@@ -1,193 +1,254 @@
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
 import {
   View,
   Text,
   StyleSheet,
-  Image,
   FlatList,
-  Alert,
-  Modal,
-  TextInput,
   TouchableOpacity,
-  ImageBackground,
+  Image,
+  Dimensions,
+  SafeAreaView,
+  ActivityIndicator,
 } from "react-native";
 import { Ionicons } from "@expo/vector-icons";
-import { useSavedChallenges } from "../../context/SavedChallengesContext";
-import ProgressBar from "react-native-progress/Bar";
+import Animated, {
+  useSharedValue,
+  useAnimatedStyle,
+  withTiming,
+} from "react-native-reanimated";
+import { doc, getDoc } from "firebase/firestore";
+import { auth, db } from "../../constants/firebase-config";
 import { useNavigation } from "@react-navigation/native";
-import Animated, { FadeIn, FadeOut, Layout } from "react-native-reanimated";
 
-const ProfilePage = () => {
-  const [profile, setProfile] = useState({
-    name: "John Doe",
-    bio: "Adventurer. Challenge enthusiast. Coffee lover.",
-    profilePicture: "https://via.placeholder.com/150",
-    challengesCompleted: 5,
-    challengesOngoing: 2,
-    successRate: 72,
-    longestStreak: 10,
+const { width } = Dimensions.get("window");
+
+const ProfileScreen = () => {
+  const navigation = useNavigation(); // Use the hook to access navigation
+  const [userData, setUserData] = useState({
+    name: "",
+    bio: "",
+    profileImage: "",
+    challengesCompleted: 0,
+    challengesOngoing: 0,
   });
+  const [isLoading, setIsLoading] = useState(true);
 
-  const [isEditing, setIsEditing] = useState(false);
-  const [editableName, setEditableName] = useState(profile.name);
-  const [editableBio, setEditableBio] = useState(profile.bio);
+  const scrollY = useSharedValue(0);
 
-  const { savedChallenges, currentChallenges, removeChallenge, markToday } =
-    useSavedChallenges();
-  const navigation = useNavigation();
+  const sections = [
+    {
+      name: "User Info",
+      icon: "person-outline",
+      navigateTo: "profile/UserInfo",
+    },
+    {
+      name: "User Stats",
+      icon: "stats-chart-outline",
+      navigateTo: "profile/UserStats",
+    },
+    {
+      name: "Current Challenges",
+      icon: "flag-outline",
+      navigateTo: "profile/CurrentChallenges",
+    },
+    {
+      name: "Saved Challenges",
+      icon: "bookmark-outline",
+      navigateTo: "profile/SavedChallenges",
+    },
+  ];
 
-  const handleRemoveChallenge = (id: string) => {
-    Alert.alert(
-      "Remove Challenge",
-      "Are you sure you want to remove this saved challenge?",
-      [
-        { text: "Cancel", style: "cancel" },
-        {
-          text: "Remove",
-          style: "destructive",
-          onPress: () => removeChallenge(id),
-        },
-      ]
-    );
+  const fetchUserData = async () => {
+    try {
+      setIsLoading(true);
+      const currentUser = auth.currentUser;
+      if (!currentUser) {
+        throw new Error("User not authenticated.");
+      }
+
+      const userId = currentUser.uid;
+      const userRef = doc(db, "users", userId);
+      const userSnap = await getDoc(userRef);
+
+      if (userSnap.exists()) {
+        const userData = userSnap.data();
+        setUserData({
+          name: userData.displayName || "Anonymous",
+          bio: userData.bio || "No bio available",
+          profileImage: userData.profileImage || "",
+          challengesCompleted: userData.challengesCompleted || 0,
+          challengesOngoing: userData.challengesOngoing || 0,
+        });
+      }
+    } catch (error) {
+      console.error("Error fetching user data:", error);
+    } finally {
+      setIsLoading(false);
+    }
   };
 
-  const handleSaveEdit = () => {
-    setProfile({ ...profile, name: editableName, bio: editableBio });
-    setIsEditing(false);
-  };
+  useEffect(() => {
+    fetchUserData();
+  }, []);
 
-  const navigateToChallengeDetails = (id: string) => {
-    navigation.navigate("ChallengeDetails" as never, { id } as never);
-  };
-
-  const renderChallengeCard = (item: any, isCurrent: boolean) => (
-    <Animated.View
-      entering={FadeIn.duration(300)}
-      exiting={FadeOut.duration(300)}
-      layout={Layout.springify()}
-      style={styles.card}
+  const renderSection = ({ item }: { item: any }) => (
+    <TouchableOpacity
+      onPress={() => navigation.navigate(item.navigateTo as never)}
+      style={styles.sectionBubble}
     >
-      <TouchableOpacity onPress={() => navigateToChallengeDetails(item.id)}>
-        <Text style={styles.cardTitle}>{item.title}</Text>
-      </TouchableOpacity>
-      <View style={styles.cardDivider} />
-      <Text style={styles.challengeCategory}>
-        {item.category || "Uncategorized"}
-      </Text>
-      {isCurrent ? (
-        <>
-          <ProgressBar
-            progress={(item.completedDays ?? 0) / (item.totalDays ?? 1)}
-            width={null}
-            color="#007bff"
-            style={styles.progressBar}
-          />
-          <Text style={styles.progressText}>
-            {item.completedDays ?? 0} / {item.totalDays ?? 1} Days Completed
-          </Text>
-          <TouchableOpacity
-            style={styles.markButton}
-            onPress={() => markToday(item.id)}
-            disabled={item.lastMarkedDate === new Date().toDateString()}
-          >
-            <Text style={styles.markButtonText}>
-              {item.lastMarkedDate === new Date().toDateString()
-                ? "Marked Today"
-                : "Mark Today"}
-            </Text>
-          </TouchableOpacity>
-        </>
-      ) : (
-        <TouchableOpacity
-          style={styles.trashButton}
-          onPress={() => handleRemoveChallenge(item.id)}
-        >
-          <Ionicons name="trash-outline" size={20} color="#fff" />
-        </TouchableOpacity>
-      )}
-    </Animated.View>
+      <Ionicons name={item.icon} size={40} color="#007bff" />
+      <Text style={styles.sectionText}>{item.name}</Text>
+    </TouchableOpacity>
   );
 
+  const headerStyle = useAnimatedStyle(() => ({
+    opacity: withTiming(Math.max(0, 1 - scrollY.value / 150), {
+      duration: 300,
+    }),
+    transform: [
+      {
+        translateY: withTiming(scrollY.value < 150 ? 0 : -scrollY.value + 150, {
+          duration: 300,
+        }),
+      },
+    ],
+  }));
+
+  const onScroll = (event: any) => {
+    scrollY.value = event.nativeEvent.contentOffset.y;
+  };
+
+  if (isLoading) {
+    return (
+      <View style={styles.loadingContainer}>
+        <ActivityIndicator size="large" color="#007bff" />
+        <Text style={styles.loadingText}>Loading Profile...</Text>
+      </View>
+    );
+  }
+
   return (
-    <ImageBackground
-      source={require("../../assets/images/background.jpg")}
-      style={styles.container}
-    >
+    <SafeAreaView style={styles.container}>
       <FlatList
-        ListHeaderComponent={
-          <>
-            <View style={styles.header}>
+        data={[null]} // Null item for header rendering
+        renderItem={() => (
+          <View>
+            {/* Header */}
+            <Animated.View style={[styles.header, headerStyle]}>
               <Image
-                source={{ uri: profile.profilePicture }}
+                source={
+                  userData.profileImage
+                    ? { uri: userData.profileImage }
+                    : require("../../assets/images/default-profile.jpg") // Placeholder image
+                }
                 style={styles.profileImage}
               />
-              <View style={styles.headerText}>
-                <Text style={styles.name}>{profile.name}</Text>
-                <Text style={styles.bio}>{profile.bio}</Text>
-                <TouchableOpacity
-                  style={styles.editButton}
-                  onPress={() => setIsEditing(true)}
-                >
-                  <Ionicons name="create-outline" size={24} color="#fff" />
-                </TouchableOpacity>
-              </View>
+              <Text style={styles.username}>{userData.name}</Text>
+              <Text style={styles.bio}>{userData.bio}</Text>
+            </Animated.View>
+
+            {/* Sections */}
+            <View style={styles.sectionsContainer}>
+              <FlatList
+                data={sections}
+                renderItem={renderSection}
+                keyExtractor={(item) => item.navigateTo}
+                numColumns={2}
+                columnWrapperStyle={styles.sectionRow}
+              />
             </View>
-            <View style={styles.statsSection}>
-              {[profile.challengesCompleted, profile.challengesOngoing].map(
-                (value, index) => (
-                  <View key={index} style={styles.statsBox}>
-                    <Text style={styles.statNumber}>{value}</Text>
-                  </View>
-                )
-              )}
-            </View>
-          </>
-        }
-        data={savedChallenges}
-        renderItem={({ item }) => renderChallengeCard(item, false)}
+          </View>
+        )}
+        onScroll={onScroll}
+        scrollEventThrottle={16}
+        contentContainerStyle={styles.contentContainer}
       />
-      <Text style={styles.sectionTitle}>Current Challenges</Text>
-      <FlatList
-        data={currentChallenges}
-        renderItem={({ item }) => renderChallengeCard(item, true)}
-      />
-    </ImageBackground>
+    </SafeAreaView>
   );
 };
 
 const styles = StyleSheet.create({
-  container: { flex: 1, padding: 20, backgroundColor: "#121212" },
-  header: { flexDirection: "row" },
-  profileImage: { width: 100, height: 100, borderRadius: 50, marginRight: 15 },
-  headerText: { flex: 1 },
-  name: { fontSize: 22, fontWeight: "bold", color: "#fff" },
-  bio: { fontSize: 16, fontStyle: "italic", color: "#bbb" },
-  editButton: { backgroundColor: "#007bff", padding: 10, borderRadius: 5 },
-  statsSection: {
-    flexDirection: "row",
-    justifyContent: "space-between",
-    flexWrap: "wrap",
+  container: {
+    flex: 1,
+    backgroundColor: "#f8f9fa",
   },
-  statsBox: {
-    width: "45%",
-    backgroundColor: "#1c1c1c",
-    padding: 15,
-    borderRadius: 8,
-    marginBottom: 10,
+  contentContainer: {
+    paddingBottom: 60,
+  },
+  header: {
     alignItems: "center",
+    backgroundColor: "#007bff",
+    paddingTop: width * 0.1,
+    paddingBottom: width * 0.15,
+    borderBottomRightRadius: 20,
+    borderBottomLeftRadius: 20,
+    shadowColor: "#000",
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.3,
+    shadowRadius: 4.65,
+    elevation: 8,
   },
-  statNumber: { fontSize: 22, color: "#007bff" },
-  statLabel: { fontSize: 14, color: "#bbb" },
-  sectionTitle: { fontSize: 20, fontWeight: "bold", color: "#fff" },
-  card: { padding: 15, backgroundColor: "#1c1c1c", borderRadius: 8 },
-  cardTitle: { fontSize: 18, fontWeight: "bold", color: "#007bff" },
-  cardDivider: { height: 1, backgroundColor: "#333", marginVertical: 10 },
-  challengeCategory: { fontSize: 14, color: "#bbb", marginBottom: 10 },
-  progressBar: { marginBottom: 10 },
-  progressText: { color: "#fff" },
-  markButton: { backgroundColor: "#007bff", padding: 10, borderRadius: 5 },
-  markButtonText: { color: "#fff", fontWeight: "bold" },
-  trashButton: { alignSelf: "flex-end" },
+  profileImage: {
+    width: 120,
+    height: 120,
+    borderRadius: 60,
+    borderWidth: 3,
+    borderColor: "#fff",
+    marginBottom: 10,
+  },
+  username: {
+    fontSize: 24,
+    fontWeight: "bold",
+    color: "#fff",
+    marginBottom: 5,
+  },
+  bio: {
+    fontSize: 14,
+    fontStyle: "italic",
+    color: "#f1f1f1",
+    textAlign: "center",
+    paddingHorizontal: 15,
+  },
+  sectionsContainer: {
+    padding: 20,
+    paddingBottom: 0,
+  },
+  sectionBubble: {
+    flex: 1,
+    alignItems: "center",
+    justifyContent: "center",
+    margin: 10,
+    backgroundColor: "#fff",
+    paddingVertical: 20,
+    borderRadius: 15,
+    shadowColor: "#000",
+    shadowOffset: { width: 0, height: 3 },
+    shadowOpacity: 0.15,
+    shadowRadius: 4.65,
+    elevation: 4,
+  },
+  sectionText: {
+    marginTop: 10,
+    fontSize: 14,
+    color: "#007bff",
+    fontWeight: "bold",
+    textAlign: "center",
+  },
+  sectionRow: {
+    justifyContent: "space-between",
+    marginBottom: 10,
+  },
+  loadingContainer: {
+    flex: 1,
+    justifyContent: "center",
+    alignItems: "center",
+    backgroundColor: "#f8f9fa",
+  },
+  loadingText: {
+    marginTop: 10,
+    fontSize: 16,
+    color: "#007bff",
+  },
 });
 
-export default ProfilePage;
+export default ProfileScreen;

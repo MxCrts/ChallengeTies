@@ -1,4 +1,14 @@
-import React, { createContext, useContext, useState } from "react";
+import React, { createContext, useContext, useState, useEffect } from "react";
+import { auth, db } from "../constants/firebase-config"; // Adjust the path if needed
+import {
+  doc,
+  setDoc,
+  deleteDoc,
+  getDocs,
+  collection,
+  query,
+  where,
+} from "firebase/firestore";
 
 interface Challenge {
   id: string;
@@ -15,8 +25,9 @@ interface CurrentChallenge extends Challenge {
 interface SavedChallengesContextType {
   savedChallenges: Challenge[];
   currentChallenges: CurrentChallenge[];
-  addChallenge: (challenge: Challenge) => void;
-  removeChallenge: (id: string) => void;
+  addChallenge: (challenge: Challenge) => Promise<void>;
+  removeChallenge: (id: string) => Promise<void>;
+  loadSavedChallenges: () => Promise<void>;
   takeChallenge: (challenge: Challenge) => void;
   markToday: (id: string) => void;
   completeChallenge: (id: string) => void;
@@ -34,15 +45,55 @@ export const SavedChallengesProvider: React.FC<{
     CurrentChallenge[]
   >([]);
 
-  const addChallenge = (challenge: Challenge) => {
-    setSavedChallenges((prev) =>
-      prev.some((c) => c.id === challenge.id) ? prev : [...prev, challenge]
-    );
+  const loadSavedChallenges = async () => {
+    const userId = auth.currentUser?.uid;
+    if (!userId) return;
+
+    try {
+      const q = query(
+        collection(db, "savedChallenges"),
+        where("userId", "==", userId)
+      );
+      const querySnapshot = await getDocs(q);
+      const challenges = querySnapshot.docs.map((doc) => ({
+        id: doc.id,
+        ...doc.data(),
+      })) as Challenge[];
+
+      setSavedChallenges(challenges);
+    } catch (error) {
+      console.error("Error loading saved challenges:", error);
+    }
   };
 
-  const removeChallenge = (id: string) => {
-    setSavedChallenges((prev) => prev.filter((c) => c.id !== id));
-    setCurrentChallenges((prev) => prev.filter((c) => c.id !== id));
+  const addChallenge = async (challenge: Challenge) => {
+    const userId = auth.currentUser?.uid;
+    if (!userId) return;
+
+    try {
+      const savedChallengeRef = doc(
+        db,
+        "savedChallenges",
+        `${userId}_${challenge.id}`
+      );
+      await setDoc(savedChallengeRef, { userId, ...challenge });
+      await loadSavedChallenges(); // Sync state after Firestore update
+    } catch (error) {
+      console.error("Error adding challenge:", error);
+    }
+  };
+
+  const removeChallenge = async (id: string) => {
+    const userId = auth.currentUser?.uid;
+    if (!userId) return;
+
+    try {
+      const savedChallengeRef = doc(db, "savedChallenges", `${userId}_${id}`);
+      await deleteDoc(savedChallengeRef);
+      await loadSavedChallenges(); // Sync state after Firestore update
+    } catch (error) {
+      console.error("Error removing challenge:", error);
+    }
   };
 
   const takeChallenge = (challenge: Challenge) => {
@@ -50,7 +101,7 @@ export const SavedChallengesProvider: React.FC<{
 
     setCurrentChallenges((prev) => [
       ...prev,
-      { ...challenge, completedDays: 0, lastMarkedDate: undefined }, // Use undefined instead of null
+      { ...challenge, completedDays: 0, lastMarkedDate: undefined },
     ]);
   };
 
@@ -59,11 +110,11 @@ export const SavedChallengesProvider: React.FC<{
       prev.map((challenge) => {
         if (challenge.id === id) {
           const today = new Date().toDateString();
-          if (challenge.lastMarkedDate === today) return challenge; // Already marked today
+          if (challenge.lastMarkedDate === today) return challenge;
 
           const newCompletedDays = Math.min(
             (challenge.completedDays || 0) + 1,
-            challenge.totalDays || 30 // Default to 30 days if not specified
+            challenge.totalDays || 30
           );
 
           return {
@@ -81,6 +132,10 @@ export const SavedChallengesProvider: React.FC<{
     setCurrentChallenges((prev) => prev.filter((c) => c.id !== id));
   };
 
+  useEffect(() => {
+    loadSavedChallenges(); // Load saved challenges when context initializes
+  }, []);
+
   return (
     <SavedChallengesContext.Provider
       value={{
@@ -88,6 +143,7 @@ export const SavedChallengesProvider: React.FC<{
         currentChallenges,
         addChallenge,
         removeChallenge,
+        loadSavedChallenges,
         takeChallenge,
         markToday,
         completeChallenge,

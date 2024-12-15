@@ -7,13 +7,14 @@ import {
   TextInput,
   TouchableOpacity,
   ActivityIndicator,
+  Alert,
 } from "react-native";
 import { Link } from "expo-router";
 import { collection, getDocs } from "firebase/firestore";
 import { db } from "../../constants/firebase-config";
 import { Ionicons } from "@expo/vector-icons";
 import { useSavedChallenges } from "../../context/SavedChallengesContext";
-import { Alert } from "react-native";
+import Animated, { FadeIn } from "react-native-reanimated";
 
 interface Challenge {
   id: string;
@@ -31,32 +32,37 @@ export default function ExploreScreen() {
     useSavedChallenges();
 
   useEffect(() => {
+    let isMounted = true; // To prevent state updates after unmount
     const fetchChallenges = async () => {
+      setLoading(true);
       try {
-        if (!db) throw new Error("Firestore is not initialized properly.");
-
+        console.log("Fetching challenges...");
         const querySnapshot = await getDocs(collection(db, "challenges"));
+        if (!isMounted) return; // Prevent setting state if unmounted
+
         if (querySnapshot.empty) {
-          console.warn("No challenges found in the database.");
-          setChallenges([]);
+          console.warn("No challenges found in Firestore.");
+          setChallenges([]); // Ensure challenges array is cleared if no data exists
         } else {
           const data = querySnapshot.docs.map((doc) => ({
             id: doc.id,
             ...doc.data(),
           })) as Challenge[];
-          setChallenges(data);
+          console.log("Challenges fetched:", data);
+          setChallenges(data); // Update challenges state
         }
       } catch (error) {
-        const errorMessage =
-          (error as Error).message || "Unknown error occurred";
-        console.error("Error fetching challenges:", errorMessage);
-        Alert.alert("Error", errorMessage);
+        console.error("Error fetching challenges:", error);
+        Alert.alert("Error", "Unable to fetch challenges. Please try again.");
       } finally {
-        setLoading(false);
+        setLoading(false); // End loading state
       }
     };
 
     fetchChallenges();
+    return () => {
+      isMounted = false; // Cleanup on unmount
+    };
   }, []);
 
   const filteredChallenges = challenges.filter((challenge) => {
@@ -68,14 +74,21 @@ export default function ExploreScreen() {
   });
 
   const toggleSave = (challenge: Challenge) => {
+    if (!challenge.id) {
+      console.error("Challenge ID is undefined. Skipping toggle save.");
+      return;
+    }
+
     if (
       savedChallenges.some(
         (savedChallenge) => savedChallenge.id === challenge.id
       )
     ) {
-      removeChallenge(challenge.id);
+      console.log(`Removing saved challenge: ${challenge.title}`);
+      removeChallenge(challenge.id); // Remove from context and Firestore
     } else {
-      addChallenge(challenge);
+      console.log(`Saving challenge: ${challenge.title}`);
+      addChallenge(challenge); // Add to context and Firestore
     }
   };
 
@@ -94,6 +107,7 @@ export default function ExploreScreen() {
       <TextInput
         style={styles.searchBar}
         placeholder="Search challenges..."
+        placeholderTextColor="#aaa"
         value={searchQuery}
         onChangeText={setSearchQuery}
       />
@@ -130,7 +144,7 @@ export default function ExploreScreen() {
           data={filteredChallenges}
           keyExtractor={(item) => item.id}
           renderItem={({ item }) => (
-            <View style={styles.challengeCard}>
+            <Animated.View entering={FadeIn} style={styles.challengeCard}>
               <Link
                 href={{
                   pathname: "/challenge-details/[id]",
@@ -172,11 +186,13 @@ export default function ExploreScreen() {
                   }
                 />
               </TouchableOpacity>
-            </View>
+            </Animated.View>
           )}
         />
       ) : (
-        <Text style={styles.noResults}>No challenges found.</Text>
+        <Text style={styles.noResults}>
+          No challenges found. Try another search or filter.
+        </Text>
       )}
     </View>
   );
@@ -186,15 +202,15 @@ const styles = StyleSheet.create({
   container: {
     flex: 1,
     padding: 16,
-    backgroundColor: "#f8f9fa",
+    backgroundColor: "#1c1c1e",
   },
   searchBar: {
     height: 40,
-    borderWidth: 1,
-    borderColor: "#ccc",
     borderRadius: 8,
     marginBottom: 16,
-    paddingHorizontal: 8,
+    paddingHorizontal: 10,
+    backgroundColor: "#2c2c2e",
+    color: "#fff",
   },
   filterContainer: {
     flexDirection: "row",
@@ -204,33 +220,26 @@ const styles = StyleSheet.create({
   filterButton: {
     paddingVertical: 8,
     paddingHorizontal: 12,
-    borderWidth: 1,
-    borderColor: "#ccc",
     borderRadius: 8,
+    backgroundColor: "#2c2c2e",
   },
   activeFilter: {
     backgroundColor: "#007bff",
-    borderColor: "#007bff",
   },
   filterText: {
-    color: "#000",
+    color: "#bbb",
   },
   activeFilterText: {
     color: "#fff",
   },
   challengeCard: {
-    padding: 16,
-    marginBottom: 12,
-    borderRadius: 8,
-    backgroundColor: "#fff",
-    shadowColor: "#000",
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.1,
-    shadowRadius: 4,
-    elevation: 2,
     flexDirection: "row",
-    justifyContent: "space-between",
     alignItems: "center",
+    justifyContent: "space-between",
+    marginBottom: 10,
+    padding: 16,
+    borderRadius: 8,
+    backgroundColor: "#2c2c2e",
   },
   challengeContent: {
     flex: 1,
@@ -238,18 +247,18 @@ const styles = StyleSheet.create({
   challengeTitle: {
     fontSize: 18,
     fontWeight: "bold",
+    color: "#fff",
   },
   challengeCategory: {
     fontSize: 14,
-    color: "#6c757d",
+    color: "#aaa",
   },
   savedIndicator: {
-    marginLeft: 10,
     padding: 8,
   },
   noResults: {
+    color: "#aaa",
     textAlign: "center",
-    color: "#6c757d",
     marginTop: 20,
   },
   loadingContainer: {
@@ -258,8 +267,7 @@ const styles = StyleSheet.create({
     alignItems: "center",
   },
   loadingText: {
+    color: "#aaa",
     marginTop: 10,
-    fontSize: 16,
-    color: "#6c757d",
   },
 });
