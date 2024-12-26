@@ -12,22 +12,19 @@ import {
 import { Ionicons } from "@expo/vector-icons";
 import Animated, { FadeIn } from "react-native-reanimated";
 import { useSavedChallenges } from "../../context/SavedChallengesContext";
-import { useNavigation } from "@react-navigation/native";
-import { Swipeable } from "react-native-gesture-handler";
+import { useRouter } from "expo-router";
 
 export default function SavedChallenges() {
   const { savedChallenges, removeChallenge, loadSavedChallenges } =
     useSavedChallenges();
   const [isLoading, setIsLoading] = React.useState(true);
-  const navigation = useNavigation();
+  const router = useRouter();
 
   React.useEffect(() => {
     const fetchChallenges = async () => {
       setIsLoading(true);
       try {
-        console.log("Fetching saved challenges...");
         await loadSavedChallenges();
-        console.log("Saved challenges loaded successfully.");
       } catch (error) {
         console.error("Error loading saved challenges:", error);
       } finally {
@@ -38,7 +35,7 @@ export default function SavedChallenges() {
     fetchChallenges();
   }, []);
 
-  const handleRemove = (id: string) => {
+  const handleRemove = async (id: string) => {
     Alert.alert(
       "Remove Challenge",
       "Are you sure you want to remove this challenge?",
@@ -47,65 +44,61 @@ export default function SavedChallenges() {
         {
           text: "Remove",
           style: "destructive",
-          onPress: () => removeChallenge(id),
+          onPress: async () => {
+            await removeChallenge(id);
+            await loadSavedChallenges();
+          },
         },
       ]
     );
   };
 
-  const renderRightActions = (id: string) => (
-    <View style={styles.swipeActionsContainer}>
-      <TouchableOpacity
-        style={styles.trashButton}
-        onPress={() => handleRemove(id)}
-      >
-        <Ionicons name="trash-outline" size={24} color="#fff" />
-      </TouchableOpacity>
-    </View>
-  );
-
   const renderChallenge = ({ item }: { item: any }) => (
-    <Swipeable
-      renderRightActions={() => renderRightActions(item.id)}
-      overshootRight={false}
-    >
-      <Animated.View entering={FadeIn} style={styles.challengeItem}>
-        <TouchableOpacity
-          style={styles.challengeContent}
-          onPress={() =>
-            navigation.navigate("challenge-details/[id]", {
+    <Animated.View entering={FadeIn} style={styles.challengeItem}>
+      <TouchableOpacity
+        style={styles.challengeContent}
+        onPress={() =>
+          router.push({
+            pathname: "/challenge-details/[id]",
+            params: {
               id: item.id,
               title: item.title,
               category: item.category,
               description: item.description,
-            })
-          }
-        >
-          {item.imageUrl ? (
-            <Image
-              source={{ uri: item.imageUrl }}
-              style={styles.challengeImage}
-            />
-          ) : (
-            <View style={styles.placeholderImage}>
-              <Ionicons name="image-outline" size={40} color="#ccc" />
-            </View>
-          )}
-          <View style={styles.challengeDetails}>
-            <Text style={styles.challengeTitle}>{item.title}</Text>
-            <Text style={styles.challengeCategory}>
-              {item.category || "Uncategorized"}
-            </Text>
+            },
+          })
+        }
+      >
+        {item.imageUrl ? (
+          <Image
+            source={{ uri: item.imageUrl }}
+            style={styles.challengeImage}
+          />
+        ) : (
+          <View style={styles.placeholderImage}>
+            <Ionicons name="image-outline" size={40} color="#b0bec5" />
           </View>
-        </TouchableOpacity>
-      </Animated.View>
-    </Swipeable>
+        )}
+        <View style={styles.challengeDetails}>
+          <Text style={styles.challengeTitle}>{item.title}</Text>
+          <Text style={styles.challengeCategory}>
+            {item.category || "Uncategorized"}
+          </Text>
+        </View>
+      </TouchableOpacity>
+      <TouchableOpacity
+        style={styles.removeButton}
+        onPress={() => handleRemove(item.id)}
+      >
+        <Ionicons name="trash-outline" size={20} color="#fff" />
+      </TouchableOpacity>
+    </Animated.View>
   );
 
   if (isLoading) {
     return (
       <View style={styles.loadingContainer}>
-        <ActivityIndicator size="large" color="#2F80ED" />
+        <ActivityIndicator size="large" color="#2196f3" />
         <Text style={styles.loadingText}>Loading saved challenges...</Text>
       </View>
     );
@@ -114,7 +107,7 @@ export default function SavedChallenges() {
   if (savedChallenges.length === 0) {
     return (
       <View style={styles.noChallengesContainer}>
-        <Ionicons name="bookmark-outline" size={60} color="#bbb" />
+        <Ionicons name="bookmark-outline" size={60} color="#b0bec5" />
         <Text style={styles.noChallengesText}>No saved challenges found!</Text>
         <Text style={styles.noChallengesSubtext}>
           Save some challenges to see them here.
@@ -140,20 +133,22 @@ const styles = StyleSheet.create({
   container: {
     flex: 1,
     padding: 20,
-    backgroundColor: "#f8f9fa",
+    backgroundColor: "#f3f9ff",
   },
   header: {
     fontSize: 24,
     fontWeight: "bold",
-    color: "#2F80ED",
+    color: "#1e88e5",
     marginBottom: 20,
     textAlign: "center",
   },
   challengeItem: {
-    backgroundColor: "#fff",
-    borderRadius: 10,
-    marginBottom: 10,
-    padding: 10,
+    flexDirection: "row",
+    alignItems: "center",
+    backgroundColor: "#e3f2fd",
+    padding: 15,
+    marginBottom: 15,
+    borderRadius: 12,
     shadowColor: "#000",
     shadowOffset: { width: 0, height: 2 },
     shadowOpacity: 0.1,
@@ -161,53 +156,47 @@ const styles = StyleSheet.create({
     elevation: 2,
   },
   challengeContent: {
+    flex: 1,
     flexDirection: "row",
     alignItems: "center",
   },
   challengeImage: {
     width: 60,
     height: 60,
-    borderRadius: 8,
-    marginRight: 10,
+    borderRadius: 10,
+    marginRight: 15,
   },
   placeholderImage: {
     width: 60,
     height: 60,
-    borderRadius: 8,
+    borderRadius: 10,
     backgroundColor: "#e0e0e0",
     justifyContent: "center",
     alignItems: "center",
-    marginRight: 10,
+    marginRight: 15,
   },
   challengeDetails: {
     flex: 1,
   },
   challengeTitle: {
-    fontSize: 16,
+    fontSize: 18,
     fontWeight: "bold",
-    color: "#2F80ED",
+    color: "#1e88e5",
     marginBottom: 5,
   },
   challengeCategory: {
     fontSize: 14,
-    color: "#666",
+    color: "#546e7a",
+  },
+  removeButton: {
+    backgroundColor: "#f44336",
+    padding: 10,
+    borderRadius: 8,
+    justifyContent: "center",
+    alignItems: "center",
   },
   listContainer: {
     paddingBottom: 20,
-  },
-  swipeActionsContainer: {
-    justifyContent: "center",
-    alignItems: "center",
-    backgroundColor: "#ff3b30",
-    width: 75,
-    borderRadius: 10,
-    marginVertical: 5,
-  },
-  trashButton: {
-    justifyContent: "center",
-    alignItems: "center",
-    height: "100%",
-    width: "100%",
   },
   loadingContainer: {
     flex: 1,
@@ -217,7 +206,7 @@ const styles = StyleSheet.create({
   loadingText: {
     marginTop: 10,
     fontSize: 16,
-    color: "#2F80ED",
+    color: "#1e88e5",
   },
   noChallengesContainer: {
     flex: 1,
@@ -227,13 +216,13 @@ const styles = StyleSheet.create({
   noChallengesText: {
     fontSize: 18,
     fontWeight: "bold",
-    color: "#555",
+    color: "#546e7a",
     marginTop: 10,
     textAlign: "center",
   },
   noChallengesSubtext: {
     fontSize: 14,
-    color: "#777",
+    color: "#90a4ae",
     textAlign: "center",
     marginTop: 5,
   },

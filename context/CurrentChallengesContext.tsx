@@ -16,16 +16,19 @@ import {
   query,
   where,
   updateDoc,
+  increment,
 } from "firebase/firestore";
 
 interface Challenge {
   id: string;
   title: string;
   category?: string;
-  totalDays?: number;
+  totalDays?: number; // Total duration of the challenge in days
   description?: string;
-  completedDays?: number;
-  lastMarkedDate?: string | null; // Allow null
+  completedDays?: number; // Tracks the progress of the challenge
+  lastMarkedDate?: string | null; // Keeps track of the last date the challenge was marked
+  imageUrl?: string; // URL for the challenge image
+  participantsCount?: number; // Number of participants taking the challenge
 }
 
 interface CurrentChallengesContextType {
@@ -75,8 +78,9 @@ export const CurrentChallengesProvider: React.FC<{
         "currentChallenges",
         `${userId}_${challenge.id}`
       );
+      const globalChallengeRef = doc(db, "challenges", challenge.id);
 
-      // Add challenge to Firestore
+      // Add the challenge to the user's currentChallenges collection
       await setDoc(challengeRef, {
         userId,
         ...challenge,
@@ -84,10 +88,16 @@ export const CurrentChallengesProvider: React.FC<{
         lastMarkedDate: null,
       });
 
-      // Reload currentChallenges from Firestore
+      // Update the participantsCount in Firestore
+      await updateDoc(globalChallengeRef, {
+        participantsCount: increment(1), // This should work with the updated rules
+      });
+
+      // Reload local state for currentChallenges
       await loadCurrentChallenges();
     } catch (error) {
       console.error("Error taking challenge:", error);
+      throw error;
     }
   };
 
@@ -98,6 +108,8 @@ export const CurrentChallengesProvider: React.FC<{
     try {
       const challengeRef = doc(db, "currentChallenges", `${userId}_${id}`);
       await deleteDoc(challengeRef);
+
+      // Reload challenges after removal
       await loadCurrentChallenges();
     } catch (error) {
       console.error("Error removing challenge:", error);
@@ -139,7 +151,7 @@ export const CurrentChallengesProvider: React.FC<{
   };
 
   useEffect(() => {
-    loadCurrentChallenges(); // Call only once
+    loadCurrentChallenges(); // Load challenges when the context initializes
   }, [loadCurrentChallenges]);
 
   return (

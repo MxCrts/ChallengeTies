@@ -13,6 +13,7 @@ import { useCurrentChallenges } from "../../context/CurrentChallengesContext";
 import Animated, { Layout, FadeIn } from "react-native-reanimated";
 import { Swipeable } from "react-native-gesture-handler";
 import { useRouter } from "expo-router";
+import { Ionicons } from "@expo/vector-icons";
 
 export default function CurrentChallenges() {
   const router = useRouter();
@@ -75,7 +76,7 @@ export default function CurrentChallenges() {
         style={styles.trashButton}
         onPress={() => handleRemoveChallenge(id)}
       >
-        <Text style={styles.deleteText}>Delete</Text>
+        <Ionicons name="trash-outline" size={24} color="#fff" />
       </TouchableOpacity>
     </View>
   );
@@ -105,6 +106,7 @@ export default function CurrentChallenges() {
                 },
               })
             }
+            style={styles.challengeContent}
           >
             {item.imageUrl ? (
               <Image
@@ -113,7 +115,7 @@ export default function CurrentChallenges() {
               />
             ) : (
               <View style={styles.imagePlaceholder}>
-                <Text style={styles.placeholderText}>No Image</Text>
+                <Ionicons name="image-outline" size={40} color="#ccc" />
               </View>
             )}
             <View style={styles.challengeInfo}>
@@ -124,7 +126,11 @@ export default function CurrentChallenges() {
             </View>
           </TouchableOpacity>
           <TouchableOpacity
-            style={styles.markTodayButton}
+            style={[
+              styles.markTodayButton,
+              item.lastMarkedDate === new Date().toDateString() &&
+                styles.disabledMarkButton,
+            ]}
             onPress={() => handleMarkToday(item.id)}
             disabled={item.lastMarkedDate === new Date().toDateString()}
           >
@@ -143,7 +149,8 @@ export default function CurrentChallenges() {
   if (isLoading) {
     return (
       <View style={styles.loadingContainer}>
-        <ActivityIndicator size="large" color="#2F80ED" />
+        <ActivityIndicator size="large" color="#4caf50" />
+        <Text style={styles.loadingText}>Loading your challenges...</Text>
       </View>
     );
   }
@@ -170,7 +177,9 @@ export default function CurrentChallenges() {
           contentContainerStyle={styles.list}
         />
       ) : (
-        <Text style={styles.noChallenges}>No current challenges found!</Text>
+        <Text style={styles.noChallenges}>
+          You haven’t started any challenges yet!
+        </Text>
       )}
     </View>
   );
@@ -180,78 +189,75 @@ const styles = StyleSheet.create({
   container: {
     flex: 1,
     padding: 20,
-    backgroundColor: "#121212",
+    backgroundColor: "#f5f5f5",
   },
   title: {
-    fontSize: 28,
+    fontSize: 24,
     fontWeight: "bold",
-    marginBottom: 20,
-    color: "#E0E0E0",
+    color: "#4caf50",
     textAlign: "center",
+    marginBottom: 20,
   },
   challengeItem: {
     flexDirection: "row",
-    backgroundColor: "#1E1E1E",
+    alignItems: "center",
+    backgroundColor: "#e8f5e9",
     padding: 15,
     marginBottom: 15,
     borderRadius: 10,
-    shadowColor: "#000",
-    shadowOffset: {
-      width: 0,
-      height: 2,
-    },
-    shadowOpacity: 0.25,
-    shadowRadius: 3.84,
-    elevation: 5,
+    elevation: 2,
+  },
+  challengeContent: {
+    flex: 1,
+    flexDirection: "row",
+    alignItems: "center",
   },
   challengeImage: {
-    width: 80,
-    height: 80,
-    borderRadius: 10,
+    width: 60,
+    height: 60,
+    borderRadius: 8,
     marginRight: 15,
   },
   imagePlaceholder: {
-    width: 80,
-    height: 80,
-    backgroundColor: "#E0E0E0",
-    borderRadius: 10,
-    marginRight: 15,
+    width: 60,
+    height: 60,
+    borderRadius: 8,
+    backgroundColor: "#c8e6c9",
     justifyContent: "center",
     alignItems: "center",
-  },
-  placeholderText: {
-    color: "#666",
-    fontSize: 14,
   },
   challengeInfo: {
     flex: 1,
   },
   challengeTitle: {
-    fontSize: 18,
+    fontSize: 16,
     fontWeight: "bold",
-    color: "#E0E0E0",
+    color: "#2e7d32",
     marginBottom: 5,
   },
   challengeStatus: {
     fontSize: 14,
-    color: "#A0A0A0",
+    color: "#558b2f",
   },
   markTodayButton: {
-    alignSelf: "center",
-    backgroundColor: "#2F80ED",
     paddingVertical: 5,
     paddingHorizontal: 10,
     borderRadius: 8,
+    backgroundColor: "#4caf50",
+  },
+  disabledMarkButton: {
+    backgroundColor: "#9e9e9e",
   },
   markTodayText: {
-    color: "#FFF",
+    color: "#fff",
     fontWeight: "bold",
   },
   swipeActionsContainer: {
     justifyContent: "center",
     alignItems: "center",
-    backgroundColor: "#ff6b6b",
+    backgroundColor: "#ff3b30",
     width: 75,
+    height: "100%",
     borderRadius: 10,
     marginVertical: 5,
   },
@@ -261,15 +267,15 @@ const styles = StyleSheet.create({
     height: "100%",
     width: "100%",
   },
-  deleteText: {
-    color: "#fff",
-    fontWeight: "bold",
-    fontSize: 16,
-  },
   loadingContainer: {
     flex: 1,
     justifyContent: "center",
     alignItems: "center",
+  },
+  loadingText: {
+    marginTop: 10,
+    color: "#2e7d32",
+    fontSize: 16,
   },
   errorContainer: {
     flex: 1,
@@ -279,20 +285,18 @@ const styles = StyleSheet.create({
   },
   errorText: {
     fontSize: 18,
-    color: "#FF6B6B",
+    color: "#ff3b30",
     textAlign: "center",
     marginBottom: 20,
   },
   retryText: {
-    color: "#2F80ED",
+    color: "#4caf50",
     fontSize: 16,
-    marginTop: 10,
   },
   noChallenges: {
-    fontSize: 18,
+    fontSize: 16,
     textAlign: "center",
-    marginTop: 50,
-    color: "#A0A0A0",
+    color: "#9e9e9e",
   },
   list: {
     paddingBottom: 20,

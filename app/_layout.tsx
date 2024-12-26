@@ -3,7 +3,9 @@ import { GestureHandlerRootView } from "react-native-gesture-handler";
 import { Stack } from "expo-router";
 import { SavedChallengesProvider } from "../context/SavedChallengesContext";
 import { CurrentChallengesProvider } from "../context/CurrentChallengesContext";
+import { ChatProvider } from "../context/ChatContext"; // Import ChatProvider
 import { useAuthInit } from "../context/useAuthInit";
+import { ThemeProvider } from "../context/ThemeContext"; // Import ThemeProvider
 import SplashScreen from "../components/SplashScreen";
 import { ActivityIndicator, View, StyleSheet, Text } from "react-native";
 
@@ -48,15 +50,19 @@ export default function RootLayout() {
 
   return (
     <GestureHandlerRootView style={{ flex: 1 }}>
-      <SavedChallengesProvider>
-        <CurrentChallengesProvider>
-          <Stack
-            screenOptions={{
-              headerShown: false,
-            }}
-          />
-        </CurrentChallengesProvider>
-      </SavedChallengesProvider>
+      <ThemeProvider>
+        <SavedChallengesProvider>
+          <CurrentChallengesProvider>
+            <ChatProvider>
+              <Stack
+                screenOptions={{
+                  headerShown: false,
+                }}
+              />
+            </ChatProvider>
+          </CurrentChallengesProvider>
+        </SavedChallengesProvider>
+      </ThemeProvider>
     </GestureHandlerRootView>
   );
 }

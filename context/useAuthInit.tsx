@@ -18,7 +18,7 @@ export function useAuthInit(): AuthState {
   useEffect(() => {
     const unsubscribe = onAuthStateChanged(auth, async (firebaseUser) => {
       if (firebaseUser) {
-        // Initialize the user in Firestore
+        console.log("Authenticated user:", firebaseUser);
         try {
           await initializeUserInFirestore(firebaseUser.uid);
           setUser({
@@ -26,23 +26,23 @@ export function useAuthInit(): AuthState {
             isAnonymous: firebaseUser.isAnonymous,
           });
         } catch (error) {
-          console.error("Failed to initialize user in Firestore:", error);
+          console.error("Error initializing Firestore user:", error);
         }
       } else {
-        // No user is signed in; create an anonymous user
         try {
+          console.log("Signing in anonymously...");
           const result = await signInAnonymously(auth);
+          console.log("Anonymous user signed in:", result.user);
           await initializeUserInFirestore(result.user.uid);
           setUser({
             uid: result.user.uid,
             isAnonymous: result.user.isAnonymous,
           });
         } catch (error) {
-          console.error("Failed to sign in anonymously:", error);
+          console.error("Error signing in anonymously:", error);
         }
       }
 
-      // Mark initialization complete
       setInitializing(false);
     });
 

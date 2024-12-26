@@ -8,19 +8,28 @@ import {
   TouchableOpacity,
   ActivityIndicator,
   Alert,
+  Image,
 } from "react-native";
-import { Link } from "expo-router";
-import { collection, getDocs } from "firebase/firestore";
+import { useRouter, useLocalSearchParams } from "expo-router";
+import {
+  collection,
+  onSnapshot,
+  updateDoc,
+  doc,
+  increment,
+} from "firebase/firestore";
 import { db } from "../../constants/firebase-config";
 import { Ionicons } from "@expo/vector-icons";
 import { useSavedChallenges } from "../../context/SavedChallengesContext";
-import Animated, { FadeIn } from "react-native-reanimated";
+import Animated, { FadeInUp } from "react-native-reanimated";
 
 interface Challenge {
   id: string;
   title: string;
   category?: string;
   description?: string;
+  imageUrl?: string;
+  participantsCount?: number;
 }
 
 export default function ExploreScreen() {
@@ -30,40 +39,55 @@ export default function ExploreScreen() {
   const [loading, setLoading] = useState(true);
   const { savedChallenges, addChallenge, removeChallenge } =
     useSavedChallenges();
+  const router = useRouter();
+  const params = useLocalSearchParams();
 
   useEffect(() => {
-    let isMounted = true; // To prevent state updates after unmount
-    const fetchChallenges = async () => {
-      setLoading(true);
-      try {
-        console.log("Fetching challenges...");
-        const querySnapshot = await getDocs(collection(db, "challenges"));
-        if (!isMounted) return; // Prevent setting state if unmounted
+    if (params.filter) {
+      setFilter(params.filter as string);
+    }
+  }, [params.filter]);
 
-        if (querySnapshot.empty) {
-          console.warn("No challenges found in Firestore.");
-          setChallenges([]); // Ensure challenges array is cleared if no data exists
-        } else {
-          const data = querySnapshot.docs.map((doc) => ({
-            id: doc.id,
-            ...doc.data(),
-          })) as Challenge[];
-          console.log("Challenges fetched:", data);
-          setChallenges(data); // Update challenges state
-        }
-      } catch (error) {
+  useEffect(() => {
+    const unsubscribe = onSnapshot(
+      collection(db, "challenges"),
+      (querySnapshot) => {
+        const fetchedChallenges = querySnapshot.docs.map((doc) => ({
+          id: doc.id,
+          title: doc.data().title || "Untitled Challenge",
+          category: doc.data().category || "Miscellaneous",
+          description: doc.data().description || "No description available",
+          imageUrl: doc.data().imageUrl || null,
+          participantsCount: doc.data().participantsCount || 0,
+        })) as Challenge[];
+
+        setChallenges(fetchedChallenges);
+        setLoading(false);
+      },
+      (error) => {
         console.error("Error fetching challenges:", error);
-        Alert.alert("Error", "Unable to fetch challenges. Please try again.");
-      } finally {
-        setLoading(false); // End loading state
+        Alert.alert("Error", "Failed to fetch challenges. Please try again.");
+        setLoading(false);
       }
-    };
+    );
 
-    fetchChallenges();
-    return () => {
-      isMounted = false; // Cleanup on unmount
-    };
+    return () => unsubscribe();
   }, []);
+
+  const categories = [
+    "All",
+    "Health",
+    "Fitness",
+    "Finance",
+    "Productivity",
+    "Special",
+    "Creativity",
+    "Education",
+    "Career",
+    "Lifestyle",
+    "Social",
+    "Miscellaneous",
+  ];
 
   const filteredChallenges = challenges.filter((challenge) => {
     const matchesSearch = challenge.title
@@ -73,37 +97,90 @@ export default function ExploreScreen() {
     return matchesSearch && matchesFilter;
   });
 
-  const toggleSave = (challenge: Challenge) => {
-    if (!challenge.id) {
-      console.error("Challenge ID is undefined. Skipping toggle save.");
-      return;
-    }
+  const takeChallenge = async (challenge: Challenge) => {
+    try {
+      const challengeRef = doc(db, "challenges", challenge.id);
 
-    if (
-      savedChallenges.some(
-        (savedChallenge) => savedChallenge.id === challenge.id
-      )
-    ) {
-      console.log(`Removing saved challenge: ${challenge.title}`);
-      removeChallenge(challenge.id); // Remove from context and Firestore
-    } else {
-      console.log(`Saving challenge: ${challenge.title}`);
-      addChallenge(challenge); // Add to context and Firestore
+      await updateDoc(challengeRef, {
+        participantsCount: increment(1),
+      });
+
+      console.log(`Challenge "${challenge.title}" taken.`);
+    } catch (error) {
+      console.error("Error taking challenge:", error);
+      Alert.alert("Error", "Failed to take challenge. Please try again.");
     }
   };
 
-  if (loading) {
-    return (
-      <View style={styles.loadingContainer}>
-        <ActivityIndicator size="large" color="#007bff" />
-        <Text style={styles.loadingText}>Loading challenges...</Text>
-      </View>
-    );
-  }
+  const renderChallengeItem = ({ item }: { item: Challenge }) => (
+    <Animated.View entering={FadeInUp} style={styles.challengeCard}>
+      <TouchableOpacity
+        style={styles.challengeContent}
+        onPress={() =>
+          router.push({
+            pathname: "/challenge-details/[id]",
+            params: {
+              id: item.id,
+              title: item.title,
+              category: item.category,
+              description: item.description,
+            },
+          })
+        }
+      >
+        {item.imageUrl ? (
+          <Image
+            source={{ uri: item.imageUrl }}
+            style={styles.challengeImage}
+          />
+        ) : (
+          <View style={styles.imagePlaceholder}>
+            <Text style={styles.imagePlaceholderText}>No Image</Text>
+          </View>
+        )}
+        <View>
+          <Text style={styles.challengeTitle}>{item.title}</Text>
+          <Text style={styles.challengeCategory}>
+            {item.category || "Miscellaneous"}
+          </Text>
+          <Text style={styles.participantsCount}>
+            {item.participantsCount} participants
+          </Text>
+        </View>
+      </TouchableOpacity>
+      <TouchableOpacity
+        style={styles.savedIndicator}
+        onPress={() =>
+          savedChallenges.some(
+            (savedChallenge) => savedChallenge.id === item.id
+          )
+            ? removeChallenge(item.id)
+            : addChallenge(item)
+        }
+      >
+        <Ionicons
+          name={
+            savedChallenges.some(
+              (savedChallenge) => savedChallenge.id === item.id
+            )
+              ? "bookmark"
+              : "bookmark-outline"
+          }
+          size={24}
+          color={
+            savedChallenges.some(
+              (savedChallenge) => savedChallenge.id === item.id
+            )
+              ? "#FFD700"
+              : "#bbb"
+          }
+        />
+      </TouchableOpacity>
+    </Animated.View>
+  );
 
   return (
     <View style={styles.container}>
-      {/* Search Bar */}
       <TextInput
         style={styles.searchBar}
         placeholder="Search challenges..."
@@ -111,83 +188,38 @@ export default function ExploreScreen() {
         value={searchQuery}
         onChangeText={setSearchQuery}
       />
-
-      {/* Filter Section */}
       <View style={styles.filterContainer}>
-        {["All", "Health", "Fitness", "Finance", "Productivity"].map(
-          (category) => (
-            <TouchableOpacity
-              key={category}
-              style={[
-                styles.filterButton,
-                filter === category && styles.activeFilter,
-              ]}
-              onPress={() => setFilter(category)}
+        {categories.map((category) => (
+          <TouchableOpacity
+            key={category}
+            style={[
+              styles.filterButton,
+              filter === category && styles.activeFilter,
+            ]}
+            onPress={() => setFilter(category)}
+          >
+            <Text
+              style={
+                filter === category
+                  ? styles.activeFilterText
+                  : styles.filterText
+              }
             >
-              <Text
-                style={
-                  filter === category
-                    ? styles.activeFilterText
-                    : styles.filterText
-                }
-              >
-                {category}
-              </Text>
-            </TouchableOpacity>
-          )
-        )}
+              {category}
+            </Text>
+          </TouchableOpacity>
+        ))}
       </View>
-
-      {/* Challenges List */}
-      {filteredChallenges.length > 0 ? (
+      {loading ? (
+        <View style={styles.loadingContainer}>
+          <ActivityIndicator size="large" color="#007bff" />
+        </View>
+      ) : filteredChallenges.length > 0 ? (
         <FlatList
           data={filteredChallenges}
           keyExtractor={(item) => item.id}
-          renderItem={({ item }) => (
-            <Animated.View entering={FadeIn} style={styles.challengeCard}>
-              <Link
-                href={{
-                  pathname: "/challenge-details/[id]",
-                  params: {
-                    id: item.id,
-                    title: item.title,
-                    category: item.category,
-                    description: item.description,
-                  },
-                }}
-                style={styles.challengeContent}
-              >
-                <View>
-                  <Text style={styles.challengeTitle}>{item.title}</Text>
-                  <Text style={styles.challengeCategory}>
-                    {item.category || "Uncategorized"}
-                  </Text>
-                </View>
-              </Link>
-              <TouchableOpacity
-                style={styles.savedIndicator}
-                onPress={() => toggleSave(item)}
-              >
-                <Ionicons
-                  name={
-                    savedChallenges.some(
-                      (savedChallenge) => savedChallenge.id === item.id
-                    )
-                      ? "star"
-                      : "star-outline"
-                  }
-                  size={24}
-                  color={
-                    savedChallenges.some(
-                      (savedChallenge) => savedChallenge.id === item.id
-                    )
-                      ? "#f0c419"
-                      : "#ddd"
-                  }
-                />
-              </TouchableOpacity>
-            </Animated.View>
-          )}
+          renderItem={renderChallengeItem}
+          contentContainerStyle={styles.challengeList}
         />
       ) : (
         <Text style={styles.noResults}>
@@ -202,72 +234,101 @@ const styles = StyleSheet.create({
   container: {
     flex: 1,
     padding: 16,
-    backgroundColor: "#1c1c1e",
+    backgroundColor: "#1C1C1E",
   },
   searchBar: {
     height: 40,
     borderRadius: 8,
     marginBottom: 16,
-    paddingHorizontal: 10,
-    backgroundColor: "#2c2c2e",
+    paddingHorizontal: 12,
+    backgroundColor: "#2C2C2E",
     color: "#fff",
   },
   filterContainer: {
     flexDirection: "row",
+    flexWrap: "wrap",
     marginBottom: 16,
     justifyContent: "space-between",
   },
   filterButton: {
     paddingVertical: 8,
-    paddingHorizontal: 12,
-    borderRadius: 8,
-    backgroundColor: "#2c2c2e",
+    paddingHorizontal: 14,
+    borderRadius: 20,
+    backgroundColor: "#2C2C2E",
+    marginBottom: 10,
   },
   activeFilter: {
     backgroundColor: "#007bff",
   },
   filterText: {
+    fontSize: 14,
     color: "#bbb",
   },
   activeFilterText: {
+    fontSize: 14,
     color: "#fff",
+    fontWeight: "bold",
   },
   challengeCard: {
     flexDirection: "row",
     alignItems: "center",
-    justifyContent: "space-between",
-    marginBottom: 10,
+    marginBottom: 15,
     padding: 16,
-    borderRadius: 8,
-    backgroundColor: "#2c2c2e",
+    borderRadius: 10,
+    backgroundColor: "#2C2C2E",
+    elevation: 3,
+  },
+  challengeImage: {
+    width: 70,
+    height: 70,
+    borderRadius: 10,
+    marginRight: 15,
+  },
+  imagePlaceholder: {
+    width: 70,
+    height: 70,
+    borderRadius: 10,
+    backgroundColor: "#444",
+    justifyContent: "center",
+    alignItems: "center",
+  },
+  imagePlaceholderText: {
+    color: "#bbb",
+    fontSize: 12,
   },
   challengeContent: {
     flex: 1,
   },
-  challengeTitle: {
-    fontSize: 18,
-    fontWeight: "bold",
-    color: "#fff",
-  },
-  challengeCategory: {
-    fontSize: 14,
-    color: "#aaa",
-  },
   savedIndicator: {
     padding: 8,
-  },
-  noResults: {
-    color: "#aaa",
-    textAlign: "center",
-    marginTop: 20,
   },
   loadingContainer: {
     flex: 1,
     justifyContent: "center",
     alignItems: "center",
   },
-  loadingText: {
+  challengeList: {
+    paddingBottom: 20,
+  },
+  noResults: {
+    fontSize: 16,
+    textAlign: "center",
+    marginTop: 20,
     color: "#aaa",
-    marginTop: 10,
+  },
+  challengeTitle: {
+    fontSize: 18,
+    fontWeight: "bold",
+    color: "#fff",
+    marginBottom: 5,
+  },
+  challengeCategory: {
+    fontSize: 14,
+    color: "#aaa",
+  },
+  participantsCount: {
+    fontSize: 12,
+    color: "#ddd",
+    marginTop: 5,
   },
 });

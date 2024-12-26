@@ -1,14 +1,13 @@
-import React, { useState, useEffect } from "react";
+import React, { useEffect, useState } from "react";
 import {
   View,
   Text,
   StyleSheet,
   FlatList,
   ActivityIndicator,
-  Alert,
 } from "react-native";
-import { doc, getDoc } from "firebase/firestore";
-import { db } from "../../constants/firebase-config";
+import { useSavedChallenges } from "../../context/SavedChallengesContext";
+import { useCurrentChallenges } from "../../context/CurrentChallengesContext";
 import { Ionicons } from "@expo/vector-icons";
 
 interface Stat {
@@ -17,55 +16,58 @@ interface Stat {
   icon: string;
 }
 
-const UserStats = () => {
+export default function UserStats() {
+  const { savedChallenges } = useSavedChallenges();
+  const { currentChallenges } = useCurrentChallenges();
+
   const [stats, setStats] = useState<Stat[]>([]);
   const [isLoading, setIsLoading] = useState(true);
 
   useEffect(() => {
-    const fetchStats = async () => {
-      try {
-        setIsLoading(true);
-        const userId = "anonymousUserId"; // Replace with logic to fetch the current user's ID
-        const userRef = doc(db, "users", userId);
-        const docSnap = await getDoc(userRef);
+    const calculateStats = () => {
+      const totalSaved = savedChallenges.length;
+      const totalOngoing = currentChallenges.length;
+      const totalCompleted = currentChallenges.filter(
+        (challenge) => challenge.completedDays === challenge.totalDays
+      ).length;
+      const successRate =
+        totalOngoing + totalCompleted > 0
+          ? Math.round((totalCompleted / (totalOngoing + totalCompleted)) * 100)
+          : 0;
+      const longestStreak = 10; // Placeholder, calculate if needed
 
-        if (docSnap.exists()) {
-          const userData = docSnap.data();
-          setStats([
-            {
-              name: "Challenges Completed",
-              value: userData?.challengesCompleted || 0,
-              icon: "trophy-outline",
-            },
-            {
-              name: "Ongoing Challenges",
-              value: userData?.challengesOngoing || 0,
-              icon: "hourglass-outline",
-            },
-            {
-              name: "Success Rate",
-              value: `${userData?.successRate || 0}%`,
-              icon: "stats-chart-outline",
-            },
-            {
-              name: "Longest Streak",
-              value: `${userData?.longestStreak || 0} days`,
-              icon: "flame-outline",
-            },
-          ]);
-        } else {
-          Alert.alert("No Stats", "User stats could not be found.");
-        }
-      } catch (error) {
-        console.error("Error fetching user stats:", error);
-        Alert.alert("Error", "Failed to fetch user stats. Please try again.");
-      } finally {
-        setIsLoading(false);
-      }
+      setStats([
+        {
+          name: "Challenges Saved",
+          value: totalSaved,
+          icon: "bookmark-outline",
+        },
+        {
+          name: "Ongoing Challenges",
+          value: totalOngoing,
+          icon: "hourglass-outline",
+        },
+        {
+          name: "Challenges Completed",
+          value: totalCompleted,
+          icon: "trophy-outline",
+        },
+        {
+          name: "Success Rate",
+          value: `${successRate}%`,
+          icon: "stats-chart-outline",
+        },
+        {
+          name: "Longest Streak",
+          value: `${longestStreak} days`,
+          icon: "flame-outline",
+        },
+      ]);
+      setIsLoading(false);
     };
 
-    fetchStats();
-  }, []);
+    calculateStats();
+  }, [savedChallenges, currentChallenges]);
 
   const renderStat = ({ item }: { item: Stat }) => (
     <View style={styles.statCard}>
@@ -85,7 +87,7 @@ const UserStats = () => {
     return (
       <View style={styles.loadingContainer}>
         <ActivityIndicator size="large" color="#2F80ED" />
-        <Text style={styles.loadingText}>Fetching your stats...</Text>
+        <Text style={styles.loadingText}>Loading your stats...</Text>
       </View>
     );
   }
@@ -112,18 +114,18 @@ const UserStats = () => {
       />
     </View>
   );
-};
+}
 
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: "#f8f9fa",
+    backgroundColor: "#1C1C1E",
     padding: 20,
   },
   header: {
     fontSize: 24,
     fontWeight: "bold",
-    color: "#2F80ED",
+    color: "#6A11CB",
     marginBottom: 20,
     textAlign: "center",
   },
@@ -133,7 +135,7 @@ const styles = StyleSheet.create({
   statCard: {
     flexDirection: "row",
     alignItems: "center",
-    backgroundColor: "#fff",
+    backgroundColor: "#2C2C2E",
     padding: 15,
     marginBottom: 10,
     borderRadius: 10,
@@ -148,12 +150,12 @@ const styles = StyleSheet.create({
   },
   statName: {
     fontSize: 16,
-    color: "#555",
+    color: "#fff",
   },
   statValue: {
     fontSize: 18,
     fontWeight: "bold",
-    color: "#2F80ED",
+    color: "#6A11CB",
   },
   loadingContainer: {
     flex: 1,
@@ -163,7 +165,7 @@ const styles = StyleSheet.create({
   loadingText: {
     marginTop: 10,
     fontSize: 16,
-    color: "#2F80ED",
+    color: "#6A11CB",
   },
   emptyContainer: {
     flex: 1,
@@ -173,15 +175,13 @@ const styles = StyleSheet.create({
   emptyText: {
     fontSize: 18,
     fontWeight: "bold",
-    color: "#555",
+    color: "#fff",
     textAlign: "center",
   },
   emptySubtext: {
     fontSize: 14,
-    color: "#777",
+    color: "#aaa",
     textAlign: "center",
     marginTop: 10,
   },
 });
-
-export default UserStats;

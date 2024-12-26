@@ -1,5 +1,5 @@
 import React, { createContext, useContext, useState, useEffect } from "react";
-import { auth, db } from "../constants/firebase-config"; // Adjust the path if needed
+import { auth, db } from "../constants/firebase-config";
 import {
   doc,
   setDoc,
@@ -15,11 +15,14 @@ interface Challenge {
   title: string;
   category?: string;
   totalDays?: number; // Total duration of the challenge in days
+  description?: string;
+  imageUrl?: string; // Challenge image
+  participantsCount?: number; // Number of participants
 }
 
 interface CurrentChallenge extends Challenge {
   completedDays: number; // Tracks the progress of the challenge
-  lastMarkedDate?: string; // Keeps track of the last date the challenge was marked
+  lastMarkedDate?: string | null; // Allow null
 }
 
 interface SavedChallengesContextType {
@@ -47,20 +50,30 @@ export const SavedChallengesProvider: React.FC<{
 
   const loadSavedChallenges = async () => {
     const userId = auth.currentUser?.uid;
-    if (!userId) return;
+    if (!userId) {
+      console.warn("No user ID found. Cannot load saved challenges.");
+      return;
+    }
 
     try {
+      console.log(`Loading saved challenges for user: ${userId}`);
       const q = query(
         collection(db, "savedChallenges"),
         where("userId", "==", userId)
       );
       const querySnapshot = await getDocs(q);
-      const challenges = querySnapshot.docs.map((doc) => ({
-        id: doc.id,
-        ...doc.data(),
-      })) as Challenge[];
 
-      setSavedChallenges(challenges);
+      if (querySnapshot.empty) {
+        console.warn("No saved challenges found for the current user.");
+        setSavedChallenges([]); // Clear the array if no data exists.
+      } else {
+        const challenges = querySnapshot.docs.map((doc) => ({
+          id: doc.id,
+          ...doc.data(),
+        })) as Challenge[];
+        console.log(`Fetched ${challenges.length} saved challenges.`);
+        setSavedChallenges(challenges);
+      }
     } catch (error) {
       console.error("Error loading saved challenges:", error);
     }
@@ -68,16 +81,20 @@ export const SavedChallengesProvider: React.FC<{
 
   const addChallenge = async (challenge: Challenge) => {
     const userId = auth.currentUser?.uid;
-    if (!userId) return;
+    if (!userId) {
+      console.warn("No user ID found. Cannot add challenge.");
+      return;
+    }
 
     try {
+      console.log(`Adding challenge: ${challenge.title}`);
       const savedChallengeRef = doc(
         db,
         "savedChallenges",
         `${userId}_${challenge.id}`
       );
       await setDoc(savedChallengeRef, { userId, ...challenge });
-      await loadSavedChallenges(); // Sync state after Firestore update
+      await loadSavedChallenges();
     } catch (error) {
       console.error("Error adding challenge:", error);
     }
@@ -85,23 +102,31 @@ export const SavedChallengesProvider: React.FC<{
 
   const removeChallenge = async (id: string) => {
     const userId = auth.currentUser?.uid;
-    if (!userId) return;
+    if (!userId) {
+      console.warn("No user ID found. Cannot remove challenge.");
+      return;
+    }
 
     try {
+      console.log(`Removing challenge with ID: ${id}`);
       const savedChallengeRef = doc(db, "savedChallenges", `${userId}_${id}`);
       await deleteDoc(savedChallengeRef);
-      await loadSavedChallenges(); // Sync state after Firestore update
+      await loadSavedChallenges();
     } catch (error) {
       console.error("Error removing challenge:", error);
     }
   };
 
   const takeChallenge = (challenge: Challenge) => {
-    if (currentChallenges.some((c) => c.id === challenge.id)) return;
+    if (currentChallenges.some((c) => c.id === challenge.id)) {
+      console.warn(`Challenge "${challenge.title}" already taken.`);
+      return;
+    }
 
+    console.log(`Taking challenge: ${challenge.title}`);
     setCurrentChallenges((prev) => [
       ...prev,
-      { ...challenge, completedDays: 0, lastMarkedDate: undefined },
+      { ...challenge, completedDays: 0, lastMarkedDate: null },
     ]);
   };
 
@@ -110,13 +135,17 @@ export const SavedChallengesProvider: React.FC<{
       prev.map((challenge) => {
         if (challenge.id === id) {
           const today = new Date().toDateString();
-          if (challenge.lastMarkedDate === today) return challenge;
+          if (challenge.lastMarkedDate === today) {
+            console.log(`Challenge with ID ${id} already marked today.`);
+            return challenge;
+          }
 
           const newCompletedDays = Math.min(
             (challenge.completedDays || 0) + 1,
             challenge.totalDays || 30
           );
 
+          console.log(`Marking challenge with ID ${id} as completed today.`);
           return {
             ...challenge,
             completedDays: newCompletedDays,
@@ -129,11 +158,12 @@ export const SavedChallengesProvider: React.FC<{
   };
 
   const completeChallenge = (id: string) => {
+    console.log(`Completing challenge with ID ${id}`);
     setCurrentChallenges((prev) => prev.filter((c) => c.id !== id));
   };
 
   useEffect(() => {
-    loadSavedChallenges(); // Load saved challenges when context initializes
+    loadSavedChallenges();
   }, []);
 
   return (
