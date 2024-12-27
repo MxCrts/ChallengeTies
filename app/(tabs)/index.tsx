@@ -81,6 +81,13 @@ export default function HomeScreen() {
 
   const renderChallenge = ({ item }: { item: Challenge }) => (
     <Animated.View entering={FadeInUp} style={styles.challengeCard}>
+      <View style={styles.cardImageContainer}>
+        <Image
+          source={require("../../assets/images/challenge-placeholder.png")} // Replace with actual image
+          style={styles.cardImage}
+          resizeMode="cover"
+        />
+      </View>
       <View style={styles.cardContent}>
         <Text style={styles.challengeTitle} numberOfLines={2}>
           {item.title}
@@ -117,22 +124,21 @@ export default function HomeScreen() {
 
   return (
     <View style={styles.container}>
-      <TouchableOpacity
-        style={styles.musicToggle}
-        onPress={() => setMusicEnabled(!musicEnabled)}
-      >
-        <Ionicons
-          name={musicEnabled ? "volume-high-outline" : "volume-mute-outline"}
-          size={24}
-          color="#FF9800"
-        />
-      </TouchableOpacity>
-
-      <View style={styles.logoContainer}>
+      <View style={styles.headerContainer}>
         <Image
           source={require("../../assets/images/logo.png")}
           style={styles.logo}
         />
+        <TouchableOpacity
+          style={styles.musicToggle}
+          onPress={() => setMusicEnabled(!musicEnabled)}
+        >
+          <Ionicons
+            name={musicEnabled ? "volume-high-outline" : "volume-mute-outline"}
+            size={24}
+            color="#FF9800"
+          />
+        </TouchableOpacity>
       </View>
 
       <Image
@@ -141,7 +147,7 @@ export default function HomeScreen() {
         resizeMode="cover"
       />
 
-      <View style={styles.articlesSection}>
+      <View style={styles.sectionContainer}>
         <Text style={styles.sectionHeader}>Explore Special Topics</Text>
         <FlatList
           data={[
@@ -174,7 +180,7 @@ export default function HomeScreen() {
         />
       </View>
 
-      <View style={styles.challengesSection}>
+      <View style={styles.sectionContainer}>
         <Text style={styles.sectionHeader}>Recommended Challenges</Text>
         <FlatList
           data={challenges}
@@ -265,15 +271,38 @@ const styles = StyleSheet.create({
     justifyContent: "space-between",
     width: 260,
   },
+  cardImage: {
+    width: "100%",
+    height: "100%",
+  },
+  cardImageContainer: {
+    width: 80,
+    height: 80,
+    borderRadius: 40,
+    overflow: "hidden",
+    marginRight: 15,
+  },
   cardContent: {
     flex: 1,
     marginRight: 10,
+  },
+  headerContainer: {
+    flexDirection: "row",
+    justifyContent: "space-between",
+    alignItems: "center",
+    paddingHorizontal: 20,
+    marginTop: 20,
+    marginBottom: 10,
   },
   challengeTitle: {
     fontSize: 16,
     fontWeight: "bold",
     color: "#444",
     marginBottom: 5,
+  },
+  sectionContainer: {
+    paddingHorizontal: 20,
+    marginBottom: 20,
   },
   challengeCategory: {
     fontSize: 14,
