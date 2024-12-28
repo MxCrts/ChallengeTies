@@ -27,6 +27,7 @@ export default function SavedChallenges() {
         await loadSavedChallenges();
       } catch (error) {
         console.error("Error loading saved challenges:", error);
+        Alert.alert("Error", "Failed to load saved challenges. Please try again.");
       } finally {
         setIsLoading(false);
       }
@@ -45,8 +46,14 @@ export default function SavedChallenges() {
           text: "Remove",
           style: "destructive",
           onPress: async () => {
-            await removeChallenge(id);
-            await loadSavedChallenges();
+            try {
+              await removeChallenge(id);
+              await loadSavedChallenges();
+              Alert.alert("Removed", "Challenge successfully removed.");
+            } catch (error) {
+              console.error("Error removing challenge:", error);
+              Alert.alert("Error", "Failed to remove the challenge.");
+            }
           },
         },
       ]
@@ -80,9 +87,12 @@ export default function SavedChallenges() {
           </View>
         )}
         <View style={styles.challengeDetails}>
-          <Text style={styles.challengeTitle}>{item.title}</Text>
+          <Text style={styles.challengeTitle} numberOfLines={1}>
+            {item.title}
+          </Text>
           <Text style={styles.challengeCategory}>
-            {item.category || "Uncategorized"}
+            {item.category?.charAt(0).toUpperCase() + item.category?.slice(1) ||
+              "Uncategorized"}
           </Text>
         </View>
       </TouchableOpacity>
@@ -124,6 +134,12 @@ export default function SavedChallenges() {
         renderItem={renderChallenge}
         keyExtractor={(item) => item.id}
         contentContainerStyle={styles.listContainer}
+        initialNumToRender={10}
+        getItemLayout={(data, index) => ({
+          length: 100,
+          offset: 100 * index,
+          index,
+        })}
       />
     </View>
   );

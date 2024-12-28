@@ -5,6 +5,7 @@ import {
   setDoc,
   deleteDoc,
   getDocs,
+  getDoc,
   collection,
   query,
   where,
@@ -44,9 +45,9 @@ const SavedChallengesContext = createContext<SavedChallengesContextType | null>(
   null
 );
 
-export const SavedChallengesProvider: React.FC<{
-  children: React.ReactNode;
-}> = ({ children }) => {
+export const SavedChallengesProvider: React.FC<{ children: React.ReactNode }> = ({
+  children,
+}) => {
   const [savedChallenges, setSavedChallenges] = useState<Challenge[]>([]);
   const [currentChallenges, setCurrentChallenges] = useState<
     CurrentChallenge[]
@@ -73,37 +74,25 @@ export const SavedChallengesProvider: React.FC<{
 
   const addChallenge = async (challenge: Challenge) => {
     const userId = auth.currentUser?.uid;
-    if (!userId) return;
-
-    try {
-      const savedChallengeRef = doc(
-        db,
-        "savedChallenges",
-        `${userId}_${challenge.id}`
-      );
-      await setDoc(savedChallengeRef, { userId, ...challenge });
-      await loadSavedChallenges();
-    } catch (error) {
-      console.error("Error adding challenge:", error);
+    if (!userId) {
+      console.error("User not authenticated.");
+      return;
     }
+    console.log("Saving challenge for user:", userId);
+    const savedChallengeRef = doc(db, "savedChallenges", `${userId}_${challenge.id}`);
+    await setDoc(savedChallengeRef, { userId, ...challenge });
   };
 
-  const removeChallenge = async (id: string) => {
-    const userId = auth.currentUser?.uid;
-    if (!userId) return;
 
-    try {
-      const savedChallengeRef = doc(db, "savedChallenges", `${userId}_${id}`);
-      await deleteDoc(savedChallengeRef);
-      await loadSavedChallenges();
-    } catch (error) {
-      console.error("Error removing challenge:", error);
+  const takeChallenge = async (
+    challenge: Challenge,
+    selectedDays: number
+  ): Promise<void> => {
+    const userId = auth.currentUser?.uid;
+    if (!userId) {
+      console.error("User ID is missing. Cannot take challenge.");
+      return;
     }
-  };
-
-  const takeChallenge = async (challenge: Challenge, selectedDays: number) => {
-    const userId = auth.currentUser?.uid;
-    if (!userId) return;
 
     try {
       const challengeRef = doc(
@@ -134,7 +123,17 @@ export const SavedChallengesProvider: React.FC<{
     }
   };
 
-  const markToday = async (id: string, selectedDays: number) => {
+  const removeChallenge = async (id: string) => {
+    const userId = auth.currentUser?.uid;
+    if (!userId) {
+      console.error("User not authenticated.");
+      return;
+    }
+    const savedChallengeRef = doc(db, "savedChallenges", `${userId}_${id}`);
+    await deleteDoc(savedChallengeRef);
+  };
+
+  const markToday = async (id: string, selectedDays: number): Promise<void> => {
     const userId = auth.currentUser?.uid;
     if (!userId) return;
 
@@ -145,15 +144,18 @@ export const SavedChallengesProvider: React.FC<{
         "currentChallenges",
         `${userId}_${id}_${selectedDays}`
       );
+      const challengeSnap = await getDoc(challengeRef);
 
-      const challengeSnap = await getDocs(challengeRef);
       if (challengeSnap.exists()) {
         const challenge = challengeSnap.data() as CurrentChallenge;
 
-        if (challenge.lastMarkedDate === today) return;
+        if (challenge.lastMarkedDate === today) {
+          console.log("Challenge already marked for today.");
+          return;
+        }
 
         const newCompletedDays = Math.min(
-          challenge.completedDays + 1,
+          (challenge.completedDays || 0) + 1,
           selectedDays
         );
 
@@ -175,7 +177,10 @@ export const SavedChallengesProvider: React.FC<{
     }
   };
 
-  const completeChallenge = async (id: string, selectedDays: number) => {
+  const completeChallenge = async (
+    id: string,
+    selectedDays: number
+  ): Promise<void> => {
     const userId = auth.currentUser?.uid;
     if (!userId) return;
 
@@ -201,7 +206,7 @@ export const SavedChallengesProvider: React.FC<{
     }
   };
 
-  const isSaved = (id: string) =>
+  const isSaved = (id: string): boolean =>
     savedChallenges.some((challenge) => challenge.id === id);
 
   useEffect(() => {
@@ -227,7 +232,7 @@ export const SavedChallengesProvider: React.FC<{
   );
 };
 
-export const useSavedChallenges = () => {
+export const useSavedChallenges = (): SavedChallengesContextType => {
   const context = useContext(SavedChallengesContext);
   if (!context) {
     throw new Error(

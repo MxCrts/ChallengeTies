@@ -26,14 +26,14 @@ interface Challenge {
   description?: string;
   imageUrl?: string;
   participantsCount?: number;
-  daysOptions: number[]; // Days choices: e.g., [10, 30, 60]
-  chatId: string; // Shared chat ID
+  daysOptions: number[];
+  chatId: string;
 }
 
 interface CurrentChallenge extends Challenge {
-  selectedDays: number; // User-selected duration
-  completedDays: number; // Progress tracking
-  lastMarkedDate?: string | null; // Last date marked as completed
+  selectedDays: number;
+  completedDays: number;
+  lastMarkedDate?: string | null;
 }
 
 interface CurrentChallengesContextType {
@@ -65,8 +65,8 @@ export const CurrentChallengesProvider: React.FC<{
       );
       const querySnapshot = await getDocs(q);
       const challenges = querySnapshot.docs.map((doc) => ({
-        id: doc.id.split("_")[1], // Extract challenge ID
-        selectedDays: parseInt(doc.id.split("_")[2]), // Extract selectedDays
+        id: doc.id.split("_")[1],
+        selectedDays: parseInt(doc.id.split("_")[2], 10),
         ...doc.data(),
       })) as CurrentChallenge[];
 
@@ -78,7 +78,10 @@ export const CurrentChallengesProvider: React.FC<{
 
   const takeChallenge = async (challenge: Challenge, selectedDays: number) => {
     const userId = auth.currentUser?.uid;
-    if (!userId) return;
+    if (!userId) {
+      console.error("User not authenticated.");
+      return;
+    }
 
     try {
       const challengeRef = doc(
@@ -111,7 +114,10 @@ export const CurrentChallengesProvider: React.FC<{
 
   const removeChallenge = async (id: string, selectedDays: number) => {
     const userId = auth.currentUser?.uid;
-    if (!userId) return;
+    if (!userId) {
+      console.error("User not authenticated.");
+      return;
+    }
 
     try {
       const challengeRef = doc(
@@ -137,7 +143,10 @@ export const CurrentChallengesProvider: React.FC<{
 
   const markToday = async (id: string, selectedDays: number) => {
     const userId = auth.currentUser?.uid;
-    if (!userId) return;
+    if (!userId) {
+      console.error("User not authenticated.");
+      return;
+    }
 
     try {
       const today = new Date().toDateString();
