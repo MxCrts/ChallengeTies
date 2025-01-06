@@ -41,18 +41,19 @@ export default function CurrentChallenges() {
     fetchChallenges();
   }, [loadCurrentChallenges]);
 
-  const handleMarkToday = async (id: string) => {
+  const handleMarkToday = async (id: string, selectedDays: number) => {
     try {
-      await markToday(id);
+      await markToday(id, selectedDays);
     } catch (err) {
       console.error("Error marking today:", err);
+      Alert.alert("Error", "Failed to mark today. Please try again.");
     }
   };
 
-  const handleRemoveChallenge = (id: string) => {
+  const handleRemoveChallenge = (id: string, selectedDays: number) => {
     Alert.alert(
       "Remove Challenge",
-      "Are you sure? You will lose your progress on this challenge.",
+      "Are you sure you want to remove this challenge? Progress will be lost.",
       [
         { text: "Cancel", style: "cancel" },
         {
@@ -60,9 +61,11 @@ export default function CurrentChallenges() {
           style: "destructive",
           onPress: async () => {
             try {
-              await removeChallenge(id);
+              await removeChallenge(id, selectedDays);
+              Alert.alert("Removed", "Challenge removed successfully.");
             } catch (err) {
               console.error("Error removing challenge:", err);
+              Alert.alert("Error", "Failed to remove the challenge.");
             }
           },
         },
@@ -70,11 +73,11 @@ export default function CurrentChallenges() {
     );
   };
 
-  const renderRightActions = (id: string) => (
+  const renderRightActions = (id: string, selectedDays: number) => (
     <View style={styles.swipeActionsContainer}>
       <TouchableOpacity
         style={styles.trashButton}
-        onPress={() => handleRemoveChallenge(id)}
+        onPress={() => handleRemoveChallenge(id, selectedDays)}
       >
         <Ionicons name="trash-outline" size={24} color="#fff" />
       </TouchableOpacity>
@@ -84,7 +87,7 @@ export default function CurrentChallenges() {
   const renderItem = useCallback(
     ({ item }: { item: any }) => (
       <Swipeable
-        renderRightActions={() => renderRightActions(item.id)}
+        renderRightActions={() => renderRightActions(item.id, item.selectedDays)}
         overshootRight={false}
       >
         <Animated.View
@@ -101,7 +104,7 @@ export default function CurrentChallenges() {
                   title: item.title,
                   category: item.category,
                   description: item.description,
-                  totalDays: item.totalDays,
+                  selectedDays: item.selectedDays,
                   completedDays: item.completedDays,
                 },
               })
@@ -112,6 +115,9 @@ export default function CurrentChallenges() {
               <Image
                 source={{ uri: item.imageUrl }}
                 style={styles.challengeImage}
+                onError={(e) =>
+                  console.error(`Error loading image for ${item.title}:`, e.nativeEvent.error)
+                }
               />
             ) : (
               <View style={styles.imagePlaceholder}>
@@ -121,7 +127,7 @@ export default function CurrentChallenges() {
             <View style={styles.challengeInfo}>
               <Text style={styles.challengeTitle}>{item.title}</Text>
               <Text style={styles.challengeStatus}>
-                {item.completedDays}/{item.totalDays} days completed
+                {item.completedDays}/{item.selectedDays} days completed
               </Text>
             </View>
           </TouchableOpacity>
@@ -129,9 +135,9 @@ export default function CurrentChallenges() {
             style={[
               styles.markTodayButton,
               item.lastMarkedDate === new Date().toDateString() &&
-                styles.disabledMarkButton,
+              styles.disabledMarkButton,
             ]}
-            onPress={() => handleMarkToday(item.id)}
+            onPress={() => handleMarkToday(item.id, item.selectedDays)}
             disabled={item.lastMarkedDate === new Date().toDateString()}
           >
             <Text style={styles.markTodayText}>
@@ -173,7 +179,7 @@ export default function CurrentChallenges() {
         <FlatList
           data={currentChallenges}
           renderItem={renderItem}
-          keyExtractor={(item) => item.id}
+          keyExtractor={(item) => `${item.id}_${item.selectedDays}`}
           contentContainerStyle={styles.list}
         />
       ) : (
