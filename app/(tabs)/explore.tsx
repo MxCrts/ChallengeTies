@@ -102,7 +102,7 @@ export default function ExploreScreen() {
       const challengeRef = doc(db, "challenges", challenge.id);
 
       await updateDoc(challengeRef, {
-        participantsCount: increment(1),
+        participantsCount: increment(1), // Ensure atomic increment
       });
 
       console.log(`Challenge "${challenge.title}" taken.`);
@@ -144,7 +144,7 @@ export default function ExploreScreen() {
             {item.category || "Miscellaneous"}
           </Text>
           <Text style={styles.participantsCount}>
-            {item.participantsCount} participants
+            {item.participantsCount || 0} participants
           </Text>
         </View>
       </TouchableOpacity>
@@ -155,7 +155,15 @@ export default function ExploreScreen() {
             (savedChallenge) => savedChallenge.id === item.id
           )
             ? removeChallenge(item.id)
-            : addChallenge(item)
+            : addChallenge({
+                id: item.id,
+                title: item.title,
+                category: item.category,
+                description: item.description,
+                imageUrl: item.imageUrl,
+                daysOptions: [], // Ensure this is fetched from Firestore if necessary
+                chatId: item.id, // Use `id` as chatId for now
+              })
         }
       >
         <Ionicons

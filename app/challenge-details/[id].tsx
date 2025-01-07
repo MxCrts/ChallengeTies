@@ -74,14 +74,26 @@ export default function ChallengeDetails() {
           usersTakingChallenge: arrayUnion(auth.currentUser?.uid),
         });
         await takeChallenge(
-          { id, title, category, description, daysOptions, chatId: id },
+          {
+            id,
+            title,
+            category,
+            description,
+            daysOptions,
+            chatId: id,
+            imageUrl: challengeImage || "",
+          },
           selectedDays
         );
         setUserHasTaken(true);
         setModalVisible(false);
-      } catch (error) {
-        console.error("Error taking challenge:", error);
-        Alert.alert("Error", "Unable to join the challenge. Please try again.");
+      } catch (err) {
+        const errorMessage =
+          err instanceof Error
+            ? err.message
+            : "Unable to join the challenge. Please try again.";
+        console.error("Error taking challenge:", errorMessage);
+        Alert.alert("Error", errorMessage);
       } finally {
         setLoading(false);
       }
@@ -116,6 +128,7 @@ export default function ChallengeDetails() {
         description,
         daysOptions,
         chatId: id,
+        imageUrl: challengeImage ?? "", // Provide an empty string as a fallback
       });
     }
   };

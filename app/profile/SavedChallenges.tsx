@@ -11,7 +11,10 @@ import {
 } from "react-native";
 import { Ionicons } from "@expo/vector-icons";
 import Animated, { FadeIn } from "react-native-reanimated";
-import { useSavedChallenges } from "../../context/SavedChallengesContext";
+import {
+  useSavedChallenges,
+  Challenge,
+} from "../../context/SavedChallengesContext";
 import { useRouter } from "expo-router";
 
 export default function SavedChallenges() {
@@ -45,15 +48,23 @@ export default function SavedChallenges() {
           text: "Remove",
           style: "destructive",
           onPress: async () => {
-            await removeChallenge(id);
-            await loadSavedChallenges();
+            try {
+              await removeChallenge(id);
+              await loadSavedChallenges();
+            } catch (error) {
+              console.error("Error removing challenge:", error);
+              Alert.alert(
+                "Error",
+                "Failed to remove the challenge. Please try again."
+              );
+            }
           },
         },
       ]
     );
   };
 
-  const renderChallenge = ({ item }: { item: any }) => (
+  const renderChallenge = ({ item }: { item: Challenge }) => (
     <Animated.View entering={FadeIn} style={styles.challengeItem}>
       <TouchableOpacity
         style={styles.challengeContent}
@@ -73,6 +84,9 @@ export default function SavedChallenges() {
           <Image
             source={{ uri: item.imageUrl }}
             style={styles.challengeImage}
+            onError={(error) =>
+              console.error(`Error loading image for ${item.title}:`, error)
+            }
           />
         ) : (
           <View style={styles.placeholderImage}>

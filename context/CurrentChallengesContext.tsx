@@ -19,6 +19,7 @@ import {
   increment,
 } from "firebase/firestore";
 
+import { Alert } from "react-native";
 interface Challenge {
   id: string;
   title: string;
@@ -26,14 +27,14 @@ interface Challenge {
   description?: string;
   imageUrl?: string;
   participantsCount?: number;
-  daysOptions: number[]; // Days choices: e.g., [10, 30, 60]
-  chatId: string; // Shared chat ID
+  daysOptions: number[];
+  chatId: string;
 }
 
 interface CurrentChallenge extends Challenge {
-  selectedDays: number; // User-selected duration
-  completedDays: number; // Progress tracking
-  lastMarkedDate?: string | null; // Last date marked as completed
+  selectedDays: number;
+  completedDays: number;
+  lastMarkedDate?: string | null;
 }
 
 interface CurrentChallengesContextType {
@@ -64,12 +65,18 @@ export const CurrentChallengesProvider: React.FC<{
         where("userId", "==", userId)
       );
       const querySnapshot = await getDocs(q);
-      const challenges = querySnapshot.docs.map((doc) => ({
-        id: doc.id.split("_")[1], // Extract challenge ID
-        selectedDays: parseInt(doc.id.split("_")[2]), // Extract selectedDays
-        ...doc.data(),
-      })) as CurrentChallenge[];
-
+      const challenges = querySnapshot.docs.map((doc) => {
+        const [_, challengeId, selectedDays] = doc.id.split("_");
+        const baseChallenge = doc.data() as Omit<
+          CurrentChallenge,
+          "id" | "selectedDays"
+        >;
+        return {
+          id: challengeId,
+          selectedDays: parseInt(selectedDays, 10),
+          ...baseChallenge,
+        };
+      });
       setCurrentChallenges(challenges);
     } catch (error) {
       console.error("Error loading current challenges:", error);
@@ -78,9 +85,18 @@ export const CurrentChallengesProvider: React.FC<{
 
   const takeChallenge = async (challenge: Challenge, selectedDays: number) => {
     const userId = auth.currentUser?.uid;
-    if (!userId) return;
+    if (!userId) {
+      console.error("User not authenticated.");
+      return;
+    }
 
     try {
+      if (!challenge.imageUrl) {
+        throw new Error(
+          `imageUrl is missing for challenge with ID: ${challenge.id}`
+        );
+      }
+
       const challengeRef = doc(
         db,
         "currentChallenges",
@@ -88,13 +104,24 @@ export const CurrentChallengesProvider: React.FC<{
       );
       const globalChallengeRef = doc(db, "challenges", challenge.id);
 
-      await setDoc(challengeRef, {
+      const challengeData = {
         userId,
-        ...challenge,
+        id: challenge.id,
+        title: challenge.title,
+        category: challenge.category,
+        description: challenge.description,
+        imageUrl: challenge.imageUrl, // Ensure this is valid
+        chatId: challenge.chatId,
+        daysOptions: challenge.daysOptions,
         selectedDays,
         completedDays: 0,
         lastMarkedDate: null,
-      });
+      };
+
+      // Debugging: Log the data being sent
+      console.log("Saving challenge with data:", challengeData);
+
+      await setDoc(challengeRef, challengeData);
 
       await updateDoc(globalChallengeRef, {
         participantsCount: increment(1),
@@ -106,6 +133,7 @@ export const CurrentChallengesProvider: React.FC<{
       ]);
     } catch (error) {
       console.error("Error taking challenge:", error);
+      Alert.alert("Error", "Failed to take challenge. Please try again.");
     }
   };
 
@@ -122,7 +150,6 @@ export const CurrentChallengesProvider: React.FC<{
       const globalChallengeRef = doc(db, "challenges", id);
 
       await deleteDoc(challengeRef);
-
       await updateDoc(globalChallengeRef, {
         participantsCount: increment(-1),
       });
