@@ -1,4 +1,6 @@
 import React, { useState, useEffect } from "react";
+import { useRouter } from "expo-router";
+
 import {
   View,
   Text,
@@ -16,7 +18,14 @@ import Animated, {
   useAnimatedStyle,
   withTiming,
 } from "react-native-reanimated";
-import { doc, getDoc } from "firebase/firestore";
+import {
+  doc,
+  getDoc,
+  collection,
+  getDocs,
+  query,
+  where,
+} from "firebase/firestore";
 import { auth, db } from "../../constants/firebase-config";
 import { useNavigation } from "@react-navigation/native";
 
@@ -31,7 +40,20 @@ const ProfileScreen = () => {
     challengesCompleted: 0,
     challengesOngoing: 0,
   });
+  const router = useRouter();
+
   const [isLoading, setIsLoading] = useState(true);
+  const [myChallenges, setMyChallenges] = useState<
+    {
+      id: string;
+      title: string;
+      category: string;
+      description: string;
+      imageUrl?: string | null;
+    }[]
+  >([]);
+
+  const [loadingChallenges, setLoadingChallenges] = useState(false);
 
   const scrollY = useSharedValue(0);
 
@@ -87,8 +109,34 @@ const ProfileScreen = () => {
     }
   };
 
+  const fetchMyChallenges = async () => {
+    try {
+      const userId = auth.currentUser?.uid;
+      if (!userId) {
+        throw new Error("User not authenticated.");
+      }
+
+      const challengesRef = collection(db, "challenges");
+      const q = query(challengesRef, where("creatorId", "==", userId));
+      const querySnapshot = await getDocs(q);
+
+      const challenges = querySnapshot.docs.map((doc) => ({
+        id: doc.id,
+        title: doc.data().title || "Untitled Challenge",
+        category: doc.data().category || "Uncategorized",
+        description: doc.data().description || "No description available",
+        imageUrl: doc.data().imageUrl || null,
+      }));
+
+      setMyChallenges(challenges); // Set the formatted challenges
+    } catch (error) {
+      console.error("Error fetching my challenges:", error);
+    }
+  };
+
   useEffect(() => {
     fetchUserData();
+    fetchMyChallenges();
   }, []);
 
   const renderSection = ({ item }: { item: any }) => (
@@ -98,6 +146,34 @@ const ProfileScreen = () => {
     >
       <Ionicons name={item.icon} size={40} color="#007bff" />
       <Text style={styles.sectionText}>{item.name}</Text>
+    </TouchableOpacity>
+  );
+
+  const renderChallenge = ({ item }: { item: any }) => (
+    <TouchableOpacity
+      style={styles.challengeCard}
+      onPress={() =>
+        router.push({
+          pathname: "/challenge-details/[id]",
+          params: {
+            id: item.id, // Challenge ID (required)
+            title: item.title, // Optional
+            category: item.category, // Optional
+            description: item.description, // Optional
+          },
+        })
+      }
+    >
+      <Image
+        source={
+          item.imageUrl
+            ? { uri: item.imageUrl }
+            : require("../../public/images/default-challenge.webp")
+        }
+        style={styles.challengeImage}
+        resizeMode="cover"
+      />
+      <Text style={styles.challengeTitle}>{item.title}</Text>
     </TouchableOpacity>
   );
 
@@ -156,6 +232,27 @@ const ProfileScreen = () => {
                 numColumns={2}
                 columnWrapperStyle={styles.sectionRow}
               />
+            </View>
+
+            {/* My Challenges Section */}
+            <View style={styles.myChallengesContainer}>
+              <Text style={styles.myChallengesTitle}>My Challenges</Text>
+              {loadingChallenges ? (
+                <ActivityIndicator size="small" color="#007bff" />
+              ) : myChallenges.length > 0 ? (
+                <FlatList
+                  data={myChallenges}
+                  renderItem={renderChallenge}
+                  keyExtractor={(item) => item.id}
+                  horizontal
+                  showsHorizontalScrollIndicator={false}
+                  contentContainerStyle={styles.challengeList}
+                />
+              ) : (
+                <Text style={styles.noChallengesText}>
+                  You haven't created any challenges yet.
+                </Text>
+              )}
             </View>
           </View>
         )}
@@ -248,6 +345,49 @@ const styles = StyleSheet.create({
     marginTop: 10,
     fontSize: 16,
     color: "#007bff",
+  },
+  myChallengesContainer: {
+    marginTop: 30,
+    paddingHorizontal: 20,
+  },
+  myChallengesTitle: {
+    fontSize: 20,
+    fontWeight: "bold",
+    color: "#007bff",
+    marginBottom: 10,
+  },
+  challengeList: {
+    paddingVertical: 10,
+  },
+  challengeCard: {
+    backgroundColor: "#ffffff",
+    marginRight: 15,
+    borderRadius: 12,
+    shadowColor: "#000",
+    shadowOffset: { width: 0, height: 3 },
+    shadowOpacity: 0.1,
+    shadowRadius: 4.65,
+    elevation: 4,
+    width: 150,
+    alignItems: "center",
+    padding: 10,
+  },
+  challengeImage: {
+    width: "100%",
+    height: 100,
+    borderRadius: 10,
+  },
+  challengeTitle: {
+    fontSize: 14,
+    fontWeight: "bold",
+    color: "#333",
+    textAlign: "center",
+    marginTop: 8,
+  },
+  noChallengesText: {
+    textAlign: "center",
+    color: "#9e9e9e",
+    fontSize: 14,
   },
 });
 

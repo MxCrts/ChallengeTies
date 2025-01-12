@@ -2,23 +2,21 @@ import React, { useState, useEffect } from "react";
 import {
   View,
   Text,
-  StyleSheet,
   FlatList,
   TextInput,
   TouchableOpacity,
   ActivityIndicator,
   Alert,
   Image,
+  Modal,
+  ScrollView,
+  StyleSheet,
 } from "react-native";
-import { useRouter, useLocalSearchParams } from "expo-router";
-import {
-  collection,
-  onSnapshot,
-  updateDoc,
-  doc,
-  increment,
-} from "firebase/firestore";
-import { db } from "../../constants/firebase-config";
+import { Picker } from "@react-native-picker/picker";
+import { useRouter } from "expo-router";
+import { collection, onSnapshot, addDoc } from "firebase/firestore";
+import * as ImagePicker from "expo-image-picker";
+import { db, auth } from "../../constants/firebase-config";
 import { Ionicons } from "@expo/vector-icons";
 import { useSavedChallenges } from "../../context/SavedChallengesContext";
 import Animated, { FadeInUp } from "react-native-reanimated";
@@ -26,8 +24,9 @@ import Animated, { FadeInUp } from "react-native-reanimated";
 interface Challenge {
   id: string;
   title: string;
-  category?: string;
-  description?: string;
+  description: string;
+  category: string;
+  days: number;
   imageUrl?: string;
   participantsCount?: number;
 }
@@ -37,16 +36,31 @@ export default function ExploreScreen() {
   const [searchQuery, setSearchQuery] = useState("");
   const [filter, setFilter] = useState("All");
   const [loading, setLoading] = useState(true);
+  const [modalVisible, setModalVisible] = useState(false);
+  const [categoryVisible, setCategoryVisible] = useState(false);
+  const [newChallenge, setNewChallenge] = useState<Partial<Challenge>>({
+    title: "",
+    description: "",
+    category: "Health",
+    days: undefined,
+  });
   const { savedChallenges, addChallenge, removeChallenge } =
     useSavedChallenges();
   const router = useRouter();
-  const params = useLocalSearchParams();
 
-  useEffect(() => {
-    if (params.filter) {
-      setFilter(params.filter as string);
-    }
-  }, [params.filter]);
+  const categories = [
+    "All",
+    "Health",
+    "Fitness",
+    "Finance",
+    "Productivity",
+    "Creativity",
+    "Education",
+    "Career",
+    "Lifestyle",
+    "Social",
+    "Miscellaneous",
+  ];
 
   useEffect(() => {
     const unsubscribe = onSnapshot(
@@ -55,8 +69,9 @@ export default function ExploreScreen() {
         const fetchedChallenges = querySnapshot.docs.map((doc) => ({
           id: doc.id,
           title: doc.data().title || "Untitled Challenge",
-          category: doc.data().category || "Miscellaneous",
           description: doc.data().description || "No description available",
+          category: doc.data().category || "Miscellaneous",
+          days: doc.data().days || 1,
           imageUrl: doc.data().imageUrl || null,
           participantsCount: doc.data().participantsCount || 0,
         })) as Challenge[];
@@ -74,21 +89,6 @@ export default function ExploreScreen() {
     return () => unsubscribe();
   }, []);
 
-  const categories = [
-    "All",
-    "Health",
-    "Fitness",
-    "Finance",
-    "Productivity",
-    "Special",
-    "Creativity",
-    "Education",
-    "Career",
-    "Lifestyle",
-    "Social",
-    "Miscellaneous",
-  ];
-
   const filteredChallenges = challenges.filter((challenge) => {
     const matchesSearch = challenge.title
       .toLowerCase()
@@ -97,19 +97,9 @@ export default function ExploreScreen() {
     return matchesSearch && matchesFilter;
   });
 
-  const takeChallenge = async (challenge: Challenge) => {
-    try {
-      const challengeRef = doc(db, "challenges", challenge.id);
-
-      await updateDoc(challengeRef, {
-        participantsCount: increment(1), // Ensure atomic increment
-      });
-
-      console.log(`Challenge "${challenge.title}" taken.`);
-    } catch (error) {
-      console.error("Error taking challenge:", error);
-      Alert.alert("Error", "Failed to take challenge. Please try again.");
-    }
+  const handleResetFilters = () => {
+    setSearchQuery("");
+    setFilter("All");
   };
 
   const renderChallengeItem = ({ item }: { item: Challenge }) => (
@@ -140,9 +130,7 @@ export default function ExploreScreen() {
         )}
         <View>
           <Text style={styles.challengeTitle}>{item.title}</Text>
-          <Text style={styles.challengeCategory}>
-            {item.category || "Miscellaneous"}
-          </Text>
+          <Text style={styles.challengeCategory}>{item.category}</Text>
           <Text style={styles.participantsCount}>
             {item.participantsCount || 0} participants
           </Text>
@@ -161,8 +149,8 @@ export default function ExploreScreen() {
                 category: item.category,
                 description: item.description,
                 imageUrl: item.imageUrl,
-                daysOptions: [], // Ensure this is fetched from Firestore if necessary
-                chatId: item.id, // Use `id` as chatId for now
+                daysOptions: [],
+                chatId: item.id,
               })
         }
       >
@@ -218,6 +206,10 @@ export default function ExploreScreen() {
           </TouchableOpacity>
         ))}
       </View>
+      <TouchableOpacity style={styles.resetButton} onPress={handleResetFilters}>
+        <Ionicons name="refresh-outline" size={24} color="#fff" />
+        <Text style={styles.resetText}>Reset Filters</Text>
+      </TouchableOpacity>
       {loading ? (
         <View style={styles.loadingContainer}>
           <ActivityIndicator size="large" color="#007bff" />
@@ -251,6 +243,7 @@ const styles = StyleSheet.create({
     paddingHorizontal: 12,
     backgroundColor: "#2C2C2E",
     color: "#fff",
+    fontSize: 16,
   },
   filterContainer: {
     flexDirection: "row",
@@ -277,6 +270,57 @@ const styles = StyleSheet.create({
     color: "#fff",
     fontWeight: "bold",
   },
+  resetButton: {
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "center",
+    paddingVertical: 10,
+    borderRadius: 8,
+    backgroundColor: "#ff3b30",
+    marginBottom: 16,
+  },
+  resetText: {
+    fontSize: 16,
+    color: "#fff",
+    fontWeight: "bold",
+    marginLeft: 8,
+  },
+  loadingContainer: {
+    flex: 1,
+    justifyContent: "center",
+    alignItems: "center",
+  },
+  challengeList: {
+    paddingBottom: 20,
+  },
+  noResults: {
+    fontSize: 16,
+    textAlign: "center",
+    marginTop: 20,
+    color: "#aaa",
+  },
+  challengeContent: {
+    flex: 1,
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "space-between",
+    backgroundColor: "#2C2C2E",
+    borderRadius: 10,
+    padding: 10,
+    shadowColor: "#000",
+    shadowOffset: { width: 0, height: 3 },
+    shadowOpacity: 0.2,
+    shadowRadius: 4,
+  },
+  savedIndicator: {
+    padding: 8,
+    alignSelf: "center",
+    backgroundColor: "#3A3A3C",
+    borderRadius: 10,
+    alignItems: "center",
+    justifyContent: "center",
+    elevation: 3,
+  },
   challengeCard: {
     flexDirection: "row",
     alignItems: "center",
@@ -284,7 +328,11 @@ const styles = StyleSheet.create({
     padding: 16,
     borderRadius: 10,
     backgroundColor: "#2C2C2E",
-    elevation: 3,
+    shadowColor: "#000",
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.3,
+    shadowRadius: 4,
+    elevation: 5,
   },
   challengeImage: {
     width: 70,
@@ -303,26 +351,6 @@ const styles = StyleSheet.create({
   imagePlaceholderText: {
     color: "#bbb",
     fontSize: 12,
-  },
-  challengeContent: {
-    flex: 1,
-  },
-  savedIndicator: {
-    padding: 8,
-  },
-  loadingContainer: {
-    flex: 1,
-    justifyContent: "center",
-    alignItems: "center",
-  },
-  challengeList: {
-    paddingBottom: 20,
-  },
-  noResults: {
-    fontSize: 16,
-    textAlign: "center",
-    marginTop: 20,
-    color: "#aaa",
   },
   challengeTitle: {
     fontSize: 18,

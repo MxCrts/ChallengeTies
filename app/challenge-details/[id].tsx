@@ -1,4 +1,5 @@
 import React, { useState, useEffect } from "react";
+import { useRouter } from "expo-router";
 import {
   View,
   Text,
@@ -14,16 +15,9 @@ import { Picker } from "@react-native-picker/picker";
 import { Ionicons } from "@expo/vector-icons";
 import { useSavedChallenges } from "../../context/SavedChallengesContext";
 import { useCurrentChallenges } from "../../context/CurrentChallengesContext";
-import { useRoute } from "@react-navigation/native";
-import {
-  doc,
-  updateDoc,
-  onSnapshot,
-  arrayUnion,
-  arrayRemove,
-} from "firebase/firestore";
+import { useRoute, useNavigation } from "@react-navigation/native";
+import { doc, onSnapshot } from "firebase/firestore";
 import { db, auth } from "../../constants/firebase-config";
-import { useRouter } from "expo-router";
 
 type RouteParams = {
   id: string;
@@ -34,6 +28,7 @@ type RouteParams = {
 
 export default function ChallengeDetails() {
   const route = useRoute();
+  const navigation = useNavigation();
   const router = useRouter();
   const { id, title, category, description } = route.params as RouteParams;
 
@@ -55,13 +50,15 @@ export default function ChallengeDetails() {
     const unsubscribe = onSnapshot(challengeDoc, (docSnap) => {
       if (docSnap.exists()) {
         const data = docSnap.data();
-        const users = data.usersTakingChallenge || [];
-        setUserHasTaken(users.includes(auth.currentUser?.uid));
-        setUserCount(users.length);
-        setChallengeImage(data.imageUrl);
+        setUserCount(data.participantsCount || 0);
+        setChallengeImage(data.imageUrl || null);
         setDaysOptions(data.daysOptions || [10, 30, 60, 365]);
+        setUserHasTaken(
+          (data.usersTakingChallenge || []).includes(auth.currentUser?.uid)
+        );
       }
     });
+
     return () => unsubscribe();
   }, [id]);
 
@@ -69,10 +66,6 @@ export default function ChallengeDetails() {
     if (!userHasTaken) {
       try {
         setLoading(true);
-        const challengeDoc = doc(db, "challenges", id);
-        await updateDoc(challengeDoc, {
-          usersTakingChallenge: arrayUnion(auth.currentUser?.uid),
-        });
         await takeChallenge(
           {
             id,
@@ -88,48 +81,37 @@ export default function ChallengeDetails() {
         setUserHasTaken(true);
         setModalVisible(false);
       } catch (err) {
-        const errorMessage =
+        console.error("Error taking challenge:", err);
+        Alert.alert(
+          "Error",
           err instanceof Error
             ? err.message
-            : "Unable to join the challenge. Please try again.";
-        console.error("Error taking challenge:", errorMessage);
-        Alert.alert("Error", errorMessage);
+            : "Unable to join the challenge. Please try again."
+        );
       } finally {
         setLoading(false);
       }
     }
   };
 
-  const handleRemoveChallenge = async () => {
-    try {
-      setLoading(true);
-      const challengeDoc = doc(db, "challenges", id);
-      await updateDoc(challengeDoc, {
-        usersTakingChallenge: arrayRemove(auth.currentUser?.uid),
-      });
-      await removeCurrentChallenge(id, selectedDays);
-      setUserHasTaken(false);
-    } catch (error) {
-      console.error("Error removing challenge:", error);
-      Alert.alert("Error", "Unable to remove the challenge. Please try again.");
-    } finally {
-      setLoading(false);
-    }
-  };
-
   const handleSaveChallenge = async () => {
-    if (isSaved(id)) {
-      await removeChallenge(id);
-    } else {
-      await addChallenge({
-        id,
-        title,
-        category,
-        description,
-        daysOptions,
-        chatId: id,
-        imageUrl: challengeImage ?? "", // Provide an empty string as a fallback
-      });
+    try {
+      if (isSaved(id)) {
+        await removeChallenge(id);
+      } else {
+        await addChallenge({
+          id,
+          title,
+          category,
+          description,
+          daysOptions,
+          chatId: id,
+          imageUrl: challengeImage || "",
+        });
+      }
+    } catch (err) {
+      console.error("Error saving challenge:", err);
+      Alert.alert("Error", "Failed to save the challenge. Please try again.");
     }
   };
 
@@ -190,19 +172,26 @@ export default function ChallengeDetails() {
             {userHasTaken ? "Challenge Taken" : "Take the Challenge"}
           </Text>
         </TouchableOpacity>
+
         {userHasTaken && (
           <TouchableOpacity
-            style={styles.removeChallengeButton}
-            onPress={handleRemoveChallenge}
+            style={styles.chatButton}
+            onPress={() =>
+              router.push({
+                pathname: "/challenge-chat/[id]",
+                params: {
+                  id: id, // Challenge ID
+                  title: title, // Challenge Title
+                },
+              })
+            }
           >
-            <Text style={styles.removeChallengeButtonText}>
-              Remove Challenge
-            </Text>
+            <Text style={styles.chatButtonText}>Join Chat</Text>
           </TouchableOpacity>
         )}
+
         <Text style={styles.userCountText}>
-          {userCount} {userCount === 1 ? "person" : "people"} taking this
-          challenge
+          {userCount} {userCount === 1 ? "participant" : "participants"}
         </Text>
       </View>
 
@@ -378,5 +367,17 @@ const styles = StyleSheet.create({
   cancelButtonText: {
     color: "#fff",
     fontWeight: "bold",
+  },
+  chatButton: {
+    marginTop: 16,
+    backgroundColor: "#007bff",
+    padding: 12,
+    borderRadius: 8,
+    alignItems: "center",
+  },
+  chatButtonText: {
+    color: "#fff",
+    fontWeight: "bold",
+    fontSize: 16,
   },
 });

@@ -10,16 +10,19 @@ import {
   collection,
   doc,
   setDoc,
+  getDoc,
+  updateDoc,
   deleteDoc,
   getDocs,
-  getDoc,
+  arrayRemove,
+  arrayUnion,
   query,
   where,
-  updateDoc,
-  increment,
+  runTransaction,
 } from "firebase/firestore";
 
 import { Alert } from "react-native";
+
 interface Challenge {
   id: string;
   title: string;
@@ -91,18 +94,12 @@ export const CurrentChallengesProvider: React.FC<{
     }
 
     try {
-      if (!challenge.imageUrl) {
-        throw new Error(
-          `imageUrl is missing for challenge with ID: ${challenge.id}`
-        );
-      }
-
-      const challengeRef = doc(
+      const challengeRef = doc(db, "challenges", challenge.id);
+      const currentChallengeRef = doc(
         db,
         "currentChallenges",
         `${userId}_${challenge.id}_${selectedDays}`
       );
-      const globalChallengeRef = doc(db, "challenges", challenge.id);
 
       const challengeData = {
         userId,
@@ -110,7 +107,7 @@ export const CurrentChallengesProvider: React.FC<{
         title: challenge.title,
         category: challenge.category,
         description: challenge.description,
-        imageUrl: challenge.imageUrl, // Ensure this is valid
+        imageUrl: challenge.imageUrl,
         chatId: challenge.chatId,
         daysOptions: challenge.daysOptions,
         selectedDays,
@@ -118,19 +115,34 @@ export const CurrentChallengesProvider: React.FC<{
         lastMarkedDate: null,
       };
 
-      // Debugging: Log the data being sent
-      console.log("Saving challenge with data:", challengeData);
+      console.log("Preparing to save challenge data:", challengeData);
 
-      await setDoc(challengeRef, challengeData);
+      await runTransaction(db, async (transaction) => {
+        const globalChallengeDoc = await transaction.get(challengeRef);
+        if (!globalChallengeDoc.exists()) {
+          throw new Error("Challenge does not exist.");
+        }
 
-      await updateDoc(globalChallengeRef, {
-        participantsCount: increment(1),
+        const globalData = globalChallengeDoc.data();
+        const currentParticipants = globalData?.participantsCount || 0;
+
+        // Update global challenge data
+        transaction.update(challengeRef, {
+          participantsCount: currentParticipants + 1,
+          usersTakingChallenge: arrayUnion(userId),
+        });
+
+        // Save to currentChallenges collection
+        transaction.set(currentChallengeRef, challengeData);
       });
 
+      // Update local state
       setCurrentChallenges((prev) => [
         ...prev,
         { ...challenge, selectedDays, completedDays: 0, lastMarkedDate: null },
       ]);
+
+      console.log("Challenge successfully saved to Firestore and local state.");
     } catch (error) {
       console.error("Error taking challenge:", error);
       Alert.alert("Error", "Failed to take challenge. Please try again.");
@@ -142,23 +154,43 @@ export const CurrentChallengesProvider: React.FC<{
     if (!userId) return;
 
     try {
-      const challengeRef = doc(
+      const challengeRef = doc(db, "challenges", id);
+      const currentChallengeRef = doc(
         db,
         "currentChallenges",
         `${userId}_${id}_${selectedDays}`
       );
-      const globalChallengeRef = doc(db, "challenges", id);
 
-      await deleteDoc(challengeRef);
-      await updateDoc(globalChallengeRef, {
-        participantsCount: increment(-1),
+      await runTransaction(db, async (transaction) => {
+        const globalChallengeDoc = await transaction.get(challengeRef);
+        if (!globalChallengeDoc.exists()) {
+          throw new Error("Challenge does not exist.");
+        }
+
+        const globalData = globalChallengeDoc.data();
+        const currentParticipants = globalData?.participantsCount || 0;
+
+        // Update global challenge data
+        transaction.update(challengeRef, {
+          participantsCount: Math.max(currentParticipants - 1, 0),
+          usersTakingChallenge: arrayRemove(userId),
+        });
+
+        // Remove from currentChallenges collection
+        transaction.delete(currentChallengeRef);
       });
 
+      // Update local state
       setCurrentChallenges((prev) =>
         prev.filter((c) => !(c.id === id && c.selectedDays === selectedDays))
       );
+
+      console.log(
+        "Challenge successfully removed from Firestore and local state."
+      );
     } catch (error) {
       console.error("Error removing challenge:", error);
+      Alert.alert("Error", "Failed to remove challenge. Please try again.");
     }
   };
 

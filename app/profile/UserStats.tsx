@@ -28,7 +28,7 @@ export default function UserStats() {
       const totalSaved = savedChallenges.length;
       const totalOngoing = currentChallenges.length;
       const totalCompleted = currentChallenges.filter(
-        (challenge) => challenge.completedDays === challenge.totalDays
+        (challenge) => challenge.completedDays === challenge.selectedDays
       ).length;
       const successRate =
         totalOngoing + totalCompleted > 0

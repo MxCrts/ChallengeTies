@@ -23,6 +23,7 @@ export default function CurrentChallenges() {
     markToday,
     removeChallenge,
   } = useCurrentChallenges();
+
   const [isLoading, setIsLoading] = React.useState(false);
   const [error, setError] = React.useState<string | null>(null);
 
@@ -87,7 +88,9 @@ export default function CurrentChallenges() {
   const renderItem = useCallback(
     ({ item }: { item: any }) => (
       <Swipeable
-        renderRightActions={() => renderRightActions(item.id, item.selectedDays)}
+        renderRightActions={() =>
+          renderRightActions(item.id, item.selectedDays)
+        }
         overshootRight={false}
       >
         <Animated.View
@@ -116,7 +119,10 @@ export default function CurrentChallenges() {
                 source={{ uri: item.imageUrl }}
                 style={styles.challengeImage}
                 onError={(e) =>
-                  console.error(`Error loading image for ${item.title}:`, e.nativeEvent.error)
+                  console.error(
+                    `Error loading image for ${item.title}:`,
+                    e.nativeEvent.error
+                  )
                 }
               />
             ) : (
@@ -135,7 +141,7 @@ export default function CurrentChallenges() {
             style={[
               styles.markTodayButton,
               item.lastMarkedDate === new Date().toDateString() &&
-              styles.disabledMarkButton,
+                styles.disabledMarkButton,
             ]}
             onPress={() => handleMarkToday(item.id, item.selectedDays)}
             disabled={item.lastMarkedDate === new Date().toDateString()}
@@ -195,23 +201,27 @@ const styles = StyleSheet.create({
   container: {
     flex: 1,
     padding: 20,
-    backgroundColor: "#f5f5f5",
+    backgroundColor: "#f9fafa", // Light neutral background
   },
   title: {
-    fontSize: 24,
+    fontSize: 26,
     fontWeight: "bold",
-    color: "#4caf50",
+    color: "#3b82f6", // Primary blue color
     textAlign: "center",
-    marginBottom: 20,
+    marginBottom: 15,
   },
   challengeItem: {
     flexDirection: "row",
     alignItems: "center",
-    backgroundColor: "#e8f5e9",
+    backgroundColor: "#ffffff", // White card background
     padding: 15,
     marginBottom: 15,
-    borderRadius: 10,
-    elevation: 2,
+    borderRadius: 15,
+    shadowColor: "#000",
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.1,
+    shadowRadius: 6,
+    elevation: 3, // Adds shadow for Android
   },
   challengeContent: {
     flex: 1,
@@ -219,16 +229,16 @@ const styles = StyleSheet.create({
     alignItems: "center",
   },
   challengeImage: {
-    width: 60,
-    height: 60,
-    borderRadius: 8,
+    width: 70,
+    height: 70,
+    borderRadius: 10,
     marginRight: 15,
   },
   imagePlaceholder: {
-    width: 60,
-    height: 60,
-    borderRadius: 8,
-    backgroundColor: "#c8e6c9",
+    width: 70,
+    height: 70,
+    borderRadius: 10,
+    backgroundColor: "#e5e7eb", // Neutral gray for placeholder
     justifyContent: "center",
     alignItems: "center",
   },
@@ -236,32 +246,34 @@ const styles = StyleSheet.create({
     flex: 1,
   },
   challengeTitle: {
-    fontSize: 16,
+    fontSize: 18,
     fontWeight: "bold",
-    color: "#2e7d32",
+    color: "#1f2937", // Darker neutral for better readability
     marginBottom: 5,
   },
   challengeStatus: {
     fontSize: 14,
-    color: "#558b2f",
+    color: "#6b7280", // Neutral gray for secondary text
   },
   markTodayButton: {
-    paddingVertical: 5,
-    paddingHorizontal: 10,
+    paddingVertical: 6,
+    paddingHorizontal: 12,
     borderRadius: 8,
-    backgroundColor: "#4caf50",
+    backgroundColor: "#22c55e", // Green for action
+    justifyContent: "center",
+    alignItems: "center",
   },
   disabledMarkButton: {
-    backgroundColor: "#9e9e9e",
+    backgroundColor: "#9ca3af", // Gray for disabled state
   },
   markTodayText: {
-    color: "#fff",
+    color: "#ffffff", // White text
     fontWeight: "bold",
   },
   swipeActionsContainer: {
     justifyContent: "center",
     alignItems: "center",
-    backgroundColor: "#ff3b30",
+    backgroundColor: "#ef4444", // Red for delete action
     width: 75,
     height: "100%",
     borderRadius: 10,
@@ -280,7 +292,7 @@ const styles = StyleSheet.create({
   },
   loadingText: {
     marginTop: 10,
-    color: "#2e7d32",
+    color: "#3b82f6", // Primary blue color
     fontSize: 16,
   },
   errorContainer: {
@@ -291,18 +303,19 @@ const styles = StyleSheet.create({
   },
   errorText: {
     fontSize: 18,
-    color: "#ff3b30",
+    color: "#ef4444", // Red for errors
     textAlign: "center",
     marginBottom: 20,
   },
   retryText: {
-    color: "#4caf50",
+    color: "#3b82f6", // Primary blue for retry
     fontSize: 16,
   },
   noChallenges: {
     fontSize: 16,
     textAlign: "center",
-    color: "#9e9e9e",
+    color: "#9ca3af", // Neutral gray for no data text
+    marginTop: 20,
   },
   list: {
     paddingBottom: 20,
