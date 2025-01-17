@@ -3,19 +3,18 @@ import {
   View,
   Text,
   StyleSheet,
-  FlatList,
   TouchableOpacity,
   Image,
   Dimensions,
   ActivityIndicator,
-  Alert,
+  ScrollView,
+  ImageBackground,
 } from "react-native";
 import { useRouter } from "expo-router";
 import { Audio } from "expo-av";
 import { collection, getDocs } from "firebase/firestore";
 import { db } from "../../constants/firebase-config";
-import { Ionicons } from "@expo/vector-icons";
-import Animated, { FadeInUp } from "react-native-reanimated";
+import Swiper from "react-native-swiper";
 
 const { width } = Dimensions.get("window");
 
@@ -23,9 +22,19 @@ interface Challenge {
   id: string;
   title: string;
   category?: string;
-  totalDays?: number;
   description?: string;
+  imageUrl?: string;
 }
+
+type NavigationPath =
+  | "/new-features"
+  | "/tips"
+  | "/explore"
+  | "/leaderboard"
+  | {
+    pathname: "/challenge-details/[id]";
+    params: { id: string; title: string; category: string; description: string };
+  };
 
 export default function HomeScreen() {
   const [challenges, setChallenges] = useState<Challenge[]>([]);
@@ -44,12 +53,12 @@ export default function HomeScreen() {
           title: doc.data().title || "Untitled Challenge",
           category: doc.data().category || "Uncategorized",
           description: doc.data().description || "No description available",
+          imageUrl: doc.data().imageUrl || null,
         })) as Challenge[];
 
-        setChallenges(fetchedChallenges.slice(0, 3));
+        setChallenges(fetchedChallenges);
       } catch (error) {
         console.error("Error fetching challenges:", error);
-        Alert.alert("Error", "Failed to fetch challenges. Please try again.");
       } finally {
         setLoading(false);
       }
@@ -79,38 +88,43 @@ export default function HomeScreen() {
     };
   }, [musicEnabled]);
 
-  const renderChallenge = ({ item }: { item: Challenge }) => (
-    <Animated.View entering={FadeInUp} style={styles.challengeCard}>
-      <View style={styles.cardImageContainer}>
-        <Image
-          source={require("../../assets/images/challenge-placeholder.png")} // Replace with actual image
-          style={styles.cardImage}
-          resizeMode="cover"
-        />
-      </View>
-      <View style={styles.cardContent}>
-        <Text style={styles.challengeTitle} numberOfLines={2}>
-          {item.title}
-        </Text>
-        <Text style={styles.challengeCategory}>{item.category}</Text>
-      </View>
-      <TouchableOpacity
-        style={styles.challengeButton}
-        onPress={() =>
-          router.push({
-            pathname: "/challenge-details/[id]",
-            params: {
-              id: item.id,
-              title: item.title,
-              category: item.category || "Uncategorized",
-              description: item.description || "No description available",
-            },
-          })
+  const handleNavigation = (path: NavigationPath) => {
+    if (typeof path === "string") {
+      router.push(path);
+    } else {
+      router.push(path);
+    }
+  };
+
+  const renderChallenge = (challenge: Challenge) => (
+    <TouchableOpacity
+      key={challenge.id}
+      style={styles.challengeCard}
+      onPress={() =>
+        handleNavigation({
+          pathname: "/challenge-details/[id]",
+          params: {
+            id: challenge.id,
+            title: challenge.title,
+            category: challenge.category || "Uncategorized",
+            description: challenge.description || "No description available",
+          },
+        })
+      }
+    >
+      <Image
+        source={
+          challenge.imageUrl
+            ? { uri: challenge.imageUrl }
+            : require("../../public/images/default-challenge.webp")
         }
-      >
-        <Ionicons name="arrow-forward" size={20} color="#fff" />
-      </TouchableOpacity>
-    </Animated.View>
+        style={styles.challengeImage}
+      />
+      <View style={styles.cardContent}>
+        <Text style={styles.challengeTitle}>{challenge.title}</Text>
+        <Text style={styles.challengeCategory}>{challenge.category}</Text>
+      </View>
+    </TouchableOpacity>
   );
 
   if (loading) {
@@ -124,78 +138,84 @@ export default function HomeScreen() {
 
   return (
     <View style={styles.container}>
-      <View style={styles.headerContainer}>
-        <Image
-          source={require("../../assets/images/logo.png")}
-          style={styles.logo}
-        />
-        <TouchableOpacity
-          style={styles.musicToggle}
-          onPress={() => setMusicEnabled(!musicEnabled)}
+      <ScrollView contentContainerStyle={styles.scrollContent}>
+        {/* Hero Section */}
+        <ImageBackground
+          source={require("../../public/images/backgroundbase.jpg")}
+          style={styles.heroSection}
+          imageStyle={{ resizeMode: "cover", borderBottomLeftRadius: 20, borderBottomRightRadius: 20 }}
         >
-          <Ionicons
-            name={musicEnabled ? "volume-high-outline" : "volume-mute-outline"}
-            size={24}
-            color="#FF9800"
-          />
-        </TouchableOpacity>
-      </View>
+          <View style={styles.heroOverlay} />
+          <Text style={styles.heroTitle}>Welcome to ChallengeTies!</Text>
+          <Text style={styles.heroSubtitle}>Take on challenges and grow every day.</Text>
+          <TouchableOpacity
+            style={styles.heroButton}
+            onPress={() => handleNavigation("/explore")}
+          >
+            <Text style={styles.heroButtonText}>Explore Challenges</Text>
+          </TouchableOpacity>
+        </ImageBackground>
 
-      <Image
-        source={require("../../assets/images/christmas-banner.png")}
-        style={styles.banner}
-        resizeMode="cover"
-      />
+        {/* Carousel Section */}
+        <View style={styles.carouselContainer}>
+          <Text style={styles.sectionHeader}>Trending Challenges</Text>
+          <Swiper
+            style={styles.swiper}
+            autoplay
+            autoplayTimeout={3}
+            loop
+            showsPagination={false}
+          >
+            {challenges.map((challenge) => (
+              <View key={challenge.id} style={styles.slide}>
+                {renderChallenge(challenge)}
+              </View>
+            ))}
+          </Swiper>
+        </View>
 
-      <View style={styles.sectionContainer}>
-        <Text style={styles.sectionHeader}>Explore Special Topics</Text>
-        <FlatList
-          data={[
-            {
-              id: "1",
-              title: "🎄 Special Challenges for the Holidays!",
-              action: () =>
-                router.push({
-                  pathname: "/explore",
-                  params: { filter: "Special" },
-                }),
-            },
-            {
-              id: "2",
-              title: "🚀 New Features Coming Soon!",
-              action: () => router.push("/new-features"),
-            },
-            {
-              id: "3",
-              title: "📈 Achieve Your Goals Faster!",
-              action: () => router.push("/tips"),
-            },
-          ]}
-          keyExtractor={(item) => item.id}
-          renderItem={({ item }) => (
-            <TouchableOpacity style={styles.article} onPress={item.action}>
-              <Text style={styles.articleText}>{item.title}</Text>
+        {/* Links Section */}
+        <View style={styles.linksSection}>
+          <Text style={styles.sectionHeader}>Discover More</Text>
+          <View style={styles.linksContainer}>
+            {["/new-features", "/tips"].map((path) => (
+              <ImageBackground
+                key={path}
+                source={require("../../public/images/backgroundbase.jpg")}
+                style={styles.linkCardBackground}
+                imageStyle={{ borderRadius: 15 }}
+              >
+                <TouchableOpacity
+                  style={styles.linkCard}
+                  onPress={() => handleNavigation(path as NavigationPath)}
+                >
+                  <Text style={styles.linkText}>
+                    {path === "/new-features"
+                      ? "🚀 New Features"
+                      : "📈 Tips & Tricks"}
+                  </Text>
+                </TouchableOpacity>
+              </ImageBackground>
+            ))}
+          </View>
+          <ImageBackground
+            source={require("../../public/images/backgroundbase.jpg")}
+            style={styles.centeredLinkCardBackground}
+            imageStyle={{ borderRadius: 15 }}
+          >
+            <TouchableOpacity
+              style={styles.linkCard}
+              onPress={() => handleNavigation("/leaderboard")}
+            >
+              <Text style={styles.linkText}>🌍 LeaderBoard</Text>
             </TouchableOpacity>
-          )}
-        />
-      </View>
+          </ImageBackground>
+        </View>
+      </ScrollView>
 
-      <View style={styles.sectionContainer}>
-        <Text style={styles.sectionHeader}>Recommended Challenges</Text>
-        <FlatList
-          data={challenges}
-          renderItem={renderChallenge}
-          keyExtractor={(item) => item.id}
-          horizontal
-          showsHorizontalScrollIndicator={false}
-          contentContainerStyle={styles.challengeList}
-        />
-      </View>
-
+      {/* Footer */}
       <View style={styles.footer}>
-        <Text style={styles.footerText}>
-          © 2024 ChallengeTies. All Rights Reserved.
-        </Text>
+        <Text style={styles.footerText}>© 2025 ChallengeTies. All Rights Reserved.</Text>
       </View>
     </View>
   );
@@ -204,118 +224,119 @@ export default function HomeScreen() {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: "#F9F9F9",
+    backgroundColor: "#F5F5F5",
   },
-  logoContainer: {
+  scrollContent: {
+    paddingBottom: 60,
+  },
+  heroSection: {
+    height: 220,
+    justifyContent: "center",
     alignItems: "center",
-    marginTop: 10,
-    marginBottom: 10,
+    position: "relative",
   },
-  logo: {
-    width: 120,
-    height: 120,
+  heroOverlay: {
+    ...StyleSheet.absoluteFillObject,
+    backgroundColor: "rgba(0, 0, 0, 0.4)",
   },
-  banner: {
-    width: width - 40,
-    height: 150,
-    alignSelf: "center",
-    marginBottom: 10,
-    borderRadius: 10,
-    overflow: "hidden",
+  heroTitle: {
+    fontSize: 26,
+    fontWeight: "bold",
+    color: "#FFF",
+    textAlign: "center",
+    marginBottom: 8,
+    zIndex: 1,
+    textShadowColor: "rgba(0, 0, 0, 0.8)",
+    textShadowOffset: { width: 1, height: 2 },
+    textShadowRadius: 3,
   },
-  articlesSection: {
-    paddingHorizontal: 16,
-    marginBottom: 20,
+  heroSubtitle: {
+    fontSize: 16,
+    color: "#FFF",
+    textAlign: "center",
+    marginBottom: 15,
+    zIndex: 1,
+  },
+  heroButton: {
+    backgroundColor: "#FFF",
+    paddingVertical: 10,
+    paddingHorizontal: 25,
+    borderRadius: 8,
+    zIndex: 1,
+    shadowColor: "#000",
+    shadowOffset: { width: 0, height: 3 },
+    shadowOpacity: 0.2,
+    shadowRadius: 4,
+  },
+  heroButtonText: {
+    fontSize: 16,
+    color: "#FF9800",
+    fontWeight: "bold",
+  },
+  carouselContainer: {
+    marginTop: 20,
   },
   sectionHeader: {
     fontSize: 20,
     fontWeight: "bold",
-    color: "#FF9800",
-    marginBottom: 10,
-  },
-  article: {
-    backgroundColor: "#FFF3E0",
-    padding: 14,
-    borderRadius: 10,
-    marginBottom: 10,
-    shadowColor: "#000",
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.1,
-    shadowRadius: 4,
-    elevation: 3,
-  },
-  articleText: {
     color: "#333",
-    fontSize: 16,
-    fontWeight: "500",
-  },
-  challengesSection: {
-    paddingHorizontal: 16,
+    marginHorizontal: 20,
     marginBottom: 10,
   },
-  challengeList: {
-    paddingBottom: 10,
-  },
-  challengeCard: {
-    backgroundColor: "#FFFFFF",
-    borderRadius: 10,
-    marginRight: 16,
-    padding: 15,
-    shadowColor: "#000",
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.1,
-    shadowRadius: 4,
-    elevation: 3,
-    flexDirection: "row",
-    alignItems: "center",
-    justifyContent: "space-between",
-    width: 260,
-  },
-  cardImage: {
-    width: "100%",
-    height: "100%",
-  },
-  cardImageContainer: {
-    width: 80,
-    height: 80,
-    borderRadius: 40,
-    overflow: "hidden",
-    marginRight: 15,
-  },
-  cardContent: {
-    flex: 1,
-    marginRight: 10,
-  },
-  headerContainer: {
-    flexDirection: "row",
-    justifyContent: "space-between",
-    alignItems: "center",
-    paddingHorizontal: 20,
+  linksSection: {
     marginTop: 20,
-    marginBottom: 10,
+    paddingHorizontal: 20,
   },
-  challengeTitle: {
+  linksContainer: {
+    flexDirection: "row",
+    justifyContent: "space-between",
+  },
+  linkCardBackground: {
+    width: "48%", // Two buttons per row
+    aspectRatio: 1.5, // Maintain proper proportions
+    borderRadius: 15,
+    overflow: "hidden",
+    justifyContent: "center",
+    alignItems: "center",
+    marginBottom: 10,
+    shadowColor: "#000",
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.3,
+    shadowRadius: 6,
+    elevation: 5,
+  },
+  centeredLinkCardBackground: {
+    width: "80%", // Centered button
+    aspectRatio: 1.5, // Maintain proportion
+    borderRadius: 15,
+    overflow: "hidden",
+    alignSelf: "center",
+    justifyContent: "center",
+    alignItems: "center",
+    shadowColor: "#000",
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.3,
+    shadowRadius: 6,
+    elevation: 5,
+    marginTop: 15,
+  },
+  linkCard: {
+    flex: 1,
+    justifyContent: "center",
+    alignItems: "center",
+  },
+  linkText: {
+    color: "#FFF",
     fontSize: 16,
     fontWeight: "bold",
-    color: "#444",
-    marginBottom: 5,
-  },
-  sectionContainer: {
-    paddingHorizontal: 20,
-    marginBottom: 20,
-  },
-  challengeCategory: {
-    fontSize: 14,
-    color: "#888",
-  },
-  challengeButton: {
-    backgroundColor: "#FF9800",
-    padding: 8,
-    borderRadius: 8,
+    textAlign: "center",
+    textShadowColor: "rgba(0, 0, 0, 0.8)",
+    textShadowOffset: { width: 1, height: 2 },
+    textShadowRadius: 3,
   },
   footer: {
     alignItems: "center",
-    padding: 10,
+    padding: 15,
     backgroundColor: "#FFF",
     borderTopWidth: 1,
     borderColor: "#E0E0E0",
@@ -334,10 +355,44 @@ const styles = StyleSheet.create({
     color: "#888",
     fontSize: 16,
   },
-  musicToggle: {
-    position: "absolute",
-    top: 30,
-    right: 20,
-    zIndex: 1,
+  swiper: {
+    height: 240,
   },
+  slide: {
+    flex: 1,
+    justifyContent: "center",
+    alignItems: "center",
+  },
+  challengeCard: {
+    width: width * 0.8,
+    borderRadius: 10,
+    overflow: "hidden",
+    backgroundColor: "#FFF",
+    shadowColor: "#000",
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.1,
+    shadowRadius: 6,
+    elevation: 4,
+  },
+  challengeImage: {
+    width: "100%",
+    height: 150,
+  },
+  cardContent: {
+    padding: 10,
+    alignItems: "center",
+  },
+  challengeTitle: {
+    fontSize: 16,
+    fontWeight: "bold",
+    color: "#333",
+    textAlign: "center",
+    marginBottom: 5,
+  },
+  challengeCategory: {
+    fontSize: 14,
+    color: "#888",
+    textAlign: "center",
+  },
+
 });

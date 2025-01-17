@@ -1,3 +1,4 @@
+import config from "../config";
 import { useEffect, useState } from "react";
 import { onAuthStateChanged, signInAnonymously } from "firebase/auth";
 import { auth } from "../constants/firebase-config";
@@ -16,6 +17,13 @@ export function useAuthInit(): AuthState {
   const [initializing, setInitializing] = useState(true);
 
   useEffect(() => {
+    if (config.DEVELOPMENT_MODE) {
+      // For testing purposes, simulate a logged-out state
+      setUser(null);
+      setInitializing(false);
+      return;
+    }
+
     const unsubscribe = onAuthStateChanged(auth, async (firebaseUser) => {
       if (firebaseUser) {
         console.log("Authenticated user:", firebaseUser);

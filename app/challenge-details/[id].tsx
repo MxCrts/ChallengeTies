@@ -30,7 +30,10 @@ export default function ChallengeDetails() {
   const route = useRoute();
   const navigation = useNavigation();
   const router = useRouter();
-  const { id, title, category, description } = route.params as RouteParams;
+
+  // Explicitly cast route.params to RouteParams
+  const { id, title = "Untitled Challenge", category = "Uncategorized", description = "No description available" } =
+    route.params as RouteParams;
 
   const { savedChallenges, addChallenge, removeChallenge, isSaved } =
     useSavedChallenges();
@@ -142,7 +145,7 @@ export default function ChallengeDetails() {
       </View>
       <View style={styles.contentContainer}>
         <Text style={styles.title}>{title}</Text>
-        <Text style={styles.category}>{category || "Uncategorized"}</Text>
+        <Text style={styles.category}>{category}</Text>
         <Text style={styles.description}>{description}</Text>
 
         <TouchableOpacity
@@ -156,7 +159,6 @@ export default function ChallengeDetails() {
             name={isSaved(id) ? "bookmark" : "bookmark-outline"}
             size={20}
             color="#fff"
-            style={styles.saveButtonIcon}
           />
         </TouchableOpacity>
 
@@ -180,8 +182,8 @@ export default function ChallengeDetails() {
               router.push({
                 pathname: "/challenge-chat/[id]",
                 params: {
-                  id: id, // Challenge ID
-                  title: title, // Challenge Title
+                  id: id,
+                  title: title,
                 },
               })
             }
@@ -289,9 +291,6 @@ const styles = StyleSheet.create({
     fontWeight: "bold",
     marginRight: 5,
   },
-  saveButtonIcon: {
-    marginLeft: 5,
-  },
   takeChallengeButton: {
     marginTop: 20,
     backgroundColor: "#28a745",
@@ -307,21 +306,33 @@ const styles = StyleSheet.create({
   disabledButton: {
     backgroundColor: "#999",
   },
-  removeChallengeButton: {
+  chatButton: {
     marginTop: 16,
-    backgroundColor: "#dc3545",
+    backgroundColor: "#007bff",
     padding: 12,
     borderRadius: 8,
     alignItems: "center",
   },
-  removeChallengeButtonText: { color: "#fff", fontWeight: "bold" },
-  userCountText: { marginTop: 16, fontSize: 16, color: "#444" },
+  chatButtonText: {
+    color: "#fff",
+    fontWeight: "bold",
+    fontSize: 16,
+  },
+  userCountText: {
+    marginTop: 16,
+    fontSize: 16,
+    color: "#444",
+  },
   loadingContainer: {
     flex: 1,
     justifyContent: "center",
     alignItems: "center",
   },
-  loadingText: { marginTop: 10, fontSize: 16, color: "#444" },
+  loadingText: {
+    marginTop: 10,
+    fontSize: 16,
+    color: "#444",
+  },
   modalContainer: {
     flex: 1,
     justifyContent: "center",
@@ -367,17 +378,5 @@ const styles = StyleSheet.create({
   cancelButtonText: {
     color: "#fff",
     fontWeight: "bold",
-  },
-  chatButton: {
-    marginTop: 16,
-    backgroundColor: "#007bff",
-    padding: 12,
-    borderRadius: 8,
-    alignItems: "center",
-  },
-  chatButtonText: {
-    color: "#fff",
-    fontWeight: "bold",
-    fontSize: 16,
   },
 });
