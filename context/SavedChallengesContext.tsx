@@ -8,15 +8,18 @@ import {
   collection,
   query,
   where,
+  getDoc,
 } from "firebase/firestore";
 
+// 1) Import your trophies helper
+import { awardTrophiesAndCheckAchievements } from "../helpers/trophiesHelpers";
+
 export interface Challenge {
-  // Export the Challenge interface
   id: string;
   title: string;
   category?: string;
   description?: string;
-  imageUrl?: string; // Ensure imageUrl is included
+  imageUrl?: string;
   daysOptions: number[];
   chatId: string;
 }
@@ -50,9 +53,9 @@ export const SavedChallengesProvider: React.FC<{
       const q = query(savedChallengesRef, where("userId", "==", userId));
       const querySnapshot = await getDocs(q);
 
-      const loadedSavedChallenges = querySnapshot.docs.map((doc) => ({
-        id: doc.id.replace(`${userId}_`, ""),
-        ...doc.data(),
+      const loadedSavedChallenges = querySnapshot.docs.map((docSnap) => ({
+        id: docSnap.id.replace(`${userId}_`, ""),
+        ...docSnap.data(),
       })) as Challenge[];
       setSavedChallenges(loadedSavedChallenges);
     } catch (error) {
@@ -62,7 +65,10 @@ export const SavedChallengesProvider: React.FC<{
 
   const addChallenge = async (challenge: Challenge) => {
     const userId = auth.currentUser?.uid;
-    if (!userId) return;
+    if (!userId) {
+      console.warn("User not authenticated. Cannot save challenge.");
+      return;
+    }
 
     try {
       const savedChallengeRef = doc(
@@ -70,13 +76,27 @@ export const SavedChallengesProvider: React.FC<{
         "savedChallenges",
         `${userId}_${challenge.id}`
       );
+      const existingSnap = await getDoc(savedChallengeRef);
 
-      await setDoc(savedChallengeRef, { userId, ...challenge });
+      // 2) If the doc doesn't exist yet => user is saving this challenge for the FIRST TIME
+      if (!existingSnap.exists()) {
+        // Trigger the "saveChallenge" action in trophiesHelpers
+        await awardTrophiesAndCheckAchievements({
+          action: "saveChallenge",
+          trophiesToAdd: 0, // We'll do the +5 logic in trophiesHelpers
+        });
+      }
 
-      // Update local state immediately with full challenge details, including imageUrl
+      // Now actually setDoc
+      await setDoc(savedChallengeRef, {
+        userId,
+        ...challenge,
+      });
+
+      // Update local state immediately
       setSavedChallenges((prev) => [
         ...prev.filter((c) => c.id !== challenge.id),
-        challenge, // Ensure the saved challenge includes imageUrl
+        challenge,
       ]);
     } catch (error) {
       console.error("Error adding challenge:", error);
@@ -94,7 +114,7 @@ export const SavedChallengesProvider: React.FC<{
       const savedChallengeRef = doc(db, "savedChallenges", `${userId}_${id}`);
       await deleteDoc(savedChallengeRef);
 
-      // Update local state immediately
+      // Update local state
       setSavedChallenges((prev) =>
         prev.filter((challenge) => challenge.id !== id)
       );

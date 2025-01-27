@@ -8,10 +8,13 @@ import {
   StyleSheet,
   KeyboardAvoidingView,
   Platform,
+  SafeAreaView,
 } from "react-native";
 import { useRoute } from "@react-navigation/native";
-import { useChat } from "../context/ChatContext";
 import { Ionicons } from "@expo/vector-icons";
+import { LinearGradient } from "expo-linear-gradient";
+import { auth } from "../constants/firebase-config";
+import { useChat } from "../context/ChatContext";
 
 export default function ChallengeChat() {
   const route = useRoute();
@@ -20,57 +23,88 @@ export default function ChallengeChat() {
     challengeTitle: string;
   };
 
-  const { messages, sendMessage } = useChat(challengeId); // Pass challengeId here
+  const { messages, sendMessage } = useChat(challengeId);
   const [newMessage, setNewMessage] = useState("");
 
   const handleSend = async () => {
     if (newMessage.trim().length === 0) return;
-
     try {
       await sendMessage(challengeId, newMessage);
-      setNewMessage(""); // Clear input field after sending
+      setNewMessage("");
     } catch (error) {
       console.error("Error sending message:", error);
     }
   };
 
-  const renderMessage = ({ item }: { item: any }) => (
-    <View style={styles.messageContainer}>
-      <View style={styles.avatarContainer}>
-        <Ionicons name="person-circle-outline" size={40} color="#007bff" />
+  const renderMessage = ({ item }: { item: any }) => {
+    const isMyMessage = item.userId === auth.currentUser?.uid;
+    return (
+      <View
+        style={[
+          styles.messageRow,
+          isMyMessage ? styles.myMessageRow : styles.otherMessageRow,
+        ]}
+      >
+        {!isMyMessage && (
+          <View style={styles.avatarContainer}>
+            <Ionicons name="person-circle-outline" size={34} color="#007bff" />
+          </View>
+        )}
+        <View
+          style={[
+            styles.messageBubble,
+            isMyMessage ? styles.myMessageBubble : styles.otherMessageBubble,
+          ]}
+        >
+          {!isMyMessage && (
+            <Text style={[styles.username, styles.otherUsername]}>
+              {item.username}
+            </Text>
+          )}
+          <Text style={styles.messageText}>{item.text}</Text>
+        </View>
       </View>
-      <View style={styles.messageContent}>
-        <Text style={styles.messageUsername}>{item.username}</Text>
-        <Text style={styles.messageText}>{item.text}</Text>
-      </View>
-    </View>
-  );
+    );
+  };
 
   return (
-    <KeyboardAvoidingView
-      style={styles.container}
-      behavior={Platform.OS === "ios" ? "padding" : undefined}
-    >
-      <Text style={styles.title}>{challengeTitle}</Text>
-      <FlatList
-        data={messages}
-        renderItem={renderMessage}
-        keyExtractor={(item) => item.id}
-        contentContainerStyle={styles.messageList}
-      />
-      <View style={styles.inputContainer}>
-        <TextInput
-          style={styles.input}
-          placeholder="Type a message..."
-          placeholderTextColor="#aaa"
-          value={newMessage}
-          onChangeText={setNewMessage}
+    <SafeAreaView style={styles.container}>
+      {/* Header with gradient */}
+      <LinearGradient
+        colors={["#007bff", "#0056b3"]}
+        start={{ x: 0, y: 0 }}
+        end={{ x: 1, y: 0 }}
+        style={styles.header}
+      >
+        <Text style={styles.headerTitle}>{challengeTitle}</Text>
+      </LinearGradient>
+
+      <KeyboardAvoidingView
+        style={styles.chatContainer}
+        behavior={Platform.OS === "ios" ? "padding" : undefined}
+        keyboardVerticalOffset={Platform.OS === "ios" ? 64 : 0}
+      >
+        <FlatList
+          data={messages}
+          renderItem={renderMessage}
+          keyExtractor={(item) => item.id}
+          contentContainerStyle={styles.messageList}
         />
-        <TouchableOpacity style={styles.sendButton} onPress={handleSend}>
-          <Ionicons name="send" size={24} color="#fff" />
-        </TouchableOpacity>
-      </View>
-    </KeyboardAvoidingView>
+
+        <View style={styles.inputContainer}>
+          <TextInput
+            style={styles.input}
+            placeholder="Type a message..."
+            placeholderTextColor="#aaa"
+            value={newMessage}
+            onChangeText={setNewMessage}
+          />
+          <TouchableOpacity style={styles.sendButton} onPress={handleSend}>
+            <Ionicons name="send" size={20} color="#fff" />
+          </TouchableOpacity>
+        </View>
+      </KeyboardAvoidingView>
+    </SafeAreaView>
   );
 }
 
@@ -79,39 +113,64 @@ const styles = StyleSheet.create({
     flex: 1,
     backgroundColor: "#f8f9fa",
   },
-  title: {
+  header: {
+    paddingVertical: 14,
+    paddingHorizontal: 20,
+    alignItems: "center",
+    justifyContent: "center",
+  },
+  headerTitle: {
+    color: "#fff",
     fontSize: 18,
     fontWeight: "bold",
-    textAlign: "center",
-    marginVertical: 10,
+  },
+  chatContainer: {
+    flex: 1,
   },
   messageList: {
-    padding: 10,
+    paddingHorizontal: 10,
+    paddingVertical: 10,
   },
-  messageContainer: {
+  messageRow: {
     flexDirection: "row",
-    marginBottom: 10,
+    marginVertical: 5,
     alignItems: "flex-start",
   },
-  avatarContainer: {
-    marginRight: 10,
+  myMessageRow: {
+    justifyContent: "flex-end",
   },
-  messageContent: {
-    backgroundColor: "#e9ecef",
+  otherMessageRow: {
+    justifyContent: "flex-start",
+  },
+  avatarContainer: {
+    marginRight: 8,
+  },
+  messageBubble: {
+    maxWidth: "75%",
     borderRadius: 10,
     padding: 10,
-    maxWidth: "80%",
   },
-  messageUsername: {
-    fontWeight: "bold",
-    marginBottom: 5,
+  myMessageBubble: {
+    backgroundColor: "#007bff",
+    marginLeft: "25%",
+  },
+  otherMessageBubble: {
+    backgroundColor: "#e9ecef",
+    marginRight: "25%",
+  },
+  username: {
+    fontWeight: "600",
+    marginBottom: 3,
+  },
+  otherUsername: {
+    color: "#007bff",
   },
   messageText: {
-    color: "#343a40",
+    fontSize: 15,
+    color: "#333",
   },
   inputContainer: {
     flexDirection: "row",
-    alignItems: "center",
     padding: 10,
     borderTopWidth: 1,
     borderTopColor: "#ddd",
@@ -129,6 +188,9 @@ const styles = StyleSheet.create({
   sendButton: {
     backgroundColor: "#007bff",
     borderRadius: 20,
-    padding: 10,
+    paddingHorizontal: 14,
+    paddingVertical: 8,
+    justifyContent: "center",
+    alignItems: "center",
   },
 });

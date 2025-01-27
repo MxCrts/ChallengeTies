@@ -1,4 +1,5 @@
-import React, { useEffect, useCallback } from "react";
+// Enhanced CurrentChallenges.tsx
+import React, { useEffect, useCallback, useState, useRef } from "react";
 import {
   View,
   Text,
@@ -8,12 +9,28 @@ import {
   ActivityIndicator,
   Image,
   Alert,
+  Modal,
 } from "react-native";
+import { LinearGradient } from "expo-linear-gradient";
 import { useCurrentChallenges } from "../../context/CurrentChallengesContext";
 import Animated, { Layout, FadeIn } from "react-native-reanimated";
 import { Swipeable } from "react-native-gesture-handler";
 import { useRouter } from "expo-router";
 import { Ionicons } from "@expo/vector-icons";
+import { db, auth } from "../../constants/firebase-config";
+import { doc, runTransaction } from "firebase/firestore";
+import ConfettiCannon from "react-native-confetti-cannon";
+
+interface ChallengeItem {
+  id: string;
+  title: string;
+  description?: string;
+  category?: string;
+  imageUrl?: string;
+  selectedDays: number;
+  completedDays: number;
+  lastMarkedDate?: string | null;
+}
 
 export default function CurrentChallenges() {
   const router = useRouter();
@@ -24,8 +41,14 @@ export default function CurrentChallenges() {
     removeChallenge,
   } = useCurrentChallenges();
 
-  const [isLoading, setIsLoading] = React.useState(false);
-  const [error, setError] = React.useState<string | null>(null);
+  const [isLoading, setIsLoading] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+  const [confettiActive, setConfettiActive] = useState(false);
+  const [trophyModalVisible, setTrophyModalVisible] = useState(false);
+  const [baseTrophyAmount, setBaseTrophyAmount] = useState(0);
+  const [challengeToComplete, setChallengeToComplete] =
+    useState<ChallengeItem | null>(null);
+  const confettiRef = useRef<ConfettiCannon | null>(null);
 
   useEffect(() => {
     const fetchChallenges = async () => {
@@ -74,6 +97,96 @@ export default function CurrentChallenges() {
     );
   };
 
+  const navigateToChallengeDetails = (item: ChallengeItem) => {
+    const { id, title, category, description, selectedDays, completedDays } =
+      item;
+    const route =
+      `/challenge-details/${encodeURIComponent(id)}` +
+      `?title=${encodeURIComponent(title)}` +
+      `&category=${encodeURIComponent(category || "")}` +
+      `&description=${encodeURIComponent(description || "")}` +
+      `&selectedDays=${selectedDays}` +
+      `&completedDays=${completedDays}`;
+
+    router.push(route as unknown as `/challenge-details/${string}`);
+  };
+
+  const handleCompleteChallengePress = (item: ChallengeItem) => {
+    setChallengeToComplete(item);
+    setBaseTrophyAmount(item.selectedDays);
+    setConfettiActive(true);
+  };
+
+  const awardTrophiesToUser = async (trophiesToAdd: number) => {
+    const userId = auth.currentUser?.uid;
+    if (!userId) return;
+
+    const userRef = doc(db, "users", userId);
+    try {
+      await runTransaction(db, async (transaction) => {
+        const userDoc = await transaction.get(userRef);
+        if (!userDoc.exists()) {
+          throw new Error("User doc not found");
+        }
+        const userData = userDoc.data() || {};
+        const currentTrophies = userData.trophies || 0;
+        const newTrophyCount = currentTrophies + trophiesToAdd;
+
+        let achievements = Array.isArray(userData.achievements)
+          ? [...userData.achievements]
+          : [];
+
+        if (!achievements.includes("First challenge completed")) {
+          achievements.push("First challenge completed");
+        }
+
+        achievements = [...new Set(achievements)];
+
+        transaction.update(userRef, {
+          trophies: newTrophyCount,
+          achievements,
+        });
+      });
+
+      Alert.alert("Congrats!", `You received ${trophiesToAdd} trophies!`);
+    } catch (err) {
+      console.error("Error awarding trophies:", err);
+      Alert.alert(
+        "Error",
+        "Failed to update trophies. Please try again later."
+      );
+    }
+  };
+
+  const finalizeChallengeRemoval = async () => {
+    if (!challengeToComplete) return;
+    try {
+      await removeChallenge(
+        challengeToComplete.id,
+        challengeToComplete.selectedDays
+      );
+    } catch (err) {
+      console.error("Error removing challenge after awarding:", err);
+    }
+  };
+
+  const handleClaimTrophiesWithoutAd = async () => {
+    await awardTrophiesToUser(baseTrophyAmount);
+    setTrophyModalVisible(false);
+    finalizeChallengeRemoval();
+  };
+
+  const handleClaimTrophiesWithAd = async () => {
+    const userWatchedAd = true;
+    if (userWatchedAd) {
+      await awardTrophiesToUser(baseTrophyAmount * 2);
+    } else {
+      await awardTrophiesToUser(baseTrophyAmount);
+    }
+    setTrophyModalVisible(false);
+    finalizeChallengeRemoval();
+  };
+
   const renderRightActions = (id: string, selectedDays: number) => (
     <View style={styles.swipeActionsContainer}>
       <TouchableOpacity
@@ -86,75 +199,83 @@ export default function CurrentChallenges() {
   );
 
   const renderItem = useCallback(
-    ({ item }: { item: any }) => (
-      <Swipeable
-        renderRightActions={() =>
-          renderRightActions(item.id, item.selectedDays)
-        }
-        overshootRight={false}
-      >
-        <Animated.View
-          entering={FadeIn.delay(100).duration(300)}
-          layout={Layout.springify()}
-          style={styles.challengeItem}
+    ({ item }: { item: ChallengeItem }) => {
+      const isFullyCompleted = item.completedDays >= item.selectedDays;
+      const isMarkedToday = item.lastMarkedDate === new Date().toDateString();
+
+      return (
+        <Swipeable
+          renderRightActions={() =>
+            renderRightActions(item.id, item.selectedDays)
+          }
+          overshootRight={false}
         >
-          <TouchableOpacity
-            onPress={() =>
-              router.push({
-                pathname: "/challenge-details/[id]",
-                params: {
-                  id: item.id,
-                  title: item.title,
-                  category: item.category,
-                  description: item.description,
-                  selectedDays: item.selectedDays,
-                  completedDays: item.completedDays,
-                },
-              })
-            }
-            style={styles.challengeContent}
+          <Animated.View
+            entering={FadeIn.delay(120).duration(400)}
+            layout={Layout.springify()}
+            style={styles.cardContainer}
           >
-            {item.imageUrl ? (
-              <Image
-                source={{ uri: item.imageUrl }}
-                style={styles.challengeImage}
-                onError={(e) =>
-                  console.error(
-                    `Error loading image for ${item.title}:`,
-                    e.nativeEvent.error
-                  )
-                }
-              />
-            ) : (
-              <View style={styles.imagePlaceholder}>
-                <Ionicons name="image-outline" size={40} color="#ccc" />
+            <LinearGradient
+              colors={["#ffffff", "#f1f5f9"]}
+              style={styles.cardGradient}
+            >
+              <TouchableOpacity
+                onPress={() => navigateToChallengeDetails(item)}
+                style={styles.cardContent}
+              >
+                {item.imageUrl ? (
+                  <Image
+                    source={{ uri: item.imageUrl }}
+                    style={styles.cardImage}
+                    onError={(e) =>
+                      console.error(
+                        `Error loading image for ${item.title}:`,
+                        e.nativeEvent.error
+                      )
+                    }
+                  />
+                ) : (
+                  <View style={styles.imagePlaceholder}>
+                    <Ionicons name="image-outline" size={40} color="#ccc" />
+                  </View>
+                )}
+
+                <View style={styles.cardInfo}>
+                  <Text style={styles.cardTitle}>{item.title}</Text>
+                  <Text style={styles.cardStatus}>
+                    {item.completedDays}/{item.selectedDays} days completed
+                  </Text>
+                </View>
+              </TouchableOpacity>
+
+              <View style={styles.actionContainer}>
+                {isFullyCompleted ? (
+                  <TouchableOpacity
+                    style={styles.completeButton}
+                    onPress={() => handleCompleteChallengePress(item)}
+                  >
+                    <Text style={styles.completeButtonText}>Complete</Text>
+                  </TouchableOpacity>
+                ) : (
+                  <TouchableOpacity
+                    style={[
+                      styles.markTodayButton,
+                      isMarkedToday && styles.disabledMarkButton,
+                    ]}
+                    onPress={() => handleMarkToday(item.id, item.selectedDays)}
+                    disabled={isMarkedToday}
+                  >
+                    <Text style={styles.markTodayText}>
+                      {isMarkedToday ? "Marked Today" : "Mark Today"}
+                    </Text>
+                  </TouchableOpacity>
+                )}
               </View>
-            )}
-            <View style={styles.challengeInfo}>
-              <Text style={styles.challengeTitle}>{item.title}</Text>
-              <Text style={styles.challengeStatus}>
-                {item.completedDays}/{item.selectedDays} days completed
-              </Text>
-            </View>
-          </TouchableOpacity>
-          <TouchableOpacity
-            style={[
-              styles.markTodayButton,
-              item.lastMarkedDate === new Date().toDateString() &&
-                styles.disabledMarkButton,
-            ]}
-            onPress={() => handleMarkToday(item.id, item.selectedDays)}
-            disabled={item.lastMarkedDate === new Date().toDateString()}
-          >
-            <Text style={styles.markTodayText}>
-              {item.lastMarkedDate === new Date().toDateString()
-                ? "Marked Today"
-                : "Mark Today"}
-            </Text>
-          </TouchableOpacity>
-        </Animated.View>
-      </Swipeable>
-    ),
+            </LinearGradient>
+          </Animated.View>
+        </Swipeable>
+      );
+    },
     [router]
   );
 
@@ -181,103 +302,201 @@ export default function CurrentChallenges() {
   return (
     <View style={styles.container}>
       <Text style={styles.title}>Current Challenges</Text>
+
       {currentChallenges.length > 0 ? (
         <FlatList
           data={currentChallenges}
           renderItem={renderItem}
           keyExtractor={(item) => `${item.id}_${item.selectedDays}`}
-          contentContainerStyle={styles.list}
+          contentContainerStyle={styles.listContent}
         />
       ) : (
         <Text style={styles.noChallenges}>
           You haven’t started any challenges yet!
         </Text>
       )}
+
+      {confettiActive && (
+        <ConfettiCannon
+          ref={confettiRef}
+          count={150}
+          origin={{ x: 200, y: 0 }}
+          autoStart={true}
+          fadeOut={true}
+          explosionSpeed={600}
+          fallSpeed={2500}
+          onAnimationEnd={() => {
+            setConfettiActive(false);
+            setTrophyModalVisible(true);
+          }}
+        />
+      )}
+
+      <Modal
+        visible={trophyModalVisible}
+        transparent
+        animationType="slide"
+        onRequestClose={() => setTrophyModalVisible(false)}
+      >
+        <View style={styles.trophyModalContainer}>
+          <View style={styles.trophyModalContent}>
+            <Text style={styles.trophyModalTitle}>Challenge Completed!</Text>
+            <Text style={styles.motivationalQuote}>
+              "Discipline is choosing between what you want now and what you
+              want most."
+            </Text>
+            <Text style={styles.earnedText}>
+              You’ve earned {baseTrophyAmount} trophies.
+            </Text>
+            <Text style={styles.doubleText}>
+              Watch an ad to double your reward to {baseTrophyAmount * 2}{" "}
+              trophies!
+            </Text>
+
+            <TouchableOpacity
+              style={styles.claimButton}
+              onPress={handleClaimTrophiesWithoutAd}
+            >
+              <Text style={styles.claimButtonText}>
+                Claim {baseTrophyAmount}
+              </Text>
+            </TouchableOpacity>
+
+            <TouchableOpacity
+              style={styles.doubleButton}
+              onPress={handleClaimTrophiesWithAd}
+            >
+              <Text style={styles.doubleButtonText}>
+                Watch Ad for {baseTrophyAmount * 2}
+              </Text>
+            </TouchableOpacity>
+
+            <TouchableOpacity
+              style={styles.cancelButton}
+              onPress={() => setTrophyModalVisible(false)}
+            >
+              <Text style={styles.cancelButtonText}>Cancel</Text>
+            </TouchableOpacity>
+          </View>
+        </View>
+      </Modal>
     </View>
   );
 }
 
+// --------------------------------
+// Styles
+// --------------------------------
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    padding: 20,
-    backgroundColor: "#f9fafa", // Light neutral background
+    backgroundColor: "#f9fafb",
+    paddingTop: 10,
   },
   title: {
     fontSize: 26,
     fontWeight: "bold",
-    color: "#3b82f6", // Primary blue color
+    color: "#3b82f6",
     textAlign: "center",
-    marginBottom: 15,
+    marginVertical: 15,
   },
-  challengeItem: {
+  listContent: {
+    paddingHorizontal: 16,
+    paddingBottom: 40,
+  },
+  noChallenges: {
+    fontSize: 16,
+    textAlign: "center",
+    color: "#9ca3af",
+    marginTop: 20,
+  },
+
+  // Each card
+  cardContainer: {
+    borderRadius: 18,
+    marginBottom: 15,
+    overflow: "hidden",
+  },
+  cardGradient: {
     flexDirection: "row",
     alignItems: "center",
-    backgroundColor: "#ffffff", // White card background
-    padding: 15,
-    marginBottom: 15,
-    borderRadius: 15,
-    shadowColor: "#000",
-    shadowOffset: { width: 0, height: 4 },
-    shadowOpacity: 0.1,
-    shadowRadius: 6,
-    elevation: 3, // Adds shadow for Android
+    padding: 14,
+    borderRadius: 18,
   },
-  challengeContent: {
+  cardContent: {
     flex: 1,
     flexDirection: "row",
     alignItems: "center",
   },
-  challengeImage: {
+  cardImage: {
     width: 70,
     height: 70,
-    borderRadius: 10,
-    marginRight: 15,
+    borderRadius: 14,
+    marginRight: 14,
+    backgroundColor: "#ccc",
   },
   imagePlaceholder: {
     width: 70,
     height: 70,
-    borderRadius: 10,
-    backgroundColor: "#e5e7eb", // Neutral gray for placeholder
+    borderRadius: 14,
+    backgroundColor: "#e5e7eb",
     justifyContent: "center",
     alignItems: "center",
+    marginRight: 14,
   },
-  challengeInfo: {
+  cardInfo: {
     flex: 1,
   },
-  challengeTitle: {
-    fontSize: 18,
-    fontWeight: "bold",
-    color: "#1f2937", // Darker neutral for better readability
-    marginBottom: 5,
+  cardTitle: {
+    fontSize: 17,
+    fontWeight: "600",
+    color: "#1f2937",
+    marginBottom: 4,
   },
-  challengeStatus: {
+  cardStatus: {
     fontSize: 14,
-    color: "#6b7280", // Neutral gray for secondary text
+    color: "#6b7280",
+  },
+  actionContainer: {
+    flexDirection: "row",
+    alignItems: "center",
   },
   markTodayButton: {
     paddingVertical: 6,
-    paddingHorizontal: 12,
+    paddingHorizontal: 14,
     borderRadius: 8,
-    backgroundColor: "#22c55e", // Green for action
-    justifyContent: "center",
+    backgroundColor: "#22c55e",
     alignItems: "center",
+    justifyContent: "center",
   },
   disabledMarkButton: {
-    backgroundColor: "#9ca3af", // Gray for disabled state
+    backgroundColor: "#9ca3af",
   },
   markTodayText: {
-    color: "#ffffff", // White text
+    color: "#ffffff",
     fontWeight: "bold",
   },
+  completeButton: {
+    paddingVertical: 6,
+    paddingHorizontal: 14,
+    borderRadius: 8,
+    backgroundColor: "#FFC107",
+    alignItems: "center",
+    justifyContent: "center",
+  },
+  completeButtonText: {
+    color: "#fff",
+    fontWeight: "bold",
+  },
+
+  // Right-swipe remove
   swipeActionsContainer: {
     justifyContent: "center",
     alignItems: "center",
-    backgroundColor: "#ef4444", // Red for delete action
-    width: 75,
-    height: "100%",
-    borderRadius: 10,
-    marginVertical: 5,
+    backgroundColor: "#ef4444",
+    width: 70,
+    borderRadius: 18,
+    marginBottom: 15,
   },
   trashButton: {
     justifyContent: "center",
@@ -285,6 +504,8 @@ const styles = StyleSheet.create({
     height: "100%",
     width: "100%",
   },
+
+  // Loading / error
   loadingContainer: {
     flex: 1,
     justifyContent: "center",
@@ -292,7 +513,7 @@ const styles = StyleSheet.create({
   },
   loadingText: {
     marginTop: 10,
-    color: "#3b82f6", // Primary blue color
+    color: "#3b82f6",
     fontSize: 16,
   },
   errorContainer: {
@@ -303,21 +524,91 @@ const styles = StyleSheet.create({
   },
   errorText: {
     fontSize: 18,
-    color: "#ef4444", // Red for errors
+    color: "#ef4444",
     textAlign: "center",
     marginBottom: 20,
   },
   retryText: {
-    color: "#3b82f6", // Primary blue for retry
+    color: "#3b82f6",
     fontSize: 16,
   },
-  noChallenges: {
-    fontSize: 16,
+
+  // Trophies modal
+  trophyModalContainer: {
+    flex: 1,
+    backgroundColor: "rgba(0,0,0,0.5)",
+    justifyContent: "center",
+    alignItems: "center",
+    padding: 20,
+  },
+  trophyModalContent: {
+    width: "90%",
+    maxWidth: 400,
+    backgroundColor: "#fff",
+    borderRadius: 20,
+    padding: 20,
+    alignItems: "center",
+  },
+  trophyModalTitle: {
+    fontSize: 20,
+    fontWeight: "bold",
+    marginBottom: 15,
     textAlign: "center",
-    color: "#9ca3af", // Neutral gray for no data text
-    marginTop: 20,
+    color: "#333",
   },
-  list: {
-    paddingBottom: 20,
+  motivationalQuote: {
+    fontSize: 14,
+    fontStyle: "italic",
+    color: "#666",
+    textAlign: "center",
+    marginBottom: 20,
+    paddingHorizontal: 10,
+  },
+  earnedText: {
+    fontSize: 16,
+    color: "#333",
+    marginBottom: 10,
+  },
+  doubleText: {
+    fontSize: 14,
+    color: "#555",
+    marginBottom: 20,
+    textAlign: "center",
+  },
+  claimButton: {
+    backgroundColor: "#28a745",
+    padding: 12,
+    borderRadius: 8,
+    width: "80%",
+    alignItems: "center",
+    marginBottom: 10,
+  },
+  claimButtonText: {
+    color: "#fff",
+    fontWeight: "bold",
+  },
+  doubleButton: {
+    backgroundColor: "#17a2b8",
+    padding: 12,
+    borderRadius: 8,
+    width: "80%",
+    alignItems: "center",
+    marginBottom: 10,
+  },
+  doubleButtonText: {
+    color: "#fff",
+    fontWeight: "bold",
+  },
+  cancelButton: {
+    backgroundColor: "#dc3545",
+    padding: 10,
+    borderRadius: 8,
+    width: "80%",
+    alignItems: "center",
+    marginTop: 6,
+  },
+  cancelButtonText: {
+    color: "#fff",
+    fontWeight: "bold",
   },
 });

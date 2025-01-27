@@ -5,7 +5,7 @@ export default function TabsLayout() {
   return (
     <Tabs
       screenOptions={{
-        headerShown: false, // Disable the top header
+        headerShown: false,
       }}
     >
       <Tabs.Screen

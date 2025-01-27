@@ -6,12 +6,16 @@ import {
   StyleSheet,
   TouchableOpacity,
   Alert,
+  ScrollView,
+  Image,
 } from "react-native";
-import { Picker } from "@react-native-picker/picker"; // Corrected import
+import { Picker } from "@react-native-picker/picker";
 import * as ImagePicker from "expo-image-picker";
 import { useRouter } from "expo-router";
 import { collection, addDoc } from "firebase/firestore";
-import { db } from "../constants/firebase-config";
+import { auth, db } from "../constants/firebase-config";
+import { LinearGradient } from "expo-linear-gradient";
+import { Ionicons } from "@expo/vector-icons";
 
 export default function CreateChallenge() {
   const [title, setTitle] = useState("");
@@ -47,21 +51,30 @@ export default function CreateChallenge() {
   };
 
   const handleSubmit = async () => {
-    if (!title.trim() || !description.trim() || !category || !days) {
+    if (!title.trim() || !description.trim() || !category) {
       Alert.alert("Error", "All fields (except image) are required.");
       return;
     }
 
     try {
-      await addDoc(collection(db, "challenges"), {
-        title,
-        description,
+      const currentUser = auth.currentUser;
+      if (!currentUser) {
+        Alert.alert("Error", "You must be logged in to create a challenge.");
+        return;
+      }
+
+      const challengeData = {
+        title: title.trim(),
+        description: description.trim(),
         category,
         days: parseInt(days, 10),
-        imageUrl: imageUri || null,
+        imageUrl: imageUri || "https://via.placeholder.com/150",
         participantsCount: 0,
         createdAt: new Date(),
-      });
+        creatorId: currentUser.uid,
+      };
+
+      await addDoc(collection(db, "challenges"), challengeData);
 
       Alert.alert("Success", "Challenge created successfully!");
       router.push("/explore");
@@ -72,110 +85,178 @@ export default function CreateChallenge() {
   };
 
   return (
-    <View style={styles.container}>
-      <Text style={styles.header}>Create a New Challenge</Text>
-      <TextInput
-        style={styles.input}
-        placeholder="Challenge Title"
-        value={title}
-        onChangeText={setTitle}
-      />
-      <TextInput
-        style={[styles.input, styles.textArea]}
-        placeholder="Description"
-        value={description}
-        onChangeText={setDescription}
-        multiline
-        numberOfLines={4}
-      />
-      <View style={styles.dropdownContainer}>
-        <Text style={styles.dropdownLabel}>Category</Text>
-        <Picker
-          selectedValue={category}
-          onValueChange={(itemValue: string) => setCategory(itemValue)} // Fixed type
-          style={styles.dropdown}
-        >
-          {categories.map((cat) => (
-            <Picker.Item label={cat} value={cat} key={cat} />
-          ))}
-        </Picker>
-      </View>
-      <TextInput
-        style={styles.input}
-        placeholder="Number of Days"
-        keyboardType="numeric"
-        value={days}
-        onChangeText={setDays}
-      />
-      <TouchableOpacity style={styles.imagePickerButton} onPress={pickImage}>
-        <Text style={styles.imagePickerText}>
-          {imageUri ? "Change Image" : "Upload Image (Optional)"}
-        </Text>
-      </TouchableOpacity>
-      <TouchableOpacity style={styles.submitButton} onPress={handleSubmit}>
-        <Text style={styles.submitText}>Create Challenge</Text>
-      </TouchableOpacity>
-    </View>
+    <LinearGradient colors={["#1F1C2C", "#928DAB"]} style={{ flex: 1 }}>
+      <ScrollView contentContainerStyle={styles.container}>
+        <View style={styles.header}>
+          <Ionicons
+            name="create-outline"
+            size={64}
+            color="#fff"
+            style={styles.headerIcon}
+          />
+          <Text style={styles.headerTitle}>Create Your Challenge</Text>
+          <Text style={styles.headerSubtitle}>
+            Inspire others with a challenge that excites!
+          </Text>
+        </View>
+
+        <TextInput
+          style={styles.input}
+          placeholder="Challenge Title"
+          placeholderTextColor="#aaa"
+          value={title}
+          onChangeText={setTitle}
+        />
+
+        <TextInput
+          style={[styles.input, styles.textArea]}
+          placeholder="Description"
+          placeholderTextColor="#aaa"
+          value={description}
+          onChangeText={setDescription}
+          multiline
+          numberOfLines={4}
+        />
+
+        <View style={styles.dropdownContainer}>
+          <Text style={styles.dropdownLabel}>Category</Text>
+          <View style={styles.pickerWrapper}>
+            <Picker
+              selectedValue={category}
+              onValueChange={(itemValue) => setCategory(itemValue)}
+              style={styles.picker}
+            >
+              {categories.map((cat) => (
+                <Picker.Item label={cat} value={cat} key={cat} />
+              ))}
+            </Picker>
+          </View>
+        </View>
+
+        <TouchableOpacity style={styles.imagePickerButton} onPress={pickImage}>
+          {imageUri ? (
+            <Image source={{ uri: imageUri }} style={styles.imagePreview} />
+          ) : (
+            <Text style={styles.imagePickerText}>
+              {imageUri ? "Change Image" : "Upload Image (Optional)"}
+            </Text>
+          )}
+        </TouchableOpacity>
+
+        <TextInput
+          style={styles.input}
+          placeholder="Number of Days"
+          placeholderTextColor="#aaa"
+          keyboardType="numeric"
+          value={days}
+          onChangeText={setDays}
+        />
+
+        <TouchableOpacity style={styles.submitButton} onPress={handleSubmit}>
+          <LinearGradient
+            colors={["#FF512F", "#DD2476"]}
+            style={styles.submitGradient}
+          >
+            <Text style={styles.submitText}>Create Challenge</Text>
+          </LinearGradient>
+        </TouchableOpacity>
+      </ScrollView>
+    </LinearGradient>
   );
 }
 
 const styles = StyleSheet.create({
   container: {
-    flex: 1,
     padding: 20,
-    backgroundColor: "#1C1C1E",
+    alignItems: "center",
+    paddingBottom: 40,
   },
   header: {
+    alignItems: "center",
+    marginBottom: 20,
+  },
+  headerIcon: {
+    marginBottom: 10,
+  },
+  headerTitle: {
     fontSize: 24,
     fontWeight: "bold",
     color: "#fff",
-    marginBottom: 20,
     textAlign: "center",
   },
+  headerSubtitle: {
+    fontSize: 16,
+    color: "#ccc",
+    textAlign: "center",
+    marginBottom: 20,
+    lineHeight: 22,
+  },
   input: {
-    backgroundColor: "#2C2C2E",
-    color: "#fff",
-    borderRadius: 10,
-    padding: 10,
+    width: "100%",
+    backgroundColor: "#fff",
+    borderRadius: 12,
+    padding: 15,
     marginBottom: 15,
+    fontSize: 16,
+    borderWidth: 1,
+    borderColor: "#ddd",
   },
   textArea: {
     height: 100,
     textAlignVertical: "top",
   },
   dropdownContainer: {
+    width: "100%",
     marginBottom: 15,
   },
   dropdownLabel: {
-    color: "#bbb",
+    color: "#ccc",
     marginBottom: 5,
-  },
-  dropdown: {
-    backgroundColor: "#2C2C2E",
-    color: "#fff",
-    borderRadius: 10,
-    padding: 10,
-  },
-  imagePickerButton: {
-    backgroundColor: "#444",
-    padding: 10,
-    borderRadius: 8,
-    alignItems: "center",
-    marginBottom: 20,
-  },
-  imagePickerText: {
-    color: "#fff",
     fontSize: 14,
   },
+  pickerWrapper: {
+    backgroundColor: "#fff",
+    borderRadius: 12,
+    borderWidth: 1,
+    borderColor: "#ddd",
+    overflow: "hidden",
+  },
+  picker: {
+    width: "100%",
+  },
+  imagePickerButton: {
+    backgroundColor: "#f5f5f5",
+    padding: 12,
+    borderRadius: 12,
+    alignItems: "center",
+    justifyContent: "center",
+    marginBottom: 20,
+    borderWidth: 1,
+    borderColor: "#ddd",
+    width: "100%",
+  },
+  imagePickerText: {
+    color: "#777",
+    fontSize: 16,
+  },
+  imagePreview: {
+    width: "100%",
+    height: 150,
+    borderRadius: 12,
+  },
   submitButton: {
-    backgroundColor: "#007bff",
+    width: "100%",
+    borderRadius: 12,
+    marginTop: 10,
+  },
+  submitGradient: {
     padding: 15,
-    borderRadius: 10,
+    borderRadius: 12,
     alignItems: "center",
   },
   submitText: {
     color: "#fff",
-    fontSize: 16,
+    fontSize: 18,
     fontWeight: "bold",
   },
 });

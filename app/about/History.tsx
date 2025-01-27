@@ -19,7 +19,7 @@ export default function History() {
       {/* Logo */}
       <View style={styles.logoContainer}>
         <Image
-          source={require("../../assets/images/logo.png")}
+          source={require("../../public/images/logo.png")}
           style={styles.logo}
         />
       </View>

@@ -8,33 +8,57 @@ import { useAuthInit } from "../context/useAuthInit";
 import { ThemeProvider } from "../context/ThemeContext";
 import SplashScreen from "../components/SplashScreen";
 import { ActivityIndicator, View, StyleSheet, Text } from "react-native";
-import config from "../config"; // Import the config file
+import AsyncStorage from "@react-native-async-storage/async-storage";
+import config from "../config";
 
 export default function RootLayout() {
   const { user, initializing } = useAuthInit();
   const router = useRouter();
   const [isAppReady, setIsAppReady] = useState(false);
+  const [hasSeenOnboarding, setHasSeenOnboarding] = useState(false);
 
   useEffect(() => {
-    const splashTimer = setTimeout(() => {
-      setIsAppReady(true); // App is considered ready after the splash screen
-    }, 3000);
+    const initializeApp = async () => {
+      try {
+        const seen = await AsyncStorage.getItem("hasSeenOnboarding");
+        setHasSeenOnboarding(seen === "true");
 
-    return () => clearTimeout(splashTimer);
+        // App is considered ready after initialization
+        setIsAppReady(true);
+      } catch (error) {
+        console.error("Error during initialization:", error);
+        setIsAppReady(true); // Avoid blocking the app indefinitely
+      }
+    };
+
+    initializeApp();
   }, []);
 
   useEffect(() => {
-    if (!isAppReady || initializing) return;
+    const navigate = async () => {
+      console.log("Navigation state:", {
+        isAppReady,
+        initializing,
+        hasSeenOnboarding,
+        user,
+      });
 
-    // Redirect logic based on development mode or user state
-    if (config.DEVELOPMENT_MODE) {
-      router.replace("/login"); // Always show the login page in development
-    } else if (!user) {
-      router.replace("/login"); // For non-authenticated users
-    } else {
-      router.replace("/"); // Navigate to the home page for authenticated users
-    }
-  }, [isAppReady, initializing, user]);
+      if (!isAppReady || initializing) return;
+
+      if (!hasSeenOnboarding) {
+        console.log("Redirecting to onboarding...");
+        router.replace("/onboarding"); // Corrected path for onboarding
+      } else if (!user || config.DEVELOPMENT_MODE) {
+        console.log("Redirecting to login...");
+        router.replace("/login"); // Corrected path for login
+      } else {
+        console.log("Redirecting to tabs index...");
+        router.replace("/(tabs)/index"); // Corrected path for home in tabs
+      }
+    };
+
+    navigate();
+  }, [isAppReady, initializing, user, hasSeenOnboarding]);
 
   if (!isAppReady) {
     return <SplashScreen />;

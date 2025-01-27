@@ -2,7 +2,10 @@ import config from "../config";
 import { useEffect, useState } from "react";
 import { onAuthStateChanged, signInAnonymously } from "firebase/auth";
 import { auth } from "../constants/firebase-config";
-import { initializeUserInFirestore } from "../services/userService";
+import {
+  initializeUserInFirestore,
+  initializeLeaderboardEntry,
+} from "../services/userService";
 
 interface AuthState {
   user: {
@@ -28,26 +31,46 @@ export function useAuthInit(): AuthState {
       if (firebaseUser) {
         console.log("Authenticated user:", firebaseUser);
         try {
-          await initializeUserInFirestore(firebaseUser.uid);
+          // Use placeholder email and username if they are not available
+          const email = firebaseUser.email || "anonymous@noemail.com";
+          const username = firebaseUser.displayName || "Anonymous";
+
+          await initializeUserInFirestore(firebaseUser.uid, email, username);
+          await initializeLeaderboardEntry(firebaseUser.uid, username);
+
           setUser({
             uid: firebaseUser.uid,
             isAnonymous: firebaseUser.isAnonymous,
           });
         } catch (error) {
-          console.error("Error initializing Firestore user:", error);
+          console.error(
+            "Error initializing Firestore user or leaderboard entry:",
+            error
+          );
         }
       } else {
         try {
           console.log("Signing in anonymously...");
           const result = await signInAnonymously(auth);
           console.log("Anonymous user signed in:", result.user);
-          await initializeUserInFirestore(result.user.uid);
+
+          // Provide default values for anonymous users
+          await initializeUserInFirestore(
+            result.user.uid,
+            "anonymous@noemail.com",
+            "Anonymous"
+          );
+          await initializeLeaderboardEntry(result.user.uid, "Anonymous");
+
           setUser({
             uid: result.user.uid,
             isAnonymous: result.user.isAnonymous,
           });
         } catch (error) {
-          console.error("Error signing in anonymously:", error);
+          console.error(
+            "Error signing in anonymously or initializing data:",
+            error
+          );
         }
       }
 

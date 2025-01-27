@@ -22,7 +22,7 @@ import {
 } from "firebase/firestore";
 import { db, auth } from "../constants/firebase-config";
 import Animated, { FadeInUp } from "react-native-reanimated";
-import { red } from "react-native-reanimated/lib/typescript/Colors";
+import { useRouter } from "expo-router";
 
 const { width } = Dimensions.get("window");
 
@@ -32,7 +32,9 @@ export default function NewFeatures() {
   >([]);
   const [loading, setLoading] = useState(true);
   const [userVote, setUserVote] = useState<string | null>(null);
+  const [timeLeft, setTimeLeft] = useState<string>("");
   const userId = auth.currentUser?.uid;
+  const router = useRouter();
 
   useEffect(() => {
     const featuresRef = collection(db, "polls", "new-features", "features");
@@ -60,8 +62,34 @@ export default function NewFeatures() {
 
     fetchUserVote();
 
+    // Timer for 31 January 2025 at 23:00 French time
+    const targetDate = new Date("2025-01-31T22:00:00Z"); // UTC equivalent
+    const updateTimer = () => {
+      const now = new Date();
+      const diff = targetDate.getTime() - now.getTime();
+
+      if (diff <= 0) {
+        setTimeLeft("Voting has ended.");
+        return;
+      }
+
+      const days = Math.floor(diff / (1000 * 60 * 60 * 24));
+      const hours = Math.floor(
+        (diff % (1000 * 60 * 60 * 24)) / (1000 * 60 * 60)
+      );
+      const minutes = Math.floor((diff % (1000 * 60 * 60)) / (1000 * 60));
+      const seconds = Math.floor((diff % (1000 * 60)) / 1000);
+
+      setTimeLeft(`${days}d ${hours}h ${minutes}m ${seconds}s`);
+    };
+
+    // Set timer immediately and update every second
+    updateTimer();
+    const timerInterval = setInterval(updateTimer, 1000);
+
     return () => {
       unsubscribeFeatures();
+      clearInterval(timerInterval);
     };
   }, [userId]);
 
@@ -117,13 +145,15 @@ export default function NewFeatures() {
 
   return (
     <View style={styles.container}>
-      {/* Logo */}
-      <View style={styles.logoContainer}>
-        <Image
-          source={require("../assets/images/logo.png")}
-          style={styles.logo}
-        />
-      </View>
+      <TouchableOpacity
+        style={styles.elegantBackButton}
+        onPress={() => router.back()}
+      >
+        <View style={styles.elegantBackButtonContainer}>
+          <Text style={styles.elegantBackButtonArrow}>←</Text>
+          <Text style={styles.elegantBackButtonText}>Back</Text>
+        </View>
+      </TouchableOpacity>
 
       {/* Header */}
       <Text style={styles.header}>Vote for the Next Feature</Text>
@@ -167,18 +197,10 @@ export default function NewFeatures() {
         </Text>
       )}
 
-      {/* Suggestion Section */}
-      <View style={styles.suggestionSection}>
-        <Text style={styles.suggestionHeader}>Got Other Ideas?</Text>
-        <Text style={styles.suggestionText}>
-          Don't hesitate to contact us. Share your ideas and help us improve!
-        </Text>
-        <Text
-          style={styles.emailLink}
-          onPress={() => Linking.openURL("mailto:support@challengeme.com")}
-        >
-          support@challengeme.com
-        </Text>
+      {/* Countdown Timer */}
+      <View style={styles.timerContainer}>
+        <Text style={styles.timerLabel}>Time Left:</Text>
+        <Text style={styles.timerText}>{timeLeft}</Text>
       </View>
     </View>
   );
@@ -190,13 +212,31 @@ const styles = StyleSheet.create({
     padding: 20,
     backgroundColor: "#1C1C1E",
   },
-  logoContainer: {
-    alignItems: "center",
+  elegantBackButton: {
     marginBottom: 20,
+    alignSelf: "flex-start",
+    padding: 10,
+    flexDirection: "row",
+    alignItems: "center",
+    backgroundColor: "#2C2C2E",
+    borderRadius: 8,
+    shadowColor: "#000",
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.2,
+    shadowRadius: 6,
   },
-  logo: {
-    width: 120,
-    height: 120,
+  elegantBackButtonContainer: {
+    flexDirection: "row",
+    alignItems: "center",
+  },
+  elegantBackButtonArrow: {
+    fontSize: 20,
+    color: "#007bff",
+    marginRight: 5,
+  },
+  elegantBackButtonText: {
+    fontSize: 16,
+    color: "#007bff",
   },
   header: {
     fontSize: 24,
@@ -255,27 +295,26 @@ const styles = StyleSheet.create({
     color: "#BBBBBB",
     textAlign: "center",
   },
-  suggestionSection: {
-    marginTop: "auto", // Push the section to the bottom
+  timerContainer: {
+    marginTop: 20,
     alignItems: "center",
+    backgroundColor: "#2C2C2E",
+    borderRadius: 8,
+    padding: 15,
+    shadowColor: "#000",
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.2,
+    shadowRadius: 6,
   },
-  suggestionHeader: {
+  timerLabel: {
     fontSize: 18,
-    fontWeight: "bold",
-    color: "#FFFFFF",
-    marginBottom: 10,
-  },
-  suggestionText: {
-    fontSize: 16,
     color: "#BBBBBB",
-    textAlign: "center",
-    marginBottom: 10,
+    marginBottom: 5,
   },
-  emailLink: {
-    fontSize: 16,
-    color: "#007bff",
+  timerText: {
+    fontSize: 22,
+    color: "#FFD700",
     fontWeight: "bold",
-    textAlign: "center",
   },
   loadingContainer: {
     flex: 1,

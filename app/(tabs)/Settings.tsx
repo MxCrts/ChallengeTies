@@ -8,17 +8,20 @@ import {
   Alert,
   Linking,
 } from "react-native";
+import { Picker } from "@react-native-picker/picker";
 import * as Notifications from "expo-notifications";
 import { Ionicons } from "@expo/vector-icons";
 import { useTheme } from "../../context/ThemeContext";
 import { useRouter } from "expo-router";
 import { auth } from "../../constants/firebase-config";
 import { useAuthInit } from "../../context/useAuthInit";
+import AsyncStorage from "@react-native-async-storage/async-storage";
 
 export default function Settings() {
   const { theme, toggleTheme } = useTheme();
   const router = useRouter();
   const [notificationsEnabled, setNotificationsEnabled] = useState(true);
+  const [selectedLanguage, setSelectedLanguage] = useState("en"); // Language selection
 
   const toggleNotifications = async (value: boolean) => {
     setNotificationsEnabled(value);
@@ -33,6 +36,15 @@ export default function Settings() {
         "Notifications Enabled",
         "Notifications are now active. Ensure permissions are granted."
       );
+    }
+  };
+
+  const clearCache = async () => {
+    try {
+      await AsyncStorage.clear();
+      Alert.alert("Cache Cleared", "All cached data has been cleared.");
+    } catch (error) {
+      Alert.alert("Error", "Failed to clear cache. Please try again.");
     }
   };
 
@@ -137,6 +149,27 @@ export default function Settings() {
         <Switch value={theme === "dark"} onValueChange={toggleTheme} />
       </View>
 
+      {/* Language Selection */}
+      <View style={styles.settingItem}>
+        <Text
+          style={[
+            styles.settingLabel,
+            theme === "dark" ? styles.darkText : styles.lightText,
+          ]}
+        >
+          Language
+        </Text>
+        <Picker
+          selectedValue={selectedLanguage}
+          style={styles.languagePicker}
+          onValueChange={(itemValue) => setSelectedLanguage(itemValue)}
+        >
+          <Picker.Item label="English" value="en" />
+          <Picker.Item label="Français" value="fr" />
+          <Picker.Item label="Español" value="es" />
+        </Picker>
+      </View>
+
       {/* Account Section */}
       <Text
         style={[
@@ -168,6 +201,12 @@ export default function Settings() {
           Delete Account
         </Text>
       </TouchableOpacity>
+      <TouchableOpacity style={styles.accountButton} onPress={clearCache}>
+        <Ionicons name="trash-bin-outline" size={20} color="#ffa500" />
+        <Text style={[styles.accountButtonText, { color: "#ffa500" }]}>
+          Clear Cache
+        </Text>
+      </TouchableOpacity>
 
       {/* About Section */}
       <Text
@@ -190,6 +229,9 @@ export default function Settings() {
       <TouchableOpacity onPress={() => Linking.openURL("https://example.com")}>
         <Text style={styles.aboutLink}>Visit Our Website</Text>
       </TouchableOpacity>
+
+      {/* App Info */}
+      <Text style={styles.appVersion}>App Version: 1.0.0</Text>
     </View>
   );
 }
@@ -218,6 +260,17 @@ const styles = StyleSheet.create({
     paddingVertical: 10,
     borderBottomWidth: 1,
     borderBottomColor: "#ddd",
+  },
+  languagePicker: {
+    width: 150,
+    height: 50,
+    color: "#007bff",
+  },
+  appVersion: {
+    textAlign: "center",
+    color: "#666",
+    marginTop: 20,
+    fontSize: 12,
   },
   accountButtonText: { fontSize: 16, color: "#007bff", marginLeft: 10 },
   aboutLink: { fontSize: 14, color: "#007bff", marginVertical: 5 },

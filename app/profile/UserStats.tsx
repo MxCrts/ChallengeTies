@@ -5,16 +5,23 @@ import {
   StyleSheet,
   FlatList,
   ActivityIndicator,
+  Dimensions,
 } from "react-native";
+import { Ionicons } from "@expo/vector-icons";
+import { doc, onSnapshot } from "firebase/firestore";
+
+import { db, auth } from "../../constants/firebase-config";
 import { useSavedChallenges } from "../../context/SavedChallengesContext";
 import { useCurrentChallenges } from "../../context/CurrentChallengesContext";
-import { Ionicons } from "@expo/vector-icons";
+import { LinearGradient } from "expo-linear-gradient";
 
 interface Stat {
   name: string;
   value: number | string;
   icon: string;
 }
+
+const { width } = Dimensions.get("window");
 
 export default function UserStats() {
   const { savedChallenges } = useSavedChallenges();
@@ -23,70 +30,87 @@ export default function UserStats() {
   const [stats, setStats] = useState<Stat[]>([]);
   const [isLoading, setIsLoading] = useState(true);
 
+  // We'll also track real-time user doc to get trophies & achievements length
+  const [userDoc, setUserDoc] = useState<any>(null);
+
   useEffect(() => {
-    const calculateStats = () => {
-      const totalSaved = savedChallenges.length;
-      const totalOngoing = currentChallenges.length;
-      const totalCompleted = currentChallenges.filter(
-        (challenge) => challenge.completedDays === challenge.selectedDays
-      ).length;
-      const successRate =
-        totalOngoing + totalCompleted > 0
-          ? Math.round((totalCompleted / (totalOngoing + totalCompleted)) * 100)
-          : 0;
-      const longestStreak = 10; // Placeholder, calculate if needed
-
-      setStats([
-        {
-          name: "Challenges Saved",
-          value: totalSaved,
-          icon: "bookmark-outline",
-        },
-        {
-          name: "Ongoing Challenges",
-          value: totalOngoing,
-          icon: "hourglass-outline",
-        },
-        {
-          name: "Challenges Completed",
-          value: totalCompleted,
-          icon: "trophy-outline",
-        },
-        {
-          name: "Success Rate",
-          value: `${successRate}%`,
-          icon: "stats-chart-outline",
-        },
-        {
-          name: "Longest Streak",
-          value: `${longestStreak} days`,
-          icon: "flame-outline",
-        },
-      ]);
+    const userId = auth.currentUser?.uid;
+    if (!userId) {
       setIsLoading(false);
-    };
+      return;
+    }
 
-    calculateStats();
-  }, [savedChallenges, currentChallenges]);
+    // Subscribe to user doc in real time
+    const unsub = onSnapshot(doc(db, "users", userId), (snapshot) => {
+      setUserDoc(snapshot.data());
+      setIsLoading(false);
+    });
 
-  const renderStat = ({ item }: { item: Stat }) => (
-    <View style={styles.statCard}>
-      <Ionicons
-        name={item.icon as keyof typeof Ionicons.glyphMap}
-        size={40}
-        color="#2F80ED"
-      />
-      <View style={styles.statContent}>
-        <Text style={styles.statName}>{item.name}</Text>
-        <Text style={styles.statValue}>{item.value}</Text>
-      </View>
-    </View>
-  );
+    return () => unsub();
+  }, []);
+
+  useEffect(() => {
+    // Combine user doc stats with local challenges
+    if (!userDoc) return;
+
+    const totalSaved = savedChallenges.length;
+    const totalOngoing = currentChallenges.length;
+    const totalCompleted = currentChallenges.filter(
+      (challenge) => challenge.completedDays === challenge.selectedDays
+    ).length;
+    const successRate =
+      totalOngoing + totalCompleted > 0
+        ? Math.round((totalCompleted / (totalOngoing + totalCompleted)) * 100)
+        : 0;
+    const longestStreak = 10; // Placeholder
+    const trophies = userDoc?.trophies || 0;
+    const achievementsUnlocked = userDoc?.achievements?.length || 0;
+
+    const newStats: Stat[] = [
+      {
+        name: "Challenges Saved",
+        value: totalSaved,
+        icon: "bookmark-outline",
+      },
+      {
+        name: "Ongoing Challenges",
+        value: totalOngoing,
+        icon: "hourglass-outline",
+      },
+      {
+        name: "Challenges Completed",
+        value: totalCompleted,
+        icon: "trophy-outline",
+      },
+      {
+        name: "Success Rate",
+        value: `${successRate}%`,
+        icon: "stats-chart-outline",
+      },
+      {
+        name: "Trophies",
+        value: trophies,
+        icon: "medal-outline",
+      },
+      {
+        name: "Achievements Unlocked",
+        value: achievementsUnlocked,
+        icon: "ribbon-outline",
+      },
+      {
+        name: "Longest Streak",
+        value: `${longestStreak} days`,
+        icon: "flame-outline",
+      },
+    ];
+
+    setStats(newStats);
+  }, [savedChallenges, currentChallenges, userDoc]);
 
   if (isLoading) {
     return (
       <View style={styles.loadingContainer}>
-        <ActivityIndicator size="large" color="#2F80ED" />
+        <ActivityIndicator size="large" color="#6A11CB" />
         <Text style={styles.loadingText}>Loading your stats...</Text>
       </View>
     );
@@ -103,8 +127,27 @@ export default function UserStats() {
     );
   }
 
+  const renderStat = ({ item }: { item: Stat }) => (
+    <View style={styles.statCard}>
+      <Ionicons
+        name={item.icon as keyof typeof Ionicons.glyphMap}
+        size={36}
+        color="#7F00FF"
+      />
+      <View style={styles.statContent}>
+        <Text style={styles.statName}>{item.name}</Text>
+        <Text style={styles.statValue}>{item.value}</Text>
+      </View>
+    </View>
+  );
+
   return (
-    <View style={styles.container}>
+    <LinearGradient
+      colors={["#1C1C1E", "#2C2C2E"]}
+      style={styles.container}
+      start={{ x: 0, y: 0 }}
+      end={{ x: 0.8, y: 1 }}
+    >
       <Text style={styles.header}>Your Stats</Text>
       <FlatList
         data={stats}
@@ -112,15 +155,13 @@ export default function UserStats() {
         keyExtractor={(item) => item.name}
         contentContainerStyle={styles.listContainer}
       />
-    </View>
+    </LinearGradient>
   );
 }
 
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: "#1C1C1E",
-    padding: 20,
   },
   header: {
     fontSize: 24,
@@ -128,17 +169,19 @@ const styles = StyleSheet.create({
     color: "#6A11CB",
     marginBottom: 20,
     textAlign: "center",
+    marginTop: 40,
   },
   listContainer: {
-    paddingBottom: 20,
+    paddingHorizontal: 20,
+    paddingBottom: 40,
   },
   statCard: {
     flexDirection: "row",
     alignItems: "center",
-    backgroundColor: "#2C2C2E",
+    backgroundColor: "#3A3A3C",
     padding: 15,
-    marginBottom: 10,
-    borderRadius: 10,
+    marginBottom: 12,
+    borderRadius: 12,
     shadowColor: "#000",
     shadowOffset: { width: 0, height: 3 },
     shadowOpacity: 0.15,
@@ -151,16 +194,18 @@ const styles = StyleSheet.create({
   statName: {
     fontSize: 16,
     color: "#fff",
+    marginBottom: 4,
   },
   statValue: {
     fontSize: 18,
     fontWeight: "bold",
-    color: "#6A11CB",
+    color: "#7F00FF",
   },
   loadingContainer: {
     flex: 1,
     justifyContent: "center",
     alignItems: "center",
+    backgroundColor: "#1C1C1E",
   },
   loadingText: {
     marginTop: 10,
@@ -171,6 +216,7 @@ const styles = StyleSheet.create({
     flex: 1,
     justifyContent: "center",
     alignItems: "center",
+    backgroundColor: "#1C1C1E",
   },
   emptyText: {
     fontSize: 18,

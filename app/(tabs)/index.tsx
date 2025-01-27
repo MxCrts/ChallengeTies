@@ -13,7 +13,7 @@ import {
 import { useRouter } from "expo-router";
 import { Audio } from "expo-av";
 import { collection, getDocs } from "firebase/firestore";
-import { db } from "../../constants/firebase-config";
+import { auth, db } from "../../constants/firebase-config";
 import Swiper from "react-native-swiper";
 
 const { width } = Dimensions.get("window");
@@ -32,9 +32,14 @@ type NavigationPath =
   | "/explore"
   | "/leaderboard"
   | {
-    pathname: "/challenge-details/[id]";
-    params: { id: string; title: string; category: string; description: string };
-  };
+      pathname: "/challenge-details/[id]";
+      params: {
+        id: string;
+        title: string;
+        category: string;
+        description: string;
+      };
+    };
 
 export default function HomeScreen() {
   const [challenges, setChallenges] = useState<Challenge[]>([]);
@@ -45,6 +50,13 @@ export default function HomeScreen() {
 
   useEffect(() => {
     const fetchChallenges = async () => {
+      const currentUser = auth.currentUser;
+      if (!currentUser) {
+        console.log("User not authenticated. Fetching challenges skipped.");
+        setLoading(false);
+        return;
+      }
+
       setLoading(true);
       try {
         const querySnapshot = await getDocs(collection(db, "challenges"));
@@ -139,32 +151,36 @@ export default function HomeScreen() {
   return (
     <View style={styles.container}>
       <ScrollView contentContainerStyle={styles.scrollContent}>
-        {/* Hero Section */}
+        {/* Logo and Hero Section */}
         <ImageBackground
           source={require("../../public/images/backgroundbase.jpg")}
           style={styles.heroSection}
-          imageStyle={{ resizeMode: "cover", borderBottomLeftRadius: 20, borderBottomRightRadius: 20 }}
+          imageStyle={{
+            resizeMode: "cover",
+            borderBottomLeftRadius: 20,
+            borderBottomRightRadius: 20,
+          }}
         >
-          <View style={styles.heroOverlay} />
+          <Image
+            source={require("../../public/images/logo.png")}
+            style={styles.logo}
+          />
           <Text style={styles.heroTitle}>Welcome to ChallengeTies!</Text>
-          <Text style={styles.heroSubtitle}>Take on challenges and grow every day.</Text>
-          <TouchableOpacity
-            style={styles.heroButton}
-            onPress={() => handleNavigation("/explore")}
-          >
-            <Text style={styles.heroButtonText}>Explore Challenges</Text>
-          </TouchableOpacity>
+          <Text style={styles.heroSubtitle}>
+            Take on challenges and grow every day.
+          </Text>
         </ImageBackground>
 
         {/* Carousel Section */}
         <View style={styles.carouselContainer}>
-          <Text style={styles.sectionHeader}>Trending Challenges</Text>
           <Swiper
             style={styles.swiper}
             autoplay
             autoplayTimeout={3}
             loop
-            showsPagination={false}
+            showsPagination
+            dotStyle={styles.swiperDot}
+            activeDotStyle={styles.swiperActiveDot}
           >
             {challenges.map((challenge) => (
               <View key={challenge.id} style={styles.slide}>
@@ -177,70 +193,57 @@ export default function HomeScreen() {
         {/* Links Section */}
         <View style={styles.linksSection}>
           <Text style={styles.sectionHeader}>Discover More</Text>
-          <View style={styles.linksContainer}>
-            {["/new-features", "/tips"].map((path) => (
-              <ImageBackground
-                key={path}
-                source={require("../../public/images/backgroundbase.jpg")}
-                style={styles.linkCardBackground}
-                imageStyle={{ borderRadius: 15 }}
-              >
-                <TouchableOpacity
-                  style={styles.linkCard}
-                  onPress={() => handleNavigation(path as NavigationPath)}
-                >
-                  <Text style={styles.linkText}>
-                    {path === "/new-features"
-                      ? "🚀 New Features"
-                      : "📈 Tips & Tricks"}
-                  </Text>
-                </TouchableOpacity>
-              </ImageBackground>
-            ))}
-          </View>
-          <ImageBackground
-            source={require("../../public/images/backgroundbase.jpg")}
-            style={styles.centeredLinkCardBackground}
-            imageStyle={{ borderRadius: 15 }}
+          <TouchableOpacity
+            style={[styles.linkCard, styles.orangeWoodBackground]}
+            onPress={() => handleNavigation("/new-features")}
           >
-            <TouchableOpacity
-              style={styles.linkCard}
-              onPress={() => handleNavigation("/leaderboard")}
-            >
-              <Text style={styles.linkText}>🌍 LeaderBoard</Text>
-            </TouchableOpacity>
-          </ImageBackground>
+            <Text style={styles.linkText}>🚀 New Features</Text>
+          </TouchableOpacity>
+          <TouchableOpacity
+            style={[styles.linkCard, styles.steelBlackBackground]}
+            onPress={() => handleNavigation("/tips")}
+          >
+            <Text style={styles.linkText}>📈 Tips & Tricks</Text>
+          </TouchableOpacity>
+          <TouchableOpacity
+            style={[styles.linkCard, styles.elegantDarkWoodBackground]}
+            onPress={() => handleNavigation("/leaderboard")}
+          >
+            <Text style={styles.linkText}>🌍 LeaderBoard</Text>
+          </TouchableOpacity>
         </View>
       </ScrollView>
 
       {/* Footer */}
       <View style={styles.footer}>
-        <Text style={styles.footerText}>© 2025 ChallengeTies. All Rights Reserved.</Text>
+        <Text style={styles.footerText}>
+          © 2025 ChallengeTies. All Rights Reserved.
+        </Text>
       </View>
     </View>
   );
 }
-
 const styles = StyleSheet.create({
   container: {
     flex: 1,
     backgroundColor: "#F5F5F5",
   },
   scrollContent: {
-    paddingBottom: 60,
+    paddingBottom: 80,
   },
   heroSection: {
-    height: 220,
+    height: 320,
     justifyContent: "center",
     alignItems: "center",
     position: "relative",
   },
-  heroOverlay: {
-    ...StyleSheet.absoluteFillObject,
-    backgroundColor: "rgba(0, 0, 0, 0.4)",
+  logo: {
+    width: 100,
+    height: 100,
+    marginBottom: 15,
   },
   heroTitle: {
-    fontSize: 26,
+    fontSize: 34,
     fontWeight: "bold",
     color: "#FFF",
     textAlign: "center",
@@ -248,86 +251,105 @@ const styles = StyleSheet.create({
     zIndex: 1,
     textShadowColor: "rgba(0, 0, 0, 0.8)",
     textShadowOffset: { width: 1, height: 2 },
-    textShadowRadius: 3,
+    textShadowRadius: 4,
   },
   heroSubtitle: {
-    fontSize: 16,
+    fontSize: 20,
     color: "#FFF",
     textAlign: "center",
-    marginBottom: 15,
+    marginBottom: 25,
     zIndex: 1,
-  },
-  heroButton: {
-    backgroundColor: "#FFF",
-    paddingVertical: 10,
-    paddingHorizontal: 25,
-    borderRadius: 8,
-    zIndex: 1,
-    shadowColor: "#000",
-    shadowOffset: { width: 0, height: 3 },
-    shadowOpacity: 0.2,
-    shadowRadius: 4,
-  },
-  heroButtonText: {
-    fontSize: 16,
-    color: "#FF9800",
-    fontWeight: "bold",
+    textShadowColor: "rgba(0, 0, 0, 0.8)",
+    textShadowOffset: { width: 1, height: 2 },
+    textShadowRadius: 4,
   },
   carouselContainer: {
-    marginTop: 20,
+    marginTop: 30,
   },
-  sectionHeader: {
-    fontSize: 20,
-    fontWeight: "bold",
-    color: "#333",
-    marginHorizontal: 20,
-    marginBottom: 10,
+  swiper: {
+    height: 240,
   },
-  linksSection: {
-    marginTop: 20,
-    paddingHorizontal: 20,
+  swiperDot: {
+    backgroundColor: "#FFF",
+    width: 8,
+    height: 8,
+    borderRadius: 4,
+    marginHorizontal: 3,
   },
-  linksContainer: {
-    flexDirection: "row",
-    justifyContent: "space-between",
+  swiperActiveDot: {
+    backgroundColor: "#FF9800",
+    width: 10,
+    height: 10,
+    borderRadius: 5,
+    marginHorizontal: 3,
   },
-  linkCardBackground: {
-    width: "48%", // Two buttons per row
-    aspectRatio: 1.5, // Maintain proper proportions
-    borderRadius: 15,
-    overflow: "hidden",
-    justifyContent: "center",
-    alignItems: "center",
-    marginBottom: 10,
-    shadowColor: "#000",
-    shadowOffset: { width: 0, height: 4 },
-    shadowOpacity: 0.3,
-    shadowRadius: 6,
-    elevation: 5,
-  },
-  centeredLinkCardBackground: {
-    width: "80%", // Centered button
-    aspectRatio: 1.5, // Maintain proportion
-    borderRadius: 15,
-    overflow: "hidden",
-    alignSelf: "center",
-    justifyContent: "center",
-    alignItems: "center",
-    shadowColor: "#000",
-    shadowOffset: { width: 0, height: 4 },
-    shadowOpacity: 0.3,
-    shadowRadius: 6,
-    elevation: 5,
-    marginTop: 15,
-  },
-  linkCard: {
+  slide: {
     flex: 1,
     justifyContent: "center",
     alignItems: "center",
   },
+  challengeCard: {
+    width: width * 0.8,
+    borderRadius: 12,
+    overflow: "hidden",
+    backgroundColor: "#FFF",
+    shadowColor: "#000",
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.1,
+    shadowRadius: 6,
+    elevation: 4,
+  },
+  challengeImage: {
+    width: "100%",
+    height: 160,
+  },
+  cardContent: {
+    padding: 15,
+    alignItems: "center",
+  },
+  challengeTitle: {
+    fontSize: 18,
+    fontWeight: "bold",
+    color: "#333",
+    textAlign: "center",
+    marginBottom: 5,
+  },
+  challengeCategory: {
+    fontSize: 14,
+    color: "#888",
+    textAlign: "center",
+  },
+  linksSection: {
+    marginTop: 40,
+    paddingHorizontal: 20,
+  },
+  sectionHeader: {
+    fontSize: 24,
+    fontWeight: "bold",
+    color: "#333",
+    marginBottom: 20,
+    textAlign: "center",
+  },
+  linkCard: {
+    marginVertical: 10,
+    paddingVertical: 15,
+    paddingHorizontal: 20,
+    borderRadius: 10,
+    alignItems: "center",
+    justifyContent: "center",
+  },
+  orangeWoodBackground: {
+    backgroundColor: "#D2691E",
+  },
+  steelBlackBackground: {
+    backgroundColor: "#2F4F4F",
+  },
+  elegantDarkWoodBackground: {
+    backgroundColor: "#8B4513",
+  },
   linkText: {
+    fontSize: 18,
     color: "#FFF",
-    fontSize: 16,
     fontWeight: "bold",
     textAlign: "center",
     textShadowColor: "rgba(0, 0, 0, 0.8)",
@@ -336,7 +358,7 @@ const styles = StyleSheet.create({
   },
   footer: {
     alignItems: "center",
-    padding: 15,
+    padding: 20,
     backgroundColor: "#FFF",
     borderTopWidth: 1,
     borderColor: "#E0E0E0",
@@ -353,46 +375,6 @@ const styles = StyleSheet.create({
   loadingText: {
     marginTop: 10,
     color: "#888",
-    fontSize: 16,
+    fontSize: 18,
   },
-  swiper: {
-    height: 240,
-  },
-  slide: {
-    flex: 1,
-    justifyContent: "center",
-    alignItems: "center",
-  },
-  challengeCard: {
-    width: width * 0.8,
-    borderRadius: 10,
-    overflow: "hidden",
-    backgroundColor: "#FFF",
-    shadowColor: "#000",
-    shadowOffset: { width: 0, height: 4 },
-    shadowOpacity: 0.1,
-    shadowRadius: 6,
-    elevation: 4,
-  },
-  challengeImage: {
-    width: "100%",
-    height: 150,
-  },
-  cardContent: {
-    padding: 10,
-    alignItems: "center",
-  },
-  challengeTitle: {
-    fontSize: 16,
-    fontWeight: "bold",
-    color: "#333",
-    textAlign: "center",
-    marginBottom: 5,
-  },
-  challengeCategory: {
-    fontSize: 14,
-    color: "#888",
-    textAlign: "center",
-  },
-
 });

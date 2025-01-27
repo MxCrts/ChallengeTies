@@ -1,6 +1,4 @@
 import React, { useState, useEffect } from "react";
-import { useRouter } from "expo-router";
-
 import {
   View,
   Text,
@@ -11,7 +9,9 @@ import {
   Dimensions,
   SafeAreaView,
   ActivityIndicator,
+  ScrollView,
 } from "react-native";
+import { useRouter } from "expo-router";
 import { Ionicons } from "@expo/vector-icons";
 import Animated, {
   useSharedValue,
@@ -20,39 +20,31 @@ import Animated, {
 } from "react-native-reanimated";
 import {
   doc,
-  getDoc,
+  onSnapshot,
   collection,
   getDocs,
   query,
   where,
 } from "firebase/firestore";
 import { auth, db } from "../../constants/firebase-config";
-import { useNavigation } from "@react-navigation/native";
 
 const { width } = Dimensions.get("window");
 
 const ProfileScreen = () => {
-  const navigation = useNavigation(); // Use the hook to access navigation
+  const router = useRouter();
+
   const [userData, setUserData] = useState({
     name: "",
     bio: "",
     profileImage: "",
     challengesCompleted: 0,
     challengesOngoing: 0,
+    trophies: 0,
+    achievements: [],
   });
-  const router = useRouter();
 
   const [isLoading, setIsLoading] = useState(true);
-  const [myChallenges, setMyChallenges] = useState<
-    {
-      id: string;
-      title: string;
-      category: string;
-      description: string;
-      imageUrl?: string | null;
-    }[]
-  >([]);
-
+  const [myChallenges, setMyChallenges] = useState([]);
   const [loadingChallenges, setLoadingChallenges] = useState(false);
 
   const scrollY = useSharedValue(0);
@@ -78,36 +70,48 @@ const ProfileScreen = () => {
       icon: "bookmark-outline",
       navigateTo: "profile/SavedChallenges",
     },
+    {
+      name: "Completed Challenges",
+      icon: "checkmark-done-outline",
+      navigateTo: "profile/CompletedChallenges",
+    },
+    {
+      name: "Achievements",
+      icon: "medal-outline",
+      navigateTo: "profile/Achievements",
+    },
   ];
 
-  const fetchUserData = async () => {
-    try {
-      setIsLoading(true);
-      const currentUser = auth.currentUser;
-      if (!currentUser) {
-        throw new Error("User not authenticated.");
-      }
+  useEffect(() => {
+    const currentUser = auth.currentUser;
+    if (!currentUser) {
+      setIsLoading(false);
+      return;
+    }
 
-      const userId = currentUser.uid;
-      const userRef = doc(db, "users", userId);
-      const userSnap = await getDoc(userRef);
+    const userId = currentUser.uid;
+    const userRef = doc(db, "users", userId);
 
-      if (userSnap.exists()) {
-        const userData = userSnap.data();
+    setIsLoading(true);
+
+    const unsubscribe = onSnapshot(userRef, (snapshot) => {
+      if (snapshot.exists()) {
+        const data = snapshot.data();
         setUserData({
-          name: userData.displayName || "Anonymous",
-          bio: userData.bio || "No bio available",
-          profileImage: userData.profileImage || "",
-          challengesCompleted: userData.challengesCompleted || 0,
-          challengesOngoing: userData.challengesOngoing || 0,
+          name: data.displayName || "Anonymous",
+          bio: data.bio || "No bio available",
+          profileImage: data.profileImage || "",
+          challengesCompleted: data.challengesCompleted || 0,
+          challengesOngoing: data.challengesOngoing || 0,
+          trophies: data.trophies || 0,
+          achievements: data.achievements || [],
         });
       }
-    } catch (error) {
-      console.error("Error fetching user data:", error);
-    } finally {
       setIsLoading(false);
-    }
-  };
+    });
+
+    return () => unsubscribe();
+  }, []);
 
   const fetchMyChallenges = async () => {
     try {
@@ -116,50 +120,65 @@ const ProfileScreen = () => {
         throw new Error("User not authenticated.");
       }
 
+      setLoadingChallenges(true);
       const challengesRef = collection(db, "challenges");
       const q = query(challengesRef, where("creatorId", "==", userId));
       const querySnapshot = await getDocs(q);
 
-      const challenges = querySnapshot.docs.map((doc) => ({
-        id: doc.id,
-        title: doc.data().title || "Untitled Challenge",
-        category: doc.data().category || "Uncategorized",
-        description: doc.data().description || "No description available",
-        imageUrl: doc.data().imageUrl || null,
+      const challenges = querySnapshot.docs.map((docSnap) => ({
+        id: docSnap.id,
+        title: docSnap.data().title || "Untitled Challenge",
+        category: docSnap.data().category || "Uncategorized",
+        description: docSnap.data().description || "No description available",
+        imageUrl: docSnap.data().imageUrl || null,
       }));
 
-      setMyChallenges(challenges); // Set the formatted challenges
+      setMyChallenges(challenges);
     } catch (error) {
-      console.error("Error fetching my challenges:", error);
+      console.error("Error fetching challenges:", error);
+    } finally {
+      setLoadingChallenges(false);
     }
   };
 
   useEffect(() => {
-    fetchUserData();
     fetchMyChallenges();
   }, []);
 
-  const renderSection = ({ item }: { item: any }) => (
+  const headerStyle = useAnimatedStyle(() => ({
+    opacity: withTiming(Math.max(0, 1 - scrollY.value / 150), {
+      duration: 300,
+    }),
+    transform: [
+      {
+        translateY: withTiming(scrollY.value < 150 ? 0 : -scrollY.value + 150, {
+          duration: 300,
+        }),
+      },
+    ],
+  }));
+
+  const renderSection = ({ item }) => (
     <TouchableOpacity
-      onPress={() => navigation.navigate(item.navigateTo as never)}
+      onPress={() => router.push(item.navigateTo)}
       style={styles.sectionBubble}
     >
-      <Ionicons name={item.icon} size={40} color="#007bff" />
+      <Ionicons name={item.icon} size={40} color="#FFA500" />
       <Text style={styles.sectionText}>{item.name}</Text>
     </TouchableOpacity>
   );
 
-  const renderChallenge = ({ item }: { item: any }) => (
+  const renderChallenge = ({ item }) => (
     <TouchableOpacity
       style={styles.challengeCard}
       onPress={() =>
         router.push({
           pathname: "/challenge-details/[id]",
           params: {
-            id: item.id, // Challenge ID (required)
-            title: item.title, // Optional
-            category: item.category, // Optional
-            description: item.description, // Optional
+            id: item.id,
+            title: item.title,
+            category: item.category,
+            description: item.description,
           },
         })
       }
@@ -177,27 +196,14 @@ const ProfileScreen = () => {
     </TouchableOpacity>
   );
 
-  const headerStyle = useAnimatedStyle(() => ({
-    opacity: withTiming(Math.max(0, 1 - scrollY.value / 150), {
-      duration: 300,
-    }),
-    transform: [
-      {
-        translateY: withTiming(scrollY.value < 150 ? 0 : -scrollY.value + 150, {
-          duration: 300,
-        }),
-      },
-    ],
-  }));
-
-  const onScroll = (event: any) => {
+  const onScroll = (event) => {
     scrollY.value = event.nativeEvent.contentOffset.y;
   };
 
   if (isLoading) {
     return (
       <View style={styles.loadingContainer}>
-        <ActivityIndicator size="large" color="#007bff" />
+        <ActivityIndicator size="large" color="#FFA500" />
         <Text style={styles.loadingText}>Loading Profile...</Text>
       </View>
     );
@@ -206,24 +212,28 @@ const ProfileScreen = () => {
   return (
     <SafeAreaView style={styles.container}>
       <FlatList
-        data={[null]} // Null item for header rendering
+        data={[null]}
         renderItem={() => (
           <View>
-            {/* Header */}
             <Animated.View style={[styles.header, headerStyle]}>
               <Image
                 source={
                   userData.profileImage
                     ? { uri: userData.profileImage }
-                    : require("../../assets/images/default-profile.jpg") // Placeholder image
+                    : require("../../assets/images/default-profile.jpg")
                 }
                 style={styles.profileImage}
               />
               <Text style={styles.username}>{userData.name}</Text>
               <Text style={styles.bio}>{userData.bio}</Text>
+              <View style={styles.trophiesContainer}>
+                <Ionicons name="trophy-outline" size={24} color="#FFD700" />
+                <Text style={styles.trophiesText}>
+                  {userData.trophies} Trophies
+                </Text>
+              </View>
             </Animated.View>
 
-            {/* Sections */}
             <View style={styles.sectionsContainer}>
               <FlatList
                 data={sections}
@@ -234,7 +244,6 @@ const ProfileScreen = () => {
               />
             </View>
 
-            {/* My Challenges Section */}
             <View style={styles.myChallengesContainer}>
               <Text style={styles.myChallengesTitle}>My Challenges</Text>
               {loadingChallenges ? (
@@ -263,7 +272,6 @@ const ProfileScreen = () => {
     </SafeAreaView>
   );
 };
-
 const styles = StyleSheet.create({
   container: {
     flex: 1,
@@ -305,6 +313,18 @@ const styles = StyleSheet.create({
     color: "#f1f1f1",
     textAlign: "center",
     paddingHorizontal: 15,
+    marginBottom: 10,
+  },
+  trophiesContainer: {
+    flexDirection: "row",
+    alignItems: "center",
+    marginTop: 10,
+  },
+  trophiesText: {
+    fontSize: 16,
+    color: "#FFD700",
+    fontWeight: "bold",
+    marginLeft: 5,
   },
   sectionsContainer: {
     padding: 20,

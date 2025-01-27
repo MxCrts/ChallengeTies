@@ -15,6 +15,9 @@ import {
 } from "firebase/firestore";
 import { db, auth } from "../constants/firebase-config";
 
+// 1) Import your trophies helper
+import { awardTrophiesAndCheckAchievements } from "../helpers/trophiesHelpers";
+
 interface Message {
   id: string;
   text: string;
@@ -27,7 +30,7 @@ interface Message {
 interface ChatContextType {
   messages: Message[];
   sendMessage: (challengeId: string, text: string) => Promise<void>;
-  fetchMessages: (challengeId: string) => () => void; // Returns the unsubscribe function
+  fetchMessages: (challengeId: string) => () => void;
   loadingMessages: boolean;
 }
 
@@ -44,6 +47,7 @@ export const ChatProvider: React.FC<{ children: React.ReactNode }> = ({
     const q = query(messagesRef, orderBy("timestamp", "asc"));
 
     setLoadingMessages(true);
+
     const unsubscribe = onSnapshot(
       q,
       (snapshot) => {
@@ -64,13 +68,16 @@ export const ChatProvider: React.FC<{ children: React.ReactNode }> = ({
     return unsubscribe;
   }, []);
 
+  /**
+   * Sends a chat message to the challenge's "messages" subcollection.
+   * After sending, we optionally award trophies for "firstChatMessage."
+   */
   const sendMessage = async (challengeId: string, text: string) => {
     if (!auth.currentUser) {
       throw new Error("User not authenticated.");
     }
 
     const { uid, displayName, photoURL } = auth.currentUser;
-
     const messageRef = collection(db, "chats", challengeId, "messages");
 
     await addDoc(messageRef, {
@@ -79,6 +86,13 @@ export const ChatProvider: React.FC<{ children: React.ReactNode }> = ({
       userId: uid,
       username: displayName || "Anonymous",
       avatar: photoURL || "",
+    });
+
+    // 2) Award trophies for "First chat message" if not already done
+    // (Define logic in trophiesHelpers: case "firstChatMessage": +5 trophies if user lacks "First chat message")
+    await awardTrophiesAndCheckAchievements({
+      action: "firstChatMessage",
+      trophiesToAdd: 0,
     });
   };
 

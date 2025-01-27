@@ -14,9 +14,8 @@ import {
 } from "react-native";
 import { Picker } from "@react-native-picker/picker";
 import { useRouter } from "expo-router";
-import { collection, onSnapshot, addDoc } from "firebase/firestore";
-import * as ImagePicker from "expo-image-picker";
-import { db, auth } from "../../constants/firebase-config";
+import { collection, onSnapshot } from "firebase/firestore";
+import { db } from "../../constants/firebase-config";
 import { Ionicons } from "@expo/vector-icons";
 import { useSavedChallenges } from "../../context/SavedChallengesContext";
 import Animated, { FadeInUp } from "react-native-reanimated";
@@ -29,24 +28,72 @@ interface Challenge {
   days: number;
   imageUrl?: string;
   participantsCount?: number;
+  creatorId?: string;
 }
 
 export default function ExploreScreen() {
   const [challenges, setChallenges] = useState<Challenge[]>([]);
+  const [customChallenges, setCustomChallenges] = useState<Challenge[]>([]);
   const [searchQuery, setSearchQuery] = useState("");
   const [filter, setFilter] = useState("All");
   const [loading, setLoading] = useState(true);
-  const [modalVisible, setModalVisible] = useState(false);
   const [categoryVisible, setCategoryVisible] = useState(false);
-  const [newChallenge, setNewChallenge] = useState<Partial<Challenge>>({
-    title: "",
-    description: "",
-    category: "Health",
-    days: undefined,
-  });
+  const [isCustomTab, setIsCustomTab] = useState(false);
   const { savedChallenges, addChallenge, removeChallenge } =
     useSavedChallenges();
   const router = useRouter();
+
+  useEffect(() => {
+    const unsubscribe = onSnapshot(
+      collection(db, "challenges"),
+      (querySnapshot) => {
+        const fetchedChallenges = querySnapshot.docs.map((doc) => ({
+          id: doc.id,
+          title: doc.data().title || "Untitled Challenge",
+          description: doc.data().description || "No description available",
+          category: doc.data().category || "Miscellaneous",
+          days: doc.data().days || 1,
+          imageUrl: doc.data().imageUrl || null,
+          participantsCount: doc.data().participantsCount || 0,
+          creatorId: doc.data().creatorId || null,
+        })) as Challenge[];
+
+        setChallenges(
+          fetchedChallenges.filter((challenge) => !challenge.creatorId)
+        );
+        setCustomChallenges(
+          fetchedChallenges.filter((challenge) => challenge.creatorId)
+        );
+        setLoading(false);
+      },
+      (error) => {
+        console.error("Error fetching challenges:", error);
+        Alert.alert("Error", "Failed to fetch challenges. Please try again.");
+        setLoading(false);
+      }
+    );
+
+    return () => unsubscribe();
+  }, []);
+
+  const filteredChallenges = (
+    isCustomTab ? customChallenges : challenges
+  ).filter((challenge) => {
+    const matchesSearch = challenge.title
+      .toLowerCase()
+      .includes(searchQuery.toLowerCase());
+    const matchesFilter = filter === "All" || challenge.category === filter;
+    return matchesSearch && matchesFilter;
+  });
+
+  const handleResetFilters = () => {
+    setSearchQuery("");
+    setFilter("All");
+  };
+
+  const toggleCategoryVisibility = () => {
+    setCategoryVisible(!categoryVisible);
+  };
 
   const categories = [
     "All",
@@ -61,46 +108,6 @@ export default function ExploreScreen() {
     "Social",
     "Miscellaneous",
   ];
-
-  useEffect(() => {
-    const unsubscribe = onSnapshot(
-      collection(db, "challenges"),
-      (querySnapshot) => {
-        const fetchedChallenges = querySnapshot.docs.map((doc) => ({
-          id: doc.id,
-          title: doc.data().title || "Untitled Challenge",
-          description: doc.data().description || "No description available",
-          category: doc.data().category || "Miscellaneous",
-          days: doc.data().days || 1,
-          imageUrl: doc.data().imageUrl || null,
-          participantsCount: doc.data().participantsCount || 0,
-        })) as Challenge[];
-
-        setChallenges(fetchedChallenges);
-        setLoading(false);
-      },
-      (error) => {
-        console.error("Error fetching challenges:", error);
-        Alert.alert("Error", "Failed to fetch challenges. Please try again.");
-        setLoading(false);
-      }
-    );
-
-    return () => unsubscribe();
-  }, []);
-
-  const filteredChallenges = challenges.filter((challenge) => {
-    const matchesSearch = challenge.title
-      .toLowerCase()
-      .includes(searchQuery.toLowerCase());
-    const matchesFilter = filter === "All" || challenge.category === filter;
-    return matchesSearch && matchesFilter;
-  });
-
-  const handleResetFilters = () => {
-    setSearchQuery("");
-    setFilter("All");
-  };
 
   const renderChallengeItem = ({ item }: { item: Challenge }) => (
     <Animated.View entering={FadeInUp} style={styles.challengeCard}>
@@ -128,7 +135,7 @@ export default function ExploreScreen() {
             <Text style={styles.imagePlaceholderText}>No Image</Text>
           </View>
         )}
-        <View>
+        <View style={styles.challengeDetails}>
           <Text style={styles.challengeTitle}>{item.title}</Text>
           <Text style={styles.challengeCategory}>{item.category}</Text>
           <Text style={styles.participantsCount}>
@@ -177,6 +184,21 @@ export default function ExploreScreen() {
 
   return (
     <View style={styles.container}>
+      <View style={styles.switchContainer}>
+        <TouchableOpacity
+          style={isCustomTab ? styles.switchInactive : styles.switchActive}
+          onPress={() => setIsCustomTab(false)}
+        >
+          <Text style={styles.switchText}>Challenges</Text>
+        </TouchableOpacity>
+        <TouchableOpacity
+          style={isCustomTab ? styles.switchActive : styles.switchInactive}
+          onPress={() => setIsCustomTab(true)}
+        >
+          <Text style={styles.switchText}>Custom Challenges</Text>
+        </TouchableOpacity>
+      </View>
+
       <TextInput
         style={styles.searchBar}
         placeholder="Search challenges..."
@@ -184,32 +206,71 @@ export default function ExploreScreen() {
         value={searchQuery}
         onChangeText={setSearchQuery}
       />
-      <View style={styles.filterContainer}>
-        {categories.map((category) => (
-          <TouchableOpacity
-            key={category}
-            style={[
-              styles.filterButton,
-              filter === category && styles.activeFilter,
-            ]}
-            onPress={() => setFilter(category)}
-          >
-            <Text
-              style={
-                filter === category
-                  ? styles.activeFilterText
-                  : styles.filterText
-              }
-            >
-              {category}
-            </Text>
-          </TouchableOpacity>
-        ))}
+
+      <View style={styles.buttonContainer}>
+        <TouchableOpacity
+          onPress={toggleCategoryVisibility}
+          style={styles.categoryButton}
+        >
+          <Ionicons name="list" size={20} color="#fff" />
+        </TouchableOpacity>
+        <TouchableOpacity
+          style={styles.resetButton}
+          onPress={handleResetFilters}
+        >
+          <Ionicons name="refresh-outline" size={24} color="#fff" />
+        </TouchableOpacity>
       </View>
-      <TouchableOpacity style={styles.resetButton} onPress={handleResetFilters}>
-        <Ionicons name="refresh-outline" size={24} color="#fff" />
-        <Text style={styles.resetText}>Reset Filters</Text>
-      </TouchableOpacity>
+
+      {isCustomTab && (
+        <TouchableOpacity
+          style={styles.createButton}
+          onPress={() => router.push("/create-challenge")}
+        >
+          <Ionicons name="add-circle-outline" size={24} color="#fff" />
+          <Text style={styles.createButtonText}>Create Challenge</Text>
+        </TouchableOpacity>
+      )}
+
+      <Modal
+        animationType="slide"
+        transparent={true}
+        visible={categoryVisible}
+        onRequestClose={() => {
+          setCategoryVisible(!categoryVisible);
+        }}
+      >
+        <View style={styles.modalContainer}>
+          <View style={styles.modalContent}>
+            <ScrollView
+              style={styles.scrollView}
+              contentContainerStyle={styles.scrollContent}
+              decelerationRate="fast"
+              snapToInterval={50}
+            >
+              {categories.map((category) => (
+                <TouchableOpacity
+                  key={category}
+                  style={styles.categoryItem}
+                  onPress={() => {
+                    setFilter(category);
+                    setCategoryVisible(false);
+                  }}
+                >
+                  <Text style={styles.categoryText}>{category}</Text>
+                </TouchableOpacity>
+              ))}
+            </ScrollView>
+            <TouchableOpacity
+              style={styles.closeButton}
+              onPress={() => setCategoryVisible(false)}
+            >
+              <Text style={styles.closeButtonText}>Close</Text>
+            </TouchableOpacity>
+          </View>
+        </View>
+      </Modal>
+
       {loading ? (
         <View style={styles.loadingContainer}>
           <ActivityIndicator size="large" color="#007bff" />
@@ -234,56 +295,66 @@ const styles = StyleSheet.create({
   container: {
     flex: 1,
     padding: 16,
-    backgroundColor: "#1C1C1E",
+    backgroundColor: "#FAFAFA", // Light color scheme
+  },
+  switchContainer: {
+    flexDirection: "row",
+    marginBottom: 16,
+    backgroundColor: "#E8E8E8",
+    borderRadius: 8,
+  },
+  switchActive: {
+    flex: 1,
+    padding: 12,
+    backgroundColor: "#007bff",
+    borderRadius: 8,
+    alignItems: "center",
+    marginHorizontal: 2,
+  },
+  switchInactive: {
+    flex: 1,
+    padding: 12,
+    backgroundColor: "#D3D3D3",
+    borderRadius: 8,
+    alignItems: "center",
+    marginHorizontal: 2,
+  },
+  switchText: {
+    color: "#FFFFFF",
+    fontWeight: "bold",
+    fontSize: 16,
   },
   searchBar: {
     height: 40,
     borderRadius: 8,
     marginBottom: 16,
     paddingHorizontal: 12,
-    backgroundColor: "#2C2C2E",
-    color: "#fff",
+    backgroundColor: "#fff",
+    color: "#333",
     fontSize: 16,
+    borderColor: "#E0E0E0",
+    borderWidth: 1,
   },
-  filterContainer: {
+  buttonContainer: {
     flexDirection: "row",
-    flexWrap: "wrap",
-    marginBottom: 16,
     justifyContent: "space-between",
-  },
-  filterButton: {
-    paddingVertical: 8,
-    paddingHorizontal: 14,
-    borderRadius: 20,
-    backgroundColor: "#2C2C2E",
-    marginBottom: 10,
-  },
-  activeFilter: {
-    backgroundColor: "#007bff",
-  },
-  filterText: {
-    fontSize: 14,
-    color: "#bbb",
-  },
-  activeFilterText: {
-    fontSize: 14,
-    color: "#fff",
-    fontWeight: "bold",
+    marginBottom: 16,
   },
   resetButton: {
-    flexDirection: "row",
-    alignItems: "center",
-    justifyContent: "center",
-    paddingVertical: 10,
-    borderRadius: 8,
+    width: 40,
+    height: 40,
+    borderRadius: 20,
     backgroundColor: "#ff3b30",
-    marginBottom: 16,
+    justifyContent: "center",
+    alignItems: "center",
   },
-  resetText: {
-    fontSize: 16,
-    color: "#fff",
-    fontWeight: "bold",
-    marginLeft: 8,
+  categoryButton: {
+    width: 40,
+    height: 40,
+    borderRadius: 20,
+    backgroundColor: "#007bff",
+    justifyContent: "center",
+    alignItems: "center",
   },
   loadingContainer: {
     flex: 1,
@@ -297,74 +368,142 @@ const styles = StyleSheet.create({
     fontSize: 16,
     textAlign: "center",
     marginTop: 20,
-    color: "#aaa",
+    color: "#333",
   },
   challengeContent: {
     flex: 1,
     flexDirection: "row",
     alignItems: "center",
     justifyContent: "space-between",
-    backgroundColor: "#2C2C2E",
-    borderRadius: 10,
     padding: 10,
-    shadowColor: "#000",
-    shadowOffset: { width: 0, height: 3 },
-    shadowOpacity: 0.2,
-    shadowRadius: 4,
+    backgroundColor: "#f9f9f9",
+    borderRadius: 10,
   },
   savedIndicator: {
     padding: 8,
-    alignSelf: "center",
-    backgroundColor: "#3A3A3C",
-    borderRadius: 10,
+    backgroundColor: "#E6E6FA",
+    borderRadius: 12,
     alignItems: "center",
     justifyContent: "center",
-    elevation: 3,
+    elevation: 1,
   },
   challengeCard: {
     flexDirection: "row",
     alignItems: "center",
     marginBottom: 15,
     padding: 16,
-    borderRadius: 10,
-    backgroundColor: "#2C2C2E",
+    borderRadius: 15,
+    backgroundColor: "#ffffff",
     shadowColor: "#000",
     shadowOffset: { width: 0, height: 4 },
-    shadowOpacity: 0.3,
-    shadowRadius: 4,
+    shadowOpacity: 0.1,
+    shadowRadius: 6,
     elevation: 5,
+    borderWidth: 1,
+    borderColor: "#E0E0E0",
   },
   challengeImage: {
-    width: 70,
-    height: 70,
-    borderRadius: 10,
+    width: 80,
+    height: 80,
+    borderRadius: 12,
     marginRight: 15,
+    backgroundColor: "#dcdcdc",
   },
   imagePlaceholder: {
-    width: 70,
-    height: 70,
-    borderRadius: 10,
-    backgroundColor: "#444",
+    width: 80,
+    height: 80,
+    borderRadius: 12,
+    backgroundColor: "#E0E0E0",
     justifyContent: "center",
     alignItems: "center",
   },
   imagePlaceholderText: {
-    color: "#bbb",
+    color: "#999",
     fontSize: 12,
   },
   challengeTitle: {
     fontSize: 18,
     fontWeight: "bold",
-    color: "#fff",
-    marginBottom: 5,
+    color: "#222",
+    marginBottom: 4,
+    textAlign: "left",
+    flexWrap: "wrap",
+    flexShrink: 1,
+    flexGrow: 1,
   },
   challengeCategory: {
     fontSize: 14,
-    color: "#aaa",
+    color: "#666",
+    marginBottom: 4,
   },
   participantsCount: {
     fontSize: 12,
-    color: "#ddd",
-    marginTop: 5,
+    color: "#888",
+  },
+  modalContainer: {
+    flex: 1,
+    justifyContent: "center",
+    alignItems: "center",
+    backgroundColor: "rgba(0,0,0,0.3)",
+  },
+  modalContent: {
+    width: "80%",
+    backgroundColor: "#fff",
+    borderRadius: 15,
+    padding: 10,
+    shadowColor: "#000",
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.25,
+    shadowRadius: 3.84,
+    elevation: 5,
+  },
+  scrollView: {
+    maxHeight: 250,
+  },
+  scrollContent: {
+    justifyContent: "center",
+    paddingBottom: 10,
+  },
+  categoryItem: {
+    padding: 10,
+    borderBottomWidth: 1,
+    borderBottomColor: "#E0E0E0",
+    alignItems: "center",
+  },
+  createButton: {
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "center",
+    backgroundColor: "#007bff",
+    borderRadius: 8,
+    paddingVertical: 10,
+    marginVertical: 15,
+  },
+  createButtonText: {
+    marginLeft: 8,
+    color: "#fff",
+    fontSize: 16,
+    fontWeight: "bold",
+  },
+  categoryText: {
+    color: "#333",
+    fontSize: 16,
+  },
+  closeButton: {
+    marginTop: 10,
+    backgroundColor: "#ff3b30",
+    borderRadius: 20,
+    padding: 10,
+    elevation: 2,
+  },
+  closeButtonText: {
+    color: "white",
+    fontWeight: "bold",
+    textAlign: "center",
+  },
+  challengeDetails: {
+    flex: 1,
+    alignItems: "flex-start",
+    justifyContent: "center",
   },
 });
