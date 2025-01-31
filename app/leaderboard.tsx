@@ -77,7 +77,7 @@ export default function Leaderboard() {
         source={
           item.profileImage
             ? { uri: item.profileImage }
-            : require("../public/images/default-profile.webp")
+            : require("../assets/images/default-profile.webp")
         }
         style={styles.profileImage}
       />
@@ -128,7 +128,7 @@ export default function Leaderboard() {
               source={
                 currentUser.profileImage
                   ? { uri: currentUser.profileImage }
-                  : require("../public/images/default-profile.webp")
+                  : require("../assets/images/default-profile.webp")
               }
               style={styles.profileImage}
             />

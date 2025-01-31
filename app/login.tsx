@@ -1,5 +1,4 @@
-// app/login.tsx
-import React, { useState } from "react";
+import React, { useState, useEffect, useRef } from "react";
 import {
   View,
   Text,
@@ -10,13 +9,17 @@ import {
   KeyboardAvoidingView,
   Platform,
   Dimensions,
+  Image,
+  Animated,
+  Easing,
+  PanResponder,
+  ActivityIndicator,
 } from "react-native";
 import { useRouter } from "expo-router";
 import { signInWithEmailAndPassword } from "firebase/auth";
-import { auth, db } from "../constants/firebase-config";
+import { auth } from "../constants/firebase-config";
 import { LinearGradient } from "expo-linear-gradient";
 import { Ionicons } from "@expo/vector-icons";
-import { collection, query, where, getDocs } from "firebase/firestore";
 
 const { width } = Dimensions.get("window");
 
@@ -26,83 +29,150 @@ export default function Login() {
   const [password, setPassword] = useState("");
   const [loading, setLoading] = useState(false);
   const [showPassword, setShowPassword] = useState(false);
+  const [errorMessage, setErrorMessage] = useState("");
+
+  const tiltX = useRef(new Animated.Value(0)).current;
+  const tiltY = useRef(new Animated.Value(0)).current;
+  const floatAnimation = useRef(new Animated.Value(0)).current;
+
+  // Tilting effect
+  const panResponder = useRef(
+    PanResponder.create({
+      onMoveShouldSetPanResponder: () => true,
+      onPanResponderMove: (_, gesture) => {
+        const { dx, dy } = gesture;
+        tiltX.setValue(dy / 50);
+        tiltY.setValue(dx / 50);
+      },
+      onPanResponderRelease: () => {
+        Animated.spring(tiltX, {
+          toValue: 0,
+          useNativeDriver: true,
+          speed: 5,
+        }).start();
+        Animated.spring(tiltY, {
+          toValue: 0,
+          useNativeDriver: true,
+          speed: 5,
+        }).start();
+      },
+    })
+  ).current;
+
+  // Floating effect
+  useEffect(() => {
+    Animated.loop(
+      Animated.sequence([
+        Animated.timing(floatAnimation, {
+          toValue: 1,
+          duration: 1500,
+          easing: Easing.inOut(Easing.quad),
+          useNativeDriver: true,
+        }),
+        Animated.timing(floatAnimation, {
+          toValue: 0,
+          duration: 1500,
+          easing: Easing.inOut(Easing.quad),
+          useNativeDriver: true,
+        }),
+      ])
+    ).start();
+  }, []);
 
   const handleLogin = async () => {
     if (!identifier.trim() || !password.trim()) {
-      Alert.alert("Error", "Please enter your email/username and password.");
+      setErrorMessage("Please enter both email and password.");
       return;
     }
 
     try {
       setLoading(true);
+      await signInWithEmailAndPassword(auth, identifier, password);
+      router.replace("/");
+    } catch (error) {
+      let message = "An error occurred. Please try again.";
 
-      let email = identifier;
-
-      // Check if identifier is a username
-      if (!identifier.includes("@")) {
-        const usersRef = collection(db, "users");
-        const q = query(usersRef, where("username", "==", identifier));
-        const querySnapshot = await getDocs(q);
-
-        if (!querySnapshot.empty) {
-          email = querySnapshot.docs[0].data().email;
-        } else {
-          throw new Error("Invalid username.");
-        }
+      if (error.code === "auth/user-not-found") {
+        message = "No account found with this email.";
+      } else if (error.code === "auth/wrong-password") {
+        message = "Incorrect password. Try again.";
+      } else if (error.code === "auth/invalid-email") {
+        message = "Please enter a valid email address.";
+      } else if (error.code === "auth/too-many-requests") {
+        message = "Too many login attempts. Try again later.";
       }
 
-      // Sign in with email and password
-      await signInWithEmailAndPassword(auth, email, password);
-      Alert.alert("Success", "Logged in successfully!");
-      router.replace("/"); // Navigate to the home page after login
-    } catch (error: any) {
-      console.error("Error during login:", error);
-      Alert.alert(
-        "Login Failed",
-        error.message || "Incorrect credentials. Please try again."
-      );
+      setErrorMessage(message);
     } finally {
       setLoading(false);
     }
   };
 
   return (
-    <LinearGradient
-      colors={["#1c1c1e", "#262629"]}
-      style={{ flex: 1 }}
-      start={{ x: 0, y: 0 }}
-      end={{ x: 1, y: 1 }}
-    >
+    <LinearGradient colors={["#141E30", "#243B55"]} style={styles.container}>
       <KeyboardAvoidingView
-        style={styles.container}
+        style={styles.innerContainer}
         behavior={Platform.OS === "ios" ? "padding" : undefined}
       >
-        {/* Header */}
-        <View style={styles.header}>
-          <Ionicons name="log-in-outline" size={64} color="#fff" />
-          <Text style={styles.title}>Welcome Back!</Text>
-          <Text style={styles.subtitle}>
-            Keep crushing those challenges. Log in to continue!
-          </Text>
-        </View>
+        <Animated.View
+          {...panResponder.panHandlers}
+          style={[
+            styles.logoContainer,
+            {
+              transform: [
+                { perspective: 1000 },
+                {
+                  rotateY: tiltY.interpolate({
+                    inputRange: [-1, 1],
+                    outputRange: ["-15deg", "15deg"],
+                  }),
+                },
+                {
+                  rotateX: tiltX.interpolate({
+                    inputRange: [-1, 1],
+                    outputRange: ["10deg", "-10deg"],
+                  }),
+                },
+              ],
+            },
+          ]}
+        >
+          <Image
+            source={require("../assets/images/logoFinal.png")}
+            style={styles.logo}
+          />
+        </Animated.View>
 
-        {/* Inputs */}
+        <Text style={styles.title}>Welcome Back!</Text>
+        <Text style={styles.subtitle}>Log in to continue your journey</Text>
+
+        {errorMessage !== "" && (
+          <Text style={styles.errorText}>{errorMessage}</Text>
+        )}
+
         <TextInput
           style={styles.input}
-          placeholder="Username or Email"
-          placeholderTextColor="#aaa"
+          placeholder="Email"
+          placeholderTextColor="#bbb"
           value={identifier}
-          onChangeText={setIdentifier}
+          onChangeText={(text) => {
+            setIdentifier(text);
+            setErrorMessage("");
+          }}
           autoCapitalize="none"
+          keyboardType="email-address"
         />
 
         <View style={styles.passwordContainer}>
           <TextInput
             style={styles.inputPassword}
             placeholder="Password"
-            placeholderTextColor="#aaa"
+            placeholderTextColor="#bbb"
             value={password}
-            onChangeText={setPassword}
+            onChangeText={(text) => {
+              setPassword(text);
+              setErrorMessage("");
+            }}
             secureTextEntry={!showPassword}
           />
           <TouchableOpacity
@@ -111,30 +181,42 @@ export default function Login() {
           >
             <Ionicons
               name={showPassword ? "eye-off-outline" : "eye-outline"}
-              size={20}
-              color="#aaa"
+              size={24}
+              color="#bbb"
             />
           </TouchableOpacity>
         </View>
 
-        {/* Login Button */}
         <TouchableOpacity
-          style={styles.loginButton}
-          onPress={handleLogin}
-          disabled={loading}
+          style={styles.forgotPassword}
+          onPress={() => router.push("/forgot-password")}
         >
-          <Text style={styles.loginButtonText}>
-            {loading ? "Logging in..." : "Login"}
-          </Text>
+          <Text style={styles.forgotPasswordText}>Forgot Password?</Text>
         </TouchableOpacity>
 
-        {/* Link to Register */}
+        <TouchableOpacity
+          onPress={handleLogin}
+          disabled={loading}
+          style={styles.loginButton}
+        >
+          <LinearGradient
+            colors={["#ff8000", "#ff3d00", "#007bff", "#0044cc"]} // 🔥 Combat intense entre le feu et la glace
+            start={{ x: 0, y: 0.5 }}
+            end={{ x: 1, y: 0.5 }}
+            style={[styles.gradientButton, { opacity: loading ? 0.7 : 1 }]} // Légère opacité en loading
+          >
+            {loading ? (
+              <ActivityIndicator color="#fff" />
+            ) : (
+              <Text style={styles.loginButtonText}> Login </Text>
+            )}
+          </LinearGradient>
+        </TouchableOpacity>
+
         <TouchableOpacity onPress={() => router.push("/register")}>
           <Text style={styles.registerLink}>
             Don’t have an account?{" "}
-            <Text style={{ color: "#8bc34a", fontWeight: "bold" }}>
-              Register Here
-            </Text>
+            <Text style={styles.registerHighlight}>Register Here</Text>
           </Text>
         </TouchableOpacity>
       </KeyboardAvoidingView>
@@ -145,73 +227,125 @@ export default function Login() {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    padding: 20,
     justifyContent: "center",
     alignItems: "center",
+    paddingHorizontal: 20,
   },
-  header: {
+  innerContainer: {
+    width: "100%",
     alignItems: "center",
-    marginBottom: 20,
   },
-  title: {
-    fontSize: 24,
-    fontWeight: "bold",
-    color: "#fff",
-    marginTop: 10,
-  },
-  subtitle: {
-    fontSize: 15,
-    color: "#aaa",
-    marginTop: 5,
-    marginBottom: 20,
+  errorText: {
+    color: "red",
+    fontSize: 14,
+    marginBottom: 10,
     textAlign: "center",
-    maxWidth: width * 0.8,
-    lineHeight: 22,
   },
   input: {
     width: "100%",
-    backgroundColor: "#2c2c2e",
-    borderRadius: 8,
-    padding: 12,
-    marginBottom: 16,
+    backgroundColor: "#1f2d3d",
+    borderRadius: 10,
+    padding: 15,
     color: "#fff",
-    fontSize: 15,
+    fontSize: 16,
+    marginBottom: 16,
   },
   passwordContainer: {
     flexDirection: "row",
     alignItems: "center",
     width: "100%",
+    backgroundColor: "#1f2d3d",
+    borderRadius: 10,
+    paddingHorizontal: 15,
+    paddingVertical: 10,
+    marginBottom: 16,
   },
   inputPassword: {
     flex: 1,
-    backgroundColor: "#2c2c2e",
-    borderRadius: 8,
-    padding: 12,
     color: "#fff",
-    fontSize: 15,
+    fontSize: 16,
+    paddingVertical: 10,
   },
   showPasswordButton: {
-    position: "absolute",
-    right: 15,
     padding: 10,
+  },
+  forgotPassword: {
+    alignSelf: "flex-end",
+    marginBottom: 10,
+    paddingVertical: 5,
+  },
+  forgotPasswordText: {
+    color: "#ff9800",
+    fontSize: 14,
+    fontWeight: "bold",
   },
   loginButton: {
     width: "100%",
-    backgroundColor: "#007bff",
-    borderRadius: 8,
-    paddingVertical: 12,
+    borderRadius: 12,
+    paddingVertical: 16,
     alignItems: "center",
+    justifyContent: "center",
     marginBottom: 16,
   },
+
+  gradientButton: {
+    width: "100%",
+    borderRadius: 12,
+    paddingVertical: 16,
+    alignItems: "center",
+    justifyContent: "center",
+    shadowColor: "#ff8000",
+    shadowOffset: { width: 0, height: 6 },
+    shadowOpacity: 0.9,
+    shadowRadius: 20,
+    elevation: 8,
+    borderWidth: 2,
+    borderColor: "rgba(255, 255, 255, 0.2)", // Effet de bord lumineux
+  },
+
   loginButtonText: {
     color: "#fff",
+    fontSize: 18,
     fontWeight: "bold",
-    fontSize: 16,
+    textShadowColor: "rgba(0, 0, 0, 0.2)", // Effet de profondeur sur le texte
+    textShadowOffset: { width: 1, height: 1 },
+    textShadowRadius: 5,
   },
   registerLink: {
-    color: "#ccc",
-    fontSize: 15,
+    color: "#ddd",
+    fontSize: 16,
+    textAlign: "center",
     marginTop: 10,
+  },
+  registerHighlight: {
+    color: "#ff9800",
+    fontWeight: "bold",
+  },
+  logoContainer: {
+    alignItems: "center",
+    marginBottom: 50,
+    elevation: 10,
+    shadowColor: "#000",
+    shadowOffset: { width: 0, height: 10 },
+    shadowOpacity: 0.3,
+    shadowRadius: 20,
+  },
+  logo: {
+    width: 240,
+    height: 240,
+    resizeMode: "contain",
+  },
+  title: {
+    fontSize: 26,
+    fontWeight: "bold",
+    color: "#fff",
+    marginBottom: 10,
+    textAlign: "center",
+  },
+  subtitle: {
+    fontSize: 16,
+    color: "#bbb",
+    marginBottom: 20,
     textAlign: "center",
   },
 });

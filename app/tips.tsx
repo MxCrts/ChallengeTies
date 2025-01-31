@@ -104,7 +104,7 @@ export default function Tips() {
         {/* Header */}
         <View style={styles.headerContainer}>
           <Image
-            source={require("../public/images/logo.png")}
+            source={require("../assets/images/logo.png")}
             style={styles.logo}
           />
           <Text style={styles.headerText}>Empower Your Journey</Text>

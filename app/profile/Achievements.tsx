@@ -79,7 +79,7 @@ const AchievementsScreen = () => {
 
   return (
     <ImageBackground
-      source={require("../../public/images/chalkboard.png")}
+      source={require("../../assets/images/chalkboard.png")}
       style={styles.boardBackground}
     >
       <Text style={styles.screenTitle}>Achievements</Text>

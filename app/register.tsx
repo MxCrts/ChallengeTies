@@ -1,56 +1,71 @@
-import React, { useState } from "react";
+import React, { useState, useEffect, useRef } from "react";
 import {
   View,
   Text,
   TextInput,
   StyleSheet,
   TouchableOpacity,
-  Alert,
   KeyboardAvoidingView,
   Platform,
   Dimensions,
+  Animated,
+  ImageBackground,
+  ActivityIndicator,
+  Alert,
 } from "react-native";
 import { useRouter } from "expo-router";
 import { createUserWithEmailAndPassword } from "firebase/auth";
 import { auth, db } from "../constants/firebase-config";
-import { doc, runTransaction, serverTimestamp } from "firebase/firestore"; // <-- Notice runTransaction here
-import AsyncStorage from "@react-native-async-storage/async-storage";
+import { doc, setDoc, serverTimestamp } from "firebase/firestore";
 import { LinearGradient } from "expo-linear-gradient";
 import { Ionicons } from "@expo/vector-icons";
 
-const { width } = Dimensions.get("window");
+const { width, height } = Dimensions.get("window");
 
 export default function Register() {
   const router = useRouter();
   const [email, setEmail] = useState("");
   const [username, setUsername] = useState("");
   const [password, setPassword] = useState("");
+  const [confirmPassword, setConfirmPassword] = useState("");
+  const [showPassword, setShowPassword] = useState(false);
   const [loading, setLoading] = useState(false);
+  const [errorMessage, setErrorMessage] = useState("");
 
-  const validateInputs = () => {
-    if (!email.trim() || !username.trim() || !password.trim()) {
-      return "All fields are required.";
-    }
-    if (!/\S+@\S+\.\S+/.test(email)) {
-      return "Please enter a valid email address.";
-    }
-    if (password.length < 8) {
-      return "Password must be at least 8 characters long.";
-    }
-    return null;
-  };
+  // Animations
+  const fadeAnim = useRef(new Animated.Value(0)).current;
+  const scaleAnim = useRef(new Animated.Value(1)).current;
+
+  useEffect(() => {
+    Animated.timing(fadeAnim, {
+      toValue: 1,
+      duration: 1500,
+      useNativeDriver: true,
+    }).start();
+
+    Animated.loop(
+      Animated.sequence([
+        Animated.timing(scaleAnim, {
+          toValue: 1.02,
+          duration: 4000,
+          useNativeDriver: true,
+        }),
+        Animated.timing(scaleAnim, {
+          toValue: 1,
+          duration: 4000,
+          useNativeDriver: true,
+        }),
+      ])
+    ).start();
+  }, []);
 
   const handleRegister = async () => {
-    const errorMessage = validateInputs();
-    if (errorMessage) {
-      Alert.alert("Error", errorMessage);
+    if (!email || !username || !password || password !== confirmPassword) {
+      setErrorMessage("Please fill all fields correctly.");
       return;
     }
-
     setLoading(true);
-
     try {
-      // 1) Create user in Firebase Auth
       const userCredential = await createUserWithEmailAndPassword(
         auth,
         email,
@@ -59,180 +74,231 @@ export default function Register() {
       const user = userCredential.user;
       const userId = user.uid;
 
-      // 2) Run a transaction to claim the username and create the user doc
-      await runTransaction(db, async (transaction) => {
-        const usernameLower = username.trim().toLowerCase();
+      const userDoc = {
+        uid: userId,
+        email,
+        username,
+        bio: "",
+        location: "",
+        profilePicture: "",
+        interests: [],
+        achievements: [],
+        trophies: 0,
+        completedChallengesCount: 0,
+        CompletedChallenges: [],
+        CurrentChallenges: [],
+        SavedChallenges: [],
+        createdAt: serverTimestamp(),
+        updatedAt: serverTimestamp(),
+      };
 
-        // A) Check if doc in 'usernames/{usernameLower}' exists
-        const usernameRef = doc(db, "usernames", usernameLower);
-        const usernameSnap = await transaction.get(usernameRef);
+      await setDoc(doc(db, "users", userId), userDoc);
 
-        if (usernameSnap.exists()) {
-          throw new Error("Username is already taken.");
-        }
-
-        // B) Create the username doc
-        transaction.set(usernameRef, {
-          userId: userId,
-          // you can store the original or lowercased username, or a timestamp, etc.
-        });
-
-        // C) Create the user doc in "users/{userId}"
-        const userRef = doc(db, "users", userId);
-        transaction.set(userRef, {
-          uid: userId,
-          email,
-          username, // keep the original case or use usernameLower
-          createdAt: serverTimestamp(),
-          profilePicture: "",
-          bio: "",
-          location: "",
-          challengesTaken: [],
-          challengesSaved: [],
-          achievements: [],
-          trophies: 0,
-          CompletedChallenges: [],
-          completedChallengesCount: 0,
-        });
-      });
-
-      // 3) If the transaction succeeds, set onboarding and alert success
-      await AsyncStorage.setItem("hasSeenOnboarding", "false");
       Alert.alert("Success", "Account created successfully!");
-
-      // 4) Redirect to onboarding
       router.replace("/onboarding");
     } catch (error) {
-      console.error("Error during registration:", error);
-      Alert.alert(
-        "Registration Failed",
-        error.message || "An error occurred. Please try again."
-      );
+      setErrorMessage(error.message);
     } finally {
       setLoading(false);
     }
   };
 
   return (
-    <LinearGradient
-      colors={["#1c1c1e", "#262629"]}
-      style={{ flex: 1 }}
-      start={{ x: 0, y: 0 }}
-      end={{ x: 1, y: 1 }}
+    <ImageBackground
+      source={require("../assets/images/earth.webp")}
+      style={styles.container}
     >
       <KeyboardAvoidingView
-        style={styles.container}
+        style={styles.innerContainer}
         behavior={Platform.OS === "ios" ? "padding" : undefined}
       >
-        <View style={styles.header}>
-          <Ionicons name="person-add-outline" size={64} color="#fff" />
-          <Text style={styles.title}>Create an Account</Text>
-          <Text style={styles.subtitle}>
-            Join ChallengeTies and start your journey!
-          </Text>
-        </View>
+        <Animated.View style={[styles.formContainer, { opacity: fadeAnim }]}>
+          <Animated.Text
+            style={[styles.bigTitle, { transform: [{ scale: scaleAnim }] }]}
+          >
+            Join the Challenge!
+          </Animated.Text>
 
-        <TextInput
-          style={styles.input}
-          placeholder="Email"
-          placeholderTextColor="#aaa"
-          value={email}
-          onChangeText={setEmail}
-          keyboardType="email-address"
-          autoCapitalize="none"
-        />
+          {errorMessage !== "" && (
+            <Text style={styles.errorText}>{errorMessage}</Text>
+          )}
 
-        <TextInput
-          style={styles.input}
-          placeholder="Username"
-          placeholderTextColor="#aaa"
-          value={username}
-          onChangeText={setUsername}
-          autoCapitalize="none"
-        />
+          <TextInput
+            style={styles.input}
+            placeholder="Email"
+            placeholderTextColor="#bbb"
+            value={email}
+            onChangeText={(text) => {
+              setEmail(text);
+              setErrorMessage("");
+            }}
+            keyboardType="email-address"
+            autoCapitalize="none"
+          />
 
-        <TextInput
-          style={styles.input}
-          placeholder="Password"
-          placeholderTextColor="#aaa"
-          value={password}
-          onChangeText={setPassword}
-          secureTextEntry
-        />
+          <TextInput
+            style={styles.input}
+            placeholder="Username"
+            placeholderTextColor="#bbb"
+            value={username}
+            onChangeText={(text) => {
+              setUsername(text);
+              setErrorMessage("");
+            }}
+            autoCapitalize="none"
+          />
 
-        <TouchableOpacity
-          style={styles.registerButton}
-          onPress={handleRegister}
-          disabled={loading}
-        >
-          <Text style={styles.registerButtonText}>
-            {loading ? "Registering..." : "Register"}
-          </Text>
-        </TouchableOpacity>
+          <View style={styles.passwordContainer}>
+            <TextInput
+              style={styles.inputPassword}
+              placeholder="Password"
+              placeholderTextColor="#bbb"
+              value={password}
+              onChangeText={(text) => {
+                setPassword(text);
+                setErrorMessage("");
+              }}
+              secureTextEntry={!showPassword}
+            />
+            <TouchableOpacity
+              style={styles.showPasswordButton}
+              onPress={() => setShowPassword((prev) => !prev)}
+            >
+              <Ionicons
+                name={showPassword ? "eye-off-outline" : "eye-outline"}
+                size={24}
+                color="#bbb"
+              />
+            </TouchableOpacity>
+          </View>
 
-        <TouchableOpacity onPress={() => router.push("/login")}>
-          <Text style={styles.loginLink}>
-            Already have an account?{" "}
-            <Text style={{ color: "#8bc34a", fontWeight: "bold" }}>Log In</Text>
-          </Text>
-        </TouchableOpacity>
+          <TextInput
+            style={styles.input}
+            placeholder="Confirm Password"
+            placeholderTextColor="#bbb"
+            value={confirmPassword}
+            onChangeText={(text) => {
+              setConfirmPassword(text);
+              setErrorMessage("");
+            }}
+            secureTextEntry={!showPassword}
+          />
+
+          <TouchableOpacity
+            onPress={handleRegister}
+            disabled={loading}
+            style={styles.registerButton}
+          >
+            <LinearGradient
+              colors={["#ff8008", "#007bff"]}
+              start={{ x: 0, y: 0.5 }}
+              end={{ x: 1, y: 0.5 }}
+              style={styles.gradientButton}
+            >
+              {loading ? (
+                <ActivityIndicator color="#fff" />
+              ) : (
+                <Text style={styles.registerButtonText}>🚀 Sign Up</Text>
+              )}
+            </LinearGradient>
+          </TouchableOpacity>
+
+          <TouchableOpacity onPress={() => router.push("/login")}>
+            <Text style={styles.loginLink}>
+              Already have an account?{" "}
+              <Text style={styles.loginHighlight}>Login here</Text>
+            </Text>
+          </TouchableOpacity>
+        </Animated.View>
       </KeyboardAvoidingView>
-    </LinearGradient>
+    </ImageBackground>
   );
 }
 
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    padding: 20,
     justifyContent: "center",
     alignItems: "center",
   },
-  header: {
+  innerContainer: {
+    width: "90%",
     alignItems: "center",
-    marginBottom: 20,
   },
-  title: {
-    fontSize: 24,
+  formContainer: {
+    width: "100%",
+    alignItems: "center",
+  },
+  bigTitle: {
+    fontSize: 28,
     fontWeight: "bold",
     color: "#fff",
-    marginTop: 10,
-  },
-  subtitle: {
-    fontSize: 15,
-    color: "#aaa",
-    marginTop: 5,
     marginBottom: 20,
     textAlign: "center",
-    maxWidth: width * 0.8,
-    lineHeight: 22,
+    textShadowColor: "rgba(255, 255, 255, 0.5)",
+    textShadowOffset: { width: 0, height: 2 },
+    textShadowRadius: 10,
+  },
+  errorText: {
+    color: "red",
+    fontSize: 14,
+    marginBottom: 10,
+    textAlign: "center",
   },
   input: {
     width: "100%",
-    backgroundColor: "#2c2c2e",
-    borderRadius: 8,
-    padding: 12,
-    marginBottom: 16,
+    backgroundColor: "#1f2d3d",
+    borderRadius: 10,
+    padding: 15,
     color: "#fff",
-    fontSize: 15,
+    fontSize: 16,
+    marginBottom: 16,
+  },
+  passwordContainer: {
+    flexDirection: "row",
+    alignItems: "center",
+    width: "100%",
+    backgroundColor: "#1f2d3d",
+    borderRadius: 10,
+    paddingHorizontal: 15,
+    paddingVertical: 10,
+    marginBottom: 16,
+    borderWidth: 1,
+    borderColor: "#ff8008", // 🔥 Ajoute une légère lueur pour l'effet premium
+  },
+
+  inputPassword: {
+    flex: 1,
+    color: "#fff",
+    fontSize: 16,
+    paddingVertical: 10,
+  },
+
+  showPasswordButton: {
+    padding: 10,
   },
   registerButton: {
     width: "100%",
-    backgroundColor: "#007bff",
-    borderRadius: 8,
-    paddingVertical: 12,
-    alignItems: "center",
+    borderRadius: 10,
+    overflow: "hidden",
     marginBottom: 16,
+  },
+  gradientButton: {
+    paddingVertical: 14,
+    alignItems: "center",
   },
   registerButtonText: {
     color: "#fff",
     fontWeight: "bold",
-    fontSize: 16,
+    fontSize: 18,
   },
   loginLink: {
-    color: "#ccc",
-    fontSize: 15,
-    marginTop: 10,
+    color: "#ddd",
+    fontSize: 16,
     textAlign: "center",
+  },
+  loginHighlight: {
+    color: "#ff9800",
+    fontWeight: "bold",
   },
 });

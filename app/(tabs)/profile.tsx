@@ -187,7 +187,7 @@ const ProfileScreen = () => {
         source={
           item.imageUrl
             ? { uri: item.imageUrl }
-            : require("../../public/images/default-challenge.webp")
+            : require("../../assets/images/default-challenge.webp")
         }
         style={styles.challengeImage}
         resizeMode="cover"

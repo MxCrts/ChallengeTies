@@ -1,49 +1,63 @@
 const admin = require("firebase-admin");
 
-// Initialize Firebase Admin SDK
-admin.initializeApp({
-  credential: admin.credential.cert("./serviceAccountKey.json"), // Replace with your service account file
-});
+// Vérifie si Firebase Admin est déjà initialisé
+if (!admin.apps.length) {
+  admin.initializeApp({
+    credential: admin.credential.cert("./serviceAccountKey.json"),
+  });
+}
 
 const db = admin.firestore();
 
 const createEmptyMessagesSubcollections = async () => {
   try {
-    // Fetch all chat documents in the `chats` collection
     const chatsSnapshot = await db.collection("chats").get();
-
     if (chatsSnapshot.empty) {
-      console.log(
-        "No chats found. Make sure you have chats in the `chats` collection."
-      );
+      console.log("⚠ No chats found. Ensure there are chats in Firestore.");
       return;
     }
 
-    const batch = db.batch(); // Use a batch for better performance
+    const batch = db.batch();
+    let initializedChats = 0;
 
-    chatsSnapshot.forEach((chatDoc) => {
+    for (const chatDoc of chatsSnapshot.docs) {
       const chatId = chatDoc.id;
       const messagesCollectionRef = db.collection(`chats/${chatId}/messages`);
 
-      // Add a placeholder document in the `messages` subcollection
+      // Vérifier si la collection contient déjà des messages
+      const messagesSnapshot = await messagesCollectionRef.limit(1).get();
+      if (!messagesSnapshot.empty) {
+        console.log(`Messages already exist for chatId: ${chatId}`);
+        continue;
+      }
+
+      // Ajouter un message de bienvenue uniquement si la collection est vide
       const messageDocRef = messagesCollectionRef.doc();
       batch.set(messageDocRef, {
-        text: "Welcome to the chat!", // Placeholder message
+        text: "Welcome to the chat!",
         timestamp: admin.firestore.FieldValue.serverTimestamp(),
         userId: "system",
         username: "System",
       });
 
-      console.log(`Prepared messages subcollection for chatId: ${chatId}`);
-    });
+      initializedChats++;
+      console.log(
+        `✅ Initialized messages subcollection for chatId: ${chatId}`
+      );
+    }
 
-    // Commit the batch operation
-    await batch.commit();
-    console.log("Messages subcollections created successfully!");
+    if (initializedChats > 0) {
+      await batch.commit();
+      console.log(
+        `✅ Successfully initialized ${initializedChats} chats with a welcome message!`
+      );
+    } else {
+      console.log("⚠ No new messages needed.");
+    }
   } catch (error) {
-    console.error("Error creating messages subcollections:", error);
+    console.error("❌ Error creating messages subcollections:", error);
   }
 };
 
-// Run the script
+// Exécute le script
 createEmptyMessagesSubcollections();

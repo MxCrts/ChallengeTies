@@ -128,7 +128,7 @@ export default function HomeScreen() {
         source={
           challenge.imageUrl
             ? { uri: challenge.imageUrl }
-            : require("../../public/images/default-challenge.webp")
+            : require("../../assets/images/default-challenge.webp")
         }
         style={styles.challengeImage}
       />
@@ -153,7 +153,7 @@ export default function HomeScreen() {
       <ScrollView contentContainerStyle={styles.scrollContent}>
         {/* Logo and Hero Section */}
         <ImageBackground
-          source={require("../../public/images/backgroundbase.jpg")}
+          source={require("../../assets/images/backgroundbase.jpg")}
           style={styles.heroSection}
           imageStyle={{
             resizeMode: "cover",
@@ -162,7 +162,7 @@ export default function HomeScreen() {
           }}
         >
           <Image
-            source={require("../../public/images/logo.png")}
+            source={require("../../assets/images/logo.png")}
             style={styles.logo}
           />
           <Text style={styles.heroTitle}>Welcome to ChallengeTies!</Text>
