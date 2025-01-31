@@ -1,11 +1,7 @@
 import React, { useState } from "react";
 import {
   View,
-  Text,
-  TextInput,
   StyleSheet,
-  TouchableOpacity,
-  Alert,
   KeyboardAvoidingView,
   Platform,
   Dimensions,
@@ -14,7 +10,7 @@ import {
 import { useRouter } from "expo-router";
 import { sendPasswordResetEmail } from "firebase/auth";
 import { auth } from "../constants/firebase-config";
-import { LinearGradient } from "expo-linear-gradient";
+import { Text, TextInput, Button, ActivityIndicator } from "react-native-paper";
 
 const { width } = Dimensions.get("window");
 
@@ -22,71 +18,85 @@ export default function ForgotPassword() {
   const router = useRouter();
   const [email, setEmail] = useState("");
   const [loading, setLoading] = useState(false);
+  const [errorMessage, setErrorMessage] = useState("");
+  const [successMessage, setSuccessMessage] = useState("");
 
   const handleResetPassword = async () => {
     if (!email.trim()) {
-      Alert.alert("Error", "Please enter your email address.");
+      setErrorMessage("Please enter your email address.");
       return;
     }
 
     try {
       setLoading(true);
       await sendPasswordResetEmail(auth, email);
-      Alert.alert(
-        "Success",
-        "A password reset link has been sent to your email."
-      );
-      router.replace("/login");
+      setSuccessMessage("A password reset link has been sent to your email.");
+      setErrorMessage(""); // Reset error message
     } catch (error) {
-      Alert.alert(
-        "Error",
-        error.message || "Failed to send reset email. Please try again."
-      );
+      setErrorMessage("Failed to send reset email. Please try again.");
     } finally {
       setLoading(false);
     }
   };
 
   return (
-    <LinearGradient colors={["#141E30", "#243B55"]} style={styles.container}>
-      <KeyboardAvoidingView
-        style={styles.innerContainer}
-        behavior={Platform.OS === "ios" ? "padding" : undefined}
+    <KeyboardAvoidingView
+      style={styles.container}
+      behavior={Platform.OS === "ios" ? "padding" : undefined}
+    >
+      {/* Logo */}
+      <Image
+        source={require("../assets/images/logoFinal.png")}
+        style={styles.logo}
+      />
+
+      {/* Titre */}
+      <Text variant="headlineMedium" style={styles.title}>
+        Reset Your Password
+      </Text>
+      <Text variant="bodyMedium" style={styles.subtitle}>
+        Enter your email to receive a reset link
+      </Text>
+
+      {/* Messages */}
+      {errorMessage !== "" && (
+        <Text style={styles.errorText}>{errorMessage}</Text>
+      )}
+      {successMessage !== "" && (
+        <Text style={styles.successText}>{successMessage}</Text>
+      )}
+
+      {/* Champ Email */}
+      <TextInput
+        label="Email Address"
+        mode="outlined"
+        style={styles.input}
+        value={email}
+        onChangeText={(text) => {
+          setEmail(text);
+          setErrorMessage("");
+          setSuccessMessage("");
+        }}
+        keyboardType="email-address"
+        autoCapitalize="none"
+      />
+
+      {/* Bouton Reset */}
+      <Button
+        mode="contained"
+        onPress={handleResetPassword}
+        loading={loading}
+        style={styles.resetButton}
+        contentStyle={styles.buttonContent}
       >
-        <Image
-          source={require("../assets/images/logo.png")}
-          style={styles.logo}
-        />
-        <Text style={styles.title}>Reset Your Password</Text>
-        <Text style={styles.subtitle}>
-          Enter your email to receive a reset link
-        </Text>
+        {loading ? "Sending..." : "Send Reset Link"}
+      </Button>
 
-        <TextInput
-          style={styles.input}
-          placeholder="Email Address"
-          placeholderTextColor="#bbb"
-          value={email}
-          onChangeText={setEmail}
-          autoCapitalize="none"
-          keyboardType="email-address"
-        />
-
-        <TouchableOpacity
-          style={styles.resetButton}
-          onPress={handleResetPassword}
-          disabled={loading}
-        >
-          <Text style={styles.resetButtonText}>
-            {loading ? "Sending..." : "Send Reset Link"}
-          </Text>
-        </TouchableOpacity>
-
-        <TouchableOpacity onPress={() => router.push("/login")}>
-          <Text style={styles.backToLogin}>Back to Login</Text>
-        </TouchableOpacity>
-      </KeyboardAvoidingView>
-    </LinearGradient>
+      {/* Lien vers Login */}
+      <Text style={styles.backToLogin} onPress={() => router.push("/login")}>
+        Back to Login
+      </Text>
+    </KeyboardAvoidingView>
   );
 }
 
@@ -95,21 +105,21 @@ const styles = StyleSheet.create({
     flex: 1,
     justifyContent: "center",
     alignItems: "center",
-  },
-  innerContainer: {
-    width: "90%",
-    alignItems: "center",
+    paddingHorizontal: 20,
+    backgroundColor: "#141E30",
   },
   logo: {
     width: 120,
     height: 120,
     marginBottom: 20,
+    resizeMode: "contain",
   },
   title: {
     fontSize: 26,
     fontWeight: "bold",
     color: "#fff",
     marginBottom: 10,
+    textAlign: "center",
   },
   subtitle: {
     fontSize: 16,
@@ -117,31 +127,35 @@ const styles = StyleSheet.create({
     marginBottom: 20,
     textAlign: "center",
   },
+  errorText: {
+    color: "red",
+    fontSize: 14,
+    marginBottom: 10,
+    textAlign: "center",
+  },
+  successText: {
+    color: "limegreen",
+    fontSize: 14,
+    marginBottom: 10,
+    textAlign: "center",
+  },
   input: {
     width: "100%",
-    backgroundColor: "#1f2d3d",
-    borderRadius: 10,
-    padding: 15,
-    color: "#fff",
     marginBottom: 16,
-    fontSize: 16,
+    backgroundColor: "#1f2d3d",
   },
   resetButton: {
     width: "100%",
-    backgroundColor: "#ff9800",
-    borderRadius: 10,
-    paddingVertical: 14,
-    alignItems: "center",
+    borderRadius: 12,
     marginBottom: 16,
   },
-  resetButtonText: {
-    color: "#fff",
-    fontSize: 18,
-    fontWeight: "bold",
+  buttonContent: {
+    paddingVertical: 8,
   },
   backToLogin: {
     color: "#ddd",
     fontSize: 16,
     textAlign: "center",
+    marginTop: 10,
   },
 });

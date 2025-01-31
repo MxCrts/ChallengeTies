@@ -10,6 +10,7 @@ import SplashScreen from "../components/SplashScreen";
 import { ActivityIndicator, View, StyleSheet, Text } from "react-native";
 import AsyncStorage from "@react-native-async-storage/async-storage";
 import config from "../config";
+import { PaperProvider } from "react-native-paper"; // ✅ Import React Native Paper
 
 export default function RootLayout() {
   const { user, initializing } = useAuthInit();
@@ -23,11 +24,10 @@ export default function RootLayout() {
         const seen = await AsyncStorage.getItem("hasSeenOnboarding");
         setHasSeenOnboarding(seen === "true");
 
-        // App is considered ready after initialization
         setIsAppReady(true);
       } catch (error) {
         console.error("Error during initialization:", error);
-        setIsAppReady(true); // Avoid blocking the app indefinitely
+        setIsAppReady(true);
       }
     };
 
@@ -47,13 +47,13 @@ export default function RootLayout() {
 
       if (!hasSeenOnboarding) {
         console.log("Redirecting to onboarding...");
-        router.replace("/onboarding"); // Corrected path for onboarding
+        router.replace("/onboarding");
       } else if (!user || config.DEVELOPMENT_MODE) {
         console.log("Redirecting to login...");
-        router.replace("/login"); // Corrected path for login
+        router.replace("/login");
       } else {
         console.log("Redirecting to tabs index...");
-        router.replace("/(tabs)/index"); // Corrected path for home in tabs
+        router.replace("/(tabs)/index");
       }
     };
 
@@ -77,19 +77,21 @@ export default function RootLayout() {
 
   return (
     <GestureHandlerRootView style={{ flex: 1 }}>
-      <ThemeProvider>
-        <SavedChallengesProvider>
-          <CurrentChallengesProvider>
-            <ChatProvider>
-              <Stack
-                screenOptions={{
-                  headerShown: false,
-                }}
-              />
-            </ChatProvider>
-          </CurrentChallengesProvider>
-        </SavedChallengesProvider>
-      </ThemeProvider>
+      <PaperProvider>
+        <ThemeProvider>
+          <SavedChallengesProvider>
+            <CurrentChallengesProvider>
+              <ChatProvider>
+                <Stack
+                  screenOptions={{
+                    headerShown: false,
+                  }}
+                />
+              </ChatProvider>
+            </CurrentChallengesProvider>
+          </SavedChallengesProvider>
+        </ThemeProvider>
+      </PaperProvider>
     </GestureHandlerRootView>
   );
 }

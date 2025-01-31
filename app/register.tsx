@@ -1,24 +1,18 @@
-import React, { useState, useEffect, useRef } from "react";
+import React, { useState, useRef, useEffect } from "react";
 import {
   View,
-  Text,
-  TextInput,
   StyleSheet,
-  TouchableOpacity,
   KeyboardAvoidingView,
   Platform,
   Dimensions,
-  Animated,
   ImageBackground,
-  ActivityIndicator,
-  Alert,
+  Animated,
 } from "react-native";
 import { useRouter } from "expo-router";
 import { createUserWithEmailAndPassword } from "firebase/auth";
 import { auth, db } from "../constants/firebase-config";
 import { doc, setDoc, serverTimestamp } from "firebase/firestore";
-import { LinearGradient } from "expo-linear-gradient";
-import { Ionicons } from "@expo/vector-icons";
+import { Text, TextInput, Button, ActivityIndicator } from "react-native-paper";
 
 const { width, height } = Dimensions.get("window");
 
@@ -32,7 +26,6 @@ export default function Register() {
   const [loading, setLoading] = useState(false);
   const [errorMessage, setErrorMessage] = useState("");
 
-  // Animations
   const fadeAnim = useRef(new Animated.Value(0)).current;
   const scaleAnim = useRef(new Animated.Value(1)).current;
 
@@ -94,10 +87,9 @@ export default function Register() {
 
       await setDoc(doc(db, "users", userId), userDoc);
 
-      Alert.alert("Success", "Account created successfully!");
       router.replace("/onboarding");
     } catch (error) {
-      setErrorMessage(error.message);
+      setErrorMessage("Failed to create account. Try again.");
     } finally {
       setLoading(false);
     }
@@ -123,10 +115,11 @@ export default function Register() {
             <Text style={styles.errorText}>{errorMessage}</Text>
           )}
 
+          {/* Champ Email */}
           <TextInput
+            label="Email"
+            mode="outlined"
             style={styles.input}
-            placeholder="Email"
-            placeholderTextColor="#bbb"
             value={email}
             onChangeText={(text) => {
               setEmail(text);
@@ -136,10 +129,11 @@ export default function Register() {
             autoCapitalize="none"
           />
 
+          {/* Champ Username */}
           <TextInput
+            label="Username"
+            mode="outlined"
             style={styles.input}
-            placeholder="Username"
-            placeholderTextColor="#bbb"
             value={username}
             onChangeText={(text) => {
               setUsername(text);
@@ -148,34 +142,30 @@ export default function Register() {
             autoCapitalize="none"
           />
 
-          <View style={styles.passwordContainer}>
-            <TextInput
-              style={styles.inputPassword}
-              placeholder="Password"
-              placeholderTextColor="#bbb"
-              value={password}
-              onChangeText={(text) => {
-                setPassword(text);
-                setErrorMessage("");
-              }}
-              secureTextEntry={!showPassword}
-            />
-            <TouchableOpacity
-              style={styles.showPasswordButton}
-              onPress={() => setShowPassword((prev) => !prev)}
-            >
-              <Ionicons
-                name={showPassword ? "eye-off-outline" : "eye-outline"}
-                size={24}
-                color="#bbb"
-              />
-            </TouchableOpacity>
-          </View>
-
+          {/* Champ Password */}
           <TextInput
+            label="Password"
+            mode="outlined"
             style={styles.input}
-            placeholder="Confirm Password"
-            placeholderTextColor="#bbb"
+            value={password}
+            onChangeText={(text) => {
+              setPassword(text);
+              setErrorMessage("");
+            }}
+            secureTextEntry={!showPassword}
+            right={
+              <TextInput.Icon
+                icon={showPassword ? "eye-off" : "eye"}
+                onPress={() => setShowPassword(!showPassword)}
+              />
+            }
+          />
+
+          {/* Champ Confirm Password */}
+          <TextInput
+            label="Confirm Password"
+            mode="outlined"
+            style={styles.input}
             value={confirmPassword}
             onChangeText={(text) => {
               setConfirmPassword(text);
@@ -184,31 +174,22 @@ export default function Register() {
             secureTextEntry={!showPassword}
           />
 
-          <TouchableOpacity
+          {/* Bouton Register */}
+          <Button
+            mode="contained"
             onPress={handleRegister}
-            disabled={loading}
+            loading={loading}
             style={styles.registerButton}
+            contentStyle={styles.buttonContent}
           >
-            <LinearGradient
-              colors={["#ff8008", "#007bff"]}
-              start={{ x: 0, y: 0.5 }}
-              end={{ x: 1, y: 0.5 }}
-              style={styles.gradientButton}
-            >
-              {loading ? (
-                <ActivityIndicator color="#fff" />
-              ) : (
-                <Text style={styles.registerButtonText}>🚀 Sign Up</Text>
-              )}
-            </LinearGradient>
-          </TouchableOpacity>
+            {loading ? "Creating Account..." : "Sign Up"}
+          </Button>
 
-          <TouchableOpacity onPress={() => router.push("/login")}>
-            <Text style={styles.loginLink}>
-              Already have an account?{" "}
-              <Text style={styles.loginHighlight}>Login here</Text>
-            </Text>
-          </TouchableOpacity>
+          {/* Lien vers Login */}
+          <Text style={styles.loginLink} onPress={() => router.push("/login")}>
+            Already have an account?{" "}
+            <Text style={styles.loginHighlight}>Login here</Text>
+          </Text>
         </Animated.View>
       </KeyboardAvoidingView>
     </ImageBackground>
@@ -220,6 +201,8 @@ const styles = StyleSheet.create({
     flex: 1,
     justifyContent: "center",
     alignItems: "center",
+    paddingHorizontal: 20,
+    backgroundColor: "#141E30",
   },
   innerContainer: {
     width: "90%",
@@ -247,50 +230,16 @@ const styles = StyleSheet.create({
   },
   input: {
     width: "100%",
-    backgroundColor: "#1f2d3d",
-    borderRadius: 10,
-    padding: 15,
-    color: "#fff",
-    fontSize: 16,
     marginBottom: 16,
-  },
-  passwordContainer: {
-    flexDirection: "row",
-    alignItems: "center",
-    width: "100%",
     backgroundColor: "#1f2d3d",
-    borderRadius: 10,
-    paddingHorizontal: 15,
-    paddingVertical: 10,
-    marginBottom: 16,
-    borderWidth: 1,
-    borderColor: "#ff8008", // 🔥 Ajoute une légère lueur pour l'effet premium
-  },
-
-  inputPassword: {
-    flex: 1,
-    color: "#fff",
-    fontSize: 16,
-    paddingVertical: 10,
-  },
-
-  showPasswordButton: {
-    padding: 10,
   },
   registerButton: {
     width: "100%",
-    borderRadius: 10,
-    overflow: "hidden",
+    borderRadius: 12,
     marginBottom: 16,
   },
-  gradientButton: {
-    paddingVertical: 14,
-    alignItems: "center",
-  },
-  registerButtonText: {
-    color: "#fff",
-    fontWeight: "bold",
-    fontSize: 18,
+  buttonContent: {
+    paddingVertical: 8,
   },
   loginLink: {
     color: "#ddd",
