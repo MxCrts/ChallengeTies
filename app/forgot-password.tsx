@@ -1,4 +1,4 @@
-import React, { useState } from "react";
+import React, { useState, useRef, useEffect } from "react";
 import {
   View,
   StyleSheet,
@@ -6,11 +6,15 @@ import {
   Platform,
   Dimensions,
   Image,
+  Animated,
+  Easing,
+  TouchableOpacity,
 } from "react-native";
 import { useRouter } from "expo-router";
 import { sendPasswordResetEmail } from "firebase/auth";
 import { auth } from "../constants/firebase-config";
-import { Text, TextInput, Button, ActivityIndicator } from "react-native-paper";
+import { Text, TextInput, Button } from "react-native-paper";
+import { LinearGradient } from "expo-linear-gradient";
 
 const { width } = Dimensions.get("window");
 
@@ -21,19 +25,39 @@ export default function ForgotPassword() {
   const [errorMessage, setErrorMessage] = useState("");
   const [successMessage, setSuccessMessage] = useState("");
 
+  const floatAnimation = useRef(new Animated.Value(0)).current;
+
+  useEffect(() => {
+    Animated.timing(floatAnimation, {
+      toValue: 1,
+      duration: 9000, // ✅ 3 rotations en 4.5 secondes
+      easing: Easing.inOut(Easing.quad),
+      useNativeDriver: true,
+    }).start();
+  }, []);
+
+  const rotateAnimation = floatAnimation.interpolate({
+    inputRange: [0, 1],
+    outputRange: ["0deg", "1080deg"], // ✅ 3 rotations complètes
+  });
+
   const handleResetPassword = async () => {
     if (!email.trim()) {
-      setErrorMessage("Please enter your email address.");
+      setErrorMessage("Veuillez entrer votre adresse e-mail.");
       return;
     }
 
     try {
       setLoading(true);
       await sendPasswordResetEmail(auth, email);
-      setSuccessMessage("A password reset link has been sent to your email.");
-      setErrorMessage(""); // Reset error message
+      setSuccessMessage(
+        "Un lien de réinitialisation a été envoyé à votre e-mail."
+      );
+      setErrorMessage(""); // Réinitialise le message d'erreur
     } catch (error) {
-      setErrorMessage("Failed to send reset email. Please try again.");
+      setErrorMessage(
+        "Échec de l'envoi du lien de réinitialisation. Réessayez."
+      );
     } finally {
       setLoading(false);
     }
@@ -44,21 +68,29 @@ export default function ForgotPassword() {
       style={styles.container}
       behavior={Platform.OS === "ios" ? "padding" : undefined}
     >
-      {/* Logo */}
-      <Image
-        source={require("../assets/images/logoFinal.png")}
-        style={styles.logo}
-      />
+      {/* ✅ Logo animé avec rotation 3D */}
+      <Animated.View
+        style={[
+          styles.logoContainer,
+          {
+            transform: [
+              { rotateY: rotateAnimation }, // ✅ Rotation 3D
+              { perspective: 1000 }, // ✅ Profondeur 3D
+            ],
+          },
+        ]}
+      >
+        <Image
+          source={require("../assets/images/logoFinal.png")}
+          style={styles.logo}
+        />
+      </Animated.View>
 
-      {/* Titre */}
-      <Text variant="headlineMedium" style={styles.title}>
-        Reset Your Password
-      </Text>
-      <Text variant="bodyMedium" style={styles.subtitle}>
-        Enter your email to receive a reset link
+      <Text style={styles.title}>Réinitialisation du mot de passe</Text>
+      <Text style={styles.subtitle}>
+        Entrez votre email pour recevoir un lien de réinitialisation
       </Text>
 
-      {/* Messages */}
       {errorMessage !== "" && (
         <Text style={styles.errorText}>{errorMessage}</Text>
       )}
@@ -66,9 +98,8 @@ export default function ForgotPassword() {
         <Text style={styles.successText}>{successMessage}</Text>
       )}
 
-      {/* Champ Email */}
       <TextInput
-        label="Email Address"
+        label="Adresse e-mail"
         mode="outlined"
         style={styles.input}
         value={email}
@@ -79,23 +110,35 @@ export default function ForgotPassword() {
         }}
         keyboardType="email-address"
         autoCapitalize="none"
+        textColor="#FFF"
+        theme={{
+          colors: {
+            primary: "#FACC15",
+            text: "#FFF",
+            placeholder: "#FACC15",
+            background: "transparent",
+          },
+        }}
       />
 
-      {/* Bouton Reset */}
-      <Button
-        mode="contained"
-        onPress={handleResetPassword}
-        loading={loading}
-        style={styles.resetButton}
-        contentStyle={styles.buttonContent}
-      >
-        {loading ? "Sending..." : "Send Reset Link"}
-      </Button>
+      <View style={styles.resetButtonContainer}>
+        <LinearGradient
+          colors={["#FACC15", "#3B82F6"]} // 🔥❄️ Dégradé ultra propre
+          start={{ x: 0, y: 0 }}
+          end={{ x: 1, y: 1 }}
+          style={styles.resetButtonGradient}
+        >
+          <TouchableOpacity onPress={handleResetPassword} disabled={loading}>
+            <Text style={styles.resetButtonText}>
+              {loading ? "Envoi en cours..." : "Envoyer le lien"}
+            </Text>
+          </TouchableOpacity>
+        </LinearGradient>
+      </View>
 
-      {/* Lien vers Login */}
-      <Text style={styles.backToLogin} onPress={() => router.push("/login")}>
-        Back to Login
-      </Text>
+      <TouchableOpacity onPress={() => router.push("/login")}>
+        <Text style={styles.backToLogin}>Retour à la connexion</Text>
+      </TouchableOpacity>
     </KeyboardAvoidingView>
   );
 }
@@ -103,15 +146,18 @@ export default function ForgotPassword() {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
+    backgroundColor: "#0F172A",
     justifyContent: "center",
     alignItems: "center",
     paddingHorizontal: 20,
-    backgroundColor: "#141E30",
+  },
+  logoContainer: {
+    alignItems: "center",
+    marginBottom: 30,
   },
   logo: {
-    width: 120,
-    height: 120,
-    marginBottom: 20,
+    width: 180,
+    height: 180,
     resizeMode: "contain",
   },
   title: {
@@ -123,12 +169,12 @@ const styles = StyleSheet.create({
   },
   subtitle: {
     fontSize: 16,
-    color: "#bbb",
+    color: "#94A3B8",
     marginBottom: 20,
     textAlign: "center",
   },
   errorText: {
-    color: "red",
+    color: "#FF5252",
     fontSize: 14,
     marginBottom: 10,
     textAlign: "center",
@@ -142,20 +188,31 @@ const styles = StyleSheet.create({
   input: {
     width: "100%",
     marginBottom: 16,
-    backgroundColor: "#1f2d3d",
+    backgroundColor: "#1F2D3D",
   },
-  resetButton: {
+  resetButtonContainer: {
     width: "100%",
     borderRadius: 12,
+    overflow: "hidden",
     marginBottom: 16,
   },
-  buttonContent: {
-    paddingVertical: 8,
+  resetButtonGradient: {
+    paddingVertical: 12,
+    alignItems: "center",
+    justifyContent: "center",
+  },
+  resetButtonText: {
+    color: "#FFF",
+    fontSize: 18,
+    fontWeight: "bold",
+    textTransform: "uppercase",
+    letterSpacing: 1.2,
   },
   backToLogin: {
-    color: "#ddd",
+    color: "#FACC15",
     fontSize: 16,
     textAlign: "center",
     marginTop: 10,
+    fontWeight: "bold",
   },
 });

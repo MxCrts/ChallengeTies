@@ -8,67 +8,65 @@ import {
   Image,
   Animated,
   Easing,
+  TouchableOpacity,
 } from "react-native";
 import { useRouter } from "expo-router";
 import { signInWithEmailAndPassword } from "firebase/auth";
 import { auth } from "../constants/firebase-config";
-import { Text, TextInput, Button, ActivityIndicator } from "react-native-paper";
-import { Ionicons } from "@expo/vector-icons";
+import { Text, TextInput, ActivityIndicator } from "react-native-paper";
+import { LinearGradient } from "expo-linear-gradient";
+import { fetchAndSaveUserLocation } from "../services/locationService"; // ✅ Import ajouté
 
 const { width } = Dimensions.get("window");
 
 export default function Login() {
   const router = useRouter();
-  const [identifier, setIdentifier] = useState("");
-  const [password, setPassword] = useState("");
+  const [email, setEmail] = useState("");
+  const [motDePasse, setMotDePasse] = useState("");
   const [loading, setLoading] = useState(false);
   const [showPassword, setShowPassword] = useState(false);
   const [errorMessage, setErrorMessage] = useState("");
 
-  const tiltX = useRef(new Animated.Value(0)).current;
-  const tiltY = useRef(new Animated.Value(0)).current;
-  const floatAnimation = useRef(new Animated.Value(0)).current;
+  const logoAnimation = useRef(new Animated.Value(0)).current;
 
-  // Animation d'inclinaison
   useEffect(() => {
     Animated.loop(
-      Animated.sequence([
-        Animated.timing(floatAnimation, {
-          toValue: 1,
-          duration: 1500,
-          easing: Easing.inOut(Easing.quad),
-          useNativeDriver: true,
-        }),
-        Animated.timing(floatAnimation, {
-          toValue: 0,
-          duration: 1500,
-          easing: Easing.inOut(Easing.quad),
-          useNativeDriver: true,
-        }),
-      ])
+      Animated.timing(logoAnimation, {
+        toValue: 1,
+        duration: 5000,
+        easing: Easing.linear,
+        useNativeDriver: true,
+      })
     ).start();
   }, []);
 
+  const spinAnimation = logoAnimation.interpolate({
+    inputRange: [0, 1],
+    outputRange: ["0deg", "360deg"],
+  });
+
   const handleLogin = async () => {
-    if (!identifier.trim() || !password.trim()) {
-      setErrorMessage("Please enter both email and password.");
+    if (!email.trim() || !motDePasse.trim()) {
+      setErrorMessage("Veuillez saisir votre e-mail et votre mot de passe.");
       return;
     }
 
     try {
       setLoading(true);
-      await signInWithEmailAndPassword(auth, identifier, password);
-      router.replace("/"); // ✅ Redirection après connexion
-    } catch (error) {
-      let message = "An error occurred. Please try again.";
-      if (error.code === "auth/user-not-found") message = "No account found.";
-      else if (error.code === "auth/wrong-password")
-        message = "Incorrect password.";
-      else if (error.code === "auth/invalid-email")
-        message = "Invalid email format.";
-      else if (error.code === "auth/too-many-requests")
-        message = "Too many attempts. Try later.";
+      await signInWithEmailAndPassword(auth, email.trim(), motDePasse);
+      await fetchAndSaveUserLocation();
 
+      router.replace("/");
+    } catch (error) {
+      let message = "Une erreur est survenue. Veuillez réessayer.";
+      if (error.code === "auth/user-not-found")
+        message = "Aucun compte trouvé pour cet e-mail.";
+      else if (error.code === "auth/wrong-password")
+        message = "Mot de passe incorrect.";
+      else if (error.code === "auth/invalid-email")
+        message = "Format d'e-mail invalide.";
+      else if (error.code === "auth/too-many-requests")
+        message = "Trop de tentatives. Veuillez réessayer plus tard.";
       setErrorMessage(message);
     } finally {
       setLoading(false);
@@ -80,20 +78,11 @@ export default function Login() {
       style={styles.container}
       behavior={Platform.OS === "ios" ? "padding" : undefined}
     >
-      {/* Logo animé */}
       <Animated.View
         style={[
           styles.logoContainer,
           {
-            transform: [
-              { perspective: 1000 },
-              {
-                translateY: floatAnimation.interpolate({
-                  inputRange: [0, 1],
-                  outputRange: [-5, 5],
-                }),
-              },
-            ],
+            transform: [{ rotate: spinAnimation }],
           },
         ]}
       >
@@ -103,39 +92,44 @@ export default function Login() {
         />
       </Animated.View>
 
-      <Text variant="headlineMedium" style={styles.title}>
-        Welcome Back!
-      </Text>
-      <Text variant="bodyMedium" style={styles.subtitle}>
-        Log in to continue your journey
+      <Text style={styles.title}>Bon retour !</Text>
+      <Text style={styles.subtitle}>
+        Connectez-vous pour continuer votre aventure
       </Text>
 
-      {/* Message d'erreur */}
       {errorMessage !== "" && (
         <Text style={styles.errorText}>{errorMessage}</Text>
       )}
 
-      {/* Champs de connexion avec Paper */}
       <TextInput
-        label="Email"
+        label="E-mail"
         mode="outlined"
         style={styles.input}
-        value={identifier}
+        value={email}
         onChangeText={(text) => {
-          setIdentifier(text);
+          setEmail(text);
           setErrorMessage("");
         }}
         keyboardType="email-address"
         autoCapitalize="none"
+        textColor="#FFF"
+        theme={{
+          colors: {
+            primary: "#FF7F00",
+            text: "#FFF",
+            placeholder: "#FF7F00",
+            background: "transparent",
+          },
+        }}
       />
 
       <TextInput
-        label="Password"
+        label="Mot de passe"
         mode="outlined"
         style={styles.input}
-        value={password}
+        value={motDePasse}
         onChangeText={(text) => {
-          setPassword(text);
+          setMotDePasse(text);
           setErrorMessage("");
         }}
         secureTextEntry={!showPassword}
@@ -145,35 +139,46 @@ export default function Login() {
             onPress={() => setShowPassword((prev) => !prev)}
           />
         }
+        textColor="#FFF"
+        theme={{
+          colors: {
+            primary: "#FF7F00",
+            text: "#FFF",
+            placeholder: "#FF7F00",
+            background: "transparent",
+          },
+        }}
       />
 
-      {/* Lien Forgot Password */}
-      <Text
-        style={styles.forgotPassword}
-        onPress={() => router.push("/forgot-password")}
-      >
-        Forgot Password?
-      </Text>
+      <TouchableOpacity onPress={() => router.push("/forgot-password")}>
+        <Text style={styles.forgotPassword}>Mot de passe oublié ?</Text>
+      </TouchableOpacity>
 
-      {/* Bouton Login avec Paper */}
-      <Button
-        mode="contained"
-        onPress={handleLogin}
-        loading={loading}
+      <TouchableOpacity
         style={styles.loginButton}
-        contentStyle={styles.buttonContent}
+        onPress={handleLogin}
+        disabled={loading}
       >
-        {loading ? "Logging in..." : "Login"}
-      </Button>
+        <LinearGradient
+          colors={["#FF7F00", "#3B82F6"]}
+          start={{ x: 0, y: 0 }}
+          end={{ x: 1, y: 1 }}
+          style={styles.loginButtonGradient}
+        >
+          {loading ? (
+            <ActivityIndicator color="#FFF" />
+          ) : (
+            <Text style={styles.loginButtonText}>Connexion</Text>
+          )}
+        </LinearGradient>
+      </TouchableOpacity>
 
-      {/* Lien vers Register */}
-      <Text
-        style={styles.registerLink}
-        onPress={() => router.push("/register")}
-      >
-        Don’t have an account?{" "}
-        <Text style={styles.registerHighlight}>Register Here</Text>
-      </Text>
+      <TouchableOpacity onPress={() => router.push("/register")}>
+        <Text style={styles.registerLink}>
+          Vous n'avez pas de compte ?{" "}
+          <Text style={styles.registerHighlight}>Inscrivez-vous ici</Text>
+        </Text>
+      </TouchableOpacity>
     </KeyboardAvoidingView>
   );
 }
@@ -181,35 +186,42 @@ export default function Login() {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
+    backgroundColor: "#0F172A",
     justifyContent: "center",
     alignItems: "center",
     paddingHorizontal: 20,
-    backgroundColor: "#141E30",
   },
   logoContainer: {
     alignItems: "center",
     marginBottom: 30,
   },
   logo: {
-    width: 210,
-    height: 240,
+    width: 180,
+    height: 180,
     resizeMode: "contain",
+    shadowColor: "#000",
+    shadowOffset: { width: 0, height: 5 },
+    shadowOpacity: 0.5,
+    shadowRadius: 10,
+    elevation: 10,
   },
   title: {
-    fontSize: 26,
+    fontSize: 28,
     fontWeight: "bold",
     color: "#fff",
-    marginBottom: 10,
+    marginBottom: 8,
     textAlign: "center",
+    textTransform: "uppercase",
+    letterSpacing: 1.2,
   },
   subtitle: {
     fontSize: 16,
-    color: "#bbb",
+    color: "#94A3B8",
     marginBottom: 20,
     textAlign: "center",
   },
   errorText: {
-    color: "red",
+    color: "#FF5252",
     fontSize: 14,
     marginBottom: 10,
     textAlign: "center",
@@ -217,11 +229,11 @@ const styles = StyleSheet.create({
   input: {
     width: "100%",
     marginBottom: 16,
-    backgroundColor: "#1f2d3d",
+    backgroundColor: "#1F2D3D",
   },
   forgotPassword: {
     alignSelf: "flex-end",
-    color: "#ff9800",
+    color: "#3B82F6",
     fontSize: 14,
     fontWeight: "bold",
     marginBottom: 10,
@@ -229,10 +241,20 @@ const styles = StyleSheet.create({
   loginButton: {
     width: "100%",
     borderRadius: 12,
+    overflow: "hidden",
     marginBottom: 16,
   },
-  buttonContent: {
-    paddingVertical: 8,
+  loginButtonGradient: {
+    paddingVertical: 12,
+    alignItems: "center",
+    justifyContent: "center",
+  },
+  loginButtonText: {
+    color: "#FFF",
+    fontSize: 18,
+    fontWeight: "bold",
+    textTransform: "uppercase",
+    letterSpacing: 1.2,
   },
   registerLink: {
     color: "#ddd",
@@ -240,7 +262,7 @@ const styles = StyleSheet.create({
     textAlign: "center",
   },
   registerHighlight: {
-    color: "#ff9800",
+    color: "#FF7F00",
     fontWeight: "bold",
   },
 });

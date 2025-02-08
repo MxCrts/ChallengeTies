@@ -13,9 +13,11 @@ const createEmptyMessagesSubcollections = async () => {
   try {
     const chatsSnapshot = await db.collection("chats").get();
     if (chatsSnapshot.empty) {
-      console.log("⚠ No chats found. Ensure there are chats in Firestore.");
+      console.log("⚠ Aucun chat trouvé. Assurez-vous d'avoir créé les chats.");
       return;
     }
+
+    console.log("🔄 Initialisation des sous-collections de messages...");
 
     const batch = db.batch();
     let initializedChats = 0;
@@ -27,35 +29,36 @@ const createEmptyMessagesSubcollections = async () => {
       // Vérifier si la collection contient déjà des messages
       const messagesSnapshot = await messagesCollectionRef.limit(1).get();
       if (!messagesSnapshot.empty) {
-        console.log(`Messages already exist for chatId: ${chatId}`);
+        console.log(`🔵 Messages déjà existants pour le chat : ${chatId}`);
         continue;
       }
 
       // Ajouter un message de bienvenue uniquement si la collection est vide
       const messageDocRef = messagesCollectionRef.doc();
       batch.set(messageDocRef, {
-        text: "Welcome to the chat!",
+        text: "Bienvenue dans ce chat ! Échangez avec les autres participants 🎉",
         timestamp: admin.firestore.FieldValue.serverTimestamp(),
         userId: "system",
-        username: "System",
+        username: "Système",
       });
 
       initializedChats++;
-      console.log(
-        `✅ Initialized messages subcollection for chatId: ${chatId}`
-      );
+      console.log(`✅ Messages de bienvenue ajoutés pour le chat : ${chatId}`);
     }
 
     if (initializedChats > 0) {
       await batch.commit();
       console.log(
-        `✅ Successfully initialized ${initializedChats} chats with a welcome message!`
+        `✅ ${initializedChats} chats initialisés avec un message de bienvenue !`
       );
     } else {
-      console.log("⚠ No new messages needed.");
+      console.log("⚠ Aucun nouveau message nécessaire.");
     }
   } catch (error) {
-    console.error("❌ Error creating messages subcollections:", error);
+    console.error(
+      "❌ Erreur lors de la création des sous-collections de messages :",
+      error
+    );
   }
 };
 

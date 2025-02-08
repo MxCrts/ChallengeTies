@@ -2,17 +2,11 @@ import React, { createContext, useContext, useState, useEffect } from "react";
 import { auth, db } from "../constants/firebase-config";
 import {
   doc,
-  setDoc,
-  deleteDoc,
-  getDocs,
-  collection,
-  query,
-  where,
+  updateDoc,
   getDoc,
+  arrayUnion,
+  arrayRemove,
 } from "firebase/firestore";
-
-// 1) Import your trophies helper
-import { awardTrophiesAndCheckAchievements } from "../helpers/trophiesHelpers";
 
 export interface Challenge {
   id: string;
@@ -41,88 +35,78 @@ export const SavedChallengesProvider: React.FC<{
 }> = ({ children }) => {
   const [savedChallenges, setSavedChallenges] = useState<Challenge[]>([]);
 
+  // 📥 Charger les défis sauvegardés depuis le document utilisateur
   const loadSavedChallenges = async () => {
     const userId = auth.currentUser?.uid;
-    if (!userId) {
-      console.warn("User not authenticated.");
-      return;
-    }
+    if (!userId) return;
 
     try {
-      const savedChallengesRef = collection(db, "savedChallenges");
-      const q = query(savedChallengesRef, where("userId", "==", userId));
-      const querySnapshot = await getDocs(q);
+      const userRef = doc(db, "users", userId);
+      const userSnap = await getDoc(userRef);
 
-      const loadedSavedChallenges = querySnapshot.docs.map((docSnap) => ({
-        id: docSnap.id.replace(`${userId}_`, ""),
-        ...docSnap.data(),
-      })) as Challenge[];
-      setSavedChallenges(loadedSavedChallenges);
+      if (userSnap.exists()) {
+        const userData = userSnap.data();
+        setSavedChallenges(userData.SavedChallenges || []);
+      }
     } catch (error) {
-      console.error("Error loading saved challenges:", error);
+      console.error("Erreur lors du chargement des défis sauvegardés :", error);
     }
   };
 
+  // ➕ Ajouter un défi à `SavedChallenges` dans le document utilisateur
   const addChallenge = async (challenge: Challenge) => {
     const userId = auth.currentUser?.uid;
-    if (!userId) {
-      console.warn("User not authenticated. Cannot save challenge.");
-      return;
-    }
+    if (!userId) return;
 
     try {
-      const savedChallengeRef = doc(
-        db,
-        "savedChallenges",
-        `${userId}_${challenge.id}`
-      );
-      const existingSnap = await getDoc(savedChallengeRef);
+      const userRef = doc(db, "users", userId);
 
-      // 2) If the doc doesn't exist yet => user is saving this challenge for the FIRST TIME
-      if (!existingSnap.exists()) {
-        // Trigger the "saveChallenge" action in trophiesHelpers
-        await awardTrophiesAndCheckAchievements({
-          action: "saveChallenge",
-          trophiesToAdd: 0, // We'll do the +5 logic in trophiesHelpers
-        });
-      }
-
-      // Now actually setDoc
-      await setDoc(savedChallengeRef, {
-        userId,
-        ...challenge,
+      // Ajouter le défi dans l'array `SavedChallenges`
+      await updateDoc(userRef, {
+        SavedChallenges: arrayUnion(challenge),
       });
 
-      // Update local state immediately
-      setSavedChallenges((prev) => [
-        ...prev.filter((c) => c.id !== challenge.id),
-        challenge,
-      ]);
+      // Ajouter localement
+      setSavedChallenges((prev) => [...prev, challenge]);
+
+      console.log("Challenge sauvegardé !");
     } catch (error) {
-      console.error("Error adding challenge:", error);
+      console.error("Erreur lors de l'ajout du défi :", error);
     }
   };
 
+  // ❌ Retirer un défi de `SavedChallenges`
   const removeChallenge = async (id: string): Promise<void> => {
     const userId = auth.currentUser?.uid;
-    if (!userId) {
-      console.error("User not authenticated. Cannot remove challenge.");
-      return;
-    }
+    if (!userId) return;
 
     try {
-      const savedChallengeRef = doc(db, "savedChallenges", `${userId}_${id}`);
-      await deleteDoc(savedChallengeRef);
+      const userRef = doc(db, "users", userId);
 
-      // Update local state
-      setSavedChallenges((prev) =>
-        prev.filter((challenge) => challenge.id !== id)
-      );
+      // Récupérer l'utilisateur pour filtrer correctement l'objet à supprimer
+      const userSnap = await getDoc(userRef);
+      if (userSnap.exists()) {
+        const userData = userSnap.data();
+        const updatedChallenges = (userData.SavedChallenges || []).filter(
+          (challenge: Challenge) => challenge.id !== id
+        );
+
+        // Mettre à jour la base de données avec la nouvelle liste filtrée
+        await updateDoc(userRef, {
+          SavedChallenges: updatedChallenges,
+        });
+
+        // Mettre à jour localement
+        setSavedChallenges(updatedChallenges);
+
+        console.log("Challenge retiré !");
+      }
     } catch (error) {
-      console.error("Error removing challenge:", error);
+      console.error("Erreur lors de la suppression du défi :", error);
     }
   };
 
+  // ✅ Vérifier si un défi est déjà sauvegardé
   const isSaved = (id: string): boolean =>
     savedChallenges.some((challenge) => challenge.id === id);
 

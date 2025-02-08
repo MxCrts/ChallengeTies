@@ -1,29 +1,14 @@
-// contexts/CurrentChallengesContext.tsx
-
-import React, {
-  createContext,
-  useContext,
-  useState,
-  useEffect,
-  useCallback,
-} from "react";
+import React, { createContext, useContext, useState, useEffect } from "react";
 import { auth, db } from "../constants/firebase-config";
 import {
-  collection,
   doc,
-  getDoc,
   updateDoc,
-  deleteDoc,
-  getDocs,
-  arrayRemove,
+  getDoc,
+  onSnapshot,
   arrayUnion,
-  query,
-  where,
-  runTransaction,
+  arrayRemove,
 } from "firebase/firestore";
 import { Alert } from "react-native";
-// Temporarily disable the import to prevent issues
-// import { awardTrophiesAndCheckAchievements } from "../helpers/trophiesHelpers";
 
 interface Challenge {
   id: string;
@@ -31,7 +16,6 @@ interface Challenge {
   category?: string;
   description?: string;
   imageUrl?: string;
-  participantsCount?: number;
   daysOptions: number[];
   chatId: string;
 }
@@ -42,23 +26,12 @@ interface CurrentChallenge extends Challenge {
   lastMarkedDate?: string | null;
 }
 
-interface CompletedChallenge {
-  id: string;
-  title: string;
-  imageUrl?: string;
-  dateCompleted: string;
-  category?: string;
-  description?: string;
-  selectedDays: number;
-}
-
 interface CurrentChallengesContextType {
   currentChallenges: CurrentChallenge[];
-  loadCurrentChallenges: () => Promise<void>;
+  completedTodayChallenges: CurrentChallenge[];
   takeChallenge: (challenge: Challenge, selectedDays: number) => Promise<void>;
   removeChallenge: (id: string, selectedDays: number) => Promise<void>;
   markToday: (id: string, selectedDays: number) => Promise<void>;
-  completeChallenge: (id: string, selectedDays: number) => Promise<void>;
 }
 
 const CurrentChallengesContext =
@@ -70,334 +43,164 @@ export const CurrentChallengesProvider: React.FC<{
   const [currentChallenges, setCurrentChallenges] = useState<
     CurrentChallenge[]
   >([]);
+  const [completedTodayChallenges, setCompletedTodayChallenges] = useState<
+    CurrentChallenge[]
+  >([]);
 
-  // ===================================
-  // LOAD CURRENT CHALLENGES
-  // ===================================
-  const loadCurrentChallenges = useCallback(async () => {
+  useEffect(() => {
     const userId = auth.currentUser?.uid;
-    if (!userId) {
-      console.log("User not authenticated. Challenges not loaded.");
-      setCurrentChallenges([]);
-      return;
-    }
+    if (!userId) return;
 
-    try {
-      const q = query(
-        collection(db, "currentChallenges"),
-        where("userId", "==", userId)
-      );
-      const querySnapshot = await getDocs(q);
-      const challenges = querySnapshot.docs.map((docSnap) => {
-        const [_, challengeId, selectedDays] = docSnap.id.split("_");
-        const baseChallenge = docSnap.data() as Omit<
-          CurrentChallenge,
-          "id" | "selectedDays"
-        >;
-        return {
-          id: challengeId,
-          selectedDays: parseInt(selectedDays, 10),
-          ...baseChallenge,
-        };
-      });
-      setCurrentChallenges(challenges);
-      console.log("Loaded current challenges:", challenges);
-    } catch (error) {
-      console.error("Error loading current challenges:", error);
-    }
+    const userRef = doc(db, "users", userId);
+
+    const unsubscribe = onSnapshot(userRef, (docSnap) => {
+      if (docSnap.exists()) {
+        const userData = docSnap.data();
+
+        // ✅ Vérifier et initialiser en tableau si Firebase ne retourne rien
+        setCurrentChallenges(
+          Array.isArray(userData.CurrentChallenges)
+            ? userData.CurrentChallenges
+            : []
+        );
+        setCompletedTodayChallenges(
+          Array.isArray(userData.CompletedTodayChallenges)
+            ? userData.CompletedTodayChallenges
+            : []
+        );
+
+        console.log("🔥 Données utilisateur récupérées :", userData);
+      } else {
+        console.log("❌ Aucune donnée trouvée pour cet utilisateur.");
+      }
+    });
+
+    return () => unsubscribe();
   }, []);
 
-  // ===================================
-  // TAKE CHALLENGE
-  // ===================================
   const takeChallenge = async (challenge: Challenge, selectedDays: number) => {
     const userId = auth.currentUser?.uid;
-    if (!userId) {
-      console.error("User not authenticated.");
-      return;
-    }
+    if (!userId) return;
 
     try {
-      const challengeRef = doc(db, "challenges", challenge.id);
-      const currentChallengeRef = doc(
-        db,
-        "currentChallenges",
-        `${userId}_${challenge.id}_${selectedDays}`
-      );
-
-      const challengeData = {
-        userId,
-        id: challenge.id,
-        title: challenge.title,
-        category: challenge.category,
-        description: challenge.description,
-        imageUrl: challenge.imageUrl,
-        chatId: challenge.chatId,
-        daysOptions: challenge.daysOptions,
+      const userRef = doc(db, "users", userId);
+      const challengeData: CurrentChallenge = {
+        ...challenge,
         selectedDays,
         completedDays: 0,
         lastMarkedDate: null,
       };
 
-      await runTransaction(db, async (transaction) => {
-        const globalChallengeDoc = await transaction.get(challengeRef);
-        if (!globalChallengeDoc.exists()) {
-          throw new Error("Challenge does not exist.");
-        }
-
-        const globalData = globalChallengeDoc.data();
-        const currentParticipants = globalData?.participantsCount || 0;
-
-        transaction.update(challengeRef, {
-          participantsCount: currentParticipants + 1,
-          usersTakingChallenge: arrayUnion(userId),
-        });
-
-        transaction.set(currentChallengeRef, challengeData);
-        console.log("Challenge taken and added to currentChallenges.");
+      await updateDoc(userRef, {
+        CurrentChallenges: arrayUnion(challengeData),
       });
 
-      setCurrentChallenges((prev) => [
-        ...prev,
-        { ...challenge, selectedDays, completedDays: 0, lastMarkedDate: null },
-      ]);
+      setCurrentChallenges((prev) => [...prev, challengeData]);
+      console.log("✅ Défi ajouté à CurrentChallenges !");
     } catch (error) {
-      console.error("Error taking challenge:", error);
-      Alert.alert("Error", "Failed to take challenge. Please try again.");
+      console.error("❌ Erreur lors de l'ajout du défi :", error);
     }
   };
 
-  // ===================================
-  // REMOVE CHALLENGE
-  // ===================================
   const removeChallenge = async (id: string, selectedDays: number) => {
     const userId = auth.currentUser?.uid;
     if (!userId) return;
 
     try {
-      const challengeRef = doc(db, "challenges", id);
-      const currentChallengeRef = doc(
-        db,
-        "currentChallenges",
-        `${userId}_${id}_${selectedDays}`
+      const userRef = doc(db, "users", userId);
+      const userSnap = await getDoc(userRef);
+      if (!userSnap.exists()) return;
+
+      const userData = userSnap.data();
+      const updatedCurrentChallenges = (
+        userData.CurrentChallenges || []
+      ).filter(
+        (challenge: CurrentChallenge) =>
+          !(challenge.id === id && challenge.selectedDays === selectedDays)
       );
 
-      await runTransaction(db, async (transaction) => {
-        const globalChallengeDoc = await transaction.get(challengeRef);
-        if (!globalChallengeDoc.exists()) {
-          throw new Error("Challenge does not exist.");
-        }
+      const updatedCompletedTodayChallenges = (
+        userData.CompletedTodayChallenges || []
+      ).filter(
+        (challenge: CurrentChallenge) =>
+          !(challenge.id === id && challenge.selectedDays === selectedDays)
+      );
 
-        const globalData = globalChallengeDoc.data();
-        const currentParticipants = globalData?.participantsCount || 0;
-
-        transaction.update(challengeRef, {
-          participantsCount: Math.max(currentParticipants - 1, 0),
-          usersTakingChallenge: arrayRemove(userId),
-        });
-
-        transaction.delete(currentChallengeRef);
-        console.log("Challenge removed from currentChallenges.");
+      await updateDoc(userRef, {
+        CurrentChallenges: updatedCurrentChallenges,
+        CompletedTodayChallenges: updatedCompletedTodayChallenges,
       });
 
-      setCurrentChallenges((prev) =>
-        prev.filter((c) => !(c.id === id && c.selectedDays === selectedDays))
+      setCurrentChallenges(updatedCurrentChallenges);
+      setCompletedTodayChallenges(updatedCompletedTodayChallenges);
+      console.log(
+        "✅ Défi retiré de CurrentChallenges et CompletedTodayChallenges !"
       );
     } catch (error) {
-      console.error("Error removing challenge:", error);
-      Alert.alert("Error", "Failed to remove challenge. Please try again.");
+      console.error("❌ Erreur lors de la suppression du défi :", error);
     }
   };
 
-  // ===================================
-  // MARK TODAY
-  // ===================================
   const markToday = async (id: string, selectedDays: number) => {
     const userId = auth.currentUser?.uid;
     if (!userId) return;
 
     try {
       const today = new Date().toDateString();
-      const challengeRef = doc(
-        db,
-        "currentChallenges",
-        `${userId}_${id}_${selectedDays}`
+      const userRef = doc(db, "users", userId);
+      const userSnap = await getDoc(userRef);
+      if (!userSnap.exists()) return;
+
+      const userData = userSnap.data();
+      let updatedChallenges = Array.isArray(userData.CurrentChallenges)
+        ? userData.CurrentChallenges
+        : [];
+      let updatedCompletedTodayChallenges = Array.isArray(
+        userData.CompletedTodayChallenges
+      )
+        ? userData.CompletedTodayChallenges
+        : [];
+
+      // 🛠️ Supprime le challenge de `CurrentChallenges`
+      updatedChallenges = updatedChallenges.filter(
+        (challenge: CurrentChallenge) => challenge.id !== id
       );
-      const challengeSnap = await getDoc(challengeRef);
 
-      if (challengeSnap.exists()) {
-        const challenge = challengeSnap.data() as CurrentChallenge;
+      // ✅ Ajouter le challenge marqué aujourd'hui dans `CompletedTodayChallenges`
+      const markedChallenge = userData.CurrentChallenges.find(
+        (challenge: CurrentChallenge) => challenge.id === id
+      );
 
-        if (challenge.lastMarkedDate === today) {
-          console.log("Challenge already marked for today.");
-          return;
-        }
-
-        const newCompletedDays = Math.min(
-          (challenge.completedDays || 0) + 1,
-          selectedDays
-        );
-
-        await updateDoc(challengeRef, {
-          completedDays: newCompletedDays,
-          lastMarkedDate: today,
-        });
-        console.log("Marked today for challenge:", {
-          id,
-          selectedDays,
-          newCompletedDays,
-        });
-
-        setCurrentChallenges((prev) =>
-          prev.map((c) =>
-            c.id === id && c.selectedDays === selectedDays
-              ? { ...c, completedDays: newCompletedDays, lastMarkedDate: today }
-              : c
-          )
-        );
+      if (markedChallenge) {
+        markedChallenge.completedDays += 1;
+        markedChallenge.lastMarkedDate = today;
+        updatedCompletedTodayChallenges.push(markedChallenge);
       }
-    } catch (error) {
-      console.error("Error marking challenge for today:", error);
-    }
-  };
 
-  // ===================================
-  // COMPLETE CHALLENGE
-  // ===================================
-  const completeChallenge = async (id: string, selectedDays: number) => {
-    const userId = auth.currentUser?.uid;
-    if (!userId) return;
-
-    const trophiesToAdd = selectedDays;
-
-    try {
-      const completionDate = new Date();
-
-      console.log("Starting completeChallenge:", { id, selectedDays, userId });
-
-      await runTransaction(db, async (transaction) => {
-        console.log("Transaction started");
-
-        // -- References --
-        const currentChallengeRef = doc(
-          db,
-          "currentChallenges",
-          `${userId}_${id}_${selectedDays}`
-        );
-        const challengeRef = doc(db, "challenges", id);
-        const userRef = doc(db, "users", userId);
-
-        // -- Get existing data --
-        const challengeDoc = await transaction.get(challengeRef);
-        if (!challengeDoc.exists()) {
-          throw new Error("Global challenge does not exist.");
-        }
-        console.log("Fetched challengeDoc");
-
-        const challengeData = challengeDoc.data();
-
-        const userDocSnap = await transaction.get(userRef);
-        if (!userDocSnap.exists()) {
-          throw new Error("User document does not exist.");
-        }
-        console.log("Fetched userDoc");
-
-        const userData = userDocSnap.data();
-
-        // -- Prepare completed challenge info --
-        const challengeTitle = challengeData?.title || "Untitled Challenge";
-        const completedChallengeData: CompletedChallenge = {
-          id,
-          title: challengeTitle,
-          category: challengeData?.category || "Uncategorized",
-          description: challengeData?.description || "No description available",
-          imageUrl: challengeData?.imageUrl || null,
-          dateCompleted: completionDate.toISOString(),
-          selectedDays: selectedDays,
-        };
-        console.log("Prepared completedChallengeData:", completedChallengeData);
-
-        // -- Increment completedChallengesCount --
-        const newCompletedCount = (userData?.completedChallengesCount || 0) + 1;
-        console.log("New completedChallengesCount:", newCompletedCount);
-
-        // -- Build an achievement string --
-        let achievementString: string;
-        if (newCompletedCount === 1) {
-          achievementString = "First challenge completed";
-        } else {
-          achievementString = `Challenge completed: ${challengeTitle}`;
-        }
-        console.log("Achievement string:", achievementString);
-
-        // -- Update user document --
-        transaction.update(userRef, {
-          completedChallengesCount: newCompletedCount,
-          achievements: arrayUnion(achievementString),
-          CompletedChallenges: arrayUnion(completedChallengeData),
-          trophies: userData?.trophies
-            ? userData.trophies + trophiesToAdd
-            : trophiesToAdd,
-        });
-        console.log("User document updated in transaction");
-
-        // -- Remove challenge from currentChallenges --
-        transaction.delete(currentChallengeRef);
-        console.log("Removed current challenge from currentChallenges");
-
-        // -- Decrement participants in 'challenges/{id}' doc --
-        const currentParticipants = challengeData?.participantsCount || 0;
-        transaction.update(challengeRef, {
-          participantsCount: Math.max(currentParticipants - 1, 0),
-          usersTakingChallenge: arrayRemove(userId),
-        });
-        console.log(
-          "Decremented participantsCount and removed user from usersTakingChallenge"
-        );
+      await updateDoc(userRef, {
+        CurrentChallenges: updatedChallenges,
+        CompletedTodayChallenges: updatedCompletedTodayChallenges,
+        trophies: (userData.trophies || 0) + 5, // Bonus trophées 🎖️
       });
 
-      console.log("Transaction completed successfully");
+      setCurrentChallenges(updatedChallenges);
+      setCompletedTodayChallenges(updatedCompletedTodayChallenges);
 
-      // -- Temporarily disable awarding trophies and achievements --
-      // await awardTrophiesAndCheckAchievements({
-      //   action: "finishChallenge",
-      //   trophiesToAdd,
-      //   additionalParams: { selectedDays },
-      // });
-      // console.log("Awarded trophies and checked achievements");
-
-      // -- Update local state --
-      setCurrentChallenges((prev) =>
-        prev.filter((c) => !(c.id === id && c.selectedDays === selectedDays))
-      );
-      console.log("Updated local state");
-
-      Alert.alert("Congrats!", `You earned ${trophiesToAdd} trophies!`);
+      console.log("✅ Journée marquée comme complétée !");
+      Alert.alert("Bravo !", "Tu gagnes 5 trophées 🎖️ !");
     } catch (error) {
-      console.error("Error completing challenge:", error);
-      Alert.alert(
-        "Error",
-        "Failed to complete the challenge. Please try again."
-      );
+      console.error("❌ Erreur lors du marquage :", error);
     }
   };
-
-  // ===================================
-  // EFFECT: Load current challenges
-  // ===================================
-  useEffect(() => {
-    loadCurrentChallenges();
-  }, [loadCurrentChallenges]);
 
   return (
     <CurrentChallengesContext.Provider
       value={{
         currentChallenges,
-        loadCurrentChallenges,
+        completedTodayChallenges,
         takeChallenge,
         removeChallenge,
         markToday,
-        completeChallenge,
       }}
     >
       {children}
@@ -412,5 +215,14 @@ export const useCurrentChallenges = () => {
       "useCurrentChallenges must be used within a CurrentChallengesProvider"
     );
   }
-  return context;
+
+  return {
+    ...context,
+    currentChallenges: Array.isArray(context.currentChallenges)
+      ? context.currentChallenges
+      : [],
+    completedTodayChallenges: Array.isArray(context.completedTodayChallenges)
+      ? context.completedTodayChallenges
+      : [],
+  };
 };

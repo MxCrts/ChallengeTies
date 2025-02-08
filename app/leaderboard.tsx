@@ -1,145 +1,209 @@
-import React, { useState, useEffect } from "react";
+import React, { useEffect, useState } from "react";
 import {
   View,
   Text,
-  StyleSheet,
   FlatList,
-  ActivityIndicator,
+  StyleSheet,
   Image,
+  ActivityIndicator,
   Dimensions,
   TouchableOpacity,
 } from "react-native";
-import { collection, getDocs, onSnapshot } from "firebase/firestore";
-import { db, auth } from "../constants/firebase-config";
-import { LinearGradient } from "expo-linear-gradient";
 import { Ionicons } from "@expo/vector-icons";
-import { useRouter } from "expo-router";
+import { LinearGradient } from "expo-linear-gradient";
+import { collection, getDocs, doc, getDoc } from "firebase/firestore";
+import { db, auth } from "../constants/firebase-config";
 
 const { width } = Dimensions.get("window");
 
-interface LeaderboardEntry {
+interface Player {
   id: string;
-  name: string;
-  profileImage: string;
+  username: string;
   trophies: number;
+  profilePicture?: string;
+  country?: string;
+  region?: string;
 }
 
-export default function Leaderboard() {
-  const [leaderboardData, setLeaderboardData] = useState<LeaderboardEntry[]>(
-    []
-  );
+export default function LeaderboardScreen() {
+  const [players, setPlayers] = useState<Player[]>([]);
+  const [filteredPlayers, setFilteredPlayers] = useState<Player[]>([]);
   const [loading, setLoading] = useState(true);
-  const [currentUser, setCurrentUser] = useState<LeaderboardEntry | null>(null);
-  const userId = auth.currentUser?.uid;
-  const router = useRouter();
+  const [currentUser, setCurrentUser] = useState<Player | null>(null);
+  const [selectedTab, setSelectedTab] = useState<
+    "region" | "national" | "global"
+  >("global");
 
   useEffect(() => {
-    const unsubscribe = onSnapshot(
-      collection(db, "users"), // Fetch data directly from the "users" collection
-      (querySnapshot) => {
-        const data = querySnapshot.docs.map((doc) => ({
+    const fetchLeaderboard = async () => {
+      try {
+        const querySnapshot = await getDocs(collection(db, "users"));
+        const fetchedPlayers = querySnapshot.docs.map((doc) => ({
           id: doc.id,
-          name: doc.data().displayName || "Anonymous", // Assuming "displayName" exists in "users"
-          profileImage: doc.data().profileImage || "",
-          trophies: doc.data().trophies || 0, // Trophies directly from "users"
-        })) as LeaderboardEntry[];
+          username: doc.data().username || "Joueur Mystère",
+          trophies: doc.data().trophies || 0,
+          profilePicture: doc.data().profilePicture || null,
+          country: doc.data().country || "Unknown",
+          region: doc.data().region || "Unknown",
+        }));
 
-        const sortedData = data.sort((a, b) => b.trophies - a.trophies); // Sort by trophies
-        setLeaderboardData(sortedData.slice(0, 100)); // Limit leaderboard to top 100 users
+        setPlayers(fetchedPlayers);
 
+        const userId = auth.currentUser?.uid;
         if (userId) {
-          const currentUserData = data.find((user) => user.id === userId);
-          setCurrentUser(currentUserData || null); // Sync current user details
+          const userRef = doc(db, "users", userId);
+          const userSnap = await getDoc(userRef);
+          if (userSnap.exists()) {
+            const userData = userSnap.data();
+            const foundUser = fetchedPlayers.find(
+              (player) => player.id === userId
+            );
+            setCurrentUser({
+              ...foundUser,
+              country: userData.country,
+              region: userData.region,
+            });
+          }
         }
-
-        setLoading(false); // Stop loading spinner
-      },
-      (error) => {
-        console.error("Error fetching leaderboard data:", error);
-        setLoading(false); // Stop loading spinner even on error
+      } catch (error) {
+        console.error("Erreur lors de la récupération du leaderboard :", error);
+      } finally {
+        setLoading(false);
       }
+    };
+
+    fetchLeaderboard();
+  }, []);
+
+  useEffect(() => {
+    if (!currentUser) return;
+
+    let filtered = players;
+    if (selectedTab === "region") {
+      filtered = players.filter((p) => p.region === currentUser.region);
+    } else if (selectedTab === "national") {
+      filtered = players.filter((p) => p.country === currentUser.country);
+    }
+
+    filtered.sort((a, b) => b.trophies - a.trophies);
+    setFilteredPlayers(filtered);
+  }, [selectedTab, players, currentUser]);
+
+  const renderTopThree = () => {
+    if (filteredPlayers.length < 3) return null;
+
+    return (
+      <View style={styles.topThreeContainer}>
+        <View style={[styles.podium, styles.second]}>
+          <Image
+            source={
+              filteredPlayers[1]?.profilePicture
+                ? { uri: filteredPlayers[1].profilePicture }
+                : require("../assets/images/default-profile.webp")
+            }
+            style={styles.topImage}
+          />
+          <Text style={styles.topName}>{filteredPlayers[1].username}</Text>
+          <Text style={styles.topTrophies}>
+            {filteredPlayers[1].trophies} 🏆
+          </Text>
+          <Ionicons name="medal-outline" size={24} color="#C0C0C0" />
+        </View>
+
+        <View style={[styles.podium, styles.first]}>
+          <Image
+            source={
+              filteredPlayers[0]?.profilePicture
+                ? { uri: filteredPlayers[0].profilePicture }
+                : require("../assets/images/default-profile.webp")
+            }
+            style={[styles.topImage, styles.goldBorder]}
+          />
+          <Text style={styles.topName}>{filteredPlayers[0].username}</Text>
+          <Text style={styles.topTrophies}>
+            {filteredPlayers[0].trophies} 🏆
+          </Text>
+          <Ionicons name="medal-outline" size={28} color="#FFD700" />
+        </View>
+
+        <View style={[styles.podium, styles.third]}>
+          <Image
+            source={
+              filteredPlayers[2]?.profilePicture
+                ? { uri: filteredPlayers[2].profilePicture }
+                : require("../assets/images/default-profile.webp")
+            }
+            style={styles.topImage}
+          />
+          <Text style={styles.topName}>{filteredPlayers[2].username}</Text>
+          <Text style={styles.topTrophies}>
+            {filteredPlayers[2].trophies} 🏆
+          </Text>
+          <Ionicons name="medal-outline" size={24} color="#CD7F32" />
+        </View>
+      </View>
     );
+  };
 
-    return () => unsubscribe(); // Cleanup subscription
-  }, [userId]);
-
-  const renderItem = ({
-    item,
-    index,
-  }: {
-    item: LeaderboardEntry;
-    index: number;
-  }) => (
+  const renderPlayer = ({ item, index }: { item: Player; index: number }) => (
     <View
-      style={[styles.entryContainer, item.id === userId && styles.highlight]}
+      style={[
+        styles.playerRow,
+        item.id === currentUser?.id && styles.highlight,
+      ]}
     >
+      <Text style={styles.rank}>{index + 1}</Text>
       <Image
         source={
-          item.profileImage
-            ? { uri: item.profileImage }
+          item.profilePicture
+            ? { uri: item.profilePicture }
             : require("../assets/images/default-profile.webp")
         }
-        style={styles.profileImage}
+        style={styles.playerImage}
       />
-      <View style={styles.infoContainer}>
-        <Text style={styles.name}>{item.name}</Text>
-        <Text style={styles.trophies}>{item.trophies} trophies</Text>
+      <View style={styles.playerInfo}>
+        <Text style={styles.playerName}>{item.username}</Text>
+        <Text style={styles.playerTrophies}>{item.trophies} 🏆</Text>
       </View>
     </View>
   );
 
-  if (loading) {
-    return (
-      <View style={styles.loadingContainer}>
-        <ActivityIndicator size="large" color="#FF9800" />
-        <Text style={styles.loadingText}>Loading leaderboard...</Text>
-      </View>
-    );
-  }
-
   return (
-    <LinearGradient colors={["#FF9800", "#FF5722"]} style={styles.container}>
-      <TouchableOpacity
-        style={styles.elegantBackButton}
-        onPress={() => router.back()}
-      >
-        <View style={styles.elegantBackButtonContainer}>
-          <Ionicons name="arrow-back-outline" size={24} color="#FFD700" />
-          <Text style={styles.elegantBackButtonText}>Back</Text>
-        </View>
-      </TouchableOpacity>
+    <LinearGradient colors={["#1E1E2E", "#2C2C3E"]} style={styles.container}>
+      <Text style={styles.header}>🏆 Classement</Text>
 
-      <Text style={styles.header}>Leaderboard</Text>
-      {leaderboardData.length === 0 ? (
-        <Text style={styles.emptyText}>No users on the leaderboard yet.</Text>
+      <View style={styles.tabsContainer}>
+        {["region", "national", "global"].map((tab) => (
+          <TouchableOpacity
+            key={tab}
+            style={[styles.tab, selectedTab === tab && styles.activeTab]}
+            onPress={() =>
+              setSelectedTab(tab as "region" | "national" | "global")
+            }
+          >
+            <Text style={styles.tabText}>
+              {tab === "region"
+                ? "Région"
+                : tab === "national"
+                ? "National"
+                : "Global"}
+            </Text>
+          </TouchableOpacity>
+        ))}
+      </View>
+
+      {loading ? (
+        <ActivityIndicator size="large" color="#FACC15" />
       ) : (
-        <FlatList
-          data={leaderboardData}
-          renderItem={renderItem}
-          keyExtractor={(item) => item.id}
-          contentContainerStyle={styles.listContainer}
-        />
-      )}
-      {currentUser && (
-        <View style={styles.currentUserContainer}>
-          <Text style={styles.currentUserHeader}>Your Stats</Text>
-          <View style={styles.entryContainer}>
-            <Image
-              source={
-                currentUser.profileImage
-                  ? { uri: currentUser.profileImage }
-                  : require("../assets/images/default-profile.webp")
-              }
-              style={styles.profileImage}
-            />
-            <View style={styles.infoContainer}>
-              <Text style={styles.name}>{currentUser.name}</Text>
-              <Text style={styles.trophies}>
-                {currentUser.trophies} trophies
-              </Text>
-            </View>
-          </View>
-        </View>
+        <>
+          {renderTopThree()}
+          <FlatList
+            data={filteredPlayers.slice(3)}
+            renderItem={renderPlayer}
+            keyExtractor={(item) => item.id}
+            contentContainerStyle={styles.listContainer}
+          />
+        </>
       )}
     </LinearGradient>
   );
@@ -148,101 +212,91 @@ export default function Leaderboard() {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    padding: 20,
-  },
-  elegantBackButton: {
-    marginBottom: 20,
-    alignSelf: "flex-start",
-    flexDirection: "row",
-    alignItems: "center",
-    backgroundColor: "#2C2C2E",
-    borderRadius: 8,
-    paddingVertical: 8,
-    paddingHorizontal: 12,
-    shadowColor: "#000",
-    shadowOffset: { width: 0, height: 4 },
-    shadowOpacity: 0.3,
-    shadowRadius: 6,
-  },
-  elegantBackButtonContainer: {
-    flexDirection: "row",
-    alignItems: "center",
-  },
-  elegantBackButtonText: {
-    fontSize: 16,
-    color: "#FFD700",
-    marginLeft: 8,
-    fontWeight: "bold",
+    paddingVertical: 20,
   },
   header: {
     fontSize: 28,
     fontWeight: "bold",
-    color: "#FFF",
+    color: "#FACC15",
     textAlign: "center",
     marginBottom: 20,
   },
-  listContainer: {
-    paddingBottom: 20,
+  tabsContainer: {
+    flexDirection: "row",
+    justifyContent: "center",
+    marginBottom: 15,
   },
-  entryContainer: {
+  tab: {
+    paddingVertical: 8,
+    paddingHorizontal: 20,
+    borderRadius: 20,
+    backgroundColor: "#2C2C3E",
+    marginHorizontal: 5,
+  },
+  activeTab: {
+    backgroundColor: "#FACC15",
+  },
+  goldBorder: {
+    borderWidth: 3,
+    borderColor: "#FFD700",
+  },
+  tabText: {
+    color: "#FFF",
+    fontWeight: "bold",
+  },
+  topThreeContainer: {
+    flexDirection: "row",
+    justifyContent: "space-evenly",
+    marginBottom: 20,
+  },
+  podium: {
+    alignItems: "center",
+    padding: 10,
+    borderRadius: 15,
+    backgroundColor: "#2E2E3E",
+    width: width * 0.28,
+  },
+  first: { backgroundColor: "#FFD700" },
+  second: { backgroundColor: "#C0C0C0" },
+  third: { backgroundColor: "#CD7F32" },
+  topImage: { width: 60, height: 60, borderRadius: 30, marginBottom: 5 },
+  topName: { fontSize: 16, fontWeight: "bold", color: "#FFF" },
+  topTrophies: { fontSize: 14, color: "#FFF" },
+  playerRow: {
     flexDirection: "row",
     alignItems: "center",
-    backgroundColor: "#FFF",
-    marginBottom: 10,
-    padding: 15,
+    backgroundColor: "#1F1F2E",
+    padding: 10,
+    marginVertical: 5,
     borderRadius: 10,
-    shadowColor: "#000",
-    shadowOffset: { width: 0, height: 4 },
-    shadowOpacity: 0.1,
-    shadowRadius: 6,
-    elevation: 4,
   },
-  highlight: {
-    borderWidth: 2,
-    borderColor: "#FF9800",
-  },
-  profileImage: {
-    width: 50,
-    height: 50,
-    borderRadius: 25,
-    marginRight: 15,
-  },
-  infoContainer: {
-    flex: 1,
-  },
-  name: {
-    fontSize: 16,
-    fontWeight: "bold",
-    color: "#333",
-  },
-  trophies: {
-    fontSize: 14,
-    color: "#888",
-  },
-  currentUserContainer: {
-    marginTop: 20,
-  },
-  currentUserHeader: {
-    fontSize: 20,
-    fontWeight: "bold",
-    color: "#FFF",
-    textAlign: "center",
-    marginBottom: 10,
-  },
-  loadingContainer: {
-    flex: 1,
-    justifyContent: "center",
-    alignItems: "center",
-  },
-  loadingText: {
-    marginTop: 10,
-    fontSize: 16,
-    color: "#FFF",
-  },
-  emptyText: {
+  highlight: { borderWidth: 2, borderColor: "#FACC15" },
+  rank: {
     fontSize: 18,
-    color: "#FFF",
+    fontWeight: "bold",
+    color: "#FACC15",
+    width: 40,
     textAlign: "center",
-    marginTop: 20,
+  },
+  playerImage: {
+    width: 40,
+    height: 40,
+    borderRadius: 20,
+    marginRight: 10,
+  },
+  playerInfo: {
+    flex: 1,
+  },
+  playerName: {
+    fontSize: 16,
+    fontWeight: "bold",
+    color: "#FFF",
+  },
+  playerTrophies: {
+    fontSize: 14,
+    color: "#FACC15",
+  },
+  listContainer: {
+    paddingHorizontal: 20,
   },
 });

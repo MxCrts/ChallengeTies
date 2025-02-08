@@ -1,32 +1,37 @@
 import React, { useState, useEffect } from "react";
 import { GestureHandlerRootView } from "react-native-gesture-handler";
 import { Stack, useRouter } from "expo-router";
-import { SavedChallengesProvider } from "../context/SavedChallengesContext";
-import { CurrentChallengesProvider } from "../context/CurrentChallengesContext";
-import { ChatProvider } from "../context/ChatContext";
-import { useAuthInit } from "../context/useAuthInit";
-import { ThemeProvider } from "../context/ThemeContext";
-import SplashScreen from "../components/SplashScreen";
 import { ActivityIndicator, View, StyleSheet, Text } from "react-native";
 import AsyncStorage from "@react-native-async-storage/async-storage";
-import config from "../config";
-import { PaperProvider } from "react-native-paper"; // ✅ Import React Native Paper
+import { PaperProvider } from "react-native-paper";
+import { auth } from "../constants/firebase-config";
+import { onAuthStateChanged, User } from "firebase/auth";
 
-export default function RootLayout() {
-  const { user, initializing } = useAuthInit();
+const RootLayout = () => {
   const router = useRouter();
   const [isAppReady, setIsAppReady] = useState(false);
-  const [hasSeenOnboarding, setHasSeenOnboarding] = useState(false);
+  const [user, setUser] = useState<User | null>(null);
+  const [authChecked, setAuthChecked] = useState(false);
+  const [navigationReady, setNavigationReady] = useState(false);
 
+  // ✅ Vérification de l'authentification Firebase
+  useEffect(() => {
+    const unsubscribe = onAuthStateChanged(auth, (firebaseUser) => {
+      setUser(firebaseUser);
+      setAuthChecked(true);
+    });
+
+    return () => unsubscribe();
+  }, []);
+
+  // ✅ Initialisation de l'application
   useEffect(() => {
     const initializeApp = async () => {
       try {
-        const seen = await AsyncStorage.getItem("hasSeenOnboarding");
-        setHasSeenOnboarding(seen === "true");
-
-        setIsAppReady(true);
+        await AsyncStorage.getItem("hasSeenOnboarding");
       } catch (error) {
-        console.error("Error during initialization:", error);
+        console.error("❌ Erreur lors de l'initialisation:", error);
+      } finally {
         setIsAppReady(true);
       }
     };
@@ -34,42 +39,29 @@ export default function RootLayout() {
     initializeApp();
   }, []);
 
+  // ✅ S'assurer que tout est prêt avant de rediriger
   useEffect(() => {
-    const navigate = async () => {
-      console.log("Navigation state:", {
-        isAppReady,
-        initializing,
-        hasSeenOnboarding,
-        user,
-      });
+    if (authChecked && isAppReady && !navigationReady) {
+      setNavigationReady(true);
+    }
+  }, [authChecked, isAppReady, navigationReady]);
 
-      if (!isAppReady || initializing) return;
-
-      if (!hasSeenOnboarding) {
-        console.log("Redirecting to onboarding...");
-        router.replace("/onboarding");
-      } else if (!user || config.DEVELOPMENT_MODE) {
-        console.log("Redirecting to login...");
+  // ✅ Redirection quand tout est prêt
+  useEffect(() => {
+    if (navigationReady) {
+      if (!user) {
         router.replace("/login");
-      } else {
-        console.log("Redirecting to tabs index...");
-        router.replace("/(tabs)/index");
       }
-    };
+    }
+  }, [navigationReady, user]);
 
-    navigate();
-  }, [isAppReady, initializing, user, hasSeenOnboarding]);
-
-  if (!isAppReady) {
-    return <SplashScreen />;
-  }
-
-  if (initializing) {
+  // ✅ Toujours afficher un écran de chargement si l'initialisation n'est pas complète
+  if (!navigationReady) {
     return (
       <GestureHandlerRootView style={{ flex: 1 }}>
         <View style={styles.loadingContainer}>
           <ActivityIndicator size="large" color="#007bff" />
-          <Text style={styles.loadingText}>Initializing...</Text>
+          <Text style={styles.loadingText}>Chargement...</Text>
         </View>
       </GestureHandlerRootView>
     );
@@ -78,35 +70,25 @@ export default function RootLayout() {
   return (
     <GestureHandlerRootView style={{ flex: 1 }}>
       <PaperProvider>
-        <ThemeProvider>
-          <SavedChallengesProvider>
-            <CurrentChallengesProvider>
-              <ChatProvider>
-                <Stack
-                  screenOptions={{
-                    headerShown: false,
-                  }}
-                />
-              </ChatProvider>
-            </CurrentChallengesProvider>
-          </SavedChallengesProvider>
-        </ThemeProvider>
+        <Stack screenOptions={{ headerShown: false }} />
       </PaperProvider>
     </GestureHandlerRootView>
   );
-}
+};
+
+export default RootLayout;
 
 const styles = StyleSheet.create({
   loadingContainer: {
     flex: 1,
     justifyContent: "center",
     alignItems: "center",
-    backgroundColor: "#f8f9fa",
+    backgroundColor: "#0F172A",
   },
   loadingText: {
     marginTop: 10,
     fontSize: 16,
-    color: "#007bff",
+    color: "#FFF",
     textAlign: "center",
   },
 });

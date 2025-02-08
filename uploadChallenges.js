@@ -25,7 +25,7 @@ const challenges = [
     category: "fitness",
     description: "Stay active by walking 10,000 steps daily.",
     imageUrl: "assets/images/walk_steps.png",
-    daysOptions: Array.from({ length: 365 }, (_, i) => i + 1),
+    daysOptions: [7, 15, 21, 30, 60, 90, 180, 365],
     chatId: "walk10000Steps",
     participantsCount: 0,
   },
@@ -34,7 +34,7 @@ const challenges = [
     category: "finance",
     description: "Build financial discipline by saving $5 every day.",
     imageUrl: "assets/images/save_money.png",
-    daysOptions: Array.from({ length: 365 }, (_, i) => i + 1),
+    daysOptions: [7, 15, 21, 30, 60, 90, 180, 365],
     chatId: "saveMoney",
     participantsCount: 0,
   },
@@ -43,7 +43,7 @@ const challenges = [
     category: "lifestyle",
     description: "Achieve mindfulness by meditating for just 10 minutes daily.",
     imageUrl: "assets/images/meditation.png",
-    daysOptions: Array.from({ length: 365 }, (_, i) => i + 1),
+    daysOptions: [7, 15, 21, 30, 60, 90, 180, 365],
     chatId: "meditation",
     participantsCount: 0,
   },
@@ -52,7 +52,7 @@ const challenges = [
     category: "education",
     description: "Develop a reading habit by finishing one chapter daily.",
     imageUrl: "assets/images/read_chapter.png",
-    daysOptions: Array.from({ length: 365 }, (_, i) => i + 1),
+    daysOptions: [7, 15, 21, 30, 60, 90, 180, 365],
     chatId: "readChapter",
     participantsCount: 0,
   },
@@ -61,7 +61,7 @@ const challenges = [
     category: "creativity",
     description: "Unlock your creative potential by writing 500 words daily.",
     imageUrl: "assets/images/write_words.png",
-    daysOptions: Array.from({ length: 365 }, (_, i) => i + 1),
+    daysOptions: [7, 15, 21, 30, 60, 90, 180, 365],
     chatId: "writeWords",
     participantsCount: 0,
   },
@@ -71,7 +71,7 @@ const challenges = [
     description:
       "Dedicate time daily to learning a new skill for professional growth.",
     imageUrl: "assets/images/learn_skill.png",
-    daysOptions: Array.from({ length: 365 }, (_, i) => i + 1),
+    daysOptions: [7, 15, 21, 30, 60, 90, 180, 365],
     chatId: "learnSkill",
     participantsCount: 0,
   },
@@ -81,7 +81,7 @@ const challenges = [
     description:
       "Clear your mind by organizing and decluttering your surroundings daily.",
     imageUrl: "assets/images/declutter_space.png",
-    daysOptions: Array.from({ length: 365 }, (_, i) => i + 1),
+    daysOptions: [7, 15, 21, 30, 60, 90, 180, 365],
     chatId: "declutterSpace",
     participantsCount: 0,
   },
@@ -90,7 +90,7 @@ const challenges = [
     category: "fitness",
     description: "Strengthen your body and mind with 15 minutes of yoga daily.",
     imageUrl: "assets/images/yoga.png",
-    daysOptions: Array.from({ length: 365 }, (_, i) => i + 1),
+    daysOptions: [7, 15, 21, 30, 60, 90, 180, 365],
     chatId: "dailyYoga",
     participantsCount: 0,
   },
@@ -100,7 +100,7 @@ const challenges = [
     description:
       "End your day with gratitude by reflecting on what you're thankful for.",
     imageUrl: "assets/images/practice_gratitude.png",
-    daysOptions: Array.from({ length: 365 }, (_, i) => i + 1),
+    daysOptions: [7, 15, 21, 30, 60, 90, 180, 365],
     chatId: "practiceGratitude",
     participantsCount: 0,
   },
@@ -109,7 +109,7 @@ const challenges = [
     category: "fitness",
     description: "Build a habit of working out at least 15 minutes every day.",
     imageUrl: "assets/images/workout.png",
-    daysOptions: Array.from({ length: 365 }, (_, i) => i + 1),
+    daysOptions: [7, 15, 21, 30, 60, 90, 180, 365],
     chatId: "workout15Min",
     participantsCount: 0,
   },
@@ -118,7 +118,7 @@ const challenges = [
     category: "health",
     description: "Stay hydrated by drinking at least 2 liters of water daily.",
     imageUrl: "assets/images/drink_water.png",
-    daysOptions: Array.from({ length: 365 }, (_, i) => i + 1),
+    daysOptions: [7, 15, 21, 30, 60, 90, 180, 365],
     chatId: "drinkWater",
     participantsCount: 0,
   },
@@ -127,7 +127,7 @@ const challenges = [
     category: "productivity",
     description: "End each day by planning for tomorrow.",
     imageUrl: "assets/images/plan_tomorrow.png",
-    daysOptions: Array.from({ length: 365 }, (_, i) => i + 1),
+    daysOptions: [7, 15, 21, 30, 60, 90, 180, 365],
     chatId: "planTomorrow",
     participantsCount: 0,
   },
@@ -136,7 +136,7 @@ const challenges = [
     category: "fitness",
     description: "Start your day with a quick morning stretch.",
     imageUrl: "assets/images/stretch.png",
-    daysOptions: Array.from({ length: 365 }, (_, i) => i + 1),
+    daysOptions: [7, 15, 21, 30, 60, 90, 180, 365],
     chatId: "morningStretch",
     participantsCount: 0,
   },
@@ -145,7 +145,7 @@ const challenges = [
     category: "lifestyle",
     description: "Improve your mental health by spending time outdoors daily.",
     imageUrl: "assets/images/outside.png",
-    daysOptions: Array.from({ length: 365 }, (_, i) => i + 1),
+    daysOptions: [7, 15, 21, 30, 60, 90, 180, 365],
     chatId: "timeOutside",
     participantsCount: 0,
   },
@@ -154,7 +154,7 @@ const challenges = [
     category: "lifestyle",
     description: "Take a break from screens for one hour every day.",
     imageUrl: "assets/images/unplug.png",
-    daysOptions: Array.from({ length: 365 }, (_, i) => i + 1),
+    daysOptions: [7, 15, 21, 30, 60, 90, 180, 365],
     chatId: "unplug",
     participantsCount: 0,
   },
@@ -163,7 +163,7 @@ const challenges = [
     category: "social",
     description: "Brighten someone’s day with a compliment.",
     imageUrl: "assets/images/compliment.png",
-    daysOptions: Array.from({ length: 365 }, (_, i) => i + 1),
+    daysOptions: [7, 15, 21, 30, 60, 90, 180, 365],
     chatId: "compliment",
     participantsCount: 0,
   },
@@ -172,7 +172,7 @@ const challenges = [
     category: "career",
     description: "Reach out to one professional contact daily.",
     imageUrl: "assets/images/network.png",
-    daysOptions: Array.from({ length: 365 }, (_, i) => i + 1),
+    daysOptions: [7, 15, 21, 30, 60, 90, 180, 365],
     chatId: "network",
     participantsCount: 0,
   },
@@ -181,7 +181,7 @@ const challenges = [
     category: "health",
     description: "Take 5 minutes to practice deep breathing daily.",
     imageUrl: "assets/images/deep_breathing.png",
-    daysOptions: Array.from({ length: 365 }, (_, i) => i + 1),
+    daysOptions: [7, 15, 21, 30, 60, 90, 180, 365],
     chatId: "deepBreathing",
     participantsCount: 0,
   },
@@ -190,7 +190,7 @@ const challenges = [
     category: "lifestyle",
     description: "Develop a habit of waking up early every day.",
     imageUrl: "assets/images/wake_up_early.png",
-    daysOptions: Array.from({ length: 365 }, (_, i) => i + 1),
+    daysOptions: [7, 15, 21, 30, 60, 90, 180, 365],
     chatId: "wakeUpEarly",
     participantsCount: 0,
   },
@@ -199,7 +199,7 @@ const challenges = [
     category: "education",
     description: "Spend time daily learning a new language.",
     imageUrl: "assets/images/learn_language.png",
-    daysOptions: Array.from({ length: 365 }, (_, i) => i + 1),
+    daysOptions: [7, 15, 21, 30, 60, 90, 180, 365],
     chatId: "learnLanguage",
     participantsCount: 0,
   },
@@ -208,7 +208,7 @@ const challenges = [
     category: "social",
     description: "Dedicate time to bonding with family every day.",
     imageUrl: "assets/images/family_time.png",
-    daysOptions: Array.from({ length: 365 }, (_, i) => i + 1),
+    daysOptions: [7, 15, 21, 30, 60, 90, 180, 365],
     chatId: "familyTime",
     participantsCount: 0,
   },
@@ -217,7 +217,7 @@ const challenges = [
     category: "creativity",
     description: "Spend time mastering a musical instrument.",
     imageUrl: "assets/images/play_instrument.png",
-    daysOptions: Array.from({ length: 365 }, (_, i) => i + 1),
+    daysOptions: [7, 15, 21, 30, 60, 90, 180, 365],
     chatId: "playInstrument",
     participantsCount: 0,
   },
@@ -227,7 +227,7 @@ const challenges = [
     description:
       "Repeat positive affirmations every day to boost your mindset.",
     imageUrl: "assets/images/affirmations.png",
-    daysOptions: Array.from({ length: 365 }, (_, i) => i + 1),
+    daysOptions: [7, 15, 21, 30, 60, 90, 180, 365],
     chatId: "positiveAffirmations",
     participantsCount: 0,
   },
@@ -237,7 +237,7 @@ const challenges = [
     description:
       "Boost your energy and willpower by taking a cold shower every day.",
     imageUrl: "assets/images/cold-shower.png",
-    daysOptions: Array.from({ length: 365 }, (_, i) => i + 1),
+    daysOptions: [7, 15, 21, 30, 60, 90, 180, 365],
     chatId: "coldShower",
     participantsCount: 0,
   },
@@ -247,7 +247,7 @@ const challenges = [
     description:
       "Eliminate added sugars from your diet for a healthier lifestyle.",
     imageUrl: "assets/images/no-sugar.png",
-    daysOptions: Array.from({ length: 30 }, (_, i) => i + 1),
+    daysOptions: [7, 15, 21, 30, 60, 90, 180, 365],
     chatId: "noSugar30Days",
     participantsCount: 0,
   },
@@ -256,7 +256,7 @@ const challenges = [
     category: "motivation",
     description: "Visualize your goals for 5 minutes every day.",
     imageUrl: "assets/images/daily-visualization.png",
-    daysOptions: Array.from({ length: 365 }, (_, i) => i + 1),
+    daysOptions: [7, 15, 21, 30, 60, 90, 180, 365],
     chatId: "dailyVisualization",
     participantsCount: 0,
   },
@@ -265,7 +265,7 @@ const challenges = [
     category: "social",
     description: "Perform a random act of kindness every day.",
     imageUrl: "assets/images/act-of-kindness.png",
-    daysOptions: Array.from({ length: 365 }, (_, i) => i + 1),
+    daysOptions: [7, 15, 21, 30, 60, 90, 180, 365],
     chatId: "kindnessAct",
     participantsCount: 0,
   },
@@ -274,7 +274,7 @@ const challenges = [
     category: "discipline",
     description: "Train yourself to wake up at 5 AM every morning.",
     imageUrl: "assets/images/wake-up-5.png",
-    daysOptions: Array.from({ length: 365 }, (_, i) => i + 1),
+    daysOptions: [7, 15, 21, 30, 60, 90, 180, 365],
     chatId: "wakeUp5AM",
     participantsCount: 0,
   },
@@ -284,7 +284,7 @@ const challenges = [
     description:
       "Expand your cooking skills by trying a new recipe every week.",
     imageUrl: "assets/images/new-recipe.png",
-    daysOptions: Array.from({ length: 52 }, (_, i) => i + 1),
+    daysOptions: [7, 15, 21, 30, 60, 90, 180, 365],
     chatId: "newRecipe",
     participantsCount: 0,
   },
@@ -293,7 +293,7 @@ const challenges = [
     category: "education",
     description: "Develop the habit of reading at least 10 pages daily.",
     imageUrl: "assets/images/read-10-pages.png",
-    daysOptions: Array.from({ length: 365 }, (_, i) => i + 1),
+    daysOptions: [7, 15, 21, 30, 60, 90, 180, 365],
     chatId: "read10Pages",
     participantsCount: 0,
   },
@@ -302,7 +302,7 @@ const challenges = [
     category: "fitness",
     description: "Strengthen your core by doing a one-minute plank daily.",
     imageUrl: "assets/images/plank.jpg",
-    daysOptions: Array.from({ length: 365 }, (_, i) => i + 1),
+    daysOptions: [7, 15, 21, 30, 60, 90, 180, 365],
     chatId: "oneMinPlank",
     participantsCount: 0,
   },
@@ -312,7 +312,7 @@ const challenges = [
     description:
       "Expand your vocabulary by learning and using a new word daily.",
     imageUrl: "assets/images/learn-word.jpg",
-    daysOptions: Array.from({ length: 365 }, (_, i) => i + 1),
+    daysOptions: [7, 15, 21, 30, 60, 90, 180, 365],
     chatId: "learnWordDaily",
     participantsCount: 0,
   },
@@ -322,7 +322,7 @@ const challenges = [
     description:
       "Give your body a reset by eliminating caffeine for a full week.",
     imageUrl: "assets/images/no-caffeine.png",
-    daysOptions: Array.from({ length: 7 }, (_, i) => i + 1),
+    daysOptions: [7, 15, 21, 30, 60, 90, 180, 365],
     chatId: "noCaffeine",
     participantsCount: 0,
   },
@@ -332,7 +332,7 @@ const challenges = [
     description:
       "Boost your confidence by listing three wins at the end of each day.",
     imageUrl: "assets/images/3-wins.png",
-    daysOptions: Array.from({ length: 365 }, (_, i) => i + 1),
+    daysOptions: [7, 15, 21, 30, 60, 90, 180, 365],
     chatId: "dailyWins",
     participantsCount: 0,
   },
@@ -342,7 +342,7 @@ const challenges = [
     description:
       "Improve your social skills by starting a conversation with someone new daily.",
     imageUrl: "assets/images/talk-stranger.jpg",
-    daysOptions: Array.from({ length: 365 }, (_, i) => i + 1),
+    daysOptions: [7, 15, 21, 30, 60, 90, 180, 365],
     chatId: "talkToStranger",
     participantsCount: 0,
   },
@@ -352,7 +352,7 @@ const challenges = [
     description:
       "Wear only 33 items of clothing for a full month to embrace minimalism.",
     imageUrl: "assets/images/minimalist-wardrobe.jpg",
-    daysOptions: Array.from({ length: 30 }, (_, i) => i + 1),
+    daysOptions: [7, 15, 21, 30, 60, 90, 180, 365],
     chatId: "minimalistWardrobe",
     participantsCount: 0,
   },
@@ -362,7 +362,7 @@ const challenges = [
     description:
       "Train your mind to stay positive by avoiding complaints for 21 days straight.",
     imageUrl: "assets/images/no-complaints.jpg",
-    daysOptions: Array.from({ length: 21 }, (_, i) => i + 1),
+    daysOptions: [7, 15, 21, 30, 60, 90, 180, 365],
     chatId: "noComplaints",
     participantsCount: 0,
   },
@@ -372,7 +372,7 @@ const challenges = [
     description:
       "Spend 5 minutes every evening reflecting on your thoughts and actions.",
     imageUrl: "assets/images/self-reflection.png",
-    daysOptions: Array.from({ length: 365 }, (_, i) => i + 1),
+    daysOptions: [7, 15, 21, 30, 60, 90, 180, 365],
     chatId: "selfReflection",
     participantsCount: 0,
   },
@@ -382,7 +382,7 @@ const challenges = [
     description:
       "Spend at least 30 minutes daily on a hobby that makes you happy.",
     imageUrl: "assets/images/hobby-30.png",
-    daysOptions: Array.from({ length: 365 }, (_, i) => i + 1),
+    daysOptions: [7, 15, 21, 30, 60, 90, 180, 365],
     chatId: "hobbyTime",
     participantsCount: 0,
   },
@@ -392,7 +392,7 @@ const challenges = [
     description:
       "Expand your knowledge by listening to an educational podcast daily.",
     imageUrl: "assets/images/poadcast.png",
-    daysOptions: Array.from({ length: 365 }, (_, i) => i + 1),
+    daysOptions: [7, 15, 21, 30, 60, 90, 180, 365],
     chatId: "listenPodcast",
     participantsCount: 0,
   },
@@ -402,7 +402,7 @@ const challenges = [
     description:
       "Reduce your environmental impact by avoiding single-use plastics.",
     imageUrl: "assets/images/reduce-plastic-use.png",
-    daysOptions: Array.from({ length: 365 }, (_, i) => i + 1),
+    daysOptions: [7, 15, 21, 30, 60, 90, 180, 365],
     chatId: "reducePlastic",
     participantsCount: 0,
   },
@@ -412,7 +412,7 @@ const challenges = [
     description:
       "Maintain a good posture throughout the day for improved back health.",
     imageUrl: "assets/images/good-posture.png",
-    daysOptions: Array.from({ length: 365 }, (_, i) => i + 1),
+    daysOptions: [7, 15, 21, 30, 60, 90, 180, 365],
     chatId: "goodPosture",
     participantsCount: 0,
   },
@@ -421,27 +421,36 @@ const challenges = [
     category: "lifestyle",
     description: "Avoid screens at least 30 minutes before bedtime.",
     imageUrl: "assets/images/no-phone-bed.png",
-    daysOptions: Array.from({ length: 365 }, (_, i) => i + 1),
+    daysOptions: [7, 15, 21, 30, 60, 90, 180, 365],
     chatId: "reduceScreenTime",
     participantsCount: 0,
   },
 ];
 
+// Fonction pour uploader les challenges
 const uploadChallenges = async () => {
   const batch = db.batch();
   const challengesCollection = db.collection("challenges");
 
+  console.log("Début de l'upload des challenges...");
+
   challenges.forEach((challenge) => {
-    const docRef = challengesCollection.doc(); // Auto-generate ID
-    batch.set(docRef, challenge);
+    const docId = challenge.title.replace(/\s+/g, "_").toLowerCase(); // ID basé sur le titre
+    const docRef = challengesCollection.doc(docId);
+
+    batch.set(docRef, {
+      ...challenge,
+      createdAt: admin.firestore.Timestamp.now(),
+    });
   });
 
   try {
     await batch.commit();
-    console.log("Challenges uploaded successfully!");
+    console.log("Challenges uploadés avec succès !");
   } catch (error) {
-    console.error("Error uploading challenges:", error);
+    console.error("Erreur lors de l'upload des challenges :", error);
   }
 };
 
+// Lancer l'upload
 uploadChallenges();

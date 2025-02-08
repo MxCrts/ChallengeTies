@@ -11,10 +11,10 @@ import {
 } from "react-native";
 import { Ionicons } from "@expo/vector-icons";
 import { useRouter } from "expo-router";
-import { doc, onSnapshot } from "firebase/firestore"; // <-- Changed here
+import { doc, onSnapshot } from "firebase/firestore";
 import { db, auth } from "../../constants/firebase-config";
 import { LinearGradient } from "expo-linear-gradient";
-import Animated, { FadeIn } from "react-native-reanimated";
+import Animated, { FadeIn, Layout } from "react-native-reanimated";
 
 interface CompletedChallenge {
   id: string;
@@ -23,7 +23,7 @@ interface CompletedChallenge {
   dateCompleted: string;
   category?: string;
   description?: string;
-  selectedDays: number; // <-- Added this property
+  selectedDays: number;
 }
 
 export default function CompletedChallenges() {
@@ -40,27 +40,24 @@ export default function CompletedChallenges() {
       return;
     }
 
-    // 1) Listen to the user document
     const userDocRef = doc(db, "users", userId);
     const unsubscribe = onSnapshot(
       userDocRef,
       (snapshot) => {
         if (snapshot.exists()) {
           const userData = snapshot.data() || {};
-          // 2) Get the CompletedChallenges array (if any)
           const challenges = Array.isArray(userData.CompletedChallenges)
             ? userData.CompletedChallenges
             : [];
 
-          // 3) Map each challenge into the shape we need
           const mappedChallenges = challenges.map((c) => ({
             id: c.id,
-            title: c.title || "Untitled Challenge",
+            title: c.title || "Défi sans titre",
             imageUrl: c.imageUrl || null,
-            dateCompleted: c.dateCompleted || "Unknown Date",
-            category: c.category || "Uncategorized",
-            description: c.description || "No description available",
-            selectedDays: c.selectedDays || 0, // <-- Included
+            dateCompleted: c.dateCompleted || "Date inconnue",
+            category: c.category || "Non catégorisé",
+            description: c.description || "Pas de description",
+            selectedDays: c.selectedDays || 0,
           }));
 
           setCompletedChallenges(mappedChallenges);
@@ -70,18 +67,21 @@ export default function CompletedChallenges() {
         setIsLoading(false);
       },
       (error) => {
-        console.error("Error fetching completed challenges:", error);
-        Alert.alert("Error", "Failed to load completed challenges.");
+        console.error("Erreur lors du chargement :", error);
+        Alert.alert("Erreur", "Impossible de charger les défis complétés.");
         setIsLoading(false);
       }
     );
 
-    // Cleanup
     return () => unsubscribe();
   }, []);
 
   const renderChallenge = ({ item }: { item: CompletedChallenge }) => (
-    <Animated.View entering={FadeIn} style={styles.challengeCard}>
+    <Animated.View
+      entering={FadeIn}
+      layout={Layout.springify()}
+      style={styles.challengeCard}
+    >
       <TouchableOpacity
         style={styles.challengeContent}
         onPress={() =>
@@ -96,6 +96,7 @@ export default function CompletedChallenges() {
           })
         }
       >
+        {/* ✅ Image du challenge */}
         {item.imageUrl ? (
           <Image
             source={{ uri: item.imageUrl }}
@@ -106,14 +107,16 @@ export default function CompletedChallenges() {
             <Ionicons name="image-outline" size={40} color="#b0bec5" />
           </View>
         )}
+
+        {/* ✅ Détails du challenge */}
         <View style={styles.challengeDetails}>
           <Text style={styles.challengeTitle}>{item.title}</Text>
           <Text style={styles.challengeDate}>
-            Completed: {new Date(item.dateCompleted).toLocaleDateString()}
+            Complété le {new Date(item.dateCompleted).toLocaleDateString()}
           </Text>
           <Text style={styles.challengeCategory}>{item.category}</Text>
           <Text style={styles.challengeSelectedDays}>
-            Selected Days: {item.selectedDays}
+            {item.selectedDays} jours de défi
           </Text>
         </View>
       </TouchableOpacity>
@@ -126,8 +129,10 @@ export default function CompletedChallenges() {
         colors={["#1C1C1E", "#2C2C2E"]}
         style={styles.loadingContainer}
       >
-        <ActivityIndicator size="large" color="#8bc34a" />
-        <Text style={styles.loadingText}>Loading completed challenges...</Text>
+        <ActivityIndicator size="large" color="#FACC15" />
+        <Text style={styles.loadingText}>
+          Chargement des défis complétés...
+        </Text>
       </LinearGradient>
     );
   }
@@ -139,11 +144,9 @@ export default function CompletedChallenges() {
         style={styles.noChallengesContainer}
       >
         <Ionicons name="checkmark-done-outline" size={60} color="#b0bec5" />
-        <Text style={styles.noChallengesText}>
-          No completed challenges yet!
-        </Text>
+        <Text style={styles.noChallengesText}>Aucun défi complété !</Text>
         <Text style={styles.noChallengesSubtext}>
-          Finish some challenges to see them here.
+          Terminez des défis pour les voir ici.
         </Text>
       </LinearGradient>
     );
@@ -151,17 +154,20 @@ export default function CompletedChallenges() {
 
   return (
     <LinearGradient colors={["#1C1C1E", "#2C2C2E"]} style={styles.container}>
-      <Text style={styles.header}>Completed Challenges</Text>
+      <Text style={styles.header}>Défis Complétés</Text>
       <FlatList
         data={completedChallenges}
         renderItem={renderChallenge}
-        keyExtractor={(item) => `${item.id}_${item.selectedDays}`} // <-- Ensured uniqueness
+        keyExtractor={(item) => `${item.id}_${item.selectedDays}`}
         contentContainerStyle={styles.listContainer}
       />
     </LinearGradient>
   );
 }
 
+// --------------------------------
+// 🎨 Styles ultra modernes
+// --------------------------------
 const styles = StyleSheet.create({
   container: {
     flex: 1,
@@ -175,7 +181,7 @@ const styles = StyleSheet.create({
   loadingText: {
     marginTop: 10,
     fontSize: 16,
-    color: "#8bc34a",
+    color: "#FACC15",
   },
   noChallengesContainer: {
     flex: 1,
@@ -199,7 +205,7 @@ const styles = StyleSheet.create({
   header: {
     fontSize: 24,
     fontWeight: "bold",
-    color: "#8bc34a",
+    color: "#FACC15",
     marginBottom: 20,
     textAlign: "center",
   },
@@ -207,32 +213,28 @@ const styles = StyleSheet.create({
     paddingBottom: 20,
   },
   challengeCard: {
-    flexDirection: "row",
-    alignItems: "center",
-    backgroundColor: "#3A3A3C",
+    backgroundColor: "#2A2A2E",
+    borderRadius: 12,
     padding: 15,
     marginBottom: 15,
-    borderRadius: 10,
-    shadowColor: "#000",
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.15,
-    shadowRadius: 3,
-    elevation: 2,
-  },
-  challengeContent: {
-    flex: 1,
     flexDirection: "row",
     alignItems: "center",
+    elevation: 3,
+  },
+  challengeContent: {
+    flexDirection: "row",
+    alignItems: "center",
+    flex: 1,
   },
   challengeImage: {
-    width: 60,
-    height: 60,
+    width: 70,
+    height: 70,
     borderRadius: 10,
     marginRight: 15,
   },
   placeholderImage: {
-    width: 60,
-    height: 60,
+    width: 70,
+    height: 70,
     borderRadius: 10,
     backgroundColor: "#2C2C2E",
     justifyContent: "center",
@@ -243,15 +245,14 @@ const styles = StyleSheet.create({
     flex: 1,
   },
   challengeTitle: {
-    fontSize: 17,
-    fontWeight: "600",
-    color: "#8bc34a",
-    marginBottom: 5,
+    fontSize: 18,
+    fontWeight: "bold",
+    color: "#FACC15",
   },
   challengeDate: {
     fontSize: 14,
-    color: "#ccc",
-    marginBottom: 5,
+    color: "#bbb",
+    marginBottom: 3,
   },
   challengeCategory: {
     fontSize: 14,
@@ -260,6 +261,6 @@ const styles = StyleSheet.create({
   challengeSelectedDays: {
     fontSize: 14,
     color: "#bbb",
-    marginTop: 5,
+    marginTop: 3,
   },
 });

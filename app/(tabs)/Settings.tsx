@@ -14,56 +14,58 @@ import { Ionicons } from "@expo/vector-icons";
 import { useTheme } from "../../context/ThemeContext";
 import { useRouter } from "expo-router";
 import { auth } from "../../constants/firebase-config";
-import { useAuthInit } from "../../context/useAuthInit";
 import AsyncStorage from "@react-native-async-storage/async-storage";
+import { LinearGradient } from "expo-linear-gradient";
+import Animated, { FadeInUp } from "react-native-reanimated";
 
 export default function Settings() {
   const { theme, toggleTheme } = useTheme();
   const router = useRouter();
   const [notificationsEnabled, setNotificationsEnabled] = useState(true);
-  const [selectedLanguage, setSelectedLanguage] = useState("en"); // Language selection
+  const [selectedLanguage, setSelectedLanguage] = useState("fr");
+  const isDarkMode = theme === "dark";
 
   const toggleNotifications = async (value: boolean) => {
     setNotificationsEnabled(value);
     if (!value) {
       await Notifications.cancelAllScheduledNotificationsAsync();
       Alert.alert(
-        "Notifications Disabled",
-        "You will no longer receive notifications."
+        "Notifications désactivées",
+        "Vous ne recevrez plus de notifications."
       );
     } else {
-      Alert.alert(
-        "Notifications Enabled",
-        "Notifications are now active. Ensure permissions are granted."
-      );
+      Alert.alert("Notifications activées", "Vérifiez vos autorisations.");
     }
   };
 
   const clearCache = async () => {
     try {
       await AsyncStorage.clear();
-      Alert.alert("Cache Cleared", "All cached data has been cleared.");
+      Alert.alert(
+        "Cache vidé",
+        "Toutes les données temporaires ont été supprimées."
+      );
     } catch (error) {
-      Alert.alert("Error", "Failed to clear cache. Please try again.");
+      Alert.alert("Erreur", "Échec du vidage du cache.");
     }
   };
 
   const handleLogout = async () => {
     Alert.alert(
-      "Log Out",
-      "Are you sure you want to log out?",
+      "Déconnexion",
+      "Êtes-vous sûr de vouloir vous déconnecter ?",
       [
-        { text: "Cancel", style: "cancel" },
+        { text: "Annuler", style: "cancel" },
         {
-          text: "Log Out",
+          text: "Déconnexion",
           style: "destructive",
           onPress: async () => {
             try {
               await auth.signOut();
-              Alert.alert("Logged Out", "You have been logged out.");
+              Alert.alert("Déconnecté", "Vous avez été déconnecté.");
               router.replace("/login");
             } catch (error) {
-              Alert.alert("Error", "Failed to log out. Try again.");
+              Alert.alert("Erreur", "Échec de la déconnexion.");
             }
           },
         },
@@ -74,12 +76,12 @@ export default function Settings() {
 
   const handleDeleteAccount = () => {
     Alert.alert(
-      "Delete Account",
-      "Are you sure you want to delete your account? This action cannot be undone.",
+      "Suppression du compte",
+      "Êtes-vous sûr ? Cette action est irréversible.",
       [
-        { text: "Cancel", style: "cancel" },
+        { text: "Annuler", style: "cancel" },
         {
-          text: "Delete",
+          text: "Supprimer",
           style: "destructive",
           onPress: async () => {
             try {
@@ -87,16 +89,15 @@ export default function Settings() {
               if (user) {
                 await user.delete();
                 Alert.alert(
-                  "Account Deleted",
-                  "Your account has been successfully deleted."
+                  "Compte supprimé",
+                  "Votre compte a été supprimé avec succès."
                 );
                 router.replace("/login");
               } else {
-                Alert.alert("Error", "No user is logged in.");
+                Alert.alert("Erreur", "Aucun utilisateur connecté.");
               }
             } catch (error) {
-              Alert.alert("Error", "Failed to delete account. Try again.");
-              console.error("Error deleting account:", error);
+              Alert.alert("Erreur", "Échec de la suppression du compte.");
             }
           },
         },
@@ -105,91 +106,58 @@ export default function Settings() {
   };
 
   return (
-    <View
-      style={[
-        styles.container,
-        theme === "dark" ? styles.darkContainer : styles.lightContainer,
-      ]}
+    <LinearGradient
+      colors={isDarkMode ? ["#1E293B", "#0F172A"] : ["#E3F2FD", "#FFFFFF"]}
+      style={styles.container}
     >
-      <Text
-        style={[
-          styles.header,
-          theme === "dark" ? styles.darkText : styles.lightText,
-        ]}
+      <Animated.View
+        entering={FadeInUp.duration(800)}
+        style={styles.headerContainer}
       >
-        Settings
-      </Text>
+        <Text style={styles.header}>Paramètres ⚙️</Text>
+      </Animated.View>
 
-      {/* Notifications Toggle */}
+      {/* 🔔 Notifications & Thème */}
       <View style={styles.settingItem}>
-        <Text
-          style={[
-            styles.settingLabel,
-            theme === "dark" ? styles.darkText : styles.lightText,
-          ]}
-        >
-          Enable Notifications
-        </Text>
+        <Text style={styles.settingLabel}>Notifications</Text>
         <Switch
           value={notificationsEnabled}
           onValueChange={toggleNotifications}
         />
       </View>
 
-      {/* Dark Mode */}
       <View style={styles.settingItem}>
-        <Text
-          style={[
-            styles.settingLabel,
-            theme === "dark" ? styles.darkText : styles.lightText,
-          ]}
-        >
-          Dark Mode
-        </Text>
+        <Text style={styles.settingLabel}>Mode sombre</Text>
         <Switch value={theme === "dark"} onValueChange={toggleTheme} />
       </View>
 
-      {/* Language Selection */}
+      {/* 🌍 Sélection de la Langue */}
       <View style={styles.settingItem}>
-        <Text
-          style={[
-            styles.settingLabel,
-            theme === "dark" ? styles.darkText : styles.lightText,
-          ]}
-        >
-          Language
-        </Text>
+        <Text style={styles.settingLabel}>Langue</Text>
         <Picker
           selectedValue={selectedLanguage}
           style={styles.languagePicker}
           onValueChange={(itemValue) => setSelectedLanguage(itemValue)}
         >
-          <Picker.Item label="English" value="en" />
           <Picker.Item label="Français" value="fr" />
+          <Picker.Item label="English" value="en" />
           <Picker.Item label="Español" value="es" />
         </Picker>
       </View>
 
-      {/* Account Section */}
-      <Text
-        style={[
-          styles.sectionHeader,
-          theme === "dark" ? styles.darkText : styles.lightText,
-        ]}
-      >
-        Account
-      </Text>
+      {/* 👤 Compte */}
+      <Text style={styles.sectionHeader}>Compte</Text>
       <TouchableOpacity
         style={styles.accountButton}
         onPress={() => router.push("/profile/UserInfo")}
       >
         <Ionicons name="person-outline" size={20} color="#007bff" />
-        <Text style={styles.accountButtonText}>Edit Profile</Text>
+        <Text style={styles.accountButtonText}>Modifier mon profil</Text>
       </TouchableOpacity>
       <TouchableOpacity style={styles.accountButton} onPress={handleLogout}>
         <Ionicons name="log-out-outline" size={20} color="#dc3545" />
         <Text style={[styles.accountButtonText, { color: "#dc3545" }]}>
-          Log Out
+          Se déconnecter
         </Text>
       </TouchableOpacity>
       <TouchableOpacity
@@ -198,84 +166,84 @@ export default function Settings() {
       >
         <Ionicons name="trash-outline" size={20} color="#dc3545" />
         <Text style={[styles.accountButtonText, { color: "#dc3545" }]}>
-          Delete Account
+          Supprimer mon compte
         </Text>
       </TouchableOpacity>
       <TouchableOpacity style={styles.accountButton} onPress={clearCache}>
         <Ionicons name="trash-bin-outline" size={20} color="#ffa500" />
         <Text style={[styles.accountButtonText, { color: "#ffa500" }]}>
-          Clear Cache
+          Vider le cache
         </Text>
       </TouchableOpacity>
 
-      {/* About Section */}
-      <Text
-        style={[
-          styles.sectionHeader,
-          theme === "dark" ? styles.darkText : styles.lightText,
-        ]}
-      >
-        About
-      </Text>
+      {/* 📜 À Propos */}
+      <Text style={styles.sectionHeader}>À Propos</Text>
       <TouchableOpacity onPress={() => router.push("/about/History")}>
-        <Text style={styles.aboutLink}>About ChallengeTies</Text>
+        <Text style={styles.aboutLink}>À propos de ChallengeTies</Text>
       </TouchableOpacity>
       <TouchableOpacity onPress={() => router.push("/about/PrivacyPolicy")}>
-        <Text style={styles.aboutLink}>Privacy Policy</Text>
+        <Text style={styles.aboutLink}>Politique de confidentialité</Text>
       </TouchableOpacity>
       <TouchableOpacity onPress={() => router.push("/about/Contact")}>
-        <Text style={styles.aboutLink}>Contact Us</Text>
+        <Text style={styles.aboutLink}>Nous contacter</Text>
       </TouchableOpacity>
       <TouchableOpacity onPress={() => Linking.openURL("https://example.com")}>
-        <Text style={styles.aboutLink}>Visit Our Website</Text>
+        <Text style={styles.aboutLink}>Visitez Notre Site Web</Text>
       </TouchableOpacity>
 
-      {/* App Info */}
-      <Text style={styles.appVersion}>App Version: 1.0.0</Text>
-    </View>
+      <Text style={styles.appVersion}>Version de l'application: 1.0.0</Text>
+    </LinearGradient>
   );
 }
-
 const styles = StyleSheet.create({
   container: { flex: 1, padding: 16 },
-  header: { fontSize: 24, fontWeight: "bold", marginBottom: 16 },
+  headerContainer: { alignItems: "center", marginBottom: 20 },
+  header: { fontSize: 28, fontWeight: "bold", color: "#007bff" },
   sectionHeader: {
     fontSize: 18,
     marginTop: 20,
     marginBottom: 10,
-    color: "#007bff",
+    color: "#333",
   },
   settingItem: {
     flexDirection: "row",
     justifyContent: "space-between",
     alignItems: "center",
-    paddingVertical: 10,
-    borderBottomWidth: 1,
-    borderBottomColor: "#ddd",
+    paddingVertical: 12,
+    marginBottom: 5,
+    backgroundColor: "#fff",
+    borderRadius: 10,
+    paddingHorizontal: 12,
+    shadowColor: "#000",
+    shadowOpacity: 0.05,
+    shadowRadius: 5,
+    elevation: 2,
   },
-  settingLabel: { fontSize: 16 },
+  settingLabel: { fontSize: 16, color: "#333" },
+  languagePicker: { width: 140, height: 40, color: "#333" },
   accountButton: {
     flexDirection: "row",
     alignItems: "center",
-    paddingVertical: 10,
-    borderBottomWidth: 1,
-    borderBottomColor: "#ddd",
+    paddingVertical: 12,
+    paddingHorizontal: 15,
+    marginBottom: 5,
+    backgroundColor: "#fff",
+    borderRadius: 10,
+    shadowColor: "#000",
+    shadowOpacity: 0.05,
+    shadowRadius: 5,
+    elevation: 2,
   },
-  languagePicker: {
-    width: 150,
-    height: 50,
+  accountButtonText: { fontSize: 14, marginLeft: 10, color: "#333" },
+  aboutLink: {
+    fontSize: 14,
     color: "#007bff",
+    marginVertical: 5,
+    textAlign: "center",
   },
   appVersion: {
     textAlign: "center",
-    color: "#666",
-    marginTop: 20,
+    color: "#888",
     fontSize: 12,
   },
-  accountButtonText: { fontSize: 16, color: "#007bff", marginLeft: 10 },
-  aboutLink: { fontSize: 14, color: "#007bff", marginVertical: 5 },
-  lightContainer: { backgroundColor: "#fff" },
-  darkContainer: { backgroundColor: "#121212" },
-  lightText: { color: "#000" },
-  darkText: { color: "#fff" },
 });

@@ -12,7 +12,13 @@ import {
 import { Picker } from "@react-native-picker/picker";
 import * as ImagePicker from "expo-image-picker";
 import { useRouter } from "expo-router";
-import { collection, addDoc } from "firebase/firestore";
+import {
+  collection,
+  addDoc,
+  updateDoc,
+  arrayUnion,
+  doc,
+} from "firebase/firestore";
 import { auth, db } from "../constants/firebase-config";
 import { LinearGradient } from "expo-linear-gradient";
 import { Ionicons } from "@expo/vector-icons";
@@ -52,14 +58,24 @@ export default function CreateChallenge() {
 
   const handleSubmit = async () => {
     if (!title.trim() || !description.trim() || !category) {
-      Alert.alert("Error", "All fields (except image) are required.");
+      Alert.alert("Erreur", "Tous les champs sont requis (sauf image).");
+      return;
+    }
+
+    // 🔹 Convertir `days` en nombre entier
+    const daysInt = parseInt(days, 10);
+    if (isNaN(daysInt) || daysInt <= 0 || daysInt > 365) {
+      Alert.alert(
+        "Erreur",
+        "Veuillez entrer un nombre de jours valide (1-365)."
+      );
       return;
     }
 
     try {
       const currentUser = auth.currentUser;
       if (!currentUser) {
-        Alert.alert("Error", "You must be logged in to create a challenge.");
+        Alert.alert("Erreur", "Vous devez être connecté pour créer un défi.");
         return;
       }
 
@@ -67,20 +83,31 @@ export default function CreateChallenge() {
         title: title.trim(),
         description: description.trim(),
         category,
-        days: parseInt(days, 10),
+        days: daysInt, // 🔹 On s'assure que c'est un `int`
         imageUrl: imageUri || "https://via.placeholder.com/150",
         participantsCount: 0,
         createdAt: new Date(),
-        creatorId: currentUser.uid,
+        creatorId: currentUser.uid, // 🔹 Assure-toi que creatorId est bien stocké
       };
 
-      await addDoc(collection(db, "challenges"), challengeData);
+      // 1️⃣ Ajouter le défi dans la collection `challenges`
+      const challengeRef = await addDoc(
+        collection(db, "challenges"),
+        challengeData
+      );
+      const challengeId = challengeRef.id;
 
-      Alert.alert("Success", "Challenge created successfully!");
+      // 2️⃣ Ajouter ce défi dans `createdChallenges` du document utilisateur
+      const userRef = doc(db, "users", currentUser.uid);
+      await updateDoc(userRef, {
+        createdChallenges: arrayUnion({ id: challengeId, ...challengeData }),
+      });
+
+      Alert.alert("Succès", "Votre défi a été créé !");
       router.push("/explore");
     } catch (error) {
-      console.error("Error creating challenge:", error);
-      Alert.alert("Error", "Failed to create challenge. Try again.");
+      console.error("Erreur lors de la création du défi :", error);
+      Alert.alert("Erreur", "Impossible de créer le défi.");
     }
   };
 

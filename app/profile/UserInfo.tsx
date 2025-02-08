@@ -1,22 +1,25 @@
 import React, { useState, useEffect, useCallback } from "react";
 import {
   View,
-  Text,
-  TouchableOpacity,
   StyleSheet,
-  TextInput,
-  Alert,
+  KeyboardAvoidingView,
+  Platform,
   Image,
+  TouchableOpacity,
   ScrollView,
   ActivityIndicator,
+  Alert,
   Dimensions,
+  Text,
 } from "react-native";
+import { useRouter } from "expo-router";
 import { doc, updateDoc, getDoc } from "firebase/firestore";
 import { auth, db } from "../../constants/firebase-config";
 import * as ImagePicker from "expo-image-picker";
-import { Ionicons } from "@expo/vector-icons";
-import { useRouter } from "expo-router";
+import { TextInput } from "react-native-paper";
 import { LinearGradient } from "expo-linear-gradient";
+
+const { width } = Dimensions.get("window");
 
 interface User {
   uid: string;
@@ -25,25 +28,16 @@ interface User {
   profileImage?: string | null;
   location?: string;
   interests?: string;
-  website?: string;
 }
-
-const { width } = Dimensions.get("window");
 
 export default function UserInfo() {
   const router = useRouter();
   const [user, setUser] = useState<User | null>(null);
-
-  // Profile fields
   const [displayName, setDisplayName] = useState("");
   const [bio, setBio] = useState("");
   const [profileImage, setProfileImage] = useState<string | null>(null);
-
-  // NEW FIELDS
   const [location, setLocation] = useState("");
   const [interests, setInterests] = useState("");
-  const [website, setWebsite] = useState("");
-
   const [isLoading, setIsLoading] = useState(false);
 
   useEffect(() => {
@@ -51,9 +45,7 @@ export default function UserInfo() {
       setIsLoading(true);
       try {
         const currentUser = auth.currentUser;
-        if (!currentUser) {
-          throw new Error("User is not authenticated.");
-        }
+        if (!currentUser) throw new Error("User is not authenticated.");
 
         const userId = currentUser.uid;
         const userRef = doc(db, "users", userId);
@@ -67,21 +59,9 @@ export default function UserInfo() {
           setProfileImage(userData.profileImage || null);
           setLocation(userData.location || "");
           setInterests(userData.interests || "");
-          setWebsite(userData.website || "");
-        } else {
-          setUser({
-            uid: userId,
-            displayName: "",
-            bio: "",
-            profileImage: null,
-            location: "",
-            interests: "",
-            website: "",
-          });
         }
       } catch (error) {
-        console.error("Error fetching user data:", error);
-        Alert.alert("Error", "Failed to fetch user details. Please try again.");
+        Alert.alert("Erreur", "Impossible de charger les informations.");
       } finally {
         setIsLoading(false);
       }
@@ -95,10 +75,7 @@ export default function UserInfo() {
       const { status } =
         await ImagePicker.requestMediaLibraryPermissionsAsync();
       if (status !== "granted") {
-        Alert.alert(
-          "Permission Denied",
-          "Camera roll permissions are required."
-        );
+        Alert.alert("Permission refusée", "Autorisation requise.");
         return;
       }
 
@@ -113,14 +90,13 @@ export default function UserInfo() {
         setProfileImage(result.assets[0].uri);
       }
     } catch (error) {
-      console.error("ImagePicker Error:", error);
-      Alert.alert("Error", "There was an error picking the image.");
+      Alert.alert("Erreur", "Impossible de sélectionner l’image.");
     }
   }, []);
 
   const handleSave = useCallback(async () => {
     if (!user?.uid) {
-      Alert.alert("Error", "User ID not found.");
+      Alert.alert("Erreur", "Utilisateur introuvable.");
       return;
     }
 
@@ -133,143 +109,137 @@ export default function UserInfo() {
         profileImage,
         location,
         interests,
-        website,
       });
 
-      Alert.alert("Success", "Profile updated successfully!");
+      Alert.alert("Succès", "Profil mis à jour !");
       router.push("/(tabs)/profile");
     } catch (error) {
-      console.error("Error updating user info:", error);
-      Alert.alert("Error", "Failed to update profile. Please try again.");
+      Alert.alert("Erreur", "Échec de la mise à jour du profil.");
     } finally {
       setIsLoading(false);
     }
-  }, [user, displayName, bio, profileImage, location, interests, website]);
+  }, [user, displayName, bio, profileImage, location, interests]);
 
   if (isLoading) {
     return (
       <View style={styles.loadingContainer}>
-        <ActivityIndicator size="large" color="#8bc34a" />
+        <ActivityIndicator size="large" color="#FACC15" />
       </View>
     );
   }
 
   return (
-    <LinearGradient
-      colors={["#1C1C1E", "#262629"]}
+    <KeyboardAvoidingView
       style={styles.container}
-      start={{ x: 0, y: 0 }}
-      end={{ x: 1, y: 1 }}
+      behavior={Platform.OS === "ios" ? "padding" : undefined}
     >
       <ScrollView
         contentContainerStyle={styles.contentContainer}
         showsVerticalScrollIndicator={false}
       >
-        {/* Header */}
-        <View style={styles.header}>
-          <Ionicons name="person-circle-outline" size={70} color="#fff" />
-          <Text style={styles.title}>Edit Profile</Text>
-          <Text style={styles.subtitle}>
-            Update your avatar and personal details.
-          </Text>
-        </View>
+        <Text style={styles.title}>Modifier votre profil</Text>
 
-        {/* Profile Image */}
-        <View style={styles.imageContainer}>
+        {/* Image de profil */}
+        <TouchableOpacity style={styles.imageContainer} onPress={pickImage}>
           {profileImage ? (
             <Image source={{ uri: profileImage }} style={styles.profileImage} />
           ) : (
-            <TouchableOpacity
-              style={styles.imagePlaceholder}
-              onPress={pickImage}
-            >
-              <Ionicons name="add-circle-outline" size={50} color="#8bc34a" />
-              <Text style={styles.addImageText}>Add Profile Image</Text>
-            </TouchableOpacity>
+            <Text style={styles.addImageText}>Ajouter une photo</Text>
           )}
-        </View>
+        </TouchableOpacity>
 
-        {/* Form Fields */}
+        {/* Champs de saisie */}
         <TextInput
+          label="Nom"
+          mode="outlined"
           style={styles.input}
-          placeholder="Name"
-          placeholderTextColor="#aaa"
           value={displayName}
           onChangeText={setDisplayName}
+          textColor="#FFF"
+          theme={{
+            colors: {
+              primary: "#FACC15",
+              text: "#FFF",
+              placeholder: "#FACC15",
+              background: "transparent",
+            },
+          }}
         />
-
         <TextInput
-          style={[styles.input, styles.multilineInput]}
-          placeholder="Bio"
-          placeholderTextColor="#aaa"
+          label="Bio"
+          mode="outlined"
+          style={styles.input}
           value={bio}
           onChangeText={setBio}
           multiline
-          numberOfLines={4}
+          textColor="#FFF"
+          theme={{
+            colors: {
+              primary: "#FACC15",
+              text: "#FFF",
+              placeholder: "#FACC15",
+              background: "transparent",
+            },
+          }}
         />
-
         <TextInput
+          label="Localisation"
+          mode="outlined"
           style={styles.input}
-          placeholder="Location"
-          placeholderTextColor="#aaa"
           value={location}
           onChangeText={setLocation}
+          textColor="#FFF"
+          theme={{
+            colors: {
+              primary: "#FACC15",
+              text: "#FFF",
+              placeholder: "#FACC15",
+              background: "transparent",
+            },
+          }}
         />
-
         <TextInput
-          style={[styles.input, styles.multilineInput]}
-          placeholder="Interests (e.g. Hiking, Cooking, Tech...)"
-          placeholderTextColor="#aaa"
+          label="Intérêts"
+          mode="outlined"
+          style={styles.input}
           value={interests}
           onChangeText={setInterests}
-          multiline
-          numberOfLines={2}
+          textColor="#FFF"
+          theme={{
+            colors: {
+              primary: "#FACC15",
+              text: "#FFF",
+              placeholder: "#FACC15",
+              background: "transparent",
+            },
+          }}
         />
 
-        <TextInput
-          style={styles.input}
-          placeholder="Website (Optional)"
-          placeholderTextColor="#aaa"
-          value={website}
-          onChangeText={setWebsite}
-          autoCapitalize="none"
-        />
-
-        <TouchableOpacity style={styles.saveButton} onPress={handleSave}>
-          <Text style={styles.saveButtonText}>Save Changes</Text>
-        </TouchableOpacity>
+        {/* Bouton Sauvegarde Feu & Glace */}
+        <LinearGradient
+          colors={["#FACC15", "#3B82F6"]}
+          start={{ x: 0, y: 0 }}
+          end={{ x: 1, y: 1 }}
+          style={styles.saveButton}
+        >
+          <TouchableOpacity onPress={handleSave}>
+            <Text style={styles.saveButtonText}>Sauvegarder</Text>
+          </TouchableOpacity>
+        </LinearGradient>
       </ScrollView>
-    </LinearGradient>
+    </KeyboardAvoidingView>
   );
 }
 
 const styles = StyleSheet.create({
   container: {
     flex: 1,
+    backgroundColor: "#0F172A",
   },
   contentContainer: {
     padding: 20,
     alignItems: "center",
     paddingBottom: 60,
-  },
-  header: {
-    alignItems: "center",
-    marginBottom: 20,
-  },
-  title: {
-    fontSize: 24,
-    fontWeight: "bold",
-    color: "#fff",
-    marginTop: 10,
-  },
-  subtitle: {
-    fontSize: 14,
-    color: "#aaa",
-    marginTop: 5,
-    textAlign: "center",
-    marginBottom: 20,
-    lineHeight: 20,
-    maxWidth: width * 0.8,
   },
   imageContainer: {
     alignItems: "center",
@@ -280,52 +250,44 @@ const styles = StyleSheet.create({
     height: 120,
     borderRadius: 60,
     borderWidth: 2,
-    borderColor: "#8bc34a",
-  },
-  imagePlaceholder: {
-    width: 120,
-    height: 120,
-    justifyContent: "center",
-    alignItems: "center",
-    borderWidth: 2,
-    borderColor: "#8bc34a",
-    borderRadius: 60,
+    borderColor: "#FACC15",
   },
   addImageText: {
     marginTop: 8,
-    color: "#8bc34a",
+    color: "#FACC15",
     fontSize: 14,
+    textAlign: "center",
   },
   input: {
     width: "100%",
-    backgroundColor: "#2C2C2E",
-    borderRadius: 8,
-    padding: 12,
     marginBottom: 16,
-    color: "#fff",
-    fontSize: 15,
-  },
-  multilineInput: {
-    height: 80,
-    textAlignVertical: "top",
+    backgroundColor: "#1F2D3D",
   },
   saveButton: {
-    backgroundColor: "#8bc34a",
-    padding: 14,
-    borderRadius: 8,
+    paddingVertical: 12,
+    borderRadius: 10,
     width: "100%",
     alignItems: "center",
-    marginTop: 5,
+    marginTop: 10,
   },
   saveButtonText: {
-    color: "#fff",
-    fontSize: 16,
+    color: "#FFF",
+    fontSize: 18,
     fontWeight: "bold",
   },
   loadingContainer: {
     flex: 1,
-    backgroundColor: "#1C1C1E",
     justifyContent: "center",
     alignItems: "center",
+    backgroundColor: "#0F172A", // ✅ Fond propre pendant le chargement
+  },
+  title: {
+    fontSize: 24,
+    fontWeight: "bold",
+    color: "#FACC15",
+    marginBottom: 20,
+    textAlign: "center",
+    textTransform: "uppercase",
+    letterSpacing: 1.5,
   },
 });

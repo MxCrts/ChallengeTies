@@ -6,10 +6,10 @@ import {
   FlatList,
   ActivityIndicator,
   Dimensions,
+  Animated,
 } from "react-native";
 import { Ionicons } from "@expo/vector-icons";
 import { doc, onSnapshot } from "firebase/firestore";
-
 import { db, auth } from "../../constants/firebase-config";
 import { useSavedChallenges } from "../../context/SavedChallengesContext";
 import { useCurrentChallenges } from "../../context/CurrentChallengesContext";
@@ -29,9 +29,8 @@ export default function UserStats() {
 
   const [stats, setStats] = useState<Stat[]>([]);
   const [isLoading, setIsLoading] = useState(true);
-
-  // We'll also track real-time user doc to get trophies & achievements length
   const [userDoc, setUserDoc] = useState<any>(null);
+  const fadeAnim = useState(new Animated.Value(0))[0];
 
   useEffect(() => {
     const userId = auth.currentUser?.uid;
@@ -40,7 +39,6 @@ export default function UserStats() {
       return;
     }
 
-    // Subscribe to user doc in real time
     const unsub = onSnapshot(doc(db, "users", userId), (snapshot) => {
       setUserDoc(snapshot.data());
       setIsLoading(false);
@@ -50,7 +48,6 @@ export default function UserStats() {
   }, []);
 
   useEffect(() => {
-    // Combine user doc stats with local challenges
     if (!userDoc) return;
 
     const totalSaved = savedChallenges.length;
@@ -62,16 +59,12 @@ export default function UserStats() {
       totalOngoing + totalCompleted > 0
         ? Math.round((totalCompleted / (totalOngoing + totalCompleted)) * 100)
         : 0;
-    const longestStreak = 10; // Placeholder
+    const longestStreak = 10;
     const trophies = userDoc?.trophies || 0;
     const achievementsUnlocked = userDoc?.achievements?.length || 0;
 
     const newStats: Stat[] = [
-      {
-        name: "Challenges Saved",
-        value: totalSaved,
-        icon: "bookmark-outline",
-      },
+      { name: "Challenges Saved", value: totalSaved, icon: "bookmark-outline" },
       {
         name: "Ongoing Challenges",
         value: totalOngoing,
@@ -87,11 +80,7 @@ export default function UserStats() {
         value: `${successRate}%`,
         icon: "stats-chart-outline",
       },
-      {
-        name: "Trophies",
-        value: trophies,
-        icon: "medal-outline",
-      },
+      { name: "Trophies", value: trophies, icon: "medal-outline" },
       {
         name: "Achievements Unlocked",
         value: achievementsUnlocked,
@@ -105,13 +94,18 @@ export default function UserStats() {
     ];
 
     setStats(newStats);
+    Animated.timing(fadeAnim, {
+      toValue: 1,
+      duration: 800,
+      useNativeDriver: true,
+    }).start();
   }, [savedChallenges, currentChallenges, userDoc]);
 
   if (isLoading) {
     return (
       <View style={styles.loadingContainer}>
-        <ActivityIndicator size="large" color="#6A11CB" />
-        <Text style={styles.loadingText}>Loading your stats...</Text>
+        <ActivityIndicator size="large" color="#FACC15" />
+        <Text style={styles.loadingText}>Chargement des statistiques...</Text>
       </View>
     );
   }
@@ -119,36 +113,31 @@ export default function UserStats() {
   if (stats.length === 0) {
     return (
       <View style={styles.emptyContainer}>
-        <Text style={styles.emptyText}>No stats available yet!</Text>
+        <Text style={styles.emptyText}>Aucune statistique disponible !</Text>
         <Text style={styles.emptySubtext}>
-          Start completing challenges to see your stats.
+          Commencez des défis pour voir vos statistiques.
         </Text>
       </View>
     );
   }
 
   const renderStat = ({ item }: { item: Stat }) => (
-    <View style={styles.statCard}>
+    <Animated.View style={[styles.statCard, { opacity: fadeAnim }]}>
       <Ionicons
         name={item.icon as keyof typeof Ionicons.glyphMap}
         size={36}
-        color="#7F00FF"
+        color="#FACC15"
       />
       <View style={styles.statContent}>
         <Text style={styles.statName}>{item.name}</Text>
         <Text style={styles.statValue}>{item.value}</Text>
       </View>
-    </View>
+    </Animated.View>
   );
 
   return (
-    <LinearGradient
-      colors={["#1C1C1E", "#2C2C2E"]}
-      style={styles.container}
-      start={{ x: 0, y: 0 }}
-      end={{ x: 0.8, y: 1 }}
-    >
-      <Text style={styles.header}>Your Stats</Text>
+    <LinearGradient colors={["#0F172A", "#1E293B"]} style={styles.container}>
+      <Text style={styles.header}>Vos Statistiques</Text>
       <FlatList
         data={stats}
         renderItem={renderStat}
@@ -162,14 +151,16 @@ export default function UserStats() {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
+    paddingTop: 40,
   },
   header: {
-    fontSize: 24,
+    fontSize: 26,
     fontWeight: "bold",
-    color: "#6A11CB",
-    marginBottom: 20,
+    color: "#FACC15",
     textAlign: "center",
-    marginTop: 40,
+    marginBottom: 20,
+    textTransform: "uppercase",
+    letterSpacing: 1.5,
   },
   listContainer: {
     paddingHorizontal: 20,
@@ -178,7 +169,7 @@ const styles = StyleSheet.create({
   statCard: {
     flexDirection: "row",
     alignItems: "center",
-    backgroundColor: "#3A3A3C",
+    backgroundColor: "#1E293B",
     padding: 15,
     marginBottom: 12,
     borderRadius: 12,
@@ -187,6 +178,8 @@ const styles = StyleSheet.create({
     shadowOpacity: 0.15,
     shadowRadius: 4.65,
     elevation: 3,
+    borderWidth: 2,
+    borderColor: "#FACC15",
   },
   statContent: {
     marginLeft: 20,
@@ -199,24 +192,24 @@ const styles = StyleSheet.create({
   statValue: {
     fontSize: 18,
     fontWeight: "bold",
-    color: "#7F00FF",
+    color: "#FACC15",
   },
   loadingContainer: {
     flex: 1,
     justifyContent: "center",
     alignItems: "center",
-    backgroundColor: "#1C1C1E",
+    backgroundColor: "#0F172A",
   },
   loadingText: {
     marginTop: 10,
     fontSize: 16,
-    color: "#6A11CB",
+    color: "#FACC15",
   },
   emptyContainer: {
     flex: 1,
     justifyContent: "center",
     alignItems: "center",
-    backgroundColor: "#1C1C1E",
+    backgroundColor: "#0F172A",
   },
   emptyText: {
     fontSize: 18,

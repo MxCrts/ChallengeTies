@@ -1,73 +1,221 @@
 import React from "react";
-import { View, Text, StyleSheet, ScrollView } from "react-native";
+import {
+  View,
+  Text,
+  StyleSheet,
+  ScrollView,
+  useColorScheme,
+} from "react-native";
+import { LinearGradient } from "expo-linear-gradient";
+import Animated, { FadeInUp } from "react-native-reanimated";
+import { useTheme } from "../../context/ThemeContext";
 
 export default function PrivacyPolicy() {
+  const { theme } = useTheme();
+  const isDarkMode = theme === "dark";
+
   return (
-    <ScrollView style={styles.container}>
-      <Text style={styles.title}>Privacy Policy</Text>
+    <LinearGradient
+      colors={isDarkMode ? ["#1E293B", "#0F172A"] : ["#F8FAFC", "#E2E8F0"]}
+      style={styles.container}
+    >
+      <ScrollView
+        contentContainerStyle={styles.contentContainer}
+        showsVerticalScrollIndicator={false}
+      >
+        {/* ✅ TITRE PRINCIPAL */}
+        <Animated.Text entering={FadeInUp.duration(800)} style={styles.title}>
+          Politique de Confidentialité 🔒
+        </Animated.Text>
 
-      <Text style={styles.sectionTitle}>Introduction</Text>
-      <Text style={styles.paragraph}>
-        ChallengeTies values your privacy. This policy explains how we collect,
-        use, and protect your data. In compliance with French laws, including
-        the GDPR, we ensure the confidentiality of your information.
-      </Text>
+        {/* ✅ INTRODUCTION */}
+        <Animated.View entering={FadeInUp.delay(200)} style={styles.card}>
+          <Text style={styles.sectionTitle}>Introduction</Text>
+          <Text style={styles.paragraph}>
+            Chez **ChallengeTies**, la protection de votre vie privée est notre
+            priorité. Cette politique explique **comment** nous collectons,
+            utilisons et sécurisons vos données personnelles, en conformité avec
+            le **RGPD (Règlement Général sur la Protection des Données)**.
+          </Text>
+        </Animated.View>
 
-      <Text style={styles.sectionTitle}>Data Collection</Text>
-      <Text style={styles.paragraph}>
-        We collect personal data such as your email address, name, and profile
-        details to enhance your experience. All data is securely stored and used
-        solely for application functionality and communication purposes.
-      </Text>
+        {/* ✅ DONNÉES COLLECTÉES */}
+        <Animated.View entering={FadeInUp.delay(400)} style={styles.card}>
+          <Text style={styles.sectionTitle}>Données collectées</Text>
+          <Text style={styles.paragraph}>
+            Nous collectons certaines informations essentielles pour améliorer
+            votre expérience sur ChallengeTies :
+          </Text>
+          <Text style={styles.listItem}>✅ Nom et adresse e-mail</Text>
+          <Text style={styles.listItem}>✅ Photo de profil</Text>
+          <Text style={styles.listItem}>
+            ✅ Progression dans vos défis & succès
+          </Text>
+          <Text style={styles.listItem}>
+            ✅ Centres d’intérêt et préférences
+          </Text>
+          <Text style={styles.listItem}>✅ Interactions sociales</Text>
+        </Animated.View>
 
-      <Text style={styles.sectionTitle}>Data Usage</Text>
-      <Text style={styles.paragraph}>
-        Your data is used to:
-        {"\n"}- Personalize challenges and user recommendations.
-        {"\n"}- Enable communication with our support team.
-        {"\n"}- Improve application features based on user feedback.
-      </Text>
+        {/* ✅ UTILISATION DES DONNÉES */}
+        <Animated.View entering={FadeInUp.delay(600)} style={styles.card}>
+          <Text style={styles.sectionTitle}>Utilisation des données</Text>
+          <Text style={styles.paragraph}>
+            Nous utilisons vos informations uniquement pour :
+          </Text>
+          <Text style={styles.listItem}>
+            🔹 Personnaliser votre expérience utilisateur
+          </Text>
+          <Text style={styles.listItem}>
+            🔹 Suivre votre progression et vos défis
+          </Text>
+          <Text style={styles.listItem}>
+            🔹 Vous envoyer des notifications et rappels
+          </Text>
+          <Text style={styles.listItem}>
+            🔹 Améliorer les fonctionnalités de l’application
+          </Text>
+        </Animated.View>
 
-      <Text style={styles.sectionTitle}>User Rights</Text>
-      <Text style={styles.paragraph}>
-        As a user, you have the right to:
-        {"\n"}- Access your personal data.
-        {"\n"}- Request correction or deletion of your information.
-        {"\n"}- Withdraw consent for data usage.
-      </Text>
+        {/* ✅ PARTAGE DES DONNÉES */}
+        <Animated.View entering={FadeInUp.delay(800)} style={styles.card}>
+          <Text style={styles.sectionTitle}>Partage des données</Text>
+          <Text style={styles.paragraph}>
+            Vos données restent **confidentielles** et ne sont pas vendues à des
+            tiers. Elles peuvent être partagées uniquement avec :
+          </Text>
+          <Text style={styles.listItem}>🔹 Nos partenaires techniques</Text>
+          <Text style={styles.listItem}>
+            🔹 Les autorités légales si nécessaire
+          </Text>
+          <Text style={styles.listItem}>🔹 Des services de sécurité</Text>
+        </Animated.View>
 
-      <Text style={styles.sectionTitle}>Contact Us</Text>
-      <Text style={styles.paragraph}>
-        For any inquiries about your data or this policy, please reach out to
-        our support team at privacy@challengeties.com.
-      </Text>
-    </ScrollView>
+        {/* ✅ SÉCURITÉ DES DONNÉES */}
+        <Animated.View entering={FadeInUp.delay(1000)} style={styles.card}>
+          <Text style={styles.sectionTitle}>Sécurité des données</Text>
+          <Text style={styles.paragraph}>
+            Nous utilisons des **mesures de sécurité avancées** pour protéger
+            vos informations :
+          </Text>
+          <Text style={styles.listItem}>🔐 Chiffrement des données</Text>
+          <Text style={styles.listItem}>
+            🔐 Authentification renforcée & vérification
+          </Text>
+          <Text style={styles.listItem}>
+            🔐 Protection contre les intrusions
+          </Text>
+        </Animated.View>
+
+        {/* ✅ DROITS DES UTILISATEURS */}
+        <Animated.View entering={FadeInUp.delay(1200)} style={styles.card}>
+          <Text style={styles.sectionTitle}>Vos droits</Text>
+          <Text style={styles.paragraph}>
+            Conformément au **RGPD**, vous disposez des droits suivants :
+          </Text>
+          <Text style={styles.listItem}>
+            ✔️ Accès et modification de vos données
+          </Text>
+          <Text style={styles.listItem}>✔️ Suppression de votre compte</Text>
+          <Text style={styles.listItem}>
+            ✔️ Portabilité de vos informations
+          </Text>
+          <Text style={styles.listItem}>
+            ✔️ Opposition et limitation du traitement
+          </Text>
+        </Animated.View>
+
+        {/* ✅ COOKIES */}
+        <Animated.View entering={FadeInUp.delay(1400)} style={styles.card}>
+          <Text style={styles.sectionTitle}>Utilisation des cookies</Text>
+          <Text style={styles.paragraph}>
+            Nous utilisons des **cookies** pour améliorer votre navigation et
+            analyser les tendances d'utilisation. Vous pouvez les gérer via les
+            paramètres de votre appareil.
+          </Text>
+        </Animated.View>
+
+        {/* ✅ CONTACT */}
+        <Animated.View entering={FadeInUp.delay(1600)} style={styles.card}>
+          <Text style={styles.sectionTitle}>Contact</Text>
+          <Text style={styles.paragraph}>
+            Pour toute question relative à vos données personnelles,
+            contactez-nous à :
+          </Text>
+          <Text style={styles.contactEmail}>📧 privacy@challengeties.com</Text>
+        </Animated.View>
+
+        {/* ✅ MESSAGE FINAL */}
+        <Animated.View entering={FadeInUp.delay(1800)} style={styles.footer}>
+          <Text style={styles.footerText}>
+            **Merci de faire confiance à ChallengeTies.** Votre confidentialité
+            est notre priorité. 🔒✨
+          </Text>
+        </Animated.View>
+      </ScrollView>
+    </LinearGradient>
   );
 }
 
 const styles = StyleSheet.create({
   container: {
     flex: 1,
+  },
+  contentContainer: {
     padding: 20,
-    backgroundColor: "#1C1C1E",
+    paddingBottom: 40,
   },
   title: {
-    fontSize: 24,
+    fontSize: 28,
     fontWeight: "bold",
-    color: "#fff",
-    marginBottom: 20,
+    color: "#1F2937",
+    textAlign: "center",
+    marginBottom: 15,
   },
   sectionTitle: {
-    fontSize: 20,
+    fontSize: 22,
     fontWeight: "bold",
-    color: "#6A11CB",
-    marginTop: 15,
+    color: "#2563EB",
     marginBottom: 10,
   },
   paragraph: {
     fontSize: 16,
     lineHeight: 24,
-    color: "#E0E0E0",
-    marginBottom: 15,
+    color: "#4B5563",
+    textAlign: "justify",
+  },
+  card: {
+    backgroundColor: "#FFFFFF",
+    borderRadius: 12,
+    padding: 20,
+    marginBottom: 20,
+    shadowColor: "#000",
+    shadowOpacity: 0.1,
+    shadowRadius: 5,
+    elevation: 6,
+  },
+  listItem: {
+    fontSize: 16,
+    color: "#4B5563",
+    marginBottom: 5,
+  },
+  contactEmail: {
+    fontSize: 16,
+    color: "#2563EB",
+    textDecorationLine: "underline",
+    textAlign: "center",
+  },
+  footer: {
+    marginTop: 30,
+    padding: 15,
+    backgroundColor: "#E5E7EB",
+    borderRadius: 12,
+    alignItems: "center",
+  },
+  footerText: {
+    fontSize: 16,
+    fontStyle: "italic",
+    color: "#1F2937",
+    textAlign: "center",
   },
 });

@@ -12,11 +12,9 @@ import {
   query,
   orderBy,
   serverTimestamp,
+  getDocs,
 } from "firebase/firestore";
 import { db, auth } from "../constants/firebase-config";
-
-// 1) Import your trophies helper
-import { awardTrophiesAndCheckAchievements } from "../helpers/trophiesHelpers";
 
 interface Message {
   id: string;
@@ -69,8 +67,7 @@ export const ChatProvider: React.FC<{ children: React.ReactNode }> = ({
   }, []);
 
   /**
-   * Sends a chat message to the challenge's "messages" subcollection.
-   * After sending, we optionally award trophies for "firstChatMessage."
+   * 🔥 Envoi un message.
    */
   const sendMessage = async (challengeId: string, text: string) => {
     if (!auth.currentUser) {
@@ -86,13 +83,6 @@ export const ChatProvider: React.FC<{ children: React.ReactNode }> = ({
       userId: uid,
       username: displayName || "Anonymous",
       avatar: photoURL || "",
-    });
-
-    // 2) Award trophies for "First chat message" if not already done
-    // (Define logic in trophiesHelpers: case "firstChatMessage": +5 trophies if user lacks "First chat message")
-    await awardTrophiesAndCheckAchievements({
-      action: "firstChatMessage",
-      trophiesToAdd: 0,
     });
   };
 

@@ -1,6 +1,6 @@
 import config from "../config";
 import { useEffect, useState } from "react";
-import { onAuthStateChanged, signInAnonymously } from "firebase/auth";
+import { onAuthStateChanged } from "firebase/auth";
 import { auth } from "../constants/firebase-config";
 import {
   initializeUserInFirestore,
@@ -8,10 +8,7 @@ import {
 } from "../services/userService";
 
 interface AuthState {
-  user: {
-    uid: string;
-    isAnonymous: boolean;
-  } | null;
+  user: { uid: string } | null;
   initializing: boolean;
 }
 
@@ -21,7 +18,6 @@ export function useAuthInit(): AuthState {
 
   useEffect(() => {
     if (config.DEVELOPMENT_MODE) {
-      // For testing purposes, simulate a logged-out state
       setUser(null);
       setInitializing(false);
       return;
@@ -31,49 +27,19 @@ export function useAuthInit(): AuthState {
       if (firebaseUser) {
         console.log("Authenticated user:", firebaseUser);
         try {
-          // Use placeholder email and username if they are not available
-          const email = firebaseUser.email || "anonymous@noemail.com";
-          const username = firebaseUser.displayName || "Anonymous";
+          const email = firebaseUser.email || "unknown@noemail.com";
+          const username = firebaseUser.displayName || "User";
 
           await initializeUserInFirestore(firebaseUser.uid, email, username);
           await initializeLeaderboardEntry(firebaseUser.uid, username);
 
-          setUser({
-            uid: firebaseUser.uid,
-            isAnonymous: firebaseUser.isAnonymous,
-          });
+          setUser({ uid: firebaseUser.uid });
         } catch (error) {
-          console.error(
-            "Error initializing Firestore user or leaderboard entry:",
-            error
-          );
+          console.error("Error initializing Firestore user:", error);
         }
       } else {
-        try {
-          console.log("Signing in anonymously...");
-          const result = await signInAnonymously(auth);
-          console.log("Anonymous user signed in:", result.user);
-
-          // Provide default values for anonymous users
-          await initializeUserInFirestore(
-            result.user.uid,
-            "anonymous@noemail.com",
-            "Anonymous"
-          );
-          await initializeLeaderboardEntry(result.user.uid, "Anonymous");
-
-          setUser({
-            uid: result.user.uid,
-            isAnonymous: result.user.isAnonymous,
-          });
-        } catch (error) {
-          console.error(
-            "Error signing in anonymously or initializing data:",
-            error
-          );
-        }
+        setUser(null);
       }
-
       setInitializing(false);
     });
 

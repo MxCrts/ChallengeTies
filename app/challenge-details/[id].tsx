@@ -14,7 +14,7 @@ import { Picker } from "@react-native-picker/picker";
 import { Ionicons } from "@expo/vector-icons";
 import { useRouter } from "expo-router";
 import { useRoute, useNavigation } from "@react-navigation/native";
-import { doc, onSnapshot, runTransaction } from "firebase/firestore";
+import { doc, onSnapshot, runTransaction, getDoc } from "firebase/firestore";
 import { db, auth } from "../../constants/firebase-config";
 import ConfettiCannon from "react-native-confetti-cannon";
 import * as Haptics from "expo-haptics"; // optional for device vibration feedback
@@ -140,31 +140,47 @@ export default function ChallengeDetails() {
     if (!userHasTaken && id) {
       try {
         setLoading(true);
+
+        // 🔥 Récupérer le vrai challenge depuis Firestore
+        const challengeRef = doc(db, "challenges", id);
+        const challengeSnap = await getDoc(challengeRef);
+
+        if (!challengeSnap.exists()) {
+          Alert.alert("Erreur", "Impossible de récupérer le challenge.");
+          return;
+        }
+
+        const challengeData = challengeSnap.data();
+
         await takeChallenge(
           {
             id,
-            title,
-            category,
-            description,
-            daysOptions,
-            chatId: id,
-            imageUrl: challengeImage || "",
+            title: challengeData.title || "Untitled Challenge",
+            category: challengeData.category || "Uncategorized",
+            description:
+              challengeData.description || "No description available",
+            daysOptions: challengeData.daysOptions || [
+              7, 14, 21, 30, 60, 90, 180, 365,
+            ],
+            chatId: challengeData.chatId || id, // ✅ Utilise le vrai chatId
+            imageUrl: challengeData.imageUrl || "", // ✅ Utilise la vraie image
           },
           localSelectedDays
         );
+
         setUserHasTaken(true);
         setModalVisible(false);
 
-        // Let’s also reflect it in local UI if user takes a 10-day challenge
+        // ✅ Met à jour l'affichage localement
         setFinalSelectedDays(localSelectedDays);
         setFinalCompletedDays(0);
       } catch (err) {
         console.error("Error taking challenge:", err);
         Alert.alert(
-          "Error",
+          "Erreur",
           err instanceof Error
             ? err.message
-            : "Unable to join the challenge. Please try again."
+            : "Impossible de rejoindre le défi. Réessayez."
         );
       } finally {
         setLoading(false);
@@ -179,19 +195,32 @@ export default function ChallengeDetails() {
       if (isSavedChallenge(id)) {
         await removeChallenge(id);
       } else {
+        // 🔥 Récupérer le vrai challenge depuis Firestore
+        const challengeRef = doc(db, "challenges", id);
+        const challengeSnap = await getDoc(challengeRef);
+
+        if (!challengeSnap.exists()) {
+          Alert.alert("Erreur", "Impossible de récupérer le challenge.");
+          return;
+        }
+
+        const challengeData = challengeSnap.data();
+
         await addChallenge({
           id,
-          title,
-          category,
-          description,
-          daysOptions,
-          chatId: id,
-          imageUrl: challengeImage || "",
+          title: challengeData.title || "Untitled Challenge",
+          category: challengeData.category || "Uncategorized",
+          description: challengeData.description || "No description available",
+          daysOptions: challengeData.daysOptions || [
+            7, 14, 21, 30, 60, 90, 180, 365,
+          ],
+          chatId: challengeData.chatId || id, // ✅ Utilise le vrai chatId
+          imageUrl: challengeData.imageUrl || "", // ✅ Utilise la vraie image
         });
       }
     } catch (err) {
       console.error("Error saving challenge:", err);
-      Alert.alert("Error", "Failed to save the challenge. Please try again.");
+      Alert.alert("Erreur", "Impossible de sauvegarder le défi.");
     }
   };
 

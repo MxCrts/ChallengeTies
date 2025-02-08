@@ -1,4 +1,4 @@
-import React from "react";
+import React, { useEffect, useRef } from "react";
 import {
   View,
   Text,
@@ -6,12 +6,13 @@ import {
   Image,
   Dimensions,
   SafeAreaView,
+  Animated,
 } from "react-native";
 import AsyncStorage from "@react-native-async-storage/async-storage";
 import AppIntroSlider from "react-native-app-intro-slider";
 import { useRouter } from "expo-router";
 import { LinearGradient } from "expo-linear-gradient";
-import { Ionicons } from "@expo/vector-icons"; // Import moved to the top
+import { Ionicons } from "@expo/vector-icons";
 
 const { width } = Dimensions.get("window");
 
@@ -76,10 +77,31 @@ const slides = [
 
 export default function Onboarding() {
   const router = useRouter();
+  const fadeAnim = useRef(new Animated.Value(0)).current;
+  const scaleAnim = useRef(new Animated.Value(0.8)).current;
+
+  useEffect(() => {
+    Animated.parallel([
+      Animated.timing(fadeAnim, {
+        toValue: 1,
+        duration: 1000,
+        useNativeDriver: true,
+      }),
+      Animated.timing(scaleAnim, {
+        toValue: 1,
+        duration: 1000,
+        useNativeDriver: true,
+      }),
+    ]).start();
+  }, []);
 
   const onDone = async () => {
-    await AsyncStorage.setItem("hasSeenOnboarding", "true");
-    router.replace("/"); // Redirect to the main page
+    try {
+      await AsyncStorage.setItem("hasSeenOnboarding", "true");
+      router.replace("/"); // Redirect to the main page
+    } catch (error) {
+      console.error("❌ Erreur lors de l'enregistrement d'Onboarding :", error);
+    }
   };
 
   const renderItem = ({ item }: { item: (typeof slides)[number] }) => {
@@ -91,7 +113,13 @@ export default function Onboarding() {
         end={{ x: 1, y: 1 }}
       >
         <SafeAreaView style={styles.slideContent}>
-          <Image source={item.image} style={styles.image} />
+          <Animated.Image
+            source={item.image}
+            style={[
+              styles.image,
+              { opacity: fadeAnim, transform: [{ scale: scaleAnim }] },
+            ]}
+          />
           <Text style={styles.title}>{item.title}</Text>
           <Text style={styles.text}>{item.text}</Text>
         </SafeAreaView>
