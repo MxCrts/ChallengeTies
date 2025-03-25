@@ -8,6 +8,7 @@ import {
   ActivityIndicator,
   Image,
   Alert,
+  Dimensions,
 } from "react-native";
 import { LinearGradient } from "expo-linear-gradient";
 import { useCurrentChallenges } from "../../context/CurrentChallengesContext";
@@ -16,13 +17,36 @@ import { useRouter } from "expo-router";
 import { Ionicons } from "@expo/vector-icons";
 import ConfettiCannon from "react-native-confetti-cannon";
 import * as Progress from "react-native-progress";
+import Animated, { FadeInUp } from "react-native-reanimated";
+import BackButton from "../../components/BackButton";
+import designSystem from "../../theme/designSystem";
 
-interface ChallengeItem {
+// Dimensions et constantes de style
+const { width: SCREEN_WIDTH } = Dimensions.get("window");
+const ITEM_WIDTH = Math.round(SCREEN_WIDTH * 0.8);
+const ITEM_HEIGHT = 260;
+const CARD_MARGIN = 5;
+const EFFECTIVE_ITEM_WIDTH = ITEM_WIDTH + CARD_MARGIN * 2;
+const LIGHT_GREEN = "#6EE7B7"; // Vert clair pour la barre de progression
+
+// Palette personnalisée harmonisée (inspirée du designSystem)
+const currentTheme = {
+  ...designSystem.lightTheme,
+  colors: {
+    ...designSystem.lightTheme.colors,
+    primary: "#ED8F03", // Orange
+    cardBackground: "#FFFFFF",
+    trophy: "#FACC15",
+  },
+};
+
+interface Challenge {
   id: string;
   title: string;
   description?: string;
   category?: string;
   imageUrl?: string;
+  day?: number;
   selectedDays: number;
   completedDays: number;
   lastMarkedDate?: string | null;
@@ -30,32 +54,21 @@ interface ChallengeItem {
 
 export default function CurrentChallenges() {
   const router = useRouter();
-  const {
-    currentChallenges,
-    completedTodayChallenges,
-    markToday,
-    removeChallenge,
-  } = useCurrentChallenges();
-
+  const { currentChallenges, markToday, removeChallenge } =
+    useCurrentChallenges();
   const [isLoading, setIsLoading] = useState(false);
   const [confettiActive, setConfettiActive] = useState(false);
   const confettiRef = useRef<ConfettiCannon | null>(null);
 
   useEffect(() => {
-    if (
-      currentChallenges.length === 0 &&
-      completedTodayChallenges.length === 0
-    ) {
-      setIsLoading(true);
-    } else {
-      setIsLoading(false);
-    }
-  }, [currentChallenges, completedTodayChallenges]);
+    setIsLoading(currentChallenges.length === 0);
+  }, [currentChallenges]);
 
   const handleMarkToday = async (id: string, selectedDays: number) => {
     try {
       await markToday(id, selectedDays);
       setConfettiActive(true);
+      // L'état se met à jour directement (bouton passe en "Déjà marqué" et progression actualisée)
     } catch (err) {
       console.error("Erreur lors du marquage :", err);
       Alert.alert("Erreur", "Impossible de marquer aujourd'hui.");
@@ -64,7 +77,7 @@ export default function CurrentChallenges() {
 
   const handleRemoveChallenge = (id: string, selectedDays: number) => {
     Alert.alert(
-      "Supprimer le Défi",
+      "Supprimer le défi",
       "Es-tu sûr de vouloir supprimer ce défi ?",
       [
         { text: "Annuler", style: "cancel" },
@@ -85,20 +98,31 @@ export default function CurrentChallenges() {
     );
   };
 
-  const navigateToChallengeDetails = (item: ChallengeItem) => {
+  const navigateToChallengeDetails = (item: Challenge) => {
     const route =
       `/challenge-details/${encodeURIComponent(item.id)}` +
       `?title=${encodeURIComponent(item.title)}` +
       `&selectedDays=${item.selectedDays}` +
-      `&completedDays=${item.completedDays}`;
-
+      `&completedDays=${item.completedDays}` +
+      `&category=${encodeURIComponent(item.category || "Uncategorized")}` +
+      `&description=${encodeURIComponent(item.description || "")}` +
+      `&imageUrl=${encodeURIComponent(item.imageUrl || "")}`;
     router.push(route as unknown as `/challenge-details/${string}`);
   };
 
-  const renderChallengeItem = ({ item }: { item: ChallengeItem }) => {
+  // Déduplication des défis basée sur l'ID et selectedDays
+  const deduplicatedChallenges: Challenge[] = Array.from(
+    new Map(
+      currentChallenges.map((item: Challenge) => [
+        `${item.id}_${item.selectedDays}`,
+        item,
+      ])
+    ).values()
+  );
+
+  const renderChallengeItem = ({ item }: { item: Challenge }) => {
     const isMarkedToday = item.lastMarkedDate === new Date().toDateString();
     const progress = item.completedDays / item.selectedDays;
-
     return (
       <Swipeable
         renderRightActions={() => (
@@ -116,31 +140,31 @@ export default function CurrentChallenges() {
         <TouchableOpacity
           style={styles.cardContainer}
           onPress={() => navigateToChallengeDetails(item)}
+          activeOpacity={0.9}
         >
-          <LinearGradient
-            colors={["#1E293B", "#334155"]}
-            style={styles.cardGradient}
-          >
+          <View style={styles.card}>
             <Image source={{ uri: item.imageUrl }} style={styles.cardImage} />
             <View style={styles.cardContent}>
-              <Text style={styles.cardTitle}>{item.title}</Text>
-
-              {/* Progression */}
+              <Text style={styles.challengeTitle} numberOfLines={1}>
+                {item.title}
+              </Text>
+              {item.day !== undefined && (
+                <Text style={styles.challengeDay}>Jour {item.day}</Text>
+              )}
               <View style={styles.progressContainer}>
                 <Progress.Bar
                   progress={progress}
                   width={null}
                   height={10}
                   borderRadius={5}
-                  color={progress >= 1 ? "#10B981" : "#3B82F6"}
-                  unfilledColor="#1E293B"
+                  color={"#C2410C"}
+                  unfilledColor={currentTheme.colors.background}
+                  style={styles.progressBar}
                 />
                 <Text style={styles.progressText}>
                   {item.completedDays}/{item.selectedDays} jours
                 </Text>
               </View>
-
-              {/* Bouton d'action */}
               <TouchableOpacity
                 style={[
                   styles.markTodayButton,
@@ -154,7 +178,7 @@ export default function CurrentChallenges() {
                 </Text>
               </TouchableOpacity>
             </View>
-          </LinearGradient>
+          </View>
         </TouchableOpacity>
       </Swipeable>
     );
@@ -163,37 +187,26 @@ export default function CurrentChallenges() {
   if (isLoading) {
     return (
       <View style={styles.loadingContainer}>
-        <ActivityIndicator size="large" color="#FACC15" />
+        <ActivityIndicator size="large" color={currentTheme.colors.primary} />
       </View>
     );
   }
 
   return (
     <View style={styles.container}>
+      <BackButton color={currentTheme.colors.primary} />
       <Text style={styles.title}>Défis en cours</Text>
-
-      {currentChallenges.length > 0 ? (
+      {deduplicatedChallenges.length > 0 ? (
         <FlatList
-          data={currentChallenges}
+          data={deduplicatedChallenges}
           renderItem={renderChallengeItem}
-          keyExtractor={(item) => `${item.id}_${item.selectedDays}`}
+          keyExtractor={(item) => `current-${item.id}_${item.selectedDays}`}
           contentContainerStyle={styles.listContent}
         />
       ) : (
         <Text style={styles.noChallenges}>Aucun défi en cours.</Text>
       )}
-
-      {confettiActive && (
-        <ConfettiCannon
-          ref={confettiRef}
-          count={150}
-          origin={{ x: 200, y: 0 }}
-          fadeOut
-          explosionSpeed={600}
-          fallSpeed={2500}
-          onAnimationEnd={() => setConfettiActive(false)}
-        />
-      )}
+      {/* Optionnel : Confetti peut être activé via confettiActive */}
     </View>
   );
 }
@@ -201,18 +214,16 @@ export default function CurrentChallenges() {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: "#0F172A",
-    paddingTop: 10,
-    paddingHorizontal: 20,
+    paddingTop: 20,
+    backgroundColor: currentTheme.colors.background,
   },
   title: {
-    fontSize: 26,
-    fontWeight: "bold",
-    color: "#FACC15",
+    fontSize: 25,
+    fontFamily: currentTheme.typography.title.fontFamily,
+    color: "#000000",
+    marginVertical: 20,
     textAlign: "center",
-    marginVertical: 15,
-    textTransform: "uppercase",
-    letterSpacing: 1,
+    marginBottom: 30,
   },
   listContent: {
     paddingBottom: 40,
@@ -220,19 +231,22 @@ const styles = StyleSheet.create({
   noChallenges: {
     fontSize: 16,
     textAlign: "center",
-    color: "#9ca3af",
+    color: "#9CA3AF",
     marginTop: 20,
   },
   cardContainer: {
     borderRadius: 18,
-    marginBottom: 15,
+    marginBottom: 5,
     overflow: "hidden",
+    borderWidth: 2,
+    borderColor: currentTheme.colors.primary,
+    margin: 10,
   },
-  cardGradient: {
-    flexDirection: "row",
-    alignItems: "center",
-    padding: 14,
+  card: {
+    backgroundColor: currentTheme.colors.cardBackground,
     borderRadius: 18,
+    flexDirection: "row",
+    padding: 14,
     elevation: 3,
   },
   cardImage: {
@@ -244,40 +258,49 @@ const styles = StyleSheet.create({
   cardContent: {
     flex: 1,
   },
-  cardTitle: {
+  challengeTitle: {
     fontSize: 18,
-    fontWeight: "600",
-    color: "#FACC15",
+    color: "#000000",
+    fontFamily: currentTheme.typography.title.fontFamily,
+  },
+  challengeDay: {
+    fontSize: 14,
+    color: "#000000",
+    fontFamily: currentTheme.typography.title.fontFamily,
+    textAlign: "center",
   },
   progressContainer: {
     marginVertical: 8,
   },
+  progressBar: {
+    marginLeft: 20, // Décalage pour ne pas couper l'image
+  },
   progressText: {
-    color: "#FACC15",
+    color: "#000000",
     fontSize: 12,
     marginTop: 4,
-    fontWeight: "500",
+    fontFamily: currentTheme.typography.title.fontFamily,
   },
   markTodayButton: {
-    backgroundColor: "#22c55e",
+    backgroundColor: currentTheme.colors.primary,
     padding: 10,
     borderRadius: 10,
     marginTop: 8,
     alignItems: "center",
   },
   disabledMarkButton: {
-    backgroundColor: "#9ca3af",
+    backgroundColor: "#D3D3D3", // Orange clair pour état désactivé
   },
   markTodayText: {
-    color: "#FFF",
-    fontWeight: "bold",
+    color: "#000000",
+    fontFamily: currentTheme.typography.title.fontFamily,
     fontSize: 15,
   },
   loadingContainer: {
     flex: 1,
     justifyContent: "center",
     alignItems: "center",
-    backgroundColor: "#0F172A",
+    backgroundColor: currentTheme.colors.background,
   },
   swipeActionsContainer: {
     justifyContent: "center",

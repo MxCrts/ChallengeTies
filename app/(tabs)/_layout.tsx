@@ -1,27 +1,26 @@
 import { Tabs } from "expo-router";
 import { Ionicons } from "@expo/vector-icons";
-import { View, Text } from "react-native";
+import { View } from "react-native";
 import { TrophyProvider } from "../../context/TrophyContext";
 import { useEffect, useState } from "react";
 import { auth, db } from "../../constants/firebase-config";
 import { doc, getDoc } from "firebase/firestore";
+import { useSafeAreaInsets } from "react-native-safe-area-context";
 
 const TabsLayout = () => {
   const [hasUnclaimedAchievements, setHasUnclaimedAchievements] =
     useState(false);
+  const insets = useSafeAreaInsets();
 
   useEffect(() => {
     const fetchUserAchievements = async () => {
       const userId = auth.currentUser?.uid;
       if (!userId) return;
-
       const userRef = doc(db, "users", userId);
       const userSnap = await getDoc(userRef);
       if (userSnap.exists()) {
         const userData = userSnap.data();
         const newAchievements = userData.newAchievements || [];
-
-        // ✅ Vérifie si des succès sont à réclamer
         setHasUnclaimedAchievements(newAchievements.length > 0);
       }
     };
@@ -36,18 +35,26 @@ const TabsLayout = () => {
           headerShown: false,
           tabBarStyle: {
             backgroundColor: "#FFFFFF",
-            height: 70,
-            borderTopLeftRadius: 15,
-            borderTopRightRadius: 15,
+            height: 70 + insets.bottom,
+            paddingBottom: insets.bottom,
+            borderTopLeftRadius: 20,
+            borderTopRightRadius: 20,
             elevation: 10,
+            shadowColor: "#000",
+            shadowOpacity: 0.1,
+            shadowOffset: { width: 0, height: -2 },
+            shadowRadius: 10,
           },
           tabBarLabelStyle: {
             fontSize: 12,
-            fontWeight: "bold",
+            fontWeight: "600",
+            marginBottom: 5,
           },
           tabBarIconStyle: {
             marginBottom: -5,
           },
+          tabBarActiveTintColor: "#ED8F03",
+          tabBarInactiveTintColor: "#A0AEC0",
         }}
       >
         <Tabs.Screen
@@ -65,18 +72,20 @@ const TabsLayout = () => {
           options={{
             tabBarLabel: "Profile",
             tabBarIcon: ({ color, size }) => (
-              <View>
+              <View style={{ position: "relative" }}>
                 <Ionicons name="person" size={size} color={color} />
                 {hasUnclaimedAchievements && (
                   <View
                     style={{
                       position: "absolute",
-                      top: -5,
-                      right: -5,
+                      top: -3,
+                      right: -3,
                       backgroundColor: "red",
-                      width: 12,
-                      height: 12,
-                      borderRadius: 6,
+                      width: 10,
+                      height: 10,
+                      borderRadius: 5,
+                      borderWidth: 1,
+                      borderColor: "#FFF",
                     }}
                   />
                 )}
@@ -92,7 +101,7 @@ const TabsLayout = () => {
             tabBarIcon: ({ focused }) => (
               <View
                 style={{
-                  backgroundColor: focused ? "#1ABC00" : "#E3F4CA",
+                  backgroundColor: focused ? "#ED8F03" : "#FFE8D6",
                   width: 60,
                   height: 60,
                   borderRadius: 30,
@@ -100,7 +109,8 @@ const TabsLayout = () => {
                   justifyContent: "center",
                   marginTop: -20,
                   shadowColor: "#000",
-                  shadowOpacity: 0.2,
+                  shadowOpacity: 0.3,
+                  shadowOffset: { width: 0, height: 3 },
                   shadowRadius: 5,
                   elevation: 5,
                 }}

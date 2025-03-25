@@ -13,133 +13,145 @@ import Animated, { FadeInUp } from "react-native-reanimated";
 import { Ionicons } from "@expo/vector-icons";
 import { LinearGradient } from "expo-linear-gradient";
 import { useRouter } from "expo-router";
+import BackButton from "../components/BackButton";
+import designSystem from "../theme/designSystem";
 
+const { lightTheme } = designSystem;
+const currentTheme = lightTheme;
 const { width } = Dimensions.get("window");
 
-export default function Tips() {
+const normalizeFont = (size: number) => {
+  const scale = width / 375;
+  return Math.round(size * scale);
+};
+
+const conseils = [
+  {
+    id: "1",
+    title: "Fixez des objectifs SMART",
+    description:
+      "Des objectifs Spécifiques, Mesurables, Atteignables, Réalistes et Temporels vous permettent de rester concentré et discipliné.",
+    icon: "checkmark-circle-outline",
+  },
+  {
+    id: "2",
+    title: "Adoptez la régularité",
+    description:
+      "Consacrez un moment fixe chaque jour à votre objectif. De petites actions quotidiennes mènent à de grands résultats.",
+    icon: "time-outline",
+  },
+  {
+    id: "3",
+    title: "Suivez tout",
+    description:
+      "Utilisez le suivi quotidien et les statistiques de ChallengeTies pour surveiller vos progrès, remporter des trophées et maintenir votre élan.",
+    icon: "analytics-outline",
+  },
+  {
+    id: "4",
+    title: "Trouvez du soutien communautaire",
+    description:
+      "Connectez-vous avec des personnes partageant les mêmes idées, invitez vos amis, partagez vos expériences et restez motivés ensemble.",
+    icon: "people-outline",
+  },
+  {
+    id: "5",
+    title: "Récompensez-vous fréquemment",
+    description:
+      "Célébrez chaque étape — courtes séries, grands succès, nouveaux trophées — pour nourrir votre motivation à long terme.",
+    icon: "gift-outline",
+  },
+  {
+    id: "6",
+    title: "Variez les plaisirs",
+    description:
+      "Luttez contre l'ennui en essayant de nouveaux défis, en explorant différentes catégories et en pimentant vos objectifs.",
+    icon: "flask-outline",
+  },
+  {
+    id: "7",
+    title: "Invitez un ami",
+    description:
+      "Les défis deviennent plus faciles (et plus amusants) avec un ami. Envoyez des invitations pour atteindre vos objectifs ensemble !",
+    icon: "person-add-outline",
+  },
+  {
+    id: "8",
+    title: "Visualisez le succès",
+    description:
+      "Imaginez le résultat final — des indices visuels et des rappels quotidiens gardent votre concentration au top.",
+    icon: "eye-outline",
+  },
+  {
+    id: "9",
+    title: "Restez positif",
+    description:
+      "Même en cas d'échec, rappelez-vous que chaque jour est un nouveau départ. Apprenez de vos erreurs et continuez d'avancer.",
+    icon: "sunny-outline",
+  },
+];
+
+export default function Conseils() {
   const router = useRouter();
-  const tips = [
-    {
-      id: "1",
-      title: "Set SMART Goals",
-      description:
-        "Specific, Measurable, Achievable, Relevant, and Time-Bound objectives keep you focused and disciplined.",
-      icon: "checkmark-circle-outline",
-    },
-    {
-      id: "2",
-      title: "Embrace Consistency",
-      description:
-        "Dedicate a fixed time daily for your goal. Small daily actions lead to huge results over time.",
-      icon: "time-outline",
-    },
-    {
-      id: "3",
-      title: "Track Everything",
-      description:
-        "Use ChallengeTies’ daily marking and stats to monitor progress, earn trophies, and maintain momentum.",
-      icon: "analytics-outline",
-    },
-    {
-      id: "4",
-      title: "Find Community Support",
-      description:
-        "Connect with like-minded individuals, invite friends, share experiences, and keep each other motivated.",
-      icon: "people-outline",
-    },
-    {
-      id: "5",
-      title: "Reward Yourself Often",
-      description:
-        "Celebrate every milestone—short streaks, bigger achievements, new trophies—to fuel long-term motivation.",
-      icon: "gift-outline",
-    },
-    {
-      id: "6",
-      title: "Mix It Up",
-      description:
-        "Avoid boredom by trying new challenges, exploring different categories, and spicing up your goals.",
-      icon: "flask-outline",
-    },
-    {
-      id: "7",
-      title: "Invite a Friend",
-      description:
-        "Challenges get easier (and more fun) with a friend. Send invites to tackle goals together!",
-      icon: "person-add-outline",
-    },
-    {
-      id: "8",
-      title: "Visualize Success",
-      description:
-        "Picture your end result—visual cues and daily reminders keep your focus razor-sharp.",
-      icon: "eye-outline",
-    },
-    {
-      id: "9",
-      title: "Stay Positive",
-      description:
-        "Even if you slip, remember each day is a fresh start. Learn from mistakes and keep pushing forward.",
-      icon: "sunny-outline",
-    },
-  ];
 
   return (
     <LinearGradient
-      colors={["#1C1C1E", "#2C2C2E"]}
+      colors={[
+        currentTheme.colors.background,
+        currentTheme.colors.cardBackground,
+      ]}
       style={styles.container}
       start={{ x: 0, y: 0 }}
       end={{ x: 0.8, y: 1 }}
     >
       <ScrollView contentContainerStyle={styles.scrollContent}>
-        <TouchableOpacity
-          style={styles.elegantBackButton}
-          onPress={() => router.back()}
-        >
-          <View style={styles.elegantBackButtonContainer}>
-            <Ionicons name="arrow-back-outline" size={24} color="#FFD700" />
-            <Text style={styles.elegantBackButtonText}>Back</Text>
-          </View>
-        </TouchableOpacity>
-        {/* Header */}
+        {/* Bouton Retour */}
+        <BackButton />
+
+        {/* En-tête */}
         <View style={styles.headerContainer}>
           <Image
-            source={require("../assets/images/logo.png")}
+            source={require("../assets/images/Challenge.png")}
             style={styles.logo}
           />
-          <Text style={styles.headerText}>Empower Your Journey</Text>
+          <Text style={styles.headerText}>Dynamisez votre parcours</Text>
           <Text style={styles.subHeaderText}>
-            Practical tips to stay inspired, achieve goals, and earn trophies!
+            Des conseils pratiques pour rester inspiré, atteindre vos objectifs
+            et remporter des trophées !
           </Text>
         </View>
 
-        {/* Tips Section */}
-        <Animated.View entering={FadeInUp} style={styles.tipsContainer}>
-          {tips.map((tip) => (
-            <View key={tip.id} style={styles.tipCard}>
+        {/* Section des conseils */}
+        <View style={styles.tipsContainer}>
+          {conseils.map((conseil, index) => (
+            <Animated.View
+              key={conseil.id}
+              entering={FadeInUp.delay(index * 100)}
+              style={styles.tipCard}
+            >
               <Ionicons
-                name={tip.icon as keyof typeof Ionicons.glyphMap}
+                name={conseil.icon as keyof typeof Ionicons.glyphMap}
                 size={32}
-                color="#FFD700"
+                color={currentTheme.colors.secondary}
                 style={styles.tipIcon}
               />
               <View style={styles.tipContent}>
-                <Text style={styles.tipTitle}>{tip.title}</Text>
-                <Text style={styles.tipDescription}>{tip.description}</Text>
+                <Text style={styles.tipTitle}>{conseil.title}</Text>
+                <Text style={styles.tipDescription}>{conseil.description}</Text>
               </View>
-            </View>
+            </Animated.View>
           ))}
-        </Animated.View>
+        </View>
 
-        {/* Footer */}
+        {/* Pied de page */}
         <View style={styles.footer}>
           <Text style={styles.footerText}>
-            More questions or need tailored guidance?{" "}
+            Plus de questions ou besoin d'une aide personnalisée ?{" "}
             <Text
               style={styles.footerLink}
               onPress={() => Linking.openURL("mailto:support@challengeme.com")}
             >
-              Contact Us
+              Contactez-nous
             </Text>
           </Text>
         </View>
@@ -155,28 +167,28 @@ const styles = StyleSheet.create({
   scrollContent: {
     paddingHorizontal: 16,
     paddingTop: 20,
-    paddingBottom: 40,
+    paddingBottom: 60, // Augmenté pour éviter que le pied de page soit coupé
   },
   headerContainer: {
     alignItems: "center",
     marginBottom: 20,
   },
   logo: {
-    width: 100,
-    height: 100,
-    marginBottom: 10,
+    width: 200,
+    height: 200,
     resizeMode: "contain",
   },
   headerText: {
-    fontSize: 26,
-    fontWeight: "bold",
-    color: "#FFFFFF",
+    fontSize: normalizeFont(26),
+    fontFamily: currentTheme.typography.title.fontFamily,
+    color: currentTheme.colors.secondary,
     textAlign: "center",
     marginBottom: 5,
   },
   subHeaderText: {
-    fontSize: 15,
-    color: "#BBBBBB",
+    fontSize: normalizeFont(15),
+    fontFamily: currentTheme.typography.body.fontFamily,
+    color: currentTheme.colors.textSecondary,
     textAlign: "center",
     marginHorizontal: 10,
     lineHeight: 20,
@@ -187,15 +199,15 @@ const styles = StyleSheet.create({
   tipCard: {
     flexDirection: "row",
     alignItems: "flex-start",
-    backgroundColor: "#2C2C2E",
+    backgroundColor: currentTheme.colors.cardBackground,
     borderRadius: 12,
     padding: 16,
     marginBottom: 15,
     shadowColor: "#000",
     shadowOffset: { width: 0, height: 4 },
-    shadowOpacity: 0.2,
+    shadowOpacity: 0.1,
     shadowRadius: 5,
-    elevation: 4,
+    elevation: 3,
   },
   tipIcon: {
     marginRight: 14,
@@ -205,52 +217,29 @@ const styles = StyleSheet.create({
     flex: 1,
   },
   tipTitle: {
-    fontSize: 18,
-    fontWeight: "bold",
-    color: "#FFD700",
+    fontSize: normalizeFont(18),
+    fontFamily: currentTheme.typography.title.fontFamily,
+    color: currentTheme.colors.secondary,
     marginBottom: 4,
   },
   tipDescription: {
-    fontSize: 14,
-    color: "#DDDDDD",
+    fontSize: normalizeFont(14),
+    fontFamily: currentTheme.typography.body.fontFamily,
+    color: currentTheme.colors.textSecondary,
     lineHeight: 20,
   },
   footer: {
-    marginTop: 25,
+    marginTop: 20,
     alignItems: "center",
   },
   footerText: {
-    fontSize: 14,
-    color: "#AAAAAA",
+    fontSize: normalizeFont(14),
+    fontFamily: currentTheme.typography.body.fontFamily,
+    color: currentTheme.colors.textSecondary,
     textAlign: "center",
   },
   footerLink: {
-    color: "#FFD700",
-    fontWeight: "bold",
-  },
-  elegantBackButton: {
-    marginBottom: 20,
-    alignSelf: "flex-start",
-    flexDirection: "row",
-    alignItems: "center",
-    backgroundColor: "#2C2C2E",
-    borderRadius: 8,
-    paddingVertical: 8,
-    paddingHorizontal: 12,
-    shadowColor: "#000",
-    shadowOffset: { width: 0, height: 4 },
-    shadowOpacity: 0.3,
-    shadowRadius: 6,
-    elevation: 4,
-  },
-  elegantBackButtonContainer: {
-    flexDirection: "row",
-    alignItems: "center",
-  },
-  elegantBackButtonText: {
-    fontSize: 16,
-    color: "#FFD700",
-    marginLeft: 8,
-    fontWeight: "bold",
+    color: currentTheme.colors.secondary,
+    fontFamily: currentTheme.typography.title.fontFamily,
   },
 });

@@ -22,7 +22,7 @@ export const initializeUserInFirestore = async (uid, email, username) => {
         username: username || "Anonymous",
         bio: "",
         location: "",
-        profilePicture: "",
+        profileImage: "",
         challengesTaken: [],
         challengesSaved: [],
         achievements: [],

@@ -1,282 +1,383 @@
-import React, { useState, useEffect, useRef, useCallback } from "react";
+import React, { useState, useEffect, useRef } from "react";
 import {
   View,
   StyleSheet,
   ActivityIndicator,
-  FlatList,
   TouchableOpacity,
   Image,
-  Animated,
   Text,
   Dimensions,
+  SafeAreaView,
+  ScrollView,
+  StatusBar,
+  NativeSyntheticEvent,
+  NativeScrollEvent,
 } from "react-native";
+import { Animated as RNAnimated } from "react-native";
 import { useRouter } from "expo-router";
 import { collection, getDocs } from "firebase/firestore";
-import { db, auth } from "../../constants/firebase-config"; // ✅ Import de auth
+import { db, auth } from "../../constants/firebase-config";
 import { LinearGradient } from "expo-linear-gradient";
-import { Ionicons } from "@expo/vector-icons";
-import { useFocusEffect } from "@react-navigation/native";
-import { onAuthStateChanged, User } from "firebase/auth"; // ✅ Import pour vérifier l'authentification
+import { onAuthStateChanged, User } from "firebase/auth";
+import { Video, ResizeMode } from "expo-av";
+import Animated, {
+  useSharedValue,
+  withTiming,
+  useAnimatedStyle,
+} from "react-native-reanimated";
 
-const { width } = Dimensions.get("window");
+const { width: SCREEN_WIDTH, height: SCREEN_HEIGHT } = Dimensions.get("window");
+const ITEM_WIDTH = Math.round(SCREEN_WIDTH * 0.8);
+const ITEM_HEIGHT = 260;
+const CARD_MARGIN = 5;
+const EFFECTIVE_ITEM_WIDTH = ITEM_WIDTH + CARD_MARGIN * 2;
+const SPACER = (SCREEN_WIDTH - ITEM_WIDTH) / 2;
 
 interface Challenge {
   id: string;
   title: string;
+  description: string;
+  category: string;
   imageUrl?: string;
+  day?: number;
 }
 
-const HomeScreen = () => {
+export default function HomeScreen() {
   const router = useRouter();
   const [challenges, setChallenges] = useState<Challenge[]>([]);
   const [loading, setLoading] = useState(false);
-  const [user, setUser] = useState<User | null>(null); // ✅ Ajout de l'état pour vérifier l'utilisateur
-  const fadeAnim = useRef(new Animated.Value(0)).current;
-  const scaleAnim = useRef(new Animated.Value(0.8)).current;
+  const [user, setUser] = useState<User | null>(null);
+
+  // Animation fade pour la section HERO
+  const fadeAnim = useSharedValue(0);
+  const fadeStyle = useAnimatedStyle(() => ({
+    opacity: fadeAnim.value,
+  }));
 
   useEffect(() => {
-    Animated.parallel([
-      Animated.timing(fadeAnim, {
-        toValue: 1,
-        duration: 2000,
-        useNativeDriver: true,
-      }),
-      Animated.timing(scaleAnim, {
-        toValue: 1,
-        duration: 1500,
-        useNativeDriver: true,
-      }),
-    ]).start();
-  }, []);
+    fadeAnim.value = withTiming(1, { duration: 2000 });
+  }, [fadeAnim]);
 
-  // ✅ Vérifier si l'utilisateur est connecté avant d'exécuter fetchChallenges
+  // Surveille l'état d'authentification
   useEffect(() => {
     const unsubscribe = onAuthStateChanged(auth, (firebaseUser) => {
       setUser(firebaseUser);
     });
-
     return () => unsubscribe();
   }, []);
 
+  // Récupère les défis depuis Firestore
   const fetchChallenges = async () => {
-    if (!user) return; // 🚨 Ne pas exécuter si l'utilisateur n'est pas connecté
-
+    if (!user) return;
     setLoading(true);
     try {
       const querySnapshot = await getDocs(collection(db, "challenges"));
-      const fetchedChallenges = querySnapshot.docs.map((doc) => {
+      const fetched = querySnapshot.docs.map((doc) => {
         const data = doc.data();
         return {
           id: doc.id,
           title: data?.title || "Défi Mystère",
-          imageUrl: data?.imageUrl || "https://via.placeholder.com/150",
+          description: data?.description || "Aucune description disponible",
+          category: data?.category || "Divers",
+          imageUrl: data?.imageUrl || "https://via.placeholder.com/300",
+          day: data?.day,
         };
       });
-      setChallenges(fetchedChallenges);
+      setChallenges(fetched.slice(0, 20));
     } catch (error) {
-      console.error("❌ Erreur lors de la récupération des défis :", error);
+      console.error("Erreur lors de la récupération des défis :", error);
       setChallenges([]);
     } finally {
       setLoading(false);
     }
   };
 
-  useFocusEffect(
-    useCallback(() => {
-      if (user) fetchChallenges(); // ✅ Appeler fetchChallenges seulement si l'utilisateur est connecté
-    }, [user])
-  );
+  useEffect(() => {
+    if (user) {
+      fetchChallenges();
+    }
+  }, [user]);
+
+  const flatListRef = useRef<RNAnimated.FlatList<any>>(null);
+  const scrollX = useRef(new RNAnimated.Value(0)).current;
+  const currentIndexRef = useRef<number>(0);
+
+  // Auto-scroll toutes les 3 secondes
+  useEffect(() => {
+    if (challenges.length === 0) return;
+    const autoScrollInterval = setInterval(() => {
+      let nextIndex = currentIndexRef.current + 1;
+      if (nextIndex >= challenges.length) {
+        nextIndex = 0;
+      }
+      flatListRef.current?.scrollToIndex({ index: nextIndex, animated: true });
+      currentIndexRef.current = nextIndex;
+    }, 3000);
+    return () => clearInterval(autoScrollInterval);
+  }, [challenges]);
+
+  // Lors du relâchement (momentum) du scroll, recentrer sur l'élément le plus proche
+  const handleMomentumScrollEnd = (
+    event: NativeSyntheticEvent<NativeScrollEvent>
+  ) => {
+    const offsetX = event.nativeEvent.contentOffset.x;
+    const index = Math.round(offsetX / EFFECTIVE_ITEM_WIDTH);
+    currentIndexRef.current = index;
+    flatListRef.current?.scrollToIndex({ index, animated: true });
+  };
 
   const renderChallenge = ({ item }: { item: Challenge }) => (
     <TouchableOpacity
       style={styles.challengeCard}
-      onPress={() => router.push(`/challenge-details/${item.id}`)}
+      onPress={() =>
+        router.push(
+          `/challenge-details/${item.id}?title=${encodeURIComponent(
+            item.title
+          )}&category=${encodeURIComponent(
+            item.category
+          )}&description=${encodeURIComponent(item.description)}`
+        )
+      }
+      activeOpacity={0.9}
     >
       <Image source={{ uri: item.imageUrl }} style={styles.challengeImage} />
-      <View style={styles.overlay}>
-        <Text style={styles.challengeTitle}>{item.title}</Text>
-      </View>
+      <LinearGradient
+        colors={["rgba(0,0,0,0.3)", "rgba(0,0,0,0.8)"]}
+        style={styles.overlay}
+      >
+        <Text style={styles.challengeTitle} numberOfLines={1}>
+          {item.title}
+        </Text>
+        {item.day !== undefined && (
+          <Text style={styles.challengeDay}>Jour {item.day}</Text>
+        )}
+      </LinearGradient>
     </TouchableOpacity>
   );
 
   return (
-    <LinearGradient colors={["#1C1C2E", "#2A2A3E"]} style={styles.container}>
-      {/* Hero Section */}
-      <Animated.View
-        style={[
-          styles.heroSection,
-          { opacity: fadeAnim, transform: [{ scale: scaleAnim }] },
-        ]}
-      >
-        <Image
-          source={require("../../assets/images/logoFinal.png")}
-          style={styles.logo}
-        />
-        <Text style={styles.heroTitle}>
-          Repousse Tes Limites, Devient Une Légende
-        </Text>
-        <Text style={styles.heroSubtitle}>
-          Des défis pour t’améliorer chaque jour.
-        </Text>
-      </Animated.View>
-
-      {/* ✅ Afficher les défis uniquement si l'utilisateur est connecté */}
-      {user ? (
-        <View style={styles.section}>
-          <Text style={styles.sectionTitle}>🔥 Défis Populaires</Text>
-          {loading ? (
-            <ActivityIndicator size="large" color="#FACC15" />
-          ) : challenges.length > 0 ? (
-            <FlatList
-              data={challenges}
-              keyExtractor={(item) => item.id}
-              renderItem={renderChallenge}
-              horizontal
-              showsHorizontalScrollIndicator={false}
-              contentContainerStyle={styles.challengeList}
+    <SafeAreaView style={styles.safeArea}>
+      <StatusBar hidden />
+      <LinearGradient colors={["#e3e2e9", "#e3e2e9"]} style={styles.container}>
+        <ScrollView
+          contentContainerStyle={styles.scrollContent}
+          bounces={false} // Désactive l'overscroll pour éviter la barre blanche
+        >
+          {/* SECTION HERO */}
+          <RNAnimated.View style={[styles.heroSection, fadeStyle]}>
+            <Video
+              source={require("../../assets/videos/hero-bg.mp4")}
+              style={styles.backgroundVideo}
+              resizeMode={ResizeMode.COVER}
+              shouldPlay
+              isLooping
+              isMuted
             />
-          ) : (
-            <Text style={styles.noChallengesText}>Aucun défi disponible</Text>
-          )}
-        </View>
-      ) : (
-        <View style={styles.section}>
-          <Text style={styles.sectionTitle}>
-            🔒 Connecte-toi pour voir les défis !
-          </Text>
-        </View>
-      )}
-      {/* Découvrir Plus */}
-      <View style={styles.section}>
-        <Text style={styles.sectionTitle}>🚀 Découvrir Plus</Text>
-        <View style={styles.buttonContainer}>
-          <TouchableOpacity
-            style={[styles.actionButton, styles.tipsButton]}
-            onPress={() => router.push("/tips")}
-          >
-            <Ionicons name="bulb-outline" size={28} color="#FFF" />
-            <Text style={styles.buttonText}>Tips & Tricks</Text>
-          </TouchableOpacity>
+            <View style={styles.heroOverlay} />
+            <Image
+              source={require("../../assets/images/Challenge.png")}
+              style={styles.logo}
+              resizeMode="contain"
+            />
+            <Text style={styles.heroTitle}>Réveille ton potentiel</Text>
+            <Text style={styles.heroSubtitle}>
+              Rejoins ChallengeTies et trouve l'inspiration au quotidien !
+            </Text>
+            <TouchableOpacity onPress={() => router.push("/explore")}>
+              <LinearGradient
+                colors={["#e3701e", "#e3701e"]}
+                style={styles.ctaButton}
+              >
+                <Text style={styles.ctaText}>Commence l'Aventure</Text>
+              </LinearGradient>
+            </TouchableOpacity>
+          </RNAnimated.View>
 
-          <TouchableOpacity
-            style={[styles.actionButton, styles.leaderboardButton]}
-            onPress={() => router.push("/leaderboard")}
-          >
-            <Ionicons name="trophy-outline" size={28} color="#FFF" />
-            <Text style={styles.buttonText}>Leaderboard</Text>
-          </TouchableOpacity>
+          {/* CAROUSEL DES DÉFIS */}
+          <View style={styles.section}>
+            <Text style={styles.sectionTitle}>Défis Inspirants</Text>
+            {loading ? (
+              <ActivityIndicator size="large" color="#a67c52" />
+            ) : challenges.length > 0 ? (
+              <RNAnimated.FlatList
+                ref={flatListRef}
+                data={challenges}
+                horizontal
+                decelerationRate="normal"
+                disableIntervalMomentum
+                bounces={false}
+                snapToInterval={EFFECTIVE_ITEM_WIDTH}
+                snapToAlignment="center"
+                contentContainerStyle={{ paddingHorizontal: SPACER }}
+                showsHorizontalScrollIndicator={false}
+                getItemLayout={(_, index) => ({
+                  length: EFFECTIVE_ITEM_WIDTH,
+                  offset: EFFECTIVE_ITEM_WIDTH * index,
+                  index,
+                })}
+                onScroll={RNAnimated.event(
+                  [{ nativeEvent: { contentOffset: { x: scrollX } } }],
+                  { useNativeDriver: true }
+                )}
+                scrollEventThrottle={16}
+                onMomentumScrollEnd={handleMomentumScrollEnd}
+                renderItem={renderChallenge}
+                keyExtractor={(item) => item.id}
+                style={{ marginBottom: 20 }}
+              />
+            ) : (
+              <Text style={styles.noChallengesText}>Aucun défi disponible</Text>
+            )}
+          </View>
 
-          <TouchableOpacity
-            style={[styles.actionButton, styles.newFeaturesButton]}
-            onPress={() => router.push("/new-features")}
-          >
-            <Ionicons name="sparkles-outline" size={28} color="#FFF" />
-            <Text style={styles.buttonText}>New Features</Text>
-          </TouchableOpacity>
-        </View>
-      </View>
-    </LinearGradient>
+          {/* SECTION "INSPIRE-TOI" */}
+          <View style={styles.discoverSection}>
+            <Text style={styles.sectionTitle}>Inspire-toi</Text>
+            <View style={styles.discoverRow}>
+              <TouchableOpacity
+                style={styles.discoverButton}
+                onPress={() => router.push("/tips")}
+              >
+                <Text style={styles.discoverButtonText}>Tips & Tricks</Text>
+              </TouchableOpacity>
+              <TouchableOpacity
+                style={styles.discoverButton}
+                onPress={() => router.push("/leaderboard")}
+              >
+                <Text style={styles.discoverButtonText}>Leaderboard</Text>
+              </TouchableOpacity>
+            </View>
+            <View style={styles.discoverRowCenter}>
+              <TouchableOpacity
+                style={styles.discoverButton}
+                onPress={() => router.push("/new-features")}
+              >
+                <Text style={styles.discoverButtonText}>Nouveautés</Text>
+              </TouchableOpacity>
+            </View>
+          </View>
+        </ScrollView>
+      </LinearGradient>
+    </SafeAreaView>
   );
-};
+}
 
 const styles = StyleSheet.create({
-  container: {
-    flex: 1,
-  },
+  safeArea: { flex: 1, backgroundColor: "#e3e2e9" },
+  container: { flex: 1 },
+  scrollContent: { paddingBottom: 20 },
   heroSection: {
+    height: SCREEN_HEIGHT * 0.5,
+    justifyContent: "center",
     alignItems: "center",
-    paddingVertical: 40,
+    overflow: "hidden",
   },
-  logo: {
-    width: 120,
-    height: 120,
-    marginBottom: 15,
+  backgroundVideo: { position: "absolute", width: "100%", height: "100%" },
+  heroOverlay: {
+    ...StyleSheet.absoluteFillObject,
+    backgroundColor: "rgba(0,0,0,0.35)",
   },
+  logo: { width: 180, height: 180, position: "absolute", top: -20 },
   heroTitle: {
-    fontSize: 24,
-    fontWeight: "bold",
+    fontSize: 28,
+    fontFamily: "Comfortaa_700Bold",
     color: "#FFF",
     textAlign: "center",
-    paddingHorizontal: 20,
+    marginTop: 80,
+    marginHorizontal: 20,
   },
   heroSubtitle: {
     fontSize: 16,
-    color: "#E5E7EB",
+    fontFamily: "Comfortaa_400Regular",
+    color: "#FFF",
     textAlign: "center",
+    marginBottom: 20,
+    marginHorizontal: 20,
+  },
+  ctaButton: {
+    backgroundColor: "#ed8f03",
+    paddingVertical: 12,
+    paddingHorizontal: 25,
+    borderRadius: 10,
     marginTop: 5,
   },
-  section: {
-    marginTop: 20,
-    paddingHorizontal: 20,
-  },
+  ctaText: { fontSize: 18, fontFamily: "Comfortaa_700Bold", color: "#FFF" },
+  section: { paddingTop: 20, paddingBottom: 10 },
   sectionTitle: {
-    fontSize: 18,
-    fontWeight: "bold",
-    color: "#FACC15",
-    marginBottom: 10,
+    fontSize: 20,
+    fontFamily: "Comfortaa_700Bold",
+    color: "#060606",
+    marginBottom: 15,
     textAlign: "center",
   },
-  challengeList: {
-    paddingLeft: 20,
-  },
   challengeCard: {
-    backgroundColor: "#1E293B",
+    backgroundColor: "#fff",
     borderRadius: 15,
     overflow: "hidden",
-    marginRight: 15,
-    width: 180,
+    marginHorizontal: CARD_MARGIN,
+    width: ITEM_WIDTH,
+    height: ITEM_HEIGHT,
+    shadowColor: "#000",
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.2,
+    shadowRadius: 6,
+    elevation: 5,
   },
-  challengeImage: {
-    width: "100%",
-    height: 120,
-  },
+  challengeImage: { width: "100%", height: "100%", resizeMode: "cover" },
   overlay: {
     position: "absolute",
     bottom: 0,
     width: "100%",
-    backgroundColor: "rgba(0, 0, 0, 0.6)",
     padding: 10,
-    alignItems: "center",
   },
   challengeTitle: {
-    fontSize: 16,
-    fontWeight: "bold",
+    fontSize: 18,
+    fontFamily: "Comfortaa_700Bold",
     color: "#FFF",
+    textAlign: "center",
+    marginBottom: 2,
+  },
+  challengeDay: {
+    fontSize: 14,
+    fontFamily: "Comfortaa_400Regular",
+    color: "#a67c52",
+    fontWeight: "600",
     textAlign: "center",
   },
   noChallengesText: {
-    color: "#E5E7EB",
+    color: "#555",
     textAlign: "center",
     fontSize: 16,
     marginTop: 10,
+    fontFamily: "Comfortaa_400Regular",
   },
-  buttonContainer: {
-    flexDirection: "row",
-    justifyContent: "space-between",
+  discoverSection: {
     marginTop: 10,
-  },
-  actionButton: {
-    flex: 1,
-    padding: 12,
-    borderRadius: 10,
+    paddingHorizontal: 20,
     alignItems: "center",
+  },
+  discoverRow: {
+    flexDirection: "row",
+    marginTop: 10,
+    justifyContent: "space-between",
+    width: "100%",
+  },
+  discoverRowCenter: {
+    width: "100%",
+    alignItems: "center",
+    marginTop: 15,
+    marginBottom: 20,
+  },
+  discoverButton: {
+    backgroundColor: "#e3701e",
+    borderRadius: 10,
+    paddingVertical: 12,
+    paddingHorizontal: 20,
     marginHorizontal: 5,
   },
-  buttonText: {
+  discoverButtonText: {
+    fontSize: 16,
+    fontFamily: "Comfortaa_700Bold",
     color: "#FFF",
-    fontWeight: "bold",
-    marginTop: 5,
-  },
-  tipsButton: {
-    backgroundColor: "#10B981", // ✅ Vert émeraude
-  },
-  leaderboardButton: {
-    backgroundColor: "#FACC15", // ✅ Or
-  },
-  newFeaturesButton: {
-    backgroundColor: "#3B82F6", // ✅ Bleu électrique
   },
 });
-
-export default HomeScreen;
-``;

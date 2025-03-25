@@ -8,19 +8,25 @@ import {
   TouchableOpacity,
   ScrollView,
   ActivityIndicator,
+  SafeAreaView,
   Alert,
   Dimensions,
   Text,
 } from "react-native";
 import { useRouter } from "expo-router";
 import { doc, updateDoc, getDoc } from "firebase/firestore";
-import { auth, db } from "../../constants/firebase-config";
+import { auth, db, storage } from "../../constants/firebase-config";
 import * as ImagePicker from "expo-image-picker";
 import { TextInput } from "react-native-paper";
 import { LinearGradient } from "expo-linear-gradient";
+import { ref, uploadBytesResumable, getDownloadURL } from "firebase/storage";
+import { checkForAchievements } from "../../helpers/trophiesHelpers";
+import BackButton from "../../components/BackButton";
+import designSystem from "../../theme/designSystem";
 
 const { width } = Dimensions.get("window");
-
+const { lightTheme } = designSystem;
+const currentTheme = lightTheme;
 interface User {
   uid: string;
   displayName?: string;
@@ -40,17 +46,18 @@ export default function UserInfo() {
   const [interests, setInterests] = useState("");
   const [isLoading, setIsLoading] = useState(false);
 
+  const currentTheme = designSystem.lightTheme;
+
+  // Chargement des données utilisateur
   useEffect(() => {
     const fetchUserData = async () => {
       setIsLoading(true);
       try {
         const currentUser = auth.currentUser;
-        if (!currentUser) throw new Error("User is not authenticated.");
-
+        if (!currentUser) throw new Error("Utilisateur non authentifié.");
         const userId = currentUser.uid;
         const userRef = doc(db, "users", userId);
         const userSnap = await getDoc(userRef);
-
         if (userSnap.exists()) {
           const userData = userSnap.data() as Omit<User, "uid">;
           setUser({ uid: userId, ...userData });
@@ -61,45 +68,95 @@ export default function UserInfo() {
           setInterests(userData.interests || "");
         }
       } catch (error) {
-        Alert.alert("Erreur", "Impossible de charger les informations.");
+        Alert.alert("Erreur", "Impossible de charger vos informations.");
       } finally {
         setIsLoading(false);
       }
     };
-
     fetchUserData();
   }, []);
 
+  // Sélection et téléversement de l'image de profil
   const pickImage = useCallback(async () => {
     try {
       const { status } =
         await ImagePicker.requestMediaLibraryPermissionsAsync();
       if (status !== "granted") {
-        Alert.alert("Permission refusée", "Autorisation requise.");
+        Alert.alert(
+          "Permission refusée",
+          "Vous devez autoriser l'accès aux photos."
+        );
         return;
       }
-
       const result = await ImagePicker.launchImageLibraryAsync({
         mediaTypes: ImagePicker.MediaTypeOptions.Images,
         allowsEditing: true,
         aspect: [1, 1],
-        quality: 1,
+        quality: 0.5,
       });
-
-      if (!result.canceled) {
-        setProfileImage(result.assets[0].uri);
+      if (!result.canceled && result.assets && result.assets[0].uri) {
+        const uri = result.assets[0].uri;
+        const currentUser = auth.currentUser;
+        if (!currentUser) {
+          Alert.alert("Erreur", "Utilisateur non authentifié.");
+          return;
+        }
+        const filename = `profileImages/${currentUser.uid}_${Date.now()}.jpg`;
+        const storageRef = ref(storage, filename);
+        const response = await fetch(uri);
+        const blob = await response.blob();
+        const uploadTask = uploadBytesResumable(storageRef, blob, {
+          contentType: "image/jpeg",
+        });
+        uploadTask.on(
+          "state_changed",
+          (snapshot) => {
+            const progress =
+              (snapshot.bytesTransferred / snapshot.totalBytes) * 100;
+            console.log(`Progression de l'upload: ${progress.toFixed(2)}%`);
+          },
+          (error) => {
+            console.error("Erreur lors de l'upload:", error);
+            Alert.alert(
+              "Erreur d'upload",
+              `Le téléversement a échoué. Détails: ${error.message}`
+            );
+          },
+          async () => {
+            try {
+              const downloadURL = await getDownloadURL(uploadTask.snapshot.ref);
+              setProfileImage(downloadURL);
+              Alert.alert("Succès", "Image de profil mise à jour !");
+            } catch (urlError: any) {
+              console.error(
+                "Erreur lors de la récupération de l'URL:",
+                urlError
+              );
+              Alert.alert(
+                "Erreur",
+                `Impossible de récupérer l'URL de l'image. Détails: ${urlError.message}`
+              );
+            }
+          }
+        );
+      } else {
+        Alert.alert("Annulé", "Aucune image sélectionnée.");
       }
-    } catch (error) {
-      Alert.alert("Erreur", "Impossible de sélectionner l’image.");
+    } catch (error: any) {
+      console.error("Erreur lors de la sélection de l'image:", error);
+      Alert.alert(
+        "Erreur",
+        `Impossible de téléverser l’image. Détails: ${error.message}`
+      );
     }
   }, []);
 
+  // Sauvegarde du profil
   const handleSave = useCallback(async () => {
     if (!user?.uid) {
       Alert.alert("Erreur", "Utilisateur introuvable.");
       return;
     }
-
     setIsLoading(true);
     try {
       const userRef = doc(db, "users", user.uid);
@@ -110,21 +167,22 @@ export default function UserInfo() {
         location,
         interests,
       });
-
-      Alert.alert("Succès", "Profil mis à jour !");
+      await checkForAchievements(user.uid);
+      Alert.alert("Succès", "Votre profil a été mis à jour !");
       router.push("/(tabs)/profile");
-    } catch (error) {
+    } catch (error: any) {
+      console.error("Erreur lors de la mise à jour du profil:", error);
       Alert.alert("Erreur", "Échec de la mise à jour du profil.");
     } finally {
       setIsLoading(false);
     }
-  }, [user, displayName, bio, profileImage, location, interests]);
+  }, [user, displayName, bio, profileImage, location, interests, router]);
 
   if (isLoading) {
     return (
-      <View style={styles.loadingContainer}>
-        <ActivityIndicator size="large" color="#FACC15" />
-      </View>
+      <SafeAreaView style={styles.loadingContainer}>
+        <ActivityIndicator size="large" color={currentTheme.colors.primary} />
+      </SafeAreaView>
     );
   }
 
@@ -137,30 +195,40 @@ export default function UserInfo() {
         contentContainerStyle={styles.contentContainer}
         showsVerticalScrollIndicator={false}
       >
-        <Text style={styles.title}>Modifier votre profil</Text>
-
-        {/* Image de profil */}
+        <BackButton color={currentTheme.colors.primary} />
+        <Text style={styles.headerTitle}>Modifier votre profil</Text>
         <TouchableOpacity style={styles.imageContainer} onPress={pickImage}>
-          {profileImage ? (
-            <Image source={{ uri: profileImage }} style={styles.profileImage} />
-          ) : (
-            <Text style={styles.addImageText}>Ajouter une photo</Text>
-          )}
+          <LinearGradient
+            colors={[
+              currentTheme.colors.primary,
+              currentTheme.colors.cardBackground,
+            ]}
+            style={styles.imageGradient}
+          >
+            {profileImage ? (
+              <Image
+                source={{ uri: profileImage }}
+                style={styles.profileImage}
+              />
+            ) : (
+              <Text style={styles.addImageText}>Ajouter une photo</Text>
+            )}
+          </LinearGradient>
         </TouchableOpacity>
-
-        {/* Champs de saisie */}
         <TextInput
           label="Nom"
           mode="outlined"
           style={styles.input}
           value={displayName}
           onChangeText={setDisplayName}
-          textColor="#FFF"
+          textColor={"#000000"}
+          activeOutlineColor={currentTheme.colors.primary}
+          outlineColor={currentTheme.colors.primary}
           theme={{
             colors: {
-              primary: "#FACC15",
-              text: "#FFF",
-              placeholder: "#FACC15",
+              primary: currentTheme.colors.primary,
+              text: "#000000",
+              placeholder: currentTheme.colors.primary,
               background: "transparent",
             },
           }}
@@ -168,16 +236,18 @@ export default function UserInfo() {
         <TextInput
           label="Bio"
           mode="outlined"
-          style={styles.input}
+          style={[styles.input, styles.multilineInput]}
           value={bio}
           onChangeText={setBio}
           multiline
-          textColor="#FFF"
+          textColor={"#000000"}
+          activeOutlineColor={currentTheme.colors.primary}
+          outlineColor={currentTheme.colors.primary}
           theme={{
             colors: {
-              primary: "#FACC15",
-              text: "#FFF",
-              placeholder: "#FACC15",
+              primary: currentTheme.colors.primary,
+              text: "#000000",
+              placeholder: currentTheme.colors.primary,
               background: "transparent",
             },
           }}
@@ -188,12 +258,14 @@ export default function UserInfo() {
           style={styles.input}
           value={location}
           onChangeText={setLocation}
-          textColor="#FFF"
+          textColor={"#000000"}
+          activeOutlineColor={currentTheme.colors.primary}
+          outlineColor={currentTheme.colors.primary}
           theme={{
             colors: {
-              primary: "#FACC15",
-              text: "#FFF",
-              placeholder: "#FACC15",
+              primary: currentTheme.colors.primary,
+              text: "#000000",
+              placeholder: currentTheme.colors.primary,
               background: "transparent",
             },
           }}
@@ -204,20 +276,23 @@ export default function UserInfo() {
           style={styles.input}
           value={interests}
           onChangeText={setInterests}
-          textColor="#FFF"
+          textColor={"#000000"}
+          activeOutlineColor={currentTheme.colors.primary}
+          outlineColor={currentTheme.colors.primary}
           theme={{
             colors: {
-              primary: "#FACC15",
-              text: "#FFF",
-              placeholder: "#FACC15",
+              primary: currentTheme.colors.primary,
+              text: "#000000",
+              placeholder: currentTheme.colors.primary,
               background: "transparent",
             },
           }}
         />
-
-        {/* Bouton Sauvegarde Feu & Glace */}
         <LinearGradient
-          colors={["#FACC15", "#3B82F6"]}
+          colors={[
+            currentTheme.colors.primary,
+            currentTheme.colors.cardBackground,
+          ]}
           start={{ x: 0, y: 0 }}
           end={{ x: 1, y: 1 }}
           style={styles.saveButton}
@@ -232,37 +307,50 @@ export default function UserInfo() {
 }
 
 const styles = StyleSheet.create({
-  container: {
+  container: { flex: 1, backgroundColor: currentTheme.colors.background },
+  contentContainer: { padding: 20, alignItems: "center", paddingBottom: 60 },
+  loadingContainer: {
     flex: 1,
-    backgroundColor: "#0F172A",
-  },
-  contentContainer: {
-    padding: 20,
+    justifyContent: "center",
     alignItems: "center",
-    paddingBottom: 60,
+    backgroundColor: currentTheme.colors.background,
   },
-  imageContainer: {
+  headerTitle: {
+    fontSize: 25,
+    fontFamily: currentTheme.typography.title.fontFamily,
+    color: "#000000",
+    marginVertical: 20,
+    textAlign: "center",
+    marginBottom: 30,
+  },
+  imageContainer: { marginBottom: 20 },
+  imageGradient: {
+    width: 140,
+    height: 140,
+    borderRadius: 70,
     alignItems: "center",
-    marginBottom: 20,
+    justifyContent: "center",
   },
   profileImage: {
-    width: 120,
-    height: 120,
-    borderRadius: 60,
+    width: 136,
+    height: 136,
+    borderRadius: 68,
     borderWidth: 2,
-    borderColor: "#FACC15",
+    borderColor: "#FFFFFF",
   },
   addImageText: {
-    marginTop: 8,
-    color: "#FACC15",
+    color: "#FFFFFF",
     fontSize: 14,
     textAlign: "center",
+    fontFamily: currentTheme.typography.body.fontFamily,
   },
   input: {
     width: "100%",
     marginBottom: 16,
-    backgroundColor: "#1F2D3D",
+    backgroundColor: "#FFFFFF",
+    fontFamily: currentTheme.typography.title.fontFamily,
   },
+  multilineInput: { minHeight: 80 },
   saveButton: {
     paddingVertical: 12,
     borderRadius: 10,
@@ -271,23 +359,8 @@ const styles = StyleSheet.create({
     marginTop: 10,
   },
   saveButtonText: {
-    color: "#FFF",
+    color: "#FFFFFF",
     fontSize: 18,
-    fontWeight: "bold",
-  },
-  loadingContainer: {
-    flex: 1,
-    justifyContent: "center",
-    alignItems: "center",
-    backgroundColor: "#0F172A", // ✅ Fond propre pendant le chargement
-  },
-  title: {
-    fontSize: 24,
-    fontWeight: "bold",
-    color: "#FACC15",
-    marginBottom: 20,
-    textAlign: "center",
-    textTransform: "uppercase",
-    letterSpacing: 1.5,
+    fontFamily: currentTheme.typography.title.fontFamily,
   },
 });

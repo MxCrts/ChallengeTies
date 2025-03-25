@@ -1,20 +1,75 @@
-import React, { useState, useRef, useEffect } from "react";
+import React, { useState, useEffect, useCallback, useRef } from "react";
 import {
   View,
+  Text,
+  TextInput,
+  TouchableOpacity,
+  Animated,
   StyleSheet,
+  Dimensions,
+  PixelRatio,
+  ScrollView,
+  ActivityIndicator,
   KeyboardAvoidingView,
   Platform,
-  Image,
-  Animated,
-  Easing,
-  TouchableOpacity,
 } from "react-native";
+import { StatusBar } from "expo-status-bar";
 import { useRouter } from "expo-router";
 import { createUserWithEmailAndPassword } from "firebase/auth";
 import { auth, db } from "../constants/firebase-config";
 import { doc, setDoc, serverTimestamp } from "firebase/firestore";
-import { Text, TextInput, ActivityIndicator } from "react-native-paper";
-import { LinearGradient } from "expo-linear-gradient";
+import { Ionicons } from "@expo/vector-icons";
+
+const normalizeFont = (size: number) => {
+  const { width } = Dimensions.get("window");
+  const scale = width / 375; // Référence iPhone X
+  return Math.round(PixelRatio.roundToNearestPixel(size * scale));
+};
+
+const { width: SCREEN_WIDTH, height: SCREEN_HEIGHT } = Dimensions.get("window");
+
+// Palette de couleurs
+const BACKGROUND_COLOR = "#FFF8E7"; // crème
+const PRIMARY_COLOR = "#FFB800"; // orange
+const TEXT_COLOR = "#333"; // texte foncé
+const BUTTON_COLOR = "#FFFFFF"; // bouton blanc
+
+// Taille du cercle décoratif et position verticale centrée
+const circleSize = Math.min(SCREEN_WIDTH, SCREEN_HEIGHT) * 0.9;
+const circleTop = SCREEN_HEIGHT * 0.38;
+const waveCount = 4;
+
+// Composant Wave (identique à Login)
+const Wave = React.memo(
+  ({
+    opacity,
+    scale,
+    borderWidth,
+    size,
+    top,
+  }: {
+    opacity: Animated.Value;
+    scale: Animated.Value;
+    borderWidth: number;
+    size: number;
+    top: number;
+  }) => (
+    <Animated.View
+      style={{
+        width: size,
+        height: size,
+        borderRadius: size / 2,
+        opacity,
+        transform: [{ scale }],
+        borderWidth,
+        borderColor: PRIMARY_COLOR,
+        position: "absolute",
+        top,
+        left: (SCREEN_WIDTH - size) / 2,
+      }}
+    />
+  )
+);
 
 export default function Register() {
   const router = useRouter();
@@ -22,34 +77,66 @@ export default function Register() {
   const [username, setUsername] = useState("");
   const [password, setPassword] = useState("");
   const [confirmPassword, setConfirmPassword] = useState("");
-  const [showPassword, setShowPassword] = useState(false);
-  const [showConfirmPassword, setShowConfirmPassword] = useState(false);
   const [loading, setLoading] = useState(false);
   const [errorMessage, setErrorMessage] = useState("");
+  const [showPassword, setShowPassword] = useState(false);
+  const [showConfirmPassword, setShowConfirmPassword] = useState(false);
 
-  const floatAnimation = useRef(new Animated.Value(0)).current;
+  // Initialisation des vagues (animation continue)
+  const wavesRef = useRef(
+    Array.from({ length: waveCount }, (_, index) => ({
+      opacity: new Animated.Value(0.3 - index * 0.05),
+      scale: new Animated.Value(1),
+      borderWidth: index === 0 ? 5 : 2,
+    }))
+  );
+  const waves = wavesRef.current;
 
   useEffect(() => {
-    Animated.timing(floatAnimation, {
-      toValue: 1,
-      duration: 9000,
-      easing: Easing.inOut(Easing.quad),
-      useNativeDriver: true,
-    }).start();
-  }, []);
-
-  const rotateAnimation = floatAnimation.interpolate({
-    inputRange: [0, 1],
-    outputRange: ["0deg", "1080deg"],
-  });
+    const animations = waves.map((wave, index) =>
+      Animated.loop(
+        Animated.parallel([
+          Animated.sequence([
+            Animated.timing(wave.opacity, {
+              toValue: 0.1,
+              duration: 2000 + index * 200,
+              useNativeDriver: true,
+            }),
+            Animated.timing(wave.opacity, {
+              toValue: 0.3 - index * 0.05,
+              duration: 2000 + index * 200,
+              useNativeDriver: true,
+            }),
+          ]),
+          Animated.sequence([
+            Animated.timing(wave.scale, {
+              toValue: 1.2 + index * 0.2,
+              duration: 2200 + index * 250,
+              useNativeDriver: true,
+            }),
+            Animated.timing(wave.scale, {
+              toValue: 1,
+              duration: 2200 + index * 250,
+              useNativeDriver: true,
+            }),
+          ]),
+        ])
+      )
+    );
+    animations.forEach((anim) => anim.start());
+    return () => animations.forEach((anim) => anim.stop());
+  }, [waves]);
 
   const handleRegister = async () => {
+    setErrorMessage("");
     if (!email.trim() || !username.trim() || !password || !confirmPassword) {
-      setErrorMessage("Veuillez remplir tous les champs.");
+      setErrorMessage("Veuillez renseigner tous les champs.");
+      setTimeout(() => setErrorMessage(""), 5000);
       return;
     }
     if (password !== confirmPassword) {
       setErrorMessage("Les mots de passe ne correspondent pas.");
+      setTimeout(() => setErrorMessage(""), 5000);
       return;
     }
     setLoading(true);
@@ -57,44 +144,45 @@ export default function Register() {
       const userCredential = await createUserWithEmailAndPassword(
         auth,
         email.trim(),
-        password
+        password.trim()
       );
       const user = userCredential.user;
       const userId = user.uid;
-
-      const userDoc = {
+      await setDoc(doc(db, "users", userId), {
         uid: userId,
         email: email.trim(),
         username: username.trim(),
         bio: "",
         location: "",
-        profilePicture: "",
+        profileImage: "",
         interests: [],
-        achievements: [], // ✅ Aucun succès réclamé au début
-        newAchievements: ["first_connection"], // ✅ Succès à réclamer
+        achievements: [],
+        newAchievements: ["first_connection"],
         trophies: 0,
         completedChallengesCount: 0,
         CompletedChallenges: [],
-        CurrentChallenges: [],
         SavedChallenges: [],
         customChallenges: [],
-        CompletedTodayChallenges: [],
+        currentChallenges: [],
+        longestStreak: 0,
+        shareChallenge: 0,
+        voteFeature: 0,
         createdAt: serverTimestamp(),
         updatedAt: serverTimestamp(),
+      });
+      router.replace("/screen/onboarding/Screen1");
+    } catch (error: any) {
+      const errorMessages = {
+        "auth/email-already-in-use": "Cet e-mail est déjà utilisé.",
+        "auth/invalid-email": "Format d'e-mail invalide.",
+        "auth/weak-password":
+          "Mot de passe trop faible. Choisissez-en un plus fort.",
       };
-
-      await setDoc(doc(db, "users", userId), userDoc);
-
-      router.replace("/onboarding");
-    } catch (error) {
-      let message = "Échec de la création du compte. Veuillez réessayer.";
-      if (error.code === "auth/email-already-in-use")
-        message = "Cet e-mail est déjà utilisé.";
-      else if (error.code === "auth/invalid-email")
-        message = "Format d'e-mail invalide.";
-      else if (error.code === "auth/weak-password")
-        message = "Mot de passe trop faible. Choisissez-en un plus fort.";
-      setErrorMessage(message);
+      setErrorMessage(
+        errorMessages[error.code] ||
+          "Une erreur est survenue. Veuillez réessayer."
+      );
+      setTimeout(() => setErrorMessage(""), 5000);
     } finally {
       setLoading(false);
     }
@@ -102,211 +190,263 @@ export default function Register() {
 
   return (
     <KeyboardAvoidingView
-      style={styles.container}
+      style={styles.flexContainer}
       behavior={Platform.OS === "ios" ? "padding" : undefined}
     >
-      <Animated.View
-        style={[
-          styles.logoContainer,
-          { transform: [{ rotateY: rotateAnimation }, { perspective: 1000 }] },
-        ]}
+      <StatusBar hidden />
+      <ScrollView
+        style={styles.flexContainer}
+        contentContainerStyle={styles.container}
+        keyboardShouldPersistTaps="handled"
       >
-        <Image
-          source={require("../assets/images/logoFinal.png")}
-          style={styles.logo}
-        />
-      </Animated.View>
-
-      <Text style={styles.title}>Rejoignez le Challenge !</Text>
-
-      {errorMessage !== "" && (
-        <Text style={styles.errorText}>{errorMessage}</Text>
-      )}
-
-      <TextInput
-        label="E-mail"
-        mode="outlined"
-        style={styles.input}
-        value={email}
-        onChangeText={(text) => {
-          setEmail(text);
-          setErrorMessage("");
-        }}
-        keyboardType="email-address"
-        autoCapitalize="none"
-        textColor="#FFF"
-        theme={{
-          colors: {
-            primary: "#FF7F00",
-            text: "#FFF",
-            placeholder: "#FF7F00",
-            background: "transparent",
-          },
-        }}
-      />
-
-      <TextInput
-        label="Nom d'utilisateur"
-        mode="outlined"
-        style={styles.input}
-        value={username}
-        onChangeText={setUsername}
-        autoCapitalize="none"
-        textColor="#FFF"
-        theme={{
-          colors: {
-            primary: "#FF7F00",
-            text: "#FFF",
-            placeholder: "#FF7F00",
-            background: "transparent",
-          },
-        }}
-      />
-
-      <TextInput
-        label="Mot de passe"
-        mode="outlined"
-        style={styles.input}
-        value={password}
-        onChangeText={setPassword}
-        secureTextEntry={!showPassword}
-        right={
-          <TextInput.Icon
-            icon={showPassword ? "eye-off" : "eye"}
-            onPress={() => setShowPassword(!showPassword)}
+        {/* Vagues de fond */}
+        {waves.map((wave, index) => (
+          <Wave
+            key={index}
+            opacity={wave.opacity}
+            scale={wave.scale}
+            borderWidth={wave.borderWidth}
+            size={circleSize}
+            top={circleTop}
           />
-        }
-        textColor="#FFF"
-        theme={{
-          colors: {
-            primary: "#FF7F00",
-            text: "#FFF",
-            placeholder: "#FF7F00",
-            background: "transparent",
-          },
-        }}
-      />
+        ))}
 
-      <TextInput
-        label="Confirmer le mot de passe"
-        mode="outlined"
-        style={styles.input}
-        value={confirmPassword}
-        onChangeText={setConfirmPassword}
-        secureTextEntry={!showConfirmPassword}
-        right={
-          <TextInput.Icon
-            icon={showConfirmPassword ? "eye-off" : "eye"}
-            onPress={() => setShowConfirmPassword(!showConfirmPassword)}
-          />
-        }
-        textColor="#FFF"
-        theme={{
-          colors: {
-            primary: "#FF7F00",
-            text: "#FFF",
-            placeholder: "#FF7F00",
-            background: "transparent",
-          },
-        }}
-      />
+        {/* Header : Titre et slogan */}
+        <View style={styles.headerContainer}>
+          <Text
+            style={styles.brandTitle}
+            numberOfLines={1}
+            adjustsFontSizeToFit
+            ellipsizeMode="tail"
+            accessibilityLabel="Titre de l'application"
+          >
+            <Text style={styles.highlight}>C</Text>hallenge
+            <Text style={styles.highlight}>T</Text>ies
+          </Text>
+          <Text style={styles.tagline}>Rejoins-nous et relève des défis !</Text>
+        </View>
 
-      <TouchableOpacity
-        style={styles.registerButton}
-        onPress={handleRegister}
-        disabled={loading}
-      >
-        <LinearGradient
-          colors={["#FACC15", "#3B82F6"]}
-          start={{ x: 0, y: 0 }}
-          end={{ x: 1, y: 1 }}
-          style={styles.registerButtonGradient}
+        {/* Formulaire : Champs de saisie */}
+        <View
+          style={styles.formContainer}
+          accessibilityLabel="Formulaire d'inscription"
         >
-          {loading ? (
-            <ActivityIndicator color="#FFF" />
-          ) : (
-            <Text style={styles.registerButtonText}>S'inscrire</Text>
+          {errorMessage !== "" && (
+            <Text style={styles.errorText} accessibilityRole="alert">
+              {errorMessage}
+            </Text>
           )}
-        </LinearGradient>
-      </TouchableOpacity>
+          <TextInput
+            placeholder="Votre e-mail"
+            placeholderTextColor="rgba(50,50,50,0.5)"
+            style={styles.input}
+            value={email}
+            onChangeText={setEmail}
+            keyboardType="email-address"
+            autoCapitalize="none"
+            accessibilityLabel="Adresse e-mail"
+          />
+          <TextInput
+            placeholder="Nom d'utilisateur"
+            placeholderTextColor="rgba(50,50,50,0.5)"
+            style={styles.input}
+            value={username}
+            onChangeText={setUsername}
+            accessibilityLabel="Nom d'utilisateur"
+          />
+          {/* Champ: Mot de passe */}
+          <View style={styles.passwordContainer}>
+            <TextInput
+              placeholder="Mot de passe"
+              placeholderTextColor="rgba(50,50,50,0.5)"
+              style={[styles.input, styles.passwordInput]}
+              value={password}
+              onChangeText={setPassword}
+              secureTextEntry={!showPassword}
+              accessibilityLabel="Mot de passe"
+            />
+            <TouchableOpacity
+              onPress={() => setShowPassword((prev) => !prev)}
+              accessibilityLabel={
+                showPassword
+                  ? "Cacher le mot de passe"
+                  : "Afficher le mot de passe"
+              }
+              style={styles.passwordIcon}
+            >
+              <Ionicons
+                name={showPassword ? "eye-off" : "eye"}
+                size={24}
+                color={PRIMARY_COLOR}
+              />
+            </TouchableOpacity>
+          </View>
+          {/* Champ: Confirmer le mot de passe */}
+          <View style={styles.passwordContainer}>
+            <TextInput
+              placeholder="Confirmer le mot de passe"
+              placeholderTextColor="rgba(50,50,50,0.5)"
+              style={[styles.input, styles.passwordInput]}
+              value={confirmPassword}
+              onChangeText={setConfirmPassword}
+              secureTextEntry={!showConfirmPassword}
+              accessibilityLabel="Confirmer le mot de passe"
+            />
+            <TouchableOpacity
+              onPress={() => setShowConfirmPassword((prev) => !prev)}
+              accessibilityLabel={
+                showConfirmPassword
+                  ? "Cacher le mot de passe"
+                  : "Afficher le mot de passe"
+              }
+              style={styles.passwordIcon}
+            >
+              <Ionicons
+                name={showConfirmPassword ? "eye-off" : "eye"}
+                size={24}
+                color={PRIMARY_COLOR}
+              />
+            </TouchableOpacity>
+          </View>
+        </View>
 
-      <TouchableOpacity onPress={() => router.push("/login")}>
-        <Text style={styles.registerLink}>
-          Vous avez déjà un compte ?{" "}
-          <Text style={styles.registerHighlight}>Connectez-vous ici</Text>
-        </Text>
-      </TouchableOpacity>
+        {/* Footer : Bouton d'inscription et lien vers la connexion */}
+        <View style={styles.footerContainer}>
+          <TouchableOpacity
+            style={[styles.registerButton, loading && styles.disabledButton]}
+            onPress={handleRegister}
+            disabled={loading}
+            accessibilityLabel="S'inscrire"
+            accessibilityRole="button"
+          >
+            {loading ? (
+              <ActivityIndicator color={TEXT_COLOR} size="small" />
+            ) : (
+              <Text style={styles.registerButtonText}>S'inscrire</Text>
+            )}
+          </TouchableOpacity>
+          <Text style={styles.loginText} accessibilityLabel="Connexion">
+            Déjà un compte ?{" "}
+            <Text
+              style={styles.loginLink}
+              onPress={() => router.push("/login")}
+              accessibilityRole="link"
+            >
+              Connecte-toi ici
+            </Text>
+          </Text>
+        </View>
+      </ScrollView>
     </KeyboardAvoidingView>
   );
 }
 
 const styles = StyleSheet.create({
+  flexContainer: { flex: 1 },
   container: {
-    flex: 1,
-    backgroundColor: "#0F172A",
+    flexGrow: 1,
+    backgroundColor: BACKGROUND_COLOR,
+    alignItems: "center",
     justifyContent: "center",
+    paddingVertical: 30,
+  },
+  headerContainer: {
+    position: "absolute",
+    top: 70,
+    width: "90%",
     alignItems: "center",
-    paddingHorizontal: 20,
   },
-  logoContainer: {
+  formContainer: {
+    position: "absolute",
+    top: "42%",
+    width: "90%",
     alignItems: "center",
-    marginBottom: 30,
   },
-  logo: {
-    width: 180,
-    height: 180,
-    resizeMode: "contain",
-    shadowColor: "#000",
-    shadowOffset: { width: 0, height: 5 },
-    shadowOpacity: 0.5,
-    shadowRadius: 10,
-    elevation: 10,
+  footerContainer: {
+    position: "absolute",
+    bottom: 60,
+    width: "90%",
+    alignItems: "center",
   },
-  title: {
-    fontSize: 28,
-    fontWeight: "bold",
-    color: "#fff",
-    marginBottom: 8,
+  brandTitle: {
+    fontSize: normalizeFont(34),
+    color: TEXT_COLOR,
     textAlign: "center",
-    textTransform: "uppercase",
-    letterSpacing: 1.2,
+    fontFamily: "Comfortaa_700Bold",
+    maxWidth: "90%",
+  },
+  highlight: { color: PRIMARY_COLOR, fontSize: normalizeFont(50) },
+  tagline: {
+    fontSize: 17,
+    color: TEXT_COLOR,
+    textAlign: "center",
+    marginTop: 6,
+    fontFamily: "Comfortaa_400Regular",
   },
   errorText: {
-    color: "#FF5252",
-    fontSize: 14,
-    marginBottom: 10,
+    color: "#FF4B4B",
+    fontSize: normalizeFont(14),
+    fontWeight: "600",
     textAlign: "center",
+    width: "90%",
+    marginBottom: 10,
   },
   input: {
     width: "100%",
-    marginBottom: 16,
-    backgroundColor: "#1F2D3D",
+    height: 55,
+    backgroundColor: "rgba(245,245,245,0.8)",
+    color: "#111",
+    fontSize: 18,
+    paddingHorizontal: 15,
+    borderRadius: 25,
+    textAlign: "center",
+    marginVertical: 6,
+    fontWeight: "500",
+    borderWidth: 2,
+    borderColor: PRIMARY_COLOR,
+    fontFamily: "Comfortaa_400Regular",
   },
-  registerButton: {
+  passwordContainer: {
     width: "100%",
-    borderRadius: 12,
-    overflow: "hidden",
-    marginBottom: 16,
-  },
-  registerButtonGradient: {
-    paddingVertical: 12,
-    alignItems: "center",
+    position: "relative",
     justifyContent: "center",
   },
+  passwordInput: { paddingRight: 45 },
+  passwordIcon: {
+    position: "absolute",
+    right: 15,
+    top: "50%",
+    transform: [{ translateY: -12 }],
+  },
+  registerButton: {
+    width: "90%",
+    backgroundColor: BUTTON_COLOR,
+    paddingVertical: 14,
+    borderRadius: 25,
+    alignItems: "center",
+    marginTop: 20,
+    borderWidth: 2,
+    borderColor: PRIMARY_COLOR,
+    shadowColor: PRIMARY_COLOR,
+    shadowOffset: { width: 0, height: 3 },
+    shadowOpacity: 0.3,
+    shadowRadius: 5,
+  },
+  disabledButton: { opacity: 0.6 },
   registerButtonText: {
-    color: "#FFF",
-    fontSize: 18,
-    fontWeight: "bold",
-    textTransform: "uppercase",
-    letterSpacing: 1.2,
+    color: TEXT_COLOR,
+    fontSize: normalizeFont(18),
+    fontFamily: "Comfortaa_400Regular",
   },
-  registerLink: {
-    color: "#ddd",
-    fontSize: 16,
+  loginText: {
+    color: TEXT_COLOR,
     textAlign: "center",
+    fontSize: 14,
+    fontFamily: "Comfortaa_400Regular",
+    marginTop: 10,
   },
-  registerHighlight: {
-    color: "#FF7F00",
-    fontWeight: "bold",
+  loginLink: {
+    color: PRIMARY_COLOR,
+    fontFamily: "Comfortaa_400Regular",
   },
 });

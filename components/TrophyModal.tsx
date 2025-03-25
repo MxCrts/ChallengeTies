@@ -1,4 +1,4 @@
-import React, { useEffect, useState } from "react";
+import React, { useEffect, useState, useCallback } from "react";
 import {
   View,
   Text,
@@ -9,31 +9,28 @@ import {
   TouchableOpacity,
 } from "react-native";
 import { Ionicons } from "@expo/vector-icons";
+import { useTrophy } from "../context/TrophyContext";
 
-interface TrophyModalProps {
-  visible: boolean;
-  trophies: number;
-  achievement?: string;
-  onClose: (finalTrophies: number) => void; // ✅ onClose retourne le nombre final de trophées
-  onWatchAd?: () => void; // ✅ Action pour regarder une pub
-}
+const TrophyModal: React.FC = () => {
+  const {
+    showTrophyModal,
+    trophiesEarned,
+    achievementEarned,
+    activateDoubleReward,
+    resetTrophyData,
+  } = useTrophy();
 
-const TrophyModal: React.FC<TrophyModalProps> = ({
-  visible,
-  trophies,
-  achievement,
-  onClose,
-  onWatchAd,
-}) => {
   const scaleAnim = useState(new Animated.Value(0))[0];
-  const [reward, setReward] = useState(trophies);
-  const [adWatched, setAdWatched] = useState(false); // ✅ Bloque le spam de la pub
+  const [reward, setReward] = useState(trophiesEarned);
+  const [adWatched, setAdWatched] = useState(false);
+  const [message, setMessage] = useState("");
 
+  // Animation d'apparition du modal
   useEffect(() => {
-    if (visible) {
-      setReward(trophies); // ✅ Réinitialise les trophées affichés
-      setAdWatched(false); // ✅ Réinitialise l’état de la pub
-
+    if (showTrophyModal) {
+      setReward(trophiesEarned);
+      setAdWatched(false);
+      setMessage("");
       Animated.spring(scaleAnim, {
         toValue: 1,
         friction: 5,
@@ -41,17 +38,26 @@ const TrophyModal: React.FC<TrophyModalProps> = ({
         useNativeDriver: true,
       }).start();
     }
-  }, [visible, trophies, scaleAnim]);
+  }, [showTrophyModal, trophiesEarned, scaleAnim]);
 
-  if (!visible) return null;
+  const handleAdPress = useCallback(() => {
+    console.log("✅ Pub regardée !");
+    setAdWatched(true);
+    activateDoubleReward();
+    setReward((prev) => prev * 2);
+    setMessage(`🔥 Tu as gagné ${trophiesEarned * 2} trophées !`);
+  }, [activateDoubleReward, trophiesEarned]);
+
+  const handleClaimPress = useCallback(() => {
+    console.log(`✅ Réclamation : ${reward} trophées`);
+    setMessage(`🎉 Tu as gagné ${reward} trophées !`);
+    setTimeout(() => resetTrophyData(), 1000);
+  }, [reward, resetTrophyData]);
+
+  if (!showTrophyModal) return null;
 
   return (
-    <Modal
-      animationType="fade"
-      transparent
-      visible={visible}
-      onRequestClose={() => onClose(reward)}
-    >
+    <Modal animationType="fade" transparent visible={showTrophyModal}>
       <View style={styles.overlay}>
         <Animated.View
           style={[styles.modalContainer, { transform: [{ scale: scaleAnim }] }]}
@@ -59,36 +65,25 @@ const TrophyModal: React.FC<TrophyModalProps> = ({
           <Ionicons name="trophy" size={50} color="#FFD700" />
           <Text style={styles.title}>Félicitations ! 🎉</Text>
           <Text style={styles.rewardText}>+{reward} trophées</Text>
-          {achievement && (
-            <Text style={styles.achievementText}>🏆 {achievement}</Text>
+          {achievementEarned && (
+            <Text style={styles.achievementText}>🏆 {achievementEarned}</Text>
           )}
-
           <Image
             source={require("../assets/images/trophy-animation.gif")}
             style={styles.trophyImage}
           />
-
-          {/* ✅ Bouton pour regarder une pub et doubler les trophées */}
-
-          <TouchableOpacity
-            style={[styles.button, styles.adButton]}
-            onPress={() => {
-              console.log("Pub regardée ! ✅");
-              setAdWatched(true);
-              setReward((prev) => prev * 2); // ✅ Double les trophées
-              onWatchAd();
-            }}
-          >
-            <Text style={styles.buttonText}>
-              🎥 Regarder une pub (+{trophies} 🏆)
-            </Text>
-          </TouchableOpacity>
-
-          {/* ✅ Bouton pour récupérer les trophées */}
-          <TouchableOpacity
-            style={styles.button}
-            onPress={() => onClose(reward)} // ✅ Ferme et donne les trophées finaux
-          >
+          {message !== "" && <Text style={styles.message}>{message}</Text>}
+          {!adWatched && (
+            <TouchableOpacity
+              style={[styles.button, styles.adButton]}
+              onPress={handleAdPress}
+            >
+              <Text style={styles.buttonText}>
+                🎥 Regarder une pub (+{trophiesEarned} 🏆)
+              </Text>
+            </TouchableOpacity>
+          )}
+          <TouchableOpacity style={styles.button} onPress={handleClaimPress}>
             <Text style={styles.buttonText}>Réclamer</Text>
           </TouchableOpacity>
         </Animated.View>
@@ -99,57 +94,63 @@ const TrophyModal: React.FC<TrophyModalProps> = ({
 
 export default TrophyModal;
 
-// --------------------------------
-// 🎨 Styles ultra modernes
-// --------------------------------
 const styles = StyleSheet.create({
   overlay: {
     flex: 1,
-    backgroundColor: "rgba(0, 0, 0, 0.7)",
+    backgroundColor: "rgba(0, 0, 0, 0.85)",
     justifyContent: "center",
     alignItems: "center",
   },
   modalContainer: {
-    width: 320,
-    backgroundColor: "#1E1E2E",
-    borderRadius: 15,
-    padding: 20,
+    width: 340,
+    backgroundColor: "#2A2A3B",
+    borderRadius: 18,
+    padding: 25,
     alignItems: "center",
     shadowColor: "#000",
-    shadowOpacity: 0.3,
-    shadowRadius: 10,
-    elevation: 10,
+    shadowOpacity: 0.4,
+    shadowRadius: 12,
+    elevation: 12,
   },
   title: {
-    fontSize: 22,
+    fontSize: 24,
     fontWeight: "bold",
-    color: "#FFF",
+    color: "#FFD700",
     marginVertical: 10,
     textAlign: "center",
   },
   rewardText: {
-    fontSize: 18,
+    fontSize: 20,
     color: "#FFD700",
     textAlign: "center",
     marginBottom: 5,
   },
   achievementText: {
-    fontSize: 16,
+    fontSize: 18,
     color: "#FFD700",
     textAlign: "center",
     marginBottom: 10,
   },
   trophyImage: {
-    width: 100,
-    height: 100,
+    width: 110,
+    height: 110,
     marginBottom: 15,
+  },
+  message: {
+    fontSize: 16,
+    color: "#00FF88",
+    textAlign: "center",
+    marginTop: 5,
+    fontWeight: "bold",
   },
   button: {
     backgroundColor: "#FFD700",
-    paddingVertical: 10,
-    paddingHorizontal: 20,
-    borderRadius: 8,
+    paddingVertical: 12,
+    paddingHorizontal: 22,
+    borderRadius: 10,
     marginTop: 10,
+    width: "100%",
+    alignItems: "center",
   },
   buttonText: {
     fontSize: 16,
@@ -157,6 +158,6 @@ const styles = StyleSheet.create({
     color: "#000",
   },
   adButton: {
-    backgroundColor: "#FFA500", // ✅ Couleur différente pour l'option pub
+    backgroundColor: "#FF8C00",
   },
 });

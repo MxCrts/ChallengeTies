@@ -2,11 +2,10 @@ import React, { useEffect, useState } from "react";
 import {
   View,
   Text,
-  StyleSheet,
   FlatList,
+  StyleSheet,
   ActivityIndicator,
   Dimensions,
-  Animated,
 } from "react-native";
 import { Ionicons } from "@expo/vector-icons";
 import { doc, onSnapshot } from "firebase/firestore";
@@ -14,6 +13,12 @@ import { db, auth } from "../../constants/firebase-config";
 import { useSavedChallenges } from "../../context/SavedChallengesContext";
 import { useCurrentChallenges } from "../../context/CurrentChallengesContext";
 import { LinearGradient } from "expo-linear-gradient";
+import BackButton from "../../components/BackButton";
+import Animated, { FadeInUp } from "react-native-reanimated";
+import designSystem from "../../theme/designSystem";
+
+const { width } = Dimensions.get("window");
+const currentTheme = designSystem.lightTheme;
 
 interface Stat {
   name: string;
@@ -21,90 +26,87 @@ interface Stat {
   icon: string;
 }
 
-const { width } = Dimensions.get("window");
-
 export default function UserStats() {
   const { savedChallenges } = useSavedChallenges();
   const { currentChallenges } = useCurrentChallenges();
-
   const [stats, setStats] = useState<Stat[]>([]);
-  const [isLoading, setIsLoading] = useState(true);
+  const [isLoading, setIsLoading] = useState<boolean>(true);
   const [userDoc, setUserDoc] = useState<any>(null);
-  const fadeAnim = useState(new Animated.Value(0))[0];
 
+  // Écoute des mises à jour du document utilisateur
   useEffect(() => {
     const userId = auth.currentUser?.uid;
     if (!userId) {
       setIsLoading(false);
       return;
     }
-
-    const unsub = onSnapshot(doc(db, "users", userId), (snapshot) => {
+    const unsubscribe = onSnapshot(doc(db, "users", userId), (snapshot) => {
       setUserDoc(snapshot.data());
       setIsLoading(false);
     });
-
-    return () => unsub();
+    return () => unsubscribe();
   }, []);
 
+  // Calcul des statistiques personnelles
   useEffect(() => {
     if (!userDoc) return;
-
+    // Suppression des doublons dans les défis en cours
+    const uniqueOngoing = new Map(
+      currentChallenges.map((ch: any) => [`${ch.id}_${ch.selectedDays}`, ch])
+    );
     const totalSaved = savedChallenges.length;
-    const totalOngoing = currentChallenges.length;
+    const totalOngoing = uniqueOngoing.size;
     const totalCompleted = currentChallenges.filter(
-      (challenge) => challenge.completedDays === challenge.selectedDays
+      (challenge: any) => challenge.completedDays === challenge.selectedDays
     ).length;
     const successRate =
       totalOngoing + totalCompleted > 0
         ? Math.round((totalCompleted / (totalOngoing + totalCompleted)) * 100)
         : 0;
-    const longestStreak = 10;
+    const longestStreak = userDoc?.longestStreak || 0;
     const trophies = userDoc?.trophies || 0;
     const achievementsUnlocked = userDoc?.achievements?.length || 0;
 
     const newStats: Stat[] = [
-      { name: "Challenges Saved", value: totalSaved, icon: "bookmark-outline" },
       {
-        name: "Ongoing Challenges",
+        name: "Défis sauvegardés",
+        value: totalSaved,
+        icon: "bookmark-outline",
+      },
+      {
+        name: "Défis en cours",
         value: totalOngoing,
         icon: "hourglass-outline",
       },
       {
-        name: "Challenges Completed",
+        name: "Défis complétés",
         value: totalCompleted,
         icon: "trophy-outline",
       },
       {
-        name: "Success Rate",
+        name: "Taux de réussite",
         value: `${successRate}%`,
         icon: "stats-chart-outline",
       },
-      { name: "Trophies", value: trophies, icon: "medal-outline" },
+      { name: "Trophées", value: trophies, icon: "medal-outline" },
       {
-        name: "Achievements Unlocked",
+        name: "Succès débloqués",
         value: achievementsUnlocked,
         icon: "ribbon-outline",
       },
       {
-        name: "Longest Streak",
-        value: `${longestStreak} days`,
+        name: "Série la plus longue",
+        value: `${longestStreak} jours`,
         icon: "flame-outline",
       },
     ];
-
     setStats(newStats);
-    Animated.timing(fadeAnim, {
-      toValue: 1,
-      duration: 800,
-      useNativeDriver: true,
-    }).start();
   }, [savedChallenges, currentChallenges, userDoc]);
 
   if (isLoading) {
     return (
       <View style={styles.loadingContainer}>
-        <ActivityIndicator size="large" color="#FACC15" />
+        <ActivityIndicator size="large" color={currentTheme.colors.primary} />
         <Text style={styles.loadingText}>Chargement des statistiques...</Text>
       </View>
     );
@@ -121,12 +123,13 @@ export default function UserStats() {
     );
   }
 
+  // Chaque carte de statistique utilise l'animation d'entrée FadeInUp
   const renderStat = ({ item }: { item: Stat }) => (
-    <Animated.View style={[styles.statCard, { opacity: fadeAnim }]}>
+    <Animated.View style={styles.statCard} entering={FadeInUp}>
       <Ionicons
         name={item.icon as keyof typeof Ionicons.glyphMap}
         size={36}
-        color="#FACC15"
+        color={currentTheme.colors.trophy}
       />
       <View style={styles.statContent}>
         <Text style={styles.statName}>{item.name}</Text>
@@ -136,7 +139,14 @@ export default function UserStats() {
   );
 
   return (
-    <LinearGradient colors={["#0F172A", "#1E293B"]} style={styles.container}>
+    <LinearGradient
+      colors={[
+        currentTheme.colors.background,
+        currentTheme.colors.cardBackground,
+      ]}
+      style={styles.container}
+    >
+      <BackButton color={currentTheme.colors.primary} />
       <Text style={styles.header}>Vos Statistiques</Text>
       <FlatList
         data={stats}
@@ -151,16 +161,16 @@ export default function UserStats() {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    paddingTop: 40,
+    paddingTop: 20,
+    backgroundColor: currentTheme.colors.background,
   },
   header: {
-    fontSize: 26,
-    fontWeight: "bold",
-    color: "#FACC15",
+    fontSize: 25,
+    fontFamily: currentTheme.typography.title.fontFamily,
+    color: "#000000",
+    marginVertical: 20,
     textAlign: "center",
-    marginBottom: 20,
-    textTransform: "uppercase",
-    letterSpacing: 1.5,
+    marginBottom: 30,
   },
   listContainer: {
     paddingHorizontal: 20,
@@ -169,57 +179,60 @@ const styles = StyleSheet.create({
   statCard: {
     flexDirection: "row",
     alignItems: "center",
-    backgroundColor: "#1E293B",
+    backgroundColor: currentTheme.colors.cardBackground,
     padding: 15,
     marginBottom: 12,
     borderRadius: 12,
+    borderWidth: 2,
+    borderColor: currentTheme.colors.primary,
     shadowColor: "#000",
     shadowOffset: { width: 0, height: 3 },
-    shadowOpacity: 0.15,
+    shadowOpacity: 0.2,
     shadowRadius: 4.65,
     elevation: 3,
-    borderWidth: 2,
-    borderColor: "#FACC15",
   },
   statContent: {
     marginLeft: 20,
   },
   statName: {
     fontSize: 16,
-    color: "#fff",
+    fontFamily: currentTheme.typography.title.fontFamily,
+    color: "#000000",
     marginBottom: 4,
   },
   statValue: {
     fontSize: 18,
+    fontFamily: currentTheme.typography.title.fontFamily,
     fontWeight: "bold",
-    color: "#FACC15",
+    color: currentTheme.colors.primary,
   },
   loadingContainer: {
     flex: 1,
     justifyContent: "center",
     alignItems: "center",
-    backgroundColor: "#0F172A",
+    backgroundColor: currentTheme.colors.background,
   },
   loadingText: {
     marginTop: 10,
     fontSize: 16,
-    color: "#FACC15",
+    color: "#000000",
   },
   emptyContainer: {
     flex: 1,
     justifyContent: "center",
     alignItems: "center",
-    backgroundColor: "#0F172A",
+    backgroundColor: currentTheme.colors.background,
   },
   emptyText: {
     fontSize: 18,
-    fontWeight: "bold",
-    color: "#fff",
+    fontFamily: currentTheme.typography.title.fontFamily,
+    color: "#000000",
     textAlign: "center",
   },
   emptySubtext: {
     fontSize: 14,
-    color: "#aaa",
+    fontFamily: currentTheme.typography.body.fontFamily,
+    color: "#777777",
     textAlign: "center",
     marginTop: 10,
   },

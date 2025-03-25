@@ -8,6 +8,7 @@ import {
   Alert,
   ScrollView,
   Image,
+  Dimensions,
 } from "react-native";
 import { Picker } from "@react-native-picker/picker";
 import * as ImagePicker from "expo-image-picker";
@@ -22,52 +23,53 @@ import {
 import { auth, db } from "../constants/firebase-config";
 import { LinearGradient } from "expo-linear-gradient";
 import { Ionicons } from "@expo/vector-icons";
+import { checkForAchievements } from "../helpers/trophiesHelpers";
+
+const { width } = Dimensions.get("window");
+
+const defaultDaysOptions = [7, 15, 21, 30, 60, 90, 180, 365];
+
+const categories = [
+  "Health",
+  "Fitness",
+  "Finance",
+  "Productivity",
+  "Creativity",
+  "Education",
+  "Career",
+  "Lifestyle",
+  "Social",
+  "Miscellaneous",
+];
 
 export default function CreateChallenge() {
   const [title, setTitle] = useState("");
   const [description, setDescription] = useState("");
   const [category, setCategory] = useState("Health");
-  const [days, setDays] = useState("");
   const [imageUri, setImageUri] = useState<string | null>(null);
   const router = useRouter();
 
-  const categories = [
-    "Health",
-    "Fitness",
-    "Finance",
-    "Productivity",
-    "Creativity",
-    "Education",
-    "Career",
-    "Lifestyle",
-    "Social",
-    "Miscellaneous",
-  ];
-
   const pickImage = async () => {
-    const result = await ImagePicker.launchImageLibraryAsync({
-      mediaTypes: ImagePicker.MediaTypeOptions.Images,
-      allowsEditing: true,
-      quality: 1,
-    });
-
-    if (!result.canceled) {
-      setImageUri(result.assets[0].uri);
+    try {
+      const result = await ImagePicker.launchImageLibraryAsync({
+        mediaTypes: ImagePicker.MediaTypeOptions.Images,
+        allowsEditing: true,
+        quality: 1,
+      });
+      if (!result.canceled && result.assets && result.assets[0].uri) {
+        setImageUri(result.assets[0].uri);
+      }
+    } catch (error) {
+      console.error("Erreur lors de la sélection d'image:", error);
+      Alert.alert("Erreur", "Impossible de sélectionner l'image.");
     }
   };
 
   const handleSubmit = async () => {
     if (!title.trim() || !description.trim() || !category) {
-      Alert.alert("Erreur", "Tous les champs sont requis (sauf image).");
-      return;
-    }
-
-    // 🔹 Convertir `days` en nombre entier
-    const daysInt = parseInt(days, 10);
-    if (isNaN(daysInt) || daysInt <= 0 || daysInt > 365) {
       Alert.alert(
         "Erreur",
-        "Veuillez entrer un nombre de jours valide (1-365)."
+        "Tous les champs sont requis (l'image est optionnelle)."
       );
       return;
     }
@@ -79,29 +81,38 @@ export default function CreateChallenge() {
         return;
       }
 
+      // Générer un chatId simple basé sur le titre
+      const chatId = title.trim().toLowerCase().replace(/\s+/g, "_");
+
       const challengeData = {
         title: title.trim(),
         description: description.trim(),
         category,
-        days: daysInt, // 🔹 On s'assure que c'est un `int`
+        daysOptions: defaultDaysOptions,
+        // Note : Le créateur ne choisit pas la durée ici.
         imageUrl: imageUri || "https://via.placeholder.com/150",
         participantsCount: 0,
         createdAt: new Date(),
-        creatorId: currentUser.uid, // 🔹 Assure-toi que creatorId est bien stocké
+        creatorId: currentUser.uid,
+        chatId,
+        usersTakingChallenge: [],
       };
 
-      // 1️⃣ Ajouter le défi dans la collection `challenges`
+      // 1️⃣ Ajouter le défi dans la collection "challenges"
       const challengeRef = await addDoc(
         collection(db, "challenges"),
         challengeData
       );
       const challengeId = challengeRef.id;
 
-      // 2️⃣ Ajouter ce défi dans `createdChallenges` du document utilisateur
+      // 2️⃣ Ajouter ce défi dans "createdChallenges" du document utilisateur
       const userRef = doc(db, "users", currentUser.uid);
       await updateDoc(userRef, {
         createdChallenges: arrayUnion({ id: challengeId, ...challengeData }),
       });
+
+      // Lancer la vérification des succès (challengeCreated)
+      await checkForAchievements(currentUser.uid);
 
       Alert.alert("Succès", "Votre défi a été créé !");
       router.push("/explore");
@@ -112,8 +123,8 @@ export default function CreateChallenge() {
   };
 
   return (
-    <LinearGradient colors={["#1F1C2C", "#928DAB"]} style={{ flex: 1 }}>
-      <ScrollView contentContainerStyle={styles.container}>
+    <LinearGradient colors={["#1F1C2C", "#928DAB"]} style={styles.container}>
+      <ScrollView contentContainerStyle={styles.scrollContainer}>
         <View style={styles.header}>
           <Ionicons
             name="create-outline"
@@ -164,20 +175,9 @@ export default function CreateChallenge() {
           {imageUri ? (
             <Image source={{ uri: imageUri }} style={styles.imagePreview} />
           ) : (
-            <Text style={styles.imagePickerText}>
-              {imageUri ? "Change Image" : "Upload Image (Optional)"}
-            </Text>
+            <Text style={styles.imagePickerText}>Upload Image (Optional)</Text>
           )}
         </TouchableOpacity>
-
-        <TextInput
-          style={styles.input}
-          placeholder="Number of Days"
-          placeholderTextColor="#aaa"
-          keyboardType="numeric"
-          value={days}
-          onChangeText={setDays}
-        />
 
         <TouchableOpacity style={styles.submitButton} onPress={handleSubmit}>
           <LinearGradient
@@ -193,7 +193,8 @@ export default function CreateChallenge() {
 }
 
 const styles = StyleSheet.create({
-  container: {
+  container: { flex: 1 },
+  scrollContainer: {
     padding: 20,
     alignItems: "center",
     paddingBottom: 40,
@@ -206,7 +207,7 @@ const styles = StyleSheet.create({
     marginBottom: 10,
   },
   headerTitle: {
-    fontSize: 24,
+    fontSize: 26,
     fontWeight: "bold",
     color: "#fff",
     textAlign: "center",

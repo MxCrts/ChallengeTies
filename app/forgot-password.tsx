@@ -1,22 +1,66 @@
-import React, { useState, useRef, useEffect } from "react";
+import React, { useState, useEffect } from "react";
 import {
   View,
+  Text,
   StyleSheet,
+  TouchableOpacity,
+  Animated,
+  Dimensions,
+  ScrollView,
+  TextInput,
+  ActivityIndicator,
   KeyboardAvoidingView,
   Platform,
-  Dimensions,
-  Image,
-  Animated,
-  Easing,
-  TouchableOpacity,
 } from "react-native";
 import { useRouter } from "expo-router";
 import { sendPasswordResetEmail } from "firebase/auth";
 import { auth } from "../constants/firebase-config";
-import { Text, TextInput, Button } from "react-native-paper";
-import { LinearGradient } from "expo-linear-gradient";
+import { Ionicons } from "@expo/vector-icons";
+import { StatusBar } from "expo-status-bar";
 
-const { width } = Dimensions.get("window");
+const { width: SCREEN_WIDTH, height: SCREEN_HEIGHT } = Dimensions.get("window");
+
+// Palette de couleurs
+const BACKGROUND_COLOR = "#FFF8E7"; // crème
+const PRIMARY_COLOR = "#FFB800"; // orange
+const TEXT_COLOR = "#333"; // texte foncé
+const BUTTON_COLOR = "#FFFFFF"; // bouton blanc
+
+// Taille du cercle décoratif et position verticale centrée
+const circleSize = Math.min(SCREEN_WIDTH, SCREEN_HEIGHT) * 0.9;
+const circleTop = SCREEN_HEIGHT * 0.38;
+const waveCount = 4;
+
+const Wave = React.memo(
+  ({
+    opacity,
+    scale,
+    borderWidth,
+    size,
+    top,
+  }: {
+    opacity: Animated.Value;
+    scale: Animated.Value;
+    borderWidth: number;
+    size: number;
+    top: number;
+  }) => (
+    <Animated.View
+      style={{
+        width: size,
+        height: size,
+        borderRadius: size / 2,
+        opacity,
+        transform: [{ scale }],
+        borderWidth,
+        borderColor: PRIMARY_COLOR,
+        position: "absolute",
+        top,
+        left: (SCREEN_WIDTH - size) / 2,
+      }}
+    />
+  )
+);
 
 export default function ForgotPassword() {
   const router = useRouter();
@@ -25,39 +69,68 @@ export default function ForgotPassword() {
   const [errorMessage, setErrorMessage] = useState("");
   const [successMessage, setSuccessMessage] = useState("");
 
-  const floatAnimation = useRef(new Animated.Value(0)).current;
+  // Initialisation des vagues (animation continue)
+  const waves = Array.from({ length: waveCount }, (_, index) => ({
+    opacity: new Animated.Value(0.3 - index * 0.05),
+    scale: new Animated.Value(1),
+    borderWidth: index === 0 ? 5 : 2,
+  }));
 
   useEffect(() => {
-    Animated.timing(floatAnimation, {
-      toValue: 1,
-      duration: 9000, // ✅ 3 rotations en 4.5 secondes
-      easing: Easing.inOut(Easing.quad),
-      useNativeDriver: true,
-    }).start();
-  }, []);
-
-  const rotateAnimation = floatAnimation.interpolate({
-    inputRange: [0, 1],
-    outputRange: ["0deg", "1080deg"], // ✅ 3 rotations complètes
-  });
+    const animations = waves.map((wave, index) =>
+      Animated.loop(
+        Animated.parallel([
+          Animated.sequence([
+            Animated.timing(wave.opacity, {
+              toValue: 0.1,
+              duration: 2000 + index * 200,
+              useNativeDriver: true,
+            }),
+            Animated.timing(wave.opacity, {
+              toValue: 0.3 - index * 0.05,
+              duration: 2000 + index * 200,
+              useNativeDriver: true,
+            }),
+          ]),
+          Animated.sequence([
+            Animated.timing(wave.scale, {
+              toValue: 1.2 + index * 0.2,
+              duration: 2200 + index * 250,
+              useNativeDriver: true,
+            }),
+            Animated.timing(wave.scale, {
+              toValue: 1,
+              duration: 2200 + index * 250,
+              useNativeDriver: true,
+            }),
+          ]),
+        ])
+      )
+    );
+    animations.forEach((anim) => anim.start());
+    return () => animations.forEach((anim) => anim.stop());
+  }, [waves]);
 
   const handleResetPassword = async () => {
+    setErrorMessage("");
+    setSuccessMessage("");
     if (!email.trim()) {
       setErrorMessage("Veuillez entrer votre adresse e-mail.");
+      setTimeout(() => setErrorMessage(""), 5000);
       return;
     }
-
     try {
       setLoading(true);
-      await sendPasswordResetEmail(auth, email);
+      await sendPasswordResetEmail(auth, email.trim());
       setSuccessMessage(
         "Un lien de réinitialisation a été envoyé à votre e-mail."
       );
-      setErrorMessage(""); // Réinitialise le message d'erreur
+      setTimeout(() => setSuccessMessage(""), 5000);
     } catch (error) {
       setErrorMessage(
-        "Échec de l'envoi du lien de réinitialisation. Réessayez."
+        "Échec de l'envoi du lien de réinitialisation. Vérifiez votre e-mail."
       );
+      setTimeout(() => setErrorMessage(""), 5000);
     } finally {
       setLoading(false);
     }
@@ -65,154 +138,195 @@ export default function ForgotPassword() {
 
   return (
     <KeyboardAvoidingView
-      style={styles.container}
+      style={styles.flexContainer}
       behavior={Platform.OS === "ios" ? "padding" : undefined}
     >
-      {/* ✅ Logo animé avec rotation 3D */}
-      <Animated.View
-        style={[
-          styles.logoContainer,
-          {
-            transform: [
-              { rotateY: rotateAnimation }, // ✅ Rotation 3D
-              { perspective: 1000 }, // ✅ Profondeur 3D
-            ],
-          },
-        ]}
+      <StatusBar hidden />
+      <ScrollView
+        contentContainerStyle={styles.container}
+        keyboardShouldPersistTaps="handled"
       >
-        <Image
-          source={require("../assets/images/logoFinal.png")}
-          style={styles.logo}
-        />
-      </Animated.View>
+        {/* Vagues de fond */}
+        {waves.map((wave, index) => (
+          <Wave
+            key={index}
+            opacity={wave.opacity}
+            scale={wave.scale}
+            borderWidth={wave.borderWidth}
+            size={circleSize}
+            top={circleTop}
+          />
+        ))}
 
-      <Text style={styles.title}>Réinitialisation du mot de passe</Text>
-      <Text style={styles.subtitle}>
-        Entrez votre email pour recevoir un lien de réinitialisation
-      </Text>
-
-      {errorMessage !== "" && (
-        <Text style={styles.errorText}>{errorMessage}</Text>
-      )}
-      {successMessage !== "" && (
-        <Text style={styles.successText}>{successMessage}</Text>
-      )}
-
-      <TextInput
-        label="Adresse e-mail"
-        mode="outlined"
-        style={styles.input}
-        value={email}
-        onChangeText={(text) => {
-          setEmail(text);
-          setErrorMessage("");
-          setSuccessMessage("");
-        }}
-        keyboardType="email-address"
-        autoCapitalize="none"
-        textColor="#FFF"
-        theme={{
-          colors: {
-            primary: "#FACC15",
-            text: "#FFF",
-            placeholder: "#FACC15",
-            background: "transparent",
-          },
-        }}
-      />
-
-      <View style={styles.resetButtonContainer}>
-        <LinearGradient
-          colors={["#FACC15", "#3B82F6"]} // 🔥❄️ Dégradé ultra propre
-          start={{ x: 0, y: 0 }}
-          end={{ x: 1, y: 1 }}
-          style={styles.resetButtonGradient}
+        {/* Bouton de retour */}
+        <TouchableOpacity
+          style={styles.backButton}
+          onPress={() => router.push("/login")}
+          accessibilityLabel="Retour à la connexion"
+          accessibilityRole="button"
         >
-          <TouchableOpacity onPress={handleResetPassword} disabled={loading}>
-            <Text style={styles.resetButtonText}>
-              {loading ? "Envoi en cours..." : "Envoyer le lien"}
-            </Text>
-          </TouchableOpacity>
-        </LinearGradient>
-      </View>
+          <Ionicons name="arrow-back" size={30} color={TEXT_COLOR} />
+        </TouchableOpacity>
 
-      <TouchableOpacity onPress={() => router.push("/login")}>
-        <Text style={styles.backToLogin}>Retour à la connexion</Text>
-      </TouchableOpacity>
+        {/* Header: Titre et slogan */}
+        <View style={styles.header}>
+          <Text
+            style={styles.brandTitle}
+            numberOfLines={1}
+            adjustsFontSizeToFit
+            accessibilityLabel="Titre de l'application"
+          >
+            <Text style={styles.highlight}>C</Text>hallenge
+            <Text style={styles.highlight}>T</Text>ies
+          </Text>
+          <Text style={styles.tagline}>
+            Entrez votre e-mail pour réinitialiser votre mot de passe.
+          </Text>
+        </View>
+
+        {/* Input: Formulaire de réinitialisation */}
+        <View
+          style={styles.inputContainer}
+          accessibilityLabel="Formulaire de réinitialisation"
+        >
+          <TextInput
+            placeholder="Votre adresse e-mail"
+            placeholderTextColor="rgba(50,50,50,0.5)"
+            style={styles.input}
+            value={email}
+            onChangeText={(text) => {
+              setEmail(text);
+              setErrorMessage("");
+              setSuccessMessage("");
+            }}
+            keyboardType="email-address"
+            autoCapitalize="none"
+            accessibilityLabel="Adresse e-mail"
+          />
+        </View>
+
+        {/* Message d'erreur/succès */}
+        {(errorMessage || successMessage) !== "" && (
+          <Text
+            style={errorMessage ? styles.errorText : styles.successText}
+            accessibilityRole="alert"
+          >
+            {errorMessage || successMessage}
+          </Text>
+        )}
+
+        {/* Bouton de réinitialisation */}
+        <TouchableOpacity
+          style={[styles.resetButton, loading && styles.disabledButton]}
+          onPress={handleResetPassword}
+          disabled={loading}
+          accessibilityLabel="Envoyer le lien de réinitialisation"
+          accessibilityRole="button"
+        >
+          {loading ? (
+            <ActivityIndicator color={TEXT_COLOR} size="small" />
+          ) : (
+            <Text style={styles.resetButtonText}>Envoyer le lien</Text>
+          )}
+        </TouchableOpacity>
+      </ScrollView>
     </KeyboardAvoidingView>
   );
 }
 
 const styles = StyleSheet.create({
+  flexContainer: { flex: 1 },
   container: {
-    flex: 1,
-    backgroundColor: "#0F172A",
+    flexGrow: 1,
+    backgroundColor: BACKGROUND_COLOR,
+    alignItems: "center",
     justifyContent: "center",
-    alignItems: "center",
     paddingHorizontal: 20,
+    paddingVertical: 30,
   },
-  logoContainer: {
+  backButton: {
+    position: "absolute",
+    top: 20,
+    left: 20,
+  },
+  header: {
+    position: "absolute",
+    top: "12%", // Ajusté pour descendre le header
     alignItems: "center",
-    marginBottom: 30,
+    width: "90%",
   },
-  logo: {
-    width: 180,
-    height: 180,
-    resizeMode: "contain",
-  },
-  title: {
-    fontSize: 26,
-    fontWeight: "bold",
-    color: "#fff",
-    marginBottom: 10,
+  brandTitle: {
+    fontSize: 42,
+    color: TEXT_COLOR,
     textAlign: "center",
+    fontFamily: "Comfortaa_700Bold",
   },
-  subtitle: {
-    fontSize: 16,
-    color: "#94A3B8",
-    marginBottom: 20,
+  highlight: { color: PRIMARY_COLOR, fontSize: 60 },
+  tagline: {
+    fontSize: 17,
+    color: TEXT_COLOR,
     textAlign: "center",
+    marginTop: 6,
+    fontFamily: "Comfortaa_400Regular",
   },
   errorText: {
-    color: "#FF5252",
-    fontSize: 14,
-    marginBottom: 10,
+    color: "#FF4B4B",
+    fontSize: 16,
+    fontWeight: "600",
     textAlign: "center",
+    width: "90%",
+    marginBottom: 10,
   },
   successText: {
     color: "limegreen",
-    fontSize: 14,
-    marginBottom: 10,
+    fontSize: 16,
+    fontWeight: "600",
     textAlign: "center",
+    width: "90%",
+    marginBottom: 10,
+  },
+  inputContainer: {
+    position: "absolute",
+    top: "55%",
+    width: "90%",
+    alignItems: "center",
   },
   input: {
     width: "100%",
-    marginBottom: 16,
-    backgroundColor: "#1F2D3D",
-  },
-  resetButtonContainer: {
-    width: "100%",
-    borderRadius: 12,
-    overflow: "hidden",
-    marginBottom: 16,
-  },
-  resetButtonGradient: {
-    paddingVertical: 12,
-    alignItems: "center",
-    justifyContent: "center",
-  },
-  resetButtonText: {
-    color: "#FFF",
+    height: 55,
+    backgroundColor: BUTTON_COLOR,
+    color: TEXT_COLOR,
     fontSize: 18,
-    fontWeight: "bold",
-    textTransform: "uppercase",
-    letterSpacing: 1.2,
-  },
-  backToLogin: {
-    color: "#FACC15",
-    fontSize: 16,
+    paddingHorizontal: 15,
+    borderRadius: 25,
     textAlign: "center",
-    marginTop: 10,
-    fontWeight: "bold",
+    textAlignVertical: "center",
+    marginBottom: 12,
+    fontWeight: "500",
+    borderWidth: 2,
+    borderColor: PRIMARY_COLOR,
+    fontFamily: "Comfortaa_400Regular",
+  },
+  resetButton: {
+    position: "absolute",
+    bottom: "12%",
+    width: "90%",
+    backgroundColor: BUTTON_COLOR,
+    paddingVertical: 14,
+    borderRadius: 25,
+    alignItems: "center",
+    borderWidth: 2,
+    borderColor: PRIMARY_COLOR,
+    shadowColor: PRIMARY_COLOR,
+    shadowOffset: { width: 0, height: 3 },
+    shadowOpacity: 0.3,
+    shadowRadius: 5,
+  },
+  disabledButton: { opacity: 0.6 },
+  resetButtonText: {
+    color: TEXT_COLOR,
+    fontSize: 18,
+    fontWeight: "400",
+    fontFamily: "Comfortaa_400Regular",
   },
 });

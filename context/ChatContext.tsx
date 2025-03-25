@@ -13,8 +13,12 @@ import {
   orderBy,
   serverTimestamp,
   getDocs,
+  updateDoc,
+  doc,
+  increment,
 } from "firebase/firestore";
 import { db, auth } from "../constants/firebase-config";
+import { checkForAchievements } from "../helpers/trophiesHelpers";
 
 interface Message {
   id: string;
@@ -67,16 +71,16 @@ export const ChatProvider: React.FC<{ children: React.ReactNode }> = ({
   }, []);
 
   /**
-   * 🔥 Envoi un message.
+   * Envoi un message et incrémente le compteur global des messages envoyés pour l'utilisateur.
    */
   const sendMessage = async (challengeId: string, text: string) => {
     if (!auth.currentUser) {
       throw new Error("User not authenticated.");
     }
-
     const { uid, displayName, photoURL } = auth.currentUser;
     const messageRef = collection(db, "chats", challengeId, "messages");
 
+    // Envoi du message
     await addDoc(messageRef, {
       text,
       timestamp: serverTimestamp(),
@@ -84,6 +88,15 @@ export const ChatProvider: React.FC<{ children: React.ReactNode }> = ({
       username: displayName || "Anonymous",
       avatar: photoURL || "",
     });
+
+    // Incrémente le compteur de messages dans le document utilisateur
+    const userRef = doc(db, "users", uid);
+    await updateDoc(userRef, {
+      messageSent: increment(1),
+    });
+
+    // Optionnel : déclencher une vérification des succès (pour "messageSent")
+    await checkForAchievements(uid);
   };
 
   return (

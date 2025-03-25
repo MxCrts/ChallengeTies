@@ -5,6 +5,9 @@ import React, {
   ReactNode,
   useCallback,
 } from "react";
+import { claimAchievement } from "../helpers/trophiesHelpers";
+import { useProfileUpdate } from "./ProfileUpdateContext";
+import { auth } from "../constants/firebase-config";
 
 interface TrophyContextProps {
   showTrophyModal: boolean;
@@ -12,48 +15,66 @@ interface TrophyContextProps {
   achievementEarned: string | null;
   isDoubleReward: boolean;
   setShowTrophyModal: (visible: boolean) => void;
-  setTrophyData: (trophies: number, achievement?: string) => void;
+  setTrophyData: (trophies: number, achievement: string) => void;
   activateDoubleReward: () => void;
-  resetTrophyData: () => void;
+  resetTrophyData: () => Promise<void>;
 }
 
-// ✅ Création du contexte sécurisé
 const TrophyContext = createContext<TrophyContextProps | undefined>(undefined);
 
 export const TrophyProvider: React.FC<{ children: ReactNode }> = ({
   children,
 }) => {
-  const [showTrophyModal, setShowTrophyModal] = useState(false);
-  const [trophiesEarned, setTrophiesEarned] = useState(0);
+  const [showTrophyModal, setShowTrophyModal] = useState<boolean>(false);
+  const [trophiesEarned, setTrophiesEarned] = useState<number>(0);
   const [achievementEarned, setAchievementEarned] = useState<string | null>(
     null
   );
-  const [isDoubleReward, setIsDoubleReward] = useState(false);
+  const [isDoubleReward, setIsDoubleReward] = useState<boolean>(false);
+  const { triggerProfileUpdate } = useProfileUpdate();
 
-  // ✅ Gérer l'affichage des trophées et succès
-  const setTrophyData = useCallback(
-    (trophies: number, achievement?: string) => {
-      setTrophiesEarned(trophies);
-      setAchievementEarned(achievement || null);
-      setIsDoubleReward(false);
-      setShowTrophyModal(true);
-    },
-    []
-  );
-
-  // ✅ Double la récompense si l'utilisateur regarde une pub
-  const activateDoubleReward = useCallback(() => {
-    setIsDoubleReward(true);
-    setTrophiesEarned((prev) => prev * 2);
+  const setTrophyData = useCallback((trophies: number, achievement: string) => {
+    console.log(
+      `🎯 Préparation pour réclamer : ${achievement} (+${trophies} trophées)`
+    );
+    setTrophiesEarned(trophies);
+    setAchievementEarned(achievement);
+    setIsDoubleReward(false);
+    setShowTrophyModal(true);
   }, []);
 
-  // ✅ Réinitialisation après fermeture du modal
-  const resetTrophyData = useCallback(() => {
+  const activateDoubleReward = useCallback(() => {
+    console.log("🎥 Publicité regardée : doublement des trophées !");
+    setIsDoubleReward(true);
+  }, []);
+
+  const resetTrophyData = useCallback(async () => {
+    const userId = auth.currentUser?.uid;
+    if (!userId || !achievementEarned) {
+      console.warn(
+        "⚠️ Aucun utilisateur ou succès sélectionné pour la réclamation."
+      );
+      return;
+    }
+    const finalTrophies = isDoubleReward ? trophiesEarned * 2 : trophiesEarned;
+    console.log(
+      `✅ Attribution finale : ${finalTrophies} trophées pour ${achievementEarned}`
+    );
+
+    try {
+      await claimAchievement(userId, achievementEarned, isDoubleReward);
+      console.log("✅ Succès réclamé avec succès. Mise à jour du profil...");
+      await triggerProfileUpdate();
+    } catch (error: any) {
+      console.error("❌ Erreur lors de la réclamation du trophée :", error);
+    }
+
+    // Réinitialisation des états
     setShowTrophyModal(false);
     setTrophiesEarned(0);
     setAchievementEarned(null);
     setIsDoubleReward(false);
-  }, []);
+  }, [achievementEarned, trophiesEarned, isDoubleReward, triggerProfileUpdate]);
 
   return (
     <TrophyContext.Provider
@@ -73,7 +94,6 @@ export const TrophyProvider: React.FC<{ children: ReactNode }> = ({
   );
 };
 
-// ✅ Hook sécurisé pour éviter toute erreur hors TrophyProvider
 export const useTrophy = () => {
   const context = useContext(TrophyContext);
   if (!context) {

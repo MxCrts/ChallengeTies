@@ -4,9 +4,11 @@ import {
   doc,
   updateDoc,
   getDoc,
+  onSnapshot,
   arrayUnion,
-  arrayRemove,
+  increment,
 } from "firebase/firestore";
+import { checkForAchievements } from "../helpers/trophiesHelpers";
 
 export interface Challenge {
   id: string;
@@ -35,15 +37,27 @@ export const SavedChallengesProvider: React.FC<{
 }> = ({ children }) => {
   const [savedChallenges, setSavedChallenges] = useState<Challenge[]>([]);
 
-  // 📥 Charger les défis sauvegardés depuis le document utilisateur
+  // Écoute en temps réel du document utilisateur pour les défis sauvegardés
+  useEffect(() => {
+    const userId = auth.currentUser?.uid;
+    if (!userId) return;
+    const userRef = doc(db, "users", userId);
+    const unsubscribe = onSnapshot(userRef, (docSnap) => {
+      if (docSnap.exists()) {
+        const userData = docSnap.data();
+        setSavedChallenges(userData.SavedChallenges || []);
+      }
+    });
+    return () => unsubscribe();
+  }, []);
+
+  // Charger manuellement les défis sauvegardés (si besoin)
   const loadSavedChallenges = async () => {
     const userId = auth.currentUser?.uid;
     if (!userId) return;
-
     try {
       const userRef = doc(db, "users", userId);
       const userSnap = await getDoc(userRef);
-
       if (userSnap.exists()) {
         const userData = userSnap.data();
         setSavedChallenges(userData.SavedChallenges || []);
@@ -53,66 +67,53 @@ export const SavedChallengesProvider: React.FC<{
     }
   };
 
-  // ➕ Ajouter un défi à `SavedChallenges` dans le document utilisateur
+  // Ajouter un défi et incrémenter le compteur "saveChallenge"
   const addChallenge = async (challenge: Challenge) => {
     const userId = auth.currentUser?.uid;
     if (!userId) return;
-
     try {
       const userRef = doc(db, "users", userId);
-
-      // Ajouter le défi dans l'array `SavedChallenges`
       await updateDoc(userRef, {
         SavedChallenges: arrayUnion(challenge),
+        saveChallenge: increment(1),
       });
-
-      // Ajouter localement
-      setSavedChallenges((prev) => [...prev, challenge]);
-
       console.log("Challenge sauvegardé !");
+      // Lancer la vérification des succès liés aux défis sauvegardés
+      await checkForAchievements(userId);
     } catch (error) {
       console.error("Erreur lors de l'ajout du défi :", error);
     }
   };
 
-  // ❌ Retirer un défi de `SavedChallenges`
+  // Retirer un défi et décrémenter le compteur "saveChallenge"
   const removeChallenge = async (id: string): Promise<void> => {
     const userId = auth.currentUser?.uid;
     if (!userId) return;
-
     try {
       const userRef = doc(db, "users", userId);
-
-      // Récupérer l'utilisateur pour filtrer correctement l'objet à supprimer
       const userSnap = await getDoc(userRef);
       if (userSnap.exists()) {
         const userData = userSnap.data();
         const updatedChallenges = (userData.SavedChallenges || []).filter(
           (challenge: Challenge) => challenge.id !== id
         );
-
-        // Mettre à jour la base de données avec la nouvelle liste filtrée
+        const currentCount = userData.saveChallenge || 0;
         await updateDoc(userRef, {
           SavedChallenges: updatedChallenges,
+          saveChallenge: currentCount > 0 ? currentCount - 1 : 0,
         });
-
-        // Mettre à jour localement
-        setSavedChallenges(updatedChallenges);
-
         console.log("Challenge retiré !");
+        // Vous pouvez aussi déclencher une vérification ici si nécessaire
+        await checkForAchievements(userId);
       }
     } catch (error) {
       console.error("Erreur lors de la suppression du défi :", error);
     }
   };
 
-  // ✅ Vérifier si un défi est déjà sauvegardé
+  // Vérifier si un défi est sauvegardé
   const isSaved = (id: string): boolean =>
     savedChallenges.some((challenge) => challenge.id === id);
-
-  useEffect(() => {
-    loadSavedChallenges();
-  }, []);
 
   return (
     <SavedChallengesContext.Provider

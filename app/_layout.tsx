@@ -6,6 +6,20 @@ import AsyncStorage from "@react-native-async-storage/async-storage";
 import { PaperProvider } from "react-native-paper";
 import { auth } from "../constants/firebase-config";
 import { onAuthStateChanged, User } from "firebase/auth";
+import { ProfileUpdateProvider } from "../context/ProfileUpdateContext";
+import { TrophyProvider } from "../context/TrophyContext";
+import { SavedChallengesProvider } from "../context/SavedChallengesContext";
+import { CurrentChallengesProvider } from "../context/CurrentChallengesContext";
+import { ChatProvider } from "../context/ChatContext";
+import TrophyModal from "../components/TrophyModal";
+import {
+  useFonts,
+  Comfortaa_400Regular,
+  Comfortaa_700Bold,
+} from "@expo-google-fonts/comfortaa";
+import { LanguageProvider } from "../context/LanguageContext";
+
+// L'appel à setShouldThrowOnError a été retiré car il n'existe plus.
 
 const RootLayout = () => {
   const router = useRouter();
@@ -14,39 +28,43 @@ const RootLayout = () => {
   const [authChecked, setAuthChecked] = useState(false);
   const [navigationReady, setNavigationReady] = useState(false);
 
-  // ✅ Vérification de l'authentification Firebase
+  const [fontsLoaded] = useFonts({
+    Comfortaa_400Regular,
+    Comfortaa_700Bold,
+  });
+
   useEffect(() => {
     const unsubscribe = onAuthStateChanged(auth, (firebaseUser) => {
       setUser(firebaseUser);
       setAuthChecked(true);
     });
-
     return () => unsubscribe();
   }, []);
 
-  // ✅ Initialisation de l'application
   useEffect(() => {
     const initializeApp = async () => {
       try {
-        await AsyncStorage.getItem("hasSeenOnboarding");
+        const hasSeenOnboarding = await AsyncStorage.getItem(
+          "hasSeenOnboarding"
+        );
+        if (!hasSeenOnboarding) {
+          router.replace("/screen/onboarding/Screen1");
+        }
       } catch (error) {
         console.error("❌ Erreur lors de l'initialisation:", error);
       } finally {
         setIsAppReady(true);
       }
     };
-
     initializeApp();
   }, []);
 
-  // ✅ S'assurer que tout est prêt avant de rediriger
   useEffect(() => {
-    if (authChecked && isAppReady && !navigationReady) {
+    if (authChecked && isAppReady && !navigationReady && fontsLoaded) {
       setNavigationReady(true);
     }
-  }, [authChecked, isAppReady, navigationReady]);
+  }, [authChecked, isAppReady, navigationReady, fontsLoaded]);
 
-  // ✅ Redirection quand tout est prêt
   useEffect(() => {
     if (navigationReady) {
       if (!user) {
@@ -55,7 +73,6 @@ const RootLayout = () => {
     }
   }, [navigationReady, user]);
 
-  // ✅ Toujours afficher un écran de chargement si l'initialisation n'est pas complète
   if (!navigationReady) {
     return (
       <GestureHandlerRootView style={{ flex: 1 }}>
@@ -70,7 +87,22 @@ const RootLayout = () => {
   return (
     <GestureHandlerRootView style={{ flex: 1 }}>
       <PaperProvider>
-        <Stack screenOptions={{ headerShown: false }} />
+        <LanguageProvider>
+          <ProfileUpdateProvider>
+            <TrophyProvider>
+              <SavedChallengesProvider>
+                <CurrentChallengesProvider>
+                  <ChatProvider>
+                    <>
+                      <Stack screenOptions={{ headerShown: false }} />
+                      <TrophyModal />
+                    </>
+                  </ChatProvider>
+                </CurrentChallengesProvider>
+              </SavedChallengesProvider>
+            </TrophyProvider>
+          </ProfileUpdateProvider>
+        </LanguageProvider>
       </PaperProvider>
     </GestureHandlerRootView>
   );

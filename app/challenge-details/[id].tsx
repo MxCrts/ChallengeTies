@@ -9,45 +9,79 @@ import {
   Image,
   ScrollView,
   Modal,
+  Dimensions,
+  Animated,
+  Share,
 } from "react-native";
-import { Picker } from "@react-native-picker/picker";
 import { Ionicons } from "@expo/vector-icons";
-import { useRouter } from "expo-router";
-import { useRoute, useNavigation } from "@react-navigation/native";
-import { doc, onSnapshot, runTransaction, getDoc } from "firebase/firestore";
+import { useRouter, useLocalSearchParams } from "expo-router";
+import {
+  doc,
+  onSnapshot,
+  runTransaction,
+  getDoc,
+  updateDoc,
+  increment,
+} from "firebase/firestore";
 import { db, auth } from "../../constants/firebase-config";
 import ConfettiCannon from "react-native-confetti-cannon";
-import * as Haptics from "expo-haptics"; // optional for device vibration feedback
-
-import { LinearGradient } from "expo-linear-gradient"; // optional for progress bar
-
+import * as Haptics from "expo-haptics";
+import { LinearGradient } from "expo-linear-gradient";
 import { useSavedChallenges } from "../../context/SavedChallengesContext";
 import { useCurrentChallenges } from "../../context/CurrentChallengesContext";
+import { checkForAchievements } from "../../helpers/trophiesHelpers";
+import ChallengeCompletionModal from "../../components/ChallengeCompletionModal";
+import designSystem from "../../theme/designSystem";
 
-type RouteParams = {
-  id: string | undefined; // can be undefined
-  title: string;
-  category?: string;
-  description?: string;
-  selectedDays?: number;
-  completedDays?: number;
+const { width: viewportWidth } = Dimensions.get("window");
+const currentTheme = designSystem.lightTheme;
+const normalizeFont = (size: number) => {
+  const scale = viewportWidth / 375;
+  return Math.round(size * scale);
 };
 
-export default function ChallengeDetails() {
-  const route = useRoute();
-  const navigation = useNavigation();
-  const router = useRouter();
+const dayIcons: Record<
+  number,
+  | "sunny-outline"
+  | "flash-outline"
+  | "timer-outline"
+  | "calendar-outline"
+  | "speedometer-outline"
+  | "trending-up-outline"
+  | "barbell-outline"
+  | "rocket-outline"
+> = {
+  7: "sunny-outline",
+  14: "flash-outline",
+  21: "timer-outline",
+  30: "calendar-outline",
+  60: "speedometer-outline",
+  90: "trending-up-outline",
+  180: "barbell-outline",
+  365: "rocket-outline",
+};
 
-  // Read route params, with defaults
-  const {
-    id = "",
-    title = "Untitled Challenge",
-    category = "Uncategorized",
-    description = "No description available",
-    // If these are zero, we might override them from context below
-    selectedDays: routeSelectedDays = 0,
-    completedDays: routeCompletedDays = 0,
-  } = route.params as Partial<RouteParams>;
+interface Stat {
+  name: string;
+  value: number | string;
+  icon: string;
+}
+
+export default function ChallengeDetails() {
+  const router = useRouter();
+  const params = useLocalSearchParams<{
+    id?: string;
+    title?: string;
+    category?: string;
+    description?: string;
+    selectedDays?: string;
+    completedDays?: string;
+  }>();
+
+  const id = params.id || "";
+  const routeTitle = params.title || "Untitled Challenge";
+  const routeCategory = params.category || "Uncategorized";
+  const routeDescription = params.description || "No description available";
 
   const { savedChallenges, addChallenge, removeChallenge } =
     useSavedChallenges();
@@ -55,158 +89,197 @@ export default function ChallengeDetails() {
     currentChallenges,
     takeChallenge,
     removeChallenge: removeCurrentChallenge,
+    markToday,
+    isMarkedToday,
+    completeChallenge, // Doit être présent ici
+    simulateStreak,
   } = useCurrentChallenges();
 
-  // Local states
-  const [userCount, setUserCount] = useState<number>(0);
-  const [userHasTaken, setUserHasTaken] = useState<boolean>(false);
-  const [loading, setLoading] = useState<boolean>(false);
+  const currentChallenge = currentChallenges.find(
+    (ch) => ch.id === id && ch.uniqueKey === `${id}_${ch.selectedDays}`
+  );
+
+  const [loading, setLoading] = useState(true);
+  const [userHasTaken, setUserHasTaken] = useState(false);
   const [challengeImage, setChallengeImage] = useState<string | null>(null);
-  const [daysOptions, setDaysOptions] = useState<number[]>([10, 30, 60, 365]);
-  const [modalVisible, setModalVisible] = useState<boolean>(false);
+  const [daysOptions, setDaysOptions] = useState<number[]>([
+    7, 14, 21, 30, 60, 90, 180, 365,
+  ]);
   const [localSelectedDays, setLocalSelectedDays] = useState<number>(10);
-
-  // We'll keep track of final selectedDays and completedDays used in UI
-  const [finalSelectedDays, setFinalSelectedDays] = useState<number>(
-    routeSelectedDays || 0
-  );
-  const [finalCompletedDays, setFinalCompletedDays] = useState<number>(
-    routeCompletedDays || 0
-  );
-
-  // For awarding trophies
+  const [finalSelectedDays, setFinalSelectedDays] = useState<number>(0);
+  const [finalCompletedDays, setFinalCompletedDays] = useState<number>(0);
+  const [userCount, setUserCount] = useState(0);
+  const [stats, setStats] = useState<Stat[]>([]);
+  const [modalVisible, setModalVisible] = useState(false);
   const [completionModalVisible, setCompletionModalVisible] = useState(false);
+  const [statsModalVisible, setStatsModalVisible] = useState(false);
   const [baseTrophyAmount, setBaseTrophyAmount] = useState(0);
-
-  // Confetti
   const confettiRef = useRef<ConfettiCannon | null>(null);
+  const [currentMonth, setCurrentMonth] = useState(new Date());
 
-  // Optional local function to check if challenge is saved
-  const isSavedChallenge = (challengeId: string) => {
-    return savedChallenges.some((ch) => ch.id === challengeId);
-  };
-
-  // 1) Possibly override selected/completed days from context
-  //    if route params are missing or zero.
   useEffect(() => {
-    // If we already have a nonzero routeSelectedDays, use that.
-    // Otherwise, try to find the record from currentChallenges context.
     if (!id) return;
-
-    // Listen to the global challenge doc (for userCount, image, etc.)
-    const challengeDocRef = doc(db, "challenges", id);
-    const unsubscribe = onSnapshot(challengeDocRef, (docSnap) => {
+    const challengeRef = doc(db, "challenges", id);
+    const unsubscribe = onSnapshot(challengeRef, (docSnap) => {
       if (docSnap.exists()) {
         const data = docSnap.data();
-        setUserCount(data.participantsCount || 0);
         setChallengeImage(data.imageUrl || null);
-        setDaysOptions(data.daysOptions || [10, 30, 60, 365]);
+        setDaysOptions(data.daysOptions || [7, 14, 21, 30, 60, 90, 180, 365]);
         setUserHasTaken(
           (data.usersTakingChallenge || []).includes(auth.currentUser?.uid)
         );
+        setUserCount(data.participantsCount || 0);
       }
+      setLoading(false);
     });
-
-    // Also check our currentChallenges to get the real selectedDays/completedDays
-    // if route params are 0 or missing
-    if (routeSelectedDays === 0 || routeCompletedDays === 0) {
-      const found = currentChallenges.find((ch) => ch.id === id);
-      if (found) {
-        setFinalSelectedDays(found.selectedDays);
-        setFinalCompletedDays(found.completedDays);
-      } else {
-        // If not found, we default to the route values, which might be 0
-        setFinalSelectedDays(routeSelectedDays || 0);
-        setFinalCompletedDays(routeCompletedDays || 0);
-      }
-    } else {
-      // We trust the route params
-      setFinalSelectedDays(routeSelectedDays!);
-      setFinalCompletedDays(routeCompletedDays!);
-    }
-
     return () => unsubscribe();
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [id, currentChallenges]);
+  }, [id]);
 
-  // RE-calc showCompleteButton whenever finalSelectedDays or finalCompletedDays changes
+  useEffect(() => {
+    const found = currentChallenges.find((ch: any) => ch.id === id);
+    if (found) {
+      setFinalSelectedDays(found.selectedDays);
+      setFinalCompletedDays(found.completedDays > 0 ? found.completedDays : 0);
+    }
+  }, [currentChallenges, id]);
+
+  useEffect(() => {
+    const exists = currentChallenges.find((ch) => ch.id === id);
+    if (!exists) {
+      setUserHasTaken(false);
+      setFinalSelectedDays(0);
+      setFinalCompletedDays(0);
+    }
+  }, [currentChallenges, id]);
+
+  useEffect(() => {
+    if (!userHasTaken) return;
+    const totalSaved = savedChallenges.length;
+    const uniqueOngoing = new Map(
+      currentChallenges.map((ch: any) => [`${ch.id}_${ch.selectedDays}`, ch])
+    );
+    const totalOngoing = uniqueOngoing.size;
+    const totalCompleted = currentChallenges.filter(
+      (challenge) => challenge.completedDays === challenge.selectedDays
+    ).length;
+    const successRate =
+      totalOngoing + totalCompleted > 0
+        ? Math.round((totalCompleted / (totalOngoing + totalCompleted)) * 100)
+        : 0;
+    const longestStreak = 0;
+    const trophies = 0;
+    const achievementsUnlocked = 0;
+
+    const newStats: Stat[] = [
+      { name: "Challenges Saved", value: totalSaved, icon: "bookmark-outline" },
+      {
+        name: "Ongoing Challenges",
+        value: totalOngoing,
+        icon: "hourglass-outline",
+      },
+      {
+        name: "Challenges Completed",
+        value: totalCompleted,
+        icon: "trophy-outline",
+      },
+      {
+        name: "Success Rate",
+        value: `${successRate}%`,
+        icon: "stats-chart-outline",
+      },
+      { name: "Trophies", value: trophies, icon: "medal-outline" },
+      {
+        name: "Achievements Unlocked",
+        value: achievementsUnlocked,
+        icon: "ribbon-outline",
+      },
+      {
+        name: "Longest Streak",
+        value: `${longestStreak} days`,
+        icon: "flame-outline",
+      },
+    ];
+    setStats(newStats);
+  }, [savedChallenges, currentChallenges, userHasTaken]);
+
+  const isSavedChallenge = (challengeId: string) =>
+    savedChallenges.some((ch) => ch.id === challengeId);
+
+  const formatDate = (date: Date) => date.toDateString();
+
+  const getCalendarDays = (): (null | {
+    day: number;
+    date: Date;
+    completed: boolean;
+  })[] => {
+    const year = currentMonth.getFullYear();
+    const month = currentMonth.getMonth();
+    const numDays = new Date(year, month + 1, 0).getDate();
+    const firstDayIndex = new Date(year, month, 1).getDay();
+    const completions: string[] = currentChallenge?.completionDates || [];
+    const calendar: (null | { day: number; date: Date; completed: boolean })[] =
+      [];
+    for (let i = 0; i < firstDayIndex; i++) {
+      calendar.push(null);
+    }
+    for (let day = 1; day <= numDays; day++) {
+      const dateObj = new Date(year, month, day);
+      const dateStr = formatDate(dateObj);
+      const completed = completions.includes(dateStr);
+      calendar.push({ day, date: dateObj, completed });
+    }
+    return calendar;
+  };
+
+  const calendarDays = getCalendarDays();
+
+  const goToPrevMonth = () => {
+    const newMonth = new Date(
+      currentMonth.getFullYear(),
+      currentMonth.getMonth() - 1,
+      1
+    );
+    setCurrentMonth(newMonth);
+  };
+
+  const goToNextMonth = () => {
+    const newMonth = new Date(
+      currentMonth.getFullYear(),
+      currentMonth.getMonth() + 1,
+      1
+    );
+    setCurrentMonth(newMonth);
+  };
+
+  const monthName = currentMonth.toLocaleString("default", { month: "long" });
+  const currentYearNum = currentMonth.getFullYear();
+
+  const alreadyMarkedToday = currentChallenge
+    ? currentChallenge.completionDates?.includes(new Date().toDateString())
+    : false;
+
   const showCompleteButton =
     userHasTaken &&
     finalSelectedDays > 0 &&
     finalCompletedDays >= finalSelectedDays;
+  const progressPercent =
+    finalSelectedDays > 0
+      ? Math.min(1, finalCompletedDays / finalSelectedDays)
+      : 0;
 
-  // 2) Taking a Challenge
   const handleTakeChallenge = async () => {
-    if (!userHasTaken && id) {
-      try {
-        setLoading(true);
-
-        // 🔥 Récupérer le vrai challenge depuis Firestore
-        const challengeRef = doc(db, "challenges", id);
-        const challengeSnap = await getDoc(challengeRef);
-
-        if (!challengeSnap.exists()) {
-          Alert.alert("Erreur", "Impossible de récupérer le challenge.");
-          return;
-        }
-
-        const challengeData = challengeSnap.data();
-
-        await takeChallenge(
-          {
-            id,
-            title: challengeData.title || "Untitled Challenge",
-            category: challengeData.category || "Uncategorized",
-            description:
-              challengeData.description || "No description available",
-            daysOptions: challengeData.daysOptions || [
-              7, 14, 21, 30, 60, 90, 180, 365,
-            ],
-            chatId: challengeData.chatId || id, // ✅ Utilise le vrai chatId
-            imageUrl: challengeData.imageUrl || "", // ✅ Utilise la vraie image
-          },
-          localSelectedDays
-        );
-
-        setUserHasTaken(true);
-        setModalVisible(false);
-
-        // ✅ Met à jour l'affichage localement
-        setFinalSelectedDays(localSelectedDays);
-        setFinalCompletedDays(0);
-      } catch (err) {
-        console.error("Error taking challenge:", err);
-        Alert.alert(
-          "Erreur",
-          err instanceof Error
-            ? err.message
-            : "Impossible de rejoindre le défi. Réessayez."
-        );
-      } finally {
-        setLoading(false);
-      }
-    }
-  };
-
-  // 3) Save / Unsave
-  const handleSaveChallenge = async () => {
-    if (!id) return;
+    if (userHasTaken || !id) return;
     try {
-      if (isSavedChallenge(id)) {
-        await removeChallenge(id);
-      } else {
-        // 🔥 Récupérer le vrai challenge depuis Firestore
-        const challengeRef = doc(db, "challenges", id);
-        const challengeSnap = await getDoc(challengeRef);
-
-        if (!challengeSnap.exists()) {
-          Alert.alert("Erreur", "Impossible de récupérer le challenge.");
-          return;
-        }
-
-        const challengeData = challengeSnap.data();
-
-        await addChallenge({
+      setLoading(true);
+      const challengeRef = doc(db, "challenges", id);
+      const challengeSnap = await getDoc(challengeRef);
+      if (!challengeSnap.exists()) {
+        Alert.alert("Erreur", "Impossible de récupérer le challenge.");
+        return;
+      }
+      const challengeData = challengeSnap.data();
+      await takeChallenge(
+        {
           id,
           title: challengeData.title || "Untitled Challenge",
           category: challengeData.category || "Uncategorized",
@@ -214,332 +287,479 @@ export default function ChallengeDetails() {
           daysOptions: challengeData.daysOptions || [
             7, 14, 21, 30, 60, 90, 180, 365,
           ],
-          chatId: challengeData.chatId || id, // ✅ Utilise le vrai chatId
-          imageUrl: challengeData.imageUrl || "", // ✅ Utilise la vraie image
+          chatId: challengeData.chatId || id,
+          imageUrl: challengeData.imageUrl || "",
+        },
+        localSelectedDays
+      );
+      await runTransaction(db, async (transaction) => {
+        const challengeDoc = await transaction.get(challengeRef);
+        if (!challengeDoc.exists()) throw new Error("Challenge inexistant");
+        const data = challengeDoc.data();
+        const currentCount = data.participantsCount || 0;
+        const currentUsers = data.usersTakingChallenge || [];
+        const uid = auth.currentUser?.uid;
+        const updatedUsers = currentUsers.includes(uid)
+          ? currentUsers
+          : currentUsers.concat([uid]);
+        transaction.update(challengeRef, {
+          participantsCount: currentCount + 1,
+          usersTakingChallenge: updatedUsers,
         });
-      }
+      });
+      setUserHasTaken(true);
+      setModalVisible(false);
+      setFinalSelectedDays(localSelectedDays);
+      setFinalCompletedDays(0);
     } catch (err) {
-      console.error("Error saving challenge:", err);
-      Alert.alert("Erreur", "Impossible de sauvegarder le défi.");
+      Alert.alert(
+        "Erreur",
+        err instanceof Error
+          ? err.message
+          : "Impossible de rejoindre le défi. Réessayez."
+      );
+    } finally {
+      setLoading(false);
     }
   };
 
-  // 4) Show “Complete Challenge” if user finished
+  const handleSaveChallenge = async () => {
+    if (!id) return;
+    try {
+      const challengeRef = doc(db, "challenges", id);
+      const challengeSnap = await getDoc(challengeRef);
+      if (!challengeSnap.exists()) {
+        Alert.alert("Erreur", "Impossible de récupérer le challenge.");
+        return;
+      }
+      const challengeData = challengeSnap.data();
+      const challengeObj = {
+        id,
+        title: challengeData.title || "Untitled Challenge",
+        category: challengeData.category || "Uncategorized",
+        description: challengeData.description || "No description available",
+        daysOptions: challengeData.daysOptions || [
+          7, 14, 21, 30, 60, 90, 180, 365,
+        ],
+        chatId: challengeData.chatId || id,
+        imageUrl: challengeData.imageUrl || "",
+      };
+      if (isSavedChallenge(id)) {
+        await removeChallenge(id);
+      } else {
+        await addChallenge(challengeObj);
+      }
+    } catch (err) {
+      Alert.alert(
+        "Erreur",
+        err instanceof Error
+          ? err.message
+          : "Impossible de sauvegarder/dé-sauvegarder le défi."
+      );
+    }
+  };
+
   const handleShowCompleteModal = () => {
     setBaseTrophyAmount(finalSelectedDays);
     setCompletionModalVisible(true);
   };
 
-  // 5) Award trophies
   const awardTrophiesToUser = async (trophiesToAdd: number) => {
     const userId = auth.currentUser?.uid;
     if (!userId) return;
-
     const userRef = doc(db, "users", userId);
     try {
       await runTransaction(db, async (transaction) => {
         const userDoc = await transaction.get(userRef);
-        if (!userDoc.exists()) {
-          throw new Error("User doc not found");
-        }
+        if (!userDoc.exists()) throw new Error("User doc not found");
         const userData = userDoc.data();
         const currentTrophies = userData.trophies || 0;
         const newTrophyCount = currentTrophies + trophiesToAdd;
-
-        // Example achievements logic:
         let achievements = userData.achievements || [];
-
-        // 5A) Basic achievements
         if (!achievements.includes("First challenge completed")) {
           achievements.push("First challenge completed");
         }
-
-        // 5B) If they completed a short challenge
-        if (
-          finalSelectedDays === 3 &&
-          !achievements.includes("3-day challenge completed")
-        ) {
-          achievements.push("3-day challenge completed");
-        }
-        // 5C) 30-day challenge
-        if (
-          finalSelectedDays === 30 &&
-          !achievements.includes("30-day challenge completed")
-        ) {
-          achievements.push("30-day challenge completed");
-        }
-
-        // If you keep track of how many total challenges they've completed, do it here:
         const totalCompleted = (userData.completedChallengesCount || 0) + 1;
-        let updatedFields: any = {
-          trophies: newTrophyCount,
-          achievements,
-          completedChallengesCount: totalCompleted,
-        };
-
-        // 5D) 10 challenges completed
         if (
           totalCompleted === 10 &&
           !achievements.includes("10 challenges completed")
         ) {
           achievements.push("10 challenges completed");
-          updatedFields.achievements = achievements;
         }
-
-        transaction.update(userRef, updatedFields);
+        transaction.update(userRef, {
+          trophies: newTrophyCount,
+          achievements,
+          completedChallengesCount: totalCompleted,
+        });
       });
-
-      // Fire confetti for 5 seconds
       confettiRef.current?.start();
-      // optional haptic feedback
       Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Heavy);
-
-      // Stop confetti after 5 seconds
-      setTimeout(() => {
-        confettiRef.current?.stop();
-      }, 5000);
-
-      Alert.alert("Success!", `You received ${trophiesToAdd} trophies!`);
+      setTimeout(() => confettiRef.current?.stop(), 5000);
+      Alert.alert("Succès !", `Vous avez reçu ${baseTrophyAmount} trophées !`);
     } catch (err) {
-      console.error("Error awarding trophies:", err);
       Alert.alert(
-        "Error",
-        "Failed to update trophies. Please try again later."
+        "Erreur",
+        "La mise à jour des trophées a échoué. Réessayez plus tard."
       );
     }
   };
 
-  // 6) Finalize removing from current challenges
   const finalizeChallengeRemoval = async () => {
     if (!id) return;
     try {
+      const challengeRef = doc(db, "challenges", id);
       await removeCurrentChallenge(id, finalSelectedDays);
+      await runTransaction(db, async (transaction) => {
+        const challengeDoc = await transaction.get(challengeRef);
+        if (!challengeDoc.exists()) throw new Error("Challenge inexistant");
+        const data = challengeDoc.data();
+        const currentCount = data.participantsCount || 0;
+        const currentUsers = data.usersTakingChallenge || [];
+        const uid = auth.currentUser?.uid;
+        const updatedUsers = currentUsers.filter(
+          (user: string) => user !== uid
+        );
+        transaction.update(challengeRef, {
+          participantsCount: Math.max(currentCount - 1, 0),
+          usersTakingChallenge: updatedUsers,
+        });
+      });
     } catch (err) {
       console.error("Error removing challenge:", err);
     }
   };
 
-  // 6A) Claim standard trophies
   const handleClaimTrophiesWithoutAd = async () => {
-    await awardTrophiesToUser(baseTrophyAmount);
-    setCompletionModalVisible(false);
-    finalizeChallengeRemoval();
-  };
-
-  // 6B) Claim double trophies
-  const handleClaimTrophiesWithAd = async () => {
-    // Insert real ad logic
-    const userWatchedAd = true;
-    if (userWatchedAd) {
-      await awardTrophiesToUser(baseTrophyAmount * 2);
-    } else {
-      await awardTrophiesToUser(baseTrophyAmount);
+    try {
+      await completeChallenge(id, finalSelectedDays, false);
+      setCompletionModalVisible(false);
+    } catch (error) {
+      Alert.alert("Erreur", "La finalisation du défi a échoué.");
     }
-    setCompletionModalVisible(false);
-    finalizeChallengeRemoval();
   };
 
-  // 7) Navigate to chat
+  const handleClaimTrophiesWithAd = async () => {
+    try {
+      // Ici, on considère que la logique de l'annonce est traitée ailleurs
+      await completeChallenge(id, finalSelectedDays, true);
+      setCompletionModalVisible(false);
+    } catch (error) {
+      Alert.alert("Erreur", "La finalisation du défi a échoué.");
+    }
+  };
+
   const handleNavigateToChat = () => {
+    if (!userHasTaken) {
+      Alert.alert(
+        "Accès refusé",
+        "Vous devez prendre le défi pour accéder au chat."
+      );
+      return;
+    }
     router.push(
-      `/challenge-chat/${id || ""}?title=${encodeURIComponent(title)}`
+      `/challenge-chat/${id}?title=${encodeURIComponent(routeTitle)}`
     );
+  };
+
+  const handleShareChallenge = async () => {
+    try {
+      const shareOptions = {
+        title: routeTitle,
+        message: `${routeTitle}\n\n${routeDescription}\n\nRelevez ce défi sur ChallengeTies !`,
+      };
+      const result = await Share.share(shareOptions);
+      if (result.action === Share.sharedAction) {
+        const userId = auth.currentUser?.uid;
+        if (userId) {
+          const userRef = doc(db, "users", userId);
+          await updateDoc(userRef, {
+            shareChallenge: increment(1),
+          });
+          console.log("Compteur de partage incrémenté.");
+          await checkForAchievements(userId);
+        }
+        console.log("Challenge partagé");
+      } else if (result.action === Share.dismissedAction) {
+        console.log("Partage annulé");
+      }
+    } catch (error: any) {
+      Alert.alert("Erreur de partage", error.message);
+    }
+  };
+
+  const handleViewStats = () => {
+    if (!userHasTaken) return;
+    setStatsModalVisible(true);
   };
 
   if (loading) {
     return (
       <View style={styles.loadingContainer}>
-        <ActivityIndicator size="large" color="#1E90FF" />
-        <Text style={styles.loadingText}>Loading...</Text>
+        <ActivityIndicator size="large" color="#FACC15" />
+        <Text style={styles.loadingText}>Chargement...</Text>
       </View>
     );
   }
 
-  // Calculate progress percent (only if userHasTaken & not complete yet)
-  const progressPercent =
-    finalSelectedDays > 0
-      ? Math.min(1, finalCompletedDays / finalSelectedDays)
-      : 0;
-
   return (
     <ScrollView style={styles.container}>
-      {/* Confetti Cannon */}
       <ConfettiCannon
         ref={confettiRef}
         count={150}
         origin={{ x: -10, y: 0 }}
         autoStart={false}
-        fadeOut={false} // Let it stay until we manually stop
+        fadeOut={false}
         explosionSpeed={800}
         fallSpeed={3000}
       />
-
-      <View style={styles.imageContainer}>
-        {challengeImage ? (
-          <Image
-            source={{ uri: challengeImage }}
-            style={styles.challengeImage}
-            resizeMode="cover"
-          />
-        ) : (
-          <View style={styles.imagePlaceholder}>
-            <Ionicons name="image-outline" size={80} color="#ccc" />
-            <Text style={styles.noImageText}>No Image Available</Text>
-          </View>
-        )}
-      </View>
-
-      <View style={styles.contentContainer}>
-        <Text style={styles.title}>{title}</Text>
-        <Text style={styles.category}>{category}</Text>
-        <Text style={styles.description}>{description}</Text>
-
-        {/* Save / Unsave */}
+      <View style={styles.carouselContainer}>
+        <View style={styles.imageContainer}>
+          {challengeImage ? (
+            <Image
+              source={{ uri: challengeImage }}
+              style={styles.image}
+              resizeMode="cover"
+            />
+          ) : (
+            <View style={styles.imagePlaceholder}>
+              <Ionicons name="image-outline" size={80} color="#ccc" />
+              <Text style={styles.noImageText}>Image non disponible</Text>
+            </View>
+          )}
+        </View>
         <TouchableOpacity
-          style={[
-            styles.saveButton,
-            isSavedChallenge(id) && styles.savedButton,
-          ]}
-          onPress={handleSaveChallenge}
+          style={styles.backButton}
+          onPress={() => router.back()}
         >
-          <Text style={styles.saveButtonText}>
-            {isSavedChallenge(id) ? "Saved" : "Save Challenge"}
-          </Text>
-          <Ionicons
-            name={isSavedChallenge(id) ? "bookmark" : "bookmark-outline"}
-            size={20}
-            color="#fff"
-          />
+          <Ionicons name="arrow-back" size={normalizeFont(28)} color="#fff" />
         </TouchableOpacity>
-
-        {/* If user not taken, let them pick days */}
+      </View>
+      <View style={styles.infoRecipeContainer}>
+        <Text style={styles.infoRecipeName}>{routeTitle}</Text>
+        <Text style={styles.category}>{routeCategory.toUpperCase()}</Text>
+        <View style={styles.infoContainer}>
+          <Ionicons name="people-outline" size={20} color="#ed8f03" />
+          <Text style={styles.infoRecipe}>
+            {userCount} {userCount === 1 ? "participant" : "participants"}
+          </Text>
+        </View>
         {!userHasTaken && (
           <TouchableOpacity
             style={styles.takeChallengeButton}
             onPress={() => setModalVisible(true)}
           >
-            <Text style={styles.takeChallengeButtonText}>
-              Take the Challenge
-            </Text>
+            <Text style={styles.takeChallengeButtonText}>Prendre le défi</Text>
           </TouchableOpacity>
         )}
-
-        {/* If user is in the challenge but hasn't finished, show progress */}
-        {userHasTaken && !showCompleteButton && (
-          <View style={{ marginTop: 20 }}>
-            <Text style={{ fontSize: 16, color: "#666", marginBottom: 10 }}>
-              Progress: {finalCompletedDays}/{finalSelectedDays} days completed
-            </Text>
-
-            {/* Optional: A simple linear progress bar */}
-            <View style={styles.progressBarBackground}>
-              <LinearGradient
-                colors={["#4caf50", "#8bc34a"]}
-                start={{ x: 0, y: 0 }}
-                end={{ x: 1, y: 0 }}
+        {userHasTaken &&
+          !(
+            finalSelectedDays > 0 && finalCompletedDays >= finalSelectedDays
+          ) && (
+            <>
+              <Text style={styles.inProgressText}>Défi en cours</Text>
+              <View style={styles.progressBarBackground}>
+                <View
+                  style={[
+                    styles.progressBarFill,
+                    { width: progressPercent * 250 },
+                  ]}
+                />
+              </View>
+              <Text style={styles.progressText}>
+                {finalCompletedDays}/{finalSelectedDays} jours complétés
+              </Text>
+              <TouchableOpacity
                 style={[
-                  styles.progressBarFill,
-                  { width: `${progressPercent * 100}%` },
+                  styles.markTodayButton,
+                  isMarkedToday(id, finalSelectedDays) &&
+                    styles.markTodayButtonDisabled,
                 ]}
-              />
-            </View>
-          </View>
-        )}
+                onPress={() => {
+                  if (!isMarkedToday(id, finalSelectedDays)) {
+                    setFinalCompletedDays((prev) => prev + 1);
+                    markToday(id, finalSelectedDays);
+                  }
+                }}
+                disabled={isMarkedToday(id, finalSelectedDays)}
+              >
+                <Text style={styles.markTodayButtonText}>
+                  {isMarkedToday(id, finalSelectedDays)
+                    ? "Déjà marqué"
+                    : "Marquer aujourd'hui"}
+                </Text>
+              </TouchableOpacity>
+            </>
+          )}
+        <Text style={styles.infoDescriptionRecipe}>{routeDescription}</Text>
+        {userHasTaken &&
+          finalSelectedDays > 0 &&
+          finalCompletedDays >= finalSelectedDays && (
+            <TouchableOpacity
+              style={styles.completeChallengeButton}
+              onPress={handleShowCompleteModal}
+            >
+              <Text style={styles.completeChallengeButtonText}>
+                Terminer le défi
+              </Text>
+            </TouchableOpacity>
+          )}
 
-        {/* If user completed all days */}
-        {showCompleteButton && (
+        <View style={[styles.infoContainer, { marginTop: 30 }]}>
           <TouchableOpacity
-            style={styles.completeChallengeButton}
-            onPress={handleShowCompleteModal}
+            style={styles.actionIcon}
+            onPress={() =>
+              router.push(
+                `/challenge-chat/${id}?title=${encodeURIComponent(routeTitle)}`
+              )
+            }
           >
-            <Text style={styles.completeChallengeButtonText}>
-              Complete Challenge
+            <Ionicons
+              name="chatbubble-ellipses-outline"
+              size={28}
+              color="#333"
+            />
+            <Text style={styles.actionIconLabel}>Chat</Text>
+          </TouchableOpacity>
+          <TouchableOpacity
+            style={styles.actionIcon}
+            onPress={handleSaveChallenge}
+          >
+            <Ionicons
+              name={isSavedChallenge(id) ? "bookmark" : "bookmark-outline"}
+              size={28}
+              color={isSavedChallenge(id) ? "#666" : "#333"}
+            />
+            <Text style={styles.actionIconLabel}>
+              {isSavedChallenge(id) ? "Sauvegardé" : "Sauvegarder"}
             </Text>
           </TouchableOpacity>
-        )}
-
-        {/* Chat button (only if user has joined) */}
-        {userHasTaken && (
           <TouchableOpacity
-            style={styles.chatButton}
-            onPress={handleNavigateToChat}
+            style={styles.actionIcon}
+            onPress={handleShareChallenge}
           >
-            <Text style={styles.chatButtonText}>Join Chat</Text>
+            <Ionicons name="share-social-outline" size={28} color="#333" />
+            <Text style={styles.actionIconLabel}>Partager</Text>
           </TouchableOpacity>
-        )}
-
-        <Text style={styles.userCountText}>
-          {userCount} {userCount === 1 ? "participant" : "participants"}
-        </Text>
+          <TouchableOpacity
+            style={[styles.actionIcon, { opacity: userHasTaken ? 1 : 0.5 }]}
+            onPress={userHasTaken ? handleViewStats : undefined}
+          >
+            <Ionicons name="stats-chart-outline" size={28} color="#333" />
+            <Text style={styles.actionIconLabel}>Stats</Text>
+          </TouchableOpacity>
+        </View>
       </View>
 
-      {/* Modal: pick days when taking the challenge */}
       <Modal visible={modalVisible} transparent animationType="slide">
         <View style={styles.modalContainer}>
           <View style={styles.modalContent}>
-            <Text style={styles.modalTitle}>Choose Duration (Days)</Text>
-            <Picker
-              selectedValue={localSelectedDays}
-              style={styles.daysPicker}
-              onValueChange={(itemValue) => setLocalSelectedDays(itemValue)}
-            >
+            <Text style={styles.modalTitle}>Choisissez la durée (jours)</Text>
+            <View style={styles.daysOptionsContainer}>
               {daysOptions.map((days) => (
-                <Picker.Item key={days} label={`${days} days`} value={days} />
+                <TouchableOpacity
+                  key={days}
+                  style={[
+                    styles.dayOption,
+                    localSelectedDays === days && styles.dayOptionSelected,
+                  ]}
+                  onPress={() => setLocalSelectedDays(days)}
+                >
+                  <Ionicons
+                    name={dayIcons[days] || "alarm-outline"}
+                    size={24}
+                    color={localSelectedDays === days ? "#fff" : "#333"}
+                  />
+                  <Text
+                    style={[
+                      styles.dayOptionText,
+                      localSelectedDays === days && { color: "#fff" },
+                    ]}
+                  >
+                    {days} jours
+                  </Text>
+                </TouchableOpacity>
               ))}
-            </Picker>
+            </View>
             <TouchableOpacity
               style={styles.confirmButton}
               onPress={handleTakeChallenge}
             >
-              <Text style={styles.confirmButtonText}>Confirm</Text>
+              <Text style={styles.confirmButtonText}>Confirmer</Text>
             </TouchableOpacity>
             <TouchableOpacity
               style={styles.cancelButton}
               onPress={() => setModalVisible(false)}
             >
-              <Text style={styles.cancelButtonText}>Cancel</Text>
+              <Text style={styles.cancelButtonText}>Annuler</Text>
             </TouchableOpacity>
           </View>
         </View>
       </Modal>
 
-      {/* Modal: awarding trophies */}
-      <Modal visible={completionModalVisible} transparent animationType="slide">
-        <View style={styles.modalContainer}>
-          <View style={styles.modalContent}>
-            <Text style={styles.modalTitle}>Challenge Completed!</Text>
-            <Text style={{ marginVertical: 10 }}>
-              You’ve earned {baseTrophyAmount} trophies.
-            </Text>
-            <Text style={{ marginBottom: 20 }}>
-              Watch an ad to double your reward to {baseTrophyAmount * 2}{" "}
-              trophies!
-            </Text>
+      {completionModalVisible && (
+        <ChallengeCompletionModal
+          visible={completionModalVisible}
+          challengeId={id}
+          selectedDays={finalSelectedDays}
+          onClose={() => setCompletionModalVisible(false)}
+        />
+      )}
 
-            <TouchableOpacity
-              style={styles.claimButton}
-              onPress={handleClaimTrophiesWithoutAd}
-            >
-              <Text style={styles.claimButtonText}>
-                Claim {baseTrophyAmount}
+      <Modal visible={statsModalVisible} transparent animationType="slide">
+        <View style={styles.statsModalContainer}>
+          <View style={styles.statsModalContent}>
+            <View style={styles.statsModalHeader}>
+              <TouchableOpacity onPress={() => setStatsModalVisible(false)}>
+                <Ionicons name="close" size={24} color="#fff" />
+              </TouchableOpacity>
+              <Text style={styles.statsModalTitle}>
+                {monthName} {currentYearNum}
               </Text>
-            </TouchableOpacity>
-
-            <TouchableOpacity
-              style={styles.doubleButton}
-              onPress={handleClaimTrophiesWithAd}
-            >
-              <Text style={styles.doubleButtonText}>
-                Watch Ad for {baseTrophyAmount * 2}
-              </Text>
-            </TouchableOpacity>
-
-            <TouchableOpacity
-              style={styles.cancelButton}
-              onPress={() => setCompletionModalVisible(false)}
-            >
-              <Text style={styles.cancelButtonText}>Cancel</Text>
-            </TouchableOpacity>
+              <View style={{ width: 24 }} />
+            </View>
+            <View style={styles.calendarContainer}>
+              <View style={styles.weekDaysContainer}>
+                {["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"].map(
+                  (day) => (
+                    <Text key={day} style={styles.weekDay}>
+                      {day}
+                    </Text>
+                  )
+                )}
+              </View>
+              <View style={styles.daysContainer}>
+                {calendarDays.map((day, index) => (
+                  <View key={index} style={styles.dayWrapper}>
+                    {day ? (
+                      <View
+                        style={[
+                          styles.dayCircle,
+                          day.completed && styles.dayCompleted,
+                        ]}
+                      >
+                        <Text style={styles.dayText}>{day.day}</Text>
+                      </View>
+                    ) : (
+                      <View style={styles.emptyDay} />
+                    )}
+                  </View>
+                ))}
+              </View>
+            </View>
+            <View style={styles.statsModalFooter}>
+              <TouchableOpacity
+                onPress={goToPrevMonth}
+                style={styles.navButton}
+              >
+                <Ionicons name="chevron-back" size={24} color="#fff" />
+              </TouchableOpacity>
+              <TouchableOpacity
+                onPress={goToNextMonth}
+                style={styles.navButton}
+              >
+                <Ionicons name="chevron-forward" size={24} color="#fff" />
+              </TouchableOpacity>
+            </View>
           </View>
         </View>
       </Modal>
@@ -547,111 +767,164 @@ export default function ChallengeDetails() {
   );
 }
 
-// ---------------------
-// Styles
-// ---------------------
 const styles = StyleSheet.create({
-  container: {
-    flex: 1,
-    backgroundColor: "#f0f4f8",
-  },
+  container: { flex: 1, backgroundColor: "white" },
+  carouselContainer: { height: 250 },
   imageContainer: {
-    height: 250,
-    width: "100%",
-    backgroundColor: "#eee",
-    justifyContent: "center",
-    alignItems: "center",
-  },
-  challengeImage: {
-    width: "100%",
-    height: "100%",
-  },
-  imagePlaceholder: {
-    alignItems: "center",
-    justifyContent: "center",
     flex: 1,
+    justifyContent: "center",
+    width: viewportWidth,
+    height: 250,
+  },
+  image: { ...StyleSheet.absoluteFillObject, width: "100%", height: 250 },
+  backButton: { position: "absolute", top: 40, left: 20, zIndex: 2 },
+  imagePlaceholder: {
+    flex: 1,
+    justifyContent: "center",
+    alignItems: "center",
+    backgroundColor: "#ccc",
   },
   noImageText: {
-    color: "#ccc",
+    color: "#777",
     marginTop: 10,
+    fontFamily: "Comfortaa_400Regular",
   },
-  contentContainer: {
-    padding: 20,
+  infoRecipeContainer: {
+    flex: 1,
+    margin: 25,
+    marginTop: 20,
+    alignItems: "center",
   },
-  title: {
-    fontSize: 24,
-    fontWeight: "bold",
-    color: "#333",
-    marginBottom: 10,
+  infoRecipeName: {
+    fontSize: 28,
+    margin: 10,
+    color: "black",
+    textAlign: "center",
+    fontFamily: "Comfortaa_700Bold",
   },
   category: {
-    fontSize: 16,
-    color: "#666",
-    marginBottom: 20,
+    fontSize: 14,
+    margin: 5,
+    color: currentTheme.colors.primary,
+    textAlign: "center",
+    fontFamily: "Comfortaa_700Bold",
   },
-  description: {
-    fontSize: 16,
-    color: "#555",
-    lineHeight: 24,
-    marginBottom: 20,
-  },
-  saveButton: {
+  infoContainer: {
     flexDirection: "row",
     alignItems: "center",
     justifyContent: "center",
-    marginTop: 16,
-    backgroundColor: "#007bff",
-    padding: 12,
-    borderRadius: 8,
+    marginVertical: 6,
   },
-  savedButton: {
-    backgroundColor: "#6c757d",
+  infoRecipe: {
+    fontSize: 14,
+    marginLeft: 5,
+    color: "#333",
+    fontFamily: "Comfortaa_700Bold",
   },
-  saveButtonText: {
-    color: "#fff",
-    fontWeight: "bold",
-    marginRight: 5,
+  infoDescriptionRecipe: {
+    textAlign: "center",
+    fontSize: 16,
+    marginTop: 30,
+    marginHorizontal: 15,
+    color: "#555",
+    lineHeight: 22,
+    fontFamily: "Comfortaa_400Regular",
   },
   takeChallengeButton: {
-    marginTop: 20,
-    backgroundColor: "#28a745",
-    padding: 12,
-    borderRadius: 8,
-    alignItems: "center",
+    backgroundColor: "#ed8f03",
+    borderRadius: 25,
+    paddingVertical: 10,
+    paddingHorizontal: 30,
+    marginTop: 15,
   },
   takeChallengeButtonText: {
-    color: "#fff",
-    fontWeight: "bold",
     fontSize: 16,
+    color: "#fff",
+    fontFamily: "Comfortaa_700Bold",
+  },
+  inProgressText: {
+    fontSize: 16,
+    color: "#ed8f03",
+    marginTop: 10,
+    fontFamily: "Comfortaa_700Bold",
+  },
+  markTodayButton: {
+    backgroundColor: "#ed8f03",
+    borderRadius: 25,
+    paddingVertical: 10,
+    paddingHorizontal: 30,
+    marginTop: 10,
+  },
+  markTodayButtonDisabled: { backgroundColor: "#aaa" },
+  markTodayButtonText: {
+    fontSize: 16,
+    color: "#fff",
+    fontFamily: "Comfortaa_700Bold",
+  },
+  progressText: {
+    fontSize: 16,
+    color: "#666",
+    marginBottom: 8,
+    textAlign: "center",
+    marginTop: 5,
+    fontFamily: "Comfortaa_400Regular",
+  },
+  progressBarBackground: {
+    width: 250,
+    height: 10,
+    backgroundColor: "#ddd",
+    borderRadius: 5,
+    overflow: "hidden",
+    alignSelf: "center",
+    marginTop: 10,
+  },
+  progressBarFill: {
+    height: "100%",
+    backgroundColor: "#ed8f03",
   },
   completeChallengeButton: {
-    marginTop: 16,
     backgroundColor: "#FFC107",
-    padding: 12,
-    borderRadius: 8,
-    alignItems: "center",
+    borderRadius: 25,
+    paddingVertical: 10,
+    paddingHorizontal: 30,
+    marginTop: 15,
   },
   completeChallengeButtonText: {
-    color: "#fff",
-    fontWeight: "bold",
     fontSize: 16,
+    color: "#fff",
+    fontWeight: "600",
+    fontFamily: "Comfortaa_700Regular",
   },
-  chatButton: {
-    marginTop: 16,
-    backgroundColor: "#007bff",
-    padding: 12,
-    borderRadius: 8,
+  daysOptionsContainer: {
+    flexDirection: "row",
+    flexWrap: "wrap",
+    justifyContent: "center",
+    marginVertical: 10,
+  },
+  dayOption: {
+    flexDirection: "row",
     alignItems: "center",
+    justifyContent: "center",
+    borderWidth: 1,
+    borderColor: "#ccc",
+    borderRadius: 8,
+    paddingVertical: 8,
+    paddingHorizontal: 12,
+    margin: 5,
   },
-  chatButtonText: {
-    color: "#fff",
-    fontWeight: "bold",
+  dayOptionSelected: { backgroundColor: "#2cd18a", borderColor: "#2cd18a" },
+  dayOptionText: {
+    marginLeft: 6,
     fontSize: 16,
+    color: "#333",
+    fontFamily: "Comfortaa_400Regular",
   },
-  userCountText: {
-    marginTop: 16,
-    fontSize: 16,
-    color: "#444",
+  actionIcon: { alignItems: "center", marginHorizontal: 10 },
+  actionIconLabel: {
+    marginTop: 4,
+    fontSize: 12,
+    color: "#333",
+    fontFamily: "Comfortaa_400Regular",
   },
   loadingContainer: {
     flex: 1,
@@ -662,12 +935,13 @@ const styles = StyleSheet.create({
     marginTop: 10,
     fontSize: 16,
     color: "#444",
+    fontFamily: "Comfortaa_400Regular",
   },
   modalContainer: {
     flex: 1,
     justifyContent: "center",
     alignItems: "center",
-    backgroundColor: "rgba(0, 0, 0, 0.5)",
+    backgroundColor: "rgba(0,0,0,0.5)",
     paddingHorizontal: 20,
   },
   modalContent: {
@@ -682,12 +956,9 @@ const styles = StyleSheet.create({
     fontSize: 18,
     fontWeight: "bold",
     marginBottom: 15,
+    fontFamily: "Comfortaa_700Regular",
   },
-  daysPicker: {
-    width: "100%",
-    height: 50,
-    marginBottom: 20,
-  },
+  daysPicker: { width: "100%", height: 50, marginBottom: 20 },
   confirmButton: {
     backgroundColor: "#28a745",
     padding: 10,
@@ -699,6 +970,7 @@ const styles = StyleSheet.create({
   confirmButtonText: {
     color: "#fff",
     fontWeight: "bold",
+    fontFamily: "Comfortaa_700Regular",
   },
   cancelButton: {
     backgroundColor: "#dc3545",
@@ -711,6 +983,7 @@ const styles = StyleSheet.create({
   cancelButtonText: {
     color: "#fff",
     fontWeight: "bold",
+    fontFamily: "Comfortaa_700Regular",
   },
   claimButton: {
     backgroundColor: "#28a745",
@@ -723,6 +996,7 @@ const styles = StyleSheet.create({
   claimButtonText: {
     color: "#fff",
     fontWeight: "bold",
+    fontFamily: "Comfortaa_700Regular",
   },
   doubleButton: {
     backgroundColor: "#17a2b8",
@@ -735,17 +1009,59 @@ const styles = StyleSheet.create({
   doubleButtonText: {
     color: "#fff",
     fontWeight: "bold",
+    fontFamily: "Comfortaa_700Regular",
   },
-
-  // Optional progress bar
-  progressBarBackground: {
+  statsModalContainer: {
+    flex: 1,
+    backgroundColor: "rgba(0,0,0,0.7)",
+    justifyContent: "center",
+    alignItems: "center",
+    paddingHorizontal: 20,
+  },
+  statsModalContent: {
+    backgroundColor: "#0F172A",
     width: "100%",
-    height: 12,
-    backgroundColor: "#ddd",
-    borderRadius: 6,
-    overflow: "hidden",
+    maxWidth: 400,
+    borderRadius: 10,
+    padding: 20,
   },
-  progressBarFill: {
-    height: "100%",
+  statsModalHeader: {
+    flexDirection: "row",
+    justifyContent: "space-between",
+    alignItems: "center",
+    marginBottom: 15,
   },
+  statsModalTitle: {
+    fontSize: 20,
+    fontWeight: "bold",
+    color: "#fff",
+    textAlign: "center",
+    fontFamily: "Comfortaa_700Regular",
+  },
+  calendarContainer: { marginVertical: 10 },
+  weekDaysContainer: {
+    flexDirection: "row",
+    justifyContent: "space-around",
+    marginBottom: 5,
+  },
+  weekDay: { flex: 1, textAlign: "center", color: "#aaa", fontSize: 12 },
+  daysContainer: { flexDirection: "row", flexWrap: "wrap" },
+  dayWrapper: { width: "14.28%", alignItems: "center", marginVertical: 4 },
+  dayCircle: {
+    width: 32,
+    height: 32,
+    borderRadius: 16,
+    justifyContent: "center",
+    alignItems: "center",
+    backgroundColor: "#333",
+  },
+  dayCompleted: { backgroundColor: "#FACC15" },
+  dayText: { color: "#fff", fontSize: 14 },
+  emptyDay: { width: 32, height: 32 },
+  statsModalFooter: {
+    flexDirection: "row",
+    justifyContent: "space-between",
+    marginTop: 15,
+  },
+  navButton: { padding: 10 },
 });

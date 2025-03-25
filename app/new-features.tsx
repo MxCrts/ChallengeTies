@@ -7,49 +7,130 @@ import {
   ActivityIndicator,
   Alert,
   FlatList,
-  Linking,
-  Image,
   Dimensions,
+  SafeAreaView,
 } from "react-native";
 import {
-  doc,
   collection,
   onSnapshot,
   updateDoc,
+  doc,
+  getDoc,
+  addDoc,
   increment,
   setDoc,
-  getDoc,
 } from "firebase/firestore";
+import { onAuthStateChanged } from "firebase/auth";
 import { db, auth } from "../constants/firebase-config";
+import { StatusBar } from "expo-status-bar";
+import BackButton from "../components/BackButton";
+import ModalExplicatif from "../components/ModalExplicatif";
+import FeatureDetailModal from "../components/FeatureDetailModal";
+import ProposeFeatureModal from "../components/ProposeFeatureModal";
+import { Ionicons } from "@expo/vector-icons";
 import Animated, { FadeInUp } from "react-native-reanimated";
-import { useRouter } from "expo-router";
+import designSystem from "../theme/designSystem";
+import AsyncStorage from "@react-native-async-storage/async-storage";
+
+const { lightTheme } = designSystem;
+const currentTheme = lightTheme;
 
 const { width } = Dimensions.get("window");
+const ITEM_WIDTH = Math.round(width * 0.9);
+const ITEM_HEIGHT = 150; // Hauteur fixe de chaque card
+const CARD_MARGIN = 8;
+
+//
+// Countdown en blocs
+//
+type CountdownValues = {
+  days: number;
+  hours: number;
+  mins: number;
+  secs: number;
+};
+
+type Feature = {
+  id: string;
+  title: string;
+  votes: number;
+  approved?: boolean;
+  description?: string;
+  username?: string;
+};
 
 export default function NewFeatures() {
-  const [features, setFeatures] = useState<
-    { id: string; title: string; votes: number }[]
-  >([]);
-  const [loading, setLoading] = useState(true);
+  const [features, setFeatures] = useState<Feature[]>([]);
+  const [loading, setLoading] = useState<boolean>(true);
   const [userVote, setUserVote] = useState<string | null>(null);
-  const [timeLeft, setTimeLeft] = useState<string>("");
-  const userId = auth.currentUser?.uid;
-  const router = useRouter();
+  const [countdown, setCountdown] = useState<CountdownValues>({
+    days: 0,
+    hours: 0,
+    mins: 0,
+    secs: 0,
+  });
+  const [user, setUser] = useState<any>(null);
 
+  const [showExplanationModal, setShowExplanationModal] =
+    useState<boolean>(false);
+  const [selectedFeature, setSelectedFeature] = useState<Feature | null>(null);
+  const [showFeatureDetailModal, setShowFeatureDetailModal] =
+    useState<boolean>(false);
+  const [showProposeModal, setShowProposeModal] = useState<boolean>(false);
+
+  // Récupération de l'user (doc Firestore) et de son vote
   useEffect(() => {
-    const featuresRef = collection(db, "polls", "new-features", "features");
+    const unsubscribeAuth = onAuthStateChanged(auth, async (firebaseUser) => {
+      if (firebaseUser) {
+        const userDocRef = doc(db, "users", firebaseUser.uid);
+        const snapshot = await getDoc(userDocRef);
+        if (snapshot.exists()) {
+          const data = snapshot.data();
+          setUser({ ...data, uid: firebaseUser.uid });
+          setUserVote(data.votedFor || null);
+        } else {
+          setUser(firebaseUser);
+        }
+      }
+    });
+    return unsubscribeAuth;
+  }, []);
+  const userId = user?.uid;
 
-    // Real-time listener for features
-    const unsubscribeFeatures = onSnapshot(featuresRef, (snapshot) => {
-      const updatedFeatures = snapshot.docs.map((doc) => ({
-        id: doc.id,
-        title: doc.data().title,
-        votes: doc.data().votes,
-      }));
-      setFeatures(updatedFeatures);
+  // Modal explicatif affiché une première fois
+  useEffect(() => {
+    const checkModalShown = async () => {
+      try {
+        const value = await AsyncStorage.getItem("explanationModalShown");
+        if (!value) {
+          setShowExplanationModal(true);
+          await AsyncStorage.setItem("explanationModalShown", "true");
+        }
+      } catch (error) {
+        console.error("Erreur AsyncStorage:", error);
+      }
+    };
+    checkModalShown();
+  }, []);
+
+  // Récupération des features
+  useEffect(() => {
+    if (!userId) return;
+    const featuresRef = collection(db, "polls", "new-features", "features");
+    const unsubscribe = onSnapshot(featuresRef, (snapshot) => {
+      const data = snapshot.docs.map((docSnap) => ({
+        id: docSnap.id,
+        ...docSnap.data(),
+      })) as Feature[];
+      const approvedFeatures = data.filter(
+        (feature) => feature.approved === true
+      );
+      approvedFeatures.sort((a, b) => b.votes - a.votes);
+      setFeatures(approvedFeatures);
       setLoading(false);
     });
 
+    // Récupération du vote
     const fetchUserVote = async () => {
       if (userId) {
         const userDoc = doc(db, "users", userId);
@@ -59,55 +140,51 @@ export default function NewFeatures() {
         }
       }
     };
-
     fetchUserVote();
 
-    // Timer for 31 January 2025 at 23:00 French time
-    const targetDate = new Date("2025-01-31T22:00:00Z"); // UTC equivalent
+    return () => unsubscribe();
+  }, [userId]);
+
+  // Countdown jusqu'au 30 avril 2025
+  useEffect(() => {
+    const targetDate = new Date("2025-04-30T23:59:59Z");
     const updateTimer = () => {
       const now = new Date();
       const diff = targetDate.getTime() - now.getTime();
-
       if (diff <= 0) {
-        setTimeLeft("Voting has ended.");
+        setCountdown({ days: 0, hours: 0, mins: 0, secs: 0 });
         return;
       }
-
       const days = Math.floor(diff / (1000 * 60 * 60 * 24));
       const hours = Math.floor(
         (diff % (1000 * 60 * 60 * 24)) / (1000 * 60 * 60)
       );
-      const minutes = Math.floor((diff % (1000 * 60 * 60)) / (1000 * 60));
-      const seconds = Math.floor((diff % (1000 * 60)) / 1000);
-
-      setTimeLeft(`${days}d ${hours}h ${minutes}m ${seconds}s`);
+      const mins = Math.floor((diff % (1000 * 60 * 60)) / (1000 * 60));
+      const secs = Math.floor((diff % (1000 * 60)) / 1000);
+      setCountdown({ days, hours, mins, secs });
     };
-
-    // Set timer immediately and update every second
     updateTimer();
-    const timerInterval = setInterval(updateTimer, 1000);
+    const interval = setInterval(updateTimer, 1000);
+    return () => clearInterval(interval);
+  }, []);
 
-    return () => {
-      unsubscribeFeatures();
-      clearInterval(timerInterval);
-    };
-  }, [userId]);
+  // Ouverture du modal de détail d'une feature
+  const openFeatureDetail = (feature: Feature) => {
+    setSelectedFeature(feature);
+    setShowFeatureDetailModal(true);
+  };
 
+  // Fonction de vote (vérifie si l'utilisateur a déjà voté)
   const handleVote = async (featureId: string) => {
     if (!userId) {
-      Alert.alert("Login Required", "Please log in to vote.");
+      Alert.alert("Connexion requise", "Veuillez vous connecter pour voter.");
       return;
     }
-
     if (userVote) {
-      Alert.alert("Vote Already Cast", "You have already voted.");
+      Alert.alert("Vote déjà effectué", "Vous avez déjà voté.");
       return;
     }
-
     try {
-      setLoading(true);
-
-      // Increment vote count
       const featureRef = doc(
         db,
         "polls",
@@ -115,216 +192,361 @@ export default function NewFeatures() {
         "features",
         featureId
       );
-      await updateDoc(featureRef, {
-        votes: increment(1),
-      });
-
-      // Save user vote
+      await updateDoc(featureRef, { votes: increment(1) });
       const userRef = doc(db, "users", userId);
-      await setDoc(userRef, { votedFor: featureId }, { merge: true });
-
+      await updateDoc(userRef, { votedFor: featureId });
       setUserVote(featureId);
-
-      Alert.alert("Vote Cast", "Thank you for voting!");
+      Alert.alert("Vote enregistré", "Merci pour votre vote !");
     } catch (error) {
-      console.error("Error casting vote:", error);
-      Alert.alert("Error", "Failed to cast your vote. Please try again.");
-    } finally {
-      setLoading(false);
+      console.error("Erreur lors du vote :", error);
+      Alert.alert("Erreur", "Une erreur est survenue lors de votre vote.");
+    }
+  };
+
+  // Fonction de proposition d'une feature :
+  // Si l'utilisateur propose une feature, son vote est automatiquement enregistré (il ne peut voter qu'une fois)
+  const handleProposeFeature = async (title: string, description?: string) => {
+    if (!userId) {
+      Alert.alert(
+        "Connexion requise",
+        "Veuillez vous connecter pour proposer une fonctionnalité."
+      );
+      return;
+    }
+    try {
+      const username = user?.username || "Inconnu";
+      const featureRef = await addDoc(
+        collection(db, "polls", "new-features", "features"),
+        {
+          title,
+          description: description || "",
+          votes: 1,
+          approved: false,
+          username: username,
+        }
+      );
+      // Enregistre automatiquement le vote dans le doc user
+      const userRef = doc(db, "users", userId);
+      await setDoc(userRef, { votedFor: featureRef.id }, { merge: true });
+      setUserVote(featureRef.id);
+      Alert.alert(
+        "Proposition envoyée",
+        "Votre idée a été soumise et votre vote a été automatiquement enregistré. Vous ne pouvez voter qu'une fois."
+      );
+    } catch (error) {
+      console.error("Erreur lors de la proposition :", error);
+      Alert.alert("Erreur", "Impossible d'envoyer votre proposition.");
     }
   };
 
   if (loading) {
     return (
       <View style={styles.loadingContainer}>
-        <ActivityIndicator size="large" color="#007bff" />
-        <Text style={styles.loadingText}>Loading features...</Text>
+        <ActivityIndicator size="large" color={currentTheme.colors.primary} />
+        <Text style={styles.loadingText}>
+          Chargement des fonctionnalités...
+        </Text>
       </View>
     );
   }
 
-  return (
-    <View style={styles.container}>
-      <TouchableOpacity
-        style={styles.elegantBackButton}
-        onPress={() => router.back()}
-      >
-        <View style={styles.elegantBackButtonContainer}>
-          <Text style={styles.elegantBackButtonArrow}>←</Text>
-          <Text style={styles.elegantBackButtonText}>Back</Text>
+  // Countdown en 4 blocs
+  const renderCountdown = () => {
+    const { days, hours, mins, secs } = countdown;
+    return (
+      <View style={styles.countdownRow}>
+        <View style={styles.countdownBox}>
+          <Text style={styles.countdownNumber}>{days}</Text>
+          <Text style={styles.countdownLabel}>Jours</Text>
         </View>
-      </TouchableOpacity>
-
-      {/* Header */}
-      <Text style={styles.header}>Vote for the Next Feature</Text>
-      <Text style={styles.description}>
-        We value your feedback! Choose a feature you’d like us to prioritize.
-        The feature with the most votes will be implemented next month.
-      </Text>
-
-      {/* Features */}
-      <FlatList
-        data={features}
-        keyExtractor={(item) => item.id}
-        contentContainerStyle={styles.featureList}
-        renderItem={({ item }) => (
-          <Animated.View entering={FadeInUp} style={styles.featureCard}>
-            <Text style={styles.featureTitle}>{item.title}</Text>
-            <Text style={styles.featureVotes}>
-              {item.votes} vote{item.votes !== 1 ? "s" : ""}
-            </Text>
-            <TouchableOpacity
-              style={[
-                styles.voteButton,
-                userVote === item.id && styles.votedButton,
-              ]}
-              onPress={() => handleVote(item.id)}
-              disabled={!!userVote}
-            >
-              <Text style={styles.voteButtonText}>
-                {userVote === item.id ? "Voted" : "Vote"}
-              </Text>
-            </TouchableOpacity>
-          </Animated.View>
-        )}
-      />
-
-      {/* Thank You Message */}
-      {userVote && (
-        <Text style={styles.thankYouText}>
-          Thank you for voting! You’ve voted for:{" "}
-          {features.find((feature) => feature.id === userVote)?.title}
-        </Text>
-      )}
-
-      {/* Countdown Timer */}
-      <View style={styles.timerContainer}>
-        <Text style={styles.timerLabel}>Time Left:</Text>
-        <Text style={styles.timerText}>{timeLeft}</Text>
+        <View style={styles.countdownBox}>
+          <Text style={styles.countdownNumber}>{hours}</Text>
+          <Text style={styles.countdownLabel}>Heures</Text>
+        </View>
+        <View style={styles.countdownBox}>
+          <Text style={styles.countdownNumber}>{mins}</Text>
+          <Text style={styles.countdownLabel}>Mins</Text>
+        </View>
+        <View style={styles.countdownBox}>
+          <Text style={styles.countdownNumber}>{secs}</Text>
+          <Text style={styles.countdownLabel}>Secs</Text>
+        </View>
       </View>
-    </View>
+    );
+  };
+
+  return (
+    <SafeAreaView style={styles.safeArea}>
+      <StatusBar hidden />
+      <BackButton color="#000000" style={styles.backButton} />
+      <TouchableOpacity
+        style={styles.questionIcon}
+        onPress={() => setShowExplanationModal(true)}
+      >
+        <Ionicons
+          name="help-circle-outline"
+          size={28}
+          color={currentTheme.colors.primary}
+        />
+      </TouchableOpacity>
+      {showExplanationModal && (
+        <ModalExplicatif onClose={() => setShowExplanationModal(false)} />
+      )}
+      <View style={styles.mainContainer}>
+        <View style={styles.headerContainer}>
+          <Text style={styles.header}>
+            Votez pour la prochaine fonctionnalité
+          </Text>
+          <Text style={styles.description}>
+            Nous apprécions vos retours ! Choisissez une fonctionnalité que nous
+            prioriserons. La fonctionnalité la plus votée sera implémentée le
+            mois prochain.
+          </Text>
+        </View>
+        <View style={styles.featuresScrollContainer}>
+          <FlatList
+            data={features}
+            keyExtractor={(item) => item.id}
+            showsVerticalScrollIndicator={false}
+            contentContainerStyle={{ paddingBottom: 0 }}
+            renderItem={({ item }) => (
+              <TouchableOpacity
+                onPress={() => openFeatureDetail(item)}
+                activeOpacity={0.85}
+              >
+                <Animated.View entering={FadeInUp} style={styles.featureCard}>
+                  <Text style={styles.featureTitle}>{item.title}</Text>
+                  {item.username && (
+                    <Text style={styles.featureUsername}>
+                      par {item.username}
+                    </Text>
+                  )}
+                  <Text style={styles.featureVotes}>
+                    {item.votes} vote{item.votes !== 1 ? "s" : ""}
+                  </Text>
+                  {item.description && (
+                    <Text style={styles.featureDescription}>
+                      {item.description.length > 60
+                        ? item.description.substring(0, 60) + "..."
+                        : item.description}
+                    </Text>
+                  )}
+                </Animated.View>
+              </TouchableOpacity>
+            )}
+          />
+        </View>
+        <View style={styles.bottomContainer}>
+          {!userVote && (
+            <TouchableOpacity
+              style={styles.proposeButton}
+              onPress={() => setShowProposeModal(true)}
+            >
+              <Text style={styles.proposeButtonText}>Proposer une idée</Text>
+            </TouchableOpacity>
+          )}
+          {userVote && (
+            <Text style={styles.thankYouText}>
+              Merci pour votre vote !{" "}
+              {features.find((f) => f.id === userVote)?.title &&
+                `Vous avez voté pour : ${
+                  features.find((f) => f.id === userVote)?.title
+                }`}
+            </Text>
+          )}
+          <Text style={styles.countdownTitle}>Temps restant :</Text>
+          {renderCountdown()}
+        </View>
+      </View>
+      {showFeatureDetailModal && selectedFeature && (
+        <FeatureDetailModal
+          visible={showFeatureDetailModal}
+          feature={selectedFeature}
+          userVoted={!!userVote}
+          onVote={handleVote}
+          onClose={() => {
+            setShowFeatureDetailModal(false);
+            setSelectedFeature(null);
+          }}
+        />
+      )}
+      {showProposeModal && (
+        <ProposeFeatureModal
+          visible={showProposeModal}
+          onClose={() => setShowProposeModal(false)}
+          onSubmit={handleProposeFeature}
+        />
+      )}
+    </SafeAreaView>
   );
 }
 
+//
+// STYLES
+//
 const styles = StyleSheet.create({
-  container: {
+  safeArea: {
     flex: 1,
-    padding: 20,
-    backgroundColor: "#1C1C1E",
+    backgroundColor: currentTheme.colors.background,
   },
-  elegantBackButton: {
-    marginBottom: 20,
-    alignSelf: "flex-start",
-    padding: 10,
-    flexDirection: "row",
+  backButton: {
+    position: "absolute",
+    top: 40,
+    left: 20,
+    zIndex: 20,
+  },
+  questionIcon: {
+    position: "absolute",
+    top: 40,
+    right: 20,
+    zIndex: 20,
+  },
+  mainContainer: {
+    flex: 1,
+    paddingHorizontal: 16,
+    paddingVertical: 8, // Réduit
+  },
+  headerContainer: {
     alignItems: "center",
-    backgroundColor: "#2C2C2E",
-    borderRadius: 8,
-    shadowColor: "#000",
-    shadowOffset: { width: 0, height: 4 },
-    shadowOpacity: 0.2,
-    shadowRadius: 6,
-  },
-  elegantBackButtonContainer: {
-    flexDirection: "row",
-    alignItems: "center",
-  },
-  elegantBackButtonArrow: {
-    fontSize: 20,
-    color: "#007bff",
-    marginRight: 5,
-  },
-  elegantBackButtonText: {
-    fontSize: 16,
-    color: "#007bff",
+    marginBottom: 10, // Très faible
+    marginTop: 60,
   },
   header: {
     fontSize: 24,
-    fontWeight: "bold",
-    color: "#FFFFFF",
+    fontFamily: currentTheme.typography.title.fontFamily,
     textAlign: "center",
-    marginBottom: 10,
+    marginTop: 30,
+    marginBottom: 2,
+    color: "#000000",
   },
   description: {
-    fontSize: 16,
-    color: "#BBBBBB",
+    fontSize: 14,
+    fontFamily: currentTheme.typography.body.fontFamily,
     textAlign: "center",
-    marginBottom: 20,
+    marginBottom: 0, // Collé
+    color: currentTheme.colors.textSecondary,
+    paddingHorizontal: 5,
   },
-  featureList: {
-    paddingBottom: 20,
+  featuresScrollContainer: {
+    flex: 1,
+    width: "100%",
+    maxHeight: 320, // Ajuster selon l'écran
+    marginTop: 2,
+    marginBottom: 50,
   },
   featureCard: {
-    backgroundColor: "#2C2C2E",
-    borderRadius: 10,
-    padding: 20,
-    marginBottom: 15,
+    width: ITEM_WIDTH,
+    height: ITEM_HEIGHT,
+    backgroundColor: currentTheme.colors.cardBackground,
+    borderRadius: 15,
+    paddingVertical: 12,
+    paddingHorizontal: 12,
+    marginVertical: 4,
+    justifyContent: "center",
+    alignItems: "center",
+    borderWidth: 1,
+    borderColor: currentTheme.colors.primary,
     shadowColor: "#000",
-    shadowOffset: { width: 0, height: 2 },
+    shadowOffset: { width: 0, height: 3 },
     shadowOpacity: 0.2,
-    shadowRadius: 4,
-    elevation: 3,
+    shadowRadius: 5,
+    elevation: 4,
   },
   featureTitle: {
-    fontSize: 18,
-    fontWeight: "bold",
-    color: "#FFFFFF",
-    marginBottom: 8,
+    fontSize: 16,
+    fontFamily: currentTheme.typography.title.fontFamily,
+    marginBottom: 2,
+    textAlign: "center",
+    color: "#000000",
+  },
+  featureUsername: {
+    fontSize: 11,
+    fontFamily: currentTheme.typography.body.fontFamily,
+    marginBottom: 2,
+    textAlign: "center",
+    color: currentTheme.colors.textSecondary,
   },
   featureVotes: {
     fontSize: 14,
-    color: "#AAAAAA",
-    marginBottom: 10,
-  },
-  voteButton: {
-    backgroundColor: "#007bff",
-    padding: 10,
-    borderRadius: 5,
-  },
-  votedButton: {
-    backgroundColor: "#6c757d",
-  },
-  voteButtonText: {
-    color: "#FFFFFF",
-    fontWeight: "bold",
+    fontFamily: currentTheme.typography.title.fontFamily,
+    marginBottom: 2,
     textAlign: "center",
+    color: currentTheme.colors.primary,
+  },
+  featureDescription: {
+    fontSize: 12,
+    fontFamily: currentTheme.typography.body.fontFamily,
+    textAlign: "center",
+    color: currentTheme.colors.textSecondary,
+    marginBottom: 0,
+  },
+
+  bottomContainer: {
+    marginTop: 2,
+    alignItems: "center",
+  },
+  proposeButton: {
+    backgroundColor: currentTheme.colors.primary,
+    paddingVertical: 10,
+    paddingHorizontal: 20,
+    borderRadius: 25,
+    marginVertical: 2,
+    marginBottom: 20,
+  },
+  proposeButtonText: {
+    fontSize: 14,
+    fontFamily: currentTheme.typography.title.fontFamily,
+    color: currentTheme.colors.textPrimary,
   },
   thankYouText: {
-    marginTop: 20,
-    fontSize: 16,
-    color: "#BBBBBB",
+    fontSize: 14,
+    fontFamily: currentTheme.typography.body.fontFamily,
+    color: currentTheme.colors.textSecondary,
+    marginTop: 4,
     textAlign: "center",
   },
-  timerContainer: {
-    marginTop: 20,
-    alignItems: "center",
-    backgroundColor: "#2C2C2E",
+  countdownTitle: {
+    fontSize: 14,
+    fontFamily: currentTheme.typography.title.fontFamily,
+    color: currentTheme.colors.textSecondary,
+    marginTop: 10,
+    marginBottom: 6,
+  },
+  countdownRow: {
+    flexDirection: "row",
+    justifyContent: "space-evenly",
+    width: "100%",
+  },
+  countdownBox: {
+    width: 70,
+    height: 70,
+    backgroundColor: currentTheme.colors.primary,
     borderRadius: 8,
-    padding: 15,
-    shadowColor: "#000",
-    shadowOffset: { width: 0, height: 4 },
-    shadowOpacity: 0.2,
-    shadowRadius: 6,
+    alignItems: "center",
+    justifyContent: "center",
+    marginHorizontal: 2,
   },
-  timerLabel: {
-    fontSize: 18,
-    color: "#BBBBBB",
-    marginBottom: 5,
+  countdownNumber: {
+    fontSize: 16,
+    fontFamily: currentTheme.typography.title.fontFamily,
+    color: "#333",
   },
-  timerText: {
-    fontSize: 22,
-    color: "#FFD700",
-    fontWeight: "bold",
+  countdownLabel: {
+    fontSize: 10,
+    fontFamily: currentTheme.typography.body.fontFamily,
+    color: "#333",
   },
+
   loadingContainer: {
     flex: 1,
     justifyContent: "center",
     alignItems: "center",
-    backgroundColor: "#1C1C1E",
+    backgroundColor: currentTheme.colors.background,
   },
   loadingText: {
     marginTop: 10,
     fontSize: 16,
-    color: "#BBBBBB",
+    fontFamily: currentTheme.typography.body.fontFamily,
+    color: currentTheme.colors.textSecondary,
   },
 });

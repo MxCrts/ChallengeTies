@@ -8,6 +8,8 @@ import {
   ActivityIndicator,
   Image,
   Alert,
+  Dimensions,
+  SafeAreaView,
 } from "react-native";
 import { Ionicons } from "@expo/vector-icons";
 import { useRouter } from "expo-router";
@@ -22,15 +24,14 @@ import { db, auth } from "../../constants/firebase-config";
 import Animated, { FadeIn, Layout } from "react-native-reanimated";
 import { LinearGradient } from "expo-linear-gradient";
 import { Swipeable } from "react-native-gesture-handler";
+import BackButton from "../../components/BackButton";
+import designSystem from "../../theme/designSystem";
 
-interface Challenge {
-  id: string;
-  title: string;
-  description?: string;
-  category?: string;
-  imageUrl?: string;
-  createdAt?: string;
-}
+const { width: SCREEN_WIDTH } = Dimensions.get("window");
+const currentTheme = designSystem.lightTheme;
+
+// On réduit légèrement la largeur des cartes en définissant un pourcentage du SCREEN_WIDTH
+const CARD_WIDTH = SCREEN_WIDTH * 0.9;
 
 export default function MyChallenges() {
   const router = useRouter();
@@ -73,7 +74,7 @@ export default function MyChallenges() {
 
   const handleRemoveChallenge = async (id: string) => {
     Alert.alert(
-      "Supprimer le Défi",
+      "Supprimer le défi",
       "Êtes-vous sûr de vouloir supprimer ce défi ?",
       [
         { text: "Annuler", style: "cancel" },
@@ -143,7 +144,9 @@ export default function MyChallenges() {
             </View>
           )}
           <View style={styles.challengeDetails}>
-            <Text style={styles.challengeTitle}>{item.title}</Text>
+            <Text style={styles.challengeTitle} numberOfLines={1}>
+              {item.title}
+            </Text>
             <Text style={styles.challengeCategory}>
               {item.category || "Sans catégorie"}
             </Text>
@@ -156,10 +159,10 @@ export default function MyChallenges() {
   if (isLoading) {
     return (
       <LinearGradient
-        colors={["#1C1C1E", "#2C2C2E"]}
+        colors={["#ECECEC", "#F8F8F8"]}
         style={styles.loadingContainer}
       >
-        <ActivityIndicator size="large" color="#FACC15" />
+        <ActivityIndicator size="large" color="#ED8F03" />
         <Text style={styles.loadingText}>Chargement de vos défis...</Text>
       </LinearGradient>
     );
@@ -168,7 +171,7 @@ export default function MyChallenges() {
   if (myChallenges.length === 0) {
     return (
       <LinearGradient
-        colors={["#1C1C1E", "#2C2C2E"]}
+        colors={["#ECECEC", "#F8F8F8"]}
         style={styles.noChallengesContainer}
       >
         <Ionicons name="create-outline" size={60} color="#b0bec5" />
@@ -181,35 +184,125 @@ export default function MyChallenges() {
   }
 
   return (
-    <LinearGradient colors={["#1C1C1E", "#2C2C2E"]} style={styles.container}>
-      <Text style={styles.header}>Mes Défis Créés</Text>
-      <FlatList
-        data={myChallenges}
-        renderItem={renderChallenge}
-        keyExtractor={(item) => item.id}
-        contentContainerStyle={styles.listContainer}
-      />
-    </LinearGradient>
+    <SafeAreaView style={styles.safeArea}>
+      <LinearGradient colors={["#ECECEC", "#F8F8F8"]} style={styles.container}>
+        <BackButton color="#ED8F03" />
+        <Text style={styles.header}>Mes Défis Créés</Text>
+        <FlatList
+          data={myChallenges}
+          renderItem={renderChallenge}
+          keyExtractor={(item) => item.id}
+          contentContainerStyle={styles.listContainer}
+        />
+      </LinearGradient>
+    </SafeAreaView>
   );
 }
 
-// --------------------------------
-// 🎨 Styles modernes et épurés
-// --------------------------------
+interface Challenge {
+  id: string;
+  title: string;
+  description?: string;
+  category?: string;
+  imageUrl?: string;
+  createdAt?: string;
+}
+
 const styles = StyleSheet.create({
+  safeArea: {
+    flex: 1,
+    backgroundColor: "#ECECEC",
+  },
   container: {
     flex: 1,
-    padding: 20,
+    paddingTop: 20,
+    backgroundColor: "#ECECEC",
+    paddingHorizontal: 20,
+  },
+  header: {
+    fontSize: 25,
+    fontFamily: "Comfortaa_700Bold",
+    color: "#000000",
+    textAlign: "center",
+    marginVertical: 20,
+    marginBottom: 30,
+  },
+  listContainer: {
+    paddingBottom: 40,
+  },
+  challengeCard: {
+    width: CARD_WIDTH,
+    alignSelf: "center",
+    borderRadius: 18,
+    marginBottom: 15,
+    overflow: "hidden",
+    borderWidth: 2,
+    borderColor: "#ED8F03",
+    backgroundColor: "#FFFFFF",
+    shadowColor: "#000",
+    shadowOpacity: 0.1,
+    shadowOffset: { width: 0, height: 2 },
+    shadowRadius: 4,
+    elevation: 3,
+  },
+  challengeContent: {
+    flexDirection: "row",
+    alignItems: "center",
+    padding: 14,
+  },
+  challengeImage: {
+    width: 70,
+    height: 70,
+    borderRadius: 14,
+    marginRight: 14,
+  },
+  placeholderImage: {
+    width: 70,
+    height: 70,
+    borderRadius: 14,
+    backgroundColor: "#F0F0F0",
+    justifyContent: "center",
+    alignItems: "center",
+    marginRight: 14,
+  },
+  challengeDetails: {
+    flex: 1,
+  },
+  challengeTitle: {
+    fontSize: 18,
+    fontFamily: currentTheme.typography.title.fontFamily,
+    color: "#000000",
+  },
+  challengeCategory: {
+    fontSize: 14,
+    color: "#555555",
+    marginTop: 4,
+    textTransform: "capitalize",
+  },
+  swipeActionsContainer: {
+    justifyContent: "center",
+    alignItems: "center",
+    backgroundColor: "#EF4444",
+    width: 70,
+    borderRadius: 18,
+    marginBottom: 15,
+  },
+  trashButton: {
+    justifyContent: "center",
+    alignItems: "center",
+    height: "100%",
+    width: "100%",
   },
   loadingContainer: {
     flex: 1,
     justifyContent: "center",
     alignItems: "center",
+    backgroundColor: "#ECECEC",
   },
   loadingText: {
     marginTop: 10,
     fontSize: 16,
-    color: "#FACC15",
+    color: "#ED8F03",
   },
   noChallengesContainer: {
     flex: 1,
@@ -229,70 +322,5 @@ const styles = StyleSheet.create({
     textAlign: "center",
     marginTop: 5,
     maxWidth: 250,
-  },
-  header: {
-    fontSize: 24,
-    fontWeight: "bold",
-    color: "#FACC15",
-    marginBottom: 20,
-    textAlign: "center",
-  },
-  listContainer: {
-    paddingBottom: 20,
-  },
-  challengeCard: {
-    flexDirection: "row",
-    alignItems: "center",
-    backgroundColor: "#3A3A3C",
-    padding: 15,
-    marginBottom: 15,
-    borderRadius: 10,
-  },
-  challengeContent: {
-    flex: 1,
-    flexDirection: "row",
-    alignItems: "center",
-  },
-  challengeImage: {
-    width: 60,
-    height: 60,
-    borderRadius: 10,
-    marginRight: 15,
-  },
-  placeholderImage: {
-    width: 60,
-    height: 60,
-    borderRadius: 10,
-    backgroundColor: "#2C2C2E",
-    justifyContent: "center",
-    alignItems: "center",
-    marginRight: 15,
-  },
-  challengeDetails: {
-    flex: 1,
-  },
-  challengeTitle: {
-    fontSize: 17,
-    fontWeight: "600",
-    color: "#FACC15",
-    marginBottom: 5,
-  },
-  challengeCategory: {
-    fontSize: 14,
-    color: "#bbb",
-  },
-  swipeActionsContainer: {
-    justifyContent: "center",
-    alignItems: "center",
-    backgroundColor: "#f44336",
-    width: 70,
-    borderRadius: 10,
-    marginBottom: 15,
-  },
-  trashButton: {
-    justifyContent: "center",
-    alignItems: "center",
-    height: "100%",
-    width: "100%",
   },
 });
