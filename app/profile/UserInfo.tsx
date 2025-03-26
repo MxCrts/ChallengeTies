@@ -33,7 +33,7 @@ interface User {
   bio?: string;
   profileImage?: string | null;
   location?: string;
-  interests?: string;
+  interet?: string;
 }
 
 export default function UserInfo() {
@@ -43,7 +43,7 @@ export default function UserInfo() {
   const [bio, setBio] = useState("");
   const [profileImage, setProfileImage] = useState<string | null>(null);
   const [location, setLocation] = useState("");
-  const [interests, setInterests] = useState("");
+  const [interet, setInteret] = useState("");
   const [isLoading, setIsLoading] = useState(false);
 
   const currentTheme = designSystem.lightTheme;
@@ -65,7 +65,7 @@ export default function UserInfo() {
           setBio(userData.bio || "");
           setProfileImage(userData.profileImage || null);
           setLocation(userData.location || "");
-          setInterests(userData.interests || "");
+          setInteret(userData.interet || "");
         }
       } catch (error) {
         Alert.alert("Erreur", "Impossible de charger vos informations.");
@@ -165,7 +165,7 @@ export default function UserInfo() {
         bio,
         profileImage,
         location,
-        interests,
+        interet,
       });
       await checkForAchievements(user.uid);
       Alert.alert("Succès", "Votre profil a été mis à jour !");
@@ -176,7 +176,7 @@ export default function UserInfo() {
     } finally {
       setIsLoading(false);
     }
-  }, [user, displayName, bio, profileImage, location, interests, router]);
+  }, [user, displayName, bio, profileImage, location, interet, router]);
 
   if (isLoading) {
     return (
@@ -274,8 +274,8 @@ export default function UserInfo() {
           label="Intérêts"
           mode="outlined"
           style={styles.input}
-          value={interests}
-          onChangeText={setInterests}
+          value={interet}
+          onChangeText={setLocation}
           textColor={"#000000"}
           activeOutlineColor={currentTheme.colors.primary}
           outlineColor={currentTheme.colors.primary}
@@ -288,6 +288,7 @@ export default function UserInfo() {
             },
           }}
         />
+
         <LinearGradient
           colors={[
             currentTheme.colors.primary,

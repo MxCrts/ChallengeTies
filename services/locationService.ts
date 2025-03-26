@@ -18,7 +18,7 @@ export const fetchAndSaveUserLocation = async () => {
 
     // Utiliser l'API Google pour récupérer pays/région (REMPLACE `TON_API_KEY`)
     const response = await fetch(
-      `https://maps.googleapis.com/maps/api/geocode/json?latlng=${latitude},${longitude}&key=TON_API_KEY`
+      `https://maps.googleapis.com/maps/api/geocode/json?latlng=${latitude},${longitude}&key=AIzaSyC1Cv8ySnoH2I5hS-f9GU6JpeY4jxEEo48`
     );
     const data = await response.json();
 

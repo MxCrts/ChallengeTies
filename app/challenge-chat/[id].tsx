@@ -1,4 +1,4 @@
-import React, { useRef, useState, useEffect } from "react";
+import React, { useState, useRef, useEffect } from "react";
 import {
   View,
   Text,
@@ -8,29 +8,50 @@ import {
   StyleSheet,
   KeyboardAvoidingView,
   Platform,
+  SafeAreaView,
+  Dimensions,
+  Image,
 } from "react-native";
-import { useLocalSearchParams } from "expo-router";
-import { useChat } from "../../context/ChatContext";
+import { useLocalSearchParams, useNavigation } from "expo-router";
 import { Ionicons } from "@expo/vector-icons";
+import { LinearGradient } from "expo-linear-gradient";
 import { auth } from "../../constants/firebase-config";
+import { useChat } from "../../context/ChatContext";
+import { useTheme } from "../../context/ThemeContext";
+import { useSafeAreaInsets } from "react-native-safe-area-context";
+import designSystem from "../../theme/designSystem";
+
+const { width } = Dimensions.get("window");
 
 export default function ChallengeChat() {
   const { id: challengeId, title: challengeTitle } = useLocalSearchParams();
+  const navigation = useNavigation();
   const { messages, sendMessage } = useChat(
     Array.isArray(challengeId) ? challengeId[0] : challengeId
   );
   const [newMessage, setNewMessage] = useState("");
   const flatListRef = useRef<FlatList>(null);
 
+  const { theme } = useTheme();
+  const currentTheme =
+    theme === "dark" ? designSystem.darkTheme : designSystem.lightTheme;
+  const headerGradient: readonly [string, string] = [
+    currentTheme.colors.primary,
+    currentTheme.colors.secondary,
+  ] as const;
+
+  // Utilisation du hook pour récupérer les insets (notamment le bottom)
+  const insets = useSafeAreaInsets();
+
   const handleSend = async () => {
     if (newMessage.trim().length === 0) return;
-
     try {
       await sendMessage(
         Array.isArray(challengeId) ? challengeId[0] : challengeId,
         newMessage
       );
       setNewMessage("");
+      flatListRef.current?.scrollToEnd({ animated: true });
     } catch (error) {
       console.error("Error sending message:", error);
     }
@@ -43,30 +64,33 @@ export default function ChallengeChat() {
   }, [messages]);
 
   const renderMessage = ({ item }: { item: any }) => {
-    const isUserMessage = item.userId === auth.currentUser?.uid;
-
+    const isMyMessage = item.userId === auth.currentUser?.uid;
     return (
       <View
         style={[
-          styles.messageContainer,
-          isUserMessage
-            ? styles.userMessageContainer
-            : styles.otherMessageContainer,
+          styles.messageRow,
+          isMyMessage ? styles.myMessageRow : styles.otherMessageRow,
         ]}
       >
-        {!isUserMessage && (
+        {!isMyMessage && (
           <View style={styles.avatarContainer}>
-            <Ionicons name="person-circle-outline" size={30} color="#007bff" />
+            <Ionicons
+              name="person-circle-outline"
+              size={34}
+              color={currentTheme.colors.primary}
+            />
           </View>
         )}
         <View
           style={[
             styles.messageBubble,
-            isUserMessage ? styles.userBubble : styles.otherBubble,
+            isMyMessage ? styles.myMessageBubble : styles.otherMessageBubble,
           ]}
         >
-          {!isUserMessage && (
-            <Text style={styles.username}>{item.username}</Text>
+          {!isMyMessage && (
+            <Text style={[styles.username, styles.otherUsername]}>
+              {item.username}
+            </Text>
           )}
           <Text style={styles.messageText}>{item.text}</Text>
         </View>
@@ -75,128 +99,161 @@ export default function ChallengeChat() {
   };
 
   return (
-    <KeyboardAvoidingView
-      style={styles.container}
-      behavior={Platform.OS === "ios" ? "padding" : undefined}
-    >
-      <View style={styles.header}>
-        <Text style={styles.title}>{challengeTitle || "Challenge Chat"}</Text>
-      </View>
-      <Text style={styles.welcomeMessage}>Welcome to the chat!</Text>
-      <FlatList
-        ref={flatListRef}
-        data={messages}
-        renderItem={renderMessage}
-        keyExtractor={(item) => item.id}
-        contentContainerStyle={styles.messageList}
-        onContentSizeChange={() =>
-          flatListRef.current?.scrollToEnd({ animated: true })
-        }
-      />
-      <View style={styles.inputContainer}>
-        <TextInput
-          style={styles.input}
-          placeholder="Type your message..."
-          placeholderTextColor="#aaa"
-          value={newMessage}
-          onChangeText={setNewMessage}
-        />
-        <TouchableOpacity style={styles.sendButton} onPress={handleSend}>
-          <Ionicons name="send" size={24} color="#fff" />
+    <SafeAreaView style={styles.container}>
+      {/* Header avec gradient */}
+      <LinearGradient colors={headerGradient} style={styles.header}>
+        <TouchableOpacity
+          onPress={() => navigation.goBack()}
+          style={styles.backButton}
+        >
+          <Ionicons name="arrow-back" size={24} color="#fff" />
         </TouchableOpacity>
-      </View>
-    </KeyboardAvoidingView>
+        <Text style={styles.headerTitle}>
+          {challengeTitle || "Challenge Chat"}
+        </Text>
+      </LinearGradient>
+
+      <KeyboardAvoidingView
+        style={styles.chatContainer}
+        behavior={Platform.OS === "ios" ? "padding" : undefined}
+        // Sur Android, on peut définir un offset pour éviter que le clavier ne masque la zone d'envoi
+        keyboardVerticalOffset={Platform.OS === "ios" ? 120 : 80}
+      >
+        <FlatList
+          ref={flatListRef}
+          data={messages}
+          renderItem={renderMessage}
+          keyExtractor={(item) => item.id}
+          contentContainerStyle={styles.messageList}
+          onContentSizeChange={() =>
+            flatListRef.current?.scrollToEnd({ animated: true })
+          }
+        />
+        {/* Zone d'envoi positionnée absolument */}
+        <View
+          style={[styles.inputWrapper, { paddingBottom: insets.bottom || 10 }]}
+        >
+          <TextInput
+            style={styles.input}
+            placeholder="Votre message..."
+            placeholderTextColor="#aaa"
+            value={newMessage}
+            onChangeText={setNewMessage}
+            multiline
+          />
+          <TouchableOpacity
+            style={[
+              styles.sendButton,
+              { backgroundColor: currentTheme.colors.primary },
+            ]}
+            onPress={handleSend}
+          >
+            <Ionicons name="send" size={24} color="#fff" />
+          </TouchableOpacity>
+        </View>
+      </KeyboardAvoidingView>
+    </SafeAreaView>
   );
 }
 
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: "#f0f4f8",
+    backgroundColor: "#f8f9fa",
   },
   header: {
-    padding: 15,
-    backgroundColor: "#007bff",
+    flexDirection: "row",
     alignItems: "center",
-    justifyContent: "center",
+    paddingVertical: 16,
+    paddingHorizontal: 20,
+    paddingBottom: 20, // Pour descendre le titre
   },
-  title: {
-    fontSize: 20,
-    fontWeight: "bold",
+  backButton: {
+    marginRight: 10,
+  },
+  headerTitle: {
     color: "#fff",
-  },
-  welcomeMessage: {
+    fontSize: 20,
+    fontFamily: "Comfortaa_700Bold",
     textAlign: "center",
-    fontSize: 14,
-    color: "#666",
-    marginVertical: 10,
+    flex: 1,
+  },
+  chatContainer: {
+    flex: 1,
   },
   messageList: {
-    padding: 10,
-    flexGrow: 1,
+    paddingHorizontal: 10,
+    paddingVertical: 10,
+    paddingBottom: 100, // Espace supplémentaire pour la zone d'envoi
   },
-  messageContainer: {
+  messageRow: {
     flexDirection: "row",
+    marginVertical: 5,
     alignItems: "flex-end",
-    marginBottom: 10,
   },
-  userMessageContainer: {
-    flexDirection: "row-reverse",
+  myMessageRow: {
+    justifyContent: "flex-end",
   },
-  otherMessageContainer: {
-    flexDirection: "row",
+  otherMessageRow: {
+    justifyContent: "flex-start",
   },
   avatarContainer: {
     marginRight: 10,
-    alignSelf: "flex-end",
   },
   messageBubble: {
+    maxWidth: "75%",
     borderRadius: 20,
-    padding: 12,
-    maxWidth: "70%",
+    padding: 10,
   },
-  userBubble: {
-    backgroundColor: "#007bff",
-    alignSelf: "flex-end",
+  myMessageBubble: {
+    backgroundColor: "#ed8f03", // Orange ChallengeTies
+    marginLeft: "25%",
   },
-  otherBubble: {
+  otherMessageBubble: {
     backgroundColor: "#e9ecef",
-    alignSelf: "flex-start",
+    marginRight: "25%",
+  },
+  username: {
+    fontFamily: "Comfortaa_700Bold",
+    marginBottom: 3,
+  },
+  otherUsername: {
+    color: "#ed8f03",
   },
   messageText: {
     fontSize: 16,
+    fontFamily: "Comfortaa_400Regular",
     color: "#fff",
   },
-  username: {
-    fontSize: 14,
-    fontWeight: "bold",
-    marginBottom: 5,
-    color: "#007bff",
-  },
-  inputContainer: {
+  inputWrapper: {
+    position: "absolute",
+    bottom: 0,
+    left: 0,
+    right: 0,
     flexDirection: "row",
-    alignItems: "center",
     padding: 10,
     backgroundColor: "#fff",
     borderTopWidth: 1,
     borderTopColor: "#ddd",
+    alignItems: "center",
   },
   input: {
     flex: 1,
-    height: 45,
+    minHeight: 45,
     borderWidth: 1,
     borderColor: "#ddd",
     borderRadius: 25,
     paddingHorizontal: 15,
     backgroundColor: "#f8f9fa",
     marginRight: 10,
+    fontFamily: "Comfortaa_400Regular",
     fontSize: 16,
   },
   sendButton: {
-    backgroundColor: "#007bff",
     borderRadius: 25,
-    padding: 10,
-    alignItems: "center",
+    paddingHorizontal: 16,
+    paddingVertical: 10,
     justifyContent: "center",
+    alignItems: "center",
   },
 });

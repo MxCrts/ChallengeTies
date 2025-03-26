@@ -1,4 +1,4 @@
-import React, { useState } from "react";
+import React, { useState, useRef } from "react";
 import {
   View,
   Text,
@@ -9,15 +9,23 @@ import {
   KeyboardAvoidingView,
   Platform,
   SafeAreaView,
+  Dimensions,
+  Image,
 } from "react-native";
-import { useRoute } from "@react-navigation/native";
+import { useRoute, useNavigation } from "@react-navigation/native";
 import { Ionicons } from "@expo/vector-icons";
 import { LinearGradient } from "expo-linear-gradient";
 import { auth } from "../constants/firebase-config";
 import { useChat } from "../context/ChatContext";
+import designSystem from "../theme/designSystem";
+
+const { width } = Dimensions.get("window");
+const { lightTheme } = designSystem;
+const currentTheme = lightTheme;
 
 export default function ChallengeChat() {
   const route = useRoute();
+  const navigation = useNavigation();
   const { challengeId, challengeTitle } = route.params as {
     challengeId: string;
     challengeTitle: string;
@@ -26,11 +34,20 @@ export default function ChallengeChat() {
   const { messages, sendMessage } = useChat(challengeId);
   const [newMessage, setNewMessage] = useState("");
 
+  // Utilisation des couleurs du design system pour le header (orange dans le thème light)
+  const headerGradient: readonly [string, string] = [
+    currentTheme.colors.primary,
+    currentTheme.colors.secondary,
+  ] as const;
+
+  const flatListRef = useRef<FlatList>(null);
+
   const handleSend = async () => {
     if (newMessage.trim().length === 0) return;
     try {
       await sendMessage(challengeId, newMessage);
       setNewMessage("");
+      flatListRef.current?.scrollToEnd({ animated: true });
     } catch (error) {
       console.error("Error sending message:", error);
     }
@@ -47,7 +64,11 @@ export default function ChallengeChat() {
       >
         {!isMyMessage && (
           <View style={styles.avatarContainer}>
-            <Ionicons name="person-circle-outline" size={34} color="#007bff" />
+            <Ionicons
+              name="person-circle-outline"
+              size={34}
+              color={currentTheme.colors.primary}
+            />
           </View>
         )}
         <View
@@ -69,28 +90,32 @@ export default function ChallengeChat() {
 
   return (
     <SafeAreaView style={styles.container}>
-      {/* Header with gradient */}
-      <LinearGradient
-        colors={["#007bff", "#0056b3"]}
-        start={{ x: 0, y: 0 }}
-        end={{ x: 1, y: 0 }}
-        style={styles.header}
-      >
+      {/* Header avec gradient */}
+      <LinearGradient colors={headerGradient} style={styles.header}>
+        <TouchableOpacity
+          onPress={() => navigation.goBack()}
+          style={styles.backButton}
+        >
+          <Ionicons name="arrow-back" size={24} color="#fff" />
+        </TouchableOpacity>
         <Text style={styles.headerTitle}>{challengeTitle}</Text>
       </LinearGradient>
 
       <KeyboardAvoidingView
         style={styles.chatContainer}
         behavior={Platform.OS === "ios" ? "padding" : undefined}
-        keyboardVerticalOffset={Platform.OS === "ios" ? 64 : 0}
+        keyboardVerticalOffset={Platform.OS === "ios" ? 120 : 0}
       >
         <FlatList
+          ref={flatListRef}
           data={messages}
           renderItem={renderMessage}
           keyExtractor={(item) => item.id}
-          contentContainerStyle={styles.messageList}
+          contentContainerStyle={[styles.messageList, { paddingBottom: 80 }]}
+          onContentSizeChange={() =>
+            flatListRef.current?.scrollToEnd({ animated: true })
+          }
         />
-
         <View style={styles.inputContainer}>
           <TextInput
             style={styles.input}
@@ -98,8 +123,15 @@ export default function ChallengeChat() {
             placeholderTextColor="#aaa"
             value={newMessage}
             onChangeText={setNewMessage}
+            multiline
           />
-          <TouchableOpacity style={styles.sendButton} onPress={handleSend}>
+          <TouchableOpacity
+            style={[
+              styles.sendButton,
+              { backgroundColor: currentTheme.colors.primary },
+            ]}
+            onPress={handleSend}
+          >
             <Ionicons name="send" size={20} color="#fff" />
           </TouchableOpacity>
         </View>
@@ -114,15 +146,18 @@ const styles = StyleSheet.create({
     backgroundColor: "#f8f9fa",
   },
   header: {
-    paddingVertical: 14,
-    paddingHorizontal: 20,
+    flexDirection: "row",
     alignItems: "center",
-    justifyContent: "center",
+    paddingVertical: 16,
+    paddingHorizontal: 20,
+  },
+  backButton: {
+    marginRight: 10,
   },
   headerTitle: {
     color: "#fff",
-    fontSize: 18,
-    fontWeight: "bold",
+    fontSize: 50,
+    fontFamily: "Comfortaa_700Bold",
   },
   chatContainer: {
     flex: 1,
@@ -147,11 +182,11 @@ const styles = StyleSheet.create({
   },
   messageBubble: {
     maxWidth: "75%",
-    borderRadius: 10,
+    borderRadius: 20,
     padding: 10,
   },
   myMessageBubble: {
-    backgroundColor: "#007bff",
+    backgroundColor: "#ed8f03", // Utilise l'orange du thème light
     marginLeft: "25%",
   },
   otherMessageBubble: {
@@ -159,14 +194,15 @@ const styles = StyleSheet.create({
     marginRight: "25%",
   },
   username: {
-    fontWeight: "600",
+    fontFamily: "Comfortaa_700Bold",
     marginBottom: 3,
   },
   otherUsername: {
-    color: "#007bff",
+    color: "#ed8f03",
   },
   messageText: {
     fontSize: 15,
+    fontFamily: "Comfortaa_400Regular",
     color: "#333",
   },
   inputContainer: {
@@ -175,21 +211,23 @@ const styles = StyleSheet.create({
     borderTopWidth: 1,
     borderTopColor: "#ddd",
     backgroundColor: "#fff",
+    alignItems: "center",
   },
   input: {
     flex: 1,
-    height: 40,
+    minHeight: 40,
     borderWidth: 1,
     borderColor: "#ddd",
     borderRadius: 20,
     paddingHorizontal: 10,
     marginRight: 10,
+    fontFamily: "Comfortaa_400Regular",
+    fontSize: 16,
   },
   sendButton: {
-    backgroundColor: "#007bff",
     borderRadius: 20,
-    paddingHorizontal: 14,
-    paddingVertical: 8,
+    paddingHorizontal: 16,
+    paddingVertical: 10,
     justifyContent: "center",
     alignItems: "center",
   },

@@ -46,16 +46,16 @@ const ChallengeCompletionModal: React.FC<ChallengeCompletionModalProps> = ({
   onClose,
 }) => {
   const [motivationalPhrase, setMotivationalPhrase] = useState("");
-  const [fadeAnim] = useState(new Animated.Value(0));
-  const [scaleAnim] = useState(new Animated.Value(0.8));
+  const fadeAnim = useRef(new Animated.Value(0)).current;
+  const scaleAnim = useRef(new Animated.Value(0.8)).current;
+  const pulseAnim = useRef(new Animated.Value(1)).current;
   const [userTrophies, setUserTrophies] = useState(0);
   const { completeChallenge } = useCurrentChallenges();
   const videoRef = useRef<Video>(null);
 
-  // Calcul proportionnel de la récompense (par exemple, pour 7 jours = baseReward)
   const calculatedReward = Math.round(baseReward * (selectedDays / 7));
 
-  // Récupération des trophées en temps réel
+  // Mise à jour en temps réel du nombre de trophées
   useEffect(() => {
     const userId = auth.currentUser?.uid;
     if (!userId) return;
@@ -76,7 +76,6 @@ const ChallengeCompletionModal: React.FC<ChallengeCompletionModalProps> = ({
       );
       setMotivationalPhrase(motivationalPhrases[randomIndex]);
 
-      // Redémarrer la vidéo si nécessaire
       videoRef.current?.setPositionAsync(0);
       videoRef.current?.playAsync();
 
@@ -93,11 +92,27 @@ const ChallengeCompletionModal: React.FC<ChallengeCompletionModalProps> = ({
           useNativeDriver: true,
         }),
       ]).start();
+
+      Animated.loop(
+        Animated.sequence([
+          Animated.timing(pulseAnim, {
+            toValue: 1.1,
+            duration: 800,
+            useNativeDriver: true,
+          }),
+          Animated.timing(pulseAnim, {
+            toValue: 1,
+            duration: 800,
+            useNativeDriver: true,
+          }),
+        ])
+      ).start();
     } else {
       fadeAnim.setValue(0);
       scaleAnim.setValue(0.8);
+      pulseAnim.setValue(1);
     }
-  }, [visible]);
+  }, [visible, fadeAnim, scaleAnim, pulseAnim]);
 
   const handleComplete = async (doubleReward: boolean) => {
     try {
@@ -108,13 +123,15 @@ const ChallengeCompletionModal: React.FC<ChallengeCompletionModalProps> = ({
     onClose();
   };
 
-  // Composant bouton avec dégradé
+  // Bouton stylisé avec dégradé orange, icône pour l'option pub
   const GradientButton = ({
     onPress,
     text,
+    iconName,
   }: {
     onPress: () => void;
     text: string;
+    iconName?: keyof typeof Ionicons.glyphMap;
   }) => (
     <TouchableOpacity
       onPress={onPress}
@@ -122,28 +139,41 @@ const ChallengeCompletionModal: React.FC<ChallengeCompletionModalProps> = ({
       style={styles.gradientButton}
     >
       <LinearGradient
-        colors={["#4c669f", "#3b5998", "#192f6a"]}
+        colors={["#FF9A2E", "#FEC163"]}
         start={{ x: 0, y: 0 }}
         end={{ x: 1, y: 0 }}
         style={styles.buttonGradient}
       >
-        <Text style={styles.buttonGradientText}>{text}</Text>
+        <View style={styles.buttonContent}>
+          {iconName && (
+            <Ionicons
+              name={iconName}
+              size={20}
+              color="#fff"
+              style={styles.buttonIcon}
+            />
+          )}
+          <Text style={styles.buttonGradientText}>{text}</Text>
+        </View>
       </LinearGradient>
     </TouchableOpacity>
   );
 
   return (
-    <Modal visible={visible} transparent animationType="fade">
-      <View style={styles.overlay}>
+    <Modal
+      visible={visible}
+      transparent
+      animationType="fade"
+      onRequestClose={onClose}
+      statusBarTranslucent={true}
+    >
+      <View style={styles.fullOverlay}>
         <Animated.View
           style={[styles.modalContainer, { transform: [{ scale: scaleAnim }] }]}
         >
-          {/* Trophées actuels centrés */}
           <View style={styles.trophyHeader}>
             <Text style={styles.trophyHeaderText}>{userTrophies} Trophées</Text>
           </View>
-
-          {/* Animation avec vidéo */}
           <View style={styles.animationContainer}>
             <Video
               ref={videoRef}
@@ -155,28 +185,24 @@ const ChallengeCompletionModal: React.FC<ChallengeCompletionModalProps> = ({
               isMuted={false}
             />
           </View>
-
-          {/* Phrase motivante en blanc */}
           <Text style={styles.motivationalText}>{motivationalPhrase}</Text>
-
-          {/* Récompense affichée */}
           <Animated.View
-            style={[styles.rewardContainer, { opacity: fadeAnim }]}
+            style={[
+              styles.rewardContainer,
+              { opacity: fadeAnim, transform: [{ scale: pulseAnim }] },
+            ]}
           >
             <Text style={styles.rewardText}>{calculatedReward} Trophées</Text>
           </Animated.View>
-
-          {/* Boutons d'action */}
-          <View style={styles.buttonContainer}>
-            <GradientButton
-              onPress={() => handleComplete(false)}
-              text="Continuer"
-            />
-            <GradientButton
-              onPress={() => handleComplete(true)}
-              text="Regarder une pub"
-            />
-          </View>
+          <GradientButton
+            onPress={() => handleComplete(false)}
+            text="Continuer"
+          />
+          <GradientButton
+            onPress={() => handleComplete(true)}
+            text="Doublez vos trophées"
+            iconName="videocam-outline"
+          />
         </Animated.View>
       </View>
     </Modal>
@@ -184,26 +210,26 @@ const ChallengeCompletionModal: React.FC<ChallengeCompletionModalProps> = ({
 };
 
 const styles = StyleSheet.create({
-  overlay: {
-    flex: 1,
+  fullOverlay: {
+    ...StyleSheet.absoluteFillObject,
     backgroundColor: "rgba(0,0,0,0.85)",
     justifyContent: "center",
     alignItems: "center",
   },
   modalContainer: {
     width: width * 0.9,
-    backgroundColor: "rgba(0,0,0,0)",
     borderRadius: 20,
     paddingVertical: 30,
     paddingHorizontal: 20,
     alignItems: "center",
+    backgroundColor: "rgba(0,0,0,0.2)",
   },
   trophyHeader: {
     marginBottom: 20,
     alignItems: "center",
   },
   trophyHeaderText: {
-    fontSize: 22,
+    fontSize: 24,
     fontWeight: "bold",
     color: "#FFD700",
   },
@@ -214,8 +240,13 @@ const styles = StyleSheet.create({
     justifyContent: "center",
     alignItems: "center",
   },
+  video: {
+    width: 200,
+    height: 200,
+    borderRadius: 20,
+  },
   motivationalText: {
-    fontSize: 24,
+    fontSize: 26,
     fontWeight: "700",
     textAlign: "center",
     marginBottom: 20,
@@ -226,34 +257,37 @@ const styles = StyleSheet.create({
     marginBottom: 30,
   },
   rewardText: {
-    fontSize: 40,
+    fontSize: 48,
     fontWeight: "bold",
     color: "#FFD700",
-    marginTop: 10,
-  },
-  buttonContainer: {
-    flexDirection: "row",
-    justifyContent: "space-between",
-    width: "100%",
   },
   gradientButton: {
-    flex: 1,
-    marginHorizontal: 8,
+    width: "80%",
+    marginVertical: 8,
+    shadowColor: "#FF9A2E",
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.4,
+    shadowRadius: 4,
+    elevation: 4,
   },
   buttonGradient: {
     paddingVertical: 15,
     borderRadius: 25,
     alignItems: "center",
   },
+  buttonContent: {
+    flexDirection: "row",
+    justifyContent: "center",
+    alignItems: "center",
+  },
   buttonGradientText: {
     color: "#fff",
     fontSize: 18,
     fontWeight: "600",
+    textAlign: "center",
   },
-  video: {
-    width: 200,
-    height: 200,
-    borderRadius: 20,
+  buttonIcon: {
+    marginRight: 8,
   },
 });
 

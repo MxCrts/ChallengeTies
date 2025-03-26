@@ -203,8 +203,7 @@ export default function NewFeatures() {
     }
   };
 
-  // Fonction de proposition d'une feature :
-  // Si l'utilisateur propose une feature, son vote est automatiquement enregistré (il ne peut voter qu'une fois)
+  // Fonction de proposition d'une feature
   const handleProposeFeature = async (title: string, description?: string) => {
     if (!userId) {
       Alert.alert(
@@ -225,7 +224,6 @@ export default function NewFeatures() {
           username: username,
         }
       );
-      // Enregistre automatiquement le vote dans le doc user
       const userRef = doc(db, "users", userId);
       await setDoc(userRef, { votedFor: featureRef.id }, { merge: true });
       setUserVote(featureRef.id);
@@ -238,17 +236,6 @@ export default function NewFeatures() {
       Alert.alert("Erreur", "Impossible d'envoyer votre proposition.");
     }
   };
-
-  if (loading) {
-    return (
-      <View style={styles.loadingContainer}>
-        <ActivityIndicator size="large" color={currentTheme.colors.primary} />
-        <Text style={styles.loadingText}>
-          Chargement des fonctionnalités...
-        </Text>
-      </View>
-    );
-  }
 
   // Countdown en 4 blocs
   const renderCountdown = () => {
@@ -381,41 +368,21 @@ export default function NewFeatures() {
   );
 }
 
-//
-// STYLES
-//
 const styles = StyleSheet.create({
-  safeArea: {
-    flex: 1,
-    backgroundColor: currentTheme.colors.background,
-  },
-  backButton: {
-    position: "absolute",
-    top: 40,
-    left: 20,
-    zIndex: 20,
-  },
-  questionIcon: {
-    position: "absolute",
-    top: 40,
-    right: 20,
-    zIndex: 20,
-  },
-  mainContainer: {
-    flex: 1,
-    paddingHorizontal: 16,
-    paddingVertical: 8, // Réduit
-  },
+  safeArea: { flex: 1, backgroundColor: currentTheme.colors.background },
+  backButton: { position: "absolute", top: 40, left: 20, zIndex: 20 },
+  questionIcon: { position: "absolute", top: 40, right: 20, zIndex: 20 },
+  mainContainer: { flex: 1, paddingHorizontal: 16, paddingVertical: 8 },
   headerContainer: {
     alignItems: "center",
-    marginBottom: 10, // Très faible
-    marginTop: 60,
+    marginBottom: 10,
+    marginTop: 30, // Réduit pour remonter le contenu
   },
   header: {
     fontSize: 24,
     fontFamily: currentTheme.typography.title.fontFamily,
     textAlign: "center",
-    marginTop: 30,
+    marginTop: 30, // Réduit
     marginBottom: 2,
     color: "#000000",
   },
@@ -423,16 +390,16 @@ const styles = StyleSheet.create({
     fontSize: 14,
     fontFamily: currentTheme.typography.body.fontFamily,
     textAlign: "center",
-    marginBottom: 0, // Collé
+    marginBottom: 4, // Réduit pour éviter le coupé
     color: currentTheme.colors.textSecondary,
     paddingHorizontal: 5,
   },
   featuresScrollContainer: {
     flex: 1,
     width: "100%",
-    maxHeight: 320, // Ajuster selon l'écran
+    maxHeight: 320, // Légèrement réduit pour laisser de la place au compte à rebours
     marginTop: 2,
-    marginBottom: 50,
+    marginBottom: 20,
   },
   featureCard: {
     width: ITEM_WIDTH,
@@ -480,9 +447,8 @@ const styles = StyleSheet.create({
     color: currentTheme.colors.textSecondary,
     marginBottom: 0,
   },
-
   bottomContainer: {
-    marginTop: 2,
+    marginTop: 4,
     alignItems: "center",
   },
   proposeButton: {
@@ -490,7 +456,7 @@ const styles = StyleSheet.create({
     paddingVertical: 10,
     paddingHorizontal: 20,
     borderRadius: 25,
-    marginVertical: 2,
+    marginVertical: 4,
     marginBottom: 20,
   },
   proposeButtonText: {
@@ -535,18 +501,5 @@ const styles = StyleSheet.create({
     fontSize: 10,
     fontFamily: currentTheme.typography.body.fontFamily,
     color: "#333",
-  },
-
-  loadingContainer: {
-    flex: 1,
-    justifyContent: "center",
-    alignItems: "center",
-    backgroundColor: currentTheme.colors.background,
-  },
-  loadingText: {
-    marginTop: 10,
-    fontSize: 16,
-    fontFamily: currentTheme.typography.body.fontFamily,
-    color: currentTheme.colors.textSecondary,
   },
 });

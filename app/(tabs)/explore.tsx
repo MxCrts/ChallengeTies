@@ -11,6 +11,8 @@ import {
   Modal,
   StyleSheet,
   Dimensions,
+  SafeAreaView,
+  StatusBar,
 } from "react-native";
 import { Ionicons } from "@expo/vector-icons";
 import { useRouter } from "expo-router";
@@ -125,10 +127,10 @@ export default function ExploreScreen() {
       ]}
       style={styles.container}
     >
-      <BackButton color={currentTheme.colors.primary} />
-      <View style={styles.header}>
-        <Text style={[styles.pageTitle]}>Explorer les défis</Text>
-      </View>
+      <SafeAreaView style={styles.safeAreaHeader}>
+        <BackButton color={currentTheme.colors.primary} />
+        <Text style={styles.header}>Explorer les défis</Text>
+      </SafeAreaView>
 
       <View style={styles.content}>
         {/* Barre de recherche */}
@@ -178,7 +180,9 @@ export default function ExploreScreen() {
           >
             <Ionicons name="filter-outline" size={22} color="#FFF" />
             <Text style={styles.filterButtonText}>
-              Catégorie: {capitalize(categoryFilter)}
+              {categoryFilter === "All"
+                ? "Catégorie"
+                : capitalize(categoryFilter)}
             </Text>
           </TouchableOpacity>
           <TouchableOpacity
@@ -317,14 +321,19 @@ export default function ExploreScreen() {
 
 const styles = StyleSheet.create({
   container: { flex: 1 },
-  header: { padding: 20, alignItems: "center" },
-  pageTitle: {
+  safeAreaHeader: {
+    width: "100%",
+    alignItems: "center",
+    paddingTop: StatusBar.currentHeight ? StatusBar.currentHeight + 10 : 10,
+  },
+  header: {
     fontSize: 25,
     fontFamily: "Comfortaa_700Bold",
     color: "#000000",
     marginVertical: 20,
     textAlign: "center",
     marginBottom: 30,
+    marginTop: -5,
   },
   content: { flex: 1, paddingHorizontal: 20 },
   searchContainer: {

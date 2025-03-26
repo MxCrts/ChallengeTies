@@ -20,7 +20,7 @@ interface DurationSelectionModalProps {
   onSelectDays: (days: number) => void;
   onConfirm: () => void;
   onCancel: () => void;
-  dayIcons: Record<number, string>;
+  dayIcons: Record<number, keyof typeof Ionicons.glyphMap>;
 }
 
 const DurationSelectionModal: React.FC<DurationSelectionModalProps> = ({
@@ -96,6 +96,7 @@ const styles = StyleSheet.create({
     fontWeight: "bold",
     marginBottom: 15,
     fontFamily: "Comfortaa_700Bold",
+    color: currentTheme.colors.primary,
   },
   daysOptionsContainer: {
     flexDirection: "row",
@@ -108,13 +109,13 @@ const styles = StyleSheet.create({
     alignItems: "center",
     justifyContent: "center",
     borderWidth: 1,
-    borderColor: "#ccc",
+    borderColor: currentTheme.colors.primary,
     borderRadius: 8,
     paddingVertical: 8,
     paddingHorizontal: 12,
     margin: 5,
   },
-  dayOptionSelected: { backgroundColor: "#2cd18a", borderColor: "#2cd18a" },
+  dayOptionSelected: { backgroundColor: currentTheme.colors.primary },
   dayOptionText: {
     marginLeft: 6,
     fontSize: 16,
@@ -122,7 +123,7 @@ const styles = StyleSheet.create({
     fontFamily: "Comfortaa_400Regular",
   },
   confirmButton: {
-    backgroundColor: "#28a745",
+    backgroundColor: currentTheme.colors.primary,
     padding: 10,
     borderRadius: 8,
     width: "80%",
@@ -135,7 +136,7 @@ const styles = StyleSheet.create({
     fontFamily: "Comfortaa_700Bold",
   },
   cancelButton: {
-    backgroundColor: "#dc3545",
+    backgroundColor: currentTheme.colors.error,
     padding: 10,
     borderRadius: 8,
     width: "80%",

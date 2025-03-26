@@ -24,6 +24,7 @@ import { auth, db } from "../constants/firebase-config";
 import { LinearGradient } from "expo-linear-gradient";
 import { Ionicons } from "@expo/vector-icons";
 import { checkForAchievements } from "../helpers/trophiesHelpers";
+import designSystem from "../theme/designSystem";
 
 const { width } = Dimensions.get("window");
 
@@ -41,6 +42,8 @@ const categories = [
   "Social",
   "Miscellaneous",
 ];
+
+const currentTheme = designSystem.lightTheme;
 
 export default function CreateChallenge() {
   const [title, setTitle] = useState("");
@@ -89,7 +92,6 @@ export default function CreateChallenge() {
         description: description.trim(),
         category,
         daysOptions: defaultDaysOptions,
-        // Note : Le créateur ne choisit pas la durée ici.
         imageUrl: imageUri || "https://via.placeholder.com/150",
         participantsCount: 0,
         createdAt: new Date(),
@@ -98,20 +100,20 @@ export default function CreateChallenge() {
         usersTakingChallenge: [],
       };
 
-      // 1️⃣ Ajouter le défi dans la collection "challenges"
+      // Ajouter le défi dans la collection "challenges"
       const challengeRef = await addDoc(
         collection(db, "challenges"),
         challengeData
       );
       const challengeId = challengeRef.id;
 
-      // 2️⃣ Ajouter ce défi dans "createdChallenges" du document utilisateur
+      // Ajouter ce défi dans "createdChallenges" du document utilisateur
       const userRef = doc(db, "users", currentUser.uid);
       await updateDoc(userRef, {
         createdChallenges: arrayUnion({ id: challengeId, ...challengeData }),
       });
 
-      // Lancer la vérification des succès (challengeCreated)
+      // Vérification des succès (challengeCreated)
       await checkForAchievements(currentUser.uid);
 
       Alert.alert("Succès", "Votre défi a été créé !");
@@ -123,13 +125,19 @@ export default function CreateChallenge() {
   };
 
   return (
-    <LinearGradient colors={["#1F1C2C", "#928DAB"]} style={styles.container}>
+    <LinearGradient
+      colors={[
+        currentTheme.colors.background,
+        currentTheme.colors.cardBackground,
+      ]}
+      style={styles.container}
+    >
       <ScrollView contentContainerStyle={styles.scrollContainer}>
         <View style={styles.header}>
           <Ionicons
             name="create-outline"
             size={64}
-            color="#fff"
+            color={currentTheme.colors.primary}
             style={styles.headerIcon}
           />
           <Text style={styles.headerTitle}>Create Your Challenge</Text>
@@ -141,7 +149,7 @@ export default function CreateChallenge() {
         <TextInput
           style={styles.input}
           placeholder="Challenge Title"
-          placeholderTextColor="#aaa"
+          placeholderTextColor={currentTheme.colors.textSecondary}
           value={title}
           onChangeText={setTitle}
         />
@@ -149,7 +157,7 @@ export default function CreateChallenge() {
         <TextInput
           style={[styles.input, styles.textArea]}
           placeholder="Description"
-          placeholderTextColor="#aaa"
+          placeholderTextColor={currentTheme.colors.textSecondary}
           value={description}
           onChangeText={setDescription}
           multiline
@@ -163,6 +171,9 @@ export default function CreateChallenge() {
               selectedValue={category}
               onValueChange={(itemValue) => setCategory(itemValue)}
               style={styles.picker}
+              itemStyle={{
+                fontFamily: currentTheme.typography.body.fontFamily,
+              }}
             >
               {categories.map((cat) => (
                 <Picker.Item label={cat} value={cat} key={cat} />
@@ -181,7 +192,10 @@ export default function CreateChallenge() {
 
         <TouchableOpacity style={styles.submitButton} onPress={handleSubmit}>
           <LinearGradient
-            colors={["#FF512F", "#DD2476"]}
+            colors={[
+              currentTheme.colors.primary,
+              currentTheme.colors.secondary,
+            ]}
             style={styles.submitGradient}
           >
             <Text style={styles.submitText}>Create Challenge</Text>
@@ -199,58 +213,52 @@ const styles = StyleSheet.create({
     alignItems: "center",
     paddingBottom: 40,
   },
-  header: {
-    alignItems: "center",
-    marginBottom: 20,
-  },
-  headerIcon: {
-    marginBottom: 10,
-  },
+  header: { alignItems: "center", marginBottom: 20 },
+  headerIcon: { marginBottom: 10, marginTop: 10 },
   headerTitle: {
     fontSize: 26,
-    fontWeight: "bold",
-    color: "#fff",
+    fontFamily: currentTheme.typography.title.fontFamily,
+    color: "#212121",
     textAlign: "center",
   },
   headerSubtitle: {
     fontSize: 16,
-    color: "#ccc",
+    color: "#555",
     textAlign: "center",
     marginBottom: 20,
     lineHeight: 22,
+    fontFamily: currentTheme.typography.body.fontFamily,
   },
   input: {
     width: "100%",
-    backgroundColor: "#fff",
+    backgroundColor: currentTheme.colors.cardBackground,
     borderRadius: 12,
     padding: 15,
     marginBottom: 15,
     fontSize: 16,
     borderWidth: 1,
-    borderColor: "#ddd",
+    borderColor: currentTheme.colors.border,
+    color: currentTheme.colors.textSecondary,
+    fontFamily: currentTheme.typography.body.fontFamily,
   },
-  textArea: {
-    height: 100,
-    textAlignVertical: "top",
-  },
-  dropdownContainer: {
-    width: "100%",
-    marginBottom: 15,
-  },
+  textArea: { height: 100, textAlignVertical: "top" },
+  dropdownContainer: { width: "100%", marginBottom: 15 },
   dropdownLabel: {
-    color: "#ccc",
+    color: currentTheme.colors.textSecondary,
     marginBottom: 5,
     fontSize: 14,
+    fontFamily: currentTheme.typography.body.fontFamily,
   },
   pickerWrapper: {
-    backgroundColor: "#fff",
+    backgroundColor: currentTheme.colors.cardBackground,
     borderRadius: 12,
     borderWidth: 1,
-    borderColor: "#ddd",
+    borderColor: currentTheme.colors.border,
     overflow: "hidden",
   },
   picker: {
     width: "100%",
+    color: currentTheme.colors.textSecondary,
   },
   imagePickerButton: {
     backgroundColor: "#f5f5f5",
@@ -260,12 +268,13 @@ const styles = StyleSheet.create({
     justifyContent: "center",
     marginBottom: 20,
     borderWidth: 1,
-    borderColor: "#ddd",
+    borderColor: currentTheme.colors.border,
     width: "100%",
   },
   imagePickerText: {
-    color: "#777",
+    color: currentTheme.colors.textSecondary,
     fontSize: 16,
+    fontFamily: currentTheme.typography.body.fontFamily,
   },
   imagePreview: {
     width: "100%",
@@ -283,8 +292,8 @@ const styles = StyleSheet.create({
     alignItems: "center",
   },
   submitText: {
-    color: "#fff",
+    color: currentTheme.colors.textPrimary,
     fontSize: 18,
-    fontWeight: "bold",
+    fontFamily: currentTheme.typography.title.fontFamily,
   },
 });

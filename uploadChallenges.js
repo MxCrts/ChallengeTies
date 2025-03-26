@@ -1,7 +1,7 @@
 const admin = require("firebase-admin");
 const path = require("path");
 
-// Initialize Firebase Admin SDK
+// Initialiser le SDK Firebase Admin
 admin.initializeApp({
   credential: admin.credential.cert("./serviceAccountKey.json"),
   storageBucket: "challengeme-d7fef.firebasestorage.app", // Assure-toi que ce nom correspond à ton bucket
@@ -21,13 +21,13 @@ function getFirebaseImageUrl(localPath) {
   return `${baseUrl}${encodeURIComponent(fullPath)}?alt=media`;
 }
 
-// Challenges à uploader
+// Challenges à uploader (traduits en français)
 const challenges = [
   {
-    title: "Eat Healthy Every Day",
-    category: "health",
+    title: "Mangez sainement chaque jour",
+    category: "Santé",
     description:
-      "Commit to eating healthy meals every day for improved well-being.",
+      "Engagez-vous à consommer des repas sains chaque jour pour améliorer votre bien-être.",
     imageUrl: getFirebaseImageUrl("assets/images/eat_healthy.png"),
     daysOptions: [7, 15, 21, 30, 60, 90, 180, 365],
     chatId: "eatHealthy",
@@ -35,9 +35,9 @@ const challenges = [
     usersTakingChallenge: [],
   },
   {
-    title: "Walk 10,000 Steps",
-    category: "fitness",
-    description: "Stay active by walking 10,000 steps daily.",
+    title: "Marchez 10 000 pas",
+    category: "Fitness",
+    description: "Restez actif en marchant 10 000 pas chaque jour.",
     imageUrl: getFirebaseImageUrl("assets/images/walk_steps.png"),
     daysOptions: [7, 15, 21, 30, 60, 90, 180, 365],
     chatId: "walk10000Steps",
@@ -45,9 +45,10 @@ const challenges = [
     usersTakingChallenge: [],
   },
   {
-    title: "Save $5 Daily",
-    category: "finance",
-    description: "Build financial discipline by saving $5 every day.",
+    title: "Économisez 5 $ par jour",
+    category: "Finance",
+    description:
+      "Développez votre discipline financière en économisant 5 dollars chaque jour.",
     imageUrl: getFirebaseImageUrl("assets/images/save_money.png"),
     daysOptions: [7, 15, 21, 30, 60, 90, 180, 365],
     chatId: "saveMoney",
@@ -55,9 +56,10 @@ const challenges = [
     usersTakingChallenge: [],
   },
   {
-    title: "Meditate for 10 Minutes",
-    category: "lifestyle",
-    description: "Achieve mindfulness by meditating for just 10 minutes daily.",
+    title: "Méditez pendant 10 minutes",
+    category: "Mode de Vie",
+    description:
+      "Atteignez la pleine conscience en méditant seulement 10 minutes par jour.",
     imageUrl: getFirebaseImageUrl("assets/images/meditation.png"),
     daysOptions: [7, 15, 21, 30, 60, 90, 180, 365],
     chatId: "meditation",
@@ -65,9 +67,10 @@ const challenges = [
     usersTakingChallenge: [],
   },
   {
-    title: "Read 1 Chapter a Day",
-    category: "education",
-    description: "Develop a reading habit by finishing one chapter daily.",
+    title: "Lisez 1 chapitre par jour",
+    category: "Éducation",
+    description:
+      "Développez l'habitude de lire en terminant un chapitre chaque jour.",
     imageUrl: getFirebaseImageUrl("assets/images/read_chapter.png"),
     daysOptions: [7, 15, 21, 30, 60, 90, 180, 365],
     chatId: "readChapter",
@@ -75,9 +78,10 @@ const challenges = [
     usersTakingChallenge: [],
   },
   {
-    title: "Write 500 Words a Day",
-    category: "creativity",
-    description: "Unlock your creative potential by writing 500 words daily.",
+    title: "Écrivez 500 mots par jour",
+    category: "Créativité",
+    description:
+      "Libérez votre potentiel créatif en écrivant 500 mots chaque jour.",
     imageUrl: getFirebaseImageUrl("assets/images/write_words.png"),
     daysOptions: [7, 15, 21, 30, 60, 90, 180, 365],
     chatId: "writeWords",
@@ -85,10 +89,10 @@ const challenges = [
     usersTakingChallenge: [],
   },
   {
-    title: "Learn a New Skill",
-    category: "career",
+    title: "Apprenez une nouvelle compétence",
+    category: "Carrière",
     description:
-      "Dedicate time daily to learning a new skill for professional growth.",
+      "Consacrez du temps chaque jour à l'apprentissage d'une nouvelle compétence pour votre développement professionnel.",
     imageUrl: getFirebaseImageUrl("assets/images/learn_skill.png"),
     daysOptions: [7, 15, 21, 30, 60, 90, 180, 365],
     chatId: "learnSkill",
@@ -96,10 +100,10 @@ const challenges = [
     usersTakingChallenge: [],
   },
   {
-    title: "Declutter Your Space",
-    category: "lifestyle",
+    title: "Désencombrez votre espace",
+    category: "Mode De Vie",
     description:
-      "Clear your mind by organizing and decluttering your surroundings daily.",
+      "Libérez votre esprit en organisant et en désencombrant votre environnement chaque jour.",
     imageUrl: getFirebaseImageUrl("assets/images/declutter_space.png"),
     daysOptions: [7, 15, 21, 30, 60, 90, 180, 365],
     chatId: "declutterSpace",
@@ -107,9 +111,10 @@ const challenges = [
     usersTakingChallenge: [],
   },
   {
-    title: "Do 15 Minutes of Yoga",
-    category: "fitness",
-    description: "Strengthen your body and mind with 15 minutes of yoga daily.",
+    title: "Pratiquez 15 minutes de yoga",
+    category: "Fitness",
+    description:
+      "Renforcez votre corps et votre esprit en pratiquant 15 minutes de yoga chaque jour.",
     imageUrl: getFirebaseImageUrl("assets/images/yoga.png"),
     daysOptions: [7, 15, 21, 30, 60, 90, 180, 365],
     chatId: "dailyYoga",
@@ -117,10 +122,10 @@ const challenges = [
     usersTakingChallenge: [],
   },
   {
-    title: "Practice Gratitude",
-    category: "lifestyle",
+    title: "Pratiquez la gratitude",
+    category: "Mode De Vie",
     description:
-      "End your day with gratitude by reflecting on what you're thankful for.",
+      "Terminez votre journée en réfléchissant à ce pour quoi vous êtes reconnaissant.",
     imageUrl: getFirebaseImageUrl("assets/images/practice_gratitude.png"),
     daysOptions: [7, 15, 21, 30, 60, 90, 180, 365],
     chatId: "practiceGratitude",
@@ -128,9 +133,10 @@ const challenges = [
     usersTakingChallenge: [],
   },
   {
-    title: "Workout",
-    category: "fitness",
-    description: "Build a habit of working out at least 15 minutes every day.",
+    title: "Entraînez-vous",
+    category: "Fitness",
+    description:
+      "Adoptez l'habitude de faire de l'exercice pendant au moins 15 minutes chaque jour.",
     imageUrl: getFirebaseImageUrl("assets/images/workout.png"),
     daysOptions: [7, 15, 21, 30, 60, 90, 180, 365],
     chatId: "workout15Min",
@@ -138,9 +144,9 @@ const challenges = [
     usersTakingChallenge: [],
   },
   {
-    title: "Drink 2 Liters of Water",
-    category: "health",
-    description: "Stay hydrated by drinking at least 2 liters of water daily.",
+    title: "Buvez 2 litres d'eau",
+    category: "Santé",
+    description: "Restez hydraté en buvant au moins 2 litres d'eau par jour.",
     imageUrl: getFirebaseImageUrl("assets/images/drink_water.png"),
     daysOptions: [7, 15, 21, 30, 60, 90, 180, 365],
     chatId: "drinkWater",
@@ -148,9 +154,9 @@ const challenges = [
     usersTakingChallenge: [],
   },
   {
-    title: "Plan Tomorrow Tonight",
-    category: "productivity",
-    description: "End each day by planning for tomorrow.",
+    title: "Planifiez demain ce soir",
+    category: "Productivité",
+    description: "Terminez chaque journée en planifiant celle du lendemain.",
     imageUrl: getFirebaseImageUrl("assets/images/plan_tomorrow.png"),
     daysOptions: [7, 15, 21, 30, 60, 90, 180, 365],
     chatId: "planTomorrow",
@@ -158,9 +164,9 @@ const challenges = [
     usersTakingChallenge: [],
   },
   {
-    title: "Morning Stretch Routine",
-    category: "fitness",
-    description: "Start your day with a quick morning stretch.",
+    title: "Routine d'étirement matinal",
+    category: "Fitness",
+    description: "Commencez votre journée par quelques étirements matinaux.",
     imageUrl: getFirebaseImageUrl("assets/images/stretch.png"),
     daysOptions: [7, 15, 21, 30, 60, 90, 180, 365],
     chatId: "morningStretch",
@@ -168,9 +174,10 @@ const challenges = [
     usersTakingChallenge: [],
   },
   {
-    title: "Spend 10 Minutes Outside",
-    category: "lifestyle",
-    description: "Improve your mental health by spending time outdoors daily.",
+    title: "Passez 10 minutes dehors",
+    category: "Mode De Vie",
+    description:
+      "Améliorez votre santé mentale en passant du temps à l'extérieur chaque jour.",
     imageUrl: getFirebaseImageUrl("assets/images/outside.png"),
     daysOptions: [7, 15, 21, 30, 60, 90, 180, 365],
     chatId: "timeOutside",
@@ -178,9 +185,9 @@ const challenges = [
     usersTakingChallenge: [],
   },
   {
-    title: "Unplug for 1 Hour",
-    category: "lifestyle",
-    description: "Take a break from screens for one hour every day.",
+    title: "Déconnectez-vous pendant 1 heure",
+    category: "Mode De Vie",
+    description: "Faites une pause des écrans pendant une heure chaque jour.",
     imageUrl: getFirebaseImageUrl("assets/images/unplug.png"),
     daysOptions: [7, 15, 21, 30, 60, 90, 180, 365],
     chatId: "unplug",
@@ -188,9 +195,9 @@ const challenges = [
     usersTakingChallenge: [],
   },
   {
-    title: "Compliment Someone",
-    category: "social",
-    description: "Brighten someone’s day with a compliment.",
+    title: "Faites un compliment",
+    category: "Social",
+    description: "Égayez la journée de quelqu'un avec un compliment.",
     imageUrl: getFirebaseImageUrl("assets/images/compliment.png"),
     daysOptions: [7, 15, 21, 30, 60, 90, 180, 365],
     chatId: "compliment",
@@ -198,9 +205,10 @@ const challenges = [
     usersTakingChallenge: [],
   },
   {
-    title: "Network Daily",
-    category: "career",
-    description: "Reach out to one professional contact daily.",
+    title: "Réseautage quotidien",
+    category: "Carrière",
+    description:
+      "Contactez chaque jour un professionnel pour élargir votre réseau.",
     imageUrl: getFirebaseImageUrl("assets/images/network.png"),
     daysOptions: [7, 15, 21, 30, 60, 90, 180, 365],
     chatId: "network",
@@ -208,9 +216,10 @@ const challenges = [
     usersTakingChallenge: [],
   },
   {
-    title: "Practice Deep Breathing",
-    category: "health",
-    description: "Take 5 minutes to practice deep breathing daily.",
+    title: "Pratiquez la respiration profonde",
+    category: "Santé",
+    description:
+      "Consacrez 5 minutes par jour à pratiquer la respiration profonde.",
     imageUrl: getFirebaseImageUrl("assets/images/deep_breathing.png"),
     daysOptions: [7, 15, 21, 30, 60, 90, 180, 365],
     chatId: "deepBreathing",
@@ -218,9 +227,9 @@ const challenges = [
     usersTakingChallenge: [],
   },
   {
-    title: "Wake Up Early",
-    category: "lifestyle",
-    description: "Develop a habit of waking up early every day.",
+    title: "Réveillez-vous tôt",
+    category: "Mode De Vie",
+    description: "Adoptez l'habitude de vous réveiller tôt chaque jour.",
     imageUrl: getFirebaseImageUrl("assets/images/wake_up_early.png"),
     daysOptions: [7, 15, 21, 30, 60, 90, 180, 365],
     chatId: "wakeUpEarly",
@@ -228,9 +237,10 @@ const challenges = [
     usersTakingChallenge: [],
   },
   {
-    title: "Learn a New Language",
-    category: "education",
-    description: "Spend time daily learning a new language.",
+    title: "Apprenez une nouvelle langue",
+    category: "Éducation",
+    description:
+      "Consacrez du temps chaque jour à apprendre une nouvelle langue.",
     imageUrl: getFirebaseImageUrl("assets/images/learn_language.png"),
     daysOptions: [7, 15, 21, 30, 60, 90, 180, 365],
     chatId: "learnLanguage",
@@ -238,9 +248,10 @@ const challenges = [
     usersTakingChallenge: [],
   },
   {
-    title: "Spend Quality Family Time",
-    category: "social",
-    description: "Dedicate time to bonding with family every day.",
+    title: "Passez du temps de qualité en famille",
+    category: "Social",
+    description:
+      "Consacrez du temps chaque jour pour renforcer les liens familiaux.",
     imageUrl: getFirebaseImageUrl("assets/images/family_time.png"),
     daysOptions: [7, 15, 21, 30, 60, 90, 180, 365],
     chatId: "familyTime",
@@ -248,9 +259,9 @@ const challenges = [
     usersTakingChallenge: [],
   },
   {
-    title: "Learn to Play an Instrument",
-    category: "creativity",
-    description: "Spend time mastering a musical instrument.",
+    title: "Apprenez à jouer d'un instrument",
+    category: "Créativité",
+    description: "Consacrez du temps pour maîtriser un instrument de musique.",
     imageUrl: getFirebaseImageUrl("assets/images/play_instrument.png"),
     daysOptions: [7, 15, 21, 30, 60, 90, 180, 365],
     chatId: "playInstrument",
@@ -258,10 +269,10 @@ const challenges = [
     usersTakingChallenge: [],
   },
   {
-    title: "Positive Affirmations",
-    category: "motivation",
+    title: "Affirmations positives",
+    category: "Motivation",
     description:
-      "Repeat positive affirmations every day to boost your mindset.",
+      "Répétez des affirmations positives chaque jour pour renforcer votre état d'esprit.",
     imageUrl: getFirebaseImageUrl("assets/images/affirmations.png"),
     daysOptions: [7, 15, 21, 30, 60, 90, 180, 365],
     chatId: "positiveAffirmations",
@@ -269,10 +280,10 @@ const challenges = [
     usersTakingChallenge: [],
   },
   {
-    title: "Cold Shower Challenge",
-    category: "health",
+    title: "Défi douche froide",
+    category: "Santé",
     description:
-      "Boost your energy and willpower by taking a cold shower every day.",
+      "Stimulez votre énergie et votre volonté en prenant une douche froide chaque jour.",
     imageUrl: getFirebaseImageUrl("assets/images/cold-shower.png"),
     daysOptions: [7, 15, 21, 30, 60, 90, 180, 365],
     chatId: "coldShower",
@@ -280,10 +291,10 @@ const challenges = [
     usersTakingChallenge: [],
   },
   {
-    title: "No Sugar for 30 Days",
-    category: "health",
+    title: "Sans sucre pendant 30 jours",
+    category: "Santé",
     description:
-      "Eliminate added sugars from your diet for a healthier lifestyle.",
+      "Éliminez les sucres ajoutés de votre alimentation pour adopter un mode de vie plus sain.",
     imageUrl: getFirebaseImageUrl("assets/images/no-sugar.png"),
     daysOptions: [7, 15, 21, 30, 60, 90, 180, 365],
     chatId: "noSugar30Days",
@@ -291,9 +302,9 @@ const challenges = [
     usersTakingChallenge: [],
   },
   {
-    title: "Daily Visualization",
-    category: "motivation",
-    description: "Visualize your goals for 5 minutes every day.",
+    title: "Visualisation quotidienne",
+    category: "Motivation",
+    description: "Visualisez vos objectifs pendant 5 minutes chaque jour.",
     imageUrl: getFirebaseImageUrl("assets/images/daily-visualization.png"),
     daysOptions: [7, 15, 21, 30, 60, 90, 180, 365],
     chatId: "dailyVisualization",
@@ -301,9 +312,9 @@ const challenges = [
     usersTakingChallenge: [],
   },
   {
-    title: "One Act of Kindness Daily",
-    category: "social",
-    description: "Perform a random act of kindness every day.",
+    title: "Un geste de gentillesse quotidien",
+    category: "Social",
+    description: "Faites un geste de gentillesse aléatoire chaque jour.",
     imageUrl: getFirebaseImageUrl("assets/images/act-of-kindness.png"),
     daysOptions: [7, 15, 21, 30, 60, 90, 180, 365],
     chatId: "kindnessAct",
@@ -311,9 +322,9 @@ const challenges = [
     usersTakingChallenge: [],
   },
   {
-    title: "Wake Up at 5 AM",
-    category: "discipline",
-    description: "Train yourself to wake up at 5 AM every morning.",
+    title: "Réveillez-vous à 5h",
+    category: "Discipline",
+    description: "Apprenez à vous lever à 5h du matin chaque jour.",
     imageUrl: getFirebaseImageUrl("assets/images/wake-up-5.png"),
     daysOptions: [7, 15, 21, 30, 60, 90, 180, 365],
     chatId: "wakeUp5AM",
@@ -321,10 +332,10 @@ const challenges = [
     usersTakingChallenge: [],
   },
   {
-    title: "One New Recipe Per Week",
-    category: "creativity",
+    title: "Une nouvelle recette par semaine",
+    category: "Créativité",
     description:
-      "Expand your cooking skills by trying a new recipe every week.",
+      "Développez vos compétences culinaires en essayant une nouvelle recette chaque semaine.",
     imageUrl: getFirebaseImageUrl("assets/images/new-recipe.png"),
     daysOptions: [7, 15, 21, 30, 60, 90, 180, 365],
     chatId: "newRecipe",
@@ -332,9 +343,9 @@ const challenges = [
     usersTakingChallenge: [],
   },
   {
-    title: "Read 10 Pages Per Day",
-    category: "education",
-    description: "Develop the habit of reading at least 10 pages daily.",
+    title: "Lisez 10 pages par jour",
+    category: "Éducation",
+    description: "Adoptez l'habitude de lire au moins 10 pages chaque jour.",
     imageUrl: getFirebaseImageUrl("assets/images/read-10-pages.png"),
     daysOptions: [7, 15, 21, 30, 60, 90, 180, 365],
     chatId: "read10Pages",
@@ -342,9 +353,10 @@ const challenges = [
     usersTakingChallenge: [],
   },
   {
-    title: "One-Minute Plank Challenge",
-    category: "fitness",
-    description: "Strengthen your core by doing a one-minute plank daily.",
+    title: "Défi planche d'une minute",
+    category: "Fitness",
+    description:
+      "Renforcez votre sangle abdominale en faisant une planche d'une minute chaque jour.",
     imageUrl: getFirebaseImageUrl("assets/images/plank.jpg"),
     daysOptions: [7, 15, 21, 30, 60, 90, 180, 365],
     chatId: "oneMinPlank",
@@ -352,10 +364,10 @@ const challenges = [
     usersTakingChallenge: [],
   },
   {
-    title: "Learn One New Word Per Day",
-    category: "education",
+    title: "Apprenez un nouveau mot par jour",
+    category: "Éducation",
     description:
-      "Expand your vocabulary by learning and using a new word daily.",
+      "Enrichissez votre vocabulaire en apprenant et en utilisant un nouveau mot chaque jour.",
     imageUrl: getFirebaseImageUrl("assets/images/learn-word.jpg"),
     daysOptions: [7, 15, 21, 30, 60, 90, 180, 365],
     chatId: "learnWordDaily",
@@ -363,10 +375,10 @@ const challenges = [
     usersTakingChallenge: [],
   },
   {
-    title: "No Caffeine for 7 Days",
-    category: "health",
+    title: "Sans caféine pendant 7 jours",
+    category: "Santé",
     description:
-      "Give your body a reset by eliminating caffeine for a full week.",
+      "Offrez à votre corps un redémarrage en éliminant la caféine pendant une semaine complète.",
     imageUrl: getFirebaseImageUrl("assets/images/no-caffeine.png"),
     daysOptions: [7, 15, 21, 30, 60, 90, 180, 365],
     chatId: "noCaffeine",
@@ -374,10 +386,10 @@ const challenges = [
     usersTakingChallenge: [],
   },
   {
-    title: "Write Down 3 Wins Daily",
-    category: "motivation",
+    title: "Notez 3 réussites par jour",
+    category: "Motivation",
     description:
-      "Boost your confidence by listing three wins at the end of each day.",
+      "Boostez votre confiance en listant trois réussites à la fin de chaque journée.",
     imageUrl: getFirebaseImageUrl("assets/images/3-wins.png"),
     daysOptions: [7, 15, 21, 30, 60, 90, 180, 365],
     chatId: "dailyWins",
@@ -385,10 +397,10 @@ const challenges = [
     usersTakingChallenge: [],
   },
   {
-    title: "Talk to a Stranger Every Day",
-    category: "social",
+    title: "Parlez à un inconnu chaque jour",
+    category: "Social",
     description:
-      "Improve your social skills by starting a conversation with someone new daily.",
+      "Améliorez vos compétences sociales en entamant une conversation avec quelqu'un de nouveau chaque jour.",
     imageUrl: getFirebaseImageUrl("assets/images/talk-stranger.jpg"),
     daysOptions: [7, 15, 21, 30, 60, 90, 180, 365],
     chatId: "talkToStranger",
@@ -396,10 +408,10 @@ const challenges = [
     usersTakingChallenge: [],
   },
   {
-    title: "Minimalist Wardrobe Challenge",
-    category: "lifestyle",
+    title: "Défi garde-robe minimaliste",
+    category: "Mode De Vie",
     description:
-      "Wear only 33 items of clothing for a full month to embrace minimalism.",
+      "Ne portez que 33 vêtements pendant un mois complet pour adopter le minimalisme.",
     imageUrl: getFirebaseImageUrl("assets/images/minimalist-wardrobe.jpg"),
     daysOptions: [7, 15, 21, 30, 60, 90, 180, 365],
     chatId: "minimalistWardrobe",
@@ -407,10 +419,10 @@ const challenges = [
     usersTakingChallenge: [],
   },
   {
-    title: "No Complaints for 21 Days",
-    category: "mindset",
+    title: "Pas de plaintes pendant 21 jours",
+    category: "État d'esprit",
     description:
-      "Train your mind to stay positive by avoiding complaints for 21 days straight.",
+      "Entraînez votre esprit à rester positif en évitant les plaintes pendant 21 jours consécutifs.",
     imageUrl: getFirebaseImageUrl("assets/images/no-complaints.jpg"),
     daysOptions: [7, 15, 21, 30, 60, 90, 180, 365],
     chatId: "noComplaints",
@@ -418,10 +430,10 @@ const challenges = [
     usersTakingChallenge: [],
   },
   {
-    title: "Daily Self-Reflection",
-    category: "mindset",
+    title: "Auto-réflexion quotidienne",
+    category: "État d'esprit",
     description:
-      "Spend 5 minutes every evening reflecting on your thoughts and actions.",
+      "Prenez 5 minutes chaque soir pour réfléchir à vos pensées et à vos actions.",
     imageUrl: getFirebaseImageUrl("assets/images/self-reflection.png"),
     daysOptions: [7, 15, 21, 30, 60, 90, 180, 365],
     chatId: "selfReflection",
@@ -429,10 +441,10 @@ const challenges = [
     usersTakingChallenge: [],
   },
   {
-    title: "Invest 30 Minutes in a Hobby",
-    category: "personal growth",
+    title: "Investissez 30 minutes dans un loisir",
+    category: "Développement Personnel",
     description:
-      "Spend at least 30 minutes daily on a hobby that makes you happy.",
+      "Consacrez au moins 30 minutes par jour à un loisir qui vous rend heureux.",
     imageUrl: getFirebaseImageUrl("assets/images/hobby-30.png"),
     daysOptions: [7, 15, 21, 30, 60, 90, 180, 365],
     chatId: "hobbyTime",
@@ -440,10 +452,10 @@ const challenges = [
     usersTakingChallenge: [],
   },
   {
-    title: "Listen to a Podcast Every Day",
-    category: "education",
+    title: "Écoutez un podcast chaque jour",
+    category: "Éducation",
     description:
-      "Expand your knowledge by listening to an educational podcast daily.",
+      "Enrichissez vos connaissances en écoutant un podcast éducatif quotidiennement.",
     imageUrl: getFirebaseImageUrl("assets/images/poadcast.png"),
     daysOptions: [7, 15, 21, 30, 60, 90, 180, 365],
     chatId: "listenPodcast",
@@ -451,10 +463,10 @@ const challenges = [
     usersTakingChallenge: [],
   },
   {
-    title: "Reduce Plastic Use",
-    category: "sustainability",
+    title: "Réduisez l'utilisation du plastique",
+    category: "Écologie",
     description:
-      "Reduce your environmental impact by avoiding single-use plastics.",
+      "Réduisez votre impact environnemental en évitant les plastiques à usage unique.",
     imageUrl: getFirebaseImageUrl("assets/images/reduce-plastic-use.png"),
     daysOptions: [7, 15, 21, 30, 60, 90, 180, 365],
     chatId: "reducePlastic",
@@ -462,10 +474,10 @@ const challenges = [
     usersTakingChallenge: [],
   },
   {
-    title: "Practice Good Posture",
-    category: "health",
+    title: "Adoptez une bonne posture",
+    category: "Santé",
     description:
-      "Maintain a good posture throughout the day for improved back health.",
+      "Maintenez une posture correcte tout au long de la journée pour améliorer la santé de votre dos.",
     imageUrl: getFirebaseImageUrl("assets/images/good-posture.png"),
     daysOptions: [7, 15, 21, 30, 60, 90, 180, 365],
     chatId: "goodPosture",
@@ -473,9 +485,9 @@ const challenges = [
     usersTakingChallenge: [],
   },
   {
-    title: "Reduce Screen Time at Night",
-    category: "lifestyle",
-    description: "Avoid screens at least 30 minutes before bedtime.",
+    title: "Réduisez le temps d'écran la nuit",
+    category: "Mode De Vie",
+    description: "Évitez les écrans au moins 30 minutes avant de vous coucher.",
     imageUrl: getFirebaseImageUrl("assets/images/no-phone-bed.png"),
     daysOptions: [7, 15, 21, 30, 60, 90, 180, 365],
     chatId: "reduceScreenTime",

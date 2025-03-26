@@ -26,7 +26,6 @@ import BackButton from "../../components/BackButton";
 import designSystem from "../../theme/designSystem";
 
 const { width } = Dimensions.get("window");
-const currentTheme = designSystem.lightTheme;
 
 const normalizeFont = (size: number) => {
   const scale = width / 375;
@@ -40,6 +39,10 @@ export default function Settings() {
   const router = useRouter();
   const [notificationsEnabled, setNotificationsEnabled] = useState(true);
   const isDarkMode = theme === "dark";
+
+  const currentTheme = isDarkMode
+    ? designSystem.darkTheme
+    : designSystem.lightTheme;
 
   // Demande de permissions pour les notifications
   useEffect(() => {
@@ -130,55 +133,94 @@ export default function Settings() {
         currentTheme.colors.background,
         currentTheme.colors.cardBackground,
       ]}
-      style={styles.container}
+      style={[
+        styles.container,
+        { backgroundColor: currentTheme.colors.background },
+      ]} // Ajoute le style dynamique ici
     >
       <BackButton color={currentTheme.colors.primary} />
       <View style={styles.header}>
-        <Text style={[styles.pageTitle]}>Paramètres</Text>
+        <Text
+          style={[
+            styles.pageTitle,
+            { color: currentTheme.colors.textSecondary },
+          ]}
+        >
+          {t("Paramètres")}
+        </Text>
       </View>
+
       <SafeAreaView style={styles.safeArea}>
         <ScrollView
           contentContainerStyle={styles.scrollContent}
           showsVerticalScrollIndicator={false}
         >
-          {/* Section Notifications */}
-          <View style={styles.settingItem}>
-            <Text style={styles.settingLabel}>{t("Notifications")}</Text>
+          {/* Notifications */}
+          <View
+            style={[
+              styles.settingItem,
+              { backgroundColor: currentTheme.colors.cardBackground },
+            ]}
+          >
+            <Text
+              style={[
+                styles.settingLabel,
+                { color: currentTheme.colors.textSecondary },
+              ]}
+            >
+              {t("Notifications")}
+            </Text>
             <Switch
               value={notificationsEnabled}
               onValueChange={(value) => {
                 setNotificationsEnabled(value);
-                if (!value) {
+                if (!value)
                   Notifications.cancelAllScheduledNotificationsAsync();
-                  Alert.alert(
-                    t("Notifications désactivées"),
-                    t("Vous ne recevrez plus de notifications.")
-                  );
-                } else {
-                  Alert.alert(
-                    t("Notifications activées"),
-                    t(
-                      "Vérifiez vos autorisations dans les paramètres de votre appareil."
-                    )
-                  );
-                }
               }}
             />
           </View>
 
-          {/* Section Mode Sombre */}
-          <View style={styles.settingItem}>
-            <Text style={styles.settingLabel}>{t("Mode sombre")}</Text>
+          {/* Mode Sombre */}
+          <View
+            style={[
+              styles.settingItem,
+              { backgroundColor: currentTheme.colors.cardBackground },
+            ]}
+          >
+            <Text
+              style={[
+                styles.settingLabel,
+                { color: currentTheme.colors.textSecondary },
+              ]}
+            >
+              {t("Mode sombre")}
+            </Text>
             <Switch value={isDarkMode} onValueChange={toggleTheme} />
           </View>
 
-          {/* Section Langue */}
-          <View style={styles.settingItem}>
-            <Text style={styles.settingLabel}>{t("Langue")}</Text>
+          {/* Langue */}
+          <View
+            style={[
+              styles.settingItem,
+              { backgroundColor: currentTheme.colors.cardBackground },
+            ]}
+          >
+            <Text
+              style={[
+                styles.settingLabel,
+                { color: currentTheme.colors.textSecondary },
+              ]}
+            >
+              {t("Langue")}
+            </Text>
             <Picker
               selectedValue={language}
-              style={styles.languagePicker}
+              style={[
+                styles.languagePicker,
+                { color: currentTheme.colors.textSecondary },
+              ]}
               onValueChange={(itemValue) => setLanguage(itemValue)}
+              dropdownIconColor={currentTheme.colors.primary}
             >
               <Picker.Item label="Français" value="fr" />
               <Picker.Item label="English" value="en" />
@@ -188,10 +230,22 @@ export default function Settings() {
             </Picker>
           </View>
 
-          {/* Section Compte */}
-          <Text style={styles.sectionHeader}>{t("Compte")}</Text>
+          {/* Boutons Compte */}
+          <Text
+            style={[
+              styles.sectionHeader,
+              { color: currentTheme.colors.textSecondary },
+            ]}
+          >
+            {t("Compte")}
+          </Text>
+
+          {/* Modifier profil */}
           <TouchableOpacity
-            style={styles.accountButton}
+            style={[
+              styles.accountButton,
+              { backgroundColor: currentTheme.colors.cardBackground },
+            ]}
             onPress={() => router.push("/profile/UserInfo")}
           >
             <Ionicons
@@ -199,62 +253,143 @@ export default function Settings() {
               size={20}
               color={currentTheme.colors.primary}
             />
-            <Text style={styles.accountButtonText}>
+            <Text
+              style={[
+                styles.accountButtonText,
+                { color: currentTheme.colors.textSecondary },
+              ]}
+            >
               {t("Modifier mon profil")}
             </Text>
           </TouchableOpacity>
-          <TouchableOpacity style={styles.accountButton} onPress={handleLogout}>
-            <Ionicons name="log-out-outline" size={20} color="#dc3545" />
-            <Text style={[styles.accountButtonText, { color: "#dc3545" }]}>
+
+          {/* Autres boutons (logout, suppression...) */}
+          <TouchableOpacity
+            style={[
+              styles.accountButton,
+              { backgroundColor: currentTheme.colors.cardBackground },
+            ]}
+            onPress={handleLogout}
+          >
+            <Ionicons
+              name="log-out-outline"
+              size={20}
+              color={currentTheme.colors.error}
+            />
+            <Text
+              style={[
+                styles.accountButtonText,
+                { color: currentTheme.colors.error },
+              ]}
+            >
               {t("Se déconnecter")}
             </Text>
           </TouchableOpacity>
+
           <TouchableOpacity
-            style={styles.accountButton}
+            style={[
+              styles.accountButton,
+              { backgroundColor: currentTheme.colors.cardBackground },
+            ]}
             onPress={handleDeleteAccount}
           >
-            <Ionicons name="trash-outline" size={20} color="#dc3545" />
-            <Text style={[styles.accountButtonText, { color: "#dc3545" }]}>
+            <Ionicons
+              name="trash-outline"
+              size={20}
+              color={currentTheme.colors.error}
+            />
+            <Text
+              style={[
+                styles.accountButtonText,
+                { color: currentTheme.colors.error },
+              ]}
+            >
               {t("Supprimer mon compte")}
             </Text>
           </TouchableOpacity>
-          <TouchableOpacity style={styles.accountButton} onPress={clearCache}>
+
+          {/* Vider cache */}
+          <TouchableOpacity
+            style={[
+              styles.accountButton,
+              { backgroundColor: currentTheme.colors.cardBackground },
+            ]}
+            onPress={clearCache}
+          >
             <Ionicons name="trash-bin-outline" size={20} color="#ffa500" />
             <Text style={[styles.accountButtonText, { color: "#ffa500" }]}>
               {t("Vider le cache")}
             </Text>
           </TouchableOpacity>
+
+          {/* Administration */}
           {auth.currentUser && auth.currentUser.uid === adminUID && (
             <TouchableOpacity
-              style={styles.adminButton}
+              style={[
+                styles.adminButton,
+                { backgroundColor: currentTheme.colors.primary },
+              ]}
               onPress={() => router.push("/AdminFeatures")}
             >
-              <Text style={styles.adminButtonText}>{t("Administration")}</Text>
+              <Text
+                style={[
+                  styles.adminButtonText,
+                  { color: currentTheme.colors.textPrimary },
+                ]}
+              >
+                {t("Administration")}
+              </Text>
             </TouchableOpacity>
           )}
 
-          {/* Section À Propos */}
-          <Text style={styles.sectionHeader}>{t("À Propos")}</Text>
-          <TouchableOpacity onPress={() => router.push("/about/History")}>
-            <Text style={styles.aboutLink}>
-              {t("À propos de ChallengeTies")}
-            </Text>
-          </TouchableOpacity>
-          <TouchableOpacity onPress={() => router.push("/about/PrivacyPolicy")}>
-            <Text style={styles.aboutLink}>
-              {t("Politique de confidentialité")}
-            </Text>
-          </TouchableOpacity>
-          <TouchableOpacity onPress={() => router.push("/about/Contact")}>
-            <Text style={styles.aboutLink}>{t("Nous contacter")}</Text>
-          </TouchableOpacity>
+          {/* À Propos */}
+          <Text
+            style={[
+              styles.sectionHeader,
+              { color: currentTheme.colors.textSecondary },
+            ]}
+          >
+            {t("À Propos")}
+          </Text>
+
+          {/* Liens */}
+          {["/about/History", "/about/PrivacyPolicy", "/about/Contact"].map(
+            (path, index) => (
+              <TouchableOpacity key={index} onPress={() => router.push(path)}>
+                <Text
+                  style={[
+                    styles.aboutLink,
+                    { color: currentTheme.colors.primary },
+                  ]}
+                >
+                  {t(
+                    [
+                      "À propos de ChallengeTies",
+                      "Politique de confidentialité",
+                      "Nous contacter",
+                    ][index]
+                  )}
+                </Text>
+              </TouchableOpacity>
+            )
+          )}
+
           <TouchableOpacity
             onPress={() => Linking.openURL("https://example.com")}
           >
-            <Text style={styles.aboutLink}>{t("Visitez Notre Site Web")}</Text>
+            <Text
+              style={[styles.aboutLink, { color: currentTheme.colors.primary }]}
+            >
+              {t("Visitez Notre Site Web")}
+            </Text>
           </TouchableOpacity>
 
-          <Text style={styles.appVersion}>
+          <Text
+            style={[
+              styles.appVersion,
+              { color: currentTheme.colors.textSecondary },
+            ]}
+          >
             {t("Version de l'application")}: 1.0.0
           </Text>
         </ScrollView>
@@ -266,7 +401,6 @@ export default function Settings() {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: currentTheme.colors.background,
     padding: 16,
   },
   safeArea: {

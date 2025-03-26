@@ -8,7 +8,6 @@ import {
   ActivityIndicator,
   Image,
   ScrollView,
-  Modal,
   Dimensions,
   Animated,
   Share,
@@ -31,6 +30,8 @@ import { useSavedChallenges } from "../../context/SavedChallengesContext";
 import { useCurrentChallenges } from "../../context/CurrentChallengesContext";
 import { checkForAchievements } from "../../helpers/trophiesHelpers";
 import ChallengeCompletionModal from "../../components/ChallengeCompletionModal";
+import DurationSelectionModal from "../../components/DurationSelectionModal";
+import StatsModal from "../../components/StatsModal";
 import designSystem from "../../theme/designSystem";
 
 const { width: viewportWidth } = Dimensions.get("window");
@@ -91,7 +92,7 @@ export default function ChallengeDetails() {
     removeChallenge: removeCurrentChallenge,
     markToday,
     isMarkedToday,
-    completeChallenge, // Doit être présent ici
+    completeChallenge,
     simulateStreak,
   } = useCurrentChallenges();
 
@@ -117,6 +118,7 @@ export default function ChallengeDetails() {
   const confettiRef = useRef<ConfettiCannon | null>(null);
   const [currentMonth, setCurrentMonth] = useState(new Date());
 
+  // Récupération des infos du défi depuis la collection "challenges"
   useEffect(() => {
     if (!id) return;
     const challengeRef = doc(db, "challenges", id);
@@ -135,6 +137,7 @@ export default function ChallengeDetails() {
     return () => unsubscribe();
   }, [id]);
 
+  // Synchronisation avec currentChallenges
   useEffect(() => {
     const found = currentChallenges.find((ch: any) => ch.id === id);
     if (found) {
@@ -152,6 +155,7 @@ export default function ChallengeDetails() {
     }
   }, [currentChallenges, id]);
 
+  // Exemple de calcul de stats
   useEffect(() => {
     if (!userHasTaken) return;
     const totalSaved = savedChallenges.length;
@@ -364,71 +368,6 @@ export default function ChallengeDetails() {
     setCompletionModalVisible(true);
   };
 
-  const awardTrophiesToUser = async (trophiesToAdd: number) => {
-    const userId = auth.currentUser?.uid;
-    if (!userId) return;
-    const userRef = doc(db, "users", userId);
-    try {
-      await runTransaction(db, async (transaction) => {
-        const userDoc = await transaction.get(userRef);
-        if (!userDoc.exists()) throw new Error("User doc not found");
-        const userData = userDoc.data();
-        const currentTrophies = userData.trophies || 0;
-        const newTrophyCount = currentTrophies + trophiesToAdd;
-        let achievements = userData.achievements || [];
-        if (!achievements.includes("First challenge completed")) {
-          achievements.push("First challenge completed");
-        }
-        const totalCompleted = (userData.completedChallengesCount || 0) + 1;
-        if (
-          totalCompleted === 10 &&
-          !achievements.includes("10 challenges completed")
-        ) {
-          achievements.push("10 challenges completed");
-        }
-        transaction.update(userRef, {
-          trophies: newTrophyCount,
-          achievements,
-          completedChallengesCount: totalCompleted,
-        });
-      });
-      confettiRef.current?.start();
-      Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Heavy);
-      setTimeout(() => confettiRef.current?.stop(), 5000);
-      Alert.alert("Succès !", `Vous avez reçu ${baseTrophyAmount} trophées !`);
-    } catch (err) {
-      Alert.alert(
-        "Erreur",
-        "La mise à jour des trophées a échoué. Réessayez plus tard."
-      );
-    }
-  };
-
-  const finalizeChallengeRemoval = async () => {
-    if (!id) return;
-    try {
-      const challengeRef = doc(db, "challenges", id);
-      await removeCurrentChallenge(id, finalSelectedDays);
-      await runTransaction(db, async (transaction) => {
-        const challengeDoc = await transaction.get(challengeRef);
-        if (!challengeDoc.exists()) throw new Error("Challenge inexistant");
-        const data = challengeDoc.data();
-        const currentCount = data.participantsCount || 0;
-        const currentUsers = data.usersTakingChallenge || [];
-        const uid = auth.currentUser?.uid;
-        const updatedUsers = currentUsers.filter(
-          (user: string) => user !== uid
-        );
-        transaction.update(challengeRef, {
-          participantsCount: Math.max(currentCount - 1, 0),
-          usersTakingChallenge: updatedUsers,
-        });
-      });
-    } catch (err) {
-      console.error("Error removing challenge:", err);
-    }
-  };
-
   const handleClaimTrophiesWithoutAd = async () => {
     try {
       await completeChallenge(id, finalSelectedDays, false);
@@ -440,7 +379,6 @@ export default function ChallengeDetails() {
 
   const handleClaimTrophiesWithAd = async () => {
     try {
-      // Ici, on considère que la logique de l'annonce est traitée ailleurs
       await completeChallenge(id, finalSelectedDays, true);
       setCompletionModalVisible(false);
     } catch (error) {
@@ -607,11 +545,7 @@ export default function ChallengeDetails() {
         <View style={[styles.infoContainer, { marginTop: 30 }]}>
           <TouchableOpacity
             style={styles.actionIcon}
-            onPress={() =>
-              router.push(
-                `/challenge-chat/${id}?title=${encodeURIComponent(routeTitle)}`
-              )
-            }
+            onPress={handleNavigateToChat}
           >
             <Ionicons
               name="chatbubble-ellipses-outline"
@@ -650,52 +584,18 @@ export default function ChallengeDetails() {
         </View>
       </View>
 
-      <Modal visible={modalVisible} transparent animationType="slide">
-        <View style={styles.modalContainer}>
-          <View style={styles.modalContent}>
-            <Text style={styles.modalTitle}>Choisissez la durée (jours)</Text>
-            <View style={styles.daysOptionsContainer}>
-              {daysOptions.map((days) => (
-                <TouchableOpacity
-                  key={days}
-                  style={[
-                    styles.dayOption,
-                    localSelectedDays === days && styles.dayOptionSelected,
-                  ]}
-                  onPress={() => setLocalSelectedDays(days)}
-                >
-                  <Ionicons
-                    name={dayIcons[days] || "alarm-outline"}
-                    size={24}
-                    color={localSelectedDays === days ? "#fff" : "#333"}
-                  />
-                  <Text
-                    style={[
-                      styles.dayOptionText,
-                      localSelectedDays === days && { color: "#fff" },
-                    ]}
-                  >
-                    {days} jours
-                  </Text>
-                </TouchableOpacity>
-              ))}
-            </View>
-            <TouchableOpacity
-              style={styles.confirmButton}
-              onPress={handleTakeChallenge}
-            >
-              <Text style={styles.confirmButtonText}>Confirmer</Text>
-            </TouchableOpacity>
-            <TouchableOpacity
-              style={styles.cancelButton}
-              onPress={() => setModalVisible(false)}
-            >
-              <Text style={styles.cancelButtonText}>Annuler</Text>
-            </TouchableOpacity>
-          </View>
-        </View>
-      </Modal>
+      {/* Composant pour la sélection de durée */}
+      <DurationSelectionModal
+        visible={modalVisible}
+        daysOptions={daysOptions}
+        selectedDays={localSelectedDays}
+        onSelectDays={setLocalSelectedDays}
+        onConfirm={handleTakeChallenge}
+        onCancel={() => setModalVisible(false)}
+        dayIcons={dayIcons}
+      />
 
+      {/* Composant pour la finalisation du défi */}
       {completionModalVisible && (
         <ChallengeCompletionModal
           visible={completionModalVisible}
@@ -705,64 +605,16 @@ export default function ChallengeDetails() {
         />
       )}
 
-      <Modal visible={statsModalVisible} transparent animationType="slide">
-        <View style={styles.statsModalContainer}>
-          <View style={styles.statsModalContent}>
-            <View style={styles.statsModalHeader}>
-              <TouchableOpacity onPress={() => setStatsModalVisible(false)}>
-                <Ionicons name="close" size={24} color="#fff" />
-              </TouchableOpacity>
-              <Text style={styles.statsModalTitle}>
-                {monthName} {currentYearNum}
-              </Text>
-              <View style={{ width: 24 }} />
-            </View>
-            <View style={styles.calendarContainer}>
-              <View style={styles.weekDaysContainer}>
-                {["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"].map(
-                  (day) => (
-                    <Text key={day} style={styles.weekDay}>
-                      {day}
-                    </Text>
-                  )
-                )}
-              </View>
-              <View style={styles.daysContainer}>
-                {calendarDays.map((day, index) => (
-                  <View key={index} style={styles.dayWrapper}>
-                    {day ? (
-                      <View
-                        style={[
-                          styles.dayCircle,
-                          day.completed && styles.dayCompleted,
-                        ]}
-                      >
-                        <Text style={styles.dayText}>{day.day}</Text>
-                      </View>
-                    ) : (
-                      <View style={styles.emptyDay} />
-                    )}
-                  </View>
-                ))}
-              </View>
-            </View>
-            <View style={styles.statsModalFooter}>
-              <TouchableOpacity
-                onPress={goToPrevMonth}
-                style={styles.navButton}
-              >
-                <Ionicons name="chevron-back" size={24} color="#fff" />
-              </TouchableOpacity>
-              <TouchableOpacity
-                onPress={goToNextMonth}
-                style={styles.navButton}
-              >
-                <Ionicons name="chevron-forward" size={24} color="#fff" />
-              </TouchableOpacity>
-            </View>
-          </View>
-        </View>
-      </Modal>
+      {/* Composant pour afficher les stats */}
+      <StatsModal
+        visible={statsModalVisible}
+        onClose={() => setStatsModalVisible(false)}
+        monthName={monthName}
+        currentYearNum={currentYearNum}
+        calendarDays={calendarDays}
+        goToPrevMonth={goToPrevMonth}
+        goToNextMonth={goToNextMonth}
+      />
     </ScrollView>
   );
 }
@@ -895,30 +747,6 @@ const styles = StyleSheet.create({
     fontWeight: "600",
     fontFamily: "Comfortaa_700Regular",
   },
-  daysOptionsContainer: {
-    flexDirection: "row",
-    flexWrap: "wrap",
-    justifyContent: "center",
-    marginVertical: 10,
-  },
-  dayOption: {
-    flexDirection: "row",
-    alignItems: "center",
-    justifyContent: "center",
-    borderWidth: 1,
-    borderColor: "#ccc",
-    borderRadius: 8,
-    paddingVertical: 8,
-    paddingHorizontal: 12,
-    margin: 5,
-  },
-  dayOptionSelected: { backgroundColor: "#2cd18a", borderColor: "#2cd18a" },
-  dayOptionText: {
-    marginLeft: 6,
-    fontSize: 16,
-    color: "#333",
-    fontFamily: "Comfortaa_400Regular",
-  },
   actionIcon: { alignItems: "center", marginHorizontal: 10 },
   actionIconLabel: {
     marginTop: 4,
@@ -937,131 +765,4 @@ const styles = StyleSheet.create({
     color: "#444",
     fontFamily: "Comfortaa_400Regular",
   },
-  modalContainer: {
-    flex: 1,
-    justifyContent: "center",
-    alignItems: "center",
-    backgroundColor: "rgba(0,0,0,0.5)",
-    paddingHorizontal: 20,
-  },
-  modalContent: {
-    backgroundColor: "#fff",
-    width: "100%",
-    maxWidth: 400,
-    padding: 20,
-    borderRadius: 10,
-    alignItems: "center",
-  },
-  modalTitle: {
-    fontSize: 18,
-    fontWeight: "bold",
-    marginBottom: 15,
-    fontFamily: "Comfortaa_700Regular",
-  },
-  daysPicker: { width: "100%", height: 50, marginBottom: 20 },
-  confirmButton: {
-    backgroundColor: "#28a745",
-    padding: 10,
-    borderRadius: 8,
-    width: "80%",
-    alignItems: "center",
-    marginBottom: 10,
-  },
-  confirmButtonText: {
-    color: "#fff",
-    fontWeight: "bold",
-    fontFamily: "Comfortaa_700Regular",
-  },
-  cancelButton: {
-    backgroundColor: "#dc3545",
-    padding: 10,
-    borderRadius: 8,
-    width: "80%",
-    alignItems: "center",
-    marginTop: 10,
-  },
-  cancelButtonText: {
-    color: "#fff",
-    fontWeight: "bold",
-    fontFamily: "Comfortaa_700Regular",
-  },
-  claimButton: {
-    backgroundColor: "#28a745",
-    padding: 12,
-    borderRadius: 8,
-    width: "80%",
-    alignItems: "center",
-    marginBottom: 10,
-  },
-  claimButtonText: {
-    color: "#fff",
-    fontWeight: "bold",
-    fontFamily: "Comfortaa_700Regular",
-  },
-  doubleButton: {
-    backgroundColor: "#17a2b8",
-    padding: 12,
-    borderRadius: 8,
-    width: "80%",
-    alignItems: "center",
-    marginBottom: 10,
-  },
-  doubleButtonText: {
-    color: "#fff",
-    fontWeight: "bold",
-    fontFamily: "Comfortaa_700Regular",
-  },
-  statsModalContainer: {
-    flex: 1,
-    backgroundColor: "rgba(0,0,0,0.7)",
-    justifyContent: "center",
-    alignItems: "center",
-    paddingHorizontal: 20,
-  },
-  statsModalContent: {
-    backgroundColor: "#0F172A",
-    width: "100%",
-    maxWidth: 400,
-    borderRadius: 10,
-    padding: 20,
-  },
-  statsModalHeader: {
-    flexDirection: "row",
-    justifyContent: "space-between",
-    alignItems: "center",
-    marginBottom: 15,
-  },
-  statsModalTitle: {
-    fontSize: 20,
-    fontWeight: "bold",
-    color: "#fff",
-    textAlign: "center",
-    fontFamily: "Comfortaa_700Regular",
-  },
-  calendarContainer: { marginVertical: 10 },
-  weekDaysContainer: {
-    flexDirection: "row",
-    justifyContent: "space-around",
-    marginBottom: 5,
-  },
-  weekDay: { flex: 1, textAlign: "center", color: "#aaa", fontSize: 12 },
-  daysContainer: { flexDirection: "row", flexWrap: "wrap" },
-  dayWrapper: { width: "14.28%", alignItems: "center", marginVertical: 4 },
-  dayCircle: {
-    width: 32,
-    height: 32,
-    borderRadius: 16,
-    justifyContent: "center",
-    alignItems: "center",
-    backgroundColor: "#333",
-  },
-  dayCompleted: { backgroundColor: "#FACC15" },
-  dayText: { color: "#fff", fontSize: 14 },
-  emptyDay: { width: 32, height: 32 },
-  statsModalFooter: {
-    flexDirection: "row",
-    justifyContent: "space-between",
-    marginTop: 15,
-  },
-  navButton: { padding: 10 },
 });

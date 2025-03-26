@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useRef } from "react";
+import React, { useState, useEffect, useRef, useCallback } from "react";
 import {
   View,
   StyleSheet,
@@ -50,10 +50,7 @@ export default function HomeScreen() {
 
   // Animation fade pour la section HERO
   const fadeAnim = useSharedValue(0);
-  const fadeStyle = useAnimatedStyle(() => ({
-    opacity: fadeAnim.value,
-  }));
-
+  const fadeStyle = useAnimatedStyle(() => ({ opacity: fadeAnim.value }));
   useEffect(() => {
     fadeAnim.value = withTiming(1, { duration: 2000 });
   }, [fadeAnim]);
@@ -101,30 +98,66 @@ export default function HomeScreen() {
   const flatListRef = useRef<RNAnimated.FlatList<any>>(null);
   const scrollX = useRef(new RNAnimated.Value(0)).current;
   const currentIndexRef = useRef<number>(0);
+  const autoScrollIntervalRef = useRef<NodeJS.Timeout | null>(null);
 
-  // Auto-scroll toutes les 3 secondes
-  useEffect(() => {
+  // Démarre l'auto-scroll avec un intervalle
+  const startAutoScroll = useCallback(() => {
     if (challenges.length === 0) return;
-    const autoScrollInterval = setInterval(() => {
+    autoScrollIntervalRef.current = setInterval(() => {
       let nextIndex = currentIndexRef.current + 1;
-      if (nextIndex >= challenges.length) {
-        nextIndex = 0;
+      if (nextIndex >= challenges.length) nextIndex = 0;
+      try {
+        flatListRef.current?.scrollToIndex({
+          index: nextIndex,
+          animated: true,
+        });
+      } catch (err) {
+        // En cas d'erreur, on ignore
       }
-      flatListRef.current?.scrollToIndex({ index: nextIndex, animated: true });
       currentIndexRef.current = nextIndex;
     }, 3000);
-    return () => clearInterval(autoScrollInterval);
   }, [challenges]);
 
-  // Lors du relâchement (momentum) du scroll, recentrer sur l'élément le plus proche
+  useEffect(() => {
+    startAutoScroll();
+    return () => {
+      if (autoScrollIntervalRef.current)
+        clearInterval(autoScrollIntervalRef.current);
+    };
+  }, [challenges, startAutoScroll]);
+
+  // Annule l'auto-scroll lors du début du swipe
+  const handleScrollBeginDrag = () => {
+    if (autoScrollIntervalRef.current) {
+      clearInterval(autoScrollIntervalRef.current);
+      autoScrollIntervalRef.current = null;
+    }
+  };
+
+  // Lors du relâchement, recentrer et redémarrer l'auto-scroll après un délai
   const handleMomentumScrollEnd = (
     event: NativeSyntheticEvent<NativeScrollEvent>
   ) => {
     const offsetX = event.nativeEvent.contentOffset.x;
     const index = Math.round(offsetX / EFFECTIVE_ITEM_WIDTH);
     currentIndexRef.current = index;
-    flatListRef.current?.scrollToIndex({ index, animated: true });
+    try {
+      flatListRef.current?.scrollToIndex({ index, animated: true });
+    } catch (err) {}
+    if (!autoScrollIntervalRef.current) {
+      setTimeout(() => startAutoScroll(), 1500);
+    }
   };
+
+  // Met à jour l'index courant via viewability
+  const onViewableItemsChanged = useRef(({ viewableItems }: any) => {
+    if (viewableItems && viewableItems.length > 0) {
+      currentIndexRef.current = viewableItems[0].index;
+    }
+  }).current;
+  const viewabilityConfig = useRef({
+    viewAreaCoveragePercentThreshold: 50,
+  }).current;
 
   const renderChallenge = ({ item }: { item: Challenge }) => (
     <TouchableOpacity
@@ -157,11 +190,14 @@ export default function HomeScreen() {
 
   return (
     <SafeAreaView style={styles.safeArea}>
-      <StatusBar hidden />
+      <StatusBar hidden translucent backgroundColor="transparent" />
       <LinearGradient colors={["#e3e2e9", "#e3e2e9"]} style={styles.container}>
         <ScrollView
-          contentContainerStyle={styles.scrollContent}
-          bounces={false} // Désactive l'overscroll pour éviter la barre blanche
+          contentContainerStyle={[
+            styles.scrollContent,
+            { flexGrow: 1, backgroundColor: "#e3e2e9" },
+          ]}
+          bounces={false}
         >
           {/* SECTION HERO */}
           <RNAnimated.View style={[styles.heroSection, fadeStyle]}>
@@ -203,8 +239,7 @@ export default function HomeScreen() {
                 ref={flatListRef}
                 data={challenges}
                 horizontal
-                decelerationRate="normal"
-                disableIntervalMomentum
+                decelerationRate="fast"
                 bounces={false}
                 snapToInterval={EFFECTIVE_ITEM_WIDTH}
                 snapToAlignment="center"
@@ -220,7 +255,10 @@ export default function HomeScreen() {
                   { useNativeDriver: true }
                 )}
                 scrollEventThrottle={16}
+                onScrollBeginDrag={handleScrollBeginDrag}
                 onMomentumScrollEnd={handleMomentumScrollEnd}
+                onViewableItemsChanged={onViewableItemsChanged}
+                viewabilityConfig={viewabilityConfig}
                 renderItem={renderChallenge}
                 keyExtractor={(item) => item.id}
                 style={{ marginBottom: 20 }}
