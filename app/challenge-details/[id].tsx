@@ -9,7 +9,7 @@ import {
   Image,
   ScrollView,
   Dimensions,
-  Animated,
+  Animated as RNAnimated,
   Share,
 } from "react-native";
 import { Ionicons } from "@expo/vector-icons";
@@ -32,12 +32,21 @@ import { checkForAchievements } from "../../helpers/trophiesHelpers";
 import ChallengeCompletionModal from "../../components/ChallengeCompletionModal";
 import DurationSelectionModal from "../../components/DurationSelectionModal";
 import StatsModal from "../../components/StatsModal";
+import Animated, { FadeInUp } from "react-native-reanimated";
 import designSystem from "../../theme/designSystem";
 
-const { width: viewportWidth } = Dimensions.get("window");
-const currentTheme = designSystem.lightTheme;
-const normalizeFont = (size: number) => {
-  const scale = viewportWidth / 375;
+const { width: SCREEN_WIDTH, height: SCREEN_HEIGHT } = Dimensions.get("window");
+const currentTheme = {
+  ...designSystem.lightTheme,
+  colors: {
+    ...designSystem.lightTheme.colors,
+    primary: "#ED8F03", // Orange
+    cardBackground: "#FFFFFF",
+  },
+};
+
+const normalizeSize = (size: number) => {
+  const scale = SCREEN_WIDTH / 375;
   return Math.round(size * scale);
 };
 
@@ -118,7 +127,6 @@ export default function ChallengeDetails() {
   const confettiRef = useRef<ConfettiCannon | null>(null);
   const [currentMonth, setCurrentMonth] = useState(new Date());
 
-  // Récupération des infos du défi depuis la collection "challenges"
   useEffect(() => {
     if (!id) return;
     const challengeRef = doc(db, "challenges", id);
@@ -137,7 +145,6 @@ export default function ChallengeDetails() {
     return () => unsubscribe();
   }, [id]);
 
-  // Synchronisation avec currentChallenges
   useEffect(() => {
     const found = currentChallenges.find((ch: any) => ch.id === id);
     if (found) {
@@ -155,7 +162,6 @@ export default function ChallengeDetails() {
     }
   }, [currentChallenges, id]);
 
-  // Exemple de calcul de stats
   useEffect(() => {
     if (!userHasTaken) return;
     const totalSaved = savedChallenges.length;
@@ -432,15 +438,33 @@ export default function ChallengeDetails() {
 
   if (loading) {
     return (
-      <View style={styles.loadingContainer}>
-        <ActivityIndicator size="large" color="#FACC15" />
-        <Text style={styles.loadingText}>Chargement...</Text>
-      </View>
+      <LinearGradient
+        colors={[
+          currentTheme.colors.background,
+          currentTheme.colors.cardBackground,
+        ]}
+        style={styles.loadingContainer}
+        start={{ x: 0, y: 0 }}
+        end={{ x: 1, y: 1 }}
+      >
+        <Animated.View entering={FadeInUp}>
+          <ActivityIndicator size="large" color="#FF6200" />
+          <Text style={styles.loadingText}>Chargement en cours...</Text>
+        </Animated.View>
+      </LinearGradient>
     );
   }
 
   return (
-    <ScrollView style={styles.container}>
+    <LinearGradient
+      colors={[
+        currentTheme.colors.background,
+        currentTheme.colors.cardBackground,
+      ]}
+      style={styles.container}
+      start={{ x: 0, y: 0 }}
+      end={{ x: 1, y: 1 }}
+    >
       <ConfettiCannon
         ref={confettiRef}
         count={150}
@@ -450,141 +474,201 @@ export default function ChallengeDetails() {
         explosionSpeed={800}
         fallSpeed={3000}
       />
-      <View style={styles.carouselContainer}>
-        <View style={styles.imageContainer}>
-          {challengeImage ? (
-            <Image
-              source={{ uri: challengeImage }}
-              style={styles.image}
-              resizeMode="cover"
-            />
-          ) : (
-            <View style={styles.imagePlaceholder}>
-              <Ionicons name="image-outline" size={80} color="#ccc" />
-              <Text style={styles.noImageText}>Image non disponible</Text>
-            </View>
-          )}
-        </View>
-        <TouchableOpacity
-          style={styles.backButton}
-          onPress={() => router.back()}
-        >
-          <Ionicons name="arrow-back" size={normalizeFont(28)} color="#fff" />
-        </TouchableOpacity>
-      </View>
-      <View style={styles.infoRecipeContainer}>
-        <Text style={styles.infoRecipeName}>{routeTitle}</Text>
-        <Text style={styles.category}>{routeCategory.toUpperCase()}</Text>
-        <View style={styles.infoContainer}>
-          <Ionicons name="people-outline" size={20} color="#ed8f03" />
-          <Text style={styles.infoRecipe}>
-            {userCount} {userCount === 1 ? "participant" : "participants"}
-          </Text>
-        </View>
-        {!userHasTaken && (
-          <TouchableOpacity
-            style={styles.takeChallengeButton}
-            onPress={() => setModalVisible(true)}
+      <ScrollView showsVerticalScrollIndicator={false}>
+        <View style={styles.carouselContainer}>
+          <LinearGradient
+            colors={["#FF6200", "#FF8C00"]}
+            style={styles.imageContainer}
+            start={{ x: 0, y: 0 }}
+            end={{ x: 1, y: 1 }}
           >
-            <Text style={styles.takeChallengeButtonText}>Prendre le défi</Text>
-          </TouchableOpacity>
-        )}
-        {userHasTaken &&
-          !(
-            finalSelectedDays > 0 && finalCompletedDays >= finalSelectedDays
-          ) && (
-            <>
-              <Text style={styles.inProgressText}>Défi en cours</Text>
-              <View style={styles.progressBarBackground}>
-                <View
-                  style={[
-                    styles.progressBarFill,
-                    { width: progressPercent * 250 },
-                  ]}
+            {challengeImage ? (
+              <Image
+                source={{ uri: challengeImage }}
+                style={styles.image}
+                resizeMode="cover"
+              />
+            ) : (
+              <View style={styles.imagePlaceholder}>
+                <Ionicons
+                  name="image-outline"
+                  size={normalizeSize(80)}
+                  color="#FFFFFF"
                 />
+                <Text style={styles.noImageText}>Image non disponible</Text>
               </View>
-              <Text style={styles.progressText}>
-                {finalCompletedDays}/{finalSelectedDays} jours complétés
-              </Text>
-              <TouchableOpacity
-                style={[
-                  styles.markTodayButton,
-                  isMarkedToday(id, finalSelectedDays) &&
-                    styles.markTodayButtonDisabled,
-                ]}
-                onPress={() => {
-                  if (!isMarkedToday(id, finalSelectedDays)) {
-                    setFinalCompletedDays((prev) => prev + 1);
-                    markToday(id, finalSelectedDays);
-                  }
-                }}
-                disabled={isMarkedToday(id, finalSelectedDays)}
-              >
-                <Text style={styles.markTodayButtonText}>
-                  {isMarkedToday(id, finalSelectedDays)
-                    ? "Déjà marqué"
-                    : "Marquer aujourd'hui"}
-                </Text>
-              </TouchableOpacity>
-            </>
-          )}
-        <Text style={styles.infoDescriptionRecipe}>{routeDescription}</Text>
-        {userHasTaken &&
-          finalSelectedDays > 0 &&
-          finalCompletedDays >= finalSelectedDays && (
+            )}
             <TouchableOpacity
-              style={styles.completeChallengeButton}
-              onPress={handleShowCompleteModal}
+              style={styles.backButton}
+              onPress={() => router.back()}
             >
-              <Text style={styles.completeChallengeButtonText}>
-                Terminer le défi
-              </Text>
+              <Ionicons
+                name="arrow-back"
+                size={normalizeSize(28)}
+                color="#FFFFFF"
+              />
+            </TouchableOpacity>
+          </LinearGradient>
+        </View>
+        <Animated.View
+          entering={FadeInUp.delay(100)}
+          style={styles.infoRecipeContainer}
+        >
+          <Text style={styles.infoRecipeName}>{routeTitle}</Text>
+          <Text style={styles.category}>{routeCategory.toUpperCase()}</Text>
+          <View style={styles.infoContainer}>
+            <Ionicons
+              name="people-outline"
+              size={normalizeSize(20)}
+              color="#FF6200"
+            />
+            <Text style={styles.infoRecipe}>
+              {userCount} {userCount <= 1 ? "participant" : "participants"}
+            </Text>
+          </View>
+          {!userHasTaken && (
+            <TouchableOpacity
+              style={styles.takeChallengeButton}
+              onPress={() => setModalVisible(true)}
+            >
+              <LinearGradient
+                colors={["#FF6200", "#FF8C00"]}
+                style={styles.takeChallengeButtonGradient}
+                start={{ x: 0, y: 0 }}
+                end={{ x: 1, y: 1 }}
+              >
+                <Text style={styles.takeChallengeButtonText}>
+                  Prendre le défi
+                </Text>
+              </LinearGradient>
             </TouchableOpacity>
           )}
+          {userHasTaken &&
+            !(
+              finalSelectedDays > 0 && finalCompletedDays >= finalSelectedDays
+            ) && (
+              <Animated.View entering={FadeInUp.delay(200)}>
+                <Text style={styles.inProgressText}>Défi en cours</Text>
+                <View style={styles.progressBarBackground}>
+                  <LinearGradient
+                    colors={["#FF6200", "#FF8C00"]}
+                    style={[
+                      styles.progressBarFill,
+                      { width: progressPercent * normalizeSize(250) },
+                    ]}
+                    start={{ x: 0, y: 0 }}
+                    end={{ x: 1, y: 1 }}
+                  />
+                </View>
+                <Text style={styles.progressText}>
+                  {finalCompletedDays}/{finalSelectedDays} jours complétés
+                </Text>
+                <TouchableOpacity
+                  style={styles.markTodayButton}
+                  onPress={() => {
+                    if (!isMarkedToday(id, finalSelectedDays)) {
+                      setFinalCompletedDays((prev) => prev + 1);
+                      markToday(id, finalSelectedDays);
+                    }
+                  }}
+                  disabled={isMarkedToday(id, finalSelectedDays)}
+                >
+                  <LinearGradient
+                    colors={
+                      isMarkedToday(id, finalSelectedDays)
+                        ? ["#D3D3D3", "#A3A3A3"]
+                        : ["#FF6200", "#FF8C00"]
+                    }
+                    style={[
+                      styles.markTodayButtonGradient,
+                      { alignItems: "center", justifyContent: "center" }, // Centrage ajouté
+                    ]}
+                    start={{ x: 0, y: 0 }}
+                    end={{ x: 1, y: 1 }}
+                  >
+                    <Text style={styles.markTodayButtonText}>
+                      {isMarkedToday(id, finalSelectedDays)
+                        ? "Déjà marqué"
+                        : "Marquer aujourd'hui"}
+                    </Text>
+                  </LinearGradient>
+                </TouchableOpacity>
+              </Animated.View>
+            )}
+          <Text style={styles.infoDescriptionRecipe}>{routeDescription}</Text>
+          {userHasTaken &&
+            finalSelectedDays > 0 &&
+            finalCompletedDays >= finalSelectedDays && (
+              <TouchableOpacity
+                style={styles.completeChallengeButton}
+                onPress={handleShowCompleteModal}
+              >
+                <LinearGradient
+                  colors={["#FFD700", "#FFC107"]}
+                  style={styles.completeChallengeButtonGradient}
+                  start={{ x: 0, y: 0 }}
+                  end={{ x: 1, y: 1 }}
+                >
+                  <Text style={styles.completeChallengeButtonText}>
+                    Terminer le défi
+                  </Text>
+                </LinearGradient>
+              </TouchableOpacity>
+            )}
+          <Animated.View
+            entering={FadeInUp.delay(300)}
+            style={styles.actionIconsContainer}
+          >
+            <TouchableOpacity
+              style={styles.actionIcon}
+              onPress={handleNavigateToChat}
+            >
+              <Ionicons
+                name="chatbubble-ellipses-outline"
+                size={normalizeSize(28)}
+                color="#333"
+              />
+              <Text style={styles.actionIconLabel}>Chat</Text>
+            </TouchableOpacity>
+            <TouchableOpacity
+              style={styles.actionIcon}
+              onPress={handleSaveChallenge}
+            >
+              <Ionicons
+                name={isSavedChallenge(id) ? "bookmark" : "bookmark-outline"}
+                size={normalizeSize(28)}
+                color={isSavedChallenge(id) ? "#FF6200" : "#333"}
+              />
+              <Text style={styles.actionIconLabel}>
+                {isSavedChallenge(id) ? "Sauvegardé" : "Sauvegarder"}
+              </Text>
+            </TouchableOpacity>
+            <TouchableOpacity
+              style={styles.actionIcon}
+              onPress={handleShareChallenge}
+            >
+              <Ionicons
+                name="share-social-outline"
+                size={normalizeSize(28)}
+                color="#333"
+              />
+              <Text style={styles.actionIconLabel}>Partager</Text>
+            </TouchableOpacity>
+            <TouchableOpacity
+              style={[styles.actionIcon, { opacity: userHasTaken ? 1 : 0.5 }]}
+              onPress={userHasTaken ? handleViewStats : undefined}
+            >
+              <Ionicons
+                name="stats-chart-outline"
+                size={normalizeSize(28)}
+                color="#333"
+              />
+              <Text style={styles.actionIconLabel}>Stats</Text>
+            </TouchableOpacity>
+          </Animated.View>
+        </Animated.View>
+      </ScrollView>
 
-        <View style={[styles.infoContainer, { marginTop: 30 }]}>
-          <TouchableOpacity
-            style={styles.actionIcon}
-            onPress={handleNavigateToChat}
-          >
-            <Ionicons
-              name="chatbubble-ellipses-outline"
-              size={28}
-              color="#333"
-            />
-            <Text style={styles.actionIconLabel}>Chat</Text>
-          </TouchableOpacity>
-          <TouchableOpacity
-            style={styles.actionIcon}
-            onPress={handleSaveChallenge}
-          >
-            <Ionicons
-              name={isSavedChallenge(id) ? "bookmark" : "bookmark-outline"}
-              size={28}
-              color={isSavedChallenge(id) ? "#666" : "#333"}
-            />
-            <Text style={styles.actionIconLabel}>
-              {isSavedChallenge(id) ? "Sauvegardé" : "Sauvegarder"}
-            </Text>
-          </TouchableOpacity>
-          <TouchableOpacity
-            style={styles.actionIcon}
-            onPress={handleShareChallenge}
-          >
-            <Ionicons name="share-social-outline" size={28} color="#333" />
-            <Text style={styles.actionIconLabel}>Partager</Text>
-          </TouchableOpacity>
-          <TouchableOpacity
-            style={[styles.actionIcon, { opacity: userHasTaken ? 1 : 0.5 }]}
-            onPress={userHasTaken ? handleViewStats : undefined}
-          >
-            <Ionicons name="stats-chart-outline" size={28} color="#333" />
-            <Text style={styles.actionIconLabel}>Stats</Text>
-          </TouchableOpacity>
-        </View>
-      </View>
-
-      {/* Composant pour la sélection de durée */}
       <DurationSelectionModal
         visible={modalVisible}
         daysOptions={daysOptions}
@@ -595,7 +679,6 @@ export default function ChallengeDetails() {
         dayIcons={dayIcons}
       />
 
-      {/* Composant pour la finalisation du défi */}
       {completionModalVisible && (
         <ChallengeCompletionModal
           visible={completionModalVisible}
@@ -605,7 +688,6 @@ export default function ChallengeDetails() {
         />
       )}
 
-      {/* Composant pour afficher les stats */}
       <StatsModal
         visible={statsModalVisible}
         onClose={() => setStatsModalVisible(false)}
@@ -615,144 +697,202 @@ export default function ChallengeDetails() {
         goToPrevMonth={goToPrevMonth}
         goToNextMonth={goToNextMonth}
       />
-    </ScrollView>
+    </LinearGradient>
   );
 }
 
 const styles = StyleSheet.create({
-  container: { flex: 1, backgroundColor: "white" },
-  carouselContainer: { height: 250 },
+  container: { flex: 1 },
+  carouselContainer: { height: SCREEN_HEIGHT * 0.3 },
   imageContainer: {
     flex: 1,
     justifyContent: "center",
-    width: viewportWidth,
-    height: 250,
+    width: SCREEN_WIDTH,
+    height: SCREEN_HEIGHT * 0.3,
+    borderBottomLeftRadius: normalizeSize(30),
+    borderBottomRightRadius: normalizeSize(30),
+    overflow: "hidden",
   },
-  image: { ...StyleSheet.absoluteFillObject, width: "100%", height: 250 },
-  backButton: { position: "absolute", top: 40, left: 20, zIndex: 2 },
+  image: {
+    ...StyleSheet.absoluteFillObject,
+    width: "100%",
+    height: SCREEN_HEIGHT * 0.3,
+  },
+  backButton: {
+    position: "absolute",
+    top: normalizeSize(40),
+    left: normalizeSize(20),
+    zIndex: 2,
+    backgroundColor: "rgba(255,255,255,0.2)",
+    borderRadius: normalizeSize(20),
+    padding: normalizeSize(5),
+  },
   imagePlaceholder: {
     flex: 1,
     justifyContent: "center",
     alignItems: "center",
-    backgroundColor: "#ccc",
+    backgroundColor: "rgba(255,255,255,0.1)",
   },
   noImageText: {
-    color: "#777",
-    marginTop: 10,
-    fontFamily: "Comfortaa_400Regular",
+    color: "#FFFFFF",
+    marginTop: normalizeSize(10),
+    fontFamily: currentTheme.typography.body.fontFamily,
+    fontSize: normalizeSize(16),
+    textShadowColor: "#000",
+    textShadowOffset: { width: 0, height: 1 },
+    textShadowRadius: 2,
   },
   infoRecipeContainer: {
     flex: 1,
-    margin: 25,
-    marginTop: 20,
+    padding: normalizeSize(25),
+    paddingTop: normalizeSize(20),
     alignItems: "center",
   },
   infoRecipeName: {
-    fontSize: 28,
-    margin: 10,
-    color: "black",
+    fontSize: normalizeSize(28),
+    marginVertical: normalizeSize(10),
+    color: "#333333",
     textAlign: "center",
-    fontFamily: "Comfortaa_700Bold",
+    fontFamily: currentTheme.typography.title.fontFamily,
+    textShadowColor: "#000",
+    textShadowOffset: { width: 0, height: 1 },
+    textShadowRadius: 2,
   },
   category: {
-    fontSize: 14,
-    margin: 5,
-    color: currentTheme.colors.primary,
+    fontSize: normalizeSize(14),
+    marginVertical: normalizeSize(5),
+    color: "#FF6200",
     textAlign: "center",
-    fontFamily: "Comfortaa_700Bold",
+    fontFamily: currentTheme.typography.title.fontFamily,
   },
   infoContainer: {
     flexDirection: "row",
     alignItems: "center",
     justifyContent: "center",
-    marginVertical: 6,
+    marginVertical: normalizeSize(6),
   },
   infoRecipe: {
-    fontSize: 14,
-    marginLeft: 5,
-    color: "#333",
-    fontFamily: "Comfortaa_700Bold",
-  },
-  infoDescriptionRecipe: {
-    textAlign: "center",
-    fontSize: 16,
-    marginTop: 30,
-    marginHorizontal: 15,
-    color: "#555",
-    lineHeight: 22,
-    fontFamily: "Comfortaa_400Regular",
+    fontSize: normalizeSize(14),
+    marginLeft: normalizeSize(5),
+    color: "#777777",
+    fontFamily: currentTheme.typography.body.fontFamily,
   },
   takeChallengeButton: {
-    backgroundColor: "#ed8f03",
-    borderRadius: 25,
-    paddingVertical: 10,
-    paddingHorizontal: 30,
-    marginTop: 15,
+    borderRadius: normalizeSize(25),
+    overflow: "hidden",
+    marginTop: normalizeSize(15),
+    shadowColor: "#000",
+    shadowOffset: { width: 0, height: normalizeSize(4) },
+    shadowOpacity: 0.3,
+    shadowRadius: normalizeSize(6),
+    elevation: 5,
+  },
+  takeChallengeButtonGradient: {
+    paddingVertical: normalizeSize(10),
+    paddingHorizontal: normalizeSize(30),
   },
   takeChallengeButtonText: {
-    fontSize: 16,
-    color: "#fff",
-    fontFamily: "Comfortaa_700Bold",
+    fontSize: normalizeSize(16),
+    color: "#FFFFFF",
+    fontFamily: currentTheme.typography.title.fontFamily,
+    textShadowColor: "#000",
+    textShadowOffset: { width: 0, height: 1 },
+    textShadowRadius: 2,
   },
   inProgressText: {
-    fontSize: 16,
-    color: "#ed8f03",
-    marginTop: 10,
-    fontFamily: "Comfortaa_700Bold",
+    fontSize: normalizeSize(16),
+    color: "#FF6200",
+    marginTop: normalizeSize(10),
+    fontFamily: currentTheme.typography.title.fontFamily,
   },
   markTodayButton: {
-    backgroundColor: "#ed8f03",
-    borderRadius: 25,
-    paddingVertical: 10,
-    paddingHorizontal: 30,
-    marginTop: 10,
+    borderRadius: normalizeSize(25),
+    overflow: "hidden",
+    marginTop: normalizeSize(10),
+    shadowColor: "#000",
+    shadowOffset: { width: 0, height: normalizeSize(4) },
+    shadowOpacity: 0.3,
+    shadowRadius: normalizeSize(6),
+    elevation: 5,
   },
-  markTodayButtonDisabled: { backgroundColor: "#aaa" },
+  markTodayButtonGradient: {
+    paddingVertical: normalizeSize(10),
+    paddingHorizontal: normalizeSize(30),
+  },
   markTodayButtonText: {
-    fontSize: 16,
-    color: "#fff",
-    fontFamily: "Comfortaa_700Bold",
+    fontSize: normalizeSize(16),
+    color: "#FFFFFF",
+    fontFamily: currentTheme.typography.title.fontFamily,
+    textShadowColor: "#000",
+    textShadowOffset: { width: 0, height: 1 },
+    textShadowRadius: 2,
   },
   progressText: {
-    fontSize: 16,
-    color: "#666",
-    marginBottom: 8,
+    fontSize: normalizeSize(14),
+    color: "#FF6200",
+    marginBottom: normalizeSize(8),
     textAlign: "center",
-    marginTop: 5,
-    fontFamily: "Comfortaa_400Regular",
+    marginTop: normalizeSize(5),
+    fontFamily: currentTheme.typography.body.fontFamily,
   },
   progressBarBackground: {
-    width: 250,
-    height: 10,
-    backgroundColor: "#ddd",
-    borderRadius: 5,
+    width: normalizeSize(250),
+    height: normalizeSize(10),
+    backgroundColor: "#E0E0E0",
+    borderRadius: normalizeSize(5),
     overflow: "hidden",
     alignSelf: "center",
-    marginTop: 10,
+    marginTop: normalizeSize(10),
   },
   progressBarFill: {
     height: "100%",
-    backgroundColor: "#ed8f03",
   },
   completeChallengeButton: {
-    backgroundColor: "#FFC107",
-    borderRadius: 25,
-    paddingVertical: 10,
-    paddingHorizontal: 30,
-    marginTop: 15,
+    borderRadius: normalizeSize(25),
+    overflow: "hidden",
+    marginTop: normalizeSize(15),
+    shadowColor: "#000",
+    shadowOffset: { width: 0, height: normalizeSize(4) },
+    shadowOpacity: 0.3,
+    shadowRadius: normalizeSize(6),
+    elevation: 5,
+  },
+  completeChallengeButtonGradient: {
+    paddingVertical: normalizeSize(10),
+    paddingHorizontal: normalizeSize(30),
   },
   completeChallengeButtonText: {
-    fontSize: 16,
-    color: "#fff",
-    fontWeight: "600",
-    fontFamily: "Comfortaa_700Regular",
+    fontSize: normalizeSize(16),
+    color: "#FFFFFF",
+    fontFamily: currentTheme.typography.title.fontFamily,
+    textShadowColor: "#000",
+    textShadowOffset: { width: 0, height: 1 },
+    textShadowRadius: 2,
   },
-  actionIcon: { alignItems: "center", marginHorizontal: 10 },
+  infoDescriptionRecipe: {
+    textAlign: "center",
+    fontSize: normalizeSize(16),
+    marginTop: normalizeSize(30),
+    marginHorizontal: normalizeSize(15),
+    color: "#555555",
+    lineHeight: normalizeSize(22),
+    fontFamily: currentTheme.typography.body.fontFamily,
+  },
+  actionIconsContainer: {
+    flexDirection: "row",
+    justifyContent: "space-around",
+    marginTop: normalizeSize(30),
+    width: "100%",
+  },
+  actionIcon: {
+    alignItems: "center",
+    marginHorizontal: normalizeSize(10),
+  },
   actionIconLabel: {
-    marginTop: 4,
-    fontSize: 12,
-    color: "#333",
-    fontFamily: "Comfortaa_400Regular",
+    marginTop: normalizeSize(4),
+    fontSize: normalizeSize(12),
+    color: "#333333",
+    fontFamily: currentTheme.typography.body.fontFamily,
   },
   loadingContainer: {
     flex: 1,
@@ -760,9 +900,9 @@ const styles = StyleSheet.create({
     alignItems: "center",
   },
   loadingText: {
-    marginTop: 10,
-    fontSize: 16,
-    color: "#444",
-    fontFamily: "Comfortaa_400Regular",
+    marginTop: normalizeSize(10),
+    fontSize: normalizeSize(16),
+    color: "#777777",
+    fontFamily: currentTheme.typography.body.fontFamily,
   },
 });

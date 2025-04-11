@@ -1,4 +1,4 @@
-import React from "react";
+import React, { useState } from "react";
 import {
   View,
   Text,
@@ -8,20 +8,26 @@ import {
   TouchableOpacity,
   Linking,
   Dimensions,
+  SafeAreaView,
 } from "react-native";
 import Animated, { FadeInUp } from "react-native-reanimated";
 import { Ionicons } from "@expo/vector-icons";
 import { LinearGradient } from "expo-linear-gradient";
 import { useRouter } from "expo-router";
-import BackButton from "../components/BackButton";
 import designSystem from "../theme/designSystem";
+import CustomHeader from "@/components/CustomHeader";
 
 const { lightTheme } = designSystem;
 const currentTheme = lightTheme;
-const { width } = Dimensions.get("window");
+const { width: SCREEN_WIDTH, height: SCREEN_HEIGHT } = Dimensions.get("window");
 
 const normalizeFont = (size: number) => {
-  const scale = width / 375;
+  const scale = SCREEN_WIDTH / 375;
+  return Math.round(size * scale);
+};
+
+const normalizeSize = (size: number) => {
+  const scale = SCREEN_WIDTH / 375;
   return Math.round(size * scale);
 };
 
@@ -93,6 +99,11 @@ const conseils = [
 
 export default function Conseils() {
   const router = useRouter();
+  const [expandedTip, setExpandedTip] = useState<string | null>(null);
+
+  const toggleTip = (id: string) => {
+    setExpandedTip(expandedTip === id ? null : id);
+  };
 
   return (
     <LinearGradient
@@ -100,118 +111,165 @@ export default function Conseils() {
         currentTheme.colors.background,
         currentTheme.colors.cardBackground,
       ]}
-      style={styles.container}
+      style={styles.gradientContainer}
       start={{ x: 0, y: 0 }}
       end={{ x: 0.8, y: 1 }}
     >
-      <ScrollView contentContainerStyle={styles.scrollContent}>
-        {/* Bouton Retour */}
-        <BackButton />
-
-        {/* En-tête */}
-        <View style={styles.headerContainer}>
-          <Image
-            source={require("../assets/images/Challenge.png")}
-            style={styles.logo}
-          />
-          <Text style={styles.headerText}>Dynamisez votre parcours</Text>
-          <Text style={styles.subHeaderText}>
-            Des conseils pratiques pour rester inspiré, atteindre vos objectifs
-            et remporter des trophées !
-          </Text>
+      <SafeAreaView style={styles.safeArea}>
+        <View style={styles.headerWrapper}>
+          <CustomHeader title="Astuces" />
         </View>
+        <ScrollView
+          contentContainerStyle={styles.scrollContent}
+          showsVerticalScrollIndicator={false}
+        >
+          <Animated.View
+            entering={FadeInUp.delay(100)}
+            style={styles.headerContainer}
+          >
+            <Image
+              source={require("../assets/images/Challenge.png")}
+              style={styles.logo}
+            />
+            <Text style={styles.subHeaderText}>
+              Des conseils pratiques pour rester inspiré, atteindre vos
+              objectifs et remporter des trophées !
+            </Text>
+          </Animated.View>
 
-        {/* Section des conseils */}
-        <View style={styles.tipsContainer}>
-          {conseils.map((conseil, index) => (
-            <Animated.View
-              key={conseil.id}
-              entering={FadeInUp.delay(index * 100)}
-              style={styles.tipCard}
+          <View style={styles.tipsContainer}>
+            {conseils.map((conseil, index) => (
+              <Animated.View
+                key={conseil.id}
+                entering={FadeInUp.delay(200 + index * 100)}
+              >
+                <TouchableOpacity
+                  style={[
+                    styles.tipCard,
+                    expandedTip === conseil.id && styles.tipCardExpanded,
+                  ]}
+                  onPress={() => toggleTip(conseil.id)}
+                >
+                  <Ionicons
+                    name={conseil.icon as keyof typeof Ionicons.glyphMap}
+                    size={normalizeSize(32)}
+                    color={currentTheme.colors.secondary}
+                    style={styles.tipIcon}
+                  />
+                  <View style={styles.tipContent}>
+                    <Text style={styles.tipTitle}>{conseil.title}</Text>
+                    <Text
+                      style={styles.tipDescription}
+                      numberOfLines={expandedTip === conseil.id ? 0 : 2}
+                    >
+                      {conseil.description}
+                    </Text>
+                    <TouchableOpacity
+                      style={styles.readMoreButton}
+                      onPress={() => toggleTip(conseil.id)}
+                    >
+                      <Text style={styles.readMoreText}>
+                        {expandedTip === conseil.id ? "Réduire" : "Lire plus"}
+                      </Text>
+                    </TouchableOpacity>
+                  </View>
+                </TouchableOpacity>
+              </Animated.View>
+            ))}
+          </View>
+
+          <Animated.View entering={FadeInUp.delay(1000)} style={styles.footer}>
+            <Text style={styles.footerText}>
+              Plus de questions ou besoin d'une aide personnalisée ?{" "}
+              <Text
+                style={styles.footerLink}
+                onPress={() =>
+                  Linking.openURL("mailto:support@challengeme.com")
+                }
+              >
+                Contactez-nous
+              </Text>
+            </Text>
+            <TouchableOpacity
+              style={styles.shareButton}
+              onPress={() =>
+                Linking.openURL(
+                  "sms:&body=Check out these awesome tips from ChallengeTies!"
+                )
+              }
             >
               <Ionicons
-                name={conseil.icon as keyof typeof Ionicons.glyphMap}
-                size={32}
-                color={currentTheme.colors.secondary}
-                style={styles.tipIcon}
+                name="share-social-outline"
+                size={normalizeSize(20)}
+                color="#fff"
               />
-              <View style={styles.tipContent}>
-                <Text style={styles.tipTitle}>{conseil.title}</Text>
-                <Text style={styles.tipDescription}>{conseil.description}</Text>
-              </View>
-            </Animated.View>
-          ))}
-        </View>
-
-        {/* Pied de page */}
-        <View style={styles.footer}>
-          <Text style={styles.footerText}>
-            Plus de questions ou besoin d'une aide personnalisée ?{" "}
-            <Text
-              style={styles.footerLink}
-              onPress={() => Linking.openURL("mailto:support@challengeme.com")}
-            >
-              Contactez-nous
-            </Text>
-          </Text>
-        </View>
-      </ScrollView>
+              <Text style={styles.shareButtonText}>Partager les astuces</Text>
+            </TouchableOpacity>
+          </Animated.View>
+        </ScrollView>
+      </SafeAreaView>
     </LinearGradient>
   );
 }
 
 const styles = StyleSheet.create({
-  container: {
+  gradientContainer: {
     flex: 1,
   },
+  safeArea: {
+    flex: 1,
+  },
+  headerWrapper: {
+    marginTop: SCREEN_HEIGHT * 0.04, // Descend légèrement le CustomHeader
+    marginBottom: SCREEN_HEIGHT * 0.02,
+    paddingHorizontal: SCREEN_WIDTH * 0.05,
+  },
   scrollContent: {
-    paddingHorizontal: 16,
-    paddingTop: 20,
-    paddingBottom: 60, // Augmenté pour éviter que le pied de page soit coupé
+    paddingHorizontal: SCREEN_WIDTH * 0.05,
+    paddingBottom: SCREEN_HEIGHT * 0.08,
   },
   headerContainer: {
     alignItems: "center",
-    marginBottom: 20,
+    marginBottom: SCREEN_HEIGHT * 0.03,
   },
   logo: {
-    width: 200,
-    height: 200,
+    width: SCREEN_WIDTH * 0.5,
+    height: SCREEN_WIDTH * 0.5,
     resizeMode: "contain",
-  },
-  headerText: {
-    fontSize: normalizeFont(26),
-    fontFamily: currentTheme.typography.title.fontFamily,
-    color: currentTheme.colors.secondary,
-    textAlign: "center",
-    marginBottom: 5,
+    marginBottom: SCREEN_HEIGHT * 0.02,
   },
   subHeaderText: {
-    fontSize: normalizeFont(15),
+    fontSize: normalizeFont(16),
     fontFamily: currentTheme.typography.body.fontFamily,
     color: currentTheme.colors.textSecondary,
     textAlign: "center",
-    marginHorizontal: 10,
-    lineHeight: 20,
+    marginHorizontal: SCREEN_WIDTH * 0.05,
+    lineHeight: normalizeFont(22),
   },
   tipsContainer: {
-    marginVertical: 10,
+    marginVertical: SCREEN_HEIGHT * 0.02,
   },
   tipCard: {
     flexDirection: "row",
     alignItems: "flex-start",
     backgroundColor: currentTheme.colors.cardBackground,
-    borderRadius: 12,
-    padding: 16,
-    marginBottom: 15,
+    borderRadius: normalizeSize(15),
+    padding: normalizeSize(16),
+    marginBottom: SCREEN_HEIGHT * 0.02,
     shadowColor: "#000",
-    shadowOffset: { width: 0, height: 4 },
-    shadowOpacity: 0.1,
-    shadowRadius: 5,
-    elevation: 3,
+    shadowOffset: { width: 0, height: normalizeSize(4) },
+    shadowOpacity: 0.15,
+    shadowRadius: normalizeSize(6),
+    elevation: 4,
+    borderWidth: 1,
+    borderColor: currentTheme.colors.border || "#e3e2e9",
+  },
+  tipCardExpanded: {
+    backgroundColor: `${currentTheme.colors.cardBackground}F0`, // Légère transparence pour effet premium
   },
   tipIcon: {
-    marginRight: 14,
-    marginTop: 2,
+    marginRight: normalizeSize(14),
+    marginTop: normalizeSize(2),
   },
   tipContent: {
     flex: 1,
@@ -220,16 +278,26 @@ const styles = StyleSheet.create({
     fontSize: normalizeFont(18),
     fontFamily: currentTheme.typography.title.fontFamily,
     color: currentTheme.colors.secondary,
-    marginBottom: 4,
+    marginBottom: normalizeSize(6),
   },
   tipDescription: {
     fontSize: normalizeFont(14),
     fontFamily: currentTheme.typography.body.fontFamily,
     color: currentTheme.colors.textSecondary,
-    lineHeight: 20,
+    lineHeight: normalizeFont(20),
+  },
+  readMoreButton: {
+    marginTop: normalizeSize(8),
+    alignSelf: "flex-start",
+  },
+  readMoreText: {
+    fontSize: normalizeFont(12),
+    fontFamily: currentTheme.typography.body.fontFamily,
+    color: currentTheme.colors.primary,
+    textDecorationLine: "underline",
   },
   footer: {
-    marginTop: 20,
+    marginTop: SCREEN_HEIGHT * 0.03,
     alignItems: "center",
   },
   footerText: {
@@ -237,9 +305,30 @@ const styles = StyleSheet.create({
     fontFamily: currentTheme.typography.body.fontFamily,
     color: currentTheme.colors.textSecondary,
     textAlign: "center",
+    marginBottom: SCREEN_HEIGHT * 0.02,
   },
   footerLink: {
     color: currentTheme.colors.secondary,
     fontFamily: currentTheme.typography.title.fontFamily,
+    textDecorationLine: "underline",
+  },
+  shareButton: {
+    flexDirection: "row",
+    alignItems: "center",
+    backgroundColor: currentTheme.colors.primary,
+    paddingVertical: normalizeSize(10),
+    paddingHorizontal: normalizeSize(20),
+    borderRadius: normalizeSize(25),
+    shadowColor: "#000",
+    shadowOffset: { width: 0, height: normalizeSize(3) },
+    shadowOpacity: 0.3,
+    shadowRadius: normalizeSize(5),
+    elevation: 5,
+  },
+  shareButtonText: {
+    fontSize: normalizeFont(14),
+    fontFamily: currentTheme.typography.title.fontFamily,
+    color: "#fff",
+    marginLeft: normalizeSize(8),
   },
 });

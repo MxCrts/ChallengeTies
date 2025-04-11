@@ -5,11 +5,10 @@ import React, {
   useEffect,
   ReactNode,
 } from "react";
-import AsyncStorage from "@react-native-async-storage/async-storage";
 
 interface ThemeContextType {
   theme: "light" | "dark";
-  toggleTheme: () => Promise<void>;
+  toggleTheme: () => void; // Plus besoin de Promise<void> sans AsyncStorage
 }
 
 interface ThemeProviderProps {
@@ -18,34 +17,17 @@ interface ThemeProviderProps {
 
 const ThemeContext = createContext<ThemeContextType>({
   theme: "light",
-  toggleTheme: async () => {},
+  toggleTheme: () => {},
 });
 
 export const ThemeProvider: React.FC<ThemeProviderProps> = ({ children }) => {
   const [theme, setTheme] = useState<"light" | "dark">("light");
 
-  useEffect(() => {
-    const loadTheme = async () => {
-      try {
-        const storedTheme = await AsyncStorage.getItem("theme");
-        if (storedTheme === "light" || storedTheme === "dark") {
-          setTheme(storedTheme);
-        }
-      } catch (error) {
-        console.error("Erreur lors du chargement du thème :", error);
-      }
-    };
-    loadTheme();
-  }, []);
-
-  const toggleTheme = async () => {
-    try {
-      const newTheme: "light" | "dark" = theme === "light" ? "dark" : "light";
-      setTheme(newTheme);
-      await AsyncStorage.setItem("theme", newTheme);
-    } catch (error) {
-      console.error("Erreur lors du changement de thème :", error);
-    }
+  const toggleTheme = () => {
+    console.log("🎨 ToggleTheme appelé, thème actuel :", theme);
+    const newTheme = theme === "light" ? "dark" : "light";
+    setTheme(newTheme);
+    console.log("🎨 Nouveau thème défini :", newTheme);
   };
 
   console.log("✅ ThemeProvider rendu avec theme :", theme);

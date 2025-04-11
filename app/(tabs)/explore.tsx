@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useMemo } from "react";
+import React, { useState, useEffect, useMemo, useCallback } from "react";
 import {
   View,
   Text,
@@ -11,8 +11,9 @@ import {
   Modal,
   StyleSheet,
   Dimensions,
-  SafeAreaView,
-  StatusBar,
+  ScrollView,
+  KeyboardAvoidingView,
+  Platform,
 } from "react-native";
 import { Ionicons } from "@expo/vector-icons";
 import { useRouter } from "expo-router";
@@ -20,17 +21,17 @@ import { collection, onSnapshot } from "firebase/firestore";
 import { db } from "../../constants/firebase-config";
 import { LinearGradient } from "expo-linear-gradient";
 import Animated, { FadeInUp } from "react-native-reanimated";
-import { useTheme } from "../../context/ThemeContext";
 import { useSavedChallenges } from "../../context/SavedChallengesContext";
+import { useTheme } from "../../context/ThemeContext";
+import { Theme } from "../../theme/designSystem"; // Import de l'interface Theme
+import CustomHeader from "@/components/CustomHeader";
+import GlobalLayout from "../../components/GlobalLayout";
 import designSystem from "../../theme/designSystem";
-import BackButton from "../../components/BackButton";
 
-const { lightTheme } = designSystem; // On applique uniquement le thème light
-const currentTheme = lightTheme;
+const { width: SCREEN_WIDTH, height: SCREEN_HEIGHT } = Dimensions.get("window");
 
-const { width } = Dimensions.get("window");
 const normalizeFont = (size: number) => {
-  const scale = width / 375;
+  const scale = SCREEN_WIDTH / 375;
   return Math.round(size * scale);
 };
 
@@ -48,6 +49,197 @@ interface Challenge {
   chatId: string;
 }
 
+// Composant Header avec React.memo
+const ExploreHeader = React.memo(
+  ({
+    searchQuery,
+    categoryFilter,
+    originFilter,
+    availableCategories,
+    onSearchChange,
+    onResetFilters,
+    onCategorySelect,
+    onOriginToggle,
+    onToggleCategoryModal,
+    isCategoryModalVisible,
+    onCloseCategoryModal,
+    currentTheme,
+  }: {
+    searchQuery: string;
+    categoryFilter: string;
+    originFilter: string;
+    availableCategories: string[];
+    onSearchChange: (text: string) => void;
+    onResetFilters: () => void;
+    onCategorySelect: (cat: string) => void;
+    onOriginToggle: () => void;
+    onToggleCategoryModal: () => void;
+    isCategoryModalVisible: boolean;
+    onCloseCategoryModal: () => void;
+    currentTheme: Theme; // Utilisation de l'interface Theme
+  }) => (
+    <Animated.View entering={FadeInUp.delay(100)} style={styles.headerContent}>
+      <View style={styles.headerWrapper}>
+        <CustomHeader title="Explore les Défis" />
+      </View>
+      <View
+        style={[
+          styles.searchContainer,
+          {
+            backgroundColor: currentTheme.colors.cardBackground,
+            borderColor: currentTheme.colors.border,
+          },
+        ]}
+      >
+        <Ionicons
+          name="search"
+          size={normalizeFont(20)}
+          color={currentTheme.colors.textSecondary}
+          style={styles.searchIcon}
+        />
+        <TextInput
+          style={[styles.searchBar, { color: currentTheme.colors.textPrimary }]}
+          placeholder="Rechercher un défi..."
+          placeholderTextColor={currentTheme.colors.textSecondary}
+          value={searchQuery}
+          onChangeText={onSearchChange}
+          returnKeyType="search"
+          autoCorrect={false}
+          blurOnSubmit={false}
+        />
+      </View>
+      <View style={styles.filtersWrapper}>
+        <View style={styles.filtersContainer}>
+          <TouchableOpacity
+            style={[
+              styles.filterButton,
+              { backgroundColor: currentTheme.colors.secondary },
+            ]}
+            onPress={onOriginToggle}
+          >
+            <Ionicons
+              name="options-outline"
+              size={normalizeFont(18)}
+              color={currentTheme.colors.textPrimary}
+            />
+            <Text
+              style={[
+                styles.filterButtonText,
+                { color: currentTheme.colors.textPrimary },
+              ]}
+            >
+              {originFilter}
+            </Text>
+          </TouchableOpacity>
+          <TouchableOpacity
+            style={[
+              styles.filterButton,
+              { backgroundColor: currentTheme.colors.secondary },
+            ]}
+            onPress={onToggleCategoryModal}
+          >
+            <Ionicons
+              name="filter-outline"
+              size={normalizeFont(18)}
+              color={currentTheme.colors.textPrimary}
+            />
+            <Text
+              style={[
+                styles.filterButtonText,
+                { color: currentTheme.colors.textPrimary },
+              ]}
+            >
+              {categoryFilter === "All"
+                ? "Catégorie"
+                : capitalize(categoryFilter)}
+            </Text>
+          </TouchableOpacity>
+        </View>
+        <TouchableOpacity
+          style={[
+            styles.resetButton,
+            { backgroundColor: currentTheme.colors.primary },
+          ]}
+          onPress={onResetFilters}
+        >
+          <Ionicons
+            name="refresh-outline"
+            size={normalizeFont(20)}
+            color={currentTheme.colors.textPrimary}
+          />
+        </TouchableOpacity>
+      </View>
+      <Modal
+        visible={isCategoryModalVisible}
+        transparent
+        animationType="slide"
+        onRequestClose={onCloseCategoryModal}
+      >
+        <TouchableOpacity
+          style={[
+            styles.modalOverlay,
+            { backgroundColor: currentTheme.colors.overlay },
+          ]}
+          activeOpacity={1}
+          onPressOut={onCloseCategoryModal}
+        >
+          <View
+            style={[
+              styles.modalContent,
+              { backgroundColor: currentTheme.colors.cardBackground },
+            ]}
+          >
+            <View style={styles.modalHeader}>
+              <Text
+                style={[
+                  styles.modalTitle,
+                  { color: currentTheme.colors.textPrimary },
+                ]}
+              >
+                Choisir une catégorie
+              </Text>
+              <TouchableOpacity onPress={onCloseCategoryModal}>
+                <Ionicons
+                  name="close-outline"
+                  size={normalizeFont(24)}
+                  color={currentTheme.colors.textPrimary}
+                />
+              </TouchableOpacity>
+            </View>
+            <ScrollView showsVerticalScrollIndicator={false}>
+              {availableCategories.map((cat) => (
+                <TouchableOpacity
+                  key={cat}
+                  style={[
+                    styles.modalItem,
+                    { borderBottomColor: currentTheme.colors.border },
+                  ]}
+                  onPress={() => onCategorySelect(cat)}
+                >
+                  <Ionicons
+                    name="pricetag-outline"
+                    size={normalizeFont(18)}
+                    color={currentTheme.colors.secondary}
+                    style={styles.modalItemIcon}
+                  />
+                  <Text
+                    style={[
+                      styles.modalItemText,
+                      { color: currentTheme.colors.textPrimary },
+                    ]}
+                  >
+                    {capitalize(cat)}
+                  </Text>
+                </TouchableOpacity>
+              ))}
+            </ScrollView>
+          </View>
+        </TouchableOpacity>
+      </Modal>
+    </Animated.View>
+  )
+);
+
 export default function ExploreScreen() {
   const [challenges, setChallenges] = useState<Challenge[]>([]);
   const [loading, setLoading] = useState(true);
@@ -56,27 +248,33 @@ export default function ExploreScreen() {
   const [originFilter, setOriginFilter] = useState("Existing");
   const [isCategoryModalVisible, setIsCategoryModalVisible] = useState(false);
   const router = useRouter();
-
   const { isSaved, addChallenge, removeChallenge } = useSavedChallenges();
+  const { theme } = useTheme();
+  const isDarkMode = theme === "dark";
+  const currentTheme = isDarkMode
+    ? designSystem.darkTheme
+    : designSystem.lightTheme;
 
   useEffect(() => {
     const unsubscribe = onSnapshot(
       collection(db, "challenges"),
       (querySnapshot) => {
-        const fetchedChallenges = querySnapshot.docs.map((doc) => ({
-          id: doc.id,
-          title: doc.data().title || "Défi sans titre",
-          description:
-            doc.data().description || "Aucune description disponible",
-          category: doc.data().category || "Divers",
-          imageUrl: doc.data().imageUrl || null,
-          participantsCount: doc.data().participantsCount || 0,
-          creatorId: doc.data().creatorId || null,
-          daysOptions: doc.data().daysOptions || [
-            7, 14, 21, 30, 60, 90, 180, 365,
-          ],
-          chatId: doc.data().chatId || doc.id,
-        })) as Challenge[];
+        const fetchedChallenges: Challenge[] = querySnapshot.docs.map(
+          (doc) => ({
+            id: doc.id,
+            title: doc.data().title || "Défi sans titre",
+            description:
+              doc.data().description || "Aucune description disponible",
+            category: doc.data().category || "Divers",
+            imageUrl: doc.data().imageUrl || null,
+            participantsCount: doc.data().participantsCount || 0,
+            creatorId: doc.data().creatorId || null,
+            daysOptions: doc.data().daysOptions || [
+              7, 14, 21, 30, 60, 90, 180, 365,
+            ],
+            chatId: doc.data().chatId || doc.id,
+          })
+        );
         setChallenges(fetchedChallenges);
         setLoading(false);
       },
@@ -89,184 +287,127 @@ export default function ExploreScreen() {
     return () => unsubscribe();
   }, []);
 
-  // Calcul des catégories disponibles
   const availableCategories = useMemo(() => {
     const cats = challenges.map((challenge) => challenge.category);
     return ["All", ...Array.from(new Set(cats))];
   }, [challenges]);
 
-  const filteredChallenges = challenges.filter((challenge) => {
-    const matchesSearch = challenge.title
-      .toLowerCase()
-      .includes(searchQuery.toLowerCase());
-    const matchesCategory =
-      categoryFilter === "All" || challenge.category === categoryFilter;
-    const matchesOrigin =
-      originFilter === "Existing"
-        ? !challenge.creatorId
-        : originFilter === "Created"
-        ? challenge.creatorId
-        : true;
-    return matchesSearch && matchesCategory && matchesOrigin;
-  });
+  const filteredChallenges = useMemo(() => {
+    return challenges.filter((challenge) => {
+      const matchesSearch = challenge.title
+        .toLowerCase()
+        .includes(searchQuery.toLowerCase());
+      const matchesCategory =
+        categoryFilter === "All" || challenge.category === categoryFilter;
+      const matchesOrigin =
+        originFilter === "Existing"
+          ? !challenge.creatorId
+          : originFilter === "Created"
+          ? challenge.creatorId
+          : true;
+      return matchesSearch && matchesCategory && matchesOrigin;
+    });
+  }, [challenges, searchQuery, categoryFilter, originFilter]);
 
-  const toggleSavedChallenge = async (challenge: Challenge) => {
-    if (isSaved(challenge.id)) {
-      await removeChallenge(challenge.id);
-    } else {
-      await addChallenge(challenge);
-    }
-    setChallenges([...challenges]);
-  };
+  const toggleSavedChallenge = useCallback(
+    async (challenge: Challenge) => {
+      if (isSaved(challenge.id)) {
+        await removeChallenge(challenge.id);
+      } else {
+        await addChallenge(challenge);
+      }
+    },
+    [isSaved, addChallenge, removeChallenge]
+  );
+
+  const handleSearchChange = useCallback(
+    (text: string) => setSearchQuery(text),
+    []
+  );
+  const resetFilters = useCallback(() => {
+    setSearchQuery("");
+    setCategoryFilter("All");
+    setOriginFilter("Existing");
+  }, []);
+  const handleCategorySelect = useCallback((cat: string) => {
+    setCategoryFilter(cat);
+    setIsCategoryModalVisible(false);
+  }, []);
+  const toggleCategoryModal = useCallback(
+    () => setIsCategoryModalVisible((prev) => !prev),
+    []
+  );
+  const closeCategoryModal = useCallback(
+    () => setIsCategoryModalVisible(false),
+    []
+  );
+  const handleOriginToggle = useCallback(
+    () =>
+      setOriginFilter((prev) => (prev === "Existing" ? "Created" : "Existing")),
+    []
+  );
+
+  if (loading) {
+    return (
+      <GlobalLayout>
+        <LinearGradient
+          colors={[
+            currentTheme.colors.background,
+            currentTheme.colors.cardBackground,
+          ]}
+          style={styles.loadingBackground}
+        >
+          <ActivityIndicator
+            size="large"
+            color={currentTheme.colors.secondary}
+          />
+          <Text
+            style={[
+              styles.loadingText,
+              { color: currentTheme.colors.textPrimary },
+            ]}
+          >
+            Chargement des défis...
+          </Text>
+        </LinearGradient>
+      </GlobalLayout>
+    );
+  }
 
   return (
-    <LinearGradient
-      colors={[
-        currentTheme.colors.background,
-        currentTheme.colors.cardBackground,
-      ]}
-      style={styles.container}
-    >
-      <SafeAreaView style={styles.safeAreaHeader}>
-        <BackButton color={currentTheme.colors.primary} />
-        <Text style={styles.header}>Explorer les défis</Text>
-      </SafeAreaView>
-
-      <View style={styles.content}>
-        {/* Barre de recherche */}
-        <View
-          style={[
-            styles.searchContainer,
-            { backgroundColor: currentTheme.colors.cardBackground },
+    <GlobalLayout>
+      <KeyboardAvoidingView
+        style={{ flex: 1 }}
+        behavior={Platform.OS === "ios" ? "padding" : "height"}
+        keyboardVerticalOffset={Platform.OS === "ios" ? 0 : 20}
+      >
+        <LinearGradient
+          colors={[
+            currentTheme.colors.background,
+            currentTheme.colors.cardBackground,
           ]}
+          style={styles.gradientContainer}
         >
-          <Ionicons
-            name="search"
-            size={22}
-            color={currentTheme.colors.textSecondary}
-            style={styles.searchIcon}
-          />
-          <TextInput
-            style={[styles.searchBar, { color: "#000000" }]}
-            placeholder="Rechercher un défi..."
-            placeholderTextColor={currentTheme.colors.textSecondary}
-            value={searchQuery}
-            onChangeText={setSearchQuery}
-          />
-        </View>
-
-        {/* Filtres */}
-        <View style={styles.filtersContainer}>
-          <TouchableOpacity
-            style={[
-              styles.filterButton,
-              { backgroundColor: currentTheme.colors.primary },
-            ]}
-            onPress={() =>
-              setOriginFilter(
-                originFilter === "Existing" ? "Created" : "Existing"
-              )
-            }
-          >
-            <Ionicons name="options-outline" size={22} color="#FFF" />
-            <Text style={styles.filterButtonText}>Type: {originFilter}</Text>
-          </TouchableOpacity>
-          <TouchableOpacity
-            style={[
-              styles.filterButton,
-              { backgroundColor: currentTheme.colors.primary },
-            ]}
-            onPress={() => setIsCategoryModalVisible(true)}
-          >
-            <Ionicons name="filter-outline" size={22} color="#FFF" />
-            <Text style={styles.filterButtonText}>
-              {categoryFilter === "All"
-                ? "Catégorie"
-                : capitalize(categoryFilter)}
-            </Text>
-          </TouchableOpacity>
-          <TouchableOpacity
-            style={[
-              styles.resetButton,
-              { backgroundColor: currentTheme.colors.error },
-            ]}
-            onPress={() => {
-              setSearchQuery("");
-              setCategoryFilter("All");
-              setOriginFilter("Existing");
-            }}
-          >
-            <Ionicons name="refresh-outline" size={22} color="#FFF" />
-          </TouchableOpacity>
-        </View>
-
-        <Modal
-          visible={isCategoryModalVisible}
-          transparent
-          animationType="slide"
-          onRequestClose={() => setIsCategoryModalVisible(false)}
-        >
-          <TouchableOpacity
-            style={styles.modalOverlay}
-            activeOpacity={1}
-            onPressOut={() => setIsCategoryModalVisible(false)}
-          >
-            <View
-              style={[
-                styles.modalContent,
-                { backgroundColor: currentTheme.colors.cardBackground },
-              ]}
-            >
-              <View style={styles.modalHeader}>
-                <TouchableOpacity
-                  onPress={() => setIsCategoryModalVisible(false)}
-                >
-                  <Ionicons
-                    name="close-outline"
-                    size={24}
-                    color={currentTheme.colors.textPrimary}
-                  />
-                </TouchableOpacity>
-              </View>
-              {availableCategories.map((cat) => (
-                <TouchableOpacity
-                  key={cat}
-                  style={styles.modalItem}
-                  onPress={() => {
-                    setCategoryFilter(cat);
-                    setIsCategoryModalVisible(false);
-                  }}
-                >
-                  <Ionicons
-                    name="pricetag-outline"
-                    size={16}
-                    color={currentTheme.colors.textPrimary}
-                    style={{ marginRight: 4 }}
-                  />
-                  <Text style={styles.modalItemText}>{capitalize(cat)}</Text>
-                </TouchableOpacity>
-              ))}
-            </View>
-          </TouchableOpacity>
-        </Modal>
-
-        {/* Liste des défis */}
-        {loading ? (
-          <ActivityIndicator size="large" color={currentTheme.colors.trophy} />
-        ) : filteredChallenges.length > 0 ? (
           <FlatList
             data={filteredChallenges}
             keyExtractor={(item) => item.id}
-            renderItem={({ item }) => (
-              <Animated.View entering={FadeInUp} style={styles.challengeCard}>
+            renderItem={({ item, index }) => (
+              <Animated.View entering={FadeInUp.delay(200 + index * 100)}>
                 <TouchableOpacity
+                  style={[
+                    styles.challengeCard,
+                    {
+                      backgroundColor: currentTheme.colors.cardBackground,
+                      borderColor: currentTheme.colors.secondary,
+                    },
+                  ]}
                   onPress={() =>
                     router.push(
                       `/challenge-details/${item.id}?title=${encodeURIComponent(
                         item.title
-                      )}&category=${encodeURIComponent(
-                        item.category
-                      )}&description=${encodeURIComponent(item.description)}`
+                      )}` +
+                        `&category=${encodeURIComponent(item.category)}` +
+                        `&description=${encodeURIComponent(item.description)}`
                     )
                   }
                 >
@@ -276,188 +417,343 @@ export default function ExploreScreen() {
                       style={styles.challengeImage}
                     />
                   ) : (
-                    <View style={styles.challengeImagePlaceholder}>
-                      <Text style={styles.challengeImagePlaceholderText}>
+                    <View
+                      style={[
+                        styles.challengeImagePlaceholder,
+                        { backgroundColor: currentTheme.colors.border },
+                      ]}
+                    >
+                      <Ionicons
+                        name="image-outline"
+                        size={normalizeFont(40)}
+                        color={currentTheme.colors.textSecondary}
+                      />
+                      <Text
+                        style={[
+                          styles.challengeImagePlaceholderText,
+                          { color: currentTheme.colors.textSecondary },
+                        ]}
+                      >
                         Image
                       </Text>
                     </View>
                   )}
-                  <Text style={[styles.challengeTitle, { color: "#000000" }]}>
-                    {item.title}
-                  </Text>
-                  <Text
-                    style={[
-                      styles.challengeCategory,
-                      { color: currentTheme.colors.textSecondary },
-                    ]}
+                  <LinearGradient
+                    colors={[currentTheme.colors.overlay, "rgba(0,0,0,0.9)"]}
+                    style={styles.cardOverlay}
                   >
-                    {capitalize(item.category)}
-                  </Text>
-                </TouchableOpacity>
-                <TouchableOpacity
-                  style={styles.saveIconContainer}
-                  onPress={() => toggleSavedChallenge(item)}
-                >
-                  <Ionicons
-                    name={isSaved(item.id) ? "bookmark" : "bookmark-outline"}
-                    size={24}
-                    color={
-                      isSaved(item.id)
-                        ? currentTheme.colors.textSecondary
-                        : currentTheme.colors.textPrimary
-                    }
-                  />
+                    <Text
+                      style={[
+                        styles.challengeTitle,
+                        { color: currentTheme.colors.textPrimary },
+                      ]}
+                      numberOfLines={2}
+                    >
+                      {item.title}
+                    </Text>
+                    <Text
+                      style={[
+                        styles.challengeCategory,
+                        { color: currentTheme.colors.trophy },
+                      ]}
+                    >
+                      {capitalize(item.category)}
+                    </Text>
+                    <Text
+                      style={[
+                        styles.challengeParticipants,
+                        { color: currentTheme.colors.trophy },
+                      ]}
+                    >
+                      <Ionicons
+                        name="people"
+                        size={normalizeFont(14)}
+                        color={currentTheme.colors.trophy}
+                      />{" "}
+                      {item.participantsCount || 0}{" "}
+                      {(item.participantsCount || 0) <= 1
+                        ? "participant"
+                        : "participants"}
+                    </Text>
+                  </LinearGradient>
+                  <TouchableOpacity
+                    style={styles.saveIconContainer}
+                    onPress={() => toggleSavedChallenge(item)}
+                  >
+                    <Ionicons
+                      name={isSaved(item.id) ? "bookmark" : "bookmark-outline"}
+                      size={normalizeFont(24)}
+                      color={
+                        isSaved(item.id)
+                          ? currentTheme.colors.secondary
+                          : currentTheme.colors.textPrimary
+                      }
+                    />
+                  </TouchableOpacity>
                 </TouchableOpacity>
               </Animated.View>
             )}
+            ListHeaderComponent={
+              <ExploreHeader
+                searchQuery={searchQuery}
+                categoryFilter={categoryFilter}
+                originFilter={originFilter}
+                availableCategories={availableCategories}
+                onSearchChange={handleSearchChange}
+                onResetFilters={resetFilters}
+                onCategorySelect={handleCategorySelect}
+                onOriginToggle={handleOriginToggle}
+                onToggleCategoryModal={toggleCategoryModal}
+                isCategoryModalVisible={isCategoryModalVisible}
+                onCloseCategoryModal={closeCategoryModal}
+                currentTheme={currentTheme}
+              />
+            }
+            ListEmptyComponent={
+              <Animated.View
+                entering={FadeInUp.delay(200)}
+                style={styles.noChallengesContent}
+              >
+                <Ionicons
+                  name="search-outline"
+                  size={normalizeFont(60)}
+                  color={currentTheme.colors.textSecondary}
+                />
+                <Text
+                  style={[
+                    styles.noChallengesText,
+                    { color: currentTheme.colors.textPrimary },
+                  ]}
+                >
+                  Aucun défi trouvé !
+                </Text>
+                <Text
+                  style={[
+                    styles.noChallengesSubtext,
+                    { color: currentTheme.colors.textSecondary },
+                  ]}
+                >
+                  Essayez une autre recherche ou filtre.
+                </Text>
+              </Animated.View>
+            }
+            contentContainerStyle={styles.listContent}
+            showsVerticalScrollIndicator={false}
+            keyboardShouldPersistTaps="handled"
           />
-        ) : (
-          <Text style={styles.noResults}>Aucun défi trouvé.</Text>
-        )}
-      </View>
-    </LinearGradient>
+        </LinearGradient>
+      </KeyboardAvoidingView>
+    </GlobalLayout>
   );
 }
 
 const styles = StyleSheet.create({
-  container: { flex: 1 },
-  safeAreaHeader: {
-    width: "100%",
+  gradientContainer: { flex: 1 },
+  listContent: {
+    paddingHorizontal: SCREEN_WIDTH * 0.05,
+    paddingBottom: SCREEN_HEIGHT * 0.05,
+  },
+  headerContent: {
+    paddingHorizontal: SCREEN_WIDTH * 0.05,
+    paddingBottom: SCREEN_HEIGHT * 0.03,
+  },
+  headerWrapper: {
+    marginTop: SCREEN_HEIGHT * 0.025,
+    marginBottom: SCREEN_HEIGHT * 0.02,
+    flexDirection: "row",
     alignItems: "center",
-    paddingTop: StatusBar.currentHeight ? StatusBar.currentHeight + 10 : 10,
+    justifyContent: "center",
   },
-  header: {
-    fontSize: 25,
-    fontFamily: "Comfortaa_700Bold",
-    color: "#000000",
-    marginVertical: 20,
-    textAlign: "center",
-    marginBottom: 30,
-    marginTop: -5,
-  },
-  content: { flex: 1, paddingHorizontal: 20 },
   searchContainer: {
     flexDirection: "row",
     alignItems: "center",
-    borderRadius: 8,
-    paddingHorizontal: 10,
-    marginBottom: 16,
+    borderRadius: 15,
+    paddingHorizontal: SCREEN_WIDTH * 0.03,
+    marginHorizontal: SCREEN_WIDTH * 0.05,
+    marginBottom: SCREEN_HEIGHT * 0.02,
     shadowColor: "#000",
-    shadowOffset: { width: 0, height: 2 },
+    shadowOffset: { width: 0, height: 4 },
     shadowOpacity: 0.2,
-    shadowRadius: 4,
-    elevation: 2,
+    shadowRadius: 6,
+    elevation: 5,
+    borderWidth: 1,
   },
-  searchIcon: { marginRight: 8 },
+  searchIcon: { marginRight: SCREEN_WIDTH * 0.02 },
   searchBar: {
     flex: 1,
-    height: 40,
-    fontSize: normalizeFont(14),
+    height: SCREEN_WIDTH * 0.12,
+    fontSize: normalizeFont(16),
     fontFamily: "Comfortaa_400Regular",
   },
+  filtersWrapper: { alignItems: "center" },
   filtersContainer: {
     flexDirection: "row",
-    justifyContent: "space-around",
-    marginBottom: 16,
+    justifyContent: "space-between",
+    width: SCREEN_WIDTH * 0.9,
+    marginBottom: SCREEN_HEIGHT * 0.015,
   },
   filterButton: {
     flexDirection: "row",
     alignItems: "center",
-    paddingHorizontal: 12,
-    paddingVertical: 8,
+    justifyContent: "center",
+    paddingHorizontal: SCREEN_WIDTH * 0.04,
+    paddingVertical: SCREEN_WIDTH * 0.025,
     borderRadius: 20,
-    marginHorizontal: 4,
+    shadowColor: "#000",
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.3,
+    shadowRadius: 4,
+    elevation: 5,
+    width: SCREEN_WIDTH * 0.42,
   },
   filterButtonText: {
-    color: "#FFF",
-    marginLeft: 4,
-    fontSize: normalizeFont(12),
-    fontFamily: "Comfortaa_400Regular",
+    marginLeft: SCREEN_WIDTH * 0.015,
+    fontSize: normalizeFont(14),
+    fontFamily: "Comfortaa_700Bold",
+    textAlign: "center",
   },
   resetButton: {
-    width: 40,
-    height: 40,
-    borderRadius: 20,
+    width: SCREEN_WIDTH * 0.12,
+    height: SCREEN_WIDTH * 0.12,
+    borderRadius: SCREEN_WIDTH * 0.06,
     justifyContent: "center",
     alignItems: "center",
+    shadowColor: "#000",
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.4,
+    shadowRadius: 5,
+    elevation: 6,
   },
   modalOverlay: {
     flex: 1,
-    backgroundColor: "rgba(0,0,0,0.5)",
     justifyContent: "center",
-    padding: 20,
+    paddingHorizontal: SCREEN_WIDTH * 0.05,
   },
   modalContent: {
-    borderRadius: 12,
-    padding: 16,
+    borderRadius: 20,
+    padding: SCREEN_WIDTH * 0.05,
+    shadowColor: "#000",
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.3,
+    shadowRadius: 6,
+    elevation: 5,
+    maxHeight: SCREEN_HEIGHT * 0.6,
   },
   modalHeader: {
     flexDirection: "row",
-    justifyContent: "flex-end",
-    marginBottom: 8,
+    justifyContent: "space-between",
+    alignItems: "center",
+    marginBottom: SCREEN_HEIGHT * 0.015,
+  },
+  modalTitle: {
+    fontSize: normalizeFont(18),
+    fontFamily: "Comfortaa_700Bold",
   },
   modalItem: {
     flexDirection: "row",
     alignItems: "center",
-    paddingVertical: 8,
+    paddingVertical: SCREEN_WIDTH * 0.025,
+    borderBottomWidth: 1,
   },
+  modalItemIcon: { marginRight: SCREEN_WIDTH * 0.02 },
   modalItemText: {
     fontSize: normalizeFont(16),
     fontFamily: "Comfortaa_400Regular",
   },
   challengeCard: {
-    padding: 16,
-    borderRadius: 12,
-    backgroundColor: currentTheme.colors.cardBackground,
-    marginBottom: 16,
-    position: "relative",
+    borderRadius: 20,
+    marginBottom: SCREEN_HEIGHT * 0.02,
     shadowColor: "#000",
+    shadowOffset: { width: 0, height: 6 },
+    shadowOpacity: 0.25,
+    shadowRadius: 8,
+    elevation: 8,
     borderWidth: 2,
-    borderColor: currentTheme.colors.primary,
-    shadowOffset: { width: 0, height: 3 },
-    shadowOpacity: 0.2,
-    shadowRadius: 4.65,
-    elevation: 3,
+    overflow: "hidden",
   },
   challengeImage: {
     width: "100%",
-    height: 150,
-    borderRadius: 12,
+    height: SCREEN_WIDTH * 0.5,
+    resizeMode: "cover",
   },
   challengeImagePlaceholder: {
     width: "100%",
-    height: 150,
-    borderRadius: 12,
-    backgroundColor: "#ccc",
+    height: SCREEN_WIDTH * 0.5,
     justifyContent: "center",
     alignItems: "center",
   },
   challengeImagePlaceholderText: {
     fontSize: normalizeFont(16),
     fontFamily: "Comfortaa_400Regular",
+    marginTop: SCREEN_WIDTH * 0.02,
+  },
+  cardOverlay: {
+    position: "absolute",
+    bottom: 0,
+    width: "100%",
+    padding: SCREEN_WIDTH * 0.04,
+    alignItems: "center",
   },
   challengeTitle: {
     fontSize: normalizeFont(18),
-    marginTop: 8,
-    fontFamily: currentTheme.typography.title.fontFamily,
+    fontFamily: "Comfortaa_700Bold",
+    textAlign: "center",
+    textShadowColor: "rgba(0, 0, 0, 0.5)",
+    textShadowOffset: { width: 1, height: 1 },
+    textShadowRadius: 3,
   },
   challengeCategory: {
     fontSize: normalizeFont(14),
-    marginTop: 4,
     fontFamily: "Comfortaa_400Regular",
-  },
-  noResults: {
-    fontSize: normalizeFont(16),
+    marginTop: SCREEN_WIDTH * 0.01,
     textAlign: "center",
-    marginTop: 20,
+  },
+  challengeParticipants: {
+    fontSize: normalizeFont(12),
     fontFamily: "Comfortaa_400Regular",
+    marginTop: SCREEN_WIDTH * 0.01,
+    textAlign: "center",
   },
   saveIconContainer: {
     position: "absolute",
-    top: 10,
-    right: 10,
-    backgroundColor: "rgba(255,255,255,0.8)",
-    borderRadius: 20,
-    padding: 4,
+    top: SCREEN_WIDTH * 0.03,
+    right: SCREEN_WIDTH * 0.03,
+    backgroundColor: "rgba(255,255,255,0.9)",
+    borderRadius: 15,
+    padding: SCREEN_WIDTH * 0.015,
+    shadowColor: "#000",
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.3,
+    shadowRadius: 4,
+    elevation: 5,
+  },
+  loadingBackground: {
+    flex: 1,
+    width: "100%",
+    justifyContent: "center",
+    alignItems: "center",
+  },
+  loadingText: {
+    marginTop: SCREEN_HEIGHT * 0.02,
+    fontSize: normalizeFont(16),
+    fontFamily: "Comfortaa_400Regular",
+  },
+  noChallengesContent: {
+    justifyContent: "center",
+    alignItems: "center",
+    paddingVertical: SCREEN_HEIGHT * 0.05,
+  },
+  noChallengesText: {
+    fontSize: normalizeFont(20),
+    fontFamily: "Comfortaa_700Bold",
+    marginTop: SCREEN_HEIGHT * 0.02,
+    textAlign: "center",
+  },
+  noChallengesSubtext: {
+    fontSize: normalizeFont(14),
+    fontFamily: "Comfortaa_400Regular",
+    textAlign: "center",
+    marginTop: SCREEN_HEIGHT * 0.01,
+    maxWidth: SCREEN_WIDTH * 0.7,
   },
 });

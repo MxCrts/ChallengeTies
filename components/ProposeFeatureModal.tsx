@@ -109,7 +109,7 @@ const styles = StyleSheet.create({
   input: {
     width: "100%",
     backgroundColor: "rgba(245, 245, 245, 0.8)",
-    color: currentTheme.colors.textPrimary,
+    color: "#000000",
     borderRadius: 5,
     padding: 10,
     marginBottom: 15,

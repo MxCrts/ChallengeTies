@@ -6,6 +6,7 @@ import {
   StyleSheet,
   ActivityIndicator,
   Dimensions,
+  SafeAreaView,
 } from "react-native";
 import { Ionicons } from "@expo/vector-icons";
 import { doc, onSnapshot } from "firebase/firestore";
@@ -16,9 +17,15 @@ import { LinearGradient } from "expo-linear-gradient";
 import BackButton from "../../components/BackButton";
 import Animated, { FadeInUp } from "react-native-reanimated";
 import designSystem from "../../theme/designSystem";
+import CustomHeader from "@/components/CustomHeader";
 
-const { width } = Dimensions.get("window");
+const { width: SCREEN_WIDTH, height: SCREEN_HEIGHT } = Dimensions.get("window");
 const currentTheme = designSystem.lightTheme;
+
+const normalizeSize = (size) => {
+  const scale = SCREEN_WIDTH / 375;
+  return Math.round(size * scale);
+};
 
 interface Stat {
   name: string;
@@ -33,7 +40,6 @@ export default function UserStats() {
   const [isLoading, setIsLoading] = useState<boolean>(true);
   const [userDoc, setUserDoc] = useState<any>(null);
 
-  // Écoute des mises à jour du document utilisateur
   useEffect(() => {
     const userId = auth.currentUser?.uid;
     if (!userId) {
@@ -47,10 +53,8 @@ export default function UserStats() {
     return () => unsubscribe();
   }, []);
 
-  // Calcul des statistiques personnelles
   useEffect(() => {
     if (!userDoc) return;
-    // Suppression des doublons dans les défis en cours
     const uniqueOngoing = new Map(
       currentChallenges.map((ch: any) => [`${ch.id}_${ch.selectedDays}`, ch])
     );
@@ -105,135 +109,175 @@ export default function UserStats() {
 
   if (isLoading) {
     return (
-      <View style={styles.loadingContainer}>
-        <ActivityIndicator size="large" color={currentTheme.colors.primary} />
-        <Text style={styles.loadingText}>Chargement des statistiques...</Text>
-      </View>
+      <SafeAreaView style={styles.safeArea}>
+        <LinearGradient
+          colors={[
+            currentTheme.colors.background,
+            currentTheme.colors.cardBackground,
+          ]}
+          style={styles.loadingContainer}
+        >
+          <ActivityIndicator size="large" color="#FF6200" />
+          <Text style={styles.loadingText}>Chargement en cours...</Text>
+        </LinearGradient>
+      </SafeAreaView>
     );
   }
 
   if (stats.length === 0) {
     return (
-      <View style={styles.emptyContainer}>
-        <Text style={styles.emptyText}>Aucune statistique disponible !</Text>
-        <Text style={styles.emptySubtext}>
-          Commencez des défis pour voir vos statistiques.
-        </Text>
-      </View>
+      <SafeAreaView style={styles.safeArea}>
+        <LinearGradient
+          colors={[
+            currentTheme.colors.background,
+            currentTheme.colors.cardBackground,
+          ]}
+          style={styles.emptyContainer}
+        >
+          <Animated.View entering={FadeInUp.delay(100)}>
+            <Text style={styles.emptyText}>
+              Aucune statistique disponible !
+            </Text>
+            <Text style={styles.emptySubtext}>
+              Commencez des défis pour voir vos stats.
+            </Text>
+          </Animated.View>
+        </LinearGradient>
+      </SafeAreaView>
     );
   }
 
-  // Chaque carte de statistique utilise l'animation d'entrée FadeInUp
-  const renderStat = ({ item }: { item: Stat }) => (
-    <Animated.View style={styles.statCard} entering={FadeInUp}>
-      <Ionicons
-        name={item.icon as keyof typeof Ionicons.glyphMap}
-        size={36}
-        color={currentTheme.colors.trophy}
-      />
-      <View style={styles.statContent}>
-        <Text style={styles.statName}>{item.name}</Text>
-        <Text style={styles.statValue}>{item.value}</Text>
-      </View>
+  const renderStat = ({ item, index }: { item: Stat; index: number }) => (
+    <Animated.View
+      entering={FadeInUp.delay(index * 100)}
+      style={styles.statCardWrapper}
+    >
+      <LinearGradient
+        colors={["#FFFFFF", "#FFE0B2"]} // Blanc à orange clair
+        style={styles.statCard}
+        start={{ x: 0, y: 0 }}
+        end={{ x: 1, y: 1 }}
+      >
+        <View style={styles.iconContainer}>
+          <Ionicons
+            name={item.icon as keyof typeof Ionicons.glyphMap}
+            size={normalizeSize(40)}
+            color="#FF6200"
+          />
+        </View>
+        <View style={styles.statContent}>
+          <Text style={styles.statName}>{item.name}</Text>
+          <Text style={styles.statValue}>{item.value}</Text>
+        </View>
+      </LinearGradient>
     </Animated.View>
   );
 
   return (
-    <LinearGradient
-      colors={[
-        currentTheme.colors.background,
-        currentTheme.colors.cardBackground,
-      ]}
-      style={styles.container}
-    >
-      <BackButton color={currentTheme.colors.primary} />
-      <Text style={styles.header}>Vos Statistiques</Text>
-      <FlatList
-        data={stats}
-        renderItem={renderStat}
-        keyExtractor={(item) => item.name}
-        contentContainerStyle={styles.listContainer}
-      />
-    </LinearGradient>
+    <SafeAreaView style={styles.safeArea}>
+      <LinearGradient
+        colors={[
+          currentTheme.colors.background,
+          currentTheme.colors.cardBackground,
+        ]}
+        style={styles.container}
+        start={{ x: 0, y: 0 }}
+        end={{ x: 1, y: 1 }}
+      >
+        <View style={styles.headerWrapper}>
+          <CustomHeader title="Vos Statistiques" />
+        </View>
+        <FlatList
+          data={stats}
+          renderItem={renderStat}
+          keyExtractor={(item) => item.name}
+          contentContainerStyle={styles.listContainer}
+          showsVerticalScrollIndicator={false}
+        />
+      </LinearGradient>
+    </SafeAreaView>
   );
 }
 
 const styles = StyleSheet.create({
-  container: {
-    flex: 1,
-    paddingTop: 20,
-    backgroundColor: currentTheme.colors.background,
-  },
-  header: {
-    fontSize: 25,
-    fontFamily: currentTheme.typography.title.fontFamily,
-    color: "#000000",
-    marginVertical: 20,
-    textAlign: "center",
-    marginBottom: 30,
+  safeArea: { flex: 1 },
+  container: { flex: 1 },
+  headerWrapper: {
+    marginTop: SCREEN_HEIGHT * 0.01,
+    marginBottom: SCREEN_HEIGHT * 0.02,
+    paddingHorizontal: SCREEN_WIDTH * 0.05,
   },
   listContainer: {
-    paddingHorizontal: 20,
-    paddingBottom: 40,
+    paddingHorizontal: SCREEN_WIDTH * 0.05,
+    paddingBottom: SCREEN_HEIGHT * 0.1,
+  },
+  statCardWrapper: {
+    marginBottom: normalizeSize(15),
+    shadowColor: "#000",
+    shadowOffset: { width: 0, height: normalizeSize(6) },
+    shadowOpacity: 0.3,
+    shadowRadius: normalizeSize(8),
+    elevation: 8,
   },
   statCard: {
     flexDirection: "row",
     alignItems: "center",
-    backgroundColor: currentTheme.colors.cardBackground,
-    padding: 15,
-    marginBottom: 12,
-    borderRadius: 12,
-    borderWidth: 2,
-    borderColor: currentTheme.colors.primary,
-    shadowColor: "#000",
-    shadowOffset: { width: 0, height: 3 },
-    shadowOpacity: 0.2,
-    shadowRadius: 4.65,
-    elevation: 3,
+    padding: normalizeSize(15),
+    borderRadius: normalizeSize(20),
+    borderWidth: 1,
+    borderColor: "#FF620030",
+    overflow: "hidden",
+  },
+  iconContainer: {
+    width: normalizeSize(60),
+    height: normalizeSize(60),
+    borderRadius: normalizeSize(30),
+    backgroundColor: "rgba(255, 98, 0, 0.1)", // Fond orange clair pour l'icône
+    justifyContent: "center",
+    alignItems: "center",
+    marginRight: normalizeSize(15),
   },
   statContent: {
-    marginLeft: 20,
+    flex: 1,
   },
   statName: {
-    fontSize: 16,
-    fontFamily: currentTheme.typography.title.fontFamily,
-    color: "#000000",
-    marginBottom: 4,
+    fontSize: normalizeSize(16),
+    fontFamily: currentTheme.typography.body.fontFamily,
+    color: "#333333",
+    marginBottom: normalizeSize(5),
   },
   statValue: {
-    fontSize: 18,
+    fontSize: normalizeSize(20),
     fontFamily: currentTheme.typography.title.fontFamily,
-    fontWeight: "bold",
-    color: currentTheme.colors.primary,
+    color: "#FF6200",
   },
   loadingContainer: {
     flex: 1,
     justifyContent: "center",
     alignItems: "center",
-    backgroundColor: currentTheme.colors.background,
   },
   loadingText: {
-    marginTop: 10,
-    fontSize: 16,
-    color: "#000000",
+    marginTop: normalizeSize(10),
+    fontSize: normalizeSize(16),
+    fontFamily: currentTheme.typography.body.fontFamily,
+    color: currentTheme.colors.textSecondary,
   },
   emptyContainer: {
     flex: 1,
     justifyContent: "center",
     alignItems: "center",
-    backgroundColor: currentTheme.colors.background,
   },
   emptyText: {
-    fontSize: 18,
+    fontSize: normalizeSize(20),
     fontFamily: currentTheme.typography.title.fontFamily,
-    color: "#000000",
+    color: currentTheme.colors.textPrimary,
     textAlign: "center",
   },
   emptySubtext: {
-    fontSize: 14,
+    fontSize: normalizeSize(16),
     fontFamily: currentTheme.typography.body.fontFamily,
-    color: "#777777",
+    color: currentTheme.colors.textSecondary,
     textAlign: "center",
-    marginTop: 10,
+    marginTop: normalizeSize(10),
   },
 });

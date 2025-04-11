@@ -1,6 +1,5 @@
 import React, { useEffect, useState, useCallback, useRef } from "react";
 import {
-  Modal,
   View,
   Text,
   TouchableOpacity,
@@ -14,17 +13,47 @@ import { Video, ResizeMode } from "expo-av";
 import { LinearGradient } from "expo-linear-gradient";
 import designSystem from "../theme/designSystem";
 
-const { width } = Dimensions.get("window");
+const { width: SCREEN_WIDTH, height: SCREEN_HEIGHT } = Dimensions.get("window");
 const { lightTheme } = designSystem;
 const currentTheme = lightTheme;
 
-// Mapping des identifiants de succès vers un libellé utilisateur
+const normalizeSize = (size) => Math.round(size * (SCREEN_WIDTH / 375));
+
 const achievementNames: Record<string, string> = {
   first_connection: "Première Connexion",
   profile_completed: "Profil Complet",
   finishChallenge_10: "Sérieux dans ses défis",
-  finishChallenge_3: "Débutant motivé",
+  finishChallenge_3: "Débutant Motivé",
   finishChallenge_1: "Premier défi complété",
+  finishChallenge_25: "Machine à Challenges !",
+  finishChallenge_50: "Imbattable !",
+  finishChallenge_100: "...Légende Vivante...",
+  selectChallengeDays_30: "Détermination",
+  selectChallengeDays_180: "Le long terme, c'est mon truc...",
+  selectChallengeDays_7: "Petit Joueur",
+  selectChallengeDays_90: "Marathonien !",
+  selectChallengeDays_365: "...Le Patient Légendaire...",
+  streakProgress_3: "Mini Streak",
+  streakProgress_7: "Routine en place",
+  streakProgress_14: "Impressionant !",
+  streakProgress_30: "Détermination en Béton !",
+  streakProgress_60: "Rien ne peut m'arrêter",
+  streakProgress_90: "Je suis une Machine !",
+  streakProgress_180: "Discipline Ultime",
+  streakProgress_365: "...Je suis un Monstre...",
+  messageSent_1: "Premier message envoyé !",
+  messageSent_10: "Esprit d'équipe",
+  messageSent_50: "...Communauté Active...",
+  shareChallenge_1: "J'aime partager",
+  shareChallenge_5: "Influenceur en Herbe",
+  shareChallenge_20: "...Meneur de Communauté...",
+  voteFeature_1: "Premier défi Voté !",
+  voteFeature_5: "...J'aime voter...",
+  saveChallenge_1: "Défi sauvegardé",
+  saveChallenge_5: "...Les Favoris...",
+  challengeCreated_1: "Créateur de Défis",
+  challengeCreated_5: "J'ai de l'Inspiration !",
+  challengeCreated_10: "...Innovateur...",
 };
 
 const TrophyModal: React.FC<{ challengeId: string; selectedDays: number }> = ({
@@ -45,12 +74,15 @@ const TrophyModal: React.FC<{ challengeId: string; selectedDays: number }> = ({
   const [message, setMessage] = useState("");
   const videoRef = useRef<Video>(null);
 
-  // Calcul proportionnel : pour 7 jours = 5 trophées
   const calculatedReward = Math.round(5 * (selectedDays / 7));
 
   useEffect(() => {
+    console.log("🔍 TrophyModal - showTrophyModal:", showTrophyModal);
+    console.log("🔍 TrophyModal - trophiesEarned:", trophiesEarned);
+    console.log("🔍 TrophyModal - achievementEarned:", achievementEarned);
     if (showTrophyModal) {
-      setReward(trophiesEarned);
+      console.log("✅ TrophyModal s’affiche au centre");
+      setReward(trophiesEarned || calculatedReward);
       setAdWatched(false);
       setMessage("");
       Animated.spring(scaleAnim, {
@@ -60,9 +92,10 @@ const TrophyModal: React.FC<{ challengeId: string; selectedDays: number }> = ({
         useNativeDriver: true,
       }).start();
     } else {
+      console.log("🚫 TrophyModal masqué");
       scaleAnim.setValue(0);
     }
-  }, [showTrophyModal, trophiesEarned, scaleAnim]);
+  }, [showTrophyModal, trophiesEarned, scaleAnim, calculatedReward]);
 
   const handleAdPress = useCallback(() => {
     console.log("✅ Pub regardée !");
@@ -75,46 +108,44 @@ const TrophyModal: React.FC<{ challengeId: string; selectedDays: number }> = ({
   const handleClaimPress = useCallback(() => {
     console.log(`✅ Réclamation : ${reward} Trophées`);
     setMessage(`🎉 Tu as gagné ${reward} Trophées !`);
-    // Délai pour que le message soit visible avant fermeture
     setTimeout(() => {
       resetTrophyData();
     }, 1500);
   }, [reward, resetTrophyData]);
 
-  if (!showTrophyModal) return null;
-
-  // Utilise le nom lisible pour le succès
-  const displayAchievement = achievementEarned
-    ? achievementNames[achievementEarned] || achievementEarned
-    : null;
+  if (!showTrophyModal) {
+    return null;
+  }
 
   return (
-    <Modal
-      visible={showTrophyModal}
-      transparent
-      animationType="fade"
-      onRequestClose={resetTrophyData}
-      statusBarTranslucent
-    >
-      <View style={styles.fullOverlay}>
-        {/* Vidéo de fond couvrant toute la surface */}
-        <Video
-          ref={videoRef}
-          source={require("../assets/videos/intro-video8.mp4")}
-          style={StyleSheet.absoluteFillObject}
-          resizeMode={ResizeMode.COVER}
-          shouldPlay
-          isLooping
-          isMuted
-        />
+    <View style={styles.overlay}>
+      <Video
+        ref={videoRef}
+        source={require("../assets/videos/intro-video8.mp4")}
+        style={StyleSheet.absoluteFillObject}
+        resizeMode={ResizeMode.COVER}
+        shouldPlay
+        isLooping
+        isMuted
+      />
+      <View style={styles.modalBackground}>
         <Animated.View
           style={[styles.modalContainer, { transform: [{ scale: scaleAnim }] }]}
         >
-          <Ionicons name="trophy" size={50} color="#FFD700" />
+          <LinearGradient
+            colors={["#FFD700", "#FFCA28"]}
+            style={styles.trophyGradient}
+            start={{ x: 0, y: 0 }}
+            end={{ x: 1, y: 1 }}
+          >
+            <Ionicons name="trophy" size={normalizeSize(60)} color="#FFF" />
+          </LinearGradient>
           <Text style={styles.title}>Félicitations ! 🎉</Text>
           <Text style={styles.rewardText}>+{reward} Trophées</Text>
-          {displayAchievement && (
-            <Text style={styles.achievementText}>🏆 {displayAchievement}</Text>
+          {achievementEarned && (
+            <Text style={styles.achievementText}>
+              🏆 {achievementNames[achievementEarned] || achievementEarned}
+            </Text>
           )}
           {message !== "" && <Text style={styles.message}>{message}</Text>}
           <GradientButton onPress={handleClaimPress} text="Réclamer" />
@@ -127,7 +158,7 @@ const TrophyModal: React.FC<{ challengeId: string; selectedDays: number }> = ({
           )}
         </Animated.View>
       </View>
-    </Modal>
+    </View>
   );
 };
 
@@ -148,17 +179,17 @@ const GradientButton: React.FC<GradientButtonProps> = ({
     style={styles.gradientButton}
   >
     <LinearGradient
-      colors={["#FF9A2E", "#FEC163"]}
+      colors={["#FF6200", "#FF8C00"]}
       start={{ x: 0, y: 0 }}
-      end={{ x: 1, y: 0 }}
+      end={{ x: 1, y: 1 }}
       style={styles.buttonGradient}
     >
       <View style={styles.buttonContent}>
         {iconName && (
           <Ionicons
             name={iconName}
-            size={20}
-            color="#fff"
+            size={normalizeSize(20)}
+            color="#FFF"
             style={styles.buttonIcon}
           />
         )}
@@ -169,69 +200,89 @@ const GradientButton: React.FC<GradientButtonProps> = ({
 );
 
 const styles = StyleSheet.create({
-  fullOverlay: {
-    ...StyleSheet.absoluteFillObject,
-    backgroundColor: "rgba(0,0,0,0.85)",
+  overlay: {
+    position: "absolute",
+    top: 0,
+    left: 0,
+    right: 0,
+    bottom: 0,
+    zIndex: 1000,
+    backgroundColor: "rgba(0, 0, 0, 0.9)",
+  },
+  modalBackground: {
+    flex: 1,
     justifyContent: "center",
     alignItems: "center",
   },
   modalContainer: {
-    width: width * 0.9,
-    backgroundColor: "rgba(255,255,255,0.95)",
-    borderRadius: 20,
-    paddingVertical: 30,
-    paddingHorizontal: 20,
+    width: SCREEN_WIDTH * 0.9,
+    maxWidth: 400,
+    backgroundColor: "#FFF3E0",
+    borderRadius: normalizeSize(25),
+    paddingVertical: normalizeSize(30),
+    paddingHorizontal: normalizeSize(20),
     alignItems: "center",
-    borderWidth: 2,
-    borderColor: "#FEC163",
-    shadowColor: "#000",
-    shadowOpacity: 0.3,
-    shadowRadius: 12,
-    elevation: 12,
+    borderWidth: 3,
+    borderColor: "#FFD700",
+    shadowColor: "#FFD700",
+    shadowOpacity: 0.5,
+    shadowRadius: normalizeSize(15),
+    elevation: 15,
+  },
+  trophyGradient: {
+    padding: normalizeSize(10),
+    borderRadius: normalizeSize(50),
+    marginBottom: normalizeSize(15),
   },
   title: {
-    fontSize: 24,
+    fontSize: normalizeSize(26),
     fontFamily: currentTheme.typography.title.fontFamily,
-    color: "#FF8C00",
-    marginVertical: 10,
+    color: "#FF6200",
+    marginVertical: normalizeSize(10),
     textAlign: "center",
+    fontWeight: "bold",
+    textShadowColor: "#000",
+    textShadowOffset: { width: 1, height: 1 },
+    textShadowRadius: 3,
   },
   rewardText: {
-    fontSize: 20,
-    color: "#FF8C00",
+    fontSize: normalizeSize(22),
+    color: "#FFD700",
     textAlign: "center",
-    marginBottom: 5,
+    marginBottom: normalizeSize(5),
     fontFamily: currentTheme.typography.title.fontFamily,
+    fontWeight: "600",
   },
   achievementText: {
-    fontSize: 18,
-    color: "#FF8C00",
+    fontSize: normalizeSize(18),
+    color: "#FF6200",
     textAlign: "center",
-    marginBottom: 10,
+    marginBottom: normalizeSize(15),
     fontFamily: currentTheme.typography.title.fontFamily,
   },
   message: {
-    fontSize: 16,
+    fontSize: normalizeSize(16),
     color: "#00FF88",
     textAlign: "center",
-    marginTop: 5,
+    marginTop: normalizeSize(5),
+    marginBottom: normalizeSize(15),
     fontFamily: currentTheme.typography.title.fontFamily,
   },
   gradientButton: {
-    width: "80%",
-    marginVertical: 8,
-    shadowColor: "#FF9A2E",
-    shadowOffset: { width: 0, height: 4 },
-    shadowOpacity: 0.6,
-    shadowRadius: 4,
-    elevation: 6,
+    width: "85%",
+    marginVertical: normalizeSize(8),
+    shadowColor: "#FF6200",
+    shadowOffset: { width: 0, height: 5 },
+    shadowOpacity: 0.7,
+    shadowRadius: normalizeSize(8),
+    elevation: 8,
   },
   buttonGradient: {
-    paddingVertical: 15,
-    borderRadius: 25,
+    paddingVertical: normalizeSize(12),
+    borderRadius: normalizeSize(30),
     alignItems: "center",
-    borderWidth: 1,
-    borderColor: "#FEC163",
+    borderWidth: 2,
+    borderColor: "#FFD700",
   },
   buttonContent: {
     flexDirection: "row",
@@ -239,13 +290,14 @@ const styles = StyleSheet.create({
     alignItems: "center",
   },
   buttonGradientText: {
-    color: "#fff",
-    fontSize: 15,
+    color: "#FFF",
+    fontSize: normalizeSize(16),
     fontFamily: currentTheme.typography.title.fontFamily,
+    fontWeight: "600",
     textAlign: "center",
   },
   buttonIcon: {
-    marginRight: 8,
+    marginRight: normalizeSize(8),
   },
 });
 

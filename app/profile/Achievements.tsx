@@ -4,80 +4,81 @@ import {
   Text,
   SectionList,
   ActivityIndicator,
-  TouchableOpacity,
   Dimensions,
   StyleSheet,
+  SafeAreaView,
+  TouchableOpacity,
 } from "react-native";
 import { Ionicons } from "@expo/vector-icons";
 import { doc, onSnapshot } from "firebase/firestore";
-import { db, auth } from "../../constants/firebase-config";
 import { LinearGradient } from "expo-linear-gradient";
-import BackButton from "../../components/BackButton";
 import Animated, { FadeInUp } from "react-native-reanimated";
+import { db, auth } from "../../constants/firebase-config";
 import { useTrophy } from "../../context/TrophyContext";
 import { achievementsList } from "../../helpers/achievementsConfig";
 import designSystem from "../../theme/designSystem";
+import CustomHeader from "@/components/CustomHeader";
 
-const { width } = Dimensions.get("window");
-const currentTheme = designSystem.lightTheme;
+const { width: SCREEN_WIDTH, height: SCREEN_HEIGHT } = Dimensions.get("window");
 
-// Descriptions pour chaque achievement
-const achievementDescriptions: Record<string, string> = {
-  finishChallenge_1: "Complétez votre premier défi.",
-  finishChallenge_3: "Complétez 3 défis pour prouver votre motivation.",
-  finishChallenge_10: "Complétez 10 défis pour montrer votre sérieux.",
-  finishChallenge_25:
-    "Atteignez 25 défis complétés pour devenir une machine à challenges.",
-  finishChallenge_50: "Complétez 50 défis et devenez imbattable !",
-  finishChallenge_100:
-    "Atteignez 100 défis complétés et devenez une légende vivante.",
-  selectChallengeDays_7: "Choisissez un défi de 7 jours et engagez-vous.",
-  selectChallengeDays_30:
-    "Sélectionnez un défi de 30 jours pour montrer votre détermination.",
-  selectChallengeDays_90:
-    "Choisissez un défi de 90 jours et devenez marathonien.",
-  selectChallengeDays_180:
-    "Sélectionnez un défi de 180 jours pour prouver votre engagement à long terme.",
-  selectChallengeDays_365:
-    "Optez pour un défi d'un an et devenez le patient légendaire.",
-  streakProgress_3: "Atteignez 3 jours consécutifs de réussite.",
-  streakProgress_7: "Maintenez 7 jours consécutifs de succès.",
-  streakProgress_14: "Atteignez 14 jours consécutifs pour impressionner.",
-  streakProgress_30:
-    "Obtenez 30 jours consécutifs pour une détermination en béton.",
-  streakProgress_60:
-    "Atteignez 60 jours consécutifs : rien ne peut vous arrêter.",
-  streakProgress_90: "Maintenez 90 jours de succès, vous êtes une machine !",
-  streakProgress_180:
-    "Atteignez 180 jours consécutifs pour une discipline ultime.",
-  streakProgress_365: "Maintenez 365 jours de succès et devenez un monstre !",
-  messageSent_1: "Envoyez votre premier message dans le chat.",
-  messageSent_10: "Envoyez 10 messages pour montrer votre esprit d'équipe.",
-  messageSent_50:
-    "Atteignez 50 messages envoyés et dynamisez votre communauté.",
-  shareChallenge_1: "Partagez un défi pour la première fois.",
-  shareChallenge_5: "Partagez 5 défis pour devenir un influenceur en herbe.",
-  shareChallenge_20: "Partagez 20 défis et devenez le meneur de communauté.",
-  inviteFriend_1: "Invitez votre premier ami à rejoindre les défis.",
-  inviteFriend_5: "Invitez 5 amis pour étendre votre réseau.",
-  inviteFriend_10: "Invitez 10 amis et devenez le roi de la communauté.",
-  voteFeature_1:
-    "Votez pour une nouvelle fonctionnalité pour la première fois.",
-  voteFeature_5: "Votez 5 fois pour montrer votre engagement.",
-  saveChallenge_1: "Sauvegardez un défi pour la première fois.",
-  saveChallenge_5: "Sauvegardez 5 défis pour montrer votre intérêt.",
-  challengeCreated_1: "Créez votre premier défi.",
-  challengeCreated_5: "Créez 5 défis pour montrer votre inspiration.",
-  challengeCreated_10: "Créez 10 défis et devenez un innovateur.",
-  first_connection: "Connectez-vous pour la première fois.",
-  profile_completed: "Complétez toutes les informations de votre profil.",
+const currentTheme = {
+  ...designSystem.lightTheme,
+  colors: {
+    ...designSystem.lightTheme.colors,
+    primary: "#FF6200",
+    accent: "#FFD700",
+    background: "#FFF3E0",
+    card: "#FFFFFF",
+  },
+};
+
+const normalizeSize = (size) => Math.round(size * (SCREEN_WIDTH / 375));
+
+const achievementDescriptions = {
+  finishChallenge_1: "Termine ton premier défi avec brio.",
+  finishChallenge_3: "Complète 3 défis et montre ta détermination.",
+  finishChallenge_10: "Atteins 10 défis pour prouver ton sérieux.",
+  finishChallenge_25: "25 défis terminés : t’es une machine !",
+  finishChallenge_50: "50 défis : personne ne t’arrête !",
+  finishChallenge_100: "100 défis : une légende est née.",
+  selectChallengeDays_7: "Lance-toi dans un défi de 7 jours.",
+  selectChallengeDays_30: "Engage-toi sur 30 jours de challenge.",
+  selectChallengeDays_90: "90 jours : un marathonien est en toi.",
+  selectChallengeDays_180: "180 jours de défi, un vrai warrior.",
+  selectChallengeDays_365: "Un an de défi : patience légendaire.",
+  streakProgress_3: "3 jours consécutifs : bon début !",
+  streakProgress_7: "7 jours de suite : t’es en feu !",
+  streakProgress_14: "14 jours consécutifs : impressionnant.",
+  streakProgress_30: "30 jours de streak : discipline de fer.",
+  streakProgress_60: "60 jours : rien ne te résiste.",
+  streakProgress_90: "90 jours : une machine unstoppable.",
+  streakProgress_180: "180 jours consécutifs : discipline ultime.",
+  streakProgress_365: "365 jours : t’es un monstre !",
+  messageSent_1: "Envoie ton premier message dans le chat.",
+  messageSent_10: "10 messages : l’esprit d’équipe est là.",
+  messageSent_50: "50 messages : ambassadeur de la communauté.",
+  shareChallenge_1: "Partage un défi pour la première fois.",
+  shareChallenge_5: "5 partages : influenceur en herbe.",
+  shareChallenge_20: "20 partages : leader incontesté.",
+  inviteFriend_1: "Invite ton premier pote à rejoindre.",
+  inviteFriend_5: "5 invitations : élargis ton crew.",
+  inviteFriend_10: "10 amis invités : roi du réseau.",
+  voteFeature_1: "Vote pour une idée pour la première fois.",
+  voteFeature_5: "5 votes : fais entendre ta voix.",
+  saveChallenge_1: "Sauvegarde ton premier défi.",
+  saveChallenge_5: "5 défis sauvés : collectionneur aguerri.",
+  challengeCreated_1: "Crée ton premier défi personnalisé.",
+  challengeCreated_5: "5 défis créés : esprit créatif.",
+  challengeCreated_10: "10 défis créés : innovateur de génie.",
+  first_connection: "Première connexion : bienvenue !",
+  profile_completed: "Profil complété : t’es prêt à briller.",
 };
 
 interface Achievement {
   id: string;
   identifier: string;
   name: string;
-  points: number;
+  trophies: number;
   description: string;
   isClaimable: boolean;
   isCompleted: boolean;
@@ -86,39 +87,56 @@ interface Achievement {
 interface AchievementSection {
   title: string;
   data: Achievement[];
+  index: number;
 }
 
-const getGroupForAchievement = (achievement: Achievement): string => {
+const groupAchievements = (achievement: Achievement) => {
   const id = achievement.identifier;
-  if (id === "first_connection" || id === "profile_completed") {
-    return "Premier pas";
-  } else if (id.startsWith("finishChallenge_")) {
-    return "Défis terminés";
-  } else if (id.startsWith("selectChallengeDays_")) {
-    return "Durée de défi";
-  } else if (id.startsWith("streakProgress_")) {
-    return "Série de réussite";
-  } else if (id.startsWith("messageSent_")) {
-    return "Messages";
-  } else if (id.startsWith("shareChallenge_")) {
-    return "Partages";
-  } else if (id.startsWith("inviteFriend_")) {
-    return "Invitations";
-  } else if (id.startsWith("voteFeature_")) {
-    return "Votes";
-  } else if (id.startsWith("saveChallenge_")) {
-    return "Défis sauvegardés";
-  } else if (id.startsWith("challengeCreated_")) {
-    return "Défis créés";
+  if (id === "first_connection" || id === "profile_completed") return "Débuts";
+  if (id.startsWith("finishChallenge_")) return "Défis Terminés";
+  if (id.startsWith("selectChallengeDays_")) return "Engagement";
+  if (id.startsWith("streakProgress_")) return "Série de Feu";
+  if (id.startsWith("messageSent_")) return "Communication";
+  if (id.startsWith("shareChallenge_")) return "Partage";
+  if (id.startsWith("inviteFriend_")) return "Réseau";
+  if (id.startsWith("voteFeature_")) return "Influence";
+  if (id.startsWith("saveChallenge_")) return "Collection";
+  if (id.startsWith("challengeCreated_")) return "Création";
+  return "Divers";
+};
+
+const getIconForGroup = (group: string) => {
+  switch (group) {
+    case "Débuts":
+      return "star";
+    case "Défis Terminés":
+      return "trophy";
+    case "Engagement":
+      return "calendar";
+    case "Série de Feu":
+      return "flame";
+    case "Communication":
+      return "chatbubbles";
+    case "Partage":
+      return "share-social";
+    case "Réseau":
+      return "people";
+    case "Influence":
+      return "thumbs-up";
+    case "Collection":
+      return "bookmark";
+    case "Création":
+      return "brush";
+    default:
+      return "ribbon";
   }
-  return "Autres";
 };
 
 const descendingGroups = new Set([
-  "Défis terminés",
-  "Durée de défi",
-  "Série de réussite",
-  "Défis créés",
+  "Défis Terminés",
+  "Engagement",
+  "Série de Feu",
+  "Création",
 ]);
 
 const AchievementsScreen = () => {
@@ -128,311 +146,411 @@ const AchievementsScreen = () => {
 
   useEffect(() => {
     const userId = auth.currentUser?.uid;
-    if (!userId) return;
-    const userRef = doc(db, "users", userId);
-    const unsubscribe = onSnapshot(userRef, (userSnap) => {
-      const data = userSnap.data();
-      if (data) {
-        const obtained = new Set(data.achievements || []);
-        const pending = new Set(data.newAchievements || []);
-        let formatted: Achievement[] = [];
+    if (!userId) {
+      setLoading(false);
+      return;
+    }
 
-        Object.entries(achievementsList).forEach(([category, config]) => {
-          if (
-            typeof config === "object" &&
-            "name" in config &&
-            "points" in config
-          ) {
-            const identifier = category;
-            formatted.push({
+    const userRef = doc(db, "users", userId);
+    const unsubscribe = onSnapshot(userRef, (snapshot) => {
+      const data = snapshot.data();
+      if (!data) return;
+
+      const obtained = new Set(data.achievements || []);
+      const pending = new Set(data.newAchievements || []);
+      const formattedAchievements: Achievement[] = [];
+
+      Object.entries(achievementsList).forEach(([key, value]) => {
+        if ("name" in value && "points" in value) {
+          const identifier = key;
+          formattedAchievements.push({
+            id: identifier,
+            identifier,
+            name: value.name,
+            trophies: value.points,
+            description:
+              achievementDescriptions[identifier] || "Succès mystère.",
+            isClaimable: pending.has(identifier),
+            isCompleted: obtained.has(identifier),
+          });
+        } else {
+          Object.entries(value).forEach(([subKey, subValue]) => {
+            const identifier = `${key}_${subKey}`;
+            formattedAchievements.push({
               id: identifier,
               identifier,
-              name: config.name,
-              points: config.points,
+              name: subValue.name,
+              trophies: subValue.points,
               description:
-                achievementDescriptions[identifier] ||
-                "Accomplissez ce défi pour débloquer ce succès.",
+                achievementDescriptions[identifier] || "Nouveau défi !",
               isClaimable: pending.has(identifier),
               isCompleted: obtained.has(identifier),
             });
-          } else {
-            Object.entries(config as object).forEach(
-              ([threshold, achievementData]: any) => {
-                const identifier = `${category}_${threshold}`;
-                formatted.push({
-                  id: identifier,
-                  identifier,
-                  name: achievementData.name,
-                  points: achievementData.points,
-                  description:
-                    achievementDescriptions[identifier] ||
-                    `Atteignez le palier ${threshold} pour ${achievementData.name}.`,
-                  isClaimable: pending.has(identifier),
-                  isCompleted: obtained.has(identifier),
-                });
-              }
-            );
-          }
-        });
+          });
+        }
+      });
 
-        const sectionsMap: { [group: string]: Achievement[] } = {};
-        formatted.forEach((ach) => {
-          const group = getGroupForAchievement(ach);
-          if (!sectionsMap[group]) {
-            sectionsMap[group] = [];
-          }
-          sectionsMap[group].push(ach);
-        });
+      const groupedAchievements: { [key: string]: Achievement[] } = {};
+      formattedAchievements.forEach((ach) => {
+        const group = groupAchievements(ach);
+        if (!groupedAchievements[group]) groupedAchievements[group] = [];
+        groupedAchievements[group].push(ach);
+      });
 
-        const sectionArr: AchievementSection[] = Object.entries(
-          sectionsMap
-        ).map(([title, data]) => {
-          if (descendingGroups.has(title)) {
-            data.sort((a, b) => b.points - a.points);
-          } else {
-            data.sort((a, b) => a.name.localeCompare(b.name));
-          }
-          return { title, data };
-        });
+      const sortedSections = Object.entries(groupedAchievements)
+        .map(([title, data], index) => {
+          data.sort((a, b) =>
+            descendingGroups.has(title)
+              ? b.trophies - a.trophies
+              : a.name.localeCompare(b.name)
+          );
+          return { title, data, index };
+        })
+        .sort((a, b) =>
+          a.title === "Débuts"
+            ? -1
+            : b.title === "Débuts"
+            ? 1
+            : a.title.localeCompare(b.title)
+        );
 
-        // Placer "Premier pas" en haut
-        sectionArr.sort((a, b) => {
-          if (a.title === "Premier pas") return -1;
-          if (b.title === "Premier pas") return 1;
-          return a.title.localeCompare(b.title);
-        });
-
-        setSections(sectionArr);
-        setLoading(false);
-      }
+      setSections(sortedSections);
+      setLoading(false);
     });
 
     return () => unsubscribe();
   }, []);
 
   const handleClaimAchievement = (achievement: Achievement) => {
-    const userId = auth.currentUser?.uid;
-    if (!userId) return;
-    console.log(
-      `Réclamation : ${achievement.name} (+${achievement.points} trophées)`
-    );
-    setTrophyData(achievement.points, achievement.identifier);
+    setTrophyData(achievement.trophies, achievement.identifier);
   };
+
+  const totalAchievements = sections.reduce((sum, s) => sum + s.data.length, 0);
+  const completedAchievements = sections.reduce(
+    (sum, s) => sum + s.data.filter((a) => a.isCompleted).length,
+    0
+  );
 
   if (loading) {
     return (
-      <LinearGradient
-        colors={[
-          currentTheme.colors.background,
-          currentTheme.colors.cardBackground,
-        ]}
-        style={styles.loadingContainer}
-      >
-        <ActivityIndicator size="large" color={currentTheme.colors.primary} />
-        <Text style={styles.loadingText}>Chargement des succès...</Text>
-      </LinearGradient>
+      <SafeAreaView style={styles.safeArea}>
+        <LinearGradient
+          colors={["#FFF3E0", "#FFE8CC"]}
+          style={styles.loadingContainer}
+        >
+          <ActivityIndicator size="large" color={currentTheme.colors.primary} />
+          <Text style={styles.loadingText}>Chargement...</Text>
+        </LinearGradient>
+      </SafeAreaView>
+    );
+  }
+
+  if (!sections.length) {
+    return (
+      <SafeAreaView style={styles.safeArea}>
+        <LinearGradient
+          colors={["#FFF3E0", "#FFE8CC"]}
+          style={styles.emptyContainer}
+        >
+          <Animated.View entering={FadeInUp.duration(400)}>
+            <CustomHeader title="Succès" />
+            <Ionicons
+              name="trophy-outline"
+              size={normalizeSize(80)}
+              color={currentTheme.colors.primary}
+            />
+            <Text style={styles.emptyTitle}>Pas encore de succès</Text>
+            <Text style={styles.emptySubtitle}>
+              Relève des défis pour tes premiers trophées !
+            </Text>
+          </Animated.View>
+        </LinearGradient>
+      </SafeAreaView>
     );
   }
 
   return (
-    <LinearGradient
-      colors={[
-        currentTheme.colors.background,
-        currentTheme.colors.cardBackground,
-      ]}
-      style={styles.container}
-    >
-      <BackButton color={currentTheme.colors.primary} />
-      <Text style={styles.header}>Vos Succès</Text>
-      <SectionList
-        sections={sections}
-        keyExtractor={(item) => item.id}
-        renderSectionHeader={({ section: { title, data } }) => {
-          const total = data.length;
-          const achieved = data.filter((item) => item.isCompleted).length;
-          return (
-            <View style={styles.sectionHeaderContainer}>
-              <Text style={styles.sectionHeader}>{title}</Text>
-              <Text style={styles.sectionCounter}>
-                {achieved}/{total}
-              </Text>
-            </View>
-          );
-        }}
-        renderItem={({ item }) => (
-          <Animated.View style={styles.achievementCard} entering={FadeInUp}>
-            <View style={styles.iconContainer}>
-              <Ionicons
-                name="trophy"
-                size={30}
-                color={
-                  item.isCompleted
-                    ? "#FFD700"
-                    : item.isClaimable
-                    ? "#C2410C" // Orange foncé
-                    : "#A0AEC0"
-                }
-              />
-              <Text style={styles.pointsText}>{item.points}</Text>
-            </View>
-            <View style={styles.achievementContent}>
-              <Text
-                style={[
-                  styles.achievementTitle,
-                  item.isCompleted && styles.completedText,
-                  item.isClaimable && styles.claimableText,
-                ]}
+    <SafeAreaView style={styles.safeArea}>
+      <LinearGradient
+        colors={["#FFF3E0", "#FFE8CC"]}
+        style={styles.container}
+        start={{ x: 0, y: 0 }}
+        end={{ x: 1, y: 1 }}
+      >
+        <CustomHeader title="Succès" />
+        <View style={styles.progressBar}>
+          <Text style={styles.progressText}>
+            {completedAchievements} / {totalAchievements} Trophées
+          </Text>
+        </View>
+        <SectionList
+          sections={sections}
+          keyExtractor={(item) => item.id}
+          renderSectionHeader={({ section }) => {
+            const { title, data, index } = section;
+            const completed = data.filter((a) => a.isCompleted).length;
+            return (
+              <Animated.View
+                entering={FadeInUp.delay(index * 150)}
+                style={styles.sectionHeader}
               >
-                {item.name}
-              </Text>
-              <Text style={styles.achievementDescription}>
-                {item.description}
-              </Text>
-            </View>
-            {item.isClaimable ? (
+                <LinearGradient
+                  colors={[currentTheme.colors.primary, "#FF8C00"]}
+                  style={styles.sectionGradient}
+                >
+                  <Ionicons
+                    name={getIconForGroup(title)}
+                    size={normalizeSize(22)}
+                    color="#FFF"
+                  />
+                  <Text style={styles.sectionTitle}>{title}</Text>
+                  <Text style={styles.sectionCount}>
+                    {completed}/{data.length}
+                  </Text>
+                </LinearGradient>
+              </Animated.View>
+            );
+          }}
+          renderItem={({ item, index }) => (
+            <Animated.View
+              entering={FadeInUp.delay(index * 75)}
+              style={styles.cardWrapper}
+            >
               <TouchableOpacity
-                style={[styles.claimButton, styles.activeButton]}
-                onPress={() => handleClaimAchievement(item)}
+                activeOpacity={0.9}
+                onPress={() => item.isClaimable && handleClaimAchievement(item)}
               >
-                <Text style={styles.buttonText}>Réclamer</Text>
+                <LinearGradient
+                  colors={["#FFFFFF", "#FFF8E6"]}
+                  style={styles.card}
+                  start={{ x: 0, y: 0 }}
+                  end={{ x: 1, y: 1 }}
+                >
+                  <View style={styles.cardContent}>
+                    <View style={styles.trophyContainer}>
+                      <Ionicons
+                        name="trophy"
+                        size={normalizeSize(48)}
+                        color={
+                          item.isCompleted
+                            ? currentTheme.colors.accent
+                            : item.isClaimable
+                            ? currentTheme.colors.primary
+                            : "#CCC"
+                        }
+                      />
+                      <Text style={styles.trophies}>{item.trophies}</Text>
+                    </View>
+                    <View style={styles.details}>
+                      <Text
+                        style={[
+                          styles.cardTitle,
+                          item.isCompleted && styles.completed,
+                          item.isClaimable && styles.claimable,
+                        ]}
+                      >
+                        {item.name}
+                      </Text>
+                      <Text style={styles.cardDescription}>
+                        {item.description}
+                      </Text>
+                    </View>
+                    <View style={styles.action}>
+                      {item.isClaimable ? (
+                        <LinearGradient
+                          colors={[currentTheme.colors.primary, "#FF8C00"]}
+                          style={styles.buttonGradient}
+                        >
+                          <Text style={styles.buttonText}>Réclamer</Text>
+                        </LinearGradient>
+                      ) : item.isCompleted ? (
+                        <Text style={styles.completedText}>Débloqué</Text>
+                      ) : (
+                        <LinearGradient
+                          colors={["#DDD", "#BBB"]}
+                          style={styles.buttonGradient}
+                        >
+                          <Text style={styles.buttonText}>En cours</Text>
+                        </LinearGradient>
+                      )}
+                    </View>
+                  </View>
+                </LinearGradient>
               </TouchableOpacity>
-            ) : item.isCompleted ? (
-              <Text style={styles.obtainedText}>Obtenu</Text>
-            ) : (
-              <TouchableOpacity
-                style={[styles.claimButton, styles.disabledButton]}
-                disabled
-              >
-                <Text style={styles.buttonText}>En cours</Text>
-              </TouchableOpacity>
-            )}
-          </Animated.View>
-        )}
-        contentContainerStyle={styles.listContent}
-      />
-    </LinearGradient>
+            </Animated.View>
+          )}
+          contentContainerStyle={styles.listContent}
+          showsVerticalScrollIndicator={false}
+        />
+      </LinearGradient>
+    </SafeAreaView>
   );
 };
 
-export default AchievementsScreen;
-
 const styles = StyleSheet.create({
-  container: {
+  safeArea: {
     flex: 1,
-    paddingTop: 20,
     backgroundColor: currentTheme.colors.background,
   },
-  header: {
-    fontSize: 25,
-    fontFamily: currentTheme.typography.title.fontFamily,
-    color: "#000000",
-    marginVertical: 20,
-    textAlign: "center",
-    marginBottom: 30,
-  },
-  listContent: {
-    paddingHorizontal: 20,
-    paddingBottom: 40,
-  },
-  sectionHeaderContainer: {
-    flexDirection: "row",
-    justifyContent: "space-between",
-    alignItems: "center",
-    backgroundColor: "#EDF2F7",
-    paddingVertical: 8,
-    paddingHorizontal: 12,
-    borderRadius: 8,
-    marginVertical: 10,
-  },
-  sectionHeader: {
-    fontSize: 20,
-    fontFamily: currentTheme.typography.title.fontFamily,
-    color: currentTheme.colors.primary,
-  },
-  sectionCounter: {
-    fontSize: 16,
-    color: currentTheme.colors.primary,
-  },
-  achievementCard: {
-    flexDirection: "row",
-    alignItems: "center",
-    backgroundColor: currentTheme.colors.cardBackground,
-    padding: 15,
-    borderRadius: 12,
-    marginBottom: 10,
-    shadowColor: "#000",
-    borderWidth: 2,
-    borderColor: currentTheme.colors.primary,
-    shadowOffset: { width: 0, height: 3 },
-    shadowOpacity: 0.2,
-    shadowRadius: 4.65,
-    elevation: 3,
-  },
-  iconContainer: {
-    alignItems: "center",
-    marginRight: 15,
-    width: 50,
-  },
-  pointsText: {
-    marginTop: 4,
-    fontSize: 14,
-    color: currentTheme.colors.primary,
-    fontFamily: currentTheme.typography.title.fontFamily,
-    textAlign: "center",
-  },
-  achievementContent: {
+  container: {
     flex: 1,
   },
-  achievementTitle: {
-    fontSize: 16,
-    fontFamily: currentTheme.typography.title.fontFamily,
-    color: "#000000",
+  progressBar: {
+    alignItems: "center",
+    marginVertical: normalizeSize(15),
   },
-  completedText: {
-    color: "#FFD700",
+  progressText: {
+    fontSize: normalizeSize(16),
+    fontFamily: currentTheme.typography.body.fontFamily,
+    color: currentTheme.colors.primary,
+    fontWeight: "700",
+  },
+  listContent: {
+    paddingHorizontal: SCREEN_WIDTH * 0.04,
+    paddingBottom: SCREEN_HEIGHT * 0.1,
+  },
+  sectionHeader: {
+    marginBottom: SCREEN_WIDTH * 0.03,
+  },
+  sectionGradient: {
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "space-between",
+    paddingVertical: normalizeSize(10),
+    paddingHorizontal: normalizeSize(15),
+    borderRadius: normalizeSize(12),
+    elevation: 3,
+    shadowColor: "#000",
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.2,
+    shadowRadius: 4,
+  },
+  sectionTitle: {
+    flex: 1,
+    fontSize: normalizeSize(18),
+    fontFamily: currentTheme.typography.title.fontFamily,
+    color: "#FFF",
+    marginLeft: normalizeSize(10),
+    fontWeight: "bold",
+  },
+  sectionCount: {
+    fontSize: normalizeSize(14),
+    color: "#FFF",
+    fontFamily: currentTheme.typography.body.fontFamily,
+    opacity: 0.9,
+  },
+  cardWrapper: {
+    marginBottom: SCREEN_WIDTH * 0.03,
+    alignItems: "center",
+  },
+  card: {
+    width: SCREEN_WIDTH * 0.92,
+    padding: normalizeSize(15),
+    borderRadius: normalizeSize(18),
+    borderWidth: 1,
+    borderColor: "#FF620010",
+    elevation: 5,
+    shadowColor: "#000",
+    shadowOffset: { width: 0, height: 3 },
+    shadowOpacity: 0.25,
+    shadowRadius: 5,
+  },
+  cardContent: {
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "space-between",
+  },
+  trophyContainer: {
+    alignItems: "center",
+    justifyContent: "center",
+    width: SCREEN_WIDTH * 0.18,
+  },
+  trophies: {
+    fontSize: normalizeSize(12),
+    color: currentTheme.colors.primary,
+    fontFamily: currentTheme.typography.title.fontFamily,
+    fontWeight: "600",
+    marginTop: normalizeSize(4),
+  },
+  details: {
+    flex: 1,
+    marginHorizontal: normalizeSize(10),
+  },
+  cardTitle: {
+    fontSize: normalizeSize(15),
+    fontFamily: currentTheme.typography.title.fontFamily,
+    color: "#333",
+    fontWeight: "bold",
+  },
+  completed: {
+    color: currentTheme.colors.accent,
     textDecorationLine: "line-through",
   },
-  claimableText: {
-    color: "#C2410C",
+  claimable: {
+    color: currentTheme.colors.primary,
+  },
+  cardDescription: {
+    fontSize: normalizeSize(11),
+    color: "#666",
     fontFamily: currentTheme.typography.body.fontFamily,
+    marginTop: normalizeSize(4),
   },
-  achievementDescription: {
-    fontSize: 14,
-    color: "#4A5568",
-    marginTop: 4,
-    fontFamily: currentTheme.typography.title.fontFamily,
+  action: {
+    width: SCREEN_WIDTH * 0.22,
+    alignItems: "center",
+    justifyContent: "center",
   },
-  claimButton: {
-    paddingVertical: 8,
-    paddingHorizontal: 15,
-    borderRadius: 8,
-  },
-  activeButton: {
-    backgroundColor: "#C2410C",
-  },
-  disabledButton: {
-    backgroundColor: "#E2E8F0",
+  buttonGradient: {
+    paddingVertical: normalizeSize(6),
+    paddingHorizontal: normalizeSize(10),
+    borderRadius: normalizeSize(8),
+    alignItems: "center",
+    justifyContent: "center",
   },
   buttonText: {
-    fontSize: 14,
-    fontFamily: currentTheme.typography.body.fontFamily,
-    color: "#1A202C",
+    fontSize: normalizeSize(11),
+    color: "#FFF",
+    fontFamily: currentTheme.typography.title.fontFamily,
+    fontWeight: "600",
+    textAlign: "center",
   },
-  obtainedText: {
-    fontSize: 14,
-    fontFamily: currentTheme.typography.body.fontFamily,
-    color: "#FFD700",
-    marginRight: 10,
+  completedText: {
+    fontSize: normalizeSize(11),
+    color: currentTheme.colors.accent,
+    fontFamily: currentTheme.typography.title.fontFamily,
+    fontWeight: "600",
   },
   loadingContainer: {
     flex: 1,
     justifyContent: "center",
     alignItems: "center",
-    backgroundColor: currentTheme.colors.background,
   },
   loadingText: {
-    marginTop: 10,
-    fontSize: 16,
+    marginTop: normalizeSize(12),
+    fontSize: normalizeSize(16),
     color: currentTheme.colors.primary,
+    fontFamily: currentTheme.typography.body.fontFamily,
+  },
+  emptyContainer: {
+    flex: 1,
+    justifyContent: "center",
+    alignItems: "center",
+  },
+  emptyTitle: {
+    fontSize: normalizeSize(22),
+    fontFamily: currentTheme.typography.title.fontFamily,
+    color: currentTheme.colors.primary,
+    marginTop: normalizeSize(20),
+    textAlign: "center",
+  },
+  emptySubtitle: {
+    fontSize: normalizeSize(16),
+    color: "#666",
+    fontFamily: currentTheme.typography.body.fontFamily,
+    textAlign: "center",
+    marginTop: normalizeSize(10),
+    maxWidth: SCREEN_WIDTH * 0.7,
   },
 });
+
+export default AchievementsScreen;

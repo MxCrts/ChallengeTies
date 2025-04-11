@@ -1,55 +1,134 @@
 import { StyleSheet } from "react-native";
 
-// ==============================
-// THÈMES LUMINEUX ET SOMBRES
-// ==============================
-
-// Thème Light – inspiré de l'apparence de votre page index.tsx
-export const lightTheme = {
+// Interface commune pour lightTheme et darkTheme
+export interface Theme {
   colors: {
-    // Fond de la page identique à celui de l'index
+    background: string;
+    primary: string;
+    secondary: string;
+    cardBackground: string;
+    border: string;
+    textPrimary: string;
+    textSecondary: string;
+    overlay: string;
+    error: string;
+    trophy: string;
+  };
+  typography: {
+    title: {
+      fontSize: number;
+      fontWeight: string;
+      color: string;
+      fontFamily: string;
+    };
+    subtitle: {
+      fontSize: number;
+      fontWeight: string;
+      color: string;
+      fontFamily: string;
+    };
+    body: {
+      fontSize: number;
+      fontWeight: string;
+      color: string;
+      fontFamily: string;
+    };
+    button: {
+      fontSize: number;
+      fontWeight: string;
+      color: string;
+      fontFamily: string;
+    };
+  };
+  spacing: { xs: number; sm: number; md: number; lg: number; xl: number };
+  shapes: { borderRadius: number; cardBorderRadius: number };
+  components: {
+    challengeCard: {
+      backgroundColor: string;
+      borderRadius: number;
+      shadowColor: string;
+      shadowOffset: { width: number; height: number };
+      shadowOpacity: number;
+      shadowRadius: number;
+      elevation: number;
+    };
+    // Propriétés optionnelles pour éviter les conflits
+    hero?: { overlay: string; logo: { width: number; height: number } };
+    ctaButton?: {
+      backgroundColor: string;
+      borderRadius: number;
+      paddingVertical: number;
+      paddingHorizontal: number;
+    };
+    discoverButton?: {
+      backgroundColor: string;
+      borderRadius: number;
+      paddingVertical: number;
+      paddingHorizontal: number;
+    };
+    challengeOverlay?: {
+      position: "absolute";
+      top: number;
+      left: number;
+      right: number;
+      bottom: number;
+      backgroundColor: string;
+      justifyContent: string;
+      padding: number;
+    };
+    trophyBadge?: {
+      position: "absolute";
+      top: number;
+      left: number;
+      backgroundColor: string;
+      borderRadius: number;
+      paddingVertical: number;
+      paddingHorizontal: number;
+    };
+    plusButton?: {
+      position: "absolute";
+      top: number;
+      right: number;
+      backgroundColor: string;
+      borderRadius: number;
+      padding: number;
+    };
+  };
+}
+
+// Thème Light
+export const lightTheme: Theme = {
+  colors: {
     background: "#e3e2e9",
-    // Couleur principale utilisée pour le CTA (bouton du HERO)
     primary: "#ed8f03",
-    // Couleur secondaire pour les boutons de la section "Inspire-toi"
     secondary: "#e3701e",
-    // Fond des cartes (défis)
     cardBackground: "#FFFFFF",
-    // Pour les bordures, si nécessaire
     border: "#E0E0E0",
-    // Couleurs de texte
-    textPrimary: "#FFF", // Titres du HERO et texte sur les boutons (blanc)
+    textPrimary: "#FFF",
     textSecondary: "#212121",
-    // Couleur de l'overlay utilisé sur la vidéo ou les cartes
     overlay: "rgba(0,0,0,0.35)",
-    // Couleur d'erreur (si besoin)
     error: "#D32F2F",
-    // Couleur pour les trophées
     trophy: "#FFD700",
   },
   typography: {
-    // Pour les titres (ex. heroTitle)
     title: {
       fontSize: 28,
       fontWeight: "700",
       color: "#FFF",
       fontFamily: "Comfortaa_700Bold",
     },
-    // Pour les sous-titres (ex. heroSubtitle)
     subtitle: {
       fontSize: 16,
       fontWeight: "400",
       color: "#FFF",
       fontFamily: "Comfortaa_400Regular",
     },
-    // Pour le corps du texte sur les cartes, etc.
     body: {
       fontSize: 16,
       fontWeight: "400",
       color: "#212121",
       fontFamily: "Comfortaa_400Regular",
     },
-    // Pour les textes des boutons
     button: {
       fontSize: 18,
       fontWeight: "700",
@@ -57,35 +136,9 @@ export const lightTheme = {
       fontFamily: "Comfortaa_700Bold",
     },
   },
-  spacing: {
-    xs: 4,
-    sm: 8,
-    md: 16,
-    lg: 24,
-    xl: 32,
-  },
-  shapes: {
-    // Pour les boutons du HERO, par exemple
-    borderRadius: 10,
-    // Pour les cartes de défis (utilisées dans index.tsx : borderRadius 15)
-    cardBorderRadius: 15,
-  },
+  spacing: { xs: 4, sm: 8, md: 16, lg: 24, xl: 32 },
+  shapes: { borderRadius: 10, cardBorderRadius: 15 },
   components: {
-    // Style global de la section HERO
-    hero: {
-      // La vidéo de fond est recouverte par un overlay semi-transparent
-      overlay: "rgba(0,0,0,0.35)",
-      // Taille du logo
-      logo: { width: 180, height: 180 },
-    },
-    // Bouton CTA du HERO
-    ctaButton: {
-      backgroundColor: "#ed8f03",
-      borderRadius: 10,
-      paddingVertical: 12,
-      paddingHorizontal: 25,
-    },
-    // Carte de défi
     challengeCard: {
       backgroundColor: "#FFFFFF",
       borderRadius: 15,
@@ -95,7 +148,13 @@ export const lightTheme = {
       shadowRadius: 6,
       elevation: 5,
     },
-    // Bouton de la section "Inspire-toi"
+    hero: { overlay: "rgba(0,0,0,0.35)", logo: { width: 180, height: 180 } },
+    ctaButton: {
+      backgroundColor: "#ed8f03",
+      borderRadius: 10,
+      paddingVertical: 12,
+      paddingHorizontal: 25,
+    },
     discoverButton: {
       backgroundColor: "#e3701e",
       borderRadius: 10,
@@ -105,8 +164,8 @@ export const lightTheme = {
   },
 };
 
-// Thème Dark – exemple fourni (vous pouvez l'ajuster si besoin)
-export const darkTheme = {
+// Thème Dark
+export const darkTheme: Theme = {
   colors: {
     primary: "#9C254D",
     secondary: "#FFDD95",
@@ -145,28 +204,20 @@ export const darkTheme = {
       fontFamily: "Roboto_700Bold",
     },
   },
-  spacing: {
-    xs: 4,
-    sm: 8,
-    md: 16,
-    lg: 24,
-    xl: 32,
-  },
-  shapes: {
-    borderRadius: 8,
-    cardBorderRadius: 12,
-  },
+  spacing: { xs: 4, sm: 8, md: 16, lg: 24, xl: 32 },
+  shapes: { borderRadius: 8, cardBorderRadius: 12 },
   components: {
     challengeCard: {
       backgroundColor: "#1E1E1E",
       borderRadius: 12,
       shadowColor: "#000",
+      shadowOffset: { width: 0, height: 4 },
       shadowOpacity: 0.2,
       shadowRadius: 10,
       elevation: 6,
     },
     challengeOverlay: {
-      position: "absolute" as "absolute",
+      position: "absolute",
       top: 0,
       left: 0,
       right: 0,
@@ -176,7 +227,7 @@ export const darkTheme = {
       padding: 16,
     },
     trophyBadge: {
-      position: "absolute" as "absolute",
+      position: "absolute",
       top: 8,
       left: 8,
       backgroundColor: "#FFC107",
@@ -185,7 +236,7 @@ export const darkTheme = {
       paddingHorizontal: 8,
     },
     plusButton: {
-      position: "absolute" as "absolute",
+      position: "absolute",
       top: 8,
       right: 8,
       backgroundColor: "#9C254D",
@@ -195,7 +246,4 @@ export const darkTheme = {
   },
 };
 
-export default {
-  lightTheme,
-  darkTheme,
-};
+export default { lightTheme, darkTheme };

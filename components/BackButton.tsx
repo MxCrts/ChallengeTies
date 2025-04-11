@@ -29,7 +29,6 @@ const BackButton: React.FC<BackButtonProps> = ({
 const styles = StyleSheet.create({
   backButton: {
     position: "absolute",
-    top: 40,
     left: 20,
     zIndex: 10,
     backgroundColor: "rgba(255,255,255,0.1)",

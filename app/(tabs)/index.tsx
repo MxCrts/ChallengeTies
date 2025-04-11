@@ -24,12 +24,17 @@ import Animated, {
   useSharedValue,
   withTiming,
   useAnimatedStyle,
+  FadeInUp,
 } from "react-native-reanimated";
+import { Ionicons } from "@expo/vector-icons";
+import { useTheme } from "../../context/ThemeContext";
+import { Theme } from "../../theme/designSystem";
+import designSystem from "../../theme/designSystem";
 
 const { width: SCREEN_WIDTH, height: SCREEN_HEIGHT } = Dimensions.get("window");
-const ITEM_WIDTH = Math.round(SCREEN_WIDTH * 0.8);
-const ITEM_HEIGHT = 260;
-const CARD_MARGIN = 5;
+const ITEM_WIDTH = SCREEN_WIDTH * 0.85;
+const ITEM_HEIGHT = SCREEN_HEIGHT * 0.32;
+const CARD_MARGIN = SCREEN_WIDTH * 0.015;
 const EFFECTIVE_ITEM_WIDTH = ITEM_WIDTH + CARD_MARGIN * 2;
 const SPACER = (SCREEN_WIDTH - ITEM_WIDTH) / 2;
 
@@ -47,15 +52,19 @@ export default function HomeScreen() {
   const [challenges, setChallenges] = useState<Challenge[]>([]);
   const [loading, setLoading] = useState(false);
   const [user, setUser] = useState<User | null>(null);
+  const [isMounted, setIsMounted] = useState(false); // Sécurité pour navigation
+  const { theme } = useTheme();
+  const isDarkMode = theme === "dark";
+  const currentTheme: Theme = isDarkMode
+    ? designSystem.darkTheme
+    : designSystem.lightTheme;
 
-  // Animation fade pour la section HERO
   const fadeAnim = useSharedValue(0);
   const fadeStyle = useAnimatedStyle(() => ({ opacity: fadeAnim.value }));
   useEffect(() => {
-    fadeAnim.value = withTiming(1, { duration: 2000 });
+    fadeAnim.value = withTiming(1, { duration: 1500 });
   }, [fadeAnim]);
 
-  // Surveille l'état d'authentification
   useEffect(() => {
     const unsubscribe = onAuthStateChanged(auth, (firebaseUser) => {
       setUser(firebaseUser);
@@ -63,7 +72,10 @@ export default function HomeScreen() {
     return () => unsubscribe();
   }, []);
 
-  // Récupère les défis depuis Firestore
+  useEffect(() => {
+    setIsMounted(true); // Composant monté
+  }, []);
+
   const fetchChallenges = async () => {
     if (!user) return;
     setLoading(true);
@@ -90,9 +102,7 @@ export default function HomeScreen() {
   };
 
   useEffect(() => {
-    if (user) {
-      fetchChallenges();
-    }
+    if (user) fetchChallenges();
   }, [user]);
 
   const flatListRef = useRef<RNAnimated.FlatList<any>>(null);
@@ -100,22 +110,19 @@ export default function HomeScreen() {
   const currentIndexRef = useRef<number>(0);
   const autoScrollIntervalRef = useRef<NodeJS.Timeout | null>(null);
 
-  // Démarre l'auto-scroll avec un intervalle
   const startAutoScroll = useCallback(() => {
-    if (challenges.length === 0) return;
+    if (challenges.length <= 1) return;
+    if (autoScrollIntervalRef.current)
+      clearInterval(autoScrollIntervalRef.current);
     autoScrollIntervalRef.current = setInterval(() => {
       let nextIndex = currentIndexRef.current + 1;
       if (nextIndex >= challenges.length) nextIndex = 0;
-      try {
-        flatListRef.current?.scrollToIndex({
-          index: nextIndex,
-          animated: true,
-        });
-      } catch (err) {
-        // En cas d'erreur, on ignore
-      }
       currentIndexRef.current = nextIndex;
-    }, 3000);
+      flatListRef.current?.scrollToOffset({
+        offset: nextIndex * EFFECTIVE_ITEM_WIDTH,
+        animated: true,
+      });
+    }, 4000);
   }, [challenges]);
 
   useEffect(() => {
@@ -126,7 +133,6 @@ export default function HomeScreen() {
     };
   }, [challenges, startAutoScroll]);
 
-  // Annule l'auto-scroll lors du début du swipe
   const handleScrollBeginDrag = () => {
     if (autoScrollIntervalRef.current) {
       clearInterval(autoScrollIntervalRef.current);
@@ -134,73 +140,130 @@ export default function HomeScreen() {
     }
   };
 
-  // Lors du relâchement, recentrer et redémarrer l'auto-scroll après un délai
   const handleMomentumScrollEnd = (
     event: NativeSyntheticEvent<NativeScrollEvent>
   ) => {
     const offsetX = event.nativeEvent.contentOffset.x;
     const index = Math.round(offsetX / EFFECTIVE_ITEM_WIDTH);
     currentIndexRef.current = index;
-    try {
-      flatListRef.current?.scrollToIndex({ index, animated: true });
-    } catch (err) {}
+    flatListRef.current?.scrollToOffset({
+      offset: index * EFFECTIVE_ITEM_WIDTH,
+      animated: true,
+    });
     if (!autoScrollIntervalRef.current) {
-      setTimeout(() => startAutoScroll(), 1500);
+      setTimeout(() => startAutoScroll(), 2000);
     }
   };
 
-  // Met à jour l'index courant via viewability
-  const onViewableItemsChanged = useRef(({ viewableItems }: any) => {
-    if (viewableItems && viewableItems.length > 0) {
-      currentIndexRef.current = viewableItems[0].index;
+  const safeNavigate = (path: string) => {
+    if (isMounted) {
+      router.push(path);
+    } else {
+      console.warn("Navigation bloquée : composant pas encore monté.");
     }
-  }).current;
-  const viewabilityConfig = useRef({
-    viewAreaCoveragePercentThreshold: 50,
-  }).current;
+  };
 
-  const renderChallenge = ({ item }: { item: Challenge }) => (
-    <TouchableOpacity
-      style={styles.challengeCard}
-      onPress={() =>
-        router.push(
-          `/challenge-details/${item.id}?title=${encodeURIComponent(
-            item.title
-          )}&category=${encodeURIComponent(
-            item.category
-          )}&description=${encodeURIComponent(item.description)}`
-        )
-      }
-      activeOpacity={0.9}
+  const renderChallenge = ({
+    item,
+    index,
+  }: {
+    item: Challenge;
+    index: number;
+  }) => (
+    <Animated.View
+      entering={FadeInUp.delay(index * 100)}
+      style={[
+        styles.challengeCard,
+        {
+          backgroundColor: currentTheme.colors.cardBackground,
+          borderColor: currentTheme.colors.secondary,
+        },
+      ]}
     >
-      <Image source={{ uri: item.imageUrl }} style={styles.challengeImage} />
-      <LinearGradient
-        colors={["rgba(0,0,0,0.3)", "rgba(0,0,0,0.8)"]}
-        style={styles.overlay}
+      <TouchableOpacity
+        onPress={() =>
+          safeNavigate(
+            `/challenge-details/${item.id}?title=${encodeURIComponent(
+              item.title
+            )}` +
+              `&category=${encodeURIComponent(item.category)}` +
+              `&description=${encodeURIComponent(item.description)}`
+          )
+        }
+        activeOpacity={0.9}
       >
-        <Text style={styles.challengeTitle} numberOfLines={1}>
-          {item.title}
-        </Text>
-        {item.day !== undefined && (
-          <Text style={styles.challengeDay}>Jour {item.day}</Text>
-        )}
-      </LinearGradient>
-    </TouchableOpacity>
+        <Image source={{ uri: item.imageUrl }} style={styles.challengeImage} />
+        <LinearGradient
+          colors={[currentTheme.colors.overlay, "rgba(0,0,0,0.9)"]}
+          style={styles.overlay}
+        >
+          <Text
+            style={[
+              styles.challengeTitle,
+              { color: currentTheme.colors.textPrimary },
+            ]}
+            numberOfLines={2}
+          >
+            {item.title}
+          </Text>
+          {item.day !== undefined && (
+            <Text
+              style={[
+                styles.challengeDay,
+                { color: currentTheme.colors.primary },
+              ]}
+            >
+              Jour {item.day}
+            </Text>
+          )}
+          <Text
+            style={[
+              styles.challengeCategory,
+              { color: currentTheme.colors.textSecondary },
+            ]}
+          >
+            {item.category}
+          </Text>
+        </LinearGradient>
+      </TouchableOpacity>
+    </Animated.View>
   );
 
+  const scrollY = useSharedValue(0);
+  const headerStyle = useAnimatedStyle(() => ({
+    transform: [
+      { translateY: withTiming(scrollY.value * 0.3, { duration: 100 }) },
+    ],
+  }));
+
+  const handleScroll = (event: NativeSyntheticEvent<NativeScrollEvent>) => {
+    scrollY.value = event.nativeEvent.contentOffset.y;
+  };
+
   return (
-    <SafeAreaView style={styles.safeArea}>
-      <StatusBar hidden translucent backgroundColor="transparent" />
-      <LinearGradient colors={["#e3e2e9", "#e3e2e9"]} style={styles.container}>
+    <SafeAreaView style={[styles.safeArea, { paddingTop: 0 }]}>
+      <StatusBar
+        hidden={true}
+        translucent={true}
+        backgroundColor="transparent"
+      />
+      <LinearGradient
+        colors={[
+          currentTheme.colors.background,
+          currentTheme.colors.cardBackground,
+        ]}
+        style={styles.container}
+      >
         <ScrollView
-          contentContainerStyle={[
-            styles.scrollContent,
-            { flexGrow: 1, backgroundColor: "#e3e2e9" },
-          ]}
+          contentContainerStyle={styles.scrollContent}
           bounces={false}
+          overScrollMode="never"
+          showsVerticalScrollIndicator={false}
+          onScroll={handleScroll}
+          scrollEventThrottle={16}
         >
           {/* SECTION HERO */}
-          <RNAnimated.View style={[styles.heroSection, fadeStyle]}>
+          <Animated.View style={[styles.heroSection, fadeStyle]}>
             <Video
               source={require("../../assets/videos/hero-bg.mp4")}
               style={styles.backgroundVideo}
@@ -209,89 +272,250 @@ export default function HomeScreen() {
               isLooping
               isMuted
             />
-            <View style={styles.heroOverlay} />
-            <Image
-              source={require("../../assets/images/Challenge.png")}
-              style={styles.logo}
-              resizeMode="contain"
+            <LinearGradient
+              colors={[currentTheme.colors.overlay, "rgba(0,0,0,0.2)"]}
+              style={styles.heroOverlay}
             />
-            <Text style={styles.heroTitle}>Réveille ton potentiel</Text>
-            <Text style={styles.heroSubtitle}>
-              Rejoins ChallengeTies et trouve l'inspiration au quotidien !
-            </Text>
-            <TouchableOpacity onPress={() => router.push("/explore")}>
-              <LinearGradient
-                colors={["#e3701e", "#e3701e"]}
-                style={styles.ctaButton}
+            <Animated.View style={[styles.heroContent, headerStyle]}>
+              <Image
+                source={require("../../assets/images/Challenge.png")}
+                style={styles.logo}
+                resizeMode="contain"
+              />
+              <Text
+                style={[
+                  styles.heroTitle,
+                  { color: currentTheme.colors.textPrimary },
+                ]}
               >
-                <Text style={styles.ctaText}>Commence l'Aventure</Text>
-              </LinearGradient>
-            </TouchableOpacity>
-          </RNAnimated.View>
+                Défie tes limites
+              </Text>
+              <Text
+                style={[
+                  styles.heroSubtitle,
+                  { color: currentTheme.colors.textSecondary },
+                ]}
+              >
+                Rejoins une communauté vibrante et repousse tes frontières
+                chaque jour !
+              </Text>
+              <TouchableOpacity onPress={() => safeNavigate("/explore")}>
+                <LinearGradient
+                  colors={[
+                    currentTheme.colors.secondary,
+                    currentTheme.colors.primary,
+                  ]}
+                  style={styles.ctaButton}
+                >
+                  <Text
+                    style={[
+                      styles.ctaText,
+                      { color: currentTheme.colors.textPrimary },
+                    ]}
+                  >
+                    Lancer l'Aventure
+                  </Text>
+                  <Ionicons
+                    name="arrow-forward"
+                    size={SCREEN_WIDTH * 0.05}
+                    color={currentTheme.colors.textPrimary}
+                  />
+                </LinearGradient>
+              </TouchableOpacity>
+            </Animated.View>
+          </Animated.View>
 
           {/* CAROUSEL DES DÉFIS */}
           <View style={styles.section}>
-            <Text style={styles.sectionTitle}>Défis Inspirants</Text>
+            <Text
+              style={[
+                styles.sectionTitle,
+                { color: currentTheme.colors.textPrimary },
+              ]}
+            >
+              Défis Populaires
+            </Text>
             {loading ? (
-              <ActivityIndicator size="large" color="#a67c52" />
-            ) : challenges.length > 0 ? (
-              <RNAnimated.FlatList
-                ref={flatListRef}
-                data={challenges}
-                horizontal
-                decelerationRate="fast"
-                bounces={false}
-                snapToInterval={EFFECTIVE_ITEM_WIDTH}
-                snapToAlignment="center"
-                contentContainerStyle={{ paddingHorizontal: SPACER }}
-                showsHorizontalScrollIndicator={false}
-                getItemLayout={(_, index) => ({
-                  length: EFFECTIVE_ITEM_WIDTH,
-                  offset: EFFECTIVE_ITEM_WIDTH * index,
-                  index,
-                })}
-                onScroll={RNAnimated.event(
-                  [{ nativeEvent: { contentOffset: { x: scrollX } } }],
-                  { useNativeDriver: true }
-                )}
-                scrollEventThrottle={16}
-                onScrollBeginDrag={handleScrollBeginDrag}
-                onMomentumScrollEnd={handleMomentumScrollEnd}
-                onViewableItemsChanged={onViewableItemsChanged}
-                viewabilityConfig={viewabilityConfig}
-                renderItem={renderChallenge}
-                keyExtractor={(item) => item.id}
-                style={{ marginBottom: 20 }}
+              <ActivityIndicator
+                size="large"
+                color={currentTheme.colors.secondary}
               />
+            ) : challenges.length > 0 ? (
+              <>
+                <RNAnimated.FlatList
+                  ref={flatListRef}
+                  data={challenges}
+                  horizontal
+                  decelerationRate="fast"
+                  bounces={false}
+                  snapToInterval={EFFECTIVE_ITEM_WIDTH}
+                  snapToAlignment="center"
+                  contentContainerStyle={{ paddingHorizontal: SPACER }}
+                  showsHorizontalScrollIndicator={false}
+                  onScroll={RNAnimated.event(
+                    [{ nativeEvent: { contentOffset: { x: scrollX } } }],
+                    { useNativeDriver: true }
+                  )}
+                  scrollEventThrottle={16}
+                  onScrollBeginDrag={handleScrollBeginDrag}
+                  onMomentumScrollEnd={handleMomentumScrollEnd}
+                  renderItem={renderChallenge}
+                  keyExtractor={(item) => item.id}
+                  style={styles.carousel}
+                />
+                <View style={styles.pagination}>
+                  {challenges.map((_, index) => (
+                    <RNAnimated.View
+                      key={index}
+                      style={[
+                        styles.dot,
+                        { backgroundColor: currentTheme.colors.secondary },
+                        {
+                          opacity: scrollX.interpolate({
+                            inputRange: [
+                              (index - 1) * EFFECTIVE_ITEM_WIDTH,
+                              index * EFFECTIVE_ITEM_WIDTH,
+                              (index + 1) * EFFECTIVE_ITEM_WIDTH,
+                            ],
+                            outputRange: [0.3, 1, 0.3],
+                            extrapolate: "clamp",
+                          }),
+                        },
+                      ]}
+                    />
+                  ))}
+                </View>
+              </>
             ) : (
-              <Text style={styles.noChallengesText}>Aucun défi disponible</Text>
+              <Animated.View
+                entering={FadeInUp}
+                style={styles.noChallengesContainer}
+              >
+                <Ionicons
+                  name="sad-outline"
+                  size={SCREEN_WIDTH * 0.1}
+                  color={currentTheme.colors.textSecondary}
+                />
+                <Text
+                  style={[
+                    styles.noChallengesText,
+                    { color: currentTheme.colors.textPrimary },
+                  ]}
+                >
+                  Aucun défi disponible
+                </Text>
+                <Text
+                  style={[
+                    styles.noChallengesSubtext,
+                    { color: currentTheme.colors.textSecondary },
+                  ]}
+                >
+                  De nouveaux défis arrivent bientôt !
+                </Text>
+              </Animated.View>
             )}
           </View>
 
           {/* SECTION "INSPIRE-TOI" */}
           <View style={styles.discoverSection}>
-            <Text style={styles.sectionTitle}>Inspire-toi</Text>
-            <View style={styles.discoverRow}>
-              <TouchableOpacity
-                style={styles.discoverButton}
-                onPress={() => router.push("/tips")}
+            <Text
+              style={[
+                styles.sectionTitle,
+                { color: currentTheme.colors.textPrimary },
+              ]}
+            >
+              Inspire-toi
+            </Text>
+            <View style={styles.discoverGrid}>
+              <View style={styles.discoverRow}>
+                <Animated.View
+                  entering={FadeInUp.delay(100)}
+                  style={styles.discoverItem}
+                >
+                  <TouchableOpacity
+                    style={[
+                      styles.discoverCard,
+                      {
+                        backgroundColor: currentTheme.colors.cardBackground,
+                        borderColor: currentTheme.colors.border,
+                      },
+                    ]}
+                    onPress={() => safeNavigate("/tips")}
+                  >
+                    <Ionicons
+                      name="bulb-outline"
+                      size={SCREEN_WIDTH * 0.08}
+                      color={currentTheme.colors.secondary}
+                    />
+                    <Text
+                      style={[
+                        styles.discoverCardText,
+                        { color: currentTheme.colors.secondary },
+                      ]}
+                    >
+                      Tips & Tricks
+                    </Text>
+                  </TouchableOpacity>
+                </Animated.View>
+                <Animated.View
+                  entering={FadeInUp.delay(200)}
+                  style={styles.discoverItem}
+                >
+                  <TouchableOpacity
+                    style={[
+                      styles.discoverCard,
+                      {
+                        backgroundColor: currentTheme.colors.cardBackground,
+                        borderColor: currentTheme.colors.border,
+                      },
+                    ]}
+                    onPress={() => safeNavigate("/leaderboard")}
+                  >
+                    <Ionicons
+                      name="trophy-outline"
+                      size={SCREEN_WIDTH * 0.08}
+                      color={currentTheme.colors.secondary}
+                    />
+                    <Text
+                      style={[
+                        styles.discoverCardText,
+                        { color: currentTheme.colors.secondary },
+                      ]}
+                    >
+                      Leaderboard
+                    </Text>
+                  </TouchableOpacity>
+                </Animated.View>
+              </View>
+              <Animated.View
+                entering={FadeInUp.delay(300)}
+                style={styles.discoverItemCentered}
               >
-                <Text style={styles.discoverButtonText}>Tips & Tricks</Text>
-              </TouchableOpacity>
-              <TouchableOpacity
-                style={styles.discoverButton}
-                onPress={() => router.push("/leaderboard")}
-              >
-                <Text style={styles.discoverButtonText}>Leaderboard</Text>
-              </TouchableOpacity>
-            </View>
-            <View style={styles.discoverRowCenter}>
-              <TouchableOpacity
-                style={styles.discoverButton}
-                onPress={() => router.push("/new-features")}
-              >
-                <Text style={styles.discoverButtonText}>Nouveautés</Text>
-              </TouchableOpacity>
+                <TouchableOpacity
+                  style={[
+                    styles.discoverCard,
+                    {
+                      backgroundColor: currentTheme.colors.cardBackground,
+                      borderColor: currentTheme.colors.border,
+                    },
+                  ]}
+                  onPress={() => safeNavigate("/new-features")}
+                >
+                  <Ionicons
+                    name="sparkles-outline"
+                    size={SCREEN_WIDTH * 0.08}
+                    color={currentTheme.colors.secondary}
+                  />
+                  <Text
+                    style={[
+                      styles.discoverCardText,
+                      { color: currentTheme.colors.secondary },
+                    ]}
+                  >
+                    Nouveautés
+                  </Text>
+                </TouchableOpacity>
+              </Animated.View>
             </View>
           </View>
         </ScrollView>
@@ -301,121 +525,199 @@ export default function HomeScreen() {
 }
 
 const styles = StyleSheet.create({
-  safeArea: { flex: 1, backgroundColor: "#e3e2e9" },
-  container: { flex: 1 },
-  scrollContent: { paddingBottom: 20 },
+  safeArea: {
+    flex: 1,
+  },
+  container: {
+    flex: 1,
+  },
+  scrollContent: {
+    flexGrow: 1,
+    paddingBottom: SCREEN_HEIGHT * 0.05,
+  },
   heroSection: {
-    height: SCREEN_HEIGHT * 0.5,
-    justifyContent: "center",
+    height: SCREEN_HEIGHT * 0.45,
+    justifyContent: "flex-start",
     alignItems: "center",
     overflow: "hidden",
+    position: "relative",
   },
-  backgroundVideo: { position: "absolute", width: "100%", height: "100%" },
+  backgroundVideo: {
+    position: "absolute",
+    width: "100%",
+    height: "100%",
+  },
   heroOverlay: {
     ...StyleSheet.absoluteFillObject,
-    backgroundColor: "rgba(0,0,0,0.35)",
   },
-  logo: { width: 180, height: 180, position: "absolute", top: -20 },
+  heroContent: {
+    alignItems: "center",
+    paddingHorizontal: SCREEN_WIDTH * 0.05,
+  },
+  logo: {
+    width: SCREEN_WIDTH * 0.4,
+    height: SCREEN_WIDTH * 0.35,
+  },
   heroTitle: {
-    fontSize: 28,
+    fontSize: SCREEN_WIDTH * 0.08,
     fontFamily: "Comfortaa_700Bold",
-    color: "#FFF",
     textAlign: "center",
-    marginTop: 80,
-    marginHorizontal: 20,
+    textShadowColor: "rgba(0, 0, 0, 0.5)",
+    textShadowOffset: { width: 1, height: 1 },
+    textShadowRadius: 4,
   },
   heroSubtitle: {
-    fontSize: 16,
+    fontSize: SCREEN_WIDTH * 0.045,
     fontFamily: "Comfortaa_400Regular",
-    color: "#FFF",
     textAlign: "center",
-    marginBottom: 20,
-    marginHorizontal: 20,
+    marginVertical: SCREEN_HEIGHT * 0.008,
+    textShadowColor: "rgba(0, 0, 0, 0.3)",
+    textShadowOffset: { width: 1, height: 1 },
+    textShadowRadius: 2,
   },
   ctaButton: {
-    backgroundColor: "#ed8f03",
-    paddingVertical: 12,
-    paddingHorizontal: 25,
-    borderRadius: 10,
-    marginTop: 5,
+    flexDirection: "row",
+    alignItems: "center",
+    paddingVertical: SCREEN_WIDTH * 0.03,
+    paddingHorizontal: SCREEN_WIDTH * 0.06,
+    borderRadius: 15,
+    shadowColor: "#000",
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.3,
+    shadowRadius: 5,
+    elevation: 5,
   },
-  ctaText: { fontSize: 18, fontFamily: "Comfortaa_700Bold", color: "#FFF" },
-  section: { paddingTop: 20, paddingBottom: 10 },
-  sectionTitle: {
-    fontSize: 20,
+  ctaText: {
+    fontSize: SCREEN_WIDTH * 0.045,
     fontFamily: "Comfortaa_700Bold",
-    color: "#060606",
-    marginBottom: 15,
+    marginRight: SCREEN_WIDTH * 0.02,
+  },
+  section: {
+    paddingTop: SCREEN_HEIGHT * 0.03,
+    paddingBottom: SCREEN_HEIGHT * 0.02,
+  },
+  sectionTitle: {
+    fontSize: SCREEN_WIDTH * 0.06,
+    fontFamily: "Comfortaa_700Bold",
+    marginBottom: SCREEN_HEIGHT * 0.025,
     textAlign: "center",
+    textShadowColor: "rgba(0, 0, 0, 0.1)",
+    textShadowOffset: { width: 1, height: 1 },
+    textShadowRadius: 2,
+  },
+  carousel: {
+    marginBottom: SCREEN_HEIGHT * 0.025,
   },
   challengeCard: {
-    backgroundColor: "#fff",
-    borderRadius: 15,
+    borderRadius: 20,
     overflow: "hidden",
     marginHorizontal: CARD_MARGIN,
     width: ITEM_WIDTH,
     height: ITEM_HEIGHT,
     shadowColor: "#000",
-    shadowOffset: { width: 0, height: 4 },
-    shadowOpacity: 0.2,
-    shadowRadius: 6,
-    elevation: 5,
+    shadowOffset: { width: 0, height: 6 },
+    shadowOpacity: 0.25,
+    shadowRadius: 8,
+    elevation: 8,
+    borderWidth: 2,
   },
-  challengeImage: { width: "100%", height: "100%", resizeMode: "cover" },
+  challengeImage: {
+    width: "100%",
+    height: "100%",
+    resizeMode: "cover",
+  },
   overlay: {
     position: "absolute",
     bottom: 0,
     width: "100%",
-    padding: 10,
+    padding: SCREEN_WIDTH * 0.03,
+    alignItems: "center",
   },
   challengeTitle: {
-    fontSize: 18,
+    fontSize: SCREEN_WIDTH * 0.045,
     fontFamily: "Comfortaa_700Bold",
-    color: "#FFF",
     textAlign: "center",
-    marginBottom: 2,
+    textShadowColor: "rgba(0, 0, 0, 0.5)",
+    textShadowOffset: { width: 1, height: 1 },
+    textShadowRadius: 3,
   },
   challengeDay: {
-    fontSize: 14,
+    fontSize: SCREEN_WIDTH * 0.04,
     fontFamily: "Comfortaa_400Regular",
-    color: "#a67c52",
-    fontWeight: "600",
     textAlign: "center",
+    marginTop: SCREEN_HEIGHT * 0.005,
+  },
+  challengeCategory: {
+    fontSize: SCREEN_WIDTH * 0.035,
+    fontFamily: "Comfortaa_400Regular",
+    textAlign: "center",
+    marginTop: SCREEN_HEIGHT * 0.005,
+  },
+  pagination: {
+    flexDirection: "row",
+    justifyContent: "center",
+    marginTop: SCREEN_HEIGHT * 0.015,
+  },
+  dot: {
+    width: SCREEN_WIDTH * 0.02,
+    height: SCREEN_WIDTH * 0.02,
+    borderRadius: SCREEN_WIDTH * 0.01,
+    marginHorizontal: SCREEN_WIDTH * 0.01,
+  },
+  noChallengesContainer: {
+    alignItems: "center",
+    marginTop: SCREEN_HEIGHT * 0.015,
   },
   noChallengesText: {
-    color: "#555",
     textAlign: "center",
-    fontSize: 16,
-    marginTop: 10,
+    fontSize: SCREEN_WIDTH * 0.045,
+    fontFamily: "Comfortaa_700Bold",
+    marginTop: SCREEN_HEIGHT * 0.015,
+  },
+  noChallengesSubtext: {
+    textAlign: "center",
+    fontSize: SCREEN_WIDTH * 0.035,
     fontFamily: "Comfortaa_400Regular",
+    marginTop: SCREEN_HEIGHT * 0.01,
   },
   discoverSection: {
-    marginTop: 10,
-    paddingHorizontal: 20,
+    marginTop: SCREEN_HEIGHT * 0.03,
+    paddingHorizontal: SCREEN_WIDTH * 0.05,
     alignItems: "center",
+  },
+  discoverGrid: {
+    width: "100%",
+    marginTop: SCREEN_HEIGHT * 0.025,
   },
   discoverRow: {
     flexDirection: "row",
-    marginTop: 10,
     justifyContent: "space-between",
     width: "100%",
+    marginBottom: SCREEN_HEIGHT * 0.025,
   },
-  discoverRowCenter: {
+  discoverItem: {
+    width: "48%",
+  },
+  discoverItemCentered: {
     width: "100%",
     alignItems: "center",
-    marginTop: 15,
-    marginBottom: 20,
   },
-  discoverButton: {
-    backgroundColor: "#e3701e",
-    borderRadius: 10,
-    paddingVertical: 12,
-    paddingHorizontal: 20,
-    marginHorizontal: 5,
+  discoverCard: {
+    borderRadius: 15,
+    padding: SCREEN_WIDTH * 0.04,
+    alignItems: "center",
+    width: SCREEN_WIDTH * 0.42,
+    shadowColor: "#000",
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.2,
+    shadowRadius: 6,
+    elevation: 5,
+    borderWidth: 1,
   },
-  discoverButtonText: {
-    fontSize: 16,
+  discoverCardText: {
+    fontSize: SCREEN_WIDTH * 0.04,
     fontFamily: "Comfortaa_700Bold",
-    color: "#FFF",
+    marginTop: SCREEN_HEIGHT * 0.015,
+    textAlign: "center",
   },
 });

@@ -22,34 +22,32 @@ import {
 } from "firebase/firestore";
 import { onAuthStateChanged } from "firebase/auth";
 import { db, auth } from "../constants/firebase-config";
-import { StatusBar } from "expo-status-bar";
-import BackButton from "../components/BackButton";
+import { Ionicons } from "@expo/vector-icons";
+import Animated, { FadeInUp } from "react-native-reanimated";
+import { LinearGradient } from "expo-linear-gradient";
+import AsyncStorage from "@react-native-async-storage/async-storage";
+import designSystem from "../theme/designSystem";
+import CustomHeader from "@/components/CustomHeader";
 import ModalExplicatif from "../components/ModalExplicatif";
 import FeatureDetailModal from "../components/FeatureDetailModal";
 import ProposeFeatureModal from "../components/ProposeFeatureModal";
-import { Ionicons } from "@expo/vector-icons";
-import Animated, { FadeInUp } from "react-native-reanimated";
-import designSystem from "../theme/designSystem";
-import AsyncStorage from "@react-native-async-storage/async-storage";
 
 const { lightTheme } = designSystem;
 const currentTheme = lightTheme;
 
-const { width } = Dimensions.get("window");
-const ITEM_WIDTH = Math.round(width * 0.9);
-const ITEM_HEIGHT = 150; // Hauteur fixe de chaque card
-const CARD_MARGIN = 8;
+const { width: SCREEN_WIDTH, height: SCREEN_HEIGHT } = Dimensions.get("window");
 
-//
-// Countdown en blocs
-//
+const normalizeSize = (size) => {
+  const scale = SCREEN_WIDTH / 375;
+  return Math.round(size * scale);
+};
+
 type CountdownValues = {
   days: number;
   hours: number;
   mins: number;
   secs: number;
 };
-
 type Feature = {
   id: string;
   title: string;
@@ -61,7 +59,7 @@ type Feature = {
 
 export default function NewFeatures() {
   const [features, setFeatures] = useState<Feature[]>([]);
-  const [loading, setLoading] = useState<boolean>(true);
+  const [loading, setLoading] = useState(true);
   const [userVote, setUserVote] = useState<string | null>(null);
   const [countdown, setCountdown] = useState<CountdownValues>({
     days: 0,
@@ -70,150 +68,101 @@ export default function NewFeatures() {
     secs: 0,
   });
   const [user, setUser] = useState<any>(null);
-
-  const [showExplanationModal, setShowExplanationModal] =
-    useState<boolean>(false);
+  const [showExplanationModal, setShowExplanationModal] = useState(false);
   const [selectedFeature, setSelectedFeature] = useState<Feature | null>(null);
-  const [showFeatureDetailModal, setShowFeatureDetailModal] =
-    useState<boolean>(false);
-  const [showProposeModal, setShowProposeModal] = useState<boolean>(false);
+  const [showFeatureDetailModal, setShowFeatureDetailModal] = useState(false);
+  const [showProposeModal, setShowProposeModal] = useState(false);
 
-  // Récupération de l'user (doc Firestore) et de son vote
   useEffect(() => {
     const unsubscribeAuth = onAuthStateChanged(auth, async (firebaseUser) => {
       if (firebaseUser) {
         const userDocRef = doc(db, "users", firebaseUser.uid);
         const snapshot = await getDoc(userDocRef);
-        if (snapshot.exists()) {
-          const data = snapshot.data();
-          setUser({ ...data, uid: firebaseUser.uid });
-          setUserVote(data.votedFor || null);
-        } else {
-          setUser(firebaseUser);
-        }
+        setUser(
+          snapshot.exists()
+            ? { ...snapshot.data(), uid: firebaseUser.uid }
+            : firebaseUser
+        );
+        setUserVote(
+          snapshot.exists() ? snapshot.data().votedFor || null : null
+        );
       }
     });
     return unsubscribeAuth;
   }, []);
-  const userId = user?.uid;
 
-  // Modal explicatif affiché une première fois
   useEffect(() => {
     const checkModalShown = async () => {
-      try {
-        const value = await AsyncStorage.getItem("explanationModalShown");
-        if (!value) {
-          setShowExplanationModal(true);
-          await AsyncStorage.setItem("explanationModalShown", "true");
-        }
-      } catch (error) {
-        console.error("Erreur AsyncStorage:", error);
+      const value = await AsyncStorage.getItem("explanationModalShown");
+      if (!value) {
+        setShowExplanationModal(true);
+        await AsyncStorage.setItem("explanationModalShown", "true");
       }
     };
     checkModalShown();
   }, []);
 
-  // Récupération des features
   useEffect(() => {
-    if (!userId) return;
+    if (!user?.uid) return;
     const featuresRef = collection(db, "polls", "new-features", "features");
     const unsubscribe = onSnapshot(featuresRef, (snapshot) => {
       const data = snapshot.docs.map((docSnap) => ({
         id: docSnap.id,
         ...docSnap.data(),
       })) as Feature[];
-      const approvedFeatures = data.filter(
-        (feature) => feature.approved === true
+      setFeatures(
+        data
+          .filter((feature) => feature.approved)
+          .sort((a, b) => b.votes - a.votes)
       );
-      approvedFeatures.sort((a, b) => b.votes - a.votes);
-      setFeatures(approvedFeatures);
       setLoading(false);
     });
+    return unsubscribe;
+  }, [user?.uid]);
 
-    // Récupération du vote
-    const fetchUserVote = async () => {
-      if (userId) {
-        const userDoc = doc(db, "users", userId);
-        const userSnapshot = await getDoc(userDoc);
-        if (userSnapshot.exists()) {
-          setUserVote(userSnapshot.data().votedFor || null);
-        }
-      }
-    };
-    fetchUserVote();
-
-    return () => unsubscribe();
-  }, [userId]);
-
-  // Countdown jusqu'au 30 avril 2025
   useEffect(() => {
     const targetDate = new Date("2025-04-30T23:59:59Z");
     const updateTimer = () => {
-      const now = new Date();
-      const diff = targetDate.getTime() - now.getTime();
-      if (diff <= 0) {
-        setCountdown({ days: 0, hours: 0, mins: 0, secs: 0 });
-        return;
-      }
-      const days = Math.floor(diff / (1000 * 60 * 60 * 24));
-      const hours = Math.floor(
-        (diff % (1000 * 60 * 60 * 24)) / (1000 * 60 * 60)
-      );
-      const mins = Math.floor((diff % (1000 * 60 * 60)) / (1000 * 60));
-      const secs = Math.floor((diff % (1000 * 60)) / 1000);
-      setCountdown({ days, hours, mins, secs });
+      const diff = targetDate.getTime() - Date.now();
+      if (diff <= 0)
+        return setCountdown({ days: 0, hours: 0, mins: 0, secs: 0 });
+      setCountdown({
+        days: Math.floor(diff / (1000 * 60 * 60 * 24)),
+        hours: Math.floor((diff % (1000 * 60 * 60 * 24)) / (1000 * 60 * 60)),
+        mins: Math.floor((diff % (1000 * 60 * 60)) / (1000 * 60)),
+        secs: Math.floor((diff % (1000 * 60)) / 1000),
+      });
     };
     updateTimer();
     const interval = setInterval(updateTimer, 1000);
     return () => clearInterval(interval);
   }, []);
 
-  // Ouverture du modal de détail d'une feature
-  const openFeatureDetail = (feature: Feature) => {
-    setSelectedFeature(feature);
-    setShowFeatureDetailModal(true);
-  };
-
-  // Fonction de vote (vérifie si l'utilisateur a déjà voté)
   const handleVote = async (featureId: string) => {
-    if (!userId) {
-      Alert.alert("Connexion requise", "Veuillez vous connecter pour voter.");
-      return;
-    }
-    if (userVote) {
-      Alert.alert("Vote déjà effectué", "Vous avez déjà voté.");
-      return;
-    }
-    try {
-      const featureRef = doc(
-        db,
-        "polls",
-        "new-features",
-        "features",
-        featureId
+    if (!user?.uid)
+      return Alert.alert(
+        "Connexion requise",
+        "Veuillez vous connecter pour voter."
       );
-      await updateDoc(featureRef, { votes: increment(1) });
-      const userRef = doc(db, "users", userId);
-      await updateDoc(userRef, { votedFor: featureId });
+    if (userVote)
+      return Alert.alert("Vote déjà effectué", "Vous avez déjà voté.");
+    try {
+      await updateDoc(doc(db, "polls", "new-features", "features", featureId), {
+        votes: increment(1),
+      });
+      await updateDoc(doc(db, "users", user.uid), { votedFor: featureId });
       setUserVote(featureId);
       Alert.alert("Vote enregistré", "Merci pour votre vote !");
     } catch (error) {
       console.error("Erreur lors du vote :", error);
-      Alert.alert("Erreur", "Une erreur est survenue lors de votre vote.");
+      Alert.alert("Erreur", "Une erreur est survenue.");
     }
   };
 
-  // Fonction de proposition d'une feature
   const handleProposeFeature = async (title: string, description?: string) => {
-    if (!userId) {
-      Alert.alert(
-        "Connexion requise",
-        "Veuillez vous connecter pour proposer une fonctionnalité."
-      );
-      return;
-    }
+    if (!user?.uid)
+      return Alert.alert("Connexion requise", "Veuillez vous connecter.");
     try {
-      const username = user?.username || "Inconnu";
       const featureRef = await addDoc(
         collection(db, "polls", "new-features", "features"),
         {
@@ -221,110 +170,140 @@ export default function NewFeatures() {
           description: description || "",
           votes: 1,
           approved: false,
-          username: username,
+          username: user?.username || "Inconnu",
         }
       );
-      const userRef = doc(db, "users", userId);
-      await setDoc(userRef, { votedFor: featureRef.id }, { merge: true });
+      await setDoc(
+        doc(db, "users", user.uid),
+        { votedFor: featureRef.id },
+        { merge: true }
+      );
       setUserVote(featureRef.id);
       Alert.alert(
         "Proposition envoyée",
-        "Votre idée a été soumise et votre vote a été automatiquement enregistré. Vous ne pouvez voter qu'une fois."
+        "Votre idée est soumise avec votre vote !"
       );
     } catch (error) {
       console.error("Erreur lors de la proposition :", error);
-      Alert.alert("Erreur", "Impossible d'envoyer votre proposition.");
+      Alert.alert("Erreur", "Impossible d'envoyer.");
     }
   };
 
-  // Countdown en 4 blocs
-  const renderCountdown = () => {
-    const { days, hours, mins, secs } = countdown;
+  const renderCountdown = () => (
+    <LinearGradient
+      colors={["#FFD700", "#FFA500"]}
+      style={styles.countdownContainer}
+      start={{ x: 0, y: 0 }}
+      end={{ x: 1, y: 1 }}
+    >
+      {["days", "hours", "mins", "secs"].map((unit, idx) => (
+        <Animated.View
+          key={idx}
+          entering={FadeInUp.delay(idx * 100)}
+          style={styles.countdownBox}
+        >
+          <Text style={styles.countdownNumber}>{countdown[unit]}</Text>
+          <Text style={styles.countdownLabel}>
+            {unit.charAt(0).toUpperCase() + unit.slice(1)}
+          </Text>
+        </Animated.View>
+      ))}
+    </LinearGradient>
+  );
+
+  const renderFeatureItem = ({ item, index }) => (
+    <Animated.View
+      entering={FadeInUp.delay(index * 100)}
+      style={styles.featureCard}
+    >
+      <TouchableOpacity
+        onPress={() => {
+          setSelectedFeature(item);
+          setShowFeatureDetailModal(true);
+        }}
+      >
+        <LinearGradient
+          colors={["#FFFFFF", "#F0F0F0"]}
+          style={styles.featureGradient}
+        >
+          <Text style={styles.featureTitle}>{item.title}</Text>
+          {item.username && (
+            <Text style={styles.featureUsername}>par {item.username}</Text>
+          )}
+          <Text style={styles.featureVotes}>
+            {item.votes} vote{item.votes !== 1 ? "s" : ""}
+          </Text>
+          {item.description && (
+            <Text style={styles.featureDescription}>
+              {item.description.length > 50
+                ? `${item.description.substring(0, 50)}...`
+                : item.description}
+            </Text>
+          )}
+        </LinearGradient>
+      </TouchableOpacity>
+    </Animated.View>
+  );
+
+  if (loading) {
     return (
-      <View style={styles.countdownRow}>
-        <View style={styles.countdownBox}>
-          <Text style={styles.countdownNumber}>{days}</Text>
-          <Text style={styles.countdownLabel}>Jours</Text>
-        </View>
-        <View style={styles.countdownBox}>
-          <Text style={styles.countdownNumber}>{hours}</Text>
-          <Text style={styles.countdownLabel}>Heures</Text>
-        </View>
-        <View style={styles.countdownBox}>
-          <Text style={styles.countdownNumber}>{mins}</Text>
-          <Text style={styles.countdownLabel}>Mins</Text>
-        </View>
-        <View style={styles.countdownBox}>
-          <Text style={styles.countdownNumber}>{secs}</Text>
-          <Text style={styles.countdownLabel}>Secs</Text>
-        </View>
-      </View>
+      <SafeAreaView style={styles.safeArea}>
+        <LinearGradient
+          colors={[currentTheme.colors.background, "#FFFFFF"]}
+          style={styles.loadingContainer}
+        >
+          <ActivityIndicator size="large" color={currentTheme.colors.primary} />
+          <Text style={styles.loadingText}>Chargement en cours...</Text>
+        </LinearGradient>
+      </SafeAreaView>
     );
-  };
+  }
 
   return (
     <SafeAreaView style={styles.safeArea}>
-      <StatusBar hidden />
-      <BackButton color="#000000" style={styles.backButton} />
-      <TouchableOpacity
-        style={styles.questionIcon}
-        onPress={() => setShowExplanationModal(true)}
+      <LinearGradient
+        colors={[
+          currentTheme.colors.background,
+          `${currentTheme.colors.cardBackground}F0`,
+        ]}
+        style={styles.container}
+        start={{ x: 0, y: 0 }}
+        end={{ x: 1, y: 1 }}
       >
-        <Ionicons
-          name="help-circle-outline"
-          size={28}
-          color={currentTheme.colors.primary}
-        />
-      </TouchableOpacity>
-      {showExplanationModal && (
-        <ModalExplicatif onClose={() => setShowExplanationModal(false)} />
-      )}
-      <View style={styles.mainContainer}>
-        <View style={styles.headerContainer}>
-          <Text style={styles.header}>
-            Votez pour la prochaine fonctionnalité
-          </Text>
-          <Text style={styles.description}>
-            Nous apprécions vos retours ! Choisissez une fonctionnalité que nous
-            prioriserons. La fonctionnalité la plus votée sera implémentée le
-            mois prochain.
-          </Text>
+        <View style={styles.headerWrapper}>
+          <CustomHeader title="Nouveautés" />
         </View>
-        <View style={styles.featuresScrollContainer}>
+        <TouchableOpacity
+          style={styles.helpIcon}
+          onPress={() => setShowExplanationModal(true)}
+        >
+          <Ionicons
+            name="help-circle-outline"
+            size={normalizeSize(30)}
+            color={currentTheme.colors.primary}
+          />
+        </TouchableOpacity>
+        <Text style={styles.description}>
+          Votez pour la prochaine fonctionnalité à implémenter ou proposez la
+          vôtre ! Fin le 30 avril 2025.
+        </Text>
+        <View style={styles.featuresWindow}>
           <FlatList
             data={features}
+            renderItem={renderFeatureItem}
             keyExtractor={(item) => item.id}
-            showsVerticalScrollIndicator={false}
-            contentContainerStyle={{ paddingBottom: 0 }}
-            renderItem={({ item }) => (
-              <TouchableOpacity
-                onPress={() => openFeatureDetail(item)}
-                activeOpacity={0.85}
-              >
-                <Animated.View entering={FadeInUp} style={styles.featureCard}>
-                  <Text style={styles.featureTitle}>{item.title}</Text>
-                  {item.username && (
-                    <Text style={styles.featureUsername}>
-                      par {item.username}
-                    </Text>
-                  )}
-                  <Text style={styles.featureVotes}>
-                    {item.votes} vote{item.votes !== 1 ? "s" : ""}
-                  </Text>
-                  {item.description && (
-                    <Text style={styles.featureDescription}>
-                      {item.description.length > 60
-                        ? item.description.substring(0, 60) + "..."
-                        : item.description}
-                    </Text>
-                  )}
-                </Animated.View>
-              </TouchableOpacity>
-            )}
+            contentContainerStyle={styles.featuresContent}
+            showsVerticalScrollIndicator={true}
           />
         </View>
         <View style={styles.bottomContainer}>
-          {!userVote && (
+          {renderCountdown()}
+          {userVote ? (
+            <Text style={styles.thankYouText}>
+              Merci pour votre vote :{" "}
+              {features.find((f) => f.id === userVote)?.title || "???"}
+            </Text>
+          ) : (
             <TouchableOpacity
               style={styles.proposeButton}
               onPress={() => setShowProposeModal(true)}
@@ -332,174 +311,154 @@ export default function NewFeatures() {
               <Text style={styles.proposeButtonText}>Proposer une idée</Text>
             </TouchableOpacity>
           )}
-          {userVote && (
-            <Text style={styles.thankYouText}>
-              Merci pour votre vote !{" "}
-              {features.find((f) => f.id === userVote)?.title &&
-                `Vous avez voté pour : ${
-                  features.find((f) => f.id === userVote)?.title
-                }`}
-            </Text>
-          )}
-          <Text style={styles.countdownTitle}>Temps restant :</Text>
-          {renderCountdown()}
         </View>
-      </View>
-      {showFeatureDetailModal && selectedFeature && (
-        <FeatureDetailModal
-          visible={showFeatureDetailModal}
-          feature={selectedFeature}
-          userVoted={!!userVote}
-          onVote={handleVote}
-          onClose={() => {
-            setShowFeatureDetailModal(false);
-            setSelectedFeature(null);
-          }}
-        />
-      )}
-      {showProposeModal && (
-        <ProposeFeatureModal
-          visible={showProposeModal}
-          onClose={() => setShowProposeModal(false)}
-          onSubmit={handleProposeFeature}
-        />
-      )}
+        {showExplanationModal && (
+          <ModalExplicatif onClose={() => setShowExplanationModal(false)} />
+        )}
+        {showFeatureDetailModal && selectedFeature && (
+          <FeatureDetailModal
+            visible={showFeatureDetailModal}
+            feature={selectedFeature}
+            userVoted={!!userVote}
+            onVote={handleVote}
+            onClose={() => {
+              setShowFeatureDetailModal(false);
+              setSelectedFeature(null);
+            }}
+          />
+        )}
+        {showProposeModal && (
+          <ProposeFeatureModal
+            visible={showProposeModal}
+            onClose={() => setShowProposeModal(false)}
+            onSubmit={handleProposeFeature}
+          />
+        )}
+      </LinearGradient>
     </SafeAreaView>
   );
 }
 
 const styles = StyleSheet.create({
-  safeArea: { flex: 1, backgroundColor: currentTheme.colors.background },
-  backButton: { position: "absolute", top: 40, left: 20, zIndex: 20 },
-  questionIcon: { position: "absolute", top: 40, right: 20, zIndex: 20 },
-  mainContainer: { flex: 1, paddingHorizontal: 16, paddingVertical: 8 },
-  headerContainer: {
-    alignItems: "center",
-    marginBottom: 10,
-    marginTop: 30, // Réduit pour remonter le contenu
+  safeArea: { flex: 1 },
+  container: { flex: 1, paddingHorizontal: normalizeSize(15) },
+  headerWrapper: {
+    marginTop: SCREEN_HEIGHT * 0.01,
+    marginBottom: SCREEN_HEIGHT * 0.02,
+    paddingHorizontal: SCREEN_WIDTH * 0.05,
   },
-  header: {
-    fontSize: 24,
-    fontFamily: currentTheme.typography.title.fontFamily,
-    textAlign: "center",
-    marginTop: 30, // Réduit
-    marginBottom: 2,
-    color: "#000000",
+  helpIcon: {
+    position: "absolute",
+    top: normalizeSize(20),
+    right: normalizeSize(20),
+    zIndex: 10,
   },
   description: {
-    fontSize: 14,
+    fontSize: normalizeSize(14),
     fontFamily: currentTheme.typography.body.fontFamily,
-    textAlign: "center",
-    marginBottom: 4, // Réduit pour éviter le coupé
     color: currentTheme.colors.textSecondary,
-    paddingHorizontal: 5,
+    textAlign: "center",
+    marginVertical: normalizeSize(15),
+    paddingHorizontal: normalizeSize(10),
   },
-  featuresScrollContainer: {
-    flex: 1,
-    width: "100%",
-    maxHeight: 320, // Légèrement réduit pour laisser de la place au compte à rebours
-    marginTop: 2,
-    marginBottom: 20,
+  featuresWindow: {
+    flex: 0.85, // Prend tout l'espace disponible
+    marginVertical: normalizeSize(10),
+    borderRadius: normalizeSize(15),
+    backgroundColor: `${currentTheme.colors.cardBackground}80`,
+    overflow: "hidden",
+  },
+  featuresContent: {
+    paddingVertical: normalizeSize(10),
+    paddingHorizontal: normalizeSize(5),
   },
   featureCard: {
-    width: ITEM_WIDTH,
-    height: ITEM_HEIGHT,
-    backgroundColor: currentTheme.colors.cardBackground,
-    borderRadius: 15,
-    paddingVertical: 12,
-    paddingHorizontal: 12,
-    marginVertical: 4,
-    justifyContent: "center",
-    alignItems: "center",
-    borderWidth: 1,
-    borderColor: currentTheme.colors.primary,
+    marginVertical: normalizeSize(8),
+    borderRadius: normalizeSize(20),
+    overflow: "hidden",
     shadowColor: "#000",
-    shadowOffset: { width: 0, height: 3 },
+    shadowOffset: { width: 0, height: normalizeSize(4) },
     shadowOpacity: 0.2,
-    shadowRadius: 5,
-    elevation: 4,
+    shadowRadius: normalizeSize(6),
+    elevation: 5,
+  },
+  featureGradient: {
+    padding: normalizeSize(15),
+    borderRadius: normalizeSize(20),
   },
   featureTitle: {
-    fontSize: 16,
+    fontSize: normalizeSize(16),
     fontFamily: currentTheme.typography.title.fontFamily,
-    marginBottom: 2,
-    textAlign: "center",
     color: "#000000",
+    textAlign: "center",
+    marginBottom: normalizeSize(5),
   },
   featureUsername: {
-    fontSize: 11,
+    fontSize: normalizeSize(12),
     fontFamily: currentTheme.typography.body.fontFamily,
-    marginBottom: 2,
-    textAlign: "center",
     color: currentTheme.colors.textSecondary,
+    textAlign: "center",
+    marginBottom: normalizeSize(5),
   },
   featureVotes: {
-    fontSize: 14,
+    fontSize: normalizeSize(14),
     fontFamily: currentTheme.typography.title.fontFamily,
-    marginBottom: 2,
-    textAlign: "center",
     color: currentTheme.colors.primary,
+    textAlign: "center",
+    marginBottom: normalizeSize(5),
   },
   featureDescription: {
-    fontSize: 12,
+    fontSize: normalizeSize(12),
     fontFamily: currentTheme.typography.body.fontFamily,
-    textAlign: "center",
     color: currentTheme.colors.textSecondary,
-    marginBottom: 0,
+    textAlign: "center",
   },
   bottomContainer: {
-    marginTop: 4,
     alignItems: "center",
+    paddingVertical: normalizeSize(20),
+    paddingHorizontal: normalizeSize(15),
+  },
+  countdownContainer: {
+    flexDirection: "row",
+    justifyContent: "space-between",
+    width: SCREEN_WIDTH * 0.9,
+    padding: normalizeSize(10),
+    borderRadius: normalizeSize(15),
+    marginBottom: normalizeSize(15),
+  },
+  countdownBox: { alignItems: "center", width: "22%" },
+  countdownNumber: {
+    fontSize: normalizeSize(20),
+    fontFamily: currentTheme.typography.title.fontFamily,
+    color: "#FFFFFF",
+  },
+  countdownLabel: {
+    fontSize: normalizeSize(10),
+    fontFamily: currentTheme.typography.body.fontFamily,
+    color: "#FFFFFF",
   },
   proposeButton: {
     backgroundColor: currentTheme.colors.primary,
-    paddingVertical: 10,
-    paddingHorizontal: 20,
-    borderRadius: 25,
-    marginVertical: 4,
-    marginBottom: 20,
+    paddingVertical: normalizeSize(12),
+    paddingHorizontal: normalizeSize(25),
+    borderRadius: normalizeSize(25),
   },
   proposeButtonText: {
-    fontSize: 14,
+    fontSize: normalizeSize(14),
     fontFamily: currentTheme.typography.title.fontFamily,
-    color: currentTheme.colors.textPrimary,
+    color: "#FFFFFF",
   },
   thankYouText: {
-    fontSize: 14,
+    fontSize: normalizeSize(14),
     fontFamily: currentTheme.typography.body.fontFamily,
     color: currentTheme.colors.textSecondary,
-    marginTop: 4,
     textAlign: "center",
   },
-  countdownTitle: {
-    fontSize: 14,
-    fontFamily: currentTheme.typography.title.fontFamily,
-    color: currentTheme.colors.textSecondary,
-    marginTop: 10,
-    marginBottom: 6,
-  },
-  countdownRow: {
-    flexDirection: "row",
-    justifyContent: "space-evenly",
-    width: "100%",
-  },
-  countdownBox: {
-    width: 70,
-    height: 70,
-    backgroundColor: currentTheme.colors.primary,
-    borderRadius: 8,
-    alignItems: "center",
-    justifyContent: "center",
-    marginHorizontal: 2,
-  },
-  countdownNumber: {
-    fontSize: 16,
-    fontFamily: currentTheme.typography.title.fontFamily,
-    color: "#333",
-  },
-  countdownLabel: {
-    fontSize: 10,
+  loadingContainer: { flex: 1, justifyContent: "center", alignItems: "center" },
+  loadingText: {
+    marginTop: normalizeSize(10),
+    fontSize: normalizeSize(16),
     fontFamily: currentTheme.typography.body.fontFamily,
-    color: "#333",
+    color: currentTheme.colors.textSecondary,
   },
 });

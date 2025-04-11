@@ -45,7 +45,7 @@ export async function checkForAchievements(userId: string): Promise<string[]> {
         userData.bio &&
         userData.location &&
         userData.profileImage &&
-        userData.interests?.length > 0 &&
+        userData.interet?.length > 0 &&
         !achieved.has("profile_completed") &&
         !pending.has("profile_completed")
       ) {

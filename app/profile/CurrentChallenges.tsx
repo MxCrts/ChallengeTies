@@ -9,6 +9,7 @@ import {
   Image,
   Alert,
   Dimensions,
+  SafeAreaView,
 } from "react-native";
 import { LinearGradient } from "expo-linear-gradient";
 import { useCurrentChallenges } from "../../context/CurrentChallengesContext";
@@ -17,19 +18,17 @@ import { useRouter } from "expo-router";
 import { Ionicons } from "@expo/vector-icons";
 import ConfettiCannon from "react-native-confetti-cannon";
 import * as Progress from "react-native-progress";
-import Animated, { FadeInUp } from "react-native-reanimated";
-import BackButton from "../../components/BackButton";
+import Animated, { FadeInUp, FadeOutRight } from "react-native-reanimated";
+import { doc, updateDoc, increment } from "firebase/firestore";
+import { db, auth } from "../../constants/firebase-config";
 import designSystem from "../../theme/designSystem";
+import CustomHeader from "@/components/CustomHeader";
 
-// Dimensions et constantes de style
-const { width: SCREEN_WIDTH } = Dimensions.get("window");
-const ITEM_WIDTH = Math.round(SCREEN_WIDTH * 0.8);
-const ITEM_HEIGHT = 260;
-const CARD_MARGIN = 5;
-const EFFECTIVE_ITEM_WIDTH = ITEM_WIDTH + CARD_MARGIN * 2;
-const LIGHT_GREEN = "#6EE7B7"; // Vert clair pour la barre de progression
+const { width: SCREEN_WIDTH, height: SCREEN_HEIGHT } = Dimensions.get("window");
+const ITEM_WIDTH = SCREEN_WIDTH * 0.9;
+const ITEM_HEIGHT = SCREEN_WIDTH * 0.45;
+const CARD_MARGIN = SCREEN_WIDTH * 0.02;
 
-// Palette personnalisée harmonisée (inspirée du designSystem)
 const currentTheme = {
   ...designSystem.lightTheme,
   colors: {
@@ -38,6 +37,11 @@ const currentTheme = {
     cardBackground: "#FFFFFF",
     trophy: "#FACC15",
   },
+};
+
+const normalizeSize = (size) => {
+  const scale = SCREEN_WIDTH / 375;
+  return Math.round(size * scale);
 };
 
 interface Challenge {
@@ -54,43 +58,106 @@ interface Challenge {
 
 export default function CurrentChallenges() {
   const router = useRouter();
-  const { currentChallenges, markToday, removeChallenge } =
+  const { currentChallenges, markToday, removeChallenge, isMarkedToday } =
     useCurrentChallenges();
-  const [isLoading, setIsLoading] = useState(false);
+  const [isLoading, setIsLoading] = useState(true);
   const [confettiActive, setConfettiActive] = useState(false);
+  const [localChallenges, setLocalChallenges] = useState<Challenge[]>([]);
   const confettiRef = useRef<ConfettiCannon | null>(null);
+  const swipeableRefs = useRef<(Swipeable | null)[]>([]);
 
   useEffect(() => {
-    setIsLoading(currentChallenges.length === 0);
+    const timer = setTimeout(() => {
+      setIsLoading(false);
+    }, 500);
+    return () => clearTimeout(timer);
+  }, []);
+
+  useEffect(() => {
+    setLocalChallenges(
+      Array.from(
+        new Map(
+          currentChallenges.map((item: Challenge) => [
+            `${item.id}_${item.selectedDays}`,
+            item,
+          ])
+        ).values()
+      )
+    );
   }, [currentChallenges]);
 
   const handleMarkToday = async (id: string, selectedDays: number) => {
     try {
-      await markToday(id, selectedDays);
-      setConfettiActive(true);
-      // L'état se met à jour directement (bouton passe en "Déjà marqué" et progression actualisée)
+      const result = await markToday(id, selectedDays);
+      if (result.success) {
+        setConfettiActive(true); // Confettis seulement si le marquage réussit
+      } else if (result.missedDays && result.missedDays >= 2) {
+        // Modal est déjà déclenché par markToday, pas besoin d'action ici
+      }
     } catch (err) {
       console.error("Erreur lors du marquage :", err);
       Alert.alert("Erreur", "Impossible de marquer aujourd'hui.");
     }
   };
 
-  const handleRemoveChallenge = (id: string, selectedDays: number) => {
+  const handleRemoveChallenge = (
+    id: string,
+    selectedDays: number,
+    index: number
+  ) => {
     Alert.alert(
-      "Supprimer le défi",
-      "Es-tu sûr de vouloir supprimer ce défi ?",
+      "Abandonner le défi",
+      "Vous êtes sûr ? Vous perdrez toute votre progression.",
       [
-        { text: "Annuler", style: "cancel" },
         {
-          text: "Supprimer",
+          text: "Annuler",
+          style: "cancel",
+          onPress: () => {
+            const swipeable = swipeableRefs.current[index];
+            if (swipeable) {
+              swipeable.close();
+            }
+          },
+        },
+        {
+          text: "Continuer",
           style: "destructive",
           onPress: async () => {
             try {
-              await removeChallenge(id, selectedDays);
-              Alert.alert("Supprimé", "Défi supprimé avec succès.");
+              setLocalChallenges((prev) =>
+                prev.filter(
+                  (challenge) =>
+                    !(
+                      challenge.id === id &&
+                      challenge.selectedDays === selectedDays
+                    )
+                )
+              );
+              setTimeout(async () => {
+                await removeChallenge(id, selectedDays);
+                const challengeRef = doc(db, "challenges", id);
+                await updateDoc(challengeRef, {
+                  participantsCount: increment(-1),
+                });
+                Alert.alert("Abandonné", "Vous avez abandonné le défi.");
+              }, 300);
             } catch (err) {
               console.error("Erreur lors de la suppression :", err);
-              Alert.alert("Erreur", "Impossible de supprimer ce défi.");
+              Alert.alert("Erreur", "Impossible d'abandonner ce défi.");
+              const swipeable = swipeableRefs.current[index];
+              if (swipeable) {
+                swipeable.close();
+              }
+              setLocalChallenges(
+                Array.from(
+                  new Map(
+                    currentChallenges.map((item: Challenge) => [
+                      `${item.id}_${item.selectedDays}`,
+                      item,
+                    ])
+                  ).values()
+                )
+              );
             }
           },
         },
@@ -110,210 +177,329 @@ export default function CurrentChallenges() {
     router.push(route as unknown as `/challenge-details/${string}`);
   };
 
-  // Déduplication des défis basée sur l'ID et selectedDays
-  const deduplicatedChallenges: Challenge[] = Array.from(
-    new Map(
-      currentChallenges.map((item: Challenge) => [
-        `${item.id}_${item.selectedDays}`,
-        item,
-      ])
-    ).values()
-  );
-
-  const renderChallengeItem = ({ item }: { item: Challenge }) => {
-    const isMarkedToday = item.lastMarkedDate === new Date().toDateString();
+  const renderChallengeItem = ({
+    item,
+    index,
+  }: {
+    item: Challenge;
+    index: number;
+  }) => {
+    const markedToday = isMarkedToday(item.id, item.selectedDays);
     const progress = item.completedDays / item.selectedDays;
+
     return (
-      <Swipeable
-        renderRightActions={() => (
-          <View style={styles.swipeActionsContainer}>
-            <TouchableOpacity
-              style={styles.trashButton}
-              onPress={() => handleRemoveChallenge(item.id, item.selectedDays)}
-            >
-              <Ionicons name="trash-outline" size={24} color="#fff" />
-            </TouchableOpacity>
-          </View>
-        )}
-        overshootRight={false}
+      <Animated.View
+        entering={FadeInUp.delay(index * 100)}
+        exiting={FadeOutRight.duration(300)}
+        style={styles.cardWrapper}
       >
-        <TouchableOpacity
-          style={styles.cardContainer}
-          onPress={() => navigateToChallengeDetails(item)}
-          activeOpacity={0.9}
-        >
-          <View style={styles.card}>
-            <Image source={{ uri: item.imageUrl }} style={styles.cardImage} />
-            <View style={styles.cardContent}>
-              <Text style={styles.challengeTitle} numberOfLines={1}>
-                {item.title}
-              </Text>
-              {item.day !== undefined && (
-                <Text style={styles.challengeDay}>Jour {item.day}</Text>
-              )}
-              <View style={styles.progressContainer}>
-                <Progress.Bar
-                  progress={progress}
-                  width={null}
-                  height={10}
-                  borderRadius={5}
-                  color={"#C2410C"}
-                  unfilledColor={currentTheme.colors.background}
-                  style={styles.progressBar}
-                />
-                <Text style={styles.progressText}>
-                  {item.completedDays}/{item.selectedDays} jours
-                </Text>
-              </View>
-              <TouchableOpacity
-                style={[
-                  styles.markTodayButton,
-                  isMarkedToday && styles.disabledMarkButton,
-                ]}
-                onPress={() => handleMarkToday(item.id, item.selectedDays)}
-                disabled={isMarkedToday}
+        <Swipeable
+          ref={(ref) => (swipeableRefs.current[index] = ref)}
+          renderRightActions={() => (
+            <View style={styles.swipeActionsContainer}>
+              <LinearGradient
+                colors={["#EF4444", "#B91C1C"]}
+                style={styles.trashButton}
+                start={{ x: 0, y: 0 }}
+                end={{ x: 1, y: 1 }}
               >
-                <Text style={styles.markTodayText}>
-                  {isMarkedToday ? "Déjà marqué" : "Marquer Aujourd'hui"}
-                </Text>
-              </TouchableOpacity>
+                <Ionicons
+                  name="trash-outline"
+                  size={normalizeSize(28)}
+                  color="#FFFFFF"
+                />
+              </LinearGradient>
             </View>
-          </View>
-        </TouchableOpacity>
-      </Swipeable>
+          )}
+          overshootRight={false}
+          onSwipeableOpen={() =>
+            handleRemoveChallenge(item.id, item.selectedDays, index)
+          }
+        >
+          <TouchableOpacity
+            style={styles.cardContainer}
+            onPress={() => navigateToChallengeDetails(item)}
+            activeOpacity={0.9}
+          >
+            <LinearGradient
+              colors={["#FFFFFF", "#FFE0B2"]}
+              style={styles.card}
+              start={{ x: 0, y: 0 }}
+              end={{ x: 1, y: 1 }}
+            >
+              <Image
+                source={{
+                  uri: item.imageUrl || "https://via.placeholder.com/70",
+                }}
+                style={styles.cardImage}
+              />
+              <View style={styles.cardContent}>
+                <Text style={styles.challengeTitle} numberOfLines={1}>
+                  {item.title}
+                </Text>
+                {item.day !== undefined && (
+                  <Text style={styles.challengeDay}>Jour {item.day}</Text>
+                )}
+                <View style={styles.progressContainer}>
+                  <Progress.Bar
+                    progress={progress}
+                    width={null}
+                    height={normalizeSize(8)}
+                    borderRadius={normalizeSize(4)}
+                    color="#FF6200"
+                    unfilledColor="#E0E0E0"
+                    borderWidth={0}
+                    style={styles.progressBar}
+                  />
+                  <Text style={styles.progressText}>
+                    {item.completedDays}/{item.selectedDays} jours
+                  </Text>
+                </View>
+                <TouchableOpacity
+                  style={[
+                    styles.markTodayButton,
+                    markedToday && styles.disabledMarkButton,
+                  ]}
+                  onPress={() => handleMarkToday(item.id, item.selectedDays)}
+                  disabled={markedToday}
+                >
+                  <LinearGradient
+                    colors={
+                      markedToday
+                        ? ["#D3D3D3", "#A3A3A3"]
+                        : ["#FF6200", "#FF8C00"]
+                    }
+                    style={styles.markTodayGradient}
+                    start={{ x: 0, y: 0 }}
+                    end={{ x: 1, y: 1 }}
+                  >
+                    <Text style={styles.markTodayText}>
+                      {markedToday ? "Déjà marqué" : "Marquer Aujourd'hui"}
+                    </Text>
+                  </LinearGradient>
+                </TouchableOpacity>
+              </View>
+            </LinearGradient>
+          </TouchableOpacity>
+        </Swipeable>
+      </Animated.View>
     );
   };
 
   if (isLoading) {
     return (
-      <View style={styles.loadingContainer}>
-        <ActivityIndicator size="large" color={currentTheme.colors.primary} />
-      </View>
+      <SafeAreaView style={styles.safeArea}>
+        <LinearGradient
+          colors={[
+            currentTheme.colors.background,
+            currentTheme.colors.cardBackground,
+          ]}
+          style={styles.loadingContainer}
+        >
+          <ActivityIndicator size="large" color="#FF6200" />
+          <Text style={styles.loadingText}>Chargement en cours...</Text>
+        </LinearGradient>
+      </SafeAreaView>
+    );
+  }
+
+  if (localChallenges.length === 0) {
+    return (
+      <SafeAreaView style={styles.safeArea}>
+        <LinearGradient
+          colors={[
+            currentTheme.colors.background,
+            currentTheme.colors.cardBackground,
+          ]}
+          style={styles.noChallengesContainer}
+        >
+          <Animated.View
+            entering={FadeInUp.delay(100)}
+            style={styles.noChallengesContent}
+          >
+            <Ionicons
+              name="hourglass-outline"
+              size={normalizeSize(60)}
+              color="#B0BEC5"
+            />
+            <Text style={styles.noChallengesText}>Aucun défi en cours !</Text>
+            <Text style={styles.noChallengesSubtext}>
+              Commencez un défi pour le voir ici.
+            </Text>
+          </Animated.View>
+        </LinearGradient>
+      </SafeAreaView>
     );
   }
 
   return (
-    <View style={styles.container}>
-      <BackButton color={currentTheme.colors.primary} />
-      <Text style={styles.title}>Défis en cours</Text>
-      {deduplicatedChallenges.length > 0 ? (
+    <SafeAreaView style={styles.safeArea}>
+      <LinearGradient
+        colors={[
+          currentTheme.colors.background,
+          currentTheme.colors.cardBackground,
+        ]}
+        style={styles.container}
+        start={{ x: 0, y: 0 }}
+        end={{ x: 1, y: 1 }}
+      >
+        <View style={styles.headerWrapper}>
+          <CustomHeader title="Défis en cours" />
+        </View>
         <FlatList
-          data={deduplicatedChallenges}
+          data={localChallenges}
           renderItem={renderChallengeItem}
           keyExtractor={(item) => `current-${item.id}_${item.selectedDays}`}
           contentContainerStyle={styles.listContent}
+          showsVerticalScrollIndicator={false}
         />
-      ) : (
-        <Text style={styles.noChallenges}>Aucun défi en cours.</Text>
-      )}
-      {/* Optionnel : Confetti peut être activé via confettiActive */}
-    </View>
+        {confettiActive && (
+          <ConfettiCannon
+            count={100}
+            origin={{ x: -10, y: 0 }}
+            autoStart
+            fadeOut
+            ref={confettiRef}
+            onAnimationEnd={() => setConfettiActive(false)}
+          />
+        )}
+      </LinearGradient>
+    </SafeAreaView>
   );
 }
 
 const styles = StyleSheet.create({
-  container: {
-    flex: 1,
-    paddingTop: 20,
-    backgroundColor: currentTheme.colors.background,
-  },
-  title: {
-    fontSize: 25,
-    fontFamily: currentTheme.typography.title.fontFamily,
-    color: "#000000",
-    marginVertical: 20,
-    textAlign: "center",
-    marginBottom: 30,
+  safeArea: { flex: 1 },
+  container: { flex: 1 },
+  headerWrapper: {
+    marginTop: SCREEN_HEIGHT * 0.01,
+    marginBottom: SCREEN_HEIGHT * 0.02,
+    paddingHorizontal: SCREEN_WIDTH * 0.05,
   },
   listContent: {
-    paddingBottom: 40,
+    paddingHorizontal: SCREEN_WIDTH * 0.05,
+    paddingBottom: SCREEN_HEIGHT * 0.1,
   },
-  noChallenges: {
-    fontSize: 16,
+  noChallengesContainer: {
+    flex: 1,
+    justifyContent: "center",
+    alignItems: "center",
+  },
+  noChallengesContent: {
+    alignItems: "center",
+  },
+  noChallengesText: {
+    fontSize: normalizeSize(20),
+    fontFamily: currentTheme.typography.title.fontFamily,
+    color: "#333333",
+    marginTop: normalizeSize(15),
     textAlign: "center",
-    color: "#9CA3AF",
-    marginTop: 20,
+  },
+  noChallengesSubtext: {
+    fontSize: normalizeSize(16),
+    fontFamily: currentTheme.typography.body.fontFamily,
+    color: "#777777",
+    textAlign: "center",
+    marginTop: normalizeSize(10),
+    maxWidth: SCREEN_WIDTH * 0.65,
+  },
+  cardWrapper: {
+    marginBottom: CARD_MARGIN,
+    shadowColor: "#000",
+    shadowOffset: { width: 0, height: normalizeSize(6) },
+    shadowOpacity: 0.3,
+    shadowRadius: normalizeSize(8),
+    elevation: 8,
   },
   cardContainer: {
-    borderRadius: 18,
-    marginBottom: 5,
+    width: ITEM_WIDTH,
+    borderRadius: normalizeSize(20),
     overflow: "hidden",
-    borderWidth: 2,
-    borderColor: currentTheme.colors.primary,
-    margin: 10,
+    alignSelf: "center",
   },
   card: {
-    backgroundColor: currentTheme.colors.cardBackground,
-    borderRadius: 18,
     flexDirection: "row",
-    padding: 14,
-    elevation: 3,
+    padding: normalizeSize(15),
+    borderRadius: normalizeSize(20),
+    borderWidth: 1,
+    borderColor: "#FF620030",
+    minHeight: ITEM_HEIGHT,
   },
   cardImage: {
-    width: 70,
-    height: 70,
-    borderRadius: 14,
-    marginRight: 14,
+    width: normalizeSize(70),
+    height: normalizeSize(70),
+    borderRadius: normalizeSize(14),
+    marginRight: normalizeSize(15),
+    borderWidth: 2,
+    borderColor: "#FFFFFF",
   },
   cardContent: {
     flex: 1,
   },
   challengeTitle: {
-    fontSize: 18,
-    color: "#000000",
+    fontSize: normalizeSize(18),
+    color: "#333333",
     fontFamily: currentTheme.typography.title.fontFamily,
   },
   challengeDay: {
-    fontSize: 14,
-    color: "#000000",
-    fontFamily: currentTheme.typography.title.fontFamily,
-    textAlign: "center",
+    fontSize: normalizeSize(14),
+    color: "#777777",
+    fontFamily: currentTheme.typography.body.fontFamily,
+    marginTop: normalizeSize(2),
   },
   progressContainer: {
-    marginVertical: 8,
+    marginVertical: normalizeSize(10),
   },
   progressBar: {
-    marginLeft: 20, // Décalage pour ne pas couper l'image
+    flex: 1,
   },
   progressText: {
-    color: "#000000",
-    fontSize: 12,
-    marginTop: 4,
-    fontFamily: currentTheme.typography.title.fontFamily,
+    fontSize: normalizeSize(12),
+    color: "#FF6200",
+    marginTop: normalizeSize(5),
+    fontFamily: currentTheme.typography.body.fontFamily,
   },
   markTodayButton: {
-    backgroundColor: currentTheme.colors.primary,
-    padding: 10,
-    borderRadius: 10,
-    marginTop: 8,
+    borderRadius: normalizeSize(12),
+    overflow: "hidden",
+    marginTop: normalizeSize(10),
+  },
+  disabledMarkButton: {},
+  markTodayGradient: {
+    paddingVertical: normalizeSize(10),
+    paddingHorizontal: normalizeSize(15),
     alignItems: "center",
   },
-  disabledMarkButton: {
-    backgroundColor: "#D3D3D3", // Orange clair pour état désactivé
-  },
   markTodayText: {
-    color: "#000000",
+    color: "#FFFFFF",
     fontFamily: currentTheme.typography.title.fontFamily,
-    fontSize: 15,
+    fontSize: normalizeSize(14),
+    textShadowColor: "#000",
+    textShadowOffset: { width: 0, height: 1 },
+    textShadowRadius: 2,
   },
   loadingContainer: {
     flex: 1,
     justifyContent: "center",
     alignItems: "center",
-    backgroundColor: currentTheme.colors.background,
+  },
+  loadingText: {
+    marginTop: normalizeSize(10),
+    fontSize: normalizeSize(16),
+    fontFamily: currentTheme.typography.body.fontFamily,
+    color: currentTheme.colors.textSecondary,
   },
   swipeActionsContainer: {
+    width: SCREEN_WIDTH * 0.18,
     justifyContent: "center",
     alignItems: "center",
-    backgroundColor: "#EF4444",
-    width: 70,
-    borderRadius: 18,
-    marginBottom: 15,
+    marginBottom: CARD_MARGIN,
   },
   trashButton: {
+    width: "100%",
+    height: "100%",
     justifyContent: "center",
     alignItems: "center",
-    height: "100%",
-    width: "100%",
+    borderRadius: normalizeSize(20),
   },
 });

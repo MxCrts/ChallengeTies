@@ -1,11 +1,118 @@
+import React, { useState, useEffect } from "react";
 import { Tabs } from "expo-router";
 import { Ionicons } from "@expo/vector-icons";
-import { View } from "react-native";
+import { View, StyleSheet, Dimensions } from "react-native";
 import { TrophyProvider } from "../../context/TrophyContext";
-import { useEffect, useState } from "react";
 import { auth, db } from "../../constants/firebase-config";
 import { doc, getDoc } from "firebase/firestore";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
+import Animated, {
+  useSharedValue,
+  useAnimatedStyle,
+  withSpring,
+  withTiming,
+  Easing,
+} from "react-native-reanimated";
+import { LinearGradient } from "expo-linear-gradient";
+
+const { width: SCREEN_WIDTH } = Dimensions.get("window");
+
+const normalizeSize = (size: number) => {
+  const scale = SCREEN_WIDTH / 375;
+  return Math.round(size * scale);
+};
+
+// Interface pour typer les noms d’icônes
+type IconName = "home" | "person" | "flame" | "compass" | "settings";
+
+// Composant animé pour chaque icône
+const AnimatedTabIcon = ({
+  name,
+  focused,
+  color,
+  size,
+}: {
+  name: IconName;
+  focused: boolean;
+  color: string;
+  size: number;
+}) => {
+  const rotation = useSharedValue(0);
+  const scale = useSharedValue(1);
+
+  useEffect(() => {
+    if (focused) {
+      scale.value = withSpring(1.2, { damping: 10, stiffness: 100 });
+      if (name === "compass") {
+        rotation.value = withTiming(360, {
+          duration: 1000,
+          easing: Easing.inOut(Easing.ease),
+        });
+      } else if (name === "settings") {
+        rotation.value = withTiming(90, {
+          duration: 500,
+          easing: Easing.out(Easing.ease),
+        });
+      } else {
+        rotation.value = 0;
+      }
+    } else {
+      scale.value = withSpring(1, { damping: 15, stiffness: 150 });
+      rotation.value = 0;
+    }
+  }, [focused, name]);
+
+  const rotateStyle = useAnimatedStyle(() => ({
+    transform: [{ rotate: `${rotation.value}deg` }],
+  }));
+
+  const scaleStyle = useAnimatedStyle(() => ({
+    transform: [{ scale: scale.value }],
+  }));
+
+  return (
+    <Animated.View style={[scaleStyle]}>
+      <Animated.View style={[rotateStyle]}>
+        <Ionicons
+          name={focused ? name : `${name}-outline`}
+          size={size}
+          color={color}
+        />
+      </Animated.View>
+    </Animated.View>
+  );
+};
+
+// Composant spécial pour l’icône "focus" (flamme centrale)
+const FocusTabIcon = ({ focused }: { focused: boolean }) => {
+  const scale = useSharedValue(1);
+  const flameOpacity = useSharedValue(1);
+
+  useEffect(() => {
+    if (focused) {
+      scale.value = withSpring(1.1, { damping: 10, stiffness: 100 });
+      flameOpacity.value = withTiming(1, { duration: 300 });
+    } else {
+      scale.value = withSpring(1, { damping: 15, stiffness: 150 });
+      flameOpacity.value = withTiming(0.7, { duration: 300 });
+    }
+  }, [focused]);
+
+  const animatedStyle = useAnimatedStyle(() => ({
+    transform: [{ scale: scale.value }],
+  }));
+
+  return (
+    <Animated.View style={[styles.focusIconContainer, animatedStyle]}>
+      <LinearGradient
+        colors={focused ? ["#ED8F03", "#F59E0B"] : ["#FFE8D6", "#FFDAB9"]}
+        style={styles.focusGradient}
+      >
+        <Ionicons name="flame" size={normalizeSize(32)} color="#FFF" />
+      </LinearGradient>
+    </Animated.View>
+  );
+};
 
 const TabsLayout = () => {
   const [hasUnclaimedAchievements, setHasUnclaimedAchievements] =
@@ -35,23 +142,25 @@ const TabsLayout = () => {
           headerShown: false,
           tabBarStyle: {
             backgroundColor: "#FFFFFF",
-            height: 70 + insets.bottom,
+            height: normalizeSize(70) + insets.bottom,
             paddingBottom: insets.bottom,
             borderTopLeftRadius: 20,
             borderTopRightRadius: 20,
             elevation: 10,
             shadowColor: "#000",
-            shadowOpacity: 0.1,
-            shadowOffset: { width: 0, height: -2 },
-            shadowRadius: 10,
+            shadowOpacity: 0.15,
+            shadowOffset: { width: 0, height: -3 },
+            shadowRadius: 12,
+            borderTopWidth: 1,
+            borderTopColor: "rgba(227, 226, 233, 0.5)",
           },
           tabBarLabelStyle: {
-            fontSize: 12,
-            fontWeight: "600",
-            marginBottom: 5,
+            fontSize: normalizeSize(12),
+            fontFamily: "Comfortaa_700Bold",
+            marginBottom: normalizeSize(5),
           },
           tabBarIconStyle: {
-            marginBottom: -5,
+            marginBottom: normalizeSize(-5),
           },
           tabBarActiveTintColor: "#ED8F03",
           tabBarInactiveTintColor: "#A0AEC0",
@@ -61,8 +170,13 @@ const TabsLayout = () => {
           name="index"
           options={{
             tabBarLabel: "Home",
-            tabBarIcon: ({ color, size }) => (
-              <Ionicons name="home" size={size} color={color} />
+            tabBarIcon: ({ color, focused, size }) => (
+              <AnimatedTabIcon
+                name="home"
+                focused={focused}
+                color={color}
+                size={size}
+              />
             ),
           }}
         />
@@ -71,23 +185,16 @@ const TabsLayout = () => {
           name="profile"
           options={{
             tabBarLabel: "Profile",
-            tabBarIcon: ({ color, size }) => (
-              <View style={{ position: "relative" }}>
-                <Ionicons name="person" size={size} color={color} />
+            tabBarIcon: ({ color, focused, size }) => (
+              <View style={styles.profileIconContainer}>
+                <AnimatedTabIcon
+                  name="person"
+                  focused={focused}
+                  color={color}
+                  size={size}
+                />
                 {hasUnclaimedAchievements && (
-                  <View
-                    style={{
-                      position: "absolute",
-                      top: -3,
-                      right: -3,
-                      backgroundColor: "red",
-                      width: 10,
-                      height: 10,
-                      borderRadius: 5,
-                      borderWidth: 1,
-                      borderColor: "#FFF",
-                    }}
-                  />
+                  <View style={styles.notificationDot} />
                 )}
               </View>
             ),
@@ -98,26 +205,7 @@ const TabsLayout = () => {
           name="focus"
           options={{
             tabBarLabel: "",
-            tabBarIcon: ({ focused }) => (
-              <View
-                style={{
-                  backgroundColor: focused ? "#ED8F03" : "#FFE8D6",
-                  width: 60,
-                  height: 60,
-                  borderRadius: 30,
-                  alignItems: "center",
-                  justifyContent: "center",
-                  marginTop: -20,
-                  shadowColor: "#000",
-                  shadowOpacity: 0.3,
-                  shadowOffset: { width: 0, height: 3 },
-                  shadowRadius: 5,
-                  elevation: 5,
-                }}
-              >
-                <Ionicons name="flame" size={32} color={"#FFF"} />
-              </View>
-            ),
+            tabBarIcon: ({ focused }) => <FocusTabIcon focused={focused} />,
           }}
         />
 
@@ -125,8 +213,13 @@ const TabsLayout = () => {
           name="explore"
           options={{
             tabBarLabel: "Explore",
-            tabBarIcon: ({ color, size }) => (
-              <Ionicons name="compass" size={size} color={color} />
+            tabBarIcon: ({ color, focused, size }) => (
+              <AnimatedTabIcon
+                name="compass"
+                focused={focused}
+                color={color}
+                size={size}
+              />
             ),
           }}
         />
@@ -135,8 +228,13 @@ const TabsLayout = () => {
           name="settings"
           options={{
             tabBarLabel: "Settings",
-            tabBarIcon: ({ color, size }) => (
-              <Ionicons name="settings" size={size} color={color} />
+            tabBarIcon: ({ color, focused, size }) => (
+              <AnimatedTabIcon
+                name="settings"
+                focused={focused}
+                color={color}
+                size={size}
+              />
             ),
           }}
         />
@@ -144,5 +242,37 @@ const TabsLayout = () => {
     </TrophyProvider>
   );
 };
+
+const styles = StyleSheet.create({
+  profileIconContainer: {
+    position: "relative",
+  },
+  notificationDot: {
+    position: "absolute",
+    top: -normalizeSize(3),
+    right: -normalizeSize(3),
+    backgroundColor: "red",
+    width: normalizeSize(10),
+    height: normalizeSize(10),
+    borderRadius: normalizeSize(5),
+    borderWidth: 1,
+    borderColor: "#FFF",
+  },
+  focusIconContainer: {
+    marginTop: -normalizeSize(20),
+    shadowColor: "#000",
+    shadowOpacity: 0.3,
+    shadowOffset: { width: 0, height: normalizeSize(3) },
+    shadowRadius: normalizeSize(5),
+    elevation: 5,
+  },
+  focusGradient: {
+    width: normalizeSize(60),
+    height: normalizeSize(60),
+    borderRadius: normalizeSize(30),
+    alignItems: "center",
+    justifyContent: "center",
+  },
+});
 
 export default TabsLayout;

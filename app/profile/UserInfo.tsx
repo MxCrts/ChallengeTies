@@ -23,10 +23,18 @@ import { ref, uploadBytesResumable, getDownloadURL } from "firebase/storage";
 import { checkForAchievements } from "../../helpers/trophiesHelpers";
 import BackButton from "../../components/BackButton";
 import designSystem from "../../theme/designSystem";
+import CustomHeader from "@/components/CustomHeader";
+import Animated, { FadeInUp } from "react-native-reanimated";
 
-const { width } = Dimensions.get("window");
+const { width: SCREEN_WIDTH, height: SCREEN_HEIGHT } = Dimensions.get("window");
 const { lightTheme } = designSystem;
 const currentTheme = lightTheme;
+
+const normalizeSize = (size) => {
+  const scale = SCREEN_WIDTH / 375;
+  return Math.round(size * scale);
+};
+
 interface User {
   uid: string;
   displayName?: string;
@@ -46,9 +54,6 @@ export default function UserInfo() {
   const [interet, setInteret] = useState("");
   const [isLoading, setIsLoading] = useState(false);
 
-  const currentTheme = designSystem.lightTheme;
-
-  // Chargement des données utilisateur
   useEffect(() => {
     const fetchUserData = async () => {
       setIsLoading(true);
@@ -76,7 +81,6 @@ export default function UserInfo() {
     fetchUserData();
   }, []);
 
-  // Sélection et téléversement de l'image de profil
   const pickImage = useCallback(async () => {
     try {
       const { status } =
@@ -151,7 +155,6 @@ export default function UserInfo() {
     }
   }, []);
 
-  // Sauvegarde du profil
   const handleSave = useCallback(async () => {
     if (!user?.uid) {
       Alert.alert("Erreur", "Utilisateur introuvable.");
@@ -180,188 +183,322 @@ export default function UserInfo() {
 
   if (isLoading) {
     return (
-      <SafeAreaView style={styles.loadingContainer}>
-        <ActivityIndicator size="large" color={currentTheme.colors.primary} />
+      <SafeAreaView style={styles.safeArea}>
+        <LinearGradient
+          colors={[
+            currentTheme.colors.background,
+            currentTheme.colors.cardBackground,
+          ]}
+          style={styles.loadingContainer}
+        >
+          <ActivityIndicator size="large" color="#FF6200" />
+          <Text style={styles.loadingText}>Chargement en cours...</Text>
+        </LinearGradient>
       </SafeAreaView>
     );
   }
 
   return (
-    <KeyboardAvoidingView
-      style={styles.container}
-      behavior={Platform.OS === "ios" ? "padding" : undefined}
-    >
-      <ScrollView
-        contentContainerStyle={styles.contentContainer}
-        showsVerticalScrollIndicator={false}
+    <SafeAreaView style={styles.safeArea}>
+      <LinearGradient
+        colors={[
+          currentTheme.colors.background,
+          currentTheme.colors.cardBackground,
+        ]}
+        style={styles.gradientContainer}
+        start={{ x: 0, y: 0 }}
+        end={{ x: 1, y: 1 }}
       >
-        <BackButton color={currentTheme.colors.primary} />
-        <Text style={styles.headerTitle}>Modifier votre profil</Text>
-        <TouchableOpacity style={styles.imageContainer} onPress={pickImage}>
-          <LinearGradient
-            colors={[
-              currentTheme.colors.primary,
-              currentTheme.colors.cardBackground,
-            ]}
-            style={styles.imageGradient}
-          >
-            {profileImage ? (
-              <Image
-                source={{ uri: profileImage }}
-                style={styles.profileImage}
-              />
-            ) : (
-              <Text style={styles.addImageText}>Ajouter une photo</Text>
-            )}
-          </LinearGradient>
-        </TouchableOpacity>
-        <TextInput
-          label="Nom"
-          mode="outlined"
-          style={styles.input}
-          value={displayName}
-          onChangeText={setDisplayName}
-          textColor={"#000000"}
-          activeOutlineColor={currentTheme.colors.primary}
-          outlineColor={currentTheme.colors.primary}
-          theme={{
-            colors: {
-              primary: currentTheme.colors.primary,
-              text: "#000000",
-              placeholder: currentTheme.colors.primary,
-              background: "transparent",
-            },
-          }}
-        />
-        <TextInput
-          label="Bio"
-          mode="outlined"
-          style={[styles.input, styles.multilineInput]}
-          value={bio}
-          onChangeText={setBio}
-          multiline
-          textColor={"#000000"}
-          activeOutlineColor={currentTheme.colors.primary}
-          outlineColor={currentTheme.colors.primary}
-          theme={{
-            colors: {
-              primary: currentTheme.colors.primary,
-              text: "#000000",
-              placeholder: currentTheme.colors.primary,
-              background: "transparent",
-            },
-          }}
-        />
-        <TextInput
-          label="Localisation"
-          mode="outlined"
-          style={styles.input}
-          value={location}
-          onChangeText={setLocation}
-          textColor={"#000000"}
-          activeOutlineColor={currentTheme.colors.primary}
-          outlineColor={currentTheme.colors.primary}
-          theme={{
-            colors: {
-              primary: currentTheme.colors.primary,
-              text: "#000000",
-              placeholder: currentTheme.colors.primary,
-              background: "transparent",
-            },
-          }}
-        />
-        <TextInput
-          label="Intérêts"
-          mode="outlined"
-          style={styles.input}
-          value={interet}
-          onChangeText={setLocation}
-          textColor={"#000000"}
-          activeOutlineColor={currentTheme.colors.primary}
-          outlineColor={currentTheme.colors.primary}
-          theme={{
-            colors: {
-              primary: currentTheme.colors.primary,
-              text: "#000000",
-              placeholder: currentTheme.colors.primary,
-              background: "transparent",
-            },
-          }}
-        />
-
-        <LinearGradient
-          colors={[
-            currentTheme.colors.primary,
-            currentTheme.colors.cardBackground,
-          ]}
-          start={{ x: 0, y: 0 }}
-          end={{ x: 1, y: 1 }}
-          style={styles.saveButton}
+        <KeyboardAvoidingView
+          style={styles.container}
+          behavior={Platform.OS === "ios" ? "padding" : undefined}
         >
-          <TouchableOpacity onPress={handleSave}>
-            <Text style={styles.saveButtonText}>Sauvegarder</Text>
-          </TouchableOpacity>
-        </LinearGradient>
-      </ScrollView>
-    </KeyboardAvoidingView>
+          <ScrollView
+            contentContainerStyle={styles.contentContainer}
+            showsVerticalScrollIndicator={false}
+          >
+            <View style={styles.headerWrapper}>
+              <CustomHeader title="Modifie Ton Profil" />
+            </View>
+
+            {/* Image de profil */}
+            <Animated.View
+              entering={FadeInUp.delay(100)}
+              style={styles.imageContainer}
+            >
+              <TouchableOpacity onPress={pickImage}>
+                <LinearGradient
+                  colors={["#FF6200", "#FF8C00"]}
+                  style={styles.imageGradient}
+                  start={{ x: 0, y: 0 }}
+                  end={{ x: 1, y: 1 }}
+                >
+                  <View style={styles.imageOverlay}>
+                    {profileImage ? (
+                      <Image
+                        source={{ uri: profileImage }}
+                        style={styles.profileImage}
+                      />
+                    ) : (
+                      <Text style={styles.addImageText}>Ajouter une photo</Text>
+                    )}
+                  </View>
+                </LinearGradient>
+              </TouchableOpacity>
+            </Animated.View>
+
+            {/* Champs de saisie stylés */}
+            <Animated.View
+              entering={FadeInUp.delay(200)}
+              style={styles.inputWrapper}
+            >
+              <LinearGradient
+                colors={["#FFFFFF", "#FFE0B2"]}
+                style={styles.fieldGradient}
+                start={{ x: 0, y: 0 }}
+                end={{ x: 1, y: 1 }}
+              >
+                <TextInput
+                  label="Nom"
+                  mode="outlined"
+                  style={styles.input}
+                  value={displayName}
+                  onChangeText={setDisplayName}
+                  textColor="#FF6200"
+                  activeOutlineColor="#FF6200"
+                  outlineColor="transparent"
+                  theme={{
+                    colors: {
+                      primary: "#FF6200",
+                      text: "#FF6200",
+                      placeholder: "#FF8C00",
+                      background: "transparent",
+                    },
+                  }}
+                />
+              </LinearGradient>
+            </Animated.View>
+            <Animated.View
+              entering={FadeInUp.delay(300)}
+              style={styles.inputWrapper}
+            >
+              <LinearGradient
+                colors={["#FFFFFF", "#FFE0B2"]}
+                style={styles.fieldGradient}
+                start={{ x: 0, y: 0 }}
+                end={{ x: 1, y: 1 }}
+              >
+                <TextInput
+                  label="Bio"
+                  mode="outlined"
+                  style={[styles.input, styles.multilineInput]}
+                  value={bio}
+                  onChangeText={setBio}
+                  multiline
+                  textColor="#FF6200"
+                  activeOutlineColor="#FF6200"
+                  outlineColor="transparent"
+                  theme={{
+                    colors: {
+                      primary: "#FF6200",
+                      text: "#FF6200",
+                      placeholder: "#FF8C00",
+                      background: "transparent",
+                    },
+                  }}
+                />
+              </LinearGradient>
+            </Animated.View>
+            <Animated.View
+              entering={FadeInUp.delay(400)}
+              style={styles.inputWrapper}
+            >
+              <LinearGradient
+                colors={["#FFFFFF", "#FFE0B2"]}
+                style={styles.fieldGradient}
+                start={{ x: 0, y: 0 }}
+                end={{ x: 1, y: 1 }}
+              >
+                <TextInput
+                  label="Localisation"
+                  mode="outlined"
+                  style={styles.input}
+                  value={location}
+                  onChangeText={setLocation}
+                  textColor="#FF6200"
+                  activeOutlineColor="#FF6200"
+                  outlineColor="transparent"
+                  theme={{
+                    colors: {
+                      primary: "#FF6200",
+                      text: "#FF6200",
+                      placeholder: "#FF8C00",
+                      background: "transparent",
+                    },
+                  }}
+                />
+              </LinearGradient>
+            </Animated.View>
+            <Animated.View
+              entering={FadeInUp.delay(500)}
+              style={styles.inputWrapper}
+            >
+              <LinearGradient
+                colors={["#FFFFFF", "#FFE0B2"]}
+                style={styles.fieldGradient}
+                start={{ x: 0, y: 0 }}
+                end={{ x: 1, y: 1 }}
+              >
+                <TextInput
+                  label="Intérêts"
+                  mode="outlined"
+                  style={styles.input}
+                  value={interet}
+                  onChangeText={setInteret}
+                  textColor="#FF6200"
+                  activeOutlineColor="#FF6200"
+                  outlineColor="transparent"
+                  theme={{
+                    colors: {
+                      primary: "#FF6200",
+                      text: "#FF6200",
+                      placeholder: "#FF8C00",
+                      background: "transparent",
+                    },
+                  }}
+                />
+              </LinearGradient>
+            </Animated.View>
+
+            {/* Bouton Sauvegarder */}
+            <Animated.View
+              entering={FadeInUp.delay(600)}
+              style={styles.saveButtonWrapper}
+            >
+              <LinearGradient
+                colors={["#FF6200", "#FF8C00"]}
+                style={styles.saveButton}
+                start={{ x: 0, y: 0 }}
+                end={{ x: 1, y: 1 }}
+              >
+                <TouchableOpacity onPress={handleSave}>
+                  <Text style={styles.saveButtonText}>Sauvegarder</Text>
+                </TouchableOpacity>
+              </LinearGradient>
+            </Animated.View>
+          </ScrollView>
+        </KeyboardAvoidingView>
+      </LinearGradient>
+    </SafeAreaView>
   );
 }
 
 const styles = StyleSheet.create({
-  container: { flex: 1, backgroundColor: currentTheme.colors.background },
-  contentContainer: { padding: 20, alignItems: "center", paddingBottom: 60 },
+  safeArea: { flex: 1 },
+  gradientContainer: { flex: 1 },
+  container: { flex: 1 },
+  contentContainer: {
+    padding: normalizeSize(20),
+    alignItems: "center",
+    paddingBottom: SCREEN_HEIGHT * 0.15,
+  },
+  headerWrapper: {
+    marginTop: SCREEN_HEIGHT * 0.01, // Alignement cohérent avec UserStats et CurrentChallenges
+    marginBottom: SCREEN_HEIGHT * 0.02,
+    paddingHorizontal: SCREEN_WIDTH * 0.05,
+    width: "100%",
+  },
   loadingContainer: {
     flex: 1,
     justifyContent: "center",
     alignItems: "center",
-    backgroundColor: currentTheme.colors.background,
   },
-  headerTitle: {
-    fontSize: 25,
-    fontFamily: currentTheme.typography.title.fontFamily,
-    color: "#000000",
-    marginVertical: 20,
-    textAlign: "center",
-    marginBottom: 30,
+  loadingText: {
+    marginTop: normalizeSize(10),
+    fontSize: normalizeSize(16),
+    fontFamily: currentTheme.typography.body.fontFamily,
+    color: currentTheme.colors.textSecondary,
   },
-  imageContainer: { marginBottom: 20 },
+  imageContainer: {
+    marginBottom: normalizeSize(30),
+    shadowColor: "#000",
+    shadowOffset: { width: 0, height: normalizeSize(6) },
+    shadowOpacity: 0.4,
+    shadowRadius: normalizeSize(8),
+    elevation: 10,
+  },
   imageGradient: {
-    width: 140,
-    height: 140,
-    borderRadius: 70,
-    alignItems: "center",
+    width: SCREEN_WIDTH * 0.4,
+    height: SCREEN_WIDTH * 0.4,
+    borderRadius: SCREEN_WIDTH * 0.2,
+    overflow: "hidden",
+    borderWidth: 3,
+    borderColor: "#FFFFFF",
+  },
+  imageOverlay: {
+    flex: 1,
+    backgroundColor: "rgba(0, 0, 0, 0.2)",
     justifyContent: "center",
+    alignItems: "center",
   },
   profileImage: {
-    width: 136,
-    height: 136,
-    borderRadius: 68,
-    borderWidth: 2,
-    borderColor: "#FFFFFF",
+    width: SCREEN_WIDTH * 0.38,
+    height: SCREEN_WIDTH * 0.38,
+    borderRadius: SCREEN_WIDTH * 0.19,
   },
   addImageText: {
     color: "#FFFFFF",
-    fontSize: 14,
-    textAlign: "center",
-    fontFamily: currentTheme.typography.body.fontFamily,
+    fontSize: normalizeSize(16),
+    fontFamily: currentTheme.typography.title.fontFamily,
+    textShadowColor: "#000",
+    textShadowOffset: { width: 0, height: 2 },
+    textShadowRadius: 4,
+  },
+  inputWrapper: {
+    width: "100%",
+    marginBottom: normalizeSize(20),
+    shadowColor: "#000",
+    shadowOffset: { width: 0, height: normalizeSize(4) },
+    shadowOpacity: 0.3,
+    shadowRadius: normalizeSize(6),
+    elevation: 5,
+  },
+  fieldGradient: {
+    borderRadius: normalizeSize(15),
+    padding: normalizeSize(5),
+    borderWidth: 1,
+    borderColor: "#FF620030",
   },
   input: {
     width: "100%",
-    marginBottom: 16,
-    backgroundColor: "#FFFFFF",
-    fontFamily: currentTheme.typography.title.fontFamily,
+    backgroundColor: "transparent",
+    fontFamily: currentTheme.typography.body.fontFamily,
+    borderRadius: normalizeSize(10),
   },
-  multilineInput: { minHeight: 80 },
-  saveButton: {
-    paddingVertical: 12,
-    borderRadius: 10,
+  multilineInput: {
+    minHeight: normalizeSize(100),
+  },
+  saveButtonWrapper: {
     width: "100%",
+    marginTop: normalizeSize(20),
+  },
+  saveButton: {
+    paddingVertical: normalizeSize(15),
+    paddingHorizontal: normalizeSize(30),
+    borderRadius: normalizeSize(25),
     alignItems: "center",
-    marginTop: 10,
+    shadowColor: "#000",
+    shadowOffset: { width: 0, height: normalizeSize(6) },
+    shadowOpacity: 0.4,
+    shadowRadius: normalizeSize(8),
+    elevation: 10,
   },
   saveButtonText: {
     color: "#FFFFFF",
-    fontSize: 18,
+    fontSize: normalizeSize(18),
     fontFamily: currentTheme.typography.title.fontFamily,
+    textShadowColor: "#000",
+    textShadowOffset: { width: 0, height: 2 },
+    textShadowRadius: 4,
   },
 });

@@ -48,7 +48,7 @@ export default function Screen1() {
         {/* Background Video */}
         <Video
           ref={videoRef}
-          source={require("../../../assets/videos/intro-video1.mp4")}
+          source={require("../../../assets/videos/intro-videoX2.mp4")}
           style={styles.backgroundVideo}
           resizeMode={ResizeMode.COVER}
           shouldPlay

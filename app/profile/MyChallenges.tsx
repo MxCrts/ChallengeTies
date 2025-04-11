@@ -7,31 +7,46 @@ import {
   StyleSheet,
   ActivityIndicator,
   Image,
-  Alert,
   Dimensions,
   SafeAreaView,
 } from "react-native";
 import { Ionicons } from "@expo/vector-icons";
 import { useRouter } from "expo-router";
-import {
-  collection,
-  doc,
-  onSnapshot,
-  deleteDoc,
-  getDoc,
-} from "firebase/firestore";
+import { doc, onSnapshot, getDoc } from "firebase/firestore"; // deleteDoc retiré
 import { db, auth } from "../../constants/firebase-config";
-import Animated, { FadeIn, Layout } from "react-native-reanimated";
+import Animated, { FadeInUp } from "react-native-reanimated";
 import { LinearGradient } from "expo-linear-gradient";
-import { Swipeable } from "react-native-gesture-handler";
-import BackButton from "../../components/BackButton";
 import designSystem from "../../theme/designSystem";
+import CustomHeader from "@/components/CustomHeader";
 
-const { width: SCREEN_WIDTH } = Dimensions.get("window");
-const currentTheme = designSystem.lightTheme;
+const { width: SCREEN_WIDTH, height: SCREEN_HEIGHT } = Dimensions.get("window");
+const ITEM_WIDTH = SCREEN_WIDTH * 0.9;
+const ITEM_HEIGHT = SCREEN_WIDTH * 0.45;
+const CARD_MARGIN = SCREEN_WIDTH * 0.02;
 
-// On réduit légèrement la largeur des cartes en définissant un pourcentage du SCREEN_WIDTH
-const CARD_WIDTH = SCREEN_WIDTH * 0.9;
+const currentTheme = {
+  ...designSystem.lightTheme,
+  colors: {
+    ...designSystem.lightTheme.colors,
+    primary: "#ED8F03", // Orange
+    cardBackground: "#FFFFFF",
+  },
+};
+
+const normalizeSize = (size) => {
+  const scale = SCREEN_WIDTH / 375;
+  return Math.round(size * scale);
+};
+
+interface Challenge {
+  id: string;
+  title: string;
+  description?: string;
+  category?: string;
+  imageUrl?: string;
+  createdAt?: string;
+  participantsCount?: number;
+}
 
 export default function MyChallenges() {
   const router = useRouter();
@@ -40,7 +55,10 @@ export default function MyChallenges() {
 
   useEffect(() => {
     const userId = auth.currentUser?.uid;
-    if (!userId) return;
+    if (!userId) {
+      setIsLoading(false);
+      return;
+    }
 
     const userRef = doc(db, "users", userId);
     const unsubscribe = onSnapshot(userRef, async (snapshot) => {
@@ -48,7 +66,6 @@ export default function MyChallenges() {
         const userData = snapshot.data();
         const challengeRefs = userData.createdChallenges || [];
 
-        // Récupérer les défis créés avec leurs `participantsCount`
         const challengesWithParticipants = await Promise.all(
           challengeRefs.map(async (challenge) => {
             const challengeSnap = await getDoc(
@@ -72,255 +89,285 @@ export default function MyChallenges() {
     return () => unsubscribe();
   }, []);
 
-  const handleRemoveChallenge = async (id: string) => {
-    Alert.alert(
-      "Supprimer le défi",
-      "Êtes-vous sûr de vouloir supprimer ce défi ?",
-      [
-        { text: "Annuler", style: "cancel" },
-        {
-          text: "Supprimer",
-          style: "destructive",
-          onPress: async () => {
-            try {
-              await deleteDoc(doc(db, "challenges", id));
-              setMyChallenges((prev) =>
-                prev.filter((challenge) => challenge.id !== id)
-              );
-              Alert.alert("Supprimé", "Votre défi a été supprimé avec succès.");
-            } catch (error) {
-              console.error("Erreur lors de la suppression:", error);
-              Alert.alert("Erreur", "Impossible de supprimer ce défi.");
-            }
-          },
-        },
-      ]
-    );
+  const navigateToChallengeDetails = (item: Challenge) => {
+    const route =
+      `/challenge-details/${encodeURIComponent(item.id)}` +
+      `?title=${encodeURIComponent(item.title)}` +
+      `&category=${encodeURIComponent(item.category || "Uncategorized")}` +
+      `&description=${encodeURIComponent(item.description || "")}` +
+      `&imageUrl=${encodeURIComponent(item.imageUrl || "")}`;
+    router.push(route as unknown as `/challenge-details/${string}`);
   };
 
-  const renderRightActions = (id: string) => (
-    <View style={styles.swipeActionsContainer}>
-      <TouchableOpacity
-        style={styles.trashButton}
-        onPress={() => handleRemoveChallenge(id)}
-      >
-        <Ionicons name="trash-outline" size={24} color="#fff" />
-      </TouchableOpacity>
-    </View>
-  );
-
-  const renderChallenge = ({ item }: { item: Challenge }) => (
-    <Swipeable
-      renderRightActions={() => renderRightActions(item.id)}
-      overshootRight={false}
+  const renderChallenge = ({
+    item,
+    index,
+  }: {
+    item: Challenge;
+    index: number;
+  }) => (
+    <Animated.View
+      entering={FadeInUp.delay(index * 100)}
+      style={styles.cardWrapper}
     >
-      <Animated.View
-        entering={FadeIn}
-        layout={Layout.springify()}
-        style={styles.challengeCard}
+      <TouchableOpacity
+        style={styles.cardContainer}
+        onPress={() => navigateToChallengeDetails(item)}
+        activeOpacity={0.9}
       >
-        <TouchableOpacity
-          style={styles.challengeContent}
-          onPress={() =>
-            router.push({
-              pathname: "/challenge-details/[id]",
-              params: {
-                id: item.id,
-                title: item.title,
-                category: item.category,
-                description: item.description,
-              },
-            })
-          }
+        <LinearGradient
+          colors={["#FFFFFF", "#FFE0B2"]}
+          style={styles.card}
+          start={{ x: 0, y: 0 }}
+          end={{ x: 1, y: 1 }}
         >
           {item.imageUrl ? (
-            <Image
-              source={{ uri: item.imageUrl }}
-              style={styles.challengeImage}
-            />
+            <Image source={{ uri: item.imageUrl }} style={styles.cardImage} />
           ) : (
             <View style={styles.placeholderImage}>
-              <Ionicons name="image-outline" size={40} color="#b0bec5" />
+              <Ionicons
+                name="image-outline"
+                size={normalizeSize(30)}
+                color="#B0BEC5"
+              />
             </View>
           )}
-          <View style={styles.challengeDetails}>
+          <View style={styles.cardContent}>
             <Text style={styles.challengeTitle} numberOfLines={1}>
               {item.title}
             </Text>
             <Text style={styles.challengeCategory}>
               {item.category || "Sans catégorie"}
             </Text>
+            {item.participantsCount !== undefined && (
+              <Text style={styles.participantsText}>
+                {item.participantsCount === undefined ||
+                item.participantsCount <= 1
+                  ? `${
+                      item.participantsCount === undefined
+                        ? 0
+                        : item.participantsCount
+                    } participant`
+                  : `${item.participantsCount} participants`}
+              </Text>
+            )}
+            <TouchableOpacity
+              style={styles.viewButton}
+              onPress={() => navigateToChallengeDetails(item)}
+            >
+              <LinearGradient
+                colors={["#FF6200", "#FF8C00"]}
+                style={styles.viewButtonGradient}
+                start={{ x: 0, y: 0 }}
+                end={{ x: 1, y: 1 }}
+              >
+                <Text style={styles.viewButtonText}>Voir Détails</Text>
+              </LinearGradient>
+            </TouchableOpacity>
           </View>
-        </TouchableOpacity>
-      </Animated.View>
-    </Swipeable>
+        </LinearGradient>
+      </TouchableOpacity>
+    </Animated.View>
   );
 
   if (isLoading) {
     return (
-      <LinearGradient
-        colors={["#ECECEC", "#F8F8F8"]}
-        style={styles.loadingContainer}
-      >
-        <ActivityIndicator size="large" color="#ED8F03" />
-        <Text style={styles.loadingText}>Chargement de vos défis...</Text>
-      </LinearGradient>
+      <SafeAreaView style={styles.safeArea}>
+        <LinearGradient
+          colors={[
+            currentTheme.colors.background,
+            currentTheme.colors.cardBackground,
+          ]}
+          style={styles.loadingContainer}
+          start={{ x: 0, y: 0 }}
+          end={{ x: 1, y: 1 }}
+        >
+          <ActivityIndicator size="large" color="#FF6200" />
+          <Text style={styles.loadingText}>Chargement en cours...</Text>
+        </LinearGradient>
+      </SafeAreaView>
     );
   }
 
   if (myChallenges.length === 0) {
     return (
-      <LinearGradient
-        colors={["#ECECEC", "#F8F8F8"]}
-        style={styles.noChallengesContainer}
-      >
-        <Ionicons name="create-outline" size={60} color="#b0bec5" />
-        <Text style={styles.noChallengesText}>Aucun défi créé</Text>
-        <Text style={styles.noChallengesSubtext}>
-          Créez votre premier défi dès maintenant !
-        </Text>
-      </LinearGradient>
+      <SafeAreaView style={styles.safeArea}>
+        <LinearGradient
+          colors={[
+            currentTheme.colors.background,
+            currentTheme.colors.cardBackground,
+          ]}
+          style={styles.noChallengesContainer}
+          start={{ x: 0, y: 0 }}
+          end={{ x: 1, y: 1 }}
+        >
+          <Animated.View
+            entering={FadeInUp.delay(100)}
+            style={styles.noChallengesContent}
+          >
+            <Ionicons
+              name="create-outline"
+              size={normalizeSize(60)}
+              color="#B0BEC5"
+            />
+            <Text style={styles.noChallengesText}>Aucun défi créé !</Text>
+            <Text style={styles.noChallengesSubtext}>
+              Créez votre premier défi dès maintenant !
+            </Text>
+          </Animated.View>
+        </LinearGradient>
+      </SafeAreaView>
     );
   }
 
   return (
     <SafeAreaView style={styles.safeArea}>
-      <LinearGradient colors={["#ECECEC", "#F8F8F8"]} style={styles.container}>
-        <BackButton color="#ED8F03" />
-        <Text style={styles.header}>Mes Défis Créés</Text>
+      <LinearGradient
+        colors={[
+          currentTheme.colors.background,
+          currentTheme.colors.cardBackground,
+        ]}
+        style={styles.container}
+        start={{ x: 0, y: 0 }}
+        end={{ x: 1, y: 1 }}
+      >
+        <View style={styles.headerWrapper}>
+          <CustomHeader title="Mes Défis Créés" />
+        </View>
         <FlatList
           data={myChallenges}
           renderItem={renderChallenge}
           keyExtractor={(item) => item.id}
-          contentContainerStyle={styles.listContainer}
+          contentContainerStyle={styles.listContent}
+          showsVerticalScrollIndicator={false}
         />
       </LinearGradient>
     </SafeAreaView>
   );
 }
 
-interface Challenge {
-  id: string;
-  title: string;
-  description?: string;
-  category?: string;
-  imageUrl?: string;
-  createdAt?: string;
-}
-
 const styles = StyleSheet.create({
-  safeArea: {
-    flex: 1,
-    backgroundColor: "#ECECEC",
+  safeArea: { flex: 1 },
+  container: { flex: 1 },
+  headerWrapper: {
+    marginTop: SCREEN_HEIGHT * 0.01,
+    marginBottom: SCREEN_HEIGHT * 0.02,
+    paddingHorizontal: SCREEN_WIDTH * 0.05,
   },
-  container: {
-    flex: 1,
-    paddingTop: 20,
-    backgroundColor: "#ECECEC",
-    paddingHorizontal: 20,
+  listContent: {
+    paddingHorizontal: SCREEN_WIDTH * 0.05,
+    paddingBottom: SCREEN_HEIGHT * 0.1,
   },
-  header: {
-    fontSize: 25,
-    fontFamily: "Comfortaa_700Bold",
-    color: "#000000",
-    textAlign: "center",
-    marginVertical: 20,
-    marginBottom: 30,
-  },
-  listContainer: {
-    paddingBottom: 40,
-  },
-  challengeCard: {
-    width: CARD_WIDTH,
-    alignSelf: "center",
-    borderRadius: 18,
-    marginBottom: 15,
-    overflow: "hidden",
-    borderWidth: 2,
-    borderColor: "#ED8F03",
-    backgroundColor: "#FFFFFF",
+  cardWrapper: {
+    marginBottom: CARD_MARGIN,
     shadowColor: "#000",
-    shadowOpacity: 0.1,
-    shadowOffset: { width: 0, height: 2 },
-    shadowRadius: 4,
-    elevation: 3,
+    shadowOffset: { width: 0, height: normalizeSize(6) },
+    shadowOpacity: 0.3,
+    shadowRadius: normalizeSize(8),
+    elevation: 8,
   },
-  challengeContent: {
+  cardContainer: {
+    width: ITEM_WIDTH,
+    borderRadius: normalizeSize(20),
+    overflow: "hidden",
+    alignSelf: "center",
+  },
+  card: {
     flexDirection: "row",
-    alignItems: "center",
-    padding: 14,
+    padding: normalizeSize(15),
+    borderRadius: normalizeSize(20),
+    borderWidth: 1,
+    borderColor: "#FF620030",
+    minHeight: ITEM_HEIGHT,
   },
-  challengeImage: {
-    width: 70,
-    height: 70,
-    borderRadius: 14,
-    marginRight: 14,
+  cardImage: {
+    width: normalizeSize(70),
+    height: normalizeSize(70),
+    borderRadius: normalizeSize(14),
+    marginRight: normalizeSize(15),
+    borderWidth: 2,
+    borderColor: "#FFFFFF",
   },
   placeholderImage: {
-    width: 70,
-    height: 70,
-    borderRadius: 14,
-    backgroundColor: "#F0F0F0",
+    width: normalizeSize(70),
+    height: normalizeSize(70),
+    borderRadius: normalizeSize(14),
+    backgroundColor: "#E5E7EB",
     justifyContent: "center",
     alignItems: "center",
-    marginRight: 14,
+    marginRight: normalizeSize(15),
   },
-  challengeDetails: {
+  cardContent: {
     flex: 1,
   },
   challengeTitle: {
-    fontSize: 18,
+    fontSize: normalizeSize(18),
+    color: "#333333",
     fontFamily: currentTheme.typography.title.fontFamily,
-    color: "#000000",
   },
   challengeCategory: {
-    fontSize: 14,
-    color: "#555555",
-    marginTop: 4,
+    fontSize: normalizeSize(14),
+    color: "#777777",
+    fontFamily: currentTheme.typography.body.fontFamily,
+    marginTop: normalizeSize(2),
     textTransform: "capitalize",
   },
-  swipeActionsContainer: {
-    justifyContent: "center",
-    alignItems: "center",
-    backgroundColor: "#EF4444",
-    width: 70,
-    borderRadius: 18,
-    marginBottom: 15,
+  participantsText: {
+    fontSize: normalizeSize(12),
+    color: "#FF6200",
+    fontFamily: currentTheme.typography.body.fontFamily,
+    marginTop: normalizeSize(5),
   },
-  trashButton: {
-    justifyContent: "center",
+  viewButton: {
+    borderRadius: normalizeSize(12),
+    overflow: "hidden",
+    marginTop: normalizeSize(10),
+  },
+  viewButtonGradient: {
+    paddingVertical: normalizeSize(10),
+    paddingHorizontal: normalizeSize(15),
     alignItems: "center",
-    height: "100%",
-    width: "100%",
+  },
+  viewButtonText: {
+    color: "#FFFFFF",
+    fontFamily: currentTheme.typography.title.fontFamily,
+    fontSize: normalizeSize(14),
+    textShadowColor: "#000",
+    textShadowOffset: { width: 0, height: 1 },
+    textShadowRadius: 2,
   },
   loadingContainer: {
     flex: 1,
     justifyContent: "center",
     alignItems: "center",
-    backgroundColor: "#ECECEC",
   },
   loadingText: {
-    marginTop: 10,
-    fontSize: 16,
-    color: "#ED8F03",
+    marginTop: normalizeSize(10),
+    fontSize: normalizeSize(16),
+    fontFamily: currentTheme.typography.body.fontFamily,
+    color: currentTheme.colors.textSecondary,
   },
   noChallengesContainer: {
     flex: 1,
     justifyContent: "center",
     alignItems: "center",
   },
+  noChallengesContent: {
+    alignItems: "center",
+  },
   noChallengesText: {
-    fontSize: 18,
-    fontWeight: "bold",
-    color: "#fff",
-    marginTop: 10,
+    fontSize: normalizeSize(20),
+    fontFamily: currentTheme.typography.title.fontFamily,
+    color: "#333333",
+    marginTop: normalizeSize(15),
     textAlign: "center",
   },
   noChallengesSubtext: {
-    fontSize: 14,
-    color: "#bbb",
+    fontSize: normalizeSize(16),
+    fontFamily: currentTheme.typography.body.fontFamily,
+    color: "#777777",
     textAlign: "center",
-    marginTop: 5,
-    maxWidth: 250,
+    marginTop: normalizeSize(10),
+    maxWidth: SCREEN_WIDTH * 0.65,
   },
 });

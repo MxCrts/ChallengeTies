@@ -1,38 +1,61 @@
-import React, { useEffect, useState } from "react";
+import React, { useEffect, useState, useRef } from "react";
 import {
   View,
   Text,
   FlatList,
-  Image,
   TouchableOpacity,
-  ActivityIndicator,
   StyleSheet,
+  ActivityIndicator,
+  Image,
   Dimensions,
   SafeAreaView,
+  Alert,
 } from "react-native";
-import { Ionicons } from "@expo/vector-icons";
-import { useRouter } from "expo-router";
 import { LinearGradient } from "expo-linear-gradient";
-import { doc, getDoc } from "firebase/firestore";
+import { Swipeable } from "react-native-gesture-handler";
+import { useRouter } from "expo-router";
+import { Ionicons } from "@expo/vector-icons";
+import * as Progress from "react-native-progress";
+import Animated, { FadeInUp, FadeOutRight } from "react-native-reanimated";
+import { doc, getDoc, updateDoc } from "firebase/firestore"; // deleteDoc retiré car non utilisé
 import { auth, db } from "../../constants/firebase-config";
-import BackButton from "../../components/BackButton";
 import designSystem from "../../theme/designSystem";
+import CustomHeader from "@/components/CustomHeader";
 
-const { width } = Dimensions.get("window");
-const currentTheme = designSystem.lightTheme;
+const { width: SCREEN_WIDTH, height: SCREEN_HEIGHT } = Dimensions.get("window");
+const ITEM_WIDTH = SCREEN_WIDTH * 0.9;
+const ITEM_HEIGHT = SCREEN_WIDTH * 0.45;
+const CARD_MARGIN = SCREEN_WIDTH * 0.02;
+
+const currentTheme = {
+  ...designSystem.lightTheme,
+  colors: {
+    ...designSystem.lightTheme.colors,
+    primary: "#ED8F03", // Orange
+    cardBackground: "#FFFFFF",
+  },
+};
+
+const normalizeSize = (size) => {
+  const scale = SCREEN_WIDTH / 375;
+  return Math.round(size * scale);
+};
 
 interface Challenge {
   id: string;
   title: string;
+  description?: string;
   category?: string;
   imageUrl?: string;
-  description?: string;
+  selectedDays?: number;
+  completedDays?: number;
 }
 
 export default function SavedChallengesScreen() {
   const [savedChallenges, setSavedChallenges] = useState<Challenge[]>([]);
   const [isLoading, setIsLoading] = useState<boolean>(true);
   const router = useRouter();
+  const swipeableRefs = useRef<(Swipeable | null)[]>([]); // Références pour les Swipeable
 
   useEffect(() => {
     const fetchSavedChallenges = async () => {
@@ -48,8 +71,13 @@ export default function SavedChallengesScreen() {
         const userSnap = await getDoc(userRef);
         if (userSnap.exists()) {
           const userData = userSnap.data();
-          // On s'assure que SavedChallenges est un tableau
-          setSavedChallenges(userData.SavedChallenges || []);
+          const challenges = userData.SavedChallenges || [];
+          const enrichedChallenges = challenges.map((challenge) => ({
+            ...challenge,
+            completedDays: challenge.completedDays || 0,
+            selectedDays: challenge.selectedDays || 7,
+          }));
+          setSavedChallenges(enrichedChallenges);
         } else {
           setSavedChallenges([]);
         }
@@ -66,52 +94,198 @@ export default function SavedChallengesScreen() {
     fetchSavedChallenges();
   }, []);
 
-  const onPressChallenge = (challenge: Challenge) => {
-    router.push({
-      pathname: "/challenge-details/[id]",
-      params: {
-        id: challenge.id,
-        title: challenge.title,
-        category: challenge.category,
-        description: challenge.description,
-      },
-    });
+  const navigateToChallengeDetails = (item: Challenge) => {
+    const route =
+      `/challenge-details/${encodeURIComponent(item.id)}` +
+      `?title=${encodeURIComponent(item.title)}` +
+      `&selectedDays=${item.selectedDays || 7}` +
+      `&completedDays=${item.completedDays || 0}` +
+      `&category=${encodeURIComponent(item.category || "Uncategorized")}` +
+      `&description=${encodeURIComponent(item.description || "")}` +
+      `&imageUrl=${encodeURIComponent(item.imageUrl || "")}`;
+    router.push(route as unknown as `/challenge-details/${string}`);
   };
 
-  const renderChallenge = ({ item }: { item: Challenge }) => (
-    <TouchableOpacity
-      style={styles.challengeItem}
-      onPress={() => onPressChallenge(item)}
-    >
-      <Image
-        source={
-          item.imageUrl
-            ? { uri: item.imageUrl }
-            : require("../../assets/images/default-challenge.webp")
-        }
-        style={styles.challengeImage}
-      />
-      <Text style={styles.challengeTitle} numberOfLines={1}>
-        {item.title}
-      </Text>
-      <Text style={styles.challengeCategory}>
-        {item.category || "Sans catégorie"}
-      </Text>
-    </TouchableOpacity>
-  );
+  const handleRemoveChallenge = (challengeId: string, index: number) => {
+    Alert.alert(
+      "Supprimer le défi",
+      "Vous êtes sûr ? Ce défi sera retiré de vos sauvegardes.",
+      [
+        {
+          text: "Annuler",
+          style: "cancel",
+          onPress: () => {
+            const swipeable = swipeableRefs.current[index];
+            if (swipeable) {
+              swipeable.close();
+            }
+          },
+        },
+        {
+          text: "Continuer",
+          style: "destructive",
+          onPress: async () => {
+            const userId = auth.currentUser?.uid;
+            if (!userId) return;
+
+            try {
+              // Supprime localement pour déclencher l'animation
+              setSavedChallenges((prev) =>
+                prev.filter((challenge) => challenge.id !== challengeId)
+              );
+
+              // Met à jour Firebase après l'animation
+              setTimeout(async () => {
+                const userRef = doc(db, "users", userId);
+                const userSnap = await getDoc(userRef);
+                if (userSnap.exists()) {
+                  const userData = userSnap.data();
+                  const updatedChallenges = (
+                    userData.SavedChallenges || []
+                  ).filter(
+                    (challenge: Challenge) => challenge.id !== challengeId
+                  );
+                  await updateDoc(userRef, {
+                    SavedChallenges: updatedChallenges,
+                  });
+                  Alert.alert("Supprimé", "Défi supprimé avec succès.");
+                }
+              }, 300); // Durée de l'animation
+            } catch (err) {
+              console.error("Erreur lors de la suppression :", err);
+              Alert.alert("Erreur", "Impossible de supprimer ce défi.");
+              const swipeable = swipeableRefs.current[index];
+              if (swipeable) {
+                swipeable.close();
+              }
+              // Restaure la liste en cas d'erreur
+              setSavedChallenges((prev) => {
+                const userRef = doc(db, "users", userId);
+                getDoc(userRef).then((snap) => {
+                  if (snap.exists()) {
+                    const userData = snap.data();
+                    return userData.SavedChallenges || [];
+                  }
+                  return prev;
+                });
+                return prev;
+              });
+            }
+          },
+        },
+      ]
+    );
+  };
+
+  const renderChallengeItem = ({
+    item,
+    index,
+  }: {
+    item: Challenge;
+    index: number;
+  }) => {
+    const progress = (item.completedDays || 0) / (item.selectedDays || 7);
+    return (
+      <Animated.View
+        entering={FadeInUp.delay(index * 100)}
+        exiting={FadeOutRight.duration(300)} // Animation de sortie
+        style={styles.cardWrapper}
+      >
+        <Swipeable
+          ref={(ref) => (swipeableRefs.current[index] = ref)}
+          renderRightActions={() => (
+            <View style={styles.swipeActionsContainer}>
+              <LinearGradient
+                colors={["#EF4444", "#B91C1C"]}
+                style={styles.trashButton}
+                start={{ x: 0, y: 0 }}
+                end={{ x: 1, y: 1 }}
+              >
+                <Ionicons
+                  name="trash-outline"
+                  size={normalizeSize(28)}
+                  color="#FFFFFF"
+                />
+              </LinearGradient>
+            </View>
+          )}
+          overshootRight={false}
+          onSwipeableOpen={() => handleRemoveChallenge(item.id, index)}
+        >
+          <TouchableOpacity
+            style={styles.cardContainer}
+            onPress={() => navigateToChallengeDetails(item)}
+            activeOpacity={0.9}
+          >
+            <LinearGradient
+              colors={["#FFFFFF", "#FFE0B2"]}
+              style={styles.card}
+              start={{ x: 0, y: 0 }}
+              end={{ x: 1, y: 1 }}
+            >
+              <Image
+                source={{
+                  uri: item.imageUrl || "https://via.placeholder.com/70",
+                }}
+                style={styles.cardImage}
+              />
+              <View style={styles.cardContent}>
+                <Text style={styles.challengeTitle} numberOfLines={1}>
+                  {item.title}
+                </Text>
+                <Text style={styles.challengeCategory}>
+                  {item.category || "Sans catégorie"}
+                </Text>
+                <View style={styles.progressContainer}>
+                  <Progress.Bar
+                    progress={progress}
+                    width={null}
+                    height={normalizeSize(8)}
+                    borderRadius={normalizeSize(4)}
+                    color="#FF6200"
+                    unfilledColor="#E0E0E0"
+                    borderWidth={0}
+                    style={styles.progressBar}
+                  />
+                  <Text style={styles.progressText}>
+                    {item.completedDays || 0}/{item.selectedDays || 7} jours
+                  </Text>
+                </View>
+                <TouchableOpacity
+                  style={styles.viewButton}
+                  onPress={() => navigateToChallengeDetails(item)}
+                >
+                  <LinearGradient
+                    colors={["#FF6200", "#FF8C00"]}
+                    style={styles.viewButtonGradient}
+                    start={{ x: 0, y: 0 }}
+                    end={{ x: 1, y: 1 }}
+                  >
+                    <Text style={styles.viewButtonText}>Voir Détails</Text>
+                  </LinearGradient>
+                </TouchableOpacity>
+              </View>
+            </LinearGradient>
+          </TouchableOpacity>
+        </Swipeable>
+      </Animated.View>
+    );
+  };
 
   if (isLoading) {
     return (
-      <SafeAreaView style={styles.loadingContainer}>
+      <SafeAreaView style={styles.safeArea}>
         <LinearGradient
           colors={[
             currentTheme.colors.background,
             currentTheme.colors.cardBackground,
           ]}
-          style={styles.loadingBackground}
+          style={styles.loadingContainer}
+          start={{ x: 0, y: 0 }}
+          end={{ x: 1, y: 1 }}
         >
-          <ActivityIndicator size="large" color={currentTheme.colors.primary} />
-          <Text style={styles.loadingText}>Chargement...</Text>
+          <ActivityIndicator size="large" color="#FF6200" />
+          <Text style={styles.loadingText}>Chargement en cours...</Text>
         </LinearGradient>
       </SafeAreaView>
     );
@@ -119,40 +293,55 @@ export default function SavedChallengesScreen() {
 
   if (savedChallenges.length === 0) {
     return (
-      <SafeAreaView style={styles.noChallengesContainer}>
+      <SafeAreaView style={styles.safeArea}>
         <LinearGradient
           colors={[
             currentTheme.colors.background,
             currentTheme.colors.cardBackground,
           ]}
-          style={styles.noChallengesBackground}
+          style={styles.noChallengesContainer}
+          start={{ x: 0, y: 0 }}
+          end={{ x: 1, y: 1 }}
         >
-          <Ionicons name="bookmark-outline" size={60} color="#b0bec5" />
-          <Text style={styles.noChallengesText}>Aucun défi sauvegardé !</Text>
-          <Text style={styles.noChallengesSubtext}>
-            Enregistrez des défis pour les retrouver ici.
-          </Text>
+          <Animated.View
+            entering={FadeInUp.delay(100)}
+            style={styles.noChallengesContent}
+          >
+            <Ionicons
+              name="bookmark-outline"
+              size={normalizeSize(60)}
+              color="#B0BEC5"
+            />
+            <Text style={styles.noChallengesText}>Aucun défi sauvegardé !</Text>
+            <Text style={styles.noChallengesSubtext}>
+              Sauvegardez des défis pour les voir ici.
+            </Text>
+          </Animated.View>
         </LinearGradient>
       </SafeAreaView>
     );
   }
 
   return (
-    <SafeAreaView style={styles.container}>
+    <SafeAreaView style={styles.safeArea}>
       <LinearGradient
         colors={[
           currentTheme.colors.background,
           currentTheme.colors.cardBackground,
         ]}
         style={styles.container}
+        start={{ x: 0, y: 0 }}
+        end={{ x: 1, y: 1 }}
       >
-        <BackButton color={currentTheme.colors.primary} />
-        <Text style={styles.header}>Défis Sauvegardés</Text>
+        <View style={styles.headerWrapper}>
+          <CustomHeader title="Défis Sauvegardés" />
+        </View>
         <FlatList
           data={savedChallenges}
-          renderItem={renderChallenge}
-          keyExtractor={(item) => item.id}
-          contentContainerStyle={styles.listContainer}
+          renderItem={renderChallengeItem}
+          keyExtractor={(item) => `saved-${item.id}`}
+          contentContainerStyle={styles.listContent}
+          showsVerticalScrollIndicator={false}
         />
       </LinearGradient>
     </SafeAreaView>
@@ -160,95 +349,137 @@ export default function SavedChallengesScreen() {
 }
 
 const styles = StyleSheet.create({
-  container: {
-    flex: 1,
-    paddingTop: 20,
-    backgroundColor: currentTheme.colors.background,
+  safeArea: { flex: 1 },
+  container: { flex: 1 },
+  headerWrapper: {
+    marginTop: SCREEN_HEIGHT * 0.01,
+    marginBottom: SCREEN_HEIGHT * 0.02,
+    paddingHorizontal: SCREEN_WIDTH * 0.05,
   },
-  header: {
-    fontSize: 25,
-    fontFamily: "Comfortaa_700Bold",
-    color: "#000000",
-    marginVertical: 20,
-    textAlign: "center",
-    marginBottom: 30,
+  listContent: {
+    paddingHorizontal: SCREEN_WIDTH * 0.05,
+    paddingBottom: SCREEN_HEIGHT * 0.1,
   },
-  listContainer: {
-    paddingHorizontal: 20,
-    paddingBottom: 40,
-  },
-  challengeItem: {
-    backgroundColor: currentTheme.colors.cardBackground,
-    borderRadius: 12,
-    padding: 15,
-    marginBottom: 15,
-    alignItems: "center",
-    elevation: 3,
+  cardWrapper: {
+    marginBottom: CARD_MARGIN,
     shadowColor: "#000",
-    shadowOpacity: 0.1,
-    shadowOffset: { width: 0, height: 2 },
-    shadowRadius: 4,
-    borderWidth: 2,
-    borderColor: currentTheme.colors.primary,
+    shadowOffset: { width: 0, height: normalizeSize(6) },
+    shadowOpacity: 0.3,
+    shadowRadius: normalizeSize(8),
+    elevation: 8,
   },
-  challengeImage: {
-    width: width * 0.85,
-    height: 150,
-    borderRadius: 10,
+  cardContainer: {
+    width: ITEM_WIDTH,
+    borderRadius: normalizeSize(20),
+    overflow: "hidden",
+    alignSelf: "center",
+  },
+  card: {
+    flexDirection: "row",
+    padding: normalizeSize(15),
+    borderRadius: normalizeSize(20),
+    borderWidth: 1,
+    borderColor: "#FF620030",
+    minHeight: ITEM_HEIGHT,
+  },
+  cardImage: {
+    width: normalizeSize(70),
+    height: normalizeSize(70),
+    borderRadius: normalizeSize(14),
+    marginRight: normalizeSize(15),
+    borderWidth: 2,
+    borderColor: "#FFFFFF",
+  },
+  cardContent: {
+    flex: 1,
   },
   challengeTitle: {
-    fontSize: 18,
-    fontFamily: "Comfortaa_700Bold",
-    color: "#000000",
-    marginTop: 10,
-    textAlign: "center",
+    fontSize: normalizeSize(18),
+    color: "#333333",
+    fontFamily: currentTheme.typography.title.fontFamily,
   },
   challengeCategory: {
-    fontSize: 14,
-    color: "#555555",
-    marginTop: 4,
-    textAlign: "center",
+    fontSize: normalizeSize(14),
+    color: "#777777",
+    fontFamily: currentTheme.typography.body.fontFamily,
+    marginTop: normalizeSize(2),
     textTransform: "capitalize",
+  },
+  progressContainer: {
+    marginVertical: normalizeSize(10),
+  },
+  progressBar: {
+    flex: 1,
+  },
+  progressText: {
+    fontSize: normalizeSize(12),
+    color: "#FF6200",
+    marginTop: normalizeSize(5),
+    fontFamily: currentTheme.typography.body.fontFamily,
+  },
+  viewButton: {
+    borderRadius: normalizeSize(12),
+    overflow: "hidden",
+    marginTop: normalizeSize(10),
+  },
+  viewButtonGradient: {
+    paddingVertical: normalizeSize(10),
+    paddingHorizontal: normalizeSize(15),
+    alignItems: "center",
+  },
+  viewButtonText: {
+    color: "#FFFFFF",
+    fontFamily: currentTheme.typography.title.fontFamily,
+    fontSize: normalizeSize(14),
+    textShadowColor: "#000",
+    textShadowOffset: { width: 0, height: 1 },
+    textShadowRadius: 2,
   },
   loadingContainer: {
     flex: 1,
     justifyContent: "center",
     alignItems: "center",
   },
-  loadingBackground: {
-    width: "100%",
-    height: "100%",
-    justifyContent: "center",
-    alignItems: "center",
-  },
   loadingText: {
-    marginTop: 10,
-    fontSize: 16,
-    color: currentTheme.colors.primary,
+    marginTop: normalizeSize(10),
+    fontSize: normalizeSize(16),
+    fontFamily: currentTheme.typography.body.fontFamily,
+    color: currentTheme.colors.textSecondary,
   },
   noChallengesContainer: {
     flex: 1,
     justifyContent: "center",
     alignItems: "center",
   },
-  noChallengesBackground: {
+  noChallengesContent: {
+    alignItems: "center",
+  },
+  noChallengesText: {
+    fontSize: normalizeSize(20),
+    fontFamily: currentTheme.typography.title.fontFamily,
+    color: "#333333",
+    marginTop: normalizeSize(15),
+    textAlign: "center",
+  },
+  noChallengesSubtext: {
+    fontSize: normalizeSize(16),
+    fontFamily: currentTheme.typography.body.fontFamily,
+    color: "#777777",
+    textAlign: "center",
+    marginTop: normalizeSize(10),
+    maxWidth: SCREEN_WIDTH * 0.65,
+  },
+  swipeActionsContainer: {
+    width: SCREEN_WIDTH * 0.18,
+    justifyContent: "center",
+    alignItems: "center",
+    marginBottom: CARD_MARGIN,
+  },
+  trashButton: {
     width: "100%",
     height: "100%",
     justifyContent: "center",
     alignItems: "center",
-  },
-  noChallengesText: {
-    fontSize: 18,
-    fontWeight: "bold",
-    color: "#333333",
-    marginTop: 10,
-    textAlign: "center",
-  },
-  noChallengesSubtext: {
-    fontSize: 14,
-    color: "#777777",
-    textAlign: "center",
-    marginTop: 5,
-    maxWidth: 250,
+    borderRadius: normalizeSize(20),
   },
 });
