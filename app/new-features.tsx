@@ -26,14 +26,13 @@ import { Ionicons } from "@expo/vector-icons";
 import Animated, { FadeInUp } from "react-native-reanimated";
 import { LinearGradient } from "expo-linear-gradient";
 import AsyncStorage from "@react-native-async-storage/async-storage";
+import { useTheme } from "../context/ThemeContext"; // Ajout de useTheme
+import { Theme } from "../theme/designSystem"; // Import de Theme
 import designSystem from "../theme/designSystem";
 import CustomHeader from "@/components/CustomHeader";
 import ModalExplicatif from "../components/ModalExplicatif";
 import FeatureDetailModal from "../components/FeatureDetailModal";
 import ProposeFeatureModal from "../components/ProposeFeatureModal";
-
-const { lightTheme } = designSystem;
-const currentTheme = lightTheme;
 
 const { width: SCREEN_WIDTH, height: SCREEN_HEIGHT } = Dimensions.get("window");
 
@@ -72,6 +71,11 @@ export default function NewFeatures() {
   const [selectedFeature, setSelectedFeature] = useState<Feature | null>(null);
   const [showFeatureDetailModal, setShowFeatureDetailModal] = useState(false);
   const [showProposeModal, setShowProposeModal] = useState(false);
+  const { theme } = useTheme(); // Ajout de useTheme
+  const isDarkMode = theme === "dark";
+  const currentTheme: Theme = isDarkMode
+    ? designSystem.darkTheme
+    : designSystem.lightTheme;
 
   useEffect(() => {
     const unsubscribeAuth = onAuthStateChanged(auth, async (firebaseUser) => {
@@ -191,7 +195,7 @@ export default function NewFeatures() {
 
   const renderCountdown = () => (
     <LinearGradient
-      colors={["#FFD700", "#FFA500"]}
+      colors={[currentTheme.colors.secondary, currentTheme.colors.primary]} // Dynamique
       style={styles.countdownContainer}
       start={{ x: 0, y: 0 }}
       end={{ x: 1, y: 1 }}
@@ -202,8 +206,20 @@ export default function NewFeatures() {
           entering={FadeInUp.delay(idx * 100)}
           style={styles.countdownBox}
         >
-          <Text style={styles.countdownNumber}>{countdown[unit]}</Text>
-          <Text style={styles.countdownLabel}>
+          <Text
+            style={[
+              styles.countdownNumber,
+              { color: currentTheme.colors.textPrimary },
+            ]}
+          >
+            {countdown[unit]}
+          </Text>
+          <Text
+            style={[
+              styles.countdownLabel,
+              { color: currentTheme.colors.textPrimary },
+            ]}
+          >
             {unit.charAt(0).toUpperCase() + unit.slice(1)}
           </Text>
         </Animated.View>
@@ -223,18 +239,45 @@ export default function NewFeatures() {
         }}
       >
         <LinearGradient
-          colors={["#FFFFFF", "#F0F0F0"]}
+          colors={[
+            currentTheme.colors.cardBackground,
+            `${currentTheme.colors.cardBackground}F0`,
+          ]} // Dynamique
           style={styles.featureGradient}
         >
-          <Text style={styles.featureTitle}>{item.title}</Text>
+          <Text
+            style={[
+              styles.featureTitle,
+              { color: currentTheme.colors.textPrimary },
+            ]}
+          >
+            {item.title}
+          </Text>
           {item.username && (
-            <Text style={styles.featureUsername}>par {item.username}</Text>
+            <Text
+              style={[
+                styles.featureUsername,
+                { color: currentTheme.colors.textSecondary },
+              ]}
+            >
+              par {item.username}
+            </Text>
           )}
-          <Text style={styles.featureVotes}>
+          <Text
+            style={[
+              styles.featureVotes,
+              { color: currentTheme.colors.primary },
+            ]}
+          >
             {item.votes} vote{item.votes !== 1 ? "s" : ""}
           </Text>
           {item.description && (
-            <Text style={styles.featureDescription}>
+            <Text
+              style={[
+                styles.featureDescription,
+                { color: currentTheme.colors.textSecondary },
+              ]}
+            >
               {item.description.length > 50
                 ? `${item.description.substring(0, 50)}...`
                 : item.description}
@@ -249,11 +292,24 @@ export default function NewFeatures() {
     return (
       <SafeAreaView style={styles.safeArea}>
         <LinearGradient
-          colors={[currentTheme.colors.background, "#FFFFFF"]}
+          colors={[
+            currentTheme.colors.background,
+            currentTheme.colors.cardBackground,
+          ]} // Dynamique
           style={styles.loadingContainer}
         >
-          <ActivityIndicator size="large" color={currentTheme.colors.primary} />
-          <Text style={styles.loadingText}>Chargement en cours...</Text>
+          <ActivityIndicator
+            size="large"
+            color={currentTheme.colors.secondary}
+          />
+          <Text
+            style={[
+              styles.loadingText,
+              { color: currentTheme.colors.textPrimary },
+            ]}
+          >
+            Chargement en cours...
+          </Text>
         </LinearGradient>
       </SafeAreaView>
     );
@@ -265,7 +321,7 @@ export default function NewFeatures() {
         colors={[
           currentTheme.colors.background,
           `${currentTheme.colors.cardBackground}F0`,
-        ]}
+        ]} // Dynamique
         style={styles.container}
         start={{ x: 0, y: 0 }}
         end={{ x: 1, y: 1 }}
@@ -280,14 +336,24 @@ export default function NewFeatures() {
           <Ionicons
             name="help-circle-outline"
             size={normalizeSize(30)}
-            color={currentTheme.colors.primary}
+            color={currentTheme.colors.secondary} // Dynamique
           />
         </TouchableOpacity>
-        <Text style={styles.description}>
+        <Text
+          style={[
+            styles.description,
+            { color: currentTheme.colors.textSecondary },
+          ]}
+        >
           Votez pour la prochaine fonctionnalité à implémenter ou proposez la
           vôtre ! Fin le 30 avril 2025.
         </Text>
-        <View style={styles.featuresWindow}>
+        <View
+          style={[
+            styles.featuresWindow,
+            { backgroundColor: `${currentTheme.colors.cardBackground}80` },
+          ]}
+        >
           <FlatList
             data={features}
             renderItem={renderFeatureItem}
@@ -299,16 +365,31 @@ export default function NewFeatures() {
         <View style={styles.bottomContainer}>
           {renderCountdown()}
           {userVote ? (
-            <Text style={styles.thankYouText}>
+            <Text
+              style={[
+                styles.thankYouText,
+                { color: currentTheme.colors.textSecondary },
+              ]}
+            >
               Merci pour votre vote :{" "}
               {features.find((f) => f.id === userVote)?.title || "???"}
             </Text>
           ) : (
             <TouchableOpacity
-              style={styles.proposeButton}
+              style={[
+                styles.proposeButton,
+                { backgroundColor: currentTheme.colors.primary },
+              ]}
               onPress={() => setShowProposeModal(true)}
             >
-              <Text style={styles.proposeButtonText}>Proposer une idée</Text>
+              <Text
+                style={[
+                  styles.proposeButtonText,
+                  { color: currentTheme.colors.textPrimary },
+                ]}
+              >
+                Proposer une idée
+              </Text>
             </TouchableOpacity>
           )}
         </View>
@@ -355,17 +436,15 @@ const styles = StyleSheet.create({
   },
   description: {
     fontSize: normalizeSize(14),
-    fontFamily: currentTheme.typography.body.fontFamily,
-    color: currentTheme.colors.textSecondary,
+    fontFamily: "Comfortaa_400Regular", // Direct
     textAlign: "center",
     marginVertical: normalizeSize(15),
     paddingHorizontal: normalizeSize(10),
   },
   featuresWindow: {
-    flex: 0.85, // Prend tout l'espace disponible
+    flex: 0.85,
     marginVertical: normalizeSize(10),
     borderRadius: normalizeSize(15),
-    backgroundColor: `${currentTheme.colors.cardBackground}80`,
     overflow: "hidden",
   },
   featuresContent: {
@@ -388,29 +467,25 @@ const styles = StyleSheet.create({
   },
   featureTitle: {
     fontSize: normalizeSize(16),
-    fontFamily: currentTheme.typography.title.fontFamily,
-    color: "#000000",
+    fontFamily: "Comfortaa_700Bold", // Direct
     textAlign: "center",
     marginBottom: normalizeSize(5),
   },
   featureUsername: {
     fontSize: normalizeSize(12),
-    fontFamily: currentTheme.typography.body.fontFamily,
-    color: currentTheme.colors.textSecondary,
+    fontFamily: "Comfortaa_400Regular", // Direct
     textAlign: "center",
     marginBottom: normalizeSize(5),
   },
   featureVotes: {
     fontSize: normalizeSize(14),
-    fontFamily: currentTheme.typography.title.fontFamily,
-    color: currentTheme.colors.primary,
+    fontFamily: "Comfortaa_700Bold", // Direct
     textAlign: "center",
     marginBottom: normalizeSize(5),
   },
   featureDescription: {
     fontSize: normalizeSize(12),
-    fontFamily: currentTheme.typography.body.fontFamily,
-    color: currentTheme.colors.textSecondary,
+    fontFamily: "Comfortaa_400Regular", // Direct
     textAlign: "center",
   },
   bottomContainer: {
@@ -429,36 +504,30 @@ const styles = StyleSheet.create({
   countdownBox: { alignItems: "center", width: "22%" },
   countdownNumber: {
     fontSize: normalizeSize(20),
-    fontFamily: currentTheme.typography.title.fontFamily,
-    color: "#FFFFFF",
+    fontFamily: "Comfortaa_700Bold", // Direct
   },
   countdownLabel: {
     fontSize: normalizeSize(10),
-    fontFamily: currentTheme.typography.body.fontFamily,
-    color: "#FFFFFF",
+    fontFamily: "Comfortaa_400Regular", // Direct
   },
   proposeButton: {
-    backgroundColor: currentTheme.colors.primary,
     paddingVertical: normalizeSize(12),
     paddingHorizontal: normalizeSize(25),
     borderRadius: normalizeSize(25),
   },
   proposeButtonText: {
     fontSize: normalizeSize(14),
-    fontFamily: currentTheme.typography.title.fontFamily,
-    color: "#FFFFFF",
+    fontFamily: "Comfortaa_700Bold", // Direct
   },
   thankYouText: {
     fontSize: normalizeSize(14),
-    fontFamily: currentTheme.typography.body.fontFamily,
-    color: currentTheme.colors.textSecondary,
+    fontFamily: "Comfortaa_400Regular", // Direct
     textAlign: "center",
   },
   loadingContainer: { flex: 1, justifyContent: "center", alignItems: "center" },
   loadingText: {
     marginTop: normalizeSize(10),
     fontSize: normalizeSize(16),
-    fontFamily: currentTheme.typography.body.fontFamily,
-    color: currentTheme.colors.textSecondary,
+    fontFamily: "Comfortaa_400Regular", // Direct
   },
 });

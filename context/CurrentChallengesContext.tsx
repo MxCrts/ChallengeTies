@@ -82,41 +82,90 @@ export const CurrentChallengesProvider: React.FC<{
   } | null>(null);
 
   useEffect(() => {
-    const userId = auth.currentUser?.uid;
-    if (!userId) return;
-    const userRef = doc(db, "users", userId);
-    const unsubscribe = onSnapshot(userRef, (docSnap) => {
-      if (docSnap.exists()) {
-        const userData = docSnap.data();
-        if (Array.isArray(userData.CurrentChallenges)) {
-          const uniqueChallenges = Array.from(
-            new Map(
-              userData.CurrentChallenges.map((ch: CurrentChallenge) => [
-                ch.uniqueKey,
-                ch,
-              ])
-            ).values()
-          );
-          setCurrentChallenges(uniqueChallenges);
-        } else {
-          setCurrentChallenges([]);
-        }
-        console.log("🔥 Données utilisateur récupérées :", userData);
+    console.log("🟢 Initialisation de l'écoute d'authentification");
+    const unsubscribeAuth = auth.onAuthStateChanged((user) => {
+      if (user) {
+        const userId = user.uid;
+        console.log(
+          "🔐 Utilisateur connecté, initialisation de onSnapshot pour userId :",
+          userId
+        );
+        const userRef = doc(db, "users", userId);
+        const unsubscribeSnapshot = onSnapshot(
+          userRef,
+          (docSnap) => {
+            if (docSnap.exists()) {
+              const userData = docSnap.data();
+              console.log(
+                "🔥 Données brutes de Firebase :",
+                JSON.stringify(userData, null, 2)
+              );
+              if (Array.isArray(userData.CurrentChallenges)) {
+                const uniqueChallenges = Array.from(
+                  new Map(
+                    userData.CurrentChallenges.map((ch: CurrentChallenge) => {
+                      const key = ch.uniqueKey || `${ch.id}_${ch.selectedDays}`;
+                      console.log("🔍 Traitement défi :", {
+                        id: ch.id,
+                        uniqueKey: key,
+                      });
+                      return [key, { ...ch, uniqueKey: key }];
+                    })
+                  ).values()
+                );
+                console.log(
+                  "✅ Challenges uniques traités :",
+                  JSON.stringify(uniqueChallenges, null, 2)
+                );
+                setCurrentChallenges(uniqueChallenges);
+              } else {
+                console.log(
+                  "⚠️ CurrentChallenges n'est pas un tableau :",
+                  userData.CurrentChallenges
+                );
+                setCurrentChallenges([]);
+              }
+            } else {
+              console.log("❌ Document utilisateur inexistant.");
+              setCurrentChallenges([]);
+            }
+          },
+          (error) => {
+            console.error("❌ Erreur onSnapshot :", error.message);
+            setCurrentChallenges([]);
+          }
+        );
+        return () => {
+          console.log("🔴 Arrêt de onSnapshot pour userId :", userId);
+          unsubscribeSnapshot();
+        };
       } else {
-        console.log("❌ Aucune donnée trouvée pour cet utilisateur.");
+        console.log(
+          "❌ Pas d'utilisateur connecté, réinitialisation des challenges."
+        );
+        setCurrentChallenges([]);
       }
     });
-    return () => unsubscribe();
+
+    return () => {
+      console.log("🔴 Arrêt de l'écoute d'authentification");
+      unsubscribeAuth();
+    };
   }, []);
 
   const getToday = () => simulatedToday || new Date();
 
   const takeChallenge = async (challenge: Challenge, selectedDays: number) => {
     const userId = auth.currentUser?.uid;
-    if (!userId) return;
+    if (!userId) {
+      console.log("❌ Pas d'utilisateur connecté pour takeChallenge.");
+      Alert.alert("Erreur", "Veuillez vous connecter pour prendre un défi.");
+      return;
+    }
     const uniqueKey = `${challenge.id}_${selectedDays}`;
     if (currentChallenges.find((ch) => ch.uniqueKey === uniqueKey)) {
-      console.log("Défi déjà pris");
+      console.log("⚠️ Défi déjà pris :", uniqueKey);
+      Alert.alert("Info", "Ce défi est déjà en cours.");
       return;
     }
     try {
@@ -130,28 +179,42 @@ export const CurrentChallengesProvider: React.FC<{
         uniqueKey,
         completionDates: [],
       };
+      console.log(
+        "📤 Envoi à Firebase :",
+        JSON.stringify(challengeData, null, 2)
+      );
       await updateDoc(userRef, {
         CurrentChallenges: arrayUnion(challengeData),
       });
-      setCurrentChallenges((prev) => [...prev, challengeData]);
-      console.log("✅ Défi ajouté à CurrentChallenges !");
+      console.log("✅ Défi envoyé à Firebase, en attente de onSnapshot...");
       await checkForAchievements(userId);
     } catch (error) {
-      console.error("❌ Erreur lors de l'ajout du défi :", error);
+      console.error("❌ Erreur lors de l'ajout du défi :", error.message);
+      Alert.alert("Erreur", "Impossible d'ajouter le défi.");
     }
   };
 
   const removeChallenge = async (id: string, selectedDays: number) => {
     const userId = auth.currentUser?.uid;
-    if (!userId) return;
+    if (!userId) {
+      console.log("❌ Pas d'utilisateur connecté pour removeChallenge.");
+      return;
+    }
     const uniqueKey = `${id}_${selectedDays}`;
     try {
       const userRef = doc(db, "users", userId);
       const userSnap = await getDoc(userRef);
-      if (!userSnap.exists()) return;
+      if (!userSnap.exists()) {
+        console.log("❌ Document utilisateur inexistant.");
+        return;
+      }
       const userData = userSnap.data();
       const updatedChallenges = (userData.CurrentChallenges || []).filter(
         (challenge: CurrentChallenge) => challenge.uniqueKey !== uniqueKey
+      );
+      console.log(
+        "📤 Mise à jour Firebase avec challenges :",
+        JSON.stringify(updatedChallenges, null, 2)
       );
       await updateDoc(userRef, {
         CurrentChallenges: updatedChallenges,
@@ -176,7 +239,11 @@ export const CurrentChallengesProvider: React.FC<{
       });
       console.log("✅ Document challenge mis à jour après suppression !");
     } catch (error) {
-      console.error("❌ Erreur lors de la suppression du défi :", error);
+      console.error(
+        "❌ Erreur lors de la suppression du défi :",
+        error.message
+      );
+      Alert.alert("Erreur", "Impossible de supprimer le défi.");
     }
   };
 
@@ -186,20 +253,29 @@ export const CurrentChallengesProvider: React.FC<{
     const challenge = currentChallenges.find(
       (ch) => ch.uniqueKey === uniqueKey
     );
-    if (!challenge) return false;
+    if (!challenge) {
+      console.log("⚠️ Challenge non trouvé pour isMarkedToday :", uniqueKey);
+      return false;
+    }
     return challenge.lastMarkedDate === today;
   };
 
   const markToday = async (id: string, selectedDays: number) => {
     const userId = auth.currentUser?.uid;
-    if (!userId) return { success: false };
+    if (!userId) {
+      console.log("❌ Pas d'utilisateur connecté pour markToday.");
+      return { success: false };
+    }
     const uniqueKey = `${id}_${selectedDays}`;
     try {
       const today = getToday();
       const todayString = today.toDateString();
       const userRef = doc(db, "users", userId);
       const userSnap = await getDoc(userRef);
-      if (!userSnap.exists()) return { success: false };
+      if (!userSnap.exists()) {
+        console.log("❌ Document utilisateur inexistant.");
+        return { success: false };
+      }
       const userData = userSnap.data();
       let currentChallengesArray: CurrentChallenge[] = Array.isArray(
         userData.CurrentChallenges
@@ -210,16 +286,17 @@ export const CurrentChallengesProvider: React.FC<{
         (challenge: CurrentChallenge) => challenge.uniqueKey === uniqueKey
       );
       if (challengeIndex === -1) {
+        console.log("⚠️ Challenge non trouvé :", uniqueKey);
         Alert.alert("Erreur", "Challenge non trouvé.");
         return { success: false };
       }
       const challengeToMark = { ...currentChallengesArray[challengeIndex] };
 
-      // Vérifier si déjà marqué aujourd'hui
       if (
         challengeToMark.completionDates &&
         challengeToMark.completionDates.includes(todayString)
       ) {
+        console.log("⚠️ Déjà marqué aujourd'hui :", uniqueKey);
         Alert.alert(
           "Déjà marqué",
           "Tu as déjà marqué ce challenge aujourd'hui."
@@ -227,30 +304,32 @@ export const CurrentChallengesProvider: React.FC<{
         return { success: false };
       }
 
-      // Calculer les jours manqués depuis la dernière date marquée
       let missedDays = 0;
       if (challengeToMark.lastMarkedDate) {
         const lastMarked = new Date(challengeToMark.lastMarkedDate);
         const diffTime = today.getTime() - lastMarked.getTime();
         missedDays = Math.floor(diffTime / (1000 * 60 * 60 * 24));
       } else {
-        // Si c'est le premier marquage, pas de jours manqués
         missedDays = 0;
       }
 
       if (missedDays < 2) {
-        // Marquage normal si moins de 2 jours manqués
         challengeToMark.streak = (challengeToMark.streak || 0) + 1;
         challengeToMark.completionDates = challengeToMark.completionDates || [];
         challengeToMark.completionDates.push(todayString);
-        challengeToMark.completedDays = challengeToMark.completedDays + 1;
+        challengeToMark.completedDays =
+          (challengeToMark.completedDays || 0) + 1;
         challengeToMark.lastMarkedDate = todayString;
 
         const updatedChallenges = currentChallengesArray.map((challenge, idx) =>
           idx === challengeIndex ? challengeToMark : challenge
         );
-        setCurrentChallenges(updatedChallenges);
+        console.log(
+          "📤 Mise à jour Firebase pour markToday :",
+          JSON.stringify(updatedChallenges, null, 2)
+        );
         await updateDoc(userRef, { CurrentChallenges: updatedChallenges });
+        setCurrentChallenges(updatedChallenges);
 
         if (challengeToMark.completedDays >= challengeToMark.selectedDays) {
           Alert.alert(
@@ -274,12 +353,13 @@ export const CurrentChallengesProvider: React.FC<{
         await checkForAchievements(userId);
         return { success: true };
       } else {
-        // Afficher le modal si 2 jours ou plus manqués
+        console.log("⚠️ Trop de jours manqués :", missedDays, uniqueKey);
         showMissedChallengeModal(id, selectedDays);
         return { success: false, missedDays };
       }
     } catch (error) {
-      console.error("❌ Erreur lors du marquage :", error);
+      console.error("❌ Erreur lors du marquage :", error.message);
+      Alert.alert("Erreur", "Impossible de marquer le défi.");
       return { success: false };
     }
   };
@@ -290,32 +370,45 @@ export const CurrentChallengesProvider: React.FC<{
     const userId = auth.currentUser?.uid;
     if (!userId) return;
     const uniqueKey = `${id}_${selectedDays}`;
-    const userRef = doc(db, "users", userId);
-    const userSnap = await getDoc(userRef);
-    const userData = userSnap.data();
-    let currentChallengesArray: CurrentChallenge[] = Array.isArray(
-      userData.CurrentChallenges
-    )
-      ? userData.CurrentChallenges
-      : [];
-    const challengeIndex = currentChallengesArray.findIndex(
-      (challenge: CurrentChallenge) => challenge.uniqueKey === uniqueKey
-    );
-    const challengeToMark = { ...currentChallengesArray[challengeIndex] };
-    const today = getToday().toDateString();
+    try {
+      const userRef = doc(db, "users", userId);
+      const userSnap = await getDoc(userRef);
+      const userData = userSnap.data();
+      let currentChallengesArray: CurrentChallenge[] = Array.isArray(
+        userData.CurrentChallenges
+      )
+        ? userData.CurrentChallenges
+        : [];
+      const challengeIndex = currentChallengesArray.findIndex(
+        (challenge: CurrentChallenge) => challenge.uniqueKey === uniqueKey
+      );
+      if (challengeIndex === -1) {
+        console.log("⚠️ Challenge non trouvé pour reset :", uniqueKey);
+        return;
+      }
+      const challengeToMark = { ...currentChallengesArray[challengeIndex] };
+      const today = getToday().toDateString();
 
-    challengeToMark.streak = 1;
-    challengeToMark.completionDates = [today];
-    challengeToMark.completedDays = 1;
-    challengeToMark.lastMarkedDate = today;
-    const updatedChallenges = currentChallengesArray.map((challenge, idx) =>
-      idx === challengeIndex ? challengeToMark : challenge
-    );
-    setCurrentChallenges(updatedChallenges);
-    await updateDoc(userRef, { CurrentChallenges: updatedChallenges });
-    Alert.alert("Streak réinitialisé", "Ton streak a été remis à 1.");
-    await checkForAchievements(userId);
-    setModalVisible(false);
+      challengeToMark.streak = 1;
+      challengeToMark.completionDates = [today];
+      challengeToMark.completedDays = 1;
+      challengeToMark.lastMarkedDate = today;
+      const updatedChallenges = currentChallengesArray.map((challenge, idx) =>
+        idx === challengeIndex ? challengeToMark : challenge
+      );
+      console.log(
+        "📤 Mise à jour Firebase pour reset :",
+        JSON.stringify(updatedChallenges, null, 2)
+      );
+      await updateDoc(userRef, { CurrentChallenges: updatedChallenges });
+      setCurrentChallenges(updatedChallenges);
+      Alert.alert("Streak réinitialisé", "Ton streak a été remis à 1.");
+      await checkForAchievements(userId);
+      setModalVisible(false);
+    } catch (error) {
+      console.error("❌ Erreur lors du reset :", error.message);
+      Alert.alert("Erreur", "Impossible de réinitialiser le streak.");
+    }
   };
 
   const handleWatchAd = async () => {
@@ -324,36 +417,50 @@ export const CurrentChallengesProvider: React.FC<{
     const userId = auth.currentUser?.uid;
     if (!userId) return;
     const uniqueKey = `${id}_${selectedDays}`;
-    const userRef = doc(db, "users", userId);
-    const userSnap = await getDoc(userRef);
-    const userData = userSnap.data();
-    let currentChallengesArray: CurrentChallenge[] = Array.isArray(
-      userData.CurrentChallenges
-    )
-      ? userData.CurrentChallenges
-      : [];
-    const challengeIndex = currentChallengesArray.findIndex(
-      (challenge: CurrentChallenge) => challenge.uniqueKey === uniqueKey
-    );
-    const challengeToMark = { ...currentChallengesArray[challengeIndex] };
-    const today = getToday().toDateString();
-    const newCompletedDays = challengeToMark.completedDays + 1;
+    try {
+      const userRef = doc(db, "users", userId);
+      const userSnap = await getDoc(userRef);
+      const userData = userSnap.data();
+      let currentChallengesArray: CurrentChallenge[] = Array.isArray(
+        userData.CurrentChallenges
+      )
+        ? userData.CurrentChallenges
+        : [];
+      const challengeIndex = currentChallengesArray.findIndex(
+        (challenge: CurrentChallenge) => challenge.uniqueKey === uniqueKey
+      );
+      if (challengeIndex === -1) {
+        console.log("⚠️ Challenge non trouvé pour watchAd :", uniqueKey);
+        return;
+      }
+      const challengeToMark = { ...currentChallengesArray[challengeIndex] };
+      const today = getToday().toDateString();
+      const newCompletedDays = (challengeToMark.completedDays || 0) + 1;
 
-    challengeToMark.streak = (challengeToMark.streak || 0) + 1;
-    challengeToMark.completionDates.push(today);
-    challengeToMark.completedDays = newCompletedDays;
-    challengeToMark.lastMarkedDate = today;
-    const updatedChallenges = currentChallengesArray.map((challenge, idx) =>
-      idx === challengeIndex ? challengeToMark : challenge
-    );
-    setCurrentChallenges(updatedChallenges);
-    await updateDoc(userRef, { CurrentChallenges: updatedChallenges });
-    Alert.alert(
-      "Pub regardée",
-      "Challenge marqué, ton streak continue normalement."
-    );
-    await checkForAchievements(userId);
-    setModalVisible(false);
+      challengeToMark.streak = (challengeToMark.streak || 0) + 1;
+      challengeToMark.completionDates = challengeToMark.completionDates || [];
+      challengeToMark.completionDates.push(today);
+      challengeToMark.completedDays = newCompletedDays;
+      challengeToMark.lastMarkedDate = today;
+      const updatedChallenges = currentChallengesArray.map((challenge, idx) =>
+        idx === challengeIndex ? challengeToMark : challenge
+      );
+      console.log(
+        "📤 Mise à jour Firebase pour watchAd :",
+        JSON.stringify(updatedChallenges, null, 2)
+      );
+      await updateDoc(userRef, { CurrentChallenges: updatedChallenges });
+      setCurrentChallenges(updatedChallenges);
+      Alert.alert(
+        "Pub regardée",
+        "Challenge marqué, ton streak continue normalement."
+      );
+      await checkForAchievements(userId);
+      setModalVisible(false);
+    } catch (error) {
+      console.error("❌ Erreur lors de watchAd :", error.message);
+      Alert.alert("Erreur", "Impossible de marquer après pub.");
+    }
   };
 
   const handleUseTrophies = async () => {
@@ -362,50 +469,66 @@ export const CurrentChallengesProvider: React.FC<{
     const userId = auth.currentUser?.uid;
     if (!userId) return;
     const uniqueKey = `${id}_${selectedDays}`;
-    const userRef = doc(db, "users", userId);
-    const userSnap = await getDoc(userRef);
-    const userData = userSnap.data();
-    let currentChallengesArray: CurrentChallenge[] = Array.isArray(
-      userData.CurrentChallenges
-    )
-      ? userData.CurrentChallenges
-      : [];
-    const challengeIndex = currentChallengesArray.findIndex(
-      (challenge: CurrentChallenge) => challenge.uniqueKey === uniqueKey
-    );
-    const challengeToMark = { ...currentChallengesArray[challengeIndex] };
-    const today = getToday().toDateString();
-    const newCompletedDays = challengeToMark.completedDays + 1;
     const trophyCost = 5;
-
-    const success = await deductTrophies(userId, trophyCost);
-    if (!success) {
-      Alert.alert(
-        "Pas assez de trophées",
-        "Tu n'as pas assez de trophées pour cette option."
+    try {
+      const userRef = doc(db, "users", userId);
+      const userSnap = await getDoc(userRef);
+      const userData = userSnap.data();
+      let currentChallengesArray: CurrentChallenge[] = Array.isArray(
+        userData.CurrentChallenges
+      )
+        ? userData.CurrentChallenges
+        : [];
+      const challengeIndex = currentChallengesArray.findIndex(
+        (challenge: CurrentChallenge) => challenge.uniqueKey === uniqueKey
       );
-      setModalVisible(false);
-      return;
-    }
+      if (challengeIndex === -1) {
+        console.log("⚠️ Challenge non trouvé pour useTrophies :", uniqueKey);
+        return;
+      }
+      const challengeToMark = { ...currentChallengesArray[challengeIndex] };
+      const today = getToday().toDateString();
+      const newCompletedDays = (challengeToMark.completedDays || 0) + 1;
 
-    challengeToMark.streak = (challengeToMark.streak || 0) + 1;
-    challengeToMark.completionDates.push(today);
-    challengeToMark.completedDays = newCompletedDays;
-    challengeToMark.lastMarkedDate = today;
-    const updatedChallenges = currentChallengesArray.map((challenge, idx) =>
-      idx === challengeIndex ? challengeToMark : challenge
-    );
-    setCurrentChallenges(updatedChallenges);
-    await updateDoc(userRef, { CurrentChallenges: updatedChallenges });
-    Alert.alert(
-      "Trophées utilisés",
-      `Challenge marqué, ton streak continue normalement. (${trophyCost} trophées ont été déduits)`
-    );
-    await checkForAchievements(userId);
-    setModalVisible(false);
+      const success = await deductTrophies(userId, trophyCost);
+      if (!success) {
+        console.log("⚠️ Pas assez de trophées :", userId);
+        Alert.alert(
+          "Pas assez de trophées",
+          "Tu n'as pas assez de trophées pour cette option."
+        );
+        setModalVisible(false);
+        return;
+      }
+
+      challengeToMark.streak = (challengeToMark.streak || 0) + 1;
+      challengeToMark.completionDates = challengeToMark.completionDates || [];
+      challengeToMark.completionDates.push(today);
+      challengeToMark.completedDays = newCompletedDays;
+      challengeToMark.lastMarkedDate = today;
+      const updatedChallenges = currentChallengesArray.map((challenge, idx) =>
+        idx === challengeIndex ? challengeToMark : challenge
+      );
+      console.log(
+        "📤 Mise à jour Firebase pour useTrophies :",
+        JSON.stringify(updatedChallenges, null, 2)
+      );
+      await updateDoc(userRef, { CurrentChallenges: updatedChallenges });
+      setCurrentChallenges(updatedChallenges);
+      Alert.alert(
+        "Trophées utilisés",
+        `Challenge marqué, ton streak continue normalement. (${trophyCost} trophées ont été déduits)`
+      );
+      await checkForAchievements(userId);
+      setModalVisible(false);
+    } catch (error) {
+      console.error("❌ Erreur lors de useTrophies :", error.message);
+      Alert.alert("Erreur", "Impossible de marquer avec trophées.");
+    }
   };
 
   const showMissedChallengeModal = (id: string, selectedDays: number) => {
+    console.log("📢 Affichage modal pour :", id, selectedDays);
     setSelectedChallenge({ id, selectedDays });
     setModalVisible(true);
   };
@@ -416,13 +539,19 @@ export const CurrentChallengesProvider: React.FC<{
     doubleReward: boolean = false
   ) => {
     const userId = auth.currentUser?.uid;
-    if (!userId) return;
+    if (!userId) {
+      console.log("❌ Pas d'utilisateur connecté pour completeChallenge.");
+      return;
+    }
     const uniqueKey = `${id}_${selectedDays}`;
     try {
       const today = getToday().toDateString();
       const userRef = doc(db, "users", userId);
       const userSnap = await getDoc(userRef);
-      if (!userSnap.exists()) return;
+      if (!userSnap.exists()) {
+        console.log("❌ Document utilisateur inexistant.");
+        return;
+      }
       const userData = userSnap.data();
 
       let currentChallengesArray: CurrentChallenge[] = Array.isArray(
@@ -434,6 +563,10 @@ export const CurrentChallengesProvider: React.FC<{
         (challenge: CurrentChallenge) => challenge.uniqueKey === uniqueKey
       );
       if (challengeIndex === -1) {
+        console.log(
+          "⚠️ Challenge non trouvé pour completeChallenge :",
+          uniqueKey
+        );
         Alert.alert("Erreur", "Challenge non trouvé.");
         return;
       }
@@ -477,6 +610,19 @@ export const CurrentChallengesProvider: React.FC<{
         completedChallengesArray.push(newCompletedEntry);
       }
 
+      console.log(
+        "📤 Mise à jour Firebase pour completeChallenge :",
+        JSON.stringify(
+          {
+            CurrentChallenges: currentChallengesArray.filter(
+              (_, idx) => idx !== challengeIndex
+            ),
+            CompletedChallenges: completedChallengesArray,
+          },
+          null,
+          2
+        )
+      );
       await updateDoc(userRef, {
         CurrentChallenges: currentChallengesArray.filter(
           (_, idx) => idx !== challengeIndex
@@ -512,7 +658,11 @@ export const CurrentChallengesProvider: React.FC<{
       );
       await checkForAchievements(userId);
     } catch (error) {
-      console.error("❌ Erreur lors de la finalisation du défi :", error);
+      console.error(
+        "❌ Erreur lors de la finalisation du défi :",
+        error.message
+      );
+      Alert.alert("Erreur", "Impossible de finaliser le défi.");
     }
   };
 
@@ -522,11 +672,17 @@ export const CurrentChallengesProvider: React.FC<{
     streakValue: number = 3
   ) => {
     const userId = auth.currentUser?.uid;
-    if (!userId) return;
-    const userRef = doc(db, "users", userId);
+    if (!userId) {
+      console.log("❌ Pas d'utilisateur connecté pour simulateStreak.");
+      return;
+    }
     try {
+      const userRef = doc(db, "users", userId);
       const userSnap = await getDoc(userRef);
-      if (!userSnap.exists()) return;
+      if (!userSnap.exists()) {
+        console.log("❌ Document utilisateur inexistant.");
+        return;
+      }
       const userData = userSnap.data();
       let currentChallengesArray: CurrentChallenge[] = Array.isArray(
         userData.CurrentChallenges
@@ -538,27 +694,41 @@ export const CurrentChallengesProvider: React.FC<{
         (challenge: CurrentChallenge) => challenge.uniqueKey === uniqueKey
       );
       if (challengeIndex === -1) {
+        console.log("⚠️ Challenge non trouvé pour simulateStreak :", uniqueKey);
         Alert.alert("Erreur", "Challenge non trouvé pour simulation.");
         return;
       }
-      currentChallengesArray[challengeIndex].streak = streakValue;
+      const challengeToUpdate = { ...currentChallengesArray[challengeIndex] };
       const today = getToday();
       const completionDates = [];
       for (let i = streakValue - 1; i >= 0; i--) {
         const d = new Date(today.getTime() - i * 86400000);
         completionDates.push(d.toDateString());
       }
-      currentChallengesArray[challengeIndex].completionDates = completionDates;
-      currentChallengesArray[challengeIndex].completedDays = streakValue;
-      currentChallengesArray[challengeIndex].lastMarkedDate =
+      challengeToUpdate.streak = streakValue;
+      challengeToUpdate.completionDates = completionDates;
+      challengeToUpdate.completedDays = streakValue;
+      challengeToUpdate.lastMarkedDate =
         completionDates[completionDates.length - 1];
+      const updatedChallenges = currentChallengesArray.map((challenge, idx) =>
+        idx === challengeIndex ? challengeToUpdate : challenge
+      );
+      console.log(
+        "📤 Mise à jour Firebase pour simulateStreak :",
+        JSON.stringify(updatedChallenges, null, 2)
+      );
       await updateDoc(userRef, {
-        CurrentChallenges: currentChallengesArray,
+        CurrentChallenges: updatedChallenges,
       });
-      await checkForAchievements(userId);
+      setCurrentChallenges(updatedChallenges);
       Alert.alert("Simulation", `Streak simulé à ${streakValue} jours.`);
+      await checkForAchievements(userId);
     } catch (error) {
-      console.error("❌ Erreur lors de la simulation du streak :", error);
+      console.error(
+        "❌ Erreur lors de la simulation du streak :",
+        error.message
+      );
+      Alert.alert("Erreur", "Impossible de simuler le streak.");
     }
   };
 

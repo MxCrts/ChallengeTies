@@ -17,11 +17,10 @@ import { db, auth } from "../constants/firebase-config";
 import { useRouter } from "expo-router";
 import { SafeAreaView } from "react-native-safe-area-context";
 import Animated, { FadeInUp } from "react-native-reanimated";
+import { useTheme } from "../context/ThemeContext"; // Ajout de useTheme
+import { Theme } from "../theme/designSystem"; // Import de Theme
 import designSystem from "../theme/designSystem";
 import CustomHeader from "@/components/CustomHeader";
-
-const { lightTheme } = designSystem;
-const currentTheme = lightTheme;
 
 const { width: SCREEN_WIDTH, height: SCREEN_HEIGHT } = Dimensions.get("window");
 
@@ -53,8 +52,12 @@ export default function LeaderboardScreen() {
   const [selectedTab, setSelectedTab] = useState<
     "region" | "national" | "global"
   >("global");
-
   const router = useRouter();
+  const { theme } = useTheme(); // Ajout de useTheme
+  const isDarkMode = theme === "dark";
+  const currentTheme: Theme = isDarkMode
+    ? designSystem.darkTheme
+    : designSystem.lightTheme;
 
   useEffect(() => {
     const fetchLeaderboard = async () => {
@@ -119,7 +122,7 @@ export default function LeaderboardScreen() {
         {/* Second Place */}
         <View style={styles.podiumItem}>
           <LinearGradient
-            colors={["#C0C0C0", "#A9A9A9"]}
+            colors={["#C0C0C0", "#A9A9A9"]} // Argent, reste fixe
             style={styles.circleSecond}
           >
             <Image
@@ -137,9 +140,28 @@ export default function LeaderboardScreen() {
               style={styles.medalIcon}
             />
           </LinearGradient>
-          <Text style={styles.podiumName}>{second.username || "Inconnu"}</Text>
-          <Text style={styles.podiumTrophies}>{second.trophies} 🏆</Text>
-          <Text style={styles.handle}>
+          <Text
+            style={[
+              styles.podiumName,
+              { color: currentTheme.colors.textPrimary },
+            ]}
+          >
+            {second.username || "Inconnu"}
+          </Text>
+          <Text
+            style={[
+              styles.podiumTrophies,
+              { color: currentTheme.colors.trophy },
+            ]}
+          >
+            {second.trophies} 🏆
+          </Text>
+          <Text
+            style={[
+              styles.handle,
+              { color: currentTheme.colors.textSecondary },
+            ]}
+          >
             @{(second.username || "").toLowerCase()}
           </Text>
         </View>
@@ -147,7 +169,7 @@ export default function LeaderboardScreen() {
         {/* First Place */}
         <View style={styles.podiumItem}>
           <LinearGradient
-            colors={["#FFD700", "#FFA500"]}
+            colors={["#FFD700", "#FFA500"]} // Or, reste fixe
             style={styles.circleFirst}
           >
             <Image
@@ -165,9 +187,28 @@ export default function LeaderboardScreen() {
               style={styles.crownIcon}
             />
           </LinearGradient>
-          <Text style={styles.podiumName}>{first.username || "Inconnu"}</Text>
-          <Text style={styles.podiumTrophies}>{first.trophies} 🏆</Text>
-          <Text style={styles.handle}>
+          <Text
+            style={[
+              styles.podiumName,
+              { color: currentTheme.colors.textPrimary },
+            ]}
+          >
+            {first.username || "Inconnu"}
+          </Text>
+          <Text
+            style={[
+              styles.podiumTrophies,
+              { color: currentTheme.colors.trophy },
+            ]}
+          >
+            {first.trophies} 🏆
+          </Text>
+          <Text
+            style={[
+              styles.handle,
+              { color: currentTheme.colors.textSecondary },
+            ]}
+          >
             @{(first.username || "").toLowerCase()}
           </Text>
         </View>
@@ -175,7 +216,7 @@ export default function LeaderboardScreen() {
         {/* Third Place */}
         <View style={styles.podiumItem}>
           <LinearGradient
-            colors={["#CD7F32", "#8B4513"]}
+            colors={["#CD7F32", "#8B4513"]} // Bronze, reste fixe
             style={styles.circleThird}
           >
             <Image
@@ -193,9 +234,28 @@ export default function LeaderboardScreen() {
               style={styles.medalIcon}
             />
           </LinearGradient>
-          <Text style={styles.podiumName}>{third.username || "Inconnu"}</Text>
-          <Text style={styles.podiumTrophies}>{third.trophies} 🏆</Text>
-          <Text style={styles.handle}>
+          <Text
+            style={[
+              styles.podiumName,
+              { color: currentTheme.colors.textPrimary },
+            ]}
+          >
+            {third.username || "Inconnu"}
+          </Text>
+          <Text
+            style={[
+              styles.podiumTrophies,
+              { color: currentTheme.colors.trophy },
+            ]}
+          >
+            {third.trophies} 🏆
+          </Text>
+          <Text
+            style={[
+              styles.handle,
+              { color: currentTheme.colors.textSecondary },
+            ]}
+          >
             @{(third.username || "").toLowerCase()}
           </Text>
         </View>
@@ -210,6 +270,10 @@ export default function LeaderboardScreen() {
         entering={FadeInUp.delay(300 + index * 100)}
         style={[
           styles.playerRow,
+          {
+            backgroundColor: currentTheme.colors.cardBackground,
+            borderColor: currentTheme.colors.border,
+          },
           item.id === currentUser?.id && styles.highlight,
         ]}
       >
@@ -220,18 +284,47 @@ export default function LeaderboardScreen() {
                 ? { uri: item.profileImage }
                 : require("../assets/images/default-profile.webp")
             }
-            style={styles.playerImage}
+            style={[
+              styles.playerImage,
+              { borderColor: currentTheme.colors.border },
+            ]}
           />
           <View style={styles.playerInfo}>
-            <Text style={styles.playerName}>{item.username || "Inconnu"}</Text>
-            <Text style={styles.handle}>
+            <Text
+              style={[
+                styles.playerName,
+                { color: currentTheme.colors.textPrimary },
+              ]}
+            >
+              {item.username || "Inconnu"}
+            </Text>
+            <Text
+              style={[
+                styles.handle,
+                { color: currentTheme.colors.textSecondary },
+              ]}
+            >
               @{(item.username || "").toLowerCase()}
             </Text>
           </View>
         </View>
         <View style={styles.rightSection}>
-          <Text style={styles.playerTrophies}>{item.trophies} 🏆</Text>
-          <Text style={styles.rankText}>#{rank}</Text>
+          <Text
+            style={[
+              styles.playerTrophies,
+              { color: currentTheme.colors.trophy },
+            ]}
+          >
+            {item.trophies} 🏆
+          </Text>
+          <Text
+            style={[
+              styles.rankText,
+              { color: currentTheme.colors.textSecondary },
+            ]}
+          >
+            #{rank}
+          </Text>
         </View>
       </Animated.View>
     );
@@ -255,8 +348,18 @@ export default function LeaderboardScreen() {
           ]}
           style={styles.loadingContainer}
         >
-          <ActivityIndicator size="large" color={currentTheme.colors.primary} />
-          <Text style={styles.loadingText}>Chargement du classement...</Text>
+          <ActivityIndicator
+            size="large"
+            color={currentTheme.colors.secondary}
+          />
+          <Text
+            style={[
+              styles.loadingText,
+              { color: currentTheme.colors.textPrimary },
+            ]}
+          >
+            Chargement du classement...
+          </Text>
         </LinearGradient>
       </SafeAreaView>
     );
@@ -283,7 +386,14 @@ export default function LeaderboardScreen() {
           {["region", "national", "global"].map((tab) => (
             <TouchableOpacity
               key={tab}
-              style={[styles.tab, selectedTab === tab && styles.activeTab]}
+              style={[
+                styles.tab,
+                { backgroundColor: `${currentTheme.colors.cardBackground}90` },
+                selectedTab === tab && [
+                  styles.activeTab,
+                  { backgroundColor: currentTheme.colors.secondary },
+                ],
+              ]}
               onPress={() =>
                 setSelectedTab(tab as "region" | "national" | "global")
               }
@@ -291,6 +401,7 @@ export default function LeaderboardScreen() {
               <Text
                 style={[
                   styles.tabText,
+                  { color: currentTheme.colors.textPrimary },
                   selectedTab === tab && styles.activeTabText,
                 ]}
               >
@@ -325,7 +436,6 @@ export default function LeaderboardScreen() {
 const styles = StyleSheet.create({
   safeArea: {
     flex: 1,
-    backgroundColor: currentTheme.colors.background,
   },
   container: {
     flex: 1,
@@ -345,7 +455,6 @@ const styles = StyleSheet.create({
     paddingVertical: normalizeSize(10),
     paddingHorizontal: normalizeSize(20),
     borderRadius: normalizeSize(25),
-    backgroundColor: "#E5E7EB90",
     marginHorizontal: normalizeSize(8),
     shadowColor: "#000",
     shadowOffset: { width: 0, height: normalizeSize(2) },
@@ -354,14 +463,12 @@ const styles = StyleSheet.create({
     elevation: 2,
   },
   activeTab: {
-    backgroundColor: currentTheme.colors.secondary,
     shadowOffset: { width: 0, height: normalizeSize(4) },
     shadowOpacity: 0.3,
   },
   tabText: {
     fontSize: normalizeFont(16),
-    fontFamily: currentTheme.typography.title.fontFamily,
-    color: "#333333",
+    fontFamily: "Comfortaa_700Bold", // Direct
   },
   activeTabText: {
     color: "#FFFFFF",
@@ -442,22 +549,19 @@ const styles = StyleSheet.create({
   },
   podiumName: {
     fontSize: normalizeFont(16),
-    fontFamily: currentTheme.typography.title.fontFamily,
-    color: "#000000",
+    fontFamily: "Comfortaa_700Bold", // Direct
     textAlign: "center",
     marginTop: normalizeSize(5),
   },
   podiumTrophies: {
     fontSize: normalizeFont(14),
-    color: currentTheme.colors.trophy || "#FACC15",
-    fontFamily: currentTheme.typography.title.fontFamily,
-    fontWeight: "600",
+    fontFamily: "Comfortaa_700Bold", // Direct
     marginTop: normalizeSize(4),
     textAlign: "center",
   },
   handle: {
     fontSize: normalizeFont(12),
-    color: currentTheme.colors.textSecondary,
+    fontFamily: "Comfortaa_400Regular", // Direct
     textAlign: "center",
     marginTop: normalizeSize(2),
   },
@@ -471,7 +575,6 @@ const styles = StyleSheet.create({
   playerRow: {
     flexDirection: "row",
     alignItems: "center",
-    backgroundColor: "#FFFFFF",
     padding: normalizeSize(15),
     marginVertical: normalizeSize(8),
     borderRadius: normalizeSize(15),
@@ -482,12 +585,10 @@ const styles = StyleSheet.create({
     shadowRadius: normalizeSize(6),
     elevation: 4,
     borderWidth: 1,
-    borderColor: "#E5E7EB",
   },
   highlight: {
     borderWidth: 2,
-    borderColor: currentTheme.colors.trophy || "#FACC15",
-    backgroundColor: "#FFF8E1",
+    borderColor: "#FACC15", // Trophy reste fixe pour highlight
   },
   leftSection: {
     flexDirection: "row",
@@ -498,28 +599,24 @@ const styles = StyleSheet.create({
     height: normalizeSize(50),
     borderRadius: normalizeSize(25),
     borderWidth: 2,
-    borderColor: currentTheme.colors.border || "#E5E7EB",
   },
   playerInfo: {
     marginLeft: normalizeSize(12),
   },
   playerName: {
     fontSize: normalizeFont(16),
-    fontFamily: currentTheme.typography.title.fontFamily,
-    color: "#000000",
+    fontFamily: "Comfortaa_700Bold", // Direct
   },
   rightSection: {
     alignItems: "flex-end",
   },
   playerTrophies: {
     fontSize: normalizeFont(16),
-    color: currentTheme.colors.trophy || "#FACC15",
-    fontFamily: currentTheme.typography.title.fontFamily,
-    fontWeight: "600",
+    fontFamily: "Comfortaa_700Bold", // Direct
   },
   rankText: {
     fontSize: normalizeFont(12),
-    color: currentTheme.colors.textSecondary,
+    fontFamily: "Comfortaa_400Regular", // Direct
     marginTop: normalizeSize(4),
   },
   loadingContainer: {
@@ -529,8 +626,7 @@ const styles = StyleSheet.create({
   },
   loadingText: {
     fontSize: normalizeFont(16),
-    fontFamily: currentTheme.typography.body.fontFamily,
-    color: currentTheme.colors.textSecondary,
+    fontFamily: "Comfortaa_400Regular", // Direct
     marginTop: SCREEN_HEIGHT * 0.02,
   },
 });

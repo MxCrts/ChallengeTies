@@ -21,6 +21,8 @@ import * as Progress from "react-native-progress";
 import Animated, { FadeInUp, FadeOutRight } from "react-native-reanimated";
 import { doc, updateDoc, increment } from "firebase/firestore";
 import { db, auth } from "../../constants/firebase-config";
+import { useTheme } from "../../context/ThemeContext";
+import { Theme } from "../../theme/designSystem";
 import designSystem from "../../theme/designSystem";
 import CustomHeader from "@/components/CustomHeader";
 
@@ -28,16 +30,6 @@ const { width: SCREEN_WIDTH, height: SCREEN_HEIGHT } = Dimensions.get("window");
 const ITEM_WIDTH = SCREEN_WIDTH * 0.9;
 const ITEM_HEIGHT = SCREEN_WIDTH * 0.45;
 const CARD_MARGIN = SCREEN_WIDTH * 0.02;
-
-const currentTheme = {
-  ...designSystem.lightTheme,
-  colors: {
-    ...designSystem.lightTheme.colors,
-    primary: "#ED8F03", // Orange
-    cardBackground: "#FFFFFF",
-    trophy: "#FACC15",
-  },
-};
 
 const normalizeSize = (size) => {
   const scale = SCREEN_WIDTH / 375;
@@ -65,6 +57,31 @@ export default function CurrentChallenges() {
   const [localChallenges, setLocalChallenges] = useState<Challenge[]>([]);
   const confettiRef = useRef<ConfettiCannon | null>(null);
   const swipeableRefs = useRef<(Swipeable | null)[]>([]);
+  const { theme } = useTheme();
+  const isDarkMode = theme === "dark";
+  const currentTheme: Theme = isDarkMode
+    ? designSystem.darkTheme
+    : designSystem.lightTheme;
+
+  useEffect(() => {
+    console.log(
+      "🔎 CurrentChallenges reçu du contexte :",
+      JSON.stringify(currentChallenges, null, 2)
+    );
+    const uniqueChallenges = Array.from(
+      new Map(
+        currentChallenges.map((item: Challenge) => [
+          `${item.id}_${item.selectedDays}`,
+          item,
+        ])
+      ).values()
+    );
+    console.log(
+      "🎨 LocalChallenges mis à jour :",
+      JSON.stringify(uniqueChallenges, null, 2)
+    );
+    setLocalChallenges(uniqueChallenges);
+  }, [currentChallenges]);
 
   useEffect(() => {
     const timer = setTimeout(() => {
@@ -73,26 +90,15 @@ export default function CurrentChallenges() {
     return () => clearTimeout(timer);
   }, []);
 
-  useEffect(() => {
-    setLocalChallenges(
-      Array.from(
-        new Map(
-          currentChallenges.map((item: Challenge) => [
-            `${item.id}_${item.selectedDays}`,
-            item,
-          ])
-        ).values()
-      )
-    );
-  }, [currentChallenges]);
+  // Le reste du code (handleMarkToday, handleRemoveChallenge, etc.) reste inchangé
+  // Pour brièveté, je ne répète pas tout, mais il est identique à la dernière version avec le mode sombre
 
   const handleMarkToday = async (id: string, selectedDays: number) => {
     try {
       const result = await markToday(id, selectedDays);
       if (result.success) {
-        setConfettiActive(true); // Confettis seulement si le marquage réussit
+        setConfettiActive(true);
       } else if (result.missedDays && result.missedDays >= 2) {
-        // Modal est déjà déclenché par markToday, pas besoin d'action ici
       }
     } catch (err) {
       console.error("Erreur lors du marquage :", err);
@@ -177,6 +183,11 @@ export default function CurrentChallenges() {
     router.push(route as unknown as `/challenge-details/${string}`);
   };
 
+  const getCardStyle = () => ({
+    ...styles.card,
+    borderColor: isDarkMode ? "#FFDD9533" : "#e3701e33",
+  });
+
   const renderChallengeItem = ({
     item,
     index,
@@ -222,8 +233,11 @@ export default function CurrentChallenges() {
             activeOpacity={0.9}
           >
             <LinearGradient
-              colors={["#FFFFFF", "#FFE0B2"]}
-              style={styles.card}
+              colors={[
+                currentTheme.colors.cardBackground,
+                `${currentTheme.colors.cardBackground}F0`,
+              ]}
+              style={getCardStyle()}
               start={{ x: 0, y: 0 }}
               end={{ x: 1, y: 1 }}
             >
@@ -231,14 +245,30 @@ export default function CurrentChallenges() {
                 source={{
                   uri: item.imageUrl || "https://via.placeholder.com/70",
                 }}
-                style={styles.cardImage}
+                style={[
+                  styles.cardImage,
+                  { borderColor: currentTheme.colors.border },
+                ]}
               />
               <View style={styles.cardContent}>
-                <Text style={styles.challengeTitle} numberOfLines={1}>
+                <Text
+                  style={[
+                    styles.challengeTitle,
+                    { color: currentTheme.colors.textPrimary },
+                  ]}
+                  numberOfLines={1}
+                >
                   {item.title}
                 </Text>
                 {item.day !== undefined && (
-                  <Text style={styles.challengeDay}>Jour {item.day}</Text>
+                  <Text
+                    style={[
+                      styles.challengeDay,
+                      { color: currentTheme.colors.textSecondary },
+                    ]}
+                  >
+                    Jour {item.day}
+                  </Text>
                 )}
                 <View style={styles.progressContainer}>
                   <Progress.Bar
@@ -246,12 +276,17 @@ export default function CurrentChallenges() {
                     width={null}
                     height={normalizeSize(8)}
                     borderRadius={normalizeSize(4)}
-                    color="#FF6200"
-                    unfilledColor="#E0E0E0"
+                    color={currentTheme.colors.secondary}
+                    unfilledColor={isDarkMode ? "#4A4A4A" : "#E0E0E0"}
                     borderWidth={0}
                     style={styles.progressBar}
                   />
-                  <Text style={styles.progressText}>
+                  <Text
+                    style={[
+                      styles.progressText,
+                      { color: currentTheme.colors.secondary },
+                    ]}
+                  >
                     {item.completedDays}/{item.selectedDays} jours
                   </Text>
                 </View>
@@ -266,14 +301,29 @@ export default function CurrentChallenges() {
                   <LinearGradient
                     colors={
                       markedToday
-                        ? ["#D3D3D3", "#A3A3A3"]
-                        : ["#FF6200", "#FF8C00"]
+                        ? [
+                            isDarkMode ? "#4A4A4A" : "#D3D3D3",
+                            isDarkMode ? "#2A2A2A" : "#A3A3A3",
+                          ]
+                        : [
+                            currentTheme.colors.secondary,
+                            currentTheme.colors.primary,
+                          ]
                     }
                     style={styles.markTodayGradient}
                     start={{ x: 0, y: 0 }}
                     end={{ x: 1, y: 1 }}
                   >
-                    <Text style={styles.markTodayText}>
+                    <Text
+                      style={[
+                        styles.markTodayText,
+                        {
+                          color: markedToday
+                            ? "#FFFFFF"
+                            : currentTheme.colors.textPrimary,
+                        },
+                      ]}
+                    >
                       {markedToday ? "Déjà marqué" : "Marquer Aujourd'hui"}
                     </Text>
                   </LinearGradient>
@@ -296,8 +346,18 @@ export default function CurrentChallenges() {
           ]}
           style={styles.loadingContainer}
         >
-          <ActivityIndicator size="large" color="#FF6200" />
-          <Text style={styles.loadingText}>Chargement en cours...</Text>
+          <ActivityIndicator
+            size="large"
+            color={currentTheme.colors.secondary}
+          />
+          <Text
+            style={[
+              styles.loadingText,
+              { color: currentTheme.colors.textPrimary },
+            ]}
+          >
+            Chargement en cours...
+          </Text>
         </LinearGradient>
       </SafeAreaView>
     );
@@ -320,10 +380,22 @@ export default function CurrentChallenges() {
             <Ionicons
               name="hourglass-outline"
               size={normalizeSize(60)}
-              color="#B0BEC5"
+              color={currentTheme.colors.textSecondary}
             />
-            <Text style={styles.noChallengesText}>Aucun défi en cours !</Text>
-            <Text style={styles.noChallengesSubtext}>
+            <Text
+              style={[
+                styles.noChallengesText,
+                { color: currentTheme.colors.textPrimary },
+              ]}
+            >
+              Aucun défi en cours !
+            </Text>
+            <Text
+              style={[
+                styles.noChallengesSubtext,
+                { color: currentTheme.colors.textSecondary },
+              ]}
+            >
               Commencez un défi pour le voir ici.
             </Text>
           </Animated.View>
@@ -390,15 +462,13 @@ const styles = StyleSheet.create({
   },
   noChallengesText: {
     fontSize: normalizeSize(20),
-    fontFamily: currentTheme.typography.title.fontFamily,
-    color: "#333333",
+    fontFamily: "Comfortaa_700Bold",
     marginTop: normalizeSize(15),
     textAlign: "center",
   },
   noChallengesSubtext: {
     fontSize: normalizeSize(16),
-    fontFamily: currentTheme.typography.body.fontFamily,
-    color: "#777777",
+    fontFamily: "Comfortaa_400Regular",
     textAlign: "center",
     marginTop: normalizeSize(10),
     maxWidth: SCREEN_WIDTH * 0.65,
@@ -422,7 +492,6 @@ const styles = StyleSheet.create({
     padding: normalizeSize(15),
     borderRadius: normalizeSize(20),
     borderWidth: 1,
-    borderColor: "#FF620030",
     minHeight: ITEM_HEIGHT,
   },
   cardImage: {
@@ -431,20 +500,17 @@ const styles = StyleSheet.create({
     borderRadius: normalizeSize(14),
     marginRight: normalizeSize(15),
     borderWidth: 2,
-    borderColor: "#FFFFFF",
   },
   cardContent: {
     flex: 1,
   },
   challengeTitle: {
     fontSize: normalizeSize(18),
-    color: "#333333",
-    fontFamily: currentTheme.typography.title.fontFamily,
+    fontFamily: "Comfortaa_700Bold",
   },
   challengeDay: {
     fontSize: normalizeSize(14),
-    color: "#777777",
-    fontFamily: currentTheme.typography.body.fontFamily,
+    fontFamily: "Comfortaa_400Regular",
     marginTop: normalizeSize(2),
   },
   progressContainer: {
@@ -455,9 +521,8 @@ const styles = StyleSheet.create({
   },
   progressText: {
     fontSize: normalizeSize(12),
-    color: "#FF6200",
     marginTop: normalizeSize(5),
-    fontFamily: currentTheme.typography.body.fontFamily,
+    fontFamily: "Comfortaa_400Regular",
   },
   markTodayButton: {
     borderRadius: normalizeSize(12),
@@ -471,8 +536,7 @@ const styles = StyleSheet.create({
     alignItems: "center",
   },
   markTodayText: {
-    color: "#FFFFFF",
-    fontFamily: currentTheme.typography.title.fontFamily,
+    fontFamily: "Comfortaa_700Bold",
     fontSize: normalizeSize(14),
     textShadowColor: "#000",
     textShadowOffset: { width: 0, height: 1 },
@@ -486,8 +550,7 @@ const styles = StyleSheet.create({
   loadingText: {
     marginTop: normalizeSize(10),
     fontSize: normalizeSize(16),
-    fontFamily: currentTheme.typography.body.fontFamily,
-    color: currentTheme.colors.textSecondary,
+    fontFamily: "Comfortaa_400Regular",
   },
   swipeActionsContainer: {
     width: SCREEN_WIDTH * 0.18,

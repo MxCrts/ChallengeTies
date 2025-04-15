@@ -124,6 +124,7 @@ export default function ChallengeDetails() {
   const [completionModalVisible, setCompletionModalVisible] = useState(false);
   const [statsModalVisible, setStatsModalVisible] = useState(false);
   const [baseTrophyAmount, setBaseTrophyAmount] = useState(0);
+  const [pendingFavorite, setPendingFavorite] = useState<boolean | null>(null);
   const confettiRef = useRef<ConfettiCannon | null>(null);
   const [currentMonth, setCurrentMonth] = useState(new Date());
 
@@ -335,11 +336,13 @@ export default function ChallengeDetails() {
 
   const handleSaveChallenge = async () => {
     if (!id) return;
+    setPendingFavorite(!isSavedChallenge(id));
     try {
       const challengeRef = doc(db, "challenges", id);
       const challengeSnap = await getDoc(challengeRef);
       if (!challengeSnap.exists()) {
         Alert.alert("Erreur", "Impossible de récupérer le challenge.");
+        setPendingFavorite(null);
         return;
       }
       const challengeData = challengeSnap.data();
@@ -359,6 +362,7 @@ export default function ChallengeDetails() {
       } else {
         await addChallenge(challengeObj);
       }
+      setPendingFavorite(null);
     } catch (err) {
       Alert.alert(
         "Erreur",
@@ -366,6 +370,7 @@ export default function ChallengeDetails() {
           ? err.message
           : "Impossible de sauvegarder/dé-sauvegarder le défi."
       );
+      setPendingFavorite(null);
     }
   };
 
@@ -581,7 +586,7 @@ export default function ChallengeDetails() {
                     }
                     style={[
                       styles.markTodayButtonGradient,
-                      { alignItems: "center", justifyContent: "center" }, // Centrage ajouté
+                      { alignItems: "center", justifyContent: "center" },
                     ]}
                     start={{ x: 0, y: 0 }}
                     end={{ x: 1, y: 1 }}
@@ -635,12 +640,34 @@ export default function ChallengeDetails() {
               onPress={handleSaveChallenge}
             >
               <Ionicons
-                name={isSavedChallenge(id) ? "bookmark" : "bookmark-outline"}
+                name={
+                  pendingFavorite !== null
+                    ? pendingFavorite
+                      ? "bookmark"
+                      : "bookmark-outline"
+                    : isSavedChallenge(id)
+                    ? "bookmark"
+                    : "bookmark-outline"
+                }
                 size={normalizeSize(28)}
-                color={isSavedChallenge(id) ? "#FF6200" : "#333"}
+                color={
+                  pendingFavorite !== null
+                    ? pendingFavorite
+                      ? "#FF6200"
+                      : "#333"
+                    : isSavedChallenge(id)
+                    ? "#FF6200"
+                    : "#333"
+                }
               />
               <Text style={styles.actionIconLabel}>
-                {isSavedChallenge(id) ? "Sauvegardé" : "Sauvegarder"}
+                {pendingFavorite !== null
+                  ? pendingFavorite
+                    ? "Sauvegardé"
+                    : "Sauvegarder"
+                  : isSavedChallenge(id)
+                  ? "Sauvegardé"
+                  : "Sauvegarder"}
               </Text>
             </TouchableOpacity>
             <TouchableOpacity

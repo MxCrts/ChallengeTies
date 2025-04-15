@@ -23,7 +23,7 @@ import { LinearGradient } from "expo-linear-gradient";
 import Animated, { FadeInUp } from "react-native-reanimated";
 import { useSavedChallenges } from "../../context/SavedChallengesContext";
 import { useTheme } from "../../context/ThemeContext";
-import { Theme } from "../../theme/designSystem"; // Import de l'interface Theme
+import { Theme } from "../../theme/designSystem";
 import CustomHeader from "@/components/CustomHeader";
 import GlobalLayout from "../../components/GlobalLayout";
 import designSystem from "../../theme/designSystem";
@@ -49,7 +49,6 @@ interface Challenge {
   chatId: string;
 }
 
-// Composant Header avec React.memo
 const ExploreHeader = React.memo(
   ({
     searchQuery,
@@ -76,7 +75,7 @@ const ExploreHeader = React.memo(
     onToggleCategoryModal: () => void;
     isCategoryModalVisible: boolean;
     onCloseCategoryModal: () => void;
-    currentTheme: Theme; // Utilisation de l'interface Theme
+    currentTheme: Theme;
   }) => (
     <Animated.View entering={FadeInUp.delay(100)} style={styles.headerContent}>
       <View style={styles.headerWrapper}>
@@ -247,6 +246,9 @@ export default function ExploreScreen() {
   const [categoryFilter, setCategoryFilter] = useState("All");
   const [originFilter, setOriginFilter] = useState("Existing");
   const [isCategoryModalVisible, setIsCategoryModalVisible] = useState(false);
+  const [pendingFavorites, setPendingFavorites] = useState<{
+    [key: string]: boolean;
+  }>({});
   const router = useRouter();
   const { isSaved, addChallenge, removeChallenge } = useSavedChallenges();
   const { theme } = useTheme();
@@ -311,10 +313,41 @@ export default function ExploreScreen() {
 
   const toggleSavedChallenge = useCallback(
     async (challenge: Challenge) => {
-      if (isSaved(challenge.id)) {
-        await removeChallenge(challenge.id);
-      } else {
-        await addChallenge(challenge);
+      const challengeId = challenge.id;
+      const isCurrentlySaved = isSaved(challengeId);
+      setPendingFavorites((prev) => ({
+        ...prev,
+        [challengeId]: !isCurrentlySaved,
+      }));
+
+      try {
+        if (isCurrentlySaved) {
+          await removeChallenge(challengeId);
+        } else {
+          await addChallenge({
+            id: challenge.id,
+            title: challenge.title,
+            category: challenge.category || null,
+            description: challenge.description || null,
+            imageUrl: challenge.imageUrl || null,
+            daysOptions: challenge.daysOptions,
+            chatId: challenge.chatId,
+          });
+        }
+        setPendingFavorites((prev) => ({
+          ...prev,
+          [challengeId]: undefined,
+        }));
+      } catch (error) {
+        console.error("Erreur lors de la mise à jour du favori :", error);
+        Alert.alert(
+          "Erreur",
+          "Impossible de sauvegarder/désauvegarder le défi."
+        );
+        setPendingFavorites((prev) => ({
+          ...prev,
+          [challengeId]: isCurrentlySaved,
+        }));
       }
     },
     [isSaved, addChallenge, removeChallenge]
@@ -324,23 +357,28 @@ export default function ExploreScreen() {
     (text: string) => setSearchQuery(text),
     []
   );
+
   const resetFilters = useCallback(() => {
     setSearchQuery("");
     setCategoryFilter("All");
     setOriginFilter("Existing");
   }, []);
+
   const handleCategorySelect = useCallback((cat: string) => {
     setCategoryFilter(cat);
     setIsCategoryModalVisible(false);
   }, []);
+
   const toggleCategoryModal = useCallback(
     () => setIsCategoryModalVisible((prev) => !prev),
     []
   );
+
   const closeCategoryModal = useCallback(
     () => setIsCategoryModalVisible(false),
     []
   );
+
   const handleOriginToggle = useCallback(
     () =>
       setOriginFilter((prev) => (prev === "Existing" ? "Created" : "Existing")),
@@ -481,10 +519,22 @@ export default function ExploreScreen() {
                     onPress={() => toggleSavedChallenge(item)}
                   >
                     <Ionicons
-                      name={isSaved(item.id) ? "bookmark" : "bookmark-outline"}
+                      name={
+                        pendingFavorites[item.id] !== undefined
+                          ? pendingFavorites[item.id]
+                            ? "bookmark"
+                            : "bookmark-outline"
+                          : isSaved(item.id)
+                          ? "bookmark"
+                          : "bookmark-outline"
+                      }
                       size={normalizeFont(24)}
                       color={
-                        isSaved(item.id)
+                        pendingFavorites[item.id] !== undefined
+                          ? pendingFavorites[item.id]
+                            ? currentTheme.colors.secondary
+                            : currentTheme.colors.textPrimary
+                          : isSaved(item.id)
                           ? currentTheme.colors.secondary
                           : currentTheme.colors.textPrimary
                       }

@@ -16,11 +16,12 @@ import { useCurrentChallenges } from "../../context/CurrentChallengesContext";
 import { LinearGradient } from "expo-linear-gradient";
 import BackButton from "../../components/BackButton";
 import Animated, { FadeInUp } from "react-native-reanimated";
+import { useTheme } from "../../context/ThemeContext"; // Ajout de useTheme
+import { Theme } from "../../theme/designSystem"; // Import de Theme
 import designSystem from "../../theme/designSystem";
 import CustomHeader from "@/components/CustomHeader";
 
 const { width: SCREEN_WIDTH, height: SCREEN_HEIGHT } = Dimensions.get("window");
-const currentTheme = designSystem.lightTheme;
 
 const normalizeSize = (size) => {
   const scale = SCREEN_WIDTH / 375;
@@ -39,6 +40,11 @@ export default function UserStats() {
   const [stats, setStats] = useState<Stat[]>([]);
   const [isLoading, setIsLoading] = useState<boolean>(true);
   const [userDoc, setUserDoc] = useState<any>(null);
+  const { theme } = useTheme(); // Ajout de useTheme
+  const isDarkMode = theme === "dark";
+  const currentTheme: Theme = isDarkMode
+    ? designSystem.darkTheme
+    : designSystem.lightTheme;
 
   useEffect(() => {
     const userId = auth.currentUser?.uid;
@@ -107,6 +113,12 @@ export default function UserStats() {
     setStats(newStats);
   }, [savedChallenges, currentChallenges, userDoc]);
 
+  // Fonction pour obtenir le style dynamique de statCard
+  const getStatCardStyle = () => ({
+    ...styles.statCard,
+    borderColor: isDarkMode ? "#FFDD9533" : "#e3701e33",
+  });
+
   if (isLoading) {
     return (
       <SafeAreaView style={styles.safeArea}>
@@ -117,8 +129,18 @@ export default function UserStats() {
           ]}
           style={styles.loadingContainer}
         >
-          <ActivityIndicator size="large" color="#FF6200" />
-          <Text style={styles.loadingText}>Chargement en cours...</Text>
+          <ActivityIndicator
+            size="large"
+            color={currentTheme.colors.secondary}
+          />
+          <Text
+            style={[
+              styles.loadingText,
+              { color: currentTheme.colors.textPrimary },
+            ]}
+          >
+            Chargement en cours...
+          </Text>
         </LinearGradient>
       </SafeAreaView>
     );
@@ -135,10 +157,20 @@ export default function UserStats() {
           style={styles.emptyContainer}
         >
           <Animated.View entering={FadeInUp.delay(100)}>
-            <Text style={styles.emptyText}>
+            <Text
+              style={[
+                styles.emptyText,
+                { color: currentTheme.colors.textPrimary },
+              ]}
+            >
               Aucune statistique disponible !
             </Text>
-            <Text style={styles.emptySubtext}>
+            <Text
+              style={[
+                styles.emptySubtext,
+                { color: currentTheme.colors.textSecondary },
+              ]}
+            >
               Commencez des défis pour voir vos stats.
             </Text>
           </Animated.View>
@@ -153,21 +185,40 @@ export default function UserStats() {
       style={styles.statCardWrapper}
     >
       <LinearGradient
-        colors={["#FFFFFF", "#FFE0B2"]} // Blanc à orange clair
-        style={styles.statCard}
+        colors={[
+          currentTheme.colors.cardBackground,
+          `${currentTheme.colors.cardBackground}F0`,
+        ]} // Dynamique
+        style={getStatCardStyle()} // Style dynamique
         start={{ x: 0, y: 0 }}
         end={{ x: 1, y: 1 }}
       >
-        <View style={styles.iconContainer}>
+        <View
+          style={[
+            styles.iconContainer,
+            { backgroundColor: `${currentTheme.colors.secondary}1A` },
+          ]} // Transparence
+        >
           <Ionicons
             name={item.icon as keyof typeof Ionicons.glyphMap}
             size={normalizeSize(40)}
-            color="#FF6200"
+            color={currentTheme.colors.secondary} // Dynamique
           />
         </View>
         <View style={styles.statContent}>
-          <Text style={styles.statName}>{item.name}</Text>
-          <Text style={styles.statValue}>{item.value}</Text>
+          <Text
+            style={[
+              styles.statName,
+              { color: currentTheme.colors.textPrimary },
+            ]}
+          >
+            {item.name}
+          </Text>
+          <Text
+            style={[styles.statValue, { color: currentTheme.colors.secondary }]}
+          >
+            {item.value}
+          </Text>
         </View>
       </LinearGradient>
     </Animated.View>
@@ -225,14 +276,12 @@ const styles = StyleSheet.create({
     padding: normalizeSize(15),
     borderRadius: normalizeSize(20),
     borderWidth: 1,
-    borderColor: "#FF620030",
     overflow: "hidden",
   },
   iconContainer: {
     width: normalizeSize(60),
     height: normalizeSize(60),
     borderRadius: normalizeSize(30),
-    backgroundColor: "rgba(255, 98, 0, 0.1)", // Fond orange clair pour l'icône
     justifyContent: "center",
     alignItems: "center",
     marginRight: normalizeSize(15),
@@ -242,14 +291,11 @@ const styles = StyleSheet.create({
   },
   statName: {
     fontSize: normalizeSize(16),
-    fontFamily: currentTheme.typography.body.fontFamily,
-    color: "#333333",
-    marginBottom: normalizeSize(5),
+    fontFamily: "Comfortaa_400Regular", // Direct
   },
   statValue: {
     fontSize: normalizeSize(20),
-    fontFamily: currentTheme.typography.title.fontFamily,
-    color: "#FF6200",
+    fontFamily: "Comfortaa_700Bold", // Direct
   },
   loadingContainer: {
     flex: 1,
@@ -259,8 +305,7 @@ const styles = StyleSheet.create({
   loadingText: {
     marginTop: normalizeSize(10),
     fontSize: normalizeSize(16),
-    fontFamily: currentTheme.typography.body.fontFamily,
-    color: currentTheme.colors.textSecondary,
+    fontFamily: "Comfortaa_400Regular", // Direct
   },
   emptyContainer: {
     flex: 1,
@@ -269,14 +314,12 @@ const styles = StyleSheet.create({
   },
   emptyText: {
     fontSize: normalizeSize(20),
-    fontFamily: currentTheme.typography.title.fontFamily,
-    color: currentTheme.colors.textPrimary,
+    fontFamily: "Comfortaa_700Bold", // Direct
     textAlign: "center",
   },
   emptySubtext: {
     fontSize: normalizeSize(16),
-    fontFamily: currentTheme.typography.body.fontFamily,
-    color: currentTheme.colors.textSecondary,
+    fontFamily: "Comfortaa_400Regular", // Direct
     textAlign: "center",
     marginTop: normalizeSize(10),
   },

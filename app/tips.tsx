@@ -14,11 +14,11 @@ import Animated, { FadeInUp } from "react-native-reanimated";
 import { Ionicons } from "@expo/vector-icons";
 import { LinearGradient } from "expo-linear-gradient";
 import { useRouter } from "expo-router";
+import { useTheme } from "../context/ThemeContext"; // Ajout de useTheme
+import { Theme } from "../theme/designSystem"; // Import de l'interface Theme
 import designSystem from "../theme/designSystem";
 import CustomHeader from "@/components/CustomHeader";
 
-const { lightTheme } = designSystem;
-const currentTheme = lightTheme;
 const { width: SCREEN_WIDTH, height: SCREEN_HEIGHT } = Dimensions.get("window");
 
 const normalizeFont = (size: number) => {
@@ -100,6 +100,11 @@ const conseils = [
 export default function Conseils() {
   const router = useRouter();
   const [expandedTip, setExpandedTip] = useState<string | null>(null);
+  const { theme } = useTheme(); // Ajout de useTheme
+  const isDarkMode = theme === "dark";
+  const currentTheme: Theme = isDarkMode
+    ? designSystem.darkTheme
+    : designSystem.lightTheme;
 
   const toggleTip = (id: string) => {
     setExpandedTip(expandedTip === id ? null : id);
@@ -131,7 +136,12 @@ export default function Conseils() {
               source={require("../assets/images/Challenge.png")}
               style={styles.logo}
             />
-            <Text style={styles.subHeaderText}>
+            <Text
+              style={[
+                styles.subHeaderText,
+                { color: currentTheme.colors.textSecondary },
+              ]}
+            >
               Des conseils pratiques pour rester inspiré, atteindre vos
               objectifs et remporter des trophées !
             </Text>
@@ -146,6 +156,10 @@ export default function Conseils() {
                 <TouchableOpacity
                   style={[
                     styles.tipCard,
+                    {
+                      backgroundColor: currentTheme.colors.cardBackground,
+                      borderColor: currentTheme.colors.border,
+                    },
                     expandedTip === conseil.id && styles.tipCardExpanded,
                   ]}
                   onPress={() => toggleTip(conseil.id)}
@@ -157,9 +171,19 @@ export default function Conseils() {
                     style={styles.tipIcon}
                   />
                   <View style={styles.tipContent}>
-                    <Text style={styles.tipTitle}>{conseil.title}</Text>
                     <Text
-                      style={styles.tipDescription}
+                      style={[
+                        styles.tipTitle,
+                        { color: currentTheme.colors.secondary },
+                      ]}
+                    >
+                      {conseil.title}
+                    </Text>
+                    <Text
+                      style={[
+                        styles.tipDescription,
+                        { color: currentTheme.colors.textSecondary },
+                      ]}
                       numberOfLines={expandedTip === conseil.id ? 0 : 2}
                     >
                       {conseil.description}
@@ -168,7 +192,12 @@ export default function Conseils() {
                       style={styles.readMoreButton}
                       onPress={() => toggleTip(conseil.id)}
                     >
-                      <Text style={styles.readMoreText}>
+                      <Text
+                        style={[
+                          styles.readMoreText,
+                          { color: currentTheme.colors.primary },
+                        ]}
+                      >
                         {expandedTip === conseil.id ? "Réduire" : "Lire plus"}
                       </Text>
                     </TouchableOpacity>
@@ -179,10 +208,18 @@ export default function Conseils() {
           </View>
 
           <Animated.View entering={FadeInUp.delay(1000)} style={styles.footer}>
-            <Text style={styles.footerText}>
+            <Text
+              style={[
+                styles.footerText,
+                { color: currentTheme.colors.textSecondary },
+              ]}
+            >
               Plus de questions ou besoin d'une aide personnalisée ?{" "}
               <Text
-                style={styles.footerLink}
+                style={[
+                  styles.footerLink,
+                  { color: currentTheme.colors.secondary },
+                ]}
                 onPress={() =>
                   Linking.openURL("mailto:support@challengeme.com")
                 }
@@ -191,7 +228,10 @@ export default function Conseils() {
               </Text>
             </Text>
             <TouchableOpacity
-              style={styles.shareButton}
+              style={[
+                styles.shareButton,
+                { backgroundColor: currentTheme.colors.primary },
+              ]}
               onPress={() =>
                 Linking.openURL(
                   "sms:&body=Check out these awesome tips from ChallengeTies!"
@@ -201,9 +241,16 @@ export default function Conseils() {
               <Ionicons
                 name="share-social-outline"
                 size={normalizeSize(20)}
-                color="#fff"
+                color={currentTheme.colors.textPrimary} // Texte blanc pour contraste
               />
-              <Text style={styles.shareButtonText}>Partager les astuces</Text>
+              <Text
+                style={[
+                  styles.shareButtonText,
+                  { color: currentTheme.colors.textPrimary },
+                ]}
+              >
+                Partager les astuces
+              </Text>
             </TouchableOpacity>
           </Animated.View>
         </ScrollView>
@@ -220,7 +267,7 @@ const styles = StyleSheet.create({
     flex: 1,
   },
   headerWrapper: {
-    marginTop: SCREEN_HEIGHT * 0.04, // Descend légèrement le CustomHeader
+    marginTop: SCREEN_HEIGHT * 0.04,
     marginBottom: SCREEN_HEIGHT * 0.02,
     paddingHorizontal: SCREEN_WIDTH * 0.05,
   },
@@ -240,8 +287,7 @@ const styles = StyleSheet.create({
   },
   subHeaderText: {
     fontSize: normalizeFont(16),
-    fontFamily: currentTheme.typography.body.fontFamily,
-    color: currentTheme.colors.textSecondary,
+    fontFamily: "Comfortaa_400Regular", // Remplace par la fonte directe
     textAlign: "center",
     marginHorizontal: SCREEN_WIDTH * 0.05,
     lineHeight: normalizeFont(22),
@@ -252,7 +298,6 @@ const styles = StyleSheet.create({
   tipCard: {
     flexDirection: "row",
     alignItems: "flex-start",
-    backgroundColor: currentTheme.colors.cardBackground,
     borderRadius: normalizeSize(15),
     padding: normalizeSize(16),
     marginBottom: SCREEN_HEIGHT * 0.02,
@@ -262,10 +307,9 @@ const styles = StyleSheet.create({
     shadowRadius: normalizeSize(6),
     elevation: 4,
     borderWidth: 1,
-    borderColor: currentTheme.colors.border || "#e3e2e9",
   },
   tipCardExpanded: {
-    backgroundColor: `${currentTheme.colors.cardBackground}F0`, // Légère transparence pour effet premium
+    opacity: 0.95, // Légère transparence pour effet premium
   },
   tipIcon: {
     marginRight: normalizeSize(14),
@@ -276,14 +320,12 @@ const styles = StyleSheet.create({
   },
   tipTitle: {
     fontSize: normalizeFont(18),
-    fontFamily: currentTheme.typography.title.fontFamily,
-    color: currentTheme.colors.secondary,
+    fontFamily: "Comfortaa_700Bold", // Remplace par la fonte directe
     marginBottom: normalizeSize(6),
   },
   tipDescription: {
     fontSize: normalizeFont(14),
-    fontFamily: currentTheme.typography.body.fontFamily,
-    color: currentTheme.colors.textSecondary,
+    fontFamily: "Comfortaa_400Regular", // Remplace par la fonte directe
     lineHeight: normalizeFont(20),
   },
   readMoreButton: {
@@ -292,8 +334,7 @@ const styles = StyleSheet.create({
   },
   readMoreText: {
     fontSize: normalizeFont(12),
-    fontFamily: currentTheme.typography.body.fontFamily,
-    color: currentTheme.colors.primary,
+    fontFamily: "Comfortaa_400Regular", // Remplace par la fonte directe
     textDecorationLine: "underline",
   },
   footer: {
@@ -302,20 +343,17 @@ const styles = StyleSheet.create({
   },
   footerText: {
     fontSize: normalizeFont(14),
-    fontFamily: currentTheme.typography.body.fontFamily,
-    color: currentTheme.colors.textSecondary,
+    fontFamily: "Comfortaa_400Regular", // Remplace par la fonte directe
     textAlign: "center",
     marginBottom: SCREEN_HEIGHT * 0.02,
   },
   footerLink: {
-    color: currentTheme.colors.secondary,
-    fontFamily: currentTheme.typography.title.fontFamily,
+    fontFamily: "Comfortaa_700Bold", // Remplace par la fonte directe
     textDecorationLine: "underline",
   },
   shareButton: {
     flexDirection: "row",
     alignItems: "center",
-    backgroundColor: currentTheme.colors.primary,
     paddingVertical: normalizeSize(10),
     paddingHorizontal: normalizeSize(20),
     borderRadius: normalizeSize(25),
@@ -327,8 +365,7 @@ const styles = StyleSheet.create({
   },
   shareButtonText: {
     fontSize: normalizeFont(14),
-    fontFamily: currentTheme.typography.title.fontFamily,
-    color: "#fff",
+    fontFamily: "Comfortaa_700Bold", // Remplace par la fonte directe
     marginLeft: normalizeSize(8),
   },
 });

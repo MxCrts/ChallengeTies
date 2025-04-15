@@ -22,13 +22,13 @@ import { LinearGradient } from "expo-linear-gradient";
 import { ref, uploadBytesResumable, getDownloadURL } from "firebase/storage";
 import { checkForAchievements } from "../../helpers/trophiesHelpers";
 import BackButton from "../../components/BackButton";
+import { useTheme } from "../../context/ThemeContext";
+import { Theme } from "../../theme/designSystem";
 import designSystem from "../../theme/designSystem";
 import CustomHeader from "@/components/CustomHeader";
 import Animated, { FadeInUp } from "react-native-reanimated";
 
 const { width: SCREEN_WIDTH, height: SCREEN_HEIGHT } = Dimensions.get("window");
-const { lightTheme } = designSystem;
-const currentTheme = lightTheme;
 
 const normalizeSize = (size) => {
   const scale = SCREEN_WIDTH / 375;
@@ -53,6 +53,11 @@ export default function UserInfo() {
   const [location, setLocation] = useState("");
   const [interet, setInteret] = useState("");
   const [isLoading, setIsLoading] = useState(false);
+  const { theme } = useTheme();
+  const isDarkMode = theme === "dark";
+  const currentTheme: Theme = isDarkMode
+    ? designSystem.darkTheme
+    : designSystem.lightTheme;
 
   useEffect(() => {
     const fetchUserData = async () => {
@@ -181,6 +186,12 @@ export default function UserInfo() {
     }
   }, [user, displayName, bio, profileImage, location, interet, router]);
 
+  // Fonction pour obtenir le style dynamique de fieldGradient
+  const getFieldGradientStyle = () => ({
+    ...styles.fieldGradient,
+    borderColor: isDarkMode ? "#FFDD9533" : "#e3701e33",
+  });
+
   if (isLoading) {
     return (
       <SafeAreaView style={styles.safeArea}>
@@ -191,8 +202,18 @@ export default function UserInfo() {
           ]}
           style={styles.loadingContainer}
         >
-          <ActivityIndicator size="large" color="#FF6200" />
-          <Text style={styles.loadingText}>Chargement en cours...</Text>
+          <ActivityIndicator
+            size="large"
+            color={currentTheme.colors.secondary}
+          />
+          <Text
+            style={[
+              styles.loadingText,
+              { color: currentTheme.colors.textPrimary },
+            ]}
+          >
+            Chargement en cours...
+          </Text>
         </LinearGradient>
       </SafeAreaView>
     );
@@ -228,19 +249,34 @@ export default function UserInfo() {
             >
               <TouchableOpacity onPress={pickImage}>
                 <LinearGradient
-                  colors={["#FF6200", "#FF8C00"]}
+                  colors={[
+                    currentTheme.colors.secondary,
+                    currentTheme.colors.primary,
+                  ]}
                   style={styles.imageGradient}
                   start={{ x: 0, y: 0 }}
                   end={{ x: 1, y: 1 }}
                 >
-                  <View style={styles.imageOverlay}>
+                  <View
+                    style={[
+                      styles.imageOverlay,
+                      { backgroundColor: `${currentTheme.colors.overlay}80` },
+                    ]}
+                  >
                     {profileImage ? (
                       <Image
                         source={{ uri: profileImage }}
                         style={styles.profileImage}
                       />
                     ) : (
-                      <Text style={styles.addImageText}>Ajouter une photo</Text>
+                      <Text
+                        style={[
+                          styles.addImageText,
+                          { color: currentTheme.colors.textPrimary },
+                        ]}
+                      >
+                        Ajouter une photo
+                      </Text>
                     )}
                   </View>
                 </LinearGradient>
@@ -253,8 +289,11 @@ export default function UserInfo() {
               style={styles.inputWrapper}
             >
               <LinearGradient
-                colors={["#FFFFFF", "#FFE0B2"]}
-                style={styles.fieldGradient}
+                colors={[
+                  currentTheme.colors.cardBackground,
+                  `${currentTheme.colors.cardBackground}F0`,
+                ]}
+                style={getFieldGradientStyle()} // Style dynamique
                 start={{ x: 0, y: 0 }}
                 end={{ x: 1, y: 1 }}
               >
@@ -264,14 +303,14 @@ export default function UserInfo() {
                   style={styles.input}
                   value={displayName}
                   onChangeText={setDisplayName}
-                  textColor="#FF6200"
-                  activeOutlineColor="#FF6200"
-                  outlineColor="transparent"
+                  textColor={currentTheme.colors.textPrimary}
+                  activeOutlineColor={currentTheme.colors.secondary}
+                  outlineColor={currentTheme.colors.border}
                   theme={{
                     colors: {
-                      primary: "#FF6200",
-                      text: "#FF6200",
-                      placeholder: "#FF8C00",
+                      primary: currentTheme.colors.secondary,
+                      text: currentTheme.colors.textPrimary,
+                      placeholder: currentTheme.colors.textSecondary,
                       background: "transparent",
                     },
                   }}
@@ -283,8 +322,11 @@ export default function UserInfo() {
               style={styles.inputWrapper}
             >
               <LinearGradient
-                colors={["#FFFFFF", "#FFE0B2"]}
-                style={styles.fieldGradient}
+                colors={[
+                  currentTheme.colors.cardBackground,
+                  `${currentTheme.colors.cardBackground}F0`,
+                ]}
+                style={getFieldGradientStyle()} // Style dynamique
                 start={{ x: 0, y: 0 }}
                 end={{ x: 1, y: 1 }}
               >
@@ -295,14 +337,14 @@ export default function UserInfo() {
                   value={bio}
                   onChangeText={setBio}
                   multiline
-                  textColor="#FF6200"
-                  activeOutlineColor="#FF6200"
-                  outlineColor="transparent"
+                  textColor={currentTheme.colors.textPrimary}
+                  activeOutlineColor={currentTheme.colors.secondary}
+                  outlineColor={currentTheme.colors.border}
                   theme={{
                     colors: {
-                      primary: "#FF6200",
-                      text: "#FF6200",
-                      placeholder: "#FF8C00",
+                      primary: currentTheme.colors.secondary,
+                      text: currentTheme.colors.textPrimary,
+                      placeholder: currentTheme.colors.textSecondary,
                       background: "transparent",
                     },
                   }}
@@ -314,8 +356,11 @@ export default function UserInfo() {
               style={styles.inputWrapper}
             >
               <LinearGradient
-                colors={["#FFFFFF", "#FFE0B2"]}
-                style={styles.fieldGradient}
+                colors={[
+                  currentTheme.colors.cardBackground,
+                  `${currentTheme.colors.cardBackground}F0`,
+                ]}
+                style={getFieldGradientStyle()} // Style dynamique
                 start={{ x: 0, y: 0 }}
                 end={{ x: 1, y: 1 }}
               >
@@ -325,14 +370,14 @@ export default function UserInfo() {
                   style={styles.input}
                   value={location}
                   onChangeText={setLocation}
-                  textColor="#FF6200"
-                  activeOutlineColor="#FF6200"
-                  outlineColor="transparent"
+                  textColor={currentTheme.colors.textPrimary}
+                  activeOutlineColor={currentTheme.colors.secondary}
+                  outlineColor={currentTheme.colors.border}
                   theme={{
                     colors: {
-                      primary: "#FF6200",
-                      text: "#FF6200",
-                      placeholder: "#FF8C00",
+                      primary: currentTheme.colors.secondary,
+                      text: currentTheme.colors.textPrimary,
+                      placeholder: currentTheme.colors.textSecondary,
                       background: "transparent",
                     },
                   }}
@@ -344,8 +389,11 @@ export default function UserInfo() {
               style={styles.inputWrapper}
             >
               <LinearGradient
-                colors={["#FFFFFF", "#FFE0B2"]}
-                style={styles.fieldGradient}
+                colors={[
+                  currentTheme.colors.cardBackground,
+                  `${currentTheme.colors.cardBackground}F0`,
+                ]}
+                style={getFieldGradientStyle()} // Style dynamique
                 start={{ x: 0, y: 0 }}
                 end={{ x: 1, y: 1 }}
               >
@@ -355,14 +403,14 @@ export default function UserInfo() {
                   style={styles.input}
                   value={interet}
                   onChangeText={setInteret}
-                  textColor="#FF6200"
-                  activeOutlineColor="#FF6200"
-                  outlineColor="transparent"
+                  textColor={currentTheme.colors.textPrimary}
+                  activeOutlineColor={currentTheme.colors.secondary}
+                  outlineColor={currentTheme.colors.border}
                   theme={{
                     colors: {
-                      primary: "#FF6200",
-                      text: "#FF6200",
-                      placeholder: "#FF8C00",
+                      primary: currentTheme.colors.secondary,
+                      text: currentTheme.colors.textPrimary,
+                      placeholder: currentTheme.colors.textSecondary,
                       background: "transparent",
                     },
                   }}
@@ -376,13 +424,23 @@ export default function UserInfo() {
               style={styles.saveButtonWrapper}
             >
               <LinearGradient
-                colors={["#FF6200", "#FF8C00"]}
+                colors={[
+                  currentTheme.colors.secondary,
+                  currentTheme.colors.primary,
+                ]}
                 style={styles.saveButton}
                 start={{ x: 0, y: 0 }}
                 end={{ x: 1, y: 1 }}
               >
                 <TouchableOpacity onPress={handleSave}>
-                  <Text style={styles.saveButtonText}>Sauvegarder</Text>
+                  <Text
+                    style={[
+                      styles.saveButtonText,
+                      { color: currentTheme.colors.textPrimary },
+                    ]}
+                  >
+                    Sauvegarder
+                  </Text>
                 </TouchableOpacity>
               </LinearGradient>
             </Animated.View>
@@ -403,7 +461,7 @@ const styles = StyleSheet.create({
     paddingBottom: SCREEN_HEIGHT * 0.15,
   },
   headerWrapper: {
-    marginTop: SCREEN_HEIGHT * 0.01, // Alignement cohérent avec UserStats et CurrentChallenges
+    marginTop: SCREEN_HEIGHT * 0.01,
     marginBottom: SCREEN_HEIGHT * 0.02,
     paddingHorizontal: SCREEN_WIDTH * 0.05,
     width: "100%",
@@ -416,8 +474,7 @@ const styles = StyleSheet.create({
   loadingText: {
     marginTop: normalizeSize(10),
     fontSize: normalizeSize(16),
-    fontFamily: currentTheme.typography.body.fontFamily,
-    color: currentTheme.colors.textSecondary,
+    fontFamily: "Comfortaa_400Regular",
   },
   imageContainer: {
     marginBottom: normalizeSize(30),
@@ -437,7 +494,6 @@ const styles = StyleSheet.create({
   },
   imageOverlay: {
     flex: 1,
-    backgroundColor: "rgba(0, 0, 0, 0.2)",
     justifyContent: "center",
     alignItems: "center",
   },
@@ -447,9 +503,8 @@ const styles = StyleSheet.create({
     borderRadius: SCREEN_WIDTH * 0.19,
   },
   addImageText: {
-    color: "#FFFFFF",
     fontSize: normalizeSize(16),
-    fontFamily: currentTheme.typography.title.fontFamily,
+    fontFamily: "Comfortaa_700Bold",
     textShadowColor: "#000",
     textShadowOffset: { width: 0, height: 2 },
     textShadowRadius: 4,
@@ -467,12 +522,11 @@ const styles = StyleSheet.create({
     borderRadius: normalizeSize(15),
     padding: normalizeSize(5),
     borderWidth: 1,
-    borderColor: "#FF620030",
   },
   input: {
     width: "100%",
     backgroundColor: "transparent",
-    fontFamily: currentTheme.typography.body.fontFamily,
+    fontFamily: "Comfortaa_400Regular",
     borderRadius: normalizeSize(10),
   },
   multilineInput: {
@@ -494,9 +548,8 @@ const styles = StyleSheet.create({
     elevation: 10,
   },
   saveButtonText: {
-    color: "#FFFFFF",
     fontSize: normalizeSize(18),
-    fontFamily: currentTheme.typography.title.fontFamily,
+    fontFamily: "Comfortaa_700Bold",
     textShadowColor: "#000",
     textShadowOffset: { width: 0, height: 2 },
     textShadowRadius: 4,

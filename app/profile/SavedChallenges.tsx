@@ -1,4 +1,4 @@
-import React, { useEffect, useState, useRef } from "react";
+import React, { useRef, useState } from "react";
 import {
   View,
   Text,
@@ -17,8 +17,12 @@ import { useRouter } from "expo-router";
 import { Ionicons } from "@expo/vector-icons";
 import * as Progress from "react-native-progress";
 import Animated, { FadeInUp, FadeOutRight } from "react-native-reanimated";
-import { doc, getDoc, updateDoc } from "firebase/firestore"; // deleteDoc retiré car non utilisé
-import { auth, db } from "../../constants/firebase-config";
+import {
+  useSavedChallenges,
+  Challenge as ContextChallenge,
+} from "../../context/SavedChallengesContext";
+import { useTheme } from "../../context/ThemeContext";
+import { Theme } from "../../theme/designSystem";
 import designSystem from "../../theme/designSystem";
 import CustomHeader from "@/components/CustomHeader";
 
@@ -27,79 +31,44 @@ const ITEM_WIDTH = SCREEN_WIDTH * 0.9;
 const ITEM_HEIGHT = SCREEN_WIDTH * 0.45;
 const CARD_MARGIN = SCREEN_WIDTH * 0.02;
 
-const currentTheme = {
-  ...designSystem.lightTheme,
-  colors: {
-    ...designSystem.lightTheme.colors,
-    primary: "#ED8F03", // Orange
-    cardBackground: "#FFFFFF",
-  },
-};
-
-const normalizeSize = (size) => {
+const normalizeSize = (size: number) => {
   const scale = SCREEN_WIDTH / 375;
   return Math.round(size * scale);
 };
 
-interface Challenge {
-  id: string;
-  title: string;
-  description?: string;
-  category?: string;
-  imageUrl?: string;
-  selectedDays?: number;
-  completedDays?: number;
-}
-
 export default function SavedChallengesScreen() {
-  const [savedChallenges, setSavedChallenges] = useState<Challenge[]>([]);
+  const { savedChallenges, removeChallenge } = useSavedChallenges();
   const [isLoading, setIsLoading] = useState<boolean>(true);
   const router = useRouter();
-  const swipeableRefs = useRef<(Swipeable | null)[]>([]); // Références pour les Swipeable
+  const swipeableRefs = useRef<(Swipeable | null)[]>([]);
+  const { theme } = useTheme();
+  const isDarkMode = theme === "dark";
+  const currentTheme: Theme = isDarkMode
+    ? designSystem.darkTheme
+    : designSystem.lightTheme;
 
-  useEffect(() => {
-    const fetchSavedChallenges = async () => {
-      const userId = auth.currentUser?.uid;
-      if (!userId) {
-        console.warn("Utilisateur non authentifié.");
-        setIsLoading(false);
-        return;
-      }
+  // Simuler le chargement initial
+  React.useEffect(() => {
+    const load = async () => {
       try {
-        setIsLoading(true);
-        const userRef = doc(db, "users", userId);
-        const userSnap = await getDoc(userRef);
-        if (userSnap.exists()) {
-          const userData = userSnap.data();
-          const challenges = userData.SavedChallenges || [];
-          const enrichedChallenges = challenges.map((challenge) => ({
-            ...challenge,
-            completedDays: challenge.completedDays || 0,
-            selectedDays: challenge.selectedDays || 7,
-          }));
-          setSavedChallenges(enrichedChallenges);
-        } else {
-          setSavedChallenges([]);
-        }
+        await loadSavedChallenges();
       } catch (error) {
-        console.error(
-          "Erreur lors du chargement des défis sauvegardés :",
-          error
-        );
+        console.error("Erreur lors du chargement initial :", error);
       } finally {
         setIsLoading(false);
       }
     };
+    load();
+  }, [loadSavedChallenges]);
 
-    fetchSavedChallenges();
-  }, []);
-
-  const navigateToChallengeDetails = (item: Challenge) => {
+  const navigateToChallengeDetails = (item: ContextChallenge) => {
+    const selectedDays = item.daysOptions[0] || 7;
+    const completedDays = 0;
     const route =
       `/challenge-details/${encodeURIComponent(item.id)}` +
       `?title=${encodeURIComponent(item.title)}` +
-      `&selectedDays=${item.selectedDays || 7}` +
-      `&completedDays=${item.completedDays || 0}` +
+      `&selectedDays=${selectedDays}` +
+      `&completedDays=${completedDays}` +
       `&category=${encodeURIComponent(item.category || "Uncategorized")}` +
       `&description=${encodeURIComponent(item.description || "")}` +
       `&imageUrl=${encodeURIComponent(item.imageUrl || "")}`;
@@ -125,32 +94,9 @@ export default function SavedChallengesScreen() {
           text: "Continuer",
           style: "destructive",
           onPress: async () => {
-            const userId = auth.currentUser?.uid;
-            if (!userId) return;
-
             try {
-              // Supprime localement pour déclencher l'animation
-              setSavedChallenges((prev) =>
-                prev.filter((challenge) => challenge.id !== challengeId)
-              );
-
-              // Met à jour Firebase après l'animation
-              setTimeout(async () => {
-                const userRef = doc(db, "users", userId);
-                const userSnap = await getDoc(userRef);
-                if (userSnap.exists()) {
-                  const userData = userSnap.data();
-                  const updatedChallenges = (
-                    userData.SavedChallenges || []
-                  ).filter(
-                    (challenge: Challenge) => challenge.id !== challengeId
-                  );
-                  await updateDoc(userRef, {
-                    SavedChallenges: updatedChallenges,
-                  });
-                  Alert.alert("Supprimé", "Défi supprimé avec succès.");
-                }
-              }, 300); // Durée de l'animation
+              await removeChallenge(challengeId);
+              Alert.alert("Supprimé", "Défi supprimé avec succès.");
             } catch (err) {
               console.error("Erreur lors de la suppression :", err);
               Alert.alert("Erreur", "Impossible de supprimer ce défi.");
@@ -158,18 +104,6 @@ export default function SavedChallengesScreen() {
               if (swipeable) {
                 swipeable.close();
               }
-              // Restaure la liste en cas d'erreur
-              setSavedChallenges((prev) => {
-                const userRef = doc(db, "users", userId);
-                getDoc(userRef).then((snap) => {
-                  if (snap.exists()) {
-                    const userData = snap.data();
-                    return userData.SavedChallenges || [];
-                  }
-                  return prev;
-                });
-                return prev;
-              });
             }
           },
         },
@@ -177,18 +111,25 @@ export default function SavedChallengesScreen() {
     );
   };
 
+  const getCardStyle = () => ({
+    ...styles.card,
+    borderColor: isDarkMode ? "#FFDD9533" : "#e3701e33",
+  });
+
   const renderChallengeItem = ({
     item,
     index,
   }: {
-    item: Challenge;
+    item: ContextChallenge;
     index: number;
   }) => {
-    const progress = (item.completedDays || 0) / (item.selectedDays || 7);
+    const selectedDays = item.daysOptions[0] || 7; // Prendre le 1er jour ou 7 par défaut
+    const completedDays = 0; // Pas de progression sauvegardée
+    const progress = completedDays / selectedDays;
     return (
       <Animated.View
         entering={FadeInUp.delay(index * 100)}
-        exiting={FadeOutRight.duration(300)} // Animation de sortie
+        exiting={FadeOutRight.duration(300)}
         style={styles.cardWrapper}
       >
         <Swipeable
@@ -218,8 +159,11 @@ export default function SavedChallengesScreen() {
             activeOpacity={0.9}
           >
             <LinearGradient
-              colors={["#FFFFFF", "#FFE0B2"]}
-              style={styles.card}
+              colors={[
+                currentTheme.colors.cardBackground,
+                `${currentTheme.colors.cardBackground}F0`,
+              ]}
+              style={getCardStyle()}
               start={{ x: 0, y: 0 }}
               end={{ x: 1, y: 1 }}
             >
@@ -227,13 +171,27 @@ export default function SavedChallengesScreen() {
                 source={{
                   uri: item.imageUrl || "https://via.placeholder.com/70",
                 }}
-                style={styles.cardImage}
+                style={[
+                  styles.cardImage,
+                  { borderColor: currentTheme.colors.border },
+                ]}
               />
               <View style={styles.cardContent}>
-                <Text style={styles.challengeTitle} numberOfLines={1}>
+                <Text
+                  style={[
+                    styles.challengeTitle,
+                    { color: currentTheme.colors.textPrimary },
+                  ]}
+                  numberOfLines={1}
+                >
                   {item.title}
                 </Text>
-                <Text style={styles.challengeCategory}>
+                <Text
+                  style={[
+                    styles.challengeCategory,
+                    { color: currentTheme.colors.textSecondary },
+                  ]}
+                >
                   {item.category || "Sans catégorie"}
                 </Text>
                 <View style={styles.progressContainer}>
@@ -242,13 +200,18 @@ export default function SavedChallengesScreen() {
                     width={null}
                     height={normalizeSize(8)}
                     borderRadius={normalizeSize(4)}
-                    color="#FF6200"
-                    unfilledColor="#E0E0E0"
+                    color={currentTheme.colors.secondary}
+                    unfilledColor={isDarkMode ? "#4A4A4A" : "#E0E0E0"}
                     borderWidth={0}
                     style={styles.progressBar}
                   />
-                  <Text style={styles.progressText}>
-                    {item.completedDays || 0}/{item.selectedDays || 7} jours
+                  <Text
+                    style={[
+                      styles.progressText,
+                      { color: currentTheme.colors.secondary },
+                    ]}
+                  >
+                    {completedDays}/{selectedDays} jours
                   </Text>
                 </View>
                 <TouchableOpacity
@@ -256,12 +219,22 @@ export default function SavedChallengesScreen() {
                   onPress={() => navigateToChallengeDetails(item)}
                 >
                   <LinearGradient
-                    colors={["#FF6200", "#FF8C00"]}
+                    colors={[
+                      currentTheme.colors.secondary,
+                      currentTheme.colors.primary,
+                    ]}
                     style={styles.viewButtonGradient}
                     start={{ x: 0, y: 0 }}
                     end={{ x: 1, y: 1 }}
                   >
-                    <Text style={styles.viewButtonText}>Voir Détails</Text>
+                    <Text
+                      style={[
+                        styles.viewButtonText,
+                        { color: currentTheme.colors.textPrimary },
+                      ]}
+                    >
+                      Voir Détails
+                    </Text>
                   </LinearGradient>
                 </TouchableOpacity>
               </View>
@@ -284,8 +257,18 @@ export default function SavedChallengesScreen() {
           start={{ x: 0, y: 0 }}
           end={{ x: 1, y: 1 }}
         >
-          <ActivityIndicator size="large" color="#FF6200" />
-          <Text style={styles.loadingText}>Chargement en cours...</Text>
+          <ActivityIndicator
+            size="large"
+            color={currentTheme.colors.secondary}
+          />
+          <Text
+            style={[
+              styles.loadingText,
+              { color: currentTheme.colors.textPrimary },
+            ]}
+          >
+            Chargement en cours...
+          </Text>
         </LinearGradient>
       </SafeAreaView>
     );
@@ -310,10 +293,22 @@ export default function SavedChallengesScreen() {
             <Ionicons
               name="bookmark-outline"
               size={normalizeSize(60)}
-              color="#B0BEC5"
+              color={currentTheme.colors.textSecondary}
             />
-            <Text style={styles.noChallengesText}>Aucun défi sauvegardé !</Text>
-            <Text style={styles.noChallengesSubtext}>
+            <Text
+              style={[
+                styles.noChallengesText,
+                { color: currentTheme.colors.textPrimary },
+              ]}
+            >
+              Aucun défi sauvegardé !
+            </Text>
+            <Text
+              style={[
+                styles.noChallengesSubtext,
+                { color: currentTheme.colors.textSecondary },
+              ]}
+            >
               Sauvegardez des défis pour les voir ici.
             </Text>
           </Animated.View>
@@ -339,7 +334,7 @@ export default function SavedChallengesScreen() {
         <FlatList
           data={savedChallenges}
           renderItem={renderChallengeItem}
-          keyExtractor={(item) => `saved-${item.id}`}
+          keyExtractor={(item, index) => `saved-${item.id}-${index}`}
           contentContainerStyle={styles.listContent}
           showsVerticalScrollIndicator={false}
         />
@@ -379,7 +374,6 @@ const styles = StyleSheet.create({
     padding: normalizeSize(15),
     borderRadius: normalizeSize(20),
     borderWidth: 1,
-    borderColor: "#FF620030",
     minHeight: ITEM_HEIGHT,
   },
   cardImage: {
@@ -388,20 +382,17 @@ const styles = StyleSheet.create({
     borderRadius: normalizeSize(14),
     marginRight: normalizeSize(15),
     borderWidth: 2,
-    borderColor: "#FFFFFF",
   },
   cardContent: {
     flex: 1,
   },
   challengeTitle: {
     fontSize: normalizeSize(18),
-    color: "#333333",
-    fontFamily: currentTheme.typography.title.fontFamily,
+    fontFamily: "Comfortaa_700Bold",
   },
   challengeCategory: {
     fontSize: normalizeSize(14),
-    color: "#777777",
-    fontFamily: currentTheme.typography.body.fontFamily,
+    fontFamily: "Comfortaa_400Regular",
     marginTop: normalizeSize(2),
     textTransform: "capitalize",
   },
@@ -413,9 +404,8 @@ const styles = StyleSheet.create({
   },
   progressText: {
     fontSize: normalizeSize(12),
-    color: "#FF6200",
     marginTop: normalizeSize(5),
-    fontFamily: currentTheme.typography.body.fontFamily,
+    fontFamily: "Comfortaa_400Regular",
   },
   viewButton: {
     borderRadius: normalizeSize(12),
@@ -428,8 +418,7 @@ const styles = StyleSheet.create({
     alignItems: "center",
   },
   viewButtonText: {
-    color: "#FFFFFF",
-    fontFamily: currentTheme.typography.title.fontFamily,
+    fontFamily: "Comfortaa_700Bold",
     fontSize: normalizeSize(14),
     textShadowColor: "#000",
     textShadowOffset: { width: 0, height: 1 },
@@ -443,8 +432,7 @@ const styles = StyleSheet.create({
   loadingText: {
     marginTop: normalizeSize(10),
     fontSize: normalizeSize(16),
-    fontFamily: currentTheme.typography.body.fontFamily,
-    color: currentTheme.colors.textSecondary,
+    fontFamily: "Comfortaa_400Regular",
   },
   noChallengesContainer: {
     flex: 1,
@@ -456,15 +444,13 @@ const styles = StyleSheet.create({
   },
   noChallengesText: {
     fontSize: normalizeSize(20),
-    fontFamily: currentTheme.typography.title.fontFamily,
-    color: "#333333",
+    fontFamily: "Comfortaa_700Bold",
     marginTop: normalizeSize(15),
     textAlign: "center",
   },
   noChallengesSubtext: {
     fontSize: normalizeSize(16),
-    fontFamily: currentTheme.typography.body.fontFamily,
-    color: "#777777",
+    fontFamily: "Comfortaa_400Regular",
     textAlign: "center",
     marginTop: normalizeSize(10),
     maxWidth: SCREEN_WIDTH * 0.65,
