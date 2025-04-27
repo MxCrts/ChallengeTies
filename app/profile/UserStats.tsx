@@ -7,6 +7,7 @@ import {
   ActivityIndicator,
   Dimensions,
   SafeAreaView,
+  StatusBar,
 } from "react-native";
 import { Ionicons } from "@expo/vector-icons";
 import { doc, onSnapshot } from "firebase/firestore";
@@ -14,16 +15,18 @@ import { db, auth } from "../../constants/firebase-config";
 import { useSavedChallenges } from "../../context/SavedChallengesContext";
 import { useCurrentChallenges } from "../../context/CurrentChallengesContext";
 import { LinearGradient } from "expo-linear-gradient";
-import BackButton from "../../components/BackButton";
 import Animated, { FadeInUp } from "react-native-reanimated";
-import { useTheme } from "../../context/ThemeContext"; // Ajout de useTheme
-import { Theme } from "../../theme/designSystem"; // Import de Theme
+import { useTheme } from "../../context/ThemeContext";
+import { Theme } from "../../theme/designSystem";
 import designSystem from "../../theme/designSystem";
 import CustomHeader from "@/components/CustomHeader";
 
+// Constante SPACING pour cohérence avec new-features.tsx, leaderboard.tsx, UserInfo.tsx
+const SPACING = 15;
+
 const { width: SCREEN_WIDTH, height: SCREEN_HEIGHT } = Dimensions.get("window");
 
-const normalizeSize = (size) => {
+const normalizeSize = (size: number) => {
   const scale = SCREEN_WIDTH / 375;
   return Math.round(size * scale);
 };
@@ -31,7 +34,19 @@ const normalizeSize = (size) => {
 interface Stat {
   name: string;
   value: number | string;
-  icon: string;
+  icon: keyof typeof Ionicons.glyphMap;
+}
+
+interface UserDoc {
+  longestStreak?: number;
+  trophies?: number;
+  achievements?: string[];
+}
+
+interface Challenge {
+  id: string;
+  selectedDays: number;
+  completedDays?: number;
 }
 
 export default function UserStats() {
@@ -39,12 +54,10 @@ export default function UserStats() {
   const { currentChallenges } = useCurrentChallenges();
   const [stats, setStats] = useState<Stat[]>([]);
   const [isLoading, setIsLoading] = useState<boolean>(true);
-  const [userDoc, setUserDoc] = useState<any>(null);
-  const { theme } = useTheme(); // Ajout de useTheme
+  const [userDoc, setUserDoc] = useState<UserDoc | null>(null);
+  const { theme } = useTheme();
   const isDarkMode = theme === "dark";
-  const currentTheme: Theme = isDarkMode
-    ? designSystem.darkTheme
-    : designSystem.lightTheme;
+  const currentTheme: Theme = isDarkMode ? designSystem.darkTheme : designSystem.lightTheme;
 
   useEffect(() => {
     const userId = auth.currentUser?.uid;
@@ -53,7 +66,7 @@ export default function UserStats() {
       return;
     }
     const unsubscribe = onSnapshot(doc(db, "users", userId), (snapshot) => {
-      setUserDoc(snapshot.data());
+      setUserDoc(snapshot.data() as UserDoc);
       setIsLoading(false);
     });
     return () => unsubscribe();
@@ -62,12 +75,12 @@ export default function UserStats() {
   useEffect(() => {
     if (!userDoc) return;
     const uniqueOngoing = new Map(
-      currentChallenges.map((ch: any) => [`${ch.id}_${ch.selectedDays}`, ch])
+      currentChallenges.map((ch: Challenge) => [`${ch.id}_${ch.selectedDays}`, ch])
     );
     const totalSaved = savedChallenges.length;
     const totalOngoing = uniqueOngoing.size;
     const totalCompleted = currentChallenges.filter(
-      (challenge: any) => challenge.completedDays === challenge.selectedDays
+      (challenge: Challenge) => challenge.completedDays === challenge.selectedDays
     ).length;
     const successRate =
       totalOngoing + totalCompleted > 0
@@ -113,109 +126,37 @@ export default function UserStats() {
     setStats(newStats);
   }, [savedChallenges, currentChallenges, userDoc]);
 
-  // Fonction pour obtenir le style dynamique de statCard
-  const getStatCardStyle = () => ({
-    ...styles.statCard,
-    borderColor: isDarkMode ? "#FFDD9533" : "#e3701e33",
-  });
-
-  if (isLoading) {
-    return (
-      <SafeAreaView style={styles.safeArea}>
-        <LinearGradient
-          colors={[
-            currentTheme.colors.background,
-            currentTheme.colors.cardBackground,
-          ]}
-          style={styles.loadingContainer}
-        >
-          <ActivityIndicator
-            size="large"
-            color={currentTheme.colors.secondary}
-          />
-          <Text
-            style={[
-              styles.loadingText,
-              { color: currentTheme.colors.textPrimary },
-            ]}
-          >
-            Chargement en cours...
-          </Text>
-        </LinearGradient>
-      </SafeAreaView>
-    );
-  }
-
-  if (stats.length === 0) {
-    return (
-      <SafeAreaView style={styles.safeArea}>
-        <LinearGradient
-          colors={[
-            currentTheme.colors.background,
-            currentTheme.colors.cardBackground,
-          ]}
-          style={styles.emptyContainer}
-        >
-          <Animated.View entering={FadeInUp.delay(100)}>
-            <Text
-              style={[
-                styles.emptyText,
-                { color: currentTheme.colors.textPrimary },
-              ]}
-            >
-              Aucune statistique disponible !
-            </Text>
-            <Text
-              style={[
-                styles.emptySubtext,
-                { color: currentTheme.colors.textSecondary },
-              ]}
-            >
-              Commencez des défis pour voir vos stats.
-            </Text>
-          </Animated.View>
-        </LinearGradient>
-      </SafeAreaView>
-    );
-  }
-
   const renderStat = ({ item, index }: { item: Stat; index: number }) => (
     <Animated.View
-      entering={FadeInUp.delay(index * 100)}
+      entering={FadeInUp.delay(index * 50)} // Délai réduit
       style={styles.statCardWrapper}
     >
       <LinearGradient
-        colors={[
-          currentTheme.colors.cardBackground,
-          `${currentTheme.colors.cardBackground}F0`,
-        ]} // Dynamique
-        style={getStatCardStyle()} // Style dynamique
+        colors={[currentTheme.colors.cardBackground, `${currentTheme.colors.cardBackground}F0`]}
+        style={styles.statCard}
         start={{ x: 0, y: 0 }}
         end={{ x: 1, y: 1 }}
       >
         <View
-          style={[
-            styles.iconContainer,
-            { backgroundColor: `${currentTheme.colors.secondary}1A` },
-          ]} // Transparence
+          style={[styles.iconContainer, { backgroundColor: `${currentTheme.colors.secondary}1A` }]}
         >
           <Ionicons
-            name={item.icon as keyof typeof Ionicons.glyphMap}
-            size={normalizeSize(40)}
-            color={currentTheme.colors.secondary} // Dynamique
+            name={item.icon}
+            size={normalizeSize(36)} // Réduit pour responsivité
+            color={currentTheme.colors.secondary}
+            accessibilityLabel={`Icône pour ${item.name}`}
           />
         </View>
         <View style={styles.statContent}>
           <Text
-            style={[
-              styles.statName,
-              { color: currentTheme.colors.textPrimary },
-            ]}
+            style={[styles.statName, { color: currentTheme.colors.textPrimary }]}
+            accessibilityLabel={`Nom de la statistique : ${item.name}`}
           >
             {item.name}
           </Text>
           <Text
             style={[styles.statValue, { color: currentTheme.colors.secondary }]}
+            accessibilityLabel={`Valeur de la statistique : ${item.value}`}
           >
             {item.value}
           </Text>
@@ -224,13 +165,67 @@ export default function UserStats() {
     </Animated.View>
   );
 
+  if (isLoading) {
+    return (
+      <SafeAreaView style={styles.safeArea}>
+        <StatusBar
+          translucent={true}
+          backgroundColor="transparent"
+          barStyle={isDarkMode ? "light-content" : "dark-content"}
+        />
+        <LinearGradient
+          colors={[currentTheme.colors.background, currentTheme.colors.cardBackground]}
+          style={styles.loadingContainer}
+        >
+          <ActivityIndicator size="large" color={currentTheme.colors.secondary} />
+          <Text
+            style={[styles.loadingText, { color: currentTheme.colors.textPrimary }]}
+          >
+            Chargement en cours...
+          </Text>
+        </LinearGradient>
+      </SafeAreaView>
+    );
+  }
+
+  if (!userDoc) {
+    return (
+      <SafeAreaView style={styles.safeArea}>
+        <StatusBar
+          translucent={true}
+          backgroundColor="transparent"
+          barStyle={isDarkMode ? "light-content" : "dark-content"}
+        />
+        <LinearGradient
+          colors={[currentTheme.colors.background, currentTheme.colors.cardBackground]}
+          style={styles.emptyContainer}
+        >
+          <Animated.View entering={FadeInUp.delay(100)}>
+            <Text
+              style={[styles.emptyText, { color: currentTheme.colors.textPrimary }]}
+            >
+              Impossible de charger vos données
+            </Text>
+            <Text
+              style={[styles.emptySubtext, { color: currentTheme.colors.textSecondary }]}
+            >
+              Veuillez vérifier votre connexion et réessayer.
+            </Text>
+          </Animated.View>
+        </LinearGradient>
+      </SafeAreaView>
+    );
+  }
+
   return (
     <SafeAreaView style={styles.safeArea}>
+      <StatusBar
+        translucent={true}
+        backgroundColor="transparent"
+        barStyle={isDarkMode ? "light-content" : "dark-content"}
+      />
       <LinearGradient
-        colors={[
-          currentTheme.colors.background,
-          currentTheme.colors.cardBackground,
-        ]}
+        colors={[currentTheme.colors.background, `${currentTheme.colors.cardBackground}F0`]}
         style={styles.container}
         start={{ x: 0, y: 0 }}
         end={{ x: 1, y: 1 }}
@@ -244,6 +239,15 @@ export default function UserStats() {
           keyExtractor={(item) => item.name}
           contentContainerStyle={styles.listContainer}
           showsVerticalScrollIndicator={false}
+          initialNumToRender={7} // Nombre de stats
+          getItemLayout={(data, index) => ({
+            length: normalizeSize(90),
+            offset: normalizeSize(90) * index,
+            index,
+          })}
+          accessibilityRole="list"
+          accessibilityLabel="Liste des statistiques utilisateur"
+          testID="stats-list"
         />
       </LinearGradient>
     </SafeAreaView>
@@ -252,50 +256,50 @@ export default function UserStats() {
 
 const styles = StyleSheet.create({
   safeArea: { flex: 1 },
-  container: { flex: 1 },
+  container: { flex: 1, paddingHorizontal: SPACING },
   headerWrapper: {
-    marginTop: SCREEN_HEIGHT * 0.01,
-    marginBottom: SCREEN_HEIGHT * 0.02,
-    paddingHorizontal: SCREEN_WIDTH * 0.05,
+    paddingHorizontal: SPACING,
+    paddingVertical: SPACING,
   },
   listContainer: {
-    paddingHorizontal: SCREEN_WIDTH * 0.05,
-    paddingBottom: SCREEN_HEIGHT * 0.1,
+    paddingVertical: SPACING,
+    paddingHorizontal: SPACING / 2,
+    paddingBottom: SPACING * 2, // Réduit pour responsivité
   },
   statCardWrapper: {
-    marginBottom: normalizeSize(15),
+    marginBottom: SPACING,
+    borderRadius: normalizeSize(20),
     shadowColor: "#000",
-    shadowOffset: { width: 0, height: normalizeSize(6) },
+    shadowOffset: { width: 0, height: normalizeSize(4) },
     shadowOpacity: 0.3,
-    shadowRadius: normalizeSize(8),
+    shadowRadius: normalizeSize(6),
     elevation: 8,
   },
   statCard: {
     flexDirection: "row",
     alignItems: "center",
-    padding: normalizeSize(15),
+    padding: SPACING,
     borderRadius: normalizeSize(20),
-    borderWidth: 1,
     overflow: "hidden",
   },
   iconContainer: {
-    width: normalizeSize(60),
-    height: normalizeSize(60),
-    borderRadius: normalizeSize(30),
+    width: normalizeSize(50), // Réduit pour responsivité
+    height: normalizeSize(50),
+    borderRadius: normalizeSize(25),
     justifyContent: "center",
     alignItems: "center",
-    marginRight: normalizeSize(15),
+    marginRight: SPACING,
   },
   statContent: {
     flex: 1,
   },
   statName: {
     fontSize: normalizeSize(16),
-    fontFamily: "Comfortaa_400Regular", // Direct
+    fontFamily: "Comfortaa_400Regular",
   },
   statValue: {
-    fontSize: normalizeSize(20),
-    fontFamily: "Comfortaa_700Bold", // Direct
+    fontSize: normalizeSize(18), // Réduit légèrement
+    fontFamily: "Comfortaa_700Bold",
   },
   loadingContainer: {
     flex: 1,
@@ -303,9 +307,9 @@ const styles = StyleSheet.create({
     alignItems: "center",
   },
   loadingText: {
-    marginTop: normalizeSize(10),
+    marginTop: SPACING,
     fontSize: normalizeSize(16),
-    fontFamily: "Comfortaa_400Regular", // Direct
+    fontFamily: "Comfortaa_400Regular",
   },
   emptyContainer: {
     flex: 1,
@@ -314,13 +318,13 @@ const styles = StyleSheet.create({
   },
   emptyText: {
     fontSize: normalizeSize(20),
-    fontFamily: "Comfortaa_700Bold", // Direct
+    fontFamily: "Comfortaa_700Bold",
     textAlign: "center",
   },
   emptySubtext: {
     fontSize: normalizeSize(16),
-    fontFamily: "Comfortaa_400Regular", // Direct
+    fontFamily: "Comfortaa_400Regular",
     textAlign: "center",
-    marginTop: normalizeSize(10),
+    marginTop: SPACING,
   },
 });

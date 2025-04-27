@@ -14,6 +14,7 @@ import {
   ScrollView,
   KeyboardAvoidingView,
   Platform,
+  PixelRatio,
 } from "react-native";
 import { Ionicons } from "@expo/vector-icons";
 import { useRouter } from "expo-router";
@@ -30,10 +31,14 @@ import designSystem from "../../theme/designSystem";
 
 const { width: SCREEN_WIDTH, height: SCREEN_HEIGHT } = Dimensions.get("window");
 
-const normalizeFont = (size: number) => {
-  const scale = SCREEN_WIDTH / 375;
-  return Math.round(size * scale);
+// Fonction de normalisation des tailles pour la responsivité
+const normalize = (size: number) => {
+  const scale = Math.min(SCREEN_WIDTH, SCREEN_HEIGHT) / 375; // Référence iPhone X
+  return Math.round(PixelRatio.roundToNearestPixel(size * scale));
 };
+
+// Constante pour les espacements
+const SPACING = normalize(15);
 
 const capitalize = (s: string) => s.charAt(0).toUpperCase() + s.slice(1);
 
@@ -92,7 +97,7 @@ const ExploreHeader = React.memo(
       >
         <Ionicons
           name="search"
-          size={normalizeFont(20)}
+          size={normalize(20)}
           color={currentTheme.colors.textSecondary}
           style={styles.searchIcon}
         />
@@ -105,6 +110,8 @@ const ExploreHeader = React.memo(
           returnKeyType="search"
           autoCorrect={false}
           blurOnSubmit={false}
+          accessibilityLabel="Rechercher un défi"
+          testID="search-input"
         />
       </View>
       <View style={styles.filtersWrapper}>
@@ -115,10 +122,12 @@ const ExploreHeader = React.memo(
               { backgroundColor: currentTheme.colors.secondary },
             ]}
             onPress={onOriginToggle}
+            accessibilityLabel={`Filtrer par ${originFilter}`}
+            testID="origin-filter-button"
           >
             <Ionicons
               name="options-outline"
-              size={normalizeFont(18)}
+              size={normalize(18)}
               color={currentTheme.colors.textPrimary}
             />
             <Text
@@ -136,10 +145,12 @@ const ExploreHeader = React.memo(
               { backgroundColor: currentTheme.colors.secondary },
             ]}
             onPress={onToggleCategoryModal}
+            accessibilityLabel="Choisir une catégorie"
+            testID="category-filter-button"
           >
             <Ionicons
               name="filter-outline"
-              size={normalizeFont(18)}
+              size={normalize(18)}
               color={currentTheme.colors.textPrimary}
             />
             <Text
@@ -148,9 +159,7 @@ const ExploreHeader = React.memo(
                 { color: currentTheme.colors.textPrimary },
               ]}
             >
-              {categoryFilter === "All"
-                ? "Catégorie"
-                : capitalize(categoryFilter)}
+              {categoryFilter === "All" ? "Catégorie" : capitalize(categoryFilter)}
             </Text>
           </TouchableOpacity>
         </View>
@@ -160,10 +169,12 @@ const ExploreHeader = React.memo(
             { backgroundColor: currentTheme.colors.primary },
           ]}
           onPress={onResetFilters}
+          accessibilityLabel="Réinitialiser les filtres"
+          testID="reset-filters-button"
         >
           <Ionicons
             name="refresh-outline"
-            size={normalizeFont(20)}
+            size={normalize(20)}
             color={currentTheme.colors.textPrimary}
           />
         </TouchableOpacity>
@@ -197,15 +208,22 @@ const ExploreHeader = React.memo(
               >
                 Choisir une catégorie
               </Text>
-              <TouchableOpacity onPress={onCloseCategoryModal}>
+              <TouchableOpacity
+                onPress={onCloseCategoryModal}
+                accessibilityLabel="Fermer la modal"
+                testID="close-modal-button"
+              >
                 <Ionicons
                   name="close-outline"
-                  size={normalizeFont(24)}
+                  size={normalize(24)}
                   color={currentTheme.colors.textPrimary}
                 />
               </TouchableOpacity>
             </View>
-            <ScrollView showsVerticalScrollIndicator={false}>
+            <ScrollView
+              showsVerticalScrollIndicator={false}
+              keyboardShouldPersistTaps="handled"
+            >
               {availableCategories.map((cat) => (
                 <TouchableOpacity
                   key={cat}
@@ -214,10 +232,12 @@ const ExploreHeader = React.memo(
                     { borderBottomColor: currentTheme.colors.border },
                   ]}
                   onPress={() => onCategorySelect(cat)}
+                  accessibilityLabel={`Sélectionner la catégorie ${cat}`}
+                  testID={`category-item-${cat}`}
                 >
                   <Ionicons
                     name="pricetag-outline"
-                    size={normalizeFont(18)}
+                    size={normalize(18)}
                     color={currentTheme.colors.secondary}
                     style={styles.modalItemIcon}
                   />
@@ -417,7 +437,7 @@ export default function ExploreScreen() {
       <KeyboardAvoidingView
         style={{ flex: 1 }}
         behavior={Platform.OS === "ios" ? "padding" : "height"}
-        keyboardVerticalOffset={Platform.OS === "ios" ? 0 : 20}
+        keyboardVerticalOffset={Platform.select({ ios: 100, android: 20 })}
       >
         <LinearGradient
           colors={[
@@ -443,11 +463,13 @@ export default function ExploreScreen() {
                     router.push(
                       `/challenge-details/${item.id}?title=${encodeURIComponent(
                         item.title
-                      )}` +
-                        `&category=${encodeURIComponent(item.category)}` +
-                        `&description=${encodeURIComponent(item.description)}`
+                      )}&category=${encodeURIComponent(
+                        item.category
+                      )}&description=${encodeURIComponent(item.description)}`
                     )
                   }
+                  accessibilityLabel={`Voir le défi ${item.title}`}
+                  testID={`challenge-card-${index}`}
                 >
                   {item.imageUrl ? (
                     <Image
@@ -455,26 +477,10 @@ export default function ExploreScreen() {
                       style={styles.challengeImage}
                     />
                   ) : (
-                    <View
-                      style={[
-                        styles.challengeImagePlaceholder,
-                        { backgroundColor: currentTheme.colors.border },
-                      ]}
-                    >
-                      <Ionicons
-                        name="image-outline"
-                        size={normalizeFont(40)}
-                        color={currentTheme.colors.textSecondary}
-                      />
-                      <Text
-                        style={[
-                          styles.challengeImagePlaceholderText,
-                          { color: currentTheme.colors.textSecondary },
-                        ]}
-                      >
-                        Image
-                      </Text>
-                    </View>
+                    <Image
+                      source={require("../../assets/images/chalkboard.png")} // Image de secours
+                      style={styles.challengeImage}
+                    />
                   )}
                   <LinearGradient
                     colors={[currentTheme.colors.overlay, "rgba(0,0,0,0.9)"]}
@@ -505,7 +511,7 @@ export default function ExploreScreen() {
                     >
                       <Ionicons
                         name="people"
-                        size={normalizeFont(14)}
+                        size={normalize(14)}
                         color={currentTheme.colors.trophy}
                       />{" "}
                       {item.participantsCount || 0}{" "}
@@ -517,6 +523,12 @@ export default function ExploreScreen() {
                   <TouchableOpacity
                     style={styles.saveIconContainer}
                     onPress={() => toggleSavedChallenge(item)}
+                    accessibilityLabel={
+                      isSaved(item.id)
+                        ? `Retirer ${item.title} des favoris`
+                        : `Ajouter ${item.title} aux favoris`
+                    }
+                    testID={`save-button-${item.id}`}
                   >
                     <Ionicons
                       name={
@@ -528,7 +540,7 @@ export default function ExploreScreen() {
                           ? "bookmark"
                           : "bookmark-outline"
                       }
-                      size={normalizeFont(24)}
+                      size={normalize(24)}
                       color={
                         pendingFavorites[item.id] !== undefined
                           ? pendingFavorites[item.id]
@@ -566,7 +578,7 @@ export default function ExploreScreen() {
               >
                 <Ionicons
                   name="search-outline"
-                  size={normalizeFont(60)}
+                  size={normalize(60)}
                   color={currentTheme.colors.textSecondary}
                 />
                 <Text
@@ -590,6 +602,8 @@ export default function ExploreScreen() {
             contentContainerStyle={styles.listContent}
             showsVerticalScrollIndicator={false}
             keyboardShouldPersistTaps="handled"
+            initialNumToRender={10}
+            windowSize={5}
           />
         </LinearGradient>
       </KeyboardAvoidingView>
@@ -600,16 +614,16 @@ export default function ExploreScreen() {
 const styles = StyleSheet.create({
   gradientContainer: { flex: 1 },
   listContent: {
-    paddingHorizontal: SCREEN_WIDTH * 0.05,
-    paddingBottom: SCREEN_HEIGHT * 0.05,
+    paddingHorizontal: SPACING,
+    paddingBottom: SPACING * 2,
   },
   headerContent: {
-    paddingHorizontal: SCREEN_WIDTH * 0.05,
-    paddingBottom: SCREEN_HEIGHT * 0.03,
+    paddingHorizontal: SPACING,
+    paddingBottom: SPACING,
   },
   headerWrapper: {
-    marginTop: SCREEN_HEIGHT * 0.025,
-    marginBottom: SCREEN_HEIGHT * 0.02,
+    marginTop: SPACING,
+    marginBottom: SPACING,
     flexDirection: "row",
     alignItems: "center",
     justifyContent: "center",
@@ -617,164 +631,157 @@ const styles = StyleSheet.create({
   searchContainer: {
     flexDirection: "row",
     alignItems: "center",
-    borderRadius: 15,
-    paddingHorizontal: SCREEN_WIDTH * 0.03,
-    marginHorizontal: SCREEN_WIDTH * 0.05,
-    marginBottom: SCREEN_HEIGHT * 0.02,
+    borderRadius: normalize(12),
+    paddingHorizontal: SPACING / 2,
+    marginHorizontal: SPACING / 2,
+    marginBottom: SPACING,
     shadowColor: "#000",
-    shadowOffset: { width: 0, height: 4 },
+    shadowOffset: { width: 0, height: normalize(4) },
     shadowOpacity: 0.2,
-    shadowRadius: 6,
+    shadowRadius: normalize(6),
     elevation: 5,
-    borderWidth: 1,
+    borderWidth: normalize(1),
+    maxWidth: normalize(600),
   },
-  searchIcon: { marginRight: SCREEN_WIDTH * 0.02 },
+  searchIcon: { marginRight: SPACING / 2 },
   searchBar: {
     flex: 1,
-    height: SCREEN_WIDTH * 0.12,
-    fontSize: normalizeFont(16),
+    height: normalize(48),
+    fontSize: normalize(16),
     fontFamily: "Comfortaa_400Regular",
   },
   filtersWrapper: { alignItems: "center" },
   filtersContainer: {
     flexDirection: "row",
     justifyContent: "space-between",
-    width: SCREEN_WIDTH * 0.9,
-    marginBottom: SCREEN_HEIGHT * 0.015,
+    width: "100%",
+    maxWidth: normalize(400),
+    marginBottom: SPACING / 2,
   },
   filterButton: {
     flexDirection: "row",
     alignItems: "center",
     justifyContent: "center",
-    paddingHorizontal: SCREEN_WIDTH * 0.04,
-    paddingVertical: SCREEN_WIDTH * 0.025,
-    borderRadius: 20,
+    paddingHorizontal: SPACING,
+    paddingVertical: normalize(10),
+    borderRadius: normalize(20),
     shadowColor: "#000",
-    shadowOffset: { width: 0, height: 2 },
+    shadowOffset: { width: 0, height: normalize(2) },
     shadowOpacity: 0.3,
-    shadowRadius: 4,
+    shadowRadius: normalize(4),
     elevation: 5,
-    width: SCREEN_WIDTH * 0.42,
+    width: "48%",
   },
   filterButtonText: {
-    marginLeft: SCREEN_WIDTH * 0.015,
-    fontSize: normalizeFont(14),
+    marginLeft: SPACING / 2,
+    fontSize: normalize(14),
     fontFamily: "Comfortaa_700Bold",
     textAlign: "center",
   },
   resetButton: {
-    width: SCREEN_WIDTH * 0.12,
-    height: SCREEN_WIDTH * 0.12,
-    borderRadius: SCREEN_WIDTH * 0.06,
+    width: normalize(48),
+    height: normalize(48),
+    borderRadius: normalize(24),
     justifyContent: "center",
     alignItems: "center",
     shadowColor: "#000",
-    shadowOffset: { width: 0, height: 2 },
+    shadowOffset: { width: 0, height: normalize(2) },
     shadowOpacity: 0.4,
-    shadowRadius: 5,
+    shadowRadius: normalize(5),
     elevation: 6,
   },
   modalOverlay: {
     flex: 1,
     justifyContent: "center",
-    paddingHorizontal: SCREEN_WIDTH * 0.05,
+    paddingHorizontal: SPACING,
   },
   modalContent: {
-    borderRadius: 20,
-    padding: SCREEN_WIDTH * 0.05,
+    borderRadius: normalize(20),
+    padding: SPACING,
     shadowColor: "#000",
-    shadowOffset: { width: 0, height: 4 },
+    shadowOffset: { width: 0, height: normalize(4) },
     shadowOpacity: 0.3,
-    shadowRadius: 6,
+    shadowRadius: normalize(6),
     elevation: 5,
     maxHeight: SCREEN_HEIGHT * 0.6,
+    minHeight: normalize(200),
   },
   modalHeader: {
     flexDirection: "row",
     justifyContent: "space-between",
     alignItems: "center",
-    marginBottom: SCREEN_HEIGHT * 0.015,
+    marginBottom: SPACING,
   },
   modalTitle: {
-    fontSize: normalizeFont(18),
+    fontSize: normalize(18),
     fontFamily: "Comfortaa_700Bold",
   },
   modalItem: {
     flexDirection: "row",
     alignItems: "center",
-    paddingVertical: SCREEN_WIDTH * 0.025,
-    borderBottomWidth: 1,
+    paddingVertical: SPACING / 2,
+    borderBottomWidth: normalize(1),
   },
-  modalItemIcon: { marginRight: SCREEN_WIDTH * 0.02 },
+  modalItemIcon: { marginRight: SPACING / 2 },
   modalItemText: {
-    fontSize: normalizeFont(16),
+    fontSize: normalize(16),
     fontFamily: "Comfortaa_400Regular",
   },
   challengeCard: {
-    borderRadius: 20,
-    marginBottom: SCREEN_HEIGHT * 0.02,
+    borderRadius: normalize(16),
+    marginBottom: SPACING,
     shadowColor: "#000",
-    shadowOffset: { width: 0, height: 6 },
+    shadowOffset: { width: 0, height: normalize(6) },
     shadowOpacity: 0.25,
-    shadowRadius: 8,
+    shadowRadius: normalize(8),
     elevation: 8,
-    borderWidth: 2,
+    borderWidth: normalize(2),
     overflow: "hidden",
+    width: SCREEN_WIDTH - SPACING * 2, // Largeur ajustée pour occuper presque tout l’écran
   },
   challengeImage: {
     width: "100%",
-    height: SCREEN_WIDTH * 0.5,
+    height: SCREEN_WIDTH * 0.5, // Hauteur restaurée pour des images visibles
     resizeMode: "cover",
-  },
-  challengeImagePlaceholder: {
-    width: "100%",
-    height: SCREEN_WIDTH * 0.5,
-    justifyContent: "center",
-    alignItems: "center",
-  },
-  challengeImagePlaceholderText: {
-    fontSize: normalizeFont(16),
-    fontFamily: "Comfortaa_400Regular",
-    marginTop: SCREEN_WIDTH * 0.02,
   },
   cardOverlay: {
     position: "absolute",
     bottom: 0,
     width: "100%",
-    padding: SCREEN_WIDTH * 0.04,
+    padding: SPACING / 2,
     alignItems: "center",
   },
   challengeTitle: {
-    fontSize: normalizeFont(18),
+    fontSize: normalize(18),
     fontFamily: "Comfortaa_700Bold",
     textAlign: "center",
     textShadowColor: "rgba(0, 0, 0, 0.5)",
     textShadowOffset: { width: 1, height: 1 },
-    textShadowRadius: 3,
+    textShadowRadius: normalize(3),
   },
   challengeCategory: {
-    fontSize: normalizeFont(14),
+    fontSize: normalize(14),
     fontFamily: "Comfortaa_400Regular",
-    marginTop: SCREEN_WIDTH * 0.01,
+    marginTop: SPACING / 4,
     textAlign: "center",
   },
   challengeParticipants: {
-    fontSize: normalizeFont(12),
+    fontSize: normalize(12),
     fontFamily: "Comfortaa_400Regular",
-    marginTop: SCREEN_WIDTH * 0.01,
+    marginTop: SPACING / 4,
     textAlign: "center",
   },
   saveIconContainer: {
     position: "absolute",
-    top: SCREEN_WIDTH * 0.03,
-    right: SCREEN_WIDTH * 0.03,
+    top: SPACING / 2,
+    right: SPACING / 2,
     backgroundColor: "rgba(255,255,255,0.9)",
-    borderRadius: 15,
-    padding: SCREEN_WIDTH * 0.015,
+    borderRadius: normalize(15),
+    padding: SPACING / 3,
     shadowColor: "#000",
-    shadowOffset: { width: 0, height: 2 },
+    shadowOffset: { width: 0, height: normalize(2) },
     shadowOpacity: 0.3,
-    shadowRadius: 4,
+    shadowRadius: normalize(4),
     elevation: 5,
   },
   loadingBackground: {
@@ -784,26 +791,26 @@ const styles = StyleSheet.create({
     alignItems: "center",
   },
   loadingText: {
-    marginTop: SCREEN_HEIGHT * 0.02,
-    fontSize: normalizeFont(16),
+    marginTop: SPACING,
+    fontSize: normalize(16),
     fontFamily: "Comfortaa_400Regular",
   },
   noChallengesContent: {
     justifyContent: "center",
     alignItems: "center",
-    paddingVertical: SCREEN_HEIGHT * 0.05,
+    paddingVertical: SPACING * 2,
   },
   noChallengesText: {
-    fontSize: normalizeFont(20),
+    fontSize: normalize(20),
     fontFamily: "Comfortaa_700Bold",
-    marginTop: SCREEN_HEIGHT * 0.02,
+    marginTop: SPACING,
     textAlign: "center",
   },
   noChallengesSubtext: {
-    fontSize: normalizeFont(14),
+    fontSize: normalize(14),
     fontFamily: "Comfortaa_400Regular",
     textAlign: "center",
-    marginTop: SCREEN_HEIGHT * 0.01,
-    maxWidth: SCREEN_WIDTH * 0.7,
+    marginTop: SPACING / 2,
+    maxWidth: normalize(300),
   },
 });

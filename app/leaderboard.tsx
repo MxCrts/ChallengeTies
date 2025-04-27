@@ -9,6 +9,7 @@ import {
   Dimensions,
   TouchableOpacity,
   ScrollView,
+  StatusBar,
 } from "react-native";
 import { Ionicons, MaterialCommunityIcons } from "@expo/vector-icons";
 import { LinearGradient } from "expo-linear-gradient";
@@ -17,10 +18,13 @@ import { db, auth } from "../constants/firebase-config";
 import { useRouter } from "expo-router";
 import { SafeAreaView } from "react-native-safe-area-context";
 import Animated, { FadeInUp } from "react-native-reanimated";
-import { useTheme } from "../context/ThemeContext"; // Ajout de useTheme
-import { Theme } from "../theme/designSystem"; // Import de Theme
+import { useTheme } from "../context/ThemeContext";
+import { Theme } from "../theme/designSystem";
 import designSystem from "../theme/designSystem";
 import CustomHeader from "@/components/CustomHeader";
+
+// Constante SPACING pour cohérence avec new-features.tsx
+const SPACING = 15;
 
 const { width: SCREEN_WIDTH, height: SCREEN_HEIGHT } = Dimensions.get("window");
 
@@ -53,11 +57,9 @@ export default function LeaderboardScreen() {
     "region" | "national" | "global"
   >("global");
   const router = useRouter();
-  const { theme } = useTheme(); // Ajout de useTheme
+  const { theme } = useTheme();
   const isDarkMode = theme === "dark";
-  const currentTheme: Theme = isDarkMode
-    ? designSystem.darkTheme
-    : designSystem.lightTheme;
+  const currentTheme: Theme = isDarkMode ? designSystem.darkTheme : designSystem.lightTheme;
 
   useEffect(() => {
     const fetchLeaderboard = async () => {
@@ -82,11 +84,15 @@ export default function LeaderboardScreen() {
             const foundUser = fetchedPlayers.find(
               (player) => player.id === userId
             );
-            setCurrentUser({
-              ...foundUser,
-              country: userData.country,
-              region: userData.region,
-            });
+            setCurrentUser(
+              foundUser
+                ? {
+                    ...foundUser,
+                    country: userData.country,
+                    region: userData.region,
+                  }
+                : null
+            );
           }
         }
       } catch (error) {
@@ -112,7 +118,15 @@ export default function LeaderboardScreen() {
   }, [selectedTab, players, currentUser]);
 
   const renderTopThree = () => {
-    if (filteredPlayers.length < 3) return null;
+    if (filteredPlayers.length < 3) {
+      return (
+        <Text
+          style={[styles.noPlayersText, { color: currentTheme.colors.textSecondary }]}
+        >
+          Pas assez de joueurs pour afficher le podium.
+        </Text>
+      );
+    }
     const [first, second, third] = filteredPlayers;
     return (
       <Animated.View
@@ -122,7 +136,7 @@ export default function LeaderboardScreen() {
         {/* Second Place */}
         <View style={styles.podiumItem}>
           <LinearGradient
-            colors={["#C0C0C0", "#A9A9A9"]} // Argent, reste fixe
+            colors={["#C0C0C0", "#A9A9A9"]}
             style={styles.circleSecond}
           >
             <Image
@@ -132,6 +146,7 @@ export default function LeaderboardScreen() {
                   : require("../assets/images/default-profile.webp")
               }
               style={styles.profileImage}
+              accessibilityLabel={`Image de profil de ${second.username || "Inconnu"}`}
             />
             <MaterialCommunityIcons
               name="medal"
@@ -141,26 +156,17 @@ export default function LeaderboardScreen() {
             />
           </LinearGradient>
           <Text
-            style={[
-              styles.podiumName,
-              { color: currentTheme.colors.textPrimary },
-            ]}
+            style={[styles.podiumName, { color: currentTheme.colors.textPrimary }]}
           >
             {second.username || "Inconnu"}
           </Text>
           <Text
-            style={[
-              styles.podiumTrophies,
-              { color: currentTheme.colors.trophy },
-            ]}
+            style={[styles.podiumTrophies, { color: currentTheme.colors.trophy }]}
           >
             {second.trophies} 🏆
           </Text>
           <Text
-            style={[
-              styles.handle,
-              { color: currentTheme.colors.textSecondary },
-            ]}
+            style={[styles.handle, { color: currentTheme.colors.textSecondary }]}
           >
             @{(second.username || "").toLowerCase()}
           </Text>
@@ -169,7 +175,7 @@ export default function LeaderboardScreen() {
         {/* First Place */}
         <View style={styles.podiumItem}>
           <LinearGradient
-            colors={["#FFD700", "#FFA500"]} // Or, reste fixe
+            colors={["#FFD700", "#FFA500"]}
             style={styles.circleFirst}
           >
             <Image
@@ -179,6 +185,7 @@ export default function LeaderboardScreen() {
                   : require("../assets/images/default-profile.webp")
               }
               style={styles.profileImageFirst}
+              accessibilityLabel={`Image de profil de ${first.username || "Inconnu"}`}
             />
             <MaterialCommunityIcons
               name="crown"
@@ -188,26 +195,17 @@ export default function LeaderboardScreen() {
             />
           </LinearGradient>
           <Text
-            style={[
-              styles.podiumName,
-              { color: currentTheme.colors.textPrimary },
-            ]}
+            style={[styles.podiumName, { color: currentTheme.colors.textPrimary }]}
           >
             {first.username || "Inconnu"}
           </Text>
           <Text
-            style={[
-              styles.podiumTrophies,
-              { color: currentTheme.colors.trophy },
-            ]}
+            style={[styles.podiumTrophies, { color: currentTheme.colors.trophy }]}
           >
             {first.trophies} 🏆
           </Text>
           <Text
-            style={[
-              styles.handle,
-              { color: currentTheme.colors.textSecondary },
-            ]}
+            style={[styles.handle, { color: currentTheme.colors.textSecondary }]}
           >
             @{(first.username || "").toLowerCase()}
           </Text>
@@ -216,7 +214,7 @@ export default function LeaderboardScreen() {
         {/* Third Place */}
         <View style={styles.podiumItem}>
           <LinearGradient
-            colors={["#CD7F32", "#8B4513"]} // Bronze, reste fixe
+            colors={["#CD7F32", "#8B4513"]}
             style={styles.circleThird}
           >
             <Image
@@ -226,6 +224,7 @@ export default function LeaderboardScreen() {
                   : require("../assets/images/default-profile.webp")
               }
               style={styles.profileImage}
+              accessibilityLabel={`Image de profil de ${third.username || "Inconnu"}`}
             />
             <MaterialCommunityIcons
               name="medal"
@@ -235,26 +234,17 @@ export default function LeaderboardScreen() {
             />
           </LinearGradient>
           <Text
-            style={[
-              styles.podiumName,
-              { color: currentTheme.colors.textPrimary },
-            ]}
+            style={[styles.podiumName, { color: currentTheme.colors.textPrimary }]}
           >
             {third.username || "Inconnu"}
           </Text>
           <Text
-            style={[
-              styles.podiumTrophies,
-              { color: currentTheme.colors.trophy },
-            ]}
+            style={[styles.podiumTrophies, { color: currentTheme.colors.trophy }]}
           >
             {third.trophies} 🏆
           </Text>
           <Text
-            style={[
-              styles.handle,
-              { color: currentTheme.colors.textSecondary },
-            ]}
+            style={[styles.handle, { color: currentTheme.colors.textSecondary }]}
           >
             @{(third.username || "").toLowerCase()}
           </Text>
@@ -267,7 +257,7 @@ export default function LeaderboardScreen() {
     const rank = item.rank ?? index + 4;
     return (
       <Animated.View
-        entering={FadeInUp.delay(300 + index * 100)}
+        entering={FadeInUp.delay(300 + index * 50)} // Délai réduit
         style={[
           styles.playerRow,
           {
@@ -284,25 +274,17 @@ export default function LeaderboardScreen() {
                 ? { uri: item.profileImage }
                 : require("../assets/images/default-profile.webp")
             }
-            style={[
-              styles.playerImage,
-              { borderColor: currentTheme.colors.border },
-            ]}
+            style={[styles.playerImage, { borderColor: currentTheme.colors.border }]}
+            accessibilityLabel={`Image de profil de ${item.username || "Inconnu"}`}
           />
           <View style={styles.playerInfo}>
             <Text
-              style={[
-                styles.playerName,
-                { color: currentTheme.colors.textPrimary },
-              ]}
+              style={[styles.playerName, { color: currentTheme.colors.textPrimary }]}
             >
               {item.username || "Inconnu"}
             </Text>
             <Text
-              style={[
-                styles.handle,
-                { color: currentTheme.colors.textSecondary },
-              ]}
+              style={[styles.handle, { color: currentTheme.colors.textSecondary }]}
             >
               @{(item.username || "").toLowerCase()}
             </Text>
@@ -310,18 +292,12 @@ export default function LeaderboardScreen() {
         </View>
         <View style={styles.rightSection}>
           <Text
-            style={[
-              styles.playerTrophies,
-              { color: currentTheme.colors.trophy },
-            ]}
+            style={[styles.playerTrophies, { color: currentTheme.colors.trophy }]}
           >
             {item.trophies} 🏆
           </Text>
           <Text
-            style={[
-              styles.rankText,
-              { color: currentTheme.colors.textSecondary },
-            ]}
+            style={[styles.rankText, { color: currentTheme.colors.textSecondary }]}
           >
             #{rank}
           </Text>
@@ -341,22 +317,18 @@ export default function LeaderboardScreen() {
   if (loading) {
     return (
       <SafeAreaView style={styles.safeArea}>
+        <StatusBar
+          translucent={true}
+          backgroundColor="transparent"
+          barStyle={isDarkMode ? "light-content" : "dark-content"}
+        />
         <LinearGradient
-          colors={[
-            currentTheme.colors.background,
-            currentTheme.colors.cardBackground,
-          ]}
+          colors={[currentTheme.colors.background, currentTheme.colors.cardBackground]}
           style={styles.loadingContainer}
         >
-          <ActivityIndicator
-            size="large"
-            color={currentTheme.colors.secondary}
-          />
+          <ActivityIndicator size="large" color={currentTheme.colors.secondary} />
           <Text
-            style={[
-              styles.loadingText,
-              { color: currentTheme.colors.textPrimary },
-            ]}
+            style={[styles.loadingText, { color: currentTheme.colors.textPrimary }]}
           >
             Chargement du classement...
           </Text>
@@ -367,11 +339,13 @@ export default function LeaderboardScreen() {
 
   return (
     <SafeAreaView style={styles.safeArea}>
+      <StatusBar
+        translucent={true}
+        backgroundColor="transparent"
+        barStyle={isDarkMode ? "light-content" : "dark-content"}
+      />
       <LinearGradient
-        colors={[
-          currentTheme.colors.background,
-          `${currentTheme.colors.cardBackground}F0`,
-        ]}
+        colors={[currentTheme.colors.background, `${currentTheme.colors.cardBackground}F0`]}
         style={styles.container}
         start={{ x: 0, y: 0 }}
         end={{ x: 1, y: 1 }}
@@ -379,10 +353,7 @@ export default function LeaderboardScreen() {
         <View style={styles.headerWrapper}>
           <CustomHeader title="Classement" />
         </View>
-        <Animated.View
-          entering={FadeInUp.delay(100)}
-          style={styles.tabsContainer}
-        >
+        <Animated.View entering={FadeInUp.delay(100)} style={styles.tabsContainer}>
           {["region", "national", "global"].map((tab) => (
             <TouchableOpacity
               key={tab}
@@ -397,6 +368,8 @@ export default function LeaderboardScreen() {
               onPress={() =>
                 setSelectedTab(tab as "region" | "national" | "global")
               }
+              accessibilityLabel={`Filtrer par ${tab === "region" ? "région" : tab === "national" ? "national" : "global"}`}
+              testID={`tab-${tab}`}
             >
               <Text
                 style={[
@@ -418,15 +391,33 @@ export default function LeaderboardScreen() {
           contentContainerStyle={styles.scrollContent}
           showsVerticalScrollIndicator={false}
         >
-          {renderTopThree()}
-          <View style={styles.listContainer}>
-            <FlatList
-              data={listPlayers}
-              renderItem={renderPlayer}
-              keyExtractor={(item) => item.id}
-              scrollEnabled={false}
-            />
-          </View>
+          {filteredPlayers.length > 0 ? (
+            <>
+              {renderTopThree()}
+              <View style={styles.listContainer}>
+                <FlatList
+                  data={listPlayers}
+                  renderItem={renderPlayer}
+                  keyExtractor={(item) => item.id}
+                  scrollEnabled={false}
+                  initialNumToRender={10}
+                  getItemLayout={(data, index) => ({
+                    length: normalizeSize(80),
+                    offset: normalizeSize(80) * index,
+                    index,
+                  })}
+                  accessibilityRole="list"
+                  accessibilityLabel="Liste des joueurs classés"
+                />
+              </View>
+            </>
+          ) : (
+            <Text
+              style={[styles.noPlayersText, { color: currentTheme.colors.textSecondary }]}
+            >
+              Aucun joueur disponible pour ce classement.
+            </Text>
+          )}
         </ScrollView>
       </LinearGradient>
     </SafeAreaView>
@@ -441,21 +432,20 @@ const styles = StyleSheet.create({
     flex: 1,
   },
   headerWrapper: {
-    marginTop: SCREEN_HEIGHT * 0.01,
-    marginBottom: SCREEN_HEIGHT * 0.02,
-    paddingHorizontal: SCREEN_WIDTH * 0.05,
+    paddingHorizontal: SPACING,
+    paddingVertical: SPACING,
   },
   tabsContainer: {
     flexDirection: "row",
     justifyContent: "center",
-    marginVertical: SCREEN_HEIGHT * 0.02,
-    paddingHorizontal: SCREEN_WIDTH * 0.05,
+    marginVertical: SPACING,
+    paddingHorizontal: SPACING,
   },
   tab: {
-    paddingVertical: normalizeSize(10),
-    paddingHorizontal: normalizeSize(20),
+    paddingVertical: SPACING,
+    paddingHorizontal: SPACING * 2,
     borderRadius: normalizeSize(25),
-    marginHorizontal: normalizeSize(8),
+    marginHorizontal: SPACING / 2,
     shadowColor: "#000",
     shadowOffset: { width: 0, height: normalizeSize(2) },
     shadowOpacity: 0.1,
@@ -468,7 +458,7 @@ const styles = StyleSheet.create({
   },
   tabText: {
     fontSize: normalizeFont(16),
-    fontFamily: "Comfortaa_700Bold", // Direct
+    fontFamily: "Comfortaa_700Bold",
   },
   activeTabText: {
     color: "#FFFFFF",
@@ -477,12 +467,12 @@ const styles = StyleSheet.create({
     flexDirection: "row",
     justifyContent: "space-evenly",
     alignItems: "flex-end",
-    marginVertical: SCREEN_HEIGHT * 0.03,
-    paddingHorizontal: SCREEN_WIDTH * 0.05,
+    marginVertical: SPACING,
+    paddingHorizontal: SPACING,
   },
   podiumItem: {
     alignItems: "center",
-    width: SCREEN_WIDTH * 0.28,
+    width: SCREEN_WIDTH * 0.3, // Ajusté pour responsivité
   },
   circleFirst: {
     width: normalizeSize(120),
@@ -490,7 +480,7 @@ const styles = StyleSheet.create({
     borderRadius: normalizeSize(60),
     alignItems: "center",
     justifyContent: "center",
-    marginBottom: normalizeSize(15),
+    marginBottom: SPACING,
     position: "relative",
     borderWidth: 2,
     borderColor: "#FFD700",
@@ -501,7 +491,7 @@ const styles = StyleSheet.create({
     borderRadius: normalizeSize(50),
     alignItems: "center",
     justifyContent: "center",
-    marginBottom: normalizeSize(15),
+    marginBottom: SPACING,
     position: "relative",
     borderWidth: 2,
     borderColor: "#C0C0C0",
@@ -512,7 +502,7 @@ const styles = StyleSheet.create({
     borderRadius: normalizeSize(50),
     alignItems: "center",
     justifyContent: "center",
-    marginBottom: normalizeSize(15),
+    marginBottom: SPACING,
     position: "relative",
     borderWidth: 2,
     borderColor: "#CD7F32",
@@ -549,34 +539,34 @@ const styles = StyleSheet.create({
   },
   podiumName: {
     fontSize: normalizeFont(16),
-    fontFamily: "Comfortaa_700Bold", // Direct
+    fontFamily: "Comfortaa_700Bold",
     textAlign: "center",
-    marginTop: normalizeSize(5),
+    marginTop: SPACING / 2,
   },
   podiumTrophies: {
     fontSize: normalizeFont(14),
-    fontFamily: "Comfortaa_700Bold", // Direct
-    marginTop: normalizeSize(4),
+    fontFamily: "Comfortaa_700Bold",
+    marginTop: SPACING / 2,
     textAlign: "center",
   },
   handle: {
     fontSize: normalizeFont(12),
-    fontFamily: "Comfortaa_400Regular", // Direct
+    fontFamily: "Comfortaa_400Regular",
     textAlign: "center",
-    marginTop: normalizeSize(2),
+    marginTop: SPACING / 2,
   },
   scrollContent: {
-    paddingBottom: SCREEN_HEIGHT * 0.08,
+    paddingBottom: SPACING * 2, // Réduit pour responsivité
   },
   listContainer: {
-    paddingHorizontal: SCREEN_WIDTH * 0.05,
-    marginTop: SCREEN_HEIGHT * 0.02,
+    paddingHorizontal: SPACING,
+    marginTop: SPACING,
   },
   playerRow: {
     flexDirection: "row",
     alignItems: "center",
-    padding: normalizeSize(15),
-    marginVertical: normalizeSize(8),
+    padding: SPACING,
+    marginVertical: SPACING / 2,
     borderRadius: normalizeSize(15),
     justifyContent: "space-between",
     shadowColor: "#000",
@@ -588,7 +578,7 @@ const styles = StyleSheet.create({
   },
   highlight: {
     borderWidth: 2,
-    borderColor: "#FACC15", // Trophy reste fixe pour highlight
+    borderColor: "#FACC15",
   },
   leftSection: {
     flexDirection: "row",
@@ -601,23 +591,23 @@ const styles = StyleSheet.create({
     borderWidth: 2,
   },
   playerInfo: {
-    marginLeft: normalizeSize(12),
+    marginLeft: SPACING,
   },
   playerName: {
     fontSize: normalizeFont(16),
-    fontFamily: "Comfortaa_700Bold", // Direct
+    fontFamily: "Comfortaa_700Bold",
   },
   rightSection: {
     alignItems: "flex-end",
   },
   playerTrophies: {
     fontSize: normalizeFont(16),
-    fontFamily: "Comfortaa_700Bold", // Direct
+    fontFamily: "Comfortaa_700Bold",
   },
   rankText: {
     fontSize: normalizeFont(12),
-    fontFamily: "Comfortaa_400Regular", // Direct
-    marginTop: normalizeSize(4),
+    fontFamily: "Comfortaa_400Regular",
+    marginTop: SPACING / 2,
   },
   loadingContainer: {
     flex: 1,
@@ -626,7 +616,13 @@ const styles = StyleSheet.create({
   },
   loadingText: {
     fontSize: normalizeFont(16),
-    fontFamily: "Comfortaa_400Regular", // Direct
-    marginTop: SCREEN_HEIGHT * 0.02,
+    fontFamily: "Comfortaa_400Regular",
+    marginTop: SPACING,
+  },
+  noPlayersText: {
+    fontSize: normalizeFont(16),
+    fontFamily: "Comfortaa_400Regular",
+    textAlign: "center",
+    padding: SPACING,
   },
 });

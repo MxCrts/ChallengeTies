@@ -12,6 +12,7 @@ import {
   Alert,
   Dimensions,
   Text,
+  StatusBar,
 } from "react-native";
 import { useRouter } from "expo-router";
 import { doc, updateDoc, getDoc } from "firebase/firestore";
@@ -28,9 +29,12 @@ import designSystem from "../../theme/designSystem";
 import CustomHeader from "@/components/CustomHeader";
 import Animated, { FadeInUp } from "react-native-reanimated";
 
+// Constante SPACING pour cohérence avec new-features.tsx et leaderboard.tsx
+const SPACING = 15;
+
 const { width: SCREEN_WIDTH, height: SCREEN_HEIGHT } = Dimensions.get("window");
 
-const normalizeSize = (size) => {
+const normalizeSize = (size: number) => {
   const scale = SCREEN_WIDTH / 375;
   return Math.round(size * scale);
 };
@@ -55,9 +59,7 @@ export default function UserInfo() {
   const [isLoading, setIsLoading] = useState(false);
   const { theme } = useTheme();
   const isDarkMode = theme === "dark";
-  const currentTheme: Theme = isDarkMode
-    ? designSystem.darkTheme
-    : designSystem.lightTheme;
+  const currentTheme: Theme = isDarkMode ? designSystem.darkTheme : designSystem.lightTheme;
 
   useEffect(() => {
     const fetchUserData = async () => {
@@ -186,31 +188,21 @@ export default function UserInfo() {
     }
   }, [user, displayName, bio, profileImage, location, interet, router]);
 
-  // Fonction pour obtenir le style dynamique de fieldGradient
-  const getFieldGradientStyle = () => ({
-    ...styles.fieldGradient,
-    borderColor: isDarkMode ? "#FFDD9533" : "#e3701e33",
-  });
-
   if (isLoading) {
     return (
       <SafeAreaView style={styles.safeArea}>
+        <StatusBar
+          translucent={true}
+          backgroundColor="transparent"
+          barStyle={isDarkMode ? "light-content" : "dark-content"}
+        />
         <LinearGradient
-          colors={[
-            currentTheme.colors.background,
-            currentTheme.colors.cardBackground,
-          ]}
+          colors={[currentTheme.colors.background, currentTheme.colors.cardBackground]}
           style={styles.loadingContainer}
         >
-          <ActivityIndicator
-            size="large"
-            color={currentTheme.colors.secondary}
-          />
+          <ActivityIndicator size="large" color={currentTheme.colors.secondary} />
           <Text
-            style={[
-              styles.loadingText,
-              { color: currentTheme.colors.textPrimary },
-            ]}
+            style={[styles.loadingText, { color: currentTheme.colors.textPrimary }]}
           >
             Chargement en cours...
           </Text>
@@ -221,11 +213,13 @@ export default function UserInfo() {
 
   return (
     <SafeAreaView style={styles.safeArea}>
+      <StatusBar
+        translucent={true}
+        backgroundColor="transparent"
+        barStyle={isDarkMode ? "light-content" : "dark-content"}
+      />
       <LinearGradient
-        colors={[
-          currentTheme.colors.background,
-          currentTheme.colors.cardBackground,
-        ]}
+        colors={[currentTheme.colors.background, currentTheme.colors.cardBackground]}
         style={styles.gradientContainer}
         start={{ x: 0, y: 0 }}
         end={{ x: 1, y: 1 }}
@@ -247,12 +241,13 @@ export default function UserInfo() {
               entering={FadeInUp.delay(100)}
               style={styles.imageContainer}
             >
-              <TouchableOpacity onPress={pickImage}>
+              <TouchableOpacity
+                onPress={pickImage}
+                accessibilityLabel="Modifier l'image de profil"
+                testID="profile-image-button"
+              >
                 <LinearGradient
-                  colors={[
-                    currentTheme.colors.secondary,
-                    currentTheme.colors.primary,
-                  ]}
+                  colors={[currentTheme.colors.secondary, currentTheme.colors.primary]}
                   style={styles.imageGradient}
                   start={{ x: 0, y: 0 }}
                   end={{ x: 1, y: 1 }}
@@ -267,6 +262,7 @@ export default function UserInfo() {
                       <Image
                         source={{ uri: profileImage }}
                         style={styles.profileImage}
+                        accessibilityLabel="Image de profil actuelle"
                       />
                     ) : (
                       <Text
@@ -284,19 +280,8 @@ export default function UserInfo() {
             </Animated.View>
 
             {/* Champs de saisie stylés */}
-            <Animated.View
-              entering={FadeInUp.delay(200)}
-              style={styles.inputWrapper}
-            >
-              <LinearGradient
-                colors={[
-                  currentTheme.colors.cardBackground,
-                  `${currentTheme.colors.cardBackground}F0`,
-                ]}
-                style={getFieldGradientStyle()} // Style dynamique
-                start={{ x: 0, y: 0 }}
-                end={{ x: 1, y: 1 }}
-              >
+            <Animated.View entering={FadeInUp.delay(200)} style={styles.inputWrapper}>
+              <View style={styles.inputCard}>
                 <TextInput
                   label="Nom"
                   mode="outlined"
@@ -314,22 +299,13 @@ export default function UserInfo() {
                       background: "transparent",
                     },
                   }}
+                  accessibilityLabel="Champ pour le nom d'utilisateur"
+                  testID="input-displayName"
                 />
-              </LinearGradient>
+              </View>
             </Animated.View>
-            <Animated.View
-              entering={FadeInUp.delay(300)}
-              style={styles.inputWrapper}
-            >
-              <LinearGradient
-                colors={[
-                  currentTheme.colors.cardBackground,
-                  `${currentTheme.colors.cardBackground}F0`,
-                ]}
-                style={getFieldGradientStyle()} // Style dynamique
-                start={{ x: 0, y: 0 }}
-                end={{ x: 1, y: 1 }}
-              >
+            <Animated.View entering={FadeInUp.delay(300)} style={styles.inputWrapper}>
+              <View style={styles.inputCard}>
                 <TextInput
                   label="Bio"
                   mode="outlined"
@@ -348,22 +324,13 @@ export default function UserInfo() {
                       background: "transparent",
                     },
                   }}
+                  accessibilityLabel="Champ pour la bio"
+                  testID="input-bio"
                 />
-              </LinearGradient>
+              </View>
             </Animated.View>
-            <Animated.View
-              entering={FadeInUp.delay(400)}
-              style={styles.inputWrapper}
-            >
-              <LinearGradient
-                colors={[
-                  currentTheme.colors.cardBackground,
-                  `${currentTheme.colors.cardBackground}F0`,
-                ]}
-                style={getFieldGradientStyle()} // Style dynamique
-                start={{ x: 0, y: 0 }}
-                end={{ x: 1, y: 1 }}
-              >
+            <Animated.View entering={FadeInUp.delay(400)} style={styles.inputWrapper}>
+              <View style={styles.inputCard}>
                 <TextInput
                   label="Localisation"
                   mode="outlined"
@@ -381,22 +348,13 @@ export default function UserInfo() {
                       background: "transparent",
                     },
                   }}
+                  accessibilityLabel="Champ pour la localisation"
+                  testID="input-location"
                 />
-              </LinearGradient>
+              </View>
             </Animated.View>
-            <Animated.View
-              entering={FadeInUp.delay(500)}
-              style={styles.inputWrapper}
-            >
-              <LinearGradient
-                colors={[
-                  currentTheme.colors.cardBackground,
-                  `${currentTheme.colors.cardBackground}F0`,
-                ]}
-                style={getFieldGradientStyle()} // Style dynamique
-                start={{ x: 0, y: 0 }}
-                end={{ x: 1, y: 1 }}
-              >
+            <Animated.View entering={FadeInUp.delay(500)} style={styles.inputWrapper}>
+              <View style={styles.inputCard}>
                 <TextInput
                   label="Intérêts"
                   mode="outlined"
@@ -414,30 +372,27 @@ export default function UserInfo() {
                       background: "transparent",
                     },
                   }}
+                  accessibilityLabel="Champ pour les intérêts"
+                  testID="input-interet"
                 />
-              </LinearGradient>
+              </View>
             </Animated.View>
 
             {/* Bouton Sauvegarder */}
-            <Animated.View
-              entering={FadeInUp.delay(600)}
-              style={styles.saveButtonWrapper}
-            >
+            <Animated.View entering={FadeInUp.delay(600)} style={styles.saveButtonWrapper}>
               <LinearGradient
-                colors={[
-                  currentTheme.colors.secondary,
-                  currentTheme.colors.primary,
-                ]}
+                colors={[currentTheme.colors.secondary, currentTheme.colors.primary]}
                 style={styles.saveButton}
                 start={{ x: 0, y: 0 }}
                 end={{ x: 1, y: 1 }}
               >
-                <TouchableOpacity onPress={handleSave}>
+                <TouchableOpacity
+                  onPress={handleSave}
+                  accessibilityLabel="Sauvegarder les modifications du profil"
+                  testID="save-button"
+                >
                   <Text
-                    style={[
-                      styles.saveButtonText,
-                      { color: currentTheme.colors.textPrimary },
-                    ]}
+                    style={[styles.saveButtonText, { color: currentTheme.colors.textPrimary }]}
                   >
                     Sauvegarder
                   </Text>
@@ -456,14 +411,13 @@ const styles = StyleSheet.create({
   gradientContainer: { flex: 1 },
   container: { flex: 1 },
   contentContainer: {
-    padding: normalizeSize(20),
+    padding: SPACING,
     alignItems: "center",
-    paddingBottom: SCREEN_HEIGHT * 0.15,
+    paddingBottom: SPACING * 3, // Réduit pour responsivité
   },
   headerWrapper: {
-    marginTop: SCREEN_HEIGHT * 0.01,
-    marginBottom: SCREEN_HEIGHT * 0.02,
-    paddingHorizontal: SCREEN_WIDTH * 0.05,
+    paddingHorizontal: SPACING,
+    paddingVertical: SPACING,
     width: "100%",
   },
   loadingContainer: {
@@ -472,12 +426,12 @@ const styles = StyleSheet.create({
     alignItems: "center",
   },
   loadingText: {
-    marginTop: normalizeSize(10),
+    marginTop: SPACING,
     fontSize: normalizeSize(16),
     fontFamily: "Comfortaa_400Regular",
   },
   imageContainer: {
-    marginBottom: normalizeSize(30),
+    marginBottom: SPACING * 2,
     shadowColor: "#000",
     shadowOffset: { width: 0, height: normalizeSize(6) },
     shadowOpacity: 0.4,
@@ -485,9 +439,9 @@ const styles = StyleSheet.create({
     elevation: 10,
   },
   imageGradient: {
-    width: SCREEN_WIDTH * 0.4,
-    height: SCREEN_WIDTH * 0.4,
-    borderRadius: SCREEN_WIDTH * 0.2,
+    width: SCREEN_WIDTH * 0.35, // Réduit pour responsivité
+    height: SCREEN_WIDTH * 0.35,
+    borderRadius: SCREEN_WIDTH * 0.175,
     overflow: "hidden",
     borderWidth: 3,
     borderColor: "#FFFFFF",
@@ -498,9 +452,9 @@ const styles = StyleSheet.create({
     alignItems: "center",
   },
   profileImage: {
-    width: SCREEN_WIDTH * 0.38,
-    height: SCREEN_WIDTH * 0.38,
-    borderRadius: SCREEN_WIDTH * 0.19,
+    width: SCREEN_WIDTH * 0.33,
+    height: SCREEN_WIDTH * 0.33,
+    borderRadius: SCREEN_WIDTH * 0.165,
   },
   addImageText: {
     fontSize: normalizeSize(16),
@@ -511,17 +465,17 @@ const styles = StyleSheet.create({
   },
   inputWrapper: {
     width: "100%",
-    marginBottom: normalizeSize(20),
+    marginBottom: SPACING,
+  },
+  inputCard: {
+    borderRadius: normalizeSize(15),
+    backgroundColor: "transparent",
     shadowColor: "#000",
     shadowOffset: { width: 0, height: normalizeSize(4) },
     shadowOpacity: 0.3,
     shadowRadius: normalizeSize(6),
     elevation: 5,
-  },
-  fieldGradient: {
-    borderRadius: normalizeSize(15),
-    padding: normalizeSize(5),
-    borderWidth: 1,
+    padding: SPACING / 2,
   },
   input: {
     width: "100%",
@@ -534,11 +488,11 @@ const styles = StyleSheet.create({
   },
   saveButtonWrapper: {
     width: "100%",
-    marginTop: normalizeSize(20),
+    marginTop: SPACING,
   },
   saveButton: {
-    paddingVertical: normalizeSize(15),
-    paddingHorizontal: normalizeSize(30),
+    paddingVertical: SPACING,
+    paddingHorizontal: SPACING * 2,
     borderRadius: normalizeSize(25),
     alignItems: "center",
     shadowColor: "#000",

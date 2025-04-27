@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useRef } from "react";
+import React, { useState, useEffect, useRef, useCallback } from "react";
 import {
   View,
   Text,
@@ -11,6 +11,7 @@ import {
   Dimensions,
   Animated as RNAnimated,
   Share,
+  StatusBar,
 } from "react-native";
 import { Ionicons } from "@expo/vector-icons";
 import { useRouter, useLocalSearchParams } from "expo-router";
@@ -33,17 +34,13 @@ import ChallengeCompletionModal from "../../components/ChallengeCompletionModal"
 import DurationSelectionModal from "../../components/DurationSelectionModal";
 import StatsModal from "../../components/StatsModal";
 import Animated, { FadeInUp } from "react-native-reanimated";
+import { useTheme } from "../../context/ThemeContext";
+import { Theme } from "../../theme/designSystem";
 import designSystem from "../../theme/designSystem";
+import BackButton from "../../components/BackButton";
 
 const { width: SCREEN_WIDTH, height: SCREEN_HEIGHT } = Dimensions.get("window");
-const currentTheme = {
-  ...designSystem.lightTheme,
-  colors: {
-    ...designSystem.lightTheme.colors,
-    primary: "#ED8F03", // Orange
-    cardBackground: "#FFFFFF",
-  },
-};
+const SPACING = 15;
 
 const normalizeSize = (size: number) => {
   const scale = SCREEN_WIDTH / 375;
@@ -78,6 +75,10 @@ interface Stat {
 }
 
 export default function ChallengeDetails() {
+  const { theme } = useTheme();
+  const isDarkMode = theme === "dark";
+  const currentTheme: Theme = isDarkMode ? designSystem.darkTheme : designSystem.lightTheme;
+
   const router = useRouter();
   const params = useLocalSearchParams<{
     id?: string;
@@ -93,8 +94,7 @@ export default function ChallengeDetails() {
   const routeCategory = params.category || "Uncategorized";
   const routeDescription = params.description || "No description available";
 
-  const { savedChallenges, addChallenge, removeChallenge } =
-    useSavedChallenges();
+  const { savedChallenges, addChallenge, removeChallenge } = useSavedChallenges();
   const {
     currentChallenges,
     takeChallenge,
@@ -228,8 +228,7 @@ export default function ChallengeDetails() {
     const numDays = new Date(year, month + 1, 0).getDate();
     const firstDayIndex = new Date(year, month, 1).getDay();
     const completions: string[] = currentChallenge?.completionDates || [];
-    const calendar: (null | { day: number; date: Date; completed: boolean })[] =
-      [];
+    const calendar: (null | { day: number; date: Date; completed: boolean })[] = [];
     for (let i = 0; i < firstDayIndex; i++) {
       calendar.push(null);
     }
@@ -278,7 +277,7 @@ export default function ChallengeDetails() {
       ? Math.min(1, finalCompletedDays / finalSelectedDays)
       : 0;
 
-  const handleTakeChallenge = async () => {
+  const handleTakeChallenge = useCallback(async () => {
     if (userHasTaken || !id) return;
     try {
       setLoading(true);
@@ -332,9 +331,9 @@ export default function ChallengeDetails() {
     } finally {
       setLoading(false);
     }
-  };
+  }, [id, userHasTaken, localSelectedDays, takeChallenge]);
 
-  const handleSaveChallenge = async () => {
+  const handleSaveChallenge = useCallback(async () => {
     if (!id) return;
     setPendingFavorite(!isSavedChallenge(id));
     try {
@@ -372,32 +371,32 @@ export default function ChallengeDetails() {
       );
       setPendingFavorite(null);
     }
-  };
+  }, [id, savedChallenges, addChallenge, removeChallenge]);
 
-  const handleShowCompleteModal = () => {
+  const handleShowCompleteModal = useCallback(() => {
     setBaseTrophyAmount(finalSelectedDays);
     setCompletionModalVisible(true);
-  };
+  }, [finalSelectedDays]);
 
-  const handleClaimTrophiesWithoutAd = async () => {
+  const handleClaimTrophiesWithoutAd = useCallback(async () => {
     try {
       await completeChallenge(id, finalSelectedDays, false);
       setCompletionModalVisible(false);
     } catch (error) {
       Alert.alert("Erreur", "La finalisation du défi a échoué.");
     }
-  };
+  }, [id, finalSelectedDays, completeChallenge]);
 
-  const handleClaimTrophiesWithAd = async () => {
+  const handleClaimTrophiesWithAd = useCallback(async () => {
     try {
       await completeChallenge(id, finalSelectedDays, true);
       setCompletionModalVisible(false);
     } catch (error) {
       Alert.alert("Erreur", "La finalisation du défi a échoué.");
     }
-  };
+  }, [id, finalSelectedDays, completeChallenge]);
 
-  const handleNavigateToChat = () => {
+  const handleNavigateToChat = useCallback(() => {
     if (!userHasTaken) {
       Alert.alert(
         "Accès refusé",
@@ -408,9 +407,9 @@ export default function ChallengeDetails() {
     router.push(
       `/challenge-chat/${id}?title=${encodeURIComponent(routeTitle)}`
     );
-  };
+  }, [id, userHasTaken, routeTitle, router]);
 
-  const handleShareChallenge = async () => {
+  const handleShareChallenge = useCallback(async () => {
     try {
       const shareOptions = {
         title: routeTitle,
@@ -434,27 +433,26 @@ export default function ChallengeDetails() {
     } catch (error: any) {
       Alert.alert("Erreur de partage", error.message);
     }
-  };
+  }, [routeTitle, routeDescription]);
 
-  const handleViewStats = () => {
+  const handleViewStats = useCallback(() => {
     if (!userHasTaken) return;
     setStatsModalVisible(true);
-  };
+  }, [userHasTaken]);
 
   if (loading) {
     return (
       <LinearGradient
-        colors={[
-          currentTheme.colors.background,
-          currentTheme.colors.cardBackground,
-        ]}
+        colors={[currentTheme.colors.background, currentTheme.colors.cardBackground]}
         style={styles.loadingContainer}
         start={{ x: 0, y: 0 }}
         end={{ x: 1, y: 1 }}
       >
         <Animated.View entering={FadeInUp}>
-          <ActivityIndicator size="large" color="#FF6200" />
-          <Text style={styles.loadingText}>Chargement en cours...</Text>
+          <ActivityIndicator size="large" color={currentTheme.colors.secondary} />
+          <Text style={[styles.loadingText, { color: currentTheme.colors.textSecondary }]}>
+            Chargement en cours...
+          </Text>
         </Animated.View>
       </LinearGradient>
     );
@@ -462,14 +460,16 @@ export default function ChallengeDetails() {
 
   return (
     <LinearGradient
-      colors={[
-        currentTheme.colors.background,
-        currentTheme.colors.cardBackground,
-      ]}
+      colors={[currentTheme.colors.background, currentTheme.colors.cardBackground]}
       style={styles.container}
       start={{ x: 0, y: 0 }}
       end={{ x: 1, y: 1 }}
     >
+      <StatusBar
+        translucent
+        backgroundColor="transparent"
+        barStyle={isDarkMode ? "light-content" : "dark-content"}
+      />
       <ConfettiCannon
         ref={confettiRef}
         count={150}
@@ -482,7 +482,7 @@ export default function ChallengeDetails() {
       <ScrollView showsVerticalScrollIndicator={false}>
         <View style={styles.carouselContainer}>
           <LinearGradient
-            colors={["#FF6200", "#FF8C00"]}
+            colors={[currentTheme.colors.primary, currentTheme.colors.secondary]}
             style={styles.imageContainer}
             start={{ x: 0, y: 0 }}
             end={{ x: 1, y: 1 }}
@@ -494,40 +494,39 @@ export default function ChallengeDetails() {
                 resizeMode="cover"
               />
             ) : (
-              <View style={styles.imagePlaceholder}>
+              <View style={[styles.imagePlaceholder, { backgroundColor: currentTheme.colors.overlay }]}>
                 <Ionicons
                   name="image-outline"
                   size={normalizeSize(80)}
-                  color="#FFFFFF"
+                  color={currentTheme.colors.textPrimary}
                 />
-                <Text style={styles.noImageText}>Image non disponible</Text>
+                <Text style={[styles.noImageText, { color: currentTheme.colors.textPrimary }]}>
+                  Image non disponible
+                </Text>
               </View>
             )}
-            <TouchableOpacity
-              style={styles.backButton}
-              onPress={() => router.back()}
-            >
-              <Ionicons
-                name="arrow-back"
-                size={normalizeSize(28)}
-                color="#FFFFFF"
-              />
-            </TouchableOpacity>
+            <BackButton
+              color={currentTheme.colors.textPrimary}
+            />
           </LinearGradient>
         </View>
         <Animated.View
           entering={FadeInUp.delay(100)}
           style={styles.infoRecipeContainer}
         >
-          <Text style={styles.infoRecipeName}>{routeTitle}</Text>
-          <Text style={styles.category}>{routeCategory.toUpperCase()}</Text>
+          <Text style={[styles.infoRecipeName, { color: currentTheme.colors.textPrimary }]}>
+            {routeTitle}
+          </Text>
+          <Text style={[styles.category, { color: currentTheme.colors.secondary }]}>
+            {routeCategory.toUpperCase()}
+          </Text>
           <View style={styles.infoContainer}>
             <Ionicons
               name="people-outline"
               size={normalizeSize(20)}
-              color="#FF6200"
+              color={currentTheme.colors.secondary}
             />
-            <Text style={styles.infoRecipe}>
+            <Text style={[styles.infoRecipe, { color: currentTheme.colors.textSecondary }]}>
               {userCount} {userCount <= 1 ? "participant" : "participants"}
             </Text>
           </View>
@@ -535,14 +534,16 @@ export default function ChallengeDetails() {
             <TouchableOpacity
               style={styles.takeChallengeButton}
               onPress={() => setModalVisible(true)}
+              accessibilityLabel="Prendre le défi"
+              testID="take-challenge-button"
             >
               <LinearGradient
-                colors={["#FF6200", "#FF8C00"]}
+                colors={[currentTheme.colors.primary, currentTheme.colors.secondary]}
                 style={styles.takeChallengeButtonGradient}
                 start={{ x: 0, y: 0 }}
                 end={{ x: 1, y: 1 }}
               >
-                <Text style={styles.takeChallengeButtonText}>
+                <Text style={[styles.takeChallengeButtonText, { color: currentTheme.colors.textPrimary }]}>
                   Prendre le défi
                 </Text>
               </LinearGradient>
@@ -553,10 +554,12 @@ export default function ChallengeDetails() {
               finalSelectedDays > 0 && finalCompletedDays >= finalSelectedDays
             ) && (
               <Animated.View entering={FadeInUp.delay(200)}>
-                <Text style={styles.inProgressText}>Défi en cours</Text>
-                <View style={styles.progressBarBackground}>
+                <Text style={[styles.inProgressText, { color: currentTheme.colors.secondary }]}>
+                  Défi en cours
+                </Text>
+                <View style={[styles.progressBarBackground, { backgroundColor: currentTheme.colors.border }]}>
                   <LinearGradient
-                    colors={["#FF6200", "#FF8C00"]}
+                    colors={[currentTheme.colors.primary, currentTheme.colors.secondary]}
                     style={[
                       styles.progressBarFill,
                       { width: progressPercent * normalizeSize(250) },
@@ -565,7 +568,7 @@ export default function ChallengeDetails() {
                     end={{ x: 1, y: 1 }}
                   />
                 </View>
-                <Text style={styles.progressText}>
+                <Text style={[styles.progressText, { color: currentTheme.colors.secondary }]}>
                   {finalCompletedDays}/{finalSelectedDays} jours complétés
                 </Text>
                 <TouchableOpacity
@@ -577,21 +580,24 @@ export default function ChallengeDetails() {
                     }
                   }}
                   disabled={isMarkedToday(id, finalSelectedDays)}
+                  accessibilityLabel={
+                    isMarkedToday(id, finalSelectedDays)
+                      ? "Déjà marqué aujourd'hui"
+                      : "Marquer aujourd'hui"
+                  }
+                  testID="mark-today-button"
                 >
                   <LinearGradient
                     colors={
                       isMarkedToday(id, finalSelectedDays)
-                        ? ["#D3D3D3", "#A3A3A3"]
-                        : ["#FF6200", "#FF8C00"]
+                        ? [currentTheme.colors.border, currentTheme.colors.overlay]
+                        : [currentTheme.colors.primary, currentTheme.colors.secondary]
                     }
-                    style={[
-                      styles.markTodayButtonGradient,
-                      { alignItems: "center", justifyContent: "center" },
-                    ]}
+                    style={styles.markTodayButtonGradient}
                     start={{ x: 0, y: 0 }}
                     end={{ x: 1, y: 1 }}
                   >
-                    <Text style={styles.markTodayButtonText}>
+                    <Text style={[styles.markTodayButtonText, { color: currentTheme.colors.textPrimary }]}>
                       {isMarkedToday(id, finalSelectedDays)
                         ? "Déjà marqué"
                         : "Marquer aujourd'hui"}
@@ -600,21 +606,25 @@ export default function ChallengeDetails() {
                 </TouchableOpacity>
               </Animated.View>
             )}
-          <Text style={styles.infoDescriptionRecipe}>{routeDescription}</Text>
+          <Text style={[styles.infoDescriptionRecipe, { color: currentTheme.colors.textSecondary }]}>
+            {routeDescription}
+          </Text>
           {userHasTaken &&
             finalSelectedDays > 0 &&
             finalCompletedDays >= finalSelectedDays && (
               <TouchableOpacity
                 style={styles.completeChallengeButton}
                 onPress={handleShowCompleteModal}
+                accessibilityLabel="Terminer le défi"
+                testID="complete-challenge-button"
               >
                 <LinearGradient
-                  colors={["#FFD700", "#FFC107"]}
-                  style={styles.completeChallengeButtonGradient}
-                  start={{ x: 0, y: 0 }}
-                  end={{ x: 1, y: 1 }}
-                >
-                  <Text style={styles.completeChallengeButtonText}>
+  colors={[currentTheme.colors.primary, currentTheme.colors.secondary]}
+  style={styles.completeChallengeButtonGradient}
+  start={{ x: 0, y: 0 }}
+  end={{ x: 1, y: 1 }}
+>
+                  <Text style={[styles.completeChallengeButtonText, { color: currentTheme.colors.textPrimary }]}>
                     Terminer le défi
                   </Text>
                 </LinearGradient>
@@ -627,17 +637,25 @@ export default function ChallengeDetails() {
             <TouchableOpacity
               style={styles.actionIcon}
               onPress={handleNavigateToChat}
+              accessibilityLabel="Accéder au chat du défi"
+              testID="chat-button"
             >
               <Ionicons
                 name="chatbubble-ellipses-outline"
                 size={normalizeSize(28)}
-                color="#333"
+                color={currentTheme.colors.textSecondary}
               />
-              <Text style={styles.actionIconLabel}>Chat</Text>
+              <Text style={[styles.actionIconLabel, { color: currentTheme.colors.textSecondary }]}>
+                Chat
+              </Text>
             </TouchableOpacity>
             <TouchableOpacity
               style={styles.actionIcon}
               onPress={handleSaveChallenge}
+              accessibilityLabel={
+                isSavedChallenge(id) ? "Retirer des sauvegardés" : "Sauvegarder le défi"
+              }
+              testID="save-button"
             >
               <Ionicons
                 name={
@@ -653,14 +671,14 @@ export default function ChallengeDetails() {
                 color={
                   pendingFavorite !== null
                     ? pendingFavorite
-                      ? "#FF6200"
-                      : "#333"
+                      ? currentTheme.colors.secondary
+                      : currentTheme.colors.textSecondary
                     : isSavedChallenge(id)
-                    ? "#FF6200"
-                    : "#333"
+                    ? currentTheme.colors.secondary
+                    : currentTheme.colors.textSecondary
                 }
               />
-              <Text style={styles.actionIconLabel}>
+              <Text style={[styles.actionIconLabel, { color: currentTheme.colors.textSecondary }]}>
                 {pendingFavorite !== null
                   ? pendingFavorite
                     ? "Sauvegardé"
@@ -673,24 +691,32 @@ export default function ChallengeDetails() {
             <TouchableOpacity
               style={styles.actionIcon}
               onPress={handleShareChallenge}
+              accessibilityLabel="Partager le défi"
+              testID="share-button"
             >
               <Ionicons
                 name="share-social-outline"
                 size={normalizeSize(28)}
-                color="#333"
+                color={currentTheme.colors.textSecondary}
               />
-              <Text style={styles.actionIconLabel}>Partager</Text>
+              <Text style={[styles.actionIconLabel, { color: currentTheme.colors.textSecondary }]}>
+                Partager
+              </Text>
             </TouchableOpacity>
             <TouchableOpacity
               style={[styles.actionIcon, { opacity: userHasTaken ? 1 : 0.5 }]}
               onPress={userHasTaken ? handleViewStats : undefined}
+              accessibilityLabel="Voir les statistiques"
+              testID="stats-button"
             >
               <Ionicons
                 name="stats-chart-outline"
                 size={normalizeSize(28)}
-                color="#333"
+                color={currentTheme.colors.textSecondary}
               />
-              <Text style={styles.actionIconLabel}>Stats</Text>
+              <Text style={[styles.actionIconLabel, { color: currentTheme.colors.textSecondary }]}>
+                Stats
+              </Text>
             </TouchableOpacity>
           </Animated.View>
         </Animated.View>
@@ -747,67 +773,55 @@ const styles = StyleSheet.create({
   },
   backButton: {
     position: "absolute",
-    top: normalizeSize(40),
-    left: normalizeSize(20),
+    top: SPACING / 2, // Réduit de SPACING (15) à SPACING / 2 (7.5) pour remonter
+    left: SPACING,
     zIndex: 2,
-    backgroundColor: "rgba(255,255,255,0.2)",
     borderRadius: normalizeSize(20),
-    padding: normalizeSize(5),
+    padding: SPACING / 2,
   },
   imagePlaceholder: {
     flex: 1,
     justifyContent: "center",
     alignItems: "center",
-    backgroundColor: "rgba(255,255,255,0.1)",
   },
   noImageText: {
-    color: "#FFFFFF",
-    marginTop: normalizeSize(10),
-    fontFamily: currentTheme.typography.body.fontFamily,
+    marginTop: SPACING,
+    fontFamily: "Comfortaa_400Regular",
     fontSize: normalizeSize(16),
-    textShadowColor: "#000",
-    textShadowOffset: { width: 0, height: 1 },
-    textShadowRadius: 2,
   },
   infoRecipeContainer: {
     flex: 1,
-    padding: normalizeSize(25),
-    paddingTop: normalizeSize(20),
+    padding: SPACING,
+    paddingTop: SPACING,
     alignItems: "center",
   },
   infoRecipeName: {
     fontSize: normalizeSize(28),
-    marginVertical: normalizeSize(10),
-    color: "#333333",
+    marginVertical: SPACING/4,
     textAlign: "center",
-    fontFamily: currentTheme.typography.title.fontFamily,
-    textShadowColor: "#000",
-    textShadowOffset: { width: 0, height: 1 },
-    textShadowRadius: 2,
+    fontFamily: "Comfortaa_700Bold",
   },
   category: {
     fontSize: normalizeSize(14),
-    marginVertical: normalizeSize(5),
-    color: "#FF6200",
+    marginVertical: SPACING / 2,
     textAlign: "center",
-    fontFamily: currentTheme.typography.title.fontFamily,
+    fontFamily: "Comfortaa_700Bold",
   },
   infoContainer: {
     flexDirection: "row",
     alignItems: "center",
     justifyContent: "center",
-    marginVertical: normalizeSize(6),
+    marginVertical: SPACING / 2,
   },
   infoRecipe: {
     fontSize: normalizeSize(14),
-    marginLeft: normalizeSize(5),
-    color: "#777777",
-    fontFamily: currentTheme.typography.body.fontFamily,
+    marginLeft: SPACING / 2,
+    fontFamily: "Comfortaa_400Regular",
   },
   takeChallengeButton: {
     borderRadius: normalizeSize(25),
     overflow: "hidden",
-    marginTop: normalizeSize(15),
+    marginTop: SPACING,
     shadowColor: "#000",
     shadowOffset: { width: 0, height: normalizeSize(4) },
     shadowOpacity: 0.3,
@@ -815,27 +829,23 @@ const styles = StyleSheet.create({
     elevation: 5,
   },
   takeChallengeButtonGradient: {
-    paddingVertical: normalizeSize(10),
-    paddingHorizontal: normalizeSize(30),
+    paddingVertical: SPACING,
+    paddingHorizontal: SPACING * 2,
   },
   takeChallengeButtonText: {
     fontSize: normalizeSize(16),
-    color: "#FFFFFF",
-    fontFamily: currentTheme.typography.title.fontFamily,
-    textShadowColor: "#000",
-    textShadowOffset: { width: 0, height: 1 },
-    textShadowRadius: 2,
+    fontFamily: "Comfortaa_700Bold",
+    textAlign: "center",
   },
   inProgressText: {
     fontSize: normalizeSize(16),
-    color: "#FF6200",
-    marginTop: normalizeSize(10),
-    fontFamily: currentTheme.typography.title.fontFamily,
+    marginTop: SPACING,
+    fontFamily: "Comfortaa_700Bold",
   },
   markTodayButton: {
     borderRadius: normalizeSize(25),
     overflow: "hidden",
-    marginTop: normalizeSize(10),
+    marginTop: SPACING,
     shadowColor: "#000",
     shadowOffset: { width: 0, height: normalizeSize(4) },
     shadowOpacity: 0.3,
@@ -843,33 +853,29 @@ const styles = StyleSheet.create({
     elevation: 5,
   },
   markTodayButtonGradient: {
-    paddingVertical: normalizeSize(10),
-    paddingHorizontal: normalizeSize(30),
+    paddingVertical: SPACING,
+    paddingHorizontal: SPACING * 2,
+    alignItems: "center",
+    justifyContent: "center",
   },
   markTodayButtonText: {
     fontSize: normalizeSize(16),
-    color: "#FFFFFF",
-    fontFamily: currentTheme.typography.title.fontFamily,
-    textShadowColor: "#000",
-    textShadowOffset: { width: 0, height: 1 },
-    textShadowRadius: 2,
+    fontFamily: "Comfortaa_700Bold",
   },
   progressText: {
     fontSize: normalizeSize(14),
-    color: "#FF6200",
-    marginBottom: normalizeSize(8),
+    marginBottom: SPACING,
     textAlign: "center",
-    marginTop: normalizeSize(5),
-    fontFamily: currentTheme.typography.body.fontFamily,
+    marginTop: SPACING / 2,
+    fontFamily: "Comfortaa_400Regular",
   },
   progressBarBackground: {
     width: normalizeSize(250),
     height: normalizeSize(10),
-    backgroundColor: "#E0E0E0",
     borderRadius: normalizeSize(5),
     overflow: "hidden",
     alignSelf: "center",
-    marginTop: normalizeSize(10),
+    marginTop: SPACING,
   },
   progressBarFill: {
     height: "100%",
@@ -877,7 +883,7 @@ const styles = StyleSheet.create({
   completeChallengeButton: {
     borderRadius: normalizeSize(25),
     overflow: "hidden",
-    marginTop: normalizeSize(15),
+    marginTop: SPACING,
     shadowColor: "#000",
     shadowOffset: { width: 0, height: normalizeSize(4) },
     shadowOpacity: 0.3,
@@ -885,41 +891,36 @@ const styles = StyleSheet.create({
     elevation: 5,
   },
   completeChallengeButtonGradient: {
-    paddingVertical: normalizeSize(10),
-    paddingHorizontal: normalizeSize(30),
+    paddingVertical: SPACING,
+    paddingHorizontal: SPACING * 2,
   },
   completeChallengeButtonText: {
     fontSize: normalizeSize(16),
-    color: "#FFFFFF",
-    fontFamily: currentTheme.typography.title.fontFamily,
-    textShadowColor: "#000",
-    textShadowOffset: { width: 0, height: 1 },
-    textShadowRadius: 2,
+    fontFamily: "Comfortaa_700Bold",
+    textAlign: "center",
   },
   infoDescriptionRecipe: {
     textAlign: "center",
     fontSize: normalizeSize(16),
-    marginTop: normalizeSize(30),
-    marginHorizontal: normalizeSize(15),
-    color: "#555555",
+    marginTop: SPACING * 2,
+    marginHorizontal: SPACING,
     lineHeight: normalizeSize(22),
-    fontFamily: currentTheme.typography.body.fontFamily,
+    fontFamily: "Comfortaa_400Regular",
   },
   actionIconsContainer: {
     flexDirection: "row",
     justifyContent: "space-around",
-    marginTop: normalizeSize(30),
+    marginTop: SPACING * 2,
     width: "100%",
   },
   actionIcon: {
     alignItems: "center",
-    marginHorizontal: normalizeSize(10),
+    marginHorizontal: SPACING,
   },
   actionIconLabel: {
-    marginTop: normalizeSize(4),
+    marginTop: SPACING / 2,
     fontSize: normalizeSize(12),
-    color: "#333333",
-    fontFamily: currentTheme.typography.body.fontFamily,
+    fontFamily: "Comfortaa_400Regular",
   },
   loadingContainer: {
     flex: 1,
@@ -927,9 +928,8 @@ const styles = StyleSheet.create({
     alignItems: "center",
   },
   loadingText: {
-    marginTop: normalizeSize(10),
+    marginTop: SPACING,
     fontSize: normalizeSize(16),
-    color: "#777777",
-    fontFamily: currentTheme.typography.body.fontFamily,
+    fontFamily: "Comfortaa_400Regular",
   },
 });

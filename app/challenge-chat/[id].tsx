@@ -1,4 +1,4 @@
-import React, { useState, useRef, useEffect } from "react";
+import React, { useState, useRef, useEffect, useCallback } from "react";
 import {
   View,
   Text,
@@ -10,7 +10,7 @@ import {
   Platform,
   SafeAreaView,
   Dimensions,
-  Image,
+  StatusBar,
 } from "react-native";
 import { useLocalSearchParams, useNavigation } from "expo-router";
 import { Ionicons } from "@expo/vector-icons";
@@ -19,9 +19,16 @@ import { auth } from "../../constants/firebase-config";
 import { useChat } from "../../context/ChatContext";
 import { useTheme } from "../../context/ThemeContext";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
+import { Theme } from "../../theme/designSystem";
 import designSystem from "../../theme/designSystem";
 
-const { width } = Dimensions.get("window");
+const { width: SCREEN_WIDTH, height: SCREEN_HEIGHT } = Dimensions.get("window");
+const SPACING = 15;
+
+const normalizeSize = (size: number) => {
+  const scale = SCREEN_WIDTH / 375;
+  return Math.round(size * scale);
+};
 
 export default function ChallengeChat() {
   const { id: challengeId, title: challengeTitle } = useLocalSearchParams();
@@ -31,19 +38,17 @@ export default function ChallengeChat() {
   );
   const [newMessage, setNewMessage] = useState("");
   const flatListRef = useRef<FlatList>(null);
+  const insets = useSafeAreaInsets();
 
   const { theme } = useTheme();
-  const currentTheme =
-    theme === "dark" ? designSystem.darkTheme : designSystem.lightTheme;
+  const isDarkMode = theme === "dark";
+  const currentTheme: Theme = isDarkMode ? designSystem.darkTheme : designSystem.lightTheme;
   const headerGradient: readonly [string, string] = [
     currentTheme.colors.primary,
     currentTheme.colors.secondary,
   ] as const;
 
-  // Utilisation du hook pour récupérer les insets (notamment le bottom)
-  const insets = useSafeAreaInsets();
-
-  const handleSend = async () => {
+  const handleSend = useCallback(async () => {
     if (newMessage.trim().length === 0) return;
     try {
       await sendMessage(
@@ -55,7 +60,7 @@ export default function ChallengeChat() {
     } catch (error) {
       console.error("Error sending message:", error);
     }
-  };
+  }, [newMessage, challengeId, sendMessage]);
 
   useEffect(() => {
     if (messages.length > 0) {
@@ -63,52 +68,82 @@ export default function ChallengeChat() {
     }
   }, [messages]);
 
-  const renderMessage = ({ item }: { item: any }) => {
-    const isMyMessage = item.userId === auth.currentUser?.uid;
-    return (
-      <View
-        style={[
-          styles.messageRow,
-          isMyMessage ? styles.myMessageRow : styles.otherMessageRow,
-        ]}
-      >
-        {!isMyMessage && (
-          <View style={styles.avatarContainer}>
-            <Ionicons
-              name="person-circle-outline"
-              size={34}
-              color={currentTheme.colors.primary}
-            />
-          </View>
-        )}
+  const renderMessage = useCallback(
+    ({ item }: { item: any }) => {
+      const isMyMessage = item.userId === auth.currentUser?.uid;
+      return (
         <View
           style={[
-            styles.messageBubble,
-            isMyMessage ? styles.myMessageBubble : styles.otherMessageBubble,
+            styles.messageRow,
+            isMyMessage ? styles.myMessageRow : styles.otherMessageRow,
           ]}
         >
           {!isMyMessage && (
-            <Text style={[styles.username, styles.otherUsername]}>
-              {item.username}
-            </Text>
+            <View style={styles.avatarContainer}>
+              <Ionicons
+                name="person-circle-outline"
+                size={normalizeSize(34)}
+                color={currentTheme.colors.secondary}
+              />
+            </View>
           )}
-          <Text style={styles.messageText}>{item.text}</Text>
+          <View
+            style={[
+              styles.messageBubble,
+              isMyMessage
+                ? [
+                    styles.myMessageBubble,
+                    { backgroundColor: currentTheme.colors.secondary },
+                  ]
+                : [
+                    styles.otherMessageBubble,
+                    { backgroundColor: currentTheme.colors.cardBackground },
+                  ],
+            ]}
+          >
+            {!isMyMessage && (
+              <Text
+                style={[
+                  styles.username,
+                  { color: currentTheme.colors.secondary },
+                ]}
+              >
+                {item.username}
+              </Text>
+            )}
+            <Text
+              style={[
+                styles.messageText,
+                { color: isMyMessage ? currentTheme.colors.textPrimary : currentTheme.colors.textSecondary },
+              ]}
+            >
+              {item.text}
+            </Text>
+          </View>
         </View>
-      </View>
-    );
-  };
+      );
+    },
+    [currentTheme]
+  );
 
   return (
-    <SafeAreaView style={styles.container}>
+    <SafeAreaView style={[styles.container, { backgroundColor: currentTheme.colors.background }]}>
+      <StatusBar
+        translucent
+        backgroundColor="transparent"
+        barStyle={isDarkMode ? "light-content" : "dark-content"}
+      />
       {/* Header avec gradient */}
-      <LinearGradient colors={headerGradient} style={styles.header}>
+      <LinearGradient colors={headerGradient} style={[styles.header, { paddingTop: insets.top }]}>
         <TouchableOpacity
           onPress={() => navigation.goBack()}
           style={styles.backButton}
+          accessibilityLabel="Retour à la page précédente"
+          testID="back-button"
         >
-          <Ionicons name="arrow-back" size={24} color="#fff" />
+          <Ionicons name="arrow-back" size={normalizeSize(24)} color={currentTheme.colors.textPrimary} />
         </TouchableOpacity>
-        <Text style={styles.headerTitle}>
+        <Text style={[styles.headerTitle, { color: currentTheme.colors.textPrimary }]}>
           {challengeTitle || "Challenge Chat"}
         </Text>
       </LinearGradient>
@@ -116,8 +151,7 @@ export default function ChallengeChat() {
       <KeyboardAvoidingView
         style={styles.chatContainer}
         behavior={Platform.OS === "ios" ? "padding" : undefined}
-        // Sur Android, on peut définir un offset pour éviter que le clavier ne masque la zone d'envoi
-        keyboardVerticalOffset={Platform.OS === "ios" ? 120 : 80}
+        keyboardVerticalOffset={Platform.OS === "ios" ? 100 : 80}
       >
         <FlatList
           ref={flatListRef}
@@ -125,30 +159,55 @@ export default function ChallengeChat() {
           renderItem={renderMessage}
           keyExtractor={(item) => item.id}
           contentContainerStyle={styles.messageList}
+          initialNumToRender={10}
+          windowSize={5}
           onContentSizeChange={() =>
             flatListRef.current?.scrollToEnd({ animated: true })
           }
         />
-        {/* Zone d'envoi positionnée absolument */}
+        {/* Zone d'envoi */}
         <View
-          style={[styles.inputWrapper, { paddingBottom: insets.bottom || 10 }]}
+          style={[
+            styles.inputWrapper,
+            {
+              paddingBottom: insets.bottom || SPACING,
+              backgroundColor: currentTheme.colors.cardBackground,
+              borderTopColor: currentTheme.colors.border,
+            },
+          ]}
         >
           <TextInput
-            style={styles.input}
+            style={[
+              styles.input,
+              {
+                borderColor: currentTheme.colors.border,
+                backgroundColor: currentTheme.colors.overlay,
+                color: currentTheme.colors.textPrimary,
+              },
+            ]}
             placeholder="Votre message..."
-            placeholderTextColor="#aaa"
+            placeholderTextColor={currentTheme.colors.textSecondary}
             value={newMessage}
             onChangeText={setNewMessage}
             multiline
+            accessibilityLabel="Champ pour écrire un message"
+            accessibilityHint="Tapez votre message ici"
+            testID="message-input"
           />
           <TouchableOpacity
             style={[
               styles.sendButton,
-              { backgroundColor: currentTheme.colors.primary },
+              { backgroundColor: currentTheme.colors.secondary },
             ]}
             onPress={handleSend}
+            accessibilityLabel="Envoyer le message"
+            testID="send-button"
           >
-            <Ionicons name="send" size={24} color="#fff" />
+            <Ionicons
+              name="send"
+              size={normalizeSize(24)}
+              color={currentTheme.colors.textPrimary}
+            />
           </TouchableOpacity>
         </View>
       </KeyboardAvoidingView>
@@ -159,21 +218,18 @@ export default function ChallengeChat() {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: "#f8f9fa",
   },
   header: {
     flexDirection: "row",
     alignItems: "center",
-    paddingVertical: 16,
-    paddingHorizontal: 20,
-    paddingBottom: 20, // Pour descendre le titre
+    paddingVertical: SPACING,
+    paddingHorizontal: SPACING,
   },
   backButton: {
-    marginRight: 10,
+    marginRight: SPACING,
   },
   headerTitle: {
-    color: "#fff",
-    fontSize: 20,
+    fontSize: normalizeSize(20),
     fontFamily: "Comfortaa_700Bold",
     textAlign: "center",
     flex: 1,
@@ -182,13 +238,13 @@ const styles = StyleSheet.create({
     flex: 1,
   },
   messageList: {
-    paddingHorizontal: 10,
-    paddingVertical: 10,
-    paddingBottom: 100, // Espace supplémentaire pour la zone d'envoi
+    paddingHorizontal: SPACING,
+    paddingVertical: SPACING,
+    paddingBottom: normalizeSize(100), // Espace pour la zone d'envoi
   },
   messageRow: {
     flexDirection: "row",
-    marginVertical: 5,
+    marginVertical: normalizeSize(5),
     alignItems: "flex-end",
   },
   myMessageRow: {
@@ -198,61 +254,54 @@ const styles = StyleSheet.create({
     justifyContent: "flex-start",
   },
   avatarContainer: {
-    marginRight: 10,
+    marginRight: SPACING,
   },
   messageBubble: {
     maxWidth: "75%",
-    borderRadius: 20,
-    padding: 10,
+    borderRadius: normalizeSize(20),
+    padding: SPACING,
+    shadowColor: "#000",
+    shadowOffset: { width: 0, height: normalizeSize(2) },
+    shadowOpacity: 0.1,
+    shadowRadius: normalizeSize(4),
+    elevation: 2,
   },
   myMessageBubble: {
-    backgroundColor: "#ed8f03", // Orange ChallengeTies
     marginLeft: "25%",
   },
   otherMessageBubble: {
-    backgroundColor: "#e9ecef",
     marginRight: "25%",
   },
   username: {
     fontFamily: "Comfortaa_700Bold",
-    marginBottom: 3,
-  },
-  otherUsername: {
-    color: "#ed8f03",
+    fontSize: normalizeSize(14),
+    marginBottom: normalizeSize(3),
   },
   messageText: {
-    fontSize: 16,
+    fontSize: normalizeSize(16),
     fontFamily: "Comfortaa_400Regular",
-    color: "#fff",
   },
   inputWrapper: {
-    position: "absolute",
-    bottom: 0,
-    left: 0,
-    right: 0,
     flexDirection: "row",
-    padding: 10,
-    backgroundColor: "#fff",
+    padding: SPACING,
     borderTopWidth: 1,
-    borderTopColor: "#ddd",
     alignItems: "center",
   },
   input: {
     flex: 1,
-    minHeight: 45,
+    minHeight: normalizeSize(45),
     borderWidth: 1,
-    borderColor: "#ddd",
-    borderRadius: 25,
-    paddingHorizontal: 15,
-    backgroundColor: "#f8f9fa",
-    marginRight: 10,
+    borderRadius: normalizeSize(25),
+    paddingHorizontal: SPACING,
+    paddingVertical: normalizeSize(10),
+    marginRight: SPACING,
     fontFamily: "Comfortaa_400Regular",
-    fontSize: 16,
+    fontSize: normalizeSize(16),
   },
   sendButton: {
-    borderRadius: 25,
-    paddingHorizontal: 16,
-    paddingVertical: 10,
+    borderRadius: normalizeSize(25),
+    paddingHorizontal: normalizeSize(16),
+    paddingVertical: normalizeSize(10),
     justifyContent: "center",
     alignItems: "center",
   },

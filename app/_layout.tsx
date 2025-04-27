@@ -1,22 +1,23 @@
-import React, { useState, useEffect } from "react";
+import React, { useState } from "react";
 import { GestureHandlerRootView } from "react-native-gesture-handler";
 import { Stack } from "expo-router";
 import { ActivityIndicator, View, StyleSheet, Text } from "react-native";
 import { PaperProvider } from "react-native-paper";
-import { auth } from "../constants/firebase-config";
 import { ProfileUpdateProvider } from "../context/ProfileUpdateContext";
 import { TrophyProvider } from "../context/TrophyContext";
 import { SavedChallengesProvider } from "../context/SavedChallengesContext";
 import { CurrentChallengesProvider } from "../context/CurrentChallengesContext";
 import { ChatProvider } from "../context/ChatContext";
 import { ThemeProvider } from "../context/ThemeContext";
+import { LanguageProvider } from "../context/LanguageContext";
 import TrophyModal from "../components/TrophyModal";
 import {
   useFonts,
   Comfortaa_400Regular,
   Comfortaa_700Bold,
 } from "@expo-google-fonts/comfortaa";
-import { LanguageProvider } from "../context/LanguageContext";
+import { I18nextProvider } from "react-i18next"; // 👈 Ajout
+import i18n from "../i18n"; // 👈 Ajout
 
 export default function RootLayout() {
   const [fontsLoaded] = useFonts({
@@ -24,7 +25,6 @@ export default function RootLayout() {
     Comfortaa_700Bold,
   });
 
-  // Afficher un écran de chargement si les fonts ne sont pas encore chargés
   if (!fontsLoaded) {
     return (
       <GestureHandlerRootView style={{ flex: 1 }}>
@@ -40,27 +40,30 @@ export default function RootLayout() {
 
   return (
     <GestureHandlerRootView style={{ flex: 1 }}>
+  <LanguageProvider> 
+    <I18nextProvider i18n={i18n}>
       <ThemeProvider>
         <PaperProvider>
-          <LanguageProvider>
-            <ProfileUpdateProvider>
-              <TrophyProvider>
-                <SavedChallengesProvider>
-                  <CurrentChallengesProvider>
-                    <ChatProvider>
-                      <>
-                        <Stack screenOptions={{ headerShown: false }} />
-                        <TrophyModal challengeId="" selectedDays={0} />
-                      </>
-                    </ChatProvider>
-                  </CurrentChallengesProvider>
-                </SavedChallengesProvider>
-              </TrophyProvider>
-            </ProfileUpdateProvider>
-          </LanguageProvider>
+          <ProfileUpdateProvider>
+            <TrophyProvider>
+              <SavedChallengesProvider>
+                <CurrentChallengesProvider>
+                  <ChatProvider>
+                    <>
+                      <Stack screenOptions={{ headerShown: false }} />
+                      <TrophyModal challengeId="" selectedDays={0} />
+                    </>
+                  </ChatProvider>
+                </CurrentChallengesProvider>
+              </SavedChallengesProvider>
+            </TrophyProvider>
+          </ProfileUpdateProvider>
         </PaperProvider>
       </ThemeProvider>
-    </GestureHandlerRootView>
+    </I18nextProvider>
+  </LanguageProvider>
+</GestureHandlerRootView>
+
   );
 }
 

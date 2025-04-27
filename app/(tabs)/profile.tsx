@@ -8,6 +8,7 @@ import {
   ActivityIndicator,
   ScrollView,
   Dimensions,
+  StatusBar,
 } from "react-native";
 import { useRouter } from "expo-router";
 import { Ionicons } from "@expo/vector-icons";
@@ -15,12 +16,15 @@ import { doc, onSnapshot } from "firebase/firestore";
 import { auth, db } from "../../constants/firebase-config";
 import { LinearGradient } from "expo-linear-gradient";
 import { useProfileUpdate } from "../../context/ProfileUpdateContext";
-import { useTheme } from "../../context/ThemeContext"; // Ajout de useTheme
-import { Theme } from "../../theme/designSystem"; // Import de l'interface Theme
+import { useTheme } from "../../context/ThemeContext";
+import { Theme } from "../../theme/designSystem";
 import CustomHeader from "@/components/CustomHeader";
 import Animated, { FadeInUp } from "react-native-reanimated";
-import GlobalLayout from "../../components/GlobalLayout"; // Ajout de GlobalLayout
+import GlobalLayout from "../../components/GlobalLayout";
 import designSystem from "../../theme/designSystem";
+
+// Import de SPACING depuis index.tsx pour cohérence
+const SPACING = 15;
 
 const { width: SCREEN_WIDTH, height: SCREEN_HEIGHT } = Dimensions.get("window");
 
@@ -29,52 +33,97 @@ const normalizeSize = (size: number) => {
   return Math.round(size * scale);
 };
 
+// Typage strict pour userData
+interface UserData {
+  username?: string;
+  bio?: string;
+  location?: string;
+  interests?: string[];
+  profileImage?: string;
+  trophies?: number;
+}
+
 export default function ProfileScreen() {
   const router = useRouter();
-  const [userData, setUserData] = useState<any>(null);
+  const [userData, setUserData] = useState<UserData | null>(null);
   const [isLoading, setIsLoading] = useState<boolean>(true);
+  const [error, setError] = useState<string | null>(null);
   const { profileUpdated } = useProfileUpdate();
-  const { theme } = useTheme(); // Ajout de useTheme
+  const { theme } = useTheme();
   const isDarkMode = theme === "dark";
   const currentTheme: Theme = isDarkMode
     ? designSystem.darkTheme
-    : designSystem.lightTheme; // Typage avec Theme
+    : designSystem.lightTheme;
 
   useEffect(() => {
     const userId = auth.currentUser?.uid;
     if (!userId) {
       setIsLoading(false);
+      setError("Aucun utilisateur connecté");
       return;
     }
     const userRef = doc(db, "users", userId);
     setIsLoading(true);
-    const unsubscribe = onSnapshot(userRef, (snapshot) => {
-      if (snapshot.exists()) {
-        setUserData(snapshot.data());
+    const unsubscribe = onSnapshot(
+      userRef,
+      (snapshot) => {
+        if (snapshot.exists()) {
+          setUserData(snapshot.data() as UserData);
+          setError(null);
+        } else {
+          setError("Profil non trouvé");
+        }
+        setIsLoading(false);
+      },
+      (err) => {
+        console.error("Erreur onSnapshot:", err);
+        setError("Erreur lors du chargement du profil");
+        setIsLoading(false);
       }
-      setIsLoading(false);
-    });
+    );
     return () => unsubscribe();
   }, [profileUpdated]);
 
   if (isLoading) {
     return (
       <GlobalLayout>
+        <StatusBar
+          translucent={true}
+          backgroundColor="transparent"
+          barStyle={isDarkMode ? "light-content" : "dark-content"}
+        />
         <LinearGradient
-          colors={[
-            currentTheme.colors.background,
-            currentTheme.colors.cardBackground,
-          ]}
+          colors={[currentTheme.colors.background, currentTheme.colors.cardBackground]}
           style={styles.loadingContainer}
         >
           <ActivityIndicator size="large" color={currentTheme.colors.primary} />
-          <Text
-            style={[
-              styles.loadingText,
-              { color: currentTheme.colors.textSecondary },
-            ]}
-          >
+          <Text style={[styles.loadingText, { color: currentTheme.colors.textSecondary }]}>
             Chargement du profil...
+          </Text>
+        </LinearGradient>
+      </GlobalLayout>
+    );
+  }
+
+  if (error) {
+    return (
+      <GlobalLayout>
+        <StatusBar
+          translucent={true}
+          backgroundColor="transparent"
+          barStyle={isDarkMode ? "light-content" : "dark-content"}
+        />
+        <LinearGradient
+          colors={[currentTheme.colors.background, currentTheme.colors.cardBackground]}
+          style={styles.loadingContainer}
+        >
+          <Ionicons
+            name="alert-circle-outline"
+            size={normalizeSize(40)}
+            color={currentTheme.colors.textSecondary}
+          />
+          <Text style={[styles.loadingText, { color: currentTheme.colors.textSecondary }]}>
+            {error}
           </Text>
         </LinearGradient>
       </GlobalLayout>
@@ -86,36 +135,50 @@ export default function ProfileScreen() {
       name: "Modifier le profil",
       icon: "person-circle-outline",
       navigateTo: "profile/UserInfo",
+      accessibilityLabel: "Modifier le profil",
+      testID: "edit-profile-button",
     },
     {
       name: "Statistiques",
       icon: "stats-chart-outline",
       navigateTo: "profile/UserStats",
+      accessibilityLabel: "Voir les statistiques",
+      testID: "stats-button",
     },
     {
       name: "Défis en cours",
       icon: "flag-outline",
       navigateTo: "profile/CurrentChallenges",
+      accessibilityLabel: "Voir les défis en cours",
+      testID: "current-challenges-button",
     },
     {
       name: "Favoris",
       icon: "bookmark-outline",
       navigateTo: "profile/SavedChallenges",
+      accessibilityLabel: "Voir les défis favoris",
+      testID: "favorites-button",
     },
     {
       name: "Défis complétés",
       icon: "checkmark-done-outline",
       navigateTo: "profile/CompletedChallenges",
+      accessibilityLabel: "Voir les défis complétés",
+      testID: "completed-challenges-button",
     },
     {
       name: "Récompenses",
       icon: "medal-outline",
       navigateTo: "profile/Achievements",
+      accessibilityLabel: "Voir les récompenses",
+      testID: "achievements-button",
     },
     {
       name: "Mes challenges",
       icon: "create-outline",
       navigateTo: "profile/MyChallenges",
+      accessibilityLabel: "Voir mes challenges",
+      testID: "my-challenges-button",
     },
   ];
 
@@ -124,17 +187,17 @@ export default function ProfileScreen() {
     rows.push(sections.slice(i, i + 2));
   }
 
-  const interests: string[] = Array.isArray(userData?.interests)
-    ? userData.interests
-    : [];
+  const interests: string[] = Array.isArray(userData?.interests) ? userData.interests : [];
 
   return (
     <GlobalLayout>
+      <StatusBar
+        translucent={true}
+        backgroundColor="transparent"
+        barStyle={isDarkMode ? "light-content" : "dark-content"}
+      />
       <LinearGradient
-        colors={[
-          currentTheme.colors.background,
-          currentTheme.colors.cardBackground,
-        ]}
+        colors={[currentTheme.colors.background, currentTheme.colors.cardBackground]}
         style={styles.container}
         start={{ x: 0, y: 0 }}
         end={{ x: 1, y: 1 }}
@@ -145,24 +208,15 @@ export default function ProfileScreen() {
           </View>
 
           {/* Carte de profil */}
-          <Animated.View
-            entering={FadeInUp.delay(100)}
-            style={styles.profileCardWrapper}
-          >
+          <Animated.View entering={FadeInUp.delay(100)} style={styles.profileCardWrapper}>
             <LinearGradient
-              colors={[
-                currentTheme.colors.secondary,
-                currentTheme.colors.background,
-              ]} // Gradient dynamique
+              colors={[currentTheme.colors.secondary, currentTheme.colors.background]}
               style={styles.profileCard}
               start={{ x: 0, y: 0 }}
               end={{ x: 1, y: 1 }}
             >
               <View
-                style={[
-                  styles.overlay,
-                  { backgroundColor: currentTheme.colors.overlay },
-                ]}
+                style={[styles.overlay, { backgroundColor: currentTheme.colors.overlay }]}
               />
               <View style={styles.avatarContainer}>
                 <Image
@@ -171,10 +225,7 @@ export default function ProfileScreen() {
                       ? { uri: userData.profileImage }
                       : require("../../assets/images/default-profile.jpg")
                   }
-                  style={[
-                    styles.avatar,
-                    { borderColor: currentTheme.colors.textPrimary },
-                  ]}
+                  style={[styles.avatar, { borderColor: currentTheme.colors.textPrimary }]}
                 />
                 <Animated.View
                   entering={FadeInUp.delay(300)}
@@ -192,40 +243,23 @@ export default function ProfileScreen() {
                     color={currentTheme.colors.trophy}
                   />
                   <Text
-                    style={[
-                      styles.trophyBadgeText,
-                      { color: currentTheme.colors.trophy },
-                    ]}
+                    style={[styles.trophyBadgeText, { color: currentTheme.colors.trophy }]}
                   >
                     {userData?.trophies || 0}
                   </Text>
                 </Animated.View>
               </View>
-              <Animated.View
-                entering={FadeInUp.delay(200)}
-                style={styles.userInfo}
-              >
+              <Animated.View entering={FadeInUp.delay(200)} style={styles.userInfo}>
                 <Text
-                  style={[
-                    styles.username,
-                    { color: currentTheme.colors.textPrimary },
-                  ]}
+                  style={[styles.username, { color: currentTheme.colors.textPrimary }]}
                 >
                   {userData?.username || "Utilisateur"}
                 </Text>
-                <Text
-                  style={[
-                    styles.bio,
-                    { color: currentTheme.colors.textSecondary },
-                  ]}
-                >
+                <Text style={[styles.bio, { color: currentTheme.colors.textSecondary }]}>
                   {userData?.bio || "Ajoute une bio stylée !"}
                 </Text>
               </Animated.View>
-              <Animated.View
-                entering={FadeInUp.delay(400)}
-                style={styles.detailsContainer}
-              >
+              <Animated.View entering={FadeInUp.delay(400)} style={styles.detailsContainer}>
                 <View style={styles.infoRow}>
                   <Ionicons
                     name="location-outline"
@@ -233,10 +267,7 @@ export default function ProfileScreen() {
                     color={currentTheme.colors.textPrimary}
                   />
                   <Text
-                    style={[
-                      styles.location,
-                      { color: currentTheme.colors.textPrimary },
-                    ]}
+                    style={[styles.location, { color: currentTheme.colors.textPrimary }]}
                   >
                     {userData?.location || "Lieu inconnu"}
                   </Text>
@@ -289,10 +320,7 @@ export default function ProfileScreen() {
                 entering={FadeInUp.delay(500 + rowIndex * 100)}
                 style={[
                   styles.rowContainer,
-                  {
-                    justifyContent:
-                      row.length === 1 ? "center" : "space-between",
-                  },
+                  { justifyContent: row.length === 1 ? "center" : "space-between" },
                 ]}
               >
                 {row.map((section, index) => (
@@ -300,12 +328,11 @@ export default function ProfileScreen() {
                     key={index}
                     style={styles.sectionButton}
                     onPress={() => router.push(section.navigateTo)}
+                    accessibilityLabel={section.accessibilityLabel}
+                    testID={section.testID}
                   >
                     <LinearGradient
-                      colors={[
-                        currentTheme.colors.cardBackground,
-                        currentTheme.colors.border,
-                      ]} // Gradient dynamique pour les boutons
+                      colors={[currentTheme.colors.cardBackground, currentTheme.colors.border]}
                       style={styles.sectionGradient}
                     >
                       <Ionicons
@@ -314,10 +341,7 @@ export default function ProfileScreen() {
                         color={currentTheme.colors.secondary}
                       />
                       <Text
-                        style={[
-                          styles.sectionText,
-                          { color: currentTheme.colors.secondary },
-                        ]}
+                        style={[styles.sectionText, { color: currentTheme.colors.secondary }]}
                       >
                         {section.name}
                       </Text>
@@ -336,16 +360,15 @@ export default function ProfileScreen() {
 const styles = StyleSheet.create({
   container: { flex: 1 },
   scrollContent: {
-    padding: normalizeSize(15),
+    padding: SPACING,
     paddingBottom: SCREEN_HEIGHT * 0.1,
   },
   headerWrapper: {
-    marginTop: SCREEN_HEIGHT * 0.01,
-    marginBottom: SCREEN_HEIGHT * 0.02,
-    paddingHorizontal: SCREEN_WIDTH * 0.05,
+    marginBottom: SPACING,
+    paddingHorizontal: SPACING,
   },
   profileCardWrapper: {
-    marginBottom: normalizeSize(20),
+    marginBottom: SPACING,
   },
   profileCard: {
     borderRadius: normalizeSize(25),
@@ -387,7 +410,7 @@ const styles = StyleSheet.create({
   },
   trophyBadgeText: {
     fontSize: normalizeSize(14),
-    fontFamily: "Comfortaa_700Bold", // Typographie dynamique possible si besoin
+    fontFamily: "Comfortaa_700Bold",
     marginLeft: normalizeSize(4),
   },
   userInfo: {
@@ -447,11 +470,11 @@ const styles = StyleSheet.create({
     margin: normalizeSize(4),
   },
   sectionsContainer: {
-    marginTop: normalizeSize(10),
+    marginTop: SPACING,
   },
   rowContainer: {
     flexDirection: "row",
-    marginBottom: normalizeSize(15),
+    marginBottom: SPACING,
   },
   sectionButton: {
     width: "48%",
@@ -468,7 +491,7 @@ const styles = StyleSheet.create({
     alignItems: "center",
     borderRadius: normalizeSize(15),
     borderWidth: 1,
-    borderColor: "rgba(255, 98, 0, 0.2)", // Légère teinte dynamique possible
+    borderColor: "rgba(255, 98, 0, 0.2)",
   },
   sectionText: {
     fontSize: normalizeSize(16),

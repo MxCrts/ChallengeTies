@@ -9,15 +9,20 @@ import {
   Linking,
   Dimensions,
   SafeAreaView,
+  StatusBar,
+  Share,
 } from "react-native";
 import Animated, { FadeInUp } from "react-native-reanimated";
 import { Ionicons } from "@expo/vector-icons";
 import { LinearGradient } from "expo-linear-gradient";
 import { useRouter } from "expo-router";
-import { useTheme } from "../context/ThemeContext"; // Ajout de useTheme
-import { Theme } from "../theme/designSystem"; // Import de l'interface Theme
+import { useTheme } from "../context/ThemeContext";
+import { Theme } from "../theme/designSystem";
 import designSystem from "../theme/designSystem";
 import CustomHeader from "@/components/CustomHeader";
+
+// Constante SPACING pour cohérence avec focus.tsx
+const SPACING = 15;
 
 const { width: SCREEN_WIDTH, height: SCREEN_HEIGHT } = Dimensions.get("window");
 
@@ -31,7 +36,26 @@ const normalizeSize = (size: number) => {
   return Math.round(size * scale);
 };
 
-const conseils = [
+// Typage des icônes pour éviter keyof typeof
+type IconName =
+  | "checkmark-circle-outline"
+  | "time-outline"
+  | "analytics-outline"
+  | "people-outline"
+  | "gift-outline"
+  | "flask-outline"
+  | "person-add-outline"
+  | "eye-outline"
+  | "sunny-outline";
+
+interface Conseil {
+  id: string;
+  title: string;
+  description: string;
+  icon: IconName;
+}
+
+const conseils: Conseil[] = [
   {
     id: "1",
     title: "Fixez des objectifs SMART",
@@ -69,7 +93,7 @@ const conseils = [
   },
   {
     id: "6",
-    title: "Variez les plaisirs",
+     title: "Variez les plaisirs",
     description:
       "Luttez contre l'ennui en essayant de nouveaux défis, en explorant différentes catégories et en pimentant vos objectifs.",
     icon: "flask-outline",
@@ -100,26 +124,50 @@ const conseils = [
 export default function Conseils() {
   const router = useRouter();
   const [expandedTip, setExpandedTip] = useState<string | null>(null);
-  const { theme } = useTheme(); // Ajout de useTheme
+  const { theme } = useTheme();
   const isDarkMode = theme === "dark";
-  const currentTheme: Theme = isDarkMode
-    ? designSystem.darkTheme
-    : designSystem.lightTheme;
+  const currentTheme: Theme = isDarkMode ? designSystem.darkTheme : designSystem.lightTheme;
 
   const toggleTip = (id: string) => {
     setExpandedTip(expandedTip === id ? null : id);
   };
 
+  const handleContact = async () => {
+    const url = "mailto:support@challengeme.com";
+    try {
+      const supported = await Linking.canOpenURL(url);
+      if (supported) {
+        await Linking.openURL(url);
+      } else {
+        console.warn("Impossible d'ouvrir l'application mail");
+      }
+    } catch (error) {
+      console.error("Erreur lors de l'ouverture du mail:", error);
+    }
+  };
+
+  const handleShare = async () => {
+    try {
+      await Share.share({
+        message: "Check out these awesome tips from ChallengeTies!",
+      });
+    } catch (error) {
+      console.error("Erreur lors du partage:", error);
+    }
+  };
+
   return (
     <LinearGradient
-      colors={[
-        currentTheme.colors.background,
-        currentTheme.colors.cardBackground,
-      ]}
+      colors={[currentTheme.colors.background, currentTheme.colors.cardBackground]}
       style={styles.gradientContainer}
       start={{ x: 0, y: 0 }}
       end={{ x: 0.8, y: 1 }}
     >
+      <StatusBar
+        translucent={true}
+        backgroundColor="transparent"
+        barStyle={isDarkMode ? "light-content" : "dark-content"}
+      />
       <SafeAreaView style={styles.safeArea}>
         <View style={styles.headerWrapper}>
           <CustomHeader title="Astuces" />
@@ -127,23 +175,41 @@ export default function Conseils() {
         <ScrollView
           contentContainerStyle={styles.scrollContent}
           showsVerticalScrollIndicator={false}
+          contentInset={{ top: SPACING, bottom: SPACING }}
+          accessibilityRole="list"
+          accessibilityLabel="Liste des astuces"
         >
           <Animated.View
             entering={FadeInUp.delay(100)}
             style={styles.headerContainer}
           >
-            <Image
-              source={require("../assets/images/Challenge.png")}
-              style={styles.logo}
-            />
+            {require("../assets/images/Challenge.png") ? (
+              <Image
+                source={require("../assets/images/Challenge.png")}
+                style={styles.logo}
+              />
+            ) : (
+              <LinearGradient
+                colors={[currentTheme.colors.border, currentTheme.colors.overlay]}
+                style={styles.logoPlaceholder}
+              >
+                <Ionicons
+                  name="image-outline"
+                  size={normalizeSize(60)}
+                  color={currentTheme.colors.textSecondary}
+                />
+                <Text
+                  style={[styles.placeholderText, { color: currentTheme.colors.textSecondary }]}
+                >
+                  Image non disponible
+                </Text>
+              </LinearGradient>
+            )}
             <Text
-              style={[
-                styles.subHeaderText,
-                { color: currentTheme.colors.textSecondary },
-              ]}
+              style={[styles.subHeaderText, { color: currentTheme.colors.textSecondary }]}
             >
-              Des conseils pratiques pour rester inspiré, atteindre vos
-              objectifs et remporter des trophées !
+              Des conseils pratiques pour rester inspiré, atteindre vos objectifs et
+              remporter des trophées !
             </Text>
           </Animated.View>
 
@@ -151,7 +217,7 @@ export default function Conseils() {
             {conseils.map((conseil, index) => (
               <Animated.View
                 key={conseil.id}
-                entering={FadeInUp.delay(200 + index * 100)}
+                entering={FadeInUp.delay(200 + index * 50)} // Délai réduit pour fluidité
               >
                 <TouchableOpacity
                   style={[
@@ -163,27 +229,23 @@ export default function Conseils() {
                     expandedTip === conseil.id && styles.tipCardExpanded,
                   ]}
                   onPress={() => toggleTip(conseil.id)}
+                  accessibilityLabel={`Afficher les détails de l'astuce ${conseil.title}`}
+                  testID={`tip-card-${conseil.id}`}
                 >
                   <Ionicons
-                    name={conseil.icon as keyof typeof Ionicons.glyphMap}
+                    name={conseil.icon}
                     size={normalizeSize(32)}
                     color={currentTheme.colors.secondary}
                     style={styles.tipIcon}
                   />
                   <View style={styles.tipContent}>
                     <Text
-                      style={[
-                        styles.tipTitle,
-                        { color: currentTheme.colors.secondary },
-                      ]}
+                      style={[styles.tipTitle, { color: currentTheme.colors.secondary }]}
                     >
                       {conseil.title}
                     </Text>
                     <Text
-                      style={[
-                        styles.tipDescription,
-                        { color: currentTheme.colors.textSecondary },
-                      ]}
+                      style={[styles.tipDescription, { color: currentTheme.colors.textSecondary }]}
                       numberOfLines={expandedTip === conseil.id ? 0 : 2}
                     >
                       {conseil.description}
@@ -191,12 +253,15 @@ export default function Conseils() {
                     <TouchableOpacity
                       style={styles.readMoreButton}
                       onPress={() => toggleTip(conseil.id)}
+                      accessibilityLabel={
+                        expandedTip === conseil.id
+                          ? `Réduire l'astuce ${conseil.title}`
+                          : `Lire plus sur l'astuce ${conseil.title}`
+                      }
+                      testID={`read-more-${conseil.id}`}
                     >
                       <Text
-                        style={[
-                          styles.readMoreText,
-                          { color: currentTheme.colors.primary },
-                        ]}
+                        style={[styles.readMoreText, { color: currentTheme.colors.primary }]}
                       >
                         {expandedTip === conseil.id ? "Réduire" : "Lire plus"}
                       </Text>
@@ -207,47 +272,33 @@ export default function Conseils() {
             ))}
           </View>
 
-          <Animated.View entering={FadeInUp.delay(1000)} style={styles.footer}>
+          <Animated.View entering={FadeInUp.delay(600)} style={styles.footer}>
             <Text
-              style={[
-                styles.footerText,
-                { color: currentTheme.colors.textSecondary },
-              ]}
+              style={[styles.footerText, { color: currentTheme.colors.textSecondary }]}
             >
               Plus de questions ou besoin d'une aide personnalisée ?{" "}
               <Text
-                style={[
-                  styles.footerLink,
-                  { color: currentTheme.colors.secondary },
-                ]}
-                onPress={() =>
-                  Linking.openURL("mailto:support@challengeme.com")
-                }
+                style={[styles.footerLink, { color: currentTheme.colors.secondary }]}
+                onPress={handleContact}
+                accessibilityLabel="Contacter le support"
+                testID="contact-link"
               >
                 Contactez-nous
               </Text>
             </Text>
             <TouchableOpacity
-              style={[
-                styles.shareButton,
-                { backgroundColor: currentTheme.colors.primary },
-              ]}
-              onPress={() =>
-                Linking.openURL(
-                  "sms:&body=Check out these awesome tips from ChallengeTies!"
-                )
-              }
+              style={[styles.shareButton, { backgroundColor: currentTheme.colors.primary }]}
+              onPress={handleShare}
+              accessibilityLabel="Partager les astuces"
+              testID="share-button"
             >
               <Ionicons
                 name="share-social-outline"
                 size={normalizeSize(20)}
-                color={currentTheme.colors.textPrimary} // Texte blanc pour contraste
+                color={currentTheme.colors.textPrimary}
               />
               <Text
-                style={[
-                  styles.shareButtonText,
-                  { color: currentTheme.colors.textPrimary },
-                ]}
+                style={[styles.shareButtonText, { color: currentTheme.colors.textPrimary }]}
               >
                 Partager les astuces
               </Text>
@@ -267,40 +318,52 @@ const styles = StyleSheet.create({
     flex: 1,
   },
   headerWrapper: {
-    marginTop: SCREEN_HEIGHT * 0.04,
-    marginBottom: SCREEN_HEIGHT * 0.02,
-    paddingHorizontal: SCREEN_WIDTH * 0.05,
+    paddingHorizontal: SPACING,
+    paddingVertical: SPACING,
   },
   scrollContent: {
-    paddingHorizontal: SCREEN_WIDTH * 0.05,
-    paddingBottom: SCREEN_HEIGHT * 0.08,
+    paddingHorizontal: SPACING,
+    paddingBottom: SPACING * 2,
   },
   headerContainer: {
     alignItems: "center",
-    marginBottom: SCREEN_HEIGHT * 0.03,
+    marginBottom: SPACING * 2,
   },
   logo: {
     width: SCREEN_WIDTH * 0.5,
     height: SCREEN_WIDTH * 0.5,
     resizeMode: "contain",
-    marginBottom: SCREEN_HEIGHT * 0.02,
+    marginBottom: SPACING,
+  },
+  logoPlaceholder: {
+    width: SCREEN_WIDTH * 0.5,
+    height: SCREEN_WIDTH * 0.5,
+    justifyContent: "center",
+    alignItems: "center",
+    marginBottom: SPACING,
+  },
+  placeholderText: {
+    marginTop: SPACING,
+    fontSize: normalizeFont(12),
+    fontFamily: "Comfortaa_400Regular",
+    textAlign: "center",
   },
   subHeaderText: {
     fontSize: normalizeFont(16),
-    fontFamily: "Comfortaa_400Regular", // Remplace par la fonte directe
+    fontFamily: "Comfortaa_400Regular",
     textAlign: "center",
-    marginHorizontal: SCREEN_WIDTH * 0.05,
+    marginHorizontal: SPACING,
     lineHeight: normalizeFont(22),
   },
   tipsContainer: {
-    marginVertical: SCREEN_HEIGHT * 0.02,
+    marginVertical: SPACING,
   },
   tipCard: {
     flexDirection: "row",
     alignItems: "flex-start",
     borderRadius: normalizeSize(15),
-    padding: normalizeSize(16),
-    marginBottom: SCREEN_HEIGHT * 0.02,
+    padding: SPACING,
+    marginBottom: SPACING,
     shadowColor: "#000",
     shadowOffset: { width: 0, height: normalizeSize(4) },
     shadowOpacity: 0.15,
@@ -309,10 +372,10 @@ const styles = StyleSheet.create({
     borderWidth: 1,
   },
   tipCardExpanded: {
-    opacity: 0.95, // Légère transparence pour effet premium
+    opacity: 0.95,
   },
   tipIcon: {
-    marginRight: normalizeSize(14),
+    marginRight: SPACING,
     marginTop: normalizeSize(2),
   },
   tipContent: {
@@ -320,42 +383,42 @@ const styles = StyleSheet.create({
   },
   tipTitle: {
     fontSize: normalizeFont(18),
-    fontFamily: "Comfortaa_700Bold", // Remplace par la fonte directe
+    fontFamily: "Comfortaa_700Bold",
     marginBottom: normalizeSize(6),
   },
   tipDescription: {
     fontSize: normalizeFont(14),
-    fontFamily: "Comfortaa_400Regular", // Remplace par la fonte directe
+    fontFamily: "Comfortaa_400Regular",
     lineHeight: normalizeFont(20),
   },
   readMoreButton: {
-    marginTop: normalizeSize(8),
+    marginTop: SPACING / 2,
     alignSelf: "flex-start",
   },
   readMoreText: {
     fontSize: normalizeFont(12),
-    fontFamily: "Comfortaa_400Regular", // Remplace par la fonte directe
+    fontFamily: "Comfortaa_400Regular",
     textDecorationLine: "underline",
   },
   footer: {
-    marginTop: SCREEN_HEIGHT * 0.03,
+    marginTop: SPACING * 2,
     alignItems: "center",
   },
   footerText: {
     fontSize: normalizeFont(14),
-    fontFamily: "Comfortaa_400Regular", // Remplace par la fonte directe
+    fontFamily: "Comfortaa_400Regular",
     textAlign: "center",
-    marginBottom: SCREEN_HEIGHT * 0.02,
+    marginBottom: SPACING,
   },
   footerLink: {
-    fontFamily: "Comfortaa_700Bold", // Remplace par la fonte directe
+    fontFamily: "Comfortaa_700Bold",
     textDecorationLine: "underline",
   },
   shareButton: {
     flexDirection: "row",
     alignItems: "center",
-    paddingVertical: normalizeSize(10),
-    paddingHorizontal: normalizeSize(20),
+    paddingVertical: SPACING / 1.5,
+    paddingHorizontal: SPACING * 1.5,
     borderRadius: normalizeSize(25),
     shadowColor: "#000",
     shadowOffset: { width: 0, height: normalizeSize(3) },
@@ -365,7 +428,7 @@ const styles = StyleSheet.create({
   },
   shareButtonText: {
     fontSize: normalizeFont(14),
-    fontFamily: "Comfortaa_700Bold", // Remplace par la fonte directe
-    marginLeft: normalizeSize(8),
+    fontFamily: "Comfortaa_700Bold",
+    marginLeft: SPACING / 2,
   },
 });

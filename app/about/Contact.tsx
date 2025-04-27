@@ -1,4 +1,4 @@
-import React, { useState } from "react";
+import React, { useState, useCallback } from "react";
 import {
   View,
   Text,
@@ -11,20 +11,28 @@ import {
   SafeAreaView,
   Image,
   Dimensions,
+  StatusBar,
 } from "react-native";
 import { Ionicons } from "@expo/vector-icons";
 import { LinearGradient } from "expo-linear-gradient";
 import Animated, { FadeInUp } from "react-native-reanimated";
 import { useTheme } from "../../context/ThemeContext";
+import { Theme } from "../../theme/designSystem";
 import designSystem from "../../theme/designSystem";
 import BackButton from "../../components/BackButton";
 
-const { width } = Dimensions.get("window");
+const { width: SCREEN_WIDTH, height: SCREEN_HEIGHT } = Dimensions.get("window");
+const SPACING = 15;
+
+const normalizeSize = (size: number) => {
+  const scale = SCREEN_WIDTH / 375;
+  return Math.round(size * scale);
+};
 
 export default function Contact() {
   const { theme } = useTheme();
-  const currentTheme =
-    theme === "dark" ? designSystem.darkTheme : designSystem.lightTheme;
+  const isDarkMode = theme === "dark";
+  const currentTheme: Theme = isDarkMode ? designSystem.darkTheme : designSystem.lightTheme;
   const gradientColors: readonly [string, string] = [
     currentTheme.colors.background,
     currentTheme.colors.cardBackground,
@@ -35,12 +43,12 @@ export default function Contact() {
   const [email, setEmail] = useState("");
   const [message, setMessage] = useState("");
 
-  const handleSendMessage = () => {
+  const handleSendMessage = useCallback(() => {
     if (!name || !email || !message) {
       Alert.alert("Erreur", "Veuillez remplir tous les champs.");
       return;
     }
-    // Ici vous pouvez intégrer l'envoi effectif du message via une API
+    // Ici, intégrer l'envoi effectif du message via une API si nécessaire
     Alert.alert(
       "Message envoyé",
       "Nous vous répondrons dans les plus brefs délais !"
@@ -48,16 +56,23 @@ export default function Contact() {
     setName("");
     setEmail("");
     setMessage("");
-  };
+  }, [name, email, message]);
 
   return (
     <LinearGradient colors={gradientColors} style={styles.container}>
       <SafeAreaView style={styles.safeArea}>
+        <StatusBar
+          translucent
+          backgroundColor="transparent"
+          barStyle={isDarkMode ? "light-content" : "dark-content"}
+        />
         <ScrollView
           contentContainerStyle={styles.contentContainer}
           showsVerticalScrollIndicator={false}
         >
-          <BackButton color={currentTheme.colors.primary} />
+          <BackButton
+            color={currentTheme.colors.secondary}
+          />
           {/* Entête avec logo */}
           <Animated.View
             entering={FadeInUp.duration(800)}
@@ -65,17 +80,15 @@ export default function Contact() {
           >
             <Image
               source={require("../../assets/images/Challenge.png")}
-              style={[styles.logo, { width: width * 0.4, height: width * 0.4 }]}
+              style={styles.logo}
+              resizeMode="contain"
             />
           </Animated.View>
 
           {/* Titre principal */}
           <Animated.Text
             entering={FadeInUp.delay(200)}
-            style={[
-              styles.title,
-              { color: currentTheme.colors.textPrimary || "#1F2937" },
-            ]}
+            style={[styles.title, { color: currentTheme.colors.textPrimary }]}
           >
             Contactez-nous 📩
           </Animated.Text>
@@ -83,41 +96,39 @@ export default function Contact() {
           {/* Introduction */}
           <Animated.Text
             entering={FadeInUp.delay(300)}
-            style={[
-              styles.paragraph,
-              { color: currentTheme.colors.textSecondary || "#4B5563" },
-            ]}
+            style={[styles.paragraph, { color: currentTheme.colors.textSecondary }]}
           >
-            Une question ? Un problème ? Une suggestion ? Nous sommes là pour
-            vous aider. N’hésitez pas à nous contacter via les canaux ci-dessous
-            ou à nous envoyer un message directement.
+            Une question ? Un problème ? Une suggestion ? Nous sommes là pour vous
+            aider. N’hésitez pas à nous contacter via les canaux ci-dessous ou à
+            nous envoyer un message directement.
           </Animated.Text>
 
           {/* Email */}
           <Animated.View
             entering={FadeInUp.delay(400)}
-            style={styles.contactCard}
+            style={[styles.contactCard, { backgroundColor: currentTheme.colors.cardBackground }]}
           >
             <Ionicons
               name="mail-outline"
-              size={28}
-              color={currentTheme.colors.primary || "#2563EB"}
+              size={normalizeSize(28)}
+              color={currentTheme.colors.secondary}
             />
             <View style={styles.contactTextContainer}>
               <Text
-                style={[
-                  styles.sectionTitle,
-                  { color: currentTheme.colors.primary || "#2563EB" },
-                ]}
+                style={[styles.sectionTitle, { color: currentTheme.colors.secondary }]}
               >
                 Email
               </Text>
               <TouchableOpacity
-                onPress={() =>
-                  Linking.openURL("mailto:support@challengeties.com")
-                }
+                onPress={() => Linking.openURL("mailto:support@challengeties.com")}
+                accessibilityLabel="Envoyer un email à support@challengeties.com"
+                testID="email-link"
               >
-                <Text style={styles.link}>support@challengeties.com</Text>
+                <Text
+                  style={[styles.link, { color: currentTheme.colors.secondary }]}
+                >
+                  support@challengeties.com
+                </Text>
               </TouchableOpacity>
             </View>
           </Animated.View>
@@ -125,22 +136,29 @@ export default function Contact() {
           {/* Téléphone */}
           <Animated.View
             entering={FadeInUp.delay(500)}
-            style={styles.contactCard}
+            style={[styles.contactCard, { backgroundColor: currentTheme.colors.cardBackground }]}
           >
-            <Ionicons name="call-outline" size={28} color="#34D399" />
+            <Ionicons
+              name="call-outline"
+              size={normalizeSize(28)}
+              color={currentTheme.colors.secondary}
+            />
             <View style={styles.contactTextContainer}>
               <Text
-                style={[
-                  styles.sectionTitle,
-                  { color: currentTheme.colors.primary || "#2563EB" },
-                ]}
+                style={[styles.sectionTitle, { color: currentTheme.colors.secondary }]}
               >
                 Téléphone
               </Text>
               <TouchableOpacity
                 onPress={() => Linking.openURL("tel:+33123456789")}
+                accessibilityLabel="Appeler le +33 1 23 45 67 89"
+                testID="phone-link"
               >
-                <Text style={styles.link}>+33 1 23 45 67 89</Text>
+                <Text
+                  style={[styles.link, { color: currentTheme.colors.secondary }]}
+                >
+                  +33 1 23 45 67 89
+                </Text>
               </TouchableOpacity>
             </View>
           </Animated.View>
@@ -148,15 +166,16 @@ export default function Contact() {
           {/* Instagram */}
           <Animated.View
             entering={FadeInUp.delay(600)}
-            style={styles.contactCard}
+            style={[styles.contactCard, { backgroundColor: currentTheme.colors.cardBackground }]}
           >
-            <Ionicons name="logo-instagram" size={28} color="#E4405F" />
+            <Ionicons
+              name="logo-instagram"
+              size={normalizeSize(28)}
+              color={currentTheme.colors.secondary}
+            />
             <View style={styles.contactTextContainer}>
               <Text
-                style={[
-                  styles.sectionTitle,
-                  { color: currentTheme.colors.primary || "#2563EB" },
-                ]}
+                style={[styles.sectionTitle, { color: currentTheme.colors.secondary }]}
               >
                 Instagram
               </Text>
@@ -164,8 +183,14 @@ export default function Contact() {
                 onPress={() =>
                   Linking.openURL("https://www.instagram.com/challengeties")
                 }
+                accessibilityLabel="Visiter notre page Instagram @challengeties"
+                testID="instagram-link"
               >
-                <Text style={styles.link}>@challengeties</Text>
+                <Text
+                  style={[styles.link, { color: currentTheme.colors.secondary }]}
+                >
+                  @challengeties
+                </Text>
               </TouchableOpacity>
             </View>
           </Animated.View>
@@ -173,15 +198,16 @@ export default function Contact() {
           {/* Facebook */}
           <Animated.View
             entering={FadeInUp.delay(700)}
-            style={styles.contactCard}
+            style={[styles.contactCard, { backgroundColor: currentTheme.colors.cardBackground }]}
           >
-            <Ionicons name="logo-facebook" size={28} color="#2563EB" />
+            <Ionicons
+              name="logo-facebook"
+              size={normalizeSize(28)}
+              color={currentTheme.colors.secondary}
+            />
             <View style={styles.contactTextContainer}>
               <Text
-                style={[
-                  styles.sectionTitle,
-                  { color: currentTheme.colors.primary || "#2563EB" },
-                ]}
+                style={[styles.sectionTitle, { color: currentTheme.colors.secondary }]}
               >
                 Facebook
               </Text>
@@ -189,8 +215,14 @@ export default function Contact() {
                 onPress={() =>
                   Linking.openURL("https://www.facebook.com/challengeties")
                 }
+                accessibilityLabel="Visiter notre page Facebook @challengeties"
+                testID="facebook-link"
               >
-                <Text style={styles.link}>@challengeties</Text>
+                <Text
+                  style={[styles.link, { color: currentTheme.colors.secondary }]}
+                >
+                  @challengeties
+                </Text>
               </TouchableOpacity>
             </View>
           </Animated.View>
@@ -198,22 +230,29 @@ export default function Contact() {
           {/* WhatsApp */}
           <Animated.View
             entering={FadeInUp.delay(800)}
-            style={styles.contactCard}
+            style={[styles.contactCard, { backgroundColor: currentTheme.colors.cardBackground }]}
           >
-            <Ionicons name="logo-whatsapp" size={28} color="#34D399" />
+            <Ionicons
+              name="logo-whatsapp"
+              size={normalizeSize(28)}
+              color={currentTheme.colors.secondary}
+            />
             <View style={styles.contactTextContainer}>
               <Text
-                style={[
-                  styles.sectionTitle,
-                  { color: currentTheme.colors.primary || "#2563EB" },
-                ]}
+                style={[styles.sectionTitle, { color: currentTheme.colors.secondary }]}
               >
                 WhatsApp
               </Text>
               <TouchableOpacity
                 onPress={() => Linking.openURL("https://wa.me/123456789")}
+                accessibilityLabel="Nous contacter via WhatsApp"
+                testID="whatsapp-link"
               >
-                <Text style={styles.link}>Nous contacter sur WhatsApp</Text>
+                <Text
+                  style={[styles.link, { color: currentTheme.colors.secondary }]}
+                >
+                  Nous contacter sur WhatsApp
+                </Text>
               </TouchableOpacity>
             </View>
           </Animated.View>
@@ -221,67 +260,96 @@ export default function Contact() {
           {/* Formulaire de contact */}
           <Animated.View
             entering={FadeInUp.delay(1000)}
-            style={styles.contactForm}
+            style={[styles.contactForm, { backgroundColor: currentTheme.colors.overlay }]}
           >
             <Text
-              style={[
-                styles.sectionTitle,
-                { color: currentTheme.colors.primary || "#2563EB" },
-              ]}
+              style={[styles.sectionTitle, { color: currentTheme.colors.secondary }]}
             >
               Envoyez-nous un message
             </Text>
             <TextInput
               style={[
                 styles.input,
-                { borderColor: currentTheme.colors.border || "#ddd" },
+                {
+                  borderColor: currentTheme.colors.border,
+                  backgroundColor: currentTheme.colors.cardBackground,
+                  color: currentTheme.colors.textPrimary,
+                },
               ]}
               placeholder="Votre nom"
-              placeholderTextColor="#666"
+              placeholderTextColor={currentTheme.colors.textSecondary}
               value={name}
               onChangeText={setName}
+              accessibilityLabel="Champ pour votre nom"
+              accessibilityHint="Entrez votre nom complet"
+              testID="name-input"
             />
             <TextInput
               style={[
                 styles.input,
-                { borderColor: currentTheme.colors.border || "#ddd" },
+                {
+                  borderColor: currentTheme.colors.border,
+                  backgroundColor: currentTheme.colors.cardBackground,
+                  color: currentTheme.colors.textPrimary,
+                },
               ]}
               placeholder="Votre email"
-              placeholderTextColor="#666"
+              placeholderTextColor={currentTheme.colors.textSecondary}
               keyboardType="email-address"
               value={email}
               onChangeText={setEmail}
+              accessibilityLabel="Champ pour votre email"
+              accessibilityHint="Entrez votre adresse email"
+              testID="email-input"
             />
             <TextInput
               style={[
                 styles.input,
                 styles.textArea,
-                { borderColor: currentTheme.colors.border || "#ddd" },
+                {
+                  borderColor: currentTheme.colors.border,
+                  backgroundColor: currentTheme.colors.cardBackground,
+                  color: currentTheme.colors.textPrimary,
+                },
               ]}
               placeholder="Votre message"
-              placeholderTextColor="#666"
+              placeholderTextColor={currentTheme.colors.textSecondary}
               multiline
               numberOfLines={4}
               value={message}
               onChangeText={setMessage}
+              accessibilityLabel="Champ pour votre message"
+              accessibilityHint="Entrez votre message ou question"
+              testID="message-input"
             />
             <TouchableOpacity
-              style={[
-                styles.button,
-                { backgroundColor: currentTheme.colors.primary || "#2563EB" },
-              ]}
+              style={[styles.button, { backgroundColor: currentTheme.colors.secondary }]}
               onPress={handleSendMessage}
+              accessibilityLabel="Envoyer le message"
+              testID="send-button"
             >
-              <Text style={styles.buttonText}>Envoyer</Text>
+              <Text
+                style={[styles.buttonText, { color: currentTheme.colors.textPrimary }]}
+              >
+                Envoyer
+              </Text>
             </TouchableOpacity>
           </Animated.View>
 
           {/* Message final */}
-          <Animated.View entering={FadeInUp.delay(1100)} style={styles.footer}>
-            <Text style={styles.footerText}>
+          <Animated.View
+            entering={FadeInUp.delay(1100)}
+            style={[styles.footer, { backgroundColor: currentTheme.colors.overlay }]}
+          >
+            <Text
+              style={[styles.footerText, { color: currentTheme.colors.textPrimary }]}
+            >
               Nous vous répondrons dans les plus brefs délais. Merci de faire
-              confiance à <Text style={styles.boldText}>ChallengeTies</Text> !
-              🚀
+              confiance à{" "}
+              <Text style={[styles.boldText, { color: currentTheme.colors.textPrimary }]}>
+                ChallengeTies
+              </Text>{" "}
+              ! 🚀
             </Text>
           </Animated.View>
         </ScrollView>
@@ -293,85 +361,92 @@ export default function Contact() {
 const styles = StyleSheet.create({
   container: { flex: 1 },
   safeArea: { flex: 1 },
-  contentContainer: { padding: 20, paddingBottom: 40 },
-  logoContainer: { alignItems: "center", marginBottom: 20 },
-  logo: { resizeMode: "contain" },
+  contentContainer: {
+    padding: SPACING,
+    paddingBottom: SPACING * 2,
+  },
+  logoContainer: {
+    alignItems: "center",
+    marginBottom: SPACING,
+  },
+  logo: {
+    width: SCREEN_WIDTH * 0.4,
+    height: SCREEN_WIDTH * 0.4,
+  },
   title: {
-    fontSize: 28,
+    fontSize: normalizeSize(28),
     fontFamily: "Comfortaa_700Bold",
     textAlign: "center",
-    marginBottom: 15,
+    marginBottom: SPACING,
   },
   paragraph: {
-    fontSize: 16,
-    lineHeight: 24,
+    fontSize: normalizeSize(16),
+    lineHeight: normalizeSize(24),
     textAlign: "center",
-    marginBottom: 20,
+    marginBottom: SPACING,
     fontFamily: "Comfortaa_400Regular",
   },
   contactCard: {
     flexDirection: "row",
     alignItems: "center",
-    backgroundColor: "#FFFFFF",
-    borderRadius: 12,
-    padding: 15,
-    marginBottom: 15,
+    borderRadius: normalizeSize(12),
+    padding: SPACING,
+    marginBottom: SPACING,
     shadowColor: "#000",
+    shadowOffset: { width: 0, height: normalizeSize(6) },
     shadowOpacity: 0.1,
-    shadowRadius: 5,
+    shadowRadius: normalizeSize(5),
     elevation: 6,
   },
-  contactTextContainer: { marginLeft: 15 },
+  contactTextContainer: {
+    marginLeft: SPACING,
+  },
   sectionTitle: {
-    fontSize: 18,
+    fontSize: normalizeSize(18),
     fontFamily: "Comfortaa_700Bold",
-    marginBottom: 5,
+    marginBottom: normalizeSize(5),
   },
   link: {
-    fontSize: 16,
+    fontSize: normalizeSize(16),
     fontFamily: "Comfortaa_400Regular",
-    color: "#2563EB",
     textDecorationLine: "underline",
   },
   contactForm: {
-    marginTop: 20,
-    padding: 15,
-    backgroundColor: "#F9FAFB",
-    borderRadius: 12,
+    marginTop: SPACING,
+    padding: SPACING,
+    borderRadius: normalizeSize(12),
   },
   input: {
-    backgroundColor: "#fff",
-    padding: 12,
-    borderRadius: 8,
-    marginBottom: 10,
+    borderWidth: 1,
+    padding: SPACING,
+    borderRadius: normalizeSize(8),
+    marginBottom: SPACING,
     fontFamily: "Comfortaa_400Regular",
-    fontSize: 16,
+    fontSize: normalizeSize(16),
   },
   textArea: {
-    height: 100,
+    height: normalizeSize(100),
     textAlignVertical: "top",
   },
   button: {
-    padding: 12,
-    borderRadius: 8,
+    padding: SPACING,
+    borderRadius: normalizeSize(8),
     alignItems: "center",
-    marginTop: 10,
+    marginTop: SPACING,
   },
   buttonText: {
-    color: "#fff",
     fontFamily: "Comfortaa_700Bold",
-    fontSize: 16,
+    fontSize: normalizeSize(16),
   },
   footer: {
-    marginTop: 30,
-    padding: 15,
-    backgroundColor: "#E5E7EB",
-    borderRadius: 12,
+    marginTop: SPACING,
+    padding: SPACING,
+    borderRadius: normalizeSize(12),
     alignItems: "center",
-    marginBottom: 20,
+    marginBottom: SPACING,
   },
   footerText: {
-    fontSize: 16,
+    fontSize: normalizeSize(16),
     fontFamily: "Comfortaa_400Regular",
     fontStyle: "italic",
     textAlign: "center",

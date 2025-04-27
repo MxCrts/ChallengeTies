@@ -10,6 +10,7 @@ import {
   Alert,
   Dimensions,
   SafeAreaView,
+  StatusBar,
 } from "react-native";
 import { LinearGradient } from "expo-linear-gradient";
 import { useCurrentChallenges } from "../../context/CurrentChallengesContext";
@@ -26,12 +27,13 @@ import { Theme } from "../../theme/designSystem";
 import designSystem from "../../theme/designSystem";
 import CustomHeader from "@/components/CustomHeader";
 
-const { width: SCREEN_WIDTH, height: SCREEN_HEIGHT } = Dimensions.get("window");
-const ITEM_WIDTH = SCREEN_WIDTH * 0.9;
-const ITEM_HEIGHT = SCREEN_WIDTH * 0.45;
-const CARD_MARGIN = SCREEN_WIDTH * 0.02;
+const SPACING = 15;
 
-const normalizeSize = (size) => {
+const { width: SCREEN_WIDTH, height: SCREEN_HEIGHT } = Dimensions.get("window");
+const ITEM_WIDTH = SCREEN_WIDTH * 0.85;
+const ITEM_HEIGHT = SCREEN_WIDTH * 0.4;
+
+const normalizeSize = (size: number) => {
   const scale = SCREEN_WIDTH / 375;
   return Math.round(size * scale);
 };
@@ -55,43 +57,38 @@ export default function CurrentChallenges() {
   const [isLoading, setIsLoading] = useState(true);
   const [confettiActive, setConfettiActive] = useState(false);
   const [localChallenges, setLocalChallenges] = useState<Challenge[]>([]);
-  const confettiRef = useRef<ConfettiCannon | null>(null);
-  const swipeableRefs = useRef<(Swipeable | null)[]>([]);
+  const confettiRef = useRef<ConfettiCannon>(null);
+  const swipeableRefs = useRef<Map<string, Swipeable | null>>(new Map());
   const { theme } = useTheme();
   const isDarkMode = theme === "dark";
-  const currentTheme: Theme = isDarkMode
-    ? designSystem.darkTheme
-    : designSystem.lightTheme;
+  const currentTheme: Theme = isDarkMode ? designSystem.darkTheme : designSystem.lightTheme;
 
   useEffect(() => {
-    console.log(
-      "🔎 CurrentChallenges reçu du contexte :",
-      JSON.stringify(currentChallenges, null, 2)
-    );
+    if (!currentChallenges || !Array.isArray(currentChallenges)) {
+      setLocalChallenges([]);
+      setIsLoading(false);
+      return;
+    }
     const uniqueChallenges = Array.from(
       new Map(
-        currentChallenges.map((item: Challenge) => [
-          `${item.id}_${item.selectedDays}`,
-          item,
-        ])
+        currentChallenges
+          .filter((item: Challenge) => item.id && item.selectedDays != null)
+          .map((item: Challenge) => [`${item.id}_${item.selectedDays}`, item])
       ).values()
     );
+    setLocalChallenges(uniqueChallenges);
+    setIsLoading(false);
     console.log(
       "🎨 LocalChallenges mis à jour :",
       JSON.stringify(uniqueChallenges, null, 2)
     );
-    setLocalChallenges(uniqueChallenges);
   }, [currentChallenges]);
 
   useEffect(() => {
-    const timer = setTimeout(() => {
-      setIsLoading(false);
-    }, 500);
-    return () => clearTimeout(timer);
+    return () => {
+      swipeableRefs.current.clear();
+    };
   }, []);
-
-  // Le reste du code (handleMarkToday, handleRemoveChallenge, etc.) reste inchangé
-  // Pour brièveté, je ne répète pas tout, mais il est identique à la dernière version avec le mode sombre
 
   const handleMarkToday = async (id: string, selectedDays: number) => {
     try {
@@ -109,7 +106,7 @@ export default function CurrentChallenges() {
   const handleRemoveChallenge = (
     id: string,
     selectedDays: number,
-    index: number
+    key: string
   ) => {
     Alert.alert(
       "Abandonner le défi",
@@ -119,7 +116,7 @@ export default function CurrentChallenges() {
           text: "Annuler",
           style: "cancel",
           onPress: () => {
-            const swipeable = swipeableRefs.current[index];
+            const swipeable = swipeableRefs.current.get(key);
             if (swipeable) {
               swipeable.close();
             }
@@ -150,7 +147,7 @@ export default function CurrentChallenges() {
             } catch (err) {
               console.error("Erreur lors de la suppression :", err);
               Alert.alert("Erreur", "Impossible d'abandonner ce défi.");
-              const swipeable = swipeableRefs.current[index];
+              const swipeable = swipeableRefs.current.get(key);
               if (swipeable) {
                 swipeable.close();
               }
@@ -183,11 +180,6 @@ export default function CurrentChallenges() {
     router.push(route as unknown as `/challenge-details/${string}`);
   };
 
-  const getCardStyle = () => ({
-    ...styles.card,
-    borderColor: isDarkMode ? "#FFDD9533" : "#e3701e33",
-  });
-
   const renderChallengeItem = ({
     item,
     index,
@@ -197,141 +189,154 @@ export default function CurrentChallenges() {
   }) => {
     const markedToday = isMarkedToday(item.id, item.selectedDays);
     const progress = item.completedDays / item.selectedDays;
+    const key = `${item.id}_${item.selectedDays}`;
 
     return (
       <Animated.View
-        entering={FadeInUp.delay(index * 100)}
+        entering={FadeInUp.delay(index * 50)}
         exiting={FadeOutRight.duration(300)}
         style={styles.cardWrapper}
       >
-        <Swipeable
-          ref={(ref) => (swipeableRefs.current[index] = ref)}
-          renderRightActions={() => (
-            <View style={styles.swipeActionsContainer}>
+        <View
+          accessibilityLabel={`Défi ${item.title}, swipez pour supprimer`}
+          testID={`challenge-swipe-${key}`}
+        >
+          <Swipeable
+            ref={(ref) => swipeableRefs.current.set(key, ref)}
+            renderRightActions={() => (
+              <View style={styles.swipeActionsContainer}>
+                <LinearGradient
+                  colors={["#EF4444", "#B91C1C"]}
+                  style={styles.trashButton}
+                  start={{ x: 0, y: 0 }}
+                  end={{ x: 1, y: 1 }}
+                >
+                  <Ionicons
+                    name="trash-outline"
+                    size={normalizeSize(28)}
+                    color="#FFFFFF"
+                    accessibilityLabel="Supprimer le défi"
+                  />
+                </LinearGradient>
+              </View>
+            )}
+            overshootRight={false}
+            onSwipeableOpen={() =>
+              handleRemoveChallenge(item.id, item.selectedDays, key)
+            }
+          >
+            <TouchableOpacity
+              style={styles.cardContainer}
+              onPress={() => navigateToChallengeDetails(item)}
+              activeOpacity={0.9}
+              accessibilityLabel={`Voir les détails du défi ${item.title}`}
+              testID={`challenge-card-${key}`}
+            >
               <LinearGradient
-                colors={["#EF4444", "#B91C1C"]}
-                style={styles.trashButton}
+                colors={[
+                  currentTheme.colors.cardBackground,
+                  `${currentTheme.colors.cardBackground}F0`,
+                ]}
+                style={styles.card}
                 start={{ x: 0, y: 0 }}
                 end={{ x: 1, y: 1 }}
               >
-                <Ionicons
-                  name="trash-outline"
-                  size={normalizeSize(28)}
-                  color="#FFFFFF"
+                <Image
+                  source={{
+                    uri: item.imageUrl || "https://via.placeholder.com/70",
+                  }}
+                  style={styles.cardImage}
+                  accessibilityLabel={`Image du défi ${item.title}`}
                 />
-              </LinearGradient>
-            </View>
-          )}
-          overshootRight={false}
-          onSwipeableOpen={() =>
-            handleRemoveChallenge(item.id, item.selectedDays, index)
-          }
-        >
-          <TouchableOpacity
-            style={styles.cardContainer}
-            onPress={() => navigateToChallengeDetails(item)}
-            activeOpacity={0.9}
-          >
-            <LinearGradient
-              colors={[
-                currentTheme.colors.cardBackground,
-                `${currentTheme.colors.cardBackground}F0`,
-              ]}
-              style={getCardStyle()}
-              start={{ x: 0, y: 0 }}
-              end={{ x: 1, y: 1 }}
-            >
-              <Image
-                source={{
-                  uri: item.imageUrl || "https://via.placeholder.com/70",
-                }}
-                style={[
-                  styles.cardImage,
-                  { borderColor: currentTheme.colors.border },
-                ]}
-              />
-              <View style={styles.cardContent}>
-                <Text
-                  style={[
-                    styles.challengeTitle,
-                    { color: currentTheme.colors.textPrimary },
-                  ]}
-                  numberOfLines={1}
-                >
-                  {item.title}
-                </Text>
-                {item.day !== undefined && (
+                <View style={styles.cardContent}>
                   <Text
                     style={[
-                      styles.challengeDay,
-                      { color: currentTheme.colors.textSecondary },
+                      styles.challengeTitle,
+                      { color: currentTheme.colors.textPrimary },
                     ]}
+                    numberOfLines={1}
                   >
-                    Jour {item.day}
+                    {item.title}
                   </Text>
-                )}
-                <View style={styles.progressContainer}>
-                  <Progress.Bar
-                    progress={progress}
-                    width={null}
-                    height={normalizeSize(8)}
-                    borderRadius={normalizeSize(4)}
-                    color={currentTheme.colors.secondary}
-                    unfilledColor={isDarkMode ? "#4A4A4A" : "#E0E0E0"}
-                    borderWidth={0}
-                    style={styles.progressBar}
-                  />
-                  <Text
-                    style={[
-                      styles.progressText,
-                      { color: currentTheme.colors.secondary },
-                    ]}
-                  >
-                    {item.completedDays}/{item.selectedDays} jours
-                  </Text>
-                </View>
-                <TouchableOpacity
-                  style={[
-                    styles.markTodayButton,
-                    markedToday && styles.disabledMarkButton,
-                  ]}
-                  onPress={() => handleMarkToday(item.id, item.selectedDays)}
-                  disabled={markedToday}
-                >
-                  <LinearGradient
-                    colors={
-                      markedToday
-                        ? [
-                            isDarkMode ? "#4A4A4A" : "#D3D3D3",
-                            isDarkMode ? "#2A2A2A" : "#A3A3A3",
-                          ]
-                        : [
-                            currentTheme.colors.secondary,
-                            currentTheme.colors.primary,
-                          ]
-                    }
-                    style={styles.markTodayGradient}
-                    start={{ x: 0, y: 0 }}
-                    end={{ x: 1, y: 1 }}
-                  >
+                  {item.day !== undefined && (
                     <Text
                       style={[
-                        styles.markTodayText,
-                        {
-                          color: markedToday
-                            ? "#FFFFFF"
-                            : currentTheme.colors.textPrimary,
-                        },
+                        styles.challengeDay,
+                        { color: currentTheme.colors.textSecondary },
                       ]}
                     >
-                      {markedToday ? "Déjà marqué" : "Marquer Aujourd'hui"}
+                      Jour {item.day}
                     </Text>
-                  </LinearGradient>
-                </TouchableOpacity>
-              </View>
-            </LinearGradient>
-          </TouchableOpacity>
-        </Swipeable>
+                  )}
+                  <View style={styles.progressContainer}>
+                    <Progress.Bar
+                      progress={progress}
+                      width={null}
+                      height={normalizeSize(8)}
+                      borderRadius={normalizeSize(4)}
+                      color={currentTheme.colors.secondary}
+                      unfilledColor={isDarkMode ? "#4A4A4A" : "#E0E0E0"}
+                      borderWidth={0}
+                      style={styles.progressBar}
+                    />
+                    <Text
+                      style={[
+                        styles.progressText,
+                        { color: currentTheme.colors.secondary },
+                      ]}
+                    >
+                      {item.completedDays}/{item.selectedDays} jours
+                    </Text>
+                  </View>
+                  <TouchableOpacity
+                    style={[
+                      styles.markTodayButton,
+                      markedToday && styles.disabledMarkButton,
+                    ]}
+                    onPress={() => handleMarkToday(item.id, item.selectedDays)}
+                    disabled={markedToday}
+                    accessibilityLabel={
+                      markedToday
+                        ? `Défi ${item.title} déjà marqué aujourd'hui`
+                        : `Marquer le défi ${item.title} pour aujourd'hui`
+                    }
+                    testID={`mark-today-${key}`}
+                  >
+                    <LinearGradient
+                      colors={
+                        markedToday
+                          ? [
+                              isDarkMode ? "#4A4A4A" : "#D3D3D3",
+                              isDarkMode ? "#2A2A2A" : "#A3A3A3",
+                            ]
+                          : [
+                              currentTheme.colors.secondary,
+                              currentTheme.colors.primary,
+                            ]
+                      }
+                      style={styles.markTodayGradient}
+                      start={{ x: 0, y: 0 }}
+                      end={{ x: 1, y: 1 }}
+                    >
+                      <Text
+                        style={[
+                          styles.markTodayText,
+                          {
+                            color: markedToday
+                              ? "#FFFFFF"
+                              : currentTheme.colors.textPrimary,
+                          },
+                        ]}
+                      >
+                        {markedToday ? "Déjà marqué" : "Marquer Aujourd'hui"}
+                      </Text>
+                    </LinearGradient>
+                  </TouchableOpacity>
+                </View>
+              </LinearGradient>
+            </TouchableOpacity>
+          </Swipeable>
+        </View>
       </Animated.View>
     );
   };
@@ -339,22 +344,18 @@ export default function CurrentChallenges() {
   if (isLoading) {
     return (
       <SafeAreaView style={styles.safeArea}>
+        <StatusBar
+          translucent={true}
+          backgroundColor="transparent"
+          barStyle={isDarkMode ? "light-content" : "dark-content"}
+        />
         <LinearGradient
-          colors={[
-            currentTheme.colors.background,
-            currentTheme.colors.cardBackground,
-          ]}
+          colors={[currentTheme.colors.background, currentTheme.colors.cardBackground]}
           style={styles.loadingContainer}
         >
-          <ActivityIndicator
-            size="large"
-            color={currentTheme.colors.secondary}
-          />
+          <ActivityIndicator size="large" color={currentTheme.colors.secondary} />
           <Text
-            style={[
-              styles.loadingText,
-              { color: currentTheme.colors.textPrimary },
-            ]}
+            style={[styles.loadingText, { color: currentTheme.colors.textPrimary }]}
           >
             Chargement en cours...
           </Text>
@@ -366,11 +367,13 @@ export default function CurrentChallenges() {
   if (localChallenges.length === 0) {
     return (
       <SafeAreaView style={styles.safeArea}>
+        <StatusBar
+          translucent={true}
+          backgroundColor="transparent"
+          barStyle={isDarkMode ? "light-content" : "dark-content"}
+        />
         <LinearGradient
-          colors={[
-            currentTheme.colors.background,
-            currentTheme.colors.cardBackground,
-          ]}
+          colors={[currentTheme.colors.background, currentTheme.colors.cardBackground]}
           style={styles.noChallengesContainer}
         >
           <Animated.View
@@ -381,20 +384,15 @@ export default function CurrentChallenges() {
               name="hourglass-outline"
               size={normalizeSize(60)}
               color={currentTheme.colors.textSecondary}
+              accessibilityLabel="Icône de défi en attente"
             />
             <Text
-              style={[
-                styles.noChallengesText,
-                { color: currentTheme.colors.textPrimary },
-              ]}
+              style={[styles.noChallengesText, { color: currentTheme.colors.textPrimary }]}
             >
               Aucun défi en cours !
             </Text>
             <Text
-              style={[
-                styles.noChallengesSubtext,
-                { color: currentTheme.colors.textSecondary },
-              ]}
+              style={[styles.noChallengesSubtext, { color: currentTheme.colors.textSecondary }]}
             >
               Commencez un défi pour le voir ici.
             </Text>
@@ -406,11 +404,13 @@ export default function CurrentChallenges() {
 
   return (
     <SafeAreaView style={styles.safeArea}>
+      <StatusBar
+        translucent={true}
+        backgroundColor="transparent"
+        barStyle={isDarkMode ? "light-content" : "dark-content"}
+      />
       <LinearGradient
-        colors={[
-          currentTheme.colors.background,
-          currentTheme.colors.cardBackground,
-        ]}
+        colors={[currentTheme.colors.background, `${currentTheme.colors.cardBackground}F0`]}
         style={styles.container}
         start={{ x: 0, y: 0 }}
         end={{ x: 1, y: 1 }}
@@ -424,6 +424,15 @@ export default function CurrentChallenges() {
           keyExtractor={(item) => `current-${item.id}_${item.selectedDays}`}
           contentContainerStyle={styles.listContent}
           showsVerticalScrollIndicator={false}
+          initialNumToRender={5}
+          getItemLayout={(data, index) => ({
+            length: normalizeSize(ITEM_HEIGHT + SPACING),
+            offset: normalizeSize(ITEM_HEIGHT + SPACING) * index,
+            index,
+          })}
+          accessibilityRole="list"
+          accessibilityLabel="Liste des défis en cours"
+          testID="challenges-list"
         />
         {confettiActive && (
           <ConfettiCannon
@@ -442,15 +451,15 @@ export default function CurrentChallenges() {
 
 const styles = StyleSheet.create({
   safeArea: { flex: 1 },
-  container: { flex: 1 },
+  container: { flex: 1, paddingHorizontal: SPACING },
   headerWrapper: {
-    marginTop: SCREEN_HEIGHT * 0.01,
-    marginBottom: SCREEN_HEIGHT * 0.02,
-    paddingHorizontal: SCREEN_WIDTH * 0.05,
+    paddingHorizontal: SPACING,
+    paddingVertical: SPACING,
   },
   listContent: {
-    paddingHorizontal: SCREEN_WIDTH * 0.05,
-    paddingBottom: SCREEN_HEIGHT * 0.1,
+    paddingVertical: SPACING,
+    paddingHorizontal: SPACING / 2,
+    paddingBottom: SPACING * 2,
   },
   noChallengesContainer: {
     flex: 1,
@@ -463,22 +472,23 @@ const styles = StyleSheet.create({
   noChallengesText: {
     fontSize: normalizeSize(20),
     fontFamily: "Comfortaa_700Bold",
-    marginTop: normalizeSize(15),
+    marginTop: SPACING,
     textAlign: "center",
   },
   noChallengesSubtext: {
     fontSize: normalizeSize(16),
     fontFamily: "Comfortaa_400Regular",
     textAlign: "center",
-    marginTop: normalizeSize(10),
+    marginTop: SPACING,
     maxWidth: SCREEN_WIDTH * 0.65,
   },
   cardWrapper: {
-    marginBottom: CARD_MARGIN,
+    marginBottom: SPACING,
+    borderRadius: normalizeSize(20),
     shadowColor: "#000",
-    shadowOffset: { width: 0, height: normalizeSize(6) },
+    shadowOffset: { width: 0, height: normalizeSize(4) },
     shadowOpacity: 0.3,
-    shadowRadius: normalizeSize(8),
+    shadowRadius: normalizeSize(6),
     elevation: 8,
   },
   cardContainer: {
@@ -489,23 +499,21 @@ const styles = StyleSheet.create({
   },
   card: {
     flexDirection: "row",
-    padding: normalizeSize(15),
+    padding: SPACING,
     borderRadius: normalizeSize(20),
-    borderWidth: 1,
     minHeight: ITEM_HEIGHT,
   },
   cardImage: {
-    width: normalizeSize(70),
-    height: normalizeSize(70),
-    borderRadius: normalizeSize(14),
-    marginRight: normalizeSize(15),
-    borderWidth: 2,
+    width: normalizeSize(60),
+    height: normalizeSize(60),
+    borderRadius: normalizeSize(12),
+    marginRight: SPACING,
   },
   cardContent: {
     flex: 1,
   },
   challengeTitle: {
-    fontSize: normalizeSize(18),
+    fontSize: normalizeSize(16),
     fontFamily: "Comfortaa_700Bold",
   },
   challengeDay: {
@@ -514,25 +522,25 @@ const styles = StyleSheet.create({
     marginTop: normalizeSize(2),
   },
   progressContainer: {
-    marginVertical: normalizeSize(10),
+    marginVertical: SPACING / 2,
   },
   progressBar: {
     flex: 1,
   },
   progressText: {
     fontSize: normalizeSize(12),
-    marginTop: normalizeSize(5),
+    marginTop: SPACING / 2,
     fontFamily: "Comfortaa_400Regular",
   },
   markTodayButton: {
     borderRadius: normalizeSize(12),
     overflow: "hidden",
-    marginTop: normalizeSize(10),
+    marginTop: SPACING / 2,
   },
   disabledMarkButton: {},
   markTodayGradient: {
-    paddingVertical: normalizeSize(10),
-    paddingHorizontal: normalizeSize(15),
+    paddingVertical: SPACING / 1.5,
+    paddingHorizontal: SPACING,
     alignItems: "center",
   },
   markTodayText: {
@@ -548,7 +556,7 @@ const styles = StyleSheet.create({
     alignItems: "center",
   },
   loadingText: {
-    marginTop: normalizeSize(10),
+    marginTop: SPACING,
     fontSize: normalizeSize(16),
     fontFamily: "Comfortaa_400Regular",
   },
@@ -556,7 +564,7 @@ const styles = StyleSheet.create({
     width: SCREEN_WIDTH * 0.18,
     justifyContent: "center",
     alignItems: "center",
-    marginBottom: CARD_MARGIN,
+    marginBottom: SPACING,
   },
   trashButton: {
     width: "100%",

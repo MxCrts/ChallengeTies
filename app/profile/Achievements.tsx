@@ -1,4 +1,4 @@
-import React, { useEffect, useState } from "react";
+import React, { useEffect, useState, useCallback } from "react";
 import {
   View,
   Text,
@@ -8,6 +8,7 @@ import {
   StyleSheet,
   SafeAreaView,
   TouchableOpacity,
+  StatusBar,
 } from "react-native";
 import { Ionicons } from "@expo/vector-icons";
 import { doc, onSnapshot } from "firebase/firestore";
@@ -15,24 +16,16 @@ import { LinearGradient } from "expo-linear-gradient";
 import Animated, { FadeInUp } from "react-native-reanimated";
 import { db, auth } from "../../constants/firebase-config";
 import { useTrophy } from "../../context/TrophyContext";
+import { useTheme } from "../../context/ThemeContext";
+import { Theme } from "../../theme/designSystem";
 import { achievementsList } from "../../helpers/achievementsConfig";
 import designSystem from "../../theme/designSystem";
 import CustomHeader from "@/components/CustomHeader";
 
 const { width: SCREEN_WIDTH, height: SCREEN_HEIGHT } = Dimensions.get("window");
+const SPACING = 15;
 
-const currentTheme = {
-  ...designSystem.lightTheme,
-  colors: {
-    ...designSystem.lightTheme.colors,
-    primary: "#FF6200",
-    accent: "#FFD700",
-    background: "#FFF3E0",
-    card: "#FFFFFF",
-  },
-};
-
-const normalizeSize = (size) => Math.round(size * (SCREEN_WIDTH / 375));
+const normalizeSize = (size: number) => Math.round(size * (SCREEN_WIDTH / 375));
 
 const achievementDescriptions = {
   finishChallenge_1: "Termine ton premier défi avec brio.",
@@ -107,28 +100,17 @@ const groupAchievements = (achievement: Achievement) => {
 
 const getIconForGroup = (group: string) => {
   switch (group) {
-    case "Débuts":
-      return "star";
-    case "Défis Terminés":
-      return "trophy";
-    case "Engagement":
-      return "calendar";
-    case "Série de Feu":
-      return "flame";
-    case "Communication":
-      return "chatbubbles";
-    case "Partage":
-      return "share-social";
-    case "Réseau":
-      return "people";
-    case "Influence":
-      return "thumbs-up";
-    case "Collection":
-      return "bookmark";
-    case "Création":
-      return "brush";
-    default:
-      return "ribbon";
+    case "Débuts": return "star";
+    case "Défis Terminés": return "trophy";
+    case "Engagement": return "calendar";
+    case "Série de Feu": return "flame";
+    case "Communication": return "chatbubbles";
+    case "Partage": return "share-social";
+    case "Réseau": return "people";
+    case "Influence": return "thumbs-up";
+    case "Collection": return "bookmark";
+    case "Création": return "brush";
+    default: return "ribbon";
   }
 };
 
@@ -143,6 +125,9 @@ const AchievementsScreen = () => {
   const [sections, setSections] = useState<AchievementSection[]>([]);
   const [loading, setLoading] = useState(true);
   const { setTrophyData } = useTrophy();
+  const { theme } = useTheme();
+  const isDarkMode = theme === "dark";
+  const currentTheme: Theme = isDarkMode ? designSystem.darkTheme : designSystem.lightTheme;
 
   useEffect(() => {
     const userId = auth.currentUser?.uid;
@@ -168,8 +153,7 @@ const AchievementsScreen = () => {
             identifier,
             name: value.name,
             trophies: value.points,
-            description:
-              achievementDescriptions[identifier] || "Succès mystère.",
+            description: achievementDescriptions[identifier] || "Succès mystère.",
             isClaimable: pending.has(identifier),
             isCompleted: obtained.has(identifier),
           });
@@ -181,8 +165,7 @@ const AchievementsScreen = () => {
               identifier,
               name: subValue.name,
               trophies: subValue.points,
-              description:
-                achievementDescriptions[identifier] || "Nouveau défi !",
+              description: achievementDescriptions[identifier] || "Nouveau défi !",
               isClaimable: pending.has(identifier),
               isCompleted: obtained.has(identifier),
             });
@@ -221,9 +204,9 @@ const AchievementsScreen = () => {
     return () => unsubscribe();
   }, []);
 
-  const handleClaimAchievement = (achievement: Achievement) => {
+  const handleClaimAchievement = useCallback((achievement: Achievement) => {
     setTrophyData(achievement.trophies, achievement.identifier);
-  };
+  }, [setTrophyData]);
 
   const totalAchievements = sections.reduce((sum, s) => sum + s.data.length, 0);
   const completedAchievements = sections.reduce(
@@ -234,12 +217,21 @@ const AchievementsScreen = () => {
   if (loading) {
     return (
       <SafeAreaView style={styles.safeArea}>
+        <StatusBar
+          translucent
+          backgroundColor="transparent"
+          barStyle={isDarkMode ? "light-content" : "dark-content"}
+        />
         <LinearGradient
-          colors={["#FFF3E0", "#FFE8CC"]}
+          colors={[currentTheme.colors.background, currentTheme.colors.cardBackground]}
           style={styles.loadingContainer}
+          start={{ x: 0, y: 0 }}
+          end={{ x: 1, y: 1 }}
         >
-          <ActivityIndicator size="large" color={currentTheme.colors.primary} />
-          <Text style={styles.loadingText}>Chargement...</Text>
+          <ActivityIndicator size="large" color={currentTheme.colors.secondary} />
+          <Text style={[styles.loadingText, { color: currentTheme.colors.textPrimary }]}>
+            Chargement...
+          </Text>
         </LinearGradient>
       </SafeAreaView>
     );
@@ -248,19 +240,28 @@ const AchievementsScreen = () => {
   if (!sections.length) {
     return (
       <SafeAreaView style={styles.safeArea}>
+        <StatusBar
+          translucent
+          backgroundColor="transparent"
+          barStyle={isDarkMode ? "light-content" : "dark-content"}
+        />
         <LinearGradient
-          colors={["#FFF3E0", "#FFE8CC"]}
+          colors={[currentTheme.colors.background, currentTheme.colors.cardBackground]}
           style={styles.emptyContainer}
+          start={{ x: 0, y: 0 }}
+          end={{ x: 1, y: 1 }}
         >
           <Animated.View entering={FadeInUp.duration(400)}>
             <CustomHeader title="Succès" />
             <Ionicons
               name="trophy-outline"
               size={normalizeSize(80)}
-              color={currentTheme.colors.primary}
+              color={currentTheme.colors.secondary}
             />
-            <Text style={styles.emptyTitle}>Pas encore de succès</Text>
-            <Text style={styles.emptySubtitle}>
+            <Text style={[styles.emptyTitle, { color: currentTheme.colors.textPrimary }]}>
+              Pas encore de succès
+            </Text>
+            <Text style={[styles.emptySubtitle, { color: currentTheme.colors.textSecondary }]}>
               Relève des défis pour tes premiers trophées !
             </Text>
           </Animated.View>
@@ -271,15 +272,20 @@ const AchievementsScreen = () => {
 
   return (
     <SafeAreaView style={styles.safeArea}>
+      <StatusBar
+        translucent
+        backgroundColor="transparent"
+        barStyle={isDarkMode ? "light-content" : "dark-content"}
+      />
       <LinearGradient
-        colors={["#FFF3E0", "#FFE8CC"]}
+        colors={[currentTheme.colors.background, currentTheme.colors.cardBackground]}
         style={styles.container}
         start={{ x: 0, y: 0 }}
         end={{ x: 1, y: 1 }}
       >
         <CustomHeader title="Succès" />
         <View style={styles.progressBar}>
-          <Text style={styles.progressText}>
+          <Text style={[styles.progressText, { color: currentTheme.colors.textPrimary }]}>
             {completedAchievements} / {totalAchievements} Trophées
           </Text>
         </View>
@@ -295,16 +301,20 @@ const AchievementsScreen = () => {
                 style={styles.sectionHeader}
               >
                 <LinearGradient
-                  colors={[currentTheme.colors.primary, "#FF8C00"]}
+                  colors={[currentTheme.colors.secondary, currentTheme.colors.primary]}
                   style={styles.sectionGradient}
+                  start={{ x: 0, y: 0 }}
+                  end={{ x: 1, y: 1 }}
                 >
                   <Ionicons
                     name={getIconForGroup(title)}
                     size={normalizeSize(22)}
-                    color="#FFF"
+                    color={currentTheme.colors.textPrimary}
                   />
-                  <Text style={styles.sectionTitle}>{title}</Text>
-                  <Text style={styles.sectionCount}>
+                  <Text style={[styles.sectionTitle, { color: currentTheme.colors.textPrimary }]}>
+                    {title}
+                  </Text>
+                  <Text style={[styles.sectionCount, { color: currentTheme.colors.textPrimary }]}>
                     {completed}/{data.length}
                   </Text>
                 </LinearGradient>
@@ -319,9 +329,11 @@ const AchievementsScreen = () => {
               <TouchableOpacity
                 activeOpacity={0.9}
                 onPress={() => item.isClaimable && handleClaimAchievement(item)}
+                accessibilityLabel={item.isClaimable ? `Réclamer ${item.name}` : item.isCompleted ? `${item.name} débloqué` : `${item.name} en cours`}
+                testID={`achievement-${item.id}`}
               >
                 <LinearGradient
-                  colors={["#FFFFFF", "#FFF8E6"]}
+                  colors={[currentTheme.colors.cardBackground, currentTheme.colors.background]}
                   style={styles.card}
                   start={{ x: 0, y: 0 }}
                   end={{ x: 1, y: 1 }}
@@ -333,44 +345,57 @@ const AchievementsScreen = () => {
                         size={normalizeSize(48)}
                         color={
                           item.isCompleted
-                            ? currentTheme.colors.accent
+                            ? currentTheme.colors.trophy
                             : item.isClaimable
-                            ? currentTheme.colors.primary
-                            : "#CCC"
+                            ? currentTheme.colors.secondary
+                            : currentTheme.colors.textSecondary
                         }
                       />
-                      <Text style={styles.trophies}>{item.trophies}</Text>
+                      <Text style={[styles.trophies, { color: currentTheme.colors.textPrimary }]}>
+                        {item.trophies}
+                      </Text>
                     </View>
                     <View style={styles.details}>
                       <Text
                         style={[
                           styles.cardTitle,
+                          { color: currentTheme.colors.textPrimary },
                           item.isCompleted && styles.completed,
-                          item.isClaimable && styles.claimable,
+                          item.isClaimable && { color: currentTheme.colors.secondary },
                         ]}
                       >
                         {item.name}
                       </Text>
-                      <Text style={styles.cardDescription}>
+                      <Text style={[styles.cardDescription, { color: currentTheme.colors.textSecondary }]}>
                         {item.description}
                       </Text>
                     </View>
                     <View style={styles.action}>
                       {item.isClaimable ? (
                         <LinearGradient
-                          colors={[currentTheme.colors.primary, "#FF8C00"]}
+                          colors={[currentTheme.colors.secondary, currentTheme.colors.primary]}
                           style={styles.buttonGradient}
+                          start={{ x: 0, y: 0 }}
+                          end={{ x: 1, y: 1 }}
                         >
-                          <Text style={styles.buttonText}>Réclamer</Text>
+                          <Text style={[styles.buttonText, { color: currentTheme.colors.textPrimary }]}>
+                            Réclamer
+                          </Text>
                         </LinearGradient>
                       ) : item.isCompleted ? (
-                        <Text style={styles.completedText}>Débloqué</Text>
+                        <Text style={[styles.completedText, { color: currentTheme.colors.trophy }]}>
+                          Débloqué
+                        </Text>
                       ) : (
                         <LinearGradient
-                          colors={["#DDD", "#BBB"]}
+                          colors={[currentTheme.colors.overlay, currentTheme.colors.border]}
                           style={styles.buttonGradient}
+                          start={{ x: 0, y: 0 }}
+                          end={{ x: 1, y: 1 }}
                         >
-                          <Text style={styles.buttonText}>En cours</Text>
+                          <Text style={[styles.buttonText, { color: currentTheme.colors.textSecondary }]}>
+                            En cours
+                          </Text>
                         </LinearGradient>
                       )}
                     </View>
@@ -381,6 +406,8 @@ const AchievementsScreen = () => {
           )}
           contentContainerStyle={styles.listContent}
           showsVerticalScrollIndicator={false}
+          initialNumToRender={10}
+          windowSize={5}
         />
       </LinearGradient>
     </SafeAreaView>
@@ -390,70 +417,64 @@ const AchievementsScreen = () => {
 const styles = StyleSheet.create({
   safeArea: {
     flex: 1,
-    backgroundColor: currentTheme.colors.background,
   },
   container: {
     flex: 1,
   },
   progressBar: {
     alignItems: "center",
-    marginVertical: normalizeSize(15),
+    marginVertical: SPACING,
   },
   progressText: {
     fontSize: normalizeSize(16),
-    fontFamily: currentTheme.typography.body.fontFamily,
-    color: currentTheme.colors.primary,
-    fontWeight: "700",
+    fontFamily: "Comfortaa_700Bold",
   },
   listContent: {
-    paddingHorizontal: SCREEN_WIDTH * 0.04,
+    paddingHorizontal: SPACING,
     paddingBottom: SCREEN_HEIGHT * 0.1,
   },
   sectionHeader: {
-    marginBottom: SCREEN_WIDTH * 0.03,
+    marginBottom: SPACING / 2,
   },
   sectionGradient: {
     flexDirection: "row",
     alignItems: "center",
     justifyContent: "space-between",
     paddingVertical: normalizeSize(10),
-    paddingHorizontal: normalizeSize(15),
+    paddingHorizontal: SPACING,
     borderRadius: normalizeSize(12),
-    elevation: 3,
     shadowColor: "#000",
-    shadowOffset: { width: 0, height: 2 },
+    shadowOffset: { width: 0, height: normalizeSize(2) },
     shadowOpacity: 0.2,
-    shadowRadius: 4,
+    shadowRadius: normalizeSize(4),
+    elevation: 3,
   },
   sectionTitle: {
     flex: 1,
     fontSize: normalizeSize(18),
-    fontFamily: currentTheme.typography.title.fontFamily,
-    color: "#FFF",
-    marginLeft: normalizeSize(10),
-    fontWeight: "bold",
+    fontFamily: "Comfortaa_700Bold",
+    marginLeft: SPACING / 2,
   },
   sectionCount: {
     fontSize: normalizeSize(14),
-    color: "#FFF",
-    fontFamily: currentTheme.typography.body.fontFamily,
+    fontFamily: "Comfortaa_400Regular",
     opacity: 0.9,
   },
   cardWrapper: {
-    marginBottom: SCREEN_WIDTH * 0.03,
+    marginBottom: SPACING / 2,
     alignItems: "center",
   },
   card: {
     width: SCREEN_WIDTH * 0.92,
-    padding: normalizeSize(15),
+    padding: SPACING,
     borderRadius: normalizeSize(18),
     borderWidth: 1,
-    borderColor: "#FF620010",
-    elevation: 5,
+    borderColor: "transparent",
     shadowColor: "#000",
-    shadowOffset: { width: 0, height: 3 },
+    shadowOffset: { width: 0, height: normalizeSize(3) },
     shadowOpacity: 0.25,
-    shadowRadius: 5,
+    shadowRadius: normalizeSize(5),
+    elevation: 5,
   },
   cardContent: {
     flexDirection: "row",
@@ -467,58 +488,45 @@ const styles = StyleSheet.create({
   },
   trophies: {
     fontSize: normalizeSize(12),
-    color: currentTheme.colors.primary,
-    fontFamily: currentTheme.typography.title.fontFamily,
-    fontWeight: "600",
+    fontFamily: "Comfortaa_700Bold",
     marginTop: normalizeSize(4),
   },
   details: {
     flex: 1,
-    marginHorizontal: normalizeSize(10),
+    marginHorizontal: SPACING / 2,
   },
   cardTitle: {
     fontSize: normalizeSize(15),
-    fontFamily: currentTheme.typography.title.fontFamily,
-    color: "#333",
-    fontWeight: "bold",
+    fontFamily: "Comfortaa_700Bold",
   },
   completed: {
-    color: currentTheme.colors.accent,
     textDecorationLine: "line-through",
-  },
-  claimable: {
-    color: currentTheme.colors.primary,
   },
   cardDescription: {
     fontSize: normalizeSize(11),
-    color: "#666",
-    fontFamily: currentTheme.typography.body.fontFamily,
+    fontFamily: "Comfortaa_400Regular",
     marginTop: normalizeSize(4),
   },
   action: {
-    width: SCREEN_WIDTH * 0.22,
+    width: SCREEN_WIDTH * 0.28, // Agrandi pour éviter le débordement
     alignItems: "center",
     justifyContent: "center",
   },
   buttonGradient: {
     paddingVertical: normalizeSize(6),
-    paddingHorizontal: normalizeSize(10),
+    paddingHorizontal: SPACING * 1.5, // Plus d'espace horizontal
     borderRadius: normalizeSize(8),
     alignItems: "center",
     justifyContent: "center",
   },
   buttonText: {
-    fontSize: normalizeSize(11),
-    color: "#FFF",
-    fontFamily: currentTheme.typography.title.fontFamily,
-    fontWeight: "600",
+    fontSize: normalizeSize(10), // Réduit pour tenir sur une ligne
+    fontFamily: "Comfortaa_700Bold",
     textAlign: "center",
   },
   completedText: {
-    fontSize: normalizeSize(11),
-    color: currentTheme.colors.accent,
-    fontFamily: currentTheme.typography.title.fontFamily,
-    fontWeight: "600",
+    fontSize: normalizeSize(10),
+    fontFamily: "Comfortaa_700Bold",
   },
   loadingContainer: {
     flex: 1,
@@ -526,10 +534,9 @@ const styles = StyleSheet.create({
     alignItems: "center",
   },
   loadingText: {
-    marginTop: normalizeSize(12),
+    marginTop: SPACING,
     fontSize: normalizeSize(16),
-    color: currentTheme.colors.primary,
-    fontFamily: currentTheme.typography.body.fontFamily,
+    fontFamily: "Comfortaa_400Regular",
   },
   emptyContainer: {
     flex: 1,
@@ -538,17 +545,15 @@ const styles = StyleSheet.create({
   },
   emptyTitle: {
     fontSize: normalizeSize(22),
-    fontFamily: currentTheme.typography.title.fontFamily,
-    color: currentTheme.colors.primary,
-    marginTop: normalizeSize(20),
+    fontFamily: "Comfortaa_700Bold",
+    marginTop: SPACING,
     textAlign: "center",
   },
   emptySubtitle: {
     fontSize: normalizeSize(16),
-    color: "#666",
-    fontFamily: currentTheme.typography.body.fontFamily,
+    fontFamily: "Comfortaa_400Regular",
     textAlign: "center",
-    marginTop: normalizeSize(10),
+    marginTop: SPACING / 2,
     maxWidth: SCREEN_WIDTH * 0.7,
   },
 });
