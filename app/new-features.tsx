@@ -5,11 +5,11 @@ import {
   StyleSheet,
   TouchableOpacity,
   ActivityIndicator,
-  Alert,
   FlatList,
   Dimensions,
   SafeAreaView,
   StatusBar,
+  Alert,
 } from "react-native";
 import {
   collection,
@@ -27,6 +27,7 @@ import { Ionicons } from "@expo/vector-icons";
 import Animated, { FadeInUp } from "react-native-reanimated";
 import { LinearGradient } from "expo-linear-gradient";
 import AsyncStorage from "@react-native-async-storage/async-storage";
+import { useTranslation } from "react-i18next";
 import { useTheme } from "../context/ThemeContext";
 import { Theme } from "../theme/designSystem";
 import designSystem from "../theme/designSystem";
@@ -35,15 +36,10 @@ import ModalExplicatif from "../components/ModalExplicatif";
 import FeatureDetailModal from "../components/FeatureDetailModal";
 import ProposeFeatureModal from "../components/ProposeFeatureModal";
 
-// Constante SPACING pour cohérence avec focus.tsx et tips.tsx
 const SPACING = 15;
-
-const { width: SCREEN_WIDTH, height: SCREEN_HEIGHT } = Dimensions.get("window");
-
-const normalizeSize = (size: number) => {
-  const scale = SCREEN_WIDTH / 375;
-  return Math.round(size * scale);
-};
+const { width: SCREEN_WIDTH } = Dimensions.get("window");
+const normalizeSize = (size: number) =>
+  Math.round(size * (SCREEN_WIDTH / 375));
 
 interface CountdownValues {
   days: number;
@@ -61,7 +57,6 @@ interface Feature {
   username?: string;
 }
 
-// Interface pour user, corrige l'erreur TS sur votedFor
 interface User {
   uid: string;
   username?: string;
@@ -70,6 +65,7 @@ interface User {
 }
 
 export default function NewFeatures() {
+  const { t } = useTranslation();
   const [features, setFeatures] = useState<Feature[]>([]);
   const [loading, setLoading] = useState(true);
   const [userVote, setUserVote] = useState<string | null>(null);
@@ -86,7 +82,9 @@ export default function NewFeatures() {
   const [showProposeModal, setShowProposeModal] = useState(false);
   const { theme } = useTheme();
   const isDarkMode = theme === "dark";
-  const currentTheme: Theme = isDarkMode ? designSystem.darkTheme : designSystem.lightTheme;
+  const currentTheme: Theme = isDarkMode
+    ? designSystem.darkTheme
+    : designSystem.lightTheme;
 
   useEffect(() => {
     const unsubscribeAuth = onAuthStateChanged(auth, async (firebaseUser) => {
@@ -97,7 +95,7 @@ export default function NewFeatures() {
           ? { ...snapshot.data(), uid: firebaseUser.uid }
           : { uid: firebaseUser.uid };
         setUser(userData as User);
-        setUserVote(snapshot.exists() ? snapshot.data().votedFor || null : null); // Logique initiale intacte
+        setUserVote(snapshot.exists() ? snapshot.data().votedFor || null : null);
       }
     });
     return unsubscribeAuth;
@@ -120,8 +118,8 @@ export default function NewFeatures() {
     const unsubscribe = onSnapshot(featuresRef, (snapshot) => {
       const data = snapshot.docs.map((docSnap) => ({
         id: docSnap.id,
-        ...docSnap.data(),
-      })) as Feature[];
+        ...(docSnap.data() as Omit<Feature, "id">),
+      }));
       setFeatures(
         data
           .filter((feature) => feature.approved)
@@ -151,29 +149,48 @@ export default function NewFeatures() {
   }, []);
 
   const handleVote = async (featureId: string) => {
-    if (!user?.uid)
-      return Alert.alert(
-        "Connexion requise",
-        "Veuillez vous connecter pour voter."
+    if (!user?.uid) {
+      Alert.alert(
+        t("newFeatures.loginRequiredTitle"),
+        t("newFeatures.loginRequiredMessage")
       );
-    if (userVote)
-      return Alert.alert("Vote déjà effectué", "Vous avez déjà voté.");
+      return;
+    }
+    if (userVote) {
+      Alert.alert(
+        t("newFeatures.alreadyVotedTitle"),
+        t("newFeatures.alreadyVotedMessage")
+      );
+      return;
+    }
     try {
-      await updateDoc(doc(db, "polls", "new-features", "features", featureId), {
-        votes: increment(1),
-      });
+      await updateDoc(
+        doc(db, "polls", "new-features", "features", featureId),
+        { votes: increment(1) }
+      );
       await updateDoc(doc(db, "users", user.uid), { votedFor: featureId });
       setUserVote(featureId);
-      Alert.alert("Vote enregistré", "Merci pour votre vote !");
+      Alert.alert(
+        t("newFeatures.voteRegisteredTitle"),
+        t("newFeatures.voteRegisteredMessage")
+      );
     } catch (error) {
       console.error("Erreur lors du vote :", error);
-      Alert.alert("Erreur", "Une erreur est survenue.");
+      Alert.alert(
+        t("newFeatures.voteErrorTitle"),
+        t("newFeatures.voteErrorMessage")
+      );
     }
   };
 
   const handleProposeFeature = async (title: string, description?: string) => {
-    if (!user?.uid)
-      return Alert.alert("Connexion requise", "Veuillez vous connecter.");
+    if (!user?.uid) {
+      Alert.alert(
+        t("newFeatures.loginRequiredTitle"),
+        t("newFeatures.loginRequiredMessage")
+      );
+      return;
+    }
     try {
       const featureRef = await addDoc(
         collection(db, "polls", "new-features", "features"),
@@ -182,7 +199,7 @@ export default function NewFeatures() {
           description: description || "",
           votes: 1,
           approved: false,
-          username: user?.username || "Inconnu",
+          username: user.username || t("newFeatures.unknown"),
         }
       );
       await setDoc(
@@ -192,12 +209,15 @@ export default function NewFeatures() {
       );
       setUserVote(featureRef.id);
       Alert.alert(
-        "Proposition envoyée",
-        "Votre idée est soumise avec votre vote !"
+        t("newFeatures.proposalSentTitle"),
+        t("newFeatures.proposalSentMessage")
       );
     } catch (error) {
       console.error("Erreur lors de la proposition :", error);
-      Alert.alert("Erreur", "Impossible d'envoyer.");
+      Alert.alert(
+        t("newFeatures.proposalErrorTitle"),
+        t("newFeatures.proposalErrorMessage")
+      );
     }
   };
 
@@ -222,7 +242,7 @@ export default function NewFeatures() {
           <Text
             style={[styles.countdownLabel, { color: currentTheme.colors.textPrimary }]}
           >
-            {unit.charAt(0).toUpperCase() + unit.slice(1)}
+            {t(`newFeatures.countdown.${unit}`)}
           </Text>
         </Animated.View>
       ))}
@@ -231,7 +251,7 @@ export default function NewFeatures() {
 
   const renderFeatureItem = ({ item, index }: { item: Feature; index: number }) => (
     <Animated.View
-      entering={FadeInUp.delay(index * 50)} // Délai réduit pour fluidité
+      entering={FadeInUp.delay(index * 50)}
       style={styles.featureCard}
     >
       <TouchableOpacity
@@ -239,29 +259,25 @@ export default function NewFeatures() {
           setSelectedFeature(item);
           setShowFeatureDetailModal(true);
         }}
-        accessibilityLabel={`Voir les détails de la fonctionnalité ${item.title}`}
+        accessibilityLabel={t("newFeatures.featureDetails", { title: item.title })}
         testID={`feature-card-${item.id}`}
       >
         <LinearGradient
           colors={[currentTheme.colors.cardBackground, `${currentTheme.colors.cardBackground}F0`]}
           style={styles.featureGradient}
         >
-          <Text
-            style={[styles.featureTitle, { color: currentTheme.colors.textPrimary }]}
-          >
+          <Text style={[styles.featureTitle, { color: currentTheme.colors.textPrimary }]}>
             {item.title}
           </Text>
           {item.username && (
             <Text
               style={[styles.featureUsername, { color: currentTheme.colors.textSecondary }]}
             >
-              par {item.username}
+              {t("newFeatures.by")} {item.username}
             </Text>
           )}
-          <Text
-            style={[styles.featureVotes, { color: currentTheme.colors.primary }]}
-          >
-            {item.votes} vote{item.votes !== 1 ? "s" : ""}
+          <Text style={[styles.featureVotes, { color: currentTheme.colors.primary }]}>
+            {item.votes} {t("newFeatures.votes", { count: item.votes })}
           </Text>
           {item.description && (
             <Text
@@ -281,7 +297,7 @@ export default function NewFeatures() {
     return (
       <SafeAreaView style={styles.safeArea}>
         <StatusBar
-          translucent={true}
+          translucent
           backgroundColor="transparent"
           barStyle={isDarkMode ? "light-content" : "dark-content"}
         />
@@ -291,7 +307,7 @@ export default function NewFeatures() {
         >
           <ActivityIndicator size="large" color={currentTheme.colors.secondary} />
           <Text style={[styles.loadingText, { color: currentTheme.colors.textPrimary }]}>
-            Chargement en cours...
+            {t("newFeatures.loading")}
           </Text>
         </LinearGradient>
       </SafeAreaView>
@@ -301,7 +317,7 @@ export default function NewFeatures() {
   return (
     <SafeAreaView style={styles.safeArea}>
       <StatusBar
-        translucent={true}
+        translucent
         backgroundColor="transparent"
         barStyle={isDarkMode ? "light-content" : "dark-content"}
       />
@@ -312,11 +328,11 @@ export default function NewFeatures() {
         end={{ x: 1, y: 1 }}
       >
         <View style={styles.headerWrapper}>
-          <CustomHeader title="Nouveautés" />
+          <CustomHeader title={t("newFeatures.title")} />
           <TouchableOpacity
             style={styles.helpIcon}
             onPress={() => setShowExplanationModal(true)}
-            accessibilityLabel="Ouvrir l'explication du vote"
+            accessibilityLabel={t("newFeatures.openExplanation")}
             testID="help-icon"
           >
             <Ionicons
@@ -329,30 +345,32 @@ export default function NewFeatures() {
         <Text
           style={[styles.description, { color: currentTheme.colors.textSecondary }]}
         >
-          Votez pour la prochaine fonctionnalité à implémenter ou proposez la vôtre ! Fin le 30 avril 2025.
+          {t("newFeatures.description")}
         </Text>
-        <View style={[styles.featuresWindow, { backgroundColor: `${currentTheme.colors.cardBackground}80` }]}>
+        <View
+          style={[styles.featuresWindow, { backgroundColor: `${currentTheme.colors.cardBackground}80` }]}
+        >
           {features.length > 0 ? (
             <FlatList
               data={features}
               renderItem={renderFeatureItem}
               keyExtractor={(item) => item.id}
               contentContainerStyle={styles.featuresContent}
-              showsVerticalScrollIndicator={true}
+              showsVerticalScrollIndicator
               initialNumToRender={10}
-              getItemLayout={(data, index) => ({
+              getItemLayout={(_, index) => ({
                 length: normalizeSize(100),
                 offset: normalizeSize(100) * index,
                 index,
               })}
               accessibilityRole="list"
-              accessibilityLabel="Liste des fonctionnalités proposées"
+              accessibilityLabel={t("newFeatures.featuresListLabel")}
             />
           ) : (
             <Text
               style={[styles.noFeaturesText, { color: currentTheme.colors.textSecondary }]}
             >
-              Aucune fonctionnalité disponible pour le moment.
+              {t("newFeatures.noFeatures")}
             </Text>
           )}
         </View>
@@ -362,20 +380,21 @@ export default function NewFeatures() {
             <Text
               style={[styles.thankYouText, { color: currentTheme.colors.textSecondary }]}
             >
-              Merci pour votre vote :{" "}
-              {features.find((f) => f.id === userVote)?.title || "???"}
+              {t("newFeatures.thankYouForVote", {
+                featureTitle: features.find((f) => f.id === userVote)?.title || "???"
+              })}
             </Text>
           ) : (
             <TouchableOpacity
               style={[styles.proposeButton, { backgroundColor: currentTheme.colors.primary }]}
               onPress={() => setShowProposeModal(true)}
-              accessibilityLabel="Proposer une nouvelle fonctionnalité"
+              accessibilityLabel={t("newFeatures.proposeIdea")}
               testID="propose-button"
             >
               <Text
                 style={[styles.proposeButtonText, { color: currentTheme.colors.textPrimary }]}
               >
-                Proposer une idée
+                {t("newFeatures.proposeIdea")}
               </Text>
             </TouchableOpacity>
           )}

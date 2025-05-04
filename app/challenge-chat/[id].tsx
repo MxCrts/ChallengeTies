@@ -19,6 +19,7 @@ import { auth } from "../../constants/firebase-config";
 import { useChat } from "../../context/ChatContext";
 import { useTheme } from "../../context/ThemeContext";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
+import { useTranslation } from "react-i18next";
 import { Theme } from "../../theme/designSystem";
 import designSystem from "../../theme/designSystem";
 
@@ -31,7 +32,8 @@ const normalizeSize = (size: number) => {
 };
 
 export default function ChallengeChat() {
-  const { id: challengeId, title: challengeTitle } = useLocalSearchParams();
+  const { t } = useTranslation();
+  const { id: challengeId, title: challengeTitleParam } = useLocalSearchParams();
   const navigation = useNavigation();
   const { messages, sendMessage } = useChat(
     Array.isArray(challengeId) ? challengeId[0] : challengeId
@@ -42,7 +44,9 @@ export default function ChallengeChat() {
 
   const { theme } = useTheme();
   const isDarkMode = theme === "dark";
-  const currentTheme: Theme = isDarkMode ? designSystem.darkTheme : designSystem.lightTheme;
+  const currentTheme: Theme = isDarkMode
+    ? designSystem.darkTheme
+    : designSystem.lightTheme;
   const headerGradient: readonly [string, string] = [
     currentTheme.colors.primary,
     currentTheme.colors.secondary,
@@ -114,7 +118,11 @@ export default function ChallengeChat() {
             <Text
               style={[
                 styles.messageText,
-                { color: isMyMessage ? currentTheme.colors.textPrimary : currentTheme.colors.textSecondary },
+                {
+                  color: isMyMessage
+                    ? currentTheme.colors.textPrimary
+                    : currentTheme.colors.textSecondary,
+                },
               ]}
             >
               {item.text}
@@ -126,25 +134,42 @@ export default function ChallengeChat() {
     [currentTheme]
   );
 
+  const challengeTitle =
+    typeof challengeTitleParam === "string"
+      ? challengeTitleParam
+      : challengeTitleParam?.[0] || "";
+
   return (
-    <SafeAreaView style={[styles.container, { backgroundColor: currentTheme.colors.background }]}>
+    <SafeAreaView
+      style={[
+        styles.container,
+        { backgroundColor: currentTheme.colors.background },
+      ]}
+    >
       <StatusBar
         translucent
         backgroundColor="transparent"
         barStyle={isDarkMode ? "light-content" : "dark-content"}
       />
-      {/* Header avec gradient */}
-      <LinearGradient colors={headerGradient} style={[styles.header, { paddingTop: insets.top }]}>
+      {/* Header */}
+      <LinearGradient
+        colors={headerGradient}
+        style={[styles.header, { paddingTop: insets.top }]}
+      >
         <TouchableOpacity
           onPress={() => navigation.goBack()}
           style={styles.backButton}
-          accessibilityLabel="Retour à la page précédente"
+          accessibilityLabel={t("challengeChat.backButton")}
           testID="back-button"
         >
-          <Ionicons name="arrow-back" size={normalizeSize(24)} color={currentTheme.colors.textPrimary} />
+          <Ionicons
+            name="arrow-back"
+            size={normalizeSize(24)}
+            color={currentTheme.colors.textPrimary}
+          />
         </TouchableOpacity>
         <Text style={[styles.headerTitle, { color: currentTheme.colors.textPrimary }]}>
-          {challengeTitle || "Challenge Chat"}
+          {challengeTitle || t("challengeChat.defaultTitle")}
         </Text>
       </LinearGradient>
 
@@ -165,7 +190,8 @@ export default function ChallengeChat() {
             flatListRef.current?.scrollToEnd({ animated: true })
           }
         />
-        {/* Zone d'envoi */}
+
+        {/* Input area */}
         <View
           style={[
             styles.inputWrapper,
@@ -185,22 +211,19 @@ export default function ChallengeChat() {
                 color: currentTheme.colors.textPrimary,
               },
             ]}
-            placeholder="Votre message..."
+            placeholder={t("challengeChat.placeholder")}
             placeholderTextColor={currentTheme.colors.textSecondary}
             value={newMessage}
             onChangeText={setNewMessage}
             multiline
-            accessibilityLabel="Champ pour écrire un message"
-            accessibilityHint="Tapez votre message ici"
+            accessibilityLabel={t("challengeChat.inputA11yLabel")}
+            accessibilityHint={t("challengeChat.inputA11yHint")}
             testID="message-input"
           />
           <TouchableOpacity
-            style={[
-              styles.sendButton,
-              { backgroundColor: currentTheme.colors.secondary },
-            ]}
+            style={[styles.sendButton, { backgroundColor: currentTheme.colors.secondary }]}
             onPress={handleSend}
-            accessibilityLabel="Envoyer le message"
+            accessibilityLabel={t("challengeChat.sendButtonLabel")}
             testID="send-button"
           >
             <Ionicons

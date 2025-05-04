@@ -18,70 +18,50 @@ import { useRouter } from "expo-router";
 import { signInWithEmailAndPassword } from "firebase/auth";
 import { auth } from "../constants/firebase-config";
 import { Ionicons } from "@expo/vector-icons";
+import { useTranslation } from "react-i18next";
 
 const { width: SCREEN_WIDTH, height: SCREEN_HEIGHT } = Dimensions.get("window");
-
-// Fonction de normalisation des tailles pour la responsivité
 const normalize = (size: number) => {
-  const scale = Math.min(SCREEN_WIDTH, SCREEN_HEIGHT) / 375; // Référence iPhone X
+  const scale = Math.min(SCREEN_WIDTH, SCREEN_HEIGHT) / 375;
   return Math.round(PixelRatio.roundToNearestPixel(size * scale));
 };
 
-// Palette de couleurs
-const BACKGROUND_COLOR = "#FFF8E7"; // crème
-const PRIMARY_COLOR = "#FFB800"; // orange
-const TEXT_COLOR = "#333"; // texte foncé
-const BUTTON_COLOR = "#FFFFFF"; // bouton blanc
+const BACKGROUND_COLOR = "#FFF8E7";
+const PRIMARY_COLOR = "#FFB800";
+const TEXT_COLOR = "#333";
+const BUTTON_COLOR = "#FFFFFF";
 
-// Taille du cercle décoratif et position dynamique
 const circleSize = Math.min(SCREEN_WIDTH, SCREEN_HEIGHT) * 0.85;
-const circleTop = SCREEN_HEIGHT * 0.35; // Ajusté pour centrage dynamique
+const circleTop = SCREEN_HEIGHT * 0.35;
 const waveCount = 4;
-
-// Constante pour les marges/paddings
 const SPACING = normalize(15);
 
-// Composant Wave (centré horizontalement)
-const Wave = React.memo(
-  ({
-    opacity,
-    scale,
-    borderWidth,
-    size,
-    top,
-  }: {
-    opacity: Animated.Value;
-    scale: Animated.Value;
-    borderWidth: number;
-    size: number;
-    top: number;
-  }) => (
-    <Animated.View
-      style={{
-        width: size,
-        height: size,
-        borderRadius: size / 2,
-        opacity,
-        transform: [{ scale }],
-        borderWidth,
-        borderColor: PRIMARY_COLOR,
-        position: "absolute",
-        top,
-        left: (SCREEN_WIDTH - size) / 2,
-      }}
-    />
-  )
-);
+const Wave = React.memo(({ opacity, scale, borderWidth, size, top }: any) => (
+  <Animated.View
+    style={{
+      width: size,
+      height: size,
+      borderRadius: size / 2,
+      opacity,
+      transform: [{ scale }],
+      borderWidth,
+      borderColor: PRIMARY_COLOR,
+      position: "absolute",
+      top,
+      left: (SCREEN_WIDTH - size) / 2,
+    }}
+  />
+));
 
 export default function Login() {
+  const { t } = useTranslation();
   const router = useRouter();
-  const [email, setEmail] = useState<string>("");
-  const [password, setPassword] = useState<string>("");
-  const [loading, setLoading] = useState<boolean>(false);
-  const [errorMessage, setErrorMessage] = useState<string>("");
-  const [showPassword, setShowPassword] = useState<boolean>(false);
+  const [email, setEmail] = useState("");
+  const [password, setPassword] = useState("");
+  const [loading, setLoading] = useState(false);
+  const [errorMessage, setErrorMessage] = useState("");
+  const [showPassword, setShowPassword] = useState(false);
 
-  // Initialiser les vagues
   const wavesRef = useRef(
     Array.from({ length: waveCount }, (_, index) => ({
       opacity: new Animated.Value(0.3 - index * 0.05),
@@ -134,12 +114,12 @@ export default function Login() {
   const handleLogin = async () => {
     setErrorMessage("");
     if (!email.trim() || !password.trim()) {
-      setErrorMessage("Veuillez renseigner votre email et votre mot de passe.");
+      setErrorMessage(t("fillEmailPassword"));
       setTimeout(() => setErrorMessage(""), 5000);
       return;
     }
     if (!isValidEmail(email.trim())) {
-      setErrorMessage("Veuillez saisir un email valide.");
+      setErrorMessage(t("invalidEmail"));
       setTimeout(() => setErrorMessage(""), 5000);
       return;
     }
@@ -150,15 +130,12 @@ export default function Login() {
     } catch (error) {
       const firebaseError = error as { code: string };
       const errorMessages: Record<string, string> = {
-        "auth/user-not-found": "Aucun compte trouvé pour cet email.",
-        "auth/wrong-password": "Mot de passe incorrect.",
-        "auth/invalid-email": "Format d'email invalide.",
-        "auth/too-many-requests":
-          "Trop de tentatives. Veuillez réessayer plus tard.",
+        "auth/user-not-found": t("noAccountFound"),
+        "auth/wrong-password": t("wrongPassword"),
+        "auth/invalid-email": t("invalidEmailFormat"),
+        "auth/too-many-requests": t("tooManyRequests"),
       };
-      setErrorMessage(
-        errorMessages[firebaseError.code] || "Une erreur est survenue."
-      );
+      setErrorMessage(errorMessages[firebaseError.code] || t("unknownError"));
       setTimeout(() => setErrorMessage(""), 5000);
     } finally {
       setLoading(false);
@@ -177,7 +154,6 @@ export default function Login() {
         contentContainerStyle={styles.container}
         keyboardShouldPersistTaps="handled"
       >
-        {/* Vagues de fond */}
         {waves.map((wave, index) => (
           <Wave
             key={index}
@@ -189,27 +165,13 @@ export default function Login() {
           />
         ))}
 
-        {/* Header : Titre et slogan */}
         <View style={styles.headerContainer}>
-          <Text
-            style={styles.brandTitle}
-            numberOfLines={1}
-            adjustsFontSizeToFit
-            ellipsizeMode="tail"
-            accessibilityLabel="Titre de l'application"
-          >
-            <Text style={styles.highlight}>C</Text>hallenge
-            <Text style={styles.highlight}>T</Text>ies
+          <Text style={styles.brandTitle} numberOfLines={1} adjustsFontSizeToFit ellipsizeMode="tail">
+            <Text style={styles.highlight}>C</Text>hallenge<Text style={styles.highlight}>T</Text>ies
           </Text>
-          <Text
-            style={styles.tagline}
-            accessibilityLabel="Slogan de l'application"
-          >
-            La meilleure façon de prédire votre avenir est de le créer
-          </Text>
+          <Text style={styles.tagline}>{t("appTagline")}</Text>
         </View>
 
-        {/* Formulaire : Champs de saisie centrés */}
         <View style={styles.formContainer}>
           {errorMessage !== "" && (
             <Text style={styles.errorText} accessibilityRole="alert">
@@ -217,38 +179,26 @@ export default function Login() {
             </Text>
           )}
           <TextInput
-            placeholder="tony.stark@example.com"
+            placeholder={t("emailPlaceholder")}
             placeholderTextColor="rgba(50,50,50,0.5)"
             style={styles.input}
             value={email}
             onChangeText={setEmail}
-            accessibilityLabel="Email"
             keyboardType="email-address"
             autoCapitalize="none"
             autoComplete="email"
-            testID="email-input"
           />
           <View style={styles.passwordContainer}>
             <TextInput
-              placeholder="Mot de passe"
+              placeholder={t("passwordPlaceholder")}
               placeholderTextColor="rgba(50,50,50,0.5)"
               style={[styles.input, styles.passwordInput]}
               value={password}
               onChangeText={setPassword}
               secureTextEntry={!showPassword}
-              accessibilityLabel="Mot de passe"
               autoComplete="password"
-              testID="password-input"
             />
-            <TouchableOpacity
-              onPress={() => setShowPassword((prev) => !prev)}
-              accessibilityLabel={
-                showPassword
-                  ? "Cacher le mot de passe"
-                  : "Afficher le mot de passe"
-              }
-              style={styles.passwordIcon}
-            >
+            <TouchableOpacity onPress={() => setShowPassword((prev) => !prev)} style={styles.passwordIcon}>
               <Ionicons
                 name={showPassword ? "eye-off" : "eye"}
                 size={normalize(24)}
@@ -257,35 +207,34 @@ export default function Login() {
             </TouchableOpacity>
           </View>
 
-          <TouchableOpacity onPress={() => router.push("/forgot-password")}>
-            <Text style={styles.forgotPassword}>Mot de passe oublié ?</Text>
+          <TouchableOpacity onPress={() => router.push("/forgot-password")}
+            accessibilityLabel={t("forgotPassword")}
+          >
+            <Text style={styles.forgotPassword}>{t("forgotPassword")}</Text>
           </TouchableOpacity>
         </View>
 
-        {/* Footer : Bouton et lien */}
         <View style={styles.footerContainer}>
           <TouchableOpacity
             style={[styles.loginButton, loading && styles.disabledButton]}
             onPress={handleLogin}
             disabled={loading}
-            accessibilityLabel="Se connecter"
             accessibilityRole="button"
-            testID="login-button"
           >
             {loading ? (
               <ActivityIndicator color={TEXT_COLOR} size="small" />
             ) : (
-              <Text style={styles.loginButtonText}>Se Connecter</Text>
+              <Text style={styles.loginButtonText}>{t("login")}</Text>
             )}
           </TouchableOpacity>
-          <Text style={styles.signupText} accessibilityLabel="Inscription">
-            Pas encore de compte ?{" "}
+          <Text style={styles.signupText}>
+            {t("noAccount")} {" "}
             <Text
               style={styles.signupLink}
               onPress={() => router.push("/register")}
               accessibilityRole="link"
             >
-              Inscris-toi ici
+              {t("signupHere")}
             </Text>
           </Text>
         </View>

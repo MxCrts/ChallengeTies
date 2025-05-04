@@ -9,6 +9,7 @@ import {
 } from "react-native";
 import { Ionicons } from "@expo/vector-icons";
 import designSystem from "../theme/designSystem";
+import { useTranslation } from "react-i18next";
 
 const { width: viewportWidth } = Dimensions.get("window");
 const currentTheme = designSystem.lightTheme;
@@ -32,11 +33,15 @@ const DurationSelectionModal: React.FC<DurationSelectionModalProps> = ({
   onCancel,
   dayIcons,
 }) => {
+  const { t } = useTranslation();
+
   return (
     <Modal visible={visible} transparent animationType="slide">
       <View style={styles.modalContainer}>
         <View style={styles.modalContent}>
-          <Text style={styles.modalTitle}>Choisissez la durée (jours)</Text>
+          <Text style={styles.modalTitle}>
+            {t("durationModal.title")}
+          </Text>
           <View style={styles.daysOptionsContainer}>
             {daysOptions.map((days) => (
               <TouchableOpacity
@@ -58,16 +63,20 @@ const DurationSelectionModal: React.FC<DurationSelectionModalProps> = ({
                     selectedDays === days && { color: "#fff" },
                   ]}
                 >
-                  {days} jours
+                  {t("durationModal.days", { count: days })}
                 </Text>
               </TouchableOpacity>
             ))}
           </View>
           <TouchableOpacity style={styles.confirmButton} onPress={onConfirm}>
-            <Text style={styles.confirmButtonText}>Confirmer</Text>
+            <Text style={styles.confirmButtonText}>
+              {t("durationModal.confirm")}
+            </Text>
           </TouchableOpacity>
           <TouchableOpacity style={styles.cancelButton} onPress={onCancel}>
-            <Text style={styles.cancelButtonText}>Annuler</Text>
+            <Text style={styles.cancelButtonText}>
+              {t("durationModal.cancel")}
+            </Text>
           </TouchableOpacity>
         </View>
       </View>

@@ -27,8 +27,9 @@ import { Theme } from "../../theme/designSystem";
 import designSystem from "../../theme/designSystem";
 import CustomHeader from "@/components/CustomHeader";
 import BackButton from "../../components/BackButton";
+import { useTranslation } from "react-i18next";
 
-const { width: SCREEN_WIDTH, height: SCREEN_HEIGHT } = Dimensions.get("window");
+const { width: SCREEN_WIDTH } = Dimensions.get("window");
 const SPACING = 15;
 const ITEM_WIDTH = SCREEN_WIDTH - SPACING * 2;
 const ITEM_HEIGHT = SCREEN_WIDTH * 0.45;
@@ -40,6 +41,7 @@ const normalizeSize = (size: number) => {
 };
 
 export default function SavedChallengesScreen() {
+  const { t, i18n } = useTranslation();
   const { savedChallenges, removeChallenge } = useSavedChallenges();
   const [isLoading, setIsLoading] = useState<boolean>(true);
   const router = useRouter();
@@ -50,20 +52,15 @@ export default function SavedChallengesScreen() {
     ? designSystem.darkTheme
     : designSystem.lightTheme;
 
+  // Traduction à chaque changement de langue
   useEffect(() => {
-    console.log("savedChallenges dans SavedChallenges.tsx :", savedChallenges);
-    // Attendre que savedChallenges soit initialisé
     if (savedChallenges !== undefined) {
       setIsLoading(false);
       if (savedChallenges.length === 0) {
-        console.warn("Aucun défi sauvegardé après initialisation.");
-        Alert.alert(
-          "Information",
-          "Aucun défi sauvegardé trouvé. Essayez de sauvegarder un défi depuis l'écran d'exploration."
-        );
+        Alert.alert(t("savedChallenges"), t("saveChallengesToSeeHere"));
       }
     }
-  }, [savedChallenges]);
+  }, [savedChallenges, t, i18n.language]);
 
   const dynamicStyles = useMemo(
     () => ({
@@ -89,65 +86,86 @@ export default function SavedChallengesScreen() {
 
   const navigateToChallengeDetails = useCallback(
     (item: ContextChallenge) => {
-      const selectedDays = item.daysOptions && item.daysOptions.length > 0 ? item.daysOptions[0] : 7;
+      // on récupère la traduction du titre et description
+      const titleTrans = item.chatId
+        ? t(`challenges.${item.chatId}.title`, { defaultValue: item.title })
+        : item.title;
+      const descTrans = item.chatId
+        ? t(`challenges.${item.chatId}.description`, {
+            defaultValue: item.description || "",
+          })
+        : item.description || "";
+      const catTrans = item.category
+        ? t(`categories.${item.category}`, { defaultValue: item.category })
+        : t("noCategory");
+
+      const selectedDays =
+        item.daysOptions && item.daysOptions.length > 0
+          ? item.daysOptions[0]
+          : 7;
       const completedDays = 0;
       const route =
         `/challenge-details/${encodeURIComponent(item.id)}` +
-        `?title=${encodeURIComponent(item.title)}` +
+        `?title=${encodeURIComponent(titleTrans)}` +
         `&selectedDays=${selectedDays}` +
         `&completedDays=${completedDays}` +
-        `&category=${encodeURIComponent(item.category || "Uncategorized")}` +
-        `&description=${encodeURIComponent(item.description || "")}` +
+        `&category=${encodeURIComponent(catTrans)}` +
+        `&description=${encodeURIComponent(descTrans)}` +
         `&imageUrl=${encodeURIComponent(item.imageUrl || "")}`;
       router.push(route as any);
     },
-    [router]
+    [router, t]
   );
 
   const handleRemoveChallenge = useCallback(
     (challengeId: string, index: number) => {
       Alert.alert(
-        "Supprimer le défi",
-        "Vous êtes sûr ? Ce défi sera retiré de vos sauvegardes.",
+        t("deleteChallenge"),
+        t("deleteChallengeConfirm"),
         [
           {
-            text: "Annuler",
+            text: t("cancel"),
             style: "cancel",
             onPress: () => {
-              const swipeable = swipeableRefs.current[index];
-              if (swipeable) {
-                swipeable.close();
-              }
+              swipeableRefs.current[index]?.close();
             },
           },
           {
-            text: "Continuer",
+            text: t("continue"),
             style: "destructive",
             onPress: async () => {
               try {
                 await removeChallenge(challengeId);
-                Alert.alert("Supprimé", "Défi supprimé avec succès.");
+                Alert.alert(t("deleted"), t("challengeDeletedSuccess"));
               } catch (err) {
-                console.error("Erreur lors de la suppression :", err);
-                Alert.alert("Erreur", "Impossible de supprimer ce défi.");
-                const swipeable = swipeableRefs.current[index];
-                if (swipeable) {
-                  swipeable.close();
-                }
+                console.error(err);
+                Alert.alert(t("error"), t("failedToDeleteChallenge"));
+                swipeableRefs.current[index]?.close();
               }
             },
           },
         ]
       );
     },
-    [removeChallenge]
+    [removeChallenge, t]
   );
 
   const renderChallengeItem = useCallback(
     ({ item, index }: { item: ContextChallenge; index: number }) => {
-      const selectedDays = item.daysOptions && item.daysOptions.length > 0 ? item.daysOptions[0] : 7;
+      const titleTrans = item.chatId
+        ? t(`challenges.${item.chatId}.title`, { defaultValue: item.title })
+        : item.title;
+      const catTrans = item.category
+        ? t(`categories.${item.category}`, { defaultValue: item.category })
+        : t("noCategory");
+
+      const selectedDays =
+        item.daysOptions && item.daysOptions.length > 0
+          ? item.daysOptions[0]
+          : 7;
       const completedDays = 0;
       const progress = completedDays / selectedDays;
+
       return (
         <Animated.View
           entering={FadeInUp.delay(index * 100)}
@@ -161,8 +179,8 @@ export default function SavedChallengesScreen() {
                 <TouchableOpacity
                   style={styles.trashButton}
                   onPress={() => handleRemoveChallenge(item.id, index)}
-                  accessibilityLabel="Supprimer le défi"
-                  accessibilityHint="Retire ce défi de vos sauvegardes"
+                  accessibilityLabel={t("deleteChallenge")}
+                  accessibilityHint={t("deleteChallengeConfirm")}
                   testID={`trash-button-${index}`}
                 >
                   <LinearGradient
@@ -187,31 +205,42 @@ export default function SavedChallengesScreen() {
               style={styles.cardContainer}
               onPress={() => navigateToChallengeDetails(item)}
               activeOpacity={0.9}
-              accessibilityLabel={`Voir les détails du défi ${item.title}`}
-              accessibilityHint="Ouvre les détails de ce défi sauvegardé"
+              accessibilityLabel={t("viewChallengeDetails")}
+              accessibilityHint={t("viewChallengeDetails")}
               testID={`challenge-card-${index}`}
             >
               <LinearGradient
-                colors={[currentTheme.colors.cardBackground, currentTheme.colors.overlay]}
+                colors={[
+                  currentTheme.colors.cardBackground,
+                  currentTheme.colors.overlay,
+                ]}
                 style={dynamicStyles.card}
                 start={{ x: 0, y: 0 }}
                 end={{ x: 1, y: 1 }}
               >
                 <Image
-                  source={{ uri: item.imageUrl || "https://via.placeholder.com/70" }}
+                  source={{
+                    uri: item.imageUrl || "https://via.placeholder.com/70",
+                  }}
                   style={dynamicStyles.cardImage}
                 />
                 <View style={styles.cardContent}>
                   <Text
-                    style={[styles.challengeTitle, { color: currentTheme.colors.textPrimary }]}
+                    style={[
+                      styles.challengeTitle,
+                      { color: currentTheme.colors.textPrimary },
+                    ]}
                     numberOfLines={1}
                   >
-                    {item.title}
+                    {titleTrans}
                   </Text>
                   <Text
-                    style={[styles.challengeCategory, { color: currentTheme.colors.textSecondary }]}
+                    style={[
+                      styles.challengeCategory,
+                      { color: currentTheme.colors.textSecondary },
+                    ]}
                   >
-                    {item.category || "Sans catégorie"}
+                    {catTrans}
                   </Text>
                   <View style={styles.progressContainer}>
                     <Progress.Bar
@@ -225,16 +254,19 @@ export default function SavedChallengesScreen() {
                       style={styles.progressBar}
                     />
                     <Text
-                      style={[styles.progressText, { color: currentTheme.colors.secondary }]}
+                      style={[
+                        styles.progressText,
+                        { color: currentTheme.colors.secondary },
+                      ]}
                     >
-                      {completedDays}/{selectedDays} jours
+                      {completedDays}/{selectedDays} {t("days")}
                     </Text>
                   </View>
                   <TouchableOpacity
                     style={styles.viewButton}
                     onPress={() => navigateToChallengeDetails(item)}
-                    accessibilityLabel="Voir les détails"
-                    accessibilityHint="Ouvre les détails de ce défi"
+                    accessibilityLabel={t("viewDetails")}
+                    accessibilityHint={t("viewChallengeDetails")}
                     testID={`view-details-button-${index}`}
                   >
                     <LinearGradient
@@ -244,9 +276,12 @@ export default function SavedChallengesScreen() {
                       end={{ x: 1, y: 1 }}
                     >
                       <Text
-                        style={[styles.viewButtonText, { color: currentTheme.colors.textPrimary }]}
+                        style={[
+                          styles.viewButtonText,
+                          { color: currentTheme.colors.textPrimary },
+                        ]}
                       >
-                        Voir Détails
+                        {t("viewDetails")}
                       </Text>
                     </LinearGradient>
                   </TouchableOpacity>
@@ -257,7 +292,13 @@ export default function SavedChallengesScreen() {
         </Animated.View>
       );
     },
-    [currentTheme, dynamicStyles, navigateToChallengeDetails, handleRemoveChallenge]
+    [
+      currentTheme,
+      dynamicStyles,
+      navigateToChallengeDetails,
+      handleRemoveChallenge,
+      t,
+    ]
   );
 
   if (isLoading) {
@@ -270,8 +311,10 @@ export default function SavedChallengesScreen() {
           end={{ x: 1, y: 1 }}
         >
           <ActivityIndicator size="large" color={currentTheme.colors.secondary} />
-          <Text style={[styles.loadingText, { color: currentTheme.colors.textPrimary }]}>
-            Chargement en cours...
+          <Text
+            style={[styles.loadingText, { color: currentTheme.colors.textPrimary }]}
+          >
+            {t("loading")}
           </Text>
         </LinearGradient>
       </SafeAreaView>
@@ -293,11 +336,15 @@ export default function SavedChallengesScreen() {
               size={normalizeSize(60)}
               color={currentTheme.colors.textSecondary}
             />
-            <Text style={[styles.noChallengesText, { color: currentTheme.colors.textPrimary }]}>
-              Aucun défi sauvegardé !
+            <Text
+              style={[styles.noChallengesText, { color: currentTheme.colors.textPrimary }]}
+            >
+              {t("noSavedChallenges")}
             </Text>
-            <Text style={[styles.noChallengesSubtext, { color: currentTheme.colors.textSecondary }]}>
-              Sauvegardez des défis pour les voir ici.
+            <Text
+              style={[styles.noChallengesSubtext, { color: currentTheme.colors.textSecondary }]}
+            >
+              {t("saveChallengesToSeeHere")}
             </Text>
           </Animated.View>
         </LinearGradient>
@@ -319,14 +366,13 @@ export default function SavedChallengesScreen() {
         end={{ x: 1, y: 1 }}
       >
         <View style={styles.headerWrapper}>
-          <BackButton
-            color={currentTheme.colors.textPrimary}/>
-          <CustomHeader title="Défis Sauvegardés" />
+          <BackButton color={currentTheme.colors.textPrimary} />
+          <CustomHeader title={t("savedChallengesScreenTitle")} />
         </View>
         <FlatList
           data={savedChallenges}
           renderItem={renderChallengeItem}
-          keyExtractor={(item, index) => `saved-${item.id}-${index}`}
+          keyExtractor={(item, idx) => `saved-${item.id}-${idx}`}
           contentContainerStyle={styles.listContent}
           showsVerticalScrollIndicator={false}
         />

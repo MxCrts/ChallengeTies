@@ -1,0 +1,996 @@
+{
+    "settings": "Ajustes",
+    "notifications": "Notificaciones",
+    "darkMode": "Modo oscuro",
+    "language": "Idioma",
+    "account": "Cuenta",
+    "editProfile": "Editar perfil",
+    "logout": "Cerrar sesión",
+    "deleteAccount": "Eliminar cuenta",
+    "clearCache": "Borrar caché",
+    "about": "Acerca de",
+    "appVersion": "Versión de la app:",
+    "wakeYourPotential": "Despierta tu potencial",
+    "joinChallengeTies": "Únete a ChallengeTies y encuentra inspiración diaria",
+    "startAdventure": "Empieza la aventura",
+    "inspiringChallenges": "Desafíos inspiradores",
+    "getInspired": "Inspírate",
+    "tipsTricks": "Consejos y trucos",
+    "leaderboardTitle": "Clasificación",
+    "whatsNew": "Novedades",
+    "home": "Inicio",
+    "profile": "Perfil",
+    "yourProfile": "Tu perfil",
+    "addBioHere": "Agrega una biografía aquí",
+    "unknownLocation": "Ubicación desconocida",
+    "trophies": "Trofeos",
+    "editYourProfile": "Edita tu perfil",
+    "statistics": "Estadísticas",
+    "ongoingChallenges": "Desafíos en curso",
+    "favorites": "Favoritos",
+    "completedChallenges": "Desafíos completados",
+    "rewards": "Recompensas",
+    "myChallenges": "Mis desafíos",
+    "name": "Nombre",
+    "bio": "Biografía",
+    "location": "Ubicación",
+    "interests": "Intereses",
+    "save": "Guardar",
+    "savedChallenges": "Desafíos guardados",
+    "successRate": "Tasa de éxito",
+    "unlockedAchievements": "Logros desbloqueados",
+    "longestStreak": "Racha más larga",
+    "days": "días",
+    "noSavedChallenges": "No hay desafíos guardados",
+    "saveChallengesHere": "Guarda desafíos para encontrarlos aquí",
+    "noCompletedChallenges": "No hay desafíos completados",
+    "completeChallengesToSeeHere": "Completa desafíos para verlos aquí",
+    "yourAchievements": "Tus logros",
+    "firstStep": "Primer paso",
+    "firstLogin": "Primer inicio de sesión",
+    "loginFirstTime": "Inicia sesión por primera vez",
+    "profileCompleted": "Perfil completado",
+    "completeProfileInfo": "Completa toda la información de tu perfil",
+    "createdChallenges": "Desafíos creados",
+    "innovator": "Innovador",
+    "createTenChallenges": "Crea 10 desafíos y conviértete en innovador",
+    "iHaveInspiration": "Estoy inspirado",
+    "createFiveChallenges": "Crea 5 desafíos para mostrar tu inspiración",
+    "challengeCreator": "Creador de desafíos",
+    "createFirstChallenge": "Crea tu primer desafío",
+    "fiveChallengesSaved": "5 desafíos guardados",
+    "saveFiveChallenges": "Guarda 5 desafíos para mostrar interés",
+    "challengeSaved": "Desafío guardado",
+    "saveChallengeFirstTime": "Guarda un desafío por primera vez",
+    "finishedChallenges": "Desafíos finalizados",
+    "livingLegend": "Leyenda viva",
+    "completeHundredChallenges": "Completa 100 desafíos y conviértete en leyenda viva",
+    "unbeatable": "Invencible",
+    "completeFiftyChallenges": "Completa 50 desafíos y conviértete en invencible",
+    "challengeMachine": "Máquina de desafíos",
+    "completeTwentyFiveChallenges": "Completa 25 desafíos para ser una máquina",
+    "seriousAboutChallenges": "Serio con los desafíos",
+    "completeThreeChallenges": "Completa 3 desafíos para mostrar tu motivación",
+    "firstChallengeCompleted": "Primer desafío completado",
+    "completeYourFirstChallenge": "Completa tu primer desafío",
+    "challengeDuration": "Duración del desafío",
+    "legendaryPatient": "Paciente legendario",
+    "chooseOneYearChallenge": "Elige un desafío anual y hazte legendario",
+    "longTermMyThing": "Lo largo plazo es lo mío",
+    "choose180DaysChallenge": "Elige un desafío de 180 días para demostrar tu compromiso",
+    "marathoner": "Maratonista",
+    "choose90DaysChallenge": "Elige un desafío de 90 días y conviértete en maratonista",
+    "determination": "Determinación",
+    "choose30DaysChallenge": "Elige un desafío de 30 días para demostrar tu determinación",
+    "smallPlayer": "Primeros pasos",
+    "choose7DaysChallenge": "Elige un desafío de 7 días y comprométete",
+    "messages": "Mensajes",
+    "activeCommunity": "Comunidad activa",
+    "sendFiftyMessages": "Envía 50 mensajes para dinamizar la comunidad",
+    "teamSpirit": "Espíritu de equipo",
+    "sendTenMessages": "Envía 10 mensajes para mostrar tu espíritu de equipo",
+    "firstMessageSent": "Primer mensaje enviado",
+    "sendFirstMessage": "Envía tu primer mensaje en el chat",
+    "shares": "Compartidos",
+    "buddingInfluencer": "Influencer emergente",
+    "shareFiveChallenges": "Comparte 5 desafíos para ser influencer",
+    "likeToShare": "Me encanta compartir",
+    "shareFirstChallenge": "Comparte un desafío por primera vez",
+    "communityLeader": "Líder comunitario",
+    "shareTwentyChallenges": "Comparte 20 desafíos y lidera la comunidad",
+    "successStreak": "Racha de éxito",
+    "imAMonster": "Soy un monstruo",
+    "maintain365DaysSuccess": "Mantén 365 días de éxito y sé un monstruo",
+    "ultimateDiscipline": "Disciplina definitiva",
+    "maintain180Days": "Mantén 180 días consecutivos de disciplina",
+    "imAMachine": "Soy una máquina",
+    "maintain90Days": "Mantén 90 días de éxito, eres una máquina",
+    "nothingCanStopMe": "Nada puede detenerme",
+    "maintain60Days": "Mantén 60 días seguidos, nada te detiene",
+    "concreteDetermination": "Determinación concreta",
+    "maintain30Days": "Mantén 30 días consecutivos de determinación",
+    "impressive": "Impresionante",
+    "maintain14Days": "Mantén 14 días seguidos para impresionar",
+    "routineInPlace": "Rutina establecida",
+    "maintain7Days": "Mantén 7 días seguidos de éxito",
+    "miniStreak": "Mini racha",
+    "maintain3Days": "Logra 3 días seguidos de éxito",
+    "votes": "Votos",
+    "likeToVote": "Me gusta votar",
+    "voteFiveTimes": "Vota 5 veces para mostrar compromiso",
+    "firstChallengeVoted": "Primer desafío votado",
+    "voteForFirstFeature": "Vota por una nueva función por primera vez",
+    "noChallengeCreated": "No hay desafíos creados",
+    "createYourFirstChallengeNow": "Crea tu primer desafío ahora",
+    "dailyChallenges": "Desafíos diarios",
+    "noChallengeOngoing": "No hay desafíos en curso",
+    "clickIconTopRight": "Toca el icono superior derecho",
+    "orJoinChallenge": "O únete a un desafío",
+    "exploreChallenges": "Explorar desafíos",
+    "searchChallenge": "Buscar un desafío",
+    "contactUs": "Contáctanos",
+    "visitWebsite": "Visitar sitio web",
+    "preferences": "Preferencias",
+    "tips": {
+    "title": "Consejos",
+    "listAccessibility": "Lista de consejos",
+    "logoAlt": "Logotipo de ChallengeTies",
+    "subHeader": "Consejos prácticos para mantenerte inspirado, alcanzar tus metas y ganar trofeos",
+    "smartGoals": {
+      "title": "Establece objetivos SMART",
+      "description": "Metas Específicas, Medibles, Alcanzables, Realistas y con un Tiempo límite te ayudan a mantener el enfoque y la disciplina."
+    },
+    "beConsistent": {
+      "title": "Sé constante",
+      "description": "Dedica un tiempo fijo cada día a tu meta. Pequeñas acciones diarias conducen a grandes resultados."
+    },
+    "trackEverything": {
+      "title": "Registra todo",
+      "description": "Utiliza el seguimiento diario y las estadísticas de ChallengeTies para monitorizar tu progreso, ganar trofeos y mantener el impulso."
+    },
+    "findSupport": {
+      "title": "Encuentra apoyo comunitario",
+      "description": "Conéctate con personas afines, invita amigos, comparte experiencias y mantente motivado en grupo."
+    },
+    "rewardYourself": {
+      "title": "Recompénsate a menudo",
+      "description": "Celebra cada hito: victorias rápidas, grandes éxitos y nuevos trofeos para alimentar la motivación a largo plazo."
+    },
+    "switchItUp": {
+      "title": "Cámbialo",
+      "description": "Combate el aburrimiento probando nuevos desafíos, explorando categorías diferentes y avivando tus objetivos."
+    },
+    "inviteAFriend": {
+      "title": "Invita a un amigo",
+      "description": "Los desafíos son más fáciles (y divertidos) con un compañero. Envía invitaciones para alcanzar tus metas juntos."
+    },
+    "visualizeSuccess": {
+      "title": "Visualiza el éxito",
+      "description": "Imagina el resultado final: señales visuales y recordatorios diarios mantienen tu enfoque agudo."
+    },
+    "stayPositive": {
+      "title": "Mantente positivo",
+      "description": "Incluso si fallas, recuerda que cada día es un nuevo comienzo. Aprende de los errores y sigue adelante."
+    },
+    "readMore": "Leer más",
+    "showLess": "Mostrar menos",
+    "footerQuery": "¿Más preguntas o necesitas ayuda personalizada?",
+    "contactUs": "Contáctanos",
+    "shareTips": "Compartir consejos",
+    "shareMessage": "¡Mira estos increíbles consejos de ChallengeTies!",
+    "shareError": "Error al compartir los consejos",
+    "mailClientError": "No se puede abrir el cliente de correo",
+    "mailOpenError": "Error al abrir la aplicación de correo"
+  },
+  "newFeatures": {
+    "loginRequiredTitle": "Inicio de sesión requerido",
+    "loginRequiredMessage": "Por favor, inicia sesión para votar.",
+    "alreadyVotedTitle": "Voto ya realizado",
+    "alreadyVotedMessage": "Ya has votado.",
+    "voteRegisteredTitle": "Voto registrado",
+    "voteRegisteredMessage": "¡Gracias por tu voto!",
+    "voteErrorTitle": "Error",
+    "voteErrorMessage": "Algo salió mal.",
+    "proposalSentTitle": "Propuesta enviada",
+    "proposalSentMessage": "¡Tu idea ha sido enviada con tu voto!",
+    "proposalErrorTitle": "Error",
+    "proposalErrorMessage": "No se pudo enviar.",
+    "title": "Novedades",
+    "openExplanation": "Abrir explicación de votación",
+    "description": "¡Vota por la próxima función a implementar o propone la tuya propia! Termina el 30 de abril de 2025.",
+    "noFeatures": "No hay características disponibles por el momento.",
+    "proposeIdea": "Proponer una idea",
+    "thankYouForVote": "Gracias por tu voto: {{featureTitle}}",
+    "countdown": {
+      "days": "Días",
+      "hours": "Horas",
+      "mins": "Minutos",
+      "secs": "Segundos"
+    },
+    "featuresListLabel": "Lista de características propuestas"
+  },
+  "permissionDenied": "Permiso denegado",
+  "mustAllowNotifications": "Debes permitir notificaciones para recibir alertas.",
+  "error": "Error",
+  "failedToSavePreferences": "No se pudieron guardar las preferencias.",
+  "cacheCleared": "Caché borrada",
+  "tempDataDeleted": "Todos los datos temporales han sido eliminados.",
+  "failedToClearCache": "No se pudo borrar la caché.",
+  "logoutConfirm": "¿Estás seguro de que quieres cerrar sesión?",
+  "cancel": "Cancelar",
+  "loggedOut": "Sesión cerrada",
+  "logoutFailed": "Error al cerrar sesión.",
+  "deleteAccountConfirm": "¿Estás seguro? Esta acción es irreversible.",
+  "delete": "Eliminar",
+  "accountDeleted": "Cuenta eliminada",
+  "accountDeletedSuccess": "Tu cuenta ha sido eliminada exitosamente.",
+  "noUserConnected": "Ningún usuario conectado.",
+  "failedToDeleteAccount": "Error al eliminar la cuenta.",
+  "userNotConnected": "Usuario no conectado.",
+  "noOngoingChallengeToSimulate": "No hay ningún desafío en curso para simular.",
+  "disconnected": "Has cerrado sesión.",
+  "handleNotifications": "Habilitar o deshabilitar notificaciones",
+  "handleDarkMode": "Habilitar o deshabilitar modo oscuro",
+  "privacyPolicyPage": "Política de privacidad",
+  "accessAdmin": "Acceder a funciones de administración",
+  "admin": "Administración",
+  "aboutChallengeTies": "Acerca de ChallengeTies",
+  "fillEmailPassword": "Por favor ingresa tu correo y contraseña.",
+  "invalidEmail": "Por favor ingresa una dirección de correo válida.",
+  "noAccountFound": "No se encontró una cuenta para este correo.",
+  "wrongPassword": "Contraseña incorrecta.",
+  "invalidEmailFormat": "Formato de correo inválido.",
+  "tooManyRequests": "Demasiados intentos. Por favor inténtalo más tarde.",
+  "unknownError": "Ocurrió un error desconocido.",
+  "emailPlaceholder": "tony.stark@example.com",
+  "passwordPlaceholder": "Contraseña",
+  "hidePassword": "Ocultar contraseña",
+  "showPassword": "Mostrar contraseña",
+  "forgotPassword": "¿Olvidaste tu contraseña?",
+  "login": "Iniciar sesión",
+  "noAccount": "¿No tienes una cuenta?",
+  "signupHere": "Regístrate aquí",
+  "appTagline": "La mejor manera de predecir tu futuro es crearlo",
+  "enterYourEmail": "Por favor ingresa tu correo electrónico.",
+  "resetLinkSent": "Se ha enviado un enlace de restablecimiento a tu correo.",
+  "resetLinkFailed": "Error al enviar el enlace de restablecimiento. Por favor revisa tu correo.",
+  "backToLogin": "Volver al inicio de sesión",
+  "appTitle": "ChallengeTies",
+  "enterEmailToResetPassword": "Ingresa tu correo para restablecer tu contraseña.",
+  "resetForm": "Formulario de restablecimiento",
+  "yourEmailAddress": "Tu dirección de correo",
+  "sendResetLink": "Enviar enlace de restablecimiento",
+  "sendLink": "Enviar enlace",
+  "fillAllFields": "Por favor completa todos los campos.",
+  "passwordsDoNotMatch": "Las contraseñas no coinciden.",
+  "emailAlreadyInUse": "Este correo ya está en uso.",
+  "weakPassword": "Contraseña demasiado débil. Por favor elige una más fuerte.",
+  "anErrorOccurred": "Ocurrió un error. Por favor inténtalo de nuevo.",
+  "joinUsAndChallenge": "¡Únete y acepta desafíos!",
+  "yourEmail": "Tu correo",
+  "username": "Nombre de usuario",
+  "password": "Contraseña",
+  "confirmPassword": "Confirmar contraseña",
+  "signup": "Regístrate",
+  "alreadyHaveAccount": "¿Ya tienes una cuenta?",
+  "loginHere": "Inicia sesión aquí",
+  "profileNotFound": "Perfil no encontrado",
+  "profileLoadError": "Error al cargar el perfil",
+  "loadingProfile": "Cargando perfil...",
+  "currentChallenges": "Desafíos en curso",
+  "achievementsTitle": "Logros",
+  "user": "Usuario",
+  "addCoolBio": "¡Agrega una biografía genial!",
+  "editYourProfileTitle": "Edita tu perfil",
+  "userNotAuthenticated": "Usuario no autenticado.",
+  "errorFetchingProfile": "Error al obtener tu información.",
+  "photoPermissionDenied": "Permiso denegado. Debes permitir el acceso a las fotos.",
+  "uploadError": "Error de carga. La subida falló.",
+  "profileImageUpdated": "¡Imagen de perfil actualizada!",
+  "noImageSelected": "Cancelado. No se seleccionó imagen.",
+  "uploadFailed": "Error al subir la imagen.",
+  "userNotFound": "Usuario no encontrado.",
+  "profileUpdateSuccess": "¡Tu perfil ha sido actualizado!",
+  "profileUpdateFailed": "Error al actualizar el perfil.",
+  "editProfileImage": "Editar imagen de perfil",
+  "currentProfileImage": "Imagen de perfil actual",
+  "addProfilePhoto": "Agregar foto de perfil",
+  "usernameField": "Campo de nombre de usuario",
+  "bioField": "Campo de biografía",
+  "locationField": "Campo de ubicación",
+  "interestsField": "Campo de intereses",
+  "saveProfileChanges": "Guardar cambios del perfil",
+  "markToday": "Marcar hoy",
+  "markTodayButton": "Marcar hoy",
+  "alreadyMarkedToday": "Desafío ya marcado hoy",
+  "alreadyMarked": "Ya marcado",
+  "loading": "Cargando...",
+  "challenge": "Desafío",
+  "deleteChallenge": "Eliminar desafío",
+  "viewChallengeDetails": "Ver detalles del desafío",
+  "challengeImage": "Imagen del desafío",
+  "day": "Día",
+  "abandonChallenge": "Abandonar desafío",
+  "abandonChallengeConfirm": "¿Estás seguro? Perderás tu progreso.",
+  "continue": "Continuar",
+  "abandoned": "Abandonado",
+  "challengeAbandoned": "Has abandonado el desafío.",
+  "failedToAbandonChallenge": "Error al abandonar el desafío.",
+  "swipeToDelete": "Desliza para eliminar",
+  "waitingChallengeIcon": "Icono de desafío en espera",
+  "noOngoingChallenge": "¡No hay desafíos en curso!",
+  "startAChallenge": "Inicia un desafío para verlo aquí.",
+  "listOfOngoingChallenges": "Lista de desafíos en curso",
+  "markTodayFailed": "Error al marcar hoy.",
+  "savedChallengesScreenTitle": "Desafíos guardados",
+  "deleteChallengeConfirm": "¿Estás seguro de que deseas eliminar este desafío?",
+  "deleted": "Eliminado",
+  "challengeDeletedSuccess": "Desafío eliminado con éxito.",
+  "failedToDeleteChallenge": "Error al eliminar el desafío.",
+  "viewDetails": "Ver detalles",
+  "noCategory": "Sin categoría",
+  "completedChallengesScreenTitle": "Desafíos completados",
+  "completedOn": "Completado el",
+  "historyOf": "Historial de",
+  "appName": "ChallengeTies",
+  "alerts": {
+    "error": "Error",
+    "accessDenied": "Acceso denegado",
+    "shareError": "Error al compartir"
+  },
+  "challengeDetails": {
+    "untitled": "Desafío sin título",
+    "uncategorized": "Sin categoría",
+    "noDescription": "No hay descripción disponible",
+    "fetchError": "No se pudo obtener el desafío.",
+    "joinError": "No se pudo unir al desafío. Por favor inténtalo de nuevo.",
+    "saveError": "No se pudo guardar el estado. Por favor inténtalo de nuevo.",
+    "completeError": "No se pudo completar el desafío.",
+    "chatAccessDenied": "Debes unirte al desafío antes de abrir el chat.",
+    "loading": "Cargando…",
+    "participant": "participante",
+    "participants": "participantes",
+    "takeChallenge": "Tomar desafío",
+    "inProgress": "En progreso",
+    "daysCompleted": "días completados",
+    "alreadyMarked": "Ya marcado hoy",
+    "markToday": "Marcar hoy",
+    "completeChallenge": "Finalizar desafío",
+    "chat": "Chat",
+    "save": "Guardar",
+    "saved": "Guardado",
+    "share": "Compartir",
+    "stats": "Estadísticas"
+  },
+  "explanation": {
+    "title": "¡Tu voz importa!",
+    "welcome": "¡Bienvenido a la página de nuevas funciones! Aquí puedes ayudar a dar forma a la evolución de la aplicación.",
+    "optionsIntro": "Tienes dos opciones:",
+    "optionVote": "Votar por una propuesta existente de otro usuario.",
+    "optionPropose": "Enviar tu propia idea, que se añadirá y podrá votarse de inmediato.",
+    "outcome": "Al final del período de votación, la función con más votos será implementada.",
+    "understood": "Entendido"
+  },
+  "trophyModal": {
+    "congrats": "¡Felicidades! 🎉",
+    "reward": "+{{count}} Trofeos",
+    "message": "{{message}}",
+    "claim": "Reclamar",
+    "doubleReward": "Doblar tus trofeos"
+  },
+  "achievements": {
+    "first_connection": "Primera conexión",
+    "profile_completed": "Perfil completado",
+    "finishChallenge_10": "Serio con los desafíos"
+  },
+  "statsModal": {
+    "close": "Cerrar",
+    "prevMonth": "Mes anterior",
+    "nextMonth": "Mes siguiente",
+    "title": "{{month}} {{year}}",
+    "weekdays": ["Dom","Lun","Mar","Mié","Jue","Vie","Sáb"],
+    "months": [
+      "enero","febrero","marzo","abril","mayo","junio",
+      "julio","agosto","septiembre","octubre","noviembre","diciembre"
+    ]
+  },
+  "proposeFeature": {
+    "errorTitle": "Error",
+    "errorNoTitle": "Por favor ingresa un título para tu propuesta.",
+    "modalTitle": "Proponer una nueva función",
+    "placeholderTitle": "Título",
+    "placeholderDescription": "Descripción (opcional)",
+    "submitButton": "Enviar propuesta"
+  },
+  "missedChallenge": {
+    "title": "¡Desafío en riesgo!",
+    "subtitle": "Has fallado 2 días o más. ¿Qué te gustaría hacer?",
+    "reset": {
+      "title": "Reiniciar",
+      "subtitle": "Empezar de cero"
+    },
+    "ad": {
+      "title": "Ver un anuncio",
+      "subtitle": "Continuar tu racha"
+    },
+    "useTrophies": {
+      "title": "Usar {{count}} trofeos",
+      "subtitle": "Mantener tu progreso"
+    }
+  },
+  "privacyPolicy": {
+    "title": "Política de privacidad",
+    "introductionTitle": "Introducción",
+    "introductionText": "En {{appName}}, proteger tu privacidad es primordial. Esta política explica cómo recopilamos, usamos, protegemos y compartimos tus datos personales cumpliendo plenamente con el RGPD.",
+    "dataCollectedTitle": "Datos que recopilamos",
+    "dataCollectedText": "Para ofrecerte una experiencia personalizada, podemos recopilar lo siguiente:",
+    "dataCollectedItems": {
+      "nameEmail": "Nombre y correo electrónico",
+      "profilePhoto": "Foto de perfil",
+      "progress": "Tu progreso y logros",
+      "interests": "Intereses y preferencias",
+      "browsingHistory": "Historial de navegación"
+    },
+    "dataUsageTitle": "Cómo usamos los datos",
+    "dataUsageText": "Tus datos se utilizan para:",
+    "dataUsageItems": {
+      "personalize": "Personalizar tu experiencia",
+      "analyze": "Analizar tu progreso",
+      "notify": "Enviar notificaciones útiles",
+      "improve": "Mejorar nuestros servicios"
+    },
+    "dataSharingTitle": "Compartir datos",
+    "dataSharingText": "Tu información permanece confidencial y solo se comparte con:",
+    "dataSharingItems": {
+      "techPartners": "Nuestros socios técnicos",
+      "legalAuthorities": "Autoridades legales cuando sea necesario",
+      "securityServices": "Proveedores de seguridad"
+    },
+    "securityTitle": "Seguridad de datos",
+    "securityText": "Implementamos medidas avanzadas para proteger tus datos:",
+    "securityItems": {
+      "encryption": "Cifrado de datos sensibles",
+      "twoFactor": "Autenticación de dos factores",
+      "monitoring": "Monitoreo continuo"
+    },
+    "userRightsTitle": "Tus derechos",
+    "userRightsText": "Según el RGPD, tienes los siguientes derechos:",
+    "userRightsItems": {
+      "accessRectify": "Acceder, rectificar y eliminar tus datos",
+      "restrictObject": "Restringir u oponerte al procesamiento",
+      "portability": "Portabilidad de datos"
+    },
+    "cookiesTitle": "Uso de cookies",
+    "cookiesText": "Las cookies nos ayudan a mejorar la navegación y analizar el uso de la plataforma. Puedes gestionarlas desde la configuración de tu dispositivo.",
+    "updatesTitle": "Actualizaciones de la política",
+    "updatesText": "Esta política puede cambiar para reflejar actualizaciones en prácticas o legislaciones. Te notificaremos sobre cualquier cambio importante.",
+    "contactTitle": "Contacto",
+    "contactText": "Para cualquier pregunta sobre tus datos o esta política, contáctanos en:",
+    "contactEmail": "📧 privacy@challengeties.com",
+    "finalMessage": "Gracias por confiar en ChallengeTies. Tu privacidad es nuestra máxima prioridad."
+  },
+  "completedOnDate": "Completado el",
+  "completion": {
+    "youAreAwesome": "¡Eres increíble!",
+    "keepItUp": "¡Sigue así!",
+    "successIsYours": "¡El éxito es tuyo!",
+    "everyEffortCounts": "¡Cada esfuerzo cuenta!",
+    "neverGiveUp": "¡Nunca te rindas!",
+    "youAreOnTrack": "¡Vas por buen camino!",
+    "excellenceAwaits": "¡La excelencia te espera!",
+    "headHeldHigh": "¡Mantén la cabeza en alto!",
+    "persistencePays": "¡La persistencia da frutos!",
+    "challengesMakeYouStronger": "¡Los desafíos te hacen más fuerte!",
+    "errorFinalizing": "Error al finalizar el desafío:",
+    "trophies": "{{count}} Trofeos",
+    "reward": "{{count}} Trofeos",
+    "continue": "Continuar",
+    "doubleTrophies": "Doblar tus trofeos"
+  },
+  "featureDetail": {
+    "votes": "{{count}} voto",
+    "votes_plural": "{{count}} votos",
+    "vote": "Votar",
+    "alreadyVoted": "Ya has votado."
+  },
+  "durationModal": {
+    "title": "Elige la duración (días)",
+    "days": "{{count}} día",
+    "days_plural": "{{count}} días",
+    "confirm": "Confirmar",
+    "cancel": "Cancelar"
+  },
+  "chat": {
+    "goBack": "Volver",
+    "title": "Chat {{title}}",
+    "messagesList": "Lista de mensajes",
+    "placeholder": "Escribe un mensaje...",
+    "sendButton": "Enviar mensaje",
+    "errorSending": "Error al enviar mensaje"
+  },
+  "close": "Cerrar",
+  "uncategorized": "Sin categoría",
+  "noDescriptionAvailable": "No hay descripción disponible",
+  "imageNotAvailable": "Imagen no disponible",
+  "participant": "participante",
+  "participants": "participantes",
+  "createPrompt": "Para crear un desafío:",
+  "today": "Hoy",
+  "errorLoadingCompletedChallenges": "Error al cargar los desafíos completados.",
+  "loadingChallenges": "Cargando desafíos...",
+  "noChallengesCreated": "¡No se han creado desafíos!",
+  "noAchievementsYet": "Aún no hay logros",
+  "chooseCategory": "Elige una categoría",
+  "category": "Categoría",
+  "resetFilters": "Restablecer filtros",
+  "closeModal": "Cerrar",
+  "untitledChallenge": "Desafío sin título",
+  "miscellaneous": "Varios",
+  "failedToLoadChallenges": "No se pueden cargar los desafíos.",
+  "noChallengesFound": "¡No se encontraron desafíos!",
+  "mysteriousChallenge": "Desafío misterioso",
+  "logoChallengeTies": "Logo de ChallengeTies",
+  "defyYourLimits": "Desafía tus límites",
+  "joinVibrantCommunity": "Únete a una comunidad vibrante y supera tus límites cada día.",
+  "launchAdventure": "Iniciar aventura",
+  "popularChallenges": "Desafíos populares",
+  "noChallengesAvailable": "No hay desafíos disponibles",
+  "challengesComingSoon": "¡Nuevos desafíos próximamente!",
+  "discover": "Descubrir",
+  "tipsAndTricks": "Consejos y trucos",
+  "leaderboard": {
+    "errorFetch": "Error al obtener la tabla de clasificación",
+    "notEnough": "No hay suficientes jugadores para mostrar el podio.",
+    "profileOf": "Perfil de {{name}}",
+    "unknown": "Desconocido",
+    "loading": "Cargando tabla de clasificación...",
+    "title": "Tabla de clasificación",
+    "filter": {
+      "region": "Región",
+      "national": "Nacional",
+      "global": "Global"
+    },
+    "tab": {
+      "region": "Región",
+      "national": "Nacional",
+      "global": "Global"
+    },
+    "listLabel": "Lista de jugadores clasificados",
+    "noPlayers": "No hay jugadores disponibles para esta tabla de clasificación."
+  },
+  "screen8": {
+    "readyQuestion": "¿Estás listo para asumir el desafío?",
+    "adventureStart": "¡Tu aventura comienza ahora! Sumérgete, progresa y únete a nuestra inspiradora comunidad.",
+    "imReady": "¡Estoy listo!",
+    "startAppLabel": "Abrir la aplicación"
+  },
+  "screen7": {
+    "title": "Gana recompensas",
+    "description": "¡Colecciona trofeos completando desafíos y mira un video para duplicar tus recompensas!",
+    "nextButtonLabel": "Continuar a la siguiente pantalla"
+  },
+  "screen6": {
+    "title": "Crea y comparte tu viaje",
+    "description": "Comparte tus éxitos e inspira a otros a asumir sus propios desafíos. Mantente conectado con tu comunidad y crea lazos fuertes.",
+    "nextButtonLabel": "Continuar a la siguiente pantalla"
+  },
+  "screen5": {
+    "title": "¡Celebra el progreso constante!",
+    "description": "Cada paso te acerca a tus metas. Celebra tus logros y sigue adelante.",
+    "nextButtonLabel": "Continuar a la siguiente pantalla"
+  },
+  "screen4": {
+    "titlePart1": "Rastrea tu progreso y gana",
+    "titleHighlight": "Trofeos",
+    "description": "Mantente constante con el seguimiento diario. Desbloquea trofeos y logros en cada hito.",
+    "nextButtonLabel": "Continuar a la siguiente pantalla"
+  },
+  "screen3": {
+    "title": "Crea tus propios desafíos",
+    "description": "Personaliza desafíos para tu vida diaria. Motívate con metas a medida.",
+    "nextButtonLabel": "Continuar a la siguiente pantalla"
+  },
+  "screen2": {
+    "title": "Asume desafíos inspiradores",
+    "description": "Elige entre desafíos motivadores y haz que cada día sea un éxito en camino.",
+    "nextButtonLabel": "Continuar a la siguiente pantalla"
+  },
+  "screen1": {
+    "logoLabel": "Logo de ChallengeTies",
+    "presentationText": "Tu camino hacia el crecimiento personal comienza ahora. Únete a una comunidad vibrante que aspira a la grandeza.",
+    "nextButtonLabel": "Continuar a la siguiente pantalla"
+  },
+  "challengeChat": {
+    "backButton": "Volver",
+    "defaultTitle": "Chat de desafío",
+    "placeholder": "Tu mensaje...",
+    "inputA11yLabel": "Campo de entrada de mensaje",
+    "inputA11yHint": "Escribe tu mensaje aquí",
+    "sendButtonLabel": "Enviar mensaje"
+  },
+  "contact": {
+    "errorTitle": "Error",
+    "errorMessage": "Por favor completa todos los campos.",
+    "successTitle": "Mensaje enviado",
+    "successMessage": "¡Te responderemos lo antes posible!",
+    "title": "Contáctanos 📩",
+    "intro": "¿Tienes una pregunta, problema o sugerencia? Estamos aquí para ayudar. No dudes en contactarnos a través de los siguientes canales o envíanos un mensaje directamente.",
+    "emailSection": "Correo",
+    "emailLinkLabel": "Enviar un correo a support@challengeties.com",
+    "emailAddress": "support@challengeties.com",
+    "phoneSection": "Teléfono",
+    "phoneLinkLabel": "Llamar al +33 1 23 45 67 89",
+    "phoneNumber": "+33 1 23 45 67 89",
+    "instagramSection": "Instagram",
+    "instagramLinkLabel": "Visitar nuestra página de Instagram @challengeties",
+    "instagramHandle": "@challengeties",
+    "facebookSection": "Facebook",
+    "facebookLinkLabel": "Visitar nuestra página de Facebook @challengeties",
+    "facebookHandle": "@challengeties",
+    "whatsappSection": "WhatsApp",
+    "whatsappLinkLabel": "Contáctanos en WhatsApp",
+    "whatsappText": "Contáctanos en WhatsApp",
+    "formTitle": "Envíanos un mensaje",
+    "namePlaceholder": "Tu nombre",
+    "nameA11y": "Campo para tu nombre",
+    "emailPlaceholder": "Tu correo",
+    "emailA11y": "Campo para tu correo",
+    "messagePlaceholder": "Tu mensaje",
+    "messageA11y": "Campo para tu mensaje",
+    "sendButton": "Enviar",
+    "sendButtonA11y": "Enviar mensaje",
+    "footerMessage": "Responderemos lo antes posible. ¡Gracias por confiar en ChallengeTies! 🚀"
+  },
+  "history": {
+    "title": "Nuestra Historia",
+    "logoAlt": "Logo de ChallengeTies",
+    "intro": "nació de una visión poderosa: …",
+    "featuresTitle": "Características clave 🔥",
+    "features": {
+      "specialChallenges": {
+        "title": "Desafíos especiales",
+        "desc": "Desafíos únicos que estimulan …"
+      },
+      "progressTracking": {
+        "title": "Seguimiento de progreso",
+        "desc": "Herramientas interactivas para visualizar …"
+      },
+      "customChallenges": {
+        "title": "Desafíos personalizados",
+        "desc": "La capacidad de crear tus propios …"
+      },
+      "community": {
+        "title": "Comunidad comprometida",
+        "desc": "Una red de personas con ideas afines …"
+      }
+    },
+    "motivationTitle": "Nuestra motivación 🚀",
+    "motivation": "Creemos firmemente que cada individuo …",
+    "logoMeaningTitle": "Significado del logo 🎨",
+    "logoMeaning": "El logo de ChallengeTies representa la unidad …",
+    "visionTitle": "Nuestra visión 🌍",
+    "vision": "No somos solo una app, somos un movimiento …",
+    "beginningsTitle": "Los comienzos 📅",
+    "beginnings": "La aventura de ChallengeTies comenzó …",
+    "communityEngagementTitle": "Participación comunitaria 🤝",
+    "communityEngagement": "Desde el principio, la fuerza de ChallengeTies …",
+    "finalThanksTitle": "Gracias por ser parte …",
+    "finalThanksMessage": "ChallengeTies es tu aliado para convertir …"
+  },
+  "newFeaturesTitle": "Novedades",
+  "tryAnotherSearch": "Prueba otra búsqueda o filtro.",
+  "addFavorite": "Añadir \"{{title}}\" a favoritos",
+  "removeFavorite": "Eliminar \"{{title}}\" de favoritos",
+  "firstAchievementsPrompt": "¡Asume desafíos para ganar tus primeros trofeos!",
+  "trophiesProgress": "{{completed}}/{{total}} Trofeos",
+  "sectionCount": "{{completed}}/{{total}}",
+  "claim": "Reclamar",
+  "unlocked": "Desbloqueado",
+  "inProgress": "En progreso",
+  "mysteryAchievement": "Logro misterioso.",
+  "newAchievement": "¡Nuevo logro!",
+  "sections": {
+    "débuts": "Comienzos",
+    "defisTermines": "Desafíos completados",
+    "engagement": "Compromiso",
+    "serieDeFeu": "Racha",
+    "communication": "Comunicación",
+    "partage": "Compartidos",
+    "reseau": "Red",
+    "influence": "Influencia",
+    "collection": "Colección",
+    "creation": "Creación",
+    "divers": "Varios"
+  },
+  "finishChallenge_1": "Primer desafío completado",
+  "finishChallenge_3": "Principiante motivado",
+  "finishChallenge_10": "Serio con los desafíos",
+  "finishChallenge_25": "Máquina de desafíos",
+  "finishChallenge_50": "¡Imbatible!",
+  "finishChallenge_100": "Leyenda viva",
+  "selectChallengeDays_7": "Empezando",
+  "selectChallengeDays_30": "Determinación",
+  "selectChallengeDays_90": "Maratonista",
+  "selectChallengeDays_180": "Me gusta el largo plazo",
+  "selectChallengeDays_365": "Paciente legendario",
+  "streakProgress_3": "Mini racha",
+  "streakProgress_7": "Rutina establecida",
+  "streakProgress_14": "¡Impresionante!",
+  "streakProgress_30": "Determinación concreta",
+  "streakProgress_60": "Nada puede pararme",
+  "streakProgress_90": "Soy una máquina",
+  "streakProgress_180": "Disciplina definitiva",
+  "streakProgress_365": "Soy un monstruo",
+  "messageSent_1": "Primer mensaje enviado",
+  "messageSent_10": "Espíritu de equipo",
+  "messageSent_50": "Comunidad activa",
+  "shareChallenge_1": "Me gusta compartir",
+  "shareChallenge_5": "Influencer en ciernes",
+  "shareChallenge_20": "Líder comunitario",
+  "inviteFriend_1": "Invitar a un amigo",
+  "inviteFriend_5": "Expande tu equipo",
+  "inviteFriend_10": "Rey de la red",
+  "voteFeature_1": "Primera función votada",
+  "voteFeature_5": "Me gusta votar",
+  "saveChallenge_1": "Desafío guardado",
+  "saveChallenge_5": "5 desafíos guardados",
+  "challengeCreated_1": "Creador de desafíos",
+  "challengeCreated_5": "Estoy inspirado",
+  "challengeCreated_10": "Innovador",
+  "first_connection": "Primera conexión",
+  "descriptions": {
+    "finishChallenge_1": "Completa tu primer desafío con éxito.",
+    "finishChallenge_3": "Completa 3 desafíos para demostrar tu determinación.",
+    "finishChallenge_10": "Alcanza 10 desafíos para probar tu seriedad.",
+    "finishChallenge_25": "25 desafíos completados: ¡eres una máquina!",
+    "finishChallenge_50": "50 desafíos: ¡nadie puede detenerte!",
+    "finishChallenge_100": "100 desafíos: ha nacido una leyenda.",
+    "selectChallengeDays_7": "Asume un desafío de 7 días.",
+    "selectChallengeDays_30": "Comprométete con un desafío de 30 días.",
+    "selectChallengeDays_90": "90 días: hay un maratonista en ti.",
+    "selectChallengeDays_180": "Desafío de 180 días: un verdadero guerrero.",
+    "selectChallengeDays_365": "Desafío de un año: paciencia legendaria.",
+    "streakProgress_3": "3 días seguidos: ¡buen comienzo!",
+    "streakProgress_7": "7 días: ¡estás en racha!",
+    "streakProgress_14": "14 días seguidos: impresionante.",
+    "streakProgress_30": "30 días: disciplina de hierro.",
+    "streakProgress_60": "60 días: nada puede resistirte.",
+    "streakProgress_90": "90 días: una máquina imparable.",
+    "streakProgress_180": "180 días: disciplina máxima.",
+    "streakProgress_365": "365 días: ¡eres un monstruo!",
+    "messageSent_1": "Envía tu primer mensaje en el chat.",
+    "messageSent_10": "10 mensajes: espíritu de equipo.",
+    "messageSent_50": "50 mensajes: embajador comunitario.",
+    "shareChallenge_1": "Comparte un desafío por primera vez.",
+    "shareChallenge_5": "5 compartidos: influencer en ciernes.",
+    "shareChallenge_20": "20 compartidos: líder indiscutible.",
+    "inviteFriend_1": "Invita a tu primer amigo a unirse.",
+    "inviteFriend_5": "5 invitaciones: expande tu equipo.",
+    "inviteFriend_10": "10 amigos invitados: rey de la red.",
+    "voteFeature_1": "Vota por una función por primera vez.",
+    "voteFeature_5": "5 votos: haz que se escuche tu voz.",
+    "saveChallenge_1": "Guarda tu primer desafío.",
+    "saveChallenge_5": "5 desafíos guardados: coleccionista experimentado.",
+    "challengeCreated_1": "Crea tu primer desafío personalizado.",
+    "challengeCreated_5": "5 desafíos creados: espíritu creativo.",
+    "challengeCreated_10": "10 desafíos creados: innovador genial.",
+    "first_connection": "Primera conexión: ¡bienvenido!",
+    "profile_completed": "Perfil completado: ¡estás listo para brillar!"
+  },
+  "profile_completed": "Perfil completado",
+  "categories": {
+  "Santé": "Salud",
+  "Fitness": "Fitness",
+  "Finance": "Finanzas",
+  "Mode de Vie": "Estilo de vida",
+  "Éducation": "Educación",
+  "Créativité": "Creatividad",
+  "Carrière": "Carrera",
+  "Social": "Social",
+  "Productivité": "Productividad",
+  "Écologie": "Ecología",
+  "Motivation": "Motivación",
+  "Discipline": "Disciplina",
+  "Développement Personnel": "Desarrollo personal",
+  "État d'esprit": "Mentalidad"
+},
+  "challenges": {
+    "eatHealthy": {
+      "title": "Come sano cada día",
+      "description": "Comprométete a consumir comidas saludables cada día para mejorar tu bienestar."
+    },
+    "walk10000Steps": {
+      "title": "Camina 10.000 pasos",
+      "description": "Mantente activo caminando 10.000 pasos cada día."
+    },
+    "saveMoney": {
+      "title": "Ahorra 5 $ al día",
+      "description": "Fomenta tu disciplina financiera ahorrando 5 $ cada día."
+    },
+    "meditation": {
+      "title": "Medita durante 10 minutos",
+      "description": "Alcanza la atención plena meditando solo 10 minutos al día."
+    },
+    "readChapter": {
+      "title": "Lee un capítulo al día",
+      "description": "Desarrolla el hábito de la lectura terminando un capítulo cada día."
+    },
+    "writeWords": {
+      "title": "Escribe 500 palabras al día",
+      "description": "Desata tu creatividad escribiendo 500 palabras cada día."
+    },
+    "learnSkill": {
+      "title": "Aprende una nueva habilidad",
+      "description": "Dedica tiempo cada día a aprender una nueva habilidad para tu crecimiento profesional."
+    },
+    "declutterSpace": {
+      "title": "Despeja tu espacio",
+      "description": "Despeja tu mente organizando y ordenando tu entorno cada día."
+    },
+    "dailyYoga": {
+      "title": "Practica 15 minutos de yoga",
+      "description": "Fortalece cuerpo y mente practicando 15 minutos de yoga cada día."
+    },
+    "practiceGratitude": {
+      "title": "Practica la gratitud",
+      "description": "Termina tu día reflexionando sobre aquello por lo que estás agradecido."
+    },
+    "workout15Min": {
+      "title": "Entrénate",
+      "description": "Adquiere el hábito de hacer ejercicio durante al menos 15 minutos cada día."
+    },
+    "drinkWater": {
+      "title": "Bebe 2 litros de agua",
+      "description": "Mantente hidratado bebiendo al menos 2 litros de agua cada día."
+    },
+    "planTomorrow": {
+      "title": "Planifica el mañana esta noche",
+      "description": "Termina cada día planificando el siguiente."
+    },
+    "morningStretch": {
+      "title": "Rutina de estiramiento matutino",
+      "description": "Comienza tu día con algunos estiramientos matutinos."
+    },
+    "timeOutside": {
+      "title": "Pasa 10 minutos fuera",
+      "description": "Mejora tu salud mental pasando tiempo al aire libre cada día."
+    },
+    "unplug": {
+      "title": "Desconéctate durante 1 hora",
+      "description": "Tómate un descanso de las pantallas durante una hora cada día."
+    },
+    "compliment": {
+      "title": "Haz un cumplido",
+      "description": "Alegrale el día a alguien con un cumplido."
+    },
+    "network": {
+      "title": "Networking diario",
+      "description": "Contacta a un profesional cada día para ampliar tu red."
+    },
+    "deepBreathing": {
+      "title": "Practica la respiración profunda",
+      "description": "Dedica 5 minutos al día a practicar la respiración profunda."
+    },
+    "wakeUpEarly": {
+      "title": "Despiértate temprano",
+      "description": "Adquiere el hábito de despertarte temprano cada día."
+    },
+    "learnLanguage": {
+      "title": "Aprende un nuevo idioma",
+      "description": "Dedica tiempo cada día a aprender un nuevo idioma."
+    },
+    "familyTime": {
+      "title": "Tiempo de calidad familiar",
+      "description": "Dedica tiempo cada día para fortalecer los lazos familiares."
+    },
+    "playInstrument": {
+      "title": "Aprende un instrumento",
+      "description": "Dedica tiempo a dominar un instrumento musical."
+    },
+    "positiveAffirmations": {
+      "title": "Afirmaciones positivas",
+      "description": "Repite afirmaciones diarias para fortalecer tu mentalidad."
+    },
+    "coldShower": {
+      "title": "Desafío de ducha fría",
+      "description": "Aumenta tu energía y fuerza de voluntad con una ducha fría diaria."
+    },
+    "noSugar30Days": {
+      "title": "Sin azúcar por 30 días",
+      "description": "Elimina los azúcares añadidos para un estilo de vida más saludable."
+    },
+    "dailyVisualization": {
+      "title": "Visualización diaria",
+      "description": "Visualiza tus metas durante 5 minutos cada día."
+    },
+    "kindnessAct": {
+      "title": "Acto de bondad diario",
+      "description": "Realiza un acto de bondad al azar cada día."
+    },
+    "wakeUp5AM": {
+      "title": "Despiértate a las 5 AM",
+      "description": "Hábtuate a levantarte a las 5 AM todos los días."
+    },
+    "newRecipe": {
+      "title": "Una nueva receta por semana",
+      "description": "Mejora tus habilidades culinarias probando recetas nuevas semanalmente."
+    },
+    "read10Pages": {
+      "title": "Lee 10 páginas al día",
+      "description": "Adquiere el hábito de leer al menos 10 páginas cada día."
+    },
+    "oneMinPlank": {
+      "title": "Desafío de plancha de un minuto",
+      "description": "Fortalece tu core con una plancha diaria de un minuto."
+    },
+    "learnWordDaily": {
+      "title": "Aprende una nueva palabra cada día",
+      "description": "Enriquece tu vocabulario aprendiendo y usando una nueva palabra cada día."
+    },
+    "noCaffeine": {
+      "title": "Sin cafeína por 7 días",
+      "description": "Dale a tu cuerpo un reinicio eliminando la cafeína durante una semana completa."
+    },
+    "dailyWins": {
+      "title": "Anota 3 éxitos diarios",
+      "description": "Impulsa tu confianza listando tres éxitos al final de cada día."
+    },
+    "talkToStranger": {
+      "title": "Habla con un desconocido cada día",
+      "description": "Mejora tus habilidades sociales iniciando una conversación con alguien nuevo cada día."
+    },
+    "minimalistWardrobe": {
+      "title": "Desafío de armario minimalista",
+      "description": "Usa solo 33 prendas de ropa durante un mes para adoptar el minimalismo."
+    },
+    "noComplaints": {
+      "title": "Sin quejas durante 21 días",
+      "description": "Entrena tu mente para mantenerte positivo evitando las quejas 21 días seguidos."
+    },
+    "selfReflection": {
+      "title": "Autorreflexión diaria",
+      "description": "Dedica 5 minutos cada noche a reflexionar sobre tus pensamientos y acciones."
+    },
+    "hobbyTime": {
+      "title": "Invierte 30 minutos en un pasatiempo",
+      "description": "Dedica al menos 30 minutos diarios a un pasatiempo que te haga feliz."
+    },
+    "listenPodcast": {
+      "title": "Escucha un podcast cada día",
+      "description": "Enriquece tu conocimiento escuchando un podcast educativo diariamente."
+    },
+    "reducePlastic": {
+      "title": "Reduce el uso de plástico",
+      "description": "Disminuye tu impacto ambiental evitando plásticos de un solo uso."
+    },
+    "goodPosture": {
+      "title": "Adopta una buena postura",
+      "description": "Mantén una postura correcta durante todo el día para mejorar la salud de tu espalda."
+    },
+    "reduceScreenTime": {
+      "title": "Reduce el tiempo frente a la pantalla por la noche",
+      "description": "Evita las pantallas al menos 30 minutos antes de acostarte."
+    }
+  },
+  "imagePickFailed": "No se pudo seleccionar la imagen.",
+  "allFieldsRequired": "Todos los campos son obligatorios (la imagen es opcional).",
+  "mustBeLoggedIn": "Debes iniciar sesión para crear un desafío.",
+  "success": "Éxito",
+  "challengeCreated": "¡Tu desafío ha sido creado!",
+  "challengeCreateFailed": "No se pudo crear el desafío.",
+  "createYourChallenge": "Crea tu desafío",
+  "inspireOthers": "¡Inspira a otros con un desafío emocionante!",
+  "challengeTitle": "Título del desafío",
+  "challengeDescription": "Descripción",
+  "selectCategory": "Selecciona una categoría",
+  "uploadImage": "Subir imagen (opcional)",
+  "uploadImageOptional": "Subir imagen (opcional)",
+  "createChallengeButton": "Crear desafío",
+  "exploreChallengesTitle": "Explorar desafíos",
+  "searchPlaceholder": "Buscar un desafío…",
+  "existing": "Existentes",
+  "created": "Creados",
+  "all": "Todos",
+  "tryOtherSearchOrFilter": "Intenta otra búsqueda o filtro.",
+  "errorLoadingChallenges": "No se pudieron cargar los desafíos."
+}

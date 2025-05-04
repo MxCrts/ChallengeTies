@@ -1,0 +1,989 @@
+{
+  "settings": "设置",
+  "notifications": "通知",
+  "darkMode": "深色模式",
+  "language": "语言",
+  "account": "账户",
+  "editProfile": "编辑个人资料",
+  "logout": "退出登录",
+  "deleteAccount": "删除账户",
+  "clearCache": "清除缓存",
+  "about": "关于",
+  "appVersion": "应用版本：",
+  "wakeYourPotential": "唤醒你的潜能",
+  "joinChallengeTies": "加入 ChallengeTies，发现每日灵感",
+  "startAdventure": "开始冒险",
+  "inspiringChallenges": "激励挑战",
+  "getInspired": "获取灵感",
+  "tipsTricks": "提示与技巧",
+  "leaderboardTitle": "排行榜",
+  "whatsNew": "新功能",
+  "home": "首页",
+  "profile": "个人资料",
+  "yourProfile": "你的个人资料",
+  "addBioHere": "在此添加个人简介",
+  "unknownLocation": "位置未知",
+  "trophies": "奖杯",
+  "editYourProfile": "编辑你的个人资料",
+  "statistics": "统计",
+  "ongoingChallenges": "进行中的挑战",
+  "favorites": "收藏",
+  "completedChallenges": "已完成的挑战",
+  "rewards": "奖励",
+  "myChallenges": "我的挑战",
+  "name": "名称",
+  "bio": "简介",
+  "location": "位置",
+  "interests": "兴趣",
+  "save": "保存",
+  "savedChallenges": "已保存的挑战",
+  "successRate": "成功率",
+  "unlockedAchievements": "解锁的成就",
+  "longestStreak": "最长连胜",
+  "days": "天",
+  "noSavedChallenges": "暂无已保存的挑战",
+  "saveChallengesHere": "保存挑战可在此查找",
+  "noCompletedChallenges": "暂无已完成的挑战",
+  "completeChallengesToSeeHere": "完成挑战后可在此查看",
+  "yourAchievements": "你的成就",
+  "firstStep": "第一步",
+  "firstLogin": "首次登录",
+  "loginFirstTime": "第一次登录",
+  "profileCompleted": "资料已完成",
+  "completeProfileInfo": "完善你的所有资料信息",
+  "createdChallenges": "已创建的挑战",
+  "innovator": "创新者",
+  "createTenChallenges": "创建10个挑战并成为创新者",
+  "iHaveInspiration": "我很有灵感",
+  "createFiveChallenges": "创建5个挑战以展示你的灵感",
+  "challengeCreator": "挑战创造者",
+  "createFirstChallenge": "创建你的第一个挑战",
+  "fiveChallengesSaved": "已保存5个挑战",
+  "saveFiveChallenges": "保存5个挑战以展示你的兴趣",
+  "challengeSaved": "挑战已保存",
+  "saveChallengeFirstTime": "首次保存挑战",
+  "finishedChallenges": "已完成的挑战",
+  "livingLegend": "传奇人物",
+  "completeHundredChallenges": "完成100个挑战，成为传奇人物",
+  "unbeatable": "无法战胜",
+  "completeFiftyChallenges": "完成50个挑战，成为无法战胜的人",
+  "challengeMachine": "挑战机器",
+  "completeTwentyFiveChallenges": "完成25个挑战，成为挑战机器",
+  "seriousAboutChallenges": "对挑战认真",
+  "completeThreeChallenges": "完成3个挑战，证明你的动力",
+  "firstChallengeCompleted": "首个挑战已完成",
+  "completeYourFirstChallenge": "完成你的第一个挑战",
+  "challengeDuration": "挑战时长",
+  "legendaryPatient": "传说中的耐心者",
+  "chooseOneYearChallenge": "选择一年挑战，成为传奇",
+  "longTermMyThing": "长期主义者",
+  "choose180DaysChallenge": "选择180天挑战，彰显你的长期承诺",
+  "marathoner": "马拉松者",
+  "choose90DaysChallenge": "选择90天挑战，成为马拉松者",
+  "determination": "决心",
+  "choose30DaysChallenge": "选择30天挑战，展现你的决心",
+  "smallPlayer": "新手起步",
+  "choose7DaysChallenge": "选择7天挑战，坚定承诺",
+  "messages": "消息",
+  "activeCommunity": "活跃社区",
+  "sendFiftyMessages": "发送50条消息以激活社区",
+  "teamSpirit": "团队精神",
+  "sendTenMessages": "发送10条消息以展示团队精神",
+  "firstMessageSent": "首条消息已发送",
+  "sendFirstMessage": "在聊天中发送你的第一条消息",
+  "shares": "分享",
+  "buddingInfluencer": "新晋影响者",
+  "shareFiveChallenges": "分享5个挑战，成为新晋影响者",
+  "likeToShare": "我喜欢分享",
+  "shareFirstChallenge": "首次分享挑战",
+  "communityLeader": "社区领袖",
+  "shareTwentyChallenges": "分享20个挑战，成为社区领袖",
+  "successStreak": "成功连胜",
+  "imAMonster": "我是怪兽",
+  "maintain365DaysSuccess": "保持365天成功，成为怪兽",
+  "ultimateDiscipline": "终极自律",
+  "maintain180Days": "保持180天连续成功，实现终极自律",
+  "imAMachine": "我是机器",
+  "maintain90Days": "保持90天成功，你是机器",
+  "nothingCanStopMe": "无人可挡",
+  "maintain60Days": "保持60天连续成功：无人可挡",
+  "concreteDetermination": "坚定决心",
+  "maintain30Days": "保持30天连续成功，彰显决心",
+  "impressive": "令人印象深刻",
+  "maintain14Days": "保持14天连续成功，令人印象深刻",
+  "routineInPlace": "形成习惯",
+  "maintain7Days": "保持7天连续成功",
+  "miniStreak": "小连胜",
+  "maintain3Days": "实现3天连续成功",
+  "votes": "投票",
+  "likeToVote": "我喜欢投票",
+  "voteFiveTimes": "投5次票以展示你的参与度",
+  "firstChallengeVoted": "首次挑战投票",
+  "voteForFirstFeature": "首次为新功能投票",
+  "noChallengeCreated": "尚未创建挑战",
+  "createYourFirstChallengeNow": "立即创建你的第一个挑战",
+  "dailyChallenges": "每日挑战",
+  "noChallengeOngoing": "暂无进行中的挑战",
+  "clickIconTopRight": "点击右上角图标",
+  "orJoinChallenge": "或加入挑战",
+  "exploreChallenges": "探索挑战",
+  "searchChallenge": "搜索挑战",
+  "contactUs": "联系我们",
+  "visitWebsite": "访问我们的网站",
+  "preferences": "偏好设置",
+  "tips": {
+    "title": "提示",
+    "listAccessibility": "提示列表",
+    "logoAlt": "ChallengeTies 标志",
+    "subHeader": "实用提示，帮助您保持灵感，实现目标并赢取奖杯！",
+    "smartGoals": {
+      "title": "设定 SMART 目标",
+      "description": "具体、可测量、可实现、现实、时限目标可帮助您保持专注和自律。"
+    },
+    "beConsistent": {
+      "title": "保持一致",
+      "description": "每天为目标安排固定时间。每天的小行动带来巨大成果。"
+    },
+    "trackEverything": {
+      "title": "记录一切",
+      "description": "使用 ChallengeTies 的每日跟踪和统计来监控进度，赢取奖杯，保持动力。"
+    },
+    "findSupport": {
+      "title": "寻求社区支持",
+      "description": "与志同道合的人联系，邀请朋友，分享经验，一起保持动力。"
+    },
+    "rewardYourself": {
+      "title": "经常奖励自己",
+      "description": "庆祝每一个里程碑——小成功、大成就、新奖杯，激发长期动力。"
+    },
+    "switchItUp": {
+      "title": "变换方式",
+      "description": "通过尝试新挑战、探索不同类别来对抗无聊，为目标增添趣味。"
+    },
+    "inviteAFriend": {
+      "title": "邀请好友",
+      "description": "与伙伴一起挑战更轻松（更有趣）。发送邀请一起实现目标！"
+    },
+    "visualizeSuccess": {
+      "title": "想象成功",
+      "description": "想象最终结果——视觉线索和每日提醒保持您的专注。"
+    },
+    "stayPositive": {
+      "title": "保持积极",
+      "description": "即使有失误，也要记住每天都是新的开始。从错误中学习，继续前进。"
+    },
+    "readMore": "阅读更多",
+    "showLess": "显示更少",
+    "footerQuery": "有更多问题或需要个性化帮助？",
+    "contactUs": "联系我们",
+    "shareTips": "分享提示",
+    "shareMessage": "来看看 ChallengeTies 的这些精彩提示！",
+    "shareError": "分享提示时出错",
+    "mailClientError": "无法打开邮件客户端",
+    "mailOpenError": "打开邮件应用错误"
+  },
+  "newFeatures": {
+    "loginRequiredTitle": "需要登录",
+    "loginRequiredMessage": "请登录以进行投票。",
+    "alreadyVotedTitle": "已投票",
+    "alreadyVotedMessage": "您已投过票。",
+    "voteRegisteredTitle": "投票已登记",
+    "voteRegisteredMessage": "感谢您的投票！",
+    "voteErrorTitle": "错误",
+    "voteErrorMessage": "出现问题。",
+    "proposalSentTitle": "提案已发送",
+    "proposalSentMessage": "您的想法已连同投票提交！",
+    "proposalErrorTitle": "错误",
+    "proposalErrorMessage": "无法发送。",
+    "title": "新功能",
+    "openExplanation": "打开投票说明",
+    "description": "投票选出下一个要实现的功能或提出您自己的建议！投票截止至2025年4月30日。",
+    "noFeatures": "目前暂无可用功能。",
+    "proposeIdea": "提出想法",
+    "thankYouForVote": "感谢您的投票：{{featureTitle}}",
+    "countdown": {
+      "days": "天",
+      "hours": "小时",
+      "mins": "分钟",
+      "secs": "秒"
+    },
+    "featuresListLabel": "提议功能列表"
+  },
+  "permissionDenied": "权限被拒绝",
+  "mustAllowNotifications": "您必须允许通知才能接收提醒。",
+  "error": "错误",
+  "failedToSavePreferences": "保存偏好失败。",
+  "cacheCleared": "缓存已清除",
+  "tempDataDeleted": "所有临时数据已删除。",
+  "failedToClearCache": "清除缓存失败。",
+  "logoutConfirm": "您确定要退出登录吗？",
+  "cancel": "取消",
+  "loggedOut": "已退出",
+  "logoutFailed": "退出登录失败。",
+  "deleteAccountConfirm": "您确定要删除吗？此操作不可撤销。",
+  "delete": "删除",
+  "accountDeleted": "账户已删除",
+  "accountDeletedSuccess": "您的账户已成功删除。",
+  "noUserConnected": "当前无用户登录。",
+  "failedToDeleteAccount": "删除账户失败。",
+  "userNotConnected": "用户未登录。",
+  "noOngoingChallengeToSimulate": "没有进行中的挑战可模拟。",
+  "disconnected": "您已被登出。",
+  "handleNotifications": "启用或禁用通知",
+  "handleDarkMode": "启用或禁用深色模式",
+  "privacyPolicyPage": "隐私政策",
+  "accessAdmin": "访问管理功能",
+  "admin": "管理",
+  "aboutChallengeTies": "关于 ChallengeTies",
+  "fillEmailPassword": "请输入您的邮箱和密码。",
+  "invalidEmail": "请输入有效的邮箱地址。",
+  "noAccountFound": "未找到该邮箱对应的账户。",
+  "wrongPassword": "密码错误。",
+  "invalidEmailFormat": "邮箱格式无效。",
+  "tooManyRequests": "尝试次数过多。请稍后再试。",
+  "unknownError": "发生未知错误。",
+  "emailPlaceholder": "tony.stark@example.com",
+  "passwordPlaceholder": "密码",
+  "hidePassword": "隐藏密码",
+  "showPassword": "显示密码",
+  "forgotPassword": "忘记密码？",
+  "login": "登录",
+  "noAccount": "没有账户？",
+  "signupHere": "在此注册",
+  "appTagline": "预测未来最好的方法是创造它",
+  "enterYourEmail": "请输入您的邮箱地址。",
+  "resetLinkSent": "重置链接已发送至您的邮箱。",
+  "resetLinkFailed": "发送重置链接失败。请检查您的邮箱。",
+  "backToLogin": "返回登录",
+  "appTitle": "ChallengeTies",
+  "enterEmailToResetPassword": "输入您的邮箱以重置密码。",
+  "resetForm": "重置表单",
+  "yourEmailAddress": "您的电子邮件地址",
+  "sendResetLink": "发送重置链接",
+  "sendLink": "发送链接",
+  "fillAllFields": "请填写所有字段。",
+  "passwordsDoNotMatch": "两次输入的密码不匹配。",
+  "emailAlreadyInUse": "该邮箱已被使用。",
+  "weakPassword": "密码过于简单。请选择更强的密码。",
+  "anErrorOccurred": "发生错误。请重试。",
+  "joinUsAndChallenge": "加入我们，迎接挑战！",
+  "yourEmail": "您的邮箱",
+  "username": "用户名",
+  "password": "密码",
+  "confirmPassword": "确认密码",
+  "signup": "注册",
+  "alreadyHaveAccount": "已有账号？",
+  "loginHere": "在此登录",
+  "profileNotFound": "未找到个人资料",
+  "profileLoadError": "加载个人资料时出错",
+  "loadingProfile": "正在加载个人资料…",
+  "currentChallenges": "进行中的挑战",
+  "achievementsTitle": "成就",
+  "user": "用户",
+  "addCoolBio": "添加个性简介！",
+  "editYourProfileTitle": "编辑您的个人资料",
+  "userNotAuthenticated": "用户未认证。",
+  "errorFetchingProfile": "获取信息时出错。",
+  "photoPermissionDenied": "权限被拒绝。请允许访问照片。",
+  "uploadError": "上传错误，上传失败。",
+  "profileImageUpdated": "个人资料图片已更新！",
+  "noImageSelected": "已取消。未选择图片。",
+  "uploadFailed": "图片上传失败。",
+  "userNotFound": "未找到用户。",
+  "profileUpdateSuccess": "您的个人资料已更新！",
+  "profileUpdateFailed": "更新个人资料失败。",
+  "editProfileImage": "编辑个人资料图片",
+  "currentProfileImage": "当前个人资料图片",
+  "addProfilePhoto": "添加个人资料照片",
+  "usernameField": "用户名字段",
+  "bioField": "简介字段",
+  "locationField": "位置字段",
+  "interestsField": "兴趣字段",
+  "saveProfileChanges": "保存个人资料更改",
+  "markToday": "标记今天",
+  "markTodayButton": "标记今天",
+  "alreadyMarkedToday": "今天已标记",
+  "alreadyMarked": "已标记",
+  "loading": "加载中…",
+  "challenge": "挑战",
+  "deleteChallenge": "删除挑战",
+  "viewChallengeDetails": "查看挑战详情",
+  "challengeImage": "挑战图片",
+  "day": "天",
+  "abandonChallenge": "放弃挑战",
+  "abandonChallengeConfirm": "您确定要放弃吗？您的进度将丢失。",
+  "continue": "继续",
+  "abandoned": "已放弃",
+  "challengeAbandoned": "您已放弃该挑战。",
+  "failedToAbandonChallenge": "放弃挑战失败。",
+  "swipeToDelete": "滑动以删除",
+  "waitingChallengeIcon": "等待挑战图标",
+  "noOngoingChallenge": "没有进行中的挑战！",
+  "startAChallenge": "开始一个挑战，您将在此看到它。",
+  "listOfOngoingChallenges": "进行中挑战列表",
+  "markTodayFailed": "标记今天失败。",
+  "savedChallengesScreenTitle": "已保存的挑战",
+  "deleteChallengeConfirm": "确定要删除此挑战吗？",
+  "deleted": "已删除",
+  "challengeDeletedSuccess": "挑战已成功删除。",
+  "failedToDeleteChallenge": "删除挑战失败。",
+  "viewDetails": "查看详情",
+  "noCategory": "无分类",
+  "completedChallengesScreenTitle": "已完成的挑战",
+  "completedOn": "完成于",
+  "historyOf": "历史记录",
+  "appName": "ChallengeTies",
+  "alerts": {
+    "error": "错误",
+    "accessDenied": "拒绝访问",
+    "shareError": "分享失败"
+  },
+  "challengeDetails": {
+    "untitled": "无标题挑战",
+    "uncategorized": "未分类",
+    "noDescription": "暂无描述",
+    "fetchError": "无法获取挑战。",
+    "joinError": "无法加入挑战，请重试。",
+    "saveError": "切换保存失败，请重试。",
+    "completeError": "无法完成挑战。",
+    "chatAccessDenied": "您必须先参加挑战才能打开聊天。",
+    "loading": "加载中…",
+    "participant": "参与者",
+    "participants": "参与者",
+    "takeChallenge": "参与挑战",
+    "inProgress": "进行中",
+    "daysCompleted": "已完成天数",
+    "alreadyMarked": "今日已标记",
+    "markToday": "标记今天",
+    "completeChallenge": "完成挑战",
+    "chat": "聊天",
+    "save": "保存",
+    "saved": "已保存",
+    "share": "分享",
+    "stats": "统计"
+  },
+  "explanation": {
+    "title": "您的声音很重要！",
+    "welcome": "欢迎来到新功能页面！在这里您可以帮助塑造应用的演进。",
+    "optionsIntro": "您有两个选项：",
+    "optionVote": "为其他用户的现有提案投票。",
+    "optionPropose": "提交您自己的想法，它将被立即添加并供投票。",
+    "outcome": "投票期结束后，得票最高的功能将被实施。",
+    "understood": "明白了"
+  },
+  "trophyModal": {
+    "congrats": "恭喜！🎉",
+    "reward": "+{{count}} 奖杯",
+    "message": "{{message}}",
+    "claim": "领取",
+    "doubleReward": "奖杯翻倍"
+  },
+  "achievements": {
+    "first_connection": "首次连接",
+    "profile_completed": "资料已完成",
+    "finishChallenge_10": "认真对待挑战"
+  },
+  "statsModal": {
+    "close": "关闭",
+    "prevMonth": "上个月",
+    "nextMonth": "下个月",
+    "title": "{{month}} {{year}}",
+    "weekdays": ["周日","周一","周二","周三","周四","周五","周六"],
+    "months": [
+      "一月","二月","三月","四月","五月","六月",
+      "七月","八月","九月","十月","十一月","十二月"
+    ]
+  },
+  "proposeFeature": {
+    "errorTitle": "错误",
+    "errorNoTitle": "请输入提案标题。",
+    "modalTitle": "提出新功能",
+    "placeholderTitle": "标题",
+    "placeholderDescription": "描述（可选）",
+    "submitButton": "提交提案"
+  },
+  "missedChallenge": {
+    "title": "挑战岌岌可危！",
+    "subtitle": "您已连续错过 2 天或以上。您想怎么做？",
+    "reset": {
+      "title": "重置",
+      "subtitle": "从头开始"
+    },
+    "ad": {
+      "title": "观看广告",
+      "subtitle": "继续保持连胜"
+    },
+    "useTrophies": {
+      "title": "使用 {{count}} 个奖杯",
+      "subtitle": "保留您的进度"
+    }
+  },
+  "privacyPolicy": {
+    "title": "隐私政策",
+    "introductionTitle": "介绍",
+    "introductionText": "在 {{appName}}，保护您的隐私至关重要。本政策解释了我们如何在完全遵守 GDPR 的前提下收集、使用、保护和共享您的个人数据。",
+    "dataCollectedTitle": "我们收集的数据",
+    "dataCollectedText": "为了为您提供个性化体验，我们可能会收集以下数据：",
+    "dataCollectedItems": {
+      "nameEmail": "姓名和电子邮件地址",
+      "profilePhoto": "个人资料照片",
+      "progress": "您的挑战进度和成就",
+      "interests": "兴趣和偏好",
+      "browsingHistory": "浏览历史"
+    },
+    "dataUsageTitle": "我们如何使用数据",
+    "dataUsageText": "您的数据将用于：",
+    "dataUsageItems": {
+      "personalize": "个性化您的体验",
+      "analyze": "分析您的进度",
+      "notify": "向您发送有用通知",
+      "improve": "改进我们的服务"
+    },
+    "dataSharingTitle": "数据共享",
+    "dataSharingText": "您的信息将保密，仅与以下对象共享：",
+    "dataSharingItems": {
+      "techPartners": "我们的技术合作伙伴",
+      "legalAuthorities": "法律机构（在需要时）",
+      "securityServices": "安全服务提供商"
+    },
+    "securityTitle": "数据安全",
+    "securityText": "我们实施先进措施来保护您的数据：",
+    "securityItems": {
+      "encryption": "敏感数据加密",
+      "twoFactor": "强身份验证",
+      "monitoring": "持续监控"
+    },
+    "userRightsTitle": "您的权利",
+    "userRightsText": "根据 GDPR，您享有以下权利：",
+    "userRightsItems": {
+      "accessRectify": "访问、修改和删除您的数据",
+      "restrictObject": "限制或反对此类处理",
+      "portability": "数据可携带权"
+    },
+    "cookiesTitle": "Cookie 使用",
+    "cookiesText": "Cookie 帮助我们改善导航并分析平台使用情况。您可以在设备设置中管理它们。",
+    "updatesTitle": "政策更新",
+    "updatesText": "本政策可能会随着实践或法规的更新而变更。如有重大变更，我们将通知您。",
+    "contactTitle": "联系",
+    "contactText": "如对您的个人数据或本政策有任何疑问，请通过以下方式联系我们：",
+    "contactEmail": "📧 privacy@challengeties.com",
+    "finalMessage": "感谢您信任 ChallengeTies。您的隐私始终是我们的首要任务。"
+  },
+  "completedOnDate": "完成于",
+  "completion": {
+    "youAreAwesome": "你真棒！",
+    "keepItUp": "继续加油！",
+    "successIsYours": "成功属于你！",
+    "everyEffortCounts": "每一次努力都重要！",
+    "neverGiveUp": "永不放弃！",
+    "youAreOnTrack": "你在正确的轨道上！",
+    "excellenceAwaits": "卓越在前方！",
+    "headHeldHigh": "抬头前行！",
+    "persistencePays": "坚持必有回报！",
+    "challengesMakeYouStronger": "挑战让你更强大！",
+    "errorFinalizing": "完成挑战时出错：",
+    "trophies": "{{count}} 个奖杯",
+    "reward": "{{count}} 个奖杯",
+    "continue": "继续",
+    "doubleTrophies": "奖杯翻倍"
+  },
+  "featureDetail": {
+    "votes": "{{count}} 票",
+    "votes_plural": "{{count}} 票",
+    "vote": "投票",
+    "alreadyVoted": "您已投过票。"
+  },
+  "durationModal": {
+    "title": "选择时长（天）",
+    "days": "{{count}} 天",
+    "days_plural": "{{count}} 天",
+    "confirm": "确认",
+    "cancel": "取消"
+  },
+  "chat": {
+    "goBack": "返回",
+    "title": "{{title}} 聊天",
+    "messagesList": "消息列表",
+    "placeholder": "输入消息…",
+    "sendButton": "发送消息",
+    "errorSending": "发送消息出错"
+  },
+  "close": "关闭",
+  "uncategorized": "未分类",
+  "noDescriptionAvailable": "暂无描述",
+  "imageNotAvailable": "图像不可用",
+  "participant": "参与者",
+  "participants": "参与者",
+  "createPrompt": "创建挑战说明：",
+  "today": "今天",
+  "errorLoadingCompletedChallenges": "加载已完成挑战时出错。",
+  "loadingChallenges": "正在加载挑战…",
+  "noChallengesCreated": "尚未创建任何挑战！",
+  "noAchievementsYet": "尚无成就",
+  "chooseCategory": "选择类别",
+  "category": "类别",
+  "resetFilters": "重置筛选",
+  "closeModal": "关闭",
+  "untitledChallenge": "无标题挑战",
+  "miscellaneous": "其他",
+  "failedToLoadChallenges": "无法加载挑战。",
+  "noChallengesFound": "未找到任何挑战！",
+  "mysteriousChallenge": "神秘挑战",
+  "logoChallengeTies": "ChallengeTies 徽标",
+  "defyYourLimits": "挑战你的极限",
+  "joinVibrantCommunity": "加入充满活力的社区，每天突破自我！",
+  "launchAdventure": "开启冒险",
+  "popularChallenges": "热门挑战",
+  "noChallengesAvailable": "暂无可用挑战",
+  "challengesComingSoon": "新挑战即将上线！",
+  "discover": "发现",
+  "tipsAndTricks": "技巧与窍门",
+  "leaderboard": {
+    "errorFetch": "获取排行榜时出错",
+    "notEnough": "玩家数量不足，无法展示领奖台。",
+    "profileOf": "{{name}} 的个人资料",
+    "unknown": "未知",
+    "loading": "正在加载排行榜…",
+    "title": "排行榜",
+    "filter": {
+      "region": "地区",
+      "national": "全国",
+      "global": "全球"
+    },
+    "tab": {
+      "region": "地区",
+      "national": "全国",
+      "global": "全球"
+    },
+    "listLabel": "排名玩家列表",
+    "noPlayers": "此排行榜暂无玩家。"
+  },
+  "screen8": {
+    "readyQuestion": "准备好接受挑战了吗？",
+    "adventureStart": "你的冒险现在开始！立即加入，进步并融入激励人的社区。",
+    "imReady": "我准备好了",
+    "startAppLabel": "打开应用"
+  },
+  "screen7": {
+    "title": "获取奖励",
+    "description": "通过完成挑战获取奖杯，观看视频可将奖励翻倍！",
+    "nextButtonLabel": "继续下一步"
+  },
+  "screen6": {
+    "title": "创建并分享你的旅程",
+    "description": "分享你的成功，激励他人接受挑战。与社区保持联系，建立深厚纽带。",
+    "nextButtonLabel": "继续下一步"
+  },
+  "screen5": {
+    "title": "庆祝持续进步！",
+    "description": "每一步都让你更接近目标。庆祝成就，持续前行。",
+    "nextButtonLabel": "继续下一步"
+  },
+  "screen4": {
+    "titlePart1": "跟踪进度并获取",
+    "titleHighlight": "奖杯",
+    "description": "坚持每日跟踪。在每个里程碑解锁奖杯和成就。",
+    "nextButtonLabel": "继续下一步"
+  },
+  "screen3": {
+    "title": "创建你的专属挑战",
+    "description": "根据日常生活定制挑战。用专属目标激励自己。",
+    "nextButtonLabel": "继续下一步"
+  },
+  "screen2": {
+    "title": "接受激励性挑战",
+    "description": "从激励性挑战中选择，让每一天成为成功的开始。",
+    "nextButtonLabel": "继续下一步"
+  },
+  "screen1": {
+    "logoLabel": "ChallengeTies 徽标",
+    "presentationText": "你的个人成长之旅从现在开始。加入追求卓越的充满活力社区。",
+    "nextButtonLabel": "继续下一步"
+  },
+  "challengeChat": {
+    "backButton": "返回",
+    "defaultTitle": "挑战聊天",
+    "placeholder": "你的消息…",
+    "inputA11yLabel": "消息输入框",
+    "inputA11yHint": "在此输入消息",
+    "sendButtonLabel": "发送消息"
+  },
+  "contact": {
+    "errorTitle": "错误",
+    "errorMessage": "请填写所有字段。",
+    "successTitle": "消息已发送",
+    "successMessage": "我们会尽快与您联系！",
+    "title": "联系我们 📩",
+    "intro": "有问题、反馈或建议？我们随时提供帮助。您可以通过以下方式联系我们，或直接发送消息。",
+    "emailSection": "电子邮件",
+    "emailLinkLabel": "发送邮件至 support@challengeties.com",
+    "emailAddress": "support@challengeties.com",
+    "phoneSection": "电话",
+    "phoneLinkLabel": "拨打 +33 1 23 45 67 89",
+    "phoneNumber": "+33 1 23 45 67 89",
+    "instagramSection": "Instagram",
+    "instagramLinkLabel": "访问我们的 Instagram 页面 @challengeties",
+    "instagramHandle": "@challengeties",
+    "facebookSection": "Facebook",
+    "facebookLinkLabel": "访问我们的 Facebook 页面 @challengeties",
+    "facebookHandle": "@challengeties",
+    "whatsappSection": "WhatsApp",
+    "whatsappLinkLabel": "通过 WhatsApp 联系我们",
+    "whatsappText": "通过 WhatsApp 联系我们",
+    "formTitle": "发送消息给我们",
+    "namePlaceholder": "您的姓名",
+    "nameA11y": "姓名字段",
+    "emailPlaceholder": "您的邮箱",
+    "emailA11y": "邮箱字段",
+    "messagePlaceholder": "您的消息",
+    "messageA11y": "消息字段",
+    "sendButton": "发送",
+    "sendButtonA11y": "发送消息",
+    "footerMessage": "我们会尽快回复。感谢您信任 ChallengeTies！🚀"
+  },
+  "history": {
+    "title": "我们的历史",
+    "logoAlt": "ChallengeTies 徽标",
+    "intro": "源自一个强大的愿景：…",
+    "featuresTitle": "主要功能 🔥",
+    "features": {
+      "specialChallenges": {
+        "title": "特别挑战",
+        "desc": "激发灵感的独特挑战…"
+      },
+      "progressTracking": {
+        "title": "进度跟踪",
+        "desc": "可视化进度的互动工具…"
+      },
+      "customChallenges": {
+        "title": "自定义挑战",
+        "desc": "创建专属挑战的能力…"
+      },
+      "community": {
+        "title": "活跃社区",
+        "desc": "志同道合者的网络…"
+      }
+    },
+    "motivationTitle": "我们的动力 🚀",
+    "motivation": "我们坚信每个人都有无限潜力…",
+    "logoMeaningTitle": "徽标含义 🎨",
+    "logoMeaning": "ChallengeTies 徽标象征团结与成长…",
+    "visionTitle": "我们的愿景 🌍",
+    "vision": "我们不仅是一个应用，更是一场运动…",
+    "beginningsTitle": "起源 📅",
+    "beginnings": "ChallengeTies 的旅程始于…",
+    "communityEngagementTitle": "社区参与 🤝",
+    "communityEngagement": "从一开始，ChallengeTies 的力量就在于社区…",
+    "finalThanksTitle": "感谢有你相伴…",
+    "finalThanksMessage": "ChallengeTies 将助你实现目标，并肩前行。"
+  },
+  "newFeaturesTitle": "新功能",
+  "tryAnotherSearch": "尝试其他搜索或筛选。",
+  "addFavorite": "将 \"{{title}}\" 添加到收藏夹",
+  "removeFavorite": "从收藏夹中移除 \"{{title}}\"",
+  "firstAchievementsPrompt": "接受挑战，赢取你的首个奖杯！",
+  "trophiesProgress": "{{completed}}/{{total}} 个奖杯",
+  "sectionCount": "{{completed}}/{{total}}",
+  "claim": "领取",
+  "unlocked": "已解锁",
+  "inProgress": "进行中",
+  "mysteryAchievement": "神秘成就。",
+  "newAchievement": "新成就！",
+  "sections": {
+    "débuts": "起源",
+    "defisTermines": "完成的挑战",
+    "engagement": "承诺",
+    "serieDeFeu": "连胜",
+    "communication": "沟通",
+    "partage": "分享",
+    "reseau": "网络",
+    "influence": "影响力",
+    "collection": "收藏",
+    "creation": "创建",
+    "divers": "其他"
+  },
+  "finishChallenge_1": "完成第一个挑战",
+  "finishChallenge_3": "积极的初学者",
+  "finishChallenge_10": "认真挑战者",
+  "finishChallenge_25": "挑战机器",
+  "finishChallenge_50": "不可战胜！",
+  "finishChallenge_100": "传奇巨匠",
+  "selectChallengeDays_7": "入门",
+  "selectChallengeDays_30": "决心",
+  "selectChallengeDays_90": "马拉松选手",
+  "selectChallengeDays_180": "长期主义者",
+  "selectChallengeDays_365": "传奇耐心",
+  "streakProgress_3": "小连胜",
+  "streakProgress_7": "已成常态",
+  "streakProgress_14": "令人印象深刻！",
+  "streakProgress_30": "坚韧决心",
+  "streakProgress_60": "势不可挡",
+  "streakProgress_90": "我是机器",
+  "streakProgress_180": "终极纪律",
+  "streakProgress_365": "我是怪兽",
+  "messageSent_1": "发送首条消息",
+  "messageSent_10": "团队精神",
+  "messageSent_50": "活跃社区",
+  "shareChallenge_1": "喜欢分享",
+  "shareChallenge_5": "新晋影响者",
+  "shareChallenge_20": "社区领袖",
+  "inviteFriend_1": "邀请一位好友",
+  "inviteFriend_5": "扩展团队",
+  "inviteFriend_10": "网络之王",
+  "voteFeature_1": "首票已投",
+  "voteFeature_5": "我喜欢投票",
+  "saveChallenge_1": "已保存挑战",
+  "saveChallenge_5": "已保存5个挑战",
+  "challengeCreated_1": "挑战创作者",
+  "challengeCreated_5": "我很有灵感",
+  "challengeCreated_10": "创新者",
+  "first_connection": "首次连接",
+  "descriptions": {
+    "finishChallenge_1": "完美完成第一个挑战。",
+    "finishChallenge_3": "完成3个挑战以展示你的决心。",
+    "finishChallenge_10": "完成10个挑战以证明你的认真态度。",
+    "finishChallenge_25": "完成25个挑战：你就是一台机器！",
+    "finishChallenge_50": "完成50个挑战：无人能敌！",
+    "finishChallenge_100": "完成100个挑战：传奇诞生。",
+    "selectChallengeDays_7": "接受一个7天挑战。",
+    "selectChallengeDays_30": "坚持30天挑战。",
+    "selectChallengeDays_90": "90天：你是马拉松选手。",
+    "selectChallengeDays_180": "180天挑战：真正的勇士。",
+    "selectChallengeDays_365": "一年挑战：传奇耐心。",
+    "streakProgress_3": "连续3天：开了个好头！",
+    "streakProgress_7": "7天连胜：你在燃烧！",
+    "streakProgress_14": "连续14天：令人印象深刻。",
+    "streakProgress_30": "30天连胜：钢铁般的纪律。",
+    "streakProgress_60": "60天：无人能挡。",
+    "streakProgress_90": "90天：一台不可阻挡的机器。",
+    "streakProgress_180": "180天连胜：终极纪律。",
+    "streakProgress_365": "365天连胜：你是一头怪兽！",
+    "messageSent_1": "在聊天中发送你的第一条消息。",
+    "messageSent_10": "发送10条消息：团队精神上线。",
+    "messageSent_50": "发送50条消息：社区大使。",
+    "shareChallenge_1": "首次分享挑战。",
+    "shareChallenge_5": "分享5次：新晋影响者。",
+    "shareChallenge_20": "分享20次：无可争议的领袖。",
+    "inviteFriend_1": "邀请第一位好友。",
+    "inviteFriend_5": "邀请5位：扩展团队。",
+    "inviteFriend_10": "邀请10位：网络之王。",
+    "voteFeature_1": "首次为功能投票。",
+    "voteFeature_5": "投票5次：发声有力。",
+    "saveChallenge_1": "保存你的第一个挑战。",
+    "saveChallenge_5": "保存5个挑战：资深收藏家。",
+    "challengeCreated_1": "创建你的第一个专属挑战。",
+    "challengeCreated_5": "创建5个挑战：创意先锋。",
+    "challengeCreated_10": "创建10个挑战：天才创新者。",
+    "first_connection": "首次连接：欢迎！",
+    "profile_completed": "资料已完成：准备大放异彩。"
+  },
+  "profile_completed": "资料已完成",
+  "categories": {
+  "Santé": "健康",
+  "Fitness": "健身",
+  "Finance": "理财",
+  "Mode de Vie": "生活方式",
+  "Éducation": "教育",
+  "Créativité": "创造力",
+  "Carrière": "职业",
+  "Social": "社交",
+  "Productivité": "生产力",
+  "Écologie": "生态",
+  "Motivation": "动机",
+  "Discipline": "自律",
+  "Développement Personnel": "个人成长",
+  "État d'esprit": "心态"
+},
+  "challenges": {
+    "eatHealthy": {
+      "title": "每天健康饮食",
+      "description": "承诺每天摄入健康餐食，以提升身心健康。"
+    },
+    "walk10000Steps": {
+      "title": "每天走10000步",
+      "description": "通过每天走10000步保持活跃。"
+    },
+    "saveMoney": {
+      "title": "每天存5美元",
+      "description": "通过每天存5美元来培养理财习惯。"
+    },
+    "meditation": {
+      "title": "冥想10分钟",
+      "description": "每天仅需10分钟冥想，即可实现正念。"
+    },
+    "readChapter": {
+      "title": "每天阅读1章",
+      "description": "养成每天读一章的好习惯。"
+    },
+    "writeWords": {
+      "title": "每天写500字",
+      "description": "每天写500字，释放你的创作潜能。"
+    },
+    "learnSkill": {
+      "title": "学习一项新技能",
+      "description": "每天花时间学习一项新技能，助力职业发展。"
+    },
+    "declutterSpace": {
+      "title": "整理你的空间",
+      "description": "每天整理和清理环境，让心灵更清爽。"
+    },
+    "dailyYoga": {
+      "title": "练习15分钟瑜伽",
+      "description": "每天练习15分钟瑜伽，强健身心。"
+    },
+    "practiceGratitude": {
+      "title": "练习感恩",
+      "description": "结束一天前，思考你感恩的所有事物。"
+    },
+    "workout15Min": {
+      "title": "锻炼15分钟",
+      "description": "养成每天至少锻炼15分钟的习惯。"
+    },
+    "drinkWater": {
+      "title": "每天喝2升水",
+      "description": "通过每天喝至少2升水来保持水分。"
+    },
+    "planTomorrow": {
+      "title": "今晚规划明天",
+      "description": "每天结束时规划第二天的安排。"
+    },
+    "morningStretch": {
+      "title": "晨间拉伸",
+      "description": "一天开始时做几分钟晨间拉伸。"
+    },
+    "timeOutside": {
+      "title": "花10分钟在户外",
+      "description": "每天花时间在户外以改善心理健康。"
+    },
+    "unplug": {
+      "title": "断开连接1小时",
+      "description": "每天与屏幕隔离一小时。"
+    },
+    "compliment": {
+      "title": "给予赞美",
+      "description": "用赞美来点亮某人的一天。"
+    },
+    "network": {
+      "title": "每日社交",
+      "description": "每天联系一位专业人士以扩大你的网络。"
+    },
+    "deepBreathing": {
+      "title": "练习深呼吸",
+      "description": "每天花5分钟练习深呼吸。"
+    },
+    "wakeUpEarly": {
+      "title": "早起",
+      "description": "养成每天早起的习惯。"
+    },
+    "learnLanguage": {
+      "title": "学习新语言",
+      "description": "每天花时间学习一种新语言。"
+    },
+    "familyTime": {
+      "title": "家庭优质时光",
+      "description": "每天花时间加强家庭纽带。"
+    },
+    "playInstrument": {
+      "title": "学习乐器",
+      "description": "花时间掌握一种乐器。"
+    },
+    "positiveAffirmations": {
+      "title": "积极肯定",
+      "description": "每天重复肯定语以强化心态。"
+    },
+    "coldShower": {
+      "title": "冷水淋浴挑战",
+      "description": "通过每天冷水淋浴提升能量和意志力。"
+    },
+    "noSugar30Days": {
+      "title": "30天无糖",
+      "description": "去除饮食中添加糖，养成更健康的生活方式。"
+    },
+    "dailyVisualization": {
+      "title": "每日可视化",
+      "description": "每天花5分钟可视化你的目标。"
+    },
+    "kindnessAct": {
+      "title": "每日善举",
+      "description": "每天随机做一件善事。"
+    },
+    "wakeUp5AM": {
+      "title": "早上5点起床",
+      "description": "养成每天早上5点起床的习惯。"
+    },
+    "newRecipe": {
+      "title": "每周一个新食谱",
+      "description": "每周尝试一个新食谱，提升烹饪技能。"
+    },
+    "read10Pages": {
+      "title": "每天阅读10页",
+      "description": "养成每天至少阅读10页的习惯。"
+    },
+    "oneMinPlank": {
+      "title": "一分钟平板支撑挑战",
+      "description": "每天一分钟平板支撑，强化核心肌群。"
+    },
+    "learnWordDaily": {
+      "title": "每天学习一个新单词",
+      "description": "通过每天学习并使用一个新单词来丰富你的词汇量。"
+    },
+    "noCaffeine": {
+      "title": "7天无咖啡因",
+      "description": "通过连续一周不摄入咖啡因来重置你的身体。"
+    },
+    "dailyWins": {
+      "title": "每天记录3个成就",
+      "description": "每天结束时列出三个成就，提升自信。"
+    },
+    "talkToStranger": {
+      "title": "每天与陌生人交谈",
+      "description": "通过每天与新朋友交谈来提升社交技巧。"
+    },
+    "minimalistWardrobe": {
+      "title": "极简衣橱挑战",
+      "description": "连续一个月只穿33件衣物，实践极简主义。"
+    },
+    "noComplaints": {
+      "title": "21天不抱怨",
+      "description": "通过连续21天不抱怨来训练积极心态。"
+    },
+    "selfReflection": {
+      "title": "每日自省",
+      "description": "每天晚上花5分钟反思自己的思想和行为。"
+    },
+    "hobbyTime": {
+      "title": "投入30分钟到爱好",
+      "description": "每天至少花30分钟从事让你快乐的爱好。"
+    },
+    "listenPodcast": {
+      "title": "每天听播客",
+      "description": "通过每天收听教育播客来丰富知识。"
+    },
+    "reducePlastic": {
+      "title": "减少塑料使用",
+      "description": "避免一次性塑料，降低环境影响。"
+    },
+    "goodPosture": {
+      "title": "保持良好姿势",
+      "description": "全天保持正确的姿势以改善背部健康。"
+    },
+    "reduceScreenTime": {
+      "title": "减少夜间屏幕时间",
+      "description": "睡前至少 30 分钟避免使用屏幕。"
+    }
+  },
+  "imagePickFailed": "无法选择图片。",
+  "allFieldsRequired": "所有字段都为必填（图片为可选）。",
+  "mustBeLoggedIn": "您必须登录才能创建挑战。",
+  "success": "成功",
+  "challengeCreated": "您的挑战已创建！",
+  "challengeCreateFailed": "无法创建挑战。",
+  "createYourChallenge": "创建您的挑战",
+  "inspireOthers": "用激动人心的挑战激励他人！",
+  "challengeTitle": "挑战标题",
+  "challengeDescription": "描述",
+  "selectCategory": "选择一个类别",
+  "uploadImage": "上传图片（可选）",
+  "uploadImageOptional": "上传图片（可选）",
+  "createChallengeButton": "创建挑战"
+}

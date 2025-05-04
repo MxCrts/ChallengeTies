@@ -1,4 +1,4 @@
-import React, { useState, useCallback } from "react";
+import React, { useState, useCallback, useEffect } from "react";
 import {
   View,
   Text,
@@ -29,6 +29,7 @@ import { useTheme } from "../context/ThemeContext";
 import { Theme } from "../theme/designSystem";
 import designSystem from "../theme/designSystem";
 import BackButton from "../components/BackButton";
+import { useTranslation } from "react-i18next";
 
 const { width: SCREEN_WIDTH } = Dimensions.get("window");
 const SPACING = 15;
@@ -54,15 +55,24 @@ const categories = [
 ];
 
 export default function CreateChallenge() {
+  const { t, i18n } = useTranslation();
   const { theme } = useTheme();
   const isDarkMode = theme === "dark";
-  const currentTheme: Theme = isDarkMode ? designSystem.darkTheme : designSystem.lightTheme;
+  const currentTheme: Theme = isDarkMode
+    ? designSystem.darkTheme
+    : designSystem.lightTheme;
+
   const router = useRouter();
 
   const [title, setTitle] = useState("");
   const [description, setDescription] = useState("");
-  const [category, setCategory] = useState("Health");
+  const [category, setCategory] = useState(categories[0]);
   const [imageUri, setImageUri] = useState<string | null>(null);
+
+  // Pour relancer les messages d'erreur si on change de langue
+  useEffect(() => {
+    // rien à faire ici, mais on dépend de i18n.language pour re-rendre
+  }, [i18n.language]);
 
   const pickImage = useCallback(async () => {
     try {
@@ -76,15 +86,15 @@ export default function CreateChallenge() {
       }
     } catch (error) {
       console.error("Erreur lors de la sélection d'image:", error);
-      Alert.alert("Erreur", "Impossible de sélectionner l'image.");
+      Alert.alert(t("error"), t("imagePickFailed"));
     }
-  }, []);
+  }, [t]);
 
   const handleSubmit = useCallback(async () => {
     if (!title.trim() || !description.trim() || !category) {
       Alert.alert(
-        "Erreur",
-        "Tous les champs sont requis (l'image est optionnelle)."
+        t("error"),
+        t("allFieldsRequired", { defaultValue: "Tous les champs sont requis (l'image est optionnelle)." })
       );
       return;
     }
@@ -92,7 +102,7 @@ export default function CreateChallenge() {
     try {
       const currentUser = auth.currentUser;
       if (!currentUser) {
-        Alert.alert("Erreur", "Vous devez être connecté pour créer un défi.");
+        Alert.alert(t("error"), t("mustBeLoggedIn", { defaultValue: "Vous devez être connecté pour créer un défi." }));
         return;
       }
 
@@ -108,13 +118,10 @@ export default function CreateChallenge() {
         createdAt: new Date(),
         creatorId: currentUser.uid,
         chatId,
-        usersTakingChallenge: [],
+        usersTakingChallenge: [] as string[],
       };
 
-      const challengeRef = await addDoc(
-        collection(db, "challenges"),
-        challengeData
-      );
+      const challengeRef = await addDoc(collection(db, "challenges"), challengeData);
       const challengeId = challengeRef.id;
 
       const userRef = doc(db, "users", currentUser.uid);
@@ -124,13 +131,13 @@ export default function CreateChallenge() {
 
       await checkForAchievements(currentUser.uid);
 
-      Alert.alert("Succès", "Votre défi a été créé !");
+      Alert.alert(t("success"), t("challengeCreated", { defaultValue: "Votre défi a été créé !" }));
       router.push("/explore");
     } catch (error) {
       console.error("Erreur lors de la création du défi :", error);
-      Alert.alert("Erreur", "Impossible de créer le défi.");
+      Alert.alert(t("error"), t("challengeCreateFailed", { defaultValue: "Impossible de créer le défi." }));
     }
-  }, [title, description, category, imageUri, router]);
+  }, [title, description, category, imageUri, router, t]);
 
   return (
     <LinearGradient
@@ -146,9 +153,7 @@ export default function CreateChallenge() {
       />
       <ScrollView contentContainerStyle={styles.scrollContainer}>
         <View style={styles.header}>
-          <BackButton
-            color={currentTheme.colors.textPrimary}
-          />
+          <BackButton color={currentTheme.colors.textPrimary} />
           <Ionicons
             name="create-outline"
             size={normalizeSize(64)}
@@ -156,72 +161,89 @@ export default function CreateChallenge() {
             style={styles.headerIcon}
           />
           <Text style={[styles.headerTitle, { color: currentTheme.colors.textPrimary }]}>
-            Create Your Challenge
+            {t("createYourChallenge", { defaultValue: "Create Your Challenge" })}
           </Text>
           <Text style={[styles.headerSubtitle, { color: currentTheme.colors.textSecondary }]}>
-            Inspire others with a challenge that excites!
+            {t("inspireOthers", { defaultValue: "Inspire others with a challenge that excites !" })}
           </Text>
         </View>
 
         <TextInput
-          style={[styles.input, { borderColor: currentTheme.colors.border, backgroundColor: currentTheme.colors.overlay, color: currentTheme.colors.textPrimary }]}
-          placeholder="Challenge Title"
+          style={[
+            styles.input,
+            {
+              borderColor: currentTheme.colors.border,
+              backgroundColor: currentTheme.colors.overlay,
+              color: currentTheme.colors.textPrimary,
+            },
+          ]}
+          placeholder={t("challengeTitle", { defaultValue: "Challenge Title" })}
           placeholderTextColor={currentTheme.colors.textSecondary}
           value={title}
           onChangeText={setTitle}
-          accessibilityLabel="Titre du défi"
-          accessibilityHint="Entrez le titre de votre défi"
+          accessibilityLabel={t("challengeTitle")}
           testID="title-input"
         />
 
         <TextInput
-          style={[styles.input, styles.textArea, { borderColor: currentTheme.colors.border, backgroundColor: currentTheme.colors.overlay, color: currentTheme.colors.textPrimary }]}
-          placeholder="Description"
+          style={[
+            styles.input,
+            styles.textArea,
+            {
+              borderColor: currentTheme.colors.border,
+              backgroundColor: currentTheme.colors.overlay,
+              color: currentTheme.colors.textPrimary,
+            },
+          ]}
+          placeholder={t("challengeDescription", { defaultValue: "Description" })}
           placeholderTextColor={currentTheme.colors.textSecondary}
           value={description}
           onChangeText={setDescription}
           multiline
           numberOfLines={4}
-          accessibilityLabel="Description du défi"
-          accessibilityHint="Entrez la description de votre défi"
+          accessibilityLabel={t("challengeDescription")}
           testID="description-input"
         />
 
         <View style={styles.dropdownContainer}>
           <Text style={[styles.dropdownLabel, { color: currentTheme.colors.textSecondary }]}>
-            Category
+            {t("category")}
           </Text>
-          <View style={[styles.pickerWrapper, { borderColor: currentTheme.colors.border, backgroundColor: currentTheme.colors.overlay }]}>
+          <View
+            style={[
+              styles.pickerWrapper,
+              { borderColor: currentTheme.colors.border, backgroundColor: currentTheme.colors.overlay },
+            ]}
+          >
             <Picker
               selectedValue={category}
-              onValueChange={(itemValue) => setCategory(itemValue)}
+              onValueChange={setCategory}
               style={[styles.picker, { color: currentTheme.colors.textPrimary }]}
-              itemStyle={{
-                fontFamily: "Comfortaa_400Regular",
-                color: currentTheme.colors.textPrimary,
-              }}
-              accessibilityLabel="Sélectionner une catégorie"
+              itemStyle={{ color: currentTheme.colors.textPrimary }}
+              accessibilityLabel={t("selectCategory")}
               testID="category-picker"
             >
               {categories.map((cat) => (
-                <Picker.Item label={cat} value={cat} key={cat} />
+                <Picker.Item label={t(`categories.${cat}`, { defaultValue: cat })} value={cat} key={cat} />
               ))}
             </Picker>
           </View>
         </View>
 
         <TouchableOpacity
-          style={[styles.imagePickerButton, { borderColor: currentTheme.colors.border, backgroundColor: currentTheme.colors.overlay }]}
+          style={[
+            styles.imagePickerButton,
+            { borderColor: currentTheme.colors.border, backgroundColor: currentTheme.colors.overlay },
+          ]}
           onPress={pickImage}
-          accessibilityLabel="Télécharger une image"
-          accessibilityHint="Sélectionnez une image pour le défi (optionnel)"
+          accessibilityLabel={t("uploadImage", { defaultValue: "Upload Image (optional)" })}
           testID="image-picker-button"
         >
           {imageUri ? (
             <Image source={{ uri: imageUri }} style={styles.imagePreview} />
           ) : (
             <Text style={[styles.imagePickerText, { color: currentTheme.colors.textSecondary }]}>
-              Upload Image (Optional)
+              {t("uploadImageOptional", { defaultValue: "Upload Image (Optional)" })}
             </Text>
           )}
         </TouchableOpacity>
@@ -229,7 +251,7 @@ export default function CreateChallenge() {
         <TouchableOpacity
           style={styles.submitButton}
           onPress={handleSubmit}
-          accessibilityLabel="Créer le défi"
+          accessibilityLabel={t("createChallengeButton", { defaultValue: "Create Challenge" })}
           testID="submit-button"
         >
           <LinearGradient
@@ -239,7 +261,7 @@ export default function CreateChallenge() {
             end={{ x: 1, y: 1 }}
           >
             <Text style={[styles.submitText, { color: currentTheme.colors.textPrimary }]}>
-              Create Challenge
+              {t("createChallengeButton", { defaultValue: "Create Challenge" })}
             </Text>
           </LinearGradient>
         </TouchableOpacity>

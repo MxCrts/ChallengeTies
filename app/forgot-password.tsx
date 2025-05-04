@@ -17,6 +17,7 @@ import { sendPasswordResetEmail } from "firebase/auth";
 import { auth } from "../constants/firebase-config";
 import { Ionicons } from "@expo/vector-icons";
 import { StatusBar } from "expo-status-bar";
+import { useTranslation } from "react-i18next";
 
 const { width: SCREEN_WIDTH, height: SCREEN_HEIGHT } = Dimensions.get("window");
 
@@ -26,25 +27,12 @@ const PRIMARY_COLOR = "#FFB800"; // orange
 const TEXT_COLOR = "#333"; // texte foncé
 const BUTTON_COLOR = "#FFFFFF"; // bouton blanc
 
-// Taille du cercle décoratif et position verticale centrée
 const circleSize = Math.min(SCREEN_WIDTH, SCREEN_HEIGHT) * 0.9;
 const circleTop = SCREEN_HEIGHT * 0.38;
 const waveCount = 4;
 
 const Wave = React.memo(
-  ({
-    opacity,
-    scale,
-    borderWidth,
-    size,
-    top,
-  }: {
-    opacity: Animated.Value;
-    scale: Animated.Value;
-    borderWidth: number;
-    size: number;
-    top: number;
-  }) => (
+  ({ opacity, scale, borderWidth, size, top }: { opacity: Animated.Value; scale: Animated.Value; borderWidth: number; size: number; top: number; }) => (
     <Animated.View
       style={{
         width: size,
@@ -63,13 +51,13 @@ const Wave = React.memo(
 );
 
 export default function ForgotPassword() {
+  const { t } = useTranslation();
   const router = useRouter();
   const [email, setEmail] = useState("");
   const [loading, setLoading] = useState(false);
   const [errorMessage, setErrorMessage] = useState("");
   const [successMessage, setSuccessMessage] = useState("");
 
-  // Initialisation des vagues (animation continue)
   const waves = Array.from({ length: waveCount }, (_, index) => ({
     opacity: new Animated.Value(0.3 - index * 0.05),
     scale: new Animated.Value(1),
@@ -115,21 +103,17 @@ export default function ForgotPassword() {
     setErrorMessage("");
     setSuccessMessage("");
     if (!email.trim()) {
-      setErrorMessage("Veuillez entrer votre adresse e-mail.");
+      setErrorMessage(t("enterYourEmail"));
       setTimeout(() => setErrorMessage(""), 5000);
       return;
     }
     try {
       setLoading(true);
       await sendPasswordResetEmail(auth, email.trim());
-      setSuccessMessage(
-        "Un lien de réinitialisation a été envoyé à votre e-mail."
-      );
+      setSuccessMessage(t("resetLinkSent"));
       setTimeout(() => setSuccessMessage(""), 5000);
     } catch (error) {
-      setErrorMessage(
-        "Échec de l'envoi du lien de réinitialisation. Vérifiez votre e-mail."
-      );
+      setErrorMessage(t("resetLinkFailed"));
       setTimeout(() => setErrorMessage(""), 5000);
     } finally {
       setLoading(false);
@@ -158,39 +142,36 @@ export default function ForgotPassword() {
           />
         ))}
 
-        {/* Bouton de retour */}
+        {/* Bouton retour */}
         <TouchableOpacity
           style={styles.backButton}
           onPress={() => router.push("/login")}
-          accessibilityLabel="Retour à la connexion"
+          accessibilityLabel={t("backToLogin")}
           accessibilityRole="button"
         >
           <Ionicons name="arrow-back" size={30} color={TEXT_COLOR} />
         </TouchableOpacity>
 
-        {/* Header: Titre et slogan */}
+        {/* Header */}
         <View style={styles.header}>
           <Text
             style={styles.brandTitle}
             numberOfLines={1}
             adjustsFontSizeToFit
-            accessibilityLabel="Titre de l'application"
+            accessibilityLabel={t("appTitle")}
           >
             <Text style={styles.highlight}>C</Text>hallenge
             <Text style={styles.highlight}>T</Text>ies
           </Text>
           <Text style={styles.tagline}>
-            Entrez votre e-mail pour réinitialiser votre mot de passe.
+            {t("enterEmailToResetPassword")}
           </Text>
         </View>
 
-        {/* Input: Formulaire de réinitialisation */}
-        <View
-          style={styles.inputContainer}
-          accessibilityLabel="Formulaire de réinitialisation"
-        >
+        {/* Input Email */}
+        <View style={styles.inputContainer} accessibilityLabel={t("resetForm")}>
           <TextInput
-            placeholder="Votre adresse e-mail"
+            placeholder={t("yourEmailAddress")}
             placeholderTextColor="rgba(50,50,50,0.5)"
             style={styles.input}
             value={email}
@@ -201,11 +182,11 @@ export default function ForgotPassword() {
             }}
             keyboardType="email-address"
             autoCapitalize="none"
-            accessibilityLabel="Adresse e-mail"
+            accessibilityLabel={t("email")}
           />
         </View>
 
-        {/* Message d'erreur/succès */}
+        {/* Messages */}
         {(errorMessage || successMessage) !== "" && (
           <Text
             style={errorMessage ? styles.errorText : styles.successText}
@@ -215,18 +196,18 @@ export default function ForgotPassword() {
           </Text>
         )}
 
-        {/* Bouton de réinitialisation */}
+        {/* Bouton envoyer lien */}
         <TouchableOpacity
           style={[styles.resetButton, loading && styles.disabledButton]}
           onPress={handleResetPassword}
           disabled={loading}
-          accessibilityLabel="Envoyer le lien de réinitialisation"
+          accessibilityLabel={t("sendResetLink")}
           accessibilityRole="button"
         >
           {loading ? (
             <ActivityIndicator color={TEXT_COLOR} size="small" />
           ) : (
-            <Text style={styles.resetButtonText}>Envoyer le lien</Text>
+            <Text style={styles.resetButtonText}>{t("sendLink")}</Text>
           )}
         </TouchableOpacity>
       </ScrollView>
@@ -251,7 +232,7 @@ const styles = StyleSheet.create({
   },
   header: {
     position: "absolute",
-    top: "12%", // Ajusté pour descendre le header
+    top: "12%",
     alignItems: "center",
     width: "90%",
   },

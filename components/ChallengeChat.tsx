@@ -18,12 +18,14 @@ import { LinearGradient } from "expo-linear-gradient";
 import { auth } from "../constants/firebase-config";
 import { useChat } from "../context/ChatContext";
 import designSystem from "../theme/designSystem";
+import { useTranslation } from "react-i18next";
 
 const { width } = Dimensions.get("window");
 const { lightTheme } = designSystem;
 const currentTheme = lightTheme;
 
 export default function ChallengeChat() {
+  const { t } = useTranslation();
   const route = useRoute();
   const navigation = useNavigation();
   const { challengeId, challengeTitle } = route.params as {
@@ -49,7 +51,7 @@ export default function ChallengeChat() {
       setNewMessage("");
       flatListRef.current?.scrollToEnd({ animated: true });
     } catch (error) {
-      console.error("Error sending message:", error);
+      console.error(t("chat.errorSending"), error);
     }
   };
 
@@ -95,10 +97,11 @@ export default function ChallengeChat() {
         <TouchableOpacity
           onPress={() => navigation.goBack()}
           style={styles.backButton}
+          accessibilityLabel={t("chat.goBack")}
         >
           <Ionicons name="arrow-back" size={24} color="#fff" />
         </TouchableOpacity>
-        <Text style={styles.headerTitle}>{challengeTitle}</Text>
+        <Text style={styles.headerTitle}>{t("chat.title", { title: challengeTitle })}</Text>
       </LinearGradient>
 
       <KeyboardAvoidingView
@@ -115,11 +118,12 @@ export default function ChallengeChat() {
           onContentSizeChange={() =>
             flatListRef.current?.scrollToEnd({ animated: true })
           }
+          accessibilityLabel={t("chat.messagesList")}
         />
         <View style={styles.inputContainer}>
           <TextInput
             style={styles.input}
-            placeholder="Type a message..."
+            placeholder={t("chat.placeholder")}
             placeholderTextColor="#aaa"
             value={newMessage}
             onChangeText={setNewMessage}
@@ -131,6 +135,7 @@ export default function ChallengeChat() {
               { backgroundColor: currentTheme.colors.primary },
             ]}
             onPress={handleSend}
+            accessibilityLabel={t("chat.sendButton")}
           >
             <Ionicons name="send" size={20} color="#fff" />
           </TouchableOpacity>

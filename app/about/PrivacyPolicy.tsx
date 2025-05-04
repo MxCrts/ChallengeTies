@@ -16,6 +16,8 @@ import { useTheme } from "../../context/ThemeContext";
 import { Theme } from "../../theme/designSystem";
 import designSystem from "../../theme/designSystem";
 import BackButton from "../../components/BackButton";
+import { useTranslation } from "react-i18next";
+
 
 const { width: SCREEN_WIDTH, height: SCREEN_HEIGHT } = Dimensions.get("window");
 const SPACING = 15;
@@ -45,13 +47,49 @@ interface ListItem {
     | "checkmark-done-outline"
     | "hand-right-outline"
     | "swap-horizontal-outline";
-  text: string;
+  key: string;
 }
 
 export default function PrivacyPolicy() {
+  const { t } = useTranslation();
   const { theme } = useTheme();
   const isDarkMode = theme === "dark";
-  const currentTheme: Theme = isDarkMode ? designSystem.darkTheme : designSystem.lightTheme;
+  const currentTheme: Theme = isDarkMode
+    ? designSystem.darkTheme
+    : designSystem.lightTheme;
+
+  const dataCollectedItems: ListItem[] = [
+    { icon: "person-outline", key: "nameEmail" },
+    { icon: "image-outline", key: "profilePhoto" },
+    { icon: "trophy-outline", key: "progress" },
+    { icon: "heart-outline", key: "interests" },
+    { icon: "time-outline", key: "browsingHistory" },
+  ];
+
+  const dataUsageItems: ListItem[] = [
+    { icon: "star-outline", key: "personalize" },
+    { icon: "analytics-outline", key: "analyze" },
+    { icon: "notifications-outline", key: "notify" },
+    { icon: "settings-outline", key: "improve" },
+  ];
+
+  const dataSharingItems: ListItem[] = [
+    { icon: "construct-outline", key: "techPartners" },
+    { icon: "shield-outline", key: "legalAuthorities" },
+    { icon: "lock-closed-outline", key: "securityServices" },
+  ];
+
+  const securityItems: ListItem[] = [
+    { icon: "lock-closed-outline", key: "encryption" },
+    { icon: "finger-print-outline", key: "twoFactor" },
+    { icon: "eye-outline", key: "monitoring" },
+  ];
+
+  const userRightsItems: ListItem[] = [
+    { icon: "checkmark-done-outline", key: "accessRectify" },
+    { icon: "hand-right-outline", key: "restrictObject" },
+    { icon: "swap-horizontal-outline", key: "portability" },
+  ];
 
   return (
     <LinearGradient
@@ -70,24 +108,19 @@ export default function PrivacyPolicy() {
           contentContainerStyle={styles.contentContainer}
           showsVerticalScrollIndicator={false}
         >
-          {/* Header avec BackButton */}
+          {/* Header */}
           <View style={styles.headerWrapper}>
-            <BackButton
-              color={currentTheme.colors.secondary}
-            />
+            <BackButton color={currentTheme.colors.secondary} />
             <Animated.Text
               entering={FadeInUp.duration(600)}
               style={[styles.title, { color: currentTheme.colors.textPrimary }]}
             >
-              Politique de Confidentialité
+              {t("privacyPolicy.title")}
             </Animated.Text>
           </View>
 
-          {/* Logo animé */}
-          <Animated.View
-            entering={FadeInUp.delay(200).duration(800)}
-            style={styles.logoContainer}
-          >
+          {/* Logo */}
+          <Animated.View entering={FadeInUp.delay(200).duration(800)} style={styles.logoContainer}>
             <LinearGradient
               colors={[currentTheme.colors.secondary, currentTheme.colors.primary]}
               style={styles.logoGradient}
@@ -102,264 +135,165 @@ export default function PrivacyPolicy() {
             </LinearGradient>
           </Animated.View>
 
-          {/* INTRODUCTION */}
+          {/* Introduction */}
           <Animated.View entering={FadeInUp.delay(300)} style={styles.card}>
             <Text style={[styles.sectionTitle, { color: currentTheme.colors.secondary }]}>
-              Introduction
+              {t("privacyPolicy.introductionTitle")}
             </Text>
             <Text style={[styles.paragraph, { color: currentTheme.colors.textSecondary }]}>
-              Chez{" "}
-              <Text style={[styles.boldText, { color: currentTheme.colors.textPrimary }]}>
-                ChallengeTies
-              </Text>
-              , la protection de votre vie privée est primordiale. Cette politique décrit
-              comment nous collectons, utilisons, protégeons et partageons vos données
-              personnelles, en respectant scrupuleusement le{" "}
-              <Text style={[styles.boldText, { color: currentTheme.colors.textPrimary }]}>
-                RGPD
-              </Text>
-              .
+              {t("privacyPolicy.introductionText", { appName: "ChallengeTies" })}
             </Text>
           </Animated.View>
 
-          {/* DONNÉES COLLECTÉES */}
+          {/* Data Collected */}
           <Animated.View entering={FadeInUp.delay(400)} style={styles.card}>
             <Text style={[styles.sectionTitle, { color: currentTheme.colors.secondary }]}>
-              Données collectées
+              {t("privacyPolicy.dataCollectedTitle")}
             </Text>
             <Text style={[styles.paragraph, { color: currentTheme.colors.textSecondary }]}>
-              Pour vous offrir une expérience personnalisée, nous collectons notamment :
+              {t("privacyPolicy.dataCollectedText")}
             </Text>
-            {[
-              {
-                icon: "person-outline" as const,
-                text: "Nom et adresse e-mail",
-              },
-              { icon: "image-outline" as const, text: "Photo de profil" },
-              {
-                icon: "trophy-outline" as const,
-                text: "Progression dans vos défis & succès",
-              },
-              {
-                icon: "heart-outline" as const,
-                text: "Centres d’intérêt et préférences",
-              },
-              {
-                icon: "time-outline" as const,
-                text: "Historique de navigation",
-              },
-            ].map((item: ListItem, index) => (
-              <View key={index} style={styles.listItem}>
+            {dataCollectedItems.map((item, i) => (
+              <View key={i} style={styles.listItem}>
                 <Ionicons
                   name={item.icon}
                   size={normalizeSize(20)}
                   color={currentTheme.colors.secondary}
                   style={styles.listIcon}
                 />
-                <Text
-                  style={[styles.listText, { color: currentTheme.colors.textSecondary }]}
-                >
-                  {item.text}
+                <Text style={[styles.listText, { color: currentTheme.colors.textSecondary }]}>
+                  {t(`privacyPolicy.dataCollectedItems.${item.key}`)}
                 </Text>
               </View>
             ))}
           </Animated.View>
 
-          {/* UTILISATION DES DONNÉES */}
+          {/* Data Usage */}
           <Animated.View entering={FadeInUp.delay(600)} style={styles.card}>
             <Text style={[styles.sectionTitle, { color: currentTheme.colors.secondary }]}>
-              Utilisation des données
+              {t("privacyPolicy.dataUsageTitle")}
             </Text>
             <Text style={[styles.paragraph, { color: currentTheme.colors.textSecondary }]}>
-              Vos données servent à :
+              {t("privacyPolicy.dataUsageText")}
             </Text>
-            {[
-              {
-                icon: "star-outline" as const,
-                text: "Personnaliser votre expérience",
-              },
-              {
-                icon: "analytics-outline" as const,
-                text: "Analyser votre progression",
-              },
-              {
-                icon: "notifications-outline" as const,
-                text: "Vous envoyer des notifications utiles",
-              },
-              {
-                icon: "settings-outline" as const,
-                text: "Améliorer nos services",
-              },
-            ].map((item: ListItem, index) => (
-              <View key={index} style={styles.listItem}>
+            {dataUsageItems.map((item, i) => (
+              <View key={i} style={styles.listItem}>
                 <Ionicons
                   name={item.icon}
                   size={normalizeSize(20)}
                   color={currentTheme.colors.secondary}
                   style={styles.listIcon}
                 />
-                <Text
-                  style={[styles.listText, { color: currentTheme.colors.textSecondary }]}
-                >
-                  {item.text}
+                <Text style={[styles.listText, { color: currentTheme.colors.textSecondary }]}>
+                  {t(`privacyPolicy.dataUsageItems.${item.key}`)}
                 </Text>
               </View>
             ))}
           </Animated.View>
 
-          {/* PARTAGE DES DONNÉES */}
+          {/* Data Sharing */}
           <Animated.View entering={FadeInUp.delay(800)} style={styles.card}>
             <Text style={[styles.sectionTitle, { color: currentTheme.colors.secondary }]}>
-              Partage des données
+              {t("privacyPolicy.dataSharingTitle")}
             </Text>
             <Text style={[styles.paragraph, { color: currentTheme.colors.textSecondary }]}>
-              Vos informations restent strictement confidentielles et ne sont partagées
-              qu’avec :
+              {t("privacyPolicy.dataSharingText")}
             </Text>
-            {[
-              {
-                icon: "construct-outline" as const,
-                text: "Nos partenaires techniques",
-              },
-              {
-                icon: "shield-outline" as const,
-                text: "Les autorités légales, si nécessaire",
-              },
-              {
-                icon: "lock-closed-outline" as const,
-                text: "Des services de sécurité",
-              },
-            ].map((item: ListItem, index) => (
-              <View key={index} style={styles.listItem}>
+            {dataSharingItems.map((item, i) => (
+              <View key={i} style={styles.listItem}>
                 <Ionicons
                   name={item.icon}
                   size={normalizeSize(20)}
                   color={currentTheme.colors.secondary}
                   style={styles.listIcon}
                 />
-                <Text
-                  style={[styles.listText, { color: currentTheme.colors.textSecondary }]}
-                >
-                  {item.text}
+                <Text style={[styles.listText, { color: currentTheme.colors.textSecondary }]}>
+                  {t(`privacyPolicy.dataSharingItems.${item.key}`)}
                 </Text>
               </View>
             ))}
           </Animated.View>
 
-          {/* SÉCURITÉ DES DONNÉES */}
+          {/* Security */}
           <Animated.View entering={FadeInUp.delay(1000)} style={styles.card}>
             <Text style={[styles.sectionTitle, { color: currentTheme.colors.secondary }]}>
-              Sécurité des données
+              {t("privacyPolicy.securityTitle")}
             </Text>
             <Text style={[styles.paragraph, { color: currentTheme.colors.textSecondary }]}>
-              Nous mettons en œuvre des mesures avancées pour protéger vos données :
+              {t("privacyPolicy.securityText")}
             </Text>
-            {[
-              {
-                icon: "lock-closed-outline" as const,
-                text: "Chiffrement des données sensibles",
-              },
-              {
-                icon: "finger-print-outline" as const,
-                text: "Authentification renforcée",
-              },
-              { icon: "eye-outline" as const, text: "Surveillance continue" },
-            ].map((item: ListItem, index) => (
-              <View key={index} style={styles.listItem}>
+            {securityItems.map((item, i) => (
+              <View key={i} style={styles.listItem}>
                 <Ionicons
                   name={item.icon}
                   size={normalizeSize(20)}
                   color={currentTheme.colors.secondary}
                   style={styles.listIcon}
                 />
-                <Text
-                  style={[styles.listText, { color: currentTheme.colors.textSecondary }]}
-                >
-                  {item.text}
+                <Text style={[styles.listText, { color: currentTheme.colors.textSecondary }]}>
+                  {t(`privacyPolicy.securityItems.${item.key}`)}
                 </Text>
               </View>
             ))}
           </Animated.View>
 
-          {/* DROITS DES UTILISATEURS */}
+          {/* User Rights */}
           <Animated.View entering={FadeInUp.delay(1200)} style={styles.card}>
             <Text style={[styles.sectionTitle, { color: currentTheme.colors.secondary }]}>
-              Vos droits
+              {t("privacyPolicy.userRightsTitle")}
             </Text>
             <Text style={[styles.paragraph, { color: currentTheme.colors.textSecondary }]}>
-              Conformément au RGPD, vous disposez notamment des droits suivants :
+              {t("privacyPolicy.userRightsText")}
             </Text>
-            {[
-              {
-                icon: "checkmark-done-outline" as const,
-                text: "Accès, rectification et suppression",
-              },
-              {
-                icon: "hand-right-outline" as const,
-                text: "Limitation et opposition",
-              },
-              {
-                icon: "swap-horizontal-outline" as const,
-                text: "Portabilité des données",
-              },
-            ].map((item: ListItem, index) => (
-              <View key={index} style={styles.listItem}>
+            {userRightsItems.map((item, i) => (
+              <View key={i} style={styles.listItem}>
                 <Ionicons
                   name={item.icon}
                   size={normalizeSize(20)}
                   color={currentTheme.colors.secondary}
                   style={styles.listIcon}
                 />
-                <Text
-                  style={[styles.listText, { color: currentTheme.colors.textSecondary }]}
-                >
-                  {item.text}
+                <Text style={[styles.listText, { color: currentTheme.colors.textSecondary }]}>
+                  {t(`privacyPolicy.userRightsItems.${item.key}`)}
                 </Text>
               </View>
             ))}
           </Animated.View>
 
-          {/* COOKIES */}
+          {/* Cookies */}
           <Animated.View entering={FadeInUp.delay(1400)} style={styles.card}>
             <Text style={[styles.sectionTitle, { color: currentTheme.colors.secondary }]}>
-              Utilisation des cookies
+              {t("privacyPolicy.cookiesTitle")}
             </Text>
             <Text style={[styles.paragraph, { color: currentTheme.colors.textSecondary }]}>
-              Les cookies nous aident à améliorer votre navigation et à analyser
-              l’utilisation de la plateforme. Vous pouvez les gérer via les paramètres
-              de votre appareil.
+              {t("privacyPolicy.cookiesText")}
             </Text>
           </Animated.View>
 
-          {/* MISES À JOUR DE LA POLITIQUE */}
+          {/* Updates */}
           <Animated.View entering={FadeInUp.delay(1600)} style={styles.card}>
             <Text style={[styles.sectionTitle, { color: currentTheme.colors.secondary }]}>
-              Mises à jour de la politique
+              {t("privacyPolicy.updatesTitle")}
             </Text>
             <Text style={[styles.paragraph, { color: currentTheme.colors.textSecondary }]}>
-              Cette politique de confidentialité peut être modifiée pour refléter les
-              évolutions de nos pratiques ou de la législation en vigueur. Nous vous
-              informerons de toute mise à jour majeure.
+              {t("privacyPolicy.updatesText")}
             </Text>
           </Animated.View>
 
-          {/* CONTACT */}
+          {/* Contact */}
           <Animated.View entering={FadeInUp.delay(1800)} style={styles.card}>
             <Text style={[styles.sectionTitle, { color: currentTheme.colors.secondary }]}>
-              Contact
+              {t("privacyPolicy.contactTitle")}
             </Text>
             <Text style={[styles.paragraph, { color: currentTheme.colors.textSecondary }]}>
-              Pour toute question relative à la gestion de vos données personnelles ou
-              à cette politique, contactez-nous à :
+              {t("privacyPolicy.contactText")}
             </Text>
-            <Text
-              style={[styles.contactEmail, { color: currentTheme.colors.secondary }]}
-            >
-              📧 privacy@challengeties.com
+            <Text style={[styles.contactEmail, { color: currentTheme.colors.secondary }]}>
+              {t("privacyPolicy.contactEmail")}
             </Text>
           </Animated.View>
 
-          {/* MESSAGE FINAL */}
+          {/* Final Message */}
           <Animated.View entering={FadeInUp.delay(2000)} style={styles.footer}>
             <LinearGradient
               colors={[currentTheme.colors.overlay, currentTheme.colors.border]}
@@ -367,13 +301,8 @@ export default function PrivacyPolicy() {
               start={{ x: 0, y: 0 }}
               end={{ x: 1, y: 1 }}
             >
-              <Text
-                style={[styles.footerText, { color: currentTheme.colors.textPrimary }]}
-              >
-                <Text style={[styles.boldText, { color: currentTheme.colors.textPrimary }]}>
-                  Merci de faire confiance à ChallengeTies.
-                </Text>{" "}
-                Votre confidentialité reste notre priorité absolue.
+              <Text style={[styles.footerText, { color: currentTheme.colors.textPrimary }]}>
+                {t("privacyPolicy.finalMessage")}
               </Text>
             </LinearGradient>
           </Animated.View>
@@ -382,7 +311,6 @@ export default function PrivacyPolicy() {
     </LinearGradient>
   );
 }
-
 const styles = StyleSheet.create({
   container: {
     flex: 1,

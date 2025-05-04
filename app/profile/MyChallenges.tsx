@@ -4,10 +4,11 @@ import {
   Text,
   FlatList,
   TouchableOpacity,
-  StyleSheet,
   ActivityIndicator,
   Image,
+  Alert,
   Dimensions,
+  StyleSheet,
   SafeAreaView,
   StatusBar,
 } from "react-native";
@@ -21,6 +22,7 @@ import { useTheme } from "../../context/ThemeContext";
 import { Theme } from "../../theme/designSystem";
 import designSystem from "../../theme/designSystem";
 import CustomHeader from "@/components/CustomHeader";
+import { useTranslation } from "react-i18next";
 
 const { width: SCREEN_WIDTH, height: SCREEN_HEIGHT } = Dimensions.get("window");
 const SPACING = 15;
@@ -35,6 +37,7 @@ const normalizeSize = (size: number) => {
 
 interface Challenge {
   id: string;
+  chatId?: string;
   title: string;
   description?: string;
   category?: string;
@@ -45,11 +48,14 @@ interface Challenge {
 
 export default function MyChallenges() {
   const router = useRouter();
+  const { t, i18n } = useTranslation();
   const [myChallenges, setMyChallenges] = useState<Challenge[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const { theme } = useTheme();
   const isDarkMode = theme === "dark";
-  const currentTheme: Theme = isDarkMode ? designSystem.darkTheme : designSystem.lightTheme;
+  const currentTheme: Theme = isDarkMode
+    ? designSystem.darkTheme
+    : designSystem.lightTheme;
 
   useEffect(() => {
     const userId = auth.currentUser?.uid;
@@ -62,127 +68,138 @@ export default function MyChallenges() {
     const unsubscribe = onSnapshot(userRef, async (snapshot) => {
       if (snapshot.exists()) {
         const userData = snapshot.data();
-        const challengeRefs = userData.createdChallenges || [];
+        const challengeRefs = Array.isArray(userData.createdChallenges)
+          ? userData.createdChallenges
+          : [];
 
-        const challengesWithParticipants = await Promise.all(
-          challengeRefs.map(async (challenge) => {
-            const challengeSnap = await getDoc(
-              doc(db, "challenges", challenge.id)
-            );
-            if (challengeSnap.exists()) {
-              return {
-                ...challenge,
-                participantsCount: challengeSnap.data().participantsCount,
-              };
-            }
-            return challenge;
+        const raw = await Promise.all(
+          challengeRefs.map(async (challenge: any) => {
+            const snap = await getDoc(doc(db, "challenges", challenge.id));
+            const participantsCount = snap.exists()
+              ? snap.data().participantsCount
+              : undefined;
+            return {
+              ...challenge,
+              participantsCount,
+            };
           })
         );
 
-        setMyChallenges(challengesWithParticipants);
+        // Traduction dynamique
+        const translated = raw.map((item) => {
+          const title = item.chatId
+            ? t(`challenges.${item.chatId}.title`, { defaultValue: item.title })
+            : item.title;
+          const description = item.chatId
+            ? t(`challenges.${item.chatId}.description`, { defaultValue: item.description || "" })
+            : item.description;
+          const category = item.category
+            ? t(`categories.${item.category}`, { defaultValue: item.category })
+            : t("noCategory");
+          return {
+            ...item,
+            title,
+            description,
+            category,
+          };
+        });
+
+        setMyChallenges(translated);
       }
       setIsLoading(false);
     });
 
     return () => unsubscribe();
-  }, []);
+  }, [t, i18n.language]);
 
   const navigateToChallengeDetails = useCallback(
     (item: Challenge) => {
       const route =
         `/challenge-details/${encodeURIComponent(item.id)}` +
         `?title=${encodeURIComponent(item.title)}` +
-        `&category=${encodeURIComponent(item.category || "Uncategorized")}` +
+        `&category=${encodeURIComponent(item.category || "")}` +
         `&description=${encodeURIComponent(item.description || "")}` +
         `&imageUrl=${encodeURIComponent(item.imageUrl || "")}`;
-      router.push(route as unknown as `/challenge-details/${string}`);
+      router.push(route);
     },
     [router]
   );
 
-  const renderChallenge = ({
-    item,
-    index,
-  }: {
-    item: Challenge;
-    index: number;
-  }) => (
-    <Animated.View
-      entering={FadeInUp.delay(index * 100)}
-      style={styles.cardWrapper}
-    >
-      <TouchableOpacity
-        style={styles.cardContainer}
-        onPress={() => navigateToChallengeDetails(item)}
-        activeOpacity={0.9}
-        accessibilityLabel={`Voir les détails du défi ${item.title}`}
-        testID={`challenge-${item.id}`}
-      >
-        <LinearGradient
-          colors={[currentTheme.colors.cardBackground, currentTheme.colors.background]}
-          style={styles.card}
-          start={{ x: 0, y: 0 }}
-          end={{ x: 1, y: 1 }}
+  const renderChallenge = useCallback(
+    ({ item, index }: { item: Challenge; index: number }) => (
+      <Animated.View entering={FadeInUp.delay(index * 100)} style={styles.cardWrapper}>
+        <TouchableOpacity
+          style={styles.cardContainer}
+          onPress={() => navigateToChallengeDetails(item)}
+          activeOpacity={0.9}
+          accessibilityLabel={t("viewChallengeDetails", { title: item.title })}
+          testID={`challenge-${item.id}`}
         >
-          {item.imageUrl ? (
-            <Image source={{ uri: item.imageUrl }} style={styles.cardImage} />
-          ) : (
-            <View style={[styles.placeholderImage, { backgroundColor: currentTheme.colors.overlay }]}>
-              <Ionicons
-                name="image-outline"
-                size={normalizeSize(30)}
-                color={currentTheme.colors.textSecondary}
-              />
-            </View>
-          )}
-          <View style={styles.cardContent}>
-            <Text
-              style={[styles.challengeTitle, { color: currentTheme.colors.textPrimary }]}
-              numberOfLines={1}
-            >
-              {item.title}
-            </Text>
-            <Text
-              style={[styles.challengeCategory, { color: currentTheme.colors.textSecondary }]}
-            >
-              {item.category || "Sans catégorie"}
-            </Text>
-            {item.participantsCount !== undefined && (
-              <Text
-                style={[styles.participantsText, { color: currentTheme.colors.secondary }]}
+          <LinearGradient
+            colors={[currentTheme.colors.cardBackground, currentTheme.colors.background]}
+            style={styles.card}
+            start={{ x: 0, y: 0 }}
+            end={{ x: 1, y: 1 }}
+          >
+            {item.imageUrl ? (
+              <Image source={{ uri: item.imageUrl }} style={styles.cardImage} />
+            ) : (
+              <View
+                style={[styles.placeholderImage, { backgroundColor: currentTheme.colors.overlay }]}
               >
-                {item.participantsCount === undefined || item.participantsCount <= 1
-                  ? `${
-                      item.participantsCount === undefined
-                        ? 0
-                        : item.participantsCount
-                    } participant`
-                  : `${item.participantsCount} participants`}
-              </Text>
+                <Ionicons
+                  name="image-outline"
+                  size={normalizeSize(30)}
+                  color={currentTheme.colors.textSecondary}
+                />
+              </View>
             )}
-            <TouchableOpacity
-              style={styles.viewButton}
-              onPress={() => navigateToChallengeDetails(item)}
-              accessibilityLabel={`Voir les détails du défi ${item.title}`}
-              testID={`view-details-${item.id}`}
-            >
-              <LinearGradient
-                colors={[currentTheme.colors.secondary, currentTheme.colors.primary]}
-                style={styles.viewButtonGradient}
-                start={{ x: 0, y: 0 }}
-                end={{ x: 1, y: 1 }}
+            <View style={styles.cardContent}>
+              <Text
+                style={[styles.challengeTitle, { color: currentTheme.colors.textPrimary }]}
+                numberOfLines={1}
               >
+                {item.title}
+              </Text>
+              <Text
+                style={[styles.challengeCategory, { color: currentTheme.colors.textSecondary }]}
+              >
+                {item.category || t("noCategory")}
+              </Text>
+              {item.participantsCount !== undefined && (
                 <Text
-                  style={[styles.viewButtonText, { color: currentTheme.colors.textPrimary }]}
+                  style={[styles.participantsText, { color: currentTheme.colors.secondary }]}
                 >
-                  Voir Détails
+                  {item.participantsCount <= 1
+                    ? t("participant", { count: item.participantsCount })
+                    : t("participants", { count: item.participantsCount })}
                 </Text>
-              </LinearGradient>
-            </TouchableOpacity>
-          </View>
-        </LinearGradient>
-      </TouchableOpacity>
-    </Animated.View>
+              )}
+              <TouchableOpacity
+                style={styles.viewButton}
+                onPress={() => navigateToChallengeDetails(item)}
+                accessibilityLabel={t("viewChallengeDetails", { title: item.title })}
+                testID={`view-details-${item.id}`}
+              >
+                <LinearGradient
+                  colors={[currentTheme.colors.secondary, currentTheme.colors.primary]}
+                  style={styles.viewButtonGradient}
+                  start={{ x: 0, y: 0 }}
+                  end={{ x: 1, y: 1 }}
+                >
+                  <Text
+                    style={[styles.viewButtonText, { color: currentTheme.colors.textPrimary }]}
+                  >
+                    {t("viewDetails")}
+                  </Text>
+                </LinearGradient>
+              </TouchableOpacity>
+            </View>
+          </LinearGradient>
+        </TouchableOpacity>
+      </Animated.View>
+    ),
+    [currentTheme, navigateToChallengeDetails, t]
   );
 
   if (isLoading) {
@@ -200,10 +217,8 @@ export default function MyChallenges() {
           end={{ x: 1, y: 1 }}
         >
           <ActivityIndicator size="large" color={currentTheme.colors.secondary} />
-          <Text
-            style={[styles.loadingText, { color: currentTheme.colors.textPrimary }]}
-          >
-            Chargement en cours...
+          <Text style={[styles.loadingText, { color: currentTheme.colors.textPrimary }]}>
+            {t("loadingChallenges")}
           </Text>
         </LinearGradient>
       </SafeAreaView>
@@ -224,24 +239,17 @@ export default function MyChallenges() {
           start={{ x: 0, y: 0 }}
           end={{ x: 1, y: 1 }}
         >
-          <Animated.View
-            entering={FadeInUp.delay(100)}
-            style={styles.noChallengesContent}
-          >
+          <Animated.View entering={FadeInUp.delay(100)} style={styles.noChallengesContent}>
             <Ionicons
               name="create-outline"
               size={normalizeSize(60)}
               color={currentTheme.colors.textSecondary}
             />
-            <Text
-              style={[styles.noChallengesText, { color: currentTheme.colors.textPrimary }]}
-            >
-              Aucun défi créé !
+            <Text style={[styles.noChallengesText, { color: currentTheme.colors.textPrimary }]}>
+              {t("noChallengesCreated")}
             </Text>
-            <Text
-              style={[styles.noChallengesSubtext, { color: currentTheme.colors.textSecondary }]}
-            >
-              Créez votre premier défi dès maintenant !
+            <Text style={[styles.noChallengesSubtext, { color: currentTheme.colors.textSecondary }]}>
+              {t("createFirstChallenge")}
             </Text>
           </Animated.View>
         </LinearGradient>
@@ -263,7 +271,7 @@ export default function MyChallenges() {
         end={{ x: 1, y: 1 }}
       >
         <View style={styles.headerWrapper}>
-          <CustomHeader title="Mes Défis Créés" />
+          <CustomHeader title={t("myChallenges")} />
         </View>
         <FlatList
           data={myChallenges}

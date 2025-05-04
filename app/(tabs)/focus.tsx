@@ -19,14 +19,13 @@ import ConfettiCannon from "react-native-confetti-cannon";
 import { doc, onSnapshot } from "firebase/firestore";
 import { db, auth } from "../../constants/firebase-config";
 import { useCurrentChallenges } from "../../context/CurrentChallengesContext";
-import { useTheme } from "../../context/ThemeContext"; // Ajout de useTheme
-import { Theme } from "../../theme/designSystem"; // Import de l'interface Theme
-import GlobalLayout from "../../components/GlobalLayout"; // Ajout de GlobalLayout
+import { useTheme } from "../../context/ThemeContext";
+import { Theme } from "../../theme/designSystem";
+import GlobalLayout from "../../components/GlobalLayout";
 import designSystem from "../../theme/designSystem";
+import { useTranslation } from "react-i18next";
 
 const { width: SCREEN_WIDTH, height: SCREEN_HEIGHT } = Dimensions.get("window");
-
-// Hauteurs dynamiques basées sur SCREEN_HEIGHT
 const TOP_ITEM_HEIGHT = Math.round(SCREEN_HEIGHT * 0.35);
 const BOTTOM_ITEM_HEIGHT = Math.round(SCREEN_HEIGHT * 0.25);
 const TOP_ITEM_WIDTH = Math.round(SCREEN_WIDTH * 0.8);
@@ -45,6 +44,7 @@ const normalizeFont = (size: number) => {
 interface CurrentChallengeExtended {
   id: string;
   title: string;
+  chatId?: string;
   imageUrl?: string;
   selectedDays: number;
   completedDays: number;
@@ -56,13 +56,14 @@ interface CurrentChallengeExtended {
 }
 
 export default function FocusScreen() {
+  const { t } = useTranslation();
   const router = useRouter();
   const { currentChallenges, markToday } = useCurrentChallenges();
-  const { theme } = useTheme(); // Ajout de useTheme
+  const { theme } = useTheme();
   const isDarkMode = theme === "dark";
   const currentTheme: Theme = isDarkMode
     ? designSystem.darkTheme
-    : designSystem.lightTheme; // Typage avec Theme
+    : designSystem.lightTheme;
   const [userTrophies, setUserTrophies] = useState<number>(0);
   const [isLoading, setIsLoading] = useState(true);
 
@@ -100,15 +101,31 @@ export default function FocusScreen() {
   const today = new Date().toDateString();
 
   const uniqueChallenges = Array.from(
-    new Map(currentChallenges.map((ch: any) => [ch.uniqueKey, ch])).values()
-  ) as CurrentChallengeExtended[];
-
-  const notMarkedToday = uniqueChallenges.filter(
-    (ch) => ch.lastMarkedDate !== today
-  );
-  const markedToday = uniqueChallenges.filter(
-    (ch) => ch.lastMarkedDate === today
-  );
+        new Map(currentChallenges.map((ch: any) => [ch.uniqueKey, ch])).values()
+      ) as CurrentChallengeExtended[];
+    
+      // === TRADUCTION MINIMALE ===
+      // On remplace uniqueChallenges par translatedChallenges partout ensuite
+      const translatedChallenges = uniqueChallenges.map((item) => {
+        const key = item.chatId || item.id;
+        return {
+          ...item,
+          title: t(`challenges.${key}.title`, { defaultValue: item.title }),
+          description: t(`challenges.${key}.description`, {
+            defaultValue: item.description || "",
+          }),
+          category: item.category
+            ? t(`categories.${item.category}`, { defaultValue: item.category })
+            : t("miscellaneous"),
+        };
+      });
+  
+      const notMarkedToday = translatedChallenges.filter(
+            (ch) => ch.lastMarkedDate !== today
+          );
+          const markedToday = translatedChallenges.filter(
+            (ch) => ch.lastMarkedDate === today
+          );
 
   const handleNavigateToDetails = (item: CurrentChallengeExtended) => {
     router.push({
@@ -118,8 +135,8 @@ export default function FocusScreen() {
         title: item.title,
         selectedDays: item.selectedDays,
         completedDays: item.completedDays,
-        category: item.category || "Uncategorized",
-        description: item.description || "No description available",
+        category: item.category || t("uncategorized"),
+        description: item.description || t("noDescriptionAvailable"),
         imageUrl: item.imageUrl,
       },
     });
@@ -140,9 +157,7 @@ export default function FocusScreen() {
       });
       unsubscribes.push(unsubscribe);
     });
-    return () => {
-      unsubscribes.forEach((unsub) => unsub());
-    };
+    return () => unsubscribes.forEach((u) => u());
   }, [uniqueChallenges]);
 
   const startTopAutoScroll = useCallback(() => {
@@ -178,8 +193,7 @@ export default function FocusScreen() {
     startBottomAutoScroll();
     return () => {
       if (topAutoScrollRef.current) clearInterval(topAutoScrollRef.current);
-      if (bottomAutoScrollRef.current)
-        clearInterval(bottomAutoScrollRef.current);
+      if (bottomAutoScrollRef.current) clearInterval(bottomAutoScrollRef.current);
     };
   }, [notMarkedToday, markedToday, startTopAutoScroll, startBottomAutoScroll]);
 
@@ -237,243 +251,97 @@ export default function FocusScreen() {
     );
   }
 
-  const renderTopItem = ({
-    item,
-    index,
-  }: {
-    item: CurrentChallengeExtended;
-    index: number;
-  }) => {
-    return (
-      <RNAnimated.View style={[styles.topItemWrapper]}>
-        <TouchableOpacity
-          activeOpacity={0.9}
-          style={[
-            styles.topItemContainer,
-            {
-              backgroundColor: currentTheme.colors.cardBackground,
-              borderColor: currentTheme.colors.secondary,
-            },
-          ]}
-          onPress={() => handleNavigateToDetails(item)}
-        >
-          {item.imageUrl ? (
-            <Image
-              source={{ uri: item.imageUrl }}
-              style={styles.topItemImage}
-            />
-          ) : (
-            <View
-              style={[
-                styles.imagePlaceholder,
-                { backgroundColor: currentTheme.colors.border },
-              ]}
-            >
-              <Ionicons
-                name="image-outline"
-                size={normalizeFont(60)}
-                color={currentTheme.colors.textSecondary}
-              />
-              <Text
-                style={[
-                  styles.noImageText,
-                  { color: currentTheme.colors.textSecondary },
-                ]}
-              >
-                Image non disponible
-              </Text>
-            </View>
-          )}
-          <LinearGradient
-            colors={[currentTheme.colors.overlay, "rgba(0,0,0,0.9)"]}
-            style={styles.topItemOverlay}
-          >
-            <Text
-              style={[
-                styles.topItemTitle,
-                { color: currentTheme.colors.textPrimary },
-              ]}
-              numberOfLines={2}
-            >
-              {item.title}
-            </Text>
-            <Text
-              style={[
-                styles.topItemParticipants,
-                { color: currentTheme.colors.trophy },
-              ]}
-            >
-              <Ionicons
-                name="people"
-                size={normalizeFont(14)}
-                color={currentTheme.colors.trophy}
-              />{" "}
-              {challengeParticipants[item.id] ?? item.participants ?? 0}{" "}
-              {(challengeParticipants[item.id] ?? item.participants ?? 0) === 1
-                ? "participant"
-                : "participants"}
-            </Text>
-          </LinearGradient>
-        </TouchableOpacity>
-        {item.lastMarkedDate !== today && (
-          <TouchableOpacity
-            style={[
-              styles.markTodayButton,
-              { backgroundColor: currentTheme.colors.secondary },
-            ]}
-            onPress={() => markToday(item.id, item.selectedDays)}
-          >
-            <Text
-              style={[
-                styles.markTodayButtonText,
-                { color: currentTheme.colors.textPrimary },
-              ]}
-            >
-              Marquer Aujourd'hui
-            </Text>
-          </TouchableOpacity>
+  const renderTopItem = ({ item }: { item: CurrentChallengeExtended }) => (
+    <RNAnimated.View style={styles.topItemWrapper}>
+      <TouchableOpacity
+        activeOpacity={0.9}
+        style={[
+          styles.topItemContainer,
+          {
+            backgroundColor: currentTheme.colors.cardBackground,
+            borderColor: currentTheme.colors.secondary,
+          },
+        ]}
+        onPress={() => handleNavigateToDetails(item)}
+      >
+        {item.imageUrl ? (
+          <Image source={{ uri: item.imageUrl }} style={styles.topItemImage} />
+        ) : (
+          <View style={[styles.imagePlaceholder, { backgroundColor: currentTheme.colors.border }]}>
+            <Ionicons name="image-outline" size={normalizeFont(60)} color={currentTheme.colors.textSecondary} />
+            <Text style={[styles.noImageText, { color: currentTheme.colors.textSecondary }]}>{t("imageNotAvailable")}</Text>
+          </View>
         )}
-      </RNAnimated.View>
-    );
-  };
-
-  const renderBottomItem = ({
-    item,
-    index,
-  }: {
-    item: CurrentChallengeExtended;
-    index: number;
-  }) => {
-    return (
-      <RNAnimated.View style={[styles.bottomItemWrapper]}>
-        <TouchableOpacity
-          activeOpacity={0.9}
-          style={[
-            styles.bottomItemContainer,
-            {
-              backgroundColor: currentTheme.colors.cardBackground,
-              borderColor: currentTheme.colors.secondary,
-            },
-          ]}
-          onPress={() => handleNavigateToDetails(item)}
-        >
-          {item.imageUrl ? (
-            <Image
-              source={{ uri: item.imageUrl }}
-              style={styles.bottomItemImage}
-            />
-          ) : (
-            <View
-              style={[
-                styles.imagePlaceholder,
-                { backgroundColor: currentTheme.colors.border },
-              ]}
-            >
-              <Ionicons
-                name="image-outline"
-                size={normalizeFont(40)}
-                color={currentTheme.colors.textSecondary}
-              />
-              <Text
-                style={[
-                  styles.noImageText,
-                  { color: currentTheme.colors.textSecondary },
-                ]}
-              >
-                Image non disponible
-              </Text>
-            </View>
-          )}
-          <LinearGradient
-            colors={[currentTheme.colors.overlay, "rgba(0,0,0,0.9)"]}
-            style={styles.bottomItemOverlay}
-          >
-            <Text
-              style={[
-                styles.bottomItemTitle,
-                { color: currentTheme.colors.textPrimary },
-              ]}
-              numberOfLines={2}
-            >
-              {item.title}
-            </Text>
-            <Text
-              style={[
-                styles.bottomItemParticipants,
-                { color: currentTheme.colors.trophy },
-              ]}
-            >
-              <Ionicons
-                name="people"
-                size={normalizeFont(12)}
-                color={currentTheme.colors.trophy}
-              />{" "}
-              {challengeParticipants[item.id] ?? item.participants ?? 0}{" "}
-              {(challengeParticipants[item.id] ?? item.participants ?? 0) === 1
-                ? "participant"
-                : "participants"}
-            </Text>
-          </LinearGradient>
+        <LinearGradient colors={[currentTheme.colors.overlay, "rgba(0,0,0,0.9)"]} style={styles.topItemOverlay}>
+          <Text style={[styles.topItemTitle, { color: currentTheme.colors.textPrimary }]} numberOfLines={2}>
+            {item.title}
+          </Text>
+          <Text style={[styles.topItemParticipants, { color: currentTheme.colors.trophy }]}>          
+            <Ionicons name="people" size={normalizeFont(14)} color={currentTheme.colors.trophy} /> {challengeParticipants[item.id] ?? item.participants ?? 0} {((challengeParticipants[item.id] ?? item.participants ?? 0) === 1 ? t("participant") : t("participants"))}          
+          </Text>
+        </LinearGradient>
+      </TouchableOpacity>
+      {item.lastMarkedDate !== today && (
+        <TouchableOpacity style={[styles.markTodayButton, { backgroundColor: currentTheme.colors.secondary }]} onPress={() => markToday(item.id, item.selectedDays)}>
+          <Text style={[styles.markTodayButtonText, { color: currentTheme.colors.textPrimary }]}>{t("markToday")}</Text>
         </TouchableOpacity>
-      </RNAnimated.View>
-    );
-  };
+      )}
+    </RNAnimated.View>
+  );
+
+  const renderBottomItem = ({ item }: { item: CurrentChallengeExtended }) => (
+    <RNAnimated.View style={styles.bottomItemWrapper}>
+      <TouchableOpacity
+        activeOpacity={0.9}
+        style={[
+          styles.bottomItemContainer,
+          {
+            backgroundColor: currentTheme.colors.cardBackground,
+            borderColor: currentTheme.colors.secondary,
+          },
+        ]}
+        onPress={() => handleNavigateToDetails(item)}
+      >
+        {item.imageUrl ? (
+          <Image source={{ uri: item.imageUrl }} style={styles.bottomItemImage} />
+        ) : (
+          <View style={[styles.imagePlaceholder, { backgroundColor: currentTheme.colors.border }]}>
+            <Ionicons name="image-outline" size={normalizeFont(40)} color={currentTheme.colors.textSecondary} />
+            <Text style={[styles.noImageText, { color: currentTheme.colors.textSecondary }]}>{t("imageNotAvailable")}</Text>
+          </View>
+        )}
+        <LinearGradient colors={[currentTheme.colors.overlay, "rgba(0,0,0,0.9)"]} style={styles.bottomItemOverlay}>
+          <Text style={[styles.bottomItemTitle, { color: currentTheme.colors.textPrimary }]} numberOfLines={2}>
+            {item.title}
+          </Text>
+          <Text style={[styles.bottomItemParticipants, { color: currentTheme.colors.trophy }]}>          
+            <Ionicons name="people" size={normalizeFont(12)} color={currentTheme.colors.trophy} /> {challengeParticipants[item.id] ?? item.participants ?? 0} {((challengeParticipants[item.id] ?? item.participants ?? 0) === 1 ? t("participant") : t("participants"))}          
+          </Text>
+        </LinearGradient>
+      </TouchableOpacity>
+    </RNAnimated.View>
+  );
 
   return (
     <GlobalLayout>
       <LinearGradient
-        colors={[
-          currentTheme.colors.background,
-          currentTheme.colors.cardBackground,
-        ]}
+        colors={[currentTheme.colors.background, currentTheme.colors.cardBackground]}
         style={styles.gradientContainer}
       >
         <View style={styles.headerContainer}>
-          <TouchableOpacity
-            style={styles.trophyContainer}
-            onPress={() => router.push("/profile")}
-          >
-            <Ionicons
-              name="trophy-outline"
-              size={normalizeFont(24)}
-              color={currentTheme.colors.trophy}
-            />
-            <Text
-              style={[styles.trophyText, { color: currentTheme.colors.trophy }]}
-            >
-              {userTrophies}
-            </Text>
+          <TouchableOpacity style={styles.trophyContainer} onPress={() => router.push("/profile")}>
+            <Ionicons name="trophy-outline" size={normalizeFont(24)} color={currentTheme.colors.trophy} />
+            <Text style={[styles.trophyText, { color: currentTheme.colors.trophy }]}>{userTrophies}</Text>
           </TouchableOpacity>
-          <TouchableOpacity
-            style={[
-              styles.plusButton,
-              { backgroundColor: currentTheme.colors.secondary },
-            ]}
-            onPress={() => router.push("/create-challenge")}
-          >
-            <Ionicons
-              name="add-circle-outline"
-              size={normalizeFont(28)}
-              color={currentTheme.colors.textPrimary}
-            />
+          <TouchableOpacity style={[styles.plusButton, { backgroundColor: currentTheme.colors.secondary }]} onPress={() => router.push("/create-challenge")}>
+            <Ionicons name="add-circle-outline" size={normalizeFont(28)} color={currentTheme.colors.textPrimary} />
           </TouchableOpacity>
         </View>
 
-        <ScrollView
-          style={styles.scrollContainer}
-          contentContainerStyle={styles.scrollContent}
-          showsVerticalScrollIndicator={false}
-        >
+        <ScrollView style={styles.scrollContainer} contentContainerStyle={styles.scrollContent} showsVerticalScrollIndicator={false}>
           {/* Carousel du haut */}
           <View style={styles.topCarouselContainer}>
-            <Text
-              style={[
-                styles.sectionTitle,
-                { color: currentTheme.colors.textPrimary },
-              ]}
-            >
-              Challenges du jour
-            </Text>
+            <Text style={[styles.sectionTitle, { color: currentTheme.colors.textPrimary }]}>{t("dailyChallenges")}</Text>
             {notMarkedToday.length > 0 ? (
               <>
                 <RNAnimated.FlatList
@@ -487,10 +355,7 @@ export default function FocusScreen() {
                   snapToInterval={EFFECTIVE_TOP_ITEM_WIDTH}
                   snapToAlignment="center"
                   contentContainerStyle={{ paddingHorizontal: SPACER_TOP }}
-                  onScroll={RNAnimated.event(
-                    [{ nativeEvent: { contentOffset: { x: scrollXTop } } }],
-                    { useNativeDriver: true }
-                  )}
+                  onScroll={RNAnimated.event([{ nativeEvent: { contentOffset: { x: scrollXTop } } }], { useNativeDriver: true })}
                   scrollEventThrottle={16}
                   onScrollBeginDrag={handleScrollBeginDragTop}
                   onMomentumScrollEnd={handleMomentumScrollEndTop}
@@ -500,74 +365,21 @@ export default function FocusScreen() {
                   {notMarkedToday.map((_, index) => (
                     <RNAnimated.View
                       key={index}
-                      style={[
-                        styles.dot,
-                        { backgroundColor: currentTheme.colors.secondary },
-                        {
-                          opacity: scrollXTop.interpolate({
-                            inputRange: [
-                              (index - 1) * EFFECTIVE_TOP_ITEM_WIDTH,
-                              index * EFFECTIVE_TOP_ITEM_WIDTH,
-                              (index + 1) * EFFECTIVE_TOP_ITEM_WIDTH,
-                            ],
-                            outputRange: [0.3, 1, 0.3],
-                            extrapolate: "clamp",
-                          }),
-                        },
-                      ]}
+                      style={[styles.dot, { backgroundColor: currentTheme.colors.secondary }, { opacity: scrollXTop.interpolate({ inputRange: [(index-1)*EFFECTIVE_TOP_ITEM_WIDTH, index*EFFECTIVE_TOP_ITEM_WIDTH, (index+1)*EFFECTIVE_TOP_ITEM_WIDTH], outputRange: [0.3,1,0.3], extrapolate: "clamp" }) }]}
                     />
                   ))}
                 </View>
               </>
             ) : (
               <View style={styles.emptyTopContainer}>
-                <Text
-                  style={[
-                    styles.emptyTitle,
-                    { color: currentTheme.colors.textPrimary },
-                  ]}
-                >
-                  Aucun défi en cours.
-                </Text>
-                <Text
-                  style={[
-                    styles.emptySubtitle,
-                    { color: currentTheme.colors.textSecondary },
-                  ]}
-                >
-                  Pour créer un défi :
-                </Text>
+                <Text style={[styles.emptyTitle, { color: currentTheme.colors.textPrimary }]}>{t("noOngoingChallenge")}</Text>
+                <Text style={[styles.emptySubtitle, { color: currentTheme.colors.textSecondary }]}>{t("createPrompt")}</Text>
                 <View style={styles.emptyList}>
-                  <Text
-                    style={[
-                      styles.emptyItem,
-                      { color: currentTheme.colors.textSecondary },
-                    ]}
-                  >
-                    • Cliquez sur l'icône{" "}
-                    <Ionicons
-                      name="add-circle-outline"
-                      size={normalizeFont(14)}
-                      color={currentTheme.colors.secondary}
-                    />{" "}
-                    en haut à droite
+                  <Text style={[styles.emptyItem, { color: currentTheme.colors.textSecondary }]}>
+                    • {t("clickIconTopRight")}
                   </Text>
-                  <Text
-                    style={[
-                      styles.emptyItem,
-                      { color: currentTheme.colors.textSecondary },
-                    ]}
-                  >
-                    • Ou{" "}
-                    <Text
-                      style={[
-                        styles.linkText,
-                        { color: currentTheme.colors.secondary },
-                      ]}
-                      onPress={() => router.push("/explore")}
-                    >
-                      rejoignez un challenge
-                    </Text>
+                  <Text style={[styles.emptyItem, { color: currentTheme.colors.textSecondary }]}>                    
+                    • <Text style={[styles.linkText, { color: currentTheme.colors.secondary }]} onPress={() => router.push("/explore")}>{t("orJoinChallenge")}</Text>
                   </Text>
                 </View>
               </View>
@@ -576,14 +388,7 @@ export default function FocusScreen() {
 
           {/* Carousel du bas */}
           <View style={styles.bottomCarouselContainer}>
-            <Text
-              style={[
-                styles.sectionTitle,
-                { color: currentTheme.colors.textPrimary },
-              ]}
-            >
-              Défis complétés aujourd’hui
-            </Text>
+            <Text style={[styles.sectionTitle, { color: currentTheme.colors.textPrimary }]}>{t("completedChallengesScreenTitle")} {t("today")}</Text>
             {markedToday.length > 0 ? (
               <>
                 <RNAnimated.FlatList
@@ -597,10 +402,7 @@ export default function FocusScreen() {
                   snapToInterval={EFFECTIVE_BOTTOM_ITEM_WIDTH}
                   snapToAlignment="center"
                   contentContainerStyle={{ paddingHorizontal: SPACER_BOTTOM }}
-                  onScroll={RNAnimated.event(
-                    [{ nativeEvent: { contentOffset: { x: scrollXBottom } } }],
-                    { useNativeDriver: true }
-                  )}
+                  onScroll={RNAnimated.event([{ nativeEvent: { contentOffset: { x: scrollXBottom } } }], { useNativeDriver: true })}
                   scrollEventThrottle={16}
                   onScrollBeginDrag={handleScrollBeginDragBottom}
                   onMomentumScrollEnd={handleMomentumScrollEndBottom}
@@ -610,52 +412,24 @@ export default function FocusScreen() {
                   {markedToday.map((_, index) => (
                     <RNAnimated.View
                       key={index}
-                      style={[
-                        styles.dot,
-                        { backgroundColor: currentTheme.colors.secondary },
-                        {
-                          opacity: scrollXBottom.interpolate({
-                            inputRange: [
-                              (index - 1) * EFFECTIVE_BOTTOM_ITEM_WIDTH,
-                              index * EFFECTIVE_BOTTOM_ITEM_WIDTH,
-                              (index + 1) * EFFECTIVE_BOTTOM_ITEM_WIDTH,
-                            ],
-                            outputRange: [0.3, 1, 0.3],
-                            extrapolate: "clamp",
-                          }),
-                        },
-                      ]}
-                    />
+                      style={[styles.dot, { backgroundColor: currentTheme.colors.secondary }, { opacity: scrollXBottom.interpolate({ inputRange: [(index-1)*EFFECTIVE_BOTTOM_ITEM_WIDTH, index*EFFECTIVE_BOTTOM_ITEM_WIDTH, (index+1)*EFFECTIVE_BOTTOM_ITEM_WIDTH], outputRange: [0.3,1,0.3], extrapolate: "clamp" }) }]} />
                   ))}
                 </View>
               </>
             ) : (
-              <Text
-                style={[
-                  styles.noChallenges,
-                  { color: currentTheme.colors.textSecondary },
-                ]}
-              >
-                Aucun défi complété aujourd’hui.
-              </Text>
+              <Text style={[styles.noChallenges, { color: currentTheme.colors.textSecondary }]}>{t("noCompletedChallenges")}</Text>
             )}
           </View>
 
           {confettiRef.current && (
-            <ConfettiCannon
-              ref={confettiRef}
-              count={150}
-              origin={{ x: SCREEN_WIDTH / 2, y: 0 }}
-              fadeOut
-              explosionSpeed={800}
-              fallSpeed={3000}
-            />
+            <ConfettiCannon ref={confettiRef} count={150} origin={{ x: SCREEN_WIDTH/2, y: 0 }} fadeOut explosionSpeed={800} fallSpeed={3000} />
           )}
         </ScrollView>
       </LinearGradient>
     </GlobalLayout>
   );
 }
+
 
 const styles = StyleSheet.create({
   gradientContainer: { flex: 1 },

@@ -21,17 +21,19 @@ import {
   useSafeAreaInsets,
 } from "react-native-safe-area-context";
 import { StatusBar } from "expo-status-bar";
+import { useTranslation } from "react-i18next";
 
 const { width, height } = Dimensions.get("window");
 const BUTTON_SIZE = 60;
 
 export default function Screen2() {
   const insets = useSafeAreaInsets();
+  const { t } = useTranslation();
   const [fontsLoaded] = useFonts({
     Comfortaa_400Regular,
     Comfortaa_700Bold,
   });
-  const videoRef = useRef(null);
+  const videoRef = useRef<any>(null);
   const fadeAnim = useRef(new Animated.Value(0)).current;
 
   useEffect(() => {
@@ -40,7 +42,7 @@ export default function Screen2() {
       duration: 1500,
       useNativeDriver: true,
     }).start();
-  }, []);
+  }, [fadeAnim]);
 
   if (!fontsLoaded) {
     return null;
@@ -78,10 +80,11 @@ export default function Screen2() {
         <View style={[styles.cardWrapper, { marginTop: insets.top + 20 }]}>
           {/* Presentation Card */}
           <Animated.View style={[styles.card, { opacity: fadeAnim }]}>
-            <Text style={styles.title}>Relevez des Défis Inspirants</Text>
+            <Text style={styles.title}>
+              {t("screen2.title")}
+            </Text>
             <Text style={styles.text}>
-              Choisissez parmi des défis motivants et faites de chaque jour une
-              réussite en devenir.
+              {t("screen2.description")}
             </Text>
           </Animated.View>
 
@@ -89,7 +92,7 @@ export default function Screen2() {
           <Link href="/screen/onboarding/Screen3" asChild>
             <TouchableOpacity
               style={styles.nextButton}
-              accessibilityLabel="Continuer vers l'écran suivant"
+              accessibilityLabel={t("screen2.nextButtonLabel")}
             >
               <Ionicons name="arrow-forward" size={24} color="#333" />
             </TouchableOpacity>

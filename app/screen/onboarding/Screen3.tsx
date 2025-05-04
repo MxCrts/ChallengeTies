@@ -21,17 +21,19 @@ import {
   useSafeAreaInsets,
 } from "react-native-safe-area-context";
 import { StatusBar } from "expo-status-bar";
+import { useTranslation } from "react-i18next";
 
 const { width, height } = Dimensions.get("window");
 const BUTTON_SIZE = 60;
 
 export default function Screen3() {
   const insets = useSafeAreaInsets();
+  const { t } = useTranslation();
   const [fontsLoaded] = useFonts({
     Comfortaa_400Regular,
     Comfortaa_700Bold,
   });
-  const videoRef = useRef(null);
+  const videoRef = useRef<any>(null);
   const fadeAnim = useRef(new Animated.Value(0)).current;
 
   useEffect(() => {
@@ -40,7 +42,7 @@ export default function Screen3() {
       duration: 1500,
       useNativeDriver: true,
     }).start();
-  }, []);
+  }, [fadeAnim]);
 
   if (!fontsLoaded) {
     return null;
@@ -80,10 +82,11 @@ export default function Screen3() {
         >
           {/* Presentation Card */}
           <Animated.View style={[styles.card, { opacity: fadeAnim }]}>
-            <Text style={styles.title}>Créez Vos Propres Défis</Text>
+            <Text style={styles.title}>
+              {t("screen3.title")}
+            </Text>
             <Text style={styles.text}>
-              Personnalisez vos défis pour qu'ils s'adaptent à votre quotidien.
-              Motivez-vous en créant des objectifs sur mesure.
+              {t("screen3.description")}
             </Text>
           </Animated.View>
 
@@ -91,7 +94,7 @@ export default function Screen3() {
           <Link href="/screen/onboarding/Screen4" asChild>
             <TouchableOpacity
               style={styles.nextButton}
-              accessibilityLabel="Continuer vers l'écran suivant"
+              accessibilityLabel={t("screen3.nextButtonLabel")}
             >
               <Ionicons name="arrow-forward" size={24} color="#333" />
             </TouchableOpacity>

@@ -38,6 +38,8 @@ import { useTheme } from "../../context/ThemeContext";
 import { Theme } from "../../theme/designSystem";
 import designSystem from "../../theme/designSystem";
 import BackButton from "../../components/BackButton";
+import { useTranslation } from "react-i18next";
+
 
 const { width: SCREEN_WIDTH, height: SCREEN_HEIGHT } = Dimensions.get("window");
 const SPACING = 15;
@@ -78,7 +80,7 @@ export default function ChallengeDetails() {
   const { theme } = useTheme();
   const isDarkMode = theme === "dark";
   const currentTheme: Theme = isDarkMode ? designSystem.darkTheme : designSystem.lightTheme;
-
+  const { t, i18n } = useTranslation();
   const router = useRouter();
   const params = useLocalSearchParams<{
     id?: string;
@@ -90,9 +92,9 @@ export default function ChallengeDetails() {
   }>();
 
   const id = params.id || "";
-  const routeTitle = params.title || "Untitled Challenge";
-  const routeCategory = params.category || "Uncategorized";
-  const routeDescription = params.description || "No description available";
+  const routeTitle = params.title || t("challengeDetails.untitled");
+  const routeCategory = params.category || t("challengeDetails.uncategorized");
+  const routeDescription = params.description || t("challengeDetails.noDescription");
 
   const { savedChallenges, addChallenge, removeChallenge } = useSavedChallenges();
   const {
@@ -261,7 +263,7 @@ export default function ChallengeDetails() {
     setCurrentMonth(newMonth);
   };
 
-  const monthName = currentMonth.toLocaleString("default", { month: "long" });
+  const monthName = currentMonth.toLocaleString(i18n.language, { month: "long" });
   const currentYearNum = currentMonth.getFullYear();
 
   const alreadyMarkedToday = currentChallenge
@@ -284,7 +286,7 @@ export default function ChallengeDetails() {
       const challengeRef = doc(db, "challenges", id);
       const challengeSnap = await getDoc(challengeRef);
       if (!challengeSnap.exists()) {
-        Alert.alert("Erreur", "Impossible de récupérer le challenge.");
+        Alert.alert(t("alerts.error"), t("challengeDetails.fetchError"));
         return;
       }
       const challengeData = challengeSnap.data();
@@ -323,11 +325,11 @@ export default function ChallengeDetails() {
       setFinalCompletedDays(0);
     } catch (err) {
       Alert.alert(
-        "Erreur",
-        err instanceof Error
-          ? err.message
-          : "Impossible de rejoindre le défi. Réessayez."
-      );
+                t("alerts.error"),
+                err instanceof Error
+                  ? err.message
+                  : t("challengeDetails.joinError")
+             );
     } finally {
       setLoading(false);
     }
@@ -340,7 +342,7 @@ export default function ChallengeDetails() {
       const challengeRef = doc(db, "challenges", id);
       const challengeSnap = await getDoc(challengeRef);
       if (!challengeSnap.exists()) {
-        Alert.alert("Erreur", "Impossible de récupérer le challenge.");
+        Alert.alert(t("alerts.error"), t("challengeDetails.fetchError"));
         setPendingFavorite(null);
         return;
       }
@@ -364,11 +366,11 @@ export default function ChallengeDetails() {
       setPendingFavorite(null);
     } catch (err) {
       Alert.alert(
-        "Erreur",
-        err instanceof Error
-          ? err.message
-          : "Impossible de sauvegarder/dé-sauvegarder le défi."
-      );
+                t("alerts.error"),
+                err instanceof Error
+                  ? err.message
+                  : t("challengeDetails.saveError")
+              );
       setPendingFavorite(null);
     }
   }, [id, savedChallenges, addChallenge, removeChallenge]);
@@ -383,7 +385,7 @@ export default function ChallengeDetails() {
       await completeChallenge(id, finalSelectedDays, false);
       setCompletionModalVisible(false);
     } catch (error) {
-      Alert.alert("Erreur", "La finalisation du défi a échoué.");
+      Alert.alert(t("alerts.error"), t("challengeDetails.completeError"));
     }
   }, [id, finalSelectedDays, completeChallenge]);
 
@@ -392,16 +394,16 @@ export default function ChallengeDetails() {
       await completeChallenge(id, finalSelectedDays, true);
       setCompletionModalVisible(false);
     } catch (error) {
-      Alert.alert("Erreur", "La finalisation du défi a échoué.");
+      Alert.alert(t("alerts.error"), t("challengeDetails.completeError"));
     }
   }, [id, finalSelectedDays, completeChallenge]);
 
   const handleNavigateToChat = useCallback(() => {
     if (!userHasTaken) {
       Alert.alert(
-        "Accès refusé",
-        "Vous devez prendre le défi pour accéder au chat."
-      );
+                t("alerts.accessDenied"),
+                t("challengeDetails.chatAccessDenied")
+              );
       return;
     }
     router.push(
@@ -431,7 +433,7 @@ export default function ChallengeDetails() {
         console.log("Partage annulé");
       }
     } catch (error: any) {
-      Alert.alert("Erreur de partage", error.message);
+      Alert.alert(t("alerts.shareError"), error.message);
     }
   }, [routeTitle, routeDescription]);
 
@@ -449,9 +451,9 @@ export default function ChallengeDetails() {
         end={{ x: 1, y: 1 }}
       >
         <Animated.View entering={FadeInUp}>
-          <ActivityIndicator size="large" color={currentTheme.colors.secondary} />
+        <ActivityIndicator size="large" color={currentTheme.colors.secondary} />
           <Text style={[styles.loadingText, { color: currentTheme.colors.textSecondary }]}>
-            Chargement en cours...
+            {t("challengeDetails.loading")}
           </Text>
         </Animated.View>
       </LinearGradient>
@@ -527,7 +529,7 @@ export default function ChallengeDetails() {
               color={currentTheme.colors.secondary}
             />
             <Text style={[styles.infoRecipe, { color: currentTheme.colors.textSecondary }]}>
-              {userCount} {userCount <= 1 ? "participant" : "participants"}
+            {userCount} {t(`challengeDetails.participant${userCount > 1 ? "s" : ""}`)}
             </Text>
           </View>
           {!userHasTaken && (
@@ -544,7 +546,7 @@ export default function ChallengeDetails() {
                 end={{ x: 1, y: 1 }}
               >
                 <Text style={[styles.takeChallengeButtonText, { color: currentTheme.colors.textPrimary }]}>
-                  Prendre le défi
+                {t("challengeDetails.takeChallenge")}
                 </Text>
               </LinearGradient>
             </TouchableOpacity>
@@ -555,7 +557,7 @@ export default function ChallengeDetails() {
             ) && (
               <Animated.View entering={FadeInUp.delay(200)}>
                 <Text style={[styles.inProgressText, { color: currentTheme.colors.secondary }]}>
-                  Défi en cours
+                {t("challengeDetails.inProgress")}
                 </Text>
                 <View style={[styles.progressBarBackground, { backgroundColor: currentTheme.colors.border }]}>
                   <LinearGradient
@@ -569,7 +571,7 @@ export default function ChallengeDetails() {
                   />
                 </View>
                 <Text style={[styles.progressText, { color: currentTheme.colors.secondary }]}>
-                  {finalCompletedDays}/{finalSelectedDays} jours complétés
+                {finalCompletedDays}/{finalSelectedDays} {t("challengeDetails.daysCompleted")}
                 </Text>
                 <TouchableOpacity
                   style={styles.markTodayButton}
@@ -582,8 +584,8 @@ export default function ChallengeDetails() {
                   disabled={isMarkedToday(id, finalSelectedDays)}
                   accessibilityLabel={
                     isMarkedToday(id, finalSelectedDays)
-                      ? "Déjà marqué aujourd'hui"
-                      : "Marquer aujourd'hui"
+                    ? t("challengeDetails.alreadyMarked")
+                    : t("challengeDetails.markToday")
                   }
                   testID="mark-today-button"
                 >
@@ -599,8 +601,9 @@ export default function ChallengeDetails() {
                   >
                     <Text style={[styles.markTodayButtonText, { color: currentTheme.colors.textPrimary }]}>
                       {isMarkedToday(id, finalSelectedDays)
-                        ? "Déjà marqué"
-                        : "Marquer aujourd'hui"}
+                        ? t("challengeDetails.alreadyMarked")
+                        : t("challengeDetails.markToday")
+                  }
                     </Text>
                   </LinearGradient>
                 </TouchableOpacity>
@@ -625,7 +628,7 @@ export default function ChallengeDetails() {
   end={{ x: 1, y: 1 }}
 >
                   <Text style={[styles.completeChallengeButtonText, { color: currentTheme.colors.textPrimary }]}>
-                    Terminer le défi
+                  {t("challengeDetails.completeChallenge")}
                   </Text>
                 </LinearGradient>
               </TouchableOpacity>
@@ -646,7 +649,7 @@ export default function ChallengeDetails() {
                 color={currentTheme.colors.textSecondary}
               />
               <Text style={[styles.actionIconLabel, { color: currentTheme.colors.textSecondary }]}>
-                Chat
+              {t("challengeDetails.chat")}
               </Text>
             </TouchableOpacity>
             <TouchableOpacity
@@ -681,11 +684,11 @@ export default function ChallengeDetails() {
               <Text style={[styles.actionIconLabel, { color: currentTheme.colors.textSecondary }]}>
                 {pendingFavorite !== null
                   ? pendingFavorite
-                    ? "Sauvegardé"
-                    : "Sauvegarder"
+                  ? t("challengeDetails.saved")
+                  : t("challengeDetails.save")
                   : isSavedChallenge(id)
-                  ? "Sauvegardé"
-                  : "Sauvegarder"}
+                  ? t("challengeDetails.saved")
+                  : t("challengeDetails.save")}
               </Text>
             </TouchableOpacity>
             <TouchableOpacity
@@ -700,7 +703,7 @@ export default function ChallengeDetails() {
                 color={currentTheme.colors.textSecondary}
               />
               <Text style={[styles.actionIconLabel, { color: currentTheme.colors.textSecondary }]}>
-                Partager
+              {t("challengeDetails.share")}
               </Text>
             </TouchableOpacity>
             <TouchableOpacity
@@ -715,7 +718,7 @@ export default function ChallengeDetails() {
                 color={currentTheme.colors.textSecondary}
               />
               <Text style={[styles.actionIconLabel, { color: currentTheme.colors.textSecondary }]}>
-                Stats
+              {t("challengeDetails.stats")}
               </Text>
             </TouchableOpacity>
           </Animated.View>
@@ -741,10 +744,10 @@ export default function ChallengeDetails() {
         />
       )}
 
-      <StatsModal
+<StatsModal
         visible={statsModalVisible}
         onClose={() => setStatsModalVisible(false)}
-        monthName={monthName}
+        monthName={monthName}       
         currentYearNum={currentYearNum}
         calendarDays={calendarDays}
         goToPrevMonth={goToPrevMonth}
@@ -773,7 +776,7 @@ const styles = StyleSheet.create({
   },
   backButton: {
     position: "absolute",
-    top: SPACING / 2, // Réduit de SPACING (15) à SPACING / 2 (7.5) pour remonter
+    top: SPACING / 2,
     left: SPACING,
     zIndex: 2,
     borderRadius: normalizeSize(20),

@@ -10,6 +10,7 @@ import {
 } from "react-native";
 import { Ionicons } from "@expo/vector-icons";
 import designSystem from "../theme/designSystem";
+import { useTranslation } from "react-i18next";
 
 const { lightTheme } = designSystem;
 const currentTheme = lightTheme; // Utilisation de la palette de couleurs
@@ -25,12 +26,16 @@ export default function ProposeFeatureModal({
   onClose,
   onSubmit,
 }: ProposeFeatureModalProps) {
+  const { t } = useTranslation();
   const [title, setTitle] = useState("");
   const [description, setDescription] = useState("");
 
   const handleSubmission = () => {
     if (!title.trim()) {
-      Alert.alert("Erreur", "Veuillez saisir un titre pour votre proposition.");
+      Alert.alert(
+        t("proposeFeature.errorTitle"),
+        t("proposeFeature.errorNoTitle")
+      );
       return;
     }
     onSubmit(title.trim(), description.trim());
@@ -48,17 +53,17 @@ export default function ProposeFeatureModal({
     >
       <View style={styles.overlay}>
         <View style={styles.modalContainer}>
-          <Text style={styles.title}>Proposer une nouvelle fonctionnalité</Text>
+          <Text style={styles.title}>{t("proposeFeature.modalTitle")}</Text>
           <TextInput
             style={styles.input}
-            placeholder="Titre"
+            placeholder={t("proposeFeature.placeholderTitle")}
             placeholderTextColor={currentTheme.colors.textSecondary}
             value={title}
             onChangeText={setTitle}
           />
           <TextInput
             style={[styles.input, styles.textArea]}
-            placeholder="Description (facultative)"
+            placeholder={t("proposeFeature.placeholderDescription")}
             placeholderTextColor={currentTheme.colors.textSecondary}
             value={description}
             onChangeText={setDescription}
@@ -69,7 +74,9 @@ export default function ProposeFeatureModal({
             style={styles.submitButton}
             onPress={handleSubmission}
           >
-            <Text style={styles.submitButtonText}>Envoyer la proposition</Text>
+            <Text style={styles.submitButtonText}>
+              {t("proposeFeature.submitButton")}
+            </Text>
           </TouchableOpacity>
           <TouchableOpacity style={styles.closeButton} onPress={onClose}>
             <Ionicons

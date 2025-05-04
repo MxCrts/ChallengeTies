@@ -11,6 +11,7 @@ import { LinearGradient } from "expo-linear-gradient";
 import { Ionicons } from "@expo/vector-icons";
 import Animated, { FadeIn, FadeOut } from "react-native-reanimated";
 import designSystem from "../theme/designSystem";
+import { useTranslation } from "react-i18next";
 
 const { width: SCREEN_WIDTH, height: SCREEN_HEIGHT } = Dimensions.get("window");
 const currentTheme = designSystem.lightTheme;
@@ -37,6 +38,8 @@ const MissedChallengeModal: React.FC<MissedChallengeModalProps> = ({
   onUseTrophies,
   trophyCost,
 }) => {
+  const { t } = useTranslation();
+
   if (!visible) return null;
 
   return (
@@ -58,10 +61,8 @@ const MissedChallengeModal: React.FC<MissedChallengeModalProps> = ({
               size={normalizeSize(48)}
               color="#FF4444"
             />
-            <Text style={styles.title}>Challenge en danger !</Text>
-            <Text style={styles.subtitle}>
-              Tu as manqué 2 jours ou plus. Que veux-tu faire ?
-            </Text>
+            <Text style={styles.title}>{t("missedChallenge.title")}</Text>
+            <Text style={styles.subtitle}>{t("missedChallenge.subtitle")}</Text>
           </View>
           <View style={styles.optionsContainer}>
             <TouchableOpacity
@@ -81,8 +82,12 @@ const MissedChallengeModal: React.FC<MissedChallengeModalProps> = ({
                   color="#FFF"
                 />
                 <View style={styles.optionTextContainer}>
-                  <Text style={styles.optionText}>Réinitialiser</Text>
-                  <Text style={styles.optionSubtext}>Recommence à zéro</Text>
+                  <Text style={styles.optionText}>
+                    {t("missedChallenge.reset.title")}
+                  </Text>
+                  <Text style={styles.optionSubtext}>
+                    {t("missedChallenge.reset.subtitle")}
+                  </Text>
                 </View>
               </LinearGradient>
             </TouchableOpacity>
@@ -103,8 +108,12 @@ const MissedChallengeModal: React.FC<MissedChallengeModalProps> = ({
                   color="#FFF"
                 />
                 <View style={styles.optionTextContainer}>
-                  <Text style={styles.optionText}>Regarder une pub</Text>
-                  <Text style={styles.optionSubtext}>Continue ton streak</Text>
+                  <Text style={styles.optionText}>
+                    {t("missedChallenge.ad.title")}
+                  </Text>
+                  <Text style={styles.optionSubtext}>
+                    {t("missedChallenge.ad.subtitle")}
+                  </Text>
                 </View>
               </LinearGradient>
             </TouchableOpacity>
@@ -126,9 +135,11 @@ const MissedChallengeModal: React.FC<MissedChallengeModalProps> = ({
                 />
                 <View style={styles.optionTextContainer}>
                   <Text style={styles.optionText}>
-                    Utiliser {trophyCost} trophées
+                    {t("missedChallenge.useTrophies.title", { count: trophyCost })}
                   </Text>
-                  <Text style={styles.optionSubtext}>Garde ton progrès</Text>
+                  <Text style={styles.optionSubtext}>
+                    {t("missedChallenge.useTrophies.subtitle")}
+                  </Text>
                 </View>
               </LinearGradient>
             </TouchableOpacity>

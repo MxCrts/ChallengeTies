@@ -2,15 +2,10 @@ import React from "react";
 import { Modal, View, Text, TouchableOpacity, StyleSheet } from "react-native";
 import { Ionicons } from "@expo/vector-icons";
 import designSystem from "../theme/designSystem";
+import { useTranslation } from "react-i18next";
 
 const { lightTheme } = designSystem;
-const currentTheme = lightTheme; // Utilise la palette de couleurs du designSystem
-// Par exemple :
-// currentTheme.colors.background = "#FFF8E7"
-// currentTheme.colors.primary = "#FFB800"
-// currentTheme.colors.textPrimary = "#000000"
-// currentTheme.colors.textSecondary = "#333333"
-// currentTheme.colors.cardBackground = "#FFFFFF"
+const currentTheme = lightTheme; // palette couleurs
 
 interface FeatureDetailModalProps {
   visible: boolean;
@@ -32,6 +27,8 @@ export default function FeatureDetailModal({
   onVote,
   onClose,
 }: FeatureDetailModalProps) {
+  const { t } = useTranslation();
+
   return (
     <Modal
       animationType="slide"
@@ -46,17 +43,21 @@ export default function FeatureDetailModal({
             <Text style={styles.description}>{feature.description}</Text>
           )}
           <Text style={styles.voteCount}>
-            {feature.votes} vote{feature.votes !== 1 ? "s" : ""}
+            {t("featureDetail.votes", { count: feature.votes })}
           </Text>
           {!userVoted ? (
             <TouchableOpacity
               style={styles.voteButton}
               onPress={() => onVote(feature.id)}
             >
-              <Text style={styles.voteButtonText}>Vote</Text>
+              <Text style={styles.voteButtonText}>
+                {t("featureDetail.vote")}
+              </Text>
             </TouchableOpacity>
           ) : (
-            <Text style={styles.alreadyVotedText}>Vous avez déjà voté.</Text>
+            <Text style={styles.alreadyVotedText}>
+              {t("featureDetail.alreadyVoted")}
+            </Text>
           )}
           <TouchableOpacity style={styles.closeButton} onPress={onClose}>
             <Ionicons

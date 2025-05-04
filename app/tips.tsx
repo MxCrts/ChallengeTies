@@ -16,6 +16,7 @@ import Animated, { FadeInUp } from "react-native-reanimated";
 import { Ionicons } from "@expo/vector-icons";
 import { LinearGradient } from "expo-linear-gradient";
 import { useRouter } from "expo-router";
+import { useTranslation } from "react-i18next";
 import { useTheme } from "../context/ThemeContext";
 import { Theme } from "../theme/designSystem";
 import designSystem from "../theme/designSystem";
@@ -58,75 +59,69 @@ interface Conseil {
 const conseils: Conseil[] = [
   {
     id: "1",
-    title: "Fixez des objectifs SMART",
-    description:
-      "Des objectifs Spécifiques, Mesurables, Atteignables, Réalistes et Temporels vous permettent de rester concentré et discipliné.",
+    title: "tips.smartGoals.title",
+    description: "tips.smartGoals.description",
     icon: "checkmark-circle-outline",
   },
   {
     id: "2",
-    title: "Adoptez la régularité",
-    description:
-      "Consacrez un moment fixe chaque jour à votre objectif. De petites actions quotidiennes mènent à de grands résultats.",
+    title: "tips.beConsistent.title",
+    description: "tips.beConsistent.description",
     icon: "time-outline",
   },
   {
     id: "3",
-    title: "Suivez tout",
-    description:
-      "Utilisez le suivi quotidien et les statistiques de ChallengeTies pour surveiller vos progrès, remporter des trophées et maintenir votre élan.",
+    title: "tips.trackEverything.title",
+    description: "tips.trackEverything.description",
     icon: "analytics-outline",
   },
   {
     id: "4",
-    title: "Trouvez du soutien communautaire",
-    description:
-      "Connectez-vous avec des personnes partageant les mêmes idées, invitez vos amis, partagez vos expériences et restez motivés ensemble.",
+    title: "tips.findSupport.title",
+    description: "tips.findSupport.description",
     icon: "people-outline",
   },
   {
     id: "5",
-    title: "Récompensez-vous fréquemment",
-    description:
-      "Célébrez chaque étape — courtes séries, grands succès, nouveaux trophées — pour nourrir votre motivation à long terme.",
+    title: "tips.rewardYourself.title",
+    description: "tips.rewardYourself.description",
     icon: "gift-outline",
   },
   {
     id: "6",
-     title: "Variez les plaisirs",
-    description:
-      "Luttez contre l'ennui en essayant de nouveaux défis, en explorant différentes catégories et en pimentant vos objectifs.",
+    title: "tips.switchItUp.title",
+    description: "tips.switchItUp.description",
     icon: "flask-outline",
   },
   {
     id: "7",
-    title: "Invitez un ami",
-    description:
-      "Les défis deviennent plus faciles (et plus amusants) avec un ami. Envoyez des invitations pour atteindre vos objectifs ensemble !",
+    title: "tips.inviteAFriend.title",
+    description: "tips.inviteAFriend.description",
     icon: "person-add-outline",
   },
   {
     id: "8",
-    title: "Visualisez le succès",
-    description:
-      "Imaginez le résultat final — des indices visuels et des rappels quotidiens gardent votre concentration au top.",
+    title: "tips.visualizeSuccess.title",
+    description: "tips.visualizeSuccess.description",
     icon: "eye-outline",
   },
   {
     id: "9",
-    title: "Restez positif",
-    description:
-      "Même en cas d'échec, rappelez-vous que chaque jour est un nouveau départ. Apprenez de vos erreurs et continuez d'avancer.",
+    title: "tips.stayPositive.title",
+    description: "tips.stayPositive.description",
     icon: "sunny-outline",
   },
 ];
 
 export default function Conseils() {
+  const { t } = useTranslation();
   const router = useRouter();
   const [expandedTip, setExpandedTip] = useState<string | null>(null);
   const { theme } = useTheme();
   const isDarkMode = theme === "dark";
-  const currentTheme: Theme = isDarkMode ? designSystem.darkTheme : designSystem.lightTheme;
+  const currentTheme: Theme = isDarkMode
+    ? designSystem.darkTheme
+    : designSystem.lightTheme;
 
   const toggleTip = (id: string) => {
     setExpandedTip(expandedTip === id ? null : id);
@@ -139,20 +134,20 @@ export default function Conseils() {
       if (supported) {
         await Linking.openURL(url);
       } else {
-        console.warn("Impossible d'ouvrir l'application mail");
+        console.warn(t("tips.mailClientError"));
       }
     } catch (error) {
-      console.error("Erreur lors de l'ouverture du mail:", error);
+      console.error(t("tips.mailOpenError"), error);
     }
   };
 
   const handleShare = async () => {
     try {
       await Share.share({
-        message: "Check out these awesome tips from ChallengeTies!",
+        message: t("tips.shareMessage"),
       });
     } catch (error) {
-      console.error("Erreur lors du partage:", error);
+      console.error(t("tips.shareError"), error);
     }
   };
 
@@ -170,55 +165,29 @@ export default function Conseils() {
       />
       <SafeAreaView style={styles.safeArea}>
         <View style={styles.headerWrapper}>
-          <CustomHeader title="Astuces" />
+          <CustomHeader title={t("tips.title")} />
         </View>
         <ScrollView
           contentContainerStyle={styles.scrollContent}
           showsVerticalScrollIndicator={false}
           contentInset={{ top: SPACING, bottom: SPACING }}
           accessibilityRole="list"
-          accessibilityLabel="Liste des astuces"
+          accessibilityLabel={t("tips.listAccessibility")}
         >
-          <Animated.View
-            entering={FadeInUp.delay(100)}
-            style={styles.headerContainer}
-          >
-            {require("../assets/images/Challenge.png") ? (
-              <Image
-                source={require("../assets/images/Challenge.png")}
-                style={styles.logo}
-              />
-            ) : (
-              <LinearGradient
-                colors={[currentTheme.colors.border, currentTheme.colors.overlay]}
-                style={styles.logoPlaceholder}
-              >
-                <Ionicons
-                  name="image-outline"
-                  size={normalizeSize(60)}
-                  color={currentTheme.colors.textSecondary}
-                />
-                <Text
-                  style={[styles.placeholderText, { color: currentTheme.colors.textSecondary }]}
-                >
-                  Image non disponible
-                </Text>
-              </LinearGradient>
-            )}
-            <Text
-              style={[styles.subHeaderText, { color: currentTheme.colors.textSecondary }]}
-            >
-              Des conseils pratiques pour rester inspiré, atteindre vos objectifs et
-              remporter des trophées !
+          <Animated.View entering={FadeInUp.delay(100)} style={styles.headerContainer}>
+            <Image
+              source={require("../assets/images/Challenge.png")}
+              style={styles.logo}
+              accessibilityLabel={t("tips.logoAlt")}
+            />
+            <Text style={[styles.subHeaderText, { color: currentTheme.colors.textSecondary }]}>
+              {t("tips.subHeader")}
             </Text>
           </Animated.View>
 
           <View style={styles.tipsContainer}>
             {conseils.map((conseil, index) => (
-              <Animated.View
-                key={conseil.id}
-                entering={FadeInUp.delay(200 + index * 50)} // Délai réduit pour fluidité
-              >
+              <Animated.View key={conseil.id} entering={FadeInUp.delay(200 + index * 50)}>
                 <TouchableOpacity
                   style={[
                     styles.tipCard,
@@ -229,7 +198,7 @@ export default function Conseils() {
                     expandedTip === conseil.id && styles.tipCardExpanded,
                   ]}
                   onPress={() => toggleTip(conseil.id)}
-                  accessibilityLabel={`Afficher les détails de l'astuce ${conseil.title}`}
+                  accessibilityLabel={t("tips.toggleTip", { title: t(conseil.title) })}
                   testID={`tip-card-${conseil.id}`}
                 >
                   <Ionicons
@@ -239,31 +208,27 @@ export default function Conseils() {
                     style={styles.tipIcon}
                   />
                   <View style={styles.tipContent}>
-                    <Text
-                      style={[styles.tipTitle, { color: currentTheme.colors.secondary }]}
-                    >
-                      {conseil.title}
+                    <Text style={[styles.tipTitle, { color: currentTheme.colors.secondary }]}>
+                      {t(conseil.title)}
                     </Text>
                     <Text
                       style={[styles.tipDescription, { color: currentTheme.colors.textSecondary }]}
                       numberOfLines={expandedTip === conseil.id ? 0 : 2}
                     >
-                      {conseil.description}
+                      {t(conseil.description)}
                     </Text>
                     <TouchableOpacity
                       style={styles.readMoreButton}
                       onPress={() => toggleTip(conseil.id)}
                       accessibilityLabel={
                         expandedTip === conseil.id
-                          ? `Réduire l'astuce ${conseil.title}`
-                          : `Lire plus sur l'astuce ${conseil.title}`
+                          ? t("tips.showLess", { title: t(conseil.title) })
+                          : t("tips.readMore", { title: t(conseil.title) })
                       }
                       testID={`read-more-${conseil.id}`}
                     >
-                      <Text
-                        style={[styles.readMoreText, { color: currentTheme.colors.primary }]}
-                      >
-                        {expandedTip === conseil.id ? "Réduire" : "Lire plus"}
+                      <Text style={[styles.readMoreText, { color: currentTheme.colors.primary }]}>
+                        {expandedTip === conseil.id ? t("tips.showLess") : t("tips.readMore")}
                       </Text>
                     </TouchableOpacity>
                   </View>
@@ -273,23 +238,21 @@ export default function Conseils() {
           </View>
 
           <Animated.View entering={FadeInUp.delay(600)} style={styles.footer}>
-            <Text
-              style={[styles.footerText, { color: currentTheme.colors.textSecondary }]}
-            >
-              Plus de questions ou besoin d'une aide personnalisée ?{" "}
+            <Text style={[styles.footerText, { color: currentTheme.colors.textSecondary }]}>
+              {t("tips.footerQuery")}{" "}
               <Text
                 style={[styles.footerLink, { color: currentTheme.colors.secondary }]}
                 onPress={handleContact}
-                accessibilityLabel="Contacter le support"
+                accessibilityLabel={t("tips.contactUs")}
                 testID="contact-link"
               >
-                Contactez-nous
+                {t("tips.contactUs")}
               </Text>
             </Text>
             <TouchableOpacity
               style={[styles.shareButton, { backgroundColor: currentTheme.colors.primary }]}
               onPress={handleShare}
-              accessibilityLabel="Partager les astuces"
+              accessibilityLabel={t("tips.shareTips")}
               testID="share-button"
             >
               <Ionicons
@@ -297,10 +260,8 @@ export default function Conseils() {
                 size={normalizeSize(20)}
                 color={currentTheme.colors.textPrimary}
               />
-              <Text
-                style={[styles.shareButtonText, { color: currentTheme.colors.textPrimary }]}
-              >
-                Partager les astuces
+              <Text style={[styles.shareButtonText, { color: currentTheme.colors.textPrimary }]}>
+                {t("tips.shareTips")}
               </Text>
             </TouchableOpacity>
           </Animated.View>

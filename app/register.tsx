@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useCallback, useRef } from "react";
+import React, { useState, useEffect, useRef } from "react";
 import {
   View,
   Text,
@@ -19,30 +19,25 @@ import { createUserWithEmailAndPassword } from "firebase/auth";
 import { auth, db } from "../constants/firebase-config";
 import { doc, setDoc, serverTimestamp } from "firebase/firestore";
 import { Ionicons } from "@expo/vector-icons";
+import { useTranslation } from "react-i18next"; // 🆕 Ajout pour la traduction
 
 const { width: SCREEN_WIDTH, height: SCREEN_HEIGHT } = Dimensions.get("window");
 
-// Fonction de normalisation des tailles pour la responsivité
 const normalize = (size: number) => {
-  const scale = Math.min(SCREEN_WIDTH, SCREEN_HEIGHT) / 375; // Référence iPhone X
+  const scale = Math.min(SCREEN_WIDTH, SCREEN_HEIGHT) / 375;
   return Math.round(PixelRatio.roundToNearestPixel(size * scale));
 };
 
-// Palette de couleurs
-const BACKGROUND_COLOR = "#FFF8E7"; // crème
-const PRIMARY_COLOR = "#FFB800"; // orange
-const TEXT_COLOR = "#333"; // texte foncé
-const BUTTON_COLOR = "#FFFFFF"; // bouton blanc
+const BACKGROUND_COLOR = "#FFF8E7";
+const PRIMARY_COLOR = "#FFB800";
+const TEXT_COLOR = "#333";
+const BUTTON_COLOR = "#FFFFFF";
 
-// Taille du cercle décoratif et position dynamique
 const circleSize = Math.min(SCREEN_WIDTH, SCREEN_HEIGHT) * 0.85;
-const circleTop = SCREEN_HEIGHT * 0.35; // Ajusté pour centrage dynamique
+const circleTop = SCREEN_HEIGHT * 0.35;
 const waveCount = 4;
-
-// Constante pour les marges/paddings
 const SPACING = normalize(15);
 
-// Composant Wave (centré horizontalement)
 const Wave = React.memo(
   ({
     opacity,
@@ -75,6 +70,7 @@ const Wave = React.memo(
 );
 
 export default function Register() {
+  const { t } = useTranslation(); // 🆕
   const router = useRouter();
   const [email, setEmail] = useState("");
   const [username, setUsername] = useState("");
@@ -85,7 +81,6 @@ export default function Register() {
   const [showPassword, setShowPassword] = useState(false);
   const [showConfirmPassword, setShowConfirmPassword] = useState(false);
 
-  // Initialisation des vagues
   const wavesRef = useRef(
     Array.from({ length: waveCount }, (_, index) => ({
       opacity: new Animated.Value(0.3 - index * 0.05),
@@ -133,12 +128,12 @@ export default function Register() {
   const handleRegister = async () => {
     setErrorMessage("");
     if (!email.trim() || !username.trim() || !password || !confirmPassword) {
-      setErrorMessage("Veuillez renseigner tous les champs.");
+      setErrorMessage(t("fillAllFields"));
       setTimeout(() => setErrorMessage(""), 5000);
       return;
     }
     if (password !== confirmPassword) {
-      setErrorMessage("Les mots de passe ne correspondent pas.");
+      setErrorMessage(t("passwordsDoNotMatch"));
       setTimeout(() => setErrorMessage(""), 5000);
       return;
     }
@@ -175,15 +170,13 @@ export default function Register() {
       });
       router.replace("/screen/onboarding/Screen1");
     } catch (error: any) {
-      const errorMessages = {
-        "auth/email-already-in-use": "Cet e-mail est déjà utilisé.",
-        "auth/invalid-email": "Format d'e-mail invalide.",
-        "auth/weak-password":
-          "Mot de passe trop faible. Choisissez-en un plus fort.",
+      const errorMessages: Record<string, string> = {
+        "auth/email-already-in-use": t("emailAlreadyInUse"),
+        "auth/invalid-email": t("invalidEmailFormat"),
+        "auth/weak-password": t("weakPassword"),
       };
       setErrorMessage(
-        errorMessages[error.code] ||
-          "Une erreur est survenue. Veuillez réessayer."
+        errorMessages[error.code] || t("unknownError")
       );
       setTimeout(() => setErrorMessage(""), 5000);
     } finally {
@@ -203,7 +196,6 @@ export default function Register() {
         contentContainerStyle={styles.container}
         keyboardShouldPersistTaps="handled"
       >
-        {/* Vagues de fond */}
         {waves.map((wave, index) => (
           <Wave
             key={index}
@@ -215,73 +207,63 @@ export default function Register() {
           />
         ))}
 
-        {/* Header : Titre et slogan */}
         <View style={styles.headerContainer}>
           <Text
             style={styles.brandTitle}
             numberOfLines={1}
             adjustsFontSizeToFit
             ellipsizeMode="tail"
-            accessibilityLabel="Titre de l'application"
+            accessibilityLabel={t("appTitle")}
           >
             <Text style={styles.highlight}>C</Text>hallenge
             <Text style={styles.highlight}>T</Text>ies
           </Text>
-          <Text style={styles.tagline}>Rejoins-nous et relève des défis !</Text>
+          <Text style={styles.tagline}>{t("joinUsAndChallenge")}</Text>
         </View>
 
-        {/* Formulaire : Champs de saisie */}
-        <View
-          style={styles.formContainer}
-          accessibilityLabel="Formulaire d'inscription"
-        >
+        <View style={styles.formContainer} accessibilityLabel={t("registrationForm")}>
           {errorMessage !== "" && (
             <Text style={styles.errorText} accessibilityRole="alert">
               {errorMessage}
             </Text>
           )}
           <TextInput
-            placeholder="Votre e-mail"
+            placeholder={t("emailPlaceholder")}
             placeholderTextColor="rgba(50,50,50,0.5)"
             style={styles.input}
             value={email}
             onChangeText={setEmail}
             keyboardType="email-address"
             autoCapitalize="none"
-            accessibilityLabel="Adresse e-mail"
+            accessibilityLabel={t("email")}
             autoComplete="email"
             testID="email-input"
           />
           <TextInput
-            placeholder="Nom d'utilisateur"
+            placeholder={t("username")}
             placeholderTextColor="rgba(50,50,50,0.5)"
             style={styles.input}
             value={username}
             onChangeText={setUsername}
-            accessibilityLabel="Nom d'utilisateur"
+            accessibilityLabel={t("username")}
             autoComplete="username"
             testID="username-input"
           />
-          {/* Champ: Mot de passe */}
           <View style={styles.passwordContainer}>
             <TextInput
-              placeholder="Mot de passe"
+              placeholder={t("passwordPlaceholder")}
               placeholderTextColor="rgba(50,50,50,0.5)"
               style={[styles.input, styles.passwordInput]}
               value={password}
               onChangeText={setPassword}
               secureTextEntry={!showPassword}
-              accessibilityLabel="Mot de passe"
+              accessibilityLabel={t("password")}
               autoComplete="new-password"
               testID="password-input"
             />
             <TouchableOpacity
               onPress={() => setShowPassword((prev) => !prev)}
-              accessibilityLabel={
-                showPassword
-                  ? "Cacher le mot de passe"
-                  : "Afficher le mot de passe"
-              }
+              accessibilityLabel={showPassword ? t("hidePassword") : t("showPassword")}
               style={styles.passwordIcon}
             >
               <Ionicons
@@ -291,26 +273,21 @@ export default function Register() {
               />
             </TouchableOpacity>
           </View>
-          {/* Champ: Confirmer le mot de passe */}
           <View style={styles.passwordContainer}>
             <TextInput
-              placeholder="Confirmer le mot de passe"
+              placeholder={t("confirmPassword")}
               placeholderTextColor="rgba(50,50,50,0.5)"
               style={[styles.input, styles.passwordInput]}
               value={confirmPassword}
               onChangeText={setConfirmPassword}
               secureTextEntry={!showConfirmPassword}
-              accessibilityLabel="Confirmer le mot de passe"
+              accessibilityLabel={t("confirmPassword")}
               autoComplete="new-password"
               testID="confirm-password-input"
             />
             <TouchableOpacity
               onPress={() => setShowConfirmPassword((prev) => !prev)}
-              accessibilityLabel={
-                showConfirmPassword
-                  ? "Cacher le mot de passe"
-                  : "Afficher le mot de passe"
-              }
+              accessibilityLabel={showConfirmPassword ? t("hidePassword") : t("showPassword")}
               style={styles.passwordIcon}
             >
               <Ionicons
@@ -322,30 +299,29 @@ export default function Register() {
           </View>
         </View>
 
-        {/* Footer : Bouton d'inscription et lien vers la connexion */}
         <View style={styles.footerContainer}>
           <TouchableOpacity
             style={[styles.registerButton, loading && styles.disabledButton]}
             onPress={handleRegister}
             disabled={loading}
-            accessibilityLabel="S'inscrire"
+            accessibilityLabel={t("signup")}
             accessibilityRole="button"
             testID="register-button"
           >
             {loading ? (
               <ActivityIndicator color={TEXT_COLOR} size="small" />
             ) : (
-              <Text style={styles.registerButtonText}>S'inscrire</Text>
+              <Text style={styles.registerButtonText}>{t("signup")}</Text>
             )}
           </TouchableOpacity>
-          <Text style={styles.loginText} accessibilityLabel="Connexion">
-            Déjà un compte ?{" "}
+          <Text style={styles.loginText} accessibilityLabel={t("login")}>
+            {t("alreadyHaveAccount")}{" "}
             <Text
               style={styles.loginLink}
               onPress={() => router.push("/login")}
               accessibilityRole="link"
             >
-              Connecte-toi ici
+              {t("loginHere")}
             </Text>
           </Text>
         </View>

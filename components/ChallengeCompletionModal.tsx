@@ -14,20 +14,22 @@ import { doc, onSnapshot } from "firebase/firestore";
 import { auth, db } from "../constants/firebase-config";
 import { useCurrentChallenges } from "../context/CurrentChallengesContext";
 import { Video, ResizeMode } from "expo-av";
+import { useTranslation } from "react-i18next";
 
 const { width } = Dimensions.get("window");
 
+// Phrases motivantes
 const motivationalPhrases = [
-  "Tu es incroyable !",
-  "Continue comme ça !",
-  "Le succès est à toi !",
-  "Chaque effort compte !",
-  "N'abandonne jamais !",
-  "Tu es sur la bonne voie !",
-  "L'excellence te sourit !",
-  "Garde la tête haute !",
-  "Ta persévérance paie !",
-  "Les défis te rendent plus fort !",
+  "completion.youAreAwesome",
+  "completion.keepItUp",
+  "completion.successIsYours",
+  "completion.everyEffortCounts",
+  "completion.neverGiveUp",
+  "completion.youAreOnTrack",
+  "completion.excellenceAwaits",
+  "completion.headHeldHigh",
+  "completion.persistencePays",
+  "completion.challengesMakeYouStronger",
 ];
 
 const baseReward = 5;
@@ -39,12 +41,13 @@ interface ChallengeCompletionModalProps {
   onClose: () => void;
 }
 
-const ChallengeCompletionModal: React.FC<ChallengeCompletionModalProps> = ({
+export default function ChallengeCompletionModal({
   visible,
   challengeId,
   selectedDays,
   onClose,
-}) => {
+}: ChallengeCompletionModalProps) {
+  const { t } = useTranslation();
   const [motivationalPhrase, setMotivationalPhrase] = useState("");
   const fadeAnim = useRef(new Animated.Value(0)).current;
   const scaleAnim = useRef(new Animated.Value(0.8)).current;
@@ -55,7 +58,6 @@ const ChallengeCompletionModal: React.FC<ChallengeCompletionModalProps> = ({
 
   const calculatedReward = Math.round(baseReward * (selectedDays / 7));
 
-  // Mise à jour en temps réel du nombre de trophées
   useEffect(() => {
     const userId = auth.currentUser?.uid;
     if (!userId) return;
@@ -71,10 +73,8 @@ const ChallengeCompletionModal: React.FC<ChallengeCompletionModalProps> = ({
 
   useEffect(() => {
     if (visible) {
-      const randomIndex = Math.floor(
-        Math.random() * motivationalPhrases.length
-      );
-      setMotivationalPhrase(motivationalPhrases[randomIndex]);
+      const idx = Math.floor(Math.random() * motivationalPhrases.length);
+      setMotivationalPhrase(motivationalPhrases[idx]);
 
       videoRef.current?.setPositionAsync(0);
       videoRef.current?.playAsync();
@@ -112,18 +112,17 @@ const ChallengeCompletionModal: React.FC<ChallengeCompletionModalProps> = ({
       scaleAnim.setValue(0.8);
       pulseAnim.setValue(1);
     }
-  }, [visible, fadeAnim, scaleAnim, pulseAnim]);
+  }, [visible]);
 
   const handleComplete = async (doubleReward: boolean) => {
     try {
       await completeChallenge(challengeId, selectedDays, doubleReward);
     } catch (error) {
-      console.error("Erreur lors de la finalisation du défi :", error);
+      console.error(t("completion.errorFinalizing"), error);
     }
     onClose();
   };
 
-  // Bouton stylisé avec dégradé orange, icône pour l'option pub
   const GradientButton = ({
     onPress,
     text,
@@ -133,11 +132,7 @@ const ChallengeCompletionModal: React.FC<ChallengeCompletionModalProps> = ({
     text: string;
     iconName?: keyof typeof Ionicons.glyphMap;
   }) => (
-    <TouchableOpacity
-      onPress={onPress}
-      activeOpacity={0.8}
-      style={styles.gradientButton}
-    >
+    <TouchableOpacity onPress={onPress} activeOpacity={0.8} style={styles.gradientButton}>
       <LinearGradient
         colors={["#FF9A2E", "#FEC163"]}
         start={{ x: 0, y: 0 }}
@@ -146,33 +141,22 @@ const ChallengeCompletionModal: React.FC<ChallengeCompletionModalProps> = ({
       >
         <View style={styles.buttonContent}>
           {iconName && (
-            <Ionicons
-              name={iconName}
-              size={20}
-              color="#fff"
-              style={styles.buttonIcon}
-            />
+            <Ionicons name={iconName} size={20} color="#fff" style={styles.buttonIcon} />
           )}
-          <Text style={styles.buttonGradientText}>{text}</Text>
+          <Text style={styles.buttonGradientText}>{t(text)}</Text>
         </View>
       </LinearGradient>
     </TouchableOpacity>
   );
 
   return (
-    <Modal
-      visible={visible}
-      transparent
-      animationType="fade"
-      onRequestClose={onClose}
-      statusBarTranslucent={true}
-    >
+    <Modal visible={visible} transparent animationType="fade" onRequestClose={onClose} statusBarTranslucent>
       <View style={styles.fullOverlay}>
-        <Animated.View
-          style={[styles.modalContainer, { transform: [{ scale: scaleAnim }] }]}
-        >
+        <Animated.View style={[styles.modalContainer, { transform: [{ scale: scaleAnim }] }]}>
           <View style={styles.trophyHeader}>
-            <Text style={styles.trophyHeaderText}>{userTrophies} Trophées</Text>
+            <Text style={styles.trophyHeaderText}>
+              {t("completion.trophies", { count: userTrophies })}
+            </Text>
           </View>
           <View style={styles.animationContainer}>
             <Video
@@ -185,29 +169,26 @@ const ChallengeCompletionModal: React.FC<ChallengeCompletionModalProps> = ({
               isMuted={false}
             />
           </View>
-          <Text style={styles.motivationalText}>{motivationalPhrase}</Text>
+          <Text style={styles.motivationalText}>{t(motivationalPhrase)}</Text>
           <Animated.View
-            style={[
-              styles.rewardContainer,
-              { opacity: fadeAnim, transform: [{ scale: pulseAnim }] },
-            ]}
+            style={[styles.rewardContainer, { opacity: fadeAnim, transform: [{ scale: pulseAnim }] }]}
           >
-            <Text style={styles.rewardText}>{calculatedReward} Trophées</Text>
+            <Text style={styles.rewardText}>
+              {t("completion.reward", { count: calculatedReward })}
+            </Text>
           </Animated.View>
-          <GradientButton
-            onPress={() => handleComplete(false)}
-            text="Continuer"
-          />
+          <GradientButton onPress={() => handleComplete(false)} text="completion.continue" />
           <GradientButton
             onPress={() => handleComplete(true)}
-            text="Doublez vos trophées"
+            text="completion.doubleTrophies"
             iconName="videocam-outline"
           />
         </Animated.View>
       </View>
     </Modal>
   );
-};
+}
+
 
 const styles = StyleSheet.create({
   fullOverlay: {
@@ -291,4 +272,3 @@ const styles = StyleSheet.create({
   },
 });
 
-export default ChallengeCompletionModal;

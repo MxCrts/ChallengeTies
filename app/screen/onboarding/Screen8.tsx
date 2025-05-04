@@ -15,21 +15,20 @@ import {
   Comfortaa_400Regular,
   Comfortaa_700Bold,
 } from "@expo-google-fonts/comfortaa";
-import {
-  SafeAreaView,
-  useSafeAreaInsets,
-} from "react-native-safe-area-context";
+import { SafeAreaView, useSafeAreaInsets } from "react-native-safe-area-context";
 import { StatusBar } from "expo-status-bar";
+import { useTranslation } from "react-i18next";
 
 const { width, height } = Dimensions.get("window");
 
 export default function Screen8() {
   const insets = useSafeAreaInsets();
+  const { t } = useTranslation();
   const [fontsLoaded] = useFonts({
     Comfortaa_400Regular,
     Comfortaa_700Bold,
   });
-  const videoRef = useRef(null);
+  const videoRef = useRef<any>(null);
   const fadeAnim = useRef(new Animated.Value(0)).current;
   const [isVideoPlaying, setIsVideoPlaying] = useState(true);
 
@@ -39,7 +38,7 @@ export default function Screen8() {
       duration: 1500,
       useNativeDriver: true,
     }).start();
-  }, []);
+  }, [fadeAnim]);
 
   if (!fontsLoaded) return null;
 
@@ -71,20 +70,23 @@ export default function Screen8() {
 
         {/* Animated Text Container */}
         <Animated.View style={[styles.textContainer, { opacity: fadeAnim }]}>
-          <Text style={styles.title}>Es-tu prêt à relever le défi ?</Text>
+          <Text style={styles.title}>
+            {t("screen8.readyQuestion")}
+          </Text>
           <Text style={styles.text}>
-            Ton aventure commence maintenant ! Lance-toi, progresse et rejoins
-            notre communauté inspirante.
+            {t("screen8.adventureStart")}
           </Text>
         </Animated.View>
 
-        {/* "Je suis Prêt" Button */}
+        {/* "I'm Ready" Button */}
         <Link href="/" asChild>
           <TouchableOpacity
             style={styles.readyButton}
-            accessibilityLabel="Démarrer l'application"
+            accessibilityLabel={t("screen8.startAppLabel")}
           >
-            <Text style={styles.readyButtonText}>Je suis Prêt</Text>
+            <Text style={styles.readyButtonText}>
+              {t("screen8.imReady")}
+            </Text>
           </TouchableOpacity>
         </Link>
       </View>

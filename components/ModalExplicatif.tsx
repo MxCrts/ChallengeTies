@@ -2,6 +2,7 @@ import React from "react";
 import { Modal, View, Text, TouchableOpacity, StyleSheet } from "react-native";
 import { Ionicons } from "@expo/vector-icons";
 import designSystem from "../theme/designSystem";
+import { useTranslation } from "react-i18next";
 
 const { lightTheme } = designSystem;
 const currentTheme = lightTheme; // Utilisation de votre palette
@@ -11,35 +12,25 @@ type ModalExplicatifProps = {
 };
 
 export default function ModalExplicatif({ onClose }: ModalExplicatifProps) {
+  const { t } = useTranslation();
+
   return (
     <Modal animationType="fade" transparent visible onRequestClose={onClose}>
       <View style={styles.overlay}>
         <View style={styles.modalContainer}>
-          <Text style={styles.title}>Votre avis compte !</Text>
-          <Text style={styles.message}>
-            Bienvenue sur la page des nouvelles fonctionnalités ! Ici, vous
-            pouvez contribuer à l’évolution de l’application.
-          </Text>
-          <Text style={styles.message}>Vous avez deux options :</Text>
-          <Text style={styles.message}>
-            • Voter pour une proposition existante proposée par un autre
-            utilisateur.
-          </Text>
-          <Text style={styles.message}>
-            • Proposer votre propre idée, qui sera ajoutée et votée dès votre
-            soumission.
-          </Text>
-          <Text style={styles.message}>
-            À la fin de la période de vote, la fonctionnalité avec le plus de
-            votes sera sélectionnée pour être implémentée rapidement.
-          </Text>
+          <Text style={styles.title}>{t("explanation.title")}</Text>
+          <Text style={styles.message}>{t("explanation.welcome")}</Text>
+          <Text style={styles.message}>{t("explanation.optionsIntro")}</Text>
+          <Text style={styles.message}>• {t("explanation.optionVote")}</Text>
+          <Text style={styles.message}>• {t("explanation.optionPropose")}</Text>
+          <Text style={styles.message}>{t("explanation.outcome")}</Text>
           <TouchableOpacity style={styles.closeButton} onPress={onClose}>
             <Ionicons
               name="checkmark-circle-outline"
               size={32}
               color={currentTheme.colors.cardBackground}
             />
-            <Text style={styles.closeButtonText}>J'ai compris</Text>
+            <Text style={styles.closeButtonText}>{t("explanation.understood")}</Text>
           </TouchableOpacity>
         </View>
       </View>

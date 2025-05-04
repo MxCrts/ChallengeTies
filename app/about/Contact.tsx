@@ -20,6 +20,7 @@ import { useTheme } from "../../context/ThemeContext";
 import { Theme } from "../../theme/designSystem";
 import designSystem from "../../theme/designSystem";
 import BackButton from "../../components/BackButton";
+import { useTranslation } from "react-i18next";
 
 const { width: SCREEN_WIDTH, height: SCREEN_HEIGHT } = Dimensions.get("window");
 const SPACING = 15;
@@ -30,33 +31,32 @@ const normalizeSize = (size: number) => {
 };
 
 export default function Contact() {
+  const { t } = useTranslation();
   const { theme } = useTheme();
   const isDarkMode = theme === "dark";
-  const currentTheme: Theme = isDarkMode ? designSystem.darkTheme : designSystem.lightTheme;
+  const currentTheme: Theme = isDarkMode
+    ? designSystem.darkTheme
+    : designSystem.lightTheme;
   const gradientColors: readonly [string, string] = [
     currentTheme.colors.background,
     currentTheme.colors.cardBackground,
   ] as const;
 
-  // États du formulaire
+  // form state
   const [name, setName] = useState("");
   const [email, setEmail] = useState("");
   const [message, setMessage] = useState("");
 
   const handleSendMessage = useCallback(() => {
     if (!name || !email || !message) {
-      Alert.alert("Erreur", "Veuillez remplir tous les champs.");
+      Alert.alert(t("contact.errorTitle"), t("contact.errorMessage"));
       return;
     }
-    // Ici, intégrer l'envoi effectif du message via une API si nécessaire
-    Alert.alert(
-      "Message envoyé",
-      "Nous vous répondrons dans les plus brefs délais !"
-    );
+    Alert.alert(t("contact.successTitle"), t("contact.successMessage"));
     setName("");
     setEmail("");
     setMessage("");
-  }, [name, email, message]);
+  }, [name, email, message, t]);
 
   return (
     <LinearGradient colors={gradientColors} style={styles.container}>
@@ -70,10 +70,9 @@ export default function Contact() {
           contentContainerStyle={styles.contentContainer}
           showsVerticalScrollIndicator={false}
         >
-          <BackButton
-            color={currentTheme.colors.secondary}
-          />
-          {/* Entête avec logo */}
+          <BackButton color={currentTheme.colors.secondary} />
+
+          {/* logo */}
           <Animated.View
             entering={FadeInUp.duration(800)}
             style={styles.logoContainer}
@@ -85,28 +84,29 @@ export default function Contact() {
             />
           </Animated.View>
 
-          {/* Titre principal */}
+          {/* title */}
           <Animated.Text
             entering={FadeInUp.delay(200)}
             style={[styles.title, { color: currentTheme.colors.textPrimary }]}
           >
-            Contactez-nous 📩
+            {t("contact.title")}
           </Animated.Text>
 
-          {/* Introduction */}
+          {/* intro */}
           <Animated.Text
             entering={FadeInUp.delay(300)}
             style={[styles.paragraph, { color: currentTheme.colors.textSecondary }]}
           >
-            Une question ? Un problème ? Une suggestion ? Nous sommes là pour vous
-            aider. N’hésitez pas à nous contacter via les canaux ci-dessous ou à
-            nous envoyer un message directement.
+            {t("contact.intro")}
           </Animated.Text>
 
           {/* Email */}
           <Animated.View
             entering={FadeInUp.delay(400)}
-            style={[styles.contactCard, { backgroundColor: currentTheme.colors.cardBackground }]}
+            style={[
+              styles.contactCard,
+              { backgroundColor: currentTheme.colors.cardBackground },
+            ]}
           >
             <Ionicons
               name="mail-outline"
@@ -117,26 +117,31 @@ export default function Contact() {
               <Text
                 style={[styles.sectionTitle, { color: currentTheme.colors.secondary }]}
               >
-                Email
+                {t("contact.emailSection")}
               </Text>
               <TouchableOpacity
-                onPress={() => Linking.openURL("mailto:support@challengeties.com")}
-                accessibilityLabel="Envoyer un email à support@challengeties.com"
+                onPress={() =>
+                  Linking.openURL("mailto:support@challengeties.com")
+                }
+                accessibilityLabel={t("contact.emailLinkLabel")}
                 testID="email-link"
               >
                 <Text
                   style={[styles.link, { color: currentTheme.colors.secondary }]}
                 >
-                  support@challengeties.com
+                  {t("contact.emailAddress")}
                 </Text>
               </TouchableOpacity>
             </View>
           </Animated.View>
 
-          {/* Téléphone */}
+          {/* Phone */}
           <Animated.View
             entering={FadeInUp.delay(500)}
-            style={[styles.contactCard, { backgroundColor: currentTheme.colors.cardBackground }]}
+            style={[
+              styles.contactCard,
+              { backgroundColor: currentTheme.colors.cardBackground },
+            ]}
           >
             <Ionicons
               name="call-outline"
@@ -147,17 +152,17 @@ export default function Contact() {
               <Text
                 style={[styles.sectionTitle, { color: currentTheme.colors.secondary }]}
               >
-                Téléphone
+                {t("contact.phoneSection")}
               </Text>
               <TouchableOpacity
                 onPress={() => Linking.openURL("tel:+33123456789")}
-                accessibilityLabel="Appeler le +33 1 23 45 67 89"
+                accessibilityLabel={t("contact.phoneLinkLabel")}
                 testID="phone-link"
               >
                 <Text
                   style={[styles.link, { color: currentTheme.colors.secondary }]}
                 >
-                  +33 1 23 45 67 89
+                  {t("contact.phoneNumber")}
                 </Text>
               </TouchableOpacity>
             </View>
@@ -166,7 +171,10 @@ export default function Contact() {
           {/* Instagram */}
           <Animated.View
             entering={FadeInUp.delay(600)}
-            style={[styles.contactCard, { backgroundColor: currentTheme.colors.cardBackground }]}
+            style={[
+              styles.contactCard,
+              { backgroundColor: currentTheme.colors.cardBackground },
+            ]}
           >
             <Ionicons
               name="logo-instagram"
@@ -177,19 +185,19 @@ export default function Contact() {
               <Text
                 style={[styles.sectionTitle, { color: currentTheme.colors.secondary }]}
               >
-                Instagram
+                {t("contact.instagramSection")}
               </Text>
               <TouchableOpacity
                 onPress={() =>
                   Linking.openURL("https://www.instagram.com/challengeties")
                 }
-                accessibilityLabel="Visiter notre page Instagram @challengeties"
+                accessibilityLabel={t("contact.instagramLinkLabel")}
                 testID="instagram-link"
               >
                 <Text
                   style={[styles.link, { color: currentTheme.colors.secondary }]}
                 >
-                  @challengeties
+                  {t("contact.instagramHandle")}
                 </Text>
               </TouchableOpacity>
             </View>
@@ -198,7 +206,10 @@ export default function Contact() {
           {/* Facebook */}
           <Animated.View
             entering={FadeInUp.delay(700)}
-            style={[styles.contactCard, { backgroundColor: currentTheme.colors.cardBackground }]}
+            style={[
+              styles.contactCard,
+              { backgroundColor: currentTheme.colors.cardBackground },
+            ]}
           >
             <Ionicons
               name="logo-facebook"
@@ -209,19 +220,19 @@ export default function Contact() {
               <Text
                 style={[styles.sectionTitle, { color: currentTheme.colors.secondary }]}
               >
-                Facebook
+                {t("contact.facebookSection")}
               </Text>
               <TouchableOpacity
                 onPress={() =>
                   Linking.openURL("https://www.facebook.com/challengeties")
                 }
-                accessibilityLabel="Visiter notre page Facebook @challengeties"
+                accessibilityLabel={t("contact.facebookLinkLabel")}
                 testID="facebook-link"
               >
                 <Text
                   style={[styles.link, { color: currentTheme.colors.secondary }]}
                 >
-                  @challengeties
+                  {t("contact.facebookHandle")}
                 </Text>
               </TouchableOpacity>
             </View>
@@ -230,7 +241,10 @@ export default function Contact() {
           {/* WhatsApp */}
           <Animated.View
             entering={FadeInUp.delay(800)}
-            style={[styles.contactCard, { backgroundColor: currentTheme.colors.cardBackground }]}
+            style={[
+              styles.contactCard,
+              { backgroundColor: currentTheme.colors.cardBackground },
+            ]}
           >
             <Ionicons
               name="logo-whatsapp"
@@ -241,23 +255,23 @@ export default function Contact() {
               <Text
                 style={[styles.sectionTitle, { color: currentTheme.colors.secondary }]}
               >
-                WhatsApp
+                {t("contact.whatsappSection")}
               </Text>
               <TouchableOpacity
                 onPress={() => Linking.openURL("https://wa.me/123456789")}
-                accessibilityLabel="Nous contacter via WhatsApp"
+                accessibilityLabel={t("contact.whatsappLinkLabel")}
                 testID="whatsapp-link"
               >
                 <Text
                   style={[styles.link, { color: currentTheme.colors.secondary }]}
                 >
-                  Nous contacter sur WhatsApp
+                  {t("contact.whatsappText")}
                 </Text>
               </TouchableOpacity>
             </View>
           </Animated.View>
 
-          {/* Formulaire de contact */}
+          {/* Contact Form */}
           <Animated.View
             entering={FadeInUp.delay(1000)}
             style={[styles.contactForm, { backgroundColor: currentTheme.colors.overlay }]}
@@ -265,7 +279,7 @@ export default function Contact() {
             <Text
               style={[styles.sectionTitle, { color: currentTheme.colors.secondary }]}
             >
-              Envoyez-nous un message
+              {t("contact.formTitle")}
             </Text>
             <TextInput
               style={[
@@ -276,12 +290,11 @@ export default function Contact() {
                   color: currentTheme.colors.textPrimary,
                 },
               ]}
-              placeholder="Votre nom"
+              placeholder={t("contact.namePlaceholder")}
               placeholderTextColor={currentTheme.colors.textSecondary}
               value={name}
               onChangeText={setName}
-              accessibilityLabel="Champ pour votre nom"
-              accessibilityHint="Entrez votre nom complet"
+              accessibilityLabel={t("contact.nameA11y")}
               testID="name-input"
             />
             <TextInput
@@ -293,13 +306,12 @@ export default function Contact() {
                   color: currentTheme.colors.textPrimary,
                 },
               ]}
-              placeholder="Votre email"
+              placeholder={t("contact.emailPlaceholder")}
               placeholderTextColor={currentTheme.colors.textSecondary}
               keyboardType="email-address"
               value={email}
               onChangeText={setEmail}
-              accessibilityLabel="Champ pour votre email"
-              accessibilityHint="Entrez votre adresse email"
+              accessibilityLabel={t("contact.emailA11y")}
               testID="email-input"
             />
             <TextInput
@@ -312,31 +324,30 @@ export default function Contact() {
                   color: currentTheme.colors.textPrimary,
                 },
               ]}
-              placeholder="Votre message"
+              placeholder={t("contact.messagePlaceholder")}
               placeholderTextColor={currentTheme.colors.textSecondary}
               multiline
               numberOfLines={4}
               value={message}
               onChangeText={setMessage}
-              accessibilityLabel="Champ pour votre message"
-              accessibilityHint="Entrez votre message ou question"
+              accessibilityLabel={t("contact.messageA11y")}
               testID="message-input"
             />
             <TouchableOpacity
               style={[styles.button, { backgroundColor: currentTheme.colors.secondary }]}
               onPress={handleSendMessage}
-              accessibilityLabel="Envoyer le message"
+              accessibilityLabel={t("contact.sendButtonA11y")}
               testID="send-button"
             >
               <Text
                 style={[styles.buttonText, { color: currentTheme.colors.textPrimary }]}
               >
-                Envoyer
+                {t("contact.sendButton")}
               </Text>
             </TouchableOpacity>
           </Animated.View>
 
-          {/* Message final */}
+          {/* Final message */}
           <Animated.View
             entering={FadeInUp.delay(1100)}
             style={[styles.footer, { backgroundColor: currentTheme.colors.overlay }]}
@@ -344,12 +355,7 @@ export default function Contact() {
             <Text
               style={[styles.footerText, { color: currentTheme.colors.textPrimary }]}
             >
-              Nous vous répondrons dans les plus brefs délais. Merci de faire
-              confiance à{" "}
-              <Text style={[styles.boldText, { color: currentTheme.colors.textPrimary }]}>
-                ChallengeTies
-              </Text>{" "}
-              ! 🚀
+              {t("contact.footerMessage")}
             </Text>
           </Animated.View>
         </ScrollView>

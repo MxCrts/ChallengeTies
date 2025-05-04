@@ -1,4 +1,4 @@
-import React, { useEffect, useState, useCallback } from "react";
+import React, { useEffect, useState } from "react";
 import {
   View,
   Text,
@@ -8,7 +8,6 @@ import {
   StyleSheet,
   SafeAreaView,
   TouchableOpacity,
-  StatusBar,
 } from "react-native";
 import { Ionicons } from "@expo/vector-icons";
 import { doc, onSnapshot } from "firebase/firestore";
@@ -16,63 +15,30 @@ import { LinearGradient } from "expo-linear-gradient";
 import Animated, { FadeInUp } from "react-native-reanimated";
 import { db, auth } from "../../constants/firebase-config";
 import { useTrophy } from "../../context/TrophyContext";
-import { useTheme } from "../../context/ThemeContext";
-import { Theme } from "../../theme/designSystem";
 import { achievementsList } from "../../helpers/achievementsConfig";
 import designSystem from "../../theme/designSystem";
 import CustomHeader from "@/components/CustomHeader";
+import { useTranslation } from "react-i18next";
 
 const { width: SCREEN_WIDTH, height: SCREEN_HEIGHT } = Dimensions.get("window");
-const SPACING = 15;
+const normalizeSize = (size: number) =>
+  Math.round(size * (SCREEN_WIDTH / 375));
 
-const normalizeSize = (size: number) => Math.round(size * (SCREEN_WIDTH / 375));
-
-const achievementDescriptions = {
-  finishChallenge_1: "Termine ton premier défi avec brio.",
-  finishChallenge_3: "Complète 3 défis et montre ta détermination.",
-  finishChallenge_10: "Atteins 10 défis pour prouver ton sérieux.",
-  finishChallenge_25: "25 défis terminés : t’es une machine !",
-  finishChallenge_50: "50 défis : personne ne t’arrête !",
-  finishChallenge_100: "100 défis : une légende est née.",
-  selectChallengeDays_7: "Lance-toi dans un défi de 7 jours.",
-  selectChallengeDays_30: "Engage-toi sur 30 jours de challenge.",
-  selectChallengeDays_90: "90 jours : un marathonien est en toi.",
-  selectChallengeDays_180: "180 jours de défi, un vrai warrior.",
-  selectChallengeDays_365: "Un an de défi : patience légendaire.",
-  streakProgress_3: "3 jours consécutifs : bon début !",
-  streakProgress_7: "7 jours de suite : t’es en feu !",
-  streakProgress_14: "14 jours consécutifs : impressionnant.",
-  streakProgress_30: "30 jours de streak : discipline de fer.",
-  streakProgress_60: "60 jours : rien ne te résiste.",
-  streakProgress_90: "90 jours : une machine unstoppable.",
-  streakProgress_180: "180 jours consécutifs : discipline ultime.",
-  streakProgress_365: "365 jours : t’es un monstre !",
-  messageSent_1: "Envoie ton premier message dans le chat.",
-  messageSent_10: "10 messages : l’esprit d’équipe est là.",
-  messageSent_50: "50 messages : ambassadeur de la communauté.",
-  shareChallenge_1: "Partage un défi pour la première fois.",
-  shareChallenge_5: "5 partages : influenceur en herbe.",
-  shareChallenge_20: "20 partages : leader incontesté.",
-  inviteFriend_1: "Invite ton premier pote à rejoindre.",
-  inviteFriend_5: "5 invitations : élargis ton crew.",
-  inviteFriend_10: "10 amis invités : roi du réseau.",
-  voteFeature_1: "Vote pour une idée pour la première fois.",
-  voteFeature_5: "5 votes : fais entendre ta voix.",
-  saveChallenge_1: "Sauvegarde ton premier défi.",
-  saveChallenge_5: "5 défis sauvés : collectionneur aguerri.",
-  challengeCreated_1: "Crée ton premier défi personnalisé.",
-  challengeCreated_5: "5 défis créés : esprit créatif.",
-  challengeCreated_10: "10 défis créés : innovateur de génie.",
-  first_connection: "Première connexion : bienvenue !",
-  profile_completed: "Profil complété : t’es prêt à briller.",
+const currentTheme = {
+  ...designSystem.lightTheme,
+  colors: {
+    ...designSystem.lightTheme.colors,
+    primary: "#FF6200",
+    accent: "#FFD700",
+    background: "#FFF3E0",
+    card: "#FFFFFF",
+  },
 };
 
 interface Achievement {
   id: string;
   identifier: string;
-  name: string;
   trophies: number;
-  description: string;
   isClaimable: boolean;
   isCompleted: boolean;
 }
@@ -83,51 +49,60 @@ interface AchievementSection {
   index: number;
 }
 
-const groupAchievements = (achievement: Achievement) => {
-  const id = achievement.identifier;
-  if (id === "first_connection" || id === "profile_completed") return "Débuts";
-  if (id.startsWith("finishChallenge_")) return "Défis Terminés";
-  if (id.startsWith("selectChallengeDays_")) return "Engagement";
-  if (id.startsWith("streakProgress_")) return "Série de Feu";
-  if (id.startsWith("messageSent_")) return "Communication";
-  if (id.startsWith("shareChallenge_")) return "Partage";
-  if (id.startsWith("inviteFriend_")) return "Réseau";
-  if (id.startsWith("voteFeature_")) return "Influence";
-  if (id.startsWith("saveChallenge_")) return "Collection";
-  if (id.startsWith("challengeCreated_")) return "Création";
-  return "Divers";
+const groupAchievements = (identifier: string) => {
+  if (identifier === "first_connection" || identifier === "profile_completed")
+    return "débuts";
+  if (identifier.startsWith("finishChallenge_")) return "defisTermines";
+  if (identifier.startsWith("selectChallengeDays_")) return "engagement";
+  if (identifier.startsWith("streakProgress_")) return "serieDeFeu";
+  if (identifier.startsWith("messageSent_")) return "communication";
+  if (identifier.startsWith("shareChallenge_")) return "partage";
+  if (identifier.startsWith("inviteFriend_")) return "reseau";
+  if (identifier.startsWith("voteFeature_")) return "influence";
+  if (identifier.startsWith("saveChallenge_")) return "collection";
+  if (identifier.startsWith("challengeCreated_")) return "creation";
+  return "divers";
 };
 
-const getIconForGroup = (group: string) => {
-  switch (group) {
-    case "Débuts": return "star";
-    case "Défis Terminés": return "trophy";
-    case "Engagement": return "calendar";
-    case "Série de Feu": return "flame";
-    case "Communication": return "chatbubbles";
-    case "Partage": return "share-social";
-    case "Réseau": return "people";
-    case "Influence": return "thumbs-up";
-    case "Collection": return "bookmark";
-    case "Création": return "brush";
-    default: return "ribbon";
+const getIconForGroup = (groupKey: string) => {
+  switch (groupKey) {
+    case "débuts":
+      return "star";
+    case "defisTermines":
+      return "trophy";
+    case "engagement":
+      return "calendar";
+    case "serieDeFeu":
+      return "flame";
+    case "communication":
+      return "chatbubbles";
+    case "partage":
+      return "share-social";
+    case "reseau":
+      return "people";
+    case "influence":
+      return "thumbs-up";
+    case "collection":
+      return "bookmark";
+    case "creation":
+      return "brush";
+    default:
+      return "ribbon";
   }
 };
 
 const descendingGroups = new Set([
-  "Défis Terminés",
-  "Engagement",
-  "Série de Feu",
-  "Création",
+  "defisTermines",
+  "engagement",
+  "serieDeFeu",
+  "creation",
 ]);
 
-const AchievementsScreen = () => {
+export default function AchievementsScreen() {
+  const { t } = useTranslation();
   const [sections, setSections] = useState<AchievementSection[]>([]);
   const [loading, setLoading] = useState(true);
   const { setTrophyData } = useTrophy();
-  const { theme } = useTheme();
-  const isDarkMode = theme === "dark";
-  const currentTheme: Theme = isDarkMode ? designSystem.darkTheme : designSystem.lightTheme;
 
   useEffect(() => {
     const userId = auth.currentUser?.uid;
@@ -135,81 +110,69 @@ const AchievementsScreen = () => {
       setLoading(false);
       return;
     }
-
-    const userRef = doc(db, "users", userId);
-    const unsubscribe = onSnapshot(userRef, (snapshot) => {
-      const data = snapshot.data();
-      if (!data) return;
-
+    const unsubscribe = onSnapshot(doc(db, "users", userId), (snapshot) => {
+      const data = snapshot.data() || {};
       const obtained = new Set(data.achievements || []);
       const pending = new Set(data.newAchievements || []);
-      const formattedAchievements: Achievement[] = [];
+      const formatted: Achievement[] = [];
 
-      Object.entries(achievementsList).forEach(([key, value]) => {
-        if ("name" in value && "points" in value) {
-          const identifier = key;
-          formattedAchievements.push({
-            id: identifier,
-            identifier,
-            name: value.name,
-            trophies: value.points,
-            description: achievementDescriptions[identifier] || "Succès mystère.",
-            isClaimable: pending.has(identifier),
-            isCompleted: obtained.has(identifier),
+      Object.entries(achievementsList).forEach(([key, val]) => {
+        if ("name" in val && "points" in val) {
+          formatted.push({
+            id: key,
+            identifier: key,
+            trophies: (val as any).points,
+            isClaimable: pending.has(key),
+            isCompleted: obtained.has(key),
           });
         } else {
-          Object.entries(value).forEach(([subKey, subValue]) => {
-            const identifier = `${key}_${subKey}`;
-            formattedAchievements.push({
-              id: identifier,
-              identifier,
-              name: subValue.name,
-              trophies: subValue.points,
-              description: achievementDescriptions[identifier] || "Nouveau défi !",
-              isClaimable: pending.has(identifier),
-              isCompleted: obtained.has(identifier),
-            });
-          });
+          Object.entries(val as Record<string,{name:string;points:number}>).forEach(
+            ([subKey, subVal]) => {
+              const id = `${key}_${subKey}`;
+              formatted.push({
+                id,
+                identifier: id,
+                trophies: subVal.points,
+                isClaimable: pending.has(id),
+                isCompleted: obtained.has(id),
+              });
+            }
+          );
         }
       });
 
-      const groupedAchievements: { [key: string]: Achievement[] } = {};
-      formattedAchievements.forEach((ach) => {
-        const group = groupAchievements(ach);
-        if (!groupedAchievements[group]) groupedAchievements[group] = [];
-        groupedAchievements[group].push(ach);
+      const grouped: Record<string, Achievement[]> = {};
+      formatted.forEach((ach) => {
+        const grp = groupAchievements(ach.identifier);
+        grouped[grp] = grouped[grp] || [];
+        grouped[grp].push(ach);
       });
 
-      const sortedSections = Object.entries(groupedAchievements)
-        .map(([title, data], index) => {
+      const secs = Object.entries(grouped)
+        .map(([title, data], idx) => {
           data.sort((a, b) =>
             descendingGroups.has(title)
               ? b.trophies - a.trophies
-              : a.name.localeCompare(b.name)
+              : t(a.identifier).localeCompare(t(b.identifier))
           );
-          return { title, data, index };
+          return { title, data, index: idx };
         })
         .sort((a, b) =>
-          a.title === "Débuts"
+          a.title === "débuts"
             ? -1
-            : b.title === "Débuts"
+            : b.title === "débuts"
             ? 1
-            : a.title.localeCompare(b.title)
+            : t(`sections.${a.title}`).localeCompare(t(`sections.${b.title}`))
         );
 
-      setSections(sortedSections);
+      setSections(secs);
       setLoading(false);
     });
-
     return () => unsubscribe();
-  }, []);
+  }, [t]);
 
-  const handleClaimAchievement = useCallback((achievement: Achievement) => {
-    setTrophyData(achievement.trophies, achievement.identifier);
-  }, [setTrophyData]);
-
-  const totalAchievements = sections.reduce((sum, s) => sum + s.data.length, 0);
-  const completedAchievements = sections.reduce(
+  const total = sections.reduce((sum, s) => sum + s.data.length, 0);
+  const done = sections.reduce(
     (sum, s) => sum + s.data.filter((a) => a.isCompleted).length,
     0
   );
@@ -217,52 +180,39 @@ const AchievementsScreen = () => {
   if (loading) {
     return (
       <SafeAreaView style={styles.safeArea}>
-        <StatusBar
-          translucent
-          backgroundColor="transparent"
-          barStyle={isDarkMode ? "light-content" : "dark-content"}
-        />
         <LinearGradient
-          colors={[currentTheme.colors.background, currentTheme.colors.cardBackground]}
+          colors={["#FFF3E0", "#FFE8CC"]}
           style={styles.loadingContainer}
-          start={{ x: 0, y: 0 }}
-          end={{ x: 1, y: 1 }}
         >
-          <ActivityIndicator size="large" color={currentTheme.colors.secondary} />
-          <Text style={[styles.loadingText, { color: currentTheme.colors.textPrimary }]}>
-            Chargement...
-          </Text>
+          <ActivityIndicator
+            size="large"
+            color={currentTheme.colors.primary}
+          />
+          <Text style={styles.loadingText}>{t("loading")}</Text>
         </LinearGradient>
       </SafeAreaView>
     );
   }
 
-  if (!sections.length) {
+  if (sections.length === 0) {
     return (
       <SafeAreaView style={styles.safeArea}>
-        <StatusBar
-          translucent
-          backgroundColor="transparent"
-          barStyle={isDarkMode ? "light-content" : "dark-content"}
-        />
         <LinearGradient
-          colors={[currentTheme.colors.background, currentTheme.colors.cardBackground]}
+          colors={["#FFF3E0", "#FFE8CC"]}
           style={styles.emptyContainer}
-          start={{ x: 0, y: 0 }}
-          end={{ x: 1, y: 1 }}
         >
           <Animated.View entering={FadeInUp.duration(400)}>
-            <CustomHeader title="Succès" />
+            <CustomHeader title={t("yourAchievements")} />
             <Ionicons
               name="trophy-outline"
               size={normalizeSize(80)}
-              color={currentTheme.colors.secondary}
+              color={currentTheme.colors.primary}
             />
-            <Text style={[styles.emptyTitle, { color: currentTheme.colors.textPrimary }]}>
-              Pas encore de succès
+            <Text style={styles.emptyTitle}>
+              {t("noAchievementsYet")}
             </Text>
-            <Text style={[styles.emptySubtitle, { color: currentTheme.colors.textSecondary }]}>
-              Relève des défis pour tes premiers trophées !
+            <Text style={styles.emptySubtitle}>
+              {t("firstAchievementsPrompt")}
             </Text>
           </Animated.View>
         </LinearGradient>
@@ -272,50 +222,45 @@ const AchievementsScreen = () => {
 
   return (
     <SafeAreaView style={styles.safeArea}>
-      <StatusBar
-        translucent
-        backgroundColor="transparent"
-        barStyle={isDarkMode ? "light-content" : "dark-content"}
-      />
       <LinearGradient
-        colors={[currentTheme.colors.background, currentTheme.colors.cardBackground]}
+        colors={["#FFF3E0", "#FFE8CC"]}
         style={styles.container}
         start={{ x: 0, y: 0 }}
         end={{ x: 1, y: 1 }}
       >
-        <CustomHeader title="Succès" />
+        <CustomHeader title={t("yourAchievements")} />
         <View style={styles.progressBar}>
-          <Text style={[styles.progressText, { color: currentTheme.colors.textPrimary }]}>
-            {completedAchievements} / {totalAchievements} Trophées
+          <Text style={styles.progressText}>
+            {t("trophiesProgress", { completed: done, total })}
           </Text>
         </View>
         <SectionList
           sections={sections}
           keyExtractor={(item) => item.id}
           renderSectionHeader={({ section }) => {
-            const { title, data, index } = section;
-            const completed = data.filter((a) => a.isCompleted).length;
+            const completedCount = section.data.filter((a) => a.isCompleted).length;
             return (
               <Animated.View
-                entering={FadeInUp.delay(index * 150)}
+                entering={FadeInUp.delay(section.index * 150)}
                 style={styles.sectionHeader}
               >
                 <LinearGradient
-                  colors={[currentTheme.colors.secondary, currentTheme.colors.primary]}
+                  colors={[currentTheme.colors.primary, "#FF8C00"]}
                   style={styles.sectionGradient}
-                  start={{ x: 0, y: 0 }}
-                  end={{ x: 1, y: 1 }}
                 >
                   <Ionicons
-                    name={getIconForGroup(title)}
+                    name={getIconForGroup(section.title)}
                     size={normalizeSize(22)}
-                    color={currentTheme.colors.textPrimary}
+                    color="#FFF"
                   />
-                  <Text style={[styles.sectionTitle, { color: currentTheme.colors.textPrimary }]}>
-                    {title}
+                  <Text style={styles.sectionTitle}>
+                    {t(`sections.${section.title}`)}
                   </Text>
-                  <Text style={[styles.sectionCount, { color: currentTheme.colors.textPrimary }]}>
-                    {completed}/{data.length}
+                  <Text style={styles.sectionCount}>
+                    {t("sectionCount", {
+                      completed: completedCount,
+                      total: section.data.length,
+                    })}
                   </Text>
                 </LinearGradient>
               </Animated.View>
@@ -328,12 +273,12 @@ const AchievementsScreen = () => {
             >
               <TouchableOpacity
                 activeOpacity={0.9}
-                onPress={() => item.isClaimable && handleClaimAchievement(item)}
-                accessibilityLabel={item.isClaimable ? `Réclamer ${item.name}` : item.isCompleted ? `${item.name} débloqué` : `${item.name} en cours`}
-                testID={`achievement-${item.id}`}
+                onPress={() =>
+                  item.isClaimable && setTrophyData(item.trophies, item.identifier)
+                }
               >
                 <LinearGradient
-                  colors={[currentTheme.colors.cardBackground, currentTheme.colors.background]}
+                  colors={["#FFFFFF", "#FFF8E6"]}
                   style={styles.card}
                   start={{ x: 0, y: 0 }}
                   end={{ x: 1, y: 1 }}
@@ -345,56 +290,51 @@ const AchievementsScreen = () => {
                         size={normalizeSize(48)}
                         color={
                           item.isCompleted
-                            ? currentTheme.colors.trophy
+                            ? currentTheme.colors.accent
                             : item.isClaimable
-                            ? currentTheme.colors.secondary
-                            : currentTheme.colors.textSecondary
+                            ? currentTheme.colors.primary
+                            : "#CCC"
                         }
                       />
-                      <Text style={[styles.trophies, { color: currentTheme.colors.textPrimary }]}>
-                        {item.trophies}
-                      </Text>
+                      <Text style={styles.trophies}>{item.trophies}</Text>
                     </View>
                     <View style={styles.details}>
                       <Text
                         style={[
                           styles.cardTitle,
-                          { color: currentTheme.colors.textPrimary },
                           item.isCompleted && styles.completed,
-                          item.isClaimable && { color: currentTheme.colors.secondary },
+                          item.isClaimable && styles.claimable,
                         ]}
                       >
-                        {item.name}
+                        {t(item.identifier, { defaultValue: item.identifier })}
                       </Text>
-                      <Text style={[styles.cardDescription, { color: currentTheme.colors.textSecondary }]}>
-                        {item.description}
+                      <Text style={styles.cardDescription}>
+                        {t(`descriptions.${item.identifier}`, {
+                          defaultValue: t(item.identifier),
+                        })}
                       </Text>
                     </View>
                     <View style={styles.action}>
                       {item.isClaimable ? (
                         <LinearGradient
-                          colors={[currentTheme.colors.secondary, currentTheme.colors.primary]}
+                          colors={[currentTheme.colors.primary, "#FF8C00"]}
                           style={styles.buttonGradient}
-                          start={{ x: 0, y: 0 }}
-                          end={{ x: 1, y: 1 }}
                         >
-                          <Text style={[styles.buttonText, { color: currentTheme.colors.textPrimary }]}>
-                            Réclamer
+                          <Text style={styles.buttonText}>
+                            {t("claim")}
                           </Text>
                         </LinearGradient>
                       ) : item.isCompleted ? (
-                        <Text style={[styles.completedText, { color: currentTheme.colors.trophy }]}>
-                          Débloqué
+                        <Text style={styles.completedText}>
+                          {t("unlocked")}
                         </Text>
                       ) : (
                         <LinearGradient
-                          colors={[currentTheme.colors.overlay, currentTheme.colors.border]}
+                          colors={["#DDD", "#BBB"]}
                           style={styles.buttonGradient}
-                          start={{ x: 0, y: 0 }}
-                          end={{ x: 1, y: 1 }}
                         >
-                          <Text style={[styles.buttonText, { color: currentTheme.colors.textSecondary }]}>
-                            En cours
+                          <Text style={styles.buttonText}>
+                            {t("inProgress")}
                           </Text>
                         </LinearGradient>
                       )}
@@ -406,75 +346,110 @@ const AchievementsScreen = () => {
           )}
           contentContainerStyle={styles.listContent}
           showsVerticalScrollIndicator={false}
-          initialNumToRender={10}
-          windowSize={5}
         />
       </LinearGradient>
     </SafeAreaView>
   );
-};
+}
 
 const styles = StyleSheet.create({
   safeArea: {
     flex: 1,
+    backgroundColor: currentTheme.colors.background,
   },
   container: {
     flex: 1,
   },
+  loadingContainer: {
+    flex: 1,
+    justifyContent: "center",
+    alignItems: "center",
+  },
+  loadingText: {
+    marginTop: normalizeSize(12),
+    fontSize: normalizeSize(16),
+    color: currentTheme.colors.primary,
+    fontFamily: currentTheme.typography.body.fontFamily,
+  },
+  emptyContainer: {
+    flex: 1,
+    justifyContent: "center",
+    alignItems: "center",
+  },
+  emptyTitle: {
+    fontSize: normalizeSize(22),
+    fontFamily: currentTheme.typography.title.fontFamily,
+    color: currentTheme.colors.primary,
+    marginTop: normalizeSize(20),
+    textAlign: "center",
+  },
+  emptySubtitle: {
+    fontSize: normalizeSize(16),
+    color: "#666",
+    fontFamily: currentTheme.typography.body.fontFamily,
+    textAlign: "center",
+    marginTop: normalizeSize(10),
+    maxWidth: SCREEN_WIDTH * 0.7,
+  },
   progressBar: {
     alignItems: "center",
-    marginVertical: SPACING,
+    marginVertical: normalizeSize(15),
   },
   progressText: {
     fontSize: normalizeSize(16),
-    fontFamily: "Comfortaa_700Bold",
-  },
-  listContent: {
-    paddingHorizontal: SPACING,
-    paddingBottom: SCREEN_HEIGHT * 0.1,
+    fontFamily: currentTheme.typography.body.fontFamily,
+    color: currentTheme.colors.primary,
+    fontWeight: "700",
   },
   sectionHeader: {
-    marginBottom: SPACING / 2,
+    marginBottom: SCREEN_WIDTH * 0.03,
   },
   sectionGradient: {
     flexDirection: "row",
     alignItems: "center",
     justifyContent: "space-between",
     paddingVertical: normalizeSize(10),
-    paddingHorizontal: SPACING,
+    paddingHorizontal: normalizeSize(15),
     borderRadius: normalizeSize(12),
-    shadowColor: "#000",
-    shadowOffset: { width: 0, height: normalizeSize(2) },
-    shadowOpacity: 0.2,
-    shadowRadius: normalizeSize(4),
     elevation: 3,
+    shadowColor: "#000",
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.2,
+    shadowRadius: 4,
   },
   sectionTitle: {
     flex: 1,
     fontSize: normalizeSize(18),
-    fontFamily: "Comfortaa_700Bold",
-    marginLeft: SPACING / 2,
+    fontFamily: currentTheme.typography.title.fontFamily,
+    color: "#FFF",
+    marginLeft: normalizeSize(10),
+    fontWeight: "bold",
   },
   sectionCount: {
     fontSize: normalizeSize(14),
-    fontFamily: "Comfortaa_400Regular",
+    color: "#FFF",
+    fontFamily: currentTheme.typography.body.fontFamily,
     opacity: 0.9,
   },
+  listContent: {
+    paddingHorizontal: SCREEN_WIDTH * 0.04,
+    paddingBottom: SCREEN_HEIGHT * 0.1,
+  },
   cardWrapper: {
-    marginBottom: SPACING / 2,
+    marginBottom: SCREEN_WIDTH * 0.03,
     alignItems: "center",
   },
   card: {
     width: SCREEN_WIDTH * 0.92,
-    padding: SPACING,
+    padding: normalizeSize(15),
     borderRadius: normalizeSize(18),
     borderWidth: 1,
-    borderColor: "transparent",
-    shadowColor: "#000",
-    shadowOffset: { width: 0, height: normalizeSize(3) },
-    shadowOpacity: 0.25,
-    shadowRadius: normalizeSize(5),
+    borderColor: "#FF620010",
     elevation: 5,
+    shadowColor: "#000",
+    shadowOffset: { width: 0, height: 3 },
+    shadowOpacity: 0.25,
+    shadowRadius: 5,
   },
   cardContent: {
     flexDirection: "row",
@@ -488,74 +463,57 @@ const styles = StyleSheet.create({
   },
   trophies: {
     fontSize: normalizeSize(12),
-    fontFamily: "Comfortaa_700Bold",
+    color: currentTheme.colors.primary,
+    fontFamily: currentTheme.typography.title.fontFamily,
+    fontWeight: "600",
     marginTop: normalizeSize(4),
   },
   details: {
     flex: 1,
-    marginHorizontal: SPACING / 2,
+    marginHorizontal: normalizeSize(10),
   },
   cardTitle: {
     fontSize: normalizeSize(15),
-    fontFamily: "Comfortaa_700Bold",
+    fontFamily: currentTheme.typography.title.fontFamily,
+    color: "#333",
+    fontWeight: "bold",
   },
   completed: {
+    color: currentTheme.colors.accent,
     textDecorationLine: "line-through",
+  },
+  claimable: {
+    color: currentTheme.colors.primary,
   },
   cardDescription: {
     fontSize: normalizeSize(11),
-    fontFamily: "Comfortaa_400Regular",
+    color: "#666",
+    fontFamily: currentTheme.typography.body.fontFamily,
     marginTop: normalizeSize(4),
   },
   action: {
-    width: SCREEN_WIDTH * 0.28, // Agrandi pour éviter le débordement
+    width: SCREEN_WIDTH * 0.22,
     alignItems: "center",
     justifyContent: "center",
   },
   buttonGradient: {
     paddingVertical: normalizeSize(6),
-    paddingHorizontal: SPACING * 1.5, // Plus d'espace horizontal
+    paddingHorizontal: normalizeSize(10),
     borderRadius: normalizeSize(8),
     alignItems: "center",
     justifyContent: "center",
   },
   buttonText: {
-    fontSize: normalizeSize(10), // Réduit pour tenir sur une ligne
-    fontFamily: "Comfortaa_700Bold",
+    fontSize: normalizeSize(11),
+    color: "#FFF",
+    fontFamily: currentTheme.typography.title.fontFamily,
+    fontWeight: "600",
     textAlign: "center",
   },
   completedText: {
-    fontSize: normalizeSize(10),
-    fontFamily: "Comfortaa_700Bold",
-  },
-  loadingContainer: {
-    flex: 1,
-    justifyContent: "center",
-    alignItems: "center",
-  },
-  loadingText: {
-    marginTop: SPACING,
-    fontSize: normalizeSize(16),
-    fontFamily: "Comfortaa_400Regular",
-  },
-  emptyContainer: {
-    flex: 1,
-    justifyContent: "center",
-    alignItems: "center",
-  },
-  emptyTitle: {
-    fontSize: normalizeSize(22),
-    fontFamily: "Comfortaa_700Bold",
-    marginTop: SPACING,
-    textAlign: "center",
-  },
-  emptySubtitle: {
-    fontSize: normalizeSize(16),
-    fontFamily: "Comfortaa_400Regular",
-    textAlign: "center",
-    marginTop: SPACING / 2,
-    maxWidth: SCREEN_WIDTH * 0.7,
+    fontSize: normalizeSize(11),
+    color: currentTheme.colors.accent,
+    fontFamily: currentTheme.typography.title.fontFamily,
+    fontWeight: "600",
   },
 });
-
-export default AchievementsScreen;

@@ -516,7 +516,7 @@ export default function Settings() {
                 <TouchableOpacity
                   onPress={() => router.push(path)}
                   accessibilityLabel={t(
-                    ["aboutChallengeTies", "privacyPolicy", "contactUs"][
+                    ["aboutChallengeTies", "privacyPolicyPage", "contactUs"][
                       index
                     ]
                   )}
@@ -526,7 +526,7 @@ export default function Settings() {
                     {t(
                       [
                         "aboutChallengeTies",
-                        "privacyPolicy",
+                        "privacyPolicyPage",
                         "contactUs",
                       ][index]
                     )}

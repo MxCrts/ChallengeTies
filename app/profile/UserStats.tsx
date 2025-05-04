@@ -20,8 +20,9 @@ import { useTheme } from "../../context/ThemeContext";
 import { Theme } from "../../theme/designSystem";
 import designSystem from "../../theme/designSystem";
 import CustomHeader from "@/components/CustomHeader";
+import { useTranslation } from "react-i18next";
 
-// Constante SPACING pour cohérence avec new-features.tsx, leaderboard.tsx, UserInfo.tsx
+// Constante SPACING pour cohérence
 const SPACING = 15;
 
 const { width: SCREEN_WIDTH, height: SCREEN_HEIGHT } = Dimensions.get("window");
@@ -50,6 +51,7 @@ interface Challenge {
 }
 
 export default function UserStats() {
+  const { t } = useTranslation();
   const { savedChallenges } = useSavedChallenges();
   const { currentChallenges } = useCurrentChallenges();
   const [stats, setStats] = useState<Stat[]>([]);
@@ -92,43 +94,47 @@ export default function UserStats() {
 
     const newStats: Stat[] = [
       {
-        name: "Défis sauvegardés",
+        name: t("savedChallenges"),
         value: totalSaved,
         icon: "bookmark-outline",
       },
       {
-        name: "Défis en cours",
+        name: t("ongoingChallenges"),
         value: totalOngoing,
         icon: "hourglass-outline",
       },
       {
-        name: "Défis complétés",
+        name: t("completedChallenges"),
         value: totalCompleted,
         icon: "trophy-outline",
       },
       {
-        name: "Taux de réussite",
+        name: t("successRate"),
         value: `${successRate}%`,
         icon: "stats-chart-outline",
       },
-      { name: "Trophées", value: trophies, icon: "medal-outline" },
       {
-        name: "Succès débloqués",
+        name: t("trophies"),
+        value: trophies,
+        icon: "medal-outline",
+      },
+      {
+        name: t("unlockedAchievements"),
         value: achievementsUnlocked,
         icon: "ribbon-outline",
       },
       {
-        name: "Série la plus longue",
-        value: `${longestStreak} jours`,
+        name: t("longestStreak"),
+        value: `${longestStreak} ${t("days")}`,
         icon: "flame-outline",
       },
     ];
     setStats(newStats);
-  }, [savedChallenges, currentChallenges, userDoc]);
+  }, [savedChallenges, currentChallenges, userDoc, t]);
 
   const renderStat = ({ item, index }: { item: Stat; index: number }) => (
     <Animated.View
-      entering={FadeInUp.delay(index * 50)} // Délai réduit
+      entering={FadeInUp.delay(index * 50)}
       style={styles.statCardWrapper}
     >
       <LinearGradient
@@ -142,7 +148,7 @@ export default function UserStats() {
         >
           <Ionicons
             name={item.icon}
-            size={normalizeSize(36)} // Réduit pour responsivité
+            size={normalizeSize(36)}
             color={currentTheme.colors.secondary}
             accessibilityLabel={`Icône pour ${item.name}`}
           />
@@ -150,13 +156,11 @@ export default function UserStats() {
         <View style={styles.statContent}>
           <Text
             style={[styles.statName, { color: currentTheme.colors.textPrimary }]}
-            accessibilityLabel={`Nom de la statistique : ${item.name}`}
           >
             {item.name}
           </Text>
           <Text
             style={[styles.statValue, { color: currentTheme.colors.secondary }]}
-            accessibilityLabel={`Valeur de la statistique : ${item.value}`}
           >
             {item.value}
           </Text>
@@ -168,20 +172,14 @@ export default function UserStats() {
   if (isLoading) {
     return (
       <SafeAreaView style={styles.safeArea}>
-        <StatusBar
-          translucent={true}
-          backgroundColor="transparent"
-          barStyle={isDarkMode ? "light-content" : "dark-content"}
-        />
+        <StatusBar translucent backgroundColor="transparent" barStyle={isDarkMode ? "light-content" : "dark-content"} />
         <LinearGradient
           colors={[currentTheme.colors.background, currentTheme.colors.cardBackground]}
           style={styles.loadingContainer}
         >
           <ActivityIndicator size="large" color={currentTheme.colors.secondary} />
-          <Text
-            style={[styles.loadingText, { color: currentTheme.colors.textPrimary }]}
-          >
-            Chargement en cours...
+          <Text style={[styles.loadingText, { color: currentTheme.colors.textPrimary }]}>
+            {t("loadingProfile")}
           </Text>
         </LinearGradient>
       </SafeAreaView>
@@ -191,25 +189,17 @@ export default function UserStats() {
   if (!userDoc) {
     return (
       <SafeAreaView style={styles.safeArea}>
-        <StatusBar
-          translucent={true}
-          backgroundColor="transparent"
-          barStyle={isDarkMode ? "light-content" : "dark-content"}
-        />
+        <StatusBar translucent backgroundColor="transparent" barStyle={isDarkMode ? "light-content" : "dark-content"} />
         <LinearGradient
           colors={[currentTheme.colors.background, currentTheme.colors.cardBackground]}
           style={styles.emptyContainer}
         >
           <Animated.View entering={FadeInUp.delay(100)}>
-            <Text
-              style={[styles.emptyText, { color: currentTheme.colors.textPrimary }]}
-            >
-              Impossible de charger vos données
+            <Text style={[styles.emptyText, { color: currentTheme.colors.textPrimary }]}>
+              {t("profileLoadError")}
             </Text>
-            <Text
-              style={[styles.emptySubtext, { color: currentTheme.colors.textSecondary }]}
-            >
-              Veuillez vérifier votre connexion et réessayer.
+            <Text style={[styles.emptySubtext, { color: currentTheme.colors.textSecondary }]}>
+              {t("tryAgain")}
             </Text>
           </Animated.View>
         </LinearGradient>
@@ -219,11 +209,7 @@ export default function UserStats() {
 
   return (
     <SafeAreaView style={styles.safeArea}>
-      <StatusBar
-        translucent={true}
-        backgroundColor="transparent"
-        barStyle={isDarkMode ? "light-content" : "dark-content"}
-      />
+      <StatusBar translucent backgroundColor="transparent" barStyle={isDarkMode ? "light-content" : "dark-content"} />
       <LinearGradient
         colors={[currentTheme.colors.background, `${currentTheme.colors.cardBackground}F0`]}
         style={styles.container}
@@ -231,7 +217,7 @@ export default function UserStats() {
         end={{ x: 1, y: 1 }}
       >
         <View style={styles.headerWrapper}>
-          <CustomHeader title="Vos Statistiques" />
+          <CustomHeader title={t("statistics")} />
         </View>
         <FlatList
           data={stats}
@@ -239,15 +225,12 @@ export default function UserStats() {
           keyExtractor={(item) => item.name}
           contentContainerStyle={styles.listContainer}
           showsVerticalScrollIndicator={false}
-          initialNumToRender={7} // Nombre de stats
+          initialNumToRender={7}
           getItemLayout={(data, index) => ({
             length: normalizeSize(90),
             offset: normalizeSize(90) * index,
             index,
           })}
-          accessibilityRole="list"
-          accessibilityLabel="Liste des statistiques utilisateur"
-          testID="stats-list"
         />
       </LinearGradient>
     </SafeAreaView>
@@ -264,7 +247,7 @@ const styles = StyleSheet.create({
   listContainer: {
     paddingVertical: SPACING,
     paddingHorizontal: SPACING / 2,
-    paddingBottom: SPACING * 2, // Réduit pour responsivité
+    paddingBottom: SPACING * 2,
   },
   statCardWrapper: {
     marginBottom: SPACING,
@@ -283,22 +266,20 @@ const styles = StyleSheet.create({
     overflow: "hidden",
   },
   iconContainer: {
-    width: normalizeSize(50), // Réduit pour responsivité
+    width: normalizeSize(50),
     height: normalizeSize(50),
     borderRadius: normalizeSize(25),
     justifyContent: "center",
     alignItems: "center",
     marginRight: SPACING,
   },
-  statContent: {
-    flex: 1,
-  },
+  statContent: { flex: 1 },
   statName: {
     fontSize: normalizeSize(16),
     fontFamily: "Comfortaa_400Regular",
   },
   statValue: {
-    fontSize: normalizeSize(18), // Réduit légèrement
+    fontSize: normalizeSize(18),
     fontFamily: "Comfortaa_700Bold",
   },
   loadingContainer: {

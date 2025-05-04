@@ -28,6 +28,8 @@ import { Theme } from "../../theme/designSystem";
 import CustomHeader from "@/components/CustomHeader";
 import GlobalLayout from "../../components/GlobalLayout";
 import designSystem from "../../theme/designSystem";
+import { useTranslation } from "react-i18next";
+
 
 const { width: SCREEN_WIDTH, height: SCREEN_HEIGHT } = Dimensions.get("window");
 
@@ -54,8 +56,27 @@ interface Challenge {
   chatId: string;
 }
 
-const ExploreHeader = React.memo(
-  ({
+interface ExploreHeaderProps {
+  searchQuery: string;
+  categoryFilter: string;
+  originFilter: string;
+  availableCategories: string[];
+  onSearchChange: (text: string) => void;
+  onResetFilters: () => void;
+  onCategorySelect: (cat: string) => void;
+  onOriginToggle: () => void;
+  onToggleCategoryModal: () => void;
+  isCategoryModalVisible: boolean;
+  onCloseCategoryModal: () => void;
+  currentTheme: Theme;
+}
+
+export const ExploreHeader = React.memo((props: ExploreHeaderProps) => {
+  const {
+    t,
+    i18n
+  } = useTranslation();
+  const {
     searchQuery,
     categoryFilter,
     originFilter,
@@ -68,24 +89,17 @@ const ExploreHeader = React.memo(
     isCategoryModalVisible,
     onCloseCategoryModal,
     currentTheme,
-  }: {
-    searchQuery: string;
-    categoryFilter: string;
-    originFilter: string;
-    availableCategories: string[];
-    onSearchChange: (text: string) => void;
-    onResetFilters: () => void;
-    onCategorySelect: (cat: string) => void;
-    onOriginToggle: () => void;
-    onToggleCategoryModal: () => void;
-    isCategoryModalVisible: boolean;
-    onCloseCategoryModal: () => void;
-    currentTheme: Theme;
-  }) => (
+  } = props;
+
+  // For re-render on language change
+  useEffect(() => {}, [i18n.language]);
+
+  return (
     <Animated.View entering={FadeInUp.delay(100)} style={styles.headerContent}>
       <View style={styles.headerWrapper}>
-        <CustomHeader title="Explore les Défis" />
+        <CustomHeader title={t("exploreChallenges")} />
       </View>
+
       <View
         style={[
           styles.searchContainer,
@@ -103,17 +117,18 @@ const ExploreHeader = React.memo(
         />
         <TextInput
           style={[styles.searchBar, { color: currentTheme.colors.textPrimary }]}
-          placeholder="Rechercher un défi..."
+          placeholder={t("searchChallenge")}
           placeholderTextColor={currentTheme.colors.textSecondary}
           value={searchQuery}
           onChangeText={onSearchChange}
           returnKeyType="search"
           autoCorrect={false}
           blurOnSubmit={false}
-          accessibilityLabel="Rechercher un défi"
+          accessibilityLabel={t("searchChallenges")}
           testID="search-input"
         />
       </View>
+
       <View style={styles.filtersWrapper}>
         <View style={styles.filtersContainer}>
           <TouchableOpacity
@@ -122,7 +137,7 @@ const ExploreHeader = React.memo(
               { backgroundColor: currentTheme.colors.secondary },
             ]}
             onPress={onOriginToggle}
-            accessibilityLabel={`Filtrer par ${originFilter}`}
+            accessibilityLabel={t("filterByOrigin", { origin: t(originFilter) })}
             testID="origin-filter-button"
           >
             <Ionicons
@@ -136,16 +151,17 @@ const ExploreHeader = React.memo(
                 { color: currentTheme.colors.textPrimary },
               ]}
             >
-              {originFilter}
+              {t(originFilter)}
             </Text>
           </TouchableOpacity>
+
           <TouchableOpacity
             style={[
               styles.filterButton,
               { backgroundColor: currentTheme.colors.secondary },
             ]}
             onPress={onToggleCategoryModal}
-            accessibilityLabel="Choisir une catégorie"
+            accessibilityLabel={t("chooseCategory")}
             testID="category-filter-button"
           >
             <Ionicons
@@ -159,17 +175,20 @@ const ExploreHeader = React.memo(
                 { color: currentTheme.colors.textPrimary },
               ]}
             >
-              {categoryFilter === "All" ? "Catégorie" : capitalize(categoryFilter)}
+              {categoryFilter === "All"
+                ? t("categoryFilter")
+                : t(`categories.${categoryFilter}`)}
             </Text>
           </TouchableOpacity>
         </View>
+
         <TouchableOpacity
           style={[
             styles.resetButton,
             { backgroundColor: currentTheme.colors.primary },
           ]}
           onPress={onResetFilters}
-          accessibilityLabel="Réinitialiser les filtres"
+          accessibilityLabel={t("resetFilters")}
           testID="reset-filters-button"
         >
           <Ionicons
@@ -179,6 +198,7 @@ const ExploreHeader = React.memo(
           />
         </TouchableOpacity>
       </View>
+
       <Modal
         visible={isCategoryModalVisible}
         transparent
@@ -206,11 +226,11 @@ const ExploreHeader = React.memo(
                   { color: currentTheme.colors.textPrimary },
                 ]}
               >
-                Choisir une catégorie
+                {t("chooseCategory")}
               </Text>
               <TouchableOpacity
                 onPress={onCloseCategoryModal}
-                accessibilityLabel="Fermer la modal"
+                accessibilityLabel={t("closeModal")}
                 testID="close-modal-button"
               >
                 <Ionicons
@@ -220,6 +240,7 @@ const ExploreHeader = React.memo(
                 />
               </TouchableOpacity>
             </View>
+
             <ScrollView
               showsVerticalScrollIndicator={false}
               keyboardShouldPersistTaps="handled"
@@ -232,7 +253,9 @@ const ExploreHeader = React.memo(
                     { borderBottomColor: currentTheme.colors.border },
                   ]}
                   onPress={() => onCategorySelect(cat)}
-                  accessibilityLabel={`Sélectionner la catégorie ${cat}`}
+                  accessibilityLabel={t("selectCategory", {
+                    category: t(`categories.${cat}`),
+                  })}
                   testID={`category-item-${cat}`}
                 >
                   <Ionicons
@@ -247,7 +270,7 @@ const ExploreHeader = React.memo(
                       { color: currentTheme.colors.textPrimary },
                     ]}
                   >
-                    {capitalize(cat)}
+                    {t(`categories.${cat}`)}
                   </Text>
                 </TouchableOpacity>
               ))}
@@ -256,8 +279,9 @@ const ExploreHeader = React.memo(
         </TouchableOpacity>
       </Modal>
     </Animated.View>
-  )
-);
+  );
+});
+
 
 export default function ExploreScreen() {
   const [challenges, setChallenges] = useState<Challenge[]>([]);

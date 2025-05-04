@@ -16,6 +16,7 @@ import { useTheme } from "../../context/ThemeContext";
 import { Theme } from "../../theme/designSystem";
 import designSystem from "../../theme/designSystem";
 import BackButton from "../../components/BackButton";
+import { useTranslation } from "react-i18next";
 
 const { width: SCREEN_WIDTH, height: SCREEN_HEIGHT } = Dimensions.get("window");
 const SPACING = 15;
@@ -26,9 +27,12 @@ const normalizeSize = (size: number) => {
 };
 
 export default function History() {
+  const { t } = useTranslation();
   const { theme } = useTheme();
   const isDarkMode = theme === "dark";
-  const currentTheme: Theme = isDarkMode ? designSystem.darkTheme : designSystem.lightTheme;
+  const currentTheme: Theme = isDarkMode
+    ? designSystem.darkTheme
+    : designSystem.lightTheme;
 
   return (
     <LinearGradient
@@ -49,12 +53,12 @@ export default function History() {
         >
           {/* Header avec BackButton */}
           <View style={styles.headerWrapper}>
-          <BackButton color={currentTheme.colors.secondary} />
+            <BackButton color={currentTheme.colors.secondary} />
             <Animated.Text
               entering={FadeInUp.duration(600)}
               style={[styles.title, { color: currentTheme.colors.textPrimary }]}
             >
-              Notre Histoire
+              {t("history.title")}
             </Animated.Text>
           </View>
 
@@ -73,6 +77,7 @@ export default function History() {
                 source={require("../../assets/images/Challenge.png")}
                 style={styles.logo}
                 resizeMode="contain"
+                accessibilityLabel={t("history.logoAlt")}
               />
             </LinearGradient>
           </Animated.View>
@@ -81,38 +86,38 @@ export default function History() {
           <Animated.View entering={FadeInUp.delay(400)} style={styles.card}>
             <Text style={[styles.paragraph, { color: currentTheme.colors.textSecondary }]}>
               <Text style={[styles.boldText, { color: currentTheme.colors.textPrimary }]}>
-                ChallengeTies
+                {t("appName")}
               </Text>{" "}
-              est né d'une vision puissante : unir les individus dans un élan collectif pour
-              se surpasser et atteindre leurs objectifs. Dans un monde saturé de
-              distractions, nous avons créé une plateforme inspirante où chaque défi est une
-              opportunité de devenir plus fort, plus résilient et de découvrir son potentiel
-              caché.
+              {t("history.intro")}
             </Text>
           </Animated.View>
 
           {/* Fonctionnalités clés */}
           <Animated.View entering={FadeInUp.delay(600)} style={styles.card}>
             <Text style={[styles.subtitle, { color: currentTheme.colors.secondary }]}>
-              Nos Fonctionnalités Clés 🔥
+              {t("history.featuresTitle")}
             </Text>
-            <Text style={[styles.paragraph, { color: currentTheme.colors.textSecondary }]}>
+            <View>
               {[
                 {
                   icon: "flame-outline" as const,
-                  text: "Défis Spéciaux : Des challenges uniques qui stimulent votre détermination, comme '30 jours sans sucre' ou 'Méditation quotidienne'.",
+                  titleKey: "history.features.specialChallenges.title",
+                  descKey: "history.features.specialChallenges.desc",
                 },
                 {
                   icon: "checkmark-circle-outline" as const,
-                  text: "Suivi de Progression : Des outils interactifs pour visualiser et célébrer chaque étape de votre parcours.",
+                  titleKey: "history.features.progressTracking.title",
+                  descKey: "history.features.progressTracking.desc",
                 },
                 {
                   icon: "create-outline" as const,
-                  text: "Défis Personnalisés : La possibilité de créer vos propres challenges, adaptés à vos aspirations.",
+                  titleKey: "history.features.customChallenges.title",
+                  descKey: "history.features.customChallenges.desc",
                 },
                 {
                   icon: "people-outline" as const,
-                  text: "Communauté Engagée : Un réseau de personnes partageant les mêmes valeurs, toujours prêtes à vous soutenir.",
+                  titleKey: "history.features.community.title",
+                  descKey: "history.features.community.desc",
                 },
               ].map((item, index) => (
                 <View key={index} style={styles.featureItem}>
@@ -126,85 +131,62 @@ export default function History() {
                     style={[styles.featureText, { color: currentTheme.colors.textSecondary }]}
                   >
                     <Text style={[styles.boldText, { color: currentTheme.colors.textPrimary }]}>
-                      {item.text.split(":")[0]}
+                      {t(item.titleKey)}
                     </Text>
-                    : {item.text.split(":")[1]}
+                    {` ${t(item.descKey)}`}
                   </Text>
                 </View>
               ))}
-            </Text>
+            </View>
           </Animated.View>
 
           {/* Notre Motivation */}
           <Animated.View entering={FadeInUp.delay(800)} style={styles.card}>
             <Text style={[styles.subtitle, { color: currentTheme.colors.secondary }]}>
-              Notre Motivation 🚀
+              {t("history.motivationTitle")}
             </Text>
             <Text style={[styles.paragraph, { color: currentTheme.colors.textSecondary }]}>
-              Nous croyons fermement que chaque individu possède un potentiel
-              extraordinaire. ChallengeTies fournit les outils et l'inspiration nécessaires
-              pour oser se lancer, surmonter les obstacles et transformer les rêves en
-              réalité. Ensemble, nous formons une communauté soudée où chaque victoire,
-              petite ou grande, est célébrée.
+              {t("history.motivation")}
             </Text>
           </Animated.View>
 
           {/* Le Sens du Logo */}
           <Animated.View entering={FadeInUp.delay(1000)} style={styles.card}>
             <Text style={[styles.subtitle, { color: currentTheme.colors.secondary }]}>
-              Le Sens du Logo 🎨
+              {t("history.logoMeaningTitle")}
             </Text>
             <Text style={[styles.paragraph, { color: currentTheme.colors.textSecondary }]}>
-              Le logo{" "}
-              <Text style={[styles.boldText, { color: currentTheme.colors.textPrimary }]}>
-                ChallengeTies
-              </Text>{" "}
-              incarne l'union, la croissance et l'énergie. Ses formes dynamiques illustrent
-              les parcours multiples et interconnectés des challenges, tandis que ses
-              couleurs vibrantes symbolisent la passion et l'action. Il représente non
-              seulement l'identité de l'application, mais aussi l'ambition collective de se
-              dépasser.
+              {t("history.logoMeaning")}
             </Text>
           </Animated.View>
 
           {/* Notre Vision */}
           <Animated.View entering={FadeInUp.delay(1200)} style={styles.card}>
             <Text style={[styles.subtitle, { color: currentTheme.colors.secondary }]}>
-              Notre Vision 🌍
+              {t("history.visionTitle")}
             </Text>
             <Text style={[styles.paragraph, { color: currentTheme.colors.textSecondary }]}>
-              Nous ne sommes pas uniquement une application, nous sommes un mouvement.
-              ChallengeTies rassemble une communauté passionnée où chaque défi rapproche
-              chacun de la meilleure version de soi-même. Ensemble, nous créons un avenir
-              où la réussite est partagée et chaque victoire inspire de nouvelles
-              ambitions.
+              {t("history.vision")}
             </Text>
           </Animated.View>
 
           {/* Les Débuts */}
           <Animated.View entering={FadeInUp.delay(1400)} style={styles.card}>
             <Text style={[styles.subtitle, { color: currentTheme.colors.secondary }]}>
-              Les Débuts 📅
+              {t("history beginningsTitle")}
             </Text>
             <Text style={[styles.paragraph, { color: currentTheme.colors.textSecondary }]}>
-              L'aventure ChallengeTies a commencé modestement, avec une petite équipe
-              passionnée et une idée simple : transformer les obstacles quotidiens en
-              opportunités de croissance. Des discussions animées, des premières
-              itérations et des tests sur le terrain ont posé les bases d'une plateforme
-              qui révolutionne l'approche des défis personnels.
+              {t("history.beginnings")}
             </Text>
           </Animated.View>
 
           {/* L'Engagement Communautaire */}
           <Animated.View entering={FadeInUp.delay(1600)} style={styles.card}>
             <Text style={[styles.subtitle, { color: currentTheme.colors.secondary }]}>
-              L'Engagement Communautaire 🤝
+              {t("history.communityEngagementTitle")}
             </Text>
             <Text style={[styles.paragraph, { color: currentTheme.colors.textSecondary }]}>
-              Dès le départ, la force de ChallengeTies a été sa communauté. Des milliers
-              d'utilisateurs se sont réunis pour se soutenir mutuellement, partager leurs
-              réussites et relever ensemble de nouveaux défis. Cet engagement collectif est
-              le moteur de notre évolution et continue d'inspirer chaque innovation.
+              {t("history.communityEngagement")}
             </Text>
           </Animated.View>
 
@@ -220,9 +202,9 @@ export default function History() {
                 style={[styles.footerText, { color: currentTheme.colors.textPrimary }]}
               >
                 <Text style={[styles.boldText, { color: currentTheme.colors.textPrimary }]}>
-                  Merci de faire partie de cette aventure !
+                  {t("history.finalThanksTitle")}
                 </Text>{" "}
-                ChallengeTies est votre allié pour transformer chaque défi en une victoire.
+                {t("history.finalThanksMessage")}
               </Text>
             </LinearGradient>
           </Animated.View>

@@ -5,10 +5,10 @@ import {
   Text,
   TouchableOpacity,
   StyleSheet,
-  FlatList,
 } from "react-native";
 import { Ionicons } from "@expo/vector-icons";
 import designSystem from "../theme/designSystem";
+import { useTranslation } from "react-i18next";
 
 const currentTheme = designSystem.lightTheme;
 
@@ -21,14 +21,14 @@ interface Day {
 interface StatsModalProps {
   visible: boolean;
   onClose: () => void;
-  monthName: string;
+  monthName: string;            // already translated month
   currentYearNum: number;
   calendarDays: (Day | null)[];
   goToPrevMonth: () => void;
   goToNextMonth: () => void;
 }
 
-const StatsModal: React.FC<StatsModalProps> = ({
+export default function StatsModal({
   visible,
   onClose,
   monthName,
@@ -36,7 +36,12 @@ const StatsModal: React.FC<StatsModalProps> = ({
   calendarDays,
   goToPrevMonth,
   goToNextMonth,
-}) => {
+}: StatsModalProps) {
+  const { t } = useTranslation();
+
+  // translated weekday abbreviations
+  const weekDays = t("statsModal.weekdays", { returnObjects: true }) as string[];
+
   return (
     <Modal
       visible={visible}
@@ -46,34 +51,48 @@ const StatsModal: React.FC<StatsModalProps> = ({
     >
       <View style={styles.modalContainer}>
         <View style={styles.modalContent}>
+          {/* Header */}
           <View style={styles.statsModalHeader}>
-            <TouchableOpacity onPress={onClose}>
-              <Ionicons name="close" size={24} color="#fff" />
+            <TouchableOpacity
+              onPress={onClose}
+              accessibilityLabel={t("statsModal.close")}
+            >
+              <Ionicons name="close" size={24} color={currentTheme.colors.textPrimary} />
             </TouchableOpacity>
-            <Text style={styles.statsModalTitle}>
-              {monthName} {currentYearNum}
+            <Text style={[styles.statsModalTitle, { color: currentTheme.colors.textPrimary }]}>
+              {t("statsModal.title", { month: monthName, year: currentYearNum })}
             </Text>
             <View style={{ width: 24 }} />
           </View>
+
+          {/* Calendar grid */}
           <View style={styles.calendarContainer}>
             <View style={styles.weekDaysContainer}>
-              {["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"].map((day) => (
-                <Text key={day} style={styles.weekDay}>
-                  {day}
+              {weekDays.map((abbr) => (
+                <Text
+                  key={abbr}
+                  style={[styles.weekDay, { color: currentTheme.colors.textSecondary }]}
+                >
+                  {abbr}
                 </Text>
               ))}
             </View>
             <View style={styles.daysContainer}>
-              {calendarDays.map((day, index) => (
-                <View key={index} style={styles.dayWrapper}>
+              {calendarDays.map((day, idx) => (
+                <View key={idx} style={styles.dayWrapper}>
                   {day ? (
                     <View
                       style={[
                         styles.dayCircle,
                         day.completed && styles.dayCompleted,
+                        { borderColor: currentTheme.colors.border },
                       ]}
                     >
-                      <Text style={styles.dayText}>{day.day}</Text>
+                      <Text
+                        style={[styles.dayText, { color: currentTheme.colors.textPrimary }]}
+                      >
+                        {day.day}
+                      </Text>
                     </View>
                   ) : (
                     <View style={styles.emptyDay} />
@@ -82,19 +101,29 @@ const StatsModal: React.FC<StatsModalProps> = ({
               ))}
             </View>
           </View>
+
+          {/* Month navigation */}
           <View style={styles.statsModalFooter}>
-            <TouchableOpacity onPress={goToPrevMonth} style={styles.navButton}>
-              <Ionicons name="chevron-back" size={24} color="#fff" />
+            <TouchableOpacity
+              onPress={goToPrevMonth}
+              style={styles.navButton}
+              accessibilityLabel={t("statsModal.prevMonth")}
+            >
+              <Ionicons name="chevron-back" size={24} color={currentTheme.colors.textPrimary} />
             </TouchableOpacity>
-            <TouchableOpacity onPress={goToNextMonth} style={styles.navButton}>
-              <Ionicons name="chevron-forward" size={24} color="#fff" />
+            <TouchableOpacity
+              onPress={goToNextMonth}
+              style={styles.navButton}
+              accessibilityLabel={t("statsModal.nextMonth")}
+            >
+              <Ionicons name="chevron-forward" size={24} color={currentTheme.colors.textPrimary} />
             </TouchableOpacity>
           </View>
         </View>
       </View>
     </Modal>
   );
-};
+}
 
 const styles = StyleSheet.create({
   modalContainer: {
@@ -176,4 +205,3 @@ const styles = StyleSheet.create({
   },
 });
 
-export default StatsModal;

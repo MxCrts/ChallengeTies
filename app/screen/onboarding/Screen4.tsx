@@ -16,22 +16,21 @@ import {
   Comfortaa_400Regular,
   Comfortaa_700Bold,
 } from "@expo-google-fonts/comfortaa";
-import {
-  SafeAreaView,
-  useSafeAreaInsets,
-} from "react-native-safe-area-context";
+import { SafeAreaView, useSafeAreaInsets } from "react-native-safe-area-context";
 import { StatusBar } from "expo-status-bar";
+import { useTranslation } from "react-i18next";
 
 const { width, height } = Dimensions.get("window");
 const BUTTON_SIZE = 60;
 
 export default function Screen4() {
   const insets = useSafeAreaInsets();
+  const { t } = useTranslation();
   const [fontsLoaded] = useFonts({
     Comfortaa_400Regular,
     Comfortaa_700Bold,
   });
-  const videoRef = useRef(null);
+  const videoRef = useRef<any>(null);
   const fadeAnim = useRef(new Animated.Value(0)).current;
 
   useEffect(() => {
@@ -40,7 +39,7 @@ export default function Screen4() {
       duration: 1500,
       useNativeDriver: true,
     }).start();
-  }, []);
+  }, [fadeAnim]);
 
   if (!fontsLoaded) {
     return null;
@@ -81,12 +80,13 @@ export default function Screen4() {
           {/* Presentation Card */}
           <Animated.View style={[styles.card, { opacity: fadeAnim }]}>
             <Text style={styles.title}>
-              Suivez Votre Progression & Gagnez des{" "}
-              <Text style={styles.greenText}>Trophées</Text>
+              {t("screen4.titlePart1")}{" "}
+              <Text style={styles.greenText}>
+                {t("screen4.titleHighlight")}
+              </Text>
             </Text>
             <Text style={styles.text}>
-              Restez constant grâce au suivi quotidien. Débloquez des trophées
-              et des succès à chaque étape franchie.
+              {t("screen4.description")}
             </Text>
           </Animated.View>
 
@@ -94,7 +94,7 @@ export default function Screen4() {
           <Link href="/screen/onboarding/Screen5" asChild>
             <TouchableOpacity
               style={styles.nextButton}
-              accessibilityLabel="Continuer vers l'écran suivant"
+              accessibilityLabel={t("screen4.nextButtonLabel")}
             >
               <Ionicons name="arrow-forward" size={24} color="#333" />
             </TouchableOpacity>

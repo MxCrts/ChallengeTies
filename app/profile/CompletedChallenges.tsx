@@ -4,7 +4,6 @@ import {
   Text,
   FlatList,
   TouchableOpacity,
-  StyleSheet,
   ActivityIndicator,
   Image,
   Alert,
@@ -12,6 +11,7 @@ import {
   SafeAreaView,
   Modal,
   StatusBar,
+  StyleSheet,
 } from "react-native";
 import { Ionicons } from "@expo/vector-icons";
 import { useRouter } from "expo-router";
@@ -23,9 +23,10 @@ import { useTheme } from "../../context/ThemeContext";
 import { Theme } from "../../theme/designSystem";
 import designSystem from "../../theme/designSystem";
 import CustomHeader from "@/components/CustomHeader";
+import { useTranslation } from "react-i18next";
 
 const { width: SCREEN_WIDTH, height: SCREEN_HEIGHT } = Dimensions.get("window");
-const SPACING = 15; // Cohérent avec les autres pages
+const SPACING = 15;
 const ITEM_WIDTH = SCREEN_WIDTH * 0.9;
 const ITEM_HEIGHT = SCREEN_WIDTH * 0.45;
 const CARD_MARGIN = SCREEN_WIDTH * 0.02;
@@ -37,6 +38,7 @@ const normalizeSize = (size: number) => {
 
 interface CompletedChallenge {
   id: string;
+  chatId?: string;
   title: string;
   imageUrl?: string;
   completedAt: string;
@@ -47,9 +49,8 @@ interface CompletedChallenge {
 }
 
 export default function CompletedChallenges() {
-  const [completedChallenges, setCompletedChallenges] = useState<
-    CompletedChallenge[]
-  >([]);
+  const { t, i18n } = useTranslation();
+  const [completedChallenges, setCompletedChallenges] = useState<CompletedChallenge[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [historyModalVisible, setHistoryModalVisible] = useState(false);
   const [selectedHistory, setSelectedHistory] = useState<{
@@ -59,7 +60,9 @@ export default function CompletedChallenges() {
   const router = useRouter();
   const { theme } = useTheme();
   const isDarkMode = theme === "dark";
-  const currentTheme: Theme = isDarkMode ? designSystem.darkTheme : designSystem.lightTheme;
+  const currentTheme: Theme = isDarkMode
+    ? designSystem.darkTheme
+    : designSystem.lightTheme;
 
   useEffect(() => {
     const userId = auth.currentUser?.uid;
@@ -76,16 +79,30 @@ export default function CompletedChallenges() {
           const challenges = Array.isArray(userData.CompletedChallenges)
             ? userData.CompletedChallenges
             : [];
-          const mappedChallenges = challenges.map((c: any) => ({
-            id: c.id,
-            title: c.title || "Défi sans titre",
-            imageUrl: c.imageUrl || null,
-            completedAt: c.completedAt || "Date inconnue",
-            category: c.category || "Non catégorisé",
-            description: c.description || "Pas de description",
-            selectedDays: c.selectedDays || 0,
-            history: c.history || [],
-          }));
+          const mappedChallenges: CompletedChallenge[] = challenges.map((c: any) => {
+            // traductions
+            const titleTrans = c.chatId
+              ? t(`challenges.${c.chatId}.title`, { defaultValue: c.title })
+              : c.title || t("challengeSaved");
+            const descTrans = c.chatId
+              ? t(`challenges.${c.chatId}.description`, { defaultValue: c.description || "" })
+              : c.description || "";
+            const catTrans = c.category
+              ? t(`categories.${c.category}`, { defaultValue: c.category })
+              : t("noCategory");
+
+            return {
+              id: c.id,
+              chatId: c.chatId,
+              title: titleTrans,
+              imageUrl: c.imageUrl || null,
+              completedAt: c.completedAt || "",
+              category: catTrans,
+              description: descTrans,
+              selectedDays: c.selectedDays || 0,
+              history: c.history || [],
+            };
+          });
           setCompletedChallenges(mappedChallenges);
         } else {
           setCompletedChallenges([]);
@@ -93,14 +110,13 @@ export default function CompletedChallenges() {
         setIsLoading(false);
       },
       (error) => {
-        console.error("Erreur lors du chargement :", error);
-        Alert.alert("Erreur", "Impossible de charger les défis complétés.");
+        console.error(error);
+        Alert.alert(t("error"), t("errorLoadingCompletedChallenges"));
         setIsLoading(false);
       }
     );
-
     return () => unsubscribe();
-  }, []);
+  }, [t, i18n.language]);
 
   const navigateToChallengeDetails = useCallback(
     (item: CompletedChallenge) => {
@@ -109,34 +125,27 @@ export default function CompletedChallenges() {
         `?title=${encodeURIComponent(item.title)}` +
         `&selectedDays=${item.selectedDays}` +
         `&completedDays=${item.selectedDays}` +
-        `&category=${encodeURIComponent(item.category || "Uncategorized")}` +
+        `&category=${encodeURIComponent(item.category || t("noCategory"))}` +
         `&description=${encodeURIComponent(item.description || "")}` +
         `&imageUrl=${encodeURIComponent(item.imageUrl || "")}`;
       router.push(route as any);
     },
-    [router]
+    [router, t]
   );
 
   const openHistoryModal = useCallback((item: CompletedChallenge) => {
-    setSelectedHistory({
-      title: item.title,
-      history: item.history!,
-    });
+    setSelectedHistory({ title: item.title, history: item.history! });
     setHistoryModalVisible(true);
   }, []);
 
   const renderChallenge = useCallback(
     ({ item, index }: { item: CompletedChallenge; index: number }) => (
-      <Animated.View
-        entering={FadeInUp.delay(index * 100)}
-        style={styles.cardWrapper}
-      >
+      <Animated.View entering={FadeInUp.delay(index * 100)} style={styles.cardWrapper}>
         <TouchableOpacity
           style={styles.cardContainer}
           onPress={() => navigateToChallengeDetails(item)}
           activeOpacity={0.9}
-          accessibilityLabel={`Voir le défi ${item.title}`}
-          testID={`challenge-card-${index}`}
+          accessibilityLabel={t("viewChallenge", { title: item.title })}
         >
           <LinearGradient
             colors={[currentTheme.colors.cardBackground, currentTheme.colors.background]}
@@ -148,10 +157,12 @@ export default function CompletedChallenges() {
               <Image
                 source={{ uri: item.imageUrl }}
                 style={styles.cardImage}
-                accessibilityLabel={`Image du défi ${item.title}`}
+                accessibilityLabel={t("challengeImage", { title: item.title })}
               />
             ) : (
-              <View style={[styles.placeholderImage, { backgroundColor: currentTheme.colors.overlay }]}>
+              <View
+                style={[styles.placeholderImage, { backgroundColor: currentTheme.colors.overlay }]}
+              >
                 <Ionicons
                   name="image-outline"
                   size={normalizeSize(30)}
@@ -169,27 +180,23 @@ export default function CompletedChallenges() {
               <Text
                 style={[styles.challengeDate, { color: currentTheme.colors.textSecondary }]}
               >
-                Complété le{" "}
-                {new Date(item.completedAt).toLocaleDateString("fr-FR")}
+                {t("completedOn")} {new Date(item.completedAt).toLocaleDateString()}
               </Text>
               <Text
                 style={[styles.challengeCategory, { color: currentTheme.colors.textSecondary }]}
               >
-                {item.category || "Non catégorisé"}
+                {item.category}
               </Text>
               <View style={styles.progressContainer}>
-                <Text
-                  style={[styles.progressText, { color: currentTheme.colors.secondary }]}
-                >
-                  {item.selectedDays}/{item.selectedDays} jours
+                <Text style={[styles.progressText, { color: currentTheme.colors.secondary }]}>
+                  {item.selectedDays}/{item.selectedDays} {t("days")}
                 </Text>
               </View>
               {item.history && item.history.length > 0 && (
                 <TouchableOpacity
                   style={styles.historyButton}
                   onPress={() => openHistoryModal(item)}
-                  accessibilityLabel={`Voir l'historique de ${item.title}`}
-                  testID={`history-button-${item.id}`}
+                  accessibilityLabel={t("history")}
                 >
                   <LinearGradient
                     colors={[currentTheme.colors.secondary, currentTheme.colors.primary]}
@@ -200,7 +207,7 @@ export default function CompletedChallenges() {
                     <Text
                       style={[styles.historyButtonText, { color: currentTheme.colors.textPrimary }]}
                     >
-                      Historique
+                      {t("history")}
                     </Text>
                   </LinearGradient>
                 </TouchableOpacity>
@@ -210,7 +217,7 @@ export default function CompletedChallenges() {
         </TouchableOpacity>
       </Animated.View>
     ),
-    [navigateToChallengeDetails, openHistoryModal, currentTheme]
+    [navigateToChallengeDetails, openHistoryModal, currentTheme, t]
   );
 
   if (isLoading) {
@@ -224,14 +231,10 @@ export default function CompletedChallenges() {
         <LinearGradient
           colors={[currentTheme.colors.background, currentTheme.colors.cardBackground]}
           style={styles.loadingContainer}
-          start={{ x: 0, y: 0 }}
-          end={{ x: 1, y: 1 }}
         >
           <ActivityIndicator size="large" color={currentTheme.colors.secondary} />
-          <Text
-            style={[styles.loadingText, { color: currentTheme.colors.textPrimary }]}
-          >
-            Chargement en cours...
+          <Text style={[styles.loadingText, { color: currentTheme.colors.textPrimary }]}>
+            {t("loadingProfile")}
           </Text>
         </LinearGradient>
       </SafeAreaView>
@@ -249,27 +252,18 @@ export default function CompletedChallenges() {
         <LinearGradient
           colors={[currentTheme.colors.background, currentTheme.colors.cardBackground]}
           style={styles.noChallengesContainer}
-          start={{ x: 0, y: 0 }}
-          end={{ x: 1, y: 1 }}
         >
-          <Animated.View
-            entering={FadeInUp.delay(100)}
-            style={styles.noChallengesContent}
-          >
+          <Animated.View entering={FadeInUp.delay(100)} style={styles.noChallengesContent}>
             <Ionicons
               name="checkmark-done-outline"
               size={normalizeSize(60)}
               color={currentTheme.colors.textSecondary}
             />
-            <Text
-              style={[styles.noChallengesText, { color: currentTheme.colors.textPrimary }]}
-            >
-              Aucun défi complété !
+            <Text style={[styles.noChallengesText, { color: currentTheme.colors.textPrimary }]}>
+              {t("noCompletedChallenges")}
             </Text>
-            <Text
-              style={[styles.noChallengesSubtext, { color: currentTheme.colors.textSecondary }]}
-            >
-              Terminez des défis pour les voir ici.
+            <Text style={[styles.noChallengesSubtext, { color: currentTheme.colors.textSecondary }]}>
+              {t("completeChallengesToSeeHere")}
             </Text>
           </Animated.View>
         </LinearGradient>
@@ -287,11 +281,9 @@ export default function CompletedChallenges() {
       <LinearGradient
         colors={[currentTheme.colors.background, currentTheme.colors.cardBackground]}
         style={styles.container}
-        start={{ x: 0, y: 0 }}
-        end={{ x: 1, y: 1 }}
       >
         <View style={styles.headerWrapper}>
-          <CustomHeader title="Défis Complétés" />
+          <CustomHeader title={t("completedChallengesScreenTitle")} />
         </View>
         <FlatList
           data={completedChallenges}
@@ -302,6 +294,7 @@ export default function CompletedChallenges() {
           initialNumToRender={10}
           windowSize={5}
         />
+
         {selectedHistory && (
           <Modal
             visible={historyModalVisible}
@@ -310,33 +303,30 @@ export default function CompletedChallenges() {
             onRequestClose={() => setHistoryModalVisible(false)}
           >
             <View
-              style={[styles.modalContainer, { backgroundColor: `${currentTheme.colors.overlay}80` }]}
+              style={[
+                styles.modalContainer,
+                { backgroundColor: `${currentTheme.colors.overlay}80` },
+              ]}
             >
               <LinearGradient
                 colors={[currentTheme.colors.cardBackground, currentTheme.colors.background]}
                 style={styles.modalContent}
-                start={{ x: 0, y: 0 }}
-                end={{ x: 1, y: 1 }}
               >
-                <Text
-                  style={[styles.modalTitle, { color: currentTheme.colors.textPrimary }]}
-                >
-                  Historique de {selectedHistory.title}
+                <Text style={[styles.modalTitle, { color: currentTheme.colors.textPrimary }]}>
+                  {t("historyOf")} {selectedHistory.title}
                 </Text>
                 <FlatList
                   data={selectedHistory.history}
-                  keyExtractor={(item, index) => `${index}`}
+                  keyExtractor={(_, i) => `${i}`}
                   renderItem={({ item }) => (
                     <Animated.View
                       entering={FadeInUp.delay(100)}
                       style={[styles.historyItem, { borderBottomColor: currentTheme.colors.border }]}
                     >
-                      <Text
-                        style={[styles.historyText, { color: currentTheme.colors.textPrimary }]}
-                      >
-                        Complété le{" "}
-                        {new Date(item.completedAt).toLocaleDateString("fr-FR")}{" "}
-                        - {item.selectedDays} jours
+                      <Text style={[styles.historyText, { color: currentTheme.colors.textPrimary }]}>
+                        {t("completedOnDate")}{" "}
+                        {new Date(item.completedAt).toLocaleDateString()} - {item.selectedDays}{" "}
+                        {t("days")}
                       </Text>
                     </Animated.View>
                   )}
@@ -344,19 +334,13 @@ export default function CompletedChallenges() {
                 <TouchableOpacity
                   style={styles.closeButton}
                   onPress={() => setHistoryModalVisible(false)}
-                  accessibilityLabel="Fermer la modal"
-                  testID="close-modal-button"
                 >
                   <LinearGradient
                     colors={[currentTheme.colors.secondary, currentTheme.colors.primary]}
                     style={styles.closeButtonGradient}
-                    start={{ x: 0, y: 0 }}
-                    end={{ x: 1, y: 1 }}
                   >
-                    <Text
-                      style={[styles.closeButtonText, { color: currentTheme.colors.textPrimary }]}
-                    >
-                      Fermer
+                    <Text style={[styles.closeButtonText, { color: currentTheme.colors.textPrimary }]}>
+                      {t("close")}
                     </Text>
                   </LinearGradient>
                 </TouchableOpacity>

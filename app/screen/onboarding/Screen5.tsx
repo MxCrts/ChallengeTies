@@ -16,22 +16,21 @@ import {
   Comfortaa_400Regular,
   Comfortaa_700Bold,
 } from "@expo-google-fonts/comfortaa";
-import {
-  SafeAreaView,
-  useSafeAreaInsets,
-} from "react-native-safe-area-context";
+import { SafeAreaView, useSafeAreaInsets } from "react-native-safe-area-context";
 import { StatusBar } from "expo-status-bar";
+import { useTranslation } from "react-i18next";
 
 const { width, height } = Dimensions.get("window");
 const BUTTON_SIZE = 60;
 
 export default function Screen5() {
   const insets = useSafeAreaInsets();
+  const { t } = useTranslation();
   const [fontsLoaded] = useFonts({
     Comfortaa_400Regular,
     Comfortaa_700Bold,
   });
-  const videoRef = useRef(null);
+  const videoRef = useRef<any>(null);
   const fadeAnim = useRef(new Animated.Value(0)).current;
   const [isVideoPlaying, setIsVideoPlaying] = useState(true);
 
@@ -41,7 +40,7 @@ export default function Screen5() {
       duration: 1500,
       useNativeDriver: true,
     }).start();
-  }, []);
+  }, [fadeAnim]);
 
   if (!fontsLoaded) {
     return null;
@@ -82,10 +81,11 @@ export default function Screen5() {
         >
           {/* Presentation Card */}
           <Animated.View style={[styles.card, { opacity: fadeAnim }]}>
-            <Text style={styles.title}>Célébrez la Constante Progression!</Text>
+            <Text style={styles.title}>
+              {t("screen5.title")}
+            </Text>
             <Text style={styles.text}>
-              Chaque étape vous rapproche de vos objectifs. Célébrez vos
-              réussites et continuez à avancer.
+              {t("screen5.description")}
             </Text>
           </Animated.View>
 
@@ -93,7 +93,7 @@ export default function Screen5() {
           <Link href="/screen/onboarding/Screen6" asChild>
             <TouchableOpacity
               style={styles.nextButton}
-              accessibilityLabel="Continuer vers l'écran suivant"
+              accessibilityLabel={t("screen5.nextButtonLabel")}
             >
               <Ionicons name="arrow-forward" size={24} color="#333" />
             </TouchableOpacity>

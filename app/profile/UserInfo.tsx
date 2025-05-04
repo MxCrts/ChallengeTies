@@ -28,6 +28,7 @@ import { Theme } from "../../theme/designSystem";
 import designSystem from "../../theme/designSystem";
 import CustomHeader from "@/components/CustomHeader";
 import Animated, { FadeInUp } from "react-native-reanimated";
+import { useTranslation } from "react-i18next"; // Ajout du hook pour les traductions
 
 // Constante SPACING pour cohérence avec new-features.tsx et leaderboard.tsx
 const SPACING = 15;
@@ -49,6 +50,7 @@ interface User {
 }
 
 export default function UserInfo() {
+  const { t } = useTranslation(); // Initialisation du hook de traduction
   const router = useRouter();
   const [user, setUser] = useState<User | null>(null);
   const [displayName, setDisplayName] = useState("");
@@ -66,7 +68,7 @@ export default function UserInfo() {
       setIsLoading(true);
       try {
         const currentUser = auth.currentUser;
-        if (!currentUser) throw new Error("Utilisateur non authentifié.");
+        if (!currentUser) throw new Error(t("userNotAuthenticated"));
         const userId = currentUser.uid;
         const userRef = doc(db, "users", userId);
         const userSnap = await getDoc(userRef);
@@ -80,23 +82,20 @@ export default function UserInfo() {
           setInteret(userData.interet || "");
         }
       } catch (error) {
-        Alert.alert("Erreur", "Impossible de charger vos informations.");
+        Alert.alert(t("error"), t("errorFetchingProfile"));
       } finally {
         setIsLoading(false);
       }
     };
     fetchUserData();
-  }, []);
+  }, [t]);
 
   const pickImage = useCallback(async () => {
     try {
       const { status } =
         await ImagePicker.requestMediaLibraryPermissionsAsync();
       if (status !== "granted") {
-        Alert.alert(
-          "Permission refusée",
-          "Vous devez autoriser l'accès aux photos."
-        );
+        Alert.alert(t("permissionDenied"), t("photoPermissionDenied"));
         return;
       }
       const result = await ImagePicker.launchImageLibraryAsync({
@@ -109,7 +108,7 @@ export default function UserInfo() {
         const uri = result.assets[0].uri;
         const currentUser = auth.currentUser;
         if (!currentUser) {
-          Alert.alert("Erreur", "Utilisateur non authentifié.");
+          Alert.alert(t("error"), t("userNotAuthenticated"));
           return;
         }
         const filename = `profileImages/${currentUser.uid}_${Date.now()}.jpg`;
@@ -128,43 +127,40 @@ export default function UserInfo() {
           },
           (error) => {
             console.error("Erreur lors de l'upload:", error);
-            Alert.alert(
-              "Erreur d'upload",
-              `Le téléversement a échoué. Détails: ${error.message}`
-            );
+            Alert.alert(t("uploadError"), `${t("uploadFailed")} Détails: ${error.message}`);
           },
           async () => {
             try {
               const downloadURL = await getDownloadURL(uploadTask.snapshot.ref);
               setProfileImage(downloadURL);
-              Alert.alert("Succès", "Image de profil mise à jour !");
+              Alert.alert(t("success"), t("profileImageUpdated"));
             } catch (urlError: any) {
               console.error(
                 "Erreur lors de la récupération de l'URL:",
                 urlError
               );
               Alert.alert(
-                "Erreur",
-                `Impossible de récupérer l'URL de l'image. Détails: ${urlError.message}`
+                t("error"),
+                `${t("uploadFailed")} Détails: ${urlError.message}`
               );
             }
           }
         );
       } else {
-        Alert.alert("Annulé", "Aucune image sélectionnée.");
+        Alert.alert(t("cancel"), t("noImageSelected"));
       }
     } catch (error: any) {
       console.error("Erreur lors de la sélection de l'image:", error);
       Alert.alert(
-        "Erreur",
-        `Impossible de téléverser l’image. Détails: ${error.message}`
+        t("error"),
+        `${t("uploadFailed")} Détails: ${error.message}`
       );
     }
-  }, []);
+  }, [t]);
 
   const handleSave = useCallback(async () => {
     if (!user?.uid) {
-      Alert.alert("Erreur", "Utilisateur introuvable.");
+      Alert.alert(t("error"), t("userNotFound"));
       return;
     }
     setIsLoading(true);
@@ -178,15 +174,15 @@ export default function UserInfo() {
         interet,
       });
       await checkForAchievements(user.uid);
-      Alert.alert("Succès", "Votre profil a été mis à jour !");
+      Alert.alert(t("success"), t("profileUpdateSuccess"));
       router.push("/(tabs)/profile");
     } catch (error: any) {
       console.error("Erreur lors de la mise à jour du profil:", error);
-      Alert.alert("Erreur", "Échec de la mise à jour du profil.");
+      Alert.alert(t("error"), t("profileUpdateFailed"));
     } finally {
       setIsLoading(false);
     }
-  }, [user, displayName, bio, profileImage, location, interet, router]);
+  }, [user, displayName, bio, profileImage, location, interet, router, t]);
 
   if (isLoading) {
     return (
@@ -204,7 +200,7 @@ export default function UserInfo() {
           <Text
             style={[styles.loadingText, { color: currentTheme.colors.textPrimary }]}
           >
-            Chargement en cours...
+            {t("loadingProfile")}
           </Text>
         </LinearGradient>
       </SafeAreaView>
@@ -233,7 +229,7 @@ export default function UserInfo() {
             showsVerticalScrollIndicator={false}
           >
             <View style={styles.headerWrapper}>
-              <CustomHeader title="Modifie Ton Profil" />
+              <CustomHeader title={t("editYourProfile")} />
             </View>
 
             {/* Image de profil */}
@@ -243,7 +239,7 @@ export default function UserInfo() {
             >
               <TouchableOpacity
                 onPress={pickImage}
-                accessibilityLabel="Modifier l'image de profil"
+                accessibilityLabel={t("editProfileImage")}
                 testID="profile-image-button"
               >
                 <LinearGradient
@@ -262,7 +258,7 @@ export default function UserInfo() {
                       <Image
                         source={{ uri: profileImage }}
                         style={styles.profileImage}
-                        accessibilityLabel="Image de profil actuelle"
+                        accessibilityLabel={t("currentProfileImage")}
                       />
                     ) : (
                       <Text
@@ -271,7 +267,7 @@ export default function UserInfo() {
                           { color: currentTheme.colors.textPrimary },
                         ]}
                       >
-                        Ajouter une photo
+                        {t("addProfilePhoto")}
                       </Text>
                     )}
                   </View>
@@ -283,7 +279,7 @@ export default function UserInfo() {
             <Animated.View entering={FadeInUp.delay(200)} style={styles.inputWrapper}>
               <View style={styles.inputCard}>
                 <TextInput
-                  label="Nom"
+                  label={t("name")}
                   mode="outlined"
                   style={styles.input}
                   value={displayName}
@@ -299,7 +295,7 @@ export default function UserInfo() {
                       background: "transparent",
                     },
                   }}
-                  accessibilityLabel="Champ pour le nom d'utilisateur"
+                  accessibilityLabel={t("usernameField")}
                   testID="input-displayName"
                 />
               </View>
@@ -307,7 +303,7 @@ export default function UserInfo() {
             <Animated.View entering={FadeInUp.delay(300)} style={styles.inputWrapper}>
               <View style={styles.inputCard}>
                 <TextInput
-                  label="Bio"
+                  label={t("bio")}
                   mode="outlined"
                   style={[styles.input, styles.multilineInput]}
                   value={bio}
@@ -324,7 +320,7 @@ export default function UserInfo() {
                       background: "transparent",
                     },
                   }}
-                  accessibilityLabel="Champ pour la bio"
+                  accessibilityLabel={t("bioField")}
                   testID="input-bio"
                 />
               </View>
@@ -332,7 +328,7 @@ export default function UserInfo() {
             <Animated.View entering={FadeInUp.delay(400)} style={styles.inputWrapper}>
               <View style={styles.inputCard}>
                 <TextInput
-                  label="Localisation"
+                  label={t("location")}
                   mode="outlined"
                   style={styles.input}
                   value={location}
@@ -348,7 +344,7 @@ export default function UserInfo() {
                       background: "transparent",
                     },
                   }}
-                  accessibilityLabel="Champ pour la localisation"
+                  accessibilityLabel={t("locationField")}
                   testID="input-location"
                 />
               </View>
@@ -356,7 +352,7 @@ export default function UserInfo() {
             <Animated.View entering={FadeInUp.delay(500)} style={styles.inputWrapper}>
               <View style={styles.inputCard}>
                 <TextInput
-                  label="Intérêts"
+                  label={t("interests")}
                   mode="outlined"
                   style={styles.input}
                   value={interet}
@@ -372,7 +368,7 @@ export default function UserInfo() {
                       background: "transparent",
                     },
                   }}
-                  accessibilityLabel="Champ pour les intérêts"
+                  accessibilityLabel={t("interestsField")}
                   testID="input-interet"
                 />
               </View>
@@ -388,13 +384,13 @@ export default function UserInfo() {
               >
                 <TouchableOpacity
                   onPress={handleSave}
-                  accessibilityLabel="Sauvegarder les modifications du profil"
+                  accessibilityLabel={t("saveProfileChanges")}
                   testID="save-button"
                 >
                   <Text
                     style={[styles.saveButtonText, { color: currentTheme.colors.textPrimary }]}
                   >
-                    Sauvegarder
+                    {t("save")}
                   </Text>
                 </TouchableOpacity>
               </LinearGradient>

@@ -22,17 +22,19 @@ import {
   useSafeAreaInsets,
 } from "react-native-safe-area-context";
 import { StatusBar } from "expo-status-bar";
+import { useTranslation } from "react-i18next";
 
 const { width, height } = Dimensions.get("window");
 const BUTTON_SIZE = 60;
 
 export default function Screen1() {
   const insets = useSafeAreaInsets();
+  const { t } = useTranslation();
   const [fontsLoaded] = useFonts({
     Comfortaa_400Regular,
     Comfortaa_700Bold,
   });
-  const videoRef = useRef(null);
+  const videoRef = useRef<any>(null);
 
   if (!fontsLoaded) {
     return null;
@@ -73,7 +75,7 @@ export default function Screen1() {
             source={require("../../../assets/images/Challenge.png")}
             style={styles.logo}
             contentFit="contain"
-            accessibilityLabel="Logo de ChallengeTies"
+            accessibilityLabel={t("screen1.logoLabel")}
           />
         </View>
 
@@ -84,9 +86,7 @@ export default function Screen1() {
           {/* Presentation Card */}
           <Animated.View style={styles.card}>
             <Text style={styles.text}>
-              Votre parcours vers l'amélioration personnelle commence
-              maintenant. Rejoignez une communauté dynamique en quête de
-              grandeur.
+              {t("screen1.presentationText")}
             </Text>
           </Animated.View>
 
@@ -94,7 +94,7 @@ export default function Screen1() {
           <Link href="/screen/onboarding/Screen2" asChild>
             <TouchableOpacity
               style={styles.nextButton}
-              accessibilityLabel="Continuer vers l'écran suivant"
+              accessibilityLabel={t("screen1.nextButtonLabel")}
             >
               <Ionicons name="arrow-forward" size={24} color="#333" />
             </TouchableOpacity>

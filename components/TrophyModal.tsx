@@ -12,6 +12,7 @@ import { useTrophy } from "../context/TrophyContext";
 import { Video, ResizeMode } from "expo-av";
 import { LinearGradient } from "expo-linear-gradient";
 import designSystem from "../theme/designSystem";
+import { useTranslation } from "react-i18next";
 
 const { width: SCREEN_WIDTH, height: SCREEN_HEIGHT } = Dimensions.get("window");
 const { lightTheme } = designSystem;
@@ -73,6 +74,7 @@ const TrophyModal: React.FC<{ challengeId: string; selectedDays: number }> = ({
   const [adWatched, setAdWatched] = useState(false);
   const [message, setMessage] = useState("");
   const videoRef = useRef<Video>(null);
+  const { t } = useTranslation();
 
   const calculatedReward = Math.round(5 * (selectedDays / 7));
 
@@ -140,19 +142,19 @@ const TrophyModal: React.FC<{ challengeId: string; selectedDays: number }> = ({
           >
             <Ionicons name="trophy" size={normalizeSize(60)} color="#FFF" />
           </LinearGradient>
-          <Text style={styles.title}>Félicitations ! 🎉</Text>
-          <Text style={styles.rewardText}>+{reward} Trophées</Text>
+          <Text style={styles.title}>{t("trophyModal.congrats") /* "Félicitations ! 🎉" */}</Text>
+          <Text style={styles.rewardText}>{t("trophyModal.reward", { count: reward }) /* "+{reward} Trophées" */}</Text>
           {achievementEarned && (
             <Text style={styles.achievementText}>
-              🏆 {achievementNames[achievementEarned] || achievementEarned}
+              🏆 {t(`achievements.${achievementEarned}`)}
             </Text>
           )}
-          {message !== "" && <Text style={styles.message}>{message}</Text>}
-          <GradientButton onPress={handleClaimPress} text="Réclamer" />
+          {message !== "" && <Text style={styles.message}>{t("trophyModal.message", { message })}</Text>}
+          <GradientButton onPress={handleClaimPress} text={t("trophyModal.claim")} />
           {!adWatched && (
             <GradientButton
               onPress={handleAdPress}
-              text="Doublez vos trophées"
+              text={t("trophyModal.doubleReward")}
               iconName="videocam-outline"
             />
           )}

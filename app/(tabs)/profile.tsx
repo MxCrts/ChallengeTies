@@ -22,6 +22,8 @@ import CustomHeader from "@/components/CustomHeader";
 import Animated, { FadeInUp } from "react-native-reanimated";
 import GlobalLayout from "../../components/GlobalLayout";
 import designSystem from "../../theme/designSystem";
+import { useTranslation } from "react-i18next";
+
 
 // Import de SPACING depuis index.tsx pour cohérence
 const SPACING = 15;
@@ -51,6 +53,8 @@ export default function ProfileScreen() {
   const { profileUpdated } = useProfileUpdate();
   const { theme } = useTheme();
   const isDarkMode = theme === "dark";
+    const { t } = useTranslation();
+  
   const currentTheme: Theme = isDarkMode
     ? designSystem.darkTheme
     : designSystem.lightTheme;
@@ -59,7 +63,7 @@ export default function ProfileScreen() {
     const userId = auth.currentUser?.uid;
     if (!userId) {
       setIsLoading(false);
-      setError("Aucun utilisateur connecté");
+      setError(t("noUserConnected"));
       return;
     }
     const userRef = doc(db, "users", userId);
@@ -71,13 +75,13 @@ export default function ProfileScreen() {
           setUserData(snapshot.data() as UserData);
           setError(null);
         } else {
-          setError("Profil non trouvé");
+          setError(t("profileNotFound"));
         }
         setIsLoading(false);
       },
       (err) => {
         console.error("Erreur onSnapshot:", err);
-        setError("Erreur lors du chargement du profil");
+        setError(t("profileLoadError"));
         setIsLoading(false);
       }
     );
@@ -132,52 +136,52 @@ export default function ProfileScreen() {
 
   const sections = [
     {
-      name: "Modifier le profil",
+      name: t("editProfile"),
       icon: "person-circle-outline",
       navigateTo: "profile/UserInfo",
-      accessibilityLabel: "Modifier le profil",
+      accessibilityLabel: t("editProfile"),
       testID: "edit-profile-button",
     },
     {
-      name: "Statistiques",
+      name: t("statistics"),
       icon: "stats-chart-outline",
       navigateTo: "profile/UserStats",
-      accessibilityLabel: "Voir les statistiques",
+      accessibilityLabel: t("statistics"),
       testID: "stats-button",
     },
     {
-      name: "Défis en cours",
+      name: t("ongoingChallenges"),
       icon: "flag-outline",
       navigateTo: "profile/CurrentChallenges",
-      accessibilityLabel: "Voir les défis en cours",
+      accessibilityLabel: t("ongoingChallenges"),
       testID: "current-challenges-button",
     },
     {
-      name: "Favoris",
+      name: t("favorites"),
       icon: "bookmark-outline",
       navigateTo: "profile/SavedChallenges",
-      accessibilityLabel: "Voir les défis favoris",
+      accessibilityLabel: t("favorites"),
       testID: "favorites-button",
     },
     {
-      name: "Défis complétés",
+      name: t("completedChallenges"),
       icon: "checkmark-done-outline",
       navigateTo: "profile/CompletedChallenges",
-      accessibilityLabel: "Voir les défis complétés",
+      accessibilityLabel: t("completedChallenges"),
       testID: "completed-challenges-button",
     },
     {
-      name: "Récompenses",
+      name: t("rewards"),
       icon: "medal-outline",
       navigateTo: "profile/Achievements",
-      accessibilityLabel: "Voir les récompenses",
+      accessibilityLabel: t("rewards"),
       testID: "achievements-button",
     },
     {
-      name: "Mes challenges",
+      name: t("myChallenges"),
       icon: "create-outline",
       navigateTo: "profile/MyChallenges",
-      accessibilityLabel: "Voir mes challenges",
+      accessibilityLabel: t("myChallenges"),
       testID: "my-challenges-button",
     },
   ];
@@ -204,7 +208,7 @@ export default function ProfileScreen() {
       >
         <ScrollView contentContainerStyle={styles.scrollContent}>
           <View style={styles.headerWrapper}>
-            <CustomHeader title="Ton Profil" />
+          <CustomHeader title={t("yourProfile")} />
           </View>
 
           {/* Carte de profil */}
@@ -256,7 +260,7 @@ export default function ProfileScreen() {
                   {userData?.username || "Utilisateur"}
                 </Text>
                 <Text style={[styles.bio, { color: currentTheme.colors.textSecondary }]}>
-                  {userData?.bio || "Ajoute une bio stylée !"}
+                {userData?.bio || t("addBioHere")}
                 </Text>
               </Animated.View>
               <Animated.View entering={FadeInUp.delay(400)} style={styles.detailsContainer}>
@@ -269,7 +273,7 @@ export default function ProfileScreen() {
                   <Text
                     style={[styles.location, { color: currentTheme.colors.textPrimary }]}
                   >
-                    {userData?.location || "Lieu inconnu"}
+                    {userData?.location || t("unknownLocation")}
                   </Text>
                 </View>
                 {interests.length > 0 && (
@@ -341,7 +345,9 @@ export default function ProfileScreen() {
                         color={currentTheme.colors.secondary}
                       />
                       <Text
-                        style={[styles.sectionText, { color: currentTheme.colors.secondary }]}
+                      style={[styles.sectionText, { color: currentTheme.colors.secondary }]}
+                      numberOfLines={1}
+                      adjustsFontSizeToFit
                       >
                         {section.name}
                       </Text>
@@ -485,10 +491,15 @@ const styles = StyleSheet.create({
     shadowOpacity: 0.2,
     shadowRadius: normalizeSize(6),
     elevation: 5,
+    minHeight: normalizeSize(100),
+    justifyContent: "center",
   },
   sectionGradient: {
+    flex: 1, // << à ajouter
+    width: "100%", // << à ajouter aussi
     paddingVertical: normalizeSize(20),
     alignItems: "center",
+    justifyContent: "center", // << à ajouter
     borderRadius: normalizeSize(15),
     borderWidth: 1,
     borderColor: "rgba(255, 98, 0, 0.2)",

@@ -29,6 +29,7 @@ import Animated, {
 } from "react-native-reanimated";
 import { Ionicons } from "@expo/vector-icons";
 import { useTheme } from "../../context/ThemeContext";
+import { useTranslation } from "react-i18next";
 import { Theme } from "../../theme/designSystem";
 import designSystem from "../../theme/designSystem";
 
@@ -36,7 +37,7 @@ const { width: SCREEN_WIDTH, height: SCREEN_HEIGHT } = Dimensions.get("window");
 
 // Fonction de normalisation des tailles pour la responsivité
 const normalize = (size: number) => {
-  const scale = Math.min(SCREEN_WIDTH, SCREEN_HEIGHT) / 375; // Référence iPhone X
+  const scale = Math.min(SCREEN_WIDTH, SCREEN_HEIGHT) / 375;
   return Math.round(PixelRatio.roundToNearestPixel(size * scale));
 };
 
@@ -48,8 +49,8 @@ const EFFECTIVE_ITEM_WIDTH = ITEM_WIDTH + CARD_MARGIN * 2;
 const SPACER = (SCREEN_WIDTH - ITEM_WIDTH) / 2;
 const SPACING = normalize(15);
 
-// Estimation de la hauteur de la barre d’état (approximative)
-const STATUS_BAR_HEIGHT = normalize(44); // Valeur sûre pour iOS (iPhone X et plus), ajustée pour Android
+// Estimation de la hauteur de la barre d’état
+const STATUS_BAR_HEIGHT = normalize(44);
 
 interface Challenge {
   id: string;
@@ -61,6 +62,7 @@ interface Challenge {
 }
 
 export default function HomeScreen() {
+  const { t, i18n } = useTranslation();
   const router = useRouter();
   const [challenges, setChallenges] = useState<Challenge[]>([]);
   const [loading, setLoading] = useState(false);
@@ -99,9 +101,16 @@ export default function HomeScreen() {
         const data = doc.data();
         return {
           id: doc.id,
-          title: data?.title || "Défi Mystère",
-          description: data?.description || "Aucune description disponible",
-          category: data?.category || "Divers",
+          // on remplace les fallbacks en dur par t("…")
+          title: data?.chatId
+            ? t(`challenges.${data.chatId}.title`)
+            : t("mysteriousChallenge"),
+          description: data?.chatId
+            ? t(`challenges.${data.chatId}.description`)
+            : t("noDescriptionAvailable"),
+            category: data?.category
+            ? t(`categories.${data.category}`)
+            : t("miscellaneous"),
           imageUrl: data?.imageUrl || "https://via.placeholder.com/300",
           day: data?.day,
         };
@@ -117,7 +126,7 @@ export default function HomeScreen() {
 
   useEffect(() => {
     if (user) fetchChallenges();
-  }, [user]);
+  }, [user, i18n.language,]);
 
   const flatListRef = useRef<RNAnimated.FlatList<any>>(null);
   const scrollX = useRef(new RNAnimated.Value(0)).current;
@@ -205,7 +214,7 @@ export default function HomeScreen() {
           )
         }
         activeOpacity={0.9}
-        accessibilityLabel={`Voir les détails du défi ${item.title}`}
+        accessibilityLabel={`${t("viewChallengeDetails")} ${item.title}`}
         testID={`challenge-card-${index}`}
       >
         <Image source={{ uri: item.imageUrl }} style={styles.challengeImage} />
@@ -223,7 +232,7 @@ export default function HomeScreen() {
             <Text
               style={[styles.challengeDay, { color: currentTheme.colors.primary }]}
             >
-              Jour {item.day}
+              {t("day")} {item.day}
             </Text>
           )}
           <Text
@@ -247,9 +256,7 @@ export default function HomeScreen() {
 
   return (
     <View style={styles.container}>
-      <StatusBar hidden={true} />
-
-
+      <StatusBar hidden />
       <LinearGradient
         colors={[currentTheme.colors.background, currentTheme.colors.cardBackground]}
         style={styles.gradientContainer}
@@ -273,7 +280,7 @@ export default function HomeScreen() {
               isLooping
               isMuted
               usePoster
-              posterSource={require("../../assets/images/chalkboard.png")} // Image de secours
+              posterSource={require("../../assets/images/chalkboard.png")}
             />
             <LinearGradient
               colors={[currentTheme.colors.overlay, "rgba(0,0,0,0.2)"]}
@@ -284,21 +291,21 @@ export default function HomeScreen() {
                 source={require("../../assets/images/Challenge.png")}
                 style={styles.logo}
                 resizeMode="contain"
-                accessibilityLabel="Logo ChallengeTies"
+                accessibilityLabel={t("logoChallengeTies")}
               />
               <Text
                 style={[styles.heroTitle, { color: currentTheme.colors.textPrimary }]}
               >
-                Défie tes limites
+                {t("defyYourLimits")}
               </Text>
               <Text
                 style={[styles.heroSubtitle, { color: currentTheme.colors.textSecondary }]}
               >
-                Rejoins une communauté vibrante et repousse tes frontières chaque jour !
+                {t("joinVibrantCommunity")}
               </Text>
               <TouchableOpacity
                 onPress={() => safeNavigate("/explore")}
-                accessibilityLabel="Lancer l'aventure"
+                accessibilityLabel={t("launchAdventure")}
                 testID="cta-button"
               >
                 <LinearGradient
@@ -308,7 +315,7 @@ export default function HomeScreen() {
                   <Text
                     style={[styles.ctaText, { color: currentTheme.colors.textPrimary }]}
                   >
-                    Lancer l'Aventure
+                    {t("launchAdventure")}
                   </Text>
                   <Ionicons
                     name="arrow-forward"
@@ -320,14 +327,14 @@ export default function HomeScreen() {
             </Animated.View>
           </Animated.View>
 
-          {/* SECTION SÉPARATE POUR LE RESTE DU CONTENU AVEC SAFEAREA */}
+          {/* RESTE DU CONTENU */}
           <SafeAreaView style={styles.safeAreaContent}>
-            {/* CAROUSEL DES DÉFIS */}
+            {/* CAROUSEL */}
             <View style={styles.section}>
               <Text
                 style={[styles.sectionTitle, { color: currentTheme.colors.textPrimary }]}
               >
-                Défis Populaires
+                {t("popularChallenges")}
               </Text>
               {loading ? (
                 <ActivityIndicator size="large" color={currentTheme.colors.secondary} />
@@ -387,23 +394,23 @@ export default function HomeScreen() {
                   <Text
                     style={[styles.noChallengesText, { color: currentTheme.colors.textPrimary }]}
                   >
-                    Aucun défi disponible
+                    {t("noChallengesAvailable")}
                   </Text>
                   <Text
                     style={[styles.noChallengesSubtext, { color: currentTheme.colors.textSecondary }]}
                   >
-                    De nouveaux défis arrivent bientôt !
+                    {t("challengesComingSoon")}
                   </Text>
                 </Animated.View>
               )}
             </View>
 
-            {/* SECTION "INSPIRE-TOI" */}
+            {/* INSPIRE-TOI */}
             <View style={styles.discoverSection}>
               <Text
                 style={[styles.sectionTitle, { color: currentTheme.colors.textPrimary }]}
               >
-                Inspire-toi
+                {t("getInspired")}
               </Text>
               <View style={styles.discoverGrid}>
                 <View style={styles.discoverRow}>
@@ -417,7 +424,7 @@ export default function HomeScreen() {
                         },
                       ]}
                       onPress={() => safeNavigate("/tips")}
-                      accessibilityLabel="Voir les astuces"
+                      accessibilityLabel={t("tipsAndTricks")}
                       testID="tips-card"
                     >
                       <Ionicons
@@ -428,7 +435,7 @@ export default function HomeScreen() {
                       <Text
                         style={[styles.discoverCardText, { color: currentTheme.colors.secondary }]}
                       >
-                        Tips & Tricks
+                        {t("tipsAndTricks")}
                       </Text>
                     </TouchableOpacity>
                   </Animated.View>
@@ -442,7 +449,7 @@ export default function HomeScreen() {
                         },
                       ]}
                       onPress={() => safeNavigate("/leaderboard")}
-                      accessibilityLabel="Voir le classement"
+                      accessibilityLabel={t("leaderboardTitle")}
                       testID="leaderboard-card"
                     >
                       <Ionicons
@@ -453,7 +460,7 @@ export default function HomeScreen() {
                       <Text
                         style={[styles.discoverCardText, { color: currentTheme.colors.secondary }]}
                       >
-                        Leaderboard
+                        {t("leaderboardTitle")}
                       </Text>
                     </TouchableOpacity>
                   </Animated.View>
@@ -468,7 +475,7 @@ export default function HomeScreen() {
                       },
                     ]}
                     onPress={() => safeNavigate("/new-features")}
-                    accessibilityLabel="Voir les nouveautés"
+                    accessibilityLabel={t("whatsNew")}
                     testID="new-features-card"
                   >
                     <Ionicons
@@ -479,7 +486,7 @@ export default function HomeScreen() {
                     <Text
                       style={[styles.discoverCardText, { color: currentTheme.colors.secondary }]}
                     >
-                      Nouveautés
+                      {t("whatsNew")}
                     </Text>
                   </TouchableOpacity>
                 </Animated.View>
@@ -538,7 +545,7 @@ const styles = StyleSheet.create({
   heroContent: {
     alignItems: "center",
     paddingHorizontal: SPACING,
-    paddingTop: STATUS_BAR_HEIGHT/8 + SPACING, // Positionne le contenu sous la barre d’état
+    paddingTop: STATUS_BAR_HEIGHT + SPACING, // Positionne le contenu sous la barre d’état
     zIndex: 1, // Contenu au-dessus de l’overlay
   },
   logo: {
