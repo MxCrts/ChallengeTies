@@ -376,7 +376,9 @@
     "reward": "+{{count}} 奖杯",
     "message": "{{message}}",
     "claim": "领取",
-    "doubleReward": "奖杯翻倍"
+    "doubleReward": "奖杯翻倍",
+    "doubleMessage": "🔥 你获得了 {{count}} 个奖杯！",
+    "claimMessage": "🎉 你获得了 {{count}} 个奖杯！"
   },
   "achievements": {
     "first_connection": "首次连接",
@@ -485,7 +487,10 @@
     "trophies": "{{count}} 个奖杯",
     "reward": "{{count}} 个奖杯",
     "continue": "继续",
-    "doubleTrophies": "奖杯翻倍"
+    "doubleTrophies": "奖杯翻倍",
+    "finalTitle": "恭喜！",
+    "finalMessage": "挑战完成！你获得 {{count}} 个奖杯！",
+    "errorFinalizingMessage": "无法完成挑战。"
   },
   "featureDetail": {
     "votes": "{{count}} 票",
@@ -782,7 +787,7 @@
   "Santé": "健康",
   "Fitness": "健身",
   "Finance": "理财",
-  "Mode de Vie": "生活方式",
+  "Mode De Vie": "生活方式",
   "Éducation": "教育",
   "Créativité": "创造力",
   "Carrière": "职业",
@@ -985,5 +990,29 @@
   "selectCategory": "选择一个类别",
   "uploadImage": "上传图片（可选）",
   "uploadImageOptional": "上传图片（可选）",
-  "createChallengeButton": "创建挑战"
+  "createChallengeButton": "创建挑战",
+  "searchPlaceholder": "搜索挑战…",
+  "filterByOrigin": "按 {{origin}} 过滤",
+  "Existing": "现有",
+  "Created": "已创建",
+  "noDescription": "暂无描述",
+  "loadChallengesFailed": "无法加载挑战。",
+  "participant_plural": "{{count}} 名参与者",
+  "tryDifferentSearch": "请尝试其他搜索或筛选。",
+  "unableToMarkChallenge": "无法标记此挑战。",
+  "streakResetTitle": "连续完成重置",
+  "streakResetMessage": "您的连续完成已重置为 1。",
+  "unableToResetStreak": "无法重置连续完成。",
+  "adWatchedTitle": "已观看广告",
+  "adWatchedMessage": "挑战已标记，您的连续完成将正常继续。",
+  "unableToMarkAfterAd": "广告后无法标记。",
+  "notEnoughTrophiesTitle": "勋章不足",
+  "notEnoughTrophiesMessage": "您没有足够的勋章来使用此选项。",
+  "trophiesUsedTitle": "勋章已使用",
+  "trophiesUsedMessage": "挑战已标记，您的连续完成将正常继续。（已扣除 {{cost}} 个勋章）",
+  "unableToMarkWithTrophies": "无法使用勋章标记。",
+  "challengeNotFound": "未找到挑战。",
+  "unableToFinalizeChallenge": "无法完成挑战。",
+  "errorLoadingSavedChallenges": "无法加载已保存的挑战：{{message}}"
+
 }

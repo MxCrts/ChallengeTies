@@ -374,11 +374,12 @@
     "understood": "Got it"
   },
   "trophyModal": {
-    "congrats": "Félicitations ! 🎉",
-    "reward": "+{{count}} Trophées",
-    "message": "{{message}}",
-    "claim": "Réclamer",
-    "doubleReward": "Doublez vos trophées"
+    "congrats": "Félicitations !",                  
+    "reward": "Vous gagnez {{count}} trophées !",     
+    "claim": "Réclamer",                               
+    "doubleReward": "Doubler la récompense",          
+    "doubleMessage": "🔥 You earned {{count}} trophies!",
+    "claimMessage": "🎉 You earned {{count}} trophies!"   
   },
   "achievements": {
     "first_connection": "Première Connexion",
@@ -487,7 +488,10 @@
     "trophies": "{{count}} Trophies",
     "reward": "{{count}} Trophies",
     "continue": "Continue",
-    "doubleTrophies": "Double your trophies"
+    "doubleTrophies": "Double your trophies",
+    "finalTitle": "Congratulations!",
+    "finalMessage": "Challenge completed! You earn {{count}} trophies!",
+    "errorFinalizingMessage": "Could not finalize the challenge."
   },
   "featureDetail": {
     "votes": "{{count}} vote",
@@ -724,22 +728,6 @@
     "profile_completed": "Profile completed: you're ready to shine."
     },
     "profile_completed": "Profile Completed",
-"categories": {
-    "Santé": "Health",
-    "Fitness": "Fitness",
-    "Finance": "Finance",
-    "Mode de Vie": "Lifestyle",
-    "Éducation": "Education",
-    "Créativité": "Creativity",
-    "Carrière": "Career",
-    "Social": "Social",
-    "Productivité": "Productivity",
-    "Écologie": "Ecology",
-    "Motivation": "Motivation",
-    "Discipline": "Discipline",
-    "Développement Personnel": "Personal Development",
-    "État d'esprit": "Mindset"
-},
 "challenges": {
     "eatHealthy": {
       "title": "Eat healthy every day",
@@ -987,11 +975,50 @@
   "uploadImageOptional": "Upload Image (Optional)",
   "createChallengeButton": "Create Challenge",
   "exploreChallengesTitle": "Explore Challenges",
-  "searchPlaceholder": "Search for a challenge...",
   "existing": "Existing",
   "created": "Created",
   "all": "All",
   "tryOtherSearchOrFilter": "Try another search or filter.",
-  "errorLoadingChallenges": "Unable to load challenges."
+  "errorLoadingChallenges": "Unable to load challenges.",
+  "searchPlaceholder": "Search for a challenge…",
+  "filterByOrigin": "Filter by {{origin}}",
+  "Existing": "Existing",
+  "Created": "Created",
+  "noDescription": "No description available",
+  "loadChallengesFailed": "Failed to load challenges.",
+  "participant_plural": "{{count}} participants",
+  "tryDifferentSearch": "Try a different search or filter.",
+  "categories": {
+    "Santé": "Health",
+    "Fitness": "Fitness",
+    "Finance": "Finance",
+    "Mode De Vie": "Lifestyle",
+    "Éducation": "Education",
+    "Créativité": "Creativity",
+    "Carrière": "Career",
+    "Social": "Social",
+    "Productivité": "Productivity",
+    "Écologie": "Ecology",
+    "Motivation": "Motivation",
+    "Discipline": "Discipline",
+    "Développement Personnel": "Personal Development",
+    "État d'esprit": "Mindset"
+},
+"unableToMarkChallenge": "Unable to mark the challenge.",
+  "streakResetTitle": "Streak Reset",
+  "streakResetMessage": "Your streak has been reset to 1.",
+  "unableToResetStreak": "Unable to reset the streak.",
+  "adWatchedTitle": "Ad Watched",
+  "adWatchedMessage": "Challenge marked, your streak continues normally.",
+  "unableToMarkAfterAd": "Unable to mark after ad.",
+  "notEnoughTrophiesTitle": "Not Enough Trophies",
+  "notEnoughTrophiesMessage": "You don't have enough trophies for this option.",
+  "trophiesUsedTitle": "Trophies Used",
+  "trophiesUsedMessage": "Challenge marked, your streak continues normally. ({{cost}} trophies have been deducted)",
+  "unableToMarkWithTrophies": "Unable to mark with trophies.",
+  "challengeNotFound": "Challenge not found.",
+  "unableToFinalizeChallenge": "Unable to finalize the challenge.",
+  "errorLoadingSavedChallenges": "Unable to load saved challenges: {{message}}"
+
 }
   

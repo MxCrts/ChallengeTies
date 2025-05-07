@@ -376,7 +376,9 @@
     "reward": "+{{count}} Trophäen",
     "message": "{{message}}",
     "claim": "Einlösen",
-    "doubleReward": "Doppelte Trophäen"
+    "doubleReward": "Doppelte Trophäen",
+    "doubleMessage": "🔥 Du hast {{count}} Trophäen gewonnen!",
+    "claimMessage": "🎉 Du hast {{count}} Trophäen gewonnen!"
   },
   "achievements": {
     "first_connection": "Erste Verbindung",
@@ -485,7 +487,10 @@
     "trophies": "{{count}} Trophäen",
     "reward": "{{count}} Trophäen",
     "continue": "Weiter",
-    "doubleTrophies": "Verdopple deine Trophäen"
+    "doubleTrophies": "Verdopple deine Trophäen",
+    "finalTitle": "Glückwunsch!",
+    "finalMessage": "Herausforderung abgeschlossen! Du erhältst {{count}} Trophäen!",
+    "errorFinalizingMessage": "Herausforderung konnte nicht abgeschlossen werden."
   },
   "featureDetail": {
     "votes": "{{count}} Stimme",
@@ -782,7 +787,7 @@
   "Santé": "Gesundheit",
   "Fitness": "Fitness",
   "Finance": "Finanzen",
-  "Mode de Vie": "Lebensstil",
+  "Mode De Vie": "Lebensstil",
   "Éducation": "Bildung",
   "Créativité": "Kreativität",
   "Carrière": "Karriere",
@@ -985,5 +990,29 @@
   "selectCategory": "Wähle eine Kategorie",
   "uploadImage": "Bild hochladen (optional)",
   "uploadImageOptional": "Bild hochladen (optional)",
-  "createChallengeButton": "Herausforderung erstellen"
+  "createChallengeButton": "Herausforderung erstellen",
+  "searchPlaceholder": "Suche nach einer Herausforderung…",
+  "filterByOrigin": "Filtern nach {{origin}}",
+  "Existing": "Bestehende",
+  "Created": "Erstellte",
+  "noDescription": "Keine Beschreibung verfügbar",
+  "loadChallengesFailed": "Herausforderungen konnten nicht geladen werden.",
+  "participant_plural": "{{count}} Teilnehmer",
+  "tryDifferentSearch": "Versuche eine andere Suche oder Filter.",
+  "unableToMarkChallenge": "Markieren der Herausforderung fehlgeschlagen.",
+  "streakResetTitle": "Serie zurückgesetzt",
+  "streakResetMessage": "Deine Serie wurde auf 1 zurückgesetzt.",
+  "unableToResetStreak": "Konnte die Serie nicht zurücksetzen.",
+  "adWatchedTitle": "Anzeige angesehen",
+  "adWatchedMessage": "Herausforderung markiert, deine Serie wird normal fortgesetzt.",
+  "unableToMarkAfterAd": "Konnte nach der Anzeige nicht markieren.",
+  "notEnoughTrophiesTitle": "Nicht genügend Trophäen",
+  "notEnoughTrophiesMessage": "Du hast nicht genug Trophäen für diese Option.",
+  "trophiesUsedTitle": "Trophäen verwendet",
+  "trophiesUsedMessage": "Herausforderung markiert, deine Serie wird normal fortgesetzt. ({{cost}} Trophäen wurden abgezogen)",
+  "unableToMarkWithTrophies": "Konnte nicht mit Trophäen markieren.",
+  "challengeNotFound": "Herausforderung nicht gefunden.",
+  "unableToFinalizeChallenge": "Konnte die Herausforderung nicht abschließen.",
+  "errorLoadingSavedChallenges": "Gespeicherte Herausforderungen konnten nicht geladen werden: {{message}}"
+
 }

@@ -376,7 +376,9 @@
     "reward": "+{{count}} Trofei",
     "message": "{{message}}",
     "claim": "Riscatta",
-    "doubleReward": "Raddoppia i tuoi trofei"
+    "doubleReward": "Raddoppia i tuoi trofei",
+    "doubleMessage": "🔥 Hai guadagnato {{count}} trofei!",
+    "claimMessage": "🎉 Hai guadagnato {{count}} trofei!"
   },
   "achievements": {
     "first_connection": "Prima connessione",
@@ -485,7 +487,10 @@
     "trophies": "{{count}} трофеев",
     "reward": "{{count}} трофеев",
     "continue": "Продолжить",
-    "doubleTrophies": "Удвоить трофеи"
+    "doubleTrophies": "Удвоить трофеи",
+    "finalTitle": "Congratulazioni!",
+    "finalMessage": "Sfida completata! Hai guadagnato {{count}} trofei!",
+    "errorFinalizingMessage": "Impossibile completare la sfida."
   },
   "featureDetail": {
     "votes": "{{count}} голос",
@@ -782,7 +787,7 @@
   "Santé": "Salute",
   "Fitness": "Fitness",
   "Finance": "Finanza",
-  "Mode de Vie": "Stile di vita",
+  "Mode De Vie": "Stile di vita",
   "Éducation": "Educazione",
   "Créativité": "Creatività",
   "Carrière": "Carriera",
@@ -985,5 +990,29 @@
   "selectCategory": "Seleziona una categoria",
   "uploadImage": "Carica immagine (opzionale)",
   "uploadImageOptional": "Carica immagine (opzionale)",
-  "createChallengeButton": "Crea sfida"
+  "createChallengeButton": "Crea sfida",
+  "searchPlaceholder": "Cerca una sfida…",
+  "filterByOrigin": "Filtra per {{origin}}",
+  "Existing": "Esistenti",
+  "Created": "Create",
+  "noDescription": "Nessuna descrizione disponibile",
+  "loadChallengesFailed": "Impossibile caricare le sfide.",
+  "participant_plural": "{{count}} partecipanti",
+  "tryDifferentSearch": "Prova un'altra ricerca o filtro.",
+  "unableToMarkChallenge": "Impossibile contrassegnare la sfida.",
+  "streakResetTitle": "Serie reimpostata",
+  "streakResetMessage": "La tua serie è stata reimpostata a 1.",
+  "unableToResetStreak": "Impossibile reimpostare la serie.",
+  "adWatchedTitle": "Annuncio visto",
+  "adWatchedMessage": "Sfida contrassegnata, la tua serie continua normalmente.",
+  "unableToMarkAfterAd": "Impossibile contrassegnare dopo l'annuncio.",
+  "notEnoughTrophiesTitle": "Trofei insufficienti",
+  "notEnoughTrophiesMessage": "Non hai abbastanza trofei per questa opzione.",
+  "trophiesUsedTitle": "Trofei usati",
+  "trophiesUsedMessage": "Sfida contrassegnata, la tua serie continua normalmente. ({{cost}} trofei sono stati detratti)",
+  "unableToMarkWithTrophies": "Impossibile contrassegnare con i trofei.",
+  "challengeNotFound": "Sfida non trovata.",
+  "unableToFinalizeChallenge": "Impossibile completare la sfida.",
+  "errorLoadingSavedChallenges": "Impossibile caricare le sfide salvate: {{message}}"
+
 }

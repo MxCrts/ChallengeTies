@@ -31,7 +31,6 @@
         <data android:scheme="myapp"/>
         <data android:scheme="com.mxcrts.ChallengeTies"/>
         <data android:scheme="exp+challengeme"/>
-        <data android:scheme="exp+challengeties"/>
       </intent-filter>
     </activity>
   </application>

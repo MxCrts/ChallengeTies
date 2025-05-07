@@ -14,48 +14,12 @@ import { LinearGradient } from "expo-linear-gradient";
 import designSystem from "../theme/designSystem";
 import { useTranslation } from "react-i18next";
 
-const { width: SCREEN_WIDTH, height: SCREEN_HEIGHT } = Dimensions.get("window");
+const { width: SCREEN_WIDTH } = Dimensions.get("window");
 const { lightTheme } = designSystem;
 const currentTheme = lightTheme;
 
-const normalizeSize = (size) => Math.round(size * (SCREEN_WIDTH / 375));
-
-const achievementNames: Record<string, string> = {
-  first_connection: "Première Connexion",
-  profile_completed: "Profil Complet",
-  finishChallenge_10: "Sérieux dans ses défis",
-  finishChallenge_3: "Débutant Motivé",
-  finishChallenge_1: "Premier défi complété",
-  finishChallenge_25: "Machine à Challenges !",
-  finishChallenge_50: "Imbattable !",
-  finishChallenge_100: "...Légende Vivante...",
-  selectChallengeDays_30: "Détermination",
-  selectChallengeDays_180: "Le long terme, c'est mon truc...",
-  selectChallengeDays_7: "Petit Joueur",
-  selectChallengeDays_90: "Marathonien !",
-  selectChallengeDays_365: "...Le Patient Légendaire...",
-  streakProgress_3: "Mini Streak",
-  streakProgress_7: "Routine en place",
-  streakProgress_14: "Impressionant !",
-  streakProgress_30: "Détermination en Béton !",
-  streakProgress_60: "Rien ne peut m'arrêter",
-  streakProgress_90: "Je suis une Machine !",
-  streakProgress_180: "Discipline Ultime",
-  streakProgress_365: "...Je suis un Monstre...",
-  messageSent_1: "Premier message envoyé !",
-  messageSent_10: "Esprit d'équipe",
-  messageSent_50: "...Communauté Active...",
-  shareChallenge_1: "J'aime partager",
-  shareChallenge_5: "Influenceur en Herbe",
-  shareChallenge_20: "...Meneur de Communauté...",
-  voteFeature_1: "Premier défi Voté !",
-  voteFeature_5: "...J'aime voter...",
-  saveChallenge_1: "Défi sauvegardé",
-  saveChallenge_5: "...Les Favoris...",
-  challengeCreated_1: "Créateur de Défis",
-  challengeCreated_5: "J'ai de l'Inspiration !",
-  challengeCreated_10: "...Innovateur...",
-};
+const normalizeSize = (size: number) =>
+  Math.round(size * (SCREEN_WIDTH / 375));
 
 const TrophyModal: React.FC<{ challengeId: string; selectedDays: number }> = ({
   challengeId,
@@ -79,11 +43,7 @@ const TrophyModal: React.FC<{ challengeId: string; selectedDays: number }> = ({
   const calculatedReward = Math.round(5 * (selectedDays / 7));
 
   useEffect(() => {
-    console.log("🔍 TrophyModal - showTrophyModal:", showTrophyModal);
-    console.log("🔍 TrophyModal - trophiesEarned:", trophiesEarned);
-    console.log("🔍 TrophyModal - achievementEarned:", achievementEarned);
     if (showTrophyModal) {
-      console.log("✅ TrophyModal s’affiche au centre");
       setReward(trophiesEarned || calculatedReward);
       setAdWatched(false);
       setMessage("");
@@ -94,30 +54,30 @@ const TrophyModal: React.FC<{ challengeId: string; selectedDays: number }> = ({
         useNativeDriver: true,
       }).start();
     } else {
-      console.log("🚫 TrophyModal masqué");
       scaleAnim.setValue(0);
     }
   }, [showTrophyModal, trophiesEarned, scaleAnim, calculatedReward]);
 
   const handleAdPress = useCallback(() => {
-    console.log("✅ Pub regardée !");
-    setAdWatched(true);
-    activateDoubleReward();
-    setReward((prev) => prev * 2);
-    setMessage(`🔥 Tu as gagné ${trophiesEarned * 2} Trophées !`);
-  }, [activateDoubleReward, trophiesEarned]);
+       console.log("✅ Pub regardée !");
+       setAdWatched(true);
+       activateDoubleReward();
+       const doubled = trophiesEarned * 2;
+       setReward(doubled);
+       // utilise la clé de traduction trophyModal.doubleMessage
+       setMessage(t("trophyModal.doubleMessage", { count: doubled }));
+     }, [activateDoubleReward, trophiesEarned, t])
 
-  const handleClaimPress = useCallback(() => {
-    console.log(`✅ Réclamation : ${reward} Trophées`);
-    setMessage(`🎉 Tu as gagné ${reward} Trophées !`);
-    setTimeout(() => {
-      resetTrophyData();
-    }, 1500);
-  }, [reward, resetTrophyData]);
+     const handleClaimPress = useCallback(() => {
+         console.log(`✅ Réclamation : ${reward} trophées`);
+         // utilise la clé de traduction trophyModal.claimMessage
+         setMessage(t("trophyModal.claimMessage", { count: reward }));
+         setTimeout(() => {
+           resetTrophyData();
+         }, 1500);
+       }, [reward, resetTrophyData, t]);
 
-  if (!showTrophyModal) {
-    return null;
-  }
+  if (!showTrophyModal) return null;
 
   return (
     <View style={styles.overlay}>
@@ -142,15 +102,27 @@ const TrophyModal: React.FC<{ challengeId: string; selectedDays: number }> = ({
           >
             <Ionicons name="trophy" size={normalizeSize(60)} color="#FFF" />
           </LinearGradient>
-          <Text style={styles.title}>{t("trophyModal.congrats") /* "Félicitations ! 🎉" */}</Text>
-          <Text style={styles.rewardText}>{t("trophyModal.reward", { count: reward }) /* "+{reward} Trophées" */}</Text>
+
+          <Text style={styles.title}>{t("trophyModal.congrats")}</Text>
+          <Text style={styles.rewardText}>
+            {t("trophyModal.reward", { count: reward })}
+          </Text>
+
           {achievementEarned && (
             <Text style={styles.achievementText}>
               🏆 {t(`achievements.${achievementEarned}`)}
             </Text>
           )}
-          {message !== "" && <Text style={styles.message}>{t("trophyModal.message", { message })}</Text>}
-          <GradientButton onPress={handleClaimPress} text={t("trophyModal.claim")} />
+
+          {!!message && (
+            <Text style={styles.message}>{message}</Text>
+          )}
+
+          <GradientButton
+            onPress={handleClaimPress}
+            text={t("trophyModal.claim")}
+          />
+
           {!adWatched && (
             <GradientButton
               onPress={handleAdPress}
@@ -175,11 +147,7 @@ const GradientButton: React.FC<GradientButtonProps> = ({
   text,
   iconName,
 }) => (
-  <TouchableOpacity
-    onPress={onPress}
-    activeOpacity={0.8}
-    style={styles.gradientButton}
-  >
+  <TouchableOpacity onPress={onPress} activeOpacity={0.8} style={styles.gradientButton}>
     <LinearGradient
       colors={["#FF6200", "#FF8C00"]}
       start={{ x: 0, y: 0 }}

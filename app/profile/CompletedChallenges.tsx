@@ -207,7 +207,7 @@ export default function CompletedChallenges() {
                     <Text
                       style={[styles.historyButtonText, { color: currentTheme.colors.textPrimary }]}
                     >
-                      {t("history")}
+                      {t("historyOf")}
                     </Text>
                   </LinearGradient>
                 </TouchableOpacity>

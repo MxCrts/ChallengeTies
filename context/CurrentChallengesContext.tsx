@@ -15,6 +15,8 @@ import {
   deductTrophies,
 } from "../helpers/trophiesHelpers";
 import MissedChallengeModal from "../components/MissedChallengeModal";
+import { useTranslation } from "react-i18next";
+
 
 interface Challenge {
   id: string;
@@ -76,6 +78,7 @@ export const CurrentChallengesProvider: React.FC<{
   >([]);
   const [simulatedToday, setSimulatedToday] = useState<Date | null>(null);
   const [modalVisible, setModalVisible] = useState(false);
+  const { t, i18n } = useTranslation();
   const [selectedChallenge, setSelectedChallenge] = useState<{
     id: string;
     selectedDays: number;
@@ -159,13 +162,19 @@ export const CurrentChallengesProvider: React.FC<{
     const userId = auth.currentUser?.uid;
     if (!userId) {
       console.log("❌ Pas d'utilisateur connecté pour takeChallenge.");
-      Alert.alert("Erreur", "Veuillez vous connecter pour prendre un défi.");
+      Alert.alert(
+        t("error"),                   // clé pour "Erreur"
+        t("loginRequired")            // clé pour "Veuillez vous connecter pour …"
+      );
       return;
     }
     const uniqueKey = `${challenge.id}_${selectedDays}`;
     if (currentChallenges.find((ch) => ch.uniqueKey === uniqueKey)) {
       console.log("⚠️ Défi déjà pris :", uniqueKey);
-      Alert.alert("Info", "Ce défi est déjà en cours.");
+      Alert.alert(
+        t("info"),                    // clé pour "Info"
+        t("challengeAlreadyTaken")    // clé pour "Ce défi est déjà en cours."
+      );
       return;
     }
     try {
@@ -190,7 +199,10 @@ export const CurrentChallengesProvider: React.FC<{
       await checkForAchievements(userId);
     } catch (error) {
       console.error("❌ Erreur lors de l'ajout du défi :", error.message);
-      Alert.alert("Erreur", "Impossible d'ajouter le défi.");
+      Alert.alert(
+        t("error"),
+        t("unableToAddChallenge")     // clé pour "Impossible d'ajouter le défi."
+      );
     }
   };
 
@@ -243,7 +255,10 @@ export const CurrentChallengesProvider: React.FC<{
         "❌ Erreur lors de la suppression du défi :",
         error.message
       );
-      Alert.alert("Erreur", "Impossible de supprimer le défi.");
+      Alert.alert(
+        t("error"),
+        t("unableToRemoveChallenge")  // clé pour "Impossible de supprimer le défi."
+      );
     }
   };
 
@@ -287,7 +302,10 @@ export const CurrentChallengesProvider: React.FC<{
       );
       if (challengeIndex === -1) {
         console.log("⚠️ Challenge non trouvé :", uniqueKey);
-        Alert.alert("Erreur", "Challenge non trouvé.");
+        Alert.alert(
+          t("error"),
+          t("challengeNotFound")        // clé pour "Challenge non trouvé."
+        );
         return { success: false };
       }
       const challengeToMark = { ...currentChallengesArray[challengeIndex] };
@@ -298,8 +316,8 @@ export const CurrentChallengesProvider: React.FC<{
       ) {
         console.log("⚠️ Déjà marqué aujourd'hui :", uniqueKey);
         Alert.alert(
-          "Déjà marqué",
-          "Tu as déjà marqué ce challenge aujourd'hui."
+          t("alreadyMarkedTitle"),     
+          t("alreadyMarkedMessage")     // clés pour "Déjà marqué…" / "Tu as déjà…"
         );
         return { success: false };
       }
@@ -333,13 +351,13 @@ export const CurrentChallengesProvider: React.FC<{
 
         if (challengeToMark.completedDays >= challengeToMark.selectedDays) {
           Alert.alert(
-            "Félicitations !",
-            "Ce défi est maintenant terminé. Veuillez finaliser pour recevoir vos trophées."
+            t("congrats"),                // clé pour "Félicitations !"
+            t("challengeFinishedPrompt")  // clé pour "Ce défi est terminé…"
           );
         } else {
           Alert.alert(
-            "Bravo !",
-            "Challenge marqué comme complété pour aujourd'hui."
+            t("markedTitle"),             // clé pour "Bravo !"
+            t("markedMessage")            // clé pour "Challenge marqué…"
           );
         }
 
@@ -359,7 +377,7 @@ export const CurrentChallengesProvider: React.FC<{
       }
     } catch (error) {
       console.error("❌ Erreur lors du marquage :", error.message);
-      Alert.alert("Erreur", "Impossible de marquer le défi.");
+      Alert.alert(t("error"), t("unableToMarkChallenge"));
       return { success: false };
     }
   };
@@ -402,12 +420,12 @@ export const CurrentChallengesProvider: React.FC<{
       );
       await updateDoc(userRef, { CurrentChallenges: updatedChallenges });
       setCurrentChallenges(updatedChallenges);
-      Alert.alert("Streak réinitialisé", "Ton streak a été remis à 1.");
+      Alert.alert(t("streakResetTitle"), t("streakResetMessage"));
       await checkForAchievements(userId);
       setModalVisible(false);
     } catch (error) {
       console.error("❌ Erreur lors du reset :", error.message);
-      Alert.alert("Erreur", "Impossible de réinitialiser le streak.");
+      Alert.alert(t("error"), t("unableToResetStreak"));
     }
   };
 
@@ -451,15 +469,12 @@ export const CurrentChallengesProvider: React.FC<{
       );
       await updateDoc(userRef, { CurrentChallenges: updatedChallenges });
       setCurrentChallenges(updatedChallenges);
-      Alert.alert(
-        "Pub regardée",
-        "Challenge marqué, ton streak continue normalement."
-      );
+      Alert.alert(t("adWatchedTitle"), t("adWatchedMessage"));
       await checkForAchievements(userId);
       setModalVisible(false);
     } catch (error) {
       console.error("❌ Erreur lors de watchAd :", error.message);
-      Alert.alert("Erreur", "Impossible de marquer après pub.");
+      Alert.alert(t("error"), t("unableToMarkAfterAd"));
     }
   };
 
@@ -493,10 +508,7 @@ export const CurrentChallengesProvider: React.FC<{
       const success = await deductTrophies(userId, trophyCost);
       if (!success) {
         console.log("⚠️ Pas assez de trophées :", userId);
-        Alert.alert(
-          "Pas assez de trophées",
-          "Tu n'as pas assez de trophées pour cette option."
-        );
+        Alert.alert(t("notEnoughTrophiesTitle"), t("notEnoughTrophiesMessage"));
         setModalVisible(false);
         return;
       }
@@ -515,15 +527,12 @@ export const CurrentChallengesProvider: React.FC<{
       );
       await updateDoc(userRef, { CurrentChallenges: updatedChallenges });
       setCurrentChallenges(updatedChallenges);
-      Alert.alert(
-        "Trophées utilisés",
-        `Challenge marqué, ton streak continue normalement. (${trophyCost} trophées ont été déduits)`
-      );
+      Alert.alert(t("trophiesUsedTitle"), t("trophiesUsedMessage", { cost: trophyCost }));
       await checkForAchievements(userId);
       setModalVisible(false);
     } catch (error) {
       console.error("❌ Erreur lors de useTrophies :", error.message);
-      Alert.alert("Erreur", "Impossible de marquer avec trophées.");
+      Alert.alert(t("error"), t("unableToMarkWithTrophies"));
     }
   };
 
@@ -567,7 +576,7 @@ export const CurrentChallengesProvider: React.FC<{
           "⚠️ Challenge non trouvé pour completeChallenge :",
           uniqueKey
         );
-        Alert.alert("Erreur", "Challenge non trouvé.");
+        Alert.alert(t("error"), t("challengeNotFound"));
         return;
       }
       const challengeToComplete = { ...currentChallengesArray[challengeIndex] };
@@ -653,8 +662,10 @@ export const CurrentChallengesProvider: React.FC<{
       });
 
       Alert.alert(
-        "Félicitations !",
-        `Challenge terminé ! Tu gagnes ${finalTrophies} trophées 🎖️ !`
+        t("finalCongratsTitle"),      // clé pour "Félicitations !"
+        t("finalCongratsMessage", {   // clé pour "Challenge terminé ! Tu gagnes X…"
+          count: finalTrophies,
+        })
       );
       await checkForAchievements(userId);
     } catch (error) {
@@ -662,7 +673,7 @@ export const CurrentChallengesProvider: React.FC<{
         "❌ Erreur lors de la finalisation du défi :",
         error.message
       );
-      Alert.alert("Erreur", "Impossible de finaliser le défi.");
+      Alert.alert(t("error"), t("unableToFinalizeChallenge"));
     }
   };
 

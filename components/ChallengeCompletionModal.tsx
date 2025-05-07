@@ -7,6 +7,7 @@ import {
   StyleSheet,
   Animated,
   Dimensions,
+  Alert,
 } from "react-native";
 import { Ionicons } from "@expo/vector-icons";
 import { LinearGradient } from "expo-linear-gradient";
@@ -16,9 +17,11 @@ import { useCurrentChallenges } from "../context/CurrentChallengesContext";
 import { Video, ResizeMode } from "expo-av";
 import { useTranslation } from "react-i18next";
 
-const { width } = Dimensions.get("window");
+const { width: SCREEN_WIDTH } = Dimensions.get("window");
+const normalizeSize = (size: number) =>
+  Math.round(size * (SCREEN_WIDTH / 375));
 
-// Phrases motivantes
+// Clés i18n pour les phrases motivantes
 const motivationalPhrases = [
   "completion.youAreAwesome",
   "completion.keepItUp",
@@ -47,30 +50,34 @@ export default function ChallengeCompletionModal({
   selectedDays,
   onClose,
 }: ChallengeCompletionModalProps) {
-  const { t } = useTranslation();
-  const [motivationalPhrase, setMotivationalPhrase] = useState("");
+  const { t, i18n } = useTranslation();
+  const [motivationalPhrase, setMotivationalPhrase] = useState<string>("");
   const fadeAnim = useRef(new Animated.Value(0)).current;
   const scaleAnim = useRef(new Animated.Value(0.8)).current;
   const pulseAnim = useRef(new Animated.Value(1)).current;
-  const [userTrophies, setUserTrophies] = useState(0);
+  const [userTrophies, setUserTrophies] = useState<number>(0);
   const { completeChallenge } = useCurrentChallenges();
   const videoRef = useRef<Video>(null);
 
+  // Re-render si la langue change (pour la phrase motivante)
+  useEffect(() => {}, [i18n.language]);
+
   const calculatedReward = Math.round(baseReward * (selectedDays / 7));
 
+  // Écoute le nombre de trophées dans Firestore
   useEffect(() => {
     const userId = auth.currentUser?.uid;
     if (!userId) return;
     const userRef = doc(db, "users", userId);
-    const unsubscribe = onSnapshot(userRef, (docSnap) => {
-      if (docSnap.exists()) {
-        const data = docSnap.data();
-        setUserTrophies(data.trophies || 0);
+    const unsubscribe = onSnapshot(userRef, (snap) => {
+      if (snap.exists()) {
+        setUserTrophies(snap.data().trophies || 0);
       }
     });
     return () => unsubscribe();
   }, []);
 
+  // Animation & phrase motivante à l'ouverture
   useEffect(() => {
     if (visible) {
       const idx = Math.floor(Math.random() * motivationalPhrases.length);
@@ -117,22 +124,37 @@ export default function ChallengeCompletionModal({
   const handleComplete = async (doubleReward: boolean) => {
     try {
       await completeChallenge(challengeId, selectedDays, doubleReward);
+  
+      // calcule le reward final (double si demandé)
+      const finalReward = doubleReward
+        ? Math.round(baseReward * (selectedDays / 7)) * 2
+        : Math.round(baseReward * (selectedDays / 7));
+  
+      Alert.alert(
+        t("completion.finalTitle"),
+        t("completion.finalMessage", { count: finalReward })
+      );
     } catch (error) {
       console.error(t("completion.errorFinalizing"), error);
+      Alert.alert(
+        t("completion.finalTitle"),
+        t("completion.errorFinalizingMessage")
+      );
     }
     onClose();
   };
+  
 
-  const GradientButton = ({
-    onPress,
-    text,
-    iconName,
-  }: {
+  const GradientButton: React.FC<{
     onPress: () => void;
-    text: string;
+    textKey: string;
     iconName?: keyof typeof Ionicons.glyphMap;
-  }) => (
-    <TouchableOpacity onPress={onPress} activeOpacity={0.8} style={styles.gradientButton}>
+  }> = ({ onPress, textKey, iconName }) => (
+    <TouchableOpacity
+      onPress={onPress}
+      activeOpacity={0.8}
+      style={styles.gradientButton}
+    >
       <LinearGradient
         colors={["#FF9A2E", "#FEC163"]}
         start={{ x: 0, y: 0 }}
@@ -141,18 +163,33 @@ export default function ChallengeCompletionModal({
       >
         <View style={styles.buttonContent}>
           {iconName && (
-            <Ionicons name={iconName} size={20} color="#fff" style={styles.buttonIcon} />
+            <Ionicons
+              name={iconName}
+              size={normalizeSize(20)}
+              color="#fff"
+              style={styles.buttonIcon}
+            />
           )}
-          <Text style={styles.buttonGradientText}>{t(text)}</Text>
+          <Text style={styles.buttonGradientText}>{t(textKey)}</Text>
         </View>
       </LinearGradient>
     </TouchableOpacity>
   );
 
+  if (!visible) return null;
+
   return (
-    <Modal visible={visible} transparent animationType="fade" onRequestClose={onClose} statusBarTranslucent>
+    <Modal
+      visible={visible}
+      transparent
+      animationType="fade"
+      onRequestClose={onClose}
+      statusBarTranslucent
+    >
       <View style={styles.fullOverlay}>
-        <Animated.View style={[styles.modalContainer, { transform: [{ scale: scaleAnim }] }]}>
+        <Animated.View
+          style={[styles.modalContainer, { transform: [{ scale: scaleAnim }] }]}
+        >
           <View style={styles.trophyHeader}>
             <Text style={styles.trophyHeaderText}>
               {t("completion.trophies", { count: userTrophies })}
@@ -169,18 +206,26 @@ export default function ChallengeCompletionModal({
               isMuted={false}
             />
           </View>
-          <Text style={styles.motivationalText}>{t(motivationalPhrase)}</Text>
+          <Text style={styles.motivationalText}>
+            {t(motivationalPhrase)}
+          </Text>
           <Animated.View
-            style={[styles.rewardContainer, { opacity: fadeAnim, transform: [{ scale: pulseAnim }] }]}
+            style={[
+              styles.rewardContainer,
+              { opacity: fadeAnim, transform: [{ scale: pulseAnim }] },
+            ]}
           >
             <Text style={styles.rewardText}>
               {t("completion.reward", { count: calculatedReward })}
             </Text>
           </Animated.View>
-          <GradientButton onPress={() => handleComplete(false)} text="completion.continue" />
+          <GradientButton
+            onPress={() => handleComplete(false)}
+            textKey="completion.continue"
+          />
           <GradientButton
             onPress={() => handleComplete(true)}
-            text="completion.doubleTrophies"
+            textKey="completion.doubleTrophies"
             iconName="videocam-outline"
           />
         </Animated.View>
@@ -188,7 +233,6 @@ export default function ChallengeCompletionModal({
     </Modal>
   );
 }
-
 
 const styles = StyleSheet.create({
   fullOverlay: {
@@ -198,7 +242,7 @@ const styles = StyleSheet.create({
     alignItems: "center",
   },
   modalContainer: {
-    width: width * 0.9,
+    width: SCREEN_WIDTH * 0.9,
     borderRadius: 20,
     paddingVertical: 30,
     paddingHorizontal: 20,
@@ -271,4 +315,3 @@ const styles = StyleSheet.create({
     marginRight: 8,
   },
 });
-

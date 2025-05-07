@@ -10,6 +10,8 @@ import {
 } from "firebase/firestore";
 import { Alert } from "react-native";
 import { checkForAchievements } from "../helpers/trophiesHelpers";
+import { useTranslation } from "react-i18next";
+
 
 export interface Challenge {
   id: string;
@@ -36,6 +38,8 @@ export const SavedChallengesProvider: React.FC<{
 }> = ({ children }) => {
   const [savedChallenges, setSavedChallenges] = useState<Challenge[]>([]);
   const [isInitialized, setIsInitialized] = useState(false);
+  const { t, i18n } = useTranslation();
+  
 
   useEffect(() => {
     console.log("Initialisation de onAuthStateChanged pour SavedChallengesContext");
@@ -81,7 +85,10 @@ export const SavedChallengesProvider: React.FC<{
           console.error("Erreur dans onSnapshot :", error);
           setSavedChallenges([]);
           setIsInitialized(true);
-          Alert.alert("Erreur", "Impossible de charger les défis sauvegardés : " + error.message);
+          Alert.alert(
+            t("error"), 
+            t("errorLoadingSavedChallenges", { message: error.message })
+          );
         }
       );
 

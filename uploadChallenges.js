@@ -57,7 +57,7 @@ const challenges = [
   },
   {
     title: "Méditez pendant 10 minutes",
-    category: "Mode de Vie",
+    category: "Mode De Vie",
     description:
       "Atteignez la pleine conscience en méditant seulement 10 minutes par jour.",
     imageUrl: getFirebaseImageUrl("assets/images/meditation.png"),
