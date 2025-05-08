@@ -2,7 +2,7 @@
   "extends": "expo/tsconfig.base",
   "compilerOptions": {
     // Allows React Native JSX in .tsx files
-    "jsx": "react-native",
+"jsx": "react-jsx",
 
     // Turn off strict mode if you prefer
     "strict": false,

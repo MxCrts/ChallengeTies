@@ -16,26 +16,27 @@
     "ios": {
       "supportsTablet": true,
       "bundleIdentifier": "com.mxcrts.ChallengeTies",
+      "config": {
+        "googleMobileAdsAppId": "ca-app-pub-4725616526467159~9688398116"
+      },
       "infoPlist": {
         "NSUserTrackingUsageDescription": "This identifier will be used to deliver personalized ads to you.",
         "SKAdNetworkItems": [
-          {
-            "SKAdNetworkIdentifier": "cstr6suwn9.skadnetwork"
-          },
-          {
-            "SKAdNetworkIdentifier": "cstr6suwn9.skadnetwork"
-          }
+          { "SKAdNetworkIdentifier": "cstr6suwn9.skadnetwork" }
         ],
         "ITSAppUsesNonExemptEncryption": false
       }
     },
     "android": {
+      "package": "com.mxcrts.ChallengeTies",
+      "softwareKeyboardLayoutMode": "pan",
       "adaptiveIcon": {
         "foregroundImage": "./assets/images/adaptive-icon.png",
         "backgroundColor": "#ffffff"
       },
-      "softwareKeyboardLayoutMode": "pan",
-      "package": "com.mxcrts.ChallengeTies"
+      "config": {
+        "googleMobileAdsAppId": "ca-app-pub-4725616526467159~2289013149"
+      }
     },
     "web": {
       "bundler": "metro",
@@ -60,18 +61,15 @@
           "iosAdMobAppId": "ca-app-pub-4725616526467159~9688398116",
           "androidAdMobAppId": "ca-app-pub-4725616526467159~2289013149"
         }
-      ]
+      ],
+      "expo-image"
     ],
     "experiments": {
       "typedRoutes": true
     },
     "extra": {
-      "router": {
-        "origin": false
-      },
-      "eas": {
-        "projectId": "f472e9b7-ef09-41b7-81c6-9a4dc44f2f37"
-      }
+      "router": { "origin": false },
+      "eas": { "projectId": "f472e9b7-ef09-41b7-81c6-9a4dc44f2f37" }
     }
   }
 }

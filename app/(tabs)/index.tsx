@@ -32,6 +32,11 @@ import { useTheme } from "../../context/ThemeContext";
 import { useTranslation } from "react-i18next";
 import { Theme } from "../../theme/designSystem";
 import designSystem from "../../theme/designSystem";
+import {
+  BannerAd,
+  BannerAdSize,
+  TestIds
+} from 'react-native-google-mobile-ads';
 
 const { width: SCREEN_WIDTH, height: SCREEN_HEIGHT } = Dimensions.get("window");
 
@@ -75,6 +80,9 @@ export default function HomeScreen() {
     : designSystem.lightTheme;
 
   const fadeAnim = useSharedValue(0);
+  const adUnitId = __DEV__
+  ? TestIds.BANNER
+  : 'ca-app-pub-4725616526467159/3887969618';
   const fadeStyle = useAnimatedStyle(() => ({ opacity: fadeAnim.value }));
 
   useEffect(() => {
@@ -495,6 +503,13 @@ export default function HomeScreen() {
           </SafeAreaView>
         </ScrollView>
       </LinearGradient>
+      <BannerAd
+  unitId={adUnitId}
+  size={BannerAdSize.BANNER}
+  requestOptions={{ requestNonPersonalizedAdsOnly: false }}
+  onAdLoaded={() => console.log('Bannière chargée')}
+  onAdFailedToLoad={err => console.error('Échec chargement bannière', err)}
+/>
     </View>
   );
 }
