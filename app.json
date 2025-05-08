@@ -44,6 +44,7 @@
       "favicon": "./assets/images/favicon.png"
     },
     "plugins": [
+      "expo-dev-client",
       "expo-router",
       [
         "expo-splash-screen",
@@ -54,15 +55,7 @@
         }
       ],
       "expo-font",
-      "expo-localization",
-      [
-        "expo-ads-admob",
-        {
-          "iosAdMobAppId": "ca-app-pub-4725616526467159~9688398116",
-          "androidAdMobAppId": "ca-app-pub-4725616526467159~2289013149"
-        }
-      ],
-      "expo-image"
+      "expo-localization"
     ],
     "experiments": {
       "typedRoutes": true
