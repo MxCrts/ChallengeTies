@@ -1,0 +1,24 @@
+*** Begin Patch
+*** Update File: node_modules/expo/android/build.gradle
+@@ apply plugin: 'expo-module-gradle-plugin'
+-import expo.modules.plugin.gradle.ExpoModuleExtension
+-import expo.modules.plugin.Version
++// @patched: remove broken imports for expo modules plugin
++// import expo.modules.plugin.gradle.ExpoModuleExtension
++// import expo.modules.plugin.Version
+
+@@ def reactNativeVersion = project.extensions.getByType(ExpoModuleExtension).reactNativeVersion
+-def reactNativeVersion = project.extensions.getByType(ExpoModuleExtension).reactNativeVersion
++// @patched: disable reactNativeVersion lookup
++def reactNativeVersion = null
+
+@@   if (reactNativeVersion.isAtLeast(new Version(0, 78, 0))) {
+-  if (reactNativeVersion.isAtLeast(new Version(0, 78, 0))) {
+-    srcDirs += 'src/rn78/main'
+-  } else if (reactNativeVersion.isAtLeast(new Version(0, 74, 0))) {
+-    // TODO: remove this when dropping RN 0.77 support
+-    srcDirs += 'src/rn74/main'
+-  }
++  // @patched: skip versioned sourceSets
++  // (no versioned srcDirs added)
+*** End Patch
