@@ -87,7 +87,7 @@ android {
     buildToolsVersion rootProject.ext.buildToolsVersion
     compileSdk rootProject.ext.compileSdkVersion
 
-    namespace 'com.mxcrts.ChallengeTies'
+    namespace "com.challengeties"
     defaultConfig {
         applicationId 'com.mxcrts.ChallengeTies'
         minSdkVersion rootProject.ext.minSdkVersion
