@@ -1,4 +1,4 @@
-// Top-level build file where you can add configuration options common to all sub-projects/modules.
+// Top-level build file where you can add configuration options common to all subprojects/modules.
 
 buildscript {
     repositories {
@@ -6,11 +6,10 @@ buildscript {
         mavenCentral()
     }
     dependencies {
-        // Explicit versions are required by Gradle
+        // Pin to known working versions:
         classpath("com.android.tools.build:gradle:8.0.2")
         classpath("com.facebook.react:react-native-gradle-plugin:0.71.8")
         classpath("org.jetbrains.kotlin:kotlin-gradle-plugin:1.8.21")
-        // If you’re using the Expo modules plugin, lock its version too:
         classpath("dev.expo:expo-module-gradle-plugin:1.5.2")
     }
 }
@@ -29,7 +28,7 @@ def reactNativeAndroidDir = new File(
 
 allprojects {
     repositories {
-        // React Native artifacts from npm
+        // React Native Android artifacts from npm
         maven { url reactNativeAndroidDir }
         google()
         mavenCentral()
@@ -37,7 +36,7 @@ allprojects {
     }
 }
 
-// Apply the Expo root-level and React Native root-project plugins
+// Your app module uses these root plugins:
 apply plugin: "com.android.application"
 apply plugin: "org.jetbrains.kotlin.android"
 apply plugin: "com.facebook.react"
