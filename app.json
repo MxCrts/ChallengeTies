@@ -55,14 +55,26 @@
         }
       ],
       "expo-font",
-      "expo-localization"
+      "expo-localization",
+      [
+        "react-native-google-mobile-ads",
+        {
+          "androidAppId": "ca-app-pub-4725616526467159~2289013149",
+          "iosAppId": "ca-app-pub-4725616526467159~9688398116"
+        }
+      ],
+      "expo-notifications"
     ],
     "experiments": {
       "typedRoutes": true
     },
     "extra": {
-      "router": { "origin": false },
-      "eas": { "projectId": "f472e9b7-ef09-41b7-81c6-9a4dc44f2f37" }
+      "router": {
+        "origin": false
+      },
+      "eas": {
+        "projectId": "f472e9b7-ef09-41b7-81c6-9a4dc44f2f37"
+      }
     }
   }
 }
