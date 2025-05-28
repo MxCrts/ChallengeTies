@@ -35,8 +35,12 @@ import designSystem from "../../theme/designSystem";
 import {
   BannerAd,
   BannerAdSize,
-  TestIds
-} from 'react-native-google-mobile-ads';
+  TestIds,
+} from "react-native-google-mobile-ads";
+import { fetchAndSaveUserLocation } from "../../services/locationService";
+import { doc, getDoc } from "firebase/firestore"; // Ajoute cet import
+import { useLanguage } from "../../context/LanguageContext"; // Ajoute cet import
+import i18n from "../../i18n"; // Ajoute cet import
 
 const { width: SCREEN_WIDTH, height: SCREEN_HEIGHT } = Dimensions.get("window");
 
@@ -74,15 +78,40 @@ export default function HomeScreen() {
   const [user, setUser] = useState<User | null>(null);
   const [isMounted, setIsMounted] = useState(false);
   const { theme } = useTheme();
+  const { setLanguage } = useLanguage(); // Ajoute ceci
   const isDarkMode = theme === "dark";
   const currentTheme: Theme = isDarkMode
     ? designSystem.darkTheme
     : designSystem.lightTheme;
 
+  useEffect(() => {
+    if (user) {
+      const userRef = doc(db, "users", user.uid);
+      getDoc(userRef)
+        .then((snapshot) => {
+          if (snapshot.exists()) {
+            const data = snapshot.data();
+            const userLanguage = data.language || i18n.language; // Firestore ou détectée
+            i18n.changeLanguage(userLanguage);
+            setLanguage(userLanguage);
+            // Vérifier locationEnabled et mettre à jour localisation
+            if (data.locationEnabled) {
+              fetchAndSaveUserLocation().catch((error) => {
+                console.error("Erreur localisation index:", error);
+              });
+            }
+          }
+        })
+        .catch((error) => {
+          console.error("Erreur chargement utilisateur:", error);
+        });
+    }
+  }, [user, setLanguage]);
+
   const fadeAnim = useSharedValue(0);
   const adUnitId = __DEV__
-  ? TestIds.BANNER
-  : 'ca-app-pub-4725616526467159/3887969618';
+    ? TestIds.BANNER
+    : "ca-app-pub-4725616526467159/3887969618";
   const fadeStyle = useAnimatedStyle(() => ({ opacity: fadeAnim.value }));
 
   useEffect(() => {
@@ -116,7 +145,7 @@ export default function HomeScreen() {
           description: data?.chatId
             ? t(`challenges.${data.chatId}.description`)
             : t("noDescriptionAvailable"),
-            category: data?.category
+          category: data?.category
             ? t(`categories.${data.category}`)
             : t("miscellaneous"),
           imageUrl: data?.imageUrl || "https://via.placeholder.com/300",
@@ -134,12 +163,14 @@ export default function HomeScreen() {
 
   useEffect(() => {
     if (user) fetchChallenges();
-  }, [user, i18n.language,]);
+  }, [user, i18n.language]);
 
   const flatListRef = useRef<RNAnimated.FlatList<any>>(null);
   const scrollX = useRef(new RNAnimated.Value(0)).current;
   const currentIndexRef = useRef<number>(0);
-  const autoScrollIntervalRef = useRef<NodeJS.Timeout | null>(null);
+  const autoScrollIntervalRef = useRef<ReturnType<typeof setInterval> | null>(
+    null
+  );
 
   const startAutoScroll = useCallback(() => {
     if (challenges.length <= 1) return;
@@ -231,20 +262,29 @@ export default function HomeScreen() {
           style={styles.overlay}
         >
           <Text
-            style={[styles.challengeTitle, { color: currentTheme.colors.textPrimary }]}
+            style={[
+              styles.challengeTitle,
+              { color: currentTheme.colors.textPrimary },
+            ]}
             numberOfLines={2}
           >
             {item.title}
           </Text>
           {item.day !== undefined && (
             <Text
-              style={[styles.challengeDay, { color: currentTheme.colors.primary }]}
+              style={[
+                styles.challengeDay,
+                { color: currentTheme.colors.primary },
+              ]}
             >
               {t("day")} {item.day}
             </Text>
           )}
           <Text
-            style={[styles.challengeCategory, { color: currentTheme.colors.textSecondary }]}
+            style={[
+              styles.challengeCategory,
+              { color: currentTheme.colors.textSecondary },
+            ]}
           >
             {item.category}
           </Text>
@@ -255,7 +295,9 @@ export default function HomeScreen() {
 
   const scrollY = useSharedValue(0);
   const headerStyle = useAnimatedStyle(() => ({
-    transform: [{ translateY: withTiming(scrollY.value * 0.2, { duration: 100 }) }],
+    transform: [
+      { translateY: withTiming(scrollY.value * 0.2, { duration: 100 }) },
+    ],
   }));
 
   const handleScroll = (event: NativeSyntheticEvent<NativeScrollEvent>) => {
@@ -266,7 +308,10 @@ export default function HomeScreen() {
     <View style={styles.container}>
       <StatusBar hidden />
       <LinearGradient
-        colors={[currentTheme.colors.background, currentTheme.colors.cardBackground]}
+        colors={[
+          currentTheme.colors.background,
+          currentTheme.colors.cardBackground,
+        ]}
         style={styles.gradientContainer}
       >
         <ScrollView
@@ -302,12 +347,18 @@ export default function HomeScreen() {
                 accessibilityLabel={t("logoChallengeTies")}
               />
               <Text
-                style={[styles.heroTitle, { color: currentTheme.colors.textPrimary }]}
+                style={[
+                  styles.heroTitle,
+                  { color: currentTheme.colors.textPrimary },
+                ]}
               >
                 {t("defyYourLimits")}
               </Text>
               <Text
-                style={[styles.heroSubtitle, { color: currentTheme.colors.textSecondary }]}
+                style={[
+                  styles.heroSubtitle,
+                  { color: currentTheme.colors.textSecondary },
+                ]}
               >
                 {t("joinVibrantCommunity")}
               </Text>
@@ -317,11 +368,17 @@ export default function HomeScreen() {
                 testID="cta-button"
               >
                 <LinearGradient
-                  colors={[currentTheme.colors.secondary, currentTheme.colors.primary]}
+                  colors={[
+                    currentTheme.colors.secondary,
+                    currentTheme.colors.primary,
+                  ]}
                   style={styles.ctaButton}
                 >
                   <Text
-                    style={[styles.ctaText, { color: currentTheme.colors.textPrimary }]}
+                    style={[
+                      styles.ctaText,
+                      { color: currentTheme.colors.textPrimary },
+                    ]}
                   >
                     {t("launchAdventure")}
                   </Text>
@@ -340,12 +397,18 @@ export default function HomeScreen() {
             {/* CAROUSEL */}
             <View style={styles.section}>
               <Text
-                style={[styles.sectionTitle, { color: currentTheme.colors.textPrimary }]}
+                style={[
+                  styles.sectionTitle,
+                  { color: currentTheme.colors.textPrimary },
+                ]}
               >
                 {t("popularChallenges")}
               </Text>
               {loading ? (
-                <ActivityIndicator size="large" color={currentTheme.colors.secondary} />
+                <ActivityIndicator
+                  size="large"
+                  color={currentTheme.colors.secondary}
+                />
               ) : challenges.length > 0 ? (
                 <>
                   <RNAnimated.FlatList
@@ -393,19 +456,28 @@ export default function HomeScreen() {
                   </View>
                 </>
               ) : (
-                <Animated.View entering={FadeInUp} style={styles.noChallengesContainer}>
+                <Animated.View
+                  entering={FadeInUp}
+                  style={styles.noChallengesContainer}
+                >
                   <Ionicons
                     name="sad-outline"
                     size={normalize(40)}
                     color={currentTheme.colors.textSecondary}
                   />
                   <Text
-                    style={[styles.noChallengesText, { color: currentTheme.colors.textPrimary }]}
+                    style={[
+                      styles.noChallengesText,
+                      { color: currentTheme.colors.textPrimary },
+                    ]}
                   >
                     {t("noChallengesAvailable")}
                   </Text>
                   <Text
-                    style={[styles.noChallengesSubtext, { color: currentTheme.colors.textSecondary }]}
+                    style={[
+                      styles.noChallengesSubtext,
+                      { color: currentTheme.colors.textSecondary },
+                    ]}
                   >
                     {t("challengesComingSoon")}
                   </Text>
@@ -416,13 +488,19 @@ export default function HomeScreen() {
             {/* INSPIRE-TOI */}
             <View style={styles.discoverSection}>
               <Text
-                style={[styles.sectionTitle, { color: currentTheme.colors.textPrimary }]}
+                style={[
+                  styles.sectionTitle,
+                  { color: currentTheme.colors.textPrimary },
+                ]}
               >
                 {t("getInspired")}
               </Text>
               <View style={styles.discoverGrid}>
                 <View style={styles.discoverRow}>
-                  <Animated.View entering={FadeInUp.delay(100)} style={styles.discoverItem}>
+                  <Animated.View
+                    entering={FadeInUp.delay(100)}
+                    style={styles.discoverItem}
+                  >
                     <TouchableOpacity
                       style={[
                         styles.discoverCard,
@@ -441,13 +519,19 @@ export default function HomeScreen() {
                         color={currentTheme.colors.secondary}
                       />
                       <Text
-                        style={[styles.discoverCardText, { color: currentTheme.colors.secondary }]}
+                        style={[
+                          styles.discoverCardText,
+                          { color: currentTheme.colors.secondary },
+                        ]}
                       >
                         {t("tipsAndTricks")}
                       </Text>
                     </TouchableOpacity>
                   </Animated.View>
-                  <Animated.View entering={FadeInUp.delay(200)} style={styles.discoverItem}>
+                  <Animated.View
+                    entering={FadeInUp.delay(200)}
+                    style={styles.discoverItem}
+                  >
                     <TouchableOpacity
                       style={[
                         styles.discoverCard,
@@ -466,14 +550,20 @@ export default function HomeScreen() {
                         color={currentTheme.colors.secondary}
                       />
                       <Text
-                        style={[styles.discoverCardText, { color: currentTheme.colors.secondary }]}
+                        style={[
+                          styles.discoverCardText,
+                          { color: currentTheme.colors.secondary },
+                        ]}
                       >
                         {t("leaderboardTitle")}
                       </Text>
                     </TouchableOpacity>
                   </Animated.View>
                 </View>
-                <Animated.View entering={FadeInUp.delay(300)} style={styles.discoverItemCentered}>
+                <Animated.View
+                  entering={FadeInUp.delay(300)}
+                  style={styles.discoverItemCentered}
+                >
                   <TouchableOpacity
                     style={[
                       styles.discoverCard,
@@ -492,7 +582,10 @@ export default function HomeScreen() {
                       color={currentTheme.colors.secondary}
                     />
                     <Text
-                      style={[styles.discoverCardText, { color: currentTheme.colors.secondary }]}
+                      style={[
+                        styles.discoverCardText,
+                        { color: currentTheme.colors.secondary },
+                      ]}
                     >
                       {t("whatsNew")}
                     </Text>
@@ -502,14 +595,19 @@ export default function HomeScreen() {
             </View>
           </SafeAreaView>
         </ScrollView>
+        {/* Bannière AdMob fixée en bas */}
+        <View style={styles.bannerContainer}>
+          <BannerAd
+            unitId={adUnitId}
+            size={BannerAdSize.BANNER}
+            requestOptions={{ requestNonPersonalizedAdsOnly: false }}
+            onAdLoaded={() => console.log("Bannière chargée")}
+            onAdFailedToLoad={(err) =>
+              console.error("Échec chargement bannière", err)
+            }
+          />
+        </View>
       </LinearGradient>
-      <BannerAd
-  unitId={adUnitId}
-  size={BannerAdSize.BANNER}
-  requestOptions={{ requestNonPersonalizedAdsOnly: false }}
-  onAdLoaded={() => console.log('Bannière chargée')}
-  onAdFailedToLoad={err => console.error('Échec chargement bannière', err)}
-/>
     </View>
   );
 }
@@ -528,6 +626,13 @@ const styles = StyleSheet.create({
   },
   safeAreaContent: {
     flex: 1,
+  },
+  bannerContainer: {
+    position: "absolute",
+    bottom: 0,
+    width: SCREEN_WIDTH,
+    alignItems: "center",
+    backgroundColor: "transparent",
   },
   scrollContent: {
     flexGrow: 1,

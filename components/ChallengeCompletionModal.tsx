@@ -16,10 +16,15 @@ import { auth, db } from "../constants/firebase-config";
 import { useCurrentChallenges } from "../context/CurrentChallengesContext";
 import { Video, ResizeMode } from "expo-av";
 import { useTranslation } from "react-i18next";
+import {
+  RewardedAd,
+  RewardedAdEventType,
+  AdEventType,
+  TestIds,
+} from "react-native-google-mobile-ads";
 
 const { width: SCREEN_WIDTH } = Dimensions.get("window");
-const normalizeSize = (size: number) =>
-  Math.round(size * (SCREEN_WIDTH / 375));
+const normalizeSize = (size: number) => Math.round(size * (SCREEN_WIDTH / 375));
 
 // Clés i18n pour les phrases motivantes
 const motivationalPhrases = [
@@ -36,6 +41,13 @@ const motivationalPhrases = [
 ];
 
 const baseReward = 5;
+// ID vidéo récompensée
+const adUnitId = __DEV__
+  ? TestIds.REWARDED
+  : "ca-app-pub-4725616526467159/6366749139";
+const rewarded = RewardedAd.createForAdRequest(adUnitId, {
+  requestNonPersonalizedAdsOnly: true,
+});
 
 interface ChallengeCompletionModalProps {
   visible: boolean;
@@ -58,7 +70,36 @@ export default function ChallengeCompletionModal({
   const [userTrophies, setUserTrophies] = useState<number>(0);
   const { completeChallenge } = useCurrentChallenges();
   const videoRef = useRef<Video>(null);
+  const [adLoaded, setAdLoaded] = useState(false);
 
+  useEffect(() => {
+    const unsubscribeLoaded = rewarded.addAdEventListener(
+      RewardedAdEventType.LOADED,
+      () => {
+        setAdLoaded(true);
+        console.log("Vidéo récompensée chargée");
+      }
+    );
+    const unsubscribeEarned = rewarded.addAdEventListener(
+      RewardedAdEventType.EARNED_REWARD,
+      () => {
+        console.log("✅ Récompense gagnée !");
+      }
+    );
+    const unsubscribeError = rewarded.addAdEventListener(
+      AdEventType.ERROR,
+      (error) => {
+        console.error("Erreur vidéo récompensée:", error.message);
+        setAdLoaded(false);
+      }
+    );
+    rewarded.load();
+    return () => {
+      unsubscribeLoaded();
+      unsubscribeEarned();
+      unsubscribeError();
+    };
+  }, []);
   // Re-render si la langue change (pour la phrase motivante)
   useEffect(() => {}, [i18n.language]);
 
@@ -122,28 +163,51 @@ export default function ChallengeCompletionModal({
   }, [visible]);
 
   const handleComplete = async (doubleReward: boolean) => {
-    try {
-      await completeChallenge(challengeId, selectedDays, doubleReward);
-  
-      // calcule le reward final (double si demandé)
-      const finalReward = doubleReward
-        ? Math.round(baseReward * (selectedDays / 7)) * 2
-        : Math.round(baseReward * (selectedDays / 7));
-  
-      Alert.alert(
-        t("completion.finalTitle"),
-        t("completion.finalMessage", { count: finalReward })
-      );
-    } catch (error) {
-      console.error(t("completion.errorFinalizing"), error);
-      Alert.alert(
-        t("completion.finalTitle"),
-        t("completion.errorFinalizingMessage")
-      );
+    if (doubleReward) {
+      if (adLoaded) {
+        try {
+          rewarded.show();
+          await completeChallenge(challengeId, selectedDays, true);
+          const finalReward = Math.round(baseReward * (selectedDays / 7)) * 2;
+          Alert.alert(
+            t("completion.finalTitle"),
+            t("completion.finalMessage", { count: finalReward })
+          );
+          setAdLoaded(false);
+          rewarded.load();
+        } catch (error) {
+          console.error(t("completion.errorFinalizing"), error);
+          Alert.alert(
+            t("completion.finalTitle"),
+            t("completion.errorFinalizingMessage")
+          );
+        }
+      } else {
+        console.log("⚠️ Vidéo non chargée, tentative de rechargement");
+        rewarded.load();
+        Alert.alert(
+          t("completion.adNotReadyTitle"),
+          t("completion.adNotReady")
+        );
+      }
+    } else {
+      try {
+        await completeChallenge(challengeId, selectedDays, false);
+        const finalReward = Math.round(baseReward * (selectedDays / 7));
+        Alert.alert(
+          t("completion.finalTitle"),
+          t("completion.finalMessage", { count: finalReward })
+        );
+      } catch (error) {
+        console.error(t("completion.errorFinalizing"), error);
+        Alert.alert(
+          t("completion.finalTitle"),
+          t("completion.errorFinalizingMessage")
+        );
+      }
     }
     onClose();
   };
-  
 
   const GradientButton: React.FC<{
     onPress: () => void;
@@ -206,9 +270,7 @@ export default function ChallengeCompletionModal({
               isMuted={false}
             />
           </View>
-          <Text style={styles.motivationalText}>
-            {t(motivationalPhrase)}
-          </Text>
+          <Text style={styles.motivationalText}>{t(motivationalPhrase)}</Text>
           <Animated.View
             style={[
               styles.rewardContainer,

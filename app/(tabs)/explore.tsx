@@ -1,9 +1,4 @@
-import React, {
-  useState,
-  useEffect,
-  useMemo,
-  useCallback,
-} from "react";
+import React, { useState, useEffect, useMemo, useCallback } from "react";
 import {
   View,
   Text,
@@ -34,9 +29,13 @@ import { Theme } from "../../theme/designSystem";
 import CustomHeader from "@/components/CustomHeader";
 import GlobalLayout from "../../components/GlobalLayout";
 import designSystem from "../../theme/designSystem";
+import {
+  BannerAd,
+  BannerAdSize,
+  TestIds,
+} from "react-native-google-mobile-ads";
 
-const { width: SCREEN_WIDTH, height: SCREEN_HEIGHT } =
-  Dimensions.get("window");
+const { width: SCREEN_WIDTH, height: SCREEN_HEIGHT } = Dimensions.get("window");
 
 // Fonction de normalisation des tailles pour la responsivité
 const normalize = (size: number) => {
@@ -47,8 +46,10 @@ const normalize = (size: number) => {
 // Constante pour les espacements
 const SPACING = normalize(15);
 
-const capitalize = (s: string) =>
-  s.charAt(0).toUpperCase() + s.slice(1);
+const capitalize = (s: string) => s.charAt(0).toUpperCase() + s.slice(1);
+const adUnitId = __DEV__
+  ? TestIds.BANNER
+  : "ca-app-pub-4725616526467159/3887969618";
 
 interface Challenge {
   id: string;
@@ -108,8 +109,7 @@ const ExploreHeader = React.memo(
           style={[
             styles.searchContainer,
             {
-              backgroundColor:
-                currentTheme.colors.cardBackground,
+              backgroundColor: currentTheme.colors.cardBackground,
               borderColor: currentTheme.colors.border,
             },
           ]}
@@ -126,9 +126,7 @@ const ExploreHeader = React.memo(
               { color: currentTheme.colors.textPrimary },
             ]}
             placeholder={t("searchPlaceholder")}
-            placeholderTextColor={
-              currentTheme.colors.textSecondary
-            }
+            placeholderTextColor={currentTheme.colors.textSecondary}
             value={searchQuery}
             onChangeText={onSearchChange}
             returnKeyType="search"
@@ -145,8 +143,7 @@ const ExploreHeader = React.memo(
               style={[
                 styles.filterButton,
                 {
-                  backgroundColor:
-                    currentTheme.colors.secondary,
+                  backgroundColor: currentTheme.colors.secondary,
                 },
               ]}
               onPress={onOriginToggle}
@@ -174,8 +171,7 @@ const ExploreHeader = React.memo(
               style={[
                 styles.filterButton,
                 {
-                  backgroundColor:
-                    currentTheme.colors.secondary,
+                  backgroundColor: currentTheme.colors.secondary,
                 },
               ]}
               onPress={onToggleCategoryModal}
@@ -196,8 +192,8 @@ const ExploreHeader = React.memo(
                 {categoryFilter === "All"
                   ? t("category")
                   : t(`categories.${categoryFilter}`, {
-                           defaultValue: capitalize(categoryFilter),
-                         })}
+                      defaultValue: capitalize(categoryFilter),
+                    })}
               </Text>
             </TouchableOpacity>
           </View>
@@ -206,8 +202,7 @@ const ExploreHeader = React.memo(
             style={[
               styles.resetButton,
               {
-                backgroundColor:
-                  currentTheme.colors.primary,
+                backgroundColor: currentTheme.colors.primary,
               },
             ]}
             onPress={onResetFilters}
@@ -232,8 +227,7 @@ const ExploreHeader = React.memo(
             style={[
               styles.modalOverlay,
               {
-                backgroundColor:
-                  currentTheme.colors.overlay,
+                backgroundColor: currentTheme.colors.overlay,
               },
             ]}
             activeOpacity={1}
@@ -243,8 +237,7 @@ const ExploreHeader = React.memo(
               style={[
                 styles.modalContent,
                 {
-                  backgroundColor:
-                    currentTheme.colors.cardBackground,
+                  backgroundColor: currentTheme.colors.cardBackground,
                 },
               ]}
             >
@@ -253,8 +246,7 @@ const ExploreHeader = React.memo(
                   style={[
                     styles.modalTitle,
                     {
-                      color:
-                        currentTheme.colors.textPrimary,
+                      color: currentTheme.colors.textPrimary,
                     },
                   ]}
                 >
@@ -268,54 +260,55 @@ const ExploreHeader = React.memo(
                   <Ionicons
                     name="close-outline"
                     size={normalize(24)}
-                    color={
-                      currentTheme.colors.textPrimary
-                    }
+                    color={currentTheme.colors.textPrimary}
                   />
                 </TouchableOpacity>
               </View>
 
               <ScrollView
-  showsVerticalScrollIndicator={false}
-  keyboardShouldPersistTaps="handled"
->
-  {availableCategories.map((rawCat) => {
-    // Détermine le label traduit, avec fallback sur la version capitalisée
-    const label =
-      rawCat === "All"
-        ? t("category")
-        : t(`categories.${rawCat}`, { defaultValue: capitalize(rawCat) });
+                showsVerticalScrollIndicator={false}
+                keyboardShouldPersistTaps="handled"
+              >
+                {availableCategories.map((rawCat) => {
+                  // Détermine le label traduit, avec fallback sur la version capitalisée
+                  const label =
+                    rawCat === "All"
+                      ? t("category")
+                      : t(`categories.${rawCat}`, {
+                          defaultValue: capitalize(rawCat),
+                        });
 
-    return (
-      <TouchableOpacity
-        key={rawCat}
-        style={[
-          styles.modalItem,
-          { borderBottomColor: currentTheme.colors.border },
-        ]}
-        onPress={() => onCategorySelect(rawCat)}
-        accessibilityLabel={t("selectCategory", { category: label })}
-        testID={`category-item-${rawCat}`}
-      >
-        <Ionicons
-          name="pricetag-outline"
-          size={normalize(18)}
-          color={currentTheme.colors.secondary}
-          style={styles.modalItemIcon}
-        />
-        <Text
-          style={[
-            styles.modalItemText,
-            { color: currentTheme.colors.textPrimary },
-          ]}
-        >
-          {label}
-        </Text>
-      </TouchableOpacity>
-    );
-  })}
-</ScrollView>
-
+                  return (
+                    <TouchableOpacity
+                      key={rawCat}
+                      style={[
+                        styles.modalItem,
+                        { borderBottomColor: currentTheme.colors.border },
+                      ]}
+                      onPress={() => onCategorySelect(rawCat)}
+                      accessibilityLabel={t("selectCategory", {
+                        category: label,
+                      })}
+                      testID={`category-item-${rawCat}`}
+                    >
+                      <Ionicons
+                        name="pricetag-outline"
+                        size={normalize(18)}
+                        color={currentTheme.colors.secondary}
+                        style={styles.modalItemIcon}
+                      />
+                      <Text
+                        style={[
+                          styles.modalItemText,
+                          { color: currentTheme.colors.textPrimary },
+                        ]}
+                      >
+                        {label}
+                      </Text>
+                    </TouchableOpacity>
+                  );
+                })}
+              </ScrollView>
             </View>
           </TouchableOpacity>
         </Modal>
@@ -331,20 +324,12 @@ export default function ExploreScreen() {
   const [searchQuery, setSearchQuery] = useState("");
   const [categoryFilter, setCategoryFilter] = useState("All");
   const [originFilter, setOriginFilter] = useState("Existing");
-  const [
-    isCategoryModalVisible,
-    setIsCategoryModalVisible,
-  ] = useState(false);
-  const [
-    pendingFavorites,
-    setPendingFavorites,
-  ] = useState<{ [key: string]: boolean }>({});
+  const [isCategoryModalVisible, setIsCategoryModalVisible] = useState(false);
+  const [pendingFavorites, setPendingFavorites] = useState<{
+    [key: string]: boolean;
+  }>({});
   const router = useRouter();
-  const {
-    isSaved,
-    addChallenge,
-    removeChallenge,
-  } = useSavedChallenges();
+  const { isSaved, addChallenge, removeChallenge } = useSavedChallenges();
   const { theme } = useTheme();
   const isDarkMode = theme === "dark";
   const currentTheme: Theme = isDarkMode
@@ -367,10 +352,14 @@ export default function ExploreScreen() {
             rawCategory: rawCat,
             category: t(`categories.${rawCat}`, { defaultValue: rawCat }),
             title: data.chatId
-              ? t(`challenges.${data.chatId}.title`, { defaultValue: data.title })
+              ? t(`challenges.${data.chatId}.title`, {
+                  defaultValue: data.title,
+                })
               : data.title,
             description: data.chatId
-              ? t(`challenges.${data.chatId}.description`, { defaultValue: data.description })
+              ? t(`challenges.${data.chatId}.description`, {
+                  defaultValue: data.description,
+                })
               : data.description || t("noDescription"),
             imageUrl: data.imageUrl || null,
             participantsCount: data.participantsCount || 0,
@@ -397,7 +386,9 @@ export default function ExploreScreen() {
 
   const filteredChallenges = useMemo(() => {
     return challenges.filter((c) => {
-      const matchesSearch = c.title.toLowerCase().includes(searchQuery.toLowerCase());
+      const matchesSearch = c.title
+        .toLowerCase()
+        .includes(searchQuery.toLowerCase());
       const matchesCategory =
         categoryFilter === "All" || c.rawCategory === categoryFilter;
       const matchesOrigin =
@@ -459,8 +450,7 @@ export default function ExploreScreen() {
     setIsCategoryModalVisible(false);
   }, []);
   const toggleCategoryModal = useCallback(
-    () =>
-      setIsCategoryModalVisible((v) => !v),
+    () => setIsCategoryModalVisible((v) => !v),
     []
   );
   const closeCategoryModal = useCallback(
@@ -468,10 +458,7 @@ export default function ExploreScreen() {
     []
   );
   const toggleOrigin = useCallback(
-    () =>
-      setOriginFilter((o) =>
-        o === "Existing" ? "Created" : "Existing"
-      ),
+    () => setOriginFilter((o) => (o === "Existing" ? "Created" : "Existing")),
     []
   );
 
@@ -506,12 +493,8 @@ export default function ExploreScreen() {
     <GlobalLayout>
       <KeyboardAvoidingView
         style={{ flex: 1 }}
-        behavior={
-          Platform.OS === "ios" ? "padding" : "height"
-        }
-        keyboardVerticalOffset={
-          Platform.select({ ios: 100, android: 20 })!
-        }
+        behavior={Platform.OS === "ios" ? "padding" : "height"}
+        keyboardVerticalOffset={Platform.select({ ios: 100, android: 20 })!}
       >
         <LinearGradient
           colors={[
@@ -524,17 +507,13 @@ export default function ExploreScreen() {
             data={filteredChallenges}
             keyExtractor={(item) => item.id}
             renderItem={({ item, index }) => (
-              <Animated.View
-                entering={FadeInUp.delay(200 + index * 100)}
-              >
+              <Animated.View entering={FadeInUp.delay(200 + index * 100)}>
                 <TouchableOpacity
                   style={[
                     styles.challengeCard,
                     {
-                      backgroundColor:
-                        currentTheme.colors.cardBackground,
-                      borderColor:
-                        currentTheme.colors.secondary,
+                      backgroundColor: currentTheme.colors.cardBackground,
+                      borderColor: currentTheme.colors.secondary,
                     },
                   ]}
                   onPress={() =>
@@ -543,15 +522,12 @@ export default function ExploreScreen() {
                         item.title
                       )}&category=${encodeURIComponent(
                         item.category
-                      )}&description=${encodeURIComponent(
-                        item.description
-                      )}`
+                      )}&description=${encodeURIComponent(item.description)}`
                     )
                   }
-                  accessibilityLabel={t(
-                    "viewChallengeDetails",
-                    { title: item.title }
-                  )}
+                  accessibilityLabel={t("viewChallengeDetails", {
+                    title: item.title,
+                  })}
                   testID={`challenge-card-${index}`}
                 >
                   {item.imageUrl ? (
@@ -566,18 +542,14 @@ export default function ExploreScreen() {
                     />
                   )}
                   <LinearGradient
-                    colors={[
-                      currentTheme.colors.overlay,
-                      "rgba(0,0,0,0.9)",
-                    ]}
+                    colors={[currentTheme.colors.overlay, "rgba(0,0,0,0.9)"]}
                     style={styles.cardOverlay}
                   >
                     <Text
                       style={[
                         styles.challengeTitle,
                         {
-                          color:
-                            currentTheme.colors.textPrimary,
+                          color: currentTheme.colors.textPrimary,
                         },
                       ]}
                       numberOfLines={2}
@@ -588,8 +560,7 @@ export default function ExploreScreen() {
                       style={[
                         styles.challengeCategory,
                         {
-                          color:
-                            currentTheme.colors.trophy,
+                          color: currentTheme.colors.trophy,
                         },
                       ]}
                     >
@@ -599,8 +570,7 @@ export default function ExploreScreen() {
                       style={[
                         styles.challengeParticipants,
                         {
-                          color:
-                            currentTheme.colors.trophy,
+                          color: currentTheme.colors.trophy,
                         },
                       ]}
                     >
@@ -615,8 +585,7 @@ export default function ExploreScreen() {
                             count: 1,
                           })
                         : t("participant", {
-                            count:
-                              item.participantsCount,
+                            count: item.participantsCount,
                           })}
                     </Text>
                   </LinearGradient>
@@ -636,8 +605,7 @@ export default function ExploreScreen() {
                   >
                     <Ionicons
                       name={
-                        pendingFavorites[item.id] !==
-                        undefined
+                        pendingFavorites[item.id] !== undefined
                           ? pendingFavorites[item.id]
                             ? "bookmark"
                             : "bookmark-outline"
@@ -647,8 +615,7 @@ export default function ExploreScreen() {
                       }
                       size={normalize(24)}
                       color={
-                        pendingFavorites[item.id] !==
-                        undefined
+                        pendingFavorites[item.id] !== undefined
                           ? pendingFavorites[item.id]
                             ? currentTheme.colors.secondary
                             : currentTheme.colors.textPrimary
@@ -672,9 +639,7 @@ export default function ExploreScreen() {
                 onCategorySelect={selectCategory}
                 onOriginToggle={toggleOrigin}
                 onToggleCategoryModal={toggleCategoryModal}
-                isCategoryModalVisible={
-                  isCategoryModalVisible
-                }
+                isCategoryModalVisible={isCategoryModalVisible}
                 onCloseCategoryModal={closeCategoryModal}
                 currentTheme={currentTheme}
               />
@@ -687,16 +652,13 @@ export default function ExploreScreen() {
                 <Ionicons
                   name="search-outline"
                   size={normalize(60)}
-                  color={
-                    currentTheme.colors.textSecondary
-                  }
+                  color={currentTheme.colors.textSecondary}
                 />
                 <Text
                   style={[
                     styles.noChallengesText,
                     {
-                      color:
-                        currentTheme.colors.textPrimary,
+                      color: currentTheme.colors.textPrimary,
                     },
                   ]}
                 >
@@ -706,8 +668,7 @@ export default function ExploreScreen() {
                   style={[
                     styles.noChallengesSubtext,
                     {
-                      color:
-                        currentTheme.colors.textSecondary,
+                      color: currentTheme.colors.textSecondary,
                     },
                   ]}
                 >
@@ -723,6 +684,17 @@ export default function ExploreScreen() {
           />
         </LinearGradient>
       </KeyboardAvoidingView>
+      <View style={styles.bannerContainer}>
+        <BannerAd
+          unitId={adUnitId}
+          size={BannerAdSize.BANNER}
+          requestOptions={{ requestNonPersonalizedAdsOnly: false }}
+          onAdLoaded={() => console.log("Bannière chargée")}
+          onAdFailedToLoad={(err) =>
+            console.error("Échec chargement bannière", err)
+          }
+        />
+      </View>
     </GlobalLayout>
   );
 }
@@ -736,6 +708,13 @@ const styles = StyleSheet.create({
   headerContent: {
     paddingHorizontal: SPACING,
     paddingBottom: SPACING,
+  },
+  bannerContainer: {
+    position: "absolute",
+    bottom: 0,
+    width: SCREEN_WIDTH,
+    alignItems: "center",
+    backgroundColor: "transparent",
   },
   headerWrapper: {
     marginTop: SPACING,

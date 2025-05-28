@@ -1,8 +1,9 @@
 // src/i18n.ts
 import i18n from "i18next";
 import { initReactI18next } from "react-i18next";
+import * as Localization from "expo-localization";
 
-// Import your translation JSON files
+// Import des traductions
 import en from "./src/locales/en/translation.json";
 import fr from "./src/locales/fr/translation.json";
 import ar from "./src/locales/ar/translation.json";
@@ -25,18 +26,36 @@ const resources = {
   es: { translation: es },
 };
 
-i18n
-  .use(initReactI18next) // pass the i18n instance to react-i18next.
-  .init({
-    resources,
-    fallbackLng: "en",
-    lng: "en", // or detect language automatically if you install a detector
-    interpolation: {
-      escapeValue: false, // react already safes from xss
-    },
-    react: {
-      useSuspense: false, // set to true if you want to suspense-load translations
-    },
-  });
+// Mapper les codes de langue système aux langues supportées
+const getSupportedLanguage = (locale: string): string => {
+  const lang = locale.split("-")[0].toLowerCase(); // Ex. : "es-ES" -> "es"
+  const supportedLanguages = [
+    "en",
+    "fr",
+    "es",
+    "de",
+    "zh",
+    "ar",
+    "hi",
+    "ru",
+    "it",
+  ];
+  return supportedLanguages.includes(lang) ? lang : "en"; // Fallback à "en"
+};
+
+// Récupérer la langue de l'appareil
+const deviceLanguage = getSupportedLanguage(Localization.locale);
+
+i18n.use(initReactI18next).init({
+  resources,
+  lng: deviceLanguage, // Langue détectée automatiquement
+  fallbackLng: "en",
+  interpolation: {
+    escapeValue: false, // React protège déjà contre XSS
+  },
+  react: {
+    useSuspense: false, // Pas de suspense pour chargement initial
+  },
+});
 
 export default i18n;

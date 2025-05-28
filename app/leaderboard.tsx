@@ -11,9 +11,18 @@ import {
   ScrollView,
   StatusBar,
 } from "react-native";
+import AsyncStorage from "@react-native-async-storage/async-storage";
 import { Ionicons, MaterialCommunityIcons } from "@expo/vector-icons";
 import { LinearGradient } from "expo-linear-gradient";
-import { collection, getDocs, doc, getDoc } from "firebase/firestore";
+import {
+  collection,
+  query,
+  orderBy,
+  limit,
+  getDocs,
+  doc,
+  getDoc,
+} from "firebase/firestore";
 import { db, auth } from "../constants/firebase-config";
 import { useRouter } from "expo-router";
 import { SafeAreaView } from "react-native-safe-area-context";
@@ -46,71 +55,133 @@ export default function LeaderboardScreen() {
   const [filteredPlayers, setFilteredPlayers] = useState<Player[]>([]);
   const [loading, setLoading] = useState(true);
   const [currentUser, setCurrentUser] = useState<Player | null>(null);
-  const [selectedTab, setSelectedTab] = useState<"region" | "national" | "global">("global");
+  const [selectedTab, setSelectedTab] = useState<
+    "region" | "national" | "global"
+  >("global");
+  const [locationDisabledMessage, setLocationDisabledMessage] = useState<
+    string | null
+  >(null);
   const router = useRouter();
   const { theme } = useTheme();
   const isDarkMode = theme === "dark";
-  const currentTheme: Theme = isDarkMode ? designSystem.darkTheme : designSystem.lightTheme;
+  const currentTheme: Theme = isDarkMode
+    ? designSystem.darkTheme
+    : designSystem.lightTheme;
+
+  const cacheLeaderboard = async (players: Player[]) => {
+    try {
+      await AsyncStorage.setItem("leaderboardCache", JSON.stringify(players));
+    } catch (e) {
+      console.error("Erreur cache:", e);
+    }
+  };
+
+  const getCachedLeaderboard = async () => {
+    try {
+      const cached = await AsyncStorage.getItem("leaderboardCache");
+      return cached ? JSON.parse(cached) : null;
+    } catch (e) {
+      console.error("Erreur lecture cache:", e);
+      return null;
+    }
+  };
 
   useEffect(() => {
     const fetchLeaderboard = async () => {
       try {
-        const snapshot = await getDocs(collection(db, "users"));
+        setLoading(true);
+        const cached = await getCachedLeaderboard();
+        if (cached) setPlayers(cached);
+
+        const q = query(
+          collection(db, "users"),
+          orderBy("trophies", "desc"),
+          limit(20)
+        );
+        const snapshot = await getDocs(q);
         const fetched: Player[] = snapshot.docs.map((d) => ({
           id: d.id,
-          username: d.data().username,
+          username: d.data().username || t("leaderboard.unknown"),
           trophies: d.data().trophies || 0,
           profileImage: d.data().profileImage || null,
           country: d.data().country || "Unknown",
           region: d.data().region || "Unknown",
         }));
         setPlayers(fetched);
+        cacheLeaderboard(fetched);
 
         const uid = auth.currentUser?.uid;
         if (uid) {
           const userSnap = await getDoc(doc(db, "users", uid));
           if (userSnap.exists()) {
             const data = userSnap.data();
-            const found = fetched.find((p) => p.id === uid) || null;
-            setCurrentUser(
-              found
-                ? { ...found, country: data.country, region: data.region }
-                : null
-            );
+            const found = fetched.find((p) => p.id === uid) || {
+              id: uid,
+              username: data.username || t("leaderboard.unknown"),
+              trophies: data.trophies || 0,
+              profileImage: data.profileImage || null,
+              country: data.country || "Unknown",
+              region: data.region || "Unknown",
+            };
+            setCurrentUser(found);
+
+            if (!data.locationEnabled) {
+              setLocationDisabledMessage(t("leaderboard.locationDisabled"));
+            } else {
+              setLocationDisabledMessage(null);
+            }
+          } else {
+            console.warn(t("leaderboard.userNotFound"));
+            setCurrentUser(null);
+            setLocationDisabledMessage(t("leaderboard.userNotFound"));
           }
         }
       } catch (e) {
         console.error(t("leaderboard.errorFetch"), e);
+        setLocationDisabledMessage(t("leaderboard.errorFetch"));
       } finally {
         setLoading(false);
       }
     };
     fetchLeaderboard();
-  }, []);
+  }, [t]);
 
   useEffect(() => {
-    if (!currentUser) return;
+    if (!currentUser) {
+      setFilteredPlayers([]);
+      return;
+    }
     let list = players;
     if (selectedTab === "region") {
-      list = players.filter((p) => p.region === currentUser.region);
+      // Filtrer les joueurs avec une région valide
+      list = players.filter((p) => p.region && p.region !== "Unknown");
     } else if (selectedTab === "national") {
-      list = players.filter((p) => p.country === currentUser.country);
+      // Filtrer les joueurs avec un pays valide
+      list = players.filter((p) => p.country && p.country !== "Unknown");
     }
-    list.sort((a, b) => b.trophies - a.trophies);
+    list = list.sort((a, b) => b.trophies - a.trophies).slice(0, 20);
     setFilteredPlayers(list);
   }, [selectedTab, players, currentUser]);
 
   const renderTopThree = () => {
     if (filteredPlayers.length < 3) {
       return (
-        <Text style={[styles.noPlayersText, { color: currentTheme.colors.textSecondary }]}>
+        <Text
+          style={[
+            styles.noPlayersText,
+            { color: currentTheme.colors.textSecondary },
+          ]}
+        >
           {t("leaderboard.notEnough")}
         </Text>
       );
     }
     const [first, second, third] = filteredPlayers;
     return (
-      <Animated.View entering={FadeInUp.delay(200)} style={styles.topThreeContainer}>
+      <Animated.View
+        entering={FadeInUp.delay(200)}
+        style={styles.topThreeContainer}
+      >
         {[second, first, third].map((player, idx) => {
           const isFirst = idx === 1;
           const colors = isFirst
@@ -123,29 +194,63 @@ export default function LeaderboardScreen() {
           return (
             <View key={player.id} style={styles.podiumItem}>
               <LinearGradient
-  colors={
-    isFirst
-      ? (["#FFD700", "#FFA500"] as [string, string])
-      : idx === 0
-      ? (["#C0C0C0", "#A9A9A9"] as [string, string])
-      : (["#CD7F32", "#8B4513"] as [string, string])
-  }
-  style={isFirst ? styles.circleFirst : idx === 0 ? styles.circleSecond : styles.circleThird}
->
+                colors={
+                  isFirst
+                    ? (["#FFD700", "#FFA500"] as [string, string])
+                    : idx === 0
+                    ? (["#C0C0C0", "#A9A9A9"] as [string, string])
+                    : (["#CD7F32", "#8B4513"] as [string, string])
+                }
+                style={
+                  isFirst
+                    ? styles.circleFirst
+                    : idx === 0
+                    ? styles.circleSecond
+                    : styles.circleThird
+                }
+              >
                 <Image
-                  source={player.profileImage ? { uri: player.profileImage } : require("../assets/images/default-profile.webp")}
-                  style={isFirst ? styles.profileImageFirst : styles.profileImage}
-                  accessibilityLabel={t("leaderboard.profileOf", { name: player.username || t("leaderboard.unknown") })}
+                  source={
+                    player.profileImage
+                      ? { uri: player.profileImage }
+                      : require("../assets/images/default-profile.webp")
+                  }
+                  style={
+                    isFirst ? styles.profileImageFirst : styles.profileImage
+                  }
+                  accessibilityLabel={t("leaderboard.profileOf", {
+                    name: player.username,
+                  })}
                 />
-                <MaterialCommunityIcons name={Icon} size={size} color={colors[0]} style={isFirst ? styles.crownIcon : styles.medalIcon} />
+                <MaterialCommunityIcons
+                  name={Icon}
+                  size={size}
+                  color={colors[0]}
+                  style={isFirst ? styles.crownIcon : styles.medalIcon}
+                />
               </LinearGradient>
-              <Text style={[styles.podiumName, { color: currentTheme.colors.textPrimary }]}>
-                {player.username || t("leaderboard.unknown")}
+              <Text
+                style={[
+                  styles.podiumName,
+                  { color: currentTheme.colors.textPrimary },
+                ]}
+              >
+                {player.username}
               </Text>
-              <Text style={[styles.podiumTrophies, { color: currentTheme.colors.trophy }]}>
+              <Text
+                style={[
+                  styles.podiumTrophies,
+                  { color: currentTheme.colors.trophy },
+                ]}
+              >
                 {player.trophies} 🏆
               </Text>
-              <Text style={[styles.handle, { color: currentTheme.colors.textSecondary }]}>
+              <Text
+                style={[
+                  styles.handle,
+                  { color: currentTheme.colors.textSecondary },
+                ]}
+              >
                 @{(player.username || "").toLowerCase()}
               </Text>
             </View>
@@ -171,24 +276,53 @@ export default function LeaderboardScreen() {
       >
         <View style={styles.leftSection}>
           <Image
-            source={item.profileImage ? { uri: item.profileImage } : require("../assets/images/default-profile.webp")}
-            style={[styles.playerImage, { borderColor: currentTheme.colors.border }]}
-            accessibilityLabel={t("leaderboard.profileOf", { name: item.username || t("leaderboard.unknown") })}
+            source={
+              item.profileImage
+                ? { uri: item.profileImage }
+                : require("../assets/images/default-profile.webp")
+            }
+            style={[
+              styles.playerImage,
+              { borderColor: currentTheme.colors.border },
+            ]}
+            accessibilityLabel={t("leaderboard.profileOf", {
+              name: item.username,
+            })}
           />
           <View style={styles.playerInfo}>
-            <Text style={[styles.playerName, { color: currentTheme.colors.textPrimary }]}>
-              {item.username || t("leaderboard.unknown")}
+            <Text
+              style={[
+                styles.playerName,
+                { color: currentTheme.colors.textPrimary },
+              ]}
+            >
+              {item.username}
             </Text>
-            <Text style={[styles.handle, { color: currentTheme.colors.textSecondary }]}>
+            <Text
+              style={[
+                styles.handle,
+                { color: currentTheme.colors.textSecondary },
+              ]}
+            >
               @{(item.username || "").toLowerCase()}
             </Text>
           </View>
         </View>
         <View style={styles.rightSection}>
-          <Text style={[styles.playerTrophies, { color: currentTheme.colors.trophy }]}>
+          <Text
+            style={[
+              styles.playerTrophies,
+              { color: currentTheme.colors.trophy },
+            ]}
+          >
             {item.trophies} 🏆
           </Text>
-          <Text style={[styles.rankText, { color: currentTheme.colors.textSecondary }]}>
+          <Text
+            style={[
+              styles.rankText,
+              { color: currentTheme.colors.textSecondary },
+            ]}
+          >
             #{rank}
           </Text>
         </View>
@@ -197,19 +331,39 @@ export default function LeaderboardScreen() {
   };
 
   const listPlayers = (() => {
-    const slice = filteredPlayers.slice(3, 23);
-    const idx = filteredPlayers.findIndex((p) => p.id === currentUser?.id);
-    if (currentUser && idx > 22) slice.push({ ...currentUser, rank: idx + 1 });
+    const slice = filteredPlayers.slice(3, 20); // 17 après podium
+    const idx = players.findIndex((p) => p.id === currentUser?.id);
+    if (currentUser && idx > 19) {
+      slice.push({ ...currentUser, rank: idx + 1 });
+    }
     return slice;
   })();
 
   if (loading) {
     return (
       <SafeAreaView style={styles.safeArea}>
-        <StatusBar translucent backgroundColor="transparent" barStyle={isDarkMode ? "light-content" : "dark-content"} />
-        <LinearGradient colors={[currentTheme.colors.background, currentTheme.colors.cardBackground]} style={styles.loadingContainer}>
-          <ActivityIndicator size="large" color={currentTheme.colors.secondary} />
-          <Text style={[styles.loadingText, { color: currentTheme.colors.textPrimary }]}>
+        <StatusBar
+          translucent
+          backgroundColor="transparent"
+          barStyle={isDarkMode ? "light-content" : "dark-content"}
+        />
+        <LinearGradient
+          colors={[
+            currentTheme.colors.background,
+            currentTheme.colors.cardBackground,
+          ]}
+          style={styles.loadingContainer}
+        >
+          <ActivityIndicator
+            size="large"
+            color={currentTheme.colors.secondary}
+          />
+          <Text
+            style={[
+              styles.loadingText,
+              { color: currentTheme.colors.textPrimary },
+            ]}
+          >
             {t("leaderboard.loading")}
           </Text>
         </LinearGradient>
@@ -219,9 +373,16 @@ export default function LeaderboardScreen() {
 
   return (
     <SafeAreaView style={styles.safeArea}>
-      <StatusBar translucent backgroundColor="transparent" barStyle={isDarkMode ? "light-content" : "dark-content"} />
+      <StatusBar
+        translucent
+        backgroundColor="transparent"
+        barStyle={isDarkMode ? "light-content" : "dark-content"}
+      />
       <LinearGradient
-        colors={[currentTheme.colors.background, `${currentTheme.colors.cardBackground}F0`]}
+        colors={[
+          currentTheme.colors.background,
+          `${currentTheme.colors.cardBackground}F0`,
+        ]}
         style={styles.container}
         start={{ x: 0, y: 0 }}
         end={{ x: 1, y: 1 }}
@@ -229,14 +390,20 @@ export default function LeaderboardScreen() {
         <View style={styles.headerWrapper}>
           <CustomHeader title={t("leaderboard.title")} />
         </View>
-        <Animated.View entering={FadeInUp.delay(100)} style={styles.tabsContainer}>
+        <Animated.View
+          entering={FadeInUp.delay(100)}
+          style={styles.tabsContainer}
+        >
           {(["region", "national", "global"] as const).map((tab) => (
             <TouchableOpacity
               key={tab}
               style={[
                 styles.tab,
                 { backgroundColor: `${currentTheme.colors.cardBackground}90` },
-                selectedTab === tab && [{ backgroundColor: currentTheme.colors.secondary }, styles.activeTab],
+                selectedTab === tab && [
+                  { backgroundColor: currentTheme.colors.secondary },
+                  styles.activeTab,
+                ],
               ]}
               onPress={() => setSelectedTab(tab)}
               accessibilityLabel={t(`leaderboard.filter.${tab}`)}
@@ -254,7 +421,10 @@ export default function LeaderboardScreen() {
             </TouchableOpacity>
           ))}
         </Animated.View>
-        <ScrollView contentContainerStyle={styles.scrollContent} showsVerticalScrollIndicator={false}>
+        <ScrollView
+          contentContainerStyle={styles.scrollContent}
+          showsVerticalScrollIndicator={false}
+        >
           {filteredPlayers.length > 0 ? (
             <>
               {renderTopThree()}
@@ -276,16 +446,51 @@ export default function LeaderboardScreen() {
               </View>
             </>
           ) : (
-            <Text style={[styles.noPlayersText, { color: currentTheme.colors.textSecondary }]}>
+            <Text
+              style={[
+                styles.noPlayersText,
+                { color: currentTheme.colors.textSecondary },
+              ]}
+            >
               {t("leaderboard.noPlayers")}
             </Text>
+          )}
+          {locationDisabledMessage && (
+            <Animated.View
+              entering={FadeInUp.delay(200)}
+              style={styles.errorContainer}
+            >
+              <Text
+                style={[
+                  styles.errorText,
+                  { color: currentTheme.colors.textSecondary },
+                ]}
+              >
+                {locationDisabledMessage}
+              </Text>
+              <TouchableOpacity
+                onPress={() => router.push("/settings")}
+                style={[
+                  styles.settingsButton,
+                  { backgroundColor: currentTheme.colors.cardBackground },
+                ]}
+              >
+                <Text
+                  style={[
+                    styles.settingsButtonText,
+                    { color: currentTheme.colors.secondary },
+                  ]}
+                >
+                  {t("leaderboard.enableLocation")}
+                </Text>
+              </TouchableOpacity>
+            </Animated.View>
           )}
         </ScrollView>
       </LinearGradient>
     </SafeAreaView>
   );
 }
-
 
 const styles = StyleSheet.create({
   safeArea: {
@@ -488,4 +693,12 @@ const styles = StyleSheet.create({
     textAlign: "center",
     padding: SPACING,
   },
+  errorContainer: { alignItems: "center", padding: SPACING * 2 },
+  errorText: {
+    fontSize: normalizeFont(16),
+    textAlign: "center",
+    marginBottom: SPACING,
+  },
+  settingsButton: { padding: SPACING, borderRadius: 10 },
+  settingsButtonText: { fontSize: normalizeFont(16), fontWeight: "600" },
 });

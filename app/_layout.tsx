@@ -1,6 +1,6 @@
 // app/_layout.tsx
 
-import React, { useState, useEffect } from "react";               // ← ajoute useEffect
+import React, { useState, useEffect } from "react"; // ← ajoute useEffect
 import { GestureHandlerRootView } from "react-native-gesture-handler";
 import { Stack } from "expo-router";
 import { ActivityIndicator, View, StyleSheet, Text } from "react-native";
@@ -34,7 +34,7 @@ export default function RootLayout() {
   useEffect(() => {
     mobileAds()
       .initialize()
-      .then(status => {
+      .then((status) => {
         console.log("AdMob initialized:", status);
       });
   }, []);

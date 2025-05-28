@@ -23,7 +23,11 @@ import Animated, { FadeInUp } from "react-native-reanimated";
 import GlobalLayout from "../../components/GlobalLayout";
 import designSystem from "../../theme/designSystem";
 import { useTranslation } from "react-i18next";
-
+import {
+  BannerAd,
+  BannerAdSize,
+  TestIds,
+} from "react-native-google-mobile-ads";
 
 // Import de SPACING depuis index.tsx pour cohérence
 const SPACING = 15;
@@ -53,11 +57,14 @@ export default function ProfileScreen() {
   const { profileUpdated } = useProfileUpdate();
   const { theme } = useTheme();
   const isDarkMode = theme === "dark";
-    const { t } = useTranslation();
-  
+  const { t } = useTranslation();
+
   const currentTheme: Theme = isDarkMode
     ? designSystem.darkTheme
     : designSystem.lightTheme;
+  const adUnitId = __DEV__
+    ? TestIds.BANNER
+    : "ca-app-pub-4725616526467159/3887969618";
 
   useEffect(() => {
     const userId = auth.currentUser?.uid;
@@ -97,11 +104,19 @@ export default function ProfileScreen() {
           barStyle={isDarkMode ? "light-content" : "dark-content"}
         />
         <LinearGradient
-          colors={[currentTheme.colors.background, currentTheme.colors.cardBackground]}
+          colors={[
+            currentTheme.colors.background,
+            currentTheme.colors.cardBackground,
+          ]}
           style={styles.loadingContainer}
         >
           <ActivityIndicator size="large" color={currentTheme.colors.primary} />
-          <Text style={[styles.loadingText, { color: currentTheme.colors.textSecondary }]}>
+          <Text
+            style={[
+              styles.loadingText,
+              { color: currentTheme.colors.textSecondary },
+            ]}
+          >
             Chargement du profil...
           </Text>
         </LinearGradient>
@@ -118,7 +133,10 @@ export default function ProfileScreen() {
           barStyle={isDarkMode ? "light-content" : "dark-content"}
         />
         <LinearGradient
-          colors={[currentTheme.colors.background, currentTheme.colors.cardBackground]}
+          colors={[
+            currentTheme.colors.background,
+            currentTheme.colors.cardBackground,
+          ]}
           style={styles.loadingContainer}
         >
           <Ionicons
@@ -126,7 +144,12 @@ export default function ProfileScreen() {
             size={normalizeSize(40)}
             color={currentTheme.colors.textSecondary}
           />
-          <Text style={[styles.loadingText, { color: currentTheme.colors.textSecondary }]}>
+          <Text
+            style={[
+              styles.loadingText,
+              { color: currentTheme.colors.textSecondary },
+            ]}
+          >
             {error}
           </Text>
         </LinearGradient>
@@ -191,7 +214,9 @@ export default function ProfileScreen() {
     rows.push(sections.slice(i, i + 2));
   }
 
-  const interests: string[] = Array.isArray(userData?.interests) ? userData.interests : [];
+  const interests: string[] = Array.isArray(userData?.interests)
+    ? userData.interests
+    : [];
 
   return (
     <GlobalLayout>
@@ -201,26 +226,38 @@ export default function ProfileScreen() {
         barStyle={isDarkMode ? "light-content" : "dark-content"}
       />
       <LinearGradient
-        colors={[currentTheme.colors.background, currentTheme.colors.cardBackground]}
+        colors={[
+          currentTheme.colors.background,
+          currentTheme.colors.cardBackground,
+        ]}
         style={styles.container}
         start={{ x: 0, y: 0 }}
         end={{ x: 1, y: 1 }}
       >
         <ScrollView contentContainerStyle={styles.scrollContent}>
           <View style={styles.headerWrapper}>
-          <CustomHeader title={t("yourProfile")} />
+            <CustomHeader title={t("yourProfile")} />
           </View>
 
           {/* Carte de profil */}
-          <Animated.View entering={FadeInUp.delay(100)} style={styles.profileCardWrapper}>
+          <Animated.View
+            entering={FadeInUp.delay(100)}
+            style={styles.profileCardWrapper}
+          >
             <LinearGradient
-              colors={[currentTheme.colors.secondary, currentTheme.colors.background]}
+              colors={[
+                currentTheme.colors.secondary,
+                currentTheme.colors.background,
+              ]}
               style={styles.profileCard}
               start={{ x: 0, y: 0 }}
               end={{ x: 1, y: 1 }}
             >
               <View
-                style={[styles.overlay, { backgroundColor: currentTheme.colors.overlay }]}
+                style={[
+                  styles.overlay,
+                  { backgroundColor: currentTheme.colors.overlay },
+                ]}
               />
               <View style={styles.avatarContainer}>
                 <Image
@@ -229,7 +266,10 @@ export default function ProfileScreen() {
                       ? { uri: userData.profileImage }
                       : require("../../assets/images/default-profile.jpg")
                   }
-                  style={[styles.avatar, { borderColor: currentTheme.colors.textPrimary }]}
+                  style={[
+                    styles.avatar,
+                    { borderColor: currentTheme.colors.textPrimary },
+                  ]}
                 />
                 <Animated.View
                   entering={FadeInUp.delay(300)}
@@ -247,23 +287,40 @@ export default function ProfileScreen() {
                     color={currentTheme.colors.trophy}
                   />
                   <Text
-                    style={[styles.trophyBadgeText, { color: currentTheme.colors.trophy }]}
+                    style={[
+                      styles.trophyBadgeText,
+                      { color: currentTheme.colors.trophy },
+                    ]}
                   >
                     {userData?.trophies || 0}
                   </Text>
                 </Animated.View>
               </View>
-              <Animated.View entering={FadeInUp.delay(200)} style={styles.userInfo}>
+              <Animated.View
+                entering={FadeInUp.delay(200)}
+                style={styles.userInfo}
+              >
                 <Text
-                  style={[styles.username, { color: currentTheme.colors.textPrimary }]}
+                  style={[
+                    styles.username,
+                    { color: currentTheme.colors.textPrimary },
+                  ]}
                 >
                   {userData?.username || "Utilisateur"}
                 </Text>
-                <Text style={[styles.bio, { color: currentTheme.colors.textSecondary }]}>
-                {userData?.bio || t("addBioHere")}
+                <Text
+                  style={[
+                    styles.bio,
+                    { color: currentTheme.colors.textSecondary },
+                  ]}
+                >
+                  {userData?.bio || t("addBioHere")}
                 </Text>
               </Animated.View>
-              <Animated.View entering={FadeInUp.delay(400)} style={styles.detailsContainer}>
+              <Animated.View
+                entering={FadeInUp.delay(400)}
+                style={styles.detailsContainer}
+              >
                 <View style={styles.infoRow}>
                   <Ionicons
                     name="location-outline"
@@ -271,7 +328,10 @@ export default function ProfileScreen() {
                     color={currentTheme.colors.textPrimary}
                   />
                   <Text
-                    style={[styles.location, { color: currentTheme.colors.textPrimary }]}
+                    style={[
+                      styles.location,
+                      { color: currentTheme.colors.textPrimary },
+                    ]}
                   >
                     {userData?.location || t("unknownLocation")}
                   </Text>
@@ -324,7 +384,10 @@ export default function ProfileScreen() {
                 entering={FadeInUp.delay(500 + rowIndex * 100)}
                 style={[
                   styles.rowContainer,
-                  { justifyContent: row.length === 1 ? "center" : "space-between" },
+                  {
+                    justifyContent:
+                      row.length === 1 ? "center" : "space-between",
+                  },
                 ]}
               >
                 {row.map((section, index) => (
@@ -336,7 +399,10 @@ export default function ProfileScreen() {
                     testID={section.testID}
                   >
                     <LinearGradient
-                      colors={[currentTheme.colors.cardBackground, currentTheme.colors.border]}
+                      colors={[
+                        currentTheme.colors.cardBackground,
+                        currentTheme.colors.border,
+                      ]}
                       style={styles.sectionGradient}
                     >
                       <Ionicons
@@ -345,9 +411,12 @@ export default function ProfileScreen() {
                         color={currentTheme.colors.secondary}
                       />
                       <Text
-                      style={[styles.sectionText, { color: currentTheme.colors.secondary }]}
-                      numberOfLines={1}
-                      adjustsFontSizeToFit
+                        style={[
+                          styles.sectionText,
+                          { color: currentTheme.colors.secondary },
+                        ]}
+                        numberOfLines={1}
+                        adjustsFontSizeToFit
                       >
                         {section.name}
                       </Text>
@@ -358,6 +427,18 @@ export default function ProfileScreen() {
             ))}
           </View>
         </ScrollView>
+        {/* Bannière fixée en bas */}
+        <View style={styles.bannerContainer}>
+          <BannerAd
+            unitId={adUnitId}
+            size={BannerAdSize.BANNER}
+            requestOptions={{ requestNonPersonalizedAdsOnly: false }}
+            onAdLoaded={() => console.log("Bannière chargée")}
+            onAdFailedToLoad={(err) =>
+              console.error("Échec chargement bannière", err)
+            }
+          />
+        </View>
       </LinearGradient>
     </GlobalLayout>
   );
@@ -519,5 +600,12 @@ const styles = StyleSheet.create({
     marginTop: normalizeSize(10),
     fontSize: normalizeSize(16),
     fontFamily: "Comfortaa_400Regular",
+  },
+  bannerContainer: {
+    position: "absolute",
+    bottom: 0,
+    width: SCREEN_WIDTH,
+    alignItems: "center",
+    backgroundColor: "transparent",
   },
 });

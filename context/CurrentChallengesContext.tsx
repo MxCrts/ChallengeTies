@@ -1,4 +1,10 @@
-import React, { createContext, useContext, useState, useEffect } from "react";
+import React, {
+  createContext,
+  useContext,
+  useState,
+  useEffect,
+  useRef,
+} from "react";
 import { auth, db } from "../constants/firebase-config";
 import {
   doc,
@@ -16,7 +22,12 @@ import {
 } from "../helpers/trophiesHelpers";
 import MissedChallengeModal from "../components/MissedChallengeModal";
 import { useTranslation } from "react-i18next";
-
+import {
+  InterstitialAd,
+  AdEventType,
+  TestIds,
+} from "react-native-google-mobile-ads";
+import AsyncStorage from "@react-native-async-storage/async-storage";
 
 interface Challenge {
   id: string;
@@ -70,6 +81,13 @@ interface CurrentChallengesContextType {
 const CurrentChallengesContext =
   createContext<CurrentChallengesContextType | null>(null);
 
+const adUnitId = __DEV__
+  ? TestIds.INTERSTITIAL
+  : "ca-app-pub-4725616526467159/6097960289";
+const interstitial = InterstitialAd.createForAdRequest(adUnitId, {
+  requestNonPersonalizedAdsOnly: true,
+});
+
 export const CurrentChallengesProvider: React.FC<{
   children: React.ReactNode;
 }> = ({ children }) => {
@@ -79,79 +97,126 @@ export const CurrentChallengesProvider: React.FC<{
   const [simulatedToday, setSimulatedToday] = useState<Date | null>(null);
   const [modalVisible, setModalVisible] = useState(false);
   const { t, i18n } = useTranslation();
+  const [adLoaded, setAdLoaded] = useState(false);
+
+  // Gestion du cooldown
+  const checkAdCooldown = async () => {
+    const lastAdTime = await AsyncStorage.getItem("lastInterstitialTime");
+    if (!lastAdTime) return true;
+    const now = Date.now();
+    const cooldownMs = 5 * 60 * 1000; // 5 minutes
+    return now - parseInt(lastAdTime) > cooldownMs;
+  };
+
+  const markAdShown = async () => {
+    await AsyncStorage.setItem("lastInterstitialTime", Date.now().toString());
+  };
+
   const [selectedChallenge, setSelectedChallenge] = useState<{
     id: string;
     selectedDays: number;
   } | null>(null);
+  const isActiveRef = useRef(true); // Bloque les callbacks
 
   useEffect(() => {
-    console.log("🟢 Initialisation de l'écoute d'authentification");
+    const unsubscribe = interstitial.addAdEventListener(
+      AdEventType.LOADED,
+      () => {
+        setAdLoaded(true);
+        console.log("Interstitiel chargé");
+      }
+    );
+    const errorListener = interstitial.addAdEventListener(
+      AdEventType.ERROR,
+      (error) => {
+        console.error("Erreur interstitiel:", error.message);
+        setAdLoaded(false);
+      }
+    );
+    interstitial.load();
+    return () => {
+      unsubscribe();
+      errorListener();
+    };
+  }, []);
+
+  useEffect(() => {
+    console.log("🟢 Initialisation de l'écoute d'authentification"); // Log
+    let unsubscribeSnapshot: (() => void) | null = null;
     const unsubscribeAuth = auth.onAuthStateChanged((user) => {
-      if (user) {
-        const userId = user.uid;
-        console.log(
-          "🔐 Utilisateur connecté, initialisation de onSnapshot pour userId :",
-          userId
-        );
-        const userRef = doc(db, "users", userId);
-        const unsubscribeSnapshot = onSnapshot(
-          userRef,
-          (docSnap) => {
-            if (docSnap.exists()) {
-              const userData = docSnap.data();
-              console.log(
-                "🔥 Données brutes de Firebase :",
-                JSON.stringify(userData, null, 2)
+      console.log("onAuthStateChanged Challenges, user:", user?.uid || "null"); // Log
+      if (!user) {
+        console.log("❌ Pas d'utilisateur, réinitialisation challenges"); // Log
+        isActiveRef.current = false; // Bloquer onSnapshot
+        if (unsubscribeSnapshot) {
+          console.log("Désabonnement onSnapshot Challenges immédiat"); // Log
+          unsubscribeSnapshot();
+          unsubscribeSnapshot = null;
+        }
+        setCurrentChallenges([]);
+        return;
+      }
+
+      const userId = user.uid;
+      console.log("🔐 Utilisateur connecté, userId:", userId); // Log
+      const userRef = doc(db, "users", userId);
+
+      unsubscribeSnapshot = onSnapshot(
+        userRef,
+        (docSnap) => {
+          if (!isActiveRef.current || !auth.currentUser) {
+            console.log("onSnapshot Challenges ignoré: inactif ou déconnecté"); // Log
+            return;
+          }
+          console.log(
+            "🔥 Données Firebase:",
+            docSnap.exists() ? docSnap.data() : "null"
+          ); // Log
+          if (docSnap.exists()) {
+            const userData = docSnap.data();
+            if (Array.isArray(userData.CurrentChallenges)) {
+              const uniqueChallenges = Array.from(
+                new Map(
+                  userData.CurrentChallenges.map((ch: CurrentChallenge) => {
+                    const key = ch.uniqueKey || `${ch.id}_${ch.selectedDays}`;
+                    return [key, { ...ch, uniqueKey: key }];
+                  })
+                ).values()
               );
-              if (Array.isArray(userData.CurrentChallenges)) {
-                const uniqueChallenges = Array.from(
-                  new Map(
-                    userData.CurrentChallenges.map((ch: CurrentChallenge) => {
-                      const key = ch.uniqueKey || `${ch.id}_${ch.selectedDays}`;
-                      console.log("🔍 Traitement défi :", {
-                        id: ch.id,
-                        uniqueKey: key,
-                      });
-                      return [key, { ...ch, uniqueKey: key }];
-                    })
-                  ).values()
-                );
-                console.log(
-                  "✅ Challenges uniques traités :",
-                  JSON.stringify(uniqueChallenges, null, 2)
-                );
-                setCurrentChallenges(uniqueChallenges);
-              } else {
-                console.log(
-                  "⚠️ CurrentChallenges n'est pas un tableau :",
-                  userData.CurrentChallenges
-                );
-                setCurrentChallenges([]);
-              }
+              console.log("✅ Challenges uniques:", uniqueChallenges); // Log
+              setCurrentChallenges(uniqueChallenges);
             } else {
-              console.log("❌ Document utilisateur inexistant.");
+              console.log(
+                "⚠️ CurrentChallenges invalide:",
+                userData.CurrentChallenges
+              ); // Log
               setCurrentChallenges([]);
             }
-          },
-          (error) => {
-            console.error("❌ Erreur onSnapshot :", error.message);
+          } else {
+            console.log("❌ Document utilisateur inexistant"); // Log
             setCurrentChallenges([]);
           }
-        );
-        return () => {
-          console.log("🔴 Arrêt de onSnapshot pour userId :", userId);
-          unsubscribeSnapshot();
-        };
-      } else {
-        console.log(
-          "❌ Pas d'utilisateur connecté, réinitialisation des challenges."
-        );
-        setCurrentChallenges([]);
-      }
+        },
+        (error) => {
+          console.error("❌ Erreur onSnapshot Challenges:", error.message); // Log
+          if (error.code === "permission-denied" && !auth.currentUser) {
+            console.log("Permission refusée, déconnecté, ignoré"); // Log
+            setCurrentChallenges([]);
+          } else {
+            console.error("Erreur inattendue:", error); // Log
+            // Pas d'alerte
+          }
+        }
+      );
     });
 
     return () => {
-      console.log("🔴 Arrêt de l'écoute d'authentification");
+      console.log("🔴 Arrêt de l'écoute d'authentification"); // Log
+      isActiveRef.current = false;
+      if (unsubscribeSnapshot) {
+        console.log("Désabonnement onSnapshot Challenges final"); // Log
+        unsubscribeSnapshot();
+      }
       unsubscribeAuth();
     };
   }, []);
@@ -163,8 +228,8 @@ export const CurrentChallengesProvider: React.FC<{
     if (!userId) {
       console.log("❌ Pas d'utilisateur connecté pour takeChallenge.");
       Alert.alert(
-        t("error"),                   // clé pour "Erreur"
-        t("loginRequired")            // clé pour "Veuillez vous connecter pour …"
+        t("error"), // clé pour "Erreur"
+        t("loginRequired") // clé pour "Veuillez vous connecter pour …"
       );
       return;
     }
@@ -172,8 +237,8 @@ export const CurrentChallengesProvider: React.FC<{
     if (currentChallenges.find((ch) => ch.uniqueKey === uniqueKey)) {
       console.log("⚠️ Défi déjà pris :", uniqueKey);
       Alert.alert(
-        t("info"),                    // clé pour "Info"
-        t("challengeAlreadyTaken")    // clé pour "Ce défi est déjà en cours."
+        t("info"), // clé pour "Info"
+        t("challengeAlreadyTaken") // clé pour "Ce défi est déjà en cours."
       );
       return;
     }
@@ -201,7 +266,7 @@ export const CurrentChallengesProvider: React.FC<{
       console.error("❌ Erreur lors de l'ajout du défi :", error.message);
       Alert.alert(
         t("error"),
-        t("unableToAddChallenge")     // clé pour "Impossible d'ajouter le défi."
+        t("unableToAddChallenge") // clé pour "Impossible d'ajouter le défi."
       );
     }
   };
@@ -257,7 +322,7 @@ export const CurrentChallengesProvider: React.FC<{
       );
       Alert.alert(
         t("error"),
-        t("unableToRemoveChallenge")  // clé pour "Impossible de supprimer le défi."
+        t("unableToRemoveChallenge") // clé pour "Impossible de supprimer le défi."
       );
     }
   };
@@ -304,7 +369,7 @@ export const CurrentChallengesProvider: React.FC<{
         console.log("⚠️ Challenge non trouvé :", uniqueKey);
         Alert.alert(
           t("error"),
-          t("challengeNotFound")        // clé pour "Challenge non trouvé."
+          t("challengeNotFound") // clé pour "Challenge non trouvé."
         );
         return { success: false };
       }
@@ -316,8 +381,8 @@ export const CurrentChallengesProvider: React.FC<{
       ) {
         console.log("⚠️ Déjà marqué aujourd'hui :", uniqueKey);
         Alert.alert(
-          t("alreadyMarkedTitle"),     
-          t("alreadyMarkedMessage")     // clés pour "Déjà marqué…" / "Tu as déjà…"
+          t("alreadyMarkedTitle"),
+          t("alreadyMarkedMessage") // clés pour "Déjà marqué…" / "Tu as déjà…"
         );
         return { success: false };
       }
@@ -349,15 +414,24 @@ export const CurrentChallengesProvider: React.FC<{
         await updateDoc(userRef, { CurrentChallenges: updatedChallenges });
         setCurrentChallenges(updatedChallenges);
 
+        // Afficher l'interstitiel si cooldown OK
+        const canShowAd = await checkAdCooldown();
+        if (canShowAd && adLoaded) {
+          interstitial.show();
+          await markAdShown();
+          setAdLoaded(false);
+          interstitial.load();
+        }
+
         if (challengeToMark.completedDays >= challengeToMark.selectedDays) {
           Alert.alert(
-            t("congrats"),                // clé pour "Félicitations !"
-            t("challengeFinishedPrompt")  // clé pour "Ce défi est terminé…"
+            t("congrats"), // clé pour "Félicitations !"
+            t("challengeFinishedPrompt") // clé pour "Ce défi est terminé…"
           );
         } else {
           Alert.alert(
-            t("markedTitle"),             // clé pour "Bravo !"
-            t("markedMessage")            // clé pour "Challenge marqué…"
+            t("markedTitle"), // clé pour "Bravo !"
+            t("markedMessage") // clé pour "Challenge marqué…"
           );
         }
 
@@ -527,7 +601,10 @@ export const CurrentChallengesProvider: React.FC<{
       );
       await updateDoc(userRef, { CurrentChallenges: updatedChallenges });
       setCurrentChallenges(updatedChallenges);
-      Alert.alert(t("trophiesUsedTitle"), t("trophiesUsedMessage", { cost: trophyCost }));
+      Alert.alert(
+        t("trophiesUsedTitle"),
+        t("trophiesUsedMessage", { cost: trophyCost })
+      );
       await checkForAchievements(userId);
       setModalVisible(false);
     } catch (error) {
@@ -662,8 +739,9 @@ export const CurrentChallengesProvider: React.FC<{
       });
 
       Alert.alert(
-        t("finalCongratsTitle"),      // clé pour "Félicitations !"
-        t("finalCongratsMessage", {   // clé pour "Challenge terminé ! Tu gagnes X…"
+        t("finalCongratsTitle"), // clé pour "Félicitations !"
+        t("finalCongratsMessage", {
+          // clé pour "Challenge terminé ! Tu gagnes X…"
           count: finalTrophies,
         })
       );

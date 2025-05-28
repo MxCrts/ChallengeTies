@@ -39,7 +39,11 @@ import { Theme } from "../../theme/designSystem";
 import designSystem from "../../theme/designSystem";
 import BackButton from "../../components/BackButton";
 import { useTranslation } from "react-i18next";
-
+import {
+  BannerAd,
+  BannerAdSize,
+  TestIds,
+} from "react-native-google-mobile-ads";
 
 const { width: SCREEN_WIDTH, height: SCREEN_HEIGHT } = Dimensions.get("window");
 const SPACING = 15;
@@ -79,7 +83,9 @@ interface Stat {
 export default function ChallengeDetails() {
   const { theme } = useTheme();
   const isDarkMode = theme === "dark";
-  const currentTheme: Theme = isDarkMode ? designSystem.darkTheme : designSystem.lightTheme;
+  const currentTheme: Theme = isDarkMode
+    ? designSystem.darkTheme
+    : designSystem.lightTheme;
   const { t, i18n } = useTranslation();
   const router = useRouter();
   const params = useLocalSearchParams<{
@@ -94,9 +100,11 @@ export default function ChallengeDetails() {
   const id = params.id || "";
   const routeTitle = params.title || t("challengeDetails.untitled");
   const routeCategory = params.category || t("challengeDetails.uncategorized");
-  const routeDescription = params.description || t("challengeDetails.noDescription");
+  const routeDescription =
+    params.description || t("challengeDetails.noDescription");
 
-  const { savedChallenges, addChallenge, removeChallenge } = useSavedChallenges();
+  const { savedChallenges, addChallenge, removeChallenge } =
+    useSavedChallenges();
   const {
     currentChallenges,
     takeChallenge,
@@ -110,6 +118,9 @@ export default function ChallengeDetails() {
   const currentChallenge = currentChallenges.find(
     (ch) => ch.id === id && ch.uniqueKey === `${id}_${ch.selectedDays}`
   );
+  const adUnitId = __DEV__
+    ? TestIds.BANNER
+    : "ca-app-pub-4725616526467159/3887969618";
 
   const [loading, setLoading] = useState(true);
   const [userHasTaken, setUserHasTaken] = useState(false);
@@ -230,7 +241,8 @@ export default function ChallengeDetails() {
     const numDays = new Date(year, month + 1, 0).getDate();
     const firstDayIndex = new Date(year, month, 1).getDay();
     const completions: string[] = currentChallenge?.completionDates || [];
-    const calendar: (null | { day: number; date: Date; completed: boolean })[] = [];
+    const calendar: (null | { day: number; date: Date; completed: boolean })[] =
+      [];
     for (let i = 0; i < firstDayIndex; i++) {
       calendar.push(null);
     }
@@ -263,7 +275,9 @@ export default function ChallengeDetails() {
     setCurrentMonth(newMonth);
   };
 
-  const monthName = currentMonth.toLocaleString(i18n.language, { month: "long" });
+  const monthName = currentMonth.toLocaleString(i18n.language, {
+    month: "long",
+  });
   const currentYearNum = currentMonth.getFullYear();
 
   const alreadyMarkedToday = currentChallenge
@@ -325,11 +339,9 @@ export default function ChallengeDetails() {
       setFinalCompletedDays(0);
     } catch (err) {
       Alert.alert(
-                t("alerts.error"),
-                err instanceof Error
-                  ? err.message
-                  : t("challengeDetails.joinError")
-             );
+        t("alerts.error"),
+        err instanceof Error ? err.message : t("challengeDetails.joinError")
+      );
     } finally {
       setLoading(false);
     }
@@ -366,11 +378,9 @@ export default function ChallengeDetails() {
       setPendingFavorite(null);
     } catch (err) {
       Alert.alert(
-                t("alerts.error"),
-                err instanceof Error
-                  ? err.message
-                  : t("challengeDetails.saveError")
-              );
+        t("alerts.error"),
+        err instanceof Error ? err.message : t("challengeDetails.saveError")
+      );
       setPendingFavorite(null);
     }
   }, [id, savedChallenges, addChallenge, removeChallenge]);
@@ -401,9 +411,9 @@ export default function ChallengeDetails() {
   const handleNavigateToChat = useCallback(() => {
     if (!userHasTaken) {
       Alert.alert(
-                t("alerts.accessDenied"),
-                t("challengeDetails.chatAccessDenied")
-              );
+        t("alerts.accessDenied"),
+        t("challengeDetails.chatAccessDenied")
+      );
       return;
     }
     router.push(
@@ -445,14 +455,25 @@ export default function ChallengeDetails() {
   if (loading) {
     return (
       <LinearGradient
-        colors={[currentTheme.colors.background, currentTheme.colors.cardBackground]}
+        colors={[
+          currentTheme.colors.background,
+          currentTheme.colors.cardBackground,
+        ]}
         style={styles.loadingContainer}
         start={{ x: 0, y: 0 }}
         end={{ x: 1, y: 1 }}
       >
         <Animated.View entering={FadeInUp}>
-        <ActivityIndicator size="large" color={currentTheme.colors.secondary} />
-          <Text style={[styles.loadingText, { color: currentTheme.colors.textSecondary }]}>
+          <ActivityIndicator
+            size="large"
+            color={currentTheme.colors.secondary}
+          />
+          <Text
+            style={[
+              styles.loadingText,
+              { color: currentTheme.colors.textSecondary },
+            ]}
+          >
             {t("challengeDetails.loading")}
           </Text>
         </Animated.View>
@@ -462,7 +483,10 @@ export default function ChallengeDetails() {
 
   return (
     <LinearGradient
-      colors={[currentTheme.colors.background, currentTheme.colors.cardBackground]}
+      colors={[
+        currentTheme.colors.background,
+        currentTheme.colors.cardBackground,
+      ]}
       style={styles.container}
       start={{ x: 0, y: 0 }}
       end={{ x: 1, y: 1 }}
@@ -484,7 +508,10 @@ export default function ChallengeDetails() {
       <ScrollView showsVerticalScrollIndicator={false}>
         <View style={styles.carouselContainer}>
           <LinearGradient
-            colors={[currentTheme.colors.primary, currentTheme.colors.secondary]}
+            colors={[
+              currentTheme.colors.primary,
+              currentTheme.colors.secondary,
+            ]}
             style={styles.imageContainer}
             start={{ x: 0, y: 0 }}
             end={{ x: 1, y: 1 }}
@@ -496,30 +523,45 @@ export default function ChallengeDetails() {
                 resizeMode="cover"
               />
             ) : (
-              <View style={[styles.imagePlaceholder, { backgroundColor: currentTheme.colors.overlay }]}>
+              <View
+                style={[
+                  styles.imagePlaceholder,
+                  { backgroundColor: currentTheme.colors.overlay },
+                ]}
+              >
                 <Ionicons
                   name="image-outline"
                   size={normalizeSize(80)}
                   color={currentTheme.colors.textPrimary}
                 />
-                <Text style={[styles.noImageText, { color: currentTheme.colors.textPrimary }]}>
+                <Text
+                  style={[
+                    styles.noImageText,
+                    { color: currentTheme.colors.textPrimary },
+                  ]}
+                >
                   Image non disponible
                 </Text>
               </View>
             )}
-            <BackButton
-              color={currentTheme.colors.textPrimary}
-            />
+            <BackButton color={currentTheme.colors.textPrimary} />
           </LinearGradient>
         </View>
         <Animated.View
           entering={FadeInUp.delay(100)}
           style={styles.infoRecipeContainer}
         >
-          <Text style={[styles.infoRecipeName, { color: currentTheme.colors.textPrimary }]}>
+          <Text
+            style={[
+              styles.infoRecipeName,
+              { color: currentTheme.colors.textPrimary },
+            ]}
+          >
             {routeTitle}
           </Text>
-          <Text style={[styles.category, { color: currentTheme.colors.secondary }]}>
+          <Text
+            style={[styles.category, { color: currentTheme.colors.secondary }]}
+          >
             {routeCategory.toUpperCase()}
           </Text>
           <View style={styles.infoContainer}>
@@ -528,8 +570,14 @@ export default function ChallengeDetails() {
               size={normalizeSize(20)}
               color={currentTheme.colors.secondary}
             />
-            <Text style={[styles.infoRecipe, { color: currentTheme.colors.textSecondary }]}>
-            {userCount} {t(`challengeDetails.participant${userCount > 1 ? "s" : ""}`)}
+            <Text
+              style={[
+                styles.infoRecipe,
+                { color: currentTheme.colors.textSecondary },
+              ]}
+            >
+              {userCount}{" "}
+              {t(`challengeDetails.participant${userCount > 1 ? "s" : ""}`)}
             </Text>
           </View>
           {!userHasTaken && (
@@ -540,13 +588,21 @@ export default function ChallengeDetails() {
               testID="take-challenge-button"
             >
               <LinearGradient
-                colors={[currentTheme.colors.primary, currentTheme.colors.secondary]}
+                colors={[
+                  currentTheme.colors.primary,
+                  currentTheme.colors.secondary,
+                ]}
                 style={styles.takeChallengeButtonGradient}
                 start={{ x: 0, y: 0 }}
                 end={{ x: 1, y: 1 }}
               >
-                <Text style={[styles.takeChallengeButtonText, { color: currentTheme.colors.textPrimary }]}>
-                {t("challengeDetails.takeChallenge")}
+                <Text
+                  style={[
+                    styles.takeChallengeButtonText,
+                    { color: currentTheme.colors.textPrimary },
+                  ]}
+                >
+                  {t("challengeDetails.takeChallenge")}
                 </Text>
               </LinearGradient>
             </TouchableOpacity>
@@ -556,12 +612,25 @@ export default function ChallengeDetails() {
               finalSelectedDays > 0 && finalCompletedDays >= finalSelectedDays
             ) && (
               <Animated.View entering={FadeInUp.delay(200)}>
-                <Text style={[styles.inProgressText, { color: currentTheme.colors.secondary }]}>
-                {t("challengeDetails.inProgress")}
+                <Text
+                  style={[
+                    styles.inProgressText,
+                    { color: currentTheme.colors.secondary },
+                  ]}
+                >
+                  {t("challengeDetails.inProgress")}
                 </Text>
-                <View style={[styles.progressBarBackground, { backgroundColor: currentTheme.colors.border }]}>
+                <View
+                  style={[
+                    styles.progressBarBackground,
+                    { backgroundColor: currentTheme.colors.border },
+                  ]}
+                >
                   <LinearGradient
-                    colors={[currentTheme.colors.primary, currentTheme.colors.secondary]}
+                    colors={[
+                      currentTheme.colors.primary,
+                      currentTheme.colors.secondary,
+                    ]}
                     style={[
                       styles.progressBarFill,
                       { width: progressPercent * normalizeSize(250) },
@@ -570,8 +639,14 @@ export default function ChallengeDetails() {
                     end={{ x: 1, y: 1 }}
                   />
                 </View>
-                <Text style={[styles.progressText, { color: currentTheme.colors.secondary }]}>
-                {finalCompletedDays}/{finalSelectedDays} {t("challengeDetails.daysCompleted")}
+                <Text
+                  style={[
+                    styles.progressText,
+                    { color: currentTheme.colors.secondary },
+                  ]}
+                >
+                  {finalCompletedDays}/{finalSelectedDays}{" "}
+                  {t("challengeDetails.daysCompleted")}
                 </Text>
                 <TouchableOpacity
                   style={styles.markTodayButton}
@@ -584,32 +659,47 @@ export default function ChallengeDetails() {
                   disabled={isMarkedToday(id, finalSelectedDays)}
                   accessibilityLabel={
                     isMarkedToday(id, finalSelectedDays)
-                    ? t("challengeDetails.alreadyMarked")
-                    : t("challengeDetails.markToday")
+                      ? t("challengeDetails.alreadyMarked")
+                      : t("challengeDetails.markToday")
                   }
                   testID="mark-today-button"
                 >
                   <LinearGradient
                     colors={
                       isMarkedToday(id, finalSelectedDays)
-                        ? [currentTheme.colors.border, currentTheme.colors.overlay]
-                        : [currentTheme.colors.primary, currentTheme.colors.secondary]
+                        ? [
+                            currentTheme.colors.border,
+                            currentTheme.colors.overlay,
+                          ]
+                        : [
+                            currentTheme.colors.primary,
+                            currentTheme.colors.secondary,
+                          ]
                     }
                     style={styles.markTodayButtonGradient}
                     start={{ x: 0, y: 0 }}
                     end={{ x: 1, y: 1 }}
                   >
-                    <Text style={[styles.markTodayButtonText, { color: currentTheme.colors.textPrimary }]}>
+                    <Text
+                      style={[
+                        styles.markTodayButtonText,
+                        { color: currentTheme.colors.textPrimary },
+                      ]}
+                    >
                       {isMarkedToday(id, finalSelectedDays)
                         ? t("challengeDetails.alreadyMarked")
-                        : t("challengeDetails.markToday")
-                  }
+                        : t("challengeDetails.markToday")}
                     </Text>
                   </LinearGradient>
                 </TouchableOpacity>
               </Animated.View>
             )}
-          <Text style={[styles.infoDescriptionRecipe, { color: currentTheme.colors.textSecondary }]}>
+          <Text
+            style={[
+              styles.infoDescriptionRecipe,
+              { color: currentTheme.colors.textSecondary },
+            ]}
+          >
             {routeDescription}
           </Text>
           {userHasTaken &&
@@ -622,13 +712,21 @@ export default function ChallengeDetails() {
                 testID="complete-challenge-button"
               >
                 <LinearGradient
-  colors={[currentTheme.colors.primary, currentTheme.colors.secondary]}
-  style={styles.completeChallengeButtonGradient}
-  start={{ x: 0, y: 0 }}
-  end={{ x: 1, y: 1 }}
->
-                  <Text style={[styles.completeChallengeButtonText, { color: currentTheme.colors.textPrimary }]}>
-                  {t("challengeDetails.completeChallenge")}
+                  colors={[
+                    currentTheme.colors.primary,
+                    currentTheme.colors.secondary,
+                  ]}
+                  style={styles.completeChallengeButtonGradient}
+                  start={{ x: 0, y: 0 }}
+                  end={{ x: 1, y: 1 }}
+                >
+                  <Text
+                    style={[
+                      styles.completeChallengeButtonText,
+                      { color: currentTheme.colors.textPrimary },
+                    ]}
+                  >
+                    {t("challengeDetails.completeChallenge")}
                   </Text>
                 </LinearGradient>
               </TouchableOpacity>
@@ -648,15 +746,22 @@ export default function ChallengeDetails() {
                 size={normalizeSize(28)}
                 color={currentTheme.colors.textSecondary}
               />
-              <Text style={[styles.actionIconLabel, { color: currentTheme.colors.textSecondary }]}>
-              {t("challengeDetails.chat")}
+              <Text
+                style={[
+                  styles.actionIconLabel,
+                  { color: currentTheme.colors.textSecondary },
+                ]}
+              >
+                {t("challengeDetails.chat")}
               </Text>
             </TouchableOpacity>
             <TouchableOpacity
               style={styles.actionIcon}
               onPress={handleSaveChallenge}
               accessibilityLabel={
-                isSavedChallenge(id) ? "Retirer des sauvegardés" : "Sauvegarder le défi"
+                isSavedChallenge(id)
+                  ? "Retirer des sauvegardés"
+                  : "Sauvegarder le défi"
               }
               testID="save-button"
             >
@@ -681,11 +786,16 @@ export default function ChallengeDetails() {
                     : currentTheme.colors.textSecondary
                 }
               />
-              <Text style={[styles.actionIconLabel, { color: currentTheme.colors.textSecondary }]}>
+              <Text
+                style={[
+                  styles.actionIconLabel,
+                  { color: currentTheme.colors.textSecondary },
+                ]}
+              >
                 {pendingFavorite !== null
                   ? pendingFavorite
-                  ? t("challengeDetails.saved")
-                  : t("challengeDetails.save")
+                    ? t("challengeDetails.saved")
+                    : t("challengeDetails.save")
                   : isSavedChallenge(id)
                   ? t("challengeDetails.saved")
                   : t("challengeDetails.save")}
@@ -702,8 +812,13 @@ export default function ChallengeDetails() {
                 size={normalizeSize(28)}
                 color={currentTheme.colors.textSecondary}
               />
-              <Text style={[styles.actionIconLabel, { color: currentTheme.colors.textSecondary }]}>
-              {t("challengeDetails.share")}
+              <Text
+                style={[
+                  styles.actionIconLabel,
+                  { color: currentTheme.colors.textSecondary },
+                ]}
+              >
+                {t("challengeDetails.share")}
               </Text>
             </TouchableOpacity>
             <TouchableOpacity
@@ -717,8 +832,13 @@ export default function ChallengeDetails() {
                 size={normalizeSize(28)}
                 color={currentTheme.colors.textSecondary}
               />
-              <Text style={[styles.actionIconLabel, { color: currentTheme.colors.textSecondary }]}>
-              {t("challengeDetails.stats")}
+              <Text
+                style={[
+                  styles.actionIconLabel,
+                  { color: currentTheme.colors.textSecondary },
+                ]}
+              >
+                {t("challengeDetails.stats")}
               </Text>
             </TouchableOpacity>
           </Animated.View>
@@ -744,15 +864,26 @@ export default function ChallengeDetails() {
         />
       )}
 
-<StatsModal
+      <StatsModal
         visible={statsModalVisible}
         onClose={() => setStatsModalVisible(false)}
-        monthName={monthName}       
+        monthName={monthName}
         currentYearNum={currentYearNum}
         calendarDays={calendarDays}
         goToPrevMonth={goToPrevMonth}
         goToNextMonth={goToNextMonth}
       />
+      <View style={styles.bannerContainer}>
+        <BannerAd
+          unitId={adUnitId}
+          size={BannerAdSize.BANNER}
+          requestOptions={{ requestNonPersonalizedAdsOnly: false }}
+          onAdLoaded={() => console.log("Bannière chargée")}
+          onAdFailedToLoad={(err) =>
+            console.error("Échec chargement bannière", err)
+          }
+        />
+      </View>
     </LinearGradient>
   );
 }
@@ -768,6 +899,13 @@ const styles = StyleSheet.create({
     borderBottomLeftRadius: normalizeSize(30),
     borderBottomRightRadius: normalizeSize(30),
     overflow: "hidden",
+  },
+  bannerContainer: {
+    position: "absolute",
+    bottom: 0,
+    width: SCREEN_WIDTH,
+    alignItems: "center",
+    backgroundColor: "transparent",
   },
   image: {
     ...StyleSheet.absoluteFillObject,
@@ -800,7 +938,7 @@ const styles = StyleSheet.create({
   },
   infoRecipeName: {
     fontSize: normalizeSize(28),
-    marginVertical: SPACING/4,
+    marginVertical: SPACING / 4,
     textAlign: "center",
     fontFamily: "Comfortaa_700Bold",
   },

@@ -13,13 +13,27 @@ import { Video, ResizeMode } from "expo-av";
 import { LinearGradient } from "expo-linear-gradient";
 import designSystem from "../theme/designSystem";
 import { useTranslation } from "react-i18next";
+import {
+  RewardedAd,
+  RewardedAdEventType,
+  AdEventType,
+  TestIds,
+} from "react-native-google-mobile-ads";
 
 const { width: SCREEN_WIDTH } = Dimensions.get("window");
 const { lightTheme } = designSystem;
 const currentTheme = lightTheme;
 
-const normalizeSize = (size: number) =>
-  Math.round(size * (SCREEN_WIDTH / 375));
+// ID vidéo récompensée
+// ID vidéo récompensée
+const adUnitId = __DEV__
+  ? TestIds.REWARDED
+  : "ca-app-pub-4725616526467159/6366749139";
+const rewarded = RewardedAd.createForAdRequest(adUnitId, {
+  requestNonPersonalizedAdsOnly: true,
+});
+
+const normalizeSize = (size: number) => Math.round(size * (SCREEN_WIDTH / 375));
 
 const TrophyModal: React.FC<{ challengeId: string; selectedDays: number }> = ({
   challengeId,
@@ -40,6 +54,37 @@ const TrophyModal: React.FC<{ challengeId: string; selectedDays: number }> = ({
   const videoRef = useRef<Video>(null);
   const { t } = useTranslation();
 
+  const [adLoaded, setAdLoaded] = useState(false);
+
+  useEffect(() => {
+    const unsubscribeLoaded = rewarded.addAdEventListener(
+      RewardedAdEventType.LOADED,
+      () => {
+        setAdLoaded(true);
+        console.log("Vidéo récompensée chargée");
+      }
+    );
+    const unsubscribeEarned = rewarded.addAdEventListener(
+      RewardedAdEventType.EARNED_REWARD,
+      () => {
+        console.log("✅ Récompense gagnée !");
+      }
+    );
+    const unsubscribeError = rewarded.addAdEventListener(
+      AdEventType.ERROR,
+      (error) => {
+        console.error("Erreur vidéo récompensée:", error.message);
+        setAdLoaded(false);
+      }
+    );
+    rewarded.load();
+    return () => {
+      unsubscribeLoaded();
+      unsubscribeEarned();
+      unsubscribeError();
+    };
+  }, []);
+
   const calculatedReward = Math.round(5 * (selectedDays / 7));
 
   useEffect(() => {
@@ -59,23 +104,30 @@ const TrophyModal: React.FC<{ challengeId: string; selectedDays: number }> = ({
   }, [showTrophyModal, trophiesEarned, scaleAnim, calculatedReward]);
 
   const handleAdPress = useCallback(() => {
-       console.log("✅ Pub regardée !");
-       setAdWatched(true);
-       activateDoubleReward();
-       const doubled = trophiesEarned * 2;
-       setReward(doubled);
-       // utilise la clé de traduction trophyModal.doubleMessage
-       setMessage(t("trophyModal.doubleMessage", { count: doubled }));
-     }, [activateDoubleReward, trophiesEarned, t])
+    if (adLoaded) {
+      rewarded.show();
+      setAdWatched(true);
+      activateDoubleReward();
+      const doubled = trophiesEarned * 2;
+      setReward(doubled);
+      setMessage(t("trophyModal.doubleMessage", { count: doubled }));
+      setAdLoaded(false);
+      rewarded.load();
+    } else {
+      console.log("⚠️ Vidéo non chargée, tentative de rechargement");
+      rewarded.load();
+      setMessage(t("trophyModal.adNotReady"));
+    }
+  }, [adLoaded, activateDoubleReward, trophiesEarned, t]);
 
-     const handleClaimPress = useCallback(() => {
-         console.log(`✅ Réclamation : ${reward} trophées`);
-         // utilise la clé de traduction trophyModal.claimMessage
-         setMessage(t("trophyModal.claimMessage", { count: reward }));
-         setTimeout(() => {
-           resetTrophyData();
-         }, 1500);
-       }, [reward, resetTrophyData, t]);
+  const handleClaimPress = useCallback(() => {
+    console.log(`✅ Réclamation : ${reward} trophées`);
+    // utilise la clé de traduction trophyModal.claimMessage
+    setMessage(t("trophyModal.claimMessage", { count: reward }));
+    setTimeout(() => {
+      resetTrophyData();
+    }, 1500);
+  }, [reward, resetTrophyData, t]);
 
   if (!showTrophyModal) return null;
 
@@ -114,9 +166,7 @@ const TrophyModal: React.FC<{ challengeId: string; selectedDays: number }> = ({
             </Text>
           )}
 
-          {!!message && (
-            <Text style={styles.message}>{message}</Text>
-          )}
+          {!!message && <Text style={styles.message}>{message}</Text>}
 
           <GradientButton
             onPress={handleClaimPress}
@@ -147,7 +197,11 @@ const GradientButton: React.FC<GradientButtonProps> = ({
   text,
   iconName,
 }) => (
-  <TouchableOpacity onPress={onPress} activeOpacity={0.8} style={styles.gradientButton}>
+  <TouchableOpacity
+    onPress={onPress}
+    activeOpacity={0.8}
+    style={styles.gradientButton}
+  >
     <LinearGradient
       colors={["#FF6200", "#FF8C00"]}
       start={{ x: 0, y: 0 }}

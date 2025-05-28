@@ -35,11 +35,23 @@ import CustomHeader from "@/components/CustomHeader";
 import ModalExplicatif from "../components/ModalExplicatif";
 import FeatureDetailModal from "../components/FeatureDetailModal";
 import ProposeFeatureModal from "../components/ProposeFeatureModal";
+import {
+  InterstitialAd,
+  AdEventType,
+  TestIds,
+} from "react-native-google-mobile-ads";
 
 const SPACING = 15;
 const { width: SCREEN_WIDTH } = Dimensions.get("window");
-const normalizeSize = (size: number) =>
-  Math.round(size * (SCREEN_WIDTH / 375));
+const normalizeSize = (size: number) => Math.round(size * (SCREEN_WIDTH / 375));
+
+// ID interstitiel
+const adUnitId = __DEV__
+  ? TestIds.INTERSTITIAL
+  : "ca-app-pub-4725616526467159/6097960289";
+const interstitial = InterstitialAd.createForAdRequest(adUnitId, {
+  requestNonPersonalizedAdsOnly: false,
+});
 
 interface CountdownValues {
   days: number;
@@ -80,11 +92,47 @@ export default function NewFeatures() {
   const [selectedFeature, setSelectedFeature] = useState<Feature | null>(null);
   const [showFeatureDetailModal, setShowFeatureDetailModal] = useState(false);
   const [showProposeModal, setShowProposeModal] = useState(false);
+  const [adLoaded, setAdLoaded] = useState(false);
   const { theme } = useTheme();
   const isDarkMode = theme === "dark";
   const currentTheme: Theme = isDarkMode
     ? designSystem.darkTheme
     : designSystem.lightTheme;
+
+  // Gestion du cooldown
+  const checkAdCooldown = async () => {
+    const lastAdTime = await AsyncStorage.getItem("lastInterstitialTime");
+    if (!lastAdTime) return true;
+    const now = Date.now();
+    const cooldownMs = 5 * 60 * 1000; // 5 minutes
+    return now - parseInt(lastAdTime) > cooldownMs;
+  };
+
+  const markAdShown = async () => {
+    await AsyncStorage.setItem("lastInterstitialTime", Date.now().toString());
+  };
+
+  useEffect(() => {
+    const unsubscribe = interstitial.addAdEventListener(
+      AdEventType.LOADED,
+      () => {
+        setAdLoaded(true);
+        console.log("Interstitiel chargé");
+      }
+    );
+    const errorListener = interstitial.addAdEventListener(
+      AdEventType.ERROR,
+      (error) => {
+        console.error("Erreur interstitiel:", error);
+        setAdLoaded(false);
+      }
+    );
+    interstitial.load();
+    return () => {
+      unsubscribe();
+      errorListener();
+    };
+  }, []);
 
   useEffect(() => {
     const unsubscribeAuth = onAuthStateChanged(auth, async (firebaseUser) => {
@@ -95,7 +143,9 @@ export default function NewFeatures() {
           ? { ...snapshot.data(), uid: firebaseUser.uid }
           : { uid: firebaseUser.uid };
         setUser(userData as User);
-        setUserVote(snapshot.exists() ? snapshot.data().votedFor || null : null);
+        setUserVote(
+          snapshot.exists() ? snapshot.data().votedFor || null : null
+        );
       }
     });
     return unsubscribeAuth;
@@ -164,12 +214,21 @@ export default function NewFeatures() {
       return;
     }
     try {
-      await updateDoc(
-        doc(db, "polls", "new-features", "features", featureId),
-        { votes: increment(1) }
-      );
+      await updateDoc(doc(db, "polls", "new-features", "features", featureId), {
+        votes: increment(1),
+      });
       await updateDoc(doc(db, "users", user.uid), { votedFor: featureId });
       setUserVote(featureId);
+
+      // Afficher l'interstitiel si cooldown OK
+      const canShowAd = await checkAdCooldown();
+      if (canShowAd && adLoaded) {
+        interstitial.show();
+        await markAdShown();
+        setAdLoaded(false);
+        interstitial.load();
+      }
+
       Alert.alert(
         t("newFeatures.voteRegisteredTitle"),
         t("newFeatures.voteRegisteredMessage")
@@ -208,6 +267,16 @@ export default function NewFeatures() {
         { merge: true }
       );
       setUserVote(featureRef.id);
+
+      // Afficher l'interstitiel si cooldown OK
+      const canShowAd = await checkAdCooldown();
+      if (canShowAd && adLoaded) {
+        interstitial.show();
+        await markAdShown();
+        setAdLoaded(false);
+        interstitial.load();
+      }
+
       Alert.alert(
         t("newFeatures.proposalSentTitle"),
         t("newFeatures.proposalSentMessage")
@@ -235,12 +304,18 @@ export default function NewFeatures() {
           style={styles.countdownBox}
         >
           <Text
-            style={[styles.countdownNumber, { color: currentTheme.colors.textPrimary }]}
+            style={[
+              styles.countdownNumber,
+              { color: currentTheme.colors.textPrimary },
+            ]}
           >
             {countdown[unit]}
           </Text>
           <Text
-            style={[styles.countdownLabel, { color: currentTheme.colors.textPrimary }]}
+            style={[
+              styles.countdownLabel,
+              { color: currentTheme.colors.textPrimary },
+            ]}
           >
             {t(`newFeatures.countdown.${unit}`)}
           </Text>
@@ -249,7 +324,13 @@ export default function NewFeatures() {
     </LinearGradient>
   );
 
-  const renderFeatureItem = ({ item, index }: { item: Feature; index: number }) => (
+  const renderFeatureItem = ({
+    item,
+    index,
+  }: {
+    item: Feature;
+    index: number;
+  }) => (
     <Animated.View
       entering={FadeInUp.delay(index * 50)}
       style={styles.featureCard}
@@ -259,29 +340,50 @@ export default function NewFeatures() {
           setSelectedFeature(item);
           setShowFeatureDetailModal(true);
         }}
-        accessibilityLabel={t("newFeatures.featureDetails", { title: item.title })}
+        accessibilityLabel={t("newFeatures.featureDetails", {
+          title: item.title,
+        })}
         testID={`feature-card-${item.id}`}
       >
         <LinearGradient
-          colors={[currentTheme.colors.cardBackground, `${currentTheme.colors.cardBackground}F0`]}
+          colors={[
+            currentTheme.colors.cardBackground,
+            `${currentTheme.colors.cardBackground}F0`,
+          ]}
           style={styles.featureGradient}
         >
-          <Text style={[styles.featureTitle, { color: currentTheme.colors.textPrimary }]}>
+          <Text
+            style={[
+              styles.featureTitle,
+              { color: currentTheme.colors.textPrimary },
+            ]}
+          >
             {item.title}
           </Text>
           {item.username && (
             <Text
-              style={[styles.featureUsername, { color: currentTheme.colors.textSecondary }]}
+              style={[
+                styles.featureUsername,
+                { color: currentTheme.colors.textSecondary },
+              ]}
             >
               {t("newFeatures.by")} {item.username}
             </Text>
           )}
-          <Text style={[styles.featureVotes, { color: currentTheme.colors.primary }]}>
+          <Text
+            style={[
+              styles.featureVotes,
+              { color: currentTheme.colors.primary },
+            ]}
+          >
             {item.votes} {t("newFeatures.votes", { count: item.votes })}
           </Text>
           {item.description && (
             <Text
-              style={[styles.featureDescription, { color: currentTheme.colors.textSecondary }]}
+              style={[
+                styles.featureDescription,
+                { color: currentTheme.colors.textSecondary },
+              ]}
             >
               {item.description.length > 50
                 ? `${item.description.substring(0, 50)}...`
@@ -302,11 +404,22 @@ export default function NewFeatures() {
           barStyle={isDarkMode ? "light-content" : "dark-content"}
         />
         <LinearGradient
-          colors={[currentTheme.colors.background, currentTheme.colors.cardBackground]}
+          colors={[
+            currentTheme.colors.background,
+            currentTheme.colors.cardBackground,
+          ]}
           style={styles.loadingContainer}
         >
-          <ActivityIndicator size="large" color={currentTheme.colors.secondary} />
-          <Text style={[styles.loadingText, { color: currentTheme.colors.textPrimary }]}>
+          <ActivityIndicator
+            size="large"
+            color={currentTheme.colors.secondary}
+          />
+          <Text
+            style={[
+              styles.loadingText,
+              { color: currentTheme.colors.textPrimary },
+            ]}
+          >
             {t("newFeatures.loading")}
           </Text>
         </LinearGradient>
@@ -322,7 +435,10 @@ export default function NewFeatures() {
         barStyle={isDarkMode ? "light-content" : "dark-content"}
       />
       <LinearGradient
-        colors={[currentTheme.colors.background, `${currentTheme.colors.cardBackground}F0`]}
+        colors={[
+          currentTheme.colors.background,
+          `${currentTheme.colors.cardBackground}F0`,
+        ]}
         style={styles.container}
         start={{ x: 0, y: 0 }}
         end={{ x: 1, y: 1 }}
@@ -343,12 +459,18 @@ export default function NewFeatures() {
           </TouchableOpacity>
         </View>
         <Text
-          style={[styles.description, { color: currentTheme.colors.textSecondary }]}
+          style={[
+            styles.description,
+            { color: currentTheme.colors.textSecondary },
+          ]}
         >
           {t("newFeatures.description")}
         </Text>
         <View
-          style={[styles.featuresWindow, { backgroundColor: `${currentTheme.colors.cardBackground}80` }]}
+          style={[
+            styles.featuresWindow,
+            { backgroundColor: `${currentTheme.colors.cardBackground}80` },
+          ]}
         >
           {features.length > 0 ? (
             <FlatList
@@ -368,7 +490,10 @@ export default function NewFeatures() {
             />
           ) : (
             <Text
-              style={[styles.noFeaturesText, { color: currentTheme.colors.textSecondary }]}
+              style={[
+                styles.noFeaturesText,
+                { color: currentTheme.colors.textSecondary },
+              ]}
             >
               {t("newFeatures.noFeatures")}
             </Text>
@@ -378,21 +503,31 @@ export default function NewFeatures() {
           {renderCountdown()}
           {userVote ? (
             <Text
-              style={[styles.thankYouText, { color: currentTheme.colors.textSecondary }]}
+              style={[
+                styles.thankYouText,
+                { color: currentTheme.colors.textSecondary },
+              ]}
             >
               {t("newFeatures.thankYouForVote", {
-                featureTitle: features.find((f) => f.id === userVote)?.title || "???"
+                featureTitle:
+                  features.find((f) => f.id === userVote)?.title || "???",
               })}
             </Text>
           ) : (
             <TouchableOpacity
-              style={[styles.proposeButton, { backgroundColor: currentTheme.colors.primary }]}
+              style={[
+                styles.proposeButton,
+                { backgroundColor: currentTheme.colors.primary },
+              ]}
               onPress={() => setShowProposeModal(true)}
               accessibilityLabel={t("newFeatures.proposeIdea")}
               testID="propose-button"
             >
               <Text
-                style={[styles.proposeButtonText, { color: currentTheme.colors.textPrimary }]}
+                style={[
+                  styles.proposeButtonText,
+                  { color: currentTheme.colors.textPrimary },
+                ]}
               >
                 {t("newFeatures.proposeIdea")}
               </Text>

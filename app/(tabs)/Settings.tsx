@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from "react";
+import React, { useState, useEffect, useRef } from "react";
 import {
   View,
   Text,
@@ -29,6 +29,7 @@ import designSystem from "../../theme/designSystem";
 import CustomHeader from "@/components/CustomHeader";
 import GlobalLayout from "../../components/GlobalLayout";
 import i18n from "../../i18n";
+import { fetchAndSaveUserLocation } from "../../services/locationService";
 
 // Import de SPACING pour cohérence avec index.tsx et profile.tsx
 const SPACING = 15;
@@ -51,24 +52,29 @@ export default function Settings() {
   const [_, setLangUpdate] = useState(false);
   const { theme, toggleTheme } = useTheme();
   const router = useRouter();
+  const isActiveRef = useRef(true); // Contrôle les callbacks
+
+  const [isSubscribed, setIsSubscribed] = useState(true); // Contrôle l'abonnement
+  const unsubscribeRef = useRef<(() => void) | null>(null); // Référence pour unsubscribe
+
   const {
     currentChallenges,
     setCurrentChallenges,
     simulatedToday,
     setSimulatedToday,
-  } = useCurrentChallenges(); // Déplacé en haut pour éviter erreur de portée
+  } = useCurrentChallenges();
   const [notificationsEnabled, setNotificationsEnabled] = useState(true);
+  const [locationEnabled, setLocationEnabled] = useState(true);
   const isDarkMode = theme === "dark";
-  const currentTheme = isDarkMode ? designSystem.darkTheme : designSystem.lightTheme;
+  const currentTheme = isDarkMode
+    ? designSystem.darkTheme
+    : designSystem.lightTheme;
 
   useEffect(() => {
     (async () => {
       const { status } = await Notifications.requestPermissionsAsync();
       if (status !== "granted") {
-        Alert.alert(
-          t("permissionDenied"),
-          t("mustAllowNotifications")
-        );
+        Alert.alert(t("permissionDenied"), t("mustAllowNotifications"));
         setNotificationsEnabled(false);
       }
     })();
@@ -78,28 +84,62 @@ export default function Settings() {
     const handleLanguageChanged = () => {
       setLangUpdate((prev) => !prev);
     };
-  
-    i18next.on('languageChanged', handleLanguageChanged);
-  
+    i18next.on("languageChanged", handleLanguageChanged);
     return () => {
-      i18next.off('languageChanged', handleLanguageChanged);
+      i18next.off("languageChanged", handleLanguageChanged);
     };
   }, [i18next]);
 
   useEffect(() => {
-    // Charger les préférences depuis Firestore
+    console.log("Settings useEffect: Initialisation"); // Log
     const userId = auth.currentUser?.uid;
-    if (userId) {
-      const userRef = doc(db, "users", userId);
-      onSnapshot(userRef, (snapshot) => {
+    if (!userId) {
+      console.log("⚠️ Pas d’utilisateur, redirection vers /login"); // Log
+      router.replace("/login");
+      return;
+    }
+
+    console.log("Utilisateur connecté, ID:", userId); // Log
+    const userRef = doc(db, "users", userId);
+
+    const unsubscribe = onSnapshot(
+      userRef,
+      (snapshot) => {
+        if (!isActiveRef.current || !auth.currentUser) {
+          console.log("onSnapshot ignoré: inactif ou déconnecté"); // Log
+          return;
+        }
+        console.log(
+          "onSnapshot Settings, données:",
+          snapshot.exists() ? snapshot.data() : "null"
+        ); // Log
         if (snapshot.exists()) {
           const data = snapshot.data();
           setNotificationsEnabled(data.notificationsEnabled ?? true);
-          setLanguage(data.language ?? "fr");
+          setLocationEnabled(data.locationEnabled ?? true);
+          if (data.language && data.language !== language) {
+            console.log("Changement de langue:", data.language); // Log
+            setLanguage(data.language);
+            i18next.changeLanguage(data.language);
+          }
         }
-      });
-    }
-  }, []);
+      },
+      (error) => {
+        console.error("Erreur onSnapshot Settings:", error.message); // Log
+        if (error.code === "permission-denied" && !auth.currentUser) {
+          console.log("Permission refusée, utilisateur déconnecté"); // Log
+        } else {
+          Alert.alert(t("error"), t("unknownError"));
+        }
+      }
+    );
+
+    return () => {
+      console.log("Désabonnement onSnapshot Settings"); // Log
+      isActiveRef.current = false;
+      unsubscribe();
+    };
+  }, [t, language, setLanguage, router]);
 
   const savePreferences = async (updates: { [key: string]: any }) => {
     const userId = auth.currentUser?.uid;
@@ -114,13 +154,34 @@ export default function Settings() {
     }
   };
 
+  const handleLocationToggle = async (value: boolean) => {
+    setLocationEnabled(value);
+    await savePreferences({ locationEnabled: value });
+    if (value) {
+      try {
+        await fetchAndSaveUserLocation();
+        Alert.alert(t("location.enabled"), t("location.updated"));
+      } catch (error) {
+        console.error("Erreur localisation:", error);
+        Alert.alert(t("error"), t("location.error"));
+        setLocationEnabled(false);
+        await savePreferences({ locationEnabled: false });
+      }
+    } else {
+      const userId = auth.currentUser?.uid;
+      if (userId) {
+        await updateDoc(doc(db, "users", userId), {
+          country: "Unknown",
+          region: "Unknown",
+        });
+      }
+    }
+  };
+
   const clearCache = async () => {
     try {
       await AsyncStorage.clear();
-      Alert.alert(
-        t("cacheCleared"),
-        t("tempDataDeleted")
-      );
+      Alert.alert(t("cacheCleared"), t("tempDataDeleted"));
     } catch (error) {
       Alert.alert(t("error"), t("failedToClearCache"));
     }
@@ -137,10 +198,16 @@ export default function Settings() {
           style: "destructive",
           onPress: async () => {
             try {
+              console.log("Début déconnexion"); // Log
+              isActiveRef.current = false; // Bloquer les callbacks
+              console.log("Callbacks onSnapshot désactivés"); // Log
               await auth.signOut();
-              Alert.alert(t("loggedOut"), t("disconnected"));
+              console.log("Déconnexion réussie"); // Log
               router.replace("/login");
+              console.log("Redirection vers /login"); // Log
+              Alert.alert(t("loggedOut"), t("disconnected"));
             } catch (error) {
+              console.error("Erreur déconnexion:", error); // Log
               Alert.alert(t("error"), t("logoutFailed"));
             }
           },
@@ -151,34 +218,27 @@ export default function Settings() {
   };
 
   const handleDeleteAccount = () => {
-    Alert.alert(
-      t("deleteAccount"),
-      t("deleteAccountConfirm"),
-      [
-        { text: t("cancel"), style: "cancel" },
-        {
-          text: t("delete"),
-          style: "destructive",
-          onPress: async () => {
-            try {
-              const user = auth.currentUser;
-              if (user) {
-                await user.delete();
-                Alert.alert(
-                  t("accountDeleted"),
-                  t("accountDeletedSuccess")
-                );
-                router.replace("/login");
-              } else {
-                Alert.alert(t("error"), t("noUserConnected"));
-              }
-            } catch (error) {
-              Alert.alert(t("error"), t("failedToDeleteAccount"));
+    Alert.alert(t("deleteAccount"), t("deleteAccountConfirm"), [
+      { text: t("cancel"), style: "cancel" },
+      {
+        text: t("delete"),
+        style: "destructive",
+        onPress: async () => {
+          try {
+            const user = auth.currentUser;
+            if (user) {
+              await user.delete();
+              Alert.alert(t("accountDeleted"), t("accountDeletedSuccess"));
+              router.replace("/login");
+            } else {
+              Alert.alert(t("error"), t("noUserConnected"));
             }
-          },
+          } catch (error) {
+            Alert.alert(t("error"), t("failedToDeleteAccount"));
+          }
         },
-      ]
-    );
+      },
+    ]);
   };
 
   const simulateDayPass = async () => {
@@ -197,22 +257,22 @@ export default function Settings() {
         : new Date();
       newSimulatedToday.setDate(newSimulatedToday.getDate() + 1);
       setSimulatedToday(newSimulatedToday);
-      // Persister dans Firestore
       await updateDoc(doc(db, "users", userId), {
         simulatedToday: newSimulatedToday.toISOString(),
       });
       Alert.alert(
         t("Simulation réussie"),
-        t(`La date est maintenant simulée à ${newSimulatedToday.toDateString()}.`)
+        t(
+          `La date est maintenant simulée à ${newSimulatedToday.toDateString()}.`
+        )
       );
-      console.log("⏳ Nouveau jour simulé:", newSimulatedToday);
     } catch (error) {
       console.error("❌ Erreur lors de la simulation d’un jour:", error);
       Alert.alert(t("Erreur"), t("Échec de la simulation."));
     }
   };
 
-  const adminUID = "mAEyXdH3J5bcBt6SxZP7lWz0EW43"; // À déplacer dans une config si possible
+  const adminUID = "mAEyXdH3J5bcBt6SxZP7lWz0EW43";
 
   return (
     <GlobalLayout key={language}>
@@ -222,7 +282,10 @@ export default function Settings() {
         barStyle={isDarkMode ? "light-content" : "dark-content"}
       />
       <LinearGradient
-        colors={[currentTheme.colors.background, currentTheme.colors.cardBackground]}
+        colors={[
+          currentTheme.colors.background,
+          currentTheme.colors.cardBackground,
+        ]}
         style={styles.gradientContainer}
         start={{ x: 0, y: 0 }}
         end={{ x: 1, y: 1 }}
@@ -237,7 +300,12 @@ export default function Settings() {
         >
           {/* Section Préférences */}
           <Animated.View entering={FadeInUp.delay(100)} style={styles.section}>
-            <Text style={[styles.sectionHeader, { color: currentTheme.colors.textPrimary }]}>
+            <Text
+              style={[
+                styles.sectionHeader,
+                { color: currentTheme.colors.textPrimary },
+              ]}
+            >
               {t("preferences")}
             </Text>
             <Animated.View
@@ -252,7 +320,10 @@ export default function Settings() {
             >
               <View style={styles.settingItem}>
                 <Text
-                  style={[styles.settingLabel, { color: currentTheme.colors.textSecondary }]}
+                  style={[
+                    styles.settingLabel,
+                    { color: currentTheme.colors.textSecondary },
+                  ]}
                 >
                   {t("notifications")}
                 </Text>
@@ -261,17 +332,56 @@ export default function Settings() {
                   onValueChange={(value) => {
                     setNotificationsEnabled(value);
                     savePreferences({ notificationsEnabled: value });
-                    if (!value) Notifications.cancelAllScheduledNotificationsAsync();
+                    if (!value)
+                      Notifications.cancelAllScheduledNotificationsAsync();
                   }}
                   trackColor={{
                     false: currentTheme.colors.border,
                     true: currentTheme.colors.primary,
                   }}
                   thumbColor={
-                    notificationsEnabled ? currentTheme.colors.textPrimary : "#d3d3d3"
+                    notificationsEnabled
+                      ? currentTheme.colors.textPrimary
+                      : "#d3d3d3"
                   }
                   style={styles.switch}
                   accessibilityLabel={t("handleNotifications")}
+                />
+              </View>
+            </Animated.View>
+            <Animated.View
+              entering={FadeInUp.delay(250)}
+              style={[
+                styles.card,
+                {
+                  backgroundColor: currentTheme.colors.cardBackground,
+                  borderColor: currentTheme.colors.border,
+                },
+              ]}
+            >
+              <View style={styles.settingItem}>
+                <Text
+                  style={[
+                    styles.settingLabel,
+                    { color: currentTheme.colors.textSecondary },
+                  ]}
+                >
+                  {t("location")}
+                </Text>
+                <Switch
+                  value={locationEnabled}
+                  onValueChange={handleLocationToggle}
+                  trackColor={{
+                    false: currentTheme.colors.border,
+                    true: currentTheme.colors.primary,
+                  }}
+                  thumbColor={
+                    locationEnabled
+                      ? currentTheme.colors.textPrimary
+                      : "#d3d3d3"
+                  }
+                  style={styles.switch}
+                  accessibilityLabel={t("handleLocation")}
                 />
               </View>
             </Animated.View>
@@ -287,7 +397,10 @@ export default function Settings() {
             >
               <View style={styles.settingItem}>
                 <Text
-                  style={[styles.settingLabel, { color: currentTheme.colors.textSecondary }]}
+                  style={[
+                    styles.settingLabel,
+                    { color: currentTheme.colors.textSecondary },
+                  ]}
                 >
                   {t("darkMode")}
                 </Text>
@@ -298,7 +411,9 @@ export default function Settings() {
                     false: currentTheme.colors.border,
                     true: currentTheme.colors.primary,
                   }}
-                  thumbColor={isDarkMode ? currentTheme.colors.textPrimary : "#d3d3d3"}
+                  thumbColor={
+                    isDarkMode ? currentTheme.colors.textPrimary : "#d3d3d3"
+                  }
                   style={styles.switch}
                   accessibilityLabel={t("handleDarkMode")}
                 />
@@ -316,39 +431,51 @@ export default function Settings() {
             >
               <View style={styles.settingItem}>
                 <Text
-                  style={[styles.settingLabel, { color: currentTheme.colors.textSecondary }]}
+                  style={[
+                    styles.settingLabel,
+                    { color: currentTheme.colors.textSecondary },
+                  ]}
                 >
                   {t("language")}
                 </Text>
                 <Picker
-  selectedValue={language}
-  style={[styles.languagePicker, { color: currentTheme.colors.textSecondary }]}
-  onValueChange={(itemValue) => {
-    setLanguage(itemValue);
-    i18next.changeLanguage(itemValue); 
-    savePreferences({ language: itemValue });
-  }}
-  dropdownIconColor={
-    isDarkMode ? currentTheme.colors.textPrimary : currentTheme.colors.primary
-  }
-  accessibilityLabel={t("language")}
->
-  <Picker.Item label="Français" value="fr" />
-  <Picker.Item label="English" value="en" />
-  <Picker.Item label="Español" value="es" />
-  <Picker.Item label="Deutsch" value="de" />
-  <Picker.Item label="中文" value="zh" />
-  <Picker.Item label="العربية" value="ar" />
-  <Picker.Item label="हिन्दी" value="hi" />
-</Picker>
-
+                  selectedValue={language}
+                  style={[
+                    styles.languagePicker,
+                    { color: currentTheme.colors.textSecondary },
+                  ]}
+                  onValueChange={(itemValue) => {
+                    setLanguage(itemValue);
+                    i18next.changeLanguage(itemValue);
+                    savePreferences({ language: itemValue });
+                  }}
+                  dropdownIconColor={
+                    isDarkMode
+                      ? currentTheme.colors.textPrimary
+                      : currentTheme.colors.primary
+                  }
+                  accessibilityLabel={t("language")}
+                >
+                  <Picker.Item label="Français" value="fr" />
+                  <Picker.Item label="English" value="en" />
+                  <Picker.Item label="Español" value="es" />
+                  <Picker.Item label="Deutsch" value="de" />
+                  <Picker.Item label="中文" value="zh" />
+                  <Picker.Item label="العربية" value="ar" />
+                  <Picker.Item label="हिन्दी" value="hi" />
+                </Picker>
               </View>
             </Animated.View>
           </Animated.View>
 
           {/* Section Compte */}
           <Animated.View entering={FadeInUp.delay(500)} style={styles.section}>
-            <Text style={[styles.sectionHeader, { color: currentTheme.colors.textPrimary }]}>
+            <Text
+              style={[
+                styles.sectionHeader,
+                { color: currentTheme.colors.textPrimary },
+              ]}
+            >
               {t("account")}
             </Text>
             <Animated.View entering={FadeInUp.delay(600)}>
@@ -359,7 +486,10 @@ export default function Settings() {
                 testID="edit-profile-button"
               >
                 <LinearGradient
-                  colors={[currentTheme.colors.primary, currentTheme.colors.secondary]}
+                  colors={[
+                    currentTheme.colors.primary,
+                    currentTheme.colors.secondary,
+                  ]}
                   style={styles.buttonGradient}
                   start={{ x: 0, y: 0 }}
                   end={{ x: 1, y: 1 }}
@@ -370,7 +500,10 @@ export default function Settings() {
                     color={currentTheme.colors.textPrimary}
                   />
                   <Text
-                    style={[styles.accountButtonText, { color: currentTheme.colors.textPrimary }]}
+                    style={[
+                      styles.accountButtonText,
+                      { color: currentTheme.colors.textPrimary },
+                    ]}
                   >
                     {t("editProfile")}
                   </Text>
@@ -385,7 +518,10 @@ export default function Settings() {
                 testID="clear-cache-button"
               >
                 <LinearGradient
-                  colors={[currentTheme.colors.secondary, currentTheme.colors.primary]}
+                  colors={[
+                    currentTheme.colors.secondary,
+                    currentTheme.colors.primary,
+                  ]}
                   style={styles.buttonGradient}
                   start={{ x: 0, y: 0 }}
                   end={{ x: 1, y: 1 }}
@@ -396,7 +532,10 @@ export default function Settings() {
                     color={currentTheme.colors.textPrimary}
                   />
                   <Text
-                    style={[styles.accountButtonText, { color: currentTheme.colors.textPrimary }]}
+                    style={[
+                      styles.accountButtonText,
+                      { color: currentTheme.colors.textPrimary },
+                    ]}
                   >
                     {t("clearCache")}
                   </Text>
@@ -411,7 +550,10 @@ export default function Settings() {
                 testID="simulate-day-button"
               >
                 <LinearGradient
-                  colors={[currentTheme.colors.secondary, currentTheme.colors.primary]}
+                  colors={[
+                    currentTheme.colors.secondary,
+                    currentTheme.colors.primary,
+                  ]}
                   style={styles.buttonGradient}
                   start={{ x: 0, y: 0 }}
                   end={{ x: 1, y: 1 }}
@@ -422,7 +564,10 @@ export default function Settings() {
                     color={currentTheme.colors.textPrimary}
                   />
                   <Text
-                    style={[styles.accountButtonText, { color: currentTheme.colors.textPrimary }]}
+                    style={[
+                      styles.accountButtonText,
+                      { color: currentTheme.colors.textPrimary },
+                    ]}
                   >
                     {t("Simuler un jour")}
                   </Text>
@@ -437,7 +582,10 @@ export default function Settings() {
                 testID="logout-button"
               >
                 <LinearGradient
-                  colors={[currentTheme.colors.primary, currentTheme.colors.secondary]}
+                  colors={[
+                    currentTheme.colors.primary,
+                    currentTheme.colors.secondary,
+                  ]}
                   style={styles.buttonGradient}
                   start={{ x: 0, y: 0 }}
                   end={{ x: 1, y: 1 }}
@@ -448,7 +596,10 @@ export default function Settings() {
                     color={currentTheme.colors.textPrimary}
                   />
                   <Text
-                    style={[styles.accountButtonText, { color: currentTheme.colors.textPrimary }]}
+                    style={[
+                      styles.accountButtonText,
+                      { color: currentTheme.colors.textPrimary },
+                    ]}
                   >
                     {t("logout")}
                   </Text>
@@ -463,7 +614,10 @@ export default function Settings() {
                 testID="delete-account-button"
               >
                 <LinearGradient
-                  colors={[currentTheme.colors.error, currentTheme.colors.error]}
+                  colors={[
+                    currentTheme.colors.error,
+                    currentTheme.colors.error,
+                  ]}
                   style={styles.buttonGradient}
                   start={{ x: 0, y: 0 }}
                   end={{ x: 1, y: 1 }}
@@ -474,7 +628,10 @@ export default function Settings() {
                     color={currentTheme.colors.textPrimary}
                   />
                   <Text
-                    style={[styles.accountButtonText, { color: currentTheme.colors.textPrimary }]}
+                    style={[
+                      styles.accountButtonText,
+                      { color: currentTheme.colors.textPrimary },
+                    ]}
                   >
                     {t("deleteAccount")}
                   </Text>
@@ -490,13 +647,19 @@ export default function Settings() {
                   testID="admin-button"
                 >
                   <LinearGradient
-                    colors={[currentTheme.colors.primary, currentTheme.colors.secondary]}
+                    colors={[
+                      currentTheme.colors.primary,
+                      currentTheme.colors.secondary,
+                    ]}
                     style={styles.adminButtonGradient}
                     start={{ x: 0, y: 0 }}
                     end={{ x: 1, y: 1 }}
                   >
                     <Text
-                      style={[styles.adminButtonText, { color: currentTheme.colors.textPrimary }]}
+                      style={[
+                        styles.adminButtonText,
+                        { color: currentTheme.colors.textPrimary },
+                      ]}
                     >
                       {t("admin")}
                     </Text>
@@ -508,45 +671,70 @@ export default function Settings() {
 
           {/* Section À Propos */}
           <Animated.View entering={FadeInUp.delay(1100)} style={styles.section}>
-            <Text style={[styles.sectionHeader, { color: currentTheme.colors.textPrimary }]}>
+            <Text
+              style={[
+                styles.sectionHeader,
+                { color: currentTheme.colors.textPrimary },
+              ]}
+            >
               {t("about")}
             </Text>
-            {["/about/History", "/about/PrivacyPolicy", "/about/Contact"].map((path, index) => (
-              <Animated.View entering={FadeInUp.delay(1200 + index * 100)} key={index}>
-                <TouchableOpacity
-                  onPress={() => router.push(path)}
-                  accessibilityLabel={t(
-                    ["aboutChallengeTies", "privacyPolicyPage", "contactUs"][
-                      index
-                    ]
-                  )}
-                  testID={`about-link-${index}`}
+            {["/about/History", "/about/PrivacyPolicy", "/about/Contact"].map(
+              (path, index) => (
+                <Animated.View
+                  entering={FadeInUp.delay(1200 + index * 100)}
+                  key={index}
                 >
-                  <Text style={[styles.aboutLink, { color: currentTheme.colors.secondary }]}>
-                    {t(
-                      [
-                        "aboutChallengeTies",
-                        "privacyPolicyPage",
-                        "contactUs",
-                      ][index]
+                  <TouchableOpacity
+                    onPress={() => router.push(path)}
+                    accessibilityLabel={t(
+                      ["aboutChallengeTies", "privacyPolicyPage", "contactUs"][
+                        index
+                      ]
                     )}
-                  </Text>
-                </TouchableOpacity>
-              </Animated.View>
-            ))}
+                    testID={`about-link-${index}`}
+                  >
+                    <Text
+                      style={[
+                        styles.aboutLink,
+                        { color: currentTheme.colors.secondary },
+                      ]}
+                    >
+                      {t(
+                        [
+                          "aboutChallengeTies",
+                          "privacyPolicyPage",
+                          "contactUs",
+                        ][index]
+                      )}
+                    </Text>
+                  </TouchableOpacity>
+                </Animated.View>
+              )
+            )}
             <Animated.View entering={FadeInUp.delay(1500)}>
               <TouchableOpacity
                 onPress={() => Linking.openURL("https://example.com")}
                 accessibilityLabel={t("visitWebsite")}
                 testID="website-link"
               >
-                <Text style={[styles.aboutLink, { color: currentTheme.colors.secondary }]}>
+                <Text
+                  style={[
+                    styles.aboutLink,
+                    { color: currentTheme.colors.secondary },
+                  ]}
+                >
                   {t("visitWebsite")}
                 </Text>
               </TouchableOpacity>
             </Animated.View>
             <Animated.View entering={FadeInUp.delay(1600)}>
-              <Text style={[styles.appVersion, { color: currentTheme.colors.textSecondary }]}>
+              <Text
+                style={[
+                  styles.appVersion,
+                  { color: currentTheme.colors.textSecondary },
+                ]}
+              >
                 {t("appVersion")} 1.0.0
               </Text>
             </Animated.View>

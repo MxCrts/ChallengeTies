@@ -12,9 +12,23 @@ import { Ionicons } from "@expo/vector-icons";
 import Animated, { FadeIn, FadeOut } from "react-native-reanimated";
 import designSystem from "../theme/designSystem";
 import { useTranslation } from "react-i18next";
+import {
+  RewardedAd,
+  RewardedAdEventType,
+  AdEventType,
+  TestIds,
+} from "react-native-google-mobile-ads";
+import { useState, useEffect } from "react";
 
 const { width: SCREEN_WIDTH, height: SCREEN_HEIGHT } = Dimensions.get("window");
 const currentTheme = designSystem.lightTheme;
+// ID vidéo récompensée
+const adUnitId = __DEV__
+  ? TestIds.REWARDED
+  : "ca-app-pub-4725616526467159/6366749139";
+const rewarded = RewardedAd.createForAdRequest(adUnitId, {
+  requestNonPersonalizedAdsOnly: true,
+});
 
 const normalizeSize = (size: number) => {
   const scale = Math.min(SCREEN_WIDTH, SCREEN_HEIGHT) / 375;
@@ -40,7 +54,53 @@ const MissedChallengeModal: React.FC<MissedChallengeModalProps> = ({
 }) => {
   const { t } = useTranslation();
 
+  const [adLoaded, setAdLoaded] = useState(false);
+  const [adError, setAdError] = useState<string | null>(null);
+
+  useEffect(() => {
+    const unsubscribeLoaded = rewarded.addAdEventListener(
+      RewardedAdEventType.LOADED,
+      () => {
+        setAdLoaded(true);
+        setAdError(null);
+        console.log("Vidéo récompensée chargée");
+      }
+    );
+    const unsubscribeEarned = rewarded.addAdEventListener(
+      RewardedAdEventType.EARNED_REWARD,
+      () => {
+        console.log("✅ Récompense gagnée !");
+      }
+    );
+    const unsubscribeError = rewarded.addAdEventListener(
+      AdEventType.ERROR,
+      (error) => {
+        console.error("Erreur vidéo récompensée:", error.message);
+        setAdLoaded(false);
+        setAdError(t("missedChallenge.adNotReady"));
+      }
+    );
+    rewarded.load();
+    return () => {
+      unsubscribeLoaded();
+      unsubscribeEarned();
+      unsubscribeError();
+    };
+  }, [t]);
+
   if (!visible) return null;
+
+  const handleWatchAd = () => {
+    if (adLoaded) {
+      rewarded.show();
+      onWatchAd();
+      setAdLoaded(false);
+      rewarded.load();
+    } else {
+      setAdError(t("missedChallenge.adNotReady"));
+      rewarded.load();
+    }
+  };
 
   return (
     <View style={styles.overlay}>
@@ -93,7 +153,7 @@ const MissedChallengeModal: React.FC<MissedChallengeModalProps> = ({
             </TouchableOpacity>
             <TouchableOpacity
               style={styles.optionButton}
-              onPress={onWatchAd}
+              onPress={handleWatchAd}
               activeOpacity={0.8}
             >
               <LinearGradient
@@ -135,7 +195,9 @@ const MissedChallengeModal: React.FC<MissedChallengeModalProps> = ({
                 />
                 <View style={styles.optionTextContainer}>
                   <Text style={styles.optionText}>
-                    {t("missedChallenge.useTrophies.title", { count: trophyCost })}
+                    {t("missedChallenge.useTrophies.title", {
+                      count: trophyCost,
+                    })}
                   </Text>
                   <Text style={styles.optionSubtext}>
                     {t("missedChallenge.useTrophies.subtitle")}
@@ -144,6 +206,7 @@ const MissedChallengeModal: React.FC<MissedChallengeModalProps> = ({
               </LinearGradient>
             </TouchableOpacity>
           </View>
+          {adError && <Text style={styles.errorText}>{adError}</Text>}
           <TouchableOpacity style={styles.closeButton} onPress={onClose}>
             <Ionicons
               name="close-circle"
@@ -251,6 +314,12 @@ const styles = StyleSheet.create({
     borderRadius: normalizeSize(18),
     padding: normalizeSize(6),
     elevation: 10,
+  },
+  errorText: {
+    color: "#FF4444",
+    fontSize: normalizeSize(14),
+    textAlign: "center",
+    marginVertical: normalizeSize(10),
   },
 });
 

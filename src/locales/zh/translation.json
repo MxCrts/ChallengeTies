@@ -390,10 +390,20 @@
     "prevMonth": "上个月",
     "nextMonth": "下个月",
     "title": "{{month}} {{year}}",
-    "weekdays": ["周日","周一","周二","周三","周四","周五","周六"],
+    "weekdays": ["周日", "周一", "周二", "周三", "周四", "周五", "周六"],
     "months": [
-      "一月","二月","三月","四月","五月","六月",
-      "七月","八月","九月","十月","十一月","十二月"
+      "一月",
+      "二月",
+      "三月",
+      "四月",
+      "五月",
+      "六月",
+      "七月",
+      "八月",
+      "九月",
+      "十月",
+      "十一月",
+      "十二月"
     ]
   },
   "proposeFeature": {
@@ -405,6 +415,7 @@
     "submitButton": "提交提案"
   },
   "missedChallenge": {
+    "adNotReady": "广告尚未准备好。请稍后再试。",
     "title": "挑战岌岌可危！",
     "subtitle": "您已连续错过 2 天或以上。您想怎么做？",
     "reset": {
@@ -490,7 +501,9 @@
     "doubleTrophies": "奖杯翻倍",
     "finalTitle": "恭喜！",
     "finalMessage": "挑战完成！你获得 {{count}} 个奖杯！",
-    "errorFinalizingMessage": "无法完成挑战。"
+    "errorFinalizingMessage": "无法完成挑战。",
+    "adNotReadyTitle": "广告暂不可用",
+    "adNotReady": "广告尚未准备好。请稍后再试。"
   },
   "featureDetail": {
     "votes": "{{count}} 票",
@@ -548,11 +561,17 @@
     "notEnough": "玩家数量不足，无法展示领奖台。",
     "profileOf": "{{name}} 的个人资料",
     "unknown": "未知",
+    "locationDisabled": "无法确定您的位置，因为未启用定位服务",
+    "enableLocation": "启用定位",
     "loading": "正在加载排行榜…",
     "title": "排行榜",
+    "noRegion": "区域定位不可用。请在设置中启用定位服务。",
+    "noCountry": "国家定位不可用。请在设置中启用定位服务。",
+    "goToSettings": "前往设置",
+    "userNotFound": "未找到用户",
     "filter": {
-      "region": "地区",
-      "national": "全国",
+      "region": "按地区筛选",
+      "national": "按国家筛选",
       "global": "全球"
     },
     "tab": {
@@ -784,21 +803,21 @@
   },
   "profile_completed": "资料已完成",
   "categories": {
-  "Santé": "健康",
-  "Fitness": "健身",
-  "Finance": "理财",
-  "Mode De Vie": "生活方式",
-  "Éducation": "教育",
-  "Créativité": "创造力",
-  "Carrière": "职业",
-  "Social": "社交",
-  "Productivité": "生产力",
-  "Écologie": "生态",
-  "Motivation": "动机",
-  "Discipline": "自律",
-  "Développement Personnel": "个人成长",
-  "État d'esprit": "心态"
-},
+    "Santé": "健康",
+    "Fitness": "健身",
+    "Finance": "理财",
+    "Mode De Vie": "生活方式",
+    "Éducation": "教育",
+    "Créativité": "创造力",
+    "Carrière": "职业",
+    "Social": "社交",
+    "Productivité": "生产力",
+    "Écologie": "生态",
+    "Motivation": "动机",
+    "Discipline": "自律",
+    "Développement Personnel": "个人成长",
+    "État d'esprit": "心态"
+  },
   "challenges": {
     "eatHealthy": {
       "title": "每天健康饮食",
@@ -1013,6 +1032,19 @@
   "unableToMarkWithTrophies": "无法使用勋章标记。",
   "challengeNotFound": "未找到挑战。",
   "unableToFinalizeChallenge": "无法完成挑战。",
-  "errorLoadingSavedChallenges": "无法加载已保存的挑战：{{message}}"
-
+  "errorLoadingSavedChallenges": "无法加载已保存的挑战：{{message}}",
+  "notificationsPush": {
+    "title": "ChallengeTies",
+    "morning1": "准备迎接新的挑战了吗？",
+    "morning2": "用一个有趣的挑战开始你的一天！",
+    "evening1": "以一个快速的挑战结束你的一天！",
+    "evening2": "睡前再来一个挑战？"
+  },
+  "settingsPage": {
+    "location": "定位",
+    "handleLocation": "启用或禁用定位",
+    "enabled": "定位已启用",
+    "updated": "定位更新成功",
+    "error": "定位更新失败"
+  }
 }

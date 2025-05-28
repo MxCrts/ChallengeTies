@@ -12,31 +12,27 @@
     },
     "scheme": "myapp",
     "userInterfaceStyle": "automatic",
-    "newArchEnabled": false,
     "ios": {
       "supportsTablet": true,
       "bundleIdentifier": "com.mxcrts.ChallengeTies",
-      "config": {
-        "googleMobileAdsAppId": "ca-app-pub-4725616526467159~9688398116"
-      },
       "infoPlist": {
-        "NSUserTrackingUsageDescription": "This identifier will be used to deliver personalized ads to you.",
-        "SKAdNetworkItems": [
-          { "SKAdNetworkIdentifier": "cstr6suwn9.skadnetwork" }
-        ],
-        "ITSAppUsesNonExemptEncryption": false
+        "UIBackgroundModes": ["remote-notification"],
+        "NSUserNotificationsUsageDescription": "Nous utilisons les notifications pour vous rappeler vos défis quotidiens et vous tenir informé des nouveaux challenges."
       }
     },
     "android": {
-      "package": "com.mxcrts.ChallengeTies",
-      "softwareKeyboardLayoutMode": "pan",
       "adaptiveIcon": {
         "foregroundImage": "./assets/images/adaptive-icon.png",
         "backgroundColor": "#ffffff"
       },
-      "config": {
-        "googleMobileAdsAppId": "ca-app-pub-4725616526467159~2289013149"
-      }
+      "softwareKeyboardLayoutMode": "pan",
+      "package": "com.mxcrts.ChallengeTies",
+      "googleMobileAdsAppId": "ca-app-pub-4725616526467159~2289013149",
+      "permissions": [
+        "RECEIVE_BOOT_COMPLETED",
+        "VIBRATE",
+        "com.google.android.c2dm.permission.RECEIVE"
+      ]
     },
     "web": {
       "bundler": "metro",
@@ -44,7 +40,6 @@
       "favicon": "./assets/images/favicon.png"
     },
     "plugins": [
-      "expo-dev-client",
       "expo-router",
       [
         "expo-splash-screen",
@@ -63,8 +58,16 @@
           "iosAppId": "ca-app-pub-4725616526467159~9688398116"
         }
       ],
-      "expo-notifications"
+      [
+        "expo-notifications",
+        {
+          "icon": "./assets/notification-icon.png",
+          "color": "#FFB800",
+          "sounds": []
+        }
+      ]
     ],
+    "newArchEnabled": true,
     "experiments": {
       "typedRoutes": true
     },

@@ -15,11 +15,17 @@ import {
 } from "react-native";
 import { StatusBar } from "expo-status-bar";
 import { useRouter } from "expo-router";
-import { createUserWithEmailAndPassword } from "firebase/auth";
+import { createUserWithEmailAndPassword, updateProfile } from "firebase/auth";
 import { auth, db } from "../constants/firebase-config";
-import { doc, setDoc, serverTimestamp } from "firebase/firestore";
+import { doc, setDoc, serverTimestamp, updateDoc } from "firebase/firestore";
 import { Ionicons } from "@expo/vector-icons";
-import { useTranslation } from "react-i18next"; // 🆕 Ajout pour la traduction
+import { useTranslation } from "react-i18next";
+import { fetchAndSaveUserLocation } from "../services/locationService";
+import {
+  requestNotificationPermissions,
+  scheduleDailyNotifications,
+} from "../services/notificationService"; // Import notifications
+import i18n from "../i18n";
 
 const { width: SCREEN_WIDTH, height: SCREEN_HEIGHT } = Dimensions.get("window");
 
@@ -70,7 +76,7 @@ const Wave = React.memo(
 );
 
 export default function Register() {
-  const { t } = useTranslation(); // 🆕
+  const { t } = useTranslation();
   const router = useRouter();
   const [email, setEmail] = useState("");
   const [username, setUsername] = useState("");
@@ -146,6 +152,8 @@ export default function Register() {
       );
       const user = userCredential.user;
       const userId = user.uid;
+
+      // Sauvegarder les données utilisateur dans Firestore
       await setDoc(doc(db, "users", userId), {
         uid: userId,
         email: email.trim(),
@@ -165,9 +173,36 @@ export default function Register() {
         longestStreak: 0,
         shareChallenge: 0,
         voteFeature: 0,
+        language: i18n.language,
+        locationEnabled: true,
+        notificationsEnabled: true,
+        country: "Unknown",
+        region: "Unknown",
         createdAt: serverTimestamp(),
         updatedAt: serverTimestamp(),
       });
+
+      // Mettre à jour le displayName
+      await updateProfile(user, { displayName: username.trim() });
+
+      // Récupérer et sauvegarder la localisation
+      try {
+        await fetchAndSaveUserLocation();
+      } catch (error) {
+        console.error("Erreur localisation lors de l'inscription :", error);
+      }
+
+      // Demander permissions notifications
+      const notificationsGranted = await requestNotificationPermissions();
+      if (notificationsGranted) {
+        await scheduleDailyNotifications();
+      } else {
+        await updateDoc(doc(db, "users", userId), {
+          notificationsEnabled: false,
+        });
+        console.log("🔔 Notifications désactivées (permissions refusées)");
+      }
+
       router.replace("/screen/onboarding/Screen1");
     } catch (error: any) {
       const errorMessages: Record<string, string> = {
@@ -175,9 +210,7 @@ export default function Register() {
         "auth/invalid-email": t("invalidEmailFormat"),
         "auth/weak-password": t("weakPassword"),
       };
-      setErrorMessage(
-        errorMessages[error.code] || t("unknownError")
-      );
+      setErrorMessage(errorMessages[error.code] || t("unknownError"));
       setTimeout(() => setErrorMessage(""), 5000);
     } finally {
       setLoading(false);
@@ -221,7 +254,10 @@ export default function Register() {
           <Text style={styles.tagline}>{t("joinUsAndChallenge")}</Text>
         </View>
 
-        <View style={styles.formContainer} accessibilityLabel={t("registrationForm")}>
+        <View
+          style={styles.formContainer}
+          accessibilityLabel={t("registrationForm")}
+        >
           {errorMessage !== "" && (
             <Text style={styles.errorText} accessibilityRole="alert">
               {errorMessage}
@@ -263,7 +299,9 @@ export default function Register() {
             />
             <TouchableOpacity
               onPress={() => setShowPassword((prev) => !prev)}
-              accessibilityLabel={showPassword ? t("hidePassword") : t("showPassword")}
+              accessibilityLabel={
+                showPassword ? t("hidePassword") : t("showPassword")
+              }
               style={styles.passwordIcon}
             >
               <Ionicons
@@ -287,7 +325,9 @@ export default function Register() {
             />
             <TouchableOpacity
               onPress={() => setShowConfirmPassword((prev) => !prev)}
-              accessibilityLabel={showConfirmPassword ? t("hidePassword") : t("showPassword")}
+              accessibilityLabel={
+                showConfirmPassword ? t("hidePassword") : t("showPassword")
+              }
               style={styles.passwordIcon}
             >
               <Ionicons
