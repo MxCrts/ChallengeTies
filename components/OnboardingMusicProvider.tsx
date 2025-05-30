@@ -16,7 +16,7 @@ const OnboardingMusicProvider: React.FC<OnboardingMusicProviderProps> = ({
     const loadAndPlay = async () => {
       try {
         const { sound } = await Audio.Sound.createAsync(
-          require("../assets/audio/onboarding-music.mp3"), // Assurez-vous d'avoir ce fichier
+          require("../assets/audio/intro-music.mp3"), // Assurez-vous d'avoir ce fichier
           { shouldPlay: true, isLooping: true, volume: 0.5 }
         );
         soundRef.current = sound;

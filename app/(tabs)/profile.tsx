@@ -28,6 +28,8 @@ import {
   BannerAdSize,
   TestIds,
 } from "react-native-google-mobile-ads";
+import { BlurView } from "expo-blur";
+import { useTutorial } from "../../context/TutorialContext";
 
 // Import de SPACING depuis index.tsx pour cohérence
 const SPACING = 15;
@@ -58,6 +60,7 @@ export default function ProfileScreen() {
   const { theme } = useTheme();
   const isDarkMode = theme === "dark";
   const { t } = useTranslation();
+  const { tutorialStep, setTutorialStep, isTutorialActive } = useTutorial();
 
   const currentTheme: Theme = isDarkMode
     ? designSystem.darkTheme
@@ -439,6 +442,30 @@ export default function ProfileScreen() {
             }
           />
         </View>
+        {isTutorialActive && tutorialStep === 2 && (
+          <BlurView intensity={50} style={styles.blurView}>
+            <Animated.View entering={FadeInUp} style={styles.modalContainer}>
+              <Text style={styles.modalTitle}>{t("yourProfile")}</Text>
+              <Text style={styles.modalDescription}>
+                {t("profileDescription", {
+                  stats: "stats",
+                  badges: "badges",
+                  personalize: "personnalise ton expérience",
+                })}
+              </Text>
+              <TouchableOpacity
+                style={styles.nextButton}
+                onPress={() => setTutorialStep(3)}
+              >
+                <Ionicons
+                  name="chevron-forward"
+                  size={normalizeSize(24)}
+                  color="#FFB800"
+                />
+              </TouchableOpacity>
+            </Animated.View>
+          </BlurView>
+        )}
       </LinearGradient>
     </GlobalLayout>
   );
@@ -607,5 +634,36 @@ const styles = StyleSheet.create({
     width: SCREEN_WIDTH,
     alignItems: "center",
     backgroundColor: "transparent",
+  },
+  blurView: {
+    ...StyleSheet.absoluteFillObject,
+    justifyContent: "center",
+    alignItems: "center",
+  },
+  modalContainer: {
+    backgroundColor: "rgba(255, 255, 255, 0.95)",
+    borderRadius: 20,
+    padding: 20,
+    width: "80%",
+    alignItems: "center",
+  },
+  modalTitle: {
+    fontSize: normalizeSize(24),
+    fontFamily: "Comfortaa_700Bold",
+    color: "#000",
+    marginBottom: 10,
+    textAlign: "center",
+  },
+  modalDescription: {
+    fontSize: normalizeSize(16),
+    fontFamily: "Comfortaa_400Regular",
+    color: "#333",
+    textAlign: "center",
+    marginBottom: 20,
+  },
+  nextButton: {
+    position: "absolute",
+    bottom: 20,
+    right: 20,
   },
 });

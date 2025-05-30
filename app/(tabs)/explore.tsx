@@ -34,6 +34,8 @@ import {
   BannerAdSize,
   TestIds,
 } from "react-native-google-mobile-ads";
+import { BlurView } from "expo-blur";
+import { useTutorial } from "../../context/TutorialContext";
 
 const { width: SCREEN_WIDTH, height: SCREEN_HEIGHT } = Dimensions.get("window");
 
@@ -331,6 +333,8 @@ export default function ExploreScreen() {
   const router = useRouter();
   const { isSaved, addChallenge, removeChallenge } = useSavedChallenges();
   const { theme } = useTheme();
+  const { tutorialStep, setTutorialStep, skipTutorial, isTutorialActive } =
+    useTutorial();
   const isDarkMode = theme === "dark";
   const currentTheme: Theme = isDarkMode
     ? designSystem.darkTheme
@@ -695,6 +699,28 @@ export default function ExploreScreen() {
           }
         />
       </View>
+      {isTutorialActive && tutorialStep === 4 && (
+        <BlurView intensity={50} style={styles.blurView}>
+          <Animated.View entering={FadeInUp} style={styles.modalContainer}>
+            <Text style={styles.modalTitle}>{t("explorePageTitle")}</Text>
+            <Text style={styles.modalDescription}>
+              {t("explorePageDescription", {
+                challenges: "nouveaux défis",
+                communities: "communautés",
+              })}
+            </Text>
+            <TouchableOpacity
+              style={styles.actionButton}
+              onPress={() => {
+                setTutorialStep(0); // Retour à Index
+                skipTutorial(); // Ferme le tutoriel
+              }}
+            >
+              <Text style={styles.actionButtonText}>{t("finish")}</Text>
+            </TouchableOpacity>
+          </Animated.View>
+        </BlurView>
+      )}
     </GlobalLayout>
   );
 }
@@ -807,10 +833,6 @@ const styles = StyleSheet.create({
     alignItems: "center",
     marginBottom: SPACING,
   },
-  modalTitle: {
-    fontSize: normalize(18),
-    fontFamily: "Comfortaa_700Bold",
-  },
   modalItem: {
     flexDirection: "row",
     alignItems: "center",
@@ -907,5 +929,42 @@ const styles = StyleSheet.create({
     textAlign: "center",
     marginTop: SPACING / 2,
     maxWidth: normalize(300),
+  },
+  blurView: {
+    ...StyleSheet.absoluteFillObject,
+    justifyContent: "center",
+    alignItems: "center",
+  },
+  modalContainer: {
+    backgroundColor: "rgba(255, 255, 255, 0.95)",
+    borderRadius: 20,
+    padding: 20,
+    width: "80%",
+    alignItems: "center",
+  },
+  modalTitle: {
+    fontSize: normalize(24),
+    fontFamily: "Comfortaa_700Bold",
+    color: "#000",
+    marginBottom: 10,
+    textAlign: "center",
+  },
+  modalDescription: {
+    fontSize: normalize(16),
+    fontFamily: "Comfortaa_400Regular",
+    color: "#333",
+    textAlign: "center",
+    marginBottom: 20,
+  },
+  actionButton: {
+    backgroundColor: "#FFB800",
+    paddingVertical: 10,
+    paddingHorizontal: 20,
+    borderRadius: 25,
+  },
+  actionButtonText: {
+    fontSize: normalize(16),
+    fontFamily: "Comfortaa_700Bold",
+    color: "#000",
   },
 });

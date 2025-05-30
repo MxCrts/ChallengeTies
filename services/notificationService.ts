@@ -25,6 +25,34 @@ export const requestNotificationPermissions = async (): Promise<boolean> => {
   }
 };
 
+// ✅ Envoyer une notification d'invitation
+export const sendInvitationNotification = async (
+  userId: string,
+  message: string
+): Promise<void> => {
+  try {
+    const userRef = doc(db, "users", userId);
+    const userSnap = await getDoc(userRef);
+    if (!userSnap.exists() || !userSnap.data().notificationsEnabled) {
+      console.warn("⚠️ Notifications désactivées pour l'utilisateur:", userId);
+      return;
+    }
+
+    const language = userSnap.data().language || "en";
+    await Notifications.scheduleNotificationAsync({
+      content: {
+        title: i18n.t("notifications.title", { lng: language }),
+        body: message,
+      },
+      trigger: null, // Immédiat
+    });
+
+    console.log("🔔 Notification envoyée:", { userId, message });
+  } catch (error) {
+    console.error("❌ Erreur envoi notification:", error);
+  }
+};
+
 // ✅ Planifier les notifications quotidiennes
 export const scheduleDailyNotifications = async (): Promise<boolean> => {
   try {

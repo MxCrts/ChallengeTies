@@ -343,6 +343,8 @@
     "uncategorized": "未分类",
     "noDescription": "暂无描述",
     "fetchError": "无法获取挑战。",
+    "invite": "邀请",
+    "inviteError": "创建邀请时出错",
     "joinError": "无法加入挑战，请重试。",
     "saveError": "切换保存失败，请重试。",
     "completeError": "无法完成挑战。",
@@ -1040,11 +1042,25 @@
     "evening1": "以一个快速的挑战结束你的一天！",
     "evening2": "睡前再来一个挑战？"
   },
+  "invitation": {
+    "title": "{username} 邀请你！",
+    "message": "加入挑战 {challenge}！",
+    "accept": "接受",
+    "refuse": "拒绝"
+  },
   "settingsPage": {
     "location": "定位",
     "handleLocation": "启用或禁用定位",
     "enabled": "定位已启用",
     "updated": "定位更新成功",
     "error": "定位更新失败"
-  }
+  },
+  "discoverAppInFewSteps": "通过几个步骤发现应用",
+  "homePageDescription": "欢迎！管理你的{challenges}，实现你的{goals}，并通过{access}导航以开始你的冒险。",
+  "profileDescription": "查看你的{stats}，发现你的{badges}，并{personalize}以使应用更符合你的风格。",
+  "focusPageDescription": "专注于你的{challenges}，并跟踪你的{progress}以保持动力。",
+  "explorePageDescription": "发现{challenges}并加入{communities}来获得灵感并迎接新的挑战。",
+  "homePageTitle": "首页",
+  "focusPageTitle": "专注",
+  "explorePageTitle": "探索"
 }

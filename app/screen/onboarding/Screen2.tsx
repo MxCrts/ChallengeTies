@@ -80,12 +80,8 @@ export default function Screen2() {
         <View style={[styles.cardWrapper, { marginTop: insets.top + 20 }]}>
           {/* Presentation Card */}
           <Animated.View style={[styles.card, { opacity: fadeAnim }]}>
-            <Text style={styles.title}>
-              {t("screen2.title")}
-            </Text>
-            <Text style={styles.text}>
-              {t("screen2.description")}
-            </Text>
+            <Text style={styles.title}>{t("screen2.title")}</Text>
+            <Text style={styles.text}>{t("screen2.description")}</Text>
           </Animated.View>
 
           {/* Next Button chevauchant la card */}

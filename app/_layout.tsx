@@ -1,6 +1,4 @@
-// app/_layout.tsx
-
-import React, { useState, useEffect } from "react"; // ← ajoute useEffect
+import React, { useState, useEffect } from "react";
 import { GestureHandlerRootView } from "react-native-gesture-handler";
 import { Stack } from "expo-router";
 import { ActivityIndicator, View, StyleSheet, Text } from "react-native";
@@ -12,6 +10,7 @@ import { CurrentChallengesProvider } from "../context/CurrentChallengesContext";
 import { ChatProvider } from "../context/ChatContext";
 import { ThemeProvider } from "../context/ThemeContext";
 import { LanguageProvider } from "../context/LanguageContext";
+import { TutorialProvider } from "../context/TutorialContext";
 import TrophyModal from "../components/TrophyModal";
 import {
   useFonts,
@@ -20,8 +19,6 @@ import {
 } from "@expo-google-fonts/comfortaa";
 import { I18nextProvider } from "react-i18next";
 import i18n from "../i18n";
-
-// ← Import du SDK AdMob
 import mobileAds from "react-native-google-mobile-ads";
 
 export default function RootLayout() {
@@ -30,7 +27,7 @@ export default function RootLayout() {
     Comfortaa_700Bold,
   });
 
-  // ← Initialisation AdMob
+  // Initialisation AdMob
   useEffect(() => {
     mobileAds()
       .initialize()
@@ -39,6 +36,7 @@ export default function RootLayout() {
       });
   }, []);
 
+  // Pendant le chargement des polices
   if (!fontsLoaded) {
     return (
       <GestureHandlerRootView style={{ flex: 1 }}>
@@ -61,10 +59,16 @@ export default function RootLayout() {
                   <SavedChallengesProvider>
                     <CurrentChallengesProvider>
                       <ChatProvider>
-                        <>
-                          <Stack screenOptions={{ headerShown: false }} />
+                        <TutorialProvider isFirstLaunch={false}>
+                          <Stack screenOptions={{ headerShown: false }}>
+                            <Stack.Screen name="index" />
+                            <Stack.Screen name="profile" />
+                            <Stack.Screen name="focus" />
+                            <Stack.Screen name="explore" />
+                            <Stack.Screen name="onboarding" />{" "}
+                          </Stack>
                           <TrophyModal challengeId="" selectedDays={0} />
-                        </>
+                        </TutorialProvider>
                       </ChatProvider>
                     </CurrentChallengesProvider>
                   </SavedChallengesProvider>

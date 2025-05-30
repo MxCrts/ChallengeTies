@@ -21,6 +21,8 @@ import { doc, setDoc, serverTimestamp, updateDoc } from "firebase/firestore";
 import { Ionicons } from "@expo/vector-icons";
 import { useTranslation } from "react-i18next";
 import { fetchAndSaveUserLocation } from "../services/locationService";
+import { createInvitation } from "../services/invitationService";
+
 import {
   requestNotificationPermissions,
   scheduleDailyNotifications,
@@ -182,6 +184,12 @@ export default function Register() {
         updatedAt: serverTimestamp(),
       });
 
+      try {
+        const inviteLink = await createInvitation("testChallenge123");
+        console.log("Test invitation link:", inviteLink);
+      } catch (error) {
+        console.error("Test invitation error:", error);
+      }
       // Mettre à jour le displayName
       await updateProfile(user, { displayName: username.trim() });
 

@@ -349,6 +349,8 @@
     "saveError": "Could not toggle save. Please try again.",
     "completeError": "Could not complete challenge.",
     "chatAccessDenied": "You must take the challenge before opening chat.",
+    "invite": "Invite",
+    "inviteError": "Error creating invitation",
     "loading": "Loading…",
     "participant": "participant",
     "participants": "participants",
@@ -1045,11 +1047,26 @@
     "evening1": "End your day with a quick challenge!",
     "evening2": "One more challenge before bed?"
   },
+  "invitation": {
+    "title": "{username} invites you!",
+    "message": "Join the challenge {challenge}!",
+    "accept": "Accept",
+    "refuse": "Refuse"
+  },
+
   "settingsPage": {
     "location": "Location",
     "handleLocation": "Enable or disable location",
     "enabled": "Location enabled",
     "updated": "Location updated successfully",
     "error": "Failed to update location"
-  }
+  },
+  "discoverAppInFewSteps": "Discover the app in a few steps",
+  "homePageDescription": "Welcome! Manage {challenges}, reach {goals}, and navigate via {access} to start your adventure.",
+  "profileDescription": "Check your {stats}, discover your {badges}, and {personalize} to make the app your own.",
+  "focusPageDescription": "Focus on your {challenges} and track your {progress} to stay motivated.",
+  "explorePageDescription": "Discover {challenges} and join {communities} to get inspired and take on new challenges.",
+  "homePageTitle": "Home",
+  "focusPageTitle": "Focus",
+  "explorePageTitle": "Explore"
 }

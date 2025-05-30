@@ -39,6 +39,10 @@ import { Theme } from "../../theme/designSystem";
 import designSystem from "../../theme/designSystem";
 import BackButton from "../../components/BackButton";
 import { useTranslation } from "react-i18next";
+import { createInvitation } from "../../services/invitationService"; // NEW: Import createInvitation
+import InvitationModal from "../../components/InvitationModal";
+import share from "react-native-share";
+
 import {
   BannerAd,
   BannerAdSize,
@@ -96,7 +100,10 @@ export default function ChallengeDetails() {
     selectedDays?: string;
     completedDays?: string;
   }>();
-
+  const inviteId = useLocalSearchParams().invite as string | undefined;
+  const [invitationModalVisible, setInvitationModalVisible] = useState(
+    !!inviteId
+  );
   const id = params.id || "";
   const routeTitle = params.title || t("challengeDetails.untitled");
   const routeCategory = params.category || t("challengeDetails.uncategorized");
@@ -841,9 +848,51 @@ export default function ChallengeDetails() {
                 {t("challengeDetails.stats")}
               </Text>
             </TouchableOpacity>
+            <TouchableOpacity
+              style={styles.actionIcon}
+              onPress={async () => {
+                try {
+                  const inviteLink = await createInvitation(id as string);
+                  await share.open({
+                    message: inviteLink,
+                    title: t("challengeDetails.invite"),
+                  });
+                  console.log("📩 Invitation partagée:", inviteLink);
+                } catch (error) {
+                  console.error("❌ Erreur partage invitation:", error);
+                  Alert.alert(
+                    t("alerts.error"),
+                    t("challengeDetails.inviteError")
+                  );
+                }
+              }}
+              accessibilityLabel="Inviter un ami"
+              testID="invite-button"
+            >
+              <Ionicons
+                name="person-add-outline"
+                size={normalizeSize(28)}
+                color={currentTheme.colors.textSecondary}
+              />
+              <Text
+                style={[
+                  styles.actionIconLabel,
+                  { color: currentTheme.colors.textSecondary },
+                ]}
+              >
+                {t("challengeDetails.invite")}
+              </Text>
+            </TouchableOpacity>
           </Animated.View>
         </Animated.View>
       </ScrollView>
+
+      <InvitationModal
+        visible={invitationModalVisible}
+        inviteId={inviteId || null}
+        challengeId={id as string}
+        onClose={() => setInvitationModalVisible(false)}
+      />
 
       <DurationSelectionModal
         visible={modalVisible}

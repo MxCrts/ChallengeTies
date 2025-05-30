@@ -24,6 +24,8 @@ import { Theme } from "../../theme/designSystem";
 import GlobalLayout from "../../components/GlobalLayout";
 import designSystem from "../../theme/designSystem";
 import { useTranslation } from "react-i18next";
+import { BlurView } from "expo-blur";
+import { useTutorial } from "../../context/TutorialContext";
 
 const { width: SCREEN_WIDTH, height: SCREEN_HEIGHT } = Dimensions.get("window");
 const TOP_ITEM_HEIGHT = Math.round(SCREEN_HEIGHT * 0.35);
@@ -57,6 +59,7 @@ interface CurrentChallengeExtended {
 
 export default function FocusScreen() {
   const { t } = useTranslation();
+  const { tutorialStep, setTutorialStep, isTutorialActive } = useTutorial();
   const router = useRouter();
   const { currentChallenges, markToday } = useCurrentChallenges();
   const { theme } = useTheme();
@@ -72,8 +75,8 @@ export default function FocusScreen() {
   const scrollXBottom = useRef(new RNAnimated.Value(0)).current;
   const flatListTopRef = useRef<RNAnimated.FlatList<any>>(null);
   const flatListBottomRef = useRef<RNAnimated.FlatList<any>>(null);
-  const topAutoScrollRef = useRef<NodeJS.Timeout | null>(null);
-  const bottomAutoScrollRef = useRef<NodeJS.Timeout | null>(null);
+  const topAutoScrollRef = useRef<number | null>(null); // Remplace NodeJS.Timeout par number
+  const bottomAutoScrollRef = useRef<number | null>(null);
   const topIndexRef = useRef<number>(0);
   const bottomIndexRef = useRef<number>(0);
 
@@ -101,31 +104,31 @@ export default function FocusScreen() {
   const today = new Date().toDateString();
 
   const uniqueChallenges = Array.from(
-        new Map(currentChallenges.map((ch: any) => [ch.uniqueKey, ch])).values()
-      ) as CurrentChallengeExtended[];
-    
-      // === TRADUCTION MINIMALE ===
-      // On remplace uniqueChallenges par translatedChallenges partout ensuite
-      const translatedChallenges = uniqueChallenges.map((item) => {
-        const key = item.chatId || item.id;
-        return {
-          ...item,
-          title: t(`challenges.${key}.title`, { defaultValue: item.title }),
-          description: t(`challenges.${key}.description`, {
-            defaultValue: item.description || "",
-          }),
-          category: item.category
-            ? t(`categories.${item.category}`, { defaultValue: item.category })
-            : t("miscellaneous"),
-        };
-      });
-  
-      const notMarkedToday = translatedChallenges.filter(
-            (ch) => ch.lastMarkedDate !== today
-          );
-          const markedToday = translatedChallenges.filter(
-            (ch) => ch.lastMarkedDate === today
-          );
+    new Map(currentChallenges.map((ch: any) => [ch.uniqueKey, ch])).values()
+  ) as CurrentChallengeExtended[];
+
+  // === TRADUCTION MINIMALE ===
+  // On remplace uniqueChallenges par translatedChallenges partout ensuite
+  const translatedChallenges = uniqueChallenges.map((item) => {
+    const key = item.chatId || item.id;
+    return {
+      ...item,
+      title: t(`challenges.${key}.title`, { defaultValue: item.title }),
+      description: t(`challenges.${key}.description`, {
+        defaultValue: item.description || "",
+      }),
+      category: item.category
+        ? t(`categories.${item.category}`, { defaultValue: item.category })
+        : t("miscellaneous"),
+    };
+  });
+
+  const notMarkedToday = translatedChallenges.filter(
+    (ch) => ch.lastMarkedDate !== today
+  );
+  const markedToday = translatedChallenges.filter(
+    (ch) => ch.lastMarkedDate === today
+  );
 
   const handleNavigateToDetails = (item: CurrentChallengeExtended) => {
     router.push({
@@ -193,7 +196,8 @@ export default function FocusScreen() {
     startBottomAutoScroll();
     return () => {
       if (topAutoScrollRef.current) clearInterval(topAutoScrollRef.current);
-      if (bottomAutoScrollRef.current) clearInterval(bottomAutoScrollRef.current);
+      if (bottomAutoScrollRef.current)
+        clearInterval(bottomAutoScrollRef.current);
     };
   }, [notMarkedToday, markedToday, startTopAutoScroll, startBottomAutoScroll]);
 
@@ -267,23 +271,74 @@ export default function FocusScreen() {
         {item.imageUrl ? (
           <Image source={{ uri: item.imageUrl }} style={styles.topItemImage} />
         ) : (
-          <View style={[styles.imagePlaceholder, { backgroundColor: currentTheme.colors.border }]}>
-            <Ionicons name="image-outline" size={normalizeFont(60)} color={currentTheme.colors.textSecondary} />
-            <Text style={[styles.noImageText, { color: currentTheme.colors.textSecondary }]}>{t("imageNotAvailable")}</Text>
+          <View
+            style={[
+              styles.imagePlaceholder,
+              { backgroundColor: currentTheme.colors.border },
+            ]}
+          >
+            <Ionicons
+              name="image-outline"
+              size={normalizeFont(60)}
+              color={currentTheme.colors.textSecondary}
+            />
+            <Text
+              style={[
+                styles.noImageText,
+                { color: currentTheme.colors.textSecondary },
+              ]}
+            >
+              {t("imageNotAvailable")}
+            </Text>
           </View>
         )}
-        <LinearGradient colors={[currentTheme.colors.overlay, "rgba(0,0,0,0.9)"]} style={styles.topItemOverlay}>
-          <Text style={[styles.topItemTitle, { color: currentTheme.colors.textPrimary }]} numberOfLines={2}>
+        <LinearGradient
+          colors={[currentTheme.colors.overlay, "rgba(0,0,0,0.9)"]}
+          style={styles.topItemOverlay}
+        >
+          <Text
+            style={[
+              styles.topItemTitle,
+              { color: currentTheme.colors.textPrimary },
+            ]}
+            numberOfLines={2}
+          >
             {item.title}
           </Text>
-          <Text style={[styles.topItemParticipants, { color: currentTheme.colors.trophy }]}>          
-            <Ionicons name="people" size={normalizeFont(14)} color={currentTheme.colors.trophy} /> {challengeParticipants[item.id] ?? item.participants ?? 0} {((challengeParticipants[item.id] ?? item.participants ?? 0) === 1 ? t("participant") : t("participants"))}          
+          <Text
+            style={[
+              styles.topItemParticipants,
+              { color: currentTheme.colors.trophy },
+            ]}
+          >
+            <Ionicons
+              name="people"
+              size={normalizeFont(14)}
+              color={currentTheme.colors.trophy}
+            />{" "}
+            {challengeParticipants[item.id] ?? item.participants ?? 0}{" "}
+            {(challengeParticipants[item.id] ?? item.participants ?? 0) === 1
+              ? t("participant")
+              : t("participants")}
           </Text>
         </LinearGradient>
       </TouchableOpacity>
       {item.lastMarkedDate !== today && (
-        <TouchableOpacity style={[styles.markTodayButton, { backgroundColor: currentTheme.colors.secondary }]} onPress={() => markToday(item.id, item.selectedDays)}>
-          <Text style={[styles.markTodayButtonText, { color: currentTheme.colors.textPrimary }]}>{t("markToday")}</Text>
+        <TouchableOpacity
+          style={[
+            styles.markTodayButton,
+            { backgroundColor: currentTheme.colors.secondary },
+          ]}
+          onPress={() => markToday(item.id, item.selectedDays)}
+        >
+          <Text
+            style={[
+              styles.markTodayButtonText,
+              { color: currentTheme.colors.textPrimary },
+            ]}
+          >
+            {t("markToday")}
+          </Text>
         </TouchableOpacity>
       )}
     </RNAnimated.View>
@@ -303,19 +358,60 @@ export default function FocusScreen() {
         onPress={() => handleNavigateToDetails(item)}
       >
         {item.imageUrl ? (
-          <Image source={{ uri: item.imageUrl }} style={styles.bottomItemImage} />
+          <Image
+            source={{ uri: item.imageUrl }}
+            style={styles.bottomItemImage}
+          />
         ) : (
-          <View style={[styles.imagePlaceholder, { backgroundColor: currentTheme.colors.border }]}>
-            <Ionicons name="image-outline" size={normalizeFont(40)} color={currentTheme.colors.textSecondary} />
-            <Text style={[styles.noImageText, { color: currentTheme.colors.textSecondary }]}>{t("imageNotAvailable")}</Text>
+          <View
+            style={[
+              styles.imagePlaceholder,
+              { backgroundColor: currentTheme.colors.border },
+            ]}
+          >
+            <Ionicons
+              name="image-outline"
+              size={normalizeFont(40)}
+              color={currentTheme.colors.textSecondary}
+            />
+            <Text
+              style={[
+                styles.noImageText,
+                { color: currentTheme.colors.textSecondary },
+              ]}
+            >
+              {t("imageNotAvailable")}
+            </Text>
           </View>
         )}
-        <LinearGradient colors={[currentTheme.colors.overlay, "rgba(0,0,0,0.9)"]} style={styles.bottomItemOverlay}>
-          <Text style={[styles.bottomItemTitle, { color: currentTheme.colors.textPrimary }]} numberOfLines={2}>
+        <LinearGradient
+          colors={[currentTheme.colors.overlay, "rgba(0,0,0,0.9)"]}
+          style={styles.bottomItemOverlay}
+        >
+          <Text
+            style={[
+              styles.bottomItemTitle,
+              { color: currentTheme.colors.textPrimary },
+            ]}
+            numberOfLines={2}
+          >
             {item.title}
           </Text>
-          <Text style={[styles.bottomItemParticipants, { color: currentTheme.colors.trophy }]}>          
-            <Ionicons name="people" size={normalizeFont(12)} color={currentTheme.colors.trophy} /> {challengeParticipants[item.id] ?? item.participants ?? 0} {((challengeParticipants[item.id] ?? item.participants ?? 0) === 1 ? t("participant") : t("participants"))}          
+          <Text
+            style={[
+              styles.bottomItemParticipants,
+              { color: currentTheme.colors.trophy },
+            ]}
+          >
+            <Ionicons
+              name="people"
+              size={normalizeFont(12)}
+              color={currentTheme.colors.trophy}
+            />{" "}
+            {challengeParticipants[item.id] ?? item.participants ?? 0}{" "}
+            {(challengeParticipants[item.id] ?? item.participants ?? 0) === 1
+              ? t("participant")
+              : t("participants")}
           </Text>
         </LinearGradient>
       </TouchableOpacity>
@@ -325,23 +421,58 @@ export default function FocusScreen() {
   return (
     <GlobalLayout>
       <LinearGradient
-        colors={[currentTheme.colors.background, currentTheme.colors.cardBackground]}
+        colors={[
+          currentTheme.colors.background,
+          currentTheme.colors.cardBackground,
+        ]}
         style={styles.gradientContainer}
       >
         <View style={styles.headerContainer}>
-          <TouchableOpacity style={styles.trophyContainer} onPress={() => router.push("/profile")}>
-            <Ionicons name="trophy-outline" size={normalizeFont(24)} color={currentTheme.colors.trophy} />
-            <Text style={[styles.trophyText, { color: currentTheme.colors.trophy }]}>{userTrophies}</Text>
+          <TouchableOpacity
+            style={styles.trophyContainer}
+            onPress={() => router.push("/profile")}
+          >
+            <Ionicons
+              name="trophy-outline"
+              size={normalizeFont(24)}
+              color={currentTheme.colors.trophy}
+            />
+            <Text
+              style={[styles.trophyText, { color: currentTheme.colors.trophy }]}
+            >
+              {userTrophies}
+            </Text>
           </TouchableOpacity>
-          <TouchableOpacity style={[styles.plusButton, { backgroundColor: currentTheme.colors.secondary }]} onPress={() => router.push("/create-challenge")}>
-            <Ionicons name="add-circle-outline" size={normalizeFont(28)} color={currentTheme.colors.textPrimary} />
+          <TouchableOpacity
+            style={[
+              styles.plusButton,
+              { backgroundColor: currentTheme.colors.secondary },
+            ]}
+            onPress={() => router.push("/create-challenge")}
+          >
+            <Ionicons
+              name="add-circle-outline"
+              size={normalizeFont(28)}
+              color={currentTheme.colors.textPrimary}
+            />
           </TouchableOpacity>
         </View>
 
-        <ScrollView style={styles.scrollContainer} contentContainerStyle={styles.scrollContent} showsVerticalScrollIndicator={false}>
+        <ScrollView
+          style={styles.scrollContainer}
+          contentContainerStyle={styles.scrollContent}
+          showsVerticalScrollIndicator={false}
+        >
           {/* Carousel du haut */}
           <View style={styles.topCarouselContainer}>
-            <Text style={[styles.sectionTitle, { color: currentTheme.colors.textPrimary }]}>{t("dailyChallenges")}</Text>
+            <Text
+              style={[
+                styles.sectionTitle,
+                { color: currentTheme.colors.textPrimary },
+              ]}
+            >
+              {t("dailyChallenges")}
+            </Text>
             {notMarkedToday.length > 0 ? (
               <>
                 <RNAnimated.FlatList
@@ -355,7 +486,10 @@ export default function FocusScreen() {
                   snapToInterval={EFFECTIVE_TOP_ITEM_WIDTH}
                   snapToAlignment="center"
                   contentContainerStyle={{ paddingHorizontal: SPACER_TOP }}
-                  onScroll={RNAnimated.event([{ nativeEvent: { contentOffset: { x: scrollXTop } } }], { useNativeDriver: true })}
+                  onScroll={RNAnimated.event(
+                    [{ nativeEvent: { contentOffset: { x: scrollXTop } } }],
+                    { useNativeDriver: true }
+                  )}
                   scrollEventThrottle={16}
                   onScrollBeginDrag={handleScrollBeginDragTop}
                   onMomentumScrollEnd={handleMomentumScrollEndTop}
@@ -365,21 +499,68 @@ export default function FocusScreen() {
                   {notMarkedToday.map((_, index) => (
                     <RNAnimated.View
                       key={index}
-                      style={[styles.dot, { backgroundColor: currentTheme.colors.secondary }, { opacity: scrollXTop.interpolate({ inputRange: [(index-1)*EFFECTIVE_TOP_ITEM_WIDTH, index*EFFECTIVE_TOP_ITEM_WIDTH, (index+1)*EFFECTIVE_TOP_ITEM_WIDTH], outputRange: [0.3,1,0.3], extrapolate: "clamp" }) }]}
+                      style={[
+                        styles.dot,
+                        { backgroundColor: currentTheme.colors.secondary },
+                        {
+                          opacity: scrollXTop.interpolate({
+                            inputRange: [
+                              (index - 1) * EFFECTIVE_TOP_ITEM_WIDTH,
+                              index * EFFECTIVE_TOP_ITEM_WIDTH,
+                              (index + 1) * EFFECTIVE_TOP_ITEM_WIDTH,
+                            ],
+                            outputRange: [0.3, 1, 0.3],
+                            extrapolate: "clamp",
+                          }),
+                        },
+                      ]}
                     />
                   ))}
                 </View>
               </>
             ) : (
               <View style={styles.emptyTopContainer}>
-                <Text style={[styles.emptyTitle, { color: currentTheme.colors.textPrimary }]}>{t("noOngoingChallenge")}</Text>
-                <Text style={[styles.emptySubtitle, { color: currentTheme.colors.textSecondary }]}>{t("createPrompt")}</Text>
+                <Text
+                  style={[
+                    styles.emptyTitle,
+                    { color: currentTheme.colors.textPrimary },
+                  ]}
+                >
+                  {t("noOngoingChallenge")}
+                </Text>
+                <Text
+                  style={[
+                    styles.emptySubtitle,
+                    { color: currentTheme.colors.textSecondary },
+                  ]}
+                >
+                  {t("createPrompt")}
+                </Text>
                 <View style={styles.emptyList}>
-                  <Text style={[styles.emptyItem, { color: currentTheme.colors.textSecondary }]}>
+                  <Text
+                    style={[
+                      styles.emptyItem,
+                      { color: currentTheme.colors.textSecondary },
+                    ]}
+                  >
                     • {t("clickIconTopRight")}
                   </Text>
-                  <Text style={[styles.emptyItem, { color: currentTheme.colors.textSecondary }]}>                    
-                    • <Text style={[styles.linkText, { color: currentTheme.colors.secondary }]} onPress={() => router.push("/explore")}>{t("orJoinChallenge")}</Text>
+                  <Text
+                    style={[
+                      styles.emptyItem,
+                      { color: currentTheme.colors.textSecondary },
+                    ]}
+                  >
+                    •{" "}
+                    <Text
+                      style={[
+                        styles.linkText,
+                        { color: currentTheme.colors.secondary },
+                      ]}
+                      onPress={() => router.push("/explore")}
+                    >
+                      {t("orJoinChallenge")}
+                    </Text>
                   </Text>
                 </View>
               </View>
@@ -388,7 +569,14 @@ export default function FocusScreen() {
 
           {/* Carousel du bas */}
           <View style={styles.bottomCarouselContainer}>
-            <Text style={[styles.sectionTitle, { color: currentTheme.colors.textPrimary }]}>{t("completedChallengesScreenTitle")} {t("today")}</Text>
+            <Text
+              style={[
+                styles.sectionTitle,
+                { color: currentTheme.colors.textPrimary },
+              ]}
+            >
+              {t("completedChallengesScreenTitle")} {t("today")}
+            </Text>
             {markedToday.length > 0 ? (
               <>
                 <RNAnimated.FlatList
@@ -402,7 +590,10 @@ export default function FocusScreen() {
                   snapToInterval={EFFECTIVE_BOTTOM_ITEM_WIDTH}
                   snapToAlignment="center"
                   contentContainerStyle={{ paddingHorizontal: SPACER_BOTTOM }}
-                  onScroll={RNAnimated.event([{ nativeEvent: { contentOffset: { x: scrollXBottom } } }], { useNativeDriver: true })}
+                  onScroll={RNAnimated.event(
+                    [{ nativeEvent: { contentOffset: { x: scrollXBottom } } }],
+                    { useNativeDriver: true }
+                  )}
                   scrollEventThrottle={16}
                   onScrollBeginDrag={handleScrollBeginDragBottom}
                   onMomentumScrollEnd={handleMomentumScrollEndBottom}
@@ -412,24 +603,75 @@ export default function FocusScreen() {
                   {markedToday.map((_, index) => (
                     <RNAnimated.View
                       key={index}
-                      style={[styles.dot, { backgroundColor: currentTheme.colors.secondary }, { opacity: scrollXBottom.interpolate({ inputRange: [(index-1)*EFFECTIVE_BOTTOM_ITEM_WIDTH, index*EFFECTIVE_BOTTOM_ITEM_WIDTH, (index+1)*EFFECTIVE_BOTTOM_ITEM_WIDTH], outputRange: [0.3,1,0.3], extrapolate: "clamp" }) }]} />
+                      style={[
+                        styles.dot,
+                        { backgroundColor: currentTheme.colors.secondary },
+                        {
+                          opacity: scrollXBottom.interpolate({
+                            inputRange: [
+                              (index - 1) * EFFECTIVE_BOTTOM_ITEM_WIDTH,
+                              index * EFFECTIVE_BOTTOM_ITEM_WIDTH,
+                              (index + 1) * EFFECTIVE_BOTTOM_ITEM_WIDTH,
+                            ],
+                            outputRange: [0.3, 1, 0.3],
+                            extrapolate: "clamp",
+                          }),
+                        },
+                      ]}
+                    />
                   ))}
                 </View>
               </>
             ) : (
-              <Text style={[styles.noChallenges, { color: currentTheme.colors.textSecondary }]}>{t("noCompletedChallenges")}</Text>
+              <Text
+                style={[
+                  styles.noChallenges,
+                  { color: currentTheme.colors.textSecondary },
+                ]}
+              >
+                {t("noCompletedChallenges")}
+              </Text>
             )}
           </View>
 
           {confettiRef.current && (
-            <ConfettiCannon ref={confettiRef} count={150} origin={{ x: SCREEN_WIDTH/2, y: 0 }} fadeOut explosionSpeed={800} fallSpeed={3000} />
+            <ConfettiCannon
+              ref={confettiRef}
+              count={150}
+              origin={{ x: SCREEN_WIDTH / 2, y: 0 }}
+              fadeOut
+              explosionSpeed={800}
+              fallSpeed={3000}
+            />
           )}
         </ScrollView>
+        {isTutorialActive && tutorialStep === 3 && (
+          <BlurView intensity={50} style={styles.blurView}>
+            <RNAnimated.View style={styles.modalContainer}>
+              <Text style={styles.modalTitle}>{t("focusPageTitle")}</Text>
+              <Text style={styles.modalDescription}>
+                {t("focusPageDescription", {
+                  challenges: "défis prioritaires",
+                  progress: "progrès",
+                })}
+              </Text>
+              <TouchableOpacity
+                style={styles.nextButton}
+                onPress={() => setTutorialStep(4)}
+              >
+                <Ionicons
+                  name="chevron-forward"
+                  size={normalizeFont(24)}
+                  color="#FFB800"
+                />
+              </TouchableOpacity>
+            </RNAnimated.View>
+          </BlurView>
+        )}
       </LinearGradient>
     </GlobalLayout>
   );
 }
-
 
 const styles = StyleSheet.create({
   gradientContainer: { flex: 1 },
@@ -625,5 +867,36 @@ const styles = StyleSheet.create({
     height: normalizeFont(6),
     borderRadius: normalizeFont(3),
     marginHorizontal: SCREEN_WIDTH * 0.015,
+  },
+  blurView: {
+    ...StyleSheet.absoluteFillObject,
+    justifyContent: "center",
+    alignItems: "center",
+  },
+  modalContainer: {
+    backgroundColor: "rgba(255, 255, 255, 0.95)",
+    borderRadius: 20,
+    padding: 20,
+    width: "80%",
+    alignItems: "center",
+  },
+  modalTitle: {
+    fontSize: normalizeFont(24),
+    fontFamily: "Comfortaa_700Bold",
+    color: "#000",
+    marginBottom: 10,
+    textAlign: "center",
+  },
+  modalDescription: {
+    fontSize: normalizeFont(16),
+    fontFamily: "Comfortaa_400Regular",
+    color: "#333",
+    textAlign: "center",
+    marginBottom: 20,
+  },
+  nextButton: {
+    position: "absolute",
+    bottom: 20,
+    right: 20,
   },
 });

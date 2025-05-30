@@ -41,6 +41,8 @@ import { fetchAndSaveUserLocation } from "../../services/locationService";
 import { doc, getDoc } from "firebase/firestore"; // Ajoute cet import
 import { useLanguage } from "../../context/LanguageContext"; // Ajoute cet import
 import i18n from "../../i18n"; // Ajoute cet import
+import { BlurView } from "expo-blur";
+import { useTutorial } from "../../context/TutorialContext";
 
 const { width: SCREEN_WIDTH, height: SCREEN_HEIGHT } = Dimensions.get("window");
 
@@ -79,6 +81,14 @@ export default function HomeScreen() {
   const [isMounted, setIsMounted] = useState(false);
   const { theme } = useTheme();
   const { setLanguage } = useLanguage(); // Ajoute ceci
+  const {
+    tutorialStep,
+    isTutorialActive,
+    startTutorial,
+    skipTutorial,
+    setTutorialStep,
+  } = useTutorial();
+
   const isDarkMode = theme === "dark";
   const currentTheme: Theme = isDarkMode
     ? designSystem.darkTheme
@@ -607,6 +617,53 @@ export default function HomeScreen() {
             }
           />
         </View>
+        {isTutorialActive && (tutorialStep === 0 || tutorialStep === 1) && (
+          <BlurView intensity={50} style={styles.blurView}>
+            <Animated.View style={[styles.modalContainer, fadeStyle]}>
+              <Text style={styles.modalTitle}>
+                {tutorialStep === 0
+                  ? t("welcomeToChallengeTies")
+                  : t("homePageTitle")}
+              </Text>
+              <Text style={styles.modalDescription}>
+                {tutorialStep === 0
+                  ? t("discoverAppInFewSteps")
+                  : t("homePageDescription", {
+                      challenges: "tes défis en cours",
+                      goals: "tes objectifs",
+                      access: "Profil, Focus, et Explore",
+                    })}
+              </Text>
+              {tutorialStep === 0 ? (
+                <View style={styles.buttonContainer}>
+                  <TouchableOpacity
+                    style={styles.actionButton}
+                    onPress={startTutorial}
+                  >
+                    <Text style={styles.actionButtonText}>{t("ok")}</Text>
+                  </TouchableOpacity>
+                  <TouchableOpacity
+                    style={styles.skipButton}
+                    onPress={skipTutorial}
+                  >
+                    <Text style={styles.skipButtonText}>{t("skip")}</Text>
+                  </TouchableOpacity>
+                </View>
+              ) : (
+                <TouchableOpacity
+                  style={styles.nextButton}
+                  onPress={() => setTutorialStep(2)}
+                >
+                  <Ionicons
+                    name="chevron-forward"
+                    size={normalize(24)}
+                    color="#FFB800"
+                  />
+                </TouchableOpacity>
+              )}
+            </Animated.View>
+          </BlurView>
+        )}
       </LinearGradient>
     </View>
   );
@@ -836,5 +893,61 @@ const styles = StyleSheet.create({
     fontFamily: "Comfortaa_700Bold",
     marginTop: SPACING / 2,
     textAlign: "center",
+  },
+  blurView: {
+    ...StyleSheet.absoluteFillObject,
+    justifyContent: "center",
+    alignItems: "center",
+  },
+  modalContainer: {
+    backgroundColor: "rgba(255, 255, 255, 0.95)",
+    borderRadius: 20,
+    padding: 20,
+    width: "80%",
+    alignItems: "center",
+  },
+  modalTitle: {
+    fontSize: normalize(24),
+    fontFamily: "Comfortaa_700Bold",
+    color: "#000",
+    marginBottom: 10,
+    textAlign: "center",
+  },
+  modalDescription: {
+    fontSize: normalize(16),
+    fontFamily: "Comfortaa_400Regular",
+    color: "#333",
+    textAlign: "center",
+    marginBottom: 20,
+  },
+  buttonContainer: {
+    flexDirection: "row",
+    justifyContent: "space-between",
+    width: "100%",
+  },
+  actionButton: {
+    backgroundColor: "#FFB800",
+    paddingVertical: 10,
+    paddingHorizontal: 20,
+    borderRadius: 25,
+  },
+  actionButtonText: {
+    fontSize: normalize(16),
+    fontFamily: "Comfortaa_700Bold",
+    color: "#000",
+  },
+  skipButton: {
+    paddingVertical: 10,
+    paddingHorizontal: 20,
+  },
+  skipButtonText: {
+    fontSize: normalize(16),
+    fontFamily: "Comfortaa_400Regular",
+    color: "#666",
+  },
+  nextButton: {
+    position: "absolute",
+    bottom: 20,
+    right: 20,
   },
 });
