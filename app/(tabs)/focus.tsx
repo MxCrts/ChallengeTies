@@ -3,14 +3,14 @@ import {
   View,
   Text,
   StyleSheet,
-  ActivityIndicator,
   Image,
   Dimensions,
   Animated as RNAnimated,
   TouchableOpacity,
+  ActivityIndicator,
+  ScrollView,
   NativeSyntheticEvent,
   NativeScrollEvent,
-  ScrollView,
 } from "react-native";
 import { useRouter } from "expo-router";
 import { LinearGradient } from "expo-linear-gradient";
@@ -26,22 +26,29 @@ import designSystem from "../../theme/designSystem";
 import { useTranslation } from "react-i18next";
 import { BlurView } from "expo-blur";
 import { useTutorial } from "../../context/TutorialContext";
+import Animated, { FadeInUp } from "react-native-reanimated";
+import TutorialModal from "../../components/TutorialModal";
+import { normalize } from "../../utils/normalize";
 
+const SPACING = 18; // Aligné avec CompletedChallenges.tsx, Notifications.tsx, etc.
 const { width: SCREEN_WIDTH, height: SCREEN_HEIGHT } = Dimensions.get("window");
-const TOP_ITEM_HEIGHT = Math.round(SCREEN_HEIGHT * 0.35);
-const BOTTOM_ITEM_HEIGHT = Math.round(SCREEN_HEIGHT * 0.25);
-const TOP_ITEM_WIDTH = Math.round(SCREEN_WIDTH * 0.8);
-const BOTTOM_ITEM_WIDTH = Math.round(SCREEN_WIDTH * 0.6);
-const CARD_MARGIN = Math.round(SCREEN_WIDTH * 0.015);
-const EFFECTIVE_TOP_ITEM_WIDTH = TOP_ITEM_WIDTH + CARD_MARGIN * 2;
-const EFFECTIVE_BOTTOM_ITEM_WIDTH = BOTTOM_ITEM_WIDTH + CARD_MARGIN * 2;
-const SPACER_TOP = (SCREEN_WIDTH - TOP_ITEM_WIDTH) / 2;
-const SPACER_BOTTOM = (SCREEN_WIDTH - BOTTOM_ITEM_WIDTH) / 2;
 
-const normalizeFont = (size: number) => {
-  const scale = SCREEN_WIDTH / 375;
+const normalizeSize = (size: number) => {
+  const baseWidth = 375;
+  const scale = Math.min(Math.max(SCREEN_WIDTH / baseWidth, 0.7), 1.8); // Limite l'échelle
   return Math.round(size * scale);
 };
+
+const TOP_ITEM_WIDTH = SCREEN_WIDTH * 0.8;
+const BOTTOM_ITEM_WIDTH = SCREEN_WIDTH * 0.6;
+const TOP_ITEM_HEIGHT = normalizeSize(280); // Ajusté pour responsivité
+const BOTTOM_ITEM_HEIGHT = normalizeSize(200); // Ajusté pour responsivité
+
+const EFFECTIVE_TOP_ITEM_WIDTH = TOP_ITEM_WIDTH + SPACING;
+const EFFECTIVE_BOTTOM_ITEM_WIDTH = BOTTOM_ITEM_WIDTH + SPACING;
+
+const SPACER_TOP = (SCREEN_WIDTH - TOP_ITEM_WIDTH) / 2;
+const SPACER_BOTTOM = (SCREEN_WIDTH - BOTTOM_ITEM_WIDTH) / 2;
 
 interface CurrentChallengeExtended {
   id: string;
@@ -59,30 +66,40 @@ interface CurrentChallengeExtended {
 
 export default function FocusScreen() {
   const { t } = useTranslation();
-  const { tutorialStep, setTutorialStep, isTutorialActive } = useTutorial();
+  const {
+    tutorialStep,
+    isTutorialActive,
+    startTutorial,
+    skipTutorial,
+    setTutorialStep,
+  } = useTutorial();
   const router = useRouter();
   const { currentChallenges, markToday } = useCurrentChallenges();
   const { theme } = useTheme();
+
   const isDarkMode = theme === "dark";
   const currentTheme: Theme = isDarkMode
     ? designSystem.darkTheme
     : designSystem.lightTheme;
-  const [userTrophies, setUserTrophies] = useState<number>(0);
+
   const [isLoading, setIsLoading] = useState(true);
+  const [userTrophies, setUserTrophies] = useState(0);
+  const [challengeParticipants, setChallengeParticipants] = useState<{
+    [key: string]: number;
+  }>({});
 
   const confettiRef = useRef<ConfettiCannon | null>(null);
   const scrollXTop = useRef(new RNAnimated.Value(0)).current;
   const scrollXBottom = useRef(new RNAnimated.Value(0)).current;
+
   const flatListTopRef = useRef<RNAnimated.FlatList<any>>(null);
   const flatListBottomRef = useRef<RNAnimated.FlatList<any>>(null);
-  const topAutoScrollRef = useRef<number | null>(null); // Remplace NodeJS.Timeout par number
-  const bottomAutoScrollRef = useRef<number | null>(null);
-  const topIndexRef = useRef<number>(0);
-  const bottomIndexRef = useRef<number>(0);
 
-  const [challengeParticipants, setChallengeParticipants] = useState<{
-    [key: string]: number;
-  }>({});
+  const topAutoScrollRef = useRef<number | null>(null);
+  const bottomAutoScrollRef = useRef<number | null>(null);
+
+  const topIndexRef = useRef(0);
+  const bottomIndexRef = useRef(0);
 
   useEffect(() => {
     const userId = auth.currentUser?.uid;
@@ -107,8 +124,6 @@ export default function FocusScreen() {
     new Map(currentChallenges.map((ch: any) => [ch.uniqueKey, ch])).values()
   ) as CurrentChallengeExtended[];
 
-  // === TRADUCTION MINIMALE ===
-  // On remplace uniqueChallenges par translatedChallenges partout ensuite
   const translatedChallenges = uniqueChallenges.map((item) => {
     const key = item.chatId || item.id;
     return {
@@ -126,6 +141,7 @@ export default function FocusScreen() {
   const notMarkedToday = translatedChallenges.filter(
     (ch) => ch.lastMarkedDate !== today
   );
+
   const markedToday = translatedChallenges.filter(
     (ch) => ch.lastMarkedDate === today
   );
@@ -147,6 +163,7 @@ export default function FocusScreen() {
 
   useEffect(() => {
     const unsubscribes: (() => void)[] = [];
+
     uniqueChallenges.forEach((challenge) => {
       const challengeRef = doc(db, "challenges", challenge.id);
       const unsubscribe = onSnapshot(challengeRef, (docSnap) => {
@@ -160,7 +177,8 @@ export default function FocusScreen() {
       });
       unsubscribes.push(unsubscribe);
     });
-    return () => unsubscribes.forEach((u) => u());
+
+    return () => unsubscribes.forEach((unsub) => unsub());
   }, [uniqueChallenges]);
 
   const startTopAutoScroll = useCallback(() => {
@@ -248,9 +266,23 @@ export default function FocusScreen() {
   if (isLoading) {
     return (
       <GlobalLayout>
-        <View style={styles.loadingContainer}>
-          <ActivityIndicator size="large" color={currentTheme.colors.trophy} />
-        </View>
+        <LinearGradient
+          colors={[
+            currentTheme.colors.background,
+            currentTheme.colors.cardBackground + "F0",
+          ]}
+          style={styles.loadingContainer}
+        >
+          <ActivityIndicator size="large" color={currentTheme.colors.primary} />
+          <Text
+            style={[
+              styles.loadingText,
+              { color: currentTheme.colors.textPrimary },
+            ]}
+          >
+            {t("loadingChallenges")}
+          </Text>
+        </LinearGradient>
       </GlobalLayout>
     );
   }
@@ -258,71 +290,84 @@ export default function FocusScreen() {
   const renderTopItem = ({ item }: { item: CurrentChallengeExtended }) => (
     <RNAnimated.View style={styles.topItemWrapper}>
       <TouchableOpacity
-        activeOpacity={0.9}
-        style={[
-          styles.topItemContainer,
-          {
-            backgroundColor: currentTheme.colors.cardBackground,
-            borderColor: currentTheme.colors.secondary,
-          },
-        ]}
+        activeOpacity={0.8}
+        style={styles.topItemContainer}
         onPress={() => handleNavigateToDetails(item)}
       >
-        {item.imageUrl ? (
-          <Image source={{ uri: item.imageUrl }} style={styles.topItemImage} />
-        ) : (
-          <View
-            style={[
-              styles.imagePlaceholder,
-              { backgroundColor: currentTheme.colors.border },
-            ]}
-          >
-            <Ionicons
-              name="image-outline"
-              size={normalizeFont(60)}
-              color={currentTheme.colors.textSecondary}
+        <LinearGradient
+          colors={[
+            currentTheme.colors.cardBackground,
+            currentTheme.colors.cardBackground + "F0",
+          ]}
+          style={[
+            styles.topItemGradient,
+            {
+              borderColor: isDarkMode
+                ? currentTheme.colors.secondary
+                : "#FF8C00",
+            },
+          ]}
+        >
+          {item.imageUrl ? (
+            <Image
+              source={{ uri: item.imageUrl }}
+              style={styles.topItemImage}
             />
-            <Text
+          ) : (
+            <View
               style={[
-                styles.noImageText,
-                { color: currentTheme.colors.textSecondary },
+                styles.imagePlaceholder,
+                { backgroundColor: currentTheme.colors.border },
               ]}
             >
-              {t("imageNotAvailable")}
+              <Ionicons
+                name="image-outline"
+                size={normalizeSize(60)}
+                color={currentTheme.colors.textSecondary}
+              />
+              <Text
+                style={[
+                  styles.noImageText,
+                  { color: currentTheme.colors.textSecondary },
+                ]}
+              >
+                {t("imageNotAvailable")}
+              </Text>
+            </View>
+          )}
+          <LinearGradient
+            colors={[currentTheme.colors.overlay, "rgba(0,0,0,0.9)"]}
+            style={styles.topItemOverlay}
+          >
+            <Text
+              style={[
+                styles.topItemTitle,
+                { color: currentTheme.colors.textPrimary },
+              ]}
+              numberOfLines={2}
+            >
+              {item.title}
             </Text>
-          </View>
-        )}
-        <LinearGradient
-          colors={[currentTheme.colors.overlay, "rgba(0,0,0,0.9)"]}
-          style={styles.topItemOverlay}
-        >
-          <Text
-            style={[
-              styles.topItemTitle,
-              { color: currentTheme.colors.textPrimary },
-            ]}
-            numberOfLines={2}
-          >
-            {item.title}
-          </Text>
-          <Text
-            style={[
-              styles.topItemParticipants,
-              { color: currentTheme.colors.trophy },
-            ]}
-          >
-            <Ionicons
-              name="people"
-              size={normalizeFont(14)}
-              color={currentTheme.colors.trophy}
-            />{" "}
-            {challengeParticipants[item.id] ?? item.participants ?? 0}{" "}
-            {(challengeParticipants[item.id] ?? item.participants ?? 0) === 1
-              ? t("participant")
-              : t("participants")}
-          </Text>
+            <Text
+              style={[
+                styles.topItemParticipants,
+                { color: currentTheme.colors.trophy },
+              ]}
+            >
+              <Ionicons
+                name="people"
+                size={normalizeSize(14)}
+                color={currentTheme.colors.trophy}
+              />{" "}
+              {challengeParticipants[item.id] ?? item.participants ?? 0}{" "}
+              {(challengeParticipants[item.id] ?? item.participants ?? 0) === 1
+                ? t("participant")
+                : t("participants")}
+            </Text>
+          </LinearGradient>
         </LinearGradient>
       </TouchableOpacity>
+
       {item.lastMarkedDate !== today && (
         <TouchableOpacity
           style={[
@@ -334,7 +379,9 @@ export default function FocusScreen() {
           <Text
             style={[
               styles.markTodayButtonText,
-              { color: currentTheme.colors.textPrimary },
+              {
+                color: isDarkMode ? "#000000" : currentTheme.colors.textPrimary,
+              },
             ]}
           >
             {t("markToday")}
@@ -347,115 +394,137 @@ export default function FocusScreen() {
   const renderBottomItem = ({ item }: { item: CurrentChallengeExtended }) => (
     <RNAnimated.View style={styles.bottomItemWrapper}>
       <TouchableOpacity
-        activeOpacity={0.9}
-        style={[
-          styles.bottomItemContainer,
-          {
-            backgroundColor: currentTheme.colors.cardBackground,
-            borderColor: currentTheme.colors.secondary,
-          },
-        ]}
+        activeOpacity={0.8}
+        style={styles.bottomItemContainer}
         onPress={() => handleNavigateToDetails(item)}
       >
-        {item.imageUrl ? (
-          <Image
-            source={{ uri: item.imageUrl }}
-            style={styles.bottomItemImage}
-          />
-        ) : (
-          <View
-            style={[
-              styles.imagePlaceholder,
-              { backgroundColor: currentTheme.colors.border },
-            ]}
-          >
-            <Ionicons
-              name="image-outline"
-              size={normalizeFont(40)}
-              color={currentTheme.colors.textSecondary}
+        <LinearGradient
+          colors={[
+            currentTheme.colors.cardBackground,
+            currentTheme.colors.cardBackground + "F0",
+          ]}
+          style={[
+            styles.bottomItemGradient,
+            {
+              borderColor: isDarkMode
+                ? currentTheme.colors.secondary
+                : "#FF8C00",
+            },
+          ]}
+        >
+          {item.imageUrl ? (
+            <Image
+              source={{ uri: item.imageUrl }}
+              style={styles.bottomItemImage}
             />
-            <Text
+          ) : (
+            <View
               style={[
-                styles.noImageText,
-                { color: currentTheme.colors.textSecondary },
+                styles.imagePlaceholder,
+                { backgroundColor: currentTheme.colors.border },
               ]}
             >
-              {t("imageNotAvailable")}
+              <Ionicons
+                name="image-outline"
+                size={normalizeSize(40)}
+                color={currentTheme.colors.textSecondary}
+              />
+              <Text
+                style={[
+                  styles.noImageText,
+                  { color: currentTheme.colors.textSecondary },
+                ]}
+              >
+                {t("imageNotAvailable")}
+              </Text>
+            </View>
+          )}
+          <LinearGradient
+            colors={[currentTheme.colors.overlay, "rgba(0,0,0,0.9)"]}
+            style={styles.bottomItemOverlay}
+          >
+            <Text
+              style={[
+                styles.bottomItemTitle,
+                { color: currentTheme.colors.textPrimary },
+              ]}
+              numberOfLines={2}
+            >
+              {item.title}
             </Text>
-          </View>
-        )}
-        <LinearGradient
-          colors={[currentTheme.colors.overlay, "rgba(0,0,0,0.9)"]}
-          style={styles.bottomItemOverlay}
-        >
-          <Text
-            style={[
-              styles.bottomItemTitle,
-              { color: currentTheme.colors.textPrimary },
-            ]}
-            numberOfLines={2}
-          >
-            {item.title}
-          </Text>
-          <Text
-            style={[
-              styles.bottomItemParticipants,
-              { color: currentTheme.colors.trophy },
-            ]}
-          >
-            <Ionicons
-              name="people"
-              size={normalizeFont(12)}
-              color={currentTheme.colors.trophy}
-            />{" "}
-            {challengeParticipants[item.id] ?? item.participants ?? 0}{" "}
-            {(challengeParticipants[item.id] ?? item.participants ?? 0) === 1
-              ? t("participant")
-              : t("participants")}
-          </Text>
+            <Text
+              style={[
+                styles.bottomItemParticipants,
+                { color: currentTheme.colors.trophy },
+              ]}
+            >
+              <Ionicons
+                name="people"
+                size={normalizeSize(12)}
+                color={currentTheme.colors.trophy}
+              />{" "}
+              {challengeParticipants[item.id] ?? item.participants ?? 0}{" "}
+              {(challengeParticipants[item.id] ?? item.participants ?? 0) === 1
+                ? t("participant")
+                : t("participants")}
+            </Text>
+          </LinearGradient>
         </LinearGradient>
       </TouchableOpacity>
     </RNAnimated.View>
   );
-
   return (
     <GlobalLayout>
       <LinearGradient
         colors={[
           currentTheme.colors.background,
-          currentTheme.colors.cardBackground,
+          currentTheme.colors.cardBackground + "F0",
         ]}
         style={styles.gradientContainer}
       >
-        <View style={styles.headerContainer}>
-          <TouchableOpacity
-            style={styles.trophyContainer}
-            onPress={() => router.push("/profile")}
-          >
-            <Ionicons
-              name="trophy-outline"
-              size={normalizeFont(24)}
-              color={currentTheme.colors.trophy}
-            />
-            <Text
-              style={[styles.trophyText, { color: currentTheme.colors.trophy }]}
+        <View style={styles.headerWrapper}>
+          <View style={styles.headerContainer}>
+            <TouchableOpacity
+              style={[
+                styles.trophyContainer,
+                {
+                  backgroundColor: isDarkMode
+                    ? currentTheme.colors.cardBackground
+                    : "#FF8C00",
+                  borderColor: isDarkMode ? currentTheme.colors.border : "#FFF",
+                },
+              ]}
+              onPress={() => router.push("/profile")}
             >
-              {userTrophies}
-            </Text>
-          </TouchableOpacity>
-          <TouchableOpacity
-            style={[
-              styles.plusButton,
-              { backgroundColor: currentTheme.colors.secondary },
-            ]}
-            onPress={() => router.push("/create-challenge")}
-          >
-            <Ionicons
-              name="add-circle-outline"
-              size={normalizeFont(28)}
-              color={currentTheme.colors.textPrimary}
-            />
-          </TouchableOpacity>
+              <Ionicons
+                name="trophy-outline"
+                size={normalizeSize(28)}
+                color={isDarkMode ? currentTheme.colors.trophy : "#FFF"}
+              />
+              <Text
+                style={[
+                  styles.trophyText,
+                  { color: isDarkMode ? currentTheme.colors.trophy : "#FFF" },
+                ]}
+              >
+                {userTrophies}
+              </Text>
+            </TouchableOpacity>
+
+            <TouchableOpacity
+              style={[
+                styles.plusButton,
+                { backgroundColor: currentTheme.colors.secondary },
+              ]}
+              onPress={() => router.push("/create-challenge")}
+            >
+              <Ionicons
+                name="add-circle-outline"
+                size={normalizeSize(28)}
+                color={isDarkMode ? "#000000" : currentTheme.colors.textPrimary}
+              />
+            </TouchableOpacity>
+          </View>
         </View>
 
         <ScrollView
@@ -463,16 +532,21 @@ export default function FocusScreen() {
           contentContainerStyle={styles.scrollContent}
           showsVerticalScrollIndicator={false}
         >
-          {/* Carousel du haut */}
+          {/* === Carrousel haut : défis à faire === */}
           <View style={styles.topCarouselContainer}>
             <Text
               style={[
                 styles.sectionTitle,
-                { color: currentTheme.colors.textPrimary },
+                {
+                  color: isDarkMode
+                    ? currentTheme.colors.textPrimary
+                    : "#000000",
+                }, // Blanc en dark, noir en light
               ]}
             >
               {t("dailyChallenges")}
             </Text>
+
             {notMarkedToday.length > 0 ? (
               <>
                 <RNAnimated.FlatList
@@ -519,64 +593,83 @@ export default function FocusScreen() {
                 </View>
               </>
             ) : (
-              <View style={styles.emptyTopContainer}>
-                <Text
-                  style={[
-                    styles.emptyTitle,
-                    { color: currentTheme.colors.textPrimary },
-                  ]}
-                >
-                  {t("noOngoingChallenge")}
-                </Text>
-                <Text
-                  style={[
-                    styles.emptySubtitle,
-                    { color: currentTheme.colors.textSecondary },
-                  ]}
-                >
-                  {t("createPrompt")}
-                </Text>
-                <View style={styles.emptyList}>
+              <LinearGradient
+                colors={[
+                  currentTheme.colors.cardBackground,
+                  currentTheme.colors.cardBackground + "F0",
+                ]}
+                style={styles.emptyTopContainer}
+              >
+                <Animated.View entering={FadeInUp.delay(100)}>
+                  <Ionicons
+                    name="create-outline"
+                    size={normalizeSize(60)}
+                    color={currentTheme.colors.textSecondary}
+                    accessibilityLabel={t("noChallengesIcon")}
+                  />
                   <Text
                     style={[
-                      styles.emptyItem,
-                      { color: currentTheme.colors.textSecondary },
+                      styles.emptyTitle,
+                      { color: currentTheme.colors.textPrimary },
                     ]}
                   >
-                    • {t("clickIconTopRight")}
+                    {t("noOngoingChallenge")}
                   </Text>
                   <Text
                     style={[
-                      styles.emptyItem,
+                      styles.emptySubtitle,
                       { color: currentTheme.colors.textSecondary },
                     ]}
                   >
-                    •{" "}
+                    {t("createPrompt")}
+                  </Text>
+                  <View style={styles.emptyList}>
                     <Text
                       style={[
-                        styles.linkText,
-                        { color: currentTheme.colors.secondary },
+                        styles.emptyItem,
+                        { color: currentTheme.colors.textSecondary },
                       ]}
-                      onPress={() => router.push("/explore")}
                     >
-                      {t("orJoinChallenge")}
+                      • {t("clickIconTopRight")}
                     </Text>
-                  </Text>
-                </View>
-              </View>
+                    <Text
+                      style={[
+                        styles.emptyItem,
+                        { color: currentTheme.colors.textSecondary },
+                      ]}
+                    >
+                      •{" "}
+                      <Text
+                        style={[
+                          styles.linkText,
+                          { color: currentTheme.colors.secondary },
+                        ]}
+                        onPress={() => router.push("/explore")}
+                      >
+                        {t("orJoinChallenge")}
+                      </Text>
+                    </Text>
+                  </View>
+                </Animated.View>
+              </LinearGradient>
             )}
           </View>
 
-          {/* Carousel du bas */}
+          {/* === Carrousel bas : défis complétés aujourd’hui === */}
           <View style={styles.bottomCarouselContainer}>
             <Text
               style={[
                 styles.sectionTitle,
-                { color: currentTheme.colors.textPrimary },
+                {
+                  color: isDarkMode
+                    ? currentTheme.colors.textPrimary
+                    : "#000000",
+                }, // Blanc en dark, noir en light
               ]}
             >
               {t("completedChallengesScreenTitle")} {t("today")}
             </Text>
+
             {markedToday.length > 0 ? (
               <>
                 <RNAnimated.FlatList
@@ -634,6 +727,7 @@ export default function FocusScreen() {
             )}
           </View>
 
+          {/* === Confettis (célébration) === */}
           {confettiRef.current && (
             <ConfettiCannon
               ref={confettiRef}
@@ -645,27 +739,17 @@ export default function FocusScreen() {
             />
           )}
         </ScrollView>
+
+        {/* === Tuto étape 3 === */}
         {isTutorialActive && tutorialStep === 3 && (
           <BlurView intensity={50} style={styles.blurView}>
-            <RNAnimated.View style={styles.modalContainer}>
-              <Text style={styles.modalTitle}>{t("focusPageTitle")}</Text>
-              <Text style={styles.modalDescription}>
-                {t("focusPageDescription", {
-                  challenges: "défis prioritaires",
-                  progress: "progrès",
-                })}
-              </Text>
-              <TouchableOpacity
-                style={styles.nextButton}
-                onPress={() => setTutorialStep(4)}
-              >
-                <Ionicons
-                  name="chevron-forward"
-                  size={normalizeFont(24)}
-                  color="#FFB800"
-                />
-              </TouchableOpacity>
-            </RNAnimated.View>
+            <TutorialModal
+              step={tutorialStep}
+              onNext={() => setTutorialStep(4)}
+              onStart={() => {}}
+              onSkip={skipTutorial}
+              onFinish={skipTutorial}
+            />
           </BlurView>
         )}
       </LinearGradient>
@@ -674,78 +758,101 @@ export default function FocusScreen() {
 }
 
 const styles = StyleSheet.create({
-  gradientContainer: { flex: 1 },
+  gradientContainer: {
+    flex: 1,
+  },
+  headerWrapper: {
+    paddingHorizontal: SPACING,
+    paddingVertical: SPACING,
+    paddingTop: SPACING * 2.5, // Aligné avec Notifications.tsx
+    position: "relative",
+  },
   headerContainer: {
-    width: "100%",
     flexDirection: "row",
     justifyContent: "space-between",
     alignItems: "center",
-    paddingHorizontal: SCREEN_WIDTH * 0.05,
-    paddingTop: SCREEN_HEIGHT * 0.02,
   },
-  trophyContainer: { flexDirection: "row", alignItems: "center" },
+  trophyContainer: {
+    flexDirection: "row",
+    alignItems: "center",
+    paddingHorizontal: normalizeSize(12),
+    paddingVertical: normalizeSize(8),
+    borderRadius: normalizeSize(20),
+    borderWidth: 1,
+  },
   trophyText: {
-    fontSize: normalizeFont(18),
-    marginLeft: SCREEN_WIDTH * 0.02,
+    fontSize: normalizeSize(20),
+    marginLeft: normalizeSize(8),
     fontFamily: "Comfortaa_700Bold",
   },
   plusButton: {
-    borderRadius: 50,
-    padding: SCREEN_WIDTH * 0.015,
-    shadowColor: "#000",
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.3,
-    shadowRadius: 4,
-    elevation: 5,
+    borderRadius: normalizeSize(50),
+    padding: normalizeSize(8),
   },
-  scrollContainer: { flex: 1 },
+  scrollContainer: {
+    flex: 1,
+  },
   scrollContent: {
-    paddingBottom: SCREEN_HEIGHT * 0.05,
-    paddingTop: SCREEN_HEIGHT * 0.01,
+    paddingBottom: normalizeSize(80),
+    paddingTop: normalizeSize(10),
   },
   sectionTitle: {
-    fontSize: normalizeFont(20),
+    fontSize: normalizeSize(22),
     fontFamily: "Comfortaa_700Bold",
     textAlign: "center",
-    marginVertical: SCREEN_HEIGHT * 0.015,
-    textShadowColor: "rgba(0, 0, 0, 0.1)",
-    textShadowOffset: { width: 1, height: 1 },
-    textShadowRadius: 2,
+    marginVertical: normalizeSize(12),
   },
   noChallenges: {
-    fontSize: normalizeFont(14),
+    fontSize: normalizeSize(18),
     textAlign: "center",
-    marginVertical: SCREEN_HEIGHT * 0.02,
+    marginVertical: normalizeSize(16),
     fontFamily: "Comfortaa_400Regular",
   },
-  /* Carousel du haut */
-  topCarouselContainer: { marginBottom: SCREEN_HEIGHT * 0.02 },
+  pagination: {
+    flexDirection: "row",
+    justifyContent: "center",
+    marginTop: normalizeSize(12),
+  },
+  dot: {
+    width: normalizeSize(8),
+    height: normalizeSize(8),
+    borderRadius: normalizeSize(4),
+    marginHorizontal: normalizeSize(6),
+  },
+  topCarouselContainer: {
+    marginBottom: normalizeSize(20),
+  },
   topItemWrapper: {
-    marginHorizontal: CARD_MARGIN,
+    marginHorizontal: SPACING / 2,
     alignItems: "center",
   },
   topItemContainer: {
     width: TOP_ITEM_WIDTH,
     height: TOP_ITEM_HEIGHT,
-    borderRadius: 20,
+    borderRadius: normalizeSize(25),
     overflow: "hidden",
     shadowColor: "#000",
-    shadowOffset: { width: 0, height: 4 },
-    shadowOpacity: 0.25,
-    shadowRadius: 6,
-    elevation: 6,
-    borderWidth: 2,
+    shadowOffset: { width: 0, height: normalizeSize(5) },
+    shadowOpacity: 0.35,
+    shadowRadius: normalizeSize(8),
+    elevation: 10,
+  },
+  topItemGradient: {
+    flex: 1,
+    borderRadius: normalizeSize(25),
+    borderWidth: 2.5,
+    overflow: "hidden",
   },
   topItemImage: { width: "100%", height: "100%", resizeMode: "cover" },
   topItemOverlay: {
     position: "absolute",
     bottom: 0,
     width: "100%",
-    padding: SCREEN_WIDTH * 0.03,
+    padding: normalizeSize(12),
     alignItems: "center",
   },
   topItemTitle: {
-    fontSize: normalizeFont(18),
+    fontSize: normalizeSize(18),
     fontFamily: "Comfortaa_700Bold",
     textAlign: "center",
     textShadowColor: "rgba(0, 0, 0, 0.5)",
@@ -753,54 +860,55 @@ const styles = StyleSheet.create({
     textShadowRadius: 3,
   },
   topItemParticipants: {
-    fontSize: normalizeFont(14),
-    marginTop: SCREEN_WIDTH * 0.01,
+    fontSize: normalizeSize(14),
+    marginTop: normalizeSize(6),
     fontFamily: "Comfortaa_400Regular",
     textAlign: "center",
   },
   markTodayButton: {
-    marginTop: SCREEN_HEIGHT * 0.01,
-    paddingVertical: SCREEN_HEIGHT * 0.01,
-    paddingHorizontal: SCREEN_WIDTH * 0.04,
-    borderRadius: 25,
-    shadowColor: "#000",
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.3,
-    shadowRadius: 4,
-    elevation: 5,
+    marginTop: normalizeSize(12),
+    paddingVertical: normalizeSize(10),
+    paddingHorizontal: normalizeSize(16),
+    borderRadius: normalizeSize(18),
   },
   markTodayButtonText: {
-    fontSize: normalizeFont(12),
+    fontSize: normalizeSize(14),
     fontFamily: "Comfortaa_700Bold",
   },
-  /* Carousel du bas */
-  bottomCarouselContainer: { marginBottom: SCREEN_HEIGHT * 0.02 },
+  bottomCarouselContainer: {
+    marginBottom: normalizeSize(30),
+  },
   bottomItemWrapper: {
-    marginHorizontal: CARD_MARGIN,
+    marginHorizontal: SPACING / 2,
     alignItems: "center",
   },
   bottomItemContainer: {
     width: BOTTOM_ITEM_WIDTH,
     height: BOTTOM_ITEM_HEIGHT,
-    borderRadius: 20,
+    borderRadius: normalizeSize(25),
     overflow: "hidden",
     shadowColor: "#000",
-    shadowOffset: { width: 0, height: 4 },
-    shadowOpacity: 0.25,
-    shadowRadius: 6,
-    elevation: 6,
-    borderWidth: 2,
+    shadowOffset: { width: 0, height: normalizeSize(5) },
+    shadowOpacity: 0.35,
+    shadowRadius: normalizeSize(8),
+    elevation: 10,
+  },
+  bottomItemGradient: {
+    flex: 1,
+    borderRadius: normalizeSize(25),
+    borderWidth: 2.5,
+    overflow: "hidden",
   },
   bottomItemImage: { width: "100%", height: "100%", resizeMode: "cover" },
   bottomItemOverlay: {
     position: "absolute",
     bottom: 0,
     width: "100%",
-    padding: SCREEN_WIDTH * 0.025,
+    padding: normalizeSize(10),
     alignItems: "center",
   },
   bottomItemTitle: {
-    fontSize: normalizeFont(16),
+    fontSize: normalizeSize(16),
     fontFamily: "Comfortaa_700Bold",
     textAlign: "center",
     textShadowColor: "rgba(0, 0, 0, 0.5)",
@@ -808,8 +916,8 @@ const styles = StyleSheet.create({
     textShadowRadius: 3,
   },
   bottomItemParticipants: {
-    fontSize: normalizeFont(12),
-    marginTop: SCREEN_WIDTH * 0.01,
+    fontSize: normalizeSize(12),
+    marginTop: normalizeSize(6),
     fontFamily: "Comfortaa_400Regular",
     textAlign: "center",
   },
@@ -819,33 +927,39 @@ const styles = StyleSheet.create({
     alignItems: "center",
   },
   noImageText: {
-    marginTop: SCREEN_WIDTH * 0.02,
-    fontSize: normalizeFont(12),
+    marginTop: normalizeSize(8),
+    fontSize: normalizeSize(12),
     textAlign: "center",
     fontFamily: "Comfortaa_400Regular",
   },
   emptyTopContainer: {
-    height: TOP_ITEM_HEIGHT + SCREEN_HEIGHT * 0.05,
-    paddingHorizontal: SPACER_TOP,
+    height: TOP_ITEM_HEIGHT + normalizeSize(30),
     justifyContent: "center",
+    alignItems: "center",
+    paddingHorizontal: SPACING,
+    borderRadius: normalizeSize(25),
   },
   emptyTitle: {
-    fontSize: normalizeFont(16),
+    fontSize: normalizeSize(22),
     fontFamily: "Comfortaa_700Bold",
-    marginBottom: SCREEN_HEIGHT * 0.01,
-    textAlign: "left",
+    marginTop: SPACING,
+    textAlign: "center",
   },
   emptySubtitle: {
-    fontSize: normalizeFont(14),
-    marginBottom: SCREEN_HEIGHT * 0.01,
-    textAlign: "left",
+    fontSize: normalizeSize(18),
     fontFamily: "Comfortaa_400Regular",
+    textAlign: "center",
+    marginTop: normalizeSize(6),
+    maxWidth: SCREEN_WIDTH * 0.75,
   },
-  emptyList: { alignSelf: "flex-start" },
+  emptyList: {
+    alignSelf: "center",
+    marginTop: normalizeSize(8),
+  },
   emptyItem: {
-    fontSize: normalizeFont(14),
-    marginBottom: SCREEN_HEIGHT * 0.005,
-    textAlign: "left",
+    fontSize: normalizeSize(16),
+    marginBottom: normalizeSize(4),
+    textAlign: "center",
     fontFamily: "Comfortaa_400Regular",
   },
   linkText: {
@@ -856,47 +970,47 @@ const styles = StyleSheet.create({
     flex: 1,
     justifyContent: "center",
     alignItems: "center",
+    paddingHorizontal: SPACING,
   },
-  pagination: {
-    flexDirection: "row",
-    justifyContent: "center",
-    marginTop: SCREEN_HEIGHT * 0.015,
-  },
-  dot: {
-    width: normalizeFont(6),
-    height: normalizeFont(6),
-    borderRadius: normalizeFont(3),
-    marginHorizontal: SCREEN_WIDTH * 0.015,
+  loadingText: {
+    marginTop: normalizeSize(20),
+    fontSize: normalizeSize(18),
+    fontFamily: "Comfortaa_400Regular",
+    textAlign: "center",
   },
   blurView: {
-    ...StyleSheet.absoluteFillObject,
+    position: "absolute",
+    top: 0,
+    left: 0,
+    right: 0,
+    bottom: 0,
     justifyContent: "center",
     alignItems: "center",
   },
   modalContainer: {
     backgroundColor: "rgba(255, 255, 255, 0.95)",
-    borderRadius: 20,
-    padding: 20,
-    width: "80%",
+    borderRadius: normalizeSize(25),
+    padding: normalizeSize(20),
+    width: SCREEN_WIDTH * 0.8,
     alignItems: "center",
   },
   modalTitle: {
-    fontSize: normalizeFont(24),
+    fontSize: normalizeSize(24),
     fontFamily: "Comfortaa_700Bold",
     color: "#000",
-    marginBottom: 10,
+    marginBottom: normalizeSize(12),
     textAlign: "center",
   },
   modalDescription: {
-    fontSize: normalizeFont(16),
+    fontSize: normalizeSize(18),
     fontFamily: "Comfortaa_400Regular",
     color: "#333",
     textAlign: "center",
-    marginBottom: 20,
+    marginBottom: normalizeSize(20),
   },
   nextButton: {
     position: "absolute",
-    bottom: 20,
-    right: 20,
+    bottom: normalizeSize(20),
+    right: normalizeSize(20),
   },
 });

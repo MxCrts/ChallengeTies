@@ -16,7 +16,19 @@ export default function CustomHeader({ title }: CustomHeaderProps) {
   return (
     <View style={styles.container}>
       <View style={styles.titleContainer}>
-        <Text style={styles.header}>{title}</Text>
+        <Text
+          style={[
+            styles.header,
+            {
+              color:
+                theme === "light"
+                  ? "#000000" // noir en light
+                  : currentTheme.colors.textPrimary, // gold en dark
+            },
+          ]}
+        >
+          {title}
+        </Text>
       </View>
     </View>
   );
@@ -24,19 +36,18 @@ export default function CustomHeader({ title }: CustomHeaderProps) {
 
 const styles = StyleSheet.create({
   container: {
-    flexDirection: "row", // Place la flèche et le titre sur la même ligne
-    alignItems: "center", // Centre verticalement la flèche par rapport au titre
-    paddingHorizontal: 16, // Garde l'espacement horizontal
+    flexDirection: "row",
+    alignItems: "center",
+    paddingHorizontal: 16,
   },
   titleContainer: {
-    flex: 1, // Permet au titre de prendre l'espace disponible
-    marginVertical: 20, // Marge verticale autour du titre
-    marginBottom: 30, // Marge supplémentaire en bas
+    flex: 1,
+    marginVertical: 20,
+    marginBottom: 30,
   },
   header: {
     fontSize: 25,
     fontFamily: "Comfortaa_700Bold",
-    color: "#000000",
-    textAlign: "center", // Centre le texte horizontalement
+    textAlign: "center",
   },
 });

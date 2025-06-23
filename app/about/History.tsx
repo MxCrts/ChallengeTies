@@ -4,10 +4,12 @@ import {
   Text,
   StyleSheet,
   ScrollView,
+  TouchableOpacity,
   Image,
   Dimensions,
   SafeAreaView,
   StatusBar,
+  Platform,
 } from "react-native";
 import { LinearGradient } from "expo-linear-gradient";
 import Animated, { FadeInUp } from "react-native-reanimated";
@@ -15,8 +17,8 @@ import { Ionicons } from "@expo/vector-icons";
 import { useTheme } from "../../context/ThemeContext";
 import { Theme } from "../../theme/designSystem";
 import designSystem from "../../theme/designSystem";
-import BackButton from "../../components/BackButton";
 import { useTranslation } from "react-i18next";
+import { useRouter } from "expo-router";
 
 const { width: SCREEN_WIDTH, height: SCREEN_HEIGHT } = Dimensions.get("window");
 const SPACING = 15;
@@ -29,6 +31,7 @@ const normalizeSize = (size: number) => {
 export default function History() {
   const { t } = useTranslation();
   const { theme } = useTheme();
+  const router = useRouter();
   const isDarkMode = theme === "dark";
   const currentTheme: Theme = isDarkMode
     ? designSystem.darkTheme
@@ -36,7 +39,10 @@ export default function History() {
 
   return (
     <LinearGradient
-      colors={[currentTheme.colors.background, currentTheme.colors.cardBackground]}
+      colors={[
+        currentTheme.colors.background,
+        currentTheme.colors.cardBackground,
+      ]}
       style={styles.container}
       start={{ x: 0, y: 0 }}
       end={{ x: 1, y: 1 }}
@@ -53,13 +59,36 @@ export default function History() {
         >
           {/* Header avec BackButton */}
           <View style={styles.headerWrapper}>
-            <BackButton color={currentTheme.colors.secondary} />
-            <Animated.Text
-              entering={FadeInUp.duration(600)}
-              style={[styles.title, { color: currentTheme.colors.textPrimary }]}
-            >
-              {t("history.title")}
-            </Animated.Text>
+            <Animated.View entering={FadeInUp}>
+              <TouchableOpacity
+                onPress={() => router.back()}
+                style={styles.backButton}
+                accessibilityLabel={t("backButton")}
+                accessibilityHint={t("backButtonHint")}
+                testID="back-button"
+              >
+                <Ionicons
+                  name="arrow-back"
+                  size={normalizeSize(24)}
+                  color={currentTheme.colors.secondary}
+                />
+              </TouchableOpacity>
+            </Animated.View>
+            <View style={styles.titleContainer}>
+              <Animated.Text
+                entering={FadeInUp.duration(600)}
+                style={[
+                  styles.title,
+                  {
+                    color: isDarkMode
+                      ? currentTheme.colors.textPrimary
+                      : "#000000",
+                  },
+                ]}
+              >
+                {t("history.title")}
+              </Animated.Text>
+            </View>
           </View>
 
           {/* Logo animé */}
@@ -67,25 +96,38 @@ export default function History() {
             entering={FadeInUp.delay(200).duration(800)}
             style={styles.logoContainer}
           >
-            <LinearGradient
-              colors={[currentTheme.colors.secondary, currentTheme.colors.primary]}
-              style={styles.logoGradient}
-              start={{ x: 0, y: 0 }}
-              end={{ x: 1, y: 1 }}
-            >
-              <Image
-                source={require("../../assets/images/Challenge.png")}
-                style={styles.logo}
-                resizeMode="contain"
-                accessibilityLabel={t("history.logoAlt")}
-              />
-            </LinearGradient>
+            <Image
+              source={require("../../assets/images/icon.png")}
+              style={styles.logo}
+              resizeMode="contain"
+              accessibilityLabel={t("history.logoAlt")}
+            />
           </Animated.View>
 
           {/* Introduction */}
-          <Animated.View entering={FadeInUp.delay(400)} style={styles.card}>
-            <Text style={[styles.paragraph, { color: currentTheme.colors.textSecondary }]}>
-              <Text style={[styles.boldText, { color: currentTheme.colors.textPrimary }]}>
+          <Animated.View
+            entering={FadeInUp.delay(400)}
+            style={[
+              styles.card,
+              { borderColor: isDarkMode ? "#FFD700" : "#FF8C00" },
+            ]}
+          >
+            <Text
+              style={[
+                styles.paragraph,
+                { color: currentTheme.colors.textSecondary },
+              ]}
+            >
+              <Text
+                style={[
+                  styles.boldText,
+                  {
+                    color: isDarkMode
+                      ? currentTheme.colors.textPrimary
+                      : "#FF8C00",
+                  },
+                ]}
+              >
                 {t("appName")}
               </Text>{" "}
               {t("history.intro")}
@@ -93,8 +135,19 @@ export default function History() {
           </Animated.View>
 
           {/* Fonctionnalités clés */}
-          <Animated.View entering={FadeInUp.delay(600)} style={styles.card}>
-            <Text style={[styles.subtitle, { color: currentTheme.colors.secondary }]}>
+          <Animated.View
+            entering={FadeInUp.delay(600)}
+            style={[
+              styles.card,
+              { borderColor: isDarkMode ? "#FFD700" : "#FF8C00" },
+            ]}
+          >
+            <Text
+              style={[
+                styles.subtitle,
+                { color: currentTheme.colors.secondary },
+              ]}
+            >
               {t("history.featuresTitle")}
             </Text>
             <View>
@@ -128,9 +181,21 @@ export default function History() {
                     style={styles.featureIcon}
                   />
                   <Text
-                    style={[styles.featureText, { color: currentTheme.colors.textSecondary }]}
+                    style={[
+                      styles.featureText,
+                      { color: currentTheme.colors.textSecondary },
+                    ]}
                   >
-                    <Text style={[styles.boldText, { color: currentTheme.colors.textPrimary }]}>
+                    <Text
+                      style={[
+                        styles.boldText,
+                        {
+                          color: isDarkMode
+                            ? currentTheme.colors.textPrimary
+                            : "#FF8C00",
+                        },
+                      ]}
+                    >
                       {t(item.titleKey)}
                     </Text>
                     {` ${t(item.descKey)}`}
@@ -141,51 +206,131 @@ export default function History() {
           </Animated.View>
 
           {/* Notre Motivation */}
-          <Animated.View entering={FadeInUp.delay(800)} style={styles.card}>
-            <Text style={[styles.subtitle, { color: currentTheme.colors.secondary }]}>
+          <Animated.View
+            entering={FadeInUp.delay(800)}
+            style={[
+              styles.card,
+              { borderColor: isDarkMode ? "#FFD700" : "#FF8C00" },
+            ]}
+          >
+            <Text
+              style={[
+                styles.subtitle,
+                { color: currentTheme.colors.secondary },
+              ]}
+            >
               {t("history.motivationTitle")}
             </Text>
-            <Text style={[styles.paragraph, { color: currentTheme.colors.textSecondary }]}>
+            <Text
+              style={[
+                styles.paragraph,
+                { color: currentTheme.colors.textSecondary },
+              ]}
+            >
               {t("history.motivation")}
             </Text>
           </Animated.View>
 
           {/* Le Sens du Logo */}
-          <Animated.View entering={FadeInUp.delay(1000)} style={styles.card}>
-            <Text style={[styles.subtitle, { color: currentTheme.colors.secondary }]}>
+          <Animated.View
+            entering={FadeInUp.delay(1000)}
+            style={[
+              styles.card,
+              { borderColor: isDarkMode ? "#FFD700" : "#FF8C00" },
+            ]}
+          >
+            <Text
+              style={[
+                styles.subtitle,
+                { color: currentTheme.colors.secondary },
+              ]}
+            >
               {t("history.logoMeaningTitle")}
             </Text>
-            <Text style={[styles.paragraph, { color: currentTheme.colors.textSecondary }]}>
+            <Text
+              style={[
+                styles.paragraph,
+                { color: currentTheme.colors.textSecondary },
+              ]}
+            >
               {t("history.logoMeaning")}
             </Text>
           </Animated.View>
 
           {/* Notre Vision */}
-          <Animated.View entering={FadeInUp.delay(1200)} style={styles.card}>
-            <Text style={[styles.subtitle, { color: currentTheme.colors.secondary }]}>
+          <Animated.View
+            entering={FadeInUp.delay(1200)}
+            style={[
+              styles.card,
+              { borderColor: isDarkMode ? "#FFD700" : "#FF8C00" },
+            ]}
+          >
+            <Text
+              style={[
+                styles.subtitle,
+                { color: currentTheme.colors.secondary },
+              ]}
+            >
               {t("history.visionTitle")}
             </Text>
-            <Text style={[styles.paragraph, { color: currentTheme.colors.textSecondary }]}>
+            <Text
+              style={[
+                styles.paragraph,
+                { color: currentTheme.colors.textSecondary },
+              ]}
+            >
               {t("history.vision")}
             </Text>
           </Animated.View>
 
           {/* Les Débuts */}
-          <Animated.View entering={FadeInUp.delay(1400)} style={styles.card}>
-            <Text style={[styles.subtitle, { color: currentTheme.colors.secondary }]}>
-              {t("history beginningsTitle")}
+          <Animated.View
+            entering={FadeInUp.delay(1400)}
+            style={[
+              styles.card,
+              { borderColor: isDarkMode ? "#FFD700" : "#FF8C00" },
+            ]}
+          >
+            <Text
+              style={[
+                styles.subtitle,
+                { color: currentTheme.colors.secondary },
+              ]}
+            >
+              {t("history.beginningsTitle")}
             </Text>
-            <Text style={[styles.paragraph, { color: currentTheme.colors.textSecondary }]}>
+            <Text
+              style={[
+                styles.paragraph,
+                { color: currentTheme.colors.textSecondary },
+              ]}
+            >
               {t("history.beginnings")}
             </Text>
           </Animated.View>
 
           {/* L'Engagement Communautaire */}
-          <Animated.View entering={FadeInUp.delay(1600)} style={styles.card}>
-            <Text style={[styles.subtitle, { color: currentTheme.colors.secondary }]}>
+          <Animated.View
+            entering={FadeInUp.delay(1600)}
+            style={[
+              styles.card,
+              { borderColor: isDarkMode ? "#FFD700" : "#FF8C00" },
+            ]}
+          >
+            <Text
+              style={[
+                styles.subtitle,
+                { color: currentTheme.colors.secondary },
+              ]}
+            >
               {t("history.communityEngagementTitle")}
             </Text>
-            <Text style={[styles.paragraph, { color: currentTheme.colors.textSecondary }]}>
+            <Text
+              style={[
+                styles.paragraph,
+                { color: currentTheme.colors.textSecondary },
+              ]}
+            >
               {t("history.communityEngagement")}
             </Text>
           </Animated.View>
@@ -199,9 +344,25 @@ export default function History() {
               end={{ x: 1, y: 1 }}
             >
               <Text
-                style={[styles.footerText, { color: currentTheme.colors.textPrimary }]}
+                style={[
+                  styles.footerText,
+                  {
+                    color: isDarkMode
+                      ? currentTheme.colors.textPrimary
+                      : "#000000",
+                  },
+                ]}
               >
-                <Text style={[styles.boldText, { color: currentTheme.colors.textPrimary }]}>
+                <Text
+                  style={[
+                    styles.boldText,
+                    {
+                      color: isDarkMode
+                        ? currentTheme.colors.textPrimary
+                        : "#000000",
+                    },
+                  ]}
+                >
                   {t("history.finalThanksTitle")}
                 </Text>{" "}
                 {t("history.finalThanksMessage")}
@@ -222,18 +383,28 @@ const styles = StyleSheet.create({
     flex: 1,
   },
   headerWrapper: {
-    flexDirection: "row",
-    alignItems: "center",
-    justifyContent: "center",
+    paddingHorizontal: SPACING,
+    paddingVertical: SPACING / 2,
+    position: "relative",
     marginTop: SPACING,
     marginBottom: SPACING,
-    paddingHorizontal: SPACING,
-    position: "relative",
+  },
+  titleContainer: {
+    alignItems: "center",
+    justifyContent: "center",
   },
   title: {
     fontSize: normalizeSize(28),
     fontFamily: "Comfortaa_700Bold",
     textAlign: "center",
+  },
+  backButton: {
+    position: "absolute",
+    top:
+      Platform.OS === "android" ? StatusBar.currentHeight ?? SPACING : SPACING,
+    left: SPACING,
+    zIndex: 10,
+    padding: SPACING / 2,
   },
   contentContainer: {
     paddingHorizontal: SPACING,
@@ -243,31 +414,27 @@ const styles = StyleSheet.create({
     alignItems: "center",
     marginBottom: SPACING * 2,
   },
+  logo: {
+    width: SCREEN_WIDTH * 0.4,
+    height: SCREEN_WIDTH * 0.4,
+    // Supprime les ombres et bordures du LinearGradient
+  },
   logoGradient: {
     borderRadius: normalizeSize(20),
     padding: SPACING / 2,
-    shadowColor: "#000",
+    shadowColor: "transparent",
     shadowOffset: { width: 0, height: normalizeSize(6) },
     shadowOpacity: 0.3,
     shadowRadius: normalizeSize(8),
     elevation: 8,
   },
-  logo: {
-    width: SCREEN_WIDTH * 0.4,
-    height: SCREEN_WIDTH * 0.4,
-  },
+
   card: {
     backgroundColor: "transparent",
     borderRadius: normalizeSize(20),
     padding: SPACING,
     marginBottom: SPACING,
-    shadowColor: "#000",
-    shadowOffset: { width: 0, height: normalizeSize(6) },
-    shadowOpacity: 0.25,
-    shadowRadius: normalizeSize(8),
-    elevation: 8,
     borderWidth: 1,
-    borderColor: "transparent",
   },
   subtitle: {
     fontSize: normalizeSize(22),
@@ -278,7 +445,6 @@ const styles = StyleSheet.create({
     fontSize: normalizeSize(16),
     lineHeight: normalizeSize(24),
     fontFamily: "Comfortaa_400Regular",
-    textAlign: "justify",
   },
   boldText: {
     fontFamily: "Comfortaa_700Bold",
@@ -290,7 +456,7 @@ const styles = StyleSheet.create({
   },
   featureIcon: {
     marginRight: SPACING,
-    marginTop: normalizeSize(2),
+    marginTop: normalizeSize(3),
   },
   featureText: {
     flex: 1,
@@ -303,11 +469,6 @@ const styles = StyleSheet.create({
     marginBottom: SPACING * 2,
     borderRadius: normalizeSize(15),
     overflow: "hidden",
-    shadowColor: "#000",
-    shadowOffset: { width: 0, height: normalizeSize(4) },
-    shadowOpacity: 0.3,
-    shadowRadius: normalizeSize(6),
-    elevation: 5,
   },
   footerGradient: {
     padding: SPACING,

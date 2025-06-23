@@ -172,6 +172,18 @@
       "title": "Bleibe positiv",
       "description": "Auch wenn du mal scheiterst: Jeder Tag ist ein Neuanfang. Lerne aus Fehlern und mach weiter."
     },
+    "takeBreaks": {
+      "title": "Mach regelmäßig Pausen",
+      "description": "Kurze Pausen können Fokus und Produktivität verbessern. Probiere die Pomodoro-Technik aus: Arbeite 25 Minuten und mache dann eine 5-minütige Pause."
+    },
+    "stayHydrated": {
+      "title": "Bleib hydriert",
+      "description": "Ausreichend Wasser zu trinken hilft, Energie und Konzentration aufrechtzuerhalten. Halte eine Wasserflasche griffbereit und stelle Erinnerungen ein, um den Tag über zu trinken."
+    },
+    "celebrateWins": {
+      "title": "Feiere deine Erfolge",
+      "description": "Deine Erfolge, egal wie klein, zu würdigen steigert Motivation und Selbstvertrauen. Nimm dir einen Moment, um deine Fortschritte anzuerkennen und dich zu belohnen."
+    },
     "readMore": "Mehr lesen",
     "showLess": "Weniger anzeigen",
     "footerQuery": "Weitere Fragen oder persönliche Hilfe gewünscht?",
@@ -362,7 +374,8 @@
     "save": "Speichern",
     "saved": "Gespeichert",
     "share": "Teilen",
-    "stats": "Statistiken"
+    "stats": "Statistiken",
+    "inviteA11y": "Freund zu dieser Herausforderung einladen"
   },
   "explanation": {
     "title": "Deine Stimme zählt!",
@@ -384,8 +397,42 @@
   },
   "achievements": {
     "first_connection": "Erste Verbindung",
-    "profile_completed": "Profil vollständig",
-    "finishChallenge_10": "Ernst bei Herausforderungen"
+    "profile_completed": "Profil vervollständigt",
+    "finishChallenge_10": "Herausforderungsprofi",
+    "finishChallenge_1": "Erste Herausforderung geschafft",
+    "finishChallenge_3": "Motivierter Anfänger",
+    "finishChallenge_25": "Herausforderungsmaschine",
+    "finishChallenge_50": "Unaufhaltsam!",
+    "finishChallenge_100": "Lebende Legende",
+    "selectChallengeDays_7": "Ich starte",
+    "selectChallengeDays_30": "Entschlossenheit",
+    "selectChallengeDays_90": "Marathonläufer",
+    "selectChallengeDays_180": "Langzeitdenker",
+    "selectChallengeDays_365": "Legendäre Geduld",
+    "streakProgress_3": "Mini-Serie",
+    "streakProgress_7": "Routine etabliert",
+    "streakProgress_14": "Beeindruckend!",
+    "streakProgress_30": "Starke Entschlossenheit",
+    "streakProgress_60": "Nichts hält mich auf",
+    "streakProgress_90": "Ich bin eine Maschine",
+    "streakProgress_180": "Absolute Disziplin",
+    "streakProgress_365": "Ich bin ein Monster",
+    "messageSent_1": "Erste Nachricht gesendet",
+    "messageSent_10": "Teamgeist",
+    "messageSent_50": "Aktives Community-Mitglied",
+    "shareChallenge_1": "Ich teile gern",
+    "shareChallenge_5": "Aufstrebender Influencer",
+    "shareChallenge_20": "Community-Leader",
+    "inviteFriend_1": "Einen Freund einladen",
+    "inviteFriend_5": "Erweitere dein Team",
+    "inviteFriend_10": "Netzwerkkönig",
+    "voteFeature_1": "Erstes Feature gewählt",
+    "voteFeature_5": "Ich liebe es zu voten",
+    "saveChallenge_1": "Herausforderung gespeichert",
+    "saveChallenge_5": "5 Herausforderungen gespeichert",
+    "challengeCreated_1": "Herausforderungsersteller",
+    "challengeCreated_5": "Ich bin inspiriert",
+    "challengeCreated_10": "Innovator"
   },
   "statsModal": {
     "close": "Schließen",
@@ -486,26 +533,25 @@
   },
   "completedOnDate": "Abgeschlossen am",
   "completion": {
-    "youAreAwesome": "Du bist fantastisch!",
-    "keepItUp": "Mach weiter so!",
+    "trophies": "Trophäen",
+    "reward": "Du hast {{count}} Trophäen gewonnen!",
+    "finalTitle": "Glückwunsch!",
+    "finalMessage": "Du hast {{count}} Trophäen gewonnen!",
+    "errorFinalizingMessage": "Fehler beim Abschließen der Herausforderung.",
+    "adNotReadyTitle": "Anzeige nicht verfügbar",
+    "adNotReady": "Die Anzeige ist noch nicht geladen. Versuche es bald erneut.",
+    "continue": "Weiter",
+    "doubleTrophies": "Verdopple deine Trophäen",
+    "youAreAwesome": "Du bist großartig!",
+    "keepItUp": "Weiter so!",
     "successIsYours": "Der Erfolg gehört dir!",
     "everyEffortCounts": "Jede Anstrengung zählt!",
     "neverGiveUp": "Gib niemals auf!",
     "youAreOnTrack": "Du bist auf dem richtigen Weg!",
     "excellenceAwaits": "Exzellenz erwartet dich!",
-    "headHeldHigh": "Halte den Kopf hoch!",
+    "headHeldHigh": "Kopf hoch!",
     "persistencePays": "Ausdauer zahlt sich aus!",
-    "challengesMakeYouStronger": "Herausforderungen machen dich stärker!",
-    "errorFinalizing": "Fehler beim Abschließen der Herausforderung:",
-    "trophies": "{{count}} Trophäen",
-    "reward": "{{count}} Trophäen",
-    "continue": "Weiter",
-    "doubleTrophies": "Verdopple deine Trophäen",
-    "finalTitle": "Glückwunsch!",
-    "finalMessage": "Herausforderung abgeschlossen! Du erhältst {{count}} Trophäen!",
-    "errorFinalizingMessage": "Herausforderung konnte nicht abgeschlossen werden.",
-    "adNotReadyTitle": "Werbung nicht verfügbar",
-    "adNotReady": "Die Werbung ist noch nicht bereit. Bitte versuche es in ein paar Augenblicken erneut."
+    "challengesMakeYouStronger": "Herausforderungen machen dich stärker!"
   },
   "featureDetail": {
     "votes": "{{count}} Stimme",
@@ -669,39 +715,39 @@
   },
   "history": {
     "title": "Unsere Geschichte",
-    "logoAlt": "ChallengeTies-Logo",
-    "intro": "wurde aus einer kraftvollen Vision geboren: …",
-    "featuresTitle": "Kernfunktionen 🔥",
+    "logoAlt": "ChallengeTies Logo",
+    "intro": "ChallengeTies ist mehr als nur eine App. Es ist eine menschliche Reise – eine Einladung, zu wachsen, dich zu verbinden und alltägliche Gewohnheiten in gemeinsame, positive Herausforderungen zu verwandeln. Ob allein oder mit einem Freund: Jede abgeschlossene Herausforderung ist ein Sieg, jeder Einsatz zählt und jeder Tag ist eine neue Chance, über dich hinauszuwachsen.",
+    "featuresTitle": "Hauptfunktionen",
     "features": {
       "specialChallenges": {
-        "title": "Spezielle Herausforderungen",
-        "desc": "Einzigartige Herausforderungen, die …"
+        "title": "Besondere Herausforderungen",
+        "desc": "Vielfältige, unterhaltsame oder tiefgründige Challenges – alleine oder im Duo. Wähle die passende Dauer und wachse ohne Druck."
       },
       "progressTracking": {
         "title": "Fortschrittsverfolgung",
-        "desc": "Interaktive Tools zur Visualisierung …"
+        "desc": "Beobachte deine Beständigkeit, schalte Trophäen frei, verfolge dein Wachstum und sei stolz auf deine Ausdauer."
       },
       "customChallenges": {
-        "title": "Eigene Herausforderungen",
-        "desc": "Die Möglichkeit, eigene Herausforderungen …"
+        "title": "Individuelle Challenges",
+        "desc": "Erstelle deine eigenen Herausforderungen – angepasst an dein Leben, deine Ziele und deinen Rhythmus. Jeder Weg ist einzigartig."
       },
       "community": {
-        "title": "Engagierte Community",
-        "desc": "Ein Netzwerk Gleichgesinnter …"
+        "title": "Starke Gemeinschaft",
+        "desc": "Werde Teil eines positiven Netzwerks. Schlage Ideen vor, stimme über neue Features ab, teile deinen Weg und wachse gemeinsam."
       }
     },
-    "motivationTitle": "Unsere Motivation 🚀",
-    "motivation": "Wir glauben fest daran, dass jeder Einzelne …",
-    "logoMeaningTitle": "Logo-Bedeutung 🎨",
-    "logoMeaning": "Das ChallengeTies-Logo steht für Einheit …",
-    "visionTitle": "Unsere Vision 🌍",
-    "vision": "Wir sind nicht nur eine App, wir sind eine Bewegung …",
-    "beginningsTitle": "Die Anfänge 📅",
-    "beginnings": "Das ChallengeTies-Abenteuer begann …",
-    "communityEngagementTitle": "Community-Engagement 🤝",
-    "communityEngagement": "Von Anfang an war ChallengeTies stark …",
-    "finalThanksTitle": "Danke, dass du dabei bist …",
-    "finalThanksMessage": "ChallengeTies ist dein Verbündeter …"
+    "motivationTitle": "Warum wir ChallengeTies gegründet haben",
+    "motivation": "Weil wir genug von kalten, einsamen oder schuldbehafteten Apps hatten. Wir wollten etwas Menschliches, etwas, das motiviert und verbindet. ChallengeTies wurde geschaffen, damit jeder in seinem eigenen Tempo wachsen kann – mit Freude, Unterstützung und echtem Sinn.",
+    "logoMeaningTitle": "Warum dieses Logo?",
+    "logoMeaning": "Das zentrale „T“ steht für Ties – die Verbindung. Die galaktische Energie symbolisiert Bewegung, Wachstum und Gemeinschaft. Es ist ein Funke im Universum – der Moment, in dem du dich entscheidest, dich zu verändern.",
+    "visionTitle": "Unsere Vision",
+    "vision": "Wir wollen nicht nur eine App. Wir bauen ein ganzes Ökosystem aus positiven Tools: ChallengeTies, SkillTies, MindTies und mehr. Ein Universum für Wohlbefinden, Lernen und Entwicklung – geführt von Freundlichkeit, Humor und Klarheit.",
+    "beginningsTitle": "Wie alles begann",
+    "beginnings": "Alles begann in einem ausgebauten Van, zwischen Bergen und Code, zwischen Träumen und Realität. Die Idee: Was, wenn eine App Menschen wirklich hilft, ihre Vorsätze in dauerhafte Taten zu verwandeln? Nicht um perfekt zu sein. Sondern besser. Gemeinsam. Eine Challenge nach der anderen.",
+    "communityEngagementTitle": "Von der Community getragen",
+    "communityEngagement": "ChallengeTies gehört nicht uns – es gehört dir. Nutzer schlagen Ideen vor, stimmen ab, gestalten die Zukunft mit. Eine lebendige App, die sich mit ihrer Community weiterentwickelt.",
+    "finalThanksTitle": "Danke ❤️",
+    "finalThanksMessage": "Wenn du das liest, glaubst du an unser Projekt. Von Herzen: Danke. ChallengeTies existiert dank Menschen wie dir – neugierig, positiv, engagiert. Gemeinsam wachsen wir weiter. 🚀"
   },
   "newFeaturesTitle": "Neuigkeiten",
   "tryAnotherSearch": "Versuche eine andere Suche oder Filter.",
@@ -1043,10 +1089,13 @@
     "evening2": "Eine weitere Herausforderung vor dem Schlafengehen?"
   },
   "invitation": {
-    "title": "{username} lädt dich ein!",
-    "message": "Nimm an der Herausforderung {challenge} teil!",
-    "accept": "Akzeptieren",
-    "refuse": "Ablehnen"
+    "title": "An einer Herausforderung teilnehmen",
+    "subtitle": "Du wurdest zur Herausforderung {challengeId} eingeladen!",
+    "accept": "Einladung annehmen",
+    "accepting": "Wird akzeptiert...",
+    "success": "Herausforderung beigetreten!",
+    "invalid": "Ungültige Einladung",
+    "joinedChallenge": "Du bist der Herausforderung erfolgreich beigetreten!"
   },
   "settingsPage": {
     "location": "Standort",
@@ -1062,5 +1111,94 @@
   "explorePageDescription": "Entdecke {challenges} und tritt {communities} bei, um dich inspirieren zu lassen und neue Herausforderungen anzunehmen.",
   "homePageTitle": "Startseite",
   "focusPageTitle": "Fokus",
-  "explorePageTitle": "Entdecken"
+  "explorePageTitle": "Entdecken",
+  "activity": "Aktivität",
+  "listOfNotifications": "Benachrichtigungsliste",
+  "viewInvitation": "Einladung zur Herausforderung {{challenge}}",
+  "invitationIcon": "Einladungssymbol",
+  "noNotifications": "Keine Benachrichtigungen",
+  "noNotificationsIcon": "Symbol für leere Benachrichtigungen",
+  "noNotificationsSubtext": "Du erhältst hier Benachrichtigungen, wenn du zu einer Herausforderung eingeladen wirst.",
+  "backButton": "Zurück",
+  "backButtonHint": "Zur vorherigen Seite zurückkehren",
+  "invitationToChallenge": "Einladung zur Herausforderung {{challenge}}",
+  "receivedOn": "Empfangen am {{date}}",
+  "locale": "de-DE",
+  "access": {
+    "editProfile": {
+      "label": "Profil bearbeiten",
+      "hint": "Zur Seite zur Profilbearbeitung navigieren"
+    },
+    "statistics": {
+      "label": "Statistiken",
+      "hint": "Greife auf deine persönlichen Statistiken zu"
+    },
+    "ongoingChallenges": {
+      "label": "Laufende Herausforderungen",
+      "hint": "Sieh dir deine laufenden Herausforderungen an"
+    },
+    "favorites": {
+      "label": "Favoriten",
+      "hint": "Greife auf deine Lieblingsherausforderungen zu"
+    },
+    "completedChallenges": {
+      "label": "Abgeschlossene Herausforderungen",
+      "hint": "Sieh dir deine abgeschlossenen Herausforderungen an"
+    },
+    "rewards": {
+      "label": "Belohnungen",
+      "hint": "Sieh dir erhaltene Trophäen und Abzeichen an"
+    },
+    "myChallenges": {
+      "label": "Meine Herausforderungen",
+      "hint": "Greife auf deine erstellten Herausforderungen zu"
+    },
+    "activity": {
+      "label": "Aktivität",
+      "hint": "Sieh dir Benachrichtigungen und letzte Aktivitäten an"
+    }
+  },
+  "statDescription": {
+    "savedChallenges": "Gespeicherte Herausforderungen insgesamt.",
+    "ongoingChallenges": "Aktuelle Herausforderungen, an denen du arbeitest.",
+    "completedChallenges": "Erfolgreich abgeschlossene Herausforderungen.",
+    "successRate": "Erfolgsquote basierend auf deinen abgeschlossenen Herausforderungen.",
+    "trophies": "Gesamte Anzahl der erhaltenen Trophäen.",
+    "unlockedAchievements": "Freigeschaltete Erfolge.",
+    "longestStreak": "Deine längste aktive Serie von Tagen."
+  },
+  "pleaseAcceptRules": "Bitte aktiviere das Kontrollkästchen, um die Regeln zu akzeptieren.",
+  "errorSavingRulesAcceptance": "Fehler beim Speichern der Regelakzeptanz.",
+  "iHaveReadRules": "Ich habe die Chat-Regeln gelesen und akzeptiere sie.",
+  "iUnderstand": "Ich verstehe",
+  "acceptRulesCheckbox": "Chat-Regeln akzeptieren",
+  "acceptRulesButton": "Regelakzeptanz bestätigen",
+  "tutorial": {
+    "welcome": {
+      "title": "Willkommen bei ChallengeTies!",
+      "description": "Begib dich auf ein einzigartiges Abenteuer, um Herausforderungen zu meistern und deine Ziele in wenigen Schritten zu erreichen."
+    },
+    "index": {
+      "title": "Entdecke das Wichtigste",
+      "description": "Erkunde beliebte Herausforderungen, erhalte Tipps, sieh dir die Rangliste an und teile deine innovativen Ideen."
+    },
+    "profile": {
+      "title": "Dein Profil, deine Geschichte",
+      "description": "Passe dein Profil an, verfolge deine Statistiken, verwalte aktive, gespeicherte, erstellte Herausforderungen und deine Benachrichtigungen."
+    },
+    "focus": {
+      "title": "Bleib fokussiert",
+      "description": "Sieh dir deine täglichen, laufenden oder abgeschlossenen Herausforderungen an und setze neue Ziele, um weiterzukommen."
+    },
+    "explore": {
+      "title": "Erkunde ohne Grenzen",
+      "description": "Finde alle bestehenden Herausforderungen aus der Community und nutze Filter, um Inspiration zu finden."
+    },
+    "buttons": {
+      "start": "Start",
+      "skip": "Überspringen",
+      "next": "Weiter",
+      "finish": "Los geht's!"
+    }
+  }
 }

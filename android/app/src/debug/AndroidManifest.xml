@@ -1,25 +1,7 @@
-<?xml version="1.0" encoding="utf-8"?>
 <manifest xmlns:android="http://schemas.android.com/apk/res/android"
-          xmlns:tools="http://schemas.android.com/tools">
+    xmlns:tools="http://schemas.android.com/tools">
 
-  <uses-permission android:name="android.permission.SYSTEM_ALERT_WINDOW"/>
+    <uses-permission android:name="android.permission.SYSTEM_ALERT_WINDOW"/>
 
-  <application
-    android:usesCleartextTraffic="true"
-    tools:targetApi="28"
-    tools:ignore="GoogleAppIndexingWarning"
-    tools:replace="android:usesCleartextTraffic">
-
-    <!-- Override des meta-data Google Ads vides du plugin -->
-    <meta-data
-      android:name="com.google.android.gms.ads.APPLICATION_ID"
-      android:value="ca-app-pub-4725616526467159~2289013149"
-      tools:replace="android:value"/>
-
-    <meta-data
-      android:name="com.google.android.gms.ads.DELAY_APP_MEASUREMENT_INIT"
-      android:value="true"
-      tools:replace="android:value"/>
-
-  </application>
+    <application android:usesCleartextTraffic="true" tools:targetApi="28" tools:ignore="GoogleAppIndexingWarning" tools:replace="android:usesCleartextTraffic" />
 </manifest>

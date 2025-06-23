@@ -12,7 +12,9 @@ import {
   Animated as RNAnimated,
   Share,
   StatusBar,
+  Platform,
 } from "react-native";
+
 import { Ionicons } from "@expo/vector-icons";
 import { useRouter, useLocalSearchParams } from "expo-router";
 import {
@@ -22,6 +24,9 @@ import {
   getDoc,
   updateDoc,
   increment,
+  query,
+  collection,
+  where,
 } from "firebase/firestore";
 import { db, auth } from "../../constants/firebase-config";
 import ConfettiCannon from "react-native-confetti-cannon";
@@ -51,7 +56,7 @@ import {
 
 const { width: SCREEN_WIDTH, height: SCREEN_HEIGHT } = Dimensions.get("window");
 const SPACING = 15;
-
+const BANNER_HEIGHT = 50;
 const normalizeSize = (size: number) => {
   const scale = SCREEN_WIDTH / 375;
   return Math.round(size * scale);
@@ -100,15 +105,9 @@ export default function ChallengeDetails() {
     selectedDays?: string;
     completedDays?: string;
   }>();
-  const inviteId = useLocalSearchParams().invite as string | undefined;
-  const [invitationModalVisible, setInvitationModalVisible] = useState(
-    !!inviteId
-  );
+  const [invitation, setInvitation] = useState<{ id: string } | null>(null);
+  const [invitationModalVisible, setInvitationModalVisible] = useState(false);
   const id = params.id || "";
-  const routeTitle = params.title || t("challengeDetails.untitled");
-  const routeCategory = params.category || t("challengeDetails.uncategorized");
-  const routeDescription =
-    params.description || t("challengeDetails.noDescription");
 
   const { savedChallenges, addChallenge, removeChallenge } =
     useSavedChallenges();
@@ -135,6 +134,15 @@ export default function ChallengeDetails() {
   const [daysOptions, setDaysOptions] = useState<number[]>([
     7, 14, 21, 30, 60, 90, 180, 365,
   ]);
+  const [routeTitle, setRouteTitle] = useState(
+    params.title || t("challengeDetails.untitled")
+  );
+  const [routeCategory, setRouteCategory] = useState(
+    params.category || t("challengeDetails.uncategorized")
+  );
+  const [routeDescription, setRouteDescription] = useState(
+    params.description || t("challengeDetails.noDescription")
+  );
   const [localSelectedDays, setLocalSelectedDays] = useState<number>(10);
   const [finalSelectedDays, setFinalSelectedDays] = useState<number>(0);
   const [finalCompletedDays, setFinalCompletedDays] = useState<number>(0);
@@ -151,18 +159,70 @@ export default function ChallengeDetails() {
   useEffect(() => {
     if (!id) return;
     const challengeRef = doc(db, "challenges", id);
-    const unsubscribe = onSnapshot(challengeRef, (docSnap) => {
-      if (docSnap.exists()) {
-        const data = docSnap.data();
-        setChallengeImage(data.imageUrl || null);
-        setDaysOptions(data.daysOptions || [7, 14, 21, 30, 60, 90, 180, 365]);
-        setUserHasTaken(
-          (data.usersTakingChallenge || []).includes(auth.currentUser?.uid)
-        );
-        setUserCount(data.participantsCount || 0);
+    const unsubscribe = onSnapshot(
+      challengeRef,
+      (docSnap) => {
+        if (docSnap.exists()) {
+          const data = docSnap.data();
+          console.log("📊 Données du défi :", data); // Log pour débogage
+          setChallengeImage(data.imageUrl || null);
+          setDaysOptions(data.daysOptions || [7, 14, 21, 30, 60, 90, 180, 365]);
+          setUserHasTaken(
+            (data.usersTakingChallenge || []).includes(auth.currentUser?.uid)
+          );
+          setUserCount(data.participantsCount || 0);
+          // Ajoute les données pour l’UI
+          setRouteTitle(data.title || t("challengeDetails.untitled"));
+          setRouteCategory(
+            data.category || t("challengeDetails.uncategorized")
+          );
+          setRouteDescription(
+            data.description || t("challengeDetails.noDescription")
+          );
+        } else {
+          console.warn("⚠️ Défi non trouvé pour ID :", id);
+        }
+        setLoading(false);
+      },
+      (error) => {
+        console.error("❌ Erreur récupération défi :", error);
+        setLoading(false);
       }
-      setLoading(false);
-    });
+    );
+    return () => unsubscribe();
+  }, [id, t]);
+
+  useEffect(() => {
+    if (!auth.currentUser || !id) return;
+
+    const q = query(
+      collection(db, "invitations"),
+      where("inviteeId", "==", auth.currentUser.uid),
+      where("challengeId", "==", id),
+      where("status", "==", "pending")
+    );
+
+    const unsubscribe = onSnapshot(
+      q,
+      (snapshot) => {
+        if (!snapshot.empty) {
+          const inviteDoc = snapshot.docs[0];
+          console.log("✅ INVITATION TROUVÉE :", inviteDoc.id);
+          setInvitation({ id: inviteDoc.id });
+          setTimeout(() => {
+            setInvitationModalVisible(true); // pour éviter bug de navigation trop rapide
+          }, 300);
+        } else {
+          console.log("❌ Aucune invitation en attente");
+          setInvitation(null);
+          setInvitationModalVisible(false);
+        }
+      },
+      (error) => {
+        console.error("🔥 Erreur onSnapshot invitation :", error);
+      }
+    );
+
     return () => unsubscribe();
   }, [id]);
 
@@ -430,9 +490,10 @@ export default function ChallengeDetails() {
 
   const handleShareChallenge = useCallback(async () => {
     try {
+      const inviteLink = await createInvitation(id as string);
       const shareOptions = {
-        title: routeTitle,
-        message: `${routeTitle}\n\n${routeDescription}\n\nRelevez ce défi sur ChallengeTies !`,
+        title: t("challengeDetails.invite"),
+        message: `Rejoins mon défi "${routeTitle}" sur ChallengeTies ! ${inviteLink}`,
       };
       const result = await Share.share(shareOptions);
       if (result.action === Share.sharedAction) {
@@ -445,14 +506,14 @@ export default function ChallengeDetails() {
           console.log("Compteur de partage incrémenté.");
           await checkForAchievements(userId);
         }
-        console.log("Challenge partagé");
+        console.log("Challenge partagé:", inviteLink);
       } else if (result.action === Share.dismissedAction) {
         console.log("Partage annulé");
       }
     } catch (error: any) {
       Alert.alert(t("alerts.shareError"), error.message);
     }
-  }, [routeTitle, routeDescription]);
+  }, [id, routeTitle]);
 
   const handleViewStats = useCallback(() => {
     if (!userHasTaken) return;
@@ -512,7 +573,27 @@ export default function ChallengeDetails() {
         explosionSpeed={800}
         fallSpeed={3000}
       />
-      <ScrollView showsVerticalScrollIndicator={false}>
+      <ScrollView
+        showsVerticalScrollIndicator={false}
+        contentContainerStyle={{ paddingBottom: BANNER_HEIGHT + SPACING * 2 }} // Ajoute un padding bottom pour dépasser la bannière
+      >
+        <View style={styles.headerWrapper}>
+          <Animated.View entering={FadeInUp} style={styles.backButtonContainer}>
+            <TouchableOpacity
+              onPress={() => router.back()}
+              style={[styles.backButton, styles.backButtonOverlay]}
+              accessibilityLabel={t("backButton")}
+              accessibilityHint={t("backButtonHint")}
+              testID="back-button"
+            >
+              <Ionicons
+                name="arrow-back"
+                size={normalizeSize(24)}
+                color={isDarkMode ? "#FFD700" : currentTheme.colors.secondary}
+              />
+            </TouchableOpacity>
+          </Animated.View>
+        </View>
         <View style={styles.carouselContainer}>
           <LinearGradient
             colors={[
@@ -551,7 +632,6 @@ export default function ChallengeDetails() {
                 </Text>
               </View>
             )}
-            <BackButton color={currentTheme.colors.textPrimary} />
           </LinearGradient>
         </View>
         <Animated.View
@@ -561,7 +641,9 @@ export default function ChallengeDetails() {
           <Text
             style={[
               styles.infoRecipeName,
-              { color: currentTheme.colors.textPrimary },
+              {
+                color: isDarkMode ? currentTheme.colors.textPrimary : "#000000",
+              }, // Couleur dynamique
             ]}
           >
             {routeTitle}
@@ -634,13 +716,17 @@ export default function ChallengeDetails() {
                   ]}
                 >
                   <LinearGradient
-                    colors={[
-                      currentTheme.colors.primary,
-                      currentTheme.colors.secondary,
-                    ]}
+                    colors={
+                      isDarkMode
+                        ? ["#FFD700", "#FFD700"] // Gold uni en dark mode
+                        : [
+                            currentTheme.colors.primary,
+                            currentTheme.colors.secondary,
+                          ]
+                    }
                     style={[
                       styles.progressBarFill,
-                      { width: progressPercent * normalizeSize(250) },
+                      { width: progressPercent * normalizeSize(200) },
                     ]}
                     start={{ x: 0, y: 0 }}
                     end={{ x: 1, y: 1 }}
@@ -671,33 +757,42 @@ export default function ChallengeDetails() {
                   }
                   testID="mark-today-button"
                 >
-                  <LinearGradient
-                    colors={
-                      isMarkedToday(id, finalSelectedDays)
-                        ? [
-                            currentTheme.colors.border,
-                            currentTheme.colors.overlay,
-                          ]
-                        : [
-                            currentTheme.colors.primary,
-                            currentTheme.colors.secondary,
-                          ]
-                    }
-                    style={styles.markTodayButtonGradient}
-                    start={{ x: 0, y: 0 }}
-                    end={{ x: 1, y: 1 }}
-                  >
-                    <Text
+                  {isMarkedToday(id, finalSelectedDays) ? (
+                    <View
                       style={[
-                        styles.markTodayButtonText,
-                        { color: currentTheme.colors.textPrimary },
+                        styles.markTodayButtonGradient,
+                        { backgroundColor: "#808080" },
                       ]}
                     >
-                      {isMarkedToday(id, finalSelectedDays)
-                        ? t("challengeDetails.alreadyMarked")
-                        : t("challengeDetails.markToday")}
-                    </Text>
-                  </LinearGradient>
+                      <Text
+                        style={[
+                          styles.markTodayButtonText,
+                          { color: currentTheme.colors.textPrimary },
+                        ]}
+                      >
+                        {t("challengeDetails.alreadyMarked")}
+                      </Text>
+                    </View>
+                  ) : (
+                    <LinearGradient
+                      colors={[
+                        currentTheme.colors.primary,
+                        currentTheme.colors.secondary,
+                      ]}
+                      style={styles.markTodayButtonGradient}
+                      start={{ x: 0, y: 0 }}
+                      end={{ x: 1, y: 1 }}
+                    >
+                      <Text
+                        style={[
+                          styles.markTodayButtonText,
+                          { color: currentTheme.colors.textPrimary },
+                        ]}
+                      >
+                        {t("challengeDetails.markToday")}
+                      </Text>
+                    </LinearGradient>
+                  )}
                 </TouchableOpacity>
               </Animated.View>
             )}
@@ -745,12 +840,12 @@ export default function ChallengeDetails() {
             <TouchableOpacity
               style={styles.actionIcon}
               onPress={handleNavigateToChat}
-              accessibilityLabel="Accéder au chat du défi"
+              accessibilityLabel={t("challengeDetails.chatA11y")}
               testID="chat-button"
             >
               <Ionicons
                 name="chatbubble-ellipses-outline"
-                size={normalizeSize(28)}
+                size={normalizeSize(22)} // Taille réduite pour compacité
                 color={currentTheme.colors.textSecondary}
               />
               <Text
@@ -767,8 +862,8 @@ export default function ChallengeDetails() {
               onPress={handleSaveChallenge}
               accessibilityLabel={
                 isSavedChallenge(id)
-                  ? "Retirer des sauvegardés"
-                  : "Sauvegarder le défi"
+                  ? t("challengeDetails.removeSavedA11y")
+                  : t("challengeDetails.saveA11y")
               }
               testID="save-button"
             >
@@ -782,7 +877,7 @@ export default function ChallengeDetails() {
                     ? "bookmark"
                     : "bookmark-outline"
                 }
-                size={normalizeSize(28)}
+                size={normalizeSize(22)} // Taille réduite
                 color={
                   pendingFavorite !== null
                     ? pendingFavorite
@@ -811,12 +906,12 @@ export default function ChallengeDetails() {
             <TouchableOpacity
               style={styles.actionIcon}
               onPress={handleShareChallenge}
-              accessibilityLabel="Partager le défi"
+              accessibilityLabel={t("challengeDetails.shareA11y")}
               testID="share-button"
             >
               <Ionicons
                 name="share-social-outline"
-                size={normalizeSize(28)}
+                size={normalizeSize(22)}
                 color={currentTheme.colors.textSecondary}
               />
               <Text
@@ -831,12 +926,13 @@ export default function ChallengeDetails() {
             <TouchableOpacity
               style={[styles.actionIcon, { opacity: userHasTaken ? 1 : 0.5 }]}
               onPress={userHasTaken ? handleViewStats : undefined}
-              accessibilityLabel="Voir les statistiques"
+              accessibilityLabel={t("challengeDetails.statsA11y")}
               testID="stats-button"
+              disabled={!userHasTaken}
             >
               <Ionicons
                 name="stats-chart-outline"
-                size={normalizeSize(28)}
+                size={normalizeSize(22)}
                 color={currentTheme.colors.textSecondary}
               />
               <Text
@@ -854,24 +950,42 @@ export default function ChallengeDetails() {
                 try {
                   const inviteLink = await createInvitation(id as string);
                   await share.open({
-                    message: inviteLink,
+                    message: `Rejoins mon défi sur ChallengeTies ! Clique ici : ${inviteLink}`,
                     title: t("challengeDetails.invite"),
+                    url: inviteLink,
                   });
                   console.log("📩 Invitation partagée:", inviteLink);
-                } catch (error) {
-                  console.error("❌ Erreur partage invitation:", error);
-                  Alert.alert(
-                    t("alerts.error"),
-                    t("challengeDetails.inviteError")
-                  );
+
+                  const userId = auth.currentUser?.uid;
+                  if (userId) {
+                    const userRef = doc(db, "users", userId);
+                    await updateDoc(userRef, {
+                      shareChallenge: increment(1),
+                    });
+                    await checkForAchievements(userId);
+                  }
+                } catch (error: any) {
+                  // Ne rien faire si l'utilisateur annule
+                  if (
+                    error.message?.includes("User did not share") ||
+                    error.message?.includes("cancelled")
+                  ) {
+                    console.log("ℹ️ Partage annulé par l'utilisateur.");
+                  } else {
+                    console.error("❌ Erreur partage invitation:", error);
+                    Alert.alert(
+                      t("alerts.error"),
+                      t("challengeDetails.inviteError")
+                    );
+                  }
                 }
               }}
-              accessibilityLabel="Inviter un ami"
+              accessibilityLabel={t("challengeDetails.inviteA11y")}
               testID="invite-button"
             >
               <Ionicons
                 name="person-add-outline"
-                size={normalizeSize(28)}
+                size={normalizeSize(22)}
                 color={currentTheme.colors.textSecondary}
               />
               <Text
@@ -886,13 +1000,6 @@ export default function ChallengeDetails() {
           </Animated.View>
         </Animated.View>
       </ScrollView>
-
-      <InvitationModal
-        visible={invitationModalVisible}
-        inviteId={inviteId || null}
-        challengeId={id as string}
-        onClose={() => setInvitationModalVisible(false)}
-      />
 
       <DurationSelectionModal
         visible={modalVisible}
@@ -932,14 +1039,32 @@ export default function ChallengeDetails() {
             console.error("Échec chargement bannière", err)
           }
         />
+        <InvitationModal
+          visible={invitationModalVisible}
+          inviteId={invitation?.id || null}
+          challengeId={id as string}
+          onClose={() => setInvitationModalVisible(false)}
+        />
       </View>
+      <InvitationModal
+        visible={invitationModalVisible}
+        inviteId={invitation?.id || null}
+        challengeId={id as string}
+        onClose={() => setInvitationModalVisible(false)}
+      />
     </LinearGradient>
   );
 }
 
 const styles = StyleSheet.create({
-  container: { flex: 1 },
-  carouselContainer: { height: SCREEN_HEIGHT * 0.3 },
+  container: {
+    flex: 1,
+    paddingBottom: BANNER_HEIGHT + SPACING * 2, // Ajoute un padding bottom au conteneur principal
+  },
+  carouselContainer: {
+    height: SCREEN_HEIGHT * 0.3,
+    zIndex: 10, // Réduit le zIndex pour que le back button passe au-dessus
+  },
   imageContainer: {
     flex: 1,
     justifyContent: "center",
@@ -955,17 +1080,25 @@ const styles = StyleSheet.create({
     width: SCREEN_WIDTH,
     alignItems: "center",
     backgroundColor: "transparent",
+    zIndex: 1, // Assure que la bannière reste au-dessus mais ne coupe pas
   },
   image: {
     ...StyleSheet.absoluteFillObject,
     width: "100%",
     height: SCREEN_HEIGHT * 0.3,
   },
-  backButton: {
+  backButtonContainer: {
     position: "absolute",
-    top: SPACING / 2,
+    top:
+      Platform.OS === "android" ? StatusBar.currentHeight ?? SPACING : SPACING,
     left: SPACING,
-    zIndex: 2,
+    zIndex: 20, // Augmente le zIndex pour être au-dessus de l'image et du gradient
+  },
+  backButton: {
+    padding: SPACING / 2,
+  },
+  backButtonOverlay: {
+    backgroundColor: "rgba(0, 0, 0, 0.5)", // Overlay semi-transparent
     borderRadius: normalizeSize(20),
     padding: SPACING / 2,
   },
@@ -983,7 +1116,8 @@ const styles = StyleSheet.create({
     flex: 1,
     padding: SPACING,
     paddingTop: SPACING,
-    alignItems: "center",
+    alignItems: "center", // Déjà présent, juste pour confirmer
+    justifyContent: "center", // Ajoute pour centrage vertical
   },
   infoRecipeName: {
     fontSize: normalizeSize(28),
@@ -1047,6 +1181,7 @@ const styles = StyleSheet.create({
     paddingHorizontal: SPACING * 2,
     alignItems: "center",
     justifyContent: "center",
+    borderRadius: normalizeSize(25), // Ajoute pour cohérence
   },
   markTodayButtonText: {
     fontSize: normalizeSize(16),
@@ -1064,7 +1199,7 @@ const styles = StyleSheet.create({
     height: normalizeSize(10),
     borderRadius: normalizeSize(5),
     overflow: "hidden",
-    alignSelf: "center",
+    alignSelf: "center", // Déjà présent
     marginTop: SPACING,
   },
   progressBarFill: {
@@ -1099,18 +1234,27 @@ const styles = StyleSheet.create({
   },
   actionIconsContainer: {
     flexDirection: "row",
-    justifyContent: "space-around",
+    flexWrap: "wrap",
+    justifyContent: "center",
+    alignItems: "center",
     marginTop: SPACING * 2,
-    width: "100%",
+    minWidth: "100%",
+    paddingHorizontal: SPACING / 2,
+    paddingBottom: BANNER_HEIGHT + SPACING, // Ajoute un padding bottom pour plus d’espace
   },
   actionIcon: {
     alignItems: "center",
-    marginHorizontal: SPACING,
+    justifyContent: "center",
+    marginHorizontal: normalizeSize(8),
+    marginVertical: normalizeSize(12), // Augmente l’espacement vertical pour un look premium
+    width: normalizeSize(70),
+    minHeight: normalizeSize(80), // Augmente la hauteur minimale pour que le texte soit bien visible
   },
   actionIconLabel: {
-    marginTop: SPACING / 2,
-    fontSize: normalizeSize(12),
+    marginTop: normalizeSize(4),
+    fontSize: normalizeSize(12), // Augmente légèrement la taille pour lisibilité
     fontFamily: "Comfortaa_400Regular",
+    textAlign: "center",
   },
   loadingContainer: {
     flex: 1,
@@ -1121,5 +1265,12 @@ const styles = StyleSheet.create({
     marginTop: SPACING,
     fontSize: normalizeSize(16),
     fontFamily: "Comfortaa_400Regular",
+  },
+  headerWrapper: {
+    paddingHorizontal: SPACING,
+    paddingVertical: SPACING / 2,
+    position: "relative",
+    marginTop: SPACING,
+    marginBottom: SPACING,
   },
 });

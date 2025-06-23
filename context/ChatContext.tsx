@@ -27,6 +27,7 @@ interface Message {
   userId: string;
   username: string;
   avatar: string;
+  reported: boolean;
 }
 
 interface ChatContextType {
@@ -87,6 +88,7 @@ export const ChatProvider: React.FC<{ children: React.ReactNode }> = ({
       userId: uid,
       username: displayName || "Anonymous",
       avatar: photoURL || "",
+      reported: false, // Ajout du champ reported
     });
 
     // Incrémente le compteur de messages dans le document utilisateur

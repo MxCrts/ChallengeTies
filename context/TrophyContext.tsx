@@ -64,13 +64,14 @@ export const TrophyProvider: React.FC<{ children: ReactNode }> = ({
     try {
       await claimAchievement(userId, achievementEarned, isDoubleReward);
       console.log("✅ Succès réclamé avec succès. Mise à jour du profil...");
+      setShowTrophyModal(false); // Fermer d’abord
+      await new Promise((resolve) => setTimeout(resolve, 600)); // Attendre l’animation
       await triggerProfileUpdate();
     } catch (error: any) {
       console.error("❌ Erreur lors de la réclamation du trophée :", error);
     }
 
     // Réinitialisation des états
-    setShowTrophyModal(false);
     setTrophiesEarned(0);
     setAchievementEarned(null);
     setIsDoubleReward(false);

@@ -1,0 +1,29 @@
+<!DOCTYPE html>
+<html>
+  <head>
+    <meta charset="utf-8" />
+    <title>ChallengeTies Invitation</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <meta name="apple-itunes-app" content="app-id=your-app-store-id" />
+    <script>
+      // Récupère le chemin et les query params
+      const path = window.location.pathname;
+      const query = window.location.search;
+
+      // Tente d'ouvrir l'appli
+      window.location =
+        "myapp://challenge-details" +
+        path.replace("/challenge-details", "") +
+        query;
+
+      // Redirige vers Play Store après 1 seconde
+      setTimeout(function () {
+        window.location =
+          "https://play.google.com/store/apps/details?id=com.mxcrts.ChallengeTies";
+      }, 1000);
+    </script>
+  </head>
+  <body>
+    <p>Redirection vers ChallengeTies...</p>
+  </body>
+</html>

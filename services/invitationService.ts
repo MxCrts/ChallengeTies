@@ -9,9 +9,12 @@ import {
   query,
   where,
   getDocs,
+  runTransaction,
+  arrayUnion,
+  increment,
 } from "firebase/firestore";
 import { db, auth } from "../constants/firebase-config";
-import { sendInvitationNotification } from "./notificationService"; // À ajouter dans notificationService.ts
+import { sendInvitationNotification } from "./notificationService";
 
 // Interface pour invitation
 interface Invitation {
@@ -33,7 +36,7 @@ interface Progress {
 
 // ✅ Créer une invitation
 export const createInvitation = async (
-  challengeId: string
+  chatId: string // Change challengeId en chatId
 ): Promise<string> => {
   try {
     const userId = auth.currentUser?.uid;
@@ -42,10 +45,9 @@ export const createInvitation = async (
       throw new Error("Utilisateur non connecté");
     }
 
-    // Vérifier si une invitation existe déjà pour ce challenge et cet utilisateur
     const invitationsQuery = query(
       collection(db, "invitations"),
-      where("challengeId", "==", challengeId),
+      where("challengeId", "==", chatId), // Garde challengeId dans Firebase pour compatibilité
       where("inviterId", "==", userId),
       where("status", "in", ["pending", "accepted"])
     );
@@ -55,19 +57,20 @@ export const createInvitation = async (
       throw new Error("Une invitation existe déjà");
     }
 
-    // Créer invitation
     const invitationRef = await addDoc(collection(db, "invitations"), {
-      challengeId,
+      challengeId: chatId, // Stocke chatId comme challengeId dans Firebase
       inviterId: userId,
       inviteeId: null,
       status: "pending",
       createdAt: serverTimestamp(),
-      expiresAt: new Date(Date.now() + 7 * 24 * 60 * 60 * 1000), // +7 jours
+      expiresAt: new Date(Date.now() + 7 * 24 * 60 * 60 * 1000),
     });
 
     const inviteId = invitationRef.id;
-    const inviteLink = `https://challengeties.com/challenge/${challengeId}?invite=${inviteId}`;
-    console.log("📩 Invitation créée:", { inviteId, inviteLink });
+    const inviteLink = `https://challengeties.app/challenge-details/${encodeURIComponent(
+      chatId
+    )}?invite=${encodeURIComponent(inviteId)}`;
+    console.log("📩 Invitation créée:", { chatId, inviteId, inviteLink });
     return inviteLink;
   } catch (error) {
     console.error("❌ Erreur création invitation:", error);
@@ -92,9 +95,19 @@ export const acceptInvitation = async (inviteId: string): Promise<void> => {
     }
 
     const invitation = invitationSnap.data() as Invitation;
-    if (invitation.status !== "pending" || invitation.inviteeId) {
-      console.warn("⚠️ Invitation non valide");
+    console.log("📋 État invitation:", invitation);
+
+    if (invitation.status !== "pending") {
+      console.warn("⚠️ Invitation déjà traitée:", invitation.status);
       throw new Error("Invitation déjà traitée ou non valide");
+    }
+
+    if (invitation.inviteeId && invitation.inviteeId !== userId) {
+      console.warn("⚠️ Invitation non destinée à cet utilisateur:", {
+        inviteeId: invitation.inviteeId,
+        userId,
+      });
+      throw new Error("Invitation non valide pour cet utilisateur");
     }
 
     // Vérifier expiration
@@ -104,22 +117,39 @@ export const acceptInvitation = async (inviteId: string): Promise<void> => {
       throw new Error("Invitation expirée");
     }
 
-    // Mettre à jour invitation
-    await updateDoc(invitationRef, {
-      inviteeId: userId,
-      status: "accepted",
+    // Transaction pour mise à jour atomique
+    await runTransaction(db, async (transaction) => {
+      // Mettre à jour invitation
+      transaction.update(invitationRef, {
+        inviteeId: userId,
+        status: "accepted",
+        updatedAt: serverTimestamp(),
+      });
+
+      // Ajouter utilisateur à usersTakingChallenge
+      const challengeRef = doc(db, "challenges", invitation.challengeId);
+      const challengeSnap = await transaction.get(challengeRef);
+      if (!challengeSnap.exists()) {
+        throw new Error("Challenge non trouvé");
+      }
+      const challengeData = challengeSnap.data();
+      const currentUsers = challengeData.usersTakingChallenge || [];
+      if (!currentUsers.includes(userId)) {
+        transaction.update(challengeRef, {
+          usersTakingChallenge: arrayUnion(userId),
+          participantsCount: increment(1),
+        });
+      }
     });
 
     // Mettre à jour utilisateur invité
     const userRef = doc(db, "users", userId);
     await updateDoc(userRef, {
-      invitedChallenges: [inviteId],
-      currentChallenges: [
-        {
-          challengeId: invitation.challengeId,
-          progress: 0,
-        },
-      ],
+      invitedChallenges: arrayUnion(inviteId),
+      currentChallenges: arrayUnion({
+        challengeId: invitation.challengeId,
+        progress: 0,
+      }),
     });
 
     // Notifier l'inviteur

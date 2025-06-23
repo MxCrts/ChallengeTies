@@ -26,30 +26,40 @@ const normalize = (size: number) => {
   return Math.round(PixelRatio.roundToNearestPixel(size * scale));
 };
 
-const BACKGROUND_COLOR = "#FFF8E7";
-const PRIMARY_COLOR = "#FFB800";
-const TEXT_COLOR = "#333";
-const BUTTON_COLOR = "#FFFFFF";
-
-const circleSize = Math.min(SCREEN_WIDTH, SCREEN_HEIGHT) * 0.85;
-const circleTop = SCREEN_HEIGHT * 0.35;
-const waveCount = 4;
+// Constantes de style
+const COLORS = {
+  background: "#FFF8E7",
+  primary: "#FFB800",
+  text: "#333",
+  button: "#FFFFFF",
+  error: "#FF4B4B",
+  inputBg: "rgba(245,245,245,0.8)",
+  inputText: "#111",
+  placeholder: "rgba(50,50,50,0.5)",
+};
 const SPACING = normalize(15);
+const CIRCLE_SIZE = Math.min(SCREEN_WIDTH, SCREEN_HEIGHT) * 0.85;
+const CIRCLE_TOP = SCREEN_HEIGHT * 0.35;
+const WAVE_COUNT = 4;
 
+// Composant Wave optimisé
 const Wave = React.memo(({ opacity, scale, borderWidth, size, top }: any) => (
   <Animated.View
-    style={{
-      width: size,
-      height: size,
-      borderRadius: size / 2,
-      opacity,
-      transform: [{ scale }],
-      borderWidth,
-      borderColor: PRIMARY_COLOR,
-      position: "absolute",
-      top,
-      left: (SCREEN_WIDTH - size) / 2,
-    }}
+    style={[
+      styles.wave,
+      {
+        width: size,
+        height: size,
+        borderRadius: size / 2,
+        opacity,
+        transform: [{ scale }],
+        borderWidth,
+        borderColor: COLORS.primary,
+        top,
+        left: (SCREEN_WIDTH - size) / 2,
+      },
+    ]}
+    accessibilityElementsHidden
   />
 ));
 
@@ -62,14 +72,14 @@ export default function Login() {
   const [errorMessage, setErrorMessage] = useState("");
   const [showPassword, setShowPassword] = useState(false);
 
-  const wavesRef = useRef(
-    Array.from({ length: waveCount }, (_, index) => ({
+  // Animation des vagues
+  const waves = useRef(
+    Array.from({ length: WAVE_COUNT }, (_, index) => ({
       opacity: new Animated.Value(0.3 - index * 0.05),
       scale: new Animated.Value(1),
       borderWidth: index === 0 ? normalize(5) : normalize(2),
     }))
-  );
-  const waves = wavesRef.current;
+  ).current;
 
   useEffect(() => {
     const animations = waves.map((wave, index) =>
@@ -104,135 +114,178 @@ export default function Login() {
     );
     animations.forEach((anim) => anim.start());
     return () => animations.forEach((anim) => anim.stop());
-  }, [waves]);
+  }, []);
 
   const isValidEmail = useCallback(
     (emailStr: string) => /\S+@\S+\.\S+/.test(emailStr),
     []
   );
 
-  const handleLogin = async () => {
+  const handleLogin = useCallback(async () => {
     setErrorMessage("");
     if (!email.trim() || !password.trim()) {
       setErrorMessage(t("fillEmailPassword"));
-      setTimeout(() => setErrorMessage(""), 5000);
       return;
     }
-    if (!isValidEmail(email.trim())) {
+    if (!isValidEmail(email)) {
       setErrorMessage(t("invalidEmail"));
-      setTimeout(() => setErrorMessage(""), 5000);
       return;
     }
     try {
       setLoading(true);
       await signInWithEmailAndPassword(auth, email.trim(), password.trim());
       router.replace("/");
-    } catch (error) {
-      const firebaseError = error as { code: string };
+    } catch (error: any) {
       const errorMessages: Record<string, string> = {
         "auth/user-not-found": t("noAccountFound"),
         "auth/wrong-password": t("wrongPassword"),
         "auth/invalid-email": t("invalidEmailFormat"),
         "auth/too-many-requests": t("tooManyRequests"),
       };
-      setErrorMessage(errorMessages[firebaseError.code] || t("unknownError"));
-      setTimeout(() => setErrorMessage(""), 5000);
+      setErrorMessage(errorMessages[error.code] || t("unknownError"));
     } finally {
       setLoading(false);
     }
-  };
+  }, [email, password, t, router]);
+
+  // Gestion auto-dismiss erreur
+  useEffect(() => {
+    if (errorMessage) {
+      const timer = setTimeout(() => setErrorMessage(""), 5000);
+      return () => clearTimeout(timer);
+    }
+  }, [errorMessage]);
 
   return (
     <KeyboardAvoidingView
-      style={styles.flexContainer}
-      behavior={Platform.OS === "ios" ? "padding" : undefined}
-      keyboardVerticalOffset={Platform.OS === "ios" ? normalize(60) : 0}
+      style={styles.container}
+      behavior={Platform.OS === "ios" ? "padding" : "height"}
+      keyboardVerticalOffset={Platform.select({
+        ios: normalize(60),
+        android: 0,
+      })}
+      testID="login-screen"
     >
-      <StatusBar hidden />
+      <StatusBar style="dark" backgroundColor={COLORS.background} />
       <ScrollView
-        style={styles.flexContainer}
-        contentContainerStyle={styles.container}
+        style={styles.container}
+        contentContainerStyle={styles.scrollContent}
         keyboardShouldPersistTaps="handled"
+        bounces={false}
       >
+        {/* Animation de fond */}
         {waves.map((wave, index) => (
           <Wave
-            key={index}
+            key={`wave-${index}`}
             opacity={wave.opacity}
             scale={wave.scale}
             borderWidth={wave.borderWidth}
-            size={circleSize}
-            top={circleTop}
+            size={CIRCLE_SIZE}
+            top={CIRCLE_TOP}
           />
         ))}
 
+        {/* Header */}
         <View style={styles.headerContainer}>
-          <Text style={styles.brandTitle} numberOfLines={1} adjustsFontSizeToFit ellipsizeMode="tail">
-            <Text style={styles.highlight}>C</Text>hallenge<Text style={styles.highlight}>T</Text>ies
+          <Text
+            style={styles.brandTitle}
+            numberOfLines={1}
+            adjustsFontSizeToFit
+            accessibilityRole="header"
+            accessibilityLabel="ChallengeTies"
+          >
+            <Text style={styles.highlight}>C</Text>hallenge
+            <Text style={styles.highlight}>T</Text>ies
           </Text>
-          <Text style={styles.tagline}>{t("appTagline")}</Text>
+          <Text style={styles.tagline} accessibilityLabel={t("appTagline")}>
+            {t("appTagline")}
+          </Text>
         </View>
 
+        {/* Formulaire */}
         <View style={styles.formContainer}>
-          {errorMessage !== "" && (
-            <Text style={styles.errorText} accessibilityRole="alert">
+          {errorMessage ? (
+            <Text
+              style={styles.errorText}
+              accessibilityRole="alert"
+              testID="error-message"
+            >
               {errorMessage}
             </Text>
-          )}
+          ) : null}
           <TextInput
             placeholder={t("emailPlaceholder")}
-            placeholderTextColor="rgba(50,50,50,0.5)"
+            placeholderTextColor={COLORS.placeholder}
             style={styles.input}
             value={email}
             onChangeText={setEmail}
             keyboardType="email-address"
             autoCapitalize="none"
             autoComplete="email"
+            accessibilityLabel={t("emailPlaceholder")}
+            testID="email-input"
           />
           <View style={styles.passwordContainer}>
             <TextInput
               placeholder={t("passwordPlaceholder")}
-              placeholderTextColor="rgba(50,50,50,0.5)"
+              placeholderTextColor={COLORS.placeholder}
               style={[styles.input, styles.passwordInput]}
               value={password}
               onChangeText={setPassword}
               secureTextEntry={!showPassword}
               autoComplete="password"
+              accessibilityLabel={t("passwordPlaceholder")}
+              testID="password-input"
             />
-            <TouchableOpacity onPress={() => setShowPassword((prev) => !prev)} style={styles.passwordIcon}>
+            <TouchableOpacity
+              onPress={() => setShowPassword((prev) => !prev)}
+              style={styles.passwordIcon}
+              accessibilityLabel={
+                showPassword ? t("hidePassword") : t("showPassword")
+              }
+              testID="toggle-password-visibility"
+            >
               <Ionicons
                 name={showPassword ? "eye-off" : "eye"}
                 size={normalize(24)}
-                color={PRIMARY_COLOR}
+                color={COLORS.primary}
               />
             </TouchableOpacity>
           </View>
-
-          <TouchableOpacity onPress={() => router.push("/forgot-password")}
+          <TouchableOpacity
+            onPress={() => router.push("/forgot-password")}
             accessibilityLabel={t("forgotPassword")}
+            accessibilityRole="link"
+            testID="forgot-password-link"
           >
             <Text style={styles.forgotPassword}>{t("forgotPassword")}</Text>
           </TouchableOpacity>
         </View>
 
+        {/* Footer */}
         <View style={styles.footerContainer}>
           <TouchableOpacity
             style={[styles.loginButton, loading && styles.disabledButton]}
             onPress={handleLogin}
             disabled={loading}
             accessibilityRole="button"
+            accessibilityLabel={t("login")}
+            testID="login-button"
           >
             {loading ? (
-              <ActivityIndicator color={TEXT_COLOR} size="small" />
+              <ActivityIndicator color={COLORS.text} size="small" />
             ) : (
               <Text style={styles.loginButtonText}>{t("login")}</Text>
             )}
           </TouchableOpacity>
           <Text style={styles.signupText}>
-            {t("noAccount")} {" "}
+            {t("noAccount")}{" "}
             <Text
               style={styles.signupLink}
               onPress={() => router.push("/register")}
               accessibilityRole="link"
+              accessibilityLabel={t("signupHere")}
+              testID="signup-link"
             >
               {t("signupHere")}
             </Text>
@@ -244,79 +297,78 @@ export default function Login() {
 }
 
 const styles = StyleSheet.create({
-  flexContainer: { flex: 1 },
-  container: {
+  container: { flex: 1, backgroundColor: COLORS.background },
+  scrollContent: {
     flexGrow: 1,
-    backgroundColor: BACKGROUND_COLOR,
     alignItems: "center",
     justifyContent: "space-between",
     paddingVertical: SPACING * 2,
     paddingHorizontal: SPACING,
   },
+  wave: { position: "absolute" },
   headerContainer: {
     width: "90%",
-    maxWidth: 600,
+    maxWidth: normalize(600),
     alignItems: "center",
-    marginTop: SCREEN_HEIGHT * 0.1, // Dynamique selon la taille de l'écran
+    marginTop: SCREEN_HEIGHT * 0.1,
   },
   formContainer: {
     width: "90%",
-    maxWidth: 400,
+    maxWidth: normalize(400),
     alignItems: "center",
     marginVertical: SPACING * 2,
   },
   footerContainer: {
     width: "90%",
-    maxWidth: 600,
+    maxWidth: normalize(600),
     alignItems: "center",
-    marginBottom: SCREEN_HEIGHT * 0.1, // Dynamique
+    marginBottom: SCREEN_HEIGHT * 0.1,
   },
   brandTitle: {
     fontSize: normalize(34),
-    color: TEXT_COLOR,
+    color: COLORS.text,
     textAlign: "center",
     fontFamily: "Comfortaa_700Bold",
     maxWidth: "100%",
   },
   highlight: {
-    color: PRIMARY_COLOR,
+    color: COLORS.primary,
     fontSize: normalize(50),
   },
   tagline: {
     fontSize: normalize(16),
-    color: TEXT_COLOR,
+    color: COLORS.text,
     textAlign: "center",
     marginTop: SPACING / 2,
     fontFamily: "Comfortaa_400Regular",
     maxWidth: "90%",
   },
   errorText: {
-    color: "#FF4B4B",
+    color: COLORS.error,
     fontSize: normalize(14),
     fontWeight: "600",
     textAlign: "center",
     marginVertical: SPACING,
     width: "100%",
+    fontFamily: "Comfortaa_400Regular",
   },
   input: {
     width: "100%",
     height: normalize(50),
-    backgroundColor: "rgba(245,245,245,0.8)",
-    color: "#111",
+    backgroundColor: COLORS.inputBg,
+    color: COLORS.inputText,
     fontSize: normalize(16),
     paddingHorizontal: SPACING,
     borderRadius: normalize(20),
     textAlign: "center",
     marginVertical: SPACING / 2,
-    fontWeight: "500",
-    borderWidth: normalize(2),
-    borderColor: PRIMARY_COLOR,
     fontFamily: "Comfortaa_400Regular",
+    borderWidth: normalize(2),
+    borderColor: COLORS.primary,
   },
   passwordContainer: {
     width: "100%",
     position: "relative",
-    justifyContent: "center",
   },
   passwordInput: {
     paddingRight: normalize(45),
@@ -328,45 +380,41 @@ const styles = StyleSheet.create({
     transform: [{ translateY: -normalize(12) }],
   },
   forgotPassword: {
-    color: PRIMARY_COLOR,
+    color: COLORS.primary,
     fontSize: normalize(14),
     fontFamily: "Comfortaa_400Regular",
     marginTop: SPACING,
-    textAlign: "center",
   },
   loginButton: {
     width: "100%",
-    maxWidth: 400,
-    backgroundColor: BUTTON_COLOR,
+    maxWidth: normalize(400),
+    backgroundColor: COLORS.button,
     paddingVertical: normalize(12),
     borderRadius: normalize(20),
     alignItems: "center",
     marginTop: SPACING,
     borderWidth: normalize(2),
-    borderColor: PRIMARY_COLOR,
-    shadowColor: PRIMARY_COLOR,
+    borderColor: COLORS.primary,
+    shadowColor: COLORS.primary,
     shadowOffset: { width: 0, height: normalize(3) },
     shadowOpacity: 0.3,
     shadowRadius: normalize(5),
+    elevation: 5,
   },
   disabledButton: { opacity: 0.6 },
   loginButtonText: {
-    color: TEXT_COLOR,
+    color: COLORS.text,
     fontSize: normalize(16),
-    fontWeight: "400",
     fontFamily: "Comfortaa_400Regular",
   },
   signupText: {
-    color: TEXT_COLOR,
-    textAlign: "center",
+    color: COLORS.text,
     fontSize: normalize(14),
-    fontWeight: "400",
     fontFamily: "Comfortaa_400Regular",
     marginTop: SPACING,
   },
   signupLink: {
-    color: PRIMARY_COLOR,
-    fontWeight: "400",
+    color: COLORS.primary,
     fontFamily: "Comfortaa_400Regular",
   },
 });

@@ -8,6 +8,8 @@ Notifications.setNotificationHandler({
     shouldShowAlert: true,
     shouldPlaySound: false,
     shouldSetBadge: false,
+    shouldShowBanner: true, // Ajout
+    shouldShowList: true,
   }),
 });
 
@@ -54,17 +56,13 @@ export const NotificationsProvider: React.FC<{ children: React.ReactNode }> = ({
 
   // Planifie une notification quotidienne à 18h
   const scheduleDailyReminder = async () => {
-    // Annule toutes les notifications précédemment programmées
     await Notifications.cancelAllScheduledNotificationsAsync();
 
-    const trigger = new Date();
-    trigger.setHours(18);
-    trigger.setMinutes(0);
-    trigger.setSeconds(0);
-    // Si l'heure de 18h est déjà passée aujourd'hui, on programme pour le lendemain
-    if (trigger <= new Date()) {
-      trigger.setDate(trigger.getDate() + 1);
-    }
+    const trigger: Notifications.DailyTriggerInput = {
+      type: Notifications.SchedulableTriggerInputTypes.DAILY, // Utilise la constante
+      hour: 18,
+      minute: 0,
+    };
 
     await Notifications.scheduleNotificationAsync({
       content: {

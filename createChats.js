@@ -42,8 +42,20 @@ const createChatsForExistingChallenges = async () => {
         description: `Chat pour le challenge : ${
           challengeData.title || "Sans titre"
         }`,
-        challengeId: doc.id, // Ajoute un lien au challenge
-        participantsCount: 0, // Initialisation des participants
+        challengeId: doc.id,
+        participantsCount: 0,
+        requiresRulesAcceptance: true, // Indique que les règles doivent être acceptées
+        welcomeRules: {
+          title: "Bienvenue dans le chat du challenge !",
+          message:
+            `Nous sommes ici pour nous encourager, nous soutenir et avancer ensemble dans ce challenge ! Voici les règles pour garder une vibe positive :\n\n` +
+            `1. **Respect** : Pas d’insultes, de harcèlement ou de contenu inapproprié.\n` +
+            `2. **Encouragement** : Partagez des messages positifs pour motiver les autres.\n` +
+            `3. **Pertinence** : Restez dans le sujet du challenge.\n` +
+            `4. **Confidentialité** : Ne partagez pas d’informations personnelles sensibles.\n` +
+            `5. **Langage approprié** : Pas de spam, de pub ou de contenu illégal.\n\n` +
+            `En rejoignant ce chat, vous vous engagez à respecter ces règles. Merci de cocher la case ci-dessous et de cliquer sur "J’ai compris" pour continuer !`,
+        },
       });
 
       createdChats++;

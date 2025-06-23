@@ -4,7 +4,7 @@ import { Ionicons } from "@expo/vector-icons";
 import { View, StyleSheet, Dimensions } from "react-native";
 import { TrophyProvider } from "../../context/TrophyContext";
 import { auth, db } from "../../constants/firebase-config";
-import { doc, getDoc } from "firebase/firestore";
+import { doc, onSnapshot } from "firebase/firestore";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import Animated, {
   useSharedValue,
@@ -120,19 +120,18 @@ const TabsLayout = () => {
   const insets = useSafeAreaInsets();
 
   useEffect(() => {
-    const fetchUserAchievements = async () => {
-      const userId = auth.currentUser?.uid;
-      if (!userId) return;
-      const userRef = doc(db, "users", userId);
-      const userSnap = await getDoc(userRef);
-      if (userSnap.exists()) {
-        const userData = userSnap.data();
-        const newAchievements = userData.newAchievements || [];
+    const userId = auth.currentUser?.uid;
+    if (!userId) return;
+    const userRef = doc(db, "users", userId);
+    // écoute en temps réel la collection users/<uid>
+    const unsubscribe = onSnapshot(userRef, (snapshot) => {
+      if (snapshot.exists()) {
+        const data = snapshot.data();
+        const newAchievements: string[] = data.newAchievements || [];
         setHasUnclaimedAchievements(newAchievements.length > 0);
       }
-    };
-
-    fetchUserAchievements();
+    });
+    return () => unsubscribe();
   }, []);
 
   return (

@@ -24,27 +24,80 @@ import Animated, { FadeInUp } from "react-native-reanimated";
 import { useTranslation } from "react-i18next";
 import { useLanguage } from "../../context/LanguageContext";
 import { useCurrentChallenges } from "../../context/CurrentChallengesContext";
-import BackButton from "../../components/BackButton";
-import designSystem from "../../theme/designSystem";
+import designSystem, { Theme } from "../../theme/designSystem";
+
 import CustomHeader from "@/components/CustomHeader";
 import GlobalLayout from "../../components/GlobalLayout";
 import i18n from "../../i18n";
 import { fetchAndSaveUserLocation } from "../../services/locationService";
+import { Link } from "expo-router"; // Ajout de l'import pour Link
 
-// Import de SPACING pour cohérence avec index.tsx et profile.tsx
-const SPACING = 15;
-
+const SPACING = 18; // Aligné avec ExploreScreen.tsx, Notifications.tsx, etc.
 const { width: SCREEN_WIDTH, height: SCREEN_HEIGHT } = Dimensions.get("window");
 
-const normalizeFont = (size: number) => {
-  const scale = SCREEN_WIDTH / 375;
+const normalizeSize = (size: number) => {
+  const baseWidth = 375;
+  const scale = Math.min(Math.max(SCREEN_WIDTH / baseWidth, 0.7), 1.8); // Limite l'échelle
   return Math.round(size * scale);
 };
 
-const normalizeSize = (size: number) => {
-  const scale = SCREEN_WIDTH / 375;
-  return Math.round(size * scale);
-};
+const getDynamicStyles = (currentTheme: Theme, isDarkMode: boolean) => ({
+  gradientContainer: {
+    backgroundColor: currentTheme.colors.background,
+  },
+  sectionHeader: {
+    color: isDarkMode ? currentTheme.colors.textPrimary : "#000000",
+  },
+  card: {
+    backgroundColor: currentTheme.colors.cardBackground,
+    borderColor: isDarkMode ? currentTheme.colors.border : "#FF8C00",
+  },
+  settingLabel: {
+    color: currentTheme.colors.textSecondary,
+  },
+  switch: {
+    trackColor: {
+      false: currentTheme.colors.border,
+      true: isDarkMode
+        ? currentTheme.colors.secondary
+        : currentTheme.colors.primary,
+    },
+    thumbColor: isDarkMode ? currentTheme.colors.textPrimary : "#fff",
+  },
+  languagePicker: {
+    color: currentTheme.colors.textSecondary,
+    dropdownIconColor: isDarkMode
+      ? currentTheme.colors.textPrimary
+      : currentTheme.colors.primary,
+  },
+  buttonGradient: {
+    colors: [
+      currentTheme.colors.primary,
+      currentTheme.colors.secondary,
+    ] as const,
+  },
+  accountButtonText: {
+    color: currentTheme.colors.textPrimary,
+  },
+  adminButtonGradient: {
+    colors: [
+      currentTheme.colors.primary,
+      currentTheme.colors.secondary,
+    ] as const,
+  },
+  adminButtonText: {
+    color: currentTheme.colors.textPrimary,
+  },
+  deleteButtonGradient: {
+    colors: [currentTheme.colors.error, currentTheme.colors.error] as const,
+  },
+  aboutLink: {
+    color: currentTheme.colors.secondary,
+  },
+  appVersion: {
+    color: currentTheme.colors.textSecondary,
+  },
+});
 
 export default function Settings() {
   const { t, i18n: i18next } = useTranslation();
@@ -52,10 +105,10 @@ export default function Settings() {
   const [_, setLangUpdate] = useState(false);
   const { theme, toggleTheme } = useTheme();
   const router = useRouter();
-  const isActiveRef = useRef(true); // Contrôle les callbacks
+  const isActiveRef = useRef(true);
 
-  const [isSubscribed, setIsSubscribed] = useState(true); // Contrôle l'abonnement
-  const unsubscribeRef = useRef<(() => void) | null>(null); // Référence pour unsubscribe
+  const [isSubscribed, setIsSubscribed] = useState(true);
+  const unsubscribeRef = useRef<(() => void) | null>(null);
 
   const {
     currentChallenges,
@@ -91,43 +144,43 @@ export default function Settings() {
   }, [i18next]);
 
   useEffect(() => {
-    console.log("Settings useEffect: Initialisation"); // Log
+    console.log("Settings useEffect: Initialisation");
     const userId = auth.currentUser?.uid;
     if (!userId) {
-      console.log("⚠️ Pas d’utilisateur, redirection vers /login"); // Log
+      console.log("⚠️ Pas d’utilisateur, redirection vers /login");
       router.replace("/login");
       return;
     }
 
-    console.log("Utilisateur connecté, ID:", userId); // Log
+    console.log("Utilisateur connecté, ID:", userId);
     const userRef = doc(db, "users", userId);
 
     const unsubscribe = onSnapshot(
       userRef,
       (snapshot) => {
         if (!isActiveRef.current || !auth.currentUser) {
-          console.log("onSnapshot ignoré: inactif ou déconnecté"); // Log
+          console.log("onSnapshot ignoré: inactif ou déconnecté");
           return;
         }
         console.log(
           "onSnapshot Settings, données:",
           snapshot.exists() ? snapshot.data() : "null"
-        ); // Log
+        );
         if (snapshot.exists()) {
           const data = snapshot.data();
           setNotificationsEnabled(data.notificationsEnabled ?? true);
           setLocationEnabled(data.locationEnabled ?? true);
           if (data.language && data.language !== language) {
-            console.log("Changement de langue:", data.language); // Log
+            console.log("Changement de langue:", data.language);
             setLanguage(data.language);
             i18next.changeLanguage(data.language);
           }
         }
       },
       (error) => {
-        console.error("Erreur onSnapshot Settings:", error.message); // Log
+        console.error("Erreur onSnapshot Settings:", error.message);
         if (error.code === "permission-denied" && !auth.currentUser) {
-          console.log("Permission refusée, utilisateur déconnecté"); // Log
+          console.log("Permission refusée, utilisateur déconnecté");
         } else {
           Alert.alert(t("error"), t("unknownError"));
         }
@@ -135,7 +188,7 @@ export default function Settings() {
     );
 
     return () => {
-      console.log("Désabonnement onSnapshot Settings"); // Log
+      console.log("Désabonnement onSnapshot Settings");
       isActiveRef.current = false;
       unsubscribe();
     };
@@ -198,16 +251,16 @@ export default function Settings() {
           style: "destructive",
           onPress: async () => {
             try {
-              console.log("Début déconnexion"); // Log
-              isActiveRef.current = false; // Bloquer les callbacks
-              console.log("Callbacks onSnapshot désactivés"); // Log
+              console.log("Début déconnexion");
+              isActiveRef.current = false;
+              console.log("Callbacks onSnapshot désactivés");
               await auth.signOut();
-              console.log("Déconnexion réussie"); // Log
+              console.log("Déconnexion réussie");
               router.replace("/login");
-              console.log("Redirection vers /login"); // Log
+              console.log("Redirection vers /login");
               Alert.alert(t("loggedOut"), t("disconnected"));
             } catch (error) {
-              console.error("Erreur déconnexion:", error); // Log
+              console.error("Erreur déconnexion:", error);
               Alert.alert(t("error"), t("logoutFailed"));
             }
           },
@@ -272,7 +325,9 @@ export default function Settings() {
     }
   };
 
-  const adminUID = "mAEyXdH3J5bcBt6SxZP7lWz0EW43";
+  const adminUID = "hCnAkM4yNgQPdtSkJEoXjkQaa6k2";
+
+  const dynamicStyles = getDynamicStyles(currentTheme, isDarkMode);
 
   return (
     <GlobalLayout key={language}>
@@ -284,15 +339,14 @@ export default function Settings() {
       <LinearGradient
         colors={[
           currentTheme.colors.background,
-          currentTheme.colors.cardBackground,
+          currentTheme.colors.cardBackground + "F0",
         ]}
-        style={styles.gradientContainer}
+        style={[styles.gradientContainer, dynamicStyles.gradientContainer]}
         start={{ x: 0, y: 0 }}
         end={{ x: 1, y: 1 }}
       >
         <View style={styles.headerWrapper}>
           <CustomHeader title={t("settings")} />
-          <BackButton />
         </View>
         <ScrollView
           contentContainerStyle={styles.scrollContent}
@@ -300,31 +354,15 @@ export default function Settings() {
         >
           {/* Section Préférences */}
           <Animated.View entering={FadeInUp.delay(100)} style={styles.section}>
-            <Text
-              style={[
-                styles.sectionHeader,
-                { color: currentTheme.colors.textPrimary },
-              ]}
-            >
+            <Text style={[styles.sectionHeader, dynamicStyles.sectionHeader]}>
               {t("preferences")}
             </Text>
             <Animated.View
               entering={FadeInUp.delay(200)}
-              style={[
-                styles.card,
-                {
-                  backgroundColor: currentTheme.colors.cardBackground,
-                  borderColor: currentTheme.colors.border,
-                },
-              ]}
+              style={[styles.card, dynamicStyles.card]}
             >
               <View style={styles.settingItem}>
-                <Text
-                  style={[
-                    styles.settingLabel,
-                    { color: currentTheme.colors.textSecondary },
-                  ]}
-                >
+                <Text style={[styles.settingLabel, dynamicStyles.settingLabel]}>
                   {t("notifications")}
                 </Text>
                 <Switch
@@ -335,15 +373,8 @@ export default function Settings() {
                     if (!value)
                       Notifications.cancelAllScheduledNotificationsAsync();
                   }}
-                  trackColor={{
-                    false: currentTheme.colors.border,
-                    true: currentTheme.colors.primary,
-                  }}
-                  thumbColor={
-                    notificationsEnabled
-                      ? currentTheme.colors.textPrimary
-                      : "#d3d3d3"
-                  }
+                  trackColor={dynamicStyles.switch.trackColor}
+                  thumbColor={dynamicStyles.switch.thumbColor}
                   style={styles.switch}
                   accessibilityLabel={t("handleNotifications")}
                 />
@@ -351,30 +382,16 @@ export default function Settings() {
             </Animated.View>
             <Animated.View
               entering={FadeInUp.delay(250)}
-              style={[
-                styles.card,
-                {
-                  backgroundColor: currentTheme.colors.cardBackground,
-                  borderColor: currentTheme.colors.border,
-                },
-              ]}
+              style={[styles.card, dynamicStyles.card]}
             >
               <View style={styles.settingItem}>
-                <Text
-                  style={[
-                    styles.settingLabel,
-                    { color: currentTheme.colors.textSecondary },
-                  ]}
-                >
+                <Text style={[styles.settingLabel, dynamicStyles.settingLabel]}>
                   {t("location")}
                 </Text>
                 <Switch
                   value={locationEnabled}
                   onValueChange={handleLocationToggle}
-                  trackColor={{
-                    false: currentTheme.colors.border,
-                    true: currentTheme.colors.primary,
-                  }}
+                  trackColor={dynamicStyles.switch.trackColor}
                   thumbColor={
                     locationEnabled
                       ? currentTheme.colors.textPrimary
@@ -387,33 +404,17 @@ export default function Settings() {
             </Animated.View>
             <Animated.View
               entering={FadeInUp.delay(300)}
-              style={[
-                styles.card,
-                {
-                  backgroundColor: currentTheme.colors.cardBackground,
-                  borderColor: currentTheme.colors.border,
-                },
-              ]}
+              style={[styles.card, dynamicStyles.card]}
             >
               <View style={styles.settingItem}>
-                <Text
-                  style={[
-                    styles.settingLabel,
-                    { color: currentTheme.colors.textSecondary },
-                  ]}
-                >
+                <Text style={[styles.settingLabel, dynamicStyles.settingLabel]}>
                   {t("darkMode")}
                 </Text>
                 <Switch
                   value={isDarkMode}
                   onValueChange={toggleTheme}
-                  trackColor={{
-                    false: currentTheme.colors.border,
-                    true: currentTheme.colors.primary,
-                  }}
-                  thumbColor={
-                    isDarkMode ? currentTheme.colors.textPrimary : "#d3d3d3"
-                  }
+                  trackColor={dynamicStyles.switch.trackColor}
+                  thumbColor={dynamicStyles.switch.thumbColor}
                   style={styles.switch}
                   accessibilityLabel={t("handleDarkMode")}
                 />
@@ -421,48 +422,31 @@ export default function Settings() {
             </Animated.View>
             <Animated.View
               entering={FadeInUp.delay(400)}
-              style={[
-                styles.card,
-                {
-                  backgroundColor: currentTheme.colors.cardBackground,
-                  borderColor: currentTheme.colors.border,
-                },
-              ]}
+              style={[styles.card, dynamicStyles.card]}
             >
               <View style={styles.settingItem}>
-                <Text
-                  style={[
-                    styles.settingLabel,
-                    { color: currentTheme.colors.textSecondary },
-                  ]}
-                >
+                <Text style={[styles.settingLabel, dynamicStyles.settingLabel]}>
                   {t("language")}
                 </Text>
                 <Picker
                   selectedValue={language}
-                  style={[
-                    styles.languagePicker,
-                    { color: currentTheme.colors.textSecondary },
-                  ]}
+                  style={[styles.languagePicker, dynamicStyles.languagePicker]}
                   onValueChange={(itemValue) => {
                     setLanguage(itemValue);
                     i18next.changeLanguage(itemValue);
                     savePreferences({ language: itemValue });
                   }}
-                  dropdownIconColor={
-                    isDarkMode
-                      ? currentTheme.colors.textPrimary
-                      : currentTheme.colors.primary
-                  }
                   accessibilityLabel={t("language")}
                 >
-                  <Picker.Item label="Français" value="fr" />
+                  <Picker.Item label="العربية" value="ar" />
+                  <Picker.Item label="Deutsch" value="de" />
                   <Picker.Item label="English" value="en" />
                   <Picker.Item label="Español" value="es" />
-                  <Picker.Item label="Deutsch" value="de" />
-                  <Picker.Item label="中文" value="zh" />
-                  <Picker.Item label="العربية" value="ar" />
+                  <Picker.Item label="Français" value="fr" />
                   <Picker.Item label="हिन्दी" value="hi" />
+                  <Picker.Item label="Italiano" value="it" />
+                  <Picker.Item label="Русский" value="ru" />
+                  <Picker.Item label="中文" value="zh" />
                 </Picker>
               </View>
             </Animated.View>
@@ -470,12 +454,7 @@ export default function Settings() {
 
           {/* Section Compte */}
           <Animated.View entering={FadeInUp.delay(500)} style={styles.section}>
-            <Text
-              style={[
-                styles.sectionHeader,
-                { color: currentTheme.colors.textPrimary },
-              ]}
-            >
+            <Text style={[styles.sectionHeader, dynamicStyles.sectionHeader]}>
               {t("account")}
             </Text>
             <Animated.View entering={FadeInUp.delay(600)}>
@@ -486,13 +465,10 @@ export default function Settings() {
                 testID="edit-profile-button"
               >
                 <LinearGradient
-                  colors={[
-                    currentTheme.colors.primary,
-                    currentTheme.colors.secondary,
-                  ]}
+                  colors={dynamicStyles.buttonGradient.colors}
                   style={styles.buttonGradient}
-                  start={{ x: 0, y: 0 }}
-                  end={{ x: 1, y: 1 }}
+                  start={{ x: 1, y: 1 }}
+                  end={{ x: 0, y: 0 }}
                 >
                   <Ionicons
                     name="person-outline"
@@ -502,7 +478,7 @@ export default function Settings() {
                   <Text
                     style={[
                       styles.accountButtonText,
-                      { color: currentTheme.colors.textPrimary },
+                      dynamicStyles.accountButtonText,
                     ]}
                   >
                     {t("editProfile")}
@@ -518,13 +494,10 @@ export default function Settings() {
                 testID="clear-cache-button"
               >
                 <LinearGradient
-                  colors={[
-                    currentTheme.colors.secondary,
-                    currentTheme.colors.primary,
-                  ]}
+                  colors={dynamicStyles.buttonGradient.colors}
                   style={styles.buttonGradient}
-                  start={{ x: 0, y: 0 }}
-                  end={{ x: 1, y: 1 }}
+                  start={{ x: 1, y: 1 }}
+                  end={{ x: 0, y: 0 }}
                 >
                   <Ionicons
                     name="trash-bin-outline"
@@ -534,7 +507,7 @@ export default function Settings() {
                   <Text
                     style={[
                       styles.accountButtonText,
-                      { color: currentTheme.colors.textPrimary },
+                      dynamicStyles.accountButtonText,
                     ]}
                   >
                     {t("clearCache")}
@@ -550,10 +523,7 @@ export default function Settings() {
                 testID="simulate-day-button"
               >
                 <LinearGradient
-                  colors={[
-                    currentTheme.colors.secondary,
-                    currentTheme.colors.primary,
-                  ]}
+                  colors={dynamicStyles.buttonGradient.colors}
                   style={styles.buttonGradient}
                   start={{ x: 0, y: 0 }}
                   end={{ x: 1, y: 1 }}
@@ -566,7 +536,7 @@ export default function Settings() {
                   <Text
                     style={[
                       styles.accountButtonText,
-                      { color: currentTheme.colors.textPrimary },
+                      dynamicStyles.accountButtonText,
                     ]}
                   >
                     {t("Simuler un jour")}
@@ -582,13 +552,10 @@ export default function Settings() {
                 testID="logout-button"
               >
                 <LinearGradient
-                  colors={[
-                    currentTheme.colors.primary,
-                    currentTheme.colors.secondary,
-                  ]}
+                  colors={dynamicStyles.buttonGradient.colors}
                   style={styles.buttonGradient}
-                  start={{ x: 0, y: 0 }}
-                  end={{ x: 1, y: 1 }}
+                  start={{ x: 1, y: 1 }}
+                  end={{ x: 0, y: 0 }}
                 >
                   <Ionicons
                     name="log-out-outline"
@@ -598,7 +565,7 @@ export default function Settings() {
                   <Text
                     style={[
                       styles.accountButtonText,
-                      { color: currentTheme.colors.textPrimary },
+                      dynamicStyles.accountButtonText,
                     ]}
                   >
                     {t("logout")}
@@ -614,10 +581,7 @@ export default function Settings() {
                 testID="delete-account-button"
               >
                 <LinearGradient
-                  colors={[
-                    currentTheme.colors.error,
-                    currentTheme.colors.error,
-                  ]}
+                  colors={dynamicStyles.deleteButtonGradient.colors}
                   style={styles.buttonGradient}
                   start={{ x: 0, y: 0 }}
                   end={{ x: 1, y: 1 }}
@@ -630,7 +594,7 @@ export default function Settings() {
                   <Text
                     style={[
                       styles.accountButtonText,
-                      { color: currentTheme.colors.textPrimary },
+                      dynamicStyles.accountButtonText,
                     ]}
                   >
                     {t("deleteAccount")}
@@ -639,50 +603,95 @@ export default function Settings() {
               </TouchableOpacity>
             </Animated.View>
             {auth.currentUser && auth.currentUser.uid === adminUID && (
-              <Animated.View entering={FadeInUp.delay(1000)}>
-                <TouchableOpacity
-                  style={styles.adminButton}
-                  onPress={() => router.push("/AdminFeatures")}
-                  accessibilityLabel={t("accessAdmin")}
-                  testID="admin-button"
-                >
-                  <LinearGradient
-                    colors={[
-                      currentTheme.colors.primary,
-                      currentTheme.colors.secondary,
-                    ]}
-                    style={styles.adminButtonGradient}
-                    start={{ x: 0, y: 0 }}
-                    end={{ x: 1, y: 1 }}
-                  >
-                    <Text
-                      style={[
-                        styles.adminButtonText,
-                        { color: currentTheme.colors.textPrimary },
-                      ]}
+              <>
+                <Animated.View entering={FadeInUp.delay(1000)}>
+                  <Link href="/AdminFeatures" asChild>
+                    <TouchableOpacity
+                      style={styles.adminButton}
+                      accessibilityLabel={t("accessAdmin")}
+                      testID="admin-button"
                     >
-                      {t("admin")}
-                    </Text>
-                  </LinearGradient>
-                </TouchableOpacity>
-              </Animated.View>
+                      <LinearGradient
+                        colors={dynamicStyles.adminButtonGradient.colors}
+                        style={styles.adminButtonGradient}
+                        start={{ x: 0, y: 0 }}
+                        end={{ x: 1, y: 1 }}
+                      >
+                        <Text
+                          style={[
+                            styles.adminButtonText,
+                            dynamicStyles.adminButtonText,
+                          ]}
+                        >
+                          {t("admin")}
+                        </Text>
+                      </LinearGradient>
+                    </TouchableOpacity>
+                  </Link>
+                </Animated.View>
+                <Animated.View entering={FadeInUp.delay(1050)}>
+                  <Link href="/AdminModerateChallenges" asChild>
+                    <TouchableOpacity
+                      style={styles.adminButton}
+                      accessibilityLabel={t("moderateChallenges")}
+                      testID="admin-moderate-challenges-button"
+                    >
+                      <LinearGradient
+                        colors={dynamicStyles.adminButtonGradient.colors}
+                        style={styles.adminButtonGradient}
+                        start={{ x: 0, y: 0 }}
+                        end={{ x: 1, y: 1 }}
+                      >
+                        <Text
+                          style={[
+                            styles.adminButtonText,
+                            dynamicStyles.adminButtonText,
+                          ]}
+                        >
+                          {t("moderateChallenges")}
+                        </Text>
+                      </LinearGradient>
+                    </TouchableOpacity>
+                  </Link>
+                </Animated.View>
+                <Animated.View entering={FadeInUp.delay(1100)}>
+                  <Link href="/AdminModerateChats" asChild>
+                    <TouchableOpacity
+                      style={styles.adminButton}
+                      accessibilityLabel={t("moderateChats")}
+                      testID="admin-moderate-chats-button"
+                    >
+                      <LinearGradient
+                        colors={dynamicStyles.adminButtonGradient.colors}
+                        style={styles.adminButtonGradient}
+                        start={{ x: 0, y: 0 }}
+                        end={{ x: 1, y: 1 }}
+                      >
+                        <Text
+                          style={[
+                            styles.adminButtonText,
+                            dynamicStyles.adminButtonText,
+                          ]}
+                        >
+                          {t("moderateChats")}
+                        </Text>
+                      </LinearGradient>
+                    </TouchableOpacity>
+                  </Link>
+                </Animated.View>
+              </>
             )}
           </Animated.View>
 
           {/* Section À Propos */}
-          <Animated.View entering={FadeInUp.delay(1100)} style={styles.section}>
-            <Text
-              style={[
-                styles.sectionHeader,
-                { color: currentTheme.colors.textPrimary },
-              ]}
-            >
+          <Animated.View entering={FadeInUp.delay(1200)} style={styles.section}>
+            <Text style={[styles.sectionHeader, dynamicStyles.sectionHeader]}>
               {t("about")}
             </Text>
             {["/about/History", "/about/PrivacyPolicy", "/about/Contact"].map(
               (path, index) => (
                 <Animated.View
-                  entering={FadeInUp.delay(1200 + index * 100)}
+                  entering={FadeInUp.delay(1300 + index * 50)}
                   key={index}
                 >
                   <TouchableOpacity
@@ -694,12 +703,7 @@ export default function Settings() {
                     )}
                     testID={`about-link-${index}`}
                   >
-                    <Text
-                      style={[
-                        styles.aboutLink,
-                        { color: currentTheme.colors.secondary },
-                      ]}
-                    >
+                    <Text style={[styles.aboutLink, dynamicStyles.aboutLink]}>
                       {t(
                         [
                           "aboutChallengeTies",
@@ -712,29 +716,19 @@ export default function Settings() {
                 </Animated.View>
               )
             )}
-            <Animated.View entering={FadeInUp.delay(1500)}>
+            <Animated.View entering={FadeInUp.delay(1600)}>
               <TouchableOpacity
                 onPress={() => Linking.openURL("https://example.com")}
                 accessibilityLabel={t("visitWebsite")}
                 testID="website-link"
               >
-                <Text
-                  style={[
-                    styles.aboutLink,
-                    { color: currentTheme.colors.secondary },
-                  ]}
-                >
+                <Text style={[styles.aboutLink, dynamicStyles.aboutLink]}>
                   {t("visitWebsite")}
                 </Text>
               </TouchableOpacity>
             </Animated.View>
-            <Animated.View entering={FadeInUp.delay(1600)}>
-              <Text
-                style={[
-                  styles.appVersion,
-                  { color: currentTheme.colors.textSecondary },
-                ]}
-              >
+            <Animated.View entering={FadeInUp.delay(1700)}>
+              <Text style={[styles.appVersion, dynamicStyles.appVersion]}>
                 {t("appVersion")} 1.0.0
               </Text>
             </Animated.View>
@@ -750,22 +744,23 @@ const styles = StyleSheet.create({
     flex: 1,
   },
   headerWrapper: {
-    marginBottom: SPACING,
+    marginBottom: SPACING * 1.5,
     paddingHorizontal: SPACING,
-    flexDirection: "row",
     alignItems: "center",
     justifyContent: "center",
-    position: "relative",
   },
   scrollContent: {
-    paddingHorizontal: SPACING,
-    paddingBottom: SCREEN_HEIGHT * 0.1,
+    paddingHorizontal: SPACING / 2,
+    paddingBottom: normalizeSize(100),
+    width: "100%",
+    maxWidth: 600,
+    alignSelf: "center",
   },
   section: {
     marginBottom: SPACING * 2,
   },
   sectionHeader: {
-    fontSize: normalizeFont(22),
+    fontSize: normalizeSize(24),
     fontFamily: "Comfortaa_700Bold",
     marginBottom: SPACING,
     textShadowColor: "rgba(0, 0, 0, 0.1)",
@@ -777,81 +772,82 @@ const styles = StyleSheet.create({
     marginBottom: SPACING,
     shadowColor: "#000",
     shadowOffset: { width: 0, height: normalizeSize(6) },
-    shadowOpacity: 0.25,
+    shadowOpacity: 0.35,
     shadowRadius: normalizeSize(8),
-    elevation: 8,
-    borderWidth: 1,
+    elevation: 10,
+    borderWidth: 2.5,
     overflow: "hidden",
   },
   settingItem: {
     flexDirection: "row",
     justifyContent: "space-between",
     alignItems: "center",
-    paddingVertical: SPACING,
+    paddingVertical: normalizeSize(14),
     paddingHorizontal: SPACING,
   },
   settingLabel: {
-    fontSize: normalizeFont(16),
+    fontSize: normalizeSize(18),
     fontFamily: "Comfortaa_400Regular",
   },
   switch: {
-    transform: [{ scale: SCREEN_WIDTH < 400 ? 0.9 : 1 }],
+    transform: [{ scale: SCREEN_WIDTH < 360 ? 0.85 : 1 }],
   },
   languagePicker: {
     width: SCREEN_WIDTH * 0.4,
-    height: SCREEN_HEIGHT * 0.06,
+    height: normalizeSize(50),
     fontFamily: "Comfortaa_400Regular",
-    fontSize: normalizeFont(14),
+    fontSize: normalizeSize(16),
   },
   accountButton: {
-    borderRadius: normalizeSize(15),
+    borderRadius: normalizeSize(16),
     marginBottom: SPACING,
     overflow: "hidden",
     shadowColor: "#000",
     shadowOffset: { width: 0, height: normalizeSize(4) },
     shadowOpacity: 0.3,
     shadowRadius: normalizeSize(6),
-    elevation: 5,
+    elevation: 8,
   },
   buttonGradient: {
     flexDirection: "row",
     alignItems: "center",
-    paddingVertical: SPACING,
-    paddingHorizontal: SPACING,
+    justifyContent: "center",
+    paddingVertical: normalizeSize(14),
+    paddingHorizontal: normalizeSize(20),
   },
   accountButtonText: {
-    fontSize: normalizeFont(16),
-    marginLeft: SPACING,
+    fontSize: normalizeSize(18),
+    marginLeft: normalizeSize(10),
     fontFamily: "Comfortaa_700Bold",
     textShadowColor: "rgba(0, 0, 0, 0.2)",
     textShadowOffset: { width: 1, height: 1 },
     textShadowRadius: 2,
   },
   adminButton: {
-    borderRadius: normalizeSize(15),
+    borderRadius: normalizeSize(16),
     overflow: "hidden",
     marginTop: SPACING,
     shadowColor: "#000",
     shadowOffset: { width: 0, height: normalizeSize(4) },
     shadowOpacity: 0.3,
     shadowRadius: normalizeSize(6),
-    elevation: 5,
+    elevation: 8,
   },
   adminButtonGradient: {
-    paddingVertical: SPACING,
+    paddingVertical: normalizeSize(14),
     paddingHorizontal: SPACING * 1.5,
     alignItems: "center",
   },
   adminButtonText: {
-    fontSize: normalizeFont(18),
+    fontSize: normalizeSize(18),
     fontFamily: "Comfortaa_700Bold",
     textShadowColor: "rgba(0, 0, 0, 0.2)",
     textShadowOffset: { width: 1, height: 1 },
     textShadowRadius: 2,
   },
   aboutLink: {
-    fontSize: normalizeFont(16),
-    marginVertical: SPACING / 2,
+    fontSize: normalizeSize(18),
+    marginVertical: normalizeSize(8),
     textAlign: "center",
     fontFamily: "Comfortaa_400Regular",
     textDecorationLine: "underline",
@@ -861,7 +857,7 @@ const styles = StyleSheet.create({
   },
   appVersion: {
     textAlign: "center",
-    fontSize: normalizeFont(12),
+    fontSize: normalizeSize(14),
     fontFamily: "Comfortaa_400Regular",
     marginTop: SPACING,
   },

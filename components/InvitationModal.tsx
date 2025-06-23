@@ -1,5 +1,6 @@
 import React, { useState, useEffect } from "react";
 import { View, Text, TouchableOpacity, Modal, StyleSheet } from "react-native";
+import Animated, { FadeInUp, Layout } from "react-native-reanimated";
 import { useTranslation } from "react-i18next";
 import { doc, getDoc } from "firebase/firestore";
 import { db } from "../constants/firebase-config";
@@ -7,6 +8,11 @@ import {
   acceptInvitation,
   refuseInvitation,
 } from "../services/invitationService";
+import { useTheme } from "../context/ThemeContext";
+import { Theme } from "../theme/designSystem";
+import designSystem from "../theme/designSystem";
+import { useRouter } from "expo-router";
+import { auth } from "../constants/firebase-config";
 
 interface InvitationModalProps {
   visible: boolean;
@@ -22,6 +28,13 @@ const InvitationModal: React.FC<InvitationModalProps> = ({
   onClose,
 }) => {
   const { t } = useTranslation();
+  const { theme } = useTheme();
+  const router = useRouter();
+
+  const isDarkMode = theme === "dark";
+  const currentTheme: Theme = isDarkMode
+    ? designSystem.darkTheme
+    : designSystem.lightTheme;
   const [inviterUsername, setInviterUsername] = useState<string>("");
   const [challengeTitle, setChallengeTitle] = useState<string>("");
   const [loading, setLoading] = useState<boolean>(false);
@@ -29,10 +42,20 @@ const InvitationModal: React.FC<InvitationModalProps> = ({
   // Récupérer inviterUsername et challengeTitle
   useEffect(() => {
     const fetchInvitationData = async () => {
-      if (!inviteId || !challengeId) return;
+      if (!inviteId || !challengeId) {
+        console.warn("⚠️ Données manquantes", { inviteId, challengeId });
+        onClose();
+        return;
+      }
+
+      if (!auth.currentUser) {
+        console.warn("⚠️ Utilisateur non connecté");
+        router.push("/login"); // Redirige vers la page de login
+        onClose();
+        return;
+      }
 
       try {
-        // Récupérer invitation
         const invitationRef = doc(db, "invitations", inviteId);
         const invitationSnap = await getDoc(invitationRef);
         if (!invitationSnap.exists()) {
@@ -42,14 +65,12 @@ const InvitationModal: React.FC<InvitationModalProps> = ({
         }
 
         const invitation = invitationSnap.data();
-        // Récupérer nom de l'inviteur
         const inviterRef = doc(db, "users", invitation.inviterId);
         const inviterSnap = await getDoc(inviterRef);
         if (inviterSnap.exists()) {
           setInviterUsername(inviterSnap.data().username || "Utilisateur");
         }
 
-        // Récupérer titre du challenge
         const challengeRef = doc(db, "challenges", challengeId);
         const challengeSnap = await getDoc(challengeRef);
         if (challengeSnap.exists()) {
@@ -62,7 +83,7 @@ const InvitationModal: React.FC<InvitationModalProps> = ({
     };
 
     fetchInvitationData();
-  }, [inviteId, challengeId]);
+  }, [inviteId, challengeId, onClose, router]); // Ajoute router aux dépendances
 
   // Gérer acceptation
   const handleAccept = async () => {
@@ -94,6 +115,70 @@ const InvitationModal: React.FC<InvitationModalProps> = ({
     }
   };
 
+  // Définir les styles dynamiquement avec currentTheme
+  const styles = StyleSheet.create({
+    centeredView: {
+      flex: 1,
+      justifyContent: "center",
+      alignItems: "center",
+      backgroundColor: isDarkMode ? "rgba(0,0,0,0.7)" : "rgba(0,0,0,0.5)",
+    },
+    modalView: {
+      backgroundColor: currentTheme.colors.cardBackground,
+      borderRadius: 16,
+      padding: 25,
+      alignItems: "center",
+      shadowColor: "#000",
+      shadowOffset: { width: 0, height: 6 },
+      shadowOpacity: 0.3,
+      shadowRadius: 10,
+      elevation: 8,
+      width: "85%",
+      maxWidth: 400,
+    },
+    modalTitle: {
+      fontSize: 20,
+      fontFamily: "Comfortaa_700Bold",
+      marginBottom: 15,
+      color: currentTheme.colors.secondary,
+      textAlign: "center",
+    },
+    modalText: {
+      fontSize: 16,
+      fontFamily: "Comfortaa_400Regular",
+      marginBottom: 20,
+      textAlign: "center",
+      color: currentTheme.colors.textSecondary,
+    },
+    buttonContainer: {
+      flexDirection: "row",
+      justifyContent: "space-between",
+      width: "100%",
+    },
+    button: {
+      borderRadius: 10,
+      padding: 12,
+      width: "45%",
+      alignItems: "center",
+      shadowColor: "#000",
+      shadowOffset: { width: 0, height: 4 },
+      shadowOpacity: 0.25,
+      shadowRadius: 6,
+      elevation: 5,
+    },
+    acceptButton: {
+      backgroundColor: currentTheme.colors.primary,
+    },
+    refuseButton: {
+      backgroundColor: currentTheme.colors.error,
+    },
+    buttonText: {
+      color: "#fff",
+      fontSize: 16,
+      fontFamily: "Comfortaa_700Bold",
+    },
+  });
+
   return (
     <Modal
       visible={visible}
@@ -102,7 +187,10 @@ const InvitationModal: React.FC<InvitationModalProps> = ({
       onRequestClose={onClose}
     >
       <View style={styles.centeredView}>
-        <View style={styles.modalView}>
+        <Animated.View
+          entering={FadeInUp.duration(300)}
+          style={styles.modalView}
+        >
           <Text style={styles.modalTitle}>
             {t("invitation.title", { username: inviterUsername })}
           </Text>
@@ -110,80 +198,31 @@ const InvitationModal: React.FC<InvitationModalProps> = ({
             {t("invitation.message", { challenge: challengeTitle })}
           </Text>
           <View style={styles.buttonContainer}>
-            <TouchableOpacity
-              style={[styles.button, styles.acceptButton]}
-              onPress={handleAccept}
-              disabled={loading}
-            >
-              <Text style={styles.buttonText}>{t("invitation.accept")}</Text>
-            </TouchableOpacity>
-            <TouchableOpacity
-              style={[styles.button, styles.refuseButton]}
-              onPress={handleRefuse}
-              disabled={loading}
-            >
-              <Text style={styles.buttonText}>{t("invitation.refuse")}</Text>
-            </TouchableOpacity>
+            <Animated.View entering={FadeInUp.delay(200)}>
+              <TouchableOpacity
+                style={[styles.button, styles.acceptButton]}
+                onPress={handleAccept}
+                disabled={loading}
+                activeOpacity={0.8}
+              >
+                <Text style={styles.buttonText}>{t("invitation.accept")}</Text>
+              </TouchableOpacity>
+            </Animated.View>
+            <Animated.View entering={FadeInUp.delay(300)}>
+              <TouchableOpacity
+                style={[styles.button, styles.refuseButton]}
+                onPress={handleRefuse}
+                disabled={loading}
+                activeOpacity={0.8}
+              >
+                <Text style={styles.buttonText}>{t("invitation.refuse")}</Text>
+              </TouchableOpacity>
+            </Animated.View>
           </View>
-        </View>
+        </Animated.View>
       </View>
     </Modal>
   );
 };
-
-const styles = StyleSheet.create({
-  centeredView: {
-    flex: 1,
-    justifyContent: "center",
-    alignItems: "center",
-    backgroundColor: "rgba(0, 0, 0, 0.5)", // Fond semi-transparent
-  },
-  modalView: {
-    backgroundColor: "white",
-    borderRadius: 20,
-    padding: 20,
-    alignItems: "center",
-    shadowColor: "#000",
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.25,
-    shadowRadius: 4,
-    elevation: 5,
-    width: "80%",
-  },
-  modalTitle: {
-    fontSize: 20,
-    fontWeight: "bold",
-    marginBottom: 10,
-    color: "#333",
-  },
-  modalText: {
-    fontSize: 16,
-    marginBottom: 20,
-    textAlign: "center",
-    color: "#555",
-  },
-  buttonContainer: {
-    flexDirection: "row",
-    justifyContent: "space-between",
-    width: "100%",
-  },
-  button: {
-    borderRadius: 10,
-    padding: 12,
-    width: "45%",
-    alignItems: "center",
-  },
-  acceptButton: {
-    backgroundColor: "#28A745", // Vert
-  },
-  refuseButton: {
-    backgroundColor: "#DC3545", // Rouge
-  },
-  buttonText: {
-    color: "white",
-    fontSize: 16,
-    fontWeight: "bold",
-  },
-});
 
 export default InvitationModal;

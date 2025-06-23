@@ -17,7 +17,8 @@
       "bundleIdentifier": "com.mxcrts.ChallengeTies",
       "infoPlist": {
         "UIBackgroundModes": ["remote-notification"],
-        "NSUserNotificationsUsageDescription": "Nous utilisons les notifications pour vous rappeler vos défis quotidiens et vous tenir informé des nouveaux challenges."
+        "NSUserNotificationsUsageDescription": "Nous utilisons les notifications pour vous rappeler vos défis quotidiens et vous tenir informé des nouveaux challenges.",
+        "LSApplicationQueriesSchemes": ["myapp"]
       }
     },
     "android": {
@@ -32,6 +33,34 @@
         "RECEIVE_BOOT_COMPLETED",
         "VIBRATE",
         "com.google.android.c2dm.permission.RECEIVE"
+      ],
+      "intentFilters": [
+        {
+          "action": "VIEW",
+          "data": [
+            {
+              "scheme": "myapp",
+              "host": "challenge",
+              "pathPrefix": "/"
+            },
+            {
+              "scheme": "myapp",
+              "host": "challenge-details",
+              "pathPrefix": "/"
+            },
+            {
+              "scheme": "https",
+              "host": "challengeme-d7fef.web.app",
+              "pathPrefix": "/challenge-details"
+            },
+            {
+              "scheme": "https",
+              "host": "challengeme-d7fef.web.app",
+              "pathPrefix": "/challenge"
+            }
+          ],
+          "category": ["BROWSABLE", "DEFAULT"]
+        }
       ]
     },
     "web": {

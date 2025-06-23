@@ -1,16 +1,9 @@
 import React from "react";
-import {
-  Modal,
-  View,
-  Text,
-  TouchableOpacity,
-  StyleSheet,
-} from "react-native";
+import { Modal, View, Text, TouchableOpacity, StyleSheet } from "react-native";
 import { Ionicons } from "@expo/vector-icons";
-import designSystem from "../theme/designSystem";
 import { useTranslation } from "react-i18next";
-
-const currentTheme = designSystem.lightTheme;
+import { useTheme } from "../context/ThemeContext";
+import designSystem from "../theme/designSystem";
 
 interface Day {
   day: number;
@@ -21,7 +14,7 @@ interface Day {
 interface StatsModalProps {
   visible: boolean;
   onClose: () => void;
-  monthName: string;            // already translated month
+  monthName: string; // already translated month
   currentYearNum: number;
   calendarDays: (Day | null)[];
   goToPrevMonth: () => void;
@@ -38,9 +31,16 @@ export default function StatsModal({
   goToNextMonth,
 }: StatsModalProps) {
   const { t } = useTranslation();
+  const { theme } = useTheme();
+  const isDarkMode = theme === "dark";
+  const currentTheme = isDarkMode
+    ? designSystem.darkTheme
+    : designSystem.lightTheme;
 
-  // translated weekday abbreviations
-  const weekDays = t("statsModal.weekdays", { returnObjects: true }) as string[];
+  // Translated weekday abbreviations
+  const weekDays = t("statsModal.weekdays", {
+    returnObjects: true,
+  }) as string[];
 
   return (
     <Modal
@@ -49,29 +49,70 @@ export default function StatsModal({
       animationType="slide"
       onRequestClose={onClose}
     >
-      <View style={styles.modalContainer}>
-        <View style={styles.modalContent}>
+      <View
+        style={[
+          styles.modalContainer,
+          {
+            backgroundColor: isDarkMode ? "rgba(0,0,0,0.7)" : "rgba(0,0,0,0.5)",
+          },
+        ]}
+      >
+        <View
+          style={[
+            styles.modalContent,
+            { backgroundColor: currentTheme.colors.background },
+          ]}
+        >
           {/* Header */}
           <View style={styles.statsModalHeader}>
             <TouchableOpacity
               onPress={onClose}
               accessibilityLabel={t("statsModal.close")}
+              testID="close-stats-modal"
             >
-              <Ionicons name="close" size={24} color={currentTheme.colors.textPrimary} />
+              <Ionicons
+                name="close"
+                size={24}
+                color={isDarkMode ? currentTheme.colors.textPrimary : "#000000"}
+              />
             </TouchableOpacity>
-            <Text style={[styles.statsModalTitle, { color: currentTheme.colors.textPrimary }]}>
-              {t("statsModal.title", { month: monthName, year: currentYearNum })}
+            <Text
+              style={[
+                styles.statsModalTitle,
+                {
+                  color: isDarkMode
+                    ? currentTheme.colors.textPrimary
+                    : "#000000",
+                },
+              ]}
+            >
+              {t("statsModal.title", {
+                month: monthName,
+                year: currentYearNum,
+              })}
             </Text>
             <View style={{ width: 24 }} />
           </View>
 
           {/* Calendar grid */}
-          <View style={styles.calendarContainer}>
+          <View
+            style={[
+              styles.calendarContainer,
+              { backgroundColor: currentTheme.colors.cardBackground },
+            ]}
+          >
             <View style={styles.weekDaysContainer}>
               {weekDays.map((abbr) => (
                 <Text
                   key={abbr}
-                  style={[styles.weekDay, { color: currentTheme.colors.textSecondary }]}
+                  style={[
+                    styles.weekDay,
+                    {
+                      color: isDarkMode
+                        ? currentTheme.colors.textSecondary
+                        : "#555555",
+                    },
+                  ]}
                 >
                   {abbr}
                 </Text>
@@ -84,12 +125,26 @@ export default function StatsModal({
                     <View
                       style={[
                         styles.dayCircle,
-                        day.completed && styles.dayCompleted,
+                        day.completed && [
+                          styles.dayCompleted,
+                          {
+                            backgroundColor: isDarkMode ? "#FF6200" : "#4ADE80",
+                          },
+                        ],
                         { borderColor: currentTheme.colors.border },
                       ]}
                     >
                       <Text
-                        style={[styles.dayText, { color: currentTheme.colors.textPrimary }]}
+                        style={[
+                          styles.dayText,
+                          {
+                            color: day.completed
+                              ? "#000000"
+                              : isDarkMode
+                              ? currentTheme.colors.textPrimary
+                              : "#000000",
+                          },
+                        ]}
                       >
                         {day.day}
                       </Text>
@@ -106,17 +161,33 @@ export default function StatsModal({
           <View style={styles.statsModalFooter}>
             <TouchableOpacity
               onPress={goToPrevMonth}
-              style={styles.navButton}
+              style={[
+                styles.navButton,
+                { backgroundColor: currentTheme.colors.cardBackground },
+              ]}
               accessibilityLabel={t("statsModal.prevMonth")}
+              testID="prev-month-button"
             >
-              <Ionicons name="chevron-back" size={24} color={currentTheme.colors.textPrimary} />
+              <Ionicons
+                name="chevron-back"
+                size={24}
+                color={isDarkMode ? currentTheme.colors.textPrimary : "#000000"}
+              />
             </TouchableOpacity>
             <TouchableOpacity
               onPress={goToNextMonth}
-              style={styles.navButton}
+              style={[
+                styles.navButton,
+                { backgroundColor: currentTheme.colors.cardBackground },
+              ]}
               accessibilityLabel={t("statsModal.nextMonth")}
+              testID="next-month-button"
             >
-              <Ionicons name="chevron-forward" size={24} color={currentTheme.colors.textPrimary} />
+              <Ionicons
+                name="chevron-forward"
+                size={24}
+                color={isDarkMode ? currentTheme.colors.textPrimary : "#000000"}
+              />
             </TouchableOpacity>
           </View>
         </View>
@@ -128,17 +199,20 @@ export default function StatsModal({
 const styles = StyleSheet.create({
   modalContainer: {
     flex: 1,
-    backgroundColor: "rgba(0,0,0,0.7)",
     justifyContent: "center",
     alignItems: "center",
     paddingHorizontal: 20,
   },
   modalContent: {
-    backgroundColor: "#0F172A",
     width: "100%",
     maxWidth: 400,
-    borderRadius: 10,
+    borderRadius: 12,
     padding: 20,
+    shadowColor: "#000",
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.25,
+    shadowRadius: 4,
+    elevation: 5,
   },
   statsModalHeader: {
     flexDirection: "row",
@@ -148,33 +222,35 @@ const styles = StyleSheet.create({
   },
   statsModalTitle: {
     fontSize: 20,
-    fontWeight: "bold",
-    color: "#fff",
-    textAlign: "center",
     fontFamily: "Comfortaa_700Bold",
+    textAlign: "center",
+    flex: 1,
   },
   calendarContainer: {
     marginVertical: 10,
+    padding: 10,
+    borderRadius: 8,
   },
   weekDaysContainer: {
     flexDirection: "row",
     justifyContent: "space-around",
-    marginBottom: 5,
+    marginBottom: 8,
   },
   weekDay: {
     flex: 1,
     textAlign: "center",
-    color: "#aaa",
     fontSize: 12,
+    fontFamily: "Comfortaa_400Regular",
   },
   daysContainer: {
     flexDirection: "row",
     flexWrap: "wrap",
+    justifyContent: "center",
   },
   dayWrapper: {
     width: "14.28%",
     alignItems: "center",
-    marginVertical: 4,
+    marginVertical: 6,
   },
   dayCircle: {
     width: 32,
@@ -182,14 +258,14 @@ const styles = StyleSheet.create({
     borderRadius: 16,
     justifyContent: "center",
     alignItems: "center",
-    backgroundColor: "#333",
+    borderWidth: 1,
   },
   dayCompleted: {
-    backgroundColor: "#FACC15",
+    borderWidth: 0,
   },
   dayText: {
-    color: "#fff",
     fontSize: 14,
+    fontFamily: "Comfortaa_400Regular",
   },
   emptyDay: {
     width: 32,
@@ -202,6 +278,11 @@ const styles = StyleSheet.create({
   },
   navButton: {
     padding: 10,
+    borderRadius: 8,
+    shadowColor: "#000",
+    shadowOffset: { width: 0, height: 1 },
+    shadowOpacity: 0.2,
+    shadowRadius: 2,
+    elevation: 3,
   },
 });
-

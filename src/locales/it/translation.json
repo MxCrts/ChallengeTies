@@ -172,6 +172,18 @@
       "title": "Rimani Positivo",
       "description": "Anche quando inciampi, ricorda che ogni giorno è un nuovo inizio. Impara dagli errori e vai avanti."
     },
+    "takeBreaks": {
+      "title": "Fai pause regolari",
+      "description": "Programmare brevi pause può migliorare concentrazione e produttività. Prova la tecnica del Pomodoro: lavora 25 minuti e poi fai una pausa di 5 minuti."
+    },
+    "stayHydrated": {
+      "title": "Mantieniti idratato",
+      "description": "Bere abbastanza acqua aiuta a mantenere i livelli di energia e concentrazione. Tieni una bottiglia d'acqua a portata di mano e imposta promemoria per bere durante la giornata."
+    },
+    "celebrateWins": {
+      "title": "Celebra i tuoi successi",
+      "description": "Riconoscere i tuoi traguardi, anche quelli piccoli, aumenta la motivazione e la fiducia. Prenditi un momento per riconoscere e premiarti per i tuoi progressi."
+    },
     "readMore": "Leggi di più",
     "showLess": "Mostra meno",
     "footerQuery": "Altre domande o hai bisogno di aiuto personalizzato?",
@@ -362,7 +374,8 @@
     "save": "Salva",
     "saved": "Salvata",
     "share": "Condividi",
-    "stats": "Statistica"
+    "stats": "Statistica",
+    "inviteA11y": "Invita un amico a questa sfida"
   },
   "explanation": {
     "title": "La tua voce conta!",
@@ -385,7 +398,41 @@
   "achievements": {
     "first_connection": "Prima connessione",
     "profile_completed": "Profilo completato",
-    "finishChallenge_10": "Serio nelle sfide"
+    "finishChallenge_10": "Serio con le sfide",
+    "finishChallenge_1": "Prima sfida completata",
+    "finishChallenge_3": "Principiante motivato",
+    "finishChallenge_25": "Macchina delle sfide",
+    "finishChallenge_50": "Inarrestabile!",
+    "finishChallenge_100": "Leggenda vivente",
+    "selectChallengeDays_7": "Inizio",
+    "selectChallengeDays_30": "Determinazione",
+    "selectChallengeDays_90": "Maratoneta",
+    "selectChallengeDays_180": "Amo il lungo termine",
+    "selectChallengeDays_365": "Pazienza leggendaria",
+    "streakProgress_3": "Mini serie",
+    "streakProgress_7": "Routine stabilita",
+    "streakProgress_14": "Impressionante!",
+    "streakProgress_30": "Determinazione concreta",
+    "streakProgress_60": "Niente può fermarmi",
+    "streakProgress_90": "Sono una macchina",
+    "streakProgress_180": "Disciplina assoluta",
+    "streakProgress_365": "Sono un mostro",
+    "messageSent_1": "Primo messaggio inviato",
+    "messageSent_10": "Spirito di squadra",
+    "messageSent_50": "Comunità attiva",
+    "shareChallenge_1": "Mi piace condividere",
+    "shareChallenge_5": "Influencer in erba",
+    "shareChallenge_20": "Leader della comunità",
+    "inviteFriend_1": "Invita un amico",
+    "inviteFriend_5": "Espandi il tuo team",
+    "inviteFriend_10": "Re della rete",
+    "voteFeature_1": "Prima funzione votata",
+    "voteFeature_5": "Mi piace votare",
+    "saveChallenge_1": "Sfida salvata",
+    "saveChallenge_5": "5 sfide salvate",
+    "challengeCreated_1": "Creatore di sfide",
+    "challengeCreated_5": "Sono ispirato",
+    "challengeCreated_10": "Innovatore"
   },
   "statsModal": {
     "close": "Chiudi",
@@ -486,26 +533,25 @@
   },
   "completedOnDate": "Завершено",
   "completion": {
-    "youAreAwesome": "Вы великолепны!",
-    "keepItUp": "Продолжайте в том же духе!",
-    "successIsYours": "Успех на вашей стороне!",
-    "everyEffortCounts": "Каждое усилие имеет значение!",
-    "neverGiveUp": "Никогда не сдавайтесь!",
-    "youAreOnTrack": "Вы на правильном пути!",
-    "excellenceAwaits": "Величие ждёт вас!",
-    "headHeldHigh": "Держите голову выше!",
-    "persistencePays": "Упорство окупается!",
-    "challengesMakeYouStronger": "Вызовы делают вас сильнее!",
-    "errorFinalizing": "Ошибка при завершении челленджа:",
-    "trophies": "{{count}} трофеев",
-    "reward": "{{count}} трофеев",
-    "continue": "Продолжить",
-    "doubleTrophies": "Удвоить трофеи",
+    "trophies": "trofei",
+    "reward": "Hai guadagnato {{count}} trofei!",
     "finalTitle": "Congratulazioni!",
-    "finalMessage": "Sfida completata! Hai guadagnato {{count}} trofei!",
-    "errorFinalizingMessage": "Impossibile completare la sfida.",
-    "adNotReadyTitle": "Pubblicità non disponibile",
-    "adNotReady": "La pubblicità non è ancora pronta. Riprova tra qualche istante."
+    "finalMessage": "Hai guadagnato {{count}} trofei!",
+    "errorFinalizingMessage": "Errore durante la finalizzazione della sfida.",
+    "adNotReadyTitle": "Annuncio non disponibile",
+    "adNotReady": "L'annuncio non è ancora caricato. Riprova tra poco.",
+    "continue": "Continua",
+    "doubleTrophies": "Raddoppia i tuoi trofei",
+    "youAreAwesome": "Sei fantastico!",
+    "keepItUp": "Continua così!",
+    "successIsYours": "Il successo è tuo!",
+    "everyEffortCounts": "Ogni sforzo conta!",
+    "neverGiveUp": "Non mollare mai!",
+    "youAreOnTrack": "Sei sulla strada giusta!",
+    "excellenceAwaits": "L'eccellenza ti aspetta!",
+    "headHeldHigh": "A testa alta!",
+    "persistencePays": "La perseveranza paga!",
+    "challengesMakeYouStronger": "Le sfide ti rendono più forte!"
   },
   "featureDetail": {
     "votes": "{{count}} голос",
@@ -668,40 +714,40 @@
     "footerMessage": "Risponderemo il prima possibile. Grazie per aver scelto ChallengeTies! 🚀"
   },
   "history": {
-    "title": "La nostra storia",
+    "title": "La Nostra Storia",
     "logoAlt": "Logo di ChallengeTies",
-    "intro": "è nata da una visione potente: …",
-    "featuresTitle": "Caratteristiche principali 🔥",
+    "intro": "ChallengeTies è molto più di un'app. È un viaggio umano, un invito a crescere, a connettersi e a trasformare le abitudini quotidiane in sfide condivise, positive e stimolanti. Che tu sia solo o con un amico, ogni sfida completata è una vittoria, ogni sforzo conta e ogni giorno è una nuova occasione per migliorare.",
+    "featuresTitle": "Funzionalità Principali",
     "features": {
       "specialChallenges": {
         "title": "Sfide speciali",
-        "desc": "Sfide uniche che stimolano …"
+        "desc": "Sfide varie, divertenti o profonde, che puoi affrontare da solo o in coppia. Scegli la durata e supera te stesso senza pressioni."
       },
       "progressTracking": {
-        "title": "Monitoraggio dei progressi",
-        "desc": "Strumenti interattivi per visualizzare …"
+        "title": "Tracciamento progressi",
+        "desc": "Visualizza la tua costanza, sblocca trofei, segui i tuoi progressi e prova orgoglio per il tuo impegno."
       },
       "customChallenges": {
         "title": "Sfide personalizzate",
-        "desc": "La capacità di creare le tue …"
+        "desc": "Crea sfide su misura per la tua vita, i tuoi obiettivi e il tuo ritmo. Ognuno cresce a modo suo."
       },
       "community": {
-        "title": "Community coinvolta",
-        "desc": "Una rete di persone con la stessa visione …"
+        "title": "Comunità unita",
+        "desc": "Unisciti a una rete positiva e motivante. Proponi idee, vota per nuove funzionalità, condividi e cresci insieme."
       }
     },
-    "motivationTitle": "La nostra motivazione 🚀",
-    "motivation": "Crediamo fermamente che ogni individuo …",
-    "logoMeaningTitle": "Significato del logo 🎨",
-    "logoMeaning": "Il logo di ChallengeTies incarna unità …",
-    "visionTitle": "La nostra visione 🌍",
-    "vision": "Non siamo solo un'app, siamo un movimento …",
-    "beginningsTitle": "Gli inizi 📅",
-    "beginnings": "L'avventura di ChallengeTies è iniziata …",
-    "communityEngagementTitle": "Coinvolgimento della community 🤝",
-    "communityEngagement": "Sin dall'inizio, la forza di ChallengeTies …",
-    "finalThanksTitle": "Grazie per far parte …",
-    "finalThanksMessage": "ChallengeTies è il tuo alleato per trasformare …"
+    "motivationTitle": "Perché abbiamo creato ChallengeTies",
+    "motivation": "Perché eravamo stanchi delle app fredde, solitarie o colpevolizzanti. Volevamo qualcosa di umano, divertente, che celebrasse ogni piccola vittoria. ChallengeTies è nata per aiutare le persone a crescere al proprio ritmo, sentendosi supportate e valorizzate.",
+    "logoMeaningTitle": "Perché questo logo?",
+    "logoMeaning": "La 'T' centrale rappresenta Ties, il legame. L'energia galattica che la circonda simboleggia lo slancio, la crescita e la comunità. Una scintilla nell’universo, che rappresenta il momento in cui scegli di cambiare.",
+    "visionTitle": "La nostra visione",
+    "vision": "Non vogliamo solo un'app, ma un ecosistema completo di strumenti positivi: ChallengeTies, SkillTies, MindTies e altri ancora. Un universo connesso per il benessere, l'apprendimento e la crescita, guidato da semplicità, empatia e umorismo.",
+    "beginningsTitle": "Gli inizi",
+    "beginnings": "Tutto è iniziato in un furgone camper, tra natura e codice, tra sogni e realtà. L’idea: e se un’app potesse davvero aiutare le persone a trasformare le intenzioni in azioni durature? Non per essere perfetti, ma per migliorare. Insieme. Una sfida alla volta.",
+    "communityEngagementTitle": "Guidato dalla comunità",
+    "communityEngagement": "ChallengeTies non è solo nostra. È tua. Ogni utente può proporre idee, votare, contribuire. Vogliamo un'app viva, in evoluzione, che assomigli a chi la utilizza.",
+    "finalThanksTitle": "Grazie ❤️",
+    "finalThanksMessage": "Se stai leggendo questo, significa che credi nel progetto. Grazie di cuore. ChallengeTies esiste grazie a persone come te: curiose, positive e determinate. Continuiamo a salire. Insieme. 🚀"
   },
   "newFeaturesTitle": "Novità",
   "tryAnotherSearch": "Prova un'altra ricerca o filtro.",
@@ -1043,10 +1089,13 @@
     "evening2": "Ancora una sfida prima di andare a letto?"
   },
   "invitation": {
-    "title": "{username} ti invita!",
-    "message": "Partecipa alla sfida {challenge}!",
-    "accept": "Accetta",
-    "refuse": "Rifiuta"
+    "title": "Unisciti a una sfida",
+    "subtitle": "Sei stato invitato alla sfida {challengeId}!",
+    "accept": "Accetta l'invito",
+    "accepting": "Accettazione in corso...",
+    "success": "Sfida unita!",
+    "invalid": "Invito non valido",
+    "joinedChallenge": "Hai partecipato con successo alla sfida!"
   },
   "settingsPage": {
     "location": "Localizzazione",
@@ -1062,5 +1111,94 @@
   "explorePageDescription": "Scopri {challenges} e unisciti a {communities} per ispirarti e affrontare nuove sfide.",
   "homePageTitle": "Home",
   "focusPageTitle": "Focus",
-  "explorePageTitle": "Esplora"
+  "explorePageTitle": "Esplora",
+  "activity": "Attività",
+  "listOfNotifications": "Elenco delle notifiche",
+  "viewInvitation": "Invito alla sfida {{challenge}}",
+  "invitationIcon": "Icona dell'invito",
+  "noNotifications": "Nessuna notifica",
+  "noNotificationsIcon": "Icona di notifiche vuote",
+  "noNotificationsSubtext": "Riceverai notifiche qui quando verrai invitato a una sfida.",
+  "backButton": "Indietro",
+  "backButtonHint": "Torna alla pagina precedente",
+  "invitationToChallenge": "Invito alla sfida {{challenge}}",
+  "receivedOn": "Ricevuto il {{date}}",
+  "locale": "it-IT",
+  "access": {
+    "editProfile": {
+      "label": "Modifica profilo",
+      "hint": "Vai alla pagina di modifica del profilo"
+    },
+    "statistics": {
+      "label": "Statistiche",
+      "hint": "Accedi alle tue statistiche personali"
+    },
+    "ongoingChallenges": {
+      "label": "Sfide in corso",
+      "hint": "Consulta le sfide in corso"
+    },
+    "favorites": {
+      "label": "Preferiti",
+      "hint": "Accedi alle tue sfide preferite"
+    },
+    "completedChallenges": {
+      "label": "Sfide completate",
+      "hint": "Vedi le sfide che hai completato"
+    },
+    "rewards": {
+      "label": "Ricompense",
+      "hint": "Vedi trofei e badge ottenuti"
+    },
+    "myChallenges": {
+      "label": "Le mie sfide",
+      "hint": "Accedi alle sfide che hai creato"
+    },
+    "activity": {
+      "label": "Attività",
+      "hint": "Vedi notifiche e attività recenti"
+    }
+  },
+  "statDescription": {
+    "savedChallenges": "Numero totale di sfide salvate.",
+    "ongoingChallenges": "Sfide attualmente in corso.",
+    "completedChallenges": "Sfide completate con successo.",
+    "successRate": "Percentuale di successo basata sulle sfide completate.",
+    "trophies": "Numero totale di trofei ottenuti.",
+    "unlockedAchievements": "Obiettivi sbloccati.",
+    "longestStreak": "La tua serie attiva più lunga di giorni."
+  },
+  "pleaseAcceptRules": "Si prega di selezionare la casella per accettare le regole.",
+  "errorSavingRulesAcceptance": "Errore durante il salvataggio dell'accettazione delle regole.",
+  "iHaveReadRules": "Ho letto e accetto le regole della chat.",
+  "iUnderstand": "Ho capito",
+  "acceptRulesCheckbox": "Accetto le regole della chat",
+  "acceptRulesButton": "Conferma accettazione regole",
+  "tutorial": {
+    "welcome": {
+      "title": "Benvenuto su ChallengeTies!",
+      "description": "Inizia un’avventura unica per affrontare sfide e raggiungere i tuoi obiettivi in pochi passaggi."
+    },
+    "index": {
+      "title": "Scopri l’essenziale",
+      "description": "Esplora le sfide più popolari, ricevi consigli, consulta la classifica e proponi le tue idee."
+    },
+    "profile": {
+      "title": "Il tuo profilo, la tua storia",
+      "description": "Personalizza il tuo profilo, segui le tue statistiche, gestisci sfide attive, salvate, create e le notifiche."
+    },
+    "focus": {
+      "title": "Rimani concentrato",
+      "description": "Visualizza le sfide del giorno, completate o in corso, e crea nuovi obiettivi per progredire."
+    },
+    "explore": {
+      "title": "Esplora senza limiti",
+      "description": "Scopri tutte le sfide esistenti create dalla community e usa i filtri per ispirarti."
+    },
+    "buttons": {
+      "start": "Inizia",
+      "skip": "Salta",
+      "next": "Avanti",
+      "finish": "Si parte!"
+    }
+  }
 }

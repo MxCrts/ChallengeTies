@@ -1,6 +1,6 @@
-// components/MissedChallengeModal.tsx
-import React from "react";
+import React, { useState, useEffect } from "react";
 import {
+  Modal,
   View,
   Text,
   StyleSheet,
@@ -18,10 +18,10 @@ import {
   AdEventType,
   TestIds,
 } from "react-native-google-mobile-ads";
-import { useState, useEffect } from "react";
 
 const { width: SCREEN_WIDTH, height: SCREEN_HEIGHT } = Dimensions.get("window");
 const currentTheme = designSystem.lightTheme;
+
 // ID vidéo récompensée
 const adUnitId = __DEV__
   ? TestIds.REWARDED
@@ -53,11 +53,14 @@ const MissedChallengeModal: React.FC<MissedChallengeModalProps> = ({
   trophyCost,
 }) => {
   const { t } = useTranslation();
-
   const [adLoaded, setAdLoaded] = useState(false);
   const [adError, setAdError] = useState<string | null>(null);
 
   useEffect(() => {
+    console.log("Modal visible:", visible, "Viewport:", {
+      SCREEN_WIDTH,
+      SCREEN_HEIGHT,
+    });
     const unsubscribeLoaded = rewarded.addAdEventListener(
       RewardedAdEventType.LOADED,
       () => {
@@ -70,6 +73,8 @@ const MissedChallengeModal: React.FC<MissedChallengeModalProps> = ({
       RewardedAdEventType.EARNED_REWARD,
       () => {
         console.log("✅ Récompense gagnée !");
+        onWatchAd();
+        onClose();
       }
     );
     const unsubscribeError = rewarded.addAdEventListener(
@@ -86,14 +91,12 @@ const MissedChallengeModal: React.FC<MissedChallengeModalProps> = ({
       unsubscribeEarned();
       unsubscribeError();
     };
-  }, [t]);
-
-  if (!visible) return null;
+  }, [t, onWatchAd, onClose, visible]);
 
   const handleWatchAd = () => {
+    console.log("handleWatchAd appelé, adLoaded:", adLoaded);
     if (adLoaded) {
       rewarded.show();
-      onWatchAd();
       setAdLoaded(false);
       rewarded.load();
     } else {
@@ -102,121 +105,162 @@ const MissedChallengeModal: React.FC<MissedChallengeModalProps> = ({
     }
   };
 
+  const handleReset = () => {
+    console.log("handleReset appelé");
+    try {
+      onReset();
+      onClose();
+      console.log("onClose appelé après onReset");
+    } catch (error) {
+      console.error("Erreur dans handleReset:", error);
+    }
+  };
+
+  const handleUseTrophies = () => {
+    console.log("handleUseTrophies appelé");
+    try {
+      onUseTrophies();
+      onClose();
+      console.log("onClose appelé après onUseTrophies");
+    } catch (error) {
+      console.error("Erreur dans handleUseTrophies:", error);
+    }
+  };
+
+  const handleClose = () => {
+    console.log("handleClose appelé");
+    onClose();
+  };
+
+  if (!visible) {
+    console.log("Modal non rendu (visible=false)", "Timestamp:", Date.now());
+    return null;
+  }
+
   return (
-    <View style={styles.overlay}>
-      <Animated.View
-        entering={FadeIn.duration(300)}
-        exiting={FadeOut.duration(200)}
-        style={styles.modalContainer}
-      >
-        <LinearGradient
-          colors={["#1E1E1E", "#3A3A3A"]}
-          style={styles.modalContent}
-          start={{ x: 0, y: 0 }}
-          end={{ x: 1, y: 1 }}
+    <Modal
+      visible={visible}
+      transparent={true}
+      animationType="none"
+      onRequestClose={handleClose}
+    >
+      <View style={styles.overlay}>
+        <Animated.View
+          entering={FadeIn.duration(300)}
+          exiting={FadeOut.duration(200)}
+          style={styles.modalContainer}
         >
-          <View style={styles.header}>
-            <Ionicons
-              name="warning-outline"
-              size={normalizeSize(48)}
-              color="#FF4444"
-            />
-            <Text style={styles.title}>{t("missedChallenge.title")}</Text>
-            <Text style={styles.subtitle}>{t("missedChallenge.subtitle")}</Text>
-          </View>
-          <View style={styles.optionsContainer}>
-            <TouchableOpacity
-              style={styles.optionButton}
-              onPress={onReset}
-              activeOpacity={0.8}
-            >
-              <LinearGradient
-                colors={["#FF6200", "#FF8C00"]}
-                style={styles.optionGradient}
-                start={{ x: 0, y: 0 }}
-                end={{ x: 1, y: 1 }}
+          <LinearGradient
+            colors={["#1E1E1E", "#3A3A3A"]}
+            style={styles.modalContent}
+            start={{ x: 0, y: 0 }}
+            end={{ x: 1, y: 1 }}
+          >
+            <View style={styles.header}>
+              <Ionicons
+                name="warning-outline"
+                size={normalizeSize(48)}
+                color="#FF4444"
+              />
+              <Text style={styles.title}>{t("missedChallenge.title")}</Text>
+              <Text style={styles.subtitle}>
+                {t("missedChallenge.subtitle")}
+              </Text>
+            </View>
+            <View style={styles.optionsContainer}>
+              <TouchableOpacity
+                style={styles.optionButton}
+                onPress={handleReset}
+                activeOpacity={0.8}
               >
-                <Ionicons
-                  name="refresh-outline"
-                  size={normalizeSize(28)}
-                  color="#FFF"
-                />
-                <View style={styles.optionTextContainer}>
-                  <Text style={styles.optionText}>
-                    {t("missedChallenge.reset.title")}
-                  </Text>
-                  <Text style={styles.optionSubtext}>
-                    {t("missedChallenge.reset.subtitle")}
-                  </Text>
-                </View>
-              </LinearGradient>
-            </TouchableOpacity>
-            <TouchableOpacity
-              style={styles.optionButton}
-              onPress={handleWatchAd}
-              activeOpacity={0.8}
-            >
-              <LinearGradient
-                colors={["#6EE7B7", "#34D399"]}
-                style={styles.optionGradient}
-                start={{ x: 0, y: 0 }}
-                end={{ x: 1, y: 1 }}
+                <LinearGradient
+                  colors={["#FF6200", "#FF8C00"]}
+                  style={styles.optionGradient}
+                  start={{ x: 0, y: 0 }}
+                  end={{ x: 1, y: 1 }}
+                >
+                  <Ionicons
+                    name="refresh-outline"
+                    size={normalizeSize(28)}
+                    color="#FFF"
+                  />
+                  <View style={styles.optionTextContainer}>
+                    <Text style={styles.optionText}>
+                      {t("missedChallenge.reset.title")}
+                    </Text>
+                    <Text style={styles.optionSubtext}>
+                      {t("missedChallenge.reset.subtitle")}
+                    </Text>
+                  </View>
+                </LinearGradient>
+              </TouchableOpacity>
+              <TouchableOpacity
+                style={styles.optionButton}
+                onPress={handleWatchAd}
+                activeOpacity={0.8}
               >
-                <Ionicons
-                  name="play-circle-outline"
-                  size={normalizeSize(28)}
-                  color="#FFF"
-                />
-                <View style={styles.optionTextContainer}>
-                  <Text style={styles.optionText}>
-                    {t("missedChallenge.ad.title")}
-                  </Text>
-                  <Text style={styles.optionSubtext}>
-                    {t("missedChallenge.ad.subtitle")}
-                  </Text>
-                </View>
-              </LinearGradient>
-            </TouchableOpacity>
-            <TouchableOpacity
-              style={styles.optionButton}
-              onPress={onUseTrophies}
-              activeOpacity={0.8}
-            >
-              <LinearGradient
-                colors={["#FACC15", "#F59E0B"]}
-                style={styles.optionGradient}
-                start={{ x: 0, y: 0 }}
-                end={{ x: 1, y: 1 }}
+                <LinearGradient
+                  colors={["#6EE7B7", "#34D399"]}
+                  style={styles.optionGradient}
+                  start={{ x: 0, y: 0 }}
+                  end={{ x: 1, y: 1 }}
+                >
+                  <Ionicons
+                    name="play-circle-outline"
+                    size={normalizeSize(28)}
+                    color="#FFF"
+                  />
+                  <View style={styles.optionTextContainer}>
+                    <Text style={styles.optionText}>
+                      {t("missedChallenge.ad.title")}
+                    </Text>
+                    <Text style={styles.optionSubtext}>
+                      {t("missedChallenge.ad.subtitle")}
+                    </Text>
+                  </View>
+                </LinearGradient>
+              </TouchableOpacity>
+              <TouchableOpacity
+                style={styles.optionButton}
+                onPress={handleUseTrophies}
+                activeOpacity={0.8}
               >
-                <Ionicons
-                  name="trophy-outline"
-                  size={normalizeSize(28)}
-                  color="#FFF"
-                />
-                <View style={styles.optionTextContainer}>
-                  <Text style={styles.optionText}>
-                    {t("missedChallenge.useTrophies.title", {
-                      count: trophyCost,
-                    })}
-                  </Text>
-                  <Text style={styles.optionSubtext}>
-                    {t("missedChallenge.useTrophies.subtitle")}
-                  </Text>
-                </View>
-              </LinearGradient>
+                <LinearGradient
+                  colors={["#FACC15", "#F59E0B"]}
+                  style={styles.optionGradient}
+                  start={{ x: 0, y: 0 }}
+                  end={{ x: 1, y: 1 }}
+                >
+                  <Ionicons
+                    name="trophy-outline"
+                    size={normalizeSize(28)}
+                    color="#FFF"
+                  />
+                  <View style={styles.optionTextContainer}>
+                    <Text style={styles.optionText}>
+                      {t("missedChallenge.useTrophies.title", {
+                        count: trophyCost,
+                      })}
+                    </Text>
+                    <Text style={styles.optionSubtext}>
+                      {t("missedChallenge.useTrophies.subtitle")}
+                    </Text>
+                  </View>
+                </LinearGradient>
+              </TouchableOpacity>
+            </View>
+            {adError && <Text style={styles.errorText}>{adError}</Text>}
+            <TouchableOpacity style={styles.closeButton} onPress={handleClose}>
+              <Ionicons
+                name="close-circle"
+                size={normalizeSize(36)}
+                color="#FFF"
+              />
             </TouchableOpacity>
-          </View>
-          {adError && <Text style={styles.errorText}>{adError}</Text>}
-          <TouchableOpacity style={styles.closeButton} onPress={onClose}>
-            <Ionicons
-              name="close-circle"
-              size={normalizeSize(36)}
-              color="#FFF"
-            />
-          </TouchableOpacity>
-        </LinearGradient>
-      </Animated.View>
-    </View>
+          </LinearGradient>
+        </Animated.View>
+      </View>
+    </Modal>
   );
 };
 
@@ -230,11 +274,10 @@ const styles = StyleSheet.create({
     backgroundColor: "rgba(0, 0, 0, 0.75)",
     justifyContent: "center",
     alignItems: "center",
-    zIndex: 1000,
   },
   modalContainer: {
     width: SCREEN_WIDTH * 0.9,
-    maxWidth: 400,
+    maxWidth: normalizeSize(400),
     maxHeight: SCREEN_HEIGHT * 0.85,
     borderRadius: normalizeSize(24),
     overflow: "hidden",
@@ -244,9 +287,9 @@ const styles = StyleSheet.create({
     padding: normalizeSize(24),
     borderRadius: normalizeSize(24),
     shadowColor: "#000",
-    shadowOffset: { width: 0, height: 12 },
+    shadowOffset: { width: 0, height: normalizeSize(12) },
     shadowOpacity: 0.6,
-    shadowRadius: 20,
+    shadowRadius: normalizeSize(20),
     elevation: 25,
   },
   header: {
@@ -278,9 +321,9 @@ const styles = StyleSheet.create({
     borderRadius: normalizeSize(16),
     overflow: "hidden",
     shadowColor: "#000",
-    shadowOffset: { width: 0, height: 6 },
+    shadowOffset: { width: 0, height: normalizeSize(6) },
     shadowOpacity: 0.3,
-    shadowRadius: 10,
+    shadowRadius: normalizeSize(10),
     elevation: 8,
   },
   optionGradient: {

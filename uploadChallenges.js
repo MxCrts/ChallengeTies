@@ -33,6 +33,7 @@ const challenges = [
     chatId: "eatHealthy",
     participantsCount: 0,
     usersTakingChallenge: [],
+    approved: true,
   },
   {
     title: "Marchez 10 000 pas",
@@ -43,6 +44,7 @@ const challenges = [
     chatId: "walk10000Steps",
     participantsCount: 0,
     usersTakingChallenge: [],
+    approved: true,
   },
   {
     title: "Économisez 5 $ par jour",
@@ -54,6 +56,7 @@ const challenges = [
     chatId: "saveMoney",
     participantsCount: 0,
     usersTakingChallenge: [],
+    approved: true,
   },
   {
     title: "Méditez pendant 10 minutes",
@@ -65,6 +68,7 @@ const challenges = [
     chatId: "meditation",
     participantsCount: 0,
     usersTakingChallenge: [],
+    approved: true,
   },
   {
     title: "Lisez 1 chapitre par jour",
@@ -76,6 +80,7 @@ const challenges = [
     chatId: "readChapter",
     participantsCount: 0,
     usersTakingChallenge: [],
+    approved: true,
   },
   {
     title: "Écrivez 500 mots par jour",
@@ -87,6 +92,7 @@ const challenges = [
     chatId: "writeWords",
     participantsCount: 0,
     usersTakingChallenge: [],
+    approved: true,
   },
   {
     title: "Apprenez une nouvelle compétence",
@@ -98,6 +104,7 @@ const challenges = [
     chatId: "learnSkill",
     participantsCount: 0,
     usersTakingChallenge: [],
+    approved: true,
   },
   {
     title: "Désencombrez votre espace",
@@ -109,6 +116,7 @@ const challenges = [
     chatId: "declutterSpace",
     participantsCount: 0,
     usersTakingChallenge: [],
+    approved: true,
   },
   {
     title: "Pratiquez 15 minutes de yoga",
@@ -120,6 +128,7 @@ const challenges = [
     chatId: "dailyYoga",
     participantsCount: 0,
     usersTakingChallenge: [],
+    approved: true,
   },
   {
     title: "Pratiquez la gratitude",
@@ -131,6 +140,7 @@ const challenges = [
     chatId: "practiceGratitude",
     participantsCount: 0,
     usersTakingChallenge: [],
+    approved: true,
   },
   {
     title: "Entraînez-vous",
@@ -142,6 +152,7 @@ const challenges = [
     chatId: "workout15Min",
     participantsCount: 0,
     usersTakingChallenge: [],
+    approved: true,
   },
   {
     title: "Buvez 2 litres d'eau",
@@ -152,6 +163,7 @@ const challenges = [
     chatId: "drinkWater",
     participantsCount: 0,
     usersTakingChallenge: [],
+    approved: true,
   },
   {
     title: "Planifiez demain ce soir",
@@ -162,6 +174,7 @@ const challenges = [
     chatId: "planTomorrow",
     participantsCount: 0,
     usersTakingChallenge: [],
+    approved: true,
   },
   {
     title: "Routine d'étirement matinal",
@@ -172,6 +185,7 @@ const challenges = [
     chatId: "morningStretch",
     participantsCount: 0,
     usersTakingChallenge: [],
+    approved: true,
   },
   {
     title: "Passez 10 minutes dehors",
@@ -183,6 +197,7 @@ const challenges = [
     chatId: "timeOutside",
     participantsCount: 0,
     usersTakingChallenge: [],
+    approved: true,
   },
   {
     title: "Déconnectez-vous pendant 1 heure",
@@ -193,6 +208,7 @@ const challenges = [
     chatId: "unplug",
     participantsCount: 0,
     usersTakingChallenge: [],
+    approved: true,
   },
   {
     title: "Faites un compliment",
@@ -203,6 +219,7 @@ const challenges = [
     chatId: "compliment",
     participantsCount: 0,
     usersTakingChallenge: [],
+    approved: true,
   },
   {
     title: "Réseautage quotidien",
@@ -214,6 +231,7 @@ const challenges = [
     chatId: "network",
     participantsCount: 0,
     usersTakingChallenge: [],
+    approved: true,
   },
   {
     title: "Pratiquez la respiration profonde",
@@ -225,6 +243,7 @@ const challenges = [
     chatId: "deepBreathing",
     participantsCount: 0,
     usersTakingChallenge: [],
+    approved: true,
   },
   {
     title: "Réveillez-vous tôt",
@@ -235,6 +254,7 @@ const challenges = [
     chatId: "wakeUpEarly",
     participantsCount: 0,
     usersTakingChallenge: [],
+    approved: true,
   },
   {
     title: "Apprenez une nouvelle langue",
@@ -246,6 +266,7 @@ const challenges = [
     chatId: "learnLanguage",
     participantsCount: 0,
     usersTakingChallenge: [],
+    approved: true,
   },
   {
     title: "Passez du temps de qualité en famille",
@@ -257,6 +278,7 @@ const challenges = [
     chatId: "familyTime",
     participantsCount: 0,
     usersTakingChallenge: [],
+    approved: true,
   },
   {
     title: "Apprenez à jouer d'un instrument",
@@ -267,6 +289,7 @@ const challenges = [
     chatId: "playInstrument",
     participantsCount: 0,
     usersTakingChallenge: [],
+    approved: true,
   },
   {
     title: "Affirmations positives",
@@ -278,6 +301,7 @@ const challenges = [
     chatId: "positiveAffirmations",
     participantsCount: 0,
     usersTakingChallenge: [],
+    approved: true,
   },
   {
     title: "Défi douche froide",
@@ -289,6 +313,7 @@ const challenges = [
     chatId: "coldShower",
     participantsCount: 0,
     usersTakingChallenge: [],
+    approved: true,
   },
   {
     title: "Sans sucre pendant 30 jours",
@@ -300,6 +325,7 @@ const challenges = [
     chatId: "noSugar30Days",
     participantsCount: 0,
     usersTakingChallenge: [],
+    approved: true,
   },
   {
     title: "Visualisation quotidienne",
@@ -310,6 +336,7 @@ const challenges = [
     chatId: "dailyVisualization",
     participantsCount: 0,
     usersTakingChallenge: [],
+    approved: true,
   },
   {
     title: "Un geste de gentillesse quotidien",
@@ -320,6 +347,7 @@ const challenges = [
     chatId: "kindnessAct",
     participantsCount: 0,
     usersTakingChallenge: [],
+    approved: true,
   },
   {
     title: "Réveillez-vous à 5h",
@@ -330,6 +358,7 @@ const challenges = [
     chatId: "wakeUp5AM",
     participantsCount: 0,
     usersTakingChallenge: [],
+    approved: true,
   },
   {
     title: "Une nouvelle recette par semaine",
@@ -341,6 +370,7 @@ const challenges = [
     chatId: "newRecipe",
     participantsCount: 0,
     usersTakingChallenge: [],
+    approved: true,
   },
   {
     title: "Lisez 10 pages par jour",
@@ -351,6 +381,7 @@ const challenges = [
     chatId: "read10Pages",
     participantsCount: 0,
     usersTakingChallenge: [],
+    approved: true,
   },
   {
     title: "Défi planche d'une minute",
@@ -362,6 +393,7 @@ const challenges = [
     chatId: "oneMinPlank",
     participantsCount: 0,
     usersTakingChallenge: [],
+    approved: true,
   },
   {
     title: "Apprenez un nouveau mot par jour",
@@ -373,6 +405,7 @@ const challenges = [
     chatId: "learnWordDaily",
     participantsCount: 0,
     usersTakingChallenge: [],
+    approved: true,
   },
   {
     title: "Sans caféine pendant 7 jours",
@@ -384,6 +417,7 @@ const challenges = [
     chatId: "noCaffeine",
     participantsCount: 0,
     usersTakingChallenge: [],
+    approved: true,
   },
   {
     title: "Notez 3 réussites par jour",
@@ -395,6 +429,7 @@ const challenges = [
     chatId: "dailyWins",
     participantsCount: 0,
     usersTakingChallenge: [],
+    approved: true,
   },
   {
     title: "Parlez à un inconnu chaque jour",
@@ -406,6 +441,7 @@ const challenges = [
     chatId: "talkToStranger",
     participantsCount: 0,
     usersTakingChallenge: [],
+    approved: true,
   },
   {
     title: "Défi garde-robe minimaliste",
@@ -417,6 +453,7 @@ const challenges = [
     chatId: "minimalistWardrobe",
     participantsCount: 0,
     usersTakingChallenge: [],
+    approved: true,
   },
   {
     title: "Pas de plaintes pendant 21 jours",
@@ -428,6 +465,7 @@ const challenges = [
     chatId: "noComplaints",
     participantsCount: 0,
     usersTakingChallenge: [],
+    approved: true,
   },
   {
     title: "Auto-réflexion quotidienne",
@@ -439,6 +477,7 @@ const challenges = [
     chatId: "selfReflection",
     participantsCount: 0,
     usersTakingChallenge: [],
+    approved: true,
   },
   {
     title: "Investissez 30 minutes dans un loisir",
@@ -450,6 +489,7 @@ const challenges = [
     chatId: "hobbyTime",
     participantsCount: 0,
     usersTakingChallenge: [],
+    approved: true,
   },
   {
     title: "Écoutez un podcast chaque jour",
@@ -461,6 +501,7 @@ const challenges = [
     chatId: "listenPodcast",
     participantsCount: 0,
     usersTakingChallenge: [],
+    approved: true,
   },
   {
     title: "Réduisez l'utilisation du plastique",
@@ -472,6 +513,7 @@ const challenges = [
     chatId: "reducePlastic",
     participantsCount: 0,
     usersTakingChallenge: [],
+    approved: true,
   },
   {
     title: "Adoptez une bonne posture",
@@ -483,6 +525,7 @@ const challenges = [
     chatId: "goodPosture",
     participantsCount: 0,
     usersTakingChallenge: [],
+    approved: true,
   },
   {
     title: "Réduisez le temps d'écran la nuit",
@@ -493,6 +536,7 @@ const challenges = [
     chatId: "reduceScreenTime",
     participantsCount: 0,
     usersTakingChallenge: [],
+    approved: true,
   },
 ];
 

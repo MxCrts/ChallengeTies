@@ -114,7 +114,7 @@ export const lightTheme: Theme = {
     title: {
       fontSize: 28,
       fontWeight: "700",
-      color: "#FFF",
+      color: "black",
       fontFamily: "Comfortaa_700Bold",
     },
     subtitle: {

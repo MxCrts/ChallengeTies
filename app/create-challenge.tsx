@@ -10,6 +10,7 @@ import {
   Image,
   Dimensions,
   StatusBar,
+  Platform,
 } from "react-native";
 import { Picker } from "@react-native-picker/picker";
 import * as ImagePicker from "expo-image-picker";
@@ -29,7 +30,6 @@ import { useTheme } from "../context/ThemeContext";
 import { useTranslation } from "react-i18next";
 import { Theme } from "../theme/designSystem";
 import designSystem from "../theme/designSystem";
-import BackButton from "../components/BackButton";
 import {
   InterstitialAd,
   AdEventType,
@@ -60,7 +60,6 @@ const categories = [
   "Miscellaneous",
 ];
 
-// ID interstitiel (remplace par le tien)
 const adUnitId = __DEV__
   ? TestIds.INTERSTITIAL
   : "ca-app-pub-4725616526467159/6097960289";
@@ -83,7 +82,6 @@ export default function CreateChallenge() {
   const [imageUri, setImageUri] = useState<string | null>(null);
   const [adLoaded, setAdLoaded] = useState(false);
 
-  // Gestion du cooldown
   const checkAdCooldown = async () => {
     const lastAdTime = await AsyncStorage.getItem("lastInterstitialTime");
     if (!lastAdTime) return true;
@@ -165,6 +163,7 @@ export default function CreateChallenge() {
         creatorId: currentUser.uid,
         chatId,
         usersTakingChallenge: [] as string[],
+        approved: false, // Ajout du champ approved: false
       };
 
       const challengeRef = await addDoc(
@@ -180,18 +179,20 @@ export default function CreateChallenge() {
 
       await checkForAchievements(currentUser.uid);
 
-      // Afficher l'interstitiel si cooldown OK
       const canShowAd = await checkAdCooldown();
       if (canShowAd && adLoaded) {
         interstitial.show();
         await markAdShown();
         setAdLoaded(false);
-        interstitial.load(); // Recharge pour la prochaine fois
+        interstitial.load();
       }
 
       Alert.alert(
         t("success"),
-        t("challengeCreated", { defaultValue: "Votre défi a été créé !" })
+        t("challengeSubmitted", {
+          defaultValue:
+            "Ton défi a été soumis et est en attente de validation.",
+        })
       );
       router.push("/explore");
     } catch (error) {
@@ -222,7 +223,18 @@ export default function CreateChallenge() {
       />
       <ScrollView contentContainerStyle={styles.scrollContainer}>
         <View style={styles.header}>
-          <BackButton color={currentTheme.colors.textPrimary} />
+          <TouchableOpacity
+            onPress={() => router.push("/focus")}
+            style={styles.backButton}
+            accessibilityLabel={t("tips.goBack")}
+            testID="back-button"
+          >
+            <Ionicons
+              name="arrow-back"
+              size={normalizeSize(24)}
+              color={currentTheme.colors.secondary}
+            />
+          </TouchableOpacity>
           <Ionicons
             name="create-outline"
             size={normalizeSize(64)}
@@ -255,6 +267,7 @@ export default function CreateChallenge() {
           style={[
             styles.input,
             {
+              borderWidth: 2,
               borderColor: currentTheme.colors.border,
               backgroundColor: currentTheme.colors.overlay,
               color: currentTheme.colors.textPrimary,
@@ -273,6 +286,7 @@ export default function CreateChallenge() {
             styles.input,
             styles.textArea,
             {
+              borderWidth: 2,
               borderColor: currentTheme.colors.border,
               backgroundColor: currentTheme.colors.overlay,
               color: currentTheme.colors.textPrimary,
@@ -303,6 +317,7 @@ export default function CreateChallenge() {
             style={[
               styles.pickerWrapper,
               {
+                borderWidth: 2,
                 borderColor: currentTheme.colors.border,
                 backgroundColor: currentTheme.colors.overlay,
               },
@@ -334,6 +349,7 @@ export default function CreateChallenge() {
           style={[
             styles.imagePickerButton,
             {
+              borderWidth: 2,
               borderColor: currentTheme.colors.border,
               backgroundColor: currentTheme.colors.overlay,
             },
@@ -404,6 +420,13 @@ const styles = StyleSheet.create({
     marginBottom: SPACING,
     width: "100%",
   },
+  backButton: {
+    position: "absolute",
+    top:
+      Platform.OS === "android" ? StatusBar.currentHeight ?? SPACING : SPACING,
+    left: SPACING,
+    zIndex: 10,
+  },
   headerIcon: {
     marginBottom: SPACING,
     marginTop: SPACING,
@@ -426,13 +449,7 @@ const styles = StyleSheet.create({
     padding: SPACING,
     marginBottom: SPACING,
     fontSize: normalizeSize(16),
-    borderWidth: 1,
     fontFamily: "Comfortaa_400Regular",
-    shadowColor: "#000",
-    shadowOffset: { width: 0, height: normalizeSize(2) },
-    shadowOpacity: 0.1,
-    shadowRadius: normalizeSize(4),
-    elevation: 2,
   },
   textArea: {
     height: normalizeSize(100),
@@ -449,13 +466,7 @@ const styles = StyleSheet.create({
   },
   pickerWrapper: {
     borderRadius: normalizeSize(12),
-    borderWidth: 1,
     overflow: "hidden",
-    shadowColor: "#000",
-    shadowOffset: { width: 0, height: normalizeSize(2) },
-    shadowOpacity: 0.1,
-    shadowRadius: normalizeSize(4),
-    elevation: 2,
   },
   picker: {
     width: "100%",
@@ -466,13 +477,7 @@ const styles = StyleSheet.create({
     alignItems: "center",
     justifyContent: "center",
     marginBottom: SPACING,
-    borderWidth: 1,
     width: "100%",
-    shadowColor: "#000",
-    shadowOffset: { width: 0, height: normalizeSize(2) },
-    shadowOpacity: 0.1,
-    shadowRadius: normalizeSize(4),
-    elevation: 2,
   },
   imagePickerText: {
     fontSize: normalizeSize(16),
@@ -487,11 +492,6 @@ const styles = StyleSheet.create({
     width: "100%",
     borderRadius: normalizeSize(12),
     marginTop: SPACING,
-    shadowColor: "#000",
-    shadowOffset: { width: 0, height: normalizeSize(4) },
-    shadowOpacity: 0.3,
-    shadowRadius: normalizeSize(6),
-    elevation: 5,
   },
   submitGradient: {
     padding: SPACING,

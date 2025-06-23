@@ -1,4 +1,4 @@
-import React, { useEffect, useState } from "react";
+import React, { useEffect, useState, useCallback, useMemo } from "react";
 import {
   View,
   Text,
@@ -10,6 +10,8 @@ import {
   TouchableOpacity,
   ScrollView,
   StatusBar,
+  Platform,
+  Share,
 } from "react-native";
 import AsyncStorage from "@react-native-async-storage/async-storage";
 import { Ionicons, MaterialCommunityIcons } from "@expo/vector-icons";
@@ -26,19 +28,26 @@ import {
 import { db, auth } from "../constants/firebase-config";
 import { useRouter } from "expo-router";
 import { SafeAreaView } from "react-native-safe-area-context";
-import Animated, { FadeInUp } from "react-native-reanimated";
+import Animated, { FadeInUp, ZoomIn } from "react-native-reanimated";
 import { useTheme } from "../context/ThemeContext";
 import { Theme } from "../theme/designSystem";
 import designSystem from "../theme/designSystem";
 import CustomHeader from "@/components/CustomHeader";
 import { useTranslation } from "react-i18next";
 
-// Constante SPACING pour cohérence avec new-features.tsx
 const SPACING = 15;
 const { width: SCREEN_WIDTH, height: SCREEN_HEIGHT } = Dimensions.get("window");
-const normalizeFont = (size: number) => Math.round(size * (SCREEN_WIDTH / 375));
-const normalizeSize = (size: number) => Math.round(size * (SCREEN_WIDTH / 375));
+const normalizeFont = (size: number) => {
+  const baseWidth = 375;
+  const scale = Math.min(Math.max(SCREEN_WIDTH / baseWidth, 0.7), 1.8);
+  return Math.round(size * scale);
+};
 
+const normalizeSize = (size: number) => {
+  const baseWidth = 375;
+  const scale = Math.min(Math.max(SCREEN_WIDTH / baseWidth, 0.7), 1.8);
+  return Math.round(size * scale);
+};
 interface Player {
   id: string;
   username?: string;
@@ -68,15 +77,16 @@ export default function LeaderboardScreen() {
     ? designSystem.darkTheme
     : designSystem.lightTheme;
 
-  const cacheLeaderboard = async (players: Player[]) => {
+  // Cache
+  const cacheLeaderboard = useCallback(async (players: Player[]) => {
     try {
       await AsyncStorage.setItem("leaderboardCache", JSON.stringify(players));
     } catch (e) {
       console.error("Erreur cache:", e);
     }
-  };
+  }, []);
 
-  const getCachedLeaderboard = async () => {
+  const getCachedLeaderboard = useCallback(async () => {
     try {
       const cached = await AsyncStorage.getItem("leaderboardCache");
       return cached ? JSON.parse(cached) : null;
@@ -84,8 +94,9 @@ export default function LeaderboardScreen() {
       console.error("Erreur lecture cache:", e);
       return null;
     }
-  };
+  }, []);
 
+  // Chargement des données
   useEffect(() => {
     const fetchLeaderboard = async () => {
       try {
@@ -124,28 +135,25 @@ export default function LeaderboardScreen() {
               region: data.region || "Unknown",
             };
             setCurrentUser(found);
-
-            if (!data.locationEnabled) {
-              setLocationDisabledMessage(t("leaderboard.locationDisabled"));
-            } else {
-              setLocationDisabledMessage(null);
-            }
+            setLocationDisabledMessage(
+              data.locationEnabled ? null : t("leaderboard.locationDisabled")
+            );
           } else {
-            console.warn(t("leaderboard.userNotFound"));
             setCurrentUser(null);
             setLocationDisabledMessage(t("leaderboard.userNotFound"));
           }
         }
       } catch (e) {
-        console.error(t("leaderboard.errorFetch"), e);
+        console.error("Erreur fetch leaderboard:", e);
         setLocationDisabledMessage(t("leaderboard.errorFetch"));
       } finally {
         setLoading(false);
       }
     };
     fetchLeaderboard();
-  }, [t]);
+  }, [t, cacheLeaderboard, getCachedLeaderboard]);
 
+  // Filtrage
   useEffect(() => {
     if (!currentUser) {
       setFilteredPlayers([]);
@@ -153,17 +161,16 @@ export default function LeaderboardScreen() {
     }
     let list = players;
     if (selectedTab === "region") {
-      // Filtrer les joueurs avec une région valide
       list = players.filter((p) => p.region && p.region !== "Unknown");
     } else if (selectedTab === "national") {
-      // Filtrer les joueurs avec un pays valide
       list = players.filter((p) => p.country && p.country !== "Unknown");
     }
     list = list.sort((a, b) => b.trophies - a.trophies).slice(0, 20);
     setFilteredPlayers(list);
   }, [selectedTab, players, currentUser]);
 
-  const renderTopThree = () => {
+  // Podium
+  const renderTopThree = useCallback(() => {
     if (filteredPlayers.length < 3) {
       return (
         <Text
@@ -184,22 +191,21 @@ export default function LeaderboardScreen() {
       >
         {[second, first, third].map((player, idx) => {
           const isFirst = idx === 1;
-          const colors = isFirst
-            ? ["#FFD700", "#FFA500"]
-            : idx === 0
-            ? ["#C0C0C0", "#A9A9A9"]
-            : ["#CD7F32", "#8B4513"];
           const Icon = isFirst ? "crown" : "medal";
           const size = normalizeSize(isFirst ? 34 : 26);
           return (
-            <View key={player.id} style={styles.podiumItem}>
+            <Animated.View
+              key={player.id}
+              entering={ZoomIn.delay(idx * 100)}
+              style={styles.podiumItem}
+            >
               <LinearGradient
                 colors={
                   isFirst
-                    ? (["#FFD700", "#FFA500"] as [string, string])
+                    ? ["#FFD700", "#FFA500"]
                     : idx === 0
-                    ? (["#C0C0C0", "#A9A9A9"] as [string, string])
-                    : (["#CD7F32", "#8B4513"] as [string, string])
+                    ? ["#C0C0C0", "#A9A9A9"]
+                    : ["#CD7F32", "#8B4513"]
                 }
                 style={
                   isFirst
@@ -218,6 +224,7 @@ export default function LeaderboardScreen() {
                   style={
                     isFirst ? styles.profileImageFirst : styles.profileImage
                   }
+                  defaultSource={require("../assets/images/default-profile.webp")}
                   accessibilityLabel={t("leaderboard.profileOf", {
                     name: player.username,
                   })}
@@ -225,24 +232,21 @@ export default function LeaderboardScreen() {
                 <MaterialCommunityIcons
                   name={Icon}
                   size={size}
-                  color={colors[0]}
+                  color={
+                    isFirst ? "#FFD700" : idx === 0 ? "#C0C0C0" : "#CD7F32"
+                  }
                   style={isFirst ? styles.crownIcon : styles.medalIcon}
                 />
               </LinearGradient>
               <Text
                 style={[
                   styles.podiumName,
-                  { color: currentTheme.colors.textPrimary },
+                  { color: isDarkMode ? "#FFFFFF" : "#000000" }, // Blanc en dark, noir en light
                 ]}
               >
                 {player.username}
               </Text>
-              <Text
-                style={[
-                  styles.podiumTrophies,
-                  { color: currentTheme.colors.trophy },
-                ]}
-              >
+              <Text style={[styles.podiumTrophies, { color: "#FFFFFF" }]}>
                 {player.trophies} 🏆
               </Text>
               <Text
@@ -251,102 +255,123 @@ export default function LeaderboardScreen() {
                   { color: currentTheme.colors.textSecondary },
                 ]}
               >
-                @{(player.username || "").toLowerCase()}
+                @{player.username?.toLowerCase()}
               </Text>
-            </View>
+            </Animated.View>
           );
         })}
       </Animated.View>
     );
-  };
+  }, [filteredPlayers, currentTheme, t, isDarkMode]);
 
-  const renderPlayer = ({ item, index }: { item: Player; index: number }) => {
-    const rank = item.rank ?? index + 4;
-    return (
-      <Animated.View
-        entering={FadeInUp.delay(300 + index * 50)}
-        style={[
-          styles.playerRow,
-          {
-            backgroundColor: currentTheme.colors.cardBackground,
-            borderColor: currentTheme.colors.border,
-          },
-          item.id === currentUser?.id && styles.highlight,
-        ]}
-      >
-        <View style={styles.leftSection}>
-          <Image
-            source={
-              item.profileImage
-                ? { uri: item.profileImage }
-                : require("../assets/images/default-profile.webp")
-            }
+  // Joueur
+  const PlayerItem = useMemo(
+    () =>
+      React.memo(({ item, index }: { item: Player; index: number }) => {
+        const rank = item.rank ?? index + 4;
+        return (
+          <Animated.View
+            entering={FadeInUp.delay(300 + index * 50)}
             style={[
-              styles.playerImage,
-              { borderColor: currentTheme.colors.border },
-            ]}
-            accessibilityLabel={t("leaderboard.profileOf", {
-              name: item.username,
-            })}
-          />
-          <View style={styles.playerInfo}>
-            <Text
-              style={[
-                styles.playerName,
-                { color: currentTheme.colors.textPrimary },
-              ]}
-            >
-              {item.username}
-            </Text>
-            <Text
-              style={[
-                styles.handle,
-                { color: currentTheme.colors.textSecondary },
-              ]}
-            >
-              @{(item.username || "").toLowerCase()}
-            </Text>
-          </View>
-        </View>
-        <View style={styles.rightSection}>
-          <Text
-            style={[
-              styles.playerTrophies,
-              { color: currentTheme.colors.trophy },
+              styles.playerRow,
+              {
+                backgroundColor: currentTheme.colors.cardBackground + "80",
+                borderColor: isDarkMode
+                  ? currentTheme.colors.secondary
+                  : currentTheme.colors.primary, // ↘️ même couleur que l’onglet actif en dark
+                borderWidth: 2,
+              },
+              item.id === currentUser?.id && styles.highlight,
             ]}
           >
-            {item.trophies} 🏆
-          </Text>
-          <Text
-            style={[
-              styles.rankText,
-              { color: currentTheme.colors.textSecondary },
-            ]}
-          >
-            #{rank}
-          </Text>
-        </View>
-      </Animated.View>
-    );
-  };
+            <View style={styles.leftSection}>
+              <Image
+                source={
+                  item.profileImage
+                    ? { uri: item.profileImage }
+                    : require("../assets/images/default-profile.webp")
+                }
+                defaultSource={require("../assets/images/default-profile.webp")}
+                style={[
+                  styles.playerImage,
+                  { borderColor: currentTheme.colors.border },
+                ]}
+                accessibilityLabel={t("leaderboard.profileOf", {
+                  name: item.username,
+                })}
+              />
+              <View style={styles.playerInfo}>
+                <Text
+                  style={[
+                    styles.playerName,
+                    { color: isDarkMode ? "#FFFFFF" : "#000000" }, // Blanc en dark, noir en light
+                  ]}
+                >
+                  {item.username}
+                </Text>
+                <Text
+                  style={[
+                    styles.handle,
+                    { color: currentTheme.colors.textSecondary },
+                  ]}
+                >
+                  @{item.username?.toLowerCase()}
+                </Text>
+              </View>
+            </View>
+            <View style={styles.rightSection}>
+              <Text style={[styles.playerTrophies, { color: "#FFFFFF" }]}>
+                {item.trophies} 🏆
+              </Text>
+              <Text
+                style={[
+                  styles.rankText,
+                  { color: currentTheme.colors.textSecondary },
+                ]}
+              >
+                #{rank}
+              </Text>
+            </View>
+          </Animated.View>
+        );
+      }),
+    [currentTheme, currentUser, t, isDarkMode]
+  );
 
-  const listPlayers = (() => {
-    const slice = filteredPlayers.slice(3, 20); // 17 après podium
+  // Liste des joueurs
+  const listPlayers = useMemo(() => {
+    const slice = filteredPlayers.slice(3, 20);
     const idx = players.findIndex((p) => p.id === currentUser?.id);
     if (currentUser && idx > 19) {
       slice.push({ ...currentUser, rank: idx + 1 });
     }
     return slice;
-  })();
+  }, [filteredPlayers, players, currentUser]);
+
+  // Métadonnées SEO
+  const metadata = useMemo(
+    () => ({
+      title: t("leaderboard.title"),
+      description: t("leaderboard.description"),
+      url: "https://challengeme.com/leaderboard",
+      structuredData: {
+        "@context": "https://schema.org",
+        "@type": "ItemList",
+        itemListElement: filteredPlayers.map((player, index) => ({
+          "@type": "ListItem",
+          position: index + 1,
+          name: player.username || t("leaderboard.unknown"),
+          description: `${player.trophies} trophies`,
+        })),
+      },
+    }),
+    [t, filteredPlayers]
+  );
 
   if (loading) {
     return (
       <SafeAreaView style={styles.safeArea}>
-        <StatusBar
-          translucent
-          backgroundColor="transparent"
-          barStyle={isDarkMode ? "light-content" : "dark-content"}
-        />
+        <StatusBar hidden={true} />
         <LinearGradient
           colors={[
             currentTheme.colors.background,
@@ -372,21 +397,34 @@ export default function LeaderboardScreen() {
   }
 
   return (
-    <SafeAreaView style={styles.safeArea}>
+    <LinearGradient
+      colors={[
+        currentTheme.colors.background,
+        currentTheme.colors.cardBackground,
+        currentTheme.colors.primary + "22",
+      ]}
+      style={styles.gradientContainer}
+      start={{ x: 0, y: 0 }}
+      end={{ x: 1, y: 1 }}
+    >
       <StatusBar
         translucent
         backgroundColor="transparent"
         barStyle={isDarkMode ? "light-content" : "dark-content"}
       />
-      <LinearGradient
-        colors={[
-          currentTheme.colors.background,
-          `${currentTheme.colors.cardBackground}F0`,
-        ]}
-        style={styles.container}
-        start={{ x: 0, y: 0 }}
-        end={{ x: 1, y: 1 }}
-      >
+      <SafeAreaView style={styles.safeArea}>
+        <TouchableOpacity
+          onPress={() => router.push("/")}
+          style={styles.backButton}
+          accessibilityLabel={t("leaderboard.goBack")}
+          testID="back-button"
+        >
+          <Ionicons
+            name="arrow-back"
+            size={normalizeSize(24)}
+            color={currentTheme.colors.secondary}
+          />
+        </TouchableOpacity>
         <View style={styles.headerWrapper}>
           <CustomHeader title={t("leaderboard.title")} />
         </View>
@@ -395,35 +433,56 @@ export default function LeaderboardScreen() {
           style={styles.tabsContainer}
         >
           {(["region", "national", "global"] as const).map((tab) => (
-            <TouchableOpacity
+            <Animated.View
               key={tab}
-              style={[
-                styles.tab,
-                { backgroundColor: `${currentTheme.colors.cardBackground}90` },
-                selectedTab === tab && [
-                  { backgroundColor: currentTheme.colors.secondary },
-                  styles.activeTab,
-                ],
-              ]}
-              onPress={() => setSelectedTab(tab)}
-              accessibilityLabel={t(`leaderboard.filter.${tab}`)}
-              testID={`tab-${tab}`}
+              entering={ZoomIn.delay(
+                100 * (["region", "national", "global"].indexOf(tab) + 1)
+              )}
             >
-              <Text
+              <TouchableOpacity
                 style={[
-                  styles.tabText,
-                  { color: currentTheme.colors.textPrimary },
-                  selectedTab === tab && styles.activeTabText,
+                  styles.tab,
+                  {
+                    backgroundColor:
+                      selectedTab === tab
+                        ? currentTheme.colors.secondary
+                        : isDarkMode
+                        ? currentTheme.colors.cardBackground + "80"
+                        : "#FFFFFF", // light → plus de fond blanc derrière le texte
+                  },
+                  selectedTab === tab && styles.activeTab,
                 ]}
+                onPress={() => setSelectedTab(tab)}
+                accessibilityLabel={t(`leaderboard.filter.${tab}`)}
+                accessibilityHint={t(`leaderboard.filterHint.${tab}`)}
+                accessibilityRole="button"
+                testID={`tab-${tab}`}
+                activeOpacity={0.7}
               >
-                {t(`leaderboard.tab.${tab}`)}
-              </Text>
-            </TouchableOpacity>
+                <Text
+                  style={[
+                    styles.tabText,
+                    {
+                      color: isDarkMode
+                        ? selectedTab === tab
+                          ? "#000000" // Noir pour onglet sélectionné en dark
+                          : "#FFFFFF" // Blanc pour onglets non sélectionnés en dark
+                        : selectedTab === tab
+                        ? "#FFFFFF" // Blanc pour onglet sélectionné en light
+                        : "#000000", // Noir pour onglets non sélectionnés en light
+                    },
+                  ]}
+                >
+                  {t(`leaderboard.tab.${tab}`)}
+                </Text>
+              </TouchableOpacity>
+            </Animated.View>
           ))}
         </Animated.View>
         <ScrollView
           contentContainerStyle={styles.scrollContent}
           showsVerticalScrollIndicator={false}
+          contentInset={{ top: SPACING, bottom: normalizeSize(80) }}
         >
           {filteredPlayers.length > 0 ? (
             <>
@@ -431,10 +490,14 @@ export default function LeaderboardScreen() {
               <View style={styles.listContainer}>
                 <FlatList
                   data={listPlayers}
-                  renderItem={renderPlayer}
+                  renderItem={({ item, index }) => (
+                    <PlayerItem item={item} index={index} />
+                  )}
                   keyExtractor={(item) => item.id}
                   scrollEnabled={false}
                   initialNumToRender={10}
+                  maxToRenderPerBatch={10}
+                  windowSize={7}
                   getItemLayout={(_, index) => ({
                     length: normalizeSize(80),
                     offset: normalizeSize(80) * index,
@@ -442,6 +505,9 @@ export default function LeaderboardScreen() {
                   })}
                   accessibilityRole="list"
                   accessibilityLabel={t("leaderboard.listLabel")}
+                  onLayout={(event) =>
+                    console.log("FlatList Layout:", event.nativeEvent.layout)
+                  }
                 />
               </View>
             </>
@@ -469,16 +535,18 @@ export default function LeaderboardScreen() {
                 {locationDisabledMessage}
               </Text>
               <TouchableOpacity
-                onPress={() => router.push("/settings")}
                 style={[
                   styles.settingsButton,
-                  { backgroundColor: currentTheme.colors.cardBackground },
+                  { backgroundColor: currentTheme.colors.primary },
                 ]}
+                onPress={() => router.push("/settings")}
+                accessibilityLabel={t("leaderboard.enableLocation")}
+                accessibilityHint={t("leaderboard.enableLocationHint")}
               >
                 <Text
                   style={[
                     styles.settingsButtonText,
-                    { color: currentTheme.colors.secondary },
+                    { color: currentTheme.colors.textPrimary },
                   ]}
                 >
                   {t("leaderboard.enableLocation")}
@@ -487,46 +555,62 @@ export default function LeaderboardScreen() {
             </Animated.View>
           )}
         </ScrollView>
-      </LinearGradient>
-    </SafeAreaView>
+      </SafeAreaView>
+    </LinearGradient>
   );
 }
 
 const styles = StyleSheet.create({
   safeArea: {
     flex: 1,
+    paddingTop: 0,
   },
   container: {
     flex: 1,
   },
+  gradientContainer: {
+    flex: 1,
+  },
   headerWrapper: {
+    flexDirection: "row",
+    justifyContent: "space-between",
+    alignItems: "center",
     paddingHorizontal: SPACING,
-    paddingVertical: SPACING,
+    paddingVertical: SPACING * 1.5,
+    marginTop: Platform.OS === "android" ? StatusBar.currentHeight ?? 0 : 0,
+  },
+  shareIcon: {
+    padding: SPACING / 2,
   },
   tabsContainer: {
     flexDirection: "row",
-    justifyContent: "center",
-    marginVertical: SPACING,
+    justifyContent: "space-around", // Répartit équitablement les onglets
+    alignItems: "center",
+    marginVertical: SPACING * 1.5,
     paddingHorizontal: SPACING,
+    width: "100%", // Prend toute la largeur pour un alignement propre
+    maxWidth: SCREEN_WIDTH - SPACING * 2, // Limite à la largeur utilisable
   },
   tab: {
-    paddingVertical: SPACING,
-    paddingHorizontal: SPACING * 2,
-    borderRadius: normalizeSize(25),
-    marginHorizontal: SPACING / 2,
-    shadowColor: "#000",
-    shadowOffset: { width: 0, height: normalizeSize(2) },
-    shadowOpacity: 0.1,
-    shadowRadius: normalizeSize(4),
-    elevation: 2,
+    paddingVertical: SPACING * 1.2,
+    paddingHorizontal: SPACING * 1.2, // Compact mais élégant
+    borderRadius: normalizeSize(30),
+    backgroundColor: "transparent",
+    elevation: 4,
+    minWidth: normalizeSize(100), // Taille minimale garantie
+    flex: 0, // Désactive la flexibilité pour contrôle précis
+    maxWidth: normalizeSize(140), // Limite max pour éviter l'étirement
   },
   activeTab: {
     shadowOffset: { width: 0, height: normalizeSize(4) },
-    shadowOpacity: 0.3,
+    shadowOpacity: 0.25,
+    shadowRadius: normalizeSize(6),
+    elevation: 6,
   },
   tabText: {
-    fontSize: normalizeFont(16),
+    fontSize: normalizeFont(15),
     fontFamily: "Comfortaa_700Bold",
+    textAlign: "center",
   },
   activeTabText: {
     color: "#FFFFFF",
@@ -535,12 +619,12 @@ const styles = StyleSheet.create({
     flexDirection: "row",
     justifyContent: "space-evenly",
     alignItems: "flex-end",
-    marginVertical: SPACING,
+    marginVertical: SPACING * 1.5,
     paddingHorizontal: SPACING,
   },
   podiumItem: {
     alignItems: "center",
-    width: SCREEN_WIDTH * 0.3, // Ajusté pour responsivité
+    width: "30%",
   },
   circleFirst: {
     width: normalizeSize(120),
@@ -550,7 +634,7 @@ const styles = StyleSheet.create({
     justifyContent: "center",
     marginBottom: SPACING,
     position: "relative",
-    borderWidth: 2,
+    borderWidth: 3,
     borderColor: "#FFD700",
   },
   circleSecond: {
@@ -576,46 +660,52 @@ const styles = StyleSheet.create({
     borderColor: "#CD7F32",
   },
   profileImage: {
-    width: normalizeSize(80),
-    height: normalizeSize(80),
-    borderRadius: normalizeSize(40),
-    borderWidth: 2,
+    width: normalizeSize(70),
+    height: normalizeSize(70),
+    borderRadius: normalizeSize(35),
+    borderWidth: 2.5,
     borderColor: "#FFF",
   },
   profileImageFirst: {
-    width: normalizeSize(95),
-    height: normalizeSize(95),
-    borderRadius: normalizeSize(47.5),
-    borderWidth: 3,
+    width: normalizeSize(90),
+    height: normalizeSize(90),
+    borderRadius: normalizeSize(45),
+    borderWidth: 3.5,
     borderColor: "#FFF",
   },
   crownIcon: {
     position: "absolute",
     top: -normalizeSize(30),
     shadowColor: "#000",
-    shadowOffset: { width: 0, height: normalizeSize(2) },
-    shadowOpacity: 0.3,
-    shadowRadius: normalizeSize(4),
+    shadowOffset: { width: 0, height: normalizeSize(3) },
+    shadowOpacity: 0.4,
+    shadowRadius: normalizeSize(6),
   },
   medalIcon: {
     position: "absolute",
     top: -normalizeSize(25),
     shadowColor: "#000",
-    shadowOffset: { width: 0, height: normalizeSize(2) },
-    shadowOpacity: 0.3,
-    shadowRadius: normalizeSize(4),
+    shadowOffset: { width: 0, height: normalizeSize(3) },
+    shadowOpacity: 0.4,
+    shadowRadius: normalizeSize(6),
   },
   podiumName: {
-    fontSize: normalizeFont(16),
+    fontSize: normalizeFont(18),
     fontFamily: "Comfortaa_700Bold",
     textAlign: "center",
-    marginTop: SPACING / 2,
+    marginTop: SPACING / 1.5,
   },
   podiumTrophies: {
-    fontSize: normalizeFont(14),
+    fontSize: normalizeFont(16),
     fontFamily: "Comfortaa_700Bold",
-    marginTop: SPACING / 2,
+    marginTop: SPACING / 1.5,
     textAlign: "center",
+    backgroundColor: "rgba(0, 0, 0, 0.8)",
+    padding: SPACING / 1.2,
+    borderRadius: normalizeSize(8),
+    textShadowColor: "#FFF",
+    textShadowOffset: { width: 1, height: 1 },
+    textShadowRadius: 3,
   },
   handle: {
     fontSize: normalizeFont(12),
@@ -624,58 +714,64 @@ const styles = StyleSheet.create({
     marginTop: SPACING / 2,
   },
   scrollContent: {
-    paddingBottom: SPACING * 2, // Réduit pour responsivité
+    paddingBottom: normalizeSize(80),
   },
   listContainer: {
     paddingHorizontal: SPACING,
-    marginTop: SPACING,
+    marginTop: SPACING * 1.5,
   },
   playerRow: {
     flexDirection: "row",
     alignItems: "center",
-    padding: SPACING,
-    marginVertical: SPACING / 2,
-    borderRadius: normalizeSize(15),
+    padding: SPACING * 1.2,
+    marginVertical: SPACING / 1.5,
+    borderRadius: normalizeSize(18),
     justifyContent: "space-between",
-    shadowColor: "#000",
-    shadowOffset: { width: 0, height: normalizeSize(4) },
-    shadowOpacity: 0.15,
-    shadowRadius: normalizeSize(6),
-    elevation: 4,
-    borderWidth: 1,
+    borderWidth: 2,
   },
   highlight: {
-    borderWidth: 2,
+    borderWidth: 3,
     borderColor: "#FACC15",
+    shadowColor: "#FACC15",
+    shadowOffset: { width: 0, height: normalizeSize(4) },
+    shadowOpacity: 0.5,
+    shadowRadius: normalizeSize(6),
+    elevation: 8,
   },
   leftSection: {
     flexDirection: "row",
     alignItems: "center",
   },
   playerImage: {
-    width: normalizeSize(50),
-    height: normalizeSize(50),
-    borderRadius: normalizeSize(25),
-    borderWidth: 2,
+    width: normalizeSize(60),
+    height: normalizeSize(60),
+    borderRadius: normalizeSize(30),
+    borderWidth: 2.5,
   },
   playerInfo: {
-    marginLeft: SPACING,
+    marginLeft: SPACING * 1.2,
   },
   playerName: {
-    fontSize: normalizeFont(16),
+    fontSize: normalizeFont(18),
     fontFamily: "Comfortaa_700Bold",
   },
   rightSection: {
     alignItems: "flex-end",
   },
   playerTrophies: {
-    fontSize: normalizeFont(16),
+    fontSize: normalizeFont(18),
     fontFamily: "Comfortaa_700Bold",
+    backgroundColor: "rgba(0, 0, 0, 0.8)",
+    padding: SPACING / 1.2,
+    borderRadius: normalizeSize(8),
+    textShadowColor: "#FFF",
+    textShadowOffset: { width: 1, height: 1 },
+    textShadowRadius: 3,
   },
   rankText: {
-    fontSize: normalizeFont(12),
+    fontSize: normalizeFont(14),
     fontFamily: "Comfortaa_400Regular",
-    marginTop: SPACING / 2,
+    marginTop: SPACING / 1.5,
   },
   loadingContainer: {
     flex: 1,
@@ -683,22 +779,47 @@ const styles = StyleSheet.create({
     alignItems: "center",
   },
   loadingText: {
-    fontSize: normalizeFont(16),
-    fontFamily: "Comfortaa_400Regular",
+    fontSize: normalizeFont(18),
+    fontFamily: "Comfortaa_400Bold",
     marginTop: SPACING,
   },
   noPlayersText: {
-    fontSize: normalizeFont(16),
+    fontSize: normalizeFont(18),
     fontFamily: "Comfortaa_400Regular",
     textAlign: "center",
-    padding: SPACING,
+    padding: SPACING * 1.5,
   },
-  errorContainer: { alignItems: "center", padding: SPACING * 2 },
+  errorContainer: {
+    alignItems: "center",
+    padding: SPACING * 2.5,
+  },
   errorText: {
-    fontSize: normalizeFont(16),
+    fontSize: normalizeFont(15),
     textAlign: "center",
-    marginBottom: SPACING,
+    marginBottom: SPACING * 1.5,
   },
-  settingsButton: { padding: SPACING, borderRadius: 10 },
-  settingsButtonText: { fontSize: normalizeFont(16), fontWeight: "600" },
+  settingsButton: {
+    paddingVertical: SPACING * 1.2,
+    paddingHorizontal: SPACING * 2.5,
+    borderRadius: normalizeSize(30),
+    shadowColor: "#000",
+    shadowOffset: { width: 0, height: normalizeSize(4) },
+    shadowOpacity: 0.35,
+    shadowRadius: normalizeSize(6),
+    elevation: 6,
+  },
+  settingsButtonText: {
+    fontSize: normalizeFont(15),
+    fontFamily: "Comfortaa_700Bold",
+  },
+  backButton: {
+    position: "absolute",
+    top:
+      Platform.OS === "android" ? StatusBar.currentHeight ?? SPACING : SPACING,
+    left: SPACING,
+    zIndex: 10,
+    padding: SPACING / 2,
+    backgroundColor: "rgba(0, 0, 0, 0.5)", // Overlay premium
+    borderRadius: normalizeSize(20),
+  },
 });

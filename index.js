@@ -1,14 +1,8 @@
-// index.js (à la racine)
+import { registerRootComponent } from 'expo';
 
-import React from "react";
-import { registerRootComponent } from "expo";
-import { ExpoRoot } from "expo-router";
+import App from './App';
 
-// On importe tout le dossier `app/` manuellement
-// via require.context pour qu'Expo Router repère TOUS vos fichiers.
-export function App() {
-  const ctx = require.context("./app", true, /\.(js|ts|tsx)$/);
-  return <ExpoRoot context={ctx} />;
-}
-
+// registerRootComponent calls AppRegistry.registerComponent('main', () => App);
+// It also ensures that whether you load the app in Expo Go or in a native build,
+// the environment is set up appropriately
 registerRootComponent(App);

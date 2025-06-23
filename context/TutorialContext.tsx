@@ -6,6 +6,7 @@ type TutorialContextType = {
   tutorialStep: number;
   setTutorialStep: (step: number) => void;
   isTutorialActive: boolean;
+  setIsTutorialActive: (isActive: boolean) => void; // Add this line
   startTutorial: () => void;
   skipTutorial: () => void;
 };
@@ -21,15 +22,32 @@ export const TutorialProvider = ({
   children: React.ReactNode;
   isFirstLaunch: boolean;
 }) => {
-  const [tutorialStep, setTutorialStep] = useState(0); // 0 = pas commencé, 1-4 = étapes
-  const [isTutorialActive, setIsTutorialActive] = useState(isFirstLaunch); // Dépend de l'appel de startTutorial
+  const [tutorialStep, setTutorialStep] = useState(0);
+  const [isTutorialActive, setIsTutorialActive] = useState(isFirstLaunch);
   const router = useRouter();
 
-  // Lancer le tutoriel
+  useEffect(() => {
+    const checkTutorialStatus = async () => {
+      const hasCompletedTutorial = await AsyncStorage.getItem(
+        "hasCompletedTutorialAfterSignup"
+      );
+      console.log("Tutorial Status:", {
+        isFirstLaunch,
+        hasCompletedTutorial,
+        isTutorialActive,
+        tutorialStep,
+      });
+      if (!hasCompletedTutorial && isFirstLaunch) {
+        setIsTutorialActive(true);
+        setTutorialStep(0);
+      }
+    };
+    checkTutorialStatus();
+  }, [isFirstLaunch]);
+
   const startTutorial = async () => {
     setTutorialStep(1);
     setIsTutorialActive(true);
-    // On s'assure que le flag n'est pas défini avant de commencer
     try {
       await AsyncStorage.removeItem("hasCompletedTutorialAfterSignup");
     } catch (error) {
@@ -37,18 +55,17 @@ export const TutorialProvider = ({
     }
   };
 
-  // Passer ou terminer le tutoriel
   const skipTutorial = async () => {
     setTutorialStep(0);
     setIsTutorialActive(false);
     try {
       await AsyncStorage.setItem("hasCompletedTutorialAfterSignup", "true");
+      router.replace("/"); // Redirection explicite
     } catch (error) {
       console.error("Erreur lors de la sauvegarde du tutoriel :", error);
     }
   };
 
-  // Navigation automatique selon l'étape
   useEffect(() => {
     const navigateWithDelay = (path: string) => {
       setTimeout(() => {
@@ -61,11 +78,10 @@ export const TutorialProvider = ({
     };
 
     if (isTutorialActive) {
-      if (tutorialStep === 1) navigateWithDelay("/");
+      if (tutorialStep === 0 || tutorialStep === 1) navigateWithDelay("/");
       else if (tutorialStep === 2) navigateWithDelay("/profile");
       else if (tutorialStep === 3) navigateWithDelay("/focus");
       else if (tutorialStep === 4) navigateWithDelay("/explore");
-      else if (tutorialStep === 0) navigateWithDelay("/"); // Fin → retour à Index
     }
   }, [tutorialStep, isTutorialActive, router]);
 
@@ -75,6 +91,7 @@ export const TutorialProvider = ({
         tutorialStep,
         setTutorialStep,
         isTutorialActive,
+        setIsTutorialActive, // Add this to the context value
         startTutorial,
         skipTutorial,
       }}

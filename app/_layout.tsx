@@ -1,7 +1,13 @@
 import React, { useState, useEffect } from "react";
 import { GestureHandlerRootView } from "react-native-gesture-handler";
-import { Stack } from "expo-router";
-import { ActivityIndicator, View, StyleSheet, Text } from "react-native";
+import { Stack, useRouter } from "expo-router";
+import {
+  ActivityIndicator,
+  View,
+  StyleSheet,
+  Text,
+  Linking,
+} from "react-native";
 import { Provider as PaperProvider } from "react-native-paper";
 import { ProfileUpdateProvider } from "../context/ProfileUpdateContext";
 import { TrophyProvider } from "../context/TrophyContext";
@@ -12,6 +18,7 @@ import { ThemeProvider } from "../context/ThemeContext";
 import { LanguageProvider } from "../context/LanguageContext";
 import { TutorialProvider } from "../context/TutorialContext";
 import TrophyModal from "../components/TrophyModal";
+
 import {
   useFonts,
   Comfortaa_400Regular,
@@ -20,14 +27,33 @@ import {
 import { I18nextProvider } from "react-i18next";
 import i18n from "../i18n";
 import mobileAds from "react-native-google-mobile-ads";
+import AsyncStorage from "@react-native-async-storage/async-storage";
 
 export default function RootLayout() {
   const [fontsLoaded] = useFonts({
     Comfortaa_400Regular,
     Comfortaa_700Bold,
   });
+  const [isFirstLaunch, setIsFirstLaunch] = useState(true);
+  const router = useRouter();
 
-  // Initialisation AdMob
+  useEffect(() => {
+    const checkFirstLaunch = async () => {
+      const hasCompletedTutorial = await AsyncStorage.getItem(
+        "hasCompletedTutorialAfterSignup"
+      );
+      const isFirst = !hasCompletedTutorial;
+      setIsFirstLaunch(isFirst);
+      console.log(
+        "isFirstLaunch:",
+        isFirst,
+        "hasCompletedTutorial:",
+        hasCompletedTutorial
+      );
+    };
+    checkFirstLaunch();
+  }, []);
+
   useEffect(() => {
     mobileAds()
       .initialize()
@@ -36,7 +62,45 @@ export default function RootLayout() {
       });
   }, []);
 
-  // Pendant le chargement des polices
+  // Gestion des deep links
+  useEffect(() => {
+    const handleDeepLink = ({ url }: { url: string }) => {
+      console.log("📲 Deep link reçu:", url);
+      let challengeId, inviteId;
+      if (
+        url.startsWith("myapp://challenge/") ||
+        url.startsWith("https://challengeme-d7fef.web.app/challenge/")
+      ) {
+        const parsedUrl = new URL(url);
+        challengeId = parsedUrl.pathname.split("/challenge/")[1]?.split("?")[0];
+        inviteId = parsedUrl.searchParams.get("invite");
+      }
+      if (challengeId && inviteId) {
+        console.log("🚀 Navigation vers profile/notifications:", {
+          challengeId,
+          inviteId,
+        });
+        router.push({
+          pathname: "profile/notifications",
+          params: { challengeId, invite: inviteId },
+        });
+      } else {
+        console.log("⚠️ Paramètres manquants:", { challengeId, inviteId });
+      }
+    };
+
+    const subscription = Linking.addEventListener("url", handleDeepLink);
+    Linking.getInitialURL().then((url) => {
+      if (url) handleDeepLink({ url });
+    });
+
+    return () => {
+      subscription.remove();
+    };
+  }, [router]);
+
+  // Ajouter l'écouteur et stocker l'abonnement
+
   if (!fontsLoaded) {
     return (
       <GestureHandlerRootView style={{ flex: 1 }}>
@@ -59,13 +123,21 @@ export default function RootLayout() {
                   <SavedChallengesProvider>
                     <CurrentChallengesProvider>
                       <ChatProvider>
-                        <TutorialProvider isFirstLaunch={false}>
-                          <Stack screenOptions={{ headerShown: false }}>
+                        <TutorialProvider isFirstLaunch={isFirstLaunch}>
+                          <Stack
+                            screenOptions={{
+                              headerShown: false,
+                              animation: "fade",
+                              animationDuration: 400,
+                            }}
+                          >
                             <Stack.Screen name="index" />
                             <Stack.Screen name="profile" />
                             <Stack.Screen name="focus" />
                             <Stack.Screen name="explore" />
-                            <Stack.Screen name="onboarding" />{" "}
+                            <Stack.Screen name="onboarding" />
+                            <Stack.Screen name="handleInvite" />
+                            <Stack.Screen name="profile/Notifications" />
                           </Stack>
                           <TrophyModal challengeId="" selectedDays={0} />
                         </TutorialProvider>

@@ -172,6 +172,18 @@
       "title": "保持积极",
       "description": "即使有失误，也要记住每天都是新的开始。从错误中学习，继续前进。"
     },
+    "takeBreaks": {
+      "title": "定期休息",
+      "description": "安排短暂的休息可以提高专注度和生产力。尝试番茄工作法：工作25分钟，然后休息5分钟。"
+    },
+    "stayHydrated": {
+      "title": "保持水分",
+      "description": "充足的饮水有助于维持精力和注意力。随身携带水瓶，并设置提醒全天饮水。"
+    },
+    "celebrateWins": {
+      "title": "庆祝你的胜利",
+      "description": "认识到你的成就，不论多么微小，都能提升动力和自信。花点时间表扬并奖励自己的进步。"
+    },
     "readMore": "阅读更多",
     "showLess": "显示更少",
     "footerQuery": "有更多问题或需要个性化帮助？",
@@ -362,7 +374,8 @@
     "save": "保存",
     "saved": "已保存",
     "share": "分享",
-    "stats": "统计"
+    "stats": "统计",
+    "inviteA11y": "邀请好友加入此挑战"
   },
   "explanation": {
     "title": "您的声音很重要！",
@@ -384,8 +397,42 @@
   },
   "achievements": {
     "first_connection": "首次连接",
-    "profile_completed": "资料已完成",
-    "finishChallenge_10": "认真对待挑战"
+    "profile_completed": "个人资料已完成",
+    "finishChallenge_10": "挑战达人",
+    "finishChallenge_1": "第一个挑战完成",
+    "finishChallenge_3": "积极的初学者",
+    "finishChallenge_25": "挑战机器",
+    "finishChallenge_50": "不可战胜！",
+    "finishChallenge_100": "活着的传奇",
+    "selectChallengeDays_7": "刚刚开始",
+    "selectChallengeDays_30": "决心十足",
+    "selectChallengeDays_90": "马拉松选手",
+    "selectChallengeDays_180": "长期主义者",
+    "selectChallengeDays_365": "传奇耐心者",
+    "streakProgress_3": "小连胜",
+    "streakProgress_7": "建立习惯",
+    "streakProgress_14": "太厉害了！",
+    "streakProgress_30": "坚定不移",
+    "streakProgress_60": "无可阻挡",
+    "streakProgress_90": "我是台机器",
+    "streakProgress_180": "极致自律",
+    "streakProgress_365": "我就是怪兽",
+    "messageSent_1": "发送了第一条消息",
+    "messageSent_10": "团队精神",
+    "messageSent_50": "活跃社区成员",
+    "shareChallenge_1": "我喜欢分享",
+    "shareChallenge_5": "潜力网红",
+    "shareChallenge_20": "社区领袖",
+    "inviteFriend_1": "邀请朋友",
+    "inviteFriend_5": "扩大你的团队",
+    "inviteFriend_10": "社交之王",
+    "voteFeature_1": "首次投票功能",
+    "voteFeature_5": "喜欢投票",
+    "saveChallenge_1": "已保存挑战",
+    "saveChallenge_5": "已保存5个挑战",
+    "challengeCreated_1": "挑战创建者",
+    "challengeCreated_5": "灵感爆发",
+    "challengeCreated_10": "创新者"
   },
   "statsModal": {
     "close": "关闭",
@@ -486,26 +533,25 @@
   },
   "completedOnDate": "完成于",
   "completion": {
-    "youAreAwesome": "你真棒！",
+    "trophies": "奖杯",
+    "reward": "你赢得了 {{count}} 个奖杯！",
+    "finalTitle": "恭喜！",
+    "finalMessage": "你赢得了 {{count}} 个奖杯！",
+    "errorFinalizingMessage": "完成挑战时出错。",
+    "adNotReadyTitle": "广告不可用",
+    "adNotReady": "广告尚未加载。请稍后再试。",
+    "continue": "继续",
+    "doubleTrophies": "双倍奖杯",
+    "youAreAwesome": "你太棒了！",
     "keepItUp": "继续加油！",
     "successIsYours": "成功属于你！",
-    "everyEffortCounts": "每一次努力都重要！",
+    "everyEffortCounts": "每一份努力都很重要！",
     "neverGiveUp": "永不放弃！",
-    "youAreOnTrack": "你在正确的轨道上！",
-    "excellenceAwaits": "卓越在前方！",
-    "headHeldHigh": "抬头前行！",
-    "persistencePays": "坚持必有回报！",
-    "challengesMakeYouStronger": "挑战让你更强大！",
-    "errorFinalizing": "完成挑战时出错：",
-    "trophies": "{{count}} 个奖杯",
-    "reward": "{{count}} 个奖杯",
-    "continue": "继续",
-    "doubleTrophies": "奖杯翻倍",
-    "finalTitle": "恭喜！",
-    "finalMessage": "挑战完成！你获得 {{count}} 个奖杯！",
-    "errorFinalizingMessage": "无法完成挑战。",
-    "adNotReadyTitle": "广告暂不可用",
-    "adNotReady": "广告尚未准备好。请稍后再试。"
+    "youAreOnTrack": "你走在正确的路上！",
+    "excellenceAwaits": "卓越在等着你！",
+    "headHeldHigh": "抬起头来！",
+    "persistencePays": "坚持终有回报！",
+    "challengesMakeYouStronger": "挑战让你更强大！"
   },
   "featureDetail": {
     "votes": "{{count}} 票",
@@ -668,40 +714,40 @@
     "footerMessage": "我们会尽快回复。感谢您信任 ChallengeTies！🚀"
   },
   "history": {
-    "title": "我们的历史",
-    "logoAlt": "ChallengeTies 徽标",
-    "intro": "源自一个强大的愿景：…",
-    "featuresTitle": "主要功能 🔥",
+    "title": "我们的故事",
+    "logoAlt": "ChallengeTies 标志",
+    "intro": "ChallengeTies 不只是一个应用程序，它是一段旅程——一个成长、连接并将日常习惯变成积极、共享挑战的邀请。不论是独自一人还是和朋友一起，每一个完成的挑战都是胜利，每一份努力都值得肯定，每一天都是新的起点。",
+    "featuresTitle": "核心功能",
     "features": {
       "specialChallenges": {
         "title": "特别挑战",
-        "desc": "激发灵感的独特挑战…"
+        "desc": "丰富多样、趣味或深入的挑战，可单独或与朋友完成。选择适合自己的周期，无压力成长。"
       },
       "progressTracking": {
-        "title": "进度跟踪",
-        "desc": "可视化进度的互动工具…"
+        "title": "进度追踪",
+        "desc": "查看你的坚持轨迹，解锁奖杯，记录长期成长历程，为自己的努力感到骄傲。"
       },
       "customChallenges": {
         "title": "自定义挑战",
-        "desc": "创建专属挑战的能力…"
+        "desc": "根据你的目标、生活方式与节奏创建个人化挑战。每个人的成长路径都不同。"
       },
       "community": {
-        "title": "活跃社区",
-        "desc": "志同道合者的网络…"
+        "title": "紧密的社区",
+        "desc": "加入一个积极、有爱与支持的网络。提出想法，为新功能投票，与大家共同成长。"
       }
     },
-    "motivationTitle": "我们的动力 🚀",
-    "motivation": "我们坚信每个人都有无限潜力…",
-    "logoMeaningTitle": "徽标含义 🎨",
-    "logoMeaning": "ChallengeTies 徽标象征团结与成长…",
-    "visionTitle": "我们的愿景 🌍",
-    "vision": "我们不仅是一个应用，更是一场运动…",
-    "beginningsTitle": "起源 📅",
-    "beginnings": "ChallengeTies 的旅程始于…",
-    "communityEngagementTitle": "社区参与 🤝",
-    "communityEngagement": "从一开始，ChallengeTies 的力量就在于社区…",
-    "finalThanksTitle": "感谢有你相伴…",
-    "finalThanksMessage": "ChallengeTies 将助你实现目标，并肩前行。"
+    "motivationTitle": "我们为何创立 ChallengeTies",
+    "motivation": "因为我们厌倦了那些冰冷、孤单或让人愧疚的应用程序。我们想要一个有人情味的、让人快乐的地方，一个能庆祝每一次小胜利的平台。ChallengeTies 由此而生，让每个人都能在没有压力下、在支持中成长。",
+    "logoMeaningTitle": "这个标志的意义",
+    "logoMeaning": "中心的“T”代表 Ties——连接。它周围的星系能量象征着行动、成长与团结。那是你选择改变的那一刻，是宇宙中的一束火花。简约而有力，人人皆懂。",
+    "visionTitle": "我们的愿景",
+    "vision": "我们不仅仅要一款应用，而是打造一个正向生态系统：ChallengeTies、SkillTies、MindTies 等，结合健康、学习、自我提升，让善意、幽默与简单成为主导。",
+    "beginningsTitle": "最初的起点",
+    "beginnings": "一切始于一辆改装的面包车，在山林与代码之间，在梦想与现实之间。一个想法诞生：如果有一款应用，能真正帮助人们将意愿转化为持续行动，会怎样？不是为了完美，而是为了变好。一起，一次挑战一个脚步。",
+    "communityEngagementTitle": "由社区驱动",
+    "communityEngagement": "ChallengeTies 不是我们的，而是你的。用户可以提出想法、参与投票、共建未来。这是一个随社区而成长的活跃项目。",
+    "finalThanksTitle": "感谢 ❤️",
+    "finalThanksMessage": "如果你读到这里，说明你相信这个项目。我们衷心感谢你。ChallengeTies 的存在正是因为你这样积极、好奇、充满动力的人。让我们一起向上前行。🚀"
   },
   "newFeaturesTitle": "新功能",
   "tryAnotherSearch": "尝试其他搜索或筛选。",
@@ -1043,10 +1089,13 @@
     "evening2": "睡前再来一个挑战？"
   },
   "invitation": {
-    "title": "{username} 邀请你！",
-    "message": "加入挑战 {challenge}！",
-    "accept": "接受",
-    "refuse": "拒绝"
+    "title": "加入挑战",
+    "subtitle": "你被邀请加入挑战 {challengeId}！",
+    "accept": "接受邀请",
+    "accepting": "正在接受...",
+    "success": "已加入挑战！",
+    "invalid": "无效的邀请",
+    "joinedChallenge": "你已成功加入挑战！"
   },
   "settingsPage": {
     "location": "定位",
@@ -1062,5 +1111,94 @@
   "explorePageDescription": "发现{challenges}并加入{communities}来获得灵感并迎接新的挑战。",
   "homePageTitle": "首页",
   "focusPageTitle": "专注",
-  "explorePageTitle": "探索"
+  "explorePageTitle": "探索",
+  "activity": "活动",
+  "listOfNotifications": "通知列表",
+  "viewInvitation": "挑战 {{challenge}} 的邀请",
+  "invitationIcon": "邀请图标",
+  "noNotifications": "暂无通知",
+  "noNotificationsIcon": "空通知图标",
+  "noNotificationsSubtext": "当你被邀请参加挑战时，你将在这里收到通知。",
+  "backButton": "返回",
+  "backButtonHint": "返回上一页",
+  "invitationToChallenge": "挑战 {{challenge}} 的邀请",
+  "receivedOn": "收到于 {{date}}",
+  "locale": "zh-CN",
+  "access": {
+    "editProfile": {
+      "label": "编辑个人资料",
+      "hint": "跳转到编辑个人资料页面"
+    },
+    "statistics": {
+      "label": "统计数据",
+      "hint": "查看你的个人统计数据"
+    },
+    "ongoingChallenges": {
+      "label": "进行中的挑战",
+      "hint": "查看你正在进行的挑战"
+    },
+    "favorites": {
+      "label": "收藏",
+      "hint": "查看你收藏的挑战"
+    },
+    "completedChallenges": {
+      "label": "已完成的挑战",
+      "hint": "查看你已完成的挑战"
+    },
+    "rewards": {
+      "label": "奖励",
+      "hint": "查看你获得的奖杯和徽章"
+    },
+    "myChallenges": {
+      "label": "我的挑战",
+      "hint": "查看你创建的挑战"
+    },
+    "activity": {
+      "label": "活动",
+      "hint": "查看通知和最近的活动"
+    }
+  },
+  "statDescription": {
+    "savedChallenges": "你保存的挑战总数。",
+    "ongoingChallenges": "你当前正在进行的挑战。",
+    "completedChallenges": "你成功完成的挑战。",
+    "successRate": "基于完成挑战的成功率。",
+    "trophies": "获得的奖杯总数。",
+    "unlockedAchievements": "已解锁的成就。",
+    "longestStreak": "你最长的连续活跃天数。"
+  },
+  "pleaseAcceptRules": "请勾选框以接受规则。",
+  "errorSavingRulesAcceptance": "保存接受规则时出错。",
+  "iHaveReadRules": "我已阅读并接受聊天规则。",
+  "iUnderstand": "我明白了",
+  "acceptRulesCheckbox": "接受聊天规则",
+  "acceptRulesButton": "确认接受规则",
+  "tutorial": {
+    "welcome": {
+      "title": "欢迎使用 ChallengeTies！",
+      "description": "开启一段独特旅程，在几个简单步骤中完成挑战并实现目标。"
+    },
+    "index": {
+      "title": "探索核心功能",
+      "description": "浏览热门挑战，获取建议，查看排行榜，提交你的创新想法。"
+    },
+    "profile": {
+      "title": "你的个人故事",
+      "description": "自定义你的个人资料，跟踪统计数据，管理当前、已保存、已创建的挑战和通知。"
+    },
+    "focus": {
+      "title": "专注当下",
+      "description": "查看每日挑战、进行中或已完成的内容，创建新目标以不断前进。"
+    },
+    "explore": {
+      "title": "无限探索",
+      "description": "发现社区创建的所有挑战，使用筛选器找到灵感。"
+    },
+    "buttons": {
+      "start": "开始",
+      "skip": "跳过",
+      "next": "下一步",
+      "finish": "出发！"
+    }
+  }
 }

@@ -11,8 +11,9 @@ import {
   SafeAreaView,
   StatusBar,
   Share,
+  Platform,
 } from "react-native";
-import Animated, { FadeInUp } from "react-native-reanimated";
+import Animated, { FadeInUp, Layout } from "react-native-reanimated";
 import { Ionicons } from "@expo/vector-icons";
 import { LinearGradient } from "expo-linear-gradient";
 import { useRouter } from "expo-router";
@@ -22,22 +23,24 @@ import { Theme } from "../theme/designSystem";
 import designSystem from "../theme/designSystem";
 import CustomHeader from "@/components/CustomHeader";
 
-// Constante SPACING pour cohérence avec focus.tsx
+// Constants
 const SPACING = 15;
-
-const { width: SCREEN_WIDTH, height: SCREEN_HEIGHT } = Dimensions.get("window");
+const { width: SCREEN_WIDTH } = Dimensions.get("window");
 
 const normalizeFont = (size: number) => {
-  const scale = SCREEN_WIDTH / 375;
+  const baseWidth = 375;
+  const scale = Math.min(Math.max(SCREEN_WIDTH / baseWidth, 0.7), 1.8);
   return Math.round(size * scale);
 };
 
 const normalizeSize = (size: number) => {
-  const scale = SCREEN_WIDTH / 375;
+  const baseWidth = 375;
+  const scale = Math.min(Math.max(SCREEN_WIDTH / baseWidth, 0.7), 1.8);
   return Math.round(size * scale);
 };
 
-// Typage des icônes pour éviter keyof typeof
+// Types
+
 type IconName =
   | "checkmark-circle-outline"
   | "time-outline"
@@ -47,7 +50,9 @@ type IconName =
   | "flask-outline"
   | "person-add-outline"
   | "eye-outline"
-  | "sunny-outline";
+  | "sunny-outline"
+  | "water-outline"
+  | "trophy-outline";
 
 interface Conseil {
   id: string;
@@ -111,6 +116,24 @@ const conseils: Conseil[] = [
     description: "tips.stayPositive.description",
     icon: "sunny-outline",
   },
+  {
+    id: "10",
+    title: "tips.takeBreaks.title",
+    description: "tips.takeBreaks.description",
+    icon: "time-outline",
+  },
+  {
+    id: "11",
+    title: "tips.stayHydrated.title",
+    description: "tips.stayHydrated.description",
+    icon: "water-outline",
+  },
+  {
+    id: "12",
+    title: "tips.celebrateWins.title",
+    description: "tips.celebrateWins.description",
+    icon: "trophy-outline",
+  },
 ];
 
 export default function Conseils() {
@@ -128,14 +151,8 @@ export default function Conseils() {
   };
 
   const handleContact = async () => {
-    const url = "mailto:support@challengeme.com";
     try {
-      const supported = await Linking.canOpenURL(url);
-      if (supported) {
-        await Linking.openURL(url);
-      } else {
-        console.warn(t("tips.mailClientError"));
-      }
+      await Linking.openURL("mailto:support@challengeme.com");
     } catch (error) {
       console.error(t("tips.mailOpenError"), error);
     }
@@ -145,6 +162,8 @@ export default function Conseils() {
     try {
       await Share.share({
         message: t("tips.shareMessage"),
+        url: "https://challengeme.com/tips",
+        title: t("tips.title"),
       });
     } catch (error) {
       console.error(t("tips.shareError"), error);
@@ -153,41 +172,78 @@ export default function Conseils() {
 
   return (
     <LinearGradient
-      colors={[currentTheme.colors.background, currentTheme.colors.cardBackground]}
+      colors={[
+        currentTheme.colors.background,
+        currentTheme.colors.cardBackground,
+      ]}
       style={styles.gradientContainer}
       start={{ x: 0, y: 0 }}
       end={{ x: 0.8, y: 1 }}
     >
       <StatusBar
-        translucent={true}
+        translucent
         backgroundColor="transparent"
         barStyle={isDarkMode ? "light-content" : "dark-content"}
       />
       <SafeAreaView style={styles.safeArea}>
+        <TouchableOpacity
+          onPress={() => router.push("/")}
+          style={styles.backButton}
+          accessibilityLabel={t("tips.goBack")}
+          testID="back-button"
+        >
+          <Ionicons
+            name="arrow-back"
+            size={normalizeSize(24)}
+            color={
+              isDarkMode
+                ? currentTheme.colors.secondary
+                : currentTheme.colors.secondary
+            }
+          />
+        </TouchableOpacity>
         <View style={styles.headerWrapper}>
           <CustomHeader title={t("tips.title")} />
         </View>
         <ScrollView
           contentContainerStyle={styles.scrollContent}
           showsVerticalScrollIndicator={false}
-          contentInset={{ top: SPACING, bottom: SPACING }}
+          contentInset={{ top: SPACING, bottom: normalizeSize(80) }}
           accessibilityRole="list"
           accessibilityLabel={t("tips.listAccessibility")}
         >
-          <Animated.View entering={FadeInUp.delay(100)} style={styles.headerContainer}>
+          <Animated.View
+            entering={FadeInUp.delay(100)}
+            style={styles.headerContainer}
+          >
             <Image
-              source={require("../assets/images/Challenge.png")}
+              source={require("../assets/images/icon.png")}
               style={styles.logo}
+              resizeMode="contain"
               accessibilityLabel={t("tips.logoAlt")}
             />
-            <Text style={[styles.subHeaderText, { color: currentTheme.colors.textSecondary }]}>
+            <Text
+              style={[
+                styles.subHeaderText,
+                {
+                  color: isDarkMode
+                    ? "#FFF"
+                    : currentTheme.colors.textSecondary,
+                },
+              ]}
+            >
               {t("tips.subHeader")}
             </Text>
           </Animated.View>
 
-          <View style={styles.tipsContainer}>
+          <View style={styles.tipsContainer} role="list">
             {conseils.map((conseil, index) => (
-              <Animated.View key={conseil.id} entering={FadeInUp.delay(200 + index * 50)}>
+              <Animated.View
+                key={conseil.id}
+                entering={FadeInUp.delay(200 + index * 50)}
+                layout={Layout.springify()}
+                style={{ marginBottom: SPACING }}
+              >
                 <TouchableOpacity
                   style={[
                     styles.tipCard,
@@ -198,8 +254,18 @@ export default function Conseils() {
                     expandedTip === conseil.id && styles.tipCardExpanded,
                   ]}
                   onPress={() => toggleTip(conseil.id)}
-                  accessibilityLabel={t("tips.toggleTip", { title: t(conseil.title) })}
+                  accessibilityLabel={t("tips.toggleTip", {
+                    title: t(conseil.title),
+                  })}
+                  accessibilityHint={
+                    expandedTip === conseil.id
+                      ? t("tips.showLessHint")
+                      : t("tips.readMoreHint")
+                  }
+                  accessibilityRole="button"
+                  accessibilityState={{ expanded: expandedTip === conseil.id }}
                   testID={`tip-card-${conseil.id}`}
+                  activeOpacity={0.8}
                 >
                   <Ionicons
                     name={conseil.icon}
@@ -208,11 +274,19 @@ export default function Conseils() {
                     style={styles.tipIcon}
                   />
                   <View style={styles.tipContent}>
-                    <Text style={[styles.tipTitle, { color: currentTheme.colors.secondary }]}>
+                    <Text
+                      style={[
+                        styles.tipTitle,
+                        { color: currentTheme.colors.secondary },
+                      ]}
+                    >
                       {t(conseil.title)}
                     </Text>
                     <Text
-                      style={[styles.tipDescription, { color: currentTheme.colors.textSecondary }]}
+                      style={[
+                        styles.tipDescription,
+                        { color: currentTheme.colors.textSecondary },
+                      ]}
                       numberOfLines={expandedTip === conseil.id ? 0 : 2}
                     >
                       {t(conseil.description)}
@@ -226,9 +300,17 @@ export default function Conseils() {
                           : t("tips.readMore", { title: t(conseil.title) })
                       }
                       testID={`read-more-${conseil.id}`}
+                      activeOpacity={0.8}
                     >
-                      <Text style={[styles.readMoreText, { color: currentTheme.colors.primary }]}>
-                        {expandedTip === conseil.id ? t("tips.showLess") : t("tips.readMore")}
+                      <Text
+                        style={[
+                          styles.readMoreText,
+                          { color: currentTheme.colors.primary },
+                        ]}
+                      >
+                        {expandedTip === conseil.id
+                          ? t("tips.showLess")
+                          : t("tips.readMore")}
                       </Text>
                     </TouchableOpacity>
                   </View>
@@ -238,30 +320,48 @@ export default function Conseils() {
           </View>
 
           <Animated.View entering={FadeInUp.delay(600)} style={styles.footer}>
-            <Text style={[styles.footerText, { color: currentTheme.colors.textSecondary }]}>
+            <Text
+              style={[
+                styles.footerText,
+                { color: currentTheme.colors.textSecondary },
+              ]}
+            >
               {t("tips.footerQuery")}{" "}
               <Text
-                style={[styles.footerLink, { color: currentTheme.colors.secondary }]}
+                style={[
+                  styles.footerLink,
+                  { color: currentTheme.colors.secondary },
+                ]}
                 onPress={handleContact}
-                accessibilityLabel={t("tips.contactUs")}
+                accessibilityRole="link"
                 testID="contact-link"
               >
                 {t("tips.contactUs")}
               </Text>
             </Text>
             <TouchableOpacity
-              style={[styles.shareButton, { backgroundColor: currentTheme.colors.primary }]}
+              style={[
+                styles.shareButton,
+                { backgroundColor: currentTheme.colors.primary },
+              ]}
               onPress={handleShare}
-              accessibilityLabel={t("tips.shareTips")}
+              accessibilityRole="button"
               testID="share-button"
+              activeOpacity={0.8}
             >
               <Ionicons
                 name="share-social-outline"
                 size={normalizeSize(20)}
                 color={currentTheme.colors.textPrimary}
               />
-              <Text style={[styles.shareButtonText, { color: currentTheme.colors.textPrimary }]}>
-                {t("tips.shareTips")}
+              <Text
+                style={[
+                  styles.shareButtonText,
+                  { color: currentTheme.colors.textPrimary },
+                ]}
+              >
+                {" "}
+                {t("tips.shareTips")}{" "}
               </Text>
             </TouchableOpacity>
           </Animated.View>
@@ -272,104 +372,92 @@ export default function Conseils() {
 }
 
 const styles = StyleSheet.create({
-  gradientContainer: {
-    flex: 1,
-  },
+  gradientContainer: { flex: 1 },
   safeArea: {
     flex: 1,
+    paddingTop:
+      Platform.OS === "android" ? StatusBar.currentHeight ?? SPACING : SPACING,
+  },
+  backButton: {
+    position: "absolute",
+    top:
+      Platform.OS === "android" ? StatusBar.currentHeight ?? SPACING : SPACING,
+    left: SPACING,
+    zIndex: 10,
+    padding: SPACING / 2,
+    backgroundColor: "rgba(0, 0, 0, 0.5)", // Overlay premium
+    borderRadius: normalizeSize(20),
   },
   headerWrapper: {
     paddingHorizontal: SPACING,
-    paddingVertical: SPACING,
+    paddingVertical: SPACING, // Réduit légèrement pour éviter un trop grand espace
   },
   scrollContent: {
     paddingHorizontal: SPACING,
-    paddingBottom: SPACING * 2,
+    paddingBottom: normalizeSize(80),
   },
   headerContainer: {
     alignItems: "center",
-    marginBottom: SPACING * 2,
+    marginBottom: SPACING * 2, // Augmente légèrement pour espacer
+    marginTop: SPACING, // Ajoute un marginTop pour éviter le chevauchement avec CustomHeader
   },
   logo: {
-    width: SCREEN_WIDTH * 0.5,
-    height: SCREEN_WIDTH * 0.5,
+    width: Math.min(SCREEN_WIDTH * 0.5, normalizeSize(120)), // Réduit la taille du logo
+    height: Math.min(SCREEN_WIDTH * 0.5, normalizeSize(120)), // Garde les proportions
+    marginBottom: SPACING * 1.5, // Espace en dessous pour le texte
+    // Supprime marginTop négatif pour éviter le chevauchement
     resizeMode: "contain",
-    marginBottom: SPACING,
-  },
-  logoPlaceholder: {
-    width: SCREEN_WIDTH * 0.5,
-    height: SCREEN_WIDTH * 0.5,
-    justifyContent: "center",
-    alignItems: "center",
-    marginBottom: SPACING,
-  },
-  placeholderText: {
-    marginTop: SPACING,
-    fontSize: normalizeFont(12),
-    fontFamily: "Comfortaa_400Regular",
-    textAlign: "center",
   },
   subHeaderText: {
-    fontSize: normalizeFont(16),
+    fontSize: normalizeFont(18),
     fontFamily: "Comfortaa_400Regular",
     textAlign: "center",
-    marginHorizontal: SPACING,
-    lineHeight: normalizeFont(22),
+    marginHorizontal: SPACING * 1.5,
+    lineHeight: normalizeFont(24),
   },
-  tipsContainer: {
-    marginVertical: SPACING,
-  },
+  tipsContainer: { marginVertical: SPACING * 1.5 },
   tipCard: {
     flexDirection: "row",
     alignItems: "flex-start",
-    borderRadius: normalizeSize(15),
-    padding: SPACING,
-    marginBottom: SPACING,
+    borderRadius: normalizeSize(18),
+    padding: SPACING * 1.2,
     shadowColor: "#000",
-    shadowOffset: { width: 0, height: normalizeSize(4) },
-    shadowOpacity: 0.15,
-    shadowRadius: normalizeSize(6),
-    elevation: 4,
-    borderWidth: 1,
+    shadowOffset: { width: 0, height: normalizeSize(6) },
+    shadowOpacity: 0.25,
+    shadowRadius: normalizeSize(8),
+    elevation: 6,
+    borderWidth: 1.5,
+    marginBottom: SPACING, // Uniformise avec Animated.View
   },
-  tipCardExpanded: {
-    opacity: 0.95,
-  },
-  tipIcon: {
-    marginRight: SPACING,
-    marginTop: normalizeSize(2),
-  },
-  tipContent: {
-    flex: 1,
-  },
+  tipCardExpanded: { opacity: 0.95 },
+  tipIcon: { marginRight: SPACING, marginTop: normalizeSize(4) },
+  tipContent: { flex: 1 },
   tipTitle: {
-    fontSize: normalizeFont(18),
+    fontSize: normalizeFont(20),
     fontFamily: "Comfortaa_700Bold",
-    marginBottom: normalizeSize(6),
+    marginBottom: normalizeSize(8),
   },
   tipDescription: {
-    fontSize: normalizeFont(14),
+    fontSize: normalizeFont(15),
     fontFamily: "Comfortaa_400Regular",
-    lineHeight: normalizeFont(20),
+    lineHeight: normalizeFont(22),
   },
-  readMoreButton: {
-    marginTop: SPACING / 2,
-    alignSelf: "flex-start",
-  },
+  readMoreButton: { marginTop: SPACING / 1.5, alignSelf: "flex-start" },
   readMoreText: {
-    fontSize: normalizeFont(12),
+    fontSize: normalizeFont(13),
     fontFamily: "Comfortaa_400Regular",
     textDecorationLine: "underline",
   },
   footer: {
-    marginTop: SPACING * 2,
+    marginTop: SPACING * 10,
     alignItems: "center",
+    paddingBottom: SPACING * 6,
   },
   footerText: {
-    fontSize: normalizeFont(14),
+    fontSize: normalizeFont(15),
     fontFamily: "Comfortaa_400Regular",
     textAlign: "center",
-    marginBottom: SPACING,
+    marginBottom: SPACING * 1.5,
   },
   footerLink: {
     fontFamily: "Comfortaa_700Bold",
@@ -378,18 +466,18 @@ const styles = StyleSheet.create({
   shareButton: {
     flexDirection: "row",
     alignItems: "center",
-    paddingVertical: SPACING / 1.5,
-    paddingHorizontal: SPACING * 1.5,
-    borderRadius: normalizeSize(25),
+    paddingVertical: SPACING / 1.2,
+    paddingHorizontal: SPACING * 2,
+    borderRadius: normalizeSize(30),
     shadowColor: "#000",
-    shadowOffset: { width: 0, height: normalizeSize(3) },
-    shadowOpacity: 0.3,
-    shadowRadius: normalizeSize(5),
-    elevation: 5,
+    shadowOffset: { width: 0, height: normalizeSize(4) },
+    shadowOpacity: 0.35,
+    shadowRadius: normalizeSize(6),
+    elevation: 8,
   },
   shareButtonText: {
-    fontSize: normalizeFont(14),
+    fontSize: normalizeFont(15),
     fontFamily: "Comfortaa_700Bold",
-    marginLeft: SPACING / 2,
+    marginLeft: SPACING / 1.5,
   },
 });

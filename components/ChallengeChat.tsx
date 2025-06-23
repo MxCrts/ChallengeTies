@@ -1,4 +1,4 @@
-import React, { useState, useRef } from "react";
+import React, { useState, useRef, useEffect } from "react";
 import {
   View,
   Text,
@@ -11,23 +11,66 @@ import {
   SafeAreaView,
   Dimensions,
   Image,
+  Alert,
 } from "react-native";
-import { useRoute, useNavigation } from "@react-navigation/native";
 import { Ionicons } from "@expo/vector-icons";
 import { LinearGradient } from "expo-linear-gradient";
-import { auth } from "../constants/firebase-config";
+import { auth, db } from "../constants/firebase-config";
 import { useChat } from "../context/ChatContext";
 import designSystem from "../theme/designSystem";
 import { useTranslation } from "react-i18next";
+import {
+  collection,
+  addDoc,
+  onSnapshot,
+  query,
+  orderBy,
+  serverTimestamp,
+  updateDoc,
+  doc,
+} from "firebase/firestore";
 
 const { width } = Dimensions.get("window");
 const { lightTheme } = designSystem;
 const currentTheme = lightTheme;
 
+// Interface pour les messages, alignée avec ChatContext.tsx
+interface Message {
+  id: string;
+  text: string;
+  timestamp: Date;
+  userId: string;
+  username: string;
+  avatar: string;
+  reported: boolean;
+}
+
 export default function ChallengeChat() {
   const { t } = useTranslation();
-  const route = useRoute();
-  const navigation = useNavigation();
+  const [route, setRoute] = useState<any>(null);
+  const [navigation, setNavigation] = useState<any>(null);
+
+  // Charger useRoute et useNavigation dynamiquement
+  useEffect(() => {
+    const loadNavigation = async () => {
+      const { useRoute, useNavigation } = await import(
+        "@react-navigation/native"
+      );
+      setRoute(() => useRoute());
+      setNavigation(() => useNavigation());
+    };
+    loadNavigation();
+  }, []);
+
+  // Vérifier si route et navigation sont chargés
+  if (!route || !navigation) {
+    return (
+      <View style={styles.container}>
+        <Text style={styles.messageText}>Chargement...</Text>
+      </View>
+    );
+  }
+
   const { challengeId, challengeTitle } = route.params as {
     challengeId: string;
     challengeTitle: string;
@@ -55,8 +98,29 @@ export default function ChallengeChat() {
     }
   };
 
-  const renderMessage = ({ item }: { item: any }) => {
+  const renderMessage = ({ item }: { item: Message }) => {
     const isMyMessage = item.userId === auth.currentUser?.uid;
+
+    // Fonction pour signaler un message
+    const handleReportMessage = async () => {
+      try {
+        const messageRef = doc(db, "chats", challengeId, "messages", item.id);
+        await updateDoc(messageRef, { reported: true });
+        Alert.alert(
+          t("success"),
+          t("messageReported", { defaultValue: "Message signalé." })
+        );
+      } catch (error) {
+        console.error("Erreur lors du signalement du message :", error);
+        Alert.alert(
+          t("error"),
+          t("reportMessageFailed", {
+            defaultValue: "Impossible de signaler le message.",
+          })
+        );
+      }
+    };
+
     return (
       <View
         style={[
@@ -85,6 +149,19 @@ export default function ChallengeChat() {
             </Text>
           )}
           <Text style={styles.messageText}>{item.text}</Text>
+          {!isMyMessage && !item.reported && (
+            <TouchableOpacity
+              style={styles.reportButton}
+              onPress={handleReportMessage}
+              accessibilityLabel={t("reportMessage", {
+                defaultValue: "Signaler ce message",
+              })}
+            >
+              <Text style={styles.reportButtonText}>
+                {t("report", { defaultValue: "Signaler" })}
+              </Text>
+            </TouchableOpacity>
+          )}
         </View>
       </View>
     );
@@ -101,7 +178,9 @@ export default function ChallengeChat() {
         >
           <Ionicons name="arrow-back" size={24} color="#fff" />
         </TouchableOpacity>
-        <Text style={styles.headerTitle}>{t("chat.title", { title: challengeTitle })}</Text>
+        <Text style={styles.headerTitle}>
+          {t("chat.title", { title: challengeTitle })}
+        </Text>
       </LinearGradient>
 
       <KeyboardAvoidingView
@@ -235,5 +314,18 @@ const styles = StyleSheet.create({
     paddingVertical: 10,
     justifyContent: "center",
     alignItems: "center",
+  },
+  reportButton: {
+    marginTop: 5,
+    backgroundColor: "#EF4444",
+    paddingVertical: 5,
+    paddingHorizontal: 10,
+    borderRadius: 5,
+    alignSelf: "flex-end",
+  },
+  reportButtonText: {
+    color: "#FFF",
+    fontSize: 12,
+    fontFamily: "Comfortaa_700Bold",
   },
 });

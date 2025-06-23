@@ -1,0 +1,22 @@
+<!DOCTYPE html>
+<html>
+  <head>
+    <meta charset="utf-8" />
+    <title>ChallengeTies Invitation</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <script>
+      // Tente d'ouvrir l'appli avec le scheme natif
+      const path = window.location.pathname.split("/challenge-details/")[1];
+      window.location = "myapp://challenge-details/" + path;
+
+      // Si l'appli n'est pas installée, redirige vers le Play Store après 1 seconde
+      setTimeout(function () {
+        window.location =
+          "https://play.google.com/store/apps/details?id=com.mxcrts.ChallengeTies";
+      }, 1000);
+    </script>
+  </head>
+  <body>
+    <p>Redirection vers ChallengeTies...</p>
+  </body>
+</html>

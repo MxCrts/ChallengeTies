@@ -12,27 +12,28 @@ import {
   Modal,
   StatusBar,
   StyleSheet,
+  Platform,
 } from "react-native";
 import { Ionicons } from "@expo/vector-icons";
 import { useRouter } from "expo-router";
 import { doc, onSnapshot } from "firebase/firestore";
-import { db, auth } from "../../constants/firebase-config";
+import { db, auth } from "@/constants/firebase-config";
 import { LinearGradient } from "expo-linear-gradient";
 import Animated, { FadeInUp } from "react-native-reanimated";
-import { useTheme } from "../../context/ThemeContext";
-import { Theme } from "../../theme/designSystem";
-import designSystem from "../../theme/designSystem";
+import { useTheme } from "@/context/ThemeContext";
+import designSystem, { Theme } from "@/theme/designSystem";
 import CustomHeader from "@/components/CustomHeader";
 import { useTranslation } from "react-i18next";
 
+// Dimensions & responsivité
 const { width: SCREEN_WIDTH, height: SCREEN_HEIGHT } = Dimensions.get("window");
-const SPACING = 15;
-const ITEM_WIDTH = SCREEN_WIDTH * 0.9;
-const ITEM_HEIGHT = SCREEN_WIDTH * 0.45;
-const CARD_MARGIN = SCREEN_WIDTH * 0.02;
+const SPACING = 18; // Aligné avec CurrentChallenges.tsx et SavedChallenges.tsx
+const ITEM_WIDTH = SCREEN_WIDTH * 0.9; // Conservé, aligné
+const ITEM_HEIGHT = SCREEN_WIDTH * 0.45; // Conservé, aligné
 
 const normalizeSize = (size: number) => {
-  const scale = SCREEN_WIDTH / 375;
+  const baseWidth = 375;
+  const scale = Math.min(Math.max(SCREEN_WIDTH / baseWidth, 0.7), 1.8); // Limite l'échelle pour responsivité
   return Math.round(size * scale);
 };
 
@@ -50,13 +51,6 @@ interface CompletedChallenge {
 
 export default function CompletedChallenges() {
   const { t, i18n } = useTranslation();
-  const [completedChallenges, setCompletedChallenges] = useState<CompletedChallenge[]>([]);
-  const [isLoading, setIsLoading] = useState(true);
-  const [historyModalVisible, setHistoryModalVisible] = useState(false);
-  const [selectedHistory, setSelectedHistory] = useState<{
-    title: string;
-    history: { completedAt: string; selectedDays: number }[];
-  } | null>(null);
   const router = useRouter();
   const { theme } = useTheme();
   const isDarkMode = theme === "dark";
@@ -64,49 +58,54 @@ export default function CompletedChallenges() {
     ? designSystem.darkTheme
     : designSystem.lightTheme;
 
+  const [completedChallenges, setCompletedChallenges] = useState<
+    CompletedChallenge[]
+  >([]);
+  const [isLoading, setIsLoading] = useState(true);
+  const [historyModalVisible, setHistoryModalVisible] = useState(false);
+  const [selectedHistory, setSelectedHistory] = useState<{
+    title: string;
+    history: { completedAt: string; selectedDays: number }[];
+  } | null>(null);
+
   useEffect(() => {
     const userId = auth.currentUser?.uid;
     if (!userId) {
       setIsLoading(false);
       return;
     }
-    const userDocRef = doc(db, "users", userId);
-    const unsubscribe = onSnapshot(
-      userDocRef,
-      (snapshot) => {
-        if (snapshot.exists()) {
-          const userData = snapshot.data() || {};
-          const challenges = Array.isArray(userData.CompletedChallenges)
-            ? userData.CompletedChallenges
-            : [];
-          const mappedChallenges: CompletedChallenge[] = challenges.map((c: any) => {
-            // traductions
-            const titleTrans = c.chatId
-              ? t(`challenges.${c.chatId}.title`, { defaultValue: c.title })
-              : c.title || t("challengeSaved");
-            const descTrans = c.chatId
-              ? t(`challenges.${c.chatId}.description`, { defaultValue: c.description || "" })
-              : c.description || "";
-            const catTrans = c.category
-              ? t(`categories.${c.category}`, { defaultValue: c.category })
-              : t("noCategory");
 
-            return {
-              id: c.id,
-              chatId: c.chatId,
-              title: titleTrans,
-              imageUrl: c.imageUrl || null,
-              completedAt: c.completedAt || "",
-              category: catTrans,
-              description: descTrans,
-              selectedDays: c.selectedDays || 0,
-              history: c.history || [],
-            };
-          });
-          setCompletedChallenges(mappedChallenges);
-        } else {
+    const unsubscribe = onSnapshot(
+      doc(db, "users", userId),
+      (snapshot) => {
+        if (!snapshot.exists()) {
           setCompletedChallenges([]);
+          setIsLoading(false);
+          return;
         }
+
+        const raw = snapshot.data()?.CompletedChallenges || [];
+        const challenges: CompletedChallenge[] = raw.map((c: any) => ({
+          id: c.id,
+          chatId: c.chatId,
+          title: c.chatId
+            ? t(`challenges.${c.chatId}.title`, { defaultValue: c.title })
+            : c.title || t("challengeSaved"),
+          description: c.chatId
+            ? t(`challenges.${c.chatId}.description`, {
+                defaultValue: c.description || "",
+              })
+            : c.description || "",
+          category: c.category
+            ? t(`categories.${c.category}`, { defaultValue: c.category })
+            : t("noCategory"),
+          imageUrl: c.imageUrl || "",
+          completedAt: c.completedAt || "",
+          selectedDays: c.selectedDays || 0,
+          history: c.history || [],
+        }));
+
+        setCompletedChallenges(challenges);
         setIsLoading(false);
       },
       (error) => {
@@ -115,6 +114,7 @@ export default function CompletedChallenges() {
         setIsLoading(false);
       }
     );
+
     return () => unsubscribe();
   }, [t, i18n.language]);
 
@@ -140,18 +140,31 @@ export default function CompletedChallenges() {
 
   const renderChallenge = useCallback(
     ({ item, index }: { item: CompletedChallenge; index: number }) => (
-      <Animated.View entering={FadeInUp.delay(index * 100)} style={styles.cardWrapper}>
+      <Animated.View
+        entering={FadeInUp.delay(index * 100)}
+        style={styles.cardWrapper}
+      >
         <TouchableOpacity
           style={styles.cardContainer}
           onPress={() => navigateToChallengeDetails(item)}
-          activeOpacity={0.9}
+          activeOpacity={0.8} // Aligné avec CurrentChallenges.tsx
           accessibilityLabel={t("viewChallenge", { title: item.title })}
+          accessibilityHint={t("viewDetails")} // Aligné avec CurrentChallenges.tsx
+          testID={`challenge-card-${item.id}`}
         >
           <LinearGradient
-            colors={[currentTheme.colors.cardBackground, currentTheme.colors.background]}
-            style={styles.card}
-            start={{ x: 0, y: 0 }}
-            end={{ x: 1, y: 1 }}
+            colors={[
+              currentTheme.colors.cardBackground,
+              currentTheme.colors.cardBackground + "F0",
+            ]}
+            style={[
+              styles.card,
+              {
+                borderColor: isDarkMode
+                  ? currentTheme.colors.secondary
+                  : "#FF8C00",
+              },
+            ]}
           >
             {item.imageUrl ? (
               <Image
@@ -161,7 +174,10 @@ export default function CompletedChallenges() {
               />
             ) : (
               <View
-                style={[styles.placeholderImage, { backgroundColor: currentTheme.colors.overlay }]}
+                style={[
+                  styles.placeholderImage,
+                  { backgroundColor: currentTheme.colors.overlay },
+                ]}
               >
                 <Ionicons
                   name="image-outline"
@@ -172,23 +188,42 @@ export default function CompletedChallenges() {
             )}
             <View style={styles.cardContent}>
               <Text
-                style={[styles.challengeTitle, { color: currentTheme.colors.textPrimary }]}
+                style={[
+                  styles.challengeTitle,
+                  {
+                    color: isDarkMode
+                      ? currentTheme.colors.textPrimary
+                      : "#000000",
+                  },
+                ]}
                 numberOfLines={1}
               >
                 {item.title}
               </Text>
               <Text
-                style={[styles.challengeDate, { color: currentTheme.colors.textSecondary }]}
+                style={[
+                  styles.challengeDate,
+                  { color: currentTheme.colors.textSecondary },
+                ]}
               >
-                {t("completedOn")} {new Date(item.completedAt).toLocaleDateString()}
+                {t("completedOn")}{" "}
+                {new Date(item.completedAt).toLocaleDateString()}
               </Text>
               <Text
-                style={[styles.challengeCategory, { color: currentTheme.colors.textSecondary }]}
+                style={[
+                  styles.challengeCategory,
+                  { color: currentTheme.colors.textSecondary },
+                ]}
               >
                 {item.category}
               </Text>
               <View style={styles.progressContainer}>
-                <Text style={[styles.progressText, { color: currentTheme.colors.secondary }]}>
+                <Text
+                  style={[
+                    styles.progressText,
+                    { color: currentTheme.colors.secondary },
+                  ]}
+                >
                   {item.selectedDays}/{item.selectedDays} {t("days")}
                 </Text>
               </View>
@@ -197,15 +232,21 @@ export default function CompletedChallenges() {
                   style={styles.historyButton}
                   onPress={() => openHistoryModal(item)}
                   accessibilityLabel={t("history")}
+                  accessibilityHint={t("viewHistoryHint")} // Aligné avec CurrentChallenges.tsx
+                  testID={`history-button-${item.id}`}
                 >
                   <LinearGradient
-                    colors={[currentTheme.colors.secondary, currentTheme.colors.primary]}
+                    colors={[
+                      currentTheme.colors.secondary,
+                      currentTheme.colors.primary,
+                    ]}
                     style={styles.historyButtonGradient}
-                    start={{ x: 0, y: 0 }}
-                    end={{ x: 1, y: 1 }}
                   >
                     <Text
-                      style={[styles.historyButtonText, { color: currentTheme.colors.textPrimary }]}
+                      style={[
+                        styles.historyButtonText,
+                        { color: currentTheme.colors.textPrimary },
+                      ]}
                     >
                       {t("historyOf")}
                     </Text>
@@ -217,7 +258,7 @@ export default function CompletedChallenges() {
         </TouchableOpacity>
       </Animated.View>
     ),
-    [navigateToChallengeDetails, openHistoryModal, currentTheme, t]
+    [navigateToChallengeDetails, openHistoryModal, currentTheme, t, isDarkMode]
   );
 
   if (isLoading) {
@@ -229,11 +270,19 @@ export default function CompletedChallenges() {
           barStyle={isDarkMode ? "light-content" : "dark-content"}
         />
         <LinearGradient
-          colors={[currentTheme.colors.background, currentTheme.colors.cardBackground]}
+          colors={[
+            currentTheme.colors.background,
+            currentTheme.colors.cardBackground + "F0",
+          ]}
           style={styles.loadingContainer}
         >
-          <ActivityIndicator size="large" color={currentTheme.colors.secondary} />
-          <Text style={[styles.loadingText, { color: currentTheme.colors.textPrimary }]}>
+          <ActivityIndicator size="large" color={currentTheme.colors.primary} />
+          <Text
+            style={[
+              styles.loadingText,
+              { color: currentTheme.colors.textPrimary },
+            ]}
+          >
             {t("loadingProfile")}
           </Text>
         </LinearGradient>
@@ -250,19 +299,54 @@ export default function CompletedChallenges() {
           barStyle={isDarkMode ? "light-content" : "dark-content"}
         />
         <LinearGradient
-          colors={[currentTheme.colors.background, currentTheme.colors.cardBackground]}
+          colors={[
+            currentTheme.colors.background,
+            currentTheme.colors.cardBackground + "F0",
+          ]}
           style={styles.noChallengesContainer}
         >
-          <Animated.View entering={FadeInUp.delay(100)} style={styles.noChallengesContent}>
+          <View style={styles.headerWrapper}>
+            <Animated.View entering={FadeInUp}>
+              <TouchableOpacity
+                onPress={() => router.back()}
+                style={styles.backButton}
+                accessibilityLabel={t("goBack")}
+                accessibilityHint={t("backButtonHint")} // Aligné avec CurrentChallenges.tsx
+                testID="back-button"
+              >
+                <Ionicons
+                  name="arrow-back"
+                  size={normalizeSize(24)}
+                  color={currentTheme.colors.secondary}
+                />
+              </TouchableOpacity>
+            </Animated.View>
+            <CustomHeader title={t("completedChallengesScreenTitle")} />
+          </View>
+          <Animated.View
+            entering={FadeInUp.delay(100)}
+            style={styles.noChallengesContent}
+          >
             <Ionicons
               name="checkmark-done-outline"
               size={normalizeSize(60)}
               color={currentTheme.colors.textSecondary}
+              accessibilityLabel={t("noCompletedChallengesIcon")}
             />
-            <Text style={[styles.noChallengesText, { color: currentTheme.colors.textPrimary }]}>
+            <Text
+              style={[
+                styles.noChallengesText,
+                { color: currentTheme.colors.textPrimary },
+              ]}
+            >
               {t("noCompletedChallenges")}
             </Text>
-            <Text style={[styles.noChallengesSubtext, { color: currentTheme.colors.textSecondary }]}>
+            <Text
+              style={[
+                styles.noChallengesSubtext,
+                { color: currentTheme.colors.textSecondary },
+              ]}
+            >
               {t("completeChallengesToSeeHere")}
             </Text>
           </Animated.View>
@@ -279,10 +363,28 @@ export default function CompletedChallenges() {
         barStyle={isDarkMode ? "light-content" : "dark-content"}
       />
       <LinearGradient
-        colors={[currentTheme.colors.background, currentTheme.colors.cardBackground]}
+        colors={[
+          currentTheme.colors.background,
+          currentTheme.colors.cardBackground + "F0",
+        ]}
         style={styles.container}
       >
         <View style={styles.headerWrapper}>
+          <Animated.View entering={FadeInUp}>
+            <TouchableOpacity
+              onPress={() => router.back()}
+              style={styles.backButton}
+              accessibilityLabel={t("goBack")}
+              accessibilityHint={t("backButtonHint")} // Aligné avec CurrentChallenges.tsx
+              testID="back-button"
+            >
+              <Ionicons
+                name="arrow-back"
+                size={normalizeSize(24)}
+                color={currentTheme.colors.secondary}
+              />
+            </TouchableOpacity>
+          </Animated.View>
           <CustomHeader title={t("completedChallengesScreenTitle")} />
         </View>
         <FlatList
@@ -293,8 +395,8 @@ export default function CompletedChallenges() {
           showsVerticalScrollIndicator={false}
           initialNumToRender={10}
           windowSize={5}
+          contentInset={{ top: SPACING, bottom: normalizeSize(100) }} // Responsivité
         />
-
         {selectedHistory && (
           <Modal
             visible={historyModalVisible}
@@ -309,10 +411,22 @@ export default function CompletedChallenges() {
               ]}
             >
               <LinearGradient
-                colors={[currentTheme.colors.cardBackground, currentTheme.colors.background]}
+                colors={[
+                  currentTheme.colors.cardBackground,
+                  currentTheme.colors.cardBackground + "F0",
+                ]}
                 style={styles.modalContent}
               >
-                <Text style={[styles.modalTitle, { color: currentTheme.colors.textPrimary }]}>
+                <Text
+                  style={[
+                    styles.modalTitle,
+                    {
+                      color: isDarkMode
+                        ? currentTheme.colors.textPrimary
+                        : "#000000",
+                    },
+                  ]}
+                >
                   {t("historyOf")} {selectedHistory.title}
                 </Text>
                 <FlatList
@@ -321,12 +435,24 @@ export default function CompletedChallenges() {
                   renderItem={({ item }) => (
                     <Animated.View
                       entering={FadeInUp.delay(100)}
-                      style={[styles.historyItem, { borderBottomColor: currentTheme.colors.border }]}
+                      style={[
+                        styles.historyItem,
+                        { borderBottomColor: currentTheme.colors.border },
+                      ]}
                     >
-                      <Text style={[styles.historyText, { color: currentTheme.colors.textPrimary }]}>
+                      <Text
+                        style={[
+                          styles.historyText,
+                          {
+                            color: isDarkMode
+                              ? currentTheme.colors.textPrimary
+                              : "#000000",
+                          },
+                        ]}
+                      >
                         {t("completedOnDate")}{" "}
-                        {new Date(item.completedAt).toLocaleDateString()} - {item.selectedDays}{" "}
-                        {t("days")}
+                        {new Date(item.completedAt).toLocaleDateString()} -{" "}
+                        {item.selectedDays} {t("days")}
                       </Text>
                     </Animated.View>
                   )}
@@ -334,12 +460,23 @@ export default function CompletedChallenges() {
                 <TouchableOpacity
                   style={styles.closeButton}
                   onPress={() => setHistoryModalVisible(false)}
+                  accessibilityLabel={t("closeModal")} // Aligné avec CurrentChallenges.tsx
+                  accessibilityHint={t("closeModalHint")} // Aligné avec CurrentChallenges.tsx
+                  testID="close-modal-button"
                 >
                   <LinearGradient
-                    colors={[currentTheme.colors.secondary, currentTheme.colors.primary]}
+                    colors={[
+                      currentTheme.colors.secondary,
+                      currentTheme.colors.primary,
+                    ]}
                     style={styles.closeButtonGradient}
                   >
-                    <Text style={[styles.closeButtonText, { color: currentTheme.colors.textPrimary }]}>
+                    <Text
+                      style={[
+                        styles.closeButtonText,
+                        { color: currentTheme.colors.textPrimary },
+                      ]}
+                    >
                       {t("close")}
                     </Text>
                   </LinearGradient>
@@ -354,127 +491,149 @@ export default function CompletedChallenges() {
 }
 
 const styles = StyleSheet.create({
-  safeArea: { flex: 1 },
-  container: { flex: 1 },
+  safeArea: {
+    flex: 1,
+  },
+  container: {
+    flex: 1,
+  },
+  backButton: {
+    position: "absolute",
+    top:
+      Platform.OS === "android" ? StatusBar.currentHeight ?? SPACING : SPACING,
+    left: SPACING,
+    zIndex: 10,
+    padding: SPACING / 2,
+    backgroundColor: "rgba(0, 0, 0, 0.5)", // Exactement comme CurrentChallenges.tsx et SavedChallenges.tsx
+    borderRadius: normalizeSize(20),
+  },
   headerWrapper: {
-    marginTop: SPACING,
-    marginBottom: SPACING,
     paddingHorizontal: SPACING,
+    paddingVertical: SPACING,
+    paddingTop: SPACING * 2.5, // Aligné avec CurrentChallenges.tsx
+    position: "relative",
   },
   listContent: {
-    paddingHorizontal: SPACING,
-    paddingBottom: SCREEN_HEIGHT * 0.1,
+    paddingVertical: SPACING * 1.5,
+    paddingHorizontal: SPACING / 2,
+    paddingBottom: normalizeSize(80), // Aligné avec CurrentChallenges.tsx
   },
   cardWrapper: {
-    marginBottom: CARD_MARGIN,
+    marginBottom: SPACING * 1.5,
+    borderRadius: normalizeSize(25),
     shadowColor: "#000",
-    shadowOffset: { width: 0, height: normalizeSize(6) },
-    shadowOpacity: 0.3,
+    shadowOffset: { width: 0, height: normalizeSize(5) },
+    shadowOpacity: 0.35,
     shadowRadius: normalizeSize(8),
-    elevation: 8,
+    elevation: 10,
   },
   cardContainer: {
     width: ITEM_WIDTH,
-    borderRadius: normalizeSize(20),
+    borderRadius: normalizeSize(25),
     overflow: "hidden",
     alignSelf: "center",
   },
   card: {
     flexDirection: "row",
-    padding: SPACING,
-    borderRadius: normalizeSize(20),
-    borderWidth: 1,
-    borderColor: "transparent",
+    alignItems: "center",
+    padding: normalizeSize(18),
+    borderRadius: normalizeSize(25),
+    borderWidth: 2.5, // Bordure premium
     minHeight: ITEM_HEIGHT,
   },
   cardImage: {
     width: normalizeSize(70),
     height: normalizeSize(70),
-    borderRadius: normalizeSize(14),
-    marginRight: SPACING,
+    borderRadius: normalizeSize(16), // Aligné avec CurrentChallenges.tsx
+    marginRight: SPACING * 1.2,
     borderWidth: 2,
-    borderColor: "#FFFFFF",
+    borderColor: "rgba(255, 255, 255, 0.6)", // Bordure premium
   },
   placeholderImage: {
     width: normalizeSize(70),
     height: normalizeSize(70),
-    borderRadius: normalizeSize(14),
+    borderRadius: normalizeSize(16),
     justifyContent: "center",
     alignItems: "center",
-    marginRight: SPACING,
+    marginRight: SPACING * 1.2,
   },
   cardContent: {
     flex: 1,
+    justifyContent: "space-between", // Aligné avec CurrentChallenges.tsx
   },
   challengeTitle: {
     fontSize: normalizeSize(18),
     fontFamily: "Comfortaa_700Bold",
+    marginBottom: normalizeSize(4),
   },
   challengeDate: {
-    fontSize: normalizeSize(14),
+    fontSize: normalizeSize(16), // Aligné avec CurrentChallenges.tsx
     fontFamily: "Comfortaa_400Regular",
-    marginTop: normalizeSize(2),
+    marginTop: normalizeSize(4),
   },
   challengeCategory: {
-    fontSize: normalizeSize(14),
+    fontSize: normalizeSize(16),
     fontFamily: "Comfortaa_400Regular",
-    marginTop: normalizeSize(2),
-    textTransform: "capitalize",
+    marginTop: normalizeSize(4),
   },
   progressContainer: {
-    marginVertical: SPACING / 2,
+    marginVertical: normalizeSize(10),
   },
   progressText: {
-    fontSize: normalizeSize(12),
+    fontSize: normalizeSize(14), // Aligné avec CurrentChallenges.tsx
     fontFamily: "Comfortaa_400Regular",
   },
   historyButton: {
-    borderRadius: normalizeSize(12),
+    borderRadius: normalizeSize(18), // Aligné avec CurrentChallenges.tsx
     overflow: "hidden",
-    marginTop: SPACING / 2,
+    marginTop: normalizeSize(10),
   },
   historyButtonGradient: {
-    paddingVertical: normalizeSize(10),
-    paddingHorizontal: SPACING,
+    paddingVertical: normalizeSize(12),
+    paddingHorizontal: SPACING * 1.2,
     alignItems: "center",
+    justifyContent: "center",
+    borderRadius: normalizeSize(18),
   },
   historyButtonText: {
     fontFamily: "Comfortaa_700Bold",
-    fontSize: normalizeSize(14),
-    textShadowColor: "#000",
-    textShadowOffset: { width: 0, height: 1 },
-    textShadowRadius: 2,
+    fontSize: normalizeSize(16), // Aligné avec CurrentChallenges.tsx
+    textAlign: "center",
   },
   loadingContainer: {
     flex: 1,
     justifyContent: "center",
     alignItems: "center",
+    paddingHorizontal: SPACING,
   },
   loadingText: {
-    marginTop: SPACING,
-    fontSize: normalizeSize(16),
+    marginTop: normalizeSize(20),
+    fontSize: normalizeSize(18), // Aligné avec CurrentChallenges.tsx
     fontFamily: "Comfortaa_400Regular",
+    textAlign: "center",
   },
   noChallengesContainer: {
     flex: 1,
-    justifyContent: "center",
-    alignItems: "center",
   },
   noChallengesContent: {
+    flex: 1,
     alignItems: "center",
+    justifyContent: "center",
+    height: SCREEN_HEIGHT * 0.85, // Responsivité
+    paddingHorizontal: SPACING,
   },
   noChallengesText: {
-    fontSize: normalizeSize(20),
+    fontSize: normalizeSize(22), // Aligné avec CurrentChallenges.tsx
     fontFamily: "Comfortaa_700Bold",
     marginTop: SPACING,
     textAlign: "center",
   },
   noChallengesSubtext: {
-    fontSize: normalizeSize(16),
+    fontSize: normalizeSize(18), // Aligné avec CurrentChallenges.tsx
     fontFamily: "Comfortaa_400Regular",
     textAlign: "center",
     marginTop: SPACING / 2,
-    maxWidth: SCREEN_WIDTH * 0.65,
+    maxWidth: SCREEN_WIDTH * 0.75, // Responsivité
   },
   modalContainer: {
     flex: 1,
@@ -484,16 +643,16 @@ const styles = StyleSheet.create({
   modalContent: {
     width: SCREEN_WIDTH * 0.85,
     maxHeight: SCREEN_HEIGHT * 0.7,
-    borderRadius: normalizeSize(20),
+    borderRadius: normalizeSize(25), // Aligné avec CurrentChallenges.tsx
     padding: SPACING,
     shadowColor: "#000",
-    shadowOffset: { width: 0, height: normalizeSize(6) },
-    shadowOpacity: 0.3,
+    shadowOffset: { width: 0, height: normalizeSize(5) },
+    shadowOpacity: 0.35,
     shadowRadius: normalizeSize(8),
-    elevation: 8,
+    elevation: 10,
   },
   modalTitle: {
-    fontSize: normalizeSize(20),
+    fontSize: normalizeSize(22), // Aligné avec CurrentChallenges.tsx
     fontFamily: "Comfortaa_700Bold",
     marginBottom: SPACING,
     textAlign: "center",
@@ -503,24 +662,24 @@ const styles = StyleSheet.create({
     borderBottomWidth: 1,
   },
   historyText: {
-    fontSize: normalizeSize(14),
+    fontSize: normalizeSize(16), // Aligné avec CurrentChallenges.tsx
     fontFamily: "Comfortaa_400Regular",
   },
   closeButton: {
     marginTop: SPACING,
-    borderRadius: normalizeSize(12),
+    borderRadius: normalizeSize(18), // Aligné avec CurrentChallenges.tsx
     overflow: "hidden",
   },
   closeButtonGradient: {
-    paddingVertical: normalizeSize(10),
-    paddingHorizontal: SPACING,
+    paddingVertical: normalizeSize(12),
+    paddingHorizontal: SPACING * 1.2,
     alignItems: "center",
+    justifyContent: "center",
+    borderRadius: normalizeSize(18),
   },
   closeButtonText: {
     fontFamily: "Comfortaa_700Bold",
     fontSize: normalizeSize(16),
-    textShadowColor: "#000",
-    textShadowOffset: { width: 0, height: 1 },
-    textShadowRadius: 2,
+    textAlign: "center",
   },
 });
