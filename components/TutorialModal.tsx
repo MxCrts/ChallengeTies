@@ -18,6 +18,7 @@ import { LinearGradient } from "expo-linear-gradient";
 import { normalize } from "../utils/normalize";
 import { useTheme } from "../context/ThemeContext";
 import designSystem, { Theme } from "../theme/designSystem";
+import TutorialIcon from "./TutorialIcon"; // ajuste le chemin si besoin
 
 interface TutorialModalProps {
   step: number;
@@ -93,32 +94,46 @@ const TutorialModal: React.FC<TutorialModalProps> = ({
   return (
     <Animated.View
       entering={FadeInUp.duration(600).springify()}
-      style={[styles.modalContainer, { borderColor: "#FFD700" }]} // Bordure dorée
+      style={[styles.modalContainer, { borderColor: "#FFD700" }]}
     >
       <LinearGradient
         colors={
           isDarkMode
-            ? ["rgba(30, 30, 30, 0.95)", "rgba(50, 50, 50, 0.85)"]
-            : ["rgba(255, 255, 255, 0.95)", "rgba(240, 240, 240, 0.85)"]
+            ? ["rgba(20, 20, 20, 0.98)", "rgba(45, 45, 45, 0.92)"]
+            : ["rgba(255, 255, 255, 0.97)", "rgba(245, 245, 245, 0.9)"]
         }
-        style={styles.gradientBackground}
+        style={[
+          styles.gradientBackground,
+          {
+            borderWidth: 1,
+            borderColor: isDarkMode
+              ? "rgba(255,255,255,0.05)"
+              : "rgba(0,0,0,0.05)",
+            shadowColor: "#000",
+            shadowOffset: { width: 0, height: 4 },
+            shadowOpacity: 0.2,
+            shadowRadius: 8,
+            elevation: 5,
+          },
+        ]}
       >
-        <Text
-          style={[
-            styles.modalTitle,
-            { color: "#FF6200" }, // Orange pour les titres
-          ]}
+        <TutorialIcon step={step} />
+        <Animated.Text
+          entering={FadeInUp.delay(150)}
+          style={[styles.modalTitle, { color: currentTheme.colors.primary }]}
         >
           {title}
-        </Text>
-        <Text
+        </Animated.Text>
+
+        <Animated.Text
+          entering={FadeInUp.delay(250)}
           style={[
             styles.modalDescription,
             { color: currentTheme.colors.textSecondary },
           ]}
         >
           {description}
-        </Text>
+        </Animated.Text>
         {step === 0 ? (
           <View style={styles.buttonContainer}>
             <Animated.View
@@ -220,27 +235,38 @@ const styles = StyleSheet.create({
     overflow: "hidden",
     shadowColor: "#000",
     shadowOffset: { width: 0, height: normalize(6) },
-    shadowOpacity: 0.4,
+    shadowOpacity: 1,
     shadowRadius: normalize(10),
     elevation: 10,
-    borderWidth: normalize(0.5), // Bordure fine
+    borderWidth: normalize(0.5),
+    alignSelf: "center",
+    marginTop: normalize(20),
+    marginBottom: normalize(20),
   },
   gradientBackground: {
     padding: SPACING * 2,
     alignItems: "center",
+    minHeight: normalize(250),
+    justifyContent: "center",
   },
   modalTitle: {
-    fontSize: normalize(22),
+    fontSize: normalize(26),
     fontFamily: "Comfortaa_700Bold",
-    marginBottom: SPACING,
-    textAlign: "center",
+    color: "#ed8f03",
+    textAlign: "center", // 🟢 Centrage horizontal
+    marginBottom: normalize(8),
+    textShadowColor: "rgba(0,0,0,0.1)",
+    textShadowOffset: { width: 0, height: 1 },
+    textShadowRadius: 2,
   },
   modalDescription: {
     fontSize: normalize(16),
     fontFamily: "Comfortaa_400Regular",
     textAlign: "center",
     marginBottom: SPACING * 2,
-    lineHeight: normalize(24),
+    lineHeight: normalize(26),
+    maxWidth: "95%",
+    opacity: 0.9,
   },
   buttonContainer: {
     flexDirection: "row",

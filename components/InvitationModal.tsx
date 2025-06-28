@@ -19,13 +19,22 @@ interface InvitationModalProps {
   inviteId: string | null;
   challengeId: string;
   onClose: () => void;
+  clearInvitation: () => void; // ✅ AJOUT ICI
 }
 
+interface InvitationModalProps {
+  visible: boolean;
+  inviteId: string | null;
+  challengeId: string;
+  onClose: () => void;
+  clearInvitation: () => void; // 🔥 Ajout ici
+}
 const InvitationModal: React.FC<InvitationModalProps> = ({
   visible,
   inviteId,
   challengeId,
   onClose,
+  clearInvitation,
 }) => {
   const { t } = useTranslation();
   const { theme } = useTheme();
@@ -91,8 +100,8 @@ const InvitationModal: React.FC<InvitationModalProps> = ({
     setLoading(true);
     try {
       await acceptInvitation(inviteId);
-      console.log("✅ Modal : Invitation acceptée");
       onClose();
+      clearInvitation(); // 🔥 Vide l'invitation du state global
     } catch (error) {
       console.error("❌ Modal : Erreur acceptation :", error);
     } finally {
@@ -100,14 +109,13 @@ const InvitationModal: React.FC<InvitationModalProps> = ({
     }
   };
 
-  // Gérer refus
   const handleRefuse = async () => {
     if (!inviteId) return;
     setLoading(true);
     try {
       await refuseInvitation(inviteId);
-      console.log("❌ Modal : Invitation refusée");
       onClose();
+      clearInvitation(); // 🔥 Vide aussi ici
     } catch (error) {
       console.error("❌ Modal : Erreur refus :", error);
     } finally {

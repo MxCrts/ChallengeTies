@@ -378,6 +378,8 @@
     "inviteError": "Impossible de partager l'invitation",
     "inviteA11y": "Inviter un ami à ce défi"
   },
+  "participant_one": "{{count}} participant",
+  "participant_other": "{{count}} participants",
   "explanation": {
     "title": "Votre voix compte !",
     "welcome": "Bienvenue sur la page des nouvelles fonctionnalités ! Ici, vous pouvez aider à façonner l’évolution de l’application.",
@@ -579,8 +581,7 @@
   "uncategorized": "Non catégorisé",
   "noDescriptionAvailable": "Aucune description disponible",
   "imageNotAvailable": "Image non disponible",
-  "participant": "participant",
-  "participants": "participants",
+  "participant": "{{count}} participant",
   "createPrompt": "Pour créer un défi :",
   "today": "Aujourd’hui",
   "errorLoadingCompletedChallenges": "Erreur lors du chargement des défis terminés.",
@@ -670,7 +671,7 @@
   },
   "screen1": {
     "logoLabel": "Logo ChallengeTies",
-    "presentationText": "Votre voyage vers la croissance personnelle commence maintenant. Rejoignez une communauté dynamique en quête d’excellence.",
+    "presentationText": "Votre voyage vers la croissance personnelle commence maintenant.",
     "nextButtonLabel": "Continuer vers l’écran suivant"
   },
   "challengeChat": {
@@ -755,7 +756,7 @@
   "addFavorite": "Ajouter \"{{title}}\" aux favoris",
   "removeFavorite": "Retirer \"{{title}}\" des favoris",
   "firstAchievementsPrompt": "Relevez des défis pour gagner vos premiers trophées !",
-  "trophiesProgress": "{{completed}}/{{total}} trophées",
+  "trophiesProgress": "{{completed}}/{{total}} Succès",
   "sectionCount": "{{completed}}/{{total}}",
   "claim": "Réclamer",
   "unlocked": "Débloqué",
@@ -1196,23 +1197,23 @@
   "tutorial": {
     "welcome": {
       "title": "Bienvenue dans ChallengeTies !",
-      "description": "Lance-toi dans une aventure unique pour relever des défis et atteindre tes objectifs en quelques étapes."
+      "description": "Lance-toi dans une aventure unique, des défis captivants et une communauté inspirante. Prêt à relever le défi ?"
     },
     "index": {
       "title": "Découvre l’essentiel",
-      "description": "Explore les défis populaires, consulte des conseils, découvre le classement et propose tes idées innovantes."
+      "description": "Découvre les défis populaires, consulte le classement, explore les nouveautés, propose des idées et accède à des conseils pour progresser."
     },
     "profile": {
       "title": "Ton profil, ton histoire",
-      "description": "Personnalise ton profil, suis tes stats, gère tes défis en cours, sauvegardés, créés et tes notifications."
+      "description": "Accède à tes infos, stats, succès, défis créés, en cours, sauvegardés ou complétés. Tout ton univers, au même endroit."
     },
     "focus": {
       "title": "Reste focus",
-      "description": "Visualise tes défis du jour, terminés ou en cours, et crée de nouveaux objectifs pour avancer."
+      "description": "Visualise tes trophées, crée un challenge et suis ceux que tu as en cours ou à faire aujourd'hui."
     },
     "explore": {
       "title": "Explore sans limites",
-      "description": "Découvre tous les défis existants, créés par la communauté, et utilise des filtres pour trouver l’inspiration."
+      "description": "Parcours les défis créés par la communauté, utilise les filtres, et ajoute ceux que tu aimes à tes favoris."
     },
     "buttons": {
       "start": "Démarrer",

@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from "react";
+import React, { useState, useEffect, useRef } from "react";
 import {
   View,
   Text,
@@ -18,6 +18,7 @@ import { auth } from "../constants/firebase-config";
 import { Ionicons } from "@expo/vector-icons";
 import { StatusBar } from "expo-status-bar";
 import { useTranslation } from "react-i18next";
+import * as Haptics from "expo-haptics";
 
 const { width: SCREEN_WIDTH, height: SCREEN_HEIGHT } = Dimensions.get("window");
 
@@ -26,13 +27,26 @@ const BACKGROUND_COLOR = "#FFF8E7"; // crème
 const PRIMARY_COLOR = "#FFB800"; // orange
 const TEXT_COLOR = "#333"; // texte foncé
 const BUTTON_COLOR = "#FFFFFF"; // bouton blanc
+const shakeAnim = useRef(new Animated.Value(0)).current;
 
 const circleSize = Math.min(SCREEN_WIDTH, SCREEN_HEIGHT) * 0.9;
 const circleTop = SCREEN_HEIGHT * 0.38;
 const waveCount = 4;
 
 const Wave = React.memo(
-  ({ opacity, scale, borderWidth, size, top }: { opacity: Animated.Value; scale: Animated.Value; borderWidth: number; size: number; top: number; }) => (
+  ({
+    opacity,
+    scale,
+    borderWidth,
+    size,
+    top,
+  }: {
+    opacity: Animated.Value;
+    scale: Animated.Value;
+    borderWidth: number;
+    size: number;
+    top: number;
+  }) => (
     <Animated.View
       style={{
         width: size,
@@ -57,7 +71,31 @@ export default function ForgotPassword() {
   const [loading, setLoading] = useState(false);
   const [errorMessage, setErrorMessage] = useState("");
   const [successMessage, setSuccessMessage] = useState("");
-
+  const triggerShake = () => {
+    shakeAnim.setValue(0);
+    Animated.sequence([
+      Animated.timing(shakeAnim, {
+        toValue: 10,
+        duration: 50,
+        useNativeDriver: true,
+      }),
+      Animated.timing(shakeAnim, {
+        toValue: -10,
+        duration: 50,
+        useNativeDriver: true,
+      }),
+      Animated.timing(shakeAnim, {
+        toValue: 6,
+        duration: 50,
+        useNativeDriver: true,
+      }),
+      Animated.timing(shakeAnim, {
+        toValue: 0,
+        duration: 50,
+        useNativeDriver: true,
+      }),
+    ]).start();
+  };
   const waves = Array.from({ length: waveCount }, (_, index) => ({
     opacity: new Animated.Value(0.3 - index * 0.05),
     scale: new Animated.Value(1),
@@ -100,10 +138,15 @@ export default function ForgotPassword() {
   }, [waves]);
 
   const handleResetPassword = async () => {
-    setErrorMessage("");
+    setErrorMessage(t("enterYourEmail"));
+    triggerShake();
+    Haptics.notificationAsync(Haptics.NotificationFeedbackType.Error);
+    setTimeout(() => setErrorMessage(""), 5000);
     setSuccessMessage("");
     if (!email.trim()) {
       setErrorMessage(t("enterYourEmail"));
+      triggerShake();
+      Haptics.notificationAsync(Haptics.NotificationFeedbackType.Error);
       setTimeout(() => setErrorMessage(""), 5000);
       return;
     }
@@ -113,7 +156,8 @@ export default function ForgotPassword() {
       setSuccessMessage(t("resetLinkSent"));
       setTimeout(() => setSuccessMessage(""), 5000);
     } catch (error) {
-      setErrorMessage(t("resetLinkFailed"));
+      triggerShake();
+      Haptics.notificationAsync(Haptics.NotificationFeedbackType.Error);
       setTimeout(() => setErrorMessage(""), 5000);
     } finally {
       setLoading(false);
@@ -163,9 +207,7 @@ export default function ForgotPassword() {
             <Text style={styles.highlight}>C</Text>hallenge
             <Text style={styles.highlight}>T</Text>ies
           </Text>
-          <Text style={styles.tagline}>
-            {t("enterEmailToResetPassword")}
-          </Text>
+          <Text style={styles.tagline}>{t("enterEmailToResetPassword")}</Text>
         </View>
 
         {/* Input Email */}
@@ -188,14 +230,16 @@ export default function ForgotPassword() {
 
         {/* Messages */}
         {(errorMessage || successMessage) !== "" && (
-          <Text
-            style={errorMessage ? styles.errorText : styles.successText}
+          <Animated.Text
+            style={[
+              errorMessage ? styles.errorText : styles.successText,
+              { transform: [{ translateX: shakeAnim }] },
+            ]}
             accessibilityRole="alert"
           >
             {errorMessage || successMessage}
-          </Text>
+          </Animated.Text>
         )}
-
         {/* Bouton envoyer lien */}
         <TouchableOpacity
           style={[styles.resetButton, loading && styles.disabledButton]}

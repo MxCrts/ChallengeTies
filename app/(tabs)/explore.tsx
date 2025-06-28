@@ -636,11 +636,10 @@ export default function ExploreScreen() {
                           name="people"
                           size={normalizeSize(14)}
                           color={currentTheme.colors.trophy}
-                        />{" "}
-                        {item.participantsCount || 0}{" "}
-                        {item.participantsCount === 1
-                          ? t("participant", { count: 1 })
-                          : t("participant", { count: item.participantsCount })}
+                        />
+                        {t("participant", {
+                          count: item.participantsCount || 0,
+                        })}
                       </Text>
                     </LinearGradient>
 
@@ -686,7 +685,6 @@ export default function ExploreScreen() {
           unitId={adUnitId}
           size={BannerAdSize.BANNER}
           requestOptions={{ requestNonPersonalizedAdsOnly: false }}
-          onAdLoaded={() => console.log("Bannière chargée")}
           onAdFailedToLoad={(err) =>
             console.error("Échec chargement bannière", err)
           }

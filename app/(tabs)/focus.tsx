@@ -28,9 +28,8 @@ import { BlurView } from "expo-blur";
 import { useTutorial } from "../../context/TutorialContext";
 import Animated, { FadeInUp } from "react-native-reanimated";
 import TutorialModal from "../../components/TutorialModal";
-import { normalize } from "../../utils/normalize";
 
-const SPACING = 18; // Aligné avec CompletedChallenges.tsx, Notifications.tsx, etc.
+const SPACING = 18;
 const { width: SCREEN_WIDTH, height: SCREEN_HEIGHT } = Dimensions.get("window");
 
 const normalizeSize = (size: number) => {
@@ -358,11 +357,10 @@ export default function FocusScreen() {
                 name="people"
                 size={normalizeSize(14)}
                 color={currentTheme.colors.trophy}
-              />{" "}
-              {challengeParticipants[item.id] ?? item.participants ?? 0}{" "}
-              {(challengeParticipants[item.id] ?? item.participants ?? 0) === 1
-                ? t("participant")
-                : t("participants")}
+              />
+              {t("participant", {
+                count: challengeParticipants[item.id] ?? item.participants ?? 0,
+              })}
             </Text>
           </LinearGradient>
         </LinearGradient>
@@ -462,11 +460,10 @@ export default function FocusScreen() {
                 name="people"
                 size={normalizeSize(12)}
                 color={currentTheme.colors.trophy}
-              />{" "}
-              {challengeParticipants[item.id] ?? item.participants ?? 0}{" "}
-              {(challengeParticipants[item.id] ?? item.participants ?? 0) === 1
-                ? t("participant")
-                : t("participants")}
+              />
+              {t("participant", {
+                count: challengeParticipants[item.id] ?? item.participants ?? 0,
+              })}
             </Text>
           </LinearGradient>
         </LinearGradient>

@@ -421,6 +421,22 @@ export default function AchievementsScreen() {
   if (sections.length === 0) {
     return (
       <SafeAreaView style={styles.safeArea}>
+        <Animated.View entering={FadeInUp}>
+          <TouchableOpacity
+            onPress={() => router.back()}
+            style={styles.backButton}
+            accessibilityLabel={t("backButton")}
+            accessibilityHint={t("backButtonHint")}
+            accessibilityRole="button"
+            testID="back-button"
+          >
+            <Ionicons
+              name="arrow-back"
+              size={normalizeSize(24)}
+              color={currentTheme.colors.secondary}
+            />
+          </TouchableOpacity>
+        </Animated.View>
         <StatusBar
           translucent
           backgroundColor="transparent"
@@ -439,21 +455,6 @@ export default function AchievementsScreen() {
           >
             <View style={styles.headerWrapper}>
               <View style={styles.headerContent}>
-                <Animated.View entering={FadeInUp}>
-                  <TouchableOpacity
-                    onPress={() => router.back()}
-                    style={styles.backButton}
-                    accessibilityLabel={t("backButton")}
-                    accessibilityHint={t("backButtonHint")}
-                    testID="back-button"
-                  >
-                    <Ionicons
-                      name="arrow-back"
-                      size={normalizeSize(24)}
-                      color={currentTheme.colors.secondary}
-                    />
-                  </TouchableOpacity>
-                </Animated.View>
                 <CustomHeader title={t("yourAchievements")} />
               </View>
             </View>
@@ -525,6 +526,7 @@ export default function AchievementsScreen() {
                       style={styles.backButton}
                       accessibilityLabel={t("backButton")}
                       accessibilityHint={t("backButtonHint")}
+                      accessibilityRole="button"
                       testID="back-button"
                     >
                       <Ionicons
@@ -568,6 +570,7 @@ export default function AchievementsScreen() {
                   <TouchableOpacity
                     onPress={() => router.back()}
                     style={styles.backButton}
+                    accessibilityRole="button"
                     accessibilityLabel={t("backButton")}
                     accessibilityHint={t("backButtonHint")}
                     testID="back-button"
@@ -582,17 +585,24 @@ export default function AchievementsScreen() {
                 <CustomHeader title={t("yourAchievements")} />
               </View>
             </View>
-            <View style={styles.progressBar}>
-              <Text
+            <View style={styles.progressBarWrapper}>
+              <View
                 style={[
-                  styles.progressText,
-                  {
-                    color: isDarkMode
-                      ? currentTheme.colors.textPrimary
-                      : "#000000", // Noir en light theme
-                  },
+                  styles.progressBarBackground,
+                  { backgroundColor: currentTheme.colors.border },
                 ]}
               >
+                <View
+                  style={[
+                    styles.progressBarFill,
+                    {
+                      width: `${(done / total) * 100}%`,
+                      backgroundColor: currentTheme.colors.secondary,
+                    },
+                  ]}
+                />
+              </View>
+              <Text style={styles.progressText}>
                 {t("trophiesProgress", { completed: done, total })}
               </Text>
             </View>
@@ -762,6 +772,7 @@ const styles = StyleSheet.create({
     fontSize: normalizeSize(14), // Aligné avec CompletedChallenges.tsx
     fontFamily: "Comfortaa_400Regular",
     marginTop: normalizeSize(4),
+    textAlign: "center",
   },
   action: {
     alignItems: "center",
@@ -794,5 +805,21 @@ const styles = StyleSheet.create({
     padding: SPACING / 2, // Aligné avec CompletedChallenges.tsx
     backgroundColor: "rgba(0, 0, 0, 0.5)", // Fond semi-transparent
     borderRadius: normalizeSize(20), // Bordure arrondie
+  },
+  progressBarWrapper: {
+    alignItems: "center",
+    marginVertical: SPACING,
+  },
+  // Fond statique de la barre de progression (couleur passée en inline dans le composant)
+  progressBarBackground: {
+    width: SCREEN_WIDTH * 0.8,
+    height: normalizeSize(8),
+    borderRadius: normalizeSize(4),
+    overflow: "hidden",
+    marginBottom: normalizeSize(6),
+  },
+  // Remplissage statique (couleur passée en inline dans le composant)
+  progressBarFill: {
+    height: "100%",
   },
 });

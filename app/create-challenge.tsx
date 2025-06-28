@@ -38,7 +38,7 @@ import {
 import AsyncStorage from "@react-native-async-storage/async-storage";
 
 const { width: SCREEN_WIDTH } = Dimensions.get("window");
-const SPACING = 15;
+const SPACING = 18;
 
 const normalizeSize = (size: number) => {
   const scale = SCREEN_WIDTH / 375;
@@ -99,7 +99,6 @@ export default function CreateChallenge() {
       AdEventType.LOADED,
       () => {
         setAdLoaded(true);
-        console.log("Interstitiel chargé");
       }
     );
     interstitial.load();
@@ -206,6 +205,9 @@ export default function CreateChallenge() {
     }
   }, [title, description, category, imageUri, adLoaded, router, t]);
 
+  const isFormValid =
+    title.trim().length > 0 && description.trim().length > 0 && !!category;
+
   return (
     <LinearGradient
       colors={[
@@ -224,7 +226,7 @@ export default function CreateChallenge() {
       <ScrollView contentContainerStyle={styles.scrollContainer}>
         <View style={styles.header}>
           <TouchableOpacity
-            onPress={() => router.push("/focus")}
+            onPress={() => router.back()}
             style={styles.backButton}
             accessibilityLabel={t("tips.goBack")}
             testID="back-button"
@@ -377,12 +379,15 @@ export default function CreateChallenge() {
         </TouchableOpacity>
 
         <TouchableOpacity
-          style={styles.submitButton}
+          disabled={!isFormValid}
           onPress={handleSubmit}
-          accessibilityLabel={t("createChallengeButton", {
-            defaultValue: "Create Challenge",
-          })}
+          accessibilityLabel={t("createChallengeButton")}
           testID="submit-button"
+          style={[
+            styles.submitButton,
+            // on baisse l’opacité si invalide
+            { opacity: isFormValid ? 1 : 0.5 },
+          ]}
         >
           <LinearGradient
             colors={[
@@ -399,7 +404,7 @@ export default function CreateChallenge() {
                 { color: currentTheme.colors.textPrimary },
               ]}
             >
-              {t("createChallengeButton", { defaultValue: "Create Challenge" })}
+              {t("createChallengeButton")}
             </Text>
           </LinearGradient>
         </TouchableOpacity>

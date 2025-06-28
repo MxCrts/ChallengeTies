@@ -302,7 +302,11 @@ export default function SavedChallengesScreen() {
         <Text
           style={[
             styles.noChallengesText,
-            { color: currentTheme.colors.textPrimary },
+            {
+              color: isDarkMode
+                ? currentTheme.colors.textPrimary
+                : currentTheme.colors.textSecondary,
+            },
           ]}
         >
           {t("noSavedChallenges")}
@@ -313,7 +317,7 @@ export default function SavedChallengesScreen() {
             { color: currentTheme.colors.textSecondary },
           ]}
         >
-          {t("saveChallengesToSeeHere")}
+          {t("saveChallengesHere")}
         </Text>
       </Animated.View>
     ),
@@ -388,7 +392,7 @@ export default function SavedChallengesScreen() {
             data={localChallenges}
             renderItem={renderChallengeItem}
             keyExtractor={(item) => `saved-${item.id}`}
-            contentContainerStyle={styles.listContent}
+            contentContainerStyle={[styles.listContent, { flexGrow: 1 }]}
             showsVerticalScrollIndicator={false}
             initialNumToRender={5}
             maxToRenderPerBatch={5}
@@ -430,7 +434,7 @@ const styles = StyleSheet.create({
   },
   listContent: {
     paddingVertical: SPACING * 1.5,
-    paddingHorizontal: SPACING / 2,
+    paddingHorizontal: SCREEN_WIDTH * 0.025,
     paddingBottom: normalizeSize(80),
   },
   cardWrapper: {
@@ -457,7 +461,7 @@ const styles = StyleSheet.create({
   },
   cardImage: {
     width: normalizeSize(70),
-    height: normalizeSize(70),
+    aspectRatio: 1,
     borderRadius: normalizeSize(16),
     marginRight: SPACING * 1.2,
     borderWidth: 2,

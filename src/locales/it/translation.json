@@ -561,7 +561,7 @@
   },
   "durationModal": {
     "title": "Выберите длительность (дней)",
-    "days": "{{count}} день",
+    "days": "{{count}} giorni",
     "days_plural": "{{count}} дней",
     "confirm": "Подтвердить",
     "cancel": "Отмена"
@@ -754,7 +754,7 @@
   "addFavorite": "Aggiungi \"{{title}}\" ai preferiti",
   "removeFavorite": "Rimuovi \"{{title}}\" dai preferiti",
   "firstAchievementsPrompt": "Affronta sfide per guadagnare i tuoi primi trofei!",
-  "trophiesProgress": "{{completed}}/{{total}} Trofei",
+  "trophiesProgress": "{{completed}}/{{total}} successi",
   "sectionCount": "{{completed}}/{{total}}",
   "claim": "Riscatta",
   "unlocked": "Sbloccato",
@@ -1176,23 +1176,23 @@
   "tutorial": {
     "welcome": {
       "title": "Benvenuto su ChallengeTies!",
-      "description": "Inizia un’avventura unica per affrontare sfide e raggiungere i tuoi obiettivi in pochi passaggi."
+      "description": "Scopri un'avventura unica, sfide coinvolgenti e una community ispiratrice. Pronto ad accettare la sfida?"
     },
     "index": {
       "title": "Scopri l’essenziale",
-      "description": "Esplora le sfide più popolari, ricevi consigli, consulta la classifica e proponi le tue idee."
+      "description": "Scopri sfide popolari, consulta la classifica, esplora le novità, proponi idee e ricevi consigli utili per migliorare."
     },
     "profile": {
       "title": "Il tuo profilo, la tua storia",
-      "description": "Personalizza il tuo profilo, segui le tue statistiche, gestisci sfide attive, salvate, create e le notifiche."
+      "description": "Accedi a info, statistiche, successi e sfide create, in corso, salvate o completate. Tutto in un unico posto."
     },
     "focus": {
       "title": "Rimani concentrato",
-      "description": "Visualizza le sfide del giorno, completate o in corso, e crea nuovi obiettivi per progredire."
+      "description": "Guarda i tuoi trofei, crea una sfida e segui quelle in corso o da fare oggi."
     },
     "explore": {
       "title": "Esplora senza limiti",
-      "description": "Scopri tutte le sfide esistenti create dalla community e usa i filtri per ispirarti."
+      "description": "Esplora le sfide create dalla community, usa i filtri e aggiungi ai preferiti."
     },
     "buttons": {
       "start": "Inizia",

@@ -94,7 +94,7 @@
   "shares": "Shares",
   "sectionCount": "{{completed}}/{{total}}",
   "buddingInfluencer": "Budding Influencer",
-  "trophiesProgress": "{{completed}}/{{total}} Trophies",
+  "trophiesProgress": "{{completed}}/{{total}} Successes",
   "shareFiveChallenges": "Share 5 challenges to become a budding influencer",
   "likeToShare": "I Like to Share",
   "shareFirstChallenge": "Share a challenge for the first time",
@@ -562,7 +562,7 @@
   },
   "durationModal": {
     "title": "Choose Duration (days)",
-    "days": "{{count}} day",
+    "days": "{{count}} days",
     "days_plural": "{{count}} days",
     "confirm": "Confirm",
     "cancel": "Cancel"
@@ -1181,23 +1181,23 @@
   "tutorial": {
     "welcome": {
       "title": "Welcome to ChallengeTies!",
-      "description": "Embark on a unique journey to tackle challenges and achieve your goals in just a few steps."
+      "description": "Discover a unique adventure, exciting challenges, and an inspiring community. Ready to take it on?"
     },
     "index": {
       "title": "Discover the essentials",
-      "description": "Browse trending challenges, get tips, view the leaderboard, and submit your creative ideas."
+      "description": "Explore popular challenges, check the leaderboard, discover new features, suggest ideas, and get useful tips to grow."
     },
     "profile": {
       "title": "Your profile, your story",
-      "description": "Customize your profile, track your stats, manage active, saved, created challenges and your notifications."
+      "description": "View your info, stats, achievements, created challenges, current, saved or completed ones — all in one place."
     },
     "focus": {
       "title": "Stay focused",
-      "description": "See your daily, ongoing or completed challenges and create new goals to keep moving forward."
+      "description": "See your trophies, create a challenge, and track your ongoing or today's challenges."
     },
     "explore": {
       "title": "Explore without limits",
-      "description": "Browse all existing challenges created by the community and use filters to find inspiration."
+      "description": "Browse challenges created by the community, use filters, and add your favorites."
     },
     "buttons": {
       "start": "Start",

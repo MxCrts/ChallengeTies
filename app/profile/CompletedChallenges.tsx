@@ -336,7 +336,12 @@ export default function CompletedChallenges() {
             <Text
               style={[
                 styles.noChallengesText,
-                { color: currentTheme.colors.textPrimary },
+                {
+                  color: isDarkMode
+                    ? currentTheme.colors.textPrimary
+                    : currentTheme.colors.textSecondary,
+                },
+                ,
               ]}
             >
               {t("noCompletedChallenges")}
@@ -391,7 +396,7 @@ export default function CompletedChallenges() {
           data={completedChallenges}
           renderItem={renderChallenge}
           keyExtractor={(item) => `${item.id}_${item.completedAt}`}
-          contentContainerStyle={styles.listContent}
+          contentContainerStyle={[styles.listContent, { flexGrow: 1 }]}
           showsVerticalScrollIndicator={false}
           initialNumToRender={10}
           windowSize={5}
@@ -515,7 +520,7 @@ const styles = StyleSheet.create({
   },
   listContent: {
     paddingVertical: SPACING * 1.5,
-    paddingHorizontal: SPACING / 2,
+    paddingHorizontal: SCREEN_WIDTH * 0.025,
     paddingBottom: normalizeSize(80), // Aligné avec CurrentChallenges.tsx
   },
   cardWrapper: {

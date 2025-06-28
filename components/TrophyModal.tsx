@@ -91,13 +91,11 @@ const TrophyModal: React.FC<TrophyModalProps> = ({
       RewardedAdEventType.LOADED,
       () => {
         setAdLoaded(true);
-        console.log("✅ Vidéo récompensée chargée");
       }
     );
     const unsubscribeEarned = rewarded.addAdEventListener(
       RewardedAdEventType.EARNED_REWARD,
       () => {
-        console.log("✅ Récompense gagnée !");
         setAdWatched(true);
         activateDoubleReward();
         const doubled = trophiesEarned * 2;
@@ -188,7 +186,6 @@ const TrophyModal: React.FC<TrophyModalProps> = ({
     if (adLoaded) {
       rewarded.show();
     } else {
-      console.log("⚠️ Vidéo non chargée, tentative de rechargement");
       rewarded.load();
       setMessage(t("trophyModal.adNotReady"));
     }
@@ -196,10 +193,8 @@ const TrophyModal: React.FC<TrophyModalProps> = ({
 
   const handleClaimPress = useCallback(() => {
     Vibration.vibrate(50);
-    console.log(`✅ Réclamation : ${reward} trophées`);
     setMessage(t("trophyModal.claimMessage", { count: reward }));
     setTimeout(() => {
-      console.log("⏩ Lancement de resetTrophyData après animation");
       resetTrophyData();
     }, 600);
   }, [reward, resetTrophyData, t]);
@@ -378,9 +373,6 @@ const TrophyModal: React.FC<TrophyModalProps> = ({
                         );
                         setVideoFailed(true);
                       }}
-                      onLoad={() =>
-                        console.log("Vidéo trophy-animation.mp4 chargée !")
-                      }
                     />
                   </View>
                 </LinearGradient>

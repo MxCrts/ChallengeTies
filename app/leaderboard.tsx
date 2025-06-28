@@ -34,6 +34,7 @@ import { Theme } from "../theme/designSystem";
 import designSystem from "../theme/designSystem";
 import CustomHeader from "@/components/CustomHeader";
 import { useTranslation } from "react-i18next";
+import { useSafeAreaInsets } from "react-native-safe-area-context";
 
 const SPACING = 15;
 const { width: SCREEN_WIDTH, height: SCREEN_HEIGHT } = Dimensions.get("window");
@@ -71,6 +72,7 @@ export default function LeaderboardScreen() {
     string | null
   >(null);
   const router = useRouter();
+  const insets = useSafeAreaInsets();
   const { theme } = useTheme();
   const isDarkMode = theme === "dark";
   const currentTheme: Theme = isDarkMode
@@ -241,7 +243,7 @@ export default function LeaderboardScreen() {
               <Text
                 style={[
                   styles.podiumName,
-                  { color: isDarkMode ? "#FFFFFF" : "#000000" }, // Blanc en dark, noir en light
+                  { color: isDarkMode ? "#FFFFFF" : "#000000" },
                 ]}
               >
                 {player.username}
@@ -278,7 +280,7 @@ export default function LeaderboardScreen() {
                 backgroundColor: currentTheme.colors.cardBackground + "80",
                 borderColor: isDarkMode
                   ? currentTheme.colors.secondary
-                  : currentTheme.colors.primary, // ↘️ même couleur que l’onglet actif en dark
+                  : currentTheme.colors.primary,
                 borderWidth: 2,
               },
               item.id === currentUser?.id && styles.highlight,
@@ -304,7 +306,7 @@ export default function LeaderboardScreen() {
                 <Text
                   style={[
                     styles.playerName,
-                    { color: isDarkMode ? "#FFFFFF" : "#000000" }, // Blanc en dark, noir en light
+                    { color: isDarkMode ? "#FFFFFF" : "#000000" },
                   ]}
                 >
                   {item.username}
@@ -412,7 +414,7 @@ export default function LeaderboardScreen() {
         backgroundColor="transparent"
         barStyle={isDarkMode ? "light-content" : "dark-content"}
       />
-      <SafeAreaView style={styles.safeArea}>
+      <SafeAreaView style={[styles.safeArea, { paddingTop: insets.top }]}>
         <TouchableOpacity
           onPress={() => router.push("/")}
           style={styles.backButton}
@@ -448,7 +450,7 @@ export default function LeaderboardScreen() {
                         ? currentTheme.colors.secondary
                         : isDarkMode
                         ? currentTheme.colors.cardBackground + "80"
-                        : "#FFFFFF", // light → plus de fond blanc derrière le texte
+                        : "#FFFFFF",
                   },
                   selectedTab === tab && styles.activeTab,
                 ]}
@@ -465,11 +467,11 @@ export default function LeaderboardScreen() {
                     {
                       color: isDarkMode
                         ? selectedTab === tab
-                          ? "#000000" // Noir pour onglet sélectionné en dark
-                          : "#FFFFFF" // Blanc pour onglets non sélectionnés en dark
+                          ? "#000000"
+                          : "#FFFFFF"
                         : selectedTab === tab
-                        ? "#FFFFFF" // Blanc pour onglet sélectionné en light
-                        : "#000000", // Noir pour onglets non sélectionnés en light
+                        ? "#FFFFFF"
+                        : "#000000",
                     },
                   ]}
                 >
@@ -505,9 +507,6 @@ export default function LeaderboardScreen() {
                   })}
                   accessibilityRole="list"
                   accessibilityLabel={t("leaderboard.listLabel")}
-                  onLayout={(event) =>
-                    console.log("FlatList Layout:", event.nativeEvent.layout)
-                  }
                 />
               </View>
             </>
@@ -584,22 +583,23 @@ const styles = StyleSheet.create({
   },
   tabsContainer: {
     flexDirection: "row",
-    justifyContent: "space-around", // Répartit équitablement les onglets
+    justifyContent: "space-around",
     alignItems: "center",
     marginVertical: SPACING * 1.5,
     paddingHorizontal: SPACING,
-    width: "100%", // Prend toute la largeur pour un alignement propre
-    maxWidth: SCREEN_WIDTH - SPACING * 2, // Limite à la largeur utilisable
+    width: "100%",
+    maxWidth: SCREEN_WIDTH - SPACING * 2,
+    alignSelf: "center",
   },
   tab: {
     paddingVertical: SPACING * 1.2,
-    paddingHorizontal: SPACING * 1.2, // Compact mais élégant
+    paddingHorizontal: SPACING * 1.2,
     borderRadius: normalizeSize(30),
     backgroundColor: "transparent",
     elevation: 4,
-    minWidth: normalizeSize(100), // Taille minimale garantie
-    flex: 0, // Désactive la flexibilité pour contrôle précis
-    maxWidth: normalizeSize(140), // Limite max pour éviter l'étirement
+    minWidth: normalizeSize(100),
+    flex: 0,
+    maxWidth: normalizeSize(140),
   },
   activeTab: {
     shadowOffset: { width: 0, height: normalizeSize(4) },
@@ -624,7 +624,8 @@ const styles = StyleSheet.create({
   },
   podiumItem: {
     alignItems: "center",
-    width: "30%",
+    flex: 1,
+    maxWidth: normalizeSize(110), // ✅ meilleur scaling
   },
   circleFirst: {
     width: normalizeSize(120),
@@ -819,7 +820,7 @@ const styles = StyleSheet.create({
     left: SPACING,
     zIndex: 10,
     padding: SPACING / 2,
-    backgroundColor: "rgba(0, 0, 0, 0.5)", // Overlay premium
+    backgroundColor: "rgba(0, 0, 0, 0.5)",
     borderRadius: normalizeSize(20),
   },
 });

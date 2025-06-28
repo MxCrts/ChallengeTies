@@ -283,24 +283,6 @@ export default function MyChallenges() {
         ]}
         style={styles.noChallengesContainer}
       >
-        <View style={styles.headerWrapper}>
-          <Animated.View entering={FadeInUp}>
-            <TouchableOpacity
-              onPress={() => router.back()}
-              style={styles.backButton}
-              accessibilityLabel={t("backButton")}
-              accessibilityHint={t("backButtonHint")}
-              testID="back-button"
-            >
-              <Ionicons
-                name="arrow-back"
-                size={normalizeSize(24)}
-                color={currentTheme.colors.secondary}
-              />
-            </TouchableOpacity>
-          </Animated.View>
-          <CustomHeader title={t("myChallenges")} />
-        </View>
         <Animated.View
           entering={FadeInUp.delay(100)}
           style={styles.noChallengesContent}
@@ -314,7 +296,11 @@ export default function MyChallenges() {
           <Text
             style={[
               styles.noChallengesText,
-              { color: currentTheme.colors.textPrimary },
+              {
+                color: isDarkMode
+                  ? currentTheme.colors.textPrimary
+                  : currentTheme.colors.textSecondary,
+              },
             ]}
           >
             {t("noChallengesCreated")}
@@ -403,7 +389,7 @@ export default function MyChallenges() {
             data={myChallenges}
             renderItem={renderChallenge}
             keyExtractor={(item) => item.id}
-            contentContainerStyle={styles.listContent}
+            contentContainerStyle={[styles.listContent, { flexGrow: 1 }]}
             showsVerticalScrollIndicator={false}
             initialNumToRender={10}
             maxToRenderPerBatch={10}
@@ -419,7 +405,7 @@ export default function MyChallenges() {
 const styles = StyleSheet.create({
   safeArea: {
     flex: 1,
-    backgroundColor: "transparent", // Ajouté pour éviter barre blanche
+    backgroundColor: "transparent",
   },
   container: {
     flex: 1,
@@ -427,20 +413,20 @@ const styles = StyleSheet.create({
   headerWrapper: {
     paddingHorizontal: SPACING,
     paddingVertical: SPACING,
-    paddingTop: SPACING * 2.5, // Aligné avec CompletedChallenges.tsx
+    paddingTop: SPACING * 2.5,
     position: "relative",
   },
   listContent: {
     paddingVertical: SPACING * 1.5,
-    paddingHorizontal: SPACING / 2, // Aligné avec CompletedChallenges.tsx
-    paddingBottom: normalizeSize(80), // Aligné avec CompletedChallenges.tsx
+    paddingHorizontal: SCREEN_WIDTH * 0.025,
+    paddingBottom: normalizeSize(80),
   },
   cardWrapper: {
-    marginBottom: SPACING * 1.5, // Aligné avec CompletedChallenges.tsx
+    marginBottom: SPACING * 1.5,
     borderRadius: normalizeSize(25),
     shadowColor: "#000",
     shadowOffset: { width: 0, height: normalizeSize(5) },
-    shadowOpacity: 0.35, // Ombre premium
+    shadowOpacity: 0.35,
     shadowRadius: normalizeSize(8),
     elevation: 10,
   },
@@ -455,16 +441,16 @@ const styles = StyleSheet.create({
     alignItems: "center",
     padding: normalizeSize(18),
     borderRadius: normalizeSize(25),
-    borderWidth: 2.5, // Bordure premium
+    borderWidth: 2.5,
     minHeight: ITEM_HEIGHT,
   },
   cardImage: {
     width: normalizeSize(70),
-    height: normalizeSize(70),
-    borderRadius: normalizeSize(16), // Aligné avec CompletedChallenges.tsx
+    aspectRatio: 1,
+    borderRadius: normalizeSize(16),
     marginRight: SPACING * 1.2,
     borderWidth: 2,
-    borderColor: "rgba(255, 255, 255, 0.6)", // Bordure premium
+    borderColor: "rgba(255, 255, 255, 0.6)",
   },
   placeholderImage: {
     width: normalizeSize(70),
@@ -476,7 +462,7 @@ const styles = StyleSheet.create({
   },
   cardContent: {
     flex: 1,
-    justifyContent: "space-between", // Aligné avec CompletedChallenges.tsx
+    justifyContent: "space-between",
   },
   challengeTitle: {
     fontSize: normalizeSize(18),
@@ -484,17 +470,17 @@ const styles = StyleSheet.create({
     marginBottom: normalizeSize(4),
   },
   challengeCategory: {
-    fontSize: normalizeSize(16), // Aligné avec CompletedChallenges.tsx
+    fontSize: normalizeSize(16),
     fontFamily: "Comfortaa_400Regular",
     marginTop: normalizeSize(4),
   },
   participantsText: {
-    fontSize: normalizeSize(14), // Aligné avec CompletedChallenges.tsx
+    fontSize: normalizeSize(14),
     fontFamily: "Comfortaa_400Regular",
     marginTop: normalizeSize(4),
   },
   viewButton: {
-    borderRadius: normalizeSize(18), // Aligné avec CompletedChallenges.tsx
+    borderRadius: normalizeSize(18),
     overflow: "hidden",
     marginTop: normalizeSize(10),
   },

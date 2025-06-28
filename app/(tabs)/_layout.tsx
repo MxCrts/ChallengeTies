@@ -141,8 +141,9 @@ const TabsLayout = () => {
           headerShown: false,
           tabBarStyle: {
             backgroundColor: "#FFFFFF",
-            height: normalizeSize(70) + insets.bottom,
-            paddingBottom: insets.bottom,
+            height: normalizeSize(60) + insets.bottom,
+            paddingBottom: insets.bottom + normalizeSize(4),
+            paddingTop: normalizeSize(4),
             borderTopLeftRadius: 20,
             borderTopRightRadius: 20,
             elevation: 10,
@@ -154,12 +155,17 @@ const TabsLayout = () => {
             borderTopColor: "rgba(227, 226, 233, 0.5)",
           },
           tabBarLabelStyle: {
-            fontSize: normalizeSize(12),
+            fontSize: normalizeSize(10),
             fontFamily: "Comfortaa_700Bold",
-            marginBottom: normalizeSize(5),
+            flexWrap: "wrap",
+            width: "100%",
+            textAlign: "center",
           },
           tabBarIconStyle: {
-            marginBottom: normalizeSize(-5),
+            marginBottom: 0,
+          },
+          tabBarItemStyle: {
+            paddingVertical: normalizeSize(4),
           },
           tabBarActiveTintColor: "#ED8F03",
           tabBarInactiveTintColor: "#A0AEC0",

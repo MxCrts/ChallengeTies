@@ -16,14 +16,11 @@ const createChatsForExistingChallenges = async () => {
   try {
     const challengesSnapshot = await db.collection("challenges").get();
     if (challengesSnapshot.empty) {
-      console.log("⚠ Aucun challenge trouvé dans Firestore.");
       return;
     }
 
     const batch = db.batch();
     let createdChats = 0;
-
-    console.log("🔄 Création des chats en cours...");
 
     for (const doc of challengesSnapshot.docs) {
       const challengeData = doc.data();
@@ -33,7 +30,6 @@ const createChatsForExistingChallenges = async () => {
       // Vérifier si le chat existe déjà
       const chatDoc = await chatRef.get();
       if (chatDoc.exists) {
-        console.log(`🔵 Chat déjà existant pour : ${challengeData.title}`);
         continue;
       }
 
@@ -63,9 +59,7 @@ const createChatsForExistingChallenges = async () => {
 
     if (createdChats > 0) {
       await batch.commit();
-      console.log(`✅ ${createdChats} nouveaux chats créés avec succès !`);
     } else {
-      console.log("⚠ Aucun nouveau chat à créer.");
     }
   } catch (error) {
     console.error("❌ Erreur lors de la création des chats :", error);

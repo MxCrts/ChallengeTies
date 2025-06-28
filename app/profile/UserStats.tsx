@@ -394,7 +394,7 @@ export default function UserStats() {
           data={stats}
           renderItem={renderStat}
           keyExtractor={(item) => item.name}
-          contentContainerStyle={styles.listContainer}
+          contentContainerStyle={[styles.listContainer, { flexGrow: 1 }]}
           showsVerticalScrollIndicator={false}
           initialNumToRender={7}
           maxToRenderPerBatch={7}

@@ -24,6 +24,7 @@ import Animated, { FadeInUp, ZoomIn } from "react-native-reanimated";
 import GlobalLayout from "../../components/GlobalLayout";
 import designSystem from "../../theme/designSystem";
 import { useTranslation } from "react-i18next";
+import { SafeAreaView } from "react-native-safe-area-context";
 import {
   BannerAd,
   BannerAdSize,
@@ -170,14 +171,6 @@ export default function ProfileScreen() {
         accessibilityLabel: t("access.myChallenges.label"),
         accessibilityHint: t("access.myChallenges.hint"),
       },
-      {
-        name: t("activity"),
-        icon: "notifications-outline",
-        navigateTo: "profile/Notifications",
-        testID: "activity-button",
-        accessibilityLabel: t("access.activity.label"),
-        accessibilityHint: t("access.activity.hint"),
-      },
     ];
   }, [t, userData]);
 
@@ -190,10 +183,11 @@ export default function ProfileScreen() {
     return split;
   }, [sections]);
 
-  const interests = useMemo(
-    () => (Array.isArray(userData?.interests) ? userData.interests : []),
-    [userData]
-  );
+  const interests = userData?.interests
+    ? Array.isArray(userData.interests)
+      ? userData.interests.join(", ")
+      : userData.interests
+    : "";
 
   // Métadonnées SEO
   const metadata = useMemo(
@@ -235,7 +229,7 @@ export default function ProfileScreen() {
               { color: currentTheme.colors.textSecondary },
             ]}
           >
-            {t("profile.loading")}
+            {t("loadingProfile")}
           </Text>
         </LinearGradient>
       </GlobalLayout>
@@ -293,293 +287,279 @@ export default function ProfileScreen() {
         start={{ x: 0, y: 0 }}
         end={{ x: 1, y: 1 }}
       >
-        <ScrollView
-          contentContainerStyle={styles.scrollContent}
-          showsVerticalScrollIndicator={false}
-          contentInset={{ top: SPACING, bottom: normalizeSize(80) }}
-        >
-          {/* Header */}
-          <View style={styles.headerWrapper}>
-            <CustomHeader title={t("yourProfile")} />
-          </View>
-
-          {/* Carte Profil */}
-          <Animated.View
-            entering={FadeInUp.delay(100)}
-            style={styles.profileCardWrapper}
+        <SafeAreaView style={{ flex: 1 }}>
+          <ScrollView
+            contentContainerStyle={styles.scrollContent}
+            showsVerticalScrollIndicator={false}
+            contentInset={{ top: SPACING, bottom: normalizeSize(80) }}
           >
-            <LinearGradient
-              colors={
-                isDarkMode
-                  ? [
-                      currentTheme.colors.background,
-                      currentTheme.colors.cardBackground,
-                    ]
-                  : ["#FFFFFF", "#FFE4B5"] // Dégradé blanc vers orange clair en light
-              }
-              style={[
-                styles.profileCard,
-                {
-                  borderWidth: 2,
-                  borderColor: isDarkMode
-                    ? currentTheme.colors.secondary // Couleur icônes en dark
-                    : "#FFB800", // Orange en light
-                },
-              ]}
-              start={{ x: 0, y: 0 }}
-              end={{ x: 1, y: 1 }}
+            {/* Header */}
+            <View style={styles.headerWrapper}>
+              <CustomHeader title={t("yourProfile")} />
+            </View>
+
+            {/* Carte Profil */}
+            <Animated.View
+              entering={FadeInUp.delay(100)}
+              style={styles.profileCardWrapper}
             >
-              {/* Avatar + badge */}
-              <View style={styles.avatarContainer}>
-                <Image
-                  source={
-                    userData?.profileImage
-                      ? { uri: userData.profileImage }
-                      : require("../../assets/images/default-profile.jpg")
-                  }
-                  defaultSource={require("../../assets/images/default-profile.jpg")}
-                  style={[
-                    styles.avatar,
-                    {
-                      borderColor: isDarkMode
-                        ? currentTheme.colors.textPrimary
-                        : "#FFB800", // Orange en light
-                    },
-                  ]}
-                  accessibilityLabel={t("profile.avatar", {
-                    username: userData?.username ?? "Utilisateur",
-                  })}
-                />
-                <Animated.View
-                  entering={ZoomIn.delay(300)}
-                  style={[
-                    styles.trophyBadge,
-                    {
-                      backgroundColor: isDarkMode
-                        ? currentTheme.colors.background
-                        : currentTheme.colors.cardBackground,
-                      borderColor: currentTheme.colors.trophy,
-                    },
-                  ]}
-                >
-                  <Ionicons
-                    name="trophy"
-                    size={normalizeSize(20)}
-                    color={currentTheme.colors.trophy}
-                  />
-                  <Text
-                    style={[
-                      styles.trophyBadgeText,
-                      { color: currentTheme.colors.trophy },
-                    ]}
-                  >
-                    {userData?.trophies ?? 0}
-                  </Text>
-                </Animated.View>
-              </View>
-
-              {/* Infos utilisateur */}
-              <Animated.View
-                entering={FadeInUp.delay(200)}
-                style={styles.userInfo}
+              <LinearGradient
+                colors={
+                  isDarkMode
+                    ? [
+                        currentTheme.colors.background,
+                        currentTheme.colors.cardBackground,
+                      ]
+                    : ["#FFFFFF", "#FFE4B5"]
+                }
+                style={[
+                  styles.profileCard,
+                  {
+                    borderWidth: 2,
+                    borderColor: isDarkMode
+                      ? currentTheme.colors.secondary
+                      : "#FFB800",
+                  },
+                ]}
+                start={{ x: 0, y: 0 }}
+                end={{ x: 1, y: 1 }}
               >
-                <Text
-                  style={{
-                    ...styles.username,
-                    color: isDarkMode
-                      ? currentTheme.colors.textPrimary
-                      : "#000000",
-                  }}
-                >
-                  {userData?.username ?? "Utilisateur"}
-                </Text>
-                <Text
-                  style={{
-                    ...styles.bio,
-                    color: isDarkMode
-                      ? currentTheme.colors.textSecondary
-                      : "#333333",
-                  }}
-                >
-                  {userData?.bio ?? t("addBioHere")}
-                </Text>
-              </Animated.View>
-
-              {/* Détails */}
-              <Animated.View
-                entering={FadeInUp.delay(400)}
-                style={styles.detailsContainer}
-              >
-                <View style={styles.infoRow}>
-                  <Ionicons
-                    name="location-outline"
-                    size={normalizeSize(16)}
-                    color={
-                      isDarkMode ? currentTheme.colors.textPrimary : "#333333"
+                <View style={styles.avatarContainer}>
+                  <Image
+                    source={
+                      userData?.profileImage
+                        ? { uri: userData.profileImage }
+                        : require("../../assets/images/default-profile.webp")
                     }
-                  />
-                  <Text
-                    style={{
-                      ...styles.location,
-                      color: isDarkMode
-                        ? currentTheme.colors.textSecondary
-                        : "#333333",
-                    }}
-                  >
-                    {userData?.location ?? t("unknownLocation")}
-                  </Text>
-                </View>
-
-                {/* Intérêts */}
-                {interests.length > 0 && (
-                  <View
+                    defaultSource={require("../../assets/images/default-profile.webp")}
                     style={[
-                      styles.interestsContainer,
+                      styles.avatar,
+                      {
+                        borderColor: isDarkMode
+                          ? currentTheme.colors.textPrimary
+                          : "#FFB800",
+                      },
+                    ]}
+                    accessibilityLabel={t("profile.avatar", {
+                      username: userData?.username ?? "Utilisateur",
+                    })}
+                  />
+                  <Animated.View
+                    entering={ZoomIn.delay(300)}
+                    style={[
+                      styles.trophyBadge,
                       {
                         backgroundColor: isDarkMode
-                          ? `${currentTheme.colors.overlay}80`
-                          : "#FFE4B5",
+                          ? currentTheme.colors.background
+                          : currentTheme.colors.cardBackground,
+                        borderColor: currentTheme.colors.trophy,
                       },
                     ]}
                   >
-                    {interests.slice(0, 3).map((interest, index) => (
-                      <Text
-                        key={index}
-                        style={{
-                          ...styles.interestText,
-                          color: isDarkMode
-                            ? currentTheme.colors.textPrimary
-                            : "#333333",
-                        }}
-                        accessibilityLabel={t("profile.interest", { interest })}
-                      >
-                        {interest}
-                      </Text>
-                    ))}
-                    {interests.length > 3 && (
-                      <Text
-                        style={{
-                          ...styles.moreInterests,
-                          color: isDarkMode
-                            ? currentTheme.colors.textPrimary
-                            : "#333333",
-                        }}
-                        accessibilityLabel={t("profile.moreInterests", {
-                          count: interests.length - 3,
-                        })}
-                      >
-                        +{interests.length - 3}
-                      </Text>
-                    )}
-                  </View>
-                )}
-              </Animated.View>
-            </LinearGradient>
-          </Animated.View>
-
-          {/* Sections / Boutons */}
-          <View style={styles.sectionsContainer}>
-            {rows.map((row, rowIndex) => (
-              <Animated.View
-                key={rowIndex}
-                entering={FadeInUp.delay(500 + rowIndex * 100)}
-                style={{
-                  ...styles.rowContainer,
-                  justifyContent: row.length === 1 ? "center" : "space-between",
-                }}
-              >
-                {row.map((section, index) => (
-                  <Animated.View
-                    key={index}
-                    entering={ZoomIn.delay(200 + index * 50)}
-                    style={styles.sectionButton}
-                  >
-                    <TouchableOpacity
-                      onPress={() => router.push(section.navigateTo)}
-                      accessibilityLabel={section.accessibilityLabel}
-                      accessibilityHint={section.accessibilityHint}
-                      accessibilityRole="button"
-                      testID={section.testID}
-                      activeOpacity={0.7}
+                    <Ionicons
+                      name="trophy"
+                      size={normalizeSize(20)}
+                      color={currentTheme.colors.trophy}
+                    />
+                    <Text
+                      style={[
+                        styles.trophyBadgeText,
+                        { color: currentTheme.colors.trophy },
+                      ]}
                     >
-                      <LinearGradient
-                        colors={
-                          isDarkMode
-                            ? [
-                                currentTheme.colors.cardBackground,
-                                currentTheme.colors.background,
-                              ]
-                            : ["#FFFFFF", "#FFF5E6"] // Dégradé subtil en light
-                        }
-                        style={[
-                          styles.sectionGradient,
-                          {
-                            borderWidth: isDarkMode ? 1 : 2,
-                            borderColor: isDarkMode
-                              ? currentTheme.colors.secondary // Couleur icônes en dark
-                              : "#FFB800", // Orange en light
-                          },
-                        ]}
-                        start={{ x: 0, y: 0 }}
-                        end={{ x: 1, y: 1 }}
-                      >
-                        <View style={styles.iconContainer}>
-                          <Ionicons
-                            name={
-                              section.icon as keyof typeof Ionicons.glyphMap
-                            }
-                            size={normalizeSize(32)}
-                            color={currentTheme.colors.secondary}
-                          />
-                          {section.unclaimedCount > 0 && (
-                            <Animated.View
-                              entering={ZoomIn}
-                              style={styles.badgeDot}
-                            >
-                              {section.unclaimedCount > 1 && (
-                                <Text style={styles.badgeText}>
-                                  {section.unclaimedCount}
-                                </Text>
-                              )}
-                            </Animated.View>
-                          )}
-                        </View>
-                        <Text
-                          style={{
-                            ...styles.sectionText,
-                            color: isDarkMode
-                              ? currentTheme.colors.textPrimary
-                              : "#333333",
-                          }}
-                          numberOfLines={1}
-                          adjustsFontSizeToFit
-                        >
-                          {section.name}
-                        </Text>
-                      </LinearGradient>
-                    </TouchableOpacity>
+                      {userData?.trophies ?? 0}
+                    </Text>
                   </Animated.View>
-                ))}
-              </Animated.View>
-            ))}
-          </View>
-        </ScrollView>
+                </View>
 
+                {/* Détails */}
+                <Animated.View
+                  entering={FadeInUp.delay(400)}
+                  style={[
+                    styles.detailsContainer,
+                    { alignItems: "flex-start" },
+                  ]}
+                >
+                  {/* 1. Bio */}
+                  <View style={styles.infoRow}>
+                    <Ionicons
+                      name="person-outline"
+                      size={normalizeSize(16)}
+                      color={
+                        isDarkMode ? currentTheme.colors.textPrimary : "#333333"
+                      }
+                    />
+                    <Text
+                      style={{
+                        ...styles.location,
+                        color: isDarkMode
+                          ? currentTheme.colors.textSecondary
+                          : "#333333",
+                        marginLeft: normalizeSize(8),
+                        flex: 1,
+                      }}
+                      numberOfLines={2}
+                      adjustsFontSizeToFit
+                    >
+                      {userData?.bio ?? t("addBioHere")}
+                    </Text>
+                  </View>
+
+                  {/* 2. Location */}
+                  <View
+                    style={[styles.infoRow, { marginTop: normalizeSize(10) }]}
+                  >
+                    <Ionicons
+                      name="location-outline"
+                      size={normalizeSize(16)}
+                      color={
+                        isDarkMode ? currentTheme.colors.textPrimary : "#333333"
+                      }
+                    />
+                    <Text
+                      style={{
+                        ...styles.location,
+                        color: isDarkMode
+                          ? currentTheme.colors.textSecondary
+                          : "#333333",
+                        marginLeft: normalizeSize(8),
+                        flex: 1,
+                      }}
+                    >
+                      {userData?.location ?? t("unknownLocation")}
+                    </Text>
+                  </View>
+
+                  {/* 3. Interests */}
+                  <View
+                    style={[styles.infoRow, { marginTop: normalizeSize(10) }]}
+                  >
+                    <Ionicons
+                      name="heart-outline"
+                      size={normalizeSize(16)}
+                      color={
+                        isDarkMode ? currentTheme.colors.textPrimary : "#333333"
+                      }
+                    />
+                    <Text
+                      style={{
+                        ...styles.location, // on réutilise le même style
+                        color: isDarkMode
+                          ? currentTheme.colors.textSecondary
+                          : "#333333",
+                        marginLeft: normalizeSize(8),
+                        flex: 1,
+                      }}
+                      numberOfLines={2}
+                      adjustsFontSizeToFit
+                    >
+                      {interests || t("noInterests")}
+                    </Text>
+                  </View>
+                </Animated.View>
+              </LinearGradient>
+            </Animated.View>
+
+            {/* Sections / Boutons */}
+            <View style={styles.sectionsContainer}>
+              {rows.map((row, rowIndex) => (
+                <Animated.View
+                  key={rowIndex}
+                  entering={FadeInUp.delay(500 + rowIndex * 100)}
+                  style={{
+                    ...styles.rowContainer,
+                    justifyContent:
+                      row.length === 1 ? "center" : "space-between",
+                  }}
+                >
+                  {row.map((section, index) => (
+                    <Animated.View
+                      key={index}
+                      entering={ZoomIn.delay(200 + index * 50)}
+                      style={styles.sectionButton}
+                    >
+                      <TouchableOpacity
+                        onPress={() => router.push(section.navigateTo)}
+                        accessibilityLabel={section.accessibilityLabel}
+                        accessibilityHint={section.accessibilityHint}
+                        accessibilityRole="button"
+                        testID={section.testID}
+                        activeOpacity={0.7}
+                      >
+                        <LinearGradient
+                          colors={
+                            isDarkMode
+                              ? [
+                                  currentTheme.colors.cardBackground,
+                                  currentTheme.colors.background,
+                                ]
+                              : ["#FFFFFF", "#FFF5E6"]
+                          }
+                          style={[
+                            styles.sectionGradient,
+                            {
+                              borderWidth: isDarkMode ? 1 : 2,
+                              borderColor: isDarkMode
+                                ? currentTheme.colors.secondary
+                                : "#FFB800",
+                            },
+                          ]}
+                          start={{ x: 0, y: 0 }}
+                          end={{ x: 1, y: 1 }}
+                        >
+                          <View style={styles.iconContainer}>
+                            <Ionicons
+                              name={
+                                section.icon as keyof typeof Ionicons.glyphMap
+                              }
+                              size={normalizeSize(32)}
+                              color={currentTheme.colors.secondary}
+                            />
+                            {section.unclaimedCount > 0 && (
+                              <Animated.View
+                                entering={ZoomIn}
+                                style={styles.badgeDot}
+                              >
+                                {section.unclaimedCount > 1 && (
+                                  <Text style={styles.badgeText}>
+                                    {section.unclaimedCount}
+                                  </Text>
+                                )}
+                              </Animated.View>
+                            )}
+                          </View>
+                          <Text
+                            style={{
+                              ...styles.sectionText,
+                              color: isDarkMode
+                                ? currentTheme.colors.textPrimary
+                                : "#333333",
+                            }}
+                            numberOfLines={1}
+                            adjustsFontSizeToFit
+                          >
+                            {section.name}
+                          </Text>
+                        </LinearGradient>
+                      </TouchableOpacity>
+                    </Animated.View>
+                  ))}
+                </Animated.View>
+              ))}
+            </View>
+          </ScrollView>
+        </SafeAreaView>
         {/* Bannière pub */}
-        <Animated.View
-          entering={FadeInUp.delay(300)}
-          style={styles.bannerContainer}
-        >
+        <View style={styles.bannerContainer}>
           <BannerAd
             unitId={adUnitId}
-            size={BannerAdSize.ANCHORED_ADAPTIVE_BANNER}
+            size={BannerAdSize.BANNER}
             requestOptions={{ requestNonPersonalizedAdsOnly: false }}
-            onAdLoaded={() => console.log("Bannière chargée")}
             onAdFailedToLoad={(err) =>
               console.error("Échec chargement bannière:", err)
             }
           />
-        </Animated.View>
+        </View>
 
         {/* Tutoriel actif */}
         {isTutorialActive && tutorialStep === 2 && (
@@ -603,7 +583,7 @@ const styles = StyleSheet.create({
 
   scrollContent: {
     padding: SPACING,
-    paddingBottom: SPACING * 3, // assez mais pas excessif
+    paddingBottom: normalizeSize(140),
   },
 
   headerWrapper: {
@@ -661,6 +641,7 @@ const styles = StyleSheet.create({
   userInfo: {
     marginTop: normalizeSize(15),
     alignItems: "center",
+    width: "100%",
   },
 
   username: {
@@ -671,14 +652,6 @@ const styles = StyleSheet.create({
     textShadowRadius: 4,
   },
 
-  bio: {
-    fontSize: normalizeSize(14),
-    fontFamily: "Comfortaa_400Regular",
-    textAlign: "center",
-    marginTop: normalizeSize(8),
-    paddingHorizontal: normalizeSize(20),
-  },
-
   detailsContainer: {
     marginTop: normalizeSize(15),
     alignItems: "center",
@@ -687,6 +660,9 @@ const styles = StyleSheet.create({
   infoRow: {
     flexDirection: "row",
     alignItems: "center",
+    justifyContent: "center",
+    marginVertical: normalizeSize(4),
+    maxWidth: SCREEN_WIDTH * 0.8,
   },
 
   location: {
@@ -739,10 +715,11 @@ const styles = StyleSheet.create({
     overflow: "hidden",
     shadowColor: SHADOW_COLOR,
     shadowOffset: { width: 0, height: normalizeSize(2) },
-    shadowOpacity: 0.1, // Ombre très légère
+    shadowOpacity: 0.1,
     shadowRadius: normalizeSize(4),
     elevation: 3,
     minHeight: normalizeSize(100),
+    marginBottom: SPACING,
   },
 
   sectionGradient: {
@@ -763,6 +740,8 @@ const styles = StyleSheet.create({
     fontFamily: "Comfortaa_700Bold",
     marginTop: normalizeSize(10),
     textAlign: "center",
+    maxWidth: "100%",
+    flexShrink: 1,
   },
 
   loadingContainer: {
@@ -783,11 +762,14 @@ const styles = StyleSheet.create({
   },
 
   bannerContainer: {
-    position: "absolute",
-    bottom: Platform.OS === "android" ? SPACING * 2 : SPACING, // Décalage pour éviter les tabs
-    width: SCREEN_WIDTH,
+    width: "100%",
     alignItems: "center",
-    paddingBottom: Platform.OS === "android" ? SPACING * 2 : 0, // Ajustement pour Android
+    paddingVertical: SPACING / 2,
+    backgroundColor: "transparent",
+    position: "absolute",
+    bottom: 0,
+    left: 0,
+    right: 0,
   },
 
   blurView: {

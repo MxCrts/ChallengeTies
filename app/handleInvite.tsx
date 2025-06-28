@@ -16,9 +16,7 @@ const HandleInvite = () => {
   const { challengeId, invite } = useLocalSearchParams();
   const [loading, setLoading] = useState(false);
 
-  useEffect(() => {
-    console.log("HandleInvite ouvert:", { challengeId, invite });
-  }, [challengeId, invite]);
+  useEffect(() => {}, [challengeId, invite]);
 
   const handleAccept = async () => {
     setLoading(true);

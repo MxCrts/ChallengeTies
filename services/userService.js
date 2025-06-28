@@ -36,8 +36,6 @@ export const initializeUserInFirestore = async (uid, email, username) => {
         action: "firstConnection",
         trophiesToAdd: 10, // Example
       });
-
-      console.log(`User ${uid} initialized successfully.`);
     }
   } catch (error) {
     console.error("Error initializing user in Firestore:", error);
@@ -61,8 +59,6 @@ export const initializeLeaderboardEntry = async (uid, username) => {
         username: username || "Anonymous",
         points: 0,
       });
-
-      console.log(`Leaderboard entry created for user ${uid}.`);
     }
   } catch (error) {
     console.error("Error initializing leaderboard entry:", error);
@@ -81,8 +77,6 @@ export const updateUserProfile = async (uid, updates) => {
     const userDocRef = doc(db, "users", uid);
 
     await updateDoc(userDocRef, updates);
-
-    console.log(`User ${uid} profile updated successfully.`);
   } catch (error) {
     console.error("Error updating user profile:", error);
     throw error;
@@ -103,7 +97,6 @@ export const getUserData = async (uid) => {
     if (userSnap.exists()) {
       return userSnap.data();
     } else {
-      console.log(`User ${uid} not found.`);
       return null;
     }
   } catch (error) {

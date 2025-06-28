@@ -38,7 +38,7 @@ export default function Screen1() {
   const videoRef = useRef<Video>(null);
   const router = useRouter();
   const { setTutorialStep, setIsTutorialActive } = useTutorial();
-
+  console.log("🧠 Screen1 monté");
   const introTextOpacity = useRef(new Animated.Value(0)).current;
   const introOverlayOpacity = useRef(new Animated.Value(0)).current;
   const challengeTiesOpacity = useRef(new Animated.Value(0)).current;
@@ -47,33 +47,7 @@ export default function Screen1() {
   const buttonOpacity = useRef(new Animated.Value(0)).current;
 
   useEffect(() => {
-    if (!videoRef.current) return;
-
-    videoRef.current.setOnPlaybackStatusUpdate((status: AVPlaybackStatus) => {
-      if (!status.isLoaded) {
-        console.error("Vidéo non chargée :", status);
-        return;
-      }
-
-      if (status.didJustFinish) {
-        videoRef.current?.replayAsync();
-      }
-    });
-
-    (async () => {
-      try {
-        await videoRef.current?.loadAsync(
-          require("../../../assets/videos/bestintrovideo.mp4"),
-          { shouldPlay: true, isLooping: true, isMuted: false },
-          true
-        );
-      } catch (e) {
-        console.error("Erreur chargement vidéo:", e);
-      }
-    })();
-  }, []);
-
-  useEffect(() => {
+    // 0s -> 5s : fade in du texte d'intro
     Animated.sequence([
       Animated.parallel([
         Animated.timing(introOverlayOpacity, {
@@ -87,7 +61,7 @@ export default function Screen1() {
           useNativeDriver: true,
         }),
       ]),
-      Animated.delay(13000),
+      Animated.delay(5000), // Affiché 5 secondes
       Animated.parallel([
         Animated.timing(introTextOpacity, {
           toValue: 0,
@@ -104,32 +78,38 @@ export default function Screen1() {
   }, []);
 
   useEffect(() => {
-    Animated.sequence([
-      Animated.delay(26000),
-      Animated.parallel([
-        Animated.timing(challengeTiesOpacity, {
-          toValue: 1,
-          duration: 2000,
-          useNativeDriver: true,
-        }),
-        Animated.spring(challengeTiesScale, {
-          toValue: 1,
-          speed: 12,
-          bounciness: 8,
-          useNativeDriver: true,
-        }),
-      ]),
+    const delayStart = 35000; // 35s
+    const fadeDuration = 2000; // 2s (de 35s à 37s)
+
+    const animations = Animated.parallel([
+      Animated.timing(challengeTiesOpacity, {
+        toValue: 1,
+        duration: fadeDuration,
+        useNativeDriver: true,
+      }),
+      Animated.spring(challengeTiesScale, {
+        toValue: 1,
+        speed: 10,
+        bounciness: 6,
+        useNativeDriver: true,
+      }),
       Animated.timing(finalTextOpacity, {
         toValue: 1,
-        duration: 2000,
+        duration: fadeDuration,
         useNativeDriver: true,
       }),
       Animated.timing(buttonOpacity, {
         toValue: 1,
-        duration: 2000,
+        duration: fadeDuration,
         useNativeDriver: true,
       }),
-    ]).start();
+    ]);
+
+    const timer = setTimeout(() => {
+      animations.start();
+    }, delayStart);
+
+    return () => clearTimeout(timer);
   }, []);
 
   const handleFinishOnboarding = async () => {
@@ -146,17 +126,29 @@ export default function Screen1() {
   if (!fontsLoaded) return null;
 
   return (
-    <SafeAreaView
-      style={styles.safeContainer}
-      edges={["bottom", "left", "right"]}
-    >
-      <StatusBar translucent backgroundColor="transparent" style="light" />
+    <View style={styles.fullscreenContainer}>
+      <StatusBar translucent backgroundColor="transparent" />
+
       <View style={styles.container}>
         <Video
           ref={videoRef}
+          source={require("../../../assets/videos/test4.mp4")}
           style={styles.backgroundVideo}
           resizeMode={ResizeMode.COVER}
+          shouldPlay
+          isMuted={false}
+          isLooping
+          useNativeControls={false}
+          onReadyForDisplay={() => {
+            console.log("✅ Vidéo prête à être affichée");
+          }}
+          onPlaybackStatusUpdate={(status: AVPlaybackStatus) => {
+            if (!status.isLoaded) {
+              console.error("❌ Vidéo non chargée :", status);
+            }
+          }}
         />
+
         <LinearGradient
           colors={["rgba(0,0,0,0.3)", "transparent"]}
           style={StyleSheet.absoluteFillObject}
@@ -164,14 +156,16 @@ export default function Screen1() {
         <Animated.View
           style={[styles.overlay, { opacity: introOverlayOpacity }]}
         />
-        <View style={styles.logoContainer}>
+        <Animated.View
+          style={[styles.logoContainer, { opacity: challengeTiesOpacity }]} // FADE IN à 35s
+        >
           <Image
-            source={require("../../../assets/images/Challenge.png")}
+            source={require("../../../assets/images/icon2.png")}
             style={styles.logo}
             contentFit="contain"
             accessibilityLabel={t("screen1.logoLabel")}
           />
-        </View>
+        </Animated.View>
         <Animated.View
           style={[styles.introTextContainer, { opacity: introTextOpacity }]}
         >
@@ -192,12 +186,10 @@ export default function Screen1() {
             ChallengeTies
           </Animated.Text>
         </Animated.View>
-        <Animated.View style={styles.finalTextContainer}>
-          <Animated.Text
-            style={[styles.finalText, { opacity: finalTextOpacity }]}
-          >
-            Prêt à relever le défi ?
-          </Animated.Text>
+        <Animated.View
+          style={[styles.finalTextContainer, { opacity: finalTextOpacity }]}
+        >
+          <Text style={styles.finalText}>Prêt à relever le défi ?</Text>
           <TouchableOpacity
             style={styles.readyButton}
             onPress={handleFinishOnboarding}
@@ -210,7 +202,7 @@ export default function Screen1() {
           </TouchableOpacity>
         </Animated.View>
       </View>
-    </SafeAreaView>
+    </View>
   );
 }
 
@@ -224,6 +216,10 @@ const styles = StyleSheet.create({
     backgroundColor: "transparent",
     alignItems: "center",
     justifyContent: "center",
+  },
+  fullscreenContainer: {
+    flex: 1,
+    backgroundColor: "black", // ou transparent, peu importe
   },
   backgroundVideo: {
     ...StyleSheet.absoluteFillObject,

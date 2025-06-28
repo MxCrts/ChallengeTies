@@ -544,8 +544,6 @@ const uploadChallenges = async () => {
   const batch = db.batch();
   const challengesCollection = db.collection("challenges");
 
-  console.log("Début de l'upload des challenges...");
-
   challenges.forEach((challenge) => {
     const docId = challenge.title.replace(/\s+/g, "_").toLowerCase(); // ID basé sur le titre
     const docRef = challengesCollection.doc(docId);
@@ -558,7 +556,6 @@ const uploadChallenges = async () => {
 
   try {
     await batch.commit();
-    console.log("Challenges uploadés avec succès !");
   } catch (error) {
     console.error("Erreur lors de l'upload des challenges :", error);
   }

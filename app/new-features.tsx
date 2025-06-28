@@ -43,6 +43,7 @@ import {
   TestIds,
 } from "react-native-google-mobile-ads";
 import { useRouter } from "expo-router";
+import { useSafeAreaInsets } from "react-native-safe-area-context";
 
 const SPACING = 15;
 const { width: SCREEN_WIDTH, height: SCREEN_HEIGHT } = Dimensions.get("window");
@@ -103,6 +104,7 @@ export default function NewFeatures() {
   const { theme } = useTheme();
   const isDarkMode = theme === "dark";
   const router = useRouter();
+  const insets = useSafeAreaInsets();
   const currentTheme: Theme = isDarkMode
     ? designSystem.darkTheme
     : designSystem.lightTheme;
@@ -112,7 +114,7 @@ export default function NewFeatures() {
     const lastAdTime = await AsyncStorage.getItem("lastInterstitialTime");
     if (!lastAdTime) return true;
     const now = Date.now();
-    const cooldownMs = 5 * 60 * 1000; // 5 minutes
+    const cooldownMs = 5 * 60 * 1000;
     return now - parseInt(lastAdTime) > cooldownMs;
   }, []);
 
@@ -126,7 +128,6 @@ export default function NewFeatures() {
       AdEventType.LOADED,
       () => {
         setAdLoaded(true);
-        console.log("Interstitiel chargé");
       }
     );
     const unsubscribeError = interstitial.addAdEventListener(
@@ -134,7 +135,7 @@ export default function NewFeatures() {
       (error) => {
         console.error("Erreur interstitiel:", error);
         setAdLoaded(false);
-        setTimeout(() => interstitial.load(), 5000); // Retry après 5s
+        setTimeout(() => interstitial.load(), 5000);
       }
     );
     interstitial.load();
@@ -390,7 +391,7 @@ export default function NewFeatures() {
                     color: isDarkMode
                       ? currentTheme.colors.textPrimary
                       : "#000000",
-                  }, // Noir en light
+                  },
                 ]}
               >
                 {item.title}
@@ -427,7 +428,7 @@ export default function NewFeatures() {
                     styles.featureDescription,
                     { color: currentTheme.colors.textSecondary },
                   ]}
-                  numberOfLines={2}
+                  numberOfLines={SCREEN_WIDTH > 600 ? 4 : 2}
                 >
                   {item.description}
                 </Text>
@@ -514,21 +515,22 @@ export default function NewFeatures() {
       safeArea: {
         flex: 1,
         backgroundColor: "transparent",
-        paddingTop: 0, // plus aucune marge, on colle tout en haut
+        paddingTop:
+          Platform.OS === "ios" ? insets.top : StatusBar.currentHeight ?? 0,
       },
       container: {
         flex: 1,
-        backgroundColor: "transparent", // Rendre transparent
+        backgroundColor: "transparent",
       },
       gradientContainer: {
         flex: 1,
-        backgroundColor: "transparent", // Assurer que le dégradé est géré par LinearGradient
+        backgroundColor: "transparent",
       },
       contentWrapper: {
         flex: 1,
         paddingHorizontal: normalizeSize(15),
         paddingBottom: normalizeSize(40),
-        backgroundColor: "transparent", // Rendre transparent
+        backgroundColor: "transparent",
       },
       backButton: {
         position: "absolute",
@@ -539,7 +541,7 @@ export default function NewFeatures() {
         left: normalizeSize(15),
         zIndex: 10,
         padding: SPACING / 2,
-        backgroundColor: "rgba(0, 0, 0, 0.5)", // Overlay premium
+        backgroundColor: "rgba(0, 0, 0, 0.5)",
         borderRadius: normalizeSize(20),
       },
       headerWrapper: {
@@ -588,7 +590,7 @@ export default function NewFeatures() {
         elevation: 5,
       },
       featureGradient: {
-        padding: normalizeSize(16), // Augmente légèrement
+        padding: normalizeSize(16),
         borderRadius: normalizeSize(25),
         borderWidth: normalizeSize(2.5),
         borderColor: isDarkMode ? "#FFDD95" : "#FF6200",
@@ -723,7 +725,7 @@ export default function NewFeatures() {
     <LinearGradient
       colors={
         isDarkMode
-          ? ["#1C2526", "#2D3A3A", "#4A5A5A"] // Dégradé sombre pour tout l'arrière-plan
+          ? ["#1C2526", "#2D3A3A", "#4A5A5A"]
           : [
               currentTheme.colors.background,
               currentTheme.colors.cardBackground,
@@ -741,7 +743,7 @@ export default function NewFeatures() {
       />
       <SafeAreaView style={styles.safeArea}>
         <TouchableOpacity
-          onPress={() => router.push("/")} // Navigue vers la page d'accueil
+          onPress={() => router.push("/")}
           style={styles.backButton}
           accessibilityLabel={t("newFeatures.goBack")}
           testID="back-button"
@@ -807,9 +809,6 @@ export default function NewFeatures() {
                 contentInset={{ top: SPACING, bottom: normalizeSize(40) }}
                 accessibilityRole="list"
                 accessibilityLabel={t("newFeatures.featuresListLabel")}
-                onLayout={(event) =>
-                  console.log("FlatList Layout:", event.nativeEvent.layout)
-                }
               />
             ) : (
               <Text
@@ -825,9 +824,6 @@ export default function NewFeatures() {
           <Animated.View
             entering={FadeInUp.delay(400)}
             style={styles.bottomContainer}
-            onLayout={(event) =>
-              console.log("BottomContainer Layout:", event.nativeEvent.layout)
-            }
           >
             {renderCountdown()}
             {userVote ? (

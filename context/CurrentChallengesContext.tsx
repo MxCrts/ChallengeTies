@@ -118,7 +118,6 @@ export const CurrentChallengesProvider: React.FC<{
       AdEventType.LOADED,
       () => {
         setAdLoaded(true);
-        console.log("Interstitiel chargé");
       }
     );
     const errorListener = interstitial.addAdEventListener(
@@ -136,21 +135,11 @@ export const CurrentChallengesProvider: React.FC<{
   }, []);
 
   useEffect(() => {
-    console.log(
-      "🟢 Initialisation onSnapshot, auth state:",
-      auth.currentUser?.uid || "null"
-    );
     let unsubscribeSnapshot: (() => void) | null = null;
     const unsubscribeAuth = auth.onAuthStateChanged((user) => {
-      console.log(
-        "🔐 onAuthStateChanged Challenges, user:",
-        user?.uid || "null"
-      );
       if (!user) {
-        console.log("❌ Pas d'utilisateur, réinitialisation challenges");
         isActiveRef.current = false;
         if (unsubscribeSnapshot) {
-          console.log("Désabonnement onSnapshot immédiat");
           unsubscribeSnapshot();
           unsubscribeSnapshot = null;
         }
@@ -158,32 +147,20 @@ export const CurrentChallengesProvider: React.FC<{
         return;
       }
 
-      console.log("✅ Utilisateur connecté, activation onSnapshot");
       isActiveRef.current = true; // Réactiver quand un utilisateur est connecté
       const userId = user.uid;
-      console.log("🔐 userId:", userId);
       const userRef = doc(db, "users", userId);
 
       unsubscribeSnapshot = onSnapshot(
         userRef,
         (docSnap) => {
-          console.log(
-            "📡 onSnapshot triggered, userId:",
-            userId,
-            "isActive:",
-            isActiveRef.current
-          );
           if (!isActiveRef.current || !auth.currentUser) {
-            console.log("🚫 onSnapshot ignoré: inactif ou déconnecté");
             setCurrentChallenges([]);
             return;
           }
           if (docSnap.exists()) {
             const userData = docSnap.data();
-            console.log(
-              "🔍 Données Firestore CurrentChallenges:",
-              JSON.stringify(userData?.CurrentChallenges || "vide", null, 2)
-            );
+
             if (Array.isArray(userData.CurrentChallenges)) {
               const uniqueChallenges = Array.from(
                 new Map(
@@ -193,23 +170,12 @@ export const CurrentChallengesProvider: React.FC<{
                   })
                 ).values()
               );
-              console.log(
-                "✅ Challenges uniques:",
-                JSON.stringify(uniqueChallenges, null, 2)
-              );
+
               setCurrentChallenges(uniqueChallenges);
             } else {
-              console.log(
-                "⚠️ CurrentChallenges n'est pas un tableau:",
-                userData.CurrentChallenges
-              );
               setCurrentChallenges([]);
             }
           } else {
-            console.log(
-              "❌ Document utilisateur inexistant pour userId:",
-              userId
-            );
             setCurrentChallenges([]);
           }
         },
@@ -228,10 +194,8 @@ export const CurrentChallengesProvider: React.FC<{
     });
 
     return () => {
-      console.log("🔴 Arrêt onSnapshot");
       isActiveRef.current = false;
       if (unsubscribeSnapshot) {
-        console.log("Désabonnement onSnapshot final");
         unsubscribeSnapshot();
       }
       unsubscribeAuth();
@@ -243,13 +207,11 @@ export const CurrentChallengesProvider: React.FC<{
   const takeChallenge = async (challenge: Challenge, selectedDays: number) => {
     const userId = auth.currentUser?.uid;
     if (!userId) {
-      console.log("Pas d'utilisateur connecté pour takeChallenge.");
       Alert.alert(t("error"), t("loginRequired"));
       return;
     }
     const uniqueKey = `${challenge.id}_${selectedDays}`;
     if (currentChallenges.find((ch) => ch.uniqueKey === uniqueKey)) {
-      console.log("Défi déjà pris :", uniqueKey);
       Alert.alert(t("info"), t("challengeAlreadyTaken"));
       return;
     }
@@ -264,11 +226,9 @@ export const CurrentChallengesProvider: React.FC<{
         uniqueKey,
         completionDates: [],
       };
-      console.log("Envoi à Firebase :", JSON.stringify(challengeData, null, 2));
       await updateDoc(userRef, {
         CurrentChallenges: arrayUnion(challengeData),
       });
-      console.log("Défi envoyé à Firebase, en attente de onSnapshot...");
       await checkForAchievements(userId);
     } catch (error) {
       console.error("Erreur lors de l'ajout du défi :", error.message);
@@ -279,7 +239,6 @@ export const CurrentChallengesProvider: React.FC<{
   const removeChallenge = async (id: string, selectedDays: number) => {
     const userId = auth.currentUser?.uid;
     if (!userId) {
-      console.log("Pas d'utilisateur connecté pour removeChallenge.");
       return;
     }
     const uniqueKey = `${id}_${selectedDays}`;
@@ -287,22 +246,17 @@ export const CurrentChallengesProvider: React.FC<{
       const userRef = doc(db, "users", userId);
       const userSnap = await getDoc(userRef);
       if (!userSnap.exists()) {
-        console.log("Document utilisateur inexistant.");
         return;
       }
       const userData = userSnap.data();
       const updatedChallenges = (userData.CurrentChallenges || []).filter(
         (challenge: CurrentChallenge) => challenge.uniqueKey !== uniqueKey
       );
-      console.log(
-        "Mise à jour Firebase avec challenges :",
-        JSON.stringify(updatedChallenges, null, 2)
-      );
+
       await updateDoc(userRef, {
         CurrentChallenges: updatedChallenges,
       });
       setCurrentChallenges(updatedChallenges);
-      console.log("Défi retiré du user document !");
 
       const challengeRef = doc(db, "challenges", id);
       await runTransaction(db, async (transaction) => {
@@ -319,7 +273,6 @@ export const CurrentChallengesProvider: React.FC<{
           usersTakingChallenge: updatedUsers,
         });
       });
-      console.log("✅ Document challenge mis à jour après suppression !");
     } catch (error) {
       console.error(
         "❌ Erreur lors de la suppression du défi :",
@@ -336,7 +289,6 @@ export const CurrentChallengesProvider: React.FC<{
       (ch) => ch.uniqueKey === uniqueKey
     );
     if (!challenge) {
-      console.log("Challenge non trouvé pour isMarkedToday :", uniqueKey);
       return false;
     }
     return challenge.lastMarkedDate === today;
@@ -345,7 +297,6 @@ export const CurrentChallengesProvider: React.FC<{
   const markToday = async (id: string, selectedDays: number) => {
     const userId = auth.currentUser?.uid;
     if (!userId) {
-      console.log("Pas d'utilisateur connecté pour markToday.");
       return { success: false };
     }
     const uniqueKey = `${id}_${selectedDays}`;

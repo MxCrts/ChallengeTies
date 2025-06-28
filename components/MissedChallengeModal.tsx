@@ -66,13 +66,11 @@ const MissedChallengeModal: React.FC<MissedChallengeModalProps> = ({
       () => {
         setAdLoaded(true);
         setAdError(null);
-        console.log("Vidéo récompensée chargée");
       }
     );
     const unsubscribeEarned = rewarded.addAdEventListener(
       RewardedAdEventType.EARNED_REWARD,
       () => {
-        console.log("✅ Récompense gagnée !");
         onWatchAd();
         onClose();
       }
@@ -94,7 +92,6 @@ const MissedChallengeModal: React.FC<MissedChallengeModalProps> = ({
   }, [t, onWatchAd, onClose, visible]);
 
   const handleWatchAd = () => {
-    console.log("handleWatchAd appelé, adLoaded:", adLoaded);
     if (adLoaded) {
       rewarded.show();
       setAdLoaded(false);
@@ -106,22 +103,18 @@ const MissedChallengeModal: React.FC<MissedChallengeModalProps> = ({
   };
 
   const handleReset = () => {
-    console.log("handleReset appelé");
     try {
       onReset();
       onClose();
-      console.log("onClose appelé après onReset");
     } catch (error) {
       console.error("Erreur dans handleReset:", error);
     }
   };
 
   const handleUseTrophies = () => {
-    console.log("handleUseTrophies appelé");
     try {
       onUseTrophies();
       onClose();
-      console.log("onClose appelé après onUseTrophies");
     } catch (error) {
       console.error("Erreur dans handleUseTrophies:", error);
     }

@@ -13,11 +13,8 @@ const createEmptyMessagesSubcollections = async () => {
   try {
     const chatsSnapshot = await db.collection("chats").get();
     if (chatsSnapshot.empty) {
-      console.log("⚠ Aucun chat trouvé. Assurez-vous d'avoir créé les chats.");
       return;
     }
-
-    console.log("🔄 Initialisation des sous-collections de messages...");
 
     const batch = db.batch();
     let initializedChats = 0;
@@ -29,7 +26,6 @@ const createEmptyMessagesSubcollections = async () => {
       // Vérifier si la collection contient déjà des messages
       const messagesSnapshot = await messagesCollectionRef.limit(1).get();
       if (!messagesSnapshot.empty) {
-        console.log(`🔵 Messages déjà existants pour le chat : ${chatId}`);
         continue;
       }
 
@@ -43,16 +39,11 @@ const createEmptyMessagesSubcollections = async () => {
       });
 
       initializedChats++;
-      console.log(`✅ Messages de bienvenue ajoutés pour le chat : ${chatId}`);
     }
 
     if (initializedChats > 0) {
       await batch.commit();
-      console.log(
-        `✅ ${initializedChats} chats initialisés avec un message de bienvenue !`
-      );
     } else {
-      console.log("⚠ Aucun nouveau message nécessaire.");
     }
   } catch (error) {
     console.error(

@@ -82,13 +82,10 @@ export default function CurrentChallenges() {
   );
 
   // Log pour déboguer
-  useEffect(() => {
-    console.log("CurrentChallenges:", currentChallenges);
-  }, [currentChallenges]);
+  useEffect(() => {}, [currentChallenges]);
 
   const translatedChallenges = useMemo(() => {
     if (!currentChallenges || !Array.isArray(currentChallenges)) {
-      console.log("No challenges or not an array:", currentChallenges);
       return [];
     }
 
@@ -400,7 +397,11 @@ export default function CurrentChallenges() {
         <Text
           style={[
             styles.noChallengesText,
-            { color: currentTheme.colors.textPrimary },
+            {
+              color: isDarkMode
+                ? currentTheme.colors.textPrimary
+                : currentTheme.colors.textSecondary,
+            },
           ]}
         >
           {t("noOngoingChallenge")}
@@ -486,7 +487,7 @@ export default function CurrentChallenges() {
             data={localChallenges}
             renderItem={renderItem}
             keyExtractor={(item) => `current-${item.id}_${item.selectedDays}`}
-            contentContainerStyle={styles.listContent}
+            contentContainerStyle={[styles.listContent, { flexGrow: 1 }]}
             showsVerticalScrollIndicator={false}
             initialNumToRender={5}
             maxToRenderPerBatch={5}
@@ -546,7 +547,7 @@ const styles = StyleSheet.create({
   },
   listContent: {
     paddingVertical: SPACING * 1.5,
-    paddingHorizontal: SPACING / 2,
+    paddingHorizontal: SCREEN_WIDTH * 0.025,
     paddingBottom: normalizeSize(80),
   },
   noChallengesContainer: {
@@ -598,7 +599,7 @@ const styles = StyleSheet.create({
   },
   cardImage: {
     width: normalizeSize(70),
-    height: normalizeSize(70),
+    aspectRatio: 1,
     borderRadius: normalizeSize(16),
     marginRight: SPACING * 1.2,
     borderWidth: 2,

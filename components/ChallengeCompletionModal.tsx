@@ -142,14 +142,11 @@ export default function ChallengeCompletionModal({
       RewardedAdEventType.LOADED,
       () => {
         setAdLoaded(true);
-        console.log("Vidéo récompensée chargée");
       }
     );
     const unsubscribeEarned = rewarded.addAdEventListener(
       RewardedAdEventType.EARNED_REWARD,
-      () => {
-        console.log("✅ Récompense gagnée !");
-      }
+      () => {}
     );
     const unsubscribeError = rewarded.addAdEventListener(
       AdEventType.ERROR,
@@ -255,7 +252,6 @@ export default function ChallengeCompletionModal({
           );
         }
       } else {
-        console.log("⚠️ Vidéo non chargée, tentative de rechargement");
         rewarded.load();
         Alert.alert(
           t("completion.adNotReadyTitle"),

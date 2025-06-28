@@ -17,9 +17,9 @@ import {
   NativeSyntheticEvent,
   NativeScrollEvent,
   PixelRatio,
-  SafeAreaView,
   Platform,
 } from "react-native";
+import { SafeAreaView } from "react-native-safe-area-context";
 import { Animated as RNAnimated } from "react-native";
 import { useRouter } from "expo-router";
 import { collection, getDocs, query, where } from "firebase/firestore";
@@ -60,7 +60,7 @@ const { width: SCREEN_WIDTH, height: SCREEN_HEIGHT } = Dimensions.get("window");
 
 const normalize = (size: number) => {
   const baseWidth = 375;
-  const scale = Math.min(Math.max(SCREEN_WIDTH / baseWidth, 0.7), 1.8); // Élargit la plage (70% à 180%) pour plus de flexibilité
+  const scale = Math.min(Math.max(SCREEN_WIDTH / baseWidth, 0.7), 1.8);
   const normalizedSize = size * scale;
   return Math.round(PixelRatio.roundToNearestPixel(normalizedSize));
 };
@@ -93,7 +93,7 @@ interface ChallengeCardProps {
   scrollX: SharedValue<number>;
   safeNavigate: (path: string) => void;
   currentTheme: Theme;
-  dynamicStyles: any; // Ajout de dynamicStyles comme prop
+  dynamicStyles: any;
   t: (key: string, options?: any) => string;
 }
 
@@ -263,7 +263,6 @@ export default function HomeScreen() {
 
   useEffect(() => {
     setIsMounted(true);
-    // Force un recalcul du layout au montage
     setLayoutKey((prev) => prev + 1);
   }, []);
 
@@ -385,7 +384,7 @@ export default function HomeScreen() {
       scrollX={scrollX}
       safeNavigate={safeNavigate}
       currentTheme={currentTheme}
-      dynamicStyles={dynamicStyles} // Passe dynamicStyles
+      dynamicStyles={dynamicStyles}
       t={t}
     />
   );
@@ -438,17 +437,8 @@ export default function HomeScreen() {
     [currentTheme, isDarkMode]
   );
 
-  useEffect(() => {
-    console.log("SCREEN_WIDTH:", SCREEN_WIDTH);
-    console.log("SCREEN_HEIGHT:", SCREEN_HEIGHT);
-    console.log("ITEM_HEIGHT:", ITEM_HEIGHT);
-    console.log("Carousel height:", ITEM_HEIGHT + normalize(40));
-    console.log("Pagination marginBottom:", normalize(100));
-    console.log("Section marginBottom:", normalize(100));
-  }, []);
-
   return (
-    <SafeAreaView style={staticStyles.container}>
+    <SafeAreaView style={{ flex: 1 }} edges={["bottom"]}>
       <StatusBar
         barStyle={isDarkMode ? "light-content" : "dark-content"}
         backgroundColor="transparent"
@@ -459,10 +449,7 @@ export default function HomeScreen() {
           currentTheme.colors.background,
           currentTheme.colors.cardBackground,
         ]}
-        style={[
-          staticStyles.gradientContainer,
-          { marginTop: -STATUS_BAR_HEIGHT },
-        ]}
+        style={[staticStyles.gradientContainer]}
       >
         <ScrollView
           key={layoutKey}
@@ -486,11 +473,6 @@ export default function HomeScreen() {
               useNativeControls={false}
               usePoster
               posterSource={require("../../assets/images/chalkboard.png")}
-              onLoadStart={() => console.log("Vidéo: démarrage chargement")}
-              onLoad={() => console.log("Vidéo: chargée")}
-              onReadyForDisplay={() =>
-                console.log("Vidéo prête à être affichée")
-              }
             />
             <LinearGradient
               colors={[currentTheme.colors.overlay, "rgba(0,0,0,0.2)"]}
@@ -503,7 +485,11 @@ export default function HomeScreen() {
                 resizeMode="contain"
                 accessibilityLabel={t("logoChallengeTies")}
               />
-              <Text style={[staticStyles.heroTitle, dynamicStyles.heroTitle]}>
+              <Text
+                style={[staticStyles.heroTitle, dynamicStyles.heroTitle]}
+                numberOfLines={2}
+                adjustsFontSizeToFit
+              >
                 {t("defyYourLimits")}
               </Text>
               <Text
@@ -523,7 +509,11 @@ export default function HomeScreen() {
                   ]}
                   style={[staticStyles.ctaButton, dynamicStyles.ctaButton]}
                 >
-                  <Text style={[staticStyles.ctaText, dynamicStyles.ctaText]}>
+                  <Text
+                    style={[staticStyles.ctaText, dynamicStyles.ctaText]}
+                    numberOfLines={1}
+                    adjustsFontSizeToFit
+                  >
                     {t("launchAdventure")}
                   </Text>
                   <Ionicons
@@ -640,6 +630,8 @@ export default function HomeScreen() {
                     staticStyles.sectionTitle,
                     dynamicStyles.sectionTitle,
                   ]}
+                  numberOfLines={1}
+                  adjustsFontSizeToFit
                 >
                   {t("getInspired")}
                 </Text>
@@ -745,10 +737,6 @@ export default function HomeScreen() {
             unitId={adUnitId}
             size={BannerAdSize.BANNER}
             requestOptions={{ requestNonPersonalizedAdsOnly: false }}
-            onAdLoaded={() => console.log("Bannière chargée")}
-            onAdFailedToLoad={(err) =>
-              console.error("Échec chargement bannière", err)
-            }
           />
         </View>
         {isTutorialActive && (tutorialStep === 0 || tutorialStep === 1) && (
@@ -774,12 +762,11 @@ const staticStyles = StyleSheet.create({
   },
   gradientContainer: {
     flex: 1,
-    paddingTop: STATUS_BAR_HEIGHT,
     paddingBottom: normalize(10),
   },
   scrollContent: {
     flexGrow: 1,
-    paddingBottom: normalize(100), // Augmente pour un espace premium en bas
+    paddingBottom: normalize(100),
   },
   bannerContainer: {
     width: "100%",
@@ -788,13 +775,13 @@ const staticStyles = StyleSheet.create({
     backgroundColor: "transparent",
   },
   heroSection: {
-    height: normalize(400),
+    height: normalize(405),
     width: SCREEN_WIDTH,
     justifyContent: "center",
     alignItems: "center",
     overflow: "hidden",
     position: "relative",
-    minHeight: normalize(350),
+    minHeight: normalize(400),
   },
   backgroundVideo: {
     position: "absolute",
@@ -827,12 +814,14 @@ const staticStyles = StyleSheet.create({
     fontFamily: "Comfortaa_700Bold",
     textAlign: "center",
     marginBottom: SPACING / 2,
+    lineHeight: normalize(36),
   },
   heroSubtitle: {
     fontSize: normalize(16),
     fontFamily: "Comfortaa_400Regular",
     textAlign: "center",
     marginBottom: SPACING,
+    lineHeight: normalize(20),
   },
   ctaButton: {
     flexDirection: "row",
@@ -850,6 +839,7 @@ const staticStyles = StyleSheet.create({
     fontSize: normalize(16),
     fontFamily: "Comfortaa_700Bold",
     marginRight: SPACING / 2,
+    lineHeight: normalize(22),
   },
   section: {
     paddingVertical: SPACING,
@@ -861,6 +851,7 @@ const staticStyles = StyleSheet.create({
     fontFamily: "Comfortaa_700Bold",
     marginBottom: SPACING,
     textAlign: "center",
+    lineHeight: normalize(28),
   },
   carousel: {
     marginBottom: normalize(15),
@@ -912,7 +903,7 @@ const staticStyles = StyleSheet.create({
     flexDirection: "row",
     justifyContent: "center",
     marginTop: normalize(5),
-    marginBottom: normalize(1), // Augmente ça si besoin (ex: normalize(50))
+    marginBottom: normalize(1),
     zIndex: 10,
     elevation: 10,
   },
@@ -937,13 +928,13 @@ const staticStyles = StyleSheet.create({
     marginTop: SPACING / 2,
   },
   spacer: {
-    height: normalize(5), // ~20px
+    height: normalize(5),
   },
   discoverSection: {
     paddingHorizontal: SPACING,
     paddingVertical: SPACING,
     alignItems: "center",
-    backgroundColor: "rgba(255, 255, 255, 0.05)", // Fond ultra-léger pour stabiliser (à retirer après test)
+    backgroundColor: "rgba(255, 255, 255, 0.05)",
   },
   discoverTitleContainer: {
     width: "100%",
@@ -958,7 +949,7 @@ const staticStyles = StyleSheet.create({
   },
   discoverRow: {
     flexDirection: "row",
-    justifyContent: "space-around", // Aligne avec discoverSingleRow
+    justifyContent: "space-around",
     gap: normalize(15),
     marginBottom: normalize(15),
     width: "100%",
@@ -966,10 +957,10 @@ const staticStyles = StyleSheet.create({
   },
   discoverSingleRow: {
     flexDirection: "row",
-    justifyContent: "center", // Centre strictement
+    justifyContent: "center",
     alignItems: "center",
     width: "100%",
-    paddingHorizontal: 0, // Pas de padding pour éviter le décalage
+    paddingHorizontal: 0,
   },
   discoverSingleCardContainer: {
     flex: 1,

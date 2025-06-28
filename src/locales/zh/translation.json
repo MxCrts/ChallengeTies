@@ -754,7 +754,7 @@
   "addFavorite": "将 \"{{title}}\" 添加到收藏夹",
   "removeFavorite": "从收藏夹中移除 \"{{title}}\"",
   "firstAchievementsPrompt": "接受挑战，赢取你的首个奖杯！",
-  "trophiesProgress": "{{completed}}/{{total}} 个奖杯",
+  "trophiesProgress": "{{completed}}/{{total}} 个成功",
   "sectionCount": "{{completed}}/{{total}}",
   "claim": "领取",
   "unlocked": "已解锁",
@@ -1176,23 +1176,23 @@
   "tutorial": {
     "welcome": {
       "title": "欢迎使用 ChallengeTies！",
-      "description": "开启一段独特旅程，在几个简单步骤中完成挑战并实现目标。"
+      "description": "探索一场独特的冒险，激动人心的挑战，以及充满灵感的社区。准备好迎接挑战了吗？"
     },
     "index": {
       "title": "探索核心功能",
-      "description": "浏览热门挑战，获取建议，查看排行榜，提交你的创新想法。"
+      "description": "浏览热门挑战，查看排行榜，探索新功能，提出创意，并获取实用建议。"
     },
     "profile": {
       "title": "你的个人故事",
-      "description": "自定义你的个人资料，跟踪统计数据，管理当前、已保存、已创建的挑战和通知。"
+      "description": "查看你的信息、统计数据、成就，以及你创建、进行中、已保存或已完成的挑战——所有内容尽在一个地方。"
     },
     "focus": {
       "title": "专注当下",
-      "description": "查看每日挑战、进行中或已完成的内容，创建新目标以不断前进。"
+      "description": "查看你的奖杯，创建挑战，追踪你当前或今天要完成的挑战。"
     },
     "explore": {
       "title": "无限探索",
-      "description": "发现社区创建的所有挑战，使用筛选器找到灵感。"
+      "description": "浏览社区创建的挑战，使用筛选器，并添加你喜欢的挑战到收藏。"
     },
     "buttons": {
       "start": "开始",

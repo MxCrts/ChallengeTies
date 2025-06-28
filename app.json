@@ -14,6 +14,7 @@
     "userInterfaceStyle": "automatic",
     "ios": {
       "supportsTablet": true,
+      "buildNumber": "1",
       "bundleIdentifier": "com.mxcrts.ChallengeTies",
       "infoPlist": {
         "UIBackgroundModes": ["remote-notification"],
@@ -26,6 +27,7 @@
         "foregroundImage": "./assets/images/adaptive-icon.png",
         "backgroundColor": "#ffffff"
       },
+      "versionCode": 1,
       "softwareKeyboardLayoutMode": "pan",
       "package": "com.mxcrts.ChallengeTies",
       "googleMobileAdsAppId": "ca-app-pub-4725616526467159~2289013149",

@@ -45,7 +45,7 @@ interface User {
   bio?: string;
   profileImage?: string | null;
   location?: string;
-  interet?: string;
+  interests?: string;
 }
 
 export default function UserInfo() {
@@ -56,7 +56,7 @@ export default function UserInfo() {
   const [bio, setBio] = useState("");
   const [profileImage, setProfileImage] = useState<string | null>(null);
   const [location, setLocation] = useState("");
-  const [interet, setInteret] = useState("");
+  const [interests, setInterests] = useState("");
   const [isLoading, setIsLoading] = useState(false);
   const { theme } = useTheme();
   const isDarkMode = theme === "dark";
@@ -69,7 +69,7 @@ export default function UserInfo() {
   const [isDisplayNameFocused, setIsDisplayNameFocused] = useState(false);
   const [isBioFocused, setIsBioFocused] = useState(false);
   const [isLocationFocused, setIsLocationFocused] = useState(false);
-  const [isInteretFocused, setIsInteretFocused] = useState(false);
+  const [isInterestsFocused, setIsInterestsFocused] = useState(false);
 
   // Chargement des données utilisateur
   useEffect(() => {
@@ -88,7 +88,7 @@ export default function UserInfo() {
           setBio(userData.bio || "");
           setProfileImage(userData.profileImage || null);
           setLocation(userData.location || "");
-          setInteret(userData.interet || "");
+          setInterests(userData.interests || "");
         } else {
           throw new Error(t("profileNotFound"));
         }
@@ -185,7 +185,7 @@ export default function UserInfo() {
         bio: bio.trim(),
         profileImage,
         location: location.trim(),
-        interet: interet.trim(),
+        interests: interests.trim(),
       });
       await checkForAchievements(user.uid);
       Alert.alert(t("success"), t("profileUpdateSuccess"));
@@ -195,7 +195,7 @@ export default function UserInfo() {
     } finally {
       setIsLoading(false);
     }
-  }, [user, displayName, bio, profileImage, location, interet, router, t]);
+  }, [user, displayName, bio, profileImage, location, interests, router, t]);
 
   // Métadonnées SEO
   const metadata = useMemo(
@@ -275,7 +275,7 @@ export default function UserInfo() {
           keyboardVerticalOffset={Platform.OS === "ios" ? 100 : 0}
         >
           <ScrollView
-            contentContainerStyle={styles.contentContainer}
+            contentContainerStyle={[styles.contentContainer, { flexGrow: 1 }]}
             showsVerticalScrollIndicator={false}
             contentInset={{ top: SPACING, bottom: normalizeSize(80) }}
           >
@@ -338,7 +338,7 @@ export default function UserInfo() {
                       accessibilityLabel={t(
                         "accessibility.currentProfileImage.label"
                       )}
-                      defaultSource={require("../../assets/images/default-profile.jpg")}
+                      defaultSource={require("../../assets/images/default-profile.webp")}
                     />
                   ) : (
                     <Text
@@ -399,9 +399,9 @@ export default function UserInfo() {
                       : currentTheme.colors.textSecondary,
                     onSurface: isDarkMode
                       ? !isDisplayNameFocused
-                        ? "#FFD700" // Or quand non focus
-                        : currentTheme.colors.textPrimary // Couleur focus
-                      : currentTheme.colors.textSecondary, // Light reste gris
+                        ? "#FFD700"
+                        : currentTheme.colors.textPrimary
+                      : currentTheme.colors.textSecondary,
                   },
                   fonts: {
                     regular: { fontFamily: "Comfortaa_400Regular" },
@@ -464,9 +464,9 @@ export default function UserInfo() {
                       : currentTheme.colors.textSecondary,
                     onSurface: isDarkMode
                       ? !isBioFocused
-                        ? "#FFD700" // Or quand non focus
-                        : currentTheme.colors.textPrimary // Couleur focus
-                      : currentTheme.colors.textSecondary, // Light reste gris
+                        ? "#FFD700"
+                        : currentTheme.colors.textPrimary
+                      : currentTheme.colors.textSecondary,
                   },
                   fonts: {
                     regular: { fontFamily: "Comfortaa_400Regular" },
@@ -524,9 +524,9 @@ export default function UserInfo() {
                       : currentTheme.colors.textSecondary,
                     onSurface: isDarkMode
                       ? !isLocationFocused
-                        ? "#FFD700" // Or quand non focus
-                        : currentTheme.colors.textPrimary // Couleur focus
-                      : currentTheme.colors.textSecondary, // Light reste gris
+                        ? "#FFD700"
+                        : currentTheme.colors.textPrimary
+                      : currentTheme.colors.textSecondary,
                   },
                   fonts: {
                     regular: { fontFamily: "Comfortaa_400Regular" },
@@ -558,10 +558,10 @@ export default function UserInfo() {
                 label={t("interests")}
                 mode="flat"
                 style={[styles.input, { fontSize: normalizeSize(14) }]}
-                value={interet}
-                onChangeText={setInteret}
-                onFocus={() => setIsInteretFocused(true)}
-                onBlur={() => setIsInteretFocused(false)}
+                value={interests}
+                onChangeText={setInterests}
+                onFocus={() => setIsInterestsFocused(true)}
+                onBlur={() => setIsInterestsFocused(false)}
                 textColor={
                   isDarkMode ? currentTheme.colors.textPrimary : "#000000"
                 }
@@ -583,10 +583,10 @@ export default function UserInfo() {
                       ? "#FFD700"
                       : currentTheme.colors.textSecondary,
                     onSurface: isDarkMode
-                      ? !isInteretFocused
-                        ? "#FFD700" // Or quand non focus
-                        : currentTheme.colors.textPrimary // Couleur focus
-                      : currentTheme.colors.textSecondary, // Light reste gris
+                      ? !isInterestsFocused
+                        ? "#FFD700"
+                        : currentTheme.colors.textPrimary
+                      : currentTheme.colors.textSecondary,
                   },
                   fonts: {
                     regular: { fontFamily: "Comfortaa_400Regular" },
@@ -595,7 +595,7 @@ export default function UserInfo() {
                 dense={true}
                 accessibilityLabel={t("accessibility.interestsField.label")}
                 accessibilityHint={t("accessibility.interestsField.hint")}
-                testID="input-interet"
+                testID="input-interests"
               />
             </Animated.View>
 
@@ -677,7 +677,7 @@ const styles = StyleSheet.create({
     left: SPACING,
     zIndex: 10,
     padding: SPACING / 2,
-    backgroundColor: "rgba(0, 0, 0, 0.5)", // Overlay premium
+    backgroundColor: "rgba(0, 0, 0, 0.5)",
     borderRadius: normalizeSize(20),
   },
   loadingContainer: {
@@ -704,7 +704,7 @@ const styles = StyleSheet.create({
   },
   imageGradient: {
     width: normalizeSize(140),
-    height: normalizeSize(140),
+    aspectRatio: 1,
     borderRadius: normalizeSize(70),
     overflow: "hidden",
     justifyContent: "center",
@@ -713,7 +713,7 @@ const styles = StyleSheet.create({
   },
   profileImage: {
     width: normalizeSize(132),
-    height: normalizeSize(132),
+    aspectRatio: 1,
     borderRadius: normalizeSize(66),
     resizeMode: "cover",
   },

@@ -23,7 +23,6 @@ import { LinearGradient } from "expo-linear-gradient";
 import Animated, { FadeInUp } from "react-native-reanimated";
 import { useTranslation } from "react-i18next";
 import { useLanguage } from "../../context/LanguageContext";
-import { useCurrentChallenges } from "../../context/CurrentChallengesContext";
 import designSystem, { Theme } from "../../theme/designSystem";
 
 import CustomHeader from "@/components/CustomHeader";
@@ -110,12 +109,6 @@ export default function Settings() {
   const [isSubscribed, setIsSubscribed] = useState(true);
   const unsubscribeRef = useRef<(() => void) | null>(null);
 
-  const {
-    currentChallenges,
-    setCurrentChallenges,
-    simulatedToday,
-    setSimulatedToday,
-  } = useCurrentChallenges();
   const [notificationsEnabled, setNotificationsEnabled] = useState(true);
   const [locationEnabled, setLocationEnabled] = useState(true);
   const isDarkMode = theme === "dark";
@@ -144,34 +137,26 @@ export default function Settings() {
   }, [i18next]);
 
   useEffect(() => {
-    console.log("Settings useEffect: Initialisation");
     const userId = auth.currentUser?.uid;
     if (!userId) {
-      console.log("⚠️ Pas d’utilisateur, redirection vers /login");
       router.replace("/login");
       return;
     }
 
-    console.log("Utilisateur connecté, ID:", userId);
     const userRef = doc(db, "users", userId);
 
     const unsubscribe = onSnapshot(
       userRef,
       (snapshot) => {
         if (!isActiveRef.current || !auth.currentUser) {
-          console.log("onSnapshot ignoré: inactif ou déconnecté");
           return;
         }
-        console.log(
-          "onSnapshot Settings, données:",
-          snapshot.exists() ? snapshot.data() : "null"
-        );
+
         if (snapshot.exists()) {
           const data = snapshot.data();
           setNotificationsEnabled(data.notificationsEnabled ?? true);
           setLocationEnabled(data.locationEnabled ?? true);
           if (data.language && data.language !== language) {
-            console.log("Changement de langue:", data.language);
             setLanguage(data.language);
             i18next.changeLanguage(data.language);
           }
@@ -180,7 +165,6 @@ export default function Settings() {
       (error) => {
         console.error("Erreur onSnapshot Settings:", error.message);
         if (error.code === "permission-denied" && !auth.currentUser) {
-          console.log("Permission refusée, utilisateur déconnecté");
         } else {
           Alert.alert(t("error"), t("unknownError"));
         }
@@ -188,7 +172,6 @@ export default function Settings() {
     );
 
     return () => {
-      console.log("Désabonnement onSnapshot Settings");
       isActiveRef.current = false;
       unsubscribe();
     };
@@ -251,13 +234,9 @@ export default function Settings() {
           style: "destructive",
           onPress: async () => {
             try {
-              console.log("Début déconnexion");
               isActiveRef.current = false;
-              console.log("Callbacks onSnapshot désactivés");
               await auth.signOut();
-              console.log("Déconnexion réussie");
               router.replace("/login");
-              console.log("Redirection vers /login");
               Alert.alert(t("loggedOut"), t("disconnected"));
             } catch (error) {
               console.error("Erreur déconnexion:", error);
@@ -292,37 +271,6 @@ export default function Settings() {
         },
       },
     ]);
-  };
-
-  const simulateDayPass = async () => {
-    const userId = auth.currentUser?.uid;
-    if (!userId) {
-      Alert.alert(t("error"), t("userNotConnected"));
-      return;
-    }
-    if (currentChallenges.length === 0) {
-      Alert.alert(t("Aucun défi"), t("Aucun défi en cours à simuler."));
-      return;
-    }
-    try {
-      const newSimulatedToday = simulatedToday
-        ? new Date(simulatedToday)
-        : new Date();
-      newSimulatedToday.setDate(newSimulatedToday.getDate() + 1);
-      setSimulatedToday(newSimulatedToday);
-      await updateDoc(doc(db, "users", userId), {
-        simulatedToday: newSimulatedToday.toISOString(),
-      });
-      Alert.alert(
-        t("Simulation réussie"),
-        t(
-          `La date est maintenant simulée à ${newSimulatedToday.toDateString()}.`
-        )
-      );
-    } catch (error) {
-      console.error("❌ Erreur lors de la simulation d’un jour:", error);
-      Alert.alert(t("Erreur"), t("Échec de la simulation."));
-    }
   };
 
   const adminUID = "hCnAkM4yNgQPdtSkJEoXjkQaa6k2";
@@ -515,35 +463,7 @@ export default function Settings() {
                 </LinearGradient>
               </TouchableOpacity>
             </Animated.View>
-            <Animated.View entering={FadeInUp.delay(750)}>
-              <TouchableOpacity
-                style={styles.accountButton}
-                onPress={simulateDayPass}
-                accessibilityLabel={t("Simuler un jour")}
-                testID="simulate-day-button"
-              >
-                <LinearGradient
-                  colors={dynamicStyles.buttonGradient.colors}
-                  style={styles.buttonGradient}
-                  start={{ x: 0, y: 0 }}
-                  end={{ x: 1, y: 1 }}
-                >
-                  <Ionicons
-                    name="calendar-outline"
-                    size={normalizeSize(20)}
-                    color={currentTheme.colors.textPrimary}
-                  />
-                  <Text
-                    style={[
-                      styles.accountButtonText,
-                      dynamicStyles.accountButtonText,
-                    ]}
-                  >
-                    {t("Simuler un jour")}
-                  </Text>
-                </LinearGradient>
-              </TouchableOpacity>
-            </Animated.View>
+
             <Animated.View entering={FadeInUp.delay(800)}>
               <TouchableOpacity
                 style={styles.accountButton}
@@ -716,17 +636,7 @@ export default function Settings() {
                 </Animated.View>
               )
             )}
-            <Animated.View entering={FadeInUp.delay(1600)}>
-              <TouchableOpacity
-                onPress={() => Linking.openURL("https://example.com")}
-                accessibilityLabel={t("visitWebsite")}
-                testID="website-link"
-              >
-                <Text style={[styles.aboutLink, dynamicStyles.aboutLink]}>
-                  {t("visitWebsite")}
-                </Text>
-              </TouchableOpacity>
-            </Animated.View>
+
             <Animated.View entering={FadeInUp.delay(1700)}>
               <Text style={[styles.appVersion, dynamicStyles.appVersion]}>
                 {t("appVersion")} 1.0.0

@@ -561,7 +561,7 @@
   },
   "durationModal": {
     "title": "Dauer auswählen (Tage)",
-    "days": "{{count}} Tag",
+    "days": "{{count}} Tage",
     "days_plural": "{{count}} Tage",
     "confirm": "Bestätigen",
     "cancel": "Abbrechen"
@@ -754,7 +754,7 @@
   "addFavorite": "„{{title}}“ zu Favoriten hinzufügen",
   "removeFavorite": "„{{title}}“ aus Favoriten entfernen",
   "firstAchievementsPrompt": "Nimm Herausforderungen an, um deine ersten Trophäen zu verdienen!",
-  "trophiesProgress": "{{completed}}/{{total}} Trophäen",
+  "trophiesProgress": "{{completed}}/{{total}} Erfolge",
   "sectionCount": "{{completed}}/{{total}}",
   "claim": "Einfordern",
   "unlocked": "Freigeschaltet",
@@ -1176,23 +1176,23 @@
   "tutorial": {
     "welcome": {
       "title": "Willkommen bei ChallengeTies!",
-      "description": "Begib dich auf ein einzigartiges Abenteuer, um Herausforderungen zu meistern und deine Ziele in wenigen Schritten zu erreichen."
+      "description": "Entdecke ein einzigartiges Abenteuer, spannende Herausforderungen und eine inspirierende Community. Bist du bereit?"
     },
     "index": {
       "title": "Entdecke das Wichtigste",
-      "description": "Erkunde beliebte Herausforderungen, erhalte Tipps, sieh dir die Rangliste an und teile deine innovativen Ideen."
+      "description": "Entdecke beliebte Herausforderungen, sieh dir die Rangliste an, entdecke Neues, schlage Ideen vor und erhalte hilfreiche Tipps."
     },
     "profile": {
       "title": "Dein Profil, deine Geschichte",
-      "description": "Passe dein Profil an, verfolge deine Statistiken, verwalte aktive, gespeicherte, erstellte Herausforderungen und deine Benachrichtigungen."
+      "description": "Sieh dir deine Infos, Statistiken, Erfolge und Herausforderungen an – erstellt, laufend, gespeichert oder abgeschlossen – alles an einem Ort."
     },
     "focus": {
       "title": "Bleib fokussiert",
-      "description": "Sieh dir deine täglichen, laufenden oder abgeschlossenen Herausforderungen an und setze neue Ziele, um weiterzukommen."
+      "description": "Sieh dir deine Trophäen an, erstelle eine Challenge und verfolge laufende oder heutige Aufgaben."
     },
     "explore": {
       "title": "Erkunde ohne Grenzen",
-      "description": "Finde alle bestehenden Herausforderungen aus der Community und nutze Filter, um Inspiration zu finden."
+      "description": "Entdecke Herausforderungen der Community, nutze Filter und speichere deine Favoriten."
     },
     "buttons": {
       "start": "Start",

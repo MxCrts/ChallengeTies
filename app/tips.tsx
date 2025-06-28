@@ -385,12 +385,12 @@ const styles = StyleSheet.create({
     left: SPACING,
     zIndex: 10,
     padding: SPACING / 2,
-    backgroundColor: "rgba(0, 0, 0, 0.5)", // Overlay premium
+    backgroundColor: "rgba(0, 0, 0, 0.5)",
     borderRadius: normalizeSize(20),
   },
   headerWrapper: {
     paddingHorizontal: SPACING,
-    paddingVertical: SPACING, // Réduit légèrement pour éviter un trop grand espace
+    paddingVertical: SPACING,
   },
   scrollContent: {
     paddingHorizontal: SPACING,
@@ -398,14 +398,14 @@ const styles = StyleSheet.create({
   },
   headerContainer: {
     alignItems: "center",
-    marginBottom: SPACING * 2, // Augmente légèrement pour espacer
-    marginTop: SPACING, // Ajoute un marginTop pour éviter le chevauchement avec CustomHeader
+    marginBottom: SPACING * 2,
+    marginTop: SPACING,
   },
   logo: {
-    width: Math.min(SCREEN_WIDTH * 0.5, normalizeSize(120)), // Réduit la taille du logo
-    height: Math.min(SCREEN_WIDTH * 0.5, normalizeSize(120)), // Garde les proportions
-    marginBottom: SPACING * 1.5, // Espace en dessous pour le texte
-    // Supprime marginTop négatif pour éviter le chevauchement
+    width: Math.min(SCREEN_WIDTH * 0.5, normalizeSize(120)),
+    height: Math.min(SCREEN_WIDTH * 0.5, normalizeSize(120)),
+    marginBottom: SPACING * 1.5,
+    minHeight: normalizeSize(80),
     resizeMode: "contain",
   },
   subHeaderText: {
@@ -427,7 +427,7 @@ const styles = StyleSheet.create({
     shadowRadius: normalizeSize(8),
     elevation: 6,
     borderWidth: 1.5,
-    marginBottom: SPACING, // Uniformise avec Animated.View
+    marginBottom: SPACING,
   },
   tipCardExpanded: { opacity: 0.95 },
   tipIcon: { marginRight: SPACING, marginTop: normalizeSize(4) },

@@ -70,7 +70,6 @@ const DurationSelectionModal: React.FC<DurationSelectionModalProps> = ({
   }));
 
   useEffect(() => {
-    console.log("Viewport:", { width: SCREEN_WIDTH, height: SCREEN_HEIGHT }); // Log pour déboguer
     if (visible) {
       scaleAnim.value = withSpring(1, { damping: 10, stiffness: 80 });
     } else {

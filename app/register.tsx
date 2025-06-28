@@ -21,8 +21,7 @@ import { doc, setDoc, serverTimestamp, updateDoc } from "firebase/firestore";
 import { Ionicons } from "@expo/vector-icons";
 import { useTranslation } from "react-i18next";
 import { fetchAndSaveUserLocation } from "../services/locationService";
-import { createInvitation } from "../services/invitationService";
-
+import * as HapticsModule from "expo-haptics";
 import {
   requestNotificationPermissions,
   scheduleDailyNotifications,
@@ -40,12 +39,37 @@ const BACKGROUND_COLOR = "#FFF8E7";
 const PRIMARY_COLOR = "#FFB800";
 const TEXT_COLOR = "#333";
 const BUTTON_COLOR = "#FFFFFF";
+const shakeAnim = useRef(new Animated.Value(0)).current;
 
 const circleSize = Math.min(SCREEN_WIDTH, SCREEN_HEIGHT) * 0.85;
 const circleTop = SCREEN_HEIGHT * 0.35;
 const waveCount = 4;
 const SPACING = normalize(15);
-
+const triggerShake = () => {
+  shakeAnim.setValue(0);
+  Animated.sequence([
+    Animated.timing(shakeAnim, {
+      toValue: 10,
+      duration: 50,
+      useNativeDriver: true,
+    }),
+    Animated.timing(shakeAnim, {
+      toValue: -10,
+      duration: 50,
+      useNativeDriver: true,
+    }),
+    Animated.timing(shakeAnim, {
+      toValue: 6,
+      duration: 50,
+      useNativeDriver: true,
+    }),
+    Animated.timing(shakeAnim, {
+      toValue: 0,
+      duration: 50,
+      useNativeDriver: true,
+    }),
+  ]).start();
+};
 const Wave = React.memo(
   ({
     opacity,
@@ -135,13 +159,26 @@ export default function Register() {
 
   const handleRegister = async () => {
     setErrorMessage("");
+    triggerShake();
+    HapticsModule.notificationAsync(
+      HapticsModule.NotificationFeedbackType.Error
+    );
+    setTimeout(() => setErrorMessage(""), 5000);
     if (!email.trim() || !username.trim() || !password || !confirmPassword) {
       setErrorMessage(t("fillAllFields"));
+      triggerShake();
+      HapticsModule.notificationAsync(
+        HapticsModule.NotificationFeedbackType.Error
+      );
       setTimeout(() => setErrorMessage(""), 5000);
       return;
     }
     if (password !== confirmPassword) {
       setErrorMessage(t("passwordsDoNotMatch"));
+      triggerShake();
+      HapticsModule.notificationAsync(
+        HapticsModule.NotificationFeedbackType.Error
+      );
       setTimeout(() => setErrorMessage(""), 5000);
       return;
     }
@@ -184,12 +221,6 @@ export default function Register() {
         updatedAt: serverTimestamp(),
       });
 
-      try {
-        const inviteLink = await createInvitation("testChallenge123");
-        console.log("Test invitation link:", inviteLink);
-      } catch (error) {
-        console.error("Test invitation error:", error);
-      }
       // Mettre à jour le displayName
       await updateProfile(user, { displayName: username.trim() });
 
@@ -197,6 +228,11 @@ export default function Register() {
       try {
         await fetchAndSaveUserLocation();
       } catch (error) {
+        triggerShake();
+        HapticsModule.notificationAsync(
+          HapticsModule.NotificationFeedbackType.Error
+        );
+        setTimeout(() => setErrorMessage(""), 5000);
         console.error("Erreur localisation lors de l'inscription :", error);
       }
 
@@ -208,7 +244,6 @@ export default function Register() {
         await updateDoc(doc(db, "users", userId), {
           notificationsEnabled: false,
         });
-        console.log("🔔 Notifications désactivées (permissions refusées)");
       }
 
       router.replace("/screen/onboarding/Screen1");
@@ -267,9 +302,15 @@ export default function Register() {
           accessibilityLabel={t("registrationForm")}
         >
           {errorMessage !== "" && (
-            <Text style={styles.errorText} accessibilityRole="alert">
+            <Animated.Text
+              style={[
+                styles.errorText,
+                { transform: [{ translateX: shakeAnim }] },
+              ]}
+              accessibilityRole="alert"
+            >
               {errorMessage}
-            </Text>
+            </Animated.Text>
           )}
           <TextInput
             placeholder={t("emailPlaceholder")}

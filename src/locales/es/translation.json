@@ -561,7 +561,7 @@
   },
   "durationModal": {
     "title": "Elige la duración (días)",
-    "days": "{{count}} día",
+    "days": "{{count}} días",
     "days_plural": "{{count}} días",
     "confirm": "Confirmar",
     "cancel": "Cancelar"
@@ -754,7 +754,7 @@
   "addFavorite": "Añadir \"{{title}}\" a favoritos",
   "removeFavorite": "Eliminar \"{{title}}\" de favoritos",
   "firstAchievementsPrompt": "¡Asume desafíos para ganar tus primeros trofeos!",
-  "trophiesProgress": "{{completed}}/{{total}} Trofeos",
+  "trophiesProgress": "{{completed}}/{{total}} éxitos",
   "sectionCount": "{{completed}}/{{total}}",
   "claim": "Reclamar",
   "unlocked": "Desbloqueado",
@@ -1182,23 +1182,23 @@
   "tutorial": {
     "welcome": {
       "title": "¡Bienvenido a ChallengeTies!",
-      "description": "Embárcate en una aventura única para superar desafíos y alcanzar tus metas en pocos pasos."
+      "description": "Descubre una aventura única, desafíos emocionantes y una comunidad inspiradora. ¿Listo para el reto?"
     },
     "index": {
       "title": "Descubre lo esencial",
-      "description": "Explora desafíos populares, obtén consejos, consulta el ranking y comparte tus ideas innovadoras."
+      "description": "Descubre desafíos populares, consulta el ranking, explora novedades, propone ideas y accede a consejos útiles para avanzar."
     },
     "profile": {
       "title": "Tu perfil, tu historia",
-      "description": "Personaliza tu perfil, sigue tus estadísticas, gestiona desafíos activos, guardados, creados y tus notificaciones."
+      "description": "Consulta tu información, estadísticas, logros y desafíos creados, en curso, guardados o completados. Todo en un solo lugar."
     },
     "focus": {
       "title": "Mantente enfocado",
-      "description": "Consulta tus desafíos diarios, en curso o completados, y crea nuevos objetivos para avanzar."
+      "description": "Mira tus trofeos, crea un desafío y sigue los que tienes en curso o para hoy."
     },
     "explore": {
       "title": "Explora sin límites",
-      "description": "Descubre todos los desafíos creados por la comunidad y utiliza filtros para inspirarte."
+      "description": "Explora desafíos creados por la comunidad, usa filtros y añade tus favoritos."
     },
     "buttons": {
       "start": "Empezar",

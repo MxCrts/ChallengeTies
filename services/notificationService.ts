@@ -17,7 +17,6 @@ Notifications.setNotificationHandler({
 export const requestNotificationPermissions = async (): Promise<boolean> => {
   try {
     const { status } = await Notifications.requestPermissionsAsync();
-    console.log("🔔 Permission notifications:", status);
     return status === "granted";
   } catch (error) {
     console.error("❌ Erreur permission notifications:", error);
@@ -46,8 +45,6 @@ export const sendInvitationNotification = async (
       },
       trigger: null, // Immédiat
     });
-
-    console.log("🔔 Notification envoyée:", { userId, message });
   } catch (error) {
     console.error("❌ Erreur envoi notification:", error);
   }
@@ -58,7 +55,6 @@ export const scheduleDailyNotifications = async (): Promise<boolean> => {
   try {
     // Annuler les anciennes notifications
     await Notifications.cancelAllScheduledNotificationsAsync();
-    console.log("🗑️ Anciennes notifications annulées");
 
     // Vérifier l'utilisateur et notificationsEnabled
     const userId = auth.currentUser?.uid;
@@ -75,7 +71,6 @@ export const scheduleDailyNotifications = async (): Promise<boolean> => {
     }
 
     const language = userSnap.data().language || "en";
-    console.log("🗣️ Langue pour notifications:", language);
 
     // Définir les messages
     const morningMessages = [
@@ -119,7 +114,6 @@ export const scheduleDailyNotifications = async (): Promise<boolean> => {
       } as Notifications.DailyTriggerInput,
     });
 
-    console.log("🔔 Notifications planifiées : 11h et 20h");
     return true;
   } catch (error) {
     console.error("❌ Erreur planification notifications:", error);
