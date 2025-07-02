@@ -43,6 +43,8 @@
       <intent-filter data-generated="true">
         <action android:name="android.intent.action.VIEW"/>
         <data android:scheme="myapp" android:host="challenge" android:pathPrefix="/"/>
+        <data android:scheme="myapp" android:host="challenge-details" android:pathPrefix="/"/>
+        <data android:scheme="https" android:host="challengeme-d7fef.web.app" android:pathPrefix="/challenge-details"/>
         <data android:scheme="https" android:host="challengeme-d7fef.web.app" android:pathPrefix="/challenge"/>
         <data android:scheme="exp+challengeme"/>
         <category android:name="android.intent.category.BROWSABLE"/>
