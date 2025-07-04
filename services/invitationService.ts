@@ -22,6 +22,8 @@ interface Invitation {
   challengeId: string;
   inviterId: string;
   inviteeId: string | null;
+  inviteeUsername?: string;
+  selectedDays: number;
   status: "pending" | "accepted" | "refused";
   createdAt: any;
   expiresAt: any;
@@ -33,215 +35,325 @@ interface Progress {
   username: string;
   profileImage: string;
   progress: number;
+  selectedDays: number;
 }
 
-// ✅ Créer une invitation
-export const createInvitation = async (
-  challengeId: string,
-  selectedDays: number
-): Promise<string> => {
-  try {
-    const userId = auth.currentUser?.uid;
-    if (!userId) {
-      throw new Error("Utilisateur non connecté");
-    }
+export const resetInviterChallenge = async (challengeId: string): Promise<void> => {
+  const userId = auth.currentUser?.uid;
+  if (!userId) throw new Error("Utilisateur non connecté");
 
-    const invitationsQuery = query(
-      collection(db, "invitations"),
-      where("challengeId", "==", challengeId),
-      where("inviterId", "==", userId),
-      where("status", "in", ["pending", "accepted"])
+  const userRef = doc(db, "users", userId);
+
+  await runTransaction(db, async (transaction) => {
+    const userSnap = await transaction.get(userRef);
+    if (!userSnap.exists()) return;
+
+    const data = userSnap.data();
+    let currentChallenges = data.CurrentChallenges || [];
+
+    currentChallenges = currentChallenges.filter(
+      (c: any) => c.challengeId !== challengeId && c.id !== challengeId
     );
-    const existingInvitations = await getDocs(invitationsQuery);
-    if (!existingInvitations.empty) {
-      throw new Error("Une invitation existe déjà");
-    }
 
-    const invitationRef = await addDoc(collection(db, "invitations"), {
-      challengeId,
-      inviterId: userId,
-      inviteeId: null,
-      selectedDays, // ✅ Ajout ici
-      status: "pending",
-      createdAt: serverTimestamp(),
-      expiresAt: new Date(Date.now() + 7 * 24 * 60 * 60 * 1000),
-    });
+    transaction.update(userRef, { CurrentChallenges: currentChallenges });
+  });
 
-    const inviteId = invitationRef.id;
-    const inviteLink = `https://challengeties.app/challenge-details/${encodeURIComponent(
-      challengeId
-    )}?invite=${encodeURIComponent(inviteId)}`;
-    return inviteLink;
-  } catch (error) {
-    console.error("❌ Erreur création invitation:", error);
-    throw error;
-  }
+  console.log("✅ Reset Inviteur fait pour", challengeId);
 };
 
+export const resetInviteeChallenge = async (challengeId: string, inviteeUsername: string) => {
+  const inviteeQuery = query(
+    collection(db, "users"),
+    where("username", "==", inviteeUsername.trim())
+  );
+  const inviteeSnap = await getDocs(inviteeQuery);
+  if (inviteeSnap.empty) throw new Error("Invité introuvable");
+
+  const inviteeId = inviteeSnap.docs[0].id;
+  const inviteeRef = doc(db, "users", inviteeId);
+
+  await runTransaction(db, async (transaction) => {
+    const snap = await transaction.get(inviteeRef);
+    if (!snap.exists()) return;
+
+    const data = snap.data();
+    let currentChallenges = data.CurrentChallenges || [];
+
+    currentChallenges = currentChallenges.filter(
+      (c: any) => c.challengeId !== challengeId && c.id !== challengeId
+    );
+
+    transaction.update(inviteeRef, { CurrentChallenges: currentChallenges });
+  });
+
+  console.log("✅ Reset Invitee fait pour", challengeId);
+};
+
+
+// ✅ Créer une invitation DUO
+export const createInvitation = async (
+  challengeId: string,
+  selectedDays: number,
+  inviteeUsername: string
+): Promise<string> => {
+  const userId = auth.currentUser?.uid;
+  if (!userId) throw new Error("Utilisateur non connecté");
+
+  // 1️⃣ Vérifie que l’invité existe
+  const inviteeQuery = query(
+    collection(db, "users"),
+    where("username", "==", inviteeUsername.trim())
+  );
+  const inviteeSnap = await getDocs(inviteeQuery);
+  if (inviteeSnap.empty) {
+    throw new Error("Utilisateur invité introuvable");
+  }
+  const inviteeId = inviteeSnap.docs[0].id;
+  if (inviteeId === userId) {
+    throw new Error("Vous ne pouvez pas vous inviter vous-même");
+  }
+
+  // 2️⃣ Vérifie que l’inviteur n’a pas déjà une invitation active
+  const inviterInvitationsQuery = query(
+    collection(db, "invitations"),
+    where("challengeId", "==", challengeId),
+    where("inviterId", "==", userId),
+    where("status", "in", ["pending", "accepted"])
+  );
+  const inviterInvitationsSnap = await getDocs(inviterInvitationsQuery);
+  if (!inviterInvitationsSnap.empty) {
+    throw new Error("Vous avez déjà une invitation en cours ou acceptée pour ce challenge");
+  }
+
+  // 3️⃣ Vérifie que l’invité n’est pas déjà en duo
+  const inviteeInvitationsQuery = query(
+    collection(db, "invitations"),
+    where("challengeId", "==", challengeId),
+    where("inviteeId", "==", inviteeId),
+    where("status", "in", ["pending", "accepted"])
+  );
+  const inviteeInvitationsSnap = await getDocs(inviteeInvitationsQuery);
+  if (!inviteeInvitationsSnap.empty) {
+    throw new Error("Cet utilisateur est déjà en duo sur ce challenge");
+  }
+
+  // 4️⃣ Vérifie si l’inviteur a déjà une progression
+  const inviterRef = doc(db, "users", userId);
+  const inviterDocSnap = await getDoc(inviterRef);
+  if (inviterDocSnap.exists()) {
+    const inviterData = inviterDocSnap.data();
+    const hasProgress = (inviterData.CurrentChallenges || []).some(
+(ch: any) => ch.id === challengeId || ch.challengeId === challengeId
+    );
+    if (hasProgress) {
+      throw new Error("restart_inviteur");
+    }
+  }
+
+  // Vérifie si l’invité a déjà une progression
+  const inviteeRef = doc(db, "users", inviteeId);
+  const inviteeDocSnap = await getDoc(inviteeRef);
+  if (inviteeDocSnap.exists()) {
+    const inviteeData = inviteeDocSnap.data();
+    const hasProgressInvitee = (inviteeData.CurrentChallenges || []).some(
+(ch: any) => ch.id === challengeId || ch.challengeId === challengeId
+    );
+    if (hasProgressInvitee) {
+      throw new Error("restart_invitee");
+    }
+  }
+
+  // 5️⃣ Crée l’invitation
+  const invitationRef = await addDoc(collection(db, "invitations"), {
+    challengeId,
+    inviterId: userId,
+    inviteeId,
+    inviteeUsername: inviteeUsername.trim(),
+    selectedDays,
+    status: "pending",
+    createdAt: serverTimestamp(),
+    expiresAt: new Date(Date.now() + 7 * 24 * 60 * 60 * 1000),
+  });
+
+  // 6️⃣ Notifie l’invité
+  await sendInvitationNotification(
+    inviteeId,
+    `Tu as une nouvelle invitation Duo sur ChallengeTies !`
+  );
+
+  console.log("✅ Invitation créée :", invitationRef.id);
+  return invitationRef.id;
+};
+
+
 // ✅ Accepter une invitation
+// ✅ Accepter une invitation (version CurrentChallenges unique + duo)
 export const acceptInvitation = async (inviteId: string): Promise<void> => {
   try {
     const userId = auth.currentUser?.uid;
-    if (!userId) {
-      console.warn("⚠️ Aucun utilisateur connecté");
-      throw new Error("Utilisateur non connecté");
-    }
+    if (!userId) throw new Error("Utilisateur non connecté");
 
     const invitationRef = doc(db, "invitations", inviteId);
     const invitationSnap = await getDoc(invitationRef);
-    if (!invitationSnap.exists()) {
-      console.warn("⚠️ Invitation non trouvée");
-      throw new Error("Invitation non trouvée");
-    }
+    if (!invitationSnap.exists()) throw new Error("Invitation non trouvée");
 
     const invitation = invitationSnap.data() as Invitation;
-
-    if (invitation.status !== "pending") {
-      console.warn("⚠️ Invitation déjà traitée:", invitation.status);
-      throw new Error("Invitation déjà traitée ou non valide");
-    }
-
-    if (invitation.inviteeId && invitation.inviteeId !== userId) {
-      console.warn("⚠️ Invitation non destinée à cet utilisateur:", {
-        inviteeId: invitation.inviteeId,
-        userId,
-      });
+    if (invitation.status !== "pending") throw new Error("Invitation déjà traitée");
+    if (invitation.inviteeId && invitation.inviteeId !== userId)
       throw new Error("Invitation non valide pour cet utilisateur");
-    }
 
-    // Vérifier expiration
     if (invitation.expiresAt.toDate() < new Date()) {
-      console.warn("⚠️ Invitation expirée");
       await updateDoc(invitationRef, { status: "refused" });
       throw new Error("Invitation expirée");
     }
 
-    // Récupérer le username de l'invité
-    const userRef = doc(db, "users", userId);
-    const inviteeSnap = await getDoc(userRef);
+    const inviteeRef = doc(db, "users", userId);
+    const inviteeSnap = await getDoc(inviteeRef);
+    if (!inviteeSnap.exists()) throw new Error("Profil invité introuvable");
     const invitee = inviteeSnap.data();
     const inviteeUsername = invitee?.username || "Utilisateur";
 
-    // Transaction pour mise à jour atomique
-    await runTransaction(db, async (transaction) => {
-      // Mettre à jour invitation avec username
-      transaction.update(invitationRef, {
-        inviteeId: userId,
-        inviteeUsername, // ✅ pour la notif
-        status: "accepted",
-        updatedAt: serverTimestamp(),
-      });
+    const inviteeChallenges = invitee?.CurrentChallenges || [];
+    const hasInvitee = inviteeChallenges.some(
+      (c: any) => c.challengeId === invitation.challengeId
+    );
+    if (hasInvitee) throw new Error("restart_invitee");
 
-      // Ajouter utilisateur à usersTakingChallenge
+    // 🔄 Transaction sur challenge
+    await runTransaction(db, async (transaction) => {
       const challengeRef = doc(db, "challenges", invitation.challengeId);
       const challengeSnap = await transaction.get(challengeRef);
-      if (!challengeSnap.exists()) {
-        throw new Error("Challenge non trouvé");
-      }
-      const challengeData = challengeSnap.data();
+      if (!challengeSnap.exists()) throw new Error("Challenge non trouvé");
+
+      const challengeData = challengeSnap.data() as { usersTakingChallenge?: string[] };
       const currentUsers = challengeData.usersTakingChallenge || [];
+
       if (!currentUsers.includes(userId)) {
         transaction.update(challengeRef, {
           usersTakingChallenge: arrayUnion(userId),
           participantsCount: increment(1),
         });
       }
+
+      transaction.update(invitationRef, {
+        inviteeId: userId,
+        inviteeUsername,
+        status: "accepted",
+        updatedAt: serverTimestamp(),
+      });
     });
 
-    // Mettre à jour utilisateur invité
-    await updateDoc(userRef, {
-      invitedChallenges: arrayUnion(inviteId),
-      currentChallenges: arrayUnion({
-        challengeId: invitation.challengeId,
-        progress: 0,
-      }),
+    // 🔄 Transaction sur invitee ➜ DUO OK
+    await runTransaction(db, async (transaction) => {
+      const inviteeSnap = await transaction.get(inviteeRef);
+      const inviteeData = inviteeSnap.data();
+      const invitedChallenges = inviteeData?.invitedChallenges || [];
+      const currentChallenges = inviteeData?.CurrentChallenges || [];
+
+      transaction.update(inviteeRef, {
+        invitedChallenges: arrayUnion(inviteId),
+        CurrentChallenges: arrayUnion({
+          challengeId: invitation.challengeId,
+          selectedDays: invitation.selectedDays,
+          completedDays: 0,
+          duo: true,
+          duoPartnerId: invitation.inviterId,
+        }),
+      });
     });
 
-    // Notifier l'inviteur
+    // 🔄 Transaction sur inviter ➜ DUO OK
     const inviterRef = doc(db, "users", invitation.inviterId);
+    await runTransaction(db, async (transaction) => {
+      const inviterSnap = await transaction.get(inviterRef);
+      const inviterData = inviterSnap.data();
+      let inviterChallenges = inviterData?.CurrentChallenges || [];
+
+      inviterChallenges = inviterChallenges.filter(
+        (c: any) => c.challengeId !== invitation.challengeId
+      );
+
+      inviterChallenges.push({
+        challengeId: invitation.challengeId,
+        selectedDays: invitation.selectedDays,
+        completedDays: 0,
+        duo: true,
+        duoPartnerId: userId,
+      });
+
+      transaction.update(inviterRef, {
+        CurrentChallenges: inviterChallenges,
+      });
+    });
+
+    // ✅ Notifie l'inviteur si activé
     const inviterSnap = await getDoc(inviterRef);
-    const inviter = inviterSnap.data();
-    if (inviter?.notificationsEnabled) {
+    const inviterData = inviterSnap.data();
+    if (inviterData?.notificationsEnabled) {
       await sendInvitationNotification(
         invitation.inviterId,
-        `${inviteeUsername} a rejoint ton challenge !`
+        `${inviteeUsername} a accepté ton invitation Duo !`
       );
     }
 
-    console.log("✅ Invitation acceptée:", { inviteId, userId });
+    console.log("✅ Invitation acceptée : CurrentChallenges mis à jour pour les deux !");
   } catch (error) {
     console.error("❌ Erreur acceptation invitation:", error);
     throw error;
   }
 };
 
+
+
 // ✅ Refuser une invitation
 export const refuseInvitation = async (inviteId: string): Promise<void> => {
   try {
     const userId = auth.currentUser?.uid;
-    if (!userId) {
-      console.warn("⚠️ Aucun utilisateur connecté");
-      throw new Error("Utilisateur non connecté");
-    }
+    if (!userId) throw new Error("Utilisateur non connecté");
 
     const invitationRef = doc(db, "invitations", inviteId);
     const invitationSnap = await getDoc(invitationRef);
-    if (!invitationSnap.exists()) {
-      console.warn("⚠️ Invitation non trouvée");
-      throw new Error("Invitation non trouvée");
-    }
+    if (!invitationSnap.exists()) throw new Error("Invitation non trouvée");
 
-    const invitation = invitationSnap.data();
-    if (invitation.status !== "pending") {
-      console.warn("⚠️ Invitation déjà traitée");
-      throw new Error("Invitation déjà traitée");
-    }
+    const invitation = invitationSnap.data() as Invitation;
+    if (invitation.status !== "pending") throw new Error("Invitation déjà traitée");
 
-    // 🔎 Récupérer username de l'invité
-    const inviteeSnap = await getDoc(doc(db, "users", userId));
-    const invitee = inviteeSnap.data();
-    const inviteeUsername = invitee?.username || "Utilisateur";
+    const userRef = doc(db, "users", userId);
+    const inviteeSnap = await getDoc(userRef);
+    const inviteeUsername = inviteeSnap.data()?.username || "Utilisateur";
 
-    // 🛠 Étape 1 : Mise à jour avec inviteeUsername
     await updateDoc(invitationRef, {
       inviteeId: userId,
-      inviteeUsername, // ✅ Pour la notif avant suppression
+      inviteeUsername,
       status: "refused",
     });
 
-    // ✅ Étape 2 : Suppression après autorisation via les règles
     await deleteDoc(invitationRef);
 
-    // 🔔 Notification à l'inviteur si activée
     const inviterRef = doc(db, "users", invitation.inviterId);
     const inviterSnap = await getDoc(inviterRef);
-    const inviter = inviterSnap.data();
-
-    if (inviter?.notificationsEnabled) {
+    if (inviterSnap.exists() && inviterSnap.data()?.notificationsEnabled) {
       await sendInvitationNotification(
         invitation.inviterId,
-        `${inviteeUsername} a refusé ton invitation.`
+        `${inviteeUsername} a refusé ton invitation Duo.`
       );
     }
 
-    console.log("❌ Invitation refusée et supprimée :", { inviteId, userId });
+    console.log("❌ Invitation refusée :", { inviteId, userId });
   } catch (error) {
     console.error("❌ Erreur refus invitation:", error);
     throw error;
   }
 };
 
-// ✅ Récupérer progression du duo
+// ✅ Récupérer progression DUO
 export const getInvitationProgress = async (
   inviteId: string
 ): Promise<Progress[]> => {
   try {
     const invitationRef = doc(db, "invitations", inviteId);
     const invitationSnap = await getDoc(invitationRef);
-    if (
-      !invitationSnap.exists() ||
-      invitationSnap.data().status !== "accepted"
-    ) {
+    if (!invitationSnap.exists() || invitationSnap.data().status !== "accepted") {
       console.warn("⚠️ Invitation non trouvée ou non acceptée");
       return [];
     }
@@ -249,7 +361,6 @@ export const getInvitationProgress = async (
     const invitation = invitationSnap.data() as Invitation;
     const progress: Progress[] = [];
 
-    // Récupérer inviteur
     const inviterRef = doc(db, "users", invitation.inviterId);
     const inviterSnap = await getDoc(inviterRef);
     if (inviterSnap.exists()) {
@@ -261,11 +372,11 @@ export const getInvitationProgress = async (
         userId: invitation.inviterId,
         username: inviter.username,
         profileImage: inviter.profileImage || "",
-        progress: challenge?.progress || 0,
+progress: challenge?.completedDays || 0,
+        selectedDays: challenge?.selectedDays || 0,
       });
     }
 
-    // Récupérer invité
     if (invitation.inviteeId) {
       const inviteeRef = doc(db, "users", invitation.inviteeId);
       const inviteeSnap = await getDoc(inviteeRef);
@@ -278,15 +389,16 @@ export const getInvitationProgress = async (
           userId: invitation.inviteeId,
           username: invitee.username,
           profileImage: invitee.profileImage || "",
-          progress: challenge?.progress || 0,
+progress: challenge?.completedDays || 0,
+          selectedDays: challenge?.selectedDays || 0,
         });
       }
     }
 
-    console.log("📊 Progression duo:", progress);
+    console.log("📊 Progression DUO:", progress);
     return progress;
   } catch (error) {
-    console.error("❌ Erreur récupération progression:", error);
+    console.error("❌ Erreur progression invitation:", error);
     return [];
   }
 };

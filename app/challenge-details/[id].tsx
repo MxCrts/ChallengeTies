@@ -650,29 +650,34 @@ export default function ChallengeDetails() {
     );
   }, [id, userHasTaken, routeTitle, router]);
 
-  const handleShareChallenge = useCallback(async () => {
-    try {
-      const inviteLink = await createInvitation(id, finalSelectedDays);
-      const shareOptions = {
-        title: t("challengeDetails.invite"),
-        message: `Rejoins mon défi "${routeTitle}" sur ChallengeTies ! ${inviteLink}`,
-      };
-      const result = await Share.share(shareOptions);
-      if (result.action === Share.sharedAction) {
-        const userId = auth.currentUser?.uid;
-        if (userId) {
-          const userRef = doc(db, "users", userId);
-          await updateDoc(userRef, {
-            shareChallenge: increment(1),
-          });
-          await checkForAchievements(userId);
-        }
-      } else if (result.action === Share.dismissedAction) {
+ const handleShareChallenge = useCallback(async () => {
+  try {
+    // 👇 Ici ton lien vers l'app ou la page du challenge dans l'app
+    const appLink = `https://challengeties.app/challenge-details/${encodeURIComponent(id)}`;
+
+    const shareOptions = {
+      title: t("challengeDetails.share"),
+      message: `${t("challengeDetails.shareMessage", { title: routeTitle })}\n${appLink}`,
+    };
+
+    const result = await Share.share(shareOptions);
+
+    if (result.action === Share.sharedAction) {
+      const userId = auth.currentUser?.uid;
+      if (userId) {
+        const userRef = doc(db, "users", userId);
+        await updateDoc(userRef, {
+          shareChallenge: increment(1),
+        });
+        await checkForAchievements(userId);
       }
-    } catch (error: any) {
-      Alert.alert(t("alerts.shareError"), error.message);
     }
-  }, [id, routeTitle]);
+  } catch (error: any) {
+    console.error("❌ handleShareChallenge error:", error);
+    Alert.alert(t("alerts.shareError"), error.message);
+  }
+}, [id, routeTitle, t]);
+
 
   const handleViewStats = useCallback(() => {
     if (!userHasTaken) return;

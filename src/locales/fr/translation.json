@@ -28,6 +28,9 @@
   "statistics": "Statistiques",
   "ongoingChallenges": "Défis en cours",
   "favorites": "Favoris",
+  "email": "Adresse email",
+  "creationDate": "Date de création",
+  "myAccount": "Mon compte",
   "completedChallenges": "Défis terminés",
   "rewards": "Récompenses",
   "myChallenges": "Mes défis",
@@ -321,7 +324,7 @@
   "deleteChallenge": "Supprimer le défi",
   "viewChallengeDetails": "Voir les détails du défi",
   "challengeImage": "Image du défi",
-  "day": "Jour",
+  "day": "Jours",
   "abandonChallenge": "Abandonner le défi",
   "abandonChallengeConfirm": "Êtes-vous sûr ? Vous perdrez votre progression.",
   "continue": "Continuer",
@@ -378,7 +381,7 @@
     "inviteError": "Impossible de partager l'invitation",
     "inviteA11y": "Inviter un ami à ce défi"
   },
-  "participant_one": "{{count}} participant",
+  "participant_one": "{{count}} participants",
   "participant_other": "{{count}} participants",
   "explanation": {
     "title": "Votre voix compte !",
@@ -564,7 +567,7 @@
   },
   "durationModal": {
     "title": "Choisir la durée (jours)",
-    "days": "{{count}} jour",
+    "days": "{{count}} jours",
     "days_plural": "{{count}} jours",
     "confirm": "Confirmer",
     "cancel": "Annuler"

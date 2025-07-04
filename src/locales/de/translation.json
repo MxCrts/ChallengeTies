@@ -377,6 +377,9 @@
     "stats": "Statistiken",
     "inviteA11y": "Freund zu dieser Herausforderung einladen"
   },
+  "email": "E-Mail-Adresse",
+  "creationDate": "Erstellungsdatum",
+  "myAccount": "Mein Konto",
   "explanation": {
     "title": "Deine Stimme zählt!",
     "welcome": "Willkommen auf der Seite für neue Funktionen! Hilf mit, die App weiterzuentwickeln.",

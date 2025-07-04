@@ -14,6 +14,8 @@ import Animated, {
   Easing,
 } from "react-native-reanimated";
 import { LinearGradient } from "expo-linear-gradient";
+import { useTheme } from "../../context/ThemeContext";
+import designSystem from "../../theme/designSystem";
 
 const { width: SCREEN_WIDTH } = Dimensions.get("window");
 
@@ -84,7 +86,15 @@ const AnimatedTabIcon = ({
 };
 
 // Composant spécial pour l’icône "focus" (flamme centrale)
-const FocusTabIcon = ({ focused }: { focused: boolean }) => {
+const FocusTabIcon = ({
+  focused,
+  currentTheme,
+  isDarkMode,
+}: {
+  focused: boolean;
+  currentTheme: typeof designSystem.lightTheme; // ou ton type Theme si tu l'as exporté
+  isDarkMode: boolean;
+}) => {
   const scale = useSharedValue(1);
   const flameOpacity = useSharedValue(1);
 
@@ -105,7 +115,13 @@ const FocusTabIcon = ({ focused }: { focused: boolean }) => {
   return (
     <Animated.View style={[styles.focusIconContainer, animatedStyle]}>
       <LinearGradient
-        colors={focused ? ["#ED8F03", "#F59E0B"] : ["#FFE8D6", "#FFDAB9"]}
+        colors={
+          focused
+            ? [currentTheme.colors.primary, currentTheme.colors.secondary]
+            : isDarkMode
+            ? ["#333", "#444"]
+            : ["#FFE8D6", "#FFDAB9"]
+        }
         style={styles.focusGradient}
       >
         <Ionicons name="flame" size={normalizeSize(32)} color="#FFF" />
@@ -114,10 +130,16 @@ const FocusTabIcon = ({ focused }: { focused: boolean }) => {
   );
 };
 
+
 const TabsLayout = () => {
   const [hasUnclaimedAchievements, setHasUnclaimedAchievements] =
     useState(false);
   const insets = useSafeAreaInsets();
+const { theme } = useTheme();
+const isDarkMode = theme === "dark";
+const currentTheme = isDarkMode
+  ? designSystem.darkTheme
+  : designSystem.lightTheme;
 
   useEffect(() => {
     const userId = auth.currentUser?.uid;
@@ -138,37 +160,45 @@ const TabsLayout = () => {
     <TrophyProvider>
       <Tabs
         screenOptions={{
-          headerShown: false,
-          tabBarStyle: {
-            backgroundColor: "#FFFFFF",
-            height: normalizeSize(60) + insets.bottom,
-            paddingBottom: insets.bottom + normalizeSize(4),
-            paddingTop: normalizeSize(4),
-            borderTopLeftRadius: 20,
-            borderTopRightRadius: 20,
-            elevation: 10,
-            shadowColor: "#000",
-            shadowOpacity: 0.15,
-            shadowOffset: { width: 0, height: -3 },
-            shadowRadius: 12,
-            borderTopWidth: 1,
-            borderTopColor: "rgba(227, 226, 233, 0.5)",
-          },
-          tabBarLabelStyle: {
-            fontSize: normalizeSize(10),
-            fontFamily: "Comfortaa_700Bold",
-            flexWrap: "wrap",
-            width: "100%",
-            textAlign: "center",
-          },
-          tabBarIconStyle: {
-            marginBottom: 0,
-          },
-          tabBarItemStyle: {
-            paddingVertical: normalizeSize(4),
-          },
-          tabBarActiveTintColor: "#ED8F03",
-          tabBarInactiveTintColor: "#A0AEC0",
+  headerShown: false,
+  tabBarStyle: {
+    backgroundColor: currentTheme.colors.cardBackground,
+    height: normalizeSize(60) + insets.bottom,
+    paddingBottom: insets.bottom + normalizeSize(4),
+    paddingTop: normalizeSize(4),
+    borderTopLeftRadius: 20,
+    borderTopRightRadius: 20,
+    elevation: 10,
+    shadowColor: "#000",
+    shadowOpacity: 0.15,
+    shadowOffset: { width: 0, height: -3 },
+    shadowRadius: 12,
+    borderTopWidth: 1,
+    borderTopColor: isDarkMode
+      ? "rgba(255, 255, 255, 0.1)"
+      : "rgba(227, 226, 233, 0.5)",
+  },
+  tabBarLabelStyle: {
+  fontSize: normalizeSize(10),
+  fontFamily: "Comfortaa_700Bold",
+  flexWrap: "wrap",
+  width: "100%",
+  textAlign: "center",
+  lineHeight: normalizeSize(12),
+  paddingBottom: normalizeSize(2), 
+},
+  tabBarIconStyle: {
+    marginBottom: 0,
+  },
+  tabBarItemStyle: {
+  paddingVertical: normalizeSize(4),
+  paddingTop: normalizeSize(6), // Légère marge haute
+},
+
+  tabBarActiveTintColor: isDarkMode ? "#FFDD95" : currentTheme.colors.primary,
+tabBarInactiveTintColor: isDarkMode ? "#FFDD95" : currentTheme.colors.textSecondary,
+
+
         }}
       >
         <Tabs.Screen
@@ -207,12 +237,18 @@ const TabsLayout = () => {
         />
 
         <Tabs.Screen
-          name="focus"
-          options={{
-            tabBarLabel: "",
-            tabBarIcon: ({ focused }) => <FocusTabIcon focused={focused} />,
-          }}
-        />
+  name="focus"
+  options={{
+    tabBarLabel: "",
+    tabBarIcon: ({ focused }) => (
+      <FocusTabIcon
+        focused={focused}
+        currentTheme={currentTheme}
+        isDarkMode={isDarkMode}
+      />
+    ),
+  }}
+/>
 
         <Tabs.Screen
           name="explore"
@@ -230,7 +266,7 @@ const TabsLayout = () => {
         />
 
         <Tabs.Screen
-          name="settings"
+          name="Settings"
           options={{
             tabBarLabel: "Settings",
             tabBarIcon: ({ color, focused, size }) => (

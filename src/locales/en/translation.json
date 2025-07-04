@@ -379,6 +379,9 @@
     "stats": "Stats",
     "inviteA11y": "Invite a friend to this challenge"
   },
+  "email": "Email address",
+  "creationDate": "Creation date",
+  "myAccount": "My account",
   "explanation": {
     "title": "Your voice matters!",
     "welcome": "Welcome to the new features page! Here you can help shape the app's evolution.",

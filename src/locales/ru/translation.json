@@ -1045,6 +1045,9 @@
   "challengeNotFound": "Задача не найдена.",
   "unableToFinalizeChallenge": "Не удалось завершить задачу.",
   "errorLoadingSavedChallenges": "Не удалось загрузить сохранённые задания: {{message}}",
+  "email": "Электронная почта",
+  "creationDate": "Дата создания",
+  "myAccount": "Мой аккаунт",
   "notificationsPush": {
     "title": "ChallengeTies",
     "morning1": "Готовы к новому вызову сегодня?",

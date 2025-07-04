@@ -434,6 +434,36 @@ export default function Settings() {
                 </LinearGradient>
               </TouchableOpacity>
             </Animated.View>
+            <Animated.View entering={FadeInUp.delay(650)}>
+  <TouchableOpacity
+    style={styles.accountButton}
+    onPress={() => router.push("/userAccount")}
+    accessibilityLabel={t("account")}
+    testID="user-account-button"
+  >
+    <LinearGradient
+      colors={dynamicStyles.buttonGradient.colors}
+      style={styles.buttonGradient}
+      start={{ x: 1, y: 1 }}
+      end={{ x: 0, y: 0 }}
+    >
+      <Ionicons
+        name="shield-outline"
+        size={normalizeSize(20)}
+        color={currentTheme.colors.textPrimary}
+      />
+      <Text
+        style={[
+          styles.accountButtonText,
+          dynamicStyles.accountButtonText,
+        ]}
+      >
+        {t("account")}
+      </Text>
+    </LinearGradient>
+  </TouchableOpacity>
+</Animated.View>
+
             <Animated.View entering={FadeInUp.delay(700)}>
               <TouchableOpacity
                 style={styles.accountButton}
@@ -703,11 +733,13 @@ const styles = StyleSheet.create({
     transform: [{ scale: SCREEN_WIDTH < 360 ? 0.85 : 1 }],
   },
   languagePicker: {
-    width: SCREEN_WIDTH * 0.4,
-    height: normalizeSize(50),
-    fontFamily: "Comfortaa_400Regular",
-    fontSize: normalizeSize(16),
-  },
+  width: SCREEN_WIDTH * 0.4,
+  height: normalizeSize(50),
+  fontFamily: "Comfortaa_400Regular",
+  fontSize: normalizeSize(16),
+  lineHeight: normalizeSize(20),
+  paddingVertical: normalizeSize(2),
+},
   accountButton: {
     borderRadius: normalizeSize(16),
     marginBottom: SPACING,

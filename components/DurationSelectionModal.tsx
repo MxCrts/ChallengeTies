@@ -24,7 +24,7 @@ import { Theme } from "../theme/designSystem";
 import designSystem from "../theme/designSystem";
 import * as Haptics from "expo-haptics";
 
-const { width: SCREEN_WIDTH, height: SCREEN_HEIGHT } = Dimensions.get("window");
+const { width: SCREEN_WIDTH } = Dimensions.get("window");
 
 const normalize = (size: number) => {
   const baseWidth = 375;
@@ -231,12 +231,12 @@ const styles = StyleSheet.create({
   modalContent: {
     width: "80%",
     maxWidth: normalize(360),
-    minHeight: normalize(200), // Hauteur minimale pour éviter compression
+    minHeight: normalize(200),
     borderRadius: normalize(16),
     paddingVertical: normalize(20),
     paddingHorizontal: normalize(16),
     alignItems: "center",
-    justifyContent: "center", // Centrage vertical interne
+    justifyContent: "center",
     shadowColor: "#000",
     shadowOffset: { width: 0, height: normalize(6) },
     shadowOpacity: 0.3,
@@ -253,24 +253,24 @@ const styles = StyleSheet.create({
   gridContainer: {
     flexDirection: "row",
     flexWrap: "wrap",
-    justifyContent: "center", // Centrage horizontal de la grille
+    justifyContent: "center",
     alignItems: "center",
     width: "100%",
     marginBottom: normalize(20),
   },
   gridItem: {
-    width: "46%", // Réduit pour espacement uniforme
+    width: "46%",
     marginVertical: normalize(6),
-    marginHorizontal: normalize(4), // Centrage symétrique
+    marginHorizontal: normalize(4),
     alignItems: "center",
   },
   dayOption: {
     flexDirection: "row",
     alignItems: "center",
     justifyContent: "center",
-    width: "100%", // Occupe tout l’espace du gridItem
+    width: "100%",
     paddingVertical: normalize(10),
-    paddingHorizontal: normalize(12), // Réduit pour compacité
+    paddingHorizontal: normalize(12),
     borderRadius: normalize(10),
     borderWidth: normalize(1.5),
     shadowOffset: { width: 0, height: normalize(2) },
@@ -281,7 +281,7 @@ const styles = StyleSheet.create({
   dayOptionText: {
     fontSize: normalize(14),
     fontFamily: "Comfortaa_400Regular",
-    marginHorizontal: normalize(4), // Symétrique
+    marginHorizontal: normalize(4),
   },
   button: {
     width: "90%",

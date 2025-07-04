@@ -627,20 +627,17 @@ export default function ExploreScreen() {
                         {item.category}
                       </Text>
                       <Text
-                        style={[
-                          styles.cardParticipants,
-                          dynamicStyles.cardParticipants,
-                        ]}
-                      >
-                        <Ionicons
-                          name="people"
-                          size={normalizeSize(14)}
-                          color={currentTheme.colors.trophy}
-                        />
-                        {t("participant", {
-                          count: item.participantsCount || 0,
-                        })}
-                      </Text>
+  style={[styles.cardParticipants, dynamicStyles.cardParticipants]}
+>
+  <Ionicons
+    name="people"
+    size={normalizeSize(14)}
+    color={currentTheme.colors.trophy}
+  />
+  {`${item.participantsCount || 0} ${t("participants", {
+    count: item.participantsCount || 0,
+  })}`}
+</Text>
                     </LinearGradient>
 
                     <TouchableOpacity

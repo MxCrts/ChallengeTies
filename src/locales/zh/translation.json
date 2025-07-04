@@ -1081,6 +1081,9 @@
   "challengeNotFound": "未找到挑战。",
   "unableToFinalizeChallenge": "无法完成挑战。",
   "errorLoadingSavedChallenges": "无法加载已保存的挑战：{{message}}",
+  "email": "电子邮件地址",
+  "creationDate": "创建日期",
+  "myAccount": "我的账户",
   "notificationsPush": {
     "title": "ChallengeTies",
     "morning1": "准备迎接新的挑战了吗？",

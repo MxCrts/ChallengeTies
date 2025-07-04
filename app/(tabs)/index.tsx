@@ -1076,8 +1076,8 @@ const getDynamicStyles = (currentTheme: Theme, isDarkMode: boolean) => ({
     color: currentTheme.colors.primary,
   },
   challengeCategory: {
-    color: currentTheme.colors.textSecondary,
-  },
+  color: isDarkMode ? "#CCCCCC" : "#999999",
+},
   dot: {
     backgroundColor: currentTheme.colors.secondary,
   },
