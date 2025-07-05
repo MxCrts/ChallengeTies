@@ -17,7 +17,7 @@ import { StatusBar } from "expo-status-bar";
 import { useRouter } from "expo-router";
 import { createUserWithEmailAndPassword, updateProfile } from "firebase/auth";
 import { auth, db } from "../constants/firebase-config";
-import { doc, setDoc, serverTimestamp, updateDoc } from "firebase/firestore";
+import { doc, setDoc, serverTimestamp, updateDoc, query, where, collection, getDocs } from "firebase/firestore";
 import { Ionicons } from "@expo/vector-icons";
 import { useTranslation } from "react-i18next";
 import { fetchAndSaveUserLocation } from "../services/locationService";
@@ -184,6 +184,22 @@ export default function Register() {
     }
     setLoading(true);
     try {
+      const q = query(
+      collection(db, "users"),
+      where("username", "==", username.trim())
+    );
+    const querySnapshot = await getDocs(q);
+
+    if (!querySnapshot.empty) {
+      setErrorMessage(t("usernameAlreadyInUse") || "Nom d'utilisateur déjà utilisé.");
+      triggerShake();
+      HapticsModule.notificationAsync(
+        HapticsModule.NotificationFeedbackType.Error
+      );
+      setTimeout(() => setErrorMessage(""), 5000);
+      setLoading(false);
+      return;
+    }
       const userCredential = await createUserWithEmailAndPassword(
         auth,
         email.trim(),

@@ -1046,8 +1046,26 @@
   "unableToFinalizeChallenge": "Не удалось завершить задачу.",
   "errorLoadingSavedChallenges": "Не удалось загрузить сохранённые задания: {{message}}",
   "email": "Электронная почта",
+  "usernameAlreadyInUse": "Имя пользователя уже используется",
   "creationDate": "Дата создания",
   "myAccount": "Мой аккаунт",
+  "inviteFriendModal": {
+  "title": "Пригласить друга",
+  "usernamePlaceholder": "Имя пользователя",
+  "selectDuration": "Выбрать длительность",
+  "days": "дней",
+  "send": "Отправить",
+  "cancel": "Отмена"
+},
+"notificationsP": {
+  "title": "Мои приглашения",
+  "loading": "Загрузка приглашений...",
+  "noInvitesTitle": "Приглашений пока нет",
+  "noInvitesSubtitle": "Здесь будут отображаться полученные приглашения",
+  "inviteFrom": "Приглашение от {{username}}",
+  "inviteDays": "{{days}} дней",
+  "view": "Посмотреть"
+},
   "notificationsPush": {
     "title": "ChallengeTies",
     "morning1": "Готовы к новому вызову сегодня?",

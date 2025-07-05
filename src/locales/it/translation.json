@@ -1062,7 +1062,25 @@
   "filterByOrigin": "Filtra per {{origin}}",
   "Existing": "Esistenti",
   "Created": "Create",
+  "usernameAlreadyInUse": "Nome utente già in uso",
   "email": "Indirizzo email",
+  "inviteFriendModal": {
+  "title": "Invita un amico",
+  "usernamePlaceholder": "Nome utente",
+  "selectDuration": "Seleziona la durata",
+  "days": "giorni",
+  "send": "Invia",
+  "cancel": "Annulla"
+},
+"notificationsP": {
+  "title": "Le Mie Inviti",
+  "loading": "Caricamento inviti...",
+  "noInvitesTitle": "Nessun invito al momento",
+  "noInvitesSubtitle": "Qui vedrai gli inviti che riceverai",
+  "inviteFrom": "Invito da {{username}}",
+  "inviteDays": "{{days}} giorni",
+  "view": "Vedi"
+},
   "creationDate": "Data di creazione",
   "myAccount": "Il mio account",
   "noDescription": "Nessuna descrizione disponibile",

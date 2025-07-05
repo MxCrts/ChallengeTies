@@ -593,6 +593,24 @@
   "category": "Categoría",
   "resetFilters": "Restablecer filtros",
   "closeModal": "Cerrar",
+  "inviteFriendModal": {
+  "title": "Invitar a un amigo",
+  "usernamePlaceholder": "Nombre de usuario",
+  "selectDuration": "Seleccionar duración",
+  "days": "días",
+  "send": "Enviar",
+  "cancel": "Cancelar"
+},
+"notificationsP": {
+  "title": "Mis Invitaciones",
+  "loading": "Cargando invitaciones...",
+  "noInvitesTitle": "No hay invitaciones por ahora",
+  "noInvitesSubtitle": "Aquí verás las invitaciones que recibas",
+  "inviteFrom": "Invitación de {{username}}",
+  "inviteDays": "{{days}} días",
+  "view": "Ver"
+},
+  "usernameAlreadyInUse": "Nombre de usuario ya en uso",
   "untitledChallenge": "Desafío sin título",
   "miscellaneous": "Varios",
   "failedToLoadChallenges": "No se pueden cargar los desafíos.",

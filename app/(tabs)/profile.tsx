@@ -171,6 +171,14 @@ export default function ProfileScreen() {
         accessibilityLabel: t("access.myChallenges.label"),
         accessibilityHint: t("access.myChallenges.hint"),
       },
+      {
+  name: t("activity"), // ou t("invitations"), à toi de choisir la clé de traduction
+  icon: "notifications-outline",
+  navigateTo: "profile/Notifications",
+  testID: "notifications-button",
+  accessibilityLabel: t("access.notifications.label"),
+  accessibilityHint: t("access.notifications.hint"),
+}
     ];
   }, [t, userData]);
 

@@ -377,6 +377,24 @@
     "stats": "Statistiken",
     "inviteA11y": "Freund zu dieser Herausforderung einladen"
   },
+  "notificationsP": {
+  "title": "Meine Einladungen",
+  "loading": "Einladungen werden geladen...",
+  "noInvitesTitle": "Keine Einladungen vorhanden",
+  "noInvitesSubtitle": "Hier siehst du deine erhaltenen Einladungen",
+  "inviteFrom": "Einladung von {{username}}",
+  "inviteDays": "{{days}} Tage",
+  "view": "Ansehen"
+},
+  "inviteFriendModal": {
+  "title": "Einen Freund einladen",
+  "usernamePlaceholder": "Benutzername",
+  "selectDuration": "Dauer auswählen",
+  "days": "Tage",
+  "send": "Senden",
+  "cancel": "Abbrechen"
+},
+  "usernameAlreadyInUse":"Benutzername bereits vergeben",
   "email": "E-Mail-Adresse",
   "creationDate": "Erstellungsdatum",
   "myAccount": "Mein Konto",

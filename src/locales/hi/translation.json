@@ -1074,6 +1074,24 @@
    "email": "ईमेल पता",
   "creationDate": "निर्माण तिथि",
   "myAccount": "मेरा खाता",
+  "inviteFriendModal": {
+  "title": "मित्र को आमंत्रित करें",
+  "usernamePlaceholder": "यूज़रनेम",
+  "selectDuration": "अवधि चुनें",
+  "days": "दिन",
+  "send": "भेजें",
+  "cancel": "रद्द करें"
+},
+"notificationsP": {
+  "title": "मेरे निमंत्रण",
+  "loading": "निमंत्रण लोड हो रहे हैं...",
+  "noInvitesTitle": "अभी कोई निमंत्रण नहीं हैं",
+  "noInvitesSubtitle": "यहां आपको प्राप्त निमंत्रण दिखेंगे",
+  "inviteFrom": "{{username}} से निमंत्रण",
+  "inviteDays": "{{days}} दिन",
+  "view": "देखें"
+},
+  "usernameAlreadyInUse": "उपयोगकर्ता नाम पहले से मौजूद है",
   "adWatchedMessage": "चुनौती चिह्नित की गई, आपकी स्ट्रिक सामान्य रूप से जारी रहेगी।",
   "unableToMarkAfterAd": "विज्ञापन के बाद चिह्नित नहीं कर सका।",
   "notEnoughTrophiesTitle": "पर्याप्त ट्रॉफी नहीं",

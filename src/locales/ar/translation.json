@@ -1065,6 +1065,24 @@
   "email": "البريد الإلكتروني",
   "creationDate": "تاريخ الإنشاء",
   "myAccount": "حسابي",
+  "inviteFriendModal": {
+  "title": "دعوة صديق",
+  "usernamePlaceholder": "اسم المستخدم",
+  "selectDuration": "اختر المدة",
+  "days": "أيام",
+  "send": "إرسال",
+  "cancel": "إلغاء"
+},
+"notificationsP": {
+  "title": "دعواتي",
+  "loading": "جارٍ تحميل الدعوات...",
+  "noInvitesTitle": "لا توجد دعوات حالياً",
+  "noInvitesSubtitle": "سترى هنا الدعوات التي تتلقاها",
+  "inviteFrom": "دعوة من {{username}}",
+  "inviteDays": "{{days}} يوم",
+  "view": "عرض"
+},
+  "usernameAlreadyInUse":  "اسم المستخدم مستخدم بالفعل",
   "noDescription": "لا يوجد وصف متاح",
   "loadChallengesFailed": "تعذر تحميل التحديات.",
   "participant_plural": "{{count}} مشاركين",

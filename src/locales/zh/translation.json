@@ -1079,11 +1079,29 @@
   "trophiesUsedMessage": "挑战已标记，您的连续完成将正常继续。（已扣除 {{cost}} 个勋章）",
   "unableToMarkWithTrophies": "无法使用勋章标记。",
   "challengeNotFound": "未找到挑战。",
+  "usernameAlreadyInUse":"用户名已被使用",
   "unableToFinalizeChallenge": "无法完成挑战。",
   "errorLoadingSavedChallenges": "无法加载已保存的挑战：{{message}}",
   "email": "电子邮件地址",
   "creationDate": "创建日期",
   "myAccount": "我的账户",
+  "inviteFriendModal": {
+  "title": "邀请好友",
+  "usernamePlaceholder": "用户名",
+  "selectDuration": "选择时长",
+  "days": "天",
+  "send": "发送",
+  "cancel": "取消"
+},
+"notificationsP": {
+  "title": "我的邀请",
+  "loading": "正在加载邀请...",
+  "noInvitesTitle": "暂无邀请",
+  "noInvitesSubtitle": "您收到的邀请将显示在这里",
+  "inviteFrom": "来自 {{username}} 的邀请",
+  "inviteDays": "{{days}} 天",
+  "view": "查看"
+},
   "notificationsPush": {
     "title": "ChallengeTies",
     "morning1": "准备迎接新的挑战了吗？",

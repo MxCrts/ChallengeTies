@@ -19,6 +19,15 @@
   "leaderboardTitle": "Classement",
   "whatsNew": "Nouveautés",
   "home": "Accueil",
+  "notificationsP": {
+  "title": "Mes Invitations",
+  "loading": "Chargement des invitations...",
+  "noInvitesTitle": "Aucune invitation pour le moment",
+  "noInvitesSubtitle": "Vous verrez ici les invitations que vous recevrez",
+  "inviteFrom": "Invitation de {{username}}",
+  "inviteDays": "{{days}} jours",
+  "view": "Voir"
+},
   "profile": "Profil",
   "yourProfile": "Votre profil",
   "addBioHere": "Ajoutez une bio ici",
@@ -285,6 +294,7 @@
   "yourEmail": "Votre email",
   "username": "Nom d’utilisateur",
   "password": "Mot de passe",
+  "usernameAlreadyInUse": "Nom d'utilisateur déjà utilisé",
   "confirmPassword": "Confirmez le mot de passe",
   "signup": "Inscription",
   "alreadyHaveAccount": "Vous avez déjà un compte ?",
@@ -348,6 +358,14 @@
   "completedOn": "Terminé le",
   "historyOf": "Historique",
   "appName": "ChallengeTies",
+  "inviteFriendModal": {
+  "title": "Inviter un ami",
+  "usernamePlaceholder": "Nom d'utilisateur",
+  "selectDuration": "Sélectionner la durée",
+  "days": "jours",
+  "send": "Envoyer",
+  "cancel": "Annuler"
+},
   "alerts": {
     "error": "Erreur",
     "accessDenied": "Accès refusé",

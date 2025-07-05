@@ -379,6 +379,24 @@
     "stats": "Stats",
     "inviteA11y": "Invite a friend to this challenge"
   },
+  "notificationsP": {
+  "title": "My Invitations",
+  "loading": "Loading invitations...",
+  "noInvitesTitle": "No invitations yet",
+  "noInvitesSubtitle": "You will see your received invitations here",
+  "inviteFrom": "Invitation from {{username}}",
+  "inviteDays": "{{days}} days",
+  "view": "View"
+},
+  "inviteFriendModal": {
+  "title": "Invite a Friend",
+  "usernamePlaceholder": "Username",
+  "selectDuration": "Select Duration",
+  "days": "days",
+  "send": "Send",
+  "cancel": "Cancel"
+},
+  "usernameAlreadyInUse": "Username already in use",
   "email": "Email address",
   "creationDate": "Creation date",
   "myAccount": "My account",

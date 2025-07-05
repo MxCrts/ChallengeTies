@@ -32,6 +32,10 @@ import {
   query,
   collection,
   where,
+  getDocs,
+  setDoc,
+  serverTimestamp,
+  arrayUnion,
 } from "firebase/firestore";
 import { db, auth } from "../../constants/firebase-config";
 import ConfettiCannon from "react-native-confetti-cannon";
@@ -50,6 +54,7 @@ import designSystem from "../../theme/designSystem";
 import BackButton from "../../components/BackButton";
 import { useTranslation } from "react-i18next";
 import InvitationModal from "../../components/InvitationModal";
+import InviteFriendModal from "@/components/InviteFriendModal";
 import share from "react-native-share";
 import {
   createInvitation,
@@ -182,6 +187,9 @@ export default function ChallengeDetails() {
   const [pendingFavorite, setPendingFavorite] = useState<boolean | null>(null);
   const confettiRef = useRef<ConfettiCannon | null>(null);
   const [currentMonth, setCurrentMonth] = useState(new Date());
+  const [isInviteDisabled, setIsInviteDisabled] = useState(false);
+const [inviteFriendModalVisible, setInviteFriendModalVisible] = useState(false);
+
 
   useEffect(() => {
     if (!id) return;
@@ -452,6 +460,41 @@ export default function ChallengeDetails() {
     return () => unsubscribe();
   }, [id, isCurrentUserInviter, t]);
 
+  useEffect(() => {
+  const checkIfInviteShouldBeDisabled = async () => {
+    if (!auth.currentUser?.uid || !id) return;
+
+    try {
+      const challengeDocRef = doc(
+        db,
+        "users",
+        auth.currentUser.uid,
+        "CurrentChallenges",
+        id
+      );
+      const docSnap = await getDoc(challengeDocRef);
+
+      if (docSnap.exists()) {
+        const data = docSnap.data();
+        if (data.duo === true) {
+          setIsInviteDisabled(true);
+        } else {
+          setIsInviteDisabled(false);
+        }
+      } else {
+        // Si le doc n'existe pas, on laisse le bouton actif
+        setIsInviteDisabled(false);
+      }
+    } catch (error) {
+      console.error("❌ Erreur vérification duo:", error);
+      setIsInviteDisabled(false);
+    }
+  };
+
+  checkIfInviteShouldBeDisabled();
+}, [id, currentChallenges]);
+
+
   const isSavedChallenge = (challengeId: string) =>
     savedChallenges.some((ch) => ch.id === challengeId);
 
@@ -618,6 +661,90 @@ export default function ChallengeDetails() {
     setBaseTrophyAmount(finalSelectedDays);
     setCompletionModalVisible(true);
   }, [finalSelectedDays]);
+
+const handleSendInvitation = async (usernameB: string, selectedDays: number) => {
+  try {
+    if (!auth.currentUser) {
+      Alert.alert("Erreur", "Vous devez être connecté.");
+      return;
+    }
+
+    const challengeId = id; // id déjà présent dans ChallengeDetails
+    const userAId = auth.currentUser.uid;
+
+    // Récupérer inviterUsername
+    const inviterSnap = await getDoc(doc(db, "users", userAId));
+    const inviterUsername = inviterSnap.exists()
+      ? inviterSnap.data().username
+      : "Utilisateur";
+
+    // 1️⃣ Chercher User B par username
+    const q = query(
+      collection(db, "users"),
+      where("username", "==", usernameB)
+    );
+    const querySnapshot = await getDocs(q);
+
+    if (querySnapshot.empty) {
+      Alert.alert("Erreur", "Aucun utilisateur trouvé avec ce nom.");
+      return;
+    }
+
+    const userB = querySnapshot.docs[0];
+    const userBId = userB.id;
+
+    // 2️⃣ Vérifier duo pour ce challenge
+    const userBData = userB.data();
+    const currentChallenges = userBData.currentChallenges || [];
+    const challenge = currentChallenges.find(
+      (c: any) => c.id === challengeId
+    );
+
+    if (challenge && challenge.duo === true) {
+      Alert.alert(
+        "Invitation impossible",
+        `Impossible d'envoyer l'invitation car ${usernameB} est déjà en duo pour ce challenge.`
+      );
+      return;
+    }
+
+    // 3️⃣ Créer doc invitation
+    const invitationId = `${userAId}_${userBId}_${challengeId}_${Date.now()}`;
+    const invitationRef = doc(db, "invitations", invitationId);
+
+    await setDoc(invitationRef, {
+      challengeId: challengeId,
+      inviterId: userAId,
+      inviterUsername: inviterUsername,
+      inviteeId: userBId,
+      inviteeUsername: usernameB,
+      selectedDays: selectedDays,
+      status: "pending",
+      createdAt: serverTimestamp(),
+    });
+
+    // 4️⃣ Ajouter un field côté userB (notifications / invitations)
+    await updateDoc(doc(db, "users", userBId), {
+      invitations: arrayUnion(invitationId),
+    });
+
+    // 5️⃣ Notifier User B via Expo Notifications
+    await Notifications.scheduleNotificationAsync({
+      content: {
+        title: "Nouvelle invitation 🎉",
+        body: `Vous avez reçu une invitation de ${inviterUsername} pour un challenge en duo.`,
+      },
+      trigger: null,
+    });
+
+    // ✅ Confirmer User A
+    Alert.alert("Invitation envoyée", "Invitation bien envoyée ✅");
+
+  } catch (error: any) {
+    console.error("❌ handleSendInvitation error:", error);
+    Alert.alert("Erreur", error.message);
+  }
+};
 
   const handleClaimTrophiesWithoutAd = useCallback(async () => {
     try {
@@ -1171,6 +1298,36 @@ export default function ChallengeDetails() {
                 {t("challengeDetails.stats")}
               </Text>
             </TouchableOpacity>
+            <TouchableOpacity
+  style={[
+    styles.actionIcon,
+    { opacity: isInviteDisabled ? 0.5 : 1 },
+  ]}
+  onPress={() => {
+    if (!isInviteDisabled) {
+      setInviteFriendModalVisible(true);
+    }
+  }}
+  accessibilityRole="button"
+  accessibilityLabel={t("challengeDetails.inviteFriend")}
+  disabled={isInviteDisabled}
+  testID="invite-friend-button"
+>
+  <Ionicons
+    name="person-add-outline"
+    size={normalizeSize(22)}
+    color={currentTheme.colors.textSecondary}
+  />
+  <Text
+    style={[
+      styles.actionIconLabel,
+      { color: currentTheme.colors.textSecondary },
+    ]}
+  >
+    {t("challengeDetails.inviteFriend")}
+  </Text>
+</TouchableOpacity>
+
           </Animated.View>
         </Animated.View>
       </ScrollView>
@@ -1220,6 +1377,12 @@ export default function ChallengeDetails() {
         onClose={() => setInvitationModalVisible(false)}
         clearInvitation={() => setInvitation(null)} // 👈 ICI
       />
+      <InviteFriendModal
+  visible={inviteFriendModalVisible}
+  onClose={() => setInviteFriendModalVisible(false)}
+  challengeId={id}
+  onSendInvitation={handleSendInvitation}
+/>
     </LinearGradient>
   );
 }
