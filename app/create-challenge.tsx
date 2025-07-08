@@ -1,510 +1,217 @@
-import React, { useState, useCallback, useEffect } from "react";
+import React, { useState, useCallback, useEffect } from 'react';
 import {
   View,
   Text,
   TextInput,
   StyleSheet,
   TouchableOpacity,
-  Alert,
   ScrollView,
   Image,
   Dimensions,
   StatusBar,
   Platform,
-} from "react-native";
-import { Picker } from "@react-native-picker/picker";
-import * as ImagePicker from "expo-image-picker";
-import { useRouter } from "expo-router";
-import {
-  collection,
-  addDoc,
-  updateDoc,
-  arrayUnion,
-  doc,
-} from "firebase/firestore";
-import { auth, db } from "../constants/firebase-config";
-import { LinearGradient } from "expo-linear-gradient";
-import { Ionicons } from "@expo/vector-icons";
-import { checkForAchievements } from "../helpers/trophiesHelpers";
-import { useTheme } from "../context/ThemeContext";
-import { useTranslation } from "react-i18next";
-import { Theme } from "../theme/designSystem";
-import designSystem from "../theme/designSystem";
-import {
-  InterstitialAd,
-  AdEventType,
-  TestIds,
-} from "react-native-google-mobile-ads";
-import AsyncStorage from "@react-native-async-storage/async-storage";
+  Modal,
+  Pressable,
+} from 'react-native';
+import { Picker } from '@react-native-picker/picker';
+import * as ImagePicker from 'expo-image-picker';
+import { useRouter } from 'expo-router';
+import { collection, addDoc, updateDoc, arrayUnion, doc } from 'firebase/firestore';
+import { auth, db } from '../constants/firebase-config';
+import { useTheme } from '../context/ThemeContext';
+import { useTranslation } from 'react-i18next';
+import designSystem from '../theme/designSystem';
+import * as Haptics from 'expo-haptics';
+import { Ionicons } from '@expo/vector-icons';
+import { LinearGradient } from 'expo-linear-gradient';
 
-const { width: SCREEN_WIDTH } = Dimensions.get("window");
-const SPACING = 18;
+const { width: SCREEN_WIDTH } = Dimensions.get('window');
+const SPACING = 20;
+const NORMALIZE = (s: number) => Math.round((SCREEN_WIDTH / 375) * s);
 
-const normalizeSize = (size: number) => {
-  const scale = SCREEN_WIDTH / 375;
-  return Math.round(size * scale);
-};
-
-const defaultDaysOptions = [7, 15, 21, 30, 60, 90, 180, 365];
-
-const categories = [
-  "Health",
-  "Fitness",
-  "Finance",
-  "Productivity",
-  "Creativity",
-  "Education",
-  "Career",
-  "Lifestyle",
-  "Social",
-  "Miscellaneous",
-];
-
-const adUnitId = __DEV__
-  ? TestIds.INTERSTITIAL
-  : "ca-app-pub-4725616526467159/6097960289";
-
-const interstitial = InterstitialAd.createForAdRequest(adUnitId, {
-  requestNonPersonalizedAdsOnly: false,
-});
+const categories = ['Santé','Fitness','Finance','Mode de Vie','Éducation','Créativité','Carrière','Social','Productivité','Écologie','Motivation','Développement Personnel','Discipline',"État d'esprit",'Autres'];
 
 export default function CreateChallenge() {
-  const { t, i18n } = useTranslation();
+  const { t } = useTranslation();
   const { theme } = useTheme();
-  const isDarkMode = theme === "dark";
-  const currentTheme: Theme = isDarkMode
-    ? designSystem.darkTheme
-    : designSystem.lightTheme;
+  const isDark = theme === 'dark';
+  const colors = isDark ? designSystem.darkTheme.colors : designSystem.lightTheme.colors;
   const router = useRouter();
-  const [title, setTitle] = useState("");
-  const [description, setDescription] = useState("");
+
+  const [title, setTitle] = useState('');
+  const [description, setDescription] = useState('');
   const [category, setCategory] = useState(categories[0]);
   const [imageUri, setImageUri] = useState<string | null>(null);
-  const [adLoaded, setAdLoaded] = useState(false);
-
-  const checkAdCooldown = async () => {
-    const lastAdTime = await AsyncStorage.getItem("lastInterstitialTime");
-    if (!lastAdTime) return true;
-    const now = Date.now();
-    const cooldownMs = 5 * 60 * 1000; // 5 minutes
-    return now - parseInt(lastAdTime) > cooldownMs;
-  };
-
-  const markAdShown = async () => {
-    await AsyncStorage.setItem("lastInterstitialTime", Date.now().toString());
-  };
+  const [submitting, setSubmitting] = useState(false);
+  const [previewVisible, setPreviewVisible] = useState(false);
 
   useEffect(() => {
-    const unsubscribe = interstitial.addAdEventListener(
-      AdEventType.LOADED,
-      () => {
-        setAdLoaded(true);
-      }
-    );
-    interstitial.load();
-    return () => unsubscribe();
+    (async () => {
+      const { status } = await ImagePicker.requestMediaLibraryPermissionsAsync();
+      if (status !== 'granted') alert(t('permissionDenied'));
+    })();
   }, []);
 
-  useEffect(() => {
-    // rien à faire ici, mais on dépend de i18n.language pour re-rendre
-  }, [i18n.language]);
-
   const pickImage = useCallback(async () => {
-    try {
-      const result = await ImagePicker.launchImageLibraryAsync({
-        mediaTypes: ImagePicker.MediaTypeOptions.Images,
-        allowsEditing: true,
-        quality: 1,
-      });
-      if (!result.canceled && result.assets && result.assets[0].uri) {
-        setImageUri(result.assets[0].uri);
-      }
-    } catch (error) {
-      console.error("Erreur lors de la sélection d'image:", error);
-      Alert.alert(t("error"), t("imagePickFailed"));
-    }
-  }, [t]);
+    await Haptics.selectionAsync();
+    const result = await ImagePicker.launchImageLibraryAsync({ mediaTypes: ImagePicker.MediaTypeOptions.Images, quality: 0.8 });
+    if (!result.canceled) setImageUri(result.assets[0].uri);
+  }, []);
+
+  const removeImage = () => {
+    setImageUri(null);
+    Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
+  };
 
   const handleSubmit = useCallback(async () => {
-    if (!title.trim() || !description.trim() || !category) {
-      Alert.alert(
-        t("error"),
-        t("allFieldsRequired", {
-          defaultValue:
-            "Tous les champs sont requis (l'image est optionnelle).",
-        })
-      );
-      return;
-    }
-
+    if (!title.trim() || !description.trim()) return;
+    setSubmitting(true);
+    await Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
     try {
-      const currentUser = auth.currentUser;
-      if (!currentUser) {
-        Alert.alert(
-          t("error"),
-          t("mustBeLoggedIn", {
-            defaultValue: "Vous devez être connecté pour créer un défi.",
-          })
-        );
-        return;
-      }
-
-      const chatId = title.trim().toLowerCase().replace(/\s+/g, "_");
-
-      const challengeData = {
+      const user = auth.currentUser;
+      if (!user) throw new Error('not_logged');
+      const chatId = title.trim().toLowerCase().replace(/\s+/g, '_');
+      const data = {
         title: title.trim(),
         description: description.trim(),
         category,
-        daysOptions: defaultDaysOptions,
-        imageUrl: imageUri || "https://via.placeholder.com/150",
+        daysOptions: [7,15,21,30,60,90,180,365],
+        imageUrl: imageUri || '',
         participantsCount: 0,
         createdAt: new Date(),
-        creatorId: currentUser.uid,
+        creatorId: user.uid,
         chatId,
-        usersTakingChallenge: [] as string[],
-        approved: false, // Ajout du champ approved: false
+        usersTakingChallenge: [],
+        approved: false,
       };
-
-      const challengeRef = await addDoc(
-        collection(db, "challenges"),
-        challengeData
-      );
-      const challengeId = challengeRef.id;
-
-      const userRef = doc(db, "users", currentUser.uid);
-      await updateDoc(userRef, {
-        createdChallenges: arrayUnion({ id: challengeId, ...challengeData }),
+      const ref = await addDoc(collection(db, 'challenges'), data);
+      await updateDoc(doc(db, 'users', user.uid), {
+        createdChallenges: arrayUnion({ id: ref.id, ...data }),
       });
-
-      await checkForAchievements(currentUser.uid);
-
-      const canShowAd = await checkAdCooldown();
-      if (canShowAd && adLoaded) {
-        interstitial.show();
-        await markAdShown();
-        setAdLoaded(false);
-        interstitial.load();
-      }
-
-      Alert.alert(
-        t("success"),
-        t("challengeSubmitted", {
-          defaultValue:
-            "Ton défi a été soumis et est en attente de validation.",
-        })
-      );
-      router.push("/explore");
-    } catch (error) {
-      console.error("Erreur lors de la création du défi :", error);
-      Alert.alert(
-        t("error"),
-        t("challengeCreateFailed", {
-          defaultValue: "Impossible de créer le défi.",
-        })
-      );
+      router.push('/explore');
+    } catch (e) {
+      console.error(e);
+      alert(t('challengeCreateFailed'));
+    } finally {
+      setSubmitting(false);
     }
-  }, [title, description, category, imageUri, adLoaded, router, t]);
+  }, [title, description, category, imageUri]);
 
-  const isFormValid =
-    title.trim().length > 0 && description.trim().length > 0 && !!category;
+  const valid = !!title.trim() && !!description.trim();
 
   return (
-    <LinearGradient
-      colors={[
-        currentTheme.colors.background,
-        currentTheme.colors.cardBackground,
-      ]}
-      style={styles.container}
-      start={{ x: 0, y: 0 }}
-      end={{ x: 1, y: 1 }}
-    >
-      <StatusBar
-        translucent
-        backgroundColor="transparent"
-        barStyle={isDarkMode ? "light-content" : "dark-content"}
-      />
-      <ScrollView contentContainerStyle={styles.scrollContainer}>
-        <View style={styles.header}>
-          <TouchableOpacity
-            onPress={() => router.back()}
-            style={styles.backButton}
-            accessibilityLabel={t("tips.goBack")}
-            testID="back-button"
-          >
-            <Ionicons
-              name="arrow-back"
-              size={normalizeSize(24)}
-              color={currentTheme.colors.secondary}
+    <LinearGradient colors={[colors.background, colors.cardBackground]} style={styles.wrapper}>
+      <StatusBar barStyle={isDark ? 'light-content' : 'dark-content'} />
+
+      <View style={[styles.header, { backgroundColor: colors.primary }]}>
+        <TouchableOpacity onPress={() => router.back()} style={styles.backBtn}>
+          <Ionicons name="arrow-back" size={NORMALIZE(24)} color="#FFF" />
+        </TouchableOpacity>
+        <Text style={styles.title}>{t('createYourChallenge')}</Text>
+      </View>
+
+      <ScrollView contentContainerStyle={styles.content}>
+        {[{
+          label: t('challengeTitle'),
+          value: title,
+          setter: setTitle,
+          multiline: false,
+          placeholder: t('challengeTitle'),
+        }, {
+          label: t('challengeDescription'),
+          value: description,
+          setter: setDescription,
+          multiline: true,
+          placeholder: t('challengeDescription'),
+        }].map((field, i) => (
+          <View key={i} style={[styles.card, { backgroundColor: colors.cardBackground }]}>
+            <Text style={[styles.label, { color: colors.textSecondary }]}>{field.label}</Text>
+            <TextInput
+              style={[styles.input, { color: colors.textPrimary }]}
+              placeholder={field.placeholder}
+              placeholderTextColor={colors.textSecondary}
+              value={field.value}
+              onChangeText={field.setter}
+              multiline={field.multiline}
             />
-          </TouchableOpacity>
-          <Ionicons
-            name="create-outline"
-            size={normalizeSize(64)}
-            color={currentTheme.colors.secondary}
-            style={styles.headerIcon}
-          />
-          <Text
-            style={[
-              styles.headerTitle,
-              { color: currentTheme.colors.textPrimary },
-            ]}
-          >
-            {t("createYourChallenge", {
-              defaultValue: "Create Your Challenge",
-            })}
-          </Text>
-          <Text
-            style={[
-              styles.headerSubtitle,
-              { color: currentTheme.colors.textSecondary },
-            ]}
-          >
-            {t("inspireOthers", {
-              defaultValue: "Inspire others with a challenge that excites !",
-            })}
-          </Text>
-        </View>
+          </View>
+        ))}
 
-        <TextInput
-          style={[
-            styles.input,
-            {
-              borderWidth: 2,
-              borderColor: currentTheme.colors.border,
-              backgroundColor: currentTheme.colors.overlay,
-              color: currentTheme.colors.textPrimary,
-            },
-          ]}
-          placeholder={t("challengeTitle", { defaultValue: "Challenge Title" })}
-          placeholderTextColor={currentTheme.colors.textSecondary}
-          value={title}
-          onChangeText={setTitle}
-          accessibilityLabel={t("challengeTitle")}
-          testID="title-input"
-        />
-
-        <TextInput
-          style={[
-            styles.input,
-            styles.textArea,
-            {
-              borderWidth: 2,
-              borderColor: currentTheme.colors.border,
-              backgroundColor: currentTheme.colors.overlay,
-              color: currentTheme.colors.textPrimary,
-            },
-          ]}
-          placeholder={t("challengeDescription", {
-            defaultValue: "Description",
-          })}
-          placeholderTextColor={currentTheme.colors.textSecondary}
-          value={description}
-          onChangeText={setDescription}
-          multiline
-          numberOfLines={4}
-          accessibilityLabel={t("challengeDescription")}
-          testID="description-input"
-        />
-
-        <View style={styles.dropdownContainer}>
-          <Text
-            style={[
-              styles.dropdownLabel,
-              { color: currentTheme.colors.textSecondary },
-            ]}
-          >
-            {t("category")}
-          </Text>
-          <View
-            style={[
-              styles.pickerWrapper,
-              {
-                borderWidth: 2,
-                borderColor: currentTheme.colors.border,
-                backgroundColor: currentTheme.colors.overlay,
-              },
-            ]}
-          >
-            <Picker
-              selectedValue={category}
-              onValueChange={setCategory}
-              style={[
-                styles.picker,
-                { color: currentTheme.colors.textPrimary },
-              ]}
-              itemStyle={{ color: currentTheme.colors.textPrimary }}
-              accessibilityLabel={t("selectCategory")}
-              testID="category-picker"
-            >
-              {categories.map((cat) => (
-                <Picker.Item
-                  label={t(`categories.${cat}`, { defaultValue: cat })}
-                  value={cat}
-                  key={cat}
-                />
-              ))}
+        <View style={[styles.card, { backgroundColor: colors.cardBackground }]}>
+          <Text style={[styles.label, { color: colors.textSecondary }]}>{t('category')}</Text>
+          <View style={[styles.pickerWrap, { borderColor: colors.border }]}>
+            <Picker selectedValue={category} onValueChange={v => setCategory(v)} style={{ color: colors.textPrimary }}>
+              {categories.map(c => <Picker.Item key={c} label={c} value={c} />)}
             </Picker>
           </View>
         </View>
 
-        <TouchableOpacity
-          style={[
-            styles.imagePickerButton,
-            {
-              borderWidth: 2,
-              borderColor: currentTheme.colors.border,
-              backgroundColor: currentTheme.colors.overlay,
-            },
-          ]}
-          onPress={pickImage}
-          accessibilityLabel={t("uploadImage", {
-            defaultValue: "Upload Image (optional)",
-          })}
-          testID="image-picker-button"
-        >
+        <TouchableOpacity style={[styles.imageBtn, { borderColor: colors.border }]} onPress={pickImage}>
           {imageUri ? (
-            <Image source={{ uri: imageUri }} style={styles.imagePreview} />
+            <View style={styles.imageContainer}>
+              <Image source={{ uri: imageUri }} style={styles.image} />
+              <TouchableOpacity style={styles.removeIcon} onPress={removeImage}>
+                <Ionicons name="close-circle" size={NORMALIZE(24)} color={colors.primary} />
+              </TouchableOpacity>
+            </View>
           ) : (
-            <Text
-              style={[
-                styles.imagePickerText,
-                { color: currentTheme.colors.textSecondary },
-              ]}
-            >
-              {t("uploadImageOptional", {
-                defaultValue: "Upload Image (Optional)",
-              })}
-            </Text>
+            <Text style={[styles.upload, { color: colors.primary }]}>{t('uploadImageOptional')}</Text>
           )}
         </TouchableOpacity>
 
-        <TouchableOpacity
-          disabled={!isFormValid}
-          onPress={handleSubmit}
-          accessibilityLabel={t("createChallengeButton")}
-          testID="submit-button"
-          style={[
-            styles.submitButton,
-            // on baisse l’opacité si invalide
-            { opacity: isFormValid ? 1 : 0.5 },
-          ]}
-        >
-          <LinearGradient
-            colors={[
-              currentTheme.colors.primary,
-              currentTheme.colors.secondary,
-            ]}
-            style={styles.submitGradient}
-            start={{ x: 0, y: 0 }}
-            end={{ x: 1, y: 1 }}
-          >
-            <Text
-              style={[
-                styles.submitText,
-                { color: currentTheme.colors.textPrimary },
-              ]}
-            >
-              {t("createChallengeButton")}
-            </Text>
-          </LinearGradient>
-        </TouchableOpacity>
+        <View style={styles.buttons}>
+          <TouchableOpacity style={[styles.btn, { backgroundColor: colors.secondary }]} disabled={!valid || submitting} onPress={() => setPreviewVisible(true)}>
+            <Text style={styles.btnText}>{t('preview')}</Text>
+          </TouchableOpacity>
+          <TouchableOpacity style={[styles.btn, { backgroundColor: valid ? colors.primary : colors.border }]} disabled={!valid || submitting} onPress={handleSubmit}>
+            <Text style={styles.btnText}>{submitting ? t('submitting') : t('create')}</Text>
+          </TouchableOpacity>
+        </View>
       </ScrollView>
+
+      <Modal visible={previewVisible} transparent animationType="fade" onRequestClose={() => setPreviewVisible(false)}>
+        <View style={styles.modalBg}>
+          <View style={[styles.modalCard, { backgroundColor: colors.cardBackground }]}>
+            <Text style={[styles.modalTitle, { color: colors.textPrimary }]}>{t('preview')}</Text>
+            <ScrollView>
+              <Text style={[styles.modalText, { color: colors.textPrimary }]}>{title}</Text>
+              <Text style={[styles.modalText, { color: colors.textSecondary }]}>{description}</Text>
+              <Text style={[styles.modalText, { color: colors.textSecondary }]}>{t('category')}: {category}</Text>
+              {imageUri && <Image source={{ uri: imageUri }} style={styles.modalImage} />}
+            </ScrollView>
+            <TouchableOpacity style={{ marginTop: SPACING/2 }} onPress={() => setPreviewVisible(false)}>
+              <Text style={[styles.close, { color: colors.primary }]}>{t('close')}</Text>
+            </TouchableOpacity>
+          </View>
+        </View>
+      </Modal>
     </LinearGradient>
   );
 }
 
 const styles = StyleSheet.create({
-  container: { flex: 1 },
-  scrollContainer: {
-    padding: SPACING,
-    alignItems: "center",
-    paddingBottom: SPACING * 2,
-  },
-  header: {
-    alignItems: "center",
-    marginBottom: SPACING,
-    width: "100%",
-  },
-  backButton: {
-    position: "absolute",
-    top:
-      Platform.OS === "android" ? StatusBar.currentHeight ?? SPACING : SPACING,
-    left: SPACING,
-    zIndex: 10,
-  },
-  headerIcon: {
-    marginBottom: SPACING,
-    marginTop: SPACING,
-  },
-  headerTitle: {
-    fontSize: normalizeSize(26),
-    fontFamily: "Comfortaa_700Bold",
-    textAlign: "center",
-  },
-  headerSubtitle: {
-    fontSize: normalizeSize(16),
-    textAlign: "center",
-    marginBottom: SPACING,
-    lineHeight: normalizeSize(22),
-    fontFamily: "Comfortaa_400Regular",
-  },
-  input: {
-    width: "100%",
-    borderRadius: normalizeSize(12),
-    padding: SPACING,
-    marginBottom: SPACING,
-    fontSize: normalizeSize(16),
-    fontFamily: "Comfortaa_400Regular",
-  },
-  textArea: {
-    height: normalizeSize(100),
-    textAlignVertical: "top",
-  },
-  dropdownContainer: {
-    width: "100%",
-    marginBottom: SPACING,
-  },
-  dropdownLabel: {
-    marginBottom: SPACING / 2,
-    fontSize: normalizeSize(14),
-    fontFamily: "Comfortaa_400Regular",
-  },
-  pickerWrapper: {
-    borderRadius: normalizeSize(12),
-    overflow: "hidden",
-  },
-  picker: {
-    width: "100%",
-  },
-  imagePickerButton: {
-    padding: SPACING,
-    borderRadius: normalizeSize(12),
-    alignItems: "center",
-    justifyContent: "center",
-    marginBottom: SPACING,
-    width: "100%",
-  },
-  imagePickerText: {
-    fontSize: normalizeSize(16),
-    fontFamily: "Comfortaa_400Regular",
-  },
-  imagePreview: {
-    width: "100%",
-    height: normalizeSize(150),
-    borderRadius: normalizeSize(12),
-  },
-  submitButton: {
-    width: "100%",
-    borderRadius: normalizeSize(12),
-    marginTop: SPACING,
-  },
-  submitGradient: {
-    padding: SPACING,
-    borderRadius: normalizeSize(12),
-    alignItems: "center",
-  },
-  submitText: {
-    fontSize: normalizeSize(18),
-    fontFamily: "Comfortaa_700Bold",
-  },
+  wrapper: { flex: 1 },
+  header: { flexDirection: 'row', alignItems: 'center', padding: SPACING, paddingTop: Platform.OS === 'android' ? StatusBar.currentHeight : SPACING },
+  backBtn: { padding: SPACING/2 },
+  title: { flex: 1, textAlign: 'center', color: '#FFF', fontSize: NORMALIZE(20), fontWeight: '700' },
+  content: { padding: SPACING, paddingBottom: SPACING*2 },
+  card: { borderRadius: 12, padding: SPACING, marginBottom: SPACING, shadowColor: '#000', shadowOffset: {width:0,height:4}, shadowOpacity:0.05, shadowRadius:6, elevation:3 },
+  label: { fontSize: NORMALIZE(13), marginBottom: SPACING/2, textTransform: 'uppercase', fontWeight: '600' },
+  input: { fontSize: NORMALIZE(16), minHeight: NORMALIZE(40) },
+  textArea: { minHeight: NORMALIZE(80) },
+  pickerWrap: { borderWidth: 1, borderRadius: 8 },
+  imageBtn: { borderWidth: 1.2, borderRadius: 12, padding: SPACING, alignItems: 'center', justifyContent: 'center', marginBottom: SPACING },
+  upload: { fontSize: NORMALIZE(14), fontWeight: '500' },
+  imageContainer: { width: '100%', height: NORMALIZE(170), borderRadius: 10, overflow: 'hidden', position: 'relative' },
+  image: { width: '100%', height: '100%' },
+  removeIcon: { position:'absolute', top:8, right:8 },
+  buttons: { flexDirection: 'row', justifyContent: 'space-between', marginTop: SPACING },
+  btn: { flex:1, padding: SPACING*0.8, borderRadius: 24, alignItems: 'center', marginHorizontal: SPACING/4 },
+  btnText: { color: '#FFF', fontSize: NORMALIZE(15), fontWeight: '600' },
+  modalBg: { flex:1, backgroundColor:'rgba(0,0,0,0.5)', justifyContent:'center', alignItems:'center', padding:SPACING },
+  modalCard:{ width:'90%', maxHeight:'80%', borderRadius:16, padding:SPACING, shadowColor:'#000', shadowOffset:{width:0,height:6}, shadowOpacity:0.1, shadowRadius:8, elevation:5 },
+  modalTitle:{ fontSize: NORMALIZE(18), fontWeight:'700', marginBottom:SPACING, textAlign:'center' },
+  modalText:{ fontSize: NORMALIZE(15), marginBottom: SPACING/2 },
+  modalImage:{ width:'100%', height: NORMALIZE(120), borderRadius:10, marginVertical: SPACING/2 },
+  close:{ fontSize: NORMALIZE(15), fontWeight:'600', textAlign:'center' },
 });

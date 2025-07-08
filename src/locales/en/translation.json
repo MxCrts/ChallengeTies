@@ -379,6 +379,7 @@
     "stats": "Stats",
     "inviteA11y": "Invite a friend to this challenge"
   },
+   "explore": "Explore",
   "email": "Email address",
   "creationDate": "Creation date",
   "myAccount": "My account",
@@ -1072,7 +1073,8 @@
     "Motivation": "Motivation",
     "Discipline": "Discipline",
     "Développement Personnel": "Personal Development",
-    "État d'esprit": "Mindset"
+    "État d'esprit": "Mindset",
+    "Autres":"Miscellaneous"
   },
   "unableToMarkChallenge": "Unable to mark the challenge.",
   "streakResetTitle": "Streak Reset",

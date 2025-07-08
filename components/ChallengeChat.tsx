@@ -19,6 +19,8 @@ import { auth, db } from "../constants/firebase-config";
 import { useChat } from "../context/ChatContext";
 import designSystem from "../theme/designSystem";
 import { useTranslation } from "react-i18next";
+import { useTheme } from "../context/ThemeContext";
+
 import {
   collection,
   addDoc,
@@ -31,8 +33,11 @@ import {
 } from "firebase/firestore";
 
 const { width } = Dimensions.get("window");
-const { lightTheme } = designSystem;
-const currentTheme = lightTheme;
+const { theme } = useTheme();
+ const isDarkMode = theme === "dark";
+ const currentTheme = isDarkMode
+   ? designSystem.darkTheme
+   : designSystem.lightTheme;
 
 // Interface pour les messages, alignée avec ChatContext.tsx
 interface Message {
@@ -227,7 +232,7 @@ export default function ChallengeChat() {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: "#f8f9fa",
+    backgroundColor: currentTheme.colors.background,
   },
   header: {
     flexDirection: "row",
@@ -270,11 +275,13 @@ const styles = StyleSheet.create({
     padding: 10,
   },
   myMessageBubble: {
-    backgroundColor: "#ed8f03", // Utilise l'orange du thème light
+     backgroundColor: currentTheme.colors.primary,
     marginLeft: "25%",
   },
   otherMessageBubble: {
-    backgroundColor: "#e9ecef",
+    backgroundColor: isDarkMode
+     ? currentTheme.colors.cardBackground
+     : "#e9ecef",
     marginRight: "25%",
   },
   username: {
@@ -287,7 +294,7 @@ const styles = StyleSheet.create({
   messageText: {
     fontSize: 15,
     fontFamily: "Comfortaa_400Regular",
-    color: "#333",
+    color: isDarkMode ? "#000000" : "#333",
   },
   inputContainer: {
     flexDirection: "row",

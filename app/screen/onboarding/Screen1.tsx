@@ -1,4 +1,4 @@
-import React, { useRef, useEffect } from "react";
+import React, { useRef, useEffect, useState  } from "react";
 import {
   View,
   Text,
@@ -6,6 +6,7 @@ import {
   TouchableOpacity,
   Dimensions,
   Animated,
+  ActivityIndicator,
 } from "react-native";
 import { useRouter } from "expo-router";
 import { Ionicons } from "@expo/vector-icons";
@@ -45,6 +46,9 @@ export default function Screen1() {
   const challengeTiesScale = useRef(new Animated.Value(0.8)).current;
   const finalTextOpacity = useRef(new Animated.Value(0)).current;
   const buttonOpacity = useRef(new Animated.Value(0)).current;
+  const [isNavigating, setIsNavigating] = useState(false);
+  const fadeAnim = useRef(new Animated.Value(1)).current;
+
 
   useEffect(() => {
     // 0s -> 5s : fade in du texte d'intro
@@ -113,23 +117,31 @@ export default function Screen1() {
   }, []);
 
   const handleFinishOnboarding = async () => {
+  setIsNavigating(true);
+  // démarrer le fade
+  Animated.timing(fadeAnim, {
+    toValue: 0,
+    duration: 400,
+    useNativeDriver: true,
+  }).start(async () => {
     try {
       await AsyncStorage.removeItem("hasCompletedTutorialAfterSignup");
       setIsTutorialActive(true);
       setTutorialStep(0);
       router.replace("/");
     } catch (error) {
-      console.error("Erreur lors de l'initialisation du tutoriel :", error);
+      console.error("Erreur…", error);
     }
-  };
+  });
+};
+
 
   if (!fontsLoaded) return null;
 
   return (
-    <View style={styles.fullscreenContainer}>
-      <StatusBar translucent backgroundColor="transparent" />
-
-      <View style={styles.container}>
+    <Animated.View style={[styles.fullscreenContainer, { opacity: fadeAnim }]}>
+    <StatusBar translucent backgroundColor="transparent" />
+    <View style={styles.container}>
         <Video
           ref={videoRef}
           source={require("../../../assets/videos/test4.mp4")}
@@ -186,23 +198,24 @@ export default function Screen1() {
             ChallengeTies
           </Animated.Text>
         </Animated.View>
-        <Animated.View
-          style={[styles.finalTextContainer, { opacity: finalTextOpacity }]}
+        <Animated.View style={[styles.finalTextContainer, { opacity: finalTextOpacity }]}>
+        <Text style={styles.finalText}>{t("Prêt à relever le défi ?")}</Text>
+        <TouchableOpacity
+          style={styles.readyButton}
+          onPress={handleFinishOnboarding}
+          disabled={isNavigating}
         >
-          <Text style={styles.finalText}>Prêt à relever le défi ?</Text>
-          <TouchableOpacity
-            style={styles.readyButton}
-            onPress={handleFinishOnboarding}
-          >
-            <Animated.Text
-              style={[styles.readyButtonText, { opacity: buttonOpacity }]}
-            >
-              Je suis prêt
+          {isNavigating ? (
+            <ActivityIndicator color="#000" />
+          ) : (
+            <Animated.Text style={[styles.readyButtonText, { opacity: buttonOpacity }]}>
+              {t("Je suis prêt")}
             </Animated.Text>
-          </TouchableOpacity>
-        </Animated.View>
-      </View>
+          )}
+        </TouchableOpacity>
+      </Animated.View>
     </View>
+  </Animated.View>
   );
 }
 

@@ -27,6 +27,9 @@ import { useTranslation } from "react-i18next";
 import { BlurView } from "expo-blur";
 import { useTutorial } from "../../context/TutorialContext";
 import Animated, { FadeInUp } from "react-native-reanimated";
+import { useSharedValue, withTiming, useAnimatedStyle } from "react-native-reanimated";
+import { runOnJS } from "react-native-reanimated";
+import { useFocusEffect } from "@react-navigation/native";
 import TutorialModal from "../../components/TutorialModal";
 
 const SPACING = 18;
@@ -75,6 +78,7 @@ export default function FocusScreen() {
   const router = useRouter();
   const { currentChallenges, markToday } = useCurrentChallenges();
   const { theme } = useTheme();
+const scrollViewRef = useRef<ScrollView>(null);
 
   const isDarkMode = theme === "dark";
   const currentTheme: Theme = isDarkMode
@@ -86,6 +90,12 @@ export default function FocusScreen() {
   const [challengeParticipants, setChallengeParticipants] = useState<{
     [key: string]: number;
   }>({});
+  const [isNavigating, setIsNavigating] = useState(false);
+  const fadeAnim = useSharedValue(1);
+ const animatedStyle = useAnimatedStyle(() => ({
+   flex: 1,
+   opacity: fadeAnim.value,
+ }));
 
   const confettiRef = useRef<ConfettiCannon | null>(null);
   const scrollXTop = useRef(new RNAnimated.Value(0)).current;
@@ -146,18 +156,8 @@ export default function FocusScreen() {
   );
 
   const handleNavigateToDetails = (item: CurrentChallengeExtended) => {
-    router.push({
-      pathname: "/challenge-details/[id]",
-      params: {
-        id: item.id,
-        title: item.title,
-        selectedDays: item.selectedDays,
-        completedDays: item.completedDays,
-        category: item.category || t("uncategorized"),
-        description: item.description || t("noDescriptionAvailable"),
-        imageUrl: item.imageUrl,
-      },
-    });
+    navigateWithFade(`/challenge-details/${item.id}?title=${encodeURIComponent(item.title)}&selectedDays=${item.selectedDays}&completedDays=${item.completedDays}&category=${encodeURIComponent(item.category)}&description=${encodeURIComponent(item.description)}&imageUrl=${encodeURIComponent(item.imageUrl||"")}`);
+
   };
 
   useEffect(() => {
@@ -217,6 +217,17 @@ export default function FocusScreen() {
         clearInterval(bottomAutoScrollRef.current);
     };
   }, [notMarkedToday, markedToday, startTopAutoScroll, startBottomAutoScroll]);
+
+  useEffect(() => {
+  fadeAnim.value = withTiming(1, { duration: 300 });
+  setIsNavigating(false);
+}, []);
+
+useFocusEffect(
+  useCallback(() => {
+    scrollViewRef.current?.scrollTo({ y: 0, animated: false });
+  }, [])
+);
 
   const handleScrollBeginDragTop = () => {
     if (topAutoScrollRef.current) {
@@ -285,6 +296,19 @@ export default function FocusScreen() {
       </GlobalLayout>
     );
   }
+
+const navigateWithFade = (path: string) => {
+   if (isNavigating) return;
+   setIsNavigating(true);
+  fadeAnim.value = withTiming(0, { duration: 300 }, (finished) => {
+    if (finished) {
+       runOnJS(router.push)(path);
+       // on rétablit l’opacité et le flag
+       fadeAnim.value = 1;
+       runOnJS(setIsNavigating)(false);
+     }
+   });
+ };
 
   const renderTopItem = ({ item }: { item: CurrentChallengeExtended }) => (
     <RNAnimated.View style={styles.topItemWrapper}>
@@ -472,6 +496,7 @@ export default function FocusScreen() {
   );
   return (
     <GlobalLayout>
+      <Animated.View style={animatedStyle}>
       <LinearGradient
         colors={[
           currentTheme.colors.background,
@@ -491,7 +516,7 @@ export default function FocusScreen() {
                   borderColor: isDarkMode ? currentTheme.colors.border : "#FFF",
                 },
               ]}
-              onPress={() => router.push("/profile")}
+              onPress={() => navigateWithFade("/profile")}
             >
               <Ionicons
                 name="trophy-outline"
@@ -513,7 +538,7 @@ export default function FocusScreen() {
                 styles.plusButton,
                 { backgroundColor: currentTheme.colors.secondary },
               ]}
-              onPress={() => router.push("/create-challenge")}
+              onPress={() => navigateWithFade("/create-challenge")}
             >
               <Ionicons
                 name="add-circle-outline"
@@ -525,6 +550,7 @@ export default function FocusScreen() {
         </View>
 
         <ScrollView
+        ref={scrollViewRef}
           style={styles.scrollContainer}
           contentContainerStyle={styles.scrollContent}
           showsVerticalScrollIndicator={false}
@@ -641,7 +667,7 @@ export default function FocusScreen() {
                           styles.linkText,
                           { color: currentTheme.colors.secondary },
                         ]}
-                        onPress={() => router.push("/explore")}
+                        onPress={() => navigateWithFade("/explore")}
                       >
                         {t("orJoinChallenge")}
                       </Text>
@@ -750,6 +776,7 @@ export default function FocusScreen() {
           </BlurView>
         )}
       </LinearGradient>
+      </Animated.View>
     </GlobalLayout>
   );
 }

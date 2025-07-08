@@ -864,7 +864,8 @@
     "Motivation": "Motivazione",
     "Discipline": "Disciplina",
     "Développement Personnel": "Sviluppo personale",
-    "État d'esprit": "Mentalità"
+    "État d'esprit": "Mentalità",
+    "Autres": "Altro"
   },
   "challenges": {
     "eatHealthy": {
@@ -1062,6 +1063,7 @@
   "filterByOrigin": "Filtra per {{origin}}",
   "Existing": "Esistenti",
   "Created": "Create",
+  "explore": "Esplora",
   "email": "Indirizzo email",
   "creationDate": "Data di creazione",
   "myAccount": "Il mio account",

@@ -855,22 +855,6 @@
     "profile_completed": "Profil complété : prêt·e à briller."
   },
   "profile_completed": "Profil complété",
-  "categories": {
-    "Santé": "Santé",
-    "Fitness": "Fitness",
-    "Finance": "Finance",
-    "Mode de Vie": "Mode de Vie",
-    "Éducation": "Éducation",
-    "Créativité": "Créativité",
-    "Carrière": "Carrière",
-    "Social": "Social",
-    "Productivité": "Productivité",
-    "Écologie": "Écologie",
-    "Motivation": "Motivation",
-    "Discipline": "Discipline",
-    "Développement Personnel": "Développement Personnel",
-    "État d'esprit": "État d'esprit"
-  },
   "challenges": {
     "eatHealthy": {
       "title": "Mangez sainement chaque jour",
@@ -1128,6 +1112,7 @@
     "updated": "Localisation mise à jour avec succès",
     "error": "Échec de la mise à jour de la localisation"
   },
+  "explore": "Explorer",
   "discoverAppInFewSteps": "Découvre l'app en quelques étapes",
   "homePageDescription": "Bienvenue ! Gère {challenges}, atteins {goals} et navigue via {access} pour commencer ton aventure.",
   "profileDescription": "Consulte tes {stats}, découvre tes {badges} et {personalize} pour rendre l’app à ton image.",
@@ -1224,5 +1209,22 @@
       "next": "Suivant",
       "finish": "C’est parti !"
     }
+  },
+  "categories": {
+    "Santé": "Santé",
+    "Fitness": "Fitness",
+    "Finance": "Finance",
+    "Mode de Vie": "Mode de Vie",
+    "Éducation": "Éducation",
+    "Créativité": "Créativité",
+    "Carrière": "Carrière",
+    "Social": "Social",
+    "Productivité": "Productivité",
+    "Écologie": "Écologie",
+    "Motivation": "Motivation",
+    "Discipline": "Discipline",
+    "Développement Personnel": "Développement Personnel",
+    "État d'esprit": "État d'esprit",
+    "Autres": "Autres"
   }
 }

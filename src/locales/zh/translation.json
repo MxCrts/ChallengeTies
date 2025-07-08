@@ -864,7 +864,8 @@
     "Motivation": "动机",
     "Discipline": "自律",
     "Développement Personnel": "个人成长",
-    "État d'esprit": "心态"
+    "État d'esprit": "心态",
+    "Autres": "其他"
   },
   "challenges": {
     "eatHealthy": {
@@ -1100,6 +1101,7 @@
     "invalid": "无效的邀请",
     "joinedChallenge": "你已成功加入挑战！"
   },
+  "explore": "探索",
   "settingsPage": {
     "location": "定位",
     "handleLocation": "启用或禁用定位",

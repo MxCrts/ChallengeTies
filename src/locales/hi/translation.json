@@ -864,7 +864,8 @@
     "Motivation": "प्रेरणा",
     "Discipline": "अनुशासन",
     "Développement Personnel": "व्यक्तिगत विकास",
-    "État d'esprit": "मानसिकता"
+    "État d'esprit": "मानसिकता",
+    "Autres": "अन्य"
   },
   "challenges": {
     "eatHealthy": {
@@ -1091,6 +1092,7 @@
     "evening1": "अपने दिन का अंत एक त्वरित चैलेंज के साथ करें!",
     "evening2": "सोने से पहले एक और चैलेंज?"
   },
+  "explore": "खोजें",
   "invitation": {
     "title": "चुनौती में शामिल हों",
     "subtitle": "आपको चुनौती {challengeId} में शामिल होने के लिए आमंत्रित किया गया है!",

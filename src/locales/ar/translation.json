@@ -864,7 +864,8 @@
     "Motivation": "الدافعية",
     "Discipline": "الانضباط",
     "Développement Personnel": "التنمية الشخصية",
-    "État d'esprit": "العقلية"
+    "État d'esprit": "العقلية",
+    "Autres": "متفرقات"
   },
   "challenges": {
     "eatHealthy": {
@@ -1065,6 +1066,7 @@
   "email": "البريد الإلكتروني",
   "creationDate": "تاريخ الإنشاء",
   "myAccount": "حسابي",
+  "explore": "استكشاف",
   "noDescription": "لا يوجد وصف متاح",
   "loadChallengesFailed": "تعذر تحميل التحديات.",
   "participant_plural": "{{count}} مشاركين",

@@ -40,6 +40,7 @@ import ChatWelcomeModal from "../../components/ChatWelcomeModal";
 const { width: SCREEN_WIDTH, height: SCREEN_HEIGHT } = Dimensions.get("window");
 const SPACING = 18;
 
+
 const normalizeSize = (size: number) => {
   const baseWidth = 375;
   const scale = Math.min(Math.max(SCREEN_WIDTH / baseWidth, 0.7), 1.8);
@@ -75,13 +76,15 @@ const getDynamicStyles = (currentTheme: Theme, isDarkMode: boolean) => ({
       : currentTheme.colors.primary,
   },
   otherMessageBubble: {
-    backgroundColor: currentTheme.colors.cardBackground,
+   backgroundColor: isDarkMode
+     ? currentTheme.colors.cardBackground
+     : "#e9ecef",
     borderColor: isDarkMode
       ? currentTheme.colors.border
       : currentTheme.colors.border,
   },
   messageText: {
-    color: currentTheme.colors.textPrimary,
+    color: isDarkMode ? "#000" : "#333",
   },
   username: {
     color: currentTheme.colors.secondary,
@@ -137,14 +140,15 @@ export default function ChallengeChat() {
   const flatListRef = useRef<FlatList>(null);
   const insets = useSafeAreaInsets();
   const { theme } = useTheme();
-  const isDarkMode = theme === "dark";
-  const currentTheme: Theme = isDarkMode
-    ? designSystem.darkTheme
-    : designSystem.lightTheme;
+const isDarkMode = theme === "dark";
+const currentTheme = isDarkMode
+  ? designSystem.darkTheme
+  : designSystem.lightTheme;
   const dynamicStyles = getDynamicStyles(currentTheme, isDarkMode);
   const [isListReady, setIsListReady] = useState(false);
   const [modalVisible, setModalVisible] = useState(false);
 
+  
   useEffect(() => {
     const checkRulesAcceptance = async () => {
       const userId = auth.currentUser?.uid;

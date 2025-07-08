@@ -377,6 +377,7 @@
     "stats": "Statistiken",
     "inviteA11y": "Freund zu dieser Herausforderung einladen"
   },
+  "explore": "Entdecken",
   "email": "E-Mail-Adresse",
   "creationDate": "Erstellungsdatum",
   "myAccount": "Mein Konto",
@@ -867,7 +868,8 @@
     "Motivation": "Motivation",
     "Discipline": "Disziplin",
     "Développement Personnel": "Persönliche Entwicklung",
-    "État d'esprit": "Einstellung"
+    "État d'esprit": "Einstellung",
+    "Autres":  "Sonstiges"
   },
   "challenges": {
     "eatHealthy": {

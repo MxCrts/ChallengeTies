@@ -55,6 +55,7 @@ import { useTutorial } from "../../context/TutorialContext";
 import AsyncStorage from "@react-native-async-storage/async-storage";
 import TutorialModal from "../../components/TutorialModal";
 import { Image as ExpoImage } from "expo-image";
+import { useFocusEffect } from '@react-navigation/native';
 
 const { width: SCREEN_WIDTH, height: SCREEN_HEIGHT } = Dimensions.get("window");
 
@@ -197,7 +198,10 @@ export default function HomeScreen() {
   const [isMounted, setIsMounted] = useState(false);
   const { theme } = useTheme();
   const [layoutKey, setLayoutKey] = useState(0);
+  const [isNavigating, setIsNavigating] = useState(false);
+  const fadeAnim = useSharedValue(1);
   const { setLanguage } = useLanguage();
+  const scrollViewRef = useRef<ScrollView>(null);
   const {
     tutorialStep,
     isTutorialActive,
@@ -244,7 +248,6 @@ export default function HomeScreen() {
     }
   }, [user, setLanguage]);
 
-  const fadeAnim = useSharedValue(0);
   const adUnitId = __DEV__
     ? TestIds.BANNER
     : "ca-app-pub-4725616526467159/3887969618";
@@ -341,6 +344,15 @@ export default function HomeScreen() {
     };
   }, [challenges, startAutoScroll]);
 
+useFocusEffect(
+  useCallback(() => {
+    // 1) on remonte verticalement en haut
+    scrollViewRef.current?.scrollTo({ y: 0, animated: false });
+    // 2) on replace la FlatList horizontale sur SPACER
+    flatListRef.current?.scrollToOffset({ offset: SPACER, animated: false });
+  }, [])
+);
+
   const handleScrollBeginDrag = () => {
     if (autoScrollIntervalRef.current) {
       clearInterval(autoScrollIntervalRef.current);
@@ -364,12 +376,14 @@ export default function HomeScreen() {
   };
 
   const safeNavigate = (path: string) => {
-    if (isMounted) {
-      router.push(path);
-    } else {
-      console.warn("Navigation bloquée : composant pas encore monté.");
-    }
-  };
+  if (!isMounted || isNavigating) return;
+  setIsNavigating(true);
+
+  fadeAnim.value = withTiming(0, { duration: 300 }, () => {
+    router.push(path);
+  });
+};
+
 
   const renderChallenge = ({
     item,
@@ -444,6 +458,7 @@ export default function HomeScreen() {
         backgroundColor="transparent"
         translucent
       />
+      <Animated.View style={[{ flex: 1 }, useAnimatedStyle(() => ({ opacity: fadeAnim.value }))]}>
       <LinearGradient
         colors={[
           currentTheme.colors.background,
@@ -453,6 +468,7 @@ export default function HomeScreen() {
       >
         <ScrollView
           key={layoutKey}
+          ref={scrollViewRef}
           contentContainerStyle={staticStyles.scrollContent}
           bounces={false}
           overScrollMode="never"
@@ -751,6 +767,7 @@ export default function HomeScreen() {
           </BlurView>
         )}
       </LinearGradient>
+      </Animated.View>
     </SafeAreaView>
   );
 }

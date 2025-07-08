@@ -153,7 +153,7 @@ export default function PrivacyPolicy() {
             style={styles.logoContainer}
           >
             <Image
-              source={require("../../assets/images/icon.png")}
+              source={require("../../assets/images/icon2.png")}
               style={styles.logo}
               resizeMode="contain"
               accessibilityLabel={t("privacyPolicy.logoAlt")}

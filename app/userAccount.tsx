@@ -76,7 +76,7 @@ export default function UserAccount() {
         <SafeAreaView style={styles.safeArea}>
           {/* Back Button */}
           <TouchableOpacity
-            onPress={() => router.push("/")}
+            onPress={() => router.back()}
             style={styles.backButton}
             accessibilityLabel={t("goBack")}
             testID="back-button"

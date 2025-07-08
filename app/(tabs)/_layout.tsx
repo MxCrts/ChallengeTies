@@ -16,6 +16,7 @@ import Animated, {
 import { LinearGradient } from "expo-linear-gradient";
 import { useTheme } from "../../context/ThemeContext";
 import designSystem from "../../theme/designSystem";
+import { useTranslation } from "react-i18next";
 
 const { width: SCREEN_WIDTH } = Dimensions.get("window");
 
@@ -132,6 +133,7 @@ const FocusTabIcon = ({
 
 
 const TabsLayout = () => {
+  const { t } = useTranslation();
   const [hasUnclaimedAchievements, setHasUnclaimedAchievements] =
     useState(false);
   const insets = useSafeAreaInsets();
@@ -204,7 +206,7 @@ tabBarInactiveTintColor: isDarkMode ? "#FFDD95" : currentTheme.colors.textSecond
         <Tabs.Screen
           name="index"
           options={{
-            tabBarLabel: "Home",
+           tabBarLabel: t("home"),
             tabBarIcon: ({ color, focused, size }) => (
               <AnimatedTabIcon
                 name="home"
@@ -219,7 +221,7 @@ tabBarInactiveTintColor: isDarkMode ? "#FFDD95" : currentTheme.colors.textSecond
         <Tabs.Screen
           name="profile"
           options={{
-            tabBarLabel: "Profile",
+            tabBarLabel: t("profile"),
             tabBarIcon: ({ color, focused, size }) => (
               <View style={styles.profileIconContainer}>
                 <AnimatedTabIcon
@@ -253,7 +255,7 @@ tabBarInactiveTintColor: isDarkMode ? "#FFDD95" : currentTheme.colors.textSecond
         <Tabs.Screen
           name="explore"
           options={{
-            tabBarLabel: "Explore",
+            tabBarLabel: t("explore"),
             tabBarIcon: ({ color, focused, size }) => (
               <AnimatedTabIcon
                 name="compass"
@@ -268,7 +270,7 @@ tabBarInactiveTintColor: isDarkMode ? "#FFDD95" : currentTheme.colors.textSecond
         <Tabs.Screen
           name="Settings"
           options={{
-            tabBarLabel: "Settings",
+             tabBarLabel: t("settings"),
             tabBarIcon: ({ color, focused, size }) => (
               <AnimatedTabIcon
                 name="settings"

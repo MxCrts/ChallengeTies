@@ -602,9 +602,9 @@ export default function AchievementsScreen() {
                   ]}
                 />
               </View>
-              <Text style={styles.progressText}>
-                {t("trophiesProgress", { completed: done, total })}
-              </Text>
+              <Text style={[styles.progressText, { color: currentTheme.colors.secondary }]}>
+              {t("trophiesProgress", { completed: done, total })}
+            </Text>
             </View>
             <SectionList
               sections={sections}

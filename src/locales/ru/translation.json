@@ -828,7 +828,8 @@
     "Motivation": "Мотивация",
     "Discipline": "Дисциплина",
     "Développement Personnel": "Личностное развитие",
-    "État d'esprit": "Менталитет"
+    "État d'esprit": "Менталитет",
+    "Autres": "Другое"
   },
   "challenges": {
     "eatHealthy": {
@@ -1064,6 +1065,7 @@
     "invalid": "Недействительное приглашение",
     "joinedChallenge": "Вы успешно присоединились к вызову!"
   },
+   "explore": "Исследовать",
   "settingsPage": {
     "location": "Геолокация",
     "handleLocation": "Включить или отключить геолокацию",

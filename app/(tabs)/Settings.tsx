@@ -29,7 +29,8 @@ import CustomHeader from "@/components/CustomHeader";
 import GlobalLayout from "../../components/GlobalLayout";
 import i18n from "../../i18n";
 import { fetchAndSaveUserLocation } from "../../services/locationService";
-import { Link } from "expo-router"; // Ajout de l'import pour Link
+import { Link } from "expo-router"; 
+import { useFocusEffect } from "@react-navigation/native";
 
 const SPACING = 18; // Aligné avec ExploreScreen.tsx, Notifications.tsx, etc.
 const { width: SCREEN_WIDTH, height: SCREEN_HEIGHT } = Dimensions.get("window");
@@ -108,7 +109,7 @@ export default function Settings() {
 
   const [isSubscribed, setIsSubscribed] = useState(true);
   const unsubscribeRef = useRef<(() => void) | null>(null);
-
+const scrollRef = useRef<ScrollView>(null);
   const [notificationsEnabled, setNotificationsEnabled] = useState(true);
   const [locationEnabled, setLocationEnabled] = useState(true);
   const isDarkMode = theme === "dark";
@@ -135,6 +136,12 @@ export default function Settings() {
       i18next.off("languageChanged", handleLanguageChanged);
     };
   }, [i18next]);
+
+ useFocusEffect(
+    React.useCallback(() => {
+      scrollRef.current?.scrollTo({ y: 0, animated: false });
+    }, [])
+  );
 
   useEffect(() => {
     const userId = auth.currentUser?.uid;
@@ -196,7 +203,7 @@ export default function Settings() {
     if (value) {
       try {
         await fetchAndSaveUserLocation();
-        Alert.alert(t("location.enabled"), t("location.updated"));
+        Alert.alert(t("settingsPage.enabled"), t("settingsPage.updated"));
       } catch (error) {
         console.error("Erreur localisation:", error);
         Alert.alert(t("error"), t("location.error"));
@@ -297,6 +304,7 @@ export default function Settings() {
           <CustomHeader title={t("settings")} />
         </View>
         <ScrollView
+        ref={scrollRef}
           contentContainerStyle={styles.scrollContent}
           showsVerticalScrollIndicator={false}
         >
@@ -369,35 +377,46 @@ export default function Settings() {
               </View>
             </Animated.View>
             <Animated.View
-              entering={FadeInUp.delay(400)}
-              style={[styles.card, dynamicStyles.card]}
-            >
-              <View style={styles.settingItem}>
-                <Text style={[styles.settingLabel, dynamicStyles.settingLabel]}>
-                  {t("language")}
-                </Text>
-                <Picker
-                  selectedValue={language}
-                  style={[styles.languagePicker, dynamicStyles.languagePicker]}
-                  onValueChange={(itemValue) => {
-                    setLanguage(itemValue);
-                    i18next.changeLanguage(itemValue);
-                    savePreferences({ language: itemValue });
-                  }}
-                  accessibilityLabel={t("language")}
-                >
-                  <Picker.Item label="العربية" value="ar" />
-                  <Picker.Item label="Deutsch" value="de" />
-                  <Picker.Item label="English" value="en" />
-                  <Picker.Item label="Español" value="es" />
-                  <Picker.Item label="Français" value="fr" />
-                  <Picker.Item label="हिन्दी" value="hi" />
-                  <Picker.Item label="Italiano" value="it" />
-                  <Picker.Item label="Русский" value="ru" />
-                  <Picker.Item label="中文" value="zh" />
-                </Picker>
-              </View>
-            </Animated.View>
+  entering={FadeInUp.delay(300)}
+  style={[styles.card, dynamicStyles.card]}
+>
+  <View style={styles.settingItem}>
+    <Text style={[styles.settingLabel, dynamicStyles.settingLabel]}>
+      {t("language")}
+    </Text>
+    {/* NOUVEAU wrapper pour donner du flex au Picker */}
+    <View style={styles.pickerContainer}>
+      <Picker
+        selectedValue={language}
+        
+        style={[styles.languagePicker, dynamicStyles.languagePicker]}
+        itemStyle={{
+          fontSize: normalizeSize(18),
+          height: normalizeSize(60),          // aligne chaque item sur la hauteur du picker
+          textAlignVertical: "center",
+          lineHeight: normalizeSize(24),
+        }}
+        onValueChange={(itemValue) => {
+          setLanguage(itemValue);
+          i18next.changeLanguage(itemValue);
+          savePreferences({ language: itemValue });
+        }}
+        accessibilityLabel={t("language")}
+      >
+        <Picker.Item label="العربية" value="ar" />
+        <Picker.Item label="Deutsch" value="de" />
+        <Picker.Item label="English" value="en" />
+        <Picker.Item label="Español" value="es" />
+        <Picker.Item label="Français" value="fr" />
+        <Picker.Item label="हिन्दी" value="hi" />
+        <Picker.Item label="Italiano" value="it" />
+        <Picker.Item label="Русский" value="ru" />
+        <Picker.Item label="中文" value="zh" />
+      </Picker>
+    </View>
+  </View>
+</Animated.View>
+
           </Animated.View>
 
           {/* Section Compte */}
@@ -725,6 +744,12 @@ const styles = StyleSheet.create({
     paddingVertical: normalizeSize(14),
     paddingHorizontal: SPACING,
   },
+  pickerContainer: {
+   flex: 1,
+   overflow: "hidden",
+   justifyContent: "center",      // on garde le centrage vertical
+    alignItems: "flex-end", 
+ },
   settingLabel: {
     fontSize: normalizeSize(18),
     fontFamily: "Comfortaa_400Regular",
@@ -733,12 +758,13 @@ const styles = StyleSheet.create({
     transform: [{ scale: SCREEN_WIDTH < 360 ? 0.85 : 1 }],
   },
   languagePicker: {
-  width: SCREEN_WIDTH * 0.4,
-  height: normalizeSize(50),
-  fontFamily: "Comfortaa_400Regular",
-  fontSize: normalizeSize(16),
-  lineHeight: normalizeSize(20),
-  paddingVertical: normalizeSize(2),
+   width: SCREEN_WIDTH * 0.4,         // largeur fixe pour éviter la coupure
+    height: normalizeSize(60),
+    textAlignVertical: "center",
+    fontFamily: "Comfortaa_400Regular",
+    fontSize: normalizeSize(16),
+    lineHeight: normalizeSize(20),
+    paddingVertical: normalizeSize(2),
 },
   accountButton: {
     borderRadius: normalizeSize(16),

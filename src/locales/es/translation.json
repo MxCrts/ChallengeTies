@@ -600,6 +600,7 @@
   "mysteriousChallenge": "Desafío misterioso",
   "logoChallengeTies": "Logo de ChallengeTies",
   "defyYourLimits": "Desafía tus límites",
+  "explore": "Explorar",
   "joinVibrantCommunity": "Únete a una comunidad vibrante y supera tus límites cada día.",
   "launchAdventure": "Iniciar aventura",
   "popularChallenges": "Desafíos populares",
@@ -867,7 +868,8 @@
     "Motivation": "Motivación",
     "Discipline": "Disciplina",
     "Développement Personnel": "Desarrollo personal",
-    "État d'esprit": "Mentalidad"
+    "État d'esprit": "Mentalidad",
+    "Autres": "Otros"
   },
   "challenges": {
     "eatHealthy": {
