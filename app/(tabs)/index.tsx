@@ -19,8 +19,14 @@ import {
   PixelRatio,
   Platform,
 } from "react-native";
+import  {
+  useAnimatedStyle,
+  interpolate,
+  Extrapolate,
+} from "react-native-reanimated";
+import type { ViewStyle } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
-import { Animated as RNAnimated } from "react-native";
+import Animated from "react-native-reanimated";
 import { useRouter } from "expo-router";
 import { collection, getDocs, query, where } from "firebase/firestore";
 import { db, auth } from "../../constants/firebase-config";
@@ -28,12 +34,10 @@ import { LinearGradient } from "expo-linear-gradient";
 import { onAuthStateChanged, User } from "firebase/auth";
 import { Video, ResizeMode } from "expo-av";
 import { Image } from "expo-image";
-import Animated, {
+import  {
   useSharedValue,
   withTiming,
-  useAnimatedStyle,
   FadeInUp,
-  interpolate,
   SharedValue,
 } from "react-native-reanimated";
 import { Ionicons } from "@expo/vector-icons";
@@ -49,13 +53,13 @@ import {
 import { fetchAndSaveUserLocation } from "../../services/locationService";
 import { doc, getDoc } from "firebase/firestore";
 import { useLanguage } from "../../context/LanguageContext";
-import i18n from "../../i18n";
 import { BlurView } from "expo-blur";
 import { useTutorial } from "../../context/TutorialContext";
 import AsyncStorage from "@react-native-async-storage/async-storage";
 import TutorialModal from "../../components/TutorialModal";
-import { Image as ExpoImage } from "expo-image";
-import { useFocusEffect } from '@react-navigation/native';
+import ThreeDCarousel from '../../components/ThreeDCarousel';
+
+
 
 const { width: SCREEN_WIDTH, height: SCREEN_HEIGHT } = Dimensions.get("window");
 
@@ -70,7 +74,7 @@ const ITEM_WIDTH = Math.min(SCREEN_WIDTH * 0.85, normalize(400));
 const ITEM_HEIGHT = Math.min(SCREEN_HEIGHT * 0.32, normalize(240));
 const CARD_MARGIN = normalize(6);
 const EFFECTIVE_ITEM_WIDTH = ITEM_WIDTH + CARD_MARGIN * 2;
-const SPACER = (SCREEN_WIDTH - ITEM_WIDTH) / 2;
+
 const SPACING = normalize(15);
 const STATUS_BAR_HEIGHT = Platform.select({
   ios: normalize(44),
@@ -91,7 +95,6 @@ interface Challenge {
 interface ChallengeCardProps {
   item: Challenge;
   index: number;
-  scrollX: SharedValue<number>;
   safeNavigate: (path: string) => void;
   currentTheme: Theme;
   dynamicStyles: any;
@@ -99,92 +102,43 @@ interface ChallengeCardProps {
 }
 
 const ChallengeCard: React.FC<ChallengeCardProps> = ({
-  item,
-  index,
-  scrollX,
-  safeNavigate,
-  currentTheme,
-  dynamicStyles,
-  t,
-}) => {
-  const cardStyle = useAnimatedStyle(() => {
-    const scale = interpolate(
-      scrollX.value,
-      [
-        (index - 1) * EFFECTIVE_ITEM_WIDTH,
-        index * EFFECTIVE_ITEM_WIDTH,
-        (index + 1) * EFFECTIVE_ITEM_WIDTH,
-      ],
-      [0.9, 1, 0.9],
-      { extrapolateLeft: "clamp", extrapolateRight: "clamp" }
-    );
-    return {
-      transform: [{ scale }],
-    };
-  });
-
-  return (
-    <Animated.View entering={FadeInUp.delay(index * 20)}>
-      <Animated.View
-        style={[
-          staticStyles.challengeCard,
-          cardStyle,
-          dynamicStyles.challengeCard,
-        ]}
+   item, index, safeNavigate, currentTheme, dynamicStyles, t,
+ }) => {
+   return (
+     <Animated.View
+       entering={FadeInUp.delay(index * 100)}
+       style={[staticStyles.challengeCard, dynamicStyles.challengeCard]}
+     >
+      <TouchableOpacity
+        onPress={() => safeNavigate(`/challenge-details/${item.id}?title=${encodeURIComponent(item.title)}&category=${encodeURIComponent(item.category)}&description=${encodeURIComponent(item.description)}`)}
+        activeOpacity={0.9}
+        accessibilityLabel={`${t("viewChallengeDetails")} ${item.title}`}
+        testID={`challenge-card-${index}`}
       >
-        <TouchableOpacity
-          onPress={() =>
-            safeNavigate(
-              `/challenge-details/${item.id}?title=${encodeURIComponent(
-                item.title
-              )}&category=${encodeURIComponent(
-                item.category
-              )}&description=${encodeURIComponent(item.description)}`
-            )
-          }
-          activeOpacity={0.9}
-          accessibilityLabel={`${t("viewChallengeDetails")} ${item.title}`}
-          testID={`challenge-card-${index}`}
+        <Image
+          source={{ uri: item.imageUrl }}
+          style={staticStyles.challengeImage}
+          cachePolicy="memory-disk"
+          priority="high"
+          contentFit="cover"
+        />
+        <LinearGradient
+          colors={[currentTheme.colors.overlay, "rgba(0,0,0,0.9)"]}
+          style={staticStyles.overlay}
         >
-          <Image
-            source={{ uri: item.imageUrl }}
-            style={staticStyles.challengeImage}
-            cachePolicy="memory-disk"
-            priority="high"
-            contentFit="cover"
-          />
-          <LinearGradient
-            colors={[currentTheme.colors.overlay, "rgba(0,0,0,0.9)"]}
-            style={staticStyles.overlay}
-          >
-            <Text
-              style={[
-                staticStyles.challengeTitle,
-                dynamicStyles.challengeTitle,
-              ]}
-              numberOfLines={2}
-              accessibilityRole="header"
-            >
-              {item.title}
+          <Text style={[staticStyles.challengeTitle, dynamicStyles.challengeTitle]} numberOfLines={2} accessibilityRole="header">
+            {item.title}
+          </Text>
+          {item.day !== undefined && (
+            <Text style={[staticStyles.challengeDay, dynamicStyles.challengeDay]}>
+              {t("day")} {item.day}
             </Text>
-            {item.day !== undefined && (
-              <Text
-                style={[staticStyles.challengeDay, dynamicStyles.challengeDay]}
-              >
-                {t("day")} {item.day}
-              </Text>
-            )}
-            <Text
-              style={[
-                staticStyles.challengeCategory,
-                dynamicStyles.challengeCategory,
-              ]}
-            >
-              {item.category}
-            </Text>
-          </LinearGradient>
-        </TouchableOpacity>
-      </Animated.View>
+          )}
+          <Text style={[staticStyles.challengeCategory, dynamicStyles.challengeCategory]}>
+            {item.category}
+          </Text>
+        </LinearGradient>
+      </TouchableOpacity>
     </Animated.View>
   );
 };
@@ -197,11 +151,9 @@ export default function HomeScreen() {
   const [user, setUser] = useState<User | null>(null);
   const [isMounted, setIsMounted] = useState(false);
   const { theme } = useTheme();
+const scrollX = useSharedValue(0);
   const [layoutKey, setLayoutKey] = useState(0);
-  const [isNavigating, setIsNavigating] = useState(false);
-  const fadeAnim = useSharedValue(1);
   const { setLanguage } = useLanguage();
-  const scrollViewRef = useRef<ScrollView>(null);
   const {
     tutorialStep,
     isTutorialActive,
@@ -215,15 +167,6 @@ export default function HomeScreen() {
     ? designSystem.darkTheme
     : designSystem.lightTheme;
 
-  useEffect(() => {
-    if (challenges.length > 0) {
-      challenges.forEach((challenge) => {
-        if (challenge.imageUrl) {
-          ExpoImage.prefetch(challenge.imageUrl);
-        }
-      });
-    }
-  }, [challenges]);
 
   useEffect(() => {
     if (user) {
@@ -248,6 +191,7 @@ export default function HomeScreen() {
     }
   }, [user, setLanguage]);
 
+  const fadeAnim = useSharedValue(0);
   const adUnitId = __DEV__
     ? TestIds.BANNER
     : "ca-app-pub-4725616526467159/3887969618";
@@ -300,7 +244,7 @@ export default function HomeScreen() {
           approved: data?.approved,
         };
       });
-      setChallenges(fetched.slice(0, 20));
+      setChallenges(fetched.slice(0, 8));
       await AsyncStorage.setItem("challenges_cache", JSON.stringify(fetched));
     } catch (error) {
       console.error("Erreur lors de la récupération des défis :", error);
@@ -314,94 +258,14 @@ export default function HomeScreen() {
     if (user) fetchChallenges();
   }, [user, i18n.language]);
 
-  const flatListRef = useRef<RNAnimated.FlatList<any>>(null);
-  const scrollX = useSharedValue(0);
-  const currentIndexRef = useRef<number>(0);
-  const autoScrollIntervalRef = useRef<ReturnType<typeof setInterval> | null>(
-    null
-  );
-
-  const startAutoScroll = useCallback(() => {
-    if (challenges.length <= 1) return;
-    if (autoScrollIntervalRef.current)
-      clearInterval(autoScrollIntervalRef.current);
-    autoScrollIntervalRef.current = setInterval(() => {
-      let nextIndex = currentIndexRef.current + 1;
-      if (nextIndex >= challenges.length) nextIndex = 0;
-      currentIndexRef.current = nextIndex;
-      flatListRef.current?.scrollToOffset({
-        offset: nextIndex * EFFECTIVE_ITEM_WIDTH,
-        animated: true,
-      });
-    }, 4000);
-  }, [challenges]);
-
-  useEffect(() => {
-    startAutoScroll();
-    return () => {
-      if (autoScrollIntervalRef.current)
-        clearInterval(autoScrollIntervalRef.current);
-    };
-  }, [challenges, startAutoScroll]);
-
-useFocusEffect(
-  useCallback(() => {
-    // 1) on remonte verticalement en haut
-    scrollViewRef.current?.scrollTo({ y: 0, animated: false });
-    // 2) on replace la FlatList horizontale sur SPACER
-    flatListRef.current?.scrollToOffset({ offset: SPACER, animated: false });
-  }, [])
-);
-
-  const handleScrollBeginDrag = () => {
-    if (autoScrollIntervalRef.current) {
-      clearInterval(autoScrollIntervalRef.current);
-      autoScrollIntervalRef.current = null;
-    }
-  };
-
-  const handleMomentumScrollEnd = (
-    event: NativeSyntheticEvent<NativeScrollEvent>
-  ) => {
-    const offsetX = event.nativeEvent.contentOffset.x;
-    const index = Math.round(offsetX / EFFECTIVE_ITEM_WIDTH);
-    currentIndexRef.current = index;
-    flatListRef.current?.scrollToOffset({
-      offset: index * EFFECTIVE_ITEM_WIDTH,
-      animated: true,
-    });
-    if (!autoScrollIntervalRef.current) {
-      setTimeout(() => startAutoScroll(), 2000);
-    }
-  };
-
   const safeNavigate = (path: string) => {
-  if (!isMounted || isNavigating) return;
-  setIsNavigating(true);
+    if (isMounted) {
+      router.push(path);
+    } else {
+      console.warn("Navigation bloquée : composant pas encore monté.");
+    }
+  };
 
-  fadeAnim.value = withTiming(0, { duration: 300 }, () => {
-    router.push(path);
-  });
-};
-
-
-  const renderChallenge = ({
-    item,
-    index,
-  }: {
-    item: Challenge;
-    index: number;
-  }) => (
-    <ChallengeCard
-      item={item}
-      index={index}
-      scrollX={scrollX}
-      safeNavigate={safeNavigate}
-      currentTheme={currentTheme}
-      dynamicStyles={dynamicStyles}
-      t={t}
-    />
-  );
   const scrollY = useSharedValue(0);
   const headerStyle = useAnimatedStyle(() => ({
     transform: [
@@ -409,42 +273,12 @@ useFocusEffect(
     ],
   }));
 
-  const MAX_DOTS = 20;
-  const dotStyles = Array.from({ length: MAX_DOTS }, (_, index) =>
-    useAnimatedStyle(() => ({
-      opacity: interpolate(
-        scrollX.value,
-        [
-          (index - 1) * EFFECTIVE_ITEM_WIDTH,
-          index * EFFECTIVE_ITEM_WIDTH,
-          (index + 1) * EFFECTIVE_ITEM_WIDTH,
-        ],
-        [0.3, 1, 0.3],
-        {
-          extrapolateLeft: "clamp",
-          extrapolateRight: "clamp",
-        }
-      ),
-    }))
-  );
-
   const handleScroll = useCallback(
     (event: NativeSyntheticEvent<NativeScrollEvent>) => {
       scrollY.value = event.nativeEvent.contentOffset.y;
     },
     []
   );
-
-  useEffect(() => {
-    if (challenges.length > 0) {
-      setTimeout(() => {
-        flatListRef.current?.scrollToOffset({
-          offset: SPACER,
-          animated: false,
-        });
-      }, 200);
-    }
-  }, [challenges]);
 
   const dynamicStyles = useMemo(
     () => getDynamicStyles(currentTheme, isDarkMode),
@@ -458,7 +292,6 @@ useFocusEffect(
         backgroundColor="transparent"
         translucent
       />
-      <Animated.View style={[{ flex: 1 }, useAnimatedStyle(() => ({ opacity: fadeAnim.value }))]}>
       <LinearGradient
         colors={[
           currentTheme.colors.background,
@@ -468,7 +301,6 @@ useFocusEffect(
       >
         <ScrollView
           key={layoutKey}
-          ref={scrollViewRef}
           contentContainerStyle={staticStyles.scrollContent}
           bounces={false}
           overScrollMode="never"
@@ -556,53 +388,26 @@ useFocusEffect(
               />
             ) : challenges.length > 0 ? (
               <>
-                <RNAnimated.FlatList
-                  ref={flatListRef}
-                  data={challenges}
-                  horizontal
-                  decelerationRate="fast"
-                  bounces={false}
-                  snapToInterval={EFFECTIVE_ITEM_WIDTH}
-                  snapToAlignment="center"
-                  removeClippedSubviews={true}
-                  contentContainerStyle={{
-                    paddingHorizontal: SPACER,
-                    justifyContent: "center",
-                    alignItems: "center",
-                    minWidth: SCREEN_WIDTH,
-                  }}
-                  showsHorizontalScrollIndicator={false}
-                  onScroll={(
-                    event: NativeSyntheticEvent<NativeScrollEvent>
-                  ) => {
-                    scrollX.value = event.nativeEvent.contentOffset.x;
-                  }}
-                  scrollEventThrottle={16}
-                  onScrollBeginDrag={handleScrollBeginDrag}
-                  onMomentumScrollEnd={handleMomentumScrollEnd}
-                  renderItem={renderChallenge}
-                  keyExtractor={(item) => item.id}
-                  style={staticStyles.carousel}
-                  initialNumToRender={3}
-                  windowSize={5}
-                  getItemLayout={(data, index) => ({
-                    length: EFFECTIVE_ITEM_WIDTH,
-                    offset: EFFECTIVE_ITEM_WIDTH * index,
-                    index,
-                  })}
-                />
-                <View style={staticStyles.pagination}>
-                  {challenges.slice(0, MAX_DOTS).map((_, index) => (
-                    <Animated.View
-                      key={index}
-                      style={[
-                        staticStyles.dot,
-                        dynamicStyles.dot,
-                        dotStyles[index],
-                      ]}
+                {challenges.length > 0 && (
+                  <ThreeDCarousel
+                  data={challenges.slice(0, 8)}        // exactement 8 items
+                  itemWidth={ITEM_WIDTH}
+                  spacing={CARD_MARGIN * 2}
+                  autoRotateInterval={4000}
+                  dotColor={currentTheme.colors.secondary}
+                  renderItem={({ item, index }) => (
+                    <ChallengeCard
+                      item={item}
+                      index={index}
+                      safeNavigate={safeNavigate}
+                      currentTheme={currentTheme}
+                      dynamicStyles={dynamicStyles}
+                      t={t}
                     />
-                  ))}
-                </View>
+                  )}
+                />
+
+          )}
               </>
             ) : (
               <Animated.View
@@ -767,7 +572,6 @@ useFocusEffect(
           </BlurView>
         )}
       </LinearGradient>
-      </Animated.View>
     </SafeAreaView>
   );
 }
@@ -870,14 +674,10 @@ const staticStyles = StyleSheet.create({
     textAlign: "center",
     lineHeight: normalize(28),
   },
-  carousel: {
-    marginBottom: normalize(15),
-    height: ITEM_HEIGHT + normalize(50),
-  },
+
   challengeCard: {
     borderRadius: normalize(18),
     overflow: "hidden",
-    marginHorizontal: CARD_MARGIN,
     width: ITEM_WIDTH,
     height: ITEM_HEIGHT,
     shadowColor: "#000",
@@ -923,12 +723,6 @@ const staticStyles = StyleSheet.create({
     marginBottom: normalize(1),
     zIndex: 10,
     elevation: 10,
-  },
-  dot: {
-    width: normalize(8),
-    height: normalize(8),
-    borderRadius: normalize(4),
-    marginHorizontal: normalize(4),
   },
   noChallengesContainer: {
     alignItems: "center",
@@ -1095,9 +889,7 @@ const getDynamicStyles = (currentTheme: Theme, isDarkMode: boolean) => ({
   challengeCategory: {
   color: isDarkMode ? "#CCCCCC" : "#999999",
 },
-  dot: {
-    backgroundColor: currentTheme.colors.secondary,
-  },
+
   heroTitle: {
     color: currentTheme.colors.textPrimary,
   },

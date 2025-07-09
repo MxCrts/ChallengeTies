@@ -27,9 +27,6 @@ import { useTranslation } from "react-i18next";
 import { BlurView } from "expo-blur";
 import { useTutorial } from "../../context/TutorialContext";
 import Animated, { FadeInUp } from "react-native-reanimated";
-import { useSharedValue, withTiming, useAnimatedStyle } from "react-native-reanimated";
-import { runOnJS } from "react-native-reanimated";
-import { useFocusEffect } from "@react-navigation/native";
 import TutorialModal from "../../components/TutorialModal";
 
 const SPACING = 18;
@@ -78,7 +75,6 @@ export default function FocusScreen() {
   const router = useRouter();
   const { currentChallenges, markToday } = useCurrentChallenges();
   const { theme } = useTheme();
-const scrollViewRef = useRef<ScrollView>(null);
 
   const isDarkMode = theme === "dark";
   const currentTheme: Theme = isDarkMode
@@ -90,12 +86,6 @@ const scrollViewRef = useRef<ScrollView>(null);
   const [challengeParticipants, setChallengeParticipants] = useState<{
     [key: string]: number;
   }>({});
-  const [isNavigating, setIsNavigating] = useState(false);
-  const fadeAnim = useSharedValue(1);
- const animatedStyle = useAnimatedStyle(() => ({
-   flex: 1,
-   opacity: fadeAnim.value,
- }));
 
   const confettiRef = useRef<ConfettiCannon | null>(null);
   const scrollXTop = useRef(new RNAnimated.Value(0)).current;
@@ -156,8 +146,18 @@ const scrollViewRef = useRef<ScrollView>(null);
   );
 
   const handleNavigateToDetails = (item: CurrentChallengeExtended) => {
-    navigateWithFade(`/challenge-details/${item.id}?title=${encodeURIComponent(item.title)}&selectedDays=${item.selectedDays}&completedDays=${item.completedDays}&category=${encodeURIComponent(item.category)}&description=${encodeURIComponent(item.description)}&imageUrl=${encodeURIComponent(item.imageUrl||"")}`);
-
+    router.push({
+      pathname: "/challenge-details/[id]",
+      params: {
+        id: item.id,
+        title: item.title,
+        selectedDays: item.selectedDays,
+        completedDays: item.completedDays,
+        category: item.category || t("uncategorized"),
+        description: item.description || t("noDescriptionAvailable"),
+        imageUrl: item.imageUrl,
+      },
+    });
   };
 
   useEffect(() => {
@@ -217,17 +217,6 @@ const scrollViewRef = useRef<ScrollView>(null);
         clearInterval(bottomAutoScrollRef.current);
     };
   }, [notMarkedToday, markedToday, startTopAutoScroll, startBottomAutoScroll]);
-
-  useEffect(() => {
-  fadeAnim.value = withTiming(1, { duration: 300 });
-  setIsNavigating(false);
-}, []);
-
-useFocusEffect(
-  useCallback(() => {
-    scrollViewRef.current?.scrollTo({ y: 0, animated: false });
-  }, [])
-);
 
   const handleScrollBeginDragTop = () => {
     if (topAutoScrollRef.current) {
@@ -296,19 +285,6 @@ useFocusEffect(
       </GlobalLayout>
     );
   }
-
-const navigateWithFade = (path: string) => {
-   if (isNavigating) return;
-   setIsNavigating(true);
-  fadeAnim.value = withTiming(0, { duration: 300 }, (finished) => {
-    if (finished) {
-       runOnJS(router.push)(path);
-       // on rétablit l’opacité et le flag
-       fadeAnim.value = 1;
-       runOnJS(setIsNavigating)(false);
-     }
-   });
- };
 
   const renderTopItem = ({ item }: { item: CurrentChallengeExtended }) => (
     <RNAnimated.View style={styles.topItemWrapper}>
@@ -496,7 +472,6 @@ const navigateWithFade = (path: string) => {
   );
   return (
     <GlobalLayout>
-      <Animated.View style={animatedStyle}>
       <LinearGradient
         colors={[
           currentTheme.colors.background,
@@ -516,7 +491,7 @@ const navigateWithFade = (path: string) => {
                   borderColor: isDarkMode ? currentTheme.colors.border : "#FFF",
                 },
               ]}
-              onPress={() => navigateWithFade("/profile")}
+              onPress={() => router.push("/profile")}
             >
               <Ionicons
                 name="trophy-outline"
@@ -538,7 +513,7 @@ const navigateWithFade = (path: string) => {
                 styles.plusButton,
                 { backgroundColor: currentTheme.colors.secondary },
               ]}
-              onPress={() => navigateWithFade("/create-challenge")}
+              onPress={() => router.push("/create-challenge")}
             >
               <Ionicons
                 name="add-circle-outline"
@@ -550,7 +525,6 @@ const navigateWithFade = (path: string) => {
         </View>
 
         <ScrollView
-        ref={scrollViewRef}
           style={styles.scrollContainer}
           contentContainerStyle={styles.scrollContent}
           showsVerticalScrollIndicator={false}
@@ -667,7 +641,7 @@ const navigateWithFade = (path: string) => {
                           styles.linkText,
                           { color: currentTheme.colors.secondary },
                         ]}
-                        onPress={() => navigateWithFade("/explore")}
+                        onPress={() => router.push("/explore")}
                       >
                         {t("orJoinChallenge")}
                       </Text>
@@ -776,7 +750,6 @@ const navigateWithFade = (path: string) => {
           </BlurView>
         )}
       </LinearGradient>
-      </Animated.View>
     </GlobalLayout>
   );
 }

@@ -442,42 +442,46 @@ export default function LeaderboardScreen() {
               )}
             >
               <TouchableOpacity
-                style={[
-                  styles.tab,
-                  {
-                    backgroundColor:
-                      selectedTab === tab
-                        ? currentTheme.colors.secondary
-                        : isDarkMode
-                        ? currentTheme.colors.cardBackground + "80"
-                        : "#FFFFFF",
-                  },
-                  selectedTab === tab && styles.activeTab,
-                ]}
-                onPress={() => setSelectedTab(tab)}
-                accessibilityLabel={t(`leaderboard.filter.${tab}`)}
-                accessibilityHint={t(`leaderboard.filterHint.${tab}`)}
-                accessibilityRole="button"
-                testID={`tab-${tab}`}
-                activeOpacity={0.7}
-              >
-                <Text
-                  style={[
-                    styles.tabText,
-                    {
-                      color: isDarkMode
-                        ? selectedTab === tab
-                          ? "#000000"
-                          : "#FFFFFF"
-                        : selectedTab === tab
-                        ? "#FFFFFF"
-                        : "#000000",
-                    },
-                  ]}
-                >
-                  {t(`leaderboard.tab.${tab}`)}
-                </Text>
-              </TouchableOpacity>
+    key={tab}
+    onPress={() => setSelectedTab(tab)}
+    activeOpacity={0.7}
+    accessibilityLabel={t(`leaderboard.filter.${tab}`)}
+    accessibilityHint={t(`leaderboard.filterHint.${tab}`)}
+    accessibilityRole="button"
+    testID={`tab-${tab}`}
+    style={[
+      styles.tab,
+      {
+        backgroundColor:
+          selectedTab === tab
+            ? currentTheme.colors.secondary
+            : isDarkMode
+            ? currentTheme.colors.cardBackground + "80"
+            : "#FFFFFF",
+      },
+      selectedTab === tab && styles.activeTab,
+      // Bordure active injectée ici où currentTheme est accessible
+      selectedTab === tab && {
+        borderBottomWidth: normalizeSize(2),
+        borderBottomColor: currentTheme.colors.primary,
+      },
+    ]}
+  >
+    <Text
+      style={[
+        styles.tabText,
+        {
+          color: selectedTab === tab
+            ? "#FFFFFF"
+            : isDarkMode
+            ? "#FFFFFF"
+            : "#000000",
+        },
+      ]}
+    >
+      {t(`leaderboard.tab.${tab}`)}
+    </Text>
+  </TouchableOpacity>
             </Animated.View>
           ))}
         </Animated.View>
@@ -592,9 +596,9 @@ const styles = StyleSheet.create({
     alignSelf: "center",
   },
   tab: {
-    paddingVertical: SPACING * 1.2,
-    paddingHorizontal: SPACING * 1.2,
-    borderRadius: normalizeSize(30),
+    paddingVertical: normalizeSize(10),
+  paddingHorizontal: normalizeSize(14),
+  borderRadius: normalizeSize(6),
     backgroundColor: "transparent",
     elevation: 4,
     minWidth: normalizeSize(100),
@@ -602,10 +606,11 @@ const styles = StyleSheet.create({
     maxWidth: normalizeSize(140),
   },
   activeTab: {
-    shadowOffset: { width: 0, height: normalizeSize(4) },
-    shadowOpacity: 0.25,
-    shadowRadius: normalizeSize(6),
-    elevation: 6,
+    borderBottomWidth: normalizeSize(2),       
+  shadowOffset: { width: 0, height: normalizeSize(2) },
+  shadowOpacity: 0.15,
+  shadowRadius: normalizeSize(4),
+  elevation: 3,
   },
   tabText: {
     fontSize: normalizeFont(15),
@@ -635,7 +640,7 @@ const styles = StyleSheet.create({
     justifyContent: "center",
     marginBottom: SPACING,
     position: "relative",
-    borderWidth: 3,
+    borderWidth: StyleSheet.hairlineWidth,
     borderColor: "#FFD700",
   },
   circleSecond: {
@@ -646,7 +651,7 @@ const styles = StyleSheet.create({
     justifyContent: "center",
     marginBottom: SPACING,
     position: "relative",
-    borderWidth: 2,
+    borderWidth: normalizeSize(1),
     borderColor: "#C0C0C0",
   },
   circleThird: {
@@ -657,21 +662,21 @@ const styles = StyleSheet.create({
     justifyContent: "center",
     marginBottom: SPACING,
     position: "relative",
-    borderWidth: 2,
+    borderWidth: normalizeSize(1),
     borderColor: "#CD7F32",
   },
   profileImage: {
     width: normalizeSize(70),
     height: normalizeSize(70),
     borderRadius: normalizeSize(35),
-    borderWidth: 2.5,
+    borderWidth: normalizeSize(0.5),
     borderColor: "#FFF",
   },
   profileImageFirst: {
     width: normalizeSize(90),
     height: normalizeSize(90),
     borderRadius: normalizeSize(45),
-    borderWidth: 3.5,
+    borderWidth: normalizeSize(0.5),
     borderColor: "#FFF",
   },
   crownIcon: {

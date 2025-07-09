@@ -20,6 +20,7 @@ import {
   StatusBar,
   Platform,
 } from "react-native";
+import { SafeAreaView } from "react-native-safe-area-context";
 import { Ionicons } from "@expo/vector-icons";
 import { useRouter, useLocalSearchParams } from "expo-router";
 import {
@@ -723,11 +724,8 @@ export default function ChallengeDetails() {
       start={{ x: 0, y: 0 }}
       end={{ x: 1, y: 1 }}
     >
-      <StatusBar
-        translucent
-        backgroundColor="transparent"
-        barStyle={isDarkMode ? "light-content" : "dark-content"}
-      />
+     <SafeAreaView style={{ flex: 1, backgroundColor: 'transparent' }} edges={['top', 'bottom']}>
+      <StatusBar hidden translucent backgroundColor="transparent" />
       <ConfettiCannon
         ref={confettiRef}
         count={150}
@@ -753,13 +751,7 @@ export default function ChallengeDetails() {
           />
         </TouchableOpacity>
       </Animated.View>
-      <ScrollView
-        showsVerticalScrollIndicator={false}
-        contentContainerStyle={{ paddingBottom: BANNER_HEIGHT + SPACING * 2 }} // Ajoute un padding bottom pour dépasser la bannière
-      >
-        <View style={styles.headerWrapper}></View>
-        <View style={styles.carouselContainer}>
-          <View style={styles.imageContainer}>
+      <View style={styles.imageContainer}>
             {challengeImage ? (
               <Image
                 source={{ uri: challengeImage }}
@@ -789,6 +781,12 @@ export default function ChallengeDetails() {
               </View>
             )}
           </View>
+      <ScrollView
+        showsVerticalScrollIndicator={false}
+        contentContainerStyle={{ paddingBottom: BANNER_HEIGHT + SPACING * 2 }} 
+      >
+        <View style={styles.carouselContainer}>
+          
         </View>
         <Animated.View
           entering={FadeInUp.delay(100)}
@@ -1077,6 +1075,7 @@ export default function ChallengeDetails() {
                   styles.actionIconLabel,
                   { color: currentTheme.colors.textSecondary },
                 ]}
+       
               >
                 {t("challengeDetails.chat")}
               </Text>
@@ -1118,6 +1117,7 @@ export default function ChallengeDetails() {
                   styles.actionIconLabel,
                   { color: currentTheme.colors.textSecondary },
                 ]}
+        
               >
                 {pendingFavorite !== null
                   ? pendingFavorite
@@ -1145,6 +1145,7 @@ export default function ChallengeDetails() {
                   styles.actionIconLabel,
                   { color: currentTheme.colors.textSecondary },
                 ]}
+ 
               >
                 {t("challengeDetails.share")}
               </Text>
@@ -1167,6 +1168,7 @@ export default function ChallengeDetails() {
                   styles.actionIconLabel,
                   { color: currentTheme.colors.textSecondary },
                 ]}
+
               >
                 {t("challengeDetails.stats")}
               </Text>
@@ -1220,6 +1222,7 @@ export default function ChallengeDetails() {
         onClose={() => setInvitationModalVisible(false)}
         clearInvitation={() => setInvitation(null)} // 👈 ICI
       />
+      </SafeAreaView>
     </LinearGradient>
   );
 }
@@ -1234,14 +1237,15 @@ const styles = StyleSheet.create({
     height: SCREEN_HEIGHT * 0.3,
   },
   imageContainer: {
-    position: "absolute",
+    position: 'absolute',
     top: 0,
     left: 0,
     right: 0,
-    height: SCREEN_HEIGHT * 0.3 + (StatusBar.currentHeight ?? 0),
+    height: SCREEN_HEIGHT * 0.35,
     borderBottomLeftRadius: normalizeSize(30),
     borderBottomRightRadius: normalizeSize(30),
-    overflow: "hidden",
+    overflow: 'hidden',
+    zIndex: 1,
   },
   bannerContainer: {
     position: "absolute",
@@ -1282,14 +1286,15 @@ const styles = StyleSheet.create({
   },
   infoRecipeContainer: {
     flex: 1,
-    padding: SPACING,
-    paddingTop: SPACING,
-    alignItems: "center", // Déjà présent, juste pour confirmer
-    justifyContent: "center", // Ajoute pour centrage vertical
+    paddingHorizontal: SPACING * 1.5,
+    paddingTop: SCREEN_HEIGHT * 0.05 ,
+    alignItems: "center",
+    justifyContent: "center",
   },
   infoRecipeName: {
     fontSize: normalizeSize(28),
-    marginVertical: SPACING / 4,
+    marginTop: SPACING * 0.2,
+    marginBottom: SPACING,
     textAlign: "center",
     fontFamily: "Comfortaa_700Bold",
   },
@@ -1403,26 +1408,26 @@ const styles = StyleSheet.create({
   actionIconsContainer: {
     flexDirection: "row",
     flexWrap: "wrap",
-    justifyContent: "center",
+    justifyContent: "space-between", 
     alignItems: "center",
     marginTop: SPACING * 2,
     minWidth: "100%",
-    paddingHorizontal: SPACING / 2,
-    paddingBottom: BANNER_HEIGHT + SPACING, // Ajoute un padding bottom pour plus d’espace
+    paddingHorizontal: SPACING / 2
   },
-  actionIcon: {
-    alignItems: "center",
-    justifyContent: "center",
-    marginHorizontal: normalizeSize(8),
-    marginVertical: normalizeSize(12), // Augmente l’espacement vertical pour un look premium
-    width: normalizeSize(70),
-    minHeight: normalizeSize(80), // Augmente la hauteur minimale pour que le texte soit bien visible
-  },
+   actionIcon: {
+     alignItems: "center",
+     justifyContent: "center",
+    marginHorizontal: 0,
+    width: '50%',
+     minHeight: normalizeSize(90),
+   },
   actionIconLabel: {
-    marginTop: normalizeSize(4),
-    fontSize: normalizeSize(12), // Augmente légèrement la taille pour lisibilité
+    marginTop: normalizeSize(6),
+    fontSize: normalizeSize(14),
     fontFamily: "Comfortaa_400Regular",
     textAlign: "center",
+    includeFontPadding: false,     // compacte le text verticalement
+    lineHeight: normalizeSize(18),
   },
   loadingContainer: {
     flex: 1,
@@ -1433,13 +1438,6 @@ const styles = StyleSheet.create({
     marginTop: SPACING,
     fontSize: normalizeSize(16),
     fontFamily: "Comfortaa_400Regular",
-  },
-  headerWrapper: {
-    paddingHorizontal: SPACING,
-    paddingVertical: SPACING / 2,
-    position: "relative",
-    marginTop: SPACING,
-    marginBottom: SPACING,
   },
   duoProgressWrapper: {
     flexDirection: "row",

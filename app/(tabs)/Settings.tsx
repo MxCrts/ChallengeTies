@@ -206,7 +206,7 @@ const scrollRef = useRef<ScrollView>(null);
         Alert.alert(t("settingsPage.enabled"), t("settingsPage.updated"));
       } catch (error) {
         console.error("Erreur localisation:", error);
-        Alert.alert(t("error"), t("location.error"));
+        Alert.alert(t("error"), t("settingsPage.error"));
         setLocationEnabled(false);
         await savePreferences({ locationEnabled: false });
       }

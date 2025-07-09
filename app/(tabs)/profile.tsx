@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useMemo, useRef, useCallback } from "react";
+import React, { useState, useEffect, useMemo } from "react";
 import {
   View,
   Text,
@@ -21,7 +21,6 @@ import { useTheme } from "../../context/ThemeContext";
 import { Theme } from "../../theme/designSystem";
 import CustomHeader from "@/components/CustomHeader";
 import Animated, { FadeInUp, ZoomIn } from "react-native-reanimated";
-import { useSharedValue, withTiming, useAnimatedStyle } from "react-native-reanimated";
 import GlobalLayout from "../../components/GlobalLayout";
 import designSystem from "../../theme/designSystem";
 import { useTranslation } from "react-i18next";
@@ -34,9 +33,7 @@ import {
 import { BlurView } from "expo-blur";
 import { useTutorial } from "../../context/TutorialContext";
 import TutorialModal from "../../components/TutorialModal";
-import { runOnJS } from 'react-native-reanimated';
-import { useFocusEffect } from "@react-navigation/native";
-
+import { normalize } from "../../utils/normalize";
 
 const SPACING = 15;
 const { width: SCREEN_WIDTH, height: SCREEN_HEIGHT } = Dimensions.get("window");
@@ -64,13 +61,6 @@ export default function ProfileScreen() {
   const [userData, setUserData] = useState<UserData | null>(null);
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
-  const [isNavigating, setIsNavigating] = useState(false);
-  const fadeAnim = useSharedValue(1);
-  const animatedStyle = useAnimatedStyle(() => ({
-    flex: 1,
-    opacity: fadeAnim.value,
-  }));
-  const scrollViewRef = useRef<ScrollView>(null);
   const { profileUpdated } = useProfileUpdate();
   const { theme } = useTheme();
   const isDarkMode = theme === "dark";
@@ -120,19 +110,6 @@ export default function ProfileScreen() {
 
     return () => unsubscribe();
   }, [profileUpdated, t]);
-
-useFocusEffect(
-  useCallback(() => {
-    // remonte vertical en haut
-    scrollViewRef.current?.scrollTo({ y: 0, animated: false });
-  }, [])
-);
-
-  useEffect(() => {
-  fadeAnim.value = withTiming(1, { duration: 300 });
-  setIsNavigating(false);
-}, []);
-
 
   // Sections
   const sections = useMemo(() => {
@@ -230,22 +207,6 @@ useFocusEffect(
     [t, userData]
   );
 
-  const navigateWithFade = (path: string) => {
-    if (isNavigating) return;
-    setIsNavigating(true);
-    // fade-out
-    fadeAnim.value = withTiming(0, { duration: 300 }, (isFinished) => {
-      if (isFinished) {
-        // on navigue depuis le thread JS
-        runOnJS(router.replace)(path);
-        // on réinitialise l’opacité
-        fadeAnim.value = 1;
-        runOnJS(setIsNavigating)(false);
-      }
-    });
-  };
-
-
   if (isLoading) {
     return (
       <GlobalLayout>
@@ -317,8 +278,6 @@ useFocusEffect(
         backgroundColor="transparent"
         barStyle={isDarkMode ? "light-content" : "dark-content"}
       />
-            <Animated.View style={animatedStyle}>
-
       <LinearGradient
         colors={[
           currentTheme.colors.background,
@@ -330,7 +289,6 @@ useFocusEffect(
       >
         <SafeAreaView style={{ flex: 1 }}>
           <ScrollView
-          ref={scrollViewRef}
             contentContainerStyle={styles.scrollContent}
             showsVerticalScrollIndicator={false}
             contentInset={{ top: SPACING, bottom: normalizeSize(80) }}
@@ -521,7 +479,7 @@ useFocusEffect(
                       style={styles.sectionButton}
                     >
                       <TouchableOpacity
-                        onPress={() => navigateWithFade(section.navigateTo)}
+                        onPress={() => router.push(section.navigateTo)}
                         accessibilityLabel={section.accessibilityLabel}
                         accessibilityHint={section.accessibilityHint}
                         accessibilityRole="button"
@@ -616,7 +574,6 @@ useFocusEffect(
           </BlurView>
         )}
       </LinearGradient>
-      </Animated.View>
     </GlobalLayout>
   );
 }

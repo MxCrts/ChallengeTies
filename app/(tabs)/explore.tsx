@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useMemo, useCallback, useRef } from "react";
+import React, { useState, useEffect, useMemo, useCallback } from "react";
 import {
   View,
   Text,
@@ -17,13 +17,13 @@ import {
 } from "react-native";
 import { Image } from "react-native";
 import { Image as RNImage } from "react-native";
+
 import { Ionicons } from "@expo/vector-icons";
 import { useRouter } from "expo-router";
 import { collection, onSnapshot } from "firebase/firestore";
 import { db } from "../../constants/firebase-config";
 import { LinearGradient } from "expo-linear-gradient";
 import Animated, { FadeInUp } from "react-native-reanimated";
-import { useSharedValue, withTiming, useAnimatedStyle } from "react-native-reanimated";
 import { useSavedChallenges } from "../../context/SavedChallengesContext";
 import { useTheme } from "../../context/ThemeContext";
 import { useTranslation } from "react-i18next";
@@ -39,8 +39,7 @@ import {
 import { BlurView } from "expo-blur";
 import { useTutorial } from "../../context/TutorialContext";
 import TutorialModal from "../../components/TutorialModal";
-import { runOnJS } from "react-native-reanimated";
-import { useFocusEffect } from "@react-navigation/native";
+import { normalize } from "../../utils/normalize";
 
 // Dimensions responsives
 const SPACING = 18; // Aligné avec Notifications.tsx, FocusScreen.tsx, etc.
@@ -333,14 +332,7 @@ export default function ExploreScreen() {
   const [pendingFavorites, setPendingFavorites] = useState<{
     [key: string]: boolean;
   }>({});
-  const listRef = useRef<FlatList<any>>(null);
-const [isNavigating, setIsNavigating] = useState(false);
- // ——— Reanimated hooks for fade transitions ——
- const fadeAnim = useSharedValue(1);
- const animatedStyle = useAnimatedStyle(() => ({
-   flex: 1,
-   opacity: fadeAnim.value,
- }));
+
   const router = useRouter();
   const { isSaved, addChallenge, removeChallenge } = useSavedChallenges();
   const { theme } = useTheme();
@@ -353,18 +345,6 @@ const [isNavigating, setIsNavigating] = useState(false);
 
   // Force re-render sur changement de langue
   useEffect(() => {}, [i18n.language]);
-
- useFocusEffect(
-    useCallback(() => {
-      listRef.current?.scrollToOffset({ offset: 0, animated: false });
-    }, [])
-  );
-
-  useEffect(() => {
-  fadeAnim.value = withTiming(1, { duration: 300 });
-  setIsNavigating(false);
-}, []);
-
 
   // Firestore fetch
   useEffect(() => {
@@ -465,19 +445,6 @@ const [isNavigating, setIsNavigating] = useState(false);
     [isSaved, addChallenge, removeChallenge, t]
   );
 
-const navigateWithFade = (path: string) => {
-   if (isNavigating) return;
-   setIsNavigating(true);
-   fadeAnim.value = withTiming(0, { duration: 300 }, (finished) => {
-     if (finished) {
-       runOnJS(router.push)(path);
-       // restore opacity + reset flag
-       fadeAnim.value = 1;
-       runOnJS(setIsNavigating)(false);
-     }
-   });
- };
-
   const onSearchChange = useCallback(
     (text: string) => setSearchQuery(text),
     []
@@ -545,7 +512,6 @@ const navigateWithFade = (path: string) => {
         behavior={Platform.OS === "ios" ? "padding" : undefined}
         keyboardVerticalOffset={normalizeSize(80)}
       >
-        <Animated.View style={animatedStyle}>
         <LinearGradient
           colors={[
             currentTheme.colors.background,
@@ -554,7 +520,6 @@ const navigateWithFade = (path: string) => {
           style={{ flex: 1 }}
         >
           <FlatList
-          ref={listRef}
             data={filteredChallenges}
             keyExtractor={(item) => item.id}
             keyboardShouldPersistTaps="handled"
@@ -619,10 +584,14 @@ const navigateWithFade = (path: string) => {
                 <TouchableOpacity
                   style={styles.cardContainer}
                   onPress={() =>
-   navigateWithFade(
-     `/challenge-details/${item.id}?title=${encodeURIComponent(item.title)}&category=${encodeURIComponent(item.category)}&description=${encodeURIComponent(item.description)}`
-   )
- }
+                    router.push(
+                      `/challenge-details/${item.id}?title=${encodeURIComponent(
+                        item.title
+                      )}&category=${encodeURIComponent(
+                        item.category
+                      )}&description=${encodeURIComponent(item.description)}`
+                    )
+                  }
                 >
                   <LinearGradient
                     colors={[
@@ -706,7 +675,6 @@ const navigateWithFade = (path: string) => {
             )}
           />
         </LinearGradient>
-        </Animated.View>
       </KeyboardAvoidingView>
 
       <View style={styles.bannerContainer}>
