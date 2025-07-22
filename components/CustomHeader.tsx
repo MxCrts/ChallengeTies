@@ -1,53 +1,104 @@
 import React from "react";
-import { View, Text, StyleSheet } from "react-native";
+import {
+  View,
+  Text,
+  StyleSheet,
+  Dimensions,
+  Platform,
+  StatusBar,
+} from "react-native";
 import { useTheme } from "../context/ThemeContext";
 import designSystem from "../theme/designSystem";
-import BackButton from "../components/BackButton";
+import BackButton from "./BackButton";
 
 interface CustomHeaderProps {
   title: string;
+  showBackButton?: boolean;
+  rightIcon?: React.ReactNode;
 }
 
-export default function CustomHeader({ title }: CustomHeaderProps) {
+const { width: SCREEN_WIDTH } = Dimensions.get("window");
+const SPACING = 15;
+
+const normalizeSize = (size: number) => {
+  const scale = SCREEN_WIDTH / 375;
+  return Math.round(size * scale);
+};
+
+export default function CustomHeader({
+  title,
+  showBackButton = true,
+  rightIcon,
+}: CustomHeaderProps) {
   const { theme } = useTheme();
-  const currentTheme =
-    theme === "light" ? designSystem.lightTheme : designSystem.darkTheme;
+  const isDarkMode = theme === "dark";
+  const currentTheme = isDarkMode
+    ? designSystem.darkTheme
+    : designSystem.lightTheme;
 
   return (
-    <View style={styles.container}>
-      <View style={styles.titleContainer}>
+    <View
+      style={[
+        styles.headerContainer,
+        { backgroundColor: currentTheme.colors.background },
+      ]}
+    >
+      <View style={styles.sideWrapper}>
+        {showBackButton && (
+          <BackButton
+            color={currentTheme.colors.secondary}
+            size={24}
+            accessibilityLabel="Retour"
+            accessibilityHint="Revenir à l'écran précédent"
+          />
+        )}
+      </View>
+
+      <View style={styles.titleWrapper}>
         <Text
           style={[
-            styles.header,
-            {
-              color:
-                theme === "light"
-                  ? "#000000" // noir en light
-                  : currentTheme.colors.textPrimary, // gold en dark
-            },
+            styles.title,
+            { color: isDarkMode ? "#FFFFFF" : "#000000" },
           ]}
+          numberOfLines={2}
+          ellipsizeMode="tail"
         >
           {title}
         </Text>
+      </View>
+
+      <View style={styles.sideWrapper}>
+        {rightIcon || <View style={{ width: normalizeSize(24) }} />}
       </View>
     </View>
   );
 }
 
 const styles = StyleSheet.create({
-  container: {
+  headerContainer: {
     flexDirection: "row",
     alignItems: "center",
-    paddingHorizontal: 16,
+    paddingTop:
+      Platform.OS === "android" ? StatusBar.currentHeight ?? SPACING : SPACING,
+    paddingHorizontal: SPACING,
+    marginBottom: normalizeSize(10),
+    width: "100%",
   },
-  titleContainer: {
+  sideWrapper: {
+    width: normalizeSize(40),
+    alignItems: "center",
+    justifyContent: "center",
+  },
+  titleWrapper: {
     flex: 1,
-    marginVertical: 20,
-    marginBottom: 30,
+    paddingHorizontal: normalizeSize(8),
+    alignItems: "center",
+    justifyContent: "center",
   },
-  header: {
-    fontSize: 25,
+  title: {
+    fontSize: normalizeSize(20),
     fontFamily: "Comfortaa_700Bold",
     textAlign: "center",
+    lineHeight: normalizeSize(24),
   },
 });

@@ -291,6 +291,7 @@ const scrollRef = useRef<ScrollView>(null);
         backgroundColor="transparent"
         barStyle={isDarkMode ? "light-content" : "dark-content"}
       />
+      <CustomHeader title={t("settings")} />
       <LinearGradient
         colors={[
           currentTheme.colors.background,
@@ -300,9 +301,6 @@ const scrollRef = useRef<ScrollView>(null);
         start={{ x: 0, y: 0 }}
         end={{ x: 1, y: 1 }}
       >
-        <View style={styles.headerWrapper}>
-          <CustomHeader title={t("settings")} />
-        </View>
         <ScrollView
         ref={scrollRef}
           contentContainerStyle={styles.scrollContent}

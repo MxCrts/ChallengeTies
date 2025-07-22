@@ -233,7 +233,6 @@ export default function Register() {
           HapticsModule.NotificationFeedbackType.Error
         );
         setTimeout(() => setErrorMessage(""), 5000);
-        console.error("Erreur localisation lors de l'inscription :", error);
       }
 
       // Demander permissions notifications
@@ -476,10 +475,11 @@ const styles = StyleSheet.create({
   },
   input: {
     width: "100%",
-    height: normalize(50),
+    maxWidth: normalize(400),
+    height: normalize(55),
     backgroundColor: "rgba(245,245,245,0.8)",
     color: "#111",
-    fontSize: normalize(16),
+    fontSize: normalize(14),
     paddingHorizontal: SPACING,
     borderRadius: normalize(20),
     textAlign: "center",

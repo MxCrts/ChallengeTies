@@ -298,6 +298,7 @@ export default function CompletedChallenges() {
           backgroundColor="transparent"
           barStyle={isDarkMode ? "light-content" : "dark-content"}
         />
+        <CustomHeader title={t("completedChallengesScreenTitle")} />
         <LinearGradient
           colors={[
             currentTheme.colors.background,
@@ -305,24 +306,6 @@ export default function CompletedChallenges() {
           ]}
           style={styles.noChallengesContainer}
         >
-          <View style={styles.headerWrapper}>
-            <Animated.View entering={FadeInUp}>
-              <TouchableOpacity
-                onPress={() => router.back()}
-                style={styles.backButton}
-                accessibilityLabel={t("goBack")}
-                accessibilityHint={t("backButtonHint")} // Aligné avec CurrentChallenges.tsx
-                testID="back-button"
-              >
-                <Ionicons
-                  name="arrow-back"
-                  size={normalizeSize(24)}
-                  color={currentTheme.colors.secondary}
-                />
-              </TouchableOpacity>
-            </Animated.View>
-            <CustomHeader title={t("completedChallengesScreenTitle")} />
-          </View>
           <Animated.View
             entering={FadeInUp.delay(100)}
             style={styles.noChallengesContent}
@@ -367,6 +350,8 @@ export default function CompletedChallenges() {
         backgroundColor="transparent"
         barStyle={isDarkMode ? "light-content" : "dark-content"}
       />
+        <CustomHeader title={t("completedChallengesScreenTitle")} />
+
       <LinearGradient
         colors={[
           currentTheme.colors.background,
@@ -374,25 +359,7 @@ export default function CompletedChallenges() {
         ]}
         style={styles.container}
       >
-        <View style={styles.headerWrapper}>
-          <Animated.View entering={FadeInUp}>
-            <TouchableOpacity
-              onPress={() => router.back()}
-              style={styles.backButton}
-              accessibilityLabel={t("goBack")}
-              accessibilityHint={t("backButtonHint")} // Aligné avec CurrentChallenges.tsx
-              testID="back-button"
-            >
-              <Ionicons
-                name="arrow-back"
-                size={normalizeSize(24)}
-                color={currentTheme.colors.secondary}
-              />
-            </TouchableOpacity>
-          </Animated.View>
-          <CustomHeader title={t("completedChallengesScreenTitle")} />
-        </View>
-        <FlatList
+                <FlatList
           data={completedChallenges}
           renderItem={renderChallenge}
           keyExtractor={(item) => `${item.id}_${item.completedAt}`}
@@ -497,8 +464,10 @@ export default function CompletedChallenges() {
 
 const styles = StyleSheet.create({
   safeArea: {
-    flex: 1,
-  },
+  flex: 1,
+  paddingTop:
+    Platform.OS === "android" ? StatusBar.currentHeight ?? SPACING : SPACING,
+},  
   container: {
     flex: 1,
   },
@@ -515,7 +484,6 @@ const styles = StyleSheet.create({
   headerWrapper: {
     paddingHorizontal: SPACING,
     paddingVertical: SPACING,
-    paddingTop: SPACING * 2.5, // Aligné avec CurrentChallenges.tsx
     position: "relative",
   },
   listContent: {

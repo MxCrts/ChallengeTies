@@ -22,36 +22,35 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({
   const [checkingAuth, setCheckingAuth] = useState(true);
 
   useEffect(() => {
-    const unsubscribe = onAuthStateChanged(auth, async (firebaseUser) => {
-      if (firebaseUser) {
-        console.log("✅ Utilisateur connecté:", firebaseUser.email);
-        setUser(firebaseUser);
+  const unsubscribe = onAuthStateChanged(auth, (firebaseUser) => {
+    if (firebaseUser) {
+      console.log("✅ Utilisateur connecté:", firebaseUser.email);
+      setUser(firebaseUser);
 
-        try {
-          await AsyncStorage.setItem("user", JSON.stringify(firebaseUser));
+      // ⚡️ LANCE EN FOND ➜ on ne bloque pas le Splash !
+      AsyncStorage.setItem("user", JSON.stringify(firebaseUser)).catch((error) => {
+        console.error("⚠️ Erreur sauvegarde AsyncStorage:", error);
+      });
 
-          // ✅ Récupération & Sauvegarde de la localisation (après login ou register)
-          await fetchAndSaveUserLocation();
-        } catch (error) {
-          console.error(
-            "⚠️ Erreur lors de la sauvegarde de l'utilisateur:",
-            error
-          );
-        }
-      } else {
-        console.log("🔴 Aucun utilisateur connecté. Redirection vers login...");
-        setUser(null);
-        try {
-          await AsyncStorage.removeItem("user");
-        } catch (error) {
-          console.error("⚠️ Erreur lors du retrait de l'utilisateur:", error);
-        }
-      }
-      setLoading(false);
-    });
+      fetchAndSaveUserLocation().catch((error) => {
+        console.error("⚠️ Erreur localisation:", error);
+      });
+    } else {
+      console.log("🔴 Aucun utilisateur connecté. Redirection vers login...");
+      setUser(null);
 
-    return () => unsubscribe();
-  }, []);
+      AsyncStorage.removeItem("user").catch((error) => {
+        console.error("⚠️ Erreur retrait AsyncStorage:", error);
+      });
+    }
+
+    // ✅ On passe loading à false TOUT DE SUITE !
+    setLoading(false);
+  });
+
+  return () => unsubscribe();
+}, []);
+
 
   // Fonction de déconnexion
   const logout = async () => {

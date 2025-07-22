@@ -273,11 +273,7 @@ export default function ProfileScreen() {
 
   return (
     <GlobalLayout>
-      <StatusBar
-        translucent
-        backgroundColor="transparent"
-        barStyle={isDarkMode ? "light-content" : "dark-content"}
-      />
+      
       <LinearGradient
         colors={[
           currentTheme.colors.background,
@@ -287,16 +283,17 @@ export default function ProfileScreen() {
         start={{ x: 0, y: 0 }}
         end={{ x: 1, y: 1 }}
       >
-        <SafeAreaView style={{ flex: 1 }}>
+          <StatusBar
+        translucent
+        backgroundColor="transparent"
+        barStyle={isDarkMode ? "light-content" : "dark-content"}
+      />
+          <CustomHeader title={t("yourProfile")} />
           <ScrollView
             contentContainerStyle={styles.scrollContent}
             showsVerticalScrollIndicator={false}
             contentInset={{ top: SPACING, bottom: normalizeSize(80) }}
           >
-            {/* Header */}
-            <View style={styles.headerWrapper}>
-              <CustomHeader title={t("yourProfile")} />
-            </View>
 
             {/* Carte Profil */}
             <Animated.View
@@ -548,7 +545,6 @@ export default function ProfileScreen() {
               ))}
             </View>
           </ScrollView>
-        </SafeAreaView>
         {/* Bannière pub */}
         <View style={styles.bannerContainer}>
           <BannerAd

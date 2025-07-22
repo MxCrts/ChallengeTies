@@ -256,6 +256,7 @@ export default function UserInfo() {
         backgroundColor="transparent"
         barStyle={isDarkMode ? "light-content" : "dark-content"}
       />
+      <CustomHeader title={t("yourProfile")} />
       <LinearGradient
         colors={
           isDarkMode
@@ -279,26 +280,7 @@ export default function UserInfo() {
             showsVerticalScrollIndicator={false}
             contentInset={{ top: SPACING, bottom: normalizeSize(80) }}
           >
-            <View style={styles.headerWrapper}>
-              <Animated.View entering={FadeInUp}>
-                <TouchableOpacity
-                  onPress={() => router.back()}
-                  style={styles.backButton}
-                  accessibilityLabel={t("accessibility.backButton.label")}
-                  accessibilityHint={t("accessibility.backButton.hint")}
-                  testID="back-button"
-                >
-                  <Ionicons
-                    name="arrow-back"
-                    size={normalizeSize(24)}
-                    color={currentTheme.colors.secondary}
-                  />
-                </TouchableOpacity>
-              </Animated.View>
-              <CustomHeader title={t("yourProfile")} />
-            </View>
 
-            {/* Image de profil */}
             <Animated.View
               entering={ZoomIn.delay(100)}
               style={styles.imageContainer}
@@ -651,8 +633,9 @@ export default function UserInfo() {
 
 const styles = StyleSheet.create({
   safeArea: {
-    flex: 1,
-  },
+  flex: 1,
+  paddingTop: Platform.OS === "android" ? StatusBar.currentHeight ?? SPACING : SPACING,
+},
   gradientContainer: {
     flex: 1,
   },

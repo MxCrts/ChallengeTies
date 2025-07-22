@@ -25,13 +25,18 @@ const BackButton: React.FC<BackButtonProps> = ({
   const router = useRouter();
   const { theme } = useTheme();
   const isDarkMode = theme === "dark";
-  const currentTheme = isDarkMode
-    ? designSystem.darkTheme
-    : designSystem.lightTheme;
 
   return (
     <TouchableOpacity
-      style={[styles.backButton, style]}
+      style={[
+        styles.backButton,
+        {
+          backgroundColor: isDarkMode
+            ? "rgba(255,255,255,0.1)"
+            : "rgba(0,0,0,0.1)",
+        },
+        style,
+      ]}
       onPress={() => router.back()}
       accessibilityLabel={accessibilityLabel}
       accessibilityHint={accessibilityHint}
@@ -40,10 +45,10 @@ const BackButton: React.FC<BackButtonProps> = ({
       activeOpacity={0.7}
     >
       <Ionicons
-        name="arrow-back-outline"
-        size={normalizeSize(size)}
-        color={color || currentTheme.colors.textPrimary}
-      />
+  name="arrow-back-outline"
+  size={normalizeSize(size)}
+  color={isDarkMode ? "#FFDD95" : "#FF6200"}
+/>
     </TouchableOpacity>
   );
 };
@@ -58,7 +63,6 @@ const styles = StyleSheet.create({
     position: "absolute",
     left: normalizeSize(20),
     zIndex: 10,
-    backgroundColor: "rgba(255, 255, 255, 0.1)",
     borderRadius: normalizeSize(10),
     padding: normalizeSize(8),
   },

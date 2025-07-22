@@ -409,27 +409,13 @@ export default function LeaderboardScreen() {
       start={{ x: 0, y: 0 }}
       end={{ x: 1, y: 1 }}
     >
-      <StatusBar
+      <SafeAreaView style={[styles.safeArea]}>
+        <StatusBar
         translucent
         backgroundColor="transparent"
         barStyle={isDarkMode ? "light-content" : "dark-content"}
       />
-      <SafeAreaView style={[styles.safeArea, { paddingTop: insets.top }]}>
-        <TouchableOpacity
-          onPress={() => router.push("/")}
-          style={styles.backButton}
-          accessibilityLabel={t("leaderboard.goBack")}
-          testID="back-button"
-        >
-          <Ionicons
-            name="arrow-back"
-            size={normalizeSize(24)}
-            color={currentTheme.colors.secondary}
-          />
-        </TouchableOpacity>
-        <View style={styles.headerWrapper}>
           <CustomHeader title={t("leaderboard.title")} />
-        </View>
         <Animated.View
           entering={FadeInUp.delay(100)}
           style={styles.tabsContainer}

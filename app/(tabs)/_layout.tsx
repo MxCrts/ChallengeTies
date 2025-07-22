@@ -21,8 +21,14 @@ import { useTranslation } from "react-i18next";
 const { width: SCREEN_WIDTH } = Dimensions.get("window");
 
 const normalizeSize = (size: number) => {
-  const scale = SCREEN_WIDTH / 375;
-  return Math.round(size * scale);
+  const baseWidth = 375; // iPhone X ref
+  const scale = SCREEN_WIDTH / baseWidth;
+  const newSize = size * scale;
+
+  // Clamp pour éviter que ça soit trop petit ou trop grand
+  if (newSize < size * 0.85) return size * 0.85;
+  if (newSize > size * 1.25) return size * 1.25;
+  return Math.round(newSize);
 };
 
 // Interface pour typer les noms d’icônes
@@ -181,27 +187,30 @@ const currentTheme = isDarkMode
       : "rgba(227, 226, 233, 0.5)",
   },
   tabBarLabelStyle: {
-  fontSize: normalizeSize(10),
-  fontFamily: "Comfortaa_700Bold",
-  flexWrap: "wrap",
-  width: "100%",
-  textAlign: "center",
-  lineHeight: normalizeSize(12),
-  paddingBottom: normalizeSize(2), 
-},
+    fontSize: normalizeSize(10),
+    fontFamily: "Comfortaa_700Bold",
+    flexWrap: "wrap",
+    width: "100%",
+    textAlign: "center",
+    lineHeight: normalizeSize(12),
+    paddingBottom: normalizeSize(2),
+  },
   tabBarIconStyle: {
     marginBottom: 0,
   },
-  tabBarItemStyle: {
-  paddingVertical: normalizeSize(4),
-  paddingTop: normalizeSize(6), // Légère marge haute
-},
-
-  tabBarActiveTintColor: isDarkMode ? "#FFDD95" : currentTheme.colors.primary,
-tabBarInactiveTintColor: isDarkMode ? "#FFDD95" : currentTheme.colors.textSecondary,
-
-
-        }}
+   tabBarItemStyle: {
+    flex: 1, // S’assure que chaque item prend le même espace
+    maxWidth: normalizeSize(80), // Évite qu’un bouton soit trop large
+    paddingVertical: normalizeSize(4),
+    paddingTop: normalizeSize(6),
+  },
+  tabBarActiveTintColor: isDarkMode
+    ? "#FFDD95"
+    : currentTheme.colors.primary,
+  tabBarInactiveTintColor: isDarkMode
+    ? "#FFDD95"
+    : currentTheme.colors.textSecondary,
+}}
       >
         <Tabs.Screen
           name="index"

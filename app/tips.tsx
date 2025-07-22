@@ -152,7 +152,7 @@ export default function Conseils() {
 
   const handleContact = async () => {
     try {
-      await Linking.openURL("mailto:support@challengeme.com");
+      await Linking.openURL("mailto:support@challengeties.app");
     } catch (error) {
       console.error(t("tips.mailOpenError"), error);
     }
@@ -180,31 +180,14 @@ export default function Conseils() {
       start={{ x: 0, y: 0 }}
       end={{ x: 0.8, y: 1 }}
     >
-      <StatusBar
+      
+      <SafeAreaView style={styles.safeArea}>
+        <StatusBar
         translucent
         backgroundColor="transparent"
         barStyle={isDarkMode ? "light-content" : "dark-content"}
       />
-      <SafeAreaView style={styles.safeArea}>
-        <TouchableOpacity
-          onPress={() => router.push("/")}
-          style={styles.backButton}
-          accessibilityLabel={t("tips.goBack")}
-          testID="back-button"
-        >
-          <Ionicons
-            name="arrow-back"
-            size={normalizeSize(24)}
-            color={
-              isDarkMode
-                ? currentTheme.colors.secondary
-                : currentTheme.colors.secondary
-            }
-          />
-        </TouchableOpacity>
-        <View style={styles.headerWrapper}>
           <CustomHeader title={t("tips.title")} />
-        </View>
         <ScrollView
           contentContainerStyle={styles.scrollContent}
           showsVerticalScrollIndicator={false}

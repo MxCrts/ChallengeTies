@@ -358,6 +358,7 @@
     "invite": "邀请",
     "inviteError": "创建邀请时出错",
     "joinError": "无法加入挑战，请重试。",
+    "needHelp": "需要建议吗？",
     "saveError": "切换保存失败，请重试。",
     "completeError": "无法完成挑战。",
     "chatAccessDenied": "您必须先参加挑战才能打开聊天。",
@@ -528,7 +529,7 @@
     "updatesText": "本政策可能会随着实践或法规的更新而变更。如有重大变更，我们将通知您。",
     "contactTitle": "联系",
     "contactText": "如对您的个人数据或本政策有任何疑问，请通过以下方式联系我们：",
-    "contactEmail": "📧 privacy@challengeties.com",
+    "contactEmail": "📧 support@challengeties.app",
     "finalMessage": "感谢您信任 ChallengeTies。您的隐私始终是我们的首要任务。"
   },
   "completedOnDate": "完成于",
@@ -680,6 +681,17 @@
     "inputA11yHint": "在此输入消息",
     "sendButtonLabel": "发送消息"
   },
+  "challengeHelper": {
+  "explanation": "解释",
+  "resources": "实用资源",
+  "videos": "推荐视频",
+  "noData": "当前暂无该挑战的帮助内容。",
+  "examples": "示例",
+  "suggestion": "建议？"
+},
+"common": {
+  "back": "返回"
+},
   "contact": {
     "errorTitle": "错误",
     "errorMessage": "请填写所有字段。",
@@ -688,8 +700,8 @@
     "title": "联系我们 📩",
     "intro": "有问题、反馈或建议？我们随时提供帮助。您可以通过以下方式联系我们，或直接发送消息。",
     "emailSection": "电子邮件",
-    "emailLinkLabel": "发送邮件至 support@challengeties.com",
-    "emailAddress": "support@challengeties.com",
+    "emailLinkLabel": "发送邮件至 support@challengeties.app",
+    "emailAddress": "support@challengeties.app",
     "phoneSection": "电话",
     "phoneLinkLabel": "拨打 +33 1 23 45 67 89",
     "phoneNumber": "+33 1 23 45 67 89",
@@ -1043,7 +1055,1679 @@
     "reduceScreenTime": {
       "title": "减少夜间屏幕时间",
       "description": "睡前至少 30 分钟避免使用屏幕。"
-    }
+    },
+    "challengeAlimentationConsciente": {
+    "title": "正念饮食",
+    "description": "在没有干扰的情况下专注于饮食，感受进食的每个瞬间。"
+  },
+  "challengeCommunication": {
+    "title": "重新建立联系",
+    "description": "联系一位你很久没有交流的人，以增进社交关系。"
+  },
+  "challengeDes3Sourires": {
+    "title": "三个微笑",
+    "description": "每天向三位不同的人微笑，传播快乐。"
+  },
+  "challengeEcritureCreative": {
+  "title": "创意写作",
+  "description": "每天写一个虚构故事，激发创造力。"
+},
+"challengeGestionTemps": {
+  "title": "时间管理",
+  "description": "使用时间管理技巧（如番茄钟）来优化你的日常生活。"
+},
+"challengeJeuneIntermittent": {
+  "title": "间歇性禁食",
+  "description": "每天在固定时间内进行间歇性禁食。"
+},
+"challengeLectureSurprise": {
+  "title": "惊喜阅读",
+  "description": "随机选择一本书，每天至少阅读一章，探索新的文学世界。"
+},
+"challengeModeAvion": {
+  "title": "飞行模式",
+  "description": "每天花1小时进入飞行模式，远离数字干扰。"
+},
+"challengeOrganisationDigitale": {
+  "title": "数字整理",
+  "description": "每天花15分钟整理文件和邮件，提高生产效率。"
+},
+"challengePenseePositive": {
+  "title": "积极思维",
+  "description": "全天将每一个负面想法转变为积极的想法。"
+},
+"challengePlanificationHebdomadaire": {
+  "title": "每周计划",
+  "description": "每周日花时间安排一周的计划，以提高组织能力。"
+},
+"defiCarnetGratitude": {
+  "title": "感恩日记",
+  "description": "每天记录三件让你感激的事情。"
+},
+"defiConnexionNature": {
+  "title": "亲近自然",
+  "description": "每天至少花30分钟在户外，与自然连接。"
+},
+"defiCreativiteQuotidienne": {
+  "title": "每日创意",
+  "description": "每天用一个小作品、写作或创意来表达你的创造力。"
+},
+"defiDigitalDetox": {
+  "title": "数字排毒",
+  "description": "每天远离屏幕2小时，缓解眼睛疲劳和数码压力。"
+},
+"defiDuZeroDechet": {
+  "title": "零垃圾挑战",
+  "description": "尝试在一天内不产生垃圾，通过回收和减少包装实现。"
+},
+"defiEcritureQuotidienne": {
+  "title": "每日写作",
+  "description": "每天在日记中写一页，以释放你的思想和情感。"
+},
+"defiGratitudeVisuelle": {
+    "title": "视觉感恩",
+    "description": "每天寻找并拍摄一件让你感到感恩的事物。"
+  },
+  "defiMarcheConsciente": {
+    "title": "正念行走",
+    "description": "练习正念行走，专注于自己的感受和周围环境。"
+  },
+  "defiMatineeSansEcrans": {
+    "title": "无屏幕早晨",
+    "description": "每天早上第一小时不看任何屏幕开始新的一天。"
+  },
+  "defiMicroMeditation": {
+    "title": "微冥想",
+    "description": "每天练习 1 分钟的微冥想，培养正念意识。"
+  },
+  "defiNoBuyMonth": {
+    "title": "禁购月",
+    "description": "只购买必需品，练习财务极简主义。"
+  },
+  "defiRangementMinimaliste": {
+    "title": "极简整理",
+    "description": "每天丢弃一个不需要的物品，养成极简生活方式。"
+  },
+  "defiRepasEquilibre": {
+    "title": "均衡饮食",
+    "description": "每餐搭配蛋白质、蔬菜和碳水化合物，保持营养均衡。"
+  },
+  "defiRespirationConsciente": {
+    "title": "正念呼吸",
+    "description": "每天练习 5 分钟正念呼吸，让自己放松并重拾专注。"
+  },
+  "défiArretTabac": {
+    "title": "戒烟挑战",
+    "description": "为了改善身心健康，请停止吸烟。"
+  },
+  "defiSommeilReparateur": {
+    "title": "优质睡眠",
+    "description": "在睡前建立放松的作息，以改善睡眠质量。"
+  }
+  },
+  "challengeAlimentationConsciente": {
+    "miniCours": "正念饮食 🍽️ 是一种有意识地享受每一口食物 🥣 的过程，细细品味食物的味道、口感和香气 🍒，并意识到它们带来的满足感与饱腹感 👌。它可以帮助你平衡饮食，避免暴饮暴食，更加健康地进食 🥦。为此，请在用餐时远离所有干扰（电视、手机、阅读）🚫📺📱📖，倾听身体的饥饿与饱足信号 🔎。",
+    "exemples": [
+      "示例 1 ✨：准备一份简单健康的餐食，然后在没有干扰的环境中用餐。专注于每一口的味道与口感。",
+      "示例 2 💡：当你想吃零食时，问问自己是否真的饿了，还是在无意识地进食。",
+      "示例 3 🚀：观察你的某些饮食习惯是如何影响你当天的情绪与能量的。",
+      "示例 4 🌱：连续一周记录你吃了什么，以及每顿饭后的感受，有助于发现以前未注意到的模式。"
+    ],
+    "ressources": [
+      { "title": "正念饮食简介", "type": "video", "url": "" },
+      { "title": "练习正念饮食的步骤", "type": "article", "url": "" },
+      { "title": "播客：正念饮食对健康的影响", "type": "bonus", "url": "" }
+    ]
+  },
+  "challengeCommunication": {
+    "miniCours": "👋🎯 主动联系很久未联系的人可能令人紧张，但这是加强社交关系和提升幸福感的绝佳方式。建立真实联系的关键是：真诚 👍 与用心。分享故事 📚，深入交流。谈谈你的近况，表达对对方生活的兴趣。回忆美好时光、欢笑 🤣 和共同经历的教训。这不仅是打破沉默，更是与重要的人共享珍贵时刻 🎁。",
+    "exemples": [
+      "给前同事发消息，提及曾经合作的项目：“嘿，我刚想起我们写的那篇有趣的博文。最近怎么样？” ✨",
+      "打电话给老同学，聊聊一起学过的课程：“好怀念我们当时的市场营销案例分析。你现在还有在用那些技能吗？” 💡",
+      "给老朋友写一封手写信 📝，传递你对这段关系的重视 🚀",
+      "与远房亲戚安排一次虚拟咖啡 ☕ 或视频通话，聊聊童年和各自的新生活 🌱"
+    ],
+    "ressources": [
+      {
+        "title": "如何重新连接旧友",
+        "type": "video",
+        "url": "https://youtube.url"
+      },
+      {
+        "title": "社交关系对幸福感的重要性",
+        "type": "article",
+        "url": "https://article.url"
+      },
+      {
+        "title": "保持朋友联系的实用指南",
+        "type": "bonus",
+        "url": "https://guide.url"
+      }
+    ]
+  },
+  "challengeDes3Sourires": {
+    "miniCours": "微笑的艺术看似简单，但真诚的微笑可以点亮他人的一天 😊。每天挑战自己对三位不同的人微笑。可以是在咖啡店、街头，甚至是镜子前！这不仅能传递快乐，还能释放内啡肽让你更快乐。请用心微笑，而非勉强。真诚是关键！👍",
+    "exemples": [
+      "示例 1 ✨：早上点咖啡时，对咖啡师微笑并说声谢谢。",
+      "示例 2 💡：遛狗时，向遇到的其他狗主人微笑。",
+      "示例 3 🚀：早晨照镜子时，对镜中的自己微笑。",
+      "示例 4 🌱：下公交车或地铁前，向司机微笑说再见。"
+    ],
+    "ressources": [
+      {
+        "title": "微笑的力量 | Ron Gutman",
+        "type": "video",
+        "url": "https://www.youtube.com/watch?v=U9cGdRNMdQQ"
+      },
+      {
+        "title": "微笑与大笑的七大好处",
+        "type": "article",
+        "url": "https://www.lifehack.org/articles/communication/7-benefits-smiling-and-laughing.html"
+      },
+      {
+        "title": "用微笑建立信任",
+        "type": "bonus",
+        "url": "https://www.psychologytoday.com/intl/blog/sideways-view/202005/using-smiles-foster-trust"
+      }
+    ]
+  },
+  "challengeEcritureCreative": {
+    "miniCours": "👩‍🏫 欢迎参加这个迷你学习挑战！通过每天写一篇500字的虚构故事来提升创造力。📝 你不需要成为下一个斯蒂芬·金，关键是让想象力自由驰骋并享受过程。🌈 记住，创造力就像肌肉：训练越多，它就越强！🏋️‍♂️ 拿起笔或键盘，让文字自由流淌。尝试加入对话、丰富的描述和各类角色，使你的故事更加生动有趣。💓",
+    "exemples": [
+      "示例1 ✨ —《阿米拉的奇异旅程》：一个少女穿越时空的神秘冒险。",
+      "示例2 💡 —《光之城的秘密》：发生在巴黎黑暗街头的一场复杂谜团。",
+      "示例3 🚀 —《星际任务》：讲述一支太空飞船船员面对挑战的精彩故事。",
+      "示例4 🌱 —《低语的森林》：一个关于大自然复苏并与居民对话的故事。"
+    ],
+    "ressources": [
+      {
+        "title": "如何写出引人入胜的故事",
+        "type": "video",
+        "url": "https://www.youtube.com/watch?v=KzjmiyVv8wA"
+      },
+      {
+        "title": "激发写作创造力的 10 个技巧",
+        "type": "article",
+        "url": "https://www.medium.com/@votrecreativite/10-conseils"
+      },
+      {
+        "title": "播客：著名作家分享写作技巧",
+        "type": "bonus",
+        "url": "https://www.soundcloud.com/techniques-ecriture"
+      }
+    ]
+  },
+
+  "challengeGestionTemps": {
+    "miniCours": "时间管理对提高效率和实现目标至关重要。😃 一种常用方法是番茄钟技术 🍅：专注工作 25 分钟，然后休息 5 分钟。重复四次后，再休息 15–20 分钟。这能防止精神疲劳并保持专注。💪 给你的一天制定清晰结构，尊重自己的节奏，让每一分钟都更有价值。🚀",
+    "exemples": [
+      "示例1 ✨：撰写重要报告时使用番茄钟，将任务拆分为 25 分钟小段，期间加入短暂休息。",
+      "示例2 💡：通过专注学习番茄钟法来学习新语言，并在休息时复习所学内容。",
+      "示例3 🚀：将番茄钟运用于创意项目（写作、绘画、音乐）以进入“心流”状态。",
+      "示例4 🌱：使用间歇休息进行自我护理：补充水分、伸展或放松大脑。"
+    ],
+    "ressources": [
+      { "title": "如何使用番茄钟技术", "type": "video", "url": "" },
+      { "title": "借助番茄钟进行时间管理", "type": "article", "url": "" },
+      { "title": "播客：番茄钟是否真的有效？", "type": "bonus", "url": "" }
+    ]
+  },
+
+  "challengeJeuneIntermittent": {
+    "miniCours": "🌞 间歇性断食就像给你的消化系统休息 ⏸️：你在一个固定时间段进食（例如 8 小时），其他 16 小时进行断食 🌛。这可以加速基础代谢 🚀，提升专注力与清晰思维 🎯，甚至可能有助于延年益寿 🌟。你不必放弃营养食物 🌈，只需调整饮食时间。重要提示 ❗️开始前务必咨询医疗专业人士 🩺📝。",
+    "exemples": [
+      "示例1 ✨：在 12 点至 20 点进食，20 点至次日 12 点断食。",
+      "示例2 💡：如果锻炼，将锻炼安排在进食时间段。",
+      "示例3 🚀：断食期间多喝水以保持水分。",
+      "示例4 🌱：避免加工食品，优先选择全食品。"
+    ],
+    "ressources": [
+      {
+        "title": "间歇性断食基础",
+        "type": "video",
+        "url": "https://www.youtube.com/watch?v=xyz123"
+      },
+      {
+        "title": "如何开始间歇性断食",
+        "type": "article",
+        "url": "https://www.example.com/blog/jeune-intermittent"
+      },
+      {
+        "title": "播客：间歇性断食的好处",
+        "type": "bonus",
+        "url": "https://www.example.com/podcast/12"
+      }
+    ]
+  },
+
+  "challengeLectureSurprise": {
+    "miniCours": "打破常规，每天花些时间阅读 📚。接触新的文学视角不仅能丰富词汇，还能激发创造力 🎨 并增强同理心。随机选择一本书能带来与你不同的思想和体验。把它当作游戏 🎲—每天都是一次新的精神冒险。记住，这不是比赛，而是一次宁静的探索旅程 🚶‍♂️。享受这段旅程！",
+    "exemples": [
+      "示例1 ✨：在书店或图书馆闭上眼，随机抽一本书并开始阅读。",
+      "示例2 💡：在自家书架中寻找一本从未读过的书——它可能是隐藏的宝藏。",
+      "示例3 🚀：制作“书籍罐”，写下未读书名，每天抽一本。",
+      "示例4 🌱：同样适用于电子书或有声书——随机阅读同样值得启发。"
+    ],
+    "ressources": [
+      {
+        "title": "阅读的好处",
+        "type": "video",
+        "url": "https://www.youtube.com/watch?v=lg31XrHm3vA&ab_channel=TEDxTalks"
+      },
+      {
+        "title": "为什么阅读应该成为优先事项",
+        "type": "article",
+        "url": "https://www.entrepreneur.com/article/315636"
+      },
+      {
+        "title": "电子书：《科学随机漫步》",
+        "type": "bonus",
+        "url": "https://www.goodreads.com/book/show/663986.A_Random_Walk_in_Science"
+      }
+    ]
+  },
+
+  "challengeModeAvion": {
+    "miniCours": "🔅 在这个充斥通知的世界里，一小时的飞行模式能帮助你集中思绪，摆脱信息过载。它是一个充电情感电池的宁静气泡。利用这段时间来反思、阅读、头脑风暴或放松自己。📵 享受安静，完成重要任务或静静品杯咖啡。记住，你的大脑也需要休息才能高效运转。🌴",
+    "exemples": [
+      "示例1 ✨：用这段时间冥想让你的思绪平静。",
+      "示例2 💡：写日记、设定目标或静读，拒绝打扰。",
+      "示例3 🚀：进行创意头脑风暴。",
+      "示例4 🌱：去大自然散步，与环境亲密接触，无数字干扰。"
+    ],
+    "ressources": [
+      {
+        "title": "飞行模式的力量",
+        "type": "video",
+        "url": "https://www.youtube.com/watch?v=xyz123"
+      },
+      {
+        "title": "为什么每天一小时飞行模式是好主意",
+        "type": "article",
+        "url": "https://www.huffpost.com/articles"
+      },
+      {
+        "title": "播客：断开连接才能重新连接",
+        "type": "bonus",
+        "url": "https://www.podcast.com/episode123"
+      }
+    ]
+  },
+  "challengeOrganisationDigitale": {
+    "miniCours": "数字化整理是一项平衡艺术 🎪，但对于高效生产力至关重要 🎯。每天只需花15分钟 🕒，就能为后续节省大量时间。🚀 首先按优先级整理邮箱 📧，使用文件夹将低优先级邮件分类。🕵️‍♀️ 然后根据日常需求逻辑地组织文件：创建文件夹和子文件夹，清晰命名文件，便于快速查找。维护整洁的数字空间或许令人畏惧，但每天一点点进步即可带来无压力效率提升。🌈",
+    "exemples": [
+      "示例1 ✨：为文件和文档创建清晰的层级结构，比如：工作 > 项目ABC > 最终版本。",
+      "示例2 💡：使用邮箱过滤器将低优先级邮件自动移动到专用文件夹。",
+      "示例3 🚀：在清理数字空间时，记得清空回收站并删除不必要的下载文件。",
+      "示例4 🌱：使用键盘快捷键来节省浏览和移动文件时的时间。"
+    ],
+    "ressources": [
+      { "title": "如何整理电脑文件", "type": "video", "url": "https://example.com/video1" },
+      { "title": "良好文件夹结构的规则", "type": "article", "url": "https://example.com/article1" },
+      { "title": "清理数字空间的终极指南", "type": "bonus", "url": "https://example.com/bonus1" }
+    ],
+    "illustrationSuggeree": "桌面上有一台电脑，屏幕显示整洁排列的文件夹",
+    "imageHelper": "https://firebasestorage.googleapis.com/v0/b/challengeme-d7fef.appspot.com/o/Challenges-Helper%2Fch-organisation-digitale.png?alt=media"
+  },
+
+  "challengePenseePositive": {
+    "miniCours": "🧘‍♀️ 将消极想法转化为积极思维是一种强大的个人成长技巧。每当出现负面想法，尝试用积极想法替换。朝着更快乐、更充实的生活迈出重要一步。🌈 例如，将“我办不到”改为“我可以做到，而且我会做得很棒！”👏 关键在于意识到自己的思维并加以掌控。✨",
+    "exemples": [
+      "示例1 ✨：将“这太难了”变为“这是一个将帮助我成长的挑战”。",
+      "示例2 💡：将“我会犯错”改为“我会学习并进步”。",
+      "示例3 🚀：将“这不可能”换成“这是可能的，我会做到”。",
+      "示例4 🌱：将“我很差劲”替换为“我在学习并每天都在进步”。"
+    ],
+    "ressources": [
+      { "title": "积极自我暗示的力量", "type": "video", "url": "" },
+      { "title": "如何将消极思维转化为积极？", "type": "article", "url": "" },
+      { "title": "播客：库埃法—积极思考带来幸福生活", "type": "bonus", "url": "" }
+    ],
+    "illustrationSuggeree": "一个人在笔记本里写下积极的想法",
+    "imageHelper": "https://firebasestorage.googleapis.com/v0/b/challengeme-d7fef.appspot.com/o/Challenges-Helper%2Fch-pensee-positive.png?alt=media"
+  },
+
+  "challengePlanificationHebdomadaire": {
+    "miniCours": "📚 每周日花大约30分钟规划接下来的一周，会产生巨大不同！💪 明确的计划让大脑不会反复考虑下一步该做什么。😌 这不仅帮助你更好地利用时间，还能缓解压力和焦虑。🧘‍♀️ 拿着一杯茶 ☕、纸和笔 🖊️，制定一份清晰的每周计划吧。",
+    "exemples": [
+      "示例1 ✨：阿曼达开始每周日制定一周计划。她注意到工作效率提高，压力减少。",
+      "示例2 💡：杰克使用数字应用来规划他的一周。他发现这能节省大量时间。",
+      "示例3 🚀：黛安为每周规划专门准备了一本笔记本。每个周日，她一边听喜欢的音乐 🎶，一边制定计划。",
+      "示例4 🌱：马克不仅规划工作时间，也安排空余时间。他设定运动 🏋️ 和娱乐 🧗 活动以保持平衡。"
+    ],
+    "ressources": [
+      { "title": "如何有效规划每周", "type": "video", "url": "https://www.example.com/planification_efficace" },
+      { "title": "每周规划的7个好处", "type": "article", "url": "https://www.example.com/blog/avantages_planification_hebdomadaire" },
+      { "title": "播客：每周规划策略", "type": "bonus", "url": "https://www.example.com/podcast/strategies_planification_hebdomadaire" }
+    ],
+    "illustrationSuggeree": "一个人坐在桌前，打开笔记本，规划一周事情",
+    "imageHelper": "https://firebasestorage.googleapis.com/v0/b/challengeme-d7fef.appspot.com/o/Challenges-Helper%2Fch-planification-hebdomadaire.png?alt=media"
+  },
+
+  "coldShower": {
+    "miniCours": "需要整天都充满能量？🌞 冷水淋浴挑战适合你。这可以培养纪律性，提升能量，唤醒感官。💦 每天洗一次冷水澡，体验身体和大脑的不同。先用温水，然后逐渐降低温度。👉 目标是尽可能长时间在冷水下冲淋。准备好接受挑战了吗？🚀",
+    "exemples": [
+      "示例1 ✨：从温水开始，然后逐渐降低水温。",
+      "示例2 💡：尽可能长时间淋冷水。",
+      "示例3 🚀：早上冲一次冷水澡，让一天精神满满。",
+      "示例4 🌱：至少坚持30秒冷水淋浴，感受身体和大脑的变化。"
+    ],
+    "ressources": [
+      { "title": "冷水淋浴的好处", "type": "video", "url": "https://www.youtube.com/watch?v=sqmrof6o0gk" },
+      { "title": "为什么你应该每天都洗冷水澡？", "type": "article", "url": "https://www.healthline.com/health/cold-shower-benefits" },
+      { "title": "冷水澡挑战：关于好处与技巧的播客", "type": "podcast", "url": "https://open.spotify.com/show/4rFsMgQhE9swoiKk7PeiYw" }
+    ],
+    "illustrationSuggeree": "一个人在冷水淋浴下，身体和思维焕发活力",
+    "imageHelper": "https://firebasestorage.googleapis.com/v0/b/challengeme-d7fef.appspot.com/o/Challenges-Helper%2Fch-douche-froide.png?alt=media"
+  },
+
+  "compliment": {
+    "miniCours": "恭喜你！🎉 你即将学会如何给出有效的赞美——这是建立关系和让人开心的强大工具之一。一个好的赞美要具体、真诚，并关注努力而不仅仅是结果。记住：实践成就完美，所以多多赞美朋友、家人，甚至是自己吧!🌟",
+    "exemples": [
+      "示例1 ✨：“你解释事物的方式非常独特，真的帮助我理解了很多。”",
+      "示例2 💡：“我非常钦佩你不断学习新事物的热情。”",
+      "示例3 🚀：“你的幽默感总能给人带来快乐。”",
+      "示例4 🌱：“我非常欣赏你为团队带来的正能量。”"
+    ],
+    "ressources": [
+      { "title": "如何给出有效赞美", "type": "video", "url": "https://example.com/video_compliment_keys" },
+      { "title": "真诚赞美的艺术", "type": "article", "url": "https://example.com/article_sincere_compliment" },
+      { "title": "真诚赞美的心理益处", "type": "podcast", "url": "https://example.com/podcast_compliment_benefits" }
+    ],
+    "illustrationSuggeree": "一个人在微笑着真诚地给另一个人赞美",
+    "imageHelper": "https://firebasestorage.googleapis.com/v0/b/challengeme-d7fef.appspot.com/o/Challenges-Helper%2Fch-compliment.png?alt=media"
+  },
+  "dailyVisualization": {
+    "miniCours": "每天花一点时间来可视化你的目标。闭上眼睛5分钟，想象自己实现了它们。可视化细节——你感觉如何？看到了什么？听到了什么？🧠🌟 这一强大的练习不仅能激励你，还能帮助你解决问题并产生新想法。关键在于持续性。每天都试试吧 🎯📅。",
+    "exemples": [
+      "示例1 ✨：如果你在为升职努力，想象你坐在新办公室里，处理更复杂的任务，主持会议。",
+      "示例2 💡：如果你的目标是跑马拉松，想象自己冲过终点线，感受喜悦与成就。",
+      "示例3 🚀：如果你想创业，想象自己成为成功的CEO，与团队讨论战略，接到满意客户的电话。",
+      "示例4 🌱：如果你想拥有更健康的生活，想象准备均衡的饮食、运动，感觉更有活力和幸福。"
+    ],
+    "ressources": [
+      { "title": "可视化的力量", "type": "video", "url": "https://www.youtube.com/watch?v=b5i3vE4S2WQ" },
+      { "title": "每日可视化如何引领成功", "type": "article", "url": "https://www.huffpost.com/entry/see-believe-achieve_b_890307" },
+      { "title": "可视化与成功的播客", "type": "bonus", "url": "https://www.mindvalley.com/podcast/mindvalley-podcast/visualization-success-procedure-reality-transurfing" }
+    ],
+    "illustrationSuggeree": "坐在安静环境中，闭眼可视化目标的人",
+    "imageHelper": "https://firebasestorage.googleapis.com/v0/b/challengeme-d7fef.appspot.com/o/Challenges-Helper%2Fch-daily-visualisation.png?alt=media"
+  },
+  "dailyWins": {
+    "miniCours": "👏 自我肯定对于增强自信至关重要。每天我们都有大大小小的胜利，但常常忽略。为改变这种状况，养成一个简单而强大的习惯：每天写下3个小胜利 📝。也许你按时完成了报告 🕒，帮助了同事 👫，或抽时间放松 🛀。无论是什么，珍惜这些时刻，看着你的信心腾飞 🚀。",
+    "exemples": [
+      "示例1 ✨：“尽管压力很大，我还是按时完成了项目。”",
+      "示例2 💡：“我帮助一位新同事熟悉我们的平台。”",
+      "示例3 🚀：“尽管疲惫，我今天早上还是去跑步。”",
+      "示例4 🌱：“我花时间为自己做了一顿健康的饭。”"
+    ],
+    "ressources": [
+      { "title": "庆祝小胜利的力量", "type": "video", "url": "https://www.youtube.com/watch?v=c9KtG6aCtB4" },
+      { "title": "识别小胜利的力量", "type": "article", "url": "https://www.tonyrobbins.com/stories/unleash-the-power/the-power-of-recognizing-your-small-wins/" },
+      { "title": "播客：成功的科学", "type": "bonus", "url": "https://www.scienceofsuccess.co/blog/the-science-of-small-wins" }
+    ],
+    "illustrationSuggeree": "一个人在日记里写字，旁边放着一杯茶，星星环绕象征胜利",
+    "imageHelper": "https://firebasestorage.googleapis.com/v0/b/challengeme-d7fef.appspot.com/o/Challenges-Helper%2Fch-daily-wins.png?alt=media"
+  },
+  "dailyYoga": {
+    "miniCours": "通过瑜伽以一个大大的微笑 😊 开始你的一天！瑜伽不仅是运动，它是一种帮助身心和谐的练习 💫。每天只需15分钟，就能提升柔韧性，增加能量，培养持久的内心平静 🧘‍♀️。为什么不试试呢？瑜伽适合所有人，无论你的体能水平或年龄。给自己这个成长的空间，保持开放，关注每一次呼吸。你可以做到！💪🏻",
+    "exemples": [
+      "示例1 ✨：尝试一节初学者瑜伽课程，温和地开始早晨。",
+      "示例2 💡：尝试不同风格——探索哈他或流瑜伽，看看你更喜欢哪个。",
+      "示例3 🚀：将瑜伽融入晨间日程，为一天带来平静的开始。",
+      "示例4 🌱：使用舒适的瑜伽垫和宁静环境来练习。"
+    ],
+    "ressources": [
+      { "title": "初学者瑜伽：15分钟放松", "type": "video", "url": "" },
+      { "title": "定期练习瑜伽的重要性", "type": "article", "url": "" },
+      { "title": "播客：瑜伽作为一种生活方式", "type": "bonus", "url": "" }
+    ],
+    "illustrationSuggeree": "清晨户外做瑜伽姿势的人",
+    "imageHelper": "https://firebasestorage.googleapis.com/v0/b/challengeme-d7fef.appspot.com/o/Challenges-Helper%2Fch-daily-yoga.png?alt=media"
+  },
+  "declutterSpace": {
+    "miniCours": "清理杂物不仅仅是整理物品——它是创造有助于高效和宁静空间的机会 🧘‍♀️。每件物品都有能量——未使用的东西可能成为干扰或焦虑源 😓。从小处开始——每天选一个区域。问自己：这个东西有用吗？它让我快乐吗？区分情感价值和实用价值可以帮助你决定什么值得保留。💼",
+    "exemples": [
+      "示例1 ✨：整理你的衣服——保留让你快乐且实用的，捐赠其余的。",
+      "示例2 💡：整理你的书📚——创建一个舒适阅读角，把你不会再看的书送人。",
+      "示例3 🚀：把你的办公桌变成高效区域——扔掉不需要的文件，整齐摆放文具。",
+      "示例4 🌱：整理厨房——捐赠或丢弃未使用的用具，高效组织储物空间。"
+    ],
+    "ressources": [
+      { "title": "如何清理家庭乱象以增进清晰度", "type": "video", "url": "http://example.com/video/désencombrer" },
+      { "title": "清理空间的5个步骤", "type": "article", "url": "http://example.com/article/désencombrer" },
+      { "title": "播客：清理的力量", "type": "bonus", "url": "http://example.com/podcast/désencombrer" }
+    ],
+    "illustrationSuggeree": "一个人整理物品，一边是保留堆，一边是捐赠/丢弃堆",
+    "imageHelper": "https://firebasestorage.googleapis.com/v0/b/challengeme-d7fef.appspot.com/o/Challenges-Helper%2Fch-declutter-space.png?alt=media"
+  },
+  "defiArretTabac": {
+    "miniCours": "欢迎踏上自由之旅 🕊️！吸烟是一种习惯——通过建立健康新习惯来打破它 💔。每天抽点时间笑一笑 😂、动一动 🕺——这可以帮助减少导致吸烟的压力。支持至关重要 🔑。与家人朋友分享你的挑战，当戒断变得艰难时寻求鼓励。记住，每一个无烟日都是一次胜利 🎉。",
+    "exemples": [
+      "示例1 ✨：用简短的瑜伽或冥想替代吸烟休息时间。",
+      "示例2 💡：当你想抽烟时，喝水或咀嚼无糖口香糖。",
+      "示例3 🚀：在社交媒体上分享你的挑战以获得支持。",
+      "示例4 🌱：庆祝每个无烟日——每一天都是你新生活的种子。"
+    ],
+    "ressources": [
+      { "title": "关于烟草危害的演讲", "type": "video", "url": "https://youtu.be/StopSmoking" },
+      { "title": "10种经验证的戒烟方法", "type": "article", "url": "https://www.stop-tabac.com" },
+      { "title": "播客：我的戒烟之旅", "type": "bonus", "url": "https://www.quit-smoking-podcast.com" }
+    ],
+    "illustrationSuggeree": "一个人在享受日出——象征自由与重生",
+    "imageHelper": "https://firebasestorage.googleapis.com/v0/b/challengeme-d7fef.appspot.com/o/Challenges-Helper%2Fch-arret-du-tabac.png?alt=media"
+  },
+  "defiCarnetGratitude": {
+    "miniCours": "每天记录感恩之事是一种欣赏生活大小美好的方式 🙏。培养感恩的态度有助于增强积极情绪并提升幸福感 ❤️。写下这些感恩瞬间能帮助你聚焦生活中的亮点并加强记忆 📖。可以记录任何内容：当天的成功、收到的善意或路边的美丽风景 🌸。让感恩每天绽放！",
+    "exemples": [
+      "示例 1 ✨ — 你在团队面前成功完成了演示。",
+      "示例 2 💡 — 有人帮你打开了咖啡店的门。",
+      "示例 3 🚀 — 你跑了5公里没有停下来。",
+      "示例 4 🌱 — 你欣赏了一场美丽的日落。"
+    ],
+    "ressources": [
+      {
+        "title": "感恩的力量",
+        "type": "video",
+        "url": "https://youtube.com/vidéo1"
+      },
+      {
+        "title": "为什么要写感恩日记",
+        "type": "article",
+        "url": "https://www.monarticle.com/1"
+      },
+      {
+        "title": "播客：感恩的影响",
+        "type": "bonus",
+        "url": "https://www.monpodcast.com/1"
+      }
+    ],
+    "illustrationSuggeree": "一个人带着平静微笑写日记。",
+    "imageHelper": "https://firebasestorage.googleapis.com/v0/b/challengeme-d7fef.appspot.com/o/Challenges-Helper%2Fch-carnet-gratitude.png?alt=media"
+  },
+  "defiConnexionNature": {
+    "miniCours": "美好的自然世界就在门外 🌳🌷🦋。亲近自然不仅让你欣赏地球之美，也滋养心灵 🧘‍♂️✨。它让你回归本源，增强觉知，呼吸新鲜空气 🍃😊。每天至少在户外待30分钟，无论是晨间散步、公园瑜伽，还是仰望星空，都会滋养身体与精神 🏞️💖。",
+    "exemples": [
+      "示例 1 ✨：早起欣赏日出 🌅",
+      "示例 2 💡：与朋友在公园野餐 🥪🌳",
+      "示例 3 🚀：在社区里慢跑或散步 🏃‍♀️",
+      "示例 4 🌱：在花园里冥想 🧘‍♀️"
+    ],
+    "ressources": [
+      {
+        "title": "自然如何改善身心健康",
+        "type": "video",
+        "url": "https://www.youtube.com/watch?v=Z7O8s9n_Va8"
+      },
+      {
+        "title": "重新连接自然的10个理由",
+        "type": "article",
+        "url": "https://www.mindbodygreen.com/0-20793/10-reasons-why-being-in-nature-is-good-for-you.html"
+      },
+      {
+        "title": "播客：回归自然",
+        "type": "bonus",
+        "url": "https://www.bbc.co.uk/programmes/p07zr8p7"
+      }
+    ],
+    "illustrationSuggeree": "一个人在绿色公园中冥想。",
+    "imageHelper": "https://firebasestorage.googleapis.com/v0/b/challengeme-d7fef.appspot.com/o/Challenges-Helper%2Fch-connexion-nature.png?alt=media"
+  },
+  "defiCreativiteQuotidienne": {
+    "miniCours": "每天用创意创作一些新东西，是激发想象力和自由表达的最佳方式 🌱🎨。即使只是一个小想法或一个小作品也很有价值 🚀。不追求完美，哪怕只是涂鸦、短诗或新点子，都是一次胜利 💡。",
+    "exemples": [
+      "示例 1 ✨：拍摄一个日常物品并用 App 转化为艺术作品。",
+      "示例 2 💡：写一首与当天情绪有关的小诗。",
+      "示例 3 🚀：为常用的物品重新设计外观。",
+      "示例 4 🌱：每天画一幅与自然有关的图。"
+    ],
+    "ressources": [
+      {
+        "title": "每天释放你的创造力",
+        "type": "video",
+        "url": "https://www.youtube.com/watch?v=xyz123"
+      },
+      {
+        "title": "30天创意挑战",
+        "type": "article",
+        "url": "https://www.blog-creatif.com/article123"
+      },
+      {
+        "title": "播客：培养创造力",
+        "type": "bonus",
+        "url": "https://www.podcast.com/episode123"
+      }
+    ],
+    "illustrationSuggeree": "一个人站在空白画布前，手拿画笔准备创作。",
+    "imageHelper": "https://firebasestorage.googleapis.com/v0/b/challengeme-d7fef.appspot.com/o/Challenges-Helper%2Fch-creativite-quotidienne.png?alt=media"
+  },
+  "defiDigitalDetox": {
+    "miniCours": "😌 每天远离电子设备2小时，对眼睛、大脑和身体都有益处。我们活在一个时刻在线的世界里，定期断联非常必要 🌲。不看屏幕时，可以阅读、冥想或锻炼，有助于减压、集中注意力并激发创造力 🚀。从每天10分钟开始，逐步延长到2小时 💫。",
+    "exemples": [
+      "示例 1 ✨：关闭设备，阅读一本好书30分钟。",
+      "示例 2 💡：不带手机外出散步。",
+      "示例 3 🚀：睡前练习瑜伽或冥想，而不是刷手机。",
+      "示例 4 🌱：从事创意爱好，如绘画或手工制作。"
+    ],
+    "ressources": [
+      {
+        "title": "如何进行数字排毒",
+        "type": "video",
+        "url": "https://youtu.be/exemple"
+      },
+      {
+        "title": "数字排毒终极指南",
+        "type": "article",
+        "url": "https://www.exemple.com/article-detox-digitale"
+      },
+      {
+        "title": "播客：数字生活中的平衡",
+        "type": "bonus",
+        "url": "https://www.exemple.com/podcast-detox-digitale"
+      }
+    ],
+    "illustrationSuggeree": "一个人躺在吊床上读书，没有任何电子设备。",
+    "imageHelper": "https://firebasestorage.googleapis.com/v0/b/challengeme-d7fef.appspot.com/o/Challenges-Helper%2Fch-digital-detox.png?alt=media"
+  },
+  "defiDuZeroDechet": {
+    "miniCours": "准备好接受环保挑战了吗？💚 今天来一个零废弃日！🗑️ 意味着重复使用、回收和减少浪费。让瓶子焕发新生，使用布袋或金属吸管 ♻️。带上你的可重复使用容器，避免一次性包装。绿色思维，绿色行动，绿色生活！🌎",
+    "exemples": [
+      "示例 1 ✨：使用不锈钢水瓶代替塑料瓶。",
+      "示例 2 💡：带上可重复使用的咖啡杯。",
+      "示例 3 🚀：用自己的容器在散装商店购物。",
+      "示例 4 🌱：将厨余堆肥，制作天然肥料。"
+    ],
+    "ressources": [
+      {
+        "title": "如何开始零废弃生活",
+        "type": "video",
+        "url": "www.votrelien.com"
+      },
+      {
+        "title": "10个零废弃生活建议",
+        "type": "article",
+        "url": "www.votrelien.com"
+      },
+      {
+        "title": "播客：迈向零废弃",
+        "type": "bonus",
+        "url": "www.votrelien.com"
+      }
+    ],
+    "illustrationSuggeree": "一个女性正在将垃圾分类放入回收桶中。",
+    "imageHelper": "https://firebasestorage.googleapis.com/v0/b/challengeme-d7fef.appspot.com/o/Challenges-Helper%2Fch-zero-dechet.png?alt=media"
+  },
+  "defiEcritureQuotidienne": {
+    "miniCours": "📓 每天写日记！你不需要成为莎士比亚，只需让你的笔 ✒️ 自由流动，表达你的思想与情感。这种习惯能够激发自我反思，打破心理障碍，并带来强大的创意与疗愈效果。它也是记录你每天生活、追踪成长和写下梦想目标的好方式。现在就拿起笔，开始书写吧 🖊️✨！",
+    "exemples": [
+      "示例 1 ✨：'亲爱的日记，今天我遇见了……'",
+      "示例 2 💡：'我经历了一段工作上的困难。这是我当时的感受，以及我学到的东西……'",
+      "示例 3 🚀：'我脑中一直挥之不去的项目创意是……'",
+      "示例 4 🌱：'每天写下三件让我感到感激的事。'"
+    ],
+    "ressources": [
+      {
+        "title": "每日写作的力量",
+        "type": "video",
+        "url": "videourl1.com"
+      },
+      {
+        "title": "写日记的10个理由",
+        "type": "article",
+        "url": "articleurl1.com"
+      },
+      {
+        "title": "写日记的艺术：如何与为什么",
+        "type": "podcast",
+        "url": "podcasturl1.com"
+      }
+    ],
+    "illustrationSuggeree": "一个人一边喝茶一边写日记。",
+    "imageHelper": "https://firebasestorage.googleapis.com/v0/b/challengeme-d7fef.appspot.com/o/Challenges-Helper%2Fch-ecriture-quotidienne.png?alt=media"
+  },
+  "defiGratitudeVisuelle": {
+    "miniCours": "🙂 每天唤醒视觉感恩 ✨。目标很简单：寻找并以视觉方式记录一件你感激的事 📸。这可以是你每天早晨的咖啡 ☕️、一次温暖的拥抱 👦，或一场绚丽的日落 🌅。这会让你更加关注生活中的点滴美好，培养感恩的态度 🙏。你可以拍照、画画或用任何你喜欢的方式呈现 💕。",
+    "exemples": [
+      "示例 1 ✨：一顿美味的家常饭菜 🥘。",
+      "示例 2 💡：安静地阅读你最喜欢的书 👓📖。",
+      "示例 3 🚀：在大自然中散步，放松身心 🏞️。",
+      "示例 4 🌱：你刚浇水的植物开始发芽 🌱。"
+    ],
+    "ressources": [
+      {
+        "title": "如何练习视觉感恩",
+        "type": "video",
+        "url": "https://www.youtube.com/"
+      },
+      {
+        "title": "视觉感恩的益处",
+        "type": "article",
+        "url": "https://www.medium.com/"
+      },
+      {
+        "title": "播客：视觉感恩的力量",
+        "type": "podcast",
+        "url": "https://www.spotify.com/"
+      }
+    ],
+    "illustrationSuggeree": "一个人拿着相机，在自然中准备拍下美丽的风景。",
+    "imageHelper": "https://firebasestorage.googleapis.com/v0/b/challengeme-d7fef.appspot.com/o/Challenges-Helper%2Fch-gratitude-visuelle.png?alt=media"
+  },
+  "defiMarcheConsciente": {
+    "miniCours": "🚶‍♀️ 正念行走是一种觉察练习，帮助你专注于当下。注意每一步的触感，你的双脚与地面的连接，以及你呼吸的节奏 😌。你会感受到风吹在皮肤上，阳光洒在脸上，周围的声音也会变得清晰 🍃。每一次散步都能成为与你自己和自然重新连接的机会 🌳。",
+    "exemples": [
+      "示例 1 ✨：注意每一步的感觉，是否有压力、摩擦或移动感？",
+      "示例 2 💡：感受每一次吸气与呼气的过程。",
+      "示例 3 🚀：聆听周围的声音，例如鸟鸣、车声或人声。",
+      "示例 4 🌱：注意皮肤上的温度，如清晨的凉风或午后的暖阳。"
+    ],
+    "ressources": [
+      {
+        "title": "了解正念行走",
+        "type": "video",
+        "url": "URL_to_replace"
+      },
+      {
+        "title": "探索正念行走的好处",
+        "type": "article",
+        "url": "URL_to_replace"
+      },
+      {
+        "title": "播客：正念行走指南",
+        "type": "podcast",
+        "url": "URL_to_replace"
+      }
+    ],
+    "illustrationSuggeree": "一个人在大自然中正念行走。",
+    "imageHelper": "https://firebasestorage.googleapis.com/v0/b/challengeme-d7fef.appspot.com/o/Challenges-Helper%2Fch-marche-consciente.png?alt=media"
+  },
+  "defiMatineeSansEcrans": {
+    "miniCours": "🚫📱 每天早晨进行一小时无屏时间！这是你重新与自我连接、清晰思维的完美机会 🧠✨。别急着查看通知、邮件和新闻，给你的大脑一个安静唤醒的时刻。你可以冥想 🧘、静静喝一杯咖啡 ☕、写日记 📝 或做些锻炼 🤸。选择一种能让你保持平静与专注的方式开启一天 🌞。",
+    "exemples": [
+      "示例 1 ✨：不要立刻查看邮箱，先进行10分钟冥想。",
+      "示例 2 💡：用晨间锻炼代替看手机。",
+      "示例 3 🚀：准备一份营养丰富的早餐。",
+      "示例 4 🌱：阅读一本鼓舞人心的书，而不是看新闻。"
+    ],
+    "ressources": [
+      {
+        "title": "为什么我每天早晨不碰屏幕",
+        "type": "video",
+        "url": ""
+      },
+      {
+        "title": "无屏早晨的好处",
+        "type": "article",
+        "url": ""
+      },
+      {
+        "title": "播客：如何建立无屏幕的晨间习惯",
+        "type": "bonus",
+        "url": ""
+      }
+    ],
+    "illustrationSuggeree": "一个人安静地坐着，手握茶杯，沐浴在日出之中，没有任何屏幕。",
+    "imageHelper": "https://firebasestorage.googleapis.com/v0/b/challengeme-d7fef.appspot.com/o/Challenges-Helper%2Fch-matin-sans-ecrans.png?alt=media"
+  },
+  "defiMicroMeditation": {
+    "miniCours": "🌈 微冥想就像是大脑的小型咖啡休息，但你不是靠咖啡因恢复活力，而是通过觉知、平衡和宁静 🧘‍♀️。每天只需要一分钟，就能带来巨大改变。无需成为专家，任何时间、任何地点都可以练习 🕒。从今天开始，把它融入生活中，成为最专注、最冷静的自己 🚀。",
+    "exemples": [
+      "示例 1 ✨：坐在桌前，闭上眼睛，专注呼吸一分钟。",
+      "示例 2 💡：散步时停下来观察自然，感受风吹一分钟。",
+      "示例 3 🚀：在开始早晨日程前，冥想一分钟。",
+      "示例 4 🌱：睡前反思自己的一天，并静心一分钟。"
+    ],
+    "ressources": [
+      {
+        "title": "微冥想入门",
+        "type": "video",
+        "url": "https://www.example.com/micro-meditation-introduction"
+      },
+      {
+        "title": "微冥想的5大好处",
+        "type": "article",
+        "url": "https://www.example.com/benefits-of-micro-meditation"
+      },
+      {
+        "title": "微冥想实践指南",
+        "type": "bonus",
+        "url": "https://www.example.com/guide-to-micro-meditation"
+      }
+    ],
+    "illustrationSuggeree": "一个人在宁静的环境中平静地冥想。",
+    "imageHelper": "https://firebasestorage.googleapis.com/v0/b/challengeme-d7fef.appspot.com/o/Challenges-Helper%2Fch-micro-meditation.png?alt=media"
+  },
+  "defiNoBuyMonth": {
+    "miniCours": "👋 你好！今天我们来聊聊“不买无用物”挑战 🛍️！理念简单，但并不容易：只买真正需要的东西。这是一种财务极简主义的思维方式，抵制线上促销和耀眼橱窗的诱惑 💰。越是不买多余东西，你就越珍惜赚来的钱。这会迅速改善你的钱包和心态——更少压力，更有条理，更快乐。准备好迎接挑战了吗❓",
+    "exemples": [
+      "示例 1 ✨：不要每天买外卖咖啡，试试在家自己冲。",
+      "示例 2 💡：别买新畅销书，到图书馆借吧。",
+      "示例 3 🚀：拒绝购买最新款运动鞋——光鲜只是暂时，钱却没了。",
+      "示例 4 🌱：用可重复使用的袋子代替一次性塑料袋。"
+    ],
+    "ressources": [
+      {
+        "title": "Minimalism: A Documentary About the Important Things",
+        "type": "video",
+        "url": "https://www.netflix.com/title/80114460"
+      },
+      {
+        "title": "7 Ways to Practice Financial Minimalism",
+        "type": "article",
+        "url": "https://www.moneycrashers.com/practice-financial-minimalism/"
+      },
+      {
+        "title": "The Minimalists Podcast",
+        "type": "podcast",
+        "url": "https://www.theminimalists.com/podcast/"
+      }
+    ],
+    "illustrationSuggeree": "一张被切成两半的信用卡",
+    "imageHelper": "https://firebasestorage.googleapis.com/v0/b/challengeme-d7fef.appspot.com/o/Challenges-Helper%2Fch-no-buy-month.png?alt=media"
+  },
+  "defiRangementMinimaliste": {
+    "miniCours": "🌿 这是一个强大的挑战：每天清理一件多余的物品！这是迈向简约生活的第一步，为你带来舒心和高效 💫。每移除一件东西，你的空间和心境就会更清晰 🌤️。从小处开始，坚持下去。捐赠、回收或丢弃吧，深呼吸。",
+    "exemples": [
+      "示例 1 ✨：一本积满灰尘的旧书？捐给图书馆吧。",
+      "示例 2 💡：抽屉里塞满旧电线？回收你不需要的。",
+      "示例 3 🚀：一年没穿的衣服？捐出去。",
+      "示例 4 🌱：重复的厨房用具？和邻居分享吧。"
+    ],
+    "ressources": [],
+    "illustrationSuggeree": "一间干净整洁的房间，没有多余物品，空间开阔。",
+    "imageHelper": "https://firebasestorage.googleapis.com/v0/b/challengeme-d7fef.appspot.com/o/Challenges-Helper%2Fch-rangement-minimaliste.png?alt=media"
+  },
+  "defiRepasEquilibre": {
+    "miniCours": "🥦🥩🍚 制作均衡膳食是提升日常幸福感的重要任务。无论你吃什么，每餐都要包含蛋白质、蔬菜和碳水化合物。蛋白质帮助修复组织 😄，蔬菜含维生素和纤维 💪，碳水提供能量，支撑全天 🚀。保持多样，不断探索新口味！",
+    "exemples": [
+      "示例 1 ✨：午餐试试烤鸡配西兰花和烤土豆。",
+      "示例 2 💡：浪漫晚餐可以做三文鱼配甜菜沙拉和藜麦。",
+      "示例 3 🚀：早餐可以是炒蛋、菠菜和全麦面包。",
+      "示例 4 🌱：素食晚餐：炒豆腐、各种烤菜和糙米。"
+    ],
+    "ressources": [
+      {
+        "title": "How to Create a Balanced Meal",
+        "type": "video",
+        "url": "https://www.youtube.com/watch?v=voNE0dnp-vc"
+      },
+      {
+        "title": "10 Balanced Meal Ideas for the Week",
+        "type": "article",
+        "url": "https://www.mangerbouger.fr/Manger-mieux/Je-prepare-mon-repas/Des-idees-de-menus"
+      },
+      {
+        "title": "Nutrition Basics in Podcast",
+        "type": "bonus",
+        "url": "https://www.santemagazine.fr/podcast/am6ly-path5"
+      }
+    ],
+    "illustrationSuggeree": "一张美观、色彩丰富的均衡餐食照片。",
+    "imageHelper": "https://firebasestorage.googleapis.com/v0/b/challengeme-d7fef.appspot.com/o/Challenges-Helper%2Fch-repas-equilibre.png?alt=media"
+  },
+  "defiRespirationConsciente": {
+    "miniCours": "🌬️ 正念呼吸是与你当下情绪和意识联结的强大方式 🌈。每天仅需 5 分钟，就能柔和改变你的生活 🚀。找一个安静地方，闭眼，深慢呼吸。专注于吸气和呼气。记住——这不是比赛，是觉知之旅 🐢。",
+    "exemples": [
+      "示例 1 ✨：每天固定一个时间，例如刚起床后。",
+      "示例 2 💡：使用冥想APP辅助呼吸练习。",
+      "示例 3 🚀：试试方盒呼吸或狮子呼吸等技术。",
+      "示例 4 🌱：如果注意力分散也没关系，这是训练的一部分。"
+    ],
+    "ressources": [],
+    "illustrationSuggeree": "一个人以莲花坐姿进行冥想。",
+    "imageHelper": "https://firebasestorage.googleapis.com/v0/b/challengeme-d7fef.appspot.com/o/Challenges-Helper%2Fch-respiration-consciente.png?alt=media"
+  },
+  "defiSommeilReparateur": {
+    "miniCours": "😴 充足的睡眠对身心健康至关重要。从一个放松的晚间仪式开始：睡前一小时关闭电子设备📵，阅读📚、练习瑜伽🧘或写感恩日记🙏。保持房间凉爽🌬️、昏暗🌚、安静🤫，将显著改善睡眠质量。",
+    "exemples": [
+      "示例 1 ✨：晚饭后关掉手机，读本小说。",
+      "示例 2 💡：睡前做轻柔瑜伽。",
+      "示例 3 🚀：写下当天值得感恩的事情。",
+      "示例 4 🌱：保持房间凉爽、昏暗和宁静。"
+    ],
+    "ressources": [],
+    "illustrationSuggeree": "一个人在宁静环境中做睡前瑜伽。",
+    "imageHelper": "https://firebasestorage.googleapis.com/v0/b/challengeme-d7fef.appspot.com/o/Challenges-Helper%2Fch-sommeil-reparateur.png?alt=media"
+  },
+  "drinkWater": {
+    "miniCours": "💦水！这个天然成分有神奇的功效！你有没有想过为什么水对我们的身体如此重要？它像清洁剂一样清除体内废物，同时保持我们的皮肤健康有光泽 🌟。设定每天喝2升水的目标是一个积极的挑战。一开始可能觉得难⛰️，但随着它慢慢融入你的日常，你会发现其实完全可以做到，并感受到身体的变化！💪🏽",
+    "exemples": [
+      "示例 1 ✨：购买一个1升的水瓶，每天挑战自己喝两次。",
+      "示例 2 💡：加入柠檬或浆果片以提升口感！",
+      "示例 3 🚀：每次洗澡后喝一杯水。",
+      "示例 4 🌱：一天开始和结束都喝一大杯水。"
+    ],
+    "ressources": [
+      {
+        "title": "为什么每天要喝2升水？",
+        "type": "video",
+        "url": "https://www.youtube.com/watch?v=example1"
+      },
+      {
+        "title": "喝足够水的7大健康益处",
+        "type": "article",
+        "url": "https://www.healthline.com/health/benefits-of-drinking-water"
+      },
+      {
+        "title": "播客：补水的重要性",
+        "type": "bonus",
+        "url": "https://www.healthpodcast.com/hydration-importance"
+      }
+    ],
+    "illustrationSuggeree": "一个人在喷泉处装水瓶",
+    "imageHelper": "https://firebasestorage.googleapis.com/v0/b/challengeme-d7fef.appspot.com/o/Challenges-Helper%2Fch-drink-water.png?alt=media"
+  },
+  "eatHealthy": {
+    "miniCours": "准备改变你的饮食习惯了吗？ 🥇每一餐都是给身体补充健康营养的机会！🥦 多吃水果、蔬菜和全谷物。多喝水，少喝甜饮料 🥤。记住，适度是均衡饮食的关键 🔑。健康饮食不仅对身体有益，对精神也有帮助！🧠 坚持下去，享受探索美味均衡新食谱的过程！🌈",
+    "exemples": [
+      "示例 1 ✨ - 用胡萝卜和鹰嘴豆泥代替薯片，做营养零食。",
+      "示例 2 💡 - 午餐来一份色彩丰富的新鲜蔬菜沙拉。",
+      "示例 3 🚀 - 早餐吃菠菜煎蛋和全麦面包。",
+      "示例 4 🌱 - 用水果泡水替代汽水。"
+    ],
+    "ressources": [
+      {
+        "title": "健康饮食的基础原理",
+        "type": "video",
+        "url": "https://www.youtube.com/watch?v=some_video_link"
+      },
+      {
+        "title": "每天吃更多蔬菜的10种方法",
+        "type": "article",
+        "url": "https://www.somesite.com/some_article_link"
+      },
+      {
+        "title": "播客：均衡饮食的益处",
+        "type": "bonus",
+        "url": "https://www.somepodcastsite.com/some_podcast_link"
+      }
+    ],
+    "illustrationSuggeree": "一个装着新鲜水果和蔬菜的彩色盘子。",
+    "imageHelper": "https://firebasestorage.googleapis.com/v0/b/challengeme-d7fef.appspot.com/o/Challenges-Helper%2Fch-eat-healthy.png?alt=media"
+  },
+  "familyTime": {
+    "miniCours": "👨‍👩‍👧‍👦家庭时光是宝贵的时刻。它能增强爱和相互尊重 🏠。每天花至少一小时的时光在一起，远离电子设备📵，分享故事、阅读或玩游戏 🎲。不必追求完美，只需用心陪伴。过程中的点滴，比结果更美好 ✨",
+    "exemples": [
+      "示例 1 ✨：开始讲故事之夜，每个人都来分享一本书 📚。",
+      "示例 2 💡：一起做饭 🥗，既有趣又学到东西。",
+      "示例 3 🚀：共同培养爱好，如园艺 🌳 或傍晚散步 🚶。",
+      "示例 4 🌱：利用时间聊聊个人成长，比如书评或励志纪录片 🎥。"
+    ],
+    "ressources": [
+      {
+        "title": "家庭时光的重要性",
+        "type": "video",
+        "url": "https://www.youtube.com/watch?v=xyz"
+      },
+      {
+        "title": "15项增进家庭感情的活动",
+        "type": "article",
+        "url": "https://www.familybondingxyz.com"
+      },
+      {
+        "title": "播客：个人成长与家庭",
+        "type": "bonus",
+        "url": "https://podcast.family.com/bonus"
+      }
+    ],
+    "illustrationSuggeree": "一家人在没有电子设备的环境中快乐互动",
+    "imageHelper": "https://firebasestorage.googleapis.com/v0/b/challengeme-d7fef.appspot.com/o/Challenges-Helper%2Fch-family-time.png?alt=media"
+  },
+  "goodPosture": {
+    "miniCours": "💪 良好姿势不仅让身体轻松，也让精神更专注！保持脊柱直立，同时收紧核心力量。每小时活动身体，练瑜伽，选择舒适椅子。日常小改变，造就大差别 🌿",
+    "exemples": [
+      "示例 1 ✨：每工作一小时就起身伸展后背。",
+      "示例 2 💡：定期做瑜伽或游泳，强化背部肌肉。",
+      "示例 3 🚀：使用腰垫或符合人体工程学的椅子。",
+      "示例 4 🌱：通过正念练习避免久坐时含胸。"
+    ],
+    "ressources": [
+      {
+        "title": "如何保持良好姿势？",
+        "type": "video",
+        "url": "www.exempleurl.com/video"
+      },
+      {
+        "title": "10个改善姿势的小贴士",
+        "type": "article",
+        "url": "www.exempleurl.com/article"
+      },
+      {
+        "title": "背部健康播客",
+        "type": "bonus",
+        "url": "www.exempleurl.com/podcast"
+      }
+    ],
+    "illustrationSuggeree": "一个人坐在符合人体工学的椅子上，对着镜子检查姿势。",
+    "imageHelper": "https://firebasestorage.googleapis.com/v0/b/challengeme-d7fef.appspot.com/o/Challenges-Helper%2Fch-good-posture.png?alt=media"
+  },
+  "hobbyTime": {
+    "miniCours": "🎨 抽时间做喜欢的事，能释放压力、激发创意、提升快乐。每日至少30分钟给自己——读书、绘画、散步、园艺等，只要让你开心 🌼",
+    "exemples": [
+      "示例 1: 花30分钟阅读喜欢的书 📚",
+      "示例 2: 做瑜伽或冥想缓解压力 🧘‍♀️",
+      "示例 3: 涂鸦或绘画，释放创造力 🎨",
+      "示例 4: 在大自然中散步，享受新鲜空气 🏞️"
+    ],
+    "ressources": [
+      {
+        "title": "如何高效利用30分钟休闲时间",
+        "type": "video",
+        "url": "https://exemple.com/video1"
+      },
+      {
+        "title": "为什么30分钟的兴趣爱好能提升生产力",
+        "type": "article",
+        "url": "https://exemple.com/article1"
+      },
+      {
+        "title": "利用业余时间进行个人成长的播客",
+        "type": "bonus",
+        "url": "https://exemple.com/podcast1"
+      }
+    ],
+    "illustrationSuggeree": "一个人坐着手持书籍，周围有小吃和饮料，微笑着。",
+    "imageHelper": "https://firebasestorage.googleapis.com/v0/b/challengeme-d7fef.appspot.com/o/Challenges-Helper%2Fch-hobby-time.png?alt=media"
+  },
+  "kindnessAct": {
+    "miniCours": "✅ 每天练习一个随机的善举，让你的生活和别人的生活都更加丰富！🌈 善举可以是身体上的行动或一句温暖的话语，可以是计划好的，也可以是自发的。它可以是提供帮助、分享时间，或者只是对他人微笑。无论形式如何，每一个善行都能带来巨大影响。💖 接受这个挑战，有助于提升社交能力、利他精神和个人幸福感，同时也是激发他人行善的有效方式。那么就行动起来，今天就做一件善事吧！🚀",
+    "exemples": [
+      "示例 1 ✨：在公交车上给一位年长者让位。",
+      "示例 2 💡：给同事写一封感谢邮件，表彰TA出色的工作。",
+      "示例 3 🚀：为朋友准备一份惊喜便当。",
+      "示例 4 🌱：在社区种一棵树。"
+    ],
+    "ressources": [
+      {
+        "title": "幸福的科学：为什么慷慨让我们更快乐？",
+        "type": "video",
+        "url": "https://www.youtube.com/watch?v=U3cZ-NGPkkU"
+      },
+      {
+        "title": "21种简单的善举方式",
+        "type": "article",
+        "url": "https://www.huffpost.com/entry/35-little-acts-of-kindness_n_5872030"
+      },
+      {
+        "title": "善良的力量",
+        "type": "podcast",
+        "url": "https://www.npr.org/programs/invisibilia/382451600/the-power-of-kindness"
+      }
+    ],
+    "illustrationSuggeree": "一个人举着写有“做个好人”的牌子",
+    "imageHelper": "https://firebasestorage.googleapis.com/v0/b/challengeme-d7fef.appspot.com/o/Challenges-Helper%2Fch-act-of-kindness.png?alt=media"
+  },
+  "learnLanguage": {
+    "miniCours": "学习一门新语言可能看起来令人生畏，但只要坚持正确方法，这将是一段激动人心的旅程🌍！从小目标开始，每天学几个单词🔠。耐心一点，给自己时间去吸收所学🕘。记住，这是一场马拉松，而不是短跑。充分利用所有工具：语言应用、视频、播客，甚至目标语言的书籍📲📺🎧📚。",
+    "exemples": [
+      "示例 1 ✨：设定每日学习 5 个新单词的目标，用抽认卡帮助记忆。",
+      "示例 2 💡：每天用 Duolingo 或类似应用练习 20 分钟。",
+      "示例 3 🚀：每周观看一部目标语言的电影或剧集，以熟悉其语音语调。",
+      "示例 4 🌱：使用目标语言写日记，帮助你用该语言思考与表达。"
+    ],
+    "ressources": [
+      {
+        "title": "学习语言的秘诀 | Lydia Machová",
+        "type": "video",
+        "url": "https://www.youtube.com/watch?v=o_XVt5rdpFY"
+      },
+      {
+        "title": "如何高效学习外语",
+        "type": "article",
+        "url": "https://lifehacker.com/i-learned-to-speak-four-languages-in-a-few-years-heres-1683098274"
+      },
+      {
+        "title": "Babbel 语言学习播客",
+        "type": "bonus",
+        "url": "https://www.babbel.com/en/magazine/category/language-podcasts"
+      }
+    ],
+    "illustrationSuggeree": "一个人坐在温馨的咖啡馆里，桌上有一杯咖啡和一本外语书。",
+    "imageHelper": "https://firebasestorage.googleapis.com/v0/b/challengeme-d7fef.appspot.com/o/Challenges-Helper%2Fch-learn-a-language.png?alt=media"
+  },
+  "learnSkill": {
+    "miniCours": "掌握一项新技能可能看起来像攀登一座大山，但别担心——一步步来就行！👣🌱 每天花一点时间学习。可以阅读相关内容，或观看教程视频📚💻。坚持与耐心是关键🗝️。这段旅程的美妙之处在于，你不仅学会了新技能，还增强了学习能力和适应力🧠💪。额外奖励：让它成为一种有趣的每日仪式🎶🍵。",
+    "exemples": [
+      "示例 1 ✨：提升与你工作相关的技能，例如掌握一款新软件。",
+      "示例 2 💡：学习你感兴趣的内容，如绘画、烹饪或摄影。",
+      "示例 3 🚀：尝试实用技能，如冥想或时间管理。",
+      "示例 4 🌱：走出舒适区，学习一门语言或者一件乐器。"
+    ],
+    "ressources": [
+      {
+        "title": "如何高效学习新技能",
+        "type": "video",
+        "url": "https://www.youtube.com/exemple"
+      },
+      {
+        "title": "掌握新技能的5个技巧",
+        "type": "article",
+        "url": "https://www.blog/exemple"
+      },
+      {
+        "title": "终身学习播客",
+        "type": "bonus",
+        "url": "https://www.podcast/exemple"
+      }
+    ],
+    "illustrationSuggeree": "一个人戴着耳机坐在笔记本电脑前在线学习新技能。",
+    "imageHelper": "https://firebasestorage.googleapis.com/v0/b/challengeme-d7fef.appspot.com/o/Challenges-Helper%2Fch-learn-skill.png?alt=media"
+  },
+  "learnWordDaily": {
+    "miniCours": "丰富你的词汇不仅能提升表达力和口才，也是一种探索不同文化和思维方式的有趣途径 🌍✨。从书籍、文章或词汇 APP 中选择一个词，理解其含义、细微差别和使用场景 🕵️‍♀️✨。然后将其写入句子并大声朗读，在日常对话中尝试使用它 📚💬。",
+    "exemples": [
+      "示例 1 ✨：'discernment' 意为正确判断的能力。可以说：'我欣赏梵高的艺术辨识力。'",
+      "示例 2 💡：'quintessential' 意为最完美或最纯粹的典范。可以说：'这首歌是节奏蓝调的精髓。'",
+      "示例 3 🚀：'ambidextrous' 意为左右手同样灵巧的人。可以说：'达芬奇不仅是一位天才艺术家，还是一个双手灵活的人。'",
+      "示例 4 🌱：'metamorphosis' 意为完全形式或本质的变化。可以说：'毛毛虫蜕变成蝴蝶。'"
+    ],
+    "ressources": [
+      {
+        "title": "如何提升你的英语词汇量？",
+        "type": "video",
+        "url": "https://youtu.be/xx_WNPe8bBs"
+      },
+      {
+        "title": "7个丰富词汇的技巧",
+        "type": "article",
+        "url": "https://www.superprof.fr/blog/amplifier-son-lexique/"
+      },
+      {
+        "title": "播客：那些你不知道的单词",
+        "type": "bonus",
+        "url": "https://anchor.fm/mots-inconnus"
+      }
+    ],
+    "illustrationSuggeree": "一个人坐在桌前读书，旁边放着一本笔记本用来记新词。",
+    "imageHelper": "https://firebasestorage.googleapis.com/v0/b/challengeme-d7fef.appspot.com/o/Challenges-Helper%2Fch-learn-word.png?alt=media"
+  },
+  "listenPodcast": {
+    "miniCours": "🎧 每天听教育类播客，就像随身携带一个移动课堂。无论散步、做饭还是闲坐，都能将时间变成充实的大脑训练 🧠。选择你感兴趣的主题，坚持收听 📚。尝试不同形式和时长，找到最适合你的那一种 🚀。",
+    "exemples": [
+      "示例 1 ✨：收听“Soft Skills Engineering”播客，了解有效沟通的重要性。",
+      "示例 2 💡：通过“Nerd's Eye View”学习个人理财基础。",
+      "示例 3 🚀：收听“WorkLife with Adam Grant”提升领导力。",
+      "示例 4 🌱：关注“TechStuff”了解最新科技创新。"
+    ],
+    "ressources": [
+      {
+        "title": "如何充分利用播客",
+        "type": "video",
+        "url": "https://youtu.be/your_url_here"
+      },
+      {
+        "title": "将播客融入日常的5个小技巧",
+        "type": "article",
+        "url": "https://blog.wordpress.com/your_article_url_here"
+      },
+      {
+        "title": "5个值得现在就听的教育播客",
+        "type": "bonus",
+        "url": "https://your_podcasts_recommendations_url_here"
+      }
+    ],
+    "illustrationSuggeree": "一个人戴着耳机，用手机听播客。",
+    "imageHelper": "https://firebasestorage.googleapis.com/v0/b/challengeme-d7fef.appspot.com/o/Challenges-Helper%2Fch-podcast.png?alt=media"
+  },
+  "meditation": {
+    "miniCours": "🧘‍♀️ 每天早上花 10 分钟冥想，可以提升专注力并缓解压力。找一个安静角落，闭上眼睛，深呼吸 🕊。冥想不是清空思绪，而是为它们创造空间。坚持比完美更重要 🌈。",
+    "exemples": [
+      "示例 1 ✨：在家中找一个无干扰的安静角。",
+      "示例 2 💡：使用初学者冥想 App 或在线引导。",
+      "示例 3 🚀：从 10 分钟开始，逐步延长时长。",
+      "示例 4 🌱：冥想后记录你的感受和体验。"
+    ],
+    "ressources": [
+      {
+        "title": "初学者冥想指南",
+        "type": "video",
+        "url": ""
+      },
+      {
+        "title": "每日冥想的好处",
+        "type": "article",
+        "url": ""
+      },
+      {
+        "title": "冥想精选播客",
+        "type": "bonus",
+        "url": ""
+      }
+    ],
+    "illustrationSuggeree": "一个人在宁静的环境中冥想。",
+    "imageHelper": "https://firebasestorage.googleapis.com/v0/b/challengeme-d7fef.appspot.com/o/Challenges-Helper%2Fch-meditation.png?alt=media"
+  },
+  "morningStretch": {
+    "miniCours": "☀️ 早安！开始一天的晨间拉伸，有助于唤醒身体、促进血液循环、激活思维 🧘‍♂️。你可做简单的动作：双臂上举、前屈触脚或轻旋颈部 🤗。关键是活动身体，唤醒感官 🏄‍♂️。",
+    "exemples": [
+      "示例 1 ✨：站立，深吸一口气，将双臂上举。",
+      "示例 2 💡：前屈，试着触碰脚趾，腿保持伸直。",
+      "示例 3 🚀：坐着依次伸展每条腿，尝试用手触碰脚，并保持 5 秒。",
+      "示例 4 🌱：坐着，双臂前伸，轻轻转动手腕。"
+    ],
+    "ressources": [
+      {
+        "title": "初学者晨间拉伸指南",
+        "type": "video",
+        "url": ""
+      },
+      {
+        "title": "为何晨间拉伸很重要",
+        "type": "article",
+        "url": ""
+      },
+      {
+        "title": "播客：拉伸如何影响你的一天",
+        "type": "bonus",
+        "url": ""
+      }
+    ],
+    "illustrationSuggeree": "有人清晨醒来后，轻轻伸展双臂。",
+    "imageHelper": "https://firebasestorage.googleapis.com/v0/b/challengeme-d7fef.appspot.com/o/Challenges-Helper%2Fch-morning-stretch.png?alt=media"
+  },
+  "network": {
+    "miniCours": "🎉 恭喜接受这个挑战！有效的社交网络可以为你打开许多大门 🚪。每天联系一位行业相关人士，保持好奇心，提出问题，分享见解 🌅。每次交流都是成长机会。记住：质量重于数量。建立真实、有意义的关系 🌟。",
+    "exemples": [
+      "示例 1 ✨：在 LinkedIn 上联系业界领袖，讨论行业趋势。",
+      "示例 2 💡：邀请同事一起喝咖啡，聊聊近期项目成果。",
+      "示例 3 🚀：参加网络研讨会，为讲者提问。",
+      "示例 4 🌱：联系以前的职业联系人，了解彼此近况。"
+    ],
+    "ressources": [
+      {
+        "title": "有效建立人脉的技巧",
+        "type": "video",
+        "url": "youtube.com/reseautageefficace"
+      },
+      {
+        "title": "每日社交网络的艺术",
+        "type": "article",
+        "url": "medium.com/reseautagequotidien"
+      },
+      {
+        "title": "播客：人脉的力量",
+        "type": "bonus",
+        "url": "spotify.com/podcast/reseautage"
+      }
+    ],
+    "illustrationSuggeree": "在办公桌前，一人在打电话，旁边放着笔记本与笔。",
+    "imageHelper": "https://firebasestorage.googleapis.com/v0/b/challengeme-d7fef.appspot.com/o/Challenges-Helper%2Fch-networking.png?alt=media"
+  },
+  "newRecipe": {
+    "miniCours": "面对一份新食谱可能看起来像座大山，但别害怕动手下厨！👨‍🍳你不需要是米其林大厨才可以开始。任何新手厨师都可以通过几个简单步骤做出美味佳肴。🍲 首先从头到尾阅读一遍食谱，理解步骤流程。📖 确保你拥有所有所需食材，不要急于求成。记住，重要的是旅程，而非目的地！🌟",
+    "exemples": [
+      "示例 1 ✨：从零开始自制一份苹果派。",
+      "示例 2 💡：尝试一种你一直想品尝的异国料理。",
+      "示例 3 🚀：为你最喜欢的菜肴加入自己的创意，重新演绎。",
+      "示例 4 🌱：选择一份完全纯素的食谱。"
+    ],
+    "ressources": [
+      {
+        "title": "如何阅读和理解食谱",
+        "type": "video",
+        "url": "https://www.youtube.com/watch?v=*"
+      },
+      {
+        "title": "成功尝试新食谱的10个技巧",
+        "type": "article",
+        "url": "https://www.cuisinemaison.com/10-astuces-pour-reussir-une-nouvelle-recette"
+      },
+      {
+        "title": "播客：像专业厨师一样下厨",
+        "type": "bonus",
+        "url": "https://www.cookingpodcast.com/cuisiner-comme-un-pro"
+      }
+    ],
+    "illustrationSuggeree": "一个人一边阅读食谱，一边切菜。",
+    "imageHelper": "https://firebasestorage.googleapis.com/v0/b/challengeme-d7fef.appspot.com/o/Challenges-Helper%2Fch-nouvelle-recette.png?alt=media"
+  },
+  "noCaffeine": {
+    "miniCours": "🌞 准备好迎接真正的健康挑战了吗？试着一整周不摄入咖啡因！是的，这确实很困难。但请记住，每一个积极的改变都需要付出努力。🏋️‍♀️ 当你戒掉咖啡因，就是在给身体它应得的休息。你的身体是你的圣殿 🏛️💖。一周后你可能会惊讶于自己感受到的清新与充沛的能量。加油！💪 你可以做到！",
+    "exemples": [
+      "✨ 用一杯草本茶代替早晨的咖啡。",
+      "💡 早餐时尝试绿色蔬果奶昔，获得天然能量。",
+      "🚀 感到疲倦时去散个小步，而不是喝咖啡。",
+      "🌱 练习冥想来提高专注力，无需咖啡因。"
+    ],
+    "ressources": [
+      {
+        "title": "如何戒掉咖啡因又不疲倦",
+        "type": "video",
+        "url": "youtube.com/watch?v=videourl1"
+      },
+      {
+        "title": "为什么你应该暂时戒掉咖啡因",
+        "type": "article",
+        "url": "articleurl.com/2"
+      },
+      {
+        "title": "播客：咖啡因的健康替代品",
+        "type": "bonus",
+        "url": "podcasturl.com/3"
+      }
+    ],
+    "illustrationSuggeree": "一个人喝着草本茶来替代咖啡。",
+    "imageHelper": "https://firebasestorage.googleapis.com/v0/b/challengeme-d7fef.appspot.com/o/Challenges-Helper%2Fch-no-cafe.png?alt=media"
+  },
+  "noComplaints": {
+    "miniCours": "专注于积极的一面 🌈 并不总是容易的，但值得记住的是，每一次抱怨都会加深我们关注负面的习惯。相反，尝试在每种情境中找出积极的方面 🌟。例如，如果你被堵在路上，感谢自己有时间听你最爱的播客 🎧。培养一种感恩的心态 🙏，你将吸引更多的正能量进入你的生活。",
+    "exemples": [
+      "示例 1 ✨：如果你不喜欢下雨 ☔，想想它如何滋养植物并让一切更绿 🌳。",
+      "示例 2 💡：与其抱怨等公交的时间 🚏，不如用这个时间冥想 🧘‍♀️ 或规划你的日程 🗓。",
+      "示例 3 🚀：如果你对自己的运动表现不满意 🏋️‍♂️，不要沮丧，欣赏你已经取得的进步 🏆。",
+      "示例 4 🌱：当你的工作看起来枯燥乏味时，提醒自己拥有工作的幸运和它带来的好处 🏢。"
+    ],
+    "ressources": [
+      {
+        "title": "保持积极心态的艺术",
+        "type": "video",
+        "url": "https://exampleurl.com"
+      },
+      {
+        "title": "如何停止抱怨的文章",
+        "type": "article",
+        "url": "https://exampleurl.com"
+      },
+      {
+        "title": "关于感恩心态的播客",
+        "type": "bonus",
+        "url": "https://exampleurl.com"
+      }
+    ],
+    "illustrationSuggeree": "某人正在写感恩日记。",
+    "imageHelper": "https://firebasestorage.googleapis.com/v0/b/challengeme-d7fef.appspot.com/o/Challenges-Helper%2Fch-no-complaints.png?alt=media"
+  },
+  "noSugar30Days": {
+    "miniCours": "🎯🍎 准备迎接一个无糖挑战吧！告别糖分，你的生活将会变得更加甜美。通过平衡饮食，你将获得更多能量并增强免疫系统 🤸‍♀️。每一口食物都是滋养身体的机会 – 好好利用吧！一旦你开始用天然甜味食物替代添加糖 ☀️，你会发现真正的味道其实更美妙 🍉🍇。你完全可以做到；无糖生活不仅更健康，也更美味！🌈🎉",
+    "exemples": [
+      "示例 1 ✨：用肉桂代替早晨咖啡中的糖。",
+      "示例 2 💡：选择新鲜水果而不是工业果汁。",
+      "示例 3 🚀：吃原味酸奶并添加水果来自然提味。",
+      "示例 4 🌱：用枣子或枫糖浆代替精制糖来烘焙蛋糕。"
+    ],
+    "ressources": [
+      {
+        "title": "如何减少饮食中的糖分",
+        "type": "video",
+        "url": ""
+      },
+      {
+        "title": "无糖饮食的益处",
+        "type": "article",
+        "url": ""
+      },
+      {
+        "title": "20道无添加糖食谱，启发你的灵感",
+        "type": "bonus",
+        "url": ""
+      }
+    ],
+    "illustrationSuggeree": "一张桌子上摆满了彩色的新鲜水果、坚果、种子和蔬菜，代表无添加糖的健康饮食。",
+    "imageHelper": "https://firebasestorage.googleapis.com/v0/b/challengeme-d7fef.appspot.com/o/Challenges-Helper%2Fch-no-sugar.png?alt=media"
+  },
+  "oneMinPlank": {
+    "miniCours": "💪通过一分钟平板支撑挑战，将你的内在力量与身体力量结合起来 🏋️‍♀️。这不仅是训练腹肌，更是向自己证明你可以接受挑战并坚持完成它。每天用一分钟专注和身体努力作为座右铭 🌈。记得做平板时要深呼吸，这将帮助你坚持更久 🗓️。",
+    "exemples": [
+      "示例 1 ✨：第一周开始练习30秒的平板支撑，然后逐步延长到一分钟。",
+      "示例 2 💡：做动作时想象将肚脐收向脊柱，有助于更好地激活核心肌群。",
+      "示例 3 🚀：尝试不同的平板变式，如侧平板或肘部支撑平板，以训练不同的肌肉群。",
+      "示例 4 🌱：将平板支撑纳入晨间日常，启动一天的新陈代谢。"
+    ],
+    "ressources": [
+      {
+        "title": "平板支撑教程",
+        "type": "video",
+        "url": "https://www.youtube.com/watch?v=7RkpEJgP6wE"
+      },
+      {
+        "title": "为什么平板是如此全面的训练",
+        "type": "article",
+        "url": "https://www.huffingtonpost.fr/entry/pourquoi-faire-la-planche-est-un-exercice-si-complet_fr_5e9450b8c5b6d97d91e4e2de"
+      },
+      {
+        "title": "播客：平板支撑的益处",
+        "type": "bonus",
+        "url": "https://www.listennotes.com/c/f5eeb7e58284840a8b171e9470168995/"
+      }
+    ],
+    "illustrationSuggeree": "一个人在户外的运动垫上做平板支撑动作。",
+    "imageHelper": "https://firebasestorage.googleapis.com/v0/b/challengeme-d7fef.appspot.com/o/Challenges-Helper%2Fch-planche.png?alt=media"
+  },
+  "planTomorrow": {
+    "miniCours": "不要再让每天开始变得混乱，从今晚开始规划明天吧！📆💡 别急着瘫坐在沙发上，先写下明天的待办事项清单 📝。这将帮助你掌控生活，减轻压力。谁不喜欢勾掉完成的任务呢？🚀 保持清单简洁可行，用动词⚡描述每个任务，并写下执行它的理由。泡杯茶，配上舒缓音乐 🎵，让这个计划时光变得愉快又高效。",
+    "exemples": [
+      "示例 1 ✨：任务：“预约医生看诊” ➡️ 理由：“为了安心和健康”",
+      "示例 2 💡：任务：“给客户发送更新邮件” ➡️ 理由：“提高销量，帮助客户”",
+      "示例 3 🚀：任务：“跑步 2 公里” ➡️ 理由：“增强健康，感觉更有活力”",
+      "示例 4 🌱：任务：“为家人准备晚餐” ➡️ 理由：“享受家庭时光和美食”"
+    ],
+    "ressources": [
+      {
+        "title": "如何规划你的一天以提高效率",
+        "type": "video",
+        "url": ""
+      },
+      {
+        "title": "为何要在今晚规划明天",
+        "type": "article",
+        "url": ""
+      },
+      {
+        "title": "播客：时间管理与计划的重要性",
+        "type": "bonus",
+        "url": ""
+      }
+    ],
+    "illustrationSuggeree": "一个人坐在办公桌前，在日历中记录明天的任务",
+    "imageHelper": "https://firebasestorage.googleapis.com/v0/b/challengeme-d7fef.appspot.com/o/Challenges-Helper%2Fch-plan-tomorrow.png?alt=media"
+  },
+  "playInstrument": {
+    "miniCours": "学习乐器既充满挑战 🌟 又无比充实 🏆。它是表达创意 🎨 和释放压力 😌 的好方式。选择一件你热爱的乐器 🎸🎷，这样你会更有动力坚持练习。学习是一个渐进过程，所以不要因初期看不到成效而沮丧 🐢。记住：大师也是从简单的步骤开始的。享受你的音乐旅程，让音符带你飞翔 🎵。",
+    "exemples": [
+      "示例 1 ✨：学习基础，比如钢琴的手指摆放或小提琴的持琴方式",
+      "示例 2 💡：坚持练习。每天 15 分钟也能带来巨大进步",
+      "示例 3 🚀：尝试学一首你喜欢的简单曲子，增加乐趣与动力",
+      "示例 4 🌱：不妨请教专业老师，得到正确指导"
+    ],
+    "ressources": [
+      {
+        "title": "吉他入门课程",
+        "type": "video",
+        "url": "https://www.youtube.com/watch?v=VmrnhzL7vY8"
+      },
+      {
+        "title": "小提琴初学者指南",
+        "type": "article",
+        "url": "https://www.bbc.co.uk/music/articles/97bbf589-75da-4f73-b179-f0a6a4f159ff"
+      },
+      {
+        "title": "播客：音乐教育的成功之路",
+        "type": "podcast",
+        "url": "https://www.successfulmusiceducation.com/"
+      }
+    ],
+    "illustrationSuggeree": "一个人沉浸在音乐中，弹吉他或坐在钢琴前学习",
+    "imageHelper": "https://firebasestorage.googleapis.com/v0/b/challengeme-d7fef.appspot.com/o/Challenges-Helper%2Fch-learn-instrument.png?alt=media"
+  },
+  "positiveAffirmations": {
+    "miniCours": "积极肯定语 🗣️ 是你对自己说的正面话语，能增强自信、吸引成功。这种重复 🔄 能训练你的思维转向正面。要让它有效，请使用现在时动词 ✔️，具体且真实 ⚙️。掌控自己的思维，让潜意识为你工作 💪",
+    "exemples": [
+      "示例 1 ✨：“我在面对挑战时勇敢坚强。”",
+      "示例 2 💡：“我在生活中创造和谐与喜悦。”",
+      "示例 3 🚀：“我正走向不可思议的机会。”",
+      "示例 4 🌱：“我自由而快乐地给予与接受爱。”"
+    ],
+    "ressources": [
+      {
+        "title": "积极肯定语的艺术与科学",
+        "type": "video",
+        "url": "https://youtu.be/your_video_url"
+      },
+      {
+        "title": "为什么肯定语有效？",
+        "type": "article",
+        "url": "https://www.your_article_url.com"
+      },
+      {
+        "title": "播客：积极肯定的力量",
+        "type": "bonus",
+        "url": "https://www.your_podcast_url.com"
+      }
+    ],
+    "illustrationSuggeree": "一个人对着镜子微笑并说出正面的肯定语",
+    "imageHelper": "https://firebasestorage.googleapis.com/v0/b/challengeme-d7fef.appspot.com/o/Challenges-Helper%2Fch-positive-affirmations.png?alt=media"
+  },
+  "readChapter": {
+    "miniCours": "每天读书有诸多好处 🌟，能扩大词汇、增强专注力并激发创意。书籍是通往新世界、文化与思想的大门。即使书很厚，也是一章章组成的 📚。每天读一章，就会有改变。读得越多，速度越快，理解越深 🚀。选一本你喜欢的书，找一个舒适角落，开始沉浸阅读吧！",
+    "exemples": [
+      "示例 1 ✨：在火车上阅读乔治·奥威尔的《1984》第一章",
+      "示例 2 💡：早晨花 15 分钟读《杀死一只知更鸟》最后一章",
+      "示例 3 🚀：边喝咖啡边读《牧羊少年奇幻之旅》的一章",
+      "示例 4 🌱：睡前放松一下，读《思考致富》的一章"
+    ],
+    "ressources": [
+      {
+        "title": "如何阅读更多书籍？",
+        "type": "video",
+        "url": "https://www.youtube.com/watch?v=..."
+      },
+      {
+        "title": "一个月读更多书的 10 个技巧",
+        "type": "article",
+        "url": "https://www.lireplus.com/..."
+      },
+      {
+        "title": "播客：每日阅读的好处",
+        "type": "bonus",
+        "url": "https://www.podcastbienfaitslecture.com/..."
+      }
+    ],
+    "illustrationSuggeree": "一个人舒适地坐在沙发上沉浸在书中",
+    "imageHelper": "https://firebasestorage.googleapis.com/v0/b/challengeme-d7fef.appspot.com/o/Challenges-Helper%2Fch-read-chapter.png?alt=media"
+  },
+  "reducePlastic": {
+    "miniCours": "🌍 拯救地球从减少塑料使用开始，这是一项个人小行动却能产生巨大影响。第一步：用可重复使用的水瓶代替塑料瓶 🚰；拒绝塑料袋，使用环保购物袋 🛍️；喝咖啡时，使用陶瓷杯代替一次性杯子 ☕。这些看似微小的举动，日积月累能改变世界 👣。",
+    "exemples": [
+      "示例 1 ✨：将塑料牙刷换成可生物降解的竹牙刷",
+      "示例 2 💡：使用可重复使用的不锈钢吸管替代塑料吸管",
+      "示例 3 🚀：外带食物时自带饭盒",
+      "示例 4 🌱：使用金属剃须刀代替一次性塑料剃须刀"
+    ],
+    "ressources": [
+      {
+        "title": "减少塑料使用的 50 个创意",
+        "type": "video",
+        "url": "https://www.youtube.com/watch?v=abc123"
+      },
+      {
+        "title": "日常生活中减少塑料使用的 10 种方法",
+        "type": "article",
+        "url": "https://www.ecowatch.com/reduce-plastic-use-2318016334.html"
+      },
+      {
+        "title": "播客：无塑生活的日常挑战",
+        "type": "bonus",
+        "url": "https://www.deezer.com/fr/show/80072"
+      }
+    ],
+    "illustrationSuggeree": "对比图：塑料瓶、袋子、杯子 与其环保替代品如玻璃瓶、布袋、陶瓷杯",
+    "imageHelper": "https://firebasestorage.googleapis.com/v0/b/challengeme-d7fef.appspot.com/o/Challenges-Helper%2Fch-reduce-plastic.png?alt=media"
+  },
+  "reduceScreenTime": {
+    "miniCours": "🌙 睡前的平静对优质睡眠至关重要。电子屏幕 📱💻 发出的蓝光可能会干扰我们的生物钟。试着在睡前至少 30 分钟关闭所有设备，让身体为深度睡眠做好准备 💤。这段时间可以用来放松 💆‍♀️、冥想、阅读 📖 或听轻柔的音乐 🎵。",
+    "exemples": [
+      "示例 1 ✨：泡一场薰衣草香气的热水澡，放松身心",
+      "示例 2 💡：阅读一本能滋养心灵并助眠的好书",
+      "示例 3 🚀：进行一场舒缓的瑜伽练习，拉伸身体，安抚心灵",
+      "示例 4 🌱：聆听轻音乐或大自然的声音"
+    ],
+    "ressources": [
+      {
+        "title": "蓝光对睡眠的影响",
+        "type": "video",
+        "url": "https://www.youtube.com/watch?v=somelink"
+      },
+      {
+        "title": "改善睡眠的技巧",
+        "type": "article",
+        "url": "https://www.someOtherLink.com"
+      },
+      {
+        "title": "睡前引导冥想",
+        "type": "podcast",
+        "url": "https://www.somePodcastLink.com"
+      }
+    ],
+    "illustrationSuggeree": "一个人关闭笔记本电脑，点亮床头灯阅读一本书",
+    "imageHelper": "https://firebasestorage.googleapis.com/v0/b/challengeme-d7fef.appspot.com/o/Challenges-Helper%2Fch-reduce-screen-time.png?alt=media"
+  },
+  "saveMoney": {
+    "miniCours": "💪 每天省下 5 美元，就能培养财务纪律，朝财务自由迈进 💰。这看似微小，但能形成强大的理财习惯。关键是每天一点点，坚持下去。泡家里的咖啡 ☕、自己带午饭 🥪，你会惊讶能省下多少！",
+    "exemples": [
+      "示例 1 ✨：用家中锻炼代替花 10 美元去健身房 🏋️‍♀️",
+      "示例 2 💡：早上在家冲咖啡 ☕，不买外带咖啡",
+      "示例 3 🚀：自备午餐 🥗，不在办公室食堂花 10 美元",
+      "示例 4 🌱：晚上在家看书 📚，不去花 15 美元看电影"
+    ],
+    "ressources": [
+      {
+        "title": "初学者如何存钱",
+        "type": "video",
+        "url": "http://lienverslavidéo.com"
+      },
+      {
+        "title": "每天节省的 7 个简单方法",
+        "type": "article",
+        "url": "http://lienverslarticle.com"
+      },
+      {
+        "title": "播客：每天省 5 美元实现财务自由",
+        "type": "bonus",
+        "url": "http://lienverslepodecast.com"
+      }
+    ],
+    "illustrationSuggeree": "桌上一只存钱罐，旁边有几枚硬币",
+    "imageHelper": "https://firebasestorage.googleapis.com/v0/b/challengeme-d7fef.appspot.com/o/Challenges-Helper%2Fch-save-money.png?alt=media"
+  },
+  "selfReflection": {
+    "miniCours": "🤔💭 每日自我反思是个人成长的重要练习。每天抽点时间回顾你的行为、想法和情绪，能帮助你发现趋势、挑战和改进机会。用日记记录或在晚上静思都可以。真诚面对自己，肯定优点，接受不完美 —— 这正是成长的起点 👍🌱。",
+    "exemples": [
+      "示例 1 ✨：回顾一次会议：过程如何？团队氛围？感受如何？",
+      "示例 2 💡：今天的社交互动顺利吗？你感觉自在吗？",
+      "示例 3 🚀：你今天设定的目标完成了吗？如果没有，为什么？",
+      "示例 4 🌱：你今天的情绪如何？可以做什么来培养正面情绪？"
+    ],
+    "ressources": [
+      {
+        "title": "如何进行每日自我反思",
+        "type": "video",
+        "url": "https://youtube.com/votreURLunique"
+      },
+      {
+        "title": "自我反思的 5 个关键问题",
+        "type": "article",
+        "url": "https://votreBlog.com/votreURLunique"
+      },
+      {
+        "title": "播客：自我反思对个人发展的重要性",
+        "type": "bonus",
+        "url": "https://votreSitePodcast.com/votreURLunique"
+      }
+    ],
+    "illustrationSuggeree": "一个人坐在桌前写日记，记录一天的感受",
+    "imageHelper": "https://firebasestorage.googleapis.com/v0/b/challengeme-d7fef.appspot.com/o/Challenges-Helper%2Fch-self-reflection.png?alt=media"
+  },
+  "talkToStranger": {
+    "miniCours": "👥 每天认识新朋友，不仅能拓展视野，也有助于提升社交技能。微笑、打招呼、提个问题，都可能开启一段深刻的对话 🚀。把每次互动当作成长机会，即便是最健谈的人也都是从“你好”开始的 🌱。",
+    "exemples": [
+      "示例 1 ✨：对咖啡师说句“你好，今天怎么样？” ☕️",
+      "示例 2 💡：在电梯里向邻居问问关于附近市政的信息 🏢",
+      "示例 3 🚀：在公园和路人谈谈新闻 🍃",
+      "示例 4 🌱：夸同事的穿搭 👔，开启友好交流"
+    ],
+    "ressources": [
+      {
+        "title": "开始对话的 5 个方法",
+        "type": "video",
+        "url": "https://youtu.be/DH6IIlxPh7w"
+      },
+      {
+        "title": "开启交流的 10 个简单方法",
+        "type": "article",
+        "url": "https://www.medium.com/10-astuces-pour-entamer-une-conversation"
+      },
+      {
+        "title": "播客：交流的艺术 - 有效沟通的秘诀",
+        "type": "bonus",
+        "url": "https://www.spotify.com/art-de-la-conversation"
+      }
+    ],
+    "illustrationSuggeree": "一位顾客在咖啡馆里和陌生人聊天",
+    "imageHelper": "https://firebasestorage.googleapis.com/v0/b/challengeme-d7fef.appspot.com/o/Challenges-Helper%2Fch-talk-to-stranger.png?alt=media"
+  },
+  "wakeUp5AM": {
+    "miniCours": "🌞 每天早上 5 点起床听起来很难，但它能极大提升你的生产力和幸福感。制定好晚间睡前习惯，保证优质睡眠是关键 👌。从每天提前 15 分钟起床开始，逐步达到目标 ⏰。",
+    "exemples": [
+      "示例 1 ✨：Elon Musk 每天 5 点起床处理业务",
+      "示例 2 💡：Michelle Obama 在孩子醒来前 4 点半起床锻炼",
+      "示例 3 🚀：Oprah Winfrey 也是 5 点起床的忠实拥趸",
+      "示例 4 🌱：《达芬奇密码》作者 Dan Brown 每天凌晨 4 点写作"
+    ],
+    "ressources": [
+      {
+        "title": "为什么我每天早上 5 点起床",
+        "type": "video",
+        "url": "https://www.youtube.com/watch?v=bEr0uEqbyV8"
+      },
+      {
+        "title": "如何每天 5 点起床",
+        "type": "article",
+        "url": "https://www.wikihow.com/Wake-Up-Early"
+      },
+      {
+        "title": "播客：Robin Sharma 的 5AM 俱乐部",
+        "type": "bonus",
+        "url": "https://www.robinsharma.com/podcast/02-the-5am-club/"
+      }
+    ],
+    "illustrationSuggeree": "清晨 5 点的闹钟，背景是旭日初升",
+    "imageHelper": "https://firebasestorage.googleapis.com/v0/b/challengeme-d7fef.appspot.com/o/Challenges-Helper%2Fch-wake-up-5am.png?alt=media"
+  },
+  "walk10000Steps": {
+    "miniCours": "🏃‍♀️ 每天走 10,000 步能让你保持健康，不仅对身体好，对心理也有益 🧠。试着在日常生活中加入更多步数，比如带狗散步 🐕、走楼梯 🏢、远一点停车 🚙。这些小改变将带来巨大效果 💪。",
+    "exemples": [
+      "示例 1 ✨：Pauline 每天午休散步，远离办公室，放松心情 💼",
+      "示例 2 💡：Marc 改走路送孩子上学，既锻炼又亲子 👨‍👧‍👦",
+      "示例 3 🚀：Jeanne 选择楼梯而非电梯 🔝",
+      "示例 4 🌱：Olivier 晚饭后散步助消化，也达成步数 👌"
+    ],
+    "ressources": [
+      {
+        "title": "如何每天走 10,000 步？",
+        "type": "video",
+        "url": "https://www.youtube.com/watch?v=abc"
+      },
+      {
+        "title": "每天走 1 万步的好处",
+        "type": "article",
+        "url": "https://www.healthbenefitsofwalking.com/articles"
+      },
+      {
+        "title": "播客：10,000 步挑战的技巧",
+        "type": "podcast",
+        "url": "https://www.walkmorepodcast.com/episode10"
+      }
+    ],
+    "illustrationSuggeree": "一个人在绿地公园里微笑着看手机计步器",
+    "imageHelper": "https://firebasestorage.googleapis.com/v0/b/challengeme-d7fef.appspot.com/o/Challenges-Helper%2Fch-walk-1000-pas.png?alt=media"
+  },
+  "workout15Min": {
+    "miniCours": "🎉 动起来吧！锻炼对身体和大脑都好 🧠，能提升精力、改善情绪、降低压力与慢性病风险。每天 15 分钟开始，逐步增加。选你喜欢的活动，坚持就是关键 💪🏋️‍♀️🧘‍♂️！",
+    "exemples": [
+      "示例 1 ✨：每天早上练习 15 分钟瑜伽",
+      "示例 2 💡：午餐时快走 15 分钟",
+      "示例 3 🚀：下班后跟随短舞蹈视频跳 15 分钟",
+      "示例 4 🌱：睡前做 15 分钟伸展运动"
+    ],
+    "ressources": [
+      {
+        "title": "15 分钟晨间瑜伽 🌞",
+        "type": "video",
+        "url": "https://www.youtube.com/watch?v=VaoV1PrYft4"
+      },
+      {
+        "title": "锻炼的好处：为什么运动有益健康",
+        "type": "article",
+        "url": "https://www.medicalnewstoday.com/articles/153390"
+      },
+      {
+        "title": "播客：了解锻炼科学",
+        "type": "bonus",
+        "url": "https://www.listennotes.com/c/4e8e3e8bcbf1486496206829f7d42e8e/"
+      }
+    ],
+    "illustrationSuggeree": "在家运动的人",
+    "imageHelper": "https://firebasestorage.googleapis.com/v0/b/challengeme-d7fef.appspot.com/o/Challenges-Helper%2Fch-workout.png?alt=media"
   },
   "imagePickFailed": "无法选择图片。",
   "allFieldsRequired": "所有字段都为必填（图片为可选）。",

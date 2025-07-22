@@ -13,12 +13,14 @@ import {
   KeyboardAvoidingView,
   ScrollView,
 } from "react-native";
-import { StatusBar } from "expo-status-bar";
+import { StatusBar } from "react-native";
 import { useRouter } from "expo-router";
 import { signInWithEmailAndPassword } from "firebase/auth";
 import { auth } from "../constants/firebase-config";
 import { Ionicons } from "@expo/vector-icons";
 import { useTranslation } from "react-i18next";
+import { StatusBar as ExpoStatusBar } from "expo-status-bar";
+
 
 const { width: SCREEN_WIDTH, height: SCREEN_HEIGHT } = Dimensions.get("window");
 const normalize = (size: number) => {
@@ -158,21 +160,19 @@ export default function Login() {
 
   return (
     <KeyboardAvoidingView
-      style={styles.container}
-      behavior={Platform.OS === "ios" ? "padding" : "height"}
-      keyboardVerticalOffset={Platform.select({
-        ios: normalize(60),
-        android: 0,
-      })}
-      testID="login-screen"
-    >
-      <StatusBar style="dark" backgroundColor={COLORS.background} />
-      <ScrollView
-        style={styles.container}
-        contentContainerStyle={styles.scrollContent}
-        keyboardShouldPersistTaps="handled"
-        bounces={false}
-      >
+  style={{ flex: 1, backgroundColor: COLORS.background }}
+  behavior={Platform.OS === "ios" ? "padding" : "height"}
+  keyboardVerticalOffset={Platform.OS === "ios" ? 60 : StatusBar.currentHeight}
+>
+  <ExpoStatusBar style="dark" backgroundColor={COLORS.background} />
+
+  <ScrollView
+    style={{ flex: 1, backgroundColor: COLORS.background }}
+contentContainerStyle={styles.scrollContent}
+    keyboardShouldPersistTaps="handled"
+    bounces={false}
+  >
+      
         {/* Animation de fond */}
         {waves.map((wave, index) => (
           <Wave
@@ -275,7 +275,13 @@ export default function Login() {
             {loading ? (
               <ActivityIndicator color={COLORS.text} size="small" />
             ) : (
-              <Text style={styles.loginButtonText}>{t("login")}</Text>
+              <Text
+  style={styles.loginButtonText}
+  numberOfLines={1}
+  adjustsFontSizeToFit
+>
+  {t("login")}
+</Text>
             )}
           </TouchableOpacity>
           <Text style={styles.signupText}>
@@ -352,19 +358,21 @@ const styles = StyleSheet.create({
     width: "100%",
     fontFamily: "Comfortaa_400Regular",
   },
-  input: {
+ input: {
     width: "100%",
-    height: normalize(50),
-    backgroundColor: COLORS.inputBg,
-    color: COLORS.inputText,
-    fontSize: normalize(16),
+    maxWidth: normalize(400),
+    height: normalize(55),
+    backgroundColor: "rgba(245,245,245,0.8)",
+    color: "#111",
+    fontSize: normalize(14),
     paddingHorizontal: SPACING,
     borderRadius: normalize(20),
     textAlign: "center",
     marginVertical: SPACING / 2,
-    fontFamily: "Comfortaa_400Regular",
+    fontWeight: "500",
     borderWidth: normalize(2),
-    borderColor: COLORS.primary,
+    borderColor: "#FFB800",
+    fontFamily: "Comfortaa_400Regular",
   },
   passwordContainer: {
     width: "100%",

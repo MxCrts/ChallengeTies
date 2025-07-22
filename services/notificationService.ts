@@ -40,7 +40,7 @@ export const sendInvitationNotification = async (
     const language = userSnap.data().language || "en";
     await Notifications.scheduleNotificationAsync({
       content: {
-        title: i18n.t("notifications.title", { lng: language }),
+        title: i18n.t("notificationsPush.title", { lng: language }),
         body: message,
       },
       trigger: null, // Immédiat
@@ -74,18 +74,18 @@ export const scheduleDailyNotifications = async (): Promise<boolean> => {
 
     // Définir les messages
     const morningMessages = [
-      i18n.t("notifications.morning1", { lng: language }),
-      i18n.t("notifications.morning2", { lng: language }),
+      i18n.t("notificationsPush.morning1", { lng: language }),
+      i18n.t("notificationsPush.morning2", { lng: language }),
     ];
     const eveningMessages = [
-      i18n.t("notifications.evening1", { lng: language }),
-      i18n.t("notifications.evening2", { lng: language }),
+      i18n.t("notificationsPush.evening1", { lng: language }),
+      i18n.t("notificationsPush.evening2", { lng: language }),
     ];
 
     // Planifier notification matin (11h)
     await Notifications.scheduleNotificationAsync({
       content: {
-        title: i18n.t("notifications.title", { lng: language }),
+        title: i18n.t("notificationsPush.title", { lng: language }),
         body: morningMessages[
           Math.floor(Math.random() * morningMessages.length)
         ],
@@ -101,7 +101,7 @@ export const scheduleDailyNotifications = async (): Promise<boolean> => {
     // Planifier notification soir (20h)
     await Notifications.scheduleNotificationAsync({
       content: {
-        title: i18n.t("notifications.title", { lng: language }),
+        title: i18n.t("notificationsPush.title", { lng: language }),
         body: eveningMessages[
           Math.floor(Math.random() * eveningMessages.length)
         ],

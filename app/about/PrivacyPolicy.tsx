@@ -19,6 +19,8 @@ import { Theme } from "../../theme/designSystem";
 import designSystem from "../../theme/designSystem";
 import { useTranslation } from "react-i18next";
 import { useRouter } from "expo-router";
+import CustomHeader from "@/components/CustomHeader";
+
 
 const { width: SCREEN_WIDTH, height: SCREEN_HEIGHT } = Dimensions.get("window");
 const SPACING = 15;
@@ -109,45 +111,12 @@ export default function PrivacyPolicy() {
           backgroundColor="transparent"
           barStyle={isDarkMode ? "light-content" : "dark-content"}
         />
+        <CustomHeader title={t("privacyPolicy.title")} />
         <ScrollView
           contentContainerStyle={styles.contentContainer}
           showsVerticalScrollIndicator={false}
         >
-          {/* Header avec BackButton */}
-          <View style={styles.headerWrapper}>
-            <Animated.View entering={FadeInUp}>
-              <TouchableOpacity
-                onPress={() => router.back()}
-                style={styles.backButton}
-                accessibilityLabel={t("backButton")}
-                accessibilityHint={t("backButtonHint")}
-                testID="back-button"
-              >
-                <Ionicons
-                  name="arrow-back"
-                  size={normalizeSize(24)}
-                  color={currentTheme.colors.secondary}
-                />
-              </TouchableOpacity>
-            </Animated.View>
-            <View style={styles.titleContainer}>
-              <Animated.Text
-                entering={FadeInUp.duration(600)}
-                style={[
-                  styles.title,
-                  {
-                    color: isDarkMode
-                      ? currentTheme.colors.textPrimary
-                      : "#000000",
-                  },
-                ]}
-              >
-                {t("privacyPolicy.title")}
-              </Animated.Text>
-            </View>
-          </View>
 
-          {/* Logo animé */}
           <Animated.View
             entering={FadeInUp.delay(200).duration(800)}
             style={styles.logoContainer}
@@ -160,7 +129,6 @@ export default function PrivacyPolicy() {
             />
           </Animated.View>
 
-          {/* Introduction */}
           <Animated.View
             entering={FadeInUp.delay(400)}
             style={[
@@ -543,6 +511,8 @@ const styles = StyleSheet.create({
   },
   safeArea: {
     flex: 1,
+    paddingTop:
+      Platform.OS === "android" ? StatusBar.currentHeight ?? SPACING : SPACING,
   },
   headerWrapper: {
     paddingHorizontal: SPACING,
@@ -559,14 +529,6 @@ const styles = StyleSheet.create({
     fontSize: normalizeSize(28),
     fontFamily: "Comfortaa_700Bold",
     textAlign: "center",
-  },
-  backButton: {
-    position: "absolute",
-    top:
-      Platform.OS === "android" ? StatusBar.currentHeight ?? SPACING : SPACING,
-    left: SPACING,
-    zIndex: 10,
-    padding: SPACING / 2,
   },
   contentContainer: {
     paddingHorizontal: SPACING,

@@ -455,6 +455,8 @@ export default function CurrentChallenges() {
         backgroundColor="transparent"
         barStyle={isDarkMode ? "light-content" : "dark-content"}
       />
+                <CustomHeader title={t("ongoingChallenges")} />
+
       <LinearGradient
         colors={[
           currentTheme.colors.background,
@@ -462,24 +464,6 @@ export default function CurrentChallenges() {
         ]}
         style={styles.container}
       >
-        <View style={styles.headerWrapper}>
-          <Animated.View entering={FadeInUp}>
-            <TouchableOpacity
-              onPress={() => router.back()}
-              style={styles.backButton}
-              accessibilityLabel={t("backButton")}
-              accessibilityHint={t("backButtonHint")}
-              testID="back-button"
-            >
-              <Ionicons
-                name="arrow-back"
-                size={normalizeSize(24)}
-                color={currentTheme.colors.secondary}
-              />
-            </TouchableOpacity>
-          </Animated.View>
-          <CustomHeader title={t("ongoingChallenges")} />
-        </View>
         {localChallenges.length === 0 ? (
           renderEmptyState()
         ) : (
@@ -519,7 +503,11 @@ export default function CurrentChallenges() {
 }
 
 const styles = StyleSheet.create({
-  safeArea: { flex: 1 },
+safeArea: {
+    flex: 1,
+    paddingTop:
+      Platform.OS === "android" ? StatusBar.currentHeight ?? SPACING : SPACING,
+  },  
   container: { flex: 1 },
   headerWrapper: {
     paddingHorizontal: SPACING,

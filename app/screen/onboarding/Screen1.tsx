@@ -190,13 +190,16 @@ export default function Screen1() {
           ]}
         >
           <Animated.Text
-            style={[
-              styles.challengeTiesText,
-              { transform: [{ scale: challengeTiesScale }] },
-            ]}
-          >
-            ChallengeTies
-          </Animated.Text>
+  style={[
+    styles.challengeTiesText,
+    { transform: [{ scale: challengeTiesScale }] },
+  ]}
+  numberOfLines={1}
+  adjustsFontSizeToFit
+  minimumFontScale={0.8}
+>
+  ChallengeTies
+</Animated.Text>
         </Animated.View>
         <Animated.View style={[styles.finalTextContainer, { opacity: finalTextOpacity }]}>
         <Text style={styles.finalText}>{t("Prêt à relever le défi ?")}</Text>

@@ -59,11 +59,7 @@ export default function UserAccount() {
 
   return (
     <>
-      <StatusBar
-        translucent
-        backgroundColor="transparent"
-        barStyle={isDarkMode ? "light-content" : "dark-content"}
-      />
+      
       <LinearGradient
         colors={[
           currentTheme.colors.background,
@@ -74,30 +70,16 @@ export default function UserAccount() {
         end={{ x: 1, y: 1 }}
       >
         <SafeAreaView style={styles.safeArea}>
-          {/* Back Button */}
-          <TouchableOpacity
-            onPress={() => router.back()}
-            style={styles.backButton}
-            accessibilityLabel={t("goBack")}
-            testID="back-button"
-          >
-            <Ionicons
-              name="arrow-back"
-              size={normalizeSize(24)}
-              color={currentTheme.colors.secondary}
-            />
-          </TouchableOpacity>
-
-          {/* Header */}
-          <View style={styles.headerWrapper}>
+          <StatusBar
+        translucent
+        backgroundColor="transparent"
+        barStyle={isDarkMode ? "light-content" : "dark-content"}
+      />
             <CustomHeader title={t("myAccount")} />
-          </View>
-
           <ScrollView
             contentContainerStyle={styles.scrollContent}
             showsVerticalScrollIndicator={false}
           >
-            {/* Email */}
             <Animated.View
               entering={FadeInUp.delay(100)}
               style={[
@@ -127,7 +109,6 @@ export default function UserAccount() {
               </Text>
             </Animated.View>
 
-            {/* Username */}
             <Animated.View
               entering={FadeInUp.delay(200)}
               style={[

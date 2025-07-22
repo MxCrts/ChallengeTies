@@ -19,6 +19,8 @@ import { Theme } from "../../theme/designSystem";
 import designSystem from "../../theme/designSystem";
 import { useTranslation } from "react-i18next";
 import { useRouter } from "expo-router";
+import CustomHeader from "@/components/CustomHeader";
+
 
 const { width: SCREEN_WIDTH, height: SCREEN_HEIGHT } = Dimensions.get("window");
 const SPACING = 15;
@@ -53,43 +55,11 @@ export default function History() {
           backgroundColor="transparent"
           barStyle={isDarkMode ? "light-content" : "dark-content"}
         />
+        <CustomHeader title={t("history.title")} />
         <ScrollView
           contentContainerStyle={styles.contentContainer}
           showsVerticalScrollIndicator={false}
         >
-          {/* Header avec BackButton */}
-          <View style={styles.headerWrapper}>
-            <Animated.View entering={FadeInUp}>
-              <TouchableOpacity
-                onPress={() => router.back()}
-                style={styles.backButton}
-                accessibilityLabel={t("backButton")}
-                accessibilityHint={t("backButtonHint")}
-                testID="back-button"
-              >
-                <Ionicons
-                  name="arrow-back"
-                  size={normalizeSize(24)}
-                  color={currentTheme.colors.secondary}
-                />
-              </TouchableOpacity>
-            </Animated.View>
-            <View style={styles.titleContainer}>
-              <Animated.Text
-                entering={FadeInUp.duration(600)}
-                style={[
-                  styles.title,
-                  {
-                    color: isDarkMode
-                      ? currentTheme.colors.textPrimary
-                      : "#000000",
-                  },
-                ]}
-              >
-                {t("history.title")}
-              </Animated.Text>
-            </View>
-          </View>
 
           {/* Logo animé */}
           <Animated.View
@@ -381,6 +351,8 @@ const styles = StyleSheet.create({
   },
   safeArea: {
     flex: 1,
+    paddingTop:
+      Platform.OS === "android" ? StatusBar.currentHeight ?? SPACING : SPACING,
   },
   headerWrapper: {
     paddingHorizontal: SPACING,

@@ -13,6 +13,7 @@ import {
   KeyboardAvoidingView,
   Platform,
   PixelRatio,
+  StatusBar,
   StyleSheet,
 } from "react-native";
 import { Image } from "react-native";
@@ -176,7 +177,6 @@ const ExploreHeader = React.memo(
         entering={FadeInUp.delay(100)}
         style={styles.headerWrapper}
       >
-        <CustomHeader title={t("exploreChallenges")} />
 
         {/* Barre de recherche */}
         <LinearGradient
@@ -512,6 +512,7 @@ export default function ExploreScreen() {
         behavior={Platform.OS === "ios" ? "padding" : undefined}
         keyboardVerticalOffset={normalizeSize(80)}
       >
+         <CustomHeader title={t("exploreChallenges")} />
         <LinearGradient
           colors={[
             currentTheme.colors.background,

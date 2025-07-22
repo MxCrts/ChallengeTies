@@ -349,6 +349,26 @@ export default function UserStats() {
         backgroundColor="transparent"
         barStyle={isDarkMode ? "light-content" : "dark-content"}
       />
+      <CustomHeader
+  title={t("statistics")}
+  rightIcon={
+    <TouchableOpacity
+      onPress={handleShareStats}
+      accessibilityLabel={t("shareStatsButton")}
+      accessibilityHint={t("shareStatsHint")}
+      accessibilityRole="button"
+      testID="share-stats"
+    >
+      <Ionicons
+        name="share-social"
+        size={normalizeSize(24)}
+        color={currentTheme.colors.secondary}
+      />
+    </TouchableOpacity>
+  }
+/>
+
+
       <LinearGradient
         colors={[
           currentTheme.colors.background,
@@ -356,40 +376,6 @@ export default function UserStats() {
         ]}
         style={styles.container}
       >
-        <View style={styles.headerWrapper}>
-          <Animated.View entering={FadeInUp}>
-            <TouchableOpacity
-              onPress={() => router.back()}
-              style={styles.backButton}
-              accessibilityLabel={t("backButton")}
-              accessibilityHint={t("backButtonHint")}
-              testID="back-button"
-            >
-              <Ionicons
-                name="arrow-back"
-                size={normalizeSize(24)}
-                color={currentTheme.colors.secondary}
-              />
-            </TouchableOpacity>
-          </Animated.View>
-          <CustomHeader title={t("statistics")} />
-          <Animated.View entering={ZoomIn.delay(200)}>
-            <TouchableOpacity
-              style={styles.shareButton}
-              onPress={handleShareStats}
-              accessibilityLabel={t("shareStatsButton")}
-              accessibilityHint={t("shareStatsHint")}
-              accessibilityRole="button"
-              testID="share-stats"
-            >
-              <Ionicons
-                name="share-social"
-                size={normalizeSize(24)}
-                color={currentTheme.colors.secondary}
-              />
-            </TouchableOpacity>
-          </Animated.View>
-        </View>
         <FlatList
           data={stats}
           renderItem={renderStat}
@@ -413,9 +399,11 @@ export default function UserStats() {
 
 const styles = StyleSheet.create({
   safeArea: {
-    flex: 1,
-    backgroundColor: "transparent",
-  },
+  flex: 1,
+  paddingTop:
+    Platform.OS === "android" ? StatusBar.currentHeight ?? SPACING : SPACING,
+  backgroundColor: "transparent",
+},
   container: {
     flex: 1,
     paddingHorizontal: SPACING,

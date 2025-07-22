@@ -13,6 +13,7 @@ export interface Theme {
     overlay: string;
     error: string;
     trophy: string;
+     link: string;
   };
   typography: {
     title: {
@@ -109,6 +110,8 @@ export const lightTheme: Theme = {
     overlay: "rgba(0,0,0,0.35)",
     error: "#D32F2F",
     trophy: "#FFD700",
+    link: "#1e90ff",
+    
   },
   typography: {
     title: {
@@ -177,6 +180,8 @@ export const darkTheme: Theme = {
     error: "#EF5350",
     trophy: "#FFC107",
     overlay: "rgba(255,255,255,0.1)",
+    link: "#4da6ff",
+
   },
   typography: {
     title: {

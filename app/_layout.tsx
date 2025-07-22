@@ -29,6 +29,8 @@ import mobileAds from "react-native-google-mobile-ads";
 import AsyncStorage from "@react-native-async-storage/async-storage";
 import { useAuth } from "../context/AuthProvider";
 import { AuthProvider } from "../context/AuthProvider";
+import * as SplashScreen from "expo-splash-screen";
+
 
 // Composant interne pour gérer la navigation
 const AppNavigator = () => {
@@ -42,27 +44,27 @@ const AppNavigator = () => {
   });
 
   useEffect(() => {
-    if (loading) return; // Attendre que tout soit prêt
-    if (pathname !== "/") {
-      return;
-    }
-    if (!user) {
-      console.log("🔴 Pas d'utilisateur, redirection vers login");
-      router.replace("/login");
-    } else {
-      console.log("✅ Utilisateur connecté, redirection vers tabs");
-      router.replace("/(tabs)");
-    }
-  }, [user, loading, fontsLoaded, router]);
+    if (loading) return;
 
-  // Afficher un écran de chargement pendant la vérification
-  if (loading) {
-    return null;
+    // ✅ On bloque la logique pour éviter de spam
+    if (pathname !== "/") return;
+
+    if (!user) {
+      router.replace("/login");
+      SplashScreen.hideAsync(); // ✅ Splash s’enlève après la redirection
+    } else {
+      router.replace("/(tabs)");
+      SplashScreen.hideAsync(); // ✅ Splash s’enlève après la redirection
+    }
+  }, [user, loading, pathname]);
+
+  if (loading || !fontsLoaded) {
+    return null; // Splash reste actif tant que loading est true
   }
 
-  // Ne rien rendre après la redirection
   return null;
 };
+
 
 export default function RootLayout() {
   const router = useRouter();
@@ -71,14 +73,18 @@ export default function RootLayout() {
     mobileAds()
       .initialize()
       .then((status) => {
-        console.log("AdMob initialized:", status);
       });
   }, []);
+
+  useEffect(() => {
+  SplashScreen.preventAutoHideAsync()
+    .then()
+    .catch();
+}, []);
 
   // Gestion des deep links
   useEffect(() => {
     const handleDeepLink = ({ url }: { url: string }) => {
-      console.log("📲 Deep link reçu:", url);
       let challengeId, inviteId;
       if (
         url.startsWith("myapp://challenge/") ||

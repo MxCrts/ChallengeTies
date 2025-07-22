@@ -57,8 +57,7 @@ import { BlurView } from "expo-blur";
 import { useTutorial } from "../../context/TutorialContext";
 import AsyncStorage from "@react-native-async-storage/async-storage";
 import TutorialModal from "../../components/TutorialModal";
-import ThreeDCarousel from '../../components/ThreeDCarousel';
-
+import ThreeDCarousel from "@/components/ThreeDCarousel";
 
 
 const { width: SCREEN_WIDTH, height: SCREEN_HEIGHT } = Dimensions.get("window");
@@ -161,6 +160,8 @@ const scrollX = useSharedValue(0);
     skipTutorial,
     setTutorialStep,
   } = useTutorial();
+const heroVideoRef = useRef<Video | null>(null);
+const [videoReady, setVideoReady] = useState(false);
 
   const isDarkMode = theme === "dark";
   const currentTheme: Theme = isDarkMode
@@ -180,13 +181,11 @@ const scrollX = useSharedValue(0);
             setLanguage(userLanguage);
             if (data.locationEnabled) {
               fetchAndSaveUserLocation().catch((error) => {
-                console.error("Erreur localisation index:", error);
               });
             }
           }
         })
         .catch((error) => {
-          console.error("Erreur chargement utilisateur:", error);
         });
     }
   }, [user, setLanguage]);
@@ -247,7 +246,6 @@ const scrollX = useSharedValue(0);
       setChallenges(fetched.slice(0, 8));
       await AsyncStorage.setItem("challenges_cache", JSON.stringify(fetched));
     } catch (error) {
-      console.error("Erreur lors de la récupération des défis :", error);
       setChallenges([]);
     } finally {
       setLoading(false);
@@ -258,11 +256,34 @@ const scrollX = useSharedValue(0);
     if (user) fetchChallenges();
   }, [user, i18n.language]);
 
+  useEffect(() => {
+  const loadHeroVideo = async () => {
+    if (heroVideoRef.current) {
+      try {
+        const status = await heroVideoRef.current.loadAsync(
+          require("../../assets/videos/Hero-Bgopti.mp4"),
+          { shouldPlay: true, isLooping: true, isMuted: true }
+        );
+      } catch (error) {
+      }
+    }
+  };
+
+  if (videoReady) {
+    loadHeroVideo();
+  }
+
+  return () => {
+    if (heroVideoRef.current) {
+      heroVideoRef.current.unloadAsync();
+    }
+  };
+}, [videoReady]);
+
   const safeNavigate = (path: string) => {
     if (isMounted) {
       router.push(path);
     } else {
-      console.warn("Navigation bloquée : composant pas encore monté.");
     }
   };
 
@@ -312,16 +333,15 @@ const scrollX = useSharedValue(0);
           {/* SECTION HERO */}
           <Animated.View style={[staticStyles.heroSection, fadeStyle]}>
             <Video
-              source={require("../../assets/videos/Hero-Bgopti.mp4")}
-              style={staticStyles.backgroundVideo}
-              resizeMode={ResizeMode.COVER}
-              shouldPlay
-              isLooping
-              isMuted
-              useNativeControls={false}
-              usePoster
-              posterSource={require("../../assets/images/chalkboard.png")}
-            />
+  ref={heroVideoRef}
+  style={staticStyles.backgroundVideo}
+  resizeMode={ResizeMode.COVER}
+  source={require("../../assets/videos/Hero-Bgopti.mp4")} // ⚡️ Donne-lui une source de base pour monter
+  onReadyForDisplay={() => {
+    setVideoReady(true);
+  }}
+  shouldPlay={false} // On laisse `loadAsync` gérer
+/>
             <LinearGradient
               colors={[currentTheme.colors.overlay, "rgba(0,0,0,0.2)"]}
               style={staticStyles.heroOverlay}
@@ -394,7 +414,6 @@ const scrollX = useSharedValue(0);
                   itemWidth={ITEM_WIDTH}
                   spacing={CARD_MARGIN * 2}
                   autoRotateInterval={4000}
-                  dotColor={currentTheme.colors.secondary}
                   renderItem={({ item, index }) => (
                     <ChallengeCard
                       item={item}

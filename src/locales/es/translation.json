@@ -362,6 +362,7 @@
     "completeError": "No se pudo completar el desafío.",
     "chatAccessDenied": "Debes unirte al desafío antes de abrir el chat.",
     "loading": "Cargando…",
+  "needHelp": "¿Necesitas consejos?",
     "participant": "participante",
     "participants": "participantes",
     "takeChallenge": "Tomar desafío",
@@ -528,7 +529,7 @@
     "updatesText": "Esta política puede cambiar para reflejar actualizaciones en prácticas o legislaciones. Te notificaremos sobre cualquier cambio importante.",
     "contactTitle": "Contacto",
     "contactText": "Para cualquier pregunta sobre tus datos o esta política, contáctanos en:",
-    "contactEmail": "📧 privacy@challengeties.com",
+    "contactEmail": "📧 support@challengeties.app",
     "finalMessage": "Gracias por confiar en ChallengeTies. Tu privacidad es nuestra máxima prioridad."
   },
   "completedOnDate": "Completado el",
@@ -684,6 +685,18 @@
     "inputA11yHint": "Escribe tu mensaje aquí",
     "sendButtonLabel": "Enviar mensaje"
   },
+  "challengeHelper": {
+  "explanation": "Explicación",
+  "resources": "Recursos útiles",
+  "videos": "Videos recomendados",
+  "noData": "No hay ayuda disponible para este desafío por el momento.",
+  "examples": "Ejemplos",
+  "suggestion": "¿Sugerencias?"
+},
+"common": {
+  "back": "Atrás"
+}
+,
   "contact": {
     "errorTitle": "Error",
     "errorMessage": "Por favor completa todos los campos.",
@@ -692,8 +705,8 @@
     "title": "Contáctanos 📩",
     "intro": "¿Tienes una pregunta, problema o sugerencia? Estamos aquí para ayudar. No dudes en contactarnos a través de los siguientes canales o envíanos un mensaje directamente.",
     "emailSection": "Correo",
-    "emailLinkLabel": "Enviar un correo a support@challengeties.com",
-    "emailAddress": "support@challengeties.com",
+    "emailLinkLabel": "Enviar un correo a support@challengeties.app",
+    "emailAddress": "support@challengeties.app",
     "phoneSection": "Teléfono",
     "phoneLinkLabel": "Llamar al +33 1 23 45 67 89",
     "phoneNumber": "+33 1 23 45 67 89",
@@ -1047,7 +1060,1679 @@
     "reduceScreenTime": {
       "title": "Reduce el tiempo frente a la pantalla por la noche",
       "description": "Evita las pantallas al menos 30 minutos antes de acostarte."
-    }
+    },
+    "challengeAlimentationConsciente": {
+    "title": "Alimentación Consciente",
+    "description": "Tómate el tiempo para comer sin distracciones, concentrándote en las sensaciones alimenticias."
+  },
+  "challengeCommunication": {
+    "title": "Comunicación Recuperada",
+    "description": "Comunícate con alguien con quien no hablas desde hace tiempo para fortalecer los lazos sociales."
+  },
+  "challengeDes3Sourires": {
+    "title": "3 Sonrisas",
+    "description": "Regala una sonrisa a tres personas diferentes cada día para difundir alegría."
+  },
+  "challengeEcritureCreative": {
+  "title": "Escritura Creativa",
+  "description": "Escribe una historia ficticia cada día para estimular tu creatividad."
+},
+"challengeGestionTemps": {
+  "title": "Gestión del Tiempo",
+  "description": "Utiliza una técnica de gestión del tiempo (por ejemplo, Pomodoro) para optimizar tu día y alcanzar tus objetivos de forma más eficaz."
+},
+"challengeJeuneIntermittent": {
+  "title": "Ayuno Intermitente",
+  "description": "Practica el ayuno intermitente cada día en un horario específico."
+},
+"challengeLectureSurprise": {
+  "title": "Lectura Sorpresa",
+  "description": "Elige un libro al azar y lee al menos un capítulo cada día para descubrir nuevos horizontes literarios."
+},
+"challengeModeAvion": {
+  "title": "Modo Avión",
+  "description": "Pasa 1 hora al día en modo avión para desconectarte de las distracciones digitales."
+},
+"challengeOrganisationDigitale": {
+  "title": "Organización Digital",
+  "description": "Dedica 15 minutos al día a organizar tus archivos y correos electrónicos para una mejor productividad."
+},
+"challengePenseePositive": {
+  "title": "Pensamiento Positivo",
+  "description": "Reemplaza cada pensamiento negativo con uno positivo durante el día."
+},
+"challengePlanificationHebdomadaire": {
+  "title": "Planificación Semanal",
+  "description": "Tómate un momento cada domingo para planificar tu semana de manera óptima."
+},
+"defiCarnetGratitude": {
+  "title": "Diario de Gratitud",
+  "description": "Escribe tres cosas por las que te sientas agradecido cada día en un cuaderno."
+},
+"defiConnexionNature": {
+  "title": "Conexión con la Naturaleza",
+  "description": "Pasa al menos 30 minutos al aire libre cada día para conectarte con la naturaleza."
+},
+"defiCreativiteQuotidienne": {
+  "title": "Creatividad Diaria",
+  "description": "Exprésate creativamente cada día con una pequeña obra de arte, escritura o idea."
+},
+"defiDigitalDetox": {
+  "title": "Desintoxicación Digital",
+  "description": "Aléjate de las pantallas durante 2 horas al día para reducir el estrés y la fatiga visual."
+},
+"defiDuZeroDechet": {
+  "title": "Día Sin Residuos",
+  "description": "Intenta no generar residuos durante un día reciclando y reduciendo los envases."
+},
+"defiEcritureQuotidienne": {
+  "title": "Escritura Diaria",
+  "description": "Escribe una página cada día en un diario para liberar tus pensamientos y emociones."
+},
+"defiGratitudeVisuelle": {
+    "title": "Gratitud Visual",
+    "description": "Busca y captura visualmente cada día algo por lo que estés agradecido."
+  },
+  "defiMarcheConsciente": {
+    "title": "Caminata Consciente",
+    "description": "Practica la caminata consciente concentrándote en tus sensaciones y entorno."
+  },
+  "defiMatineeSansEcrans": {
+    "title": "Mañana sin Pantallas",
+    "description": "Empieza cada día sin mirar pantallas durante la primera hora."
+  },
+  "defiMicroMeditation": {
+    "title": "Micro Meditación",
+    "description": "Practica 1 minuto de micro-meditación cada día para fomentar la atención plena."
+  },
+  "defiNoBuyMonth": {
+    "title": "Mes sin Compras",
+    "description": "Compra solo lo necesario para practicar el minimalismo financiero."
+  },
+  "defiRangementMinimaliste": {
+    "title": "Orden Minimalista",
+    "description": "Deshazte de un objeto innecesario cada día para adoptar un estilo de vida minimalista."
+  },
+  "defiRepasEquilibre": {
+    "title": "Comida Equilibrada",
+    "description": "Prepara una comida equilibrada con proteínas, vegetales y carbohidratos en cada comida."
+  },
+  "defiRespirationConsciente": {
+    "title": "Respiración Consciente",
+    "description": "Practica 5 minutos de respiración consciente al día para relajarte y centrarte."
+  },
+  "défiArretTabac": {
+    "title": "Dejar de Fumar",
+    "description": "Deja de fumar para mejorar tu salud física y mental."
+  },
+  "defiSommeilReparateur": {
+    "title": "Sueño Reparador",
+    "description": "Adopta una rutina relajante antes de dormir para mejorar la calidad del sueño."
+  }
+  },
+  "challengeAlimentationConsciente": {
+    "miniCours": "La alimentación consciente 🍽️ es un proceso que implica saborear cada bocado 🥣, tomarse el tiempo para apreciar los sabores, texturas y aromas de los alimentos 🍒, y ser consciente de la satisfacción y la saciedad que proporcionan 👌. Puede ayudarte a equilibrar tu dieta, evitar los antojos y comer de forma más saludable 🥦. Para lograrlo, elimina todas las distracciones (televisión, móvil, lectura) durante las comidas 🚫📺📱📖, escucha lo que tu cuerpo te dice y presta atención a las señales de hambre y saciedad 🔎.",
+    "exemples": [
+      "Ejemplo 1 ✨: Prepara una comida sencilla y saludable, luego siéntate sin distracciones. Concéntrate en cada bocado, saboreando los sabores y texturas.",
+      "Ejemplo 2 💡: Cuando tengas antojo de un tentempié, pregúntate si realmente tienes hambre o si es solo un hábito automático.",
+      "Ejemplo 3 🚀: Observa cómo ciertos hábitos alimenticios afectan tu estado de ánimo y energía durante el día.",
+      "Ejemplo 4 🌱: Durante una semana, anota lo que comes y cómo te sientes después de cada comida; puede ayudarte a detectar patrones que antes no notabas."
+    ],
+    "ressources": [
+      {
+        "title": "Introducción a la alimentación consciente",
+        "type": "video",
+        "url": ""
+      },
+      {
+        "title": "Pasos para practicar la alimentación consciente",
+        "type": "article",
+        "url": ""
+      },
+      {
+        "title": "Podcast: La alimentación consciente y su impacto en la salud",
+        "type": "bonus",
+        "url": ""
+      }
+    ]
+  },
+  "challengeCommunication": {
+    "miniCours": "👋🎯 Contactar a alguien con quien no has hablado en mucho tiempo puede parecer intimidante, pero es un gran paso para fortalecer tus vínculos sociales y mejorar tu bienestar. Para crear una conexión auténtica, sé sincero 👍 e intencional. Comparte historias 📚, involúcrate a un nivel más profundo. Habla de las novedades en tu vida y muestra interés genuino por la suya. Recuerda momentos, risas 🤣 y lecciones compartidas. No se trata de llenar el silencio, sino de compartir un momento valioso 🎁 con alguien que te importa.",
+    "exemples": [
+      "Envía un mensaje a un excompañero de trabajo sobre un proyecto que hicieron juntos: 'Hola, me acordé de ese post divertido que hicimos para el blog de la empresa. ¿Cómo te va?' ✨",
+      "Llama a un viejo compañero de clase y pregúntale sobre aquella materia que estudiaron juntos: 'Nostalgia de esos casos de marketing. ¿Has usado esas habilidades en tu trabajo?' 💡",
+      "Enviar una carta escrita a mano 📝 a un amigo muestra cuánto te importa 🚀",
+      "Organiza un café virtual ☕ o una videollamada con un primo lejano. Hablen de su infancia compartida y cuenten sus nuevas aventuras 🌱"
+    ],
+    "ressources": [
+      {
+        "title": "Cómo reconectar con antiguas relaciones",
+        "type": "video",
+        "url": "https://youtube.url"
+      },
+      {
+        "title": "La importancia de los vínculos sociales para el bienestar",
+        "type": "article",
+        "url": "https://article.url"
+      },
+      {
+        "title": "Guía práctica para mantener el contacto con amigos",
+        "type": "bonus",
+        "url": "https://guide.url"
+      }
+    ]
+  },
+  "challengeDes3Sourires": {
+    "miniCours": "El arte de sonreír puede parecer algo básico, pero una sonrisa genuina puede alegrarle el día a alguien 😊. Cada día, proponte dar una sonrisa a tres personas diferentes. Puede ser en una cafetería, en la calle o incluso frente al espejo. No solo difunde alegría, también tiene un impacto positivo en ti, liberando endorfinas que te hacen sentir mejor. Intenta que las sonrisas sean sinceras, no forzadas. ¡La autenticidad es la clave! 👍",
+    "exemples": [
+      "Ejemplo 1 ✨: Al pedir tu café por la mañana, sonríe al barista y da las gracias.",
+      "Ejemplo 2 💡: Cuando pasees a tu perro, sonríe a otros paseadores que encuentres.",
+      "Ejemplo 3 🚀: Al mirarte en el espejo por la mañana, sonríe a tu reflejo.",
+      "Ejemplo 4 🌱: Antes de salir de un autobús o metro, sonríe al conductor y dile adiós."
+    ],
+    "ressources": [
+      {
+        "title": "El poder de la sonrisa | Ron Gutman",
+        "type": "video",
+        "url": "https://www.youtube.com/watch?v=U9cGdRNMdQQ"
+      },
+      {
+        "title": "7 beneficios de sonreír y reír",
+        "type": "article",
+        "url": "https://www.lifehack.org/articles/communication/7-benefits-smiling-and-laughing.html"
+      },
+      {
+        "title": "Cómo usar la sonrisa para generar confianza",
+        "type": "bonus",
+        "url": "https://www.psychologytoday.com/intl/blog/sideways-view/202005/using-smiles-foster-trust"
+      }
+    ]
+  },
+  "challengeEcritureCreative": {
+    "miniCours": "👩‍🏫 ¡Bienvenido a este mini reto de aprendizaje! Vas a desarrollar tu creatividad escribiendo una historia ficticia de 500 palabras cada día. 📝 No necesitas ser el próximo Stephen King, lo importante es dejar volar tu imaginación y disfrutar el proceso. 🌈 Recuerda, la creatividad es como un músculo: cuanto más la entrenas, más crece. 🏋️‍♂️ Toma tu bolígrafo o tu teclado y deja que fluyan las palabras. Intenta incluir elementos variados como diálogos, descripciones ricas y diferentes tipos de personajes para enriquecer tu historia. 💓",
+    "exemples": [
+      "Ejemplo 1 ✨ – 'El viaje extraño de Amira': una aventura mística de una joven que viaja en el tiempo.",
+      "Ejemplo 2 💡 – 'Los secretos de la Ciudad de la Luz': un misterio complejo en las calles oscuras de París.",
+      "Ejemplo 3 🚀 – 'Misiones interestelares': una historia apasionante sobre los desafíos de una tripulación espacial.",
+      "Ejemplo 4 🌱 – 'El bosque que susurraba': una historia donde la naturaleza cobra vida y habla con sus habitantes."
+    ],
+    "ressources": [
+      {
+        "title": "Cómo escribir una historia cautivadora",
+        "type": "video",
+        "url": "https://www.youtube.com/watch?v=KzjmiyVv8wA"
+      },
+      {
+        "title": "10 consejos para estimular tu creatividad al escribir",
+        "type": "article",
+        "url": "https://www.medium.com/@votrecreativite/10-conseils"
+      },
+      {
+        "title": "Podcast: Escritores famosos comparten sus técnicas",
+        "type": "bonus",
+        "url": "https://www.soundcloud.com/techniques-ecriture"
+      }
+    ]
+  },
+
+  "challengeGestionTemps": {
+    "miniCours": "Gestionar tu tiempo es clave para ser productivo y alcanzar tus objetivos. 😃 Una técnica muy utilizada es la técnica Pomodoro 🍅: trabaja intensamente durante 25 minutos, luego toma un descanso de 5 minutos. Repite este ciclo cuatro veces, y después haz una pausa más larga de 15 a 20 minutos. Esto ayuda a evitar la fatiga mental y mantener el enfoque. 💪 Dale estructura a tu día, respeta tu ritmo y saca el máximo provecho de cada minuto. Tus objetivos parecerán más alcanzables. 🚀",
+    "exemples": [
+      "Ejemplo 1 ✨: Prepara un informe importante dividiéndolo en bloques de 25 minutos con descansos de 5 minutos usando Pomodoro.",
+      "Ejemplo 2 💡: Aprende un nuevo idioma con sesiones intensivas Pomodoro y pausas para reforzar lo aprendido.",
+      "Ejemplo 3 🚀: Usa Pomodoro en un proyecto creativo (pintura, escritura, música) para entrar en 'estado de flujo'.",
+      "Ejemplo 4 🌱: Usa las pausas para cuidarte: hidrátate, estírate o despeja la mente."
+    ],
+    "ressources": [
+      { "title": "¿Cómo usar la técnica Pomodoro?", "type": "video", "url": "" },
+      { "title": "Gestión del tiempo con Pomodoro", "type": "article", "url": "" },
+      { "title": "Podcast: ¿Es realmente efectiva la técnica Pomodoro?", "type": "bonus", "url": "" }
+    ]
+  },
+
+  "challengeJeuneIntermittent": {
+    "miniCours": "🌞 El ayuno intermitente consiste en darle un descanso a tu sistema digestivo ⏸️: comes durante una franja de tiempo específica (por ejemplo, 8 horas) y ayunas las otras 16 🌛. Esta práctica puede ayudar a acelerar tu metabolismo 🚀, mejorar tu enfoque mental 🎯 e incluso contribuir a la longevidad 🌟. No se trata de privarte de alimentos nutritivos 🌈, solo de ajustar tus horarios de comida. Importante ❗️ Consulta siempre a un profesional de salud antes de empezar 🩺📝.",
+    "exemples": [
+      "Ejemplo 1 ✨: Durante el ayuno intermitente, puedes comer entre las 12h y las 20h y ayunar de 20h a 12h.",
+      "Ejemplo 2 💡: Si haces ejercicio, planifica tu entrenamiento durante el período de comida.",
+      "Ejemplo 3 🚀: Bebe mucha agua durante el ayuno para mantenerte hidratado.",
+      "Ejemplo 4 🌱: Evita los alimentos ultraprocesados y prioriza alimentos reales y naturales."
+    ],
+    "ressources": [
+      {
+        "title": "Conceptos básicos del ayuno intermitente",
+        "type": "video",
+        "url": "https://www.youtube.com/watch?v=xyz123"
+      },
+      {
+        "title": "¿Cómo comenzar el ayuno intermitente?",
+        "type": "article",
+        "url": "https://www.example.com/blog/jeune-intermittent"
+      },
+      {
+        "title": "Podcast: Beneficios del ayuno intermitente",
+        "type": "bonus",
+        "url": "https://www.example.com/podcast/12"
+      }
+    ]
+  },
+
+  "challengeLectureSurprise": {
+    "miniCours": "Rompe la rutina dedicando un poco de tiempo cada día a la lectura 📚. Abrirte a nuevas perspectivas literarias enriquece tu vocabulario, estimula tu creatividad 🎨 y fortalece tu empatía. Al elegir un libro al azar, te expones a ideas y experiencias diferentes a las tuyas. Convierte este ejercicio en un juego 🎲, una lotería literaria donde cada día es una nueva aventura intelectual. Recuerda: no se trata de correr, sino de explorar con calma 🚶‍♂️. ¡Disfruta del viaje!",
+    "exemples": [
+      "Ejemplo 1 ✨: Si estás en una librería o biblioteca, cierra los ojos y escoge un libro al azar. Ábrelo y comienza tu viaje.",
+      "Ejemplo 2 💡: Revisa tu biblioteca personal y elige un libro que nunca hayas leído. Podría ser una joya escondida.",
+      "Ejemplo 3 🚀: Crea tu 'frasco de libros'. Escribe los títulos de libros sin leer y saca uno por día.",
+      "Ejemplo 4 🌱: También puedes hacerlo con ebooks o audiolibros. La lectura aleatoria digital también puede ser inspiradora."
+    ],
+    "ressources": [
+      {
+        "title": "Los beneficios de la lectura",
+        "type": "video",
+        "url": "https://www.youtube.com/watch?v=lg31XrHm3vA&ab_channel=TEDxTalks"
+      },
+      {
+        "title": "¿Por qué deberías dar prioridad a la lectura?",
+        "type": "article",
+        "url": "https://www.entrepreneur.com/article/315636"
+      },
+      {
+        "title": "Ebook: Un paseo aleatorio por la ciencia",
+        "type": "bonus",
+        "url": "https://www.goodreads.com/book/show/663986.A_Random_Walk_in_Science"
+      }
+    ]
+  },
+
+  "challengeModeAvion": {
+    "miniCours": "🔅 En un mundo lleno de notificaciones, una hora en modo avión puede ayudarte a centrar tus pensamientos y escapar de la sobrecarga de información. Es una burbuja de tranquilidad para recargar tus energías emocionales. Usa ese tiempo para reflexionar, leer, hacer lluvia de ideas o simplemente descansar. 📵 Aprovéchalo para trabajar sin interrupciones o disfrutar de un café tranquilo. Recuerda: tu mente necesita pausas para regenerarse y rendir mejor. 🌴",
+    "exemples": [
+      "Ejemplo 1 ✨: Dedica esta hora a meditar y calmar tu mente.",
+      "Ejemplo 2 💡: Escribe en tu diario, establece tus objetivos o lee sin interrupciones.",
+      "Ejemplo 3 🚀: Haz una sesión de ideas para tu próximo proyecto creativo.",
+      "Ejemplo 4 🌱: Da un paseo por la naturaleza y conéctate contigo sin distracciones digitales."
+    ],
+    "ressources": [
+      {
+        "title": "El poder del modo avión",
+        "type": "video",
+        "url": "https://www.youtube.com/watch?v=xyz123"
+      },
+      {
+        "title": "¿Por qué deberías pasar una hora diaria en modo avión?",
+        "type": "article",
+        "url": "https://www.huffpost.com/articles"
+      },
+      {
+        "title": "Podcast: Desconectar para reconectar",
+        "type": "bonus",
+        "url": "https://www.podcast.com/episode123"
+      }
+    ]
+  },
+  "challengeOrganisationDigitale": {
+    "miniCours": "La organización digital es un acto de equilibrio 🎪 pero esencial para una productividad saludable 🎯. Con solo 15 minutos al día 🕒 puedes ahorrarte horas más adelante. 🚀 Comienza clasificando tus correos por prioridad 📧 usando carpetas para los mensajes de baja importancia. 🕵️‍♀️ Luego organiza tus archivos de forma lógica según tus necesidades diarias: crea carpetas y subcarpetas, y nombra los archivos claramente para encontrarlos rápido. Mantener un espacio digital ordenado puede parecer abrumador, ¡pero pequeños pasos diarios llevan a eficiencia sin estrés! 🌈",
+    "exemples": [
+      "Ejemplo 1 ✨: Crea una jerarquía clara de carpetas y documentos, por ejemplo: Trabajo > Proyecto ABC > Versión Final.",
+      "Ejemplo 2 💡: Usa filtros en el correo para mover automáticamente los mensajes de baja prioridad a una carpeta separada.",
+      "Ejemplo 3 🚀: Al limpiar tu espacio digital, no olvides vaciar la papelera y borrar descargas innecesarias.",
+      "Ejemplo 4 🌱: Usa atajos de teclado para ganar tiempo al navegar y mover archivos."
+    ],
+    "ressources": [
+      { "title": "Cómo organizar archivos en tu ordenador", "type": "video", "url": "https://example.com/video1" },
+      { "title": "Buenas prácticas para carpetas organizadas", "type": "article", "url": "https://example.com/article1" },
+      { "title": "Guía definitiva para limpiar tu espacio digital", "type": "bonus", "url": "https://example.com/bonus1" }
+    ],
+    "illustrationSuggeree": "Un escritorio con un ordenador que muestra carpetas bien organizadas en el escritorio digital",
+    "imageHelper": "https://firebasestorage.googleapis.com/v0/b/challengeme-d7fef.appspot.com/o/Challenges-Helper%2Fch-organisation-digitale.png?alt=media"
+  },
+
+  "challengePenseePositive": {
+    "miniCours": "🧘‍♀️ Transformar pensamientos negativos en positivos es una técnica poderosa de desarrollo personal. Cada vez que surge un pensamiento negativo, intenta sustituirlo por uno positivo. Es un paso fuerte hacia una vida más feliz y plena. 🌈 Por ejemplo, si piensas “No puedo hacer esto”, cámbialo por “Puedo hacerlo y lo haré excelente”. 👏 La clave es la conciencia de tus pensamientos y tomar control de ellos. ✨",
+    "exemples": [
+      "Ejemplo 1 ✨: Transforma “Esto es demasiado difícil” en “Este es un desafío que me ayudará a crecer”.",
+      "Ejemplo 2 💡: Reemplaza “Voy a cometer errores” por “Voy a aprender y mejorar”.",
+      "Ejemplo 3 🚀: Cambia “Esto es imposible” por “Esto es posible y voy a lograrlo”.",
+      "Ejemplo 4 🌱: Sustituye “Soy un desastre” por “Estoy aprendiendo y mejorando cada día”."
+    ],
+    "ressources": [
+      { "title": "El poder de la autosugestión positiva", "type": "video", "url": "" },
+      { "title": "Cómo convertir pensamientos negativos en positivos", "type": "article", "url": "" },
+      { "title": "Podcast: Método Coué – pensar en positivo para una vida feliz", "type": "bonus", "url": "" }
+    ],
+    "illustrationSuggeree": "Persona escribiendo pensamientos positivos en un cuaderno",
+    "imageHelper": "https://firebasestorage.googleapis.com/v0/b/challengeme-d7fef.appspot.com/o/Challenges-Helper%2Fch-pensee-positive.png?alt=media"
+  },
+
+  "challengePlanificationHebdomadaire": {
+    "miniCours": "📚 Dedicando alrededor de 30 minutos cada domingo a planificar tu semana puedes marcar una gran diferencia! 💪 Con un plan claro, tu mente no se distraerá pensando qué hacer a continuación. 😌 Esto no solo te ayuda a utilizar tu tiempo mejor, sino también reduce el estrés y la ansiedad. 🧘‍♀️ Así que relájate con una taza de té ☕, papel y bolígrafo 🖊️, y define un plan claro para la semana.",
+    "exemples": [
+      "Ejemplo 1 ✨: Amanda empezó a planificar su semana cada domingo. Notó un aumento en productividad y disminución del estrés con el tiempo.",
+      "Ejemplo 2 💡: Jack usa una app digital para planificar su semana. Descubrió que ahorra mucho tiempo durante la semana.",
+      "Ejemplo 3 🚀: Diane dedica un cuaderno completo a la planificación semanal. Cada domingo escucha su música favorita 🎶 y planifica.",
+      "Ejemplo 4 🌱: Mark planifica no solo su trabajo, sino también sus momentos de descanso. Programa entrenamientos 🏋️ y actividades de ocio 🧗 para mantener el equilibrio."
+    ],
+    "ressources": [
+      { "title": "Cómo planificar tu semana efectivamente", "type": "video", "url": "https://www.example.com/planification_efficace" },
+      { "title": "7 beneficios de la planificación semanal", "type": "article", "url": "https://www.example.com/blog/avantages_planification_hebdomadaire" },
+      { "title": "Podcast: estrategias de planificación semanal", "type": "bonus", "url": "https://www.example.com/podcast/strategies_planification_hebdomadaire" }
+    ],
+    "illustrationSuggeree": "Persona sentada en un escritorio con cuaderno abierto planificando la próxima semana",
+    "imageHelper": "https://firebasestorage.googleapis.com/v0/b/challengeme-d7fef.appspot.com/o/Challenges-Helper%2Fch-planification-hebdomadaire.png?alt=media"
+  },
+
+  "coldShower": {
+    "miniCours": "¿Necesitas un impulso de energía para todo el día? 🌞 El desafío de la ducha fría es para ti. Promueve la disciplina, aumenta la energía y despierta tus sentidos. 💦 Date una ducha fría cada día y siente la diferencia en cuerpo y mente. Empieza con agua tibia y baja la temperatura gradualmente. 👉 El objetivo es permanecer bajo el agua fría el mayor tiempo posible. ¿Listo para el reto? 🚀",
+    "exemples": [
+      "Ejemplo 1 ✨: Comienza con agua tibia, luego baja la temperatura gradualmente.",
+      "Ejemplo 2 💡: Trata de mantenerte bajo el agua fría tanto como puedas.",
+      "Ejemplo 3 🚀: Toma una ducha fría por la mañana para activar tu día.",
+      "Ejemplo 4 🌱: Quédate bajo el agua fría al menos 30 segundos para sentir sus efectos en cuerpo y mente."
+    ],
+    "ressources": [
+      { "title": "Beneficios de las duchas frías", "type": "video", "url": "https://www.youtube.com/watch?v=sqmrof6o0gk" },
+      { "title": "¿Por qué deberías ducharte con agua fría a diario?", "type": "article", "url": "https://www.healthline.com/health/cold-shower-benefits" },
+      { "title": "Desafío ducha fría: episodio sobre beneficios y consejos", "type": "podcast", "url": "https://open.spotify.com/show/4rFsMgQhE9swoiKk7PeiYw" }
+    ],
+    "illustrationSuggeree": "Persona bajo una ducha con agua fría que revigoriza cuerpo y mente",
+    "imageHelper": "https://firebasestorage.googleapis.com/v0/b/challengeme-d7fef.appspot.com/o/Challenges-Helper%2Fch-douche-froide.png?alt=media"
+  },
+
+  "compliment": {
+    "miniCours": "¡Felicidades! 🎉 Estás a punto de aprender a dar cumplidos efectivos, una de las herramientas más poderosas para fortalecer relaciones y alegrar el día de alguien. Un buen cumplido es específico, sincero y elogia el esfuerzo de la persona, no solo el resultado. Y recuerda: ¡la práctica lleva a la perfección! ¡Haz cumplidos a tus amigos, familia e incluso a ti mismo! 🌟",
+    "exemples": [
+      "Ejemplo 1 ✨: «Tienes una forma verdaderamente única de explicar las cosas; me ayudó mucho a comprender.»",
+      "Ejemplo 2 💡: «Realmente admiro tu dedicación para aprender cosas nuevas constantemente.»",
+      "Ejemplo 3 🚀: «Tu sentido del humor siempre aporta alegría al día.»",
+      "Ejemplo 4 🌱: «Realmente aprecio la energía positiva que aportas a nuestro equipo.»"
+    ],
+    "ressources": [
+      { "title": "Cómo dar cumplidos efectivos", "type": "video", "url": "https://example.com/video_compliment_keys" },
+      { "title": "El arte de los cumplidos sinceros", "type": "article", "url": "https://example.com/article_sincere_compliment" },
+      { "title": "Beneficios psicológicos de los cumplidos sinceros", "type": "podcast", "url": "https://example.com/podcast_compliment_benefits" }
+    ],
+    "illustrationSuggeree": "Persona sonriendo y dando un cumplido a otra persona amablemente",
+    "imageHelper": "https://firebasestorage.googleapis.com/v0/b/challengeme-d7fef.appspot.com/o/Challenges-Helper%2Fch-compliment.png?alt=media"
+  },
+  "dailyVisualization": {
+    "miniCours": "Tómate un momento cada día para visualizar tus metas. Cierra los ojos durante 5 minutos e imagina que las estás alcanzando. Visualiza los detalles: ¿cómo te sientes? ¿Qué ves? ¿Qué escuchas? 🧠🌟 Esta práctica poderosa no solo puede motivarte, sino también ayudarte a resolver problemas y generar nuevas ideas. La clave es la constancia. Intenta hacerlo todos los días 🎯📅.",
+    "exemples": [
+      "Ejemplo 1 ✨ - Si trabajas para obtener un ascenso, imagínate sentado en tu nueva oficina, manejando tareas más complejas y liderando reuniones.",
+      "Ejemplo 2 💡 - Si tu meta es correr un maratón, visualízate cruzando la línea de meta, siente la alegría y la sensación de logro.",
+      "Ejemplo 3 🚀 - Si deseas lanzar tu propio negocio, imagínate como un CEO exitoso, discutiendo estrategias con tu equipo y recibiendo llamadas de clientes satisfechos.",
+      "Ejemplo 4 🌱 - Si tu objetivo es llevar una vida más saludable, imagínate preparando una comida equilibrada, haciendo ejercicio y sintiéndote más enérgico y feliz."
+    ],
+    "ressources": [
+      { "title": "El poder de la visualización", "type": "video", "url": "https://www.youtube.com/watch?v=b5i3vE4S2WQ" },
+      { "title": "Cómo la visualización diaria conduce al éxito", "type": "article", "url": "https://www.huffpost.com/entry/see-believe-achieve_b_890307" },
+      { "title": "Podcast sobre visualización y éxito", "type": "bonus", "url": "https://www.mindvalley.com/podcast/mindvalley-podcast/visualization-success-procedure-reality-transurfing" }
+    ],
+    "illustrationSuggeree": "Persona sentada en un entorno tranquilo, con los ojos cerrados, visualizando sus metas",
+    "imageHelper": "https://firebasestorage.googleapis.com/v0/b/challengeme-d7fef.appspot.com/o/Challenges-Helper%2Fch-daily-visualisation.png?alt=media"
+  },
+  "dailyWins": {
+    "miniCours": "👏 El reconocimiento personal es esencial para aumentar la confianza. Cada día tenemos victorias—grandes y pequeñas—que a menudo pasamos por alto. Para cambiar eso, adopta un hábito simple pero poderoso: escribe 3 éxitos cada día 📝. Tal vez completaste un informe a tiempo 🕒, ayudaste a un compañero 👫 o te tomaste un momento para relajarte 🛀. Sea lo que sea, valora esos momentos y observa cómo se eleva tu confianza 🚀.",
+    "exemples": [
+      "Ejemplo 1 ✨: 'Terminé mi proyecto a tiempo a pesar del estrés.'",
+      "Ejemplo 2 💡: 'Ayudé a un nuevo compañero a familiarizarse con nuestra plataforma.'",
+      "Ejemplo 3 🚀: 'Salí a correr esta mañana aunque estaba cansado.'",
+      "Ejemplo 4 🌱: 'Me tomé el tiempo para cocinar una comida saludable para mí.'"
+    ],
+    "ressources": [
+      { "title": "El poder de celebrar pequeñas victorias", "type": "video", "url": "https://www.youtube.com/watch?v=c9KtG6aCtB4" },
+      { "title": "El poder de reconocer tus pequeñas victorias", "type": "article", "url": "https://www.tonyrobbins.com/stories/unleash-the-power/the-power-of-recognizing-your-small-wins/" },
+      { "title": "Podcast: La ciencia del éxito", "type": "bonus", "url": "https://www.scienceofsuccess.co/blog/the-science-of-small-wins" }
+    ],
+    "illustrationSuggeree": "Persona escribiendo en su diario, con una taza de té a un lado —estrellas simbolizan los logros",
+    "imageHelper": "https://firebasestorage.googleapis.com/v0/b/challengeme-d7fef.appspot.com/o/Challenges-Helper%2Fch-daily-wins.png?alt=media"
+  },
+  "dailyYoga": {
+    "miniCours": "¡Comienza tu día con una gran sonrisa 😊 con yoga! El yoga no es solo ejercicio, es una práctica que ayuda a tu mente y cuerpo a trabajar en armonía 💫. Con solo 15 minutos al día, puedes mejorar tu flexibilidad, aumentar tus niveles de energía y cultivar una paz interior duradera 🧘‍♀️. ¿Por qué no probarlo? El yoga es para todos, sin importar tu nivel de condición física o edad. Date ese espacio para tu crecimiento personal. Mantén la mente abierta y concéntrate en cada respiración. ¡Tú puedes! 💪🏻",
+    "exemples": [
+      "Ejemplo 1 ✨: Prueba una sesión de yoga para principiantes para empezar suavemente.",
+      "Ejemplo 2 💡: Varía tus estilos —explora Hatha o Vinyasa para encontrar lo que más te gusta.",
+      "Ejemplo 3 🚀: Integra tu sesión de yoga en tu rutina matutina para comenzar el día con calma.",
+      "Ejemplo 4 🌱: Usa una esterilla cómoda y un entorno tranquilo para tu práctica."
+    ],
+    "ressources": [
+      { "title": "Yoga para principiantes: 15 minutos para relajarte", "type": "video", "url": "" },
+      { "title": "La importancia de una práctica regular de yoga", "type": "article", "url": "" },
+      { "title": "Podcast: Yoga como estilo de vida", "type": "bonus", "url": "" }
+    ],
+    "illustrationSuggeree": "Persona haciendo una postura de yoga al amanecer al aire libre",
+    "imageHelper": "https://firebasestorage.googleapis.com/v0/b/challengeme-d7fef.appspot.com/o/Challenges-Helper%2Fch-daily-yoga.png?alt=media"
+  },
+  "declutterSpace": {
+    "miniCours": "Despejar el desorden no solo es ordenar cosas—es una oportunidad para crear un espacio que apoye la productividad y la calma 🧘‍♀️. Cada artículo tiene energía—y los objetos sin uso pueden convertirse en distracciones o fuentes de ansiedad 😓. Comienza con poco—elige una zona cada día. Pregúntate: ¿es útil? ¿Me trae alegría? Diferenciar entre valor emocional y práctico te ayuda a decidir qué apoya tu vida. 💼",
+    "exemples": [
+      "Ejemplo 1 ✨: Ordena tu ropa—guarda lo que te hace feliz y sirve, dona lo demás.",
+      "Ejemplo 2 💡: Organiza tus libros 📚—crea un rincón de lectura acogedor y regala los que no vas a leer.",
+      "Ejemplo 3 🚀: Transforma tu escritorio en una zona productiva—descarta papeles innecesarios y organiza tus suministros cuidadosamente.",
+      "Ejemplo 4 🌱: Ordena tu cocina—dona o elimina utensilios sin uso y organiza tu despensa de manera eficiente."
+    ],
+    "ressources": [
+      { "title": "Cómo despejar tu hogar para más claridad", "type": "video", "url": "http://example.com/video/désencombrer" },
+      { "title": "5 pasos para despejar tu espacio", "type": "article", "url": "http://example.com/article/désencombrer" },
+      { "title": "Podcast: El poder de despejar", "type": "bonus", "url": "http://example.com/podcast/désencombrer" }
+    ],
+    "illustrationSuggeree": "Persona ordenando sus pertenencias, con una pila para conservar y otra para donar/tirar",
+    "imageHelper": "https://firebasestorage.googleapis.com/v0/b/challengeme-d7fef.appspot.com/o/Challenges-Helper%2Fch-declutter-space.png?alt=media"
+  },
+  "defiArretTabac": {
+    "miniCours": "¡Bienvenido(a) a tu viaje hacia la libertad 🕊️! Fumar es un hábito—rompe 💔lo creando nuevas rutinas saludables. Dedica un momento cada día para reír 😂 y moverte 🕺—esto puede ayudar a reducir el estrés que te incita a fumar. El apoyo es clave 🔑. Comparte tu desafío con tus seres queridos y pide ánimo cuando dejarlo se vuelva difícil. Recuerda, cada día sin tabaco es una victoria 🎉.",
+    "exemples": [
+      "Ejemplo 1 ✨: Sustituye tu pausa para fumar por una breve sesión de yoga o meditación.",
+      "Ejemplo 2 💡: Cuando sientas ganas de fumar, bebe agua o mastica chicle sin azúcar.",
+      "Ejemplo 3 🚀: Comparte tu desafío en redes para obtener apoyo.",
+      "Ejemplo 4 🌱: Celebra cada día sin tabaco—cada día es una semilla plantada para tu nueva vida."
+    ],
+    "ressources": [
+      { "title": "Charla sobre los riesgos del tabaco", "type": "video", "url": "https://youtu.be/StopSmoking" },
+      { "title": "10 métodos comprobados para dejar de fumar", "type": "article", "url": "https://www.stop-tabac.com" },
+      { "title": "Podcast: Mi experiencia dejando el hábito de fumar", "type": "bonus", "url": "https://www.quit-smoking-podcast.com" }
+    ],
+    "illustrationSuggeree": "Persona disfrutando un amanecer—símbolo de libertad y renovación",
+    "imageHelper": "https://firebasestorage.googleapis.com/v0/b/challengeme-d7fef.appspot.com/o/Challenges-Helper%2Fch-arret-du-tabac.png?alt=media"
+  },
+  "defiCarnetGratitude": {
+    "miniCours": "Practicar la gratitud diaria es cultivar la apreciación de las pequeñas y grandes cosas 🙏. Tener una actitud agradecida atrae más positividad y bienestar ❤️. Escribir estos momentos en un diario te ayuda a enfocarte en lo positivo y grabarlo en tu memoria 📖. Puedes incluir cualquier cosa: un éxito del día, alguien que te apoyó, o una flor en tu camino 🌸. ¡Deja que tu gratitud florezca cada día!",
+    "exemples": [
+      "Ejemplo 1 ✨ - Lograste una presentación frente a tu equipo.",
+      "Ejemplo 2 💡 - Alguien te sostuvo la puerta al entrar a una cafetería.",
+      "Ejemplo 3 🚀 - Corriste 5km sin detenerte.",
+      "Ejemplo 4 🌱 - Disfrutaste la belleza de una puesta de sol."
+    ],
+    "ressources": [
+      { "title": "El poder de la gratitud", "type": "video", "url": "https://youtube.com/vidéo1" },
+      { "title": "Por qué escribir un diario de gratitud", "type": "article", "url": "https://www.monarticle.com/1" },
+      { "title": "Podcast sobre el poder de la gratitud", "type": "bonus", "url": "https://www.monpodcast.com/1" }
+    ],
+    "illustrationSuggeree": "Una persona escribiendo en un diario con una sonrisa pacífica.",
+    "imageHelper": "https://firebasestorage.googleapis.com/v0/b/challengeme-d7fef.appspot.com/o/Challenges-Helper%2Fch-carnet-gratitude.png?alt=media"
+  },
+  "defiConnexionNature": {
+    "miniCours": "Es un mundo maravilloso allá afuera 🌳🌷🦋. Conectarse con la naturaleza no solo alimenta la apreciación de su belleza, sino también tu alma. 🧘‍♂️✨ Ayuda a mantenerse con los pies en la tierra, a respirar aire puro y recargar el cuerpo y la mente 🍃😊. Pasa al menos 30 minutos al aire libre cada día: camina, corre, lee bajo un árbol o contempla las estrellas 🌌.",
+    "exemples": [
+      "Ejemplo 1 ✨: Levantarse temprano para ver el amanecer 🌅",
+      "Ejemplo 2 💡: Hacer un picnic con amigos en el parque 🥪🌳",
+      "Ejemplo 3 🚀: Salir a correr o caminar por tu vecindario 🏃‍♀️",
+      "Ejemplo 4 🌱: Meditar al aire libre en un jardín 🧘‍♀️"
+    ],
+    "ressources": [
+      { "title": "Cómo la naturaleza afecta al cerebro", "type": "video", "url": "https://www.youtube.com/watch?v=Z7O8s9n_Va8" },
+      { "title": "10 razones para reconectar con la naturaleza", "type": "article", "url": "https://www.mindbodygreen.com/0-20793/10-reasons-why-being-in-nature-is-good-for-you.html" },
+      { "title": "Podcast: Reconectando con la naturaleza", "type": "bonus", "url": "https://www.bbc.co.uk/programmes/p07zr8p7" }
+    ],
+    "illustrationSuggeree": "Una persona meditando en un parque verde.",
+    "imageHelper": "https://firebasestorage.googleapis.com/v0/b/challengeme-d7fef.appspot.com/o/Challenges-Helper%2Fch-connexion-nature.png?alt=media"
+  },
+  "defiCreativiteQuotidienne": {
+    "miniCours": "¿Qué mejor manera de liberar tu creatividad que dar vida a una nueva idea o arte cada día? 🌱 Este reto entrena tu mente hacia formas de pensamiento más expresivas e innovadoras 🎨. ¡La clave es crear algo cada día! 🚀 No busques la perfección, un simple boceto o idea ya es un gran logro 💡",
+    "exemples": [
+      "Ejemplo 1 ✨: Toma una foto y edítala artísticamente con una app.",
+      "Ejemplo 2 💡: Escribe un poema o canción sobre algo vivido hoy.",
+      "Ejemplo 3 🚀: Diseña un objeto de tu casa para mejorarlo.",
+      "Ejemplo 4 🌱: Dibuja o pinta inspirado en la naturaleza."
+    ],
+    "ressources": [
+      { "title": "Cómo expresar tu creatividad", "type": "video", "url": "https://www.youtube.com/watch?v=xyz123" },
+      { "title": "30 días de retos creativos", "type": "article", "url": "https://www.blog-creatif.com/article123" },
+      { "title": "Podcast sobre creatividad", "type": "bonus", "url": "https://www.podcast.com/episode123" }
+    ],
+    "illustrationSuggeree": "Una persona con un pincel lista para comenzar a pintar.",
+    "imageHelper": "https://firebasestorage.googleapis.com/v0/b/challengeme-d7fef.appspot.com/o/Challenges-Helper%2Fch-creativite-quotidienne.png?alt=media"
+  },
+  "defiDigitalDetox": {
+    "miniCours": "😌 Una pausa digital de 2 horas al día mejora tu salud visual y mental. Vivimos en un mundo hiperconectado, pero desconectar también es vital 🌲. Dedica tiempo a leer, meditar o hacer ejercicio. Reduce el estrés digital y mejora tu concentración 🚀. Comienza con solo 10 minutos y aumenta poco a poco 💫",
+    "exemples": [
+      "Ejemplo 1 ✨ - Apaga los dispositivos y lee tu libro favorito 30 min.",
+      "Ejemplo 2 💡 - Haz una caminata en vez de estar frente al ordenador.",
+      "Ejemplo 3 🚀 - Reemplaza el móvil antes de dormir con yoga o meditación.",
+      "Ejemplo 4 🌱 - Pinta o teje para desconectarte haciendo algo que amas."
+    ],
+    "ressources": [
+      { "title": "Cómo hacer una detox digital", "type": "video", "url": "https://youtu.be/exemple" },
+      { "title": "Guía definitiva para la detox digital", "type": "article", "url": "https://www.exemple.com/article-detox-digitale" },
+      { "title": "Podcast: Equilibrio en un mundo digital", "type": "bonus", "url": "https://www.exemple.com/podcast-detox-digitale" }
+    ],
+    "illustrationSuggeree": "Una persona en una hamaca leyendo un libro sin dispositivos cerca.",
+    "imageHelper": "https://firebasestorage.googleapis.com/v0/b/challengeme-d7fef.appspot.com/o/Challenges-Helper%2Fch-digital-detox.png?alt=media"
+  },
+  "defiDuZeroDechet": {
+    "miniCours": "¿Listo para un reto verde? 💚 ¡Prueba un día sin generar basura! 🗑️ En lugar de tirar, vamos a reducir, reutilizar y reciclar ♻️. Botellas reutilizables, bolsas de tela, utensilios duraderos… ¡Cada gesto cuenta! Piensa verde, actúa verde, vive verde 🌎",
+    "exemples": [
+      "Ejemplo 1 ✨: Usa botella reutilizable en vez de una de plástico.",
+      "Ejemplo 2 💡: Lleva tu taza de café reutilizable contigo.",
+      "Ejemplo 3 🚀: Compra a granel con tus propios envases.",
+      "Ejemplo 4 🌱: Haz compost con los residuos orgánicos."
+    ],
+    "ressources": [
+      { "title": "Cómo empezar con el zero waste", "type": "video", "url": "www.votrelien.com" },
+      { "title": "10 trucos para vivir sin residuos", "type": "article", "url": "www.votrelien.com" },
+      { "title": "Podcast: Hacia un mundo sin residuos", "type": "bonus", "url": "www.votrelien.com" }
+    ],
+    "illustrationSuggeree": "Una mujer separando residuos en contenedores de reciclaje.",
+    "imageHelper": "https://firebasestorage.googleapis.com/v0/b/challengeme-d7fef.appspot.com/o/Challenges-Helper%2Fch-zero-dechet.png?alt=media"
+  },
+  "defiEcritureQuotidienne": {
+    "miniCours": "📓 ¡Lleva un diario personal a diario! No necesitas ser Shakespeare: solo deja que tu pluma ✒️ fluya por el papel y da rienda suelta a tus pensamientos y emociones. Este hábito diario despierta la introspección, rompe bloqueos mentales y ofrece enormes beneficios creativos y terapéuticos. También es una forma genial de recordar tus días, seguir tu evolución personal y registrar tus sueños y metas. ¡Vamos, toma ese bolígrafo y empieza a escribir 🖊️✨!",
+    "exemples": [
+      "Ejemplo 1 ✨: 'Querido diario, hoy conocí a...'",
+      "Ejemplo 2 💡: 'Tuve una situación difícil en el trabajo. Así me sentí y esto aprendí...'",
+      "Ejemplo 3 🚀: 'La idea de proyecto que tengo en mente es...'",
+      "Ejemplo 4 🌱: 'Cada día escribiré tres cosas por las que estoy agradecido/a.'"
+    ],
+    "ressources": [
+      {
+        "title": "El poder de escribir cada día",
+        "type": "video",
+        "url": "videourl1.com"
+      },
+      {
+        "title": "10 razones para escribir un diario",
+        "type": "article",
+        "url": "articleurl1.com"
+      },
+      {
+        "title": "El arte del journaling: cómo y por qué",
+        "type": "podcast",
+        "url": "podcasturl1.com"
+      }
+    ],
+    "illustrationSuggeree": "Una persona escribiendo en su diario mientras toma una taza de té.",
+    "imageHelper": "https://firebasestorage.googleapis.com/v0/b/challengeme-d7fef.appspot.com/o/Challenges-Helper%2Fch-ecriture-quotidienne.png?alt=media"
+  },
+  "defiGratitudeVisuelle": {
+    "miniCours": "🙂 Despierta cada día con gratitud visual ✨. El objetivo es simple: encuentra y captura visualmente algo por lo que te sientas agradecido/a 📸. Puede ser tu café de la mañana ☕️, un abrazo inesperado 👦 o una puesta de sol 🌅. Esto te ayudará a notar los pequeños placeres de la vida y a cultivar una actitud agradecida 🙏. Puedes fotografiarlo, dibujarlo o pintarlo 💕.",
+    "exemples": [
+      "Ejemplo 1 ✨: Una comida casera deliciosa 🥘.",
+      "Ejemplo 2 💡: La calma al leer tu libro favorito 👓📖.",
+      "Ejemplo 3 🚀: Un paseo revitalizante por la naturaleza 🏞️.",
+      "Ejemplo 4 🌱: Tu planta recién regada brotando 🌱."
+    ],
+    "ressources": [
+      {
+        "title": "Cómo practicar la gratitud visual",
+        "type": "video",
+        "url": "https://www.youtube.com/"
+      },
+      {
+        "title": "Beneficios de la gratitud visual",
+        "type": "article",
+        "url": "https://www.medium.com/"
+      },
+      {
+        "title": "Podcast sobre gratitud visual",
+        "type": "podcast",
+        "url": "https://www.spotify.com/"
+      }
+    ],
+    "illustrationSuggeree": "Una persona sosteniendo una cámara lista para capturar una hermosa vista durante un paseo.",
+    "imageHelper": "https://firebasestorage.googleapis.com/v0/b/challengeme-d7fef.appspot.com/o/Challenges-Helper%2Fch-gratitude-visuelle.png?alt=media"
+  },
+  "defiMarcheConsciente": {
+    "miniCours": "🚶‍♀️ Caminar conscientemente es una práctica de atención plena que te ayuda a estar presente en el momento. Concéntrate en cada paso, en el contacto de tus pies con el suelo y en tu respiración 😌. Notarás la brisa en la piel, el sol en tu rostro y los sonidos que te rodean 🍃. Cada paseo se convierte en una oportunidad para reconectarte contigo y con la naturaleza 🌳.",
+    "exemples": [
+      "Ejemplo 1 ✨: Siente cómo tus pies tocan el suelo con cada paso.",
+      "Ejemplo 2 💡: Observa tu respiración mientras caminas.",
+      "Ejemplo 3 🚀: Escucha los sonidos a tu alrededor durante la caminata.",
+      "Ejemplo 4 🌱: Nota la temperatura en tu piel. ¿Frío? ¿Calor?"
+    ],
+    "ressources": [
+      {
+        "title": "Entendiendo la caminata consciente",
+        "type": "video",
+        "url": "URL_to_replace"
+      },
+      {
+        "title": "Descubriendo la caminata consciente",
+        "type": "article",
+        "url": "URL_to_replace"
+      },
+      {
+        "title": "Beneficios de caminar conscientemente",
+        "type": "podcast",
+        "url": "URL_to_replace"
+      }
+    ],
+    "illustrationSuggeree": "Persona caminando conscientemente en la naturaleza.",
+    "imageHelper": "https://firebasestorage.googleapis.com/v0/b/challengeme-d7fef.appspot.com/o/Challenges-Helper%2Fch-marche-consciente.png?alt=media"
+  },
+  "defiMatineeSansEcrans": {
+    "miniCours": "🚫📱 ¡Empieza tu día con una hora sin pantallas! Es el momento perfecto para reconectar contigo mismo y enfocar tu mente 🧠✨. En lugar de sumergirte en notificaciones y noticias, permite que tu mente despierte con calma. Medita 🧘, toma tu café en paz ☕, escribe en tu diario 📝 o haz ejercicio 🤸 – lo que te haga sentir presente y enfocado 🌞.",
+    "exemples": [
+      "Ejemplo 1 ✨: Medita 10 minutos antes de revisar correos.",
+      "Ejemplo 2 💡: Haz ejercicio en vez de mirar una pantalla.",
+      "Ejemplo 3 🚀: Prepara un desayuno nutritivo.",
+      "Ejemplo 4 🌱: Lee un libro inspirador en vez de ver las noticias."
+    ],
+    "ressources": [
+      {
+        "title": "Por qué empiezo mis días sin pantallas",
+        "type": "video",
+        "url": ""
+      },
+      {
+        "title": "Beneficios de una mañana sin pantallas",
+        "type": "article",
+        "url": ""
+      },
+      {
+        "title": "Podcast: Cómo crear una rutina matinal sin pantallas",
+        "type": "bonus",
+        "url": ""
+      }
+    ],
+    "illustrationSuggeree": "Persona sentada con calma tomando té mientras observa el amanecer sin ninguna pantalla.",
+    "imageHelper": "https://firebasestorage.googleapis.com/v0/b/challengeme-d7fef.appspot.com/o/Challenges-Helper%2Fch-matin-sans-ecrans.png?alt=media"
+  },
+  "defiMicroMeditation": {
+    "miniCours": "🌈 La micro-meditación es como una pausa para el cerebro – pero en vez de cafeína, te recargas con conciencia, equilibrio y calma 🧘‍♀️. Solo un minuto al día puede transformar tu vida. No necesitas ser experto: puedes hacerlo en cualquier lugar y momento 🕒. Empecemos hoy para convertirnos en nuestra versión más tranquila y enfocada 🚀.",
+    "exemples": [
+      "Ejemplo 1 ✨: Cierra los ojos un minuto en tu escritorio y enfócate en tu respiración.",
+      "Ejemplo 2 💡: Durante un paseo, detente y observa la naturaleza por un minuto.",
+      "Ejemplo 3 🚀: Haz una micro-meditación antes de empezar tu rutina matinal.",
+      "Ejemplo 4 🌱: Antes de dormir, reflexiona sobre tu día y calma tu mente por un minuto."
+    ],
+    "ressources": [
+      {
+        "title": "Introducción a la micro-meditación",
+        "type": "video",
+        "url": "https://www.example.com/micro-meditation-introduction"
+      },
+      {
+        "title": "5 beneficios increíbles de la micro-meditación",
+        "type": "article",
+        "url": "https://www.example.com/benefits-of-micro-meditation"
+      },
+      {
+        "title": "Guía práctica de micro-meditación",
+        "type": "bonus",
+        "url": "https://www.example.com/guide-to-micro-meditation"
+      }
+    ],
+    "illustrationSuggeree": "Alguien meditando con calma en un entorno tranquilo.",
+    "imageHelper": "https://firebasestorage.googleapis.com/v0/b/challengeme-d7fef.appspot.com/o/Challenges-Helper%2Fch-micro-meditation.png?alt=media"
+  },
+  "defiNoBuyMonth": {
+    "miniCours": "👋 ¡Hola! Hoy hablaremos del reto de NO COMPRAR NADA INNECESARIO 🛍️. El concepto es simple pero desafiante: comprar solo lo que realmente necesitas. Se basa en una mentalidad de minimalismo financiero, evitando caer en las tentaciones de las ofertas online y los escaparates brillantes 💰. Cuanto más te abstengas de comprar cosas superfluas, más valorarás el dinero que tanto te costó ganar. Pronto notarás los beneficios en tu bolsillo y también en tu mente. Menos estrés, más orden y, en definitiva, más felicidad. ¿Estás listo para aceptar el reto ❓",
+    "exemples": [
+      "Ejemplo 1 ✨: En lugar de comprar café para llevar todos los días, prueba a prepararlo en casa.",
+      "Ejemplo 2 💡: En vez de comprar la última novela de moda, ¡ve a la biblioteca!",
+      "Ejemplo 3 🚀: Evita comprar las zapatillas de moda. Su brillo es temporal, pero el gasto es permanente.",
+      "Ejemplo 4 🌱: Usa bolsas reutilizables en vez de comprar siempre bolsas de plástico de un solo uso."
+    ],
+    "ressources": [
+      {
+        "title": "Minimalism: Un documental sobre lo importante",
+        "type": "video",
+        "url": "https://www.netflix.com/title/80114460"
+      },
+      {
+        "title": "7 maneras de practicar el minimalismo financiero",
+        "type": "article",
+        "url": "https://www.moneycrashers.com/practice-financial-minimalism/"
+      },
+      {
+        "title": "Podcast de The Minimalists",
+        "type": "podcast",
+        "url": "https://www.theminimalists.com/podcast/"
+      }
+    ],
+    "illustrationSuggeree": "Una tarjeta de crédito cortada por la mitad",
+    "imageHelper": "https://firebasestorage.googleapis.com/v0/b/challengeme-d7fef.appspot.com/o/Challenges-Helper%2Fch-no-buy-month.png?alt=media"
+  },
+  "defiRangementMinimaliste": {
+    "miniCours": "Aquí tienes un desafío poderoso para adoptar un estilo de vida minimalista 🌿: deshazte de un objeto innecesario cada día. Es el primer paso hacia un entorno más despejado, que mejora tu bienestar y productividad 💫. Imagina el espacio que ganarás, la claridad mental que vendrá... Cada objeto que eliminas crea espacio para la calma y el orden 🌤️. Empieza con algo pequeño y sigue avanzando. Dona, recicla o tira – y respira más libremente.",
+    "exemples": [
+      "Ejemplo 1 ✨: ¿Ese libro viejo lleno de polvo? Dónalo a una biblioteca.",
+      "Ejemplo 2 💡: ¿Cajón lleno de cables viejos? Recicla los que ya no uses.",
+      "Ejemplo 3 🚀: ¿Ropa que no usas desde hace un año? Dónala a una organización benéfica.",
+      "Ejemplo 4 🌱: ¿Utensilios de cocina duplicados? Compártelos con un vecino o una asociación local."
+    ],
+    "ressources": [
+      {
+        "title": "Guía para principiantes al minimalismo",
+        "type": "video",
+        "url": ""
+      },
+      {
+        "title": "10 consejos para empezar a vivir de forma minimalista",
+        "type": "article",
+        "url": ""
+      },
+      {
+        "title": "Por qué el minimalismo puede cambiar tu vida",
+        "type": "podcast",
+        "url": ""
+      }
+    ],
+    "illustrationSuggeree": "Una habitación recién despejada mostrando un espacio más limpio y abierto.",
+    "imageHelper": "https://firebasestorage.googleapis.com/v0/b/challengeme-d7fef.appspot.com/o/Challenges-Helper%2Fch-rangement-minimaliste.png?alt=media"
+  },
+  "defiRepasEquilibre": {
+    "miniCours": "Crear una comida equilibrada es esencial para nuestro bienestar diario 🥦🥩🍚. Sea cual sea tu dieta, el objetivo es incluir proteínas, verduras y carbohidratos en cada plato. Las proteínas ayudan a reparar los tejidos 😄. Las verduras aportan vitaminas, minerales y fibras indispensables 💪. Los carbohidratos son tu fuente principal de energía 🚀. Varía las combinaciones para no aburrirte y descubrir nuevos sabores.",
+    "exemples": [
+      "Ejemplo 1 ✨: Prueba pollo a la parrilla con brócoli y patatas asadas para almorzar.",
+      "Ejemplo 2 💡: Para una cena romántica, prepara salmón con ensalada de remolacha y quinoa.",
+      "Ejemplo 3 🚀: ¿Qué tal unos huevos revueltos, espinacas y pan integral para el desayuno?",
+      "Ejemplo 4 🌱: Una cena vegetariana podría incluir tofu salteado, verduras asadas y arroz integral."
+    ],
+    "ressources": [
+      {
+        "title": "Cómo preparar una comida equilibrada",
+        "type": "video",
+        "url": "https://www.youtube.com/watch?v=voNE0dnp-vc"
+      },
+      {
+        "title": "10 ideas de menús equilibrados para la semana",
+        "type": "article",
+        "url": "https://www.mangerbouger.fr/Manger-mieux/Je-prepare-mon-repas/Des-idees-de-menus"
+      },
+      {
+        "title": "Fundamentos de una alimentación equilibrada",
+        "type": "bonus",
+        "url": "https://www.santemagazine.fr/podcast/am6ly-path5"
+      }
+    ],
+    "illustrationSuggeree": "Una foto colorida y atractiva de una comida bien equilibrada.",
+    "imageHelper": "https://firebasestorage.googleapis.com/v0/b/challengeme-d7fef.appspot.com/o/Challenges-Helper%2Fch-repas-equilibre.png?alt=media"
+  },
+  "defiRespirationConsciente": {
+    "miniCours": "La respiración consciente 🌬️ es una herramienta poderosa para conectarte con tu estado mental y emocional actual 🌈. Con solo 5 minutos al día, puedes transformar tu día con suavidad 🚀. Medita por la mañana, antes de empezar el día. Siéntate tranquilamente, cierra los ojos y respira lenta y profundamente. Concéntrate en tu respiración, siente el aire entrar y salir. Recuerda: ¡no es una carrera! 🐢",
+    "exemples": [
+      "Ejemplo 1 ✨: Reserva un momento fijo cada día, por ejemplo, justo después de despertar.",
+      "Ejemplo 2 💡: Usa una app de meditación que te guíe en tu respiración.",
+      "Ejemplo 3 🚀: Prueba técnicas como la respiración cuadrada o la respiración del león.",
+      "Ejemplo 4 🌱: No te frustres si tu mente se distrae, el objetivo es entrenar tu concentración."
+    ],
+    "ressources": [
+      {
+        "title": "Meditación guiada para la respiración consciente",
+        "type": "video",
+        "url": ""
+      },
+      {
+        "title": "Beneficios de la respiración consciente",
+        "type": "article",
+        "url": ""
+      },
+      {
+        "title": "Podcast sobre el poder de la respiración",
+        "type": "bonus",
+        "url": ""
+      }
+    ],
+    "illustrationSuggeree": "Una persona sentada en posición de loto practicando meditación.",
+    "imageHelper": "https://firebasestorage.googleapis.com/v0/b/challengeme-d7fef.appspot.com/o/Challenges-Helper%2Fch-respiration-consciente.png?alt=media"
+  },
+  "defiSommeilReparateur": {
+    "miniCours": "😴 Dormir bien es fundamental para tu bienestar. Empecemos con una rutina relajante antes de dormir. Apaga los dispositivos electrónicos 📵 al menos una hora antes de acostarte para desconectarte del estrés digital. Actividades relajantes como leer 📚, hacer yoga suave 🧘 o escribir en un diario de gratitud 🙏 pueden ayudarte a descansar mejor. Y no olvides preparar tu entorno: una habitación fresca 🌬️, oscura 🌚 y silenciosa 🤫 puede marcar una gran diferencia.",
+    "exemples": [
+      "Ejemplo 1 ✨: Después de cenar, Lisa apaga su móvil y lee una buena novela.",
+      "Ejemplo 2 💡: Kevin hace estiramientos suaves de yoga antes de dormir.",
+      "Ejemplo 3 🚀: María escribe en su diario de gratitud recordando los momentos positivos del día.",
+      "Ejemplo 4 🌱: Ali mantiene su habitación fresca, oscura y silenciosa para dormir mejor."
+    ],
+    "ressources": [
+      {
+        "title": "Técnicas de relajación antes de dormir",
+        "type": "video",
+        "url": ""
+      },
+      {
+        "title": "El impacto de las rutinas nocturnas",
+        "type": "article",
+        "url": ""
+      },
+      {
+        "title": "Podcast sobre el poder del buen descanso",
+        "type": "bonus",
+        "url": ""
+      }
+    ],
+    "illustrationSuggeree": "Una persona haciendo yoga en un entorno tranquilo antes de dormir.",
+    "imageHelper": "https://firebasestorage.googleapis.com/v0/b/challengeme-d7fef.appspot.com/o/Challenges-Helper%2Fch-sommeil-reparateur.png?alt=media"
+  },
+  "drinkWater": {
+    "miniCours": "💦 ¡Agua! ¡El ingrediente natural que hace maravillas! ¿Alguna vez te has preguntado por qué el agua es tan vital para nuestro cuerpo? Actúa como limpiador de desechos y mantiene nuestra piel brillante y saludable 🌟. Fijarte el objetivo de beber 2 litros de agua al día es un desafío positivo. Puede parecer difícil al principio ⛰️, pero al integrarlo poco a poco en tu rutina diaria, verás lo fácil que se vuelve y cómo tu cuerpo se beneficia 💪🏽.",
+    "exemples": [
+      "Ejemplo 1 ✨: Compra una botella de un litro y desafíate a llenarla y beberla dos veces al día.",
+      "Ejemplo 2 💡: ¡Agrega rodajas de frutas como limón o bayas para mejorar el sabor!",
+      "Ejemplo 3 🚀: Bebe un vaso de agua después de cada visita al baño.",
+      "Ejemplo 4 🌱: Empieza y termina tu día con un gran vaso de agua."
+    ],
+    "illustrationSuggeree": "Una persona llenando una botella de agua en una fuente",
+    "imageHelper": "https://firebasestorage.googleapis.com/v0/b/challengeme-d7fef.appspot.com/o/Challenges-Helper%2Fch-drink-water.png?alt=media",
+    "ressources": [
+      {
+        "title": "¿Por qué beber 2 litros de agua al día?",
+        "type": "video",
+        "url": "https://www.youtube.com/watch?v=example1"
+      },
+      {
+        "title": "7 beneficios de beber suficiente agua",
+        "type": "article",
+        "url": "https://www.healthline.com/health/benefits-of-drinking-water"
+      },
+      {
+        "title": "Podcast: La importancia de la hidratación",
+        "type": "bonus",
+        "url": "https://www.healthpodcast.com/hydration-importance"
+      }
+    ]
+  },
+  "eatHealthy": {
+    "miniCours": "¿Listo para transformar tu alimentación? 🥇¡Cada comida es una oportunidad para nutrir tu cuerpo con alimentos saludables y nutritivos! 🥦 Empieza por incluir más frutas, verduras y cereales integrales en tu plato. Intenta beber más agua y menos bebidas azucaradas 🥤. Recuerda, la moderación es clave 🔑 para una dieta equilibrada. Comer sano no solo es bueno para tu cuerpo, ¡también lo es para tu mente! 🧠 Sé constante y diviértete explorando nuevas recetas saludables y deliciosas 🌈.",
+    "exemples": [
+      "Ejemplo 1 ✨ - Cambia las papas fritas por zanahorias y hummus como snack nutritivo.",
+      "Ejemplo 2 💡 - ¿Qué mejor que una ensalada colorida con vegetales frescos para el almuerzo?",
+      "Ejemplo 3 🚀 - Elige una tortilla de espinacas con pan integral para el desayuno.",
+      "Ejemplo 4 🌱 - Sustituye el refresco por agua con frutas frescas."
+    ],
+    "illustrationSuggeree": "Un plato colorido con frutas y verduras frescas.",
+    "imageHelper": "https://firebasestorage.googleapis.com/v0/b/challengeme-d7fef.appspot.com/o/Challenges-Helper%2Fch-eat-healthy.png?alt=media",
+    "ressources": [
+      {
+        "title": "Principios básicos de una dieta saludable",
+        "type": "video",
+        "url": "https://www.youtube.com/watch?v=some_video_link"
+      },
+      {
+        "title": "10 maneras de comer más verduras cada día",
+        "type": "article",
+        "url": "https://www.somesite.com/some_article_link"
+      },
+      {
+        "title": "Podcast: Beneficios de una alimentación equilibrada",
+        "type": "bonus",
+        "url": "https://www.somepodcastsite.com/some_podcast_link"
+      }
+    ]
+  },
+  "familyTime": {
+    "miniCours": "👨‍👩‍👦‍👦 El tiempo en familia es valioso. Refuerza el amor y el respeto mutuo entre sus miembros 🏠. Empieza dedicando al menos una hora diaria a estar juntos sin distracciones ⏰. Puedes crear una 'hora sin tecnología' 🚫📱 para contar historias, leer o jugar juntos 🎲. No se trata de que sea perfecto. Solo hay que estar presentes, atentos y conectados. La belleza está en el proceso, no en el resultado ✨.",
+    "exemples": [
+      "Ejemplo 1 ✨: Inicien una tradición divertida como una noche de cuentos 📚.",
+      "Ejemplo 2 💡: Cocinen juntos 🥗, ¡es una excelente manera de divertirse y aprender!",
+      "Ejemplo 3 🚀: Elijan un pasatiempo compartido como la jardinería 🌳 o paseos vespertinos 🚶.",
+      "Ejemplo 4 🌱: Aprovechen para tener charlas de crecimiento personal como reseñas de libros o documentales inspiradores 🎥."
+    ],
+    "illustrationSuggeree": "Una familia compartiendo alegremente sin dispositivos digitales",
+    "imageHelper": "https://firebasestorage.googleapis.com/v0/b/challengeme-d7fef.appspot.com/o/Challenges-Helper%2Fch-family-time.png?alt=media",
+    "ressources": [
+      {
+        "title": "La importancia del tiempo en familia",
+        "type": "video",
+        "url": "https://www.youtube.com/watch?v=xyz"
+      },
+      {
+        "title": "15 actividades para unir a la familia",
+        "type": "article",
+        "url": "https://www.familybondingxyz.com"
+      },
+      {
+        "title": "Podcast sobre desarrollo personal en familia",
+        "type": "bonus",
+        "url": "https://podcast.family.com/bonus"
+      }
+    ]
+  },
+  "goodPosture": {
+    "miniCours": "💪 ¡Mantener una buena postura no es solo estar derecho! Implica activar el cuerpo para sostener tu columna. Observa tu postura en el escritorio: ¿tu espalda está recta? ¿Tu cabeza inclinada hacia adelante? Sé consciente y corrige a tiempo ⏱. Pequeños ajustes diarios hacen una gran diferencia 🌈.",
+    "exemples": [
+      "Ejemplo 1 ✨: Levántate y estira la espalda cada hora si trabajas en un escritorio.",
+      "Ejemplo 2 💡: Haz ejercicios como yoga o natación para fortalecer la espalda.",
+      "Ejemplo 3 🚀: Usa una almohada lumbar o silla ergonómica para apoyo.",
+      "Ejemplo 4 🌱: Practica mindfulness para evitar encorvarte frente al ordenador."
+    ],
+    "illustrationSuggeree": "Una persona sentada en una silla ergonómica frente a un escritorio, revisando su postura en un espejo.",
+    "imageHelper": "https://firebasestorage.googleapis.com/v0/b/challengeme-d7fef.appspot.com/o/Challenges-Helper%2Fch-good-posture.png?alt=media",
+    "ressources": [
+      {
+        "title": "¿Cómo tener una buena postura?",
+        "type": "video",
+        "url": "www.exempleurl.com/video"
+      },
+      {
+        "title": "10 consejos para mejorar tu postura",
+        "type": "article",
+        "url": "www.exempleurl.com/article"
+      },
+      {
+        "title": "Podcast sobre salud de la espalda",
+        "type": "bonus",
+        "url": "www.exempleurl.com/podcast"
+      }
+    ]
+  },
+  "hobbyTime": {
+    "miniCours": "¡Dedicar tiempo a ti cada día es esencial! — 30 minutos a un hobby pueden hacer una gran diferencia 🦋. Disfrutar de tu pasatiempo actúa como una vía de escape mental, reduciendo el estrés. Es como unas mini vacaciones 🌴. Anímate a probar cosas nuevas y descubrir lo que te apasiona. Ya sea cocinar 🍳, leer 📚, andar en bici 🚴‍♀️, pintar 🎨 o jardinería 🌱, lo importante es que te haga feliz.",
+    "exemples": [
+      "Ejemplo 1: Lee un capítulo de tu libro favorito por 30 minutos 📚",
+      "Ejemplo 2: Medita o haz yoga para aliviar el estrés 🧘‍♀️",
+      "Ejemplo 3: Pinta o dibuja para liberar tu creatividad 🎨",
+      "Ejemplo 4: Sal a caminar en la naturaleza y disfruta del aire fresco 🏞️"
+    ],
+    "illustrationSuggeree": "Una persona sentada cómodamente con un libro en la mano, rodeada de snacks y una bebida, sonriendo relajada.",
+    "imageHelper": "https://firebasestorage.googleapis.com/v0/b/challengeme-d7fef.appspot.com/o/Challenges-Helper%2Fch-hobby-time.png?alt=media",
+    "ressources": [
+      {
+        "title": "Cómo aprovechar 30 minutos de ocio",
+        "type": "video",
+        "url": "https://exemple.com/video1"
+      },
+      {
+        "title": "Por qué 30 minutos de pasatiempos mejoran tu productividad",
+        "type": "article",
+        "url": "https://exemple.com/article1"
+      },
+      {
+        "title": "Usar tu tiempo libre para el desarrollo personal",
+        "type": "podcast",
+        "url": "https://exemple.com/podcast1"
+      }
+    ]
+  },
+  "kindnessAct": {
+    "miniCours": "✅ ¡Practica un acto de bondad al azar cada día para enriquecer tu vida y la de los demás! 🌈 Un gesto amable puede ser físico o verbal, planificado o espontáneo. Puede ser ofrecer tu ayuda, compartir tu tiempo o simplemente sonreír. No importa su forma, cada acto de bondad puede marcar una gran diferencia. 💖 Aceptar este reto mejora tus habilidades sociales, tu generosidad y tu bienestar personal. Además, ¡inspiras a otros a ser amables también! 🚀",
+    "exemples": [
+      "Ejemplo 1 ✨ Cede tu asiento a una persona mayor en el autobús.",
+      "Ejemplo 2 💡 Escribe un correo de agradecimiento a un compañero de trabajo.",
+      "Ejemplo 3 🚀 Prepara una comida sorpresa para un amigo.",
+      "Ejemplo 4 🌱 Planta un árbol en tu vecindario."
+    ],
+    "ressources": [
+      {
+        "title": "La ciencia de la felicidad: ¿Por qué la generosidad nos hace felices?",
+        "type": "video",
+        "url": "https://www.youtube.com/watch?v=U3cZ-NGPkkU"
+      },
+      {
+        "title": "21 formas sencillas de ser amable",
+        "type": "article",
+        "url": "https://www.huffpost.com/entry/35-little-acts-of-kindness_n_5872030"
+      },
+      {
+        "title": "El poder de la bondad",
+        "type": "podcast",
+        "url": "https://www.npr.org/programs/invisibilia/382451600/the-power-of-kindness"
+      }
+    ],
+    "illustrationSuggeree": "Una persona sosteniendo un cartel que dice 'Sé amable'",
+    "imageHelper": "https://firebasestorage.googleapis.com/v0/b/challengeme-d7fef.appspot.com/o/Challenges-Helper%2Fch-act-of-kindness.png?alt=media"
+  },
+  "learnLanguage": {
+    "miniCours": "Aprender un nuevo idioma puede parecer intimidante, ¡pero con perseverancia y el enfoque correcto es una aventura emocionante! 🌍 Empieza poco a poco con metas diarias manejables, como aprender algunas palabras nuevas al día 🔠. Sé paciente y date tiempo para asimilar lo aprendido 🕘. Recuerda que es un maratón, no una carrera. Utiliza todas las herramientas que tengas: apps, videos, podcasts e incluso libros en el idioma que aprendes 📲📺🎧📚.",
+    "exemples": [
+      "Ejemplo 1 ✨: Fíjate una meta diaria de 5 palabras nuevas y usa tarjetas para memorizar.",
+      "Ejemplo 2 💡: Usa una app como Duolingo durante 20 minutos al día.",
+      "Ejemplo 3 🚀: Una vez a la semana, mira una película o serie en el idioma que estás aprendiendo.",
+      "Ejemplo 4 🌱: Escribe en un diario usando el nuevo idioma para expresarte y pensar en él."
+    ],
+    "ressources": [
+      {
+        "title": "Los secretos para aprender un idioma | Lydia Machová",
+        "type": "video",
+        "url": "https://www.youtube.com/watch?v=o_XVt5rdpFY"
+      },
+      {
+        "title": "Cómo aprender un idioma extranjero de manera efectiva",
+        "type": "article",
+        "url": "https://lifehacker.com/i-learned-to-speak-four-languages-in-a-few-years-heres-1683098274"
+      },
+      {
+        "title": "Podcasts de Babbel para aprender idiomas",
+        "type": "bonus",
+        "url": "https://www.babbel.com/en/magazine/category/language-podcasts"
+      }
+    ],
+    "illustrationSuggeree": "Persona sentada en una cafetería acogedora, con una taza de café y un libro de idiomas en la mesa.",
+    "imageHelper": "https://firebasestorage.googleapis.com/v0/b/challengeme-d7fef.appspot.com/o/Challenges-Helper%2Fch-learn-a-language.png?alt=media"
+  },
+  "learnSkill": {
+    "miniCours": "Dominar una nueva habilidad puede parecer una montaña, pero ¡no te preocupes! Se sube paso a paso 👣🌱. Dedica cada día un poco de tiempo al aprendizaje. Comienza leyendo sobre el tema o viendo tutoriales 📚💻. La clave es la constancia y la paciencia 🗝️. Lo bonito de este camino es que, además de la habilidad, fortaleces tu capacidad de aprender y tu resiliencia 🧠💪. Consejo: ¡hazlo divertido! Conviértelo en un ritual relajante diario 🎶🍵.",
+    "exemples": [
+      "Ejemplo 1 ✨: Mejora una habilidad profesional, como dominar un software nuevo.",
+      "Ejemplo 2 💡: Aprende algo que te apasione, como pintura, cocina o fotografía.",
+      "Ejemplo 3 🚀: Prueba algo útil para tu día a día, como meditación u organización.",
+      "Ejemplo 4 🌱: Sal de tu zona de confort aprendiendo un idioma o un instrumento musical."
+    ],
+    "ressources": [
+      {
+        "title": "Cómo aprender una nueva habilidad de forma eficaz",
+        "type": "video",
+        "url": "https://www.youtube.com/exemple"
+      },
+      {
+        "title": "5 trucos para dominar una nueva habilidad",
+        "type": "article",
+        "url": "https://www.blog/exemple"
+      },
+      {
+        "title": "Podcast sobre aprendizaje continuo",
+        "type": "bonus",
+        "url": "https://www.podcast/exemple"
+      }
+    ],
+    "illustrationSuggeree": "Alguien con auriculares frente a un portátil aprendiendo algo nuevo.",
+    "imageHelper": "https://firebasestorage.googleapis.com/v0/b/challengeme-d7fef.appspot.com/o/Challenges-Helper%2Fch-learn-skill.png?alt=media"
+  },
+  "learnWordDaily": {
+    "miniCours": "Enriquecer tu vocabulario no solo es beneficioso para la expresión personal y la elocuencia, sino también una forma emocionante de explorar diferentes culturas y formas de pensar 🌍✨. Comienza eligiendo una palabra de un libro, un artículo o una aplicación. Trata de comprender su significado, matices y uso en diferentes contextos 🕵️‍♀️✨. Luego practícala escribiéndola en frases y diciéndola en voz alta. Usa la palabra siempre que puedas en conversaciones durante el día 📚💬.",
+    "exemples": [
+      "Ejemplo 1 ✨: La palabra 'discernimiento' significa la capacidad de juzgar bien. Podrías usarla así: 'Admiro el discernimiento artístico de Van Gogh.'",
+      "Ejemplo 2 💡: La palabra 'quintessential' significa el ejemplo perfecto o más puro de algo. Puedes decir: 'Esta canción es la quintaesencia del rhythm and blues.'",
+      "Ejemplo 3 🚀: La palabra 'ambidiestro' significa capaz de usar la mano derecha e izquierda por igual. Puedes decir: 'Leonardo Da Vinci no solo fue un genio artista, sino también ambidiestro.'",
+      "Ejemplo 4 🌱: La palabra 'metamorfosis' significa un cambio completo de naturaleza o forma. Por ejemplo: 'La oruga sufre una metamorfosis para convertirse en mariposa.'"
+    ],
+    "ressources": [
+      {
+        "title": "¿Cómo mejorar tu vocabulario en inglés?",
+        "type": "video",
+        "url": "https://youtu.be/xx_WNPe8bBs"
+      },
+      {
+        "title": "7 Consejos para enriquecer tu vocabulario",
+        "type": "article",
+        "url": "https://www.superprof.fr/blog/amplifier-son-lexique/"
+      },
+      {
+        "title": "Podcast: Palabras que quizás no conozcas",
+        "type": "bonus",
+        "url": "https://anchor.fm/mots-inconnus"
+      }
+    ],
+    "illustrationSuggeree": "Una persona sentada en su escritorio, leyendo un libro, con un cuaderno al lado para anotar nuevas palabras.",
+    "imageHelper": "https://firebasestorage.googleapis.com/v0/b/challengeme-d7fef.appspot.com/o/Challenges-Helper%2Fch-learn-word.png?alt=media"
+  },
+  "listenPodcast": {
+    "miniCours": "🎧 Escuchar podcasts educativos todos los días es como llevar un aula móvil contigo. Ya sea que camines, cocines o descanses en tu sofá, un podcast puede convertir ese tiempo en una sesión de aprendizaje enriquecedora 🧠. Elegir temas que te interesen aumenta no solo tu conocimiento sino también tu pasión por el aprendizaje continuo 📚. Prueba diferentes formatos y duraciones hasta encontrar lo que más te funcione. Recuerda, el objetivo es que este reto de escuchar podcasts sea un hábito estimulante, no una tarea 🚀.",
+    "exemples": [
+      "Ejemplo 1 ✨ Descubre la importancia de la comunicación efectiva con el podcast 'Soft Skills Engineering'.",
+      "Ejemplo 2 💡 Aprende lo básico sobre finanzas personales con el podcast 'Nerd's Eye View'.",
+      "Ejemplo 3 🚀 Mejora tus habilidades de liderazgo con el podcast 'WorkLife con Adam Grant'.",
+      "Ejemplo 4 🌱 Mantente al día con las innovaciones tecnológicas con el podcast 'TechStuff'."
+    ],
+    "ressources": [
+      {
+        "title": "Cómo aprovechar al máximo los podcasts",
+        "type": "video",
+        "url": "https://youtu.be/your_url_here"
+      },
+      {
+        "title": "5 consejos para integrar los podcasts en tu rutina diaria",
+        "type": "article",
+        "url": "https://blog.wordpress.com/your_article_url_here"
+      },
+      {
+        "title": "5 podcasts educativos que debes escuchar ya",
+        "type": "bonus",
+        "url": "https://your_podcasts_recommendations_url_here"
+      }
+    ],
+    "illustrationSuggeree": "Persona con auriculares, escuchando un podcast en su teléfono inteligente.",
+    "imageHelper": "https://firebasestorage.googleapis.com/v0/b/challengeme-d7fef.appspot.com/o/Challenges-Helper%2Fch-podcast.png?alt=media"
+  },
+  "meditation": {
+    "miniCours": "Tómate un momento cada mañana para meditar, desarrollar tu concentración y reducir el estrés 🧘‍♀️. ¡Es más fácil de lo que crees! Solo toma 10 minutos, busca un lugar tranquilo, cierra los ojos, respira y vacía tu mente. 🕊 No se trata de eliminar pensamientos, sino de darles espacio. ¿Lo más importante? Ser constante y valorar el progreso, no la perfección 🌈.",
+    "exemples": [
+      "Ejemplo 1 ✨: Encuentra un rincón tranquilo en tu hogar para meditar, lejos de distracciones.",
+      "Ejemplo 2 💡: Existen muchas aplicaciones y sitios web que ofrecen sesiones guiadas de meditación para principiantes.",
+      "Ejemplo 3 🚀: Comienza con sesiones breves de 10 minutos y aumenta poco a poco el tiempo.",
+      "Ejemplo 4 🌱: Finaliza cada sesión anotando lo que sentiste y experimentaste durante la meditación."
+    ],
+    "ressources": [
+      {
+        "title": "Meditación para principiantes",
+        "type": "video",
+        "url": ""
+      },
+      {
+        "title": "Beneficios de la meditación diaria",
+        "type": "article",
+        "url": ""
+      },
+      {
+        "title": "Los mejores podcasts sobre meditación",
+        "type": "bonus",
+        "url": ""
+      }
+    ],
+    "illustrationSuggeree": "Persona meditando en un espacio tranquilo y sereno.",
+    "imageHelper": "https://firebasestorage.googleapis.com/v0/b/challengeme-d7fef.appspot.com/o/Challenges-Helper%2Fch-meditation.png?alt=media"
+  },
+  "morningStretch": {
+    "miniCours": "☀️ ¡Buenos días! Comienza el día con una hermosa rutina de estiramientos matutinos 🧘‍♂️. Por la mañana, nuestro cuerpo se despierta tras muchas horas de descanso. Es importante estirarse para activar la circulación sanguínea y la concentración mental. No hace falta ser experto en yoga 🤗 — basta con tocarse los pies, levantar los brazos o estirar el cuello. Lo importante es mover el cuerpo y despertar los sentidos 🏄‍♂️.",
+    "exemples": [
+      "Ejemplo 1 ✨: De pie, respira profundamente y estira los brazos hacia arriba.",
+      "Ejemplo 2 💡: Inclínate suavemente hacia adelante para tocarte los pies, manteniendo las piernas rectas.",
+      "Ejemplo 3 🚀: Sentado, estira una pierna a la vez. Intenta tocar el pie con tus manos y mantén por 5 segundos.",
+      "Ejemplo 4 🌱: Sentado, estira los brazos al frente y rota las muñecas para estirar manos y brazos."
+    ],
+    "ressources": [
+      {
+        "title": "Rutina de estiramiento matinal para principiantes",
+        "type": "video",
+        "url": ""
+      },
+      {
+        "title": "Importancia del estiramiento por la mañana",
+        "type": "article",
+        "url": ""
+      },
+      {
+        "title": "Podcast: El impacto del estiramiento en tu día",
+        "type": "bonus",
+        "url": ""
+      }
+    ],
+    "illustrationSuggeree": "Una persona estirando los brazos hacia arriba después de despertar.",
+    "imageHelper": "https://firebasestorage.googleapis.com/v0/b/challengeme-d7fef.appspot.com/o/Challenges-Helper%2Fch-morning-stretch.png?alt=media"
+  },
+  "network": {
+    "miniCours": "🎉 ¡Felicidades por asumir este emocionante reto! Hacer networking de forma efectiva puede abrir muchas puertas 🚪. Comienza contactando a un profesional cada día en tu área de interés. Puede parecer difícil, pero cada conversación es una oportunidad para aprender y ampliar tu perspectiva 🌅. Sé curioso y empático, haz preguntas y comparte tus ideas. Convierte cada interacción en una experiencia estimulante 🎈. Y recuerda: la calidad es más importante que la cantidad. Crea relaciones significativas y auténticas 🌟.",
+    "exemples": [
+      "Ejemplo 1 ✨: Contacta a un referente en LinkedIn para hablar sobre tendencias del sector.",
+      "Ejemplo 2 💡: Invita a un colega a tomar un café y conversar sobre logros recientes.",
+      "Ejemplo 3 🚀: Participa en un webinar y haz preguntas interesantes al ponente.",
+      "Ejemplo 4 🌱: Haz seguimiento a un antiguo contacto profesional para saber cómo está y compartir novedades."
+    ],
+    "ressources": [
+      {
+        "title": "Consejos para hacer networking eficaz",
+        "type": "video",
+        "url": "youtube.com/reseautageefficace"
+      },
+      {
+        "title": "El arte del networking diario",
+        "type": "article",
+        "url": "medium.com/reseautagequotidien"
+      },
+      {
+        "title": "Podcast: El poder del networking",
+        "type": "bonus",
+        "url": "spotify.com/podcast/reseautage"
+      }
+    ],
+    "illustrationSuggeree": "Una persona haciendo una llamada telefónica en su escritorio, con una libreta y bolígrafo al lado.",
+    "imageHelper": "https://firebasestorage.googleapis.com/v0/b/challengeme-d7fef.appspot.com/o/Challenges-Helper%2Fch-networking.png?alt=media"
+  },
+  "newRecipe": {
+    "miniCours": "Enfrentar una nueva receta puede parecer una montaña, ¡pero no tengas miedo de ensuciarte las manos! 👨‍🍳 No necesitas ser un chef con estrellas Michelin para comenzar. Cualquier cocinero principiante puede preparar un plato delicioso siguiendo unos simples pasos. 🍲 Empieza leyendo la receta completa para entender el proceso. 📖 Asegúrate de tener todos los ingredientes listos y no te apresures. ¡Recuerda, lo importante es el viaje, no el destino! 🌟",
+    "exemples": [
+      "Ejemplo 1 ✨: Hacer una tarta de manzana casera desde cero.",
+      "Ejemplo 2 💡: Probar un plato étnico que siempre has querido degustar.",
+      "Ejemplo 3 🚀: Reinventar tu comida favorita agregando tu propio toque.",
+      "Ejemplo 4 🌱: Elegir una receta completamente vegana."
+    ],
+    "ressources": [
+      {
+        "title": "Cómo leer y entender una receta",
+        "type": "video",
+        "url": "https://www.youtube.com/watch?v=*"
+      },
+      {
+        "title": "10 trucos para tener éxito con una nueva receta",
+        "type": "article",
+        "url": "https://www.cuisinemaison.com/10-astuces-pour-reussir-une-nouvelle-recette"
+      },
+      {
+        "title": "Podcast: Cocina como un profesional",
+        "type": "bonus",
+        "url": "https://www.cookingpodcast.com/cuisiner-comme-un-pro"
+      }
+    ],
+    "illustrationSuggeree": "Una persona leyendo una receta mientras corta verduras.",
+    "imageHelper": "https://firebasestorage.googleapis.com/v0/b/challengeme-d7fef.appspot.com/o/Challenges-Helper%2Fch-nouvelle-recette.png?alt=media"
+  },
+  "noCaffeine": {
+    "miniCours": "🌞 ¿Listo para un verdadero desafío de salud? ¡Intenta pasar una semana entera sin cafeína! Sí, es difícil. Pero recuerda, todo buen cambio requiere esfuerzo. 🏋️‍♀️ Al eliminar la cafeína, le das a tu cuerpo el descanso que merece. Tu cuerpo es tu templo. 🏛️💖 Te sorprenderás de lo renovado y lleno de energía que te sentirás después. ¡Tú puedes! 💪",
+    "exemples": [
+      "✨ Sustituye tu café matutino por una infusión.",
+      "💡 Prueba un batido verde en el desayuno como impulso natural.",
+      "🚀 Da un paseo corto cuando te sientas cansado en lugar de tomar café.",
+      "🌱 Practica meditación para mejorar la concentración sin cafeína."
+    ],
+    "ressources": [
+      {
+        "title": "Cómo dejar la cafeína sin estar cansado",
+        "type": "video",
+        "url": "youtube.com/watch?v=videourl1"
+      },
+      {
+        "title": "Por qué deberías hacer una pausa de cafeína",
+        "type": "article",
+        "url": "articleurl.com/2"
+      },
+      {
+        "title": "Podcast: Alternativas saludables a la cafeína",
+        "type": "bonus",
+        "url": "podcasturl.com/3"
+      }
+    ],
+    "illustrationSuggeree": "Persona tomando una infusión en lugar de café.",
+    "imageHelper": "https://firebasestorage.googleapis.com/v0/b/challengeme-d7fef.appspot.com/o/Challenges-Helper%2Fch-no-cafe.png?alt=media"
+  },
+  "noComplaints": {
+    "miniCours": "Centrarse en lo positivo 🌈 no siempre es fácil, pero recuerda que cada queja refuerza el hábito de la negatividad. En su lugar, intenta encontrar un aspecto positivo 🌟 en cada situación. Por ejemplo, si estás atrapado en el tráfico, agradécelo como una oportunidad para escuchar tu podcast favorito 🎧. Cultiva una mentalidad de gratitud 🙏 y atraerás más positividad a tu vida.",
+    "exemples": [
+      "Ejemplo 1 ✨: ¿No te gusta la lluvia? ☔ Piensa en cómo alimenta las plantas y hace todo más verde. 🌳",
+      "Ejemplo 2 💡: ¿Esperas el autobús? 🚏 Usa ese tiempo para meditar 🧘‍♀️ o planificar tu día. 🗓",
+      "Ejemplo 3 🚀: ¿No estás contento con tu rendimiento físico? 🏋️‍♂️ Aprecia cuánto has progresado. 🏆",
+      "Ejemplo 4 🌱: ¿Aburrido en el trabajo? Agradece tener un empleo y los beneficios que aporta. 🏢"
+    ],
+    "ressources": [
+      {
+        "title": "Vídeo sobre el arte de ser positivo",
+        "type": "video",
+        "url": "https://exampleurl.com"
+      },
+      {
+        "title": "Artículo sobre cómo dejar de quejarse",
+        "type": "article",
+        "url": "https://exampleurl.com"
+      },
+      {
+        "title": "Podcast sobre la mentalidad de gratitud",
+        "type": "bonus",
+        "url": "https://exampleurl.com"
+      }
+    ],
+    "illustrationSuggeree": "Alguien escribiendo en un diario de gratitud.",
+    "imageHelper": "https://firebasestorage.googleapis.com/v0/b/challengeme-d7fef.appspot.com/o/Challenges-Helper%2Fch-no-complaints.png?alt=media"
+  },
+  "noSugar30Days": {
+    "miniCours": "🎯🍎 ¡Vamos con un desafío sin azúcar! ¡Adiós, azúcar! Puedes mejorar tu vida evitando los azúcares añadidos. Al equilibrar tu dieta, aumentarás tu energía y fortalecerás tu sistema inmunológico 🤸‍♀️. Cada alimento es una oportunidad para nutrir tu cuerpo. Una vez que reemplaces los azúcares añadidos por alimentos naturalmente dulces ☀️, notarás cuán deliciosos son los sabores reales 🍉🍇. ¡Una vida sin azúcar añadido no solo es más saludable, sino también más sabrosa! 🌈🎉",
+    "exemples": [
+      "Ejemplo 1 ✨: Sustituye el azúcar del café por canela.",
+      "Ejemplo 2 💡: Elige frutas frescas en lugar de jugos industriales.",
+      "Ejemplo 3 🚀: Prefiere yogures naturales y añade frutas.",
+      "Ejemplo 4 🌱: Cocina con dátiles o sirope de arce."
+    ],
+    "ressources": [
+      {
+        "title": "Cómo reducir el azúcar en tu dieta",
+        "type": "video",
+        "url": ""
+      },
+      {
+        "title": "Beneficios de una dieta sin azúcar",
+        "type": "article",
+        "url": ""
+      },
+      {
+        "title": "20 recetas sin azúcar añadido para inspirarte",
+        "type": "bonus",
+        "url": ""
+      }
+    ],
+    "illustrationSuggeree": "Una mesa llena de frutas, nueces, semillas y verduras frescas que representan una dieta sin azúcar añadido.",
+    "imageHelper": "https://firebasestorage.googleapis.com/v0/b/challengeme-d7fef.appspot.com/o/Challenges-Helper%2Fch-no-sugar.png?alt=media"
+  },
+  "oneMinPlank": {
+    "miniCours": "💪 Acepta el reto de combinar tu fuerza interna con la física con un ejercicio simple pero eficaz: la plancha de un minuto. 🏋️‍♀️ No se trata solo de tus abdominales, sino de demostrarte que puedes superar un desafío. Haz de la plancha tu mantra diario para fortalecer la perseverancia en un minuto de esfuerzo concentrado. 🌈 ¡No olvides respirar profundamente mientras la haces para aguantar más tiempo! 🗓️",
+    "exemples": [
+      "Ejemplo 1 ✨: Comienza con 30 segundos y aumenta hasta un minuto.",
+      "Ejemplo 2 💡: Mientras haces la plancha, imagina que llevas tu ombligo hacia la columna.",
+      "Ejemplo 3 🚀: Prueba variaciones como la plancha lateral o sobre los codos.",
+      "Ejemplo 4 🌱: Añade la plancha a tu rutina matutina para activar tu metabolismo."
+    ],
+    "ressources": [
+      {
+        "title": "Tutorial de la plancha",
+        "type": "video",
+        "url": "https://www.youtube.com/watch?v=7RkpEJgP6wE"
+      },
+      {
+        "title": "¿Por qué la plancha es un ejercicio completo?",
+        "type": "article",
+        "url": "https://www.huffingtonpost.fr/entry/pourquoi-faire-la-planche-est-un-exercice-si-complet_fr_5e9450b8c5b6d97d91e4e2de"
+      },
+      {
+        "title": "Podcast sobre los beneficios de la plancha",
+        "type": "bonus",
+        "url": "https://www.listennotes.com/c/f5eeb7e58284840a8b171e9470168995/"
+      }
+    ],
+    "illustrationSuggeree": "Una persona en posición de plancha al aire libre sobre una colchoneta.",
+    "imageHelper": "https://firebasestorage.googleapis.com/v0/b/challengeme-d7fef.appspot.com/o/Challenges-Helper%2Fch-planche.png?alt=media"
+  },
+  "planTomorrow": {
+    "miniCours": "¡Deja de terminar tus días en el caos y empieza a sentirte en control planificando el mañana esta noche! 📆💡 No te hundas en el sofá sin antes escribir tus tareas para el día siguiente. Crear una lista 📝 de lo que quieres y necesitas hacer ayuda a reducir el estrés y te da dirección. Además, ¿a quién no le gusta marcar cosas como hechas? 🚀 Mantén tu lista realista y específica. Usa verbos de acción ⚡ para cada tarea e incluye el *por qué*. Convierte la planificación en un ritual relajante con té o música 🎵 para que se vuelva un hábito positivo y productivo.",
+    "exemples": [
+      "Ejemplo 1 ✨: Tarea: 'Llamar al médico para una consulta' ➡️ Motivo: 'Para sentirse mejor y más seguro'",
+      "Ejemplo 2 💡: Tarea: 'Enviar correo de actualización a los clientes' ➡️ Motivo: 'Para vender más productos y ayudar a los clientes'",
+      "Ejemplo 3 🚀: Tarea: 'Correr 2 km' ➡️ Motivo: 'Para cuidar la salud y sentirse bien con uno mismo'",
+      "Ejemplo 4 🌱: Tarea: 'Preparar la cena para la familia' ➡️ Motivo: 'Para disfrutar tiempo de calidad y una comida compartida'"
+    ],
+    "ressources": [
+      {
+        "title": "Planifica tu día para ser más productivo",
+        "type": "video",
+        "url": ""
+      },
+      {
+        "title": "Por qué planificar mañana esta noche",
+        "type": "article",
+        "url": ""
+      },
+      {
+        "title": "Podcast: Gestión del tiempo y poder de la planificación",
+        "type": "bonus",
+        "url": ""
+      }
+    ],
+    "illustrationSuggeree": "Una persona sentada en un escritorio escribiendo tareas para el día siguiente en una agenda",
+    "imageHelper": "https://firebasestorage.googleapis.com/v0/b/challengeme-d7fef.appspot.com/o/Challenges-Helper%2Fch-plan-tomorrow.png?alt=media"
+  },
+  "playInstrument": {
+    "miniCours": "Aprender a tocar un instrumento es un reto tan emocionante 🌟 como gratificante 🏆. Es una forma maravillosa de expresar tu creatividad 🎨 y reducir el estrés 😌. Comienza eligiendo un instrumento que te apasione 🎸🎷, así estarás más motivado para aprenderlo. El progreso lleva tiempo, así que no te frustres si al principio todo parece lento 🐢. Recuerda: todo maestro comenzó dando pasos simples. Lo más importante: ¡disfruta el viaje musical y déjate llevar por las notas! 🎵",
+    "exemples": [
+      "Ejemplo 1 ✨: Aprende lo básico como la posición de los dedos en el piano o cómo sostener un violín.",
+      "Ejemplo 2 💡: Practica con regularidad. Incluso 15 minutos al día pueden marcar la diferencia.",
+      "Ejemplo 3 🚀: Intenta aprender una canción sencilla que te guste. ¡Hace la práctica más divertida y gratificante!",
+      "Ejemplo 4 🌱: No dudes en pedir ayuda o tomar clases con un profesor experimentado."
+    ],
+    "ressources": [
+      {
+        "title": "Clases de guitarra para principiantes",
+        "type": "video",
+        "url": "https://www.youtube.com/watch?v=VmrnhzL7vY8"
+      },
+      {
+        "title": "Cómo empezar a tocar el violín",
+        "type": "article",
+        "url": "https://www.bbc.co.uk/music/articles/97bbf589-75da-4f73-b179-f0a6a4f159ff"
+      },
+      {
+        "title": "Podcast: Medidas del éxito musical",
+        "type": "podcast",
+        "url": "https://www.successfulmusiceducation.com/"
+      }
+    ],
+    "illustrationSuggeree": "Alguien tocando la guitarra o sentado al piano, inmerso en la música y disfrutando del proceso.",
+    "imageHelper": "https://firebasestorage.googleapis.com/v0/b/challengeme-d7fef.appspot.com/o/Challenges-Helper%2Fch-learn-instrument.png?alt=media"
+  },
+  "positiveAffirmations": {
+    "miniCours": "Las afirmaciones positivas 🗣️ son frases poderosas que te repites para fortalecer la confianza y atraer el éxito. Estas repeticiones 🔄 ayudan a cambiar tu mentalidad hacia lo positivo. Para que funcionen, usa tiempo presente ✔️, sé específico ⚙️ ¡y honesto! Recupera el control de tu mente y deja que tu subconsciente haga el resto 💪.",
+    "exemples": [
+      "Ejemplo 1 ✨: 'Soy fuerte y valiente frente a cualquier desafío.'",
+      "Ejemplo 2 💡: 'Creo armonía y alegría en mi vida.'",
+      "Ejemplo 3 🚀: 'Estoy en camino hacia oportunidades increíbles.'",
+      "Ejemplo 4 🌱: 'Doy y recibo amor libre y alegremente.'"
+    ],
+    "ressources": [
+      {
+        "title": "El arte y la ciencia de las afirmaciones positivas",
+        "type": "video",
+        "url": "https://youtu.be/your_video_url"
+      },
+      {
+        "title": "¿Por qué funcionan las afirmaciones positivas?",
+        "type": "article",
+        "url": "https://www.your_article_url.com"
+      },
+      {
+        "title": "Podcast: El poder de las afirmaciones positivas",
+        "type": "bonus",
+        "url": "https://www.your_podcast_url.com"
+      }
+    ],
+    "illustrationSuggeree": "Persona mirándose al espejo mientras repite afirmaciones positivas.",
+    "imageHelper": "https://firebasestorage.googleapis.com/v0/b/challengeme-d7fef.appspot.com/o/Challenges-Helper%2Fch-positive-affirmations.png?alt=media"
+  },
+  "readChapter": {
+    "miniCours": "📚 Leer a diario amplía tu vocabulario, mejora la concentración y estimula la creatividad. Los libros son puertas a otros mundos, culturas e ideas. No te intimides por los libros largos: todos están compuestos por capítulos. Leer solo un capítulo al día puede marcar una gran diferencia. Cuanto más leas, mejor y más rápido lo harás. Así que elige un libro, busca tu rincón cómodo y ¡sumérgete en la historia!",
+    "exemples": [
+      "Ejemplo 1 ✨: Lee el primer capítulo de '1984' de George Orwell en el tren.",
+      "Ejemplo 2 💡: Dedica 15 minutos por la mañana a terminar 'Matar a un ruiseñor' de Harper Lee.",
+      "Ejemplo 3 🚀: Mientras tomas café, disfruta un capítulo de 'El alquimista' de Paulo Coelho.",
+      "Ejemplo 4 🌱: Relájate antes de dormir con un capítulo de 'Piense y hágase rico' de Napoleon Hill."
+    ],
+    "ressources": [
+      {
+        "title": "Cómo leer más libros",
+        "type": "video",
+        "url": "https://www.youtube.com/watch?v=..."
+      },
+      {
+        "title": "10 trucos para leer más este mes",
+        "type": "article",
+        "url": "https://www.lireplus.com/..."
+      },
+      {
+        "title": "Podcast: Beneficios de la lectura diaria",
+        "type": "bonus",
+        "url": "https://www.podcastbienfaitslecture.com/..."
+      }
+    ],
+    "illustrationSuggeree": "Una persona cómodamente sentada en un sofá, sumergida en un libro.",
+    "imageHelper": "https://firebasestorage.googleapis.com/v0/b/challengeme-d7fef.appspot.com/o/Challenges-Helper%2Fch-read-chapter.png?alt=media"
+  },
+  "reducePlastic": {
+    "miniCours": "🌍 Salvar el planeta empieza con pequeñas acciones individuales como reducir el uso del plástico. Puedes comenzar cambiando las botellas de plástico por una reutilizable 🚰. Di no a las bolsas de plástico y lleva tus propias bolsas reutilizables cuando vayas de compras 🛍️. Y durante tus pausas para el café, evita los vasos desechables y usa una taza de cerámica o termo ☕. ¡Pequeños pasos pueden lograr grandes cambios! 👣",
+    "exemples": [
+      "Ejemplo 1 ✨: Cambia tus cepillos de dientes de plástico por unos de bambú biodegradable.",
+      "Ejemplo 2 💡: Usa pajillas de acero inoxidable reutilizables en lugar de las de plástico.",
+      "Ejemplo 3 🚀: Lleva tu propio recipiente reutilizable cuando compres comida para llevar.",
+      "Ejemplo 4 🌱: Opta por rasuradoras metálicas reutilizables en vez de las desechables."
+    ],
+    "ressources": [
+      {
+        "title": "50 ideas para reducir el uso del plástico",
+        "type": "video",
+        "url": "https://www.youtube.com/watch?v=abc123"
+      },
+      {
+        "title": "10 formas de reducir el plástico en tu vida diaria",
+        "type": "article",
+        "url": "https://www.ecowatch.com/reduce-plastic-use-2318016334.html"
+      },
+      {
+        "title": "Podcast: Vivir sin plástico, un reto diario",
+        "type": "bonus",
+        "url": "https://www.deezer.com/fr/show/80072"
+      }
+    ],
+    "illustrationSuggeree": "Collage fotográfico con botella plástica, bolsas de plástico y vasos de café junto a alternativas sostenibles como botella reutilizable, bolsas de tela y taza de cerámica.",
+    "imageHelper": "https://firebasestorage.googleapis.com/v0/b/challengeme-d7fef.appspot.com/o/Challenges-Helper%2Fch-reduce-plastic.png?alt=media"
+  },
+  "reduceScreenTime": {
+    "miniCours": "La serenidad antes de dormir 🌙 es crucial para un buen descanso nocturno. Las pantallas 📱💻 emiten luz azul que puede alterar nuestro reloj biológico. Intenta decirles buenas noches al menos 30 minutos antes de acostarte para ayudar a tu cuerpo a prepararse para un sueño profundo 💤. Usa este momento para relajarte 💆‍♀️, meditar, leer 📖 o escuchar música suave 🎵.",
+    "exemples": [
+      "Ejemplo 1 ✨: Sumérgete en un baño caliente con aroma a lavanda para calmar tus sentidos",
+      "Ejemplo 2 💡: Lee un buen libro que alimente tu mente e invite al sueño",
+      "Ejemplo 3 🚀: Practica una sesión de yoga suave para estirar tu cuerpo y calmar tu mente",
+      "Ejemplo 4 🌱: Escucha una lista de reproducción de música relajante o sonidos de la naturaleza"
+    ],
+    "illustrationSuggeree": "Una persona apagando su portátil y encendiendo una lámpara de noche para leer un libro",
+    "imageHelper": "https://firebasestorage.googleapis.com/v0/b/challengeme-d7fef.appspot.com/o/Challenges-Helper%2Fch-reduce-screen-time.png?alt=media",
+    "ressources": [
+      {
+        "title": "Los efectos de la luz azul en el sueño",
+        "type": "video",
+        "url": "https://www.youtube.com/watch?v=somelink"
+      },
+      {
+        "title": "Técnicas para dormir mejor",
+        "type": "article",
+        "url": "https://www.someOtherLink.com"
+      },
+      {
+        "title": "Meditación guiada para dormir",
+        "type": "podcast",
+        "url": "https://www.somePodcastLink.com"
+      }
+    ]
+  },
+  "saveMoney": {
+    "miniCours": "💪 Desarrolla tu disciplina financiera y alcanza tu libertad económica ahorrando solo 5 $ al día. Puede parecer poco, pero es un gran paso hacia una mejor gestión del dinero 💰. El secreto es comenzar poco a poco y convertirlo en un hábito diario. Cada acción cuenta, incluso si parece insignificante 😇. Prepara tu café en casa ☕, cocina tu almuerzo 🥪. ¡Te sorprenderá cuánto puedes ahorrar!",
+    "exemples": [
+      "Ejemplo 1 ✨: En lugar de pagar 10 $ por una clase de gimnasio, intenta una rutina en casa 🏋️‍♀️.",
+      "Ejemplo 2 💡: En lugar de comprar café por 5 $, hazlo en casa ☕ y llévalo contigo.",
+      "Ejemplo 3 🚀: Prepara tu almuerzo 🥗 en casa en vez de gastar 10 $ en el trabajo.",
+      "Ejemplo 4 🌱: Opta por una noche tranquila en casa con un libro 📚 en lugar de gastar 15 $ en el cine."
+    ],
+    "illustrationSuggeree": "Una alcancía sobre una mesa con algunas monedas al lado.",
+    "imageHelper": "https://firebasestorage.googleapis.com/v0/b/challengeme-d7fef.appspot.com/o/Challenges-Helper%2Fch-save-money.png?alt=media",
+    "ressources": [
+      {
+        "title": "Cómo ahorrar dinero para principiantes",
+        "type": "video",
+        "url": "http://lienverslavidéo.com"
+      },
+      {
+        "title": "7 maneras simples de ahorrar dinero a diario",
+        "type": "article",
+        "url": "http://lienverslarticle.com"
+      },
+      {
+        "title": "Podcast: Logra libertad financiera ahorrando 5 $ al día",
+        "type": "bonus",
+        "url": "http://lienverslepodecast.com"
+      }
+    ]
+  },
+  "selfReflection": {
+    "miniCours": "La autorreflexión diaria 🤔💭 es una práctica esencial para el desarrollo personal. Dedica unos minutos cada día para revisar tus acciones, pensamientos y emociones. Puedes identificar patrones, desafíos y oportunidades de mejora. Escribe en un diario o simplemente medita. Lo importante es enfocarte en ti mismo y hacer un balance honesto de tu día 👍🌱.",
+    "exemples": [
+      "Ejemplo 1 ✨: Analiza una reunión de trabajo. ¿Fue bien? ¿Hubo una dinámica positiva?",
+      "Ejemplo 2 💡: Reflexiona sobre tus interacciones sociales. ¿Te sentiste cómodo?",
+      "Ejemplo 3 🚀: Evalúa tus metas del día. ¿Las lograste? ¿Qué te lo impidió?",
+      "Ejemplo 4 🌱: Piensa en tus emociones del día. ¿Qué puedes hacer mañana para sentirte mejor?"
+    ],
+    "illustrationSuggeree": "Una persona sentada en un escritorio escribiendo en un diario al final del día.",
+    "imageHelper": "https://firebasestorage.googleapis.com/v0/b/challengeme-d7fef.appspot.com/o/Challenges-Helper%2Fch-self-reflection.png?alt=media",
+    "ressources": [
+      {
+        "title": "Cómo practicar la autorreflexión diaria",
+        "type": "video",
+        "url": "https://youtube.com/votreURLunique"
+      },
+      {
+        "title": "5 preguntas para una autorreflexión efectiva",
+        "type": "article",
+        "url": "https://votreBlog.com/votreURLunique"
+      },
+      {
+        "title": "Podcast: La importancia de la autorreflexión",
+        "type": "bonus",
+        "url": "https://votreSitePodcast.com/votreURLunique"
+      }
+    ]
+  },
+  "talkToStranger": {
+    "miniCours": "Conocer nuevas personas a diario no solo amplía tu perspectiva, también fortalece tus habilidades sociales 👥. Empieza con poco: una sonrisa, un saludo, una pregunta simple pueden abrir la puerta a conversaciones significativas 🚀. Cada encuentro es una oportunidad de crecimiento 🌱.",
+    "exemples": [
+      "Comienza con un simple 'Hola, ¿cómo estás?' a tu barista ☕️.",
+      "Pregunta algo sobre el barrio a alguien en el ascensor 🏢.",
+      "Comenta las noticias con un desconocido en el parque 🍃.",
+      "Haz un cumplido a un compañero sobre su atuendo 👔."
+    ],
+    "illustrationSuggeree": "Una persona iniciando conversación con un desconocido en una cafetería.",
+    "imageHelper": "https://firebasestorage.googleapis.com/v0/b/challengeme-d7fef.appspot.com/o/Challenges-Helper%2Fch-talk-to-stranger.png?alt=media",
+    "ressources": [
+      {
+        "title": "Cómo iniciar una conversación: 5 frases después de 'hola'",
+        "type": "video",
+        "url": "https://youtu.be/DH6IIlxPh7w"
+      },
+      {
+        "title": "10 formas simples y efectivas para empezar una conversación",
+        "type": "article",
+        "url": "https://www.medium.com/10-astuces-pour-entamer-une-conversation"
+      },
+      {
+        "title": "Podcast: El arte de conversar - Claves para comunicar mejor",
+        "type": "bonus",
+        "url": "https://www.spotify.com/art-de-la-conversation"
+      }
+    ]
+  },
+  "wakeUp5AM": {
+    "miniCours": "Despertarse a las 5 a. m. puede parecer difícil, pero sus beneficios para la productividad y el bienestar son enormes 🌞. Imagina todo lo que puedes lograr antes que los demás. Crea una rutina nocturna sólida para dormir bien 😴 y ve adelantando tu hora de despertar poco a poco ⏰.",
+    "exemples": [
+      "Ejemplo 1 ✨: Elon Musk se levanta a las 5 a. m. para manejar sus empresas.",
+      "Ejemplo 2 💡: Michelle Obama hacía ejercicio a las 4:30 antes de que despertaran sus hijos.",
+      "Ejemplo 3 🚀: Oprah Winfrey inicia su día a las 5 a. m. como parte de su rutina.",
+      "Ejemplo 4 🌱: Dan Brown se levanta a las 4 a. m. todos los días para escribir."
+    ],
+    "illustrationSuggeree": "Un despertador marcando las 5 a. m. con el amanecer al fondo.",
+    "imageHelper": "https://firebasestorage.googleapis.com/v0/b/challengeme-d7fef.appspot.com/o/Challenges-Helper%2Fch-wake-up-5am.png?alt=media",
+    "ressources": [
+      {
+        "title": "Por qué me levanto a las 5 todos los días",
+        "type": "video",
+        "url": "https://www.youtube.com/watch?v=bEr0uEqbyV8"
+      },
+      {
+        "title": "Cómo levantarse a las 5 a. m.",
+        "type": "article",
+        "url": "https://www.wikihow.com/Wake-Up-Early"
+      },
+      {
+        "title": "El poder de madrugar | Podcast de Robin Sharma",
+        "type": "bonus",
+        "url": "https://www.robinsharma.com/podcast/02-the-5am-club/"
+      }
+    ]
+  },
+  "walk10000Steps": {
+    "miniCours": "Caminar 10,000 pasos al día es un reto perfecto para mantenerte en forma 🏃‍♀️. Es beneficioso tanto para tu cuerpo como para tu mente 🧠. Sal a caminar, reduce el estrés, y divide los pasos en pequeños tramos. Usa tus trayectos diarios para sumar: pasea al perro 🐕, usa escaleras 🏢, camina más lejos 🚙.",
+    "exemples": [
+      "Ejemplo 1 ✨: Pauline da un paseo diario en su pausa para almorzar 💼.",
+      "Ejemplo 2 💡: Marc lleva a sus hijos a la escuela caminando 👨‍👧‍👦.",
+      "Ejemplo 3 🚀: Jeanne prefiere escaleras en lugar de ascensor 🔝.",
+      "Ejemplo 4 🌱: Olivier camina cada noche después de cenar 👌."
+    ],
+    "illustrationSuggeree": "Alguien mirando su podómetro en el móvil, sonriendo, en un parque.",
+    "imageHelper": "https://firebasestorage.googleapis.com/v0/b/challengeme-d7fef.appspot.com/o/Challenges-Helper%2Fch-walk-1000-pas.png?alt=media",
+    "ressources": [
+      {
+        "title": "¿Cómo caminar 10 000 pasos al día?",
+        "type": "video",
+        "url": "https://www.youtube.com/watch?v=abc"
+      },
+      {
+        "title": "Beneficios de caminar 10 000 pasos diarios",
+        "type": "article",
+        "url": "https://www.healthbenefitsofwalking.com/articles"
+      },
+      {
+        "title": "Reto 10000 pasos: consejos útiles",
+        "type": "podcast",
+        "url": "https://www.walkmorepodcast.com/episode10"
+      }
+    ]
+  },
+  "workout15Min": {
+    "miniCours": "🎉 ¡Vamos allá! Hacer ejercicio beneficia tanto tu cuerpo como tu mente 🧠. Mejora tu energía, estado de ánimo y salud general. Comienza con solo 15 minutos al día y aumenta con el tiempo. Elige una actividad que disfrutes y ¡sé constante! 💪🏋️‍♀️",
+    "exemples": [
+      "Ejemplo 1 ✨: Hacer yoga durante 15 minutos por la mañana.",
+      "Ejemplo 2 💡: Salir a caminar rápido en tu descanso de almuerzo.",
+      "Ejemplo 3 🚀: Seguir un tutorial de baile corto al terminar el trabajo.",
+      "Ejemplo 4 🌱: Estirarte 15 minutos antes de dormir."
+    ],
+    "illustrationSuggeree": "Persona haciendo ejercicio en casa",
+    "imageHelper": "https://firebasestorage.googleapis.com/v0/b/challengeme-d7fef.appspot.com/o/Challenges-Helper%2Fch-workout.png?alt=media",
+    "ressources": [
+      {
+        "title": "Yoga matutino de 15 minutos para principiantes 🌞",
+        "type": "video",
+        "url": "https://www.youtube.com/watch?v=VaoV1PrYft4"
+      },
+      {
+        "title": "Beneficios del ejercicio físico",
+        "type": "article",
+        "url": "https://www.medicalnewstoday.com/articles/153390"
+      },
+      {
+        "title": "Podcast: Entendiendo la ciencia del ejercicio",
+        "type": "bonus",
+        "url": "https://www.listennotes.com/c/4e8e3e8bcbf1486496206829f7d42e8e/"
+      }
+    ]
   },
   "imagePickFailed": "No se pudo seleccionar la imagen.",
   "allFieldsRequired": "Todos los campos son obligatorios (la imagen es opcional).",

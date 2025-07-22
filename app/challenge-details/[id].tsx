@@ -8,6 +8,7 @@ import React, {
 import {
   View,
   Text,
+  Pressable,
   StyleSheet,
   TouchableOpacity,
   Alert,
@@ -36,7 +37,6 @@ import {
 } from "firebase/firestore";
 import { db, auth } from "../../constants/firebase-config";
 import ConfettiCannon from "react-native-confetti-cannon";
-import * as Haptics from "expo-haptics";
 import { LinearGradient } from "expo-linear-gradient";
 import { useSavedChallenges } from "../../context/SavedChallengesContext";
 import { useCurrentChallenges } from "../../context/CurrentChallengesContext";
@@ -44,18 +44,13 @@ import { checkForAchievements } from "../../helpers/trophiesHelpers";
 import ChallengeCompletionModal from "../../components/ChallengeCompletionModal";
 import DurationSelectionModal from "../../components/DurationSelectionModal";
 import StatsModal from "../../components/StatsModal";
-import Animated, { FadeInUp } from "react-native-reanimated";
+import Animated, { FadeInUp, FadeIn } from "react-native-reanimated";
 import { useTheme } from "../../context/ThemeContext";
 import { Theme } from "../../theme/designSystem";
 import designSystem from "../../theme/designSystem";
-import BackButton from "../../components/BackButton";
 import { useTranslation } from "react-i18next";
 import InvitationModal from "../../components/InvitationModal";
-import share from "react-native-share";
-import {
-  createInvitation,
-  getInvitationProgress,
-} from "../../services/invitationService";
+
 import * as Notifications from "expo-notifications";
 
 import {
@@ -141,7 +136,6 @@ export default function ChallengeDetails() {
     markToday,
     isMarkedToday,
     completeChallenge,
-    simulateStreak,
   } = useCurrentChallenges();
 
   const currentChallenge = currentChallenges.find(
@@ -183,6 +177,8 @@ export default function ChallengeDetails() {
   const [pendingFavorite, setPendingFavorite] = useState<boolean | null>(null);
   const confettiRef = useRef<ConfettiCannon | null>(null);
   const [currentMonth, setCurrentMonth] = useState(new Date());
+  const [challenge, setChallenge] = useState<any>(null);
+
 
   useEffect(() => {
     if (!id) return;
@@ -191,6 +187,7 @@ export default function ChallengeDetails() {
       challengeRef,
       (docSnap) => {
         if (docSnap.exists()) {
+          setChallenge({ id: docSnap.id, ...docSnap.data() });
           const data = docSnap.data();
           setChallengeImage(data.imageUrl || null);
           setDaysOptions(data.daysOptions || [7, 14, 21, 30, 60, 90, 180, 365]);
@@ -1014,6 +1011,54 @@ export default function ChallengeDetails() {
                     </LinearGradient>
                   )}
                 </TouchableOpacity>
+                <Animated.View entering={FadeIn} style={{ marginTop: 20, alignItems: "center" }}>
+                  <Pressable
+                    onPress={() => {
+  if (challenge?.chatId) {
+    router.push(`/challenge-helper/${challenge.chatId}`);
+  } else {
+    console.warn("❌ Aucun chatId disponible pour ce challenge");
+    Alert.alert(t("alerts.error"), t("alerts.noHelperAvailable"));
+  }
+}}
+                    android_ripple={{ color: "#fff", borderless: false }}
+                    accessibilityLabel="HelpButton"
+                    accessibilityHint="Navigate to challenge help content"
+                    style={({ pressed }) => ({
+                      opacity: pressed ? 0.8 : 1,
+                      borderRadius: 24,
+                      overflow: "hidden",
+                      shadowColor: "#000",
+                      shadowOffset: { width: 0, height: 2 },
+                      shadowOpacity: 0.2,
+                      shadowRadius: 4,
+                      elevation: 5,
+                      width: "90%",
+                      maxWidth: 380,
+                    })}
+                  >
+                    <LinearGradient
+                      colors={[currentTheme.colors.secondary, currentTheme.colors.primary]}
+                      start={{ x: 0, y: 0 }}
+                      end={{ x: 1, y: 1 }}
+                      style={{
+                        flexDirection: "row",
+                        alignItems: "center",
+                        justifyContent: "center",
+                        paddingVertical: 14,
+                        paddingHorizontal: 20,
+                        borderRadius: 24,
+                      }}
+                    >
+                      <Ionicons name="bulb-outline" size={20} color="#fff" style={{ marginRight: 8 }} />
+                      <Text style={{ color: "#fff", fontWeight: "600", fontSize: 16 }}>
+                        {t("challengeDetails.needHelp")}
+                      </Text>
+                    </LinearGradient>
+                  </Pressable>
+                </Animated.View>
+
+
               </Animated.View>
             )}
           <Text

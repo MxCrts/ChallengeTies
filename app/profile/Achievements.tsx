@@ -421,22 +421,6 @@ export default function AchievementsScreen() {
   if (sections.length === 0) {
     return (
       <SafeAreaView style={styles.safeArea}>
-        <Animated.View entering={FadeInUp}>
-          <TouchableOpacity
-            onPress={() => router.back()}
-            style={styles.backButton}
-            accessibilityLabel={t("backButton")}
-            accessibilityHint={t("backButtonHint")}
-            accessibilityRole="button"
-            testID="back-button"
-          >
-            <Ionicons
-              name="arrow-back"
-              size={normalizeSize(24)}
-              color={currentTheme.colors.secondary}
-            />
-          </TouchableOpacity>
-        </Animated.View>
         <StatusBar
           translucent
           backgroundColor="transparent"
@@ -493,6 +477,7 @@ export default function AchievementsScreen() {
         backgroundColor="transparent"
         barStyle={isDarkMode ? "light-content" : "dark-content"}
       />
+      <CustomHeader title={t("yourAchievements")} />
       <LinearGradient
         colors={[
           currentTheme.colors.background,
@@ -518,27 +503,6 @@ export default function AchievementsScreen() {
         ) : sections.length === 0 ? (
           <View style={styles.emptyContainer}>
             <Animated.View entering={FadeInUp.duration(400)}>
-              <View style={styles.headerWrapper}>
-                <View style={styles.headerContent}>
-                  <Animated.View entering={FadeInUp}>
-                    <TouchableOpacity
-                      onPress={() => router.back()}
-                      style={styles.backButton}
-                      accessibilityLabel={t("backButton")}
-                      accessibilityHint={t("backButtonHint")}
-                      accessibilityRole="button"
-                      testID="back-button"
-                    >
-                      <Ionicons
-                        name="arrow-back"
-                        size={normalizeSize(24)}
-                        color={currentTheme.colors.secondary}
-                      />
-                    </TouchableOpacity>
-                  </Animated.View>
-                  <CustomHeader title={t("yourAchievements")} />
-                </View>
-              </View>
               <Ionicons
                 name="trophy-outline"
                 size={normalizeSize(80)}
@@ -564,27 +528,6 @@ export default function AchievementsScreen() {
           </View>
         ) : (
           <>
-            <View style={styles.headerWrapper}>
-              <View style={styles.headerContent}>
-                <Animated.View entering={FadeInUp}>
-                  <TouchableOpacity
-                    onPress={() => router.back()}
-                    style={styles.backButton}
-                    accessibilityRole="button"
-                    accessibilityLabel={t("backButton")}
-                    accessibilityHint={t("backButtonHint")}
-                    testID="back-button"
-                  >
-                    <Ionicons
-                      name="arrow-back"
-                      size={normalizeSize(24)}
-                      color={currentTheme.colors.secondary}
-                    />
-                  </TouchableOpacity>
-                </Animated.View>
-                <CustomHeader title={t("yourAchievements")} />
-              </View>
-            </View>
             <View style={styles.progressBarWrapper}>
               <View
                 style={[
@@ -627,15 +570,16 @@ export default function AchievementsScreen() {
 
 const styles = StyleSheet.create({
   safeArea: {
-    flex: 1,
-  },
+  flex: 1,
+  paddingTop:
+    Platform.OS === "android" ? StatusBar.currentHeight ?? SPACING : SPACING,
+},
   container: {
     flex: 1,
   },
   headerWrapper: {
     paddingHorizontal: SPACING,
     paddingVertical: SPACING,
-    paddingTop: SPACING * 2.5, // Aligné avec CompletedChallenges.tsx
     position: "relative",
   },
   headerContent: {
@@ -796,16 +740,7 @@ const styles = StyleSheet.create({
     fontSize: normalizeSize(14), // Aligné avec CompletedChallenges.tsx
     fontFamily: "Comfortaa_700Bold",
   },
-  backButton: {
-    position: "absolute",
-    top:
-      Platform.OS === "android" ? StatusBar.currentHeight ?? SPACING : SPACING,
-    left: SPACING,
-    zIndex: 10,
-    padding: SPACING / 2, // Aligné avec CompletedChallenges.tsx
-    backgroundColor: "rgba(0, 0, 0, 0.5)", // Fond semi-transparent
-    borderRadius: normalizeSize(20), // Bordure arrondie
-  },
+
   progressBarWrapper: {
     alignItems: "center",
     marginVertical: SPACING,

@@ -213,7 +213,7 @@ export default function NewFeatures() {
 
   // Compte à rebours
   useEffect(() => {
-    const targetDate = new Date("2025-07-30T23:59:59Z");
+   const targetDate = new Date("2025-08-31T23:59:59Z");
     const updateTimer = () => {
       const diff = targetDate.getTime() - Date.now();
       if (diff <= 0) {
@@ -736,45 +736,30 @@ export default function NewFeatures() {
       start={{ x: 0, y: 0 }}
       end={{ x: 1, y: 1 }}
     >
-      <StatusBar
+      <SafeAreaView style={styles.safeArea}>
+        <StatusBar
         translucent
         backgroundColor="transparent"
         barStyle={isDarkMode ? "light-content" : "dark-content"}
       />
-      <SafeAreaView style={styles.safeArea}>
-        <TouchableOpacity
-          onPress={() => router.push("/")}
-          style={styles.backButton}
-          accessibilityLabel={t("newFeatures.goBack")}
-          testID="back-button"
-        >
-          <Ionicons
-            name="arrow-back"
-            size={normalizeSize(24)}
-            color={currentTheme.colors.secondary}
-          />
-        </TouchableOpacity>
+      <CustomHeader
+  title={t("newFeatures.title")}
+  rightIcon={
+    <TouchableOpacity
+      onPress={() => setShowExplanationModal(true)}
+      accessibilityLabel={t("newFeatures.openExplanation")}
+      accessibilityHint={t("newFeatures.openExplanationHint")}
+    >
+      <Ionicons
+        name="help-circle-outline"
+        size={normalizeSize(26)}
+        color={currentTheme.colors.secondary}
+      />
+    </TouchableOpacity>
+  }
+/>
         <View style={styles.contentWrapper}>
-          <View style={styles.headerWrapper}>
-            <CustomHeader title={t("newFeatures.title")} />
-            <Animated.View entering={ZoomIn.delay(300)}>
-              <TouchableOpacity
-                style={styles.helpIcon}
-                onPress={() => setShowExplanationModal(true)}
-                accessibilityLabel={t("newFeatures.openExplanation")}
-                accessibilityHint={t("newFeatures.openExplanationHint")}
-                accessibilityRole="button"
-                testID="help-icon"
-                activeOpacity={0.7}
-              >
-                <Ionicons
-                  name="help-circle-outline"
-                  size={normalizeSize(30)}
-                  color={currentTheme.colors.secondary}
-                />
-              </TouchableOpacity>
-            </Animated.View>
-          </View>
+
           <Text
             style={[
               styles.description,

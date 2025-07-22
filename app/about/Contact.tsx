@@ -22,6 +22,8 @@ import { Theme } from "../../theme/designSystem";
 import designSystem from "../../theme/designSystem";
 import { useTranslation } from "react-i18next";
 import { useRouter } from "expo-router";
+import CustomHeader from "@/components/CustomHeader";
+
 
 const { width: SCREEN_WIDTH, height: SCREEN_HEIGHT } = Dimensions.get("window");
 const SPACING = 15;
@@ -72,44 +74,11 @@ export default function Contact() {
           backgroundColor="transparent"
           barStyle={isDarkMode ? "light-content" : "dark-content"}
         />
+        <CustomHeader title={t("contact.title")} />
         <ScrollView
           contentContainerStyle={styles.contentContainer}
           showsVerticalScrollIndicator={false}
         >
-          {/* Header avec BackButton */}
-          <View style={styles.headerWrapper}>
-            <Animated.View entering={FadeInUp}>
-              <TouchableOpacity
-                onPress={() => router.back()}
-                style={styles.backButton}
-                accessibilityLabel={t("backButton")}
-                accessibilityHint={t("backButtonHint")}
-                testID="back-button"
-              >
-                <Ionicons
-                  name="arrow-back"
-                  size={normalizeSize(24)}
-                  color={currentTheme.colors.secondary}
-                />
-              </TouchableOpacity>
-            </Animated.View>
-            <View style={styles.titleContainer}>
-              <Animated.Text
-                entering={FadeInUp.duration(600)}
-                style={[
-                  styles.title,
-                  {
-                    color: isDarkMode
-                      ? currentTheme.colors.textPrimary
-                      : "#000000",
-                  },
-                ]}
-              >
-                {t("contact.title")}
-              </Animated.Text>
-            </View>
-          </View>
-
           {/* Logo animé */}
           <Animated.View
             entering={FadeInUp.delay(200).duration(800)}
@@ -179,7 +148,7 @@ export default function Contact() {
                 </Text>
                 <TouchableOpacity
                   onPress={() =>
-                    Linking.openURL("mailto:support@challengeties.com")
+                    Linking.openURL("mailto:support@challengeties.app")
                   }
                   accessibilityLabel={t("contact.emailLinkLabel")}
                   testID="email-link"
@@ -492,15 +461,15 @@ const styles = StyleSheet.create({
     flex: 1,
   },
   safeArea: {
-    flex: 1,
-  },
+  flex: 1,
+  paddingTop:
+    Platform.OS === "android" ? StatusBar.currentHeight ?? SPACING : SPACING,
+},
   headerWrapper: {
-    paddingHorizontal: SPACING,
-    paddingVertical: SPACING / 2,
-    position: "relative",
-    marginTop: SPACING,
-    marginBottom: SPACING,
-  },
+  paddingHorizontal: SPACING,
+  paddingVertical: SPACING,
+  position: "relative",
+},
   titleContainer: {
     alignItems: "center",
     justifyContent: "center",
@@ -509,14 +478,6 @@ const styles = StyleSheet.create({
     fontSize: normalizeSize(28),
     fontFamily: "Comfortaa_700Bold",
     textAlign: "center",
-  },
-  backButton: {
-    position: "absolute",
-    top:
-      Platform.OS === "android" ? StatusBar.currentHeight ?? SPACING : SPACING,
-    left: SPACING,
-    zIndex: 10,
-    padding: SPACING / 2,
   },
   contentContainer: {
     paddingHorizontal: SPACING,

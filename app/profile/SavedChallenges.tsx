@@ -360,6 +360,8 @@ export default function SavedChallengesScreen() {
         backgroundColor="transparent"
         barStyle={isDarkMode ? "light-content" : "dark-content"}
       />
+                <CustomHeader title={t("savedChallengesScreenTitle")} />
+
       <LinearGradient
         colors={[
           currentTheme.colors.background,
@@ -367,25 +369,7 @@ export default function SavedChallengesScreen() {
         ]}
         style={styles.container}
       >
-        <View style={styles.headerWrapper}>
-          <Animated.View entering={FadeInUp}>
-            <TouchableOpacity
-              onPress={() => router.back()}
-              style={styles.backButton}
-              accessibilityLabel={t("backButton")}
-              accessibilityHint={t("backButtonHint")}
-              testID="back-button"
-            >
-              <Ionicons
-                name="arrow-back"
-                size={normalizeSize(24)}
-                color={currentTheme.colors.secondary}
-              />
-            </TouchableOpacity>
-          </Animated.View>
-          <CustomHeader title={t("savedChallengesScreenTitle")} />
-        </View>
-        {localChallenges.length === 0 ? (
+                {localChallenges.length === 0 ? (
           renderEmptyState()
         ) : (
           <FlatList
@@ -414,7 +398,12 @@ export default function SavedChallengesScreen() {
 }
 
 const styles = StyleSheet.create({
-  safeArea: { flex: 1 },
+  safeArea: {
+    flex: 1,
+    paddingTop:
+      Platform.OS === "android" ? StatusBar.currentHeight ?? SPACING : SPACING,
+    backgroundColor: "transparent",
+  },
   container: { flex: 1 },
   headerWrapper: {
     paddingHorizontal: SPACING,
