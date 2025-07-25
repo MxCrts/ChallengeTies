@@ -280,7 +280,7 @@ const scrollRef = useRef<ScrollView>(null);
     ]);
   };
 
-  const adminUID = "hCnAkM4yNgQPdtSkJEoXjkQaa6k2";
+  const adminUID = "GiN2yTfA7NWISeb4QjXmDPq5TgK2";
 
   const dynamicStyles = getDynamicStyles(currentTheme, isDarkMode);
 

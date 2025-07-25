@@ -153,6 +153,8 @@ export default function HomeScreen() {
 const scrollX = useSharedValue(0);
   const [layoutKey, setLayoutKey] = useState(0);
   const { setLanguage } = useLanguage();
+  const [showTutorial, setShowTutorial] = useState(false);
+
   const {
     tutorialStep,
     isTutorialActive,
@@ -336,11 +338,12 @@ const [videoReady, setVideoReady] = useState(false);
   ref={heroVideoRef}
   style={staticStyles.backgroundVideo}
   resizeMode={ResizeMode.COVER}
-  source={require("../../assets/videos/Hero-Bgopti.mp4")} // ⚡️ Donne-lui une source de base pour monter
-  onReadyForDisplay={() => {
-    setVideoReady(true);
-  }}
-  shouldPlay={false} // On laisse `loadAsync` gérer
+  source={require("../../assets/videos/Hero-Bgopti.mp4")}
+  onReadyForDisplay={() => setVideoReady(true)}
+  shouldPlay={true}
+  isLooping
+  isMuted
+  onError={() => {}}
 />
             <LinearGradient
               colors={[currentTheme.colors.overlay, "rgba(0,0,0,0.2)"]}
@@ -572,13 +575,13 @@ const [videoReady, setVideoReady] = useState(false);
           </View>
         </ScrollView>
         {/* Bannière AdMob fixée en bas */}
-        <View style={staticStyles.bannerContainer}>
-          <BannerAd
-            unitId={adUnitId}
-            size={BannerAdSize.BANNER}
-            requestOptions={{ requestNonPersonalizedAdsOnly: false }}
-          />
-        </View>
+          <View style={staticStyles.bannerContainer} pointerEvents="box-none">
+  <BannerAd
+    unitId={adUnitId}
+    size={BannerAdSize.BANNER}
+    requestOptions={{ requestNonPersonalizedAdsOnly: false }}
+  />
+</View>
         {isTutorialActive && (tutorialStep === 0 || tutorialStep === 1) && (
           <BlurView intensity={50} style={staticStyles.blurView}>
             <TutorialModal

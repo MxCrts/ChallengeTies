@@ -76,8 +76,11 @@ export default function FeatureDetailModal({
           ]}
         >
           <Text
-            style={[styles.title, { color: currentTheme.colors.textPrimary }]}
-          >
+  style={[
+    styles.title,
+    { color: isDarkMode ? currentTheme.colors.textPrimary : "#000000" },
+  ]}
+>
             {feature.title}
           </Text>
           {feature.description && (

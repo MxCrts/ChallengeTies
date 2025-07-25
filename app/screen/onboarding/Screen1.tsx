@@ -156,7 +156,6 @@ export default function Screen1() {
           }}
           onPlaybackStatusUpdate={(status: AVPlaybackStatus) => {
             if (!status.isLoaded) {
-              console.error("❌ Vidéo non chargée :", status);
             }
           }}
         />
@@ -202,7 +201,7 @@ export default function Screen1() {
 </Animated.Text>
         </Animated.View>
         <Animated.View style={[styles.finalTextContainer, { opacity: finalTextOpacity }]}>
-        <Text style={styles.finalText}>{t("Prêt à relever le défi ?")}</Text>
+        <Text style={styles.finalText}>{t("screen8.readyQuestion")}</Text>
         <TouchableOpacity
           style={styles.readyButton}
           onPress={handleFinishOnboarding}
@@ -212,7 +211,7 @@ export default function Screen1() {
             <ActivityIndicator color="#000" />
           ) : (
             <Animated.Text style={[styles.readyButtonText, { opacity: buttonOpacity }]}>
-              {t("Je suis prêt")}
+              {t("screen8.imReady")}
             </Animated.Text>
           )}
         </TouchableOpacity>

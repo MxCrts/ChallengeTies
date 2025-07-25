@@ -29,7 +29,7 @@ type Feature = {
 
 export default function AdminFeatures() {
   // Remplacer "TON_UID_ADMIN" par ton UID Firebase réel
-  const adminUID = "hCnAkM4yNgQPdtSkJEoXjkQaa6k2";
+  const adminUID = "GiN2yTfA7NWISeb4QjXmDPq5TgK2";
   const currentUser = auth.currentUser;
 
   if (!currentUser || currentUser.uid !== adminUID) {

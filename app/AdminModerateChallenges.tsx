@@ -38,7 +38,7 @@ type Challenge = {
 
 export default function AdminModerateChallenges() {
   const { t } = useTranslation();
-  const adminUID = "hCnAkM4yNgQPdtSkJEoXjkQaa6k2"; // Ton UID
+  const adminUID = "GiN2yTfA7NWISeb4QjXmDPq5TgK2"; // Ton UID
   const currentUser = auth.currentUser;
 
   if (!currentUser || currentUser.uid !== adminUID) {

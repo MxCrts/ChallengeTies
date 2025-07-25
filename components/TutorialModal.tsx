@@ -18,7 +18,8 @@ import { LinearGradient } from "expo-linear-gradient";
 import { normalize } from "../utils/normalize";
 import { useTheme } from "../context/ThemeContext";
 import designSystem, { Theme } from "../theme/designSystem";
-import TutorialIcon from "./TutorialIcon"; // ajuste le chemin si besoin
+import TutorialIcon from "./TutorialIcon";
+import TutorialVideoWrapper from "./TutorialVideoWrapper";
 
 interface TutorialModalProps {
   step: number;
@@ -84,6 +85,11 @@ const TutorialModal: React.FC<TutorialModalProps> = ({
           title: t("tutorial.explore.title"),
           description: t("tutorial.explore.description"),
         };
+      case 5:
+        return {
+          title: t("tutorial.videoStep.title"),
+          description: t("tutorial.videoStep.description"),
+        };
       default:
         return { title: "", description: "" };
     }
@@ -92,39 +98,17 @@ const TutorialModal: React.FC<TutorialModalProps> = ({
   const { title, description } = getModalContent();
 
   return (
-    <Animated.View
-      entering={FadeInUp.duration(600).springify()}
-      style={[styles.modalContainer, { borderColor: "#FFD700" }]}
-    >
-      <LinearGradient
-        colors={
-          isDarkMode
-            ? ["rgba(20, 20, 20, 0.98)", "rgba(45, 45, 45, 0.92)"]
-            : ["rgba(255, 255, 255, 0.97)", "rgba(245, 245, 245, 0.9)"]
-        }
-        style={[
-          styles.gradientBackground,
-          {
-            borderWidth: 1,
-            borderColor: isDarkMode
-              ? "rgba(255,255,255,0.05)"
-              : "rgba(0,0,0,0.05)",
-            shadowColor: "#000",
-            shadowOffset: { width: 0, height: 4 },
-            shadowOpacity: 0.2,
-            shadowRadius: 8,
-            elevation: 5,
-          },
-        ]}
-      >
-        <TutorialIcon step={step} />
+    <TutorialVideoWrapper
+      step={step}
+      title={
         <Animated.Text
           entering={FadeInUp.delay(150)}
           style={[styles.modalTitle, { color: currentTheme.colors.primary }]}
         >
           {title}
         </Animated.Text>
-
+      }
+      description={
         <Animated.Text
           entering={FadeInUp.delay(250)}
           style={[
@@ -134,78 +118,17 @@ const TutorialModal: React.FC<TutorialModalProps> = ({
         >
           {description}
         </Animated.Text>
-        {step === 0 ? (
-          <View style={styles.buttonContainer}>
-            <Animated.View
-              entering={FadeInUp.delay(200)}
-              style={buttonAnimatedStyle}
-            >
-              <Pressable
-                onPressIn={handlePressIn}
-                onPressOut={handlePressOut}
-                onPress={onStart}
-                accessibilityLabel={t("tutorial.buttons.start")}
-              >
-                <LinearGradient
-                  colors={[
-                    currentTheme.colors.primary,
-                    currentTheme.colors.secondary,
-                  ]}
-                  style={styles.gradientButton}
-                >
-                  <Text style={styles.actionButtonText}>
-                    {t("tutorial.buttons.start")}
-                  </Text>
-                </LinearGradient>
-              </Pressable>
-            </Animated.View>
-            <Animated.View entering={FadeInUp.delay(300)}>
-              <TouchableOpacity
-                onPress={onSkip}
-                style={styles.skipButton}
-                accessibilityLabel={t("tutorial.buttons.skip")}
-              >
-                <Text
-                  style={[
-                    styles.skipButtonText,
-                    { color: currentTheme.colors.textSecondary },
-                  ]}
-                >
-                  {t("tutorial.buttons.skip")}
-                </Text>
-              </TouchableOpacity>
-            </Animated.View>
-          </View>
-        ) : step < 4 ? (
+      }
+      icon={<TutorialIcon step={step} />}
+    >
+      {step === 0 && (
+        <View style={styles.centeredButtonContainer}>
           <Animated.View style={buttonAnimatedStyle}>
             <Pressable
               onPressIn={handlePressIn}
               onPressOut={handlePressOut}
-              onPress={onNext}
-              accessibilityLabel={t("tutorial.buttons.next")}
-            >
-              <LinearGradient
-                colors={[
-                  currentTheme.colors.primary,
-                  currentTheme.colors.secondary,
-                ]}
-                style={styles.gradientButton}
-              >
-                <Ionicons
-                  name="chevron-forward"
-                  size={normalize(24)}
-                  color={currentTheme.colors.textPrimary}
-                />
-              </LinearGradient>
-            </Pressable>
-          </Animated.View>
-        ) : (
-          <Animated.View style={buttonAnimatedStyle}>
-            <Pressable
-              onPressIn={handlePressIn}
-              onPressOut={handlePressOut}
-              onPress={onFinish}
-              accessibilityLabel={t("tutorial.buttons.finish")}
+              onPress={onStart}
+              accessibilityLabel={t("tutorial.buttons.start")}
             >
               <LinearGradient
                 colors={[
@@ -215,85 +138,130 @@ const TutorialModal: React.FC<TutorialModalProps> = ({
                 style={styles.gradientButton}
               >
                 <Text style={styles.actionButtonText}>
-                  {t("tutorial.buttons.finish")}
+                  {t("tutorial.buttons.start")}
                 </Text>
               </LinearGradient>
             </Pressable>
           </Animated.View>
-        )}
-      </LinearGradient>
-    </Animated.View>
+
+          <TouchableOpacity
+            onPress={onSkip}
+            style={styles.skipButton}
+            accessibilityLabel={t("tutorial.buttons.skip")}
+          >
+            <Text
+              style={[
+                styles.skipButtonText,
+                { color: currentTheme.colors.textSecondary },
+              ]}
+            >
+              {t("tutorial.buttons.skip")}
+            </Text>
+          </TouchableOpacity>
+        </View>
+      )}
+
+      {step > 0 && step <= 4 && (
+        <Animated.View style={[buttonAnimatedStyle, styles.bottomButton]}>
+          <Pressable
+            onPressIn={handlePressIn}
+            onPressOut={handlePressOut}
+            onPress={onNext}
+            accessibilityLabel={t("tutorial.buttons.next")}
+          >
+            <LinearGradient
+              colors={[
+                currentTheme.colors.primary,
+                currentTheme.colors.secondary,
+              ]}
+              style={styles.gradientButton}
+            >
+              <Ionicons
+                name="chevron-forward"
+                size={normalize(24)}
+                color={currentTheme.colors.textPrimary}
+              />
+            </LinearGradient>
+          </Pressable>
+        </Animated.View>
+      )}
+
+      {step === 5 && (
+        <Animated.View style={[buttonAnimatedStyle, styles.bottomButton]}>
+          <Pressable
+            onPressIn={handlePressIn}
+            onPressOut={handlePressOut}
+            onPress={onFinish}
+            accessibilityLabel={t("tutorial.buttons.finish")}
+          >
+            <LinearGradient
+              colors={[
+                currentTheme.colors.primary,
+                currentTheme.colors.secondary,
+              ]}
+              style={styles.gradientButton}
+            >
+              <Text style={styles.actionButtonText}>
+                {t("tutorial.buttons.finish")}
+              </Text>
+            </LinearGradient>
+          </Pressable>
+        </Animated.View>
+      )}
+    </TutorialVideoWrapper>
   );
 };
 
 const styles = StyleSheet.create({
-  modalContainer: {
-    width: "90%",
-    maxWidth: normalize(400),
-    marginHorizontal: SPACING,
-    borderRadius: normalize(24),
-    overflow: "hidden",
-    shadowColor: "#000",
-    shadowOffset: { width: 0, height: normalize(6) },
-    shadowOpacity: 1,
-    shadowRadius: normalize(10),
-    elevation: 10,
-    borderWidth: normalize(0.5),
-    alignSelf: "center",
-    marginTop: normalize(20),
-    marginBottom: normalize(20),
-  },
-  gradientBackground: {
-    padding: SPACING * 2,
-    alignItems: "center",
-    minHeight: normalize(250),
-    justifyContent: "center",
-  },
   modalTitle: {
-    fontSize: normalize(26),
+    fontSize: normalize(20),
     fontFamily: "Comfortaa_700Bold",
-    color: "#ed8f03",
-    textAlign: "center", // 🟢 Centrage horizontal
-    marginBottom: normalize(8),
-    textShadowColor: "rgba(0,0,0,0.1)",
-    textShadowOffset: { width: 0, height: 1 },
-    textShadowRadius: 2,
+    textAlign: "center",
+    marginBottom: normalize(6),
   },
   modalDescription: {
-    fontSize: normalize(16),
+    fontSize: normalize(14),
     fontFamily: "Comfortaa_400Regular",
     textAlign: "center",
-    marginBottom: SPACING * 2,
-    lineHeight: normalize(26),
-    maxWidth: "95%",
-    opacity: 0.9,
+    opacity: 0.85,
+    marginBottom: normalize(12),
+    lineHeight: normalize(22),
+    maxWidth: "92%",
   },
-  buttonContainer: {
-    flexDirection: "row",
-    justifyContent: "space-between",
-    width: "100%",
-    paddingHorizontal: SPACING,
+  centeredButtonContainer: {
+    flexDirection: "column",
+    alignItems: "center",
+    justifyContent: "center",
+    marginTop: normalize(10),
   },
   gradientButton: {
-    paddingVertical: normalize(12),
-    paddingHorizontal: normalize(24),
-    borderRadius: normalize(30),
+    paddingVertical: normalize(10),
+    paddingHorizontal: normalize(20),
+    borderRadius: normalize(24),
     flexDirection: "row",
     alignItems: "center",
     justifyContent: "center",
+    minWidth: normalize(100),
   },
   actionButtonText: {
-    fontSize: normalize(16),
+    fontSize: normalize(15),
     fontFamily: "Comfortaa_700Bold",
-    color: "#000",
+    color: "#fff",
   },
   skipButton: {
-    paddingVertical: normalize(12),
-    paddingHorizontal: normalize(24),
+    justifyContent: "center",
+    paddingHorizontal: normalize(12),
+    marginTop: normalize(8),
   },
   skipButtonText: {
-    fontSize: normalize(16),
+    fontSize: normalize(14),
     fontFamily: "Comfortaa_400Regular",
+    color: "#ddd",
+  },
+  bottomButton: {
+    alignItems: "center",
+    justifyContent: "center",
+    marginTop: normalize(10),
   },
 });
 

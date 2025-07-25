@@ -215,13 +215,17 @@ export default function ChallengeDetails() {
           }
           setUserCount(data.participantsCount || 0);
           // Ajoute les données pour l’UI
-          setRouteTitle(data.title || t("challengeDetails.untitled"));
-          setRouteCategory(
-            data.category || t("challengeDetails.uncategorized")
-          );
+          setRouteTitle(
+  t(`challenges.${data.chatId}.title`, { defaultValue: data.title })
+);
+          const rawCat = data.category || "";
+// on traduit via la clé categories.rawCat, ou on retombe sur rawCat si pas définie
+setRouteCategory(
+  t(`categories.${rawCat}`, { defaultValue: rawCat })
+);
           setRouteDescription(
-            data.description || t("challengeDetails.noDescription")
-          );
+  t(`challenges.${data.chatId}.description`, { defaultValue: data.description })
+);
         } else {
           console.warn("⚠️ Défi non trouvé pour ID :", id);
         }
@@ -1011,7 +1015,10 @@ export default function ChallengeDetails() {
                     </LinearGradient>
                   )}
                 </TouchableOpacity>
-                <Animated.View entering={FadeIn} style={{ marginTop: 20, alignItems: "center" }}>
+
+              </Animated.View>
+            )}
+            <Animated.View entering={FadeIn} style={{ marginTop: 20, alignItems: "center" }}>
                   <Pressable
                     onPress={() => {
   if (challenge?.chatId) {
@@ -1057,10 +1064,6 @@ export default function ChallengeDetails() {
                     </LinearGradient>
                   </Pressable>
                 </Animated.View>
-
-
-              </Animated.View>
-            )}
           <Text
             style={[
               styles.infoDescriptionRecipe,
@@ -1099,6 +1102,8 @@ export default function ChallengeDetails() {
                 </LinearGradient>
               </TouchableOpacity>
             )}
+
+            
           <Animated.View
             entering={FadeInUp.delay(300)}
             style={styles.actionIconsContainer}

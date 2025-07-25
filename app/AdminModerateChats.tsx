@@ -31,7 +31,7 @@ type ReportedMessage = {
 
 export default function AdminModerateChats() {
   const { t } = useTranslation();
-  const adminUID = "hCnAkM4yNgQPdtSkJEoXjkQaa6k2"; // Ton UID admin
+  const adminUID = "GiN2yTfA7NWISeb4QjXmDPq5TgK2"; // Ton UID admin
   const currentUser = auth.currentUser;
 
   // Vérifie si l'utilisateur est admin

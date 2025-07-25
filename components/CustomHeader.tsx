@@ -55,17 +55,21 @@ export default function CustomHeader({
       </View>
 
       <View style={styles.titleWrapper}>
-        <Text
-          style={[
-            styles.title,
-            { color: isDarkMode ? "#FFFFFF" : "#000000" },
-          ]}
-          numberOfLines={2}
-          ellipsizeMode="tail"
-        >
-          {title}
-        </Text>
-      </View>
+  <Text
+    style={[
+      styles.title,
+      {
+        color: isDarkMode ? "#FFFFFF" : "#000000",
+        fontSize: normalizeSize(title.length > 25 ? 17 : 20),
+        lineHeight: normalizeSize(title.length > 25 ? 22 : 26),
+      },
+    ]}
+    numberOfLines={2}
+    adjustsFontSizeToFit
+  >
+    {title}
+  </Text>
+</View>
 
       <View style={styles.sideWrapper}>
         {rightIcon || <View style={{ width: normalizeSize(24) }} />}
@@ -85,10 +89,10 @@ const styles = StyleSheet.create({
     width: "100%",
   },
   sideWrapper: {
-    width: normalizeSize(40),
-    alignItems: "center",
-    justifyContent: "center",
-  },
+  width: normalizeSize(44), // au lieu de 40
+  alignItems: "center",
+  justifyContent: "center",
+},
   titleWrapper: {
     flex: 1,
     paddingHorizontal: normalizeSize(8),

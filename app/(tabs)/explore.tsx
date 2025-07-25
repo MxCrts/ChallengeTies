@@ -689,17 +689,18 @@ export default function ExploreScreen() {
         />
       </View>
 
-      {isTutorialActive && tutorialStep === 4 && (
-        <BlurView intensity={50} style={styles.blurView}>
-          <TutorialModal
-            step={tutorialStep}
-            onNext={() => {}}
-            onStart={() => {}}
-            onSkip={skipTutorial}
-            onFinish={skipTutorial}
-          />
-        </BlurView>
-      )}
+      {isTutorialActive && tutorialStep >= 4 && (
+  <TutorialModal
+    step={tutorialStep}
+    onNext={() => setTutorialStep(5)} // ← quand on clique sur "suivant" à l'étape 4
+    onStart={() => {}}
+    onSkip={skipTutorial}
+    onFinish={() => {
+      skipTutorial();
+      setTutorialStep(0); // ← facultatif : reset pour les prochaines fois
+    }}
+  />
+)}
     </GlobalLayout>
   );
 }

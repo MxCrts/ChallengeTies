@@ -6,123 +6,113 @@ import {
   Linking,
   TouchableOpacity,
   ActivityIndicator,
-  StyleSheet,
-  Platform,
   StatusBar,
   Dimensions,
-  Image,
+  StyleSheet,
+  Platform,
 } from "react-native";
 import { useLocalSearchParams } from "expo-router";
 import Animated, { FadeInDown } from "react-native-reanimated";
-import { useTheme } from "@/context/ThemeContext";
 import { useTranslation } from "react-i18next";
+import { useTheme } from "@/context/ThemeContext";
 import designSystem, { Theme } from "@/theme/designSystem";
 import { SafeAreaView } from "react-native-safe-area-context";
 import { LinearGradient } from "expo-linear-gradient";
-import { doc, getDoc } from "firebase/firestore";
-import { db } from "@/constants/firebase-config";
 import CustomHeader from "@/components/CustomHeader";
-import { query, collection, where, getDocs } from "firebase/firestore";
-import type { ChallengeHelperContent } from "@/services/helperService";
+import { Image } from "expo-image";
+import { collection, query, where, getDocs } from "firebase/firestore";
+import { db } from "@/constants/firebase-config";
 
-const SPACING = 16;
 const { width: SCREEN_WIDTH } = Dimensions.get("window");
-
 const normalizeFont = (size: number) => {
-  const baseWidth = 375;
-  const scale = Math.min(Math.max(SCREEN_WIDTH / baseWidth, 0.7), 1.8);
+  const base = 375;
+  const scale = Math.min(Math.max(SCREEN_WIDTH / base, 0.7), 1.8);
   return Math.round(size * scale);
 };
-
-interface ChallengeMetadata {
-  title: string;
-}
+const SPACING = 16;
 
 export default function ChallengeHelperScreen() {
-  const { id } = useLocalSearchParams();
+  const { id } = useLocalSearchParams<{ id: string }>();
   const { t } = useTranslation();
   const { theme } = useTheme();
-  const isDarkMode = theme === "dark";
-  const currentTheme: Theme = isDarkMode ? designSystem.darkTheme : designSystem.lightTheme;
+  const isDark = theme === "dark";
+  const currentTheme: Theme = isDark
+    ? designSystem.darkTheme
+    : designSystem.lightTheme;
 
-  const [loading, setLoading] = useState(true);
-  const [helperData, setHelperData] = useState<ChallengeHelperContent | null>(null);
-  const [metadata, setMetadata] = useState<ChallengeMetadata>({ title: "" });
+  // 1) Charger le titre brut de Firestore
+  const [docTitle, setDocTitle] = useState("");
+  const [loadingTitleDoc, setLoadingTitleDoc] = useState(true);
+  useEffect(() => {
+    if (!id) return;
+    (async () => {
+      const q = query(collection(db, "challenges"), where("chatId", "==", id));
+      const snap = await getDocs(q);
+      if (!snap.empty) {
+        const data = snap.docs[0].data();
+        setDocTitle(typeof data.title === "string" ? data.title : "");
+      }
+      setLoadingTitleDoc(false);
+    })();
+  }, [id]);
 
- useEffect(() => {
-  const loadContent = async () => {
-    try {
-      if (typeof id !== "string") return;
-
-      console.log("🔍 Chargement du helper pour chatId:", id);
-
-      // Étape 1 : récupérer le helper lié à ce chatId
-      const helperQuery = query(
+  // 2) Charger helperData
+  const [helperData, setHelperData] = useState<any>(null);
+  const [loadingHelper, setLoadingHelper] = useState(true);
+  useEffect(() => {
+    if (!id) return;
+    (async () => {
+      const q2 = query(
         collection(db, "challenge-helpers"),
         where("chatId", "==", id)
       );
-      const helperSnapshot = await getDocs(helperQuery);
-
-      if (helperSnapshot.empty) {
-        console.warn("⚠️ Aucun helper trouvé pour le chatId:", id);
-        return;
+      const snap2 = await getDocs(q2);
+      if (!snap2.empty) {
+        setHelperData(snap2.docs[0].data());
       }
+      setLoadingHelper(false);
+    })();
+  }, [id]);
 
-      const helperDoc = helperSnapshot.docs[0];
-      const helperData = helperDoc.data() as ChallengeHelperContent;
-      setHelperData(helperData);
-      console.log("✅ Données helper récupérées:", helperData);
+  // 3) Récupérer le titre traduit depuis le namespace "challenges"
+  //    avec fallback sur docTitle
+  const title = t(`challenges.${id}.title`, { defaultValue: docTitle });
 
-      // Étape 2 : récupérer le challenge qui a ce chatId
-      const challengeQuery = query(
-        collection(db, "challenges"),
-        where("chatId", "==", id)
-      );
-      const challengeSnapshot = await getDocs(challengeQuery);
+  // 4) Contenu traduits
+  const miniCours = t(`${id}.miniCours`);
+  const exemples = t(`${id}.exemples`, { returnObjects: true }) as string[];
+  const ressources = t(`${id}.ressources`, { returnObjects: true }) as {
+    title: string;
+    url: string;
+    type?: string;
+  }[];
 
-      if (challengeSnapshot.empty) {
-        console.warn("⚠️ Aucun challenge trouvé avec chatId:", id);
-        return;
-      }
-
-      const challengeData = challengeSnapshot.docs[0].data();
-      const title =
-        typeof challengeData.title === "string" ? challengeData.title : "Sans titre";
-      const imageURL =
-        typeof challengeData.imageUrl === "string" ? challengeData.imageUrl : "";
-
-      setMetadata({ title });
-      console.log("✅ Titre du challenge:", title);
-console.log("🖼️ imageHelper:", helperData?.imageHelper);
-
-    } catch (error) {
-      console.error("❌ Erreur chargement contenu challenge-helper:", error);
-    } finally {
-      setLoading(false);
-    }
-  };
-
-  loadContent();
-}, [id]);
-
-
-  if (loading) {
+  // 5) Loader global
+  const missingMiniCours = miniCours === `${id}.miniCours`;
+  if (
+    loadingTitleDoc ||
+    loadingHelper ||
+    !title ||
+    missingMiniCours ||
+    !helperData
+  ) {
     return (
-      <View style={styles.loadingContainer}>
+      <View
+        style={[
+          styles.loadingContainer,
+          { backgroundColor: currentTheme.colors.background },
+        ]}
+      >
         <ActivityIndicator size="large" color={currentTheme.colors.primary} />
       </View>
     );
   }
 
-  if (!helperData) {
-    return (
-      <View style={styles.loadingContainer}>
-        <Text style={[styles.errorText, { color: currentTheme.colors.textSecondary }]}>
-          {t("challengeHelper.noData")}
-        </Text>
-      </View>
-    );
-  }
+  // 6) Cache‑bust de l’image
+  const rawImage = helperData.imageHelper as string | undefined;
+  const imageUri = rawImage
+    ? `${rawImage}${rawImage.includes("?") ? "&" : "?"}t=${Date.now()}`
+    : null;
 
   return (
     <LinearGradient
@@ -132,46 +122,138 @@ console.log("🖼️ imageHelper:", helperData?.imageHelper);
       end={{ x: 0.8, y: 1 }}
     >
       <SafeAreaView style={styles.safeArea}>
-        <StatusBar translucent backgroundColor="transparent" barStyle={isDarkMode ? "light-content" : "dark-content"} />
-        <CustomHeader title={metadata.title || "..."} />
+        <StatusBar
+          translucent
+          backgroundColor="transparent"
+          barStyle={isDark ? "light-content" : "dark-content"}
+        />
+        <CustomHeader title={title} />
 
-        <ScrollView contentContainerStyle={styles.scrollContent} showsVerticalScrollIndicator={false}>
-          {helperData?.imageHelper ? (
-  <Image
-  source={{ uri: helperData.imageHelper }}
-  style={styles.image}
-  resizeMode="cover"
-/>
-) : null}
+        <ScrollView
+          contentContainerStyle={styles.scrollContent}
+          showsVerticalScrollIndicator={false}
+        >
+          {imageUri && (
+            <Image
+              source={{ uri: imageUri }}
+              style={styles.image}
+              contentFit="cover"
+              transition={200}
+              cachePolicy="none"
+            />
+          )}
 
-          <Animated.View entering={FadeInDown.duration(500)} style={[styles.card, { backgroundColor: currentTheme.colors.cardBackground }]}>
-            <Text style={[styles.sectionTitle, { color: currentTheme.colors.primary }]}>🎓 {t("challengeHelper.explanation")}</Text>
-            <Text style={[styles.text, { color: currentTheme.colors.textSecondary }]}>{helperData.miniCours}</Text>
+          {/* Mini‑cours */}
+          <Animated.View
+            entering={FadeInDown.duration(500)}
+            style={[
+              styles.card,
+              { backgroundColor: currentTheme.colors.cardBackground },
+            ]}
+          >
+            <Text
+              style={[
+                styles.sectionTitle,
+                { color: currentTheme.colors.primary },
+              ]}
+            >
+              🎓 {t("challengeHelper.explanation")}
+            </Text>
+            <Text
+              style={[styles.text, { color: currentTheme.colors.textSecondary }]}
+            >
+              {miniCours}
+            </Text>
           </Animated.View>
 
-          {helperData.exemples?.length > 0 && (
-            <Animated.View entering={FadeInDown.delay(200).duration(500)} style={[styles.card, { backgroundColor: currentTheme.colors.cardBackground }]}>
-              <Text style={[styles.sectionTitle, { color: currentTheme.colors.primary }]}>💡 {t("challengeHelper.examples")}</Text>
-              {helperData.exemples.map((ex, i) => (
-                <Text key={i} style={[styles.text, { color: currentTheme.colors.textSecondary, marginBottom: 8 }]}>• {ex}</Text>
+          {/* Exemples */}
+          {Array.isArray(exemples) && exemples.length > 0 && (
+            <Animated.View
+              entering={FadeInDown.delay(200).duration(500)}
+              style={[
+                styles.card,
+                { backgroundColor: currentTheme.colors.cardBackground },
+              ]}
+            >
+              <Text
+                style={[
+                  styles.sectionTitle,
+                  { color: currentTheme.colors.primary },
+                ]}
+              >
+                💡 {t("challengeHelper.examples")}
+              </Text>
+              {exemples.map((ex, i) => (
+                <Text
+                  key={i}
+                  style={[
+                    styles.text,
+                    {
+                      color: currentTheme.colors.textSecondary,
+                      marginBottom: 8,
+                    },
+                  ]}
+                >
+                  • {ex}
+                </Text>
               ))}
             </Animated.View>
           )}
 
-          {helperData.ressources?.length > 0 && (
-            <Animated.View entering={FadeInDown.delay(400).duration(500)} style={[styles.card, { backgroundColor: currentTheme.colors.cardBackground }]}>
-              <Text style={[styles.sectionTitle, { color: currentTheme.colors.primary }]}>🔗 {t("challengeHelper.resources")}</Text>
-              {helperData.ressources.map((res, i) => (
-                <TouchableOpacity key={i} onPress={() => Linking.openURL(res.url)}>
-                  <Text style={[styles.linkText, { color: currentTheme.colors.secondary }]}>• {res.title}</Text>
+          {/* Ressources */}
+          {Array.isArray(ressources) && ressources.length > 0 && (
+            <Animated.View
+              entering={FadeInDown.delay(400).duration(500)}
+              style={[
+                styles.card,
+                { backgroundColor: currentTheme.colors.cardBackground },
+              ]}
+            >
+              <Text
+                style={[
+                  styles.sectionTitle,
+                  { color: currentTheme.colors.primary },
+                ]}
+              >
+                🔗 {t("challengeHelper.resources")}
+              </Text>
+              {ressources.map((r, i) => (
+                <TouchableOpacity key={i} onPress={() => Linking.openURL(r.url)}>
+                  <Text
+                    style={[
+                      styles.linkText,
+                      { color: currentTheme.colors.secondary },
+                    ]}
+                  >
+                    • {r.title}
+                  </Text>
                 </TouchableOpacity>
               ))}
             </Animated.View>
           )}
 
+          {/* Suggestion */}
           <View style={styles.footer}>
-            <Text style={[styles.footerText, { color: currentTheme.colors.textSecondary }]}>📩 {t("challengeHelper.suggestion")}</Text>
-            <Text style={[styles.footerLink, { color: currentTheme.colors.secondary }]} onPress={() => Linking.openURL("mailto:support@challengeties.app")}>support@challengeties.app</Text>
+            <Text
+              style={[
+                styles.footerText,
+                { color: currentTheme.colors.textSecondary },
+              ]}
+            >
+              📩 {t("challengeHelper.suggestion")}
+            </Text>
+            <TouchableOpacity
+              onPress={() => Linking.openURL("mailto:support@challengeties.app")}
+            >
+              <Text
+                style={[
+                  styles.footerLink,
+                  { color: currentTheme.colors.secondary },
+                ]}
+              >
+                support@challengeties.app
+              </Text>
+            </TouchableOpacity>
           </View>
         </ScrollView>
       </SafeAreaView>
@@ -179,27 +261,30 @@ console.log("🖼️ imageHelper:", helperData?.imageHelper);
   );
 }
 
+
 const styles = StyleSheet.create({
   container: { flex: 1 },
   safeArea: {
     flex: 1,
-    paddingTop: Platform.OS === "android" ? StatusBar.currentHeight ?? SPACING : SPACING,
+    paddingTop:
+      Platform.OS === "android" ? StatusBar.currentHeight ?? SPACING : SPACING,
+  },
+  scrollContent: {
+    padding: SPACING,
+    paddingBottom: 100,
   },
   loadingContainer: {
     flex: 1,
     justifyContent: "center",
     alignItems: "center",
   },
-  scrollContent: {
-    padding: SPACING,
-    paddingBottom: 100,
-  },
   image: {
-  width: "100%",
-  height: 240,
-  marginBottom: SPACING * 1.4,
-  resizeMode: "cover", 
-},
+    width: "100%",
+    height: 240,
+    borderRadius: 18,
+    marginBottom: SPACING * 1.4,
+    backgroundColor: "#ccc",
+  },
   card: {
     borderRadius: 18,
     padding: SPACING,
@@ -225,12 +310,6 @@ const styles = StyleSheet.create({
     fontFamily: "Comfortaa_400Regular",
     textDecorationLine: "underline",
     marginVertical: 6,
-  },
-  errorText: {
-    fontSize: normalizeFont(16),
-    fontFamily: "Comfortaa_400Regular",
-    textAlign: "center",
-    paddingHorizontal: SPACING * 2,
   },
   footer: {
     marginTop: SPACING * 2,

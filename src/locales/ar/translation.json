@@ -198,6 +198,8 @@
     "loginRequiredTitle": "تسجيل الدخول مطلوب",
     "loginRequiredMessage": "يرجى تسجيل الدخول للتصويت.",
     "alreadyVotedTitle": "تم التصويت بالفعل",
+    "by": "بواسطة",
+  "votes": "أصوات",
     "alreadyVotedMessage": "لقد قمت بالتصويت بالفعل.",
     "voteRegisteredTitle": "تم تسجيل التصويت",
     "voteRegisteredMessage": "شكرًا على تصويتك!",
@@ -209,7 +211,7 @@
     "proposalErrorMessage": "تعذرت الإرسال.",
     "title": "الجديد",
     "openExplanation": "افتح شرح التصويت",
-    "description": "صوّت للميزة التالية للتنفيذ أو اقترح فكرتك! ينتهي في 30 أبريل 2025.",
+    "description": "صوّت للميزة القادمة أو اقترح ميزتك الخاصة! ينتهي في 30 أغسطس 2025.",
     "noFeatures": "لا توجد ميزات متاحة في الوقت الحالي.",
     "proposeIdea": "اقترح فكرة",
     "thankYouForVote": "شكرًا على تصويتك: {{featureTitle}}",
@@ -558,7 +560,9 @@
     "votes": "{{count}} صوت",
     "votes_plural": "{{count}} أصوات",
     "vote": "صوّت",
-    "alreadyVoted": "لقد صوّت بالفعل."
+    "alreadyVoted": "لقد صوّت بالفعل.",
+    "share": "مشاركة"
+
   },
   "durationModal": {
     "title": "اختر المدة (أيام)",
@@ -1174,9 +1178,23 @@
       "مثال 4 🌱: دوّن ما تأكله وكيف تشعر بعد كل وجبة لمدة أسبوع، فقد تكشف عن أنماط لم تلاحظها من قبل."
     ],
     "ressources": [
-      { "title": "مقدمة في الأكل الواعي", "type": "video", "url": "" },
-      { "title": "خطوات تطبيق الأكل الواعي", "type": "article", "url": "" },
-      { "title": "بودكاست: الأكل الواعي وتأثيره على الصحة", "type": "bonus", "url": "" }
+      [
+  {
+    "title": "قوة الأكل الواعي - TedXTalks",
+    "type": "video",
+    "url": "https://youtu.be/fAm4r4FQMQM?si=QeEswp-Yz4Zkccfl"
+  },
+  {
+    "title": "كيف تطبق الأكل الواعي فعلياً؟",
+    "type": "article",
+    "url": "https://youtu.be/otNX8RVn6-U?si=7bY2EJsvYojwgJW3"
+  },
+  {
+    "title": "من الأكل الآلي إلى الأكل الواعي",
+    "type": "bonus",
+    "url": "https://www.eufic.org/fr/une-vie-saine/article/dune-alimentation-machinale-a-une-alimentation-consciente/"
+  }
+]
     ]
   },
   "challengeCommunication": {
@@ -1189,20 +1207,15 @@
     ],
     "ressources": [
       {
-        "title": "كيفية إعادة التواصل مع الأصدقاء القدامى",
-        "type": "video",
-        "url": "https://youtube.url"
-      },
-      {
-        "title": "أهمية العلاقات الاجتماعية للصحة النفسية",
-        "type": "article",
-        "url": "https://article.url"
-      },
-      {
-        "title": "دليل عملي للحفاظ على التواصل مع الأصدقاء",
-        "type": "bonus",
-        "url": "https://guide.url"
-      }
+    "title": "إعادة التواصل مع أصدقاء قدامى",
+    "type": "video",
+    "url": "https://www.slate.fr/story/267116/technique-renouer-liens-anciens-amis-amitie-psychologie-sociale-etude-scientifique"
+  },
+  {
+    "title": "أهمية الروابط الاجتماعية للرفاهية",
+    "type": "article",
+    "url": "https://www.cequinousrelie.com/prendre-soin/le-bien-etre-par-le-lien-social/"
+  }
     ]
   },
   "challengeDes3Sourires": {
@@ -1214,22 +1227,23 @@
       "مثال 4 🌱: قبل مغادرة الحافلة أو المترو، ابتسم للسائق وقل له وداعًا."
     ],
     "ressources": [
-      {
-        "title": "قوة الابتسامة | Ron Gutman",
-        "type": "video",
-        "url": "https://www.youtube.com/watch?v=U9cGdRNMdQQ"
-      },
-      {
-        "title": "7 فوائد للابتسام والضحك",
-        "type": "article",
-        "url": "https://www.lifehack.org/articles/communication/7-benefits-smiling-and-laughing.html"
-      },
-      {
-        "title": "استخدام الابتسامات لبناء الثقة",
-        "type": "bonus",
-        "url": "https://www.psychologytoday.com/intl/blog/sideways-view/202005/using-smiles-foster-trust"
-      }
-    ]
+  {
+    "title": "القوة الخفية للابتسامة | رون غوتمن",
+    "type": "video",
+    "url": "https://www.youtube.com/watch?v=U9cGdRNMdQQ"
+  },
+  {
+    "title": "7 فوائد للابتسامة والضحك",
+    "type": "article",
+    "url": "https://www.lifehack.org/articles/communication/7-benefits-smiling-and-laughing.html"
+  },
+  {
+    "title": "فوائد الابتسامة",
+    "type": "bonus",
+    "url": "https://youtu.be/abFAazci84s?si=rpL-37dpK4sBum-y"
+  }
+]
+
   },
   "challengeEcritureCreative": {
   "miniCours": "👩‍🏫مرحبًا بك في هذا التحدي المصغر! ستقوم بتنمية إبداعك من خلال كتابة قصة خيالية مكونة من 500 كلمة يوميًا. 📝 لا تحتاج لأن تكون كاتبًا مشهورًا، الأهم هو أن تترك لخيالك العنان وتستمتع بالكتابة. 🌈 تذكر، إبداعك مثل العضلة: كلما استخدمته، زاد قوته! 🏋️‍♂️ أمسك بالقلم أو اجلس أمام لوحة المفاتيح ودع الكلمات تتدفق. حاول دمج عناصر متنوعة مثل الحوارات، الأوصاف التفصيلية، وأنواع مختلفة من الشخصيات لتجعل قصتك أكثر غنى وتشويقًا. 💓",
@@ -1240,22 +1254,23 @@
     "مثال 4 🌱 - 'الغابة الهمس': قصة عن الطبيعة التي تتحدث مع سكانها."
   ],
   "ressources": [
-    {
-      "title": "كيف تكتب قصة مشوقة",
-      "type": "video",
-      "url": "https://www.youtube.com/watch?v=KzjmiyVv8wA"
-    },
-    {
-      "title": "10 نصائح لتحفيز الإبداع في الكتابة",
-      "type": "article",
-      "url": "https://www.medium.com/@votrecreativite/10-conseils"
-    },
-    {
-      "title": "بودكاست: كتّاب مشهورون يشاركون تقنياتهم",
-      "type": "bonus",
-      "url": "https://www.soundcloud.com/techniques-ecriture"
-    }
-  ]
+  {
+    "title": "كيف تكتب قصة؟",
+    "type": "video",
+    "url": "https://youtu.be/5pdx1Y3l0vg?si=xvOOmaYzEXMfdmBK"
+  },
+  {
+    "title": "نصائح لتطوير إبداعك ككاتب",
+    "type": "article",
+    "url": "https://www.laparentheseimaginaire.com/ecriture/8-conseils-pour-developper-votre-creativite-decrivain"
+  },
+  {
+    "title": "بودكاست لكتّاب مشهورين يشاركون تقنياتهم في الكتابة",
+    "type": "bonus",
+    "url": "https://www.academie.les-mots-ratures.com/blog/meilleurs-podcasts-ecriture-ecrivains-romans-guide-2024"
+  }
+]
+
 }
 ,
 "challengeGestionTemps": {
@@ -1267,22 +1282,23 @@
     "مثال 4 🌱: استخدم فترات الراحة في بومودورو للاعتناء بنفسك: اشرب الماء، تمطى، أو فقط استرح."
   ],
   "ressources": [
-    {
-      "title": "كيفية استخدام تقنية بومودورو؟",
-      "type": "video",
-      "url": ""
-    },
-    {
-      "title": "إدارة الوقت بتقنية بومودورو",
-      "type": "article",
-      "url": ""
-    },
-    {
-      "title": "بودكاست: مناقشة حول فعالية بومودورو",
-      "type": "bonus",
-      "url": ""
-    }
-  ]
+  {
+    "title": "تقنية بومودورو",
+    "type": "video",
+    "url": "https://www.youtube.com/watch?v=mNBmG24djoY&t=19s"
+  },
+  {
+    "title": "كيف تتقن فن إدارة الوقت",
+    "type": "article",
+    "url": "https://youtu.be/s8tOj43JC-o?si=ii4G0MT0UFSedclZ"
+  },
+  {
+    "title": "إدارة الوقت بشكل فعّال",
+    "type": "bonus",
+    "url": "https://asana.com/fr/resources/time-management-tips"
+  }
+]
+
 },
 "challengeJeuneIntermittent": {
   "miniCours": "🌞 الصيام المتقطع يشبه إعطاء جهازك الهضمي استراحة ⏸️، حيث تتناول الطعام خلال فترة محددة (مثلاً 8 ساعات)، وتصوم خلال 16 ساعة المتبقية 🌛. هذا النوع من الصيام قد يساعد في تنشيط عملية الأيض 🚀، وتحسين التركيز والوضوح الذهني 🎯، بل وقد يساهم في إطالة العمر 🌟. لا حاجة للحرمان من الأطعمة المغذية 🌈، فقط نظم أوقات الوجبات. مهم جدًا ❗️استشر طبيبًا قبل البدء 🩺📝.",
@@ -1293,22 +1309,23 @@
     "مثال 4 🌱: تجنب الأطعمة المصنعة وركز على الأطعمة الطبيعية أثناء الوجبات."
   ],
   "ressources": [
-    {
-      "title": "أساسيات الصيام المتقطع",
-      "type": "video",
-      "url": "https://www.youtube.com/watch?v=xyz123"
-    },
-    {
-      "title": "كيفية بدء الصيام المتقطع؟",
-      "type": "article",
-      "url": "https://www.example.com/blog/jeune-intermittent"
-    },
-    {
-      "title": "بودكاست: فوائد الصيام المتقطع",
-      "type": "bonus",
-      "url": "https://www.example.com/podcast/12"
-    }
-  ]
+  {
+    "title": "الصيام المتقطع - كيف تبدأ",
+    "type": "video",
+    "url": "https://youtu.be/pl37cnIOnKw?si=NChrVL6wZq8NqWTI"
+  },
+  {
+    "title": "الصيام المتقطع - تنظيف خلوي",
+    "type": "article",
+    "url": "https://www.pasteur.fr/fr/journal-recherche/actualites/jeune-intermittent-nettoyage-cellulaire-meilleure-sante"
+  },
+  {
+    "title": "بودكاست: فوائد الصيام المتقطع",
+    "type": "bonus",
+    "url": "https://www.radiofrance.fr/franceinter/podcasts/grand-bien-vous-fasse/grand-bien-vous-fasse-du-lundi-25-novembre-2024-1998229"
+  }
+]
+
 },
 "challengeLectureSurprise": {
   "miniCours": "كسر الروتين عن طريق تخصيص وقت يومي للقراءة 📚 يعزز مفرداتك، ويحفز إبداعك 🎨، وينمي تعاطفك. اختيار كتاب عشوائيًا يفتح لك أبوابًا لأفكار وتجارب جديدة. اجعل هذا التمرين أشبه بلعبة 🎲، حيث يكون كل يوم فرصة لرحلة فكرية جديدة. لا تنسَ، القراءة ليست سباقًا بل مغامرة هادئة 🚶‍♂️. استمتع بالرحلة!",
@@ -1319,22 +1336,23 @@
     "مثال 4 🌱: يمكن تطبيق هذه الفكرة مع الكتب الإلكترونية أو المسموعة أيضًا."
   ],
   "ressources": [
-    {
-      "title": "فوائد القراءة",
-      "type": "video",
-      "url": "https://www.youtube.com/watch?v=lg31XrHm3vA&ab_channel=TEDxTalks"
-    },
-    {
-      "title": "لماذا يجب أن تكون القراءة أولوية؟",
-      "type": "article",
-      "url": "https://www.entrepreneur.com/article/315636"
-    },
-    {
-      "title": "كتاب إلكتروني: نزهة عشوائية في عالم العلم",
-      "type": "bonus",
-      "url": "https://www.goodreads.com/book/show/663986.A_Random_Walk_in_Science"
-    }
-  ]
+  {
+    "title": "القراءة تغيّر دماغك",
+    "type": "video",
+    "url": "https://youtu.be/TvQ9AbWVuTU?si=UjevxYORwzkqhDVI"
+  },
+  {
+    "title": "فوائد القراءة",
+    "type": "article",
+    "url": "https://www.decitre.fr/blog/bienfaits-de-la-lecture?srsltid=AfmBOopSa-39BXUeD35rWw5ob-MvRtEsIQy2d7CnIYwdn-06HhvpDkvR"
+  },
+  {
+    "title": "ما الفوائد التي تقدمها لنا القراءة؟",
+    "type": "bonus",
+    "url": "https://www.podcastics.com/podcast/episode/quels-bienfaits-nous-apporte-la-lecture-329681/"
+  }
+]
+
 }
 ,"challengeModeAvion": {
   "miniCours": "🔅 في عالم مملوء بالإشعارات، فإن تخصيص ساعة واحدة في وضع الطيران يمكن أن يساعدك على تصفية ذهنك والهروب من فرط المعلومات. إنها فقاعة من الهدوء لإعادة شحن بطارياتك العاطفية. يمكن استخدام هذا الوقت للتأمل، القراءة، العصف الذهني أو فقط للاسترخاء. 📵 استغل الصمت للعمل على مشروع أو للاستمتاع بفنجان قهوة بدون إزعاج. تذكر، يحتاج عقلك للراحة من أجل أن يكون أكثر إنتاجية. 🌴",
@@ -1345,22 +1363,18 @@
     "مثال 4 🌱: اخرج في نزهة في الطبيعة وتواصل مع بيئتك بدون تشتيت."
   ],
   "ressources": [
-    {
-      "title": "قوة وضع الطيران",
-      "type": "video",
-      "url": "https://www.youtube.com/watch?v=xyz123"
-    },
-    {
-      "title": "لماذا يجب أن تقضي ساعة يوميًا في وضع الطيران",
-      "type": "article",
-      "url": "https://www.huffpost.com/articles"
-    },
-    {
-      "title": "بودكاست: افصل لتتصل",
-      "type": "bonus",
-      "url": "https://www.podcast.com/episode123"
-    }
-  ]
+  {
+    "title": "فهم وضع الطيران",
+    "type": "video",
+    "url": "https://youtu.be/xW1nPijFqk4?si=Cfq_lLmOP93VH_GR"
+  },
+  {
+    "title": "أسباب جيدة لتفعيل وضع الطيران",
+    "type": "article",
+    "url": "https://leclaireur.fnac.com/article/cp33801-5-bonnes-raisons-de-passer-votre-smartphone-en-mode-avion/"
+  }
+]
+
 }
 ,
 "challengeOrganisationDigitale": {
@@ -1372,22 +1386,23 @@
       "مثال 4 🌱 : استخدم اختصارات لوحة المفاتيح لتوفير وقت أثناء التنقل بين الملفات."
     ],
     "ressources": [
-      {
-        "title": "كيفية تنظيم ملفاتك على جهازك",
-        "type": "video",
-        "url": "https://example.com/video1"
-      },
-      {
-        "title": "قواعد التنظيم الجيد للمجلدات",
-        "type": "article",
-        "url": "https://example.com/article1"
-      },
-      {
-        "title": "الدليل النهائي لتنظيف مساحتك الرقمية",
-        "type": "bonus",
-        "url": "https://example.com/bonus1"
-      }
-    ],
+  {
+    "title": "كيفية تنظيم ملفاتك على الكمبيوتر",
+    "type": "video",
+    "url": "https://youtu.be/Z_4jyyPixD4?si=cQHEQuncUUB_5-2W"
+  },
+  {
+    "title": "فوائد إدارة الملفات",
+    "type": "article",
+    "url": "https://www.acollab.com/quels-sont-les-7-avantages-dune-gestion-de-fichiers/"
+  },
+  {
+    "title": "التخلص من الفوضى الرقمية",
+    "type": "bonus",
+    "url": "https://podcasts.apple.com/fr/podcast/22-d%C3%A9tox-digitale-3-conseils-pour-d%C3%A9sencombrer-ton/id1736480617?i=1000664554079"
+  }
+]
+,
     "illustrationSuggeree": "مكتب به حاسوب يظهر مجلدات منظمة جيدًا على المكتب الرقمي",
     "imageHelper": "https://firebasestorage.googleapis.com/v0/b/challengeme-d7fef.appspot.com/o/Challenges-Helper%2Fch-organisation-digitale.png?alt=media"
   },
@@ -1401,22 +1416,23 @@
       "مثال 4 🌱: بدّل 'أنا فاشل/ة' بـ 'أنا في مرحلة تعلم وأتحسّن كل يوم'."
     ],
     "ressources": [
-      {
-        "title": "قوة التوكيد الذاتي الإيجابي",
-        "type": "video",
-        "url": ""
-      },
-      {
-        "title": "كيف تحوّل أفكارك السلبية إلى إيجابية؟",
-        "type": "article",
-        "url": ""
-      },
-      {
-        "title": "بودكاست: منهج ميتود كوي – التفكير الإيجابي للعيش بسعادة",
-        "type": "bonus",
-        "url": ""
-      }
-    ],
+  {
+    "title": "قوة التفكير الإيجابي",
+    "type": "video",
+    "url": "https://youtu.be/qo19BMD4i98?si=ELJYB6Ty_aNbWb08"
+  },
+  {
+    "title": "مفاتيح التفكير الإيجابي",
+    "type": "article",
+    "url": "https://epycure.com/blogs/journal-feel-good/les-8-cles-de-la-pensee-positive?srsltid=AfmBOor4uLL7BvQoA0iSLLm8BYzghp_qNhXa8ZAA9rwrcbV1me1it31o"
+  },
+  {
+    "title": "التخلص من الأفكار السلبية",
+    "type": "bonus",
+    "url": "https://youtu.be/2RZ9vqEfyCI?si=pOusiyI7RrZssiPc"
+  }
+]
+,
     "illustrationSuggeree": "شخص يكتب أفكارًا إيجابية في دفتر يوميات",
     "imageHelper": "https://firebasestorage.googleapis.com/v0/b/challengeme-d7fef.appspot.com/o/Challenges-Helper%2Fch-pensee-positive.png?alt=media"
   },
@@ -1430,22 +1446,23 @@
       "مثال 4 🌱: يخطط مارك ليس فقط لعمله، بل أيضًا لوقته الحر. يحدد روتين التمارين 🏋️ والأنشطة الترفيهية 🧗 ليبقى متوازنًا."
     ],
     "ressources": [
-      {
-        "title": "كيفية تخطيط أسبوعك بفعالية",
-        "type": "video",
-        "url": "https://www.example.com/planification_efficace"
-      },
-      {
-        "title": "7 فوائد للتخطيط الأسبوعي",
-        "type": "article",
-        "url": "https://www.example.com/blog/avantages_planification_hebdomadaire"
-      },
-      {
-        "title": "بودكاست: استراتيجيات التخطيط الأسبوعي",
-        "type": "bonus",
-        "url": "https://www.example.com/podcast/strategies_planification_hebdomadaire"
-      }
-    ],
+  {
+    "title": "كيفية تخطيط أسبوعك بفعالية",
+    "type": "video",
+    "url": "https://youtu.be/jozNEpY8iik?si=HtP-7UG3qP2we-hH"
+  },
+  {
+    "title": "كيف تخطط لأسبوعك؟",
+    "type": "article",
+    "url": "https://www.appytodo.com/comment-planifier-semaine/"
+  },
+  {
+    "title": "الإنتاجية",
+    "type": "bonus",
+    "url": "https://youtu.be/2uAvargJv0k?si=Y8eQu93930jlm4Wz"
+  }
+]
+,
     "illustrationSuggeree": "شخص جالس أمام مكتب ودفتر مفتوح، ينظم أسبوعه القادم.",
     "imageHelper": "https://firebasestorage.googleapis.com/v0/b/challengeme-d7fef.appspot.com/o/Challenges-Helper%2Fch-planification-hebdomadaire.png?alt=media"
   },
@@ -1459,22 +1476,23 @@
       "مثال 4 🌱: ابقَ تحت الماء البارد لمدة 30 ثانية على الأقل لتلاحظ تأثيره على جسمك وعقلك."
     ],
     "ressources": [
-      {
-        "title": "فوائد الدش البارد",
-        "type": "video",
-        "url": "https://www.youtube.com/watch?v=sqmrof6o0gk"
-      },
-      {
-        "title": "لماذا تأخذ دشًا باردًا يوميًا؟",
-        "type": "article",
-        "url": "https://www.healthline.com/health/cold-shower-benefits"
-      },
-      {
-        "title": "تحدي الدش البارد: حلقة عن فوائده ونصائح لإنجازه",
-        "type": "podcast",
-        "url": "https://open.spotify.com/show/4rFsMgQhE9swoiKk7PeiYw"
-      }
-    ],
+  {
+    "title": "كيفية أخذ الدش البارد بسهولة أكبر",
+    "type": "video",
+    "url": "https://youtu.be/sy4ATccOm2Y?si=GF66WoqndmAhF2om"
+  },
+  {
+    "title": "فوائد الاستحمام بالماء البارد",
+    "type": "article",
+    "url": "https://laboratoires-phytoceutic.com/blogs/news/10-bienfaits-de-la-douche-froide?srsltid=AfmBOopQYq_J-sF5wQpr1hMjlvsWIHCJ4IA_9HXA3G6Chm7W2-xYdPzA"
+  },
+  {
+    "title": "دش بارد، الصمود، حمام جليدي",
+    "type": "podcast",
+    "url": "https://www.podcastics.com/podcast/episode/douche-froide-resilience-bain-glaceavec-maxime-frost-304582/"
+  }
+]
+,
     "illustrationSuggeree": "شخص تحت الدش يتلقى ماءً باردًا ينشّط جسده وعقله",
     "imageHelper": "https://firebasestorage.googleapis.com/v0/b/challengeme-d7fef.appspot.com/o/Challenges-Helper%2Fch-douche-froide.png?alt=media"
   },
@@ -1488,22 +1506,23 @@
       "مثال 4 🌱: 'أنا أقدّر جدًا الطاقة الإيجابية التي تجلبها إلى فريقنا.'"
     ],
     "ressources": [
-      {
-        "title": "كيفية تقديم مجاملات فعّالة",
-        "type": "video",
-        "url": "https://example.com/video_compliment_keys"
-      },
-      {
-        "title": "فن المجاملات الصادقة",
-        "type": "article",
-        "url": "https://example.com/article_sincere_compliment"
-      },
-      {
-        "title": "الفوائد النفسية للمجاملات الصادقة",
-        "type": "podcast",
-        "url": "https://example.com/podcast_compliment_benefits"
-      }
-    ],
+  {
+    "title": "فوائد الإطراءات",
+    "type": "video",
+    "url": "https://youtube.com/shorts/Pq0mBfooSKg?si=2bprdsj9FvQvYQyP"
+  },
+  {
+    "title": "إطراء بسيط يُحدث فرقًا!",
+    "type": "article",
+    "url": "https://shop.simplycure.com/blogs/health-guide/les-bienfaits-des-compliments"
+  },
+  {
+    "title": "تقديم الإطراءات أو تلقيها",
+    "type": "podcast",
+    "url": "https://podcast.chloebloom.com/episodes/faire-ou-recevoir-des-compliments-c-est-dur"
+  }
+]
+,
     "illustrationSuggeree": "شخص مبتسم يقدّم مجاملة لشخص آخر بلطف.",
     "imageHelper": "https://firebasestorage.googleapis.com/v0/b/challengeme-d7fef.appspot.com/o/Challenges-Helper%2Fch-compliment.png?alt=media"
   },
@@ -1516,10 +1535,23 @@
       "مثال 4 🌱 - إذا كان هدفك حياة أكثر صحة، تخيل نفسك تحضّر وجبة متوازنة، تمارس التمارين بدنيًا وتشعر بطاقة وسعادة أكبر."
     ],
     "ressources": [
-      { "title": "قوة التصوّر", "type": "video", "url": "https://www.youtube.com/watch?v=b5i3vE4S2WQ" },
-      { "title": "كيف يؤدي التصوّر اليومي إلى النجاح", "type": "article", "url": "https://www.huffpost.com/entry/see-believe-achieve_b_890307" },
-      { "title": "بودكاست عن التصوّر والنجاح", "type": "bonus", "url": "https://www.mindvalley.com/podcast/mindvalley-podcast/visualization-success-procedure-reality-transurfing" }
-    ],
+  {
+    "title": "التخيل - قانون الجذب",
+    "type": "video",
+    "url": "https://youtu.be/7b80UgObUyQ?si=GJtDTWcwbQuWanzB"
+  },
+  {
+    "title": "التخيل والصور الذهنية",
+    "type": "article",
+    "url": "https://www.passeportsante.net/fr/Therapies/Guide/Fiche.aspx?doc=visualisation_th"
+  },
+  {
+    "title": "التخيل الإيجابي",
+    "type": "bonus",
+    "url": "https://www.radiofrance.fr/franceinter/podcasts/etat-d-esprit/la-visualisation-positive-avec-alain-lancelot-2263321"
+  }
+]
+,
     "illustrationSuggeree": "شخص يجلس في مكان هادئ، مغمض العينين، يتخيّل أهدافه",
     "imageHelper": "https://firebasestorage.googleapis.com/v0/b/challengeme-d7fef.appspot.com/o/Challenges-Helper%2Fch-daily-visualisation.png?alt=media"
   },
@@ -1532,10 +1564,23 @@
       "مثال 4 🌱: 'استغرقت وقتًا لإعداد وجبة صحية لي.'"
     ],
     "ressources": [
-      { "title": "قوة الاحتفال بالانتصارات الصغيرة", "type": "video", "url": "https://www.youtube.com/watch?v=c9KtG6aCtB4" },
-      { "title": "قوة الاعتراف بانتصاراتك الصغيرة", "type": "article", "url": "https://www.tonyrobbins.com/stories/unleash-the-power/the-power-of-recognizing-your-small-wins/" },
-      { "title": "بودكاست: علم النجاح", "type": "bonus", "url": "https://www.scienceofsuccess.co/blog/the-science-of-small-wins" }
-    ],
+  {
+    "title": "ركّز على 3 إنجازات يومية",
+    "type": "video",
+    "url": "https://youtu.be/N9RVuMunXIQ?si=g589bCqMnifcthhI"
+  },
+  {
+    "title": "قوة الإنجازات اليومية",
+    "type": "article",
+    "url": "https://vocal.media/motivation/the-power-of-daily-wins-how-small-successes-lead-to-big-change"
+  },
+  {
+    "title": "إنجازك اليومي",
+    "type": "bonus",
+    "url": "https://podcasts.apple.com/us/podcast/your-daily-win/id1403606358"
+  }
+]
+,
     "illustrationSuggeree": "شخص يكتب في دفترك اليومي، وفنجان شاي بجانبه، ونجوم حوله رمزًا للإنجازات",
     "imageHelper": "https://firebasestorage.googleapis.com/v0/b/challengeme-d7fef.appspot.com/o/Challenges-Helper%2Fch-daily-wins.png?alt=media"
   },
@@ -1548,10 +1593,23 @@
       "مثال 4 🌱: استخدم حصيرة مريحة وبيئة هادئة لتمارينك."
     ],
     "ressources": [
-      { "title": "يوغا للمبتدئين: 15 دقيقة للاسترخاء", "type": "video", "url": "" },
-      { "title": "أهمية ممارسة اليوغا بانتظام", "type": "article", "url": "" },
-      { "title": "بودكاست: اليوغا كأسلوب حياة", "type": "bonus", "url": "" }
-    ],
+  {
+    "title": "دورة يوجا للمبتدئين",
+    "type": "video",
+    "url": "https://youtu.be/3_rUl32CPbA?si=fmQlAL1kmuyx7UpZ"
+  },
+  {
+    "title": "فوائد اليوغا",
+    "type": "article",
+    "url": "https://www.cerclesdelaforme.com/blog/coaching-sportif/les-5-bienfaits-du-yoga/"
+  },
+  {
+    "title": "بودكاستات عن اليوغا",
+    "type": "bonus",
+    "url": "https://ecolefrancaisedeyoga.fr/5-podcasts-a-decouvrir-sur-le-yoga/"
+  }
+]
+,
     "illustrationSuggeree": "شخص يؤدي وضعية يوغا في الهواء الطلق عند شروق الشمس",
     "imageHelper": "https://firebasestorage.googleapis.com/v0/b/challengeme-d7fef.appspot.com/o/Challenges-Helper%2Fch-daily-yoga.png?alt=media"
   },
@@ -1564,10 +1622,23 @@
       "مثال 4 🌱: نظّم مطبخك – تبرع أو تخلّ عن الأدوات غير المستخدمة ونظم البقايا بكفاءة."
     ],
     "ressources": [
-      { "title": "كيف تنظّم بيتك لزيادة الصفاء", "type": "video", "url": "http://example.com/video/désencombrer" },
-      { "title": "5 خطوات لتفريغ مساحة بأمان", "type": "article", "url": "http://example.com/article/désencombrer" },
-      { "title": "بودكاست: قوة التخلّص من الفوضى", "type": "bonus", "url": "http://example.com/podcast/désencombrer" }
-    ],
+  {
+    "title": "التخلص من الفوضى في المنزل",
+    "type": "video",
+    "url": "https://youtu.be/oH_WlPxp4es?si=c1CBz2Ma715G9eMo"
+  },
+  {
+    "title": "فوائد الترتيب والتخلص من الفوضى",
+    "type": "article",
+    "url": "https://laureganisatrice.fr/les-bienfaits-du-desencombrement-et-du-rangement/#:~:text=D%C3%A9sencombrer%20et%20ranger%20fait%20diminuer%20le%20stress&text=Il%20nous%20fait%20sans%20arr%C3%AAt,%C3%A0%20ce%20sentiment%20de%20culpabilit%C3%A9."
+  },
+  {
+    "title": "الفرز، الترتيب والتنظيم",
+    "type": "bonus",
+    "url": "https://www.radiofrance.fr/francebleu/podcasts/cote-experts-l-invite/trier-desencombrer-et-organiser-votre-interieur-pour-alleger-votre-mental-1561486"
+  }
+]
+,
     "illustrationSuggeree": "شخص يصنّف أغراضه، بجانب كومة للابقاء وأخرى للتبرع أو التخلص",
     "imageHelper": "https://firebasestorage.googleapis.com/v0/b/challengeme-d7fef.appspot.com/o/Challenges-Helper%2Fch-declutter-space.png?alt=media"
   },
@@ -1580,10 +1651,23 @@
       "مثال 4 🌱 : احتفل بكل يوم بدون تبغ – فكل يوم هو بذرة لحياة جديدة."
     ],
     "ressources": [
-      { "title": "محاضرة عن أضرار التبغ", "type": "video", "url": "https://youtu.be/StopSmoking" },
-      { "title": "10 طرق مثبتة للإقلاع عن التدخين", "type": "article", "url": "https://www.stop-tabac.com" },
-      { "title": "بودكاست: تجربتي مع الإقلاع عن التدخين", "type": "bonus", "url": "https://www.quit-smoking-podcast.com" }
-    ],
+  {
+    "title": "الاستمتاع بالإقلاع عن التدخين",
+    "type": "video",
+    "url": "https://youtu.be/t9Sujfu5BsY?si=fcE48WX-mpBSyFBs"
+  },
+  {
+    "title": "فوائد الإقلاع عن التدخين",
+    "type": "article",
+    "url": "https://www.fedecardio.org/je-m-informe/les-benefices-immediats-de-l-arret-du-tabac/"
+  },
+  {
+    "title": "ماذا لو أقلعت حقاً عن التدخين؟",
+    "type": "bonus",
+    "url": "https://www.radiofrance.fr/franceinter/podcasts/grand-bien-vous-fasse/grand-bien-vous-fasse-du-lundi-02-septembre-2024-9669868"
+  }
+]
+,
     "illustrationSuggeree": "شخص يستمتع بشروق الشمس، رمز الحرية والتجديد",
     "imageHelper": "https://firebasestorage.googleapis.com/v0/b/challengeme-d7fef.appspot.com/o/Challenges-Helper%2Fch-arret-du-tabac.png?alt=media"
   },
@@ -1596,10 +1680,23 @@
       "مثال 4 🌱 - استمتعت بجمال غروب الشمس."
     ],
     "ressources": [
-      { "title": "قوة الامتنان", "type": "video", "url": "https://youtube.com/vidéo1" },
-      { "title": "لماذا تكتب دفتر امتنان؟", "type": "article", "url": "https://www.monarticle.com/1" },
-      { "title": "بودكاست عن قوة الامتنان", "type": "bonus", "url": "https://www.monpodcast.com/1" }
-    ],
+  {
+    "title": "ابدأ دفتر الامتنان",
+    "type": "video",
+    "url": "https://youtu.be/GZghu_xFRM8?si=fChgmowBEpz2P-r9"
+  },
+  {
+    "title": "كيفية الاحتفاظ بدفتر امتنان",
+    "type": "article",
+    "url": "https://amandebasilic.com/journal-de-gratitude/"
+  },
+  {
+    "title": "بودكاست دفتر الامتنان",
+    "type": "bonus",
+    "url": "https://podcasts.apple.com/fr/podcast/gratitude-journal/id1493974729"
+  }
+]
+,
     "illustrationSuggeree": "شخص يكتب في دفتر بابتسامة هادئة.",
     "imageHelper": "https://firebasestorage.googleapis.com/v0/b/challengeme-d7fef.appspot.com/o/Challenges-Helper%2Fch-carnet-gratitude.png?alt=media"
   },
@@ -1612,10 +1709,23 @@
       "مثال 4 🌱: تأمل في الحديقة أو الطبيعة المفتوحة 🧘‍♀️"
     ],
     "ressources": [
-      { "title": "كيف تؤثر الطبيعة على أدمغتنا وأجسامنا", "type": "video", "url": "https://www.youtube.com/watch?v=Z7O8s9n_Va8" },
-      { "title": "10 أسباب للتواصل مع الطبيعة", "type": "article", "url": "https://www.mindbodygreen.com/0-20793/10-reasons-why-being-in-nature-is-good-for-you.html" },
-      { "title": "بودكاست: إعادة الاتصال بالطبيعة", "type": "bonus", "url": "https://www.bbc.co.uk/programmes/p07zr8p7" }
-    ],
+  {
+    "title": "تحسين الاتصال بالطبيعة",
+    "type": "video",
+    "url": "https://youtu.be/XuFNa0v4EuM?si=rm3_58lXyu3-umnF"
+  },
+  {
+    "title": "كيف تستفيد من فوائد الطبيعة؟",
+    "type": "article",
+    "url": "https://www.mindbodygreen.com/0-20793/10-reasons-why-being-in-nature-is-good-for-you.html"
+  },
+  {
+    "title": "علاقتنا بالطبيعة",
+    "type": "bonus",
+    "url": "https://www.radiofrance.fr/franceinter/podcasts/la-tete-au-carre/notre-connexion-a-la-nature-6405232"
+  }
+]
+,
     "illustrationSuggeree": "شخص يتأمل في حديقة خضراء.",
     "imageHelper": "https://firebasestorage.googleapis.com/v0/b/challengeme-d7fef.appspot.com/o/Challenges-Helper%2Fch-connexion-nature.png?alt=media"
   },
@@ -1628,10 +1738,23 @@
       "مثال 4 🌱 : استلهم من الطبيعة وارسم شيئًا جديدًا كل يوم."
     ],
     "ressources": [
-      { "title": "كيف تعبّر عن إبداعك", "type": "video", "url": "https://www.youtube.com/watch?v=xyz123" },
-      { "title": "30 يومًا من التحديات الإبداعية", "type": "article", "url": "https://www.blog-creatif.com/article123" },
-      { "title": "بودكاست تطوير الإبداع", "type": "bonus", "url": "https://www.podcast.com/episode123" }
-    ],
+  {
+    "title": "حرر إبداعك",
+    "type": "video",
+    "url": "https://youtu.be/7RJIrHi8ifE?si=IFU4Kz31-rd3O0CE"
+  },
+  {
+    "title": "فوائد الإبداع",
+    "type": "article",
+    "url": "https://bluevertsoul.fr/bienfaits-creativite"
+  },
+  {
+    "title": "الإبداع",
+    "type": "bonus",
+    "url": "https://www.radiofrance.fr/franceculture/podcasts/serie-la-creativite-avec-samah-karaki"
+  }
+]
+,
     "illustrationSuggeree": "شخص يمسك بفرشاة فوق لوحة بيضاء، مستعد لبدء الإبداع.",
     "imageHelper": "https://firebasestorage.googleapis.com/v0/b/challengeme-d7fef.appspot.com/o/Challenges-Helper%2Fch-creativite-quotidienne.png?alt=media"
   },
@@ -1644,10 +1767,23 @@
       "مثال 4 🌱 - شارك في نشاط إبداعي كالرسم أو الحياكة بدون شاشات."
     ],
     "ressources": [
-      { "title": "كيفية فصل الاتصال والقيام بإزالة السموم الرقمية", "type": "video", "url": "https://youtu.be/exemple" },
-      { "title": "الدليل الكامل للتخلص من السموم الرقمية", "type": "article", "url": "https://www.exemple.com/article-detox-digitale" },
-      { "title": "بودكاست: إيجاد التوازن في عالم رقمي", "type": "bonus", "url": "https://www.exemple.com/podcast-detox-digitale" }
-    ],
+  {
+    "title": "وقت أقل أمام الشاشات، حياة أكثر",
+    "type": "video",
+    "url": "https://youtu.be/MwXNOxhhYLg?si=HdaA8JxAWK6ghmhJ"
+  },
+  {
+    "title": "التخلص الرقمي - ما هي فوائده؟",
+    "type": "article",
+    "url": "https://www.livi.fr/en-bonne-sante/digital-detox-bienfaits/"
+  },
+  {
+    "title": "العيش بدون هاتف، التخلص الرقمي",
+    "type": "bonus",
+    "url": "https://www.radiofrance.fr/franceinter/podcasts/le-zoom-de-la-redaction/le-zoom-de-la-redaction-du-mercredi-27-decembre-2023-3330605"
+  }
+]
+,
     "illustrationSuggeree": "شخص مستلقٍ في أرجوحة بالخارج يقرأ كتابًا، بعيدًا عن الأجهزة الرقمية.",
     "imageHelper": "https://firebasestorage.googleapis.com/v0/b/challengeme-d7fef.appspot.com/o/Challenges-Helper%2Fch-digital-detox.png?alt=media"
   },
@@ -1660,10 +1796,23 @@
       "مثال 4 🌱 : حوّل نفاياتك العضوية إلى سماد طبيعي غني لنباتاتك."
     ],
     "ressources": [
-      { "title": "كيف تبدأ في نمط حياة بدون نفايات؟", "type": "video", "url": "www.votrelien.com" },
-      { "title": "10 نصائح للعيش بدون نفايات", "type": "article", "url": "www.votrelien.com" },
-      { "title": "بودكاست: نحو عالم خالٍ من النفايات", "type": "bonus", "url": "www.votrelien.com" }
-    ],
+  {
+    "title": "العيش مع نفايات أقل",
+    "type": "video",
+    "url": "https://youtu.be/B5ijPk5_8pM?si=NNztRhVW8d3KWFLA"
+  },
+  {
+    "title": "لماذا التحول إلى صفر نفايات؟",
+    "type": "article",
+    "url": "https://www.wespring.com/blog/zero-dechet/article/pourquoi-passer-au-zero-dechet"
+  },
+  {
+    "title": "هل من الممكن العيش بدون نفايات؟",
+    "type": "bonus",
+    "url": "https://www.radiofrance.fr/franceinter/podcasts/on-se-decarbone/on-se-decarbone-du-lundi-18-novembre-2024-2176680"
+  }
+]
+,
     "illustrationSuggeree": "امرأة تفرز نفاياتها في صناديق إعادة التدوير.",
     "imageHelper": "https://firebasestorage.googleapis.com/v0/b/challengeme-d7fef.appspot.com/o/Challenges-Helper%2Fch-zero-dechet.png?alt=media"
   },
@@ -1675,23 +1824,24 @@
       "مثال 3 🚀: 'الفكرة التي تراودني منذ فترة هي...'",
       "مثال 4 🌱: 'سأكتب كل يوم ثلاث أشياء أشعر بالامتنان لها'"
     ],
-    "ressources": [
-      {
-        "title": "قوة الكتابة اليومية",
-        "type": "video",
-        "url": "videourl1.com"
-      },
-      {
-        "title": "10 أسباب لتدوين يومياتك",
-        "type": "article",
-        "url": "articleurl1.com"
-      },
-      {
-        "title": "فن كتابة اليوميات: كيف ولماذا؟",
-        "type": "podcast",
-        "url": "podcasturl1.com"
-      }
-    ],
+    "ressources":[
+  {
+    "title": "فوائد الكتابة - TEDXTalk",
+    "type": "video",
+    "url": "https://youtu.be/S1t90ucM-54?si=-Vcbr5UxE_RJuZbL"
+  },
+  {
+    "title": "فوائد الكتابة",
+    "type": "article",
+    "url": "https://www.psychologies.com/Therapies/Developpement-personnel/Methodes/Articles-et-Dossiers/5-bienfaits-insoupconnes-de-l-ecriture"
+  },
+  {
+    "title": "الكتابة",
+    "type": "podcast",
+    "url": "https://www.radiofrance.fr/franceinter/podcasts/serie-ecrire"
+  }
+]
+,
     "illustrationSuggeree": "شخص يكتب في دفتر يومياته بينما يحتسي كوب شاي.",
     "imageHelper": "https://firebasestorage.googleapis.com/v0/b/challengeme-d7fef.appspot.com/o/Challenges-Helper%2Fch-ecriture-quotidienne.png?alt=media"
   },
@@ -1704,22 +1854,23 @@
       "مثال 4 🌱: نبتتك المزروعة حديثًا تنمو 🌱."
     ],
     "ressources": [
-      {
-        "title": "كيف تمارس الامتنان البصري؟",
-        "type": "video",
-        "url": "https://www.youtube.com/"
-      },
-      {
-        "title": "فوائد الامتنان البصري",
-        "type": "article",
-        "url": "https://www.medium.com/"
-      },
-      {
-        "title": "بودكاست عن الامتنان البصري",
-        "type": "podcast",
-        "url": "https://www.spotify.com/"
-      }
-    ],
+  {
+    "title": "كيف تمارس الامتنان؟",
+    "type": "video",
+    "url": "https://youtu.be/PAmueEyG-6o?si=4ePdoDlwBdw2A1jJ"
+  },
+  {
+    "title": "فوائد الامتنان البصري",
+    "type": "article",
+    "url": "https://strategies-evolution.com/les-7-bienfaits-de-la-gratitude-2/#:~:text=Gr%C3%A2ce%20%C3%A0%20la%20gratitude%2C%20votre,bien%2D%C3%AAtre%20physique%20et%20mental."
+  },
+  {
+    "title": "بودكاست حول الامتنان البصري",
+    "type": "podcast",
+    "url": "https://www.radiofrance.fr/franceinter/podcasts/grand-bien-vous-fasse/les-bienfaits-de-la-gratitude-8436207"
+  }
+]
+,
     "illustrationSuggeree": "شخص يحمل كاميرا لالتقاط منظر جميل خلال نزهة.",
     "imageHelper": "https://firebasestorage.googleapis.com/v0/b/challengeme-d7fef.appspot.com/o/Challenges-Helper%2Fch-gratitude-visuelle.png?alt=media"
   },
@@ -1732,22 +1883,23 @@
       "مثال 4 🌱: انتبه لدرجة حرارة الجو على بشرتك."
     ],
     "ressources": [
-      {
-        "title": "فهم المشي الواعي",
-        "type": "video",
-        "url": "URL_to_replace"
-      },
-      {
-        "title": "استكشاف المشي الواعي",
-        "type": "article",
-        "url": "URL_to_replace"
-      },
-      {
-        "title": "فوائد المشي الواعي",
-        "type": "podcast",
-        "url": "URL_to_replace"
-      }
-    ],
+  {
+    "title": "دليل المشي الواعي",
+    "type": "video",
+    "url": "https://youtu.be/0nwqqOCtGEU?si=smRIRhAsjl2j2wUc"
+  },
+  {
+    "title": "فوائد المشي الواعي",
+    "type": "article",
+    "url": "https://www.femmeactuelle.fr/sante/forme/la-marche-consciente-cette-habitude-douce-qui-ameliore-le-moral-et-la-concentration-2192839"
+  },
+  {
+    "title": "المشي بوعي - بودكاست",
+    "type": "podcast",
+    "url": "https://www.radiofrance.fr/franceinter/podcasts/la-chronique-de-christophe-andre/la-chronique-de-christophe-andre-du-mardi-26-avril-2022-8675545"
+  }
+]
+,
     "illustrationSuggeree": "شخص يمشي بوعي وسط الطبيعة.",
     "imageHelper": "https://firebasestorage.googleapis.com/v0/b/challengeme-d7fef.appspot.com/o/Challenges-Helper%2Fch-marche-consciente.png?alt=media"
   },
@@ -1760,22 +1912,23 @@
       "مثال 4 🌱: اقرأ بضع صفحات من كتاب ملهم بدلًا من مشاهدة الأخبار."
     ],
     "ressources": [
-      {
-        "title": "لماذا أبدأ يومي دون شاشات؟",
-        "type": "video",
-        "url": ""
-      },
-      {
-        "title": "فوائد الصباح الخالي من الشاشات",
-        "type": "article",
-        "url": ""
-      },
-      {
-        "title": "بودكاست: كيف تبني روتين صباحي بلا شاشات",
-        "type": "bonus",
-        "url": ""
-      }
-    ],
+  {
+    "title": "ابدأ صباحك بدون شاشة",
+    "type": "video",
+    "url": "https://youtube.com/shorts/skNPHO-Ytl8?si=THNgH6V3RpbK8Umc"
+  },
+  {
+    "title": "لماذا تستيقظ بدون هاتفك؟",
+    "type": "article",
+    "url": "https://polysleep.ca/fr/blogs/nouvelles/reveil-sans-telephone"
+  },
+  {
+    "title": "يوم بدون شاشات",
+    "type": "bonus",
+    "url": "https://www.vannesetsens.fr/post/une-journ%C3%A9e-sans-%C3%A9crans-relevez-le-d%C3%A9fi"
+  }
+]
+,
     "illustrationSuggeree": "شخص جالس بهدوء مع كوب شاي أثناء شروق الشمس دون وجود أي شاشة.",
     "imageHelper": "https://firebasestorage.googleapis.com/v0/b/challengeme-d7fef.appspot.com/o/Challenges-Helper%2Fch-matin-sans-ecrans.png?alt=media"
   },
@@ -1788,22 +1941,23 @@
       "مثال 4 🌱: قبل النوم، خذ دقيقة لتصفية ذهنك والتفكر في يومك."
     ],
     "ressources": [
-      {
-        "title": "مقدمة إلى التأمل الدقيق",
-        "type": "video",
-        "url": "https://www.example.com/micro-meditation-introduction"
-      },
-      {
-        "title": "5 فوائد مذهلة للتأمل الدقيق",
-        "type": "article",
-        "url": "https://www.example.com/benefits-of-micro-meditation"
-      },
-      {
-        "title": "دليل عملي للتأمل الدقيق",
-        "type": "bonus",
-        "url": "https://www.example.com/guide-to-micro-meditation"
-      }
-    ],
+  {
+    "title": "تأمل دقيق - 5 دقائق",
+    "type": "video",
+    "url": "https://youtu.be/ssss7V1_eyA?si=A90Ck5bMGiU9SQNz"
+  },
+  {
+    "title": "تأملات دقيقة لطرد التوتر",
+    "type": "article",
+    "url": "https://www.marieclaire.fr/micro-meditation-exercices-reduire-stress-rapidement,1483765.asp"
+  },
+  {
+    "title": "تأمل دقيق - بودكاست",
+    "type": "bonus",
+    "url": "https://www.audible.fr/podcast/ITEM_NAME/B0FJ7C1SYQ"
+  }
+]
+,
     "illustrationSuggeree": "شخص يتأمل بسلام في مكان هادئ.",
     "imageHelper": "https://firebasestorage.googleapis.com/v0/b/challengeme-d7fef.appspot.com/o/Challenges-Helper%2Fch-micro-meditation.png?alt=media"
   },
@@ -1816,22 +1970,23 @@
       "مثال 4 🌱: استخدم أكياس قابلة لإعادة الاستخدام بدلًا من أكياس البلاستيك."
     ],
     "ressources": [
-      {
-        "title": "Minimalism: A Documentary About the Important Things",
-        "type": "video",
-        "url": "https://www.netflix.com/title/80114460"
-      },
-      {
-        "title": "7 طرق لممارسة البساطة المالية",
-        "type": "article",
-        "url": "https://www.moneycrashers.com/practice-financial-minimalism/"
-      },
-      {
-        "title": "بودكاست The Minimalists",
-        "type": "podcast",
-        "url": "https://www.theminimalists.com/podcast/"
-      }
-    ],
+  {
+    "title": "التبسيط",
+    "type": "video",
+    "url": "https://www.netflix.com/title/80114460"
+  },
+  {
+    "title": "تحدي عدم الشراء",
+    "type": "article",
+    "url": "https://www.slate.fr/societe/no-buy-challenge-shopping-2025-consommation"
+  },
+  {
+    "title": "بودكاست Nobuy",
+    "type": "podcast",
+    "url": "https://open.spotify.com/show/5oJs4J3btWexkThaHR7UmI"
+  }
+]
+,
     "illustrationSuggeree": "بطاقة ائتمان مقطوعة إلى نصفين",
     "imageHelper": "https://firebasestorage.googleapis.com/v0/b/challengeme-d7fef.appspot.com/o/Challenges-Helper%2Fch-no-buy-month.png?alt=media"
   },
@@ -1844,22 +1999,23 @@
       "مثال 4 🌱: شارك أدوات المطبخ الزائدة مع الجيران."
     ],
     "ressources": [
-      {
-        "title": "دليل المبتدئين للتبسيط",
-        "type": "video",
-        "url": ""
-      },
-      {
-        "title": "10 نصائح للعيش ببساطة",
-        "type": "article",
-        "url": ""
-      },
-      {
-        "title": "لماذا قد يغير التبسيط حياتك؟",
-        "type": "podcast",
-        "url": ""
-      }
-    ],
+  {
+    "title": "التبسيط - فرّغ حياتك",
+    "type": "video",
+    "url": "https://youtu.be/YgqgdxG9-Fc?si=irxJnoe0zMVLK8bx"
+  },
+  {
+    "title": "تفضيل التنظيم البسيط",
+    "type": "article",
+    "url": "https://udd.eu/newsroom/raisons-opter-piece-minimaliste#:~:text=Simplifier%20sa%20vie,plut%C3%B4t%20que%20des%20achats%20compulsifs."
+  },
+  {
+    "title": "تبني أسلوب حياة بسيط",
+    "type": "bonus",
+    "url": "https://culturev.fr/podcasts-minimalisme/"
+  }
+]
+,
     "illustrationSuggeree": "غرفة نظيفة بعد إزالة الفوضى، تُظهر مساحة واسعة ومنظمة.",
     "imageHelper": "https://firebasestorage.googleapis.com/v0/b/challengeme-d7fef.appspot.com/o/Challenges-Helper%2Fch-rangement-minimaliste.png?alt=media"
   },
@@ -1872,22 +2028,23 @@
       "مثال 4 🌱: عشاء نباتي مع توفو وخضار مشوية وأرز بني."
     ],
     "ressources": [
-      {
-        "title": "كيفية إعداد وجبة متوازنة",
-        "type": "video",
-        "url": "https://www.youtube.com/watch?v=voNE0dnp-vc"
-      },
-      {
-        "title": "10 أفكار لوجبات أسبوعية متوازنة",
-        "type": "article",
-        "url": "https://www.mangerbouger.fr/Manger-mieux/Je-prepare-mon-repas/Des-idees-de-menus"
-      },
-      {
-        "title": "أساسيات التغذية الصحية (بودكاست)",
-        "type": "bonus",
-        "url": "https://www.santemagazine.fr/podcast/am6ly-path5"
-      }
-    ],
+  {
+    "title": "ما هو النظام الغذائي الصحي؟",
+    "type": "video",
+    "url": "https://youtu.be/AVkIzSb1xEE?si=uIb7M6TIIOPXRhm6"
+  },
+  {
+    "title": "أفكار لوجبات متوازنة للأسبوع",
+    "type": "article",
+    "url": "https://toutpourmasante.fr/composer-repas-equilibre/"
+  },
+  {
+    "title": "نصائح لتحسين التغذية",
+    "type": "bonus",
+    "url": "https://www.goodsesame.com/blog/10-podcasts-a-ecouter-pour-mieux-manger/"
+  }
+]
+,
     "illustrationSuggeree": "صورة جميلة وملونة لوجبة صحية متوازنة.",
     "imageHelper": "https://firebasestorage.googleapis.com/v0/b/challengeme-d7fef.appspot.com/o/Challenges-Helper%2Fch-repas-equilibre.png?alt=media"
   },
@@ -1900,22 +2057,23 @@
       "مثال 4 🌱: لا تحبط إن شرد ذهنك، الهدف هو التمرن على التركيز."
     ],
     "ressources": [
-      {
-        "title": "جلسة تأمل موجهة للتنفس الواعي",
-        "type": "video",
-        "url": ""
-      },
-      {
-        "title": "فوائد التنفس الواعي",
-        "type": "article",
-        "url": ""
-      },
-      {
-        "title": "بودكاست عن قوة التنفس الواعي",
-        "type": "bonus",
-        "url": ""
-      }
-    ],
+  {
+    "title": "جلسة تأمل موجهة للتنفس الواعي",
+    "type": "video",
+    "url": "https://youtu.be/tdwn-jObld4?si=5LH0TGzSpbodrx7x"
+  },
+  {
+    "title": "تمارين التنفس - التحكم في المشاعر",
+    "type": "article",
+    "url": "https://www.sante-sur-le-net.com/breathwork-techniques-respiration-reguler-stress/#:~:text=Le%20breathwork%20appel%C3%A9%20aussi%20la,pouvons%20r%C3%A9guler%20notre%20syst%C3%A8me%20nerveux."
+  },
+  {
+    "title": "التنفس الواعي - بودكاست",
+    "type": "bonus",
+    "url": "https://www.passeportsante.net/audio?doc=respiration-consciente"
+  }
+]
+,
     "illustrationSuggeree": "شخص يجلس بوضعية لوتس يمارس التأمل.",
     "imageHelper": "https://firebasestorage.googleapis.com/v0/b/challengeme-d7fef.appspot.com/o/Challenges-Helper%2Fch-respiration-consciente.png?alt=media"
   },
@@ -1927,23 +2085,24 @@
       "مثال 3 🚀: تكتب ماريا لحظات الامتنان في دفترها.",
       "مثال 4 🌱: يحتفظ علي بغرفة نوم باردة ومظلمة وهادئة."
     ],
-    "ressources": [
-      {
-        "title": "تقنيات الاسترخاء قبل النوم",
-        "type": "video",
-        "url": ""
-      },
-      {
-        "title": "تأثير الروتين الليلي",
-        "type": "article",
-        "url": ""
-      },
-      {
-        "title": "بودكاست عن قوة النوم الجيد",
-        "type": "bonus",
-        "url": ""
-      }
-    ],
+    "ressources":[
+  {
+    "title": "لماذا لا ننام جيداً؟",
+    "type": "video",
+    "url": "https://youtu.be/Bgg0EX-uELU?si=Q5s7DqHdi_DAM87F"
+  },
+  {
+    "title": "كيف نحسن جودة النوم؟",
+    "type": "article",
+    "url": "https://www.laboratoire-lescuyer.com/blog/comment-mieux-dormir?srsltid=AfmBOopvQt1-1uB1HDmu_f0WpLzdbFs-LLeztdHKXZil4chyDCKKrWG1"
+  },
+  {
+    "title": "منوّم – بودكاست لمساعدتك على النوم",
+    "type": "bonus",
+    "url": "https://podcasts.apple.com/fr/podcast/somnif%C3%A8re-le-podcast-pour-sendormir/id1531278587"
+  }
+]
+,
     "illustrationSuggeree": "شخص يمارس اليوغا في مكان هادئ قبل النوم.",
     "imageHelper": "https://firebasestorage.googleapis.com/v0/b/challengeme-d7fef.appspot.com/o/Challenges-Helper%2Fch-sommeil-reparateur.png?alt=media"
   },
@@ -1956,22 +2115,23 @@
       "مثال 4 🌱: ابدأ يومك وأنهِه بكوب ماء كبير."
     ],
     "ressources": [
-      {
-        "title": "لماذا شرب لترين من الماء يوميًا؟",
-        "type": "video",
-        "url": "https://www.youtube.com/watch?v=example1"
-      },
-      {
-        "title": "٧ فوائد صحية لشرب كمية كافية من الماء",
-        "type": "article",
-        "url": "https://www.healthline.com/health/benefits-of-drinking-water"
-      },
-      {
-        "title": "بودكاست: أهمية الترطيب",
-        "type": "bonus",
-        "url": "https://www.healthpodcast.com/hydration-importance"
-      }
-    ],
+  {
+    "title": "علاج الماء",
+    "type": "video",
+    "url": "https://youtu.be/siB-FTg7OAc?si=sJYczEP03MydzmLf"
+  },
+  {
+    "title": "لماذا يجب أن نشرب الماء؟",
+    "type": "article",
+    "url": "https://www.cieau.com/leau-et-votre-sante/eau-hydratation-et-hygiene/hydratation/pourquoi-doit-on-boire-de-leau/"
+  },
+  {
+    "title": "الترطيب",
+    "type": "bonus",
+    "url": "https://www.radiofrance.fr/francebleu/podcasts/bienvenue-chez-vous-les-specialistes-ici-nord/hydratation-le-dr-vankemmel-explique-pourquoi-il-faut-boire-de-l-eau-2545207"
+  }
+]
+,
     "illustrationSuggeree": "شخص يملأ زجاجة ماء من النافورة",
     "imageHelper": "https://firebasestorage.googleapis.com/v0/b/challengeme-d7fef.appspot.com/o/Challenges-Helper%2Fch-drink-water.png?alt=media"
   },
@@ -1984,22 +2144,23 @@
       "مثال 4 🌱 - استبدل الصودا بماء منقوع بالفواكه الطازجة."
     ],
     "ressources": [
-      {
-        "title": "أساسيات التغذية الصحية",
-        "type": "video",
-        "url": "https://www.youtube.com/watch?v=some_video_link"
-      },
-      {
-        "title": "10 طرق لزيادة استهلاك الخضروات يوميًا",
-        "type": "article",
-        "url": "https://www.somesite.com/some_article_link"
-      },
-      {
-        "title": "بودكاست: فوائد الغذاء المتوازن",
-        "type": "bonus",
-        "url": "https://www.somepodcastsite.com/some_podcast_link"
-      }
-    ],
+  {
+    "title": "الوصفة للبدء في التغذية الصحية",
+    "type": "video",
+    "url": "https://youtu.be/I1_RSyzPHPg?si=pKHYyG2BhjhEiJZK"
+  },
+  {
+    "title": "10 مفاتيح لتغذية صحية",
+    "type": "article",
+    "url": "https://yuka.io/10-cles-alimentation-saine/"
+  },
+  {
+    "title": "ماذا نأكل؟",
+    "type": "bonus",
+    "url": "https://www.lavieclaire.com/podcasts/"
+  }
+]
+,
     "illustrationSuggeree": "طبق ملون من الفواكه والخضروات الطازجة.",
     "imageHelper": "https://firebasestorage.googleapis.com/v0/b/challengeme-d7fef.appspot.com/o/Challenges-Helper%2Fch-eat-healthy.png?alt=media"
   },
@@ -2012,22 +2173,23 @@
       "مثال 4 🌱: استخدموا الوقت في نقاشات حول النمو الشخصي، مثل تقييم الكتب أو الوثائقيات الملهمة 🎥."
     ],
     "ressources": [
-      {
-        "title": "أهمية الوقت العائلي",
-        "type": "video",
-        "url": "https://www.youtube.com/watch?v=xyz"
-      },
-      {
-        "title": "15 نشاطًا لتعزيز الروابط العائلية",
-        "type": "article",
-        "url": "https://www.familybondingxyz.com"
-      },
-      {
-        "title": "بودكاست عن النمو الشخصي والعائلة",
-        "type": "bonus",
-        "url": "https://podcast.family.com/bonus"
-      }
-    ],
+  {
+    "title": "أفكار لقضاء وقت ممتع مع العائلة",
+    "type": "video",
+    "url": "https://optimoms.fr/maman-optimiste/laslowlife/30-idees-prendre-son-temps-famille"
+  },
+  {
+    "title": "أهمية قضاء الوقت مع العائلة",
+    "type": "article",
+    "url": "https://najell.com/fr-fr/urban-dreamers/importance-of-family-time"
+  },
+  {
+    "title": "قضاء وقت مع العائلة",
+    "type": "bonus",
+    "url": "https://podcast.fr/episode/passer-du-temps-en-famille/"
+  }
+]
+,
     "illustrationSuggeree": "عائلة تتفاعل بسعادة دون أي أجهزة رقمية",
     "imageHelper": "https://firebasestorage.googleapis.com/v0/b/challengeme-d7fef.appspot.com/o/Challenges-Helper%2Fch-family-time.png?alt=media"
   },
@@ -2040,22 +2202,23 @@
       "مثال 4 🌱 : مارس اليقظة الذهنية لتجنب ميل الظهر أمام الكمبيوتر."
     ],
     "ressources": [
-      {
-        "title": "كيف تعتمد وضعية صحيحة؟",
-        "type": "video",
-        "url": "http://www.exempleurl.com/video"
-      },
-      {
-        "title": "10 نصائح لوضعية أفضل",
-        "type": "article",
-        "url": "http://www.exempleurl.com/article"
-      },
-      {
-        "title": "بودكاست عن صحة الظهر",
-        "type": "bonus",
-        "url": "http://www.exempleurl.com/podcast"
-      }
-    ],
+  {
+    "title": "فوائد الوضعية الجيدة",
+    "type": "video",
+    "url": "https://youtu.be/OyK0oE5rwFY?si=nmoe2Hj9oUzXZRE9"
+  },
+  {
+    "title": "فوائد الحفاظ على وضعية جيدة",
+    "type": "article",
+    "url": "https://fr.shenyunperformingarts.org/blog/view/article/e/Zf4MSdlGFak/les-5-bienfaits-d-une-bonne-posture.html"
+  },
+  {
+    "title": "الوضعية الجيدة لصحة أفضل",
+    "type": "bonus",
+    "url": "https://www.radiofrance.fr/francebleu/podcasts/le-conseil-bien-etre/quelle-est-la-bonne-posture-pour-bien-se-porter-7544177"
+  }
+]
+,
     "illustrationSuggeree": "شخص يجلس على كرسي مريح في مكتب ويتحقق من وضعيته باستخدام مرآة.",
     "imageHelper": "https://firebasestorage.googleapis.com/v0/b/challengeme-d7fef.appspot.com/o/Challenges-Helper%2Fch-good-posture.png?alt=media"
   },
@@ -2068,22 +2231,23 @@
       "قم بنزهة في الطبيعة للاستمتاع بالهواء النقي 🏞️"
     ],
     "ressources": [
-      {
-        "title": "كيف تستفيد من 30 دقيقة لهواية",
-        "type": "video",
-        "url": "https://exemple.com/video1"
-      },
-      {
-        "title": "لماذا 30 دقيقة من الهواية تعزز إنتاجيتك",
-        "type": "article",
-        "url": "https://exemple.com/article1"
-      },
-      {
-        "title": "استخدام وقت الفراغ للتنمية الشخصية",
-        "type": "podcast",
-        "url": "https://exemple.com/podcast1"
-      }
-    ],
+  {
+    "title": "كيف تجد هوايتك؟",
+    "type": "video",
+    "url": "https://youtu.be/qjdmIY04soc?si=TqnGGNHi1a_c6-Wu"
+  },
+  {
+    "title": "كيف تساعدنا هواياتنا؟",
+    "type": "article",
+    "url": "https://www.selectionclic.com/conseils-sante/comment-nos-hobbys-nous-aident/#:~:text=Les%20hobbys%20prot%C3%A8gent%20de%20la,utile%20dans%20d'autres%20domaines."
+  },
+  {
+    "title": "ما هي هوايتك؟",
+    "type": "podcast",
+    "url": "https://youtu.be/KjsvG7tZhmA?si=TDFeumCy4aHG6dV6"
+  }
+]
+,
     "illustrationSuggeree": "شخص يجلس مرتاحًا مع كتاب ومشروب ووجبات خفيفة، يبتسم.",
     "imageHelper": "https://firebasestorage.googleapis.com/v0/b/challengeme-d7fef.appspot.com/o/Challenges-Helper%2Fch-hobby-time.png?alt=media"
   },
@@ -2096,22 +2260,23 @@
       "مثال 4 🌱: زرع شجرة في الحي الذي تسكن فيه."
     ],
     "ressources": [
-      {
-        "title": "علم السعادة: لماذا تجعلنا الكرم أكثر سعادة؟",
-        "type": "video",
-        "url": "https://www.youtube.com/watch?v=U3cZ-NGPkkU"
-      },
-      {
-        "title": "21 طريقة بسيطة لممارسة اللطف",
-        "type": "article",
-        "url": "https://www.huffpost.com/entry/35-little-acts-of-kindness_n_5872030"
-      },
-      {
-        "title": "قوة اللطف",
-        "type": "podcast",
-        "url": "https://www.npr.org/programs/invisibilia/382451600/the-power-of-kindness"
-      }
-    ],
+  {
+    "title": "علم اللطف",
+    "type": "video",
+    "url": "https://youtu.be/O9UByLyOjBM?si=aerzsJbCBREvBUSi"
+  },
+  {
+    "title": "طرق لإظهار اللطف",
+    "type": "article",
+    "url": "https://elisegravel.com/blog/9-facons-de-faire-preuve-de-gentillesse/"
+  },
+  {
+    "title": "قوة اللطف - بودكاست",
+    "type": "podcast",
+    "url": "https://podcasts.apple.com/fr/podcast/the-power-of-kindness/id1771351575"
+  }
+]
+,
     "illustrationSuggeree": "شخص يحمل لافتة مكتوب عليها 'كن لطيفًا'",
     "imageHelper": "https://firebasestorage.googleapis.com/v0/b/challengeme-d7fef.appspot.com/o/Challenges-Helper%2Fch-act-of-kindness.png?alt=media"
   },
@@ -2124,22 +2289,23 @@
       "مثال 4 🌱: اكتب في دفتر ملاحظات باستخدام اللغة التي تتعلمها لتطوير تعبيرك."
     ],
     "ressources": [
-      {
-        "title": "أسرار تعلم اللغات | ليديا ماشوفا",
-        "type": "video",
-        "url": "https://www.youtube.com/watch?v=o_XVt5rdpFY"
-      },
-      {
-        "title": "كيف تتعلم لغة أجنبية بفعالية",
-        "type": "article",
-        "url": "https://lifehacker.com/i-learned-to-speak-four-languages-in-a-few-years-heres-1683098274"
-      },
-      {
-        "title": "بودكاست Babbel لتعلم اللغات",
-        "type": "bonus",
-        "url": "https://www.babbel.com/en/magazine/category/language-podcasts"
-      }
-    ],
+  {
+    "title": "أسرار تعلم اللغات | ليديا ماتشوفا",
+    "type": "video",
+    "url": "https://www.youtube.com/watch?v=o_XVt5rdpFY"
+  },
+  {
+    "title": "فوائد تعلم اللغات على الدماغ",
+    "type": "article",
+    "url": "https://fr.babbel.com/fr/magazine/benefices-apprentissage-langues-cerveau"
+  },
+  {
+    "title": "بودكاست Babbel لتعلم اللغات",
+    "type": "bonus",
+    "url": "https://fr.babbel.com/fr/magazine/les-meilleurs-podcasts-pour-apprendre-une-langue"
+  }
+]
+,
     "illustrationSuggeree": "شخص يجلس في مقهى مريح مع فنجان قهوة وكتاب لغات أجنبية على الطاولة.",
     "imageHelper": "https://firebasestorage.googleapis.com/v0/b/challengeme-d7fef.appspot.com/o/Challenges-Helper%2Fch-learn-a-language.png?alt=media"
   },
@@ -2152,22 +2318,23 @@
       "مثال 4 🌱: اخرج من منطقة الراحة وتعلم آلة موسيقية جديدة أو لغة."
     ],
     "ressources": [
-      {
-        "title": "كيفية تعلم مهارة جديدة بفعالية",
-        "type": "video",
-        "url": "https://www.youtube.com/exemple"
-      },
-      {
-        "title": "5 نصائح لإتقان مهارة جديدة",
-        "type": "article",
-        "url": "https://www.blog/exemple"
-      },
-      {
-        "title": "بودكاست حول التعلم المستمر",
-        "type": "bonus",
-        "url": "https://www.podcast/exemple"
-      }
-    ],
+  {
+    "title": "طريقة فاينمان",
+    "type": "video",
+    "url": "https://youtu.be/UUSmBMWk2sI?si=HUdlol3QuEnY3H0H"
+  },
+  {
+    "title": "30 نصيحة لإتقان مهارة جديدة بسرعة",
+    "type": "article",
+    "url": "https://angyna.com/blog/articles/8/30-conseils-pour-acquerir-rapidement-une-nouvelle-competence"
+  },
+  {
+    "title": "تعلم كيف تتعلم",
+    "type": "bonus",
+    "url": "https://www.radiofrance.fr/franceculture/podcasts/serie-apprendre-a-apprendre"
+  }
+]
+,
     "illustrationSuggeree": "شخص يرتدي سماعة يجلس أمام حاسوب محمول ويتعلم مهارة جديدة.",
     "imageHelper": "https://firebasestorage.googleapis.com/v0/b/challengeme-d7fef.appspot.com/o/Challenges-Helper%2Fch-learn-skill.png?alt=media"
   },
@@ -2180,22 +2347,23 @@
       "مثال 4 🌱: الكلمة 'تحول جذري' تشير إلى تغيير كامل في الطبيعة أو الشكل."
     ],
     "ressources": [
-      {
-        "title": "كيف تطور مفرداتك الإنجليزية؟",
-        "type": "video",
-        "url": "https://youtu.be/xx_WNPe8bBs"
-      },
-      {
-        "title": "7 طرق لتوسيع مفرداتك",
-        "type": "article",
-        "url": "https://www.superprof.fr/blog/amplifier-son-lexique/"
-      },
-      {
-        "title": "بودكاست: كلمات غير معروفة",
-        "type": "bonus",
-        "url": "https://anchor.fm/mots-inconnus"
-      }
-    ],
+  {
+    "title": "زيادة مفرداتك",
+    "type": "video",
+    "url": "https://youtu.be/Ms7cF8mQ0BI?si=-tpszWN-B6QG7kzS"
+  },
+  {
+    "title": "كيف تطور مفرداتك؟",
+    "type": "article",
+    "url": "https://www.the-artist-academy.fr/blog/comment-enrichir-votre-vocabulaire-7-manieres-de-developper-votre-vocabulaire"
+  },
+  {
+    "title": "كلمة اليوم - بودكاست",
+    "type": "bonus",
+    "url": "https://www.radiofrance.fr/francemusique/podcasts/le-mot-du-jour"
+  }
+]
+,
     "illustrationSuggeree": "شخص يقرأ كتابًا ويكتب كلمات جديدة في دفتر ملاحظاته",
     "imageHelper": "https://firebasestorage.googleapis.com/v0/b/challengeme-d7fef.appspot.com/o/Challenges-Helper%2Fch-learn-word.png?alt=media"
   },
@@ -2208,22 +2376,13 @@
       "مثال 4 🌱: تابع الابتكارات التكنولوجية عبر بودكاست 'TechStuff'."
     ],
     "ressources": [
-      {
-        "title": "كيف تستفيد من البودكاست إلى أقصى حد؟",
-        "type": "video",
-        "url": "https://youtu.be/your_url_here"
-      },
-      {
-        "title": "5 نصائح لدمج البودكاست في روتينك اليومي",
-        "type": "article",
-        "url": "https://blog.wordpress.com/your_article_url_here"
-      },
-      {
-        "title": "5 بودكاستات تعليمية للاستماع الآن",
-        "type": "bonus",
-        "url": "https://your_podcasts_recommendations_url_here"
-      }
-    ],
+  {
+    "title": "البودكاستات",
+    "type": "video",
+    "url": "https://www.radiofrance.fr/podcasts"
+  }
+]
+,
     "illustrationSuggeree": "شخص يضع سماعات أذن ويستمع إلى بودكاست على هاتفه",
     "imageHelper": "https://firebasestorage.googleapis.com/v0/b/challengeme-d7fef.appspot.com/o/Challenges-Helper%2Fch-podcast.png?alt=media"
   },
@@ -2235,7 +2394,24 @@
       "مثال 3 🚀: ابدأ بجلسات قصيرة و زد المدة تدريجيًا.",
       "مثال 4 🌱: دون ما شعرت به بعد كل جلسة."
     ],
-    "ressources": [],
+    "ressources": [
+  {
+    "title": "تأملات موجهة - برنارد ويربر",
+    "type": "video",
+    "url": "https://youtu.be/eay1enaijAc?si=MIQT1EEgJZFOCnB_"
+  },
+  {
+    "title": "تعلم التأمل بسهولة أكبر",
+    "type": "article",
+    "url": "https://www.helsana.ch/fr/blog/psyche/pleine-conscience/meditation.html"
+  },
+  {
+    "title": "وقت التأمل",
+    "type": "bonus",
+    "url": "https://www.radiofrance.fr/franceinter/podcasts/le-temps-de-mediter"
+  }
+]
+,
     "illustrationSuggeree": "شخص يتأمل في مكان هادئ وسلمي",
     "imageHelper": "https://firebasestorage.googleapis.com/v0/b/challengeme-d7fef.appspot.com/o/Challenges-Helper%2Fch-meditation.png?alt=media"
   },
@@ -2247,7 +2423,23 @@
       "مثال 3 🚀: اجلس وامد ساقًا واحدة ولامس قدمك بيديك.",
       "مثال 4 🌱: اجلس ومد ذراعيك للأمام وقم بلف معصميك."
     ],
-    "ressources": [],
+    "ressources": [
+  {
+    "title": "روتين الصباح",
+    "type": "video",
+    "url": "https://youtu.be/BNJuv209-yc?si=nsca-yZjkJTiu6fc"
+  },
+  {
+    "title": "5 أسباب للتمدد في الصباح",
+    "type": "article",
+    "url": "https://truefitness.com/fr/5-reasons-for-a-morning-stretch-routine/"
+  },
+  {
+    "title": "التمدد: ضروري في أي عمر!",
+    "type": "bonus",
+    "url": "https://www.radiofrance.fr/franceinter/podcasts/carnet-de-sante/carnet-de-sante-du-samedi-03-aout-2024-8615750"
+  }
+],
     "illustrationSuggeree": "شخص يمد ذراعيه بلطف للأعلى بعد الاستيقاظ",
     "imageHelper": "https://firebasestorage.googleapis.com/v0/b/challengeme-d7fef.appspot.com/o/Challenges-Helper%2Fch-morning-stretch.png?alt=media"
   },
@@ -2260,22 +2452,23 @@
       "مثال 4 🌱: تواصل مع معرفة قديمة لتبادل الخبرات."
     ],
     "ressources": [
-      {
-        "title": "نصائح للتواصل الفعال",
-        "type": "video",
-        "url": "youtube.com/reseautageefficace"
-      },
-      {
-        "title": "فن التواصل اليومي",
-        "type": "article",
-        "url": "medium.com/reseautagequotidien"
-      },
-      {
-        "title": "بودكاست: قوة العلاقات المهنية",
-        "type": "bonus",
-        "url": "spotify.com/podcast/reseautage"
-      }
-    ],
+  {
+    "title": "إتقان فن التواصل المهني",
+    "type": "video",
+    "url": "https://youtu.be/SN9zTEWVjGM?si=xWgFcdfqz6X3l2Df"
+  },
+  {
+    "title": "7 أسباب للاهتمام بشبكتك المهنية",
+    "type": "article",
+    "url": "https://ch-fr.indeed.com/conseils-carriere/evolution-professionnelle/networking-reseau"
+  },
+  {
+    "title": "التواصل المهني - بودكاست",
+    "type": "bonus",
+    "url": "https://podcasts.apple.com/fr/podcast/le-networking-de-steeve/id1437905134"
+  }
+]
+,
     "illustrationSuggeree": "شخص يتحدث في مكالمة وفي يده دفتر ملاحظات",
     "imageHelper": "https://firebasestorage.googleapis.com/v0/b/challengeme-d7fef.appspot.com/o/Challenges-Helper%2Fch-networking.png?alt=media"
   },
@@ -2288,22 +2481,23 @@
       "مثال 4 🌱: اختر وصفة نباتية بالكامل."
     ],
     "ressources": [
-      {
-        "title": "كيفية قراءة وفهم وصفة غذائية",
-        "type": "video",
-        "url": "https://www.youtube.com/watch?v=*"
-      },
-      {
-        "title": "10 نصائح لنجاح الوصفة الجديدة",
-        "type": "article",
-        "url": "https://www.cuisinemaison.com/10-astuces-pour-reussir-une-nouvelle-recette"
-      },
-      {
-        "title": "بودكاست: الطهي كالاحتراف",
-        "type": "bonus",
-        "url": "https://www.cookingpodcast.com/cuisiner-comme-un-pro"
-      }
-    ],
+  {
+    "title": "يوم واحد، وصفة واحدة",
+    "type": "video",
+    "url": "https://www.youtube.com/@UnjourUnerecettekatyseats"
+  },
+  {
+    "title": "كيف تنجح في إعداد وصفة؟",
+    "type": "article",
+    "url": "https://www.potes-au-feu.ch/les-7-regles-d-or-pour-reussir-une-recette.html"
+  },
+  {
+    "title": "الطبخ مثل المحترفين - بودكاست",
+    "type": "bonus",
+    "url": "https://www.huffingtonpost.fr/life/article/les-meilleurs-podcasts-de-cuisine-a-ecouter-sans-moderation_173220.html"
+  }
+]
+,
     "illustrationSuggeree": "شخص يقرأ وصفة أثناء تقطيع الخضروات.",
     "imageHelper": "https://firebasestorage.googleapis.com/v0/b/challengeme-d7fef.appspot.com/o/Challenges-Helper%2Fch-nouvelle-recette.png?alt=media"
   },
@@ -2316,22 +2510,23 @@
       "🌱 مارس التأمل لتعزيز التركيز بدون كافيين."
     ],
     "ressources": [
-      {
-        "title": "كيفية التوقف عن الكافيين دون الشعور بالتعب",
-        "type": "video",
-        "url": "youtube.com/watch?v=videourl1"
-      },
-      {
-        "title": "لماذا يجب أن تأخذ استراحة من الكافيين",
-        "type": "article",
-        "url": "articleurl.com/2"
-      },
-      {
-        "title": "بودكاست: بدائل صحية للكافيين",
-        "type": "bonus",
-        "url": "podcasturl.com/3"
-      }
-    ],
+  {
+    "title": "القهوة وتأثيرها على الصحة",
+    "type": "video",
+    "url": "https://youtu.be/5joA6VS7_88?si=bB5kFYcQg0YZ8HB5"
+  },
+  {
+    "title": "تأثير القهوة على الجسم",
+    "type": "article",
+    "url": "https://www.bbc.com/afrique/articles/cw0l43ezgggo"
+  },
+  {
+    "title": "الكافيين - بودكاست",
+    "type": "bonus",
+    "url": "https://www.rtbf.be/article/la-cafeine-une-addiction-silencieuse-a-arreter-10825320"
+  }
+]
+,
     "illustrationSuggeree": "شخص يحتسي شاي أعشاب بدلاً من القهوة.",
     "imageHelper": "https://firebasestorage.googleapis.com/v0/b/challengeme-d7fef.appspot.com/o/Challenges-Helper%2Fch-no-cafe.png?alt=media"
   },
@@ -2344,22 +2539,23 @@
       "مثال 4 🌱: عندما يبدو عملك مملًا ورتيبًا، تذكّر أنك محظوظ بوجوده والفوائد التي يجلبها. 🏢"
     ],
     "ressources": [
-      {
-        "title": "فيديو عن فن البقاء إيجابيًا",
-        "type": "video",
-        "url": "https://exampleurl.com"
-      },
-      {
-        "title": "مقال حول التوقف عن الشكوى",
-        "type": "article",
-        "url": "https://exampleurl.com"
-      },
-      {
-        "title": "بودكاست عن عقلية الامتنان",
-        "type": "bonus",
-        "url": "https://exampleurl.com"
-      }
-    ],
+  {
+    "title": "الحيلة البسيطة للتوقف عن الشكوى",
+    "type": "video",
+    "url": "https://youtu.be/3boYHN7g7Q8?si=7_ogMcb_L4eWtJlK"
+  },
+  {
+    "title": "كيف تتوقف عن التذمر؟",
+    "type": "article",
+    "url": "https://www.2minutesdebonheur.com/arreter-se-plaindre-223/"
+  },
+  {
+    "title": "كن إيجابيًا لتعيش أفضل",
+    "type": "bonus",
+    "url": "https://www.radiofrance.fr/francebleu/podcasts/le-mag-de-france-bleu-poitou/comment-rester-positif-pour-vivre-mieux-9713037"
+  }
+]
+,
     "illustrationSuggeree": "شخص يكتب في دفتر الامتنان.",
     "imageHelper": "https://firebasestorage.googleapis.com/v0/b/challengeme-d7fef.appspot.com/o/Challenges‑Helper%2Fch-no-complaints.png?alt=media"
   },
@@ -2372,22 +2568,23 @@
       "مثال 4 🌱: حضّر كعكًا باستخدام التمر أو شراب القيقب بدلاً من السكر المكرر."
     ],
     "ressources": [
-      {
-        "title": "كيفية تقليل السكر في نظامك الغذائي",
-        "type": "video",
-        "url": ""
-      },
-      {
-        "title": "فوائد التغذية بدون سكر",
-        "type": "article",
-        "url": ""
-      },
-      {
-        "title": "20 وصفة بدون سكر مضاف لتلهمك",
-        "type": "bonus",
-        "url": ""
-      }
-    ],
+  {
+    "title": "14 يومًا بدون سكر",
+    "type": "video",
+    "url": "https://youtu.be/jvQRR3WLnhg?si=QM1rj_yBFAnWrinT"
+  },
+  {
+    "title": "إزالة السموم من السكر",
+    "type": "article",
+    "url": "https://www.ayuin.fr/detox-sucre/#:~:text=Les%20bienfaits%20de%20l'arr%C3%AAt%20du%20sucre,-Arr%C3%AAter%20le%20sucre&text=La%20perte%20de%20poids%3A%20l,de%20sucre%20dans%20le%20sang)."
+  },
+  {
+    "title": "حياة بدون سكر - بودكاست",
+    "type": "bonus",
+    "url": "https://www.radiofrance.fr/franceinter/podcasts/vie-quotidienne-mode-d-emploi/une-vie-sans-sucre-4356519"
+  }
+]
+,
     "illustrationSuggeree": "طاولة مليئة بالفواكه الطازجة والمكسرات والبذور والخضروات لتمثيل نظام غذائي صحي بدون سكر مضاف.",
     "imageHelper": "https://firebasestorage.googleapis.com/v0/b/challengeme-d7fef.appspot.com/o/Challenges‑Helper%2Fch-no-sugar.png?alt=media"
   },
@@ -2400,22 +2597,23 @@
       "مثال 4 🌱: ضمّن البلانك في روتينك الصباحي لتعزيز معدل الأيض طوال اليوم."
     ],
     "ressources": [
-      {
-        "title": "دليل عملي لتمرين البلانك",
-        "type": "video",
-        "url": "https://www.youtube.com/watch?v=7RkpEJgP6wE"
-      },
-      {
-        "title": "لماذا البلانك تمرين شامل جدًا؟",
-        "type": "article",
-        "url": "https://www.huffingtonpost.fr/entry/pourquoi-faire-la-planche-est-un-exercice-si-complet_fr_5e9450b8c5b6d97d91e4e2de"
-      },
-      {
-        "title": "بودكاست عن فوائد البلانك",
-        "type": "bonus",
-        "url": "https://www.listennotes.com/c/f5eeb7e58284840a8b171e9470168995/"
-      }
-    ],
+  {
+    "title": "دقيقة واحدة من تمرين البلانك يوميًا",
+    "type": "video",
+    "url": "https://youtu.be/LHd790kagqw?si=JU0U3_T3dJASbrEV"
+  },
+  {
+    "title": "تمارين البلانك المختلفة",
+    "type": "article",
+    "url": "https://laseche.fr/la-seche/les-incroyables-bienfaits-de-la-planche"
+  },
+  {
+    "title": "البلانك مفيد للجسم بالكامل",
+    "type": "bonus",
+    "url": "https://www.radiofrance.fr/francebleu/podcasts/les-petits-plaisirs-sur-france-bleu-poitou/exercice-physique-la-planche-c-est-bon-pour-tout-le-corps-4771680"
+  }
+]
+,
     "illustrationSuggeree": "شخص في وضعية بلانك في الخارج على بساط تمارين.",
     "imageHelper": "https://firebasestorage.googleapis.com/v0/b/challengeme-d7fef.appspot.com/o/Challenges‑Helper%2Fch-planche.png?alt=media"
   },
@@ -2428,22 +2626,23 @@
       "مثال 4 🌱: المهمة: 'تحضير العشاء للعائلة' ➡️ السبب: 'لقضاء وقت ممتع مع العائلة والاستمتاع بوجبة شهية'"
     ],
     "ressources": [
-      {
-        "title": "التخطيط لليوم من أجل إنتاجية أفضل",
-        "type": "video",
-        "url": ""
-      },
-      {
-        "title": "لماذا تخطط ليومك في الليلة السابقة؟",
-        "type": "article",
-        "url": ""
-      },
-      {
-        "title": "بودكاست حول إدارة الوقت وأهمية التخطيط",
-        "type": "bonus",
-        "url": ""
-      }
-    ],
+  {
+    "title": "كيف تنظم يومك",
+    "type": "video",
+    "url": "https://youtu.be/eOOmP6IUtOk?si=iv6DMcfZhOje-KBf"
+  },
+  {
+    "title": "تخطيط اليوم",
+    "type": "article",
+    "url": "https://matthieudesroches.com/articles/comment-organiser-sa-journee"
+  },
+  {
+    "title": "لماذا التخطيط ضروري؟",
+    "type": "bonus",
+    "url": "https://www.radiofrance.fr/franceculture/podcasts/le-pourquoi-du-comment-economie-et-social/le-pourquoi-du-comment-economie-social-chronique-du-vendredi-29-mars-2024-5316044"
+  }
+]
+,
     "illustrationSuggeree": "شخص يجلس على مكتب ويكتب مهام الغد في دفتر",
     "imageHelper": "https://firebasestorage.googleapis.com/v0/b/challengeme-d7fef.appspot.com/o/Challenges-Helper%2Fch-plan-tomorrow.png?alt=media"
   },
@@ -2456,22 +2655,23 @@
       "مثال 4 🌱: لا تتردد في طلب المساعدة أو أخذ دروس من معلم خبير."
     ],
     "ressources": [
-      {
-        "title": "دروس غيتار للمبتدئين",
-        "type": "video",
-        "url": "https://www.youtube.com/watch?v=VmrnhzL7vY8"
-      },
-      {
-        "title": "كيف تبدأ في تعلم الكمان",
-        "type": "article",
-        "url": "https://www.bbc.co.uk/music/articles/97bbf589-75da-4f73-b179-f0a6a4f159ff"
-      },
-      {
-        "title": "بودكاست: النجاح في التعليم الموسيقي",
-        "type": "podcast",
-        "url": "https://www.successfulmusiceducation.com/"
-      }
-    ],
+  {
+    "title": "اختيار آلة موسيقية",
+    "type": "video",
+    "url": "https://youtu.be/psbPHO-cRn4?si=x0viD_YouT3oN38C"
+  },
+  {
+    "title": "دروس الآلات الموسيقية",
+    "type": "article",
+    "url": "https://www.anacours-musique.com/tous-les-instruments/"
+  },
+  {
+    "title": "تعلم آلة موسيقية في سن الرشد",
+    "type": "podcast",
+    "url": "https://youtu.be/At-c9pwkckQ?si=ADSwYamSoh9zFsrT"
+  }
+]
+,
     "illustrationSuggeree": "شخص يعزف على الغيتار أو يجلس على البيانو مستمتعًا بالموسيقى.",
     "imageHelper": "https://firebasestorage.googleapis.com/v0/b/challengeme-d7fef.appspot.com/o/Challenges-Helper%2Fch-learn-instrument.png?alt=media"
   },
@@ -2484,22 +2684,23 @@
       "مثال 4 🌱: 'أعطي وأتلقى الحب بحرية وسعادة.'"
     ],
     "ressources": [
-      {
-        "title": "فن وعلم التوكيدات الإيجابية",
-        "type": "video",
-        "url": "https://youtu.be/your_video_url"
-      },
-      {
-        "title": "لماذا تعتبر التوكيدات فعالة؟",
-        "type": "article",
-        "url": "https://www.your_article_url.com"
-      },
-      {
-        "title": "قوة التوكيدات الإيجابية - بودكاست",
-        "type": "bonus",
-        "url": "https://www.your_podcast_url.com"
-      }
-    ],
+  {
+    "title": "٥٠ تأكيدًا إيجابيًا",
+    "type": "video",
+    "url": "https://youtu.be/Xaf_wrbB1lQ?si=Pf4pmaSBS6PTQFUG"
+  },
+  {
+    "title": "التأكيدات الإيجابية للرفاهية",
+    "type": "article",
+    "url": "https://pauldevaux.fr/affirmations-positives/#:~:text=La%20technique%20des%20affirmations%20positives%20consiste%20%C3%A0%20r%C3%A9p%C3%A9ter%20de%20mani%C3%A8re,notre%20corps%20et%20nos%20comportements."
+  },
+  {
+    "title": "تأكيدات إيجابية - الثقة والحدس",
+    "type": "bonus",
+    "url": "https://open.spotify.com/episode/6z9sP0bq1SSJuS56W9Y7WT"
+  }
+]
+,
     "illustrationSuggeree": "شخص ينظر إلى المرآة ويكرر توكيدات إيجابية.",
     "imageHelper": "https://firebasestorage.googleapis.com/v0/b/challengeme-d7fef.appspot.com/o/Challenges-Helper%2Fch-positive-affirmations.png?alt=media"
   },
@@ -2512,22 +2713,23 @@
       "مثال 4 🌱: قبل النوم، استرخِ مع فصل من 'فكر وازدد ثراءً'."
     ],
     "ressources": [
-      {
-        "title": "كيف تقرأ المزيد من الكتب؟",
-        "type": "video",
-        "url": "https://www.youtube.com/watch?v=..."
-      },
-      {
-        "title": "10 نصائح لقراءة المزيد هذا الشهر",
-        "type": "article",
-        "url": "https://www.lireplus.com/..."
-      },
-      {
-        "title": "بودكاست: فوائد القراءة اليومية",
-        "type": "bonus",
-        "url": "https://www.podcastbienfaitslecture.com/..."
-      }
-    ],
+  {
+    "title": "القراءة تغير دماغك",
+    "type": "video",
+    "url": "https://youtu.be/TvQ9AbWVuTU?si=9XMDStk1kadrUYw0"
+  },
+  {
+    "title": "لماذا يجب تخصيص وقت للقراءة يوميًا؟",
+    "type": "article",
+    "url": "https://labibliomaniaque.ca/2016/08/31/pourquoi-prendre-le-temps-de-lire-chaque-jour/"
+  },
+  {
+    "title": "فوائد القراءة",
+    "type": "bonus",
+    "url": "https://www.rts.ch/audio-podcast/2023/audio/les-bienfaits-de-la-lecture-27448117.html"
+  }
+]
+,
     "illustrationSuggeree": "شخص جالس على أريكة يقرأ كتابًا بانسجام.",
     "imageHelper": "https://firebasestorage.googleapis.com/v0/b/challengeme-d7fef.appspot.com/o/Challenges-Helper%2Fch-read-chapter.png?alt=media"
   },
@@ -2540,22 +2742,23 @@
       "مثال 4 🌱: استخدم شفرات حلاقة قابلة لإعادة الاستخدام بدلاً من الشفرات البلاستيكية."
     ],
     "ressources": [
-      {
-        "title": "50 فكرة لتقليل استخدام البلاستيك",
-        "type": "video",
-        "url": "https://www.youtube.com/watch?v=abc123"
-      },
-      {
-        "title": "10 طرق لتقليل البلاستيك في حياتك اليومية",
-        "type": "article",
-        "url": "https://www.ecowatch.com/reduce-plastic-use-2318016334.html"
-      },
-      {
-        "title": "بودكاست: الحياة بدون بلاستيك - تحدي يومي",
-        "type": "bonus",
-        "url": "https://www.deezer.com/fr/show/80072"
-      }
-    ],
+  {
+    "title": "كيف تقلل من استهلاكك للبلاستيك؟",
+    "type": "video",
+    "url": "https://youtu.be/6f68f8phQLY?si=ajJJ2GtO9UYgiY-X"
+  },
+  {
+    "title": "10 طرق لتقليل استخدام البلاستيك في حياتك اليومية",
+    "type": "article",
+    "url": "https://lespetitsbidons.fr/blogs/news/10-conseils-pour-reduire-sa-consommation-de-plastique"
+  },
+  {
+    "title": "كوكب مختنق بالبلاستيك - ما هي الحلول؟",
+    "type": "bonus",
+    "url": "https://www.radiofrance.fr/franceculture/podcasts/de-cause-a-effets-le-magazine-de-l-environnement/une-planete-asphyxiee-de-plastique-quelles-solutions-5340104"
+  }
+]
+,
     "illustrationSuggeree": "صورة توضح منتجات بلاستيكية وأخرى مستدامة كبدائل صديقة للبيئة.",
     "imageHelper": "https://firebasestorage.googleapis.com/v0/b/challengeme-d7fef.appspot.com/o/Challenges-Helper%2Fch-reduce-plastic.png?alt=media"
   },
@@ -2568,22 +2771,23 @@
       "مثال 4 🌱: استمع إلى موسيقى هادئة أو أصوات الطبيعة."
     ],
     "ressources": [
-      {
-        "title": "تأثير الضوء الأزرق على النوم",
-        "type": "video",
-        "url": "https://www.youtube.com/watch?v=somelink"
-      },
-      {
-        "title": "تقنيات لتحسين النوم",
-        "type": "article",
-        "url": "https://www.someOtherLink.com"
-      },
-      {
-        "title": "تأمل موجه للنوم",
-        "type": "podcast",
-        "url": "https://www.somePodcastLink.com"
-      }
-    ],
+  {
+    "title": "التغلب على إدمان الهاتف",
+    "type": "video",
+    "url": "https://youtu.be/HSeF86blL7Y?si=ieSLc2SYAUVkConf"
+  },
+  {
+    "title": "الحد من وقت الشاشة",
+    "type": "article",
+    "url": "https://naitreetgrandir.com/fr/nouvelles/2023/12/04/limiter-temps-ecran-important/"
+  },
+  {
+    "title": "نصائحنا لتقليل وقت الشاشة",
+    "type": "podcast",
+    "url": "https://www.radiofrance.fr/franceinter/podcasts/l-info-de-france-inter/l-info-de-france-inter-8230190"
+  }
+]
+,
     "illustrationSuggeree": "شخص يُطفئ الحاسوب المحمول ويُشعل مصباحًا للقراءة.",
     "imageHelper": "https://firebasestorage.googleapis.com/v0/b/challengeme-d7fef.appspot.com/o/Challenges-Helper%2Fch-reduce-screen-time.png?alt=media"
   },
@@ -2596,22 +2800,23 @@
       "مثال 4 🌱: اقضِ أمسية في المنزل مع كتاب جيد 📚 بدلاً من الذهاب للسينما بـ15 دولارًا."
     ],
     "ressources": [
-      {
-        "title": "كيف تدخر المال للمبتدئين",
-        "type": "video",
-        "url": "http://lienverslavidéo.com"
-      },
-      {
-        "title": "7 طرق بسيطة لتوفير المال يوميًا",
-        "type": "article",
-        "url": "http://lienverslarticle.com"
-      },
-      {
-        "title": "بودكاست: تحقيق الحرية المالية بتوفير 5 دولارات يوميًا",
-        "type": "bonus",
-        "url": "http://lienverslepodecast.com"
-      }
-    ],
+  {
+    "title": "كيفية توفير المال بسرعة",
+    "type": "video",
+    "url": "https://youtu.be/4TU9xB5ttYo?si=P1qE-3sujLTu2LZF"
+  },
+  {
+    "title": "نصائح لتوفير المال",
+    "type": "article",
+    "url": "https://www.mesquestionsdargent.fr/budget/comment-faire-des-economies/astuces-economies-accessible"
+  },
+  {
+    "title": "التوفير اليومي - بودكاست",
+    "type": "bonus",
+    "url": "https://www.radiofrance.fr/francebleu/podcasts/france-bleu-paris-bienvenue-chez-vous-les-experts/des-astuces-simples-pour-faire-des-economies-au-quotidien-8148632"
+  }
+]
+,
     "illustrationSuggeree": "حصّالة نقود على طاولة مع بعض العملات بجانبها.",
     "imageHelper": "https://firebasestorage.googleapis.com/v0/b/challengeme-d7fef.appspot.com/o/Challenges-Helper%2Fch-save-money.png?alt=media"
   },
@@ -2624,22 +2829,23 @@
       "مثال 4 🌱: راقب مشاعرك خلال اليوم: كيف كانت حالتك النفسية؟ ماذا يمكنك تحسينه غدًا؟"
     ],
     "ressources": [
-      {
-        "title": "كيفية ممارسة التأمل الذاتي اليومي",
-        "type": "video",
-        "url": "https://youtube.com/votreURLunique"
-      },
-      {
-        "title": "5 أسئلة تساعدك على التأمل الذاتي الفعال",
-        "type": "article",
-        "url": "https://votreBlog.com/votreURLunique"
-      },
-      {
-        "title": "بودكاست: أهمية التأمل الذاتي للتطور الشخصي",
-        "type": "bonus",
-        "url": "https://votreSitePodcast.com/votreURLunique"
-      }
-    ],
+  {
+    "title": "أهمية التأمل الذاتي",
+    "type": "video",
+    "url": "https://youtu.be/CVsAaRPf60E?si=i_KZ3i5MKUBpZBJ5"
+  },
+  {
+    "title": "التأمل الذاتي مفتاح للنمو الشخصي",
+    "type": "article",
+    "url": "https://nospensees.fr/lauto-reflexion-cle-de-croissance-personnelle-de-liberte-emotionnelle/"
+  },
+  {
+    "title": "بودكاستات حول التأمل الذاتي",
+    "type": "bonus",
+    "url": "https://podcast.feedspot.com/self_reflection_podcasts/"
+  }
+]
+,
     "illustrationSuggeree": "شخص يكتب في دفتر يوميات على مكتبه في نهاية اليوم.",
     "imageHelper": "https://firebasestorage.googleapis.com/v0/b/challengeme-d7fef.appspot.com/o/Challenges-Helper%2Fch-self-reflection.png?alt=media"
   },
@@ -2651,23 +2857,24 @@
       "ناقش آخر الأخبار مع شخص في الحديقة 🍃.",
       "امتدح ملابس زميلك لبدء محادثة ودية 👔."
     ],
-    "ressources": [
-      {
-        "title": "ابدأ محادثة: 5 أشياء يمكن قولها بعد التحية",
-        "type": "video",
-        "url": "https://youtu.be/DH6IIlxPh7w"
-      },
-      {
-        "title": "10 طرق سهلة وفعالة لبدء محادثة",
-        "type": "article",
-        "url": "https://www.medium.com/10-astuces-pour-entamer-une-conversation"
-      },
-      {
-        "title": "بودكاست: فن الحديث - مفاتيح التواصل الفعال",
-        "type": "bonus",
-        "url": "https://www.spotify.com/art-de-la-conversation"
-      }
-    ],
+   "ressources": [
+  {
+    "title": "إتقان فن المحادثة",
+    "type": "video",
+    "url": "https://youtu.be/HYQ4ZjylHEU?si=sonikOMisf7bwb4Z"
+  },
+  {
+    "title": "التواصل الفعّال في 10 خطوات",
+    "type": "article",
+    "url": "https://timidite.info/agir/apprendre-a-mieux-communiquer/"
+  },
+  {
+    "title": "حديث عابر - بودكاست",
+    "type": "bonus",
+    "url": "https://podcast.ausha.co/100-reseau/le-small-talk-comment-engager-une-conversation"
+  }
+]
+,
     "illustrationSuggeree": "شخص يفتح محادثة مع غريب في مقهى.",
     "imageHelper": "https://firebasestorage.googleapis.com/v0/b/challengeme-d7fef.appspot.com/o/Challenges-Helper%2Fch-talk-to-stranger.png?alt=media"
   },
@@ -2680,22 +2887,23 @@
       "مثال 4 🌱: دان براون يكتب يوميًا في الساعة 4 صباحًا دون استثناء."
     ],
     "ressources": [
-      {
-        "title": "لماذا أستيقظ الساعة 5 صباحًا يوميًا",
-        "type": "video",
-        "url": "https://www.youtube.com/watch?v=bEr0uEqbyV8"
-      },
-      {
-        "title": "كيفية الاستيقاظ مبكرًا في الخامسة صباحًا",
-        "type": "article",
-        "url": "https://www.wikihow.com/Wake-Up-Early"
-      },
-      {
-        "title": "قوة الاستيقاظ المبكر | بودكاست روبن شارما",
-        "type": "bonus",
-        "url": "https://www.robinsharma.com/podcast/02-the-5am-club/"
-      }
-    ],
+  {
+    "title": "لماذا أستيقظ كل يوم في الساعة 5 صباحًا؟",
+    "type": "video",
+    "url": "https://youtu.be/pg2GnMwpePo?si=cf66E-ptBf8cJDSE"
+  },
+  {
+    "title": "لماذا يجب الاستيقاظ مبكرًا؟",
+    "type": "article",
+    "url": "https://www.tediber.com/conseils/lit/pourquoi-lever-tot"
+  },
+  {
+    "title": "هل العالم ملك لمن يستيقظون باكرًا؟",
+    "type": "bonus",
+    "url": "https://www.radiofrance.fr/franceculture/podcasts/la-question-du-jour/le-matin-appartient-il-a-ceux-qui-se-levent-tot-2077852"
+  }
+]
+,
     "illustrationSuggeree": "ساعة توقظ في الخامسة صباحًا مع شروق الشمس في الخلفية.",
     "imageHelper": "https://firebasestorage.googleapis.com/v0/b/challengeme-d7fef.appspot.com/o/Challenges-Helper%2Fch-wake-up-5am.png?alt=media"
   },
@@ -2708,22 +2916,23 @@
       "مثال 4 🌱: أوليفييه يمشي بعد العشاء لتحسين الهضم وتحقيق هدفه 👌."
     ],
     "ressources": [
-      {
-        "title": "كيف تمشي 10,000 خطوة في اليوم؟",
-        "type": "video",
-        "url": "https://www.youtube.com/watch?v=abc"
-      },
-      {
-        "title": "فوائد المشي 10,000 خطوة يوميًا",
-        "type": "article",
-        "url": "https://www.healthbenefitsofwalking.com/articles"
-      },
-      {
-        "title": "تحدي 10000 خطوة، نصائح لمساعدتك",
-        "type": "podcast",
-        "url": "https://www.walkmorepodcast.com/episode10"
-      }
-    ],
+  {
+    "title": "المشي 10,000 خطوة في اليوم",
+    "type": "video",
+    "url": "https://youtu.be/CNGG-amQsyw?si=FMc11PXozuxTuV5u"
+  },
+  {
+    "title": "هل من الضروري حقًا المشي 10,000 خطوة في اليوم؟",
+    "type": "article",
+    "url": "https://www.nationalgeographic.fr/sciences/sante-recommandations-sante-faut-il-reellement-faire-10000-pas-par-jour"
+  },
+  {
+    "title": "كيف يمكن أن يساعدك المشي 10,000 خطوة يوميًا؟",
+    "type": "podcast",
+    "url": "https://podcast.ausha.co/sport-sante-nutrition-podcast/comment-10-000-pas-par-jour-peuvent-t-aider-a-perdre-du-gras-et-etre-en-meilleure-sante"
+  }
+]
+,
     "illustrationSuggeree": "شخص ينظر إلى عداد الخطوات على هاتفه في حديقة خضراء.",
     "imageHelper": "https://firebasestorage.googleapis.com/v0/b/challengeme-d7fef.appspot.com/o/Challenges-Helper%2Fch-walk-1000-pas.png?alt=media"
   },
@@ -2736,22 +2945,23 @@
       "مثال 4 🌱: التمدد لمدة 15 دقيقة قبل النوم."
     ],
     "ressources": [
-      {
-        "title": "يوغا صباحية لمدة 15 دقيقة للمبتدئين 🌞",
-        "type": "video",
-        "url": "https://www.youtube.com/watch?v=VaoV1PrYft4"
-      },
-      {
-        "title": "فوائد التمرين: لماذا النشاط البدني جيد للصحة",
-        "type": "article",
-        "url": "https://www.medicalnewstoday.com/articles/153390"
-      },
-      {
-        "title": "بودكاست حول علم التمارين",
-        "type": "bonus",
-        "url": "https://www.listennotes.com/c/4e8e3e8bcbf1486496206829f7d42e8e/"
-      }
-    ],
+  {
+    "title": "الرياضة الصباحية لبدء اليوم",
+    "type": "video",
+    "url": "https://youtu.be/nHzveG3uyho?si=EWTmvbnKTm-0LvGH"
+  },
+  {
+    "title": "فوائد ممارسة الرياضة",
+    "type": "article",
+    "url": "https://www.medicalnewstoday.com/articles/153390"
+  },
+  {
+    "title": "ممارسة الرياضة - بودكاست",
+    "type": "bonus",
+    "url": "https://www.radiofrance.fr/franceculture/podcasts/serie-faites-du-sport"
+  }
+]
+,
     "illustrationSuggeree": "شخص يتمرن في المنزل.",
     "imageHelper": "https://firebasestorage.googleapis.com/v0/b/challengeme-d7fef.appspot.com/o/Challenges-Helper%2Fch-workout.png?alt=media"
   },
@@ -2893,6 +3103,10 @@
       "title": "مرحبًا بك في ChallengeTies!",
       "description": "اكتشف مغامرة فريدة وتحديات مثيرة ومجتمعًا ملهمًا. هل أنت مستعد للتحدي؟"
     },
+    "videoStep": {
+    "title": "مرحبًا بك في التحدي 🎯",
+    "description": "هنا يمكنك قبول التحدي، متابعة تقدمك، عرض إحصائياتك... والأهم من ذلك، الوصول إلى نصائح، أمثلة ملموسة، وموارد صوتية أو مرئية لمساعدتك على النجاح 💡🔥"
+  },
     "index": {
       "title": "اكتشف الأساسيات",
       "description": "استكشف التحديات الشائعة، تحقق من قائمة المتصدرين، اكتشف الميزات الجديدة، اقترح أفكارًا، واحصل على نصائح مفيدة للتقد"

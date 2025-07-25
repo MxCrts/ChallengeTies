@@ -202,6 +202,8 @@
     "voteRegisteredTitle": "Voto registrado",
     "voteRegisteredMessage": "¡Gracias por tu voto!",
     "voteErrorTitle": "Error",
+    "by": "por",
+  "votes": "votos",
     "voteErrorMessage": "Algo salió mal.",
     "proposalSentTitle": "Propuesta enviada",
     "proposalSentMessage": "¡Tu idea ha sido enviada con tu voto!",
@@ -209,7 +211,7 @@
     "proposalErrorMessage": "No se pudo enviar.",
     "title": "Novedades",
     "openExplanation": "Abrir explicación de votación",
-    "description": "¡Vota por la próxima función a implementar o propone la tuya propia! Termina el 30 de abril de 2025.",
+"description": "¡Vota por la próxima función o propón la tuya! Finaliza el 30 de agosto de 2025.",
     "noFeatures": "No hay características disponibles por el momento.",
     "proposeIdea": "Proponer una idea",
     "thankYouForVote": "Gracias por tu voto: {{featureTitle}}",
@@ -558,7 +560,9 @@
     "votes": "{{count}} voto",
     "votes_plural": "{{count}} votos",
     "vote": "Votar",
-    "alreadyVoted": "Ya has votado."
+    "alreadyVoted": "Ya has votado.",
+    "share": "Compartir"
+
   },
   "durationModal": {
     "title": "Elige la duración (días)",
@@ -1180,20 +1184,20 @@
     ],
     "ressources": [
       {
-        "title": "Introducción a la alimentación consciente",
-        "type": "video",
-        "url": ""
-      },
-      {
-        "title": "Pasos para practicar la alimentación consciente",
-        "type": "article",
-        "url": ""
-      },
-      {
-        "title": "Podcast: La alimentación consciente y su impacto en la salud",
-        "type": "bonus",
-        "url": ""
-      }
+    "title": "El Poder de la Alimentación Consciente - TedXTalks",
+    "type": "video",
+    "url": "https://youtu.be/fAm4r4FQMQM?si=QeEswp-Yz4Zkccfl"
+  },
+  {
+    "title": "¿Cómo aplicar realmente la Alimentación Consciente?",
+    "type": "article",
+    "url": "https://youtu.be/otNX8RVn6-U?si=7bY2EJsvYojwgJW3"
+  },
+  {
+    "title": "De una Alimentación Automática a una Consciente",
+    "type": "bonus",
+    "url": "https://www.eufic.org/fr/une-vie-saine/article/dune-alimentation-machinale-a-une-alimentation-consciente/"
+  }
     ]
   },
   "challengeCommunication": {
@@ -1205,22 +1209,18 @@
       "Organiza un café virtual ☕ o una videollamada con un primo lejano. Hablen de su infancia compartida y cuenten sus nuevas aventuras 🌱"
     ],
     "ressources": [
-      {
-        "title": "Cómo reconectar con antiguas relaciones",
-        "type": "video",
-        "url": "https://youtube.url"
-      },
-      {
-        "title": "La importancia de los vínculos sociales para el bienestar",
-        "type": "article",
-        "url": "https://article.url"
-      },
-      {
-        "title": "Guía práctica para mantener el contacto con amigos",
-        "type": "bonus",
-        "url": "https://guide.url"
-      }
-    ]
+  {
+    "title": "Reconectar con viejos amigos",
+    "type": "video",
+    "url": "https://www.slate.fr/story/267116/technique-renouer-liens-anciens-amis-amitie-psychologie-sociale-etude-scientifique"
+  },
+  {
+    "title": "La importancia de los lazos sociales para el bienestar",
+    "type": "article",
+    "url": "https://www.cequinousrelie.com/prendre-soin/le-bien-etre-par-le-lien-social/"
+  }
+]
+
   },
   "challengeDes3Sourires": {
     "miniCours": "El arte de sonreír puede parecer algo básico, pero una sonrisa genuina puede alegrarle el día a alguien 😊. Cada día, proponte dar una sonrisa a tres personas diferentes. Puede ser en una cafetería, en la calle o incluso frente al espejo. No solo difunde alegría, también tiene un impacto positivo en ti, liberando endorfinas que te hacen sentir mejor. Intenta que las sonrisas sean sinceras, no forzadas. ¡La autenticidad es la clave! 👍",
@@ -1231,22 +1231,23 @@
       "Ejemplo 4 🌱: Antes de salir de un autobús o metro, sonríe al conductor y dile adiós."
     ],
     "ressources": [
-      {
-        "title": "El poder de la sonrisa | Ron Gutman",
-        "type": "video",
-        "url": "https://www.youtube.com/watch?v=U9cGdRNMdQQ"
-      },
-      {
-        "title": "7 beneficios de sonreír y reír",
-        "type": "article",
-        "url": "https://www.lifehack.org/articles/communication/7-benefits-smiling-and-laughing.html"
-      },
-      {
-        "title": "Cómo usar la sonrisa para generar confianza",
-        "type": "bonus",
-        "url": "https://www.psychologytoday.com/intl/blog/sideways-view/202005/using-smiles-foster-trust"
-      }
-    ]
+  {
+    "title": "El poder oculto de la sonrisa | Ron Gutman",
+    "type": "video",
+    "url": "https://www.youtube.com/watch?v=U9cGdRNMdQQ"
+  },
+  {
+    "title": "7 beneficios de sonreír y reír",
+    "type": "article",
+    "url": "https://www.lifehack.org/articles/communication/7-benefits-smiling-and-laughing.html"
+  },
+  {
+    "title": "Los beneficios de la sonrisa",
+    "type": "bonus",
+    "url": "https://youtu.be/abFAazci84s?si=rpL-37dpK4sBum-y"
+  }
+]
+
   },
   "challengeEcritureCreative": {
     "miniCours": "👩‍🏫 ¡Bienvenido a este mini reto de aprendizaje! Vas a desarrollar tu creatividad escribiendo una historia ficticia de 500 palabras cada día. 📝 No necesitas ser el próximo Stephen King, lo importante es dejar volar tu imaginación y disfrutar el proceso. 🌈 Recuerda, la creatividad es como un músculo: cuanto más la entrenas, más crece. 🏋️‍♂️ Toma tu bolígrafo o tu teclado y deja que fluyan las palabras. Intenta incluir elementos variados como diálogos, descripciones ricas y diferentes tipos de personajes para enriquecer tu historia. 💓",
@@ -1257,22 +1258,23 @@
       "Ejemplo 4 🌱 – 'El bosque que susurraba': una historia donde la naturaleza cobra vida y habla con sus habitantes."
     ],
     "ressources": [
-      {
-        "title": "Cómo escribir una historia cautivadora",
-        "type": "video",
-        "url": "https://www.youtube.com/watch?v=KzjmiyVv8wA"
-      },
-      {
-        "title": "10 consejos para estimular tu creatividad al escribir",
-        "type": "article",
-        "url": "https://www.medium.com/@votrecreativite/10-conseils"
-      },
-      {
-        "title": "Podcast: Escritores famosos comparten sus técnicas",
-        "type": "bonus",
-        "url": "https://www.soundcloud.com/techniques-ecriture"
-      }
-    ]
+  {
+    "title": "¿Cómo escribir una historia?",
+    "type": "video",
+    "url": "https://youtu.be/5pdx1Y3l0vg?si=xvOOmaYzEXMfdmBK"
+  },
+  {
+    "title": "Consejos para potenciar tu creatividad como escritor",
+    "type": "article",
+    "url": "https://www.laparentheseimaginaire.com/ecriture/8-conseils-pour-developper-votre-creativite-decrivain"
+  },
+  {
+    "title": "Podcast de escritores famosos compartiendo sus técnicas",
+    "type": "bonus",
+    "url": "https://www.academie.les-mots-ratures.com/blog/meilleurs-podcasts-ecriture-ecrivains-romans-guide-2024"
+  }
+]
+
   },
 
   "challengeGestionTemps": {
@@ -1284,10 +1286,23 @@
       "Ejemplo 4 🌱: Usa las pausas para cuidarte: hidrátate, estírate o despeja la mente."
     ],
     "ressources": [
-      { "title": "¿Cómo usar la técnica Pomodoro?", "type": "video", "url": "" },
-      { "title": "Gestión del tiempo con Pomodoro", "type": "article", "url": "" },
-      { "title": "Podcast: ¿Es realmente efectiva la técnica Pomodoro?", "type": "bonus", "url": "" }
-    ]
+  {
+    "title": "Técnica Pomodoro",
+    "type": "video",
+    "url": "https://www.youtube.com/watch?v=mNBmG24djoY&t=19s"
+  },
+  {
+    "title": "Cómo dominar el arte de la gestión del tiempo",
+    "type": "article",
+    "url": "https://youtu.be/s8tOj43JC-o?si=ii4G0MT0UFSedclZ"
+  },
+  {
+    "title": "Gestionar bien tu tiempo",
+    "type": "bonus",
+    "url": "https://asana.com/fr/resources/time-management-tips"
+  }
+]
+
   },
 
   "challengeJeuneIntermittent": {
@@ -1299,22 +1314,23 @@
       "Ejemplo 4 🌱: Evita los alimentos ultraprocesados y prioriza alimentos reales y naturales."
     ],
     "ressources": [
-      {
-        "title": "Conceptos básicos del ayuno intermitente",
-        "type": "video",
-        "url": "https://www.youtube.com/watch?v=xyz123"
-      },
-      {
-        "title": "¿Cómo comenzar el ayuno intermitente?",
-        "type": "article",
-        "url": "https://www.example.com/blog/jeune-intermittent"
-      },
-      {
-        "title": "Podcast: Beneficios del ayuno intermitente",
-        "type": "bonus",
-        "url": "https://www.example.com/podcast/12"
-      }
-    ]
+  {
+    "title": "Ayuno intermitente – Cómo hacerlo",
+    "type": "video",
+    "url": "https://youtu.be/pl37cnIOnKw?si=NChrVL6wZq8NqWTI"
+  },
+  {
+    "title": "Ayuno intermitente – Una limpieza celular",
+    "type": "article",
+    "url": "https://www.pasteur.fr/fr/journal-recherche/actualites/jeune-intermittent-nettoyage-cellulaire-meilleure-sante"
+  },
+  {
+    "title": "Podcast: Los beneficios del ayuno intermitente",
+    "type": "bonus",
+    "url": "https://www.radiofrance.fr/franceinter/podcasts/grand-bien-vous-fasse/grand-bien-vous-fasse-du-lundi-25-novembre-2024-1998229"
+  }
+]
+
   },
 
   "challengeLectureSurprise": {
@@ -1326,22 +1342,23 @@
       "Ejemplo 4 🌱: También puedes hacerlo con ebooks o audiolibros. La lectura aleatoria digital también puede ser inspiradora."
     ],
     "ressources": [
-      {
-        "title": "Los beneficios de la lectura",
-        "type": "video",
-        "url": "https://www.youtube.com/watch?v=lg31XrHm3vA&ab_channel=TEDxTalks"
-      },
-      {
-        "title": "¿Por qué deberías dar prioridad a la lectura?",
-        "type": "article",
-        "url": "https://www.entrepreneur.com/article/315636"
-      },
-      {
-        "title": "Ebook: Un paseo aleatorio por la ciencia",
-        "type": "bonus",
-        "url": "https://www.goodreads.com/book/show/663986.A_Random_Walk_in_Science"
-      }
-    ]
+  {
+    "title": "La lectura transforma tu cerebro",
+    "type": "video",
+    "url": "https://youtu.be/TvQ9AbWVuTU?si=UjevxYORwzkqhDVI"
+  },
+  {
+    "title": "Los beneficios de la lectura",
+    "type": "article",
+    "url": "https://www.decitre.fr/blog/bienfaits-de-la-lecture?srsltid=AfmBOopSa-39BXUeD35rWw5ob-MvRtEsIQy2d7CnIYwdn-06HhvpDkvR"
+  },
+  {
+    "title": "¿Qué beneficios nos aporta la lectura?",
+    "type": "bonus",
+    "url": "https://www.podcastics.com/podcast/episode/quels-bienfaits-nous-apporte-la-lecture-329681/"
+  }
+]
+
   },
 
   "challengeModeAvion": {
@@ -1353,22 +1370,18 @@
       "Ejemplo 4 🌱: Da un paseo por la naturaleza y conéctate contigo sin distracciones digitales."
     ],
     "ressources": [
-      {
-        "title": "El poder del modo avión",
-        "type": "video",
-        "url": "https://www.youtube.com/watch?v=xyz123"
-      },
-      {
-        "title": "¿Por qué deberías pasar una hora diaria en modo avión?",
-        "type": "article",
-        "url": "https://www.huffpost.com/articles"
-      },
-      {
-        "title": "Podcast: Desconectar para reconectar",
-        "type": "bonus",
-        "url": "https://www.podcast.com/episode123"
-      }
-    ]
+  {
+    "title": "Entender el modo avión",
+    "type": "video",
+    "url": "https://youtu.be/xW1nPijFqk4?si=Cfq_lLmOP93VH_GR"
+  },
+  {
+    "title": "Buenas razones para activar el modo avión",
+    "type": "article",
+    "url": "https://leclaireur.fnac.com/article/cp33801-5-bonnes-raisons-de-passer-votre-smartphone-en-mode-avion/"
+  }
+]
+
   },
   "challengeOrganisationDigitale": {
     "miniCours": "La organización digital es un acto de equilibrio 🎪 pero esencial para una productividad saludable 🎯. Con solo 15 minutos al día 🕒 puedes ahorrarte horas más adelante. 🚀 Comienza clasificando tus correos por prioridad 📧 usando carpetas para los mensajes de baja importancia. 🕵️‍♀️ Luego organiza tus archivos de forma lógica según tus necesidades diarias: crea carpetas y subcarpetas, y nombra los archivos claramente para encontrarlos rápido. Mantener un espacio digital ordenado puede parecer abrumador, ¡pero pequeños pasos diarios llevan a eficiencia sin estrés! 🌈",
@@ -1379,10 +1392,23 @@
       "Ejemplo 4 🌱: Usa atajos de teclado para ganar tiempo al navegar y mover archivos."
     ],
     "ressources": [
-      { "title": "Cómo organizar archivos en tu ordenador", "type": "video", "url": "https://example.com/video1" },
-      { "title": "Buenas prácticas para carpetas organizadas", "type": "article", "url": "https://example.com/article1" },
-      { "title": "Guía definitiva para limpiar tu espacio digital", "type": "bonus", "url": "https://example.com/bonus1" }
-    ],
+  {
+    "title": "Cómo organizar tus archivos en la computadora",
+    "type": "video",
+    "url": "https://youtu.be/Z_4jyyPixD4?si=cQHEQuncUUB_5-2W"
+  },
+  {
+    "title": "Ventajas de la gestión de archivos",
+    "type": "article",
+    "url": "https://www.acollab.com/quels-sont-les-7-avantages-dune-gestion-de-fichiers/"
+  },
+  {
+    "title": "Despejar tu espacio digital",
+    "type": "bonus",
+    "url": "https://podcasts.apple.com/fr/podcast/22-d%C3%A9tox-digitale-3-conseils-pour-d%C3%A9sencombrer-ton/id1736480617?i=1000664554079"
+  }
+]
+,
     "illustrationSuggeree": "Un escritorio con un ordenador que muestra carpetas bien organizadas en el escritorio digital",
     "imageHelper": "https://firebasestorage.googleapis.com/v0/b/challengeme-d7fef.appspot.com/o/Challenges-Helper%2Fch-organisation-digitale.png?alt=media"
   },
@@ -1396,10 +1422,23 @@
       "Ejemplo 4 🌱: Sustituye “Soy un desastre” por “Estoy aprendiendo y mejorando cada día”."
     ],
     "ressources": [
-      { "title": "El poder de la autosugestión positiva", "type": "video", "url": "" },
-      { "title": "Cómo convertir pensamientos negativos en positivos", "type": "article", "url": "" },
-      { "title": "Podcast: Método Coué – pensar en positivo para una vida feliz", "type": "bonus", "url": "" }
-    ],
+  {
+    "title": "El poder del pensamiento positivo",
+    "type": "video",
+    "url": "https://youtu.be/qo19BMD4i98?si=ELJYB6Ty_aNbWb08"
+  },
+  {
+    "title": "Las claves del pensamiento positivo",
+    "type": "article",
+    "url": "https://epycure.com/blogs/journal-feel-good/les-8-cles-de-la-pensee-positive?srsltid=AfmBOor4uLL7BvQoA0iSLLm8BYzghp_qNhXa8ZAA9rwrcbV1me1it31o"
+  },
+  {
+    "title": "Cómo liberarse de los pensamientos negativos",
+    "type": "bonus",
+    "url": "https://youtu.be/2RZ9vqEfyCI?si=pOusiyI7RrZssiPc"
+  }
+]
+,
     "illustrationSuggeree": "Persona escribiendo pensamientos positivos en un cuaderno",
     "imageHelper": "https://firebasestorage.googleapis.com/v0/b/challengeme-d7fef.appspot.com/o/Challenges-Helper%2Fch-pensee-positive.png?alt=media"
   },
@@ -1413,10 +1452,23 @@
       "Ejemplo 4 🌱: Mark planifica no solo su trabajo, sino también sus momentos de descanso. Programa entrenamientos 🏋️ y actividades de ocio 🧗 para mantener el equilibrio."
     ],
     "ressources": [
-      { "title": "Cómo planificar tu semana efectivamente", "type": "video", "url": "https://www.example.com/planification_efficace" },
-      { "title": "7 beneficios de la planificación semanal", "type": "article", "url": "https://www.example.com/blog/avantages_planification_hebdomadaire" },
-      { "title": "Podcast: estrategias de planificación semanal", "type": "bonus", "url": "https://www.example.com/podcast/strategies_planification_hebdomadaire" }
-    ],
+  {
+    "title": "Cómo planificar eficazmente tu semana",
+    "type": "video",
+    "url": "https://youtu.be/jozNEpY8iik?si=HtP-7UG3qP2we-hH"
+  },
+  {
+    "title": "¿Cómo planificar tu semana?",
+    "type": "article",
+    "url": "https://www.appytodo.com/comment-planifier-semaine/"
+  },
+  {
+    "title": "Productividad",
+    "type": "bonus",
+    "url": "https://youtu.be/2uAvargJv0k?si=Y8eQu93930jlm4Wz"
+  }
+]
+,
     "illustrationSuggeree": "Persona sentada en un escritorio con cuaderno abierto planificando la próxima semana",
     "imageHelper": "https://firebasestorage.googleapis.com/v0/b/challengeme-d7fef.appspot.com/o/Challenges-Helper%2Fch-planification-hebdomadaire.png?alt=media"
   },
@@ -1430,10 +1482,23 @@
       "Ejemplo 4 🌱: Quédate bajo el agua fría al menos 30 segundos para sentir sus efectos en cuerpo y mente."
     ],
     "ressources": [
-      { "title": "Beneficios de las duchas frías", "type": "video", "url": "https://www.youtube.com/watch?v=sqmrof6o0gk" },
-      { "title": "¿Por qué deberías ducharte con agua fría a diario?", "type": "article", "url": "https://www.healthline.com/health/cold-shower-benefits" },
-      { "title": "Desafío ducha fría: episodio sobre beneficios y consejos", "type": "podcast", "url": "https://open.spotify.com/show/4rFsMgQhE9swoiKk7PeiYw" }
-    ],
+  {
+    "title": "Cómo tomar duchas frías más fácilmente",
+    "type": "video",
+    "url": "https://youtu.be/sy4ATccOm2Y?si=GF66WoqndmAhF2om"
+  },
+  {
+    "title": "Los beneficios de las duchas frías",
+    "type": "article",
+    "url": "https://laboratoires-phytoceutic.com/blogs/news/10-bienfaits-de-la-douche-froide?srsltid=AfmBOopQYq_J-sF5wQpr1hMjlvsWIHCJ4IA_9HXA3G6Chm7W2-xYdPzA"
+  },
+  {
+    "title": "Ducha fría, resiliencia, baño helado",
+    "type": "podcast",
+    "url": "https://www.podcastics.com/podcast/episode/douche-froide-resilience-bain-glaceavec-maxime-frost-304582/"
+  }
+]
+,
     "illustrationSuggeree": "Persona bajo una ducha con agua fría que revigoriza cuerpo y mente",
     "imageHelper": "https://firebasestorage.googleapis.com/v0/b/challengeme-d7fef.appspot.com/o/Challenges-Helper%2Fch-douche-froide.png?alt=media"
   },
@@ -1447,10 +1512,23 @@
       "Ejemplo 4 🌱: «Realmente aprecio la energía positiva que aportas a nuestro equipo.»"
     ],
     "ressources": [
-      { "title": "Cómo dar cumplidos efectivos", "type": "video", "url": "https://example.com/video_compliment_keys" },
-      { "title": "El arte de los cumplidos sinceros", "type": "article", "url": "https://example.com/article_sincere_compliment" },
-      { "title": "Beneficios psicológicos de los cumplidos sinceros", "type": "podcast", "url": "https://example.com/podcast_compliment_benefits" }
-    ],
+  {
+    "title": "Los beneficios de los cumplidos",
+    "type": "video",
+    "url": "https://youtube.com/shorts/Pq0mBfooSKg?si=2bprdsj9FvQvYQyP"
+  },
+  {
+    "title": "¡Un pequeño cumplido alegra el día!",
+    "type": "article",
+    "url": "https://shop.simplycure.com/blogs/health-guide/les-bienfaits-des-compliments"
+  },
+  {
+    "title": "Dar o recibir cumplidos",
+    "type": "podcast",
+    "url": "https://podcast.chloebloom.com/episodes/faire-ou-recevoir-des-compliments-c-est-dur"
+  }
+]
+,
     "illustrationSuggeree": "Persona sonriendo y dando un cumplido a otra persona amablemente",
     "imageHelper": "https://firebasestorage.googleapis.com/v0/b/challengeme-d7fef.appspot.com/o/Challenges-Helper%2Fch-compliment.png?alt=media"
   },
@@ -1463,10 +1541,23 @@
       "Ejemplo 4 🌱 - Si tu objetivo es llevar una vida más saludable, imagínate preparando una comida equilibrada, haciendo ejercicio y sintiéndote más enérgico y feliz."
     ],
     "ressources": [
-      { "title": "El poder de la visualización", "type": "video", "url": "https://www.youtube.com/watch?v=b5i3vE4S2WQ" },
-      { "title": "Cómo la visualización diaria conduce al éxito", "type": "article", "url": "https://www.huffpost.com/entry/see-believe-achieve_b_890307" },
-      { "title": "Podcast sobre visualización y éxito", "type": "bonus", "url": "https://www.mindvalley.com/podcast/mindvalley-podcast/visualization-success-procedure-reality-transurfing" }
-    ],
+  {
+    "title": "Visualización – La ley de la atracción",
+    "type": "video",
+    "url": "https://youtu.be/7b80UgObUyQ?si=GJtDTWcwbQuWanzB"
+  },
+  {
+    "title": "Visualización e imágenes mentales",
+    "type": "article",
+    "url": "https://www.passeportsante.net/fr/Therapies/Guide/Fiche.aspx?doc=visualisation_th"
+  },
+  {
+    "title": "Visualización positiva",
+    "type": "bonus",
+    "url": "https://www.radiofrance.fr/franceinter/podcasts/etat-d-esprit/la-visualisation-positive-avec-alain-lancelot-2263321"
+  }
+]
+,
     "illustrationSuggeree": "Persona sentada en un entorno tranquilo, con los ojos cerrados, visualizando sus metas",
     "imageHelper": "https://firebasestorage.googleapis.com/v0/b/challengeme-d7fef.appspot.com/o/Challenges-Helper%2Fch-daily-visualisation.png?alt=media"
   },
@@ -1479,10 +1570,23 @@
       "Ejemplo 4 🌱: 'Me tomé el tiempo para cocinar una comida saludable para mí.'"
     ],
     "ressources": [
-      { "title": "El poder de celebrar pequeñas victorias", "type": "video", "url": "https://www.youtube.com/watch?v=c9KtG6aCtB4" },
-      { "title": "El poder de reconocer tus pequeñas victorias", "type": "article", "url": "https://www.tonyrobbins.com/stories/unleash-the-power/the-power-of-recognizing-your-small-wins/" },
-      { "title": "Podcast: La ciencia del éxito", "type": "bonus", "url": "https://www.scienceofsuccess.co/blog/the-science-of-small-wins" }
-    ],
+  {
+    "title": "Concéntrate en 3 logros diarios",
+    "type": "video",
+    "url": "https://youtu.be/N9RVuMunXIQ?si=g589bCqMnifcthhI"
+  },
+  {
+    "title": "El poder de los logros diarios",
+    "type": "article",
+    "url": "https://vocal.media/motivation/the-power-of-daily-wins-how-small-successes-lead-to-big-change"
+  },
+  {
+    "title": "Tu logro diario",
+    "type": "bonus",
+    "url": "https://podcasts.apple.com/us/podcast/your-daily-win/id1403606358"
+  }
+]
+,
     "illustrationSuggeree": "Persona escribiendo en su diario, con una taza de té a un lado —estrellas simbolizan los logros",
     "imageHelper": "https://firebasestorage.googleapis.com/v0/b/challengeme-d7fef.appspot.com/o/Challenges-Helper%2Fch-daily-wins.png?alt=media"
   },
@@ -1495,10 +1599,23 @@
       "Ejemplo 4 🌱: Usa una esterilla cómoda y un entorno tranquilo para tu práctica."
     ],
     "ressources": [
-      { "title": "Yoga para principiantes: 15 minutos para relajarte", "type": "video", "url": "" },
-      { "title": "La importancia de una práctica regular de yoga", "type": "article", "url": "" },
-      { "title": "Podcast: Yoga como estilo de vida", "type": "bonus", "url": "" }
-    ],
+  {
+    "title": "Clase de yoga para principiantes",
+    "type": "video",
+    "url": "https://youtu.be/3_rUl32CPbA?si=fmQlAL1kmuyx7UpZ"
+  },
+  {
+    "title": "Los beneficios del yoga",
+    "type": "article",
+    "url": "https://www.cerclesdelaforme.com/blog/coaching-sportif/les-5-bienfaits-du-yoga/"
+  },
+  {
+    "title": "Podcasts sobre yoga",
+    "type": "bonus",
+    "url": "https://ecolefrancaisedeyoga.fr/5-podcasts-a-decouvrir-sur-le-yoga/"
+  }
+]
+,
     "illustrationSuggeree": "Persona haciendo una postura de yoga al amanecer al aire libre",
     "imageHelper": "https://firebasestorage.googleapis.com/v0/b/challengeme-d7fef.appspot.com/o/Challenges-Helper%2Fch-daily-yoga.png?alt=media"
   },
@@ -1511,10 +1628,23 @@
       "Ejemplo 4 🌱: Ordena tu cocina—dona o elimina utensilios sin uso y organiza tu despensa de manera eficiente."
     ],
     "ressources": [
-      { "title": "Cómo despejar tu hogar para más claridad", "type": "video", "url": "http://example.com/video/désencombrer" },
-      { "title": "5 pasos para despejar tu espacio", "type": "article", "url": "http://example.com/article/désencombrer" },
-      { "title": "Podcast: El poder de despejar", "type": "bonus", "url": "http://example.com/podcast/désencombrer" }
-    ],
+  {
+    "title": "Despejar tu casa",
+    "type": "video",
+    "url": "https://youtu.be/oH_WlPxp4es?si=c1CBz2Ma715G9eMo"
+  },
+  {
+    "title": "Los beneficios de ordenar y despejar",
+    "type": "article",
+    "url": "https://laureganisatrice.fr/les-bienfaits-du-desencombrement-et-du-rangement/#:~:text=D%C3%A9sencombrer%20et%20ranger%20fait%20diminuer%20le%20stress&text=Il%20nous%20fait%20sans%20arr%C3%AAt,%C3%A0%20ce%20sentiment%20de%20culpabilit%C3%A9."
+  },
+  {
+    "title": "Clasificar, despejar y organizar",
+    "type": "bonus",
+    "url": "https://www.radiofrance.fr/francebleu/podcasts/cote-experts-l-invite/trier-desencombrer-et-organiser-votre-interieur-pour-alleger-votre-mental-1561486"
+  }
+]
+,
     "illustrationSuggeree": "Persona ordenando sus pertenencias, con una pila para conservar y otra para donar/tirar",
     "imageHelper": "https://firebasestorage.googleapis.com/v0/b/challengeme-d7fef.appspot.com/o/Challenges-Helper%2Fch-declutter-space.png?alt=media"
   },
@@ -1527,10 +1657,23 @@
       "Ejemplo 4 🌱: Celebra cada día sin tabaco—cada día es una semilla plantada para tu nueva vida."
     ],
     "ressources": [
-      { "title": "Charla sobre los riesgos del tabaco", "type": "video", "url": "https://youtu.be/StopSmoking" },
-      { "title": "10 métodos comprobados para dejar de fumar", "type": "article", "url": "https://www.stop-tabac.com" },
-      { "title": "Podcast: Mi experiencia dejando el hábito de fumar", "type": "bonus", "url": "https://www.quit-smoking-podcast.com" }
-    ],
+  {
+    "title": "Disfrutar al dejar de fumar",
+    "type": "video",
+    "url": "https://youtu.be/t9Sujfu5BsY?si=fcE48WX-mpBSyFBs"
+  },
+  {
+    "title": "Los beneficios de dejar de fumar",
+    "type": "article",
+    "url": "https://www.fedecardio.org/je-m-informe/les-benefices-immediats-de-l-arret-du-tabac/"
+  },
+  {
+    "title": "¿Y si REALMENTE dejaras de fumar?",
+    "type": "bonus",
+    "url": "https://www.radiofrance.fr/franceinter/podcasts/grand-bien-vous-fasse/grand-bien-vous-fasse-du-lundi-02-septembre-2024-9669868"
+  }
+]
+,
     "illustrationSuggeree": "Persona disfrutando un amanecer—símbolo de libertad y renovación",
     "imageHelper": "https://firebasestorage.googleapis.com/v0/b/challengeme-d7fef.appspot.com/o/Challenges-Helper%2Fch-arret-du-tabac.png?alt=media"
   },
@@ -1543,10 +1686,23 @@
       "Ejemplo 4 🌱 - Disfrutaste la belleza de una puesta de sol."
     ],
     "ressources": [
-      { "title": "El poder de la gratitud", "type": "video", "url": "https://youtube.com/vidéo1" },
-      { "title": "Por qué escribir un diario de gratitud", "type": "article", "url": "https://www.monarticle.com/1" },
-      { "title": "Podcast sobre el poder de la gratitud", "type": "bonus", "url": "https://www.monpodcast.com/1" }
-    ],
+  {
+    "title": "Comienza un diario de gratitud",
+    "type": "video",
+    "url": "https://youtu.be/GZghu_xFRM8?si=fChgmowBEpz2P-r9"
+  },
+  {
+    "title": "Cómo llevar un diario de gratitud",
+    "type": "article",
+    "url": "https://amandebasilic.com/journal-de-gratitude/"
+  },
+  {
+    "title": "Podcast Diario de Gratitud",
+    "type": "bonus",
+    "url": "https://podcasts.apple.com/fr/podcast/gratitude-journal/id1493974729"
+  }
+]
+,
     "illustrationSuggeree": "Una persona escribiendo en un diario con una sonrisa pacífica.",
     "imageHelper": "https://firebasestorage.googleapis.com/v0/b/challengeme-d7fef.appspot.com/o/Challenges-Helper%2Fch-carnet-gratitude.png?alt=media"
   },
@@ -1559,10 +1715,24 @@
       "Ejemplo 4 🌱: Meditar al aire libre en un jardín 🧘‍♀️"
     ],
     "ressources": [
-      { "title": "Cómo la naturaleza afecta al cerebro", "type": "video", "url": "https://www.youtube.com/watch?v=Z7O8s9n_Va8" },
-      { "title": "10 razones para reconectar con la naturaleza", "type": "article", "url": "https://www.mindbodygreen.com/0-20793/10-reasons-why-being-in-nature-is-good-for-you.html" },
-      { "title": "Podcast: Reconectando con la naturaleza", "type": "bonus", "url": "https://www.bbc.co.uk/programmes/p07zr8p7" }
-    ],
+  {
+    "title": "Mejorar la conexión con la naturaleza",
+    "type": "video",
+    "url": "https://youtu.be/XuFNa0v4EuM?si=rm3_58lXyu3-umnF"
+  },
+  {
+    "title": "¿Cómo disfrutar de los beneficios de la naturaleza?",
+    "type": "article",
+    "url": "https://www.mindbodygreen.com/0-20793/10-reasons-why-being-in-nature-is-good-for-you.html"
+  },
+  {
+    "title": "Nuestra conexión con la naturaleza",
+    "type": "bonus",
+    "url": "https://www.radiofrance.fr/franceinter/podcasts/la-tete-au-carre/notre-connexion-a-la-nature-6405232"
+  }
+]
+
+,
     "illustrationSuggeree": "Una persona meditando en un parque verde.",
     "imageHelper": "https://firebasestorage.googleapis.com/v0/b/challengeme-d7fef.appspot.com/o/Challenges-Helper%2Fch-connexion-nature.png?alt=media"
   },
@@ -1575,10 +1745,23 @@
       "Ejemplo 4 🌱: Dibuja o pinta inspirado en la naturaleza."
     ],
     "ressources": [
-      { "title": "Cómo expresar tu creatividad", "type": "video", "url": "https://www.youtube.com/watch?v=xyz123" },
-      { "title": "30 días de retos creativos", "type": "article", "url": "https://www.blog-creatif.com/article123" },
-      { "title": "Podcast sobre creatividad", "type": "bonus", "url": "https://www.podcast.com/episode123" }
-    ],
+  {
+    "title": "Libera tu creatividad",
+    "type": "video",
+    "url": "https://youtu.be/7RJIrHi8ifE?si=IFU4Kz31-rd3O0CE"
+  },
+  {
+    "title": "Los beneficios de la creatividad",
+    "type": "article",
+    "url": "https://bluevertsoul.fr/bienfaits-creativite"
+  },
+  {
+    "title": "La creatividad",
+    "type": "bonus",
+    "url": "https://www.radiofrance.fr/franceculture/podcasts/serie-la-creativite-avec-samah-karaki"
+  }
+]
+,
     "illustrationSuggeree": "Una persona con un pincel lista para comenzar a pintar.",
     "imageHelper": "https://firebasestorage.googleapis.com/v0/b/challengeme-d7fef.appspot.com/o/Challenges-Helper%2Fch-creativite-quotidienne.png?alt=media"
   },
@@ -1591,10 +1774,23 @@
       "Ejemplo 4 🌱 - Pinta o teje para desconectarte haciendo algo que amas."
     ],
     "ressources": [
-      { "title": "Cómo hacer una detox digital", "type": "video", "url": "https://youtu.be/exemple" },
-      { "title": "Guía definitiva para la detox digital", "type": "article", "url": "https://www.exemple.com/article-detox-digitale" },
-      { "title": "Podcast: Equilibrio en un mundo digital", "type": "bonus", "url": "https://www.exemple.com/podcast-detox-digitale" }
-    ],
+  {
+    "title": "Menos tiempo en pantalla, más vida",
+    "type": "video",
+    "url": "https://youtu.be/MwXNOxhhYLg?si=HdaA8JxAWK6ghmhJ"
+  },
+  {
+    "title": "Desintoxicación digital - ¿Cuáles son sus beneficios?",
+    "type": "article",
+    "url": "https://www.livi.fr/en-bonne-sante/digital-detox-bienfaits/"
+  },
+  {
+    "title": "Vivir sin teléfono - Desintoxicación digital",
+    "type": "bonus",
+    "url": "https://www.radiofrance.fr/franceinter/podcasts/le-zoom-de-la-redaction/le-zoom-de-la-redaction-du-mercredi-27-decembre-2023-3330605"
+  }
+]
+,
     "illustrationSuggeree": "Una persona en una hamaca leyendo un libro sin dispositivos cerca.",
     "imageHelper": "https://firebasestorage.googleapis.com/v0/b/challengeme-d7fef.appspot.com/o/Challenges-Helper%2Fch-digital-detox.png?alt=media"
   },
@@ -1607,10 +1803,23 @@
       "Ejemplo 4 🌱: Haz compost con los residuos orgánicos."
     ],
     "ressources": [
-      { "title": "Cómo empezar con el zero waste", "type": "video", "url": "www.votrelien.com" },
-      { "title": "10 trucos para vivir sin residuos", "type": "article", "url": "www.votrelien.com" },
-      { "title": "Podcast: Hacia un mundo sin residuos", "type": "bonus", "url": "www.votrelien.com" }
-    ],
+  {
+    "title": "Vivir con menos residuos",
+    "type": "video",
+    "url": "https://youtu.be/B5ijPk5_8pM?si=NNztRhVW8d3KWFLA"
+  },
+  {
+    "title": "¿Por qué pasarse al Cero Residuos?",
+    "type": "article",
+    "url": "https://www.wespring.com/blog/zero-dechet/article/pourquoi-passer-au-zero-dechet"
+  },
+  {
+    "title": "¿Es posible vivir sin residuos?",
+    "type": "bonus",
+    "url": "https://www.radiofrance.fr/franceinter/podcasts/on-se-decarbone/on-se-decarbone-du-lundi-18-novembre-2024-2176680"
+  }
+]
+,
     "illustrationSuggeree": "Una mujer separando residuos en contenedores de reciclaje.",
     "imageHelper": "https://firebasestorage.googleapis.com/v0/b/challengeme-d7fef.appspot.com/o/Challenges-Helper%2Fch-zero-dechet.png?alt=media"
   },
@@ -1623,22 +1832,23 @@
       "Ejemplo 4 🌱: 'Cada día escribiré tres cosas por las que estoy agradecido/a.'"
     ],
     "ressources": [
-      {
-        "title": "El poder de escribir cada día",
-        "type": "video",
-        "url": "videourl1.com"
-      },
-      {
-        "title": "10 razones para escribir un diario",
-        "type": "article",
-        "url": "articleurl1.com"
-      },
-      {
-        "title": "El arte del journaling: cómo y por qué",
-        "type": "podcast",
-        "url": "podcasturl1.com"
-      }
-    ],
+  {
+    "title": "Los beneficios de escribir - TEDXTalk",
+    "type": "video",
+    "url": "https://youtu.be/S1t90ucM-54?si=-Vcbr5UxE_RJuZbL"
+  },
+  {
+    "title": "Los beneficios de la escritura",
+    "type": "article",
+    "url": "https://www.psychologies.com/Therapies/Developpement-personnel/Methodes/Articles-et-Dossiers/5-bienfaits-insoupconnes-de-l-ecriture"
+  },
+  {
+    "title": "Escribir",
+    "type": "podcast",
+    "url": "https://www.radiofrance.fr/franceinter/podcasts/serie-ecrire"
+  }
+]
+,
     "illustrationSuggeree": "Una persona escribiendo en su diario mientras toma una taza de té.",
     "imageHelper": "https://firebasestorage.googleapis.com/v0/b/challengeme-d7fef.appspot.com/o/Challenges-Helper%2Fch-ecriture-quotidienne.png?alt=media"
   },
@@ -1650,23 +1860,24 @@
       "Ejemplo 3 🚀: Un paseo revitalizante por la naturaleza 🏞️.",
       "Ejemplo 4 🌱: Tu planta recién regada brotando 🌱."
     ],
-    "ressources": [
-      {
-        "title": "Cómo practicar la gratitud visual",
-        "type": "video",
-        "url": "https://www.youtube.com/"
-      },
-      {
-        "title": "Beneficios de la gratitud visual",
-        "type": "article",
-        "url": "https://www.medium.com/"
-      },
-      {
-        "title": "Podcast sobre gratitud visual",
-        "type": "podcast",
-        "url": "https://www.spotify.com/"
-      }
-    ],
+    "ressources":[
+  {
+    "title": "¿Cómo practicar la gratitud?",
+    "type": "video",
+    "url": "https://youtu.be/PAmueEyG-6o?si=4ePdoDlwBdw2A1jJ"
+  },
+  {
+    "title": "Los beneficios de la gratitud visual",
+    "type": "article",
+    "url": "https://strategies-evolution.com/les-7-bienfaits-de-la-gratitude-2/#:~:text=Gr%C3%A2ce%20%C3%A0%20la%20gratitude%2C%20votre,bien%2D%C3%AAtre%20physique%20et%20mental."
+  },
+  {
+    "title": "Podcast sobre gratitud visual",
+    "type": "podcast",
+    "url": "https://www.radiofrance.fr/franceinter/podcasts/grand-bien-vous-fasse/les-bienfaits-de-la-gratitude-8436207"
+  }
+]
+,
     "illustrationSuggeree": "Una persona sosteniendo una cámara lista para capturar una hermosa vista durante un paseo.",
     "imageHelper": "https://firebasestorage.googleapis.com/v0/b/challengeme-d7fef.appspot.com/o/Challenges-Helper%2Fch-gratitude-visuelle.png?alt=media"
   },
@@ -1679,22 +1890,23 @@
       "Ejemplo 4 🌱: Nota la temperatura en tu piel. ¿Frío? ¿Calor?"
     ],
     "ressources": [
-      {
-        "title": "Entendiendo la caminata consciente",
-        "type": "video",
-        "url": "URL_to_replace"
-      },
-      {
-        "title": "Descubriendo la caminata consciente",
-        "type": "article",
-        "url": "URL_to_replace"
-      },
-      {
-        "title": "Beneficios de caminar conscientemente",
-        "type": "podcast",
-        "url": "URL_to_replace"
-      }
-    ],
+  {
+    "title": "Guía para Caminar Conscientemente",
+    "type": "video",
+    "url": "https://youtu.be/0nwqqOCtGEU?si=smRIRhAsjl2j2wUc"
+  },
+  {
+    "title": "Los beneficios de caminar con atención plena",
+    "type": "article",
+    "url": "https://www.femmeactuelle.fr/sante/forme/la-marche-consciente-cette-habitude-douce-qui-ameliore-le-moral-et-la-concentration-2192839"
+  },
+  {
+    "title": "Caminata Consciente - Podcast",
+    "type": "podcast",
+    "url": "https://www.radiofrance.fr/franceinter/podcasts/la-chronique-de-christophe-andre/la-chronique-de-christophe-andre-du-mardi-26-avril-2022-8675545"
+  }
+]
+,
     "illustrationSuggeree": "Persona caminando conscientemente en la naturaleza.",
     "imageHelper": "https://firebasestorage.googleapis.com/v0/b/challengeme-d7fef.appspot.com/o/Challenges-Helper%2Fch-marche-consciente.png?alt=media"
   },
@@ -1707,22 +1919,23 @@
       "Ejemplo 4 🌱: Lee un libro inspirador en vez de ver las noticias."
     ],
     "ressources": [
-      {
-        "title": "Por qué empiezo mis días sin pantallas",
-        "type": "video",
-        "url": ""
-      },
-      {
-        "title": "Beneficios de una mañana sin pantallas",
-        "type": "article",
-        "url": ""
-      },
-      {
-        "title": "Podcast: Cómo crear una rutina matinal sin pantallas",
-        "type": "bonus",
-        "url": ""
-      }
-    ],
+  {
+    "title": "Empieza tu mañana sin pantallas",
+    "type": "video",
+    "url": "https://youtube.com/shorts/skNPHO-Ytl8?si=THNgH6V3RpbK8Umc"
+  },
+  {
+    "title": "¿Por qué despertar sin tu teléfono?",
+    "type": "article",
+    "url": "https://polysleep.ca/fr/blogs/nouvelles/reveil-sans-telephone"
+  },
+  {
+    "title": "Un día sin pantallas",
+    "type": "bonus",
+    "url": "https://www.vannesetsens.fr/post/une-journ%C3%A9e-sans-%C3%A9crans-relevez-le-d%C3%A9fi"
+  }
+]
+,
     "illustrationSuggeree": "Persona sentada con calma tomando té mientras observa el amanecer sin ninguna pantalla.",
     "imageHelper": "https://firebasestorage.googleapis.com/v0/b/challengeme-d7fef.appspot.com/o/Challenges-Helper%2Fch-matin-sans-ecrans.png?alt=media"
   },
@@ -1735,22 +1948,23 @@
       "Ejemplo 4 🌱: Antes de dormir, reflexiona sobre tu día y calma tu mente por un minuto."
     ],
     "ressources": [
-      {
-        "title": "Introducción a la micro-meditación",
-        "type": "video",
-        "url": "https://www.example.com/micro-meditation-introduction"
-      },
-      {
-        "title": "5 beneficios increíbles de la micro-meditación",
-        "type": "article",
-        "url": "https://www.example.com/benefits-of-micro-meditation"
-      },
-      {
-        "title": "Guía práctica de micro-meditación",
-        "type": "bonus",
-        "url": "https://www.example.com/guide-to-micro-meditation"
-      }
-    ],
+  {
+    "title": "Micro-Meditación – 5 Minutos",
+    "type": "video",
+    "url": "https://youtu.be/ssss7V1_eyA?si=A90Ck5bMGiU9SQNz"
+  },
+  {
+    "title": "Micro-Meditaciones para Eliminar el Estrés",
+    "type": "article",
+    "url": "https://www.marieclaire.fr/micro-meditation-exercices-reduire-stress-rapidement,1483765.asp"
+  },
+  {
+    "title": "Micro-Meditación – Podcast",
+    "type": "bonus",
+    "url": "https://www.audible.fr/podcast/ITEM_NAME/B0FJ7C1SYQ"
+  }
+]
+,
     "illustrationSuggeree": "Alguien meditando con calma en un entorno tranquilo.",
     "imageHelper": "https://firebasestorage.googleapis.com/v0/b/challengeme-d7fef.appspot.com/o/Challenges-Helper%2Fch-micro-meditation.png?alt=media"
   },
@@ -1763,22 +1977,23 @@
       "Ejemplo 4 🌱: Usa bolsas reutilizables en vez de comprar siempre bolsas de plástico de un solo uso."
     ],
     "ressources": [
-      {
-        "title": "Minimalism: Un documental sobre lo importante",
-        "type": "video",
-        "url": "https://www.netflix.com/title/80114460"
-      },
-      {
-        "title": "7 maneras de practicar el minimalismo financiero",
-        "type": "article",
-        "url": "https://www.moneycrashers.com/practice-financial-minimalism/"
-      },
-      {
-        "title": "Podcast de The Minimalists",
-        "type": "podcast",
-        "url": "https://www.theminimalists.com/podcast/"
-      }
-    ],
+  {
+    "title": "Minimalismo",
+    "type": "video",
+    "url": "https://www.netflix.com/title/80114460"
+  },
+  {
+    "title": "Reto de No Comprar",
+    "type": "article",
+    "url": "https://www.slate.fr/societe/no-buy-challenge-shopping-2025-consommation"
+  },
+  {
+    "title": "Nobuy – Podcast",
+    "type": "podcast",
+    "url": "https://open.spotify.com/show/5oJs4J3btWexkThaHR7UmI"
+  }
+]
+,
     "illustrationSuggeree": "Una tarjeta de crédito cortada por la mitad",
     "imageHelper": "https://firebasestorage.googleapis.com/v0/b/challengeme-d7fef.appspot.com/o/Challenges-Helper%2Fch-no-buy-month.png?alt=media"
   },
@@ -1791,22 +2006,23 @@
       "Ejemplo 4 🌱: ¿Utensilios de cocina duplicados? Compártelos con un vecino o una asociación local."
     ],
     "ressources": [
-      {
-        "title": "Guía para principiantes al minimalismo",
-        "type": "video",
-        "url": ""
-      },
-      {
-        "title": "10 consejos para empezar a vivir de forma minimalista",
-        "type": "article",
-        "url": ""
-      },
-      {
-        "title": "Por qué el minimalismo puede cambiar tu vida",
-        "type": "podcast",
-        "url": ""
-      }
-    ],
+  {
+    "title": "Minimalismo – Haz espacio",
+    "type": "video",
+    "url": "https://youtu.be/YgqgdxG9-Fc?si=irxJnoe0zMVLK8bx"
+  },
+  {
+    "title": "Preferir la organización minimalista",
+    "type": "article",
+    "url": "https://udd.eu/newsroom/raisons-opter-piece-minimaliste#:~:text=Simplifier%20sa%20vie,plut%C3%B4t%20que%20des%20achats%20compulsifs."
+  },
+  {
+    "title": "Cultivar un estilo de vida minimalista",
+    "type": "bonus",
+    "url": "https://culturev.fr/podcasts-minimalisme/"
+  }
+]
+,
     "illustrationSuggeree": "Una habitación recién despejada mostrando un espacio más limpio y abierto.",
     "imageHelper": "https://firebasestorage.googleapis.com/v0/b/challengeme-d7fef.appspot.com/o/Challenges-Helper%2Fch-rangement-minimaliste.png?alt=media"
   },
@@ -1819,22 +2035,23 @@
       "Ejemplo 4 🌱: Una cena vegetariana podría incluir tofu salteado, verduras asadas y arroz integral."
     ],
     "ressources": [
-      {
-        "title": "Cómo preparar una comida equilibrada",
-        "type": "video",
-        "url": "https://www.youtube.com/watch?v=voNE0dnp-vc"
-      },
-      {
-        "title": "10 ideas de menús equilibrados para la semana",
-        "type": "article",
-        "url": "https://www.mangerbouger.fr/Manger-mieux/Je-prepare-mon-repas/Des-idees-de-menus"
-      },
-      {
-        "title": "Fundamentos de una alimentación equilibrada",
-        "type": "bonus",
-        "url": "https://www.santemagazine.fr/podcast/am6ly-path5"
-      }
-    ],
+  {
+    "title": "¿Qué es una alimentación saludable?",
+    "type": "video",
+    "url": "https://youtu.be/AVkIzSb1xEE?si=uIb7M6TIIOPXRhm6"
+  },
+  {
+    "title": "Ideas de menús equilibrados para la semana",
+    "type": "article",
+    "url": "https://toutpourmasante.fr/composer-repas-equilibre/"
+  },
+  {
+    "title": "Consejos para comer mejor",
+    "type": "bonus",
+    "url": "https://www.goodsesame.com/blog/10-podcasts-a-ecouter-pour-mieux-manger/"
+  }
+]
+,
     "illustrationSuggeree": "Una foto colorida y atractiva de una comida bien equilibrada.",
     "imageHelper": "https://firebasestorage.googleapis.com/v0/b/challengeme-d7fef.appspot.com/o/Challenges-Helper%2Fch-repas-equilibre.png?alt=media"
   },
@@ -1847,22 +2064,23 @@
       "Ejemplo 4 🌱: No te frustres si tu mente se distrae, el objetivo es entrenar tu concentración."
     ],
     "ressources": [
-      {
-        "title": "Meditación guiada para la respiración consciente",
-        "type": "video",
-        "url": ""
-      },
-      {
-        "title": "Beneficios de la respiración consciente",
-        "type": "article",
-        "url": ""
-      },
-      {
-        "title": "Podcast sobre el poder de la respiración",
-        "type": "bonus",
-        "url": ""
-      }
-    ],
+  {
+    "title": "Sesión de meditación guiada para la respiración consciente",
+    "type": "video",
+    "url": "https://youtu.be/tdwn-jObld4?si=5LH0TGzSpbodrx7x"
+  },
+  {
+    "title": "Respiración consciente - Controlar las emociones",
+    "type": "article",
+    "url": "https://www.sante-sur-le-net.com/breathwork-techniques-respiration-reguler-stress/#:~:text=Le%20breathwork%20appel%C3%A9%20aussi%20la,pouvons%20r%C3%A9guler%20notre%20syst%C3%A8me%20nerveux."
+  },
+  {
+    "title": "La respiración consciente - Podcast",
+    "type": "bonus",
+    "url": "https://www.passeportsante.net/audio?doc=respiration-consciente"
+  }
+]
+,
     "illustrationSuggeree": "Una persona sentada en posición de loto practicando meditación.",
     "imageHelper": "https://firebasestorage.googleapis.com/v0/b/challengeme-d7fef.appspot.com/o/Challenges-Helper%2Fch-respiration-consciente.png?alt=media"
   },
@@ -1875,22 +2093,23 @@
       "Ejemplo 4 🌱: Ali mantiene su habitación fresca, oscura y silenciosa para dormir mejor."
     ],
     "ressources": [
-      {
-        "title": "Técnicas de relajación antes de dormir",
-        "type": "video",
-        "url": ""
-      },
-      {
-        "title": "El impacto de las rutinas nocturnas",
-        "type": "article",
-        "url": ""
-      },
-      {
-        "title": "Podcast sobre el poder del buen descanso",
-        "type": "bonus",
-        "url": ""
-      }
-    ],
+  {
+    "title": "¿Por qué dormimos mal?",
+    "type": "video",
+    "url": "https://youtu.be/Bgg0EX-uELU?si=Q5s7DqHdi_DAM87F"
+  },
+  {
+    "title": "¿Cómo dormir mejor?",
+    "type": "article",
+    "url": "https://www.laboratoire-lescuyer.com/blog/comment-mieux-dormir?srsltid=AfmBOopvQt1-1uB1HDmu_f0WpLzdbFs-LLeztdHKXZil4chyDCKKrWG1"
+  },
+  {
+    "title": "Somnífero – El podcast para dormir",
+    "type": "bonus",
+    "url": "https://podcasts.apple.com/fr/podcast/somnif%C3%A8re-le-podcast-pour-sendormir/id1531278587"
+  }
+]
+,
     "illustrationSuggeree": "Una persona haciendo yoga en un entorno tranquilo antes de dormir.",
     "imageHelper": "https://firebasestorage.googleapis.com/v0/b/challengeme-d7fef.appspot.com/o/Challenges-Helper%2Fch-sommeil-reparateur.png?alt=media"
   },
@@ -1905,22 +2124,23 @@
     "illustrationSuggeree": "Una persona llenando una botella de agua en una fuente",
     "imageHelper": "https://firebasestorage.googleapis.com/v0/b/challengeme-d7fef.appspot.com/o/Challenges-Helper%2Fch-drink-water.png?alt=media",
     "ressources": [
-      {
-        "title": "¿Por qué beber 2 litros de agua al día?",
-        "type": "video",
-        "url": "https://www.youtube.com/watch?v=example1"
-      },
-      {
-        "title": "7 beneficios de beber suficiente agua",
-        "type": "article",
-        "url": "https://www.healthline.com/health/benefits-of-drinking-water"
-      },
-      {
-        "title": "Podcast: La importancia de la hidratación",
-        "type": "bonus",
-        "url": "https://www.healthpodcast.com/hydration-importance"
-      }
-    ]
+  {
+    "title": "Terapia del Agua",
+    "type": "video",
+    "url": "https://youtu.be/siB-FTg7OAc?si=sJYczEP03MydzmLf"
+  },
+  {
+    "title": "¿Por qué debemos beber agua?",
+    "type": "article",
+    "url": "https://www.cieau.com/leau-et-votre-sante/eau-hydratation-et-hygiene/hydratation/pourquoi-doit-on-boire-de-leau/"
+  },
+  {
+    "title": "Hidratación",
+    "type": "bonus",
+    "url": "https://www.radiofrance.fr/francebleu/podcasts/bienvenue-chez-vous-les-specialistes-ici-nord/hydratation-le-dr-vankemmel-explique-pourquoi-il-faut-boire-de-l-eau-2545207"
+  }
+]
+
   },
   "eatHealthy": {
     "miniCours": "¿Listo para transformar tu alimentación? 🥇¡Cada comida es una oportunidad para nutrir tu cuerpo con alimentos saludables y nutritivos! 🥦 Empieza por incluir más frutas, verduras y cereales integrales en tu plato. Intenta beber más agua y menos bebidas azucaradas 🥤. Recuerda, la moderación es clave 🔑 para una dieta equilibrada. Comer sano no solo es bueno para tu cuerpo, ¡también lo es para tu mente! 🧠 Sé constante y diviértete explorando nuevas recetas saludables y deliciosas 🌈.",
@@ -1933,22 +2153,23 @@
     "illustrationSuggeree": "Un plato colorido con frutas y verduras frescas.",
     "imageHelper": "https://firebasestorage.googleapis.com/v0/b/challengeme-d7fef.appspot.com/o/Challenges-Helper%2Fch-eat-healthy.png?alt=media",
     "ressources": [
-      {
-        "title": "Principios básicos de una dieta saludable",
-        "type": "video",
-        "url": "https://www.youtube.com/watch?v=some_video_link"
-      },
-      {
-        "title": "10 maneras de comer más verduras cada día",
-        "type": "article",
-        "url": "https://www.somesite.com/some_article_link"
-      },
-      {
-        "title": "Podcast: Beneficios de una alimentación equilibrada",
-        "type": "bonus",
-        "url": "https://www.somepodcastsite.com/some_podcast_link"
-      }
-    ]
+  {
+    "title": "La Receta para Empezar una Alimentación Saludable",
+    "type": "video",
+    "url": "https://youtu.be/I1_RSyzPHPg?si=pKHYyG2BhjhEiJZK"
+  },
+  {
+    "title": "10 Claves para una Alimentación Saludable",
+    "type": "article",
+    "url": "https://yuka.io/10-cles-alimentation-saine/"
+  },
+  {
+    "title": "¿Qué Comemos?",
+    "type": "bonus",
+    "url": "https://www.lavieclaire.com/podcasts/"
+  }
+]
+
   },
   "familyTime": {
     "miniCours": "👨‍👩‍👦‍👦 El tiempo en familia es valioso. Refuerza el amor y el respeto mutuo entre sus miembros 🏠. Empieza dedicando al menos una hora diaria a estar juntos sin distracciones ⏰. Puedes crear una 'hora sin tecnología' 🚫📱 para contar historias, leer o jugar juntos 🎲. No se trata de que sea perfecto. Solo hay que estar presentes, atentos y conectados. La belleza está en el proceso, no en el resultado ✨.",
@@ -1961,22 +2182,23 @@
     "illustrationSuggeree": "Una familia compartiendo alegremente sin dispositivos digitales",
     "imageHelper": "https://firebasestorage.googleapis.com/v0/b/challengeme-d7fef.appspot.com/o/Challenges-Helper%2Fch-family-time.png?alt=media",
     "ressources": [
-      {
-        "title": "La importancia del tiempo en familia",
-        "type": "video",
-        "url": "https://www.youtube.com/watch?v=xyz"
-      },
-      {
-        "title": "15 actividades para unir a la familia",
-        "type": "article",
-        "url": "https://www.familybondingxyz.com"
-      },
-      {
-        "title": "Podcast sobre desarrollo personal en familia",
-        "type": "bonus",
-        "url": "https://podcast.family.com/bonus"
-      }
-    ]
+  {
+    "title": "Ideas para Disfrutar del Tiempo en Familia",
+    "type": "video",
+    "url": "https://optimoms.fr/maman-optimiste/laslowlife/30-idees-prendre-son-temps-famille"
+  },
+  {
+    "title": "La Importancia de Pasar Tiempo en Familia",
+    "type": "article",
+    "url": "https://najell.com/fr-fr/urban-dreamers/importance-of-family-time"
+  },
+  {
+    "title": "Pasar Tiempo en Familia",
+    "type": "bonus",
+    "url": "https://podcast.fr/episode/passer-du-temps-en-famille/"
+  }
+]
+
   },
   "goodPosture": {
     "miniCours": "💪 ¡Mantener una buena postura no es solo estar derecho! Implica activar el cuerpo para sostener tu columna. Observa tu postura en el escritorio: ¿tu espalda está recta? ¿Tu cabeza inclinada hacia adelante? Sé consciente y corrige a tiempo ⏱. Pequeños ajustes diarios hacen una gran diferencia 🌈.",
@@ -1988,23 +2210,24 @@
     ],
     "illustrationSuggeree": "Una persona sentada en una silla ergonómica frente a un escritorio, revisando su postura en un espejo.",
     "imageHelper": "https://firebasestorage.googleapis.com/v0/b/challengeme-d7fef.appspot.com/o/Challenges-Helper%2Fch-good-posture.png?alt=media",
-    "ressources": [
-      {
-        "title": "¿Cómo tener una buena postura?",
-        "type": "video",
-        "url": "www.exempleurl.com/video"
-      },
-      {
-        "title": "10 consejos para mejorar tu postura",
-        "type": "article",
-        "url": "www.exempleurl.com/article"
-      },
-      {
-        "title": "Podcast sobre salud de la espalda",
-        "type": "bonus",
-        "url": "www.exempleurl.com/podcast"
-      }
-    ]
+    "ressources":[
+  {
+    "title": "Los Beneficios de una Buena Postura",
+    "type": "video",
+    "url": "https://youtu.be/OyK0oE5rwFY?si=nmoe2Hj9oUzXZRE9"
+  },
+  {
+    "title": "Ventajas de Mantener una Buena Postura",
+    "type": "article",
+    "url": "https://fr.shenyunperformingarts.org/blog/view/article/e/Zf4MSdlGFak/les-5-bienfaits-d-une-bonne-posture.html"
+  },
+  {
+    "title": "Buena Postura para Sentirse Bien",
+    "type": "bonus",
+    "url": "https://www.radiofrance.fr/francebleu/podcasts/le-conseil-bien-etre/quelle-est-la-bonne-posture-pour-bien-se-porter-7544177"
+  }
+]
+
   },
   "hobbyTime": {
     "miniCours": "¡Dedicar tiempo a ti cada día es esencial! — 30 minutos a un hobby pueden hacer una gran diferencia 🦋. Disfrutar de tu pasatiempo actúa como una vía de escape mental, reduciendo el estrés. Es como unas mini vacaciones 🌴. Anímate a probar cosas nuevas y descubrir lo que te apasiona. Ya sea cocinar 🍳, leer 📚, andar en bici 🚴‍♀️, pintar 🎨 o jardinería 🌱, lo importante es que te haga feliz.",
@@ -2017,22 +2240,23 @@
     "illustrationSuggeree": "Una persona sentada cómodamente con un libro en la mano, rodeada de snacks y una bebida, sonriendo relajada.",
     "imageHelper": "https://firebasestorage.googleapis.com/v0/b/challengeme-d7fef.appspot.com/o/Challenges-Helper%2Fch-hobby-time.png?alt=media",
     "ressources": [
-      {
-        "title": "Cómo aprovechar 30 minutos de ocio",
-        "type": "video",
-        "url": "https://exemple.com/video1"
-      },
-      {
-        "title": "Por qué 30 minutos de pasatiempos mejoran tu productividad",
-        "type": "article",
-        "url": "https://exemple.com/article1"
-      },
-      {
-        "title": "Usar tu tiempo libre para el desarrollo personal",
-        "type": "podcast",
-        "url": "https://exemple.com/podcast1"
-      }
-    ]
+  {
+    "title": "¿Cómo encontrar tu pasatiempo?",
+    "type": "video",
+    "url": "https://youtu.be/qjdmIY04soc?si=TqnGGNHi1a_c6-Wu"
+  },
+  {
+    "title": "¿Cómo nos ayudan nuestros pasatiempos?",
+    "type": "article",
+    "url": "https://www.selectionclic.com/conseils-sante/comment-nos-hobbys-nous-aident/#:~:text=Les%20hobbys%20prot%C3%A8gent%20de%20la,utile%20dans%20d'autres%20domaines."
+  },
+  {
+    "title": "¿Cuál es tu hobby?",
+    "type": "podcast",
+    "url": "https://youtu.be/KjsvG7tZhmA?si=TDFeumCy4aHG6dV6"
+  }
+]
+
   },
   "kindnessAct": {
     "miniCours": "✅ ¡Practica un acto de bondad al azar cada día para enriquecer tu vida y la de los demás! 🌈 Un gesto amable puede ser físico o verbal, planificado o espontáneo. Puede ser ofrecer tu ayuda, compartir tu tiempo o simplemente sonreír. No importa su forma, cada acto de bondad puede marcar una gran diferencia. 💖 Aceptar este reto mejora tus habilidades sociales, tu generosidad y tu bienestar personal. Además, ¡inspiras a otros a ser amables también! 🚀",
@@ -2043,22 +2267,23 @@
       "Ejemplo 4 🌱 Planta un árbol en tu vecindario."
     ],
     "ressources": [
-      {
-        "title": "La ciencia de la felicidad: ¿Por qué la generosidad nos hace felices?",
-        "type": "video",
-        "url": "https://www.youtube.com/watch?v=U3cZ-NGPkkU"
-      },
-      {
-        "title": "21 formas sencillas de ser amable",
-        "type": "article",
-        "url": "https://www.huffpost.com/entry/35-little-acts-of-kindness_n_5872030"
-      },
-      {
-        "title": "El poder de la bondad",
-        "type": "podcast",
-        "url": "https://www.npr.org/programs/invisibilia/382451600/the-power-of-kindness"
-      }
-    ],
+  {
+    "title": "La Ciencia de la Amabilidad",
+    "type": "video",
+    "url": "https://youtu.be/O9UByLyOjBM?si=aerzsJbCBREvBUSi"
+  },
+  {
+    "title": "Cómo mostrar amabilidad",
+    "type": "article",
+    "url": "https://elisegravel.com/blog/9-facons-de-faire-preuve-de-gentillesse/"
+  },
+  {
+    "title": "El Poder de la Amabilidad – Podcast",
+    "type": "podcast",
+    "url": "https://podcasts.apple.com/fr/podcast/the-power-of-kindness/id1771351575"
+  }
+]
+,
     "illustrationSuggeree": "Una persona sosteniendo un cartel que dice 'Sé amable'",
     "imageHelper": "https://firebasestorage.googleapis.com/v0/b/challengeme-d7fef.appspot.com/o/Challenges-Helper%2Fch-act-of-kindness.png?alt=media"
   },
@@ -2071,22 +2296,23 @@
       "Ejemplo 4 🌱: Escribe en un diario usando el nuevo idioma para expresarte y pensar en él."
     ],
     "ressources": [
-      {
-        "title": "Los secretos para aprender un idioma | Lydia Machová",
-        "type": "video",
-        "url": "https://www.youtube.com/watch?v=o_XVt5rdpFY"
-      },
-      {
-        "title": "Cómo aprender un idioma extranjero de manera efectiva",
-        "type": "article",
-        "url": "https://lifehacker.com/i-learned-to-speak-four-languages-in-a-few-years-heres-1683098274"
-      },
-      {
-        "title": "Podcasts de Babbel para aprender idiomas",
-        "type": "bonus",
-        "url": "https://www.babbel.com/en/magazine/category/language-podcasts"
-      }
-    ],
+  {
+    "title": "Los secretos para aprender idiomas | Lydia Machová",
+    "type": "video",
+    "url": "https://www.youtube.com/watch?v=o_XVt5rdpFY"
+  },
+  {
+    "title": "Beneficios del aprendizaje de idiomas para el cerebro",
+    "type": "article",
+    "url": "https://fr.babbel.com/fr/magazine/benefices-apprentissage-langues-cerveau"
+  },
+  {
+    "title": "Podcasts de Babbel para aprender idiomas",
+    "type": "bonus",
+    "url": "https://fr.babbel.com/fr/magazine/les-meilleurs-podcasts-pour-apprendre-une-langue"
+  }
+]
+,
     "illustrationSuggeree": "Persona sentada en una cafetería acogedora, con una taza de café y un libro de idiomas en la mesa.",
     "imageHelper": "https://firebasestorage.googleapis.com/v0/b/challengeme-d7fef.appspot.com/o/Challenges-Helper%2Fch-learn-a-language.png?alt=media"
   },
@@ -2099,22 +2325,23 @@
       "Ejemplo 4 🌱: Sal de tu zona de confort aprendiendo un idioma o un instrumento musical."
     ],
     "ressources": [
-      {
-        "title": "Cómo aprender una nueva habilidad de forma eficaz",
-        "type": "video",
-        "url": "https://www.youtube.com/exemple"
-      },
-      {
-        "title": "5 trucos para dominar una nueva habilidad",
-        "type": "article",
-        "url": "https://www.blog/exemple"
-      },
-      {
-        "title": "Podcast sobre aprendizaje continuo",
-        "type": "bonus",
-        "url": "https://www.podcast/exemple"
-      }
-    ],
+  {
+    "title": "El Método Feynman",
+    "type": "video",
+    "url": "https://youtu.be/UUSmBMWk2sI?si=HUdlol3QuEnY3H0H"
+  },
+  {
+    "title": "30 consejos para dominar una nueva habilidad rápidamente",
+    "type": "article",
+    "url": "https://angyna.com/blog/articles/8/30-conseils-pour-acquerir-rapidement-une-nouvelle-competence"
+  },
+  {
+    "title": "Aprender a Aprender",
+    "type": "bonus",
+    "url": "https://www.radiofrance.fr/franceculture/podcasts/serie-apprendre-a-apprendre"
+  }
+]
+,
     "illustrationSuggeree": "Alguien con auriculares frente a un portátil aprendiendo algo nuevo.",
     "imageHelper": "https://firebasestorage.googleapis.com/v0/b/challengeme-d7fef.appspot.com/o/Challenges-Helper%2Fch-learn-skill.png?alt=media"
   },
@@ -2127,22 +2354,23 @@
       "Ejemplo 4 🌱: La palabra 'metamorfosis' significa un cambio completo de naturaleza o forma. Por ejemplo: 'La oruga sufre una metamorfosis para convertirse en mariposa.'"
     ],
     "ressources": [
-      {
-        "title": "¿Cómo mejorar tu vocabulario en inglés?",
-        "type": "video",
-        "url": "https://youtu.be/xx_WNPe8bBs"
-      },
-      {
-        "title": "7 Consejos para enriquecer tu vocabulario",
-        "type": "article",
-        "url": "https://www.superprof.fr/blog/amplifier-son-lexique/"
-      },
-      {
-        "title": "Podcast: Palabras que quizás no conozcas",
-        "type": "bonus",
-        "url": "https://anchor.fm/mots-inconnus"
-      }
-    ],
+  {
+    "title": "Ampliar tu Vocabulario",
+    "type": "video",
+    "url": "https://youtu.be/Ms7cF8mQ0BI?si=-tpszWN-B6QG7kzS"
+  },
+  {
+    "title": "¿Cómo enriquecer tu vocabulario?",
+    "type": "article",
+    "url": "https://www.the-artist-academy.fr/blog/comment-enrichir-votre-vocabulaire-7-manieres-de-developper-votre-vocabulaire"
+  },
+  {
+    "title": "La Palabra del Día – Podcast",
+    "type": "bonus",
+    "url": "https://www.radiofrance.fr/francemusique/podcasts/le-mot-du-jour"
+  }
+]
+,
     "illustrationSuggeree": "Una persona sentada en su escritorio, leyendo un libro, con un cuaderno al lado para anotar nuevas palabras.",
     "imageHelper": "https://firebasestorage.googleapis.com/v0/b/challengeme-d7fef.appspot.com/o/Challenges-Helper%2Fch-learn-word.png?alt=media"
   },
@@ -2155,22 +2383,13 @@
       "Ejemplo 4 🌱 Mantente al día con las innovaciones tecnológicas con el podcast 'TechStuff'."
     ],
     "ressources": [
-      {
-        "title": "Cómo aprovechar al máximo los podcasts",
-        "type": "video",
-        "url": "https://youtu.be/your_url_here"
-      },
-      {
-        "title": "5 consejos para integrar los podcasts en tu rutina diaria",
-        "type": "article",
-        "url": "https://blog.wordpress.com/your_article_url_here"
-      },
-      {
-        "title": "5 podcasts educativos que debes escuchar ya",
-        "type": "bonus",
-        "url": "https://your_podcasts_recommendations_url_here"
-      }
-    ],
+  {
+    "title": "Podcasts",
+    "type": "video",
+    "url": "https://www.radiofrance.fr/podcasts"
+  }
+]
+,
     "illustrationSuggeree": "Persona con auriculares, escuchando un podcast en su teléfono inteligente.",
     "imageHelper": "https://firebasestorage.googleapis.com/v0/b/challengeme-d7fef.appspot.com/o/Challenges-Helper%2Fch-podcast.png?alt=media"
   },
@@ -2183,22 +2402,23 @@
       "Ejemplo 4 🌱: Finaliza cada sesión anotando lo que sentiste y experimentaste durante la meditación."
     ],
     "ressources": [
-      {
-        "title": "Meditación para principiantes",
-        "type": "video",
-        "url": ""
-      },
-      {
-        "title": "Beneficios de la meditación diaria",
-        "type": "article",
-        "url": ""
-      },
-      {
-        "title": "Los mejores podcasts sobre meditación",
-        "type": "bonus",
-        "url": ""
-      }
-    ],
+  {
+    "title": "Meditaciones Guiadas – Bernard Werber",
+    "type": "video",
+    "url": "https://youtu.be/eay1enaijAc?si=MIQT1EEgJZFOCnB_"
+  },
+  {
+    "title": "Aprender a Meditar Más Fácilmente",
+    "type": "article",
+    "url": "https://www.helsana.ch/fr/blog/psyche/pleine-conscience/meditation.html"
+  },
+  {
+    "title": "Tiempo para Meditar",
+    "type": "bonus",
+    "url": "https://www.radiofrance.fr/franceinter/podcasts/le-temps-de-mediter"
+  }
+]
+,
     "illustrationSuggeree": "Persona meditando en un espacio tranquilo y sereno.",
     "imageHelper": "https://firebasestorage.googleapis.com/v0/b/challengeme-d7fef.appspot.com/o/Challenges-Helper%2Fch-meditation.png?alt=media"
   },
@@ -2211,22 +2431,23 @@
       "Ejemplo 4 🌱: Sentado, estira los brazos al frente y rota las muñecas para estirar manos y brazos."
     ],
     "ressources": [
-      {
-        "title": "Rutina de estiramiento matinal para principiantes",
-        "type": "video",
-        "url": ""
-      },
-      {
-        "title": "Importancia del estiramiento por la mañana",
-        "type": "article",
-        "url": ""
-      },
-      {
-        "title": "Podcast: El impacto del estiramiento en tu día",
-        "type": "bonus",
-        "url": ""
-      }
-    ],
+  {
+    "title": "Rutina Matutina",
+    "type": "video",
+    "url": "https://youtu.be/BNJuv209-yc?si=nsca-yZjkJTiu6fc"
+  },
+  {
+    "title": "5 razones para estirarte por la mañana",
+    "type": "article",
+    "url": "https://truefitness.com/fr/5-reasons-for-a-morning-stretch-routine/"
+  },
+  {
+    "title": "Estiramientos: ¡esenciales a cualquier edad!",
+    "type": "bonus",
+    "url": "https://www.radiofrance.fr/franceinter/podcasts/carnet-de-sante/carnet-de-sante-du-samedi-03-aout-2024-8615750"
+  }
+]
+,
     "illustrationSuggeree": "Una persona estirando los brazos hacia arriba después de despertar.",
     "imageHelper": "https://firebasestorage.googleapis.com/v0/b/challengeme-d7fef.appspot.com/o/Challenges-Helper%2Fch-morning-stretch.png?alt=media"
   },
@@ -2239,22 +2460,23 @@
       "Ejemplo 4 🌱: Haz seguimiento a un antiguo contacto profesional para saber cómo está y compartir novedades."
     ],
     "ressources": [
-      {
-        "title": "Consejos para hacer networking eficaz",
-        "type": "video",
-        "url": "youtube.com/reseautageefficace"
-      },
-      {
-        "title": "El arte del networking diario",
-        "type": "article",
-        "url": "medium.com/reseautagequotidien"
-      },
-      {
-        "title": "Podcast: El poder del networking",
-        "type": "bonus",
-        "url": "spotify.com/podcast/reseautage"
-      }
-    ],
+  {
+    "title": "Domina el Arte del Networking",
+    "type": "video",
+    "url": "https://youtu.be/SN9zTEWVjGM?si=xWgFcdfqz6X3l2Df"
+  },
+  {
+    "title": "7 razones para cuidar tu red de contactos",
+    "type": "article",
+    "url": "https://ch-fr.indeed.com/conseils-carriere/evolution-professionnelle/networking-reseau"
+  },
+  {
+    "title": "Networking - Podcast",
+    "type": "bonus",
+    "url": "https://podcasts.apple.com/fr/podcast/le-networking-de-steeve/id1437905134"
+  }
+]
+,
     "illustrationSuggeree": "Una persona haciendo una llamada telefónica en su escritorio, con una libreta y bolígrafo al lado.",
     "imageHelper": "https://firebasestorage.googleapis.com/v0/b/challengeme-d7fef.appspot.com/o/Challenges-Helper%2Fch-networking.png?alt=media"
   },
@@ -2267,22 +2489,23 @@
       "Ejemplo 4 🌱: Elegir una receta completamente vegana."
     ],
     "ressources": [
-      {
-        "title": "Cómo leer y entender una receta",
-        "type": "video",
-        "url": "https://www.youtube.com/watch?v=*"
-      },
-      {
-        "title": "10 trucos para tener éxito con una nueva receta",
-        "type": "article",
-        "url": "https://www.cuisinemaison.com/10-astuces-pour-reussir-une-nouvelle-recette"
-      },
-      {
-        "title": "Podcast: Cocina como un profesional",
-        "type": "bonus",
-        "url": "https://www.cookingpodcast.com/cuisiner-comme-un-pro"
-      }
-    ],
+  {
+    "title": "Un Día, Una Receta",
+    "type": "video",
+    "url": "https://www.youtube.com/@UnjourUnerecettekatyseats"
+  },
+  {
+    "title": "Cómo tener éxito con una receta",
+    "type": "article",
+    "url": "https://www.potes-au-feu.ch/les-7-regles-d-or-pour-reussir-une-recette.html"
+  },
+  {
+    "title": "Cocina como un Pro - Podcast",
+    "type": "bonus",
+    "url": "https://www.huffingtonpost.fr/life/article/les-meilleurs-podcasts-de-cuisine-a-ecouter-sans-moderation_173220.html"
+  }
+]
+,
     "illustrationSuggeree": "Una persona leyendo una receta mientras corta verduras.",
     "imageHelper": "https://firebasestorage.googleapis.com/v0/b/challengeme-d7fef.appspot.com/o/Challenges-Helper%2Fch-nouvelle-recette.png?alt=media"
   },
@@ -2295,22 +2518,23 @@
       "🌱 Practica meditación para mejorar la concentración sin cafeína."
     ],
     "ressources": [
-      {
-        "title": "Cómo dejar la cafeína sin estar cansado",
-        "type": "video",
-        "url": "youtube.com/watch?v=videourl1"
-      },
-      {
-        "title": "Por qué deberías hacer una pausa de cafeína",
-        "type": "article",
-        "url": "articleurl.com/2"
-      },
-      {
-        "title": "Podcast: Alternativas saludables a la cafeína",
-        "type": "bonus",
-        "url": "podcasturl.com/3"
-      }
-    ],
+  {
+    "title": "El café y su impacto en la salud",
+    "type": "video",
+    "url": "https://youtu.be/5joA6VS7_88?si=bB5kFYcQg0YZ8HB5"
+  },
+  {
+    "title": "Efectos sobre el cuerpo",
+    "type": "article",
+    "url": "https://www.bbc.com/afrique/articles/cw0l43ezgggo"
+  },
+  {
+    "title": "La cafeína - Podcast",
+    "type": "bonus",
+    "url": "https://www.rtbf.be/article/la-cafeine-une-addiction-silencieuse-a-arreter-10825320"
+  }
+]
+,
     "illustrationSuggeree": "Persona tomando una infusión en lugar de café.",
     "imageHelper": "https://firebasestorage.googleapis.com/v0/b/challengeme-d7fef.appspot.com/o/Challenges-Helper%2Fch-no-cafe.png?alt=media"
   },
@@ -2323,22 +2547,23 @@
       "Ejemplo 4 🌱: ¿Aburrido en el trabajo? Agradece tener un empleo y los beneficios que aporta. 🏢"
     ],
     "ressources": [
-      {
-        "title": "Vídeo sobre el arte de ser positivo",
-        "type": "video",
-        "url": "https://exampleurl.com"
-      },
-      {
-        "title": "Artículo sobre cómo dejar de quejarse",
-        "type": "article",
-        "url": "https://exampleurl.com"
-      },
-      {
-        "title": "Podcast sobre la mentalidad de gratitud",
-        "type": "bonus",
-        "url": "https://exampleurl.com"
-      }
-    ],
+  {
+    "title": "El truco sencillo para dejar de quejarse",
+    "type": "video",
+    "url": "https://youtu.be/3boYHN7g7Q8?si=7_ogMcb_L4eWtJlK"
+  },
+  {
+    "title": "Dejar de quejarse",
+    "type": "article",
+    "url": "https://www.2minutesdebonheur.com/arreter-se-plaindre-223/"
+  },
+  {
+    "title": "Mantente positivo para vivir mejor",
+    "type": "bonus",
+    "url": "https://www.radiofrance.fr/francebleu/podcasts/le-mag-de-france-bleu-poitou/comment-rester-positif-pour-vivre-mieux-9713037"
+  }
+]
+,
     "illustrationSuggeree": "Alguien escribiendo en un diario de gratitud.",
     "imageHelper": "https://firebasestorage.googleapis.com/v0/b/challengeme-d7fef.appspot.com/o/Challenges-Helper%2Fch-no-complaints.png?alt=media"
   },
@@ -2351,22 +2576,23 @@
       "Ejemplo 4 🌱: Cocina con dátiles o sirope de arce."
     ],
     "ressources": [
-      {
-        "title": "Cómo reducir el azúcar en tu dieta",
-        "type": "video",
-        "url": ""
-      },
-      {
-        "title": "Beneficios de una dieta sin azúcar",
-        "type": "article",
-        "url": ""
-      },
-      {
-        "title": "20 recetas sin azúcar añadido para inspirarte",
-        "type": "bonus",
-        "url": ""
-      }
-    ],
+  {
+    "title": "14 días sin azúcar",
+    "type": "video",
+    "url": "https://youtu.be/jvQRR3WLnhg?si=QM1rj_yBFAnWrinT"
+  },
+  {
+    "title": "Desintoxicación de azúcar",
+    "type": "article",
+    "url": "https://www.ayuin.fr/detox-sucre/#:~:text=Les%20bienfaits%20de%20l'arr%C3%AAt%20du%20sucre,-Arr%C3%AAter%20le%20sucre&text=La%20perte%20de%20poids%3A%20l,de%20sucre%20dans%20le%20sang)."
+  },
+  {
+    "title": "Una vida sin azúcar - Podcast",
+    "type": "bonus",
+    "url": "https://www.radiofrance.fr/franceinter/podcasts/vie-quotidienne-mode-d-emploi/une-vie-sans-sucre-4356519"
+  }
+]
+,
     "illustrationSuggeree": "Una mesa llena de frutas, nueces, semillas y verduras frescas que representan una dieta sin azúcar añadido.",
     "imageHelper": "https://firebasestorage.googleapis.com/v0/b/challengeme-d7fef.appspot.com/o/Challenges-Helper%2Fch-no-sugar.png?alt=media"
   },
@@ -2379,22 +2605,23 @@
       "Ejemplo 4 🌱: Añade la plancha a tu rutina matutina para activar tu metabolismo."
     ],
     "ressources": [
-      {
-        "title": "Tutorial de la plancha",
-        "type": "video",
-        "url": "https://www.youtube.com/watch?v=7RkpEJgP6wE"
-      },
-      {
-        "title": "¿Por qué la plancha es un ejercicio completo?",
-        "type": "article",
-        "url": "https://www.huffingtonpost.fr/entry/pourquoi-faire-la-planche-est-un-exercice-si-complet_fr_5e9450b8c5b6d97d91e4e2de"
-      },
-      {
-        "title": "Podcast sobre los beneficios de la plancha",
-        "type": "bonus",
-        "url": "https://www.listennotes.com/c/f5eeb7e58284840a8b171e9470168995/"
-      }
-    ],
+  {
+    "title": "1 Minuto de Plancha al Día",
+    "type": "video",
+    "url": "https://youtu.be/LHd790kagqw?si=JU0U3_T3dJASbrEV"
+  },
+  {
+    "title": "Diferentes Ejercicios de Plancha",
+    "type": "article",
+    "url": "https://laseche.fr/la-seche/les-incroyables-bienfaits-de-la-planche"
+  },
+  {
+    "title": "La Plancha es Buena para Todo el Cuerpo",
+    "type": "bonus",
+    "url": "https://www.radiofrance.fr/francebleu/podcasts/les-petits-plaisirs-sur-france-bleu-poitou/exercice-physique-la-planche-c-est-bon-pour-tout-le-corps-4771680"
+  }
+]
+,
     "illustrationSuggeree": "Una persona en posición de plancha al aire libre sobre una colchoneta.",
     "imageHelper": "https://firebasestorage.googleapis.com/v0/b/challengeme-d7fef.appspot.com/o/Challenges-Helper%2Fch-planche.png?alt=media"
   },
@@ -2407,22 +2634,23 @@
       "Ejemplo 4 🌱: Tarea: 'Preparar la cena para la familia' ➡️ Motivo: 'Para disfrutar tiempo de calidad y una comida compartida'"
     ],
     "ressources": [
-      {
-        "title": "Planifica tu día para ser más productivo",
-        "type": "video",
-        "url": ""
-      },
-      {
-        "title": "Por qué planificar mañana esta noche",
-        "type": "article",
-        "url": ""
-      },
-      {
-        "title": "Podcast: Gestión del tiempo y poder de la planificación",
-        "type": "bonus",
-        "url": ""
-      }
-    ],
+  {
+    "title": "Cómo Organizar tu Día",
+    "type": "video",
+    "url": "https://youtu.be/eOOmP6IUtOk?si=iv6DMcfZhOje-KBf"
+  },
+  {
+    "title": "Planificar tu Día",
+    "type": "article",
+    "url": "https://matthieudesroches.com/articles/comment-organiser-sa-journee"
+  },
+  {
+    "title": "¿Por qué es Necesaria la Planificación?",
+    "type": "bonus",
+    "url": "https://www.radiofrance.fr/franceculture/podcasts/le-pourquoi-du-comment-economie-et-social/le-pourquoi-du-comment-economie-social-chronique-du-vendredi-29-mars-2024-5316044"
+  }
+]
+,
     "illustrationSuggeree": "Una persona sentada en un escritorio escribiendo tareas para el día siguiente en una agenda",
     "imageHelper": "https://firebasestorage.googleapis.com/v0/b/challengeme-d7fef.appspot.com/o/Challenges-Helper%2Fch-plan-tomorrow.png?alt=media"
   },
@@ -2435,22 +2663,23 @@
       "Ejemplo 4 🌱: No dudes en pedir ayuda o tomar clases con un profesor experimentado."
     ],
     "ressources": [
-      {
-        "title": "Clases de guitarra para principiantes",
-        "type": "video",
-        "url": "https://www.youtube.com/watch?v=VmrnhzL7vY8"
-      },
-      {
-        "title": "Cómo empezar a tocar el violín",
-        "type": "article",
-        "url": "https://www.bbc.co.uk/music/articles/97bbf589-75da-4f73-b179-f0a6a4f159ff"
-      },
-      {
-        "title": "Podcast: Medidas del éxito musical",
-        "type": "podcast",
-        "url": "https://www.successfulmusiceducation.com/"
-      }
-    ],
+  {
+    "title": "Elegir tu Instrumento Musical",
+    "type": "video",
+    "url": "https://youtu.be/psbPHO-cRn4?si=x0viD_YouT3oN38C"
+  },
+  {
+    "title": "Clases de Instrumentos",
+    "type": "article",
+    "url": "https://www.anacours-musique.com/tous-les-instruments/"
+  },
+  {
+    "title": "Aprender un Instrumento en la Edad Adulta",
+    "type": "podcast",
+    "url": "https://youtu.be/At-c9pwkckQ?si=ADSwYamSoh9zFsrT"
+  }
+]
+,
     "illustrationSuggeree": "Alguien tocando la guitarra o sentado al piano, inmerso en la música y disfrutando del proceso.",
     "imageHelper": "https://firebasestorage.googleapis.com/v0/b/challengeme-d7fef.appspot.com/o/Challenges-Helper%2Fch-learn-instrument.png?alt=media"
   },
@@ -2463,22 +2692,23 @@
       "Ejemplo 4 🌱: 'Doy y recibo amor libre y alegremente.'"
     ],
     "ressources": [
-      {
-        "title": "El arte y la ciencia de las afirmaciones positivas",
-        "type": "video",
-        "url": "https://youtu.be/your_video_url"
-      },
-      {
-        "title": "¿Por qué funcionan las afirmaciones positivas?",
-        "type": "article",
-        "url": "https://www.your_article_url.com"
-      },
-      {
-        "title": "Podcast: El poder de las afirmaciones positivas",
-        "type": "bonus",
-        "url": "https://www.your_podcast_url.com"
-      }
-    ],
+  {
+    "title": "50 Afirmaciones Positivas",
+    "type": "video",
+    "url": "https://youtu.be/Xaf_wrbB1lQ?si=Pf4pmaSBS6PTQFUG"
+  },
+  {
+    "title": "Afirmaciones Positivas para el Bienestar",
+    "type": "article",
+    "url": "https://pauldevaux.fr/affirmations-positives/#:~:text=La%20technique%20des%20affirmations%20positives%20consiste%20%C3%A0%20r%C3%A9p%C3%A9ter%20de%20mani%C3%A8re,notre%20corps%20et%20nos%20comportements."
+  },
+  {
+    "title": "Afirmaciones Positivas – Confianza e Intuición",
+    "type": "bonus",
+    "url": "https://open.spotify.com/episode/6z9sP0bq1SSJuS56W9Y7WT"
+  }
+]
+,
     "illustrationSuggeree": "Persona mirándose al espejo mientras repite afirmaciones positivas.",
     "imageHelper": "https://firebasestorage.googleapis.com/v0/b/challengeme-d7fef.appspot.com/o/Challenges-Helper%2Fch-positive-affirmations.png?alt=media"
   },
@@ -2491,22 +2721,23 @@
       "Ejemplo 4 🌱: Relájate antes de dormir con un capítulo de 'Piense y hágase rico' de Napoleon Hill."
     ],
     "ressources": [
-      {
-        "title": "Cómo leer más libros",
-        "type": "video",
-        "url": "https://www.youtube.com/watch?v=..."
-      },
-      {
-        "title": "10 trucos para leer más este mes",
-        "type": "article",
-        "url": "https://www.lireplus.com/..."
-      },
-      {
-        "title": "Podcast: Beneficios de la lectura diaria",
-        "type": "bonus",
-        "url": "https://www.podcastbienfaitslecture.com/..."
-      }
-    ],
+  {
+    "title": "La lectura transforma tu cerebro",
+    "type": "video",
+    "url": "https://youtu.be/TvQ9AbWVuTU?si=9XMDStk1kadrUYw0"
+  },
+  {
+    "title": "¿Por qué tomarse el tiempo de leer cada día?",
+    "type": "article",
+    "url": "https://labibliomaniaque.ca/2016/08/31/pourquoi-prendre-le-temps-de-lire-chaque-jour/"
+  },
+  {
+    "title": "Los beneficios de la lectura",
+    "type": "bonus",
+    "url": "https://www.rts.ch/audio-podcast/2023/audio/les-bienfaits-de-la-lecture-27448117.html"
+  }
+]
+,
     "illustrationSuggeree": "Una persona cómodamente sentada en un sofá, sumergida en un libro.",
     "imageHelper": "https://firebasestorage.googleapis.com/v0/b/challengeme-d7fef.appspot.com/o/Challenges-Helper%2Fch-read-chapter.png?alt=media"
   },
@@ -2519,22 +2750,23 @@
       "Ejemplo 4 🌱: Opta por rasuradoras metálicas reutilizables en vez de las desechables."
     ],
     "ressources": [
-      {
-        "title": "50 ideas para reducir el uso del plástico",
-        "type": "video",
-        "url": "https://www.youtube.com/watch?v=abc123"
-      },
-      {
-        "title": "10 formas de reducir el plástico en tu vida diaria",
-        "type": "article",
-        "url": "https://www.ecowatch.com/reduce-plastic-use-2318016334.html"
-      },
-      {
-        "title": "Podcast: Vivir sin plástico, un reto diario",
-        "type": "bonus",
-        "url": "https://www.deezer.com/fr/show/80072"
-      }
-    ],
+  {
+    "title": "¿Cómo reducir tu consumo de plástico?",
+    "type": "video",
+    "url": "https://youtu.be/6f68f8phQLY?si=ajJJ2GtO9UYgiY-X"
+  },
+  {
+    "title": "10 maneras de reducir el uso de plástico en tu vida diaria",
+    "type": "article",
+    "url": "https://lespetitsbidons.fr/blogs/news/10-conseils-pour-reduire-sa-consommation-de-plastique"
+  },
+  {
+    "title": "Un planeta asfixiado por el plástico – ¿Qué soluciones hay?",
+    "type": "bonus",
+    "url": "https://www.radiofrance.fr/franceculture/podcasts/de-cause-a-effets-le-magazine-de-l-environnement/une-planete-asphyxiee-de-plastique-quelles-solutions-5340104"
+  }
+]
+,
     "illustrationSuggeree": "Collage fotográfico con botella plástica, bolsas de plástico y vasos de café junto a alternativas sostenibles como botella reutilizable, bolsas de tela y taza de cerámica.",
     "imageHelper": "https://firebasestorage.googleapis.com/v0/b/challengeme-d7fef.appspot.com/o/Challenges-Helper%2Fch-reduce-plastic.png?alt=media"
   },
@@ -2549,22 +2781,23 @@
     "illustrationSuggeree": "Una persona apagando su portátil y encendiendo una lámpara de noche para leer un libro",
     "imageHelper": "https://firebasestorage.googleapis.com/v0/b/challengeme-d7fef.appspot.com/o/Challenges-Helper%2Fch-reduce-screen-time.png?alt=media",
     "ressources": [
-      {
-        "title": "Los efectos de la luz azul en el sueño",
-        "type": "video",
-        "url": "https://www.youtube.com/watch?v=somelink"
-      },
-      {
-        "title": "Técnicas para dormir mejor",
-        "type": "article",
-        "url": "https://www.someOtherLink.com"
-      },
-      {
-        "title": "Meditación guiada para dormir",
-        "type": "podcast",
-        "url": "https://www.somePodcastLink.com"
-      }
-    ]
+  {
+    "title": "Superar la Adicción al Teléfono",
+    "type": "video",
+    "url": "https://youtu.be/HSeF86blL7Y?si=ieSLc2SYAUVkConf"
+  },
+  {
+    "title": "Limitar el Tiempo de Pantalla",
+    "type": "article",
+    "url": "https://naitreetgrandir.com/fr/nouvelles/2023/12/04/limiter-temps-ecran-important/"
+  },
+  {
+    "title": "Nuestros Consejos para Reducir tu Tiempo de Pantalla",
+    "type": "podcast",
+    "url": "https://www.radiofrance.fr/franceinter/podcasts/l-info-de-france-inter/l-info-de-france-inter-8230190"
+  }
+]
+
   },
   "saveMoney": {
     "miniCours": "💪 Desarrolla tu disciplina financiera y alcanza tu libertad económica ahorrando solo 5 $ al día. Puede parecer poco, pero es un gran paso hacia una mejor gestión del dinero 💰. El secreto es comenzar poco a poco y convertirlo en un hábito diario. Cada acción cuenta, incluso si parece insignificante 😇. Prepara tu café en casa ☕, cocina tu almuerzo 🥪. ¡Te sorprenderá cuánto puedes ahorrar!",
@@ -2577,22 +2810,23 @@
     "illustrationSuggeree": "Una alcancía sobre una mesa con algunas monedas al lado.",
     "imageHelper": "https://firebasestorage.googleapis.com/v0/b/challengeme-d7fef.appspot.com/o/Challenges-Helper%2Fch-save-money.png?alt=media",
     "ressources": [
-      {
-        "title": "Cómo ahorrar dinero para principiantes",
-        "type": "video",
-        "url": "http://lienverslavidéo.com"
-      },
-      {
-        "title": "7 maneras simples de ahorrar dinero a diario",
-        "type": "article",
-        "url": "http://lienverslarticle.com"
-      },
-      {
-        "title": "Podcast: Logra libertad financiera ahorrando 5 $ al día",
-        "type": "bonus",
-        "url": "http://lienverslepodecast.com"
-      }
-    ]
+  {
+    "title": "Cómo Ahorrar Dinero Rápidamente",
+    "type": "video",
+    "url": "https://youtu.be/4TU9xB5ttYo?si=P1qE-3sujLTu2LZF"
+  },
+  {
+    "title": "Consejos para Ahorrar",
+    "type": "article",
+    "url": "https://www.mesquestionsdargent.fr/budget/comment-faire-des-economies/astuces-economies-accessible"
+  },
+  {
+    "title": "Ahorrar en el Día a Día - Podcast",
+    "type": "bonus",
+    "url": "https://www.radiofrance.fr/francebleu/podcasts/france-bleu-paris-bienvenue-chez-vous-les-experts/des-astuces-simples-pour-faire-des-economies-au-quotidien-8148632"
+  }
+]
+
   },
   "selfReflection": {
     "miniCours": "La autorreflexión diaria 🤔💭 es una práctica esencial para el desarrollo personal. Dedica unos minutos cada día para revisar tus acciones, pensamientos y emociones. Puedes identificar patrones, desafíos y oportunidades de mejora. Escribe en un diario o simplemente medita. Lo importante es enfocarte en ti mismo y hacer un balance honesto de tu día 👍🌱.",
@@ -2605,22 +2839,23 @@
     "illustrationSuggeree": "Una persona sentada en un escritorio escribiendo en un diario al final del día.",
     "imageHelper": "https://firebasestorage.googleapis.com/v0/b/challengeme-d7fef.appspot.com/o/Challenges-Helper%2Fch-self-reflection.png?alt=media",
     "ressources": [
-      {
-        "title": "Cómo practicar la autorreflexión diaria",
-        "type": "video",
-        "url": "https://youtube.com/votreURLunique"
-      },
-      {
-        "title": "5 preguntas para una autorreflexión efectiva",
-        "type": "article",
-        "url": "https://votreBlog.com/votreURLunique"
-      },
-      {
-        "title": "Podcast: La importancia de la autorreflexión",
-        "type": "bonus",
-        "url": "https://votreSitePodcast.com/votreURLunique"
-      }
-    ]
+  {
+    "title": "La Importancia de la Autorreflexión",
+    "type": "video",
+    "url": "https://youtu.be/CVsAaRPf60E?si=i_KZ3i5MKUBpZBJ5"
+  },
+  {
+    "title": "La Autorreflexión, Clave del Crecimiento Personal",
+    "type": "article",
+    "url": "https://nospensees.fr/lauto-reflexion-cle-de-croissance-personnelle-de-liberte-emotionnelle/"
+  },
+  {
+    "title": "Podcasts sobre Autorreflexión",
+    "type": "bonus",
+    "url": "https://podcast.feedspot.com/self_reflection_podcasts/"
+  }
+]
+
   },
   "talkToStranger": {
     "miniCours": "Conocer nuevas personas a diario no solo amplía tu perspectiva, también fortalece tus habilidades sociales 👥. Empieza con poco: una sonrisa, un saludo, una pregunta simple pueden abrir la puerta a conversaciones significativas 🚀. Cada encuentro es una oportunidad de crecimiento 🌱.",
@@ -2633,22 +2868,23 @@
     "illustrationSuggeree": "Una persona iniciando conversación con un desconocido en una cafetería.",
     "imageHelper": "https://firebasestorage.googleapis.com/v0/b/challengeme-d7fef.appspot.com/o/Challenges-Helper%2Fch-talk-to-stranger.png?alt=media",
     "ressources": [
-      {
-        "title": "Cómo iniciar una conversación: 5 frases después de 'hola'",
-        "type": "video",
-        "url": "https://youtu.be/DH6IIlxPh7w"
-      },
-      {
-        "title": "10 formas simples y efectivas para empezar una conversación",
-        "type": "article",
-        "url": "https://www.medium.com/10-astuces-pour-entamer-une-conversation"
-      },
-      {
-        "title": "Podcast: El arte de conversar - Claves para comunicar mejor",
-        "type": "bonus",
-        "url": "https://www.spotify.com/art-de-la-conversation"
-      }
-    ]
+  {
+    "title": "Domina el Arte de la Conversación",
+    "type": "video",
+    "url": "https://youtu.be/HYQ4ZjylHEU?si=sonikOMisf7bwb4Z"
+  },
+  {
+    "title": "Comunica Mejor en 10 Pasos",
+    "type": "article",
+    "url": "https://timidite.info/agir/apprendre-a-mieux-communiquer/"
+  },
+  {
+    "title": "Small Talk - Podcast",
+    "type": "bonus",
+    "url": "https://podcast.ausha.co/100-reseau/le-small-talk-comment-engager-une-conversation"
+  }
+]
+
   },
   "wakeUp5AM": {
     "miniCours": "Despertarse a las 5 a. m. puede parecer difícil, pero sus beneficios para la productividad y el bienestar son enormes 🌞. Imagina todo lo que puedes lograr antes que los demás. Crea una rutina nocturna sólida para dormir bien 😴 y ve adelantando tu hora de despertar poco a poco ⏰.",
@@ -2661,22 +2897,23 @@
     "illustrationSuggeree": "Un despertador marcando las 5 a. m. con el amanecer al fondo.",
     "imageHelper": "https://firebasestorage.googleapis.com/v0/b/challengeme-d7fef.appspot.com/o/Challenges-Helper%2Fch-wake-up-5am.png?alt=media",
     "ressources": [
-      {
-        "title": "Por qué me levanto a las 5 todos los días",
-        "type": "video",
-        "url": "https://www.youtube.com/watch?v=bEr0uEqbyV8"
-      },
-      {
-        "title": "Cómo levantarse a las 5 a. m.",
-        "type": "article",
-        "url": "https://www.wikihow.com/Wake-Up-Early"
-      },
-      {
-        "title": "El poder de madrugar | Podcast de Robin Sharma",
-        "type": "bonus",
-        "url": "https://www.robinsharma.com/podcast/02-the-5am-club/"
-      }
-    ]
+  {
+    "title": "¿Por qué me levanto a las 5 a. m. todos los días?",
+    "type": "video",
+    "url": "https://youtu.be/pg2GnMwpePo?si=cf66E-ptBf8cJDSE"
+  },
+  {
+    "title": "¿Por qué levantarse temprano?",
+    "type": "article",
+    "url": "https://www.tediber.com/conseils/lit/pourquoi-lever-tot"
+  },
+  {
+    "title": "¿El mundo pertenece a los que madrugan?",
+    "type": "bonus",
+    "url": "https://www.radiofrance.fr/franceculture/podcasts/la-question-du-jour/le-matin-appartient-il-a-ceux-qui-se-levent-tot-2077852"
+  }
+]
+
   },
   "walk10000Steps": {
     "miniCours": "Caminar 10,000 pasos al día es un reto perfecto para mantenerte en forma 🏃‍♀️. Es beneficioso tanto para tu cuerpo como para tu mente 🧠. Sal a caminar, reduce el estrés, y divide los pasos en pequeños tramos. Usa tus trayectos diarios para sumar: pasea al perro 🐕, usa escaleras 🏢, camina más lejos 🚙.",
@@ -2689,22 +2926,23 @@
     "illustrationSuggeree": "Alguien mirando su podómetro en el móvil, sonriendo, en un parque.",
     "imageHelper": "https://firebasestorage.googleapis.com/v0/b/challengeme-d7fef.appspot.com/o/Challenges-Helper%2Fch-walk-1000-pas.png?alt=media",
     "ressources": [
-      {
-        "title": "¿Cómo caminar 10 000 pasos al día?",
-        "type": "video",
-        "url": "https://www.youtube.com/watch?v=abc"
-      },
-      {
-        "title": "Beneficios de caminar 10 000 pasos diarios",
-        "type": "article",
-        "url": "https://www.healthbenefitsofwalking.com/articles"
-      },
-      {
-        "title": "Reto 10000 pasos: consejos útiles",
-        "type": "podcast",
-        "url": "https://www.walkmorepodcast.com/episode10"
-      }
-    ]
+  {
+    "title": "Caminar 10.000 pasos al día",
+    "type": "video",
+    "url": "https://youtu.be/CNGG-amQsyw?si=FMc11PXozuxTuV5u"
+  },
+  {
+    "title": "¿Realmente necesitas caminar 10.000 pasos al día?",
+    "type": "article",
+    "url": "https://www.nationalgeographic.fr/sciences/sante-recommandations-sante-faut-il-reellement-faire-10000-pas-par-jour"
+  },
+  {
+    "title": "¿Cómo te pueden ayudar 10.000 pasos al día?",
+    "type": "podcast",
+    "url": "https://podcast.ausha.co/sport-sante-nutrition-podcast/comment-10-000-pas-par-jour-peuvent-t-aider-a-perdre-du-gras-et-etre-en-meilleure-sante"
+  }
+]
+
   },
   "workout15Min": {
     "miniCours": "🎉 ¡Vamos allá! Hacer ejercicio beneficia tanto tu cuerpo como tu mente 🧠. Mejora tu energía, estado de ánimo y salud general. Comienza con solo 15 minutos al día y aumenta con el tiempo. Elige una actividad que disfrutes y ¡sé constante! 💪🏋️‍♀️",
@@ -2717,22 +2955,23 @@
     "illustrationSuggeree": "Persona haciendo ejercicio en casa",
     "imageHelper": "https://firebasestorage.googleapis.com/v0/b/challengeme-d7fef.appspot.com/o/Challenges-Helper%2Fch-workout.png?alt=media",
     "ressources": [
-      {
-        "title": "Yoga matutino de 15 minutos para principiantes 🌞",
-        "type": "video",
-        "url": "https://www.youtube.com/watch?v=VaoV1PrYft4"
-      },
-      {
-        "title": "Beneficios del ejercicio físico",
-        "type": "article",
-        "url": "https://www.medicalnewstoday.com/articles/153390"
-      },
-      {
-        "title": "Podcast: Entendiendo la ciencia del ejercicio",
-        "type": "bonus",
-        "url": "https://www.listennotes.com/c/4e8e3e8bcbf1486496206829f7d42e8e/"
-      }
-    ]
+  {
+    "title": "Ejercicio matutino para empezar el día",
+    "type": "video",
+    "url": "https://youtu.be/nHzveG3uyho?si=EWTmvbnKTm-0LvGH"
+  },
+  {
+    "title": "Los beneficios del ejercicio",
+    "type": "article",
+    "url": "https://www.medicalnewstoday.com/articles/153390"
+  },
+  {
+    "title": "Hacer deporte – Podcast",
+    "type": "bonus",
+    "url": "https://www.radiofrance.fr/franceculture/podcasts/serie-faites-du-sport"
+  }
+]
+
   },
   "imagePickFailed": "No se pudo seleccionar la imagen.",
   "allFieldsRequired": "Todos los campos son obligatorios (la imagen es opcional).",
@@ -2874,6 +3113,10 @@
       "title": "¡Bienvenido a ChallengeTies!",
       "description": "Descubre una aventura única, desafíos emocionantes y una comunidad inspiradora. ¿Listo para el reto?"
     },
+    "videoStep": {
+    "title": "Bienvenido a un desafío 🎯",
+    "description": "Aquí puedes aceptar un desafío, seguir tu progreso, consultar tus estadísticas… y sobre todo acceder a consejos, ejemplos concretos y recursos en audio o video para ayudarte a tener éxito 💡🔥"
+  },
     "index": {
       "title": "Descubre lo esencial",
       "description": "Descubre desafíos populares, consulta el ranking, explora novedades, propone ideas y accede a consejos útiles para avanzar."

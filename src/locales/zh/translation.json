@@ -198,6 +198,8 @@
     "loginRequiredTitle": "需要登录",
     "loginRequiredMessage": "请登录以进行投票。",
     "alreadyVotedTitle": "已投票",
+    "by": "由",
+  "votes": "票数",
     "alreadyVotedMessage": "您已投过票。",
     "voteRegisteredTitle": "投票已登记",
     "voteRegisteredMessage": "感谢您的投票！",
@@ -209,7 +211,7 @@
     "proposalErrorMessage": "无法发送。",
     "title": "新功能",
     "openExplanation": "打开投票说明",
-    "description": "投票选出下一个要实现的功能或提出您自己的建议！投票截止至2025年4月30日。",
+    "description": "为下一个功能投票，或提出你自己的建议！截止日期为2025年8月30日。",
     "noFeatures": "目前暂无可用功能。",
     "proposeIdea": "提出想法",
     "thankYouForVote": "感谢您的投票：{{featureTitle}}",
@@ -558,7 +560,9 @@
     "votes": "{{count}} 票",
     "votes_plural": "{{count}} 票",
     "vote": "投票",
-    "alreadyVoted": "您已投过票。"
+    "alreadyVoted": "您已投过票。",
+    "share": "分享"
+
   },
   "durationModal": {
     "title": "选择时长（天）",
@@ -1174,9 +1178,21 @@
       "示例 4 🌱：连续一周记录你吃了什么，以及每顿饭后的感受，有助于发现以前未注意到的模式。"
     ],
     "ressources": [
-      { "title": "正念饮食简介", "type": "video", "url": "" },
-      { "title": "练习正念饮食的步骤", "type": "article", "url": "" },
-      { "title": "播客：正念饮食对健康的影响", "type": "bonus", "url": "" }
+      {
+    "title": "正念饮食的力量 - TedXTalks",
+    "type": "video",
+    "url": "https://youtu.be/fAm4r4FQMQM?si=QeEswp-Yz4Zkccfl"
+  },
+  {
+    "title": "如何真正实践正念饮食？",
+    "type": "article",
+    "url": "https://youtu.be/otNX8RVn6-U?si=7bY2EJsvYojwgJW3"
+  },
+  {
+    "title": "从无意识饮食到正念饮食",
+    "type": "bonus",
+    "url": "https://www.eufic.org/fr/une-vie-saine/article/dune-alimentation-machinale-a-une-alimentation-consciente/"
+  }
     ]
   },
   "challengeCommunication": {
@@ -1188,22 +1204,18 @@
       "与远房亲戚安排一次虚拟咖啡 ☕ 或视频通话，聊聊童年和各自的新生活 🌱"
     ],
     "ressources": [
-      {
-        "title": "如何重新连接旧友",
-        "type": "video",
-        "url": "https://youtube.url"
-      },
-      {
-        "title": "社交关系对幸福感的重要性",
-        "type": "article",
-        "url": "https://article.url"
-      },
-      {
-        "title": "保持朋友联系的实用指南",
-        "type": "bonus",
-        "url": "https://guide.url"
-      }
-    ]
+  {
+    "title": "与老朋友重新建立联系",
+    "type": "video",
+    "url": "https://www.slate.fr/story/267116/technique-renouer-liens-anciens-amis-amitie-psychologie-sociale-etude-scientifique"
+  },
+  {
+    "title": "社交关系对幸福感的重要性",
+    "type": "article",
+    "url": "https://www.cequinousrelie.com/prendre-soin/le-bien-etre-par-le-lien-social/"
+  }
+]
+
   },
   "challengeDes3Sourires": {
     "miniCours": "微笑的艺术看似简单，但真诚的微笑可以点亮他人的一天 😊。每天挑战自己对三位不同的人微笑。可以是在咖啡店、街头，甚至是镜子前！这不仅能传递快乐，还能释放内啡肽让你更快乐。请用心微笑，而非勉强。真诚是关键！👍",
@@ -1214,22 +1226,23 @@
       "示例 4 🌱：下公交车或地铁前，向司机微笑说再见。"
     ],
     "ressources": [
-      {
-        "title": "微笑的力量 | Ron Gutman",
-        "type": "video",
-        "url": "https://www.youtube.com/watch?v=U9cGdRNMdQQ"
-      },
-      {
-        "title": "微笑与大笑的七大好处",
-        "type": "article",
-        "url": "https://www.lifehack.org/articles/communication/7-benefits-smiling-and-laughing.html"
-      },
-      {
-        "title": "用微笑建立信任",
-        "type": "bonus",
-        "url": "https://www.psychologytoday.com/intl/blog/sideways-view/202005/using-smiles-foster-trust"
-      }
-    ]
+  {
+    "title": "微笑的隐藏力量 | Ron Gutman",
+    "type": "video",
+    "url": "https://www.youtube.com/watch?v=U9cGdRNMdQQ"
+  },
+  {
+    "title": "微笑和大笑的七个好处",
+    "type": "article",
+    "url": "https://www.lifehack.org/articles/communication/7-benefits-smiling-and-laughing.html"
+  },
+  {
+    "title": "微笑的益处",
+    "type": "bonus",
+    "url": "https://youtu.be/abFAazci84s?si=rpL-37dpK4sBum-y"
+  }
+]
+
   },
   "challengeEcritureCreative": {
     "miniCours": "👩‍🏫 欢迎参加这个迷你学习挑战！通过每天写一篇500字的虚构故事来提升创造力。📝 你不需要成为下一个斯蒂芬·金，关键是让想象力自由驰骋并享受过程。🌈 记住，创造力就像肌肉：训练越多，它就越强！🏋️‍♂️ 拿起笔或键盘，让文字自由流淌。尝试加入对话、丰富的描述和各类角色，使你的故事更加生动有趣。💓",
@@ -1240,22 +1253,23 @@
       "示例4 🌱 —《低语的森林》：一个关于大自然复苏并与居民对话的故事。"
     ],
     "ressources": [
-      {
-        "title": "如何写出引人入胜的故事",
-        "type": "video",
-        "url": "https://www.youtube.com/watch?v=KzjmiyVv8wA"
-      },
-      {
-        "title": "激发写作创造力的 10 个技巧",
-        "type": "article",
-        "url": "https://www.medium.com/@votrecreativite/10-conseils"
-      },
-      {
-        "title": "播客：著名作家分享写作技巧",
-        "type": "bonus",
-        "url": "https://www.soundcloud.com/techniques-ecriture"
-      }
-    ]
+  {
+    "title": "如何写一个故事？",
+    "type": "video",
+    "url": "https://youtu.be/5pdx1Y3l0vg?si=xvOOmaYzEXMfdmBK"
+  },
+  {
+    "title": "提升写作创意的实用建议",
+    "type": "article",
+    "url": "https://www.laparentheseimaginaire.com/ecriture/8-conseils-pour-developper-votre-creativite-decrivain"
+  },
+  {
+    "title": "名作家分享写作技巧的播客",
+    "type": "bonus",
+    "url": "https://www.academie.les-mots-ratures.com/blog/meilleurs-podcasts-ecriture-ecrivains-romans-guide-2024"
+  }
+]
+
   },
 
   "challengeGestionTemps": {
@@ -1267,10 +1281,23 @@
       "示例4 🌱：使用间歇休息进行自我护理：补充水分、伸展或放松大脑。"
     ],
     "ressources": [
-      { "title": "如何使用番茄钟技术", "type": "video", "url": "" },
-      { "title": "借助番茄钟进行时间管理", "type": "article", "url": "" },
-      { "title": "播客：番茄钟是否真的有效？", "type": "bonus", "url": "" }
-    ]
+  {
+    "title": "番茄工作法",
+    "type": "video",
+    "url": "https://www.youtube.com/watch?v=mNBmG24djoY&t=19s"
+  },
+  {
+    "title": "如何掌握时间管理的艺术",
+    "type": "article",
+    "url": "https://youtu.be/s8tOj43JC-o?si=ii4G0MT0UFSedclZ"
+  },
+  {
+    "title": "高效管理时间",
+    "type": "bonus",
+    "url": "https://asana.com/fr/resources/time-management-tips"
+  }
+]
+
   },
 
   "challengeJeuneIntermittent": {
@@ -1282,22 +1309,23 @@
       "示例4 🌱：避免加工食品，优先选择全食品。"
     ],
     "ressources": [
-      {
-        "title": "间歇性断食基础",
-        "type": "video",
-        "url": "https://www.youtube.com/watch?v=xyz123"
-      },
-      {
-        "title": "如何开始间歇性断食",
-        "type": "article",
-        "url": "https://www.example.com/blog/jeune-intermittent"
-      },
-      {
-        "title": "播客：间歇性断食的好处",
-        "type": "bonus",
-        "url": "https://www.example.com/podcast/12"
-      }
-    ]
+  {
+    "title": "间歇性禁食 - 如何开始",
+    "type": "video",
+    "url": "https://youtu.be/pl37cnIOnKw?si=NChrVL6wZq8NqWTI"
+  },
+  {
+    "title": "间歇性禁食 - 一种细胞清理方式",
+    "type": "article",
+    "url": "https://www.pasteur.fr/fr/journal-recherche/actualites/jeune-intermittent-nettoyage-cellulaire-meilleure-sante"
+  },
+  {
+    "title": "播客：间歇性禁食的好处",
+    "type": "bonus",
+    "url": "https://www.radiofrance.fr/franceinter/podcasts/grand-bien-vous-fasse/grand-bien-vous-fasse-du-lundi-25-novembre-2024-1998229"
+  }
+]
+
   },
 
   "challengeLectureSurprise": {
@@ -1309,22 +1337,23 @@
       "示例4 🌱：同样适用于电子书或有声书——随机阅读同样值得启发。"
     ],
     "ressources": [
-      {
-        "title": "阅读的好处",
-        "type": "video",
-        "url": "https://www.youtube.com/watch?v=lg31XrHm3vA&ab_channel=TEDxTalks"
-      },
-      {
-        "title": "为什么阅读应该成为优先事项",
-        "type": "article",
-        "url": "https://www.entrepreneur.com/article/315636"
-      },
-      {
-        "title": "电子书：《科学随机漫步》",
-        "type": "bonus",
-        "url": "https://www.goodreads.com/book/show/663986.A_Random_Walk_in_Science"
-      }
-    ]
+  {
+    "title": "阅读改变你的大脑",
+    "type": "video",
+    "url": "https://youtu.be/TvQ9AbWVuTU?si=UjevxYORwzkqhDVI"
+  },
+  {
+    "title": "阅读的好处",
+    "type": "article",
+    "url": "https://www.decitre.fr/blog/bienfaits-de-la-lecture?srsltid=AfmBOopSa-39BXUeD35rWw5ob-MvRtEsIQy2d7CnIYwdn-06HhvpDkvR"
+  },
+  {
+    "title": "阅读能带来哪些好处？",
+    "type": "bonus",
+    "url": "https://www.podcastics.com/podcast/episode/quels-bienfaits-nous-apporte-la-lecture-329681/"
+  }
+]
+
   },
 
   "challengeModeAvion": {
@@ -1336,22 +1365,18 @@
       "示例4 🌱：去大自然散步，与环境亲密接触，无数字干扰。"
     ],
     "ressources": [
-      {
-        "title": "飞行模式的力量",
-        "type": "video",
-        "url": "https://www.youtube.com/watch?v=xyz123"
-      },
-      {
-        "title": "为什么每天一小时飞行模式是好主意",
-        "type": "article",
-        "url": "https://www.huffpost.com/articles"
-      },
-      {
-        "title": "播客：断开连接才能重新连接",
-        "type": "bonus",
-        "url": "https://www.podcast.com/episode123"
-      }
-    ]
+  {
+    "title": "了解飞行模式",
+    "type": "video",
+    "url": "https://youtu.be/xW1nPijFqk4?si=Cfq_lLmOP93VH_GR"
+  },
+  {
+    "title": "开启飞行模式的好理由",
+    "type": "article",
+    "url": "https://leclaireur.fnac.com/article/cp33801-5-bonnes-raisons-de-passer-votre-smartphone-en-mode-avion/"
+  }
+]
+
   },
   "challengeOrganisationDigitale": {
     "miniCours": "数字化整理是一项平衡艺术 🎪，但对于高效生产力至关重要 🎯。每天只需花15分钟 🕒，就能为后续节省大量时间。🚀 首先按优先级整理邮箱 📧，使用文件夹将低优先级邮件分类。🕵️‍♀️ 然后根据日常需求逻辑地组织文件：创建文件夹和子文件夹，清晰命名文件，便于快速查找。维护整洁的数字空间或许令人畏惧，但每天一点点进步即可带来无压力效率提升。🌈",
@@ -1362,10 +1387,23 @@
       "示例4 🌱：使用键盘快捷键来节省浏览和移动文件时的时间。"
     ],
     "ressources": [
-      { "title": "如何整理电脑文件", "type": "video", "url": "https://example.com/video1" },
-      { "title": "良好文件夹结构的规则", "type": "article", "url": "https://example.com/article1" },
-      { "title": "清理数字空间的终极指南", "type": "bonus", "url": "https://example.com/bonus1" }
-    ],
+  {
+    "title": "如何整理你电脑上的文件",
+    "type": "video",
+    "url": "https://youtu.be/Z_4jyyPixD4?si=cQHEQuncUUB_5-2W"
+  },
+  {
+    "title": "文件管理的好处",
+    "type": "article",
+    "url": "https://www.acollab.com/quels-sont-les-7-avantages-dune-gestion-de-fichiers/"
+  },
+  {
+    "title": "清理你的数字空间",
+    "type": "bonus",
+    "url": "https://podcasts.apple.com/fr/podcast/22-d%C3%A9tox-digitale-3-conseils-pour-d%C3%A9sencombrer-ton/id1736480617?i=1000664554079"
+  }
+]
+,
     "illustrationSuggeree": "桌面上有一台电脑，屏幕显示整洁排列的文件夹",
     "imageHelper": "https://firebasestorage.googleapis.com/v0/b/challengeme-d7fef.appspot.com/o/Challenges-Helper%2Fch-organisation-digitale.png?alt=media"
   },
@@ -1379,10 +1417,23 @@
       "示例4 🌱：将“我很差劲”替换为“我在学习并每天都在进步”。"
     ],
     "ressources": [
-      { "title": "积极自我暗示的力量", "type": "video", "url": "" },
-      { "title": "如何将消极思维转化为积极？", "type": "article", "url": "" },
-      { "title": "播客：库埃法—积极思考带来幸福生活", "type": "bonus", "url": "" }
-    ],
+  {
+    "title": "积极思维的力量",
+    "type": "video",
+    "url": "https://youtu.be/qo19BMD4i98?si=ELJYB6Ty_aNbWb08"
+  },
+  {
+    "title": "积极思维的关键",
+    "type": "article",
+    "url": "https://epycure.com/blogs/journal-feel-good/les-8-cles-de-la-pensee-positive?srsltid=AfmBOor4uLL7BvQoA0iSLLm8BYzghp_qNhXa8ZAA9rwrcbV1me1it31o"
+  },
+  {
+    "title": "摆脱消极想法",
+    "type": "bonus",
+    "url": "https://youtu.be/2RZ9vqEfyCI?si=pOusiyI7RrZssiPc"
+  }
+]
+,
     "illustrationSuggeree": "一个人在笔记本里写下积极的想法",
     "imageHelper": "https://firebasestorage.googleapis.com/v0/b/challengeme-d7fef.appspot.com/o/Challenges-Helper%2Fch-pensee-positive.png?alt=media"
   },
@@ -1396,10 +1447,23 @@
       "示例4 🌱：马克不仅规划工作时间，也安排空余时间。他设定运动 🏋️ 和娱乐 🧗 活动以保持平衡。"
     ],
     "ressources": [
-      { "title": "如何有效规划每周", "type": "video", "url": "https://www.example.com/planification_efficace" },
-      { "title": "每周规划的7个好处", "type": "article", "url": "https://www.example.com/blog/avantages_planification_hebdomadaire" },
-      { "title": "播客：每周规划策略", "type": "bonus", "url": "https://www.example.com/podcast/strategies_planification_hebdomadaire" }
-    ],
+  {
+    "title": "如何高效规划你的一周",
+    "type": "video",
+    "url": "https://youtu.be/jozNEpY8iik?si=HtP-7UG3qP2we-hH"
+  },
+  {
+    "title": "如何规划每周计划？",
+    "type": "article",
+    "url": "https://www.appytodo.com/comment-planifier-semaine/"
+  },
+  {
+    "title": "生产力",
+    "type": "bonus",
+    "url": "https://youtu.be/2uAvargJv0k?si=Y8eQu93930jlm4Wz"
+  }
+]
+,
     "illustrationSuggeree": "一个人坐在桌前，打开笔记本，规划一周事情",
     "imageHelper": "https://firebasestorage.googleapis.com/v0/b/challengeme-d7fef.appspot.com/o/Challenges-Helper%2Fch-planification-hebdomadaire.png?alt=media"
   },
@@ -1412,11 +1476,24 @@
       "示例3 🚀：早上冲一次冷水澡，让一天精神满满。",
       "示例4 🌱：至少坚持30秒冷水淋浴，感受身体和大脑的变化。"
     ],
-    "ressources": [
-      { "title": "冷水淋浴的好处", "type": "video", "url": "https://www.youtube.com/watch?v=sqmrof6o0gk" },
-      { "title": "为什么你应该每天都洗冷水澡？", "type": "article", "url": "https://www.healthline.com/health/cold-shower-benefits" },
-      { "title": "冷水澡挑战：关于好处与技巧的播客", "type": "podcast", "url": "https://open.spotify.com/show/4rFsMgQhE9swoiKk7PeiYw" }
-    ],
+    "ressources":[
+  {
+    "title": "如何更轻松地洗冷水澡",
+    "type": "video",
+    "url": "https://youtu.be/sy4ATccOm2Y?si=GF66WoqndmAhF2om"
+  },
+  {
+    "title": "冷水澡的好处",
+    "type": "article",
+    "url": "https://laboratoires-phytoceutic.com/blogs/news/10-bienfaits-de-la-douche-froide?srsltid=AfmBOopQYq_J-sF5wQpr1hMjlvsWIHCJ4IA_9HXA3G6Chm7W2-xYdPzA"
+  },
+  {
+    "title": "冷水澡、韧性、冰浴",
+    "type": "podcast",
+    "url": "https://www.podcastics.com/podcast/episode/douche-froide-resilience-bain-glaceavec-maxime-frost-304582/"
+  }
+]
+,
     "illustrationSuggeree": "一个人在冷水淋浴下，身体和思维焕发活力",
     "imageHelper": "https://firebasestorage.googleapis.com/v0/b/challengeme-d7fef.appspot.com/o/Challenges-Helper%2Fch-douche-froide.png?alt=media"
   },
@@ -1430,10 +1507,23 @@
       "示例4 🌱：“我非常欣赏你为团队带来的正能量。”"
     ],
     "ressources": [
-      { "title": "如何给出有效赞美", "type": "video", "url": "https://example.com/video_compliment_keys" },
-      { "title": "真诚赞美的艺术", "type": "article", "url": "https://example.com/article_sincere_compliment" },
-      { "title": "真诚赞美的心理益处", "type": "podcast", "url": "https://example.com/podcast_compliment_benefits" }
-    ],
+  {
+    "title": "赞美的好处",
+    "type": "video",
+    "url": "https://youtube.com/shorts/Pq0mBfooSKg?si=2bprdsj9FvQvYQyP"
+  },
+  {
+    "title": "一句简单的赞美让人感觉很好！",
+    "type": "article",
+    "url": "https://shop.simplycure.com/blogs/health-guide/les-bienfaits-des-compliments"
+  },
+  {
+    "title": "给予或接受赞美",
+    "type": "podcast",
+    "url": "https://podcast.chloebloom.com/episodes/faire-ou-recevoir-des-compliments-c-est-dur"
+  }
+]
+,
     "illustrationSuggeree": "一个人在微笑着真诚地给另一个人赞美",
     "imageHelper": "https://firebasestorage.googleapis.com/v0/b/challengeme-d7fef.appspot.com/o/Challenges-Helper%2Fch-compliment.png?alt=media"
   },
@@ -1446,10 +1536,23 @@
       "示例4 🌱：如果你想拥有更健康的生活，想象准备均衡的饮食、运动，感觉更有活力和幸福。"
     ],
     "ressources": [
-      { "title": "可视化的力量", "type": "video", "url": "https://www.youtube.com/watch?v=b5i3vE4S2WQ" },
-      { "title": "每日可视化如何引领成功", "type": "article", "url": "https://www.huffpost.com/entry/see-believe-achieve_b_890307" },
-      { "title": "可视化与成功的播客", "type": "bonus", "url": "https://www.mindvalley.com/podcast/mindvalley-podcast/visualization-success-procedure-reality-transurfing" }
-    ],
+  {
+    "title": "可视化 —— 吸引力法则",
+    "type": "video",
+    "url": "https://youtu.be/7b80UgObUyQ?si=GJtDTWcwbQuWanzB"
+  },
+  {
+    "title": "可视化与心理想象",
+    "type": "article",
+    "url": "https://www.passeportsante.net/fr/Therapies/Guide/Fiche.aspx?doc=visualisation_th"
+  },
+  {
+    "title": "积极的可视化练习",
+    "type": "bonus",
+    "url": "https://www.radiofrance.fr/franceinter/podcasts/etat-d-esprit/la-visualisation-positive-avec-alain-lancelot-2263321"
+  }
+]
+,
     "illustrationSuggeree": "坐在安静环境中，闭眼可视化目标的人",
     "imageHelper": "https://firebasestorage.googleapis.com/v0/b/challengeme-d7fef.appspot.com/o/Challenges-Helper%2Fch-daily-visualisation.png?alt=media"
   },
@@ -1462,10 +1565,23 @@
       "示例4 🌱：“我花时间为自己做了一顿健康的饭。”"
     ],
     "ressources": [
-      { "title": "庆祝小胜利的力量", "type": "video", "url": "https://www.youtube.com/watch?v=c9KtG6aCtB4" },
-      { "title": "识别小胜利的力量", "type": "article", "url": "https://www.tonyrobbins.com/stories/unleash-the-power/the-power-of-recognizing-your-small-wins/" },
-      { "title": "播客：成功的科学", "type": "bonus", "url": "https://www.scienceofsuccess.co/blog/the-science-of-small-wins" }
-    ],
+  {
+    "title": "专注于每日的三项胜利",
+    "type": "video",
+    "url": "https://youtu.be/N9RVuMunXIQ?si=g589bCqMnifcthhI"
+  },
+  {
+    "title": "每日胜利的力量",
+    "type": "article",
+    "url": "https://vocal.media/motivation/the-power-of-daily-wins-how-small-successes-lead-to-big-change"
+  },
+  {
+    "title": "你的每日胜利",
+    "type": "bonus",
+    "url": "https://podcasts.apple.com/us/podcast/your-daily-win/id1403606358"
+  }
+]
+,
     "illustrationSuggeree": "一个人在日记里写字，旁边放着一杯茶，星星环绕象征胜利",
     "imageHelper": "https://firebasestorage.googleapis.com/v0/b/challengeme-d7fef.appspot.com/o/Challenges-Helper%2Fch-daily-wins.png?alt=media"
   },
@@ -1478,10 +1594,23 @@
       "示例4 🌱：使用舒适的瑜伽垫和宁静环境来练习。"
     ],
     "ressources": [
-      { "title": "初学者瑜伽：15分钟放松", "type": "video", "url": "" },
-      { "title": "定期练习瑜伽的重要性", "type": "article", "url": "" },
-      { "title": "播客：瑜伽作为一种生活方式", "type": "bonus", "url": "" }
-    ],
+  {
+    "title": "瑜伽入门课程",
+    "type": "video",
+    "url": "https://youtu.be/3_rUl32CPbA?si=fmQlAL1kmuyx7UpZ"
+  },
+  {
+    "title": "瑜伽的好处",
+    "type": "article",
+    "url": "https://www.cerclesdelaforme.com/blog/coaching-sportif/les-5-bienfaits-du-yoga/"
+  },
+  {
+    "title": "关于瑜伽的播客",
+    "type": "bonus",
+    "url": "https://ecolefrancaisedeyoga.fr/5-podcasts-a-decouvrir-sur-le-yoga/"
+  }
+]
+,
     "illustrationSuggeree": "清晨户外做瑜伽姿势的人",
     "imageHelper": "https://firebasestorage.googleapis.com/v0/b/challengeme-d7fef.appspot.com/o/Challenges-Helper%2Fch-daily-yoga.png?alt=media"
   },
@@ -1494,10 +1623,23 @@
       "示例4 🌱：整理厨房——捐赠或丢弃未使用的用具，高效组织储物空间。"
     ],
     "ressources": [
-      { "title": "如何清理家庭乱象以增进清晰度", "type": "video", "url": "http://example.com/video/désencombrer" },
-      { "title": "清理空间的5个步骤", "type": "article", "url": "http://example.com/article/désencombrer" },
-      { "title": "播客：清理的力量", "type": "bonus", "url": "http://example.com/podcast/désencombrer" }
-    ],
+  {
+    "title": "整理你的家",
+    "type": "video",
+    "url": "https://youtu.be/oH_WlPxp4es?si=c1CBz2Ma715G9eMo"
+  },
+  {
+    "title": "清理与整理的好处",
+    "type": "article",
+    "url": "https://laureganisatrice.fr/les-bienfaits-du-desencombrement-et-du-rangement/#:~:text=D%C3%A9sencombrer%20et%20ranger%20fait%20diminuer%20le%20stress&text=Il%20nous%20fait%20sans%20arr%C3%AAt,%C3%A0%20ce%20sentiment%20de%20culpabilit%C3%A9."
+  },
+  {
+    "title": "分类、清理和整理",
+    "type": "bonus",
+    "url": "https://www.radiofrance.fr/francebleu/podcasts/cote-experts-l-invite/trier-desencombrer-et-organiser-votre-interieur-pour-alleger-votre-mental-1561486"
+  }
+]
+,
     "illustrationSuggeree": "一个人整理物品，一边是保留堆，一边是捐赠/丢弃堆",
     "imageHelper": "https://firebasestorage.googleapis.com/v0/b/challengeme-d7fef.appspot.com/o/Challenges-Helper%2Fch-declutter-space.png?alt=media"
   },
@@ -1510,10 +1652,23 @@
       "示例4 🌱：庆祝每个无烟日——每一天都是你新生活的种子。"
     ],
     "ressources": [
-      { "title": "关于烟草危害的演讲", "type": "video", "url": "https://youtu.be/StopSmoking" },
-      { "title": "10种经验证的戒烟方法", "type": "article", "url": "https://www.stop-tabac.com" },
-      { "title": "播客：我的戒烟之旅", "type": "bonus", "url": "https://www.quit-smoking-podcast.com" }
-    ],
+  {
+    "title": "享受戒烟的过程",
+    "type": "video",
+    "url": "https://youtu.be/t9Sujfu5BsY?si=fcE48WX-mpBSyFBs"
+  },
+  {
+    "title": "戒烟的好处",
+    "type": "article",
+    "url": "https://www.fedecardio.org/je-m-informe/les-benefices-immediats-de-l-arret-du-tabac/"
+  },
+  {
+    "title": "如果你真的戒烟了呢？",
+    "type": "bonus",
+    "url": "https://www.radiofrance.fr/franceinter/podcasts/grand-bien-vous-fasse/grand-bien-vous-fasse-du-lundi-02-septembre-2024-9669868"
+  }
+]
+,
     "illustrationSuggeree": "一个人在享受日出——象征自由与重生",
     "imageHelper": "https://firebasestorage.googleapis.com/v0/b/challengeme-d7fef.appspot.com/o/Challenges-Helper%2Fch-arret-du-tabac.png?alt=media"
   },
@@ -1526,22 +1681,23 @@
       "示例 4 🌱 — 你欣赏了一场美丽的日落。"
     ],
     "ressources": [
-      {
-        "title": "感恩的力量",
-        "type": "video",
-        "url": "https://youtube.com/vidéo1"
-      },
-      {
-        "title": "为什么要写感恩日记",
-        "type": "article",
-        "url": "https://www.monarticle.com/1"
-      },
-      {
-        "title": "播客：感恩的影响",
-        "type": "bonus",
-        "url": "https://www.monpodcast.com/1"
-      }
-    ],
+  {
+    "title": "开始写感恩日记",
+    "type": "video",
+    "url": "https://youtu.be/GZghu_xFRM8?si=fChgmowBEpz2P-r9"
+  },
+  {
+    "title": "如何保持感恩日记",
+    "type": "article",
+    "url": "https://amandebasilic.com/journal-de-gratitude/"
+  },
+  {
+    "title": "播客：感恩日记",
+    "type": "bonus",
+    "url": "https://podcasts.apple.com/fr/podcast/gratitude-journal/id1493974729"
+  }
+]
+,
     "illustrationSuggeree": "一个人带着平静微笑写日记。",
     "imageHelper": "https://firebasestorage.googleapis.com/v0/b/challengeme-d7fef.appspot.com/o/Challenges-Helper%2Fch-carnet-gratitude.png?alt=media"
   },
@@ -1553,23 +1709,24 @@
       "示例 3 🚀：在社区里慢跑或散步 🏃‍♀️",
       "示例 4 🌱：在花园里冥想 🧘‍♀️"
     ],
-    "ressources": [
-      {
-        "title": "自然如何改善身心健康",
-        "type": "video",
-        "url": "https://www.youtube.com/watch?v=Z7O8s9n_Va8"
-      },
-      {
-        "title": "重新连接自然的10个理由",
-        "type": "article",
-        "url": "https://www.mindbodygreen.com/0-20793/10-reasons-why-being-in-nature-is-good-for-you.html"
-      },
-      {
-        "title": "播客：回归自然",
-        "type": "bonus",
-        "url": "https://www.bbc.co.uk/programmes/p07zr8p7"
-      }
-    ],
+    "ressources":[
+  {
+    "title": "提升与自然的连接",
+    "type": "video",
+    "url": "https://youtu.be/XuFNa0v4EuM?si=rm3_58lXyu3-umnF"
+  },
+  {
+    "title": "如何享受大自然的益处？",
+    "type": "article",
+    "url": "https://www.mindbodygreen.com/0-20793/10-reasons-why-being-in-nature-is-good-for-you.html"
+  },
+  {
+    "title": "我们与自然的联系",
+    "type": "bonus",
+    "url": "https://www.radiofrance.fr/franceinter/podcasts/la-tete-au-carre/notre-connexion-a-la-nature-6405232"
+  }
+]
+,
     "illustrationSuggeree": "一个人在绿色公园中冥想。",
     "imageHelper": "https://firebasestorage.googleapis.com/v0/b/challengeme-d7fef.appspot.com/o/Challenges-Helper%2Fch-connexion-nature.png?alt=media"
   },
@@ -1582,22 +1739,23 @@
       "示例 4 🌱：每天画一幅与自然有关的图。"
     ],
     "ressources": [
-      {
-        "title": "每天释放你的创造力",
-        "type": "video",
-        "url": "https://www.youtube.com/watch?v=xyz123"
-      },
-      {
-        "title": "30天创意挑战",
-        "type": "article",
-        "url": "https://www.blog-creatif.com/article123"
-      },
-      {
-        "title": "播客：培养创造力",
-        "type": "bonus",
-        "url": "https://www.podcast.com/episode123"
-      }
-    ],
+  {
+    "title": "释放你的创造力",
+    "type": "video",
+    "url": "https://youtu.be/7RJIrHi8ifE?si=IFU4Kz31-rd3O0CE"
+  },
+  {
+    "title": "创造力的好处",
+    "type": "article",
+    "url": "https://bluevertsoul.fr/bienfaits-creativite"
+  },
+  {
+    "title": "创造力",
+    "type": "bonus",
+    "url": "https://www.radiofrance.fr/franceculture/podcasts/serie-la-creativite-avec-samah-karaki"
+  }
+]
+,
     "illustrationSuggeree": "一个人站在空白画布前，手拿画笔准备创作。",
     "imageHelper": "https://firebasestorage.googleapis.com/v0/b/challengeme-d7fef.appspot.com/o/Challenges-Helper%2Fch-creativite-quotidienne.png?alt=media"
   },
@@ -1610,22 +1768,23 @@
       "示例 4 🌱：从事创意爱好，如绘画或手工制作。"
     ],
     "ressources": [
-      {
-        "title": "如何进行数字排毒",
-        "type": "video",
-        "url": "https://youtu.be/exemple"
-      },
-      {
-        "title": "数字排毒终极指南",
-        "type": "article",
-        "url": "https://www.exemple.com/article-detox-digitale"
-      },
-      {
-        "title": "播客：数字生活中的平衡",
-        "type": "bonus",
-        "url": "https://www.exemple.com/podcast-detox-digitale"
-      }
-    ],
+  {
+    "title": "减少屏幕时间，享受更多生活",
+    "type": "video",
+    "url": "https://youtu.be/MwXNOxhhYLg?si=HdaA8JxAWK6ghmhJ"
+  },
+  {
+    "title": "数字排毒 - 有哪些好处？",
+    "type": "article",
+    "url": "https://www.livi.fr/en-bonne-sante/digital-detox-bienfaits/"
+  },
+  {
+    "title": "没有手机的生活 - 数字排毒",
+    "type": "bonus",
+    "url": "https://www.radiofrance.fr/franceinter/podcasts/le-zoom-de-la-redaction/le-zoom-de-la-redaction-du-mercredi-27-decembre-2023-3330605"
+  }
+]
+,
     "illustrationSuggeree": "一个人躺在吊床上读书，没有任何电子设备。",
     "imageHelper": "https://firebasestorage.googleapis.com/v0/b/challengeme-d7fef.appspot.com/o/Challenges-Helper%2Fch-digital-detox.png?alt=media"
   },
@@ -1638,22 +1797,23 @@
       "示例 4 🌱：将厨余堆肥，制作天然肥料。"
     ],
     "ressources": [
-      {
-        "title": "如何开始零废弃生活",
-        "type": "video",
-        "url": "www.votrelien.com"
-      },
-      {
-        "title": "10个零废弃生活建议",
-        "type": "article",
-        "url": "www.votrelien.com"
-      },
-      {
-        "title": "播客：迈向零废弃",
-        "type": "bonus",
-        "url": "www.votrelien.com"
-      }
-    ],
+  {
+    "title": "减少垃圾的生活方式",
+    "type": "video",
+    "url": "https://youtu.be/B5ijPk5_8pM?si=NNztRhVW8d3KWFLA"
+  },
+  {
+    "title": "为什么选择零废弃生活？",
+    "type": "article",
+    "url": "https://www.wespring.com/blog/zero-dechet/article/pourquoi-passer-au-zero-dechet"
+  },
+  {
+    "title": "零废弃生活真的可能吗？",
+    "type": "bonus",
+    "url": "https://www.radiofrance.fr/franceinter/podcasts/on-se-decarbone/on-se-decarbone-du-lundi-18-novembre-2024-2176680"
+  }
+]
+,
     "illustrationSuggeree": "一个女性正在将垃圾分类放入回收桶中。",
     "imageHelper": "https://firebasestorage.googleapis.com/v0/b/challengeme-d7fef.appspot.com/o/Challenges-Helper%2Fch-zero-dechet.png?alt=media"
   },
@@ -1666,22 +1826,23 @@
       "示例 4 🌱：'每天写下三件让我感到感激的事。'"
     ],
     "ressources": [
-      {
-        "title": "每日写作的力量",
-        "type": "video",
-        "url": "videourl1.com"
-      },
-      {
-        "title": "写日记的10个理由",
-        "type": "article",
-        "url": "articleurl1.com"
-      },
-      {
-        "title": "写日记的艺术：如何与为什么",
-        "type": "podcast",
-        "url": "podcasturl1.com"
-      }
-    ],
+  {
+    "title": "写作的好处 - TEDXTalk",
+    "type": "video",
+    "url": "https://youtu.be/S1t90ucM-54?si=-Vcbr5UxE_RJuZbL"
+  },
+  {
+    "title": "写作的好处",
+    "type": "article",
+    "url": "https://www.psychologies.com/Therapies/Developpement-personnel/Methodes/Articles-et-Dossiers/5-bienfaits-insoupconnes-de-l-ecriture"
+  },
+  {
+    "title": "写作",
+    "type": "podcast",
+    "url": "https://www.radiofrance.fr/franceinter/podcasts/serie-ecrire"
+  }
+]
+,
     "illustrationSuggeree": "一个人一边喝茶一边写日记。",
     "imageHelper": "https://firebasestorage.googleapis.com/v0/b/challengeme-d7fef.appspot.com/o/Challenges-Helper%2Fch-ecriture-quotidienne.png?alt=media"
   },
@@ -1694,22 +1855,23 @@
       "示例 4 🌱：你刚浇水的植物开始发芽 🌱。"
     ],
     "ressources": [
-      {
-        "title": "如何练习视觉感恩",
-        "type": "video",
-        "url": "https://www.youtube.com/"
-      },
-      {
-        "title": "视觉感恩的益处",
-        "type": "article",
-        "url": "https://www.medium.com/"
-      },
-      {
-        "title": "播客：视觉感恩的力量",
-        "type": "podcast",
-        "url": "https://www.spotify.com/"
-      }
-    ],
+  {
+    "title": "如何练习感恩？",
+    "type": "video",
+    "url": "https://youtu.be/PAmueEyG-6o?si=4ePdoDlwBdw2A1jJ"
+  },
+  {
+    "title": "视觉感恩的好处",
+    "type": "article",
+    "url": "https://strategies-evolution.com/les-7-bienfaits-de-la-gratitude-2/#:~:text=Gr%C3%A2ce%20%C3%A0%20la%20gratitude%2C%20votre,bien%2D%C3%AAtre%20physique%20et%20mental."
+  },
+  {
+    "title": "关于视觉感恩的播客",
+    "type": "podcast",
+    "url": "https://www.radiofrance.fr/franceinter/podcasts/grand-bien-vous-fasse/les-bienfaits-de-la-gratitude-8436207"
+  }
+]
+,
     "illustrationSuggeree": "一个人拿着相机，在自然中准备拍下美丽的风景。",
     "imageHelper": "https://firebasestorage.googleapis.com/v0/b/challengeme-d7fef.appspot.com/o/Challenges-Helper%2Fch-gratitude-visuelle.png?alt=media"
   },
@@ -1722,22 +1884,23 @@
       "示例 4 🌱：注意皮肤上的温度，如清晨的凉风或午后的暖阳。"
     ],
     "ressources": [
-      {
-        "title": "了解正念行走",
-        "type": "video",
-        "url": "URL_to_replace"
-      },
-      {
-        "title": "探索正念行走的好处",
-        "type": "article",
-        "url": "URL_to_replace"
-      },
-      {
-        "title": "播客：正念行走指南",
-        "type": "podcast",
-        "url": "URL_to_replace"
-      }
-    ],
+  {
+    "title": "正念行走指南",
+    "type": "video",
+    "url": "https://youtu.be/0nwqqOCtGEU?si=smRIRhAsjl2j2wUc"
+  },
+  {
+    "title": "正念行走的好处",
+    "type": "article",
+    "url": "https://www.femmeactuelle.fr/sante/forme/la-marche-consciente-cette-habitude-douce-qui-ameliore-le-moral-et-la-concentration-2192839"
+  },
+  {
+    "title": "正念行走 - 播客",
+    "type": "podcast",
+    "url": "https://www.radiofrance.fr/franceinter/podcasts/la-chronique-de-christophe-andre/la-chronique-de-christophe-andre-du-mardi-26-avril-2022-8675545"
+  }
+]
+,
     "illustrationSuggeree": "一个人在大自然中正念行走。",
     "imageHelper": "https://firebasestorage.googleapis.com/v0/b/challengeme-d7fef.appspot.com/o/Challenges-Helper%2Fch-marche-consciente.png?alt=media"
   },
@@ -1750,22 +1913,23 @@
       "示例 4 🌱：阅读一本鼓舞人心的书，而不是看新闻。"
     ],
     "ressources": [
-      {
-        "title": "为什么我每天早晨不碰屏幕",
-        "type": "video",
-        "url": ""
-      },
-      {
-        "title": "无屏早晨的好处",
-        "type": "article",
-        "url": ""
-      },
-      {
-        "title": "播客：如何建立无屏幕的晨间习惯",
-        "type": "bonus",
-        "url": ""
-      }
-    ],
+  {
+    "title": "开启无屏幕的早晨",
+    "type": "video",
+    "url": "https://youtube.com/shorts/skNPHO-Ytl8?si=THNgH6V3RpbK8Umc"
+  },
+  {
+    "title": "为什么要在没有手机的情况下醒来？",
+    "type": "article",
+    "url": "https://polysleep.ca/fr/blogs/nouvelles/reveil-sans-telephone"
+  },
+  {
+    "title": "没有屏幕的一天",
+    "type": "bonus",
+    "url": "https://www.vannesetsens.fr/post/une-journ%C3%A9e-sans-%C3%A9crans-relevez-le-d%C3%A9fi"
+  }
+]
+,
     "illustrationSuggeree": "一个人安静地坐着，手握茶杯，沐浴在日出之中，没有任何屏幕。",
     "imageHelper": "https://firebasestorage.googleapis.com/v0/b/challengeme-d7fef.appspot.com/o/Challenges-Helper%2Fch-matin-sans-ecrans.png?alt=media"
   },
@@ -1778,22 +1942,23 @@
       "示例 4 🌱：睡前反思自己的一天，并静心一分钟。"
     ],
     "ressources": [
-      {
-        "title": "微冥想入门",
-        "type": "video",
-        "url": "https://www.example.com/micro-meditation-introduction"
-      },
-      {
-        "title": "微冥想的5大好处",
-        "type": "article",
-        "url": "https://www.example.com/benefits-of-micro-meditation"
-      },
-      {
-        "title": "微冥想实践指南",
-        "type": "bonus",
-        "url": "https://www.example.com/guide-to-micro-meditation"
-      }
-    ],
+  {
+    "title": "微冥想 - 5分钟",
+    "type": "video",
+    "url": "https://youtu.be/ssss7V1_eyA?si=A90Ck5bMGiU9SQNz"
+  },
+  {
+    "title": "减压微冥想练习",
+    "type": "article",
+    "url": "https://www.marieclaire.fr/micro-meditation-exercices-reduire-stress-rapidement,1483765.asp"
+  },
+  {
+    "title": "微冥想 - 播客",
+    "type": "bonus",
+    "url": "https://www.audible.fr/podcast/ITEM_NAME/B0FJ7C1SYQ"
+  }
+]
+,
     "illustrationSuggeree": "一个人在宁静的环境中平静地冥想。",
     "imageHelper": "https://firebasestorage.googleapis.com/v0/b/challengeme-d7fef.appspot.com/o/Challenges-Helper%2Fch-micro-meditation.png?alt=media"
   },
@@ -1806,22 +1971,23 @@
       "示例 4 🌱：用可重复使用的袋子代替一次性塑料袋。"
     ],
     "ressources": [
-      {
-        "title": "Minimalism: A Documentary About the Important Things",
-        "type": "video",
-        "url": "https://www.netflix.com/title/80114460"
-      },
-      {
-        "title": "7 Ways to Practice Financial Minimalism",
-        "type": "article",
-        "url": "https://www.moneycrashers.com/practice-financial-minimalism/"
-      },
-      {
-        "title": "The Minimalists Podcast",
-        "type": "podcast",
-        "url": "https://www.theminimalists.com/podcast/"
-      }
-    ],
+  {
+    "title": "极简主义",
+    "type": "video",
+    "url": "https://www.netflix.com/title/80114460"
+  },
+  {
+    "title": "无购物挑战",
+    "type": "article",
+    "url": "https://www.slate.fr/societe/no-buy-challenge-shopping-2025-consommation"
+  },
+  {
+    "title": "Nobuy – 播客",
+    "type": "podcast",
+    "url": "https://open.spotify.com/show/5oJs4J3btWexkThaHR7UmI"
+  }
+]
+,
     "illustrationSuggeree": "一张被切成两半的信用卡",
     "imageHelper": "https://firebasestorage.googleapis.com/v0/b/challengeme-d7fef.appspot.com/o/Challenges-Helper%2Fch-no-buy-month.png?alt=media"
   },
@@ -1833,7 +1999,24 @@
       "示例 3 🚀：一年没穿的衣服？捐出去。",
       "示例 4 🌱：重复的厨房用具？和邻居分享吧。"
     ],
-    "ressources": [],
+    "ressources": [
+  {
+    "title": "极简主义 – 清空你的生活",
+    "type": "video",
+    "url": "https://youtu.be/YgqgdxG9-Fc?si=irxJnoe0zMVLK8bx"
+  },
+  {
+    "title": "选择极简整理方式",
+    "type": "article",
+    "url": "https://udd.eu/newsroom/raisons-opter-piece-minimaliste#:~:text=Simplifier%20sa%20vie,plut%C3%B4t%20que%20des%20achats%20compulsifs."
+  },
+  {
+    "title": "培养极简生活方式",
+    "type": "bonus",
+    "url": "https://culturev.fr/podcasts-minimalisme/"
+  }
+]
+,
     "illustrationSuggeree": "一间干净整洁的房间，没有多余物品，空间开阔。",
     "imageHelper": "https://firebasestorage.googleapis.com/v0/b/challengeme-d7fef.appspot.com/o/Challenges-Helper%2Fch-rangement-minimaliste.png?alt=media"
   },
@@ -1846,22 +2029,23 @@
       "示例 4 🌱：素食晚餐：炒豆腐、各种烤菜和糙米。"
     ],
     "ressources": [
-      {
-        "title": "How to Create a Balanced Meal",
-        "type": "video",
-        "url": "https://www.youtube.com/watch?v=voNE0dnp-vc"
-      },
-      {
-        "title": "10 Balanced Meal Ideas for the Week",
-        "type": "article",
-        "url": "https://www.mangerbouger.fr/Manger-mieux/Je-prepare-mon-repas/Des-idees-de-menus"
-      },
-      {
-        "title": "Nutrition Basics in Podcast",
-        "type": "bonus",
-        "url": "https://www.santemagazine.fr/podcast/am6ly-path5"
-      }
-    ],
+  {
+    "title": "什么是健康饮食？",
+    "type": "video",
+    "url": "https://youtu.be/AVkIzSb1xEE?si=uIb7M6TIIOPXRhm6"
+  },
+  {
+    "title": "每周均衡饮食菜单建议",
+    "type": "article",
+    "url": "https://toutpourmasante.fr/composer-repas-equilibre/"
+  },
+  {
+    "title": "如何吃得更健康",
+    "type": "bonus",
+    "url": "https://www.goodsesame.com/blog/10-podcasts-a-ecouter-pour-mieux-manger/"
+  }
+]
+,
     "illustrationSuggeree": "一张美观、色彩丰富的均衡餐食照片。",
     "imageHelper": "https://firebasestorage.googleapis.com/v0/b/challengeme-d7fef.appspot.com/o/Challenges-Helper%2Fch-repas-equilibre.png?alt=media"
   },
@@ -1873,7 +2057,24 @@
       "示例 3 🚀：试试方盒呼吸或狮子呼吸等技术。",
       "示例 4 🌱：如果注意力分散也没关系，这是训练的一部分。"
     ],
-    "ressources": [],
+    "ressources": [
+  {
+    "title": "正念呼吸引导冥想课程",
+    "type": "video",
+    "url": "https://youtu.be/tdwn-jObld4?si=5LH0TGzSpbodrx7x"
+  },
+  {
+    "title": "呼吸练习 - 情绪管理",
+    "type": "article",
+    "url": "https://www.sante-sur-le-net.com/breathwork-techniques-respiration-reguler-stress/#:~:text=Le%20breathwork%20appel%C3%A9%20aussi%20la,pouvons%20r%C3%A9guler%20notre%20syst%C3%A8me%20nerveux."
+  },
+  {
+    "title": "正念呼吸 - 播客",
+    "type": "bonus",
+    "url": "https://www.passeportsante.net/audio?doc=respiration-consciente"
+  }
+]
+,
     "illustrationSuggeree": "一个人以莲花坐姿进行冥想。",
     "imageHelper": "https://firebasestorage.googleapis.com/v0/b/challengeme-d7fef.appspot.com/o/Challenges-Helper%2Fch-respiration-consciente.png?alt=media"
   },
@@ -1885,7 +2086,24 @@
       "示例 3 🚀：写下当天值得感恩的事情。",
       "示例 4 🌱：保持房间凉爽、昏暗和宁静。"
     ],
-    "ressources": [],
+    "ressources": [
+  {
+    "title": "我们为什么睡不好？",
+    "type": "video",
+    "url": "https://youtu.be/Bgg0EX-uELU?si=Q5s7DqHdi_DAM87F"
+  },
+  {
+    "title": "如何改善睡眠质量？",
+    "type": "article",
+    "url": "https://www.laboratoire-lescuyer.com/blog/comment-mieux-dormir?srsltid=AfmBOopvQt1-1uB1HDmu_f0WpLzdbFs-LLeztdHKXZil4chyDCKKrWG1"
+  },
+  {
+    "title": "助眠播客 – 安然入睡",
+    "type": "bonus",
+    "url": "https://podcasts.apple.com/fr/podcast/somnif%C3%A8re-le-podcast-pour-sendormir/id1531278587"
+  }
+]
+,
     "illustrationSuggeree": "一个人在宁静环境中做睡前瑜伽。",
     "imageHelper": "https://firebasestorage.googleapis.com/v0/b/challengeme-d7fef.appspot.com/o/Challenges-Helper%2Fch-sommeil-reparateur.png?alt=media"
   },
@@ -1898,22 +2116,23 @@
       "示例 4 🌱：一天开始和结束都喝一大杯水。"
     ],
     "ressources": [
-      {
-        "title": "为什么每天要喝2升水？",
-        "type": "video",
-        "url": "https://www.youtube.com/watch?v=example1"
-      },
-      {
-        "title": "喝足够水的7大健康益处",
-        "type": "article",
-        "url": "https://www.healthline.com/health/benefits-of-drinking-water"
-      },
-      {
-        "title": "播客：补水的重要性",
-        "type": "bonus",
-        "url": "https://www.healthpodcast.com/hydration-importance"
-      }
-    ],
+  {
+    "title": "水疗疗法",
+    "type": "video",
+    "url": "https://youtu.be/siB-FTg7OAc?si=sJYczEP03MydzmLf"
+  },
+  {
+    "title": "我们为什么要喝水？",
+    "type": "article",
+    "url": "https://www.cieau.com/leau-et-votre-sante/eau-hydratation-et-hygiene/hydratation/pourquoi-doit-on-boire-de-leau/"
+  },
+  {
+    "title": "补水",
+    "type": "bonus",
+    "url": "https://www.radiofrance.fr/francebleu/podcasts/bienvenue-chez-vous-les-specialistes-ici-nord/hydratation-le-dr-vankemmel-explique-pourquoi-il-faut-boire-de-l-eau-2545207"
+  }
+]
+,
     "illustrationSuggeree": "一个人在喷泉处装水瓶",
     "imageHelper": "https://firebasestorage.googleapis.com/v0/b/challengeme-d7fef.appspot.com/o/Challenges-Helper%2Fch-drink-water.png?alt=media"
   },
@@ -1926,22 +2145,23 @@
       "示例 4 🌱 - 用水果泡水替代汽水。"
     ],
     "ressources": [
-      {
-        "title": "健康饮食的基础原理",
-        "type": "video",
-        "url": "https://www.youtube.com/watch?v=some_video_link"
-      },
-      {
-        "title": "每天吃更多蔬菜的10种方法",
-        "type": "article",
-        "url": "https://www.somesite.com/some_article_link"
-      },
-      {
-        "title": "播客：均衡饮食的益处",
-        "type": "bonus",
-        "url": "https://www.somepodcastsite.com/some_podcast_link"
-      }
-    ],
+  {
+    "title": "开启健康饮食的秘诀",
+    "type": "video",
+    "url": "https://youtu.be/I1_RSyzPHPg?si=pKHYyG2BhjhEiJZK"
+  },
+  {
+    "title": "健康饮食的10个关键",
+    "type": "article",
+    "url": "https://yuka.io/10-cles-alimentation-saine/"
+  },
+  {
+    "title": "我们在吃什么？",
+    "type": "bonus",
+    "url": "https://www.lavieclaire.com/podcasts/"
+  }
+]
+,
     "illustrationSuggeree": "一个装着新鲜水果和蔬菜的彩色盘子。",
     "imageHelper": "https://firebasestorage.googleapis.com/v0/b/challengeme-d7fef.appspot.com/o/Challenges-Helper%2Fch-eat-healthy.png?alt=media"
   },
@@ -1954,22 +2174,23 @@
       "示例 4 🌱：利用时间聊聊个人成长，比如书评或励志纪录片 🎥。"
     ],
     "ressources": [
-      {
-        "title": "家庭时光的重要性",
-        "type": "video",
-        "url": "https://www.youtube.com/watch?v=xyz"
-      },
-      {
-        "title": "15项增进家庭感情的活动",
-        "type": "article",
-        "url": "https://www.familybondingxyz.com"
-      },
-      {
-        "title": "播客：个人成长与家庭",
-        "type": "bonus",
-        "url": "https://podcast.family.com/bonus"
-      }
-    ],
+  {
+    "title": "与家人共度时光的创意",
+    "type": "video",
+    "url": "https://optimoms.fr/maman-optimiste/laslowlife/30-idees-prendre-son-temps-famille"
+  },
+  {
+    "title": "与家人共度时光的重要性",
+    "type": "article",
+    "url": "https://najell.com/fr-fr/urban-dreamers/importance-of-family-time"
+  },
+  {
+    "title": "和家人一起的时光",
+    "type": "bonus",
+    "url": "https://podcast.fr/episode/passer-du-temps-en-famille/"
+  }
+]
+,
     "illustrationSuggeree": "一家人在没有电子设备的环境中快乐互动",
     "imageHelper": "https://firebasestorage.googleapis.com/v0/b/challengeme-d7fef.appspot.com/o/Challenges-Helper%2Fch-family-time.png?alt=media"
   },
@@ -1982,22 +2203,23 @@
       "示例 4 🌱：通过正念练习避免久坐时含胸。"
     ],
     "ressources": [
-      {
-        "title": "如何保持良好姿势？",
-        "type": "video",
-        "url": "www.exempleurl.com/video"
-      },
-      {
-        "title": "10个改善姿势的小贴士",
-        "type": "article",
-        "url": "www.exempleurl.com/article"
-      },
-      {
-        "title": "背部健康播客",
-        "type": "bonus",
-        "url": "www.exempleurl.com/podcast"
-      }
-    ],
+  {
+    "title": "良好姿势的好处",
+    "type": "video",
+    "url": "https://youtu.be/OyK0oE5rwFY?si=nmoe2Hj9oUzXZRE9"
+  },
+  {
+    "title": "保持正确姿势的益处",
+    "type": "article",
+    "url": "https://fr.shenyunperformingarts.org/blog/view/article/e/Zf4MSdlGFak/les-5-bienfaits-d-une-bonne-posture.html"
+  },
+  {
+    "title": "良好姿势有助于健康",
+    "type": "bonus",
+    "url": "https://www.radiofrance.fr/francebleu/podcasts/le-conseil-bien-etre/quelle-est-la-bonne-posture-pour-bien-se-porter-7544177"
+  }
+]
+,
     "illustrationSuggeree": "一个人坐在符合人体工学的椅子上，对着镜子检查姿势。",
     "imageHelper": "https://firebasestorage.googleapis.com/v0/b/challengeme-d7fef.appspot.com/o/Challenges-Helper%2Fch-good-posture.png?alt=media"
   },
@@ -2010,22 +2232,23 @@
       "示例 4: 在大自然中散步，享受新鲜空气 🏞️"
     ],
     "ressources": [
-      {
-        "title": "如何高效利用30分钟休闲时间",
-        "type": "video",
-        "url": "https://exemple.com/video1"
-      },
-      {
-        "title": "为什么30分钟的兴趣爱好能提升生产力",
-        "type": "article",
-        "url": "https://exemple.com/article1"
-      },
-      {
-        "title": "利用业余时间进行个人成长的播客",
-        "type": "bonus",
-        "url": "https://exemple.com/podcast1"
-      }
-    ],
+  {
+    "title": "如何找到你的兴趣爱好？",
+    "type": "video",
+    "url": "https://youtu.be/qjdmIY04soc?si=TqnGGNHi1a_c6-Wu"
+  },
+  {
+    "title": "我们的爱好如何帮助我们？",
+    "type": "article",
+    "url": "https://www.selectionclic.com/conseils-sante/comment-nos-hobbys-nous-aident/#:~:text=Les%20hobbys%20prot%C3%A8gent%20de%20la,utile%20dans%20d'autres%20domaines."
+  },
+  {
+    "title": "你的兴趣爱好是什么？",
+    "type": "podcast",
+    "url": "https://youtu.be/KjsvG7tZhmA?si=TDFeumCy4aHG6dV6"
+  }
+]
+,
     "illustrationSuggeree": "一个人坐着手持书籍，周围有小吃和饮料，微笑着。",
     "imageHelper": "https://firebasestorage.googleapis.com/v0/b/challengeme-d7fef.appspot.com/o/Challenges-Helper%2Fch-hobby-time.png?alt=media"
   },
@@ -2038,22 +2261,23 @@
       "示例 4 🌱：在社区种一棵树。"
     ],
     "ressources": [
-      {
-        "title": "幸福的科学：为什么慷慨让我们更快乐？",
-        "type": "video",
-        "url": "https://www.youtube.com/watch?v=U3cZ-NGPkkU"
-      },
-      {
-        "title": "21种简单的善举方式",
-        "type": "article",
-        "url": "https://www.huffpost.com/entry/35-little-acts-of-kindness_n_5872030"
-      },
-      {
-        "title": "善良的力量",
-        "type": "podcast",
-        "url": "https://www.npr.org/programs/invisibilia/382451600/the-power-of-kindness"
-      }
-    ],
+  {
+    "title": "善良的科学",
+    "type": "video",
+    "url": "https://youtu.be/O9UByLyOjBM?si=aerzsJbCBREvBUSi"
+  },
+  {
+    "title": "展现善良的9种方式",
+    "type": "article",
+    "url": "https://elisegravel.com/blog/9-facons-de-faire-preuve-de-gentillesse/"
+  },
+  {
+    "title": "善良的力量 – 播客",
+    "type": "podcast",
+    "url": "https://podcasts.apple.com/fr/podcast/the-power-of-kindness/id1771351575"
+  }
+]
+,
     "illustrationSuggeree": "一个人举着写有“做个好人”的牌子",
     "imageHelper": "https://firebasestorage.googleapis.com/v0/b/challengeme-d7fef.appspot.com/o/Challenges-Helper%2Fch-act-of-kindness.png?alt=media"
   },
@@ -2066,22 +2290,23 @@
       "示例 4 🌱：使用目标语言写日记，帮助你用该语言思考与表达。"
     ],
     "ressources": [
-      {
-        "title": "学习语言的秘诀 | Lydia Machová",
-        "type": "video",
-        "url": "https://www.youtube.com/watch?v=o_XVt5rdpFY"
-      },
-      {
-        "title": "如何高效学习外语",
-        "type": "article",
-        "url": "https://lifehacker.com/i-learned-to-speak-four-languages-in-a-few-years-heres-1683098274"
-      },
-      {
-        "title": "Babbel 语言学习播客",
-        "type": "bonus",
-        "url": "https://www.babbel.com/en/magazine/category/language-podcasts"
-      }
-    ],
+  {
+    "title": "学习语言的秘密 | Lydia Machová",
+    "type": "video",
+    "url": "https://www.youtube.com/watch?v=o_XVt5rdpFY"
+  },
+  {
+    "title": "学习语言对大脑的益处",
+    "type": "article",
+    "url": "https://fr.babbel.com/fr/magazine/benefices-apprentissage-langues-cerveau"
+  },
+  {
+    "title": "Babbel 学习语言的播客",
+    "type": "bonus",
+    "url": "https://fr.babbel.com/fr/magazine/les-meilleurs-podcasts-pour-apprendre-une-langue"
+  }
+]
+,
     "illustrationSuggeree": "一个人坐在温馨的咖啡馆里，桌上有一杯咖啡和一本外语书。",
     "imageHelper": "https://firebasestorage.googleapis.com/v0/b/challengeme-d7fef.appspot.com/o/Challenges-Helper%2Fch-learn-a-language.png?alt=media"
   },
@@ -2094,22 +2319,23 @@
       "示例 4 🌱：走出舒适区，学习一门语言或者一件乐器。"
     ],
     "ressources": [
-      {
-        "title": "如何高效学习新技能",
-        "type": "video",
-        "url": "https://www.youtube.com/exemple"
-      },
-      {
-        "title": "掌握新技能的5个技巧",
-        "type": "article",
-        "url": "https://www.blog/exemple"
-      },
-      {
-        "title": "终身学习播客",
-        "type": "bonus",
-        "url": "https://www.podcast/exemple"
-      }
-    ],
+  {
+    "title": "费曼学习法",
+    "type": "video",
+    "url": "https://youtu.be/UUSmBMWk2sI?si=HUdlol3QuEnY3H0H"
+  },
+  {
+    "title": "快速掌握新技能的30个技巧",
+    "type": "article",
+    "url": "https://angyna.com/blog/articles/8/30-conseils-pour-acquerir-rapidement-une-nouvelle-competence"
+  },
+  {
+    "title": "学习如何学习",
+    "type": "bonus",
+    "url": "https://www.radiofrance.fr/franceculture/podcasts/serie-apprendre-a-apprendre"
+  }
+]
+,
     "illustrationSuggeree": "一个人戴着耳机坐在笔记本电脑前在线学习新技能。",
     "imageHelper": "https://firebasestorage.googleapis.com/v0/b/challengeme-d7fef.appspot.com/o/Challenges-Helper%2Fch-learn-skill.png?alt=media"
   },
@@ -2122,22 +2348,23 @@
       "示例 4 🌱：'metamorphosis' 意为完全形式或本质的变化。可以说：'毛毛虫蜕变成蝴蝶。'"
     ],
     "ressources": [
-      {
-        "title": "如何提升你的英语词汇量？",
-        "type": "video",
-        "url": "https://youtu.be/xx_WNPe8bBs"
-      },
-      {
-        "title": "7个丰富词汇的技巧",
-        "type": "article",
-        "url": "https://www.superprof.fr/blog/amplifier-son-lexique/"
-      },
-      {
-        "title": "播客：那些你不知道的单词",
-        "type": "bonus",
-        "url": "https://anchor.fm/mots-inconnus"
-      }
-    ],
+  {
+    "title": "提升词汇量",
+    "type": "video",
+    "url": "https://youtu.be/Ms7cF8mQ0BI?si=-tpszWN-B6QG7kzS"
+  },
+  {
+    "title": "如何丰富你的词汇量？",
+    "type": "article",
+    "url": "https://www.the-artist-academy.fr/blog/comment-enrichir-votre-vocabulaire-7-manieres-de-developper-votre-vocabulaire"
+  },
+  {
+    "title": "每日一词 – 播客",
+    "type": "bonus",
+    "url": "https://www.radiofrance.fr/francemusique/podcasts/le-mot-du-jour"
+  }
+]
+,
     "illustrationSuggeree": "一个人坐在桌前读书，旁边放着一本笔记本用来记新词。",
     "imageHelper": "https://firebasestorage.googleapis.com/v0/b/challengeme-d7fef.appspot.com/o/Challenges-Helper%2Fch-learn-word.png?alt=media"
   },
@@ -2150,22 +2377,13 @@
       "示例 4 🌱：关注“TechStuff”了解最新科技创新。"
     ],
     "ressources": [
-      {
-        "title": "如何充分利用播客",
-        "type": "video",
-        "url": "https://youtu.be/your_url_here"
-      },
-      {
-        "title": "将播客融入日常的5个小技巧",
-        "type": "article",
-        "url": "https://blog.wordpress.com/your_article_url_here"
-      },
-      {
-        "title": "5个值得现在就听的教育播客",
-        "type": "bonus",
-        "url": "https://your_podcasts_recommendations_url_here"
-      }
-    ],
+  {
+    "title": "播客",
+    "type": "video",
+    "url": "https://www.radiofrance.fr/podcasts"
+  }
+]
+,
     "illustrationSuggeree": "一个人戴着耳机，用手机听播客。",
     "imageHelper": "https://firebasestorage.googleapis.com/v0/b/challengeme-d7fef.appspot.com/o/Challenges-Helper%2Fch-podcast.png?alt=media"
   },
@@ -2178,22 +2396,23 @@
       "示例 4 🌱：冥想后记录你的感受和体验。"
     ],
     "ressources": [
-      {
-        "title": "初学者冥想指南",
-        "type": "video",
-        "url": ""
-      },
-      {
-        "title": "每日冥想的好处",
-        "type": "article",
-        "url": ""
-      },
-      {
-        "title": "冥想精选播客",
-        "type": "bonus",
-        "url": ""
-      }
-    ],
+  {
+    "title": "引导式冥想 - 贝尔纳·韦尔贝",
+    "type": "video",
+    "url": "https://youtu.be/eay1enaijAc?si=MIQT1EEgJZFOCnB_"
+  },
+  {
+    "title": "学习更轻松地进行冥想",
+    "type": "article",
+    "url": "https://www.helsana.ch/fr/blog/psyche/pleine-conscience/meditation.html"
+  },
+  {
+    "title": "冥想时间",
+    "type": "bonus",
+    "url": "https://www.radiofrance.fr/franceinter/podcasts/le-temps-de-mediter"
+  }
+]
+,
     "illustrationSuggeree": "一个人在宁静的环境中冥想。",
     "imageHelper": "https://firebasestorage.googleapis.com/v0/b/challengeme-d7fef.appspot.com/o/Challenges-Helper%2Fch-meditation.png?alt=media"
   },
@@ -2206,22 +2425,23 @@
       "示例 4 🌱：坐着，双臂前伸，轻轻转动手腕。"
     ],
     "ressources": [
-      {
-        "title": "初学者晨间拉伸指南",
-        "type": "video",
-        "url": ""
-      },
-      {
-        "title": "为何晨间拉伸很重要",
-        "type": "article",
-        "url": ""
-      },
-      {
-        "title": "播客：拉伸如何影响你的一天",
-        "type": "bonus",
-        "url": ""
-      }
-    ],
+  {
+    "title": "早晨例行活动",
+    "type": "video",
+    "url": "https://youtu.be/BNJuv209-yc?si=nsca-yZjkJTiu6fc"
+  },
+  {
+    "title": "早晨伸展的5个理由",
+    "type": "article",
+    "url": "https://truefitness.com/fr/5-reasons-for-a-morning-stretch-routine/"
+  },
+  {
+    "title": "拉伸：任何年龄都很重要！",
+    "type": "bonus",
+    "url": "https://www.radiofrance.fr/franceinter/podcasts/carnet-de-sante/carnet-de-sante-du-samedi-03-aout-2024-8615750"
+  }
+]
+,
     "illustrationSuggeree": "有人清晨醒来后，轻轻伸展双臂。",
     "imageHelper": "https://firebasestorage.googleapis.com/v0/b/challengeme-d7fef.appspot.com/o/Challenges-Helper%2Fch-morning-stretch.png?alt=media"
   },
@@ -2234,22 +2454,23 @@
       "示例 4 🌱：联系以前的职业联系人，了解彼此近况。"
     ],
     "ressources": [
-      {
-        "title": "有效建立人脉的技巧",
-        "type": "video",
-        "url": "youtube.com/reseautageefficace"
-      },
-      {
-        "title": "每日社交网络的艺术",
-        "type": "article",
-        "url": "medium.com/reseautagequotidien"
-      },
-      {
-        "title": "播客：人脉的力量",
-        "type": "bonus",
-        "url": "spotify.com/podcast/reseautage"
-      }
-    ],
+  {
+    "title": "掌握人脉的艺术",
+    "type": "video",
+    "url": "https://youtu.be/SN9zTEWVjGM?si=xWgFcdfqz6X3l2Df"
+  },
+  {
+    "title": "建立人脉的7个理由",
+    "type": "article",
+    "url": "https://ch-fr.indeed.com/conseils-carriere/evolution-professionnelle/networking-reseau"
+  },
+  {
+    "title": "人脉拓展 - 播客",
+    "type": "bonus",
+    "url": "https://podcasts.apple.com/fr/podcast/le-networking-de-steeve/id1437905134"
+  }
+]
+,
     "illustrationSuggeree": "在办公桌前，一人在打电话，旁边放着笔记本与笔。",
     "imageHelper": "https://firebasestorage.googleapis.com/v0/b/challengeme-d7fef.appspot.com/o/Challenges-Helper%2Fch-networking.png?alt=media"
   },
@@ -2262,22 +2483,23 @@
       "示例 4 🌱：选择一份完全纯素的食谱。"
     ],
     "ressources": [
-      {
-        "title": "如何阅读和理解食谱",
-        "type": "video",
-        "url": "https://www.youtube.com/watch?v=*"
-      },
-      {
-        "title": "成功尝试新食谱的10个技巧",
-        "type": "article",
-        "url": "https://www.cuisinemaison.com/10-astuces-pour-reussir-une-nouvelle-recette"
-      },
-      {
-        "title": "播客：像专业厨师一样下厨",
-        "type": "bonus",
-        "url": "https://www.cookingpodcast.com/cuisiner-comme-un-pro"
-      }
-    ],
+  {
+    "title": "一天一道菜",
+    "type": "video",
+    "url": "https://www.youtube.com/@UnjourUnerecettekatyseats"
+  },
+  {
+    "title": "如何成功做出一道菜？",
+    "type": "article",
+    "url": "https://www.potes-au-feu.ch/les-7-regles-d-or-pour-reussir-une-recette.html"
+  },
+  {
+    "title": "像专业厨师一样烹饪 - 播客",
+    "type": "bonus",
+    "url": "https://www.huffingtonpost.fr/life/article/les-meilleurs-podcasts-de-cuisine-a-ecouter-sans-moderation_173220.html"
+  }
+]
+,
     "illustrationSuggeree": "一个人一边阅读食谱，一边切菜。",
     "imageHelper": "https://firebasestorage.googleapis.com/v0/b/challengeme-d7fef.appspot.com/o/Challenges-Helper%2Fch-nouvelle-recette.png?alt=media"
   },
@@ -2290,22 +2512,23 @@
       "🌱 练习冥想来提高专注力，无需咖啡因。"
     ],
     "ressources": [
-      {
-        "title": "如何戒掉咖啡因又不疲倦",
-        "type": "video",
-        "url": "youtube.com/watch?v=videourl1"
-      },
-      {
-        "title": "为什么你应该暂时戒掉咖啡因",
-        "type": "article",
-        "url": "articleurl.com/2"
-      },
-      {
-        "title": "播客：咖啡因的健康替代品",
-        "type": "bonus",
-        "url": "podcasturl.com/3"
-      }
-    ],
+  {
+    "title": "咖啡对健康的影响",
+    "type": "video",
+    "url": "https://youtu.be/5joA6VS7_88?si=bB5kFYcQg0YZ8HB5"
+  },
+  {
+    "title": "对身体的影响",
+    "type": "article",
+    "url": "https://www.bbc.com/afrique/articles/cw0l43ezgggo"
+  },
+  {
+    "title": "咖啡因 - 播客",
+    "type": "bonus",
+    "url": "https://www.rtbf.be/article/la-cafeine-une-addiction-silencieuse-a-arreter-10825320"
+  }
+]
+,
     "illustrationSuggeree": "一个人喝着草本茶来替代咖啡。",
     "imageHelper": "https://firebasestorage.googleapis.com/v0/b/challengeme-d7fef.appspot.com/o/Challenges-Helper%2Fch-no-cafe.png?alt=media"
   },
@@ -2318,22 +2541,23 @@
       "示例 4 🌱：当你的工作看起来枯燥乏味时，提醒自己拥有工作的幸运和它带来的好处 🏢。"
     ],
     "ressources": [
-      {
-        "title": "保持积极心态的艺术",
-        "type": "video",
-        "url": "https://exampleurl.com"
-      },
-      {
-        "title": "如何停止抱怨的文章",
-        "type": "article",
-        "url": "https://exampleurl.com"
-      },
-      {
-        "title": "关于感恩心态的播客",
-        "type": "bonus",
-        "url": "https://exampleurl.com"
-      }
-    ],
+  {
+    "title": "停止抱怨的简单技巧",
+    "type": "video",
+    "url": "https://youtu.be/3boYHN7g7Q8?si=7_ogMcb_L4eWtJlK"
+  },
+  {
+    "title": "如何停止抱怨？",
+    "type": "article",
+    "url": "https://www.2minutesdebonheur.com/arreter-se-plaindre-223/"
+  },
+  {
+    "title": "保持积极心态，生活更美好",
+    "type": "bonus",
+    "url": "https://www.radiofrance.fr/francebleu/podcasts/le-mag-de-france-bleu-poitou/comment-rester-positif-pour-vivre-mieux-9713037"
+  }
+]
+,
     "illustrationSuggeree": "某人正在写感恩日记。",
     "imageHelper": "https://firebasestorage.googleapis.com/v0/b/challengeme-d7fef.appspot.com/o/Challenges-Helper%2Fch-no-complaints.png?alt=media"
   },
@@ -2346,22 +2570,23 @@
       "示例 4 🌱：用枣子或枫糖浆代替精制糖来烘焙蛋糕。"
     ],
     "ressources": [
-      {
-        "title": "如何减少饮食中的糖分",
-        "type": "video",
-        "url": ""
-      },
-      {
-        "title": "无糖饮食的益处",
-        "type": "article",
-        "url": ""
-      },
-      {
-        "title": "20道无添加糖食谱，启发你的灵感",
-        "type": "bonus",
-        "url": ""
-      }
-    ],
+  {
+    "title": "14天无糖挑战",
+    "type": "video",
+    "url": "https://youtu.be/jvQRR3WLnhg?si=QM1rj_yBFAnWrinT"
+  },
+  {
+    "title": "戒糖排毒",
+    "type": "article",
+    "url": "https://www.ayuin.fr/detox-sucre/#:~:text=Les%20bienfaits%20de%20l'arr%C3%AAt%20du%20sucre,-Arr%C3%AAter%20le%20sucre&text=La%20perte%20de%20poids%3A%20l,de%20sucre%20dans%20le%20sang)."
+  },
+  {
+    "title": "无糖生活 - 播客",
+    "type": "bonus",
+    "url": "https://www.radiofrance.fr/franceinter/podcasts/vie-quotidienne-mode-d-emploi/une-vie-sans-sucre-4356519"
+  }
+]
+,
     "illustrationSuggeree": "一张桌子上摆满了彩色的新鲜水果、坚果、种子和蔬菜，代表无添加糖的健康饮食。",
     "imageHelper": "https://firebasestorage.googleapis.com/v0/b/challengeme-d7fef.appspot.com/o/Challenges-Helper%2Fch-no-sugar.png?alt=media"
   },
@@ -2374,22 +2599,23 @@
       "示例 4 🌱：将平板支撑纳入晨间日常，启动一天的新陈代谢。"
     ],
     "ressources": [
-      {
-        "title": "平板支撑教程",
-        "type": "video",
-        "url": "https://www.youtube.com/watch?v=7RkpEJgP6wE"
-      },
-      {
-        "title": "为什么平板是如此全面的训练",
-        "type": "article",
-        "url": "https://www.huffingtonpost.fr/entry/pourquoi-faire-la-planche-est-un-exercice-si-complet_fr_5e9450b8c5b6d97d91e4e2de"
-      },
-      {
-        "title": "播客：平板支撑的益处",
-        "type": "bonus",
-        "url": "https://www.listennotes.com/c/f5eeb7e58284840a8b171e9470168995/"
-      }
-    ],
+  {
+    "title": "每天1分钟平板支撑",
+    "type": "video",
+    "url": "https://youtu.be/LHd790kagqw?si=JU0U3_T3dJASbrEV"
+  },
+  {
+    "title": "各种平板支撑练习",
+    "type": "article",
+    "url": "https://laseche.fr/la-seche/les-incroyables-bienfaits-de-la-planche"
+  },
+  {
+    "title": "平板支撑对全身有益",
+    "type": "bonus",
+    "url": "https://www.radiofrance.fr/francebleu/podcasts/les-petits-plaisirs-sur-france-bleu-poitou/exercice-physique-la-planche-c-est-bon-pour-tout-le-corps-4771680"
+  }
+]
+,
     "illustrationSuggeree": "一个人在户外的运动垫上做平板支撑动作。",
     "imageHelper": "https://firebasestorage.googleapis.com/v0/b/challengeme-d7fef.appspot.com/o/Challenges-Helper%2Fch-planche.png?alt=media"
   },
@@ -2402,22 +2628,23 @@
       "示例 4 🌱：任务：“为家人准备晚餐” ➡️ 理由：“享受家庭时光和美食”"
     ],
     "ressources": [
-      {
-        "title": "如何规划你的一天以提高效率",
-        "type": "video",
-        "url": ""
-      },
-      {
-        "title": "为何要在今晚规划明天",
-        "type": "article",
-        "url": ""
-      },
-      {
-        "title": "播客：时间管理与计划的重要性",
-        "type": "bonus",
-        "url": ""
-      }
-    ],
+  {
+    "title": "如何安排你的一天",
+    "type": "video",
+    "url": "https://youtu.be/eOOmP6IUtOk?si=iv6DMcfZhOje-KBf"
+  },
+  {
+    "title": "规划你的一天",
+    "type": "article",
+    "url": "https://matthieudesroches.com/articles/comment-organiser-sa-journee"
+  },
+  {
+    "title": "为什么规划是必要的？",
+    "type": "bonus",
+    "url": "https://www.radiofrance.fr/franceculture/podcasts/le-pourquoi-du-comment-economie-et-social/le-pourquoi-du-comment-economie-social-chronique-du-vendredi-29-mars-2024-5316044"
+  }
+]
+,
     "illustrationSuggeree": "一个人坐在办公桌前，在日历中记录明天的任务",
     "imageHelper": "https://firebasestorage.googleapis.com/v0/b/challengeme-d7fef.appspot.com/o/Challenges-Helper%2Fch-plan-tomorrow.png?alt=media"
   },
@@ -2430,22 +2657,23 @@
       "示例 4 🌱：不妨请教专业老师，得到正确指导"
     ],
     "ressources": [
-      {
-        "title": "吉他入门课程",
-        "type": "video",
-        "url": "https://www.youtube.com/watch?v=VmrnhzL7vY8"
-      },
-      {
-        "title": "小提琴初学者指南",
-        "type": "article",
-        "url": "https://www.bbc.co.uk/music/articles/97bbf589-75da-4f73-b179-f0a6a4f159ff"
-      },
-      {
-        "title": "播客：音乐教育的成功之路",
-        "type": "podcast",
-        "url": "https://www.successfulmusiceducation.com/"
-      }
-    ],
+  {
+    "title": "如何选择你的乐器",
+    "type": "video",
+    "url": "https://youtu.be/psbPHO-cRn4?si=x0viD_YouT3oN38C"
+  },
+  {
+    "title": "乐器课程",
+    "type": "article",
+    "url": "https://www.anacours-musique.com/tous-les-instruments/"
+  },
+  {
+    "title": "成年后学习乐器",
+    "type": "podcast",
+    "url": "https://youtu.be/At-c9pwkckQ?si=ADSwYamSoh9zFsrT"
+  }
+]
+,
     "illustrationSuggeree": "一个人沉浸在音乐中，弹吉他或坐在钢琴前学习",
     "imageHelper": "https://firebasestorage.googleapis.com/v0/b/challengeme-d7fef.appspot.com/o/Challenges-Helper%2Fch-learn-instrument.png?alt=media"
   },
@@ -2458,22 +2686,23 @@
       "示例 4 🌱：“我自由而快乐地给予与接受爱。”"
     ],
     "ressources": [
-      {
-        "title": "积极肯定语的艺术与科学",
-        "type": "video",
-        "url": "https://youtu.be/your_video_url"
-      },
-      {
-        "title": "为什么肯定语有效？",
-        "type": "article",
-        "url": "https://www.your_article_url.com"
-      },
-      {
-        "title": "播客：积极肯定的力量",
-        "type": "bonus",
-        "url": "https://www.your_podcast_url.com"
-      }
-    ],
+  {
+    "title": "50条积极肯定语",
+    "type": "video",
+    "url": "https://youtu.be/Xaf_wrbB1lQ?si=Pf4pmaSBS6PTQFUG"
+  },
+  {
+    "title": "促进身心健康的积极肯定语",
+    "type": "article",
+    "url": "https://pauldevaux.fr/affirmations-positives/#:~:text=La%20technique%20des%20affirmations%20positives%20consiste%20%C3%A0%20r%C3%A9p%C3%A9ter%20de%20mani%C3%A8re,notre%20corps%20et%20nos%20comportements."
+  },
+  {
+    "title": "积极肯定语：信心与直觉",
+    "type": "bonus",
+    "url": "https://open.spotify.com/episode/6z9sP0bq1SSJuS56W9Y7WT"
+  }
+]
+,
     "illustrationSuggeree": "一个人对着镜子微笑并说出正面的肯定语",
     "imageHelper": "https://firebasestorage.googleapis.com/v0/b/challengeme-d7fef.appspot.com/o/Challenges-Helper%2Fch-positive-affirmations.png?alt=media"
   },
@@ -2486,22 +2715,23 @@
       "示例 4 🌱：睡前放松一下，读《思考致富》的一章"
     ],
     "ressources": [
-      {
-        "title": "如何阅读更多书籍？",
-        "type": "video",
-        "url": "https://www.youtube.com/watch?v=..."
-      },
-      {
-        "title": "一个月读更多书的 10 个技巧",
-        "type": "article",
-        "url": "https://www.lireplus.com/..."
-      },
-      {
-        "title": "播客：每日阅读的好处",
-        "type": "bonus",
-        "url": "https://www.podcastbienfaitslecture.com/..."
-      }
-    ],
+  {
+    "title": "阅读改变你的大脑",
+    "type": "video",
+    "url": "https://youtu.be/TvQ9AbWVuTU?si=9XMDStk1kadrUYw0"
+  },
+  {
+    "title": "为什么每天要花时间阅读？",
+    "type": "article",
+    "url": "https://labibliomaniaque.ca/2016/08/31/pourquoi-prendre-le-temps-de-lire-chaque-jour/"
+  },
+  {
+    "title": "阅读的好处",
+    "type": "bonus",
+    "url": "https://www.rts.ch/audio-podcast/2023/audio/les-bienfaits-de-la-lecture-27448117.html"
+  }
+]
+,
     "illustrationSuggeree": "一个人舒适地坐在沙发上沉浸在书中",
     "imageHelper": "https://firebasestorage.googleapis.com/v0/b/challengeme-d7fef.appspot.com/o/Challenges-Helper%2Fch-read-chapter.png?alt=media"
   },
@@ -2514,22 +2744,23 @@
       "示例 4 🌱：使用金属剃须刀代替一次性塑料剃须刀"
     ],
     "ressources": [
-      {
-        "title": "减少塑料使用的 50 个创意",
-        "type": "video",
-        "url": "https://www.youtube.com/watch?v=abc123"
-      },
-      {
-        "title": "日常生活中减少塑料使用的 10 种方法",
-        "type": "article",
-        "url": "https://www.ecowatch.com/reduce-plastic-use-2318016334.html"
-      },
-      {
-        "title": "播客：无塑生活的日常挑战",
-        "type": "bonus",
-        "url": "https://www.deezer.com/fr/show/80072"
-      }
-    ],
+  {
+    "title": "如何减少塑料使用？",
+    "type": "video",
+    "url": "https://youtu.be/6f68f8phQLY?si=ajJJ2GtO9UYgiY-X"
+  },
+  {
+    "title": "日常生活中减少塑料使用的10种方法",
+    "type": "article",
+    "url": "https://lespetitsbidons.fr/blogs/news/10-conseils-pour-reduire-sa-consommation-de-plastique"
+  },
+  {
+    "title": "一个被塑料窒息的星球——有哪些解决方案？",
+    "type": "bonus",
+    "url": "https://www.radiofrance.fr/franceculture/podcasts/de-cause-a-effets-le-magazine-de-l-environnement/une-planete-asphyxiee-de-plastique-quelles-solutions-5340104"
+  }
+]
+,
     "illustrationSuggeree": "对比图：塑料瓶、袋子、杯子 与其环保替代品如玻璃瓶、布袋、陶瓷杯",
     "imageHelper": "https://firebasestorage.googleapis.com/v0/b/challengeme-d7fef.appspot.com/o/Challenges-Helper%2Fch-reduce-plastic.png?alt=media"
   },
@@ -2542,22 +2773,23 @@
       "示例 4 🌱：聆听轻音乐或大自然的声音"
     ],
     "ressources": [
-      {
-        "title": "蓝光对睡眠的影响",
-        "type": "video",
-        "url": "https://www.youtube.com/watch?v=somelink"
-      },
-      {
-        "title": "改善睡眠的技巧",
-        "type": "article",
-        "url": "https://www.someOtherLink.com"
-      },
-      {
-        "title": "睡前引导冥想",
-        "type": "podcast",
-        "url": "https://www.somePodcastLink.com"
-      }
-    ],
+  {
+    "title": "战胜手机成瘾",
+    "type": "video",
+    "url": "https://youtu.be/HSeF86blL7Y?si=ieSLc2SYAUVkConf"
+  },
+  {
+    "title": "限制屏幕时间",
+    "type": "article",
+    "url": "https://naitreetgrandir.com/fr/nouvelles/2023/12/04/limiter-temps-ecran-important/"
+  },
+  {
+    "title": "减少屏幕时间的小贴士",
+    "type": "podcast",
+    "url": "https://www.radiofrance.fr/franceinter/podcasts/l-info-de-france-inter/l-info-de-france-inter-8230190"
+  }
+]
+,
     "illustrationSuggeree": "一个人关闭笔记本电脑，点亮床头灯阅读一本书",
     "imageHelper": "https://firebasestorage.googleapis.com/v0/b/challengeme-d7fef.appspot.com/o/Challenges-Helper%2Fch-reduce-screen-time.png?alt=media"
   },
@@ -2570,22 +2802,23 @@
       "示例 4 🌱：晚上在家看书 📚，不去花 15 美元看电影"
     ],
     "ressources": [
-      {
-        "title": "初学者如何存钱",
-        "type": "video",
-        "url": "http://lienverslavidéo.com"
-      },
-      {
-        "title": "每天节省的 7 个简单方法",
-        "type": "article",
-        "url": "http://lienverslarticle.com"
-      },
-      {
-        "title": "播客：每天省 5 美元实现财务自由",
-        "type": "bonus",
-        "url": "http://lienverslepodecast.com"
-      }
-    ],
+  {
+    "title": "如何快速存钱",
+    "type": "video",
+    "url": "https://youtu.be/4TU9xB5ttYo?si=P1qE-3sujLTu2LZF"
+  },
+  {
+    "title": "省钱小妙招",
+    "type": "article",
+    "url": "https://www.mesquestionsdargent.fr/budget/comment-faire-des-economies/astuces-economies-accessible"
+  },
+  {
+    "title": "日常省钱技巧 - 播客",
+    "type": "bonus",
+    "url": "https://www.radiofrance.fr/francebleu/podcasts/france-bleu-paris-bienvenue-chez-vous-les-experts/des-astuces-simples-pour-faire-des-economies-au-quotidien-8148632"
+  }
+]
+,
     "illustrationSuggeree": "桌上一只存钱罐，旁边有几枚硬币",
     "imageHelper": "https://firebasestorage.googleapis.com/v0/b/challengeme-d7fef.appspot.com/o/Challenges-Helper%2Fch-save-money.png?alt=media"
   },
@@ -2598,22 +2831,23 @@
       "示例 4 🌱：你今天的情绪如何？可以做什么来培养正面情绪？"
     ],
     "ressources": [
-      {
-        "title": "如何进行每日自我反思",
-        "type": "video",
-        "url": "https://youtube.com/votreURLunique"
-      },
-      {
-        "title": "自我反思的 5 个关键问题",
-        "type": "article",
-        "url": "https://votreBlog.com/votreURLunique"
-      },
-      {
-        "title": "播客：自我反思对个人发展的重要性",
-        "type": "bonus",
-        "url": "https://votreSitePodcast.com/votreURLunique"
-      }
-    ],
+  {
+    "title": "自我反思的重要性",
+    "type": "video",
+    "url": "https://youtu.be/CVsAaRPf60E?si=i_KZ3i5MKUBpZBJ5"
+  },
+  {
+    "title": "自我反思：个人成长的关键",
+    "type": "article",
+    "url": "https://nospensees.fr/lauto-reflexion-cle-de-croissance-personnelle-de-liberte-emotionnelle/"
+  },
+  {
+    "title": "关于自我反思的播客",
+    "type": "bonus",
+    "url": "https://podcast.feedspot.com/self_reflection_podcasts/"
+  }
+]
+,
     "illustrationSuggeree": "一个人坐在桌前写日记，记录一天的感受",
     "imageHelper": "https://firebasestorage.googleapis.com/v0/b/challengeme-d7fef.appspot.com/o/Challenges-Helper%2Fch-self-reflection.png?alt=media"
   },
@@ -2626,22 +2860,23 @@
       "示例 4 🌱：夸同事的穿搭 👔，开启友好交流"
     ],
     "ressources": [
-      {
-        "title": "开始对话的 5 个方法",
-        "type": "video",
-        "url": "https://youtu.be/DH6IIlxPh7w"
-      },
-      {
-        "title": "开启交流的 10 个简单方法",
-        "type": "article",
-        "url": "https://www.medium.com/10-astuces-pour-entamer-une-conversation"
-      },
-      {
-        "title": "播客：交流的艺术 - 有效沟通的秘诀",
-        "type": "bonus",
-        "url": "https://www.spotify.com/art-de-la-conversation"
-      }
-    ],
+  {
+    "title": "掌握对话的艺术",
+    "type": "video",
+    "url": "https://youtu.be/HYQ4ZjylHEU?si=sonikOMisf7bwb4Z"
+  },
+  {
+    "title": "10个步骤提升沟通能力",
+    "type": "article",
+    "url": "https://timidite.info/agir/apprendre-a-mieux-communiquer/"
+  },
+  {
+    "title": "闲聊技巧 - 播客",
+    "type": "bonus",
+    "url": "https://podcast.ausha.co/100-reseau/le-small-talk-comment-engager-une-conversation"
+  }
+]
+,
     "illustrationSuggeree": "一位顾客在咖啡馆里和陌生人聊天",
     "imageHelper": "https://firebasestorage.googleapis.com/v0/b/challengeme-d7fef.appspot.com/o/Challenges-Helper%2Fch-talk-to-stranger.png?alt=media"
   },
@@ -2654,22 +2889,23 @@
       "示例 4 🌱：《达芬奇密码》作者 Dan Brown 每天凌晨 4 点写作"
     ],
     "ressources": [
-      {
-        "title": "为什么我每天早上 5 点起床",
-        "type": "video",
-        "url": "https://www.youtube.com/watch?v=bEr0uEqbyV8"
-      },
-      {
-        "title": "如何每天 5 点起床",
-        "type": "article",
-        "url": "https://www.wikihow.com/Wake-Up-Early"
-      },
-      {
-        "title": "播客：Robin Sharma 的 5AM 俱乐部",
-        "type": "bonus",
-        "url": "https://www.robinsharma.com/podcast/02-the-5am-club/"
-      }
-    ],
+  {
+    "title": "我为什么每天早上5点起床",
+    "type": "video",
+    "url": "https://youtu.be/pg2GnMwpePo?si=cf66E-ptBf8cJDSE"
+  },
+  {
+    "title": "为什么要早起？",
+    "type": "article",
+    "url": "https://www.tediber.com/conseils/lit/pourquoi-lever-tot"
+  },
+  {
+    "title": "世界真的属于早起的人吗？",
+    "type": "bonus",
+    "url": "https://www.radiofrance.fr/franceculture/podcasts/la-question-du-jour/le-matin-appartient-il-a-ceux-qui-se-levent-tot-2077852"
+  }
+]
+,
     "illustrationSuggeree": "清晨 5 点的闹钟，背景是旭日初升",
     "imageHelper": "https://firebasestorage.googleapis.com/v0/b/challengeme-d7fef.appspot.com/o/Challenges-Helper%2Fch-wake-up-5am.png?alt=media"
   },
@@ -2682,22 +2918,23 @@
       "示例 4 🌱：Olivier 晚饭后散步助消化，也达成步数 👌"
     ],
     "ressources": [
-      {
-        "title": "如何每天走 10,000 步？",
-        "type": "video",
-        "url": "https://www.youtube.com/watch?v=abc"
-      },
-      {
-        "title": "每天走 1 万步的好处",
-        "type": "article",
-        "url": "https://www.healthbenefitsofwalking.com/articles"
-      },
-      {
-        "title": "播客：10,000 步挑战的技巧",
-        "type": "podcast",
-        "url": "https://www.walkmorepodcast.com/episode10"
-      }
-    ],
+  {
+    "title": "每天走一万步",
+    "type": "video",
+    "url": "https://youtu.be/CNGG-amQsyw?si=FMc11PXozuxTuV5u"
+  },
+  {
+    "title": "每天真的需要走一万步吗？",
+    "type": "article",
+    "url": "https://www.nationalgeographic.fr/sciences/sante-recommandations-sante-faut-il-reellement-faire-10000-pas-par-jour"
+  },
+  {
+    "title": "每天走一万步能如何帮助你？",
+    "type": "podcast",
+    "url": "https://podcast.ausha.co/sport-sante-nutrition-podcast/comment-10-000-pas-par-jour-peuvent-t-aider-a-perdre-du-gras-et-etre-en-meilleure-sante"
+  }
+]
+,
     "illustrationSuggeree": "一个人在绿地公园里微笑着看手机计步器",
     "imageHelper": "https://firebasestorage.googleapis.com/v0/b/challengeme-d7fef.appspot.com/o/Challenges-Helper%2Fch-walk-1000-pas.png?alt=media"
   },
@@ -2710,22 +2947,23 @@
       "示例 4 🌱：睡前做 15 分钟伸展运动"
     ],
     "ressources": [
-      {
-        "title": "15 分钟晨间瑜伽 🌞",
-        "type": "video",
-        "url": "https://www.youtube.com/watch?v=VaoV1PrYft4"
-      },
-      {
-        "title": "锻炼的好处：为什么运动有益健康",
-        "type": "article",
-        "url": "https://www.medicalnewstoday.com/articles/153390"
-      },
-      {
-        "title": "播客：了解锻炼科学",
-        "type": "bonus",
-        "url": "https://www.listennotes.com/c/4e8e3e8bcbf1486496206829f7d42e8e/"
-      }
-    ],
+  {
+    "title": "早晨锻炼开启一天",
+    "type": "video",
+    "url": "https://youtu.be/nHzveG3uyho?si=EWTmvbnKTm-0LvGH"
+  },
+  {
+    "title": "锻炼的好处",
+    "type": "article",
+    "url": "https://www.medicalnewstoday.com/articles/153390"
+  },
+  {
+    "title": "运动 – 播客",
+    "type": "bonus",
+    "url": "https://www.radiofrance.fr/franceculture/podcasts/serie-faites-du-sport"
+  }
+]
+,
     "illustrationSuggeree": "在家运动的人",
     "imageHelper": "https://firebasestorage.googleapis.com/v0/b/challengeme-d7fef.appspot.com/o/Challenges-Helper%2Fch-workout.png?alt=media"
   },
@@ -2867,6 +3105,10 @@
       "title": "欢迎使用 ChallengeTies！",
       "description": "探索一场独特的冒险，激动人心的挑战，以及充满灵感的社区。准备好迎接挑战了吗？"
     },
+    "videoStep": {
+    "title": "欢迎参加挑战 🎯",
+    "description": "在这里你可以接受挑战、追踪你的进度、查看你的统计数据……最重要的是，你可以获取成功所需的建议、具体示例以及音频或视频资源 💡🔥"
+  },
     "index": {
       "title": "探索核心功能",
       "description": "浏览热门挑战，查看排行榜，探索新功能，提出创意，并获取实用建议。"
