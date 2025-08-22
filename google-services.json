@@ -1,0 +1,29 @@
+{
+  "project_info": {
+    "project_number": "344780684076",
+    "project_id": "challengeme-d7fef",
+    "storage_bucket": "challengeme-d7fef.firebasestorage.app"
+  },
+  "client": [
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:344780684076:android:1ee582a77371332c5dca89",
+        "android_client_info": {
+          "package_name": "com.mxcrts.ChallengeTies"
+        }
+      },
+      "oauth_client": [],
+      "api_key": [
+        {
+          "current_key": "AIzaSyBQVVzbZfOBLs7cDGnFb3Aij0sNawh3qfQ"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": []
+        }
+      }
+    }
+  ],
+  "configuration_version": "1"
+}
