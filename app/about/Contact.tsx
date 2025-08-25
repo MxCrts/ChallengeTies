@@ -21,7 +21,6 @@ import { useTheme } from "../../context/ThemeContext";
 import { Theme } from "../../theme/designSystem";
 import designSystem from "../../theme/designSystem";
 import { useTranslation } from "react-i18next";
-import { useRouter } from "expo-router";
 import CustomHeader from "@/components/CustomHeader";
 
 
@@ -33,10 +32,56 @@ const normalizeSize = (size: number) => {
   return Math.round(size * scale);
 };
 
+/** Fond orbe discret, non interactif */
+const OrbBackground = ({ theme }: { theme: Theme }) => {
+  return (
+    <View style={StyleSheet.absoluteFill} pointerEvents="none">
+      {/* Orbe haut-gauche */}
+      <LinearGradient
+        colors={[theme.colors.secondary + "55", theme.colors.primary + "11"]}
+        style={[
+          styles.orb,
+          {
+            width: SCREEN_WIDTH * 0.8,
+            height: SCREEN_WIDTH * 0.8,
+            borderRadius: (SCREEN_WIDTH * 0.8) / 2,
+            top: -SCREEN_WIDTH * 0.35,
+            left: -SCREEN_WIDTH * 0.25,
+          },
+        ]}
+        start={{ x: 0.1, y: 0.1 }}
+        end={{ x: 0.9, y: 0.9 }}
+      />
+
+      {/* Orbe bas-droit */}
+      <LinearGradient
+        colors={[theme.colors.primary + "55", theme.colors.secondary + "11"]}
+        style={[
+          styles.orb,
+          {
+            width: SCREEN_WIDTH * 0.9,
+            height: SCREEN_WIDTH * 0.9,
+            borderRadius: (SCREEN_WIDTH * 0.9) / 2,
+            bottom: -SCREEN_WIDTH * 0.45,
+            right: -SCREEN_WIDTH * 0.25,
+          },
+        ]}
+        start={{ x: 0.2, y: 0.2 }}
+        end={{ x: 0.8, y: 0.8 }}
+      />
+
+      {/* Voile léger pour fusionner */}
+      <LinearGradient
+        colors={[theme.colors.background + "00", theme.colors.background + "66"]}
+        style={StyleSheet.absoluteFill}
+      />
+    </View>
+  );
+};
+
 export default function Contact() {
   const { t } = useTranslation();
   const { theme } = useTheme();
-  const router = useRouter();
   const isDarkMode = theme === "dark";
   const currentTheme: Theme = isDarkMode
     ? designSystem.darkTheme
@@ -47,27 +92,21 @@ export default function Contact() {
   const [email, setEmail] = useState("");
   const [message, setMessage] = useState("");
 
-  const handleSendMessage = useCallback(() => {
-    if (!name || !email || !message) {
-      Alert.alert(t("contact.errorTitle"), t("contact.errorMessage"));
-      return;
-    }
-    Alert.alert(t("contact.successTitle"), t("contact.successMessage"));
-    setName("");
-    setEmail("");
-    setMessage("");
-  }, [name, email, message, t]);
+
+  const borderColor = isDarkMode ? currentTheme.colors.secondary : "#FF8C00";
 
   return (
-    <LinearGradient
-      colors={[
-        currentTheme.colors.background,
-        currentTheme.colors.cardBackground,
-      ]}
-      style={styles.container}
-      start={{ x: 0, y: 0 }}
-      end={{ x: 1, y: 1 }}
-    >
+    <View style={{ flex: 1 }}>
+      {/* Fond gradient en absolu pour ne pas pousser le layout */}
+      <LinearGradient
+        colors={[currentTheme.colors.background, currentTheme.colors.cardBackground]}
+        start={{ x: 0, y: 0 }}
+        end={{ x: 1, y: 1 }}
+        style={StyleSheet.absoluteFill}
+        pointerEvents="none"
+      />
+      <OrbBackground theme={currentTheme} />
+
       <SafeAreaView style={styles.safeArea}>
         <StatusBar
           translucent
@@ -75,11 +114,13 @@ export default function Contact() {
           barStyle={isDarkMode ? "light-content" : "dark-content"}
         />
         <CustomHeader title={t("contact.title")} />
+
         <ScrollView
           contentContainerStyle={styles.contentContainer}
           showsVerticalScrollIndicator={false}
+          keyboardShouldPersistTaps="handled"
         >
-          {/* Logo animé */}
+          {/* Logo rond sans ombre */}
           <Animated.View
             entering={FadeInUp.delay(200).duration(800)}
             style={styles.logoContainer}
@@ -87,33 +128,18 @@ export default function Contact() {
             <Image
               source={require("../../assets/images/icon2.png")}
               style={styles.logo}
-              resizeMode="contain"
+              resizeMode="cover"
               accessibilityLabel={t("contact.logoAlt")}
             />
           </Animated.View>
 
           {/* Intro */}
-          <Animated.View
-            entering={FadeInUp.delay(400)}
-            style={[
-              styles.card,
-              { borderColor: isDarkMode ? "#FFD700" : "#FF8C00" },
-            ]}
-          >
-            <Text
-              style={[
-                styles.paragraph,
-                { color: currentTheme.colors.textSecondary },
-              ]}
-            >
+          <Animated.View entering={FadeInUp.delay(400)} style={[styles.card, { borderColor }]}>
+            <Text style={[styles.paragraph, { color: currentTheme.colors.textSecondary }]}>
               <Text
                 style={[
                   styles.boldText,
-                  {
-                    color: isDarkMode
-                      ? currentTheme.colors.textPrimary
-                      : "#FF8C00",
-                  },
+                  { color: isDarkMode ? currentTheme.colors.textPrimary : "#FF8C00" },
                 ]}
               >
                 {t("appName")}
@@ -123,13 +149,7 @@ export default function Contact() {
           </Animated.View>
 
           {/* Email */}
-          <Animated.View
-            entering={FadeInUp.delay(600)}
-            style={[
-              styles.card,
-              { borderColor: isDarkMode ? "#FFD700" : "#FF8C00" },
-            ]}
-          >
+          <Animated.View entering={FadeInUp.delay(600)} style={[styles.card, { borderColor }]}>
             <View style={styles.featureItem}>
               <Ionicons
                 name="mail-outline"
@@ -138,27 +158,15 @@ export default function Contact() {
                 style={styles.featureIcon}
               />
               <View style={styles.contactTextContainer}>
-                <Text
-                  style={[
-                    styles.subtitle,
-                    { color: currentTheme.colors.secondary },
-                  ]}
-                >
+                <Text style={[styles.subtitle, { color: currentTheme.colors.secondary }]}>
                   {t("contact.emailSection")}
                 </Text>
                 <TouchableOpacity
-                  onPress={() =>
-                    Linking.openURL("mailto:support@challengeties.app")
-                  }
+                  onPress={() => Linking.openURL("mailto:support@challengeties.app")}
                   accessibilityLabel={t("contact.emailLinkLabel")}
                   testID="email-link"
                 >
-                  <Text
-                    style={[
-                      styles.featureText,
-                      { color: currentTheme.colors.textSecondary },
-                    ]}
-                  >
+                  <Text style={[styles.featureText, { color: currentTheme.colors.textSecondary }]}>
                     {t("contact.emailAddress")}
                   </Text>
                 </TouchableOpacity>
@@ -166,56 +174,8 @@ export default function Contact() {
             </View>
           </Animated.View>
 
-          {/* Phone */}
-          <Animated.View
-            entering={FadeInUp.delay(800)}
-            style={[
-              styles.card,
-              { borderColor: isDarkMode ? "#FFD700" : "#FF8C00" },
-            ]}
-          >
-            <View style={styles.featureItem}>
-              <Ionicons
-                name="call-outline"
-                size={normalizeSize(20)}
-                color={currentTheme.colors.secondary}
-                style={styles.featureIcon}
-              />
-              <View style={styles.contactTextContainer}>
-                <Text
-                  style={[
-                    styles.subtitle,
-                    { color: currentTheme.colors.secondary },
-                  ]}
-                >
-                  {t("contact.phoneSection")}
-                </Text>
-                <TouchableOpacity
-                  onPress={() => Linking.openURL("tel:+33123456789")}
-                  accessibilityLabel={t("contact.phoneLinkLabel")}
-                  testID="phone-link"
-                >
-                  <Text
-                    style={[
-                      styles.featureText,
-                      { color: currentTheme.colors.textSecondary },
-                    ]}
-                  >
-                    {t("contact.phoneNumber")}
-                  </Text>
-                </TouchableOpacity>
-              </View>
-            </View>
-          </Animated.View>
-
           {/* Instagram */}
-          <Animated.View
-            entering={FadeInUp.delay(1000)}
-            style={[
-              styles.card,
-              { borderColor: isDarkMode ? "#FFD700" : "#FF8C00" },
-            ]}
-          >
+          <Animated.View entering={FadeInUp.delay(1000)} style={[styles.card, { borderColor }]}>
             <View style={styles.featureItem}>
               <Ionicons
                 name="logo-instagram"
@@ -224,27 +184,15 @@ export default function Contact() {
                 style={styles.featureIcon}
               />
               <View style={styles.contactTextContainer}>
-                <Text
-                  style={[
-                    styles.subtitle,
-                    { color: currentTheme.colors.secondary },
-                  ]}
-                >
+                <Text style={[styles.subtitle, { color: currentTheme.colors.secondary }]}>
                   {t("contact.instagramSection")}
                 </Text>
                 <TouchableOpacity
-                  onPress={() =>
-                    Linking.openURL("https://www.instagram.com/challengeties")
-                  }
+                  onPress={() => Linking.openURL("https://www.instagram.com/challengeties")}
                   accessibilityLabel={t("contact.instagramLinkLabel")}
                   testID="instagram-link"
                 >
-                  <Text
-                    style={[
-                      styles.featureText,
-                      { color: currentTheme.colors.textSecondary },
-                    ]}
-                  >
+                  <Text style={[styles.featureText, { color: currentTheme.colors.textSecondary }]}>
                     {t("contact.instagramHandle")}
                   </Text>
                 </TouchableOpacity>
@@ -253,13 +201,7 @@ export default function Contact() {
           </Animated.View>
 
           {/* Facebook */}
-          <Animated.View
-            entering={FadeInUp.delay(1200)}
-            style={[
-              styles.card,
-              { borderColor: isDarkMode ? "#FFD700" : "#FF8C00" },
-            ]}
-          >
+          <Animated.View entering={FadeInUp.delay(1200)} style={[styles.card, { borderColor }]}>
             <View style={styles.featureItem}>
               <Ionicons
                 name="logo-facebook"
@@ -268,27 +210,15 @@ export default function Contact() {
                 style={styles.featureIcon}
               />
               <View style={styles.contactTextContainer}>
-                <Text
-                  style={[
-                    styles.subtitle,
-                    { color: currentTheme.colors.secondary },
-                  ]}
-                >
+                <Text style={[styles.subtitle, { color: currentTheme.colors.secondary }]}>
                   {t("contact.facebookSection")}
                 </Text>
                 <TouchableOpacity
-                  onPress={() =>
-                    Linking.openURL("https://www.facebook.com/challengeties")
-                  }
+                  onPress={() => Linking.openURL("https://www.facebook.com/challengeties")}
                   accessibilityLabel={t("contact.facebookLinkLabel")}
                   testID="facebook-link"
                 >
-                  <Text
-                    style={[
-                      styles.featureText,
-                      { color: currentTheme.colors.textSecondary },
-                    ]}
-                  >
+                  <Text style={[styles.featureText, { color: currentTheme.colors.textSecondary }]}>
                     {t("contact.facebookHandle")}
                   </Text>
                 </TouchableOpacity>
@@ -296,139 +226,8 @@ export default function Contact() {
             </View>
           </Animated.View>
 
-          {/* WhatsApp */}
-          <Animated.View
-            entering={FadeInUp.delay(1400)}
-            style={[
-              styles.card,
-              { borderColor: isDarkMode ? "#FFD700" : "#FF8C00" },
-            ]}
-          >
-            <View style={styles.featureItem}>
-              <Ionicons
-                name="logo-whatsapp"
-                size={normalizeSize(20)}
-                color={currentTheme.colors.secondary}
-                style={styles.featureIcon}
-              />
-              <View style={styles.contactTextContainer}>
-                <Text
-                  style={[
-                    styles.subtitle,
-                    { color: currentTheme.colors.secondary },
-                  ]}
-                >
-                  {t("contact.whatsappSection")}
-                </Text>
-                <TouchableOpacity
-                  onPress={() => Linking.openURL("https://wa.me/123456789")}
-                  accessibilityLabel={t("contact.whatsappLinkLabel")}
-                  testID="whatsapp-link"
-                >
-                  <Text
-                    style={[
-                      styles.featureText,
-                      { color: currentTheme.colors.textSecondary },
-                    ]}
-                  >
-                    {t("contact.whatsappText")}
-                  </Text>
-                </TouchableOpacity>
-              </View>
-            </View>
-          </Animated.View>
-
-          {/* Contact Form */}
-          <Animated.View
-            entering={FadeInUp.delay(1600)}
-            style={[
-              styles.card,
-              { borderColor: isDarkMode ? "#FFD700" : "#FF8C00" },
-            ]}
-          >
-            <Text
-              style={[
-                styles.subtitle,
-                { color: currentTheme.colors.secondary },
-              ]}
-            >
-              {t("contact.formTitle")}
-            </Text>
-            <TextInput
-              style={[
-                styles.input,
-                {
-                  borderColor: currentTheme.colors.border,
-                  backgroundColor: currentTheme.colors.cardBackground,
-                  color: currentTheme.colors.textPrimary,
-                },
-              ]}
-              placeholder={t("contact.namePlaceholder")}
-              placeholderTextColor={currentTheme.colors.textSecondary}
-              value={name}
-              onChangeText={setName}
-              accessibilityLabel={t("contact.nameA11y")}
-              testID="name-input"
-            />
-            <TextInput
-              style={[
-                styles.input,
-                {
-                  borderColor: currentTheme.colors.border,
-                  backgroundColor: currentTheme.colors.cardBackground,
-                  color: currentTheme.colors.textPrimary,
-                },
-              ]}
-              placeholder={t("contact.emailPlaceholder")}
-              placeholderTextColor={currentTheme.colors.textSecondary}
-              keyboardType="email-address"
-              value={email}
-              onChangeText={setEmail}
-              accessibilityLabel={t("contact.emailA11y")}
-              testID="email-input"
-            />
-            <TextInput
-              style={[
-                styles.input,
-                styles.textArea,
-                {
-                  borderColor: currentTheme.colors.border,
-                  backgroundColor: currentTheme.colors.cardBackground,
-                  color: currentTheme.colors.textPrimary,
-                },
-              ]}
-              placeholder={t("contact.messagePlaceholder")}
-              placeholderTextColor={currentTheme.colors.textSecondary}
-              multiline
-              numberOfLines={4}
-              value={message}
-              onChangeText={setMessage}
-              accessibilityLabel={t("contact.messageA11y")}
-              testID="message-input"
-            />
-            <TouchableOpacity
-              style={[
-                styles.button,
-                { backgroundColor: currentTheme.colors.secondary },
-              ]}
-              onPress={handleSendMessage}
-              accessibilityLabel={t("contact.sendButtonA11y")}
-              testID="send-button"
-            >
-              <Text
-                style={[
-                  styles.buttonText,
-                  {
-                    color: isDarkMode ? "#000000" : "#000000",
-                  },
-                ]}
-              >
-                {t("contact.sendButton")}
-              </Text>
-            </TouchableOpacity>
-          </Animated.View>
-
-          {/* Final message */}
+ 
+          {/* Message final */}
           <Animated.View entering={FadeInUp.delay(1800)} style={styles.footer}>
             <LinearGradient
               colors={[currentTheme.colors.overlay, currentTheme.colors.border]}
@@ -439,11 +238,7 @@ export default function Contact() {
               <Text
                 style={[
                   styles.footerText,
-                  {
-                    color: isDarkMode
-                      ? currentTheme.colors.textPrimary
-                      : "#000000",
-                  },
+                  { color: isDarkMode ? currentTheme.colors.textPrimary : "#000000" },
                 ]}
               >
                 {t("contact.footerMessage")}
@@ -452,37 +247,25 @@ export default function Contact() {
           </Animated.View>
         </ScrollView>
       </SafeAreaView>
-    </LinearGradient>
+    </View>
   );
 }
 
 const styles = StyleSheet.create({
-  container: {
-    flex: 1,
-  },
+  container: { flex: 1 },
+
   safeArea: {
-  flex: 1,
-  paddingTop:
-    Platform.OS === "android" ? StatusBar.currentHeight ?? SPACING : SPACING,
-},
-  headerWrapper: {
-  paddingHorizontal: SPACING,
-  paddingVertical: SPACING,
-  position: "relative",
-},
-  titleContainer: {
-    alignItems: "center",
-    justifyContent: "center",
+    flex: 1,
+    paddingTop:
+      Platform.OS === "android" ? StatusBar.currentHeight ?? SPACING : SPACING,
   },
-  title: {
-    fontSize: normalizeSize(28),
-    fontFamily: "Comfortaa_700Bold",
-    textAlign: "center",
-  },
+
   contentContainer: {
     paddingHorizontal: SPACING,
     paddingBottom: SCREEN_HEIGHT * 0.1,
   },
+
+  // Logo rond et clean
   logoContainer: {
     alignItems: "center",
     marginBottom: SPACING * 2,
@@ -490,25 +273,25 @@ const styles = StyleSheet.create({
   logo: {
     width: SCREEN_WIDTH * 0.4,
     height: SCREEN_WIDTH * 0.4,
-    // Supprime les ombres et bordures du LinearGradient
-  },
-  logoGradient: {
-    borderRadius: normalizeSize(20),
-    padding: SPACING / 2,
-    shadowColor: "#000",
-    shadowOffset: { width: 0, height: normalizeSize(6) },
-    shadowOpacity: 0.3,
-    shadowRadius: normalizeSize(8),
-    elevation: 8,
+    borderRadius: (SCREEN_WIDTH * 0.4) / 2,
+    overflow: "hidden",
   },
 
+  // Cartes sans grosses ombres
   card: {
     backgroundColor: "transparent",
     borderRadius: normalizeSize(20),
     padding: SPACING,
     marginBottom: SPACING,
-    borderWidth: 1,
+    borderWidth: 2,
+    // no shadows
+    shadowColor: "transparent",
+    shadowOffset: { width: 0, height: 0 },
+    shadowOpacity: 0,
+    shadowRadius: 0,
+    elevation: 0,
   },
+
   subtitle: {
     fontSize: normalizeSize(22),
     fontFamily: "Comfortaa_700Bold",
@@ -522,6 +305,7 @@ const styles = StyleSheet.create({
   boldText: {
     fontFamily: "Comfortaa_700Bold",
   },
+
   featureItem: {
     flexDirection: "row",
     alignItems: "flex-start",
@@ -541,21 +325,22 @@ const styles = StyleSheet.create({
   contactTextContainer: {
     flex: 1,
   },
+
   input: {
     borderWidth: 1,
     padding: SPACING,
-    borderRadius: normalizeSize(8),
+    borderRadius: normalizeSize(12),
     marginBottom: SPACING,
     fontFamily: "Comfortaa_400Regular",
     fontSize: normalizeSize(16),
   },
   textArea: {
-    height: normalizeSize(100),
+    height: normalizeSize(110),
     textAlignVertical: "top",
   },
   button: {
     padding: SPACING,
-    borderRadius: normalizeSize(8),
+    borderRadius: normalizeSize(16),
     alignItems: "center",
     marginTop: SPACING,
   },
@@ -563,6 +348,7 @@ const styles = StyleSheet.create({
     fontFamily: "Comfortaa_700Bold",
     fontSize: normalizeSize(16),
   },
+
   footer: {
     marginTop: SPACING,
     marginBottom: SPACING * 2,
@@ -578,5 +364,11 @@ const styles = StyleSheet.create({
     fontFamily: "Comfortaa_400Regular",
     fontStyle: "italic",
     textAlign: "center",
+  },
+
+  // Orbes
+  orb: {
+    position: "absolute",
+    opacity: 0.9,
   },
 });

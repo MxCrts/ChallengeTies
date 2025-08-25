@@ -1,34 +1,36 @@
-import React, { useState, useEffect } from "react";
-import { View, Text, TouchableOpacity, Modal, StyleSheet } from "react-native";
-import Animated, { FadeInUp, Layout } from "react-native-reanimated";
+// components/InvitationModal.tsx
+import React, { useEffect, useMemo, useState } from "react";
+import {
+  View,
+  Text,
+  TouchableOpacity,
+  Modal,
+  StyleSheet,
+  ActivityIndicator,
+} from "react-native";
+import Animated, { FadeInUp } from "react-native-reanimated";
 import { useTranslation } from "react-i18next";
 import { doc, getDoc } from "firebase/firestore";
-import { db } from "../constants/firebase-config";
+import { db, auth } from "@/constants/firebase-config";
 import {
   acceptInvitation,
   refuseInvitation,
-} from "../services/invitationService";
-import { useTheme } from "../context/ThemeContext";
-import { Theme } from "../theme/designSystem";
-import designSystem from "../theme/designSystem";
-import { useRouter } from "expo-router";
-import { auth } from "../constants/firebase-config";
+  resetInviteeChallenge, // alias -> resetInviteeChallengeByUsername
+  getInvitation,
+  isInvitationExpired,
+  Invitation,
+} from "@/services/invitationService";
+import { useTheme } from "@/context/ThemeContext";
+import designSystem, { Theme } from "@/theme/designSystem";
 
-interface InvitationModalProps {
+type InvitationModalProps = {
   visible: boolean;
   inviteId: string | null;
   challengeId: string;
   onClose: () => void;
-  clearInvitation: () => void; // ✅ AJOUT ICI
-}
+  clearInvitation?: () => void; // optionnel: pour vider l'état parent
+};
 
-interface InvitationModalProps {
-  visible: boolean;
-  inviteId: string | null;
-  challengeId: string;
-  onClose: () => void;
-  clearInvitation: () => void; // 🔥 Ajout ici
-}
 const InvitationModal: React.FC<InvitationModalProps> = ({
   visible,
   inviteId,
@@ -38,72 +40,174 @@ const InvitationModal: React.FC<InvitationModalProps> = ({
 }) => {
   const { t } = useTranslation();
   const { theme } = useTheme();
-  const router = useRouter();
+
+  const [loading, setLoading] = useState(false);
+  const [fetching, setFetching] = useState(false);
+  const [showRestartConfirm, setShowRestartConfirm] = useState(false);
+
+  const [inv, setInv] = useState<Invitation | null>(null);
+  const [inviterUsername, setInviterUsername] = useState("");
+  const [inviteeUsername, setInviteeUsername] = useState("");
+  const [challengeTitle, setChallengeTitle] = useState("");
+  const [errorMsg, setErrorMsg] = useState<string>("");
 
   const isDarkMode = theme === "dark";
   const currentTheme: Theme = isDarkMode
     ? designSystem.darkTheme
     : designSystem.lightTheme;
-  const [inviterUsername, setInviterUsername] = useState<string>("");
-  const [challengeTitle, setChallengeTitle] = useState<string>("");
-  const [loading, setLoading] = useState<boolean>(false);
 
-  // Récupérer inviterUsername et challengeTitle
+  const you = auth.currentUser?.uid || "";
+
+  // ✅ Open-aware: une open invite est valable pour tout user connecté ≠ inviter
+  const isForMe = useMemo(() => {
+    if (!inv || !you) return false;
+    if (inv.kind === "open") {
+      return inv.inviterId !== you;
+    }
+    // ancien modèle direct
+    return inv.inviteeId === you;
+  }, [inv, you]);
+
+  const expired = useMemo(() => (inv ? isInvitationExpired(inv) : false), [inv]);
+
+  /* =========================
+   * Chargement des infos (invitation + noms + titre challenge)
+   * ========================= */
   useEffect(() => {
-    const fetchInvitationData = async () => {
-      if (!inviteId || !challengeId) {
-        console.warn("⚠️ Données manquantes", { inviteId, challengeId });
-        onClose();
-        return;
-      }
-
-      if (!auth.currentUser) {
-        console.warn("⚠️ Utilisateur non connecté");
-        router.push("/login"); // Redirige vers la page de login
-        onClose();
-        return;
-      }
-
+    const load = async () => {
+      if (!visible || !inviteId) return;
       try {
-        const invitationRef = doc(db, "invitations", inviteId);
-        const invitationSnap = await getDoc(invitationRef);
-        if (!invitationSnap.exists()) {
-          console.warn("⚠️ Invitation non trouvée");
-          onClose();
-          return;
+        setFetching(true);
+        setErrorMsg("");
+
+        // 1) Invitation
+        const data = await getInvitation(inviteId);
+        setInv(data);
+
+        // 2) Inviter username
+        if (data?.inviterId) {
+          const inviterSnap = await getDoc(doc(db, "users", data.inviterId));
+          setInviterUsername(
+            (inviterSnap.exists() && (inviterSnap.data() as any)?.username) ||
+              t("invitation.userFallback", { defaultValue: "Utilisateur" })
+          );
         }
 
-        const invitation = invitationSnap.data();
-        const inviterRef = doc(db, "users", invitation.inviterId);
-        const inviterSnap = await getDoc(inviterRef);
-        if (inviterSnap.exists()) {
-          setInviterUsername(inviterSnap.data().username || "Utilisateur");
+        // 3) Invitee username (toi)
+        if (auth.currentUser?.uid) {
+          const meSnap = await getDoc(doc(db, "users", auth.currentUser.uid));
+          setInviteeUsername(
+            (meSnap.exists() && (meSnap.data() as any)?.username) ||
+              t("invitation.youFallback", { defaultValue: "Toi" })
+          );
         }
 
-        const challengeRef = doc(db, "challenges", challengeId);
-        const challengeSnap = await getDoc(challengeRef);
-        if (challengeSnap.exists()) {
-          setChallengeTitle(challengeSnap.data().title || "Challenge");
+        // 4) Challenge title pour le message
+        if (challengeId) {
+          const chSnap = await getDoc(doc(db, "challenges", challengeId));
+          setChallengeTitle(
+            (chSnap.exists() && (chSnap.data() as any)?.title) ||
+              t("challengeDetails.untitled", { defaultValue: "Défi" })
+          );
         }
-      } catch (error) {
-        console.error("❌ Erreur récupération données invitation :", error);
-        onClose();
+      } catch (e) {
+        console.error("❌ InvitationModal load error:", e);
+        setErrorMsg(
+          t("invitation.errors.unknown", { defaultValue: "Erreur inconnue." })
+        );
+      } finally {
+        setFetching(false);
       }
     };
+    load();
+  }, [visible, inviteId, challengeId, t]);
 
-    fetchInvitationData();
-  }, [inviteId, challengeId, onClose, router]); // Ajoute router aux dépendances
+  /* =========================
+   * Actions
+   * ========================= */
 
-  // Gérer acceptation
+  // Accepter (avec détection d’un solo en cours → confirmation reset)
   const handleAccept = async () => {
-    if (!inviteId) return;
+    if (!inviteId || !auth.currentUser) return;
+
+    if (!inv || expired || !isForMe) {
+      setErrorMsg(
+        expired
+          ? t("invitation.errors.expired", {
+              defaultValue: "Invitation expirée.",
+            })
+          : t("invitation.errors.unknown", { defaultValue: "Erreur." })
+      );
+      return;
+    }
+
     setLoading(true);
+    setErrorMsg("");
     try {
+      // Vérifier si un solo existe déjà pour ce challenge
+      const meSnap = await getDoc(doc(db, "users", auth.currentUser.uid));
+      const current = (meSnap.data()?.CurrentChallenges || []) as any[];
+      const hasSolo = current.some(
+        (c) => (c.challengeId === challengeId || c.id === challengeId) && !c.duo
+      );
+
+      if (hasSolo) {
+        setShowRestartConfirm(true);
+      } else {
+        await acceptInvitation(inviteId);
+        onClose();
+        clearInvitation?.();
+      }
+    } catch (e: any) {
+      console.error("❌ Invitation accept error:", e);
+      // surface quelques erreurs connues lisiblement
+      const msg = String(e?.message || "").toLowerCase();
+      if (msg.includes("auto_invite")) {
+        setErrorMsg(
+          t("invitation.errors.autoInvite", {
+            defaultValue: "Tu ne peux pas accepter ta propre invitation.",
+          })
+        );
+      } else if (msg.includes("expirée") || msg.includes("expired")) {
+        setErrorMsg(
+          t("invitation.errors.expired", {
+            defaultValue: "Invitation expirée.",
+          })
+        );
+      } else if (msg.includes("restart_invitee")) {
+        setErrorMsg(
+          t("invitation.errors.alreadyStarted", {
+            defaultValue:
+              "Tu as déjà ce défi en cours. Termine-le ou réinitialise-le d'abord.",
+          })
+        );
+      } else {
+        setErrorMsg(
+          t("invitation.errors.unknown", { defaultValue: "Erreur." })
+        );
+      }
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  // Confirme le reset de mon solo, puis accepte
+  const handleConfirmRestart = async () => {
+    if (!inviteId || !auth.currentUser || !inv) return;
+
+    setLoading(true);
+    setErrorMsg("");
+    try {
+      if (inviteeUsername) {
+        await resetInviteeChallenge(challengeId, inviteeUsername);
+      }
       await acceptInvitation(inviteId);
+      setShowRestartConfirm(false);
       onClose();
-      clearInvitation(); // 🔥 Vide l'invitation du state global
-    } catch (error) {
-      console.error("❌ Modal : Erreur acceptation :", error);
+      clearInvitation?.();
+    } catch (e) {
+      console.error("❌ Invitation restart+accept error:", e);
+      setErrorMsg(t("invitation.errors.unknown", { defaultValue: "Erreur." }));
     } finally {
       setLoading(false);
     }
@@ -112,124 +216,316 @@ const InvitationModal: React.FC<InvitationModalProps> = ({
   const handleRefuse = async () => {
     if (!inviteId) return;
     setLoading(true);
+    setErrorMsg("");
     try {
       await refuseInvitation(inviteId);
       onClose();
-      clearInvitation(); // 🔥 Vide aussi ici
-    } catch (error) {
-      console.error("❌ Modal : Erreur refus :", error);
+      clearInvitation?.();
+    } catch (e) {
+      console.error("❌ Invitation refuse error:", e);
+      setErrorMsg(t("invitation.errors.unknown", { defaultValue: "Erreur." }));
     } finally {
       setLoading(false);
     }
   };
 
-  // Définir les styles dynamiquement avec currentTheme
+  /* =========================
+   * Styles
+   * ========================= */
   const styles = StyleSheet.create({
     centeredView: {
       flex: 1,
       justifyContent: "center",
       alignItems: "center",
       backgroundColor: isDarkMode ? "rgba(0,0,0,0.7)" : "rgba(0,0,0,0.5)",
+      padding: 20,
     },
     modalView: {
       backgroundColor: currentTheme.colors.cardBackground,
       borderRadius: 16,
-      padding: 25,
+      padding: 22,
       alignItems: "center",
       shadowColor: "#000",
       shadowOffset: { width: 0, height: 6 },
       shadowOpacity: 0.3,
       shadowRadius: 10,
       elevation: 8,
-      width: "85%",
-      maxWidth: 400,
+      width: "100%",
+      maxWidth: 420,
     },
     modalTitle: {
       fontSize: 20,
       fontFamily: "Comfortaa_700Bold",
-      marginBottom: 15,
+      marginBottom: 10,
       color: currentTheme.colors.secondary,
       textAlign: "center",
     },
     modalText: {
       fontSize: 16,
       fontFamily: "Comfortaa_400Regular",
-      marginBottom: 20,
+      marginBottom: 18,
       textAlign: "center",
       color: currentTheme.colors.textSecondary,
     },
-    buttonContainer: {
+    errorText: {
+      color: currentTheme.colors.error,
+      fontSize: 14,
+      marginBottom: 12,
+      textAlign: "center",
+    },
+    buttonRow: {
       flexDirection: "row",
       justifyContent: "space-between",
       width: "100%",
+      gap: 12,
+      marginTop: 6,
     },
-    button: {
-      borderRadius: 10,
-      padding: 12,
-      width: "45%",
+    btn: {
+      flex: 1,
+      borderRadius: 12,
+      paddingVertical: 12,
       alignItems: "center",
       shadowColor: "#000",
       shadowOffset: { width: 0, height: 4 },
-      shadowOpacity: 0.25,
+      shadowOpacity: 0.2,
       shadowRadius: 6,
       elevation: 5,
     },
-    acceptButton: {
-      backgroundColor: currentTheme.colors.primary,
-    },
-    refuseButton: {
-      backgroundColor: currentTheme.colors.error,
-    },
-    buttonText: {
+    accept: { backgroundColor: currentTheme.colors.primary },
+    refuse: { backgroundColor: currentTheme.colors.error },
+    neutral: { backgroundColor: currentTheme.colors.border },
+    btnText: {
       color: "#fff",
       fontSize: 16,
       fontFamily: "Comfortaa_700Bold",
     },
+    neutralText: {
+      color: currentTheme.colors.textPrimary,
+    },
+    spinnerWrap: { marginVertical: 10 },
   });
 
-  return (
-    <Modal
-      visible={visible}
-      transparent={true}
-      animationType="fade"
-      onRequestClose={onClose}
-    >
+  /* =========================
+   * Rendus conditionnels
+   * ========================= */
+  const renderBody = () => {
+    if (fetching) {
+      return (
+        <>
+          <Text style={styles.modalTitle}>
+            {t("invitation.loading", { defaultValue: "Chargement..." })}
+          </Text>
+          <View style={styles.spinnerWrap}>
+            <ActivityIndicator
+              size="large"
+              color={currentTheme.colors.secondary}
+            />
+          </View>
+        </>
+      );
+    }
+
+    if (!inv) {
+      return (
+        <>
+          <Text style={styles.modalTitle}>
+            {t("invitation.invalidTitle", {
+              defaultValue: "Invitation indisponible",
+            })}
+          </Text>
+          <Text style={styles.modalText}>
+            {t("invitation.invalidMessage", {
+              defaultValue:
+                "Cette invitation est introuvable ou a été supprimée.",
+            })}
+          </Text>
+          <View style={styles.buttonRow}>
+            <TouchableOpacity
+              style={[styles.btn, styles.neutral]}
+              onPress={onClose}
+            >
+              <Text style={[styles.btnText, styles.neutralText]}>
+                {t("commonS.close", { defaultValue: "Fermer" })}
+              </Text>
+            </TouchableOpacity>
+          </View>
+        </>
+      );
+    }
+
+    if (!isForMe) {
+      return (
+        <>
+          <Text style={styles.modalTitle}>
+            {t("invitation.notForYouTitle", { defaultValue: "Oups" })}
+          </Text>
+          <Text style={styles.modalText}>
+            {t("invitation.notForYouMessage", {
+              defaultValue:
+                "Cette invitation n'est pas destinée à ce compte.",
+            })}
+          </Text>
+          <View style={styles.buttonRow}>
+            <TouchableOpacity
+              style={[styles.btn, styles.neutral]}
+              onPress={onClose}
+            >
+              <Text style={[styles.btnText, styles.neutralText]}>
+                {t("commonS.close", { defaultValue: "Fermer" })}
+              </Text>
+            </TouchableOpacity>
+          </View>
+        </>
+      );
+    }
+
+    if (expired) {
+      return (
+        <>
+          <Text style={styles.modalTitle}>
+            {t("invitation.expiredTitle", { defaultValue: "Invitation expirée" })}
+          </Text>
+          <Text style={styles.modalText}>
+            {t("invitation.expiredMessage", {
+              defaultValue:
+                "Cette invitation a expiré. Demande à ton ami d'en renvoyer une nouvelle.",
+            })}
+          </Text>
+          <View style={styles.buttonRow}>
+            <TouchableOpacity
+              style={[styles.btn, styles.neutral]}
+              onPress={onClose}
+            >
+              <Text style={[styles.btnText, styles.neutralText]}>
+                {t("commonS.close", { defaultValue: "Fermer" })}
+              </Text>
+            </TouchableOpacity>
+          </View>
+        </>
+      );
+    }
+
+    return (
+      <>
+        <Text style={styles.modalTitle}>
+          {t("invitation.title", {
+            username: inviterUsername,
+            defaultValue: "{{username}} t’invite en Duo",
+          })}
+        </Text>
+        <Text style={styles.modalText}>
+          {t("invitation.message", {
+            challenge: challengeTitle,
+            defaultValue:
+              "Accepte pour démarrer ce défi en Duo. Tu pourrez suivre vos progrès ensemble.",
+          })}
+        </Text>
+
+        {!!errorMsg && <Text style={styles.errorText}>{errorMsg}</Text>}
+
+        <View style={styles.buttonRow}>
+          <TouchableOpacity
+            style={[styles.btn, styles.accept]}
+            onPress={handleAccept}
+            disabled={loading}
+            activeOpacity={0.85}
+          >
+            {loading ? (
+              <ActivityIndicator color="#fff" />
+            ) : (
+              <Text style={styles.btnText}>
+                {t("invitation.accept", { defaultValue: "Accepter" })}
+              </Text>
+            )}
+          </TouchableOpacity>
+
+          <TouchableOpacity
+            style={[styles.btn, styles.refuse]}
+            onPress={handleRefuse}
+            disabled={loading}
+            activeOpacity={0.85}
+          >
+            {loading ? (
+              <ActivityIndicator color="#fff" />
+            ) : (
+              <Text style={styles.btnText}>
+                {t("invitation.refuse", { defaultValue: "Refuser" })}
+              </Text>
+            )}
+          </TouchableOpacity>
+        </View>
+      </>
+    );
+  };
+
+  const renderRestartConfirm = () => (
+    <Modal visible={showRestartConfirm} transparent animationType="fade">
       <View style={styles.centeredView}>
         <Animated.View
-          entering={FadeInUp.duration(300)}
+          entering={FadeInUp.duration(250)}
           style={styles.modalView}
         >
           <Text style={styles.modalTitle}>
-            {t("invitation.title", { username: inviterUsername })}
+            {t("invitation.restartTitle", {
+              defaultValue: "Recommencer le défi en Duo ?",
+            })}
           </Text>
           <Text style={styles.modalText}>
-            {t("invitation.message", { challenge: challengeTitle })}
+            {t("invitation.restartMessage", {
+              defaultValue:
+                "Tu as déjà ce défi en solo. On va le réinitialiser pour repartir à zéro à deux.",
+            })}
           </Text>
-          <View style={styles.buttonContainer}>
-            <Animated.View entering={FadeInUp.delay(200)}>
-              <TouchableOpacity
-                style={[styles.button, styles.acceptButton]}
-                onPress={handleAccept}
-                disabled={loading}
-                activeOpacity={0.8}
-              >
-                <Text style={styles.buttonText}>{t("invitation.accept")}</Text>
-              </TouchableOpacity>
-            </Animated.View>
-            <Animated.View entering={FadeInUp.delay(300)}>
-              <TouchableOpacity
-                style={[styles.button, styles.refuseButton]}
-                onPress={handleRefuse}
-                disabled={loading}
-                activeOpacity={0.8}
-              >
-                <Text style={styles.buttonText}>{t("invitation.refuse")}</Text>
-              </TouchableOpacity>
-            </Animated.View>
+          <View style={styles.buttonRow}>
+            <TouchableOpacity
+              style={[styles.btn, styles.neutral]}
+              onPress={() => setShowRestartConfirm(false)}
+              activeOpacity={0.85}
+            >
+              <Text style={[styles.btnText, styles.neutralText]}>
+                {t("invitation.cancel", { defaultValue: "Annuler" })}
+              </Text>
+            </TouchableOpacity>
+            <TouchableOpacity
+              style={[styles.btn, styles.accept]}
+              onPress={handleConfirmRestart}
+              disabled={loading}
+              activeOpacity={0.85}
+            >
+              {loading ? (
+                <ActivityIndicator color="#fff" />
+              ) : (
+                <Text style={styles.btnText}>
+                  {t("invitation.continue", { defaultValue: "Continuer" })}
+                </Text>
+              )}
+            </TouchableOpacity>
           </View>
         </Animated.View>
       </View>
     </Modal>
+  );
+
+  return (
+    <>
+      <Modal
+        visible={visible}
+        transparent
+        animationType="fade"
+        onRequestClose={onClose}
+      >
+        <View style={styles.centeredView}>
+          <Animated.View
+            entering={FadeInUp.duration(250)}
+            style={styles.modalView}
+          >
+            {renderBody()}
+          </Animated.View>
+        </View>
+      </Modal>
+
+      {renderRestartConfirm()}
+    </>
   );
 };
 

@@ -46,38 +46,48 @@ const TutorialVideoWrapper = ({
   };
 
   return (
-    <View style={styles.fullscreenContainer} pointerEvents="box-none">
-      {videoSource && (
-        <Video
-          source={videoSource}
-          style={StyleSheet.absoluteFill}
-          resizeMode={ResizeMode.COVER}
-          shouldPlay
-          isLooping
-          isMuted
-        />
-      )}
+  <View style={styles.fullscreenContainer} pointerEvents="auto">
+    {/* 🔒 Catch all touches so nothing passes through */}
+    <View
+      style={StyleSheet.absoluteFill}
+      pointerEvents="auto"
+      // This makes the view become responder and swallow the press
+      onStartShouldSetResponder={() => true}
+    />
 
-      {/* Zone cliquable protégée */}
-      <View style={[styles.bottomOverlay, containerStyle]} pointerEvents="auto">
-        <View style={styles.textContainer}>
-          {icon}
-          <View style={styles.textGroup}>
-            {renderWithWhiteText(title)}
-            {renderWithWhiteText(description)}
-          </View>
-          {children}
+    {videoSource && (
+      <Video
+        source={videoSource}
+        style={StyleSheet.absoluteFill}
+        resizeMode={ResizeMode.COVER}
+        shouldPlay
+        isLooping
+        isMuted
+      />
+    )}
+
+    {/* Bottom overlay with your content/buttons */}
+    <View style={[styles.bottomOverlay, containerStyle]} pointerEvents="auto">
+      <View style={styles.textContainer}>
+        {icon}
+        <View style={styles.textGroup}>
+          {renderWithWhiteText(title)}
+          {renderWithWhiteText(description)}
         </View>
+        {children}
       </View>
     </View>
-  );
+  </View>
+);
+
 };
 
 const styles = StyleSheet.create({
   fullscreenContainer: {
-    ...StyleSheet.absoluteFillObject,
-    zIndex: 999,
-  },
+  ...StyleSheet.absoluteFillObject,
+  zIndex: 9999,      // iOS
+  elevation: 9999,   // Android
+},
   bottomOverlay: {
     position: "absolute",
     bottom: 0,

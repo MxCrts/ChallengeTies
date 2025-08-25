@@ -23,6 +23,9 @@ import { Theme } from "../../theme/designSystem";
 import designSystem from "../../theme/designSystem";
 import CustomHeader from "@/components/CustomHeader";
 import { useTranslation } from "react-i18next";
+import { BannerAd, BannerAdSize } from "react-native-google-mobile-ads";
+import { adUnitIds } from "@/constants/admob";
+import { useAdsVisibility } from "../../src/context/AdsVisibilityContext";
 
 const SPACING = 18; // Déjà aligné avec CompletedChallenges.tsx et Achievements.tsx
 const { width: SCREEN_WIDTH, height: SCREEN_HEIGHT } = Dimensions.get("window");
@@ -35,6 +38,30 @@ const normalizeSize = (size: number) => {
   const scale = Math.min(Math.max(SCREEN_WIDTH / baseWidth, 0.7), 1.8); // Limite l'échelle
   return Math.round(size * scale);
 };
+
+ const BANNER_HEIGHT = normalizeSize(50);
+
+/** Util pour ajouter une alpha sans casser les gradients */
+const withAlpha = (color: string, alpha: number) => {
+  const clamp = (n: number, min = 0, max = 1) => Math.min(Math.max(n, min), max);
+  const a = clamp(alpha);
+
+  if (/^rgba?\(/i.test(color)) {
+    const nums = color.match(/[\d.]+/g) || [];
+    const [r = "0", g = "0", b = "0"] = nums;
+    return `rgba(${r}, ${g}, ${b}, ${a})`;
+  }
+  let hex = color.replace("#", "");
+  if (hex.length === 3) hex = hex.split("").map((c) => c + c).join("");
+  if (hex.length >= 6) {
+    const r = parseInt(hex.slice(0, 2), 16);
+    const g = parseInt(hex.slice(2, 4), 16);
+    const b = parseInt(hex.slice(4, 6), 16);
+    return `rgba(${r}, ${g}, ${b}, ${a})`;
+  }
+  return `rgba(0,0,0,${a})`;
+};
+
 
 interface Challenge {
   id: string;
@@ -58,6 +85,8 @@ export default function MyChallenges() {
     () => (isDarkMode ? designSystem.darkTheme : designSystem.lightTheme),
     [isDarkMode]
   );
+  const { showBanners } = useAdsVisibility();
+  const bottomPadding = showBanners ? BANNER_HEIGHT + normalizeSize(90) : normalizeSize(90);
 
   useEffect(() => {
     const userId = auth.currentUser?.uid;
@@ -275,49 +304,41 @@ export default function MyChallenges() {
   );
 
   const renderEmptyState = useCallback(
-    () => (
-      <LinearGradient
-        colors={[
-          currentTheme.colors.background,
-          currentTheme.colors.cardBackground + "F0",
-        ]}
-        style={styles.noChallengesContainer}
-      >
-        <Animated.View
-          entering={FadeInUp.delay(100)}
-          style={styles.noChallengesContent}
+  () => (
+    <View style={styles.noChallengesContainer}>
+      <Animated.View entering={FadeInUp.delay(100)} style={styles.noChallengesContent}>
+        <Ionicons
+          name="create-outline"
+          size={normalizeSize(60)}
+          color={currentTheme.colors.textSecondary}
+          accessibilityLabel={t("noChallengesCreated")}
+        />
+        <Text
+          style={[
+            styles.noChallengesText,
+            {
+              color: isDarkMode
+                ? currentTheme.colors.textPrimary
+                : currentTheme.colors.textSecondary,
+            },
+          ]}
         >
-          <Ionicons
-            name="create-outline"
-            size={normalizeSize(60)}
-            color={currentTheme.colors.textSecondary}
-            accessibilityLabel={t("noChallengesCreated")}
-          />
-          <Text
-            style={[
-              styles.noChallengesText,
-              {
-                color: isDarkMode
-                  ? currentTheme.colors.textPrimary
-                  : currentTheme.colors.textSecondary,
-              },
-            ]}
-          >
-            {t("noChallengesCreated")}
-          </Text>
-          <Text
-            style={[
-              styles.noChallengesSubtext,
-              { color: currentTheme.colors.textSecondary },
-            ]}
-          >
-            {t("createFirstChallenge")}
-          </Text>
-        </Animated.View>
-      </LinearGradient>
-    ),
-    [currentTheme, t]
-  );
+          {t("noChallengesCreated")}
+        </Text>
+        <Text
+          style={[
+            styles.noChallengesSubtext,
+            { color: currentTheme.colors.textSecondary },
+          ]}
+        >
+          {t("createFirstChallenge")}
+        </Text>
+      </Animated.View>
+    </View>
+  ),
+  [currentTheme, t, isDarkMode]
+);
+
 
   if (isLoading) {
     return (
@@ -329,9 +350,10 @@ export default function MyChallenges() {
         />
         <LinearGradient
           colors={[
-            currentTheme.colors.background,
-            currentTheme.colors.cardBackground + "F0",
-          ]}
+  withAlpha(currentTheme.colors.background, 1),
+  withAlpha(currentTheme.colors.cardBackground, 1),
+  withAlpha(currentTheme.colors.primary, 0.13),
+]}
           style={styles.loadingContainer}
         >
           <ActivityIndicator size="large" color={currentTheme.colors.primary} />
@@ -349,23 +371,43 @@ export default function MyChallenges() {
   }
 
   return (
-    <SafeAreaView style={styles.safeArea}>
-      <StatusBar
-        translucent
-        backgroundColor="transparent"
-        barStyle={isDarkMode ? "light-content" : "dark-content"}
-      />
-                <CustomHeader title={t("myChallenges")} />
+  <SafeAreaView style={styles.safeArea}>
+    <StatusBar translucent backgroundColor="transparent" barStyle={isDarkMode ? "light-content" : "dark-content"} />
 
+    <LinearGradient
+      colors={[
+        withAlpha(currentTheme.colors.background, 1),
+        withAlpha(currentTheme.colors.cardBackground, 1),
+        withAlpha(currentTheme.colors.primary, 0.13),
+      ]}
+      style={styles.gradientContainer}
+      start={{ x: 0, y: 0 }}
+      end={{ x: 1, y: 1 }}
+    >
+      {/* Orbes décoratives */}
       <LinearGradient
-        colors={[
-          currentTheme.colors.background,
-          currentTheme.colors.cardBackground + "F0",
-        ]}
-        style={styles.container}
-        start={{ x: 0, y: 0 }}
-        end={{ x: 0.8, y: 1 }}
-      >
+        pointerEvents="none"
+        colors={[withAlpha(currentTheme.colors.primary, 0.28), "transparent"]}
+        style={styles.bgOrbTop}
+        start={{ x: 0.2, y: 0 }}
+        end={{ x: 1, y: 1 }}
+      />
+      <LinearGradient
+        pointerEvents="none"
+        colors={[withAlpha(currentTheme.colors.secondary, 0.25), "transparent"]}
+        style={styles.bgOrbBottom}
+        start={{ x: 1, y: 0 }}
+        end={{ x: 0, y: 1 }}
+      />
+
+      <CustomHeader
+        title={t("myChallenges")}
+        backgroundColor="transparent"
+        useBlur={false}
+        showHairline={false}
+      />
+
+      <View style={styles.container}>
         {myChallenges.length === 0 ? (
           renderEmptyState()
         ) : (
@@ -373,25 +415,39 @@ export default function MyChallenges() {
             data={myChallenges}
             renderItem={renderChallenge}
             keyExtractor={(item) => item.id}
-            contentContainerStyle={[styles.listContent, { flexGrow: 1 }]}
+            contentContainerStyle={[styles.listContent, { flexGrow: 1, paddingBottom: bottomPadding }]}
             showsVerticalScrollIndicator={false}
             initialNumToRender={10}
             maxToRenderPerBatch={10}
             windowSize={5}
-            contentInset={{ top: SPACING, bottom: normalizeSize(100) }} // Responsivité
+             contentInset={{ top: SPACING, bottom: 0 }}
           />
         )}
-      </LinearGradient>
-    </SafeAreaView>
-  );
+      </View>
+      {showBanners && (
+        <View style={styles.bannerContainer}>
+          <BannerAd
+            unitId={adUnitIds.banner}
+            size={BannerAdSize.BANNER}
+            requestOptions={{ requestNonPersonalizedAdsOnly: false }}
+            onAdFailedToLoad={(err) =>
+              console.error("Échec chargement bannière (MyChallenges):", err)
+            }
+          />
+        </View>
+      )}
+    </LinearGradient>
+  </SafeAreaView>
+);
+
 }
 
 const styles = StyleSheet.create({
   safeArea: {
-    flex: 1,
-    paddingTop:
-      Platform.OS === "android" ? StatusBar.currentHeight ?? SPACING : SPACING,
-  },
+  flex: 1,
+  paddingTop: 0,
+},
+
   container: {
     flex: 1,
   },
@@ -401,6 +457,35 @@ const styles = StyleSheet.create({
     paddingTop: SPACING * 2.5,
     position: "relative",
   },
+  gradientContainer: {
+  flex: 1,
+},
+bgOrbTop: {
+  position: "absolute",
+  top: -SCREEN_WIDTH * 0.25,
+  left: -SCREEN_WIDTH * 0.2,
+  width: SCREEN_WIDTH * 0.9,
+  height: SCREEN_WIDTH * 0.9,
+  borderRadius: SCREEN_WIDTH * 0.45,
+},
+bgOrbBottom: {
+  position: "absolute",
+  bottom: -SCREEN_WIDTH * 0.3,
+  right: -SCREEN_WIDTH * 0.25,
+  width: SCREEN_WIDTH * 1.1,
+  height: SCREEN_WIDTH * 1.1,
+  borderRadius: SCREEN_WIDTH * 0.55,
+},
+bannerContainer: {
+   width: "100%",
+   alignItems: "center",
+   paddingVertical: SPACING / 2,
+   backgroundColor: "transparent",
+   position: "absolute",
+   bottom: 0,
+   left: 0,
+   right: 0,
+ },
   listContent: {
     paddingVertical: SPACING * 1.5,
     paddingHorizontal: SCREEN_WIDTH * 0.025,

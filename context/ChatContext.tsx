@@ -1,3 +1,4 @@
+// src/context/ChatContext.tsx
 import React, {
   createContext,
   useContext,
@@ -12,7 +13,6 @@ import {
   query,
   orderBy,
   serverTimestamp,
-  getDocs,
   updateDoc,
   doc,
   increment,
@@ -20,18 +20,25 @@ import {
 import { db, auth } from "../constants/firebase-config";
 import { checkForAchievements } from "../helpers/trophiesHelpers";
 
-interface Message {
+// On décrit TOUS les champs possibles, y compris ceux des messages système
+export interface ChatMessage {
   id: string;
   text: string;
-  timestamp: Date;
+  textKey?: string;
+  timestamp: any; // Firestore Timestamp | Date | number | null
   userId: string;
   username: string;
-  avatar: string;
-  reported: boolean;
+  avatar?: string;
+  reported?: boolean;
+  type?: "system" | "text";
+  systemType?: "welcome" | string;
+  pinned?: boolean;
+  centered?: boolean;
+  style?: string;
 }
 
 interface ChatContextType {
-  messages: Message[];
+  messages: ChatMessage[];
   sendMessage: (challengeId: string, text: string) => Promise<void>;
   fetchMessages: (challengeId: string) => () => void;
   loadingMessages: boolean;
@@ -39,27 +46,51 @@ interface ChatContextType {
 
 const ChatContext = createContext<ChatContextType | null>(null);
 
-export const ChatProvider: React.FC<{ children: React.ReactNode }> = ({
-  children,
-}) => {
-  const [messages, setMessages] = useState<Message[]>([]);
+// helper robuste pour normaliser les timestamps
+const toDateSafe = (ts: any): Date => {
+  if (!ts) return new Date(0);
+  if (ts instanceof Date) return ts;
+  if (typeof ts?.toDate === "function") return ts.toDate(); // Firestore Timestamp
+  if (typeof ts === "number") return new Date(ts);
+  return new Date(0);
+};
+
+export const ChatProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
+  const [messages, setMessages] = useState<ChatMessage[]>([]);
   const [loadingMessages, setLoadingMessages] = useState<boolean>(true);
 
   const fetchMessages = useCallback((challengeId: string) => {
     const messagesRef = collection(db, "chats", challengeId, "messages");
-    const q = query(messagesRef, orderBy("timestamp", "asc"));
+    // IMPORTANT : on ne filtre pas par type → on récupère aussi les messages système
+const q = query(messagesRef);
 
     setLoadingMessages(true);
 
     const unsubscribe = onSnapshot(
       q,
       (snapshot) => {
-        const fetchedMessages = snapshot.docs.map((doc) => ({
-          id: doc.id,
-          ...doc.data(),
-          timestamp: doc.data().timestamp?.toDate() || new Date(),
-        })) as Message[];
-        setMessages(fetchedMessages);
+        const fetched: ChatMessage[] = snapshot.docs.map((d) => {
+          const data = d.data() as any;
+          return {
+            id: d.id,
+            text: data.text ?? "",
+            textKey: data.textKey,
+            userId: data.userId ?? "",
+            username: data.username ?? "",
+            avatar: data.avatar ?? "",
+            reported: !!data.reported,
+            type: data.type,
+            systemType: data.systemType,
+            pinned: !!data.pinned,
+            centered: !!data.centered,
+            style: data.style,
+            // on garde le brut pour l’écran (il re-triera s’il veut),
+            // mais on expose aussi une Date utilisable (toDateSafe).
+            timestamp: data.timestamp || data.createdAt || null,
+          };
+        });
+
+        setMessages(fetched);
         setLoadingMessages(false);
       },
       (error) => {
@@ -71,35 +102,28 @@ export const ChatProvider: React.FC<{ children: React.ReactNode }> = ({
     return unsubscribe;
   }, []);
 
-  /**
-   * Envoi un message et incrémente le compteur global des messages envoyés pour l'utilisateur.
-   */
-  const sendMessage = async (challengeId: string, text: string) => {
-    if (!auth.currentUser) {
-      throw new Error("User not authenticated.");
-    }
+  const sendMessage = useCallback(async (challengeId: string, text: string) => {
+    if (!auth.currentUser) throw new Error("User not authenticated.");
+
     const { uid, displayName, photoURL } = auth.currentUser;
     const messageRef = collection(db, "chats", challengeId, "messages");
 
-    // Envoi du message
     await addDoc(messageRef, {
       text,
-      timestamp: serverTimestamp(),
       userId: uid,
       username: displayName || "Anonymous",
       avatar: photoURL || "",
-      reported: false, // Ajout du champ reported
+      reported: false,
+      type: "text",
+      timestamp: serverTimestamp(),
+      createdAt: serverTimestamp(),
     });
 
-    // Incrémente le compteur de messages dans le document utilisateur
+    // compteur utilisateur + trophées
     const userRef = doc(db, "users", uid);
-    await updateDoc(userRef, {
-      messageSent: increment(1),
-    });
-
-    // Optionnel : déclencher une vérification des succès (pour "messageSent")
+    await updateDoc(userRef, { messageSent: increment(1) });
     await checkForAchievements(uid);
-  };
+  }, []);
 
   return (
     <ChatContext.Provider
@@ -111,18 +135,15 @@ export const ChatProvider: React.FC<{ children: React.ReactNode }> = ({
 };
 
 export const useChat = (challengeId: string) => {
-  const context = useContext(ChatContext);
-  if (!context) {
-    throw new Error("useChat must be used within a ChatProvider");
-  }
+  const ctx = useContext(ChatContext);
+  if (!ctx) throw new Error("useChat must be used within a ChatProvider");
 
-  const { fetchMessages, ...rest } = context;
+  const { fetchMessages, ...rest } = ctx;
 
   useEffect(() => {
     if (!challengeId) return;
-
-    const unsubscribe = fetchMessages(challengeId);
-    return () => unsubscribe();
+    const unsub = fetchMessages(challengeId);
+    return () => unsub();
   }, [challengeId, fetchMessages]);
 
   return rest;

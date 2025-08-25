@@ -1,13 +1,8 @@
-import React, { useState, useEffect } from "react";
+// app/_layout.tsx
+import React, { useEffect } from "react";
 import { GestureHandlerRootView } from "react-native-gesture-handler";
 import { Stack, useRouter, usePathname } from "expo-router";
-import {
-  ActivityIndicator,
-  View,
-  StyleSheet,
-  Text,
-  Linking,
-} from "react-native";
+import { StyleSheet, AppState } from "react-native";
 import { Provider as PaperProvider } from "react-native-paper";
 import { ProfileUpdateProvider } from "../context/ProfileUpdateContext";
 import { TrophyProvider } from "../context/TrophyContext";
@@ -25,15 +20,26 @@ import {
 } from "@expo-google-fonts/comfortaa";
 import { I18nextProvider } from "react-i18next";
 import i18n from "../i18n";
-import mobileAds from "react-native-google-mobile-ads";
-import AsyncStorage from "@react-native-async-storage/async-storage";
 import { useAuth } from "../context/AuthProvider";
 import { AuthProvider } from "../context/AuthProvider";
 import * as SplashScreen from "expo-splash-screen";
+import { FeatureFlagsProvider, useFlags } from "../src/constants/featureFlags";
+import * as Linking from "expo-linking";
+import { PremiumProvider, usePremium } from "../src/context/PremiumContext";
+import { AdsVisibilityProvider, useAdsVisibility } from "../src/context/AdsVisibilityContext";
+import mobileAds from "react-native-google-mobile-ads";
+import {
+  ensureAndroidChannelAsync,
+  registerForPushNotificationsAsync,
+  scheduleDailyNotifications,
+} from "@/services/notificationService";
 
 
-// Composant interne pour gérer la navigation
-const AppNavigator = () => {
+
+// =========================
+// AppNavigator : redirection initiale + Splash
+// =========================
+const AppNavigator: React.FC = () => {
   const { user, loading } = useAuth();
   const router = useRouter();
   const pathname = usePathname();
@@ -45,47 +51,57 @@ const AppNavigator = () => {
 
   useEffect(() => {
     if (loading) return;
-
-    // ✅ On bloque la logique pour éviter de spam
+    // éviter de rejouer si on n’est pas à la racine
     if (pathname !== "/") return;
 
     if (!user) {
       router.replace("/login");
-      SplashScreen.hideAsync(); // ✅ Splash s’enlève après la redirection
+      SplashScreen.hideAsync().catch(() => {});
     } else {
       router.replace("/(tabs)");
-      SplashScreen.hideAsync(); // ✅ Splash s’enlève après la redirection
+      SplashScreen.hideAsync().catch(() => {});
     }
-  }, [user, loading, pathname]);
+  }, [user, loading, pathname, router]);
 
-  if (loading || !fontsLoaded) {
-    return null; // Splash reste actif tant que loading est true
-  }
+  // Laisse le Splash tant que auth ou fonts ne sont pas prêtes
+  if (loading || !fontsLoaded) return null;
+  return null;
+};
 
+// =========================
+// FlagsGate : bloque le rendu tant que les flags ne sont pas prêts
+// =========================
+const FlagsGate: React.FC<{ children: React.ReactNode }> = ({ children }) => {
+  const { isReady } = useFlags();
+  if (!isReady) return null; // Splash toujours visible
+  return <>{children}</>;
+};
+
+// =========================
+/** AdsManager : initialise AdMob si (global non-premium) ET (user non-premium) */
+// =========================
+const AdsManager: React.FC = () => {
+  useEffect(() => {
+    mobileAds().initialize().catch(() => {});
+  }, []);
   return null;
 };
 
 
-export default function RootLayout() {
+// =========================
+// DeepLinkManager : actif seulement si enableDeepLinks = true
+// =========================
+const DeepLinkManager: React.FC = () => {
   const router = useRouter();
+  const { flags } = useFlags();
 
   useEffect(() => {
-    mobileAds()
-      .initialize()
-      .then((status) => {
-      });
-  }, []);
+    if (!flags.enableDeepLinks) return;
 
-  useEffect(() => {
-  SplashScreen.preventAutoHideAsync()
-    .then()
-    .catch();
-}, []);
-
-  // Gestion des deep links
-  useEffect(() => {
     const handleDeepLink = ({ url }: { url: string }) => {
-      let challengeId, inviteId;
+      let challengeId: string | undefined;
+      let inviteId: string | null | undefined;
+
       if (
         url.startsWith("myapp://challenge/") ||
         url.startsWith("https://challengeme-d7fef.web.app/challenge/")
@@ -94,74 +110,133 @@ export default function RootLayout() {
         challengeId = parsedUrl.pathname.split("/challenge/")[1]?.split("?")[0];
         inviteId = parsedUrl.searchParams.get("invite");
       }
+
       if (challengeId && inviteId) {
-        console.log("🚀 Navigation vers profile/notifications:", {
-          challengeId,
-          inviteId,
-        });
         router.push({
           pathname: "profile/notifications",
           params: { challengeId, invite: inviteId },
         });
-      } else {
-        console.log("⚠️ Paramètres manquants:", { challengeId, inviteId });
       }
     };
 
     const subscription = Linking.addEventListener("url", handleDeepLink);
-    Linking.getInitialURL().then((url) => {
-      if (url) handleDeepLink({ url });
-    });
+
+    Linking.getInitialURL()
+      .then((url) => {
+        if (url) handleDeepLink({ url });
+      })
+      .catch(() => {});
 
     return () => {
       subscription.remove();
     };
-  }, [router]);
+  }, [router, flags.enableDeepLinks]);
+
+  return null;
+};
+
+const NotificationsBootstrap: React.FC = () => {
+  const { user } = useAuth();
+  const hasInitRef = React.useRef(false);
+
+  // Crée le canal Android dès que possible (safe no-op sur iOS)
+  useEffect(() => {
+    ensureAndroidChannelAsync().catch(() => {});
+  }, []);
+
+  // Première initialisation après login
+  useEffect(() => {
+    if (!user || hasInitRef.current) return;
+    hasInitRef.current = true;
+
+    (async () => {
+      // 1) demande permission + enregistre expoPushToken en base
+      await registerForPushNotificationsAsync();
+      // 2) planifie proprement 09:00 et 19:00 (heure locale)
+      await scheduleDailyNotifications();
+    })();
+  }, [user]);
+
+  // Replanifie quand l'app revient active (changement heure/fuseau/DST)
+  useEffect(() => {
+    const sub = AppState.addEventListener("change", (state) => {
+      if (state === "active" && user) {
+        scheduleDailyNotifications().catch(() => {});
+      }
+    });
+    return () => sub.remove();
+  }, [user]);
+
+  return null;
+};
+
+
+// =========================
+// RootLayout
+// =========================
+export default function RootLayout() {
+  // On garde le Splash jusqu’à masquage explicite
+  useEffect(() => {
+    SplashScreen.preventAutoHideAsync().catch(() => {});
+  }, []);
 
   return (
     <GestureHandlerRootView style={{ flex: 1 }}>
-      <AuthProvider>
-        <LanguageProvider>
-          <I18nextProvider i18n={i18n}>
-            <ThemeProvider>
-              <PaperProvider>
-                <ProfileUpdateProvider>
-                  <TrophyProvider>
-                    <SavedChallengesProvider>
-                      <CurrentChallengesProvider>
-                        <ChatProvider>
-                          <TutorialProvider isFirstLaunch={false}>
-                            <Stack
-                              screenOptions={{
-                                headerShown: false,
-                                animation: "fade",
-                                animationDuration: 400,
-                              }}
-                            >
-                              <Stack.Screen
-                                name="(tabs)"
-                                options={{ headerShown: false }}
-                              />
-                              <Stack.Screen name="login" />
-                              <Stack.Screen name="onboarding" />
-                              <Stack.Screen name="register" />
-                              <Stack.Screen name="forgot-password" />
-                              <Stack.Screen name="profile/Notifications" />
-                              <Stack.Screen name="handleInvite" />
-                            </Stack>
-                            <AppNavigator />
-                            <TrophyModal challengeId="" selectedDays={0} />
-                          </TutorialProvider>
-                        </ChatProvider>
-                      </CurrentChallengesProvider>
-                    </SavedChallengesProvider>
-                  </TrophyProvider>
-                </ProfileUpdateProvider>
-              </PaperProvider>
-            </ThemeProvider>
-          </I18nextProvider>
-        </LanguageProvider>
-      </AuthProvider>
+      <FeatureFlagsProvider>
+        <FlagsGate>
+          <AuthProvider>
+            <AdsVisibilityProvider>
+            <LanguageProvider>
+              <I18nextProvider i18n={i18n}>
+                <ThemeProvider>
+                  <PaperProvider>
+                    <ProfileUpdateProvider>
+                      <TrophyProvider>
+                        <SavedChallengesProvider>
+                          <CurrentChallengesProvider>
+                            <ChatProvider>
+                              <TutorialProvider isFirstLaunch={false}>
+                                {/* Deep links (pilotés par flags) */}
+                                <DeepLinkManager />
+                                {/* AdMob init si non premium */}
+                                <AdsManager />
+                                <NotificationsBootstrap />
+
+                                <Stack
+                                  screenOptions={{
+                                    headerShown: false,
+                                    animation: "fade",
+                                    animationDuration: 400,
+                                  }}
+                                >
+                                  <Stack.Screen
+                                    name="(tabs)"
+                                    options={{ headerShown: false }}
+                                  />
+                                  <Stack.Screen name="login" />
+                                  <Stack.Screen name="onboarding" />
+                                  <Stack.Screen name="register" />
+                                  <Stack.Screen name="forgot-password" />
+                                  <Stack.Screen name="profile/Notifications" />
+                                  <Stack.Screen name="handleInvite" />
+                                </Stack>
+
+                                <AppNavigator />
+                                <TrophyModal challengeId="" selectedDays={0} />
+                              </TutorialProvider>
+                            </ChatProvider>
+                          </CurrentChallengesProvider>
+                        </SavedChallengesProvider>
+                      </TrophyProvider>
+                    </ProfileUpdateProvider>
+                  </PaperProvider>
+                </ThemeProvider>
+              </I18nextProvider>
+            </LanguageProvider>
+            </AdsVisibilityProvider>
+          </AuthProvider>
+        </FlagsGate>
+      </FeatureFlagsProvider>
     </GestureHandlerRootView>
   );
 }

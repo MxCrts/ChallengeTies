@@ -10,17 +10,17 @@ import {
   PixelRatio,
   ActivityIndicator,
   Platform,
-  KeyboardAvoidingView,
   ScrollView,
+  Keyboard,
+  StatusBar,
 } from "react-native";
-import { StatusBar } from "react-native";
+import { useSafeAreaInsets, SafeAreaView } from "react-native-safe-area-context";
 import { useRouter } from "expo-router";
 import { signInWithEmailAndPassword } from "firebase/auth";
 import { auth } from "../constants/firebase-config";
 import { Ionicons } from "@expo/vector-icons";
 import { useTranslation } from "react-i18next";
 import { StatusBar as ExpoStatusBar } from "expo-status-bar";
-
 
 const { width: SCREEN_WIDTH, height: SCREEN_HEIGHT } = Dimensions.get("window");
 const normalize = (size: number) => {
@@ -65,9 +65,48 @@ const Wave = React.memo(({ opacity, scale, borderWidth, size, top }: any) => (
   />
 ));
 
+// 🧠 Spacer clavier premium: gère iOS/Android, respecte le safe-area, évite la bande grise
+const KeyboardPadding = React.memo(() => {
+  const insets = useSafeAreaInsets();
+  const pad = useRef(new Animated.Value(0)).current;
+
+  useEffect(() => {
+    const showEvt = Platform.OS === "ios" ? "keyboardWillShow" : "keyboardDidShow";
+    const hideEvt = Platform.OS === "ios" ? "keyboardWillHide" : "keyboardDidHide";
+
+    const onShow = (e: any) => {
+      const h = e?.endCoordinates?.height ?? 0;
+      Animated.timing(pad, {
+        toValue: Math.max(h - insets.bottom, 0),
+        duration: Platform.OS === "ios" ? e?.duration ?? 250 : 150,
+        useNativeDriver: false,
+      }).start();
+    };
+
+    const onHide = (e: any) => {
+      Animated.timing(pad, {
+        toValue: 0,
+        duration: Platform.OS === "ios" ? e?.duration ?? 250 : 150,
+        useNativeDriver: false,
+      }).start();
+    };
+
+    const subShow = Keyboard.addListener(showEvt, onShow);
+    const subHide = Keyboard.addListener(hideEvt, onHide);
+    return () => {
+      subShow.remove();
+      subHide.remove();
+    };
+  }, [insets.bottom, pad]);
+
+  return <Animated.View style={{ height: pad }} />;
+});
+
 export default function Login() {
   const { t } = useTranslation();
   const router = useRouter();
+  const insets = useSafeAreaInsets();
+
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [loading, setLoading] = useState(false);
@@ -125,6 +164,7 @@ export default function Login() {
 
   const handleLogin = useCallback(async () => {
     setErrorMessage("");
+
     if (!email.trim() || !password.trim()) {
       setErrorMessage(t("fillEmailPassword"));
       return;
@@ -133,24 +173,29 @@ export default function Login() {
       setErrorMessage(t("invalidEmail"));
       return;
     }
+
     try {
       setLoading(true);
       await signInWithEmailAndPassword(auth, email.trim(), password.trim());
       router.replace("/");
     } catch (error: any) {
-      const errorMessages: Record<string, string> = {
-        "auth/user-not-found": t("noAccountFound"),
-        "auth/wrong-password": t("wrongPassword"),
-        "auth/invalid-email": t("invalidEmailFormat"),
-        "auth/too-many-requests": t("tooManyRequests"),
-      };
-      setErrorMessage(errorMessages[error.code] || t("unknownError"));
+      const errorCode = error.code;
+      const invalidCredentialsCodes = ["auth/user-not-found", "auth/wrong-password"];
+      if (invalidCredentialsCodes.includes(errorCode)) {
+        setErrorMessage(t("invalidCredentials"));
+      } else {
+        const errorMessages: Record<string, string> = {
+          "auth/invalid-email": t("invalidEmailFormat"),
+          "auth/too-many-requests": t("tooManyRequests"),
+        };
+        setErrorMessage(errorMessages[errorCode] || t("unknownError"));
+      }
     } finally {
       setLoading(false);
     }
-  }, [email, password, t, router]);
+  }, [email, password, t, router, isValidEmail]);
 
-  // Gestion auto-dismiss erreur
+  // Auto-dismiss erreur
   useEffect(() => {
     if (errorMessage) {
       const timer = setTimeout(() => setErrorMessage(""), 5000);
@@ -159,20 +204,24 @@ export default function Login() {
   }, [errorMessage]);
 
   return (
-    <KeyboardAvoidingView
-  style={{ flex: 1, backgroundColor: COLORS.background }}
-  behavior={Platform.OS === "ios" ? "padding" : "height"}
-  keyboardVerticalOffset={Platform.OS === "ios" ? 60 : StatusBar.currentHeight}
->
-  <ExpoStatusBar style="dark" backgroundColor={COLORS.background} />
+    <SafeAreaView style={{ flex: 1, backgroundColor: COLORS.background }}>
+      <ExpoStatusBar style="dark" backgroundColor={COLORS.background} />
 
-  <ScrollView
-    style={{ flex: 1, backgroundColor: COLORS.background }}
-contentContainerStyle={styles.scrollContent}
-    keyboardShouldPersistTaps="handled"
-    bounces={false}
-  >
-      
+      <ScrollView
+        style={{ flex: 1, backgroundColor: COLORS.background }}
+        contentContainerStyle={[
+          styles.scrollContent,
+          {
+            // garantit qu'on remplit tout l'écran, même après hide du clavier
+            minHeight: SCREEN_HEIGHT - insets.top - insets.bottom,
+            paddingBottom: SPACING * 2, // de base; le KeyboardPadding ajoutera le reste
+          },
+        ]}
+        contentInsetAdjustmentBehavior="always"
+        keyboardShouldPersistTaps="handled"
+        showsVerticalScrollIndicator={false}
+        bounces={false}
+      >
         {/* Animation de fond */}
         {waves.map((wave, index) => (
           <Wave
@@ -213,6 +262,7 @@ contentContainerStyle={styles.scrollContent}
               {errorMessage}
             </Text>
           ) : null}
+
           <TextInput
             placeholder={t("emailPlaceholder")}
             placeholderTextColor={COLORS.placeholder}
@@ -224,7 +274,9 @@ contentContainerStyle={styles.scrollContent}
             autoComplete="email"
             accessibilityLabel={t("emailPlaceholder")}
             testID="email-input"
+            returnKeyType="next"
           />
+
           <View style={styles.passwordContainer}>
             <TextInput
               placeholder={t("passwordPlaceholder")}
@@ -236,13 +288,12 @@ contentContainerStyle={styles.scrollContent}
               autoComplete="password"
               accessibilityLabel={t("passwordPlaceholder")}
               testID="password-input"
+              returnKeyType="done"
             />
             <TouchableOpacity
               onPress={() => setShowPassword((prev) => !prev)}
               style={styles.passwordIcon}
-              accessibilityLabel={
-                showPassword ? t("hidePassword") : t("showPassword")
-              }
+              accessibilityLabel={showPassword ? t("hidePassword") : t("showPassword")}
               testID="toggle-password-visibility"
             >
               <Ionicons
@@ -252,6 +303,7 @@ contentContainerStyle={styles.scrollContent}
               />
             </TouchableOpacity>
           </View>
+
           <TouchableOpacity
             onPress={() => router.push("/forgot-password")}
             accessibilityLabel={t("forgotPassword")}
@@ -275,15 +327,12 @@ contentContainerStyle={styles.scrollContent}
             {loading ? (
               <ActivityIndicator color={COLORS.text} size="small" />
             ) : (
-              <Text
-  style={styles.loginButtonText}
-  numberOfLines={1}
-  adjustsFontSizeToFit
->
-  {t("login")}
-</Text>
+              <Text style={styles.loginButtonText} numberOfLines={1} adjustsFontSizeToFit>
+                {t("login")}
+              </Text>
             )}
           </TouchableOpacity>
+
           <Text style={styles.signupText}>
             {t("noAccount")}{" "}
             <Text
@@ -297,8 +346,11 @@ contentContainerStyle={styles.scrollContent}
             </Text>
           </Text>
         </View>
+
+        {/* ✅ Espace animé lié au clavier — supprime la “bande grise” */}
+        <KeyboardPadding />
       </ScrollView>
-    </KeyboardAvoidingView>
+    </SafeAreaView>
   );
 }
 
@@ -337,10 +389,7 @@ const styles = StyleSheet.create({
     fontFamily: "Comfortaa_700Bold",
     maxWidth: "100%",
   },
-  highlight: {
-    color: COLORS.primary,
-    fontSize: normalize(50),
-  },
+  highlight: { color: COLORS.primary, fontSize: normalize(50) },
   tagline: {
     fontSize: normalize(16),
     color: COLORS.text,
@@ -358,7 +407,7 @@ const styles = StyleSheet.create({
     width: "100%",
     fontFamily: "Comfortaa_400Regular",
   },
- input: {
+  input: {
     width: "100%",
     maxWidth: normalize(400),
     height: normalize(55),
@@ -374,13 +423,8 @@ const styles = StyleSheet.create({
     borderColor: "#FFB800",
     fontFamily: "Comfortaa_400Regular",
   },
-  passwordContainer: {
-    width: "100%",
-    position: "relative",
-  },
-  passwordInput: {
-    paddingRight: normalize(45),
-  },
+  passwordContainer: { width: "100%", position: "relative" },
+  passwordInput: { paddingRight: normalize(45) },
   passwordIcon: {
     position: "absolute",
     right: SPACING,
@@ -421,8 +465,5 @@ const styles = StyleSheet.create({
     fontFamily: "Comfortaa_400Regular",
     marginTop: SPACING,
   },
-  signupLink: {
-    color: COLORS.primary,
-    fontFamily: "Comfortaa_400Regular",
-  },
+  signupLink: { color: COLORS.primary, fontFamily: "Comfortaa_400Regular" },
 });

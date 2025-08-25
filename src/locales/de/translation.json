@@ -131,6 +131,35 @@
   "contactUs": "Kontaktieren Sie uns",
   "visitWebsite": "Besuche unsere Website",
   "preferences": "Einstellungen",
+  "interestsPlaceholder": "Z. B. Fitness, Lesen, UI-Design",
+  "editProfile.title": "Profil bearbeiten",
+  "editProfile.description": "Aktualisiere deinen Namen, deine Bio, deinen Standort und deine Interessen",
+
+  "accessibility.editProfileImage.label": "Profilbild bearbeiten",
+  "accessibility.editProfileImage.hint": "Öffnet deine Galerie, um ein Bild auszuwählen",
+  "accessibility.currentProfileImage.label": "Aktuelles Profilbild",
+
+  "accessibility.usernameField.label": "Benutzername",
+  "accessibility.usernameField.hint": "Gib deinen Benutzernamen ein",
+
+  "accessibility.bioField.label": "Bio",
+  "accessibility.bioField.hint": "Füge eine kurze Beschreibung hinzu",
+
+  "accessibility.locationField.label": "Standort",
+  "accessibility.locationField.hint": "Gib deine Stadt oder dein Land ein",
+
+  "accessibility.interestsField.label": "Interessen",
+  "accessibility.interestsField.hint": "Trenne Einträge mit Kommas",
+
+  "accessibility.saveProfileChanges.label": "Änderungen speichern",
+  "accessibility.saveProfileChanges.hint": "Speichert deine Profilinformationen",
+  "systemWelcome": "👋 Willkommen! Dieser Chat ist für Motivation, Fragen und gegenseitige Unterstützung. Bitte bleibt respektvoll und freundlich. Nicht erlaubt: Beleidigungen/Belästigung, Hassrede (Rassismus, Sexismus usw.), Nacktheit/Pornografie, illegale oder gefährliche Inhalte, Spam/Werbung/Betrug sowie das Teilen sensibler persönlicher Daten. Missbrauch bitte über die Schaltfläche melden. Weiter so – ihr schafft das! 💪✨",
+  "welcomeRules": {
+    "title": "Willkommen im Challenge-Chat!",
+    "message": "Wir sind hier, um uns zu motivieren, Fragen zu stellen und gemeinsam voranzukommen. Für eine positive Stimmung gelten folgende Regeln:\n\n1. **Respekt**: Keine Beleidigungen, Belästigungen oder Drohungen.\n2. **Toleranz**: Keine Hassrede oder Diskriminierung (Rassismus, Sexismus, Homophobie, Transphobie etc.).\n3. **Inhalte**: Keine Nacktheit/Pornografie, gewalttätigen oder illegalen Inhalte.\n4. **Thema**: Bitte beim Thema bleiben (Motivation, Fragen, gegenseitige Hilfe).\n5. **Sicherheit**: Keine sensiblen persönlichen Daten teilen (Adresse, Telefon, Ausweisdokumente).\n6. **Sauberkeit**: Kein Spam, keine Werbung, keine Betrugsversuche, keine Identitätsfälschung.\n\nMit dem Beitritt akzeptierst du diese Regeln. Danke 💛"
+  },
+  "chat.title": "Willkommen 🙌",
+  "chat.systemWelcome": "Wir sind hier, um uns gegenseitig zu motivieren, zu unterstützen und gemeinsam in dieser Challenge voranzukommen! Hier sind die Regeln, damit die Stimmung positiv bleibt:\n\n1. **Respekt**: Keine Beleidigungen, Belästigungen oder Drohungen.\n2. **Toleranz**: Keine Hassrede oder Diskriminierung (Rassismus, Sexismus, Homo-/Transfeindlichkeit usw.).\n3. **Inhalte**: Keine Nacktheit/Pornografie, keine gewaltverherrlichenden oder illegalen Inhalte.\n4. **Themenbezug**: Bleib beim Thema der Challenge (Motivation, Fragen, gegenseitige Hilfe).\n5. **Sicherheit**: Teile keine sensiblen persönlichen Daten (Adresse, Telefon, Ausweisdokumente).\n6. **Sauberkeit**: Kein Spam, keine Werbung, keine Betrugsversuche oder Identitätsvortäuschung.\n\nMit dem Beitritt zu diesem Chat akzeptierst du diese Regeln. Danke 💛",
   "tips": {
     "title": "Tipps",
     "listAccessibility": "Liste der Tipps",
@@ -248,6 +277,7 @@
   "privacyPolicyPage": "Datenschutzrichtlinie",
   "accessAdmin": "Auf Admin-Funktionen zugreifen",
   "admin": "Verwaltung",
+  "invalidCredentials": "E-Mail oder Passwort sind falsch",
   "aboutChallengeTies": "Über ChallengeTies",
   "fillEmailPassword": "Bitte gib deine E-Mail und dein Passwort ein.",
   "invalidEmail": "Bitte gib eine gültige E-Mail-Adresse ein.",
@@ -352,11 +382,48 @@
     "accessDenied": "Zugriff verweigert",
     "shareError": "Teilen fehlgeschlagen"
   },
+  "invitationS": {
+      "shareTitle": "Duo-Einladung",
+      "shareMessageWithTitle": "Ich lade dich ein, „{{title}}“ über {{days}} Tage mit mir zu starten!",
+      "errors": {
+        "alreadyInvited": "Du hast bereits eine Einladung für diese Herausforderung.",
+        "autoInvite": "Du kannst deine eigene Einladung nicht annehmen.",
+        "expired": "Diese Einladung ist abgelaufen.",
+        "unknown": "Ein unbekannter Fehler ist aufgetreten.",
+        "inviterAlreadyStarted": "Du hast diese Herausforderung bereits alleine gestartet.",
+        "duoAlready": "Du bist bereits in einem Duo für diese Herausforderung."
+      },
+      "confirmStartDuoTitle": "Als Duo starten?",
+      "confirmStartDuoMessage": "Wenn du als Duo startest, wird dein Solo-Fortschritt zurückgesetzt. Fortfahren?",
+      "actions": {
+        "cancel": "Abbrechen",
+        "continue": "Fortfahren"
+      }
+    },
+    "pendingInvite": "Einladung läuft",
+"commonS": { "close": "Schließen", "notLoggedIn": "Du musst eingeloggt sein.", "sending": "Senden…" }
+,
+"profileS": {
+    "bioLabel": "Bio",
+    "locationLabel": "Standort",
+    "interestsLabel": "Interessen"
+  },
+  "addLocationHere": "Füge einen Standort hinzu",
+  "addInterestsHere": "Füge deine Interessen hinzu",
+"firstPick": {
+      "title": "Wähle deine erste Challenge!",
+      "subtitle": "Möchtest du im … starten?",
+      "chooseSolo": "Solo wählen",
+      "chooseDuo": "Duo wählen"
+    },
+    "spotlight": "Im Rampenlicht",
+  "refreshDaily": "Neue Herausforderungen ab morgen ✨",
   "challengeDetails": {
     "untitled": "Unbenannte Herausforderung",
     "uncategorized": "Unkategorisiert",
     "invite": "Einladen",
     "needHelp": "Brauchst du Tipps?",
+    "shareMessage": "Mach mit bei „{{title}}“ auf ChallengeTies!",
     "inviteError": "Fehler beim Erstellen der Einladung",
     "noDescription": "Keine Beschreibung verfügbar",
     "fetchError": "Herausforderung konnte nicht geladen werden.",
@@ -365,6 +432,8 @@
     "completeError": "Herausforderung konnte nicht abgeschlossen werden.",
     "chatAccessDenied": "Du musst die Herausforderung annehmen, bevor du den Chat öffnen kannst.",
     "loading": "Lädt…",
+    "days":  "Tage",
+    "reviewAfterComplete":"⚠️ Du musst diese Challenge abschließen, bevor du eine Bewertung abgeben kannst 🏆",
     "participant": "Teilnehmer",
     "participants": "Teilnehmer",
     "takeChallenge": "Herausforderung annehmen",
@@ -378,7 +447,16 @@
     "saved": "Gespeichert",
     "share": "Teilen",
     "stats": "Statistiken",
-    "inviteA11y": "Freund zu dieser Herausforderung einladen"
+    "inviteA11y": "Freund zu dieser Herausforderung einladen",
+    "leaveReview": "Eine Bewertung abgeben",
+  "alreadyReviewed": "Du hast für diese Challenge bereits eine Bewertung abgegeben.",
+  "reviewSectionTitle": "Das sagen andere",
+  "noReviewsYet": "Für diese Challenge gibt es noch keine Bewertungen.",
+  "yourReview": "Deine Bewertung",
+  "reviewPlaceholder": "Teile deine Erfahrung, nachdem du diese Challenge abgeschlossen hast...",
+  "submitReview": "Senden",
+  "deleteReview": "Löschen",
+  "confirmDeleteReview": "Diese Bewertung löschen?"
   },
   "explore": "Entdecken",
   "email": "E-Mail-Adresse",
@@ -1201,11 +1279,28 @@
   "errorLoadingSavedChallenges": "Gespeicherte Herausforderungen konnten nicht geladen werden: {{message}}",
   "notificationsPush": {
     "title": "ChallengeTies",
-    "morning1": "Bereit für eine neue Herausforderung heute?",
-    "morning2": "Beginne deinen Tag mit einer spaßigen Herausforderung!",
-    "evening1": "Beende deinen Tag mit einer schnellen Herausforderung!",
-    "evening2": "Eine weitere Herausforderung vor dem Schlafengehen?"
+    "morning1": "☀️ Neuer Tag, neuer Schritt Richtung Ziel!",
+    "morning2": "Heute packst du das! 💪",
+    "evening1": "🌙 Zeit, den Tag abzuhaken. Kleine Schritte, große Wirkung.",
+    "evening2": "Noch ein Tag Konsequenz. Stark!",
+    "nudgeBody": "Yo! Vergiss „{{title}}“ nicht — {{from}} feuert dich an 💪"
   },
+"editYourReview": "Bewertung bearbeiten",
+"saveReview": "Speichern"
+,
+"duo": {
+  "title": "Duo-Herausforderung",
+  "you": "Du",
+  "nudge": "Anspornen",
+  "leading": "Du führst!",
+  "tied": "Gleichstand",
+  "behind": "Du liegst zurück",
+  "nudgeSent": "Ansporn gesendet ✅",
+  "nudgeFailed": "Benachrichtigung konnte nicht gesendet werden.",
+  "nudgeUnavailable": "Funktion nur für Duo-Challenges.",
+  "nudgeHint": "Tippen zum Anspornen. Lang drücken, um den Chat zu öffnen."
+}
+,
   "challengeAlimentationConsciente": {
     "miniCours": "Bewusstes Essen 🍽️ bedeutet, jeden Bissen 🥣 achtsam zu genießen, sich Zeit zu nehmen, um die Aromen, Texturen und Düfte der Speisen 🍒 wahrzunehmen, und sich der Sättigung und Zufriedenheit bewusst zu werden 👌. Es kann helfen, die Ernährung besser auszugleichen, Heißhunger zu vermeiden und gesünder zu essen 🥦. Schalte dafür alle Ablenkungen (Fernseher, Handy, Lesen) während der Mahlzeiten aus 🚫📺📱📖, höre auf deinen Körper und achte auf Hunger- und Sättigungssignale 🔎.",
     "exemples": [
@@ -3126,7 +3221,8 @@
   "suggestion": "Vorschläge?"
 },
 "common": {
-  "back": "Zurück"
+  "back": "Zurück",
+  "skip": "Überspringen"
 }
 
 }

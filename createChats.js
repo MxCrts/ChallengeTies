@@ -23,39 +23,65 @@ const createChatsForExistingChallenges = async () => {
     let createdChats = 0;
 
     for (const doc of challengesSnapshot.docs) {
-      const challengeData = doc.data();
-      const chatId = challengeData.chatId || doc.id; // Utilisation de chatId existant ou ID du challenge
-      const chatRef = db.collection("chats").doc(chatId);
+  const challengeData = doc.data();
+  const chatId = challengeData.chatId || doc.id; // Utilise chatId existant ou l’ID du challenge
+  const chatRef = db.collection("chats").doc(chatId);
 
-      // Vérifier si le chat existe déjà
-      const chatDoc = await chatRef.get();
-      if (chatDoc.exists) {
-        continue;
-      }
+  // Vérifier si le chat existe déjà
+  const chatDoc = await chatRef.get();
+  if (chatDoc.exists) {
+    continue; // on ne modifie pas les chats déjà présents
+  }
 
-      batch.set(chatRef, {
-        createdAt: admin.firestore.FieldValue.serverTimestamp(),
-        description: `Chat pour le challenge : ${
-          challengeData.title || "Sans titre"
-        }`,
-        challengeId: doc.id,
-        participantsCount: 0,
-        requiresRulesAcceptance: true, // Indique que les règles doivent être acceptées
-        welcomeRules: {
-          title: "Bienvenue dans le chat du challenge !",
-          message:
-            `Nous sommes ici pour nous encourager, nous soutenir et avancer ensemble dans ce challenge ! Voici les règles pour garder une vibe positive :\n\n` +
-            `1. **Respect** : Pas d’insultes, de harcèlement ou de contenu inapproprié.\n` +
-            `2. **Encouragement** : Partagez des messages positifs pour motiver les autres.\n` +
-            `3. **Pertinence** : Restez dans le sujet du challenge.\n` +
-            `4. **Confidentialité** : Ne partagez pas d’informations personnelles sensibles.\n` +
-            `5. **Langage approprié** : Pas de spam, de pub ou de contenu illégal.\n\n` +
-            `En rejoignant ce chat, vous vous engagez à respecter ces règles. Merci de cocher la case ci-dessous et de cliquer sur "J’ai compris" pour continuer !`,
-        },
-      });
+  // 1) Création du document "chat"
+  batch.set(chatRef, {
+  createdAt: admin.firestore.FieldValue.serverTimestamp(),
+  description: `Chat pour le challenge : ${challengeData.title || "Sans titre"}`,
+  challengeId: doc.id,
+  participantsCount: 0,
+  requiresRulesAcceptance: true,
 
-      createdChats++;
-    }
+  // ⬇️ i18n direct
+  welcomeRules: {
+    titleKey: "chat.welcomeRules.title",
+    messageKey: "chat.welcomeRules.message",
+  },
+
+  hasPinnedWelcome: true,
+});
+
+  // 2) Ajout du **message système de bienvenue** dans /chats/{chatId}/messages/welcome
+  // 2) Ajout du message système de bienvenue
+const welcomeMsgRef = chatRef.collection("messages").doc("welcome");
+batch.set(welcomeMsgRef, {
+  // IMPORTANT: le champ que le client utilise pour orderBy
+  timestamp: admin.firestore.FieldValue.serverTimestamp(),
+  // (optionnel) tu peux garder createdAt si tu veux
+  createdAt: admin.firestore.FieldValue.serverTimestamp(),
+
+  type: "system",
+  systemType: "welcome",
+  pinned: true,
+  centered: true,
+  style: "notice",
+
+  userId: "system",
+  username: "Moderation",
+  avatar: "",
+  reported: false,
+
+  // i18n direct
+  textKey: "chat.systemWelcome",
+  text: "", // inutile mais inoffensif
+
+  visibility: "everyone",
+});
+
+
+
+  createdChats++;
+}
+
 
     if (createdChats > 0) {
       await batch.commit();

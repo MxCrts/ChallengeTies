@@ -26,6 +26,9 @@ import designSystem from "../../theme/designSystem";
 import CustomHeader from "@/components/CustomHeader";
 import { useTranslation } from "react-i18next";
 import { useRouter } from "expo-router";
+ import { BannerAd, BannerAdSize } from "react-native-google-mobile-ads";
+ import { adUnitIds } from "@/constants/admob";
+ import { useAdsVisibility } from "../../src/context/AdsVisibilityContext";
 
 const SPACING = 15;
 const { width: SCREEN_WIDTH } = Dimensions.get("window");
@@ -34,6 +37,29 @@ const normalizeSize = (size: number) => {
   const baseWidth = 375;
   const scale = Math.min(Math.max(SCREEN_WIDTH / baseWidth, 0.7), 1.8);
   return Math.round(size * scale);
+};
+
+const BANNER_HEIGHT = normalizeSize(50);
+
+/** Util pour ajouter une alpha sans casser les gradients */
+const withAlpha = (color: string, alpha: number) => {
+  const clamp = (n: number, min = 0, max = 1) => Math.min(Math.max(n, min), max);
+  const a = clamp(alpha);
+
+  if (/^rgba?\(/i.test(color)) {
+    const nums = color.match(/[\d.]+/g) || [];
+    const [r = "0", g = "0", b = "0"] = nums;
+    return `rgba(${r}, ${g}, ${b}, ${a})`;
+  }
+  let hex = color.replace("#", "");
+  if (hex.length === 3) hex = hex.split("").map((c) => c + c).join("");
+  if (hex.length >= 6) {
+    const r = parseInt(hex.slice(0, 2), 16);
+    const g = parseInt(hex.slice(2, 4), 16);
+    const b = parseInt(hex.slice(4, 6), 16);
+    return `rgba(${r}, ${g}, ${b}, ${a})`;
+  }
+  return `rgba(0,0,0,${a})`;
 };
 
 interface Stat {
@@ -70,6 +96,8 @@ export default function UserStats() {
     () => (isDarkMode ? designSystem.darkTheme : designSystem.lightTheme),
     [isDarkMode]
   );
+  const { showBanners } = useAdsVisibility();
+  const bottomPadding = showBanners ? BANNER_HEIGHT + normalizeSize(80) : normalizeSize(80);
 
   useEffect(() => {
     const userId = auth.currentUser?.uid;
@@ -344,70 +372,99 @@ export default function UserStats() {
 
   return (
     <SafeAreaView style={styles.safeArea}>
-      <StatusBar
-        translucent
-        backgroundColor="transparent"
-        barStyle={isDarkMode ? "light-content" : "dark-content"}
-      />
-      <CustomHeader
-  title={t("statistics")}
-  rightIcon={
-    <TouchableOpacity
-      onPress={handleShareStats}
-      accessibilityLabel={t("shareStatsButton")}
-      accessibilityHint={t("shareStatsHint")}
-      accessibilityRole="button"
-      testID="share-stats"
-    >
-      <Ionicons
-        name="share-social"
-        size={normalizeSize(24)}
-        color={currentTheme.colors.secondary}
-      />
-    </TouchableOpacity>
-  }
-/>
+  <StatusBar
+    translucent
+    backgroundColor="transparent"
+    barStyle={isDarkMode ? "light-content" : "dark-content"}
+  />
+<LinearGradient
+  colors={[
+    withAlpha(currentTheme.colors.background, 1),
+    withAlpha(currentTheme.colors.cardBackground, 1),
+    withAlpha(currentTheme.colors.primary, 0.13),
+  ]}
+  style={styles.gradientContainer}
+  start={{ x: 0, y: 0 }}
+  end={{ x: 1, y: 1 }}
+>
+  {/* Orbes premium en arrière-plan */}
+  <LinearGradient
+    pointerEvents="none"
+    colors={[withAlpha(currentTheme.colors.primary, 0.28), "transparent"]}
+    style={styles.bgOrbTop}
+    start={{ x: 0.2, y: 0 }}
+    end={{ x: 1, y: 1 }}
+  />
+  <LinearGradient
+    pointerEvents="none"
+    colors={[withAlpha(currentTheme.colors.secondary, 0.25), "transparent"]}
+    style={styles.bgOrbBottom}
+    start={{ x: 1, y: 0 }}
+    end={{ x: 0, y: 1 }}
+  />
+    <CustomHeader
+      title={t("statistics")}
+      backgroundColor="transparent"
+      useBlur={false}
+      showHairline={false}   // 👈 évite la petite barre de séparation
+      
+    />
 
+    <FlatList
+      data={stats}
+      renderItem={renderStat}
+      keyExtractor={(item) => item.name}
+      contentContainerStyle={[styles.listContainer, { flexGrow: 1, paddingBottom: bottomPadding }]}
+      showsVerticalScrollIndicator={false}
+      initialNumToRender={7}
+      maxToRenderPerBatch={7}
+      windowSize={5}
+      getItemLayout={(data, index) => ({
+        length: normalizeSize(100),
+        offset: normalizeSize(100) * index,
+        index,
+      })}
+      contentInset={{ top: SPACING, bottom: 0 }}
+    />
+    {showBanners && (
+     <View style={styles.bannerContainer}>
+       <BannerAd
+         unitId={adUnitIds.banner}
+         size={BannerAdSize.BANNER}
+         requestOptions={{ requestNonPersonalizedAdsOnly: false }}
+         onAdFailedToLoad={(err) =>
+           console.error("Échec chargement bannière (UserStats):", err)
+         }
+       />
+     </View>
+   )}
+  </LinearGradient>
+</SafeAreaView>
 
-      <LinearGradient
-        colors={[
-          currentTheme.colors.background,
-          currentTheme.colors.cardBackground + "F0",
-        ]}
-        style={styles.container}
-      >
-        <FlatList
-          data={stats}
-          renderItem={renderStat}
-          keyExtractor={(item) => item.name}
-          contentContainerStyle={[styles.listContainer, { flexGrow: 1 }]}
-          showsVerticalScrollIndicator={false}
-          initialNumToRender={7}
-          maxToRenderPerBatch={7}
-          windowSize={5}
-          getItemLayout={(data, index) => ({
-            length: normalizeSize(100),
-            offset: normalizeSize(100) * index,
-            index,
-          })}
-          contentInset={{ top: SPACING, bottom: normalizeSize(80) }}
-        />
-      </LinearGradient>
-    </SafeAreaView>
   );
 }
 
 const styles = StyleSheet.create({
   safeArea: {
   flex: 1,
-  paddingTop:
-    Platform.OS === "android" ? StatusBar.currentHeight ?? SPACING : SPACING,
+  paddingTop: 0,
   backgroundColor: "transparent",
 },
   container: {
     flex: 1,
     paddingHorizontal: SPACING,
+    paddingTop: SPACING / 2,
   },
+  bannerContainer: {
+   width: "100%",
+   alignItems: "center",
+   paddingVertical: SPACING / 2,
+   backgroundColor: "transparent",
+   position: "absolute",
+   bottom: 0,
+   left: 0,
+   right: 0,
+ },
   headerWrapper: {
     paddingHorizontal: SPACING,
     paddingVertical: SPACING,
@@ -506,4 +563,25 @@ const styles = StyleSheet.create({
     textAlign: "center",
     opacity: 0.8,
   },
+  gradientContainer: {
+  flex: 1,
+  // pas de padding ici; garde ton padding dans styles.container
+},
+bgOrbTop: {
+  position: "absolute",
+  top: -SCREEN_WIDTH * 0.25,
+  left: -SCREEN_WIDTH * 0.2,
+  width: SCREEN_WIDTH * 0.9,
+  height: SCREEN_WIDTH * 0.9,
+  borderRadius: SCREEN_WIDTH * 0.45,
+},
+bgOrbBottom: {
+  position: "absolute",
+  bottom: -SCREEN_WIDTH * 0.3,
+  right: -SCREEN_WIDTH * 0.25,
+  width: SCREEN_WIDTH * 1.1,
+  height: SCREEN_WIDTH * 1.1,
+  borderRadius: SCREEN_WIDTH * 0.55,
+},
+
 });

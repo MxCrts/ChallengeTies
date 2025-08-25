@@ -32,15 +32,14 @@ import { Theme } from "../../theme/designSystem";
 import CustomHeader from "@/components/CustomHeader";
 import GlobalLayout from "../../components/GlobalLayout";
 import designSystem from "../../theme/designSystem";
-import {
-  BannerAd,
-  BannerAdSize,
-  TestIds,
-} from "react-native-google-mobile-ads";
+import { BannerAd, BannerAdSize } from "react-native-google-mobile-ads";
+import { adUnitIds } from "@/constants/admob";
 import { BlurView } from "expo-blur";
 import { useTutorial } from "../../context/TutorialContext";
 import TutorialModal from "../../components/TutorialModal";
-import { normalize } from "../../utils/normalize";
+import { useAdsVisibility } from "../../src/context/AdsVisibilityContext";
+import { useBottomTabBarHeight } from "@react-navigation/bottom-tabs";
+import { useSafeAreaInsets } from "react-native-safe-area-context";
 
 // Dimensions responsives
 const SPACING = 18; // Aligné avec Notifications.tsx, FocusScreen.tsx, etc.
@@ -52,10 +51,30 @@ const normalizeSize = (size: number) => {
   return Math.round(size * scale);
 };
 
+// rgba helper (hex/rgb -> rgba avec alpha)
+const withAlpha = (color: string, alpha: number) => {
+  const clamp = (n: number, min = 0, max = 1) => Math.min(Math.max(n, min), max);
+  const a = clamp(alpha);
+
+  if (/^rgba?\(/i.test(color)) {
+    const nums = color.match(/[\d.]+/g) || [];
+    const [r="0", g="0", b="0"] = nums;
+    return `rgba(${r}, ${g}, ${b}, ${a})`;
+  }
+  let hex = color.replace("#", "");
+  if (hex.length === 3) hex = hex.split("").map(c => c + c).join("");
+  if (hex.length >= 6) {
+    const r = parseInt(hex.slice(0,2),16);
+    const g = parseInt(hex.slice(2,4),16);
+    const b = parseInt(hex.slice(4,6),16);
+    return `rgba(${r}, ${g}, ${b}, ${a})`;
+  }
+  return `rgba(0,0,0,${a})`;
+};
+
+
 const capitalize = (s: string) => s.charAt(0).toUpperCase() + s.slice(1);
-const adUnitId = __DEV__
-  ? TestIds.BANNER
-  : "ca-app-pub-4725616526467159/3887969618";
+const BANNER_HEIGHT = normalizeSize(50);
 
 interface Challenge {
   id: string;
@@ -293,7 +312,10 @@ const ExploreHeader = React.memo(
                     <TouchableOpacity
                       key={rawCat}
                       onPress={() => onCategorySelect(rawCat)}
-                      style={styles.modalItem}
+                      style={[
+  styles.modalItem,
+  { borderBottomColor: withAlpha(currentTheme.colors.border, isDarkMode ? 0.6 : 0.4) },
+]}
                     >
                       <Ionicons
                         name="pricetag-outline"
@@ -342,6 +364,16 @@ export default function ExploreScreen() {
   const currentTheme: Theme = isDarkMode
     ? designSystem.darkTheme
     : designSystem.lightTheme;
+const { showBanners } = useAdsVisibility();
+ const insets = useSafeAreaInsets();
+const tabBarHeight = useBottomTabBarHeight();
+
+const bannerHeight = BANNER_HEIGHT;               // ta constante
+const bannerLift = tabBarHeight + insets.bottom + normalizeSize(8); // ↑ décale la bannière au-dessus de la TabBar
+
+const listBottomPadding =
+  (showBanners ? bannerHeight : 0) + tabBarHeight + insets.bottom + normalizeSize(20);
+
 
   // Force re-render sur changement de langue
   useEffect(() => {}, [i18n.language]);
@@ -417,33 +449,45 @@ export default function ExploreScreen() {
   }, [challenges, searchQuery, categoryFilter, originFilter]);
 
   const toggleSaved = useCallback(
-    async (ch: Challenge) => {
-      const id = ch.id;
-      const was = isSaved(id);
-      setPendingFavorites((p) => ({ ...p, [id]: !was }));
-      try {
-        if (was) {
-          await removeChallenge(id);
-        } else {
-          await addChallenge({
-            id: ch.id,
-            title: ch.title,
-            category: ch.category,
-            description: ch.description,
-            imageUrl: ch.imageUrl,
-            daysOptions: ch.daysOptions,
-            chatId: ch.chatId,
-          });
-        }
-        setPendingFavorites((p) => ({ ...p, [id]: undefined! }));
-      } catch (err) {
-        console.error(err);
-        Alert.alert(t("error"), t("toggleFavoriteFailed"));
-        setPendingFavorites((p) => ({ ...p, [id]: was }));
+  async (ch: Challenge) => {
+    const id = ch.id;
+    const was = isSaved(id);
+    // Optimistic UI
+    setPendingFavorites((p) => ({ ...p, [id]: !was }));
+    try {
+      if (was) {
+        await removeChallenge(id);
+      } else {
+        await addChallenge({
+          id: ch.id,
+          title: ch.title,
+          category: ch.category,
+          description: ch.description,
+          imageUrl: ch.imageUrl,
+          daysOptions: ch.daysOptions,
+          chatId: ch.chatId,
+        });
       }
-    },
-    [isSaved, addChallenge, removeChallenge, t]
-  );
+      // Nettoyage de l'état pending
+      setPendingFavorites((p) => {
+        const copy = { ...p };
+        delete copy[id];
+        return copy;
+      });
+    } catch (err) {
+      console.error(err);
+      Alert.alert(t("error"), t("toggleFavoriteFailed"));
+      // rollback
+      setPendingFavorites((p) => {
+        const copy = { ...p };
+        copy[id] = was;
+        return copy;
+      });
+    }
+  },
+  [isSaved, addChallenge, removeChallenge, t]
+);
+
 
   const onSearchChange = useCallback(
     (text: string) => setSearchQuery(text),
@@ -478,15 +522,16 @@ export default function ExploreScreen() {
       <GlobalLayout>
         <LinearGradient
           colors={[
-            currentTheme.colors.background,
-            currentTheme.colors.cardBackground + "F0",
-          ]}
-          style={{
-            flex: 1,
-            justifyContent: "center",
-            alignItems: "center",
-            paddingHorizontal: SPACING,
-          }}
+    withAlpha(currentTheme.colors.background, 1),
+    withAlpha(currentTheme.colors.cardBackground, 1),
+    withAlpha(currentTheme.colors.primary, 0.13),
+  ]}
+  style={{
+    flex: 1,
+    justifyContent: "center",
+    alignItems: "center",
+    paddingHorizontal: SPACING,
+  }}
         >
           <ActivityIndicator size="large" color={currentTheme.colors.primary} />
           <Text
@@ -508,29 +553,51 @@ export default function ExploreScreen() {
   return (
     <GlobalLayout>
       <KeyboardAvoidingView
-        style={{ flex: 1 }}
-        behavior={Platform.OS === "ios" ? "padding" : undefined}
-        keyboardVerticalOffset={normalizeSize(80)}
-      >
+  style={{ flex: 1 }}
+  behavior={Platform.OS === "ios" ? "padding" : undefined}
+  keyboardVerticalOffset={tabBarHeight}   // 👈 au lieu d’un nombre fixe
+>
          <CustomHeader title={t("exploreChallenges")} />
         <LinearGradient
-          colors={[
-            currentTheme.colors.background,
-            currentTheme.colors.cardBackground + "F0",
-          ]}
-          style={{ flex: 1 }}
-        >
-          <FlatList
-            data={filteredChallenges}
-            keyExtractor={(item) => item.id}
-            keyboardShouldPersistTaps="handled"
-            initialNumToRender={10}
-            windowSize={5}
-            showsVerticalScrollIndicator={false}
-            contentContainerStyle={{
-              paddingBottom: normalizeSize(100),
-              paddingHorizontal: SPACING / 2,
-            }}
+  colors={[
+    withAlpha(currentTheme.colors.background, 1),
+    withAlpha(currentTheme.colors.cardBackground, 1),
+    withAlpha(currentTheme.colors.primary, 0.12),
+  ]}
+  style={styles.gradientContainer}
+  start={{ x: 0, y: 0 }}
+  end={{ x: 1, y: 1 }}
+>
+  {/* Orbes décoratives */}
+  <LinearGradient
+    pointerEvents="none"
+    colors={[withAlpha(currentTheme.colors.primary, 0.28), "transparent"]}
+    style={styles.bgOrbTop}
+    start={{ x: 0.2, y: 0 }}
+    end={{ x: 1, y: 1 }}
+  />
+  <LinearGradient
+    pointerEvents="none"
+    colors={[withAlpha(currentTheme.colors.secondary, 0.25), "transparent"]}
+    style={styles.bgOrbBottom}
+    start={{ x: 1, y: 0 }}
+    end={{ x: 0, y: 1 }}
+  />
+
+  <FlatList
+    data={filteredChallenges}
+    keyExtractor={(item) => item.id}
+    keyboardShouldPersistTaps="handled"
+    initialNumToRender={10}
+    windowSize={5}
+    removeClippedSubviews
+    showsVerticalScrollIndicator={false}
+    stickyHeaderIndices={[0]}           // 👈 garde la barre de recherche visible
+    contentContainerStyle={{
+      paddingBottom: listBottomPadding,
+      paddingHorizontal: SPACING / 2,
+    }}
+
             ListHeaderComponent={
               <ExploreHeader
                 searchQuery={searchQuery}
@@ -610,7 +677,10 @@ export default function ExploreScreen() {
                       style={styles.cardImage}
                     />
                     <LinearGradient
-                      colors={["transparent", "rgba(0,0,0,0.7)"]}
+                      colors={[
+    withAlpha(currentTheme.colors.overlay, 0.1),
+    withAlpha("#000", 0.8),
+  ]}
                       style={styles.cardOverlay}
                     >
                       <Text
@@ -678,16 +748,22 @@ export default function ExploreScreen() {
         </LinearGradient>
       </KeyboardAvoidingView>
 
-      <View style={styles.bannerContainer}>
-        <BannerAd
-          unitId={adUnitId}
-          size={BannerAdSize.BANNER}
-          requestOptions={{ requestNonPersonalizedAdsOnly: false }}
-          onAdFailedToLoad={(err) =>
-            console.error("Échec chargement bannière", err)
-          }
-        />
-      </View>
+      {showBanners && !isTutorialActive && (
+  <View
+    style={[
+      styles.bannerContainer,
+      { position: "absolute", left: 0, right: 0, bottom: bannerLift },
+    ]}
+    pointerEvents="auto"
+  >
+    <BannerAd
+      unitId={adUnitIds.banner}
+      size={BannerAdSize.ANCHORED_ADAPTIVE_BANNER}  // 👈 responsive pleine largeur
+      requestOptions={{ requestNonPersonalizedAdsOnly: false }}
+      onAdFailedToLoad={(err) => console.error("Échec chargement bannière", err)}
+    />
+  </View>
+)}
 
       {isTutorialActive && tutorialStep >= 4 && (
   <TutorialModal
@@ -707,9 +783,15 @@ export default function ExploreScreen() {
 
 const styles = StyleSheet.create({
   headerWrapper: {
-    paddingHorizontal: SPACING,
-    paddingVertical: SPACING * 1.5,
-  },
+  paddingHorizontal: SPACING,
+  paddingVertical: SPACING * 1.5,
+  backgroundColor: "transparent", // laisse le LinearGradient gérer
+  // Optionnel: petite ombre quand sticky
+  ...Platform.select({
+    ios: { shadowColor: "#000", shadowOpacity: 0.06, shadowRadius: 8, shadowOffset: { width: 0, height: 4 } },
+    android: { elevation: 2 },
+  }),
+},
   searchContainer: {
     flexDirection: "row",
     alignItems: "center",
@@ -798,6 +880,23 @@ const styles = StyleSheet.create({
     fontFamily: "Comfortaa_700Bold",
     marginBottom: normalizeSize(8),
   },
+  gradientContainer: { flex: 1 },
+bgOrbTop: {
+  position: "absolute",
+  top: -SCREEN_WIDTH * 0.25,
+  left: -SCREEN_WIDTH * 0.2,
+  width: SCREEN_WIDTH * 0.9,
+  height: SCREEN_WIDTH * 0.9,
+  borderRadius: SCREEN_WIDTH * 0.45,
+},
+bgOrbBottom: {
+  position: "absolute",
+  bottom: -SCREEN_WIDTH * 0.3,
+  right: -SCREEN_WIDTH * 0.25,
+  width: SCREEN_WIDTH * 1.1,
+  height: SCREEN_WIDTH * 1.1,
+  borderRadius: SCREEN_WIDTH * 0.55,
+},
   modalItem: {
     flexDirection: "row",
     alignItems: "center",
@@ -889,15 +988,11 @@ const styles = StyleSheet.create({
     maxWidth: SCREEN_WIDTH * 0.75,
   },
   bannerContainer: {
-    position: "absolute",
-    bottom: normalizeSize(10),
-    alignSelf: "center",
-    shadowColor: "#000",
-    shadowOffset: { width: 0, height: normalizeSize(3) },
-    shadowOpacity: 0.3,
-    shadowRadius: normalizeSize(6),
-    elevation: 8,
-  },
+  width: "100%",
+  alignItems: "center",
+  justifyContent: "center",
+  backgroundColor: "transparent",
+},
   blurView: {
     position: "absolute",
     top: 0,

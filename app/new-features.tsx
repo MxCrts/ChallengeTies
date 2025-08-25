@@ -44,6 +44,7 @@ import {
 } from "react-native-google-mobile-ads";
 import { useRouter } from "expo-router";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
+import { useAdsVisibility } from "../src/context/AdsVisibilityContext";
 
 const SPACING = 15;
 const { width: SCREEN_WIDTH, height: SCREEN_HEIGHT } = Dimensions.get("window");
@@ -53,13 +54,26 @@ const normalizeSize = (size: number) => {
   return Math.round(size * scale);
 };
 
-// ID interstitiel
-const adUnitId = __DEV__
-  ? TestIds.INTERSTITIAL
-  : "ca-app-pub-4725616526467159/6097960289";
-const interstitial = InterstitialAd.createForAdRequest(adUnitId, {
-  requestNonPersonalizedAdsOnly: false,
-});
+/** Util robuste pour ajouter une alpha sans casser les gradients */
+const withAlpha = (color: string, alpha: number) => {
+  const clamp = (n: number, min = 0, max = 1) => Math.min(Math.max(n, min), max);
+  const a = clamp(alpha);
+
+  if (/^rgba?\(/i.test(color)) {
+    const nums = color.match(/[\d.]+/g) || [];
+    const [r = "0", g = "0", b = "0"] = nums;
+    return `rgba(${r}, ${g}, ${b}, ${a})`;
+  }
+  let hex = color.replace("#", "");
+  if (hex.length === 3) hex = hex.split("").map((c) => c + c).join("");
+  if (hex.length >= 6) {
+    const r = parseInt(hex.slice(0, 2), 16);
+    const g = parseInt(hex.slice(2, 4), 16);
+    const b = parseInt(hex.slice(4, 6), 16);
+    return `rgba(${r}, ${g}, ${b}, ${a})`;
+  }
+  return `rgba(0,0,0,${a})`;
+};
 
 interface CountdownValues {
   days: number;
@@ -109,6 +123,18 @@ export default function NewFeatures() {
     ? designSystem.darkTheme
     : designSystem.lightTheme;
 
+  // ↓↓↓ DANS le composant NewFeatures
+  const { showInterstitials } = useAdsVisibility();
+
+  const interstitialAdUnitId = __DEV__
+    ? TestIds.INTERSTITIAL
+    : Platform.select({
+        ios: "ca-app-pub-4725616526467159/4942270608",
+        android: "ca-app-pub-4725616526467159/6097960289",
+      })!;
+
+  const interstitialRef = React.useRef<InterstitialAd | null>(null);
+
   // Gestion du cooldown des pubs
   const checkAdCooldown = useCallback(async () => {
     const lastAdTime = await AsyncStorage.getItem("lastInterstitialTime");
@@ -124,26 +150,43 @@ export default function NewFeatures() {
 
   // Gestion des pubs
   useEffect(() => {
-    const unsubscribeLoaded = interstitial.addAdEventListener(
-      AdEventType.LOADED,
-      () => {
-        setAdLoaded(true);
-      }
-    );
-    const unsubscribeError = interstitial.addAdEventListener(
-      AdEventType.ERROR,
-      (error) => {
-        console.error("Erreur interstitiel:", error);
-        setAdLoaded(false);
-        setTimeout(() => interstitial.load(), 5000);
-      }
-    );
-    interstitial.load();
+    if (!showInterstitials) {
+      interstitialRef.current = null;
+      setAdLoaded(false);
+      return;
+    }
+
+    const ad = InterstitialAd.createForAdRequest(interstitialAdUnitId, {
+      requestNonPersonalizedAdsOnly: false,
+    });
+    interstitialRef.current = ad;
+
+    const loadedSub = ad.addAdEventListener(AdEventType.LOADED, () => {
+      setAdLoaded(true);
+    });
+    const errorSub = ad.addAdEventListener(AdEventType.ERROR, (error) => {
+      console.error("Erreur interstitiel:", error);
+      setAdLoaded(false);
+    });
+    const closedSub = ad.addAdEventListener(AdEventType.CLOSED, () => {
+      setAdLoaded(false);
+      try {
+        ad.load();
+      } catch {}
+    });
+
+    try {
+      ad.load();
+    } catch {}
+
     return () => {
-      unsubscribeLoaded();
-      unsubscribeError();
+      loadedSub();
+      errorSub();
+      closedSub();
+      interstitialRef.current = null;
+      setAdLoaded(false);
     };
-  }, []);
+  }, [showInterstitials, interstitialAdUnitId]);
 
   // Authentification
   useEffect(() => {
@@ -170,7 +213,7 @@ export default function NewFeatures() {
     return unsubscribeAuth;
   }, []);
 
-  // Modal explicatif
+  // Modal explicatif (une fois)
   useEffect(() => {
     const checkModalShown = async () => {
       const value = await AsyncStorage.getItem("explanationModalShown");
@@ -211,9 +254,9 @@ export default function NewFeatures() {
     return unsubscribe;
   }, [user?.uid]);
 
-  // Compte à rebours
+  // ⏱️ Compte à rebours → FIN SEPTEMBRE
   useEffect(() => {
-   const targetDate = new Date("2025-08-31T23:59:59Z");
+    const targetDate = new Date("2025-09-30T23:59:59Z");
     const updateTimer = () => {
       const diff = targetDate.getTime() - Date.now();
       if (diff <= 0) {
@@ -265,11 +308,17 @@ export default function NewFeatures() {
         setUserVote(featureId);
 
         const canShowAd = await checkAdCooldown();
-        if (canShowAd && adLoaded) {
-          interstitial.show();
-          await markAdShown();
+        if (showInterstitials && canShowAd && adLoaded && interstitialRef.current) {
+          try {
+            await interstitialRef.current.show();
+            await markAdShown();
+          } catch (e) {
+            console.warn("Interstitial show error:", (e as any)?.message ?? e);
+          }
           setAdLoaded(false);
-          interstitial.load();
+          try {
+            interstitialRef.current.load();
+          } catch {}
         }
 
         Alert.alert(
@@ -284,7 +333,7 @@ export default function NewFeatures() {
         );
       }
     },
-    [user, userVote, adLoaded, t, checkAdCooldown, markAdShown]
+    [user, userVote, adLoaded, t, checkAdCooldown, markAdShown, showInterstitials]
   );
 
   // Proposition de fonctionnalité
@@ -316,11 +365,11 @@ export default function NewFeatures() {
         setUserVote(featureRef.id);
 
         const canShowAd = await checkAdCooldown();
-        if (canShowAd && adLoaded) {
-          interstitial.show();
+        if (showInterstitials && canShowAd && adLoaded && interstitialRef.current) {
+          await interstitialRef.current.show();
           await markAdShown();
           setAdLoaded(false);
-          interstitial.load();
+          interstitialRef.current.load();
         }
 
         Alert.alert(
@@ -335,7 +384,7 @@ export default function NewFeatures() {
         );
       }
     },
-    [user, adLoaded, t, checkAdCooldown, markAdShown]
+    [user, adLoaded, t, checkAdCooldown, markAdShown, showInterstitials]
   );
 
   // Partage de fonctionnalité
@@ -354,74 +403,77 @@ export default function NewFeatures() {
     [t]
   );
 
-  // Memoized Feature Item
+  // Feature Item (UI only)
   const FeatureItem = useMemo(
     () =>
       React.memo(({ item, index }: { item: Feature; index: number }) => (
-        <Animated.View
-          entering={FadeInUp.delay(index * 50)}
-          style={styles.featureCard}
-        >
+        <Animated.View entering={FadeInUp.delay(index * 50)} style={styles.featureCard}>
           <TouchableOpacity
             onPress={() => {
               setSelectedFeature(item);
               setShowFeatureDetailModal(true);
             }}
-            accessibilityLabel={t("newFeatures.featureDetails", {
-              title: item.title,
-            })}
+            accessibilityLabel={t("newFeatures.featureDetails", { title: item.title })}
             accessibilityHint={t("newFeatures.featureDetailsHint")}
             accessibilityRole="button"
             accessibilityState={{ selected: selectedFeature?.id === item.id }}
             testID={`feature-card-${item.id}`}
-            activeOpacity={0.8}
+            activeOpacity={0.85}
           >
             <LinearGradient
               colors={
                 isDarkMode
-                  ? [currentTheme.colors.cardBackground, "#333333"]
-                  : ["#FFFFFF", "#F5F5F5"]
+                  ? [withAlpha(currentTheme.colors.cardBackground, 0.85), withAlpha("#333333", 0.85)]
+                  : [withAlpha("#FFFFFF", 0.95), withAlpha("#F5F5F5", 0.95)]
               }
               style={styles.featureGradient}
+              start={{ x: 0, y: 0 }}
+              end={{ x: 1, y: 1 }}
             >
-              <Text
-                style={[
-                  styles.featureTitle,
-                  {
-                    color: isDarkMode
-                      ? currentTheme.colors.textPrimary
-                      : "#000000",
-                  },
-                ]}
-              >
-                {item.title}
-              </Text>
+              <View style={styles.featureHeaderRow}>
+                <Text
+                  style={[
+                    styles.featureTitle,
+                    { color: isDarkMode ? currentTheme.colors.textPrimary : "#000000" },
+                  ]}
+                  numberOfLines={2}
+                >
+                  {item.title}
+                </Text>
+                <View style={styles.votesPill}>
+                  <Ionicons
+                    name="heart-outline"
+                    size={normalizeSize(14)}
+                    color={isDarkMode ? currentTheme.colors.secondary : currentTheme.colors.primary}
+                  />
+                  <Text
+                    style={[
+                      styles.votesPillText,
+                      {
+                        color: isDarkMode
+                          ? currentTheme.colors.secondary
+                          : currentTheme.colors.primary,
+                      },
+                    ]}
+                  >
+                    {item.votes}
+                  </Text>
+                </View>
+              </View>
+
               {item.username && (
                 <Text
                   style={[
                     styles.featureUsername,
                     {
-                      color: isDarkMode
-                        ? "#A0A0A0"
-                        : currentTheme.colors.textSecondary,
+                      color: isDarkMode ? "#A0A0A0" : currentTheme.colors.textSecondary,
                     },
                   ]}
                 >
                   {t("newFeatures.by")} {item.username}
                 </Text>
               )}
-              <Text
-                style={[
-                  styles.featureVotes,
-                  {
-                    color: isDarkMode
-                      ? currentTheme.colors.secondary
-                      : currentTheme.colors.primary,
-                  },
-                ]}
-              >
-                {item.votes} {t("newFeatures.votes", { count: item.votes })}
-              </Text>
+
               {item.description && (
                 <Text
                   style={[
@@ -440,46 +492,25 @@ export default function NewFeatures() {
     [t, currentTheme, selectedFeature, isDarkMode]
   );
 
-  // Compte à rebours
+  // Compte à rebours (UI only)
   const renderCountdown = useCallback(
     () => (
       <Animated.View entering={FadeInUp} style={styles.countdownContainer}>
         <LinearGradient
-          colors={
-            isDarkMode
-              ? [
-                  currentTheme.colors.secondary,
-                  currentTheme.colors.primary + "CC",
-                ]
-              : [
-                  currentTheme.colors.secondary,
-                  currentTheme.colors.primary + "CC",
-                ]
-          }
+          colors={[
+            withAlpha(currentTheme.colors.secondary, 1),
+            withAlpha(currentTheme.colors.primary, 1),
+          ]}
           style={styles.countdownGradient}
           start={{ x: 0, y: 0 }}
           end={{ x: 1, y: 1 }}
         >
           {(["days", "hours", "mins", "secs"] as const).map((unit, index) => (
-            <Animated.View
-              key={unit}
-              entering={FadeInUp.delay(index * 200)}
-              style={styles.countdownBox}
-            >
-              <Text
-                style={[
-                  styles.countdownNumber,
-                  { color: currentTheme.colors.textPrimary },
-                ]}
-              >
+            <Animated.View key={unit} entering={FadeInUp.delay(index * 120)} style={styles.countdownBox}>
+              <Text style={[styles.countdownNumber, { color: currentTheme.colors.textPrimary }]}>
                 {countdown[unit]}
               </Text>
-              <Text
-                style={[
-                  styles.countdownLabel,
-                  { color: currentTheme.colors.textPrimary },
-                ]}
-              >
+              <Text style={[styles.countdownLabel, { color: currentTheme.colors.textPrimary }]}>
                 {t(`newFeatures.countdown.${unit}`)}
               </Text>
             </Animated.View>
@@ -487,10 +518,10 @@ export default function NewFeatures() {
         </LinearGradient>
       </Animated.View>
     ),
-    [countdown, t, currentTheme, isDarkMode]
+    [countdown, t, currentTheme]
   );
 
-  // Métadonnées SEO
+  // Métadonnées (inchangé)
   const metadata = useMemo(
     () => ({
       title: t("newFeatures.title"),
@@ -510,6 +541,8 @@ export default function NewFeatures() {
     [t, features]
   );
 
+  const monthLabel = t("newFeatures.monthLabel", { defaultValue: "Mise à jour • Septembre" });
+
   const createStyles = (isDarkMode: boolean) =>
     StyleSheet.create({
       safeArea: {
@@ -518,67 +551,101 @@ export default function NewFeatures() {
         paddingTop:
           Platform.OS === "ios" ? insets.top : StatusBar.currentHeight ?? 0,
       },
-      container: {
-        flex: 1,
-        backgroundColor: "transparent",
-      },
       gradientContainer: {
         flex: 1,
         backgroundColor: "transparent",
       },
+
+      /** HERO HEADER (premium) */
+      heroHeader: {
+        marginHorizontal: SPACING,
+        marginTop: SPACING,
+        borderRadius: normalizeSize(22),
+        overflow: "hidden",
+        borderWidth: StyleSheet.hairlineWidth,
+        borderColor: withAlpha("#fff", isDarkMode ? 0.08 : 0.25),
+      },
+      heroGradient: {
+        paddingVertical: normalizeSize(18),
+        paddingHorizontal: normalizeSize(16),
+      },
+      monthPill: {
+        alignSelf: "flex-start",
+        paddingVertical: normalizeSize(6),
+        paddingHorizontal: normalizeSize(12),
+        borderRadius: 999,
+        backgroundColor: withAlpha("#000", 0.25),
+        borderWidth: StyleSheet.hairlineWidth,
+        borderColor: withAlpha("#fff", 0.18),
+        marginBottom: normalizeSize(10),
+      },
+      monthPillText: {
+        fontSize: normalizeSize(12),
+        fontFamily: "Comfortaa_700Bold",
+        color: "#fff",
+        letterSpacing: 0.3,
+      },
+      heroTitle: {
+        fontSize: normalizeSize(20),
+        fontFamily: "Comfortaa_700Bold",
+        color: "#fff",
+        marginBottom: normalizeSize(6),
+        textAlign: "left",
+      },
+      heroSubtitle: {
+        fontSize: normalizeSize(13),
+        fontFamily: "Comfortaa_400Regular",
+        color: withAlpha("#fff", 0.9),
+      },
+
+      /** Orbes décoratives (arrière-plan) */
+      bgOrbTop: {
+        position: "absolute",
+        top: -SCREEN_WIDTH * 0.25,
+        left: -SCREEN_WIDTH * 0.2,
+        width: SCREEN_WIDTH * 0.9,
+        height: SCREEN_WIDTH * 0.9,
+        borderRadius: SCREEN_WIDTH * 0.45,
+      },
+      bgOrbBottom: {
+        position: "absolute",
+        bottom: -SCREEN_WIDTH * 0.3,
+        right: -SCREEN_WIDTH * 0.25,
+        width: SCREEN_WIDTH * 1.1,
+        height: SCREEN_WIDTH * 1.1,
+        borderRadius: SCREEN_WIDTH * 0.55,
+      },
+
       contentWrapper: {
         flex: 1,
         paddingHorizontal: normalizeSize(15),
         paddingBottom: normalizeSize(40),
         backgroundColor: "transparent",
       },
-      backButton: {
-        position: "absolute",
-        top:
-          Platform.OS === "android"
-            ? StatusBar.currentHeight ?? SPACING
-            : SPACING,
-        left: normalizeSize(15),
-        zIndex: 10,
-        padding: SPACING / 2,
-        backgroundColor: "rgba(0, 0, 0, 0.5)",
-        borderRadius: normalizeSize(20),
-      },
-      headerWrapper: {
-        flexDirection: "row",
-        justifyContent: "center",
-        alignItems: "center",
-        paddingHorizontal: SPACING,
-        paddingVertical: SPACING * 1.5,
-        position: "relative",
-        backgroundColor: "transparent",
-      },
-      helpIcon: {
-        position: "absolute",
-        right: normalizeSize(15),
-        top: normalizeSize(15),
-      },
+
       description: {
         fontSize: normalizeSize(16),
         fontFamily: "Comfortaa_400Regular",
         textAlign: "center",
-        marginVertical: normalizeSize(20),
+        marginVertical: normalizeSize(18),
         lineHeight: normalizeSize(24),
       },
+
       featuresWindow: {
         flex: 1,
-        marginVertical: normalizeSize(20),
+        marginVertical: normalizeSize(12),
         borderRadius: normalizeSize(25),
         overflow: "hidden",
-        backgroundColor: isDarkMode
-          ? "transparent"
-          : "rgba(255, 255, 255, 0.1)", // Fond léger en light pour premium
+        backgroundColor: isDarkMode ? "transparent" : withAlpha("#fff", 0.08),
+        borderWidth: StyleSheet.hairlineWidth,
+        borderColor: withAlpha("#fff", isDarkMode ? 0.12 : 0.18),
       },
       featuresContent: {
-        paddingVertical: normalizeSize(20),
+        paddingVertical: normalizeSize(16),
         paddingHorizontal: normalizeSize(10),
         backgroundColor: "transparent",
       },
+
       featureCard: {
         marginVertical: normalizeSize(10),
         borderRadius: normalizeSize(25),
@@ -588,53 +655,70 @@ export default function NewFeatures() {
         shadowOpacity: isDarkMode ? 0.25 : 0.15,
         shadowRadius: normalizeSize(6),
         elevation: 5,
+        borderWidth: 1,
+        borderColor: withAlpha("#fff", 0.12),
       },
       featureGradient: {
         padding: normalizeSize(16),
         borderRadius: normalizeSize(25),
-        borderWidth: normalizeSize(2.5),
-        borderColor: isDarkMode ? "#FFDD95" : "#FF6200",
-        backgroundColor: isDarkMode ? "rgba(0, 0, 0, 0.4)" : undefined,
+        borderWidth: normalizeSize(2),
+        borderColor: isDarkMode ? withAlpha("#FFDD95", 0.7) : withAlpha("#FF6200", 0.7),
+      },
+      featureHeaderRow: {
+        flexDirection: "row",
+        justifyContent: "space-between",
+        alignItems: "center",
+        marginBottom: normalizeSize(6),
+      },
+      votesPill: {
+        flexDirection: "row",
+        alignItems: "center",
+        gap: 6,
+        paddingVertical: 4,
+        paddingHorizontal: 10,
+        borderRadius: 999,
+        backgroundColor: withAlpha("#000", 0.1),
+        borderWidth: StyleSheet.hairlineWidth,
+        borderColor: withAlpha("#fff", 0.12),
+      },
+      votesPillText: {
+        fontSize: normalizeSize(12),
+        fontFamily: "Comfortaa_700Bold",
       },
       featureTitle: {
+        flex: 1,
         fontSize: normalizeSize(18),
         fontFamily: "Comfortaa_700Bold",
-        textAlign: "center",
-        marginBottom: normalizeSize(8),
+        marginRight: normalizeSize(10),
       },
       featureUsername: {
-        fontSize: normalizeSize(13),
+        fontSize: normalizeSize(12),
         fontFamily: "Comfortaa_400Regular",
-        textAlign: "center",
         marginBottom: normalizeSize(8),
-      },
-      featureVotes: {
-        fontSize: normalizeSize(15),
-        fontFamily: "Comfortaa_700Bold",
-        textAlign: "center",
-        marginBottom: normalizeSize(8),
+        textAlign: "left",
       },
       featureDescription: {
         fontSize: normalizeSize(13),
         fontFamily: "Comfortaa_400Regular",
-        textAlign: "center",
         lineHeight: normalizeSize(20),
+        textAlign: "left",
       },
+
       bottomContainer: {
         alignItems: "center",
-        paddingVertical: normalizeSize(25),
-        marginTop: normalizeSize(20),
+        paddingVertical: normalizeSize(22),
+        marginTop: normalizeSize(10),
       },
       countdownContainer: {
         width: "100%",
-        marginBottom: normalizeSize(20),
+        marginBottom: normalizeSize(16),
       },
       countdownGradient: {
         flexDirection: "row",
         justifyContent: "space-between",
-        padding: normalizeSize(18),
+        padding: normalizeSize(16),
         borderRadius: normalizeSize(18),
-        backgroundColor: "rgba(255, 255, 255, 0.95)",
+        backgroundColor: withAlpha("#fff", isDarkMode ? 0.08 : 0.95),
       },
       countdownBox: {
         alignItems: "center",
@@ -649,6 +733,7 @@ export default function NewFeatures() {
         fontSize: normalizeSize(10),
         fontFamily: "Comfortaa_400Regular",
       },
+
       proposeButton: {
         paddingVertical: normalizeSize(15),
         paddingHorizontal: normalizeSize(30),
@@ -663,12 +748,14 @@ export default function NewFeatures() {
         fontSize: normalizeSize(14),
         fontFamily: "Comfortaa_700Bold",
       },
+
       thankYouText: {
         fontSize: normalizeSize(14),
         fontFamily: "Comfortaa_400Regular",
         textAlign: "center",
-        marginVertical: normalizeSize(15),
+        marginVertical: normalizeSize(12),
       },
+
       loadingContainer: {
         flex: 1,
         justifyContent: "center",
@@ -699,21 +786,13 @@ export default function NewFeatures() {
         />
         <LinearGradient
           colors={[
-            currentTheme.colors.background,
-            currentTheme.colors.cardBackground,
+            withAlpha(currentTheme.colors.background, 1),
+            withAlpha(currentTheme.colors.cardBackground, 1),
           ]}
           style={styles.loadingContainer}
         >
-          <ActivityIndicator
-            size="large"
-            color={currentTheme.colors.secondary}
-          />
-          <Text
-            style={[
-              styles.loadingText,
-              { color: currentTheme.colors.textPrimary },
-            ]}
-          >
+          <ActivityIndicator size="large" color={currentTheme.colors.secondary} />
+          <Text style={[styles.loadingText, { color: currentTheme.colors.textPrimary }]}>
             {t("newFeatures.loading")}
           </Text>
         </LinearGradient>
@@ -723,63 +802,95 @@ export default function NewFeatures() {
 
   return (
     <LinearGradient
-      colors={
-        isDarkMode
-          ? ["#1C2526", "#2D3A3A", "#4A5A5A"]
-          : [
-              currentTheme.colors.background,
-              currentTheme.colors.cardBackground,
-              currentTheme.colors.primary + "22",
-            ]
-      }
+      colors={[
+        withAlpha(currentTheme.colors.background, 1),
+        withAlpha(currentTheme.colors.cardBackground, 1),
+        withAlpha(currentTheme.colors.primary, 0.13),
+      ]}
       style={styles.gradientContainer}
       start={{ x: 0, y: 0 }}
       end={{ x: 1, y: 1 }}
     >
+      {/* Orbes premium en arrière-plan */}
+      <LinearGradient
+        pointerEvents="none"
+        colors={[withAlpha(currentTheme.colors.primary, 0.28), "transparent"]}
+        style={styles.bgOrbTop}
+        start={{ x: 0.2, y: 0 }}
+        end={{ x: 1, y: 1 }}
+      />
+      <LinearGradient
+        pointerEvents="none"
+        colors={[withAlpha(currentTheme.colors.secondary, 0.25), "transparent"]}
+        style={styles.bgOrbBottom}
+        start={{ x: 1, y: 0 }}
+        end={{ x: 0, y: 1 }}
+      />
+
       <SafeAreaView style={styles.safeArea}>
         <StatusBar
-        translucent
-        backgroundColor="transparent"
-        barStyle={isDarkMode ? "light-content" : "dark-content"}
-      />
-      <CustomHeader
-  title={t("newFeatures.title")}
-  rightIcon={
-    <TouchableOpacity
-      onPress={() => setShowExplanationModal(true)}
-      accessibilityLabel={t("newFeatures.openExplanation")}
-      accessibilityHint={t("newFeatures.openExplanationHint")}
-    >
-      <Ionicons
-        name="help-circle-outline"
-        size={normalizeSize(26)}
-        color={currentTheme.colors.secondary}
-      />
-    </TouchableOpacity>
-  }
-/>
+          translucent
+          backgroundColor="transparent"
+          barStyle={isDarkMode ? "light-content" : "dark-content"}
+        />
+
+        <CustomHeader
+          title={t("newFeatures.title")}
+          rightIcon={
+            <TouchableOpacity
+              onPress={() => setShowExplanationModal(true)}
+              accessibilityLabel={t("newFeatures.openExplanation")}
+              accessibilityHint={t("newFeatures.openExplanationHint")}
+            >
+              <Ionicons
+                name="help-circle-outline"
+                size={normalizeSize(26)}
+                color={currentTheme.colors.secondary}
+              />
+            </TouchableOpacity>
+          }
+        />
+
+        {/* HERO SEPTEMBRE */}
+        <View style={styles.heroHeader}>
+          <LinearGradient
+            colors={[
+              withAlpha(currentTheme.colors.secondary, 0.9),
+              withAlpha(currentTheme.colors.primary, 0.9),
+            ]}
+            style={styles.heroGradient}
+            start={{ x: 0, y: 0 }}
+            end={{ x: 1, y: 1 }}
+          >
+            <View style={styles.monthPill}>
+              <Text style={styles.monthPillText}>{monthLabel}</Text>
+            </View>
+            <Text style={styles.heroTitle}>
+              {t("newFeatures.heroTitleSep", {
+                defaultValue: "Vote les nouveautés qui arrivent fin septembre 🚀",
+              })}
+            </Text>
+            <Text style={styles.heroSubtitle}>
+              {t("newFeatures.heroSubtitleSep", {
+                defaultValue: "Ta voix compte : propose, vote et suis l’évolution des features.",
+              })}
+            </Text>
+          </LinearGradient>
+        </View>
+
         <View style={styles.contentWrapper}>
 
-          <Text
-            style={[
-              styles.description,
-              { color: currentTheme.colors.textSecondary },
-            ]}
-          >
-            {t("newFeatures.description")}
-          </Text>
+
           <View
             style={[
               styles.featuresWindow,
-              { backgroundColor: currentTheme.colors.cardBackground + "80" },
+              { backgroundColor: withAlpha(currentTheme.colors.cardBackground, 0.8) },
             ]}
           >
             {features.length > 0 ? (
               <FlatList
                 data={features}
-                renderItem={({ item, index }) => (
-                  <FeatureItem item={item} index={index} />
-                )}
+                renderItem={({ item, index }) => <FeatureItem item={item} index={index} />}
                 keyExtractor={(item) => item.id}
                 contentContainerStyle={styles.featuresContent}
                 showsVerticalScrollIndicator={false}
@@ -796,53 +907,32 @@ export default function NewFeatures() {
                 accessibilityLabel={t("newFeatures.featuresListLabel")}
               />
             ) : (
-              <Text
-                style={[
-                  styles.noFeaturesText,
-                  { color: currentTheme.colors.textSecondary },
-                ]}
-              >
+              <Text style={[styles.noFeaturesText, { color: currentTheme.colors.textSecondary }]}>
                 {t("newFeatures.noFeatures")}
               </Text>
             )}
           </View>
-          <Animated.View
-            entering={FadeInUp.delay(400)}
-            style={styles.bottomContainer}
-          >
+
+          <Animated.View entering={FadeInUp.delay(400)} style={styles.bottomContainer}>
             {renderCountdown()}
             {userVote ? (
-              <Text
-                style={[
-                  styles.thankYouText,
-                  { color: currentTheme.colors.textSecondary },
-                ]}
-              >
+              <Text style={[styles.thankYouText, { color: currentTheme.colors.textSecondary }]}>
                 {t("newFeatures.thankYouForVote", {
-                  featureTitle:
-                    features.find((f) => f.id === userVote)?.title || "???",
+                  featureTitle: features.find((f) => f.id === userVote)?.title || "???",
                 })}
               </Text>
             ) : (
               <Animated.View entering={ZoomIn.delay(500)}>
                 <TouchableOpacity
-                  style={[
-                    styles.proposeButton,
-                    { backgroundColor: currentTheme.colors.primary },
-                  ]}
+                  style={[styles.proposeButton, { backgroundColor: currentTheme.colors.primary }]}
                   onPress={() => setShowProposeModal(true)}
                   accessibilityLabel={t("newFeatures.proposeIdea")}
                   accessibilityHint={t("newFeatures.proposeIdeaHint")}
                   accessibilityRole="button"
                   testID="propose-button"
-                  activeOpacity={0.7}
+                  activeOpacity={0.85}
                 >
-                  <Text
-                    style={[
-                      styles.proposeButtonText,
-                      { color: currentTheme.colors.textPrimary },
-                    ]}
-                  >
+                  <Text style={[styles.proposeButtonText, { color: currentTheme.colors.textPrimary }]}>
                     {t("newFeatures.proposeIdea")}
                   </Text>
                 </TouchableOpacity>
@@ -850,6 +940,7 @@ export default function NewFeatures() {
             )}
           </Animated.View>
         </View>
+
         {showExplanationModal && (
           <ModalExplicatif onClose={() => setShowExplanationModal(false)} />
         )}

@@ -38,6 +38,27 @@ const normalizeSize = (size: number) => {
   return Math.round(size * scale);
 };
 
+// util couleur -> rgba avec alpha
+const withAlpha = (color: string, alpha: number) => {
+  const clamp = (n: number, min = 0, max = 1) => Math.min(Math.max(n, min), max);
+  const a = clamp(alpha);
+
+  if (/^rgba?\(/i.test(color)) {
+    const nums = color.match(/[\d.]+/g) || [];
+    const [r="0", g="0", b="0"] = nums;
+    return `rgba(${r}, ${g}, ${b}, ${a})`;
+  }
+  let hex = color.replace("#", "");
+  if (hex.length === 3) hex = hex.split("").map(c => c + c).join("");
+  if (hex.length >= 6) {
+    const r = parseInt(hex.slice(0,2),16);
+    const g = parseInt(hex.slice(2,4),16);
+    const b = parseInt(hex.slice(4,6),16);
+    return `rgba(${r}, ${g}, ${b}, ${a})`;
+  }
+  return `rgba(0,0,0,${a})`;
+};
+
 const TOP_ITEM_WIDTH = SCREEN_WIDTH * 0.8;
 const BOTTOM_ITEM_WIDTH = SCREEN_WIDTH * 0.6;
 const TOP_ITEM_HEIGHT = normalizeSize(280); // Ajusté pour responsivité
@@ -267,9 +288,11 @@ export default function FocusScreen() {
       <GlobalLayout>
         <LinearGradient
           colors={[
-            currentTheme.colors.background,
-            currentTheme.colors.cardBackground + "F0",
-          ]}
+  withAlpha(currentTheme.colors.background, 1),
+  withAlpha(currentTheme.colors.cardBackground, 1),
+  withAlpha(currentTheme.colors.primary, 0.13),
+]}
+
           style={styles.loadingContainer}
         >
           <ActivityIndicator size="large" color={currentTheme.colors.primary} />
@@ -335,7 +358,10 @@ export default function FocusScreen() {
             </View>
           )}
           <LinearGradient
-            colors={[currentTheme.colors.overlay, "rgba(0,0,0,0.9)"]}
+            colors={[
+    withAlpha(currentTheme.colors.overlay, 0.25),
+    withAlpha("#000000", 0.85),
+  ]}
             style={styles.topItemOverlay}
           >
             <Text
@@ -438,7 +464,10 @@ export default function FocusScreen() {
             </View>
           )}
           <LinearGradient
-            colors={[currentTheme.colors.overlay, "rgba(0,0,0,0.9)"]}
+            colors={[
+    withAlpha(currentTheme.colors.overlay, 0.25),
+    withAlpha("#000000", 0.85),
+  ]}
             style={styles.bottomItemOverlay}
           >
             <Text
@@ -473,12 +502,30 @@ export default function FocusScreen() {
   return (
     <GlobalLayout>
       <LinearGradient
-        colors={[
-          currentTheme.colors.background,
-          currentTheme.colors.cardBackground + "F0",
-        ]}
-        style={styles.gradientContainer}
-      >
+  colors={[
+    withAlpha(currentTheme.colors.background, 1),
+    withAlpha(currentTheme.colors.cardBackground, 1),
+    withAlpha(currentTheme.colors.primary, 0.13),
+  ]}
+  style={styles.gradientContainer}
+  start={{ x: 0, y: 0 }}
+  end={{ x: 1, y: 1 }}
+>
+  {/* Orbes décoratives */}
+  <LinearGradient
+    pointerEvents="none"
+    colors={[withAlpha(currentTheme.colors.primary, 0.28), "transparent"]}
+    style={styles.bgOrbTop}
+    start={{ x: 0.2, y: 0 }}
+    end={{ x: 1, y: 1 }}
+  />
+  <LinearGradient
+    pointerEvents="none"
+    colors={[withAlpha(currentTheme.colors.secondary, 0.25), "transparent"]}
+    style={styles.bgOrbBottom}
+    start={{ x: 1, y: 0 }}
+    end={{ x: 0, y: 1 }}
+  />
         <View style={styles.headerWrapper}>
           <View style={styles.headerContainer}>
             <TouchableOpacity
@@ -549,7 +596,7 @@ export default function FocusScreen() {
                 <RNAnimated.FlatList
                   ref={flatListTopRef}
                   data={notMarkedToday}
-                  keyExtractor={(item) => item.uniqueKey!}
+keyExtractor={(item, index) => item.uniqueKey || `${item.id}-${index}`}
                   horizontal
                   showsHorizontalScrollIndicator={false}
                   decelerationRate="fast"
@@ -595,7 +642,11 @@ export default function FocusScreen() {
                   currentTheme.colors.cardBackground,
                   currentTheme.colors.cardBackground + "F0",
                 ]}
-                style={styles.emptyTopContainer}
+                style={[
+  styles.emptyTopContainer,
+  { borderWidth: 2.5, borderColor: isDarkMode ? currentTheme.colors.secondary : "#FF8C00" }
+]}
+
               >
                 <Animated.View entering={FadeInUp.delay(100)}>
                   <Ionicons
@@ -872,6 +923,22 @@ const styles = StyleSheet.create({
     fontSize: normalizeSize(14),
     fontFamily: "Comfortaa_700Bold",
   },
+  bgOrbTop: {
+  position: "absolute",
+  top: -SCREEN_WIDTH * 0.25,
+  left: -SCREEN_WIDTH * 0.2,
+  width: SCREEN_WIDTH * 0.9,
+  height: SCREEN_WIDTH * 0.9,
+  borderRadius: SCREEN_WIDTH * 0.45,
+},
+bgOrbBottom: {
+  position: "absolute",
+  bottom: -SCREEN_WIDTH * 0.3,
+  right: -SCREEN_WIDTH * 0.25,
+  width: SCREEN_WIDTH * 1.1,
+  height: SCREEN_WIDTH * 1.1,
+  borderRadius: SCREEN_WIDTH * 0.55,
+},
   bottomCarouselContainer: {
     marginBottom: normalizeSize(30),
   },

@@ -25,15 +25,14 @@ import GlobalLayout from "../../components/GlobalLayout";
 import designSystem from "../../theme/designSystem";
 import { useTranslation } from "react-i18next";
 import { SafeAreaView } from "react-native-safe-area-context";
-import {
-  BannerAd,
-  BannerAdSize,
-  TestIds,
-} from "react-native-google-mobile-ads";
+import { BannerAd, BannerAdSize } from "react-native-google-mobile-ads";
+import { adUnitIds } from "@/constants/admob";
 import { BlurView } from "expo-blur";
 import { useTutorial } from "../../context/TutorialContext";
 import TutorialModal from "../../components/TutorialModal";
-import { normalize } from "../../utils/normalize";
+import { useAdsVisibility } from "../../src/context/AdsVisibilityContext";
+import { useBottomTabBarHeight } from "@react-navigation/bottom-tabs";
+import { useSafeAreaInsets } from "react-native-safe-area-context";
 
 const SPACING = 15;
 const { width: SCREEN_WIDTH, height: SCREEN_HEIGHT } = Dimensions.get("window");
@@ -44,6 +43,43 @@ const normalizeSize = (size: number) => {
   const baseWidth = 375;
   const scale = Math.min(Math.max(SCREEN_WIDTH / baseWidth, 0.7), 1.8);
   return Math.round(size * scale);
+};
+
+/** Util pour ajouter une alpha sans casser les gradients */
+const withAlpha = (color: string, alpha: number) => {
+  const clamp = (n: number, min = 0, max = 1) => Math.min(Math.max(n, min), max);
+  const a = clamp(alpha);
+
+  if (/^rgba?\(/i.test(color)) {
+    const nums = color.match(/[\d.]+/g) || [];
+    const [r = "0", g = "0", b = "0"] = nums;
+    return `rgba(${r}, ${g}, ${b}, ${a})`;
+  }
+  let hex = color.replace("#", "");
+  if (hex.length === 3) hex = hex.split("").map((c) => c + c).join("");
+  if (hex.length >= 6) {
+    const r = parseInt(hex.slice(0, 2), 16);
+    const g = parseInt(hex.slice(2, 4), 16);
+    const b = parseInt(hex.slice(4, 6), 16);
+    return `rgba(${r}, ${g}, ${b}, ${a})`;
+  }
+  return `rgba(0,0,0,${a})`;
+};
+
+
+
+const BANNER_HEIGHT = normalizeSize(50);
+
+
+
+// helpers d’affichage
+const takeInterests = (raw?: string[] | string) => {
+  if (!raw) return [];
+  if (Array.isArray(raw)) return raw.filter(Boolean).map((s) => String(s).trim());
+  return String(raw)
+    .split(",")
+    .map((s) => s.trim())
+    .filter(Boolean);
 };
 
 interface UserData {
@@ -65,6 +101,14 @@ export default function ProfileScreen() {
   const { theme } = useTheme();
   const isDarkMode = theme === "dark";
   const { t } = useTranslation();
+  const { showBanners } = useAdsVisibility();
+ const insets = useSafeAreaInsets();
+const tabBarHeight = useBottomTabBarHeight();
+const bannerHeight = BANNER_HEIGHT; // ta constante
+const bannerLift = tabBarHeight + insets.bottom + normalizeSize(8); // décalage au-dessus de la tabbar
+const bottomPadding =
+  (showBanners ? bannerHeight : 0) + tabBarHeight + insets.bottom + normalizeSize(90);
+
   const {
     tutorialStep,
     isTutorialActive,
@@ -76,10 +120,6 @@ export default function ProfileScreen() {
   const currentTheme: Theme = isDarkMode
     ? designSystem.darkTheme
     : designSystem.lightTheme;
-
-  const adUnitId = __DEV__
-    ? TestIds.BANNER
-    : "ca-app-pub-4725616526467159/3887969618";
 
   // Chargement des données
   useEffect(() => {
@@ -193,7 +233,7 @@ export default function ProfileScreen() {
   const metadata = useMemo(
     () => ({
       title: t("yourProfile"),
-      description: t("profile.description", {
+      description: t("profileS.description", {
         username: userData?.username || "Utilisateur",
       }),
       url: `https://challengeme.com/profile/${auth.currentUser?.uid}`,
@@ -217,9 +257,10 @@ export default function ProfileScreen() {
         />
         <LinearGradient
           colors={[
-            currentTheme.colors.background,
-            currentTheme.colors.cardBackground,
-          ]}
+  withAlpha(currentTheme.colors.background, 1),
+  withAlpha(currentTheme.colors.cardBackground, 1),
+  withAlpha(currentTheme.colors.primary, 0.13),
+]}
           style={styles.loadingContainer}
         >
           <ActivityIndicator size="large" color={currentTheme.colors.primary} />
@@ -246,9 +287,10 @@ export default function ProfileScreen() {
         />
         <LinearGradient
           colors={[
-            currentTheme.colors.background,
-            currentTheme.colors.cardBackground,
-          ]}
+  withAlpha(currentTheme.colors.background, 1),
+  withAlpha(currentTheme.colors.cardBackground, 1),
+  withAlpha(currentTheme.colors.primary, 0.13),
+]}
           style={styles.loadingContainer}
         >
           <View style={styles.errorContainer}>
@@ -275,25 +317,49 @@ export default function ProfileScreen() {
     <GlobalLayout>
       
       <LinearGradient
-        colors={[
-          currentTheme.colors.background,
-          currentTheme.colors.cardBackground,
-        ]}
-        style={styles.container}
-        start={{ x: 0, y: 0 }}
-        end={{ x: 1, y: 1 }}
-      >
-          <StatusBar
-        translucent
-        backgroundColor="transparent"
-        barStyle={isDarkMode ? "light-content" : "dark-content"}
-      />
-          <CustomHeader title={t("yourProfile")} />
-          <ScrollView
-            contentContainerStyle={styles.scrollContent}
-            showsVerticalScrollIndicator={false}
-            contentInset={{ top: SPACING, bottom: normalizeSize(80) }}
-          >
+  colors={[
+    withAlpha(currentTheme.colors.background, 1),
+    withAlpha(currentTheme.colors.cardBackground, 1),
+    withAlpha(currentTheme.colors.primary, 0.13),
+  ]}
+  style={styles.gradientContainer}
+  start={{ x: 0, y: 0 }}
+  end={{ x: 1, y: 1 }}
+>
+  {/* Orbes décoratives en arrière-plan */}
+  <LinearGradient
+    pointerEvents="none"
+    colors={[withAlpha(currentTheme.colors.primary, 0.28), "transparent"]}
+    style={styles.bgOrbTop}
+    start={{ x: 0.2, y: 0 }}
+    end={{ x: 1, y: 1 }}
+  />
+  <LinearGradient
+    pointerEvents="none"
+    colors={[withAlpha(currentTheme.colors.secondary, 0.25), "transparent"]}
+    style={styles.bgOrbBottom}
+    start={{ x: 1, y: 0 }}
+    end={{ x: 0, y: 1 }}
+  />
+
+  <StatusBar
+    translucent
+    backgroundColor="transparent"
+    barStyle={isDarkMode ? "light-content" : "dark-content"}
+  />
+
+  <CustomHeader
+    title={t("yourProfile")}
+    backgroundColor="transparent"
+    useBlur={false}
+    showHairline={false}
+  />
+
+  <ScrollView
+    contentContainerStyle={[styles.scrollContent, { paddingBottom: bottomPadding }]}
+    showsVerticalScrollIndicator={false}
+    contentInset={{ top: SPACING, bottom: normalizeSize(80) }}
+  >
 
             {/* Carte Profil */}
             <Animated.View
@@ -370,90 +436,137 @@ export default function ProfileScreen() {
                 </View>
 
                 {/* Détails */}
-                <Animated.View
-                  entering={FadeInUp.delay(400)}
-                  style={[
-                    styles.detailsContainer,
-                    { alignItems: "flex-start" },
-                  ]}
-                >
-                  {/* 1. Bio */}
-                  <View style={styles.infoRow}>
-                    <Ionicons
-                      name="person-outline"
-                      size={normalizeSize(16)}
-                      color={
-                        isDarkMode ? currentTheme.colors.textPrimary : "#333333"
-                      }
-                    />
-                    <Text
-                      style={{
-                        ...styles.location,
-                        color: isDarkMode
-                          ? currentTheme.colors.textSecondary
-                          : "#333333",
-                        marginLeft: normalizeSize(8),
-                        flex: 1,
-                      }}
-                      numberOfLines={2}
-                      adjustsFontSizeToFit
-                    >
-                      {userData?.bio ?? t("addBioHere")}
-                    </Text>
-                  </View>
+<Animated.View
+  entering={FadeInUp.delay(400)}
+  style={[styles.detailsContainer, { alignItems: "stretch", width: "100%" }]}
+>
+  {/* BIO */}
+  <View style={styles.infoBlock}>
+    <Text
+      style={[
+        styles.fieldLabel,
+        { color: isDarkMode ? currentTheme.colors.textSecondary : "#333" },
+      ]}
+    >
+      {t("profileS.bioLabel", { defaultValue: "Bio" })}
+    </Text>
 
-                  {/* 2. Location */}
-                  <View
-                    style={[styles.infoRow, { marginTop: normalizeSize(10) }]}
-                  >
-                    <Ionicons
-                      name="location-outline"
-                      size={normalizeSize(16)}
-                      color={
-                        isDarkMode ? currentTheme.colors.textPrimary : "#333333"
-                      }
-                    />
-                    <Text
-                      style={{
-                        ...styles.location,
-                        color: isDarkMode
-                          ? currentTheme.colors.textSecondary
-                          : "#333333",
-                        marginLeft: normalizeSize(8),
-                        flex: 1,
-                      }}
-                    >
-                      {userData?.location ?? t("unknownLocation")}
-                    </Text>
-                  </View>
+    {userData?.bio?.trim() ? (
+      <Text
+        style={[
+          styles.fieldValue,
+          { color: isDarkMode ? currentTheme.colors.textPrimary : "#111" },
+        ]}
+        numberOfLines={3}
+      >
+        {userData.bio.trim()}
+      </Text>
+    ) : (
+      <TouchableOpacity
+        onPress={() => router.push("profile/UserInfo")}
+        activeOpacity={0.85}
+        style={styles.placeholderChip}
+      >
+        <Ionicons name="add-circle-outline" size={normalizeSize(14)} color={currentTheme.colors.secondary} />
+        <Text style={[styles.placeholderChipText, { color: currentTheme.colors.secondary }]}>
+          {t("addBioHere")}
+        </Text>
+      </TouchableOpacity>
+    )}
+  </View>
 
-                  {/* 3. Interests */}
-                  <View
-                    style={[styles.infoRow, { marginTop: normalizeSize(10) }]}
-                  >
-                    <Ionicons
-                      name="heart-outline"
-                      size={normalizeSize(16)}
-                      color={
-                        isDarkMode ? currentTheme.colors.textPrimary : "#333333"
-                      }
-                    />
-                    <Text
-                      style={{
-                        ...styles.location, // on réutilise le même style
-                        color: isDarkMode
-                          ? currentTheme.colors.textSecondary
-                          : "#333333",
-                        marginLeft: normalizeSize(8),
-                        flex: 1,
-                      }}
-                      numberOfLines={2}
-                      adjustsFontSizeToFit
-                    >
-                      {interests || t("noInterests")}
-                    </Text>
-                  </View>
-                </Animated.View>
+  <View style={styles.softDivider} />
+
+  {/* LOCATION */}
+  <View style={styles.infoBlock}>
+    <Text
+      style={[
+        styles.fieldLabel,
+        { color: isDarkMode ? currentTheme.colors.textSecondary : "#333" },
+      ]}
+    >
+      {t("profileS.locationLabel", { defaultValue: "Location" })}
+    </Text>
+
+    {userData?.location?.trim() ? (
+      <View style={styles.inline}>
+        <Ionicons name="location-outline" size={normalizeSize(16)} color={currentTheme.colors.secondary} />
+        <Text
+          style={[
+            styles.fieldValue,
+            { marginLeft: 6, color: isDarkMode ? currentTheme.colors.textPrimary : "#111" },
+          ]}
+          numberOfLines={1}
+        >
+          {userData.location.trim()}
+        </Text>
+      </View>
+    ) : (
+      <TouchableOpacity
+        onPress={() => router.push("profile/UserInfo")}
+        activeOpacity={0.85}
+        style={styles.placeholderChip}
+      >
+        <Ionicons name="add-circle-outline" size={normalizeSize(14)} color={currentTheme.colors.secondary} />
+        <Text style={[styles.placeholderChipText, { color: currentTheme.colors.secondary }]}>
+          {t("addLocationHere")}
+        </Text>
+      </TouchableOpacity>
+    )}
+  </View>
+
+  <View style={styles.softDivider} />
+
+  {/* INTERESTS */}
+  <View style={styles.infoBlock}>
+    <Text
+      style={[
+        styles.fieldLabel,
+        { color: isDarkMode ? currentTheme.colors.textSecondary : "#333" },
+      ]}
+    >
+      {t("profileS.interestsLabel", { defaultValue: "Interests" })}
+    </Text>
+
+    {takeInterests(userData?.interests).length ? (
+      <View style={styles.interestsRow}>
+        {takeInterests(userData?.interests).slice(0, 6).map((tag, i) => (
+          <View key={`${tag}-${i}`} style={[styles.interestPill, { borderColor: currentTheme.colors.secondary }]}>
+            <Text
+              style={[
+                styles.interestPillText,
+                { color: isDarkMode ? currentTheme.colors.textPrimary : "#111" },
+              ]}
+              numberOfLines={1}
+            >
+              {tag}
+            </Text>
+          </View>
+        ))}
+        {takeInterests(userData?.interests).length > 6 && (
+          <View style={[styles.interestPill, { borderColor: currentTheme.colors.secondary }]}>
+            <Text style={[styles.interestPillText, { color: currentTheme.colors.secondary }]}>
+              +{takeInterests(userData?.interests).length - 6}
+            </Text>
+          </View>
+        )}
+      </View>
+    ) : (
+      <TouchableOpacity
+        onPress={() => router.push("profile/UserInfo")}
+        activeOpacity={0.85}
+        style={[styles.placeholderChip, { alignSelf: "flex-start" }]}
+      >
+        <Ionicons name="add-circle-outline" size={normalizeSize(14)} color={currentTheme.colors.secondary} />
+        <Text style={[styles.placeholderChipText, { color: currentTheme.colors.secondary }]}>
+          {t("addInterestsHere")}
+        </Text>
+      </TouchableOpacity>
+    )}
+  </View>
+</Animated.View>
+
+
               </LinearGradient>
             </Animated.View>
 
@@ -546,16 +659,24 @@ export default function ProfileScreen() {
             </View>
           </ScrollView>
         {/* Bannière pub */}
-        <View style={styles.bannerContainer}>
-          <BannerAd
-            unitId={adUnitId}
-            size={BannerAdSize.BANNER}
-            requestOptions={{ requestNonPersonalizedAdsOnly: false }}
-            onAdFailedToLoad={(err) =>
-              console.error("Échec chargement bannière:", err)
-            }
-          />
-        </View>
+        {showBanners && (
+  <View
+    style={[
+      styles.bannerContainer,
+      { position: "absolute", left: 0, right: 0, bottom: bannerLift },
+    ]}
+    pointerEvents="box-none"
+  >
+    <BannerAd
+      unitId={adUnitIds.banner}
+      size={BannerAdSize.ANCHORED_ADAPTIVE_BANNER} // 👈 responsive auto
+      requestOptions={{ requestNonPersonalizedAdsOnly: false }}
+      onAdFailedToLoad={(err) => console.error("Échec chargement bannière:", err)}
+    />
+  </View>
+)}
+
+
 
         {/* Tutoriel actif */}
         {isTutorialActive && tutorialStep === 2 && (
@@ -581,6 +702,95 @@ const styles = StyleSheet.create({
     padding: SPACING,
     paddingBottom: normalizeSize(140),
   },
+inline: {
+  flexDirection: "row",
+  alignItems: "center",
+},
+infoBlock: {               // AVANT: marginBottom: normalizeSize(12)
+  marginBottom: normalizeSize(6),
+},
+fieldLabel: {
+  fontFamily: "Comfortaa_700Bold",
+  fontSize: normalizeSize(13),
+  opacity: 0.9,
+  marginBottom: normalizeSize(6),
+},
+
+fieldValue: {
+  fontFamily: "Comfortaa_400Regular",
+  fontSize: normalizeSize(14),
+  lineHeight: normalizeSize(18),
+},
+softDivider: {             // AVANT: marginVertical: normalizeSize(8)
+  height: 1,
+  backgroundColor: "rgba(255,255,255,0.12)",
+  marginVertical: normalizeSize(1),
+},
+interestsRow: {            // AVANT: gap: normalizeSize(8)
+  flexDirection: "row",
+  flexWrap: "wrap",
+  gap: normalizeSize(3),
+},
+
+placeholderChip: {
+  flexDirection: "row",
+  alignItems: "center",
+  alignSelf: "flex-start",
+  borderWidth: 1,
+  borderStyle: "dashed",
+  borderColor: "rgba(255,255,255,0.35)",
+  paddingVertical: normalizeSize(6),
+  paddingHorizontal: normalizeSize(10),
+  borderRadius: normalizeSize(10),
+},
+
+placeholderChipText: {
+  marginLeft: normalizeSize(6),
+  fontFamily: "Comfortaa_700Bold",
+  fontSize: normalizeSize(12),
+},
+
+interestPill: {
+  borderWidth: 1,
+  paddingVertical: normalizeSize(6),
+  paddingHorizontal: normalizeSize(10),
+  borderRadius: normalizeSize(12),
+  marginRight: normalizeSize(6),
+  marginBottom: normalizeSize(6),
+  backgroundColor: "rgba(255,255,255,0.06)",
+},
+
+interestPillText: {
+  fontFamily: "Comfortaa_700Bold",
+  fontSize: normalizeSize(12),
+},
+
+editFab: {
+  position: "absolute",
+  top: normalizeSize(-8),
+  right: normalizeSize(-8),
+  borderRadius: normalizeSize(16),
+  overflow: "hidden",
+  elevation: 6,
+  shadowColor: "#000",
+  shadowOffset: { width: 0, height: 3 },
+  shadowOpacity: 0.25,
+  shadowRadius: 6,
+},
+
+editFabInner: {
+  flexDirection: "row",
+  alignItems: "center",
+  paddingVertical: normalizeSize(8),
+  paddingHorizontal: normalizeSize(12),
+},
+
+editFabText: {
+  color: "#fff",
+  marginLeft: normalizeSize(6),
+  fontFamily: "Comfortaa_700Bold",
+  fontSize: normalizeSize(12),
+},
 
   headerWrapper: {
     flexDirection: "row",
@@ -717,6 +927,25 @@ const styles = StyleSheet.create({
     minHeight: normalizeSize(100),
     marginBottom: SPACING,
   },
+gradientContainer: { flex: 1 },
+
+bgOrbTop: {
+  position: "absolute",
+  top: -SCREEN_WIDTH * 0.25,
+  left: -SCREEN_WIDTH * 0.2,
+  width: SCREEN_WIDTH * 0.9,
+  height: SCREEN_WIDTH * 0.9,
+  borderRadius: SCREEN_WIDTH * 0.45,
+},
+
+bgOrbBottom: {
+  position: "absolute",
+  bottom: -SCREEN_WIDTH * 0.3,
+  right: -SCREEN_WIDTH * 0.25,
+  width: SCREEN_WIDTH * 1.1,
+  height: SCREEN_WIDTH * 1.1,
+  borderRadius: SCREEN_WIDTH * 0.55,
+},
 
   sectionGradient: {
     flex: 1,
@@ -756,17 +985,12 @@ const styles = StyleSheet.create({
     fontSize: normalizeSize(16),
     fontFamily: "Comfortaa_400Regular",
   },
+bannerContainer: {
+  width: "100%",
+  alignItems: "center",
+  backgroundColor: "transparent",
+},
 
-  bannerContainer: {
-    width: "100%",
-    alignItems: "center",
-    paddingVertical: SPACING / 2,
-    backgroundColor: "transparent",
-    position: "absolute",
-    bottom: 0,
-    left: 0,
-    right: 0,
-  },
 
   blurView: {
     position: "absolute",

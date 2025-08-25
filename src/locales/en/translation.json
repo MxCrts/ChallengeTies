@@ -133,6 +133,35 @@
   "contactUs": "Contact Us",
   "visitWebsite": "Visit our website",
   "preferences": "Preferences",
+  "interestsPlaceholder": "e.g., fitness, reading, UI design",
+  "editProfile.title": "Edit Profile",
+  "editProfile.description": "Update your name, bio, location, and interests",
+
+  "accessibility.editProfileImage.label": "Edit profile photo",
+  "accessibility.editProfileImage.hint": "Opens your gallery to choose an image",
+  "accessibility.currentProfileImage.label": "Current profile photo",
+
+  "accessibility.usernameField.label": "Username",
+  "accessibility.usernameField.hint": "Enter your username",
+
+  "accessibility.bioField.label": "Bio",
+  "accessibility.bioField.hint": "Add a short description",
+
+  "accessibility.locationField.label": "Location",
+  "accessibility.locationField.hint": "Enter your city or country",
+
+  "accessibility.interestsField.label": "Interests",
+  "accessibility.interestsField.hint": "Separate items with commas",
+
+  "accessibility.saveProfileChanges.label": "Save changes",
+  "accessibility.saveProfileChanges.hint": "Saves your profile information",
+  "systemWelcome": "👋 Welcome! This space is for motivation, questions, and mutual support. Please stay respectful and kind. Not allowed: insults/harassment, hate speech (racism, sexism, etc.), nudity/pornography, illegal or dangerous content, spam/ads/scams, and sharing sensitive personal information. Report abuse via the button. Keep going—you’ve got this! 💪✨",
+  "welcomeRules": {
+    "title": "Welcome to the challenge chat!",
+    "message": "We’re here to encourage each other, share questions, and move forward together. To keep a positive vibe, please follow these rules:\n\n1. **Respect**: No insults, harassment, or threats.\n2. **Tolerance**: No hate or discrimination (racism, sexism, homophobia, transphobia, etc.).\n3. **Content**: No nudity/pornography, violent, or illegal content.\n4. **Relevance**: Stay on topic (motivation, questions, mutual help).\n5. **Safety**: Don’t share sensitive personal info (address, phone, ID documents).\n6. **Clean chat**: No spam, advertising, scams, or identity impersonation.\n\nBy joining this chat, you agree to these rules. Thank you 💛"
+  },
+   "chat.title": "Welcome 🙌",
+    "chat.systemWelcome": "We're here to encourage each other, support one another, and move forward together in this challenge! Here are the rules to keep the vibe positive:\n\n1. **Respect**: No insults, harassment, or threats.\n2. **Tolerance**: No hate or discrimination (racism, sexism, homophobia, transphobia, etc.).\n3. **Content**: No nudity/pornography, violent or illegal content.\n4. **Relevance**: Stay on topic (motivation, questions, mutual help).\n5. **Safety**: Do not share sensitive personal information (address, phone, ID documents).\n6. **Cleanliness**: No spam, ads, scams, or identity impersonation.\n\nBy joining this chat, you agree to these rules. Thank you 💛",
   "tips": {
     "title": "Tips",
     "listAccessibility": "List of tips",
@@ -250,6 +279,7 @@
   "privacyPolicyPage": "Privacy Policy",
   "accessAdmin": "Access administration features",
   "admin": "Administration",
+  "invalidCredentials": "Invalid email or password",
   "aboutChallengeTies": "About ChallengeTies",
   "fillEmailPassword": "Please enter your email and password.",
   "invalidEmail": "Please enter a valid email address.",
@@ -354,16 +384,55 @@
     "accessDenied": "Access denied",
     "shareError": "Share failed"
   },
+  "invitationS": {
+      "shareTitle": "Duo Invitation",
+      "shareMessageWithTitle": "I invite you to start “{{title}}” for {{days}} days with me!",
+      "errors": {
+        "alreadyInvited": "You already have an active invitation for this challenge.",
+        "autoInvite": "You cannot accept your own invitation.",
+        "expired": "This invitation has expired.",
+        "unknown": "An unknown error occurred.",
+        "inviterAlreadyStarted": "You already started this challenge solo.",
+        "duoAlready": "You are already in a duo for this challenge."
+      },
+      "confirmStartDuoTitle": "Start as Duo?",
+      "confirmStartDuoMessage": "If you start as a Duo, your solo progress will be reset. Continue?",
+      "actions": {
+        "cancel": "Cancel",
+        "continue": "Continue"
+      }
+    },
+    "pendingInvite": "Invitation in progress",
+"commonS": { "close": "Close", "notLoggedIn": "You must be logged in.", "sending": "Sending…" }
+,
+"profileS": {
+    "bioLabel": "Bio",
+    "locationLabel": "Location",
+    "interestsLabel": "Interests"
+  },
+  "addLocationHere": "Add a location",
+  "addInterestsHere": "Add your interests",
+"firstPick": {
+      "title": "Pick your first challenge!",
+      "subtitle": "Do you want to start in…",
+      "chooseSolo": "Choose Solo",
+      "chooseDuo": "Choose Duo"
+    },
+    "spotlight": "Spotlight",
+  "refreshDaily": "New challenges tomorrow ✨",
   "challengeDetails": {
     "untitled": "Untitled Challenge",
     "uncategorized": "Uncategorized",
     "noDescription": "No description available",
     "fetchError": "Could not fetch challenge.",
+    "reviewAfterComplete":"⚠️ You must complete this challenge before leaving a review 🏆",
     "joinError": "Could not join challenge. Please try again.",
     "saveError": "Could not toggle save. Please try again.",
     "completeError": "Could not complete challenge.",
     "chatAccessDenied": "You must take the challenge before opening chat.",
     "invite": "Invite",
+    "days":"days",
+    "shareMessage": "Join me on “{{title}}” on ChallengeTies!",
     "needHelp": "Need some tips?",
     "inviteError": "Error creating invitation",
     "loading": "Loading…",
@@ -380,7 +449,16 @@
     "saved": "Saved",
     "share": "Share",
     "stats": "Stats",
-    "inviteA11y": "Invite a friend to this challenge"
+    "inviteA11y": "Invite a friend to this challenge",
+    "leaveReview": "Leave a review",
+  "alreadyReviewed": "You have already left a review for this challenge.",
+  "reviewSectionTitle": "What others think",
+  "noReviewsYet": "No reviews for this challenge yet.",
+  "yourReview": "Your review",
+  "reviewPlaceholder": "Share your thoughts after completing this challenge...",
+  "submitReview": "Submit",
+  "deleteReview": "Delete",
+  "confirmDeleteReview": "Delete this review?"
   },
    "explore": "Explore",
   "email": "Email address",
@@ -2996,12 +3074,29 @@
   "unableToFinalizeChallenge": "Unable to finalize the challenge.",
   "errorLoadingSavedChallenges": "Unable to load saved challenges: {{message}}",
   "notificationsPush": {
-    "title": "ChallengeTies",
-    "morning1": "Ready for a new challenge today?",
-    "morning2": "Start your day with a fun challenge!",
-    "evening1": "End your day with a quick challenge!",
-    "evening2": "One more challenge before bed?"
-  },
+  "title": "ChallengeTies",
+  "morning1": "☀️ New day, new step toward your goal!",
+  "morning2": "You’ve got this today! 💪",
+  "evening1": "🌙 Time to tick your day. Small steps, big results.",
+  "evening2": "Another day of consistency. Nice!",
+  "nudgeBody": "Yo! Don’t forget “{{title}}” — {{from}} is cheering you on 💪"
+},
+"editYourReview": "Edit your review",
+"saveReview": "Save"
+,
+"duo": {
+  "title": "Duo Challenge",
+  "you": "You",
+  "nudge": "Nudge",
+  "leading": "You’re leading!",
+  "tied": "Tied",
+  "behind": "You’re behind",
+  "nudgeSent": "Nudge sent ✅",
+  "nudgeFailed": "Couldn't send the notification.",
+  "nudgeUnavailable": "This feature is only for duo challenges.",
+  "nudgeHint": "Tap to nudge. Long-press to open chat."
+}
+,
   "invitation": {
     "title": "Join a challenge",
     "subtitle": "You have been invited to join challenge {challengeId}!",
@@ -3128,7 +3223,8 @@
   "suggestion": "Suggestions?"
 },
 "common": {
-  "back": "Back"
+  "back": "Back",
+  "skip": "Skip"
 }
 
 }

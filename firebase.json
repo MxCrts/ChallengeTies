@@ -1,12 +1,14 @@
 {
+  "functions": {
+    "source": "functions"
+  },
   "hosting": {
     "public": "public",
     "ignore": ["firebase.json", "**/.*", "**/node_modules/**"],
     "rewrites": [
-      {
-        "source": "/challenge-details/**",
-        "destination": "/index.html"
-      }
+      { "source": "/challenge-details/**", "destination": "/index.html" },
+      { "source": "/dl", "function": "dl" },
+      { "source": "/dl/**", "function": "dl" }
     ]
   }
 }

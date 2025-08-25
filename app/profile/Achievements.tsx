@@ -24,6 +24,9 @@ import { Theme } from "../../theme/designSystem";
 import CustomHeader from "@/components/CustomHeader";
 import { useTranslation } from "react-i18next";
 import { useRouter } from "expo-router";
+import { BannerAd, BannerAdSize } from "react-native-google-mobile-ads";
+import { adUnitIds } from "@/constants/admob";
+import { useAdsVisibility } from "../../src/context/AdsVisibilityContext";
 
 const SPACING = 18; // Aligné avec CompletedChallenges.tsx
 const { width: SCREEN_WIDTH, height: SCREEN_HEIGHT } = Dimensions.get("window");
@@ -32,6 +35,30 @@ const normalizeSize = (size: number) => {
   const scale = Math.min(Math.max(SCREEN_WIDTH / baseWidth, 0.7), 1.8); // Limite l'échelle
   return Math.round(size * scale);
 };
+
+const BANNER_HEIGHT = normalizeSize(50);
+
+/** Util pour ajouter une alpha sans casser les gradients */
+const withAlpha = (color: string, alpha: number) => {
+  const clamp = (n: number, min = 0, max = 1) => Math.min(Math.max(n, min), max);
+  const a = clamp(alpha);
+
+  if (/^rgba?\(/i.test(color)) {
+    const nums = color.match(/[\d.]+/g) || [];
+    const [r = "0", g = "0", b = "0"] = nums;
+    return `rgba(${r}, ${g}, ${b}, ${a})`;
+  }
+  let hex = color.replace("#", "");
+  if (hex.length === 3) hex = hex.split("").map((c) => c + c).join("");
+  if (hex.length >= 6) {
+    const r = parseInt(hex.slice(0, 2), 16);
+    const g = parseInt(hex.slice(2, 4), 16);
+    const b = parseInt(hex.slice(4, 6), 16);
+    return `rgba(${r}, ${g}, ${b}, ${a})`;
+  }
+  return `rgba(0,0,0,${a})`;
+};
+
 interface Achievement {
   id: string;
   identifier: string;
@@ -97,6 +124,8 @@ export default function AchievementsScreen() {
     () => (isDarkMode ? designSystem.darkTheme : designSystem.lightTheme),
     [isDarkMode]
   );
+  const { showBanners } = useAdsVisibility();
+  const bottomPadding = showBanners ? BANNER_HEIGHT + normalizeSize(90) : normalizeSize(90);
 
   useEffect(() => {
     const userId = auth.currentUser?.uid;
@@ -399,9 +428,10 @@ export default function AchievementsScreen() {
         />
         <LinearGradient
           colors={[
-            currentTheme.colors.background,
-            currentTheme.colors.cardBackground + "F0",
-          ]}
+  withAlpha(currentTheme.colors.background, 1),
+  withAlpha(currentTheme.colors.cardBackground, 1),
+  withAlpha(currentTheme.colors.primary, 0.13),
+]}
           style={styles.loadingContainer}
         >
           <ActivityIndicator size="large" color={currentTheme.colors.primary} />
@@ -420,159 +450,161 @@ export default function AchievementsScreen() {
 
   if (sections.length === 0) {
     return (
-      <SafeAreaView style={styles.safeArea}>
-        <StatusBar
-          translucent
-          backgroundColor="transparent"
-          barStyle={isDarkMode ? "light-content" : "dark-content"}
-        />
-        <LinearGradient
-          colors={[
-            currentTheme.colors.background,
-            currentTheme.colors.cardBackground,
-          ]}
-          style={styles.emptyContainer}
-        >
-          <Animated.View
-            entering={FadeInUp.duration(400)}
-            style={styles.emptyContent}
-          >
-            <View style={styles.headerWrapper}>
-              <View style={styles.headerContent}>
-                <CustomHeader title={t("yourAchievements")} />
-              </View>
-            </View>
-            <Ionicons
-              name="trophy-outline"
-              size={normalizeSize(80)}
-              color={currentTheme.colors.primary}
-              accessibilityLabel={t("noAchievementsIcon")} // Ajout pour accessibilité
-            />
-            <Text
-              style={[
-                styles.emptyTitle,
-                { color: currentTheme.colors.textPrimary },
-              ]}
-            >
-              {t("noAchievementsYet")}
-            </Text>
-            <Text
-              style={[
-                styles.emptySubtitle,
-                { color: currentTheme.colors.textSecondary },
-              ]}
-            >
-              {t("firstAchievementsPrompt")}
-            </Text>
-          </Animated.View>
-        </LinearGradient>
-      </SafeAreaView>
-    );
+  <SafeAreaView style={styles.safeArea}>
+    <StatusBar translucent backgroundColor="transparent" barStyle={isDarkMode ? "light-content" : "dark-content"} />
+    <LinearGradient
+      colors={[
+        withAlpha(currentTheme.colors.background, 1),
+        withAlpha(currentTheme.colors.cardBackground, 1),
+        withAlpha(currentTheme.colors.primary, 0.13),
+      ]}
+      style={styles.gradientContainer}
+      start={{ x: 0, y: 0 }}
+      end={{ x: 1, y: 1 }}
+    >
+      {/* Orbes */}
+      <LinearGradient
+        pointerEvents="none"
+        colors={[withAlpha(currentTheme.colors.primary, 0.28), "transparent"]}
+        style={styles.bgOrbTop}
+        start={{ x: 0.2, y: 0 }}
+        end={{ x: 1, y: 1 }}
+      />
+      <LinearGradient
+        pointerEvents="none"
+        colors={[withAlpha(currentTheme.colors.secondary, 0.25), "transparent"]}
+        style={styles.bgOrbBottom}
+        start={{ x: 1, y: 0 }}
+        end={{ x: 0, y: 1 }}
+      />
+
+      <CustomHeader
+        title={t("yourAchievements")}
+        backgroundColor="transparent"
+        useBlur={false}
+        showHairline={false}
+      />
+
+      <View style={styles.emptyContainer}>
+        <Animated.View entering={FadeInUp.duration(400)} style={styles.emptyContent}>
+          <Ionicons
+            name="trophy-outline"
+            size={normalizeSize(80)}
+            color={currentTheme.colors.primary}
+            accessibilityLabel={t("noAchievementsIcon")}
+          />
+          <Text style={[styles.emptyTitle, { color: currentTheme.colors.textPrimary }]}>
+            {t("noAchievementsYet")}
+          </Text>
+          <Text style={[styles.emptySubtitle, { color: currentTheme.colors.textSecondary }]}>
+            {t("firstAchievementsPrompt")}
+          </Text>
+        </Animated.View>
+      </View>
+      {showBanners && (
+        <View style={styles.bannerContainer}>
+          <BannerAd
+            unitId={adUnitIds.banner}
+            size={BannerAdSize.BANNER}
+            requestOptions={{ requestNonPersonalizedAdsOnly: false }}
+            onAdFailedToLoad={(err) =>
+              console.error("Échec chargement bannière (Achievements empty):", err)
+            }
+          />
+        </View>
+      )}
+    </LinearGradient>
+  </SafeAreaView>
+);
+
   }
 
   return (
-    <SafeAreaView style={styles.safeArea}>
-      <StatusBar
-        translucent
-        backgroundColor="transparent"
-        barStyle={isDarkMode ? "light-content" : "dark-content"}
-      />
-      <CustomHeader title={t("yourAchievements")} />
+  <SafeAreaView style={styles.safeArea}>
+    <StatusBar translucent backgroundColor="transparent" barStyle={isDarkMode ? "light-content" : "dark-content"} />
+    <LinearGradient
+      colors={[
+        withAlpha(currentTheme.colors.background, 1),
+        withAlpha(currentTheme.colors.cardBackground, 1),
+        withAlpha(currentTheme.colors.primary, 0.13),
+      ]}
+      style={styles.gradientContainer}
+      start={{ x: 0, y: 0 }}
+      end={{ x: 1, y: 1 }}
+    >
+      {/* Orbes */}
       <LinearGradient
-        colors={[
-          currentTheme.colors.background,
-          currentTheme.colors.cardBackground + "F0",
-        ]}
-        style={styles.container}
-      >
-        {loading ? (
-          <View style={styles.loadingContainer}>
-            <ActivityIndicator
-              size="large"
-              color={currentTheme.colors.primary}
-            />
-            <Text
+        pointerEvents="none"
+        colors={[withAlpha(currentTheme.colors.primary, 0.28), "transparent"]}
+        style={styles.bgOrbTop}
+        start={{ x: 0.2, y: 0 }}
+        end={{ x: 1, y: 1 }}
+      />
+      <LinearGradient
+        pointerEvents="none"
+        colors={[withAlpha(currentTheme.colors.secondary, 0.25), "transparent"]}
+        style={styles.bgOrbBottom}
+        start={{ x: 1, y: 0 }}
+        end={{ x: 0, y: 1 }}
+      />
+
+      <CustomHeader
+        title={t("yourAchievements")}
+        backgroundColor="transparent"
+        useBlur={false}
+        showHairline={false}
+      />
+
+      <View style={styles.container}>
+        <View style={styles.progressBarWrapper}>
+          <View style={[styles.progressBarBackground, { backgroundColor: currentTheme.colors.border }]}>
+            <View
               style={[
-                styles.loadingText,
-                { color: currentTheme.colors.textPrimary },
+                styles.progressBarFill,
+                { width: `${(done / total) * 100}%`, backgroundColor: currentTheme.colors.secondary },
               ]}
-            >
-              {t("loading")}
-            </Text>
-          </View>
-        ) : sections.length === 0 ? (
-          <View style={styles.emptyContainer}>
-            <Animated.View entering={FadeInUp.duration(400)}>
-              <Ionicons
-                name="trophy-outline"
-                size={normalizeSize(80)}
-                color={currentTheme.colors.primary}
-              />
-              <Text
-                style={[
-                  styles.emptyTitle,
-                  { color: currentTheme.colors.textPrimary },
-                ]}
-              >
-                {t("noAchievementsYet")}
-              </Text>
-              <Text
-                style={[
-                  styles.emptySubtitle,
-                  { color: currentTheme.colors.textSecondary },
-                ]}
-              >
-                {t("firstAchievementsPrompt")}
-              </Text>
-            </Animated.View>
-          </View>
-        ) : (
-          <>
-            <View style={styles.progressBarWrapper}>
-              <View
-                style={[
-                  styles.progressBarBackground,
-                  { backgroundColor: currentTheme.colors.border },
-                ]}
-              >
-                <View
-                  style={[
-                    styles.progressBarFill,
-                    {
-                      width: `${(done / total) * 100}%`,
-                      backgroundColor: currentTheme.colors.secondary,
-                    },
-                  ]}
-                />
-              </View>
-              <Text style={[styles.progressText, { color: currentTheme.colors.secondary }]}>
-              {t("trophiesProgress", { completed: done, total })}
-            </Text>
-            </View>
-            <SectionList
-              sections={sections}
-              keyExtractor={(item) => item.id}
-              renderSectionHeader={renderSectionHeader}
-              renderItem={renderItem}
-              contentContainerStyle={styles.listContent}
-              showsVerticalScrollIndicator={false}
-              initialNumToRender={10}
-              maxToRenderPerBatch={10}
-              windowSize={5}
-              contentInset={{ top: SPACING, bottom: normalizeSize(100) }} // Responsivité
             />
-          </>
-        )}
-      </LinearGradient>
-    </SafeAreaView>
-  );
+          </View>
+          <Text style={[styles.progressText, { color: currentTheme.colors.secondary }]}>
+            {t("trophiesProgress", { completed: done, total })}
+          </Text>
+        </View>
+
+        <SectionList
+          sections={sections}
+          keyExtractor={(item) => item.id}
+          renderSectionHeader={renderSectionHeader}
+          renderItem={renderItem}
+          contentContainerStyle={[styles.listContent, { paddingBottom: bottomPadding }]}
+          showsVerticalScrollIndicator={false}
+          initialNumToRender={10}
+          maxToRenderPerBatch={10}
+          windowSize={5}
+          contentInset={{ top: SPACING, bottom: 0 }}
+        />
+      </View>
+      {showBanners && (
+        <View style={styles.bannerContainer}>
+          <BannerAd
+            unitId={adUnitIds.banner}
+            size={BannerAdSize.BANNER}
+            requestOptions={{ requestNonPersonalizedAdsOnly: false }}
+            onAdFailedToLoad={(err) =>
+              console.error("Échec chargement bannière (Achievements):", err)
+            }
+          />
+        </View>
+      )}
+    </LinearGradient>
+  </SafeAreaView>
+);
+
 }
 
 const styles = StyleSheet.create({
   safeArea: {
   flex: 1,
-  paddingTop:
-    Platform.OS === "android" ? StatusBar.currentHeight ?? SPACING : SPACING,
+  paddingTop: 0,
 },
   container: {
     flex: 1,
@@ -616,6 +648,16 @@ const styles = StyleSheet.create({
     height: SCREEN_HEIGHT * 0.85, // Responsivité
     paddingHorizontal: SPACING,
   },
+  bannerContainer: {
+   width: "100%",
+   alignItems: "center",
+   paddingVertical: SPACING / 2,
+   backgroundColor: "transparent",
+   position: "absolute",
+   bottom: 0,
+   left: 0,
+   right: 0,
+ },
   emptySubtitle: {
     fontSize: normalizeSize(18), // Aligné avec CompletedChallenges.tsx
     fontFamily: "Comfortaa_400Regular",
@@ -648,6 +690,25 @@ const styles = StyleSheet.create({
     width: SCREEN_WIDTH * 0.9, // Aligne avec les cartes
     alignSelf: "center", // Centre l’en-tête
   },
+  gradientContainer: {
+  flex: 1,
+},
+bgOrbTop: {
+  position: "absolute",
+  top: -SCREEN_WIDTH * 0.25,
+  left: -SCREEN_WIDTH * 0.2,
+  width: SCREEN_WIDTH * 0.9,
+  height: SCREEN_WIDTH * 0.9,
+  borderRadius: SCREEN_WIDTH * 0.45,
+},
+bgOrbBottom: {
+  position: "absolute",
+  bottom: -SCREEN_WIDTH * 0.3,
+  right: -SCREEN_WIDTH * 0.25,
+  width: SCREEN_WIDTH * 1.1,
+  height: SCREEN_WIDTH * 1.1,
+  borderRadius: SCREEN_WIDTH * 0.55,
+},
   sectionTitle: {
     flex: 1,
     fontSize: normalizeSize(20), // Aligné avec CompletedChallenges.tsx

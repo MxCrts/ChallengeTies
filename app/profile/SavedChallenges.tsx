@@ -34,6 +34,9 @@ import { useTranslation } from "react-i18next";
 import { Theme } from "../../theme/designSystem";
 import designSystem from "../../theme/designSystem";
 import CustomHeader from "@/components/CustomHeader";
+import { BannerAd, BannerAdSize } from "react-native-google-mobile-ads";
+ import { adUnitIds } from "@/constants/admob";
+ import { useAdsVisibility } from "../../src/context/AdsVisibilityContext";
 
 const SPACING = 18; // Aligné avec CurrentChallenges.tsx
 const { width: SCREEN_WIDTH, height: SCREEN_HEIGHT } = Dimensions.get("window");
@@ -45,6 +48,30 @@ const normalizeSize = (size: number) => {
   const scale = Math.min(Math.max(SCREEN_WIDTH / baseWidth, 0.7), 1.8);
   return Math.round(size * scale);
 };
+
+const BANNER_HEIGHT = normalizeSize(50);
+
+/** Util pour ajouter une alpha sans casser les gradients */
+const withAlpha = (color: string, alpha: number) => {
+  const clamp = (n: number, min = 0, max = 1) => Math.min(Math.max(n, min), max);
+  const a = clamp(alpha);
+
+  if (/^rgba?\(/i.test(color)) {
+    const nums = color.match(/[\d.]+/g) || [];
+    const [r = "0", g = "0", b = "0"] = nums;
+    return `rgba(${r}, ${g}, ${b}, ${a})`;
+  }
+  let hex = color.replace("#", "");
+  if (hex.length === 3) hex = hex.split("").map((c) => c + c).join("");
+  if (hex.length >= 6) {
+    const r = parseInt(hex.slice(0, 2), 16);
+    const g = parseInt(hex.slice(2, 4), 16);
+    const b = parseInt(hex.slice(4, 6), 16);
+    return `rgba(${r}, ${g}, ${b}, ${a})`;
+  }
+  return `rgba(0,0,0,${a})`;
+};
+
 
 interface Challenge {
   id: string;
@@ -69,6 +96,8 @@ export default function SavedChallengesScreen() {
     () => (isDarkMode ? designSystem.darkTheme : designSystem.lightTheme),
     [isDarkMode]
   );
+   const { showBanners } = useAdsVisibility();
+   const bottomPadding = showBanners ? BANNER_HEIGHT + normalizeSize(90) : normalizeSize(90);
 
   const translatedChallenges = useMemo(() => {
     if (!savedChallenges || !Array.isArray(savedChallenges)) {
@@ -334,9 +363,10 @@ export default function SavedChallengesScreen() {
         />
         <LinearGradient
           colors={[
-            currentTheme.colors.background,
-            currentTheme.colors.cardBackground,
-          ]}
+  withAlpha(currentTheme.colors.background, 1),
+  withAlpha(currentTheme.colors.cardBackground, 1),
+  withAlpha(currentTheme.colors.primary, 0.13),
+]}
           style={styles.loadingContainer}
         >
           <ActivityIndicator size="large" color={currentTheme.colors.primary} />
@@ -360,49 +390,99 @@ export default function SavedChallengesScreen() {
         backgroundColor="transparent"
         barStyle={isDarkMode ? "light-content" : "dark-content"}
       />
-                <CustomHeader title={t("savedChallengesScreenTitle")} />
+                <LinearGradient
+  colors={[
+    withAlpha(currentTheme.colors.background, 1),
+    withAlpha(currentTheme.colors.cardBackground, 1),
+    withAlpha(currentTheme.colors.primary, 0.13),
+  ]}
+  style={styles.gradientContainer}
+  start={{ x: 0, y: 0 }}
+  end={{ x: 1, y: 1 }}
+>
+  {/* Orbes premium en arrière-plan */}
+  <LinearGradient
+    pointerEvents="none"
+    colors={[withAlpha(currentTheme.colors.primary, 0.28), "transparent"]}
+    style={styles.bgOrbTop}
+    start={{ x: 0.2, y: 0 }}
+    end={{ x: 1, y: 1 }}
+  />
+  <LinearGradient
+    pointerEvents="none"
+    colors={[withAlpha(currentTheme.colors.secondary, 0.25), "transparent"]}
+    style={styles.bgOrbBottom}
+    start={{ x: 1, y: 0 }}
+    end={{ x: 0, y: 1 }}
+  />
 
-      <LinearGradient
-        colors={[
-          currentTheme.colors.background,
-          currentTheme.colors.cardBackground + "F0",
-        ]}
-        style={styles.container}
-      >
-                {localChallenges.length === 0 ? (
-          renderEmptyState()
-        ) : (
-          <FlatList
-            data={localChallenges}
-            renderItem={renderChallengeItem}
-            keyExtractor={(item) => `saved-${item.id}`}
-            contentContainerStyle={[styles.listContent, { flexGrow: 1 }]}
-            showsVerticalScrollIndicator={false}
-            initialNumToRender={5}
-            maxToRenderPerBatch={5}
-            windowSize={5}
-            getItemLayout={(data, index) => ({
-              length: normalizeSize(ITEM_HEIGHT + SPACING * 1.5),
-              offset: normalizeSize(ITEM_HEIGHT + SPACING * 1.5) * index,
-              index,
-            })}
-            contentInset={{ top: SPACING, bottom: normalizeSize(100) }}
-            accessibilityRole="list"
-            accessibilityLabel={t("listOfSavedChallenges")}
-            testID="saved-challenges-list"
-          />
-        )}
-      </LinearGradient>
+  {/* Header sans séparation */}
+  <CustomHeader
+    title={t("savedChallengesScreenTitle")}
+    backgroundColor="transparent"
+    useBlur={false}
+    showHairline={false}
+  />
+
+  {/* Contenu */}
+  <View style={styles.container}>
+    {localChallenges.length === 0 ? (
+      renderEmptyState()
+    ) : (
+      <FlatList
+        data={localChallenges}
+        renderItem={renderChallengeItem}
+        keyExtractor={(item) => `saved-${item.id}`}
+        contentContainerStyle={[styles.listContent, { flexGrow: 1, paddingBottom: bottomPadding }]}
+        showsVerticalScrollIndicator={false}
+        initialNumToRender={5}
+        maxToRenderPerBatch={5}
+        windowSize={5}
+        getItemLayout={(data, index) => ({
+          length: normalizeSize(ITEM_HEIGHT + SPACING * 1.5),
+          offset: normalizeSize(ITEM_HEIGHT + SPACING * 1.5) * index,
+          index,
+        })}
+        contentInset={{ top: SPACING, bottom: 0 }}
+        accessibilityRole="list"
+        accessibilityLabel={t("listOfSavedChallenges")}
+        testID="saved-challenges-list"
+      />
+    )}
+  </View>
+  {showBanners && (
+     <View style={styles.bannerContainer}>
+       <BannerAd
+         unitId={adUnitIds.banner}
+         size={BannerAdSize.BANNER}
+         requestOptions={{ requestNonPersonalizedAdsOnly: false }}
+         onAdFailedToLoad={(err) =>
+           console.error("Échec chargement bannière (SavedChallenges):", err)
+         }
+       />
+     </View>
+   )}
+</LinearGradient>
+
     </SafeAreaView>
   );
 }
 
 const styles = StyleSheet.create({
   safeArea: {
-    flex: 1,
-    paddingTop:
-      Platform.OS === "android" ? StatusBar.currentHeight ?? SPACING : SPACING,
+  flex: 1,
+  paddingTop: 0,
+  backgroundColor: "transparent",
+},
+bannerContainer: {
+    width: "100%",
+    alignItems: "center",
+    paddingVertical: SPACING / 2,
     backgroundColor: "transparent",
+    position: "absolute",
+    bottom: 0,
+    left: 0,
+    right: 0,
   },
   container: { flex: 1 },
   headerWrapper: {
@@ -411,6 +491,25 @@ const styles = StyleSheet.create({
     paddingTop: SPACING * 2.5,
     position: "relative",
   },
+  gradientContainer: {
+  flex: 1,
+},
+bgOrbTop: {
+  position: "absolute",
+  top: -SCREEN_WIDTH * 0.25,
+  left: -SCREEN_WIDTH * 0.2,
+  width: SCREEN_WIDTH * 0.9,
+  height: SCREEN_WIDTH * 0.9,
+  borderRadius: SCREEN_WIDTH * 0.45,
+},
+bgOrbBottom: {
+  position: "absolute",
+  bottom: -SCREEN_WIDTH * 0.3,
+  right: -SCREEN_WIDTH * 0.25,
+  width: SCREEN_WIDTH * 1.1,
+  height: SCREEN_WIDTH * 1.1,
+  borderRadius: SCREEN_WIDTH * 0.55,
+},
   backButton: {
     position: "absolute",
     top:

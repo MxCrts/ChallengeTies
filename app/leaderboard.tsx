@@ -35,6 +35,7 @@ import designSystem from "../theme/designSystem";
 import CustomHeader from "@/components/CustomHeader";
 import { useTranslation } from "react-i18next";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
+import { BlurView } from "expo-blur";
 
 const SPACING = 15;
 const { width: SCREEN_WIDTH, height: SCREEN_HEIGHT } = Dimensions.get("window");
@@ -217,6 +218,7 @@ export default function LeaderboardScreen() {
                     : styles.circleThird
                 }
               >
+                <View style={styles.glowRing} pointerEvents="none" />
                 <Image
                   source={
                     player.profileImage
@@ -372,6 +374,7 @@ export default function LeaderboardScreen() {
 
   if (loading) {
     return (
+      
       <SafeAreaView style={styles.safeArea}>
         <StatusBar hidden={true} />
         <LinearGradient
@@ -399,16 +402,27 @@ export default function LeaderboardScreen() {
   }
 
   return (
+  <LinearGradient
+    colors={[
+      currentTheme.colors.background,
+      currentTheme.colors.cardBackground,
+      currentTheme.colors.primary + "22",
+    ]}
+    style={styles.gradientContainer}
+    start={{ x: 0, y: 0 }}
+    end={{ x: 1, y: 1 }}
+  >
+    {/* === Orbes décoratives en arrière-plan (purement visuel) === */}
     <LinearGradient
-      colors={[
-        currentTheme.colors.background,
-        currentTheme.colors.cardBackground,
-        currentTheme.colors.primary + "22",
-      ]}
-      style={styles.gradientContainer}
-      start={{ x: 0, y: 0 }}
-      end={{ x: 1, y: 1 }}
-    >
+      pointerEvents="none"
+      colors={[currentTheme.colors.primary + "33", "transparent"]}
+      style={styles.bgOrbTop}
+    />
+    <LinearGradient
+      pointerEvents="none"
+      colors={[currentTheme.colors.secondary + "33", "transparent"]}
+      style={styles.bgOrbBottom}
+    />
       <SafeAreaView style={[styles.safeArea]}>
         <StatusBar
         translucent
@@ -416,61 +430,65 @@ export default function LeaderboardScreen() {
         barStyle={isDarkMode ? "light-content" : "dark-content"}
       />
           <CustomHeader title={t("leaderboard.title")} />
-        <Animated.View
-          entering={FadeInUp.delay(100)}
-          style={styles.tabsContainer}
-        >
-          {(["region", "national", "global"] as const).map((tab) => (
-            <Animated.View
-              key={tab}
-              entering={ZoomIn.delay(
-                100 * (["region", "national", "global"].indexOf(tab) + 1)
-              )}
-            >
-              <TouchableOpacity
-    key={tab}
-    onPress={() => setSelectedTab(tab)}
-    activeOpacity={0.7}
-    accessibilityLabel={t(`leaderboard.filter.${tab}`)}
-    accessibilityHint={t(`leaderboard.filterHint.${tab}`)}
-    accessibilityRole="button"
-    testID={`tab-${tab}`}
-    style={[
-      styles.tab,
-      {
-        backgroundColor:
-          selectedTab === tab
-            ? currentTheme.colors.secondary
-            : isDarkMode
-            ? currentTheme.colors.cardBackground + "80"
-            : "#FFFFFF",
-      },
-      selectedTab === tab && styles.activeTab,
-      // Bordure active injectée ici où currentTheme est accessible
-      selectedTab === tab && {
-        borderBottomWidth: normalizeSize(2),
-        borderBottomColor: currentTheme.colors.primary,
-      },
-    ]}
+        <Animated.View entering={FadeInUp.delay(100)} style={styles.tabsContainer}>
+  <BlurView
+    intensity={28}
+    tint={isDarkMode ? "dark" : "light"}
+    style={styles.tabsBlur}
   >
-    <Text
-      style={[
-        styles.tabText,
-        {
-          color: selectedTab === tab
-            ? "#FFFFFF"
-            : isDarkMode
-            ? "#FFFFFF"
-            : "#000000",
-        },
-      ]}
-    >
-      {t(`leaderboard.tab.${tab}`)}
-    </Text>
-  </TouchableOpacity>
-            </Animated.View>
-          ))}
+    {(["region", "national", "global"] as const).map((tab) => {
+      const active = selectedTab === tab;
+      return (
+        <Animated.View
+          key={tab}
+          entering={ZoomIn.delay(
+            100 * (["region", "national", "global"].indexOf(tab) + 1)
+          )}
+          style={styles.tabWrap}
+        >
+          <TouchableOpacity
+            onPress={() => setSelectedTab(tab)}
+            activeOpacity={0.85}
+            accessibilityLabel={t(`leaderboard.filter.${tab}`)}
+            accessibilityHint={t(`leaderboard.filterHint.${tab}`)}
+            accessibilityRole="button"
+            testID={`tab-${tab}`}
+            style={[
+              styles.tab,
+              active ? styles.tabActive : styles.tabInactive,
+              {
+                borderColor: active
+                  ? currentTheme.colors.primary + "66"
+                  : "rgba(255,255,255,0.12)",
+              },
+            ]}
+          >
+            {/* Fond dégradé derrière le label quand actif */}
+            {active && (
+              <LinearGradient
+                colors={[currentTheme.colors.secondary, currentTheme.colors.primary]}
+                start={{ x: 0, y: 0 }}
+                end={{ x: 1, y: 1 }}
+                style={styles.tabGradientBg}
+              />
+            )}
+            <Text
+              style={[
+                styles.tabText,
+                { color: active ? "#FFFFFF" : isDarkMode ? "#EAEAEA" : "#111111" },
+              ]}
+              numberOfLines={1}
+              adjustsFontSizeToFit
+            >
+              {t(`leaderboard.tab.${tab}`)}
+            </Text>
+          </TouchableOpacity>
         </Animated.View>
+      );
+    })}
+  </BlurView>
+</Animated.View>
+
         <ScrollView
           contentContainerStyle={styles.scrollContent}
           showsVerticalScrollIndicator={false}
@@ -582,14 +600,14 @@ const styles = StyleSheet.create({
     alignSelf: "center",
   },
   tab: {
-    paddingVertical: normalizeSize(10),
-  paddingHorizontal: normalizeSize(14),
-  borderRadius: normalizeSize(6),
-    backgroundColor: "transparent",
-    elevation: 4,
-    minWidth: normalizeSize(100),
-    flex: 0,
-    maxWidth: normalizeSize(140),
+    minHeight: normalizeSize(40),
+    paddingVertical: normalizeSize(8),
+    paddingHorizontal: normalizeSize(14),
+    borderRadius: normalizeSize(10),
+    alignItems: "center",
+    justifyContent: "center",
+    overflow: "hidden",
+    borderWidth: 1,
   },
   activeTab: {
     borderBottomWidth: normalizeSize(2),       
@@ -765,6 +783,84 @@ const styles = StyleSheet.create({
     fontFamily: "Comfortaa_400Regular",
     marginTop: SPACING / 1.5,
   },
+    // --- BACKGROUND ORBS ---
+  bgOrbTop: {
+    position: "absolute",
+    top: -SCREEN_WIDTH * 0.25,
+    right: -SCREEN_WIDTH * 0.2,
+    width: SCREEN_WIDTH * 0.8,
+    height: SCREEN_WIDTH * 0.8,
+    borderRadius: SCREEN_WIDTH * 0.4,
+    opacity: 0.55,
+    transform: [{ rotate: "15deg" }],
+  },
+  bgOrbBottom: {
+    position: "absolute",
+    bottom: -SCREEN_WIDTH * 0.25,
+    left: -SCREEN_WIDTH * 0.2,
+    width: SCREEN_WIDTH * 0.9,
+    height: SCREEN_WIDTH * 0.9,
+    borderRadius: SCREEN_WIDTH * 0.45,
+    opacity: 0.5,
+    transform: [{ rotate: "-12deg" }],
+  },
+
+  // --- TABS (frosted glass seg control) ---
+  tabsBlur: {
+    flexDirection: "row",
+    justifyContent: "space-between",
+    alignItems: "center",
+    borderRadius: normalizeSize(14),
+    padding: 6,
+    width: "100%",
+    maxWidth: SCREEN_WIDTH - SPACING * 2,
+    borderWidth: StyleSheet.hairlineWidth,
+    borderColor: "rgba(255,255,255,0.08)",
+    overflow: "hidden",
+  },
+  tabWrap: {
+    flex: 1,
+    alignItems: "center",
+    justifyContent: "center",
+  },
+  tabInactive: {
+    backgroundColor: "rgba(255,255,255,0.06)",
+  },
+  tabActive: {
+    backgroundColor: "rgba(255,255,255,0.12)",
+    shadowColor: "#000",
+    shadowOffset: { width: 0, height: normalizeSize(2) },
+    shadowOpacity: 0.18,
+    shadowRadius: normalizeSize(6),
+    elevation: 4,
+  },
+  tabGradientBg: {
+    ...StyleSheet.absoluteFillObject,
+    borderRadius: normalizeSize(10),
+    opacity: 0.9,
+  },
+
+  // --- PODIUM glow ring ---
+  glowRing: {
+    position: "absolute",
+    width: "105%",
+    height: "105%",
+    borderRadius: 999,
+    borderWidth: 1,
+    borderColor: "rgba(255,255,255,0.35)",
+    shadowColor: "#fff",
+    shadowOffset: { width: 0, height: 0 },
+    shadowOpacity: 0.35,
+    shadowRadius: normalizeSize(10),
+    opacity: 0.7,
+  },
+
+  // --- ROW overlay (glass) ---
+  rowOverlay: {
+    ...StyleSheet.absoluteFillObject,
+    borderRadius: normalizeSize(18),
+  },
+
   loadingContainer: {
     flex: 1,
     justifyContent: "center",

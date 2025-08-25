@@ -122,7 +122,7 @@
   "voteForFirstFeature": "首次为新功能投票",
   "noChallengeCreated": "尚未创建挑战",
   "createYourFirstChallengeNow": "立即创建你的第一个挑战",
-  "dailyChallenges": "每日挑战",
+  "dailyChallenges": "今日挑战",
   "noChallengeOngoing": "暂无进行中的挑战",
   "clickIconTopRight": "点击右上角图标",
   "orJoinChallenge": "或加入挑战",
@@ -131,6 +131,35 @@
   "contactUs": "联系我们",
   "visitWebsite": "访问我们的网站",
   "preferences": "偏好设置",
+  "interestsPlaceholder": "例如：健身、阅读、UI 设计",
+  "editProfile.title": "编辑个人资料",
+  "editProfile.description": "更新你的姓名、简介、位置和兴趣",
+
+  "accessibility.editProfileImage.label": "编辑头像",
+  "accessibility.editProfileImage.hint": "打开相册以选择图片",
+  "accessibility.currentProfileImage.label": "当前头像",
+
+  "accessibility.usernameField.label": "用户名",
+  "accessibility.usernameField.hint": "输入你的用户名",
+
+  "accessibility.bioField.label": "个人简介",
+  "accessibility.bioField.hint": "添加一段简短介绍",
+
+  "accessibility.locationField.label": "位置",
+  "accessibility.locationField.hint": "输入你的城市或国家",
+
+  "accessibility.interestsField.label": "兴趣",
+  "accessibility.interestsField.hint": "用逗号分隔各项",
+
+  "accessibility.saveProfileChanges.label": "保存更改",
+  "accessibility.saveProfileChanges.hint": "保存你的个人资料信息",
+  "systemWelcome": "👋 欢迎！这里用于互相激励、提问与互助。请保持尊重与友善。禁止：侮辱/骚扰、仇恨言论（种族主义、性别歧视等）、裸露/色情、违法或危险内容、垃圾信息/广告/诈骗，以及分享敏感的个人信息。若发现违规，请使用按钮举报。继续加油，你一定行！💪✨",
+  "welcomeRules": {
+    "title": "欢迎加入挑战聊天！",
+    "message": "我们在这里互相鼓励、提出问题、共同进步。为保持积极氛围，请遵守以下规则：\n\n1. **尊重**：禁止侮辱、骚扰或威胁。\n2. **包容**：禁止仇恨与歧视（种族主义、性别歧视、恐同/跨性别歧视等）。\n3. **内容**：禁止裸露/色情、暴力或违法内容。\n4. **相关性**：请保持话题相关（动力、提问、互助）。\n5. **安全**：不要分享敏感个人信息（地址、电话、证件）。\n6. **整洁**：禁止垃圾信息、广告、诈骗或身份冒用。\n\n加入聊天即表示同意以上规则。谢谢 💛"
+  },
+  "chat.title": "欢迎 🙌",
+  "chat.systemWelcome": "我们在这里互相鼓励、彼此支持，并一起推进这个挑战！为保持积极的氛围，请遵守以下规则：\n\n1. **尊重**：不得辱骂、骚扰或威胁他人。\n2. **包容**：禁止仇恨或歧视（种族主义、性别歧视、恐同/跨性别歧视等）。\n3. **内容**：禁止裸露/色情、暴力或违法内容。\n4. **相关性**：请围绕挑战主题交流（激励、提问、互助）。\n5. **安全**：不要分享敏感的个人信息（地址、电话、身份证件）。\n6. **整洁**：禁止垃圾信息、广告、诈骗或身份冒充。\n\n加入本聊天即表示你同意以上规则。谢谢 💛",
   "tips": {
     "title": "提示",
     "listAccessibility": "提示列表",
@@ -248,6 +277,7 @@
   "privacyPolicyPage": "隐私政策",
   "accessAdmin": "访问管理功能",
   "admin": "管理",
+  "invalidCredentials": "邮箱或密码不正确",
   "aboutChallengeTies": "关于 ChallengeTies",
   "fillEmailPassword": "请输入您的邮箱和密码。",
   "invalidEmail": "请输入有效的邮箱地址。",
@@ -352,12 +382,51 @@
     "accessDenied": "拒绝访问",
     "shareError": "分享失败"
   },
+  "invitationS": {
+      "shareTitle": "双人邀请",
+      "shareMessageWithTitle": "我邀请你和我一起开始“{{title}}”，持续 {{days}} 天！",
+      "errors": {
+        "alreadyInvited": "你已经有一个此挑战的进行中邀请。",
+        "autoInvite": "你不能接受自己的邀请。",
+        "expired": "此邀请已过期。",
+        "unknown": "发生未知错误。",
+        "inviterAlreadyStarted": "你已经单独开始了这个挑战。",
+        "duoAlready": "你已经在此挑战中组成了双人组。"
+      },
+      "confirmStartDuoTitle": "开始双人模式？",
+      "confirmStartDuoMessage": "如果你开始双人模式，你的单人进度将被重置。要继续吗？",
+      "actions": {
+        "cancel": "取消",
+        "continue": "继续"
+      }
+    },
+    "pendingInvite": "邀请进行中",
+"commonS": { "close": "关闭", "notLoggedIn": "你必须先登录。",  "sending": "正在发送…" }
+,
+"profileS": {
+    "bioLabel": "个人简介",
+    "locationLabel": "位置",
+    "interestsLabel": "兴趣"
+  },
+  "addLocationHere": "添加位置",
+  "addInterestsHere": "添加你的兴趣",
+"firstPick": {
+      "title": "选择你的第一个挑战！",
+      "subtitle": "你想从…开始吗？",
+      "chooseSolo": "选择单人",
+      "chooseDuo": "选择双人"
+    },
+    "spotlight": "焦点",
+  "refreshDaily": "明天将有新挑战 ✨",
   "challengeDetails": {
     "untitled": "无标题挑战",
     "uncategorized": "未分类",
     "noDescription": "暂无描述",
     "fetchError": "无法获取挑战。",
     "invite": "邀请",
+    "days":"天",
+    "shareMessage":"来 ChallengeTies 加入我的「{{title}}」挑战！",
+    "reviewAfterComplete": "⚠️ 您必须完成此挑战才能留下评价 🏆",
     "inviteError": "创建邀请时出错",
     "joinError": "无法加入挑战，请重试。",
     "needHelp": "需要建议吗？",
@@ -378,7 +447,16 @@
     "saved": "已保存",
     "share": "分享",
     "stats": "统计",
-    "inviteA11y": "邀请好友加入此挑战"
+    "inviteA11y": "邀请好友加入此挑战",
+    "leaveReview": "留下评价",
+  "alreadyReviewed": "您已经为此挑战留下了评价。",
+  "reviewSectionTitle": "其他人的看法",
+  "noReviewsYet": "此挑战目前还没有评价。",
+  "yourReview": "您的评价",
+  "reviewPlaceholder": "完成此挑战后分享您的感受...",
+  "submitReview": "提交",
+  "deleteReview": "删除",
+  "confirmDeleteReview": "删除此评价？"
   },
   "explanation": {
     "title": "您的声音很重要！",
@@ -694,7 +772,8 @@
   "suggestion": "建议？"
 },
 "common": {
-  "back": "返回"
+  "back": "返回",
+  "skip": "跳过"
 },
   "contact": {
     "errorTitle": "错误",
@@ -3009,11 +3088,28 @@
   "myAccount": "我的账户",
   "notificationsPush": {
     "title": "ChallengeTies",
-    "morning1": "准备迎接新的挑战了吗？",
-    "morning2": "用一个有趣的挑战开始你的一天！",
-    "evening1": "以一个快速的挑战结束你的一天！",
-    "evening2": "睡前再来一个挑战？"
+    "morning1": "☀️ 新的一天，向目标再迈一步！",
+    "morning2": "你今天一定可以！💪",
+    "evening1": "🌙 该勾掉今天啦。小步前进，大有收获。",
+    "evening2": "又坚持了一天，棒！",
+    "nudgeBody": "哟！别忘了「{{title}}」——{{from}} 为你加油 💪"
   },
+"editYourReview": "修改您的评论",
+"saveReview": "保存"
+,
+"duo": {
+  "title": "双人挑战",
+  "you": "你",
+  "nudge": "鼓励",
+  "leading": "你领先！",
+  "tied": "平局",
+  "behind": "你落后了",
+  "nudgeSent": "已发送鼓励 ✅",
+  "nudgeFailed": "通知发送失败。",
+  "nudgeUnavailable": "该功能仅适用于双人挑战。",
+  "nudgeHint": "轻触发送鼓励，长按打开聊天。"
+}
+,
   "invitation": {
     "title": "加入挑战",
     "subtitle": "你被邀请加入挑战 {challengeId}！",

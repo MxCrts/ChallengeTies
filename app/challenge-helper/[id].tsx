@@ -29,6 +29,52 @@ const normalizeFont = (size: number) => {
   const scale = Math.min(Math.max(SCREEN_WIDTH / base, 0.7), 1.8);
   return Math.round(size * scale);
 };
+
+/** Fond orbe premium, non interactif */
+const OrbBackground = ({ theme }: { theme: Theme }) => (
+  <View style={StyleSheet.absoluteFill} pointerEvents="none">
+    {/* Orbe haut-gauche */}
+    <LinearGradient
+      colors={[theme.colors.secondary + "55", theme.colors.primary + "11"]}
+      start={{ x: 0.1, y: 0.1 }}
+      end={{ x: 0.9, y: 0.9 }}
+      style={[
+        styles.orb,
+        {
+          width: SCREEN_WIDTH * 0.95,
+          height: SCREEN_WIDTH * 0.95,
+          borderRadius: (SCREEN_WIDTH * 0.95) / 2,
+          top: -SCREEN_WIDTH * 0.45,
+          left: -SCREEN_WIDTH * 0.28,
+        },
+      ]}
+    />
+
+    {/* Orbe bas-droite */}
+    <LinearGradient
+      colors={[theme.colors.primary + "55", theme.colors.secondary + "11"]}
+      start={{ x: 0.2, y: 0.2 }}
+      end={{ x: 0.8, y: 0.8 }}
+      style={[
+        styles.orb,
+        {
+          width: SCREEN_WIDTH * 1.1,
+          height: SCREEN_WIDTH * 1.1,
+          borderRadius: (SCREEN_WIDTH * 1.1) / 2,
+          bottom: -SCREEN_WIDTH * 0.55,
+          right: -SCREEN_WIDTH * 0.35,
+        },
+      ]}
+    />
+
+    {/* Voile léger pour fusionner */}
+    <LinearGradient
+      colors={[theme.colors.background + "00", theme.colors.background + "66"]}
+      style={StyleSheet.absoluteFill}
+    />
+  </View>
+);
+
 const SPACING = 16;
 
 export default function ChallengeHelperScreen() {
@@ -121,6 +167,7 @@ export default function ChallengeHelperScreen() {
       start={{ x: 0, y: 0 }}
       end={{ x: 0.8, y: 1 }}
     >
+      <OrbBackground theme={currentTheme} />
       <SafeAreaView style={styles.safeArea}>
         <StatusBar
           translucent
@@ -147,9 +194,17 @@ export default function ChallengeHelperScreen() {
           <Animated.View
             entering={FadeInDown.duration(500)}
             style={[
-              styles.card,
-              { backgroundColor: currentTheme.colors.cardBackground },
-            ]}
+  styles.card,
+  {
+    backgroundColor: isDark
+      ? "rgba(255,255,255,0.06)"
+      : "rgba(0,0,0,0.04)",
+    borderColor: isDark
+      ? "rgba(255,255,255,0.14)"
+      : "rgba(0,0,0,0.08)",
+    borderWidth: StyleSheet.hairlineWidth,
+  },
+]}
           >
             <Text
               style={[
@@ -171,9 +226,17 @@ export default function ChallengeHelperScreen() {
             <Animated.View
               entering={FadeInDown.delay(200).duration(500)}
               style={[
-                styles.card,
-                { backgroundColor: currentTheme.colors.cardBackground },
-              ]}
+  styles.card,
+  {
+    backgroundColor: isDark
+      ? "rgba(255,255,255,0.06)"
+      : "rgba(0,0,0,0.04)",
+    borderColor: isDark
+      ? "rgba(255,255,255,0.14)"
+      : "rgba(0,0,0,0.08)",
+    borderWidth: StyleSheet.hairlineWidth,
+  },
+]}
             >
               <Text
                 style={[
@@ -205,9 +268,17 @@ export default function ChallengeHelperScreen() {
             <Animated.View
               entering={FadeInDown.delay(400).duration(500)}
               style={[
-                styles.card,
-                { backgroundColor: currentTheme.colors.cardBackground },
-              ]}
+  styles.card,
+  {
+    backgroundColor: isDark
+      ? "rgba(255,255,255,0.06)"
+      : "rgba(0,0,0,0.04)",
+    borderColor: isDark
+      ? "rgba(255,255,255,0.14)"
+      : "rgba(0,0,0,0.08)",
+    borderWidth: StyleSheet.hairlineWidth,
+  },
+]}
             >
               <Text
                 style={[
@@ -278,6 +349,25 @@ const styles = StyleSheet.create({
     justifyContent: "center",
     alignItems: "center",
   },
+    // Orbes
+  orb: {
+    position: "absolute",
+    opacity: 0.9,
+  },
+
+  // Card : fond “glass”, on coupe les grosses ombres (on les gère via la bordure subtile)
+  card: {
+    borderRadius: 18,
+    padding: SPACING,
+    marginBottom: SPACING * 1.4,
+    // kill heavy shadows
+    shadowColor: "transparent",
+    shadowOffset: { width: 0, height: 0 },
+    shadowOpacity: 0,
+    shadowRadius: 0,
+    elevation: 0,
+  },
+
   image: {
     width: "100%",
     height: 240,
@@ -285,16 +375,7 @@ const styles = StyleSheet.create({
     marginBottom: SPACING * 1.4,
     backgroundColor: "#ccc",
   },
-  card: {
-    borderRadius: 18,
-    padding: SPACING,
-    marginBottom: SPACING * 1.4,
-    shadowColor: "#000",
-    shadowOffset: { width: 0, height: 4 },
-    shadowOpacity: 0.1,
-    shadowRadius: 8,
-    elevation: 6,
-  },
+  
   sectionTitle: {
     fontSize: normalizeFont(21),
     fontFamily: "Comfortaa_700Bold",

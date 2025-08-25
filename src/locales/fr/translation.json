@@ -125,7 +125,7 @@
   "voteForFirstFeature": "Votez pour une fonctionnalité pour la première fois",
   "noChallengeCreated": "Aucun défi créé",
   "createYourFirstChallengeNow": "Créez votre premier défi maintenant",
-  "dailyChallenges": "Défis quotidiens",
+  "dailyChallenges": "Défis du Jour",
   "noChallengeOngoing": "Aucun défi en cours",
   "clickIconTopRight": "Cliquez sur l’icône en haut à droite",
   "orJoinChallenge": "Ou rejoignez un défi",
@@ -134,6 +134,35 @@
   "contactUs": "Contactez-nous",
   "visitWebsite": "Visitez notre site",
   "preferences": "Préférences",
+  "interestsPlaceholder": "Ex. fitness, lecture, UI design",
+  "editProfile.title": "Modifier le profil",
+  "editProfile.description": "Mettez à jour votre nom, bio, localisation et centres d’intérêt",
+
+  "accessibility.editProfileImage.label": "Modifier la photo de profil",
+  "accessibility.editProfileImage.hint": "Ouvre votre galerie pour choisir une image",
+  "accessibility.currentProfileImage.label": "Photo de profil actuelle",
+
+  "accessibility.usernameField.label": "Nom d’utilisateur",
+  "accessibility.usernameField.hint": "Entrez votre nom d’utilisateur",
+
+  "accessibility.bioField.label": "Bio",
+  "accessibility.bioField.hint": "Ajoutez une courte description",
+
+  "accessibility.locationField.label": "Localisation",
+  "accessibility.locationField.hint": "Saisissez votre ville ou votre pays",
+
+  "accessibility.interestsField.label": "Centres d’intérêt",
+  "accessibility.interestsField.hint": "Séparez les éléments par des virgules",
+
+  "accessibility.saveProfileChanges.label": "Enregistrer les modifications",
+  "accessibility.saveProfileChanges.hint": "Sauvegarde vos informations de profil",
+  "systemWelcome": "👋 Bienvenue ! Ici, on se motive, on pose des questions et on s’entraide. Merci de rester respectueux et bienveillant. Sont interdits : insultes/harcèlement, propos haineux (racisme, sexisme, etc.), nudité/pornographie, contenus illégaux ou dangereux, spam/pub/scams, et partage d’infos personnelles sensibles. Signalez tout abus via le bouton dédié. Bonne progression à toutes et tous ! 💪✨",
+  "welcomeRules": {
+    "title": "Bienvenue dans le chat du challenge !",
+    "message": "Nous sommes ici pour nous encourager, nous soutenir et avancer ensemble dans ce challenge ! Voici les règles pour garder une vibe positive :\n\n1. **Respect** : Pas d’insultes, de harcèlement ou de menaces.\n2. **Tolérance** : Aucune haine ni discrimination (racisme, sexisme, homophobie, transphobie, etc.).\n3. **Contenu** : Pas de nudité/pornographie, contenus violents ou illégaux.\n4. **Pertinence** : Restez dans le thème du challenge (motivation, questions, entraide).\n5. **Sécurité** : Ne partagez pas d’infos perso sensibles (adresse, tel, documents d’identité).\n6. **Propreté** : Pas de spam, pub, scams ou usurpation d’identité.\n\nEn rejoignant ce chat, vous acceptez ces règles. Merci 💛"
+  },
+  "chat.title":"Bienvenue 🙌",
+  "chat.systemWelcome":"Nous sommes ici pour nous encourager, nous soutenir et avancer ensemble dans ce challenge ! Voici les règles pour garder une vibe positive :\n\n1. **Respect** : Pas d’insultes, de harcèlement ou de menaces.\n2. **Tolérance** : Aucune haine ni discrimination (racisme, sexisme, homophobie, transphobie, etc.).\n3. **Contenu** : Pas de nudité/pornographie, contenus violents ou illégaux.\n4. **Pertinence** : Restez dans le thème du challenge (motivation, questions, entraide).\n5. **Sécurité** : Ne partagez pas d’infos perso sensibles (adresse, tel, documents d’identité).\n6. **Propreté** : Pas de spam, pub, scams ou usurpation d’identité.\n\nEn rejoignant ce chat, vous acceptez ces règles. Merci 💛",
   "tips": {
     "title": "Conseils",
     "listAccessibility": "Liste des conseils",
@@ -366,6 +395,7 @@
     "completeError": "Impossible de terminer le défi.",
     "chatAccessDenied": "Vous devez prendre le défi avant d’ouvrir le chat.",
     "loading": "Chargement…",
+    "shareMessage": "Rejoins-moi sur « {{title}} » sur ChallengeTies !",
     "participant": "participant",
     "participants": "participants",
     "takeChallenge": "Relever le défi",
@@ -374,7 +404,9 @@
     "alreadyMarked": "Déjà marqué aujourd’hui",
     "markToday": "Marquer aujourd’hui",
     "completeChallenge": "Terminer le défi",
+    "reviewAfterComplete":"⚠️ Vous devez terminer ce challenge pour pouvoir laisser un avis 🏆",
     "chat": "Chat",
+    "days": "jours",
     "save": "Enregistrer",
     "saved": "Enregistré",
     "share": "Partager",
@@ -382,8 +414,49 @@
     "invite": "Inviter un ami",
     "inviteError": "Impossible de partager l'invitation",
     "inviteA11y": "Inviter un ami à ce défi",
-    "needHelp": "Besoin de conseils ?"
+    "needHelp": "Besoin de conseils ?",
+    "leaveReview": "Laisser un avis",
+  "alreadyReviewed": "Vous avez déjà laissé un avis pour ce challenge.",
+  "reviewSectionTitle": "Ce qu’ils en ont pensé",
+  "noReviewsYet": "Aucun avis pour ce challenge pour l’instant.",
+  "yourReview": "Votre avis",
+  "reviewPlaceholder": "Partage ton ressenti après avoir terminé ce challenge...",
+  "submitReview": "Envoyer",
+  "deleteReview": "Supprimer",
+  "confirmDeleteReview": "Supprimer cet avis ?"
   },
+  "editYourReview": "Modifier votre avis",
+"saveReview": "Enregistrer"
+,
+"duo": {
+  "title": "Défi en duo",
+  "you": "Toi",
+  "nudge": "Encourager",
+  "leading": "Tu mènes !",
+  "tied": "Égalité",
+  "behind": "Tu es derrière",
+  "nudgeSent": "Encouragement envoyé ✅",
+  "nudgeFailed": "Impossible d'envoyer la notification.",
+  "nudgeUnavailable": "Fonction réservée aux défis en duo.",
+  "nudgeHint": "Appuie pour encourager. Appui long pour ouvrir le chat."
+},
+  "invitationModal": {
+  "title": "Inviter un ami",
+  "enterUsername": "Entrez le nom exact d'utilisateur",
+  "send": "Envoyer l'invitation",
+  "userNotFound": "Aucun utilisateur trouvé avec ce nom",
+  "cannotInviteSelf": "Vous ne pouvez pas vous inviter vous-même",
+  "alreadyInvited": "Une invitation est déjà en attente",
+  "invitationSent": "Invitation envoyée avec succès 🎉",
+  "unknownError": "Une erreur est survenue. Veuillez réessayer."
+},
+
+  "inviteAFriend": "Inviter un ami",
+"enterExactUsername": "Saisis le nom d'utilisateur exact",
+"alreadyInvited": "Tu as déjà invité cette personne à ce challenge",
+"invitationSent": "Invitation envoyée avec succès !",
+"cannotInviteYourself": "Tu ne peux pas t'inviter toi-même",
+"sendInvitation": "Envoyer l'invitation",
   "participant_one": "{{count}} participants",
   "participant_other": "{{count}} participants",
   "explanation": {
@@ -584,6 +657,13 @@
     "sendButton": "Envoyer le message",
     "errorSending": "Erreur d’envoi du message"
   },
+  "profileS": {
+    "bioLabel": "Bio",
+    "locationLabel": "Localisation",
+    "interestsLabel": "Centres d’intérêt"
+  },
+  "addLocationHere": "Ajoutez une localisation",
+  "addInterestsHere": "Ajoutez vos centres d’intérêt",
   "close": "Fermer",
   "uncategorized": "Non catégorisé",
   "noDescriptionAvailable": "Aucune description disponible",
@@ -1145,11 +1225,14 @@
     "description": "Adoptez une routine relaxante avant le coucher pour améliorer la qualité de votre sommeil."
   }
   },
+"spotlight": "À la une",
+"refreshDaily": "Nouveaux défis dès demain ✨",
   "imagePickFailed": "Impossible de sélectionner l'image.",
   "allFieldsRequired": "Tous les champs sont requis (l'image est optionnelle).",
   "mustBeLoggedIn": "Vous devez être connecté pour créer un défi.",
   "success": "Succès",
   "challengeCreated": "Votre défi a été créé !",
+  "invalidCredentials": "Identifiant ou mot de passe incorrect",
   "challengeCreateFailed": "Impossible de créer le défi.",
   "createYourChallenge": "Créer votre défi",
   "inspireOthers": "Inspirez les autres avec un défi passionnant !",
@@ -1201,12 +1284,13 @@
   "unableToMarkWithTrophies": "Impossible de marquer avec trophées.",
   "errorLoadingSavedChallenges": "Impossible de charger les défis sauvegardés : {{message}}",
   "notificationsPush": {
-    "title": "ChallengeTies 🚀",
-    "morning1": "Commence ta journée avec un défi !",
-    "morning2": "Une nouvelle journée, un nouveau challenge !",
-    "evening1": "Prêt à relever un dernier défi ce soir ?",
-    "evening2": "Termine ta journée en beauté avec un challenge !"
-  },
+  "title": "ChallengeTies",
+  "morning1": "☀️ Nouveau jour, nouveau pas vers ton objectif !",
+  "morning2": "Tu l’as, aujourd’hui ! On y va 💪",
+  "evening1": "🌙 Tu coches ta journée ? Petit pas, grands effets.",
+  "evening2": "Encore un jour de régularité, bien joué !",
+  "nudgeBody": "Yo ! N’oublie pas « {{title}} » — {{from}} t’encourage 💪"
+},
   "invitation": {
     "title": "Rejoindre un défi",
     "subtitle": "Vous avez été invité à rejoindre le défi {challengeId} !",
@@ -1216,7 +1300,26 @@
     "invalid": "Invitation non valide",
     "joinedChallenge": "Vous avez rejoint le défi avec succès !"
   },
-
+  "invitationS": {
+    "shareTitle": "Invitation Duo",
+    "shareMessageWithTitle": "Je t’invite à commencer « {{title}} » sur {{days}} jours avec moi !",
+    "errors": {
+      "alreadyInvited": "Tu as déjà une invitation en cours pour ce défi.",
+      "autoInvite": "Tu ne peux pas accepter ta propre invitation.",
+      "expired": "Cette invitation a expiré.",
+      "unknown": "Une erreur est survenue.",
+      "inviterAlreadyStarted": "Tu as déjà commencé ce défi en solo.",
+      "duoAlready": "Tu es déjà en duo sur ce défi."
+    },
+    "confirmStartDuoTitle": "Passer en Duo ?",
+    "confirmStartDuoMessage": "Si tu commences en Duo, ta progression en solo sera remise à zéro. Continuer ?",
+    "actions": {
+      "cancel": "Annuler",
+      "continue": "Continuer"
+    }
+  },
+  "commonS": { "close": "Fermer", "notLoggedIn": "Tu dois être connecté.", "sending": "Envoi..." },
+"pendingInvite": "Invitation en cours",
   "settingsPage": {
     "location": "Localisation",
     "handleLocation": "Activer ou désactiver la localisation",
@@ -1962,6 +2065,7 @@
     "illustrationSuggeree": "Une personne remplissant une bouteille d'eau à la fontaine",
     "imageHelper": "https://firebasestorage.googleapis.com/v0/b/challengeme-d7fef.appspot.com/o/Challenges-Helper%2Fch-drink-water.png?alt=media"
   },
+  
   "eatHealthy": {
     "miniCours": "Prêt à transformer votre alimentation ? 🥇 Chaque repas est une opportunité de nourrir votre corps avec des aliments sains et nutritifs ! 🥦 Ajoutez plus de fruits, légumes et céréales complètes. Diminuez les boissons sucrées 🥤. Manger sainement améliore non seulement votre forme physique, mais aussi votre humeur 🧠. Cuisinez, testez, savourez ! 🌈",
     "exemples": [
@@ -2785,6 +2889,13 @@
   "invitationToChallenge": "Invitation au défi {{challenge}}",
   "receivedOn": "Reçue le {{date}}",
   "locale": "fr-FR",
+  "firstPick": {
+    "title": "Choisis ton premier challenge !",
+    "subtitle": "Tu veux commencer en…",
+    "chooseSolo": "Choisir en Solo",
+    "chooseDuo": "Choisir en Duo"
+  },
+  
   "access": {
     "editProfile": {
       "label": "Modifier le profil",
@@ -2892,6 +3003,7 @@
     "suggestion": "Des suggestions ?"
   },
   "common": {
-    "back": "Retour"
+    "back": "Retour",
+    "skip": "Ignorer"
   }
 }

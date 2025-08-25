@@ -22,10 +22,12 @@ import { useTheme } from "../context/ThemeContext";
 import { Theme } from "../theme/designSystem";
 import designSystem from "../theme/designSystem";
 import CustomHeader from "@/components/CustomHeader";
+ import { BannerAd, BannerAdSize } from "react-native-google-mobile-ads";
+ import { adUnitIds } from "@/constants/admob";
+ import { useAdsVisibility } from "../src/context/AdsVisibilityContext";
 
-// Constants
 const SPACING = 15;
-const { width: SCREEN_WIDTH } = Dimensions.get("window");
+const { width: SCREEN_WIDTH, height: SCREEN_HEIGHT } = Dimensions.get("window");
 
 const normalizeFont = (size: number) => {
   const baseWidth = 375;
@@ -39,7 +41,7 @@ const normalizeSize = (size: number) => {
   return Math.round(size * scale);
 };
 
-// Types
+const BANNER_HEIGHT = normalizeSize(50);
 
 type IconName =
   | "checkmark-circle-outline"
@@ -62,79 +64,62 @@ interface Conseil {
 }
 
 const conseils: Conseil[] = [
-  {
-    id: "1",
-    title: "tips.smartGoals.title",
-    description: "tips.smartGoals.description",
-    icon: "checkmark-circle-outline",
-  },
-  {
-    id: "2",
-    title: "tips.beConsistent.title",
-    description: "tips.beConsistent.description",
-    icon: "time-outline",
-  },
-  {
-    id: "3",
-    title: "tips.trackEverything.title",
-    description: "tips.trackEverything.description",
-    icon: "analytics-outline",
-  },
-  {
-    id: "4",
-    title: "tips.findSupport.title",
-    description: "tips.findSupport.description",
-    icon: "people-outline",
-  },
-  {
-    id: "5",
-    title: "tips.rewardYourself.title",
-    description: "tips.rewardYourself.description",
-    icon: "gift-outline",
-  },
-  {
-    id: "6",
-    title: "tips.switchItUp.title",
-    description: "tips.switchItUp.description",
-    icon: "flask-outline",
-  },
-  {
-    id: "7",
-    title: "tips.inviteAFriend.title",
-    description: "tips.inviteAFriend.description",
-    icon: "person-add-outline",
-  },
-  {
-    id: "8",
-    title: "tips.visualizeSuccess.title",
-    description: "tips.visualizeSuccess.description",
-    icon: "eye-outline",
-  },
-  {
-    id: "9",
-    title: "tips.stayPositive.title",
-    description: "tips.stayPositive.description",
-    icon: "sunny-outline",
-  },
-  {
-    id: "10",
-    title: "tips.takeBreaks.title",
-    description: "tips.takeBreaks.description",
-    icon: "time-outline",
-  },
-  {
-    id: "11",
-    title: "tips.stayHydrated.title",
-    description: "tips.stayHydrated.description",
-    icon: "water-outline",
-  },
-  {
-    id: "12",
-    title: "tips.celebrateWins.title",
-    description: "tips.celebrateWins.description",
-    icon: "trophy-outline",
-  },
+  { id: "1", title: "tips.smartGoals.title", description: "tips.smartGoals.description", icon: "checkmark-circle-outline" },
+  { id: "2", title: "tips.beConsistent.title", description: "tips.beConsistent.description", icon: "time-outline" },
+  { id: "3", title: "tips.trackEverything.title", description: "tips.trackEverything.description", icon: "analytics-outline" },
+  { id: "4", title: "tips.findSupport.title", description: "tips.findSupport.description", icon: "people-outline" },
+  { id: "5", title: "tips.rewardYourself.title", description: "tips.rewardYourself.description", icon: "gift-outline" },
+  { id: "6", title: "tips.switchItUp.title", description: "tips.switchItUp.description", icon: "flask-outline" },
+  { id: "7", title: "tips.inviteAFriend.title", description: "tips.inviteAFriend.description", icon: "person-add-outline" },
+  { id: "8", title: "tips.visualizeSuccess.title", description: "tips.visualizeSuccess.description", icon: "eye-outline" },
+  { id: "9", title: "tips.stayPositive.title", description: "tips.stayPositive.description", icon: "sunny-outline" },
+  { id: "10", title: "tips.takeBreaks.title", description: "tips.takeBreaks.description", icon: "time-outline" },
+  { id: "11", title: "tips.stayHydrated.title", description: "tips.stayHydrated.description", icon: "water-outline" },
+  { id: "12", title: "tips.celebrateWins.title", description: "tips.celebrateWins.description", icon: "trophy-outline" },
 ];
+
+/** ——— Fond orbes premium ——— */
+const OrbBackground = ({ theme }: { theme: Theme }) => (
+  <View style={StyleSheet.absoluteFill} pointerEvents="none">
+    {/* orbe top-left */}
+    <LinearGradient
+      colors={[theme.colors.secondary + "55", theme.colors.primary + "11"]}
+      start={{ x: 0.1, y: 0.1 }}
+      end={{ x: 0.9, y: 0.9 }}
+      style={[
+        styles.orb,
+        {
+          width: SCREEN_WIDTH * 0.9,
+          height: SCREEN_WIDTH * 0.9,
+          borderRadius: (SCREEN_WIDTH * 0.9) / 2,
+          top: -SCREEN_WIDTH * 0.35,
+          left: -SCREEN_WIDTH * 0.25,
+        },
+      ]}
+    />
+    {/* orbe bottom-right */}
+    <LinearGradient
+      colors={[theme.colors.primary + "55", theme.colors.secondary + "11"]}
+      start={{ x: 0.2, y: 0.2 }}
+      end={{ x: 0.8, y: 0.8 }}
+      style={[
+        styles.orb,
+        {
+          width: SCREEN_WIDTH * 1.0,
+          height: SCREEN_WIDTH * 1.0,
+          borderRadius: (SCREEN_WIDTH * 1.0) / 2,
+          bottom: -SCREEN_WIDTH * 0.45,
+          right: -SCREEN_WIDTH * 0.25,
+        },
+      ]}
+    />
+    {/* voile de fusion */}
+    <LinearGradient
+      colors={[theme.colors.background + "00", theme.colors.background + "66"]}
+      style={StyleSheet.absoluteFill}
+    />
+  </View>
+);
 
 export default function Conseils() {
   const { t } = useTranslation();
@@ -142,13 +127,10 @@ export default function Conseils() {
   const [expandedTip, setExpandedTip] = useState<string | null>(null);
   const { theme } = useTheme();
   const isDarkMode = theme === "dark";
-  const currentTheme: Theme = isDarkMode
-    ? designSystem.darkTheme
-    : designSystem.lightTheme;
-
-  const toggleTip = (id: string) => {
-    setExpandedTip(expandedTip === id ? null : id);
-  };
+  const currentTheme: Theme = isDarkMode ? designSystem.darkTheme : designSystem.lightTheme;
+const { showBanners } = useAdsVisibility();
+const bottomPadding = showBanners ? BANNER_HEIGHT + normalizeSize(90) : normalizeSize(90);
+  const toggleTip = (id: string) => setExpandedTip(expandedTip === id ? null : id);
 
   const handleContact = async () => {
     try {
@@ -171,34 +153,29 @@ export default function Conseils() {
   };
 
   return (
-    <LinearGradient
-      colors={[
-        currentTheme.colors.background,
-        currentTheme.colors.cardBackground,
-      ]}
-      style={styles.gradientContainer}
-      start={{ x: 0, y: 0 }}
-      end={{ x: 0.8, y: 1 }}
-    >
-      
-      <SafeAreaView style={styles.safeArea}>
-        <StatusBar
-        translucent
-        backgroundColor="transparent"
-        barStyle={isDarkMode ? "light-content" : "dark-content"}
+    <View style={{ flex: 1 }}>
+      {/* fond dégradé + orbes en arrière-plan */}
+      <LinearGradient
+        colors={[currentTheme.colors.background, currentTheme.colors.cardBackground]}
+        style={StyleSheet.absoluteFill}
+        start={{ x: 0, y: 0 }}
+        end={{ x: 0.8, y: 1 }}
+        pointerEvents="none"
       />
-          <CustomHeader title={t("tips.title")} />
+      <OrbBackground theme={currentTheme} />
+
+      <SafeAreaView style={styles.safeArea}>
+        <StatusBar translucent backgroundColor="transparent" barStyle={isDarkMode ? "light-content" : "dark-content"} />
+        <CustomHeader title={t("tips.title")} />
+
         <ScrollView
-          contentContainerStyle={styles.scrollContent}
+          contentContainerStyle={[styles.scrollContent, { paddingBottom: bottomPadding }]}
           showsVerticalScrollIndicator={false}
-          contentInset={{ top: SPACING, bottom: normalizeSize(80) }}
+           contentInset={{ top: SPACING, bottom: 0 }}
           accessibilityRole="list"
           accessibilityLabel={t("tips.listAccessibility")}
         >
-          <Animated.View
-            entering={FadeInUp.delay(100)}
-            style={styles.headerContainer}
-          >
+          <Animated.View entering={FadeInUp.delay(100)} style={styles.headerContainer}>
             <Image
               source={require("../assets/images/icon.png")}
               style={styles.logo}
@@ -208,11 +185,7 @@ export default function Conseils() {
             <Text
               style={[
                 styles.subHeaderText,
-                {
-                  color: isDarkMode
-                    ? "#FFF"
-                    : currentTheme.colors.textSecondary,
-                },
+                { color: isDarkMode ? "#FFF" : currentTheme.colors.textSecondary },
               ]}
             >
               {t("tips.subHeader")}
@@ -237,18 +210,12 @@ export default function Conseils() {
                     expandedTip === conseil.id && styles.tipCardExpanded,
                   ]}
                   onPress={() => toggleTip(conseil.id)}
-                  accessibilityLabel={t("tips.toggleTip", {
-                    title: t(conseil.title),
-                  })}
-                  accessibilityHint={
-                    expandedTip === conseil.id
-                      ? t("tips.showLessHint")
-                      : t("tips.readMoreHint")
-                  }
+                  accessibilityLabel={t("tips.toggleTip", { title: t(conseil.title) })}
+                  accessibilityHint={expandedTip === conseil.id ? t("tips.showLessHint") : t("tips.readMoreHint")}
                   accessibilityRole="button"
                   accessibilityState={{ expanded: expandedTip === conseil.id }}
                   testID={`tip-card-${conseil.id}`}
-                  activeOpacity={0.8}
+                  activeOpacity={0.85}
                 >
                   <Ionicons
                     name={conseil.icon}
@@ -257,19 +224,11 @@ export default function Conseils() {
                     style={styles.tipIcon}
                   />
                   <View style={styles.tipContent}>
-                    <Text
-                      style={[
-                        styles.tipTitle,
-                        { color: currentTheme.colors.secondary },
-                      ]}
-                    >
+                    <Text style={[styles.tipTitle, { color: currentTheme.colors.secondary }]}>
                       {t(conseil.title)}
                     </Text>
                     <Text
-                      style={[
-                        styles.tipDescription,
-                        { color: currentTheme.colors.textSecondary },
-                      ]}
+                      style={[styles.tipDescription, { color: currentTheme.colors.textSecondary }]}
                       numberOfLines={expandedTip === conseil.id ? 0 : 2}
                     >
                       {t(conseil.description)}
@@ -285,15 +244,8 @@ export default function Conseils() {
                       testID={`read-more-${conseil.id}`}
                       activeOpacity={0.8}
                     >
-                      <Text
-                        style={[
-                          styles.readMoreText,
-                          { color: currentTheme.colors.primary },
-                        ]}
-                      >
-                        {expandedTip === conseil.id
-                          ? t("tips.showLess")
-                          : t("tips.readMore")}
+                      <Text style={[styles.readMoreText, { color: currentTheme.colors.primary }]}>
+                        {expandedTip === conseil.id ? t("tips.showLess") : t("tips.readMore")}
                       </Text>
                     </TouchableOpacity>
                   </View>
@@ -303,18 +255,10 @@ export default function Conseils() {
           </View>
 
           <Animated.View entering={FadeInUp.delay(600)} style={styles.footer}>
-            <Text
-              style={[
-                styles.footerText,
-                { color: currentTheme.colors.textSecondary },
-              ]}
-            >
+            <Text style={[styles.footerText, { color: currentTheme.colors.textSecondary }]}>
               {t("tips.footerQuery")}{" "}
               <Text
-                style={[
-                  styles.footerLink,
-                  { color: currentTheme.colors.secondary },
-                ]}
+                style={[styles.footerLink, { color: currentTheme.colors.secondary }]}
                 onPress={handleContact}
                 accessibilityRole="link"
                 testID="contact-link"
@@ -322,68 +266,68 @@ export default function Conseils() {
                 {t("tips.contactUs")}
               </Text>
             </Text>
+
             <TouchableOpacity
-              style={[
-                styles.shareButton,
-                { backgroundColor: currentTheme.colors.primary },
-              ]}
+              style={[styles.shareButton, { backgroundColor: currentTheme.colors.primary }]}
               onPress={handleShare}
               accessibilityRole="button"
               testID="share-button"
-              activeOpacity={0.8}
+              activeOpacity={0.9}
             >
               <Ionicons
                 name="share-social-outline"
                 size={normalizeSize(20)}
                 color={currentTheme.colors.textPrimary}
               />
-              <Text
-                style={[
-                  styles.shareButtonText,
-                  { color: currentTheme.colors.textPrimary },
-                ]}
-              >
-                {" "}
-                {t("tips.shareTips")}{" "}
+              <Text style={[styles.shareButtonText, { color: currentTheme.colors.textPrimary }]}>
+                {" "}{t("tips.shareTips")}{" "}
               </Text>
             </TouchableOpacity>
           </Animated.View>
         </ScrollView>
+        {showBanners && (
+          <View style={styles.bannerContainer}>
+            <BannerAd
+              unitId={adUnitIds.banner}
+              size={BannerAdSize.BANNER}
+              requestOptions={{ requestNonPersonalizedAdsOnly: false }}
+              onAdFailedToLoad={(err) =>
+                console.error("Échec chargement bannière (Tips):", err)
+              }
+            />
+          </View>
+        )}
       </SafeAreaView>
-    </LinearGradient>
+    </View>
   );
 }
 
 const styles = StyleSheet.create({
-  gradientContainer: { flex: 1 },
   safeArea: {
     flex: 1,
-    paddingTop:
-      Platform.OS === "android" ? StatusBar.currentHeight ?? SPACING : SPACING,
+    paddingTop: Platform.OS === "android" ? StatusBar.currentHeight ?? SPACING : SPACING,
   },
-  backButton: {
-    position: "absolute",
-    top:
-      Platform.OS === "android" ? StatusBar.currentHeight ?? SPACING : SPACING,
-    left: SPACING,
-    zIndex: 10,
-    padding: SPACING / 2,
-    backgroundColor: "rgba(0, 0, 0, 0.5)",
-    borderRadius: normalizeSize(20),
-  },
-  headerWrapper: {
-    paddingHorizontal: SPACING,
-    paddingVertical: SPACING,
-  },
+
   scrollContent: {
     paddingHorizontal: SPACING,
     paddingBottom: normalizeSize(80),
   },
+
   headerContainer: {
     alignItems: "center",
     marginBottom: SPACING * 2,
     marginTop: SPACING,
   },
+bannerContainer: {
+   position: "absolute",
+   left: 0,
+   right: 0,
+   bottom: 0,
+   alignItems: "center",
+   paddingVertical: SPACING / 2,
+   backgroundColor: "transparent",
+   width: "100%",
+ },
   logo: {
     width: Math.min(SCREEN_WIDTH * 0.5, normalizeSize(120)),
     height: Math.min(SCREEN_WIDTH * 0.5, normalizeSize(120)),
@@ -391,6 +335,7 @@ const styles = StyleSheet.create({
     minHeight: normalizeSize(80),
     resizeMode: "contain",
   },
+
   subHeaderText: {
     fontSize: normalizeFont(18),
     fontFamily: "Comfortaa_400Regular",
@@ -398,23 +343,37 @@ const styles = StyleSheet.create({
     marginHorizontal: SPACING * 1.5,
     lineHeight: normalizeFont(24),
   },
+
   tipsContainer: { marginVertical: SPACING * 1.5 },
+
+  // ——— Card with very subtle shadow (premium) ———
   tipCard: {
     flexDirection: "row",
     alignItems: "flex-start",
     borderRadius: normalizeSize(18),
     padding: SPACING * 1.2,
-    shadowColor: "#000",
-    shadowOffset: { width: 0, height: normalizeSize(6) },
-    shadowOpacity: 0.25,
-    shadowRadius: normalizeSize(8),
-    elevation: 6,
     borderWidth: 1.5,
     marginBottom: SPACING,
+
+    // iOS (soft)
+    ...Platform.select({
+      ios: {
+        shadowColor: "#000",
+        shadowOffset: { width: 0, height: 2 },
+        shadowOpacity: 0.08,
+        shadowRadius: 6,
+      },
+      android: {
+        elevation: 2,
+      },
+      default: {},
+    }),
   },
-  tipCardExpanded: { opacity: 0.95 },
+  tipCardExpanded: { opacity: 0.98 },
+
   tipIcon: { marginRight: SPACING, marginTop: normalizeSize(4) },
   tipContent: { flex: 1 },
+
   tipTitle: {
     fontSize: normalizeFont(20),
     fontFamily: "Comfortaa_700Bold",
@@ -431,8 +390,9 @@ const styles = StyleSheet.create({
     fontFamily: "Comfortaa_400Regular",
     textDecorationLine: "underline",
   },
+
   footer: {
-    marginTop: SPACING * 10,
+    marginTop: SPACING * 6,
     alignItems: "center",
     paddingBottom: SPACING * 6,
   },
@@ -446,21 +406,33 @@ const styles = StyleSheet.create({
     fontFamily: "Comfortaa_700Bold",
     textDecorationLine: "underline",
   },
+
+  // share button shadow — subtle
   shareButton: {
     flexDirection: "row",
     alignItems: "center",
     paddingVertical: SPACING / 1.2,
     paddingHorizontal: SPACING * 2,
     borderRadius: normalizeSize(30),
-    shadowColor: "#000",
-    shadowOffset: { width: 0, height: normalizeSize(4) },
-    shadowOpacity: 0.35,
-    shadowRadius: normalizeSize(6),
-    elevation: 8,
+    ...Platform.select({
+      ios: {
+        shadowColor: "#000",
+        shadowOffset: { width: 0, height: 2 },
+        shadowOpacity: 0.1,
+        shadowRadius: 6,
+      },
+      android: { elevation: 2 },
+    }),
   },
   shareButtonText: {
     fontSize: normalizeFont(15),
     fontFamily: "Comfortaa_700Bold",
     marginLeft: SPACING / 1.5,
+  },
+
+  // orbes
+  orb: {
+    position: "absolute",
+    opacity: 0.9,
   },
 });

@@ -122,7 +122,7 @@
   "voteForFirstFeature": "Vota por una nueva función por primera vez",
   "noChallengeCreated": "No hay desafíos creados",
   "createYourFirstChallengeNow": "Crea tu primer desafío ahora",
-  "dailyChallenges": "Desafíos diarios",
+  "dailyChallenges": "Desafíos del día",
   "noChallengeOngoing": "No hay desafíos en curso",
   "clickIconTopRight": "Toca el icono superior derecho",
   "orJoinChallenge": "O únete a un desafío",
@@ -131,6 +131,35 @@
   "contactUs": "Contáctanos",
   "visitWebsite": "Visitar sitio web",
   "preferences": "Preferencias",
+  "interestsPlaceholder": "Ej.: fitness, lectura, diseño UI",
+  "editProfile.title": "Editar perfil",
+  "editProfile.description": "Actualiza tu nombre, biografía, ubicación e intereses",
+
+  "accessibility.editProfileImage.label": "Editar foto de perfil",
+  "accessibility.editProfileImage.hint": "Abre tu galería para elegir una imagen",
+  "accessibility.currentProfileImage.label": "Foto de perfil actual",
+
+  "accessibility.usernameField.label": "Nombre de usuario",
+  "accessibility.usernameField.hint": "Introduce tu nombre de usuario",
+
+  "accessibility.bioField.label": "Biografía",
+  "accessibility.bioField.hint": "Añade una breve descripción",
+
+  "accessibility.locationField.label": "Ubicación",
+  "accessibility.locationField.hint": "Escribe tu ciudad o país",
+
+  "accessibility.interestsField.label": "Intereses",
+  "accessibility.interestsField.hint": "Separa los elementos con comas",
+
+  "accessibility.saveProfileChanges.label": "Guardar cambios",
+  "accessibility.saveProfileChanges.hint": "Guarda tu información de perfil",
+  "systemWelcome": "👋 ¡Bienvenid@! Este espacio es para motivarnos, hacer preguntas y ayudarnos mutuamente. Mantén el respeto y la amabilidad. No se permiten: insultos/acoso, discurso de odio (racismo, sexismo, etc.), desnudez/pornografía, contenido ilegal o peligroso, spam/publicidad/estafas, ni compartir información personal sensible. Denuncia cualquier abuso con el botón. ¡A seguir con todo! 💪✨",
+  "welcomeRules": {
+    "title": "¡Bienvenid@ al chat del desafío!",
+    "message": "Estamos aquí para animarnos, resolver dudas y avanzar juntos. Para mantener una vibra positiva, sigue estas reglas:\n\n1. **Respeto**: Nada de insultos, acoso o amenazas.\n2. **Tolerancia**: Prohibido el odio o la discriminación (racismo, sexismo, homofobia, transfobia, etc.).\n3. **Contenido**: No desnudez/pornografía, contenido violento o ilegal.\n4. **Pertinencia**: Mantente en el tema (motivación, preguntas, apoyo).\n5. **Seguridad**: No compartas datos personales sensibles (dirección, teléfono, documentos de identidad).\n6. **Limpieza**: Sin spam, publicidad, estafas ni suplantación de identidad.\n\nAl unirte a este chat, aceptas estas reglas. ¡Gracias! 💛"
+  },
+  "chat.title": "¡Bienvenido/a 🙌!",
+  "chat.systemWelcome": "Estamos aquí para animarnos, apoyarnos y avanzar juntos en este desafío. Estas son las reglas para mantener una vibra positiva:\n\n1. **Respeto**: Nada de insultos, acoso o amenazas.\n2. **Tolerancia**: Prohibido el odio o la discriminación (racismo, sexismo, homofobia, transfobia, etc.).\n3. **Contenido**: No se permite desnudez/pornografía ni contenido violento o ilegal.\n4. **Pertinencia**: Mantente en el tema del desafío (motivación, preguntas, ayuda mutua).\n5. **Seguridad**: No compartas información personal sensible (dirección, teléfono, documentos de identidad).\n6. **Limpieza**: Nada de spam, publicidad, estafas o suplantación de identidad.\n\nAl unirte a este chat, aceptas estas reglas. ¡Gracias! 💛",
   "tips": {
     "title": "Consejos",
     "listAccessibility": "Lista de consejos",
@@ -248,6 +277,7 @@
   "privacyPolicyPage": "Política de privacidad",
   "accessAdmin": "Acceder a funciones de administración",
   "admin": "Administración",
+  "invalidCredentials": "Correo electrónico o contraseña incorrectos",
   "aboutChallengeTies": "Acerca de ChallengeTies",
   "fillEmailPassword": "Por favor ingresa tu correo y contraseña.",
   "invalidEmail": "Por favor ingresa una dirección de correo válida.",
@@ -352,10 +382,48 @@
     "accessDenied": "Acceso denegado",
     "shareError": "Error al compartir"
   },
+  "invitationS": {
+      "shareTitle": "Invitación Dúo",
+      "shareMessageWithTitle": "¡Te invito a comenzar « {{title}} » durante {{days}} días conmigo!",
+      "errors": {
+        "alreadyInvited": "Ya tienes una invitación activa para este reto.",
+        "autoInvite": "No puedes aceptar tu propia invitación.",
+        "expired": "Esta invitación ha caducado.",
+        "unknown": "Ha ocurrido un error.",
+        "inviterAlreadyStarted": "Ya has comenzado este reto en solitario.",
+        "duoAlready": "Ya estás en un dúo para este reto."
+      },
+      "confirmStartDuoTitle": "¿Empezar en dúo?",
+      "confirmStartDuoMessage": "Si empiezas en dúo, tu progreso en solitario se reiniciará. ¿Continuar?",
+      "actions": {
+        "cancel": "Cancelar",
+        "continue": "Continuar"
+      }
+    },
+    "pendingInvite": "Invitación en curso",
+"commonS": { "close": "Cerrar", "notLoggedIn": "Debes iniciar sesión.", "sending": "Enviando…" }
+,
+"profileS": {
+    "bioLabel": "Biografía",
+    "locationLabel": "Ubicación",
+    "interestsLabel": "Intereses"
+  },
+  "addLocationHere": "Agrega una ubicación",
+  "addInterestsHere": "Agrega tus intereses",
+"firstPick": {
+      "title": "¡Elige tu primer desafío!",
+      "subtitle": "¿Quieres empezar en…?",
+      "chooseSolo": "Elegir Solo",
+      "chooseDúo": "Elegir Dúo"
+    },
+    "spotlight": "Destacado",
+  "refreshDaily": "Nuevos desafíos mañana ✨",
   "challengeDetails": {
     "untitled": "Desafío sin título",
     "uncategorized": "Sin categoría",
     "invite": "Invitar",
+    "shareMessage":"¡Únete conmigo en “{{title}}” en ChallengeTies!",
+    "reviewAfterComplete":"⚠️ Debes completar este desafío antes de dejar una reseña 🏆",
     "inviteError": "Error al crear la invitación",
     "noDescription": "No hay descripción disponible",
     "fetchError": "No se pudo obtener el desafío.",
@@ -364,6 +432,7 @@
     "completeError": "No se pudo completar el desafío.",
     "chatAccessDenied": "Debes unirte al desafío antes de abrir el chat.",
     "loading": "Cargando…",
+    "days":"días",
   "needHelp": "¿Necesitas consejos?",
     "participant": "participante",
     "participants": "participantes",
@@ -378,7 +447,16 @@
     "saved": "Guardado",
     "share": "Compartir",
     "stats": "Estadísticas",
-    "inviteA11y": "Invitar a un amigo a este desafío"
+    "inviteA11y": "Invitar a un amigo a este desafío",
+    "leaveReview": "Dejar una reseña",
+  "alreadyReviewed": "Ya has dejado una reseña para este desafío.",
+  "reviewSectionTitle": "Lo que opinan otros",
+  "noReviewsYet": "Aún no hay reseñas para este desafío.",
+  "yourReview": "Tu reseña",
+  "reviewPlaceholder": "Comparte tu opinión después de completar este desafío...",
+  "submitReview": "Enviar",
+  "deleteReview": "Eliminar",
+  "confirmDeleteReview": "¿Eliminar esta reseña?"
   },
   "explanation": {
     "title": "¡Tu voz importa!",
@@ -698,7 +776,8 @@
   "suggestion": "¿Sugerencias?"
 },
 "common": {
-  "back": "Atrás"
+  "back": "Atrás",
+  "skip": "Omitir"
 }
 ,
   "contact": {
@@ -3018,11 +3097,28 @@
   "errorLoadingSavedChallenges": "No se pudieron cargar los desafíos guardados: {{message}}",
   "notificationsPush": {
     "title": "ChallengeTies",
-    "morning1": "¿Listo para un nuevo desafío hoy?",
-    "morning2": "¡Empieza el día con un desafío divertido!",
-    "evening1": "¡Termina el día con un reto rápido!",
-    "evening2": "¿Un reto más antes de dormir?"
+    "morning1": "☀️ ¡Nuevo día, un paso más hacia tu objetivo!",
+    "morning2": "¡Hoy lo tienes! 💪",
+    "evening1": "🌙 Hora de marcar tu día. Pequeños pasos, grandes resultados.",
+    "evening2": "Otro día de constancia. ¡Bien!",
+    "nudgeBody": "¡Ey! No olvides «{{title}}» — {{from}} te anima 💪"
   },
+"editYourReview": "Editar tu reseña",
+"saveReview": "Guardar"
+,
+"duo": {
+  "title": "Desafío en dúo",
+  "you": "Tú",
+  "nudge": "Animar",
+  "leading": "¡Vas ganando!",
+  "tied": "Empate",
+  "behind": "Vas detrás",
+  "nudgeSent": "Ánimo enviado ✅",
+  "nudgeFailed": "No se pudo enviar la notificación.",
+  "nudgeUnavailable": "Función disponible solo en desafíos en dúo.",
+  "nudgeHint": "Toca para animar. Mantén presionado para abrir el chat."
+}
+,
   "invitation": {
     "title": "Unirse a un desafío",
     "subtitle": "¡Has sido invitado al desafío {challengeId}!",

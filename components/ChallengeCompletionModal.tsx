@@ -10,7 +10,9 @@ import {
   Alert,
 } from "react-native";
 import { Ionicons } from "@expo/vector-icons";
-import { LinearGradient } from "expo-linear-gradient";
+ import { Platform } from "react-native";
+ import { useAdsVisibility } from "../src/context/AdsVisibilityContext";
+ import { adUnitIds } from "@/constants/admob";import { LinearGradient } from "expo-linear-gradient";
 import { doc, onSnapshot } from "firebase/firestore";
 import { auth, db } from "../constants/firebase-config";
 import { useCurrentChallenges } from "../context/CurrentChallengesContext";
@@ -49,12 +51,10 @@ const motivationalPhrases = [
 ];
 
 const baseReward = 5;
-const adUnitId = __DEV__
-  ? TestIds.REWARDED
-  : "ca-app-pub-4725616526467159/6366749139";
-const rewarded = RewardedAd.createForAdRequest(adUnitId, {
-  requestNonPersonalizedAdsOnly: true,
-});
+ const rewardedAdUnitId = __DEV__ ? TestIds.REWARDED : adUnitIds.rewarded;
+ const rewarded = RewardedAd.createForAdRequest(rewardedAdUnitId, {
+   requestNonPersonalizedAdsOnly: true,
+ });
 
 const getDynamicStyles = (currentTheme: Theme, isDarkMode: boolean) => ({
   fullOverlay: {
@@ -119,6 +119,8 @@ export default function ChallengeCompletionModal({
   onClose,
 }: ChallengeCompletionModalProps) {
   const { t } = useTranslation();
+  const { showRewardedAds, showInterstitials } = useAdsVisibility() as any;
+  const canShowRewarded = (showRewardedAds ?? showInterstitials);
   const { theme } = useTheme();
   const isDarkMode = theme === "dark";
   const currentTheme: Theme = isDarkMode
@@ -136,32 +138,67 @@ export default function ChallengeCompletionModal({
   const { completeChallenge } = useCurrentChallenges();
   const videoRef = useRef<Video>(null);
   const [adLoaded, setAdLoaded] = useState(false);
+  const [isShowingAd, setIsShowingAd] = useState(false);
+ const earnedRef = useRef(false);
 
   useEffect(() => {
-    const unsubscribeLoaded = rewarded.addAdEventListener(
+    if (!canShowRewarded) {
+      setAdLoaded(false);
+     return;
+   }
+
+    const unsubLoaded = rewarded.addAdEventListener(
       RewardedAdEventType.LOADED,
-      () => {
-        setAdLoaded(true);
-      }
+      () => setAdLoaded(true)
     );
-    const unsubscribeEarned = rewarded.addAdEventListener(
+
+    const unsubEarned = rewarded.addAdEventListener(
       RewardedAdEventType.EARNED_REWARD,
-      () => {}
+      () => { earnedRef.current = true; }
     );
-    const unsubscribeError = rewarded.addAdEventListener(
+
+    const unsubError = rewarded.addAdEventListener(
       AdEventType.ERROR,
       (error) => {
-        console.error("Erreur vidéo récompensée:", error.message);
+        console.error("Erreur vidéo récompensée:", error?.message ?? error);
         setAdLoaded(false);
+        setIsShowingAd(false);
       }
     );
-    rewarded.load();
+
+    const unsubClosed = rewarded.addAdEventListener(
+      AdEventType.CLOSED,
+      async () => {
+        const userEarned = earnedRef.current;
+        earnedRef.current = false;
+        setIsShowingAd(false);
+        setAdLoaded(false);
+        try {
+          if (userEarned) {
+            await completeChallenge(challengeId, selectedDays, true);
+            const finalReward = Math.round(baseReward * (selectedDays / 7)) * 2;
+            Alert.alert(t("completion.finalTitle"), t("completion.finalMessage", { count: finalReward }));
+          } else {
+            Alert.alert(t("completion.adNotReadyTitle"), t("completion.adNotReady"));
+          }
+        } catch (e) {
+          console.error(t("completion.errorFinalizing"), e);
+          Alert.alert(t("completion.finalTitle"), t("completion.errorFinalizingMessage"));
+        } finally {
+          try { rewarded.load(); } catch {}
+          onClose();
+        }
+      }
+    );
+
+    try { rewarded.load(); } catch {}
     return () => {
-      unsubscribeLoaded();
-      unsubscribeEarned();
-      unsubscribeError();
+      unsubLoaded();
+      unsubEarned();
+      unsubError();
+      unsubClosed();
     };
-  }, []);
+  }, [canShowRewarded, challengeId, selectedDays, t, completeChallenge, onClose]);
 
   useEffect(() => {
     const userId = auth.currentUser?.uid;
@@ -230,195 +267,217 @@ export default function ChallengeCompletionModal({
     }
   }, [visible]);
 
-  const handleComplete = async (doubleReward: boolean) => {
-    const calculatedReward = Math.round(baseReward * (selectedDays / 7));
-    if (doubleReward) {
-      if (adLoaded) {
-        try {
-          rewarded.show();
-          await completeChallenge(challengeId, selectedDays, true);
-          const finalReward = calculatedReward * 2;
-          Alert.alert(
-            t("completion.finalTitle"),
-            t("completion.finalMessage", { count: finalReward })
-          );
-          setAdLoaded(false);
-          rewarded.load();
-        } catch (error) {
-          console.error(t("completion.errorFinalizing"), error);
-          Alert.alert(
-            t("completion.finalTitle"),
-            t("completion.errorFinalizingMessage")
-          );
-        }
-      } else {
-        rewarded.load();
-        Alert.alert(
-          t("completion.adNotReadyTitle"),
-          t("completion.adNotReady")
-        );
-      }
-    } else {
-      try {
-        await completeChallenge(challengeId, selectedDays, false);
-        Alert.alert(
-          t("completion.finalTitle"),
-          t("completion.finalMessage", { count: calculatedReward })
-        );
-      } catch (error) {
-        console.error(t("completion.errorFinalizing"), error);
-        Alert.alert(
-          t("completion.finalTitle"),
-          t("completion.errorFinalizingMessage")
-        );
-      }
-    }
-    onClose();
-  };
-
-  const GradientButton: React.FC<{
-    onPress: () => void;
-    textKey: string;
-    iconName?: keyof typeof Ionicons.glyphMap;
-  }> = ({ onPress, textKey, iconName }) => (
-    <TouchableOpacity
-      onPress={onPress}
-      activeOpacity={0.7}
-      style={styles.gradientButton}
-    >
-      <LinearGradient
-        colors={dynamicStyles.buttonGradient.colors}
-        start={{ x: 0, y: 0 }}
-        end={{ x: 1, y: 0 }}
-        style={styles.buttonGradient}
-      >
-        <View style={styles.buttonContent}>
-          {iconName && (
-            <Ionicons
-              name={iconName}
-              size={normalizeSize(20)}
-              color={dynamicStyles.buttonIcon.color}
-              style={styles.buttonIcon}
-            />
-          )}
-          <Text
-            style={[
-              styles.buttonGradientText,
-              dynamicStyles.buttonGradientText,
-            ]}
-            numberOfLines={1}
-            adjustsFontSizeToFit
-          >
-            {t(textKey)}
-          </Text>
-        </View>
-      </LinearGradient>
-    </TouchableOpacity>
-  );
-
-  if (!visible) return null;
-
-  const rotateInterpolate = rotateAnim.interpolate({
-    inputRange: [0, 1],
-    outputRange: ["-3deg", "0deg"],
-  });
-
+const handleComplete = async (doubleReward: boolean): Promise<void> => {
   const calculatedReward = Math.round(baseReward * (selectedDays / 7));
 
-  return (
-    <Modal
-      visible={visible}
-      transparent
-      animationType="none"
-      onRequestClose={onClose}
-      statusBarTranslucent
-    >
-      <View style={[styles.fullOverlay, dynamicStyles.fullOverlay]}>
-        <Animated.View
-          style={[
-            styles.modalContainer,
-            dynamicStyles.modalContainer,
-            {
-              opacity: fadeAnim,
-              transform: [{ scale: scaleAnim }, { rotate: rotateInterpolate }],
-            },
-          ]}
+  if (doubleReward) {
+    if (!canShowRewarded) {
+      Alert.alert(t("completion.adNotReadyTitle"), t("completion.adNotReady"));
+      return;
+    }
+    if (!adLoaded) {
+      try {
+        rewarded.load();
+      } catch {}
+      Alert.alert(
+        t("completion.adNotReadyTitle"),
+        t("completion.adNotReady")
+      );
+      return;
+    }
+
+    try {
+      setIsShowingAd(true);
+      earnedRef.current = false; // reset avant affichage
+      rewarded.show();           // la suite (crédit/double) se fait dans les listeners CLOSED/EARNED_REWARD
+    } catch (error) {
+      console.error(t("completion.errorFinalizing"), error);
+      setIsShowingAd(false);
+      Alert.alert(
+        t("completion.finalTitle"),
+        t("completion.errorFinalizingMessage")
+      );
+    }
+    return; // ne pas fermer la modale ici : on attend l’événement CLOSED
+  }
+
+  // → Flux sans publicité : crédite immédiatement puis ferme la modale
+  try {
+    await completeChallenge(challengeId, selectedDays, false);
+    Alert.alert(
+      t("completion.finalTitle"),
+      t("completion.finalMessage", { count: calculatedReward })
+    );
+    onClose();
+  } catch (error) {
+    console.error(t("completion.errorFinalizing"), error);
+    Alert.alert(
+      t("completion.finalTitle"),
+      t("completion.errorFinalizingMessage")
+    );
+  }
+};
+
+// === À COLLER APRÈS handleComplete(...) ET AVANT const styles ===
+
+// Utilisé dans l'animation du container
+const rotateInterpolate = rotateAnim.interpolate({
+  inputRange: [0, 1],
+  outputRange: ["-3deg", "0deg"],
+});
+
+// Montant affiché dans la zone "reward"
+const calculatedReward = Math.round(baseReward * (selectedDays / 7));
+
+// ====== RETURN DU COMPOSANT ======
+return (
+  <Modal
+    visible={visible}
+    transparent
+    animationType="none"
+    onRequestClose={onClose}
+    statusBarTranslucent
+  >
+    <View style={[styles.fullOverlay, dynamicStyles.fullOverlay]}>
+      <Animated.View
+        style={[
+          styles.modalContainer,
+          dynamicStyles.modalContainer,
+          {
+            opacity: fadeAnim,
+            transform: [{ scale: scaleAnim }, { rotate: rotateInterpolate }],
+          },
+        ]}
+      >
+        <LinearGradient
+          colors={dynamicStyles.modalGradient.colors}
+          style={styles.modalGradient}
         >
-          <LinearGradient
-            colors={dynamicStyles.modalGradient.colors}
-            style={styles.modalGradient}
-          >
-            <View style={styles.trophyHeader}>
-              <Text
-                style={[
-                  styles.trophyHeaderText,
-                  dynamicStyles.trophyHeaderText,
-                ]}
-              >
-                {userTrophies} {t("completion.trophies")}
-              </Text>
-            </View>
-            <Animated.View
-              style={[styles.animationContainer, { opacity: videoFadeAnim }]}
-            >
-              <LinearGradient
-                colors={dynamicStyles.glowGradient.colors}
-                style={styles.glowEffect}
-              >
-                <View
-                  style={[styles.videoContainer, dynamicStyles.videoBorder]}
-                >
-                  <Video
-                    ref={videoRef}
-                    source={require("../assets/videos/trophy-animation.mp4")}
-                    style={styles.video}
-                    resizeMode={ResizeMode.COVER}
-                    shouldPlay
-                    isLooping
-                    isMuted={false}
-                  />
-                </View>
-              </LinearGradient>
-            </Animated.View>
+          <View style={styles.trophyHeader}>
             <Text
-              style={[styles.motivationalText, dynamicStyles.motivationalText]}
-            >
-              {t(motivationalPhrase)}
-            </Text>
-            <Animated.View
               style={[
-                styles.rewardContainer,
-                { transform: [{ scale: glowAnim }] },
+                styles.trophyHeaderText,
+                dynamicStyles.trophyHeaderText,
               ]}
             >
-              <LinearGradient
-                colors={dynamicStyles.glowGradient.colors}
-                style={styles.rewardGlow}
-              >
-                <Text
-                  style={[styles.rewardText, dynamicStyles.rewardText]}
-                  numberOfLines={2}
-                >
-                  {t("completion.reward", { count: calculatedReward })}
-                </Text>
-              </LinearGradient>
-            </Animated.View>
-            <GradientButton
-              onPress={() => handleComplete(false)}
-              textKey="completion.continue"
-            />
-            <GradientButton
-              onPress={() => handleComplete(true)}
-              textKey="completion.doubleTrophies"
-              iconName="videocam-outline"
-            />
-          </LinearGradient>
-        </Animated.View>
-      </View>
-    </Modal>
-  );
-}
+              {userTrophies} {t("completion.trophies")}
+            </Text>
+          </View>
 
+          <Animated.View
+            style={[styles.animationContainer, { opacity: videoFadeAnim }]}
+          >
+            <LinearGradient
+              colors={dynamicStyles.glowGradient.colors}
+              style={styles.glowEffect}
+            >
+              <View
+                style={[styles.videoContainer, dynamicStyles.videoBorder]}
+              >
+                <Video
+                  ref={videoRef}
+                  source={require("../assets/videos/trophy-animation.mp4")}
+                  style={styles.video}
+                  resizeMode={ResizeMode.COVER}
+                  shouldPlay
+                  isLooping
+                  isMuted={false}
+                />
+              </View>
+            </LinearGradient>
+          </Animated.View>
+
+          <Text
+            style={[styles.motivationalText, dynamicStyles.motivationalText]}
+          >
+            {t(motivationalPhrase)}
+          </Text>
+
+          <Animated.View
+            style={[
+              styles.rewardContainer,
+              { transform: [{ scale: glowAnim }] },
+            ]}
+          >
+            <LinearGradient
+              colors={dynamicStyles.glowGradient.colors}
+              style={styles.rewardGlow}
+            >
+              <Text
+                style={[styles.rewardText, dynamicStyles.rewardText]}
+                numberOfLines={2}
+              >
+                {t("completion.reward", { count: calculatedReward })}
+              </Text>
+            </LinearGradient>
+          </Animated.View>
+
+          {/* Bouton "Continuer" (sans pub) */}
+          <TouchableOpacity
+            onPress={() => handleComplete(false)}
+            activeOpacity={0.7}
+            style={styles.gradientButton}
+          >
+            <LinearGradient
+              colors={dynamicStyles.buttonGradient.colors}
+              start={{ x: 0, y: 0 }}
+              end={{ x: 1, y: 0 }}
+              style={styles.buttonGradient}
+            >
+              <View style={styles.buttonContent}>
+                <Text
+                  style={[
+                    styles.buttonGradientText,
+                    dynamicStyles.buttonGradientText,
+                  ]}
+                  numberOfLines={1}
+                  adjustsFontSizeToFit
+                >
+                  {t("completion.continue")}
+                </Text>
+              </View>
+            </LinearGradient>
+          </TouchableOpacity>
+
+          {/* Bouton "Doubler les trophées" (rewarded) */}
+          <TouchableOpacity
+   onPress={() => handleComplete(true)}
+   activeOpacity={0.7}
+   disabled={!canShowRewarded || !adLoaded}
+   style={[styles.gradientButton, (!canShowRewarded || !adLoaded) && { opacity: 0.5 }]}
+ >
+            <LinearGradient
+              colors={dynamicStyles.buttonGradient.colors}
+              start={{ x: 0, y: 0 }}
+              end={{ x: 1, y: 0 }}
+              style={styles.buttonGradient}
+            >
+              <View style={styles.buttonContent}>
+                <Ionicons
+                  name="videocam-outline"
+                  size={normalizeSize(20)}
+                  color={dynamicStyles.buttonIcon.color}
+                  style={styles.buttonIcon}
+                />
+                <Text
+                  style={[
+                    styles.buttonGradientText,
+                    dynamicStyles.buttonGradientText,
+                  ]}
+                  numberOfLines={1}
+                  adjustsFontSizeToFit
+                >
+                  {t("completion.doubleTrophies")}
+                </Text>
+              </View>
+            </LinearGradient>
+          </TouchableOpacity>
+        </LinearGradient>
+      </Animated.View>
+    </View>
+  </Modal>
+);
+}
 const styles = StyleSheet.create({
   fullOverlay: {
     ...StyleSheet.absoluteFillObject,

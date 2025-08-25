@@ -1,4 +1,4 @@
-import React, { useEffect } from "react";
+import React, { useEffect, useMemo, useRef, useState, useCallback } from "react";
 import {
   Modal,
   View,
@@ -16,6 +16,7 @@ import Animated, {
   withTiming,
   useAnimatedStyle,
   withSpring,
+  runOnJS,
 } from "react-native-reanimated";
 import { LinearGradient } from "expo-linear-gradient";
 import { useTranslation } from "react-i18next";
@@ -42,6 +43,9 @@ interface DurationSelectionModalProps {
   dayIcons: Record<number, keyof typeof Ionicons.glyphMap>;
 }
 
+const EXIT_ANIM_MS = 300;
+const REOPEN_COOLDOWN_MS = 400;
+
 const DurationSelectionModal: React.FC<DurationSelectionModalProps> = ({
   visible,
   daysOptions,
@@ -54,64 +58,104 @@ const DurationSelectionModal: React.FC<DurationSelectionModalProps> = ({
   const { t } = useTranslation();
   const { theme } = useTheme();
   const isDarkMode = theme === "dark";
-  const currentTheme: Theme = isDarkMode
-    ? designSystem.darkTheme
-    : designSystem.lightTheme;
+  const currentTheme: Theme = isDarkMode ? designSystem.darkTheme : designSystem.lightTheme;
 
-  const scale = useSharedValue(1);
-  const scaleAnim = useSharedValue(0.8);
+  // --- Anti "bounce": on contrôle le montage indépendamment de `visible`
+  const [mounted, setMounted] = useState<boolean>(false);
+  const [closing, setClosing] = useState<boolean>(false);
+  const lastCloseAtRef = useRef<number>(0);
+
+  // Empêche double tap sur "Confirmer"
+  const [confirming, setConfirming] = useState<boolean>(false);
+
+  // Animations
+  const pressScale = useSharedValue(1);
+  const cardScale = useSharedValue(0.9);
 
   const buttonAnimatedStyle = useAnimatedStyle(() => ({
-    transform: [{ scale: scale.value }],
+    transform: [{ scale: pressScale.value }],
   }));
 
-  const animatedScaleStyle = useAnimatedStyle(() => ({
-    transform: [{ scale: scaleAnim.value }],
+  const cardAnimatedStyle = useAnimatedStyle(() => ({
+    transform: [{ scale: cardScale.value }],
   }));
 
+  // Synchronisation `visible` -> `mounted` avec anti-rebond
   useEffect(() => {
     if (visible) {
-      scaleAnim.value = withSpring(1, { damping: 10, stiffness: 80 });
-    } else {
-      scaleAnim.value = withTiming(0.8, { duration: 200 });
+      // Si on tente de rouvrir trop vite après une fermeture, on ignore
+      if (Date.now() - lastCloseAtRef.current < REOPEN_COOLDOWN_MS) {
+        return;
+      }
+      setClosing(false);
+      setMounted(true);
+      // petit délai pour que l’Animated.View monte proprement puis spring
+      requestAnimationFrame(() => {
+        cardScale.value = withSpring(1, { damping: 12, stiffness: 120 });
+      });
+    } else if (mounted && !closing) {
+      // Lance l’animation de sortie puis démonte
+      setClosing(true);
+      cardScale.value = withTiming(0.9, { duration: 160 }, () => {
+        runOnJS(setMounted)(false);
+        runOnJS(setClosing)(false);
+        lastCloseAtRef.current = Date.now();
+      });
     }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [visible]);
 
-  const handlePressIn = () => {
-    scale.value = withTiming(0.95, { duration: 100 });
+  // Sélection d’un nombre de jours (mini feedback)
+  const handleSelectDays = useCallback(
+    (days: number) => {
+      pressScale.value = withTiming(1.1, { duration: 100 }, () => {
+        pressScale.value = withTiming(1, { duration: 100 });
+      });
+      Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
+      onSelectDays(days);
+    },
+    [onSelectDays, pressScale]
+  );
+
+  const handlePressIn = useCallback(() => {
+    pressScale.value = withTiming(0.96, { duration: 90 });
     Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
-  };
+  }, [pressScale]);
 
-  const handlePressOut = () => {
-    scale.value = withTiming(1, { duration: 100 });
-  };
+  const handlePressOut = useCallback(() => {
+    pressScale.value = withTiming(1, { duration: 90 });
+  }, [pressScale]);
 
-  const handleSelectDays = (days: number) => {
-    scale.value = withTiming(1.1, { duration: 100 }, () => {
-      scale.value = withTiming(1, { duration: 100 });
-    });
-    Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
-    onSelectDays(days);
-  };
+  const safeConfirm = useCallback(() => {
+    if (confirming) return;          // garde-fou double-tap
+    setConfirming(true);
+    try {
+      onConfirm();                   // Le parent fermera le modal (visible=false)
+    } finally {
+      // On laisse le parent gérer la fermeture; on débloque le bouton
+      // après une petite fenêtre pour éviter double toggles/taps.
+      setTimeout(() => setConfirming(false), 500);
+    }
+  }, [confirming, onConfirm]);
+
+  // Mémo des icônes (évite recalcul)
+  const iconsMap = useMemo(() => dayIcons, [dayIcons]);
+
+  if (!mounted) return null;
 
   return (
-    <Modal visible={visible} transparent animationType="none">
+    <Modal visible transparent animationType="none" statusBarTranslucent>
       <View style={styles.modalContainer}>
         <Animated.View
           entering={FadeInUp.springify()}
-          exiting={FadeOutDown.duration(300)}
+          exiting={FadeOutDown.duration(EXIT_ANIM_MS)}
           style={[
             styles.modalContent,
-            animatedScaleStyle,
+            cardAnimatedStyle,
             { backgroundColor: currentTheme.colors.cardBackground },
           ]}
         >
-          <Text
-            style={[
-              styles.modalTitle,
-              { color: currentTheme.colors.secondary },
-            ]}
-          >
+          <Text style={[styles.modalTitle, { color: currentTheme.colors.secondary }]}>
             {t("durationModal.title")}
           </Text>
 
@@ -133,29 +177,23 @@ const DurationSelectionModal: React.FC<DurationSelectionModalProps> = ({
                         backgroundColor: selected
                           ? currentTheme.colors.primary
                           : currentTheme.colors.background,
-                        shadowColor: selected
-                          ? currentTheme.colors.primary
-                          : "#000",
+                        shadowColor: selected ? currentTheme.colors.primary : "#000",
                       },
                     ]}
                     onPress={() => handleSelectDays(days)}
-                    activeOpacity={0.8}
+                    activeOpacity={0.85}
                     onPressIn={handlePressIn}
                     onPressOut={handlePressOut}
                   >
                     <Ionicons
-                      name={dayIcons[days] || "calendar-outline"}
+                      name={iconsMap[days] || ("calendar-outline" as any)}
                       size={normalize(18)}
                       color={selected ? "#fff" : currentTheme.colors.secondary}
                     />
                     <Text
                       style={[
                         styles.dayOptionText,
-                        {
-                          color: selected
-                            ? "#fff"
-                            : currentTheme.colors.textSecondary,
-                        },
+                        { color: selected ? "#fff" : currentTheme.colors.textSecondary },
                       ]}
                     >
                       {t("durationModal.days", { count: days })}
@@ -166,52 +204,42 @@ const DurationSelectionModal: React.FC<DurationSelectionModalProps> = ({
             })}
           </View>
 
-          <Animated.View
-            entering={FadeInUp.delay(200)}
-            style={buttonAnimatedStyle}
-          >
+          <Animated.View entering={FadeInUp.delay(200)} style={buttonAnimatedStyle}>
             <TouchableOpacity
               style={styles.button}
-              onPress={onConfirm}
-              activeOpacity={0.8}
+              onPress={safeConfirm}
+              activeOpacity={0.85}
               onPressIn={handlePressIn}
               onPressOut={handlePressOut}
+              disabled={confirming}
             >
               <LinearGradient
                 colors={[
-                  currentTheme.colors.primary,
-                  currentTheme.colors.secondary,
+                  confirming ? currentTheme.colors.textSecondary : currentTheme.colors.primary,
+                  confirming ? currentTheme.colors.textSecondary : currentTheme.colors.secondary,
                 ]}
                 style={styles.buttonGradient}
               >
                 <Text style={styles.buttonText}>
-                  {t("durationModal.confirm")}
+                  {confirming ? t("pleaseWait", { defaultValue: "Patiente..." }) : t("durationModal.confirm")}
                 </Text>
               </LinearGradient>
             </TouchableOpacity>
           </Animated.View>
 
-          <Animated.View
-            entering={FadeInUp.delay(300)}
-            style={buttonAnimatedStyle}
-          >
+          <Animated.View entering={FadeInUp.delay(300)} style={buttonAnimatedStyle}>
             <TouchableOpacity
               style={styles.button}
               onPress={onCancel}
-              activeOpacity={0.8}
+              activeOpacity={0.85}
               onPressIn={handlePressIn}
               onPressOut={handlePressOut}
             >
               <LinearGradient
-                colors={[
-                  currentTheme.colors.error,
-                  currentTheme.colors.error + "CC",
-                ]}
+                colors={[currentTheme.colors.error, currentTheme.colors.error + "CC"]}
                 style={styles.buttonGradient}
               >
-                <Text style={styles.buttonText}>
-                  {t("durationModal.cancel")}
-                </Text>
+                <Text style={styles.buttonText}>{t("durationModal.cancel")}</Text>
               </LinearGradient>
             </TouchableOpacity>
           </Animated.View>

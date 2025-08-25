@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from "react";
+import React, { useState, useEffect, useRef  } from "react";
 import {
   Modal,
   View,
@@ -7,11 +7,14 @@ import {
   TouchableOpacity,
   Dimensions,
 } from "react-native";
+import { Platform } from "react-native";
 import { LinearGradient } from "expo-linear-gradient";
 import { Ionicons } from "@expo/vector-icons";
 import Animated, { FadeIn, FadeOut } from "react-native-reanimated";
 import designSystem from "../theme/designSystem";
 import { useTranslation } from "react-i18next";
+import { useAdsVisibility } from "../src/context/AdsVisibilityContext";
+import { adUnitIds } from "@/constants/admob";
 import {
   RewardedAd,
   RewardedAdEventType,
@@ -23,12 +26,7 @@ const { width: SCREEN_WIDTH, height: SCREEN_HEIGHT } = Dimensions.get("window");
 const currentTheme = designSystem.lightTheme;
 
 // ID vidéo récompensée
-const adUnitId = __DEV__
-  ? TestIds.REWARDED
-  : "ca-app-pub-4725616526467159/6366749139";
-const rewarded = RewardedAd.createForAdRequest(adUnitId, {
-  requestNonPersonalizedAdsOnly: true,
-});
+const rewardedAdUnitId = __DEV__ ? TestIds.REWARDED : adUnitIds.rewarded;
 
 const normalizeSize = (size: number) => {
   const scale = Math.min(SCREEN_WIDTH, SCREEN_HEIGHT) / 375;
@@ -53,52 +51,101 @@ const MissedChallengeModal: React.FC<MissedChallengeModalProps> = ({
   trophyCost,
 }) => {
   const { t } = useTranslation();
+  const { showRewardedAds, showInterstitials } = useAdsVisibility() as any;
+  const canShowRewarded = (showRewardedAds ?? showInterstitials) === true;
   const [adLoaded, setAdLoaded] = useState(false);
   const [adError, setAdError] = useState<string | null>(null);
+  const earnedRef = useRef(false);
+ const rewardedRef = useRef<RewardedAd | null>(null);
 
-  useEffect(() => {
-    console.log("Modal visible:", visible, "Viewport:", {
-      SCREEN_WIDTH,
-      SCREEN_HEIGHT,
-    });
-    const unsubscribeLoaded = rewarded.addAdEventListener(
+ useEffect(() => {
+    // si pubs désactivées -> ne pas instancier ni charger
+    if (!canShowRewarded) {
+      setAdLoaded(false);
+      setAdError(null);
+      return;
+    }
+
+    // crée/rafraîchit l'instance locale si besoin
+   if (!rewardedRef.current) {
+     rewardedRef.current = RewardedAd.createForAdRequest(rewardedAdUnitId, {
+       requestNonPersonalizedAdsOnly: true,
+      });
+    }
+    const rewarded = rewardedRef.current;
+
+    const unsubLoaded = rewarded.addAdEventListener(
       RewardedAdEventType.LOADED,
       () => {
         setAdLoaded(true);
         setAdError(null);
       }
     );
-    const unsubscribeEarned = rewarded.addAdEventListener(
+    const unsubEarned = rewarded.addAdEventListener(
       RewardedAdEventType.EARNED_REWARD,
       () => {
-        onWatchAd();
-        onClose();
+        // on ne close pas ici (iOS/Android ordre différent)
+        earnedRef.current = true;
       }
     );
-    const unsubscribeError = rewarded.addAdEventListener(
+    const unsubError = rewarded.addAdEventListener(
       AdEventType.ERROR,
       (error) => {
-        console.error("Erreur vidéo récompensée:", error.message);
+        console.error("Erreur rewarded:", error?.message ?? error);
         setAdLoaded(false);
         setAdError(t("missedChallenge.adNotReady"));
       }
     );
-    rewarded.load();
+    const unsubClosed = rewarded.addAdEventListener(
+      AdEventType.CLOSED,
+      () => {
+        const earned = earnedRef.current;
+        earnedRef.current = false;
+        setAdLoaded(false);
+        // recharge pour la prochaine fois (si modal reste ouverte)
+        try { rewarded.load(); } catch {}
+        if (earned) {
+          // ✅ on crédite/couvre la logique via prop
+          try { onWatchAd(); } catch {}
+          onClose();
+        } else {
+          // pas de reward gagné
+          setAdError(t("missedChallenge.adNotReady"));
+        }
+      }
+   );
+    // charge au montage + à chaque ouverture
+   try { rewarded.load(); } catch {}
+
     return () => {
-      unsubscribeLoaded();
-      unsubscribeEarned();
-      unsubscribeError();
+      unsubLoaded();
+      unsubEarned();
+      unsubError();
+      unsubClosed();
     };
-  }, [t, onWatchAd, onClose, visible]);
+  }, [canShowRewarded, rewardedAdUnitId, t, onWatchAd, onClose, visible]);
 
   const handleWatchAd = () => {
+    if (!canShowRewarded) {
+      setAdError(t("missedChallenge.adNotReady"));
+      return;
+    }
+    const rewarded = rewardedRef.current;
+    if (!rewarded) {
+      setAdError(t("missedChallenge.adNotReady"));
+      return;
+    }
     if (adLoaded) {
-      rewarded.show();
-      setAdLoaded(false);
-      rewarded.load();
+      try {
+        rewarded.show();
+        setAdLoaded(false);
+      } catch {
+        setAdError(t("missedChallenge.adNotReady"));
+        try { rewarded.load(); } catch {}
+      }
     } else {
       setAdError(t("missedChallenge.adNotReady"));
-      rewarded.load();
+      try { rewarded.load(); } catch {}
     }
   };
 
@@ -188,9 +235,10 @@ const MissedChallengeModal: React.FC<MissedChallengeModalProps> = ({
                 </LinearGradient>
               </TouchableOpacity>
               <TouchableOpacity
-                style={styles.optionButton}
+                style={[styles.optionButton, (!canShowRewarded || !adLoaded) && { opacity: 0.5 }]}
                 onPress={handleWatchAd}
                 activeOpacity={0.8}
+                disabled={!canShowRewarded || !adLoaded}
               >
                 <LinearGradient
                   colors={["#6EE7B7", "#34D399"]}

@@ -30,6 +30,8 @@ import {
   AdEventType,
   TestIds,
 } from "react-native-google-mobile-ads";
+import { useAdsVisibility } from "../src/context/AdsVisibilityContext";
+import { adUnitIds } from "@/constants/admob";
 
 const normalizeSize = (size: number) => {
   const scale = Math.min(SCREEN_WIDTH / 375, SCREEN_HEIGHT / 812);
@@ -38,13 +40,6 @@ const normalizeSize = (size: number) => {
 const { width: SCREEN_WIDTH, height: SCREEN_HEIGHT } = Dimensions.get("window");
 const SPACING = normalizeSize(15);
 
-// ID vidéo récompensée
-const adUnitId = __DEV__
-  ? TestIds.REWARDED
-  : "ca-app-pub-4725616526467159/6366749139";
-const rewarded = RewardedAd.createForAdRequest(adUnitId, {
-  requestNonPersonalizedAdsOnly: true,
-});
 
 interface TrophyModalProps {
   challengeId: string;
@@ -84,42 +79,68 @@ const TrophyModal: React.FC<TrophyModalProps> = ({
   const [message, setMessage] = useState("");
   const [adLoaded, setAdLoaded] = useState(false);
   const videoRef = useRef<Video>(null);
+  const { showRewardedAds, showInterstitials } = useAdsVisibility() as any;
+  const canShowRewarded = (showRewardedAds ?? showInterstitials) === true;
+  const rewardedRef = useRef<RewardedAd | null>(null);
+  const earnedRef = useRef(false);
 
-  // Ad handling
+  // Ad handling (gating + flux EARNED -> CLOSED)
   useEffect(() => {
-    const unsubscribeLoaded = rewarded.addAdEventListener(
+    if (!canShowRewarded || !showTrophyModal) {
+      setAdLoaded(false);
+      return;
+    }
+    if (!rewardedRef.current) {
+      const unitId = __DEV__ ? TestIds.REWARDED : adUnitIds.rewarded;
+      rewardedRef.current = RewardedAd.createForAdRequest(unitId, {
+        requestNonPersonalizedAdsOnly: true,
+      });
+    }
+    const rewarded = rewardedRef.current;
+
+    const unsubLoaded = rewarded.addAdEventListener(
       RewardedAdEventType.LOADED,
-      () => {
-        setAdLoaded(true);
-      }
+      () => setAdLoaded(true)
     );
-    const unsubscribeEarned = rewarded.addAdEventListener(
+    const unsubEarned = rewarded.addAdEventListener(
       RewardedAdEventType.EARNED_REWARD,
-      () => {
-        setAdWatched(true);
-        activateDoubleReward();
-        const doubled = trophiesEarned * 2;
-        setReward(doubled);
-        setMessage(t("trophyModal.doubleMessage", { count: doubled }));
-        setAdLoaded(false);
-        rewarded.load();
-      }
+      () => { earnedRef.current = true; }
     );
-    const unsubscribeError = rewarded.addAdEventListener(
+    const unsubError = rewarded.addAdEventListener(
       AdEventType.ERROR,
       (error) => {
-        console.error("❌ Erreur vidéo récompensée:", error.message);
+        console.error("❌ Rewarded error:", error?.message ?? error);
         setAdLoaded(false);
-        rewarded.load();
       }
     );
-    rewarded.load();
+    const unsubClosed = rewarded.addAdEventListener(
+      AdEventType.CLOSED,
+      () => {
+        const earned = earnedRef.current;
+        earnedRef.current = false;
+        setAdLoaded(false);
+        try { rewarded.load(); } catch {}
+        if (earned) {
+          // ✅ récompenser *après* fermeture seulement si reward gagné
+          setAdWatched(true);
+          activateDoubleReward();
+          const doubled = (trophiesEarned || Math.round(5 * (selectedDays / 7))) * 2;
+          setReward(doubled);
+          setMessage(t("trophyModal.doubleMessage", { count: doubled }));
+        } else {
+          setMessage(t("trophyModal.adNotReady"));
+        }
+      }
+    );
+
+    try { rewarded.load(); } catch {}
     return () => {
-      unsubscribeLoaded();
-      unsubscribeEarned();
-      unsubscribeError();
+      unsubLoaded();
+      unsubEarned();
+      unsubError();
+      unsubClosed();
     };
-  }, [activateDoubleReward, trophiesEarned, t]);
+  }, [canShowRewarded, showTrophyModal, activateDoubleReward, trophiesEarned, selectedDays, t]);
 
   // Animation on modal show/hide
   useEffect(() => {
@@ -181,15 +202,25 @@ const TrophyModal: React.FC<TrophyModalProps> = ({
     }
   }, [showTrophyModal, trophiesEarned, selectedDays]);
 
-  const handleAdPress = useCallback(() => {
+   const handleAdPress = useCallback(() => {
     Vibration.vibrate(50);
-    if (adLoaded) {
-      rewarded.show();
-    } else {
-      rewarded.load();
+    if (!canShowRewarded) {
       setMessage(t("trophyModal.adNotReady"));
+      return;
     }
-  }, [adLoaded, t]);
+    const rewarded = rewardedRef.current;
+    if (adLoaded && rewarded) {
+      try {
+        rewarded.show();
+      } catch {
+        setMessage(t("trophyModal.adNotReady"));
+        try { rewarded.load(); } catch {}
+      }
+    } else {
+      setMessage(t("trophyModal.adNotReady"));
+      try { rewarded?.load(); } catch {}
+    }
+  }, [adLoaded, canShowRewarded, t]);
 
   const handleClaimPress = useCallback(() => {
     Vibration.vibrate(50);

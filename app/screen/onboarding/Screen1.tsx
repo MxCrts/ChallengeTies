@@ -118,7 +118,6 @@ export default function Screen1() {
 
   const handleFinishOnboarding = async () => {
   setIsNavigating(true);
-  // démarrer le fade
   Animated.timing(fadeAnim, {
     toValue: 0,
     duration: 400,
@@ -126,14 +125,15 @@ export default function Screen1() {
   }).start(async () => {
     try {
       await AsyncStorage.removeItem("hasCompletedTutorialAfterSignup");
-      setIsTutorialActive(true);
-      setTutorialStep(0);
-      router.replace("/");
+      // 👉 passe d'abord par le choix initial
+      router.replace("/first-pick");
     } catch (error) {
       console.error("Erreur…", error);
     }
   });
 };
+
+
 
 
   if (!fontsLoaded) return null;

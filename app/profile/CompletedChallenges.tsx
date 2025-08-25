@@ -24,6 +24,9 @@ import { useTheme } from "@/context/ThemeContext";
 import designSystem, { Theme } from "@/theme/designSystem";
 import CustomHeader from "@/components/CustomHeader";
 import { useTranslation } from "react-i18next";
+import { BannerAd, BannerAdSize } from "react-native-google-mobile-ads";
+ import { adUnitIds } from "@/constants/admob";
+ import { useAdsVisibility } from "../../src/context/AdsVisibilityContext";
 
 // Dimensions & responsivité
 const { width: SCREEN_WIDTH, height: SCREEN_HEIGHT } = Dimensions.get("window");
@@ -35,6 +38,29 @@ const normalizeSize = (size: number) => {
   const baseWidth = 375;
   const scale = Math.min(Math.max(SCREEN_WIDTH / baseWidth, 0.7), 1.8); // Limite l'échelle pour responsivité
   return Math.round(size * scale);
+};
+
+const BANNER_HEIGHT = normalizeSize(50);
+
+/** Util pour ajouter une alpha sans casser les gradients */
+const withAlpha = (color: string, alpha: number) => {
+  const clamp = (n: number, min = 0, max = 1) => Math.min(Math.max(n, min), max);
+  const a = clamp(alpha);
+
+  if (/^rgba?\(/i.test(color)) {
+    const nums = color.match(/[\d.]+/g) || [];
+    const [r = "0", g = "0", b = "0"] = nums;
+    return `rgba(${r}, ${g}, ${b}, ${a})`;
+  }
+  let hex = color.replace("#", "");
+  if (hex.length === 3) hex = hex.split("").map((c) => c + c).join("");
+  if (hex.length >= 6) {
+    const r = parseInt(hex.slice(0, 2), 16);
+    const g = parseInt(hex.slice(2, 4), 16);
+    const b = parseInt(hex.slice(4, 6), 16);
+    return `rgba(${r}, ${g}, ${b}, ${a})`;
+  }
+  return `rgba(0,0,0,${a})`;
 };
 
 interface CompletedChallenge {
@@ -57,7 +83,8 @@ export default function CompletedChallenges() {
   const currentTheme: Theme = isDarkMode
     ? designSystem.darkTheme
     : designSystem.lightTheme;
-
+const { showBanners } = useAdsVisibility();
+const bottomPadding = showBanners ? BANNER_HEIGHT + normalizeSize(90) : normalizeSize(90);
   const [completedChallenges, setCompletedChallenges] = useState<
     CompletedChallenge[]
   >([]);
@@ -271,9 +298,10 @@ export default function CompletedChallenges() {
         />
         <LinearGradient
           colors={[
-            currentTheme.colors.background,
-            currentTheme.colors.cardBackground + "F0",
-          ]}
+  withAlpha(currentTheme.colors.background, 1),
+  withAlpha(currentTheme.colors.cardBackground, 1),
+  withAlpha(currentTheme.colors.primary, 0.13),
+]}
           style={styles.loadingContainer}
         >
           <ActivityIndicator size="large" color={currentTheme.colors.primary} />
@@ -292,55 +320,79 @@ export default function CompletedChallenges() {
 
   if (completedChallenges.length === 0) {
     return (
-      <SafeAreaView style={styles.safeArea}>
-        <StatusBar
-          translucent
-          backgroundColor="transparent"
-          barStyle={isDarkMode ? "light-content" : "dark-content"}
-        />
-        <CustomHeader title={t("completedChallengesScreenTitle")} />
-        <LinearGradient
-          colors={[
-            currentTheme.colors.background,
-            currentTheme.colors.cardBackground + "F0",
-          ]}
-          style={styles.noChallengesContainer}
-        >
-          <Animated.View
-            entering={FadeInUp.delay(100)}
-            style={styles.noChallengesContent}
+  <SafeAreaView style={styles.safeArea}>
+    <StatusBar translucent backgroundColor="transparent" barStyle={isDarkMode ? "light-content" : "dark-content"} />
+
+    <LinearGradient
+      colors={[
+        withAlpha(currentTheme.colors.background, 1),
+        withAlpha(currentTheme.colors.cardBackground, 1),
+        withAlpha(currentTheme.colors.primary, 0.13),
+      ]}
+      style={styles.gradientContainer}
+      start={{ x: 0, y: 0 }}
+      end={{ x: 1, y: 1 }}
+    >
+      {/* Orbes */}
+      <LinearGradient
+        pointerEvents="none"
+        colors={[withAlpha(currentTheme.colors.primary, 0.28), "transparent"]}
+        style={styles.bgOrbTop}
+        start={{ x: 0.2, y: 0 }}
+        end={{ x: 1, y: 1 }}
+      />
+      <LinearGradient
+        pointerEvents="none"
+        colors={[withAlpha(currentTheme.colors.secondary, 0.25), "transparent"]}
+        style={styles.bgOrbBottom}
+        start={{ x: 1, y: 0 }}
+        end={{ x: 0, y: 1 }}
+      />
+
+      <CustomHeader
+        title={t("completedChallengesScreenTitle")}
+        backgroundColor="transparent"
+        useBlur={false}
+        showHairline={false}
+      />
+
+      <View style={styles.noChallengesContainer}>
+        <Animated.View entering={FadeInUp.delay(100)} style={styles.noChallengesContent}>
+          <Ionicons
+            name="checkmark-done-outline"
+            size={normalizeSize(60)}
+            color={currentTheme.colors.textSecondary}
+            accessibilityLabel={t("noCompletedChallengesIcon")}
+          />
+          <Text
+            style={[
+  styles.noChallengesText,
+  { color: isDarkMode ? currentTheme.colors.textPrimary : currentTheme.colors.textSecondary },
+]}
           >
-            <Ionicons
-              name="checkmark-done-outline"
-              size={normalizeSize(60)}
-              color={currentTheme.colors.textSecondary}
-              accessibilityLabel={t("noCompletedChallengesIcon")}
-            />
-            <Text
-              style={[
-                styles.noChallengesText,
-                {
-                  color: isDarkMode
-                    ? currentTheme.colors.textPrimary
-                    : currentTheme.colors.textSecondary,
-                },
-                ,
-              ]}
-            >
-              {t("noCompletedChallenges")}
-            </Text>
-            <Text
-              style={[
-                styles.noChallengesSubtext,
-                { color: currentTheme.colors.textSecondary },
-              ]}
-            >
-              {t("completeChallengesToSeeHere")}
-            </Text>
-          </Animated.View>
-        </LinearGradient>
-      </SafeAreaView>
-    );
+            {t("noCompletedChallenges")}
+          </Text>
+          <Text style={[styles.noChallengesSubtext, { color: currentTheme.colors.textSecondary }]}>
+            {t("completeChallengesToSeeHere")}
+          </Text>
+        </Animated.View>
+      </View>
+      {showBanners && (
+   <View style={styles.bannerContainer}>
+     <BannerAd
+       unitId={adUnitIds.banner}
+       size={BannerAdSize.BANNER}
+       requestOptions={{ requestNonPersonalizedAdsOnly: false }}
+       onAdFailedToLoad={(err) =>
+         console.error("Échec chargement bannière (CompletedChallenges empty):", err)
+       }
+     />
+   </View>
+ )}
+    </LinearGradient>
+  </SafeAreaView>
+);
+
   }
 
   return (
@@ -350,45 +402,63 @@ export default function CompletedChallenges() {
         backgroundColor="transparent"
         barStyle={isDarkMode ? "light-content" : "dark-content"}
       />
-        <CustomHeader title={t("completedChallengesScreenTitle")} />
+        <LinearGradient
+  colors={[
+    withAlpha(currentTheme.colors.background, 1),
+    withAlpha(currentTheme.colors.cardBackground, 1),
+    withAlpha(currentTheme.colors.primary, 0.13),
+  ]}
+  style={styles.gradientContainer}
+  start={{ x: 0, y: 0 }}
+  end={{ x: 1, y: 1 }}
+>
+  {/* Orbes */}
+  <LinearGradient
+    pointerEvents="none"
+    colors={[withAlpha(currentTheme.colors.primary, 0.28), "transparent"]}
+    style={styles.bgOrbTop}
+    start={{ x: 0.2, y: 0 }}
+    end={{ x: 1, y: 1 }}
+  />
+  <LinearGradient
+    pointerEvents="none"
+    colors={[withAlpha(currentTheme.colors.secondary, 0.25), "transparent"]}
+    style={styles.bgOrbBottom}
+    start={{ x: 1, y: 0 }}
+    end={{ x: 0, y: 1 }}
+  />
 
-      <LinearGradient
-        colors={[
-          currentTheme.colors.background,
-          currentTheme.colors.cardBackground + "F0",
-        ]}
-        style={styles.container}
+  <CustomHeader
+    title={t("completedChallengesScreenTitle")}
+    backgroundColor="transparent"
+    useBlur={false}
+    showHairline={false}
+  />
+
+  <View style={styles.container}>
+    <FlatList
+      data={completedChallenges}
+      renderItem={renderChallenge}
+      keyExtractor={(item) => `${item.id}_${item.completedAt}`}
+       contentContainerStyle={[styles.listContent, { flexGrow: 1, paddingBottom: bottomPadding }]}
+      showsVerticalScrollIndicator={false}
+      initialNumToRender={10}
+      windowSize={5}
+      contentInset={{ top: SPACING, bottom: 0 }}
+    />
+
+    {selectedHistory && (
+      <Modal
+        visible={historyModalVisible}
+        transparent
+        animationType="slide"
+        onRequestClose={() => setHistoryModalVisible(false)}
       >
-                <FlatList
-          data={completedChallenges}
-          renderItem={renderChallenge}
-          keyExtractor={(item) => `${item.id}_${item.completedAt}`}
-          contentContainerStyle={[styles.listContent, { flexGrow: 1 }]}
-          showsVerticalScrollIndicator={false}
-          initialNumToRender={10}
-          windowSize={5}
-          contentInset={{ top: SPACING, bottom: normalizeSize(100) }} // Responsivité
-        />
-        {selectedHistory && (
-          <Modal
-            visible={historyModalVisible}
-            transparent
-            animationType="slide"
-            onRequestClose={() => setHistoryModalVisible(false)}
+        <View style={[styles.modalContainer, { backgroundColor: `${currentTheme.colors.overlay}80` }]}>
+          <LinearGradient
+            colors={[currentTheme.colors.cardBackground, currentTheme.colors.cardBackground + "F0"]}
+            style={styles.modalContent}
           >
-            <View
-              style={[
-                styles.modalContainer,
-                { backgroundColor: `${currentTheme.colors.overlay}80` },
-              ]}
-            >
-              <LinearGradient
-                colors={[
-                  currentTheme.colors.cardBackground,
-                  currentTheme.colors.cardBackground + "F0",
-                ]}
-                style={styles.modalContent}
-              >
                 <Text
                   style={[
                     styles.modalTitle,
@@ -454,10 +524,23 @@ export default function CompletedChallenges() {
                   </LinearGradient>
                 </TouchableOpacity>
               </LinearGradient>
-            </View>
-          </Modal>
-        )}
-      </LinearGradient>
+        </View>
+      </Modal>
+    )}
+  </View>
+  {showBanners && (
+   <View style={styles.bannerContainer}>
+     <BannerAd
+       unitId={adUnitIds.banner}
+       size={BannerAdSize.BANNER}
+       requestOptions={{ requestNonPersonalizedAdsOnly: false }}
+       onAdFailedToLoad={(err) =>
+         console.error("Échec chargement bannière (CompletedChallenges):", err)
+       }
+     />
+   </View>
+ )}
+</LinearGradient>
     </SafeAreaView>
   );
 }
@@ -465,9 +548,8 @@ export default function CompletedChallenges() {
 const styles = StyleSheet.create({
   safeArea: {
   flex: 1,
-  paddingTop:
-    Platform.OS === "android" ? StatusBar.currentHeight ?? SPACING : SPACING,
-},  
+  paddingTop: 0,
+},
   container: {
     flex: 1,
   },
@@ -486,6 +568,16 @@ const styles = StyleSheet.create({
     paddingVertical: SPACING,
     position: "relative",
   },
+  bannerContainer: {
+   width: "100%",
+   alignItems: "center",
+   paddingVertical: SPACING / 2,
+   backgroundColor: "transparent",
+   position: "absolute",
+   bottom: 0,
+   left: 0,
+   right: 0,
+ },
   listContent: {
     paddingVertical: SPACING * 1.5,
     paddingHorizontal: SCREEN_WIDTH * 0.025,
@@ -514,6 +606,25 @@ const styles = StyleSheet.create({
     borderWidth: 2.5, // Bordure premium
     minHeight: ITEM_HEIGHT,
   },
+  gradientContainer: {
+  flex: 1,
+},
+bgOrbTop: {
+  position: "absolute",
+  top: -SCREEN_WIDTH * 0.25,
+  left: -SCREEN_WIDTH * 0.2,
+  width: SCREEN_WIDTH * 0.9,
+  height: SCREEN_WIDTH * 0.9,
+  borderRadius: SCREEN_WIDTH * 0.45,
+},
+bgOrbBottom: {
+  position: "absolute",
+  bottom: -SCREEN_WIDTH * 0.3,
+  right: -SCREEN_WIDTH * 0.25,
+  width: SCREEN_WIDTH * 1.1,
+  height: SCREEN_WIDTH * 1.1,
+  borderRadius: SCREEN_WIDTH * 0.55,
+},
   cardImage: {
     width: normalizeSize(70),
     height: normalizeSize(70),
