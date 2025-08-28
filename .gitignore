@@ -81,3 +81,17 @@ yarn-error.*
 # @end expo-cli
 #/android
 #/ios
+
+# Secrets (ne jamais committer)
+play-service-account.json
+secrets/
+*.keystore
+*.jks
+*.p8
+*.p12
+*.pem
+*.mobileprovision
+
+# Expo prebuild (si managed)
+android/
+ios/
