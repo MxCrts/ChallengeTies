@@ -95,3 +95,6 @@ secrets/
 # Expo prebuild (si managed)
 android/
 ios/
+
+play-service-account.json
+secrets/
