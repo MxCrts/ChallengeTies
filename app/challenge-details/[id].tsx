@@ -30,6 +30,7 @@ import {
   getDoc,
   updateDoc,
   increment,
+  getDocs,
   query,
   collection,
   where,
@@ -56,9 +57,6 @@ import { useAdsVisibility } from "../../src/context/AdsVisibilityContext";
 import { CARD_HEIGHT, CARD_WIDTH } from "@/components/ShareCard";
 import * as Notifications from "expo-notifications";
 import { Share } from "react-native";
-import { createOpenInvitationAndLink } from "@/services/invitationService";
-import { isInvitationExpired, Invitation } from "@/services/invitationService";
-// tout en haut, près des autres imports
 import type { ViewStyle } from "react-native";
 
 import Animated, {
@@ -77,6 +75,10 @@ import {
   BannerAdSize,
   TestIds,
 } from "react-native-google-mobile-ads";
+import * as Linking from "expo-linking";
+import SendInvitationModal from "@/components/SendInvitationModal";
+
+
 
 const { width: SCREEN_WIDTH, height: SCREEN_HEIGHT } = Dimensions.get("window");
 const SPACING = 15;
@@ -182,8 +184,6 @@ export default function ChallengeDetails() {
   const { t, i18n } = useTranslation();
   const { showBanners } = useAdsVisibility();
  const bottomInset = showBanners ? BANNER_HEIGHT + SPACING * 2 : SPACING * 2;
-const CT_LOGO = require("../../assets/images/icon.png");
-const [hasActiveOpenInvite, setHasActiveOpenInvite] = useState(false);
 
   const router = useRouter();
     const pct = (num = 0, den = 0) => (den > 0 ? Math.min(100, Math.max(0, Math.round((num / den) * 100))) : 0);
@@ -201,8 +201,6 @@ useEffect(() => {
     true // reverse = true pour alterner
   );
 }, []);
-// garde l'info du leader précédent pour déclencher un feedback inspirant
-const prevLeaderRef = useRef<"me" | "partner" | "tied">("tied");
 
   
   const params = useLocalSearchParams<{
@@ -218,7 +216,6 @@ const prevLeaderRef = useRef<"me" | "partner" | "tied">("tied");
   const [invitation, setInvitation] = useState<{ id: string } | null>(null);
   const [invitationModalVisible, setInvitationModalVisible] = useState(false);
   const id = params.id || "";
-const cardRef = useRef<View>(null);
 
   const { savedChallenges, addChallenge, removeChallenge } =
     useSavedChallenges();
@@ -304,7 +301,9 @@ const TITLE = IS_SMALL ? normalizeSize(34) : normalizeSize(42);
 
 
 const isDuo = !!currentChallenge?.duo;
-const canInviteFriend = !isDuo && !hasActiveOpenInvite;
+
+
+const canInviteFriend = !isDuo; // interne : on autorise l'ouverture du modal si pas en duo
 
   // ⚙️ Pré-sélection depuis le deep link ?days=XX (si valide)
 useEffect(() => {
@@ -326,6 +325,7 @@ useEffect(() => {
     setLocalSelectedDays(n);
   }
 }, [params.days, daysOptions]);
+
 
 const resetSoloProgressIfNeeded = useCallback(async () => {
   try {
@@ -387,12 +387,6 @@ const shakeStylePartner = useAnimatedStyle<ViewStyle>(() => ({
   ] as ViewStyle["transform"],
 }));
 
-const leaderPulseStyle = useAnimatedStyle<ViewStyle>(() => ({
-  transform: [
-    { scale: interpolate(leaderPulse.value, [0, 1], [1, 1.08]) },
-  ] as ViewStyle["transform"],
-  opacity: interpolate(leaderPulse.value, [0, 1], [0.12, 0.28]),
-}));
 
 const pulseStyle = useAnimatedStyle<ViewStyle>(() => ({
   transform: [
@@ -510,36 +504,98 @@ const resolveAvatarUrl = async (raw?: string): Promise<string> => {
     return "";
   }
 };
-
+// 👉 Ouvre automatiquement le modal si je suis l'invité d'une "direct" pending de ce challenge
 useEffect(() => {
   const uid = auth.currentUser?.uid;
-  if (!uid || !id) {
-    setHasActiveOpenInvite(false);
-    return;
-  }
+  if (!uid || !id) return;
 
-  // on écoute les invitations OPEN actives de cet inviter pour ce challenge
-  const qOpen = query(
+  // 1) déduplication (évite de rouvrir 10x si le doc est modifié)
+  const opened = new Set<string>();
+
+  // 2) écoute "robuste" avec 2 where (peut exiger un index Firestore)
+  const qPending = query(
     collection(db, "invitations"),
-    where("inviterId", "==", uid),
-    where("challengeId", "==", id),
-    where("kind", "==", "open"),
-    where("status", "in", ["pending", "accepted"])
+    where("inviteeId", "==", uid),
+    where("status", "==", "pending")
   );
 
-  const unsub = onSnapshot(qOpen, (snap) => {
-    const active = snap.docs.some((d) => {
-      const data = d.data() as Invitation;
-      return !isInvitationExpired(data);
-    });
-    setHasActiveOpenInvite(active);
-  }, (err) => {
-    console.error("❌ onSnapshot open invites error:", err);
-    setHasActiveOpenInvite(false);
-  });
+  const unsub = onSnapshot(
+    qPending,
+    (snap) => {
+      snap.docChanges().forEach((chg) => {
+        const docId = chg.doc.id;
+        const data = chg.doc.data() as any;
+
+        // On ne gère que ce challenge et qu'une seule ouverture par doc
+        if (data.challengeId === id && !opened.has(docId)) {
+          opened.add(docId);
+          setInvitation({ id: docId });
+          setInvitationModalVisible(true);
+        }
+      });
+    },
+    async (err) => {
+      // 3) Fallback si index manquant (ou autre erreur de requête) :
+      console.warn(
+        "⚠️ Snapshot invitations (inviteeId+status) a échoué, fallback sans index:",
+        err?.message || err
+      );
+      try {
+        // On écoute seulement inviteeId et on filtre en JS
+        const qByInvitee = query(
+          collection(db, "invitations"),
+          where("inviteeId", "==", uid)
+        );
+        const unsubFallback = onSnapshot(qByInvitee, (snap2) => {
+          snap2
+            .docChanges()
+            .forEach((chg) => {
+              const docId = chg.doc.id;
+              const data = chg.doc.data() as any;
+              if (
+                data.status === "pending" &&
+                data.challengeId === id &&
+                !opened.has(docId)
+              ) {
+                opened.add(docId);
+                setInvitation({ id: docId });
+                setInvitationModalVisible(true);
+              }
+            });
+        });
+        // remplace l’unsub principal par celui du fallback
+        return () => unsubFallback();
+      } catch (e) {
+        console.error("❌ Fallback invitations échoué:", e);
+      }
+    }
+  );
+
+  // 4) Première vérif immédiate (au cas où l’event ‘added’ ne se déclenche pas à froid)
+  (async () => {
+    try {
+      const snap = await getDocs(
+        query(collection(db, "invitations"), where("inviteeId", "==", uid))
+      );
+      snap.forEach((d) => {
+        const data = d.data() as any;
+        if (
+          data.status === "pending" &&
+          data.challengeId === id &&
+          !opened.has(d.id)
+        ) {
+          opened.add(d.id);
+          setInvitation({ id: d.id });
+          setInvitationModalVisible(true);
+        }
+      });
+    } catch (e) {
+      console.error("❌ Vérif immédiate invitations échouée:", e);
+    }
+  })();
 
   return () => unsub();
-}, [id, auth.currentUser?.uid]);
+}, [id]);
 
 
 useEffect(() => {
@@ -651,7 +707,6 @@ useEffect(() => {
 
   return () => unsubscribe();
 }, [id, t, currentChallenge]);
-
 
   useEffect(() => {
     if (!id || !auth.currentUser?.uid) return;
@@ -872,22 +927,57 @@ useEffect(() => {
   return () => unsubscribe();
 }, [id, isCurrentUserInviter, t]);
 
-
+// Ouvre le modal si ?invite=... est présent (via route OU via deep link brut)
 useEffect(() => {
-  // on n’ouvre le modal que si on a un user (sinon le composant d’invite s’affolera)
-  if (params.invite && auth.currentUser) {
-    setInvitation({ id: String(params.invite) });
-    // petite latence pour laisser la page se poser avant d’afficher le modal
-    const to = setTimeout(() => setInvitationModalVisible(true), 250);
-    return () => clearTimeout(to);
+  const openFromParams = (inviteParam?: string) => {
+    if (!inviteParam) return;
+    if (auth.currentUser) {
+      setInvitation({ id: String(inviteParam) });
+      // petit délai pour laisser l'écran se charger
+      setTimeout(() => setInvitationModalVisible(true), 200);
+    } else {
+      // si non connecté → on redirige vers login en préservant l'invite
+      router.replace(
+        `/login?redirect=challenge-detail/${params.id}&invite=${inviteParam}`
+      );
+    }
+  };
+
+  // 1) Si expo-router nous a déjà passé ?invite
+  if (params?.invite) {
+    openFromParams(String(params.invite));
   }
-}, [params.invite, auth.currentUser]);
+
+  // 2) Fallback: lire l’URL initiale (si l’app a été ouverte par un lien)
+  Linking.getInitialURL().then((url) => {
+    if (!url) return;
+    try {
+      const parsed = Linking.parse(url);
+      const invite = String(parsed?.queryParams?.invite || "");
+      if (invite) openFromParams(invite);
+    } catch {}
+  });
+
+  // 3) Fallback live: si un lien arrive pendant que l’app est ouverte
+  const sub = Linking.addEventListener("url", ({ url }) => {
+    try {
+      const parsed = Linking.parse(url);
+      const invite = String(parsed?.queryParams?.invite || "");
+      if (invite) openFromParams(invite);
+    } catch {}
+  });
+
+  return () => {
+    // API SDK48/49: sub.remove(); SDK50+: sub.remove() aussi
+    (sub as any)?.remove?.();
+  };
+}, [params?.id, params?.invite, router]);
+
 
 
   const isSavedChallenge = (challengeId: string) =>
     savedChallenges.some((ch) => ch.id === challengeId);
 
-  const formatDate = (date: Date) => date.toDateString();
 
   // 👇 TOP-LEVEL, pas dans une fonction
 const completions = useMemo(
@@ -1172,130 +1262,24 @@ const handleShareChallenge = useCallback(async () => {
   }
 }, [id, routeTitle, t, lang]);
 
-const mapInviteError = (err: unknown) => {
-  const code = String((err as any)?.message || err || "").toLowerCase();
-  if (code.includes("invitation_already_active")) return t("invitationS.errors.alreadyInvited");
-  if (code.includes("restart_inviteur")) return t("invitationS.errors.inviterAlreadyStarted");
-  if (code.includes("utilisateur non connecté")) return t("commonS.notLoggedIn");
-  if (code.includes("auto_invite")) return t("invitationS.errors.autoInvite");
-  if (code.includes("expired") || code.includes("expirée")) return t("invitationS.errors.expired");
-  return t("invitationS.errors.unknown");
-};
 
-const handleInviteFriend = useCallback(async () => {
+const handleInviteFriend = useCallback(() => {
   try {
     if (!id) return;
 
-    // 1) Si une open-invite est déjà active → on bloque
-    if (hasActiveOpenInvite) {
-      Alert.alert(t("alerts.error"), t("invitationS.errors.alreadyInvited"));
-      return;
-    }
-
-    // 2) Si on est en DUO → bouton devrait déjà être désactivé, par sécurité on bloque
+    // 1) Si déjà en duo → interdit
     if (isDuo) {
       Alert.alert(t("alerts.error"), t("invitationS.errors.duoAlready"));
       return;
     }
 
-    // 3) Si on est en SOLO (challenge déjà pris) → afficher la confirmation
-    if (challengeTaken) {
-      setInviteConfirmVisible(true);
-      return;
-    }
-
-    // 4) Sinon (challenge pas encore pris) → créer directement l'open-invite et partager
-    const langRaw =
-      (i18n?.language as string | undefined) ??
-      (globalThis as any)?.Localization?.locale ??
-      "fr";
-    const lang = String(langRaw).split("-")[0].toLowerCase();
-
-    const { universalUrl } = await createOpenInvitationAndLink({
-      challengeId: id,
-      selectedDays: localSelectedDays,
-      lang: lang as any,
-      title: routeTitle,
-    });
-
-    const message = t("invitationS.shareMessageWithTitle", {
-      title: routeTitle,
-      days: localSelectedDays,
-    });
-
-    await Share.share({
-      title: t("invitationS.shareTitle"),
-      message: `${message}\n${universalUrl}`,
-    });
+    // 2) Sinon (solo ou challenge pas encore pris) → ouvrir le modal interne
+    setInviteConfirmVisible(true);
   } catch (err) {
     console.error("❌ handleInviteFriend error:", err);
-    // On garde tes mappages d'erreurs
-    const code = String((err as any)?.message || err || "").toLowerCase();
-    if (code.includes("invitation_already_active")) {
-      Alert.alert(t("alerts.error"), t("invitationS.errors.alreadyInvited"));
-    } else if (code.includes("auto_invite")) {
-      Alert.alert(t("alerts.error"), t("invitationS.errors.autoInvite"));
-    } else if (code.includes("utilisateur non connecté")) {
-      Alert.alert(t("alerts.error"), t("commonS.notLoggedIn"));
-    } else if (code.includes("expired") || code.includes("expirée")) {
-      Alert.alert(t("alerts.error"), t("invitationS.errors.expired"));
-    } else {
-      Alert.alert(t("alerts.error"), t("invitationS.errors.unknown"));
-    }
-  }
-}, [
-  id,
-  localSelectedDays,
-  routeTitle,
-  i18n?.language,
-  t,
-  challengeTaken,
-  hasActiveOpenInvite,
-  isDuo,
-]);
-
-const confirmAndSendInvite = useCallback(async () => {
-  try {
-    if (!id) return;
-
-    const uid = auth.currentUser?.uid;
-    if (!uid) {
-      Alert.alert(t("alerts.error"), t("commonS.notLoggedIn"));
-      return;
-    }
-
-    setInviteConfirmVisible(false);
-
-    const langRaw =
-      (i18n?.language as string | undefined) ??
-      (globalThis as any)?.Localization?.locale ??
-      "fr";
-    const lang = String(langRaw).split("-")[0].toLowerCase();
-
-    // ✅ ne PAS passer inviterId/kind ici
-    const { universalUrl } = await createOpenInvitationAndLink({
-      challengeId: id,
-      selectedDays: localSelectedDays,
-      lang: lang as any,
-      title: routeTitle,
-    });
-
-    const message = t("invitationS.shareMessageWithTitle", {
-      title: routeTitle,
-      days: localSelectedDays,
-    });
-
-    await Share.share({
-      title: t("invitationS.shareTitle"),
-      message: `${message}\n${universalUrl}`,
-    });
-
-    setHasActiveOpenInvite(true);
-  } catch (err: any) {
-    console.error("❌ confirmAndSendInvite error:", err?.message || err);
     Alert.alert(t("alerts.error"), t("invitationS.errors.unknown"));
   }
-}, [id, localSelectedDays, routeTitle, i18n?.language, t]);
+}, [id, isDuo, t]);
 
 
   const handleViewStats = useCallback(() => {
@@ -1452,12 +1436,6 @@ const confirmAndSendInvite = useCallback(async () => {
       {userCount} {t(`challengeDetails.participant${userCount > 1 ? "s" : ""}`)}
     </Text>
   </View>
-  {hasActiveOpenInvite && (
-  <View style={styles.chip}>
-    <Ionicons name="send-outline" size={14} color="#fff" />
-    <Text style={styles.chipText}>{t("pendingInvite", { defaultValue: "Invitation en cours" })}</Text>
-  </View>
-)}
 </View>
           {!challengeTaken  && (
             <TouchableOpacity
@@ -2150,139 +2128,14 @@ const confirmAndSendInvite = useCallback(async () => {
   </View>
 )}
 {/* ⚠️ Confirmation : passer en Duo réinitialise ta progression solo */}
-<Modal
+<SendInvitationModal
   visible={inviteConfirmVisible}
-  transparent
-  animationType="fade"
-  onRequestClose={() => setInviteConfirmVisible(false)}
->
-  <View
-  style={{
-    flex: 1,
-    justifyContent: "center",
-    alignItems: "center",
-    backgroundColor: isDarkMode ? "rgba(0,0,0,0.7)" : "rgba(0,0,0,0.5)",
-    padding: 20,
-  }}
->
-  <Animated.View
-    entering={FadeInUp.duration(250)}
-    style={{
-      backgroundColor: currentTheme.colors.cardBackground,
-      borderRadius: 16,
-      padding: 22,
-      alignItems: "center",
-      shadowColor: "#000",
-      shadowOffset: { width: 0, height: 6 },
-      shadowOpacity: 0.3,
-      shadowRadius: 10,
-      elevation: 8,
-      width: "100%",
-      maxWidth: 420,
-    }}
-  >
-    <Text
-      style={{
-        fontSize: 20,
-        fontFamily: "Comfortaa_700Bold",
-        marginBottom: 10,
-        color: currentTheme.colors.secondary,
-        textAlign: "center",
-      }}
-    >
-      {t("invitationS.confirmStartDuoTitle")}
-    </Text>
+  onClose={() => setInviteConfirmVisible(false)}
+  challengeId={id}
+  selectedDays={localSelectedDays}
+  challengeTitle={routeTitle}
+/>
 
-    <Text
-      style={{
-        fontSize: 16,
-        fontFamily: "Comfortaa_400Regular",
-        marginBottom: 18,
-        textAlign: "center",
-        color: currentTheme.colors.textSecondary,
-      }}
-    >
-      {t("invitationS.confirmStartDuoMessage")}
-    </Text>
-
-    <View
-      style={{
-        flexDirection: "row",
-        justifyContent: "space-between",
-        width: "100%",
-        marginTop: 6,
-      }}
-    >
-      {/* Bouton Annuler (neutre) */}
-      <TouchableOpacity
-  onPress={() => setInviteConfirmVisible(false)}
-  activeOpacity={0.85}
-  style={{
-    flex: 1,
-    borderRadius: 12,
-    paddingVertical: 12,
-    alignItems: "center",
-    backgroundColor: currentTheme.colors.border,
-    shadowColor: "#000",
-    shadowOffset: { width: 0, height: 4 },
-    shadowOpacity: 0.2,
-    shadowRadius: 6,
-    elevation: 5,
-    marginRight: 12, // 👈 remplace le gap
-  }}
->
-        <Text
-          style={{
-            fontSize: 16,
-            fontFamily: "Comfortaa_700Bold",
-            color: currentTheme.colors.textPrimary,
-          }}
-        >
-          {t("invitationS.actions.cancel")}
-        </Text>
-      </TouchableOpacity>
-
-      {/* Bouton Continuer (primaire dégradé) */}
-      <TouchableOpacity
-        onPress={confirmAndSendInvite}
-        activeOpacity={0.85}
-        style={{
-          flex: 1,
-          borderRadius: 12,
-          overflow: "hidden",
-          shadowColor: "#000",
-          shadowOffset: { width: 0, height: 4 },
-          shadowOpacity: 0.2,
-          shadowRadius: 6,
-          elevation: 5,
-        }}
-      >
-        <LinearGradient
-          colors={[currentTheme.colors.primary, currentTheme.colors.secondary]}
-          start={{ x: 0, y: 0 }}
-          end={{ x: 1, y: 1 }}
-          style={{
-            paddingVertical: 12,
-            alignItems: "center",
-            justifyContent: "center",
-          }}
-        >
-          <Text
-            style={{
-              color: "#fff",
-              fontSize: 16,
-              fontFamily: "Comfortaa_700Bold",
-            }}
-          >
-            {t("invitationS.actions.continue")}
-          </Text>
-        </LinearGradient>
-      </TouchableOpacity>
-    </View>
-  </Animated.View>
-</View>
-
-</Modal>
 {introVisible && (
   <Animated.View style={[styles.vsOverlay, fadeStyle]} pointerEvents="auto">
     {!assetsReady ? (
@@ -2798,3 +2651,4 @@ chipText: {
     borderColor: "#FFD700",
   },
 });
+

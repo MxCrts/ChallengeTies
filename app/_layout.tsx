@@ -13,6 +13,7 @@ import { ThemeProvider } from "../context/ThemeContext";
 import { LanguageProvider } from "../context/LanguageContext";
 import { TutorialProvider } from "../context/TutorialContext";
 import TrophyModal from "../components/TrophyModal";
+import { auth } from "../constants/firebase-config";
 import {
   useFonts,
   Comfortaa_400Regular,
@@ -143,6 +144,16 @@ const NotificationsBootstrap: React.FC = () => {
   useEffect(() => {
     ensureAndroidChannelAsync().catch(() => {});
   }, []);
+
+  useEffect(() => {
+  const unsub = auth.onAuthStateChanged(async (u) => {
+    if (u) {
+      await ensureAndroidChannelAsync();         // Android: créer le canal
+      await registerForPushNotificationsAsync(); // 👈 sauve expoPushToken dans /users
+    }
+  });
+  return () => unsub();
+}, []);
 
   // Première initialisation après login
   useEffect(() => {

@@ -22,8 +22,6 @@ import { db } from "../constants/firebase-config";
 import { useTheme } from "../context/ThemeContext";
 import designSystem from "../theme/designSystem";
 import { useCurrentChallenges } from "../context/CurrentChallengesContext";
-import { createOpenInvitationAndLink } from "@/services/invitationService";
-import { Share } from "react-native";
 
 const { width, height } = Dimensions.get("window");
 const SPACING = 16;
@@ -169,18 +167,19 @@ export default function FirstPick() {
       }
 
       if (mode === "duo") {
-        const { universalUrl } = await createOpenInvitationAndLink({
-          challengeId: challengeObj.id,
-          selectedDays: days,
-          lang: "fr" as any,
-          title: challengeObj.title,
-        });
-        const message = `Je te défie sur "${challengeObj.title}" (${days} jours) ! Rejoins-moi sur ChallengeTies 👇`;
-        await Share.share({ title: "Invitation Duo", message: `${message}\n${universalUrl}` });
-        await AsyncStorage.setItem("firstPickDone", "1");
-        await goToHomeWithTutorial();
-        return;
-      }
+  await AsyncStorage.setItem("firstPickDone", "1");
+
+  // On redirige vers la page du challenge → c’est là que ton SendInvitationModal gère l’invitation
+  router.replace({
+    pathname: `/challenge-details/${challengeObj.id}`,
+    params: {
+      selectedDays: String(days),
+      title: challengeObj.title,
+    },
+  });
+  return;
+}
+
     } catch (e: any) {
       console.error("first-pick confirm error", e);
       Alert.alert("Erreur", e?.message || "Oups…");

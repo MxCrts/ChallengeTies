@@ -3,7 +3,7 @@ import * as Notifications from "expo-notifications";
 import Constants from "expo-constants";
 import { Platform } from "react-native";
 import AsyncStorage from "@react-native-async-storage/async-storage";
-import { doc, getDoc, updateDoc } from "firebase/firestore";
+import { doc, getDoc, updateDoc, setDoc  } from "firebase/firestore";
 import { db, auth } from "../constants/firebase-config";
 import i18n from "../i18n";
 
@@ -53,11 +53,15 @@ export const requestNotificationPermissions = async (): Promise<boolean> => {
 // ---------- Token Expo Push (pour nudges duo) ----------
 export const registerForPushNotificationsAsync = async (): Promise<string | null> => {
   try {
-    // Use Constants.isDevice instead of expo-device
     if (!Constants.isDevice) return null;
 
-    const granted = await requestNotificationPermissions();
-    if (!granted) return null;
+    const { status: existing } = await Notifications.getPermissionsAsync();
+    let final = existing;
+    if (existing !== "granted") {
+      const { status } = await Notifications.requestPermissionsAsync();
+      final = status;
+    }
+    if (final !== "granted") return null;
 
     let tokenResp;
     try {
@@ -69,14 +73,19 @@ export const registerForPushNotificationsAsync = async (): Promise<string | null
     } catch {
       tokenResp = await Notifications.getExpoPushTokenAsync();
     }
-
     const token = tokenResp?.data ?? null;
+
     const uid = auth.currentUser?.uid;
     if (uid && token) {
-      await updateDoc(doc(db, "users", uid), {
-        expoPushToken: token,
-        notificationsEnabled: true,
-      }).catch(() => {});
+      await setDoc(
+        doc(db, "users", uid),
+        {
+          expoPushToken: token,
+          notificationsEnabled: true,
+          expoPushUpdatedAt: new Date(),
+        },
+        { merge: true }
+      );
     }
     return token;
   } catch (e) {
@@ -84,7 +93,6 @@ export const registerForPushNotificationsAsync = async (): Promise<string | null
     return null;
   }
 };
-
 
 // ---------- Planifier 09:00 & 19:00 (heure locale), sans doublons ----------
 export const scheduleDailyNotifications = async (): Promise<boolean> => {

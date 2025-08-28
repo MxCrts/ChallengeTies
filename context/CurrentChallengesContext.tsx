@@ -163,76 +163,142 @@ useEffect(() => {
   };
 }, [showInterstitials, interstitialAdUnitId]);
 
+// --- à placer dans le même fichier, au-dessus du useEffect ---
+async function reconcileDuoLinks(
+  myUserId: string,
+  myChallenges: CurrentChallenge[],
+  setCurrentChallenges: React.Dispatch<React.SetStateAction<CurrentChallenge[]>>,
+) {
+  // Rien à faire si aucun duo
+  const hasDuo = myChallenges.some((c) => c?.duo && c?.duoPartnerId && c?.uniqueKey);
+  if (!hasDuo) return;
 
+  const updates: Record<string, boolean> = {};
 
-  useEffect(() => {
-    let unsubscribeSnapshot: (() => void) | null = null;
-    const unsubscribeAuth = auth.onAuthStateChanged((user) => {
-      if (!user) {
-        isActiveRef.current = false;
-        if (unsubscribeSnapshot) {
-          unsubscribeSnapshot();
-          unsubscribeSnapshot = null;
-        }
-        setCurrentChallenges([]);
-        return;
+  for (const ch of myChallenges) {
+    if (!ch?.duo || !ch?.duoPartnerId || !ch?.uniqueKey) continue;
+
+    try {
+      const partnerRef = doc(db, "users", ch.duoPartnerId);
+      const partnerSnap = await getDoc(partnerRef);
+      if (!partnerSnap.exists()) {
+        updates[ch.uniqueKey] = true; // partenaire inexistant → solo
+        continue;
       }
 
-      isActiveRef.current = true; // Réactiver quand un utilisateur est connecté
-      const userId = user.uid;
-      const userRef = doc(db, "users", userId);
+      const partnerData = partnerSnap.data();
+      const partnerList: CurrentChallenge[] = Array.isArray(partnerData.CurrentChallenges)
+        ? partnerData.CurrentChallenges
+        : [];
 
-      unsubscribeSnapshot = onSnapshot(
-        userRef,
-        (docSnap) => {
-          if (!isActiveRef.current || !auth.currentUser) {
-            setCurrentChallenges([]);
-            return;
-          }
-          if (docSnap.exists()) {
-            const userData = docSnap.data();
+      const stillPaired = partnerList.some((p) => p?.uniqueKey === ch.uniqueKey);
+      if (!stillPaired) updates[ch.uniqueKey] = true; // l'autre s'est retiré → je passe solo
+    } catch (e: any) {
+      console.warn("reconcileDuoLinks partner read error:", e?.message ?? e);
+    }
+  }
 
-            if (Array.isArray(userData.CurrentChallenges)) {
-              const uniqueChallenges = Array.from(
-                new Map(
-                  userData.CurrentChallenges.map((ch: CurrentChallenge) => {
-                    const key = ch.uniqueKey || `${ch.id}_${ch.selectedDays}`;
-                    return [key, { ...ch, uniqueKey: key } as CurrentChallenge];
+  if (Object.keys(updates).length === 0) return;
 
-                  })
-                ).values()
-              );
+  // Applique localement puis persiste (on modifie MON doc → autorisé par tes rules)
+  const meRef = doc(db, "users", myUserId);
+  const newArray = myChallenges.map((item) => {
+    if (!item?.uniqueKey) return item;
+    if (!updates[item.uniqueKey]) return item;
+    return {
+      ...item,
+      duo: false,
+      duoPartnerId: null,
+      duoPartnerUsername: null,
+    };
+  });
 
-              setCurrentChallenges(uniqueChallenges);
-            } else {
-              setCurrentChallenges([]);
-            }
-          } else {
-            setCurrentChallenges([]);
-          }
-        },
-        (error) => {
-          console.error(
-            "❌ Erreur onSnapshot Challenges:",
-            error.message,
-            error.code
-          );
-          Alert.alert(
-            "Erreur",
-            `Impossible de charger les défis: ${error.message}`
-          );
-        }
-      );
-    });
+  try {
+    await updateDoc(meRef, { CurrentChallenges: newArray });
+    setCurrentChallenges(newArray);
+  } catch (e: any) {
+    console.error("reconcileDuoLinks write error:", e?.message ?? e);
+  }
+}
 
-    return () => {
+// --- remplace intégralement ton useEffect par ceci ---
+useEffect(() => {
+  let unsubscribeSnapshot: (() => void) | null = null;
+  let cancelled = false;
+
+  const unsubscribeAuth = auth.onAuthStateChanged((user) => {
+    // Si déconnecté → on nettoie et on sort
+    if (!user) {
       isActiveRef.current = false;
       if (unsubscribeSnapshot) {
         unsubscribeSnapshot();
+        unsubscribeSnapshot = null;
       }
-      unsubscribeAuth();
-    };
-  }, [t]);
+      setCurrentChallenges([]);
+      return;
+    }
+
+    // Connecté
+    isActiveRef.current = true;
+    const userId = user.uid;
+    const userRef = doc(db, "users", userId);
+
+    // On (ré)écoute le doc utilisateur
+    unsubscribeSnapshot = onSnapshot(
+      userRef,
+      (docSnap) => {
+        if (cancelled || !isActiveRef.current || !auth.currentUser) {
+          setCurrentChallenges([]);
+          return;
+        }
+
+        if (!docSnap.exists()) {
+          setCurrentChallenges([]);
+          return;
+        }
+
+        const userData = docSnap.data();
+        const rawList: CurrentChallenge[] = Array.isArray(userData.CurrentChallenges)
+          ? userData.CurrentChallenges
+          : [];
+
+        // Dédup + normalisation du uniqueKey
+        const uniqueChallenges = Array.from(
+          new Map(
+            rawList.map((ch: CurrentChallenge) => {
+              const key = ch?.uniqueKey || `${ch?.id}_${ch?.selectedDays}`;
+              return [key, { ...ch, uniqueKey: key } as CurrentChallenge];
+            })
+          ).values()
+        );
+
+        setCurrentChallenges(uniqueChallenges);
+
+        // Réconciliation duo (asynchrone, ne bloque pas l'UI)
+        // NB: on appelle seulement si toujours connecté
+        if (auth.currentUser?.uid) {
+          void reconcileDuoLinks(userId, uniqueChallenges, setCurrentChallenges);
+        }
+      },
+      (error) => {
+        console.error("❌ Erreur onSnapshot Challenges:", error.message, error.code);
+        Alert.alert("Erreur", `Impossible de charger les défis: ${error.message}`);
+        setCurrentChallenges([]);
+      }
+    );
+  });
+
+  return () => {
+    cancelled = true;
+    isActiveRef.current = false;
+    if (unsubscribeSnapshot) {
+      unsubscribeSnapshot();
+      unsubscribeSnapshot = null;
+    }
+    unsubscribeAuth();
+  };
+}, [t]);
+
 
   const getToday = () => simulatedToday || new Date();
 
@@ -303,11 +369,8 @@ const removeChallenge = async (id: string, selectedDays: number) => {
     const challengeToRemove = currentChallenges.find((ch) => ch.uniqueKey === uniqueKey);
     if (!challengeToRemove) return;
 
-    // Protection contre suppression duo sans confirmation
-    if (challengeToRemove.duo && challengeToRemove.duoPartnerId) {
-      Alert.alert(t("warning"), t("cannotRemoveDuoChallengeDirectly"));
-      return;
-    }
+
+
 
     const updatedChallenges = currentChallenges.filter((ch) => ch.uniqueKey !== uniqueKey);
 

@@ -14,11 +14,11 @@ import { doc, getDoc } from "firebase/firestore";
 import { db, auth } from "@/constants/firebase-config";
 import {
   acceptInvitation,
-  refuseInvitation,
-  resetInviteeChallenge, // alias -> resetInviteeChallengeByUsername
+  refuseInvitationDirect,
+  refuseOpenInvitation,
   getInvitation,
   isInvitationExpired,
-  Invitation,
+  type Invitation,
 } from "@/services/invitationService";
 import { useTheme } from "@/context/ThemeContext";
 import designSystem, { Theme } from "@/theme/designSystem";
@@ -28,7 +28,7 @@ type InvitationModalProps = {
   inviteId: string | null;
   challengeId: string;
   onClose: () => void;
-  clearInvitation?: () => void; // optionnel: pour vider l'état parent
+  clearInvitation?: () => void;
 };
 
 const InvitationModal: React.FC<InvitationModalProps> = ({
@@ -47,35 +47,27 @@ const InvitationModal: React.FC<InvitationModalProps> = ({
 
   const [inv, setInv] = useState<Invitation | null>(null);
   const [inviterUsername, setInviterUsername] = useState("");
-  const [inviteeUsername, setInviteeUsername] = useState("");
   const [challengeTitle, setChallengeTitle] = useState("");
   const [errorMsg, setErrorMsg] = useState<string>("");
 
   const isDarkMode = theme === "dark";
-  const currentTheme: Theme = isDarkMode
-    ? designSystem.darkTheme
-    : designSystem.lightTheme;
+  const currentTheme: Theme = isDarkMode ? designSystem.darkTheme : designSystem.lightTheme;
 
   const you = auth.currentUser?.uid || "";
 
-  // ✅ Open-aware: une open invite est valable pour tout user connecté ≠ inviter
+  // OPEN: valable pour tout user connecté ≠ inviter
   const isForMe = useMemo(() => {
     if (!inv || !you) return false;
-    if (inv.kind === "open") {
-      return inv.inviterId !== you;
-    }
-    // ancien modèle direct
-    return inv.inviteeId === you;
+    if (inv.kind === "open") return inv.inviterId !== you;
+    return inv.inviteeId === you; // direct
   }, [inv, you]);
 
   const expired = useMemo(() => (inv ? isInvitationExpired(inv) : false), [inv]);
 
-  /* =========================
-   * Chargement des infos (invitation + noms + titre challenge)
-   * ========================= */
+  // ===== Load invitation + infos affichage =====
   useEffect(() => {
     const load = async () => {
-      if (!visible || !inviteId) return;
+      if (!visible || !inviteId || !auth.currentUser) return;
       try {
         setFetching(true);
         setErrorMsg("");
@@ -93,18 +85,10 @@ const InvitationModal: React.FC<InvitationModalProps> = ({
           );
         }
 
-        // 3) Invitee username (toi)
-        if (auth.currentUser?.uid) {
-          const meSnap = await getDoc(doc(db, "users", auth.currentUser.uid));
-          setInviteeUsername(
-            (meSnap.exists() && (meSnap.data() as any)?.username) ||
-              t("invitation.youFallback", { defaultValue: "Toi" })
-          );
-        }
-
-        // 4) Challenge title pour le message
-        if (challengeId) {
-          const chSnap = await getDoc(doc(db, "challenges", challengeId));
+        // 3) Challenge title (depuis prop ou inv)
+        const targetChallengeId = data?.challengeId || challengeId;
+        if (targetChallengeId) {
+          const chSnap = await getDoc(doc(db, "challenges", targetChallengeId));
           setChallengeTitle(
             (chSnap.exists() && (chSnap.data() as any)?.title) ||
               t("challengeDetails.untitled", { defaultValue: "Défi" })
@@ -112,9 +96,7 @@ const InvitationModal: React.FC<InvitationModalProps> = ({
         }
       } catch (e) {
         console.error("❌ InvitationModal load error:", e);
-        setErrorMsg(
-          t("invitation.errors.unknown", { defaultValue: "Erreur inconnue." })
-        );
+        setErrorMsg(t("invitation.errors.unknown", { defaultValue: "Erreur inconnue." }));
       } finally {
         setFetching(false);
       }
@@ -122,20 +104,15 @@ const InvitationModal: React.FC<InvitationModalProps> = ({
     load();
   }, [visible, inviteId, challengeId, t]);
 
-  /* =========================
-   * Actions
-   * ========================= */
+  // ===== Actions =====
 
-  // Accepter (avec détection d’un solo en cours → confirmation reset)
   const handleAccept = async () => {
     if (!inviteId || !auth.currentUser) return;
 
     if (!inv || expired || !isForMe) {
       setErrorMsg(
         expired
-          ? t("invitation.errors.expired", {
-              defaultValue: "Invitation expirée.",
-            })
+          ? t("invitation.errors.expired", { defaultValue: "Invitation expirée." })
           : t("invitation.errors.unknown", { defaultValue: "Erreur." })
       );
       return;
@@ -144,11 +121,12 @@ const InvitationModal: React.FC<InvitationModalProps> = ({
     setLoading(true);
     setErrorMsg("");
     try {
-      // Vérifier si un solo existe déjà pour ce challenge
+      // Option UX : si l'utilisateur a déjà le challenge en SOLO, on demande confirmation.
+      // Techniquement pas besoin de reset préalable : acceptInvitation() fait le "filter SOLO + add DUO".
       const meSnap = await getDoc(doc(db, "users", auth.currentUser.uid));
       const current = (meSnap.data()?.CurrentChallenges || []) as any[];
       const hasSolo = current.some(
-        (c) => (c.challengeId === challengeId || c.id === challengeId) && !c.duo
+        (c) => (c.challengeId === (inv.challengeId || challengeId) || c.id === (inv.challengeId || challengeId)) && !c.duo
       );
 
       if (hasSolo) {
@@ -160,7 +138,6 @@ const InvitationModal: React.FC<InvitationModalProps> = ({
       }
     } catch (e: any) {
       console.error("❌ Invitation accept error:", e);
-      // surface quelques erreurs connues lisiblement
       const msg = String(e?.message || "").toLowerCase();
       if (msg.includes("auto_invite")) {
         setErrorMsg(
@@ -168,39 +145,22 @@ const InvitationModal: React.FC<InvitationModalProps> = ({
             defaultValue: "Tu ne peux pas accepter ta propre invitation.",
           })
         );
-      } else if (msg.includes("expirée") || msg.includes("expired")) {
-        setErrorMsg(
-          t("invitation.errors.expired", {
-            defaultValue: "Invitation expirée.",
-          })
-        );
-      } else if (msg.includes("restart_invitee")) {
-        setErrorMsg(
-          t("invitation.errors.alreadyStarted", {
-            defaultValue:
-              "Tu as déjà ce défi en cours. Termine-le ou réinitialise-le d'abord.",
-          })
-        );
+      } else if (msg.includes("expired") || msg.includes("expir")) {
+        setErrorMsg(t("invitation.errors.expired", { defaultValue: "Invitation expirée." }));
       } else {
-        setErrorMsg(
-          t("invitation.errors.unknown", { defaultValue: "Erreur." })
-        );
+        setErrorMsg(t("invitation.errors.unknown", { defaultValue: "Erreur." }));
       }
     } finally {
       setLoading(false);
     }
   };
 
-  // Confirme le reset de mon solo, puis accepte
   const handleConfirmRestart = async () => {
     if (!inviteId || !auth.currentUser || !inv) return;
-
     setLoading(true);
     setErrorMsg("");
     try {
-      if (inviteeUsername) {
-        await resetInviteeChallenge(challengeId, inviteeUsername);
-      }
+      // Pas de reset manuel : acceptInvitation gère déjà le remplacement SOLO -> DUO
       await acceptInvitation(inviteId);
       setShowRestartConfirm(false);
       onClose();
@@ -214,11 +174,16 @@ const InvitationModal: React.FC<InvitationModalProps> = ({
   };
 
   const handleRefuse = async () => {
-    if (!inviteId) return;
+    if (!inviteId || !inv) return;
     setLoading(true);
     setErrorMsg("");
     try {
-      await refuseInvitation(inviteId);
+      if (inv.kind === "direct") {
+        await refuseInvitationDirect(inviteId);
+      } else {
+        // OPEN : refus explicite (status = refused + inviteeId = me)
+        await refuseOpenInvitation(inviteId);
+      }
       onClose();
       clearInvitation?.();
     } catch (e) {
@@ -229,9 +194,7 @@ const InvitationModal: React.FC<InvitationModalProps> = ({
     }
   };
 
-  /* =========================
-   * Styles
-   * ========================= */
+  // ===== Styles =====
   const styles = StyleSheet.create({
     centeredView: {
       flex: 1,
@@ -299,15 +262,11 @@ const InvitationModal: React.FC<InvitationModalProps> = ({
       fontSize: 16,
       fontFamily: "Comfortaa_700Bold",
     },
-    neutralText: {
-      color: currentTheme.colors.textPrimary,
-    },
+    neutralText: { color: currentTheme.colors.textPrimary },
     spinnerWrap: { marginVertical: 10 },
   });
 
-  /* =========================
-   * Rendus conditionnels
-   * ========================= */
+  // ===== UI =====
   const renderBody = () => {
     if (fetching) {
       return (
@@ -316,10 +275,7 @@ const InvitationModal: React.FC<InvitationModalProps> = ({
             {t("invitation.loading", { defaultValue: "Chargement..." })}
           </Text>
           <View style={styles.spinnerWrap}>
-            <ActivityIndicator
-              size="large"
-              color={currentTheme.colors.secondary}
-            />
+            <ActivityIndicator size="large" color={currentTheme.colors.secondary} />
           </View>
         </>
       );
@@ -329,21 +285,15 @@ const InvitationModal: React.FC<InvitationModalProps> = ({
       return (
         <>
           <Text style={styles.modalTitle}>
-            {t("invitation.invalidTitle", {
-              defaultValue: "Invitation indisponible",
-            })}
+            {t("invitation.invalidTitle", { defaultValue: "Invitation indisponible" })}
           </Text>
           <Text style={styles.modalText}>
             {t("invitation.invalidMessage", {
-              defaultValue:
-                "Cette invitation est introuvable ou a été supprimée.",
+              defaultValue: "Cette invitation est introuvable ou a été supprimée.",
             })}
           </Text>
-          <View style={styles.buttonRow}>
-            <TouchableOpacity
-              style={[styles.btn, styles.neutral]}
-              onPress={onClose}
-            >
+          <View className="row" style={styles.buttonRow}>
+            <TouchableOpacity style={[styles.btn, styles.neutral]} onPress={onClose}>
               <Text style={[styles.btnText, styles.neutralText]}>
                 {t("commonS.close", { defaultValue: "Fermer" })}
               </Text>
@@ -361,15 +311,11 @@ const InvitationModal: React.FC<InvitationModalProps> = ({
           </Text>
           <Text style={styles.modalText}>
             {t("invitation.notForYouMessage", {
-              defaultValue:
-                "Cette invitation n'est pas destinée à ce compte.",
+              defaultValue: "Cette invitation n'est pas destinée à ce compte.",
             })}
           </Text>
           <View style={styles.buttonRow}>
-            <TouchableOpacity
-              style={[styles.btn, styles.neutral]}
-              onPress={onClose}
-            >
+            <TouchableOpacity style={[styles.btn, styles.neutral]} onPress={onClose}>
               <Text style={[styles.btnText, styles.neutralText]}>
                 {t("commonS.close", { defaultValue: "Fermer" })}
               </Text>
@@ -392,10 +338,7 @@ const InvitationModal: React.FC<InvitationModalProps> = ({
             })}
           </Text>
           <View style={styles.buttonRow}>
-            <TouchableOpacity
-              style={[styles.btn, styles.neutral]}
-              onPress={onClose}
-            >
+            <TouchableOpacity style={[styles.btn, styles.neutral]} onPress={onClose}>
               <Text style={[styles.btnText, styles.neutralText]}>
                 {t("commonS.close", { defaultValue: "Fermer" })}
               </Text>
@@ -417,7 +360,7 @@ const InvitationModal: React.FC<InvitationModalProps> = ({
           {t("invitation.message", {
             challenge: challengeTitle,
             defaultValue:
-              "Accepte pour démarrer ce défi en Duo. Tu pourrez suivre vos progrès ensemble.",
+              "Accepte pour démarrer ce défi en Duo. Vous pourrez suivre vos progrès ensemble.",
           })}
         </Text>
 
@@ -430,9 +373,7 @@ const InvitationModal: React.FC<InvitationModalProps> = ({
             disabled={loading}
             activeOpacity={0.85}
           >
-            {loading ? (
-              <ActivityIndicator color="#fff" />
-            ) : (
+            {loading ? <ActivityIndicator color="#fff" /> : (
               <Text style={styles.btnText}>
                 {t("invitation.accept", { defaultValue: "Accepter" })}
               </Text>
@@ -445,9 +386,7 @@ const InvitationModal: React.FC<InvitationModalProps> = ({
             disabled={loading}
             activeOpacity={0.85}
           >
-            {loading ? (
-              <ActivityIndicator color="#fff" />
-            ) : (
+            {loading ? <ActivityIndicator color="#fff" /> : (
               <Text style={styles.btnText}>
                 {t("invitation.refuse", { defaultValue: "Refuser" })}
               </Text>
@@ -461,14 +400,9 @@ const InvitationModal: React.FC<InvitationModalProps> = ({
   const renderRestartConfirm = () => (
     <Modal visible={showRestartConfirm} transparent animationType="fade">
       <View style={styles.centeredView}>
-        <Animated.View
-          entering={FadeInUp.duration(250)}
-          style={styles.modalView}
-        >
+        <Animated.View entering={FadeInUp.duration(250)} style={styles.modalView}>
           <Text style={styles.modalTitle}>
-            {t("invitation.restartTitle", {
-              defaultValue: "Recommencer le défi en Duo ?",
-            })}
+            {t("invitation.restartTitle", { defaultValue: "Recommencer le défi en Duo ?" })}
           </Text>
           <Text style={styles.modalText}>
             {t("invitation.restartMessage", {
@@ -492,9 +426,7 @@ const InvitationModal: React.FC<InvitationModalProps> = ({
               disabled={loading}
               activeOpacity={0.85}
             >
-              {loading ? (
-                <ActivityIndicator color="#fff" />
-              ) : (
+              {loading ? <ActivityIndicator color="#fff" /> : (
                 <Text style={styles.btnText}>
                   {t("invitation.continue", { defaultValue: "Continuer" })}
                 </Text>
@@ -508,22 +440,13 @@ const InvitationModal: React.FC<InvitationModalProps> = ({
 
   return (
     <>
-      <Modal
-        visible={visible}
-        transparent
-        animationType="fade"
-        onRequestClose={onClose}
-      >
+      <Modal visible={visible} transparent animationType="fade" onRequestClose={onClose}>
         <View style={styles.centeredView}>
-          <Animated.View
-            entering={FadeInUp.duration(250)}
-            style={styles.modalView}
-          >
+          <Animated.View entering={FadeInUp.duration(250)} style={styles.modalView}>
             {renderBody()}
           </Animated.View>
         </View>
       </Modal>
-
       {renderRestartConfirm()}
     </>
   );

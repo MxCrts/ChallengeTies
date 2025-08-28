@@ -29,8 +29,9 @@
         "track": "production"                     
       },
       "ios": {
-        "ascAppId": "APP_STORE_CONNECT_APP_ID",   
-        "appleTeamId": "APPLE_TEAM_ID"            
+        "ascAppId": "6751504640",
+        "appleTeamId": "C3235NU4QN",
+        "appleId": "maxime.cortes619@gmail.com"
       }
     }
   }

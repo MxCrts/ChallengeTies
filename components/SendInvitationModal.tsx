@@ -1,5 +1,5 @@
 // components/SendInvitationModal.tsx
-import React, { useState, useMemo } from "react";
+import React, { useState } from "react";
 import {
   Modal,
   View,
@@ -10,22 +10,21 @@ import {
   KeyboardAvoidingView,
   Platform,
   Pressable,
-  Share,
+  TextInput,
 } from "react-native";
 import { Ionicons } from "@expo/vector-icons";
 import Animated, { FadeInUp } from "react-native-reanimated";
 import { useTranslation } from "react-i18next";
-
-// ✅ Service centralisé (open invite)
-import { createInvitationAndLink } from "@/services/invitationService";
+import { db, auth } from "@/constants/firebase-config";
+import { collection, query, where, getDocs } from "firebase/firestore";
+import { createDirectInvitation } from "@/services/invitationService";
 
 type Props = {
   visible: boolean;
   onClose: () => void;
   challengeId: string;
   selectedDays: number;
-  /** Optionnel: pour enrichir le message de partage et l’OG */
-  challengeTitle?: string;
+  challengeTitle?: string; // affichage uniquement (non envoyé à Firestore)
 };
 
 export default function SendInvitationModal({
@@ -35,108 +34,126 @@ export default function SendInvitationModal({
   selectedDays,
   challengeTitle,
 }: Props) {
-  const { t, i18n } = useTranslation();
+  const { t } = useTranslation();
 
   const [loading, setLoading] = useState(false);
+  const [username, setUsername] = useState("");
   const [errorMsg, setErrorMsg] = useState("");
   const [successMsg, setSuccessMsg] = useState("");
 
-  // Langue courte "fr", "en", etc.
-  const lang = useMemo(
-    () => String((i18n?.language || "fr").split("-")[0]).toLowerCase(),
-    [i18n?.language]
-  );
-
-  // Mappe les erreurs "métier" → clés i18n lisibles
-  const mapErrorToMessage = (err: unknown): string => {
-    const code = String((err as any)?.message || err || "").toLowerCase();
-
-    if (code.includes("auto_invite")) return t("invitationS.errors.autoInvite");
-    if (code.includes("invitation_already_active"))
-      return t("invitationS.errors.alreadyInvited");
-    if (code.includes("restart_inviteur"))
-      return t("invitationS.errors.inviterAlreadyStarted");
-    if (code.includes("restart_invitee"))
-      return t("invitationS.errors.inviteeAlreadyStarted");
-    if (code.includes("expirée") || code.includes("expired"))
-      return t("invitationS.errors.expired");
-    if (code.includes("invalid_challenge") || code.includes("invalid_days"))
-      return t("invitationS.errors.unknown");
-    if (code.includes("utilisateur non connecté"))
-      return t("commonS.notLoggedIn");
-
-    // fallback
-    return t("invitationS.errors.unknown");
+  const mapError = (e: unknown): string => {
+    const msg = String((e as any)?.message || e || "").toLowerCase();
+    if (msg.includes("missing or insufficient permissions")) {
+      return t("invitationS.errors.permissions", {
+        defaultValue:
+          "Permissions insuffisantes. Vérifie que tu es bien connecté et que les règles Firestore autorisent cette action.",
+      });
+    }
+    if (msg.includes("utilisateur non connecté")) {
+      return t("commonS.notLoggedIn", { defaultValue: "Tu dois être connecté." });
+    }
+    if (msg.includes("invitation_already_active")) {
+      return t("invitationS.errors.alreadyInvited", {
+        defaultValue: "Une invitation est déjà active.",
+      });
+    }
+    if (msg.includes("auto_invite")) {
+      return t("invitationS.errors.autoInvite", {
+        defaultValue: "Tu ne peux pas t’inviter toi-même.",
+      });
+    }
+    return t("invitationS.errors.unknown", { defaultValue: "Erreur inconnue." });
   };
 
-  const handleShare = async () => {
+  const handleSend = async () => {
     setErrorMsg("");
     setSuccessMsg("");
-    setLoading(true);
 
-    try {
-      // 1) Création open invite + lien universel (CF /dl)
-      const { universalUrl } = await createInvitationAndLink({
-        challengeId,
-        selectedDays,
-        lang: lang as any,
-        title: challengeTitle,
-      });
-
-      // 2) Partage natif (message i18n concis)
-      const msg =
-        (challengeTitle
-          ? t("invitationS.shareMessageWithTitle", {
-              days: selectedDays,
-              title: challengeTitle,
-              defaultValue:
-                "Rejoins-moi pour ce défi « {{title}} » ! On le fait pendant {{days}} jours 💪",
-            })
-          : t("invitationS.shareMessage", {
-              days: selectedDays,
-              defaultValue:
-                "Rejoins-moi sur ce défi ! On le tente pendant {{days}} jours 💪",
-            })) +
-        "\n" +
-        universalUrl;
-
-      await Share.share(
-        {
-          title: t("invitationS.shareTitle", {
-            defaultValue: "Inviter un ami",
-          }),
-          message: msg,
-        },
-        {
-          dialogTitle: t("invitationS.shareTitle", {
-            defaultValue: "Inviter un ami",
-          }),
-        }
+    const me = auth.currentUser?.uid;
+    if (!me) {
+      setErrorMsg(
+        t("commonS.notLoggedIn", { defaultValue: "Tu dois être connecté." })
       );
+      return;
+    }
+
+    if (!challengeId || !Number.isInteger(selectedDays) || selectedDays <= 0) {
+      setErrorMsg(
+        t("invitationS.errors.params", {
+          defaultValue: "Paramètres invalides pour l’invitation.",
+        })
+      );
+      return;
+    }
+
+    if (!username.trim()) {
+      setErrorMsg(
+        t("invitationS.errors.usernameRequired", {
+          defaultValue: "Entre le nom d’utilisateur de ton ami.",
+        })
+      );
+      return;
+    }
+
+    setLoading(true);
+    try {
+      // 1) Trouver l'utilisateur par username
+      const q = query(collection(db, "users"), where("username", "==", username.trim()));
+      const snap = await getDocs(q);
+
+      if (snap.empty) {
+        setErrorMsg(
+          t("invitationS.errors.userNotFound", {
+            defaultValue: "Aucun utilisateur trouvé avec ce nom.",
+          })
+        );
+        return;
+      }
+
+      const inviteeDoc = snap.docs[0];
+      const inviteeId = inviteeDoc.id;
+
+      // 2) Empêcher l’auto-invite
+      if (inviteeId === me) {
+        setErrorMsg(
+          t("invitationS.errors.autoInvite", {
+            defaultValue: "Tu ne peux pas t’inviter toi-même.",
+          })
+        );
+        return;
+      }
+
+      const inviteeData = inviteeDoc.data() as any;
+      const inviteeUsername: string | null = inviteeData?.username ?? null;
+
+      // 3) Créer l’invitation DIRECT conforme aux rules
+      await createDirectInvitation({
+  challengeId,
+  selectedDays,
+  inviteeId,
+  inviteeUsername,
+});
 
       setSuccessMsg(
         t("invitationS.sent", { defaultValue: "Invitation envoyée ✅" })
       );
-    } catch (err) {
-      console.error("🔥 createInvitationAndLink error:", err);
-      setErrorMsg(mapErrorToMessage(err));
+      setUsername("");
+    } catch (e) {
+      console.error("🔥 createDirectInvitation error:", e);
+      setErrorMsg(mapError(e));
     } finally {
       setLoading(false);
     }
   };
 
   return (
-    <Modal
-      visible={visible}
-      animationType="fade"
-      transparent
-      onRequestClose={onClose}
-    >
+    <Modal visible={visible} animationType="fade" transparent onRequestClose={onClose}>
       <KeyboardAvoidingView
         behavior={Platform.OS === "ios" ? "padding" : undefined}
         style={styles.overlay}
       >
         <Animated.View entering={FadeInUp} style={styles.container}>
+          {/* Close */}
           <Pressable
             style={styles.closeBtn}
             onPress={onClose}
@@ -146,23 +163,45 @@ export default function SendInvitationModal({
             <Ionicons name="close" size={24} color="#333" />
           </Pressable>
 
+          {/* Title */}
           <Text style={styles.title}>
             {t("invitationS.title", { defaultValue: "Inviter un ami" })}
           </Text>
 
+          {!!challengeTitle && (
+            <Text style={styles.challenge}>
+              {t("challengeDetails.challenge", { defaultValue: "Défi" })}: {challengeTitle}
+            </Text>
+          )}
+
           <Text style={styles.subtitle}>
-            {t("invitationS.subtitle", {
+            {t("invitationS.subtitleDirect", {
               defaultValue:
-                "Un lien sera généré. S’il a l’app, il ouvre ce défi avec un bouton Accepter/Refuser. Sinon, il est redirigé vers le Store.",
+                "Entre le nom d’utilisateur exact de ton ami pour lui envoyer une invitation.",
             })}
           </Text>
 
+          {/* Input */}
+          <TextInput
+            style={styles.input}
+            placeholder={t("invitationS.usernamePlaceholder", {
+              defaultValue: "Nom d’utilisateur",
+            })}
+            value={username}
+            onChangeText={setUsername}
+            autoCapitalize="none"
+            autoCorrect={false}
+            editable={!loading}
+          />
+
+          {/* Messages */}
           {!!errorMsg && <Text style={styles.error}>{errorMsg}</Text>}
           {!!successMsg && <Text style={styles.success}>{successMsg}</Text>}
 
+          {/* Send */}
           <TouchableOpacity
             style={[styles.button, loading && styles.buttonDisabled]}
-            onPress={handleShare}
+            onPress={handleSend}
             disabled={loading}
             accessibilityRole="button"
             accessibilityLabel={t("invitationS.send", {
@@ -175,9 +214,7 @@ export default function SendInvitationModal({
               <View style={styles.btnContent}>
                 <Ionicons name="person-add-outline" size={18} color="#fff" />
                 <Text style={styles.buttonText}>
-                  {t("invitationS.send", {
-                    defaultValue: "Envoyer l’invitation",
-                  })}
+                  {t("invitationS.send", { defaultValue: "Envoyer l’invitation" })}
                 </Text>
               </View>
             )}
@@ -208,9 +245,15 @@ const styles = StyleSheet.create({
   title: {
     fontSize: 20,
     fontWeight: "700",
-    marginBottom: 8,
+    marginBottom: 4,
     textAlign: "center",
     color: "#111",
+  },
+  challenge: {
+    textAlign: "center",
+    color: "#444",
+    fontSize: 14,
+    marginBottom: 6,
   },
   subtitle: {
     textAlign: "center",
@@ -218,6 +261,15 @@ const styles = StyleSheet.create({
     fontSize: 14,
     marginBottom: 16,
     lineHeight: 20,
+  },
+  input: {
+    borderWidth: 1,
+    borderColor: "#ddd",
+    borderRadius: 12,
+    paddingHorizontal: 12,
+    paddingVertical: 10,
+    marginBottom: 14,
+    fontSize: 16,
   },
   button: {
     backgroundColor: "#FFB800",

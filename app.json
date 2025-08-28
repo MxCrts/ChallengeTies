@@ -13,26 +13,31 @@
     "scheme": "myapp",
     "userInterfaceStyle": "automatic",
     "ios": {
-      "supportsTablet": true,
+      "supportsTablet": false,
+      "requiresFullScreen": true,
       "buildNumber": "2",
       "bundleIdentifier": "com.mxcrts.ChallengeTies",
       "googleServicesFile": "./GoogleService-Info.plist",
+      "associatedDomains": [
+        "applinks:challengeties.app",
+        "applinks:www.challengeties.app"
+      ],
       "infoPlist": {
         "UIBackgroundModes": [
           "remote-notification"
         ],
-        "NSUserNotificationsUsageDescription": "Nous utilisons les notifications pour vous rappeler vos défis quotidiens et vous tenir informé des nouveaux challenges.",
         "LSApplicationQueriesSchemes": [
           "myapp"
         ],
         "GADApplicationIdentifier": "ca-app-pub-4725616526467159~9688398116",
         "NSUserTrackingUsageDescription": "Votre identifiant peut être utilisé pour des publicités plus pertinentes afin de soutenir l'app.",
         "SKAdNetworkItems": [
-          {
-            "SKAdNetworkIdentifier": "cstr6suwn9.skadnetwork"
-          }
+          { "SKAdNetworkIdentifier": "cstr6suwn9.skadnetwork" }
         ],
-        "NSPhotoLibraryUsageDescription": "Nous avons besoin d'accéder à votre photothèque pour choisir une photo de profil."
+        "NSPhotoLibraryUsageDescription": "Nous avons besoin d'accéder à votre photothèque pour choisir une photo de profil.",
+        "NSCameraUsageDescription": "Nous avons besoin d'accéder à la caméra pour prendre une photo de profil.",
+        "NSPhotoLibraryAddUsageDescription": "Autorisez l'ajout de photos pour enregistrer votre image de profil.",
+        "ITSAppUsesNonExemptEncryption": false
       }
     },
     "android": {
@@ -57,41 +62,14 @@
           "action": "VIEW",
           "autoVerify": true,
           "data": [
-            {
-              "scheme": "myapp",
-              "host": "challenge",
-              "pathPrefix": "/"
-            },
-            {
-              "scheme": "myapp",
-              "host": "challenge-details",
-              "pathPrefix": "/"
-            },
-            {
-              "scheme": "https",
-              "host": "challengeties.app",
-              "pathPrefix": "/challenge-details"
-            },
-            {
-              "scheme": "https",
-              "host": "challengeties.app",
-              "pathPrefix": "/challenge"
-            },
-            {
-              "scheme": "https",
-              "host": "www.challengeties.app",
-              "pathPrefix": "/challenge-details"
-            },
-            {
-              "scheme": "https",
-              "host": "www.challengeties.app",
-              "pathPrefix": "/challenge"
-            }
+            { "scheme": "myapp", "host": "challenge", "pathPrefix": "/" },
+            { "scheme": "myapp", "host": "challenge-details", "pathPrefix": "/" },
+            { "scheme": "https", "host": "challengeties.app", "pathPrefix": "/challenge-details" },
+            { "scheme": "https", "host": "challengeties.app", "pathPrefix": "/challenge" },
+            { "scheme": "https", "host": "www.challengeties.app", "pathPrefix": "/challenge-details" },
+            { "scheme": "https", "host": "www.challengeties.app", "pathPrefix": "/challenge" }
           ],
-          "category": [
-            "BROWSABLE",
-            "DEFAULT"
-          ]
+          "category": ["BROWSABLE", "DEFAULT"]
         }
       ]
     },
@@ -136,17 +114,13 @@
       ],
       "expo-mail-composer"
     ],
-    "newArchEnabled": true,
+    "newArchEnabled": false,
     "experiments": {
       "typedRoutes": true
     },
     "extra": {
-      "router": {
-        "origin": false
-      },
-      "eas": {
-        "projectId": "f472e9b7-ef09-41b7-81c6-9a4dc44f2f37"
-      }
+      "router": { "origin": false },
+      "eas": { "projectId": "f472e9b7-ef09-41b7-81c6-9a4dc44f2f37" }
     }
   }
 }
