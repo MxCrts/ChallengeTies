@@ -7,12 +7,11 @@ import {
   StyleSheet,
   Animated,
   Dimensions,
-  Alert,
 } from "react-native";
 import { Ionicons } from "@expo/vector-icons";
- import { Platform } from "react-native";
- import { useAdsVisibility } from "../src/context/AdsVisibilityContext";
- import { adUnitIds } from "@/constants/admob";import { LinearGradient } from "expo-linear-gradient";
+import { useAdsVisibility } from "../src/context/AdsVisibilityContext";
+import { adUnitIds } from "@/constants/admob";
+import { LinearGradient } from "expo-linear-gradient";
 import { doc, onSnapshot } from "firebase/firestore";
 import { auth, db } from "../constants/firebase-config";
 import { useCurrentChallenges } from "../context/CurrentChallengesContext";
@@ -27,8 +26,10 @@ import {
   AdEventType,
   TestIds,
 } from "react-native-google-mobile-ads";
+import { useRouter } from "expo-router";
+import * as Haptics from "expo-haptics";
 
-const { width: SCREEN_WIDTH, height: SCREEN_HEIGHT } = Dimensions.get("window");
+const { width: SCREEN_WIDTH } = Dimensions.get("window");
 const SPACING = 16;
 
 const normalizeSize = (size: number) => {
@@ -51,10 +52,10 @@ const motivationalPhrases = [
 ];
 
 const baseReward = 5;
- const rewardedAdUnitId = __DEV__ ? TestIds.REWARDED : adUnitIds.rewarded;
- const rewarded = RewardedAd.createForAdRequest(rewardedAdUnitId, {
-   requestNonPersonalizedAdsOnly: true,
- });
+const rewardedAdUnitId = __DEV__ ? TestIds.REWARDED : adUnitIds.rewarded;
+const rewarded = RewardedAd.createForAdRequest(rewardedAdUnitId, {
+  requestNonPersonalizedAdsOnly: true,
+});
 
 const getDynamicStyles = (currentTheme: Theme, isDarkMode: boolean) => ({
   fullOverlay: {
@@ -66,8 +67,8 @@ const getDynamicStyles = (currentTheme: Theme, isDarkMode: boolean) => ({
   },
   modalGradient: {
     colors: [
-      currentTheme.colors.cardBackground + "F0",
-      currentTheme.colors.background + "E0",
+      (currentTheme.colors.cardBackground as string) + "F0",
+      (currentTheme.colors.background as string) + "E0",
     ] as const,
   },
   trophyHeaderText: {
@@ -88,18 +89,18 @@ const getDynamicStyles = (currentTheme: Theme, isDarkMode: boolean) => ({
     ] as const,
   },
   buttonGradientText: {
-    color: currentTheme.colors.textPrimary,
+    color: "#FFFFFF",
   },
   buttonIcon: {
-    color: currentTheme.colors.textPrimary,
+    color: isDarkMode ? "#FFD700" : "#FFFFFF",
   },
   videoBorder: {
     borderColor: currentTheme.colors.primary,
   },
   glowGradient: {
     colors: [
-      currentTheme.colors.primary + "80",
-      currentTheme.colors.secondary + "40",
+      (currentTheme.colors.primary as string) + "80",
+      (currentTheme.colors.secondary as string) + "40",
       "transparent",
     ] as const,
   },
@@ -119,8 +120,8 @@ export default function ChallengeCompletionModal({
   onClose,
 }: ChallengeCompletionModalProps) {
   const { t } = useTranslation();
-  const { showRewardedAds, showInterstitials } = useAdsVisibility() as any;
-  const canShowRewarded = (showRewardedAds ?? showInterstitials);
+  const { showRewarded } = useAdsVisibility() as any;
+  const canShowRewarded = !!showRewarded;
   const { theme } = useTheme();
   const isDarkMode = theme === "dark";
   const currentTheme: Theme = isDarkMode
@@ -128,24 +129,58 @@ export default function ChallengeCompletionModal({
     : designSystem.lightTheme;
   const dynamicStyles = getDynamicStyles(currentTheme, isDarkMode);
 
+  // --- Toast state
+  const [toastText, setToastText] = useState<string>("");
+  const [toastVisible, setToastVisible] = useState(false);
+  const toastOpacity = useRef(new Animated.Value(0)).current;
+  const toastTranslate = useRef(new Animated.Value(30)).current;
+
+  // --- Busy guard
+  const [busy, setBusy] = useState(false);
+
+  // --- Navigation
+  const router = useRouter();
+  const didNavigateRef = useRef(false);
+
+  // --- Animations
   const [motivationalPhrase, setMotivationalPhrase] = useState<string>("");
   const fadeAnim = useRef(new Animated.Value(0)).current;
   const scaleAnim = useRef(new Animated.Value(0.8)).current;
   const rotateAnim = useRef(new Animated.Value(0)).current;
-  const glowAnim = useRef(new Animated.Value(0.8)).current; // Zoom/dézoom boosté
+  const glowAnim = useRef(new Animated.Value(0.8)).current;
   const videoFadeAnim = useRef(new Animated.Value(0)).current;
+
+  // --- Data
   const [userTrophies, setUserTrophies] = useState<number>(0);
   const { completeChallenge } = useCurrentChallenges();
   const videoRef = useRef<Video>(null);
   const [adLoaded, setAdLoaded] = useState(false);
   const [isShowingAd, setIsShowingAd] = useState(false);
- const earnedRef = useRef(false);
+  const earnedRef = useRef(false);
 
+  // ---- Helper toast (réutilisable)
+  const showToast = (msg: string, duration = 1200) => {
+    setToastText(msg);
+    setToastVisible(true);
+    Animated.parallel([
+      Animated.timing(toastOpacity, { toValue: 1, duration: 220, useNativeDriver: true }),
+      Animated.timing(toastTranslate, { toValue: 0, duration: 220, useNativeDriver: true }),
+    ]).start(() => {
+      setTimeout(() => {
+        Animated.parallel([
+          Animated.timing(toastOpacity, { toValue: 0, duration: 200, useNativeDriver: true }),
+          Animated.timing(toastTranslate, { toValue: 30, duration: 200, useNativeDriver: true }),
+        ]).start(() => setToastVisible(false));
+      }, duration);
+    });
+  };
+
+  // ---- Ads listeners
   useEffect(() => {
     if (!canShowRewarded) {
       setAdLoaded(false);
-     return;
-   }
+      return;
+    }
 
     const unsubLoaded = rewarded.addAdEventListener(
       RewardedAdEventType.LOADED,
@@ -154,44 +189,49 @@ export default function ChallengeCompletionModal({
 
     const unsubEarned = rewarded.addAdEventListener(
       RewardedAdEventType.EARNED_REWARD,
-      () => { earnedRef.current = true; }
-    );
-
-    const unsubError = rewarded.addAdEventListener(
-      AdEventType.ERROR,
-      (error) => {
-        console.error("Erreur vidéo récompensée:", error?.message ?? error);
-        setAdLoaded(false);
-        setIsShowingAd(false);
+      () => {
+        earnedRef.current = true;
       }
     );
 
-    const unsubClosed = rewarded.addAdEventListener(
-      AdEventType.CLOSED,
-      async () => {
-        const userEarned = earnedRef.current;
-        earnedRef.current = false;
-        setIsShowingAd(false);
-        setAdLoaded(false);
-        try {
-          if (userEarned) {
-            await completeChallenge(challengeId, selectedDays, true);
-            const finalReward = Math.round(baseReward * (selectedDays / 7)) * 2;
-            Alert.alert(t("completion.finalTitle"), t("completion.finalMessage", { count: finalReward }));
-          } else {
-            Alert.alert(t("completion.adNotReadyTitle"), t("completion.adNotReady"));
-          }
-        } catch (e) {
-          console.error(t("completion.errorFinalizing"), e);
-          Alert.alert(t("completion.finalTitle"), t("completion.errorFinalizingMessage"));
-        } finally {
-          try { rewarded.load(); } catch {}
-          onClose();
+    const unsubError = rewarded.addAdEventListener(AdEventType.ERROR, (error) => {
+      console.error("Erreur vidéo récompensée:", error?.message ?? error);
+      setAdLoaded(false);
+      setIsShowingAd(false);
+      setBusy(false);
+    });
+
+    const unsubClosed = rewarded.addAdEventListener(AdEventType.CLOSED, async () => {
+      const userEarned = earnedRef.current;
+      earnedRef.current = false;
+      setIsShowingAd(false);
+      setAdLoaded(false);
+
+      try {
+        if (userEarned) {
+          await completeChallenge(challengeId, selectedDays, true);
+          const finalReward = Math.round(baseReward * (selectedDays / 7)) * 2;
+          await showSuccessAndNavigate(finalReward);
+        } else {
+          showToast(t("completion.adNotReady"));
+          onClose?.();
         }
+      } catch (e) {
+        console.error(t("completion.errorFinalizing"), e);
+        showToast(t("completion.errorFinalizingMessage"), 1400);
+        onClose?.();
+      } finally {
+        try {
+          rewarded.load();
+        } catch {}
+        setBusy(false);
       }
-    );
+    });
 
-    try { rewarded.load(); } catch {}
+    try {
+      rewarded.load();
+    } catch {}
+
     return () => {
       unsubLoaded();
       unsubEarned();
@@ -200,6 +240,7 @@ export default function ChallengeCompletionModal({
     };
   }, [canShowRewarded, challengeId, selectedDays, t, completeChallenge, onClose]);
 
+  // ---- User trophies listener
   useEffect(() => {
     const userId = auth.currentUser?.uid;
     if (!userId) return;
@@ -212,6 +253,7 @@ export default function ChallengeCompletionModal({
     return () => unsubscribe();
   }, []);
 
+  // ---- Open/close animations
   useEffect(() => {
     if (visible) {
       const idx = Math.floor(Math.random() * motivationalPhrases.length);
@@ -247,7 +289,7 @@ export default function ChallengeCompletionModal({
       Animated.loop(
         Animated.sequence([
           Animated.timing(glowAnim, {
-            toValue: 1.2, // Zoom plus marqué
+            toValue: 1.2,
             duration: 700,
             useNativeDriver: true,
           }),
@@ -267,217 +309,275 @@ export default function ChallengeCompletionModal({
     }
   }, [visible]);
 
-const handleComplete = async (doubleReward: boolean): Promise<void> => {
-  const calculatedReward = Math.round(baseReward * (selectedDays / 7));
-
-  if (doubleReward) {
-    if (!canShowRewarded) {
-      Alert.alert(t("completion.adNotReadyTitle"), t("completion.adNotReady"));
-      return;
-    }
-    if (!adLoaded) {
-      try {
-        rewarded.load();
-      } catch {}
-      Alert.alert(
-        t("completion.adNotReadyTitle"),
-        t("completion.adNotReady")
-      );
-      return;
-    }
-
+  // +++ Toast success + nav smooth
+  const showSuccessAndNavigate = async (count: number) => {
     try {
-      setIsShowingAd(true);
-      earnedRef.current = false; // reset avant affichage
-      rewarded.show();           // la suite (crédit/double) se fait dans les listeners CLOSED/EARNED_REWARD
+      await Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
+    } catch {}
+
+    showToast(t("completion.finalMessage", { count }), 1000);
+
+    // Attends que le toast reste visible un court instant, puis ferme et remplace l’écran
+    setTimeout(() => {
+      if (!didNavigateRef.current) {
+        didNavigateRef.current = true;
+
+        onClose?.(); // ferme la modale
+
+        // nav smooth (remplace au lieu d’empiler)
+        router.replace(`/challenge-details/${challengeId}`);
+
+        setTimeout(() => {
+          didNavigateRef.current = false;
+          setBusy(false);
+        }, 800);
+      }
+    }, 1000);
+  };
+
+  const handleComplete = async (doubleReward: boolean): Promise<void> => {
+    if (busy) return;
+    setBusy(true);
+
+    const calculatedReward = Math.round(baseReward * (selectedDays / 7));
+
+    if (doubleReward) {
+      if (!canShowRewarded) {
+        showToast(t("completion.adNotReady"));
+        setBusy(false);
+        return;
+      }
+      if (!adLoaded) {
+        try {
+          rewarded.load();
+        } catch {}
+        showToast(t("completion.adNotReady"));
+        setBusy(false);
+        return;
+      }
+
+      try {
+        setIsShowingAd(true);
+        earnedRef.current = false;
+        rewarded.show(); // suite gérée dans CLOSED/EARNED
+      } catch (error) {
+        console.error(t("completion.errorFinalizing"), error);
+        setIsShowingAd(false);
+        showToast(t("completion.errorFinalizingMessage"), 1400);
+        setBusy(false);
+      }
+      return;
+    }
+
+    // Flux sans pub
+    try {
+      await completeChallenge(challengeId, selectedDays, false);
+      await showSuccessAndNavigate(calculatedReward);
     } catch (error) {
       console.error(t("completion.errorFinalizing"), error);
-      setIsShowingAd(false);
-      Alert.alert(
-        t("completion.finalTitle"),
-        t("completion.errorFinalizingMessage")
-      );
+      showToast(t("completion.errorFinalizingMessage"), 1400);
+      setBusy(false);
     }
-    return; // ne pas fermer la modale ici : on attend l’événement CLOSED
-  }
+  };
 
-  // → Flux sans publicité : crédite immédiatement puis ferme la modale
-  try {
-    await completeChallenge(challengeId, selectedDays, false);
-    Alert.alert(
-      t("completion.finalTitle"),
-      t("completion.finalMessage", { count: calculatedReward })
-    );
-    onClose();
-  } catch (error) {
-    console.error(t("completion.errorFinalizing"), error);
-    Alert.alert(
-      t("completion.finalTitle"),
-      t("completion.errorFinalizingMessage")
-    );
-  }
-};
+  // === Anim helpers
+  const rotateInterpolate = rotateAnim.interpolate({
+    inputRange: [0, 1],
+    outputRange: ["-3deg", "0deg"],
+  });
 
-// === À COLLER APRÈS handleComplete(...) ET AVANT const styles ===
+  const calculatedReward = Math.round(baseReward * (selectedDays / 7));
 
-// Utilisé dans l'animation du container
-const rotateInterpolate = rotateAnim.interpolate({
-  inputRange: [0, 1],
-  outputRange: ["-3deg", "0deg"],
-});
-
-// Montant affiché dans la zone "reward"
-const calculatedReward = Math.round(baseReward * (selectedDays / 7));
-
-// ====== RETURN DU COMPOSANT ======
-return (
-  <Modal
-    visible={visible}
-    transparent
-    animationType="none"
-    onRequestClose={onClose}
-    statusBarTranslucent
-  >
-    <View style={[styles.fullOverlay, dynamicStyles.fullOverlay]}>
-      <Animated.View
-        style={[
-          styles.modalContainer,
-          dynamicStyles.modalContainer,
-          {
-            opacity: fadeAnim,
-            transform: [{ scale: scaleAnim }, { rotate: rotateInterpolate }],
-          },
-        ]}
-      >
-        <LinearGradient
-          colors={dynamicStyles.modalGradient.colors}
-          style={styles.modalGradient}
+  // ====== RENDER ======
+  return (
+    <Modal
+      visible={visible}
+      transparent
+      animationType="none"
+      onRequestClose={onClose}
+      statusBarTranslucent
+    >
+      <View style={[styles.fullOverlay, dynamicStyles.fullOverlay]}>
+        <Animated.View
+          style={[
+            styles.modalContainer,
+            dynamicStyles.modalContainer,
+            {
+              opacity: fadeAnim,
+              transform: [{ scale: scaleAnim }, { rotate: rotateInterpolate }],
+            },
+          ]}
         >
-          <View style={styles.trophyHeader}>
+          <LinearGradient
+            colors={dynamicStyles.modalGradient.colors}
+            style={styles.modalGradient}
+          >
+            <View style={styles.trophyHeader}>
+              <Text
+                style={[
+                  styles.trophyHeaderText,
+                  dynamicStyles.trophyHeaderText,
+                ]}
+              >
+                {userTrophies} {t("completion.trophies")}
+              </Text>
+            </View>
+
+            <Animated.View
+              style={[styles.animationContainer, { opacity: videoFadeAnim }]}
+              pointerEvents="box-none"
+            >
+              <LinearGradient
+                colors={dynamicStyles.glowGradient.colors}
+                style={styles.glowEffect}
+              >
+                <View
+                  style={[styles.videoContainer, dynamicStyles.videoBorder]}
+                >
+                  <Video
+                    ref={videoRef}
+                    source={require("../assets/videos/trophy-animation.mp4")}
+                    style={styles.video}
+                    resizeMode={ResizeMode.COVER}
+                    shouldPlay
+                    isLooping
+                    isMuted={false}
+                  />
+                </View>
+              </LinearGradient>
+            </Animated.View>
+
             <Text
+              style={[styles.motivationalText, dynamicStyles.motivationalText]}
+            >
+              {t(motivationalPhrases)}
+            </Text>
+
+            <Animated.View
               style={[
-                styles.trophyHeaderText,
-                dynamicStyles.trophyHeaderText,
+                styles.rewardContainer,
+                { transform: [{ scale: glowAnim }] },
+              ]}
+              pointerEvents="none"
+            >
+              <LinearGradient
+                colors={dynamicStyles.glowGradient.colors}
+                style={styles.rewardGlow}
+              >
+                <Text
+                  style={[styles.rewardText, dynamicStyles.rewardText]}
+                  numberOfLines={2}
+                >
+                  {t("completion.reward", { count: calculatedReward })}
+                </Text>
+              </LinearGradient>
+            </Animated.View>
+
+            {/* Continuer (sans pub) */}
+            <TouchableOpacity
+              onPress={() => handleComplete(false)}
+              activeOpacity={0.7}
+              disabled={busy}
+              style={[styles.gradientButton, busy && { opacity: 0.5 }]}
+            >
+              <LinearGradient
+                colors={dynamicStyles.buttonGradient.colors}
+                start={{ x: 0, y: 0 }}
+                end={{ x: 1, y: 0 }}
+                style={styles.buttonGradient}
+              >
+                <View style={styles.buttonContent}>
+                  <Text
+                    style={[
+                      styles.buttonGradientText,
+                      dynamicStyles.buttonGradientText,
+                    ]}
+                    numberOfLines={1}
+                    ellipsizeMode="tail"
+                  >
+                    {t("completion.continue")}
+                  </Text>
+                </View>
+              </LinearGradient>
+            </TouchableOpacity>
+
+            {/* Doubler (rewarded) */}
+            <TouchableOpacity
+              onPress={() => handleComplete(true)}
+              activeOpacity={0.7}
+              disabled={!canShowRewarded || busy}
+              style={[
+                styles.gradientButton,
+                (!canShowRewarded || busy) && { opacity: 0.5 },
               ]}
             >
-              {userTrophies} {t("completion.trophies")}
+              <LinearGradient
+                colors={dynamicStyles.buttonGradient.colors}
+                start={{ x: 0, y: 0 }}
+                end={{ x: 1, y: 0 }}
+                style={styles.buttonGradient}
+              >
+                <View style={styles.buttonContent}>
+                  <Ionicons
+                    name="videocam-outline"
+                    size={normalizeSize(20)}
+                    color={dynamicStyles.buttonIcon.color}
+                    style={styles.buttonIcon}
+                  />
+                  <Text
+                    style={[
+                      styles.buttonGradientText,
+                      dynamicStyles.buttonGradientText,
+                    ]}
+                    numberOfLines={1}
+                    ellipsizeMode="tail"
+                  >
+                    {t("completion.doubleTrophies")}
+                  </Text>
+                </View>
+              </LinearGradient>
+            </TouchableOpacity>
+          </LinearGradient>
+        </Animated.View>
+
+        {toastVisible && (
+          <Animated.View
+            pointerEvents="none"
+            style={{
+              position: "absolute",
+              bottom: normalizeSize(40),
+              left: normalizeSize(20),
+              right: normalizeSize(20),
+              borderRadius: normalizeSize(14),
+              paddingVertical: normalizeSize(12),
+              paddingHorizontal: normalizeSize(16),
+              alignItems: "center",
+              justifyContent: "center",
+              backgroundColor: isDarkMode
+                ? "rgba(0,0,0,0.85)"
+                : "rgba(0,0,0,0.8)",
+              transform: [{ translateY: toastTranslate }],
+              opacity: toastOpacity,
+            }}
+          >
+            <Text
+              style={{
+                color: "#fff",
+                fontFamily: "Comfortaa_700Bold",
+                fontSize: normalizeSize(14),
+                textAlign: "center",
+              }}
+              numberOfLines={2}
+            >
+              {toastText}
             </Text>
-          </View>
-
-          <Animated.View
-            style={[styles.animationContainer, { opacity: videoFadeAnim }]}
-          >
-            <LinearGradient
-              colors={dynamicStyles.glowGradient.colors}
-              style={styles.glowEffect}
-            >
-              <View
-                style={[styles.videoContainer, dynamicStyles.videoBorder]}
-              >
-                <Video
-                  ref={videoRef}
-                  source={require("../assets/videos/trophy-animation.mp4")}
-                  style={styles.video}
-                  resizeMode={ResizeMode.COVER}
-                  shouldPlay
-                  isLooping
-                  isMuted={false}
-                />
-              </View>
-            </LinearGradient>
           </Animated.View>
-
-          <Text
-            style={[styles.motivationalText, dynamicStyles.motivationalText]}
-          >
-            {t(motivationalPhrase)}
-          </Text>
-
-          <Animated.View
-            style={[
-              styles.rewardContainer,
-              { transform: [{ scale: glowAnim }] },
-            ]}
-          >
-            <LinearGradient
-              colors={dynamicStyles.glowGradient.colors}
-              style={styles.rewardGlow}
-            >
-              <Text
-                style={[styles.rewardText, dynamicStyles.rewardText]}
-                numberOfLines={2}
-              >
-                {t("completion.reward", { count: calculatedReward })}
-              </Text>
-            </LinearGradient>
-          </Animated.View>
-
-          {/* Bouton "Continuer" (sans pub) */}
-          <TouchableOpacity
-            onPress={() => handleComplete(false)}
-            activeOpacity={0.7}
-            style={styles.gradientButton}
-          >
-            <LinearGradient
-              colors={dynamicStyles.buttonGradient.colors}
-              start={{ x: 0, y: 0 }}
-              end={{ x: 1, y: 0 }}
-              style={styles.buttonGradient}
-            >
-              <View style={styles.buttonContent}>
-                <Text
-                  style={[
-                    styles.buttonGradientText,
-                    dynamicStyles.buttonGradientText,
-                  ]}
-                  numberOfLines={1}
-                  adjustsFontSizeToFit
-                >
-                  {t("completion.continue")}
-                </Text>
-              </View>
-            </LinearGradient>
-          </TouchableOpacity>
-
-          {/* Bouton "Doubler les trophées" (rewarded) */}
-          <TouchableOpacity
-   onPress={() => handleComplete(true)}
-   activeOpacity={0.7}
-   disabled={!canShowRewarded || !adLoaded}
-   style={[styles.gradientButton, (!canShowRewarded || !adLoaded) && { opacity: 0.5 }]}
- >
-            <LinearGradient
-              colors={dynamicStyles.buttonGradient.colors}
-              start={{ x: 0, y: 0 }}
-              end={{ x: 1, y: 0 }}
-              style={styles.buttonGradient}
-            >
-              <View style={styles.buttonContent}>
-                <Ionicons
-                  name="videocam-outline"
-                  size={normalizeSize(20)}
-                  color={dynamicStyles.buttonIcon.color}
-                  style={styles.buttonIcon}
-                />
-                <Text
-                  style={[
-                    styles.buttonGradientText,
-                    dynamicStyles.buttonGradientText,
-                  ]}
-                  numberOfLines={1}
-                  adjustsFontSizeToFit
-                >
-                  {t("completion.doubleTrophies")}
-                </Text>
-              </View>
-            </LinearGradient>
-          </TouchableOpacity>
-        </LinearGradient>
-      </Animated.View>
-    </View>
-  </Modal>
-);
+        )}
+      </View>
+    </Modal>
+  );
 }
+
 const styles = StyleSheet.create({
   fullOverlay: {
     ...StyleSheet.absoluteFillObject,
@@ -556,13 +656,13 @@ const styles = StyleSheet.create({
     marginBottom: SPACING * 1.5,
   },
   rewardGlow: {
-    padding: normalizeSize(20), // Plus d'espace pour texte gros
+    padding: normalizeSize(20),
     paddingHorizontal: normalizeSize(28),
     borderRadius: normalizeSize(22),
-    maxWidth: normalizeSize(320), // Élargi
+    maxWidth: normalizeSize(320),
   },
   rewardText: {
-    fontSize: normalizeSize(20), // Plus gros
+    fontSize: normalizeSize(20),
     fontFamily: "Comfortaa_700Bold",
     textShadowColor: "rgba(0, 0, 0, 0.2)",
     textShadowOffset: { width: 2, height: 2 },

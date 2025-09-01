@@ -391,6 +391,7 @@
         "alreadyInvited": "You already have an active invitation for this challenge.",
         "autoInvite": "You cannot accept your own invitation.",
         "expired": "This invitation has expired.",
+        "alreadyInDuoForChallenge": "Cannot invite this user: they are already in a duo for this challenge.",
         "unknown": "An unknown error occurred.",
         "inviterAlreadyStarted": "You already started this challenge solo.",
         "duoAlready": "You are already in a duo for this challenge."
@@ -416,8 +417,21 @@
       "title": "Pick your first challenge!",
       "subtitle": "Do you want to start in…",
       "chooseSolo": "Choose Solo",
-      "chooseDuo": "Choose Duo"
+      "chooseDuo": "Choose Duo",
+  "modeDuo": "Duo (recommended)",
+  "modeSolo": "Solo",
+  "durationLabel": "Duration:",
+  "day_one": "{{count}} d",
+  "day_other": "{{count}} d",
+  "skip": "Skip",
+  "alert": {
+    "missingChoiceTitle": "Missing choice",
+    "missingChoiceBody": "Select a challenge.",
+    "modeTitle": "Mode",
+    "modeBody": "Choose Duo or Solo."
+  }
     },
+    "faqShort": "FAQ",
     "spotlight": "Spotlight",
   "refreshDaily": "New challenges tomorrow ✨",
   "challengeDetails": {
@@ -481,6 +495,28 @@
     "doubleMessage": "🔥 You earned {{count}} trophies!",
     "claimMessage": "🎉 You earned {{count}} trophies!"
   },
+  "coverImage": "Cover image (optional)",
+  "pickAnImage": "Pick an image",
+  "edit": "Edit",
+  "livePreview": "Preview",
+  "yourTitleHere": "Your title here",
+  "yourDescriptionHere": "Your description here…",
+  "exTitle": "Ex: 30 days of reading",
+  "exDescription": "Ex: Read 10 pages per day and share your notes…",
+  "pleaseWait": "Please wait…",
+  "ok": "OK",
+  "duoInfoModal": {
+  "title": "Invite a friend",
+  "desc": "To invite a friend, simply enter their username and wait for their response.\n\nIf you don’t know their username, don’t worry: just ask them (it’s visible in the My Account section) and you can invite them later from the desired challenge.",
+  "button": "Got it"
+},
+  "charsRemaining_one": "{{count}} character remaining",
+"charsRemaining_other": "{{count}} characters remaining",
+"completionLabel": "Completion",
+  "loginRequired": "You must be logged in to create a challenge.",
+  "createChallengeFailed": "Unable to create challenge at the moment. Please try again later.",
+  "challengeSubmittedForReview": "Your challenge has been submitted and will be visible once approved by an admin.",
+  "reviewNote": "Each challenge is reviewed. Blurry, unrelated or poor quality images may be rejected.",
   "achievements": {
     "first_connection": "First connection",
     "profile_completed": "Profile completed",
@@ -3222,9 +3258,49 @@
   "examples": "Examples",
   "suggestion": "Suggestions?"
 },
+"questions": {
+    "title": "Frequently Asked Questions",
+    "searchPlaceholder": "🔍 Search a question…",
+    "overview": {
+      "title": "Welcome to the FAQ ✨",
+      "body": "Find here the most common answers to get the best out of ChallengeTies."
+    },
+    "contactCta": "✉️ Contact support",
+    "noResult": "No result found. Try another keyword!",
+
+    "q": {
+      "whatIs": "❓ What is ChallengeTies?",
+      "howToStart": "🚀 How do I start my first challenge?",
+      "duoMode": "👫 What is Duo mode?",
+      "soloMode": "🙋 And what about Solo mode?",
+      "invitations": "📨 How do invitations work?",
+      "progress": "📈 How is my progress tracked?",
+      "notifications": "🔔 How can I manage my notifications?",
+      "community": "💬 Is there a community around the challenges?",
+      "privacy": "🛡️ What about my personal data?",
+      "contact": "📬 How can I contact you if I have a problem?"
+    },
+
+    "a": {
+      "whatIs": "ChallengeTies is an app that helps you take on daily challenges, alone or with a friend, to gradually build better habits. Each day, mark your progress and unlock motivating rewards 🏆.",
+      "howToStart": "When you sign up, choose a first challenge from the list. Select the duration (7, 14, 21 days, etc.), then receive daily reminders to stay on track ✅.",
+      "duoMode": "Duo mode lets you share a challenge with a friend. You both see each other’s progress in parallel. Teamwork makes the journey more fun and powerful 💪.",
+      "soloMode": "Solo mode is all about you. Progress at your own pace, without comparison, and enjoy the satisfaction of building consistency day by day ✨.",
+      "invitations": "Invite a friend by username or share a unique link. They’ll receive a notification and can accept or decline. If accepted, you follow the same challenge together 🎯.",
+      "progress": "Every day, check your progress with 'Mark Today'. Your history is saved: completed days, streaks 🔥, and unlocked achievements.",
+      "notifications": "Enable notifications to get daily reminders and never miss a challenge. You can toggle them anytime in settings ⚙️.",
+      "community": "A community section is coming soon ✨. For now, share your wins and invite friends to build your own support circle 👥.",
+      "privacy": "Your personal data is safe 🔒. It is never sold. You can delete your account and data at any time in the settings.",
+      "contact": "Our team is here for you. Write to us directly from the app via 'Contact support', or on our website 🌍."
+    }
+  },
 "common": {
   "back": "Back",
-  "skip": "Skip"
+  "skip": "Skip",
+  "challenge": "Challenge",
+  "misc": "Misc",
+  "error": "Error",
+  "oops": "Oops…"
 }
 
 }

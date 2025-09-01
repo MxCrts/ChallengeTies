@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useCallback, useMemo } from "react";
+import React, { useState, useEffect, useCallback, useMemo, useRef  } from "react";
 import {
   View,
   StyleSheet,
@@ -13,7 +13,8 @@ import {
   Dimensions,
   Text,
   StatusBar,
-  StyleProp
+  StyleProp,
+  Keyboard
 } from "react-native";
 import { useRouter } from "expo-router";
 import { doc, updateDoc, getDoc } from "firebase/firestore";
@@ -91,6 +92,49 @@ const toDisplayString = (v: any): string => {
 // 👇 Trim sécurisé: retourne toujours une string trimée
 const safeTrim = (v: any): string => toDisplayString(v).trim();
 
+// ==== GlassCard (défini au module scope) ====
+type GlassCardProps = {
+  isDarkMode: boolean;
+  overlayLightColor: string;
+  overlayLightColor2: string;
+  overlayDarkColor: string;
+  overlayDarkColor2: string;
+  style?: StyleProp<ViewStyle>;
+  children: React.ReactNode;
+};
+
+const GlassCard: React.FC<GlassCardProps> = ({
+  isDarkMode,
+  overlayLightColor,
+  overlayLightColor2,
+  overlayDarkColor,
+  overlayDarkColor2,
+  style,
+  children,
+}) => {
+  return (
+    <View style={[styles.glassWrap, style]}>
+      <BlurView
+        intensity={45}
+        tint={isDarkMode ? "dark" : "light"}
+        experimentalBlurMethod="dimezisBlurView"
+        style={StyleSheet.absoluteFill}
+      />
+      <LinearGradient
+        colors={
+          isDarkMode
+            ? [overlayDarkColor, overlayDarkColor2]
+            : [overlayLightColor, overlayLightColor2]
+        }
+        style={StyleSheet.absoluteFill}
+        pointerEvents="none"
+      />
+      <View style={styles.glassInner}>{children}</View>
+    </View>
+  );
+};
+
+
 
 interface User {
   uid: string;
@@ -118,31 +162,9 @@ export default function UserInfo() {
     () => (isDarkMode ? designSystem.darkTheme : designSystem.lightTheme),
     [isDarkMode]
   );
+  const navigatedRef = useRef(false);
   const { showBanners } = useAdsVisibility();
  const bottomPadding = showBanners ? BANNER_HEIGHT + n(40) : n(40);
-
-  const GlassCard: React.FC<{ style?: StyleProp<ViewStyle>; children: React.ReactNode }> = ({ style, children }) => (
-  <View style={[styles.glassWrap, style]}>
-    {/* Blur natif */}
-    <BlurView
-      intensity={45}
-      tint={isDarkMode ? "dark" : "light"}
-      experimentalBlurMethod="dimezisBlurView"
-      style={StyleSheet.absoluteFill}
-    />
-    <LinearGradient
-      colors={
-        isDarkMode
-          ? [withAlpha("#FFFFFF", 0.03), withAlpha("#FFFFFF", 0.02)]
-          : [withAlpha("#FFFFFF", 0.6), withAlpha("#FFF5E6", 0.4)]
-      }
-      style={StyleSheet.absoluteFill}
-      pointerEvents="none"
-    />
-    <View style={styles.glassInner}>{children}</View>
-  </View>
-);
-
 
   // États de focus pour chaque champ
   const [isDisplayNameFocused, setIsDisplayNameFocused] = useState(false);
@@ -318,12 +340,15 @@ if (cleanInterests && cleanInterests !== safeTrim(user.interests)) {
     const userRef = doc(db, "users", user.uid);
     await updateDoc(userRef, updateData);
     await checkForAchievements(user.uid);
-    Alert.alert(t("success"), t("profileUpdateSuccess"));
-    router.push("/(tabs)/profile");
+    Keyboard.dismiss();
+   navigatedRef.current = true;
+   setIsLoading(false);
+   router.replace("/(tabs)/profile");
+   return;
   } catch (error: any) {
     Alert.alert(t("error"), t("profileUpdateFailed") + `: ${error.message}`);
   } finally {
-    setIsLoading(false);
+    if (!navigatedRef.current) setIsLoading(false);
   }
 }, [user, displayName, bio, profileImage, location, interests, router, t]);
 
@@ -486,6 +511,11 @@ if (cleanInterests && cleanInterests !== safeTrim(user.interests)) {
               </TouchableOpacity>
             </Animated.View>
 <GlassCard
+  isDarkMode={isDarkMode}
+  overlayLightColor={withAlpha("#FFFFFF", 0.6)}
+  overlayLightColor2={withAlpha("#FFF5E6", 0.4)}
+  overlayDarkColor={withAlpha("#FFFFFF", 0.03)}
+  overlayDarkColor2={withAlpha("#FFFFFF", 0.02)}
   style={[styles.formCard, { borderColor: isDarkMode ? currentTheme.colors.secondary : "#FFB800" }]}
 >
   {/* Nom */}

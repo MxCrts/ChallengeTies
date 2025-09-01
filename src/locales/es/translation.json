@@ -390,6 +390,7 @@
         "autoInvite": "No puedes aceptar tu propia invitación.",
         "expired": "Esta invitación ha caducado.",
         "unknown": "Ha ocurrido un error.",
+        "alreadyInDuoForChallenge": "No se puede invitar a este usuario: ya está en un dúo para este desafío.",
         "inviterAlreadyStarted": "Ya has comenzado este reto en solitario.",
         "duoAlready": "Ya estás en un dúo para este reto."
       },
@@ -411,11 +412,68 @@
   "addLocationHere": "Agrega una ubicación",
   "addInterestsHere": "Agrega tus intereses",
 "firstPick": {
-      "title": "¡Elige tu primer desafío!",
-      "subtitle": "¿Quieres empezar en…?",
-      "chooseSolo": "Elegir Solo",
-      "chooseDúo": "Elegir Dúo"
+  "title": "¡Elige tu primer desafío!",
+  "subtitle": "¿Quieres empezar en…",
+  "chooseSolo": "Elegir Solo",
+  "chooseDuo": "Elegir Dúo",
+  "modeDuo": "Dúo (recomendado)",
+  "modeSolo": "Solo",
+  "durationLabel": "Duración:",
+  "day_one": "{{count}} d",
+  "day_other": "{{count}} d",
+  "skip": "Saltar",
+  "alert": {
+    "missingChoiceTitle": "Falta elección",
+    "missingChoiceBody": "Selecciona un desafío.",
+    "modeTitle": "Modo",
+    "modeBody": "Elige Dúo o Solo."
+  }
+},
+"common": {
+  "back": "Volver",
+  "skip": "Saltar",
+  "challenge": "Desafío",
+  "misc": "Varios",
+  "error": "Error",
+  "oops": "Ups…"
+},
+"questions": {
+    "title": "Preguntas frecuentes",
+    "searchPlaceholder": "🔍 Buscar una pregunta…",
+    "overview": {
+      "title": "Bienvenido a la FAQ ✨",
+      "body": "Encuentra aquí las respuestas más comunes para aprovechar al máximo ChallengeTies."
     },
+    "contactCta": "✉️ Contactar con soporte",
+    "noResult": "No se encontraron resultados. ¡Prueba con otra palabra clave!",
+
+    "q": {
+      "whatIs": "❓ ¿Qué es ChallengeTies?",
+      "howToStart": "🚀 ¿Cómo empiezo mi primer reto?",
+      "duoMode": "👫 ¿Qué es el modo Dúo?",
+      "soloMode": "🙋 ¿Y qué pasa con el modo Solo?",
+      "invitations": "📨 ¿Cómo funcionan las invitaciones?",
+      "progress": "📈 ¿Cómo se mide mi progreso?",
+      "notifications": "🔔 ¿Cómo gestiono mis notificaciones?",
+      "community": "💬 ¿Existe una comunidad alrededor de los retos?",
+      "privacy": "🛡️ ¿Qué pasa con mis datos personales?",
+      "contact": "📬 ¿Cómo puedo contactar en caso de un problema?"
+    },
+
+    "a": {
+      "whatIs": "ChallengeTies es una aplicación que te permite superar retos diarios, solo o con un amigo, para transformar tus hábitos paso a paso. Cada día marca tu progreso y desbloquea recompensas motivadoras 🏆.",
+      "howToStart": "Al registrarte, elige un primer reto de la lista. Define la duración (7, 14, 21 días, etc.) y recibe recordatorios diarios para seguir motivado ✅.",
+      "duoMode": "El modo Dúo te permite compartir un reto con un amigo. Ambos veis vuestros progresos en paralelo. La motivación compartida hace la experiencia más divertida y potente 💪.",
+      "soloMode": "En modo Solo, avanzas a tu propio ritmo, sin comparaciones, disfrutando la satisfacción de crear constancia día a día ✨.",
+      "invitations": "Invita a un amigo con su nombre de usuario o comparte un enlace único. Recibirá una notificación y podrá aceptar o rechazar. Si acepta, haréis el mismo reto juntos 🎯.",
+      "progress": "Cada día marca tu avance con 'Marcar Hoy'. Tu historial queda guardado: días completados, rachas 🔥 y logros desbloqueados.",
+      "notifications": "Activa las notificaciones para recibir recordatorios diarios y no olvidar tu reto. Puedes gestionarlas en ajustes ⚙️.",
+      "community": "Una sección de comunidad llegará pronto ✨. Mientras tanto, comparte tus logros e invita a tus amigos para crear tu círculo motivador 👥.",
+      "privacy": "Tus datos están seguros 🔒. Nunca se venden. Puedes eliminar tu cuenta y datos en cualquier momento desde ajustes.",
+      "contact": "Nuestro equipo está aquí para ayudarte. Escríbenos desde la app en 'Contactar con soporte' o en nuestra web 🌍."
+    }
+  },
+  "faqShort": "FAQ",
     "spotlight": "Destacado",
   "refreshDaily": "Nuevos desafíos mañana ✨",
   "challengeDetails": {
@@ -775,11 +833,6 @@
   "examples": "Ejemplos",
   "suggestion": "¿Sugerencias?"
 },
-"common": {
-  "back": "Atrás",
-  "skip": "Omitir"
-}
-,
   "contact": {
     "errorTitle": "Error",
     "errorMessage": "Por favor completa todos los campos.",
@@ -849,6 +902,30 @@
     "finalThanksTitle": "Gracias ❤️",
     "finalThanksMessage": "Si estás leyendo esto, es porque crees en el proyecto. De corazón, gracias. ChallengeTies existe gracias a personas como tú: curiosas, positivas y comprometidas. Sigamos subiendo. Juntos. 🚀"
   },
+   "coverImage": "Imagen de portada (opcional)",
+  "pickAnImage": "Elegir una imagen",
+  "edit": "Editar",
+  "livePreview": "Vista previa",
+  "yourTitleHere": "Tu título aquí",
+  "yourDescriptionHere": "Tu descripción aquí…",
+  "exTitle": "Ej: 30 días de lectura",
+  "exDescription": "Ej: Leer 10 páginas al día y compartir tus notas…",
+  "pleaseWait": "Por favor espera…",
+  "ok": "OK",
+  "charsRemaining_one": "{{count}} carácter restante",
+"charsRemaining_other": "{{count}} caracteres restantes",
+"completionLabel": "Completado"
+,
+"duoInfoModal": {
+  "title": "Invitar a un amigo",
+  "desc": "Para invitar a un amigo, simplemente ingresa su nombre de usuario y espera su respuesta.\n\nSi no conoces su nombre de usuario, no te preocupes: pídeselo (es visible en la sección Mi Cuenta) y podrás invitarlo más tarde desde el desafío que quieras.",
+  "button": "Entendido"
+}
+,
+  "loginRequired": "Debes iniciar sesión para crear un desafío.",
+  "createChallengeFailed": "No se pudo crear el desafío en este momento. Inténtalo más tarde.",
+  "challengeSubmittedForReview": "Tu desafío ha sido enviado y será visible una vez aprobado por un administrador.",
+  "reviewNote": "Cada desafío es revisado. Las imágenes borrosas, irrelevantes o de mala calidad pueden ser rechazadas.",
   "newFeaturesTitle": "Novedades",
   "tryAnotherSearch": "Prueba otra búsqueda o filtro.",
   "addFavorite": "Añadir \"{{title}}\" a favoritos",

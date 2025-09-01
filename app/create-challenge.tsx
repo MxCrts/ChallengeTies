@@ -1,4 +1,4 @@
-import React, { useState, useRef, useCallback, useEffect } from "react";
+import React, { useState, useRef, useCallback, useEffect, useMemo } from "react";
 import {
   View,
   Text,
@@ -19,6 +19,7 @@ import * as ImagePicker from "expo-image-picker";
 import { useRouter } from "expo-router";
 import { LinearGradient } from "expo-linear-gradient";
 import { Ionicons } from "@expo/vector-icons";
+import { BlurView } from "expo-blur";
 import { useTheme } from "../context/ThemeContext";
 import { useTranslation } from "react-i18next";
 import designSystem from "../theme/designSystem";
@@ -30,8 +31,11 @@ import {
 } from "react-native-google-mobile-ads";
 import AsyncStorage from "@react-native-async-storage/async-storage";
 import { useAdsVisibility } from "../src/context/AdsVisibilityContext";
+// en haut du fichier, avec les imports
+import type { TFunction } from "i18next";
 
-// 🔥 Firebase
+
+/* -------- Firebase (inchangé) -------- */
 import {
   addDoc,
   collection,
@@ -43,9 +47,11 @@ import {
 import { getStorage, ref as storageRef, uploadBytes, getDownloadURL } from "firebase/storage";
 import { auth, db } from "../constants/firebase-config";
 
+/* -------- Constantes UI -------- */
 const { width: SCREEN_WIDTH } = Dimensions.get("window");
 const SPACING = 20;
-const BORDER_RADIUS = 16;
+const RADIUS = 18;
+const FIELD_HEIGHT = 52;
 
 const defaultCategories = [
   "Santé",
@@ -63,11 +69,19 @@ const defaultCategories = [
   "Discipline",
   "État d'esprit",
   "Autres",
-];
+] as const;
+type CategoryLabel = typeof defaultCategories[number];
 
 // Cohérent avec Explore (fallback côté liste)
 const DEFAULT_DAYS_OPTIONS = [3, 7, 14, 21, 30, 60, 90, 180, 365];
 
+/* -------- Limites de saisie (UX) -------- */
+const TITLE_MAX = 60;
+const DESC_MAX = 240;
+
+/* =========================================
+   CreateChallenge (logique conservée)
+========================================= */
 export default function CreateChallenge() {
   const { t } = useTranslation();
   const { theme } = useTheme();
@@ -75,49 +89,47 @@ export default function CreateChallenge() {
   const current = isDark ? designSystem.darkTheme : designSystem.lightTheme;
   const router = useRouter();
 
-
   const [title, setTitle] = useState("");
   const [description, setDescription] = useState("");
-  const [category, setCategory] = useState(defaultCategories[0]);
   const [imageUri, setImageUri] = useState<string | null>(null);
   const [submitting, setSubmitting] = useState(false);
+  const [category, setCategory] = useState<CategoryLabel>(defaultCategories[0]);
 
-  // ====== Interstitiel (non premium) ======
+
+  /* ====== Interstitiel (non premium) — inchangé ====== */
   const { showInterstitials } = useAdsVisibility();
   const interstitialAdUnitId = __DEV__
-  ? TestIds.INTERSTITIAL
-  : Platform.select({
-      ios: "ca-app-pub-4725616526467159/4942270608",     // Interstit-Create-iOS
-      android: "ca-app-pub-4725616526467159/6097960289", // Interstit-Create (Android)
-    })!;
+    ? TestIds.INTERSTITIAL
+    : Platform.select({
+        ios: "ca-app-pub-4725616526467159/4942270608",
+        android: "ca-app-pub-4725616526467159/6097960289",
+      })!;
   const interstitialRef = useRef<InterstitialAd | null>(null);
   const [adLoaded, setAdLoaded] = useState(false);
 
   useEffect(() => {
-  if (!showInterstitials) {
-    interstitialRef.current = null;
-    setAdLoaded(false);
-    return;
-  }
+    if (!showInterstitials) {
+      interstitialRef.current = null;
+      setAdLoaded(false);
+      return;
+    }
+    const ad = InterstitialAd.createForAdRequest(interstitialAdUnitId, {
+      requestNonPersonalizedAdsOnly: true,
+    });
+    interstitialRef.current = ad;
 
-  const ad = InterstitialAd.createForAdRequest(interstitialAdUnitId, {
-    requestNonPersonalizedAdsOnly: true,
-  });
-  interstitialRef.current = ad;
+    const onLoaded = ad.addAdEventListener(AdEventType.LOADED, () => setAdLoaded(true));
+    const onError  = ad.addAdEventListener(AdEventType.ERROR,  () => setAdLoaded(false));
 
-  const onLoaded = ad.addAdEventListener(AdEventType.LOADED, () => setAdLoaded(true));
-  const onError  = ad.addAdEventListener(AdEventType.ERROR,  () => setAdLoaded(false));
+    ad.load();
 
-  ad.load();
-
-  return () => {
-    onLoaded();
-    onError();
-    interstitialRef.current = null;
-    setAdLoaded(false);
-  };
-}, [showInterstitials, interstitialAdUnitId]);
-
+    return () => {
+      onLoaded();
+      onError();
+      interstitialRef.current = null;
+      setAdLoaded(false);
+    };
+  }, [showInterstitials, interstitialAdUnitId]);
 
   const checkAdCooldownCreate = useCallback(async () => {
     const last = await AsyncStorage.getItem("lastInterstitialTime_create");
@@ -128,10 +140,7 @@ export default function CreateChallenge() {
   }, []);
 
   const markAdShownCreate = useCallback(async () => {
-    await AsyncStorage.setItem(
-      "lastInterstitialTime_create",
-      Date.now().toString()
-    );
+    await AsyncStorage.setItem("lastInterstitialTime_create", Date.now().toString());
   }, []);
 
   const tryShowCreateInterstitial = useCallback(async () => {
@@ -150,13 +159,14 @@ export default function CreateChallenge() {
     }
   }, [showInterstitials, adLoaded, checkAdCooldownCreate, markAdShownCreate]);
 
-  // ====== Image picker ======
+  /* ====== Image picker ====== */
   const pickImage = useCallback(async () => {
     try {
       const { canceled, assets } = await ImagePicker.launchImageLibraryAsync({
         mediaTypes: ImagePicker.MediaTypeOptions.Images,
         allowsEditing: true,
-        quality: 1,
+        aspect: [4, 3],
+        quality: 0.9,
       });
       if (!canceled && assets?.[0]?.uri) setImageUri(assets[0].uri);
     } catch {
@@ -164,7 +174,7 @@ export default function CreateChallenge() {
     }
   }, [t]);
 
-  // ====== Upload image vers Storage (si fournie) ======
+  /* ====== Upload vers Storage (si image) ====== */
   const uploadImageIfNeeded = useCallback(async (localUri: string | null, nameHint: string) => {
     if (!localUri) return null;
     try {
@@ -173,20 +183,30 @@ export default function CreateChallenge() {
 
       const storage = getStorage();
       const safeName =
-        nameHint.trim().toLowerCase().replace(/[^\w]+/g, "_").slice(0, 40) ||
-        "challenge";
+        nameHint.trim().toLowerCase().replace(/[^\w]+/g, "_").slice(0, 40) || "challenge";
       const fileName = `${safeName}_${Date.now()}.jpg`;
       const ref = storageRef(storage, `Challenges-Image/${fileName}`);
 
       await uploadBytes(ref, blob, { contentType: "image/jpeg" });
       const url = await getDownloadURL(ref);
       return url;
-    } catch (e) {
+    } catch {
       return null; // on ne bloque pas la création si l’upload échoue
     }
   }, []);
 
-  // ====== Validation & Création ======
+  /* ====== Validation & Création ====== */
+  const titleLeft = TITLE_MAX - title.length;
+  const descLeft = DESC_MAX - description.length;
+
+  const completeness = useMemo(() => {
+    let score = 0;
+    if (title.trim().length >= 3) score += 0.34;
+    if (description.trim().length >= 10) score += 0.33;
+    if (imageUri) score += 0.33;
+    return Math.min(1, score);
+  }, [title, description, imageUri]);
+
   const isValid = !!title.trim() && !!description.trim();
 
   const handleSubmit = useCallback(async () => {
@@ -212,16 +232,14 @@ export default function CreateChallenge() {
       const payload = {
         title: title.trim(),
         description: description.trim(),
-        category: category || "Autres",
         imageUrl: uploadedUrl || null,
         participantsCount: 0,
         usersTakingChallenge: [] as string[],
         creatorId: user.uid,
         createdAt: serverTimestamp(),
         approved: false,
-        // Compat avec Explore : si non fourni, Explore fallback déjà géré
         daysOptions: DEFAULT_DAYS_OPTIONS,
-        // Pas de chatId pour les créations user (Explore gère fallback)
+        category,
       };
 
       const ref = await addDoc(collection(db, "challenges"), payload);
@@ -241,12 +259,7 @@ export default function CreateChallenge() {
           defaultValue:
             "Ton défi a été soumis et sera visible dès qu’un admin l’aura approuvé.",
         }),
-        [
-          {
-            text: t("ok", { defaultValue: "OK" }),
-            onPress: () => router.push("/explore"),
-          },
-        ]
+        [{ text: t("ok", { defaultValue: "OK" }), onPress: () => router.push("/explore") }]
       );
     } catch (e: any) {
       console.error("Create challenge error:", e?.message ?? e);
@@ -272,6 +285,10 @@ export default function CreateChallenge() {
     submitting,
   ]);
 
+  /* ====== UI ====== */
+  const onChangeTitle = (v: string) => setTitle(v.slice(0, TITLE_MAX));
+  const onChangeDescription = (v: string) => setDescription(v.slice(0, DESC_MAX));
+
   return (
     <SafeAreaView style={styles.safeArea}>
       <StatusBar
@@ -287,69 +304,205 @@ export default function CreateChallenge() {
       >
         <CustomHeader title={t("createYourChallenge")} />
 
+        {/* Bandeau progression */}
+        <View style={[styles.progressWrap, { backgroundColor: isDark ? "#202022" : "#ffffff" }]}>
+          <Text style={[styles.progressText, { color: current.colors.textSecondary }]}>
+  {t("completionLabel", { defaultValue: "Complétion" })}
+</Text>
+          <View style={[styles.progressBar, { backgroundColor: isDark ? "#2b2b30" : "#EFEFEF" }]}>
+            <View
+              style={[
+                styles.progressFill,
+                {
+                  width: `${Math.round(completeness * 100)}%`,
+                  backgroundColor: current.colors.secondary,
+                },
+              ]}
+            />
+          </View>
+          <Text style={[styles.progressPct, { color: current.colors.textSecondary }]}>
+            {Math.round(completeness * 100)}%
+          </Text>
+        </View>
+
         <ScrollView
           contentContainerStyle={styles.scrollContent}
           showsVerticalScrollIndicator={false}
-          contentInset={{ top: SPACING, bottom: SPACING * 4 }}
           keyboardShouldPersistTaps="handled"
         >
-          <View style={styles.iconContainer}>
-            <Ionicons
-              name="create-outline"
-              size={48}
-              color={current.colors.secondary}
-              style={{ marginBottom: 8 }}
-            />
-            <Text
-              style={[styles.subtitle, { color: current.colors.textSecondary }]}
+          {/* Carte verre + halo */}
+          <View style={styles.cardShadow}>
+            <View style={[styles.halo, { backgroundColor: isDark ? "#7b5cff22" : "#ffb70022" }]} />
+            <BlurView
+              intensity={40}
+              tint={isDark ? "dark" : "light"}
+              style={styles.glassCard}
             >
-              {t("inspireOthers")}
-            </Text>
+              <LinearGradient
+                colors={
+                  isDark
+                    ? ["rgba(255,255,255,0.04)", "rgba(255,255,255,0.02)"]
+                    : ["rgba(255,255,255,0.6)", "rgba(255,245,230,0.35)"]
+                }
+                style={StyleSheet.absoluteFill}
+              />
+
+              {/* Icône + tagline */}
+              <View style={styles.heroRow}>
+                <View style={[styles.iconBadge, { borderColor: current.colors.secondary }]}>
+                  <Ionicons name="flash-outline" size={22} color={current.colors.secondary} />
+                </View>
+                <Text style={[styles.heroTagline, { color: current.colors.textSecondary }]}>
+                  {t("inspireOthers")}
+                </Text>
+              </View>
+
+              {/* Titre */}
+              <Field
+  label={t("challengeTitle")}
+  value={title}
+  onChangeText={onChangeTitle}
+  placeholder={t("exTitle") || "Ex: 30 jours de lecture"}
+  max={TITLE_MAX}
+  leftIcon="text-outline"
+  theme={current}
+  isDark={isDark}
+  t={t}
+/>
+
+<Field
+  label={t("challengeDescription")}
+  value={description}
+  onChangeText={onChangeDescription}
+  placeholder={t("exDescription") || "Ex: Lire 10 pages par jour, partager ses notes..."}
+  max={DESC_MAX}
+  multiline
+  numberOfLines={5}
+  leftIcon="document-text-outline"
+  theme={current}
+  isDark={isDark}
+  t={t}
+/>
+
+
+              {/* Catégorie (chips + picker accessible) */}
+              <Text style={[styles.sectionLabel, { color: current.colors.textSecondary }]}>
+                {t("category")}
+              </Text>
+              <View style={[styles.dropdownWrap, { backgroundColor: current.colors.background }]}>
+                <Picker
+  selectedValue={category}
+  onValueChange={(v) => setCategory(v as CategoryLabel)}
+  style={{
+    color: isDark ? current.colors.textPrimary : "#111",
+    height: FIELD_HEIGHT,
+  }}
+  itemStyle={{
+    // iOS: améliore le centrage vertical et la lisibilité
+    height: FIELD_HEIGHT,
+    fontSize: 16,
+    color: isDark ? current.colors.textPrimary : "#111",
+  }}
+  dropdownIconColor={isDark ? current.colors.textPrimary : current.colors.secondary}
+  mode={Platform.OS === "ios" ? "dialog" : "dropdown"}
+>
+  {defaultCategories.map((opt) => (
+    <Picker.Item
+      key={opt}
+      value={opt}
+      label={t(`categories.${opt}`, { defaultValue: opt })}
+      color={isDark ? current.colors.textPrimary : "#111"} // Android
+    />
+  ))}
+</Picker>
+              </View>
+
+              {/* Image */}
+              <Text style={[styles.sectionLabel, { color: current.colors.textSecondary }]}>
+                {t("coverImage") || "Image de couverture (optionnel)"}
+              </Text>
+              <TouchableOpacity style={[styles.imageBox, { backgroundColor: current.colors.background }]} onPress={pickImage}>
+                {imageUri ? (
+                  <>
+                    <Image source={{ uri: imageUri }} style={styles.imagePreview} />
+                    <View style={styles.imageOverlay}>
+                      <Ionicons name="pencil" size={18} color="#fff" />
+                      <Text style={styles.imageOverlayText}>{t("edit") || "Modifier"}</Text>
+                    </View>
+                  </>
+                ) : (
+                  <View style={styles.imageEmpty}>
+                    <Ionicons name="cloud-upload-outline" size={28} color={current.colors.textSecondary} />
+                    <Text style={[styles.imageHint, { color: current.colors.textSecondary }]}>
+                      {t("pickAnImage") || "Choisir une image"}
+                    </Text>
+                  </View>
+                )}
+              </TouchableOpacity>
+
+              {/* Aperçu en direct */}
+              <Text style={[styles.sectionLabel, { color: current.colors.textSecondary, marginTop: 4 }]}>
+                {t("livePreview") || "Aperçu"}
+              </Text>
+              <View style={[styles.previewCard, { backgroundColor: current.colors.background }]}>
+                {imageUri && <Image source={{ uri: imageUri }} style={styles.previewImage} />}
+                <View style={styles.previewContent}>
+                  <View style={[styles.catBadge, { backgroundColor: current.colors.secondary }]}>
+                    <Text style={styles.catBadgeText}>
+  {t(`categories.${category}`, { defaultValue: category })}
+</Text>
+                  </View>
+                  <Text
+                    numberOfLines={1}
+                    style={[styles.previewTitle, { color: current.colors.textPrimary }]}
+                  >
+                    {title || (t("yourTitleHere") || "Ton titre ici")}
+                  </Text>
+                  <Text
+                    numberOfLines={2}
+                    style={[styles.previewDesc, { color: current.colors.textSecondary }]}
+                  >
+                    {description || (t("yourDescriptionHere") || "Ta description ici…")}
+                  </Text>
+                </View>
+              </View>
+
+              {/* CTA */}
+              <TouchableOpacity
+                disabled={!isValid || submitting}
+                onPress={handleSubmit}
+                accessibilityRole="button"
+                style={{ opacity: !isValid || submitting ? 0.6 : 1, marginTop: SPACING }}
+              >
+                <LinearGradient
+                  colors={[current.colors.primary, current.colors.secondary]}
+                  style={styles.cta}
+                  start={{ x: 0, y: 0 }}
+                  end={{ x: 1, y: 1 }}
+                >
+                  <Ionicons name="rocket-outline" size={18} color={isDark ? "#111" : "#111"} />
+                  <Text style={[styles.ctaText, { color: "#111" }]}>
+                    {submitting
+                      ? t("pleaseWait", { defaultValue: "Patiente..." })
+                      : t("createChallengeButton")}
+                  </Text>
+                </LinearGradient>
+              </TouchableOpacity>
+
+              {submitting && (
+                <View style={{ marginTop: 10, alignItems: "center" }}>
+                  <ActivityIndicator color={current.colors.secondary} />
+                </View>
+              )}
+            </BlurView>
           </View>
 
-          <View
-            style={[styles.form, { backgroundColor: current.colors.cardBackground }]}
-          >
-            <Input
-              label={t("challengeTitle")}
-              value={title}
-              onChange={setTitle}
-              theme={current}
-            />
-            <Input
-              label={t("challengeDescription")}
-              value={description}
-              onChange={setDescription}
-              multiline
-              numberOfLines={4}
-              theme={current}
-            />
-
-            <Dropdown
-              label={t("category")}
-              options={defaultCategories}
-              selected={category}
-              onSelect={setCategory}
-              theme={current}
-            />
-
-            <ImageUpload uri={imageUri} onPick={pickImage} theme={current} />
-
-            <Button
-              label={
-                submitting
-                  ? t("pleaseWait", { defaultValue: "Patiente..." })
-                  : t("createChallengeButton")
-              }
-              onPress={handleSubmit}
-              disabled={!isValid || submitting}
-              theme={current}
-            />
-            {submitting && (
-              <View style={{ marginTop: 12, alignItems: "center" }}>
-                <ActivityIndicator color={current.colors.secondary} />
-              </View>
-            )}
+          {/* Petites notes d’aide */}
+          <View style={styles.hintRow}>
+            <Ionicons name="information-circle-outline" size={16} color={current.colors.textSecondary} />
+            <Text style={[styles.hintText, { color: current.colors.textSecondary }]}>
+              {t("reviewNote") || "Chaque défi est vérifié. Les images trop floues ou sans rapport sont rejetées."}
+            </Text>
           </View>
         </ScrollView>
       </LinearGradient>
@@ -357,160 +510,287 @@ export default function CreateChallenge() {
   );
 }
 
-// ======================
-// Reusable Components
-// ======================
+/* =========================================
+   Champs réutilisables
+========================================= */
 
-const Input = ({
+const Field = ({
   label,
   value,
-  onChange,
+  onChangeText,
+  placeholder,
+  max,
   multiline = false,
   numberOfLines = 1,
+  leftIcon,
   theme,
-}: any) => (
-  <View style={{ marginBottom: SPACING }}>
-    <Text style={[styles.inputLabel, { color: theme.colors.textSecondary }]}>
-      {label}
-    </Text>
-    <TextInput
-      style={[
-        styles.input,
-        {
-          backgroundColor: theme.colors.background,
-          color: theme.colors.textPrimary,
-          height: multiline ? 100 : 48,
-        },
-      ]}
-      placeholder={label}
-      placeholderTextColor={theme.colors.textSecondary}
-      value={value}
-      onChangeText={onChange}
-      multiline={multiline}
-      numberOfLines={numberOfLines}
-    />
-  </View>
-);
+  isDark,
+  t,
+}: {
+  label: string;
+  value: string;
+  onChangeText: (v: string) => void;
+  placeholder?: string;
+  max?: number;
+  multiline?: boolean;
+  numberOfLines?: number;
+  leftIcon?: string;
+  theme: any;
+  isDark: boolean;
+  t: TFunction;
+}) => {
+  const left = max ? Math.max(0, max - value.length) : undefined;
 
-const Dropdown = ({ label, options, selected, onSelect, theme }: any) => (
-  <View style={{ marginBottom: SPACING }}>
-    <Text style={[styles.inputLabel, { color: theme.colors.textSecondary }]}>
-      {label}
-    </Text>
-    <View style={[styles.dropdown, { backgroundColor: theme.colors.background }]}>
-      <Picker
-        selectedValue={selected}
-        onValueChange={onSelect}
-        style={{ color: theme.colors.textPrimary }}
+  return (
+    <View style={{ marginBottom: SPACING }}>
+      <Text style={[styles.sectionLabel, { color: theme.colors.textSecondary }]}>{label}</Text>
+
+      <View
+        style={[
+          styles.inputWrap,
+          {
+            backgroundColor: theme.colors.background,
+            borderColor: Platform.OS === "ios" ? "transparent" : "#00000010",
+          },
+        ]}
       >
-        {options.map((opt: string) => (
-          <Picker.Item key={opt} label={opt} value={opt} />
-        ))}
-      </Picker>
+        {leftIcon && (
+          <View style={styles.leftIcon}>
+            <Ionicons name={leftIcon as any} size={18} color={theme.colors.textSecondary} />
+          </View>
+        )}
+
+        <TextInput
+          style={[
+            styles.input,
+            {
+              color: isDark ? theme.colors.textPrimary : "#111",   // ← texte bien noir en light
+              height: multiline ? 120 : FIELD_HEIGHT,
+            },
+          ]}
+          placeholder={placeholder || label}
+          placeholderTextColor={isDark ? theme.colors.textSecondary : "#666"} // ← placeholder foncé en light
+          value={value}
+          onChangeText={onChangeText}
+          multiline={multiline}
+          numberOfLines={numberOfLines}
+        />
+      </View>
+
+      {typeof left === "number" && (
+        <Text
+          style={[
+            styles.counter,
+            { color: left < 10 ? theme.colors.secondary : theme.colors.textSecondary },
+          ]}
+        >
+          {t("charsRemaining", { count: left })}   {/* ← i18n pluriel */}
+        </Text>
+      )}
     </View>
-  </View>
-);
+  );
+};
 
-const ImageUpload = ({ uri, onPick, theme }: any) => (
-  <TouchableOpacity
-    style={[styles.imageBox, { backgroundColor: theme.colors.background }]}
-    onPress={onPick}
-  >
-    {uri ? (
-      <Image source={{ uri }} style={styles.imagePreview} />
-    ) : (
-      <Ionicons
-        name="cloud-upload-outline"
-        size={32}
-        color={theme.colors.textSecondary}
-      />
-    )}
-  </TouchableOpacity>
-);
 
-const Button = ({ label, onPress, disabled, theme }: any) => (
-  <TouchableOpacity
-    disabled={disabled}
-    onPress={onPress}
-    style={{ opacity: disabled ? 0.5 : 1 }}
-  >
-    <LinearGradient
-      colors={[theme.colors.primary, theme.colors.secondary]}
-      style={styles.button}
-      start={{ x: 0, y: 0 }}
-      end={{ x: 1, y: 1 }}
-    >
-      <Text style={[styles.buttonText, { color: theme.colors.textPrimary }]}>
-        {label}
-      </Text>
-    </LinearGradient>
-  </TouchableOpacity>
-);
-
-// ======================
-// Styles
-// ======================
-
+/* =========================================
+   Styles
+========================================= */
 const styles = StyleSheet.create({
   safeArea: {
     flex: 1,
-    paddingTop: Platform.OS === "android" ? StatusBar.currentHeight ?? SPACING : SPACING,
+    paddingTop: Platform.OS === "android" ? (StatusBar.currentHeight ?? SPACING) : 0,
   },
   gradient: { flex: 1 },
+
   scrollContent: {
     paddingHorizontal: SPACING,
-    paddingBottom: SPACING * 4,
+    paddingBottom: SPACING * 3,
+  },
+
+  /* progression */
+  progressWrap: {
+    marginHorizontal: SPACING,
+    marginBottom: SPACING / 2,
+    marginTop: 8,
+    borderRadius: RADIUS,
+    padding: 12,
+    flexDirection: "row",
     alignItems: "center",
+    gap: 10,
   },
-  iconContainer: {
-    alignItems: "center",
-    marginBottom: SPACING,
-  },
-  subtitle: {
-    fontSize: 16,
-    fontFamily: "Comfortaa_400Regular",
-    textAlign: "center",
-  },
-  form: {
-    width: "100%",
-    borderRadius: BORDER_RADIUS,
-    padding: SPACING,
-    shadowColor: "#000",
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.05,
-    shadowRadius: 4,
-    elevation: 3,
-  },
-  inputLabel: { marginBottom: 6, fontSize: 14, fontFamily: "Comfortaa_500Medium" },
-  input: {
-    width: "100%",
-    borderRadius: BORDER_RADIUS,
-    paddingHorizontal: SPACING,
-    paddingVertical: 12,
-    fontSize: 16,
-    fontFamily: "Comfortaa_400Regular",
-  },
-  dropdown: {
-    borderRadius: BORDER_RADIUS,
+  progressText: { fontSize: 12, fontFamily: "Comfortaa_500Medium" },
+  progressPct: { marginLeft: "auto", fontSize: 12, fontFamily: "Comfortaa_500Medium" },
+  progressBar: {
+    flex: 1,
+    height: 8,
+    borderRadius: 999,
     overflow: "hidden",
   },
-  imageBox: {
-    width: "100%",
-    height: 150,
-    borderRadius: BORDER_RADIUS,
-    borderWidth: 1,
-    borderColor: "#DDD",
+  progressFill: { height: "100%", borderRadius: 999 },
+
+  /* carte verre */
+  cardShadow: {
+    marginTop: SPACING,
+    marginBottom: SPACING,
+  },
+  halo: {
+    position: "absolute",
+    top: -10,
+    left: -10,
+    right: -10,
+    bottom: -10,
+    borderRadius: RADIUS + 10,
+    filter: Platform.OS === "web" ? "blur(32px)" : undefined,
+    opacity: 0.9,
+  },
+  glassCard: {
+    borderRadius: RADIUS,
+    overflow: "hidden",
+    borderWidth: 1.5,
+    borderColor: "rgba(255,255,255,0.12)",
+    padding: SPACING,
+  },
+
+  heroRow: {
+    flexDirection: "row",
+    alignItems: "center",
+    marginBottom: SPACING * 0.75,
+  },
+  iconBadge: {
+    width: 36,
+    height: 36,
+    borderRadius: 18,
+    borderWidth: 1.5,
     alignItems: "center",
     justifyContent: "center",
-    marginBottom: SPACING,
-    overflow: "hidden",
+    marginRight: 10,
   },
-  imagePreview: { width: "100%", height: "100%" },
-  button: {
-    width: "100%",
-    paddingVertical: 14,
-    borderRadius: BORDER_RADIUS,
+  heroTagline: {
+    fontSize: 14,
+    fontFamily: "Comfortaa_500Medium",
+  },
+
+  sectionLabel: {
+    marginBottom: 8,
+    fontSize: 13,
+    fontFamily: "Comfortaa_500Medium",
+  },
+
+  /* field */
+  inputWrap: {
+    borderRadius: RADIUS,
+    borderWidth: Platform.OS === "ios" ? 0 : 1,
+    paddingHorizontal: 14,
+    paddingVertical: 6,
+    flexDirection: "row",
     alignItems: "center",
   },
-  buttonText: { fontSize: 18, fontFamily: "Comfortaa_700Bold" },
+  leftIcon: { marginRight: 8, width: 20, alignItems: "center" },
+  input: {
+    flex: 1,
+    fontSize: 16,
+    fontFamily: "Comfortaa_400Regular",
+  },
+  counter: {
+    marginTop: 6,
+    alignSelf: "flex-end",
+    fontSize: 12,
+    fontFamily: "Comfortaa_400Regular",
+  },
+
+  /* chips */
+  chipsRow: {
+    flexDirection: "row",
+    flexWrap: "wrap",
+    gap: 8,
+    marginBottom: 10,
+  },
+  chip: {
+    paddingHorizontal: 12,
+    height: 34,
+    borderRadius: 999,
+    borderWidth: 1,
+    alignItems: "center",
+    justifyContent: "center",
+  },
+  chipText: { fontSize: 13, fontFamily: "Comfortaa_500Medium" },
+  dropdownWrap: {
+    borderRadius: RADIUS,
+    overflow: "hidden",
+    borderWidth: 1,
+    borderColor: "#00000012",
+    marginBottom: SPACING,
+  },
+
+  /* image */
+  imageBox: {
+    width: "100%",
+    height: 160,
+    borderRadius: RADIUS,
+    borderWidth: 1,
+    borderColor: "#00000012",
+    alignItems: "center",
+    justifyContent: "center",
+    overflow: "hidden",
+    marginBottom: SPACING,
+  },
+  imagePreview: { width: "100%", height: "100%" },
+  imageOverlay: {
+    position: "absolute",
+    right: 10,
+    bottom: 10,
+    backgroundColor: "rgba(0,0,0,0.55)",
+    paddingHorizontal: 10,
+    height: 32,
+    borderRadius: 16,
+    alignItems: "center",
+    flexDirection: "row",
+    gap: 6,
+  },
+  imageOverlayText: { color: "#fff", fontFamily: "Comfortaa_600SemiBold", fontSize: 12 },
+  imageEmpty: { alignItems: "center", gap: 8 },
+  imageHint: { fontSize: 13, fontFamily: "Comfortaa_400Regular" },
+
+  /* preview */
+  previewCard: {
+    borderRadius: RADIUS,
+    borderWidth: 1,
+    borderColor: "#00000012",
+    overflow: "hidden",
+  },
+  previewImage: { width: "100%", height: 120 },
+  previewContent: { padding: 12 },
+  catBadge: {
+    alignSelf: "flex-start",
+    paddingHorizontal: 10,
+    height: 24,
+    borderRadius: 999,
+    alignItems: "center",
+    justifyContent: "center",
+    marginBottom: 6,
+  },
+  catBadgeText: { color: "#0e0e12", fontFamily: "Comfortaa_700Bold", fontSize: 11 },
+  previewTitle: { fontSize: 16, fontFamily: "Comfortaa_700Bold" },
+  previewDesc: { marginTop: 4, fontSize: 13, fontFamily: "Comfortaa_400Regular" },
+
+  /* CTA */
+  cta: {
+    height: 52,
+    borderRadius: 999,
+    alignItems: "center",
+    justifyContent: "center",
+    flexDirection: "row",
+    gap: 8,
+  },
+  ctaText: { fontSize: 16, fontFamily: "Comfortaa_700Bold" },
+
+  /* hints */
+  hintRow: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 8,
+    marginTop: 6,
+    paddingHorizontal: SPACING,
+  },
+  hintText: { fontSize: 12, fontFamily: "Comfortaa_400Regular" },
 });

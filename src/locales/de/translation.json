@@ -389,6 +389,7 @@
         "alreadyInvited": "Du hast bereits eine Einladung für diese Herausforderung.",
         "autoInvite": "Du kannst deine eigene Einladung nicht annehmen.",
         "expired": "Diese Einladung ist abgelaufen.",
+         "alreadyInDuoForChallenge": "Dieser Benutzer kann nicht eingeladen werden: Er ist bereits in einem Duo für diese Challenge.",
         "unknown": "Ein unbekannter Fehler ist aufgetreten.",
         "inviterAlreadyStarted": "Du hast diese Herausforderung bereits alleine gestartet.",
         "duoAlready": "Du bist bereits in einem Duo für diese Herausforderung."
@@ -410,12 +411,6 @@
   },
   "addLocationHere": "Füge einen Standort hinzu",
   "addInterestsHere": "Füge deine Interessen hinzu",
-"firstPick": {
-      "title": "Wähle deine erste Challenge!",
-      "subtitle": "Möchtest du im … starten?",
-      "chooseSolo": "Solo wählen",
-      "chooseDuo": "Duo wählen"
-    },
     "spotlight": "Im Rampenlicht",
   "refreshDaily": "Neue Herausforderungen ab morgen ✨",
   "challengeDetails": {
@@ -480,6 +475,31 @@
     "doubleMessage": "🔥 Du hast {{count}} Trophäen gewonnen!",
     "claimMessage": "🎉 Du hast {{count}} Trophäen gewonnen!"
   },
+  "coverImage": "Titelbild (optional)",
+  "pickAnImage": "Ein Bild auswählen",
+  "edit": "Bearbeiten",
+  "livePreview": "Vorschau",
+  "yourTitleHere": "Dein Titel hier",
+  "yourDescriptionHere": "Deine Beschreibung hier…",
+  "exTitle": "Beispiel: 30 Tage Lesen",
+  "exDescription": "Beispiel: Lies 10 Seiten pro Tag und teile deine Notizen…",
+  "pleaseWait": "Bitte warten…",
+  "ok": "OK",
+  "duoInfoModal": {
+  "title": "Freund einladen",
+  "desc": "Um einen Freund einzuladen, gib einfach seinen Benutzernamen ein und warte auf seine Antwort.\n\nWenn du seinen Benutzernamen nicht kennst, keine Sorge: Frag ihn einfach (sichtbar im Bereich Mein Konto) und du kannst ihn später bei der gewünschten Challenge einladen.",
+  "button": "Verstanden"
+}
+,
+  "charsRemaining_one": "{{count}} verbleibendes Zeichen",
+"charsRemaining_other": "{{count}} verbleibende Zeichen",
+"completionLabel": "Fortschritt"
+,
+  "loginRequired": "Du musst eingeloggt sein, um eine Challenge zu erstellen.",
+  "createChallengeFailed": "Die Challenge konnte momentan nicht erstellt werden. Bitte versuche es später erneut.",
+  "challengeSubmittedForReview": "Deine Challenge wurde eingereicht und wird sichtbar, sobald ein Admin sie freigegeben hat.",
+
+  "reviewNote": "Jede Challenge wird überprüft. Verschwommene, unpassende oder qualitativ schlechte Bilder können abgelehnt werden.",
   "achievements": {
     "first_connection": "Erste Verbindung",
     "profile_completed": "Profil vervollständigt",
@@ -3220,9 +3240,69 @@
   "examples": "Beispiele",
   "suggestion": "Vorschläge?"
 },
+"firstPick": {
+  "title": "Wähle deine erste Challenge!",
+  "subtitle": "Möchtest du starten als…",
+  "chooseSolo": "Solo wählen",
+  "chooseDuo": "Duo wählen",
+  "modeDuo": "Duo (empfohlen)",
+  "modeSolo": "Solo",
+  "durationLabel": "Dauer:",
+  "day_one": "{{count}} T",
+  "day_other": "{{count}} T",
+  "skip": "Überspringen",
+  "alert": {
+    "missingChoiceTitle": "Fehlende Auswahl",
+    "missingChoiceBody": "Wähle eine Challenge.",
+    "modeTitle": "Modus",
+    "modeBody": "Wähle Duo oder Solo."
+  }
+},
+"questions": {
+    "title": "Häufig gestellte Fragen",
+    "searchPlaceholder": "🔍 Frage suchen…",
+    "overview": {
+      "title": "Willkommen in der FAQ ✨",
+      "body": "Hier findest du die häufigsten Antworten, um ChallengeTies optimal zu nutzen."
+    },
+    "contactCta": "✉️ Support kontaktieren",
+    "noResult": "Keine Ergebnisse gefunden. Versuche ein anderes Stichwort!",
+
+    "q": {
+      "whatIs": "❓ Was ist ChallengeTies?",
+      "howToStart": "🚀 Wie starte ich meine erste Challenge?",
+      "duoMode": "👫 Was ist der Duo-Modus?",
+      "soloMode": "🙋 Und was ist der Solo-Modus?",
+      "invitations": "📨 Wie funktionieren Einladungen?",
+      "progress": "📈 Wie wird mein Fortschritt verfolgt?",
+      "notifications": "🔔 Wie verwalte ich meine Benachrichtigungen?",
+      "community": "💬 Gibt es eine Community für die Challenges?",
+      "privacy": "🛡️ Was passiert mit meinen persönlichen Daten?",
+      "contact": "📬 Wie kann ich euch bei Problemen kontaktieren?"
+    },
+
+    "a": {
+      "whatIs": "ChallengeTies ist eine App, mit der du tägliche Herausforderungen allein oder mit einem Freund meistern kannst, um Schritt für Schritt bessere Gewohnheiten aufzubauen. Markiere täglich deinen Fortschritt und schalte motivierende Belohnungen frei 🏆.",
+      "howToStart": "Bei der Anmeldung wählst du eine erste Challenge aus der Liste. Bestimme die Dauer (7, 14, 21 Tage usw.) und erhalte tägliche Erinnerungen, um dranzubleiben ✅.",
+      "duoMode": "Im Duo-Modus teilst du eine Challenge mit einem Freund. Ihr seht eure Fortschritte parallel. Gemeinsam macht es mehr Spaß und motiviert 💪.",
+      "soloMode": "Im Solo-Modus zählst nur du. Mache Fortschritte in deinem eigenen Tempo, ohne Vergleich, und genieße die Zufriedenheit, Tag für Tag konsequent zu sein ✨.",
+      "invitations": "Lade einen Freund über seinen Benutzernamen ein oder teile einen einzigartigen Link. Er erhält eine Benachrichtigung und kann annehmen oder ablehnen. Bei Annahme absolviert ihr die Challenge gemeinsam 🎯.",
+      "progress": "Markiere jeden Tag deinen Fortschritt mit 'Heute markieren'. Deine Historie wird gespeichert: absolvierte Tage, Serien 🔥 und freigeschaltete Erfolge.",
+      "notifications": "Aktiviere Benachrichtigungen, um tägliche Erinnerungen zu erhalten und keine Challenge zu verpassen. Du kannst sie jederzeit in den Einstellungen verwalten ⚙️.",
+      "community": "Ein Community-Bereich kommt bald ✨. Teile in der Zwischenzeit deine Erfolge und lade Freunde ein, um deinen eigenen Motivationskreis zu schaffen 👥.",
+      "privacy": "Deine persönlichen Daten sind sicher 🔒. Sie werden niemals verkauft. Du kannst dein Konto und deine Daten jederzeit in den Einstellungen löschen.",
+      "contact": "Unser Team ist für dich da. Schreibe uns direkt in der App über 'Support kontaktieren' oder auf unserer Website 🌍."
+    }
+  },
+  "faqShort": "FAQ",
 "common": {
   "back": "Zurück",
-  "skip": "Überspringen"
+  "skip": "Überspringen",
+  "challenge": "Challenge",
+  "misc": "Verschiedenes",
+  "error": "Fehler",
+  "oops": "Ups…"
 }
+
 
 }

@@ -390,6 +390,7 @@
         "autoInvite": "你不能接受自己的邀请。",
         "expired": "此邀请已过期。",
         "unknown": "发生未知错误。",
+         "alreadyInDuoForChallenge": "无法邀请该用户：他已经在此挑战的双人模式中。",
         "inviterAlreadyStarted": "你已经单独开始了这个挑战。",
         "duoAlready": "你已经在此挑战中组成了双人组。"
       },
@@ -411,11 +412,69 @@
   "addLocationHere": "添加位置",
   "addInterestsHere": "添加你的兴趣",
 "firstPick": {
-      "title": "选择你的第一个挑战！",
-      "subtitle": "你想从…开始吗？",
-      "chooseSolo": "选择单人",
-      "chooseDuo": "选择双人"
+  "title": "选择你的第一个挑战！",
+  "subtitle": "你想开始于…",
+  "chooseSolo": "选择单人",
+  "chooseDuo": "选择双人",
+  "modeDuo": "双人（推荐）",
+  "modeSolo": "单人",
+  "durationLabel": "时长：",
+  "day_one": "{{count}} 天",
+  "day_other": "{{count}} 天",
+  "skip": "跳过",
+  "alert": {
+    "missingChoiceTitle": "缺少选择",
+    "missingChoiceBody": "请选择一个挑战。",
+    "modeTitle": "模式",
+    "modeBody": "选择双人或单人。"
+  }
+},
+"questions": {
+    "title": "常见问题",
+    "searchPlaceholder": "🔍 搜索问题…",
+    "overview": {
+      "title": "欢迎来到 FAQ ✨",
+      "body": "在这里找到最常见的问题答案，帮助你更好地使用 ChallengeTies。"
     },
+    "contactCta": "✉️ 联系客服",
+    "noResult": "未找到结果。请尝试其他关键词！",
+
+    "q": {
+      "whatIs": "❓ 什么是 ChallengeTies？",
+      "howToStart": "🚀 如何开始我的第一个挑战？",
+      "duoMode": "👫 什么是双人模式？",
+      "soloMode": "🙋 单人模式是什么？",
+      "invitations": "📨 邀请是如何运作的？",
+      "progress": "📈 我的进度如何被跟踪？",
+      "notifications": "🔔 如何管理通知？",
+      "community": "💬 是否有挑战社区？",
+      "privacy": "🛡️ 我的个人数据如何处理？",
+      "contact": "📬 出现问题时如何联系你们？"
+    },
+
+    "a": {
+      "whatIs": "ChallengeTies 是一款应用，帮助你每天完成挑战，可以单独进行，也可以与朋友一起逐步养成更好的习惯。每天标记进度并解锁激励性的奖励 🏆。",
+      "howToStart": "注册时，从列表中选择一个挑战。设定持续时间（7、14、21 天等），并每天收到提醒以保持进度 ✅。",
+      "duoMode": "双人模式允许你与朋友共享挑战。你们可以并行查看彼此的进度。互相鼓励让体验更有趣、更有力量 💪。",
+      "soloMode": "单人模式是属于你自己的节奏。没有比较，只专注于每天建立规律，享受坚持带来的满足感 ✨。",
+      "invitations": "你可以通过用户名邀请朋友，或分享唯一链接。他会收到通知并选择接受或拒绝。接受后，你们将一起进行相同的挑战 🎯。",
+      "progress": "每天用“标记今天”记录进度。你的历史会被保存：完成的天数、连续天数 🔥 以及解锁的成就。",
+      "notifications": "开启通知以获取每日提醒，不会错过挑战。你可以随时在设置中管理 ⚙️。",
+      "community": "社区功能即将上线 ✨。在此之前，可以分享成果并邀请朋友组成自己的激励圈 👥。",
+      "privacy": "你的个人数据是安全的 🔒，绝不会被出售。你可以随时在设置中删除账号和数据。",
+      "contact": "我们的团队随时为你服务。你可以通过应用内“联系客服”按钮，或访问我们的网站 🌍。"
+    }
+  },
+   "faqShort": "常见问题" ,
+"common": {
+  "back": "返回",
+  "skip": "跳过",
+  "challenge": "挑战",
+  "misc": "其他",
+  "error": "错误",
+  "oops": "哎呀…"
+}
+,
     "spotlight": "焦点",
   "refreshDaily": "明天将有新挑战 ✨",
   "challengeDetails": {
@@ -771,10 +830,6 @@
   "examples": "示例",
   "suggestion": "建议？"
 },
-"common": {
-  "back": "返回",
-  "skip": "跳过"
-},
   "contact": {
     "errorTitle": "错误",
     "errorMessage": "请填写所有字段。",
@@ -844,6 +899,30 @@
     "finalThanksTitle": "感谢 ❤️",
     "finalThanksMessage": "如果你读到这里，说明你相信这个项目。我们衷心感谢你。ChallengeTies 的存在正是因为你这样积极、好奇、充满动力的人。让我们一起向上前行。🚀"
   },
+  "coverImage": "封面图片（可选）",
+  "pickAnImage": "选择图片",
+  "edit": "编辑",
+  "livePreview": "预览",
+  "yourTitleHere": "在这里输入标题",
+  "yourDescriptionHere": "在这里输入描述…",
+  "exTitle": "示例：30天阅读",
+  "exDescription": "示例：每天读10页并分享笔记…",
+  "pleaseWait": "请稍候…",
+  "ok": "确定",
+  "charsRemaining_one": "剩余 {{count}} 个字符",
+"charsRemaining_other": "剩余 {{count}} 个字符",
+"completionLabel": "完成度"
+,
+"duoInfoModal": {
+  "title": "邀请好友",
+  "desc": "要邀请好友，只需输入他的用户名并等待回复。\n\n如果你不知道他的用户名，不用担心：只需询问他（在“我的账户”中可见），你可以稍后从想要的挑战中邀请他。",
+  "button": "明白了"
+}
+,
+  "loginRequired": "你必须登录才能创建挑战。",
+  "createChallengeFailed": "暂时无法创建挑战。请稍后再试。",
+  "challengeSubmittedForReview": "你的挑战已提交，将在管理员审核后可见。",
+  "reviewNote": "每个挑战都会经过审核。模糊、不相关或质量差的图片可能会被拒绝。",
   "newFeaturesTitle": "新功能",
   "tryAnotherSearch": "尝试其他搜索或筛选。",
   "addFavorite": "将 \"{{title}}\" 添加到收藏夹",

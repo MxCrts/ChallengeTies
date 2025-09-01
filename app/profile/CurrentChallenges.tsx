@@ -258,7 +258,7 @@ const bottomPadding = showBanners ? BANNER_HEIGHT + normalizeSize(90) : normaliz
                       name="trash-outline"
                       size={normalizeSize(28)}
                       color="#fff"
-                      accessibilityLabel={t("deleteChallenge")}
+                      accessibilityLabel={String(t("deleteChallenge"))}
                     />
                   </LinearGradient>
                 </View>
@@ -272,10 +272,8 @@ const bottomPadding = showBanners ? BANNER_HEIGHT + normalizeSize(90) : normaliz
                 style={styles.cardContainer}
                 onPress={() => navigateToDetail(item)}
                 activeOpacity={0.8}
-                accessibilityLabel={t("viewChallengeDetails", {
-                  title: item.title,
-                })}
-                accessibilityHint={t("viewDetails")}
+                accessibilityLabel={String(t("viewChallengeDetails", { title: item.title }))}
+                accessibilityHint={String(t("viewDetails"))}
                 accessibilityRole="button"
                 testID={`challenge-card-${key}`}
               >
@@ -291,9 +289,7 @@ const bottomPadding = showBanners ? BANNER_HEIGHT + normalizeSize(90) : normaliz
                       uri: item.imageUrl || "https://via.placeholder.com/70",
                     }}
                     style={styles.cardImage}
-                    accessibilityLabel={t("challengeImage", {
-                      title: item.title,
-                    })}
+                    accessibilityLabel={String(t("challengeImage", { title: item.title }))}
                   />
                   <View style={styles.cardContent}>
                     <Text
@@ -316,7 +312,7 @@ const bottomPadding = showBanners ? BANNER_HEIGHT + normalizeSize(90) : normaliz
                           { color: currentTheme.colors.textSecondary },
                         ]}
                       >
-                        {t("day")} {item.day}
+                        {String(t("day"))} {item.day}
                       </Text>
                     )}
                     <View style={styles.progressContainer}>
@@ -340,7 +336,7 @@ const bottomPadding = showBanners ? BANNER_HEIGHT + normalizeSize(90) : normaliz
                           { color: currentTheme.colors.secondary },
                         ]}
                       >
-                        {item.completedDays}/{item.selectedDays} {t("days")}
+                        {item.completedDays}/{item.selectedDays} {String(t("days"))}
                       </Text>
                     </View>
                     <TouchableOpacity
@@ -357,9 +353,7 @@ const bottomPadding = showBanners ? BANNER_HEIGHT + normalizeSize(90) : normaliz
                           ? t("alreadyMarkedToday", { title: item.title })
                           : t("markToday", { title: item.title })
                       }
-                      accessibilityHint={
-                        marked ? t("alreadyMarked") : t("markTodayButton")
-                      }
+                      accessibilityHint={marked ? String(t("alreadyMarked")) : String(t("markTodayButton"))}
                       accessibilityRole="button"
                       testID={`mark-today-${key}`}
                     >
@@ -420,7 +414,7 @@ const bottomPadding = showBanners ? BANNER_HEIGHT + normalizeSize(90) : normaliz
           name="hourglass-outline"
           size={normalizeSize(60)}
           color={currentTheme.colors.textSecondary}
-          accessibilityLabel={t("waitingChallengeIcon")}
+          accessibilityLabel={String(t("waitingChallengeIcon"))}
         />
         <Text
           style={[
@@ -432,7 +426,7 @@ const bottomPadding = showBanners ? BANNER_HEIGHT + normalizeSize(90) : normaliz
             },
           ]}
         >
-          {t("noOngoingChallenge")}
+          {String(t("noOngoingChallenge"))}
         </Text>
         <Text
           style={[
@@ -440,7 +434,7 @@ const bottomPadding = showBanners ? BANNER_HEIGHT + normalizeSize(90) : normaliz
             { color: currentTheme.colors.textSecondary },
           ]}
         >
-          {t("startAChallenge")}
+          {String(t("startAChallenge"))}
         </Text>
       </Animated.View>
     ),
@@ -470,7 +464,7 @@ const bottomPadding = showBanners ? BANNER_HEIGHT + normalizeSize(90) : normaliz
               { color: currentTheme.colors.textPrimary },
             ]}
           >
-            {t("loading")}
+            {String(t("loading"))}
           </Text>
         </LinearGradient>
       </SafeAreaView>
@@ -512,7 +506,7 @@ const bottomPadding = showBanners ? BANNER_HEIGHT + normalizeSize(90) : normaliz
 
   {/* Header fusionné (pas de séparation) */}
   <CustomHeader
-    title={t("ongoingChallenges")}
+    title={String(t("ongoingChallenges"))}
     backgroundColor="transparent"
     useBlur={false}
     showHairline={false}
@@ -539,7 +533,7 @@ const bottomPadding = showBanners ? BANNER_HEIGHT + normalizeSize(90) : normaliz
         })}
         contentInset={{ top: SPACING, bottom: 0 }}
         accessibilityRole="list"
-        accessibilityLabel={t("listOfOngoingChallenges")}
+        accessibilityLabel={String(t("listOfOngoingChallenges"))}
         testID="challenges-list"
       />
     )}

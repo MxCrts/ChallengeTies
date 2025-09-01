@@ -390,6 +390,7 @@
         "autoInvite": "Non puoi accettare il tuo stesso invito.",
         "expired": "Questo invito è scaduto.",
         "unknown": "Si è verificato un errore.",
+         "alreadyInDuoForChallenge": "Impossibile invitare questo utente: è già in un duo per questa sfida.",
         "inviterAlreadyStarted": "Hai già iniziato questa sfida da solo.",
         "duoAlready": "Sei già in un duo per questa sfida."
       },
@@ -411,11 +412,69 @@
   "addLocationHere": "Aggiungi una località",
   "addInterestsHere": "Aggiungi i tuoi interessi",
 "firstPick": {
-      "title": "Scegli la tua prima sfida!",
-      "subtitle": "Vuoi iniziare in…",
-      "chooseSolo": "Scegli Solo",
-      "chooseDuo": "Scegli Duo"
+  "title": "Scegli la tua prima sfida!",
+  "subtitle": "Vuoi iniziare in…",
+  "chooseSolo": "Scegli Solo",
+  "chooseDuo": "Scegli Duo",
+  "modeDuo": "Duo (consigliato)",
+  "modeSolo": "Solo",
+  "durationLabel": "Durata:",
+  "day_one": "{{count}} g",
+  "day_other": "{{count}} g",
+  "skip": "Salta",
+  "alert": {
+    "missingChoiceTitle": "Scelta mancante",
+    "missingChoiceBody": "Seleziona una sfida.",
+    "modeTitle": "Modalità",
+    "modeBody": "Scegli Duo o Solo."
+  }
+},
+"common": {
+  "back": "Indietro",
+  "skip": "Salta",
+  "challenge": "Sfida",
+  "misc": "Varie",
+  "error": "Errore",
+  "oops": "Ops…"
+}
+,
+ "questions": {
+    "title": "Domande frequenti",
+    "searchPlaceholder": "🔍 Cerca una domanda…",
+    "overview": {
+      "title": "Benvenuto nella FAQ ✨",
+      "body": "Qui trovi le risposte alle domande più comuni per sfruttare al massimo ChallengeTies."
     },
+    "contactCta": "✉️ Contatta il supporto",
+    "noResult": "Nessun risultato trovato. Prova con un'altra parola chiave!",
+
+    "q": {
+      "whatIs": "❓ Che cos’è ChallengeTies?",
+      "howToStart": "🚀 Come inizio la mia prima sfida?",
+      "duoMode": "👫 Cos’è la modalità Duo?",
+      "soloMode": "🙋 E la modalità Solo?",
+      "invitations": "📨 Come funzionano gli inviti?",
+      "progress": "📈 Come viene monitorato il mio progresso?",
+      "notifications": "🔔 Come gestisco le notifiche?",
+      "community": "💬 Esiste una comunità per le sfide?",
+      "privacy": "🛡️ Come vengono gestiti i miei dati personali?",
+      "contact": "📬 Come posso contattarvi in caso di problema?"
+    },
+
+    "a": {
+      "whatIs": "ChallengeTies è un’app che ti permette di affrontare sfide quotidiane, da solo o con un amico, per trasformare le tue abitudini passo dopo passo. Ogni giorno segna i tuoi progressi e sblocca ricompense motivanti 🏆.",
+      "howToStart": "Al momento dell’iscrizione, scegli una prima sfida dall’elenco. Imposta la durata (7, 14, 21 giorni, ecc.) e ricevi promemoria quotidiani per rimanere motivato ✅.",
+      "duoMode": "La modalità Duo ti permette di condividere una sfida con un amico. Vedete i progressi l’uno dell’altro in parallelo. La motivazione condivisa rende l’esperienza più divertente e potente 💪.",
+      "soloMode": "In modalità Solo avanzi al tuo ritmo, senza paragoni, e gusti la soddisfazione di costruire costanza giorno dopo giorno ✨.",
+      "invitations": "Invita un amico tramite nome utente o condividi un link unico. Riceverà una notifica e potrà accettare o rifiutare. Se accetta, seguirete insieme la stessa sfida 🎯.",
+      "progress": "Ogni giorno segna il tuo avanzamento con 'Segna oggi'. La tua cronologia è salvata: giorni completati, serie 🔥 e traguardi sbloccati.",
+      "notifications": "Attiva le notifiche per ricevere promemoria quotidiani e non perdere la tua sfida. Puoi gestirle in qualsiasi momento nelle impostazioni ⚙️.",
+      "community": "Una sezione community è in arrivo ✨. Nel frattempo, condividi i tuoi successi e invita gli amici per creare il tuo cerchio motivante 👥.",
+      "privacy": "I tuoi dati personali sono al sicuro 🔒. Non vengono mai venduti. Puoi eliminare il tuo account e i tuoi dati in qualsiasi momento dalle impostazioni.",
+      "contact": "Il nostro team è qui per te. Scrivici direttamente dall’app tramite 'Contatta il supporto' o sul nostro sito 🌍."
+    }
+  },
+  "faqShort": "FAQ",
     "spotlight": "In evidenza",
   "refreshDaily": "Nuove sfide da domani ✨",
   "challengeDetails": {
@@ -772,10 +831,6 @@
   "examples": "Esempi",
   "suggestion": "Suggerimenti?"
 },
-"common": {
-  "back": "Indietro",
-  "skip": "Ignora"
-},
   "contact": {
     "errorTitle": "Errore",
     "errorMessage": "Per favore compila tutti i campi.",
@@ -845,6 +900,31 @@
     "finalThanksTitle": "Grazie ❤️",
     "finalThanksMessage": "Se stai leggendo questo, significa che credi nel progetto. Grazie di cuore. ChallengeTies esiste grazie a persone come te: curiose, positive e determinate. Continuiamo a salire. Insieme. 🚀"
   },
+   "coverImage": "Immagine di copertina (opzionale)",
+  "pickAnImage": "Scegli un'immagine",
+  "edit": "Modifica",
+  "livePreview": "Anteprima",
+  "yourTitleHere": "Il tuo titolo qui",
+  "yourDescriptionHere": "La tua descrizione qui…",
+  "exTitle": "Es: 30 giorni di lettura",
+  "exDescription": "Es: Leggere 10 pagine al giorno e condividere le note…",
+  "pleaseWait": "Attendere…",
+  "ok": "OK",
+  "charsRemaining_one": "{{count}} carattere rimanente",
+"charsRemaining_other": "{{count}} caratteri rimanenti",
+"completionLabel": "Completamento"
+,
+"duoInfoModal": {
+  "title": "Invita un amico",
+  "desc": "Per invitare un amico, ti basta inserire il suo username e attendere la sua risposta.\n\nSe non conosci il suo username, non preoccuparti: chiediglielo (è visibile nella sezione Il Mio Account) e potrai invitarlo più tardi dalla sfida desiderata.",
+  "button": "Capito"
+}
+,
+  "loginRequired": "Devi essere connesso per creare una sfida.",
+  "createChallengeFailed": "Impossibile creare la sfida al momento. Riprova più tardi.",
+  "challengeSubmittedForReview": "La tua sfida è stata inviata e sarà visibile una volta approvata da un amministratore.",
+
+  "reviewNote": "Ogni sfida viene verificata. Immagini sfocate, non pertinenti o di scarsa qualità possono essere rifiutate.",
   "newFeaturesTitle": "Novità",
   "tryAnotherSearch": "Prova un'altra ricerca o filtro.",
   "addFavorite": "Aggiungi \"{{title}}\" ai preferiti",

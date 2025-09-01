@@ -697,18 +697,19 @@ const listBottomPadding =
                       >
                         {item.category}
                       </Text>
-                      <Text
-  style={[styles.cardParticipants, dynamicStyles.cardParticipants]}
->
+                      <View style={{ flexDirection: "row", alignItems: "center" }}>
   <Ionicons
     name="people"
     size={normalizeSize(14)}
     color={currentTheme.colors.trophy}
+    style={{ marginRight: 4 }}
   />
-  {`${item.participantsCount || 0} ${t("participants", {
-    count: item.participantsCount || 0,
-  })}`}
-</Text>
+  <Text style={[styles.cardParticipants, dynamicStyles.cardParticipants]}>
+    {`${item.participantsCount || 0} ${t("participants", {
+      count: item.participantsCount || 0,
+    })}`}
+  </Text>
+</View>
                     </LinearGradient>
 
                     <TouchableOpacity

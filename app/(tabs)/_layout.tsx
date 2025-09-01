@@ -26,7 +26,7 @@ import { BlurView } from "expo-blur";
 import { useTheme } from "../../context/ThemeContext";
 import designSystem, { Theme } from "../../theme/designSystem";
 import { useTranslation } from "react-i18next";
-
+import { useTutorial } from "../../context/TutorialContext";
 
 /* ----------------- Responsive helpers ----------------- */
 const clamp = (v: number, min: number, max: number) =>
@@ -190,6 +190,7 @@ const TabsLayout = () => {
   const currentTheme = isDarkMode ? designSystem.darkTheme : designSystem.lightTheme;
   const { isTablet, n, width } = useResponsive();
   const [hasUnclaimed, setHasUnclaimed] = useState(false);
+  const { isTutorialActive } = useTutorial();
 
   const iconSize = isTablet ? n(26) : n(22);
   const showLabels = width >= 360;
@@ -253,6 +254,49 @@ const TabsLayout = () => {
     [n]
   );
 
+  const tabBarStyleBase = {
+  position: "absolute" as const,
+  left: 0,
+  right: 0,
+  bottom: 0,
+  height: (isTablet ? n(70) : n(60)) + Math.max(insets.bottom, n(12)), // = barHeight
+  paddingBottom: Math.max(insets.bottom, n(10)),                        // = padBottom
+  paddingTop: n(6),
+  borderTopWidth: 0,
+  borderTopLeftRadius: n(18),
+  borderTopRightRadius: n(18),
+  borderBottomLeftRadius: 0,
+  borderBottomRightRadius: 0,
+  backgroundColor: "transparent",
+  overflow: "visible" as const,
+  ...Platform.select({
+    ios: {
+      shadowColor: "#000",
+      shadowOpacity: 0.16,
+      shadowRadius: 12,
+      shadowOffset: { width: 0, height: -6 },
+    },
+    android: { elevation: 22 },
+    default: {},
+  }),
+};
+
+const tabBarStyleHidden = {
+  ...tabBarStyleBase,
+  height: 0,
+  paddingTop: 0,
+  paddingBottom: 0,
+  opacity: 0,
+  transform: [{ translateY: tabBarStyleBase.height as number }], // sort de l’écran
+  pointerEvents: "none" as const,
+};
+
+const tabBarItemStyleHidden = {
+  height: 0,
+  paddingVertical: 0,
+  margin: 0,
+};
+
   return (
     <TrophyProvider>
       <Tabs
@@ -263,51 +307,18 @@ const TabsLayout = () => {
           tabBarActiveTintColor: isDarkMode ? "#FFDD95" : currentTheme.colors.primary,
           tabBarInactiveTintColor: isDarkMode ? "#D9D9D9" : currentTheme.colors.textSecondary,
           tabBarLabelStyle: labelStyle,
-          overflow: "visible", 
-          tabBarItemStyle: {
-            paddingVertical: n(4),
-          },
-
-          /* --------- FULL-BLEED: colle au bas et sur les côtés --------- */
-          tabBarStyle: {
-            position: "absolute",
-            left: 0,
-            overflow: "visible", 
-            right: 0,
-            bottom: 0,              // 👈 plus d’espace sous la barre
-            height: barHeight,      // inclut déjà le safe area
-            paddingBottom: padBottom,
-            paddingTop: n(6),
-
-            borderTopWidth: 0,
-            // Coins arrondis uniquement en haut pour le look “dock”
-            borderTopLeftRadius: n(18),
-            borderTopRightRadius: n(18),
-            borderBottomLeftRadius: 0,
-            borderBottomRightRadius: 0,
-
-            backgroundColor: "transparent", // rendu via tabBarBackground
-
-            ...Platform.select({
-              ios: {
-                shadowColor: "#000",
-                shadowOpacity: 0.16,
-                shadowRadius: 12,
-                shadowOffset: { width: 0, height: -6 },
-              },
-              android: { elevation: 22 },
-              default: {},
-            }),
-          },
-
-          tabBarBackground: () => tabBarBackground,
+          overflow: "visible",
+   tabBarItemStyle: isTutorialActive ? tabBarItemStyleHidden : { paddingVertical: n(4) },
+   tabBarStyle: isTutorialActive ? tabBarStyleHidden : tabBarStyleBase,
+   tabBarBackground: isTutorialActive ? undefined : () => tabBarBackground,
 
           // Ripple discret Android
           tabBarButton: (props) => (
             <Pressable
-              android_ripple={{ color: isDarkMode ? "#ffffff22" : "#00000011", borderless: false }}
-              {...props}
-            />
+       disabled={isTutorialActive} // désactive les press pendant le tuto
+       android_ripple={{ color: isDarkMode ? "#ffffff22" : "#00000011", borderless: false }}
+       {...props}
+     />
           ),
         }}
       >

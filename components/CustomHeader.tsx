@@ -16,15 +16,15 @@ import BackButton from "./BackButton";
 interface CustomHeaderProps {
   title: string;
   showBackButton?: boolean;
-  rightIcon?: React.ReactNode;
+  rightIcon?: React.ReactNode;   // peut être string, number, élément, etc.
   showHairline?: boolean;
 
-  // Options UI (facultatives)
-  containerStyle?: ViewStyle;   // override du wrapper
-  titleColor?: string;          // couleur du titre
-  backgroundColor?: string;     // fond (sinon transparent)
-  useBlur?: boolean;            // active un blur premium
-  blurIntensity?: number;       // 0-100 (default 30)
+  // Options UI
+  containerStyle?: ViewStyle;
+  titleColor?: string;
+  backgroundColor?: string;
+  useBlur?: boolean;
+  blurIntensity?: number;
 }
 
 const { width: SCREEN_WIDTH } = Dimensions.get("window");
@@ -35,6 +35,51 @@ const normalizeSize = (size: number) => {
   return Math.round(size * scale);
 };
 
+// Rend en toute sécurité le contenu "rightIcon" : string/number -> <Text>, élément -> tel quel, sinon placeholder
+function SafeRightContent({
+  node,
+  placeholderSize = 24,
+}: {
+  node: React.ReactNode | React.ReactNode[];
+  placeholderSize?: number;
+}) {
+  if (Array.isArray(node)) {
+    return (
+      <View style={{ flexDirection: "row", alignItems: "center" }}>
+        {node.map((child, idx) => {
+          if (typeof child === "string" || typeof child === "number") {
+            return (
+              <Text
+                key={idx}
+                style={{ fontFamily: "Comfortaa_700Bold", fontSize: normalizeSize(14) }}
+              >
+                {String(child)}
+              </Text>
+            );
+          }
+          return React.isValidElement(child) ? (
+            React.cloneElement(child, { key: idx })
+          ) : (
+            <View key={idx} />
+          );
+        })}
+      </View>
+    );
+  }
+  if (typeof node === "string" || typeof node === "number") {
+    return (
+      <Text style={{ fontFamily: "Comfortaa_700Bold", fontSize: normalizeSize(14) }}>
+        {String(node)}
+      </Text>
+    );
+  }
+  if (React.isValidElement(node)) {
+    return node;
+  }
+  // null/undefined/booleans etc. => placeholder pour garder la mise en page stable
+  return <View style={{ width: normalizeSize(placeholderSize), height: normalizeSize(placeholderSize) }} />;
+}
+
 export default function CustomHeader({
   title,
   showBackButton = true,
@@ -42,22 +87,17 @@ export default function CustomHeader({
   containerStyle,
   titleColor,
   showHairline = true,
-  backgroundColor, // si non fourni => transparent
+  backgroundColor,
   useBlur = false,
   blurIntensity = 30,
 }: CustomHeaderProps) {
   const { theme } = useTheme();
   const isDarkMode = theme === "dark";
-  const currentTheme = isDarkMode
-    ? designSystem.darkTheme
-    : designSystem.lightTheme;
+  const currentTheme = isDarkMode ? designSystem.darkTheme : designSystem.lightTheme;
 
-  // Couleur du titre (noir en light comme demandé)
-  const resolvedTitleColor =
-    titleColor ?? (isDarkMode ? currentTheme.colors.textPrimary : "#000000");
+  const resolvedTitleColor = titleColor ?? (isDarkMode ? currentTheme.colors.textPrimary : "#000000");
 
-  // Taille/lineHeight adaptatives selon longueur
-  const isLong = title.length > 25;
+  const isLong = (title ?? "").length > 25;
   const fontSize = normalizeSize(isLong ? 17 : 20);
   const lineHeight = normalizeSize(isLong ? 22 : 26);
 
@@ -67,15 +107,11 @@ export default function CustomHeader({
         styles.headerContainer,
         {
           backgroundColor: backgroundColor ?? "transparent",
-          paddingTop:
-            Platform.OS === "android"
-              ? StatusBar.currentHeight ?? SPACING
-              : SPACING,
+          paddingTop: Platform.OS === "android" ? StatusBar.currentHeight ?? SPACING : SPACING,
         },
         containerStyle,
       ]}
     >
-      {/* Blur premium en fond si demandé */}
       {useBlur && (
         <BlurView
           intensity={blurIntensity}
@@ -85,16 +121,15 @@ export default function CustomHeader({
         />
       )}
 
-      {/* Hairline subtile */}
       {showHairline && (
-   <View
-     pointerEvents="none"
-     style={[
-       styles.hairline,
-       { backgroundColor: isDarkMode ? "rgba(255,255,255,0.08)" : "rgba(0,0,0,0.06)" },
-     ]}
-   />
- )}
+        <View
+          pointerEvents="none"
+          style={[
+            styles.hairline,
+            { backgroundColor: isDarkMode ? "rgba(255,255,255,0.08)" : "rgba(0,0,0,0.06)" },
+          ]}
+        />
+      )}
 
       {/* LEFT */}
       <View style={styles.sideWrapper}>
@@ -103,12 +138,8 @@ export default function CustomHeader({
             style={[
               styles.backHalo,
               {
-                backgroundColor: isDarkMode
-                  ? "rgba(255,255,255,0.08)"
-                  : "rgba(0,0,0,0.06)",
-                borderColor: isDarkMode
-                  ? "rgba(255,255,255,0.14)"
-                  : "rgba(0,0,0,0.08)",
+                backgroundColor: "transparent",
+                borderColor: "transparent",
               },
             ]}
           >
@@ -121,10 +152,7 @@ export default function CustomHeader({
             />
           </View>
         ) : (
-          // placeholder pour garder le titre centré
-          <View
-            style={{ width: normalizeSize(24), height: normalizeSize(24) }}
-          />
+          <View style={{ width: normalizeSize(24), height: normalizeSize(24) }} />
         )}
       </View>
 
@@ -142,17 +170,13 @@ export default function CustomHeader({
           numberOfLines={2}
           adjustsFontSizeToFit
         >
-          {title}
+          {String(title ?? "")}
         </Text>
       </View>
 
       {/* RIGHT */}
       <View style={styles.sideWrapper}>
-        {rightIcon ?? (
-          <View
-            style={{ width: normalizeSize(24), height: normalizeSize(24) }}
-          />
-        )}
+        <SafeRightContent node={rightIcon} />
       </View>
     </View>
   );
@@ -165,7 +189,7 @@ const styles = StyleSheet.create({
     paddingHorizontal: SPACING,
     marginBottom: normalizeSize(10),
     width: "100%",
-    overflow: "visible", // évite le clipping du halo
+    overflow: "visible",
   },
   hairline: {
     position: "absolute",
@@ -175,7 +199,7 @@ const styles = StyleSheet.create({
     height: StyleSheet.hairlineWidth,
   },
   sideWrapper: {
-    minWidth: normalizeSize(56), // plus large pour le halo
+    minWidth: normalizeSize(56),
     alignItems: "flex-start",
     justifyContent: "center",
     paddingVertical: normalizeSize(2),
@@ -193,8 +217,8 @@ const styles = StyleSheet.create({
   backHalo: {
     padding: normalizeSize(6),
     borderRadius: normalizeSize(14),
-    borderWidth: 0,                // pas de bord
-    backgroundColor: "transparent",// pas de fond qui “bave”
+    borderWidth: 0,
+    backgroundColor: "transparent",
     shadowColor: "transparent",
     shadowOffset: { width: 0, height: 0 },
     shadowOpacity: 0,

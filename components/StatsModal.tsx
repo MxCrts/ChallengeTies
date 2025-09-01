@@ -4,12 +4,25 @@ import { Ionicons } from "@expo/vector-icons";
 import { useTranslation } from "react-i18next";
 import { useTheme } from "../context/ThemeContext";
 import designSystem from "../theme/designSystem";
+import { useMemo } from "react";
 
 interface Day {
   day: number;
   date: Date;
   completed: boolean;
 }
+
+const WEEKDAYS_FALLBACK: Record<string, string[]> = {
+  fr: ["Lun","Mar","Mer","Jeu","Ven","Sam","Dim"],
+  en: ["Mon","Tue","Wed","Thu","Fri","Sat","Sun"],
+  es: ["Lun","Mar","Mié","Jue","Vie","Sáb","Dom"],
+  it: ["Lun","Mar","Mer","Gio","Ven","Sab","Dom"],
+  de: ["Mo","Di","Mi","Do","Fr","Sa","So"],
+  zh: ["周一","周二","周三","周四","周五","周六","周日"],
+  hi: ["सोम","मंगल","बुध","गुरु","शुक्र","शनि","रवि"],
+  ar: ["الإثنين","الثلاثاء","الأربعاء","الخميس","الجمعة","السبت","الأحد"],
+  ru: ["Пн","Вт","Ср","Чт","Пт","Сб","Вс"],
+};
 
 interface StatsModalProps {
   visible: boolean;
@@ -30,7 +43,7 @@ export default function StatsModal({
   goToPrevMonth,
   goToNextMonth,
 }: StatsModalProps) {
-  const { t } = useTranslation();
+  const { t, i18n } = useTranslation();
   const { theme } = useTheme();
   const isDarkMode = theme === "dark";
   const currentTheme = isDarkMode
@@ -38,9 +51,17 @@ export default function StatsModal({
     : designSystem.lightTheme;
 
   // Translated weekday abbreviations
-  const weekDays = t("statsModal.weekdays", {
-    returnObjects: true,
-  }) as string[];
+   const weekDays: string[] = useMemo(() => {
+    const raw = t("statsModal.weekdays", {
+      returnObjects: true,
+      defaultValue: [],
+    }) as unknown;
+
+    if (Array.isArray(raw) && raw.length > 0) return raw as string[];
+
+    const lang = (i18n.language || "en").split("-")[0].toLowerCase();
+    return WEEKDAYS_FALLBACK[lang] || WEEKDAYS_FALLBACK.en;
+  }, [t, i18n.language]);
 
   return (
     <Modal
@@ -102,22 +123,18 @@ export default function StatsModal({
             ]}
           >
             <View style={styles.weekDaysContainer}>
-              {weekDays.map((abbr) => (
-                <Text
-                  key={abbr}
-                  style={[
-                    styles.weekDay,
-                    {
-                      color: isDarkMode
-                        ? currentTheme.colors.textSecondary
-                        : "#555555",
-                    },
-                  ]}
-                >
-                  {abbr}
-                </Text>
-              ))}
-            </View>
+      {weekDays.map((abbr, idx) => (
+        <Text
+          key={`${abbr}-${idx}`} // clé stable même si doublons
+          style={[
+            styles.weekDay,
+            { color: isDarkMode ? currentTheme.colors.textSecondary : "#555555" },
+          ]}
+        >
+          {abbr}
+        </Text>
+      ))}
+    </View>
             <View style={styles.daysContainer}>
               {calendarDays.map((day, idx) => (
                 <View key={idx} style={styles.dayWrapper}>

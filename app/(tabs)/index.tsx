@@ -755,38 +755,55 @@ const pressed = useSharedValue<number>(0);
                     </TouchableOpacity>
                   </Animated.View>
                 </View>
-                <View style={staticStyles.discoverSingleRow}>
-                  <View style={staticStyles.discoverSingleCardContainer}>
-                    <Animated.View entering={FadeInUp.delay(28)}>
-                      <TouchableOpacity
-                        style={[
-                          staticStyles.discoverCard,
-                          dynamicStyles.discoverCard,
-                        ]}
-                        onPress={() => safeNavigate("/new-features")}
-                        accessibilityLabel={t("whatsNew")}
-                        testID="new-features-card"
-                        accessibilityRole="button"
-                      >
-                        <Ionicons
-                          name="sparkles"
-                          size={normalize(32)}
-                          color={currentTheme.colors.secondary}
-                        />
-                        <Text
-                          style={[
-                            staticStyles.discoverCardText,
-                            dynamicStyles.discoverCardText,
-                          ]}
-                          numberOfLines={2}
-                          adjustsFontSizeToFit
-                        >
-                          {t("whatsNew")}
-                        </Text>
-                      </TouchableOpacity>
-                    </Animated.View>
-                  </View>
-                </View>
+                <View style={staticStyles.discoverRow}>
+  {/* New Features */}
+  <Animated.View entering={FadeInUp.delay(28)}>
+    <TouchableOpacity
+      style={[staticStyles.discoverCard, dynamicStyles.discoverCard]}
+      onPress={() => safeNavigate("/new-features")}
+      accessibilityLabel={t("whatsNew")}
+      testID="new-features-card"
+      accessibilityRole="button"
+    >
+      <Ionicons
+        name="sparkles"
+        size={normalize(32)}
+        color={currentTheme.colors.secondary}
+      />
+      <Text
+        style={[staticStyles.discoverCardText, dynamicStyles.discoverCardText]}
+        numberOfLines={2}
+        adjustsFontSizeToFit
+      >
+        {t("whatsNew")}
+      </Text>
+    </TouchableOpacity>
+  </Animated.View>
+
+  {/* FAQ */}
+  <Animated.View entering={FadeInUp.delay(36)}>
+    <TouchableOpacity
+      style={[staticStyles.discoverCard, dynamicStyles.discoverCard]}
+      onPress={() => safeNavigate("/Questions")}
+      accessibilityLabel={t("questions.title")}
+      testID="faq-card"
+      accessibilityRole="button"
+    >
+      <Ionicons
+        name="help-circle-outline"
+        size={normalize(32)}
+        color={currentTheme.colors.secondary}
+      />
+      <Text
+        style={[staticStyles.discoverCardText, dynamicStyles.discoverCardText]}
+        numberOfLines={2}
+        adjustsFontSizeToFit
+      >
+        {t("faqShort", { defaultValue: "FAQ" })}
+      </Text>
+    </TouchableOpacity>
+  </Animated.View>
+</View>
               </View>
             </View>
           </View>

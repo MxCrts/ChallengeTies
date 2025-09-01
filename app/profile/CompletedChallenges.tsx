@@ -115,17 +115,24 @@ const bottomPadding = showBanners ? BANNER_HEIGHT + normalizeSize(90) : normaliz
         const challenges: CompletedChallenge[] = raw.map((c: any) => ({
           id: c.id,
           chatId: c.chatId,
-          title: c.chatId
-            ? t(`challenges.${c.chatId}.title`, { defaultValue: c.title })
-            : c.title || t("challengeSaved"),
-          description: c.chatId
-            ? t(`challenges.${c.chatId}.description`, {
-                defaultValue: c.description || "",
-              })
-            : c.description || "",
-          category: c.category
-            ? t(`categories.${c.category}`, { defaultValue: c.category })
-            : t("noCategory"),
+          title: String(
+  c.chatId
+    ? t(`challenges.${c.chatId}.title`, { defaultValue: c.title })
+    : c.title || t("challengeSaved")
+),
+description: String(
+  c.chatId
+    ? t(`challenges.${c.chatId}.description`, {
+        defaultValue: c.description || "",
+      })
+    : c.description || ""
+),
+category: String(
+  c.category
+    ? t(`categories.${c.category}`, { defaultValue: c.category })
+    : t("noCategory")
+),
+
           imageUrl: c.imageUrl || "",
           completedAt: c.completedAt || "",
           selectedDays: c.selectedDays || 0,
@@ -137,7 +144,7 @@ const bottomPadding = showBanners ? BANNER_HEIGHT + normalizeSize(90) : normaliz
       },
       (error) => {
         console.error(error);
-        Alert.alert(t("error"), t("errorLoadingCompletedChallenges"));
+        Alert.alert(String(t("error")), String(t("errorLoadingCompletedChallenges")));
         setIsLoading(false);
       }
     );
@@ -152,7 +159,7 @@ const bottomPadding = showBanners ? BANNER_HEIGHT + normalizeSize(90) : normaliz
         `?title=${encodeURIComponent(item.title)}` +
         `&selectedDays=${item.selectedDays}` +
         `&completedDays=${item.selectedDays}` +
-        `&category=${encodeURIComponent(item.category || t("noCategory"))}` +
+        `&category=${encodeURIComponent(item.category || String(t("noCategory")))}` +
         `&description=${encodeURIComponent(item.description || "")}` +
         `&imageUrl=${encodeURIComponent(item.imageUrl || "")}`;
       router.push(route as any);
@@ -175,8 +182,8 @@ const bottomPadding = showBanners ? BANNER_HEIGHT + normalizeSize(90) : normaliz
           style={styles.cardContainer}
           onPress={() => navigateToChallengeDetails(item)}
           activeOpacity={0.8} // Aligné avec CurrentChallenges.tsx
-          accessibilityLabel={t("viewChallenge", { title: item.title })}
-          accessibilityHint={t("viewDetails")} // Aligné avec CurrentChallenges.tsx
+          accessibilityLabel={String(t("viewChallenge", { title: item.title }))}
+          accessibilityHint={String(t("viewDetails"))}
           testID={`challenge-card-${item.id}`}
         >
           <LinearGradient
@@ -197,7 +204,7 @@ const bottomPadding = showBanners ? BANNER_HEIGHT + normalizeSize(90) : normaliz
               <Image
                 source={{ uri: item.imageUrl }}
                 style={styles.cardImage}
-                accessibilityLabel={t("challengeImage", { title: item.title })}
+                accessibilityLabel={String(t("challengeImage", { title: item.title }))}
               />
             ) : (
               <View
@@ -233,8 +240,7 @@ const bottomPadding = showBanners ? BANNER_HEIGHT + normalizeSize(90) : normaliz
                   { color: currentTheme.colors.textSecondary },
                 ]}
               >
-                {t("completedOn")}{" "}
-                {new Date(item.completedAt).toLocaleDateString()}
+                {String(t("completedOn"))} {new Date(item.completedAt).toLocaleDateString()}
               </Text>
               <Text
                 style={[
@@ -251,15 +257,15 @@ const bottomPadding = showBanners ? BANNER_HEIGHT + normalizeSize(90) : normaliz
                     { color: currentTheme.colors.secondary },
                   ]}
                 >
-                  {item.selectedDays}/{item.selectedDays} {t("days")}
+                  {item.selectedDays}/{item.selectedDays} {String(t("days"))}
                 </Text>
               </View>
               {item.history && item.history.length > 0 && (
                 <TouchableOpacity
                   style={styles.historyButton}
                   onPress={() => openHistoryModal(item)}
-                  accessibilityLabel={t("history")}
-                  accessibilityHint={t("viewHistoryHint")} // Aligné avec CurrentChallenges.tsx
+                  accessibilityLabel={String(t("history"))}
+                  accessibilityHint={String(t("viewHistoryHint"))}
                   testID={`history-button-${item.id}`}
                 >
                   <LinearGradient
@@ -275,7 +281,7 @@ const bottomPadding = showBanners ? BANNER_HEIGHT + normalizeSize(90) : normaliz
                         { color: currentTheme.colors.textPrimary },
                       ]}
                     >
-                      {t("historyOf")}
+                      {String(t("historyOf"))}
                     </Text>
                   </LinearGradient>
                 </TouchableOpacity>
@@ -311,7 +317,7 @@ const bottomPadding = showBanners ? BANNER_HEIGHT + normalizeSize(90) : normaliz
               { color: currentTheme.colors.textPrimary },
             ]}
           >
-            {t("loadingProfile")}
+            {String(t("loadingProfile"))}
           </Text>
         </LinearGradient>
       </SafeAreaView>
@@ -350,7 +356,7 @@ const bottomPadding = showBanners ? BANNER_HEIGHT + normalizeSize(90) : normaliz
       />
 
       <CustomHeader
-        title={t("completedChallengesScreenTitle")}
+        title={String(t("completedChallengesScreenTitle"))}
         backgroundColor="transparent"
         useBlur={false}
         showHairline={false}
@@ -362,7 +368,7 @@ const bottomPadding = showBanners ? BANNER_HEIGHT + normalizeSize(90) : normaliz
             name="checkmark-done-outline"
             size={normalizeSize(60)}
             color={currentTheme.colors.textSecondary}
-            accessibilityLabel={t("noCompletedChallengesIcon")}
+            accessibilityLabel={String(t("noCompletedChallengesIcon"))}
           />
           <Text
             style={[
@@ -370,10 +376,10 @@ const bottomPadding = showBanners ? BANNER_HEIGHT + normalizeSize(90) : normaliz
   { color: isDarkMode ? currentTheme.colors.textPrimary : currentTheme.colors.textSecondary },
 ]}
           >
-            {t("noCompletedChallenges")}
+            {String(t("noCompletedChallenges"))}
           </Text>
           <Text style={[styles.noChallengesSubtext, { color: currentTheme.colors.textSecondary }]}>
-            {t("completeChallengesToSeeHere")}
+            {String(t("completeChallengesToSeeHere"))}
           </Text>
         </Animated.View>
       </View>
@@ -429,7 +435,7 @@ const bottomPadding = showBanners ? BANNER_HEIGHT + normalizeSize(90) : normaliz
   />
 
   <CustomHeader
-    title={t("completedChallengesScreenTitle")}
+    title={String(t("completedChallengesScreenTitle"))}
     backgroundColor="transparent"
     useBlur={false}
     showHairline={false}
@@ -469,7 +475,7 @@ const bottomPadding = showBanners ? BANNER_HEIGHT + normalizeSize(90) : normaliz
                     },
                   ]}
                 >
-                  {t("historyOf")} {selectedHistory.title}
+                  {String(t("historyOf"))} {selectedHistory.title}
                 </Text>
                 <FlatList
                   data={selectedHistory.history}
@@ -492,9 +498,9 @@ const bottomPadding = showBanners ? BANNER_HEIGHT + normalizeSize(90) : normaliz
                           },
                         ]}
                       >
-                        {t("completedOnDate")}{" "}
+                        {String(t("completedOnDate"))}{" "}
                         {new Date(item.completedAt).toLocaleDateString()} -{" "}
-                        {item.selectedDays} {t("days")}
+                        {item.selectedDays} {String(t("days"))}
                       </Text>
                     </Animated.View>
                   )}
@@ -502,8 +508,8 @@ const bottomPadding = showBanners ? BANNER_HEIGHT + normalizeSize(90) : normaliz
                 <TouchableOpacity
                   style={styles.closeButton}
                   onPress={() => setHistoryModalVisible(false)}
-                  accessibilityLabel={t("closeModal")} // Aligné avec CurrentChallenges.tsx
-                  accessibilityHint={t("closeModalHint")} // Aligné avec CurrentChallenges.tsx
+                  accessibilityLabel={String(t("closeModal"))}
+                  accessibilityHint={String(t("closeModalHint"))}
                   testID="close-modal-button"
                 >
                   <LinearGradient
@@ -519,7 +525,7 @@ const bottomPadding = showBanners ? BANNER_HEIGHT + normalizeSize(90) : normaliz
                         { color: currentTheme.colors.textPrimary },
                       ]}
                     >
-                      {t("close")}
+                      {String(t("close"))}
                     </Text>
                   </LinearGradient>
                 </TouchableOpacity>

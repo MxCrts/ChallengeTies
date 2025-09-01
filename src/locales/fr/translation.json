@@ -161,6 +161,20 @@
     "title": "Bienvenue dans le chat du challenge !",
     "message": "Nous sommes ici pour nous encourager, nous soutenir et avancer ensemble dans ce challenge ! Voici les règles pour garder une vibe positive :\n\n1. **Respect** : Pas d’insultes, de harcèlement ou de menaces.\n2. **Tolérance** : Aucune haine ni discrimination (racisme, sexisme, homophobie, transphobie, etc.).\n3. **Contenu** : Pas de nudité/pornographie, contenus violents ou illégaux.\n4. **Pertinence** : Restez dans le thème du challenge (motivation, questions, entraide).\n5. **Sécurité** : Ne partagez pas d’infos perso sensibles (adresse, tel, documents d’identité).\n6. **Propreté** : Pas de spam, pub, scams ou usurpation d’identité.\n\nEn rejoignant ce chat, vous acceptez ces règles. Merci 💛"
   },
+  "coverImage": "Image de couverture (optionnel)",
+  "pickAnImage": "Choisir une image",
+  "edit": "Modifier",
+  "livePreview": "Aperçu",
+  "yourTitleHere": "Ton titre ici",
+  "yourDescriptionHere": "Ta description ici…",
+  "exTitle": "Ex : 30 jours de lecture",
+  "exDescription": "Ex : Lire 10 pages par jour et partager ses notes…",
+  "pleaseWait": "Patiente…",
+  "ok": "OK",
+  "createChallengeFailed": "Impossible de créer le défi pour le moment. Réessaie plus tard.",
+  "challengeSubmittedForReview": "Ton défi a été soumis et sera visible dès qu’un admin l’aura approuvé.",
+"completionLabel": "Complétion",
+  "reviewNote": "Chaque défi est vérifié. Les images floues, sans rapport ou de mauvaise qualité peuvent être refusées.",
   "chat.title":"Bienvenue 🙌",
   "chat.systemWelcome":"Nous sommes ici pour nous encourager, nous soutenir et avancer ensemble dans ce challenge ! Voici les règles pour garder une vibe positive :\n\n1. **Respect** : Pas d’insultes, de harcèlement ou de menaces.\n2. **Tolérance** : Aucune haine ni discrimination (racisme, sexisme, homophobie, transphobie, etc.).\n3. **Contenu** : Pas de nudité/pornographie, contenus violents ou illégaux.\n4. **Pertinence** : Restez dans le thème du challenge (motivation, questions, entraide).\n5. **Sécurité** : Ne partagez pas d’infos perso sensibles (adresse, tel, documents d’identité).\n6. **Propreté** : Pas de spam, pub, scams ou usurpation d’identité.\n\nEn rejoignant ce chat, vous acceptez ces règles. Merci 💛",
   "tips": {
@@ -307,6 +321,13 @@
   "yourEmailAddress": "Votre adresse email",
   "sendResetLink": "Envoyer le lien",
   "sendLink": "Envoyer",
+  "duoInfoModal": {
+  "title": "Inviter un ami",
+  "desc": "Pour inviter un ami, il vous suffit d’ajouter son username et d’attendre sa réponse.\n\nSi vous ne connaissez pas son username, pas d’inquiétude : demandez-le-lui (visible dans la rubrique Mon Compte) et vous pourrez l’inviter plus tard depuis le challenge désiré.",
+  "button": "Compris"
+},
+  "charsRemaining_one": "{{count}} caractère restant",
+"charsRemaining_other": "{{count}} caractères restants",
   "fillAllFields": "Veuillez remplir tous les champs.",
   "passwordsDoNotMatch": "Les mots de passe ne correspondent pas.",
   "emailAlreadyInUse": "Cet email est déjà utilisé.",
@@ -521,6 +542,7 @@
     "prevMonth": "Mois précédent",
     "nextMonth": "Mois suivant",
     "title": "{{month}} {{year}}",
+    
     "weekdays": ["Dim", "Lun", "Mar", "Mer", "Jeu", "Ven", "Sam"],
     "months": [
       "janvier",
@@ -562,6 +584,7 @@
       "subtitle": "Conserver votre progression"
     }
   },
+  
   "privacyPolicy": {
     "title": "Politique de confidentialité",
     "introductionTitle": "Introduction",
@@ -1309,6 +1332,7 @@
       "expired": "Cette invitation a expiré.",
       "unknown": "Une erreur est survenue.",
       "inviterAlreadyStarted": "Tu as déjà commencé ce défi en solo.",
+      "alreadyInDuoForChallenge": "Impossible d’inviter cet utilisateur : il est déjà en duo pour ce challenge.",
       "duoAlready": "Tu es déjà en duo sur ce défi."
     },
     "confirmStartDuoTitle": "Passer en Duo ?",
@@ -2893,7 +2917,19 @@
     "title": "Choisis ton premier challenge !",
     "subtitle": "Tu veux commencer en…",
     "chooseSolo": "Choisir en Solo",
-    "chooseDuo": "Choisir en Duo"
+    "chooseDuo": "Choisir en Duo",
+    "modeDuo": "Duo (recommandé)",
+    "modeSolo": "Solo",
+    "durationLabel": "Durée :",
+    "day_one": "{{count}} j",
+    "day_other": "{{count}} j",
+    "skip": "Ignorer",
+    "alert": {
+      "missingChoiceTitle": "Choix manquant",
+      "missingChoiceBody": "Sélectionne un challenge.",
+      "modeTitle": "Mode",
+      "modeBody": "Choisis Duo ou Solo."
+    }
   },
   
   "access": {
@@ -2977,6 +3013,7 @@
       "description": "Ici tu peux accepter un défi, suivre ta progression, consulter tes statistiques… et surtout accéder à des conseils, des exemples concrets, ainsi que des ressources audio et vidéo pour t’aider à réussir 💡🔥"
     }
   },
+  "faqShort": "FAQ",
   "categories": {
     "Santé": "Santé",
     "Fitness": "Fitness",
@@ -3002,8 +3039,49 @@
     "examples": "Exemples",
     "suggestion": "Des suggestions ?"
   },
+  
+   "questions": {
+    "title": "Foire aux questions",
+    "searchPlaceholder": "🔍 Rechercher une question…",
+    "overview": {
+      "title": "Bienvenue dans la FAQ ✨",
+      "body": "Retrouve ici les réponses aux questions les plus fréquentes pour profiter à fond de ChallengeTies."
+    },
+    "contactCta": "✉️ Contacter le support",
+    "noResult": "Aucun résultat trouvé. Essaie un autre mot-clé !",
+
+    "q": {
+      "whatIs": "❓ Qu’est-ce que ChallengeTies ?",
+      "howToStart": "🚀 Comment commencer mon premier challenge ?",
+      "duoMode": "👫 Qu’est-ce que le mode Duo ?",
+      "soloMode": "🙋 Et le mode Solo, c’est quoi ?",
+      "invitations": "📨 Comment fonctionnent les invitations ?",
+      "progress": "📈 Comment est suivie ma progression ?",
+      "notifications": "🔔 Comment gérer mes notifications ?",
+      "community": "💬 Existe-t-il une communauté autour des challenges ?",
+      "privacy": "🛡️ Que faites-vous de mes données personnelles ?",
+      "contact": "📬 Comment vous contacter en cas de problème ?"
+    },
+
+    "a": {
+      "whatIs": "ChallengeTies est une application qui te permet de relever des défis quotidiens, seul ou avec un ami, pour transformer tes habitudes pas à pas. Chaque jour, marque ta progression et débloque des récompenses motivantes 🏆.",
+      "howToStart": "Lors de ton inscription, tu choisis un premier challenge parmi ceux proposés. Sélectionne la durée (7, 14, 21 jours, etc.), puis reçois chaque jour un rappel pour marquer ton avancée ✅.",
+      "duoMode": "Le mode Duo te permet de partager un challenge avec un ami. Vous voyez vos progressions en parallèle. L’entraide et la motivation à deux rendent l’expérience plus fun et plus puissante 💪.",
+      "soloMode": "En mode Solo, c’est toi face à toi-même. Avance à ton rythme, sans comparaison, et savoure la satisfaction de construire ta régularité jour après jour ✨.",
+      "invitations": "Invite un ami via son nom d’utilisateur ou un lien unique. Il reçoit une notification et peut accepter ou refuser. En cas d’acceptation, vous suivez le même challenge ensemble 🎯.",
+      "progress": "Chaque jour, coche ton avancée avec 'Mark Today'. Ton historique est sauvegardé : nombre de jours réussis, séries (streaks 🔥) et succès débloqués.",
+      "notifications": "Active les notifications pour recevoir tes rappels quotidiens et ne jamais oublier ton challenge. Tu peux les activer ou les désactiver à tout moment dans les paramètres ⚙️.",
+      "community": "Une section communauté est en cours de développement ✨. En attendant, partage tes succès et invite tes amis pour créer ton cercle motivant 👥.",
+      "privacy": "Tes données personnelles sont sécurisées 🔒. Elles ne sont jamais revendues. Tu peux supprimer ton compte et tes données à tout moment depuis les paramètres.",
+      "contact": "Notre équipe est là pour toi. Tu peux nous écrire directement depuis l’app via le bouton 'Contacter le support', ou depuis la page Contact sur notre site 🌍."
+    }
+  },
   "common": {
     "back": "Retour",
-    "skip": "Ignorer"
+    "skip": "Ignorer",
+    "challenge": "Challenge",
+    "misc": "Divers",
+    "error": "Erreur",
+    "oops": "Oups…"
   }
 }

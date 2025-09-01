@@ -115,8 +115,9 @@ export default function FocusScreen() {
   const flatListTopRef = useRef<RNAnimated.FlatList<any>>(null);
   const flatListBottomRef = useRef<RNAnimated.FlatList<any>>(null);
 
-  const topAutoScrollRef = useRef<number | null>(null);
-  const bottomAutoScrollRef = useRef<number | null>(null);
+ type IntervalId = ReturnType<typeof setInterval>;
+const topAutoScrollRef = useRef<IntervalId | null>(null);
+const bottomAutoScrollRef = useRef<IntervalId | null>(null);
 
   const topIndexRef = useRef(0);
   const bottomIndexRef = useRef(0);
@@ -373,21 +374,25 @@ export default function FocusScreen() {
             >
               {item.title}
             </Text>
-            <Text
-              style={[
-                styles.topItemParticipants,
-                { color: currentTheme.colors.trophy },
-              ]}
-            >
-              <Ionicons
-                name="people"
-                size={normalizeSize(14)}
-                color={currentTheme.colors.trophy}
-              />
-              {t("participant", {
-                count: challengeParticipants[item.id] ?? item.participants ?? 0,
-              })}
-            </Text>
+            <View style={{ flexDirection: "row", alignItems: "center" }}>
+  <Ionicons
+    name="people"
+    size={normalizeSize(14)}
+    color={currentTheme.colors.trophy}
+    style={{ marginRight: 4 }}
+  />
+  <Text
+    style={[
+      styles.topItemParticipants,
+      { color: currentTheme.colors.trophy },
+    ]}
+  >
+    {t("participant", {
+      count: challengeParticipants[item.id] ?? item.participants ?? 0,
+    })}
+  </Text>
+</View>
+
           </LinearGradient>
         </LinearGradient>
       </TouchableOpacity>
@@ -479,21 +484,25 @@ export default function FocusScreen() {
             >
               {item.title}
             </Text>
-            <Text
-              style={[
-                styles.bottomItemParticipants,
-                { color: currentTheme.colors.trophy },
-              ]}
-            >
-              <Ionicons
-                name="people"
-                size={normalizeSize(12)}
-                color={currentTheme.colors.trophy}
-              />
-              {t("participant", {
-                count: challengeParticipants[item.id] ?? item.participants ?? 0,
-              })}
-            </Text>
+           <View style={{ flexDirection: "row", alignItems: "center" }}>
+  <Ionicons
+    name="people"
+    size={normalizeSize(12)}
+    color={currentTheme.colors.trophy}
+    style={{ marginRight: 4 }}
+  />
+  <Text
+    style={[
+      styles.bottomItemParticipants,
+      { color: currentTheme.colors.trophy },
+    ]}
+  >
+    {t("participant", {
+      count: challengeParticipants[item.id] ?? item.participants ?? 0,
+    })}
+  </Text>
+</View>
+
           </LinearGradient>
         </LinearGradient>
       </TouchableOpacity>

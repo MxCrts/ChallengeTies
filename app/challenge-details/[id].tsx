@@ -18,7 +18,6 @@ import {
   Dimensions,
   StatusBar,
   Platform,
-  Modal, 
 } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 import { Ionicons } from "@expo/vector-icons";
@@ -58,6 +57,7 @@ import { CARD_HEIGHT, CARD_WIDTH } from "@/components/ShareCard";
 import * as Notifications from "expo-notifications";
 import { Share } from "react-native";
 import type { ViewStyle } from "react-native";
+import { adUnitIds } from "@/constants/admob";
 
 import Animated, {
   useSharedValue,
@@ -236,12 +236,7 @@ const currentChallenge = useMemo(() => {
   const [duoChallengeData, setDuoChallengeData] =
     useState<DuoChallengeData | null>(null);
 
-  const bannerAdUnitId = __DEV__
-  ? TestIds.BANNER
-  : Platform.select({
-      ios: "ca-app-pub-4725616526467159/3887969618",  // <- mets ici ton ID iOS si différent
-      android: "ca-app-pub-4725616526467159/3887969618",
-    })!;
+  const bannerAdUnitId = __DEV__ ? TestIds.BANNER : adUnitIds.banner;
 
 
   const [loading, setLoading] = useState(true);
@@ -283,7 +278,6 @@ const assetsReady =
   const [inviteConfirmVisible, setInviteConfirmVisible] = useState(false);
   const [completionModalVisible, setCompletionModalVisible] = useState(false);
   const [statsModalVisible, setStatsModalVisible] = useState(false);
-  const [baseTrophyAmount, setBaseTrophyAmount] = useState(0);
   const [pendingFavorite, setPendingFavorite] = useState<boolean | null>(null);
   const confettiRef = useRef<ConfettiCannon | null>(null);
   const [currentMonth, setCurrentMonth] = useState(new Date());
@@ -504,29 +498,28 @@ const resolveAvatarUrl = async (raw?: string): Promise<string> => {
     return "";
   }
 };
-// 👉 Ouvre automatiquement le modal si je suis l'invité d'une "direct" pending de ce challenge
 useEffect(() => {
   const uid = auth.currentUser?.uid;
   if (!uid || !id) return;
 
-  // 1) déduplication (évite de rouvrir 10x si le doc est modifié)
+  // déduplication (évite d'ouvrir plusieurs fois le même doc)
   const opened = new Set<string>();
 
-  // 2) écoute "robuste" avec 2 where (peut exiger un index Firestore)
+  // on gardera ici un éventuel unsub du fallback
+  let fallbackUnsub: (() => void) | undefined;
+
   const qPending = query(
     collection(db, "invitations"),
     where("inviteeId", "==", uid),
     where("status", "==", "pending")
   );
 
-  const unsub = onSnapshot(
+  const unsubMain = onSnapshot(
     qPending,
     (snap) => {
       snap.docChanges().forEach((chg) => {
         const docId = chg.doc.id;
         const data = chg.doc.data() as any;
-
-        // On ne gère que ce challenge et qu'une seule ouverture par doc
         if (data.challengeId === id && !opened.has(docId)) {
           opened.add(docId);
           setInvitation({ id: docId });
@@ -535,43 +528,34 @@ useEffect(() => {
       });
     },
     async (err) => {
-      // 3) Fallback si index manquant (ou autre erreur de requête) :
       console.warn(
-        "⚠️ Snapshot invitations (inviteeId+status) a échoué, fallback sans index:",
+        "⚠️ Snapshot (inviteeId+status) a échoué, fallback sans index:",
         err?.message || err
       );
-      try {
-        // On écoute seulement inviteeId et on filtre en JS
-        const qByInvitee = query(
-          collection(db, "invitations"),
-          where("inviteeId", "==", uid)
-        );
-        const unsubFallback = onSnapshot(qByInvitee, (snap2) => {
-          snap2
-            .docChanges()
-            .forEach((chg) => {
-              const docId = chg.doc.id;
-              const data = chg.doc.data() as any;
-              if (
-                data.status === "pending" &&
-                data.challengeId === id &&
-                !opened.has(docId)
-              ) {
-                opened.add(docId);
-                setInvitation({ id: docId });
-                setInvitationModalVisible(true);
-              }
-            });
+      // Fallback: écoute "inviteeId" uniquement puis filtre en JS
+      const qByInvitee = query(
+        collection(db, "invitations"),
+        where("inviteeId", "==", uid)
+      );
+      fallbackUnsub = onSnapshot(qByInvitee, (snap2) => {
+        snap2.docChanges().forEach((chg) => {
+          const docId = chg.doc.id;
+          const data = chg.doc.data() as any;
+          if (
+            data.status === "pending" &&
+            data.challengeId === id &&
+            !opened.has(docId)
+          ) {
+            opened.add(docId);
+            setInvitation({ id: docId });
+            setInvitationModalVisible(true);
+          }
         });
-        // remplace l’unsub principal par celui du fallback
-        return () => unsubFallback();
-      } catch (e) {
-        console.error("❌ Fallback invitations échoué:", e);
-      }
+      });
     }
   );
 
-  // 4) Première vérif immédiate (au cas où l’event ‘added’ ne se déclenche pas à froid)
+  // Vérif immédiate (au cas où)
   (async () => {
     try {
       const snap = await getDocs(
@@ -594,7 +578,10 @@ useEffect(() => {
     }
   })();
 
-  return () => unsub();
+  return () => {
+    unsubMain();
+    fallbackUnsub?.();
+  };
 }, [id]);
 
 
@@ -877,55 +864,8 @@ useEffect(() => {
   });
 
   return () => unsubscribe();
-}, [id, t]);
+}, [id, t, resetSoloProgressIfNeeded]);
 
-
-useEffect(() => {
-  if (!auth.currentUser?.uid || !id || !isCurrentUserInviter) return;
-
-  const q = query(
-    collection(db, "invitations"),
-    where("inviterId", "==", auth.currentUser.uid),
-    where("challengeId", "==", id)
-  );
-
-
-
-  const unsubscribe = onSnapshot(q, (snapshot) => {
-    snapshot.docChanges().forEach((change) => {
-      // 🔒 Only react to true updates, not the initial "added" docs
-      if (change.type !== "modified") return;
-
-      const data = change.doc.data();
-
-      if (data.status === "refused") {
-        Notifications.scheduleNotificationAsync({
-          content: {
-            title: t("notificationsPush.title"),
-            body: t("notificationsPush.invitationRefused", {
-              username: data.inviteeUsername || "L'utilisateur",
-            }),
-          },
-          trigger: null,
-        });
-      }
-
-      if (data.status === "accepted") {
-        Notifications.scheduleNotificationAsync({
-          content: {
-            title: t("notificationsPush.title"),
-            body: t("notificationsPush.invitationAccepted", {
-              username: data.inviteeUsername || "L'utilisateur",
-            }),
-          },
-          trigger: null,
-        });
-      }
-    });
-  });
-
-  return () => unsubscribe();
-}, [id, isCurrentUserInviter, t]);
 
 // Ouvre le modal si ?invite=... est présent (via route OU via deep link brut)
 useEffect(() => {
@@ -937,9 +877,7 @@ useEffect(() => {
       setTimeout(() => setInvitationModalVisible(true), 200);
     } else {
       // si non connecté → on redirige vers login en préservant l'invite
-      router.replace(
-        `/login?redirect=challenge-detail/${params.id}&invite=${inviteParam}`
-      );
+      router.replace(`/login?redirect=challenge-details/${params.id}&invite=${inviteParam}`);
     }
   };
 
@@ -1184,13 +1122,13 @@ const handleNudgePartner = useCallback(async () => {
 ]);
 
   const handleShowCompleteModal = useCallback(() => {
-    setBaseTrophyAmount(finalSelectedDays);
     setCompletionModalVisible(true);
   }, [finalSelectedDays]);
 
   const handleClaimTrophiesWithoutAd = useCallback(async () => {
     try {
       await completeChallenge(id, finalSelectedDays, false);
+      
       setCompletionModalVisible(false);
     } catch (error) {
       Alert.alert(t("alerts.error"), t("challengeDetails.completeError"));
@@ -1225,7 +1163,7 @@ const handleShareChallenge = useCallback(async () => {
       (i18n?.language as string | undefined) ??
       (globalThis as any)?.Localization?.locale ??
       "fr";
-    const lang = String(langRaw).split("-")[0].toLowerCase();
+    const shareLang = String(langRaw).split("-")[0].toLowerCase();
 
     // ⚠️ Utiliser la Cloud Function (pas le domaine web.app)
     const base = "https://europe-west1-challengeme-d7fef.cloudfunctions.net/dl";
@@ -1233,7 +1171,7 @@ const handleShareChallenge = useCallback(async () => {
     const params = new URLSearchParams({
       id,
       title: routeTitle,
-      lang,
+      shareLang,
       v: String(Date.now()), // anti-cache scrapers
     });
 
@@ -1319,7 +1257,7 @@ const handleInviteFriend = useCallback(() => {
   style={{ flex: 1, backgroundColor: 'transparent' }}
   edges={['top','bottom']}
 >
-      <StatusBar hidden translucent backgroundColor="transparent" />
+      <StatusBar  translucent backgroundColor="transparent" />
       <ConfettiCannon
         ref={confettiRef}
         count={150}
@@ -1809,21 +1747,22 @@ const handleInviteFriend = useCallback(() => {
         </View>
       ) : (
         <LinearGradient
-          colors={[
-            currentTheme.colors.primary,
-            currentTheme.colors.secondary,
-          ]}
-          style={styles.markTodayButtonGradient}
-          start={{ x: 0, y: 0 }}
-          end={{ x: 1, y: 1 }}
-        >
+  colors={
+    marking
+      ? ["#6b7280", "#6b7280"]            // gris pendant l’envoi
+      : [currentTheme.colors.primary, currentTheme.colors.secondary]
+  }
+  style={styles.markTodayButtonGradient}
+  start={{ x: 0, y: 0 }}
+  end={{ x: 1, y: 1 }}
+>
           <Text
             style={[
               styles.markTodayButtonText,
               { color: currentTheme.colors.textPrimary },
             ]}
           >
-            {t("challengeDetails.markToday")}
+             {marking ? t("commonS.sending", { defaultValue: "Envoi..." }) : t("challengeDetails.markToday")}
           </Text>
         </LinearGradient>
       )}

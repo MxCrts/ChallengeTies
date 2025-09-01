@@ -247,26 +247,19 @@ export default function AchievementsScreen() {
               name={getIconForGroup(section.title)}
               size={normalizeSize(22)}
               color={currentTheme.colors.textPrimary}
-              accessibilityLabel={t(`sections.${section.title}`)}
+              accessibilityLabel={String(t(`sections.${section.title}`))}
             />
-            <Text
-              style={[
-                styles.sectionTitle,
-                { color: currentTheme.colors.textPrimary },
-              ]}
-            >
-              {t(`sections.${section.title}`)}
-            </Text>
+            <Text style={[styles.sectionTitle, { color: currentTheme.colors.textPrimary }]}>
+  {String(t(`sections.${section.title}`))}
+</Text>
+
             <Text
               style={[
                 styles.sectionCount,
                 { color: currentTheme.colors.textPrimary },
               ]}
             >
-              {t("sectionCount", {
-                completed: completedCount,
-                total: section.data.length,
-              })}
+              {String(t("sectionCount", { completed: completedCount, total: section.data.length }))}
             </Text>
           </LinearGradient>
         </Animated.View>
@@ -323,7 +316,7 @@ export default function AchievementsScreen() {
                       ? currentTheme.colors.primary
                       : currentTheme.colors.textSecondary
                   }
-                  accessibilityLabel={t("trophy")}
+                  accessibilityLabel={String(t("trophy"))}
                 />
                 <Text
                   style={[
@@ -351,7 +344,7 @@ export default function AchievementsScreen() {
                     item.isClaimable && styles.claimable,
                   ]}
                 >
-                  {t(item.identifier, { defaultValue: item.identifier })}
+                  {String(t(item.identifier, { defaultValue: item.identifier }))}
                 </Text>
                 <Text
                   style={[
@@ -359,9 +352,9 @@ export default function AchievementsScreen() {
                     { color: currentTheme.colors.textSecondary },
                   ]}
                 >
-                  {t(`descriptions.${item.identifier}`, {
-                    defaultValue: t(item.identifier),
-                  })}
+                  {String(t(`descriptions.${item.identifier}`, {
+    defaultValue: String(t(item.identifier)),
+  }))}
                 </Text>
               </View>
               <View style={styles.action}>
@@ -379,7 +372,7 @@ export default function AchievementsScreen() {
                         { color: currentTheme.colors.textPrimary },
                       ]}
                     >
-                      {t("claim")}
+                      {String(t("claim"))}
                     </Text>
                   </LinearGradient>
                 ) : item.isCompleted ? (
@@ -389,7 +382,7 @@ export default function AchievementsScreen() {
                       { color: currentTheme.colors.secondary },
                     ]}
                   >
-                    {t("unlocked")}
+                    {String(t("unlocked"))}
                   </Text>
                 ) : (
                   <LinearGradient
@@ -405,7 +398,7 @@ export default function AchievementsScreen() {
                         { color: currentTheme.colors.textPrimary },
                       ]}
                     >
-                      {t("inProgress")}
+                      {String(t("inProgress"))}
                     </Text>
                   </LinearGradient>
                 )}
@@ -441,7 +434,7 @@ export default function AchievementsScreen() {
               { color: currentTheme.colors.textPrimary },
             ]}
           >
-            {t("loading")}
+            {String(t("loading"))}
           </Text>
         </LinearGradient>
       </SafeAreaView>
@@ -479,7 +472,7 @@ export default function AchievementsScreen() {
       />
 
       <CustomHeader
-        title={t("yourAchievements")}
+        title={String(t("yourAchievements"))}
         backgroundColor="transparent"
         useBlur={false}
         showHairline={false}
@@ -494,10 +487,10 @@ export default function AchievementsScreen() {
             accessibilityLabel={t("noAchievementsIcon")}
           />
           <Text style={[styles.emptyTitle, { color: currentTheme.colors.textPrimary }]}>
-            {t("noAchievementsYet")}
+            {String(t("noAchievementsYet"))}
           </Text>
           <Text style={[styles.emptySubtitle, { color: currentTheme.colors.textSecondary }]}>
-            {t("firstAchievementsPrompt")}
+            {String(t("firstAchievementsPrompt"))}
           </Text>
         </Animated.View>
       </View>
@@ -566,8 +559,8 @@ export default function AchievementsScreen() {
             />
           </View>
           <Text style={[styles.progressText, { color: currentTheme.colors.secondary }]}>
-            {t("trophiesProgress", { completed: done, total })}
-          </Text>
+  {String(t("trophiesProgress", { completed: done, total }))}
+</Text>
         </View>
 
         <SectionList
