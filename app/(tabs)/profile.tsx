@@ -108,6 +108,7 @@ const bannerHeight = BANNER_HEIGHT; // ta constante
 const bannerLift = tabBarHeight + insets.bottom + normalizeSize(8); // décalage au-dessus de la tabbar
 const bottomPadding =
   (showBanners ? bannerHeight : 0) + tabBarHeight + insets.bottom + normalizeSize(90);
+const npa = (globalThis as any).__NPA__ === true;
 
   const {
     tutorialStep,
@@ -668,11 +669,11 @@ const bottomPadding =
     pointerEvents="box-none"
   >
     <BannerAd
-      unitId={adUnitIds.banner}
-      size={BannerAdSize.ANCHORED_ADAPTIVE_BANNER} // 👈 responsive auto
-      requestOptions={{ requestNonPersonalizedAdsOnly: false }}
-      onAdFailedToLoad={(err) => console.error("Échec chargement bannière:", err)}
-    />
+  unitId={adUnitIds.banner}
+  size={BannerAdSize.ANCHORED_ADAPTIVE_BANNER}
+  requestOptions={{ requestNonPersonalizedAdsOnly: npa }}
+  onAdFailedToLoad={(err) => console.error("Échec chargement bannière:", err)}
+/>
   </View>
 )}
 

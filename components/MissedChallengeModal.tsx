@@ -57,73 +57,61 @@ const MissedChallengeModal: React.FC<MissedChallengeModalProps> = ({
   const [adError, setAdError] = useState<string | null>(null);
   const earnedRef = useRef(false);
  const rewardedRef = useRef<RewardedAd | null>(null);
+// true = pubs non-personnalisées
+const npa = (globalThis as any).__NPA__ === true;
 
- useEffect(() => {
-    // si pubs désactivées -> ne pas instancier ni charger
-    if (!canShowRewarded) {
-      setAdLoaded(false);
-      setAdError(null);
-      return;
+useEffect(() => {
+  if (!canShowRewarded) {
+    setAdLoaded(false);
+    setAdError(null);
+    return;
+  }
+
+  // (re)crée l'instance si absente OU si le consentement a changé
+  if (!rewardedRef.current || (rewardedRef.current as any).__npa !== npa) {
+    const inst = RewardedAd.createForAdRequest(rewardedAdUnitId, {
+      requestNonPersonalizedAdsOnly: npa,
+    });
+    (inst as any).__npa = npa; // mémo interne
+    rewardedRef.current = inst;
+  }
+  const rewarded = rewardedRef.current!;
+
+  const unsubLoaded = rewarded.addAdEventListener(RewardedAdEventType.LOADED, () => {
+    setAdLoaded(true);
+    setAdError(null);
+  });
+  const unsubEarned = rewarded.addAdEventListener(RewardedAdEventType.EARNED_REWARD, () => {
+    earnedRef.current = true;
+  });
+  const unsubError = rewarded.addAdEventListener(AdEventType.ERROR, (error) => {
+    console.error("Erreur rewarded:", error?.message ?? error);
+    setAdLoaded(false);
+    setAdError(t("missedChallenge.adNotReady"));
+  });
+  const unsubClosed = rewarded.addAdEventListener(AdEventType.CLOSED, () => {
+    const earned = earnedRef.current;
+    earnedRef.current = false;
+    setAdLoaded(false);
+    try { rewarded.load(); } catch {}
+    if (earned) {
+      try { onWatchAd(); } catch {}
+      onClose();
+    } else {
+      setAdError(t("missedChallenge.adNotReady"));
     }
+  });
 
-    // crée/rafraîchit l'instance locale si besoin
-   if (!rewardedRef.current) {
-     rewardedRef.current = RewardedAd.createForAdRequest(rewardedAdUnitId, {
-       requestNonPersonalizedAdsOnly: true,
-      });
-    }
-    const rewarded = rewardedRef.current;
+  try { rewarded.load(); } catch {}
 
-    const unsubLoaded = rewarded.addAdEventListener(
-      RewardedAdEventType.LOADED,
-      () => {
-        setAdLoaded(true);
-        setAdError(null);
-      }
-    );
-    const unsubEarned = rewarded.addAdEventListener(
-      RewardedAdEventType.EARNED_REWARD,
-      () => {
-        // on ne close pas ici (iOS/Android ordre différent)
-        earnedRef.current = true;
-      }
-    );
-    const unsubError = rewarded.addAdEventListener(
-      AdEventType.ERROR,
-      (error) => {
-        console.error("Erreur rewarded:", error?.message ?? error);
-        setAdLoaded(false);
-        setAdError(t("missedChallenge.adNotReady"));
-      }
-    );
-    const unsubClosed = rewarded.addAdEventListener(
-      AdEventType.CLOSED,
-      () => {
-        const earned = earnedRef.current;
-        earnedRef.current = false;
-        setAdLoaded(false);
-        // recharge pour la prochaine fois (si modal reste ouverte)
-        try { rewarded.load(); } catch {}
-        if (earned) {
-          // ✅ on crédite/couvre la logique via prop
-          try { onWatchAd(); } catch {}
-          onClose();
-        } else {
-          // pas de reward gagné
-          setAdError(t("missedChallenge.adNotReady"));
-        }
-      }
-   );
-    // charge au montage + à chaque ouverture
-   try { rewarded.load(); } catch {}
+  return () => {
+    unsubLoaded();
+    unsubEarned();
+    unsubError();
+    unsubClosed();
+  };
+}, [canShowRewarded, rewardedAdUnitId, t, onWatchAd, onClose, visible, npa]); // 👈 ajoute npa
 
-    return () => {
-      unsubLoaded();
-      unsubEarned();
-      unsubError();
-      unsubClosed();
-    };
-  }, [canShowRewarded, rewardedAdUnitId, t, onWatchAd, onClose, visible]);
 
   const handleWatchAd = () => {
     if (!canShowRewarded) {
@@ -209,10 +197,11 @@ const MissedChallengeModal: React.FC<MissedChallengeModalProps> = ({
             </View>
             <View style={styles.optionsContainer}>
               <TouchableOpacity
-                style={styles.optionButton}
-                onPress={handleReset}
-                activeOpacity={0.8}
-              >
+  style={[styles.optionButton, !canShowRewarded && { opacity: 0.5 }]}
+  onPress={handleWatchAd}
+  activeOpacity={0.8}
+  disabled={!canShowRewarded}   // 👈 enlève la dépendance à adLoaded
+>
                 <LinearGradient
                   colors={["#FF6200", "#FF8C00"]}
                   style={styles.optionGradient}

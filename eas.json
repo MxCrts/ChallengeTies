@@ -9,7 +9,7 @@
       "developmentClient": true,
       "distribution": "internal",
       "android": { "buildType": "apk" },
-      "ios": { "simulator": true }
+      "ios": { "simulator": false }
     },
     "preview": {
       "distribution": "internal",

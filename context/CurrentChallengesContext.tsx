@@ -104,6 +104,7 @@ const rewardedRef = useRef<RewardedAd | null>(null);
 
 const interstitialAdUnitId = adUnitIds.interstitial;
 const rewardedAdUnitId = adUnitIds.rewarded;
+const npa = (globalThis as any).__NPA__ === true; // true => pubs non personnalisées
 
 
   const [modalVisible, setModalVisible] = useState(false);
@@ -140,8 +141,8 @@ useEffect(() => {
 
   // (Re)création contrôlée
   const ad = InterstitialAd.createForAdRequest(interstitialAdUnitId, {
-    requestNonPersonalizedAdsOnly: true,
-  });
+  requestNonPersonalizedAdsOnly: npa,
+});
   interstitialRef.current = ad;
 
   const onLoaded = ad.addAdEventListener(AdEventType.LOADED, () => {
@@ -665,23 +666,9 @@ const showRewardedAndWait = async () => {
 };
 
 const handleWatchAd = async () => {
+  // La REWARDED a déjà été vue et validée par MissedChallengeModal.
   if (!selectedChallenge) return;
-  const canShowRewarded = (showRewardedAds ?? showInterstitials);
-  if (!canShowRewarded) {
-    Alert.alert(t("info"), t("adsDisabledForYourAccount"));
-    return;
-  }
 
-  try {
-    await showRewardedAndWait(); // ⬅️ attend la récompense réelle
-  } catch (e: any) {
-    console.warn("Rewarded not granted:", e?.message ?? e);
-    Alert.alert(t("error"), t("adNotAvailableTryLater"));
-    return;
-  }
-
-  // ✅ À partir d’ici, on exécute TON flux d’origine (identique),
-  //     car la récompense a bien été obtenue.
   const { id, selectedDays } = selectedChallenge;
   const userId = auth.currentUser?.uid;
   if (!userId) return;
@@ -695,71 +682,50 @@ const handleWatchAd = async () => {
     if (!userSnap.exists()) return;
 
     const userData = userSnap.data();
-    const currentChallengesArray: CurrentChallenge[] = Array.isArray(userData.CurrentChallenges)
-      ? userData.CurrentChallenges
-      : [];
-
-    const challengeIndex = currentChallengesArray.findIndex((ch) => ch.uniqueKey === uniqueKey);
-    if (challengeIndex === -1) {
-      console.log("Challenge non trouvé pour watchAd :", uniqueKey);
-      return;
-    }
+    const arr: CurrentChallenge[] = Array.isArray(userData.CurrentChallenges) ? userData.CurrentChallenges : [];
+    const index = arr.findIndex((ch) => ch.uniqueKey === uniqueKey);
+    if (index === -1) return;
 
     const updated = {
-      ...currentChallengesArray[challengeIndex],
-      streak: (currentChallengesArray[challengeIndex].streak || 0) + 1,
-      completedDays: (currentChallengesArray[challengeIndex].completedDays || 0) + 1,
-      completionDates: [
-        ...(currentChallengesArray[challengeIndex].completionDates || []),
-        today,
-      ],
+      ...arr[index],
+      streak: (arr[index].streak || 0) + 1,
+      completedDays: (arr[index].completedDays || 0) + 1,
+      completionDates: [ ...(arr[index].completionDates || []), today ],
       lastMarkedDate: today,
     };
 
-    const updatedArray = currentChallengesArray.map((ch, i) =>
-      i === challengeIndex ? updated : ch
-    );
-
-    await updateDoc(userRef, { CurrentChallenges: updatedArray });
-    setCurrentChallenges(updatedArray);
+    const next = arr.map((ch, i) => (i === index ? updated : ch));
+    await updateDoc(userRef, { CurrentChallenges: next });
+    setCurrentChallenges(next);
     Alert.alert(t("adWatchedTitle"), t("adWatchedMessage"));
     setModalVisible(false);
     await checkForAchievements(userId);
 
-    // 🔁 Sync duo (inchangé)
+    // Duo sync (identique à avant)
     if (updated.duo && updated.duoPartnerId) {
       const partnerRef = doc(db, "users", updated.duoPartnerId);
       const partnerSnap = await getDoc(partnerRef);
       if (partnerSnap.exists()) {
-        const partnerData = partnerSnap.data();
-        const partnerChallenges: CurrentChallenge[] = Array.isArray(partnerData.CurrentChallenges)
-          ? partnerData.CurrentChallenges
-          : [];
-
-        const partnerIndex = partnerChallenges.findIndex((ch) => ch.uniqueKey === uniqueKey);
-        if (partnerIndex !== -1) {
-          const updatedPartner = {
-            ...partnerChallenges[partnerIndex],
+        const pData = partnerSnap.data();
+        const pArr: CurrentChallenge[] = Array.isArray(pData.CurrentChallenges) ? pData.CurrentChallenges : [];
+        const pIdx = pArr.findIndex((ch) => ch.uniqueKey === uniqueKey);
+        if (pIdx !== -1) {
+          const pUpd = {
+            ...pArr[pIdx],
             lastMarkedDate: today,
-            completionDates: [
-              ...(partnerChallenges[partnerIndex].completionDates || []),
-              today,
-            ],
+            completionDates: [ ...(pArr[pIdx].completionDates || []), today ],
           };
-
-          const updatedPartnerArray = partnerChallenges.map((ch, i) =>
-            i === partnerIndex ? updatedPartner : ch
-          );
-
-          await updateDoc(partnerRef, { CurrentChallenges: updatedPartnerArray });
+          const pNext = pArr.map((ch, i) => (i === pIdx ? pUpd : ch));
+          await updateDoc(partnerRef, { CurrentChallenges: pNext });
         }
       }
     }
-  } catch (error) {
-    console.error("❌ Erreur lors de watchAd :", (error as any).message);
+  } catch (error: any) {
+    console.error("❌ Erreur handleWatchAd:", error.message);
     Alert.alert(t("error"), t("unableToMarkAfterAd"));
   }
 };
+
 
 
 const handleUseTrophies = async () => {

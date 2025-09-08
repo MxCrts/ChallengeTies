@@ -72,6 +72,8 @@ const TrophyModal: React.FC<TrophyModalProps> = ({
   const opacityAnim = useRef(new Animated.Value(0)).current;
   const textTranslateY = useRef(new Animated.Value(30)).current;
   const buttonsTranslateY = useRef(new Animated.Value(30)).current;
+// true => pubs non personnalisées (rempli par ton écran consentement / CMP)
+const npa = (globalThis as any).__NPA__ === true;
 
   // States
   const [reward, setReward] = useState(trophiesEarned);
@@ -85,62 +87,69 @@ const TrophyModal: React.FC<TrophyModalProps> = ({
   const earnedRef = useRef(false);
 
   // Ad handling (gating + flux EARNED -> CLOSED)
-  useEffect(() => {
-    if (!canShowRewarded || !showTrophyModal) {
+ useEffect(() => {
+  if (!canShowRewarded || !showTrophyModal) {
+    setAdLoaded(false);
+    return;
+  }
+
+  // (re)crée l'instance si absente OU si le consentement a changé
+  if (!rewardedRef.current || (rewardedRef.current as any).__npa !== npa) {
+    const unitId = __DEV__ ? TestIds.REWARDED : adUnitIds.rewarded;
+    const inst = RewardedAd.createForAdRequest(unitId, {
+      requestNonPersonalizedAdsOnly: npa, // 👈 respecte le consentement
+    });
+    (inst as any).__npa = npa; // mémo local pour détecter un changement ultérieur
+    rewardedRef.current = inst;
+  }
+  const rewarded = rewardedRef.current!;
+
+  const unsubLoaded = rewarded.addAdEventListener(
+    RewardedAdEventType.LOADED,
+    () => setAdLoaded(true)
+  );
+  const unsubEarned = rewarded.addAdEventListener(
+    RewardedAdEventType.EARNED_REWARD,
+    () => { earnedRef.current = true; }
+  );
+  const unsubError = rewarded.addAdEventListener(
+    AdEventType.ERROR,
+    (error) => {
+      console.error("❌ Rewarded error:", error?.message ?? error);
       setAdLoaded(false);
-      return;
     }
-    if (!rewardedRef.current) {
-      const unitId = __DEV__ ? TestIds.REWARDED : adUnitIds.rewarded;
-      rewardedRef.current = RewardedAd.createForAdRequest(unitId, {
-        requestNonPersonalizedAdsOnly: true,
-      });
+  );
+  const unsubClosed = rewarded.addAdEventListener(
+    AdEventType.CLOSED,
+    () => {
+      const earned = earnedRef.current;
+      earnedRef.current = false;
+      setAdLoaded(false);
+      try { rewarded.load(); } catch {}
+
+      if (earned) {
+        setAdWatched(true);
+        activateDoubleReward();
+        const base = trophiesEarned || Math.round(5 * (selectedDays / 7));
+        const doubled = base * 2;
+        setReward(doubled);
+        setMessage(t("trophyModal.doubleMessage", { count: doubled }));
+      } else {
+        setMessage(t("trophyModal.adNotReady"));
+      }
     }
-    const rewarded = rewardedRef.current;
+  );
 
-    const unsubLoaded = rewarded.addAdEventListener(
-      RewardedAdEventType.LOADED,
-      () => setAdLoaded(true)
-    );
-    const unsubEarned = rewarded.addAdEventListener(
-      RewardedAdEventType.EARNED_REWARD,
-      () => { earnedRef.current = true; }
-    );
-    const unsubError = rewarded.addAdEventListener(
-      AdEventType.ERROR,
-      (error) => {
-        console.error("❌ Rewarded error:", error?.message ?? error);
-        setAdLoaded(false);
-      }
-    );
-    const unsubClosed = rewarded.addAdEventListener(
-      AdEventType.CLOSED,
-      () => {
-        const earned = earnedRef.current;
-        earnedRef.current = false;
-        setAdLoaded(false);
-        try { rewarded.load(); } catch {}
-        if (earned) {
-          // ✅ récompenser *après* fermeture seulement si reward gagné
-          setAdWatched(true);
-          activateDoubleReward();
-          const doubled = (trophiesEarned || Math.round(5 * (selectedDays / 7))) * 2;
-          setReward(doubled);
-          setMessage(t("trophyModal.doubleMessage", { count: doubled }));
-        } else {
-          setMessage(t("trophyModal.adNotReady"));
-        }
-      }
-    );
+  try { rewarded.load(); } catch {}
 
-    try { rewarded.load(); } catch {}
-    return () => {
-      unsubLoaded();
-      unsubEarned();
-      unsubError();
-      unsubClosed();
-    };
-  }, [canShowRewarded, showTrophyModal, activateDoubleReward, trophiesEarned, selectedDays, t]);
+  return () => {
+    unsubLoaded();
+    unsubEarned();
+    unsubError();
+    unsubClosed();
+  };
+}, [canShowRewarded, showTrophyModal, activateDoubleReward, trophiesEarned, selectedDays, t, npa]);
+
 
   // Animation on modal show/hide
   useEffect(() => {
@@ -427,10 +436,10 @@ const TrophyModal: React.FC<TrophyModalProps> = ({
               </Text>
 
               {achievementEarned && (
-                <Text style={styles.achievementText}>
-                  🏆 {t(`achievements.${achievementEarned}`)}
-                </Text>
-              )}
+  <Text style={styles.achievementText}>
+    🏆 {t(`achievements.${achievementEarned}`, { defaultValue: t(achievementEarned) })}
+  </Text>
+)}
 
               {!!message && <Text style={styles.message}>{message}</Text>}
             </Animated.View>
@@ -450,16 +459,12 @@ const TrophyModal: React.FC<TrophyModalProps> = ({
               />
               {!adWatched && (
                 <GradientButton
-                  onPress={handleAdPress}
-                  text={t("trophyModal.doubleReward")}
-                  iconName="videocam-outline"
-                  gradientColors={
-                    [
-                      currentTheme.colors.primary,
-                      currentTheme.colors.secondary,
-                    ] as const
-                  }
-                />
+  onPress={handleAdPress}
+  text={t("trophyModal.doubleReward")}
+  iconName="videocam-outline"
+  gradientColors={[currentTheme.colors.primary, currentTheme.colors.secondary]}
+  // optionnel : wrapper côté appelant pour ajuster l’opacité si !adLoaded
+/>
               )}
             </Animated.View>
           </LinearGradient>

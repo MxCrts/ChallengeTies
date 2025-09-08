@@ -12,6 +12,7 @@ import { BlurView } from "expo-blur";
 import { useTheme } from "../context/ThemeContext";
 import designSystem from "../theme/designSystem";
 import BackButton from "./BackButton";
+import { useSafeAreaInsets } from "react-native-safe-area-context";
 
 interface CustomHeaderProps {
   title: string;
@@ -92,6 +93,7 @@ export default function CustomHeader({
   blurIntensity = 30,
 }: CustomHeaderProps) {
   const { theme } = useTheme();
+  const insets = useSafeAreaInsets();
   const isDarkMode = theme === "dark";
   const currentTheme = isDarkMode ? designSystem.darkTheme : designSystem.lightTheme;
 
@@ -107,7 +109,10 @@ export default function CustomHeader({
         styles.headerContainer,
         {
           backgroundColor: backgroundColor ?? "transparent",
-          paddingTop: Platform.OS === "android" ? StatusBar.currentHeight ?? SPACING : SPACING,
+          paddingTop:
+            Platform.OS === "android"
+              ? (StatusBar.currentHeight ?? SPACING)
+              : insets.top + Math.round(SPACING * 0.5),
         },
         containerStyle,
       ]}
@@ -140,6 +145,8 @@ export default function CustomHeader({
               {
                 backgroundColor: "transparent",
                 borderColor: "transparent",
+                marginTop: Platform.OS === "ios" ? 12 : 0, // ⬅️ décale franchement vers le bas sur iOS
+                alignSelf: "flex-start",
               },
             ]}
           >
@@ -148,7 +155,7 @@ export default function CustomHeader({
               size={24}
               accessibilityLabel="Retour"
               accessibilityHint="Revenir à l'écran précédent"
-              hitSlop={{ top: 10, right: 10, bottom: 10, left: 10 }}
+              hitSlop={{ top: 20, right: 20, bottom: 20, left: 20 }}
             />
           </View>
         ) : (

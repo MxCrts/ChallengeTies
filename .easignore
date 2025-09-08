@@ -1,0 +1,59 @@
+# OS/editor junk
+.DS_Store
+Thumbs.db
+.idea/
+.vscode/
+
+# Git
+.git/
+.gitignore
+
+# Expo/EAS caches & web output
+.expo/
+.expo-shared/
+dist/
+web-build/
+
+# Native projects (generated on EAS for managed workflow)
+ios/
+android/
+
+# Build artifacts & caches
+**/build/
+**/.gradle/
+**/.expo/
+**/.cache/
+**/Pods/
+**/*.keystore
+**/*.jks
+
+# Tests/docs/etc.
+__tests__/
+coverage/
+docs/
+
+# Design/marketing/source assets not used by the app at runtime
+screenshots/
+screens/
+design/
+art/
+assets/source/
+**/*.psd
+**/*.ai
+**/*.sketch
+**/*.fig
+
+# native intermediates that balloon the archive
+**/android/build/
+**/ios/build/
+**/node_modules/**/android/build/
+**/node_modules/**/ios/build/
+**/node_modules/**/.cxx/
+**/node_modules/**/build/
+**/node_modules/**/Examples/
+**/node_modules/**/example/
+**/node_modules/**/samples/
+**/node_modules/**/__tests__/
+**/node_modules/**/docs/
+**/node_modules/**/test/
+**/node_modules/**/tests/

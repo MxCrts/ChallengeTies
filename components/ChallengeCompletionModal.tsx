@@ -52,10 +52,8 @@ const motivationalPhrases = [
 ];
 
 const baseReward = 5;
-const rewardedAdUnitId = __DEV__ ? TestIds.REWARDED : adUnitIds.rewarded;
-const rewarded = RewardedAd.createForAdRequest(rewardedAdUnitId, {
-  requestNonPersonalizedAdsOnly: true,
-});
+
+
 
 const getDynamicStyles = (currentTheme: Theme, isDarkMode: boolean) => ({
   fullOverlay: {
@@ -128,13 +126,17 @@ export default function ChallengeCompletionModal({
     ? designSystem.darkTheme
     : designSystem.lightTheme;
   const dynamicStyles = getDynamicStyles(currentTheme, isDarkMode);
+const npa = (globalThis as any).__NPA__ === true;
 
   // --- Toast state
   const [toastText, setToastText] = useState<string>("");
   const [toastVisible, setToastVisible] = useState(false);
   const toastOpacity = useRef(new Animated.Value(0)).current;
   const toastTranslate = useRef(new Animated.Value(30)).current;
-
+const rewardedAdUnitId = __DEV__ ? TestIds.REWARDED : adUnitIds.rewarded;
+const rewarded = RewardedAd.createForAdRequest(rewardedAdUnitId, {
+  requestNonPersonalizedAdsOnly: npa,
+});
   // --- Busy guard
   const [busy, setBusy] = useState(false);
 

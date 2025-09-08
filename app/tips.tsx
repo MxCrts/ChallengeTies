@@ -129,6 +129,7 @@ export default function Conseils() {
   const isDarkMode = theme === "dark";
   const currentTheme: Theme = isDarkMode ? designSystem.darkTheme : designSystem.lightTheme;
 const { showBanners } = useAdsVisibility();
+const npa = (globalThis as any).__NPA__ === true;
 const bottomPadding = showBanners ? BANNER_HEIGHT + normalizeSize(90) : normalizeSize(90);
   const toggleTip = (id: string) => setExpandedTip(expandedTip === id ? null : id);
 
@@ -288,13 +289,14 @@ const bottomPadding = showBanners ? BANNER_HEIGHT + normalizeSize(90) : normaliz
         {showBanners && (
           <View style={styles.bannerContainer}>
             <BannerAd
-              unitId={adUnitIds.banner}
-              size={BannerAdSize.BANNER}
-              requestOptions={{ requestNonPersonalizedAdsOnly: false }}
-              onAdFailedToLoad={(err) =>
-                console.error("Échec chargement bannière (Tips):", err)
-              }
-            />
+  unitId={adUnitIds.banner}
+  size={BannerAdSize.BANNER}
+  requestOptions={{ requestNonPersonalizedAdsOnly: npa }}
+  onAdFailedToLoad={(err) =>
+    console.error("Échec chargement bannière (Tips):", err)
+  }
+/>
+
           </View>
         )}
       </SafeAreaView>

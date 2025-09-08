@@ -1,4 +1,4 @@
-import React, { useEffect, useMemo, useState, useRef } from "react";
+import React, { useEffect, useMemo, useState, useRef, useCallback } from "react";
 import {
   View,
   Text,
@@ -10,7 +10,7 @@ import {
   Alert,
   Animated,
 } from "react-native";
-import { useRouter } from "expo-router";
+import { useRouter, useRootNavigationState } from "expo-router";
 import { SafeAreaView } from "react-native-safe-area-context";
 import { LinearGradient } from "expo-linear-gradient";
 import { Ionicons } from "@expo/vector-icons";
@@ -73,6 +73,23 @@ const [infoDuoVisible, setInfoDuoVisible] = useState(false);
   const [selected, setSelected] = useState<Challenge | null>(null);
   const [days, setDays] = useState<number>(DEFAULT_DAYS[0]);
   const [submitting, setSubmitting] = useState(false);
+const nav = useRootNavigationState();                 // <— clé dispo quand le Root est monté
+const pendingNavRef = useRef<null | { pathname: string; params?: any }>(null);
+
+const safeReplace = useCallback((to: { pathname: string; params?: any }) => {
+  if (nav?.key) {
+    router.replace(to);
+  } else {
+    pendingNavRef.current = to;                      // garde la nav en attente
+  }
+}, [nav?.key, router]);
+
+useEffect(() => {
+  if (nav?.key && pendingNavRef.current) {
+    router.replace(pendingNavRef.current);
+    pendingNavRef.current = null;
+  }
+}, [nav?.key, router]);
 
   // Lancement du fade-in
   useEffect(() => {
@@ -94,13 +111,6 @@ const [infoDuoVisible, setInfoDuoVisible] = useState(false);
   // L'utilisateur ferme sans envoyer => on reste sur first-pick
   setInviteModalVisible(false);
   // (aucune redirection, aucun flag 'done')
-};
-
-const handleInvitationSent = async () => {
-  // L'utilisateur a envoyé => on ferme + on va à l'index (tuto)
-  setInviteModalVisible(false);
-  await AsyncStorage.setItem("firstPickDone", "1");
-  await goToHomeWithTutorial();
 };
 
 
@@ -174,20 +184,26 @@ const handleInvitationSent = async () => {
   }, [pool]);
 
   const goToHomeWithTutorial = async () => {
-    await AsyncStorage.setItem("pendingTutorial", "1");
-    router.replace({ pathname: "/", params: { startTutorial: "1" } });
-  };
+  await AsyncStorage.setItem("pendingTutorial", "1");
+  safeReplace({ pathname: "/", params: { startTutorial: "1" } }); // <—
+};
 
-  const onSkip = async () => {
-    await AsyncStorage.setItem("firstPickSkipped", "1");
-    await goToHomeWithTutorial();
-  };
+const onSkip = async () => {
+  await AsyncStorage.setItem("firstPickSkipped", "1");
+  await goToHomeWithTutorial();
+};
 
-  const handleCloseInviteModal = async () => {
-    setInviteModalVisible(false);
-    await AsyncStorage.setItem("firstPickDone", "1");
-    await goToHomeWithTutorial(); // redirige vers index avec tuto
-  };
+  const handleInvitationSent = async () => {
+  setInviteModalVisible(false);
+  await AsyncStorage.setItem("firstPickDone", "1");
+  await goToHomeWithTutorial();
+};
+
+const handleCloseInviteModal = async () => {
+  setInviteModalVisible(false);
+  await AsyncStorage.setItem("firstPickDone", "1");
+  await goToHomeWithTutorial();
+};
 
    const onConfirm = async () => {
     if (!selected) {
@@ -217,11 +233,11 @@ description: selected.description || data?.description || "",
       };
 
       if (mode === "solo") {
-        await takeChallenge(challengeObj, days);
-        await AsyncStorage.setItem("firstPickDone", "1");
-        await goToHomeWithTutorial();
-        return;
-      }
+  await takeChallenge(challengeObj, days);
+  await AsyncStorage.setItem("firstPickDone", "1");
+  await goToHomeWithTutorial();
+  return;
+}
 
       if (mode === "duo") {
         setInfoDuoVisible(true);

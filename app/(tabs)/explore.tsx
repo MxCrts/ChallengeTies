@@ -354,6 +354,7 @@ export default function ExploreScreen() {
   const [pendingFavorites, setPendingFavorites] = useState<{
     [key: string]: boolean;
   }>({});
+const npa = (globalThis as any).__NPA__ === true;
 
   const router = useRouter();
   const { isSaved, addChallenge, removeChallenge } = useSavedChallenges();
@@ -758,11 +759,11 @@ const listBottomPadding =
     pointerEvents="auto"
   >
     <BannerAd
-      unitId={adUnitIds.banner}
-      size={BannerAdSize.ANCHORED_ADAPTIVE_BANNER}  // 👈 responsive pleine largeur
-      requestOptions={{ requestNonPersonalizedAdsOnly: false }}
-      onAdFailedToLoad={(err) => console.error("Échec chargement bannière", err)}
-    />
+  unitId={adUnitIds.banner}
+  size={BannerAdSize.ANCHORED_ADAPTIVE_BANNER}
+  requestOptions={{ requestNonPersonalizedAdsOnly: npa }}
+  onAdFailedToLoad={(err) => console.error("Échec chargement bannière", err)}
+/>
   </View>
 )}
 

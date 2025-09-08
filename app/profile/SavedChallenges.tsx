@@ -96,6 +96,7 @@ export default function SavedChallengesScreen() {
     () => (isDarkMode ? designSystem.darkTheme : designSystem.lightTheme),
     [isDarkMode]
   );
+  const npa = (globalThis as any).__NPA__ === true;
    const { showBanners } = useAdsVisibility();
    const bottomPadding = showBanners ? BANNER_HEIGHT + normalizeSize(90) : normalizeSize(90);
 
@@ -453,13 +454,14 @@ export default function SavedChallengesScreen() {
   {showBanners && (
      <View style={styles.bannerContainer}>
        <BannerAd
-         unitId={adUnitIds.banner}
-         size={BannerAdSize.BANNER}
-         requestOptions={{ requestNonPersonalizedAdsOnly: false }}
-         onAdFailedToLoad={(err) =>
-           console.error("Échec chargement bannière (SavedChallenges):", err)
-         }
-       />
+  unitId={adUnitIds.banner}
+  size={BannerAdSize.BANNER}
+  requestOptions={{ requestNonPersonalizedAdsOnly: npa }}
+  onAdFailedToLoad={(err) =>
+    console.error("Échec chargement bannière (SavedChallenges):", err)
+  }
+/>
+
      </View>
    )}
 </LinearGradient>

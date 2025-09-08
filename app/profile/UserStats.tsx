@@ -96,6 +96,8 @@ export default function UserStats() {
     () => (isDarkMode ? designSystem.darkTheme : designSystem.lightTheme),
     [isDarkMode]
   );
+  const npa = (globalThis as any).__NPA__ === true;
+
   const { showBanners } = useAdsVisibility();
   const bottomPadding = showBanners ? BANNER_HEIGHT + normalizeSize(80) : normalizeSize(80);
 
@@ -431,7 +433,7 @@ export default function UserStats() {
        <BannerAd
          unitId={adUnitIds.banner}
          size={BannerAdSize.BANNER}
-         requestOptions={{ requestNonPersonalizedAdsOnly: false }}
+         requestOptions={{ requestNonPersonalizedAdsOnly: npa }}
          onAdFailedToLoad={(err) =>
            console.error("Échec chargement bannière (UserStats):", err)
          }

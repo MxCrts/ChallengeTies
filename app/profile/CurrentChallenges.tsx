@@ -101,6 +101,8 @@ export default function CurrentChallenges() {
   const confettiRef = useRef<ConfettiCannon>(null);
   const swipeableRefs = useRef<(Swipeable | null)[]>([]);
   const { showBanners } = useAdsVisibility();
+  const npa = (globalThis as any).__NPA__ === true;
+
 const bottomPadding = showBanners ? BANNER_HEIGHT + normalizeSize(90) : normalizeSize(90);
   const { theme } = useTheme();
   const isDarkMode = theme === "dark";
@@ -551,13 +553,14 @@ const bottomPadding = showBanners ? BANNER_HEIGHT + normalizeSize(90) : normaliz
   {showBanners && (
      <View style={styles.bannerContainer}>
        <BannerAd
-         unitId={adUnitIds.banner}
-         size={BannerAdSize.BANNER}
-         requestOptions={{ requestNonPersonalizedAdsOnly: false }}
-         onAdFailedToLoad={(err) =>
-           console.error("Échec chargement bannière (CurrentChallenges):", err)
-         }
-       />
+  unitId={adUnitIds.banner}
+  size={BannerAdSize.BANNER}
+  requestOptions={{ requestNonPersonalizedAdsOnly: npa }}
+  onAdFailedToLoad={(err) =>
+    console.error("Échec chargement bannière (CurrentChallenges):", err)
+  }
+/>
+
      </View>
    )}
 </LinearGradient>

@@ -195,10 +195,6 @@ const TabsLayout = () => {
   const iconSize = isTablet ? n(26) : n(22);
   const showLabels = width >= 360;
 
-  // Full-bleed height (inclut le safe area)
-  const barHeight = (isTablet ? n(70) : n(60)) + Math.max(insets.bottom, n(12));
-  const padBottom = Math.max(insets.bottom, n(10));
-
   useEffect(() => {
     const uid = auth.currentUser?.uid;
     if (!uid) return;
@@ -254,13 +250,16 @@ const TabsLayout = () => {
     [n]
   );
 
+const barHeight = (isTablet ? n(70) : n(60)) + Math.max(insets.bottom, n(12));
+ const padBottom  = Math.max(insets.bottom, n(10));
+
   const tabBarStyleBase = {
   position: "absolute" as const,
   left: 0,
   right: 0,
   bottom: 0,
-  height: (isTablet ? n(70) : n(60)) + Math.max(insets.bottom, n(12)), // = barHeight
-  paddingBottom: Math.max(insets.bottom, n(10)),                        // = padBottom
+  height: barHeight,
+  paddingBottom: padBottom,                   
   paddingTop: n(6),
   borderTopWidth: 0,
   borderTopLeftRadius: n(18),
@@ -283,11 +282,11 @@ const TabsLayout = () => {
 
 const tabBarStyleHidden = {
   ...tabBarStyleBase,
+  bottom: -barHeight,   // 👈 la barre est placée sous l’écran
   height: 0,
   paddingTop: 0,
   paddingBottom: 0,
   opacity: 0,
-  transform: [{ translateY: tabBarStyleBase.height as number }], // sort de l’écran
   pointerEvents: "none" as const,
 };
 
@@ -309,8 +308,8 @@ const tabBarItemStyleHidden = {
           tabBarLabelStyle: labelStyle,
           overflow: "visible",
    tabBarItemStyle: isTutorialActive ? tabBarItemStyleHidden : { paddingVertical: n(4) },
-   tabBarStyle: isTutorialActive ? tabBarStyleHidden : tabBarStyleBase,
-   tabBarBackground: isTutorialActive ? undefined : () => tabBarBackground,
+tabBarStyle:     isTutorialActive ? tabBarStyleHidden     : tabBarStyleBase,
+tabBarBackground: isTutorialActive ? undefined : () => tabBarBackground,
 
           // Ripple discret Android
           tabBarButton: (props) => (

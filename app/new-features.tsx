@@ -109,6 +109,7 @@ export default function NewFeatures() {
     mins: 0,
     secs: 0,
   });
+  const npa = (globalThis as any).__NPA__ === true;
   const [user, setUser] = useState<User | null>(null);
   const [showExplanationModal, setShowExplanationModal] = useState(false);
   const [selectedFeature, setSelectedFeature] = useState<Feature | null>(null);
@@ -157,8 +158,9 @@ export default function NewFeatures() {
     }
 
     const ad = InterstitialAd.createForAdRequest(interstitialAdUnitId, {
-      requestNonPersonalizedAdsOnly: false,
-    });
+  requestNonPersonalizedAdsOnly: npa,
+});
+
     interstitialRef.current = ad;
 
     const loadedSub = ad.addAdEventListener(AdEventType.LOADED, () => {

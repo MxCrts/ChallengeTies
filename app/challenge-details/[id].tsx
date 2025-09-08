@@ -77,8 +77,7 @@ import {
 } from "react-native-google-mobile-ads";
 import * as Linking from "expo-linking";
 import SendInvitationModal from "@/components/SendInvitationModal";
-
-
+import * as Localization from "expo-localization";
 
 const { width: SCREEN_WIDTH, height: SCREEN_HEIGHT } = Dimensions.get("window");
 const SPACING = 15;
@@ -184,6 +183,7 @@ export default function ChallengeDetails() {
   const { t, i18n } = useTranslation();
   const { showBanners } = useAdsVisibility();
  const bottomInset = showBanners ? BANNER_HEIGHT + SPACING * 2 : SPACING * 2;
+const npa = (globalThis as any).__NPA__ === true;
 
   const router = useRouter();
     const pct = (num = 0, den = 0) => (den > 0 ? Math.min(100, Math.max(0, Math.round((num / den) * 100))) : 0);
@@ -1157,14 +1157,42 @@ const handleNudgePartner = useCallback(async () => {
     );
   }, [id, challengeTaken , routeTitle, router]);
 
+  // Langue sûre pour le partage (Jamais de split sur undefined)
+const getShareLang = (i18nLang?: string) => {
+  // 1) i18n si dispo
+  if (typeof i18nLang === "string" && i18nLang.length > 0) {
+    const l = i18nLang.split(/[-_]/)[0]?.toLowerCase();
+    if (l) return l;
+  }
+  // 2) Expo Localization (SDK récents)
+  try {
+    const locs = (Localization as any)?.getLocales?.();
+    if (Array.isArray(locs) && locs[0]?.languageTag) {
+      const l = String(locs[0].languageTag).split(/[-_]/)[0]?.toLowerCase();
+      if (l) return l;
+    }
+  } catch {}
+  // 3) Expo Localization (SDK anciens)
+  try {
+    const tag = (Localization as any)?.locale;
+    if (typeof tag === "string" && tag.length > 0) {
+      const l = tag.split(/[-_]/)[0]?.toLowerCase();
+      if (l) return l;
+    }
+  } catch {}
+  // 4) Web fallback éventuel
+  const navLang = (globalThis as any)?.navigator?.language;
+  if (typeof navLang === "string" && navLang.length > 0) {
+    const l = navLang.split(/[-_]/)[0]?.toLowerCase();
+    if (l) return l;
+  }
+  // 5) Défaut
+  return "en";
+};
+
 const handleShareChallenge = useCallback(async () => {
   try {
-    const langRaw =
-      (i18n?.language as string | undefined) ??
-      (globalThis as any)?.Localization?.locale ??
-      "fr";
-    const shareLang = String(langRaw).split("-")[0].toLowerCase();
-
+    const shareLang = getShareLang(i18n?.language as string | undefined);
     // ⚠️ Utiliser la Cloud Function (pas le domaine web.app)
     const base = "https://europe-west1-challengeme-d7fef.cloudfunctions.net/dl";
 
@@ -1172,13 +1200,10 @@ const handleShareChallenge = useCallback(async () => {
       id,
       title: routeTitle,
       shareLang,
-      v: String(Date.now()), // anti-cache scrapers
+      v: String(Date.now()),
     });
 
-    // 👉 Lien final court et propre
     const appLink = `${base}?${params.toString()}`;
-
-    // Message texte uniquement (PAS d’URL d’image ici)
     const message = `${t("challengeDetails.shareMessage", { title: routeTitle })}\n${appLink}`;
 
     const result = await Share.share(
@@ -1257,7 +1282,7 @@ const handleInviteFriend = useCallback(() => {
   style={{ flex: 1, backgroundColor: 'transparent' }}
   edges={['top','bottom']}
 >
-      <StatusBar  translucent backgroundColor="transparent" />
+      <StatusBar hidden translucent backgroundColor="transparent" />
       <ConfettiCannon
         ref={confettiRef}
         count={150}
@@ -2042,7 +2067,7 @@ const handleInviteFriend = useCallback(() => {
     <BannerAd
   unitId={bannerAdUnitId}
   size={BannerAdSize.BANNER}
-  requestOptions={{ requestNonPersonalizedAdsOnly: false }}
+  requestOptions={{ requestNonPersonalizedAdsOnly: npa }}
   onAdFailedToLoad={(err) =>
     console.error("Échec chargement bannière", err)
   }

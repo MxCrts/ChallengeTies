@@ -28,37 +28,36 @@ const resources = {
 
 const SUPPORTED_LANGS = ["en", "fr", "es", "de", "zh", "ar", "hi", "ru", "it"] as const;
 
-// Détection robuste (Expo nouveaux/anciens SDK, web)
-const getSupportedLanguage = (forceLocale?: string): string => {
-  let detected: string | undefined = forceLocale;
-
-  if (!detected) {
-    try {
-      if (typeof (Localization as any)?.getLocales === "function") {
-        const loc = (Localization as any).getLocales();
-        if (Array.isArray(loc) && loc[0]?.languageTag) {
-          detected = String(loc[0].languageTag); // ex: "fr-FR" ou "pt_BR"
-        }
-      }
-      if (!detected && (Localization as any)?.locale) {
-        detected = String((Localization as any).locale); // ex: "fr-FR"
-      }
-    } catch {
-      // ignore
+// ===== Détection robuste du locale (SDK 53+, fallback anciens) =====
+const resolveSystemTag = (): string => {
+  try {
+    const getLocales = (Localization as any)?.getLocales;
+    if (typeof getLocales === "function") {
+      const arr = getLocales();
+      const tag = arr?.[0]?.languageTag; // e.g. "fr-FR"
+      if (tag) return String(tag);
     }
-  }
-
-  const tag = (detected || "en").toString();
-  const lang = (tag.split(/[-_]/)[0] || "en").toLowerCase();
-  return (SUPPORTED_LANGS as readonly string[]).includes(lang) ? lang : "en";
+    const legacy = (Localization as any)?.locale; // anciens SDK
+    if (legacy) return String(legacy);            // e.g. "fr-FR"
+  } catch {}
+  return "en";
 };
 
-const deviceLanguage = getSupportedLanguage();
+const pickSupported = (tag: string): string => {
+  // toujours forcer en string AVANT split:
+  const lang = String(tag).split(/[-_]/)[0]?.toLowerCase() || "en";
+  const SUPPORTED = ["en","fr","es","de","zh","ar","hi","ru","it"] as const;
+  return (SUPPORTED as readonly string[]).includes(lang) ? lang : "en";
+};
+
+const deviceLanguage = pickSupported(resolveSystemTag());
 
 /** Post-processor: garantit qu'on renvoie toujours une string
  * - Évite l'erreur iOS "Text strings must be rendered within a <Text> component"
  *   si jamais une clé renvoie un array/objet/null par accident.
  */
+
+// (optionnel) post-processor pour garantir une string
 i18n.use({
   type: "postProcessor",
   name: "ensureString",
@@ -66,29 +65,25 @@ i18n.use({
     if (typeof value === "string") return value;
     if (Array.isArray(value)) return value.join("\n");
     if (value == null) return "";
-    try {
-      return String(value);
-    } catch {
-      return "";
-    }
+    try { return String(value); } catch { return ""; }
   },
 });
 
-i18n.use(initReactI18next).init({
-  resources,
-  lng: deviceLanguage,
-  fallbackLng: "en",
-  supportedLngs: SUPPORTED_LANGS as unknown as string[],
-  nonExplicitSupportedLngs: true,
+i18n
+  .use(initReactI18next)
+  .init({
+    resources,
+    lng: deviceLanguage,
+    fallbackLng: "en",
+    supportedLngs: ["en","fr","es","de","zh","ar","hi","ru","it"],
+    nonExplicitSupportedLngs: true,
+    returnObjects: false,
+    returnNull: false,
+    joinArrays: "\n",
+    postProcess: ["ensureString"],
+    interpolation: { escapeValue: false },
+    react: { useSuspense: false },
+  });
 
-  // 🔒 Important en React Native / iOS
-  returnObjects: false,        // pas d'objets dans <Text>
-  returnNull: false,           // évite null dans <Text>
-  joinArrays: "\n",            // si un tableau passe, on le joint proprement
-  postProcess: ["ensureString"],
-
-  interpolation: { escapeValue: false },
-  react: { useSuspense: false },
-});
 
 export default i18n;

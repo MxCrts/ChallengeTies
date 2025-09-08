@@ -157,6 +157,8 @@ export default function UserInfo() {
   const [interests, setInterests] = useState("");
   const [isLoading, setIsLoading] = useState(false);
   const { theme } = useTheme();
+  const npa = (globalThis as any).__NPA__ === true;
+
   const isDarkMode = theme === "dark";
   const currentTheme: Theme = useMemo(
     () => (isDarkMode ? designSystem.darkTheme : designSystem.lightTheme),
@@ -734,7 +736,7 @@ if (cleanInterests && cleanInterests !== safeTrim(user.interests)) {
      <BannerAd
        unitId={adUnitIds.banner}
        size={BannerAdSize.BANNER}
-       requestOptions={{ requestNonPersonalizedAdsOnly: false }}
+       requestOptions={{ requestNonPersonalizedAdsOnly: npa }}
        onAdFailedToLoad={(err) =>
          console.error("Échec chargement bannière (UserInfo):", err)
        }

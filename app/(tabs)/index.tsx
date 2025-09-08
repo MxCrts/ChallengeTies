@@ -224,6 +224,7 @@ export default function HomeScreen() {
   const [user, setUser] = useState<User | null>(null);
   const [isMounted, setIsMounted] = useState(false);
   const { theme } = useTheme();
+  
 const scrollX = useSharedValue(0);
   const [layoutKey, setLayoutKey] = useState(0);
   const { setLanguage } = useLanguage();
@@ -239,7 +240,7 @@ const { showBanners } = useAdsVisibility();
 const params = useLocalSearchParams<{ startTutorial?: string }>();
 const [allChallenges, setAllChallenges] = useState<Challenge[]>([]);
 const [dailyFive, setDailyFive] = useState<Challenge[]>([]);
-
+const npa = (globalThis as any).__NPA__ === true;
   const {
     tutorialStep,
     isTutorialActive,
@@ -823,10 +824,10 @@ const pressed = useSharedValue<number>(0);
     pointerEvents="box-none"
   >
     <BannerAd
-      unitId={adUnitIds.banner}
-      size={BannerAdSize.ANCHORED_ADAPTIVE_BANNER}  // 👈 auto responsive
-      requestOptions={{ requestNonPersonalizedAdsOnly: false }}
-    />
+  unitId={adUnitIds.banner}
+  size={BannerAdSize.ANCHORED_ADAPTIVE_BANNER}
+  requestOptions={{ requestNonPersonalizedAdsOnly: npa }}
+/>
   </View>
 )}
         {isTutorialActive && (tutorialStep === 0 || tutorialStep === 1) && (

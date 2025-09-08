@@ -78,6 +78,7 @@ interface CompletedChallenge {
 export default function CompletedChallenges() {
   const { t, i18n } = useTranslation();
   const router = useRouter();
+  const npa = (globalThis as any).__NPA__ === true;
   const { theme } = useTheme();
   const isDarkMode = theme === "dark";
   const currentTheme: Theme = isDarkMode
@@ -386,13 +387,14 @@ category: String(
       {showBanners && (
    <View style={styles.bannerContainer}>
      <BannerAd
-       unitId={adUnitIds.banner}
-       size={BannerAdSize.BANNER}
-       requestOptions={{ requestNonPersonalizedAdsOnly: false }}
-       onAdFailedToLoad={(err) =>
-         console.error("Échec chargement bannière (CompletedChallenges empty):", err)
-       }
-     />
+  unitId={adUnitIds.banner}
+  size={BannerAdSize.BANNER}
+  requestOptions={{ requestNonPersonalizedAdsOnly: npa }}
+  onAdFailedToLoad={(err) =>
+    console.error("Échec chargement bannière (CompletedChallenges ...):", err)
+  }
+/>
+
    </View>
  )}
     </LinearGradient>
@@ -537,13 +539,14 @@ category: String(
   {showBanners && (
    <View style={styles.bannerContainer}>
      <BannerAd
-       unitId={adUnitIds.banner}
-       size={BannerAdSize.BANNER}
-       requestOptions={{ requestNonPersonalizedAdsOnly: false }}
-       onAdFailedToLoad={(err) =>
-         console.error("Échec chargement bannière (CompletedChallenges):", err)
-       }
-     />
+  unitId={adUnitIds.banner}
+  size={BannerAdSize.BANNER}
+  requestOptions={{ requestNonPersonalizedAdsOnly: npa }}
+  onAdFailedToLoad={(err) =>
+    console.error("Échec chargement bannière (CompletedChallenges ...):", err)
+  }
+/>
+
    </View>
  )}
 </LinearGradient>

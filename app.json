@@ -37,6 +37,8 @@
         "NSPhotoLibraryUsageDescription": "Nous avons besoin d'accéder à votre photothèque pour choisir une photo de profil.",
         "NSCameraUsageDescription": "Nous avons besoin d'accéder à la caméra pour prendre une photo de profil.",
         "NSPhotoLibraryAddUsageDescription": "Autorisez l'ajout de photos pour enregistrer votre image de profil.",
+        "NSLocationWhenInUseUsageDescription": "Nous utilisons votre position pour afficher du contenu et des défis proches de vous.",
+        "NSLocationAlwaysAndWhenInUseUsageDescription": "Nous utilisons votre position pour améliorer votre expérience, même quand l'app est en arrière-plan.",
         "ITSAppUsesNonExemptEncryption": false
       }
     },

@@ -27,7 +27,6 @@ const BACKGROUND_COLOR = "#FFF8E7"; // crème
 const PRIMARY_COLOR = "#FFB800"; // orange
 const TEXT_COLOR = "#333"; // texte foncé
 const BUTTON_COLOR = "#FFFFFF"; // bouton blanc
-const shakeAnim = useRef(new Animated.Value(0)).current;
 
 const circleSize = Math.min(SCREEN_WIDTH, SCREEN_HEIGHT) * 0.9;
 const circleTop = SCREEN_HEIGHT * 0.38;
@@ -71,6 +70,7 @@ export default function ForgotPassword() {
   const [loading, setLoading] = useState(false);
   const [errorMessage, setErrorMessage] = useState("");
   const [successMessage, setSuccessMessage] = useState("");
+  const shakeAnim = useRef(new Animated.Value(0)).current;
   const triggerShake = () => {
     shakeAnim.setValue(0);
     Animated.sequence([
@@ -96,11 +96,13 @@ export default function ForgotPassword() {
       }),
     ]).start();
   };
-  const waves = Array.from({ length: waveCount }, (_, index) => ({
-    opacity: new Animated.Value(0.3 - index * 0.05),
-    scale: new Animated.Value(1),
-    borderWidth: index === 0 ? 5 : 2,
-  }));
+  const waves = useRef(
+    Array.from({ length: waveCount }, (_, index) => ({
+      opacity: new Animated.Value(0.3 - index * 0.05),
+      scale: new Animated.Value(1),
+      borderWidth: index === 0 ? 5 : 2,
+    }))
+  ).current;
 
   useEffect(() => {
     const animations = waves.map((wave, index) =>
@@ -135,7 +137,7 @@ export default function ForgotPassword() {
     );
     animations.forEach((anim) => anim.start());
     return () => animations.forEach((anim) => anim.stop());
-  }, [waves]);
+  }, []);
 
   const handleResetPassword = async () => {
     setErrorMessage(t("enterYourEmail"));

@@ -34,7 +34,12 @@ import {
   registerForPushNotificationsAsync,
   scheduleDailyNotifications,
 } from "@/services/notificationService";
-
+import * as TrackingTransparency from "expo-tracking-transparency";
+import { Platform } from "react-native";
+import {
+  RequestConfiguration,
+  MaxAdContentRating,
+} from "react-native-google-mobile-ads";
 
 
 // =========================
@@ -79,14 +84,47 @@ const FlagsGate: React.FC<{ children: React.ReactNode }> = ({ children }) => {
 };
 
 // =========================
-/** AdsManager : initialise AdMob si (global non-premium) ET (user non-premium) */
+// ConsentGate: ATT -> init Ads accordingly
 // =========================
-const AdsManager: React.FC = () => {
+const ConsentGate: React.FC<{ children: React.ReactNode }> = ({ children }) => {
+  const [ready, setReady] = React.useState(false);
+
   useEffect(() => {
-    mobileAds().initialize().catch(() => {});
+    const run = async () => {
+      try {
+        let trackingGranted = true;
+
+        if (Platform.OS === "ios") {
+          const { status: current } = await TrackingTransparency.getTrackingPermissionsAsync();
+          let s = current;
+          if (current === "undetermined") {
+            const { status: asked } = await TrackingTransparency.requestTrackingPermissionsAsync();
+            s = asked;
+          }
+          trackingGranted = s === "granted";
+        }
+
+        // Flag global pour les requêtes d’annonces
+        (globalThis as any).__NPA__ = trackingGranted ? false : true;
+
+        const requestConfig: RequestConfiguration = {
+          tagForChildDirectedTreatment: false,
+          tagForUnderAgeOfConsent: false,
+          maxAdContentRating: MaxAdContentRating.PG,
+        };
+        await mobileAds().setRequestConfiguration(requestConfig);
+        await mobileAds().initialize();
+      } finally {
+        setReady(true);
+      }
+    };
+    run();
   }, []);
-  return null;
+
+  if (!ready) return null; // Splash reste visible
+  return <>{children}</>;
 };
+
 
 
 // =========================
@@ -191,12 +229,12 @@ export default function RootLayout() {
     SplashScreen.preventAutoHideAsync().catch(() => {});
   }, []);
 
-  return (
-    <GestureHandlerRootView style={{ flex: 1 }}>
-      <FeatureFlagsProvider>
-        <FlagsGate>
-          <AuthProvider>
-            <AdsVisibilityProvider>
+ return (
+  <GestureHandlerRootView style={{ flex: 1 }}>
+    <FeatureFlagsProvider>
+      <FlagsGate>
+        <AuthProvider>
+          <AdsVisibilityProvider>
             <LanguageProvider>
               <I18nextProvider i18n={i18n}>
                 <ThemeProvider>
@@ -207,33 +245,33 @@ export default function RootLayout() {
                           <CurrentChallengesProvider>
                             <ChatProvider>
                               <TutorialProvider isFirstLaunch={false}>
-                                {/* Deep links (pilotés par flags) */}
-                                <DeepLinkManager />
-                                {/* AdMob init si non premium */}
-                                <AdsManager />
-                                <NotificationsBootstrap />
 
-                                <Stack
-                                  screenOptions={{
-                                    headerShown: false,
-                                    animation: "fade",
-                                    animationDuration: 400,
-                                  }}
-                                >
-                                  <Stack.Screen
-                                    name="(tabs)"
-                                    options={{ headerShown: false }}
-                                  />
-                                  <Stack.Screen name="login" />
-                                  <Stack.Screen name="onboarding" />
-                                  <Stack.Screen name="register" />
-                                  <Stack.Screen name="forgot-password" />
-                                  <Stack.Screen name="profile/Notifications" />
-                                  <Stack.Screen name="handleInvite" />
-                                </Stack>
+                                {/* GATE consent -> rien d'init avant */}
+                                <ConsentGate>
+                                  <DeepLinkManager />
+                                  {/* <AdsManager />  <-- removed */}
+                                  <NotificationsBootstrap />
 
-                                <AppNavigator />
-                                <TrophyModal challengeId="" selectedDays={0} />
+                                  <Stack
+                                    screenOptions={{
+                                      headerShown: false,
+                                      animation: "fade",
+                                      animationDuration: 400,
+                                    }}
+                                  >
+                                    <Stack.Screen name="(tabs)" options={{ headerShown: false }} />
+                                    <Stack.Screen name="login" />
+                                    <Stack.Screen name="onboarding" />
+                                    <Stack.Screen name="register" />
+                                    <Stack.Screen name="forgot-password" />
+                                    <Stack.Screen name="profile/Notifications" />
+                                    <Stack.Screen name="handleInvite" />
+                                  </Stack>
+
+                                  <AppNavigator />
+                                  <TrophyModal challengeId="" selectedDays={0} />
+                                </ConsentGate>
+
                               </TutorialProvider>
                             </ChatProvider>
                           </CurrentChallengesProvider>
@@ -244,12 +282,13 @@ export default function RootLayout() {
                 </ThemeProvider>
               </I18nextProvider>
             </LanguageProvider>
-            </AdsVisibilityProvider>
-          </AuthProvider>
-        </FlagsGate>
-      </FeatureFlagsProvider>
-    </GestureHandlerRootView>
-  );
+          </AdsVisibilityProvider>
+        </AuthProvider>
+      </FlagsGate>
+    </FeatureFlagsProvider>
+  </GestureHandlerRootView>
+);
+
 }
 
 const styles = StyleSheet.create({

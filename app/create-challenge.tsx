@@ -88,6 +88,7 @@ export default function CreateChallenge() {
   const isDark = theme === "dark";
   const current = isDark ? designSystem.darkTheme : designSystem.lightTheme;
   const router = useRouter();
+const npa = (globalThis as any).__NPA__ === true;
 
   const [title, setTitle] = useState("");
   const [description, setDescription] = useState("");
@@ -114,8 +115,9 @@ export default function CreateChallenge() {
       return;
     }
     const ad = InterstitialAd.createForAdRequest(interstitialAdUnitId, {
-      requestNonPersonalizedAdsOnly: true,
-    });
+  requestNonPersonalizedAdsOnly: npa,
+});
+
     interstitialRef.current = ad;
 
     const onLoaded = ad.addAdEventListener(AdEventType.LOADED, () => setAdLoaded(true));
