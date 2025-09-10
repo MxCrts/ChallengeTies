@@ -58,7 +58,7 @@ import * as Notifications from "expo-notifications";
 import { Share } from "react-native";
 import type { ViewStyle } from "react-native";
 import { adUnitIds } from "@/constants/admob";
-
+import PioneerBadge from "@/components/PioneerBadge";
 import Animated, {
   useSharedValue,
   useAnimatedStyle,
@@ -86,6 +86,7 @@ const normalizeSize = (size: number) => {
   const scale = SCREEN_WIDTH / 375;
   return Math.round(size * scale);
 };
+const HERO_H = Math.max(240, Math.round(SCREEN_HEIGHT * 0.35));
 
 /** Fond orbe premium, non interactif */
 const OrbBackground = ({ theme }: { theme: Theme }) => (
@@ -166,12 +167,15 @@ interface DuoUser {
   avatar: string;
   completedDays: number;
   selectedDays: number;
+  isPioneer?: boolean;
 }
 
 interface DuoChallengeData {
   duo: boolean;
   duoUser: DuoUser;
 }
+
+
 export default function ChallengeDetails() {
   const { theme } = useTheme();
   const [marking, setMarking] = useState(false);
@@ -262,6 +266,7 @@ const currentChallenge = useMemo(() => {
 
   const [myAvatar, setMyAvatar] = useState<string>("");
   const [myName, setMyName] = useState<string>("");
+  const [myIsPioneer, setMyIsPioneer] = useState(false);
 const [partnerAvatar, setPartnerAvatar] = useState<string>("");
 const assetsReady =
   !!myAvatar &&
@@ -674,6 +679,8 @@ useEffect(() => {
       avatar: resolvedPartnerAvatar, // ✅ plus d'image de test
       completedDays: partnerChallenge.completedDays || 0,
       selectedDays: partnerChallenge.selectedDays || 0,
+      isPioneer: !!partnerData.isPioneer, 
+      
     },
   });
 }
@@ -796,6 +803,7 @@ useEffect(() => {
           auth.currentUser?.displayName ||
           (auth.currentUser?.email ? auth.currentUser.email.split("@")[0] : "") ||
           "You";
+          setMyIsPioneer(!!u?.isPioneer);
       } else {
         raw = auth.currentUser?.photoURL || "";
         display =
@@ -1282,7 +1290,11 @@ const handleInviteFriend = useCallback(() => {
   style={{ flex: 1, backgroundColor: 'transparent' }}
   edges={['top','bottom']}
 >
-      <StatusBar hidden translucent backgroundColor="transparent" />
+      <StatusBar
+  translucent
+  backgroundColor="transparent"
+  barStyle={isDarkMode ? "light-content" : "dark-content"}
+/>
       <ConfettiCannon
         ref={confettiRef}
         count={150}
@@ -1349,7 +1361,10 @@ const handleInviteFriend = useCallback(() => {
           </View>
       <ScrollView
         showsVerticalScrollIndicator={false}
-        contentContainerStyle={{ paddingBottom: bottomInset }}
+        contentContainerStyle={{
+    paddingTop: HERO_H + SPACING,         // ✅ on “pousse” tout sous l’image
+    paddingBottom: bottomInset + SPACING, // ✅ au-dessus de la bannière
+  }}
 
       >
         <View style={styles.carouselContainer}>
@@ -1447,12 +1462,20 @@ const handleInviteFriend = useCallback(() => {
         {/* Header: avatar + label */}
         <View style={{ flexDirection: "row", alignItems: "center", justifyContent: "center" }}>
           {!!myAvatar && (
-            <Image
-              source={{ uri: myAvatar }}
-              style={{ width: normalizeSize(36), height: normalizeSize(36), borderRadius: normalizeSize(18), borderWidth: 2, borderColor: "#FFD700" }}
-            />
-          )}
-          <Text
+    <View style={styles.avatarWrap}>
+      <Image
+        source={{ uri: myAvatar }}
+        style={{ width: normalizeSize(36), height: normalizeSize(36), borderRadius: normalizeSize(18), borderWidth: 2, borderColor: "#FFD700" }}
+      />
+      {myIsPioneer && (
+        <PioneerBadge
+    size="mini"
+    style={{ position: "absolute", bottom: -6, left: -6 }}
+  />
+      )}
+    </View>
+  )}
+  <Text
   style={[
     styles.inProgressText,
     { color: currentTheme.colors.secondary, marginLeft: 8 }, // 👈 ajouté
@@ -1595,6 +1618,12 @@ const handleInviteFriend = useCallback(() => {
                 <View style={styles.duoSide}>
                  <View style={styles.avatarWrap}>
   <Image source={{ uri: me.avatar }} style={styles.duoAvatarBig} />
+  {myIsPioneer && (
+    <PioneerBadge
+    size="mini"
+    style={{ position: "absolute", bottom: -6, left: -6 }}
+  />
+  )}
   {(iLead && !tied) && (
     <View
       style={[
@@ -1657,9 +1686,20 @@ const handleInviteFriend = useCallback(() => {
                 <View style={styles.duoSide}>
                   <View style={styles.avatarWrap}>
   <Image
-    source={{ uri: partnerAvatar || partner.avatar || `https://ui-avatars.com/api/?name=${encodeURIComponent(partner.name || "P")}` }}
+    source={{
+      uri:
+        partnerAvatar ||
+        partner.avatar ||
+        `https://ui-avatars.com/api/?name=${encodeURIComponent(partner.name || "P")}`,
+    }}
     style={styles.duoAvatarBig}
   />
+  {partner.isPioneer && (
+  <PioneerBadge
+    size="mini"
+    style={{ position: "absolute", bottom: -6, left: -6 }}
+  />
+)}
   {(!iLead && !tied) && (
     <View
       style={[
@@ -1810,17 +1850,19 @@ const handleInviteFriend = useCallback(() => {
                     accessibilityLabel="HelpButton"
                     accessibilityHint="Navigate to challenge help content"
                     style={({ pressed }) => ({
-                      opacity: pressed ? 0.8 : 1,
-                      borderRadius: 24,
-                      overflow: "hidden",
-                      shadowColor: "#000",
-                      shadowOffset: { width: 0, height: 2 },
-                      shadowOpacity: 0.2,
-                      shadowRadius: 4,
-                      elevation: 5,
-                      width: "90%",
-                      maxWidth: 380,
-                    })}
+    opacity: pressed ? 0.8 : 1,
+    borderRadius: 24,
+    overflow: "hidden",
+    // Ombres iOS ok, mais sur Android on coupe l'elevation :
+    shadowColor: "#000",
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.2,
+    shadowRadius: 4,
+    elevation: Platform.OS === "android" ? 0 : 5, // ✅ important
+    width: "90%",
+    maxWidth: 380,
+    marginTop: SPACING * 1.2, // ✅ assure un vrai espace sous la section au-dessus
+  })}
                   >
                     <LinearGradient
                       colors={[currentTheme.colors.secondary, currentTheme.colors.primary]}
@@ -2109,6 +2151,12 @@ const handleInviteFriend = useCallback(() => {
   {/* Moi */}
   <Animated.View entering={FadeInUp.duration(300)} style={[shakeStyleMy, styles.vsSide, { marginHorizontal: GAP }]}>
     <Image source={{ uri: myAvatar || `https://ui-avatars.com/api/?name=${encodeURIComponent(myName || "You")}`, }} style={[styles.vsAvatarXL, { width: AVA, height: AVA, borderRadius: AVA/2 }]} />
+    {myIsPioneer && (
+  <PioneerBadge
+    size="mini"
+    style={{ position: "absolute", bottom: -6, left: -6 }}
+  />
+)}
     <Text style={[styles.vsNameXL, { fontSize: IS_SMALL ? normalizeSize(16) : normalizeSize(18) }]}>
       {myName || t("duo.you")}
     </Text>
@@ -2124,6 +2172,12 @@ const handleInviteFriend = useCallback(() => {
     <Image source={{ uri: partnerAvatar || `https://ui-avatars.com/api/?name=${encodeURIComponent(
                   duoChallengeData?.duoUser?.name || "P"
                 )}`, }} style={[styles.vsAvatarXL, { width: AVA, height: AVA, borderRadius: AVA/2 }]} />
+                {duoChallengeData?.duoUser?.isPioneer && (
+  <PioneerBadge
+    size="mini"
+    style={{ position: "absolute", bottom: -6, left: -6 }}
+  />
+)}
     <Text style={[styles.vsNameXL, { fontSize: IS_SMALL ? normalizeSize(16) : normalizeSize(18) }]}>
       {duoChallengeData?.duoUser?.name || t("duo.partner")}
     </Text>
@@ -2142,21 +2196,19 @@ const styles = StyleSheet.create({
   container: {
     flex: 1,
   },
-  carouselContainer: {
-    position: "relative",
-    height: SCREEN_HEIGHT * 0.3,
-  },
+  carouselContainer: { position: "relative", height: 0 },
   imageContainer: {
-    position: 'absolute',
-    top: 0,
-    left: 0,
-    right: 0,
-    height: SCREEN_HEIGHT * 0.35,
-    borderBottomLeftRadius: normalizeSize(30),
-    borderBottomRightRadius: normalizeSize(30),
-    overflow: 'hidden',
-    zIndex: 1,
-  },
+  position: "absolute",
+  top: 0,
+  left: 0,
+  right: 0,
+  height: HERO_H,                  // ✅ fixe
+  borderBottomLeftRadius: normalizeSize(30),
+  borderBottomRightRadius: normalizeSize(30),
+  overflow: "hidden",
+  zIndex: 1,
+},
+
   bannerContainer: {
     position: "absolute",
     bottom: 0,
@@ -2251,6 +2303,7 @@ vsOverlay: {
   alignItems: "center",
   zIndex: 9999,
 },
+
 vsRow: {
   flexDirection: "row",
   alignItems: "center",
@@ -2307,6 +2360,7 @@ chipText: {
   fontFamily: "Comfortaa_700Bold",
   fontSize: normalizeSize(12),
   marginLeft: 6, // remplace le gap interne
+  includeFontPadding: false,
 },
     duoCard: {
     marginTop: SPACING * 1.2,
@@ -2505,6 +2559,7 @@ chipText: {
     fontSize: normalizeSize(16),
     marginTop: SPACING,
     fontFamily: "Comfortaa_700Bold",
+    includeFontPadding: false,
   },
   markTodayButton: {
     borderRadius: normalizeSize(25),
@@ -2567,6 +2622,7 @@ chipText: {
   infoDescriptionRecipe: {
     textAlign: "center",
     fontSize: normalizeSize(16),
+    includeFontPadding: false,
     marginTop: SPACING * 2,
     marginHorizontal: SPACING,
     lineHeight: normalizeSize(22),

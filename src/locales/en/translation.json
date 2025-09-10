@@ -352,6 +352,10 @@
   "alreadyMarked": "Already Marked",
   "loading": "Loading...",
   "challenge": "Challenge",
+  "authRequiredTitle": "Enjoy everything in ChallengeTies",
+    "authRequiredBody": "Sign up or log in to access this feature.",
+    "authRequiredCTA": "Create an account / Log in",
+    "authRequiredLater": "Continue as Guest",
   "deleteChallenge": "Delete challenge",
   "viewChallengeDetails": "View challenge details",
   "challengeImage": "Challenge image",
@@ -378,6 +382,7 @@
   "completedChallengesScreenTitle": "Completed Challenges",
   "completedOn": "Completed on",
   "historyOf": "History of",
+   "continueAsGuest": "Continue as Guest",
   "appName": "ChallengeTies",
   "alerts": {
     "error": "Error",

@@ -2979,6 +2979,11 @@
   "errorSavingRulesAcceptance": "Erreur lors de l’enregistrement de l’acceptation des règles.",
   "iHaveReadRules": "J’ai lu et j’accepte les règles du chat.",
   "iUnderstand": "J’ai compris",
+  "continueAsGuest": "Continuer en tant que visiteur",
+  "authRequiredTitle": "Profite de tout ChallengeTies",
+    "authRequiredBody": "Inscris-toi ou connecte-toi pour accéder à cette fonctionnalité.",
+    "authRequiredCTA": "Créer un compte / Se connecter",
+    "authRequiredLater": "Continuer en visiteur",
   "acceptRulesCheckbox": "Accepter les règles du chat",
   "acceptRulesButton": "Valider l’acceptation des règles",
   "tutorial": {

@@ -33,6 +33,7 @@ import TutorialModal from "../../components/TutorialModal";
 import { useAdsVisibility } from "../../src/context/AdsVisibilityContext";
 import { useBottomTabBarHeight } from "@react-navigation/bottom-tabs";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
+import PioneerBadge from "@/components/PioneerBadge";
 
 const SPACING = 15;
 const { width: SCREEN_WIDTH, height: SCREEN_HEIGHT } = Dimensions.get("window");
@@ -90,6 +91,7 @@ interface UserData {
   profileImage?: string;
   trophies?: number;
   newAchievements?: string[];
+  isPioneer?: boolean;
 }
 
 export default function ProfileScreen() {
@@ -404,10 +406,18 @@ const npa = (globalThis as any).__NPA__ === true;
                           : "#FFB800",
                       },
                     ]}
-                    accessibilityLabel={t("profile.avatar", {
-                      username: userData?.username ?? "Utilisateur",
-                    })}
+                    accessibilityLabel={
+  (userData?.isPioneer ? "Pioneer · " : "") +
+  t("profile.avatar", { username: userData?.username ?? "Utilisateur" })
+}
                   />
+                  {userData?.isPioneer === true && (
+                    <PioneerBadge
+                      size="mini"
+                      label={t("badges.pioneer", { defaultValue: "Pioneer" })}
+                      style={{ position: "absolute", bottom: -normalizeSize(10), left: normalizeSize(10) }}
+                    />
+                  )}
                   <Animated.View
                     entering={ZoomIn.delay(300)}
                     style={[

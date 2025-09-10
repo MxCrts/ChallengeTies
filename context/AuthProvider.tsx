@@ -6,7 +6,7 @@ import { fetchAndSaveUserLocation } from "../services/locationService";
 import { db } from "../constants/firebase-config";
 import { collection, query, where, onSnapshot, doc, getDoc, runTransaction } from "firebase/firestore";
 import { increment } from "firebase/firestore";
-
+import { setDoc, updateDoc } from "firebase/firestore";
 
 interface AuthContextType {
   user: User | null;
@@ -30,6 +30,61 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({
     if (firebaseUser) {
       console.log("✅ Utilisateur connecté:", firebaseUser.email);
       setUser(firebaseUser);
+
+      (async () => {
+  try {
+    const userRef = doc(db, "users", firebaseUser.uid);
+    const pioneerRef = doc(db, "meta", "pioneerStats");
+
+    let pioneerJustGranted = false;
+
+    await runTransaction(db, async (tx) => {
+      // Lire/initialiser le compteur global
+      const pioneerSnap = await tx.get(pioneerRef);
+      const currentCount = pioneerSnap.exists()
+        ? (pioneerSnap.data().count || 0)
+        : 0;
+      if (!pioneerSnap.exists()) {
+        tx.set(pioneerRef, { count: 0 }); // init si manquant
+      }
+
+      // Lire l'utilisateur
+      const userSnap = await tx.get(userRef);
+
+      // On ne récompense QUE les nouveaux (doc inexistant)
+      if (!userSnap.exists()) {
+        const isPioneer = currentCount < 1000;
+
+        // set merge + increments (n’écrase rien si futurs champs)
+        tx.set(
+          userRef,
+          {
+            isPioneer,
+            trophies: isPioneer ? increment(50) : increment(0),
+          },
+          { merge: true }
+        );
+
+        if (isPioneer) {
+          tx.update(pioneerRef, { count: currentCount + 1 });
+          pioneerJustGranted = true;
+        } else {
+          // S’assure que le champ existe quand même (0 si absent)
+          tx.set(userRef, { trophies: increment(0) }, { merge: true });
+        }
+      }
+    });
+
+    if (pioneerJustGranted) {
+      console.log("🎉 Pionnier attribué à", firebaseUser.email);
+      // Flag pour afficher un modal “Pioneer” après l’inscription
+      await AsyncStorage.setItem("pioneerJustGranted", "1");
+    }
+  } catch (err) {
+    console.error("⚠️ Erreur attribution pionnier:", err);
+  }
+})();
+
 
       // ⚡️ LANCE EN FOND ➜ on ne bloque pas le Splash !
       AsyncStorage.setItem("user", JSON.stringify(firebaseUser)).catch((error) => {

@@ -40,6 +40,9 @@ import TutorialModal from "../../components/TutorialModal";
 import { useAdsVisibility } from "../../src/context/AdsVisibilityContext";
 import { useBottomTabBarHeight } from "@react-navigation/bottom-tabs";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
+import useGateForGuest from "@/hooks/useGateForGuest";
+import RequireAuthModal from "@/components/RequireAuthModal";
+
 
 // Dimensions responsives
 const SPACING = 18; // Aligné avec Notifications.tsx, FocusScreen.tsx, etc.
@@ -375,6 +378,17 @@ const bannerLift = tabBarHeight + insets.bottom + normalizeSize(8); // ↑ déca
 const listBottomPadding =
   (showBanners ? bannerHeight : 0) + tabBarHeight + insets.bottom + normalizeSize(20);
 
+const { gate, modalVisible, closeGate } = useGateForGuest();
+
+const safeNavigate = (path: string) => {
+  // Vérifie si route challenge → nécessite login
+  if (path.startsWith("/challenge-details")) {
+    if (gate()) router.push(path);
+    return;
+  }
+  router.push(path);
+};
+
 
   // Force re-render sur changement de langue
   useEffect(() => {}, [i18n.language]);
@@ -653,14 +667,14 @@ const listBottomPadding =
                 <TouchableOpacity
                   style={styles.cardContainer}
                   onPress={() =>
-                    router.push(
-                      `/challenge-details/${item.id}?title=${encodeURIComponent(
-                        item.title
-                      )}&category=${encodeURIComponent(
-                        item.category
-                      )}&description=${encodeURIComponent(item.description)}`
-                    )
-                  }
+   safeNavigate(
+     `/challenge-details/${item.id}?title=${encodeURIComponent(
+       item.title
+     )}&category=${encodeURIComponent(
+       item.category
+     )}&description=${encodeURIComponent(item.description)}`
+   )
+ }
                 >
                   <LinearGradient
                     colors={[
@@ -779,6 +793,7 @@ const listBottomPadding =
     }}
   />
 )}
+<RequireAuthModal visible={modalVisible} onClose={closeGate} />
     </GlobalLayout>
   );
 }

@@ -12,12 +12,13 @@ import {
   ActivityIndicator,
   KeyboardAvoidingView,
   Platform,
+  Alert,
 } from "react-native";
 import { StatusBar } from "expo-status-bar";
 import { useRouter } from "expo-router";
 import { createUserWithEmailAndPassword, updateProfile } from "firebase/auth";
 import { auth, db } from "../constants/firebase-config";
-import { doc, setDoc, serverTimestamp, updateDoc } from "firebase/firestore";
+import { doc, setDoc, serverTimestamp, updateDoc, runTransaction } from "firebase/firestore";
 import { Ionicons } from "@expo/vector-icons";
 import { useTranslation } from "react-i18next";
 import { fetchAndSaveUserLocation } from "../services/locationService";
@@ -219,7 +220,48 @@ export default function Register() {
         region: "Unknown",
         createdAt: serverTimestamp(),
         updatedAt: serverTimestamp(),
+        isPioneer: false, // 👈 ajouté
+  pioneerRewardGranted: false,
       });
+
+      // Vérifier si user fait partie des 1000 premiers
+// ✅ Attribution Pioneer (cap à 1000) + 50 trophées — ATOMIQUE via transaction
+try {
+  const userRef = doc(db, "users", userId);
+  const metaRef = doc(db, "meta", "pioneer"); // doc compteur global
+
+  let becamePioneer = false;
+
+  await runTransaction(db, async (tx) => {
+    const metaSnap = await tx.get(metaRef);
+    const userSnap = await tx.get(userRef);
+
+    // Si le doc meta n'existe pas, on l'initialise
+    if (!metaSnap.exists()) {
+      tx.set(metaRef, { granted: 0, cap: 1000 });
+    }
+
+    const { granted = 0, cap = 1000 } = metaSnap.exists() ? (metaSnap.data() as any) : { granted: 0, cap: 1000 };
+    const alreadyGranted = userSnap.exists() ? !!(userSnap.data() as any)?.pioneerRewardGranted : false;
+
+    // Si quota dispo et pas déjà attribué à ce user -> on attribue
+    if (!alreadyGranted && granted < cap) {
+      tx.update(metaRef, { granted: granted + 1 });
+      tx.update(userRef, {
+        isPioneer: true,
+        pioneerRewardGranted: true,
+        trophies: 50,
+      });
+      becamePioneer = true;
+    }
+  });
+
+
+} catch (err) {
+  console.error("Erreur attribution pionnier (transaction):", err);
+}
+
+
 
       // Mettre à jour le displayName
       await updateProfile(user, { displayName: username.trim() });

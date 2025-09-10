@@ -77,6 +77,23 @@ const OrbBackground = ({ theme }: { theme: Theme }) => (
 
 const SPACING = 16;
 
+const getTransString = (tFn: any, key: string, fallback = ""): string => {
+  const val = tFn(key, { defaultValue: fallback });
+  // si la clé n'existe pas, i18n renvoie souvent la clé elle-même
+  if (!val || val === key) return fallback;
+  return String(val);
+};
+
+const getTransArray = <T = any>(
+  tFn: any,
+  key: string,
+  fallback: T[] = []
+): T[] => {
+  const val = tFn(key, { returnObjects: true, defaultValue: fallback });
+  // si la clé n'existe pas, on obtient souvent 'key' (string) -> pas un array
+  return Array.isArray(val) ? (val as T[]) : fallback;
+};
+
 export default function ChallengeHelperScreen() {
   const { id } = useLocalSearchParams<{ id: string }>();
   const { t } = useTranslation();
@@ -122,16 +139,18 @@ export default function ChallengeHelperScreen() {
 
   // 3) Récupérer le titre traduit depuis le namespace "challenges"
   //    avec fallback sur docTitle
-  const title = t(`challenges.${id}.title`, { defaultValue: docTitle });
+ const title = getTransString(t, `challenges.${id}.title`, docTitle);
 
   // 4) Contenu traduits
-  const miniCours = t(`${id}.miniCours`);
-  const exemples = t(`${id}.exemples`, { returnObjects: true }) as string[];
-  const ressources = t(`${id}.ressources`, { returnObjects: true }) as {
-    title: string;
-    url: string;
-    type?: string;
-  }[];
+ const miniCours = getTransString(t, `${id}.miniCours`, helperData?.miniCours || "");
+
+const exemples = getTransArray<string>(t, `${id}.exemples`, helperData?.exemples || []);
+
+const ressources = getTransArray<{ title: string; url: string; type?: string }>(
+  t,
+  `${id}.ressources`,
+  helperData?.ressources || []
+);
 
   // 5) Loader global
   const missingMiniCours = miniCours === `${id}.miniCours`;

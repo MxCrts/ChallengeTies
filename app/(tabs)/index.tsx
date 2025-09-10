@@ -59,7 +59,9 @@ import TutorialModal from "../../components/TutorialModal";
 import { useAdsVisibility } from "../../src/context/AdsVisibilityContext";
 import { useLocalSearchParams } from "expo-router";
 import { useBottomTabBarHeight } from "@react-navigation/bottom-tabs";
-
+import useGateForGuest from "@/hooks/useGateForGuest";
+import RequireAuthModal from "@/components/RequireAuthModal";
+import { Modal } from "react-native";
 
 type Deg = `${number}deg`;
 
@@ -224,7 +226,7 @@ export default function HomeScreen() {
   const [user, setUser] = useState<User | null>(null);
   const [isMounted, setIsMounted] = useState(false);
   const { theme } = useTheme();
-  
+  const { modalVisible, gate, closeGate } = useGateForGuest();
 const scrollX = useSharedValue(0);
   const [layoutKey, setLayoutKey] = useState(0);
   const { setLanguage } = useLanguage();
@@ -241,6 +243,7 @@ const params = useLocalSearchParams<{ startTutorial?: string }>();
 const [allChallenges, setAllChallenges] = useState<Challenge[]>([]);
 const [dailyFive, setDailyFive] = useState<Challenge[]>([]);
 const npa = (globalThis as any).__NPA__ === true;
+const [showPioneerModal, setShowPioneerModal] = useState(false); 
   const {
     tutorialStep,
     isTutorialActive,
@@ -250,6 +253,11 @@ const npa = (globalThis as any).__NPA__ === true;
   } = useTutorial();
 const heroVideoRef = useRef<Video | null>(null);
 const [videoReady, setVideoReady] = useState(false);
+const requiresAuth = (path: string) =>
+  path.startsWith("/leaderboard") ||
+  path.startsWith("/new-features") ||
+  path.startsWith("/challenge-details");
+
 
   const isDarkMode = theme === "dark";
   const currentTheme: Theme = isDarkMode
@@ -332,6 +340,22 @@ const [videoReady, setVideoReady] = useState(false);
   }, []);
 
   useEffect(() => {
+    const checkPioneerFlag = async () => {
+      try {
+        const flag = await AsyncStorage.getItem("pioneerJustGranted");
+        if (flag === "1") {
+          setShowPioneerModal(true);
+          await AsyncStorage.removeItem("pioneerJustGranted"); // one-shot
+        }
+      } catch {}
+    };
+
+    if (user) {
+      checkPioneerFlag();
+    }
+  }, [user]);
+
+  useEffect(() => {
   const list = dailyFive.length ? dailyFive : allChallenges;
   if (!list?.length) return;
   list.forEach((c) => {
@@ -356,7 +380,6 @@ useEffect(() => {
 }, [challenges]);
 
 const fetchChallenges = async () => {
-  if (!user) return;
   setLoading(true);
   try {
     // 1) Lire cache global (toutes les challenges)
@@ -446,11 +469,17 @@ const fetchChallenges = async () => {
   }, [user, i18n.language]);
 
   const safeNavigate = (path: string) => {
-    if (isMounted) {
-      router.push(path);
-    } else {
-    }
-  };
+  if (!isMounted) return;
+
+  if (requiresAuth(path)) {
+    // gate() => true si connecté, sinon ouvre la modale et retourne false
+    if (gate()) router.push(path);
+    return;
+  }
+
+  router.push(path); // routes libres (explore, tips, etc.)
+};
+
 
 const pressed = useSharedValue<number>(0);
 
@@ -841,6 +870,38 @@ const pressed = useSharedValue<number>(0);
             />
           </BlurView>
         )}
+        <RequireAuthModal visible={modalVisible} onClose={closeGate} />
+        <Modal
+          visible={showPioneerModal}
+          transparent
+          animationType="fade"
+          onRequestClose={() => setShowPioneerModal(false)}
+        >
+          <View style={staticStyles.blurView}>
+            <View style={staticStyles.modalContainer}>
+              <Ionicons name="sparkles" size={normalize(36)} color="#FFB800" />
+              <Text style={staticStyles.modalTitle}>
+                {/* Titre court et clair */}
+                🎖️ Bienvenue parmi les Pioneers !
+              </Text>
+              <Text style={staticStyles.modalDescription}>
+                Vous faites partie des <Text style={{ fontWeight: "700" }}>1000 premiers</Text> inscrits.
+                {"\n"}Un badge <Text style={{ fontWeight: "700" }}>Pioneer</Text> vous a été attribué
+                et vous gagnez <Text style={{ fontWeight: "700" }}>+50 trophées</Text> 🏆.
+              </Text>
+
+              <View style={staticStyles.buttonContainer}>
+                <TouchableOpacity
+                  onPress={() => setShowPioneerModal(false)}
+                  style={staticStyles.actionButton}
+                  accessibilityLabel="Fermer le message Pioneer"
+                >
+                  <Text style={staticStyles.actionButtonText}>Super !</Text>
+                </TouchableOpacity>
+              </View>
+            </View>
+          </View>
+        </Modal>
       </LinearGradient>
     </SafeAreaView>
   );

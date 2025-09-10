@@ -40,7 +40,8 @@ import {
   RequestConfiguration,
   MaxAdContentRating,
 } from "react-native-google-mobile-ads";
-
+import { VisitorProvider } from "@/context/VisitorContext";
+import { useVisitor } from "@/context/VisitorContext";
 
 // =========================
 // AppNavigator : redirection initiale + Splash
@@ -49,6 +50,7 @@ const AppNavigator: React.FC = () => {
   const { user, loading } = useAuth();
   const router = useRouter();
   const pathname = usePathname();
+  const { isGuest } = useVisitor();
 
   const [fontsLoaded] = useFonts({
     Comfortaa_400Regular,
@@ -56,18 +58,21 @@ const AppNavigator: React.FC = () => {
   });
 
   useEffect(() => {
-    if (loading) return;
-    // éviter de rejouer si on n’est pas à la racine
-    if (pathname !== "/") return;
+  if (loading) return;
+  if (pathname !== "/") return;
 
-    if (!user) {
-      router.replace("/login");
-      SplashScreen.hideAsync().catch(() => {});
-    } else {
-      router.replace("/(tabs)");
-      SplashScreen.hideAsync().catch(() => {});
-    }
-  }, [user, loading, pathname, router]);
+  if (user) {
+     router.replace("/(tabs)");
+   } else if (isGuest) {
+     // ✅ Laisse le visiteur aller sur la Home au lieu de forcer /login
+     router.replace("/");
+   } else {
+     // ✅ Premier lancement sans compte -> login/register (ton souhait)
+     router.replace("/login");
+   }
+   SplashScreen.hideAsync().catch(() => {});
+  }, [user, loading, pathname, router, isGuest]);
+
 
   // Laisse le Splash tant que auth ou fonts ne sont pas prêtes
   if (loading || !fontsLoaded) return null;
@@ -245,33 +250,33 @@ export default function RootLayout() {
                           <CurrentChallengesProvider>
                             <ChatProvider>
                               <TutorialProvider isFirstLaunch={false}>
+                                <VisitorProvider>
+                                  {/* GATE consent -> rien d'init avant */}
+                                  <ConsentGate>
+                                    <DeepLinkManager />
+                                    {/* <AdsManager />  <-- removed */}
+                                    <NotificationsBootstrap />
 
-                                {/* GATE consent -> rien d'init avant */}
-                                <ConsentGate>
-                                  <DeepLinkManager />
-                                  {/* <AdsManager />  <-- removed */}
-                                  <NotificationsBootstrap />
+                                    <Stack
+                                      screenOptions={{
+                                        headerShown: false,
+                                        animation: "fade",
+                                        animationDuration: 400,
+                                      }}
+                                    >
+                                      <Stack.Screen name="(tabs)" options={{ headerShown: false }} />
+                                      <Stack.Screen name="login" />
+                                      <Stack.Screen name="onboarding" />
+                                      <Stack.Screen name="register" />
+                                      <Stack.Screen name="forgot-password" />
+                                      <Stack.Screen name="profile/Notifications" />
+                                      <Stack.Screen name="handleInvite" />
+                                    </Stack>
 
-                                  <Stack
-                                    screenOptions={{
-                                      headerShown: false,
-                                      animation: "fade",
-                                      animationDuration: 400,
-                                    }}
-                                  >
-                                    <Stack.Screen name="(tabs)" options={{ headerShown: false }} />
-                                    <Stack.Screen name="login" />
-                                    <Stack.Screen name="onboarding" />
-                                    <Stack.Screen name="register" />
-                                    <Stack.Screen name="forgot-password" />
-                                    <Stack.Screen name="profile/Notifications" />
-                                    <Stack.Screen name="handleInvite" />
-                                  </Stack>
-
-                                  <AppNavigator />
-                                  <TrophyModal challengeId="" selectedDays={0} />
-                                </ConsentGate>
-
+                                    <AppNavigator />
+                                    <TrophyModal challengeId="" selectedDays={0} />
+                                  </ConsentGate>
+                                </VisitorProvider>
                               </TutorialProvider>
                             </ChatProvider>
                           </CurrentChallengesProvider>

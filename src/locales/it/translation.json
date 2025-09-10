@@ -373,8 +373,13 @@
   "failedToDeleteChallenge": "Impossibile eliminare la sfida.",
   "viewDetails": "Visualizza dettagli",
   "noCategory": "Nessuna categoria",
+  "authRequiredTitle": "Goditi tutto su ChallengeTies",
+    "authRequiredBody": "Registrati o accedi per utilizzare questa funzione.",
+    "authRequiredCTA": "Crea un account / Accedi",
+    "authRequiredLater": "Continua come ospite",
   "completedChallengesScreenTitle": "Sfide completate",
   "completedOn": "Completata il",
+  "continueAsGuest": "Continua come ospite",
   "historyOf": "Storia di",
   "appName": "ChallengeTies",
   "alerts": {

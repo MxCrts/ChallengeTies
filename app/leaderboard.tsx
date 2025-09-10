@@ -36,6 +36,7 @@ import CustomHeader from "@/components/CustomHeader";
 import { useTranslation } from "react-i18next";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { BlurView } from "expo-blur";
+import PioneerBadge from "@/components/PioneerBadge";
 
 const SPACING = 15;
 const { width: SCREEN_WIDTH, height: SCREEN_HEIGHT } = Dimensions.get("window");
@@ -58,6 +59,7 @@ interface Player {
   country?: string;
   region?: string;
   rank?: number;
+  isPioneer?: boolean;
 }
 
 export default function LeaderboardScreen() {
@@ -120,6 +122,7 @@ export default function LeaderboardScreen() {
           profileImage: d.data().profileImage || null,
           country: d.data().country || "Unknown",
           region: d.data().region || "Unknown",
+          isPioneer: !!d.data().isPioneer,
         }));
         setPlayers(fetched);
         cacheLeaderboard(fetched);
@@ -136,6 +139,7 @@ export default function LeaderboardScreen() {
               profileImage: data.profileImage || null,
               country: data.country || "Unknown",
               region: data.region || "Unknown",
+              isPioneer: !!data.isPioneer,
             };
             setCurrentUser(found);
             setLocationDisabledMessage(
@@ -158,19 +162,36 @@ export default function LeaderboardScreen() {
 
   // Filtrage
   useEffect(() => {
-    if (!currentUser) {
-      setFilteredPlayers([]);
-      return;
-    }
-    let list = players;
-    if (selectedTab === "region") {
-      list = players.filter((p) => p.region && p.region !== "Unknown");
-    } else if (selectedTab === "national") {
-      list = players.filter((p) => p.country && p.country !== "Unknown");
-    }
-    list = list.sort((a, b) => b.trophies - a.trophies).slice(0, 20);
-    setFilteredPlayers(list);
-  }, [selectedTab, players, currentUser]);
+  if (!currentUser) {
+    setFilteredPlayers([]);
+    return;
+  }
+
+  let base = players;
+
+  if (selectedTab === "region") {
+    base = players.filter(
+      (p) =>
+        p.region &&
+        p.region !== "Unknown" &&
+        currentUser.region &&
+        p.region === currentUser.region
+    );
+  } else if (selectedTab === "national") {
+    base = players.filter(
+      (p) =>
+        p.country &&
+        p.country !== "Unknown" &&
+        currentUser.country &&
+        p.country === currentUser.country
+    );
+  }
+
+  // ⚠️ éviter de muter `players` par accident
+  const list = base.slice().sort((a, b) => b.trophies - a.trophies).slice(0, 20);
+  setFilteredPlayers(list);
+}, [selectedTab, players, currentUser]);
+
 
   // Podium
   const renderTopThree = useCallback(() => {
@@ -229,10 +250,18 @@ export default function LeaderboardScreen() {
                     isFirst ? styles.profileImageFirst : styles.profileImage
                   }
                   defaultSource={require("../assets/images/default-profile.webp")}
-                  accessibilityLabel={t("leaderboard.profileOf", {
-                    name: player.username,
-                  })}
+                  accessibilityLabel={
+  (player.isPioneer ? "Pioneer · " : "") +
+  t("leaderboard.profileOf", { name: player.username })
+}
                 />
+                {player.isPioneer && (
+                  <PioneerBadge
+                    size="mini"
+                    label={t("badges.pioneer", { defaultValue: "Pioneer" })}
+                    style={{ position: "absolute", bottom: -normalizeSize(8), left: -normalizeSize(8) }}
+                  />
+                )}
                 <MaterialCommunityIcons
                   name={Icon}
                   size={size}
@@ -289,21 +318,32 @@ export default function LeaderboardScreen() {
             ]}
           >
             <View style={styles.leftSection}>
-              <Image
-                source={
-                  item.profileImage
-                    ? { uri: item.profileImage }
-                    : require("../assets/images/default-profile.webp")
-                }
-                defaultSource={require("../assets/images/default-profile.webp")}
-                style={[
-                  styles.playerImage,
-                  { borderColor: currentTheme.colors.border },
-                ]}
-                accessibilityLabel={t("leaderboard.profileOf", {
-                  name: item.username,
-                })}
-              />
+              <View style={styles.avatarWrap}>
+  <Image
+    source={
+      item.profileImage
+        ? { uri: item.profileImage }
+        : require("../assets/images/default-profile.webp")
+    }
+    defaultSource={require("../assets/images/default-profile.webp")}
+    style={[
+      styles.playerImage,
+      { borderColor: currentTheme.colors.border },
+    ]}
+    accessibilityLabel={
+      (item.isPioneer ? "Pioneer · " : "") +
+      t("leaderboard.profileOf", { name: item.username })
+    }
+  />
+  {item.isPioneer && (
+    <PioneerBadge
+      size="mini"
+      label={t("badges.pioneer", { defaultValue: "Pioneer" })}
+      style={{ position: "absolute", bottom: -normalizeSize(6), left: -normalizeSize(6) }}
+    />
+  )}
+</View>
+
               <View style={styles.playerInfo}>
                 <Text
                   style={[
@@ -717,6 +757,53 @@ const styles = StyleSheet.create({
     textShadowOffset: { width: 1, height: 1 },
     textShadowRadius: 3,
   },
+  avatarWrap: {
+  position: "relative",
+},
+
+pioneerBadgeText: {
+  fontSize: normalizeSize(10),
+  fontFamily: "Comfortaa_700Bold",
+  color: "#2D1600",
+  marginLeft: 4,
+  letterSpacing: 0.2,
+},
+
+pioneerBadgePodium: {
+  position: "absolute",
+  bottom: -normalizeSize(8),
+  left: -normalizeSize(8),
+  paddingVertical: normalizeSize(4),
+  paddingHorizontal: normalizeSize(8),
+  borderRadius: normalizeSize(14),
+  flexDirection: "row",
+  alignItems: "center",
+  borderWidth: 1,
+  borderColor: "rgba(0,0,0,0.15)",
+  shadowColor: "#000",
+  shadowOffset: { width: 0, height: normalizeSize(2) },
+  shadowOpacity: 0.25,
+  shadowRadius: normalizeSize(3),
+  elevation: 3,
+},
+
+pioneerBadgeList: {
+  position: "absolute",
+  bottom: -normalizeSize(6),
+  left: -normalizeSize(6),
+  paddingVertical: normalizeSize(3),
+  paddingHorizontal: normalizeSize(7),
+  borderRadius: normalizeSize(12),
+  flexDirection: "row",
+  alignItems: "center",
+  borderWidth: 1,
+  borderColor: "rgba(0,0,0,0.15)",
+  shadowColor: "#000",
+  shadowOffset: { width: 0, height: normalizeSize(2) },
+  shadowOpacity: 0.2,
+  shadowRadius: normalizeSize(3),
+  elevation: 3,
+},
   handle: {
     fontSize: normalizeFont(12),
     fontFamily: "Comfortaa_400Regular",

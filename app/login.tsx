@@ -21,6 +21,7 @@ import { auth } from "../constants/firebase-config";
 import { Ionicons } from "@expo/vector-icons";
 import { useTranslation } from "react-i18next";
 import { StatusBar as ExpoStatusBar } from "expo-status-bar";
+import { useVisitor } from "@/context/VisitorContext";
 
 const { width: SCREEN_WIDTH, height: SCREEN_HEIGHT } = Dimensions.get("window");
 const normalize = (size: number) => {
@@ -106,7 +107,7 @@ export default function Login() {
   const { t } = useTranslation();
   const router = useRouter();
   const insets = useSafeAreaInsets();
-
+const { setGuest  } = useVisitor();
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [loading, setLoading] = useState(false);
@@ -177,6 +178,7 @@ export default function Login() {
     try {
       setLoading(true);
       await signInWithEmailAndPassword(auth, email.trim(), password.trim());
+      setGuest(false); 
       router.replace("/");
     } catch (error: any) {
       const errorCode = error.code;
@@ -345,6 +347,20 @@ export default function Login() {
               {t("signupHere")}
             </Text>
           </Text>
+          {/* Bouton mode visiteur (en dehors du <Text>) */}
+ <TouchableOpacity
+   style={styles.guestButton}
+   onPress={() => {
+     setGuest(true);        // ✅ active le mode visiteur
+     router.replace("/");   // ✅ va sur la Home
+   }}
+   accessibilityRole="button"
+   accessibilityLabel={t("continueAsGuest") || "Continuer en tant que visiteur"}
+ >
+   <Text style={styles.guestButtonText}>
+     {t("continueAsGuest") || "Continuer en tant que visiteur"}
+   </Text>
+ </TouchableOpacity>
         </View>
 
         {/* ✅ Espace animé lié au clavier — supprime la “bande grise” */}
@@ -459,6 +475,22 @@ const styles = StyleSheet.create({
     fontSize: normalize(16),
     fontFamily: "Comfortaa_400Regular",
   },
+  guestButton: {
+  width: "100%",
+  maxWidth: normalize(400),
+  backgroundColor: "transparent",
+  paddingVertical: normalize(12),
+  borderRadius: normalize(20),
+  alignItems: "center",
+  marginTop: SPACING,
+  borderWidth: normalize(2),
+  borderColor: COLORS.primary,
+},
+guestButtonText: {
+  color: COLORS.primary,
+  fontSize: normalize(16),
+  fontFamily: "Comfortaa_400Regular",
+},
   signupText: {
     color: COLORS.text,
     fontSize: normalize(14),

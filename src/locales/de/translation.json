@@ -369,6 +369,10 @@
   "savedChallengesScreenTitle": "Gespeicherte Herausforderungen",
   "deleteChallengeConfirm": "Möchtest du diese Herausforderung wirklich löschen?",
   "deleted": "Gelöscht",
+  "authRequiredTitle": "Alles aus ChallengeTies nutzen",
+    "authRequiredBody": "Melde dich an oder registriere dich, um diese Funktion zu nutzen.",
+    "authRequiredCTA": "Konto erstellen / Anmelden",
+    "authRequiredLater": "Als Gast fortfahren",
   "challengeDeletedSuccess": "Herausforderung erfolgreich gelöscht.",
   "failedToDeleteChallenge": "Löschen der Herausforderung fehlgeschlagen.",
   "viewDetails": "Details ansehen",
@@ -376,6 +380,7 @@
   "completedChallengesScreenTitle": "Abgeschlossene Herausforderungen",
   "completedOn": "Abgeschlossen am",
   "historyOf": "Verlauf von",
+  "continueAsGuest": "Als Gast fortfahren",
   "appName": "ChallengeTies",
   "alerts": {
     "error": "Fehler",

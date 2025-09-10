@@ -27,6 +27,8 @@ import { useTheme } from "../../context/ThemeContext";
 import designSystem, { Theme } from "../../theme/designSystem";
 import { useTranslation } from "react-i18next";
 import { useTutorial } from "../../context/TutorialContext";
+import useGateForGuest from "@/hooks/useGateForGuest";
+import RequireAuthModal from "@/components/RequireAuthModal";
 
 /* ----------------- Responsive helpers ----------------- */
 const clamp = (v: number, min: number, max: number) =>
@@ -191,6 +193,7 @@ const TabsLayout = () => {
   const { isTablet, n, width } = useResponsive();
   const [hasUnclaimed, setHasUnclaimed] = useState(false);
   const { isTutorialActive } = useTutorial();
+  const { gate, modalVisible, closeGate } = useGateForGuest();
 
   const iconSize = isTablet ? n(26) : n(22);
   const showLabels = width >= 360;
@@ -359,6 +362,9 @@ tabBarBackground: isTutorialActive ? undefined : () => tabBarBackground,
                 {hasUnclaimed && <View style={styles.badgeDot} />}
               </View>
             ),
+            tabBarButton: (props) => (
+              <Pressable {...props} onPress={() => gate() && props.onPress?.()} />
+            ),
           }}
         />
 
@@ -378,6 +384,9 @@ tabBarBackground: isTutorialActive ? undefined : () => tabBarBackground,
         reduceMotion={!!reduceMotion}
       />
     ),
+    tabBarButton: (props) => (
+              <Pressable {...props} onPress={() => gate() && props.onPress?.()} />
+            ),
   }}
 />
 
@@ -416,9 +425,13 @@ tabBarBackground: isTutorialActive ? undefined : () => tabBarBackground,
                 reduceMotion={!!reduceMotion}
               />
             ),
+            tabBarButton: (props) => (
+              <Pressable {...props} onPress={() => gate() && props.onPress?.()} />
+            ),
           }}
         />
       </Tabs>
+      <RequireAuthModal visible={modalVisible} onClose={closeGate} />
     </TrophyProvider>
   );
 };

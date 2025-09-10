@@ -375,7 +375,12 @@
   "noCategory": "Sin categoría",
   "completedChallengesScreenTitle": "Desafíos completados",
   "completedOn": "Completado el",
+  "authRequiredTitle": "Disfruta todo lo de ChallengeTies",
+    "authRequiredBody": "Regístrate o inicia sesión para acceder a esta función.",
+    "authRequiredCTA": "Crear cuenta / Iniciar sesión",
+    "authRequiredLater": "Continuar como invitado",
   "historyOf": "Historial de",
+  "continueAsGuest": "Continuar como invitado",
   "appName": "ChallengeTies",
   "alerts": {
     "error": "Error",
