@@ -5,6 +5,7 @@ import {
   TouchableOpacity,
   StyleSheet,
   Pressable,
+  Platform,
 } from "react-native";
 import { Ionicons } from "@expo/vector-icons";
 import { useTranslation } from "react-i18next";
@@ -100,25 +101,37 @@ const TutorialModal: React.FC<TutorialModalProps> = ({
   return (
     <TutorialVideoWrapper
       step={step}
-      title={
-        <Animated.Text
-          entering={FadeInUp.delay(150)}
-          style={[styles.modalTitle, { color: currentTheme.colors.primary }]}
-        >
-          {title}
-        </Animated.Text>
-      }
-      description={
-        <Animated.Text
-          entering={FadeInUp.delay(250)}
-          style={[
-            styles.modalDescription,
-            { color: currentTheme.colors.textSecondary },
-          ]}
-        >
-          {description}
-        </Animated.Text>
-      }
+     title={
+  <Animated.View entering={FadeInUp.delay(150)}>
+    <Text
+      style={[styles.modalTitle, { color: currentTheme.colors.primary }]}
+      allowFontScaling={false}
+      {...(Platform.OS === "android"
+        ? { textBreakStrategy: "simple" as const }
+        : {})}
+    >
+      {title}
+    </Text>
+  </Animated.View>
+}
+description={
+  <Animated.View entering={FadeInUp.delay(250)}>
+    <Text
+      style={[
+       styles.modalDescription,
+       { color: "#fff" }, // 👈 toujours blanc
+     ]}
+      allowFontScaling={false}
+      {...(Platform.OS === "android"
+        ? { textBreakStrategy: "simple" as const }
+        : {})}
+    >
+      {description}
+    </Text>
+  </Animated.View>
+}
+
+
       icon={<TutorialIcon step={step} />}
     >
       {step === 0 && (
@@ -218,6 +231,11 @@ const styles = StyleSheet.create({
     fontFamily: "Comfortaa_700Bold",
     textAlign: "center",
     marginBottom: normalize(6),
+    includeFontPadding: true,
+   ...(Platform.OS === "android" ? { textBreakStrategy: "simple" } : null),
+ textAlignVertical: "center", 
+ maxWidth: "92%",
+   alignSelf: "center",
   },
   modalDescription: {
     fontSize: normalize(14),
@@ -225,8 +243,13 @@ const styles = StyleSheet.create({
     textAlign: "center",
     opacity: 0.85,
     marginBottom: normalize(12),
-    lineHeight: normalize(22),
-    maxWidth: "92%",
+    lineHeight: Math.round(normalize(14) * 1.55), // ≈ 21
+ maxWidth: "92%",
+ includeFontPadding: true,
+ textAlignVertical: "center",
+ ...(Platform.OS === "android" ? { textBreakStrategy: "simple" as const } : null),
+ paddingTop: normalize(2),
+   paddingBottom: normalize(2),
   },
   centeredButtonContainer: {
     flexDirection: "column",
@@ -247,6 +270,9 @@ const styles = StyleSheet.create({
     fontSize: normalize(15),
     fontFamily: "Comfortaa_700Bold",
     color: "#fff",
+    includeFontPadding: true,
+   lineHeight: Math.round(normalize(15) * 1.35),
+   ...(Platform.OS === "android" ? { textBreakStrategy: "simple" } : null),
   },
   skipButton: {
     justifyContent: "center",
@@ -260,8 +286,9 @@ const styles = StyleSheet.create({
   },
   bottomButton: {
     alignItems: "center",
-    justifyContent: "center",
-    marginTop: normalize(10),
+   justifyContent: "center",
+   alignSelf: "center",
+   marginTop: normalize(10),
   },
 });
 

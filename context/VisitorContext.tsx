@@ -11,6 +11,7 @@ type Ctx = {
   isLoggedInOrGuest: boolean;       // utile si besoin
   // Ouvre le modal d’auth, retourne true si modal ouvert (donc navigation bloquée)
   askToSignIn: (redirectTo?: string, reason?: string) => boolean;
+  hydrated: boolean;
 };
 
 const VisitorContext = createContext<Ctx | null>(null);
@@ -49,10 +50,17 @@ export function VisitorProvider({children}: {children: React.ReactNode}) {
   const [modalVisible, setModalVisible] = useState(false);
   const [pendingRedirect, setPendingRedirect] = useState<string | undefined>(undefined);
   const [modalReason, setModalReason] = useState<string | undefined>(undefined);
-
+const [hydrated, setHydrated] = useState(false);
   // Persistance simple
   useEffect(() => {
-    AsyncStorage.getItem('@ct.isGuest').then(v => setIsGuest(v === '1'));
+    (async () => {
+      try {
+        const v = await AsyncStorage.getItem('@ct.isGuest');
+        setIsGuest(v === '1');
+      } finally {
+        setHydrated(true); // 👈 prêt
+      }
+    })();
   }, []);
   const setGuest = (v: boolean) => {
     setIsGuest(v);
@@ -90,7 +98,8 @@ export function VisitorProvider({children}: {children: React.ReactNode}) {
     isAuthenticated,
     isLoggedInOrGuest: isAuthenticated || isGuest,
     askToSignIn,
-  }), [isGuest, isAuthenticated]);
+  hydrated,
+  }), [isGuest, isAuthenticated, hydrated]);
 
   return (
     <VisitorContext.Provider value={value}>

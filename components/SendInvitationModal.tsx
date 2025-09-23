@@ -114,6 +114,22 @@ export default function SendInvitationModal({
     if (msg.includes("utilisateur non connecté")) {
       return t("commonS.notLoggedIn", { defaultValue: "Tu dois être connecté." });
     }
+    if (msg.includes("inviter_has_pending_for_challenge")) {
+  return t("invitationS.errors.inviterHasPendingForChallenge", {
+    defaultValue: "Tu as déjà une invitation en attente pour ce défi.",
+  });
+}
+if (msg.includes("invitee_has_pending_for_challenge")) {
+  return t("invitationS.errors.inviteeHasPendingForChallenge", {
+    defaultValue: "Impossible d’inviter cet utilisateur : il a déjà une invitation en attente pour ce défi.",
+  });
+}
+if (msg.includes("pair_already_pending")) {
+  return t("invitationS.errors.alreadyInvited", {
+    defaultValue: "Une invitation est déjà en attente avec cet utilisateur.",
+  });
+}
+
     if (msg.includes("invitation_already_active")) {
       return t("invitationS.errors.alreadyInvited", {
         defaultValue: "Une invitation est déjà active.",
@@ -127,24 +143,35 @@ export default function SendInvitationModal({
     return t("invitationS.errors.unknown", { defaultValue: "Erreur inconnue." });
   };
 
- const handleSend = async () => {
-  if (loading) return;       // anti double-tap
+const handleSend = async () => {
+  if (loading) return; // anti double-tap
   setErrorMsg("");
 
   const me = auth.currentUser?.uid;
   if (!me) {
-    setErrorMsg(t("commonS.notLoggedIn", { defaultValue: "Tu dois être connecté." }));
+    setErrorMsg(
+      t("commonS.notLoggedIn", { defaultValue: "Tu dois être connecté." })
+    );
     return;
   }
 
+  // Validations basiques
   if (!challengeId || !Number.isInteger(selectedDays) || selectedDays <= 0) {
-    setErrorMsg(t("invitationS.errors.params", { defaultValue: "Paramètres invalides pour l’invitation." }));
+    setErrorMsg(
+      t("invitationS.errors.params", {
+        defaultValue: "Paramètres invalides pour l’invitation.",
+      })
+    );
     return;
   }
 
   const input = username.trim();
   if (!input) {
-    setErrorMsg(t("invitationS.errors.usernameRequired", { defaultValue: "Entre le nom d’utilisateur de ton ami." }));
+    setErrorMsg(
+      t("invitationS.errors.usernameRequired", {
+        defaultValue: "Entre le nom d’utilisateur de ton ami.",
+      })
+    );
     return;
   }
 
@@ -152,70 +179,230 @@ export default function SendInvitationModal({
   Keyboard.dismiss();
 
   try {
-    // 1) lookup exact
-    const q = query(collection(db, "users"), where("username", "==", input));
-    const snap = await getDocs(q);
-    if (snap.empty) {
-      setErrorMsg(t("invitationS.errors.userNotFound", { defaultValue: "Aucun utilisateur trouvé avec ce nom." }));
-      return;
-    }
+    // 1) Lookup exact par username
+    const userQ = query(collection(db, "users"), where("username", "==", input));
+    const userSnap = await getDocs(userQ);
 
-    const inviteeDoc = snap.docs[0];
-    const inviteeId = inviteeDoc.id;
-
-    // 2) déjà en duo actif ? (même challenge)
-    const alreadyInDuo = await isInviteeAlreadyInActiveDuoForChallenge({ inviteeId, challengeId });
-    if (alreadyInDuo) {
+    if (userSnap.empty) {
       setErrorMsg(
-        t("invitationS.errors.alreadyInDuoForChallenge", {
-          defaultValue: "Impossible d’inviter cet utilisateur : il est déjà en duo pour ce challenge.",
+        t("invitationS.errors.userNotFound", {
+          defaultValue: "Aucun utilisateur trouvé avec ce nom.",
         })
       );
       return;
     }
 
-    // 3) auto-invite ?
-    if (inviteeId === me) {
-      setErrorMsg(t("invitationS.errors.autoInvite", { defaultValue: "Tu ne peux pas t’inviter toi-même." }));
-      return;
-    }
-
+    // (sécurité : on prend le premier si jamais il y en avait plusieurs, mais chez toi c’est unique)
+    const inviteeDoc = userSnap.docs[0];
+    const inviteeId = inviteeDoc.id;
     const inviteeData = inviteeDoc.data() as any;
     const inviteeUsername: string | null = inviteeData?.username ?? null;
 
-    // 4) créer l’invitation
-    await createDirectInvitation({ challengeId, selectedDays, inviteeId, inviteeUsername });
-
-    // 5) succès -> reset + toast + callback parent
-    setUsername("");
-    showSuccessToast();
-
-    if (typeof onSent === "function") {
-      onSent();      // 👈 redirection + tuto gérés par FirstPick
-    } else {
-      onClose();     // fallback
+    // 2) auto-invite
+    if (inviteeId === me) {
+      setErrorMsg(
+        t("invitationS.errors.autoInvite", {
+          defaultValue: "Tu ne peux pas t’inviter toi-même.",
+        })
+      );
+      return;
     }
-  } catch (e) {
+
+    // 3) L'invité est-il DÉJÀ en DUO actif sur CE challenge ?
+    const alreadyInDuo = await isInviteeAlreadyInActiveDuoForChallenge({
+      inviteeId,
+      challengeId,
+    });
+    if (alreadyInDuo) {
+      const msg = t("invitationS.errors.alreadyInDuoForChallenge", {
+        defaultValue:
+          "Impossible d’inviter cet utilisateur : il est déjà en duo pour ce challenge.",
+      });
+      if (Platform.OS === "android") {
+        ToastAndroid.show(msg, ToastAndroid.LONG);
+      } else {
+        Alert.alert("", msg);
+      }
+      onClose(); // ✅ fermeture immédiate du modal (flow demandé)
+      return;
+    }
+
+    // 4) Conflits d'invitations "pending"
+    // 4a) A (inviter) a-t-il déjà une pending pour CE challenge ?
+    let inviterHasPendingForChallenge = false;
+    try {
+      const qInviter = query(
+        collection(db, "invitations"),
+        where("inviterId", "==", me),
+        where("status", "==", "pending")
+      );
+      const sInviter = await getDocs(qInviter);
+      inviterHasPendingForChallenge = sInviter.docs.some(
+        (d) => d.data()?.challengeId === challengeId
+      );
+      // (on réutilisera sInviter plus bas pour vérifier A→B)
+      if (inviterHasPendingForChallenge) {
+        const msg = t(
+          "invitationS.errors.inviterHasPendingForChallenge",
+          { defaultValue: "Tu as déjà une invitation en attente pour ce défi." }
+        );
+        if (Platform.OS === "android") ToastAndroid.show(msg, ToastAndroid.LONG);
+        else Alert.alert("", msg);
+        onClose(); // ✅ fermeture
+        return;
+      }
+
+      // 4b) Existe-t-il déjà une pending A→B pour CE challenge ?
+      const pairAlreadyPending = sInviter.docs.some((d) => {
+        const data = d.data();
+        return (
+          data?.inviteeId === inviteeId && data?.challengeId === challengeId
+        );
+      });
+      if (pairAlreadyPending) {
+        const msg = t("invitationS.errors.alreadyInvited", {
+          defaultValue: "Une invitation est déjà en attente avec cet utilisateur.",
+        });
+        if (Platform.OS === "android") ToastAndroid.show(msg, ToastAndroid.LONG);
+        else Alert.alert("", msg);
+        onClose(); // ✅ fermeture
+        return;
+      }
+    } catch (e) {
+      // Si erreur d’index, on ne bloque pas ici : le service gérera un 2e filet côté serveur
+      console.warn("Pending check (inviter) failed:", e);
+    }
+
+    // 4c) B (invitee) a-t-il déjà une pending pour CE challenge ?
+    try {
+      const qInvitee = query(
+        collection(db, "invitations"),
+        where("inviteeId", "==", inviteeId),
+        where("status", "==", "pending")
+      );
+      const sInvitee = await getDocs(qInvitee);
+      const inviteeHasPendingForChallenge = sInvitee.docs.some(
+        (d) => d.data()?.challengeId === challengeId
+      );
+      if (inviteeHasPendingForChallenge) {
+        const msg = t("invitationS.errors.inviteeHasPendingForChallenge", {
+          defaultValue:
+            "Impossible d’inviter cet utilisateur : il a déjà une invitation en attente pour ce défi.",
+        });
+        if (Platform.OS === "android") ToastAndroid.show(msg, ToastAndroid.LONG);
+        else Alert.alert("", msg);
+        onClose(); // ✅ fermeture
+        return;
+      }
+    } catch (e) {
+      console.warn("Pending check (invitee) failed:", e);
+    }
+
+    // 5) Création de l’invitation
+    await createDirectInvitation({
+      challengeId,
+      selectedDays,
+      inviteeId,
+      inviteeUsername,
+    });
+
+    // 6) Succès → reset, toast, fermeture/callback
+    setUsername("");
+    const okMsg = t("invitationS.sentShort", {
+      defaultValue: "Invitation envoyée !",
+    });
+    if (Platform.OS === "android") ToastAndroid.show(okMsg, ToastAndroid.SHORT);
+    else Alert.alert("", okMsg);
+
+    if (typeof onSent === "function") onSent();
+    else onClose();
+  } catch (e: any) {
     console.error("🔥 createDirectInvitation error:", e);
-    setErrorMsg(mapError(e));
+    // Mapping d’erreurs lisible
+    const msg = String(e?.message || e || "").toLowerCase();
+    if (msg.includes("missing or insufficient permissions")) {
+      setErrorMsg(
+        t("invitationS.errors.permissions", {
+          defaultValue:
+            "Permissions insuffisantes. Vérifie que tu es bien connecté et que les règles Firestore autorisent cette action.",
+        })
+      );
+    } else if (msg.includes("utilisateur non connecté")) {
+      setErrorMsg(
+        t("commonS.notLoggedIn", { defaultValue: "Tu dois être connecté." })
+      );
+    } else if (msg.includes("inviter_has_pending_for_challenge")) {
+      const m = t("invitationS.errors.inviterHasPendingForChallenge", {
+        defaultValue: "Tu as déjà une invitation en attente pour ce défi.",
+      });
+      if (Platform.OS === "android") ToastAndroid.show(m, ToastAndroid.LONG);
+      else Alert.alert("", m);
+      onClose();
+    } else if (msg.includes("invitee_has_pending_for_challenge")) {
+      const m = t("invitationS.errors.inviteeHasPendingForChallenge", {
+        defaultValue:
+          "Impossible d’inviter cet utilisateur : il a déjà une invitation en attente pour ce défi.",
+      });
+      if (Platform.OS === "android") ToastAndroid.show(m, ToastAndroid.LONG);
+      else Alert.alert("", m);
+      onClose();
+    } else if (msg.includes("pair_already_pending") || msg.includes("invitation_already_active")) {
+      const m = t("invitationS.errors.alreadyInvited", {
+        defaultValue: "Une invitation est déjà en attente avec cet utilisateur.",
+      });
+      if (Platform.OS === "android") ToastAndroid.show(m, ToastAndroid.LONG);
+      else Alert.alert("", m);
+      onClose();
+
+      
+    } else if (msg.includes("pair_already_pending") || msg.includes("invitation_already_active")) {
+  const m = t("invitationS.errors.alreadyInvited", {
+    defaultValue: "Une invitation est déjà en attente avec cet utilisateur.",
+  });
+  if (Platform.OS === "android") ToastAndroid.show(m, ToastAndroid.LONG);
+  else Alert.alert("", m);
+  onClose();
+} else if (msg.includes("invitee_already_in_duo")) {
+  const m = t("invitationS.errors.alreadyInDuoForChallenge", {
+    defaultValue:
+      "Impossible d’inviter cet utilisateur : il est déjà en duo pour ce challenge.",
+  });
+  if (Platform.OS === "android") ToastAndroid.show(m, ToastAndroid.LONG);
+  else Alert.alert("", m);
+  onClose();
+} else if (msg.includes("auto_invite")) {
+  setErrorMsg(
+    t("invitationS.errors.autoInvite", {
+      defaultValue: "Tu ne peux pas t’inviter toi-même.",
+    })
+  );
+} else {
+  setErrorMsg(
+    t("invitationS.errors.unknown", { defaultValue: "Erreur inconnue." })
+  );
+}
+
   } finally {
     setLoading(false);
   }
 };
 
 
-
   return (
     <Modal
-      visible={visible}
-      animationType="fade"
-      transparent
-      onRequestClose={onClose}
-    >
-      <KeyboardAvoidingView
-        behavior={Platform.OS === "ios" ? "padding" : undefined}
-        style={styles.overlay}
-      >
+  visible={visible}
+  animationType="fade"
+  transparent
+  statusBarTranslucent              // 👈 évite un décalage sous la status bar Android
+  presentationStyle="overFullScreen"// 👈 meilleur rendu plein-écran
+  onRequestClose={onClose}
+>
+  <KeyboardAvoidingView
+    behavior={Platform.OS === "ios" ? "padding" : "height"} // 👈 Android: "height"
+    style={styles.overlay}
+    contentContainerStyle={styles.centerWrap}               // 👈 centre même quand la hauteur change
+    keyboardVerticalOffset={Platform.OS === "ios" ? 16 : 0} // 👈 petit offset iOS
+  >
         <TouchableWithoutFeedback onPress={Keyboard.dismiss}>
           <View style={styles.centerWrap}>
             <Animated.View entering={FadeInUp} style={styles.container}>
@@ -255,9 +442,10 @@ export default function SendInvitationModal({
                 {/* Input */}
                 <TextInput
                   style={styles.input}
-                  placeholder={t("invitationS.usernamePlaceholder", {
-                    defaultValue: "Nom d’utilisateur",
-                  })}
+  placeholder={t("invitationS.usernamePlaceholder", { defaultValue: "Nom d’utilisateur" })}
+  placeholderTextColor="#888"      // 👈 lisible sur fond blanc
+  selectionColor="#FFB800"         // 👈 curseur/sélection visibles
+  keyboardAppearance="light"  
                   value={username}
                   onChangeText={setUsername}
                   autoCapitalize="none"
@@ -310,6 +498,7 @@ const styles = StyleSheet.create({
   centerWrap: {
     flex: 1,
     justifyContent: "center",
+    alignItems: "center",  // 👈 ajoute ça
     paddingHorizontal: 16,
   },
   container: {
@@ -357,6 +546,8 @@ const styles = StyleSheet.create({
     paddingVertical: Platform.OS === "ios" ? 12 : 10,
     marginBottom: 12,
     fontSize: 16,
+    color: "#111",            // 👈 texte forcé sombre
+    backgroundColor: "#fff",  // 👈 fond blanc explicite
   },
   button: {
     backgroundColor: "#FFB800",

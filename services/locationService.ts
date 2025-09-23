@@ -82,3 +82,54 @@ export const fetchAndSaveUserLocation = async (): Promise<boolean> => {
     return false;
   }
 };
+
+// ---------- Helpers pour Settings (toggles) ----------
+
+export const enableLocationFromSettings = async (): Promise<boolean> => {
+  try {
+    const perm = await Location.getForegroundPermissionsAsync().catch(() => ({
+      status: "undetermined" as const,
+    }));
+    let final = perm.status;
+
+    if (final !== "granted") {
+      const req = await Location.requestForegroundPermissionsAsync();
+      final = req.status;
+      if (final !== "granted") {
+        return false; // refusé → Settings pourra ouvrir les réglages
+      }
+    }
+
+    // Si granted → on peut snapshot la localisation
+    await fetchAndSaveUserLocation();
+
+    const uid = auth.currentUser?.uid;
+    if (uid) {
+      await updateDoc(doc(db, "users", uid), {
+        locationEnabled: true,
+        updatedAt: serverTimestamp(),
+      });
+    }
+
+    return true;
+  } catch (e) {
+    console.error("❌ enableLocationFromSettings:", e);
+    return false;
+  }
+};
+
+export const disableLocationFromSettings = async (): Promise<void> => {
+  try {
+    const uid = auth.currentUser?.uid;
+    if (uid) {
+      await updateDoc(doc(db, "users", uid), {
+        locationEnabled: false,
+        country: "Unknown",
+        region: "Unknown",
+        updatedAt: serverTimestamp(),
+      });
+    }
+  } catch (e) {
+    console.error("❌ disableLocationFromSettings:", e);
+  }
+};

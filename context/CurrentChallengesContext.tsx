@@ -43,6 +43,29 @@ interface Challenge {
   chatId: string;
 }
 
+const DAY_MS = 86400000;
+
+const dayKeyUTC = (d: Date) => d.toISOString().slice(0, 10); // "YYYY-MM-DD" (UTC)
+
+const dateFromDayKeyUTC = (key: string) => new Date(`${key}T00:00:00.000Z`);
+
+const diffDaysUTC = (aKey: string, bKey: string) => {
+  const A = dateFromDayKeyUTC(aKey).getTime();
+  const B = dateFromDayKeyUTC(bKey).getTime();
+  return Math.round((B - A) / DAY_MS);
+};
+
+// Compat : on convertit tes anciens strings vers une key UTC fiable
+const coerceToDayKey = (s?: string | null): string | null => {
+  if (!s) return null;
+  if (/^\d{4}-\d{2}-\d{2}$/.test(s)) return s; // déjà une key
+  // ancien format "Mon Sep 16 2025" → on tente un parse et on re-clé
+  const d = new Date(s);
+  if (isNaN(d.getTime())) return null;
+  return dayKeyUTC(d);
+};
+
+
 export interface CurrentChallenge extends Challenge {
   selectedDays: number;
   completedDays: number;
@@ -105,6 +128,7 @@ const rewardedRef = useRef<RewardedAd | null>(null);
 const interstitialAdUnitId = adUnitIds.interstitial;
 const rewardedAdUnitId = adUnitIds.rewarded;
 const npa = (globalThis as any).__NPA__ === true; // true => pubs non personnalisées
+const graceShownRef = useRef<Record<string, boolean>>({});
 
 
   const [modalVisible, setModalVisible] = useState(false);
@@ -130,6 +154,16 @@ const npa = (globalThis as any).__NPA__ === true; // true => pubs non personnali
   const markAdShown = async () => {
     await AsyncStorage.setItem("lastInterstitialTime", Date.now().toString());
   };
+
+  const closeMissedModal = () => {
+  setModalVisible(false);
+  if (selectedChallenge) {
+    const k = `${selectedChallenge.id}_${selectedChallenge.selectedDays}`;
+    // réarme la grâce pour permettre l’affichage du modal au prochain tap
+    delete graceShownRef.current[k]; // (ou: graceShownRef.current[k] = false)
+  }
+  setSelectedChallenge(null);
+};
 
 useEffect(() => {
   // Si on ne doit pas afficher d'interstitiels (premium/admin) -> clean total
@@ -192,7 +226,12 @@ async function reconcileDuoLinks(
         ? partnerData.CurrentChallenges
         : [];
 
-      const stillPaired = partnerList.some((p) => p?.uniqueKey === ch.uniqueKey);
+      const stillPaired = partnerList.some((p) => {
+  if (p?.uniqueKey === ch.uniqueKey) return true;
+  const pcid = (p as any)?.challengeId ?? p?.id;
+  const ccid = (ch as any)?.challengeId ?? ch?.id;
+  return pcid === ccid && Number(p?.selectedDays) === Number(ch?.selectedDays);
+});
       if (!stillPaired) updates[ch.uniqueKey] = true; // l'autre s'est retiré → je passe solo
     } catch (e: any) {
       console.warn("reconcileDuoLinks partner read error:", e?.message ?? e);
@@ -322,7 +361,8 @@ useEffect(() => {
 
   try {
     const userRef = doc(db, "users", userId);
-    const todayString = getToday().toDateString();
+    const today = getToday();
+const todayString = today.toDateString();
 
     const challengeData: CurrentChallenge = {
       ...challenge,
@@ -333,13 +373,15 @@ useEffect(() => {
       uniqueKey,
       completionDates: [],
       startedAt: todayString,
-      ...(options?.duo
-        ? {
-            duo: true,
-            duoPartnerId: options.duoPartnerId,
-          }
-        : {}),
-    };
+  // ✅ NEW: clef UTC du jour de départ (utile si lastMarkedKey absent)
+  ...( { startedKey: dayKeyUTC(today) } as any ),
+  ...(options?.duo
+    ? {
+        duo: true,
+        duoPartnerId: options.duoPartnerId,
+      }
+    : {}),
+};
 
     await updateDoc(userRef, {
       CurrentChallenges: arrayUnion(challengeData),
@@ -402,16 +444,13 @@ const removeChallenge = async (id: string, selectedDays: number) => {
 
 
   const isMarkedToday = (id: string, selectedDays: number): boolean => {
-    const today = getToday().toDateString();
-    const uniqueKey = `${id}_${selectedDays}`;
-    const challenge = currentChallenges.find(
-      (ch) => ch.uniqueKey === uniqueKey
-    );
-    if (!challenge) {
-      return false;
-    }
-    return challenge.lastMarkedDate === today;
-  };
+   const uniqueKey = `${id}_${selectedDays}`;
+   const ch = currentChallenges.find((c) => c.uniqueKey === uniqueKey);
+   if (!ch) return false;
+   const todayKey = dayKeyUTC(getToday());
+   const lastKey = coerceToDayKey((ch as any).lastMarkedKey ?? ch.lastMarkedDate);
+   return !!lastKey && lastKey === todayKey;
+ };
 
 const markToday = async (id: string, selectedDays: number) => {
   const userId = auth.currentUser?.uid;
@@ -420,7 +459,8 @@ const markToday = async (id: string, selectedDays: number) => {
   const uniqueKey = `${id}_${selectedDays}`;
   try {
     const today = getToday();
-    const todayString = today.toDateString();
+ const todayKey = dayKeyUTC(today);        // "YYYY-MM-DD" (UTC)
+ const todayString = today.toDateString();
     const userRef = doc(db, "users", userId);
     const userSnap = await getDoc(userRef);
     if (!userSnap.exists()) return { success: false };
@@ -440,39 +480,45 @@ const markToday = async (id: string, selectedDays: number) => {
 
     const challengeToMark = { ...currentChallengesArray[challengeIndex] };
 
-    // Déjà marqué aujourd’hui ?
-    if (challengeToMark.completionDates?.includes(todayString)) {
+    const completionKeys: string[] =
+   (challengeToMark as any).completionDateKeys ??
+   (challengeToMark.completionDates || []).map(coerceToDayKey).filter(Boolean) as string[];
+ if (completionKeys.includes(todayKey)) {
       Alert.alert(t("alreadyMarkedTitle"), t("alreadyMarkedMessage"));
       return { success: false };
     }
 
-    // Vérifie s’il y a eu des jours manqués
-    let missedDays = 0;
-
-// 🔥 NEW: on prend lastMarkedDate OU startedAt comme point de référence
-const refDateStr =
-  challengeToMark.lastMarkedDate || challengeToMark.startedAt || null;
-
-if (refDateStr) {
-  const refDate = new Date(refDateStr);
-  missedDays = Math.floor(
-    (today.getTime() - refDate.getTime()) / (1000 * 60 * 60 * 24)
-  );
-}
+    // Vérifie s’il y a eu des jours manqués (calendrier UTC)
+ let missedDays = 0;
+ const refKey =
+   (challengeToMark as any).lastMarkedKey ??
+   coerceToDayKey(challengeToMark.lastMarkedDate) ??
+   coerceToDayKey(challengeToMark.startedAt);
+ if (refKey) {
+   missedDays = diffDaysUTC(refKey, todayKey);
+ }
 
 if (missedDays >= 2) {
+  const uKey = `${id}_${selectedDays}`;
+ if (graceShownRef.current[uKey]) {
+   return { success: false, missedDays };
+ }
   showMissedChallengeModal(id, selectedDays);
+ graceShownRef.current[uKey] = true;
   return { success: false, missedDays };
 }
 
     // ✅ Marquer le jour
     challengeToMark.streak = (challengeToMark.streak || 0) + 1;
-    challengeToMark.completionDates = [
-      ...(challengeToMark.completionDates || []),
-      todayString,
-    ];
-    challengeToMark.completedDays = (challengeToMark.completedDays || 0) + 1;
-    challengeToMark.lastMarkedDate = todayString;
+ const newKeys = [...completionKeys, todayKey];
+ (challengeToMark as any).completionDateKeys = newKeys; // ✅ NEW
+ challengeToMark.completionDates = [
+   ...(challengeToMark.completionDates || []),
+   todayString,
+ ];
+ challengeToMark.completedDays = (challengeToMark.completedDays || 0) + 1;
+ (challengeToMark as any).lastMarkedKey = todayKey;     // ✅ NEW
+ challengeToMark.lastMarkedDate = todayString;  
 
     const updatedChallenges = currentChallengesArray.map((ch, idx) =>
       idx === challengeIndex ? challengeToMark : ch
@@ -492,26 +538,40 @@ if (missedDays >= 2) {
             ? partnerData.CurrentChallenges
             : [];
 
-          const partnerIndex = partnerChallenges.findIndex((ch) => ch.uniqueKey === uniqueKey);
+          const partnerIndex = partnerChallenges.findIndex((ch) => {
+  if (ch?.uniqueKey === uniqueKey) return true;
+  const cid = (ch as any)?.challengeId ?? ch?.id;
+  return cid === id && Number(ch?.selectedDays) === Number(selectedDays);
+});
           if (partnerIndex !== -1) {
-            const updatedPartner = { ...partnerChallenges[partnerIndex] };
+  const updatedPartner = { ...partnerChallenges[partnerIndex] };
 
-            if (!updatedPartner.completionDates?.includes(todayString)) {
-              updatedPartner.completionDates = [
-                ...(updatedPartner.completionDates || []),
-                todayString,
-              ];
-              updatedPartner.lastMarkedDate = todayString;
-            }
+  // lis les keys existantes (fallback depuis completionDates si besoin)
+  const pKeys: string[] =
+    (updatedPartner as any).completionDateKeys ??
+    (updatedPartner.completionDates || [])
+      .map(coerceToDayKey)
+      .filter(Boolean) as string[];
 
-            const updatedPartnerArray = partnerChallenges.map((ch, idx) =>
-              idx === partnerIndex ? updatedPartner : ch
-            );
+  if (!pKeys.includes(todayKey)) {
+    (updatedPartner as any).completionDateKeys = [...pKeys, todayKey];
+    updatedPartner.completionDates = [
+      ...(updatedPartner.completionDates || []),
+      todayString,
+    ];
+    (updatedPartner as any).lastMarkedKey = todayKey;
+    updatedPartner.lastMarkedDate = todayString;
+  }
 
-            await updateDoc(partnerRef, {
-              CurrentChallenges: updatedPartnerArray,
-            });
-          }
+  const updatedPartnerArray = partnerChallenges.map((ch, idx) =>
+    idx === partnerIndex ? updatedPartner : ch
+  );
+
+  await updateDoc(partnerRef, {
+    CurrentChallenges: updatedPartnerArray,
+  });
+}
+
         }
       } catch (err) {
         console.error("❌ Erreur synchronisation duo:", err.message);
@@ -565,7 +625,9 @@ const handleReset = async () => {
   if (!userId) return;
 
   const uniqueKey = `${id}_${selectedDays}`;
-  const today = getToday().toDateString();
+  const today = getToday();
+ const todayKey = dayKeyUTC(today);
+ const todayString = today.toDateString();
 
   try {
     const userRef = doc(db, "users", userId);
@@ -586,9 +648,11 @@ const handleReset = async () => {
     const updated = {
       ...currentChallengesArray[challengeIndex],
       streak: 1,
-      completionDates: [today],
-      completedDays: 1,
-      lastMarkedDate: today,
+ completedDays: 1,
+ completionDates: [todayString],
+ lastMarkedDate: todayString,
+ lastMarkedKey: todayKey,
+ completionDateKeys: [todayKey],
     };
 
     const updatedArray = currentChallengesArray.map((ch, i) =>
@@ -600,6 +664,7 @@ const handleReset = async () => {
     Alert.alert(t("streakResetTitle"), t("streakResetMessage"));
     setModalVisible(false);
     await checkForAchievements(userId);
+    graceShownRef.current[`${id}_${selectedDays}`] = false;
 
     // 🔁 Si duo, reset partenaire aussi
     if (updated.duo && updated.duoPartnerId) {
@@ -611,21 +676,27 @@ const handleReset = async () => {
           ? partnerData.CurrentChallenges
           : [];
 
-        const partnerIndex = partnerChallenges.findIndex((ch) => ch.uniqueKey === uniqueKey);
+        const partnerIndex = partnerChallenges.findIndex((ch) => {
+  if (ch?.uniqueKey === uniqueKey) return true;
+  const cid = (ch as any)?.challengeId ?? ch?.id;
+  return cid === id && Number(ch?.selectedDays) === Number(selectedDays);
+});
         if (partnerIndex !== -1) {
           const updatedPartner = {
-            ...partnerChallenges[partnerIndex],
-            streak: 1,
-            completedDays: 1,
-            completionDates: [today],
-            lastMarkedDate: today,
-          };
+  ...partnerChallenges[partnerIndex],
+  streak: 1,
+  completedDays: 1,
+  completionDates: [todayString],
+  lastMarkedDate: todayString,
+  ...( { lastMarkedKey: todayKey, completionDateKeys: [todayKey] } as any ),
+};
 
           const updatedPartnerArray = partnerChallenges.map((ch, i) =>
             i === partnerIndex ? updatedPartner : ch
           );
 
           await updateDoc(partnerRef, { CurrentChallenges: updatedPartnerArray });
+          
         }
       }
     }
@@ -674,7 +745,9 @@ const handleWatchAd = async () => {
   if (!userId) return;
 
   const uniqueKey = `${id}_${selectedDays}`;
-  const today = getToday().toDateString();
+  const today = getToday();
+ const todayKey = dayKeyUTC(today);
+ const todayString = today.toDateString();
 
   try {
     const userRef = doc(db, "users", userId);
@@ -686,13 +759,20 @@ const handleWatchAd = async () => {
     const index = arr.findIndex((ch) => ch.uniqueKey === uniqueKey);
     if (index === -1) return;
 
-    const updated = {
-      ...arr[index],
-      streak: (arr[index].streak || 0) + 1,
-      completedDays: (arr[index].completedDays || 0) + 1,
-      completionDates: [ ...(arr[index].completionDates || []), today ],
-      lastMarkedDate: today,
-    };
+    const prevKeys: string[] =
+  (arr[index] as any).completionDateKeys ??
+  (arr[index].completionDates || [])
+    .map(coerceToDayKey)
+    .filter(Boolean) as string[];
+
+const updated = {
+  ...arr[index],
+  streak: (arr[index].streak || 0) + 1,          // ✅ on continue le streak
+  completedDays: (arr[index].completedDays || 0) + 1,
+  completionDates: [ ...(arr[index].completionDates || []), todayString ],
+  lastMarkedDate: todayString,
+  ...( { lastMarkedKey: todayKey, completionDateKeys: [...prevKeys, todayKey] } as any ),
+};
 
     const next = arr.map((ch, i) => (i === index ? updated : ch));
     await updateDoc(userRef, { CurrentChallenges: next });
@@ -700,7 +780,7 @@ const handleWatchAd = async () => {
     Alert.alert(t("adWatchedTitle"), t("adWatchedMessage"));
     setModalVisible(false);
     await checkForAchievements(userId);
-
+graceShownRef.current[`${id}_${selectedDays}`] = false;
     // Duo sync (identique à avant)
     if (updated.duo && updated.duoPartnerId) {
       const partnerRef = doc(db, "users", updated.duoPartnerId);
@@ -708,13 +788,24 @@ const handleWatchAd = async () => {
       if (partnerSnap.exists()) {
         const pData = partnerSnap.data();
         const pArr: CurrentChallenge[] = Array.isArray(pData.CurrentChallenges) ? pData.CurrentChallenges : [];
-        const pIdx = pArr.findIndex((ch) => ch.uniqueKey === uniqueKey);
+        const pIdx = pArr.findIndex((ch) => {
+  if (ch?.uniqueKey === uniqueKey) return true;
+  const cid = (ch as any)?.challengeId ?? ch?.id;
+  return cid === id && Number(ch?.selectedDays) === Number(selectedDays);
+});
         if (pIdx !== -1) {
-          const pUpd = {
-            ...pArr[pIdx],
-            lastMarkedDate: today,
-            completionDates: [ ...(pArr[pIdx].completionDates || []), today ],
-          };
+          const pKeys: string[] =
+  (pArr[pIdx] as any).completionDateKeys ??
+  (pArr[pIdx].completionDates || [])
+    .map(coerceToDayKey)
+    .filter(Boolean) as string[];
+
+const pUpd = {
+  ...pArr[pIdx],
+  completionDates: [ ...(pArr[pIdx].completionDates || []), todayString ],
+  lastMarkedDate: todayString,
+  ...( { lastMarkedKey: todayKey, completionDateKeys: [...pKeys, todayKey] } as any ),
+};
           const pNext = pArr.map((ch, i) => (i === pIdx ? pUpd : ch));
           await updateDoc(partnerRef, { CurrentChallenges: pNext });
         }
@@ -736,7 +827,9 @@ const handleUseTrophies = async () => {
 
   const uniqueKey = `${id}_${selectedDays}`;
   const trophyCost = 5;
-  const today = getToday().toDateString();
+  const today = getToday();
+ const todayKey = dayKeyUTC(today);
+ const todayString = today.toDateString();
 
   try {
     const userRef = doc(db, "users", userId);
@@ -761,16 +854,24 @@ const handleUseTrophies = async () => {
       return;
     }
 
-    const updated = {
-      ...currentChallengesArray[challengeIndex],
-      streak: (currentChallengesArray[challengeIndex].streak || 0) + 1,
-      completedDays: (currentChallengesArray[challengeIndex].completedDays || 0) + 1,
-      completionDates: [
-        ...(currentChallengesArray[challengeIndex].completionDates || []),
-        today,
-      ],
-      lastMarkedDate: today,
-    };
+    const prevKeys: string[] =
+  (currentChallengesArray[challengeIndex] as any).completionDateKeys ??
+  (currentChallengesArray[challengeIndex].completionDates || [])
+    .map(coerceToDayKey)
+    .filter(Boolean) as string[];
+
+const updated = {
+  ...currentChallengesArray[challengeIndex],
+  streak: (currentChallengesArray[challengeIndex].streak || 0) + 1, // ✅ continue
+  completedDays: (currentChallengesArray[challengeIndex].completedDays || 0) + 1,
+  completionDates: [
+    ...(currentChallengesArray[challengeIndex].completionDates || []),
+    todayString,
+  ],
+  lastMarkedDate: todayString,
+  ...( { lastMarkedKey: todayKey, completionDateKeys: [...prevKeys, todayKey] } as any ),
+};
+
 
     const updatedArray = currentChallengesArray.map((ch, i) =>
       i === challengeIndex ? updated : ch
@@ -792,22 +893,35 @@ const handleUseTrophies = async () => {
           ? partnerData.CurrentChallenges
           : [];
 
-        const partnerIndex = partnerArray.findIndex((ch) => ch.uniqueKey === uniqueKey);
+        const partnerIndex = partnerArray.findIndex((ch) => {
+  if (ch?.uniqueKey === uniqueKey) return true;
+  const cid = (ch as any)?.challengeId ?? ch?.id;
+  return cid === id && Number(ch?.selectedDays) === Number(selectedDays);
+});
         if (partnerIndex !== -1) {
-          const updatedPartner = {
-            ...partnerArray[partnerIndex],
-            lastMarkedDate: today,
-            completionDates: [
-              ...(partnerArray[partnerIndex].completionDates || []),
-              today,
-            ],
-          };
+          const pKeys: string[] =
+  (partnerArray[partnerIndex] as any).completionDateKeys ??
+  (partnerArray[partnerIndex].completionDates || [])
+    .map(coerceToDayKey)
+    .filter(Boolean) as string[];
+
+const updatedPartner = {
+  ...partnerArray[partnerIndex],
+  completionDates: [
+    ...(partnerArray[partnerIndex].completionDates || []),
+    todayString,
+  ],
+  lastMarkedDate: todayString,
+  ...( { lastMarkedKey: todayKey, completionDateKeys: [...pKeys, todayKey] } as any ),
+};
 
           const updatedPartnerArray = partnerArray.map((ch, i) =>
             i === partnerIndex ? updatedPartner : ch
           );
 
           await updateDoc(partnerRef, { CurrentChallenges: updatedPartnerArray });
+          graceShownRef.current[`${id}_${selectedDays}`] = false;
+
         }
       }
     }
@@ -1026,7 +1140,7 @@ const completeChallenge = async (
         {modalVisible && (
           <MissedChallengeModal
             visible={modalVisible}
-            onClose={() => setModalVisible(false)}
+            onClose={closeMissedModal}
             onReset={handleReset}
             onWatchAd={handleWatchAd}
             onUseTrophies={handleUseTrophies}

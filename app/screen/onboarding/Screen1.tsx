@@ -26,6 +26,8 @@ import { StatusBar } from "expo-status-bar";
 import { useTranslation } from "react-i18next";
 import { useTutorial } from "../../../context/TutorialContext";
 import AsyncStorage from "@react-native-async-storage/async-storage";
+import { Platform } from "react-native";
+import { useNavGuard } from "@/hooks/useNavGuard";
 
 const { width, height } = Dimensions.get("window");
 
@@ -38,6 +40,9 @@ export default function Screen1() {
   });
   const videoRef = useRef<Video>(null);
   const router = useRouter();
+  const nav = useNavGuard(router);
+const IS_IPAD = Platform.OS === "ios" && (Platform as any).isPad === true;
+
   const { setTutorialStep, setIsTutorialActive } = useTutorial();
   console.log("🧠 Screen1 monté");
   const introTextOpacity = useRef(new Animated.Value(0)).current;
@@ -116,8 +121,28 @@ export default function Screen1() {
     return () => clearTimeout(timer);
   }, []);
 
-  const handleFinishOnboarding = async () => {
+  useEffect(() => {
+  return () => {
+    // stoppe proprement si le composant se démonte pendant une transition
+    const v = videoRef.current;
+    if (v) {
+      try { v.stopAsync?.(); } catch {}
+      try { v.unloadAsync?.(); } catch {}
+    }
+  };
+}, []);
+
+const handleFinishOnboarding = async () => {
+  if (isNavigating) return;
   setIsNavigating(true);
+
+  // stoppe la vidéo avant d'animer/naviguer (évite crash iPad)
+  const v = videoRef.current;
+  if (v) {
+    try { await v.stopAsync?.(); } catch {}
+    try { await v.unloadAsync?.(); } catch {}
+  }
+
   Animated.timing(fadeAnim, {
     toValue: 0,
     duration: 400,
@@ -125,15 +150,13 @@ export default function Screen1() {
   }).start(async () => {
     try {
       await AsyncStorage.removeItem("hasCompletedTutorialAfterSignup");
-      // 👉 passe d'abord par le choix initial
-      router.replace("/first-pick");
+      nav.replace("/first-pick");
     } catch (error) {
       console.error("Erreur…", error);
+      setIsNavigating(false);
     }
   });
 };
-
-
 
 
   if (!fontsLoaded) return null;
@@ -142,23 +165,28 @@ export default function Screen1() {
     <Animated.View style={[styles.fullscreenContainer, { opacity: fadeAnim }]}>
     <StatusBar translucent backgroundColor="transparent" />
     <View style={styles.container}>
-        <Video
-          ref={videoRef}
-          source={require("../../../assets/videos/test4.mp4")}
-          style={styles.backgroundVideo}
-          resizeMode={ResizeMode.COVER}
-          shouldPlay
-          isMuted={false}
-          isLooping
-          useNativeControls={false}
-          onReadyForDisplay={() => {
-            console.log("✅ Vidéo prête à être affichée");
-          }}
-          onPlaybackStatusUpdate={(status: AVPlaybackStatus) => {
-            if (!status.isLoaded) {
-            }
-          }}
-        />
+        {!IS_IPAD ? (
+  <Video
+    ref={videoRef}
+    source={require("../../../assets/videos/test4.mp4")}
+    style={styles.backgroundVideo}
+    resizeMode={ResizeMode.COVER}
+    shouldPlay={!isNavigating}     // ⬅️ stop auto pendant la nav
+    isMuted={false}
+    isLooping
+    useNativeControls={false}
+    onReadyForDisplay={() => {
+      console.log("✅ Vidéo prête à être affichée");
+    }}
+    onPlaybackStatusUpdate={(status: AVPlaybackStatus) => {
+      if (!status.isLoaded) {}
+    }}
+  />
+) : (
+  // Fallback iPad ultra-stable: pas de vidéo, juste un fond
+  <View style={styles.backgroundVideo} />
+)}
+
 
         <LinearGradient
           colors={["rgba(0,0,0,0.3)", "transparent"]}

@@ -31,6 +31,16 @@ import i18n from "../../i18n";
 import { fetchAndSaveUserLocation } from "../../services/locationService";
 import { Link } from "expo-router"; 
 import { useFocusEffect } from "@react-navigation/native";
+import {
+  enableNotificationsFromSettings,
+  disableNotificationsFromSettings,
+} from "../../services/notificationService";
+
+import {
+  enableLocationFromSettings,
+  disableLocationFromSettings,
+} from "../../services/locationService";
+
 
 
 const SPACING = 18; // Aligné avec ExploreScreen.tsx, Notifications.tsx, etc.
@@ -227,18 +237,12 @@ const scrollRef = useRef<ScrollView>(null);
 const handleNotificationsToggle = async (value: boolean) => {
   if (saving.notif) return;
   setSaving((s) => ({ ...s, notif: true }));
-  const prev = notificationsEnabled;
   setNotificationsEnabled(value);
 
   try {
     if (value) {
-      const { status } = await Notifications.getPermissionsAsync();
-      let finalStatus = status;
-      if (finalStatus !== "granted") {
-        const req = await Notifications.requestPermissionsAsync();
-        finalStatus = req.status;
-      }
-      if (finalStatus !== "granted") {
+      const ok = await enableNotificationsFromSettings();
+      if (!ok) {
         setNotificationsEnabled(false);
         Alert.alert(
           t("permissionDenied"),
@@ -249,17 +253,14 @@ const handleNotificationsToggle = async (value: boolean) => {
           ],
           { cancelable: true }
         );
-        await savePreferences({ notificationsEnabled: false });
-        return;
       }
     } else {
-      await Notifications.cancelAllScheduledNotificationsAsync();
+      await disableNotificationsFromSettings();
     }
-    await savePreferences({ notificationsEnabled: value });
   } catch (e) {
-    console.error(e);
-    setNotificationsEnabled(prev);
+    console.error("❌ handleNotificationsToggle:", e);
     Alert.alert(t("error"), t("failedToSavePreferences"));
+    setNotificationsEnabled(!value); // rollback UI
   } finally {
     setSaving((s) => ({ ...s, notif: false }));
   }
@@ -268,20 +269,15 @@ const handleNotificationsToggle = async (value: boolean) => {
 const handleLocationToggle = async (value: boolean) => {
   if (saving.loc) return;
   setSaving((s) => ({ ...s, loc: true }));
-  const prev = locationEnabled;
   setLocationEnabled(value);
+
   try {
-    await savePreferences({ locationEnabled: value });
     if (value) {
-      try {
-        await fetchAndSaveUserLocation();
-        Alert.alert(t("settingsPage.enabled"), t("settingsPage.updated"));
-      } catch (err) {
-        console.error("Erreur localisation:", err);
+      const ok = await enableLocationFromSettings();
+      if (!ok) {
         setLocationEnabled(false);
-        await savePreferences({ locationEnabled: false });
         Alert.alert(
-          t("error"),
+          t("permissionDenied"),
           t("settingsPage.error"),
           [
             { text: t("cancel"), style: "cancel" },
@@ -289,21 +285,21 @@ const handleLocationToggle = async (value: boolean) => {
           ],
           { cancelable: true }
         );
+      } else {
+        Alert.alert(t("settingsPage.enabled"), t("settingsPage.updated"));
       }
     } else {
-      const userId = auth.currentUser?.uid;
-      if (userId) {
-        await updateDoc(doc(db, "users", userId), { country: "Unknown", region: "Unknown" });
-      }
+      await disableLocationFromSettings();
     }
   } catch (e) {
-    console.error(e);
-    setLocationEnabled(prev);
+    console.error("❌ handleLocationToggle:", e);
     Alert.alert(t("error"), t("failedToSavePreferences"));
+    setLocationEnabled(!value); // rollback UI
   } finally {
     setSaving((s) => ({ ...s, loc: false }));
   }
 };
+
 
   const clearCache = async () => {
     try {
@@ -421,18 +417,13 @@ const handleLocationToggle = async (value: boolean) => {
                   {t("notifications")}
                 </Text>
                 <Switch
-                  value={notificationsEnabled}
-                  onValueChange={(value) => {
-                    setNotificationsEnabled(value);
-                    savePreferences({ notificationsEnabled: value });
-                    if (!value)
-                      Notifications.cancelAllScheduledNotificationsAsync();
-                  }}
-                  trackColor={dynamicStyles.switch.trackColor}
-                  thumbColor={dynamicStyles.switch.thumbColor}
-                  style={styles.switch}
-                  accessibilityLabel={t("handleNotifications")}
-                />
+  value={notificationsEnabled}
+  onValueChange={handleNotificationsToggle}
+  trackColor={dynamicStyles.switch.trackColor}
+  thumbColor={dynamicStyles.switch.thumbColor}
+  style={styles.switch}
+  accessibilityLabel={t("handleNotifications")}
+/>
               </View>
             </Animated.View>
             <Animated.View

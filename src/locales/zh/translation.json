@@ -387,9 +387,24 @@
     "accessDenied": "拒绝访问",
     "shareError": "分享失败"
   },
+  "pioneerModal": {
+    "title": "🎖️ 欢迎加入 Pioneer！",
+    "description": "你是<b>前 {{first}}</b>名注册用户之一。\n你已获得<b>Pioneer</b> 徽章，并获取 <b>+{{trophies}} 个奖杯</b> 🏆。",
+    "cta": "太棒了！",
+    "closeA11y": "关闭 Pioneer 提示"
+  },
   "invitationS": {
       "shareTitle": "双人邀请",
       "shareMessageWithTitle": "我邀请你和我一起开始“{{title}}”，持续 {{days}} 天！",
+       "title": "邀请朋友",
+    "subtitleDirect": "输入你朋友的用户名以发送邀请。",
+    "usernamePlaceholder": "用户名",
+    "send": "发送邀请",
+    "sentShort": "邀请已发送！",
+    "confirmReset": {
+      "title": "切换到双人模式？",
+      "message": "如果你发送邀请，你的单人进度将丢失，并会以双人模式重新开始。确定要继续吗？"
+    },
       "errors": {
         "alreadyInvited": "你已经有一个此挑战的进行中邀请。",
         "autoInvite": "你不能接受自己的邀请。",
@@ -397,7 +412,13 @@
         "unknown": "发生未知错误。",
          "alreadyInDuoForChallenge": "无法邀请该用户：他已经在此挑战的双人模式中。",
         "inviterAlreadyStarted": "你已经单独开始了这个挑战。",
-        "duoAlready": "你已经在此挑战中组成了双人组。"
+        "duoAlready": "你已经在此挑战中组成了双人组。",
+        "permissions": "权限不足。请确认你已登录且 Firestore 规则允许此操作。",
+      "userNotFound": "未找到该用户名的用户。",
+      "usernameRequired": "请输入你朋友的用户名。",
+      "params": "邀请参数无效。",
+      "inviterHasPendingForChallenge": "你已经有一个此挑战的待处理邀请。",
+      "inviteeHasPendingForChallenge": "该用户已有一个此挑战的待处理邀请。"
       },
       "confirmStartDuoTitle": "开始双人模式？",
       "confirmStartDuoMessage": "如果你开始双人模式，你的单人进度将被重置。要继续吗？",
@@ -407,7 +428,9 @@
       }
     },
     "pendingInvite": "邀请进行中",
-"commonS": { "close": "关闭", "notLoggedIn": "你必须先登录。",  "sending": "正在发送…" }
+"commonS": { "close": "关闭", "notLoggedIn": "你必须先登录。",  "sending": "正在发送…",
+    "cancel": "否",
+    "continue": "是，继续"}
 ,
 "profileS": {
     "bioLabel": "个人简介",
@@ -520,7 +543,14 @@
   "reviewPlaceholder": "完成此挑战后分享您的感受...",
   "submitReview": "提交",
   "deleteReview": "删除",
-  "confirmDeleteReview": "删除此评价？"
+  "confirmDeleteReview": "删除此评价？",
+    "shareA11y": "分享此挑战",
+    "chatA11y": "打开挑战聊天",
+    "statsA11y": "查看统计",
+    "challenge": "挑战",
+    "accessDenied": "拒绝访问",
+    "backButton": "返回",
+    "backButtonHint": "返回上一页"
   },
   "explanation": {
     "title": "您的声音很重要！",
@@ -678,26 +708,28 @@
   },
   "completedOnDate": "完成于",
   "completion": {
-    "trophies": "奖杯",
-    "reward": "你赢得了 {{count}} 个奖杯！",
-    "finalTitle": "恭喜！",
-    "finalMessage": "你赢得了 {{count}} 个奖杯！",
-    "errorFinalizingMessage": "完成挑战时出错。",
-    "adNotReadyTitle": "广告不可用",
-    "adNotReady": "广告尚未加载。请稍后再试。",
-    "continue": "继续",
-    "doubleTrophies": "双倍奖杯",
-    "youAreAwesome": "你太棒了！",
-    "keepItUp": "继续加油！",
-    "successIsYours": "成功属于你！",
-    "everyEffortCounts": "每一份努力都很重要！",
-    "neverGiveUp": "永不放弃！",
-    "youAreOnTrack": "你走在正确的路上！",
-    "excellenceAwaits": "卓越在等着你！",
-    "headHeldHigh": "抬起头来！",
-    "persistencePays": "坚持终有回报！",
-    "challengesMakeYouStronger": "挑战让你更强大！"
-  },
+  "trophies": "奖杯",
+  "reward": "你赢得了 {{count}} 个奖杯！",
+  "finalTitle": "恭喜！",
+  "finalMessage": "你赢得了 {{count}} 个奖杯！",
+  "errorFinalizing": "完成挑战时出错。",
+  "errorFinalizingMessage": "完成挑战时出错。",
+  "adNotReadyTitle": "广告不可用",
+  "adNotReady": "广告尚未加载，请稍后重试。",
+  "continue": "继续",
+  "loadingAd": "正在准备视频…",
+  "doubleTrophies": "奖杯翻倍",
+  "youAreAwesome": "你太棒了！",
+  "keepItUp": "继续努力！",
+  "successIsYours": "成功属于你！",
+  "everyEffortCounts": "每一份努力都很重要！",
+  "neverGiveUp": "永不放弃！",
+  "youAreOnTrack": "你走在正确的道路上！",
+  "excellenceAwaits": "卓越在等着你！",
+  "headHeldHigh": "抬起头来！",
+  "persistencePays": "坚持会有回报！",
+  "challengesMakeYouStronger": "挑战让你更强大！"
+},
   "featureDetail": {
     "votes": "{{count}} 票",
     "votes_plural": "{{count}} 票",
@@ -3176,7 +3208,9 @@
     "morning2": "你今天一定可以！💪",
     "evening1": "🌙 该勾掉今天啦。小步前进，大有收获。",
     "evening2": "又坚持了一天，棒！",
-    "nudgeBody": "哟！别忘了「{{title}}」——{{from}} 为你加油 💪"
+    "nudgeBody": "哟！别忘了「{{title}}」——{{from}} 为你加油 💪",
+    "invitationAccepted": "{{username}} 已接受你的邀请！",
+    "invitationRefused": "{{username}} 已拒绝你的邀请。"
   },
 "editYourReview": "修改您的评论",
 "saveReview": "保存"
@@ -3184,24 +3218,51 @@
 "duo": {
   "title": "双人挑战",
   "you": "你",
+  "nudgeNoToken": "你的伙伴尚未启用通知，或更新后还未打开应用。",
+  "nudgeDisabled": "你的伙伴已关闭通知。",
+  "nudgeNoUser": "未找到伙伴。",
   "nudge": "鼓励",
   "leading": "你领先！",
+  "nudgeUnregistered": "你伙伴的令牌已失效。请让他打开应用以重新启用通知。",
+  "nudgeExpoError": "通知服务出错，请稍后再试。",
   "tied": "平局",
   "behind": "你落后了",
   "nudgeSent": "已发送鼓励 ✅",
   "nudgeFailed": "通知发送失败。",
   "nudgeUnavailable": "该功能仅适用于双人挑战。",
-  "nudgeHint": "轻触发送鼓励，长按打开聊天。"
+  "nudgeHint": "轻触发送鼓励，长按打开聊天。",
+  "loadingPartner": "正在加载伙伴...",
+   "partner": "伙伴"
 }
 ,
   "invitation": {
-    "title": "加入挑战",
     "subtitle": "你被邀请加入挑战 {challengeId}！",
-    "accept": "接受邀请",
     "accepting": "正在接受...",
     "success": "已加入挑战！",
     "invalid": "无效的邀请",
-    "joinedChallenge": "你已成功加入挑战！"
+    "joinedChallenge": "你已成功加入挑战！",
+    "loading": "加载中...",
+  "invalidTitle": "邀请不可用",
+  "invalidMessage": "未找到此邀请或已被删除。",
+  "expiredTitle": "邀请已过期",
+  "expiredMessage": "此邀请已过期。请让你的朋友重新发送一个。",
+  "title": "{{username}} 邀请你参加双人挑战",
+  "message": "接受以开始这个双人挑战。你们可以一起追踪进度。",
+  "accept": "接受",
+  "refuse": "拒绝",
+  "acceptHint": "接受邀请并开始双人挑战。",
+  "refuseHint": "拒绝邀请并关闭。",
+  "restartTitle": "重新开始双人挑战？",
+  "restartMessage": "你已经在单人模式中拥有此挑战。我们将重置它以便你们一起重新开始。",
+  "cancel": "取消",
+  "continue": "继续",
+  "errors": {
+    "unknown": "未知错误。",
+    "expired": "邀请已过期。",
+    "autoInvite": "你不能接受自己的邀请。",
+    "alreadyInDuoForChallenge": "你已经在此挑战中处于双人模式。"
+  },
+  "userFallback": "用户"
   },
   "explore": "探索",
   "settingsPage": {

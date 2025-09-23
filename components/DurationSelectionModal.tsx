@@ -4,8 +4,12 @@ import {
   View,
   Text,
   TouchableOpacity,
+  TouchableWithoutFeedback,
   StyleSheet,
   Dimensions,
+  ScrollView,
+  useWindowDimensions,
+  Platform,
 } from "react-native";
 import { Ionicons } from "@expo/vector-icons";
 import Animated, {
@@ -25,11 +29,12 @@ import { Theme } from "../theme/designSystem";
 import designSystem from "../theme/designSystem";
 import * as Haptics from "expo-haptics";
 
-const { width: SCREEN_WIDTH } = Dimensions.get("window");
+const { width: INIT_WIDTH } = Dimensions.get("window");
 
+// ⚠️ normalize global (valeur de secours)
 const normalize = (size: number) => {
   const baseWidth = 375;
-  const scale = Math.min(Math.max(SCREEN_WIDTH / baseWidth, 0.7), 1.8);
+  const scale = Math.min(Math.max(INIT_WIDTH / baseWidth, 0.7), 1.8);
   return Math.round(size * scale);
 };
 
@@ -55,10 +60,15 @@ const DurationSelectionModal: React.FC<DurationSelectionModalProps> = ({
   onCancel,
   dayIcons,
 }) => {
+  const { width, height } = useWindowDimensions(); // ✅ responsive live
   const { t } = useTranslation();
   const { theme } = useTheme();
   const isDarkMode = theme === "dark";
   const currentTheme: Theme = isDarkMode ? designSystem.darkTheme : designSystem.lightTheme;
+
+  // ——— Responsive sizing (live)
+  const CARD_MAX_W = Math.min(width - 32, 420);      // 16px margin de chaque côté
+  const CARD_MAX_H = Math.min(height * 0.9, 620);    // 90% de la hauteur dispo
 
   // --- Anti "bounce": on contrôle le montage indépendamment de `visible`
   const [mounted, setMounted] = useState<boolean>(false);
@@ -83,18 +93,13 @@ const DurationSelectionModal: React.FC<DurationSelectionModalProps> = ({
   // Synchronisation `visible` -> `mounted` avec anti-rebond
   useEffect(() => {
     if (visible) {
-      // Si on tente de rouvrir trop vite après une fermeture, on ignore
-      if (Date.now() - lastCloseAtRef.current < REOPEN_COOLDOWN_MS) {
-        return;
-      }
+      if (Date.now() - lastCloseAtRef.current < REOPEN_COOLDOWN_MS) return;
       setClosing(false);
       setMounted(true);
-      // petit délai pour que l’Animated.View monte proprement puis spring
       requestAnimationFrame(() => {
         cardScale.value = withSpring(1, { damping: 12, stiffness: 120 });
       });
     } else if (mounted && !closing) {
-      // Lance l’animation de sortie puis démonte
       setClosing(true);
       cardScale.value = withTiming(0.9, { duration: 160 }, () => {
         runOnJS(setMounted)(false);
@@ -127,33 +132,54 @@ const DurationSelectionModal: React.FC<DurationSelectionModalProps> = ({
   }, [pressScale]);
 
   const safeConfirm = useCallback(() => {
-    if (confirming) return;          // garde-fou double-tap
+    if (confirming) return;
     setConfirming(true);
     try {
-      onConfirm();                   // Le parent fermera le modal (visible=false)
+      onConfirm(); // le parent ferme
     } finally {
-      // On laisse le parent gérer la fermeture; on débloque le bouton
-      // après une petite fenêtre pour éviter double toggles/taps.
       setTimeout(() => setConfirming(false), 500);
     }
   }, [confirming, onConfirm]);
 
-  // Mémo des icônes (évite recalcul)
   const iconsMap = useMemo(() => dayIcons, [dayIcons]);
 
   if (!mounted) return null;
 
   return (
-    <Modal visible transparent animationType="none" statusBarTranslucent>
-      <View style={styles.modalContainer}>
-        <Animated.View
-          entering={FadeInUp.springify()}
-          exiting={FadeOutDown.duration(EXIT_ANIM_MS)}
-          style={[
-            styles.modalContent,
-            cardAnimatedStyle,
-            { backgroundColor: currentTheme.colors.cardBackground },
-          ]}
+  <Modal
+    visible
+    transparent
+    animationType="none"
+    statusBarTranslucent
+  >
+    {/* 🔒 Conteneur unique plein écran, centre parfait */}
+    <View style={styles.modalRoot}>
+      {/* Backdrop cliquable, dans le même conteneur */}
+      <TouchableOpacity
+        activeOpacity={1}
+        onPress={onCancel}
+        style={styles.backdrop}
+      />
+
+      {/* Carte centrée */}
+      <Animated.View
+        entering={FadeInUp.springify()}
+        exiting={FadeOutDown.duration(EXIT_ANIM_MS)}
+        style={[
+          styles.modalContent,
+          cardAnimatedStyle,
+          {
+            backgroundColor: currentTheme.colors.cardBackground,
+            width: Math.min(width - 32, 420),   // responsive
+            maxHeight: Math.min(height * 0.9, 620),
+          },
+        ]}
+      >
+        <ScrollView
+          style={{ alignSelf: "stretch" }}
+          contentContainerStyle={styles.scrollCC}
+          bounces={false}
+          showsVerticalScrollIndicator={false}
         >
           <Text style={[styles.modalTitle, { color: currentTheme.colors.secondary }]}>
             {t("durationModal.title")}
@@ -203,88 +229,111 @@ const DurationSelectionModal: React.FC<DurationSelectionModalProps> = ({
               );
             })}
           </View>
+        </ScrollView>
 
-          <Animated.View entering={FadeInUp.delay(200)} style={buttonAnimatedStyle}>
-            <TouchableOpacity
-              style={styles.button}
-              onPress={safeConfirm}
-              activeOpacity={0.85}
-              onPressIn={handlePressIn}
-              onPressOut={handlePressOut}
-              disabled={confirming}
+        {/* Boutons bas */}
+        <Animated.View entering={FadeInUp.delay(200)} style={[buttonAnimatedStyle, styles.btnWrap]}>
+          <TouchableOpacity
+            style={styles.button}
+            onPress={safeConfirm}
+            activeOpacity={0.85}
+            onPressIn={handlePressIn}
+            onPressOut={handlePressOut}
+            disabled={confirming}
+          >
+            <LinearGradient
+              colors={[
+                confirming ? currentTheme.colors.textSecondary : currentTheme.colors.primary,
+                confirming ? currentTheme.colors.textSecondary : currentTheme.colors.secondary,
+              ]}
+              style={styles.buttonGradient}
             >
-              <LinearGradient
-                colors={[
-                  confirming ? currentTheme.colors.textSecondary : currentTheme.colors.primary,
-                  confirming ? currentTheme.colors.textSecondary : currentTheme.colors.secondary,
-                ]}
-                style={styles.buttonGradient}
-              >
-                <Text style={styles.buttonText}>
-                  {confirming ? t("pleaseWait", { defaultValue: "Patiente..." }) : t("durationModal.confirm")}
-                </Text>
-              </LinearGradient>
-            </TouchableOpacity>
-          </Animated.View>
-
-          <Animated.View entering={FadeInUp.delay(300)} style={buttonAnimatedStyle}>
-            <TouchableOpacity
-              style={styles.button}
-              onPress={onCancel}
-              activeOpacity={0.85}
-              onPressIn={handlePressIn}
-              onPressOut={handlePressOut}
-            >
-              <LinearGradient
-                colors={[currentTheme.colors.error, currentTheme.colors.error + "CC"]}
-                style={styles.buttonGradient}
-              >
-                <Text style={styles.buttonText}>{t("durationModal.cancel")}</Text>
-              </LinearGradient>
-            </TouchableOpacity>
-          </Animated.View>
+              <Text style={styles.buttonText}>
+                {confirming ? t("pleaseWait", { defaultValue: "Patiente..." }) : t("durationModal.confirm")}
+              </Text>
+            </LinearGradient>
+          </TouchableOpacity>
         </Animated.View>
-      </View>
-    </Modal>
-  );
+
+        <Animated.View entering={FadeInUp.delay(260)} style={[buttonAnimatedStyle, styles.btnWrapLast]}>
+          <TouchableOpacity
+            style={styles.button}
+            onPress={onCancel}
+            activeOpacity={0.85}
+            onPressIn={handlePressIn}
+            onPressOut={handlePressOut}
+          >
+            <LinearGradient
+              colors={[currentTheme.colors.error, currentTheme.colors.error + "CC"]}
+              style={styles.buttonGradient}
+            >
+              <Text style={styles.buttonText}>{t("durationModal.cancel")}</Text>
+            </LinearGradient>
+          </TouchableOpacity>
+        </Animated.View>
+      </Animated.View>
+    </View>
+  </Modal>
+);
+
 };
 
 const styles = StyleSheet.create({
-  modalContainer: {
+  // Backdrop plein écran
+  modalRoot: {
     flex: 1,
     justifyContent: "center",
     alignItems: "center",
+  },
+
+  // ✅ Backdrop dans le même conteneur
+  backdrop: {
+    ...StyleSheet.absoluteFillObject,
     backgroundColor: "rgba(0,0,0,0.7)",
   },
-  modalContent: {
-    width: "80%",
-    maxWidth: normalize(360),
-    minHeight: normalize(200),
-    borderRadius: normalize(16),
-    paddingVertical: normalize(20),
-    paddingHorizontal: normalize(16),
-    alignItems: "center",
+  // Couche centreuse
+  centerWrap: {
+    ...StyleSheet.absoluteFillObject,
     justifyContent: "center",
+    alignItems: "center",
+    paddingHorizontal: 16, // garde des marges sûres sur très petits écrans
+  },
+
+  // Carte du modal
+   modalContent: {
+    borderRadius: normalize(16),
+    paddingTop: normalize(20),
+    paddingHorizontal: normalize(16),
+    paddingBottom: normalize(10),
+    alignItems: "center",
+    justifyContent: "flex-start",
     shadowColor: "#000",
     shadowOffset: { width: 0, height: normalize(6) },
     shadowOpacity: 0.3,
     shadowRadius: normalize(10),
     elevation: 8,
   },
+
+  scrollCC: {
+    paddingBottom: normalize(10),
+    alignItems: "center",
+  },
+
   modalTitle: {
     fontSize: normalize(18),
     fontFamily: "Comfortaa_700Bold",
-    marginBottom: normalize(16),
+    marginBottom: normalize(12),
     textAlign: "center",
-    width: "100%",
+    alignSelf: "stretch",
   },
+
   gridContainer: {
     flexDirection: "row",
     flexWrap: "wrap",
     justifyContent: "center",
     alignItems: "center",
-    width: "100%",
-    marginBottom: normalize(20),
+    alignSelf: "stretch",
+    marginBottom: normalize(10),
   },
   gridItem: {
     width: "46%",
@@ -311,8 +360,13 @@ const styles = StyleSheet.create({
     fontFamily: "Comfortaa_400Regular",
     marginHorizontal: normalize(4),
   },
+
+  // Boutons
+  btnWrap: { alignSelf: "stretch" },
+  btnWrapLast: { alignSelf: "stretch", marginBottom: normalize(4) },
   button: {
-    width: "90%",
+    alignSelf: "center",
+    width: "92%",
     borderRadius: normalize(10),
     marginVertical: normalize(6),
     overflow: "hidden",
@@ -321,7 +375,6 @@ const styles = StyleSheet.create({
     shadowOpacity: 0.25,
     shadowRadius: normalize(6),
     elevation: 5,
-    alignSelf: "center",
   },
   buttonGradient: {
     paddingVertical: normalize(12),

@@ -13,7 +13,6 @@ import { ThemeProvider } from "../context/ThemeContext";
 import { LanguageProvider } from "../context/LanguageContext";
 import { TutorialProvider } from "../context/TutorialContext";
 import TrophyModal from "../components/TrophyModal";
-import { auth } from "../constants/firebase-config";
 import {
   useFonts,
   Comfortaa_400Regular,
@@ -26,12 +25,10 @@ import { AuthProvider } from "../context/AuthProvider";
 import * as SplashScreen from "expo-splash-screen";
 import { FeatureFlagsProvider, useFlags } from "../src/constants/featureFlags";
 import * as Linking from "expo-linking";
-import { PremiumProvider, usePremium } from "../src/context/PremiumContext";
-import { AdsVisibilityProvider, useAdsVisibility } from "../src/context/AdsVisibilityContext";
+import { AdsVisibilityProvider } from "../src/context/AdsVisibilityContext";
 import mobileAds from "react-native-google-mobile-ads";
 import {
   ensureAndroidChannelAsync,
-  registerForPushNotificationsAsync,
   scheduleDailyNotifications,
 } from "@/services/notificationService";
 import * as TrackingTransparency from "expo-tracking-transparency";
@@ -43,14 +40,15 @@ import {
 import { VisitorProvider } from "@/context/VisitorContext";
 import { useVisitor } from "@/context/VisitorContext";
 
+
 // =========================
 // AppNavigator : redirection initiale + Splash
 // =========================
 const AppNavigator: React.FC = () => {
-  const { user, loading } = useAuth();
+const { user, loading, checkingAuth } = useAuth();
   const router = useRouter();
   const pathname = usePathname();
-  const { isGuest } = useVisitor();
+  const { isGuest, hydrated } = useVisitor();
 
   const [fontsLoaded] = useFonts({
     Comfortaa_400Regular,
@@ -58,24 +56,26 @@ const AppNavigator: React.FC = () => {
   });
 
   useEffect(() => {
-  if (loading) return;
-  if (pathname !== "/") return;
+    // ⛔️ tant que Auth/Fonts/Visitor pas prêts → ne route pas
+if (loading || checkingAuth || !fontsLoaded || !hydrated) return;
+    if (pathname !== "/") {
+      SplashScreen.hideAsync().catch(() => {});
+      return;
+    }
 
   if (user) {
-     router.replace("/(tabs)");
-   } else if (isGuest) {
-     // ✅ Laisse le visiteur aller sur la Home au lieu de forcer /login
-     router.replace("/");
-   } else {
-     // ✅ Premier lancement sans compte -> login/register (ton souhait)
-     router.replace("/login");
-   }
-   SplashScreen.hideAsync().catch(() => {});
-  }, [user, loading, pathname, router, isGuest]);
+      router.replace("/(tabs)");
+    } else if (isGuest) {
+  router.replace("/(tabs)"); // Home (tabs) en visiteur
+    } else {
+      router.replace("/login");
+    }
+    SplashScreen.hideAsync().catch(() => {});
+  }, [user, loading, pathname, router, isGuest, fontsLoaded, hydrated]);
 
 
   // Laisse le Splash tant que auth ou fonts ne sont pas prêtes
-  if (loading || !fontsLoaded) return null;
+if (loading || checkingAuth || !fontsLoaded || !hydrated) return null;
   return null;
 };
 
@@ -181,37 +181,28 @@ const DeepLinkManager: React.FC = () => {
 
 const NotificationsBootstrap: React.FC = () => {
   const { user } = useAuth();
-  const hasInitRef = React.useRef(false);
 
-  // Crée le canal Android dès que possible (safe no-op sur iOS)
+  // Canal Android dès que possible (safe no-op iOS)
   useEffect(() => {
+  if (Platform.OS === "android") {
     ensureAndroidChannelAsync().catch(() => {});
-  }, []);
-
-  useEffect(() => {
-  const unsub = auth.onAuthStateChanged(async (u) => {
-    if (u) {
-      await ensureAndroidChannelAsync();         // Android: créer le canal
-      await registerForPushNotificationsAsync(); // 👈 sauve expoPushToken dans /users
-    }
-  });
-  return () => unsub();
+  }
 }, []);
 
-  // Première initialisation après login
+  // À la connexion, NE DEMANDE PAS — juste (re)planifie proprement
   useEffect(() => {
-    if (!user || hasInitRef.current) return;
-    hasInitRef.current = true;
-
+    if (!user) return;
     (async () => {
-      // 1) demande permission + enregistre expoPushToken en base
-      await registerForPushNotificationsAsync();
-      // 2) planifie proprement 09:00 et 19:00 (heure locale)
-      await scheduleDailyNotifications();
+      if (Platform.OS === "android") {
+  await ensureAndroidChannelAsync();
+}
+// scheduleDailyNotifications() ne pop pas (lit l'état existant)
+await scheduleDailyNotifications();
+
     })();
   }, [user]);
 
-  // Replanifie quand l'app revient active (changement heure/fuseau/DST)
+  // Replanifie quand l'app redevient active (fus. horaire/DST)
   useEffect(() => {
     const sub = AppState.addEventListener("change", (state) => {
       if (state === "active" && user) {
@@ -266,10 +257,9 @@ export default function RootLayout() {
                                     >
                                       <Stack.Screen name="(tabs)" options={{ headerShown: false }} />
                                       <Stack.Screen name="login" />
-                                      <Stack.Screen name="onboarding" />
                                       <Stack.Screen name="register" />
                                       <Stack.Screen name="forgot-password" />
-                                      <Stack.Screen name="profile/Notifications" />
+                                      <Stack.Screen name="profile/notifications" />
                                       <Stack.Screen name="handleInvite" />
                                     </Stack>
 

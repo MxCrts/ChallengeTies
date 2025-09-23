@@ -389,9 +389,24 @@
     "accessDenied": "Access denied",
     "shareError": "Share failed"
   },
+  "pioneerModal": {
+    "title": "🎖️ Welcome to the Pioneers!",
+    "description": "You are among the <b>first {{first}}</b> users.\nA <b>Pioneer</b> badge has been awarded and you earn <b>+{{trophies}} trophies</b> 🏆.",
+    "cta": "Awesome!",
+    "closeA11y": "Close the Pioneer message"
+  },
   "invitationS": {
       "shareTitle": "Duo Invitation",
       "shareMessageWithTitle": "I invite you to start “{{title}}” for {{days}} days with me!",
+      "title": "Invite a Friend",
+    "subtitleDirect": "Enter your friend's exact username to send them an invitation.",
+    "usernamePlaceholder": "Username",
+    "send": "Send Invitation",
+    "sentShort": "Invitation sent!",
+    "confirmReset": {
+      "title": "Switch to Duo?",
+      "message": "If you send an invitation, you will lose your solo progress and restart at 0 in duo. Are you sure you want to continue?"
+    },
       "errors": {
         "alreadyInvited": "You already have an active invitation for this challenge.",
         "autoInvite": "You cannot accept your own invitation.",
@@ -399,7 +414,13 @@
         "alreadyInDuoForChallenge": "Cannot invite this user: they are already in a duo for this challenge.",
         "unknown": "An unknown error occurred.",
         "inviterAlreadyStarted": "You already started this challenge solo.",
-        "duoAlready": "You are already in a duo for this challenge."
+        "duoAlready": "You are already in a duo for this challenge.",
+        "permissions": "Insufficient permissions. Make sure you are logged in and Firestore rules allow this action.",
+      "userNotFound": "No user found with that name.",
+      "usernameRequired": "Enter your friend’s username.",
+      "params": "Invalid parameters for invitation.",
+      "inviterHasPendingForChallenge": "You already have a pending invitation for this challenge.",
+      "inviteeHasPendingForChallenge": "This user already has a pending invitation for this challenge."
       },
       "confirmStartDuoTitle": "Start as Duo?",
       "confirmStartDuoMessage": "If you start as a Duo, your solo progress will be reset. Continue?",
@@ -409,7 +430,9 @@
       }
     },
     "pendingInvite": "Invitation in progress",
-"commonS": { "close": "Close", "notLoggedIn": "You must be logged in.", "sending": "Sending…" }
+"commonS": { "close": "Close", "notLoggedIn": "You must be logged in.", "sending": "Sending…",
+    "cancel": "No",
+    "continue": "Yes, continue" }
 ,
 "profileS": {
     "bioLabel": "Bio",
@@ -477,7 +500,14 @@
   "reviewPlaceholder": "Share your thoughts after completing this challenge...",
   "submitReview": "Submit",
   "deleteReview": "Delete",
-  "confirmDeleteReview": "Delete this review?"
+  "confirmDeleteReview": "Delete this review?",
+    "shareA11y": "Share this challenge",
+    "chatA11y": "Open the challenge chat",
+    "statsA11y": "View stats",
+    "challenge": "Challenge",
+    "accessDenied": "Access denied",
+    "backButton": "Back",
+    "backButtonHint": "Go back to the previous screen"
   },
    "explore": "Explore",
   "email": "Email address",
@@ -660,26 +690,28 @@
   },
   "completedOnDate": "Completed on",
   "completion": {
-    "trophies": "trophies",
-    "reward": "You earned {{count}} trophies!",
-    "finalTitle": "Congratulations!",
-    "finalMessage": "You earned {{count}} trophies!",
-    "errorFinalizingMessage": "Error while finalizing the challenge.",
-    "adNotReadyTitle": "Ad not available",
-    "adNotReady": "The ad is not loaded yet. Try again soon.",
-    "continue": "Continue",
-    "doubleTrophies": "Double your trophies",
-    "youAreAwesome": "You are awesome!",
-    "keepItUp": "Keep it up!",
-    "successIsYours": "Success is yours!",
-    "everyEffortCounts": "Every effort counts!",
-    "neverGiveUp": "Never give up!",
-    "youAreOnTrack": "You are on the right track!",
-    "excellenceAwaits": "Excellence awaits!",
-    "headHeldHigh": "Head held high!",
-    "persistencePays": "Persistence pays!",
-    "challengesMakeYouStronger": "Challenges make you stronger!"
-  },
+  "trophies": "trophies",
+  "reward": "You earned {{count}} trophies!",
+  "finalTitle": "Congratulations!",
+  "finalMessage": "You earned {{count}} trophies!",
+  "errorFinalizing": "Error finalizing the challenge.",
+  "errorFinalizingMessage": "Error finalizing the challenge.",
+  "adNotReadyTitle": "Ad not available",
+  "adNotReady": "The ad is not loaded yet. Please try again soon.",
+  "continue": "Continue",
+  "loadingAd": "Preparing the video…",
+  "doubleTrophies": "Double your trophies",
+  "youAreAwesome": "You are awesome!",
+  "keepItUp": "Keep it up!",
+  "successIsYours": "Success is yours!",
+  "everyEffortCounts": "Every effort counts!",
+  "neverGiveUp": "Never give up!",
+  "youAreOnTrack": "You are on track!",
+  "excellenceAwaits": "Excellence awaits you!",
+  "headHeldHigh": "Head held high!",
+  "persistencePays": "Persistence pays!",
+  "challengesMakeYouStronger": "Challenges make you stronger!"
+},
   "featureDetail": {
     "votes": "{{count}} vote",
     "votes_plural": "{{count}} votes",
@@ -3120,7 +3152,9 @@
   "morning2": "You’ve got this today! 💪",
   "evening1": "🌙 Time to tick your day. Small steps, big results.",
   "evening2": "Another day of consistency. Nice!",
-  "nudgeBody": "Yo! Don’t forget “{{title}}” — {{from}} is cheering you on 💪"
+  "nudgeBody": "Yo! Don’t forget “{{title}}” — {{from}} is cheering you on 💪",
+  "invitationAccepted": "{{username}} accepted your invitation!",
+    "invitationRefused": "{{username}} refused your invitation."
 },
 "editYourReview": "Edit your review",
 "saveReview": "Save"
@@ -3128,24 +3162,51 @@
 "duo": {
   "title": "Duo Challenge",
   "you": "You",
+  "nudgeNoToken": "Your partner hasn’t enabled notifications or hasn’t opened the app since the update.",
+  "nudgeDisabled": "Your partner has disabled notifications.",
+  "nudgeNoUser": "Partner not found.",
   "nudge": "Nudge",
   "leading": "You’re leading!",
+  "nudgeUnregistered": "Your partner’s token is no longer valid. Ask them to open the app to reactivate notifications.",
+  "nudgeExpoError": "Notification service error. Please try again later.",
   "tied": "Tied",
   "behind": "You’re behind",
   "nudgeSent": "Nudge sent ✅",
   "nudgeFailed": "Couldn't send the notification.",
   "nudgeUnavailable": "This feature is only for duo challenges.",
-  "nudgeHint": "Tap to nudge. Long-press to open chat."
+  "nudgeHint": "Tap to nudge. Long-press to open chat.",
+    "partner": "Partner",
+    "loadingPartner": "Loading partner..."
 }
 ,
   "invitation": {
-    "title": "Join a challenge",
     "subtitle": "You have been invited to join challenge {challengeId}!",
-    "accept": "Accept invitation",
     "accepting": "Accepting...",
     "success": "Challenge joined!",
     "invalid": "Invalid invitation",
-    "joinedChallenge": "You successfully joined the challenge!"
+    "joinedChallenge": "You successfully joined the challenge!",
+    "loading": "Loading...",
+  "invalidTitle": "Invitation unavailable",
+  "invalidMessage": "This invitation is not found or has been deleted.",
+  "expiredTitle": "Invitation expired",
+  "expiredMessage": "This invitation has expired. Ask your friend to send a new one.",
+  "title": "{{username}} invites you to a Duo",
+  "message": "Accept to start this challenge in Duo. You will be able to track your progress together.",
+  "accept": "Accept",
+  "refuse": "Decline",
+  "acceptHint": "Accept the invitation and start the Duo.",
+  "refuseHint": "Decline the invitation and close.",
+  "restartTitle": "Restart the challenge in Duo?",
+  "restartMessage": "You already have this challenge in solo. We will reset it to start fresh together.",
+  "cancel": "Cancel",
+  "continue": "Continue",
+  "errors": {
+    "unknown": "Unknown error.",
+    "expired": "Invitation expired.",
+    "autoInvite": "You cannot accept your own invitation.",
+    "alreadyInDuoForChallenge": "You are already in a Duo for this challenge."
+  },
+  "userFallback": "User"
   },
   "settingsPage": {
     "location": "Location",

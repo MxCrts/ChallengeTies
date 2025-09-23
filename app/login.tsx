@@ -13,6 +13,7 @@ import {
   ScrollView,
   Keyboard,
   StatusBar,
+  InteractionManager,
 } from "react-native";
 import { useSafeAreaInsets, SafeAreaView } from "react-native-safe-area-context";
 import { useRouter } from "expo-router";
@@ -21,7 +22,10 @@ import { auth } from "../constants/firebase-config";
 import { Ionicons } from "@expo/vector-icons";
 import { useTranslation } from "react-i18next";
 import { StatusBar as ExpoStatusBar } from "expo-status-bar";
+import AsyncStorage from "@react-native-async-storage/async-storage";
 import { useVisitor } from "@/context/VisitorContext";
+import { useNavGuard } from "@/hooks/useNavGuard";
+
 
 const { width: SCREEN_WIDTH, height: SCREEN_HEIGHT } = Dimensions.get("window");
 const normalize = (size: number) => {
@@ -106,6 +110,7 @@ const KeyboardPadding = React.memo(() => {
 export default function Login() {
   const { t } = useTranslation();
   const router = useRouter();
+  const nav = useNavGuard(router);
   const insets = useSafeAreaInsets();
 const { setGuest  } = useVisitor();
   const [email, setEmail] = useState("");
@@ -113,6 +118,15 @@ const { setGuest  } = useVisitor();
   const [loading, setLoading] = useState(false);
   const [errorMessage, setErrorMessage] = useState("");
   const [showPassword, setShowPassword] = useState(false);
+
+  const isMountedRef = useRef(true);
+  const submittingRef = useRef(false);
+
+  useEffect(() => {
+    return () => {
+      isMountedRef.current = false;
+    };
+  }, []);
 
   // Animation des vagues
   const waves = useRef(
@@ -163,39 +177,46 @@ const { setGuest  } = useVisitor();
     []
   );
 
-  const handleLogin = useCallback(async () => {
+   const handleLogin = useCallback(async () => {
+    if (submittingRef.current || loading) return;
+    submittingRef.current = true;
     setErrorMessage("");
 
     if (!email.trim() || !password.trim()) {
-      setErrorMessage(t("fillEmailPassword"));
+      if (isMountedRef.current) setErrorMessage(t("fillEmailPassword"));
+      submittingRef.current = false;
       return;
     }
     if (!isValidEmail(email)) {
-      setErrorMessage(t("invalidEmail"));
+      if (isMountedRef.current) setErrorMessage(t("invalidEmail"));
+      submittingRef.current = false;
       return;
     }
 
     try {
-      setLoading(true);
+      if (isMountedRef.current) setLoading(true);
       await signInWithEmailAndPassword(auth, email.trim(), password.trim());
-      setGuest(false); 
-      router.replace("/");
+      setGuest(false);
+      InteractionManager.runAfterInteractions(() => {
+        if (isMountedRef.current) router.replace("/");
+      });
     } catch (error: any) {
       const errorCode = error.code;
       const invalidCredentialsCodes = ["auth/user-not-found", "auth/wrong-password"];
       if (invalidCredentialsCodes.includes(errorCode)) {
-        setErrorMessage(t("invalidCredentials"));
+        if (isMountedRef.current) setErrorMessage(t("invalidCredentials"));
       } else {
         const errorMessages: Record<string, string> = {
           "auth/invalid-email": t("invalidEmailFormat"),
           "auth/too-many-requests": t("tooManyRequests"),
         };
-        setErrorMessage(errorMessages[errorCode] || t("unknownError"));
+        if (isMountedRef.current) setErrorMessage(errorMessages[errorCode] || t("unknownError"));
       }
     } finally {
-      setLoading(false);
+      submittingRef.current = false;
+      if (isMountedRef.current) setLoading(false);
     }
-  }, [email, password, t, router, isValidEmail]);
+  }, [email, password, t, router, isValidEmail, loading]);
 
   // Auto-dismiss erreur
   useEffect(() => {
@@ -204,6 +225,10 @@ const { setGuest  } = useVisitor();
       return () => clearTimeout(timer);
     }
   }, [errorMessage]);
+
+  const goSignUp = () => nav.replace("/register");
+// (optionnel) on protège aussi le “forgot password” :
+const goForgot = () => nav.push("/forgot-password");
 
   return (
     <SafeAreaView style={{ flex: 1, backgroundColor: COLORS.background }}>
@@ -307,7 +332,7 @@ const { setGuest  } = useVisitor();
           </View>
 
           <TouchableOpacity
-            onPress={() => router.push("/forgot-password")}
+            onPress={goForgot}
             accessibilityLabel={t("forgotPassword")}
             accessibilityRole="link"
             testID="forgot-password-link"
@@ -339,7 +364,7 @@ const { setGuest  } = useVisitor();
             {t("noAccount")}{" "}
             <Text
               style={styles.signupLink}
-              onPress={() => router.push("/register")}
+              onPress={goSignUp}
               accessibilityRole="link"
               accessibilityLabel={t("signupHere")}
               testID="signup-link"
@@ -350,10 +375,13 @@ const { setGuest  } = useVisitor();
           {/* Bouton mode visiteur (en dehors du <Text>) */}
  <TouchableOpacity
    style={styles.guestButton}
-   onPress={() => {
-     setGuest(true);        // ✅ active le mode visiteur
-     router.replace("/");   // ✅ va sur la Home
-   }}
+   onPress={async () => {
+  await AsyncStorage.removeItem("pendingTutorial"); // ✅ évite tout lancement de tuto
+  setGuest(true);                                   // ✅ mode visiteur
+  InteractionManager.runAfterInteractions(() => {
+    if (isMountedRef.current) router.replace("/");
+  });
+}}
    accessibilityRole="button"
    accessibilityLabel={t("continueAsGuest") || "Continuer en tant que visiteur"}
  >

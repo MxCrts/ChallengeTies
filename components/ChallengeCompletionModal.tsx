@@ -134,9 +134,11 @@ const npa = (globalThis as any).__NPA__ === true;
   const toastOpacity = useRef(new Animated.Value(0)).current;
   const toastTranslate = useRef(new Animated.Value(30)).current;
 const rewardedAdUnitId = __DEV__ ? TestIds.REWARDED : adUnitIds.rewarded;
-const rewarded = RewardedAd.createForAdRequest(rewardedAdUnitId, {
-  requestNonPersonalizedAdsOnly: npa,
-});
+const rewardedRef = useRef<RewardedAd | null>(null);
+const [adLoaded, setAdLoaded] = useState(false);
+const [isShowingAd, setIsShowingAd] = useState(false);
+const earnedRef = useRef(false);
+const createdRef = useRef(false);
   // --- Busy guard
   const [busy, setBusy] = useState(false);
 
@@ -156,9 +158,6 @@ const rewarded = RewardedAd.createForAdRequest(rewardedAdUnitId, {
   const [userTrophies, setUserTrophies] = useState<number>(0);
   const { completeChallenge } = useCurrentChallenges();
   const videoRef = useRef<Video>(null);
-  const [adLoaded, setAdLoaded] = useState(false);
-  const [isShowingAd, setIsShowingAd] = useState(false);
-  const earnedRef = useRef(false);
 
   // ---- Helper toast (réutilisable)
   const showToast = (msg: string, duration = 1200) => {
@@ -177,33 +176,37 @@ const rewarded = RewardedAd.createForAdRequest(rewardedAdUnitId, {
     });
   };
 
-  // ---- Ads listeners
-  useEffect(() => {
-    if (!canShowRewarded) {
-      setAdLoaded(false);
-      return;
-    }
+  // --- Ads listeners (create once)
+useEffect(() => {
+  if (!canShowRewarded) { setAdLoaded(false); return; }
+  if (createdRef.current) return;       // only once per mount
+  createdRef.current = true;
 
-    const unsubLoaded = rewarded.addAdEventListener(
+  const ad = RewardedAd.createForAdRequest(rewardedAdUnitId, {
+    requestNonPersonalizedAdsOnly: npa,
+  });
+  rewardedRef.current = ad;
+
+  const unsubLoaded = ad.addAdEventListener(
       RewardedAdEventType.LOADED,
       () => setAdLoaded(true)
     );
 
-    const unsubEarned = rewarded.addAdEventListener(
+    const unsubEarned = ad.addAdEventListener(
       RewardedAdEventType.EARNED_REWARD,
       () => {
         earnedRef.current = true;
       }
     );
 
-    const unsubError = rewarded.addAdEventListener(AdEventType.ERROR, (error) => {
+    const unsubError = ad.addAdEventListener(AdEventType.ERROR, (error) => {
       console.error("Erreur vidéo récompensée:", error?.message ?? error);
       setAdLoaded(false);
       setIsShowingAd(false);
       setBusy(false);
     });
 
-    const unsubClosed = rewarded.addAdEventListener(AdEventType.CLOSED, async () => {
+    const unsubClosed = ad.addAdEventListener(AdEventType.CLOSED, async () => {
       const userEarned = earnedRef.current;
       earnedRef.current = false;
       setIsShowingAd(false);
@@ -223,24 +226,20 @@ const rewarded = RewardedAd.createForAdRequest(rewardedAdUnitId, {
         showToast(t("completion.errorFinalizingMessage"), 1400);
         onClose?.();
       } finally {
-        try {
-          rewarded.load();
-        } catch {}
+        try { rewardedRef.current?.load(); } catch {}
         setBusy(false);
       }
     });
-
-    try {
-      rewarded.load();
-    } catch {}
 
     return () => {
       unsubLoaded();
       unsubEarned();
       unsubError();
       unsubClosed();
+      rewardedRef.current = null;
+    createdRef.current = false;
     };
-  }, [canShowRewarded, challengeId, selectedDays, t, completeChallenge, onClose]);
+ }, [canShowRewarded]);
 
   // ---- User trophies listener
   useEffect(() => {
@@ -258,6 +257,8 @@ const rewarded = RewardedAd.createForAdRequest(rewardedAdUnitId, {
   // ---- Open/close animations
   useEffect(() => {
     if (visible) {
+      setAdLoaded(false);
+    try { rewardedRef.current?.load(); } catch {}
       const idx = Math.floor(Math.random() * motivationalPhrases.length);
       setMotivationalPhrase(motivationalPhrases[idx]);
 
@@ -308,6 +309,8 @@ const rewarded = RewardedAd.createForAdRequest(rewardedAdUnitId, {
       rotateAnim.setValue(0);
       glowAnim.setValue(0.8);
       videoFadeAnim.setValue(0);
+      setIsShowingAd(false);
+    setBusy(false);
     }
   }, [visible]);
 
@@ -349,10 +352,9 @@ const rewarded = RewardedAd.createForAdRequest(rewardedAdUnitId, {
         setBusy(false);
         return;
       }
-      if (!adLoaded) {
-        try {
-          rewarded.load();
-        } catch {}
+      if (!adLoaded || !rewardedRef.current) {
+        // Try to load and tell the user we’re prepping the ad
+        try { rewardedRef.current?.load(); } catch {}
         showToast(t("completion.adNotReady"));
         setBusy(false);
         return;
@@ -361,7 +363,7 @@ const rewarded = RewardedAd.createForAdRequest(rewardedAdUnitId, {
       try {
         setIsShowingAd(true);
         earnedRef.current = false;
-        rewarded.show(); // suite gérée dans CLOSED/EARNED
+         rewardedRef.current.show();
       } catch (error) {
         console.error(t("completion.errorFinalizing"), error);
         setIsShowingAd(false);
@@ -449,11 +451,9 @@ const rewarded = RewardedAd.createForAdRequest(rewardedAdUnitId, {
               </LinearGradient>
             </Animated.View>
 
-            <Text
-              style={[styles.motivationalText, dynamicStyles.motivationalText]}
-            >
-              {t(motivationalPhrases)}
-            </Text>
+            <Text style={[styles.motivationalText, dynamicStyles.motivationalText]}>
+  {t(motivationalPhrase)}
+</Text>
 
             <Animated.View
               style={[
@@ -505,12 +505,12 @@ const rewarded = RewardedAd.createForAdRequest(rewardedAdUnitId, {
 
             {/* Doubler (rewarded) */}
             <TouchableOpacity
-              onPress={() => handleComplete(true)}
-              activeOpacity={0.7}
-              disabled={!canShowRewarded || busy}
+  onPress={() => handleComplete(true)}
+  activeOpacity={0.7}
+  disabled={!canShowRewarded || busy || !adLoaded || isShowingAd}
               style={[
                 styles.gradientButton,
-                (!canShowRewarded || busy) && { opacity: 0.5 },
+                (!canShowRewarded || busy || !adLoaded || isShowingAd) && { opacity: 0.5 },
               ]}
             >
               <LinearGradient
@@ -534,7 +534,11 @@ const rewarded = RewardedAd.createForAdRequest(rewardedAdUnitId, {
                     numberOfLines={1}
                     ellipsizeMode="tail"
                   >
-                    {t("completion.doubleTrophies")}
+                    {isShowingAd
+          ? t("pleaseWait", { defaultValue: "Patiente..." })
+          : adLoaded
+            ? t("completion.doubleTrophies")
+            : t("completion.loadingAd", { defaultValue: "Préparation de la vidéo..." })}
                   </Text>
                 </View>
               </LinearGradient>

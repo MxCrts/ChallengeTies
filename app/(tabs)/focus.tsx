@@ -16,7 +16,7 @@ import { useRouter } from "expo-router";
 import { LinearGradient } from "expo-linear-gradient";
 import { Ionicons } from "@expo/vector-icons";
 import ConfettiCannon from "react-native-confetti-cannon";
-import { doc, onSnapshot } from "firebase/firestore";
+import { doc, onSnapshot, collection, getDocs, query, where, limit } from "firebase/firestore";
 import { db, auth } from "../../constants/firebase-config";
 import { useCurrentChallenges } from "../../context/CurrentChallengesContext";
 import { useTheme } from "../../context/ThemeContext";
@@ -28,6 +28,7 @@ import { BlurView } from "expo-blur";
 import { useTutorial } from "../../context/TutorialContext";
 import Animated, { FadeInUp } from "react-native-reanimated";
 import TutorialModal from "../../components/TutorialModal";
+
 
 const SPACING = 18;
 const { width: SCREEN_WIDTH, height: SCREEN_HEIGHT } = Dimensions.get("window");
@@ -73,6 +74,8 @@ const SPACER_BOTTOM = (SCREEN_WIDTH - BOTTOM_ITEM_WIDTH) / 2;
 interface CurrentChallengeExtended {
   id: string;
   title: string;
+  challengeId?: string;    // ⇐ si présent dans ton contexte
+  docId?: string; 
   chatId?: string;
   imageUrl?: string;
   selectedDays: number;
@@ -116,12 +119,36 @@ export default function FocusScreen() {
   const flatListBottomRef = useRef<RNAnimated.FlatList<any>>(null);
 
  type IntervalId = ReturnType<typeof setInterval>;
+ const [participantsMap, setParticipantsMap] = useState<Record<string, number>>({});
+
 const topAutoScrollRef = useRef<IntervalId | null>(null);
 const bottomAutoScrollRef = useRef<IntervalId | null>(null);
 
   const topIndexRef = useRef(0);
   const bottomIndexRef = useRef(0);
+const chatIdToDocIdRef = useRef<Record<string, string>>({});
+const keysFor = (item: any) =>
+  Array.from(
+    new Set(
+      [item?.docId, item?.challengeId, item?.chatId, item?.id].filter(Boolean)
+    )
+  ) as string[];
 
+const getParticipantsCount = (item: any) => {
+  // on essaie d’abord chatId (le plus fiable pour “mapper” avec Explore),
+  // puis docId/challengeId/id, puis fallbacks locaux éventuels :
+  return (
+    (item?.chatId && participantsMap[item.chatId]) ??
+    (item?.docId && participantsMap[item.docId]) ??
+    (item?.challengeId && participantsMap[item.challengeId]) ??
+    (item?.id && participantsMap[item.id]) ??
+    (typeof item?.participantsCount === "number" ? item.participantsCount : undefined) ??
+    (typeof item?.participants === "number" ? item.participants : 0)
+  );
+};
+
+// éviter de lancer 10x la même résolution
+const resolvingRef = useRef<Record<string, boolean>>({});
   useEffect(() => {
     const userId = auth.currentUser?.uid;
     if (!userId) return;
@@ -159,13 +186,33 @@ const bottomAutoScrollRef = useRef<IntervalId | null>(null);
     };
   });
 
-  const notMarkedToday = translatedChallenges.filter(
-    (ch) => ch.lastMarkedDate !== today
-  );
+// 🔁 Un SEUL listener (comme Explore) : on remplit la map par doc.id et par chatId
+useEffect(() => {
+  const q = query(collection(db, "challenges"), where("approved", "==", true));
+  const unsub = onSnapshot(q, (snap) => {
+    const next: Record<string, number> = {};
+    snap.forEach((d) => {
+      const data: any = d.data();
+      const count = Number(data?.participantsCount ?? data?.participants ?? 0);
+      next[d.id] = count;               // clé par doc.id
+      if (data?.chatId) next[data.chatId] = count; // alias par chatId
+    });
+    setParticipantsMap(next);
+  });
+  return () => unsub();
+}, []);
 
-  const markedToday = translatedChallenges.filter(
-    (ch) => ch.lastMarkedDate === today
-  );
+
+
+  const enrichedChallenges = translatedChallenges.map((item) => ({
+  ...item,
+  // priors : challengeId (si tu le stockes), sinon chatId (tu le set = doc.id côté Explore), sinon id
+  docId: (item as any).challengeId || item.chatId || item.id,
+}));
+
+  const notMarkedToday = enrichedChallenges.filter((ch) => ch.lastMarkedDate !== today);
+
+ const markedToday     = enrichedChallenges.filter((ch) => ch.lastMarkedDate === today);
 
   const handleNavigateToDetails = (item: CurrentChallengeExtended) => {
     router.push({
@@ -181,26 +228,6 @@ const bottomAutoScrollRef = useRef<IntervalId | null>(null);
       },
     });
   };
-
-  useEffect(() => {
-    const unsubscribes: (() => void)[] = [];
-
-    uniqueChallenges.forEach((challenge) => {
-      const challengeRef = doc(db, "challenges", challenge.id);
-      const unsubscribe = onSnapshot(challengeRef, (docSnap) => {
-        if (docSnap.exists()) {
-          const data = docSnap.data();
-          setChallengeParticipants((prev) => ({
-            ...prev,
-            [challenge.id]: data.participantsCount || 0,
-          }));
-        }
-      });
-      unsubscribes.push(unsubscribe);
-    });
-
-    return () => unsubscribes.forEach((unsub) => unsub());
-  }, [uniqueChallenges]);
 
   const startTopAutoScroll = useCallback(() => {
     if (notMarkedToday.length <= 1) return;
@@ -377,20 +404,18 @@ const bottomAutoScrollRef = useRef<IntervalId | null>(null);
             <View style={{ flexDirection: "row", alignItems: "center" }}>
   <Ionicons
     name="people"
-    size={normalizeSize(14)}
+    size={normalizeSize(14)} // 12 en bas si tu veux
     color={currentTheme.colors.trophy}
     style={{ marginRight: 4 }}
   />
-  <Text
-    style={[
-      styles.topItemParticipants,
-      { color: currentTheme.colors.trophy },
-    ]}
-  >
-    {t("participant", {
-      count: challengeParticipants[item.id] ?? item.participants ?? 0,
-    })}
-  </Text>
+  {(() => {
+    const count = getParticipantsCount(item);
+    return (
+      <Text style={[styles.topItemParticipants /* ou bottom... */, { color: currentTheme.colors.trophy }]}>
+        {`${count} ${t("participants", { count })}`}
+      </Text>
+    );
+  })()}
 </View>
 
           </LinearGradient>
@@ -487,20 +512,18 @@ const bottomAutoScrollRef = useRef<IntervalId | null>(null);
            <View style={{ flexDirection: "row", alignItems: "center" }}>
   <Ionicons
     name="people"
-    size={normalizeSize(12)}
+    size={normalizeSize(14)} // 12 en bas si tu veux
     color={currentTheme.colors.trophy}
     style={{ marginRight: 4 }}
   />
-  <Text
-    style={[
-      styles.bottomItemParticipants,
-      { color: currentTheme.colors.trophy },
-    ]}
-  >
-    {t("participant", {
-      count: challengeParticipants[item.id] ?? item.participants ?? 0,
-    })}
-  </Text>
+  {(() => {
+    const count = getParticipantsCount(item);
+    return (
+      <Text style={[styles.bottomItemParticipants /* ou bottom... */, { color: currentTheme.colors.trophy }]}>
+        {`${count} ${t("participants", { count })}`}
+      </Text>
+    );
+  })()}
 </View>
 
           </LinearGradient>

@@ -21,7 +21,7 @@ import { Image as RNImage } from "react-native";
 
 import { Ionicons } from "@expo/vector-icons";
 import { useRouter } from "expo-router";
-import { collection, onSnapshot } from "firebase/firestore";
+import { collection, onSnapshot, query, where } from "firebase/firestore";
 import { db } from "../../constants/firebase-config";
 import { LinearGradient } from "expo-linear-gradient";
 import Animated, { FadeInUp } from "react-native-reanimated";
@@ -395,8 +395,12 @@ const safeNavigate = (path: string) => {
 
   // Firestore fetch
   useEffect(() => {
-    const unsubscribe = onSnapshot(
-      collection(db, "challenges"),
+    const q = query(
+    collection(db, "challenges"),
+    where("approved", "==", true)   // 👈 important pour matcher la rule
+  );
+  const unsubscribe = onSnapshot(
+    q,
       (querySnapshot) => {
         const fetched: Challenge[] = querySnapshot.docs
           .map((doc) => {
@@ -423,10 +427,10 @@ const safeNavigate = (path: string) => {
               daysOptions: data.daysOptions || [
                 7, 14, 21, 30, 60, 90, 180, 365,
               ],
-              approved: data.approved ?? false,
+              approved: true,
             };
           })
-          .filter((challenge) => challenge.approved === true);
+          
 
         const urls = fetched.map((ch) => ch.imageUrl).filter(Boolean);
         Promise.all(urls.map((url) => RNImage.prefetch(url))).catch((err) =>

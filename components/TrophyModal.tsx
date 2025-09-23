@@ -81,74 +81,96 @@ const npa = (globalThis as any).__NPA__ === true;
   const [message, setMessage] = useState("");
   const [adLoaded, setAdLoaded] = useState(false);
   const videoRef = useRef<Video>(null);
-  const { showRewardedAds, showInterstitials } = useAdsVisibility() as any;
-  const canShowRewarded = (showRewardedAds ?? showInterstitials) === true;
+  const { showRewarded } = useAdsVisibility() as any;
+const canShowRewarded = !!showRewarded;
   const rewardedRef = useRef<RewardedAd | null>(null);
   const earnedRef = useRef(false);
+  const unitId = __DEV__ ? TestIds.REWARDED : adUnitIds.rewarded;
+const [isShowingAd, setIsShowingAd] = useState(false);
+const createdRef = useRef(false);
 
-  // Ad handling (gating + flux EARNED -> CLOSED)
- useEffect(() => {
-  if (!canShowRewarded || !showTrophyModal) {
+ // Ad handling (instance unique + listeners stables)
+useEffect(() => {
+  if (!canShowRewarded) {
     setAdLoaded(false);
     return;
   }
+  if (createdRef.current) return; // ne crée qu'une fois
+  createdRef.current = true;
 
-  // (re)crée l'instance si absente OU si le consentement a changé
-  if (!rewardedRef.current || (rewardedRef.current as any).__npa !== npa) {
-    const unitId = __DEV__ ? TestIds.REWARDED : adUnitIds.rewarded;
-    const inst = RewardedAd.createForAdRequest(unitId, {
-      requestNonPersonalizedAdsOnly: npa, // 👈 respecte le consentement
-    });
-    (inst as any).__npa = npa; // mémo local pour détecter un changement ultérieur
-    rewardedRef.current = inst;
-  }
-  const rewarded = rewardedRef.current!;
+  const ad = RewardedAd.createForAdRequest(unitId, {
+    requestNonPersonalizedAdsOnly: npa,
+  });
+  rewardedRef.current = ad;
 
-  const unsubLoaded = rewarded.addAdEventListener(
+  const unsubLoaded = ad.addAdEventListener(
     RewardedAdEventType.LOADED,
     () => setAdLoaded(true)
   );
-  const unsubEarned = rewarded.addAdEventListener(
+
+  const unsubEarned = ad.addAdEventListener(
     RewardedAdEventType.EARNED_REWARD,
-    () => { earnedRef.current = true; }
-  );
-  const unsubError = rewarded.addAdEventListener(
-    AdEventType.ERROR,
-    (error) => {
-      console.error("❌ Rewarded error:", error?.message ?? error);
-      setAdLoaded(false);
-    }
-  );
-  const unsubClosed = rewarded.addAdEventListener(
-    AdEventType.CLOSED,
     () => {
-      const earned = earnedRef.current;
-      earnedRef.current = false;
-      setAdLoaded(false);
-      try { rewarded.load(); } catch {}
-
-      if (earned) {
-        setAdWatched(true);
-        activateDoubleReward();
-        const base = trophiesEarned || Math.round(5 * (selectedDays / 7));
-        const doubled = base * 2;
-        setReward(doubled);
-        setMessage(t("trophyModal.doubleMessage", { count: doubled }));
-      } else {
-        setMessage(t("trophyModal.adNotReady"));
-      }
+      earnedRef.current = true;
     }
   );
 
-  try { rewarded.load(); } catch {}
+  const unsubError = ad.addAdEventListener(AdEventType.ERROR, (error) => {
+    console.error("❌ Rewarded error:", error?.message ?? error);
+    setAdLoaded(false);
+    setIsShowingAd(false);
+  });
+
+  const unsubClosed = ad.addAdEventListener(AdEventType.CLOSED, () => {
+    const earned = earnedRef.current;
+    earnedRef.current = false;
+    setIsShowingAd(false);
+    setAdLoaded(false);
+
+    try { rewardedRef.current?.load(); } catch {}
+
+    if (earned) {
+      setAdWatched(true);
+      activateDoubleReward();
+      const base = trophiesEarned || Math.round(5 * (selectedDays / 7));
+      const doubled = base * 2;
+      setReward(doubled);
+      setMessage(
+        t("trophyModal.doubleMessage", {
+          count: doubled,
+          defaultValue: `Récompense doublée : ${doubled}`,
+        })
+      );
+    } else {
+      setMessage(
+        t("completion.adNotReady", {
+          defaultValue: "Vidéo pas prête, réessaie dans 2–3 secondes.",
+        })
+      );
+    }
+  });
+
+  try { ad.load(); } catch {}
 
   return () => {
     unsubLoaded();
     unsubEarned();
     unsubError();
     unsubClosed();
+    rewardedRef.current = null;
+    createdRef.current = false;
   };
-}, [canShowRewarded, showTrophyModal, activateDoubleReward, trophiesEarned, selectedDays, t, npa]);
+}, [canShowRewarded, unitId, npa, activateDoubleReward, trophiesEarned, selectedDays, t]);
+
+// ⬇️ PRELOAD à chaque ouverture du modal
+useEffect(() => {
+  if (showTrophyModal) {
+    setAdLoaded(false);
+    try { rewardedRef.current?.load(); } catch {}
+  } else {
+    setIsShowingAd(false);
+  }
+}, [showTrophyModal]);
 
 
   // Animation on modal show/hide
@@ -212,24 +234,39 @@ const npa = (globalThis as any).__NPA__ === true;
   }, [showTrophyModal, trophiesEarned, selectedDays]);
 
    const handleAdPress = useCallback(() => {
-    Vibration.vibrate(50);
-    if (!canShowRewarded) {
-      setMessage(t("trophyModal.adNotReady"));
-      return;
+  Vibration.vibrate(50);
+  if (!canShowRewarded) {
+    setMessage(
+      t("completion.adNotReady", {
+        defaultValue: "Vidéo pas prête, réessaie dans 2–3 secondes.",
+      })
+    );
+    return;
+  }
+  const rewarded = rewardedRef.current;
+  if (adLoaded && rewarded) {
+    try {
+      setIsShowingAd(true);
+      rewarded.show();
+    } catch {
+      setIsShowingAd(false);
+      setMessage(
+        t("completion.adNotReady", {
+          defaultValue: "Vidéo pas prête, réessaie dans 2–3 secondes.",
+        })
+      );
+      try { rewarded.load(); } catch {}
     }
-    const rewarded = rewardedRef.current;
-    if (adLoaded && rewarded) {
-      try {
-        rewarded.show();
-      } catch {
-        setMessage(t("trophyModal.adNotReady"));
-        try { rewarded.load(); } catch {}
-      }
-    } else {
-      setMessage(t("trophyModal.adNotReady"));
-      try { rewarded?.load(); } catch {}
-    }
-  }, [adLoaded, canShowRewarded, t]);
+  } else {
+    setMessage(
+      t("completion.adNotReady", {
+        defaultValue: "Vidéo pas prête, réessaie dans 2–3 secondes.",
+      })
+    );
+    try { rewarded?.load(); } catch {}
+  }
+}, [adLoaded, canShowRewarded, t]);
+
 
   const handleClaimPress = useCallback(() => {
     Vibration.vibrate(50);
@@ -458,13 +495,20 @@ const npa = (globalThis as any).__NPA__ === true;
                 }
               />
               {!adWatched && (
-                <GradientButton
-  onPress={handleAdPress}
-  text={t("trophyModal.doubleReward")}
-  iconName="videocam-outline"
-  gradientColors={[currentTheme.colors.primary, currentTheme.colors.secondary]}
-  // optionnel : wrapper côté appelant pour ajuster l’opacité si !adLoaded
-/>
+                <View style={{ opacity: !canShowRewarded || !adLoaded || isShowingAd ? 0.5 : 1 }}>
+  <GradientButton
+    onPress={handleAdPress}
+    text={
+      isShowingAd
+        ? t("pleaseWait", { defaultValue: "Patiente..." })
+        : adLoaded
+          ? t("trophyModal.doubleReward", { defaultValue: "Doubler la récompense" })
+          : t("completion.loadingAd", { defaultValue: "Préparation de la vidéo..." })
+    }
+    iconName="videocam-outline"
+    gradientColors={[currentTheme.colors.primary, currentTheme.colors.secondary]}
+  />
+</View>
               )}
             </Animated.View>
           </LinearGradient>

@@ -197,11 +197,10 @@ useEffect(() => {
             </View>
             <View style={styles.optionsContainer}>
               <TouchableOpacity
-  style={[styles.optionButton, !canShowRewarded && { opacity: 0.5 }]}
-  onPress={handleWatchAd}
-  activeOpacity={0.8}
-  disabled={!canShowRewarded}   // 👈 enlève la dépendance à adLoaded
->
+   style={styles.optionButton}
+   onPress={handleReset}
+   activeOpacity={0.8}
+ >
                 <LinearGradient
                   colors={["#FF6200", "#FF8C00"]}
                   style={styles.optionGradient}
@@ -224,11 +223,11 @@ useEffect(() => {
                 </LinearGradient>
               </TouchableOpacity>
               <TouchableOpacity
-                style={[styles.optionButton, (!canShowRewarded || !adLoaded) && { opacity: 0.5 }]}
-                onPress={handleWatchAd}
-                activeOpacity={0.8}
-                disabled={!canShowRewarded || !adLoaded}
-              >
+   style={[styles.optionButton, !canShowRewarded && { opacity: 0.5 }]}
+   onPress={handleWatchAd}
+   activeOpacity={0.8}
+   disabled={!canShowRewarded}
+ >
                 <LinearGradient
                   colors={["#6EE7B7", "#34D399"]}
                   style={styles.optionGradient}

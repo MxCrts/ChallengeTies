@@ -24,8 +24,7 @@
     },
     "simulator": {
       "ios": {
-        "simulator": true,
-        "buildType": "development"
+        "simulator": true
       }
     }
   },

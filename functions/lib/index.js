@@ -3,7 +3,7 @@ var __importDefault = (this && this.__importDefault) || function (mod) {
     return (mod && mod.__esModule) ? mod : { "default": mod };
 };
 Object.defineProperty(exports, "__esModule", { value: true });
-exports.dl = void 0;
+exports.invitationsOnWrite = exports.dl = void 0;
 const express_1 = __importDefault(require("express"));
 const cors_1 = __importDefault(require("cors"));
 const https_1 = require("firebase-functions/v2/https");
@@ -11,7 +11,7 @@ const https_1 = require("firebase-functions/v2/https");
  *  CONFIG
  *  ========================= */
 const CLOUDINARY_CLOUD_NAME = "dfhoxbsvr";
-const CLOUDINARY_BG_PUBLIC_ID = "ct_share_bg1"; // ta source est un PNG
+const CLOUDINARY_BG_PUBLIC_ID = "ct_share_bg1"; // asset source (PNG)
 const APP_SCHEME = "myapp";
 const ANDROID_PACKAGE = "com.mxcrts.ChallengeTies";
 const WEB_HOSTING = "https://challengeme-d7fef.web.app";
@@ -19,39 +19,20 @@ const IOS_STORE_URL = "https://apps.apple.com/app/idXXXXXXXX"; // TODO: real App
 const ANDROID_STORE_URL = "https://play.google.com/store/apps/details?id=com.mxcrts.ChallengeTies";
 // Bots (FB/Twitter/WhatsApp/etc.)
 const BOT_UA = /(facebookexternalhit|Twitterbot|Slackbot|WhatsApp|TelegramBot|LinkedInBot|Discordbot|Pinterest|SkypeUriPreview|Googlebot|bingbot)/i;
-const WA_UA = /WhatsApp/i; // si besoin de traitements spécifiques
-const INV = " "; // espace non-vide pour éviter les fallbacks titre/desc
+const INV = " "; // espace non vide pour éviter les fallbacks titre/desc
 /** =========================
  *  I18N (9 langues)
  *  ========================= */
 const I18N = {
-    ar: {
-        join: "انضم إليّ في هذا التحدي! 🚀",
-    },
-    de: {
-        join: "Mach mit bei dieser Challenge! 🚀",
-    },
-    es: {
-        join: "¡Únete a mí en este desafío! 🚀",
-    },
-    en: {
-        join: "Join me on this challenge! 🚀",
-    },
-    fr: {
-        join: "Rejoins-moi sur ce défi ! 🚀",
-    },
-    hi: {
-        join: "इस चैलेंज में मेरे साथ जुड़ो! 🚀",
-    },
-    it: {
-        join: "Unisciti a me in questa sfida! 🚀",
-    },
-    ru: {
-        join: "Присоединяйся ко мне в этом челлендже! 🚀",
-    },
-    zh: {
-        join: "加入我的挑战吧！🚀",
-    },
+    ar: { join: "انضم إليّ في هذا التحدي! 🚀" },
+    de: { join: "Mach mit bei dieser Challenge! 🚀" },
+    es: { join: "¡Únete a mí en este desafío! 🚀" },
+    en: { join: "Join me on this challenge! 🚀" },
+    fr: { join: "Rejoins-moi sur ce défi ! 🚀" },
+    hi: { join: "इस चैलेंज में मेरे साथ जुड़ो! 🚀" },
+    it: { join: "Unisciti a me in questa sfida! 🚀" },
+    ru: { join: "Присоединяйся ко мне в этом челлендже! 🚀" },
+    zh: { join: "加入我的挑战吧！🚀" },
 };
 function t(lang) {
     const key = (lang || "fr").toLowerCase();
@@ -69,6 +50,24 @@ function escapeHtml(s) {
         .replace(/</g, "&lt;")
         .replace(/>/g, "&gt;")
         .replace(/"/g, "&quot;");
+}
+/** Build querystring only with truthy values */
+function qs(obj) {
+    const p = new URLSearchParams();
+    Object.entries(obj).forEach(([k, v]) => {
+        if (v !== undefined && v !== null) {
+            const sv = String(v);
+            if (sv.length)
+                p.set(k, sv);
+        }
+    });
+    const str = p.toString();
+    return str ? `?${str}` : "";
+}
+/** Extract numeric iOS App ID from the IOS_STORE_URL */
+function getIosAppId(url) {
+    const m = url.match(/id(\d+)/);
+    return m?.[1] || "";
 }
 /**
  * Construit l’URL Cloudinary pour OG:
@@ -96,31 +95,44 @@ app.get("/img", (_req, res) => {
     res.set("Cache-Control", "public, max-age=300, s-maxage=300");
     res.redirect(302, ogUrl);
 });
+/**
+ * /dl — Lien universel partage + INVITATIONS
+ * accepte:
+ *  - id        : challenge id (cible challenge-details/[id])
+ *  - title     : (optionnel) pour anti-cache image OG
+ *  - lang      : fr|en|... (affiche la desc OG)
+ *  - invite    : invitation document id (déclenche le modal in-app)
+ *  - days      : nombre de jours suggéré (passé en query à l’app)
+ */
 app.get(["/", "/dl"], (req, res) => {
     const ua = String(req.headers["user-agent"] || "");
     const isBot = BOT_UA.test(ua);
-    // const isWA = WA_UA.test(ua); // si tu veux des tweaks spécifiques WhatsApp
     const lang = String(req.query.lang || "fr").toLowerCase();
     const id = String(req.query.id || "");
-    const rawTitle = String(req.query.title || ""); // si tu veux l’exploiter plus tard
+    const rawTitle = String(req.query.title || ""); // pour anti-cache OG
+    // 🔑 paramètres d’invitation (si présents)
+    const invite = String(req.query.invite || "");
+    const days = String(req.query.days || "");
     const L = t(lang);
-    // Deep links
-    const appDeepLink = id
-        ? `${APP_SCHEME}://challenge-details/${encodeURIComponent(id)}`
-        : `${APP_SCHEME}://challenge-details`;
-    const webFallback = id
-        ? `${WEB_HOSTING}/challenge-details/${encodeURIComponent(id)}`
-        : `${WEB_HOSTING}`;
+    // ==== Deep links ====
+    // Query à transmettre à l’app (ou au web fallback) pour ouvrir le modal invitation
+    const sharedQuery = qs({ invite, days });
+    // Paths
+    const path = id ? `challenge-details/${encodeURIComponent(id)}` : `challenge-details`;
+    // App deep link (avec query)
+    const appDeepLink = `${APP_SCHEME}://${path}${sharedQuery}`;
+    // Web fallback
+    const webFallback = `${WEB_HOSTING}/${path}${sharedQuery}`;
     // Android intent
-    const androidIntent = id
-        ? `intent://challenge-details/${encodeURIComponent(id)}#Intent;scheme=${APP_SCHEME};package=${ANDROID_PACKAGE};end`
-        : `intent://challenge-details#Intent;scheme=${APP_SCHEME};package=${ANDROID_PACKAGE};end`;
+    const androidIntent = `intent://${path}${sharedQuery}` +
+        `#Intent;scheme=${APP_SCHEME};package=${ANDROID_PACKAGE};end`;
     // Image OG (anti-cache)
     const ogImageUrl = buildOgUrl(`${rawTitle}|${lang}`);
     // Texte d’aperçu SOUS l’image (pas incrusté)
     const ogTitle = "ChallengeTies";
     const ogDesc = L.join || INV;
-    // HEAD (balises OG/Twitter strictes)
+    const iosAppId = getIosAppId(IOS_STORE_URL);
+    // HEAD (balises OG/Twitter strictes + App Links hints)
     const head = `<!doctype html>
 <html lang="${lang}">
 <head>
@@ -129,6 +141,7 @@ app.get(["/", "/dl"], (req, res) => {
 <title>${escapeHtml(ogTitle)}</title>
 
 <!-- OpenGraph -->
+<meta property="og:site_name" content="ChallengeTies">
 <meta property="og:title" content="${escapeHtml(ogTitle)}">
 <meta property="og:description" content="${escapeHtml(ogDesc)}">
 <meta property="og:image" content="${ogImageUrl}">
@@ -144,6 +157,15 @@ app.get(["/", "/dl"], (req, res) => {
 <meta name="twitter:title" content="${escapeHtml(ogTitle)}">
 <meta name="twitter:description" content="${escapeHtml(ogDesc)}">
 <meta name="twitter:image" content="${ogImageUrl}">
+
+<!-- App Links (hint pour OS/navigateurs) -->
+<meta property="al:ios:url" content="${appDeepLink}">
+<meta property="al:ios:app_name" content="ChallengeTies">
+${iosAppId ? `<meta property="al:ios:app_store_id" content="${iosAppId}">` : ""}
+<meta property="al:android:url" content="${appDeepLink}">
+<meta property="al:android:app_name" content="ChallengeTies">
+<meta property="al:android:package" content="${ANDROID_PACKAGE}">
+<meta property="al:web:url" content="${webFallback}">
 </head>`;
     let body;
     if (isBot) {
@@ -191,3 +213,5 @@ app.get(["/", "/dl"], (req, res) => {
  *  EXPORT
  *  ========================= */
 exports.dl = (0, https_1.onRequest)({ region: "europe-west1", cors: true }, app);
+var invitationsOnWrite_1 = require("./invitationsOnWrite");
+Object.defineProperty(exports, "invitationsOnWrite", { enumerable: true, get: function () { return invitationsOnWrite_1.invitationsOnWrite; } });

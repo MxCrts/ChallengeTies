@@ -46,7 +46,7 @@ import  {
 } from "react-native-reanimated";
 import { Ionicons } from "@expo/vector-icons";
 import { useTheme } from "../../context/ThemeContext";
-import { useTranslation } from "react-i18next";
+import { useTranslation, Trans } from "react-i18next";
 import { Theme } from "../../theme/designSystem";
 import designSystem from "../../theme/designSystem";
 import { fetchAndSaveUserLocation } from "../../services/locationService";
@@ -465,7 +465,7 @@ const fetchChallenges = async () => {
 };
 
   useEffect(() => {
-    if (user) fetchChallenges();
+    fetchChallenges(); 
   }, [user, i18n.language]);
 
   const safeNavigate = (path: string) => {
@@ -600,11 +600,11 @@ const pressed = useSharedValue<number>(0);
 
           {/* DAILY FIVE */}
 <View style={staticStyles.section}>
-  <Text
-    style={[staticStyles.sectionTitle, dynamicStyles.sectionTitle]}
-  >
+  <View style={stylesDaily.titleRow}>
+  <Text style={[staticStyles.sectionTitle, dynamicStyles.sectionTitle]}>
     {t("dailyChallenges", { defaultValue: "Défis du jour" })}
   </Text>
+</View>
 
   {loading ? (
     <ActivityIndicator size="large" color={currentTheme.colors.secondary} />
@@ -881,22 +881,25 @@ const pressed = useSharedValue<number>(0);
             <View style={staticStyles.modalContainer}>
               <Ionicons name="sparkles" size={normalize(36)} color="#FFB800" />
               <Text style={staticStyles.modalTitle}>
-                {/* Titre court et clair */}
-                🎖️ Bienvenue parmi les Pioneers !
-              </Text>
-              <Text style={staticStyles.modalDescription}>
-                Vous faites partie des <Text style={{ fontWeight: "700" }}>1000 premiers</Text> inscrits.
-                {"\n"}Un badge <Text style={{ fontWeight: "700" }}>Pioneer</Text> vous a été attribué
-                et vous gagnez <Text style={{ fontWeight: "700" }}>+50 trophées</Text> 🏆.
-              </Text>
+         {t("pioneerModal.title")}
+       </Text>
+       <Text style={staticStyles.modalDescription}>
+         <Trans
+           i18nKey="pioneerModal.description"
+           values={{ first: 1000, trophies: 50 }}
+           components={{ b: <Text style={{ fontWeight: "700" }} /> }}
+         />
+       </Text>
 
               <View style={staticStyles.buttonContainer}>
                 <TouchableOpacity
                   onPress={() => setShowPioneerModal(false)}
                   style={staticStyles.actionButton}
-                  accessibilityLabel="Fermer le message Pioneer"
+                 accessibilityLabel={t("pioneerModal.closeA11y")}
                 >
-                  <Text style={staticStyles.actionButtonText}>Super !</Text>
+                 <Text style={staticStyles.actionButtonText}>
+             {t("pioneerModal.cta")}
+           </Text>
                 </TouchableOpacity>
               </View>
             </View>
@@ -1011,6 +1014,7 @@ edgeFadeRight: {
     paddingVertical: SPACING,
     paddingHorizontal: SPACING,
     marginBottom: 0,
+    overflow: "visible",
   },
   sectionTitle: {
     fontSize: normalize(24),
@@ -1190,16 +1194,18 @@ edgeFadeRight: {
     marginBottom: SPACING * 1.5,
   },
   buttonContainer: {
-    flexDirection: "row",
-    justifyContent: "space-between",
-    width: "100%",
-  },
+  flexDirection: "row",
+  justifyContent: "center",     // ⬅️ was "space-between"
+  alignItems: "center",         // ⬅️ ensure vertical centering too
+  width: "100%",
+},
   actionButton: {
-    backgroundColor: "#FFB800",
-    paddingVertical: normalize(10),
-    paddingHorizontal: normalize(20),
-    borderRadius: normalize(25),
-  },
+  backgroundColor: "#FFB800",
+  paddingVertical: normalize(10),
+  paddingHorizontal: normalize(20),
+  borderRadius: normalize(25),
+  alignSelf: "center",          // ⬅️ keeps it centered even if container changes later
+},
   actionButtonText: {
     fontSize: normalize(16),
     fontFamily: "Comfortaa_700Bold",
@@ -1275,7 +1281,12 @@ const CONTENT_W = Math.min(SCREEN_WIDTH - SPACING * 2, normalize(420));
 const IS_SMALL = SCREEN_WIDTH < 360;
 
 const stylesDaily = StyleSheet.create({
-  wrap: { width: "100%", alignItems: "center" },
+ wrap: {
+    width: "100%",
+    alignItems: "center",
+    position: "relative",
+    zIndex: 1,          // contenu sous le titre
+  },
 
   heroCard: {
     width: CONTENT_W,                 // ← avant: 380
@@ -1287,11 +1298,20 @@ const stylesDaily = StyleSheet.create({
     shadowOffset: { width: 0, height: normalize(6) },
     shadowOpacity: 0.25,
     shadowRadius: normalize(8),
-    elevation: 8,
+    zIndex: 1,
+    elevation: 3, 
   },
   heroImage: {
     width: "100%",
     height: "100%",
+  },
+  titleRow: {
+    position: "relative",
+    zIndex: 5,          // ↑ au-dessus des cartes
+    elevation: 5,       // Android: indispensable pour dépasser l'elevation des cartes
+    alignItems: "center",
+    width: "100%",
+    marginBottom: SPACING, // espace sous le titre
   },
   heroOverlay: {
     position: "absolute",
@@ -1352,7 +1372,8 @@ const stylesDaily = StyleSheet.create({
     shadowOffset: { width: 0, height: normalize(4) },
     shadowOpacity: 0.2,
     shadowRadius: normalize(6),
-    elevation: 6,
+    zIndex: 1,
+    elevation: 3, 
   },
   miniTitle: {
   position: "absolute",

@@ -12,22 +12,20 @@ import {
   ActivityIndicator,
   KeyboardAvoidingView,
   Platform,
-  Alert,
 } from "react-native";
 import { StatusBar } from "expo-status-bar";
 import { useRouter } from "expo-router";
 import { createUserWithEmailAndPassword, updateProfile } from "firebase/auth";
 import { auth, db } from "../constants/firebase-config";
-import { doc, setDoc, serverTimestamp, updateDoc, runTransaction } from "firebase/firestore";
+import { doc, setDoc, serverTimestamp, } from "firebase/firestore";
 import { Ionicons } from "@expo/vector-icons";
 import { useTranslation } from "react-i18next";
-import { fetchAndSaveUserLocation } from "../services/locationService";
+import { askPermissionsOnceAfterSignup } from "../services/permissionsOnboarding";
 import * as HapticsModule from "expo-haptics";
-import {
-  requestNotificationPermissions,
-  scheduleDailyNotifications,
-} from "../services/notificationService"; // Import notifications
+import { useNavGuard } from "@/hooks/useNavGuard";
 import i18n from "../i18n";
+import { InteractionManager } from "react-native";
+
 
 const { width: SCREEN_WIDTH, height: SCREEN_HEIGHT } = Dimensions.get("window");
 
@@ -40,37 +38,11 @@ const BACKGROUND_COLOR = "#FFF8E7";
 const PRIMARY_COLOR = "#FFB800";
 const TEXT_COLOR = "#333";
 const BUTTON_COLOR = "#FFFFFF";
-const shakeAnim = useRef(new Animated.Value(0)).current;
 
 const circleSize = Math.min(SCREEN_WIDTH, SCREEN_HEIGHT) * 0.85;
 const circleTop = SCREEN_HEIGHT * 0.35;
 const waveCount = 4;
 const SPACING = normalize(15);
-const triggerShake = () => {
-  shakeAnim.setValue(0);
-  Animated.sequence([
-    Animated.timing(shakeAnim, {
-      toValue: 10,
-      duration: 50,
-      useNativeDriver: true,
-    }),
-    Animated.timing(shakeAnim, {
-      toValue: -10,
-      duration: 50,
-      useNativeDriver: true,
-    }),
-    Animated.timing(shakeAnim, {
-      toValue: 6,
-      duration: 50,
-      useNativeDriver: true,
-    }),
-    Animated.timing(shakeAnim, {
-      toValue: 0,
-      duration: 50,
-      useNativeDriver: true,
-    }),
-  ]).start();
-};
 const Wave = React.memo(
   ({
     opacity,
@@ -86,6 +58,9 @@ const Wave = React.memo(
     top: number;
   }) => (
     <Animated.View
+      // ⚠️ Empêche la pruning et toute interaction
+      collapsable={false}
+      pointerEvents="none"
       style={{
         width: size,
         height: size,
@@ -102,9 +77,11 @@ const Wave = React.memo(
   )
 );
 
+
 export default function Register() {
   const { t } = useTranslation();
   const router = useRouter();
+  const nav = useNavGuard(router);
   const [email, setEmail] = useState("");
   const [username, setUsername] = useState("");
   const [password, setPassword] = useState("");
@@ -113,6 +90,57 @@ export default function Register() {
   const [errorMessage, setErrorMessage] = useState("");
   const [showPassword, setShowPassword] = useState(false);
   const [showConfirmPassword, setShowConfirmPassword] = useState(false);
+  
+  // ✅ DANS LE COMPOSANT
+const shakeAnim = useRef(new Animated.Value(0)).current;
+
+const triggerShake = React.useCallback(() => {
+  shakeAnim.setValue(0);
+  Animated.sequence([
+    Animated.timing(shakeAnim, { toValue: 10,  duration: 50, useNativeDriver: true }),
+    Animated.timing(shakeAnim, { toValue: -10, duration: 50, useNativeDriver: true }),
+    Animated.timing(shakeAnim, { toValue: 6,  duration: 50, useNativeDriver: true }),
+    Animated.timing(shakeAnim, { toValue: 0,  duration: 50, useNativeDriver: true }),
+  ]).start();
+}, [shakeAnim]);
+ 
+// évite setState après unmount
+const isMountedRef = useRef(true);
+// on stocke nos timeouts pour les nettoyer
+const clearErrorTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+const submittingRef = useRef(false);
+
+
+// helper sécurisé pour afficher/effacer un message d’erreur
+const showError = React.useCallback((msg: string) => {
+  // stoppe un éventuel ancien timer
+  if (clearErrorTimeoutRef.current) {
+    clearTimeout(clearErrorTimeoutRef.current);
+    clearErrorTimeoutRef.current = null;
+  }
+  if (isMountedRef.current) {
+    setErrorMessage(msg);
+    triggerShake();
+  }
+  // on efface après 5s si toujours monté
+  clearErrorTimeoutRef.current = setTimeout(() => {
+    if (isMountedRef.current) {
+      setErrorMessage("");
+    }
+    clearErrorTimeoutRef.current = null;
+  }, 5000);
+}, [triggerShake]);
+
+// helper haptics safe
+const safeHapticsError = React.useCallback(async () => {
+  try {
+    await HapticsModule.notificationAsync(
+      HapticsModule.NotificationFeedbackType.Error
+    );
+  } catch {
+    // on ignore silencieusement si indisponible
+  }
+}, []);
 
   const wavesRef = useRef(
     Array.from({ length: waveCount }, (_, index) => ({
@@ -158,31 +186,35 @@ export default function Register() {
     return () => animations.forEach((anim) => anim.stop());
   }, [waves]);
 
+  useEffect(() => {
+  return () => {
+    isMountedRef.current = false;
+    if (clearErrorTimeoutRef.current) {
+      clearTimeout(clearErrorTimeoutRef.current);
+      clearErrorTimeoutRef.current = null;
+    }
+  };
+}, []);
+
   const handleRegister = async () => {
-    setErrorMessage("");
-    triggerShake();
-    HapticsModule.notificationAsync(
-      HapticsModule.NotificationFeedbackType.Error
-    );
-    setTimeout(() => setErrorMessage(""), 5000);
-    if (!email.trim() || !username.trim() || !password || !confirmPassword) {
-      setErrorMessage(t("fillAllFields"));
-      triggerShake();
-      HapticsModule.notificationAsync(
-        HapticsModule.NotificationFeedbackType.Error
-      );
-      setTimeout(() => setErrorMessage(""), 5000);
-      return;
-    }
-    if (password !== confirmPassword) {
-      setErrorMessage(t("passwordsDoNotMatch"));
-      triggerShake();
-      HapticsModule.notificationAsync(
-        HapticsModule.NotificationFeedbackType.Error
-      );
-      setTimeout(() => setErrorMessage(""), 5000);
-      return;
-    }
+    if (submittingRef.current || loading) return;
+submittingRef.current = true;
+    // reset propre sans timer direct
+if (isMountedRef.current) setErrorMessage("");
+
+if (!email.trim() || !username.trim() || !password || !confirmPassword) {
+    showError(t("fillAllFields"));
+    safeHapticsError();
+    submittingRef.current = false;          // 👈 libère le garde
+    return;
+  }
+if (password !== confirmPassword) {
+    showError(t("passwordsDoNotMatch"));
+    safeHapticsError();
+    submittingRef.current = false;          // 👈 libère le garde
+    return;
+  }
+
     setLoading(true);
     try {
       const userCredential = await createUserWithEmailAndPassword(
@@ -192,6 +224,16 @@ export default function Register() {
       );
       const user = userCredential.user;
       const userId = user.uid;
+      // Mettre à jour le displayName (blindé)
+try {
+  await updateProfile(user, { displayName: username.trim() });
+} catch { /* on ignore, on ne bloque pas le flow */ }
+
+// Récupérer et sauvegarder la localisation (non bloquant)
+try {
+  await askPermissionsOnceAfterSignup();
+} catch { /* on ignore proprement */ }
+
 
       // Sauvegarder les données utilisateur dans Firestore
       await setDoc(doc(db, "users", userId), {
@@ -224,82 +266,27 @@ export default function Register() {
   pioneerRewardGranted: false,
       });
 
-      // Vérifier si user fait partie des 1000 premiers
-// ✅ Attribution Pioneer (cap à 1000) + 50 trophées — ATOMIQUE via transaction
-try {
-  const userRef = doc(db, "users", userId);
-  const metaRef = doc(db, "meta", "pioneer"); // doc compteur global
+InteractionManager.runAfterInteractions(() => {
+  if (isMountedRef.current) {
+    nav.replace("/screen/onboarding/Screen1");
+  }
+});
 
-  let becamePioneer = false;
-
-  await runTransaction(db, async (tx) => {
-    const metaSnap = await tx.get(metaRef);
-    const userSnap = await tx.get(userRef);
-
-    // Si le doc meta n'existe pas, on l'initialise
-    if (!metaSnap.exists()) {
-      tx.set(metaRef, { granted: 0, cap: 1000 });
-    }
-
-    const { granted = 0, cap = 1000 } = metaSnap.exists() ? (metaSnap.data() as any) : { granted: 0, cap: 1000 };
-    const alreadyGranted = userSnap.exists() ? !!(userSnap.data() as any)?.pioneerRewardGranted : false;
-
-    // Si quota dispo et pas déjà attribué à ce user -> on attribue
-    if (!alreadyGranted && granted < cap) {
-      tx.update(metaRef, { granted: granted + 1 });
-      tx.update(userRef, {
-        isPioneer: true,
-        pioneerRewardGranted: true,
-        trophies: 50,
-      });
-      becamePioneer = true;
-    }
-  });
-
-
-} catch (err) {
-  console.error("Erreur attribution pionnier (transaction):", err);
-}
-
-
-
-      // Mettre à jour le displayName
-      await updateProfile(user, { displayName: username.trim() });
-
-      // Récupérer et sauvegarder la localisation
-      try {
-        await fetchAndSaveUserLocation();
-      } catch (error) {
-        triggerShake();
-        HapticsModule.notificationAsync(
-          HapticsModule.NotificationFeedbackType.Error
-        );
-        setTimeout(() => setErrorMessage(""), 5000);
-      }
-
-      // Demander permissions notifications
-      const notificationsGranted = await requestNotificationPermissions();
-      if (notificationsGranted) {
-        await scheduleDailyNotifications();
-      } else {
-        await updateDoc(doc(db, "users", userId), {
-          notificationsEnabled: false,
-        });
-      }
-
-      router.replace("/screen/onboarding/Screen1");
     } catch (error: any) {
       const errorMessages: Record<string, string> = {
         "auth/email-already-in-use": t("emailAlreadyInUse"),
         "auth/invalid-email": t("invalidEmailFormat"),
         "auth/weak-password": t("weakPassword"),
       };
-      setErrorMessage(errorMessages[error.code] || t("unknownError"));
-      setTimeout(() => setErrorMessage(""), 5000);
+      showError(errorMessages[error.code] || t("unknownError"));
+safeHapticsError();
     } finally {
-      setLoading(false);
+     submittingRef.current = false;
+if (isMountedRef.current) setLoading(false);
     }
   };
+
+const goLogin = () => nav.replace("/login");
 
   return (
     <KeyboardAvoidingView
@@ -307,23 +294,25 @@ try {
       behavior={Platform.OS === "ios" ? "padding" : undefined}
       keyboardVerticalOffset={Platform.OS === "ios" ? normalize(60) : 0}
     >
+      <View style={styles.wavesContainer}>
+  {waves.map((wave, index) => (
+    <Wave
+      key={index}
+      opacity={wave.opacity}
+      scale={wave.scale}
+      borderWidth={wave.borderWidth}
+      size={circleSize}
+      top={circleTop}
+    />
+  ))}
+</View>
       <StatusBar hidden />
       <ScrollView
-        style={styles.flexContainer}
-        contentContainerStyle={styles.container}
-        keyboardShouldPersistTaps="handled"
-      >
-        {waves.map((wave, index) => (
-          <Wave
-            key={index}
-            opacity={wave.opacity}
-            scale={wave.scale}
-            borderWidth={wave.borderWidth}
-            size={circleSize}
-            top={circleTop}
-          />
-        ))}
-
+  style={styles.flexContainer}
+  contentContainerStyle={styles.container}
+  keyboardShouldPersistTaps="handled"
+  removeClippedSubviews={false}
+>
         <View style={styles.headerContainer}>
           <Text
             style={styles.brandTitle}
@@ -363,6 +352,7 @@ try {
             autoCapitalize="none"
             accessibilityLabel={t("email")}
             autoComplete="email"
+            autoCorrect={false}
             testID="email-input"
           />
           <TextInput
@@ -374,6 +364,7 @@ try {
             accessibilityLabel={t("username")}
             autoComplete="username"
             testID="username-input"
+            autoCorrect={false}
           />
           <View style={styles.passwordContainer}>
             <TextInput
@@ -448,7 +439,7 @@ try {
             {t("alreadyHaveAccount")}{" "}
             <Text
               style={styles.loginLink}
-              onPress={() => router.push("/login")}
+              onPress={goLogin}
               accessibilityRole="link"
             >
               {t("loginHere")}
@@ -488,6 +479,10 @@ const styles = StyleSheet.create({
     alignItems: "center",
     marginBottom: SCREEN_HEIGHT * 0.08, // Dynamique
   },
+  wavesContainer: {
+  ...StyleSheet.absoluteFillObject,
+  pointerEvents: "none",
+},
   brandTitle: {
     fontSize: normalize(34),
     color: TEXT_COLOR,

@@ -238,3 +238,6 @@ ${iosAppId ? `<meta property="al:ios:app_store_id" content="${iosAppId}">` : ""}
  *  EXPORT
  *  ========================= */
 export const dl = onRequest({ region: "europe-west1", cors: true }, app);
+
+export { invitationsOnWrite } from "./invitationsOnWrite";
+

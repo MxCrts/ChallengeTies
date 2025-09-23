@@ -18,6 +18,7 @@ import {
   Dimensions,
   StatusBar,
   Platform,
+  Modal,
 } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 import { Ionicons } from "@expo/vector-icons";
@@ -54,7 +55,6 @@ import { storage } from "../../constants/firebase-config";
 import { getDownloadURL, ref } from "firebase/storage";
 import { useAdsVisibility } from "../../src/context/AdsVisibilityContext";
 import { CARD_HEIGHT, CARD_WIDTH } from "@/components/ShareCard";
-import * as Notifications from "expo-notifications";
 import { Share } from "react-native";
 import type { ViewStyle } from "react-native";
 import { adUnitIds } from "@/constants/admob";
@@ -180,20 +180,41 @@ export default function ChallengeDetails() {
   const { theme } = useTheme();
   const [marking, setMarking] = useState(false);
   const [sendingNudge, setSendingNudge] = useState(false);
+  const [duoState, setDuoState] = useState<{
+  enabled: boolean;
+  partnerId?: string;
+  selectedDays?: number;
+  uniqueKey?: string;
+} | null>(null);
   const isDarkMode = theme === "dark";
   const currentTheme: Theme = isDarkMode
     ? designSystem.darkTheme
     : designSystem.lightTheme;
   const { t, i18n } = useTranslation();
   const { showBanners } = useAdsVisibility();
+  const justJoinedRef = useRef(false);
  const bottomInset = showBanners ? BANNER_HEIGHT + SPACING * 2 : SPACING * 2;
 const npa = (globalThis as any).__NPA__ === true;
+const IS_COMPACT = SCREEN_WIDTH < 380; // très petits écrans (iPhone SE/Android compacts)
+const [confirmResetVisible, setConfirmResetVisible] = useState(false);
+const [sendInviteVisible, setSendInviteVisible] = useState(false);
 
   const router = useRouter();
     const pct = (num = 0, den = 0) => (den > 0 ? Math.min(100, Math.max(0, Math.round((num / den) * 100))) : 0);
 
   // pulse subtil autour de l'avatar du leader
   const leaderPulse = useSharedValue(0);
+const startedRef = useRef(false);
+const myImgReady = useRef(false);
+const partnerImgReady = useRef(false);
+const startTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+
+
+  const firstMountRef = useRef(true);
+useEffect(() => {
+  firstMountRef.current = false;
+}, []);
+
 
 useEffect(() => {
   leaderPulse.value = withRepeat(
@@ -220,6 +241,9 @@ useEffect(() => {
   const [invitation, setInvitation] = useState<{ id: string } | null>(null);
   const [invitationModalVisible, setInvitationModalVisible] = useState(false);
   const id = params.id || "";
+const isReload = !!(params as any)?.reload;
+const shouldEnterAnim =
+  Platform.OS === "ios" && !isReload; // ➜ pas d'entering sur Android ni après reload
 
   const { savedChallenges, addChallenge, removeChallenge } =
     useSavedChallenges();
@@ -231,6 +255,7 @@ useEffect(() => {
     isMarkedToday,
     completeChallenge,
   } = useCurrentChallenges();
+  const lastIntroKeyRef = useRef<string | null>(null);
 
 const currentChallenge = useMemo(() => {
   return currentChallenges.find((ch) => ch.id === id || ch.challengeId === id);
@@ -255,7 +280,6 @@ const currentChallenge = useMemo(() => {
   const [routeTitle, setRouteTitle] = useState(
     params.title || t("challengeDetails.untitled")
   );
-  const [isCurrentUserInviter, setIsCurrentUserInviter] = useState(false);
 
   const [routeCategory, setRouteCategory] = useState(
     params.category || t("challengeDetails.uncategorized")
@@ -288,6 +312,7 @@ const assetsReady =
   const [currentMonth, setCurrentMonth] = useState(new Date());
   const [challenge, setChallenge] = useState<any>(null);
 const [introVisible, setIntroVisible] = useState(false);
+const [introBlocking, setIntroBlocking] = useState(false); // blocks UI & hides StatusBar while true
 const fadeOpacity = useSharedValue(1); // pour fade-out
 const shakeMy = useSharedValue(0);
 const shakePartner = useSharedValue(0);
@@ -298,11 +323,14 @@ const AVA = IS_SMALL ? normalizeSize(96) : normalizeSize(120);
 const GAP = IS_SMALL ? 16 : 24;
 const TITLE = IS_SMALL ? normalizeSize(34) : normalizeSize(42);
 
+const challengeTakenOptimistic = challengeTaken || justJoinedRef.current;
 
-const isDuo = !!currentChallenge?.duo;
+const isDuo = !!duoState?.enabled;   // une seule source = pas de flicker
+// Déjà en SOLO dans ce challenge (peu importe le streak) ?
+const isSoloInThisChallenge = !!currentChallenge && !isDuo;
 
+const canInviteFriend = !isDuo;
 
-const canInviteFriend = !isDuo; // interne : on autorise l'ouverture du modal si pas en duo
 
   // ⚙️ Pré-sélection depuis le deep link ?days=XX (si valide)
 useEffect(() => {
@@ -395,22 +423,16 @@ const pulseStyle = useAnimatedStyle<ViewStyle>(() => ({
 }));
 
 useEffect(() => {
-  if (!currentChallenge?.duo) return;
-  if (hasShownIntro.current) return;      // ✅ ne pas ré-afficher si déjà vu
+  if (!isDuo) return;
 
-  hasShownIntro.current = true;
+  const introKey =
+    duoState?.uniqueKey || `${id}_${duoState?.selectedDays || 0}_${duoState?.partnerId || ""}`;
+
+  if (!introKey || lastIntroKeyRef.current === introKey) return;
+
+  lastIntroKeyRef.current = introKey;
   setIntroVisible(true);
-  fadeOpacity.value = 1;
-
-  // Sécurité : on éteint l’overlay au cas où
-  const killer = setTimeout(() => {
-    fadeOpacity.value = withTiming(0, { duration: 500 }, () => {
-      runOnJS(setIntroVisible)(false);
-    });
-  }, 6000);
-
-  return () => clearTimeout(killer);
-}, [currentChallenge?.duo]);
+}, [isDuo, duoState?.uniqueKey, duoState?.selectedDays, duoState?.partnerId, id]);
 
 const startVsIntro = useCallback(() => {
   // 3 shakes chacun
@@ -440,12 +462,24 @@ const startVsIntro = useCallback(() => {
     withTiming(0, { duration: 60 }, () => {
       // ✅ fermeture douce de l’overlay à la fin du partner
       fadeOpacity.value = withTiming(0, { duration: 500 }, () => {
-        runOnJS(setIntroVisible)(false);
+  runOnJS(setIntroVisible)(false);
+  runOnJS(setIntroBlocking)(false);
+  // reset pour la prochaine fois
+  startedRef.current = false;
+  myImgReady.current = false;
+  partnerImgReady.current = false;
       });
     })
   );
 }, []);
 
+const tryStart = useCallback(() => {
+  if (startedRef.current) return;
+  if (myImgReady.current && partnerImgReady.current) {
+    startedRef.current = true;
+    startVsIntro();
+  }
+}, [startVsIntro]);
 
 useEffect(() => {
   if (!introVisible) return;
@@ -459,12 +493,59 @@ useEffect(() => {
   Image.prefetch(pa);
 }, [introVisible, myAvatar, partnerAvatar, myName, duoChallengeData?.duoUser?.name]);
 
+
 useEffect(() => {
   if (!introVisible) return;
-  if (!assetsReady) return;
 
-  startVsIntro();
+  // reset à chaque ouverture
+  startedRef.current = false;
+  myImgReady.current = false;
+  partnerImgReady.current = false;
+
+  setIntroBlocking(true);
+  fadeOpacity.value = 0;
+  fadeOpacity.value = withTiming(1, { duration: 220, easing: Easing.out(Easing.quad) });
+
+  // pas de timer ici
+  return () => {
+    if (startTimerRef.current) {
+      clearTimeout(startTimerRef.current);
+      startTimerRef.current = null;
+    }
+  };
+}, [introVisible]);
+
+useEffect(() => {
+  if (!introVisible) return;
+  if (!assetsReady) return; // attend que les URIs soient connues et la vue montée
+
+  // petit coussin pour laisser React monter les <Image/>
+  if (startTimerRef.current) clearTimeout(startTimerRef.current);
+  startTimerRef.current = setTimeout(() => {
+    // démarrage « propre » seulement si les deux images ont tiré onLoad
+    if (!startedRef.current && myImgReady.current && partnerImgReady.current) {
+      startedRef.current = true;
+      startVsIntro();
+    }
+  }, 400);
+
+  // hard fallback si onLoad ne vient jamais (réseaux pourris)
+  const hard = setTimeout(() => {
+    if (!startedRef.current) {
+      startedRef.current = true;
+      startVsIntro();
+    }
+  }, 2500);
+
+  return () => {
+    if (startTimerRef.current) {
+      clearTimeout(startTimerRef.current);
+      startTimerRef.current = null;
+    }
+    clearTimeout(hard);
+  };
 }, [introVisible, assetsReady, startVsIntro]);
+
 
 
 // Résout une URL d'avatar quelle que soit la forme : http(s) (Firebase ou non), gs://, ou path Storage
@@ -589,6 +670,132 @@ useEffect(() => {
   };
 }, [id]);
 
+useEffect(() => {
+  const uid = auth.currentUser?.uid;
+  if (!uid || !id) return;
+
+  const unsub = onSnapshot(doc(db, "users", uid), (snap) => {
+    const data = snap.data() as any;
+    const list: any[] = Array.isArray(data?.CurrentChallenges) ? data.CurrentChallenges : [];
+
+    // Robust matching (id || challengeId) + selectedDays si dispo + uniqueKey si présent
+    const entry = list.find((c) => {
+      const cid = c?.challengeId ?? c?.id;
+      if (!cid) return false;
+      // si on a déjà un selectedDays local ou context
+      const sd = c?.selectedDays ?? finalSelectedDays ?? (Number(params.selectedDays) || undefined);
+
+      // uniqueKey prioritaire si présent
+      if (c?.uniqueKey && (currentChallenge?.uniqueKey || `${id}_${sd}`)) {
+        return c.uniqueKey === (currentChallenge?.uniqueKey || `${id}_${sd}`);
+      }
+      return cid === id; // fallback
+    });
+
+    if (!entry) {
+      setDuoState((prev) => (prev?.enabled ? { enabled: false } : prev));
+      return;
+    }
+
+    // Toujours garder ces deux-là sync depuis Firestore
+    setFinalSelectedDays(entry.selectedDays || 0);
+    setFinalCompletedDays(entry.completedDays || 0);
+
+    if (entry.duo && entry.duoPartnerId) {
+      setDuoState({
+        enabled: true,
+        partnerId: entry.duoPartnerId,
+        selectedDays: entry.selectedDays,
+        uniqueKey: entry.uniqueKey || `${entry.challengeId ?? entry.id}_${entry.selectedDays}`,
+      });
+    } else {
+      setDuoState({ enabled: false });
+      // On ne force pas duoChallengeData ici, un autre effet le remettra à null
+    }
+  });
+
+  return () => unsub();
+  // ⚠️ ne mets pas finalSelectedDays ici dans les deps pour éviter les boucles
+}, [id]);
+
+useEffect(() => {
+  let cancelled = false;
+
+  const run = async () => {
+    if (!duoState?.enabled || !duoState?.partnerId) {
+  return;
+}
+
+    try {
+      const partnerRef = doc(db, "users", duoState.partnerId);
+      const partnerSnap = await getDoc(partnerRef);
+      if (!partnerSnap.exists()) {
+        if (!cancelled) setDuoChallengeData(null);
+        return;
+      }
+
+      const partnerData = partnerSnap.data() as any;
+
+      const partnerName =
+        partnerData.username ||
+        partnerData.displayName ||
+        (typeof partnerData.email === "string"
+          ? partnerData.email.split("@")[0]
+          : "") ||
+        t("duo.partner");
+
+      const rawAvatar =
+        partnerData.profileImage ||
+        partnerData.avatar ||
+        partnerData.avatarUrl ||
+        partnerData.photoURL ||
+        partnerData.photoUrl ||
+        partnerData.imageUrl ||
+        "";
+
+      let resolvedPartnerAvatar = "";
+      try {
+        resolvedPartnerAvatar = (await resolveAvatarUrl(rawAvatar)) || rawAvatar;
+      } catch {}
+      if (!resolvedPartnerAvatar) {
+        resolvedPartnerAvatar = `https://ui-avatars.com/api/?name=${encodeURIComponent(
+          partnerName || "P"
+        )}`;
+      }
+
+      // entrée miroir chez le partenaire
+      const partnerList: any[] = Array.isArray(partnerData.CurrentChallenges)
+        ? partnerData.CurrentChallenges
+        : [];
+      const mirror = partnerList.find((c: any) => {
+        if (duoState.uniqueKey && c?.uniqueKey) return c.uniqueKey === duoState.uniqueKey;
+        const cid = c?.challengeId ?? c?.id;
+        return cid === id && c?.selectedDays === duoState.selectedDays;
+      });
+
+      if (!cancelled) {
+        setPartnerAvatar(resolvedPartnerAvatar);
+        setDuoChallengeData({
+          duo: true,
+          duoUser: {
+            id: duoState.partnerId,
+            name: partnerName,
+            avatar: resolvedPartnerAvatar,
+            completedDays: mirror?.completedDays || 0,
+            selectedDays: mirror?.selectedDays || duoState.selectedDays || 0,
+            isPioneer: !!partnerData.isPioneer,
+          },
+        });
+      }
+    } catch (e) {
+      console.error("❌ load partner failed:", e);
+    }
+  };
+
+  run();
+  return () => { cancelled = true; };
+}, [duoState?.enabled, duoState?.partnerId, duoState?.selectedDays, duoState?.uniqueKey, id, t]);
+
 
 useEffect(() => {
   if (!id) return;
@@ -623,74 +830,6 @@ useEffect(() => {
         })
       );
 
-      // 🔁 Récupération des données duo si challenge actif et en duo
-      if (currentChallenge?.duo && currentChallenge.duoPartnerId) {
-        try {
-          const partnerRef = doc(db, "users", currentChallenge.duoPartnerId);
-          const partnerSnap = await getDoc(partnerRef);
-
-          if (partnerSnap.exists()) {
-            const partnerData = partnerSnap.data();
-            const partnerChallenge = (partnerData.CurrentChallenges || []).find(
-              (ch: any) =>
-                ch.challengeId === id &&
-                ch.selectedDays === currentChallenge.selectedDays
-            );
-
-            if (partnerChallenge) {
-  // Sécurisation des infos (nom + avatar)
-  const partnerName =
-    partnerData.username ||
-    partnerData.displayName ||
-    (typeof partnerData.email === "string"
-      ? partnerData.email.split("@")[0]
-      : "") ||
-    t("duo.partner"); // fallback lisible
-
-  const rawAvatar =
-    partnerData.profileImage ||
-    partnerData.avatar ||
-    partnerData.avatarUrl ||
-    partnerData.photoURL ||
-    partnerData.photoUrl ||
-    partnerData.imageUrl ||
-    "";
-
-  let resolvedPartnerAvatar = "";
-  try {
-    resolvedPartnerAvatar = (await resolveAvatarUrl(rawAvatar)) || rawAvatar;
-  } catch {
-    resolvedPartnerAvatar = "";
-  }
-
-  if (!resolvedPartnerAvatar) {
-    resolvedPartnerAvatar = `https://ui-avatars.com/api/?name=${encodeURIComponent(
-      partnerName || "P"
-    )}`;
-  }
-
-  setPartnerAvatar(resolvedPartnerAvatar);
-
-  setDuoChallengeData({
-    duo: true,
-    duoUser: {
-      id: currentChallenge.duoPartnerId,
-      name: partnerName,
-      avatar: resolvedPartnerAvatar, // ✅ plus d'image de test
-      completedDays: partnerChallenge.completedDays || 0,
-      selectedDays: partnerChallenge.selectedDays || 0,
-      isPioneer: !!partnerData.isPioneer, 
-      
-    },
-  });
-}
-
-          }
-        } catch (err) {
-          console.error("❌ Erreur récupération partenaire duo :", err);
-        }
-      }
-
       setLoading(false);
     },
     (error) => {
@@ -700,27 +839,7 @@ useEffect(() => {
   );
 
   return () => unsubscribe();
-}, [id, t, currentChallenge]);
-
-  useEffect(() => {
-    if (!id || !auth.currentUser?.uid) return;
-
-    const challengeRef = doc(db, "challenges", id);
-    getDoc(challengeRef).then((docSnap) => {
-      if (docSnap.exists()) {
-        const data = docSnap.data();
-        const isInviter = data?.inviterId === auth.currentUser?.uid;
-        setIsCurrentUserInviter(isInviter);
-      }
-    });
-  }, [id]);
-
-  useEffect(() => {
-  if (currentChallenge) {
-    setFinalSelectedDays(currentChallenge.selectedDays || 0);
-    setFinalCompletedDays(currentChallenge.completedDays || 0);
-  }
-}, [currentChallenge]);
+}, [id, t]);
 
 
   useEffect(() => {
@@ -773,6 +892,7 @@ useEffect(() => {
     ];
     setStats(newStats);
   }, [savedChallenges, currentChallenges, currentChallenge]);
+  
 
 // Avatar du user courant
 // Avatar + Nom du user courant
@@ -840,31 +960,9 @@ useEffect(() => {
       if (change.type !== "modified") return;
       const data = change.doc.data();
 
-      if (data.status === "refused") {
-        Notifications.scheduleNotificationAsync({
-          content: {
-            title: t("notificationsPush.title"),
-            body: t("notificationsPush.invitationRefused", {
-              username: data.inviteeUsername || t("duo.partner"),
-            }),
-          },
-          trigger: null,
-        });
-      }
-
       if (data.status === "accepted") {
-  Notifications.scheduleNotificationAsync({
-    content: {
-      title: t("notificationsPush.title"),
-      body: t("notificationsPush.invitationAccepted", {
-        username: data.inviteeUsername || "L'utilisateur",
-      }),
-    },
-    trigger: null,
-  });
-
-  // ✅ Reset de la progression SOLO de l’inviteur UNIQUEMENT maintenant
-  // (si elle existait et > 0 ; idempotent et sûr)
+  // La notif à l'inviteur est envoyée par la Cloud Function.
+  // Ici, on ne fait que le reset solo local, idempotent et sûr.
   resetSoloProgressIfNeeded();
 }
 
@@ -975,10 +1073,6 @@ const getCalendarDays = (): (null | { day: number; date: Date; completed: boolea
   });
   const currentYearNum = currentMonth.getFullYear();
 
-  const alreadyMarkedToday = currentChallenge
-    ? currentChallenge.completionDates?.includes(new Date().toDateString())
-    : false;
-
   const showCompleteButton =
     challengeTaken &&
     finalSelectedDays > 0 &&
@@ -991,12 +1085,13 @@ const getCalendarDays = (): (null | { day: number; date: Date; completed: boolea
   const handleTakeChallenge = useCallback(async () => {
   if (challengeTaken || !id) return;
 
-  // ✅ Fermer IMMÉDIATEMENT le modal pour éviter le "rebond"
   setModalVisible(false);
 
   try {
-    setLoading(true);
+    // 👇 spinner global c'est optionnel, mais on va surtout faire de l’optimiste
+    // setLoading(true);
 
+    // 1) On récupère le challenge une fois (rapide)
     const challengeRef = doc(db, "challenges", id);
     const challengeSnap = await getDoc(challengeRef);
     if (!challengeSnap.exists()) {
@@ -1005,44 +1100,58 @@ const getCalendarDays = (): (null | { day: number; date: Date; completed: boolea
     }
     const challengeData = challengeSnap.data();
 
+    // 2) UI optimiste IMMÉDIATE
+    justJoinedRef.current = true;
+    setFinalSelectedDays(localSelectedDays);
+    setFinalCompletedDays(0);
+
+    // 3) Contexte (persistance locale) — ok de l’attendre pour être cohérent
     await takeChallenge(
       {
         id,
         title: challengeData.title || "Untitled Challenge",
         category: challengeData.category || "Uncategorized",
         description: challengeData.description || "No description available",
-        daysOptions:
-          challengeData.daysOptions || [7, 14, 21, 30, 60, 90, 180, 365],
+        daysOptions: challengeData.daysOptions || [7,14,21,30,60,90,180,365],
         chatId: challengeData.chatId || id,
         imageUrl: challengeData.imageUrl || "",
       },
       localSelectedDays
     );
 
-    await runTransaction(db, async (transaction) => {
+    // 4) Préfetch de l’image pour éviter le flash si tu scrolles/remontes
+    if (challengeData.imageUrl) {
+      try { Image.prefetch?.(challengeData.imageUrl); } catch {}
+    }
+
+    // 5) Écriture Firestore **en arrière-plan** (pas d’attente UI)
+    runTransaction(db, async (transaction) => {
       const docSnap = await transaction.get(challengeRef);
       if (!docSnap.exists()) throw new Error("Challenge inexistant");
       const data = docSnap.data();
-      const uid = auth.currentUser?.uid;
+      const uid = auth.currentUser?.uid!;
       const count = data.participantsCount || 0;
       const users: string[] = data.usersTakingChallenge || [];
-      const updatedUsers = users.includes(uid!) ? users : users.concat([uid!]);
-      transaction.update(challengeRef, {
-        participantsCount: count + 1,
-        usersTakingChallenge: updatedUsers,
-      });
-    });
+      if (!users.includes(uid)) {
+        transaction.update(challengeRef, {
+          participantsCount: count + 1,
+          usersTakingChallenge: users.concat([uid]),
+        });
+      }
+    }).catch((e) => console.warn("Txn participants échouée (non bloquant):", e));
 
-    // ✅ Mettre à jour les infos locales
-    setFinalSelectedDays(localSelectedDays);
-    setFinalCompletedDays(0);
+    // ❌ plus de router.replace() ici
   } catch (err) {
+    // si fail => rollback minimal de l’optimisme
+    justJoinedRef.current = false;
+    setFinalSelectedDays(0);
+    setFinalCompletedDays(0);
     Alert.alert(
       t("alerts.error"),
       err instanceof Error ? err.message : t("challengeDetails.joinError")
     );
   } finally {
-    setLoading(false);
+    // setLoading(false);
   }
 }, [id, challengeTaken, localSelectedDays, takeChallenge, t]);
 
@@ -1086,33 +1195,60 @@ const getCalendarDays = (): (null | { day: number; date: Date; completed: boolea
   }, [id, savedChallenges, addChallenge, removeChallenge]);
 
 const handleNudgePartner = useCallback(async () => {
-  if (!duoChallengeData?.duo || !currentChallenge?.duoPartnerId) {
-    Alert.alert(
-      t("alerts.error"),
-      t("duo.nudgeUnavailable", { defaultValue: "Fonction réservée aux défis en duo." })
-    );
-    return;
-  }
+  if (!isDuo || !(duoState?.partnerId || duoChallengeData?.duoUser?.id)) {
+
+  Alert.alert(
+    t("alerts.error"),
+    t("duo.nudgeUnavailable", { defaultValue: "Fonction réservée aux défis en duo." })
+  );
+  return;
+}
   if (sendingNudge) return;
 
   try {
     setSendingNudge(true);
-    const ok = await sendDuoNudge({
-      toUserId: currentChallenge.duoPartnerId,
+    const res = await sendDuoNudge({
+      toUserId: duoState?.partnerId || duoChallengeData?.duoUser?.id!,
       challengeTitle: routeTitle || t("challengeDetails.untitled"),
     });
 
-    if (ok) {
+    if (res.ok) {
       Alert.alert(
         t("duo.nudge", { defaultValue: "Encourager" }),
         t("duo.nudgeSent", { defaultValue: "Encouragement envoyé ✅" })
       );
-    } else {
-      Alert.alert(
-        t("alerts.error"),
-        t("duo.nudgeFailed", { defaultValue: "Impossible d'envoyer la notification." })
-      );
+      return;
     }
+
+    // Messages d'erreur plus explicites (UN SEUL bloc)
+    let msg = t("duo.nudgeFailed", {
+      defaultValue: "Impossible d'envoyer la notification.",
+    });
+
+    if (res.reason === "no-token") {
+      msg = t("duo.nudgeNoToken", {
+        defaultValue:
+          "Ton partenaire n’a pas activé les notifications ou n’a pas encore ouvert l’app depuis la mise à jour.",
+      });
+    } else if (res.reason === "disabled") {
+      msg = t("duo.nudgeDisabled", {
+        defaultValue: "Ton partenaire a désactivé les notifications.",
+      });
+    } else if (res.reason === "no-user") {
+      msg = t("duo.nudgeNoUser", { defaultValue: "Partenaire introuvable." });
+    } else if (res.reason === "unregistered") {
+      msg = t("duo.nudgeUnregistered", {
+        defaultValue:
+          "Le token de ton partenaire n’est plus valide. Demande-lui d’ouvrir l’app pour réactiver les notifications.",
+      });
+    } else if (res.reason === "expo-error") {
+      msg = t("duo.nudgeExpoError", {
+        defaultValue:
+          "Erreur du service de notifications. Réessaie un peu plus tard.",
+      });
+    }
+
+    Alert.alert(t("alerts.error"), msg);
   } catch (e) {
     Alert.alert(
       t("alerts.error"),
@@ -1128,6 +1264,8 @@ const handleNudgePartner = useCallback(async () => {
   t,
   sendingNudge,
 ]);
+
+
 
   const handleShowCompleteModal = useCallback(() => {
     setCompletionModalVisible(true);
@@ -1238,19 +1376,25 @@ const handleInviteFriend = useCallback(() => {
   try {
     if (!id) return;
 
-    // 1) Si déjà en duo → interdit
+    // 1) Interdit si déjà en DUO
     if (isDuo) {
       Alert.alert(t("alerts.error"), t("invitationS.errors.duoAlready"));
       return;
     }
 
-    // 2) Sinon (solo ou challenge pas encore pris) → ouvrir le modal interne
-    setInviteConfirmVisible(true);
+    // 2) Si déjà en SOLO (streak 0 ou > 0) → confirmation obligatoire
+    if (isSoloInThisChallenge) {
+      setConfirmResetVisible(true);
+      return;
+    }
+
+    // 3) Sinon (pas pris du tout) → on ouvre directement le SendInvitationModal
+    setSendInviteVisible(true);
   } catch (err) {
     console.error("❌ handleInviteFriend error:", err);
     Alert.alert(t("alerts.error"), t("invitationS.errors.unknown"));
   }
-}, [id, isDuo, t]);
+}, [id, isDuo, isSoloInThisChallenge, t]);
 
 
   const handleViewStats = useCallback(() => {
@@ -1277,14 +1421,11 @@ const handleInviteFriend = useCallback(() => {
 
   return (
     <LinearGradient
-      colors={[
-        currentTheme.colors.background,
-        currentTheme.colors.cardBackground,
-      ]}
-      style={[styles.container, { paddingBottom: bottomInset }]}
-      start={{ x: 0, y: 0 }}
-      end={{ x: 1, y: 1 }}
-    >
+  colors={[currentTheme.colors.background, currentTheme.colors.cardBackground]}
+  style={styles.container}
+  start={{ x: 0, y: 0 }}
+  end={{ x: 1, y: 1 }}
+>
       <OrbBackground theme={currentTheme} />
      <SafeAreaView
   style={{ flex: 1, backgroundColor: 'transparent' }}
@@ -1294,6 +1435,7 @@ const handleInviteFriend = useCallback(() => {
   translucent
   backgroundColor="transparent"
   barStyle={isDarkMode ? "light-content" : "dark-content"}
+  hidden={introBlocking}
 />
       <ConfettiCannon
         ref={confettiRef}
@@ -1304,7 +1446,10 @@ const handleInviteFriend = useCallback(() => {
         explosionSpeed={800}
         fallSpeed={3000}
       />
-      <Animated.View entering={FadeInUp} style={styles.backButtonContainer}>
+      <Animated.View entering={firstMountRef.current && shouldEnterAnim ? FadeInUp : undefined}
+                style={styles.backButtonContainer}
+                renderToHardwareTextureAndroid
+                needsOffscreenAlphaCompositing>
         <TouchableOpacity
           onPress={() => router.back()}
           style={[styles.backButton, styles.backButtonOverlay]}
@@ -1320,60 +1465,38 @@ const handleInviteFriend = useCallback(() => {
           />
         </TouchableOpacity>
       </Animated.View>
-      <View style={styles.imageContainer}>
-            {challengeImage ? (
-  <>
-    <Image
-      source={{ uri: challengeImage }}
-      style={styles.image}
-      resizeMode="cover"
-    />
-    {/* 🔥 Overlay premium */}
-    <LinearGradient
-      colors={["rgba(0,0,0,0)", "rgba(0,0,0,0.35)", "rgba(0,0,0,0.6)"]}
-      start={{ x: 0, y: 0 }}
-      end={{ x: 0, y: 1 }}
-      style={styles.heroOverlay}
-    />
-  </>
-) : (
-              <View
-                style={[
-                  styles.imagePlaceholder,
-                  { backgroundColor: currentTheme.colors.overlay },
-                ]}
-              >
-                <Ionicons
-                  name="image-outline"
-                  size={normalizeSize(80)}
-                  color={currentTheme.colors.textPrimary}
-                />
-                <Text
-                  style={[
-                    styles.noImageText,
-                    { color: currentTheme.colors.textPrimary },
-                  ]}
-                >
-                  Image non disponible
-                </Text>
-              </View>
-            )}
-          </View>
       <ScrollView
-        showsVerticalScrollIndicator={false}
-        contentContainerStyle={{
-    paddingTop: HERO_H + SPACING,         // ✅ on “pousse” tout sous l’image
-    paddingBottom: bottomInset + SPACING, // ✅ au-dessus de la bannière
-  }}
-
-      >
+  style={{ flex: 1 }}
+  removeClippedSubviews={false}
+  keyboardShouldPersistTaps="handled"
+  showsVerticalScrollIndicator={false}
+  contentContainerStyle={{ paddingBottom: bottomInset + SPACING }}
+  contentInsetAdjustmentBehavior="never"
+  overScrollMode="never"
+>
+  <View style={styles.imageContainer}>
+    {challengeImage ? (
+      <>
+        <Image source={{ uri: challengeImage }} style={styles.image} resizeMode="cover" />
+        <LinearGradient
+          colors={["rgba(0,0,0,0)", "rgba(0,0,0,0.35)", "rgba(0,0,0,0.6)"]}
+          start={{ x: 0, y: 0 }} end={{ x: 0, y: 1 }} style={styles.heroOverlay}
+        />
+      </>
+    ) : (
+      <View style={[styles.imagePlaceholder, { backgroundColor: currentTheme.colors.overlay }]}>
+        <Ionicons name="image-outline" size={normalizeSize(80)} color={currentTheme.colors.textPrimary} />
+        <Text style={[styles.noImageText, { color: currentTheme.colors.textPrimary }]}>Image non disponible</Text>
+      </View>
+    )}
+  </View>
+        {/* 🔒 réserve d'espace pour le hero, stable dès le 1er frame */}
         <View style={styles.carouselContainer}>
           
         </View>
-        <Animated.View
-          entering={FadeInUp.delay(100)}
-          style={styles.infoRecipeContainer}
-        >
+        <Animated.View entering={firstMountRef.current && shouldEnterAnim ? FadeInUp.delay(100) : undefined}
+    style={styles.infoRecipeContainer}
+  >
           <Text
             style={[
               styles.infoRecipeName,
@@ -1400,7 +1523,7 @@ const handleInviteFriend = useCallback(() => {
   )}
 
   {/* Duo actif ? */}
-  {duoChallengeData?.duo && (
+  {isDuo && (
     <View style={styles.chip}>
       <Ionicons name="people-outline" size={14} color="#fff" />
       <Text style={styles.chipText}>{t("duo.title")}</Text>
@@ -1415,7 +1538,7 @@ const handleInviteFriend = useCallback(() => {
     </Text>
   </View>
 </View>
-          {!challengeTaken  && (
+          {!challengeTakenOptimistic  && (
             <TouchableOpacity
               style={styles.takeChallengeButton}
               onPress={() => setModalVisible(true)}
@@ -1444,9 +1567,11 @@ const handleInviteFriend = useCallback(() => {
               </LinearGradient>
             </TouchableOpacity>
           )}
-          {challengeTaken &&
+          {challengeTakenOptimistic &&
   !(finalSelectedDays > 0 && finalCompletedDays >= finalSelectedDays) && (
-  <Animated.View entering={FadeInUp.delay(200)}>
+  <Animated.View entering={firstMountRef.current && shouldEnterAnim ? FadeInUp.delay(200) : undefined}
+    style={styles.progressSection}
+  >
     <Text
       style={[
         styles.inProgressText,
@@ -1457,7 +1582,7 @@ const handleInviteFriend = useCallback(() => {
     </Text>
 
     {/* === SOLO MODE (pas de duo) === */}
-    {!duoChallengeData?.duo && (
+    {!isDuo && (
       <View style={{ marginTop: SPACING }}>
         {/* Header: avatar + label */}
         <View style={{ flexDirection: "row", alignItems: "center", justifyContent: "center" }}>
@@ -1525,261 +1650,273 @@ const handleInviteFriend = useCallback(() => {
     )}
 
     {/* === DUO MODE === */}
-    {duoChallengeData?.duo && duoChallengeData.duoUser && (
-      <View
-        style={[
-          styles.duoCard,
-          !isDarkMode && { backgroundColor: "rgba(0,0,0,0.05)", borderColor: "rgba(0,0,0,0.08)" },
-        ]}
-      >
-        {/* Header */}
-        <View style={styles.duoHeader}>
-          <Ionicons
-  name="people-circle-outline"
-  size={normalizeSize(22)}
-  color={currentTheme.colors.secondary}
-  style={{ marginRight: 8 }} // 👈 ajouté
-/>
-          <Text style={[styles.duoTitle, { color: currentTheme.colors.secondary }]}>
-            {t("duo.title")}
-          </Text>
-        </View>
-
-        {/* Versus row */}
-        {(() => {
-          const me = {
-            id: auth.currentUser?.uid || "me",
-            name: t("duo.you"),
-            avatar: myAvatar || (auth.currentUser as any)?.photoURL || "https://ui-avatars.com/api/?name=You",
-            completedDays: finalCompletedDays || 0,
-            selectedDays: finalSelectedDays || 0,
-          };
-          const partner = duoChallengeData.duoUser;
-          const myPct = pct(me.completedDays, me.selectedDays);
-          const hisPct = pct(partner.completedDays, partner.selectedDays);
-          const iLead = myPct > hisPct;
-          const tied = myPct === hisPct;
-
-
-          return (
-            <>
-              {/* Lead banner */}
-{(() => {
-  // Styles dynamiques par état + thème
-  const bannerBase = [styles.duoLeadBanner];
-  let bannerBg = {};
-  let textStyle = {};
-  let iconColor = currentTheme.colors.textSecondary;
-
-  if (tied) {
-    bannerBg = isDarkMode
-      ? { backgroundColor: "rgba(255,255,255,0.08)" }
-      : { backgroundColor: "rgba(0,0,0,0.06)" };
-    textStyle = { color: currentTheme.colors.textSecondary };
-  } else if (iLead) {
-    bannerBg = isDarkMode
-      ? { backgroundColor: "rgba(255,215,0,0.18)" } // gold pill dark
-      : { backgroundColor: "#FFF4CC" };             // gold pill light
-    textStyle = isDarkMode ? { color: "#FFD700" } : { color: "#8A6A00" };
-    iconColor = isDarkMode ? "#FFD700" : "#8A6A00";
-  } else {
-    bannerBg = isDarkMode
-      ? { backgroundColor: "rgba(255,122,122,0.18)" } // red pill dark
-      : { backgroundColor: "#FFE5E5" };               // red pill light
-    textStyle = isDarkMode ? { color: "#FF9999" } : { color: "#B30000" };
-    iconColor = isDarkMode ? "#FF9999" : "#B30000";
-  }
-
-  return (
-    <View style={[...bannerBase, bannerBg]}>
-      {tied ? (
-        <>
-          <Ionicons name="remove-outline" size={16} color={iconColor} style={{ marginRight: 6 }} />
-          <Text style={[styles.duoLeadText, textStyle]}>{t("duo.tied")}</Text>
-        </>
-      ) : iLead ? (
-        <>
-          <Ionicons name="trophy-outline" size={16} color={iconColor} style={{ marginRight: 6 }} />
-          <Text style={[styles.duoLeadText, textStyle]}>{t("duo.leading")}</Text>
-        </>
-      ) : (
-        <>
-          <Ionicons name="trending-down-outline" size={16} color={iconColor} style={{ marginRight: 6 }} />
-          <Text style={[styles.duoLeadText, textStyle]}>{t("duo.behind")}</Text>
-        </>
-      )}
-    </View>
-  );
-})()}
-
-
-              <View style={styles.duoRow}>
-                {/* Me */}
-                <View style={styles.duoSide}>
-                 <View style={styles.avatarWrap}>
-  <Image source={{ uri: me.avatar }} style={styles.duoAvatarBig} />
-  {myIsPioneer && (
-    <PioneerBadge
-    size="mini"
-    style={{ position: "absolute", bottom: -6, left: -6 }}
-  />
-  )}
-  {(iLead && !tied) && (
+    {/* === DUO MODE === */}
+{isDuo && (
+  duoChallengeData?.duoUser ? (
     <View
       style={[
-        styles.crownWrap,
-        isDarkMode
-          ? { backgroundColor: "rgba(255,215,0,0.18)", borderWidth: 1, borderColor: "rgba(255,215,0,0.6)" }
-          : { backgroundColor: "#FFF4CC", borderWidth: 1, borderColor: "#FFE08A" }
+        styles.duoCard,
+        !isDarkMode && { backgroundColor: "rgba(0,0,0,0.05)", borderColor: "rgba(0,0,0,0.08)" },
       ]}
     >
-      <Text style={styles.crownEmoji}>👑</Text>
-    </View>
-  )}
-  {(iLead || tied) && (
-    <Animated.View
-  pointerEvents="none"
-  style={[
-    styles.pulseCircle,
-    pulseStyle,
-    { borderColor: currentTheme.colors.secondary },
-  ]}
-/>
+      {/* Header */}
+      <View style={styles.duoHeader}>
+        <Ionicons
+          name="people-circle-outline"
+          size={normalizeSize(22)}
+          color={currentTheme.colors.secondary}
+          style={{ marginRight: 8 }}
+        />
+        <Text style={[styles.duoTitle, { color: currentTheme.colors.secondary }]}>
+          {t("duo.title")}
+        </Text>
+      </View>
 
-  )}
-</View>
+      {/* Versus row */}
+      {(() => {
+        const me = {
+          id: auth.currentUser?.uid || "me",
+          name: t("duo.you"),
+          avatar:
+            myAvatar ||
+            (auth.currentUser as any)?.photoURL ||
+            "https://ui-avatars.com/api/?name=You",
+          completedDays: finalCompletedDays || 0,
+          selectedDays: finalSelectedDays || 0,
+        };
+        const partner = duoChallengeData.duoUser;
+        const myPct = pct(me.completedDays, me.selectedDays);
+        const hisPct = pct(partner.completedDays, partner.selectedDays);
+        const iLead = myPct > hisPct;
+        const tied = myPct === hisPct;
 
-                  <Text style={[styles.duoName, { color: isDarkMode ? currentTheme.colors.textPrimary : "#000" }]} numberOfLines={1}>
-                    {me.name}
-                  </Text>
+        return (
+          <>
+            {/* Lead banner */}
+            {(() => {
+              const bannerBase = [styles.duoLeadBanner];
+              let bannerBg: any = {};
+              let textStyle: any = {};
+              let iconColor = currentTheme.colors.textSecondary;
 
-                  <View style={[styles.miniBarBg, { backgroundColor: currentTheme.colors.border }]}>
-                    <LinearGradient
-                      colors={
+              if (tied) {
+                bannerBg = isDarkMode
+                  ? { backgroundColor: "rgba(255,255,255,0.08)" }
+                  : { backgroundColor: "rgba(0,0,0,0.06)" };
+                textStyle = { color: currentTheme.colors.textSecondary };
+              } else if (iLead) {
+                bannerBg = isDarkMode
+                  ? { backgroundColor: "rgba(255,215,0,0.18)" }
+                  : { backgroundColor: "#FFF4CC" };
+                textStyle = isDarkMode ? { color: "#FFD700" } : { color: "#8A6A00" };
+                iconColor = isDarkMode ? "#FFD700" : "#8A6A00";
+              } else {
+                bannerBg = isDarkMode
+                  ? { backgroundColor: "rgba(255,122,122,0.18)" }
+                  : { backgroundColor: "#FFE5E5" };
+                textStyle = isDarkMode ? { color: "#FF9999" } : { color: "#B30000" };
+                iconColor = isDarkMode ? "#FF9999" : "#B30000";
+              }
+
+              return (
+                <View style={[...bannerBase, bannerBg]}>
+                  {tied ? (
+                    <>
+                      <Ionicons
+                        name="remove-outline"
+                        size={16}
+                        color={iconColor}
+                        style={{ marginRight: 6 }}
+                      />
+                      <Text style={[styles.duoLeadText, textStyle]}>{t("duo.tied")}</Text>
+                    </>
+                  ) : iLead ? (
+                    <>
+                      <Ionicons
+                        name="trophy-outline"
+                        size={16}
+                        color={iconColor}
+                        style={{ marginRight: 6 }}
+                      />
+                      <Text style={[styles.duoLeadText, textStyle]}>{t("duo.leading")}</Text>
+                    </>
+                  ) : (
+                    <>
+                      <Ionicons
+                        name="trending-down-outline"
+                        size={16}
+                        color={iconColor}
+                        style={{ marginRight: 6 }}
+                      />
+                      <Text style={[styles.duoLeadText, textStyle]}>{t("duo.behind")}</Text>
+                    </>
+                  )}
+                </View>
+              );
+            })()}
+
+            <View style={[styles.duoRow, IS_COMPACT && styles.duoRowCompact]}>
+              {/* Me */}
+              <View style={styles.duoSide}>
+                <View style={styles.avatarWrap}>
+                  <Image source={{ uri: me.avatar }} style={styles.duoAvatarBig} />
+                  {myIsPioneer && (
+                    <PioneerBadge size="mini" style={{ position: "absolute", bottom: -6, left: -6 }} />
+                  )}
+                  {(iLead && !tied) && (
+                    <View
+                      style={[
+                        styles.crownWrap,
                         isDarkMode
-                          ? ["#FFD700", "#FFD700"]
-                          : [currentTheme.colors.primary, currentTheme.colors.secondary]
-                      }
-                      style={[styles.miniBarFill, { width: `${myPct}%` }]}
-                      start={{ x: 0, y: 0 }}
-                      end={{ x: 1, y: 1 }}
+                          ? { backgroundColor: "rgba(255,215,0,0.18)", borderWidth: 1, borderColor: "rgba(255,215,0,0.6)" }
+                          : { backgroundColor: "#FFF4CC", borderWidth: 1, borderColor: "#FFE08A" }
+                      ]}
+                    >
+                      <Text style={styles.crownEmoji}>👑</Text>
+                    </View>
+                  )}
+                  {(iLead || tied) && (
+                    <Animated.View
+                      pointerEvents="none"
+                      style={[styles.pulseCircle, pulseStyle, { borderColor: currentTheme.colors.secondary }]}
                     />
-                  </View>
-                  <Text style={[styles.duoPct, { color: currentTheme.colors.textSecondary }]}>
-                    {me.completedDays}/{me.selectedDays} · {myPct}%
-                  </Text>
+                  )}
                 </View>
 
-                {/* VS */}
-                <View style={styles.vsWrap}>
+                <Text
+                  style={[styles.duoName, { color: isDarkMode ? currentTheme.colors.textPrimary : "#000" }]}
+                  numberOfLines={1}
+                >
+                  {me.name}
+                </Text>
+
+                <View style={[styles.miniBarBg, { backgroundColor: currentTheme.colors.border }]}>
                   <LinearGradient
-                    colors={[currentTheme.colors.secondary, currentTheme.colors.primary]}
+                    colors={
+                      isDarkMode ? ["#FFD700", "#FFD700"] : [currentTheme.colors.primary, currentTheme.colors.secondary]
+                    }
+                    style={[styles.miniBarFill, { width: `${myPct}%` }]}
                     start={{ x: 0, y: 0 }}
                     end={{ x: 1, y: 1 }}
-                    style={styles.vsBadge}
-                  >
-                    <Text style={styles.vsText}>VS</Text>
-                  </LinearGradient>
+                  />
                 </View>
-
-                {/* Partner */}
-                <View style={styles.duoSide}>
-                  <View style={styles.avatarWrap}>
-  <Image
-    source={{
-      uri:
-        partnerAvatar ||
-        partner.avatar ||
-        `https://ui-avatars.com/api/?name=${encodeURIComponent(partner.name || "P")}`,
-    }}
-    style={styles.duoAvatarBig}
-  />
-  {partner.isPioneer && (
-  <PioneerBadge
-    size="mini"
-    style={{ position: "absolute", bottom: -6, left: -6 }}
-  />
-)}
-  {(!iLead && !tied) && (
-    <View
-      style={[
-        styles.crownWrap,
-        isDarkMode
-          ? { backgroundColor: "rgba(0,209,255,0.18)", borderWidth: 1, borderColor: "rgba(0,209,255,0.55)" }
-          : { backgroundColor: "#DFF7FF", borderWidth: 1, borderColor: "#B9ECFF" }
-      ]}
-    >
-      <Text style={styles.crownEmoji}>👑</Text>
-    </View>
-  )}
-  {(!iLead && !tied) && (
-    <Animated.View
-  pointerEvents="none"
-  style={[
-    styles.pulseCircle,
-    pulseStyle,
-    { borderColor: currentTheme.colors.secondary },
-  ]}
-/>
-
-  )}
-</View>
-
-                  <Text style={[styles.duoName, { color: isDarkMode ? currentTheme.colors.textPrimary : "#000" }]} numberOfLines={1}>
-                    {partner.name}
-                  </Text>
-
-                  <View style={[styles.miniBarBg, { backgroundColor: currentTheme.colors.border }]}>
-                    <LinearGradient
-                      colors={isDarkMode ? ["#00FFFF", "#00FFFF"] : [currentTheme.colors.secondary, currentTheme.colors.primary]}
-                      style={[styles.miniBarFill, { width: `${hisPct}%` }]}
-                      start={{ x: 0, y: 0 }}
-                      end={{ x: 1, y: 1 }}
-                    />
-                  </View>
-                  <Text style={[styles.duoPct, { color: currentTheme.colors.textSecondary }]}>
-                    {partner.completedDays}/{partner.selectedDays} · {hisPct}%
-                  </Text>
-                </View>
+                <Text style={[styles.duoPct, { color: currentTheme.colors.textSecondary }]}>
+                  {me.completedDays}/{me.selectedDays} · {myPct}%
+                </Text>
               </View>
 
-              {/* CTA Duo */}
-              <View style={styles.duoCtas}>
-  <TouchableOpacity
-    onPress={handleNudgePartner}
-    onLongPress={handleNavigateToChat}
-    activeOpacity={0.9}
-    disabled={sendingNudge}
-    accessibilityLabel={t("duo.nudge")}
-    accessibilityHint={t("duo.nudgeHint", {
-      defaultValue: "Appuie pour encourager. Appui long pour ouvrir le chat.",
-    })}
-  >
-    <LinearGradient
-      colors={
-        sendingNudge
-          ? ["#6b7280", "#6b7280"] // gris pendant l'envoi
-          : [currentTheme.colors.secondary, currentTheme.colors.primary]
-      }
-      start={{ x: 0, y: 0 }}
-      end={{ x: 1, y: 1 }}
-      style={styles.duoBtn}
-    >
-      <Ionicons name="megaphone-outline" size={18} color="#fff" style={{ marginRight: 6 }} />
-      <Text style={styles.duoBtnText}>
-        {sendingNudge
-          ? t("commonS.sending", { defaultValue: "Envoi..." })
-          : t("duo.nudge")}
-      </Text>
-    </LinearGradient>
-  </TouchableOpacity>
-</View>
+              {/* VS */}
+              <View style={[styles.vsWrap, IS_COMPACT && styles.vsWrapCompact]}>
+                <LinearGradient
+                  colors={[currentTheme.colors.secondary, currentTheme.colors.primary]}
+                  start={{ x: 0, y: 0 }}
+                  end={{ x: 1, y: 1 }}
+                  style={[styles.vsBadge, IS_COMPACT && styles.vsBadgeCompact]}
+                >
+                  <Text style={[styles.vsText, IS_COMPACT && styles.vsTextCompact]}>VS</Text>
+                </LinearGradient>
+              </View>
 
-            </>
-          );
-        })()}
-      </View>
-    )}
+              {/* Partner */}
+              <View style={styles.duoSide}>
+                <View style={styles.avatarWrap}>
+                  <Image
+                    source={{
+                      uri:
+                        partnerAvatar ||
+                        partner.avatar ||
+                        `https://ui-avatars.com/api/?name=${encodeURIComponent(partner.name || "P")}`,
+                    }}
+                    style={styles.duoAvatarBig}
+                  />
+                  {partner.isPioneer && (
+                    <PioneerBadge size="mini" style={{ position: "absolute", bottom: -6, left: -6 }} />
+                  )}
+                  {(!iLead && !tied) && (
+                    <View
+                      style={[
+                        styles.crownWrap,
+                        isDarkMode
+                          ? { backgroundColor: "rgba(0,209,255,0.18)", borderWidth: 1, borderColor: "rgba(0,209,255,0.55)" }
+                          : { backgroundColor: "#DFF7FF", borderWidth: 1, borderColor: "#B9ECFF" }
+                      ]}
+                    >
+                      <Text style={styles.crownEmoji}>👑</Text>
+                    </View>
+                  )}
+                  {(!iLead && !tied) && (
+                    <Animated.View
+                      pointerEvents="none"
+                      style={[styles.pulseCircle, pulseStyle, { borderColor: currentTheme.colors.secondary }]}
+                    />
+                  )}
+                </View>
+
+                <Text
+                  style={[styles.duoName, { color: isDarkMode ? currentTheme.colors.textPrimary : "#000" }]}
+                  numberOfLines={1}
+                >
+                  {partner.name}
+                </Text>
+
+                <View style={[styles.miniBarBg, { backgroundColor: currentTheme.colors.border }]}>
+                  <LinearGradient
+                    colors={isDarkMode ? ["#00FFFF", "#00FFFF"] : [currentTheme.colors.secondary, currentTheme.colors.primary]}
+                    style={[styles.miniBarFill, { width: `${hisPct}%` }]}
+                    start={{ x: 0, y: 0 }}
+                    end={{ x: 1, y: 1 }}
+                  />
+                </View>
+                <Text style={[styles.duoPct, { color: currentTheme.colors.textSecondary }]}>
+                  {partner.completedDays}/{partner.selectedDays} · {hisPct}%
+                </Text>
+              </View>
+            </View>
+
+            {/* CTA Duo */}
+            <View style={styles.duoCtas}>
+              <TouchableOpacity
+                onPress={handleNudgePartner}
+                onLongPress={handleNavigateToChat}
+                activeOpacity={0.9}
+                disabled={sendingNudge}
+                accessibilityLabel={t("duo.nudge")}
+                accessibilityHint={t("duo.nudgeHint", {
+                  defaultValue: "Appuie pour encourager. Appui long pour ouvrir le chat.",
+                })}
+              >
+                <LinearGradient
+                  colors={
+                    sendingNudge
+                      ? ["#6b7280", "#6b7280"]
+                      : [currentTheme.colors.secondary, currentTheme.colors.primary]
+                  }
+                  start={{ x: 0, y: 0 }}
+                  end={{ x: 1, y: 1 }}
+                  style={styles.duoBtn}
+                >
+                  <Ionicons name="megaphone-outline" size={18} color="#fff" style={{ marginRight: 6 }} />
+                  <Text style={styles.duoBtnText}>
+                    {sendingNudge ? t("commonS.sending", { defaultValue: "Envoi..." }) : t("duo.nudge")}
+                  </Text>
+                </LinearGradient>
+              </TouchableOpacity>
+            </View>
+          </>
+        );
+      })()}
+    </View>
+  ) : (
+    // Loader pendant le fetch du partenaire (évite tout flicker)
+    <View style={{ marginTop: 20, alignItems: "center" }}>
+      <ActivityIndicator size="small" color={currentTheme.colors.secondary} />
+      <Text style={{ color: currentTheme.colors.textSecondary, marginTop: 6 }}>
+        {t("duo.loadingPartner")}
+      </Text>
+    </View>
+  )
+)}
+
 
     {/* Bouton marquer aujourd'hui (commun) */}
     <TouchableOpacity
@@ -1836,7 +1973,9 @@ const handleInviteFriend = useCallback(() => {
 )}
 
 
-            <Animated.View entering={FadeIn} style={{ marginTop: 20, alignItems: "center" }}>
+           <Animated.View entering={firstMountRef.current && shouldEnterAnim ? FadeIn : undefined}
+    style={{ marginTop: SPACING * 1.5, alignItems: "center", zIndex: 0 }}
+  >
                   <Pressable
                     onPress={() => {
   if (challenge?.chatId) {
@@ -1892,7 +2031,7 @@ const handleInviteFriend = useCallback(() => {
           >
             {routeDescription}
           </Text>
-          {challengeTaken  &&
+          {challengeTakenOptimistic  &&
             finalSelectedDays > 0 &&
             finalCompletedDays >= finalSelectedDays && (
               <TouchableOpacity
@@ -1924,10 +2063,9 @@ const handleInviteFriend = useCallback(() => {
             )}
 
             
-          <Animated.View
-            entering={FadeInUp.delay(300)}
-            style={styles.actionIconsContainer}
-          >
+          <Animated.View entering={firstMountRef.current && shouldEnterAnim ? FadeInUp.delay(300) : undefined}
+    style={styles.actionIconsContainer}
+  >
             <TouchableOpacity
               style={styles.actionIcon}
               onPress={handleNavigateToChat}
@@ -2134,59 +2272,163 @@ const handleInviteFriend = useCallback(() => {
   </View>
 )}
 {/* ⚠️ Confirmation : passer en Duo réinitialise ta progression solo */}
+{/* ⚠️ Confirmation : si déjà en SOLO, accepter bascule en DUO et remet à 0 le solo */}
+<Modal
+  visible={confirmResetVisible}
+  transparent
+  animationType="fade"
+  onRequestClose={() => setConfirmResetVisible(false)}
+>
+  <View style={styles.confirmBackdrop}>
+    <View style={styles.confirmCard}>
+      <Text style={styles.confirmTitle}>
+        {t("invitationS.confirmReset.title", {
+          defaultValue: "Passer en duo ?",
+        })}
+      </Text>
+      <Text style={styles.confirmText}>
+        {t("invitationS.confirmReset.message", {
+          defaultValue:
+            "Si vous envoyez une invitation, vous perdrez votre progression solo pour recommencer à 0 en duo. Êtes-vous sûr de vouloir continuer ?",
+        })}
+      </Text>
+
+      <View style={styles.confirmRow}>
+        <TouchableOpacity
+          style={[styles.confirmBtn, styles.confirmBtnCancel]}
+          onPress={() => setConfirmResetVisible(false)}
+          accessibilityLabel={t("commonS.cancel")}
+        >
+          <Text style={styles.confirmBtnCancelText}>
+            {t("commonS.cancel", { defaultValue: "Non" })}
+          </Text>
+        </TouchableOpacity>
+
+        <TouchableOpacity
+          style={[styles.confirmBtn, styles.confirmBtnOk]}
+          onPress={() => {
+            // Ferme l’alerte et ouvre le vrai SendInvitationModal
+            setConfirmResetVisible(false);
+            setSendInviteVisible(true);
+          }}
+          accessibilityLabel={t("commonS.continue")}
+        >
+          <Text style={styles.confirmBtnOkText}>
+            {t("commonS.continue", { defaultValue: "Oui, continuer" })}
+          </Text>
+        </TouchableOpacity>
+      </View>
+    </View>
+  </View>
+</Modal>
+
 <SendInvitationModal
-  visible={inviteConfirmVisible}
-  onClose={() => setInviteConfirmVisible(false)}
+  visible={sendInviteVisible}
   challengeId={id}
   selectedDays={localSelectedDays}
   challengeTitle={routeTitle}
+  onClose={() => setSendInviteVisible(false)}
+  onSent={() => {
+    // UX : toast/alert “Invitation envoyée” si le composant ne s’en charge pas déjà
+    // Alert.alert(t("duo.nudge"), t("invitationS.sent", { defaultValue: "Invitation envoyée ✅" }));
+    setSendInviteVisible(false);
+  }}
 />
 
+
+{/* === DUO INTRO — FULLSCREEN MODAL === */}
 {introVisible && (
-  <Animated.View style={[styles.vsOverlay, fadeStyle]} pointerEvents="auto">
+  <View pointerEvents="none" /> /* keep tree stable while Modal mounts */
+)}
+<Modal
+  visible={introVisible}
+  presentationStyle="fullScreen"
+  animationType="fade"
+  statusBarTranslucent
+  transparent
+  hardwareAccelerated
+  onShow={() => setIntroBlocking(true)}
+  onRequestClose={() => setIntroVisible(false)}
+  onDismiss={() => setIntroBlocking(false)}
+
+>
+  <Animated.View
+    style={[styles.vsModalRoot, fadeStyle]}
+    pointerEvents="auto"  // capture touches while showing
+  >
+    {/* BACKDROP: deep black with subtle gradient beams */}
+    <LinearGradient
+      colors={["#000000", "#050505", "#000000"]}
+      start={{ x: 0, y: 0 }}
+      end={{ x: 1, y: 1 }}
+      style={StyleSheet.absoluteFill}
+    />
+    <LinearGradient
+      colors={["rgba(255,215,0,0.06)", "rgba(0,0,0,0)", "rgba(0,255,255,0.06)"]}
+      start={{ x: 0.1, y: 0 }}
+      end={{ x: 0.9, y: 1 }}
+      style={StyleSheet.absoluteFill}
+    />
+
+    {/* CONTENT */}
     {!assetsReady ? (
       <ActivityIndicator size="large" color="#FFD700" />
     ) : (
-     <View style={[styles.vsRow, { paddingHorizontal: GAP }]}>
-  {/* Moi */}
-  <Animated.View entering={FadeInUp.duration(300)} style={[shakeStyleMy, styles.vsSide, { marginHorizontal: GAP }]}>
-    <Image source={{ uri: myAvatar || `https://ui-avatars.com/api/?name=${encodeURIComponent(myName || "You")}`, }} style={[styles.vsAvatarXL, { width: AVA, height: AVA, borderRadius: AVA/2 }]} />
-    {myIsPioneer && (
-  <PioneerBadge
-    size="mini"
-    style={{ position: "absolute", bottom: -6, left: -6 }}
-  />
-)}
-    <Text style={[styles.vsNameXL, { fontSize: IS_SMALL ? normalizeSize(16) : normalizeSize(18) }]}>
-      {myName || t("duo.you")}
-    </Text>
-  </Animated.View>
+      <View style={[styles.vsStage, { paddingHorizontal: GAP }]}>
+        {/* Me */}
+        <Animated.View entering={FadeInUp.duration(220)} style={[shakeStyleMy, styles.vsSide, { marginHorizontal: GAP }]}>
+          <View style={styles.vsAvatarWrap}>
+           <Image
+  source={{ uri: myAvatar || `https://ui-avatars.com/api/?name=${encodeURIComponent(myName || "You")}` }}
+  style={[styles.vsAvatarXL, { width: AVA, height: AVA, borderRadius: AVA/2 }]}
+  onLoad={() => { myImgReady.current = true; tryStart(); }}
+/>
+            {/* glow ring */}
+            <Animated.View style={[styles.vsGlowRing]} />
+            {myIsPioneer && (
+              <PioneerBadge size="mini" style={{ position: "absolute", bottom: -6, left: -6 }} />
+            )}
+          </View>
+          <Text style={[styles.vsNameXL, { fontSize: IS_SMALL ? normalizeSize(16) : normalizeSize(18) }]}>
+            {myName || t("duo.you")}
+          </Text>
+        </Animated.View>
 
-  {/* VS */}
-  <Animated.View entering={FadeInUp.delay(200).duration(600)} style={[styles.vsCenter, { marginHorizontal: GAP }]}>
-    <Text style={[styles.vsTextBig, { fontSize: TITLE }]}>VS</Text>
-  </Animated.View>
+        {/* VS badge */}
+        <Animated.View entering={FadeInUp.delay(120).duration(320)} style={[styles.vsCenter, { marginHorizontal: GAP }]}>
+          <LinearGradient
+            colors={["#FFD700", "#00FFFF"]}
+            start={{ x: 0, y: 0 }}
+            end={{ x: 1, y: 1 }}
+            style={styles.vsBadgeBig}
+          >
+            <Text style={styles.vsBadgeText}>VS</Text>
+          </LinearGradient>
+        </Animated.View>
 
-  {/* Partenaire */}
-  <Animated.View entering={FadeInUp.duration(300)} style={[shakeStylePartner, styles.vsSide, { marginHorizontal: GAP }]}>
-    <Image source={{ uri: partnerAvatar || `https://ui-avatars.com/api/?name=${encodeURIComponent(
-                  duoChallengeData?.duoUser?.name || "P"
-                )}`, }} style={[styles.vsAvatarXL, { width: AVA, height: AVA, borderRadius: AVA/2 }]} />
-                {duoChallengeData?.duoUser?.isPioneer && (
-  <PioneerBadge
-    size="mini"
-    style={{ position: "absolute", bottom: -6, left: -6 }}
-  />
-)}
-    <Text style={[styles.vsNameXL, { fontSize: IS_SMALL ? normalizeSize(16) : normalizeSize(18) }]}>
-      {duoChallengeData?.duoUser?.name || t("duo.partner")}
-    </Text>
-  </Animated.View>
-</View>
-
+        {/* Partner */}
+        <Animated.View entering={FadeInUp.duration(220)} style={[shakeStylePartner, styles.vsSide, { marginHorizontal: GAP }]}>
+          <View style={styles.vsAvatarWrap}>
+            <Image
+  source={{ uri: partnerAvatar || `https://ui-avatars.com/api/?name=${encodeURIComponent(duoChallengeData?.duoUser?.name || "P")}` }}
+  style={[styles.vsAvatarXL, { width: AVA, height: AVA, borderRadius: AVA/2 }]}
+  onLoad={() => { partnerImgReady.current = true; tryStart(); }}
+/>
+            {/* glow ring */}
+            <Animated.View style={[styles.vsGlowRing, { borderColor: "#00FFFF55", shadowColor: "#00FFFF" }]} />
+            {duoChallengeData?.duoUser?.isPioneer && (
+              <PioneerBadge size="mini" style={{ position: "absolute", bottom: -6, left: -6 }} />
+            )}
+          </View>
+          <Text style={[styles.vsNameXL, { fontSize: IS_SMALL ? normalizeSize(16) : normalizeSize(18) }]}>
+            {duoChallengeData?.duoUser?.name || t("duo.partner")}
+          </Text>
+        </Animated.View>
+      </View>
     )}
   </Animated.View>
-)}
+</Modal>
+
       </SafeAreaView>
     </LinearGradient>
   );
@@ -2198,15 +2440,12 @@ const styles = StyleSheet.create({
   },
   carouselContainer: { position: "relative", height: 0 },
   imageContainer: {
-  position: "absolute",
-  top: 0,
-  left: 0,
-  right: 0,
-  height: HERO_H,                  // ✅ fixe
-  borderBottomLeftRadius: normalizeSize(30),
-  borderBottomRightRadius: normalizeSize(30),
-  overflow: "hidden",
-  zIndex: 1,
+    width: "100%",
+  height: HERO_H,                  // fixe
+   borderBottomLeftRadius: normalizeSize(30),
+   borderBottomRightRadius: normalizeSize(30),
+   overflow: "hidden",
+  marginBottom: SPACING, 
 },
 
   bannerContainer: {
@@ -2286,6 +2525,61 @@ loadingText: {
     justifyContent: "center",
     alignItems: "center",
   },
+  confirmBackdrop: {
+  flex: 1,
+  backgroundColor: "rgba(0,0,0,0.5)",
+  alignItems: "center",
+  justifyContent: "center",
+  padding: 20,
+},
+confirmCard: {
+  width: "100%",
+  maxWidth: 380,
+  borderRadius: 16,
+  padding: 16,
+  backgroundColor: "#111", // ou currentTheme.colors.cardBackground
+},
+confirmTitle: {
+  fontSize: 18,
+  fontWeight: "700",
+  color: "#fff",
+  marginBottom: 8,
+  textAlign: "center",
+},
+confirmText: {
+  fontSize: 14,
+  color: "#ddd",
+  lineHeight: 20,
+  textAlign: "center",
+},
+confirmRow: {
+  flexDirection: "row",
+  justifyContent: "space-between",
+  marginTop: 16,
+},
+confirmBtn: {
+  flex: 1,
+  paddingVertical: 12,
+  borderRadius: 12,
+  alignItems: "center",
+},
+confirmBtnCancel: {
+  backgroundColor: "#333",
+  marginRight: 8,
+},
+confirmBtnOk: {
+  backgroundColor: "#FFD700",
+  marginLeft: 8,
+},
+confirmBtnCancelText: {
+  color: "#fff",
+  fontWeight: "600",
+},
+confirmBtnOkText: {
+  color: "#000",
+  fontWeight: "700",
+},
+
   chipRow: {
   flexDirection: "row",
   flexWrap: "wrap",
@@ -2325,6 +2619,59 @@ vsAvatarXL: {
   shadowOffset: { width: 0, height: 4 },
   elevation: 8,
 },
+vsModalRoot: {
+  ...StyleSheet.absoluteFillObject,
+  backgroundColor: "#000", // hard black base, then gradients on top
+  justifyContent: "center",
+  alignItems: "center",
+  zIndex: 99999,
+},
+
+vsStage: {
+  width: "100%",
+  maxWidth: 820,
+  flexDirection: "row",
+  alignItems: "center",
+  justifyContent: "center",
+},
+
+vsAvatarWrap: {
+  position: "relative",
+  alignItems: "center",
+  justifyContent: "center",
+},
+
+vsGlowRing: {
+  position: "absolute",
+  width: normalizeSize(138),
+  height: normalizeSize(138),
+  borderRadius: normalizeSize(69),
+  borderWidth: 2,
+  borderColor: "#FFD70055",
+  shadowColor: "#FFD700",
+  shadowOpacity: 0.45,
+  shadowRadius: 16,
+  shadowOffset: { width: 0, height: 6 },
+  opacity: 0.85,
+},
+
+vsBadgeBig: {
+  paddingVertical: 10,
+  paddingHorizontal: 20,
+  borderRadius: 999,
+  shadowColor: "#000",
+  shadowOpacity: 0.35,
+  shadowRadius: 10,
+  shadowOffset: { width: 0, height: 6 },
+},
+
+vsBadgeText: {
+  color: "#000",
+  fontFamily: "Comfortaa_700Bold",
+  fontSize: normalizeSize(18),
+  letterSpacing: 2,
+},
+
 vsNameXL: {
   color: "#fff",
   marginTop: 10,
@@ -2363,17 +2710,17 @@ chipText: {
   includeFontPadding: false,
 },
     duoCard: {
-    marginTop: SPACING * 1.2,
-    borderRadius: normalizeSize(20),
-    padding: SPACING,
-    backgroundColor: "rgba(255,255,255,0.08)",
-    borderWidth: 1,
-    borderColor: "rgba(255,255,255,0.12)",
-  },
-  duoHeader: {
-  flexDirection: "row",
-  alignItems: "center",
-  marginBottom: SPACING,
+  marginTop: SPACING * 1.2,
+  borderRadius: normalizeSize(20),
+  padding: SPACING,
+  backgroundColor: "rgba(255,255,255,0.08)",
+  borderWidth: 1,
+  borderColor: "rgba(255,255,255,0.12)",
+
+  // ✅ NEW: largeur confortable et centrée
+  width: "100%",
+  maxWidth: 640,
+  alignSelf: "center",
 },
   duoTitle: {
     fontFamily: "Comfortaa_700Bold",
@@ -2383,8 +2730,8 @@ chipText: {
   alignSelf: "center",
   flexDirection: "row",
   alignItems: "center",
-  paddingVertical: 6,
-  paddingHorizontal: 10,
+  paddingVertical: 8,           // 6 → 8
+  paddingHorizontal: 12,
   borderRadius: 999,
   backgroundColor: "rgba(0,0,0,0.08)",
   marginBottom: SPACING,
@@ -2395,16 +2742,31 @@ chipText: {
     fontSize: normalizeSize(12),
     letterSpacing: 0.3,
   },
-  duoRow: {
+  duoHeader: {
+  flexDirection: "row",
+  alignItems: "center",
+  justifyContent: "center",
+  marginBottom: SPACING,
+},
+
+duoRow: {
   flexDirection: "row",
   alignItems: "center",
   justifyContent: "space-between",
+  gap: 12, // petit gap quand on a la place
+},
+duoRowCompact: {
+  flexDirection: "column",
+  alignItems: "stretch",
+  gap: SPACING,
 },
 
-  duoSide: {
-    flex: 1,
-    alignItems: "center",
-  },
+duoSide: {
+  flex: 1,
+  alignItems: "center",
+  // ✅ NEW: sur très petit écran, on force la pleine largeur pour les barres
+  width: "100%",
+},
   heroOverlay: {
   position: "absolute",
   left: 0,
@@ -2422,12 +2784,19 @@ chipText: {
     marginBottom: 6,
   },
   duoAvatarBig: {
-    width: normalizeSize(62),
-    height: normalizeSize(62),
-    borderRadius: normalizeSize(31),
-    borderWidth: 2,
-    borderColor: "#FFD700",
-  },
+  width: normalizeSize(62),
+  height: normalizeSize(62),
+  borderRadius: normalizeSize(31),
+  borderWidth: 2,
+  borderColor: "#FFD700",
+},
+
+duoName: {
+  fontFamily: "Comfortaa_700Bold",
+  fontSize: normalizeSize(14),
+  maxWidth: normalizeSize(160), // ✅ un peu plus large
+  textAlign: "center",
+},
   pulseCircle: {
     position: "absolute",
     width: normalizeSize(68),
@@ -2435,19 +2804,17 @@ chipText: {
     borderRadius: normalizeSize(34),
     borderWidth: 2,
   },
-  duoName: {
-    fontFamily: "Comfortaa_700Bold",
-    fontSize: normalizeSize(14),
-    maxWidth: normalizeSize(120),
-    textAlign: "center",
-  },
+ 
   miniBarBg: {
-    width: "85%",
-    height: normalizeSize(8),
-    borderRadius: normalizeSize(4),
-    overflow: "hidden",
-    marginTop: 8,
-  },
+  width: "85%",
+  height: normalizeSize(8),
+  borderRadius: normalizeSize(4),
+  overflow: "hidden",
+  marginTop: 8,
+
+  // ✅ NEW: donne plus d’air sur compact
+  alignSelf: "center",
+},
   crownEmoji: {
   fontSize: normalizeSize(12),
   transform: [{ translateY: Platform.OS === "android" ? -1 : 0 }],
@@ -2463,24 +2830,45 @@ chipText: {
     marginTop: 6,
   },
   vsWrap: {
-    width: normalizeSize(56),
-    alignItems: "center",
-  },
+  width: normalizeSize(56),
+  alignItems: "center",
+  justifyContent: "center",
+},
+
+// ✅ NEW: en compact, on ne “vole” pas de largeur ; on met VS avec marge verticale
+vsWrapCompact: {
+  width: "100%",
+  paddingVertical: 6,
+},
   vsBadge: {
-    paddingVertical: 6,
-    paddingHorizontal: 12,
-    borderRadius: 999,
-  },
+  paddingVertical: 6,
+  paddingHorizontal: 12,
+  borderRadius: 999,
+},
+
+// ✅ NEW: badge plus visible en compact
+vsBadgeCompact: {
+  alignSelf: "center",
+  paddingVertical: 8,
+  paddingHorizontal: 16,
+},
   vsText: {
-    color: "#fff",
-    fontFamily: "Comfortaa_700Bold",
-    fontSize: normalizeSize(12),
-    letterSpacing: 1.5,
-  },
+  color: "#fff",
+  fontFamily: "Comfortaa_700Bold",
+  fontSize: normalizeSize(12),
+  letterSpacing: 1.5,
+},
+
+// ✅ NEW: texte un poil plus grand sur compact pour compenser la verticalité
+vsTextCompact: {
+  fontSize: normalizeSize(14),
+},
   duoCtas: {
-    marginTop: SPACING,
-    alignItems: "center",
-  },
+  marginTop: SPACING,
+  alignItems: "center",
+  // ✅ NEW: évite que le CTA colle à la barre
+  paddingTop: 2,
+},
   duoBtn: {
     flexDirection: "row",
     alignItems: "center",
@@ -2502,9 +2890,9 @@ chipText: {
   infoRecipeContainer: {
     flex: 1,
     paddingHorizontal: SPACING * 1.5,
-    paddingTop: SCREEN_HEIGHT * 0.05 ,
-    alignItems: "center",
-    justifyContent: "center",
+    alignItems: "stretch",
+    justifyContent: "flex-start",
+    width: "100%",
   },
   infoRecipeName: {
     fontSize: normalizeSize(28),
@@ -2535,7 +2923,14 @@ chipText: {
   justifyContent: "center",
   marginTop: 12,
 },
-
+progressSection: {
+    alignSelf: "stretch",
+    alignItems: "center",       // on centre le contenu de la section, pas tout l’écran
+    paddingHorizontal: SPACING,
+    paddingTop: SPACING,
+    width: "100%",              // ✅ garantit la pleine largeur (évite les chevaucher)
+   maxWidth: 560,
+  },
   takeChallengeButton: {
     borderRadius: normalizeSize(25),
     overflow: "hidden",
@@ -2590,11 +2985,14 @@ chipText: {
     fontFamily: "Comfortaa_400Regular",
   },
   progressBarBackground: {
-    width: normalizeSize(250),
+    width: "100%",        // prend la largeur dispo
+    maxWidth: 480,        // borne haute élégante
+    minWidth: 220,
+    alignSelf: "center",
+    zIndex: 0,
     height: normalizeSize(10),
     borderRadius: normalizeSize(5),
     overflow: "hidden",
-    alignSelf: "center", // Déjà présent
     marginTop: SPACING,
   },
   progressBarFill: {
@@ -2634,7 +3032,7 @@ chipText: {
     justifyContent: "space-between", 
     alignItems: "center",
     marginTop: SPACING * 2,
-    minWidth: "100%",
+    width: "100%",
     paddingHorizontal: SPACING / 2
   },
    actionIcon: {

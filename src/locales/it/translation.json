@@ -387,9 +387,24 @@
     "accessDenied": "Accesso negato",
     "shareError": "Condivisione fallita"
   },
+  "pioneerModal": {
+    "title": "🎖️ Benvenuto tra i Pioneer!",
+    "description": "Fai parte dei <b>primi {{first}}</b> iscritti.\nTi è stato assegnato un badge <b>Pioneer</b> e ottieni <b>+{{trophies}} trofei</b> 🏆.",
+    "cta": "Fantastico!",
+    "closeA11y": "Chiudi il messaggio Pioneer"
+  },
   "invitationS": {
       "shareTitle": "Invito Duo",
       "shareMessageWithTitle": "Ti invito a iniziare « {{title}} » per {{days}} giorni con me!",
+      "title": "Invita un amico",
+    "subtitleDirect": "Inserisci l'esatto nome utente del tuo amico per inviargli un invito.",
+    "usernamePlaceholder": "Nome utente",
+    "send": "Invia invito",
+    "sentShort": "Invito inviato!",
+    "confirmReset": {
+      "title": "Passare a Duo?",
+      "message": "Se invii un invito perderai i tuoi progressi in solitaria e ricomincerai da 0 in duo. Sei sicuro di voler continuare?"
+    },
       "errors": {
         "alreadyInvited": "Hai già un invito attivo per questa sfida.",
         "autoInvite": "Non puoi accettare il tuo stesso invito.",
@@ -397,7 +412,13 @@
         "unknown": "Si è verificato un errore.",
          "alreadyInDuoForChallenge": "Impossibile invitare questo utente: è già in un duo per questa sfida.",
         "inviterAlreadyStarted": "Hai già iniziato questa sfida da solo.",
-        "duoAlready": "Sei già in un duo per questa sfida."
+        "duoAlready": "Sei già in un duo per questa sfida.",
+        "permissions": "Permessi insufficienti. Assicurati di essere connesso e che le regole di Firestore lo permettano.",
+      "userNotFound": "Nessun utente trovato con questo nome.",
+      "usernameRequired": "Inserisci il nome utente del tuo amico.",
+      "params": "Parametri non validi per l’invito.",
+      "inviterHasPendingForChallenge": "Hai già un invito in sospeso per questa sfida.",
+      "inviteeHasPendingForChallenge": "Questo utente ha già un invito in sospeso per questa sfida."
       },
       "confirmStartDuoTitle": "Iniziare in Duo?",
       "confirmStartDuoMessage": "Se inizi in Duo, i tuoi progressi da solo saranno azzerati. Continuare?",
@@ -407,7 +428,9 @@
       }
     },
     "pendingInvite": "Invito in corso",
-"commonS": { "close": "Chiudi", "notLoggedIn": "Devi effettuare l’accesso.", "sending": "Invio…" }
+"commonS": { "close": "Chiudi", "notLoggedIn": "Devi effettuare l’accesso.", "sending": "Invio…",
+    "cancel": "No",
+    "continue": "Sì, continua" }
 ,
 "profileS": {
     "bioLabel": "Bio",
@@ -520,7 +543,14 @@
   "reviewPlaceholder": "Condividi le tue impressioni dopo aver completato questa sfida...",
   "submitReview": "Invia",
   "deleteReview": "Elimina",
-  "confirmDeleteReview": "Eliminare questa recensione?"
+  "confirmDeleteReview": "Eliminare questa recensione?",
+    "shareA11y": "Condividi questa sfida",
+    "chatA11y": "Apri la chat della sfida",
+    "statsA11y": "Vedi statistiche",
+    "challenge": "Sfida",
+    "accessDenied": "Accesso negato",
+    "backButton": "Indietro",
+    "backButtonHint": "Torna alla schermata precedente"
   },
   "explanation": {
     "title": "La tua voce conta!",
@@ -679,26 +709,28 @@
 "completedOnDate": "Completato"
 ,
   "completion": {
-    "trophies": "trofei",
-    "reward": "Hai guadagnato {{count}} trofei!",
-    "finalTitle": "Congratulazioni!",
-    "finalMessage": "Hai guadagnato {{count}} trofei!",
-    "errorFinalizingMessage": "Errore durante la finalizzazione della sfida.",
-    "adNotReadyTitle": "Annuncio non disponibile",
-    "adNotReady": "L'annuncio non è ancora caricato. Riprova tra poco.",
-    "continue": "Continua",
-    "doubleTrophies": "Raddoppia i tuoi trofei",
-    "youAreAwesome": "Sei fantastico!",
-    "keepItUp": "Continua così!",
-    "successIsYours": "Il successo è tuo!",
-    "everyEffortCounts": "Ogni sforzo conta!",
-    "neverGiveUp": "Non mollare mai!",
-    "youAreOnTrack": "Sei sulla strada giusta!",
-    "excellenceAwaits": "L'eccellenza ti aspetta!",
-    "headHeldHigh": "A testa alta!",
-    "persistencePays": "La perseveranza paga!",
-    "challengesMakeYouStronger": "Le sfide ti rendono più forte!"
-  },
+  "trophies": "trofei",
+  "reward": "Hai guadagnato {{count}} trofei!",
+  "finalTitle": "Congratulazioni!",
+  "finalMessage": "Hai guadagnato {{count}} trofei!",
+  "errorFinalizing": "Errore durante il completamento della sfida.",
+  "errorFinalizingMessage": "Errore durante il completamento della sfida.",
+  "adNotReadyTitle": "Annuncio non disponibile",
+  "adNotReady": "L'annuncio non è ancora pronto. Riprova più tardi.",
+  "continue": "Continua",
+  "loadingAd": "Preparazione del video…",
+  "doubleTrophies": "Raddoppia i tuoi trofei",
+  "youAreAwesome": "Sei fantastico!",
+  "keepItUp": "Continua così!",
+  "successIsYours": "Il successo è tuo!",
+  "everyEffortCounts": "Ogni sforzo conta!",
+  "neverGiveUp": "Non arrenderti mai!",
+  "youAreOnTrack": "Sei sulla strada giusta!",
+  "excellenceAwaits": "L'eccellenza ti aspetta!",
+  "headHeldHigh": "A testa alta!",
+  "persistencePays": "La perseveranza paga!",
+  "challengesMakeYouStronger": "Le sfide ti rendono più forte!"
+},
   "featureDetail": {
     "votes": "{{count}} voto",
     "votes_plural": "{{count}} voti",
@@ -3180,7 +3212,9 @@
     "morning2": "Oggi ce la fai! 💪",
     "evening1": "🌙 È ora di spuntare la giornata. Piccoli passi, grandi risultati.",
     "evening2": "Un altro giorno di costanza. Grande!",
-    "nudgeBody": "Ehi! Non dimenticare «{{title}}» — {{from}} fa il tifo per te 💪"
+    "nudgeBody": "Ehi! Non dimenticare «{{title}}» — {{from}} fa il tifo per te 💪",
+    "invitationAccepted": "{{username}} ha accettato il tuo invito!",
+    "invitationRefused": "{{username}} ha rifiutato il tuo invito."
   },
 "editYourReview": "Modifica la tua recensione",
 "saveReview": "Salva"
@@ -3190,22 +3224,49 @@
   "you": "Tu",
   "nudge": "Incoraggia",
   "leading": "Sei in vantaggio!",
+  "nudgeNoToken": "Il tuo partner non ha abilitato le notifiche o non ha aperto l’app dopo l’aggiornamento.",
+  "nudgeDisabled": "Il tuo partner ha disattivato le notifiche.",
+  "nudgeNoUser": "Partner non trovato.",
   "tied": "Parità",
+  "nudgeUnregistered": "Il token del tuo partner non è più valido. Chiedigli di aprire l’app per riattivare le notifiche.",
+  "nudgeExpoError": "Errore del servizio di notifiche. Riprova più tardi.",
   "behind": "Sei indietro",
   "nudgeSent": "Incitamento inviato ✅",
   "nudgeFailed": "Impossibile inviare la notifica.",
   "nudgeUnavailable": "Funzione disponibile solo per le sfide in duo.",
-  "nudgeHint": "Tocca per incoraggiare. Tieni premuto per aprire la chat."
+  "nudgeHint": "Tocca per incoraggiare. Tieni premuto per aprire la chat.",
+   "loadingPartner": "Caricamento compagno...",
+   "partner": "Compagno"
 }
 ,
   "invitation": {
-    "title": "Unisciti a una sfida",
     "subtitle": "Sei stato invitato alla sfida {challengeId}!",
-    "accept": "Accetta l'invito",
     "accepting": "Accettazione in corso...",
     "success": "Sfida unita!",
     "invalid": "Invito non valido",
-    "joinedChallenge": "Hai partecipato con successo alla sfida!"
+    "joinedChallenge": "Hai partecipato con successo alla sfida!",
+    "loading": "Caricamento...",
+  "invalidTitle": "Invito non disponibile",
+  "invalidMessage": "Questo invito non è stato trovato o è stato eliminato.",
+  "expiredTitle": "Invito scaduto",
+  "expiredMessage": "Questo invito è scaduto. Chiedi al tuo amico di inviarne uno nuovo.",
+  "title": "{{username}} ti invita a un Duo",
+  "message": "Accetta per iniziare questa sfida in Duo. Potrete seguire i vostri progressi insieme.",
+  "accept": "Accetta",
+  "refuse": "Rifiuta",
+  "acceptHint": "Accetta l’invito e avvia il Duo.",
+  "refuseHint": "Rifiuta l’invito e chiudi.",
+  "restartTitle": "Ricominciare la sfida in Duo?",
+  "restartMessage": "Hai già questa sfida in modalità solo. La reimposteremo per ricominciare da zero insieme.",
+  "cancel": "Annulla",
+  "continue": "Continua",
+  "errors": {
+    "unknown": "Errore sconosciuto.",
+    "expired": "Invito scaduto.",
+    "autoInvite": "Non puoi accettare il tuo stesso invito.",
+    "alreadyInDuoForChallenge": "Sei già in un Duo per questa sfida."
+  },
+  "userFallback": "Utente"
   },
   "settingsPage": {
     "location": "Localizzazione",

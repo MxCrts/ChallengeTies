@@ -60,6 +60,23 @@ async function hasActiveInvite(params: {
   return !snap.empty;
 }
 
+async function isUserAlreadyInActiveDuoForChallenge(userId: string, challengeId: string): Promise<boolean> {
+  const userRef = doc(db, "users", userId);
+  const snap = await getDoc(userRef);
+  if (!snap.exists()) return false;
+  const arr: any[] = Array.isArray(snap.data()?.CurrentChallenges) ? snap.data()!.CurrentChallenges : [];
+  const found = arr.find((c) => {
+    const cid = c?.challengeId ?? c?.id;
+    const match = cid === challengeId || c?.uniqueKey?.startsWith?.(challengeId + "_");
+    if (!match || !c?.duo) return false;
+    const sel = Number(c?.selectedDays ?? 0);
+    const done = Number(c?.completedDays ?? 0);
+    return !sel || done < sel; // actif si pas d’info ou pas terminé
+  });
+  return !!found;
+}
+
+
 /* =========================
  * CREATE — DIRECT
  * ========================= */
@@ -69,6 +86,7 @@ export function isInvitationExpired(inv?: { expiresAt?: Timestamp | null }) {
   const ms = inv.expiresAt instanceof Timestamp ? inv.expiresAt.toMillis() : Number(inv.expiresAt);
   return Number.isFinite(ms) && ms < Date.now();
 }
+
 export async function createDirectInvitation(opts: {
   challengeId: string;
   selectedDays: number;
@@ -82,9 +100,14 @@ export async function createDirectInvitation(opts: {
   }
   if (opts.inviteeId === inviterId) throw new Error("auto_invite");
 
-  // anti-dup
+  // anti-dup pour l’inviteur
   if (await hasActiveInvite({ inviterId, challengeId: opts.challengeId, selectedDays: opts.selectedDays })) {
     throw new Error("invitation_already_active");
+  }
+
+  // ❗ garde-fou : l’invité n’est pas déjà en duo actif sur ce challenge
+  if (await isUserAlreadyInActiveDuoForChallenge(opts.inviteeId, opts.challengeId)) {
+    throw new Error("invitee_already_in_duo");
   }
 
   const ref = await addDoc(collection(db, "invitations"), {
@@ -103,6 +126,7 @@ export async function createDirectInvitation(opts: {
 
   return { id: ref.id };
 }
+
 
 /* =========================
  * CREATE — OPEN (+ lien universel)
@@ -169,15 +193,26 @@ export async function acceptInvitation(inviteId: string): Promise<void> {
   if (!invSnap.exists()) throw new Error("invitation_introuvable");
 
   const inv = invSnap.data() as Invitation;
+
+  // Statut & expiration
   if (inv.status !== "pending") throw new Error("invitation_deja_traitee");
+  if (isInvitationExpired(inv)) throw new Error("expired");
 
-  // Vérifs d’autorisation métier (conformes aux rules)
-  if (inv.kind === "direct" && inv.inviteeId !== me) {
-    throw new Error("non_autorise");
+  // Autorisation logique
+  if (inv.kind === "direct" && inv.inviteeId !== me) throw new Error("non_autorise");
+  if (inv.kind === "open" && inv.inviterId === me) throw new Error("auto_invite");
+
+  const inviterId = inv.inviterId;
+  const inviteeId = inv.kind === "open" ? me : (inv.inviteeId as string);
+  if (!inviteeId) throw new Error("invitee_invalide");
+
+  // Garde-fous (lecture autorisée par tes rules)
+  if (await isUserAlreadyInActiveDuoForChallenge(inviteeId, inv.challengeId)) {
+    throw new Error("invitee_already_in_duo");
   }
-
-  if (inv.kind === "open" && inv.inviteeId && inv.inviteeId !== me) {
-    throw new Error("non_autorise");
+  if (await isUserAlreadyInActiveDuoForChallenge(inviterId, inv.challengeId)) {
+    // on empêche l’acceptation : l’inviteur est déjà en duo actif
+    throw new Error("inviter_already_in_duo");
   }
 
   const challengeRef = doc(db, "challenges", inv.challengeId);
@@ -192,26 +227,27 @@ export async function acceptInvitation(inviteId: string): Promise<void> {
     if (!meSnap.exists()) throw new Error("user_introuvable");
     const meData = meSnap.data() as any;
 
-    // 1) Invitation → accepted (+ pour OPEN: assigne inviteeId = me)
+    // 1) Invitation → accepted (+ OPEN: set inviteeId = me)
     const invUpdate: any = {
       status: "accepted",
       updatedAt: serverTimestamp(),
       acceptedAt: serverTimestamp(),
     };
     if (inv.kind === "open" && !inv.inviteeId) {
-      invUpdate.inviteeId = me; // conforme à la règle 1) OPEN
+      invUpdate.inviteeId = me;
     }
     tx.update(invitationRef, invUpdate);
 
-    // 2) users/{me} → ajoute l’entrée duo (tu ne peux MAJ que TON doc user)
-    const meCurrent: any[] = Array.isArray(meData?.CurrentChallenges)
-      ? meData.CurrentChallenges
-      : [];
+    // 2) users/{me} → SOLO cleanup + DUO entry (miroir pour l’inviteur sera fait par son app)
+    const meCurrent: any[] = Array.isArray(meData?.CurrentChallenges) ? meData.CurrentChallenges : [];
+    const filtered = meCurrent.filter((c: any) => {
+      const cid = c?.challengeId ?? c?.id;
+      return cid !== inv.challengeId; // supprime SOLO/ancien pour ce challenge
+    });
 
-    // Nettoie une éventuelle entrée SOLO pour ce challenge
-    const filtered = meCurrent.filter(
-      (c: any) => c?.challengeId !== inv.challengeId && c?.id !== inv.challengeId
-    );
+    // uniqueKey déterministe (pair triée) pour aider le miroir côté inviteur
+    const pair = [inviterId, inviteeId].sort().join("-");
+    const uniqueKey = `${inv.challengeId}_${inv.selectedDays}_${pair}`;
 
     const duoEntry = {
       challengeId: inv.challengeId,
@@ -226,8 +262,8 @@ export async function acceptInvitation(inviteId: string): Promise<void> {
       lastMarkedDate: null,
       streak: 0,
       duo: true,
-      duoPartnerId: inv.inviterId === me ? inv.inviteeId : inv.inviterId, // si jamais me == inviter (théorique)
-      uniqueKey: `${inv.challengeId}_${inv.selectedDays}`,
+      duoPartnerId: inviterId,  // partenaire = l’inviteur
+      uniqueKey,
     };
 
     tx.update(meRef, {
@@ -235,7 +271,7 @@ export async function acceptInvitation(inviteId: string): Promise<void> {
       updatedAt: serverTimestamp(),
     });
 
-    // 3) challenges/{id} → append self + participantsCount +1 (règle “self only”)
+    // 3) challenges/{id} → append self uniquement (tes rules l’exigent)
     tx.update(challengeRef, {
       participantsCount: increment(1),
       usersTakingChallenge: arrayUnion(me),
@@ -243,6 +279,7 @@ export async function acceptInvitation(inviteId: string): Promise<void> {
     });
   });
 }
+
 
 /* =========================
  * REFUSE — DIRECT (invitee)
@@ -329,6 +366,8 @@ export async function cancelInvitationByInviter(inviteId: string): Promise<void>
     updatedAt: serverTimestamp(),
   });
 }
+
+
 
 /* =========================
  * GET

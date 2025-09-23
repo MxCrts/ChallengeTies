@@ -169,7 +169,7 @@
   "yourDescriptionHere": "Ta description ici…",
   "exTitle": "Ex : 30 jours de lecture",
   "exDescription": "Ex : Lire 10 pages par jour et partager ses notes…",
-  "pleaseWait": "Patiente…",
+  "pleaseWait": "Patientez…",
   "ok": "OK",
   "createChallengeFailed": "Impossible de créer le défi pour le moment. Réessaie plus tard.",
   "challengeSubmittedForReview": "Ton défi a été soumis et sera visible dès qu’un admin l’aura approuvé.",
@@ -408,21 +408,16 @@
 
   "challengeDetails": {
     "untitled": "Défi sans titre",
-    "uncategorized": "Non catégorisé",
     "noDescription": "Aucune description disponible",
     "fetchError": "Impossible de récupérer le défi.",
     "joinError": "Impossible de rejoindre le défi. Veuillez réessayer.",
-    "saveError": "Impossible de basculer l’enregistrement. Veuillez réessayer.",
     "completeError": "Impossible de terminer le défi.",
-    "chatAccessDenied": "Vous devez prendre le défi avant d’ouvrir le chat.",
     "loading": "Chargement…",
     "shareMessage": "Rejoins-moi sur « {{title}} » sur ChallengeTies !",
     "participant": "participant",
     "participants": "participants",
     "takeChallenge": "Relever le défi",
     "inProgress": "En cours",
-    "daysCompleted": "jours terminés",
-    "alreadyMarked": "Déjà marqué aujourd’hui",
     "markToday": "Marquer aujourd’hui",
     "completeChallenge": "Terminer le défi",
     "reviewAfterComplete":"⚠️ Vous devez terminer ce challenge pour pouvoir laisser un avis 🏆",
@@ -444,7 +439,19 @@
   "reviewPlaceholder": "Partage ton ressenti après avoir terminé ce challenge...",
   "submitReview": "Envoyer",
   "deleteReview": "Supprimer",
-  "confirmDeleteReview": "Supprimer cet avis ?"
+  "confirmDeleteReview": "Supprimer cet avis ?",
+    "uncategorized": "Sans catégorie",
+    "daysCompleted": "jours complétés",
+    "alreadyMarked": "Déjà validé aujourd’hui",
+    "shareA11y": "Partager ce défi",
+    "chatA11y": "Ouvrir le chat du défi",
+    "statsA11y": "Voir les statistiques",
+    "challenge": "Défi",
+    "accessDenied": "Accès refusé",
+    "chatAccessDenied": "Tu dois prendre le défi pour accéder au chat.",
+    "saveError": "Impossible de sauvegarder ce défi",
+    "backButton": "Retour",
+    "backButtonHint": "Revenir à l’écran précédent"
   },
   "editYourReview": "Modifier votre avis",
 "saveReview": "Enregistrer"
@@ -452,14 +459,21 @@
 "duo": {
   "title": "Défi en duo",
   "you": "Toi",
+  "nudgeUnregistered": "Le token de ton partenaire n’est plus valide. Demande-lui d’ouvrir l’app pour réactiver les notifications.",
+  "nudgeExpoError": "Erreur du service de notifications. Réessaie un peu plus tard.",
   "nudge": "Encourager",
   "leading": "Tu mènes !",
   "tied": "Égalité",
   "behind": "Tu es derrière",
+  "nudgeNoToken": "Ton partenaire n’a pas activé les notifications ou n’a pas encore ouvert l’app depuis la mise à jour.",
+    "nudgeDisabled": "Ton partenaire a désactivé les notifications.",
+    "nudgeNoUser": "Partenaire introuvable.",
   "nudgeSent": "Encouragement envoyé ✅",
   "nudgeFailed": "Impossible d'envoyer la notification.",
   "nudgeUnavailable": "Fonction réservée aux défis en duo.",
-  "nudgeHint": "Appuie pour encourager. Appui long pour ouvrir le chat."
+  "nudgeHint": "Appuie pour encourager. Appui long pour ouvrir le chat.",
+  "loadingPartner": "Chargement du partenaire...",
+  "partner": "Partenaire"
 },
   "invitationModal": {
   "title": "Inviter un ami",
@@ -641,12 +655,14 @@
     "trophies": "trophées",
     "reward": "Vous avez gagné {{count}} trophées !",
     "finalTitle": "Félicitations !",
-    "finalMessage": "Vous avez gagné {{count}} trophés !",
+    "finalMessage": "Vous avez gagné {{count}} trophées !",
+    "errorFinalizing": "Erreur lors de la finalisation du défi.",
     "errorFinalizingMessage": "Erreur lors de la finalisation du défi.",
     "adNotReadyTitle": "Publicité non disponible",
     "adNotReady": "La publicité n'est pas encore chargée. Réessayez bientôt.",
     "continue": "Continuer",
-    "doubleTrophies": "Doubler vos trophés",
+    "loadingAd": "Préparation de la vidéo…",
+    "doubleTrophies": "Doubler vos trophées",
     "youAreAwesome": "Vous êtes incroyable !",
     "keepItUp": "Continuez comme ça !",
     "successIsYours": "Le succès est à vous !",
@@ -824,6 +840,12 @@
     "sendButton": "Envoyer",
     "sendButtonA11y": "Envoyer le message",
     "footerMessage": "Nous répondrons dès que possible. Merci de faire confiance à ChallengeTies ! 🚀"
+  },
+  "pioneerModal": {
+    "title": "🎖️ Bienvenue parmi les Pioneers !",
+    "description": "Vous faites partie des <b>{{first}} premiers</b> inscrits.\nUn badge <b>Pioneer</b> vous a été attribué et vous gagnez <b>+{{trophies}} trophées</b> 🏆.",
+    "cta": "Super !",
+    "closeA11y": "Fermer le message Pioneer"
   },
   "history": {
     "title": "Notre Histoire",
@@ -1312,28 +1334,66 @@
   "morning2": "Tu l’as, aujourd’hui ! On y va 💪",
   "evening1": "🌙 Tu coches ta journée ? Petit pas, grands effets.",
   "evening2": "Encore un jour de régularité, bien joué !",
-  "nudgeBody": "Yo ! N’oublie pas « {{title}} » — {{from}} t’encourage 💪"
+  "nudgeBody": "Yo ! N’oublie pas « {{title}} » — {{from}} t’encourage 💪",
+    "invitationAccepted": "{{username}} a accepté ton invitation !",
+    "invitationRefused": "{{username}} a refusé ton invitation."
 },
   "invitation": {
-    "title": "Rejoindre un défi",
     "subtitle": "Vous avez été invité à rejoindre le défi {challengeId} !",
-    "accept": "Accepter l'invitation",
     "accepting": "Acceptation en cours...",
     "success": "Défi rejoint !",
     "invalid": "Invitation non valide",
-    "joinedChallenge": "Vous avez rejoint le défi avec succès !"
+    "joinedChallenge": "Vous avez rejoint le défi avec succès !",
+    "loading": "Chargement...",
+    "invalidTitle": "Invitation indisponible",
+    "invalidMessage": "Cette invitation est introuvable ou a été supprimée.",
+    "expiredTitle": "Invitation expirée",
+    "expiredMessage": "Cette invitation a expiré. Demande à ton ami d'en renvoyer une nouvelle.",
+    "title": "{{username}} t’invite en Duo",
+    "message": "Accepte pour démarrer ce défi en Duo. Vous pourrez suivre vos progrès ensemble.",
+    "accept": "Accepter",
+    "refuse": "Refuser",
+    "acceptHint": "Accepter l’invitation et démarrer en Duo.",
+    "refuseHint": "Refuser l’invitation et fermer.",
+    "restartTitle": "Recommencer le défi en Duo ?",
+    "restartMessage": "Tu as déjà ce défi en solo. On va le réinitialiser pour repartir à zéro à deux.",
+    "cancel": "Annuler",
+    "continue": "Continuer",
+    "errors": {
+      "unknown": "Erreur inconnue.",
+      "expired": "Invitation expirée.",
+      "autoInvite": "Tu ne peux pas accepter ta propre invitation.",
+      "alreadyInDuoForChallenge": "Tu es déjà en duo pour ce défi."
+    },
+    "userFallback": "Utilisateur"
+  
   },
   "invitationS": {
     "shareTitle": "Invitation Duo",
     "shareMessageWithTitle": "Je t’invite à commencer « {{title}} » sur {{days}} jours avec moi !",
+    "title": "Inviter un ami",
+    "subtitleDirect": "Entre le nom d’utilisateur exact de ton ami pour lui envoyer une invitation.",
+    "usernamePlaceholder": "Nom d’utilisateur",
+    "send": "Envoyer l’invitation",
+    "sentShort": "Invitation envoyée !",
+    "confirmReset": {
+      "title": "Passer en duo ?",
+      "message": "Si vous envoyez une invitation, vous perdrez votre progression solo pour recommencer à 0 en duo. Êtes-vous sûr de vouloir continuer ?"
+    },
     "errors": {
       "alreadyInvited": "Tu as déjà une invitation en cours pour ce défi.",
-      "autoInvite": "Tu ne peux pas accepter ta propre invitation.",
       "expired": "Cette invitation a expiré.",
       "unknown": "Une erreur est survenue.",
       "inviterAlreadyStarted": "Tu as déjà commencé ce défi en solo.",
       "alreadyInDuoForChallenge": "Impossible d’inviter cet utilisateur : il est déjà en duo pour ce challenge.",
-      "duoAlready": "Tu es déjà en duo sur ce défi."
+      "duoAlready": "Tu es déjà en duo sur ce défi.",
+      "permissions": "Permissions insuffisantes. Vérifie que tu es bien connecté et que les règles Firestore autorisent cette action.",
+      "userNotFound": "Aucun utilisateur trouvé avec ce nom.",
+      "usernameRequired": "Entre le nom d’utilisateur de ton ami.",
+      "params": "Paramètres invalides pour l’invitation.",
+      "autoInvite": "Tu ne peux pas t’inviter toi-même.",
+      "inviterHasPendingForChallenge": "Tu as déjà une invitation en attente pour ce défi.",
+      "inviteeHasPendingForChallenge": "Impossible d’inviter cet utilisateur : il a déjà une invitation en attente pour ce défi."
     },
     "confirmStartDuoTitle": "Passer en Duo ?",
     "confirmStartDuoMessage": "Si tu commences en Duo, ta progression en solo sera remise à zéro. Continuer ?",
@@ -1342,7 +1402,9 @@
       "continue": "Continuer"
     }
   },
-  "commonS": { "close": "Fermer", "notLoggedIn": "Tu dois être connecté.", "sending": "Envoi..." },
+  "commonS": { "close": "Fermer", "notLoggedIn": "Tu dois être connecté.", "sending": "Envoi...",
+    "cancel": "Non",
+    "continue": "Oui, continuer"},
 "pendingInvite": "Invitation en cours",
   "settingsPage": {
     "location": "Localisation",
