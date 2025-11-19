@@ -10,7 +10,7 @@ const CLOUDINARY_BG_PUBLIC_ID = "ct_share_bg1"; // asset source (PNG)
 const APP_SCHEME = "myapp";
 const ANDROID_PACKAGE = "com.mxcrts.ChallengeTies";
 const WEB_HOSTING = "https://challengeme-d7fef.web.app";
-const IOS_STORE_URL = "https://apps.apple.com/app/idXXXXXXXX"; // TODO: real App Store id
+const IOS_STORE_URL = "https://apps.apple.com/app/id6751504640"; 
 const ANDROID_STORE_URL =
   "https://play.google.com/store/apps/details?id=com.mxcrts.ChallengeTies";
 
@@ -21,7 +21,7 @@ const BOT_UA =
 const INV = " "; // espace non vide pour éviter les fallbacks titre/desc
 
 /** =========================
- *  I18N (9 langues)
+ *  I18N (12 langues)
  *  ========================= */
 const I18N = {
   ar: { join: "انضم إليّ في هذا التحدي! 🚀" },
@@ -33,7 +33,11 @@ const I18N = {
   it: { join: "Unisciti a me in questa sfida! 🚀" },
   ru: { join: "Присоединяйся ко мне в этом челлендже! 🚀" },
   zh: { join: "加入我的挑战吧！🚀" },
+  pt: { join: "Junta-te a mim neste desafio! 🚀" },
+  ja: { join: "このチャレンジに一緒に挑戦しよう！🚀" },
+  ko: { join: "이 챌린지에 나와 함께 도전하자! 🚀" },
 } as const;
+
 
 function t(lang: string) {
   const key = (lang || "fr").toLowerCase();
@@ -240,4 +244,10 @@ ${iosAppId ? `<meta property="al:ios:app_store_id" content="${iosAppId}">` : ""}
 export const dl = onRequest({ region: "europe-west1", cors: true }, app);
 
 export { invitationsOnWrite } from "./invitationsOnWrite";
+export { referralsOnFirstActivation } from "./referralsOnFirstActivation";
+export { onUserActivated } from "./referralRewards";
+export { claimReferralMilestone } from "./referralClaim";
+
+
+
 

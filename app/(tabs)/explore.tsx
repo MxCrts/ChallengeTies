@@ -1,30 +1,17 @@
-import React, { useState, useEffect, useMemo, useCallback } from "react";
+import React, { useState, useEffect, useMemo, useCallback, useRef  } from "react";
 import {
-  View,
-  Text,
-  FlatList,
-  TextInput,
-  TouchableOpacity,
-  ActivityIndicator,
-  Alert,
-  Modal,
-  Dimensions,
-  ScrollView,
-  KeyboardAvoidingView,
-  Platform,
-  PixelRatio,
-  StatusBar,
-  StyleSheet,
-} from "react-native";
-import { Image } from "react-native";
+   View, Text, FlatList, TextInput, TouchableOpacity, ActivityIndicator,
+   Alert, Modal, Dimensions, ScrollView, KeyboardAvoidingView, Platform,
+   StyleSheet, Keyboard, InteractionManager,
+ } from "react-native";
 import { Image as RNImage } from "react-native";
-
 import { Ionicons } from "@expo/vector-icons";
 import { useRouter } from "expo-router";
-import { collection, onSnapshot, query, where } from "firebase/firestore";
+import { collection, onSnapshot, query, where, orderBy  } from "firebase/firestore";
 import { db } from "../../constants/firebase-config";
 import { LinearGradient } from "expo-linear-gradient";
-import Animated, { FadeInUp } from "react-native-reanimated";
+import Animated, { FadeInUp, useSharedValue, useAnimatedStyle, withSpring } from "react-native-reanimated";
+import * as Haptics from "expo-haptics";
 import { useSavedChallenges } from "../../context/SavedChallengesContext";
 import { useTheme } from "../../context/ThemeContext";
 import { useTranslation } from "react-i18next";
@@ -32,9 +19,7 @@ import { Theme } from "../../theme/designSystem";
 import CustomHeader from "@/components/CustomHeader";
 import GlobalLayout from "../../components/GlobalLayout";
 import designSystem from "../../theme/designSystem";
-import { BannerAd, BannerAdSize } from "react-native-google-mobile-ads";
-import { adUnitIds } from "@/constants/admob";
-import { BlurView } from "expo-blur";
+import BannerSlot from "@/components/BannerSlot";
 import { useTutorial } from "../../context/TutorialContext";
 import TutorialModal from "../../components/TutorialModal";
 import { useAdsVisibility } from "../../src/context/AdsVisibilityContext";
@@ -47,6 +32,11 @@ import RequireAuthModal from "@/components/RequireAuthModal";
 // Dimensions responsives
 const SPACING = 18; // Aligné avec Notifications.tsx, FocusScreen.tsx, etc.
 const { width: SCREEN_WIDTH, height: SCREEN_HEIGHT } = Dimensions.get("window");
+// Hauteur item stable pour getItemLayout (évite les re-calculs)
+const ITEM_HEIGHT =
+  SPACING * 1.5 + /* wrapper margin */
+  180 /* image normalized base, sera normalisé visuellement */ +
+  12 /* paddings approx */;
 
 const normalizeSize = (size: number) => {
   const baseWidth = 375;
@@ -75,6 +65,28 @@ const withAlpha = (color: string, alpha: number) => {
   return `rgba(0,0,0,${a})`;
 };
 
+// Normalise (lowercase + sans accents)
+const normalizeText = (s: string) =>
+  (s || "")
+    .toLowerCase()
+    .normalize("NFD")
+    .replace(/[\u0300-\u036f]/g, "");
+
+// true si tous les tokens du query matchent un début de mot
+const tokensMatchWordStarts = (text: string, query: string) => {
+  const t = normalizeText(text);
+  const q = normalizeText(query).trim();
+  if (!q) return true;
+  const tokens = q.split(/\s+/).filter(Boolean);
+  if (tokens.length === 0) return true;
+
+  // Découpe le texte en "mots" rudimentaires
+  const words = t.split(/[^a-z0-9]+/i).filter(Boolean);
+  return tokens.every(token =>
+    words.some(w => w.startsWith(token))
+  );
+};
+
 
 const capitalize = (s: string) => s.charAt(0).toUpperCase() + s.slice(1);
 const BANNER_HEIGHT = normalizeSize(50);
@@ -91,6 +103,20 @@ interface Challenge {
   creatorId?: string;
   daysOptions: number[];
   chatId: string;
+}
+
+// On sépare la couche "raw" (Firestore) de la couche "vue" traduite
+interface ChallengeRaw {
+  id: string;
+  title?: string;
+  description?: string;
+  category?: string;
+  imageUrl?: string | null;
+  participantsCount?: number;
+  creatorId?: string | null;
+  daysOptions?: number[];
+  chatId?: string | null;
+  approved?: boolean;
 }
 
 const getDynamicStyles = (currentTheme: Theme, isDarkMode: boolean) => ({
@@ -174,6 +200,7 @@ const ExploreHeader = React.memo(
     onCloseCategoryModal,
     currentTheme,
     isDarkMode,
+    inputRef,
   }: {
     searchQuery: string;
     categoryFilter: string;
@@ -188,6 +215,7 @@ const ExploreHeader = React.memo(
     onCloseCategoryModal: () => void;
     currentTheme: Theme;
     isDarkMode: boolean;
+    inputRef: React.RefObject<TextInput>;
   }) => {
     const { t, i18n } = useTranslation();
     const dynamicStyles = getDynamicStyles(currentTheme, isDarkMode);
@@ -201,6 +229,7 @@ const ExploreHeader = React.memo(
       >
 
         {/* Barre de recherche */}
+        <TouchableOpacity activeOpacity={1} onPress={() => inputRef.current?.focus()}>
         <LinearGradient
           colors={[
             currentTheme.colors.cardBackground,
@@ -215,17 +244,44 @@ const ExploreHeader = React.memo(
             style={styles.searchIcon}
           />
           <TextInput
-            style={[styles.searchInput, dynamicStyles.searchInput]}
-            placeholder={t("searchPlaceholder")}
-            placeholderTextColor={currentTheme.colors.textSecondary}
-            value={searchQuery}
-            onChangeText={onSearchChange}
-            returnKeyType="search"
-            autoCorrect={false}
-            blurOnSubmit={false}
-            accessibilityLabel={t("searchPlaceholder")}
-          />
+  ref={inputRef}
+  style={[styles.searchInput, dynamicStyles.searchInput]}
+  placeholder={t("searchPlaceholder")}
+  placeholderTextColor={currentTheme.colors.textSecondary}
+  value={searchQuery}
+  onChangeText={onSearchChange}
+  returnKeyType="search"
+  autoCorrect={false}
+  onSubmitEditing={Keyboard.dismiss}
+  autoCapitalize="none"
+  blurOnSubmit={false}
+  enterKeyHint="search"
+  keyboardAppearance={isDarkMode ? "dark" : "light"}
+  onFocus={() => {
+    // Force le focus (fix certains devices)
+    inputRef.current?.focus();
+  }}
+  accessibilityLabel={t("searchPlaceholder")}
+/>
+{!!searchQuery && (
+            <TouchableOpacity
+              onPress={() => {
+                onSearchChange("");
+                Keyboard.dismiss();
+              }}
+              accessibilityRole="button"
+              accessibilityLabel={t("clearSearch")}
+              hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}
+            >
+              <Ionicons
+                name="close-circle"
+                size={normalizeSize(20)}
+                color={currentTheme.colors.textSecondary}
+              />
+            </TouchableOpacity>
+          )}
         </LinearGradient>
+        </TouchableOpacity>
 
         {/* Filtres */}
         <View style={styles.filtersContainer}>
@@ -240,8 +296,10 @@ const ExploreHeader = React.memo(
               style={styles.filterIcon}
             />
             <Text style={[styles.filterText, dynamicStyles.filterText]}>
-              {t(originFilter)}
-            </Text>
+   {originFilter === "Existing" ? t("origin.existing") :
+    originFilter === "Created" ? t("origin.created") :
+    t("origin.all")}
+ </Text>
           </TouchableOpacity>
 
           <TouchableOpacity
@@ -314,7 +372,10 @@ const ExploreHeader = React.memo(
                   return (
                     <TouchableOpacity
                       key={rawCat}
-                      onPress={() => onCategorySelect(rawCat)}
+                      onPress={() => {
+                        try { Haptics.selectionAsync(); } catch {}
+                        onCategorySelect(rawCat);
+                      }}
                       style={[
   styles.modalItem,
   { borderBottomColor: withAlpha(currentTheme.colors.border, isDarkMode ? 0.6 : 0.4) },
@@ -348,16 +409,15 @@ const ExploreHeader = React.memo(
 
 export default function ExploreScreen() {
   const { t, i18n } = useTranslation();
-  const [challenges, setChallenges] = useState<Challenge[]>([]);
+  const searchRef = useRef<TextInput>(null);
+  const listRef = useRef<FlatList<Challenge>>(null);
+  const [rawChallenges, setRawChallenges] = useState<ChallengeRaw[]>([]);
   const [loading, setLoading] = useState(true);
   const [searchQuery, setSearchQuery] = useState("");
   const [categoryFilter, setCategoryFilter] = useState("All");
-  const [originFilter, setOriginFilter] = useState("Existing");
+  const [originFilter, setOriginFilter] = useState<"Existing"|"Created"|"All">("Existing");
   const [isCategoryModalVisible, setIsCategoryModalVisible] = useState(false);
-  const [pendingFavorites, setPendingFavorites] = useState<{
-    [key: string]: boolean;
-  }>({});
-const npa = (globalThis as any).__NPA__ === true;
+  const [optimisticSaved, setOptimisticSaved] = useState<Set<string>>(new Set());
 
   const router = useRouter();
   const { isSaved, addChallenge, removeChallenge } = useSavedChallenges();
@@ -372,13 +432,92 @@ const { showBanners } = useAdsVisibility();
  const insets = useSafeAreaInsets();
 const tabBarHeight = useBottomTabBarHeight();
 
-const bannerHeight = BANNER_HEIGHT;               // ta constante
-const bannerLift = tabBarHeight + insets.bottom + normalizeSize(8); // ↑ décale la bannière au-dessus de la TabBar
+
+const [adHeight, setAdHeight] = useState(0);
+const unmountedRef = useRef(false);
 
 const listBottomPadding =
-  (showBanners ? bannerHeight : 0) + tabBarHeight + insets.bottom + normalizeSize(20);
+  (showBanners ? adHeight : 0) + tabBarHeight + insets.bottom + normalizeSize(20);
 
 const { gate, modalVisible, closeGate } = useGateForGuest();
+
+const shouldAnimateItems = !searchQuery && categoryFilter === "All" && originFilter === "All";
+
+const ChallengeCard = React.memo(function ChallengeCard({
+   item, index, onPress, onToggleSaved, saved, pending, theme, isDark
+ }: any) {
+  // Anim scale sur l’icône bookmark
+   const scale = useSharedValue(1);
+   const rStyle = useAnimatedStyle(() => ({
+     transform: [{ scale: scale.value }],
+   }), []);
+
+   const onPressBookmark = () => {
+     Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light).catch(() => {});
+     scale.value = 0.94;
+     scale.value = withSpring(1, { damping: 18, stiffness: 260, mass: 0.7 });
+     onToggleSaved();
+   };
+   return (
+     <Animated.View
+       {...(shouldAnimateItems ? { entering: FadeInUp.delay(120 + index * 35) } : {})}
+       style={styles.cardWrapper}
+     >
+       <TouchableOpacity
+         activeOpacity={0.9}
+         style={styles.cardContainer}
+         onPress={onPress}
+         accessibilityRole="button"
+         accessibilityLabel={item.title}
+       >
+         <LinearGradient
+           colors={[theme.colors.cardBackground, theme.colors.cardBackground + "F0"]}
+           style={[styles.cardGradient, getDynamicStyles(theme, isDark).cardGradient]}
+         >
+           <RNImage
+   source={ item.imageUrl ? { uri: item.imageUrl } : require("../../assets/images/chalkboard.png") }
+   defaultSource={require("../../assets/images/chalkboard.png")}
+   style={styles.cardImage}
+   accessibilityIgnoresInvertColors
+ />
+           <LinearGradient
+             colors={[withAlpha(theme.colors.overlay, 0.1), withAlpha("#000", 0.8)]}
+             style={styles.cardOverlay}
+           >
+             <Text style={[styles.cardTitle, getDynamicStyles(theme, isDark).cardTitle]} numberOfLines={2}>
+               {item.title}
+             </Text>
+             <Text style={[styles.cardCategory, getDynamicStyles(theme, isDark).cardCategory]}>
+               {item.category}
+             </Text>
+             <View style={{ flexDirection: "row", alignItems: "center" }}>
+               <Ionicons name="people" size={normalizeSize(14)} color={theme.colors.trophy} style={{ marginRight: 4 }} />
+               <Text style={[styles.cardParticipants, getDynamicStyles(theme, isDark).cardParticipants]}>
+                 {`${item.participantsCount || 0} ${t("participants", { count: item.participantsCount || 0 })}`}
+               </Text>
+             </View>
+           </LinearGradient>
+           <TouchableOpacity
+             onPress={onPressBookmark}
+             disabled={pending}
+             hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}
+             style={[ styles.bookmarkButton, getDynamicStyles(theme, isDark).bookmarkButton ]}
+             accessibilityRole="button"
+             accessibilityLabel={saved ? t("removeFromSaved") : t("saveChallenge")}
+           >
+             <Animated.View style={rStyle}>
+              <Ionicons
+                name={saved ? "bookmark" : "bookmark-outline"}
+                size={normalizeSize(22)}
+                color={saved ? theme.colors.secondary : theme.colors.textPrimary}
+              />
+            </Animated.View>
+           </TouchableOpacity>
+         </LinearGradient>
+       </TouchableOpacity>
+     </Animated.View>
+   );
+ });
 
 const safeNavigate = (path: string) => {
   // Vérifie si route challenge → nécessite login
@@ -389,129 +528,180 @@ const safeNavigate = (path: string) => {
   router.push(path);
 };
 
-
   // Force re-render sur changement de langue
   useEffect(() => {}, [i18n.language]);
 
-  // Firestore fetch
+   // Firestore fetch (une seule fois) → on garde "raw", la traduction est dérivée
   useEffect(() => {
     const q = query(
-    collection(db, "challenges"),
-    where("approved", "==", true)   // 👈 important pour matcher la rule
-  );
-  const unsubscribe = onSnapshot(
-    q,
-      (querySnapshot) => {
-        const fetched: Challenge[] = querySnapshot.docs
-          .map((doc) => {
-            const data = doc.data();
-            const rawCat = data.category || "Miscellaneous";
-            return {
-              id: doc.id,
-              chatId: data.chatId || doc.id,
-              rawCategory: rawCat,
-              category: t(`categories.${rawCat}`, { defaultValue: rawCat }),
-              title: data.chatId
-                ? t(`challenges.${data.chatId}.title`, {
-                    defaultValue: data.title,
-                  })
-                : data.title,
-              description: data.chatId
-                ? t(`challenges.${data.chatId}.description`, {
-                    defaultValue: data.description,
-                  })
-                : data.description || t("noDescription"),
-              imageUrl: data.imageUrl || null,
-              participantsCount: data.participantsCount || 0,
-              creatorId: data.creatorId || null,
-              daysOptions: data.daysOptions || [
-                7, 14, 21, 30, 60, 90, 180, 365,
-              ],
-              approved: true,
-            };
-          })
-          
-
-        const urls = fetched.map((ch) => ch.imageUrl).filter(Boolean);
-        Promise.all(urls.map((url) => RNImage.prefetch(url))).catch((err) =>
-          console.log("Erreur de préchargement d'image :", err)
-        );
-        setChallenges(fetched);
-        setLoading(false);
+      collection(db, "challenges"),
+      where("approved", "==", true),
+      orderBy("participantsCount", "desc"),
+      orderBy("createdAt", "desc")
+    );
+    unmountedRef.current = false;
+    const unsubscribe = onSnapshot(
+      q,
+      async (querySnapshot) => {
+        const fetched: ChallengeRaw[] = querySnapshot.docs.map((snap) => {
+          const d = snap.data() as any;
+          return {
+            id: snap.id,
+            chatId: d.chatId ?? snap.id,
+            title: d.title,
+            description: d.description,
+            category: d.category ?? "Miscellaneous",
+            imageUrl: d.imageUrl ?? null,
+            participantsCount: d.participantsCount ?? 0,
+            creatorId: d.creatorId ?? null,
+            daysOptions: d.daysOptions ?? [7, 14, 21, 30, 60, 90, 180, 365],
+            approved: true,
+          };
+        });
+        if (!unmountedRef.current) {
+          setRawChallenges(fetched);
+          setLoading(false);
+        }
+        // ⚡️ Déporte le prefetch après les interactions → pas de freeze du premier paint
+        InteractionManager.runAfterInteractions(() => {
+          const urls = Array.from(
+            new Set(fetched.map((c) => c.imageUrl).filter(Boolean) as string[])
+          ).slice(0, 20); // limite raisonnable
+          urls.forEach((u) => RNImage.prefetch(u).catch(() => {}));
+        });
       },
       (error) => {
         console.error(error);
         Alert.alert(t("error"), t("loadChallengesFailed"));
-        setLoading(false);
+        if (!unmountedRef.current) setLoading(false);
       }
     );
-    return () => unsubscribe();
-  }, [t]);
+    return () => {
+      unmountedRef.current = true;
+      unsubscribe();
+    };
+  }, []);
+  
+
+  // Projection "vue" (traduite) → recalculée quand la langue change
+  const challenges: Challenge[] = useMemo(() => {
+    return rawChallenges.map((r) => {
+      const rawCat = r.category ?? "Miscellaneous";
+      return {
+        id: r.id,
+        chatId: r.chatId ?? r.id,
+        rawCategory: rawCat,
+        category: t(`categories.${rawCat}`, { defaultValue: rawCat }),
+        title: (r.chatId
+          ? t(`challenges.${r.chatId}.title`, { defaultValue: r.title })
+          : r.title) as string,
+        description: (r.chatId
+          ? t(`challenges.${r.chatId}.description`, {
+              defaultValue: r.description,
+            })
+          : r.description) || (t("noDescription") as string),
+        imageUrl: r.imageUrl ?? undefined,
+        participantsCount: r.participantsCount ?? 0,
+        creatorId: r.creatorId ?? undefined,
+        daysOptions: r.daysOptions ?? [7, 14, 21, 30, 60, 90, 180, 365],
+        approved: true,
+      };
+    });
+  }, [rawChallenges, t, i18n.language]);
 
   const availableCategories = useMemo(() => {
-    const raws = challenges.map((c) => c.rawCategory);
+    const raws = rawChallenges.map((c) => c.category ?? "Miscellaneous");
     return ["All", ...Array.from(new Set(raws))];
-  }, [challenges]);
+  }, [rawChallenges]);
 
   const filteredChallenges = useMemo(() => {
-    return challenges.filter((c) => {
-      const matchesSearch = c.title
-        .toLowerCase()
-        .includes(searchQuery.toLowerCase());
-      const matchesCategory =
-        categoryFilter === "All" || c.rawCategory === categoryFilter;
-      const matchesOrigin =
-        originFilter === "All" ||
-        (originFilter === "Existing" ? !c.creatorId : !!c.creatorId);
-      return matchesSearch && matchesCategory && matchesOrigin;
+    const base = (!searchQuery && categoryFilter === "All" && originFilter === "All")
+      ? challenges
+      : challenges.filter((c) => {
+          const matchesSearch =
+            tokensMatchWordStarts(`${c.title} ${c.description}`, searchQuery);
+          const matchesCategory =
+            categoryFilter === "All" || c.rawCategory === categoryFilter;
+          const matchesOrigin =
+            originFilter === "All" ||
+            (originFilter === "Existing" ? !c.creatorId : !!c.creatorId);
+          return matchesSearch && matchesCategory && matchesOrigin;
+        });
+
+    if (!searchQuery) {
+      // Sans recherche : popularité d’abord
+      return base.slice().sort((a, b) => (b.participantsCount ?? 0) - (a.participantsCount ?? 0));
+    }
+
+    // Score de pertinence simple et efficace
+    const q = normalizeText(searchQuery).trim();
+    const tokens = q.split(/\s+/).filter(Boolean);
+    const score = (c: Challenge) => {
+      const titleN = normalizeText(c.title);
+      const descN = normalizeText(c.description);
+      let s = 0;
+      for (const token of tokens) {
+        // titre : début de string > début de mot > substring
+        if (titleN.startsWith(token)) s += 120;
+        else if (titleN.split(/[^a-z0-9]+/i).some(w => w.startsWith(token))) s += 100;
+        else if (titleN.includes(token)) s += 40;
+        // description : moins pondérée
+        if (descN.split(/[^a-z0-9]+/i).some(w => w.startsWith(token))) s += 30;
+        else if (descN.includes(token)) s += 10;
+      }
+      // petit bonus popularité
+      s += Math.min(50, (c.participantsCount ?? 0) * 0.1);
+      return s;
+    };
+
+    return base.slice().sort((a, b) => {
+      const sa = score(a);
+      const sb = score(b);
+      if (sb !== sa) return sb - sa;
+      const pa = a.participantsCount ?? 0;
+      const pb = b.participantsCount ?? 0;
+      if (pb !== pa) return pb - pa;
+      return a.title.localeCompare(b.title);
     });
   }, [challenges, searchQuery, categoryFilter, originFilter]);
 
-  const toggleSaved = useCallback(
-  async (ch: Challenge) => {
-    const id = ch.id;
-    const was = isSaved(id);
-    // Optimistic UI
-    setPendingFavorites((p) => ({ ...p, [id]: !was }));
-    try {
-      if (was) {
-        await removeChallenge(id);
-      } else {
-        await addChallenge({
-          id: ch.id,
-          title: ch.title,
-          category: ch.category,
-          description: ch.description,
-          imageUrl: ch.imageUrl,
-          daysOptions: ch.daysOptions,
-          chatId: ch.chatId,
-        });
-      }
-      // Nettoyage de l'état pending
-      setPendingFavorites((p) => {
-        const copy = { ...p };
-        delete copy[id];
-        return copy;
-      });
-    } catch (err) {
-      console.error(err);
-      Alert.alert(t("error"), t("toggleFavoriteFailed"));
-      // rollback
-      setPendingFavorites((p) => {
-        const copy = { ...p };
-        copy[id] = was;
-        return copy;
-      });
-    }
-  },
-  [isSaved, addChallenge, removeChallenge, t]
-);
 
 
-  const onSearchChange = useCallback(
-    (text: string) => setSearchQuery(text),
-    []
-  );
+  const toggleSaved = useCallback((ch: Challenge) => {
+   const id = ch.id;
+   const was = isSaved(id);
+   // 1) override optimiste local (pas de cleanup → pas de double/triple rerender)
+   setOptimisticSaved((prev) => {
+     const next = new Set(prev);
+     if (was) next.delete(id); else next.add(id);
+     return next;
+   });
+   // 2) fire-and-forget l’update backend (sans await)
+   const p = was ? removeChallenge(id) : addChallenge({
+     id: ch.id,
+     title: ch.title,
+     category: ch.category,
+     description: ch.description,
+     imageUrl: ch.imageUrl,
+     daysOptions: ch.daysOptions,
+     chatId: ch.chatId,
+   });
+   p.catch((err) => {
+     console.error(err);
+     Alert.alert(t("error"), t("toggleFavoriteFailed"));
+     // rollback si échec
+     setOptimisticSaved((prev) => {
+       const next = new Set(prev);
+       if (was) next.add(id); else next.delete(id);
+       return next;
+     });
+   });
+ }, [isSaved, addChallenge, removeChallenge, t]);
+
+const onSearchChange = useCallback((text: string) => {
+  setSearchQuery(text);
+}, []);
+
   const resetFilters = useCallback(() => {
     setSearchQuery("");
     setCategoryFilter("All");
@@ -530,11 +720,53 @@ const safeNavigate = (path: string) => {
     []
   );
   const toggleOrigin = useCallback(
-    () => setOriginFilter((o) => (o === "Existing" ? "Created" : "Existing")),
+    () => setOriginFilter((o) => (o === "Existing" ? "Created" : o === "Created" ? "All" : "Existing")),
     []
   );
 
   const dynamicStyles = getDynamicStyles(currentTheme, isDarkMode);
+
+   // 🧭 Scroll en haut quand la recherche / les filtres changent (UX premium, supprime tout "gap")
+  const scrollTop = useCallback(() => {
+    requestAnimationFrame(() => {
+      listRef.current?.scrollToOffset({ offset: 0, animated: false });
+    });
+  }, []);
+  useEffect(() => { scrollTop(); }, [searchQuery, categoryFilter, originFilter, scrollTop]);
+
+  // Renders & helpers mémoïsés pour éviter re-créations à chaque render
+  const keyExtractor = useCallback((item: Challenge) => item.id, []);
+  const getItemLayout = useCallback(
+    (_: any, index: number) => ({
+      length: ITEM_HEIGHT,
+      offset: ITEM_HEIGHT * index,
+      index,
+    }),
+    []
+  );
+  const renderItem = useCallback(
+    ({ item, index }: { item: Challenge; index: number }) => (
+      <ChallengeCard
+        item={item}
+        index={index}
+        theme={currentTheme}
+        isDark={isDarkMode}
+        saved={ optimisticSaved.has(item.id) ? true : isSaved(item.id) }
+        pending={ false }
+        onPress={() =>
+          safeNavigate(
+            `/challenge-details/${item.id}?title=${encodeURIComponent(
+              item.title
+            )}&category=${encodeURIComponent(
+              item.category
+            )}&description=${encodeURIComponent(item.description)}`
+          )
+        }
+        onToggleSaved={() => toggleSaved(item)}
+      />
+    ),
+    [currentTheme, isDarkMode, optimisticSaved, isSaved, toggleSaved]
+  );
 
   if (loading) {
     return (
@@ -604,14 +836,21 @@ const safeNavigate = (path: string) => {
   />
 
   <FlatList
+    ref={listRef}
     data={filteredChallenges}
-    keyExtractor={(item) => item.id}
-    keyboardShouldPersistTaps="handled"
+    keyExtractor={keyExtractor}
     initialNumToRender={10}
-    windowSize={5}
-    removeClippedSubviews
+    maxToRenderPerBatch={10}
+    updateCellsBatchingPeriod={30}
+    windowSize={12}
+    getItemLayout={getItemLayout}
+    keyboardShouldPersistTaps="always"     // 👈 important
+    keyboardDismissMode="on-drag" 
+    removeClippedSubviews={false}       
+    extraData={{                          
+      optimisticSaved, searchQuery, categoryFilter, originFilter
+    }}
     showsVerticalScrollIndicator={false}
-    stickyHeaderIndices={[0]}           // 👈 garde la barre de recherche visible
     contentContainerStyle={{
       paddingBottom: listBottomPadding,
       paddingHorizontal: SPACING / 2,
@@ -632,6 +871,7 @@ const safeNavigate = (path: string) => {
                 onCloseCategoryModal={closeCategoryModal}
                 currentTheme={currentTheme}
                 isDarkMode={isDarkMode}
+                inputRef={searchRef}
               />
             }
             ListEmptyComponent={
@@ -663,127 +903,29 @@ const safeNavigate = (path: string) => {
                 </Animated.View>
               </LinearGradient>
             }
-            renderItem={({ item, index }) => (
-              <Animated.View
-                entering={FadeInUp.delay(200 + index * 50)}
-                style={styles.cardWrapper}
-              >
-                <TouchableOpacity
-                  style={styles.cardContainer}
-                  onPress={() =>
-   safeNavigate(
-     `/challenge-details/${item.id}?title=${encodeURIComponent(
-       item.title
-     )}&category=${encodeURIComponent(
-       item.category
-     )}&description=${encodeURIComponent(item.description)}`
-   )
- }
-                >
-                  <LinearGradient
-                    colors={[
-                      currentTheme.colors.cardBackground,
-                      currentTheme.colors.cardBackground + "F0",
-                    ]}
-                    style={[styles.cardGradient, dynamicStyles.cardGradient]}
-                  >
-                    <Image
-                      source={
-                        item.imageUrl
-                          ? { uri: item.imageUrl }
-                          : require("../../assets/images/chalkboard.png")
-                      }
-                      style={styles.cardImage}
-                    />
-                    <LinearGradient
-                      colors={[
-    withAlpha(currentTheme.colors.overlay, 0.1),
-    withAlpha("#000", 0.8),
-  ]}
-                      style={styles.cardOverlay}
-                    >
-                      <Text
-                        style={[styles.cardTitle, dynamicStyles.cardTitle]}
-                        numberOfLines={2}
-                      >
-                        {item.title}
-                      </Text>
-                      <Text
-                        style={[
-                          styles.cardCategory,
-                          dynamicStyles.cardCategory,
-                        ]}
-                      >
-                        {item.category}
-                      </Text>
-                      <View style={{ flexDirection: "row", alignItems: "center" }}>
-  <Ionicons
-    name="people"
-    size={normalizeSize(14)}
-    color={currentTheme.colors.trophy}
-    style={{ marginRight: 4 }}
-  />
-  <Text style={[styles.cardParticipants, dynamicStyles.cardParticipants]}>
-    {`${item.participantsCount || 0} ${t("participants", {
-      count: item.participantsCount || 0,
-    })}`}
-  </Text>
-</View>
-                    </LinearGradient>
-
-                    <TouchableOpacity
-                      onPress={() => toggleSaved(item)}
-                      style={[
-                        styles.bookmarkButton,
-                        dynamicStyles.bookmarkButton,
-                      ]}
-                    >
-                      <Ionicons
-                        name={
-                          pendingFavorites[item.id] !== undefined
-                            ? pendingFavorites[item.id]
-                              ? "bookmark"
-                              : "bookmark-outline"
-                            : isSaved(item.id)
-                            ? "bookmark"
-                            : "bookmark-outline"
-                        }
-                        size={normalizeSize(22)}
-                        color={
-                          pendingFavorites[item.id] !== undefined
-                            ? pendingFavorites[item.id]
-                              ? currentTheme.colors.secondary
-                              : currentTheme.colors.textPrimary
-                            : isSaved(item.id)
-                            ? currentTheme.colors.secondary
-                            : currentTheme.colors.textPrimary
-                        }
-                      />
-                    </TouchableOpacity>
-                  </LinearGradient>
-                </TouchableOpacity>
-              </Animated.View>
-            )}
+            renderItem={renderItem}
           />
         </LinearGradient>
       </KeyboardAvoidingView>
 
       {showBanners && !isTutorialActive && (
   <View
-    style={[
-      styles.bannerContainer,
-      { position: "absolute", left: 0, right: 0, bottom: bannerLift },
-    ]}
-    pointerEvents="auto"
+    style={{
+      position: "absolute",
+      left: 0,
+      right: 0,
+      bottom: tabBarHeight + insets.bottom, // ✅ juste au-dessus de la TabBar + safe area
+      alignItems: "center",
+      zIndex: 9999,
+      backgroundColor: "transparent",
+      paddingBottom: 6,
+    }}
+    pointerEvents="box-none"
   >
-    <BannerAd
-  unitId={adUnitIds.banner}
-  size={BannerAdSize.ANCHORED_ADAPTIVE_BANNER}
-  requestOptions={{ requestNonPersonalizedAdsOnly: npa }}
-  onAdFailedToLoad={(err) => console.error("Échec chargement bannière", err)}
-/>
+    <BannerSlot onHeight={(h) => setAdHeight(h)} />
   </View>
 )}
+
 
       {isTutorialActive && tutorialStep >= 4 && (
   <TutorialModal
@@ -824,14 +966,16 @@ const styles = StyleSheet.create({
     shadowOffset: { width: 0, height: normalizeSize(5) },
     shadowOpacity: 0.35,
     shadowRadius: normalizeSize(8),
+    minHeight: normalizeSize(48),
     elevation: 10,
+    paddingRight: normalizeSize(8),
   },
   searchIcon: {
     marginRight: normalizeSize(8),
   },
   searchInput: {
     flex: 1,
-    paddingVertical: normalizeSize(10),
+    paddingVertical: normalizeSize(12),
     fontSize: normalizeSize(16),
     fontFamily: "Comfortaa_400Regular",
   },

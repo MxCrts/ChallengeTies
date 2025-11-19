@@ -5,12 +5,11 @@ import {
   FlatList,
   StyleSheet,
   Image,
-  ActivityIndicator,
   Dimensions,
   TouchableOpacity,
   ScrollView,
   StatusBar,
-  Platform,
+  RefreshControl,
   Share,
 } from "react-native";
 import AsyncStorage from "@react-native-async-storage/async-storage";
@@ -34,12 +33,15 @@ import { Theme } from "../theme/designSystem";
 import designSystem from "../theme/designSystem";
 import CustomHeader from "@/components/CustomHeader";
 import { useTranslation } from "react-i18next";
-import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { BlurView } from "expo-blur";
 import PioneerBadge from "@/components/PioneerBadge";
+import { useShareCard } from "@/hooks/useShareCard";
+import { RankShareCard } from "@/components/ShareCards";
+import * as Haptics from "expo-haptics";
+import { I18nManager } from "react-native";
 
 const SPACING = 15;
-const { width: SCREEN_WIDTH, height: SCREEN_HEIGHT } = Dimensions.get("window");
+const { width: SCREEN_WIDTH } = Dimensions.get("window");
 const normalizeFont = (size: number) => {
   const baseWidth = 375;
   const scale = Math.min(Math.max(SCREEN_WIDTH / baseWidth, 0.7), 1.8);
@@ -62,11 +64,14 @@ interface Player {
   isPioneer?: boolean;
 }
 
+const topN = (arr: Player[], n: number) => arr.slice(0, n);
+
 export default function LeaderboardScreen() {
-  const { t } = useTranslation();
+  const { t, i18n } = useTranslation();
   const [players, setPlayers] = useState<Player[]>([]);
   const [filteredPlayers, setFilteredPlayers] = useState<Player[]>([]);
   const [loading, setLoading] = useState(true);
+  const [refreshing, setRefreshing] = useState(false);
   const [currentUser, setCurrentUser] = useState<Player | null>(null);
   const [selectedTab, setSelectedTab] = useState<
     "region" | "national" | "global"
@@ -75,13 +80,18 @@ export default function LeaderboardScreen() {
     string | null
   >(null);
   const router = useRouter();
-  const insets = useSafeAreaInsets();
   const { theme } = useTheme();
   const isDarkMode = theme === "dark";
   const currentTheme: Theme = isDarkMode
     ? designSystem.darkTheme
     : designSystem.lightTheme;
-
+const { ref: rankShareRef, share: shareRankCard } = useShareCard();
+const [rankSharePayload, setRankSharePayload] = useState<{
+  username: string;
+  rank: number | string;
+  trophies?: number;
+  avatarUri?: string | null;
+} | null>(null);
   // Cache
   const cacheLeaderboard = useCallback(async (players: Player[]) => {
     try {
@@ -102,10 +112,9 @@ export default function LeaderboardScreen() {
   }, []);
 
   // Chargement des données
-  useEffect(() => {
-    const fetchLeaderboard = async () => {
+    const fetchLeaderboard = useCallback(async () => {
       try {
-        setLoading(true);
+        !refreshing && setLoading(true);
         const cached = await getCachedLeaderboard();
         if (cached) setPlayers(cached);
 
@@ -117,11 +126,11 @@ export default function LeaderboardScreen() {
         const snapshot = await getDocs(q);
         const fetched: Player[] = snapshot.docs.map((d) => ({
           id: d.id,
-          username: d.data().username || t("leaderboard.unknown"),
+          username: d.data().username?.toString?.() || t("leaderboard.unknown", { defaultValue: "Unknown" }),
           trophies: d.data().trophies || 0,
-          profileImage: d.data().profileImage || null,
-          country: d.data().country || "Unknown",
-          region: d.data().region || "Unknown",
+          profileImage: d.data().profileImage?.toString?.() || null,
+          country: d.data().country?.toString?.() || t("leaderboard.unknown", { defaultValue: "Unknown" }),
+          region: d.data().region?.toString?.() || t("leaderboard.unknown", { defaultValue: "Unknown" }),
           isPioneer: !!d.data().isPioneer,
         }));
         setPlayers(fetched);
@@ -134,11 +143,11 @@ export default function LeaderboardScreen() {
             const data = userSnap.data();
             const found = fetched.find((p) => p.id === uid) || {
               id: uid,
-              username: data.username || t("leaderboard.unknown"),
+              username: data.username?.toString?.() || t("leaderboard.unknown", { defaultValue: "Unknown" }),
               trophies: data.trophies || 0,
-              profileImage: data.profileImage || null,
-              country: data.country || "Unknown",
-              region: data.region || "Unknown",
+              profileImage: data.profileImage?.toString?.() || null,
+              country: data.country?.toString?.() || t("leaderboard.unknown", { defaultValue: "Unknown" }),
+              region: data.region?.toString?.() || t("leaderboard.unknown", { defaultValue: "Unknown" }),
               isPioneer: !!data.isPioneer,
             };
             setCurrentUser(found);
@@ -155,10 +164,46 @@ export default function LeaderboardScreen() {
         setLocationDisabledMessage(t("leaderboard.errorFetch"));
       } finally {
         setLoading(false);
+        setRefreshing(false);
       }
-    };
+    }, [t, cacheLeaderboard, getCachedLeaderboard, refreshing]);
+
+    useEffect(() => {
     fetchLeaderboard();
-  }, [t, cacheLeaderboard, getCachedLeaderboard]);
+  }, [fetchLeaderboard]);
+
+  const onRefresh = useCallback(() => {
+    setRefreshing(true);
+    fetchLeaderboard();
+  }, [fetchLeaderboard]);
+
+  const shareMyRankCard = useCallback(async () => {
+  if (!currentUser) return;
+  const basis = selectedTab === "global" ? players : filteredPlayers;
+  const myIndex = basis.findIndex((p) => p.id === currentUser.id);
+  const myRank = myIndex >= 0 ? myIndex + 1 : "—";
+try { await Haptics.selectionAsync(); } catch {}
+  // 1) on prépare la payload → la carte cachée se rend
+  setRankSharePayload({
+    username: currentUser.username ?? "me",
+    rank: myRank,
+    trophies: currentUser.trophies ?? 0,
+    avatarUri: currentUser.profileImage ?? null,
+  });
+
+  // 2) laisser React “peindre” la vue invisible
+  await new Promise<void>((resolve) => requestAnimationFrame(() => resolve()));
+
+  // 3) capture + partage (PNG) via le hook
+  await shareRankCard(
+    `ct-rank-${currentUser.id}-${Date.now()}.png`,
+ t("leaderboard.shareDialogTitle", { defaultValue: "Partager mon rang" })
+  );
+
+  // 4) cleanup optionnel
+  setRankSharePayload(null);
+}, [currentUser, players, filteredPlayers, selectedTab, shareRankCard, t]);
+
 
   // Filtrage
   useEffect(() => {
@@ -169,45 +214,41 @@ export default function LeaderboardScreen() {
 
   let base = players;
 
-  if (selectedTab === "region") {
-    base = players.filter(
-      (p) =>
-        p.region &&
-        p.region !== "Unknown" &&
-        currentUser.region &&
-        p.region === currentUser.region
-    );
-  } else if (selectedTab === "national") {
-    base = players.filter(
-      (p) =>
-        p.country &&
-        p.country !== "Unknown" &&
-        currentUser.country &&
-        p.country === currentUser.country
-    );
-  }
+  const hasText = (v?: string) => typeof v === "string" && v.trim().length > 0;
+ if (selectedTab === "region") {
+   base = players.filter((p) => hasText(p.region) && hasText(currentUser.region) && p.region === currentUser.region);
+ } else if (selectedTab === "national") {
+   base = players.filter((p) => hasText(p.country) && hasText(currentUser.country) && p.country === currentUser.country);
+ }
 
   // ⚠️ éviter de muter `players` par accident
   const list = base.slice().sort((a, b) => b.trophies - a.trophies).slice(0, 20);
   setFilteredPlayers(list);
 }, [selectedTab, players, currentUser]);
 
-
+const podium = useMemo(() => topN(filteredPlayers, 3), [filteredPlayers]);
   // Podium
   const renderTopThree = useCallback(() => {
-    if (filteredPlayers.length < 3) {
+       if (podium.length < 3) {
       return (
         <Text
           style={[
             styles.noPlayersText,
             { color: currentTheme.colors.textSecondary },
+            {
+              writingDirection: I18nManager.isRTL ? "rtl" : "ltr",
+              textAlign: "center",
+            },
           ]}
+          numberOfLines={3}
+          adjustsFontSizeToFit
         >
           {t("leaderboard.notEnough")}
         </Text>
       );
     }
-    const [first, second, third] = filteredPlayers;
+
+    const [first, second, third] = podium;
     return (
       <Animated.View
         entering={FadeInUp.delay(200)}
@@ -250,6 +291,7 @@ export default function LeaderboardScreen() {
                     isFirst ? styles.profileImageFirst : styles.profileImage
                   }
                   defaultSource={require("../assets/images/default-profile.webp")}
+                  accessibilityRole="image"
                   accessibilityLabel={
   (player.isPioneer ? "Pioneer · " : "") +
   t("leaderboard.profileOf", { name: player.username })
@@ -271,31 +313,38 @@ export default function LeaderboardScreen() {
                   style={isFirst ? styles.crownIcon : styles.medalIcon}
                 />
               </LinearGradient>
-              <Text
-                style={[
-                  styles.podiumName,
-                  { color: isDarkMode ? "#FFFFFF" : "#000000" },
-                ]}
-              >
+              <Text style={[
+   styles.podiumName,
+   { color: isDarkMode ? "#FFFFFF" : "#000000" },
+   { writingDirection: I18nManager.isRTL ? "rtl" : "ltr", textAlign: "center" }
+ ]}
+ numberOfLines={1}
+ adjustsFontSizeToFit
+>
                 {player.username}
               </Text>
-              <Text style={[styles.podiumTrophies, { color: "#FFFFFF" }]}>
-                {player.trophies} 🏆
-              </Text>
-              <Text
-                style={[
-                  styles.handle,
-                  { color: currentTheme.colors.textSecondary },
-                ]}
+              <Text style={[styles.podiumTrophies, { color: "#FFFFFF" }]}
+                numberOfLines={1}
+                adjustsFontSizeToFit
               >
-                @{player.username?.toLowerCase()}
+   {Number(player.trophies || 0).toLocaleString(i18n.language)} 🏆
+ </Text>
+             <Text style={[
+   styles.handle,
+   { color: currentTheme.colors.textSecondary },
+   { writingDirection: "ltr", textAlign: "center" }  // handle forcé LTR
+ ]}
+  numberOfLines={1}
+  adjustsFontSizeToFit
+ >
+   @{(player.username || "").toLocaleLowerCase("en-US")}
               </Text>
             </Animated.View>
           );
         })}
       </Animated.View>
     );
-  }, [filteredPlayers, currentTheme, t, isDarkMode]);
+  }, [podium, currentTheme, t, isDarkMode, i18n.language]);
 
   // Joueur
   const PlayerItem = useMemo(
@@ -330,6 +379,7 @@ export default function LeaderboardScreen() {
       styles.playerImage,
       { borderColor: currentTheme.colors.border },
     ]}
+    accessibilityRole="image"
     accessibilityLabel={
       (item.isPioneer ? "Pioneer · " : "") +
       t("leaderboard.profileOf", { name: item.username })
@@ -349,95 +399,213 @@ export default function LeaderboardScreen() {
                   style={[
                     styles.playerName,
                     { color: isDarkMode ? "#FFFFFF" : "#000000" },
+                    {
+                      writingDirection: I18nManager.isRTL ? "rtl" : "ltr",
+                      textAlign: I18nManager.isRTL ? "right" : "left",
+                    },
                   ]}
+                  numberOfLines={1}
+                  adjustsFontSizeToFit
                 >
                   {item.username}
                 </Text>
-                <Text
-                  style={[
-                    styles.handle,
-                    { color: currentTheme.colors.textSecondary },
-                  ]}
-                >
-                  @{item.username?.toLowerCase()}
+                                <Text style={[
+   styles.handle,
+   { color: currentTheme.colors.textSecondary },
+   { writingDirection: "ltr" }
+ ]}
+  numberOfLines={1}
+  adjustsFontSizeToFit
+>
+   @{(item.username || "").toLocaleLowerCase("en-US")}
                 </Text>
+
               </View>
             </View>
             <View style={styles.rightSection}>
-              <Text style={[styles.playerTrophies, { color: "#FFFFFF" }]}>
-                {item.trophies} 🏆
-              </Text>
-              <Text
-                style={[
-                  styles.rankText,
-                  { color: currentTheme.colors.textSecondary },
-                ]}
+                            <Text style={[styles.playerTrophies, { color: "#FFFFFF" }]}
+                numberOfLines={1}
+                adjustsFontSizeToFit
               >
-                #{rank}
-              </Text>
+   {Number(item.trophies || 0).toLocaleString(i18n.language)} 🏆
+ </Text>
+
+                            <Text style={[styles.rankText, { color: currentTheme.colors.textSecondary }]}
+                numberOfLines={1}
+                adjustsFontSizeToFit
+              >
+   #{typeof rank === "number" ? rank.toLocaleString(i18n.language) : rank}
+ </Text>
+
             </View>
           </Animated.View>
         );
       }),
-    [currentTheme, currentUser, t, isDarkMode]
+    [currentTheme, currentUser, t, isDarkMode, i18n.language]
   );
 
   // Liste des joueurs
   const listPlayers = useMemo(() => {
+    const basis = selectedTab === "global" ? players : filteredPlayers;
     const slice = filteredPlayers.slice(3, 20);
-    const idx = players.findIndex((p) => p.id === currentUser?.id);
+    const idx = basis.findIndex((p) => p.id === currentUser?.id);
     if (currentUser && idx > 19) {
       slice.push({ ...currentUser, rank: idx + 1 });
     }
     return slice;
-  }, [filteredPlayers, players, currentUser]);
+  }, [filteredPlayers, players, currentUser, selectedTab]);
 
-  // Métadonnées SEO
-  const metadata = useMemo(
-    () => ({
-      title: t("leaderboard.title"),
-      description: t("leaderboard.description"),
-      url: "https://challengeme.com/leaderboard",
-      structuredData: {
-        "@context": "https://schema.org",
-        "@type": "ItemList",
-        itemListElement: filteredPlayers.map((player, index) => ({
-          "@type": "ListItem",
-          position: index + 1,
-          name: player.username || t("leaderboard.unknown"),
-          description: `${player.trophies} trophies`,
-        })),
-      },
-    }),
-    [t, filteredPlayers]
-  );
 
+  const MyRankCard = useMemo(() => {
+    if (!currentUser) return null;
+    const basis = selectedTab === "global" ? players : filteredPlayers;
+    const myIndex = basis.findIndex((p) => p.id === currentUser.id);
+    const myRank = myIndex >= 0 ? myIndex + 1 : undefined;
+    return (
+      <View style={styles.myRankCard} accessibilityRole="summary">
+        <View style={styles.myRankLeft}>
+          <Image
+            source={
+              currentUser.profileImage
+                ? { uri: currentUser.profileImage }
+                : require("../assets/images/default-profile.webp")
+            }
+            style={styles.myRankAvatar}
+            accessibilityRole="image"
+          />
+          <View style={{ marginLeft: 10 }}>
+                        <Text
+              style={[
+                styles.myRankName,
+                {
+                  writingDirection: I18nManager.isRTL ? "rtl" : "ltr",
+                  textAlign: I18nManager.isRTL ? "right" : "left",
+                },
+              ]}
+              numberOfLines={1}
+              adjustsFontSizeToFit
+            >
+              {currentUser.username || t("leaderboard.unknown", { defaultValue: "Unknown" })}
+            </Text>
+
+                       <Text
+              style={[
+                styles.myRankSub,
+                {
+                  writingDirection: I18nManager.isRTL ? "rtl" : "ltr",
+                  textAlign: I18nManager.isRTL ? "right" : "left",
+                },
+              ]}
+              numberOfLines={1}
+              adjustsFontSizeToFit
+            >
+              {myRank ? `#${myRank.toLocaleString(i18n.language)}` : "—"} ·{" "}
+              {Number(currentUser.trophies || 0).toLocaleString(i18n.language)} 🏆
+            </Text>
+
+          </View>
+        </View>
+        <TouchableOpacity
+          onPress={shareMyRankCard}
+          style={styles.myRankShareBtn}
+          activeOpacity={0.85}
+          accessibilityRole="button"
+          accessibilityLabel={t("leaderboard.share")}
+          accessibilityHint={t("leaderboard.shareHint", { defaultValue: "Partage ta carte de rang" })}
+        >
+          <Ionicons name="share-social-outline" size={18} color="#fff" />
+          <Text style={styles.myRankShareText}>{t("leaderboard.share")}</Text>
+        </TouchableOpacity>
+      </View>
+    );
+  }, [currentUser, players, filteredPlayers, selectedTab, shareMyRankCard, t, i18n.language]);
+
+// --- Skeleton (podium x3 + rows x5) ---
   if (loading) {
     return (
-      
-      <SafeAreaView style={styles.safeArea}>
-        <StatusBar hidden={true} />
-        <LinearGradient
-          colors={[
-            currentTheme.colors.background,
-            currentTheme.colors.cardBackground,
-          ]}
-          style={styles.loadingContainer}
-        >
-          <ActivityIndicator
-            size="large"
-            color={currentTheme.colors.secondary}
-          />
-          <Text
-            style={[
-              styles.loadingText,
-              { color: currentTheme.colors.textPrimary },
-            ]}
-          >
-            {t("leaderboard.loading")}
-          </Text>
-        </LinearGradient>
-      </SafeAreaView>
+      <LinearGradient
+        colors={[
+          currentTheme.colors.background,
+          currentTheme.colors.cardBackground,
+          currentTheme.colors.primary + "22",
+        ]}
+        style={styles.gradientContainer}
+        start={{ x: 0, y: 0 }}
+        end={{ x: 1, y: 1 }}
+      >
+        <SafeAreaView style={styles.safeArea}>
+          <StatusBar hidden={true} />
+          <CustomHeader title={t("leaderboard.title")} />
+          <View style={{ paddingHorizontal: SPACING, marginTop: SPACING * 2 }}>
+            {/* Podium placeholders */}
+            <View style={[styles.topThreeContainer, { opacity: 0.9 }]}>
+              {[0, 1, 2].map((i) => (
+                <LinearGradient
+                  key={i}
+                  colors={[currentTheme.colors.cardBackground, currentTheme.colors.background]}
+                  style={
+                    i === 1 ? styles.circleFirst : i === 0 ? styles.circleSecond : styles.circleThird
+                  }
+                />
+              ))}
+            </View>
+            {/* Rows placeholders */}
+            <View style={styles.listContainer}>
+              {[...Array(5)].map((_, i) => (
+                <View
+                  key={i}
+                  style={[
+                    styles.playerRow,
+                    {
+                      backgroundColor: currentTheme.colors.cardBackground + "80",
+                      borderColor: currentTheme.colors.border,
+                      borderWidth: 2,
+                    },
+                  ]}
+                >
+                  <View style={styles.leftSection}>
+                    <View
+                      style={{
+                        width: normalizeSize(60),
+                        height: normalizeSize(60),
+                        borderRadius: normalizeSize(30),
+                        backgroundColor: currentTheme.colors.background + "55",
+                      }}
+                    />
+                    <View style={{ marginLeft: SPACING }}>
+                      <View
+                        style={{
+                          width: normalizeSize(120),
+                          height: normalizeSize(16),
+                          borderRadius: 8,
+                          backgroundColor: currentTheme.colors.background + "55",
+                          marginBottom: 6,
+                        }}
+                      />
+                      <View
+                        style={{
+                          width: normalizeSize(80),
+                          height: normalizeSize(12),
+                          borderRadius: 6,
+                          backgroundColor: currentTheme.colors.background + "40",
+                        }}
+                      />
+                    </View>
+                  </View>
+                  <View
+                    style={{
+                      width: normalizeSize(70),
+                      height: normalizeSize(24),
+                      borderRadius: 8,
+                      backgroundColor: currentTheme.colors.background + "55",
+                    }}
+                  />
+                </View>
+              ))}
+            </View>
+          </View>
+        </SafeAreaView>
+      </LinearGradient>
     );
   }
 
@@ -533,10 +701,20 @@ export default function LeaderboardScreen() {
           contentContainerStyle={styles.scrollContent}
           showsVerticalScrollIndicator={false}
           contentInset={{ top: SPACING, bottom: normalizeSize(80) }}
+          refreshControl={
+            <RefreshControl
+              refreshing={refreshing}
+              onRefresh={onRefresh}
+              tintColor={currentTheme.colors.secondary}
+              colors={[currentTheme.colors.secondary]}
+              progressViewOffset={SPACING}
+            />
+          }
         >
           {filteredPlayers.length > 0 ? (
             <>
               {renderTopThree()}
+              {MyRankCard}
               <View style={styles.listContainer}>
                 <FlatList
                   data={listPlayers}
@@ -558,16 +736,23 @@ export default function LeaderboardScreen() {
                 />
               </View>
             </>
-          ) : (
+                    ) : (
             <Text
               style={[
                 styles.noPlayersText,
                 { color: currentTheme.colors.textSecondary },
+                {
+                  writingDirection: I18nManager.isRTL ? "rtl" : "ltr",
+                  textAlign: "center",
+                },
               ]}
+              numberOfLines={3}
+              adjustsFontSizeToFit
             >
               {t("leaderboard.noPlayers")}
             </Text>
           )}
+
           {locationDisabledMessage && (
             <Animated.View
               entering={FadeInUp.delay(200)}
@@ -581,6 +766,23 @@ export default function LeaderboardScreen() {
               >
                 {locationDisabledMessage}
               </Text>
+               <TouchableOpacity
+                style={[
+                  styles.settingsButton,
+                  { backgroundColor: currentTheme.colors.primary, marginBottom: SPACING },
+                ]}
+                onPress={onRefresh}
+                accessibilityLabel={t("leaderboard.retry", { defaultValue: "Réessayer" })}
+              >
+                <Text
+                  style={[
+                    styles.settingsButtonText,
+                    { color: currentTheme.colors.textPrimary },
+                  ]}
+                >
+                  {t("leaderboard.retry", { defaultValue: "Réessayer" })}
+                </Text>
+              </TouchableOpacity>
               <TouchableOpacity
                 style={[
                   styles.settingsButton,
@@ -603,6 +805,17 @@ export default function LeaderboardScreen() {
           )}
         </ScrollView>
       </SafeAreaView>
+      {rankSharePayload && (
+  <View style={{ position: "absolute", opacity: 0, pointerEvents: "none" }}>
+    <RankShareCard
+      ref={rankShareRef}
+      username={rankSharePayload.username}
+      rank={rankSharePayload.rank}
+      trophies={rankSharePayload.trophies}
+      avatarUri={rankSharePayload.avatarUri}
+    />
+  </View>
+)}
     </LinearGradient>
   );
 }
@@ -612,22 +825,8 @@ const styles = StyleSheet.create({
     flex: 1,
     paddingTop: 0,
   },
-  container: {
-    flex: 1,
-  },
   gradientContainer: {
     flex: 1,
-  },
-  headerWrapper: {
-    flexDirection: "row",
-    justifyContent: "space-between",
-    alignItems: "center",
-    paddingHorizontal: SPACING,
-    paddingVertical: SPACING * 1.5,
-    marginTop: Platform.OS === "android" ? StatusBar.currentHeight ?? 0 : 0,
-  },
-  shareIcon: {
-    padding: SPACING / 2,
   },
   tabsContainer: {
     flexDirection: "row",
@@ -649,17 +848,58 @@ const styles = StyleSheet.create({
     overflow: "hidden",
     borderWidth: 1,
   },
-  activeTab: {
-    borderBottomWidth: normalizeSize(2),       
-  shadowOffset: { width: 0, height: normalizeSize(2) },
-  shadowOpacity: 0.15,
-  shadowRadius: normalizeSize(4),
-  elevation: 3,
-  },
   tabText: {
     fontSize: normalizeFont(15),
     fontFamily: "Comfortaa_700Bold",
     textAlign: "center",
+  },
+  myRankCard: {
+    marginHorizontal: SPACING,
+    marginTop: SPACING,
+    padding: SPACING,
+    borderRadius: normalizeSize(16),
+    backgroundColor: "rgba(0,0,0,0.35)",
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "space-between",
+    borderWidth: StyleSheet.hairlineWidth,
+    borderColor: "rgba(255,255,255,0.12)",
+  },
+  myRankLeft: {
+    flexDirection: "row",
+    alignItems: "center",
+  },
+  myRankAvatar: {
+    width: normalizeSize(46),
+    height: normalizeSize(46),
+    borderRadius: normalizeSize(23),
+    borderWidth: StyleSheet.hairlineWidth,
+    borderColor: "rgba(255,255,255,0.6)",
+  },
+  myRankName: {
+    fontFamily: "Comfortaa_700Bold",
+    fontSize: normalizeFont(16),
+    color: "#fff",
+  },
+  myRankSub: {
+    fontFamily: "Comfortaa_400Regular",
+    fontSize: normalizeFont(12),
+    color: "rgba(255,255,255,0.8)",
+    marginTop: 2,
+  },
+  myRankShareBtn: {
+    flexDirection: "row",
+    alignItems: "center",
+    backgroundColor: "#111828",
+    paddingHorizontal: SPACING * 1.2,
+    paddingVertical: SPACING * 0.7,
+    borderRadius: 999,
+  },
+  myRankShareText: {
+    color: "#fff",
+    marginLeft: 6,
+    fontFamily: "Comfortaa_700Bold",
+    fontSize: normalizeFont(12),
   },
   activeTabText: {
     color: "#FFFFFF",
@@ -897,13 +1137,6 @@ const styles = StyleSheet.create({
     shadowRadius: normalizeSize(10),
     opacity: 0.7,
   },
-
-  // --- ROW overlay (glass) ---
-  rowOverlay: {
-    ...StyleSheet.absoluteFillObject,
-    borderRadius: normalizeSize(18),
-  },
-
   loadingContainer: {
     flex: 1,
     justifyContent: "center",
@@ -911,7 +1144,7 @@ const styles = StyleSheet.create({
   },
   loadingText: {
     fontSize: normalizeFont(18),
-    fontFamily: "Comfortaa_400Bold",
+    fontFamily: "Comfortaa_700Bold",
     marginTop: SPACING,
   },
   noPlayersText: {
@@ -942,15 +1175,5 @@ const styles = StyleSheet.create({
   settingsButtonText: {
     fontSize: normalizeFont(15),
     fontFamily: "Comfortaa_700Bold",
-  },
-  backButton: {
-    position: "absolute",
-    top:
-      Platform.OS === "android" ? StatusBar.currentHeight ?? SPACING : SPACING,
-    left: SPACING,
-    zIndex: 10,
-    padding: SPACING / 2,
-    backgroundColor: "rgba(0, 0, 0, 0.5)",
-    borderRadius: normalizeSize(20),
   },
 });

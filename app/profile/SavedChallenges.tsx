@@ -12,7 +12,6 @@ import {
   TouchableOpacity,
   StyleSheet,
   ActivityIndicator,
-  Image,
   Dimensions,
   SafeAreaView,
   Alert,
@@ -28,15 +27,19 @@ import Animated, {
   FadeOutRight,
   ZoomIn,
 } from "react-native-reanimated";
+import * as Haptics from "expo-haptics";
 import { useSavedChallenges } from "../../context/SavedChallengesContext";
 import { useTheme } from "../../context/ThemeContext";
 import { useTranslation } from "react-i18next";
 import { Theme } from "../../theme/designSystem";
 import designSystem from "../../theme/designSystem";
 import CustomHeader from "@/components/CustomHeader";
-import { BannerAd, BannerAdSize } from "react-native-google-mobile-ads";
- import { adUnitIds } from "@/constants/admob";
+import BannerSlot from "@/components/BannerSlot";
+ import { useBottomTabBarHeight } from "@react-navigation/bottom-tabs";
+ import { useSafeAreaInsets } from "react-native-safe-area-context";
  import { useAdsVisibility } from "../../src/context/AdsVisibilityContext";
+import { Image as ExpoImage } from "expo-image";
+import type { ListRenderItem } from "react-native";
 
 const SPACING = 18; // Aligné avec CurrentChallenges.tsx
 const { width: SCREEN_WIDTH, height: SCREEN_HEIGHT } = Dimensions.get("window");
@@ -48,8 +51,6 @@ const normalizeSize = (size: number) => {
   const scale = Math.min(Math.max(SCREEN_WIDTH / baseWidth, 0.7), 1.8);
   return Math.round(size * scale);
 };
-
-const BANNER_HEIGHT = normalizeSize(50);
 
 /** Util pour ajouter une alpha sans casser les gradients */
 const withAlpha = (color: string, alpha: number) => {
@@ -89,16 +90,25 @@ export default function SavedChallengesScreen() {
   const [isLoading, setIsLoading] = useState(true);
   const [localChallenges, setLocalChallenges] = useState<Challenge[]>([]);
   const router = useRouter();
-  const swipeableRefs = useRef<(Swipeable | null)[]>([]);
+  type SwipeableHandle = { close: () => void } | null;
+  const swipeableRefs = useRef<SwipeableHandle[]>([]);
   const { theme } = useTheme();
   const isDarkMode = theme === "dark";
   const currentTheme: Theme = useMemo(
     () => (isDarkMode ? designSystem.darkTheme : designSystem.lightTheme),
     [isDarkMode]
   );
-  const npa = (globalThis as any).__NPA__ === true;
    const { showBanners } = useAdsVisibility();
-   const bottomPadding = showBanners ? BANNER_HEIGHT + normalizeSize(90) : normalizeSize(90);
+   const insets = useSafeAreaInsets();
+ const tabBarHeight = (() => {
+   try { return useBottomTabBarHeight(); } catch { return 0; }
+ })();
+ const [adHeight, setAdHeight] = useState(0);
+ const bottomPadding =
+   normalizeSize(90) +
+   (showBanners ? adHeight : 0) +
+   tabBarHeight +
+   insets.bottom;
 
   const translatedChallenges = useMemo(() => {
     if (!savedChallenges || !Array.isArray(savedChallenges)) {
@@ -184,8 +194,37 @@ export default function SavedChallengesScreen() {
     [removeChallenge, t]
   );
 
-  const renderChallengeItem = useCallback(
-    ({ item, index }: { item: Challenge; index: number }) => {
+  // Swipe en 2 temps : pill premium centrée + haptic léger
+  const pendingDeleteRef = useRef<(() => void) | null>(null);
+  const renderRightActions = useCallback(
+    (_index: number) => (
+      <View style={styles.swipeActionsContainer} pointerEvents="box-none">
+        <TouchableOpacity
+          activeOpacity={0.9}
+          style={styles.trashButton}
+          onPress={() => pendingDeleteRef.current?.()}
+          accessible
+          accessibilityRole="button"
+          accessibilityLabel={t("deleteChallenge")}
+          accessibilityHint={t("confirmDeletionHint")}
+          hitSlop={{ top: 14, bottom: 14, left: 14, right: 14 }}
+        >
+          <LinearGradient
+            colors={["#F43F5E", "#DC2626"]}
+            start={{ x: 0, y: 0 }}
+            end={{ x: 1, y: 1 }}
+            style={StyleSheet.absoluteFillObject}
+          />
+          <Ionicons name="trash-outline" size={normalizeSize(26)} color="#fff" />
+          <Text style={styles.trashLabel}>{t("delete")}</Text>
+        </TouchableOpacity>
+      </View>
+    ),
+    [t]
+  );
+
+  const renderChallengeItem = useCallback<ListRenderItem<Challenge>>(
+    ({ item, index }) => {
       const borderColor = isDarkMode
         ? currentTheme.colors.secondary
         : "#FF8C00"; // Aligné avec CurrentChallenges.tsx
@@ -204,25 +243,20 @@ export default function SavedChallengesScreen() {
           >
             <Swipeable
               ref={(ref) => {
-                swipeableRefs.current[index] = ref;
+                swipeableRefs.current[index] = (ref as unknown as SwipeableHandle) ?? null;
               }}
-              renderRightActions={() => (
-                <View style={styles.swipeActionsContainer}>
-                  <LinearGradient
-                    colors={["#EF4444", "#B91C1C"]}
-                    style={styles.trashButton}
-                  >
-                    <Ionicons
-                      name="trash-outline"
-                      size={normalizeSize(28)}
-                      color="#fff"
-                      accessibilityLabel={t("deleteChallenge")}
-                    />
-                  </LinearGradient>
-                </View>
-              )}
+              renderRightActions={() => renderRightActions(index)}
               overshootRight={false}
-              onSwipeableOpen={() => handleRemoveChallenge(item.id, index)}
+              onSwipeableOpen={() => {
+                Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light).catch(() => {});
+                pendingDeleteRef.current = () => {
+                  handleRemoveChallenge(item.id, index);
+                  pendingDeleteRef.current = null;
+                };
+              }}
+              onSwipeableClose={() => {
+                pendingDeleteRef.current = null;
+              }}
             >
               <TouchableOpacity
                 style={styles.cardContainer}
@@ -242,14 +276,13 @@ export default function SavedChallengesScreen() {
                   ]}
                   style={[styles.card, { borderColor }]}
                 >
-                  <Image
-                    source={{
-                      uri: item.imageUrl || "https://via.placeholder.com/70",
-                    }}
+                  <ExpoImage
+                    source={{ uri: item.imageUrl || "https://via.placeholder.com/70" }}
                     style={styles.cardImage}
-                    accessibilityLabel={t("challengeImage", {
-                      title: item.title,
-                    })}
+                    contentFit="cover"
+                    transition={200}
+                    placeholder={{ blurhash: "LKO2?U%2Tw=w]~RBVZRi};RPxuwH" }}
+                    accessibilityLabel={t("challengeImage", { title: item.title })}
                   />
                   <View style={styles.cardContent}>
                     <Text
@@ -452,18 +485,22 @@ export default function SavedChallengesScreen() {
     )}
   </View>
   {showBanners && (
-     <View style={styles.bannerContainer}>
-       <BannerAd
-  unitId={adUnitIds.banner}
-  size={BannerAdSize.BANNER}
-  requestOptions={{ requestNonPersonalizedAdsOnly: npa }}
-  onAdFailedToLoad={(err) =>
-    console.error("Échec chargement bannière (SavedChallenges):", err)
-  }
-/>
-
-     </View>
-   )}
+   <View
+     style={{
+       position: "absolute",
+       left: 0,
+       right: 0,
+       bottom: tabBarHeight + insets.bottom,
+       alignItems: "center",
+       backgroundColor: "transparent",
+       paddingBottom: 6,
+       zIndex: 9999,
+     }}
+     pointerEvents="box-none"
+   >
+     <BannerSlot onHeight={(h) => setAdHeight(h)} />
+   </View>
+ )}
 </LinearGradient>
 
     </SafeAreaView>
@@ -476,16 +513,6 @@ const styles = StyleSheet.create({
   paddingTop: 0,
   backgroundColor: "transparent",
 },
-bannerContainer: {
-    width: "100%",
-    alignItems: "center",
-    paddingVertical: SPACING / 2,
-    backgroundColor: "transparent",
-    position: "absolute",
-    bottom: 0,
-    left: 0,
-    right: 0,
-  },
   container: { flex: 1 },
   headerWrapper: {
     paddingHorizontal: SPACING,
@@ -620,16 +647,32 @@ bgOrbBottom: {
     maxWidth: SCREEN_WIDTH * 0.75,
   },
   swipeActionsContainer: {
-    width: SCREEN_WIDTH * 0.2,
-    justifyContent: "center",
-    alignItems: "center",
-    marginBottom: SPACING,
-  },
-  trashButton: {
-    width: "100%",
     height: "100%",
     justifyContent: "center",
+    alignItems: "flex-end",
+    paddingRight: normalizeSize(10),
+  },
+  trashButton: {
+    width: Math.min(ITEM_WIDTH * 0.26, 120),
+    height: Math.max(normalizeSize(ITEM_HEIGHT * 0.72), 64),
+    borderTopLeftRadius: normalizeSize(22),
+    borderBottomLeftRadius: normalizeSize(22),
+    borderTopRightRadius: normalizeSize(18),
+    borderBottomRightRadius: normalizeSize(18),
+    overflow: "hidden",
+    justifyContent: "center",
     alignItems: "center",
-    borderRadius: normalizeSize(25),
+    shadowColor: "#000",
+    shadowOffset: { width: 0, height: 6 },
+    shadowOpacity: 0.25,
+    shadowRadius: 10,
+    elevation: 8,
+    gap: normalizeSize(6),
+  },
+  trashLabel: {
+    color: "#fff",
+    fontFamily: "Comfortaa_700Bold",
+    fontSize: normalizeSize(12),
+    letterSpacing: 0.3,
   },
 });

@@ -1,0 +1,3856 @@
+{
+  "settings": "設定",
+  "notifications": "通知",
+  "darkMode": "ダークモード",
+  "language": "言語",
+  "account": "アカウント",
+  "editProfile": "プロフィールを編集",
+  "logout": "ログアウト",
+  "deleteAccount": "アカウントを削除",
+  "clearCache": "キャッシュを削除",
+  "about": "概要",
+  "wakeYourPotential": "あなたの可能性を呼び覚まそう",
+  "joinChallengeTies": "ChallengeTies に参加して、毎日にインスピレーションを。",
+  "startAdventure": "冒険を始める",
+  "inspiringChallenges": "インスピレーションあふれるチャレンジ",
+  "getInspired": "インスピレーションを得る",
+  "tipsAndTricks": "ヒント＆コツ",
+  "leaderboardTitle": "ランキング",
+  "whatsNew": "新着情報",
+  "faqShort": "FAQ",
+  "copied": "コピーしました",
+  "copiedToClipboard": "クリップボードにコピーされました。",
+  "verified": "認証済み",
+  "verify": "認証",
+  "sending": "送信中…",
+  "emailVerification": "メール認証",
+  "verificationEmailSent": "認証メールを送信しました。",
+  "notSet": "未設定",
+  "tipsTricks": "コツ＆ヒント",
+  "home": "ホーム",
+  "profile": "プロフィール",
+  "yourProfile": "あなたのプロフィール",
+  "addBioHere": "ここに自己紹介を追加",
+  "unknownLocation": "位置情報不明",
+  "trophies": "トロフィー",
+  "editYourProfile": "プロフィールを編集",
+  "statistics": "統計",
+  "ongoingChallenges": "進行中のチャレンジ",
+  "favorites": "お気に入り",
+  "email": "メールアドレス",
+  "creationDate": "作成日",
+  "myAccount": "マイアカウント",
+  "completedChallenges": "完了したチャレンジ",
+  "rewards": "報酬",
+  "myChallenges": "自分のチャレンジ",
+  "name": "名前",
+  "bio": "自己紹介",
+  "location": "所在地",
+  "interests": "興味・関心",
+  "save": "保存",
+  "savedChallenges": "保存したチャレンジ",
+  "successRate": "成功率",
+  "unlockedAchievements": "解除した実績",
+  "longestStreak": "最長連続日数",
+  "days": "日",
+  "noSavedChallenges": "保存されたチャレンジがありません",
+  "saveChallengesHere": "チャレンジを保存するとここに表示されます",
+  "noCompletedChallenges": "完了したチャレンジがありません",
+  "completeChallengesToSeeHere": "チャレンジを完了するとここに表示されます",
+  "yourAchievements": "あなたの実績",
+  "firstStep": "最初の一歩",
+  "firstLogin": "初回ログイン",
+  "loginFirstTime": "初めてログインする",
+  "profileCompleted": "プロフィール完了",
+  "completeProfileInfo": "プロフィール情報をすべて入力してください",
+  "createdChallenges": "作成したチャレンジ",
+  "innovator": "イノベーター",
+  "createTenChallenges": "チャレンジを10件作成してイノベーターになろう",
+  "iHaveInspiration": "ひらめいています",
+  "createFiveChallenges": "チャレンジを5件作成してインスピレーションを示そう",
+  "challengeCreator": "チャレンジクリエイター",
+  "createFirstChallenge": "最初のチャレンジを作成",
+  "fiveChallengesSaved": "5件のチャレンジを保存",
+  "saveFiveChallenges": "チャレンジを5件保存して関心を示そう",
+  "challengeSaved": "チャレンジを保存しました",
+  "saveChallengeFirstTime": "初めてチャレンジを保存",
+  "finishedChallenges": "完了したチャレンジ",
+  "livingLegend": "生ける伝説",
+  "completeHundredChallenges": "チャレンジを100件達成して生ける伝説になろう",
+  "unbeatable": "無敵",
+  "completeFiftyChallenges": "チャレンジを50件達成して無敵になろう",
+  "challengeMachine": "チャレンジマシーン",
+  "completeTwentyFiveChallenges": "チャレンジを25件達成してマシーンになろう",
+  "seriousAboutChallenges": "チャレンジに本気",
+  "completeThreeChallenges": "3件のチャレンジを達成してやる気を証明しよう",
+  "firstChallengeCompleted": "最初のチャレンジ達成",
+  "completeYourFirstChallenge": "最初のチャレンジを達成しよう",
+  "challengeDuration": "チャレンジ期間",
+  "legendaryPatient": "伝説の忍耐力",
+  "chooseOneYearChallenge": "1年チャレンジを選んで伝説になろう",
+  "longTermMyThing": "長期戦は得意",
+  "choose180DaysChallenge": "180日チャレンジを選んで本気度を示そう",
+  "marathoner": "マラソンランナー",
+  "choose90DaysChallenge": "90日チャレンジを選んでマラソンランナーになろう",
+  "determination": "決意",
+  "choose30DaysChallenge": "30日チャレンジを選んで決意を示そう",
+  "smallPlayer": "スタートライン",
+  "choose7DaysChallenge": "7日間チャレンジを選んでコミットしよう",
+  "messages": "メッセージ",
+  "activeCommunity": "アクティブなコミュニティ",
+  "sendFiftyMessages": "50件のメッセージを送りコミュニティを盛り上げよう",
+  "teamSpirit": "チーム精神",
+  "sendTenMessages": "10件のメッセージを送りチーム精神を示そう",
+  "firstMessageSent": "最初のメッセージ送信",
+  "sendFirstMessage": "チャットで最初のメッセージを送ろう",
+  "shares": "シェア",
+  "buddingInfluencer": "駆け出しインフルエンサー",
+  "shareFiveChallenges": "チャレンジを5回シェアして駆け出しインフルエンサーになろう",
+  "likeToShare": "シェアが好き",
+  "shareFirstChallenge": "初めてチャレンジをシェア",
+  "communityLeader": "コミュニティリーダー",
+  "shareTwentyChallenges": "チャレンジを20回シェアしてリーダーになろう",
+  "successStreak": "成功連続記録",
+  "imAMonster": "モンスターだ",
+  "maintain365DaysSuccess": "365日連続成功を維持してモンスターになろう",
+  "ultimateDiscipline": "究極の規律",
+  "maintain180Days": "180日連続達成して究極の規律を手に入れよう",
+  "imAMachine": "マシーンだ",
+  "maintain90Days": "90日連続成功を維持してあなたはマシーンだ",
+  "nothingCanStopMe": "誰にも止められない",
+  "maintain60Days": "60日連続成功：あなたを止められるものはない",
+  "concreteDetermination": "揺るぎない決意",
+  "maintain30Days": "30日連続成功で揺るぎない決意を示そう",
+  "impressive": "すごい！",
+  "maintain14Days": "14日連続成功を達成して自分を驚かせよう",
+  "routineInPlace": "ルーティン確立",
+  "maintain7Days": "7日連続成功を維持しよう",
+  "miniStreak": "ミニ連続記録",
+  "maintain3Days": "3日連続成功を達成しよう",
+  "votes": "投票",
+  "likeToVote": "投票が好き",
+  "voteFiveTimes": "5回投票してあなたの参加度を示そう",
+  "firstChallengeVoted": "初めての投票",
+  "voteForFirstFeature": "初めて機能に投票する",
+  "noChallengeCreated": "作成されたチャレンジはありません",
+  "createYourFirstChallengeNow": "今すぐ最初のチャレンジを作成しよう",
+  "noChallengeOngoing": "進行中のチャレンジなし",
+  "clickIconTopRight": "右上のアイコンをタップ",
+  "orJoinChallenge": "またはチャレンジに参加",
+  "exploreChallenges": "チャレンジを探す",
+  "searchChallenge": "チャレンジを検索",
+  "contactUs": "お問い合わせ",
+  "visitWebsite": "公式サイトへ",
+  "preferences": "設定",
+  "interestsPlaceholder": "例：フィットネス、読書、UI デザイン",
+  "editProfile.title": "プロフィールを編集",
+  "editProfile.description": "名前、自己紹介、所在地、興味を更新",
+
+  "accessibility.editProfileImage.label": "プロフィール写真を編集",
+  "accessibility.editProfileImage.hint": "ギャラリーを開いて画像を選択します",
+  "accessibility.currentProfileImage.label": "現在のプロフィール写真",
+
+  "accessibility.usernameField.label": "ユーザー名",
+  "accessibility.usernameField.hint": "ユーザー名を入力",
+
+  "accessibility.bioField.label": "自己紹介",
+  "accessibility.bioField.hint": "短い説明を追加",
+
+  "accessibility.locationField.label": "所在地",
+  "accessibility.locationField.hint": "都市または国を入力",
+
+  "accessibility.interestsField.label": "興味・関心",
+  "accessibility.interestsField.hint": "項目をカンマで区切って入力",
+
+  "accessibility.saveProfileChanges.label": "変更を保存",
+  "accessibility.saveProfileChanges.hint": "プロフィール情報を保存します",
+
+  "systemWelcome": "👋 ようこそ！ここでは、お互いに励まし合い、質問し、サポートし合います。敬意と優しさを忘れずに。禁止事項：侮辱・ハラスメント、ヘイト、ヌード/ポルノ、違法・危険な内容、スパム/宣伝/詐欺、個人情報の共有。問題を見つけたら通報ボタンから報告してください。今日も前進を 💪✨",
+
+  "welcomeRules": {
+    "title": "チャレンジチャットへようこそ！",
+    "message": "このチャットでは、お互いを励まし、支え合い、一緒に前進します。ポジティブな空気を保つため、以下のルールを守ってください：\n\n1. **敬意**：侮辱、ハラスメント、脅迫は禁止。\n2. **寛容**：差別やヘイト（人種差別、性差別、ホモフォビア等）は禁止。\n3. **内容**：ヌード・ポルノ、暴力、違法内容は禁止。\n4. **関連性**：チャレンジのテーマから逸脱しないこと。\n5. **安全**：個人情報を共有しないこと。\n6. **クリーン**：スパム、宣伝、詐欺、なりすましは禁止。\n\nこのチャットに参加することで、これらのルールに同意するものとします。ありがとう 💛"
+  },
+
+  "coverImage": "カバー画像（任意）",
+  "pickAnImage": "画像を選ぶ",
+  "edit": "編集",
+  "livePreview": "ライブプレビュー",
+  "yourTitleHere": "ここにタイトル",
+  "yourDescriptionHere": "ここに説明…",
+  "exTitle": "例：30日読書チャレンジ",
+  "exDescription": "例：毎日10ページ読み、気づきを共有…",
+  "ok": "OK",
+  "createChallengeFailed": "現在チャレンジを作成できません。後でもう一度お試しください。",
+  "challengeSubmittedForReview": "チャレンジが送信され、管理者が承認すると表示されます。",
+  "completionLabel": "達成度",
+  "reviewNote": "すべてのチャレンジは審査されます。ぼやけた画像、無関係な内容、低品質の画像は拒否される可能性があります。",
+
+  "chat.title": "ようこそ 🙌",
+  "chatRules": {
+    "title": "チャットへようこそ",
+    "message": "参加する前に、以下のルールを守ってください：優しさ、敬意、攻撃的または差別的な内容は禁止、スパム禁止。みんなでポジティブな空間を作ろう！"
+  },
+  "iHaveReadRules": "ルールを読み、同意します。",
+  "acceptRulesButton": "理解して同意する",
+  "iUnderstand": "理解しました",
+  "chat.systemWelcome": "このチャットでは、お互いを励まし、支え合い、一緒に前進します。以下のルールを守ってください：\n\n1. **敬意**：侮辱、ハラスメントは禁止。\n2. **寛容**：差別・ヘイト禁止。\n3. **内容**：ヌード、暴力、違法は禁止。\n4. **関連性**：テーマに沿って参加。\n5. **安全**：個人情報を共有しないこと。\n6. **クリーン**：スパム・詐欺禁止。\n\n参加することで同意したものとみなします 💛",
+
+  "tips": {
+    "title": "ヒント",
+    "listAccessibility": "ヒント一覧",
+    "shareDialogTitle": "ヒントを共有",
+    "kicker": "今日のヒント",
+    "noResults": "検索に一致するヒントはありません。",
+    "readMoreHint": "タップして続きを表示",
+    "showLessHint": "タップして折りたたむ",
+    "toggleTip": "「{{title}}」の表示を切り替える",
+    "searchPlaceholder": "ヒントを検索…",
+    "logoAlt": "ChallengeTies ロゴ",
+    "subHeader": "インスピレーションを保ち、目標を達成し、トロフィーを獲得するための実践的なヒント！",
+
+    "smartGoals": {
+      "title": "SMART 目標を設定しよう",
+      "description": "具体的・測定可能・達成可能・現実的・期限付きの目標は、集中力と継続力を高めます。"
+    },
+    "beConsistent": {
+      "title": "継続しよう",
+      "description": "毎日同じ時間に取り組むことで、大きな成果につながります。"
+    },
+    "trackEverything": {
+      "title": "すべて記録しよう",
+      "description": "毎日の記録と統計を使って進捗を把握しよう。"
+    },
+    "findSupport": {
+      "title": "仲間を見つけよう",
+      "description": "同じ目標の仲間とつながり、一緒に進もう。"
+    },
+    "rewardYourself": {
+      "title": "自分にご褒美を",
+      "description": "小さな成功でも祝うことでモチベーションが続きます。"
+    },
+    "switchItUp": {
+      "title": "変化をつけよう",
+      "description": "新しいチャレンジを試してマンネリを防ごう。"
+    },
+    "inviteAFriend": {
+      "title": "友達を招待しよう",
+      "description": "二人でやるチャレンジはより楽しくて続けやすい！"
+    },
+    "visualizeSuccess": {
+      "title": "成功をイメージしよう",
+      "description": "視覚的なリマインダーは集中の助けになります。"
+    },
+    "stayPositive": {
+      "title": "前向きに",
+      "description": "失敗しても毎日が新しいチャンス。学んで進もう。"
+    },
+    "takeBreaks": {
+      "title": "適度に休憩しよう",
+      "description": "短い休憩は集中力と生産性を高めます。"
+    },
+    "stayHydrated": {
+      "title": "水分補給を忘れずに",
+      "description": "水を飲むことでエネルギーと集中力が維持されます。"
+    },
+    "celebrateWins": {
+      "title": "勝利を祝おう",
+      "description": "小さな成果でも認めることで自信がつきます。"
+    },
+
+    "readMore": "続きを読む",
+    "showLess": "閉じる",
+    "footerQuery": "質問やサポートが必要ですか？",
+    "contactUs": "お問い合わせ",
+    "shareTips": "ヒントを共有",
+    "shareMessage": "ChallengeTies の素晴らしいヒントをチェックしよう！",
+    "shareError": "共有中にエラーが発生しました",
+    "mailClientError": "メールアプリを開けませんでした",
+    "mailOpenError": "メールアプリ起動中にエラーが発生しました"
+  },
+  "cards": {
+    "brandName": "ChallengeTies",
+    "accessibility": {
+      "logoAlt": "{{brand}} のロゴ"
+    }
+  },
+
+  "newFeatures": {
+    "loginRequiredTitle": "ログインが必要です",
+
+    "sharE": {
+      "kicker": "投票しよう！",
+      "footerWithDays": "投票終了まであと {{days}} 日 — あなたの一票が未来を作る ✨",
+      "footer": "投票終了間近 — あなたの一票が未来を作る ✨"
+    },
+
+    "shareDialogTitle": "この新機能を共有",
+    "votes_one": "1 票",
+    "deadlineIso": "2025-11-30T23:59:59+01:00",
+
+    "monthLabelTpl": "アップデート • {{month}}",
+    "months": {
+      "01": "1月", "02": "2月", "03": "3月", "04": "4月",
+      "05": "5月", "06": "6月", "07": "7月", "08": "8月",
+      "09": "9月", "10": "10月", "11": "11月", "12": "12月"
+    },
+
+    "voteCloses": "投票終了まで",
+    "thankYouShort": "投票ありがとう 💜",
+
+    "votes_other": "{{count}} 票",
+    "loginRequiredMessage": "投票するにはログインしてください。",
+    "alreadyVotedTitle": "すでに投票済み",
+    "alreadyVotedMessage": "あなたはすでに投票しています。",
+    "voteRegisteredTitle": "投票完了",
+    "voteRegisteredMessage": "ご投票ありがとうございます！",
+    "voteErrorTitle": "エラー",
+    "voteErrorMessage": "問題が発生しました。",
+    "proposalSentTitle": "提案を送信しました",
+    "proposalSentMessage": "あなたのアイデアと投票が送信されました！",
+    "proposalErrorTitle": "エラー",
+    "proposalErrorMessage": "送信できませんでした。",
+    "title": "新着情報",
+    "by": "投稿者",
+    "votes": "票",
+    "openExplanation": "投票の仕組みを見る",
+    "description": "次に追加される機能に投票するか、自分のアイデアを提案しよう！締切：2025年11月30日。",
+    "noFeatures": "現在利用可能な機能はありません。",
+    "monthLabel": "アップデート • 11月",
+
+    "heroTitleNov": "11月末に登場する新機能に投票しよう 🚀",
+    "heroSubtitleNov": "あなたの声が未来を作る：提案、投票、進捗の確認ができます。",
+
+    "proposeIdea": "アイデアを提案",
+    "thankYouForVote": "投票ありがとうございます：{{featureTitle}}",
+
+    "countdown": {
+      "days": "日",
+      "hours": "時間",
+      "mins": "分",
+      "secs": "秒",
+      "abbr": { "d": "日", "h": "時", "m": "分", "s": "秒" }
+    },
+
+    "featuresListLabel": "提案された機能一覧",
+    "loading": "読み込み中…",
+
+    "heroTitleSep": "11月末に登場する新機能に投票しよう 🚀",
+    "heroSubtitleSep": "あなたの声が未来を作る：提案、投票、進捗の確認ができます。",
+
+    "featureDetails": "詳細：{{title}}",
+    "featureDetailsHint": "機能の詳細ページを開きます",
+    "openExplanationHint": "投票システムの説明を表示",
+    "proposeIdeaHint": "アイデア提案フォームを開く",
+    "shareMessage": "この機能をチェックして投票しよう：",
+    "shareFeature": "機能を共有",
+    "share": "共有",
+    "vote": "投票",
+    "alreadyVotedShort": "投票済み",
+    "unknown": "不明"
+  },
+
+  "permissionDenied": "許可が拒否されました",
+  "mustAllowNotifications": "通知を受け取るには通知を許可してください。",
+  "error": "エラー",
+  "failedToSavePreferences": "設定の保存に失敗しました。",
+  "cacheCleared": "キャッシュを削除しました",
+  "tempDataDeleted": "一時データをすべて削除しました。",
+  "failedToClearCache": "キャッシュの削除に失敗しました。",
+  "logoutConfirm": "ログアウトしてもよろしいですか？",
+  "cancel": "キャンセル",
+  "loggedOut": "ログアウトしました",
+  "logoutFailed": "ログアウトに失敗しました。",
+  "deleteAccountConfirm": "本当に削除しますか？この操作は元に戻せません。",
+  "delete": "削除",
+  "accountDeleted": "アカウント削除済み",
+  "accountDeletedSuccess": "アカウントが正常に削除されました。",
+  "noUserConnected": "ログイン中のユーザーがいません。",
+  "failedToDeleteAccount": "アカウント削除に失敗しました。",
+  "userNotConnected": "ユーザーが接続されていません。",
+  "noOngoingChallengeToSimulate": "シミュレーションできる進行中のチャレンジがありません。",
+  "disconnected": "接続が切れました。",
+  "handleNotifications": "通知をオン/オフ",
+  "handleDarkMode": "ダークモードをオン/オフ",
+  "privacyPolicyPage": "プライバシーポリシー",
+  "accessAdmin": "管理者機能へアクセス",
+  "admin": "管理",
+  "aboutChallengeTies": "ChallengeTies について",
+  "fillEmailPassword": "メールアドレスとパスワードを入力してください。",
+  "invalidEmail": "有効なメールアドレスを入力してください。",
+  "noAccountFound": "このメールアドレスのアカウントは見つかりませんでした。",
+  "wrongPassword": "パスワードが正しくありません。",
+  "invalidEmailFormat": "メールアドレスの形式が無効です。",
+  "tooManyRequests": "試行回数が多すぎます。しばらくしてから再試行してください。",
+  "unknownError": "不明なエラーが発生しました。",
+  "emailPlaceholder": "tony.stark@example.com",
+  "passwordPlaceholder": "パスワード",
+  "hidePassword": "パスワードを非表示",
+  "showPassword": "パスワードを表示",
+  "forgotPassword": "パスワードをお忘れですか？",
+  "login": "ログイン",
+  "noAccount": "アカウントがありませんか？",
+  "signupHere": "こちらで登録",
+  "appTagline": "未来を創る一番の方法は、今それを作り始めることだ",
+  "enterYourEmail": "メールアドレスを入力してください。",
+  "resetLinkSent": "リセットリンクをメールに送信しました。",
+  "resetLinkFailed": "リンクの送信に失敗しました。メールをご確認ください。",
+  "backToLogin": "ログインに戻る",
+  "appTitle": "ChallengeTies",
+  "enterEmailToResetPassword": "パスワードをリセットするにはメールアドレスを入力してください。",
+  "resetForm": "リセットフォーム",
+  "yourEmailAddress": "あなたのメールアドレス",
+  "sendResetLink": "リンクを送信",
+  "sendLink": "送信",
+
+  "duoInfoModal": {
+    "title": "デュオチャレンジ",
+    "badge": "デュオモード",
+    "desc": "友達を招待して一緒に進み、リアルタイムで同期された進捗バーを確認できます。",
+    "tips": {
+      "fast": "2クリックで招待、どこでも共有可能なリンク。",
+      "sync": "進捗はリアルタイム同期、通知も即時。",
+      "safe": "スパム防止とワンタップキャンセル。"
+    },
+    "openInbox": "招待一覧を見る",
+    "inviteNow": "友達を招待",
+    "button": "了解"
+  },
+
+  "charsRemaining_one": "{{count}} 文字残り",
+  "charsRemaining_other": "{{count}} 文字残り",
+
+  "fillAllFields": "すべての項目を入力してください。",
+  "passwordsDoNotMatch": "パスワードが一致しません。",
+  "emailAlreadyInUse": "このメールアドレスはすでに使用されています。",
+  "weakPassword": "パスワードが弱すぎます。より強力なものを選んでください。",
+  "anErrorOccurred": "エラーが発生しました。もう一度お試しください。",
+  "joinUsAndChallenge": "私たちと一緒にチャレンジしよう！",
+  "yourEmail": "あなたのメール",
+  "username": "ユーザー名",
+  "password": "パスワード",
+  "confirmPassword": "パスワード確認",
+  "signup": "登録",
+  "alreadyHaveAccount": "すでにアカウントがありますか？",
+  "loginHere": "こちらからログイン",
+  "profileNotFound": "プロフィールが見つかりません",
+  "profileLoadError": "プロフィールの読み込みエラー",
+  "loadingProfile": "プロフィール読み込み中…",
+  "currentChallenges": "進行中のチャレンジ",
+  "achievementsTitle": "実績",
+  "user": "ユーザー",
+  "addCoolBio": "素敵な自己紹介を書いてみよう！",
+  "editYourProfileTitle": "プロフィールを編集",
+  "userNotAuthenticated": "ユーザーが認証されていません。",
+  "errorFetchingProfile": "プロフィール情報の取得中にエラーが発生しました。",
+  "photoPermissionDenied": "許可が拒否されました。写真へのアクセスを許可してください。",
+  "uploadError": "アップロードエラー。送信に失敗しました。",
+  "profileImageUpdated": "プロフィール画像を更新しました！",
+  "noImageSelected": "キャンセルされました。画像が選択されていません。",
+  "uploadFailed": "画像のアップロードに失敗しました。",
+  "userNotFound": "ユーザーが見つかりません。",
+  "profileUpdateSuccess": "プロフィールが更新されました！",
+  "profileUpdateFailed": "プロフィールの更新に失敗しました。",
+  "editProfileImage": "プロフィール画像を編集",
+  "currentProfileImage": "現在のプロフィール画像",
+  "addProfilePhoto": "プロフィール写真を追加",
+  "usernameField": "ユーザー名フィールド",
+  "bioField": "自己紹介フィールド",
+  "locationField": "所在地フィールド",
+  "interestsField": "興味・関心フィールド",
+  "saveProfileChanges": "変更を保存",
+
+  "markToday": "今日をマーク",
+  "markTodayButton": "今日をマーク",
+  "alreadyMarkedToday": "今日はすでにマーク済みです",
+  "alreadyMarked": "すでにマーク済み",
+  "loading": "読み込み中…",
+  "challenge": "チャレンジ",
+  "deleteChallenge": "チャレンジを削除",
+  "viewChallengeDetails": "チャレンジの詳細を見る",
+  "challengeImage": "チャレンジ画像",
+  "day": "日",
+  "abandonChallenge": "チャレンジを放棄",
+  "abandonChallengeConfirm": "本当に放棄しますか？進行状況が失われます。",
+  "continue": "続ける",
+  "abandoned": "放棄しました",
+  "challengeAbandoned": "チャレンジを放棄しました。",
+  "failedToAbandonChallenge": "チャレンジの放棄に失敗しました。",
+  "swipeToDelete": "スワイプして削除",
+  "waitingChallengeIcon": "待機中チャレンジのアイコン",
+  "noOngoingChallenge": "進行中のチャレンジはありません！",
+  "startAChallenge": "チャレンジを始めるとここに表示されます。",
+  "listOfOngoingChallenges": "進行中のチャレンジ一覧",
+  "markTodayFailed": "今日のマークに失敗しました。",
+
+  "savedChallengesScreenTitle": "保存したチャレンジ",
+  "deleteChallengeConfirm": "このチャレンジを削除してもよろしいですか？",
+  "deleted": "削除しました",
+  "challengeDeletedSuccess": "チャレンジを削除しました。",
+  "failedToDeleteChallenge": "チャレンジの削除に失敗しました。",
+  "viewDetails": "詳細を見る",
+  "noCategory": "カテゴリなし",
+
+  "completedChallengesScreenTitle": "完了したチャレンジ",
+  "completedOn": "完了日",
+  "historyOf": "履歴",
+  "appName": "ChallengeTies",
+
+  "alerts": {
+    "error": "エラー",
+    "accessDenied": "アクセス拒否",
+    "shareError": "共有に失敗しました"
+  },
+
+  "economy": {
+    "weeklyTitle": "週間トロフィー",
+    "weeklySubtitle": "チェックインで +1（週ごとに上限あり）。",
+    "total": "{{count}} トロフィー",
+    "used": "{{used}} / {{cap}}（今週）",
+    "remaining": "{{remain}} 残り",
+    "capReached": "週間上限に達しました。明日また来てね ✨",
+    "dailyHint": "ヒント：今日のチャレンジをマークすると+1即時付与。",
+    "streakBonusesTitle": "連続達成ボーナス",
+    "streakAt": "{{at}} 日",
+    "bonus": "+{{bonus}}",
+    "pb": "あなたの最長連続記録：{{days}} 日"
+  },
+
+  "microEarnedTitle": "トロフィー獲得",
+  "microEarnedMessage": "今日 +{{count}} トロフィー ✨",
+  "microCapTitle": "上限に達しました",
+  "microCapMessage": "週間のマイクロトロフィー上限に達しました。",
+  "streakBonusTitle": "連続ボーナス",
+  "streakBonusMessage": "🎯 {{streak}} 日連続達成で +{{bonus}} ！",
+
+  "challengeDetails": {
+    "noDescription": "説明がありません",
+    "fetchError": "チャレンジを取得できませんでした。",
+    "untitled": "チャレンジ",
+    "joinError": "チャレンジに参加できませんでした。再試行してください。",
+    "completeError": "チャレンジを完了できませんでした。",
+    "loading": "読み込み中…",
+
+    "shareMessage": "ChallengeTies の「{{title}}」に一緒に挑戦しよう！",
+    "participants": "{{count}} 人参加",
+    "participants_plural": "{{count}} 人参加",
+
+    "takeChallenge": "チャレンジを開始",
+    "inProgress": "進行中",
+    "markToday": "今日をマーク",
+    "markTodayHint": "今日の進捗を追加します。",
+    "completeChallenge": "チャレンジを完了",
+
+    "reviewAfterComplete": "⚠️ このチャレンジを完了するとレビューを投稿できます 🏆",
+
+    "chat": "チャット",
+    "days": "日",
+
+    "save": "保存",
+    "saved": "保存済み",
+    "saveError": "このチャレンジを保存できませんでした",
+
+    "share": "共有",
+    "shareA11y": "このチャレンジを共有",
+    "linkCopied": "リンクをコピーしました",
+
+    "stats": "統計",
+    "statsA11y": "統計を見る",
+
+    "invite": "友達を招待",
+    "inviteAFriend": "友達を招待",
+    "inviteError": "招待の共有に失敗しました",
+    "inviteA11y": "このチャレンジに友達を招待",
+
+    "needHelp": "アドバイスが必要？",
+    "leaveReview": "レビューを書く",
+    "alreadyReviewed": "このチャレンジにはすでにレビュー済みです。",
+    "reviewSectionTitle": "みんなのレビュー",
+    "noReviewsYet": "まだレビューがありません。",
+    "yourReview": "あなたのレビュー",
+    "reviewPlaceholder": "チャレンジを終えてどう感じたかを書いてみよう…",
+    "submitReview": "送信",
+    "deleteReview": "削除",
+    "confirmDeleteReview": "このレビューを削除しますか？",
+
+    "uncategorized": "未分類",
+    "daysCompleted": "日間達成",
+    "alreadyMarked": "今日はすでに記録済み",
+
+    "challenge": "チャレンジ",
+    "accessDenied": "アクセス拒否",
+    "chatAccessDenied": "チャットに入るにはチャレンジに参加する必要があります。",
+
+    "backButton": "戻る",
+    "backButtonHint": "前の画面に戻る"
+  },
+
+  "editYourReview": "レビューを編集",
+  "deleteReview": "レビューを削除",
+  "saveReview": "保存",
+  "oops": "おっと",
+  "writeSomething": "送信する前に何か書いてね 😉",
+  "maxChars": "最大 500 文字",
+  "cannotSaveReview": "現在レビューを保存できません。",
+
+  "duo": {
+    "title": "デュオチャレンジ",
+    "you": "あなた",
+    "partner": "パートナー",
+
+    "leading": "あなたがリード中！",
+    "tied": "同点",
+    "behind": "遅れています",
+
+    "loadingPartner": "パートナーを読み込み中…",
+
+    "nudge": "励ます",
+    "nudgeHint": "タップで励ます。長押しでチャットを開く。",
+    "nudgeSent": "励ましを送信しました ✅",
+    "nudgeFailed": "通知を送信できませんでした。",
+    "nudgeUnavailable": "この機能はデュオチャレンジ専用です。",
+
+    "nudgeNoUser": "パートナーが見つかりません。",
+    "nudgeNoToken": "パートナーは通知を有効にしていないか、アップデート後まだアプリを開いていません。",
+    "nudgeDisabled": "パートナーが通知をオフにしています。",
+    "nudgeUnregistered": "パートナーの通知トークンが無効です。アプリを開いて再登録してもらってください。",
+    "nudgeExpoError": "通知サービスエラー。少し待ってから再試行してください。"
+  },
+
+  "invitationModal": {
+    "title": "友達を招待",
+    "enterUsername": "正確なユーザー名を入力してください",
+    "send": "招待を送信",
+    "userNotFound": "その名前のユーザーが見つかりません",
+    "cannotInviteSelf": "自分自身を招待することはできません",
+    "alreadyInvited": "すでに保留中の招待があります",
+    "invitationSent": "招待を送信しました 🎉",
+    "unknownError": "エラーが発生しました。もう一度お試しください。"
+  },
+
+  "inviteAFriend": "友達を招待",
+  "enterExactUsername": "正確なユーザー名を入力",
+  "alreadyInvited": "このユーザーにはすでに招待済みです",
+  "invitationSent": "招待を送信しました！",
+  "cannotInviteYourself": "自分自身を招待することはできません",
+  "sendInvitation": "招待を送信",
+
+  "participant_one": "{{count}} 人参加",
+  "participant_other": "{{count}} 人参加",
+
+  "explanation": {
+    "title": "あなたの声が大切です！",
+    "welcome": "ようこそ！ここではアプリの進化にあなたも参加できます。",
+    "optionsIntro": "できることは2つ：",
+    "optionVote": "他のユーザーが提案した案に投票する。",
+    "optionPropose": "自分のアイデアを投稿して、その場で投票対象に追加されます。",
+    "outcome": "投票期間終了後、最も票を集めた機能が実装されます。",
+    "understood": "了解"
+  },
+
+  "trophyModal": {
+    "congrats": "おめでとう！🎉",
+    "reward": "+{{count}} トロフィー",
+    "message": "{{message}}",
+    "claim": "受け取る",
+    "doubleReward": "トロフィーを2倍に",
+    "doubleMessage": "🔥 {{count}} トロフィー獲得！",
+    "claimMessage": "🎉 {{count}} トロフィーを獲得しました！"
+  },
+  "achievements": {
+    "first_connection": "初回ログイン",
+
+    "finishDuoChallenge_1_desc": "初めて友達とデュオチャレンジを達成しよう。",
+    "finishDuoChallenge_3_desc": "デュオで3回達成。二人の継続力が結果を生む。",
+    "finishDuoChallenge_5_desc": "5回のデュオ達成。協力の達人だ。",
+    "finishDuoChallenge_10_desc": "デュオ10回達成、あなたたちは伝説のコンビだ！",
+
+    "duoStreak_3_desc": "パートナーと3日連続でシンクロしよう。",
+    "duoStreak_7_desc": "7日連続デュオ、驚異的な安定感。",
+    "duoStreak_14_desc": "14日間デュオを途切れず継続。",
+    "duoStreak_21_desc": "21日間一緒に継続、まさに規律の体現。",
+    "duoStreak_30_desc": "30日連続デュオ、永遠のリスペクト！",
+
+    "perfectMonth_1_desc": "1か月間、一度も失敗せずに達成。",
+    "perfectMonth_3_desc": "3か月連続パーフェクト。次の次元へ。",
+    "perfectMonth_6_desc": "6か月パーフェクト、圧倒的な継続力。",
+    "perfectMonth_12_desc": "12か月パーフェクト：一年間無敗、まさに伝説。",
+
+    "categoriesMastered_3_desc": "3つのカテゴリーをマスター。",
+    "categoriesMastered_5_desc": "5つのカテゴリー制覇。好奇心があなたを導く。",
+    "categoriesMastered_8_desc": "8カテゴリー達成、すべてを探求する冒険者。",
+    "categoriesMastered_10_desc": "10カテゴリー完全制覇、バランスの象徴。",
+
+    "referralsRegistered_1_desc": "初めて友達を招待しよう。",
+    "referralsRegistered_3_desc": "3人の友達が参加、ムーブメントが広がっている。",
+    "referralsRegistered_5_desc": "5人の友達があなたのエネルギーに触発された。",
+    "referralsRegistered_10_desc": "10人の友達を動かし、コミュニティの中心に。",
+
+    "duoMessages_10_desc": "デュオチャットで10件メッセージを送信。",
+    "duoMessages_50_desc": "50件のデュオメッセージ、成功は対話から生まれる。",
+    "duoMessages_100_desc": "100件のやり取り、あなたたちは真のチーム。",
+    "duoMessages_250_desc": "250件のメッセージ、最高レベルの絆。",
+    "duoMessages_500_desc": "500件の共有、強くて前向きな友情。",
+
+    "focusDays_3_desc": "3日連続で集中を維持。",
+    "focusDays_7_desc": "7日間ノーディストラクション、力が湧いてくる。",
+    "focusDays_14_desc": "14日間の集中、精神が研ぎ澄まされる。",
+    "focusDays_21_desc": "21日間の集中、上級レベルへ。",
+    "focusDays_30_desc": "30日間完全フォーカス、心を完全にコントロール。",
+
+    "dailyCompletion_3_desc": "3日連続で目標を達成。",
+    "dailyCompletion_7_desc": "7日連続クリア、習慣が定着。",
+    "dailyCompletion_14_desc": "14日間パーフェクトコンボ。",
+    "dailyCompletion_21_desc": "21日間の安定した規律。",
+    "dailyCompletion_30_desc": "30日間一度も欠かさず達成、規則性のマスター。",
+
+    "challengeAdopted_10_desc": "あなたのチャレンジが10人に採用された。",
+    "challengeAdopted_50_desc": "50人があなたのアイデアに参加。",
+    "challengeAdopted_100_desc": "100人があなたのチャレンジに挑戦。",
+    "challengeAdopted_250_desc": "250人があなたに触発された。",
+    "challengeAdopted_500_desc": "500人が挑戦をフォロー：あなたはインスピレーションの源泉。",
+
+    "seasonal_1_desc": "季節限定イベントに参加。",
+    "seasonal_3_desc": "3つの季節イベントをクリア。",
+    "seasonal_5_desc": "5つのシーズン達成、季節と共に成長。",
+    "seasonal_10_desc": "10シーズン突破、ChallengeTiesの柱。",
+
+    "zeroMissLongRun_30_desc": "30日間一度も欠かさず達成。",
+    "zeroMissLongRun_60_desc": "60日間パーフェクト、完全無欠のマシン。",
+
+    "profile_completed": "プロフィール完成",
+    "finishChallenge_10": "チャレンジに本気",
+    "finishChallenge_1": "初めてのチャレンジ達成",
+    "finishChallenge_3": "やる気十分のビギナー",
+    "finishChallenge_25": "チャレンジマシーン",
+    "finishChallenge_50": "無敵！",
+    "finishChallenge_100": "生ける伝説",
+
+    "selectChallengeDays_7": "スタートライン",
+    "selectChallengeDays_30": "決意",
+    "selectChallengeDays_90": "マラソンランナー",
+    "selectChallengeDays_180": "長期型プレイヤー",
+    "selectChallengeDays_365": "伝説の忍耐力",
+
+    "streakProgress_3": "ミニ連続達成",
+    "streakProgress_7": "習慣が完成",
+    "streakProgress_14": "見事！",
+    "streakProgress_30": "確かな決意",
+    "streakProgress_60": "もう誰にも止められない",
+    "streakProgress_90": "完全にマシン化",
+    "streakProgress_180": "絶対的な規律",
+    "streakProgress_365": "怪物級の継続力",
+
+    "messageSent_1": "初メッセージ送信",
+    "messageSent_10": "チームスピリット",
+    "messageSent_50": "活発なコミュニティ",
+
+    "shareChallenge_1": "シェアが好き",
+    "shareChallenge_5": "プチインフルエンサー",
+    "shareChallenge_20": "コミュニティリーダー",
+
+    "inviteFriend_1": "友達を招待",
+    "inviteFriend_5": "仲間を拡大",
+    "inviteFriend_10": "ネットワークの王",
+
+    "voteFeature_1": "初めての機能投票",
+    "voteFeature_5": "投票が大好き",
+
+    "saveChallenge_1": "チャレンジ保存",
+    "saveChallenge_5": "5つのチャレンジを保存",
+
+    "challengeCreated_1": "チャレンジクリエイター",
+    "challengeCreated_5": "インスピレーション全開",
+    "challengeCreated_10": "イノベーター",
+
+    "finishDuoChallenge_1": "初デュオ達成",
+    "finishDuoChallenge_3": "強いチーム",
+    "finishDuoChallenge_5": "最強デュオ",
+    "finishDuoChallenge_10": "デュオの伝説",
+
+    "duoStreak_3": "デュオ連続 ×3",
+    "duoStreak_7": "デュオ連続 ×7",
+    "duoStreak_14": "デュオ連続 ×14",
+    "duoStreak_21": "デュオ連続 ×21",
+    "duoStreak_30": "デュオ連続 ×30",
+
+    "perfectMonth_1": "パーフェクト月間",
+    "perfectMonth_3": "3か月パーフェクト",
+    "perfectMonth_6": "6か月パーフェクト",
+    "perfectMonth_12": "パーフェクトイヤー",
+
+    "categoriesMastered_3": "3カテゴリー制覇",
+    "categoriesMastered_5": "5カテゴリー制覇",
+    "categoriesMastered_8": "8カテゴリー制覇",
+    "categoriesMastered_10": "10カテゴリー制覇",
+
+    "referralsRegistered_1": "1人紹介",
+    "referralsRegistered_3": "3人紹介",
+    "referralsRegistered_5": "5人紹介",
+    "referralsRegistered_10": "10人紹介",
+
+    "duoMessages_10": "デュオメッセージ ×10",
+    "duoMessages_50": "デュオメッセージ ×50",
+    "duoMessages_100": "デュオメッセージ ×100",
+    "duoMessages_250": "デュオメッセージ ×250",
+    "duoMessages_500": "デュオメッセージ ×500",
+
+    "focusDays_3": "フォーカス3日",
+    "focusDays_7": "フォーカス7日",
+    "focusDays_14": "フォーカス14日",
+    "focusDays_21": "フォーカス21日",
+    "focusDays_30": "フォーカス30日",
+
+    "dailyCompletion_3": "3日連続達成",
+    "dailyCompletion_7": "7日連続達成",
+    "dailyCompletion_14": "14日連続達成",
+    "dailyCompletion_21": "21日連続達成",
+    "dailyCompletion_30": "30日連続達成",
+
+    "challengeAdopted_10": "10人があなたのチャレンジに参加",
+    "challengeAdopted_50": "50人があなたのチャレンジに参加",
+    "challengeAdopted_100": "100人があなたのチャレンジに参加",
+    "challengeAdopted_250": "250人があなたのチャレンジに参加",
+    "challengeAdopted_500": "500人があなたのチャレンジに参加",
+
+    "seasonal_1": "季節イベント達成",
+    "seasonal_3": "3つの季節イベント達成",
+    "seasonal_5": "5つの季節イベント達成",
+    "seasonal_10": "10季節イベント達成",
+
+    "zeroMissLongRun_30": "30日連続ノーミス",
+    "zeroMissLongRun_60": "60日連続ノーミス"
+  },
+
+  "statsModal": {
+    "close": "閉じる",
+    "prevMonth": "前の月",
+    "nextMonth": "次の月",
+    "title": "{{month}} {{year}}",
+
+    "weekdays": ["日", "月", "火", "水", "木", "金", "土"],
+    "months": [
+      "1月",
+      "2月",
+      "3月",
+      "4月",
+      "5月",
+      "6月",
+      "7月",
+      "8月",
+      "9月",
+      "10月",
+      "11月",
+      "12月"
+    ]
+  },
+
+  "proposeFeature": {
+    "errorTitle": "エラー",
+    "errorNoTitle": "提案にはタイトルを入力してください。",
+    "modalTitle": "新機能を提案する",
+    "placeholderTitle": "タイトル",
+    "placeholderDescription": "説明（任意）",
+    "submitButton": "提案を送信"
+  },
+
+  "missedChallenge": {
+    "adNotReady": "広告の準備がまだできていません。少し待ってから試してください。",
+    "confirmResetTitle": "確認",
+    "confirmResetText": "ストリークパスがあります。本当にシリーズをリセットしますか？",
+    "title": "チャレンジを逃したようです",
+    "subtitle": "心配無用！シリーズを守って続けられるよ 💪",
+
+    "reset": {
+      "title": "シリーズをリセット",
+      "subtitle": "ゼロから再スタートして、 discipline を取り戻そう。"
+    },
+
+    "streakPass": {
+      "title": "ストリークパスを使う",
+      "subtitle": "ストリークパスでシリーズをそのまま維持。"
+    },
+
+    "ad": {
+      "title": "広告を見てシリーズを守る",
+      "subtitle": "短い動画を見るだけでシリーズを継続できるよ。"
+    },
+
+    "useTrophies": {
+      "title": "{{count}} トロフィーでシリーズを守る",
+      "subtitle": "少しのトロフィーと引き換えで進捗を保護。"
+    }
+  },
+  "privacyPolicy": {
+    "title": "プライバシーポリシー",
+    "lastUpdated": "最終更新日：{{date}}",
+    "legalBasisTitle": "法的根拠（GDPR）",
+    "legalBasisText": "GDPRに基づき、当社は次の法的根拠によりお客様のデータを取り扱います。(i) お客様の同意（例：通知、パーソナライズされた広告）、(ii) アプリ利用時の契約履行、(iii) セキュリティ向上および不正対策を目的とした正当な利益、(iv) 法的義務の遵守。",
+    "retentionTitle": "データの保存期間",
+    "retentionText": "データは目的達成に必要な期間のみ保存されます：アカウントおよび進捗データはアカウントが存在する限り、技術ログは最長13か月、広告・分析データはパートナー各社のポリシーに準拠し、権利行使に関する記録は法的保管として最長6年間保存されます。",
+    "transfersTitle": "EU域外へのデータ移転",
+    "transfersText": "当社のサービスプロバイダ（例：Firebase、Google AdMob）は、EU域外でデータを処理する場合があります。その際は、標準契約条項や追加的な保護措置など、公的に認められた保証に基づき、適切な保護水準を確保します。",
+    "childrenTitle": "未成年者の保護",
+    "childrenText": "本アプリは13歳未満（または各地域で定められた最低年齢未満）の子どもを対象としていません。誤って未成年のデータが処理されていることが判明した場合は、速やかな削除のためご連絡ください。",
+    "manageCookiesCta": "クッキー設定を管理する",
+    "manageCookiesUrl": "https://challengeties.app/",
+    "supervisoryAuthorityCta": "監督機関（CNIL）へ連絡する",
+    "supervisoryAuthorityUrl": "https://www.cnil.fr/fr/plaintes",
+    "introductionTitle": "はじめに",
+    "introductionText": "ChallengeTiesでは、お客様のプライバシー保護を最優先としています。本ポリシーでは、GDPRに完全準拠した形で、お客様の個人データをどのように収集・利用・保護・共有するのかをご説明します。",
+    "dataCollectedTitle": "収集するデータ",
+    "dataCollectedText": "パーソナライズされた体験をご提供するため、次のような情報を収集する場合があります：",
+    "dataCollectedItems": {
+      "nameEmail": "氏名およびメールアドレス",
+      "profilePhoto": "プロフィール写真",
+      "progress": "チャレンジにおける進捗・達成状況",
+      "interests": "興味・関心や各種の好み",
+      "browsingHistory": "閲覧履歴"
+    },
+    "dataUsageTitle": "データの利用方法",
+    "dataUsageText": "お客様のデータは次の目的で利用されます：",
+    "dataUsageItems": {
+      "personalize": "体験をパーソナライズするため",
+      "analyze": "進捗状況を分析するため",
+      "notify": "有用な通知をお届けするため",
+      "improve": "サービスを改善するため"
+    },
+    "dataSharingTitle": "データの共有",
+    "dataSharingText": "お客様の情報は機密として扱われ、次の場合に限り共有されます：",
+    "dataSharingItems": {
+      "techPartners": "技術パートナー各社",
+      "legalAuthorities": "必要に応じた法的機関",
+      "securityServices": "セキュリティ関連サービス提供者"
+    },
+    "securityTitle": "データの安全管理",
+    "securityText": "当社はお客様のデータを保護するため、次のような高度なセキュリティ対策を実施しています：",
+    "securityItems": {
+      "encryption": "機密データの暗号化",
+      "twoFactor": "強固な認証方式",
+      "monitoring": "継続的な監視体制"
+    },
+    "userRightsTitle": "お客様の権利",
+    "userRightsText": "GDPRに基づき、お客様には次の権利があります：",
+    "userRightsItems": {
+      "accessRectify": "データへのアクセス、訂正、削除を求める権利",
+      "restrictObject": "処理の制限または異議を申し立てる権利",
+      "portability": "データポータビリティに関する権利"
+    },
+    "cookiesTitle": "クッキーの利用",
+    "cookiesText": "クッキーは、ナビゲーションの改善やプラットフォーム利用状況の分析に役立ちます。クッキーはお使いの端末の設定から管理することができます。",
+    "updatesTitle": "ポリシーの更新",
+    "updatesText": "本ポリシーは、運用実態や法令の変更に応じて更新される場合があります。重要な変更がある場合は、適切な方法でお知らせいたします。",
+    "contactTitle": "お問い合わせ",
+    "contactText": "個人データまたは本ポリシーに関するご質問は、以下までご連絡ください：",
+    "contactEmail": "📧 support@challengeties.app",
+    "finalMessage": "ChallengeTies をご利用いただきありがとうございます。お客様のプライバシーを守ることが、私たちの最優先事項です。"
+  },
+  "completedOnDate": "完了日",
+  "networkError": "ネットワークエラー。再試行してください。",
+  "completion": {
+    "trophies": "トロフィー",
+    "finalTitle": "おめでとう！",
+    "adNotReadyTitle": "広告を利用できません",
+    "continue": "続ける",
+    "loadingAd": "動画を準備中…",
+    "doubleTrophies": "トロフィーを2倍にする",
+    "reward": "+{{count}} トロフィー",
+    "finalMessage": "お見事！{{count}} 個のトロフィーを獲得しました。",
+    "adNotReady": "報酬付きの広告がまだ準備できていません。しばらくしてからもう一度お試しください。",
+    "errorFinalizing": "完了処理エラー",
+    "errorFinalizingMessage": "問題が発生しました。再度お試しください。",
+    "watchAdHint": "広告を見ると報酬を2倍にできます。",
+    "wellDone": "よくやった！",
+    "youAreAwesome": "君は最高だ！✨",
+    "keepItUp": "その調子で続けよう！💪",
+    "successIsYours": "成功は君のものだ！🏆",
+    "everyEffortCounts": "一つ一つの努力が力になる。🌱",
+    "neverGiveUp": "あきらめないで！🚀",
+    "youAreOnTrack": "順調に進んでいるよ！✅",
+    "excellenceAwaits": "最高の自分が待っている。⭐",
+    "headHeldHigh": "胸を張って — 素晴らしい成果！🙌",
+    "persistencePays": "継続は必ず力になる。🔁",
+    "challengesMakeYouStronger": "チャレンジが君を強くする。🧠"
+  },
+  "share": "共有",
+  "shareStatsMessage": "これが僕の ChallengeTies スタッツだ 🔥",
+  "featureDetail": {
+    "votes": "{{count}} 票",
+    "votes_plural": "{{count}} 票",
+    "vote": "投票する",
+    "alreadyVoted": "すでに投票済みです。",
+    "share": "共有",
+    "overlayLabel": "機能詳細ウィンドウ"
+  },
+  "durationModal": {
+    "title": "期間を選択",
+    "days": "{{count}} 日",
+    "days_plural": "{{count}} 日",
+    "confirm": "確定",
+    "cancel": "キャンセル",
+    "optionLabel": "{{count}} 日",
+    "optionLabel_plural": "{{count}} 日",
+    "optionHint": "この期間を選択",
+    "closeBackdrop": "ウィンドウを閉じる"
+  },
+  "pleaseWait": "少々お待ちください…",
+  "chat": {
+    "goBack": "戻る",
+    "title": "チャット {{title}}",
+    "messagesList": "メッセージ一覧",
+    "placeholder": "メッセージを入力…",
+    "sendButton": "メッセージを送信",
+    "errorSending": "メッセージ送信中にエラーが発生しました"
+  },
+  "profileS": {
+    "bioLabel": "自己紹介",
+    "locationLabel": "所在地",
+    "interestsLabel": "興味・関心"
+  },
+  "referral": {
+    "menu": "Share & Earn",
+    "history": {
+      "title": "紹介履歴",
+      "subtitle": "合計 {{total}} 名 • {{activated}} 名が有効化",
+      "filters": {
+        "all": "すべて",
+        "activated": "有効化済み",
+        "pending": "保留中"
+      },
+      "empty": "まだ紹介されたユーザーがいません。",
+      "invitedOn": "招待日：{{date}}",
+      "activatedOn": "有効化日：{{date}}",
+      "status": {
+        "activated": "有効化",
+        "pending": "保留中"
+      }
+    },
+    "nudge": {
+      "title": "🎁 報酬が利用可能",
+      "body": "パ tier {{milestone}} の報酬を受け取れます。Share & Earn を開いてください！"
+    },
+    "share": {
+      "title": "Share & Earn",
+      "subtitle": "友達を招待しよう。彼らが最初のチャレンジを開始すると、あなたがトロフィーを獲得！段階的な報酬をアンロックしてボーナスを手に入れよう 💎",
+      "linksTitle": "あなたのリンク",
+      "linkApp": "アプリリンク",
+      "linkWeb": "Webリンク",
+      "copy": "コピー",
+      "copiedTitle": "コピー完了 ✅",
+      "copiedMsg": "クリップボードにコピーしました。",
+      "shareBtn": "共有",
+      "cardCta": "Share Card を作成",
+      "statsTitle": "あなたの統計",
+      "bigCountSuffix": "有効化済み紹介",
+      "tipNext": "あと {{remaining}} 名で {{milestone}} の報酬に到達！",
+      "tipAllReached": "すべての報酬段階が達成されました。すごい🔥",
+      "milestoneLabel": "{{count}} 件の有効化",
+      "claim": "受け取る",
+      "historyCta": "紹介履歴を見る",
+      "banner": {
+        "amount": "+{{amount}} トロフィー",
+        "message": "紹介報酬を受け取りました — ナイス 💪"
+      },
+      "nativeShare": {
+        "title": "{{appName}} — 一緒に始めよう！",
+        "message": "{{appName}} で一緒にチャレンジしよう！💪\n\nアプリリンク：{{appLink}}\nWebリンク：{{webLink}}"
+      },
+      "errors": {
+        "title": "エラー",
+        "loadStats": "紹介データを読み込めませんでした。",
+        "alreadyClaimed": "この報酬はすでに受け取り済みです。",
+        "notReached": "まだ到達していません。",
+        "claimFailed": "この報酬を受け取れませんでした。",
+        "oops": "おっと"
+      }
+    },
+    "share1": {
+      "title": "招待 — {{appName}}",
+      "inviteMessage": "{{appName}} で一緒にチャレンジしよう 👇\n{{webLink}}\n(アプリで開く：{{appLink}})",
+      "notLoggedIn": "未ログイン"
+    },
+    "shareCard": {
+      "title": "あなたの紹介カード",
+      "subtitle": "どこでも共有して招待数をブーストしよう 🚀",
+      "defaultUsername": "New Challenger",
+      "tagline": "一緒に挑戦しよう 🔥",
+      "footer": "QR をスキャンするか、リンクをタップ",
+      "actions": {
+        "save": "保存",
+        "share": "共有"
+      },
+      "alerts": {
+        "permission": {
+          "title": "権限が必要です",
+          "media": "カードを保存するには写真アクセスを許可してください。"
+        },
+        "saved": {
+          "title": "保存完了 ✅",
+          "msg": "カードがギャラリーに保存されました。"
+        },
+        "error": {
+          "title": "エラー"
+        },
+        "saveFailed": "画像を保存できませんでした。",
+        "shareUnavailable": {
+          "title": "共有不可",
+          "msg": "お使いの端末ではネイティブ共有が利用できません。"
+        },
+        "shareFailed": "画像を共有できませんでした。"
+      }
+    }
+  },
+
+  "addLocationHere": "ロケーションを追加",
+  "addInterestsHere": "興味を追加",
+  "close": "閉じる",
+  "uncategorized": "未分類",
+  "imageNotAvailable": "画像を利用できません",
+  "participant": "{{count}} 名",
+  "createPrompt": "チャレンジを作成するには：",
+  "today": "今日",
+  "errorLoadingCompletedChallenges": "完了したチャレンジの読み込みエラー。",
+  "loadingChallenges": "チャレンジを読み込み中…",
+  "noChallengesCreated": "作成されたチャレンジはありません！",
+  "noAchievementsYet": "まだ実績がありません",
+  "chooseCategory": "カテゴリを選択",
+  "category": "カテゴリ",
+  "resetFilters": "フィルターをリセット",
+  "closeModal": "閉じる",
+  "untitledChallenge": "タイトルなしのチャレンジ",
+  "failedToLoadChallenges": "チャレンジを読み込めませんでした。",
+  "noChallengesFound": "チャレンジが見つかりません！",
+  "popularChallenges": "人気のチャレンジ",
+
+  "origin": {
+    "all": "すべて",
+    "existing": "公式",
+    "created": "コミュニティ作成"
+  },
+
+  "participants_one": "参加者",
+  "participants_other": "参加者",
+
+  "saveChallenge": "チャレンジを保存",
+  "clearSearch": "クリア",
+  "removeFromSaved": "保存から削除",
+  "noChallengesIcon": "検索アイコン",
+
+  "draft": {
+    "title": "下書き",
+    "restored": "下書きを復元しました。"
+  },
+
+  "challengeC": {
+    "validation": {
+      "titleTooShort": "タイトルが短すぎます（6文字以上）。",
+      "descTooShort": "説明が短すぎます（20文字以上）。",
+      "titleInvalidChars": "タイトルには文字が含まれている必要があります。"
+    }
+  },
+
+  "imageTooBig": "画像サイズが大きすぎます（最大 {{mb}} MB）。",
+  "imageTooSmall": "画像サイズが小さすぎます（最小 600×400）。",
+
+  "quality": {
+    "hintBoostStart": "ヒント：数値目標と期間を明確にすると良いです。",
+    "hintBoostMid": "もう少し：毎日の具体的なアクションを加えると完璧！",
+    "hintGreat": "完璧！チャレンジが明確でやる気が出ます ✨"
+  },
+
+  "a11y": {
+    "typeHere": "ここに入力",
+    "close": "閉じる"
+  },
+
+  "badges": {
+    "pioneer": "パイオニア"
+  },
+
+  "leaderboard": {
+    "errorFetch": "ランキングを取得できませんでした",
+    "shareDialogTitle": "RankCard を共有",
+    "shareHint": "あなたのランクカードを共有",
+    "retry": "再試行",
+    "description": "トッププレイヤーとあなたの順位をリアルタイムで確認。",
+    "notEnough": "上位3名を表示するにはプレイヤーが不足しています。",
+    "profileOf": "{{name}} のプロフィール",
+    "unknown": "不明",
+    "loading": "ランキングを読み込み中…",
+    "title": "ランキング",
+    "currentTop3": "現在のトップ3",
+    "share": "共有",
+    "noRegion": "地域情報を取得できません。設定で位置情報を有効にしてください。",
+    "noCountry": "国情報を取得できません。設定で位置情報を有効にしてください。",
+    "goToSettings": "設定を開く",
+    "userNotFound": "ユーザーが見つかりません",
+    "locationDisabled": "位置情報が無効なため現在地を取得できません。",
+    "enableLocation": "位置情報を有効化",
+    "enableLocationHint": "設定画面を開いて位置情報を有効にしてください。",
+    "filter": {
+      "region": "地域別",
+      "national": "国別",
+      "global": "グローバル"
+    },
+    "filterHint": {
+      "region": "あなたの地域のプレイヤーを見る",
+      "national": "あなたの国のプレイヤーを見る",
+      "global": "全プレイヤーを見る"
+    },
+    "tab": {
+      "region": "地域",
+      "national": "国",
+      "global": "世界"
+    },
+    "listLabel": "ランキングプレイヤー一覧",
+    "noPlayers": "このランキングにプレイヤーがいません。"
+  },
+
+  "logoChallengeTies": "ChallengeTies ロゴ",
+
+  "defyYourLimits": "限界に挑め — 1日1チャレンジ。",
+  "joinVibrantCommunity": "人生を取り戻すために行動する仲間とつながろう。",
+  "launchAdventure": "冒険を始める",
+  "discover": "チャレンジを探す",
+
+  "mysteriousChallenge": "ミステリーチャレンジ",
+  "noDescriptionAvailable": "現在このチャレンジの説明はありません。",
+  "miscellaneous": "その他",
+
+  "dailyChallenges": "今日のチャレンジ",
+  "spotlight": "注目",
+  "refreshDaily": "明日新しいチャレンジが追加されます ✨",
+  "noChallengesAvailable": "現在利用できるチャレンジはありません。",
+  "challengesComingSoon": "新しいチャレンジがまもなく登場します！",
+
+  "screen8": {
+    "readyQuestion": "チャレンジする準備はできた？",
+    "adventureStart": "あなたの冒険は今始まります！挑戦し、成長し、仲間とつながろう。",
+    "imReady": "準備できた",
+    "startAppLabel": "アプリを開始"
+  },
+
+  "screen7": {
+    "title": "報酬を獲得しよう",
+    "description": "チャレンジを達成してトロフィーを集め、動画を見て報酬を2倍にしよう！",
+    "nextButtonLabel": "次へ進む"
+  },
+
+  "screen6": {
+    "title": "自分の挑戦を共有",
+    "description": "成果を共有し、他の人を刺激しよう。コミュニティとつながり、モチベーションを高め続けよう。",
+    "nextButtonLabel": "次へ進む"
+  },
+
+  "screen5": {
+    "title": "継続する力を祝おう！",
+    "description": "一歩一歩が目標に近づく鍵。達成を祝い、勢いをつけよう。",
+    "nextButtonLabel": "次へ進む"
+  },
+
+  "screen4": {
+    "titlePart1": "進捗を追跡して",
+    "titleHighlight": "トロフィーを獲得",
+    "description": "毎日のチェックインを習慣化しよう。トロフィーと実績がどんどんアンロックされる！",
+    "nextButtonLabel": "次へ進む"
+  },
+
+  "screen3": {
+    "title": "自分だけのチャレンジを作成",
+    "description": "日常生活に合わせてチャレンジをカスタマイズ。自分だけの目標でモチベアップ！",
+    "nextButtonLabel": "次へ進む"
+  },
+
+  "screen2": {
+    "title": "インスピレーションあふれるチャレンジ",
+    "description": "魅力的なチャレンジから選び、毎日を成功への一歩にしよう。",
+    "nextButtonLabel": "次へ進む"
+  },
+
+  "screen1": {
+    "logoLabel": "ChallengeTies ロゴ",
+    "presentationText": "あなたの成長への旅はここから始まる。",
+    "nextButtonLabel": "次へ進む"
+  },
+
+  "challengeChat": {
+    "backButton": "戻る",
+    "defaultTitle": "チャレンジチャット",
+    "placeholder": "メッセージを入力…",
+    "inputA11yLabel": "メッセージ入力欄",
+    "inputA11yHint": "ここにメッセージを入力",
+    "sendButtonLabel": "送信"
+  },
+  "contact": {
+    "errorTitle": "エラー",
+    "errorMessage": "すべての項目を入力してください。",
+    "successTitle": "メッセージ送信完了",
+    "successMessage": "できるだけ早くご返信いたします！",
+    "title": "お問い合わせ 📩",
+    "intro": "質問・問題・ご提案などありましたら、お気軽にご連絡ください。以下のチャンネル、またはフォームから直接メッセージを送信できます。",
+    "emailSection": "メール",
+    "emailLinkLabel": "support@challengeties.app にメールを送る",
+    "emailAddress": "support@challengeties.app",
+    "phoneSection": "電話",
+    "phoneLinkLabel": "+33 1 23 45 67 89 に電話する",
+    "phoneNumber": "+33 1 23 45 67 89",
+    "instagramSection": "Instagram",
+    "instagramLinkLabel": "Instagram @challengeties を見る",
+    "instagramHandle": "@challengeties",
+    "facebookSection": "Facebook",
+    "facebookLinkLabel": "Facebook @challengeties を見る",
+    "facebookHandle": "@challengeties",
+    "whatsappSection": "WhatsApp",
+    "whatsappLinkLabel": "WhatsApp で連絡する",
+    "whatsappText": "WhatsApp で連絡する",
+    "formTitle": "メッセージを送る",
+    "namePlaceholder": "お名前",
+    "nameA11y": "お名前入力欄",
+    "emailPlaceholder": "メールアドレス",
+    "emailA11y": "メールアドレス入力欄",
+    "messagePlaceholder": "メッセージ",
+    "messageA11y": "メッセージ入力欄",
+    "sendButton": "送信",
+    "sendButtonA11y": "メッセージを送信",
+    "footerMessage": "できるだけ早くお返事いたします。ChallengeTies をご利用いただきありがとうございます！🚀"
+  },
+
+  "pioneerModal": {
+    "title": "あなたはパイオニアです 🚀",
+    "description": "あなたは ChallengeTies の<b>{{first}}</b>人目のユーザーの一人です。感謝を込めて、<b>{{trophies}}</b>個のボーナストロフィーをプレゼントします 🎁",
+    "cta": "ありがとう！",
+    "closeA11y": "パイオニアモーダルを閉じる"
+  },
+
+  "history": {
+    "title": "私たちのストーリー",
+    "logoAlt": "ChallengeTies のロゴ",
+    "intro": "ChallengeTies はただのアプリではありません。日々の小さな挑戦を通じて成長し、つながり、前に進むための人間的な冒険です。一人でも、友達と一緒でも、毎日の挑戦が勝利となり、毎日が新しいチャンスに変わります。",
+    "featuresTitle": "主な機能",
+    "features": {
+      "specialChallenges": {
+        "title": "スペシャルチャレンジ",
+        "desc": "一人でも二人でも挑戦できる、楽しいものから深いものまで幅広いチャレンジ。自由に期間を選んで、無理なく自分を超えていく体験を。"
+      },
+      "progressTracking": {
+        "title": "進捗トラッキング",
+        "desc": "習慣の継続を可視化し、トロフィーを獲得し、長期的な成長を実感できます。"
+      },
+      "customChallenges": {
+        "title": "カスタムチャレンジ",
+        "desc": "自分の生活・目標に合わせて、オリジナルのチャレンジを作成できます。誰もが自分のペースで成長できるように。"
+      },
+      "community": {
+        "title": "温かいコミュニティ",
+        "desc": "前向きで優しい仲間が集まる空間。アイデアを投稿したり、投票したり、仲間と励まし合えます。"
+      }
+    },
+    "motivationTitle": "なぜ ChallengeTies を作ったのか？",
+    "motivation": "冷たく孤独で、時には罪悪感を煽るようなアプリにうんざりしていました。私たちが望んだのは、責めずに励まし、強制せずにつながり、どんな小さな勝利でも祝福できるアプリでした。楽しく、優しく、意味のある前進を一緒に。",
+    "logoMeaningTitle": "ロゴの意味",
+    "logoMeaning": "中央の「T」は Ties（つながり）を象徴しています。周囲のエネルギーは勢い・動き・コミュニティを表しています。変わろうと決意した瞬間に生まれる小さな宇宙の火花。それがこのロゴです。",
+    "visionTitle": "私たちのビジョン",
+    "vision": "アプリだけではなく、ポジティブな体験のエコシステムを創りたい。ChallengeTies、SkillTies、MindTies… 成長・学び・ウェルビーングを支える総合的な世界を。",
+    "beginningsTitle": "はじまり",
+    "beginnings": "すべては自然の中、キャンピングカーの中で始まりました。「もしアプリが、人々の意志を“続く行動”に変える手助けができたら？」完璧じゃなくていい。昨日より少し良くなるだけでいい。仲間と一緒に、一歩ずつ。",
+    "communityEngagementTitle": "コミュニティへの想い",
+    "communityEngagement": "ChallengeTies は“私たちの”ではなく、“あなたの”アプリです。ユーザー一人ひとりがアイデアを提案し、投票し、形づくっていきます。コミュニティと共に成長するアプリを目指しています。",
+    "finalThanksTitle": "ありがとう ❤️",
+    "finalThanksMessage": "ここまで読んでくれたあなた、本当にありがとう。ChallengeTies はあなたのような前向きで優しい仲間のおかげで存在しています。一緒に、もっと高く、もっと遠くへ。🚀"
+  },
+
+  "newFeaturesTitle": "新着情報",
+  "tryAnotherSearch": "別の検索語やフィルターをお試しください。",
+  "addFavorite": "「{{title}}」をお気に入りに追加",
+  "removeFavorite": "「{{title}}」をお気に入りから削除",
+  "firstAchievementsPrompt": "チャレンジを達成して最初のトロフィーを獲得しよう！",
+  "trophiesProgress": "{{completed}}/{{total}} 実績",
+  "sectionCount": "{{completed}}/{{total}}",
+  "claim": "受け取る",
+  "unlocked": "解除済み",
+  "inProgress": "進行中",
+  "mysteryAchievement": "ミステリー実績",
+  "newAchievement": "新しい実績！",
+
+  "sections": {
+    "débuts": "スタート",
+    "defisTermines": "完了したチャレンジ",
+    "engagement": "エンゲージメント",
+    "serieDeFeu": "連続達成",
+    "communication": "コミュニケーション",
+    "partage": "シェア",
+    "reseau": "ネットワーク",
+    "influence": "影響力",
+    "collection": "コレクション",
+    "creation": "クリエーション",
+    "divers": "その他"
+  },
+
+  "dailyBonus": {
+    "title": "今日のボーナス",
+    "subtitle": "ミステリールーレットを回して報酬をゲット 🎁",
+    "error": "今日のボーナスを取得できませんでした。",
+    "hint": "ミステリールーレットを開いて報酬を獲得しよう。",
+    "tag": "本日の限定",
+"shortCta": "1タップ、1サプライズ",
+    "loading": "ミステリーチェストを開く中...",
+    "congrats": "おめでとう！",
+    "teaser": "タップして報酬を確認。",
+    "visualHint": "ルーレットを回すとすぐに報酬がアカウントに追加されます。連続達成を続けて、さらに多くのボーナスをアンロックしよう ✨",
+    "spinning": "回転中...",
+    "cta": "ルーレットを回す",
+    "again": "もう一度見る",
+    "reward": {
+      "streakPass": "{{count}} 個のストリークパスを獲得 🎫",
+      "trophies": "{{count}} 個のトロフィーを獲得 🏆",
+      "xpBoost": "XP ブースト：+{{count}} トロフィー ⚡",
+      "miniChallenge": "今日のミニチャレンジがアンロックされました！ホーム画面に表示されます 👇",
+      "tempBadge": "今日限定のバッジを獲得 {{emoji}}",
+      "default": "報酬を獲得しました 🎁"
+    }
+  },
+
+  "dailyMini": {
+    "cta": "やった！",
+    "doneTitle": "よくやった 🎉",
+    "doneMessage": "ミニチャレンジ達成！トロフィーが更新されました。"
+  },
+
+  "finishChallenge_1": "初めてのチャレンジ達成",
+  "finishChallenge_3": "やる気満々の初心者",
+  "finishChallenge_10": "チャレンジに本気",
+  "finishChallenge_25": "チャレンジマシン",
+  "finishChallenge_50": "無敵！",
+  "finishChallenge_100": "生ける伝説",
+
+  "selectChallengeDays_7": "はじめの一歩",
+  "selectChallengeDays_30": "決意",
+  "selectChallengeDays_90": "マラソンランナー",
+  "selectChallengeDays_180": "長期戦が得意",
+  "selectChallengeDays_365": "伝説の忍耐",
+
+  "streakProgress_3": "ミニ連続達成",
+  "streakProgress_7": "ルーティン確立",
+  "streakProgress_14": "すごい！",
+  "streakProgress_30": "確かな決意",
+  "streakProgress_60": "もう誰にも止められない",
+  "streakProgress_90": "まさにマシン",
+  "streakProgress_180": "究極の discipline",
+  "streakProgress_365": "あなたはモンスター",
+
+  "messageSent_1": "初メッセージ送信",
+  "messageSent_10": "チームスピリット",
+  "messageSent_50": "アクティブコミュニティ",
+
+  "shareChallenge_1": "シェアが好き",
+  "shareChallenge_5": "未来のインフルエンサー",
+  "shareChallenge_20": "コミュニティリーダー",
+
+  "inviteFriend_1": "友達を招待",
+  "inviteFriend_5": "チーム拡大",
+  "inviteFriend_10": "ネットワーク王",
+
+  "voteFeature_1": "初めての投票",
+  "voteFeature_5": "投票大好き",
+
+  "saveChallenge_1": "チャレンジを保存",
+  "saveChallenge_5": "5つのチャレンジを保存",
+
+  "challengeCreated_1": "チャレンジクリエイター",
+  "challengeCreated_5": "インスパイアされた",
+  "challengeCreated_10": "イノベーター",
+
+  "first_connection": "初回ログイン",
+
+  "descriptions": {
+    "finishChallenge_1": "最初のチャレンジを達成しましょう。",
+    "finishChallenge_3": "3つのチャレンジ達成で決意を示そう。",
+    "finishChallenge_10": "10個達成で本気度が伝わる！",
+    "finishChallenge_25": "25個達成：あなたはマシン！",
+    "finishChallenge_50": "50個達成：もう止まらない！",
+    "finishChallenge_100": "100個達成：真の伝説。",
+
+    "selectChallengeDays_7": "7日間チャレンジを達成しよう。",
+    "selectChallengeDays_30": "30日間チャレンジに挑戦。",
+    "selectChallengeDays_90": "90日達成：あなたの中のマラソンランナー誕生。",
+    "selectChallengeDays_180": "180日：本物の戦士。",
+    "selectChallengeDays_365": "1年の挑戦：伝説級の忍耐。",
+
+    "streakProgress_3": "3日連続：最高のスタート！",
+    "streakProgress_7": "7日連続：完全に火がついた！",
+    "streakProgress_14": "14日連続：素晴らしい。",
+    "streakProgress_30": "30日連続：鉄の discipline。",
+    "streakProgress_60": "60日：あなたの意志に勝てるものなし。",
+    "streakProgress_90": "90日：止まらないマシン。",
+    "streakProgress_180": "180日：究極の discipline。",
+    "streakProgress_365": "365日：あなたはモンスター！",
+
+    "messageSent_1": "初めてチャットでメッセージを送信。",
+    "messageSent_10": "10件：チームスピリット！",
+    "messageSent_50": "50件：コミュニティの柱。",
+
+    "shareChallenge_1": "初めてチャレンジをシェア。",
+    "shareChallenge_5": "5回シェア：影響力アップ！",
+    "shareChallenge_20": "20回シェア：コミュニティのリーダー。",
+
+    "inviteFriend_1": "初めて友達を招待。",
+    "inviteFriend_5": "5人招待して仲間を増やそう。",
+    "inviteFriend_10": "10人招待：ネットワークの王者。",
+
+    "voteFeature_1": "初めての機能投票。",
+    "voteFeature_5": "5回投票して声を届けよう。",
+
+    "saveChallenge_1": "初めてチャレンジを保存。",
+    "saveChallenge_5": "5つ保存：立派なコレクター。",
+
+    "challengeCreated_1": "初めてカスタムチャレンジを作成。",
+    "challengeCreated_5": "5つ作成：クリエイティブ！",
+    "challengeCreated_10": "10個作成：真のイノベーター。",
+
+    "first_connection": "初回ログイン：ようこそ！",
+    "profile_completed": "プロフィール完成：準備万端！"
+  },
+  "profile_completed": "プロフィールが完成しました",
+  "challenges": {
+    "eatHealthy": {
+      "title": "毎日ヘルシーに食べる",
+      "description": "毎日健康的な食事をとり、あなたのウェルビーイングを高めましょう。"
+    },
+    "walk10000Steps": {
+      "title": "1万歩歩く",
+      "description": "毎日1万歩を歩いてアクティブに過ごしましょう。"
+    },
+    "saveMoney": {
+      "title": "毎日5ドル貯金する",
+      "description": "毎日5ドルを貯金して、金銭的な規律を身につけましょう。"
+    },
+    "meditation": {
+      "title": "10分間の瞑想",
+      "description": "1日わずか10分の瞑想でマインドフルネスを高めましょう。"
+    },
+    "readChapter": {
+      "title": "1日1章読む",
+      "description": "読書の習慣をつけるために毎日1章読みましょう。"
+    },
+    "writeWords": {
+      "title": "毎日500文字書く",
+      "description": "毎日500文字を書くことで創造力を解放しましょう。"
+    },
+    "learnSkill": {
+      "title": "新しいスキルを学ぶ",
+      "description": "毎日少しずつ新しいスキルを学び、自己成長を促しましょう。"
+    },
+    "declutterSpace": {
+      "title": "スペースの整理整頓",
+      "description": "毎日少しずつ片付けをして、心と空間をクリアにしましょう。"
+    },
+    "dailyYoga": {
+      "title": "15分のヨガ",
+      "description": "毎日15分のヨガで心身を整えましょう。"
+    },
+    "practiceGratitude": {
+      "title": "感謝の練習",
+      "description": "1日の終わりに感謝できることを振り返りましょう。"
+    },
+    "workout15Min": {
+      "title": "15分の運動",
+      "description": "毎日15分以上運動する習慣を身につけましょう。"
+    },
+    "drinkWater": {
+      "title": "水を2リットル飲む",
+      "description": "1日2リットルの水を飲んでしっかり水分補給しましょう。"
+    },
+    "planTomorrow": {
+      "title": "明日の計画を立てる",
+      "description": "毎日の終わりに翌日の計画を立てて整えましょう。"
+    },
+    "morningStretch": {
+      "title": "朝のストレッチ",
+      "description": "一日の始まりを軽いストレッチで整えましょう。"
+    },
+    "timeOutside": {
+      "title": "外で10分過ごす",
+      "description": "毎日少し外に出てメンタルヘルスを整えましょう。"
+    },
+    "unplug": {
+      "title": "1時間デジタル断ち",
+      "description": "1日1時間、画面から離れてリフレッシュしましょう。"
+    },
+    "compliment": {
+      "title": "褒め言葉を贈る",
+      "description": "誰かに褒め言葉を伝えて、その日を明るくしましょう。"
+    },
+    "network": {
+      "title": "毎日のネットワーキング",
+      "description": "毎日1人、仕事関係の人に連絡してネットワークを広げましょう。"
+    },
+    "deepBreathing": {
+      "title": "深呼吸の練習",
+      "description": "毎日5分間、深呼吸をして心を落ち着かせましょう。"
+    },
+    "wakeUpEarly": {
+      "title": "早起きをする",
+      "description": "毎日早起きの習慣を身につけましょう。"
+    },
+    "learnLanguage": {
+      "title": "新しい言語を学ぶ",
+      "description": "毎日少しずつ新しい言語を勉強しましょう。"
+    },
+    "familyTime": {
+      "title": "家族との時間",
+      "description": "毎日家族と大切な時間を過ごしましょう。"
+    },
+    "playInstrument": {
+      "title": "楽器の練習",
+      "description": "毎日少しずつ楽器のスキルを磨きましょう。"
+    },
+    "positiveAffirmations": {
+      "title": "ポジティブアファメーション",
+      "description": "毎日ポジティブな言葉を自分に言い聞かせましょう。"
+    },
+    "coldShower": {
+      "title": "冷水シャワーチャレンジ",
+      "description": "毎日冷水シャワーを浴びてエネルギーと意志力を高めましょう。"
+    },
+    "noSugar30Days": {
+      "title": "30日間砂糖断ち",
+      "description": "砂糖をやめて、より健康的な生活を送りましょう。"
+    },
+    "dailyVisualization": {
+      "title": "毎日のビジュアライゼーション",
+      "description": "毎日5分、目標を視覚化しましょう。"
+    },
+    "kindnessAct": {
+      "title": "毎日の親切行動",
+      "description": "毎日1つ、誰かに親切な行動をしましょう。"
+    },
+    "wakeUp5AM": {
+      "title": "朝5時起き",
+      "description": "毎日5時に起きる習慣を身につけましょう。"
+    },
+    "newRecipe": {
+      "title": "週に1つ新しいレシピ",
+      "description": "毎週新しいレシピを試して料理スキルを高めましょう。"
+    },
+    "read10Pages": {
+      "title": "1日10ページ読む",
+      "description": "毎日10ページ以上読み、知識を広げましょう。"
+    },
+    "oneMinPlank": {
+      "title": "1分プランク",
+      "description": "毎日1分のプランクで体幹を鍛えましょう。"
+    },
+    "learnWordDaily": {
+      "title": "毎日新しい単語を学ぶ",
+      "description": "毎日1つ新しい単語を覚えて語彙力を広げましょう。"
+    },
+    "noCaffeine": {
+      "title": "7日間カフェイン断ち",
+      "description": "1週間カフェインをやめて体をリセットしましょう。"
+    },
+    "dailyWins": {
+      "title": "毎日3つの成功を書く",
+      "description": "1日の終わりに3つの成功を記録して自信を高めましょう。"
+    },
+    "talkToStranger": {
+      "title": "毎日知らない人と話す",
+      "description": "毎日新しい人と話してコミュニケーション能力を磨きましょう。"
+    },
+    "minimalistWardrobe": {
+      "title": "ミニマリスト衣服チャレンジ",
+      "description": "1か月間、33着のみで過ごしてミニマリズムを体験しましょう。"
+    },
+    "noComplaints": {
+      "title": "21日間不平ゼロ",
+      "description": "21日間不平を言わず、ポジティブな思考を育てましょう。"
+    },
+    "selfReflection": {
+      "title": "毎日のセルフリフレクション",
+      "description": "毎晩5分、自分の行動や考えを振り返りましょう。"
+    },
+    "hobbyTime": {
+      "title": "趣味に30分投資する",
+      "description": "毎日30分、好きな趣味に時間を使いましょう。"
+    },
+    "listenPodcast": {
+      "title": "毎日ポッドキャストを聞く",
+      "description": "毎日1つ教育系ポッドキャストを聞いて成長しましょう。"
+    },
+    "reducePlastic": {
+      "title": "プラスチック削減",
+      "description": "使い捨てプラスチックを避けて環境に優しい行動をしましょう。"
+    },
+    "goodPosture": {
+      "title": "良い姿勢を保つ",
+      "description": "背中をまっすぐに保ち、姿勢を意識しましょう。"
+    },
+    "reduceScreenTime": {
+      "title": "夜のスクリーンタイム削減",
+      "description": "就寝の30分前からスクリーンを避けましょう。"
+    },
+
+    "challengeAlimentationConsciente": {
+      "title": "マインドフルイーティング",
+      "description": "気を散らすものを避け、食べる感覚に集中して食事をしましょう。"
+    },
+    "challengeCommunication": {
+      "title": "久々の連絡",
+      "description": "しばらく連絡していない人にメッセージを送り、つながりを深めましょう。"
+    },
+    "challengeDes3Sourires": {
+      "title": "3つの笑顔",
+      "description": "毎日3人に笑顔を届けて、喜びを広げましょう。"
+    },
+    "challengeEcritureCreative": {
+      "title": "クリエイティブライティング",
+      "description": "毎日フィクションの短い物語を書いて創造力を刺激しましょう。"
+    },
+    "challengeGestionTemps": {
+      "title": "時間管理チャレンジ",
+      "description": "ポモドーロなどのテクニックを使って生産性を高めましょう。"
+    },
+    "challengeJeuneIntermittent": {
+      "title": "間欠的ファスティング",
+      "description": "毎日決まった時間帯で断食を実践しましょう。"
+    },
+    "challengeLectureSurprise": {
+      "title": "サプライズ読書",
+      "description": "ランダムに選んだ本を毎日1章読みましょう。"
+    },
+    "challengeModeAvion": {
+      "title": "機内モードチャレンジ",
+      "description": "1日1時間スマホを機内モードにしてデジタルデトックス。"
+    },
+    "challengeOrganisationDigitale": {
+      "title": "デジタル整理整頓",
+      "description": "毎日15分、ファイルやメールを整理して生産性をアップ。"
+    },
+    "challengePenseePositive": {
+      "title": "ポジティブ思考",
+      "description": "ネガティブな考えをポジティブに置き換えましょう。"
+    },
+    "challengePlanificationHebdomadaire": {
+      "title": "週次プランニング",
+      "description": "毎週日曜日に1週間の計画を立てましょう。"
+    },
+    "defiCarnetGratitude": {
+      "title": "感謝日記",
+      "description": "毎日3つ、感謝できることを書き出しましょう。"
+    },
+    "defiConnexionNature": {
+      "title": "自然とのつながり",
+      "description": "毎日30分外で過ごして自然と触れ合いましょう。"
+    },
+    "defiCreativiteQuotidienne": {
+      "title": "毎日のクリエイティビティ",
+      "description": "毎日、小さなアートや文章などで創造力を発揮しましょう。"
+    },
+    "defiDigitalDetox": {
+      "title": "デジタルデトックス",
+      "description": "毎日2時間、スクリーンから離れて心身をリセット。"
+    },
+    "defiDuZeroDechet": {
+      "title": "ゼロ・ウェイスト",
+      "description": "1日、ゴミを出さないようリサイクルとミニマルな生活を心がけましょう。"
+    },
+    "defiEcritureQuotidienne": {
+      "title": "毎日のジャーナリング",
+      "description": "毎日1ページ日記を書き、思考と感情を整理しましょう。"
+    },
+    "defiMarcheConsciente": {
+      "title": "マインドフルウォーク",
+      "description": "歩くたびに呼吸と感覚を意識しながら歩きましょう。"
+    },
+    "defiGratitudeVisuelle": {
+      "title": "ビジュアル感謝",
+      "description": "毎日1つ、感謝できるものを写真やメモで残しましょう。"
+    },
+    "defiMatineeSansEcrans": {
+      "title": "朝のノースクリーン",
+      "description": "朝の1時間、画面を見ずに一日を始めましょう。"
+    },
+    "defiMicroMeditation": {
+      "title": "マイクロ瞑想",
+      "description": "毎日1分の短い瞑想で心を落ち着けましょう。"
+    },
+    "defiNoBuyMonth": {
+      "title": "不要な買い物ゼロ",
+      "description": "必需品以外は買わず、ミニマルな生活を実践しましょう。"
+    },
+    "defiRangementMinimaliste": {
+      "title": "ミニマリスト片付け",
+      "description": "毎日1つ不要なものを手放して、生活をシンプルにしましょう。"
+    },
+    "defiRepasEquilibre": {
+      "title": "バランスの良い食事",
+      "description": "毎食、タンパク質・野菜・炭水化物のバランスを意識しましょう。"
+    },
+    "defiRespirationConsciente": {
+      "title": "意識呼吸",
+      "description": "毎日5分、呼吸に集中してリラックスしましょう。"
+    },
+    "défiArretTabac": {
+      "title": "禁煙チャレンジ",
+      "description": "タバコをやめて、より健康な体と心を手に入れましょう。"
+    },
+    "defiSommeilReparateur": {
+      "title": "質の良い睡眠",
+      "description": "寝る前にリラックスルーティンを行い、睡眠の質を高めましょう。"
+    }
+  },
+  "imagePickFailed": "画像を選択できませんでした。",
+  "allFieldsRequired": "すべての項目を入力してください（画像は任意です）。",
+  "mustBeLoggedIn": "チャレンジを作成するにはログインが必要です。",
+  "success": "成功",
+  "challengeCreated": "チャレンジが作成されました！",
+  "invalidCredentials": "メールまたはパスワードが正しくありません。",
+  "challengeCreateFailed": "チャレンジを作成できませんでした。",
+  "createYourChallenge": "チャレンジを作成",
+  "inspireOthers": "魅力的なチャレンジで他の人を鼓舞しよう！",
+  "challengeTitle": "チャレンジのタイトル",
+  "challengeDescription": "説明",
+  "selectCategory": "カテゴリを選択",
+  "uploadImage": "画像をアップロード（任意）",
+  "uploadImageOptional": "画像をアップロード（任意）",
+  "createChallengeButton": "チャレンジを作成",
+  "exploreChallengesTitle": "チャレンジを探す",
+  "created": "作成済み",
+  "all": "すべて",
+  "tryOtherSearchOrFilter": "別の検索ワードまたはフィルターを試してください。",
+  "errorLoadingChallenges": "チャレンジを読み込めませんでした。",
+  "searchPlaceholder": "チャレンジを検索…",
+  "filterByOrigin": "{{origin}} でフィルター",
+  "Existing": "公式",
+  "Created": "ユーザー作成",
+  "noDescription": "説明がありません",
+  "loadChallengesFailed": "チャレンジを読み込めませんでした。",
+  "participant_plural": "{{count}} 人の参加者",
+  "tryDifferentSearch": "別の検索またはフィルターを試してください。",
+  "info": "情報",
+  "loginRequired": "チャレンジを開始するにはログインしてください。",
+  "challengeAlreadyTaken": "このチャレンジはすでに進行中です。",
+  "unableToAddChallenge": "チャレンジを追加できませんでした。",
+  "unableToRemoveChallenge": "チャレンジを削除できませんでした。",
+  "challengeNotFound": "チャレンジが見つかりません。",
+  "alreadyMarkedTitle": "すでに記録済み",
+  "alreadyMarkedMessage": "今日はすでにこのチャレンジを記録済みです。",
+  "congrats": "おめでとう！",
+  "challengeFinishedPrompt": "チャレンジが完了しました。トロフィーを受け取るには最終確認してください。",
+  "markedTitle": "よくやった！",
+  "markedMessage": "今日のチャレンジが記録されました！",
+  "finalCongratsTitle": "おめでとう！",
+  "finalCongratsMessage": "チャレンジ完了！{{count}} トロフィーを獲得しました 🎖️",
+  "unableToFinalizeChallenge": "チャレンジを完了できませんでした。",
+  "unableToMarkChallenge": "チャレンジを記録できませんでした。",
+  "streakResetTitle": "連続記録がリセットされました",
+  "streakResetMessage": "あなたの連続記録は 1 に戻りました。",
+  "unableToResetStreak": "連続記録をリセットできませんでした。",
+  "adWatchedTitle": "広告視聴完了",
+  "adWatchedMessage": "記録され、連続記録はそのまま続きます。",
+  "unableToMarkAfterAd": "広告後の記録ができませんでした。",
+  "notEnoughTrophiesTitle": "トロフィーが不足しています",
+  "notEnoughTrophiesMessage": "このオプションを実行するにはトロフィーが足りません。",
+  "trophiesUsedTitle": "トロフィーを使用しました",
+  "trophiesUsedMessage": "記録され、連続記録はそのまま続きます。（{{cost}} トロフィーが消費されました）",
+  "unableToMarkWithTrophies": "トロフィーで記録できませんでした。",
+  "errorLoadingSavedChallenges": "保存されたチャレンジを読み込めませんでした：{{message}}",
+  "rateUs": "アプリを評価する",
+
+  "notificationsPush": {
+    "title": "ChallengeTies",
+    "morning1": "良い一日の始まりに小さなチャレンジをしよう！",
+    "morning2": "9時！今日のチャレンジを選んでスタートしよう。",
+    "evening1": "今夜のチャレンジが待ってるよ。やってみる？",
+    "evening2": "今日を進めるのに2分あれば十分。",
+    "nudgeBody": "{{from}} が「{{title}}」を再開しようと誘っています 💪",
+    "invitationAccepted": "{{username}} があなたの招待を承認しました！",
+    "invitationRefused": "{{username}} が招待を拒否しました。",
+    "inviteAcceptedToast": "招待が承認されました 🎉",
+    "inviteRefusedToast": "招待が拒否されました 🙏",
+    "opened": "通知が開かれました"
+  },
+
+  "invitation": {
+    "subtitle": "チャレンジ {{challengeId}} に招待されています！",
+    "accepting": "承認中…",
+    "success": "チャレンジに参加しました！",
+    "invalid": "無効な招待です",
+    "joinedChallenge": "チャレンジに参加しました！",
+    "loading": "読み込み中…",
+    "invalidTitle": "招待が無効です",
+    "invalidMessage": "この招待は見つからないか、削除されました。",
+    "expiredTitle": "招待期限切れ",
+    "expiredMessage": "この招待は期限切れです。もう一度送ってもらってください。",
+    "title": "{{username}} があなたをデュオに招待しています",
+    "message": "承認するとデュオでチャレンジを開始できます。一緒に進捗を追いましょう。",
+    "accept": "承認",
+    "refuse": "拒否",
+    "acceptHint": "招待を承認してデュオ開始",
+    "refuseHint": "招待を拒否して閉じる",
+    "restartTitle": "デュオでやり直しますか？",
+    "restartMessage": "このチャレンジはソロで進行中です。デュオを開始すると進行状況がリセットされます。",
+    "cancel": "キャンセル",
+    "continue": "続ける",
+
+    "errors": {
+      "unknown": "不明なエラーです。",
+      "expired": "招待が期限切れです。",
+      "autoInvite": "自分自身を招待することはできません。",
+      "alreadyInDuoForChallenge": "このチャレンジはすでにデュオで参加中です。"
+    },
+
+    "userFallback": "ユーザー",
+    "notForYouTitle": "おっと",
+    "notForYouMessage": "この招待はこのアカウント向けではありません。"
+  },
+
+  "invitationS": {
+    "shareTitle": "デュオ招待",
+    "sendTitle": "友達を招待",
+    "shareSubtitle": "「{{challenge}}」（{{days}}日間）用のリンクを生成。アプリ → 直接開く。未インストール → ストアへ。",
+    "shareHint": "このリンクはどこでも使えるユニバーサルリンクです。",
+    "shareMessage": "「{{title}}」に一緒に挑戦しよう！",
+    "generateAndShare": "生成して共有",
+    "shareMessageWithTitle": "「{{title}}」の{{days}}日チャレンジに一緒に挑戦しよう！",
+
+    "title": "友達を招待",
+    "subtitleDirect": "友達の正確なユーザー名を入力して招待を送信します。",
+    "usernamePlaceholder": "ユーザー名",
+    "send": "招待を送信",
+    "sentShort": "送信しました！",
+    "sent": "招待を送信しました ✅",
+
+    "confirmReset": {
+      "title": "デュオに切り替えますか？",
+      "message": "招待を送ると、ソロの進行状況がリセットされます。続けますか？"
+    },
+
+    "errors": {
+      "alreadyInvited": "このチャレンジにはすでに招待が進行中です。",
+      "expired": "この招待は期限切れです。",
+      "unknown": "エラーが発生しました。",
+      "inviterAlreadyStarted": "あなたはこのチャレンジをすでにソロで開始しています。",
+      "alreadyInDuoForChallenge": "相手はすでにこのチャレンジでデュオ参加中です。",
+      "duoAlready": "このチャレンジはすでにデュオ参加中です。",
+      "permissions": "権限不足です。ログイン状態とFirestoreルールを確認してください。",
+      "userNotFound": "この名前のユーザーが見つかりません。",
+      "usernameRequired": "ユーザー名を入力してください。",
+      "params": "招待パラメータが無効です。",
+      "autoInvite": "自分自身は招待できません。",
+      "inviterHasPendingForChallenge": "このチャレンジにはすでに保留中の招待があります。",
+      "inviteeHasPendingForChallenge": "相手にはすでにこのチャレンジの保留中の招待があります。"
+    },
+
+    "confirmStartDuoTitle": "デュオに切り替えますか？",
+    "confirmStartDuoMessage": "デュオ開始時、ソロの進行状況はリセットされます。続けますか？",
+
+    "actions": {
+      "cancel": "キャンセル",
+      "continue": "続ける"
+    }
+  },
+
+  "commonS": {
+    "close": "閉じる",
+    "notLoggedIn": "ログインが必要です。",
+    "sending": "送信中…",
+    "cancel": "キャンセル",
+    "continue": "続ける",
+    "errorTitle": "エラー"
+  },
+
+  "notificationsScreen": {
+    "title": "招待 & 通知",
+    "filterAll": "すべて",
+    "filterDuo": "デュオのみ",
+    "expiresInShort": "{{time}}で期限切れ",
+    "expired": "期限切れ",
+    "remain": {
+      "d": "{{count}}日",
+      "h": "{{count}}時間",
+      "m": "{{count}}分"
+    },
+    "subtitle": "デュオ招待を管理し、そのステータスを確認できます。",
+    "tabInbox": "受信",
+    "tabSent": "送信済み",
+    "tabAccepted": "承認済み",
+    "tabRefused": "拒否済み",
+    "challenge": "チャレンジ",
+    "open": "開く",
+    "cancelShort": "取消",
+    "cancelTitle": "招待を取り消しますか？",
+    "cancelMessage": "この招待は取り消されます。",
+    "cancelConfirm": "取り消す",
+    "cancelled": "招待を取り消しました",
+    "emptyTitle": "まだ何もありません",
+    "emptyText": "ここにあなたの招待が表示されます。",
+
+    "a11y": {
+      "accept": "招待を承認",
+      "refuse": "招待を拒否",
+      "cancel": "招待を取り消す",
+      "open": "チャレンジを開く"
+    },
+
+    "status": {
+      "pending": "保留",
+      "accepted": "承認済み",
+      "refused": "拒否",
+      "cancelled": "取消済み"
+    }
+  },
+
+  "pendingInvite": "招待保留中",
+
+  "settingsPage": {
+    "location": "位置情報",
+    "handleLocation": "位置情報をオン/オフ",
+    "error": "位置情報の更新に失敗しました",
+    "enableInSystem": "システム設定で通知を有効にしてください。",
+    "locationTip": "近くのおすすめのために位置情報をオンにしてください。",
+    "openMailError": "メールアプリを開けませんでした。",
+    "enabled": "有効",
+    "updated": "設定が更新されました"
+  },
+
+  "support": "サポート",
+  "dangerZone": "危険ゾーン",
+  "appVersion": "バージョン",
+
+  "challengeAlimentationConsciente": {
+    "miniCours": "マインドフル・イーティング 🍽️ とは…（同内容の日本語訳）",
+    "exemples": [
+      "例 1 ✨：…",
+      "例 2 💡：…",
+      "例 3 🚀：…",
+      "例 4 🌱：…"
+    ],
+    "ressources": [
+      {
+        "title": "マインドフル・イーティングの力 - TedXTalks",
+        "type": "video",
+        "url": "https://youtu.be/fAm4r4FQMQM?si=QeEswp-Yz4Zkccfl"
+      },
+      {
+        "title": "マインドフル・イーティングを本当に実践する方法",
+        "type": "article",
+        "url": "https://youtu.be/otNX8RVn6-U?si=7bY2EJsvYojwgJW3"
+      },
+      {
+        "title": "機械的な食事からマインドフル・イーティングへ",
+        "type": "bonus",
+        "url": "https://www.eufic.org/fr/une-vie-saine/article/dune-alimentation-machinale-a-une-alimentation-consciente/"
+      }
+    ]
+  },
+  "challengeCommunication": {
+    "miniCours": "👋🎯 長い間連絡を取っていない相手にコンタクトを取るのは少し勇気がいるかもしれませんが、それは人間関係を強め、幸福感を高める素晴らしい一歩です。大切なのは、正直さ 👍 と思いやりです。近況を共有したり、相手の話に心から興味を示しましょう。昔の思い出や笑い話 🤣 を振り返ることでも、心の距離が一気に縮まります。沈黙を埋めることではなく、相手との“価値ある時間” 🎁 を作ることが目的です。",
+    "exemples": [
+      "以前の同僚にメッセージを送り、過去に一緒に取り組んだプロジェクトを話題にする：『ねえ、この前ふと思い出したんだけど、あのブログ企画楽しかったよね。最近どうしてる？』✨",
+      "昔のクラスメートに電話して、一緒に勉強したテーマについて聞く：『あのマーケのケーススタディ覚えてる？あれ仕事で活かしたりしてる？』💡",
+      "親しい友人に手書きの手紙 📝 を送るのも、関係を大切にしている気持ちがよく伝わります 🚀",
+      "いとことオンラインでバーチャルカフェ ☕ を開催して、子どもの頃の思い出や近況を語り合う 🌱"
+    ],
+    "ressources": [
+      {
+        "title": "昔の友人とのつながりを取り戻す方法",
+        "type": "video",
+        "url": "https://www.slate.fr/story/267116/technique-renouer-liens-anciens-amis-amitie-psychologie-sociale-etude-scientifique"
+      },
+      {
+        "title": "幸福のための社会的つながりの重要性",
+        "type": "article",
+        "url": "https://www.cequinousrelie.com/prendre-soin/le-bien-etre-par-le-lien-social/"
+      }
+    ]
+  },
+
+  "challengeDes3Sourires": {
+    "miniCours": "笑顔はシンプルに見えて、誰かの一日を明るくする強力な力があります！😊 毎日3人に笑顔を向けるこのチャレンジでは、周りに喜びを広げるだけでなく、自分自身の幸福度もアップします。大切なのは、“心からの笑顔”。作り笑いではなく、温かさのある笑顔を意識しましょう 👍",
+    "exemples": [
+      "例 1 ✨ : 朝コーヒーを買うとき、バリスタに笑顔で「ありがとう」と言う。",
+      "例 2 💡 : 犬の散歩中、すれ違う人に笑顔であいさつする。",
+      "例 3 🚀 : 朝鏡を見るとき、自分に向かって笑顔をつくる。",
+      "例 4 🌱 : バスや電車を降りるとき、運転手さんに笑顔で「ありがとう」と伝える。"
+    ],
+    "ressources": [
+      {
+        "title": "The hidden power of smiling | Ron Gutman",
+        "type": "video",
+        "url": "https://www.youtube.com/watch?v=U9cGdRNMdQQ"
+      },
+      {
+        "title": "7 Benefits of Smiling and Laughing",
+        "type": "article",
+        "url": "https://www.lifehack.org/articles/communication/7-benefits-smiling-and-laughing.html"
+      },
+      {
+        "title": "笑顔の効果について",
+        "type": "bonus",
+        "url": "https://youtu.be/abFAazci84s?si=rpL-37dpK4sBum-y"
+      }
+    ]
+  },
+
+  "challengeEcritureCreative": {
+    "miniCours": "👩‍🏫ようこそ！このミニチャレンジでは、毎日500文字のフィクションを書くことで創造力を育てます 📝✨ 小説家になる必要はありません。大事なのは、想像力を自由に遊ばせること 🌈。創造力は筋肉と同じで、鍛えれば鍛えるほど強くなります 🏋️‍♂️。会話、描写、多様なキャラクターなどを取り入れて、あなたの物語をより豊かにしましょう 💓",
+    "exemples": [
+      "例 1 ✨ - 『アミラの不思議な旅』：時間を超えて旅する少女の物語。",
+      "例 2 💡 - 『光の都の秘密』：パリの影の中に隠されたミステリー。",
+      "例 3 🚀 - 『星間ミッション』：宇宙船クルーの挑戦と冒険の物語。",
+      "例 4 🌱 - 『ささやく森』：自然が語りかける幻想的な世界。"
+    ],
+    "ressources": [
+      {
+        "title": "ストーリーを書く方法",
+        "type": "video",
+        "url": "https://youtu.be/5pdx1Y3l0vg?si=xvOOmaYzEXMfdmBK"
+      },
+      {
+        "title": "創造力を育てるためのヒント",
+        "type": "article",
+        "url": "https://www.laparentheseimaginaire.com/ecriture/8-conseils-pour-developper-votre-creativite-decrivain"
+      },
+      {
+        "title": "作家による執筆テクニックのポッドキャスト",
+        "type": "bonus",
+        "url": "https://www.academie.les-mots-ratures.com/blog/meilleurs-podcasts-ecriture-ecrivains-romans-guide-2024"
+      }
+    ]
+  },
+
+  "challengeGestionTemps": {
+    "miniCours": "時間管理は生産性と目標達成の鍵です 😃。その代表的な方法がポモドーロ・テクニック 🍅。25分集中 → 5分休憩を1セットとし、4セット後は15〜20分の長めの休憩を取ります。集中力の維持や疲労の軽減に効果的 💪。日々にリズムと意味を与えて、目標達成をより簡単にしましょう 🚀",
+    "exemples": [
+      "例 1 ✨：重要なレポート作成を、25分×数セットに分割して進める。",
+      "例 2 💡：語学学習で25分集中、5分で復習。",
+      "例 3 🚀：クリエイティブ作業にも有効で、フロー状態に入りやすくなる。",
+      "例 4 🌱：休憩時間にはストレッチや水分補給をしてリフレッシュ。"
+    ],
+    "ressources": [
+      { "title": "ポモドーロ・テクニック", "type": "video", "url": "https://www.youtube.com/watch?v=mNBmG24djoY&t=19s" },
+      { "title": "時間管理の極意", "type": "article", "url": "https://youtu.be/s8tOj43JC-o?si=ii4G0MT0UFSedclZ" },
+      { "title": "時間をうまく管理する", "type": "bonus", "url": "https://asana.com/fr/resources/time-management-tips" }
+    ]
+  },
+
+  "challengeJeuneIntermittent": {
+    "miniCours": "🌞 断続的断食は、消化器官に休息を与え ⏸️、集中力や代謝を高めると言われています 🚀。例えば8時間の食事時間と16時間の断食を設定する方法です。体に優しい選択ですが、健康上の注意が必要なので必ず専門家に相談してください 🩺✨",
+    "exemples": [
+      "例 1 ✨：12時〜20時の間に食事をし、それ以外は断食する。",
+      "例 2 💡：運動は食事時間内に行うと効果的。",
+      "例 3 🚀：断食中は水分補給をしっかり。",
+      "例 4 🌱：できるだけ未加工の食品を選ぶことを意識する。"
+    ],
+    "ressources": [
+      {
+        "title": "断続的断食の始め方",
+        "type": "video",
+        "url": "https://youtu.be/pl37cnIOnKw?si=NChrVL6wZq8NqWTI"
+      },
+      {
+        "title": "断続的断食と細胞の浄化",
+        "type": "article",
+        "url": "https://www.pasteur.fr/fr/journal-recherche/actualites/jeune-intermittent-nettoyage-cellulaire-meilleure-sante"
+      },
+      {
+        "title": "断食の効果についてのポッドキャスト",
+        "type": "bonus",
+        "url": "https://www.radiofrance.fr/franceinter/podcasts/grand-bien-vous-fasse/grand-bien-vous-fasse-du-lundi-25-novembre-2024-1998229"
+      }
+    ]
+  },
+
+  "challengeLectureSurprise": {
+    "miniCours": "📚 読書は語彙力、創造力 🎨、共感力を育てる最高の習慣です。ランダムに選んだ本は、あなたを新しい世界へ導く“文学のくじ引き”🎲。毎日少しずつ読むことで、ペースではなく楽しさを重視した穏やかな知的旅を楽しめます 🚶‍♂️✨",
+    "exemples": [
+      "例 1 ✨：本屋で目を閉じて、手が触れた本を読む。",
+      "例 2 💡：自宅の本棚から読んでいない本を一冊選ぶ。",
+      "例 3 🚀：未読本のタイトルを紙に書いて“ブックポット”を作り、毎日1枚引く。",
+      "例 4 🌱：電子書籍やオーディオブックでも同じように楽しめる。"
+    ],
+    "ressources": [
+      {
+        "title": "読書は脳をどう変えるのか",
+        "type": "video",
+        "url": "https://youtu.be/TvQ9AbWVuTU?si=UjevxYORwzkqhDVI"
+      },
+      {
+        "title": "読書のメリット",
+        "type": "article",
+        "url": "https://www.decitre.fr/blog/bienfaits-de-la-lecture?srsltid=AfmBOopSa-39BXUeD35rWw5ob-MvRtEsIQy2d7CnIYwdn-06HhvpDkvR"
+      },
+      {
+        "title": "読書の効果とは？",
+        "type": "bonus",
+        "url": "https://www.podcastics.com/podcast/episode/quels-bienfaits-nous-apporte-la-lecture-329681/"
+      }
+    ]
+  },
+
+  "challengeModeAvion": {
+    "miniCours": "📵 通知だらけの現代では、“1時間の機内モード”は心の充電時間です 🔅。静かな環境で思考が整理され、生産性や創造力が高まります。日記を書く、読書、アイデアの整理、あるいはただゆっくり過ごすなど、情報過多から解放される貴重な時間になります 🌴",
+    "exemples": [
+      "例 1 ✨：瞑想の時間にする。",
+      "例 2 💡：日記を書いたり、翌日の目標を整理する。",
+      "例 3 🚀：新しいアイデアのブレインストーミングに使う。",
+      "例 4 🌱：散歩に出て、自然の音に集中する。"
+    ],
+    "ressources": [
+      {
+        "title": "機内モードの役割を理解する",
+        "type": "video",
+        "url": "https://youtu.be/xW1nPijFqk4?si=Cfq_lLmOP93VH_GR"
+      },
+      {
+        "title": "機内モードにするべき理由",
+        "type": "article",
+        "url": "https://leclaireur.fnac.com/article/cp33801-5-bonnes-raisons-de-passer-votre-smartphone-en-mode-avion/"
+      }
+    ]
+  },
+
+  "challengeOrganisationDigitale": {
+    "miniCours": "デジタル整理は🎪 バランス感覚のいる作業ですが、生産性の向上には欠かせません 🎯。毎日15分 🕒 だけ使うことで、後の数時間を節約できます。メール整理 📧、フォルダ分類、無駄なファイル削除、明確な命名など、小さな積み重ねが大きな成果になります 🚀",
+    "exemples": [
+      "例 1 ✨：明確で階層的なフォルダ構成を作る。",
+      "例 2 💡：メールフィルタを設定し、優先度の低いメールを自動分類。",
+      "例 3 🚀：不要なダウンロードやゴミ箱を定期的に削除。",
+      "例 4 🌱：ショートカットキーを使って操作時間を短縮。"
+    ],
+    "ressources": [
+      { "title": "ファイルの整理方法", "type": "video", "url": "https://youtu.be/Z_4jyyPixD4?si=cQHEQuncUUB_5-2W" },
+      { "title": "ファイル管理の利点", "type": "article", "url": "https://www.acollab.com/quels-sont-les-7-avantages-dune-gestion-de-fichiers/" },
+      { "title": "デジタルデトックス", "type": "bonus", "url": "https://podcasts.apple.com/fr/podcast/22-d%C3%A9tox-digitale-3-conseils-pour-d%C3%A9sencombrer-ton/id1736480617?i=1000664554079" }
+    ],
+    "illustrationSuggeree": "整理されたデスクと、整頓されたデジタルフォルダが表示されたコンピューター画面",
+    "imageHelper": "https://firebasestorage.googleapis.com/v0/b/challengeme-d7fef.appspot.com/o/Challenges-Helper%2Fch-organisation-digitale.png?alt=media"
+  },
+
+  "challengePenseePositive": {
+    "miniCours": "🧘‍♀️ ネガティブな思考をポジティブに変えることは、人生を大きく前向きにしてくれる強力なスキルです。『できない』と思ったら『できる。挑戦する価値がある』と言ってみましょう ✨。自分の思考を観察し、方向づける力があなたを大きく成長させます 🌈",
+    "exemples": [
+      "例 1 ✨：『難しすぎる』→『これは成長できるチャンス』",
+      "例 2 💡：『ミスしそう』→『学んで上達できる』",
+      "例 3 🚀：『無理だ』→『できる。やってみよう』",
+      "例 4 🌱：『私はダメだ』→『毎日成長している途中』"
+    ],
+    "ressources": [
+      { "title": "ポジティブ思考の力", "type": "video", "url": "https://youtu.be/qo19BMD4i98?si=ELJYB6Ty_aNbWb08" },
+      { "title": "ポジティブ思考のコツ", "type": "article", "url": "https://epycure.com/blogs/journal-feel-good/les-8-cles-de-la-pensee-positive?srsltid=AfmBOor4uLL7BvQoA0iSLLm8BYzghp_qNhXa8ZAA9rwrcbV1me1it31o" },
+      { "title": "ネガティブ思考を手放す方法", "type": "bonus", "url": "https://youtu.be/2RZ9vqEfyCI?si=pOusiyI7RrZssiPc" }
+    ],
+    "illustrationSuggeree": "ノートに前向きな言葉を書き込んでいる人",
+    "imageHelper": "https://firebasestorage.googleapis.com/v0/b/challengeme-d7fef.appspot.com/o/Challenges-Helper%2Fch-pensee-positive.png?alt=media"
+  },
+
+  "challengePlanificationHebdomadaire": {
+    "miniCours": "📚 毎週日曜日に30分だけ時間を取り、1週間の計画を立てることで生産性が大幅に向上します 💪。やるべきことが明確になり、ストレスが軽減され、心の負担も軽くなります 😌。お気に入りの飲み物を準備して ☕、ノートを開き 🖊️、ゆっくり計画を立てましょう。",
+    "exemples": [
+      "例 1 ✨：アマンダは毎週日曜に計画を立てる習慣をつけ、生産性が向上した。",
+      "例 2 💡：ジャックはアプリで週間計画を立て、時間を大幅に節約。",
+      "例 3 🚀：ダイアンは手帳を使い、音楽を聴きながら計画を書くのが日曜のルーティン。",
+      "例 4 🌱：マークは仕事だけでなく、運動や趣味の時間も計画に組み込んでいる。"
+    ],
+    "ressources": [
+      { "title": "効果的な週次計画の立て方", "type": "video", "url": "https://youtu.be/jozNEpY8iik?si=HtP-7UG3qP2we-hH" },
+      { "title": "週次計画の方法", "type": "article", "url": "https://www.appytodo.com/comment-planifier-semaine/" },
+      { "title": "生産性向上のヒント", "type": "bonus", "url": "https://youtu.be/2uAvargJv0k?si=Y8eQu93930jlm4Wz" }
+    ],
+    "illustrationSuggeree": "机に座り、1週間の予定をノートに書いている人",
+    "imageHelper": "https://firebasestorage.googleapis.com/v0/b/challengeme-d7fef.appspot.com/o/Challenges-Helper%2Fch-planification-hebdomadaire.png?alt=media"
+  },
+
+  "coldShower": {
+    "miniCours": "1日のエネルギーを最大化したい？ 🌞 冷水シャワーチャレンジがぴったり！ discipline、エネルギー、集中力を一気に高めます 💦。最初は温かいシャワーから始め、徐々に温度を下げていきましょう 👉。できるだけ長く冷水のまま耐えるのが目標です 🚀",
+    "exemples": [
+      "例 1 ✨：温水から始め、徐々に冷たくしていく。",
+      "例 2 💡：できるだけ長く冷水の下に立つ。",
+      "例 3 🚀：朝の冷水シャワーでスイッチオン！",
+      "例 4 🌱：まずは30秒を目標に。"
+    ],
+    "ressources": [
+      { "title": "冷水シャワーを簡単に始める方法", "type": "video", "url": "https://youtu.be/sy4ATccOm2Y?si=GF66WoqndmAhF2om" },
+      { "title": "冷水シャワーの健康効果", "type": "article", "url": "https://laboratoires-phytoceutic.com/blogs/news/10-bienfaits-de-la-douche-froide?srsltid=AfmBOopQYq_J-sF5wQpr1hMjlvsWIHCJ4IA_9HXA3G6Chm7W2-xYdPzA" },
+      { "title": "冷水浴とレジリエンス", "type": "podcast", "url": "https://www.podcastics.com/podcast/episode/douche-froide-resilience-bain-glaceavec-maxime-frost-304582/" }
+    ],
+    "illustrationSuggeree": "冷水シャワーを浴びて活力を感じる人",
+    "imageHelper": "https://firebasestorage.googleapis.com/v0/b/challengeme-d7fef.appspot.com/o/Challenges-Helper%2Fch-douche-froide.png?alt=media"
+  },
+  "compliment": {
+  "miniCours": "おめでとうございます 🎉 効果的な褒め方を学ぼうとしていますね。これは人間関係を深めて、誰かの一日を明るくする、とても強力なスキルです。良い褒め言葉は、具体的で、誠実で、その人の「結果」だけでなく「努力」も認めるものです。大切なのは、たくさん練習すること。さあ、始めましょう。あなたの友達も、家族も、そしてあなた自身も、その優しい言葉に値します 🌟",
+  "exemples": [
+    "例 1 ✨：「あなたの説明の仕方、本当にわかりやすいね。すごく理解の助けになったよ。」",
+    "例 2 💡：「いつも新しいことを学ぼうとする、その姿勢を本当に尊敬してる。」",
+    "例 3 🚀：「君のユーモアセンスのおかげで、いつもその場が明るくなるね。」",
+    "例 4 🌱：「チームにいつも前向きなエネルギーを運んでくれて、本当に感謝してるよ。」"
+  ],
+  "ressources": [
+    { "title": "Les bienfaits des compliments", "type": "video", "url": "https://youtube.com/shorts/Pq0mBfooSKg?si=2bprdsj9FvQvYQyP" },
+    { "title": "Un petit compliment, ça fait du bien !", "type": "article", "url": "https://shop.simplycure.com/blogs/health-guide/les-bienfaits-des-compliments" },
+    { "title": "Faire ou recevoir des compliments", "type": "podcast", "url": "https://podcast.chloebloom.com/episodes/faire-ou-recevoir-des-compliments-c-est-dur" }
+  ],
+  "illustrationSuggeree": "笑顔で、自然に相手を褒めている人物のイラスト。",
+  "imageHelper": "https://firebasestorage.googleapis.com/v0/b/challengeme-d7fef.appspot.com/o/Challenges-Helper%2Fch-compliment.png?alt=media"
+},
+"dailyVisualization": {
+  "miniCours": "毎日少し時間をとって、自分の目標を「視覚化」してみましょう。目を閉じて5分間、自分がその目標を達成している姿をイメージします。どんな気持ちですか？何が見えますか？何を感じますか？🧠🌟 このシンプルな習慣は、モチベーションを高め、問題解決のヒントを生み出し、新しいアイデアを引き出してくれます。コツは「続けること」。できれば毎日やってみましょう 🎯📅",
+  "exemples": [
+    "例 1 ✨：昇進を目指しているなら、新しいオフィスで複雑な仕事をこなし、会議をリードしている自分をイメージする。",
+    "例 2 💡：マラソン完走が目標なら、ゴールラインを駆け抜けている自分の姿、その喜びと誇りをイメージする。",
+    "例 3 🚀：起業を目指すなら、成功したCEOとしてチームと戦略を話し合い、満足したクライアントから電話を受けている自分を思い描く。",
+    "例 4 🌱：もっと健康的な生活を目指すなら、バランスの取れた食事を作り、運動をして、エネルギッシュで幸せそうな自分をイメージする。"
+  ],
+  "ressources": [
+    { "title": "Visualisation - La loi de l'attraction", "type": "video", "url": "https://youtu.be/7b80UgObUyQ?si=GJtDTWcwbQuWanzB" },
+    { "title": "Visualisation et imagerie mentale", "type": "article", "url": "https://www.passeportsante.net/fr/Therapies/Guide/Fiche.aspx?doc=visualisation_th" },
+    { "title": "La visualisation positive", "type": "bonus", "url": "https://www.radiofrance.fr/franceinter/podcasts/etat-d-esprit/la-visualisation-positive-avec-alain-lancelot-2263321" }
+  ],
+  "illustrationSuggeree": "静かな場所で目を閉じ、自分の目標をイメージしている人物。",
+  "imageHelper": "https://firebasestorage.googleapis.com/v0/b/challengeme-d7fef.appspot.com/o/Challenges-Helper%2Fch-daily-visualisation.png?alt=media"
+},
+"dailyWins": {
+  "miniCours": "👏 自分を認めることは、自己信頼を育てるうえでとても大切です。毎日、私たちは大きなことから小さなことまで、たくさんの「勝ち」を積み重ねていますが、多くの場合それを忘れてしまいます。そこで今日から、シンプルだけど強力な習慣を取り入れてみましょう：毎日「小さな成功」を3つ書き出すことです 📝。締切どおりにレポートを終えたこと 🕒、同僚を助けたこと 👫、自分のために休む時間をとったこと 🛀…。こうした瞬間を大事にすると、自己肯定感がぐんぐん育っていきます 🚀",
+  "exemples": [
+    "例 1 ✨：「今日はプレッシャーの中でも、プロジェクトを時間どおりに終わらせた。」",
+    "例 2 💡：「新しく入った同僚に、ツールの使い方を丁寧に教えてあげた。」",
+    "例 3 🚀：「疲れていたけど、今朝ちゃんとランニングに行った。」",
+    "例 4 🌱：「自分のためにヘルシーなご飯を作る時間をとれた。」"
+  ],
+  "ressources": [
+    { "title": "Focus on 3 Daily Wins", "type": "video", "url": "https://youtu.be/N9RVuMunXIQ?si=g589bCqMnifcthhI" },
+    { "title": "The Power of Daily Wins", "type": "article", "url": "https://vocal.media/motivation/the-power-of-daily-wins-how-small-successes-lead-to-big-change" },
+    { "title": "Your Daily Win", "type": "bonus", "url": "https://podcasts.apple.com/us/podcast/your-daily-win/id1403606358" }
+  ],
+  "illustrationSuggeree": "ノートに今日の成功を書き込み、そばにお茶が置かれていて、まわりに星が散りばめられているイラスト。",
+  "imageHelper": "https://firebasestorage.googleapis.com/v0/b/challengeme-d7fef.appspot.com/o/Challenges-Helper%2Fch-daily-wins.png?alt=media"
+},
+"dailyYoga": {
+  "miniCours": "一日を笑顔でスタートしたい？😊 それならヨガがおすすめです！ ヨガは単なる運動ではなく、身体と心のバランスを整えるプラクティスです 💫。1日たった15分でも、柔軟性が上がり、エネルギーが増し、内側からの穏やかな安定感が育まれます 🧘‍♀️。年齢やレベルに関係なく、誰でも始められます。自分の成長のための「大切な時間」として、呼吸に意識を向けながら取り組んでみましょう。あなたならきっとできます 💪🏻",
+  "exemples": [
+    "例 1 ✨：朝の目覚めに、初心者向けのヨガセッションを一つやってみる。",
+    "例 2 💡：ハタヨガやヴィンヤサなど、いろいろなスタイルを試して自分に合うものを探す。",
+    "例 3 🚀：朝のルーティンにヨガを組み込んで、一日を落ち着いてスタートする。",
+    "例 4 🌱：快適なヨガマットと静かな空間を用意して、集中しやすい環境を整える。"
+  ],
+  "ressources": [
+    { "title": "Cours de Yoga pour débuter", "type": "video", "url": "https://youtu.be/3_rUl32CPbA?si=fmQlAL1kmuyx7UpZ" },
+    { "title": "Les Bienfaits du Yoga", "type": "article", "url": "https://www.cerclesdelaforme.com/blog/coaching-sportif/les-5-bienfaits-du-yoga/" },
+    { "title": "Podcasts sur le Yoga", "type": "bonus", "url": "https://ecolefrancaisedeyoga.fr/5-podcasts-a-decouvrir-sur-le-yoga/" }
+  ],
+  "illustrationSuggeree": "朝日が昇る屋外で、ヨガのポーズをとっている人物。",
+  "imageHelper": "https://firebasestorage.googleapis.com/v0/b/challengeme-d7fef.appspot.com/o/Challenges-Helper%2Fch-daily-yoga.png?alt=media"
+},
+"declutterSpace": {
+  "miniCours": "片づけることは、単に「物をどかす」ことではなく、自分の生産性と心の穏やかさを支えてくれる空間をつくることです 🧘‍♀️。すべての物にはエネルギーがあり、使っていない物はいつの間にか雑念や罪悪感のもとになってしまうこともあります 😓。まずは小さなエリアから始めましょう。「これは今の自分に役立っている？」「これを見ると嬉しい？」と自分に問いかけ、感情的な価値と実用的な価値を見分けていきます。そうすることで、本当に自分の人生を支えてくれる物だけが残っていきます 💼",
+  "exemples": [
+    "例 1 ✨：服を仕分けして、「気に入っていて着ている物」と「もう着ない物」に分け、後者は手放す。",
+    "例 2 💡：本棚を整理して、お気に入りだけを残し、もう読まない本は寄付するか譲る。",
+    "例 3 🚀：デスク周りを「仕事に集中できるスペース」に変えるため、不要な紙や古いメモを捨て、文房具をきちんと整理する。",
+    "例 4 🌱：キッチンを整理して、使っていない調理器具を手放し、食材や道具を取り出しやすく並べ直す。"
+  ],
+  "ressources": [
+    { "title": "Désencombrer sa Maison", "type": "video", "url": "https://youtu.be/oH_WlPxp4es?si=c1CBz2Ma715G9eMo" },
+    { "title": "Les Bienfaits du Désencombrement", "type": "article", "url": "https://laureganisatrice.fr/les-bienfaits-du-desencombrement-et-du-rangement/#:~:text=D%C3%A9sencombrer%20et%20ranger%20fait%20diminuer%20le%20stress&text=Il%20nous%20fait%20sans%20arr%C3%AAt,%C3%A0%20ce%20sentiment%20de%20culpabilit%C3%A9." },
+    { "title": "Trier, Désencombrer et Organiser", "type": "bonus", "url": "https://www.radiofrance.fr/francebleu/podcasts/cote-experts-l-invite/trier-desencombrer-et-organiser-votre-interieur-pour-alleger-votre-mental-1561486" }
+  ],
+  "illustrationSuggeree": "持ち物を仕分けして、「残す山」と「手放す山」に分けている人物。",
+  "imageHelper": "https://firebasestorage.googleapis.com/v0/b/challengeme-d7fef.appspot.com/o/Challenges-Helper%2Fch-declutter-space.png?alt=media"
+},
+"defiArretTabac": {
+  "miniCours": "あなたの「自由」への旅へようこそ 🕊️！ 喫煙は習慣です。つまり、新しい習慣で置き換えることで断ち切ることができます 💔。毎日、思いきり笑ったり 😂、身体を動かしたりする時間 🕺 をつくってみましょう。これは、ついタバコに手を伸ばしてしまうストレスを減らすのに役立ちます。サポートもとても大事 🔑。このチャレンジを周りの人にシェアして、つらいときは応援をお願いしましょう。覚えておいてください：タバコのない1日1日が、すべて大きな勝利です 🎉",
+  "exemples": [
+    "例 1 ✨：タバコ休憩の代わりに、短いヨガや瞑想をする。",
+    "例 2 💡：吸いたくなったときは、水を飲んだり、シュガーレスガムを噛んだりする。",
+    "例 3 🚀：SNSなどで「禁煙チャレンジ」を宣言して、周りから応援してもらう。",
+    "例 4 🌱：タバコを吸わずに過ごせた日を毎日お祝いする。1日1日が、新しい人生の芽になる。"
+  ],
+  "ressources": [
+    { "title": "Prendre du Plaisir à Arrêter de Fumer", "type": "video", "url": "https://youtu.be/t9Sujfu5BsY?si=fcE48WX-mpBSyFBs" },
+    { "title": "Les bénéfices de l'arrêt du tabac", "type": "article", "url": "https://www.fedecardio.org/je-m-informe/les-benefices-immediats-de-l-arret-du-tabac/" },
+    { "title": "Et si vous arrêtiez VRAIMENT de fumer", "type": "bonus", "url": "https://www.radiofrance.fr/franceinter/podcasts/grand-bien-vous-fasse/grand-bien-vous-fasse-du-lundi-02-septembre-2024-9669868" }
+  ],
+  "illustrationSuggeree": "朝日を眺めながら、自由と再出発を象徴するように深呼吸している人物。",
+  "imageHelper": "https://firebasestorage.googleapis.com/v0/b/challengeme-d7fef.appspot.com/o/Challenges-Helper%2Fch-arret-du-tabac.png?alt=media"
+},
+"defiCarnetGratitude": {
+  "miniCours": "毎日「感謝」を実践することは、小さなことから大きなことまで、人生のありがたさを味わうこと 🙏。この姿勢は、ポジティブな出来事を引き寄せ、あなたのウェルビーイングをぐっと高めてくれます ❤️。ノートに感謝を書き留めることで、その瞬間を心と記憶にしっかり刻むことができます 📖。今日の成功、支えてくれた人、道で見かけた一輪の花 🌸… 何でもOK。日々の感謝を、少しずつ咲かせていきましょう。",
+  "exemples": [
+    "例 1 ✨ – チームの前でのプレゼンがうまくいった。",
+    "例 2 💡 – カフェで誰かがドアを開けて待っていてくれた。",
+    "例 3 🚀 – ノンストップで5km走ることができた。",
+    "例 4 🌱 – きれいな夕焼けをゆっくり眺める時間がとれた。"
+  ],
+  "ressources": [
+    { "title": "Start a Gratitude Journal", "type": "video", "url": "https://youtu.be/GZghu_xFRM8?si=fChgmowBEpz2P-r9" },
+    { "title": "Tenir un Journal de Gratitude", "type": "article", "url": "https://amandebasilic.com/journal-de-gratitude/" },
+    { "title": "Gratitude Journal", "type": "bonus", "url": "https://podcasts.apple.com/fr/podcast/gratitude-journal/id1493974729" }
+  ],
+  "illustrationSuggeree": "穏やかな表情で日記に感謝を書き込んでいる人物。",
+  "imageHelper": "https://firebasestorage.googleapis.com/v0/b/challengeme-d7fef.appspot.com/o/Challenges-Helper%2Fch-carnet-gratitude.png?alt=media"
+},
+"defiConnexionNature": {
+  "miniCours": "自然の世界は本当にすばらしい存在です 🌳🌷🦋。自然とつながることは、感謝の気持ちを育てるだけでなく、心そのものを満たしてくれます 🧘‍♂️✨。気持ちを落ち着かせ、よりきれいな空気を吸い、心と体をリセットする時間にもなります 🍃😊。1日30分だけでも外に出て、歩いたり、走ったり、木陰で本を読んだり、夜空の星を眺めたりしてみましょう 🌌。",
+  "exemples": [
+    "例 1 ✨：早起きして朝日を見に行く 🌅",
+    "例 2 💡：友達とピクニックに行って、木々の下でご飯を食べる 🥪🌳",
+    "例 3 🚀：近所をランニングまたはウォーキングして自然を感じる 🏃‍♀️",
+    "例 4 🌱：庭や公園で瞑想して、風や鳥の声を味わう 🧘‍♀️"
+  ],
+  "ressources": [
+    { "title": "Améliorer sa Connexion à la Nature", "type": "video", "url": "https://youtu.be/XuFNa0v4EuM?si=rm3_58lXyu3-umnF" },
+    { "title": "Comment Profiter des Bienfaits de la Nature ?", "type": "article", "url": "https://www.mindbodygreen.com/0-20793/10-reasons-why-being-in-nature-is-good-for-you.html" },
+    { "title": "Notre Connexion à la Nature", "type": "bonus", "url": "https://www.radiofrance.fr/franceinter/podcasts/la-tete-au-carre/notre-connexion-a-la-nature-6405232" }
+  ],
+  "illustrationSuggeree": "緑豊かな公園で瞑想している人物。",
+  "imageHelper": "https://firebasestorage.googleapis.com/v0/b/challengeme-d7fef.appspot.com/o/Challenges-Helper%2Fch-connexion-nature.png?alt=media"
+},
+"defiCreativiteQuotidienne": {
+  "miniCours": "毎日、新しいアイデアや小さな作品を生み出してみませんか？ 🌱 それがこのクリエイティビティチャレンジです。日々の小さな「創作」は、あなたの思考をより自由で表現豊かなものに変えていきます 🎨。目標は、とにかく「毎日なにかを生み出す」こと 🚀。完璧さは不要です。ラフなスケッチでも、ひらめいたアイデアでも、短い文章でもOK 💡",
+  "exemples": [
+    "例 1 ✨：1枚の写真を撮って、アート風にレタッチしてみる。",
+    "例 2 💡：その日の出来事や気持ちについて、短い詩や歌詞を書いてみる。",
+    "例 3 🚀：家にある物の中から一つを選び、それをもっと便利にするアイデアを考える。",
+    "例 4 🌱：自然をテーマにした風景画やイラストを描いてみる。"
+  ],
+  "ressources": [
+    { "title": "Libérez votre Créativité", "type": "video", "url": "https://youtu.be/7RJIrHi8ifE?si=IFU4Kz31-rd3O0CE" },
+    { "title": "Les Bienfaits de la Créativité", "type": "article", "url": "https://bluevertsoul.fr/bienfaits-creativite" },
+    { "title": "La Créativité", "type": "bonus", "url": "https://www.radiofrance.fr/franceculture/podcasts/serie-la-creativite-avec-samah-karaki" }
+  ],
+  "illustrationSuggeree": "筆を手に持ち、今からキャンバスに描き始めようとしている人物。",
+  "imageHelper": "https://firebasestorage.googleapis.com/v0/b/challengeme-d7fef.appspot.com/o/Challenges-Helper%2Fch-creativite-quotidienne.png?alt=media"
+},
+"defiDigitalDetox": {
+  "miniCours": "😌 1日2時間のデジタルデトックスは、目とメンタルの両方にとって最高の休息です。超・接続社会に生きているからこそ、「意図的にオフラインになる時間」がとても大事 🌲。その時間を、読書・瞑想・運動などにあててみましょう。デジタルストレスが減るほど、集中力はアップします 🚀。最初は1日10分から始めて、少しずつ時間を延ばしていくのもOK 💫",
+  "exemples": [
+    "例 1 ✨ – 画面を消して、本を30分読む。",
+    "例 2 💡 – スクロールの代わりに、外を散歩する。",
+    "例 3 🚀 – 寝る前のスマホ時間をやめて、ヨガやストレッチに置き換える。",
+    "例 4 🌱 – SNSの代わりに、絵を描いたり、編み物・クラフトなどの手仕事をする。"
+  ],
+  "ressources": [
+    { "title": "Less Screen Time, More Life", "type": "video", "url": "https://youtu.be/MwXNOxhhYLg?si=HdaA8JxAWK6ghmhJ" },
+    { "title": "Digital Detox - Quels sont ses bienfaits ?", "type": "article", "url": "https://www.livi.fr/en-bonne-sante/digital-detox-bienfaits/" },
+    { "title": "Vivre sans Téléphone, la Digital-Detox", "type": "bonus", "url": "https://www.radiofrance.fr/franceinter/podcasts/le-zoom-de-la-redaction/le-zoom-de-la-redaction-du-mercredi-27-decembre-2023-3330605" }
+  ],
+  "illustrationSuggeree": "ハンモックで本を読んでいる人物。周りにはスマホがなく、落ち着いた雰囲気。",
+  "imageHelper": "https://firebasestorage.googleapis.com/v0/b/challengeme-d7fef.appspot.com/o/Challenges-Helper%2Fch-digital-detox.png?alt=media"
+},
+"defiDuZeroDechet": {
+  "miniCours": "エコなチャレンジ、やってみる？ 💚 今日は「ゴミを出さない一日」にトライしてみましょう 🗑️。捨てる前に、まず減らす・再利用する・リサイクルすることを考えます ♻️。マイボトル、エコバッグ、繰り返し使えるカトラリー… 小さな工夫の積み重ねがとても大きなインパクトになります。グリーンに考え、グリーンに生きよう 🌎",
+  "exemples": [
+    "例 1 ✨：ペットボトルではなく、マイボトルを使う。",
+    "例 2 💡：カフェに自分のマグカップを持参する。",
+    "例 3 🚀：量り売りのお店で、自分の容器を使って買い物をする。",
+    "例 4 🌱：生ごみをコンポストに回して、土に還す。"
+  ],
+  "ressources": [
+    { "title": "Vivre avec Moins de Déchets", "type": "video", "url": "https://youtu.be/B5ijPk5_8pM?si=NNztRhVW8d3KWFLA" },
+    { "title": "Pourquoi passer au Zéro Déchet ?", "type": "article", "url": "https://www.wespring.com/blog/zero-dechet/article/pourquoi-passer-au-zero-dechet" },
+    { "title": "Zéro Déchet, c'est Possible ?", "type": "bonus", "url": "https://www.radiofrance.fr/franceinter/podcasts/on-se-decarbone/on-se-decarbone-du-lundi-18-novembre-2024-2176680" }
+  ],
+  "illustrationSuggeree": "リサイクル用の分別ボックスにゴミを仕分けしている女性。",
+  "imageHelper": "https://firebasestorage.googleapis.com/v0/b/challengeme-d7fef.appspot.com/o/Challenges-Helper%2Fch-zero-dechet.png?alt=media"
+},
+"defiEcritureQuotidienne": {
+  "miniCours": "📓 毎日「書く」習慣をつくってみましょう。シェイクスピアになる必要なんてありません。ペン ✒️ を紙の上ですべらせて、心に浮かんだことをそのまま書き出すだけでOKです。日記を書くことは、内省を深め、創造性を解放し、とても大きなセラピー効果をもたらしてくれます。また、どんな日々を過ごしてきたかを振り返る手がかりにもなり、自分の成長や叶えたい夢・目標を記録する最高のツールでもあります。さあ、ペンを手に取って、1行から始めてみましょう 🖊️✨",
+  "exemples": [
+    "例 1 ✨：「親愛なる日記へ。今日はこんな人に出会って…」と書き出してみる。",
+    "例 2 💡：「今日、仕事でつらかった出来事があった。そのときの感情と、そこから学んだことを書いてみる。」",
+    "例 3 🚀：「最近ずっと頭の中にあるプロジェクトのアイデアは…」と、思いつくままに書き出す。",
+    "例 4 🌱：「毎日、感謝していることを3つ書いていく」とテーマを決めて続ける。"
+  ],
+  "ressources": [
+    {
+      "title": "The Benefits of Writing - TEDXTalk",
+      "type": "video",
+      "url": "https://youtu.be/S1t90ucM-54?si=-Vcbr5UxE_RJuZbL"
+    },
+    {
+      "title": "Les Bienfaits de l'écriture",
+      "type": "article",
+      "url": "https://www.psychologies.com/Therapies/Developpement-personnel/Methodes/Articles-et-Dossiers/5-bienfaits-insoupconnes-de-l-ecriture"
+    },
+    {
+      "title": "Écrire",
+      "type": "podcast",
+      "url": "https://www.radiofrance.fr/franceinter/podcasts/serie-ecrire"
+    }
+  ],
+  "illustrationSuggeree": "お茶を飲みながら日記に向かっている人物のイラスト。",
+  "imageHelper": "https://firebasestorage.googleapis.com/v0/b/challengeme-d7fef.appspot.com/o/Challenges-Helper%2Fch-ecriture-quotidienne.png?alt=media"
+},
+"defiGratitudeVisuelle": {
+  "miniCours": "🙂 毎日「ビジュアル感謝チャレンジ」で感謝の気持ちを目覚めさせましょう ✨。ルールはシンプルです：毎日、感謝しているものを1つ見つけて、目に見える形で残します 📸。それは何でも構いません — 一杯のコーヒー ☕️、子どもからのハグ 👦、美しい夕焼け 🌅 など。小さなことに気づき、感謝の心を育てるきっかけになります 🙏。写真を撮ってもいいし、絵を描いたりペイントしてもOKです 💕。",
+  "exemples": [
+    "Exemple 1 ✨: 手作りのあたたかい家庭料理 🥘。",
+    "Exemple 2 💡: お気に入りの本をゆっくり読んでいる時間 👓📖。",
+    "Exemple 3 🚀: 自然の中を歩いてリフレッシュした瞬間 🏞️。",
+    "Exemple 4 🌱: 水やりをしたばかりの、芽を出し始めた植物 🌱。"
+  ],
+  "ressources": [
+    {
+      "title": "Comment pratiquer la gratitude ?",
+      "type": "video",
+      "url": "https://youtu.be/PAmueEyG-6o?si=4ePdoDlwBdw2A1jJ"
+    },
+    {
+      "title": "Les bénéfices de la gratitude visuelle",
+      "type": "article",
+      "url": "https://strategies-evolution.com/les-7-bienfaits-de-la-gratitude-2/#:~:text=Gr%C3%A2ce%20%C3%A0%20la%20gratitude%2C%20votre,bien%2D%C3%AAtre%20physique%20et%20mental."
+    },
+    {
+      "title": "Podcast sur la gratitude visuelle",
+      "type": "podcast",
+      "url": "https://www.radiofrance.fr/franceinter/podcasts/grand-bien-vous-fasse/les-bienfaits-de-la-gratitude-8436207"
+    }
+  ],
+  "illustrationSuggeree": "自然の中を散歩しながら、美しい景色を撮ろうとしているカメラを手にした人物。",
+  "imageHelper": "https://firebasestorage.googleapis.com/v0/b/challengeme-d7fef.appspot.com/o/Challenges-Helper%2Fch-gratitude-visuelle.png?alt=media"
+},
+"defiMarcheConsciente": {
+  "miniCours": "🚶‍♀️ マインドフル・ウォーキング（意識的な歩行）は、「今この瞬間」に意識を向けるためのマインドフルネスの実践です。1歩1歩の感覚や、足の裏と地面のつながり、肺に出入りする空気の流れに意識を向けます 😌。肌に触れる風、顔に当たる太陽の光、周囲の音 🍃 に気づきながら歩きましょう。散歩のたびに、自分自身と自然とつながり直すチャンスになります 🌳。",
+  "exemples": [
+    "Exemple 1 ✨: 一歩ごとに足の裏の感覚に意識を向けて歩く。",
+    "Exemple 2 💡: 歩きながら、息を吸う・吐く感覚を丁寧に感じる。",
+    "Exemple 3 🚀: 周囲の音（鳥の声、車の音、人の話し声など）に耳を澄ませながら歩く。",
+    "Exemple 4 🌱: 肌に感じる気温や風の感触を意識してみる。"
+  ],
+  "ressources": [
+    {
+      "title": "A Guide to Mindful Walking",
+      "type": "video",
+      "url": "https://youtu.be/0nwqqOCtGEU?si=smRIRhAsjl2j2wUc"
+    },
+    {
+      "title": "Les Bienfaits de la Marche Consciente",
+      "type": "article",
+      "url": "https://www.femmeactuelle.fr/sante/forme/la-marche-consciente-cette-habitude-douce-qui-ameliore-le-moral-et-la-concentration-2192839"
+    },
+    {
+      "title": "Marche en Pleine Conscience - Podcast",
+      "type": "podcast",
+      "url": "https://www.radiofrance.fr/franceinter/podcasts/la-chronique-de-christophe-andre/la-chronique-de-christophe-andre-du-mardi-26-avril-2022-8675545"
+    }
+  ],
+  "illustrationSuggeree": "自然の中を、意識を向けながらゆっくり歩いている人物。",
+  "imageHelper": "https://firebasestorage.googleapis.com/v0/b/challengeme-d7fef.appspot.com/o/Challenges-Helper%2Fch-marche-consciente.png?alt=media"
+},
+"defiMatineeSansEcrans": {
+  "miniCours": "🚫📱 毎朝1時間、スクリーンなしで一日をスタートしてみましょう！これは自分自身と向き合い、その日のために思考を整える絶好の時間です 🧠✨。通知・メール・ニュースから始めるのではなく、心が静かに目覚めるのを許してあげましょう。瞑想 🧘、ゆっくりコーヒーを飲む ☕、日記を書く 📝、運動をする 🤸 など、心穏やかに一日を始められる活動を選んでください 🌞。",
+  "exemples": [
+    "Exemple 1 ✨: 目覚めてすぐメールを見る代わりに、まず10分間の瞑想をする。",
+    "Exemple 2 💡: 朝のスクリーン時間を軽いエクササイズに置き換える。",
+    "Exemple 3 🚀: その時間を使ってバランスの取れた朝食を用意する。",
+    "Exemple 4 🌱: ニュースの代わりに、心が前向きになる本を数ページ読む。"
+  ],
+  "ressources": [
+    {
+      "title": "Fuel Your Morning without Screen",
+      "type": "video",
+      "url": "https://youtube.com/shorts/skNPHO-Ytl8?si=THNgH6V3RpbK8Umc"
+    },
+    {
+      "title": "Pourquoi se Réveiller sans son Téléphone ?",
+      "type": "article",
+      "url": "https://polysleep.ca/fr/blogs/nouvelles/reveil-sans-telephone"
+    },
+    {
+      "title": "Une Journée sans Écrans",
+      "type": "bonus",
+      "url": "https://www.vannesetsens.fr/post/une-journ%C3%A9e-sans-%C3%A9crans-relevez-le-d%C3%A9fi"
+    }
+  ],
+  "illustrationSuggeree": "スクリーンのない環境で、日の出を眺めながらお茶を楽しんでいる人物。",
+  "imageHelper": "https://firebasestorage.googleapis.com/v0/b/challengeme-d7fef.appspot.com/o/Challenges-Helper%2Fch-matin-sans-ecrans.png?alt=media"
+},
+"defiMicroMeditation": {
+  "miniCours": "🌈 マイクロ・メディテーションは、脳のための「小さなコーヒーブレイク」のようなもの。カフェインではなく、意識・バランス・穏やかさでリセットします 🧘‍♀️。たった1分でOKで、これを毎日続けることで人生が大きく変わることもあります 🎯。瞑想のプロである必要も、長い時間は必要もありません。マイクロ・メディテーションは、いつでもどこでも実践できます 🕒。今日から日常に取り入れて、より落ち着き、集中した自分を目指しましょう 🚀。",
+  "exemples": [
+    "Exemple 1 ✨ : デスクに座ったまま目を閉じて1分間、呼吸だけに意識を向ける。",
+    "Exemple 2 💡 : 散歩の途中で立ち止まり、まわりの自然を静かに眺める。",
+    "Exemple 3 🚀 : 朝のルーティンを始める前に、1分だけ瞑想する。",
+    "Exemple 4 🌱 : 就寝前に1分間、1日を振り返りながら静かに呼吸する。"
+  ],
+  "ressources": [
+    {
+      "title": "Micro - Méditation 5 minutes",
+      "type": "video",
+      "url": "https://youtu.be/ssss7V1_eyA?si=A90Ck5bMGiU9SQNz"
+    },
+    {
+      "title": "Micro- Méditations pour Chasser le Stress",
+      "type": "article",
+      "url": "https://www.marieclaire.fr/micro-meditation-exercices-reduire-stress-rapidement,1483765.asp"
+    },
+    {
+      "title": "Micro-Méditation - Podcast",
+      "type": "bonus",
+      "url": "https://www.audible.fr/podcast/ITEM_NAME/B0FJ7C1SYQ?ref_pageloadid=not_applicable&pf_rd_p=9d51cb7e-7e6b-48e8-8381-764f9e203984&pf_rd_r=WKVYSH9CPCV17J3S3NV0&plink=wh2786wbyz6vJHQs&pageLoadId=N4wr2eRreHSkoCwQ&creativeId=9540960c-c2f7-4b44-a7b8-6fe812a8e6ae&ref=a_podcast_V_c0_lAsin_0_1"
+    }
+  ],
+  "illustrationSuggeree": "落ち着いた環境で静かに瞑想している人物。",
+  "imageHelper": "https://firebasestorage.googleapis.com/v0/b/challengeme-d7fef.appspot.com/o/Challenges-Helper%2Fch-micro-meditation.png?alt=media"
+},
+"defiNoBuyMonth": {
+  "miniCours": "👋 こんにちは！今日は「不要な買い物ゼロ」チャレンジ 🛍️ について話しましょう！コンセプトはシンプルですが、守るのは意外と難しいかもしれません。必要なものだけを買う、というルールです。これは金融ミニマリズムの一歩であり、オンラインセールや魅力的なショーウィンドウの誘惑に負けない練習でもあります 💰。無駄なものを買わなければ、自分が苦労して稼いだお金の価値をより深く実感できます。お財布だけでなく、心にも余裕が生まれ、ストレスが減り、整理された感覚が増し、結果的にもっと幸せになれるでしょう。さあ、このチャレンジに挑戦する準備はできましたか ❓",
+  "exemples": [
+    "Exemple 1 ✨: 毎日テイクアウトのコーヒーを買う代わりに、自宅で淹れたコーヒーを持ち歩く。",
+    "Exemple 2 💡: 話題の新刊を買う代わりに、図書館で本を借りて読む。",
+    "Exemple 3 🚀: 流行の最新スニーカーの衝動買いを我慢する。その一瞬のときめきより、お金のほうが長く残ります。",
+    "Exemple 4 🌱: 毎回レジ袋を買うのではなく、マイバッグを使う。"
+  ],
+  "ressources": [
+    {
+      "title": "Minimalism",
+      "type": "video",
+      "url": "https://www.netflix.com/title/80114460"
+    },
+    {
+      "title": "No-Buy Challenge",
+      "type": "article",
+      "url": "https://www.slate.fr/societe/no-buy-challenge-shopping-2025-consommation"
+    },
+    {
+      "title": "Nobuy - Podcast",
+      "type": "podcast",
+      "url": "https://open.spotify.com/show/5oJs4J3btWexkThaHR7UmI"
+    }
+  ],
+  "illustrationSuggeree": "真ん中で半分に切られたクレジットカードのイラスト。",
+  "imageHelper": "https://firebasestorage.googleapis.com/v0/b/challengeme-d7fef.appspot.com/o/Challenges-Helper%2Fch-no-buy-month.png?alt=media"
+},
+"defiRangementMinimaliste": {
+  "miniCours": "ミニマルなライフスタイルに近づくための、とても有意義なチャレンジです 🌿：毎日いらない物を1つ手放してみましょう！これは、スッキリとした環境と心の余白をつくるための最初の一歩です 💫。余計なものがなくなった部屋、整ったスペースを思い浮かべてみてください… それだけで気分も軽くなります 🌤️。まずはもう使っていない物から、小さく始めてOK。捨てる・リサイクルする・誰かに譲る、を少しずつ続けていけば、呼吸しやすい空間が生まれます。",
+  "exemples": [
+    "Exemple 1 ✨: 何年も本棚でホコリをかぶっている本を、図書館や古本屋に寄付する。",
+    "Exemple 2 💡 : 引き出しの中にたくさん眠っている古いケーブル類を、必要なものだけ残してリサイクルする。",
+    "Exemple 3 🚀 : 1年以上着ていない服は、チャリティ団体に寄付する。",
+    "Exemple 4 🌱 : キッチンで重複している調理器具を、近所の人や地域の団体に譲る。"
+    ],
+  "ressources": [
+    {
+      "title": "Minimalisme - Faites le Vide",
+      "type": "video",
+      "url": "https://youtu.be/YgqgdxG9-Fc?si=irxJnoe0zMVLK8bx"
+    },
+    {
+      "title": "Préférer le Rangement Minimaliste",
+      "type": "article",
+      "url": "https://udd.eu/newsroom/raisons-opter-piece-minimaliste#:~:text=Simplifier%20sa%20vie,plut%C3%B4t%20que%20des%20achats%20compulsifs."
+    },
+    {
+      "title": "Cultiver un Style de Vie Minimaliste",
+      "type": "bonus",
+      "url": "https://culturev.fr/podcasts-minimalisme/"
+    }
+  ],
+  "illustrationSuggeree": "不要な物が片付けられ、広くスッキリした部屋の様子。",
+  "imageHelper": "https://firebasestorage.googleapis.com/v0/b/challengeme-d7fef.appspot.com/o/Challenges-Helper%2Fch-rangement-minimaliste.png?alt=media"
+},
+"defiRepasEquilibre": {
+  "miniCours": "バランスの取れた食事をつくることは、毎日の健康を支える大切でワクワクするミッションです 🥦🥩🍚。どんな食事スタイルであっても、基本は「たんぱく質＋野菜＋炭水化物」を1皿の中に取り入れること。たんぱく質は、身体の組織を修復するのに欠かせません 😄。野菜はビタミンやミネラルが豊富で、消化に必要な食物繊維もたっぷり 💪。炭水化物は一日のエネルギー源となり、活力を維持するのに役立ちます 🚀。飽きないように食材やレシピを変えながら、いろいろな味を楽しむのもポイントです！",
+  "exemples": [
+    "Exemple 1 ✨ : ランチに、グリルチキン＋ブロッコリー＋ローストポテトのプレートを用意する。",
+    "Exemple 2 💡 : ディナーには、サーモンのソテー＋ビーツ入りサラダ＋キヌアを組み合わせてみる。",
+    "Exemple 3 🚀 : 朝食として、スクランブルエッグ＋ほうれん草＋全粒粉トーストを食べてみる。",
+    "Exemple 4 🌱 : ベジタリアンディナーなら、炒めた豆腐＋ロースト野菜いろいろ＋玄米のワンプレートにしてみる。"
+  ],
+  "ressources": [
+    {
+      "title": "Qu'est-ce qu'une Alimentation Saine ?",
+      "type": "video",
+      "url": "https://youtu.be/AVkIzSb1xEE?si=uIb7M6TIIOPXRhm6"
+    },
+    {
+      "title": "Idées de Menus équilibrés pour la Semaine",
+      "type": "article",
+      "url": "https://toutpourmasante.fr/composer-repas-equilibre/"
+    },
+    {
+      "title": "Pour Mieux Manger",
+      "type": "bonus",
+      "url": "https://www.goodsesame.com/blog/10-podcasts-a-ecouter-pour-mieux-manger/"
+    }
+  ],
+  "illustrationSuggeree": "カラフルでバランスの取れた一皿の食事の写真。",
+  "imageHelper": "https://firebasestorage.googleapis.com/v0/b/challengeme-d7fef.appspot.com/o/Challenges-Helper%2Fch-repas-equilibre.png?alt=media"
+},
+"defiRespirationConsciente": {
+  "miniCours": "意識的な呼吸 🌬️ は、その瞬間の心と感情の状態とつながる、とてもパワフルな方法です 🌈。1日たった5分だけでも、あなたの一日をやさしく変えることができます 🚀。朝、1日のスタート前に静かに座る時間をつくってみましょう。楽な姿勢で座り、目を閉じて、ゆっくり深く呼吸します。息が体の中に入っていき、外に出ていく感覚に意識を向けてください。忘れないでくださいね、これは競争ではありません🐢 自分のペースで大丈夫です。",
+  "exemples": [
+    "Exemple 1 ✨ : 毎日、起きた直後など、呼吸の練習をする時間をあらかじめ決めておく。",
+    "Exemple 2 💡 : ガイド付き瞑想アプリを使って、呼吸に集中できるようサポートしてもらう。",
+    "Exemple 3 🚀 : ボックスブリージング（四角呼吸）やライオンブレスなど、さまざまな呼吸法を試してみる。",
+    "Exemple 4 🌱 : 心がさまよっても落ち込まないこと。意識を戻す練習こそが、このトレーニングの目的です。"
+  ],
+  "ressources": [
+    {
+      "title": "Séance de méditation guidée pour la respiration consciente",
+      "type": "video",
+      "url": "https://youtu.be/tdwn-jObld4?si=5LH0TGzSpbodrx7x"
+    },
+    {
+      "title": "BreathWork - Gérer ses Émotions",
+      "type": "article",
+      "url": "https://www.sante-sur-le-net.com/breathwork-techniques-respiration-reguler-stress/#:~:text=Le%20breathwork%20appel%C3%A9%20aussi%20la,pouvons%20r%C3%A9guler%20notre%20syst%C3%A8me%20nerveux."
+    },
+    {
+      "title": "La Respiration Consciente - Podcast",
+      "type": "bonus",
+      "url": "https://www.passeportsante.net/audio?doc=respiration-consciente"
+    }
+  ],
+  "illustrationSuggeree": "蓮華座で座り、瞑想しながら呼吸を意識している人物。",
+  "imageHelper": "https://firebasestorage.googleapis.com/v0/b/challengeme-d7fef.appspot.com/o/Challenges-Helper%2Fch-respiration-consciente.png?alt=media"
+},
+
+"defiSommeilReparateur": {
+  "miniCours": "😴 質の良い睡眠は、心と体の健康にとって欠かせません。まずはリラックスできるナイトルーティンをつくることから始めましょう。寝る1時間前にはスマホやPCなどの電子機器をオフ📵にして、デジタルな刺激から離れます。読書 📚、やさしいヨガ 🧘、感謝日記を書く 🙏 などの穏やかな習慣は、心と体を眠りモードに切り替える助けになります。さらに、寝室の環境もとても大切です。少し涼しく 🌬️、暗く 🌚、静かな 🤫 空間を整えることで、睡眠の質が大きく変わります。",
+  "exemples": [
+    "Exemple 1 ✨ 夕食後、リサはスマホの電源を切り、お気に入りの小説を読んで過ごす。",
+    "Exemple 2 💡 ケヴィンは寝る前に、軽いストレッチややさしいヨガをして体をほぐす。",
+    "Exemple 3 🚀 マリアは感謝日記を書き、その日にあったポジティブな出来事を振り返る。",
+    "Exemple 4 🌱 アリは寝室を少し涼しく保ち、暗く静かな環境を整えて、ぐっすり眠れるようにしている。"
+  ],
+  "ressources": [
+    {
+      "title": "Pourquoi Dort-On Mal ?",
+      "type": "video",
+      "url": "https://youtu.be/Bgg0EX-uELU?si=Q5s7DqHdi_DAM87F"
+    },
+    {
+      "title": "Comment mieux Dormir ?",
+      "type": "article",
+      "url": "https://www.laboratoire-lescuyer.com/blog/comment-mieux-dormir?srsltid=AfmBOopvQt1-1uB1HDmu_f0WpLzdbFs-LLeztdHKXZil4chyDCKKrWG1"
+    },
+    {
+      "title": "Somnifère - Le Podcast pour S'Endormir",
+      "type": "bonus",
+      "url": "https://podcasts.apple.com/fr/podcast/somnif%C3%A8re-le-podcast-pour-sendormir/id1531278587"
+    }
+  ],
+  "illustrationSuggeree": "夜、静かな部屋でリラックスヨガをしてから眠りに備えている人物。",
+  "imageHelper": "https://firebasestorage.googleapis.com/v0/b/challengeme-d7fef.appspot.com/o/Challenges-Helper%2Fch-sommeil-reparateur.png?alt=media"
+},
+
+"drinkWater": {
+  "miniCours": "💦 水は、自然が与えてくれる万能サポーター！こまめに水を飲むことで、体内の老廃物を流し出し、肌をうるおし、エネルギーもアップします。1日2リットルを目標にしてみましょう 🌟。最初は少し大変に感じるかもしれませんが、少しずつ習慣にしていけば、体がきっと感謝してくれます 💪🏽。",
+  "exemples": [
+    "Exemple 1 ✨: 1リットルのボトルを用意して、1日に2回飲みきることを目標にする。",
+    "Exemple 2 💡: レモンやベリーなどのフルーツを入れて、味付きのウォーターにして楽しむ。",
+    "Exemple 3 🚀: トイレ休憩や休憩のたびに、必ずコップ一杯の水を飲むようにする。",
+    "Exemple 4 🌱: 朝起きてすぐと寝る前に、それぞれ大きなコップ一杯の水を飲む。"
+  ],
+  "ressources": [
+    {
+      "title": "La Thérapie de l'Eau",
+      "type": "video",
+      "url": "https://youtu.be/siB-FTg7OAc?si=sJYczEP03MydzmLf"
+    },
+    {
+      "title": "Boire de l'Eau",
+      "type": "article",
+      "url": "https://www.cieau.com/leau-et-votre-sante/eau-hydratation-et-hygiene/hydratation/pourquoi-doit-on-boire-de-leau/"
+    },
+    {
+      "title": "Hydratation",
+      "type": "bonus",
+      "url": "https://www.radiofrance.fr/francebleu/podcasts/bienvenue-chez-vous-les-specialistes-ici-nord/hydratation-le-dr-vankemmel-explique-pourquoi-il-faut-boire-de-l-eau-2545207"
+    }
+  ],
+  "illustrationSuggeree": "水飲み場で、自分のボトルに水を満たしている人物。",
+  "imageHelper": "https://firebasestorage.googleapis.com/v0/b/challengeme-d7fef.appspot.com/o/Challenges-Helper%2Fch-drink-water.png?alt=media"
+},
+
+"eatHealthy": {
+  "miniCours": "食生活を変える準備はできましたか？ 🥇 すべての食事は、体に良いものを届けるチャンスです 🥦。フルーツ、野菜、全粒穀物を増やし、砂糖たっぷりの飲み物 🥤 を減らしていきましょう。ヘルシーな食事は、体型だけでなく、気分や集中力にも良い影響を与えてくれます 🧠。料理して、試して、味わいながら、自分に合った“おいしい健康習慣”を見つけてください 🌈。",
+  "exemples": [
+    "Exemple 1 ✨ - スナック菓子の代わりに、ニンジンスティックとフムスでヘルシーおやつにする。",
+    "Exemple 2 💡 - ランチには、色とりどりの野菜を使ったサラダをメインにしてみる。",
+    "Exemple 3 🚀 - 朝食は、ほうれん草入りオムレツと全粒粉パンで、栄養満点にする。",
+    "Exemple 4 🌱 - 炭酸飲料の代わりに、フレッシュフルーツを入れたフレーバーウォーターを飲む。"
+  ],
+  "ressources": [
+    {
+      "title": "La Recette pour se Mettre à une Alimentation Saine",
+      "type": "video",
+      "url": "https://youtu.be/I1_RSyzPHPg?si=pKHYyG2BhjhEiJZK"
+    },
+    {
+      "title": "10 Clés d'une Alimentation Saine",
+      "type": "article",
+      "url": "https://yuka.io/10-cles-alimentation-saine/"
+    },
+    {
+      "title": "Qu'est-ce Qu'on Mange ?",
+      "type": "bonus",
+      "url": "https://www.lavieclaire.com/podcasts/"
+    }
+  ],
+  "illustrationSuggeree": "新鮮なフルーツと野菜がたっぷり盛られたカラフルなプレート。",
+  "imageHelper": "https://firebasestorage.googleapis.com/v0/b/challengeme-d7fef.appspot.com/o/Challenges-Helper%2Fch-eat-healthy.png?alt=media"
+},
+
+"familyTime": {
+  "miniCours": "👨‍👩‍👧‍👦 家族と過ごす時間は、絆を深め、思い出をつくり、ストレスを和らげてくれます。毎日、テクノロジーから離れる“ノースクリーンタイム”📵を少しでもつくり、おしゃべりをしたり、一緒に料理をしたりしましょう。完璧である必要はなく、「一緒にいること」がいちばん大事です。家族の愛は、尽きることのないウェルビーイングの源泉です 💛。",
+  "exemples": [
+    "Exemple 1 ✨: 毎晩、寝る前に家族でお話タイムをつくり、1日の出来事をシェアする 📚。",
+    "Exemple 2 💡: 一緒に料理をして、楽しく食卓を囲む 🥗。",
+    "Exemple 3 🚀: 家族でガーデニング 🌳 やお散歩 🚶 など、共通のアクティビティを楽しむ。",
+    "Exemple 4 🌱: 映画や本、自己成長のテーマについて語り合う時間をつくる 🎥。"
+  ],
+  "ressources": [
+    {
+      "title": "Idées pour Prendre son Temps en Famille",
+      "type": "video",
+      "url": "https://optimoms.fr/maman-optimiste/laslowlife/30-idees-prendre-son-temps-famille"
+    },
+    {
+      "title": "L'importance de Passer du Temps en Famille",
+      "type": "article",
+      "url": "https://najell.com/fr-fr/urban-dreamers/importance-of-family-time"
+    },
+    {
+      "title": "Passer du Temps en Famille",
+      "type": "bonus",
+      "url": "https://podcast.fr/episode/passer-du-temps-en-famille/"
+    }
+  ],
+  "illustrationSuggeree": "スクリーンなしで、笑顔で一緒に遊んだり話したりしている家族。",
+  "imageHelper": "https://firebasestorage.googleapis.com/v0/b/challengeme-d7fef.appspot.com/o/Challenges-Helper%2Fch-family-time.png?alt=media"
+},
+
+"goodPosture": {
+  "miniCours": "💪 良い姿勢は、背骨の正しいアライメントだけでなく、頭の冴えや痛みの軽減にもつながります！同じ姿勢を続けず、こまめに体勢を変えたり、休憩を入れたりして背中や体幹を鍛えましょう。ヨガやストレッチ、デスクの環境調整など、小さな工夫の積み重ねが、長く快適に過ごせる体をつくります 🌿。",
+  "exemples": [
+    "Exemple 1 ✨ : デスクワーク中は1時間ごとに立ち上がり、背中や肩をストレッチする。",
+    "Exemple 2 💡 : ヨガや水泳など、背筋を鍛える運動を定期的に取り入れる。",
+    "Exemple 3 🚀 : 腰を支えるランバーサポートや、姿勢を意識しやすいエルゴノミックチェアを使う。",
+    "Exemple 4 🌱 : PC作業中、「前かがみになってないかな？」とマインドフルに姿勢をチェックする。"
+    ],
+  "ressources": [
+    {
+      "title": "The Benefits of Good Posture",
+      "type": "video",
+      "url": "https://youtu.be/OyK0oE5rwFY?si=nmoe2Hj9oUzXZRE9"
+    },
+    {
+      "title": "Les Bienfaits d'une Bonne Posture",
+      "type": "article",
+      "url": "https://fr.shenyunperformingarts.org/blog/view/article/e/Zf4MSdlGFak/les-5-bienfaits-d-une-bonne-posture.html"
+    },
+    {
+      "title": "Bonne Posture pour Bien se Porter",
+      "type": "bonus",
+      "url": "https://www.radiofrance.fr/francebleu/podcasts/le-conseil-bien-etre/quelle-est-la-bonne-posture-pour-bien-se-porter-7544177"
+    }
+  ],
+  "illustrationSuggeree": "エルゴノミックチェアに座り、デスクで作業しながら、鏡で自分の姿勢を確認している人物。",
+  "imageHelper": "https://firebasestorage.googleapis.com/v0/b/challengeme-d7fef.appspot.com/o/Challenges-Helper%2Fch-good-posture.png?alt=media"
+},
+
+"hobbyTime": {
+  "miniCours": "🎨 趣味の時間は、創造性を育て、ストレスをやわらげ、人生の楽しさを思い出させてくれます。毎日少しでいいので、「自分のためだけの時間」をつくりましょう。本を読む、絵を描く、料理をする、散歩をする… どんなことでもOK。大切なのは、「楽しい」と感じられて、心が満たされることです 🌼。",
+  "exemples": [
+    "30分だけ、自分の好きな本の1章を読む 📚",
+    "ストレス解消のために、短い瞑想やヨガを行う 🧘‍♀️",
+    "絵を描いたり、色塗りをしたりして、自由に表現する 🎨",
+    "自然の中をお散歩して、新鮮な空気をたっぷり吸う 🏞️"
+  ],
+  "ressources": [
+    {
+      "title": "How to Find your Hobby",
+      "type": "video",
+      "url": "https://youtu.be/qjdmIY04soc?si=TqnGGNHi1a_c6-Wu"
+    },
+    {
+      "title": "Comment nos Hobbys nous Aident ?",
+      "type": "article",
+      "url": "https://www.selectionclic.com/conseils-sante/comment-nos-hobbys-nous-aident/#:~:text=Les%20hobbys%20prot%C3%A8gent%20de%20la,utile%20dans%20d'autres%20domaines."
+    },
+    {
+      "title": "Quel est votre Hobby ?",
+      "type": "podcast",
+      "url": "https://youtu.be/KjsvG7tZhmA?si=TDFeumCy4aHG6dV6"
+    }
+  ],
+  "illustrationSuggeree": "お気に入りの飲み物とお菓子に囲まれ、本を読みながら幸せそうにくつろいでいる人物。",
+  "imageHelper": "https://firebasestorage.googleapis.com/v0/b/challengeme-d7fef.appspot.com/o/Challenges-Helper%2Fch-hobby-time.png?alt=media"
+},
+"kindnessAct": {
+    "miniCours": "✅ 毎日ひとつ、ランダムな優しさを実践してみましょう。あなた自身の人生も、周りの人の人生も豊かにしてくれます！🌈 優しさの行動は、言葉でも行動でも構いません。計画的でも、ふと思いついたものでも大丈夫。助けを申し出たり、時間を分け合ったり、相手に微笑みかけるだけでも立派な優しさです。形はどうであれ、ひとつひとつの行動が大きな変化を生みます。💖 このチャレンジは、社会性や思いやり、そしてあなた自身の幸福感を高める素晴らしい方法です。また、あなたの優しさが他の人の優しさを引き出すきっかけにもなります。さあ、一緒に今日もひとつ優しさを届けましょう！🚀",
+    "exemples": [
+      "例 1 ✨：バスでお年寄りに席を譲る。",
+      "例 2 💡：仕事を頑張ってくれた同僚に感謝のメールを書く。",
+      "例 3 🚀：友達にサプライズの食事を作る。",
+      "例 4 🌱：近所に木を植える。"
+    ],
+    "ressources": [
+      {
+        "title": "The Science of Kindness",
+        "type": "video",
+        "url": "https://youtu.be/O9UByLyOjBM?si=aerzsJbCBREvBUSi"
+      },
+      {
+        "title": "優しさを実践する方法",
+        "type": "article",
+        "url": "https://elisegravel.com/blog/9-facons-de-faire-preuve-de-gentillesse/"
+      },
+      {
+        "title": "The Power of Kindness - ポッドキャスト",
+        "type": "podcast",
+        "url": "https://podcasts.apple.com/fr/podcast/the-power-of-kindness/id1771351575"
+      }
+    ],
+    "illustrationSuggeree": "「優しくしよう」と書かれた看板を持つ人物。",
+    "imageHelper": "https://firebasestorage.googleapis.com/v0/b/challengeme-d7fef.appspot.com/o/Challenges-Helper%2Fch-act-of-kindness.png?alt=media"
+  },
+
+  "learnLanguage": {
+    "miniCours": "新しい言語を学ぶのは難しそうに感じるかもしれませんが、正しい方法と少しの継続でとてもワクワクする冒険になります 🌍！まずは毎日続けられる小さな目標から始めましょう。例えば、毎日数個の新しい単語を覚えること 🔠。焦らず、習ったことが自然に身につく時間を自分に与えてください 🕘。これは短距離走ではなくマラソンです。アプリ、動画、ポッドキャスト、本など、使えるものは何でも活用しましょう 📲📺🎧📚。",
+    "exemples": [
+      "例 1 ✨：毎日5つの単語を覚え、フラッシュカードで復習する。",
+      "例 2 💡：Duolingo などのアプリで 20 分間学習する。",
+      "例 3 🚀：週に1回、学んでいる言語の映画やドラマを観る時間を作る。",
+      "例 4 🌱：学んでいる言語で日記を書くことで、自然に考える力がつく。"
+    ],
+    "ressources": [
+      {
+        "title": "言語学習の秘密 | Lydia Machová",
+        "type": "video",
+        "url": "https://www.youtube.com/watch?v=o_XVt5rdpFY"
+      },
+      {
+        "title": "言語学習が脳に与えるメリット",
+        "type": "article",
+        "url": "https://fr.babbel.com/fr/magazine/benefices-apprentissage-langues-cerveau"
+      },
+      {
+        "title": "Babbel：言語学習に役立つポッドキャスト",
+        "type": "bonus",
+        "url": "https://fr.babbel.com/fr/magazine/les-meilleurs-podcasts-pour-apprendre-une-langue"
+      }
+    ],
+    "illustrationSuggeree": "カフェでコーヒーと語学の本を前に座っている人物。",
+    "imageHelper": "https://firebasestorage.googleapis.com/v0/b/challengeme-d7fef.appspot.com/o/Challenges-Helper%2Fch-learn-a-language.png?alt=media"
+  },
+
+  "learnSkill": {
+    "miniCours": "新しいスキルを身につけることは、大きな山を登るように感じるかもしれません。でも、心配いりません。すべては一歩ずつです 👣🌱！毎日少しだけでも学ぶ時間を作りましょう。関連する記事を読んだり、チュートリアル動画を見るだけでも OK です 💻📚。鍵となるのは“継続”と“忍耐”。🗝️ この旅の素晴らしいところは、新しいスキルを得るだけでなく、“学ぶ力”と“粘り強さ”も鍛えられることです 🧠💪。ボーナス：学ぶ時間を癒しの時間にして、毎日の習慣にしてしまいましょう 🎶🍵。",
+    "exemples": [
+      "例 1 ✨：仕事に関係するスキルを向上させる。",
+      "例 2 💡：あなたが本当にワクワクするスキルを学ぶ。",
+      "例 3 🚀：日常生活に役立つスキルを身につける。",
+      "例 4 🌱：コンフォートゾーンを抜け、新しい挑戦をしてみる。"
+    ],
+    "ressources": [
+      {
+        "title": "ファインマン・テクニック",
+        "type": "video",
+        "url": "https://youtu.be/UUSmBMWk2sI?si=HUdlol3QuEnY3H0H"
+      },
+      {
+        "title": "新しいスキルを身につける30のコツ",
+        "type": "article",
+        "url": "https://angyna.com/blog/articles/8/30-conseils-pour-acquerir-rapidement-une-nouvelle-competence"
+      },
+      {
+        "title": "「学び方を学ぶ」シリーズ",
+        "type": "bonus",
+        "url": "https://www.radiofrance.fr/franceculture/podcasts/serie-apprendre-a-apprendre"
+      }
+    ],
+    "illustrationSuggeree": "ヘッドホンをつけ、ノートPCでオンライン学習をしている人物。",
+    "imageHelper": "https://firebasestorage.googleapis.com/v0/b/challengeme-d7fef.appspot.com/o/Challenges-Helper%2Fch-learn-skill.png?alt=media"
+  },
+
+  "learnWordDaily": {
+    "miniCours": "語彙を増やすことは、表現力を高めるだけでなく、さまざまな文化や考え方に触れるワクワクする方法でもあります 🌍✨。本や記事、語彙アプリから毎日ひとつ言葉を選び、その意味・ニュアンス・使い方を理解しましょう 🕵️‍♀️✨。その後、例文を書いたり声に出して練習します。1日の中でできるだけ会話に使ってみましょう 📚💬。",
+    "exemples": [
+      "例 1 ✨：「discernement（識別力）」：例『私はゴッホの芸術的な識別力を尊敬している。』",
+      "例 2 💡：「quintessentiel（本質的／典型的）」：例『この曲はリズム＆ブルースの真髄だ。』",
+      "例 3 🚀：「ambidextre（両利き）」：例『レオナルド・ダ・ヴィンチは天才であるだけでなく、両利きでもあった。』",
+      "例 4 🌱：「métamorphose（変態／大きな変化）」：例『イモムシは変態して蝶になる。』"
+    ],
+    "ressources": [
+      {
+        "title": "語彙力を高める方法",
+        "type": "video",
+        "url": "https://youtu.be/Ms7cF8mQ0BI?si=-tpszWN-B6QG7kzS"
+      },
+      {
+        "title": "語彙を豊かにする7つの方法",
+        "type": "article",
+        "url": "https://www.the-artist-academy.fr/blog/comment-enrichir-votre-vocabulaire-7-manieres-de-developper-votre-vocabulaire"
+      },
+      {
+        "title": "今日の言葉 - ポッドキャスト",
+        "type": "bonus",
+        "url": "https://www.radiofrance.fr/francemusique/podcasts/le-mot-du-jour"
+      }
+    ],
+    "illustrationSuggeree": "テーブルで本を読み、横に新しい単語を書き留めるノートが置かれている人物。",
+    "imageHelper": "https://firebasestorage.googleapis.com/v0/b/challengeme-d7fef.appspot.com/o/Challenges-Helper%2Fch-learn-word.png?alt=media"
+  },
+
+  "listenPodcast": {
+    "miniCours": "🎧 毎日教育系ポッドキャストを聴くことは、どこへ行っても“持ち運べる教室”を連れていくようなものです。散歩中でも、料理中でも、ソファでくつろいでいる時でも、学びの時間に変わります 🧠。興味のあるテーマを選べば、知識も増え、学び続ける情熱も高まります 📚。さまざまな形式や長さを試して、自分に合うスタイルを見つけてください。大切なのは“楽しく続けること”。義務ではなく、刺激的な習慣にしていきましょう 🚀。",
+    "exemples": [
+      "例 1 ✨：『Soft Skills Engineering』で効果的なコミュニケーションを学ぶ。",
+      "例 2 💡：『Nerd's Eye View』で個人ファイナンスの基礎を学ぶ。",
+      "例 3 🚀：『WorkLife（アダム・グラント）』でリーダーシップを磨く。",
+      "例 4 🌱：『TechStuff』で最新テクノロジーの動向をチェック。"
+    ],
+    "ressources": [
+      {
+        "title": "ポッドキャスト一覧",
+        "type": "video",
+        "url": "https://www.radiofrance.fr/podcasts"
+      }
+    ],
+    "illustrationSuggeree": "スマホでポッドキャストを聴いているヘッドホンの人物。",
+    "imageHelper": "https://firebasestorage.googleapis.com/v0/b/challengeme-d7fef.appspot.com/o/Challenges-Helper%2Fch-podcast.png?alt=media"
+  },
+
+  "meditation": {
+    "miniCours": "🧘‍♀️ 毎朝、数分だけ瞑想することで集中力を高め、ストレスを減らすことができます。とても簡単！静かな場所で10分座り、目を閉じ、深く呼吸し、心を落ち着かせましょう 🕊。完全に“無”になろうとする必要はありません。大切なのは、自分の思考や感情にスペースを作ること。最も重要なのは“続ける”こと。完璧ではなく、進歩を目指しましょう 🌈。",
+    "exemples": [
+      "例 1 ✨：家の中で静かに瞑想できるスペースを見つける。",
+      "例 2 💡：初心者向けのガイド付き瞑想アプリやサイトを利用する。",
+      "例 3 🚀：最初は10分から始め、慣れてきたら少しずつ時間を伸ばす。",
+      "例 4 🌱：終わったら、その時の気持ちをメモしてみる。"
+    ],
+    "ressources": [
+      {
+        "title": "ガイド付き瞑想 – Bernard WERBER",
+        "type": "video",
+        "url": "https://youtu.be/eay1enaijAc?si=MIQT1EEgJZFOCnB_"
+      },
+      {
+        "title": "もっと簡単に瞑想を学ぶ方法",
+        "type": "article",
+        "url": "https://www.helsana.ch/fr/blog/psyche/pleine-conscience/meditation.html"
+      },
+      {
+        "title": "瞑想の時間",
+        "type": "bonus",
+        "url": "https://www.radiofrance.fr/franceinter/podcasts/le-temps-de-mediter"
+      }
+    ],
+    "illustrationSuggeree": "静かで穏やかな空間で瞑想している人物。",
+    "imageHelper": "https://firebasestorage.googleapis.com/v0/b/challengeme-d7fef.appspot.com/o/Challenges-Helper%2Fch-meditation.png?alt=media"
+  },
+
+  "morningStretch": {
+    "miniCours": "☀️ おはようございます！朝のストレッチで一日を気持ちよくスタートしましょう。🧘‍♂️ 朝は体が固まりがちなので、血行を良くし、頭をスッキリさせるために軽いストレッチが理想的です。ヨガの専門家でなくても大丈夫 🤗。軽く体を伸ばし、腕を上げたり、つま先に触れたり、首を優しくほぐしたりしましょう。大切なのは“体をゆっくり目覚めさせること”です 🏄‍♂️。",
+    "exemples": [
+      "例 1 ✨：立ったまま深呼吸をしながら腕をぐーっと上へ伸ばす。",
+      "例 2 💡：膝を伸ばしたまま前屈し、つま先に触れる。",
+      "例 3 🚀：座ったまま片脚ずつ前に伸ばし、足先に5秒触れる。",
+      "例 4 🌱：座ったまま腕を前に伸ばし、手首をゆっくり回す。"
+    ],
+    "ressources": [
+      {
+        "title": "朝のルーティン",
+        "type": "video",
+        "url": "https://youtu.be/BNJuv209-yc?si=nsca-yZjkJTiu6fc"
+      },
+      {
+        "title": "朝にストレッチをする5つの理由",
+        "type": "article",
+        "url": "https://truefitness.com/fr/5-reasons-for-a-morning-stretch-routine/"
+      },
+      {
+        "title": "ストレッチはどの年代にも大切！",
+        "type": "bonus",
+        "url": "https://www.radiofrance.fr/franceinter/podcasts/carnet-de-sante/carnet-de-sante-du-samedi-03-aout-2024-8615750"
+      }
+    ],
+    "illustrationSuggeree": "朝起きて腕をゆっくり伸ばしている人物。",
+    "imageHelper": "https://firebasestorage.googleapis.com/v0/b/challengeme-d7fef.appspot.com/o/Challenges-Helper%2Fch-morning-stretch.png?alt=media"
+  },
+
+  "network": {
+    "miniCours": "🎉 素晴らしい！効果的なネットワーキングは、あなたにたくさんのチャンスをもたらします 🚪。まずは毎日、あなたの分野で働くプロフェッショナルにひとり連絡してみましょう。少し勇気が必要ですが、ひとつひとつの会話が新しい学びと成長の扉を開いてくれます 🌅。相手に興味を持ち、質問し、自分の考えも共有しましょう。会話のひとつひとつを刺激的な冒険にできるはず 🎈。そして何より大事なのは“量より質”。本物のつながりを築いていきましょう 🌟。",
+    "exemples": [
+      "例 1 ✨：LinkedInで業界のリーダーにメッセージを送り、最新トレンドについて意見交換する。",
+      "例 2 💡：同僚をコーヒーに誘い、最近の成功や学びを共有する。",
+      "例 3 🚀：ウェビナーに参加し、登壇者に有益な質問をする。",
+      "例 4 🌱：以前の仕事仲間に連絡し、最近の状況をお互いにシェアする。"
+    ],
+    "ressources": [
+      {
+        "title": "ネットワーキングの極意",
+        "type": "video",
+        "url": "https://youtu.be/SN9zTEWVjGM?si=xWgFcdfqz6X3l2Df"
+      },
+      {
+        "title": "ネットワークを大切にすべき7つの理由",
+        "type": "article",
+        "url": "https://ch-fr.indeed.com/conseils-carriere/evolution-professionnelle/networking-reseau"
+      },
+      {
+        "title": "ネットワーキング – ポッドキャスト",
+        "type": "bonus",
+        "url": "https://podcasts.apple.com/fr/podcast/le-networking-de-steeve/id1437905134"
+      }
+    ],
+    "illustrationSuggeree": "デスクで電話をしている人物。横にはメモ帳とペンが置かれている。",
+    "imageHelper": "https://firebasestorage.googleapis.com/v0/b/challengeme-d7fef.appspot.com/o/Challenges-Helper%2Fch-networking.png?alt=media"
+  },
+   "newRecipe": {
+    "miniCours": "新しいレシピに挑戦するのは大きな山のように感じるかもしれませんが、手を汚すことを恐れないでください！ 👨‍🍳 星付きシェフになる必要はありません。ちょっとしたコツさえ押さえれば、初心者でも美味しい料理を作ることができます。🍲 まずはレシピを最初から最後まで読み、全体の流れを理解しましょう。📖 必要な材料が揃っているか確認し、焦らず丁寧に進めてください。大切なのは結果よりも“作る過程を楽しむこと”です！ 🌟",
+    "exemples": [
+      "例 1 ✨：リンゴのタルトをゼロから手作りしてみる。",
+      "例 2 💡：ずっと気になっていた異国料理に挑戦する。",
+      "例 3 🚀：好きな料理を自分流にアレンジしてみる。",
+      "例 4 🌱：完全ヴィーガンのレシピを選んで作ってみる。"
+    ],
+    "ressources": [
+      {
+        "title": "Un Jour Une Recette",
+        "type": "video",
+        "url": "https://www.youtube.com/@UnjourUnerecettekatyseats"
+      },
+      {
+        "title": "レシピを成功させるコツ",
+        "type": "article",
+        "url": "https://www.potes-au-feu.ch/les-7-regles-d-or-pour-reussir-une-recette.html"
+      },
+      {
+        "title": "プロのように料理する – ポッドキャスト",
+        "type": "bonus",
+        "url": "https://www.huffingtonpost.fr/life/article/les-meilleurs-podcasts-de-cuisine-a-ecouter-sans-moderation_173220.html"
+      }
+    ],
+    "illustrationSuggeree": "レシピを読みながら野菜を切っている人物。",
+    "imageHelper": "https://firebasestorage.googleapis.com/v0/b/challengeme-d7fef.appspot.com/o/Challenges-Helper%2Fch-nouvelle-recette.png?alt=media"
+  },
+
+  "noCaffeine": {
+    "miniCours": "🌞 本気の健康チャレンジをしてみませんか？1週間、カフェインなしで過ごしてみましょう！はい、確かに難しいです。でも、大きな変化には努力が必要です。🏋️‍♀️ カフェインを断つことで、身体に本当の休息を与えることができます。あなたの身体はあなたの神殿です。🏛️💖 1週間経つ頃には、驚くほどスッキリして元気になっているかもしれません。大丈夫、あなたならできます！💪",
+    "exemples": [
+      "✨ 朝のコーヒーをハーブティーに置き換える。",
+      "💡 朝食にグリーンスムージーを取り入れて自然なエネルギー補給をする。",
+      "🚀 眠気を感じたらコーヒーに頼らず散歩に行く。",
+      "🌱 カフェインなしで集中力を高めるために瞑想をする。"
+    ],
+    "ressources": [
+      {
+        "title": "コーヒーと健康への影響",
+        "type": "video",
+        "url": "https://youtu.be/5joA6VS7_88?si=bB5kFYcQg0YZ8HB5"
+      },
+      {
+        "title": "身体への影響",
+        "type": "article",
+        "url": "https://www.bbc.com/afrique/articles/cw0l43ezgggo"
+      },
+      {
+        "title": "カフェイン – ポッドキャスト",
+        "type": "bonus",
+        "url": "https://www.rtbf.be/article/la-cafeine-une-addiction-silencieuse-a-arreter-10825320"
+      }
+    ],
+    "illustrationSuggeree": "コーヒーの代わりにハーブティーを飲んでいる人。",
+    "imageHelper": "https://firebasestorage.googleapis.com/v0/b/challengeme-d7fef.appspot.com/o/Challenges-Helper%2Fch-no-cafe.png?alt=media"
+  },
+
+  "noComplaints": {
+    "miniCours": "ポジティブに目を向けること 🌈 は簡単ではありません。でも、文句を言うたびに“ネガティブに集中する癖”が強くなってしまうことを覚えておきましょう。その代わりに、どんな状況でもポジティブな面 🌟 を探す習慣を持ちましょう。例えば、渋滞に巻き込まれたら、お気に入りのポッドキャストを聴く時間ができたと考えるのです 🎧。感謝の気持ち 🙏 を育てることで、あなたの人生にはもっと多くの良いことが引き寄せられていきます。",
+    "exemples": [
+      "例 1 ✨：雨が好きではないなら ☔、植物を育てて街を緑にしてくれる恵みだと考えてみる。🌳",
+      "例 2 💡：バスを待つ時間 🚏 に文句を言う代わりに、瞑想したり 🧘‍♀️ 1日の計画を立てたりする。",
+      "例 3 🚀：スポーツの成果に満足していない時 🏋️‍♂️ は、イライラするのではなく、これまでの成長を認める。🏆",
+      "例 4 🌱：仕事が単調でつまらなく感じたら、仕事があることのありがたさと得られる恩恵を思い出す。🏢"
+    ],
+    "ressources": [
+      {
+        "title": "文句をやめるための簡単なコツ",
+        "type": "video",
+        "url": "https://youtu.be/3boYHN7g7Q8?si=7_ogMcb_L4eWtJlK"
+      },
+      {
+        "title": "文句をやめる方法",
+        "type": "article",
+        "url": "https://www.2minutesdebonheur.com/arreter-se-plaindre-223/"
+      },
+      {
+        "title": "前向きに生きるために – ポッドキャスト",
+        "type": "bonus",
+        "url": "https://www.radiofrance.fr/francebleu/podcasts/le-mag-de-france-bleu-poitou/comment-rester-positif-pour-vivre-mieux-9713037"
+      }
+    ],
+    "illustrationSuggeree": "感謝日記を書いている人。",
+    "imageHelper": "https://firebasestorage.googleapis.com/v0/b/challengeme-d7fef.appspot.com/o/Challenges-Helper%2Fch-no-complaints.png?alt=media"
+  },
+
+  "noSugar30Days": {
+    "miniCours": "🎯🍎 30日間の砂糖なしチャレンジへようこそ！ 精製糖にさようなら！ 砂糖を控えることで、あなたの体はより軽く、よりエネルギッシュになり、免疫力も高まります 🤸‍♀️。食べるものすべてが身体への“贈り物”になります。だからこそ、そのひとつひとつを大切にしましょう。添加糖を自然な甘さに置き換え始めると ☀️、本来の味がどれほど美味しいかに気づきます 🍉🍇。あなたにはできます。砂糖のない生活は、より健康的で、しかも美味しいのです！ 🌈🎉",
+    "exemples": [
+      "例 1 ✨：朝のコーヒーの砂糖をシナモンに置き換える。",
+      "例 2 💡：砂糖入りジュースの代わりに新鮮な果物を選ぶ。",
+      "例 3 🚀：加糖ヨーグルトではなく無糖ヨーグルトに果物を加えて自然な甘さにする。",
+      "例 4 🌱：白砂糖の代わりにデーツやメープルシロップでお菓子を作る。"
+    ],
+    "ressources": [
+      {
+        "title": "14日間砂糖なし",
+        "type": "video",
+        "url": "https://youtu.be/jvQRR3WLnhg?si=QM1rj_yBFAnWrinT"
+      },
+      {
+        "title": "砂糖デトックス",
+        "type": "article",
+        "url": "https://www.ayuin.fr/detox-sucre/#:~:text=Les%20bienfaits%20de%20l'arr%C3%AAt%20du%20sucre,-Arr%C3%AAter%20le%20sucre&text=La%20perte%20de%20poids%3A%20l,de%20sucre%20dans%20le%20sang)."
+      },
+      {
+        "title": "砂糖のない生活 – ポッドキャスト",
+        "type": "bonus",
+        "url": "https://www.radiofrance.fr/franceinter/podcasts/vie-quotidienne-mode-d-emploi/une-vie-sans-sucre-4356519"
+      }
+    ],
+    "illustrationSuggeree": "新鮮な果物、ナッツ、種子、野菜が並んだ健康的な食卓。",
+    "imageHelper": "https://firebasestorage.googleapis.com/v0/b/challengeme-d7fef.appspot.com/o/Challenges-Helper%2Fch-no-sugar.png?alt=media"
+  },
+
+  "oneMinPlank": {
+    "miniCours": "💪 たった1分のプランクで、身体の強さと心の強さを同時に鍛えましょう。🏋️‍♀️ プランクは腹筋を鍛えるだけでなく、“自分は挑戦を受け入れ、やり遂げられる”という自信を育てるエクササイズです。1日1分のプランクをあなたの小さなマントラにして、集中と努力の時間にしましょう 🌈。深く呼吸することを忘れないでください。呼吸が安定すると長くキープできます！🗓️",
+    "exemples": [
+      "例 1 ✨：最初の1週間は30秒から始め、徐々に1分まで延ばす。",
+      "例 2 💡：おへそを背骨に引き寄せるイメージで腹筋をより深く使う。",
+      "例 3 🚀：サイドプランクや肘つきプランクなど、バリエーションを変えて別の筋肉も鍛える。",
+      "例 4 🌱：朝のルーティンにプランクを取り入れて、1日の代謝をアップさせる。"
+    ],
+    "ressources": [
+      {
+        "title": "1日1分のプランク",
+        "type": "video",
+        "url": "https://youtu.be/LHd790kagqw?si=JU0U3_T3dJASbrEV"
+      },
+      {
+        "title": "いろいろなプランクの種類",
+        "type": "article",
+        "url": "https://laseche.fr/la-seche/les-incroyables-bienfaits-de-la-planche"
+      },
+      {
+        "title": "プランクは全身に効く – ポッドキャスト",
+        "type": "bonus",
+        "url": "https://www.radiofrance.fr/francebleu/podcasts/les-petits-plaisirs-sur-france-bleu-poitou/exercice-physique-la-planche-c-est-bon-pour-tout-le-corps-4771680"
+      }
+    ],
+    "illustrationSuggeree": "屋外でヨガマットの上にプランク姿勢でいる人。",
+    "imageHelper": "https://firebasestorage.googleapis.com/v0/b/challengeme-d7fef.appspot.com/o/Challenges-Helper%2Fch-planche.png?alt=media"
+  },
+
+  "planTomorrow": {
+    "miniCours": "混乱のまま1日を終えるのは今日でやめて、夜のうちに明日の計画を立ててスッキリした気持ちで過ごしましょう！ 📆💡 ソファでだらだらする前に、まず翌日のタスクを書き出してみてください。やりたいこと・やるべきことをリストにするだけで、コントロール感が生まれ、ストレスも軽減されます。📝 そして、タスクを“完了”とチェックするのは最高に気持ちいいものです！ 🚀 リストは現実的で具体的に。各タスクにはアクション動詞 ⚡ を使い、できればその“理由”も書いてみましょう。お気に入りの音楽やお茶と一緒に、この時間を心地よい習慣にしてください 🎵。",
+    "exemples": [
+      "例 1 ✨：タスク：「医者に予約の電話をする」 ➡️ 理由：「安心して健康を守るため」。",
+      "例 2 💡：タスク：「顧客に進捗メールを送る」 ➡️ 理由：「売上につながり、顧客のサポートにもなる」。",
+      "例 3 🚀：タスク：「2 km ランニングする」 ➡️ 理由：「健康維持と自己満足につながる」。",
+      "例 4 🌱：タスク：「家族の夕食を作る」 ➡️ 理由：「一緒に楽しい時間を過ごすため」。"
+    ],
+    "ressources": [
+      {
+        "title": "1日の計画の立て方",
+        "type": "video",
+        "url": "https://youtu.be/eOOmP6IUtOk?si=iv6DMcfZhOje-KBf"
+      },
+      {
+        "title": "1日の整理方法",
+        "type": "article",
+        "url": "https://matthieudesroches.com/articles/comment-organiser-sa-journee"
+      },
+      {
+        "title": "なぜ計画は必要なのか？ – ポッドキャスト",
+        "type": "bonus",
+        "url": "https://www.radiofrance.fr/franceculture/podcasts/le-pourquoi-du-comment-economie-et-social/le-pourquoi-du-comment-economie-social-chronique-du-vendredi-29-mars-2024-5316044"
+      }
+    ],
+    "illustrationSuggeree": "机に座り、翌日のタスクを手帳に書いている人。",
+    "imageHelper": "https://firebasestorage.googleapis.com/v0/b/challengeme-d7fef.appspot.com/o/Challenges-Helper%2Fch-plan-tomorrow.png?alt=media"
+  },
+
+  "playInstrument": {
+    "miniCours": "楽器を学ぶことは、ワクワクする 🌟 と同時にとても達成感のある挑戦です 🏆。創造性を表現できる素晴らしい方法でもあり 🎨、ストレスを和らげる効果もあります 😌。まずは、自分が本当に惹かれる楽器を選んでみましょう 🎸🎷。その楽器を“好き”という気持ちが、学び続けるモチベーションになります。上達はゆっくり進むものなので、すぐに上手くいかなくても焦らずに 🐢。偉大な演奏家も、最初はとてもシンプルなステップから始めています。学ぶ過程を楽しみ、音楽に身を委ねてください 🎵。",
+    "exemples": [
+      "例 1 ✨：まずは基本から。ピアノなら指の置き方、バイオリンなら正しい構え方を覚える。",
+      "例 2 💡：短時間でも毎日練習する。15分でも続けることで大きな成長につながる。",
+      "例 3 🚀：好きな簡単な曲を1つ選んで練習する。楽しく学べるのでモチベが上がる。",
+      "例 4 🌱：困ったときは、経験豊富な先生に教えてもらう。プロのアドバイスは上達の近道。"
+    ],
+    "ressources": [
+      {
+        "title": "自分に合った楽器を選ぶには",
+        "type": "video",
+        "url": "https://youtu.be/psbPHO-cRn4?si=x0viD_YouT3oN38C"
+      },
+      {
+        "title": "いろいろな楽器レッスン",
+        "type": "article",
+        "url": "https://www.anacours-musique.com/tous-les-instruments/"
+      },
+      {
+        "title": "大人になってから楽器を学ぶ – ポッドキャスト",
+        "type": "podcast",
+        "url": "https://youtu.be/At-c9pwkckQ?si=ADSwYamSoh9zFsrT"
+      }
+    ],
+    "illustrationSuggeree": "ギターを弾いたり、ピアノに向かって音楽に没頭している人。",
+    "imageHelper": "https://firebasestorage.googleapis.com/v0/b/challengeme-d7fef.appspot.com/o/Challenges-Helper%2Fch-learn-instrument.png?alt=media"
+  },
+  "positiveAffirmations": {
+    "miniCours": "ポジティブ・アファメーション 🗣️ とは、自分に向けて言う前向きな言葉の宣言のことです。自己肯定感を高め、成功を引き寄せるための強力なツールです。こうした前向きなフレーズをくり返し唱えることで 🔄、心の向きが少しずつポジティブな方向へと変わっていきます。効果を高めるには、「今」の自分に向けた言葉（現在形）✔️ を使い、具体的に ⚙️、そして自分にとってしっくりくる“本当の言葉”であることが大切です。自分の心を取り戻し、あとは潜在意識に任せましょう。アファメーションがあなたを後押ししてくれます。💪",
+    "exemples": [
+      "例 1 ✨ 「私はどんな困難にも立ち向かう強さと勇気を持っている。」",
+      "例 2 💡 「私は自分の人生に調和と喜びを創り出している。」",
+      "例 3 🚀 「私は今、素晴らしいチャンスへと続く道の上を歩いている。」",
+      "例 4 🌱 「私は愛を自由に与え、喜びをもって受け取っている。」"
+    ],
+    "ressources": [
+      {
+        "title": "50のポジティブ・アファメーション",
+        "type": "video",
+        "url": "https://youtu.be/Xaf_wrbB1lQ?si=Pf4pmaSBS6PTQFUG"
+      },
+      {
+        "title": "ポジティブ・アファメーションと心の整え方",
+        "type": "article",
+        "url": "https://pauldevaux.fr/affirmations-positives/#:~:text=La%20technique%20des%20affirmations%20positives%20consiste%20%C3%A0%20r%C3%A9p%C3%A9ter%20de%20mani%C3%A8re,notre%20corps%20et%20nos%20comportements."
+      },
+      {
+        "title": "ポジティブ・アファメーション － 自信と直感",
+        "type": "bonus",
+        "url": "https://open.spotify.com/episode/6z9sP0bq1SSJuS56W9Y7WT"
+      }
+    ],
+    "illustrationSuggeree": "鏡の前で自分にポジティブな言葉をかけている人。",
+    "imageHelper": "https://firebasestorage.googleapis.com/v0/b/challengeme-d7fef.appspot.com/o/Challenges-Helper%2Fch-positive-affirmations.png?alt=media"
+  },
+  "readChapter": {
+    "miniCours": "📚 毎日の読書は、語彙力を広げ、集中力を高め、創造性を刺激してくれます。本は、ほかの世界や文化、考え方へと通じる扉です。分厚い本はときに圧倒されるかもしれませんが、どんな本も「1章ずつ」の積み重ねでできています。1日1章読むだけでも、大きな変化を生み出せます。読めば読むほど、理解力も読むスピードも自然と上がっていきます。お気に入りの本を選んで、心地よい場所に腰をおろし、物語の世界に飛び込みましょう！",
+    "exemples": [
+      "例 1 ✨：通勤電車の中で、ジョージ・オーウェル『1984年』の第1章を読む。",
+      "例 2 💡：朝15分だけ時間を取り、ハーパー・リー『アラバマ物語（To Kill a Mockingbird）』の最後の章を読む。",
+      "例 3 🚀：カフェでコーヒーを飲みながら、パウロ・コエーリョ『アルケミスト』の1章を味わう。",
+      "例 4 🌱：寝る前に、ナポレオン・ヒル『思考は現実化する（Think and Grow Rich）』の1章を読んで一日を締めくくる。"
+    ],
+    "ressources": [
+      {
+        "title": "読書は脳をどう変えるのか",
+        "type": "video",
+        "url": "https://youtu.be/TvQ9AbWVuTU?si=9XMDStk1kadrUYw0"
+      },
+      {
+        "title": "なぜ毎日読む時間を作るべきか？",
+        "type": "article",
+        "url": "https://labibliomaniaque.ca/2016/08/31/pourquoi-prendre-le-temps-de-lire-chaque-jour/"
+      },
+      {
+        "title": "読書の効果について",
+        "type": "bonus",
+        "url": "https://www.rts.ch/audio-podcast/2023/audio/les-bienfaits-de-la-lecture-27448117.html"
+      }
+    ],
+    "illustrationSuggeree": "ソファにゆったり座って本に没頭している人。",
+    "imageHelper": "https://firebasestorage.googleapis.com/v0/b/challengeme-d7fef.appspot.com/o/Challenges-Helper%2Fch-read-chapter.png?alt=media"
+  },
+  "reducePlastic": {
+    "miniCours": "🌍 地球を守る大きな一歩は、日々の小さな行動から始まります。そのひとつが、プラスチックの使用を減らすことです。第一歩として、ペットボトルの代わりにマイボトルを使ってみましょう 🚰。また、買い物のときはビニール袋を断り、エコバッグを持ち歩く習慣をつけてみてください 🛍️。コーヒーブレイクでは、使い捨てカップではなく、マグカップや陶器のカップを選ぶこともできます ☕。これらの小さな行動が積み重なることで、大きな変化につながっていきます 👣。",
+    "exemples": [
+      "例 1 ✨：プラスチック製の歯ブラシを、土に還る竹製の歯ブラシに替える。",
+      "例 2 💡：プラスチックストローの代わりに、ステンレス製の繰り返し使えるストローを使う。",
+      "例 3 🚀：テイクアウトを買うとき、自分のフードコンテナを持参する。",
+      "例 4 🌱：使い捨てカミソリの代わりに、長く使える金属製のカミソリを選ぶ。"
+    ],
+    "ressources": [
+      {
+        "title": "プラスチック消費を減らすには？",
+        "type": "video",
+        "url": "https://youtu.be/6f68f8phQLY?si=ajJJ2GtO9UYgiY-X"
+      },
+      {
+        "title": "日常でプラスチック使用を減らす10のアイデア",
+        "type": "article",
+        "url": "https://lespetitsbidons.fr/blogs/news/10-conseils-pour-reduire-sa-consommation-de-plastique"
+      },
+      {
+        "title": "プラスチックに覆われた地球 − 解決策は？",
+        "type": "bonus",
+        "url": "https://www.radiofrance.fr/franceculture/podcasts/de-cause-a-effets-le-magazine-de-l-environnement/une-planete-asphyxiee-de-plastique-quelles-solutions-5340104"
+      }
+    ],
+    "illustrationSuggeree": "ペットボトルやビニール袋、紙コップと、それぞれのエコな代替品（マイボトル、布バッグ、マグカップ）が並べてある写真コラージュ。",
+    "imageHelper": "https://firebasestorage.googleapis.com/v0/b/challengeme-d7fef.appspot.com/o/Challenges-Helper%2Fch-reduce-plastic.png?alt=media"
+  },
+  "reduceScreenTime": {
+    "miniCours": "眠りにつく前の静かな時間 🌙 は、良質な睡眠のためにとても大切です。スマホやパソコンなどの画面 📱💻 から出るブルーライトは、体内時計のリズムを乱してしまうことがあります。寝る少なくとも30分前には画面から離れて、心と身体を“おやすみモード”に切り替えてあげましょう 💤。その時間は、リラックスしたり 💆‍♀️、軽く瞑想したり、本を読んだり 📖、優しい音楽を聴いたりするのにぴったりです 🎵。",
+    "exemples": [
+      "例 1 ✨：ラベンダーのアロマオイルを入れた、心を落ち着かせるバスタイムをとる。",
+      "例 2 💡：心を満たしてくれる本を読んで、自然と眠りへと導かれる時間にする。",
+      "例 3 🚀：寝る前に軽いヨガやストレッチをして、体と心の緊張をほぐす。",
+      "例 4 🌱：リラックスできる音楽や自然音のプレイリストを聴きながら目を閉じて休む。"
+    ],
+    "illustrationSuggeree": "ノートパソコンの電源を切り、枕元のライトをつけて本を読み始める人。",
+    "imageHelper": "https://firebasestorage.googleapis.com/v0/b/challengeme-d7fef.appspot.com/o/Challenges-Helper%2Fch-reduce-screen-time.png?alt=media",
+    "ressources": [
+      {
+        "title": "スマホ依存を断ち切るには",
+        "type": "video",
+        "url": "https://youtu.be/HSeF86blL7Y?si=ieSLc2SYAUVkConf"
+      },
+      {
+        "title": "スクリーンタイムを制限することの大切さ",
+        "type": "article",
+        "url": "https://naitreetgrandir.com/fr/nouvelles/2023/12/04/limiter-temps-ecran-important/"
+      },
+      {
+        "title": "スクリーンタイムを減らすためのコツ − ポッドキャスト",
+        "type": "podcast",
+        "url": "https://www.radiofrance.fr/franceinter/podcasts/l-info-de-france-inter/l-info-de-france-inter-8230190"
+      }
+    ]
+  },
+  "saveMoney": {
+    "miniCours": "💪 1日たった5ユーロを貯金するだけでも、経済的な自由への大きな一歩になります。金額は小さく見えても、お金の扱い方を整えるうえで大きな意味があります 💰。コツは、小さく始めて、それを毎日の習慣にすること。どんなに小さな一手でも、積み重なれば大きな違いになります 😇。コーヒーを自宅で淹れたり ☕、お弁当を作って持っていったり 🥪。続けていくうちに、「こんなに節約できたんだ！」と驚くはずです。",
+    "exemples": [
+      "例 1 ✨：10ユーロかかるフィットネスレッスンの代わりに、自宅でトレーニングを行う 🏋️‍♀️。",
+      "例 2 💡：カフェでテイクアウトせず、家でコーヒーを淹れて飲む ☕。",
+      "例 3 🚀：ランチを外食せず、手作りの昼食 🥗 を職場に持参する。",
+      "例 4 🌱：映画館で15ユーロ使う代わりに、家でお気に入りの本 📚 と静かな夜を過ごす。"
+    ],
+    "illustrationSuggeree": "テーブルの上に置かれた貯金箱と、その横に並ぶ数枚のコイン。",
+    "imageHelper": "https://firebasestorage.googleapis.com/v0/b/challengeme-d7fef.appspot.com/o/Challenges-Helper%2Fch-save-money.png?alt=media",
+    "ressources": [
+      {
+        "title": "お金を素早く貯める方法",
+        "type": "video",
+        "url": "https://youtu.be/4TU9xB5ttYo?si=P1qE-3sujLTu2LZF"
+      },
+      {
+        "title": "日々の節約アイデア",
+        "type": "article",
+        "url": "https://www.mesquestionsdargent.fr/budget/comment-faire-des-economies/astuces-economies-accessible"
+      },
+      {
+        "title": "毎日の節約術 − ポッドキャスト",
+        "type": "bonus",
+        "url": "https://www.radiofrance.fr/francebleu/podcasts/france-bleu-paris-bienvenue-chez-vous-les-experts/des-astuces-simples-pour-faire-des-economies-au-quotidien-8148632"
+      }
+    ]
+  },
+  "selfReflection": {
+    "miniCours": "毎日の自己振り返り 🤔💭 は、自己成長に欠かせない大切な習慣です。毎日数分だけでいいので、その日の行動・思考・感情を見つめ直す時間をとりましょう。そうすることで、自分のパターンや課題、成長のチャンスが見えてきます。日記に書き出してもよいですし、静かに目を閉じて振り返るだけでも構いません。大切なのは、自分自身と向き合い、一日を正直な目で見つめ直すことです 👍🌱。",
+    "exemples": [
+      "例 1 ✨：仕事の会議を振り返り、「うまくいった点」「もっと良くできた点」を整理する。",
+      "例 2 💡：その日の人間関係のやりとりを思い返し、「心地よかった場面」「違和感があった場面」を観察する。",
+      "例 3 🚀：一日の目標が達成できたかどうかを確認し、「なぜできたのか／できなかったのか」を考える。",
+      "例 4 🌱：その日感じた主な感情を振り返り、「明日はどう対応したいか」をイメージする。"
+    ],
+    "illustrationSuggeree": "一日の終わりに机に座り、日記にペンを走らせている人。",
+    "imageHelper": "https://firebasestorage.googleapis.com/v0/b/challengeme-d7fef.appspot.com/o/Challenges-Helper%2Fch-self-reflection.png?alt=media",
+    "ressources": [
+      {
+        "title": "自己振り返りの重要性",
+        "type": "video",
+        "url": "https://youtu.be/CVsAaRPf60E?si=i_KZ3i5MKUBpZBJ5"
+      },
+      {
+        "title": "自己内省：自己成長と感情の自由への鍵",
+        "type": "article",
+        "url": "https://nospensees.fr/lauto-reflexion-cle-de-croissance-personnelle-de-liberte-emotionnelle/"
+      },
+      {
+        "title": "Self-Reflection Podcasts（自己内省ポッドキャストのまとめ）",
+        "type": "bonus",
+        "url": "https://podcast.feedspot.com/self_reflection_podcasts/"
+      }
+    ]
+  },
+  "talkToStranger": {
+    "miniCours": "毎日新しい人と出会うことは、視野を広げるだけでなく、コミュニケーション能力や社交スキル 👥 を育てる最高のトレーニングになります。最初は小さな一歩からで大丈夫です。笑顔を向ける、あいさつをする、簡単な質問をしてみる——それだけで、思いがけない会話が生まれることもあります 🚀。出会いの一つひとつが、自分自身の成長につながるチャンスです 🌱。",
+    "exemples": [
+      "例 1 ✨：カフェでバリスタに「こんにちは、お元気ですか？」と声をかけてみる ☕️。",
+      "例 2 💡：エレベーターの中で、「この近くでおすすめのお店はありますか？」と聞いてみる 🏢。",
+      "例 3 🚀：公園で隣に座った人と、その日のニュースや天気について一言話してみる 🍃。",
+      "例 4 🌱：職場の同僚に、「その服素敵ですね」とさりげなく褒め言葉を伝える 👔。"
+    ],
+    "illustrationSuggeree": "カフェで、見知らぬ人に笑顔で話しかけている人。",
+    "imageHelper": "https://firebasestorage.googleapis.com/v0/b/challengeme-d7fef.appspot.com/o/Challenges-Helper%2Fch-talk-to-stranger.png?alt=media",
+    "ressources": [
+      {
+        "title": "会話術を身につける",
+        "type": "video",
+        "url": "https://youtu.be/HYQ4ZjylHEU?si=sonikOMisf7bwb4Z"
+      },
+      {
+        "title": "コミュニケーション力を高める10ステップ",
+        "type": "article",
+        "url": "https://timidite.info/agir/apprendre-a-mieux-communiquer/"
+      },
+      {
+        "title": "スモールトークの始め方 – ポッドキャスト",
+        "type": "bonus",
+        "url": "https://podcast.ausha.co/100-reseau/le-small-talk-comment-engager-une-conversation"
+      }
+    ]
+  },
+  "wakeUp5AM": {
+    "miniCours": "朝5時に起きるのは大変に感じるかもしれませんが、生産性と幸福感の向上という大きなメリットがあります 🌞。誰よりも早く一日を始められることで、達成できることが一気に増えます。質のいい睡眠のための夜のルーティンを整え 😴、少しずつ起床時間を早めていきましょう ⏰。",
+    "exemples": [
+      "例 1 ✨：イーロン・マスクは5時に起きて複数の企業を管理しています。",
+      "例 2 💡：ミシェル・オバマは、子どもたちが起きる前の4時30分に運動していました。",
+      "例 3 🚀：オプラ・ウィンフリーは、5時に起きてウェルネス・ルーティンを始めます。",
+      "例 4 🌱：ダン・ブラウンは毎日4時に起きて執筆しています。"
+    ],
+    "illustrationSuggeree": "朝日を背景に、5時を示す目覚まし時計。",
+    "imageHelper": "https://firebasestorage.googleapis.com/v0/b/challengeme-d7fef.appspot.com/o/Challenges-Helper%2Fch-wake-up-5am.png?alt=media",
+    "ressources": [
+      {
+        "title": "なぜ私は毎日5時に起きるのか",
+        "type": "video",
+        "url": "https://youtu.be/pg2GnMwpePo?si=cf66E-ptBf8cJDSE"
+      },
+      {
+        "title": "早起きする理由",
+        "type": "article",
+        "url": "https://www.tediber.com/conseils/lit/pourquoi-lever-tot"
+      },
+      {
+        "title": "“早起きは三文の得”は本当？",
+        "type": "bonus",
+        "url": "https://www.radiofrance.fr/franceculture/podcasts/la-question-du-jour/le-matin-appartient-il-a-ceux-qui-se-levent-tot-2077852"
+      }
+    ]
+  },
+
+  "walk10000Steps": {
+    "miniCours": "1日1万歩のウォーキングは、健康維持にも心身の活性化にも最適なチャレンジです 🏃‍♀️。身体にも心にも良い影響を与えます 🧠。散歩に出たり、外の空気を吸ったり、食後に歩いたりと、少しの工夫で歩数を増やすことができます 🚶。一歩一歩が積み重なります！",
+    "exemples": [
+      "例 1 ✨：ポーリンは昼休みに毎日散歩しています 💼。",
+      "例 2 💡：マルクは子どもたちを学校まで徒歩で送り届けています 👨‍👧‍👦。",
+      "例 3 🚀：ジャンヌはエレベーターではなく階段を選びます 🔝。",
+      "例 4 🌱：オリヴィエは夕食後に毎晩散歩しています 👌。"
+    ],
+    "illustrationSuggeree": "公園でスマホの歩数計を見ながら微笑む人。",
+    "imageHelper": "https://firebasestorage.googleapis.com/v0/b/challengeme-d7fef.appspot.com/o/Challenges-Helper%2Fch-walk-1000-pas.png?alt=media",
+    "ressources": [
+      {
+        "title": "1日1万歩ウォーキング",
+        "type": "video",
+        "url": "https://youtu.be/CNGG-amQsyw?si=FMc11PXozuxTuV5u"
+      },
+      {
+        "title": "本当に1日1万歩が必要なのか？",
+        "type": "article",
+        "url": "https://www.nationalgeographic.fr/sciences/sante-recommandations-sante-faut-il-reellement-faire-10000-pas-par-jour"
+      },
+      {
+        "title": "1日1万歩がもたらす効果",
+        "type": "podcast",
+        "url": "https://podcast.ausha.co/sport-sante-nutrition-podcast/comment-10-000-pas-par-jour-peuvent-t-aider-a-perdre-du-gras-et-etre-en-meilleure-sante"
+      }
+    ]
+  },
+
+  "workout15Min": {
+    "miniCours": "🎉 さあ始めましょう！ 運動は身体にも心にもとても良い習慣です 🧠。エネルギー、気分、健康状態を改善してくれます。まずは1日15分から始め、徐々に増やしていきましょう。好きなアクティビティを選んで継続することが大切です！ 💪🏋️‍♀️",
+    "exemples": [
+      "例 1 ✨：朝に15分間ヨガをする。",
+      "例 2 💡：昼休みに速歩きをする。",
+      "例 3 🚀：仕事後にダンスのショートチュートリアルをしてみる。",
+      "例 4 🌱：寝る前に15分のストレッチを行う。"
+    ],
+    "illustrationSuggeree": "自宅でエクササイズしている人。",
+    "imageHelper": "https://firebasestorage.googleapis.com/v0/b/challengeme-d7fef.appspot.com/o/Challenges-Helper%2Fch-workout.png?alt=media",
+    "ressources": [
+      {
+        "title": "朝に行うエクササイズで一日をスタート",
+        "type": "video",
+        "url": "https://youtu.be/nHzveG3uyho?si=EWTmvbnKTm-0LvGH"
+      },
+      {
+        "title": "運動がもたらすメリット",
+        "type": "article",
+        "url": "https://www.medicalnewstoday.com/articles/153390"
+      },
+      {
+        "title": "運動について – ポッドキャスト",
+        "type": "bonus",
+        "url": "https://www.radiofrance.fr/franceculture/podcasts/serie-faites-du-sport"
+      }
+    ]
+  },
+
+  "explore": "探索",
+  "discoverAppInFewSteps": "数ステップでアプリを発見",
+  "homePageDescription": "ようこそ！ {challenges} を管理し、{goals} を達成し、{access} からあなたの新しい冒険を始めましょう。",
+  "profileDescription": "あなたの {stats} を確認し、{badges} を見つけ、{personalize} してアプリを自分らしくカスタマイズしましょう。",
+  "focusPageDescription": "{challenges} に集中し、{progress} を追跡してモチベーションを高めましょう。",
+  "explorePageDescription": "新しい {challenges} を発見し、{communities} に参加して刺激を受けながら新たな挑戦を始めよう。",
+  "homePageTitle": "ホーム",
+  "focusPageTitle": "フォーカス",
+  "explorePageTitle": "探索",
+  "activity": "アクティビティ",
+  "listOfNotifications": "通知一覧",
+  "viewInvitation": "チャレンジ「{{challenge}}」への招待",
+  "invitationIcon": "招待アイコン",
+  "noNotifications": "通知はありません",
+  "noNotificationsIcon": "通知なしアイコン",
+  "noNotificationsSubtext": "チャレンジに招待されると、ここに通知が届きます。",
+  "backButton": "戻る",
+  "backButtonHint": "前のページへ戻る",
+  "invitationToChallenge": "チャレンジ「{{challenge}}」への招待",
+  "receivedOn": "{{date}} に受信",
+  "locale": "ja-JP",
+
+  "firstPick": {
+    "title": "最初のチャレンジを選ぼう！",
+    "subtitle": "どのモードで始めたい？",
+    "chooseSolo": "ソロを選ぶ",
+    "chooseDuo": "デュオを選ぶ",
+    "modeDuo": "デュオ（おすすめ）",
+    "modeSolo": "ソロ",
+    "duoBadge": "デュオ",
+    "alreadyInvited": "このチャレンジにはすでに保留中の招待があります。",
+    "durationLabel": "期間：",
+    "offlineDuo": "オフラインです。デュオ招待を送るには再接続してください。",
+    "day_one": "{{count}} 日",
+    "day_other": "{{count}} 日",
+    "chooseMode": "モードを選択",
+    "chooseSoloShort": "ソロを選択",
+    "chooseDuoShort": "デュオを選択",
+    "skip": "スキップ",
+    "alert": {
+      "missingChoiceTitle": "選択されていません",
+      "missingChoiceBody": "チャレンジを選択してください。",
+      "modeTitle": "モード",
+      "modeBody": "デュオまたはソロを選択してください。"
+    }
+  },
+
+  "access": {
+    "editProfile": {
+      "label": "プロフィール編集",
+      "hint": "プロフィール編集ページへ移動"
+    },
+    "statistics": {
+      "label": "統計",
+      "hint": "あなたの統計情報にアクセス"
+    },
+    "ongoingChallenges": {
+      "label": "進行中のチャレンジ",
+      "hint": "現在取り組んでいるチャレンジを確認"
+    },
+    "favorites": {
+      "label": "お気に入り",
+      "hint": "お気に入りチャレンジにアクセス"
+    },
+    "completedChallenges": {
+      "label": "完了したチャレンジ",
+      "hint": "完了済みのチャレンジを見る"
+    },
+    "rewards": {
+      "label": "リワード",
+      "hint": "獲得したトロフィーやバッジを見る"
+    },
+    "myChallenges": {
+      "label": "マイチャレンジ",
+      "hint": "自分が作成したチャレンジにアクセス"
+    },
+    "activity": {
+      "label": "アクティビティ",
+      "hint": "最新の通知とアクティビティを見る"
+    }
+  },
+   "daysShort": "日",
+  "myStats": "マイ・ステータス",
+  "myCTStats": "ChallengeTies ステータス",
+  "rank": {
+    "kicker": "マイランキング",
+    "body": "今週の順位は #{{r}} ！ ChallengeTies で僕に挑戦してみて 💥"
+  },
+  "features": {
+    "voteKicker": "次の新機能に投票しよう",
+    "voteFooter": "投票はもうすぐ終了 — あなたの一票が力になる ✨"
+  },
+  "statDescription": {
+    "savedChallenges": "保存したチャレンジ数",
+    "ongoingChallenges": "進行中のチャレンジ数",
+    "completedChallenges": "完了したチャレンジ数",
+    "successRate": "全体の達成率",
+    "trophies": "獲得したトロフィー数",
+    "unlockedAchievements": "アンロックした実績数",
+    "longestStreak": "最長連続達成日数"
+  },
+  "pleaseAcceptRules": "ルールに同意するチェックボックスをオンにしてください。",
+  "errorSavingRulesAcceptance": "ルールへの同意を保存中にエラーが発生しました。",
+  "continueAsGuest": "ゲストとして続行",
+  "authRequiredTitle": "ChallengeTies をフルで楽しもう",
+  "authRequiredBody": "この機能にアクセスするには、新規登録またはログインが必要です。",
+  "authRequiredCTA": "アカウント作成 / ログイン",
+  "authRequiredLater": "ゲストのまま続行",
+  "acceptRulesCheckbox": "チャットのルールに同意する",
+
+  "tutorial": {
+    "daily": {
+      "title": "今日のチャレンジ",
+      "description": "毎日、あなたのために選ばれたチャレンジが5つ。こまめにチェックして見逃さないようにしよう。"
+    },
+    "discover": {
+      "title": "インスピレーション",
+      "description": "ティップス、ランキング、新機能、FAQ にアクセスして、さらに高みを目指そう。"
+    },
+    "welcome": {
+      "title": "ようこそ！",
+      "description": "ChallengeTies の魅力をサクッと紹介する、超ショート・ツアーです。"
+    },
+    "profile": {
+      "title": "あなたのプロフィール",
+      "description": "チャレンジ、報酬、各種設定を一箇所で確認できるマイページです。"
+    },
+    "videoStep": {
+      "title": "即効ヒント",
+      "description": "モチベーションを一気に上げる、短いインスピレーション動画。"
+    },
+    "tapAnywhere": "画面のどこかをタップして続行",
+    "buttons": {
+      "start": "始める",
+      "next": "次へ",
+      "skip": "スキップ",
+      "finish": "完了"
+    },
+    "index": {
+      "welcome": {
+        "title": "ChallengeTies へようこそ ✨",
+        "description": "最初の一歩をスムーズにするためのミニツアーです。いつでもスキップできます。"
+      },
+      "cta": {
+        "title": "冒険をスタート",
+        "description": "ここをタップして、すべてのチャレンジをブラウズして、数秒で次のチャレンジを見つけよう。"
+      },
+      "daily": {
+        "title": "今日のチャレンジ",
+        "description": "毎日、新しいおすすめチャレンジが表示されます。何から始めればいいか迷ったときに最適。"
+      },
+      "discover": {
+        "title": "インスピレーションを得る",
+        "description": "ティップス、ランキング、新機能、FAQ など、成長とモチベ維持に役立つ情報がここに。"
+      }
+    }
+  },
+
+  "categories": {
+    "Santé": "健康",
+    "Fitness": "フィットネス",
+    "Finance": "ファイナンス",
+    "Mode de Vie": "ライフスタイル",
+    "Éducation": "教育",
+    "Créativité": "クリエイティビティ",
+    "Carrière": "キャリア",
+    "Social": "ソーシャル",
+    "Productivité": "生産性",
+    "Écologie": "エコロジー",
+    "Motivation": "モチベーション",
+    "Discipline": "自己管理",
+    "Développement Personnel": "自己成長",
+    "État d'esprit": "マインドセット",
+    "Autres": "その他"
+  },
+
+  "challengeHelper": {
+    "videos": "おすすめ動画",
+    "noData": "このチャレンジには、まだヘルプ情報が登録されていません。",
+    "examples": "例",
+    "openImage": "イラストを開く",
+    "openShare": "開く / 共有する",
+    "copy": "コピー",
+    "copySummary": "ミニコースをコピー",
+    "explanation": "ミニコース",
+    "resources": "リソース",
+    "suggestion": "改善アイデアがある？ 気軽にメッセージを送ってね。",
+    "share": "共有",
+    "shareMessage": {
+      "titleLine": "⭐ {{title}}",
+      "bodyLine": "{{body}}",
+      "tagline": "1分あったら？ 1つスキルアップ！ ⚡",
+      "cta": "ChallengeTies で開く",
+      "linkLabel": "ミニコースを見る",
+      "shareAlt": "このミニコースを ChallengeTies でチェックしよう：{{link}}"
+    },
+    "open": "開く"
+  },
+
+  "questions": {
+    "title": "よくある質問",
+    "expandAll": "すべて開く",
+    "collapseAll": "すべて閉じる",
+    "searchPlaceholder": "🔍 質問を検索…",
+    "overview": {
+      "title": "FAQ へようこそ ✨",
+      "body": "ChallengeTies を最大限に楽しむための、よくある質問とその答えをまとめています。"
+    },
+    "contactCta": "✉️ サポートに連絡",
+    "noResult": "該当する結果が見つかりませんでした。別のキーワードを試してみてください。",
+
+    "q": {
+      "whatIs": "❓ ChallengeTies ってどんなアプリ？",
+      "howToStart": "🚀 最初のチャレンジはどう始めるの？",
+      "duoMode": "👫 Duo モードって何？",
+      "soloMode": "🙋 Solo モードはどう違うの？",
+      "invitations": "📨 招待機能はどうやって使うの？",
+      "progress": "📈 自分の進捗はどうやって記録されるの？",
+      "notifications": "🔔 通知の設定はどこで変えられる？",
+      "community": "💬 チャレンジのコミュニティはある？",
+      "privacy": "🛡️ 個人データはどう扱われるの？",
+      "contact": "📬 困ったときはどうやって連絡すればいい？"
+    },
+
+    "a": {
+      "whatIs": "ChallengeTies は、毎日のチャレンジに取り組むことで、少しずつ習慣を変えていけるアプリです。1人でも、友だちと一緒でも挑戦でき、毎日の達成を記録して、モチベーションになる報酬をアンロックできます 🏆。",
+      "howToStart": "登録のときに、まず最初のチャレンジをひとつ選びます。期間（7日・14日・21日 など）を決めると、毎日リマインダーが届き、進捗をチェックできます ✅。",
+      "duoMode": "Duo モードでは、友だちと同じチャレンジを共有できます。お互いの進捗が並んで表示され、励まし合いながら取り組めるので、より楽しく・続けやすくなります 💪。",
+      "soloMode": "Solo モードでは、自分自身との勝負です。他人と比べることなく、自分のペースで進みながら、1日ずつ積み重ねる達成感を味わえます ✨。",
+      "invitations": "ユーザー名または専用リンクを使って友だちを招待できます。相手には通知が届き、承諾または辞退を選べます。承諾されると、同じチャレンジを一緒に進められます 🎯。",
+      "progress": "毎日「Mark Today」ボタンで進捗をチェックします。これまでの履歴（達成した日数、連続達成（ストリーク 🔥）、アンロックした実績など）が保存されます。",
+      "notifications": "通知をオンにすると、毎日のリマインダーが届き、チャレンジを忘れにくくなります。設定画面から、いつでもオン／オフを切り替えできます ⚙️。",
+      "community": "コミュニティ機能は現在開発中です ✨。それまでは、友だちを招待したり、成果をシェアして、自分だけのモチベ・サークルを作ってみてください 👥。",
+      "privacy": "あなたの個人データは安全に管理されます 🔒。第三者に販売されることはありません。設定画面から、いつでもアカウントとデータを削除できます。",
+      "contact": "困ったときは、アプリ内の「サポートに連絡」ボタンから、または公式サイトのコンタクトページからいつでもメッセージを送ってください 🌍。"
+    }
+  },
+
+  "common": {
+    "back": "戻る",
+    "skip": "スキップ",
+    "challenge": "チャレンジ",
+    "error": "エラー",
+    "unexpectedError": "予期せぬエラーが発生しました。もう一度お試しください。",
+    "misc": "その他",
+    "oops": "おっと…",
+    "loadError": "更新できませんでした。下にスワイプして再読み込みしてください。",
+    "close": "閉じる",
+    "networkError": "通信エラーが発生しました",
+    "info": "情報"
+  },
+
+  "inventory": {
+    "title": "インベントリ",
+    "subtitle": "ここで特別ボーナスとストリーク保護アイテムを管理できます。",
+    "sectionSubtitle": "すべてのボーナスとストリーク保護アイテムを一目で確認。",
+    "totalItems": "合計 {{count}} 個のアイテム",
+    "itemHint": "このアイテムの詳細情報を見る。",
+    "emptyTitle": "まだボーナスはありません",
+    "emptyText": "チャレンジを達成して、デイリールーレットを回してインベントリを増やそう。",
+    "streakHint": "Streak Pass は、チャレンジを取りこぼしたときに、シリーズを守るため自動的に使用されます。",
+    "items": {
+      "streakPass": {
+        "title": "Streak Pass",
+        "subtitle": "チャレンジを1回失敗しても、連続記録を一度だけ保護してくれる。"
+      }
+    }
+  }
+}

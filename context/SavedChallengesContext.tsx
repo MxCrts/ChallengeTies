@@ -7,16 +7,15 @@ import React, {
 } from "react";
 import { auth, db } from "../constants/firebase-config";
 import {
-  doc,
-  updateDoc,
-  getDoc,
-  onSnapshot,
-  arrayUnion,
-  increment,
-} from "firebase/firestore";
-import { Alert } from "react-native";
+   doc,
+   updateDoc,
+   getDoc,
+   onSnapshot,
+   arrayUnion,
+ } from "firebase/firestore";
 import { checkForAchievements } from "../helpers/trophiesHelpers";
 import { useTranslation } from "react-i18next";
+import { incStat } from "@/src/services/metricsService";
 
 export interface Challenge {
   id: string;
@@ -45,8 +44,9 @@ export const SavedChallengesProvider: React.FC<{
 }> = ({ children }) => {
   const [savedChallenges, setSavedChallenges] = useState<Challenge[]>([]);
   const [isInitialized, setIsInitialized] = useState(false);
-  const { t, i18n } = useTranslation();
-  const isActiveRef = useRef(true); // Bloque les callbacks
+  const isActiveRef = useRef(true); 
+  const inFlightAdd = useRef<Set<string>>(new Set());
+ const inFlightRemove = useRef<Set<string>>(new Set());
 
   useEffect(() => {
     console.log(
@@ -54,6 +54,11 @@ export const SavedChallengesProvider: React.FC<{
     ); // Log
     let unsubscribeSnapshot: (() => void) | null = null; // Stocker unsubscribe
     const unsubscribeAuth = auth.onAuthStateChanged((user) => {
+      // Si on switche d'utilisateur, on nettoie l'ancien onSnapshot
+   if (unsubscribeSnapshot) {
+     unsubscribeSnapshot();
+     unsubscribeSnapshot = null;
+   }
       console.log(
         "onAuthStateChanged SavedChallenges, user:",
         user?.uid || "null"
@@ -70,7 +75,8 @@ export const SavedChallengesProvider: React.FC<{
         setIsInitialized(true);
         return;
       }
-
+// Réactive l’écoute si user connecté
+    isActiveRef.current = true;
       const userRef = doc(db, "users", user.uid);
       unsubscribeSnapshot = onSnapshot(
         userRef,
@@ -88,8 +94,9 @@ export const SavedChallengesProvider: React.FC<{
               "Données brutes de SavedChallenges:",
               userData.SavedChallenges
             ); // Log
-            const challenges = userData.SavedChallenges || [];
-            const validChallenges = challenges.map((challenge: any) => ({
+            const challenges = Array.isArray(userData.SavedChallenges) ? userData.SavedChallenges : [];
+            // normalisation + DÉDUP strict par id (Map)
+            const normalized = challenges.map((challenge: any) => ({
               id: challenge.id || "unknown",
               title: challenge.title || "Sans titre",
               category: challenge.category || null,
@@ -102,6 +109,9 @@ export const SavedChallengesProvider: React.FC<{
                   : [7],
               chatId: challenge.chatId || `chat_${challenge.id}`,
             }));
+            const validChallenges = Array.from(
+              new Map(normalized.map((c: Challenge) => [c.id, c])).values()
+            );
             console.log("Défis valides via onSnapshot:", validChallenges); // Log
             setSavedChallenges(validChallenges);
             setIsInitialized(true);
@@ -192,8 +202,31 @@ export const SavedChallengesProvider: React.FC<{
       console.error("Aucun utilisateur connecté pour sauvegarder le défi.");
       throw new Error("Vous devez être connecté pour sauvegarder un défi.");
     }
-    try {
+    // anti double tap local
+   if (inFlightAdd.current.has(challenge.id)) return;
+   inFlightAdd.current.add(challenge.id);
+   try {
       const userRef = doc(db, "users", userId);
+      // Vérifie côté serveur pour éviter d'incrémenter les stats si déjà présent
+     const snap = await getDoc(userRef);
+     const serverList: Challenge[] = Array.isArray(snap.data()?.SavedChallenges)
+       ? snap.data()!.SavedChallenges
+       : [];
+     if (serverList.some((c: any) => c?.id === challenge.id)) {
+       // Miroir local si besoin
+       if (!savedChallenges.some((c) => c.id === challenge.id)) {
+         setSavedChallenges((prev) => [...prev, {
+           id: challenge.id,
+           title: challenge.title,
+           category: challenge.category || null,
+           description: challenge.description || null,
+           imageUrl: challenge.imageUrl || null,
+           daysOptions: (challenge.daysOptions?.length ? challenge.daysOptions : [7]),
+           chatId: challenge.chatId || `chat_${challenge.id}`,
+         }]);
+       }
+       return; // idempotent: pas d'incStat
+     }
       const challengeData = {
         id: challenge.id,
         title: challenge.title,
@@ -206,17 +239,32 @@ export const SavedChallengesProvider: React.FC<{
             : [7],
         chatId: challenge.chatId || `chat_${challenge.id}`,
       };
-      setSavedChallenges((prev) => [...prev, challengeData]);
-      await updateDoc(userRef, {
-        SavedChallenges: arrayUnion(challengeData),
-        saveChallenge: increment(1),
-      });
+      // 🔒 MàJ locale optimiste + dédup + typage strict
+ let nextLen = 0;
+ setSavedChallenges((prev) => {
+   const m = new Map<string, Challenge>(prev.map((c) => [c.id, c]));
+   m.set(challengeData.id, challengeData);
+   const arr = Array.from(m.values());
+   nextLen = arr.length;
+   return arr;
+ });
+
+      // 🗄️ Persistance (arrayUnion est idempotent côté Firestore si l'objet est identique)
+      await updateDoc(userRef, { SavedChallenges: arrayUnion(challengeData) });
+
+      // 📊 Buckets succès
+      // 1) cumulatif (ne JAMAIS décrémenter) → déclenche les paliers achievements.saveChallenge
+      try { await incStat(userId, "saveChallenge.total", 1); } catch {}
+      // 2) courant (miroir du nombre actuel) → utile analytics/UI
+      try { await updateDoc(userRef, { "stats.saveChallenge.current": nextLen }); } catch {}
       console.log("Challenge sauvegardé avec succès :", challengeData);
       await checkForAchievements(userId);
     } catch (error) {
       console.error("Erreur lors de l'ajout du défi :", error);
       setSavedChallenges((prev) => prev.filter((c) => c.id !== challenge.id));
       throw error;
+      } finally {
+     inFlightAdd.current.delete(challenge.id);
     }
   };
 
@@ -226,7 +274,9 @@ export const SavedChallengesProvider: React.FC<{
       console.error("Aucun utilisateur connecté pour supprimer le défi.");
       throw new Error("Vous devez être connecté pour supprimer un défi.");
     }
-    try {
+    if (inFlightRemove.current.has(id)) return;
+   inFlightRemove.current.add(id);
+   try {
       const userRef = doc(db, "users", userId);
       const userSnap = await getDoc(userRef);
       if (userSnap.exists()) {
@@ -234,13 +284,21 @@ export const SavedChallengesProvider: React.FC<{
         const updatedChallenges = (userData.SavedChallenges || []).filter(
           (challenge: Challenge) => challenge.id !== id
         );
-        setSavedChallenges(updatedChallenges);
-        await updateDoc(userRef, {
-          SavedChallenges: updatedChallenges,
-          saveChallenge:
-            userData.saveChallenge > 0 ? userData.saveChallenge - 1 : 0,
-        });
+        await updateDoc(userRef, { SavedChallenges: updatedChallenges });
+
+        // ❌ On ne touche PAS au cumulatif (saveChallenge.total)
+        // ✅ On met à jour seulement le courant (miroir)
+        try {
+          await updateDoc(userRef, {
+            "stats.saveChallenge.current": updatedChallenges.length,
+          });
+        } catch {}
         console.log("Challenge retiré avec succès :", id);
+        // MàJ locale immédiate
+       const deduped: Challenge[] = Array.from(
+   new Map((updatedChallenges as Challenge[]).map((c) => [c.id, c])).values()
+ );
+ setSavedChallenges(deduped);
         await checkForAchievements(userId);
       } else {
         console.log("Document utilisateur introuvable.");
@@ -249,6 +307,8 @@ export const SavedChallengesProvider: React.FC<{
       console.error("Erreur lors de la suppression du défi :", error);
       await loadSavedChallenges();
       throw error;
+      } finally {
+     inFlightRemove.current.delete(id);
     }
   };
 

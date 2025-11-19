@@ -1,4 +1,4 @@
-import React, { useState, useCallback } from "react";
+import React, { useMemo, useCallback } from "react";
 import {
   View,
   Text,
@@ -13,6 +13,7 @@ import {
   Dimensions,
   StatusBar,
   Platform,
+  Pressable,
 } from "react-native";
 import { LinearGradient } from "expo-linear-gradient";
 import Animated, { FadeInUp } from "react-native-reanimated";
@@ -22,6 +23,8 @@ import { Theme } from "../../theme/designSystem";
 import designSystem from "../../theme/designSystem";
 import { useTranslation } from "react-i18next";
 import CustomHeader from "@/components/CustomHeader";
+import * as Clipboard from "expo-clipboard";
+import { tap, success } from "@/src/utils/haptics";
 
 
 const { width: SCREEN_WIDTH, height: SCREEN_HEIGHT } = Dimensions.get("window");
@@ -83,17 +86,34 @@ export default function Contact() {
   const { t } = useTranslation();
   const { theme } = useTheme();
   const isDarkMode = theme === "dark";
-  const currentTheme: Theme = isDarkMode
-    ? designSystem.darkTheme
-    : designSystem.lightTheme;
-
-  // Form state
-  const [name, setName] = useState("");
-  const [email, setEmail] = useState("");
-  const [message, setMessage] = useState("");
-
+  const currentTheme: Theme = useMemo(
+    () => (isDarkMode ? designSystem.darkTheme : designSystem.lightTheme),
+    [isDarkMode]
+  );
 
   const borderColor = isDarkMode ? currentTheme.colors.secondary : "#FF8C00";
+
+  // --- helpers
+  const openUrl = useCallback(async (url: string) => {
+    try {
+      tap();
+      const can = await Linking.canOpenURL(url);
+      if (!can) throw new Error("cannot_open");
+      await Linking.openURL(url);
+      success();
+    } catch {
+      Alert.alert(t("error"), t("linkOpenFailed", { defaultValue: "Impossible d’ouvrir ce lien." }));
+    }
+  }, [t]);
+
+  const copyToClipboard = useCallback(async (text: string) => {
+    tap();
+    try {
+      await Clipboard.setStringAsync(text);
+      success();
+      Alert.alert(t("copied"), t("copiedToClipboard"));
+    } catch { /* no-op */ }
+  }, [t]);
 
   return (
     <View style={{ flex: 1 }}>
@@ -150,80 +170,40 @@ export default function Contact() {
 
           {/* Email */}
           <Animated.View entering={FadeInUp.delay(600)} style={[styles.card, { borderColor }]}>
-            <View style={styles.featureItem}>
-              <Ionicons
-                name="mail-outline"
-                size={normalizeSize(20)}
-                color={currentTheme.colors.secondary}
-                style={styles.featureIcon}
-              />
-              <View style={styles.contactTextContainer}>
-                <Text style={[styles.subtitle, { color: currentTheme.colors.secondary }]}>
-                  {t("contact.emailSection")}
-                </Text>
-                <TouchableOpacity
-                  onPress={() => Linking.openURL("mailto:support@challengeties.app")}
-                  accessibilityLabel={t("contact.emailLinkLabel")}
-                  testID="email-link"
-                >
-                  <Text style={[styles.featureText, { color: currentTheme.colors.textSecondary }]}>
-                    {t("contact.emailAddress")}
-                  </Text>
-                </TouchableOpacity>
-              </View>
-            </View>
+            <LinkRow
+              icon="mail-outline"
+              title={t("contact.emailSection")}
+              value={t("contact.emailAddress")}
+              onOpen={() => openUrl("mailto:support@challengeties.app")}
+              onCopy={() => copyToClipboard("support@challengeties.app")}
+              currentTheme={currentTheme}
+            />
           </Animated.View>
 
           {/* Instagram */}
           <Animated.View entering={FadeInUp.delay(1000)} style={[styles.card, { borderColor }]}>
-            <View style={styles.featureItem}>
-              <Ionicons
-                name="logo-instagram"
-                size={normalizeSize(20)}
-                color={currentTheme.colors.secondary}
-                style={styles.featureIcon}
-              />
-              <View style={styles.contactTextContainer}>
-                <Text style={[styles.subtitle, { color: currentTheme.colors.secondary }]}>
-                  {t("contact.instagramSection")}
-                </Text>
-                <TouchableOpacity
-                  onPress={() => Linking.openURL("https://www.instagram.com/challengeties")}
-                  accessibilityLabel={t("contact.instagramLinkLabel")}
-                  testID="instagram-link"
-                >
-                  <Text style={[styles.featureText, { color: currentTheme.colors.textSecondary }]}>
-                    {t("contact.instagramHandle")}
-                  </Text>
-                </TouchableOpacity>
-              </View>
-            </View>
+            <LinkRow
+              icon="logo-instagram"
+              title={t("contact.instagramSection")}
+              value={t("contact.instagramHandle")}
+              onOpen={() => openUrl("https://www.instagram.com/challengeties")}
+              onCopy={() => copyToClipboard("https://www.instagram.com/challengeties")}
+              currentTheme={currentTheme}
+              testID="instagram-link"
+            />
           </Animated.View>
 
           {/* Facebook */}
           <Animated.View entering={FadeInUp.delay(1200)} style={[styles.card, { borderColor }]}>
-            <View style={styles.featureItem}>
-              <Ionicons
-                name="logo-facebook"
-                size={normalizeSize(20)}
-                color={currentTheme.colors.secondary}
-                style={styles.featureIcon}
-              />
-              <View style={styles.contactTextContainer}>
-                <Text style={[styles.subtitle, { color: currentTheme.colors.secondary }]}>
-                  {t("contact.facebookSection")}
-                </Text>
-                <TouchableOpacity
-                  onPress={() => Linking.openURL("https://www.facebook.com/challengeties")}
-                  accessibilityLabel={t("contact.facebookLinkLabel")}
-                  testID="facebook-link"
-                >
-                  <Text style={[styles.featureText, { color: currentTheme.colors.textSecondary }]}>
-                    {t("contact.facebookHandle")}
-                  </Text>
-                </TouchableOpacity>
-              </View>
-            </View>
+            <LinkRow
+              icon="logo-facebook"
+              title={t("contact.facebookSection")}
+              value={t("contact.facebookHandle")}
+              onOpen={() => openUrl("https://www.facebook.com/challengeties")}
+              onCopy={() => copyToClipboard("https://www.facebook.com/challengeties")}
+              currentTheme={currentTheme}
+              testID="facebook-link"
+            />
           </Animated.View>
 
  
@@ -251,6 +231,63 @@ export default function Contact() {
   );
 }
 
+// ========= Premium Link Row (pressable + copy pill) =========
+const LinkRow = React.memo(function LinkRow({
+  icon,
+  title,
+  value,
+  onOpen,
+  onCopy,
+  currentTheme,
+  testID
+}: {
+  icon: keyof typeof Ionicons.glyphMap;
+  title: string;
+  value: string;
+  onOpen: () => void;
+  onCopy: () => void;
+  currentTheme: Theme;
+  testID?: string;
+}) {
+  const { t } = useTranslation();
+  return (
+    <View style={styles.linkRowWrap}>
+      <Pressable
+        onPress={onOpen}
+        testID={testID}
+        accessibilityRole="button"
+        accessibilityLabel={title}
+        style={styles.linkRowPressable}
+        android_ripple={{ color: "#00000010", borderless: false }}
+        hitSlop={8}
+      >
+        <Ionicons
+          name={icon}
+          size={normalizeSize(20)}
+          color={currentTheme.colors.secondary}
+          style={styles.featureIcon}
+        />
+        <View style={{ flex: 1 }}>
+          <Text style={[styles.subtitle, { color: currentTheme.colors.secondary, marginBottom: 4 }]}>{title}</Text>
+          <Text style={[styles.featureText, { color: currentTheme.colors.textSecondary }]} numberOfLines={1}>
+            {value}
+          </Text>
+        </View>
+        <Ionicons name="open-outline" size={18} color="#111" />
+      </Pressable>
+      <View style={{ height: 8 }} />
+      <TouchableOpacity
+        onPress={onCopy}
+        accessibilityRole="button"
+        style={styles.copyBtn}
+      >
+        <Ionicons name="copy-outline" size={16} color="#111" />
+        <Text style={styles.copyTxt}>{/* i18n keys déjà présents */} {t("share.copy", { defaultValue: "Copier" })}</Text>
+      </TouchableOpacity>
+    </View>
+  );
+});
+
 const styles = StyleSheet.create({
   container: { flex: 1 },
 
@@ -259,12 +296,11 @@ const styles = StyleSheet.create({
     paddingTop:
       Platform.OS === "android" ? StatusBar.currentHeight ?? SPACING : SPACING,
   },
-
-  contentContainer: {
+contentContainer: {
     paddingHorizontal: SPACING,
-    paddingBottom: SCREEN_HEIGHT * 0.1,
+    paddingBottom: SCREEN_HEIGHT * 0.14, // espace pub/bottom safe-area
+    rowGap: SPACING
   },
-
   // Logo rond et clean
   logoContainer: {
     alignItems: "center",
@@ -319,9 +355,27 @@ const styles = StyleSheet.create({
     flex: 1,
     fontSize: normalizeSize(16),
     lineHeight: normalizeSize(24),
-    fontFamily: "Comfortaa_400Regular",
-    textDecorationLine: "underline",
+    fontFamily: "Comfortaa_400Regular"
   },
+  linkRowWrap: {},
+  linkRowPressable: {
+    flexDirection: "row",
+    alignItems: "center",
+    paddingVertical: SPACING / 2
+  },
+  copyBtn: {
+    alignSelf: "flex-start",
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 8,
+    borderRadius: 999,
+    paddingHorizontal: 12,
+    paddingVertical: 8,
+    backgroundColor: "#FFF1C9",
+    borderWidth: 1,
+    borderColor: "#FFB800",
+  },
+  copyTxt: { fontFamily: "Comfortaa_700Bold", fontSize: normalizeSize(14), color: "#111" },
   contactTextContainer: {
     flex: 1,
   },

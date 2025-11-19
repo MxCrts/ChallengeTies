@@ -9,8 +9,8 @@ import {
   ScrollView,
   Dimensions,
   StatusBar,
-  Platform,
 } from "react-native";
+
 import { useRouter } from "expo-router";
 import { Ionicons } from "@expo/vector-icons";
 import { doc, onSnapshot } from "firebase/firestore";
@@ -24,9 +24,11 @@ import Animated, { FadeInUp, ZoomIn } from "react-native-reanimated";
 import GlobalLayout from "../../components/GlobalLayout";
 import designSystem from "../../theme/designSystem";
 import { useTranslation } from "react-i18next";
-import { SafeAreaView } from "react-native-safe-area-context";
-import { BannerAd, BannerAdSize } from "react-native-google-mobile-ads";
-import { adUnitIds } from "@/constants/admob";
+// ✅ à ajouter
+import BannerSlot from "@/components/BannerSlot";
+// 🆕 Inventaire (résumé)
+import InventorySection from "@/components/InventorySection";
+
 import { BlurView } from "expo-blur";
 import { useTutorial } from "../../context/TutorialContext";
 import TutorialModal from "../../components/TutorialModal";
@@ -67,12 +69,6 @@ const withAlpha = (color: string, alpha: number) => {
   return `rgba(0,0,0,${a})`;
 };
 
-
-
-const BANNER_HEIGHT = normalizeSize(50);
-
-
-
 // helpers d’affichage
 const takeInterests = (raw?: string[] | string) => {
   if (!raw) return [];
@@ -92,6 +88,23 @@ interface UserData {
   trophies?: number;
   newAchievements?: string[];
   isPioneer?: boolean;
+  unreadNotifications?: number;
+
+  // 🆕 inventaire (streak pass & futurs items)
+  inventory?: {
+    streakPass?: number;
+    [key: string]: any;
+  };
+}
+
+interface ProfileSection {
+  name: string;
+  icon: keyof typeof Ionicons.glyphMap;
+  navigateTo: string;
+  testID: string;
+  accessibilityLabel: string;
+  accessibilityHint: string;
+  unclaimedCount?: number; // badge optionnel (notifs, rewards, inventaire…)
 }
 
 export default function ProfileScreen() {
@@ -106,19 +119,32 @@ export default function ProfileScreen() {
   const { showBanners } = useAdsVisibility();
  const insets = useSafeAreaInsets();
 const tabBarHeight = useBottomTabBarHeight();
-const bannerHeight = BANNER_HEIGHT; // ta constante
-const bannerLift = tabBarHeight + insets.bottom + normalizeSize(8); // décalage au-dessus de la tabbar
-const bottomPadding =
-  (showBanners ? bannerHeight : 0) + tabBarHeight + insets.bottom + normalizeSize(90);
-const npa = (globalThis as any).__NPA__ === true;
+const [adHeight, setAdHeight] = useState(0);
 
-  const {
+const bottomContentPadding =
+  (showBanners ? adHeight : 0) + tabBarHeight + insets.bottom + normalizeSize(90);
+
+// 🆕 total d’objets dans l’inventaire (streakPass + futurs items numériques)
+const totalInventoryItems = useMemo(() => {
+  const inv = userData?.inventory;
+  if (!inv || typeof inv !== "object") return 0;
+
+  return Object.values(inv).reduce((sum, val) => {
+    if (typeof val === "number" && isFinite(val)) {
+      return sum + val;
+    }
+    return sum;
+  }, 0);
+}, [userData]);
+
+
+   const {
     tutorialStep,
     isTutorialActive,
-    startTutorial,
     skipTutorial,
     setTutorialStep,
   } = useTutorial();
+
 
   const currentTheme: Theme = isDarkMode
     ? designSystem.darkTheme
@@ -154,9 +180,9 @@ const npa = (globalThis as any).__NPA__ === true;
     return () => unsubscribe();
   }, [profileUpdated, t]);
 
-  // Sections
-  const sections = useMemo(() => {
-    return [
+    // Sections
+  const sections = useMemo<ProfileSection[]>(
+    () => [
       {
         name: t("editProfile"),
         icon: "person-circle-outline",
@@ -164,6 +190,15 @@ const npa = (globalThis as any).__NPA__ === true;
         testID: "edit-profile-button",
         accessibilityLabel: t("access.editProfile.label"),
         accessibilityHint: t("access.editProfile.hint"),
+      },
+      {
+        name: t("notifications"),
+        icon: "notifications-outline",
+        navigateTo: "profile/Notifications",
+        testID: "notifications-button",
+        unclaimedCount: userData?.unreadNotifications ?? 0,
+        accessibilityLabel: t("access.notifications.label"),
+        accessibilityHint: t("access.notifications.hint"),
       },
       {
         name: t("statistics"),
@@ -207,6 +242,19 @@ const npa = (globalThis as any).__NPA__ === true;
         accessibilityHint: t("access.rewards.hint"),
       },
       {
+        name: t("inventory.title"),
+        icon: "briefcase-outline",
+        navigateTo: "profile/Inventory",
+        testID: "inventory-button",
+        unclaimedCount: totalInventoryItems,
+        accessibilityLabel: t("access.inventory.label", {
+          defaultValue: "Ouvrir ton inventaire",
+        }),
+        accessibilityHint: t("access.inventory.hint", {
+          defaultValue: "Voir et gérer tes bonus et protections de série.",
+        }),
+      },
+      {
         name: t("myChallenges"),
         icon: "create-outline",
         navigateTo: "profile/MyChallenges",
@@ -214,41 +262,19 @@ const npa = (globalThis as any).__NPA__ === true;
         accessibilityLabel: t("access.myChallenges.label"),
         accessibilityHint: t("access.myChallenges.hint"),
       },
-    ];
-  }, [t, userData]);
+    ],
+    [t, userData, totalInventoryItems]
+  );
 
-  // Grille des sections
-  const rows = useMemo<Array<typeof sections>>(() => {
-    const split: Array<typeof sections> = [];
+
+  // Grille des sections (2 par ligne)
+  const rows = useMemo<ProfileSection[][]>(() => {
+    const split: ProfileSection[][] = [];
     for (let i = 0; i < sections.length; i += 2) {
       split.push(sections.slice(i, i + 2));
     }
     return split;
   }, [sections]);
-
-  const interests = userData?.interests
-    ? Array.isArray(userData.interests)
-      ? userData.interests.join(", ")
-      : userData.interests
-    : "";
-
-  // Métadonnées SEO
-  const metadata = useMemo(
-    () => ({
-      title: t("yourProfile"),
-      description: t("profileS.description", {
-        username: userData?.username || "Utilisateur",
-      }),
-      url: `https://challengeme.com/profile/${auth.currentUser?.uid}`,
-      structuredData: {
-        "@context": "https://schema.org",
-        "@type": "ProfilePage",
-        name: userData?.username || "Utilisateur",
-        description: userData?.bio || t("addBioHere"),
-      },
-    }),
-    [t, userData]
-  );
 
   if (isLoading) {
     return (
@@ -359,7 +385,7 @@ const npa = (globalThis as any).__NPA__ === true;
   />
 
   <ScrollView
-    contentContainerStyle={[styles.scrollContent, { paddingBottom: bottomPadding }]}
+    contentContainerStyle={[styles.scrollContent, { paddingBottom: bottomContentPadding }]}
     showsVerticalScrollIndicator={false}
     contentInset={{ top: SPACING, bottom: normalizeSize(80) }}
   >
@@ -444,6 +470,19 @@ const npa = (globalThis as any).__NPA__ === true;
                       {userData?.trophies ?? 0}
                     </Text>
                   </Animated.View>
+                </View>
+
+                {/* Username (manquait) */}
+                <View style={styles.userInfo}>
+                  <Text
+                    style={[
+                      styles.username,
+                      { color: isDarkMode ? currentTheme.colors.textPrimary : "#111" },
+                    ]}
+                    numberOfLines={1}
+                  >
+                    {userData?.username || t("yourProfile")}
+                  </Text>
                 </View>
 
                 {/* Détails */}
@@ -581,6 +620,12 @@ const npa = (globalThis as any).__NPA__ === true;
               </LinearGradient>
             </Animated.View>
 
+            {/* Inventaire (résumé rapide) */}
+            <InventorySection
+              userData={userData}
+              onPressItem={() => router.push("profile/Inventory")}
+            />
+
             {/* Sections / Boutons */}
             <View style={styles.sectionsContainer}>
               {rows.map((row, rowIndex) => (
@@ -670,22 +715,25 @@ const npa = (globalThis as any).__NPA__ === true;
             </View>
           </ScrollView>
         {/* Bannière pub */}
-        {showBanners && (
+        {/* Bannière dockée au-dessus de la TabBar (iOS + Android) */}
+{showBanners && (
   <View
-    style={[
-      styles.bannerContainer,
-      { position: "absolute", left: 0, right: 0, bottom: bannerLift },
-    ]}
+    style={{
+      position: "absolute",
+      left: 0,
+      right: 0,
+      bottom: tabBarHeight + insets.bottom,
+      alignItems: "center",
+      zIndex: 9999,
+      backgroundColor: "transparent",
+      paddingBottom: 6,
+    }}
     pointerEvents="box-none"
   >
-    <BannerAd
-  unitId={adUnitIds.banner}
-  size={BannerAdSize.ANCHORED_ADAPTIVE_BANNER}
-  requestOptions={{ requestNonPersonalizedAdsOnly: npa }}
-  onAdFailedToLoad={(err) => console.error("Échec chargement bannière:", err)}
-/>
+    <BannerSlot onHeight={(h) => setAdHeight(h)} />
   </View>
 )}
+
 
 
 

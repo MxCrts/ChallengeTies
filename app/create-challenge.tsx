@@ -23,6 +23,7 @@ import { BlurView } from "expo-blur";
 import { useTheme } from "../context/ThemeContext";
 import { useTranslation } from "react-i18next";
 import designSystem from "../theme/designSystem";
+import { KeyboardAvoidingView } from "react-native";
 import CustomHeader from "@/components/CustomHeader";
 import {
   InterstitialAd,
@@ -33,9 +34,6 @@ import AsyncStorage from "@react-native-async-storage/async-storage";
 import { useAdsVisibility } from "../src/context/AdsVisibilityContext";
 // en haut du fichier, avec les imports
 import type { TFunction } from "i18next";
-
-
-/* -------- Firebase (inchangé) -------- */
 import {
   addDoc,
   collection,
@@ -46,12 +44,38 @@ import {
 } from "firebase/firestore";
 import { getStorage, ref as storageRef, uploadBytes, getDownloadURL } from "firebase/storage";
 import { auth, db } from "../constants/firebase-config";
+import * as Haptics from "expo-haptics";
+import { Image as RNImage } from "react-native";
+import { checkForAchievements } from "../helpers/trophiesHelpers";
 
 /* -------- Constantes UI -------- */
-const { width: SCREEN_WIDTH } = Dimensions.get("window");
 const SPACING = 20;
 const RADIUS = 18;
 const FIELD_HEIGHT = 52;
+
+const DRAFT_KEY = "create_challenge_draft_v1";
+ const IMAGE_MAX_BYTES = 5 * 1024 * 1024; // 5 MB
+
+ const scoreQuality = (title: string, desc: string) => {
+   let s = 0;
+   const t = title.trim();
+   const d = desc.trim();
+   if (t.length >= 6) s += 0.35;
+   if (/[A-Za-zÀ-ÿ]/.test(t)) s += 0.1;
+   if (/^[A-ZÀ-Ÿ]/.test(t)) s += 0.05;
+   if (d.length >= 40) s += 0.3;
+   if (/[.!?]$/.test(d)) s += 0.05;
+   if (/(par jour|quotidien|minutes?|jours?)/i.test(d)) s += 0.1; // concret/actionnable
+   return Math.min(1, s);
+ };
+
+ const describeIssues = (t: TFunction, title: string, desc: string) => {
+   const issues: string[] = [];
+   if (title.trim().length < 6) issues.push(t("challengeC.validation.titleTooShort"));
+   if (desc.trim().length < 20) issues.push(t("challengeC.validation.descTooShort"));
+   if (!/[A-Za-zÀ-ÿ]/.test(title)) issues.push(t("challengeC.validation.titleInvalidChars"));
+   return issues;
+ };
 
 const defaultCategories = [
   "Santé",
@@ -78,6 +102,9 @@ const DEFAULT_DAYS_OPTIONS = [3, 7, 14, 21, 30, 60, 90, 180, 365];
 /* -------- Limites de saisie (UX) -------- */
 const TITLE_MAX = 60;
 const DESC_MAX = 240;
+// ✅ règles minimales de validation (cohérentes avec le calcul deterministe)
+const MIN_TITLE = 6;
+const MIN_DESC = 20;
 
 /* =========================================
    CreateChallenge (logique conservée)
@@ -95,7 +122,9 @@ const npa = (globalThis as any).__NPA__ === true;
   const [imageUri, setImageUri] = useState<string | null>(null);
   const [submitting, setSubmitting] = useState(false);
   const [category, setCategory] = useState<CategoryLabel>(defaultCategories[0]);
-
+  const [issues, setIssues] = useState<string[]>([]);
+  const [draftLoaded, setDraftLoaded] = useState(false);
+  const submittingRef = useRef(false);
 
   /* ====== Interstitiel (non premium) — inchangé ====== */
   const { showInterstitials } = useAdsVisibility();
@@ -107,6 +136,28 @@ const npa = (globalThis as any).__NPA__ === true;
       })!;
   const interstitialRef = useRef<InterstitialAd | null>(null);
   const [adLoaded, setAdLoaded] = useState(false);
+
+  const draftTimeout = useRef<ReturnType<typeof setTimeout> | null>(null);
+  useEffect(() => {
+   return () => {
+     if (draftTimeout.current) clearTimeout(draftTimeout.current);
+   };
+ }, []);
+ const saveDraft = useCallback((next: {
+   title?: string; description?: string; imageUri?: string | null; category?: CategoryLabel;
+ }) => {
+   const payload = {
+     title,
+     description,
+     imageUri,
+     category,
+     ...next,
+   };
+   if (draftTimeout.current) clearTimeout(draftTimeout.current);
+   draftTimeout.current = setTimeout(() => {
+     AsyncStorage.setItem(DRAFT_KEY, JSON.stringify(payload)).catch(() => {});
+   }, 300);
+ }, [title, description, imageUri, category]);
 
   useEffect(() => {
     if (!showInterstitials) {
@@ -132,6 +183,24 @@ const npa = (globalThis as any).__NPA__ === true;
       setAdLoaded(false);
     };
   }, [showInterstitials, interstitialAdUnitId]);
+
+   useEffect(() => {
+   (async () => {
+     try {
+       const raw = await AsyncStorage.getItem(DRAFT_KEY);
+       if (raw) {
+         const draft = JSON.parse(raw);
+         setTitle(draft.title ?? "");
+         setDescription(draft.description ?? "");
+         setImageUri(draft.imageUri ?? null);
+         setCategory(draft.category ?? defaultCategories[0]);
+         setDraftLoaded(true);
+         Alert.alert(t("draft.title"), t("draft.restored"));
+       }
+     } catch {}
+   })();
+ }, [t]);
+
 
   const checkAdCooldownCreate = useCallback(async () => {
     const last = await AsyncStorage.getItem("lastInterstitialTime_create");
@@ -170,16 +239,39 @@ const npa = (globalThis as any).__NPA__ === true;
         aspect: [4, 3],
         quality: 0.9,
       });
-      if (!canceled && assets?.[0]?.uri) setImageUri(assets[0].uri);
+      if (!canceled && assets?.[0]?.uri) { setImageUri(assets[0].uri); saveDraft({ imageUri: assets[0].uri }); }
     } catch {
       Alert.alert(t("error"), t("imagePickFailed"));
     }
-  }, [t]);
+  }, [t, saveDraft]);
 
   /* ====== Upload vers Storage (si image) ====== */
   const uploadImageIfNeeded = useCallback(async (localUri: string | null, nameHint: string) => {
     if (!localUri) return null;
     try {
+      let reject = false;
+      // Taille approximative (Android/iOS renvoient parfois "file://" OK)
+     // Si ça échoue, on laisse passer (soft fail)
+     try {
+       const res = await fetch(localUri);
+       const buf = await res.blob();
+       if (buf.size > IMAGE_MAX_BYTES) {
+         Alert.alert(t("error"), t("imageTooBig", { mb: 5 }));
+         reject = true;
+       }
+     } catch {}
+
+     // Dimensions minimales (ex: 600x400)
+     await new Promise<void>((resolve) => {
+       RNImage.getSize(localUri, (w, h) => {
+         if (w < 600 || h < 400) {
+           Alert.alert(t("error"), t("imageTooSmall"));
+           reject = true;
+         }
+         resolve();
+       }, () => resolve());
+     });
+     if (reject) return null;
       const resp = await fetch(localUri);
       const blob = await resp.blob();
 
@@ -201,15 +293,69 @@ const npa = (globalThis as any).__NPA__ === true;
   const titleLeft = TITLE_MAX - title.length;
   const descLeft = DESC_MAX - description.length;
 
-  const completeness = useMemo(() => {
-    let score = 0;
-    if (title.trim().length >= 3) score += 0.34;
-    if (description.trim().length >= 10) score += 0.33;
-    if (imageUri) score += 0.33;
-    return Math.min(1, score);
-  }, [title, description, imageUri]);
+  // ✅ Progression déterministe basée sur les champs REQUIS
+  const titleOK = useMemo(
+    () => title.trim().length >= MIN_TITLE && /[A-Za-zÀ-ÿ]/.test(title),
+    [title]
+  );
+  const descOK = useMemo(
+    () => description.trim().length >= MIN_DESC,
+    [description]
+  );
+ const categoryOK = !!category; // le Picker a toujours une valeur ; garde le test pour la cohérence
+ const REQUIRED_COUNT = 3; // titre, description, catégorie
+ const completeness = useMemo(() => {
+   const count = [titleOK, descOK, categoryOK].filter(Boolean).length;
+   return count / REQUIRED_COUNT;
+ }, [titleOK, descOK, categoryOK]);
 
-  const isValid = !!title.trim() && !!description.trim();
+ // ✅ Messages helper/erreur (i18n + fallback)
+  const titleTooShort = title.trim().length > 0 && title.trim().length < MIN_TITLE;
+  const titleNoLetters = title.trim().length > 0 && !/[A-Za-zÀ-ÿ]/.test(title.trim());
+  const titleError =
+    (titleTooShort || titleNoLetters)
+      ? [
+          titleTooShort
+            ? t("challengeC.hint.titleMin", {
+                min: MIN_TITLE,
+                defaultValue: `Au moins ${MIN_TITLE} caractères.`,
+              })
+            : null,
+          !titleTooShort && titleNoLetters
+            ? t("challengeC.hint.titleLetters", {
+                defaultValue: "Doit contenir des lettres.",
+              })
+            : null,
+        ].filter(Boolean).join(" ")
+      : null;
+  const titleHelper =
+    title.length === 0
+      ? t("challengeC.hint.titleHelper", {
+          min: MIN_TITLE,
+          defaultValue: `Titre clair (≥ ${MIN_TITLE} caractères).`,
+        })
+      : null;
+
+  const descError =
+    description.length > 0 && !descOK
+      ? t("challengeC.hint.descMin", {
+          min: MIN_DESC,
+          defaultValue: `Description ≥ ${MIN_DESC} caractères.`,
+        })
+      : null;
+  const descHelper =
+    description.length === 0
+      ? t("challengeC.hint.descHelper", {
+          min: MIN_DESC,
+          defaultValue: `Explique concrètement (≥ ${MIN_DESC} caractères).`,
+        })
+      : null;
+
+ useEffect(() => {
+   setIssues(describeIssues(t, title, description));
+ }, [t, title, description]);
+
+  const isValid = titleOK && descOK && categoryOK;
 
   const handleSubmit = useCallback(async () => {
     if (!title.trim() || !description.trim()) {
@@ -217,14 +363,22 @@ const npa = (globalThis as any).__NPA__ === true;
       return;
     }
 
+    const currentIssues = describeIssues(t, title, description);
+   if (currentIssues.length) {
+     Alert.alert(t("error"), currentIssues.join("\n"));
+     return;
+   }
+
     const user = auth.currentUser;
     if (!user) {
       Alert.alert(t("error"), t("loginRequired"));
       return;
     }
 
-    if (submitting) return;
+    if (submitting || submittingRef.current) return;
     setSubmitting(true);
+    submittingRef.current = true;
+    try { await Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium); } catch {}
 
     try {
       // 1) Upload image si fournie
@@ -249,19 +403,30 @@ const npa = (globalThis as any).__NPA__ === true;
       // 3) Ajouter l’entrée dans users/{uid}.createdChallenges
       await updateDoc(doc(db, "users", user.uid), {
         createdChallenges: arrayUnion({ id: ref.id, approved: false }),
+        // ❌ NE PAS incrémenter le compteur succès ici (le défi n'est pas encore approuvé)
+        // ✅ (optionnel) analytics: compter les soumissions
+        // "stats.created.submitted": increment(1),
+        lastCreatedChallengeAt: serverTimestamp(), // (optionnel analytics)
       });
 
       // 4) Interstitiel (non-premium)
       await tryShowCreateInterstitial();
 
       // 5) Confirmation + navigation
+      try { await AsyncStorage.removeItem(DRAFT_KEY); } catch {}
       Alert.alert(
         t("success", { defaultValue: "Succès" }),
         t("challengeSubmittedForReview", {
           defaultValue:
             "Ton défi a été soumis et sera visible dès qu’un admin l’aura approuvé.",
         }),
-        [{ text: t("ok", { defaultValue: "OK" }), onPress: () => router.push("/explore") }]
+        [{
+   text: t("ok", { defaultValue: "OK" }),
+   onPress: () => {
+  try { (router as any).dismiss?.(); } catch {}
+  setTimeout(() => router.replace("/focus"), 10);
+}
+ }]
       );
     } catch (e: any) {
       console.error("Create challenge error:", e?.message ?? e);
@@ -274,6 +439,7 @@ const npa = (globalThis as any).__NPA__ === true;
       );
     } finally {
       setSubmitting(false);
+      submittingRef.current = false;
     }
   }, [
     title,
@@ -288,8 +454,8 @@ const npa = (globalThis as any).__NPA__ === true;
   ]);
 
   /* ====== UI ====== */
-  const onChangeTitle = (v: string) => setTitle(v.slice(0, TITLE_MAX));
-  const onChangeDescription = (v: string) => setDescription(v.slice(0, DESC_MAX));
+  const onChangeTitle = (v: string) => { const nv = v.slice(0, TITLE_MAX); setTitle(nv); saveDraft({ title: nv }); };
+  const onChangeDescription = (v: string) => { const nv = v.slice(0, DESC_MAX); setDescription(nv); saveDraft({ description: nv }); };
 
   return (
     <SafeAreaView style={styles.safeArea}>
@@ -327,6 +493,13 @@ const npa = (globalThis as any).__NPA__ === true;
           </Text>
         </View>
 
+        <Text style={[styles.hintText, { marginTop: 6, color: current.colors.textSecondary }]}>
+   {completeness < 1
+     ? t("quality.fillRequired", { defaultValue: "Remplis titre, description (≥ 20 caractères) et catégorie pour atteindre 100%." })
+     : t("quality.hintGreat", { defaultValue: "Parfait ! Tu peux créer ton défi." })}
+ </Text>
+
+<KeyboardAvoidingView behavior={Platform.OS === "ios" ? "padding" : undefined} style={{ flex: 1 }}>
         <ScrollView
           contentContainerStyle={styles.scrollContent}
           showsVerticalScrollIndicator={false}
@@ -370,6 +543,8 @@ const npa = (globalThis as any).__NPA__ === true;
   theme={current}
   isDark={isDark}
   t={t}
+  helper={titleHelper}
+  error={titleError}
 />
 
 <Field
@@ -384,6 +559,8 @@ const npa = (globalThis as any).__NPA__ === true;
   theme={current}
   isDark={isDark}
   t={t}
+  helper={descHelper}
+  error={descError}
 />
 
 
@@ -394,7 +571,8 @@ const npa = (globalThis as any).__NPA__ === true;
               <View style={[styles.dropdownWrap, { backgroundColor: current.colors.background }]}>
                 <Picker
   selectedValue={category}
-  onValueChange={(v) => setCategory(v as CategoryLabel)}
+  onValueChange={(v) => { setCategory(v as CategoryLabel); saveDraft({ category: v as CategoryLabel }); }}
+
   style={{
     color: isDark ? current.colors.textPrimary : "#111",
     height: FIELD_HEIGHT,
@@ -469,12 +647,27 @@ const npa = (globalThis as any).__NPA__ === true;
                 </View>
               </View>
 
+              {issues.length > 0 && (
+  <View style={{ marginTop: 8 }}>
+    {issues.map((it, idx) => (
+      <Text
+        key={idx}
+        style={[styles.hintText, { color: "#ffb3b3", fontFamily: "Comfortaa_500Medium" }]}
+      >
+        • {it}
+      </Text>
+    ))}
+  </View>
+)}
+
               {/* CTA */}
               <TouchableOpacity
                 disabled={!isValid || submitting}
                 onPress={handleSubmit}
                 accessibilityRole="button"
                 style={{ opacity: !isValid || submitting ? 0.6 : 1, marginTop: SPACING }}
+                accessibilityLabel={t("createChallengeButton")}
+                accessibilityHint={t("inspireOthers")}
               >
                 <LinearGradient
                   colors={[current.colors.primary, current.colors.secondary]}
@@ -507,6 +700,7 @@ const npa = (globalThis as any).__NPA__ === true;
             </Text>
           </View>
         </ScrollView>
+        </KeyboardAvoidingView>
       </LinearGradient>
     </SafeAreaView>
   );
@@ -528,6 +722,8 @@ const Field = ({
   theme,
   isDark,
   t,
+  helper,
+  error,
 }: {
   label: string;
   value: string;
@@ -540,6 +736,8 @@ const Field = ({
   theme: any;
   isDark: boolean;
   t: TFunction;
+  helper?: string | null;
+  error?: string | null;
 }) => {
   const left = max ? Math.max(0, max - value.length) : undefined;
 
@@ -576,22 +774,42 @@ const Field = ({
           onChangeText={onChangeText}
           multiline={multiline}
           numberOfLines={numberOfLines}
+          autoCapitalize={multiline ? "sentences" : "words"}
+          autoCorrect
+          returnKeyType={multiline ? "default" : "done"}
+          blurOnSubmit={!multiline}
+          accessibilityLabel={label}
+          accessibilityHint={t("a11y.typeHere")}
         />
       </View>
 
-      {typeof left === "number" && (
-        <Text
-          style={[
-            styles.counter,
-            { color: left < 10 ? theme.colors.secondary : theme.colors.textSecondary },
-          ]}
-        >
-          {t("charsRemaining", { count: left })}   {/* ← i18n pluriel */}
-        </Text>
-      )}
-    </View>
-  );
-};
+        <View style={styles.helperRow}>
+        {/* helper / error à gauche */}
+        {!!error ? (
+          <Text accessibilityLiveRegion="polite" style={[styles.helperText, { color: "#ff6b6b" }]}>
+            {error}
+          </Text>
+        ) : !!helper ? (
+          <Text style={[styles.helperText, { color: theme.colors.textSecondary }]}>{helper}</Text>
+        ) : (
+          <View />
+        )}
+
+        {/* compteur à droite */}
+        {typeof left === "number" && (
+          <Text
+            style={[
+              styles.counter,
+              { color: left < 10 ? theme.colors.secondary : theme.colors.textSecondary },
+            ]}
+          >
+            {t("charsRemaining", { count: left })}
+          </Text>
+        )}
+      </View>
+  </View>
+   );
+ };
 
 
 /* =========================================
@@ -627,6 +845,18 @@ const styles = StyleSheet.create({
     height: 8,
     borderRadius: 999,
     overflow: "hidden",
+  },
+  helperRow: {
+    marginTop: 6,
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "space-between",
+  },
+  helperText: {
+    flexShrink: 1,
+    fontSize: 12,
+    fontFamily: "Comfortaa_400Regular",
+    marginRight: 8,
   },
   progressFill: { height: "100%", borderRadius: 999 },
 
@@ -694,8 +924,7 @@ const styles = StyleSheet.create({
     fontFamily: "Comfortaa_400Regular",
   },
   counter: {
-    marginTop: 6,
-    alignSelf: "flex-end",
+    marginTop: 0,
     fontSize: 12,
     fontFamily: "Comfortaa_400Regular",
   },

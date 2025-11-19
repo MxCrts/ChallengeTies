@@ -1,4 +1,4 @@
-import React, { useState } from "react";
+import React, { useMemo, useState, useCallback, useRef } from "react";
 import {
   Modal,
   View,
@@ -7,17 +7,52 @@ import {
   StyleSheet,
   TextInput,
   Alert,
+  Platform,
+  KeyboardAvoidingView,
+  TouchableWithoutFeedback,
+  Keyboard,
+  ActivityIndicator,
+  Dimensions,
+  ScrollView,
 } from "react-native";
 import { Ionicons } from "@expo/vector-icons";
 import { LinearGradient } from "expo-linear-gradient";
 import { useTranslation } from "react-i18next";
 import { useTheme } from "../context/ThemeContext";
-import designSystem from "../theme/designSystem";
+import designSystem, { Theme } from "../theme/designSystem";
+import Animated, { FadeIn, FadeOut, ZoomIn, ZoomOut } from "react-native-reanimated";
+import * as Haptics from "expo-haptics";
+import { useSafeAreaInsets } from "react-native-safe-area-context";
 
 type ProposeFeatureModalProps = {
   visible: boolean;
   onClose: () => void;
-  onSubmit: (title: string, description?: string) => void;
+  onSubmit: (title: string, description?: string) => Promise<void> | void;
+};
+
+const TITLE_MAX = 60;
+const DESC_MAX = 280;
+
+const { width: SCREEN_W, height: SCREEN_H } = Dimensions.get("window");
+const normalize = (n: number) => {
+  const base = 375;
+  const scale = Math.min(Math.max(SCREEN_W / base, 0.85), 1.5);
+  return Math.round(n * scale);
+};
+
+const withAlpha = (hex: string, a: number) => {
+  const clamp = (x: number, min = 0, max = 1) => Math.min(Math.max(x, min), max);
+  const alpha = Math.round(clamp(a) * 255)
+    .toString(16)
+    .padStart(2, "0");
+  const clean = hex.replace("#", "");
+  if (clean.length === 3) {
+    const r = clean[0] + clean[0];
+    const g = clean[1] + clean[1];
+    const b = clean[2] + clean[2];
+    return `#${r}${g}${b}${alpha}`;
+  }
+  return `#${clean}${alpha}`;
 };
 
 export default function ProposeFeatureModal({
@@ -27,149 +62,422 @@ export default function ProposeFeatureModal({
 }: ProposeFeatureModalProps) {
   const { t } = useTranslation();
   const { theme } = useTheme();
-  const isDarkMode = theme === "dark";
-  const currentTheme = isDarkMode
-    ? designSystem.darkTheme
-    : designSystem.lightTheme;
+  const insets = useSafeAreaInsets();
+  const isDark = theme === "dark";
+  const currentTheme: Theme = isDark ? designSystem.darkTheme : designSystem.lightTheme;
+
   const [title, setTitle] = useState("");
   const [description, setDescription] = useState("");
+  const [submitting, setSubmitting] = useState(false);
 
-  const handleSubmission = () => {
-    if (!title.trim()) {
-      Alert.alert(
-        t("proposeFeature.errorTitle"),
-        t("proposeFeature.errorNoTitle")
-      );
+  const titleInputRef = useRef<TextInput>(null);
+
+  const titleLen = title.trim().length;
+  const descLen = description.trim().length;
+  const titleLeft = Math.max(0, TITLE_MAX - titleLen);
+  const descLeft  = Math.max(0, DESC_MAX - descLen);
+
+  const titleValid = titleLen >= 6 && titleLen <= TITLE_MAX;
+  const descValid  = descLen <= DESC_MAX; // facultatif
+  const canSubmit  = titleValid && descValid && !submitting;
+
+  const styles = useMemo(() => createStyles(isDark, currentTheme, insets), [isDark, currentTheme, insets]);
+
+  const handleClose = useCallback(async () => {
+    try { await Haptics.selectionAsync(); } catch {}
+    onClose();
+  }, [onClose]);
+
+  const handleSubmission = useCallback(async () => {
+    if (!canSubmit) {
+      try { await Haptics.notificationAsync(Haptics.NotificationFeedbackType.Warning); } catch {}
+      Alert.alert(t("proposeFeature.errorTitle"), t("proposeFeature.errorNoTitle"));
       return;
     }
-    onSubmit(title.trim(), description.trim());
-    // Réinitialisation du formulaire et fermeture automatique
-    setTitle("");
-    setDescription("");
-    onClose(); // Ferme le modal après soumission
-  };
-
-  const styles = createStyles(isDarkMode, currentTheme);
+    try {
+      setSubmitting(true);
+      await onSubmit(title.trim(), description.trim() || undefined);
+      try { await Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success); } catch {}
+      setTitle("");
+      setDescription("");
+      onClose();
+    } catch (e) {
+      console.error(e);
+      try { await Haptics.notificationAsync(Haptics.NotificationFeedbackType.Error); } catch {}
+      Alert.alert(
+        t("proposeFeature.errorTitle"),
+        t("proposeFeature.submitFailed", { defaultValue: "Échec de l’envoi. Réessaie." })
+      );
+    } finally {
+      setSubmitting(false);
+    }
+  }, [canSubmit, onSubmit, title, description, t, onClose]);
 
   return (
     <Modal
-      animationType="slide"
+      animationType="none"
       transparent
       visible={visible}
-      onRequestClose={onClose}
+      onRequestClose={handleClose}
+      statusBarTranslucent
+      presentationStyle={Platform.OS === "ios" ? "overFullScreen" : undefined}
     >
-      <View style={styles.overlay}>
-        <LinearGradient
-          colors={
-            isDarkMode
-              ? ["#1C2526", "#2D3A3A", "#4A5A5A"] // Dégradé sombre cohérent avec NewFeatures
-              : [
-                  currentTheme.colors.cardBackground,
-                  currentTheme.colors.cardBackground + "CC",
-                ]
-          }
-          style={styles.modalContainer}
-          start={{ x: 0, y: 0 }}
-          end={{ x: 1, y: 1 }}
+      {/* Overlay plein écran, centrage absolu */}
+      <Animated.View
+        entering={FadeIn.duration(160)}
+        exiting={FadeOut.duration(140)}
+        style={styles.overlay}
+        accessibilityViewIsModal
+        accessibilityLabel={t("proposeFeature.a11yOverlay", { defaultValue: "Proposer une fonctionnalité" })}
+      >
+        {/* Backdrop cliquable pour fermer */}
+        <TouchableWithoutFeedback onPress={handleClose}>
+          <View style={styles.backdrop} />
+        </TouchableWithoutFeedback>
+
+        {/* KAV + Scroll pour clavier / petits écrans */}
+        <KeyboardAvoidingView
+          behavior={Platform.OS === "ios" ? "padding" : undefined}
+          style={styles.kav}
+          keyboardVerticalOffset={Platform.OS === "ios" ? Math.max(insets.top, 16) : 0}
         >
-          <Text style={styles.title}>{t("proposeFeature.modalTitle")}</Text>
-          <TextInput
-            style={styles.input}
-            placeholder={t("proposeFeature.placeholderTitle")}
-            placeholderTextColor={currentTheme.colors.textSecondary}
-            value={title}
-            onChangeText={setTitle}
-          />
-          <TextInput
-            style={[styles.input, styles.textArea]}
-            placeholder={t("proposeFeature.placeholderDescription")}
-            placeholderTextColor={currentTheme.colors.textSecondary}
-            value={description}
-            onChangeText={setDescription}
-            multiline
-            numberOfLines={4}
-          />
-          <TouchableOpacity
-            style={styles.submitButton}
-            onPress={handleSubmission}
-          >
-            <Text style={styles.submitButtonText}>
-              {t("proposeFeature.submitButton")}
-            </Text>
-          </TouchableOpacity>
-          <TouchableOpacity style={styles.closeButton} onPress={onClose}>
-            <Ionicons
-              name="close-circle-outline"
-              size={32}
-              color={currentTheme.colors.primary}
-            />
-          </TouchableOpacity>
-        </LinearGradient>
-      </View>
+          <Animated.View entering={ZoomIn.springify().damping(18)} exiting={ZoomOut.duration(140)} style={styles.cardShadow}>
+            {/* Liseré premium */}
+            <LinearGradient
+              colors={
+                [
+                  withAlpha(currentTheme.colors.secondary, 0.9),
+                  withAlpha(currentTheme.colors.primary,   0.9),
+                ] as const
+              }
+              start={{ x: 0, y: 0 }}
+              end={{ x: 1, y: 1 }}
+              style={styles.borderGlow}
+            >
+              <View style={styles.card}>
+                <View style={styles.headerRow}>
+                  <View style={{ flexDirection: "row", alignItems: "center" }}>
+                    <Ionicons
+                      name="sparkles-outline"
+                      size={normalize(20)}
+                      color={currentTheme.colors.secondary}
+                      style={{ marginRight: 8 }}
+                    />
+                    <Text
+                      style={[styles.title, { color: currentTheme.colors.textPrimary }]}
+                      accessibilityRole="header"
+                    >
+                      {t("proposeFeature.modalTitle")}
+                    </Text>
+                  </View>
+
+                  <TouchableOpacity
+                    onPress={handleClose}
+                    accessibilityRole="button"
+                    accessibilityLabel={t("common.close")}
+                    hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
+                  >
+                    <Ionicons name="close" size={normalize(22)} color={isDark ? "#fff" : "#111"} />
+                  </TouchableOpacity>
+                </View>
+
+                <Text style={[styles.subtitle, { color: currentTheme.colors.textSecondary }]}>
+                  {t("proposeFeature.subtitle", {
+                    defaultValue: "Une idée précise ? Décris-la clairement pour que la communauté puisse voter.",
+                  })}
+                </Text>
+
+                {/* Contenu scrollable pour éviter tout débordement */}
+                <ScrollView
+                  bounces={false}
+                  keyboardShouldPersistTaps="handled"
+                  contentContainerStyle={styles.scrollInner}
+                  showsVerticalScrollIndicator={false}
+                >
+                  {/* Titre */}
+                  <View style={styles.inputBlock}>
+                    <View style={styles.labelRow}>
+                      <Text style={[styles.label, { color: currentTheme.colors.textSecondary }]}>
+                        {t("proposeFeature.labelTitle", { defaultValue: "Titre (obligatoire)" })}
+                      </Text>
+                      <Text
+                        style={[
+                          styles.counter,
+                          { color: titleLeft <= 8 ? "#FF6B6B" : currentTheme.colors.textSecondary },
+                        ]}
+                      >
+                        {titleLeft}
+                      </Text>
+                    </View>
+
+                    <TextInput
+                      ref={titleInputRef}
+                      value={title}
+                      onChangeText={(v) => setTitle(v.slice(0, TITLE_MAX))}
+                      onBlur={() => setTitle((v) => v.trimStart())}
+                      placeholder={t("proposeFeature.placeholderTitle")}
+                      placeholderTextColor={withAlpha(currentTheme.colors.textSecondary, 0.8)}
+                      style={[
+                        styles.input,
+                        {
+                          backgroundColor: isDark ? withAlpha("#FFFFFF", 0.06) : withAlpha("#000000", 0.04),
+                          borderColor: titleLen === 0
+                            ? withAlpha(currentTheme.colors.border, 0.6)
+                            : titleValid
+                              ? withAlpha("#00C853", 0.6)
+                              : withAlpha("#FF6B6B", 0.6),
+                        },
+                      ]}
+                      returnKeyType="next"
+                      blurOnSubmit={false}
+                      onSubmitEditing={Keyboard.dismiss}
+                      accessible
+                      accessibilityLabel={t("proposeFeature.placeholderTitle")}
+                      accessibilityHint={t("proposeFeature.a11yTitleHint", { defaultValue: "Entre un titre clair et concis." })}
+                      maxLength={TITLE_MAX}
+                      autoCapitalize="sentences"
+                    />
+                    {!titleValid && titleLen > 0 && (
+                      <Text style={[styles.helper, { color: "#FF6B6B" }]}>
+                        {t("proposeFeature.titleRule", { defaultValue: "Entre 6 et 60 caractères." })}
+                      </Text>
+                    )}
+                  </View>
+
+                  {/* Description */}
+                  <View style={styles.inputBlock}>
+                    <View style={styles.labelRow}>
+                      <Text style={[styles.label, { color: currentTheme.colors.textSecondary }]}>
+                        {t("proposeFeature.labelDescription", { defaultValue: "Description (optionnel)" })}
+                      </Text>
+                      <Text
+                        style={[
+                          styles.counter,
+                          { color: descLeft <= 20 ? "#FF9E3D" : currentTheme.colors.textSecondary },
+                        ]}
+                      >
+                        {descLeft}
+                      </Text>
+                    </View>
+
+                    <TextInput
+                      value={description}
+                      onChangeText={(v) => setDescription(v.slice(0, DESC_MAX))}
+                      onBlur={() => setDescription((v) => v.trimStart())}
+                      placeholder={t("proposeFeature.placeholderDescription")}
+                      placeholderTextColor={withAlpha(currentTheme.colors.textSecondary, 0.8)}
+                      style={[
+                        styles.input,
+                        styles.textArea,
+                        {
+                          backgroundColor: isDark ? withAlpha("#FFFFFF", 0.05) : withAlpha("#000000", 0.035),
+                          borderColor: withAlpha(currentTheme.colors.border, 0.7),
+                        },
+                      ]}
+                      multiline
+                      textAlignVertical="top"
+                      returnKeyType="done"
+                      accessible
+                      accessibilityLabel={t("proposeFeature.placeholderDescription")}
+                      maxLength={DESC_MAX}
+                      autoCapitalize="sentences"
+                    />
+                  </View>
+
+                  {/* Tips */}
+                  <View style={styles.chipsRow}>
+                    <Chip text={t("proposeFeature.chipImpact",  { defaultValue: "Impact clair" })} />
+                    <Chip text={t("proposeFeature.chipFeasible", { defaultValue: "Faisable" })} />
+                    <Chip text={t("proposeFeature.chipPrecise",  { defaultValue: "Précis" })} />
+                  </View>
+
+                  {/* CTA */}
+                  <TouchableOpacity
+                    onPress={handleSubmission}
+                    disabled={!canSubmit}
+                    activeOpacity={0.92}
+                    accessibilityRole="button"
+                    accessibilityState={{ disabled: !canSubmit }}
+                    testID="submit-feature"
+                    style={{ width: "100%", marginTop: 10 }}
+                  >
+                    <LinearGradient
+                      colors={
+                        [
+                          canSubmit ? currentTheme.colors.secondary : withAlpha(currentTheme.colors.secondary, 0.5),
+                          canSubmit ? currentTheme.colors.primary   : withAlpha(currentTheme.colors.primary,   0.5),
+                        ] as const
+                      }
+                      start={{ x: 0, y: 0 }}
+                      end={{ x: 1, y: 1 }}
+                      style={styles.submitBtn}
+                    >
+                      {submitting ? (
+                        <ActivityIndicator size="small" color={currentTheme.colors.textPrimary} />
+                      ) : (
+                        <>
+                          <Ionicons
+                            name="paper-plane-outline"
+                            size={normalize(18)}
+                            color={currentTheme.colors.textPrimary}
+                            style={{ marginRight: 8 }}
+                          />
+                          <Text style={[styles.submitText, { color: currentTheme.colors.textPrimary }]}>
+                            {t("proposeFeature.submitButton")}
+                          </Text>
+                        </>
+                      )}
+                    </LinearGradient>
+                  </TouchableOpacity>
+                </ScrollView>
+              </View>
+            </LinearGradient>
+          </Animated.View>
+        </KeyboardAvoidingView>
+      </Animated.View>
     </Modal>
   );
 }
 
-const createStyles = (isDarkMode: boolean, currentTheme: any) =>
+/* ---------- UI Subcomponent ---------- */
+function Chip({ text }: { text: string }) {
+  return (
+    <View style={chipStyles.chip}>
+      <Ionicons name="shield-checkmark-outline" size={14} color="#fff" style={{ marginRight: 6 }} />
+      <Text style={chipStyles.text}>{text}</Text>
+    </View>
+  );
+}
+
+const chipStyles = StyleSheet.create({
+  chip: {
+    flexDirection: "row",
+    alignItems: "center",
+    borderRadius: 999,
+    paddingHorizontal: 10,
+    paddingVertical: 6,
+    backgroundColor: "#00000033",
+    marginRight: 8,
+    marginBottom: 8,
+  },
+  text: { color: "#fff", fontSize: 12, fontFamily: "Comfortaa_700Bold" },
+});
+
+/* ---------- Styles ---------- */
+const createStyles = (isDark: boolean, current: Theme, insets: { top: number; bottom: number }) =>
   StyleSheet.create({
     overlay: {
-      flex: 1,
-      backgroundColor: isDarkMode ? "rgba(0, 0, 0, 0.7)" : "rgba(0, 0, 0, 0.6)", // Plus sombre en mode sombre
+      ...StyleSheet.absoluteFillObject,
       justifyContent: "center",
       alignItems: "center",
     },
-    modalContainer: {
-      width: "85%",
-      borderRadius: 10,
-      padding: 20,
+    backdrop: {
+      ...StyleSheet.absoluteFillObject,
+      backgroundColor: "rgba(0,0,0,0.6)",
+    },
+    kav: {
+      width: "100%",
       alignItems: "center",
-      position: "relative",
-      shadowColor: "#000",
-      shadowOffset: { width: 0, height: 2 },
-      shadowOpacity: isDarkMode ? 0.3 : 0.2,
-      shadowRadius: 4,
-      elevation: 5,
+      paddingHorizontal: 16,
+      paddingTop: Math.max(insets.top, 16),
+      paddingBottom: Math.max(insets.bottom, 16),
+    },
+    cardShadow: {
+      width: "100%",
+      maxWidth: 520,
+      borderRadius: 22,
+      overflow: "hidden",
+      maxHeight: SCREEN_H - (insets.top + insets.bottom) - normalize(48),
+    },
+    borderGlow: {
+      padding: 1.5,
+      borderRadius: 22,
+    },
+    card: {
+      backgroundColor: isDark ? withAlpha(current.colors.cardBackground, 0.92) : withAlpha("#ffffff", 0.98),
+      borderRadius: 20,
+      padding: 16,
+      borderWidth: StyleSheet.hairlineWidth,
+      borderColor: withAlpha(current.colors.border, 0.6),
+      ...Platform.select({
+        ios: {
+          shadowColor: "#000",
+          shadowOffset: { width: 0, height: 8 },
+          shadowOpacity: 0.18,
+          shadowRadius: 16,
+        },
+        android: { elevation: 6 },
+      }),
+      flexGrow: 0,
+    },
+    headerRow: {
+      flexDirection: "row",
+      justifyContent: "space-between",
+      alignItems: "center",
+      marginBottom: 8,
     },
     title: {
-      fontSize: 22,
-      fontFamily: currentTheme.typography.title.fontFamily,
-      color: isDarkMode ? currentTheme.colors.textPrimary : "#000000", // Noir en mode clair
-      marginBottom: 15,
-      textAlign: "center",
+      fontSize: normalize(18),
+      fontFamily: "Comfortaa_700Bold",
+    },
+    subtitle: {
+      fontSize: normalize(13),
+      fontFamily: "Comfortaa_400Regular",
+      marginBottom: 12,
+    },
+    scrollInner: {
+      paddingBottom: 4,
+    },
+    inputBlock: { marginBottom: 12 },
+    labelRow: {
+      flexDirection: "row",
+      justifyContent: "space-between",
+      alignItems: "center",
+      marginBottom: 6,
+    },
+    label: {
+      fontSize: 12,
+      fontFamily: "Comfortaa_700Bold",
+      textTransform: "uppercase",
+      letterSpacing: 0.5,
+    },
+    counter: {
+      fontSize: 12,
+      fontFamily: "Comfortaa_700Bold",
     },
     input: {
       width: "100%",
-      backgroundColor: isDarkMode
-        ? "rgba(255, 255, 255, 0.1)"
-        : "rgba(245, 245, 245, 0.8)",
-      color: isDarkMode ? currentTheme.colors.textPrimary : "#000000",
-      borderRadius: 5,
-      padding: 10,
-      marginBottom: 15,
-      borderWidth: isDarkMode ? 1 : 0,
-      borderColor: isDarkMode ? "#FFD700" : undefined, // Bordure dorée en mode sombre
+      borderRadius: 14,
+      paddingHorizontal: 14,
+      paddingVertical: 12,
+      fontFamily: "Comfortaa_400Regular",
+      fontSize: 14,
+      borderWidth: 1.5,
+      color: current.colors.textPrimary,
     },
-    textArea: {
-      height: 100,
-      textAlignVertical: "top",
+    textArea: { minHeight: 110 },
+    chipsRow: {
+      flexDirection: "row",
+      flexWrap: "wrap",
+      marginTop: 4,
+      marginBottom: 8,
     },
-    submitButton: {
-      backgroundColor: currentTheme.colors.primary,
-      paddingVertical: 10,
-      paddingHorizontal: 20,
-      borderRadius: 5,
-      marginBottom: 15,
+    submitBtn: {
       width: "100%",
+      paddingVertical: 12,
+      borderRadius: 999,
       alignItems: "center",
+      justifyContent: "center",
+      flexDirection: "row",
     },
-    submitButtonText: {
-      color: currentTheme.colors.cardBackground,
-      fontSize: 16,
-      fontFamily: currentTheme.typography.title.fontFamily,
+    helper: {
+      marginTop: 6,
+      fontSize: 12,
+      lineHeight: 16,
+      fontFamily: "Comfortaa_400Regular",
     },
-    closeButton: {
-      position: "absolute",
-      top: 10,
-      right: 10,
+    submitText: {
+      fontSize: 15,
+      fontFamily: "Comfortaa_700Bold",
     },
   });

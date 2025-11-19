@@ -2,7 +2,7 @@
   "expo": {
     "name": "ChallengeTies",
     "slug": "ChallengeMe",
-    "version": "1.0.0",
+    "version": "1.0.2",
     "orientation": "portrait",
     "icon": "./assets/images/icon.png",
     "splash": {
@@ -15,28 +15,33 @@
     "ios": {
       "supportsTablet": false,
       "requiresFullScreen": true,
-      "buildNumber": "2",
+      "buildNumber": "46",
       "bundleIdentifier": "com.mxcrts.ChallengeTies",
       "googleServicesFile": "./GoogleService-Info.plist",
       "associatedDomains": [
         "applinks:challengeties.app",
-        "applinks:www.challengeties.app"
+        "applinks:www.challengeties.app",
+        "applinks:links.challengeties.app"
       ],
       "infoPlist": {
         "UIBackgroundModes": [
           "remote-notification"
         ],
         "LSApplicationQueriesSchemes": [
-          "myapp"
+          "myapp",
+          "itms-apps",
+          "itms"
         ],
         "GADApplicationIdentifier": "ca-app-pub-4725616526467159~9688398116",
         "NSUserTrackingUsageDescription": "Votre identifiant peut être utilisé pour des publicités plus pertinentes afin de soutenir l'app.",
         "SKAdNetworkItems": [
-          { "SKAdNetworkIdentifier": "cstr6suwn9.skadnetwork" }
+          {
+            "SKAdNetworkIdentifier": "cstr6suwn9.skadnetwork"
+          }
         ],
         "NSPhotoLibraryUsageDescription": "Nous avons besoin d'accéder à votre photothèque pour choisir une photo de profil.",
         "NSCameraUsageDescription": "Nous avons besoin d'accéder à la caméra pour prendre une photo de profil.",
-        "NSPhotoLibraryAddUsageDescription": "Autorisez l'ajout de photos pour enregistrer votre image de profil.",
+        "NSPhotoLibraryAddUsageDescription": "Autorisez l'ajout de photos pour enregistrer votre image de profil et votre carte de parrainage.",
         "NSLocationWhenInUseUsageDescription": "Nous utilisons votre position pour afficher du contenu et des défis proches de vous.",
         "NSLocationAlwaysAndWhenInUseUsageDescription": "Nous utilisons votre position pour améliorer votre expérience, même quand l'app est en arrière-plan.",
         "ITSAppUsesNonExemptEncryption": false
@@ -64,14 +69,46 @@
           "action": "VIEW",
           "autoVerify": true,
           "data": [
-            { "scheme": "myapp", "host": "challenge", "pathPrefix": "/" },
-            { "scheme": "myapp", "host": "challenge-details", "pathPrefix": "/" },
-            { "scheme": "https", "host": "challengeties.app", "pathPrefix": "/challenge-details" },
-            { "scheme": "https", "host": "challengeties.app", "pathPrefix": "/challenge" },
-            { "scheme": "https", "host": "www.challengeties.app", "pathPrefix": "/challenge-details" },
-            { "scheme": "https", "host": "www.challengeties.app", "pathPrefix": "/challenge" }
+            {
+              "scheme": "myapp",
+              "host": "challenge",
+              "pathPrefix": "/"
+            },
+            {
+              "scheme": "myapp",
+              "host": "challenge-details",
+              "pathPrefix": "/"
+            },
+            {
+              "scheme": "https",
+              "host": "challengeties.app",
+              "pathPrefix": "/challenge-details"
+            },
+            {
+              "scheme": "https",
+              "host": "challengeties.app",
+              "pathPrefix": "/challenge"
+            },
+            {
+              "scheme": "https",
+              "host": "www.challengeties.app",
+              "pathPrefix": "/challenge-details"
+            },
+            {
+              "scheme": "https",
+              "host": "www.challengeties.app",
+              "pathPrefix": "/challenge"
+            },
+            {
+              "scheme": "https",
+              "host": "links.challengeties.app",
+              "pathPrefix": "/i"
+            }
           ],
-          "category": ["BROWSABLE", "DEFAULT"]
+          "category": [
+            "BROWSABLE",
+            "DEFAULT"
+          ]
         }
       ]
     },
@@ -114,15 +151,20 @@
           "cameraPermission": "Accéder à l'appareil photo pour prendre une photo de profil."
         }
       ],
-      "expo-mail-composer"
+      "expo-mail-composer",
+      "expo-iap"
     ],
     "newArchEnabled": false,
     "experiments": {
       "typedRoutes": true
     },
     "extra": {
-      "router": { "origin": false },
-      "eas": { "projectId": "f472e9b7-ef09-41b7-81c6-9a4dc44f2f37" }
+      "router": {
+        "origin": false
+      },
+      "eas": {
+        "projectId": "f472e9b7-ef09-41b7-81c6-9a4dc44f2f37"
+      }
     }
   }
 }

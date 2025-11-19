@@ -4,11 +4,11 @@ import {
   View,
   Text,
   TouchableOpacity,
-  TouchableWithoutFeedback,
   StyleSheet,
-  Dimensions,
-  ScrollView,
   useWindowDimensions,
+  BackHandler,
+  AccessibilityInfo,
+  ScrollView,
   Platform,
 } from "react-native";
 import { Ionicons } from "@expo/vector-icons";
@@ -29,12 +29,11 @@ import { Theme } from "../theme/designSystem";
 import designSystem from "../theme/designSystem";
 import * as Haptics from "expo-haptics";
 
-const { width: INIT_WIDTH } = Dimensions.get("window");
-
-// ⚠️ normalize global (valeur de secours)
 const normalize = (size: number) => {
+  // Échelle cohérente cross-devices
   const baseWidth = 375;
-  const scale = Math.min(Math.max(INIT_WIDTH / baseWidth, 0.7), 1.8);
+  const width = Math.max(320, Math.min(1024, require("react-native").Dimensions.get("window").width));
+  const scale = Math.min(Math.max(width / baseWidth, 0.7), 1.8);
   return Math.round(size * scale);
 };
 
@@ -60,37 +59,36 @@ const DurationSelectionModal: React.FC<DurationSelectionModalProps> = ({
   onCancel,
   dayIcons,
 }) => {
-  const { width, height } = useWindowDimensions(); // ✅ responsive live
+  const { width, height } = useWindowDimensions();
   const { t } = useTranslation();
   const { theme } = useTheme();
   const isDarkMode = theme === "dark";
   const currentTheme: Theme = isDarkMode ? designSystem.darkTheme : designSystem.lightTheme;
 
-  // ——— Responsive sizing (live)
-  const CARD_MAX_W = Math.min(width - 32, 420);      // 16px margin de chaque côté
-  const CARD_MAX_H = Math.min(height * 0.9, 620);    // 90% de la hauteur dispo
+  // Responsive caps
+  const CARD_MAX_W = Math.min(width - 32, 420);
+  const CARD_MAX_H = Math.min(height * 0.9, 620);
 
-  // --- Anti "bounce": on contrôle le montage indépendamment de `visible`
-  const [mounted, setMounted] = useState<boolean>(false);
-  const [closing, setClosing] = useState<boolean>(false);
-  const lastCloseAtRef = useRef<number>(0);
+  // Montage/fermeture contrôlés
+  const [mounted, setMounted] = useState(false);
+  const [closing, setClosing] = useState(false);
+  const lastCloseAtRef = useRef(0);
 
-  // Empêche double tap sur "Confirmer"
-  const [confirming, setConfirming] = useState<boolean>(false);
+  // Guard double validation
+  const [confirming, setConfirming] = useState(false);
 
-  // Animations
+  // Anim
   const pressScale = useSharedValue(1);
   const cardScale = useSharedValue(0.9);
 
   const buttonAnimatedStyle = useAnimatedStyle(() => ({
     transform: [{ scale: pressScale.value }],
   }));
-
   const cardAnimatedStyle = useAnimatedStyle(() => ({
     transform: [{ scale: cardScale.value }],
   }));
 
-  // Synchronisation `visible` -> `mounted` avec anti-rebond
+  // Synchronisation visible -> mounted
   useEffect(() => {
     if (visible) {
       if (Date.now() - lastCloseAtRef.current < REOPEN_COOLDOWN_MS) return;
@@ -99,6 +97,8 @@ const DurationSelectionModal: React.FC<DurationSelectionModalProps> = ({
       requestAnimationFrame(() => {
         cardScale.value = withSpring(1, { damping: 12, stiffness: 120 });
       });
+      // Focus vocal
+      AccessibilityInfo.announceForAccessibility?.(t("durationModal.title"));
     } else if (mounted && !closing) {
       setClosing(true);
       cardScale.value = withTiming(0.9, { duration: 160 }, () => {
@@ -110,13 +110,22 @@ const DurationSelectionModal: React.FC<DurationSelectionModalProps> = ({
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [visible]);
 
-  // Sélection d’un nombre de jours (mini feedback)
+  // Android Back button => cancel
+  useEffect(() => {
+    if (!mounted) return;
+    const sub = BackHandler.addEventListener("hardwareBackPress", () => {
+      onCancel?.();
+      return true;
+    });
+    return () => sub.remove();
+  }, [mounted, onCancel]);
+
   const handleSelectDays = useCallback(
     (days: number) => {
-      pressScale.value = withTiming(1.1, { duration: 100 }, () => {
-        pressScale.value = withTiming(1, { duration: 100 });
+      pressScale.value = withTiming(1.08, { duration: 90 }, () => {
+        pressScale.value = withTiming(1, { duration: 90 });
       });
-      Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
+      Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium).catch(() => {});
       onSelectDays(days);
     },
     [onSelectDays, pressScale]
@@ -124,7 +133,7 @@ const DurationSelectionModal: React.FC<DurationSelectionModalProps> = ({
 
   const handlePressIn = useCallback(() => {
     pressScale.value = withTiming(0.96, { duration: 90 });
-    Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
+    Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light).catch(() => {});
   }, [pressScale]);
 
   const handlePressOut = useCallback(() => {
@@ -135,7 +144,7 @@ const DurationSelectionModal: React.FC<DurationSelectionModalProps> = ({
     if (confirming) return;
     setConfirming(true);
     try {
-      onConfirm(); // le parent ferme
+      onConfirm?.(); // parent ferme le modal
     } finally {
       setTimeout(() => setConfirming(false), 500);
     }
@@ -146,161 +155,174 @@ const DurationSelectionModal: React.FC<DurationSelectionModalProps> = ({
   if (!mounted) return null;
 
   return (
-  <Modal
-    visible
-    transparent
-    animationType="none"
-    statusBarTranslucent
-  >
-    {/* 🔒 Conteneur unique plein écran, centre parfait */}
-    <View style={styles.modalRoot}>
-      {/* Backdrop cliquable, dans le même conteneur */}
-      <TouchableOpacity
-        activeOpacity={1}
-        onPress={onCancel}
-        style={styles.backdrop}
-      />
+    <Modal
+      visible={mounted}
+      transparent
+      animationType="none"
+      statusBarTranslucent
+      onRequestClose={onCancel}
+      supportedOrientations={["portrait", "portrait-upside-down", "landscape", "landscape-left", "landscape-right"]}
+    >
+      {/* Backdrop */}
+      <View style={styles.modalRoot} pointerEvents="box-none">
+        <TouchableOpacity
+          activeOpacity={1}
+          onPress={onCancel}
+          style={styles.backdrop}
+          accessibilityRole="button"
+          accessibilityLabel={t("durationModal.closeBackdrop")}
+        />
 
-      {/* Carte centrée */}
-      <Animated.View
-        entering={FadeInUp.springify()}
-        exiting={FadeOutDown.duration(EXIT_ANIM_MS)}
-        style={[
-          styles.modalContent,
-          cardAnimatedStyle,
-          {
-            backgroundColor: currentTheme.colors.cardBackground,
-            width: Math.min(width - 32, 420),   // responsive
-            maxHeight: Math.min(height * 0.9, 620),
-          },
-        ]}
-      >
-        <ScrollView
-          style={{ alignSelf: "stretch" }}
-          contentContainerStyle={styles.scrollCC}
-          bounces={false}
-          showsVerticalScrollIndicator={false}
+        {/* Carte */}
+        <View style={styles.centerWrap} pointerEvents="box-none">
+        <Animated.View
+          entering={FadeInUp.springify()}
+          exiting={FadeOutDown.duration(EXIT_ANIM_MS)}
+          style={[
+            styles.modalContent,
+            cardAnimatedStyle,
+            {
+              backgroundColor: currentTheme.colors.cardBackground,
+               width: Math.min(width - 32, 420),
+              maxHeight: Math.min(height * 0.9, 620),
+              
+            },
+          ]}
         >
-          <Text style={[styles.modalTitle, { color: currentTheme.colors.secondary }]}>
-            {t("durationModal.title")}
-          </Text>
+          <ScrollView
+            style={{ alignSelf: "stretch" }}
+            contentContainerStyle={styles.scrollCC}
+            bounces={false}
+            showsVerticalScrollIndicator={false}
+          >
+            <Text
+              style={[styles.modalTitle, { color: currentTheme.colors.secondary }]}
+              accessibilityRole="header"
+            >
+              {t("durationModal.title")}
+            </Text>
 
-          <View style={styles.gridContainer}>
-            {daysOptions.map((days, index) => {
-              const selected = selectedDays === days;
-              return (
-                <Animated.View
-                  key={days}
-                  entering={FadeInUp.delay(100 + index * 50)}
-                  layout={Layout.springify()}
-                  style={styles.gridItem}
-                >
-                  <TouchableOpacity
-                    style={[
-                      styles.dayOption,
-                      {
-                        borderColor: currentTheme.colors.primary,
-                        backgroundColor: selected
-                          ? currentTheme.colors.primary
-                          : currentTheme.colors.background,
-                        shadowColor: selected ? currentTheme.colors.primary : "#000",
-                      },
-                    ]}
-                    onPress={() => handleSelectDays(days)}
-                    activeOpacity={0.85}
-                    onPressIn={handlePressIn}
-                    onPressOut={handlePressOut}
+            <View style={styles.gridContainer}>
+              {daysOptions.map((days, index) => {
+                const selected = selectedDays === days;
+                const iconName = iconsMap[days] || ("calendar-outline" as keyof typeof Ionicons.glyphMap);
+                return (
+                  <Animated.View
+                    key={days}
+                    entering={FadeInUp.delay(80 + index * 50)}
+                    layout={Layout.springify()}
+                    style={styles.gridItem}
                   >
-                    <Ionicons
-                      name={iconsMap[days] || ("calendar-outline" as any)}
-                      size={normalize(18)}
-                      color={selected ? "#fff" : currentTheme.colors.secondary}
-                    />
-                    <Text
+                    <TouchableOpacity
                       style={[
-                        styles.dayOptionText,
-                        { color: selected ? "#fff" : currentTheme.colors.textSecondary },
+                        styles.dayOption,
+                        {
+                          borderColor: currentTheme.colors.primary,
+                          backgroundColor: selected
+                            ? currentTheme.colors.primary
+                            : currentTheme.colors.background,
+                          shadowColor: selected ? currentTheme.colors.primary : "#000",
+                        },
                       ]}
+                      onPress={() => handleSelectDays(days)}
+                      activeOpacity={0.85}
+                      onPressIn={handlePressIn}
+                      onPressOut={handlePressOut}
+                      accessibilityRole="button"
+                      accessibilityLabel={t("durationModal.optionLabel", { count: days })}
+                      accessibilityHint={t("durationModal.optionHint")}
                     >
-                      {t("durationModal.days", { count: days })}
-                    </Text>
-                  </TouchableOpacity>
-                </Animated.View>
-              );
-            })}
-          </View>
-        </ScrollView>
+                      <Ionicons
+                        name={iconName}
+                        size={normalize(18)}
+                        color={selected ? "#fff" : currentTheme.colors.secondary}
+                      />
+                      <Text
+                        style={[
+                          styles.dayOptionText,
+                          { color: selected ? "#fff" : currentTheme.colors.textSecondary },
+                        ]}
+                      >
+                        {t("durationModal.days", { count: days })}
+                      </Text>
+                    </TouchableOpacity>
+                  </Animated.View>
+                );
+              })}
+            </View>
+          </ScrollView>
 
-        {/* Boutons bas */}
-        <Animated.View entering={FadeInUp.delay(200)} style={[buttonAnimatedStyle, styles.btnWrap]}>
-          <TouchableOpacity
-            style={styles.button}
-            onPress={safeConfirm}
-            activeOpacity={0.85}
-            onPressIn={handlePressIn}
-            onPressOut={handlePressOut}
-            disabled={confirming}
-          >
-            <LinearGradient
-              colors={[
-                confirming ? currentTheme.colors.textSecondary : currentTheme.colors.primary,
-                confirming ? currentTheme.colors.textSecondary : currentTheme.colors.secondary,
-              ]}
-              style={styles.buttonGradient}
+          {/* Actions */}
+          <Animated.View entering={FadeInUp.delay(180)} style={[buttonAnimatedStyle, styles.btnWrap]}>
+            <TouchableOpacity
+              style={styles.button}
+              onPress={safeConfirm}
+              activeOpacity={0.85}
+              onPressIn={handlePressIn}
+              onPressOut={handlePressOut}
+              disabled={confirming}
+              accessibilityRole="button"
+              accessibilityLabel={t("durationModal.confirm")}
             >
-              <Text style={styles.buttonText}>
-                {confirming ? t("pleaseWait", { defaultValue: "Patiente..." }) : t("durationModal.confirm")}
-              </Text>
-            </LinearGradient>
-          </TouchableOpacity>
-        </Animated.View>
+              <LinearGradient
+                colors={[
+                  confirming ? currentTheme.colors.textSecondary : currentTheme.colors.primary,
+                  confirming ? currentTheme.colors.textSecondary : currentTheme.colors.secondary,
+                ]}
+                style={styles.buttonGradient}
+              >
+                <Text style={styles.buttonText}>
+                  {confirming
+                    ? t("pleaseWait", { defaultValue: "Patiente..." })
+                    : t("durationModal.confirm")}
+                </Text>
+              </LinearGradient>
+            </TouchableOpacity>
+          </Animated.View>
 
-        <Animated.View entering={FadeInUp.delay(260)} style={[buttonAnimatedStyle, styles.btnWrapLast]}>
-          <TouchableOpacity
-            style={styles.button}
-            onPress={onCancel}
-            activeOpacity={0.85}
-            onPressIn={handlePressIn}
-            onPressOut={handlePressOut}
-          >
-            <LinearGradient
-              colors={[currentTheme.colors.error, currentTheme.colors.error + "CC"]}
-              style={styles.buttonGradient}
+          <Animated.View entering={FadeInUp.delay(220)} style={[buttonAnimatedStyle, styles.btnWrapLast]}>
+            <TouchableOpacity
+              style={styles.button}
+              onPress={onCancel}
+              activeOpacity={0.85}
+              onPressIn={handlePressIn}
+              onPressOut={handlePressOut}
+              accessibilityRole="button"
+              accessibilityLabel={t("durationModal.cancel")}
             >
-              <Text style={styles.buttonText}>{t("durationModal.cancel")}</Text>
-            </LinearGradient>
-          </TouchableOpacity>
+              <LinearGradient
+                colors={[currentTheme.colors.error, currentTheme.colors.error + "CC"]}
+                style={styles.buttonGradient}
+              >
+                <Text style={styles.buttonText}>{t("durationModal.cancel")}</Text>
+              </LinearGradient>
+            </TouchableOpacity>
+          </Animated.View>
+          
         </Animated.View>
-      </Animated.View>
-    </View>
-  </Modal>
-);
-
+        </View>
+      </View>
+    </Modal>
+  );
 };
 
 const styles = StyleSheet.create({
-  // Backdrop plein écran
   modalRoot: {
     flex: 1,
     justifyContent: "center",
     alignItems: "center",
   },
-
-  // ✅ Backdrop dans le même conteneur
   backdrop: {
     ...StyleSheet.absoluteFillObject,
     backgroundColor: "rgba(0,0,0,0.7)",
   },
-  // Couche centreuse
   centerWrap: {
     ...StyleSheet.absoluteFillObject,
     justifyContent: "center",
     alignItems: "center",
-    paddingHorizontal: 16, // garde des marges sûres sur très petits écrans
+    paddingHorizontal: 16, // marges sûres sur petits écrans
   },
-
-  // Carte du modal
-   modalContent: {
+  modalContent: {
     borderRadius: normalize(16),
     paddingTop: normalize(20),
     paddingHorizontal: normalize(16),
@@ -312,13 +334,12 @@ const styles = StyleSheet.create({
     shadowOpacity: 0.3,
     shadowRadius: normalize(10),
     elevation: 8,
+    alignSelf: "center",
   },
-
   scrollCC: {
     paddingBottom: normalize(10),
     alignItems: "center",
   },
-
   modalTitle: {
     fontSize: normalize(18),
     fontFamily: "Comfortaa_700Bold",
@@ -326,7 +347,6 @@ const styles = StyleSheet.create({
     textAlign: "center",
     alignSelf: "stretch",
   },
-
   gridContainer: {
     flexDirection: "row",
     flexWrap: "wrap",
@@ -354,14 +374,12 @@ const styles = StyleSheet.create({
     shadowOpacity: 0.2,
     shadowRadius: normalize(4),
     elevation: 3,
+    gap: normalize(6),
   },
   dayOptionText: {
     fontSize: normalize(14),
     fontFamily: "Comfortaa_400Regular",
-    marginHorizontal: normalize(4),
   },
-
-  // Boutons
   btnWrap: { alignSelf: "stretch" },
   btnWrapLast: { alignSelf: "stretch", marginBottom: normalize(4) },
   button: {

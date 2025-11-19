@@ -7,6 +7,7 @@ import {
   Platform,
   StatusBar,
   ViewStyle,
+  TouchableOpacity,
 } from "react-native";
 import { BlurView } from "expo-blur";
 import { useTheme } from "../context/ThemeContext";
@@ -19,6 +20,7 @@ interface CustomHeaderProps {
   showBackButton?: boolean;
   rightIcon?: React.ReactNode;   // peut être string, number, élément, etc.
   showHairline?: boolean;
+  onRightPress?: () => void;
 
   // Options UI
   containerStyle?: ViewStyle;
@@ -85,6 +87,7 @@ export default function CustomHeader({
   title,
   showBackButton = true,
   rightIcon,
+  onRightPress,
   containerStyle,
   titleColor,
   showHairline = true,
@@ -112,7 +115,7 @@ export default function CustomHeader({
           paddingTop:
             Platform.OS === "android"
               ? (StatusBar.currentHeight ?? SPACING)
-              : insets.top + Math.round(SPACING * 0.5),
+              : insets.top,
         },
         containerStyle,
       ]}
@@ -145,7 +148,7 @@ export default function CustomHeader({
               {
                 backgroundColor: "transparent",
                 borderColor: "transparent",
-                marginTop: Platform.OS === "ios" ? 12 : 0, // ⬅️ décale franchement vers le bas sur iOS
+                marginTop:0, // ⬅️ décale franchement vers le bas sur iOS
                 alignSelf: "flex-start",
               },
             ]}
@@ -183,7 +186,17 @@ export default function CustomHeader({
 
       {/* RIGHT */}
       <View style={styles.sideWrapper}>
-        <SafeRightContent node={rightIcon} />
+        {onRightPress ? (
+          <TouchableOpacity
+            onPress={onRightPress}
+            hitSlop={{ top: 12, right: 12, bottom: 12, left: 12 }}
+            accessibilityRole="button"
+          >
+            <SafeRightContent node={rightIcon} />
+          </TouchableOpacity>
+        ) : (
+          <SafeRightContent node={rightIcon} />
+        )}
       </View>
     </View>
   );
@@ -194,7 +207,7 @@ const styles = StyleSheet.create({
     flexDirection: "row",
     alignItems: "center",
     paddingHorizontal: SPACING,
-    marginBottom: normalizeSize(10),
+    marginBottom: Platform.OS === 'ios' ? normalizeSize(6) : normalizeSize(10),
     width: "100%",
     overflow: "visible",
   },

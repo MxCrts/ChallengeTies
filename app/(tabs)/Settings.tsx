@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useRef } from "react";
+import React, { useState, useEffect, useRef, useMemo, useCallback } from "react";
 import {
   View,
   Text,
@@ -9,8 +9,8 @@ import {
   Linking,
   ScrollView,
   Dimensions,
-  StatusBar,
 } from "react-native";
+import { StatusBar } from "expo-status-bar";
 import { Picker } from "@react-native-picker/picker";
 import * as Notifications from "expo-notifications";
 import { Ionicons } from "@expo/vector-icons";
@@ -24,24 +24,27 @@ import Animated, { FadeInUp } from "react-native-reanimated";
 import { useTranslation } from "react-i18next";
 import { useLanguage } from "../../context/LanguageContext";
 import designSystem, { Theme } from "../../theme/designSystem";
-
 import CustomHeader from "@/components/CustomHeader";
 import GlobalLayout from "../../components/GlobalLayout";
 import i18n from "../../i18n";
 import { fetchAndSaveUserLocation } from "../../services/locationService";
 import { Link } from "expo-router"; 
 import { useFocusEffect } from "@react-navigation/native";
+import { shareReferralLink } from "@/src/referral/shareReferral";
+import * as Application from "expo-application";
 import {
   enableNotificationsFromSettings,
   disableNotificationsFromSettings,
 } from "../../services/notificationService";
-
 import {
   enableLocationFromSettings,
   disableLocationFromSettings,
 } from "../../services/locationService";
-
-
+import { useReferralStatus } from "@/src/referral/useReferralStatus";
+import { nudgeClaimableOnce } from "@/src/referral/nudge";
+import { maybeAskForReview, openStoreListing } from "@/src/services/reviewService";
+import { tap, success, warning } from "@/src/utils/haptics";
+import * as Device from "expo-device";
 
 const SPACING = 18; // Aligné avec ExploreScreen.tsx, Notifications.tsx, etc.
 const { width: SCREEN_WIDTH, height: SCREEN_HEIGHT } = Dimensions.get("window");
@@ -141,9 +144,8 @@ export default function Settings() {
   const { theme, toggleTheme } = useTheme();
   const router = useRouter();
   const isActiveRef = useRef(true);
-
+const [deviceName, setDeviceName] = useState<string>("Unknown");
   const [isSubscribed, setIsSubscribed] = useState(true);
-  const unsubscribeRef = useRef<(() => void) | null>(null);
 const scrollRef = useRef<ScrollView>(null);
   const [notificationsEnabled, setNotificationsEnabled] = useState(true);
   const [locationEnabled, setLocationEnabled] = useState(true);
@@ -151,16 +153,56 @@ const scrollRef = useRef<ScrollView>(null);
   const currentTheme = isDarkMode
     ? designSystem.darkTheme
     : designSystem.lightTheme;
+    const { claimable } = useReferralStatus();
+const claimableCount = claimable.length;
+
+ // Version réelle de l’app (affiche X.Y.Z (build))
+  const appVersion = useMemo(() => {
+    const v = Application.nativeApplicationVersion ?? "1.0.0";
+    const b = Application.nativeBuildVersion ? ` (${Application.nativeBuildVersion})` : "";
+    return `${v}${b}`;
+  }, []);
+
+  // Styles dynamiques mémorisés (évite recalculs/re-renders)
+  const dynamicStyles = useMemo(
+    () => getDynamicStyles(currentTheme, isDarkMode),
+    [currentTheme, isDarkMode]
+  );
+
+// ✅ Remplace l’ancienne implémentation d’openSupport (deviceName venait de Application)
+  const openSupport = useCallback(() => {
+    tap();
+    const subject = encodeURIComponent("Support ChallengeTies");
+    const body = encodeURIComponent(
+      `Bonjour,\n\nJ’ai besoin d’aide.\n\n---\nLangue: ${language}\nThème: ${isDarkMode ? "dark" : "light"}\nVersion: ${appVersion}\nUID: ${auth.currentUser?.uid ?? "guest"}\nDevice: ${deviceName}\nApp ID: ${Application.applicationId ?? "Unknown"}\n---`
+    );
+    Linking.openURL(
+      `mailto:support@challengeties.app?subject=${subject}&body=${body}`
+    ).catch(() => {
+      Alert.alert(
+        t("error"),
+        t("settingsPage.openMailError", {
+          defaultValue: "Impossible d’ouvrir votre application mail.",
+        })
+      );
+    });
+  }, [language, isDarkMode, appVersion, deviceName, t]);
+
+    useEffect(() => {
+  // envoie une notif locale 1 seule fois par palier claimable
+  nudgeClaimableOnce(claimable);
+}, [claimable]);
 
   useEffect(() => {
     (async () => {
-      const { status } = await Notifications.requestPermissionsAsync();
-      if (status !== "granted") {
-        Alert.alert(t("permissionDenied"), t("mustAllowNotifications"));
-        setNotificationsEnabled(false);
-      }
+      try {
+        const { status } = await Notifications.getPermissionsAsync();
+        if (status !== "granted") {
+          setNotificationsEnabled(false);
+        }
+      } catch {}
     })();
-  }, [t]);
+  }, []);
 
   useEffect(() => {
     const handleLanguageChanged = () => {
@@ -171,6 +213,23 @@ const scrollRef = useRef<ScrollView>(null);
       i18next.off("languageChanged", handleLanguageChanged);
     };
   }, [i18next]);
+
+  // Résolution robuste du nom d’appareil (pas d’API async requise)
+  useEffect(() => {
+    try {
+      const anyDev = Device as any;
+      const nameFromProp =
+        (typeof anyDev?.deviceName === "string" && anyDev.deviceName) || null;
+      const readable =
+        nameFromProp ||
+        Device.modelName ||
+        `${Device.brand ?? "Device"} ${Device.modelName ?? ""}`.trim() ||
+        "Unknown";
+      setDeviceName(readable);
+    } catch {
+      setDeviceName(Device.modelName ?? "Unknown");
+    }
+  }, []);
 
  useFocusEffect(
     React.useCallback(() => {
@@ -234,8 +293,15 @@ const scrollRef = useRef<ScrollView>(null);
 
   const [saving, setSaving] = useState<{notif?: boolean; loc?: boolean}>({});
 
+  // --- Actions utilitaires ---
+  const openSystemSettings = useCallback(() => {
+    try { Linking.openSettings?.(); } catch {}
+  }, []);
+
+
 const handleNotificationsToggle = async (value: boolean) => {
   if (saving.notif) return;
+  tap();
   setSaving((s) => ({ ...s, notif: true }));
   setNotificationsEnabled(value);
 
@@ -243,6 +309,7 @@ const handleNotificationsToggle = async (value: boolean) => {
     if (value) {
       const ok = await enableNotificationsFromSettings();
       if (!ok) {
+        warning();
         setNotificationsEnabled(false);
         Alert.alert(
           t("permissionDenied"),
@@ -268,6 +335,7 @@ const handleNotificationsToggle = async (value: boolean) => {
 
 const handleLocationToggle = async (value: boolean) => {
   if (saving.loc) return;
+  tap();
   setSaving((s) => ({ ...s, loc: true }));
   setLocationEnabled(value);
 
@@ -275,6 +343,7 @@ const handleLocationToggle = async (value: boolean) => {
     if (value) {
       const ok = await enableLocationFromSettings();
       if (!ok) {
+        warning();
         setLocationEnabled(false);
         Alert.alert(
           t("permissionDenied"),
@@ -286,6 +355,7 @@ const handleLocationToggle = async (value: boolean) => {
           { cancelable: true }
         );
       } else {
+         success();
         Alert.alert(t("settingsPage.enabled"), t("settingsPage.updated"));
       }
     } else {
@@ -362,15 +432,10 @@ const handleLocationToggle = async (value: boolean) => {
 
   const adminUID = "GiN2yTfA7NWISeb4QjXmDPq5TgK2";
 
-  const dynamicStyles = getDynamicStyles(currentTheme, isDarkMode);
 
   return (
     <GlobalLayout key={language}>
-      <StatusBar
-        translucent={true}
-        backgroundColor="transparent"
-        barStyle={isDarkMode ? "light-content" : "dark-content"}
-      />
+      <StatusBar style={isDarkMode ? "light" : "dark"} translucent />
       <CustomHeader title={t("settings")} />
       <LinearGradient
   colors={[
@@ -425,6 +490,14 @@ const handleLocationToggle = async (value: boolean) => {
   accessibilityLabel={t("handleNotifications")}
 />
               </View>
+              {/* Lien vers Réglages système si notifs OFF */}
+              {!notificationsEnabled && (
+                <TouchableOpacity onPress={openSystemSettings} style={{ paddingHorizontal: SPACING, paddingBottom: normalizeSize(12) }}>
+                  <Text style={{ fontFamily: "Comfortaa_400Regular", fontSize: normalizeSize(14), color: currentTheme.colors.textSecondary }}>
+                    {t("settingsPage.enableInSystem", { defaultValue: "Activez les notifications dans les réglages système." })}
+                  </Text>
+                </TouchableOpacity>
+              )}
             </Animated.View>
             <Animated.View
               entering={FadeInUp.delay(250)}
@@ -447,6 +520,13 @@ const handleLocationToggle = async (value: boolean) => {
                   accessibilityLabel={t("handleLocation")}
                 />
               </View>
+              {!locationEnabled && (
+                <TouchableOpacity onPress={openSystemSettings} style={{ paddingHorizontal: SPACING, paddingBottom: normalizeSize(12) }}>
+                  <Text style={{ fontFamily: "Comfortaa_400Regular", fontSize: normalizeSize(14), color: currentTheme.colors.textSecondary }}>
+                    {t("settingsPage.locationTip", { defaultValue: "Activez la localisation dans les réglages système pour des suggestions proches." })}
+                  </Text>
+                </TouchableOpacity>
+              )}
             </Animated.View>
             <Animated.View
               entering={FadeInUp.delay(300)}
@@ -476,10 +556,12 @@ const handleLocationToggle = async (value: boolean) => {
     </Text>
     {/* NOUVEAU wrapper pour donner du flex au Picker */}
    <View style={styles.pickerContainer}>
-  <Picker
+    <Picker
     selectedValue={language}
     mode="dropdown"
-    dropdownIconColor={isDarkMode ? currentTheme.colors.textPrimary : currentTheme.colors.primary}
+    dropdownIconColor={
+      isDarkMode ? currentTheme.colors.textPrimary : currentTheme.colors.primary
+    }
     prompt={t("chooseLanguage")}
     style={[styles.languagePicker, dynamicStyles.languagePicker]}
     itemStyle={{
@@ -502,9 +584,13 @@ const handleLocationToggle = async (value: boolean) => {
     <Picker.Item label="Français" value="fr" />
     <Picker.Item label="हिन्दी" value="hi" />
     <Picker.Item label="Italiano" value="it" />
+    <Picker.Item label="日本語" value="ja" />      {/* 🇯🇵 ajouté */}
+    <Picker.Item label="한국어" value="ko" />       {/* 🇰🇷 ajouté */}
+    <Picker.Item label="Português" value="pt" />  {/* 🇵🇹🇧🇷 ajouté */}
     <Picker.Item label="Русский" value="ru" />
     <Picker.Item label="中文" value="zh" />
   </Picker>
+
 </View>
 
   </View>
@@ -638,6 +724,30 @@ const handleLocationToggle = async (value: boolean) => {
     end={{ x: 1, y: 0 }}
     style={styles.sectionAccent}
   />
+  {claimableCount > 0 && (
+  <TouchableOpacity
+    onPress={() => router.push("/referral/ShareAndEarn")}
+    accessibilityLabel={t("referral.banner.open")}
+    style={styles.claimBanner}
+    activeOpacity={0.9}
+  >
+    <View style={styles.claimBannerLeft}>
+      <Ionicons name="gift-outline" size={normalizeSize(18)} color="#111" />
+    </View>
+    <View style={{ flex: 1 }}>
+      <Text style={styles.claimBannerTitle}>
+        {t("referral.banner.title")}
+      </Text>
+      <Text style={styles.claimBannerText}>
+        {t("referral.banner.subtitle", { count: claimableCount })}
+      </Text>
+    </View>
+    <View style={styles.claimBannerCta}>
+      <Text style={styles.claimBannerCtaText}>{t("referral.banner.cta")}</Text>
+    </View>
+  </TouchableOpacity>
+)}
+
             <Animated.View entering={FadeInUp.delay(600)}>
               <TouchableOpacity
                 style={styles.accountButton}
@@ -696,11 +806,33 @@ const handleLocationToggle = async (value: boolean) => {
     </LinearGradient>
   </TouchableOpacity>
 </Animated.View>
-
+<Animated.View entering={FadeInUp.delay(675)}>
+  <TouchableOpacity
+    style={styles.accountButton}
+    onPress={async () => {
+      tap();
+      try { await shareReferralLink(); } catch (e) {}
+    }}
+    accessibilityLabel={t("inviteFriends") || "Inviter des amis"}
+    testID="invite-friends-button"
+  >
+    <LinearGradient
+      colors={dynamicStyles.buttonGradient.colors}
+      style={styles.buttonGradient}
+      start={{ x: 1, y: 1 }}
+      end={{ x: 0, y: 0 }}
+    >
+      <Ionicons name="send-outline" size={normalizeSize(20)} color={currentTheme.colors.textPrimary} />
+      <Text style={[styles.accountButtonText, dynamicStyles.accountButtonText]}>
+        {t("inviteFriends") || "Inviter des amis"}
+      </Text>
+    </LinearGradient>
+  </TouchableOpacity>
+</Animated.View>
             <Animated.View entering={FadeInUp.delay(700)}>
               <TouchableOpacity
                 style={styles.accountButton}
-                onPress={clearCache}
+                onPress={async () => { tap(); await clearCache(); }}
                 accessibilityLabel={t("clearCache")}
                 testID="clear-cache-button"
               >
@@ -726,11 +858,60 @@ const handleLocationToggle = async (value: boolean) => {
                 </LinearGradient>
               </TouchableOpacity>
             </Animated.View>
+<Animated.View entering={FadeInUp.delay(540)}>
+  <TouchableOpacity
+    style={styles.accountButton}
+    onPress={() => router.push("/referral/ShareAndEarn")}
+    accessibilityLabel={t("referral.menu")}
+    testID="share-earn-button"
+  >
+    <LinearGradient
+      colors={dynamicStyles.buttonGradient.colors}
+      style={styles.buttonGradient}
+      start={{ x: 1, y: 1 }}
+      end={{ x: 0, y: 0 }}
+    >
+      <Ionicons
+        name="gift-outline"
+        size={normalizeSize(20)}
+        color={currentTheme.colors.textPrimary}
+      />
+      <Text
+        style={[
+          styles.accountButtonText,
+          dynamicStyles.accountButtonText,
+        ]}
+      >
+         {t("referral.menu")}
+      </Text>
+
+      {/* BADGE si des paliers sont claimables */}
+      {claimable.length > 0 && (
+        <View
+          style={{
+            marginLeft: normalizeSize(8),
+            paddingHorizontal: normalizeSize(10),
+            paddingVertical: normalizeSize(6),
+            borderRadius: 999,
+            borderWidth: 1.2,
+            borderColor: "#111",
+            backgroundColor: "#FFB800",
+          }}
+        >
+          <Text style={{ fontWeight: "900", color: "#111", fontSize: normalizeSize(12) }}>
+  {t("referral.badge", { defaultValue: "+ Récompense" })}
+</Text>
+        </View>
+      )}
+    </LinearGradient>
+  </TouchableOpacity>
+</Animated.View>
+
 
             <Animated.View entering={FadeInUp.delay(800)}>
               <TouchableOpacity
                 style={styles.accountButton}
-                onPress={handleLogout}
+                onPress={async () => { tap(); await handleLogout(); }}
                 accessibilityLabel={t("logout")}
                 testID="logout-button"
               >
@@ -756,10 +937,44 @@ const handleLocationToggle = async (value: boolean) => {
                 </LinearGradient>
               </TouchableOpacity>
             </Animated.View>
+
+            {/* Support */}
+<Animated.View entering={FadeInUp.delay(720)}>
+  <TouchableOpacity
+    style={styles.accountButton}
+    onPress={openSupport}
+    accessibilityLabel={t("support")}
+    testID="support-button"
+  >
+    <LinearGradient
+      colors={dynamicStyles.buttonGradient.colors}
+      style={styles.buttonGradient}
+      start={{ x: 1, y: 1 }}
+      end={{ x: 0, y: 0 }}
+    >
+      <Ionicons name="help-buoy-outline" size={normalizeSize(20)} color={currentTheme.colors.textPrimary} />
+      <Text style={[styles.accountButtonText, dynamicStyles.accountButtonText]}>
+        {t("support")}
+      </Text>
+    </LinearGradient>
+  </TouchableOpacity>
+</Animated.View>
+            {/* Danger Zone */}
+            <Animated.View entering={FadeInUp.delay(860)} style={{ marginTop: SPACING }}>
+              <Text style={[styles.sectionHeader, dynamicStyles.sectionHeader]}>
+                {t("dangerZone", { defaultValue: "Zone dangereuse" })}
+              </Text>
+              <LinearGradient
+                colors={[currentTheme.colors.error, withAlpha(currentTheme.colors.error, 0.8)]}
+                start={{ x: 0, y: 0 }}
+                end={{ x: 1, y: 0 }}
+                style={styles.sectionAccent}
+              />
+            </Animated.View>
             <Animated.View entering={FadeInUp.delay(900)}>
               <TouchableOpacity
                 style={styles.accountButton}
-                onPress={handleDeleteAccount}
+                onPress={async () => { tap(); await handleDeleteAccount(); }}
                 accessibilityLabel={t("deleteAccount")}
                 testID="delete-account-button"
               >
@@ -837,6 +1052,32 @@ const handleLocationToggle = async (value: boolean) => {
                     </TouchableOpacity>
                   </Link>
                 </Animated.View>
+                <Animated.View entering={FadeInUp.delay(1150)}>
+  <Link href="/admin/events" asChild>
+    <TouchableOpacity
+      style={styles.adminButton}
+      accessibilityLabel={t("adminEvents", { defaultValue: "Admin Events" })}
+      testID="admin-events-button"
+    >
+      <LinearGradient
+        colors={dynamicStyles.adminButtonGradient.colors}
+        style={styles.adminButtonGradient}
+        start={{ x: 0, y: 0 }}
+        end={{ x: 1, y: 1 }}
+      >
+        <Text
+          style={[
+            styles.adminButtonText,
+            dynamicStyles.adminButtonText,
+          ]}
+        >
+          {t("adminEvents", { defaultValue: "Admin Events" })}
+        </Text>
+      </LinearGradient>
+    </TouchableOpacity>
+  </Link>
+</Animated.View>
+
                 <Animated.View entering={FadeInUp.delay(1100)}>
                   <Link href="/AdminModerateChats" asChild>
                     <TouchableOpacity
@@ -905,10 +1146,46 @@ const handleLocationToggle = async (value: boolean) => {
                 </Animated.View>
               )
             )}
+{/* Bouton Noter l’app */}
+<Animated.View entering={FadeInUp.delay(1650)}>
+  <TouchableOpacity
+    onPress={async () => {
+      tap();
+      const shown = await maybeAskForReview().catch(() => false);
+      if (!shown) {
+        await openStoreListing().catch(() => {});
+      }
+    }}
+    accessibilityLabel={t("rateUs")}
+    testID="rate-app-button"
+    style={styles.accountButton}
+  >
+    <LinearGradient
+      colors={dynamicStyles.buttonGradient.colors}
+      style={styles.buttonGradient}
+      start={{ x: 1, y: 1 }}
+      end={{ x: 0, y: 0 }}
+    >
+      <Ionicons
+        name="star-outline"
+        size={normalizeSize(20)}
+        color={currentTheme.colors.textPrimary}
+      />
+      <Text
+        style={[
+          styles.accountButtonText,
+          dynamicStyles.accountButtonText,
+        ]}
+      >
+        {t("rateUs")}
+      </Text>
+    </LinearGradient>
+  </TouchableOpacity>
+</Animated.View>
 
             <Animated.View entering={FadeInUp.delay(1700)}>
               <Text style={[styles.appVersion, dynamicStyles.appVersion]}>
-                {t("appVersion")} 1.0.0
+                {t("appVersion")} {appVersion}
               </Text>
             </Animated.View>
           </Animated.View>
@@ -996,6 +1273,52 @@ const styles = StyleSheet.create({
     shadowRadius: normalizeSize(6),
     elevation: 8,
   },
+  claimBanner: {
+  flexDirection: "row",
+  alignItems: "center",
+  gap: normalizeSize(10),
+  backgroundColor: "#FFF1C9",
+  borderColor: "#FFB800",
+  borderWidth: 1.5,
+  borderRadius: normalizeSize(14),
+  paddingVertical: normalizeSize(10),
+  paddingHorizontal: normalizeSize(12),
+  marginBottom: SPACING,
+},
+claimBannerLeft: {
+  width: normalizeSize(34),
+  height: normalizeSize(34),
+  borderRadius: normalizeSize(17),
+  alignItems: "center",
+  justifyContent: "center",
+  backgroundColor: "#FFE9A6",
+  borderColor: "#FFB800",
+  borderWidth: 1,
+},
+claimBannerTitle: {
+  fontFamily: "Comfortaa_700Bold",
+  fontSize: normalizeSize(14),
+  color: "#111",
+},
+claimBannerText: {
+  fontFamily: "Comfortaa_400Regular",
+  fontSize: normalizeSize(12),
+  color: "#7C5800",
+  marginTop: 2,
+},
+claimBannerCta: {
+  paddingHorizontal: normalizeSize(10),
+  paddingVertical: normalizeSize(6),
+  borderRadius: 999,
+  borderWidth: 1.2,
+  borderColor: "#111",
+  backgroundColor: "#FFB800",
+},
+claimBannerCtaText: {
+  fontFamily: "Comfortaa_700Bold",
+  fontSize: normalizeSize(12),
+  color: "#111",
+},
   buttonGradient: {
     flexDirection: "row",
     alignItems: "center",

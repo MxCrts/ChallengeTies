@@ -13,6 +13,10 @@ import ru from "./src/locales/ru/translation.json";
 import it from "./src/locales/it/translation.json";
 import de from "./src/locales/de/translation.json";
 import es from "./src/locales/es/translation.json";
+import pt from "./src/locales/pt/translation.json";
+import ja from "./src/locales/ja/translation.json";
+import ko from "./src/locales/ko/translation.json";
+
 
 const resources = {
   en: { translation: en },
@@ -24,9 +28,26 @@ const resources = {
   it: { translation: it },
   de: { translation: de },
   es: { translation: es },
+  pt: { translation: pt }, // 👈 ajouté
+  ja: { translation: ja }, // 👈 ajouté
+  ko: { translation: ko },
 };
 
-const SUPPORTED_LANGS = ["en", "fr", "es", "de", "zh", "ar", "hi", "ru", "it"] as const;
+const SUPPORTED_LANGS = [
+  "en",
+  "fr",
+  "es",
+  "de",
+  "zh",
+  "ar",
+  "hi",
+  "ru",
+  "it",
+  "pt",
+  "ja",
+  "ko",
+] as const;
+
 
 // ===== Détection robuste du locale (SDK 53+, fallback anciens) =====
 const resolveSystemTag = (): string => {
@@ -46,7 +67,20 @@ const resolveSystemTag = (): string => {
 const pickSupported = (tag: string): string => {
   // toujours forcer en string AVANT split:
   const lang = String(tag).split(/[-_]/)[0]?.toLowerCase() || "en";
-  const SUPPORTED = ["en","fr","es","de","zh","ar","hi","ru","it"] as const;
+ const SUPPORTED = [
+  "en",
+  "fr",
+  "es",
+  "de",
+  "zh",
+  "ar",
+  "hi",
+  "ru",
+  "it",
+  "pt",
+  "ja",
+  "ko",
+] as const;
   return (SUPPORTED as readonly string[]).includes(lang) ? lang : "en";
 };
 
@@ -75,7 +109,21 @@ i18n
     resources,
     lng: deviceLanguage,
     fallbackLng: "en",
-    supportedLngs: ["en","fr","es","de","zh","ar","hi","ru","it"],
+    supportedLngs: [
+  "en",
+  "fr",
+  "es",
+  "de",
+  "zh",
+  "ar",
+  "hi",
+  "ru",
+  "it",
+  "pt",
+  "ja",
+  "ko",
+],
+
     nonExplicitSupportedLngs: true,
     returnObjects: false,
     returnNull: false,

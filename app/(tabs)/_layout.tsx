@@ -29,6 +29,8 @@ import { useTranslation } from "react-i18next";
 import { useTutorial } from "../../context/TutorialContext";
 import useGateForGuest from "@/hooks/useGateForGuest";
 import RequireAuthModal from "@/components/RequireAuthModal";
+import { useReferralStatus } from "@/src/referral/useReferralStatus";
+
 
 /* ----------------- Responsive helpers ----------------- */
 const clamp = (v: number, min: number, max: number) =>
@@ -194,6 +196,7 @@ const TabsLayout = () => {
   const [hasUnclaimed, setHasUnclaimed] = useState(false);
   const { isTutorialActive } = useTutorial();
   const { gate, modalVisible, closeGate } = useGateForGuest();
+  const { claimable } = useReferralStatus();
 
   const iconSize = isTablet ? n(26) : n(22);
   const showLabels = width >= 360;
@@ -417,14 +420,17 @@ tabBarBackground: isTutorialActive ? undefined : () => tabBarBackground,
             tabBarLabel: t("settings"),
             tabBarAccessibilityLabel: t("settings"),
             tabBarIcon: ({ color, focused }) => (
-              <AnimatedTabIcon
-                name="settings"
-                focused={focused}
-                color={color}
-                size={iconSize}
-                reduceMotion={!!reduceMotion}
-              />
-            ),
+  <View style={styles.badgeWrap}>
+    <AnimatedTabIcon
+      name="settings"
+      focused={focused}
+      color={color}
+      size={iconSize}
+      reduceMotion={!!reduceMotion}
+    />
+    {claimable.length > 0 && <View style={styles.badgeDotSettings} />}
+  </View>
+),
             tabBarButton: (props) => (
               <Pressable {...props} onPress={() => gate() && props.onPress?.()} />
             ),
@@ -449,6 +455,17 @@ const styles = StyleSheet.create({
     borderWidth: 1,
     borderColor: "#FFF",
   },
+  badgeDotSettings: {
+  position: "absolute",
+  top: -2,
+  right: -6,            // ajuste à -4 ou -8 si besoin
+  backgroundColor: "#FF4D4F",
+  width: 10,
+  height: 10,
+  borderRadius: 5,
+  borderWidth: 1,
+  borderColor: "#FFF",
+},
   focusIconContainer: {
     marginTop: -8, // petit flottement
     ...Platform.select({

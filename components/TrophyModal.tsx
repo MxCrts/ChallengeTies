@@ -1,63 +1,47 @@
-import React, {
-  useEffect,
-  useState,
-  useCallback,
-  useRef,
-  useMemo,
-} from "react";
+import React, { useEffect, useState, useCallback, useRef, useMemo } from "react";
 import {
   View,
   Text,
   TouchableOpacity,
   StyleSheet,
-  Animated,
   Dimensions,
-  Easing,
   Platform,
   Vibration,
+  Pressable,
+  Modal,
 } from "react-native";
 import { Ionicons } from "@expo/vector-icons";
-import { Video, ResizeMode } from "expo-av";
+import Reanimated, { FadeIn, FadeOut, ZoomIn, ZoomOut } from "react-native-reanimated";
+import { Animated as RNAnimated } from "react-native";
+import { Video, ResizeMode, AVPlaybackStatusSuccess } from "expo-av";
 import { LinearGradient } from "expo-linear-gradient";
 import { useTrophy } from "../context/TrophyContext";
 import { useTheme } from "../context/ThemeContext";
 import { Theme } from "../theme/designSystem";
 import designSystem from "../theme/designSystem";
 import { useTranslation } from "react-i18next";
-import {
-  RewardedAd,
-  RewardedAdEventType,
-  AdEventType,
-  TestIds,
-} from "react-native-google-mobile-ads";
 import { useAdsVisibility } from "../src/context/AdsVisibilityContext";
-import { adUnitIds } from "@/constants/admob";
+import { useCurrentChallenges } from "../context/CurrentChallengesContext";
+import { useSafeAreaInsets } from "react-native-safe-area-context";
+import * as Haptics from "expo-haptics";
 
-const normalizeSize = (size: number) => {
-  const scale = Math.min(SCREEN_WIDTH / 375, SCREEN_HEIGHT / 812);
-  return Math.round(size * scale);
-};
 const { width: SCREEN_WIDTH, height: SCREEN_HEIGHT } = Dimensions.get("window");
-const SPACING = normalizeSize(15);
-
+const scaleBase = Math.min(SCREEN_WIDTH / 375, SCREEN_HEIGHT / 812);
+const normalizeSize = (n: number) => Math.max(1, Math.round(n * scaleBase));
+const SPACING = normalizeSize(14);
 
 interface TrophyModalProps {
   challengeId: string;
   selectedDays: number;
 }
 
-const TrophyModal: React.FC<TrophyModalProps> = ({
-  challengeId,
-  selectedDays,
-}) => {
+const TrophyModal: React.FC<TrophyModalProps> = ({ challengeId, selectedDays }) => {
   const { t } = useTranslation();
+  const insets = useSafeAreaInsets();
   const { theme } = useTheme();
   const isDarkMode = theme === "dark";
-  const [videoFailed, setVideoFailed] = useState(false);
+  const currentTheme: Theme = isDarkMode ? designSystem.darkTheme : designSystem.lightTheme;
 
-  const currentTheme: Theme = isDarkMode
-    ? designSystem.darkTheme
-    : designSystem.lightTheme;
   const {
     showTrophyModal,
     trophiesEarned,
@@ -65,456 +49,291 @@ const TrophyModal: React.FC<TrophyModalProps> = ({
     activateDoubleReward,
     resetTrophyData,
   } = useTrophy();
-  const videoRefTrophy = useRef<Video>(null);
+
+  const { requestRewardedAd, preloadRewarded } = useCurrentChallenges();
+  const { showRewarded } = useAdsVisibility() as any;
+  const canShowRewarded = !!showRewarded;
+
+  const [reward, setReward] = useState<number>(0);
+  const [adWatched, setAdWatched] = useState(false);
+  const [adBusy, setAdBusy] = useState(false);
+  const [message, setMessage] = useState("");
+  const [bgFailed, setBgFailed] = useState(false);
+  const [trophyVidFailed, setTrophyVidFailed] = useState(false);
+
+  const videoBgRef = useRef<Video>(null);
+  const videoTrophyRef = useRef<Video>(null);
 
   // Animations
-  const scaleAnim = useRef(new Animated.Value(0)).current;
-  const opacityAnim = useRef(new Animated.Value(0)).current;
-  const textTranslateY = useRef(new Animated.Value(30)).current;
-  const buttonsTranslateY = useRef(new Animated.Value(30)).current;
-// true => pubs non personnalisées (rempli par ton écran consentement / CMP)
-const npa = (globalThis as any).__NPA__ === true;
+  const cardEnter = ZoomIn.springify().damping(18);
+  const cardExit = ZoomOut.duration(140);
 
-  // States
-  const [reward, setReward] = useState(trophiesEarned);
-  const [adWatched, setAdWatched] = useState(false);
-  const [message, setMessage] = useState("");
-  const [adLoaded, setAdLoaded] = useState(false);
-  const videoRef = useRef<Video>(null);
-  const { showRewarded } = useAdsVisibility() as any;
-const canShowRewarded = !!showRewarded;
-  const rewardedRef = useRef<RewardedAd | null>(null);
-  const earnedRef = useRef(false);
-  const unitId = __DEV__ ? TestIds.REWARDED : adUnitIds.rewarded;
-const [isShowingAd, setIsShowingAd] = useState(false);
-const createdRef = useRef(false);
-
- // Ad handling (instance unique + listeners stables)
-useEffect(() => {
-  if (!canShowRewarded) {
-    setAdLoaded(false);
-    return;
-  }
-  if (createdRef.current) return; // ne crée qu'une fois
-  createdRef.current = true;
-
-  const ad = RewardedAd.createForAdRequest(unitId, {
-    requestNonPersonalizedAdsOnly: npa,
-  });
-  rewardedRef.current = ad;
-
-  const unsubLoaded = ad.addAdEventListener(
-    RewardedAdEventType.LOADED,
-    () => setAdLoaded(true)
+  const defaultBaseReward = useMemo(
+    () => trophiesEarned || Math.max(3, Math.round(5 * (selectedDays / 7))),
+    [trophiesEarned, selectedDays]
   );
 
-  const unsubEarned = ad.addAdEventListener(
-    RewardedAdEventType.EARNED_REWARD,
-    () => {
-      earnedRef.current = true;
-    }
-  );
+  // Pré-load rewarded et init état à l’ouverture
+  useEffect(() => {
+    if (!showTrophyModal) return;
+    try { preloadRewarded(); } catch {}
+  }, [showTrophyModal, preloadRewarded]);
 
-  const unsubError = ad.addAdEventListener(AdEventType.ERROR, (error) => {
-    console.error("❌ Rewarded error:", error?.message ?? error);
-    setAdLoaded(false);
-    setIsShowingAd(false);
-  });
-
-  const unsubClosed = ad.addAdEventListener(AdEventType.CLOSED, () => {
-    const earned = earnedRef.current;
-    earnedRef.current = false;
-    setIsShowingAd(false);
-    setAdLoaded(false);
-
-    try { rewardedRef.current?.load(); } catch {}
-
-    if (earned) {
-      setAdWatched(true);
-      activateDoubleReward();
-      const base = trophiesEarned || Math.round(5 * (selectedDays / 7));
-      const doubled = base * 2;
-      setReward(doubled);
-      setMessage(
-        t("trophyModal.doubleMessage", {
-          count: doubled,
-          defaultValue: `Récompense doublée : ${doubled}`,
-        })
-      );
-    } else {
-      setMessage(
-        t("completion.adNotReady", {
-          defaultValue: "Vidéo pas prête, réessaie dans 2–3 secondes.",
-        })
-      );
-    }
-  });
-
-  try { ad.load(); } catch {}
-
-  return () => {
-    unsubLoaded();
-    unsubEarned();
-    unsubError();
-    unsubClosed();
-    rewardedRef.current = null;
-    createdRef.current = false;
-  };
-}, [canShowRewarded, unitId, npa, activateDoubleReward, trophiesEarned, selectedDays, t]);
-
-// ⬇️ PRELOAD à chaque ouverture du modal
-useEffect(() => {
-  if (showTrophyModal) {
-    setAdLoaded(false);
-    try { rewardedRef.current?.load(); } catch {}
-  } else {
-    setIsShowingAd(false);
-  }
-}, [showTrophyModal]);
-
-
-  // Animation on modal show/hide
+  // Lecture/pause vidéos + init UI
   useEffect(() => {
     if (showTrophyModal) {
-      setReward(trophiesEarned || Math.round(5 * (selectedDays / 7)));
+      setReward(defaultBaseReward);
       setAdWatched(false);
+      setAdBusy(false);
       setMessage("");
-      setVideoFailed(false);
-      videoRef.current?.playAsync();
-      videoRefTrophy.current?.playAsync();
-      Animated.parallel([
-        Animated.timing(opacityAnim, {
-          toValue: 1,
-          duration: 400,
-          useNativeDriver: true,
-        }),
-        Animated.spring(scaleAnim, {
-          toValue: 1,
-          friction: 5,
-          tension: 120,
-          useNativeDriver: true,
-        }),
-        Animated.sequence([
-          Animated.timing(textTranslateY, {
-            toValue: 0,
-            duration: 400,
-            easing: Easing.out(Easing.exp),
-            useNativeDriver: true,
-          }),
-          Animated.timing(buttonsTranslateY, {
-            toValue: 0,
-            duration: 400,
-            easing: Easing.out(Easing.exp),
-            useNativeDriver: true,
-          }),
-        ]),
-      ]).start();
+      setBgFailed(false);
+      setTrophyVidFailed(false);
+
+      // play vidéos
+      setTimeout(() => {
+        videoBgRef.current?.playAsync().catch(() => {});
+        videoTrophyRef.current?.playAsync().catch(() => {});
+      }, 50);
+      try { Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success); } catch {}
     } else {
-      videoRef.current?.pauseAsync();
-      videoRefTrophy.current?.pauseAsync();
-      Animated.parallel([
-        Animated.timing(opacityAnim, {
-          toValue: 0,
-          duration: 500,
-          easing: Easing.out(Easing.cubic),
-          useNativeDriver: true,
-        }),
-        Animated.timing(scaleAnim, {
-          toValue: 0.95,
-          duration: 500,
-          easing: Easing.out(Easing.cubic),
-          useNativeDriver: true,
-        }),
-      ]).start(() => {
-        scaleAnim.setValue(0);
-        textTranslateY.setValue(30);
-        buttonsTranslateY.setValue(30);
-      });
+      videoBgRef.current?.pauseAsync().catch(() => {});
+      videoTrophyRef.current?.pauseAsync().catch(() => {});
     }
-  }, [showTrophyModal, trophiesEarned, selectedDays]);
+  }, [showTrophyModal, defaultBaseReward]);
 
-   const handleAdPress = useCallback(() => {
-  Vibration.vibrate(50);
-  if (!canShowRewarded) {
-    setMessage(
-      t("completion.adNotReady", {
-        defaultValue: "Vidéo pas prête, réessaie dans 2–3 secondes.",
-      })
-    );
-    return;
-  }
-  const rewarded = rewardedRef.current;
-  if (adLoaded && rewarded) {
+  // Cleanup complet sur unmount
+  useEffect(() => {
+    return () => {
+      videoBgRef.current?.unloadAsync().catch(() => {});
+      videoTrophyRef.current?.unloadAsync().catch(() => {});
+    };
+  }, []);
+
+  const withAlpha = (hex: string, a: number) => {
+    const clamp = (x: number, min = 0, max = 1) => Math.min(Math.max(x, min), max);
+    const alpha = Math.round(clamp(a) * 255).toString(16).padStart(2, "0");
+    const clean = hex.replace("#", "");
+    if (clean.length === 3) return `#${clean[0]}${clean[0]}${clean[1]}${clean[1]}${clean[2]}${clean[2]}${alpha}`;
+    return `#${clean}${alpha}`;
+  };
+
+  const handleDouble = useCallback(async () => {
+    Vibration.vibrate(30);
+    if (adBusy) return;
+    if (!canShowRewarded) {
+      setMessage(t("completion.adNotReady", { defaultValue: "Vidéo pas prête, réessaie dans 2–3 secondes." }));
+      return;
+    }
+
+    setAdBusy(true);
     try {
-      setIsShowingAd(true);
-      rewarded.show();
+      // sécurité: on limite à 12s max
+      const guard = setTimeout(() => setAdBusy(false), 12000);
+      const ok = await requestRewardedAd();
+      clearTimeout(guard);
+
+      if (ok) {
+        setAdWatched(true);
+        activateDoubleReward();
+        const doubled = defaultBaseReward * 2;
+        setReward(doubled);
+        setMessage(t("trophyModal.doubleMessage", {
+          count: doubled,
+          defaultValue: `Récompense doublée : ${doubled}`,
+        }));
+        try { Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success); } catch {}
+      } else {
+        setMessage(t("completion.adNotReady", { defaultValue: "Vidéo pas prête, réessaie dans 2–3 secondes." }));
+      }
     } catch {
-      setIsShowingAd(false);
-      setMessage(
-        t("completion.adNotReady", {
-          defaultValue: "Vidéo pas prête, réessaie dans 2–3 secondes.",
-        })
-      );
-      try { rewarded.load(); } catch {}
+      setMessage(t("completion.adNotReady", { defaultValue: "Vidéo pas prête, réessaie dans 2–3 secondes." }));
+    } finally {
+      setAdBusy(false);
     }
-  } else {
-    setMessage(
-      t("completion.adNotReady", {
-        defaultValue: "Vidéo pas prête, réessaie dans 2–3 secondes.",
-      })
-    );
-    try { rewarded?.load(); } catch {}
-  }
-}, [adLoaded, canShowRewarded, t]);
+  }, [adBusy, canShowRewarded, requestRewardedAd, activateDoubleReward, defaultBaseReward, t]);
 
-
-  const handleClaimPress = useCallback(() => {
-    Vibration.vibrate(50);
+  const handleClaim = useCallback(() => {
+    Vibration.vibrate(30);
+    try { Haptics.selectionAsync(); } catch {}
     setMessage(t("trophyModal.claimMessage", { count: reward }));
+    // on laisse le message se lire un court instant
     setTimeout(() => {
       resetTrophyData();
     }, 600);
   }, [reward, resetTrophyData, t]);
 
-  // Définir les styles dynamiquement
-  const styles = StyleSheet.create({
-    overlay: {
-      position: "absolute",
-      top: 0,
-      left: 0,
-      right: 0,
-      bottom: 0,
-      zIndex: 1000,
-    },
-    modalBackground: {
-      flex: 1,
-      justifyContent: "center",
-      alignItems: "center",
-    },
-    modalContainer: {
-      width: SCREEN_WIDTH * 0.9,
-      maxWidth: normalizeSize(420),
-      borderRadius: normalizeSize(20),
-      overflow: "hidden",
-      shadowColor: "#000",
-      shadowOffset: { width: 0, height: 8 },
-      shadowOpacity: 0.4,
-      shadowRadius: normalizeSize(12),
-      elevation: 12,
-    },
-    modalInner: {
-      paddingVertical: normalizeSize(25),
-      paddingHorizontal: normalizeSize(20),
-      alignItems: "center",
-      borderWidth: 1,
-      borderColor: currentTheme.colors.border,
-    },
-    animationContainer: {
-      width: normalizeSize(140),
-      height: normalizeSize(140),
-      marginBottom: normalizeSize(20),
-      justifyContent: "center",
-      alignItems: "center",
-    },
-    glowEffect: {
-      width: normalizeSize(160),
-      height: normalizeSize(160),
-      borderRadius: normalizeSize(80),
-      justifyContent: "center",
-      alignItems: "center",
-    },
-    videoContainer: {
-      width: normalizeSize(120),
-      height: normalizeSize(120),
-      borderRadius: normalizeSize(60),
-      borderWidth: 3,
-      borderColor: currentTheme.colors.primary,
-      overflow: "hidden",
-      backgroundColor: currentTheme.colors.background, // Fallback visuel
-      justifyContent: "center", // Pour centrer l’icône fallback
-      alignItems: "center",
-      shadowColor: "#000",
-      shadowOffset: { width: 0, height: normalizeSize(6) },
-      shadowOpacity: 0.4,
-      shadowRadius: normalizeSize(10),
-      elevation: 10,
-    },
-    video: {
-      width: "100%",
-      height: "100%",
-    },
-    title: {
-      fontSize: normalizeSize(28),
-      fontFamily: "Comfortaa_700Bold",
-      marginVertical: normalizeSize(12),
-      textAlign: "center",
-      color: currentTheme.colors.secondary,
-      textShadowColor: "rgba(0, 0, 0, 0.3)",
-      textShadowOffset: { width: 1, height: 1 },
-      textShadowRadius: 4,
-    },
-    rewardText: {
-      fontSize: normalizeSize(22),
-      fontFamily: "Comfortaa_600SemiBold",
-      textAlign: "center",
-      marginBottom: normalizeSize(10),
-      color: currentTheme.colors.textSecondary,
-      textShadowColor: "rgba(0, 0, 0, 0.2)",
-      textShadowOffset: { width: 1, height: 1 },
-      textShadowRadius: 3,
-    },
-    achievementText: {
-      fontSize: normalizeSize(18),
-      fontFamily: "Comfortaa_500Medium",
-      textAlign: "center",
-      marginBottom: normalizeSize(15),
-      color: currentTheme.colors.primary,
-      textShadowColor: "rgba(0, 0, 0, 0.2)",
-      textShadowOffset: { width: 1, height: 1 },
-      textShadowRadius: 2,
-    },
-    message: {
-      fontSize: normalizeSize(16),
-      fontFamily: "Comfortaa_400Regular",
-      textAlign: "center",
-      marginVertical: normalizeSize(16),
-      color: "#00FF88", // Remplacement temporaire de success
-      textShadowColor: "rgba(0, 0, 0, 0.2)",
-      textShadowOffset: { width: 1, height: 1 },
-      textShadowRadius: 2,
-    },
-  });
+  const closeManually = useCallback(() => {
+    // Permet de fermer si besoin (tap backdrop ou croix)
+    resetTrophyData();
+  }, [resetTrophyData]);
 
   if (!showTrophyModal) return null;
 
   return (
-    <Animated.View style={[styles.overlay, { opacity: opacityAnim as any }]}>
+    <Modal
+  visible={showTrophyModal}
+  transparent
+  animationType="none"
+  onRequestClose={closeManually}
+  statusBarTranslucent
+  presentationStyle={Platform.OS === "ios" ? "overFullScreen" : undefined}
+>
+  <Reanimated.View entering={FadeIn.duration(140)} exiting={FadeOut.duration(120)} style={styles.root}>
+    {/* Vidéo de fond ou fallback gradient */}
+    {!bgFailed ? (
       <Video
-        ref={videoRef}
+        ref={videoBgRef}
         source={require("../assets/videos/intro-video8.mp4")}
         style={StyleSheet.absoluteFillObject}
         resizeMode={ResizeMode.COVER}
-        shouldPlay
         isLooping
+        shouldPlay
         isMuted
+        onError={() => setBgFailed(true)}
+        onLoad={(st) => {
+          const s = st as AVPlaybackStatusSuccess;
+          if (!s.isLoaded) setBgFailed(true);
+        }}
       />
+    ) : (
       <LinearGradient
-        colors={["rgba(0,0,0,0.8)", "rgba(0,0,0,0.9)"] as const}
-        style={styles.modalBackground}
+        colors={[
+          withAlpha(currentTheme.colors.primary, 0.25),
+          withAlpha(currentTheme.colors.secondary, 0.25),
+        ]}
+        style={StyleSheet.absoluteFillObject}
+      />
+    )}
+
+    {/* Backdrop cliquable */}
+    <Pressable style={styles.backdrop} onPress={closeManually} />
+
+    {/* Contenu centré */}
+    <View
+      style={[
+        styles.center,
+        {
+          paddingTop: 16,
+          paddingBottom: 16,
+          paddingHorizontal: 16,
+        },
+      ]}
+      pointerEvents="box-none"
+    >
+      {/* ===== UNIQUE CARD ===== */}
+      <Reanimated.View
+        entering={cardEnter}
+        exiting={cardExit}
+        style={[
+          styles.card,
+          {
+            backgroundColor: currentTheme.colors.background,
+            borderColor: withAlpha(currentTheme.colors.border, 0.6),
+          },
+        ]}
+        testID="trophy-card"
+        accessibilityRole="summary"
       >
-        <Animated.View
-          style={[
-            styles.modalContainer,
-            { transform: [{ scale: scaleAnim as any }] },
-          ]}
-        >
-          <LinearGradient
-            colors={
-              [
-                currentTheme.colors.background,
-                currentTheme.colors.cardBackground,
-              ] as const
-            }
-            style={styles.modalInner}
-            start={{ x: 0, y: 0 }}
-            end={{ x: 1, y: 1 }}
+        {/* Header */}
+        <View style={styles.header}>
+          <TouchableOpacity
+            onPress={closeManually}
+            accessibilityLabel={t("commonS.close", { defaultValue: "Fermer" })}
+            hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
+            testID="trophy-close"
           >
-            <View style={styles.animationContainer}>
-              {!videoFailed ? (
-                <LinearGradient
-                  colors={
-                    [
-                      currentTheme.colors.primary + "80",
-                      currentTheme.colors.secondary + "40",
-                      "transparent",
-                    ] as const
-                  }
-                  style={styles.glowEffect}
-                >
-                  <View style={styles.videoContainer}>
-                    <Video
-                      ref={videoRefTrophy}
-                      source={require("../assets/videos/trophy-animation.mp4")}
-                      style={styles.video}
-                      resizeMode={ResizeMode.COVER}
-                      shouldPlay
-                      isLooping
-                      isMuted={true}
-                      useNativeControls={false}
-                      usePoster={true}
-                      posterSource={require("../assets/images/trophy-poster.png")}
-                      onError={(error) => {
-                        console.error(
-                          "Erreur chargement trophy-animation.mp4:",
-                          error
-                        );
-                        setVideoFailed(true);
-                      }}
-                    />
-                  </View>
-                </LinearGradient>
+            <Ionicons
+              name="close"
+              size={normalizeSize(20)}
+              color={isDarkMode ? currentTheme.colors.textPrimary : "#000"}
+            />
+          </TouchableOpacity>
+
+          <Text
+            style={[styles.title, { color: isDarkMode ? currentTheme.colors.textPrimary : "#000" }]}
+            numberOfLines={2}
+            accessibilityRole="header"
+          >
+            {t("trophyModal.congrats")}
+          </Text>
+
+          <View style={{ width: normalizeSize(20) }} />
+        </View>
+
+        {/* Médaillon / animation */}
+        <View style={styles.animationContainer}>
+          <LinearGradient
+            colors={[currentTheme.colors.primary + "80", currentTheme.colors.secondary + "40", "transparent"]}
+            style={styles.glow}
+          >
+            <View style={[styles.videoCircle, { borderColor: currentTheme.colors.primary }]}>
+              {!trophyVidFailed ? (
+                <Video
+                  ref={videoTrophyRef}
+                  source={require("../assets/videos/trophy-animation.mp4")}
+                  style={StyleSheet.absoluteFillObject}
+                  resizeMode={ResizeMode.COVER}
+                  isLooping
+                  shouldPlay
+                  isMuted
+                  usePoster
+                  posterSource={require("../assets/images/trophy-poster.png")}
+                  onError={() => setTrophyVidFailed(true)}
+                />
               ) : (
-                <View style={styles.videoContainer}>
-                  <Ionicons
-                    name="trophy"
-                    size={normalizeSize(60)}
-                    color={currentTheme.colors.textPrimary}
-                  />
+                <View style={styles.fallbackIcon}>
+                  <Ionicons name="trophy" size={normalizeSize(64)} color={currentTheme.colors.textPrimary} />
                 </View>
               )}
             </View>
-
-            <Animated.View
-              style={{ transform: [{ translateY: textTranslateY as any }] }}
-            >
-              <Text style={styles.title}>{t("trophyModal.congrats")}</Text>
-              <Text style={styles.rewardText}>
-                {t("trophyModal.reward", { count: reward })}
-              </Text>
-
-              {achievementEarned && (
-  <Text style={styles.achievementText}>
-    🏆 {t(`achievements.${achievementEarned}`, { defaultValue: t(achievementEarned) })}
-  </Text>
-)}
-
-              {!!message && <Text style={styles.message}>{message}</Text>}
-            </Animated.View>
-
-            <Animated.View
-              style={{ transform: [{ translateY: buttonsTranslateY as any }] }}
-            >
-              <GradientButton
-                onPress={handleClaimPress}
-                text={t("trophyModal.claim")}
-                gradientColors={
-                  [
-                    currentTheme.colors.primary,
-                    currentTheme.colors.secondary,
-                  ] as const
-                }
-              />
-              {!adWatched && (
-                <View style={{ opacity: !canShowRewarded || !adLoaded || isShowingAd ? 0.5 : 1 }}>
-  <GradientButton
-    onPress={handleAdPress}
-    text={
-      isShowingAd
-        ? t("pleaseWait", { defaultValue: "Patiente..." })
-        : adLoaded
-          ? t("trophyModal.doubleReward", { defaultValue: "Doubler la récompense" })
-          : t("completion.loadingAd", { defaultValue: "Préparation de la vidéo..." })
-    }
-    iconName="videocam-outline"
-    gradientColors={[currentTheme.colors.primary, currentTheme.colors.secondary]}
-  />
-</View>
-              )}
-            </Animated.View>
           </LinearGradient>
-        </Animated.View>
-      </LinearGradient>
-    </Animated.View>
+        </View>
+
+        {/* Textes */}
+        <View style={{ alignItems: "center", paddingHorizontal: 12 }}>
+          <Text style={[styles.rewardText, { color: currentTheme.colors.secondary }]}>
+            {t("trophyModal.reward", { count: reward })}
+          </Text>
+
+          {achievementEarned ? (
+            <Text style={[styles.achievementText, { color: currentTheme.colors.primary }]}>
+              🏆 {t(`achievements.${achievementEarned}`, { defaultValue: t(achievementEarned) })}
+            </Text>
+          ) : null}
+
+          {!!message && (
+            <Text style={[styles.message, { color: isDarkMode ? "#8BFFB0" : "#0E9F6E" }]}>{message}</Text>
+          )}
+        </View>
+
+        {/* Boutons */}
+        <View style={styles.buttons}>
+          <GradientButton
+            onPress={handleClaim}
+            text={t("trophyModal.claim")}
+            iconName="checkmark-circle-outline"
+            gradientColors={[currentTheme.colors.primary, currentTheme.colors.secondary]}
+          />
+
+          {!adWatched && (
+            <View style={{ opacity: !canShowRewarded || adBusy ? 0.55 : 1 }}>
+              <GradientButton
+                onPress={() => {
+                  if (!adBusy && canShowRewarded) handleDouble();
+                }}
+                text={t("trophyModal.doubleReward", { defaultValue: "Doubler la récompense" })}
+                iconName="videocam-outline"
+                gradientColors={[currentTheme.colors.secondary, currentTheme.colors.primary]}
+              />
+            </View>
+          )}
+        </View>
+      </Reanimated.View>
+      {/* ===== FIN UNIQUE CARD ===== */}
+    </View>
+  </Reanimated.View>
+</Modal>
+
   );
 };
 
@@ -525,105 +344,119 @@ interface GradientButtonProps {
   gradientColors: readonly [string, string, ...string[]];
 }
 
-const GradientButton: React.FC<GradientButtonProps> = ({
-  onPress,
-  text,
-  iconName,
-  gradientColors,
-}) => {
-  const scaleAnim = useRef(new Animated.Value(1)).current;
+const GradientButton: React.FC<GradientButtonProps> = ({ onPress, text, iconName, gradientColors }) => {
+  const scale = useRef(new RNAnimated.Value(1)).current;
 
-  const handlePressIn = () => {
-    Vibration.vibrate(50);
-    Animated.spring(scaleAnim, {
-      toValue: 0.95,
-      friction: 5,
-      useNativeDriver: true,
-    }).start();
-  };
-
-  const handlePressOut = () => {
-    Animated.spring(scaleAnim, {
-      toValue: 1,
-      friction: 5,
-      useNativeDriver: true,
-    }).start();
-    onPress();
-  };
-
-  const buttonStyles = StyleSheet.create({
-    gradientButton: {
-      width: "90%", // Agrandi pour plus d’espace
-      marginVertical: normalizeSize(8),
-      alignSelf: "center",
-      shadowColor: "#000",
-      shadowOffset: { width: 0, height: normalizeSize(4) },
-      shadowOpacity: 0.3,
-      shadowRadius: normalizeSize(6),
-      elevation: 8,
-    },
-    buttonGradient: {
-      paddingVertical: normalizeSize(14),
-      paddingHorizontal: normalizeSize(32), // Plus de padding pour le texte
-      borderRadius: normalizeSize(24),
-      alignItems: "center",
-      borderWidth: 1,
-      borderColor: "rgba(255,255,255,0.15)",
-    },
-    buttonContent: {
-      flexDirection: "row",
-      justifyContent: "center",
-      alignItems: "center",
-    },
-    buttonIcon: {
-      marginRight: normalizeSize(6),
-    },
-    buttonGradientText: {
-      color: "#FFFFFF",
-      fontSize: normalizeSize(15),
-      fontFamily: "Comfortaa_700Bold",
-      textAlign: "center",
-      textShadowColor: "rgba(0, 0, 0, 0.1)",
-      textShadowOffset: { width: 1, height: 1 },
-      textShadowRadius: 1,
-    },
-  });
+const pressIn = () => {
+  Vibration.vibrate(20);
+  RNAnimated.spring(scale, { toValue: 0.96, friction: 5, useNativeDriver: true }).start();
+};
+const pressOut = () => {
+  RNAnimated.spring(scale, { toValue: 1, friction: 5, useNativeDriver: true }).start(() => onPress());
+};
 
   return (
-    <TouchableOpacity
-      onPressIn={handlePressIn}
-      onPressOut={handlePressOut}
-      activeOpacity={0.7}
-      style={buttonStyles.gradientButton}
-    >
-      <Animated.View style={{ transform: [{ scale: scaleAnim }] }}>
-        <LinearGradient
-          colors={gradientColors}
-          start={{ x: 0, y: 0 }}
-          end={{ x: 1, y: 0 }}
-          style={buttonStyles.buttonGradient}
-        >
-          <View style={buttonStyles.buttonContent}>
-            {iconName && (
-              <Ionicons
-                name={iconName}
-                size={normalizeSize(20)}
-                color="#FFFFFF"
-                style={buttonStyles.buttonIcon}
-              />
-            )}
-            <Text
-              style={buttonStyles.buttonGradientText}
-              adjustsFontSizeToFit
-              numberOfLines={1}
-            >
-              {text}
-            </Text>
+    <TouchableOpacity onPressIn={pressIn} onPressOut={pressOut} activeOpacity={0.8} style={btnStyles.wrap}>
+      <RNAnimated.View style={{ transform: [{ scale }] }}>
+        <LinearGradient colors={gradientColors} start={{ x: 0, y: 0 }} end={{ x: 1, y: 0 }} style={btnStyles.gradient}>
+          <View style={btnStyles.content}>
+            {iconName && <Ionicons name={iconName} size={normalizeSize(18)} color="#FFFFFF" style={btnStyles.icon} />}
+            <Text style={btnStyles.text} adjustsFontSizeToFit numberOfLines={1}>{text}</Text>
           </View>
         </LinearGradient>
-      </Animated.View>
+      </RNAnimated.View>
     </TouchableOpacity>
   );
 };
+
+/* Styles */
+const styles = StyleSheet.create({
+  root: { flex: 1 },
+  backdrop: { ...StyleSheet.absoluteFillObject, backgroundColor: "rgba(0,0,0,0.6)" },
+  center: { flex: 1, alignItems: "center", justifyContent: "center" },
+  card: {
+    width: "92%",
+    maxWidth: 460,
+    borderRadius: 20,
+    borderWidth: StyleSheet.hairlineWidth,
+    paddingVertical: SPACING,
+    paddingHorizontal: SPACING,
+    shadowColor: "#000",
+    shadowOffset: { width: 0, height: Platform.OS === "android" ? 6 : 10 },
+    shadowOpacity: 0.25,
+    shadowRadius: 16,
+    elevation: 10,
+  },
+  header: { flexDirection: "row", alignItems: "center", justifyContent: "space-between", marginBottom: SPACING },
+  title: { fontSize: normalizeSize(22), fontFamily: "Comfortaa_700Bold", textAlign: "center", flex: 1, paddingHorizontal: 8 },
+  animationContainer: { width: "100%", alignItems: "center", marginBottom: SPACING },
+  glow: {
+    width: normalizeSize(172),
+    height: normalizeSize(172),
+    borderRadius: normalizeSize(86),
+    alignItems: "center",
+    justifyContent: "center",
+  },
+  videoCircle: {
+    width: normalizeSize(140),
+    height: normalizeSize(140),
+    borderRadius: normalizeSize(70),
+    overflow: "hidden",
+    borderWidth: 3,
+    backgroundColor: "#000",
+    shadowColor: "#000",
+    shadowOffset: { width: 0, height: 6 },
+    shadowOpacity: 0.35,
+    shadowRadius: 10,
+    elevation: 10,
+  },
+  fallbackIcon: { flex: 1, alignItems: "center", justifyContent: "center" },
+  rewardText: {
+    fontSize: normalizeSize(20),
+    fontFamily: "Comfortaa_700Bold",
+    textAlign: "center",
+    textShadowColor: "rgba(0,0,0,0.18)",
+    textShadowOffset: { width: 1, height: 1 },
+    textShadowRadius: 2,
+    marginBottom: 4,
+  },
+  achievementText: {
+    fontSize: normalizeSize(16),
+    fontFamily: "Comfortaa_600SemiBold",
+    textAlign: "center",
+    marginTop: 2,
+    marginBottom: 8,
+  },
+  message: {
+    fontSize: normalizeSize(14),
+    fontFamily: "Comfortaa_400Regular",
+    textAlign: "center",
+    marginTop: 6,
+  },
+  buttons: { marginTop: SPACING, alignItems: "center" },
+});
+
+const btnStyles = StyleSheet.create({
+  wrap: {
+    width: "92%",
+    marginVertical: normalizeSize(6),
+    alignSelf: "center",
+    shadowColor: "#000",
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.22,
+    shadowRadius: 6,
+    elevation: 8,
+  },
+  gradient: {
+    paddingVertical: normalizeSize(14),
+    paddingHorizontal: normalizeSize(22),
+    borderRadius: normalizeSize(24),
+    borderWidth: 1,
+    borderColor: "rgba(255,255,255,0.12)",
+  },
+  content: { flexDirection: "row", alignItems: "center", justifyContent: "center" },
+  icon: { marginRight: normalizeSize(6) },
+  text: { color: "#fff", fontSize: normalizeSize(15), fontFamily: "Comfortaa_700Bold", textAlign: "center" },
+});
 
 export default TrophyModal;

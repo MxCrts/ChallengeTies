@@ -1,4 +1,4 @@
-import React, { useEffect, useState, useRef } from "react";
+import React, { useEffect, useState, useRef, useMemo  } from "react";
 import {
   Modal,
   View,
@@ -9,8 +9,6 @@ import {
   Dimensions,
 } from "react-native";
 import { Ionicons } from "@expo/vector-icons";
-import { useAdsVisibility } from "../src/context/AdsVisibilityContext";
-import { adUnitIds } from "@/constants/admob";
 import { LinearGradient } from "expo-linear-gradient";
 import { doc, onSnapshot } from "firebase/firestore";
 import { auth, db } from "../constants/firebase-config";
@@ -20,12 +18,7 @@ import { useTranslation } from "react-i18next";
 import { useTheme } from "../context/ThemeContext";
 import { Theme } from "../theme/designSystem";
 import designSystem from "../theme/designSystem";
-import {
-  RewardedAd,
-  RewardedAdEventType,
-  AdEventType,
-  TestIds,
-} from "react-native-google-mobile-ads";
+import { useAdsVisibility } from "../src/context/AdsVisibilityContext";
 import { useRouter } from "expo-router";
 import * as Haptics from "expo-haptics";
 
@@ -53,8 +46,6 @@ const motivationalPhrases = [
 
 const baseReward = 5;
 
-
-
 const getDynamicStyles = (currentTheme: Theme, isDarkMode: boolean) => ({
   fullOverlay: {
     backgroundColor: isDarkMode ? "rgba(0,0,0,0.9)" : "rgba(0,0,0,0.85)",
@@ -81,20 +72,11 @@ const getDynamicStyles = (currentTheme: Theme, isDarkMode: boolean) => ({
     color: currentTheme.colors.secondary,
   },
   buttonGradient: {
-    colors: [
-      currentTheme.colors.primary,
-      currentTheme.colors.secondary,
-    ] as const,
+    colors: [currentTheme.colors.primary, currentTheme.colors.secondary] as const,
   },
-  buttonGradientText: {
-    color: "#FFFFFF",
-  },
-  buttonIcon: {
-    color: isDarkMode ? "#FFD700" : "#FFFFFF",
-  },
-  videoBorder: {
-    borderColor: currentTheme.colors.primary,
-  },
+  buttonGradientText: { color: "#FFFFFF" },
+  buttonIcon: { color: isDarkMode ? "#FFD700" : "#FFFFFF" },
+  videoBorder: { borderColor: currentTheme.colors.primary },
   glowGradient: {
     colors: [
       (currentTheme.colors.primary as string) + "80",
@@ -120,33 +102,43 @@ export default function ChallengeCompletionModal({
   const { t } = useTranslation();
   const { showRewarded } = useAdsVisibility() as any;
   const canShowRewarded = !!showRewarded;
+const safeReward = useMemo(() => {
+    const r = Math.round(baseReward * Math.max(1, selectedDays) / 7);
+    return Math.max(1, r);
+  }, [selectedDays]);
   const { theme } = useTheme();
   const isDarkMode = theme === "dark";
   const currentTheme: Theme = isDarkMode
     ? designSystem.darkTheme
     : designSystem.lightTheme;
   const dynamicStyles = getDynamicStyles(currentTheme, isDarkMode);
-const npa = (globalThis as any).__NPA__ === true;
 
-  // --- Toast state
+  // Toast state
   const [toastText, setToastText] = useState<string>("");
   const [toastVisible, setToastVisible] = useState(false);
   const toastOpacity = useRef(new Animated.Value(0)).current;
   const toastTranslate = useRef(new Animated.Value(30)).current;
-const rewardedAdUnitId = __DEV__ ? TestIds.REWARDED : adUnitIds.rewarded;
-const rewardedRef = useRef<RewardedAd | null>(null);
-const [adLoaded, setAdLoaded] = useState(false);
-const [isShowingAd, setIsShowingAd] = useState(false);
-const earnedRef = useRef(false);
-const createdRef = useRef(false);
-  // --- Busy guard
-  const [busy, setBusy] = useState(false);
 
-  // --- Navigation
+  // Busy guard
+  const [busy, setBusy] = useState(false);
+  const busyRef = useRef(false);
+ 
+
+  // Navigation
   const router = useRouter();
   const didNavigateRef = useRef(false);
 
-  // --- Animations
+   // Vidéo / fallback image
+  const videoRef = useRef<Video>(null);
+  const [videoOk, setVideoOk] = useState(true);
+
+  // Loop handle pour stopper proprement
+  const loopRef = useRef<Animated.CompositeAnimation | null>(null);
+  useEffect(() => () => {
+    loopRef.current?.stop?.();
+  }, []);
+
+  // Animations
   const [motivationalPhrase, setMotivationalPhrase] = useState<string>("");
   const fadeAnim = useRef(new Animated.Value(0)).current;
   const scaleAnim = useRef(new Animated.Value(0.8)).current;
@@ -154,12 +146,11 @@ const createdRef = useRef(false);
   const glowAnim = useRef(new Animated.Value(0.8)).current;
   const videoFadeAnim = useRef(new Animated.Value(0)).current;
 
-  // --- Data
+  // Data
   const [userTrophies, setUserTrophies] = useState<number>(0);
-  const { completeChallenge } = useCurrentChallenges();
-  const videoRef = useRef<Video>(null);
+  const { completeChallenge, requestRewardedAd, preloadRewarded } = useCurrentChallenges();
 
-  // ---- Helper toast (réutilisable)
+  // Toast helper
   const showToast = (msg: string, duration = 1200) => {
     setToastText(msg);
     setToastVisible(true);
@@ -176,162 +167,89 @@ const createdRef = useRef(false);
     });
   };
 
-  // --- Ads listeners (create once)
-useEffect(() => {
-  if (!canShowRewarded) { setAdLoaded(false); return; }
-  if (createdRef.current) return;       // only once per mount
-  createdRef.current = true;
+ useEffect(() => { busyRef.current = busy; }, [busy]);
 
-  const ad = RewardedAd.createForAdRequest(rewardedAdUnitId, {
-    requestNonPersonalizedAdsOnly: npa,
-  });
-  rewardedRef.current = ad;
+  // Précharge la rewarded côté contexte à chaque ouverture
+  useEffect(() => {
+    if (visible) {
+      try { preloadRewarded(); } catch {}
+      // reset état vidéo et animations
+      setVideoOk(true);
+      loopRef.current?.stop?.();
+    }
+  }, [visible, preloadRewarded]);
 
-  const unsubLoaded = ad.addAdEventListener(
-      RewardedAdEventType.LOADED,
-      () => setAdLoaded(true)
-    );
-
-    const unsubEarned = ad.addAdEventListener(
-      RewardedAdEventType.EARNED_REWARD,
-      () => {
-        earnedRef.current = true;
-      }
-    );
-
-    const unsubError = ad.addAdEventListener(AdEventType.ERROR, (error) => {
-      console.error("Erreur vidéo récompensée:", error?.message ?? error);
-      setAdLoaded(false);
-      setIsShowingAd(false);
-      setBusy(false);
-    });
-
-    const unsubClosed = ad.addAdEventListener(AdEventType.CLOSED, async () => {
-      const userEarned = earnedRef.current;
-      earnedRef.current = false;
-      setIsShowingAd(false);
-      setAdLoaded(false);
-
-      try {
-        if (userEarned) {
-          await completeChallenge(challengeId, selectedDays, true);
-          const finalReward = Math.round(baseReward * (selectedDays / 7)) * 2;
-          await showSuccessAndNavigate(finalReward);
-        } else {
-          showToast(t("completion.adNotReady"));
-          onClose?.();
-        }
-      } catch (e) {
-        console.error(t("completion.errorFinalizing"), e);
-        showToast(t("completion.errorFinalizingMessage"), 1400);
-        onClose?.();
-      } finally {
-        try { rewardedRef.current?.load(); } catch {}
-        setBusy(false);
-      }
-    });
-
-    return () => {
-      unsubLoaded();
-      unsubEarned();
-      unsubError();
-      unsubClosed();
-      rewardedRef.current = null;
-    createdRef.current = false;
-    };
- }, [canShowRewarded]);
-
-  // ---- User trophies listener
+  // User trophies listener
   useEffect(() => {
     const userId = auth.currentUser?.uid;
     if (!userId) return;
     const userRef = doc(db, "users", userId);
     const unsubscribe = onSnapshot(userRef, (snap) => {
-      if (snap.exists()) {
-        setUserTrophies(snap.data().trophies || 0);
-      }
+      if (snap.exists()) setUserTrophies(snap.data().trophies || 0);
     });
     return () => unsubscribe();
   }, []);
 
-  // ---- Open/close animations
+  // Open/close animations
   useEffect(() => {
     if (visible) {
-      setAdLoaded(false);
-    try { rewardedRef.current?.load(); } catch {}
-      const idx = Math.floor(Math.random() * motivationalPhrases.length);
-      setMotivationalPhrase(motivationalPhrases[idx]);
+      const phrase = motivationalPhrases[Math.floor(Math.random() * motivationalPhrases.length)];
+      setMotivationalPhrase(phrase);
 
-      videoRef.current?.setPositionAsync(0);
-      videoRef.current?.playAsync();
+      // (re)lance la video proprement
+      (async () => {
+        try {
+          await videoRef.current?.setStatusAsync({ positionMillis: 0, shouldPlay: true });
+        } catch {
+          setVideoOk(false);
+        }
+      })();
 
       Animated.parallel([
-        Animated.timing(fadeAnim, {
-          toValue: 1,
-          duration: 1000,
-          useNativeDriver: true,
-        }),
-        Animated.spring(scaleAnim, {
-          toValue: 1,
-          friction: 6,
-          tension: 120,
-          useNativeDriver: true,
-        }),
-        Animated.timing(rotateAnim, {
-          toValue: 1,
-          duration: 600,
-          useNativeDriver: true,
-        }),
-        Animated.timing(videoFadeAnim, {
-          toValue: 1,
-          duration: 1200,
-          useNativeDriver: true,
-        }),
+        Animated.timing(fadeAnim, { toValue: 1, duration: 1000, useNativeDriver: true }),
+        Animated.spring(scaleAnim, { toValue: 1, friction: 6, tension: 120, useNativeDriver: true }),
+        Animated.timing(rotateAnim, { toValue: 1, duration: 600, useNativeDriver: true }),
+        Animated.timing(videoFadeAnim, { toValue: 1, duration: 1200, useNativeDriver: true }),
       ]).start();
 
-      Animated.loop(
+      // loop pulsation contrôlée (réf pour cleanup)
+      loopRef.current = Animated.loop(
         Animated.sequence([
-          Animated.timing(glowAnim, {
-            toValue: 1.2,
-            duration: 700,
-            useNativeDriver: true,
-          }),
-          Animated.timing(glowAnim, {
-            toValue: 0.8,
-            duration: 700,
-            useNativeDriver: true,
-          }),
-        ])
-      ).start();
+          Animated.timing(glowAnim, { toValue: 1.2, duration: 700, useNativeDriver: true }),
+          Animated.timing(glowAnim, { toValue: 0.8, duration: 700, useNativeDriver: true }),
+        ]),
+      );
+      loopRef.current.start();
     } else {
       fadeAnim.setValue(0);
       scaleAnim.setValue(0.8);
       rotateAnim.setValue(0);
       glowAnim.setValue(0.8);
       videoFadeAnim.setValue(0);
-      setIsShowingAd(false);
-    setBusy(false);
+      // stop anims & vidéo pour batterie
+      loopRef.current?.stop?.();
+      (async () => {
+        try {
+          await videoRef.current?.stopAsync();
+          await videoRef.current?.setStatusAsync({ shouldPlay: false });
+        } catch {}
+      })();
+      setBusy(false);
     }
-  }, [visible]);
+  }, [visible, fadeAnim, scaleAnim, rotateAnim, glowAnim, videoFadeAnim]);
 
-  // +++ Toast success + nav smooth
+  // Success + navigation smooth
   const showSuccessAndNavigate = async (count: number) => {
     try {
       await Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
     } catch {}
-
     showToast(t("completion.finalMessage", { count }), 1000);
 
-    // Attends que le toast reste visible un court instant, puis ferme et remplace l’écran
     setTimeout(() => {
       if (!didNavigateRef.current) {
         didNavigateRef.current = true;
-
-        onClose?.(); // ferme la modale
-
-        // nav smooth (remplace au lieu d’empiler)
+        onClose?.();
         router.replace(`/challenge-details/${challengeId}`);
-
         setTimeout(() => {
           didNavigateRef.current = false;
           setBusy(false);
@@ -341,10 +259,10 @@ useEffect(() => {
   };
 
   const handleComplete = async (doubleReward: boolean): Promise<void> => {
-    if (busy) return;
+    if (busyRef.current) return;
     setBusy(true);
 
-    const calculatedReward = Math.round(baseReward * (selectedDays / 7));
+   const calculatedReward = safeReward;
 
     if (doubleReward) {
       if (!canShowRewarded) {
@@ -352,21 +270,18 @@ useEffect(() => {
         setBusy(false);
         return;
       }
-      if (!adLoaded || !rewardedRef.current) {
-        // Try to load and tell the user we’re prepping the ad
-        try { rewardedRef.current?.load(); } catch {}
-        showToast(t("completion.adNotReady"));
-        setBusy(false);
-        return;
-      }
 
       try {
-        setIsShowingAd(true);
-        earnedRef.current = false;
-         rewardedRef.current.show();
+        const ok = await requestRewardedAd();
+        if (ok) {
+          await completeChallenge(challengeId, selectedDays, true);
+          await showSuccessAndNavigate(calculatedReward * 2);
+        } else {
+          showToast(t("completion.adNotReady"));
+          setBusy(false);
+        }
       } catch (error) {
         console.error(t("completion.errorFinalizing"), error);
-        setIsShowingAd(false);
         showToast(t("completion.errorFinalizingMessage"), 1400);
         setBusy(false);
       }
@@ -384,21 +299,21 @@ useEffect(() => {
     }
   };
 
-  // === Anim helpers
+  // Anim helpers
   const rotateInterpolate = rotateAnim.interpolate({
     inputRange: [0, 1],
     outputRange: ["-3deg", "0deg"],
   });
 
-  const calculatedReward = Math.round(baseReward * (selectedDays / 7));
+  const calculatedReward = safeReward;
 
-  // ====== RENDER ======
   return (
     <Modal
       visible={visible}
       transparent
       animationType="none"
       onRequestClose={onClose}
+      onDismiss={() => { loopRef.current?.stop?.(); }}
       statusBarTranslucent
     >
       <View style={[styles.fullOverlay, dynamicStyles.fullOverlay]}>
@@ -435,25 +350,43 @@ useEffect(() => {
                 colors={dynamicStyles.glowGradient.colors}
                 style={styles.glowEffect}
               >
-                <View
-                  style={[styles.videoContainer, dynamicStyles.videoBorder]}
-                >
-                  <Video
-                    ref={videoRef}
-                    source={require("../assets/videos/trophy-animation.mp4")}
-                    style={styles.video}
-                    resizeMode={ResizeMode.COVER}
-                    shouldPlay
-                    isLooping
-                    isMuted={false}
-                  />
+                <View style={[styles.videoContainer, dynamicStyles.videoBorder]}>
+                  {videoOk ? (
+                    <Video
+                      ref={videoRef}
+                      source={require("../assets/videos/trophy-animation.mp4")}
+                      style={styles.video}
+                      resizeMode={ResizeMode.COVER}
+                      shouldPlay
+                      isLooping
+                      isMuted={false}
+                      onError={() => setVideoOk(false)}
+                    />
+                  ) : (
+                    // ✅ Fallback ultra léger si la vidéo échoue (réseau ou device ancien)
+                    <View style={[styles.video, { alignItems: "center", justifyContent: "center" }]}>
+                      <Ionicons name="trophy" size={normalizeSize(72)} color={currentTheme.colors.secondary} />
+                      <Text
+                        style={{
+                          marginTop: 8,
+                          color: currentTheme.colors.textSecondary,
+                          fontFamily: "Comfortaa_700Bold",
+                          fontSize: normalizeSize(13),
+                        }}
+                      >
+                        {t("completion.wellDone")}
+                      </Text>
+                    </View>
+                  )}
                 </View>
               </LinearGradient>
             </Animated.View>
 
-            <Text style={[styles.motivationalText, dynamicStyles.motivationalText]}>
-  {t(motivationalPhrase)}
-</Text>
+            <Text
+              style={[styles.motivationalText, dynamicStyles.motivationalText]}
+            >
+              {t(motivationalPhrase)}
+            </Text>
 
             <Animated.View
               style={[
@@ -481,6 +414,9 @@ useEffect(() => {
               activeOpacity={0.7}
               disabled={busy}
               style={[styles.gradientButton, busy && { opacity: 0.5 }]}
+              accessibilityRole="button"
+              accessibilityLabel={t("completion.continue")}
+              testID="complete-without-ad"
             >
               <LinearGradient
                 colors={dynamicStyles.buttonGradient.colors}
@@ -503,15 +439,19 @@ useEffect(() => {
               </LinearGradient>
             </TouchableOpacity>
 
-            {/* Doubler (rewarded) */}
+            {/* Doubler (rewarded centralisée) */}
             <TouchableOpacity
-  onPress={() => handleComplete(true)}
-  activeOpacity={0.7}
-  disabled={!canShowRewarded || busy || !adLoaded || isShowingAd}
+              onPress={() => handleComplete(true)}
+              activeOpacity={0.7}
+              disabled={!canShowRewarded || busy}
               style={[
                 styles.gradientButton,
-                (!canShowRewarded || busy || !adLoaded || isShowingAd) && { opacity: 0.5 },
+                (!canShowRewarded || busy) && { opacity: 0.5 },
               ]}
+              accessibilityRole="button"
+              accessibilityLabel={t("completion.doubleTrophies")}
+              accessibilityHint={t("completion.watchAdHint", { defaultValue: "Watch an ad to double your reward." })}
+              testID="complete-with-ad"
             >
               <LinearGradient
                 colors={dynamicStyles.buttonGradient.colors}
@@ -534,11 +474,7 @@ useEffect(() => {
                     numberOfLines={1}
                     ellipsizeMode="tail"
                   >
-                    {isShowingAd
-          ? t("pleaseWait", { defaultValue: "Patiente..." })
-          : adLoaded
-            ? t("completion.doubleTrophies")
-            : t("completion.loadingAd", { defaultValue: "Préparation de la vidéo..." })}
+                    {t("completion.doubleTrophies")}
                   </Text>
                 </View>
               </LinearGradient>
@@ -643,10 +579,7 @@ const styles = StyleSheet.create({
     shadowRadius: normalizeSize(10),
     elevation: 10,
   },
-  video: {
-    width: "100%",
-    height: "100%",
-  },
+  video: { width: "100%", height: "100%" },
   motivationalText: {
     fontSize: normalizeSize(20),
     fontFamily: "Comfortaa_700Bold",
@@ -705,7 +638,5 @@ const styles = StyleSheet.create({
     textShadowOffset: { width: 1, height: 1 },
     textShadowRadius: 1,
   },
-  buttonIcon: {
-    marginRight: normalizeSize(6),
-  },
+  buttonIcon: { marginRight: normalizeSize(6) },
 });

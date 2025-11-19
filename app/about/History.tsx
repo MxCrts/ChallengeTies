@@ -1,15 +1,15 @@
-import React, { useMemo } from "react";
+import React, { useMemo, memo } from "react";
 import {
   View,
   Text,
   StyleSheet,
   ScrollView,
-  Image,
   Dimensions,
-  SafeAreaView,
-  StatusBar,
-  Platform,
+  Platform
 } from "react-native";
+import { StatusBar } from "expo-status-bar";
+import { SafeAreaView, useSafeAreaInsets } from "react-native-safe-area-context";
+import { Image } from "expo-image";
 import { LinearGradient } from "expo-linear-gradient";
 import Animated, { FadeInUp } from "react-native-reanimated";
 import { Ionicons } from "@expo/vector-icons";
@@ -32,6 +32,7 @@ export default function History() {
   const { t } = useTranslation();
   const { theme } = useTheme();
   const isDarkMode = theme === "dark";
+  const insets = useSafeAreaInsets();
   const currentTheme: Theme = useMemo(
     () => (isDarkMode ? designSystem.darkTheme : designSystem.lightTheme),
     [isDarkMode]
@@ -45,14 +46,19 @@ export default function History() {
       end={{ x: 1, y: 1 }}
     >
       {/* Orbes décoratifs en arrière-plan */}
-      <View style={styles.orbsContainer} pointerEvents="none">
+      <View style={styles.orbsContainer} pointerEvents="none" accessibilityElementsHidden importantForAccessibility="no">
         {/* Orbe principal */}
         <LinearGradient
           colors={[
             currentTheme.colors.secondary + "66",
             currentTheme.colors.primary + "22",
           ]}
-          style={[styles.orb, styles.orbLg, { top: -SCREEN_WIDTH * 0.25, left: -SCREEN_WIDTH * 0.15 }]}
+          style={[
+            styles.orb,
+            styles.orbLg,
+            { top: -SCREEN_WIDTH * 0.25, left: -SCREEN_WIDTH * 0.15 },
+            Platform.OS === "web" ? { filter: "blur(12px)" as any } : null,
+          ]}
         />
         {/* Orbe secondaire */}
         <LinearGradient
@@ -60,7 +66,12 @@ export default function History() {
             currentTheme.colors.primary + "55",
             currentTheme.colors.secondary + "11",
           ]}
-          style={[styles.orb, styles.orbMd, { top: SCREEN_HEIGHT * 0.15, right: -SCREEN_WIDTH * 0.25 }]}
+          style={[
+            styles.orb,
+            styles.orbMd,
+            { top: SCREEN_HEIGHT * 0.15, right: -SCREEN_WIDTH * 0.25 },
+            Platform.OS === "web" ? { filter: "blur(12px)" as any } : null,
+          ]}
         />
         {/* Orbe tertiaire */}
         <LinearGradient
@@ -68,30 +79,35 @@ export default function History() {
             currentTheme.colors.secondary + "44",
             currentTheme.colors.primary + "11",
           ]}
-          style={[styles.orb, styles.orbSm, { bottom: -SCREEN_WIDTH * 0.1, left: SCREEN_WIDTH * 0.15 }]}
+          style={[
+            styles.orb,
+            styles.orbSm,
+            { bottom: -SCREEN_WIDTH * 0.1, left: SCREEN_WIDTH * 0.15 },
+            Platform.OS === "web" ? { filter: "blur(12px)" as any } : null,
+          ]}
         />
       </View>
 
-      <SafeAreaView style={styles.safeArea}>
-        <StatusBar
-          translucent
-          backgroundColor="transparent"
-          barStyle={isDarkMode ? "light-content" : "dark-content"}
-        />
+      <SafeAreaView style={[styles.safeArea, { paddingTop: insets.top + SPACING * 0.5 }]}>
+        <StatusBar style={isDarkMode ? "light" : "dark"} />
 
         <CustomHeader title={t("history.title")} />
 
         <ScrollView
           contentContainerStyle={styles.contentContainer}
           showsVerticalScrollIndicator={false}
-          contentInset={{ top: SPACING, bottom: normalizeSize(80) }}
+          contentInsetAdjustmentBehavior="automatic"
+          keyboardDismissMode="on-drag"
+          keyboardShouldPersistTaps="handled"
         >
           {/* Logo animé */}
           <Animated.View entering={FadeInUp.delay(150).duration(600)} style={styles.logoContainer}>
             <Image
               source={require("../../assets/images/icon2.png")}
               style={styles.logo}
-              resizeMode="contain"
+              contentFit="contain"
+              transition={120}
+              cachePolicy="memory-disk"
               accessibilityLabel={t("history.logoAlt")}
             />
           </Animated.View>
@@ -139,26 +155,14 @@ export default function History() {
                 descKey: "history.features.community.desc",
               },
             ].map((item, idx) => (
-              <View key={idx} style={styles.featureItem}>
-                <Ionicons
-                  name={item.icon}
-                  size={normalizeSize(20)}
-                  color={currentTheme.colors.secondary}
-                  style={styles.featureIcon}
-                  accessibilityLabel={t(item.titleKey)}
-                />
-                <Text style={[styles.featureText, { color: currentTheme.colors.textSecondary }]}>
-                  <Text
-                    style={[
-                      styles.boldText,
-                      { color: isDarkMode ? currentTheme.colors.textPrimary : "#FF8C00" },
-                    ]}
-                  >
-                    {t(item.titleKey)}
-                  </Text>
-                  {` ${t(item.descKey)}`}
-                </Text>
-              </View>
+              <FeatureItem
+                key={idx}
+                icon={item.icon}
+                title={t(item.titleKey)}
+                desc={t(item.descKey)}
+                currentTheme={currentTheme}
+                isDarkMode={isDarkMode}
+              />
             ))}
           </Card>
 
@@ -244,8 +248,7 @@ export default function History() {
   );
 }
 
-/** Petite carte premium avec bordure dynamique + légère ombre */
-function Card({
+const Card = memo(function Card({
   children,
   currentTheme,
   isDarkMode,
@@ -270,19 +273,57 @@ function Card({
       {children}
     </Animated.View>
   );
-}
+});
+
+const FeatureItem = memo(function FeatureItem({
+  icon,
+  title,
+  desc,
+  currentTheme,
+  isDarkMode,
+}: {
+  icon: React.ComponentProps<typeof Ionicons>["name"];
+  title: string;
+  desc: string;
+  currentTheme: Theme;
+  isDarkMode: boolean;
+}) {
+  return (
+    <View style={styles.featureItem}>
+      <Ionicons
+        name={icon}
+        size={normalizeSize(20)}
+        color={currentTheme.colors.secondary}
+        style={styles.featureIcon}
+        accessibilityLabel={title}
+      />
+      <Text style={[styles.featureText, { color: currentTheme.colors.textSecondary }]}>
+        <Text
+          style={[
+            styles.boldText,
+            { color: isDarkMode ? currentTheme.colors.textPrimary : "#FF8C00" },
+          ]}
+        >
+          {title}
+        </Text>
+        {` ${desc}`}
+      </Text>
+    </View>
+  );
+});
 
 const styles = StyleSheet.create({
   container: { flex: 1 },
 
   safeArea: {
     flex: 1,
-    paddingTop: Platform.OS === "android" ? StatusBar.currentHeight ?? SPACING : SPACING,
   },
 
   contentContainer: {
     paddingHorizontal: SPACING,
     paddingBottom: normalizeSize(120),
+    maxWidth: 720,
+    alignSelf: "center",
   },
 
   // --- ORBS ---
@@ -293,7 +334,6 @@ const styles = StyleSheet.create({
     position: "absolute",
     borderRadius: 9999,
     opacity: 0.9,
-    filter: "blur(12px)" as any, // web-only, ignoré sur natif
   },
   orbLg: {
     width: SCREEN_WIDTH * 0.9,
@@ -318,12 +358,10 @@ const styles = StyleSheet.create({
   },
   logo: {
   width: SCREEN_WIDTH * 0.38,
-  height: SCREEN_WIDTH * 0.38,
-  borderRadius: (SCREEN_WIDTH * 0.38) / 2, // cercle parfait
-  borderWidth: 0,                          // pas de cadre
-  overflow: "hidden",                      // crop propre si l’image dépasse
-},
-
+    height: SCREEN_WIDTH * 0.38,
+    borderRadius: (SCREEN_WIDTH * 0.38) / 2,
+    overflow: "hidden",
+  },                    // crop propre si l’image dépasse
 
   // --- Cards ---
  card: {

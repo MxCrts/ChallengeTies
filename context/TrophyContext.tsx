@@ -4,12 +4,16 @@ import React, {
   useState,
   ReactNode,
   useCallback,
+  useRef,
+  useMemo,
 } from "react";
+import * as Haptics from "expo-haptics";
 import { claimAchievement } from "../helpers/trophiesHelpers";
 import { useProfileUpdate } from "./ProfileUpdateContext";
 import { auth } from "../constants/firebase-config";
 
 interface TrophyContextProps {
+  // existant
   showTrophyModal: boolean;
   trophiesEarned: number;
   achievementEarned: string | null;
@@ -18,68 +22,125 @@ interface TrophyContextProps {
   setTrophyData: (trophies: number, achievement: string) => void;
   activateDoubleReward: () => void;
   resetTrophyData: () => Promise<void>;
+  // bonus non-cassants (utiles si tu veux les lire)
+  isClaiming?: boolean;
+  closeTrophyModal?: () => void;
+  canClaim?: boolean;
 }
 
 const TrophyContext = createContext<TrophyContextProps | undefined>(undefined);
 
-export const TrophyProvider: React.FC<{ children: ReactNode }> = ({
-  children,
-}) => {
+export const TrophyProvider: React.FC<{ children: ReactNode }> = ({ children }) => {
   const [showTrophyModal, setShowTrophyModal] = useState<boolean>(false);
   const [trophiesEarned, setTrophiesEarned] = useState<number>(0);
-  const [achievementEarned, setAchievementEarned] = useState<string | null>(
-    null
-  );
+  const [achievementEarned, setAchievementEarned] = useState<string | null>(null);
   const [isDoubleReward, setIsDoubleReward] = useState<boolean>(false);
+
+  // Nouveaux états premium
+  const [isClaiming, setIsClaiming] = useState<boolean>(false);
+  const [lastActionAt, setLastActionAt] = useState<number>(0);
+  const recentClaimsRef = useRef<Set<string>>(new Set()); // anti double-claim local
+
   const { triggerProfileUpdate } = useProfileUpdate();
 
+  /** Cooldown anti-spam (tap, pub, etc.) */
+  const withinCooldown = useCallback((ms = 800) => {
+    const now = Date.now();
+    if (now - lastActionAt < ms) return true;
+    setLastActionAt(now);
+    return false;
+  }, [lastActionAt]);
+
+  /** Ouverture modale + pré-chargement des infos (idempotent, anti-spam) */
   const setTrophyData = useCallback((trophies: number, achievement: string) => {
-    console.log(
-      `🎯 Préparation pour réclamer : ${achievement} (+${trophies} trophées)`
-    );
+    if (!trophies || !achievement) return;
+    if (withinCooldown(400)) return;
+
+    // si la même récompense est déjà en cours/ouverte on ignore
+    if (showTrophyModal && achievementEarned === achievement) return;
+
     setTrophiesEarned(trophies);
     setAchievementEarned(achievement);
     setIsDoubleReward(false);
     setShowTrophyModal(true);
-  }, []);
+    // haptique léger pour feedback premium
+    Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium).catch(() => {});
+  }, [achievementEarned, showTrophyModal, withinCooldown]);
 
+  /** Active le x2 après pub/condition */
   const activateDoubleReward = useCallback(() => {
-    console.log("🎥 Publicité regardée : doublement des trophées !");
+    if (withinCooldown(500)) return;
     setIsDoubleReward(true);
+    Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success).catch(() => {});
+  }, [withinCooldown]);
+
+  /** Ferme proprement la modale (sans reset des states métier) */
+  const closeTrophyModal = useCallback(() => {
+    setShowTrophyModal(false);
   }, []);
 
+  /** Idempotence locale pour empêcher double soumission */
+  const alreadyClaimedLocally = useCallback((id: string) => {
+    if (!id) return false;
+    const s = recentClaimsRef.current;
+    if (s.has(id)) return true;
+    // expire localement après ~3s
+    s.add(id);
+    setTimeout(() => s.delete(id), 3000);
+    return false;
+  }, []);
+
+  /** Claim atomique + UI optimiste + haptics + refresh profil */
   const resetTrophyData = useCallback(async () => {
     const userId = auth.currentUser?.uid;
-    if (!userId || !achievementEarned) {
-      console.warn(
-        "⚠️ Aucun utilisateur ou succès sélectionné pour la réclamation."
-      );
+    const id = achievementEarned;
+    if (!userId || !id) {
+      console.warn("⚠️ Aucun utilisateur ou succès sélectionné pour la réclamation.");
       return;
     }
+    if (withinCooldown(400)) return;
+    if (alreadyClaimedLocally(id)) return; // anti double tap ultra-rapide
+
     const finalTrophies = isDoubleReward ? trophiesEarned * 2 : trophiesEarned;
-    console.log(
-      `✅ Attribution finale : ${finalTrophies} trophées pour ${achievementEarned}`
-    );
+    setIsClaiming(true);
 
     try {
-      await claimAchievement(userId, achievementEarned, isDoubleReward);
-      console.log("✅ Succès réclamé avec succès. Mise à jour du profil...");
-      setShowTrophyModal(false); // Fermer d’abord
-      await new Promise((resolve) => setTimeout(resolve, 600)); // Attendre l’animation
+      // feedback immédiat
+      Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light).catch(() => {});
+      // Transaction serveur (vérifie pending côté Firestore)
+      await claimAchievement(userId, id, isDoubleReward);
+
+      // Succès 🎉
+      Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success).catch(() => {});
+      // Ferme d’abord pour laisser place aux toasts/animations d’UI
+      setShowTrophyModal(false);
+
+      // Petite pause le temps d’éventuelles animations de sortie
+      await new Promise((r) => setTimeout(r, 500));
+
+      // Refresh profil (trophies, achievements, newAchievements…)
       await triggerProfileUpdate();
     } catch (error: any) {
       console.error("❌ Erreur lors de la réclamation du trophée :", error);
+      Haptics.notificationAsync(Haptics.NotificationFeedbackType.Error).catch(() => {});
+    } finally {
+      // Réinitialisation des états
+      setIsClaiming(false);
+      setTrophiesEarned(0);
+      setAchievementEarned(null);
+      setIsDoubleReward(false);
     }
+  }, [achievementEarned, trophiesEarned, isDoubleReward, triggerProfileUpdate, withinCooldown, alreadyClaimedLocally]);
 
-    // Réinitialisation des états
-    setTrophiesEarned(0);
-    setAchievementEarned(null);
-    setIsDoubleReward(false);
-  }, [achievementEarned, trophiesEarned, isDoubleReward, triggerProfileUpdate]);
+  const canClaim = useMemo(
+    () => !!achievementEarned && trophiesEarned > 0 && !isClaiming,
+    [achievementEarned, trophiesEarned, isClaiming]
+  );
 
   return (
     <TrophyContext.Provider
       value={{
+        // existant
         showTrophyModal,
         trophiesEarned,
         achievementEarned,
@@ -88,6 +149,10 @@ export const TrophyProvider: React.FC<{ children: ReactNode }> = ({
         setTrophyData,
         activateDoubleReward,
         resetTrophyData,
+        // bonus
+        isClaiming,
+        closeTrophyModal,
+        canClaim,
       }}
     >
       {children}
@@ -98,9 +163,7 @@ export const TrophyProvider: React.FC<{ children: ReactNode }> = ({
 export const useTrophy = () => {
   const context = useContext(TrophyContext);
   if (!context) {
-    throw new Error(
-      "❌ useTrophy doit être utilisé à l'intérieur de TrophyProvider."
-    );
+    throw new Error("❌ useTrophy doit être utilisé à l'intérieur de TrophyProvider.");
   }
   return context;
 };

@@ -9,15 +9,11 @@
   "deleteAccount": "Elimina Account",
   "clearCache": "Cancella Cache",
   "about": "Informazioni",
-  "appVersion": "Versione App:",
   "wakeYourPotential": "Risveglia il Tuo Potenziale",
   "joinChallengeTies": "Unisciti a ChallengeTies e trova ispirazione quotidiana",
   "startAdventure": "Inizia l'Avventura",
   "inspiringChallenges": "Sfide Ispiratrici",
-  "getInspired": "Ispirati",
   "tipsTricks": "Consigli & Trucchi",
-  "leaderboardTitle": "Classifica",
-  "whatsNew": "Novità",
   "home": "Home",
   "profile": "Profilo",
   "yourProfile": "Il Tuo Profilo",
@@ -122,7 +118,6 @@
   "voteForFirstFeature": "Vota per una nuova funzionalità per la prima volta",
   "noChallengeCreated": "Nessuna sfida creata",
   "createYourFirstChallengeNow": "Crea ora la tua prima sfida",
-  "dailyChallenges": "Sfide del giorno",
   "noChallengeOngoing": "Nessuna sfida in corso",
   "clickIconTopRight": "Clicca l'icona in alto a destra",
   "orJoinChallenge": "Oppure unisciti a una sfida",
@@ -159,10 +154,24 @@
     "message": "Siamo qui per incoraggiarci, porre domande e progredire insieme. Per mantenere un’atmosfera positiva, segui queste regole:\n\n1. **Rispetto**: No a insulti, molestie o minacce.\n2. **Tolleranza**: No a odio o discriminazioni (razzismo, sessismo, omofobia, transfobia, ecc.).\n3. **Contenuti**: No a nudità/pornografia, contenuti violenti o illegali.\n4. **Pertinenza**: Resta in tema (motivazione, domande, supporto).\n5. **Sicurezza**: Non condividere dati personali sensibili (indirizzo, telefono, documenti d’identità).\n6. **Pulizia**: Niente spam, pubblicità, truffe o furto d’identità.\n\nEntrando in chat, accetti queste regole. Grazie 💛"
   },
   "chat.title": "Benvenuto/a 🙌",
+  "daysShort": "g",
+  "myStats": "Le mie statistiche",
+  "myCTStats": "Le mie statistiche di ChallengeTies",
+  "rank": {
+    "kicker": "La mia classifica",
+    "body": "Sono #{{r}} questa settimana! Sfidami su ChallengeTies 💥"
+  },
+  "features": {
+    "voteKicker": "Vota la prossima funzionalità",
+    "voteFooter": "La votazione termina presto — la tua voce conta ✨"
+  },
   "chat.systemWelcome": "Siamo qui per incoraggiarci, sostenerci e progredire insieme in questa sfida! Ecco le regole per mantenere un'atmosfera positiva:\n\n1. **Rispetto**: Niente insulti, molestie o minacce.\n2. **Tolleranza**: Vietati odio e discriminazioni (razzismo, sessismo, omo/transfobia, ecc.).\n3. **Contenuti**: Niente nudità/pornografia, contenuti violenti o illegali.\n4. **Pertinenza**: Resta sul tema della challenge (motivazione, domande, aiuto reciproco).\n5. **Sicurezza**: Non condividere informazioni personali sensibili (indirizzo, telefono, documenti d’identità).\n6. **Pulizia**: Niente spam, pubblicità, truffe o furto d’identità.\n\nUnendoti a questa chat accetti queste regole. Grazie 💛",
   "tips": {
     "title": "Consigli",
     "listAccessibility": "Elenco dei consigli",
+    "searchPlaceholder": "Cerca un consiglio…",
+    "shareDialogTitle": "Condividi il consiglio",
+    "kicker": "Consiglio del giorno",
     "logoAlt": "Logo di ChallengeTies",
     "subHeader": "Consigli pratici per rimanere ispirato, raggiungere i tuoi obiettivi e guadagnare trofei!",
     "smartGoals": {
@@ -223,10 +232,53 @@
     "mailClientError": "Impossibile aprire il client di posta",
     "mailOpenError": "Errore nell'apertura dell'app di posta"
   },
+  "cards": {
+    "brandName": "ChallengeTies",
+    "accessibility": {
+      "logoAlt": "Logo di {{brand}}"
+    }
+  },
   "newFeatures": {
     "loginRequiredTitle": "Accesso richiesto",
+    "deadlineIso": "2025-11-30T23:59:59+01:00",
+    "monthLabelTpl": "Aggiornamento • {{month}}",
+    "months": {
+      "01": "Gennaio", "02": "Febbraio", "03": "Marzo", "04": "Aprile",
+      "05": "Maggio", "06": "Giugno", "07": "Luglio", "08": "Agosto",
+      "09": "Settembre", "10": "Ottobre", "11": "Novembre", "12": "Dicembre"
+    },
+    "voteCloses": "La votazione termina tra",
+    "thankYouShort": "Grazie per il tuo voto 💜",
+     "sharE": {
+      "kicker": "Vieni a votare!",
+  "footerWithDays": "Il voto termina tra {{days}} giorni — la tua voce conta ✨",
+      "footer": "Il voto termina presto — la tua voce conta ✨"
+    },
     "loginRequiredMessage": "Effettua il login per votare.",
     "alreadyVotedTitle": "Voto già espresso",
+    
+    "shareDialogTitle": "Condividi questa novità",
+    "votes_one": "1 voto",
+    "votes_other": "{{count}} voti"
+,
+
+    "loading": "Caricamento…",
+  "heroTitleSep": "Vota le novità in arrivo a fine novembre 🚀",
+  "heroSubtitleSep": "La tua voce conta: proponi, vota e segui l’evoluzione delle funzionalità.",
+  "featureDetails": "Dettagli: {{title}}",
+  "monthLabel": "Aggiornamento • Novembre",
+    "heroTitleNov": "Vota le novità in arrivo a fine novembre 🚀",
+    "heroSubtitleNov": "La tua voce conta: proponi, vota e segui l’evoluzione delle funzionalità.",
+    "description": "Vota la prossima funzionalità o proponine una tu! Termine: 30 novembre 2025.",
+  "featureDetailsHint": "Apri la pagina dettagli della funzionalità",
+  "openExplanationHint": "Mostra come funziona il sistema di voto",
+  "proposeIdeaHint": "Apri il modulo per proporre un’idea",
+  "shareMessage": "Scopri e vota questa funzionalità:",
+  "shareFeature": "Condividi la funzionalità",
+  "share": "Condividi",
+  "vote": "Vota",
+  "alreadyVotedShort": "Già votato",
+  "unknown": "Sconosciuto",
     "by": "da",
   "votes": "voti",
     "alreadyVotedMessage": "Hai già votato.",
@@ -240,7 +292,6 @@
     "proposalErrorMessage": "Impossibile inviare.",
     "title": "Novità",
     "openExplanation": "Apri spiegazione del voto",
-    "description": "Vota per la prossima funzionalità o proponi la tua! Termina il 30 agosto 2025.",
     "noFeatures": "Nessuna funzionalità disponibile al momento.",
     "proposeIdea": "Proponi un'idea",
     "thankYouForVote": "Grazie per il tuo voto: {{featureTitle}}",
@@ -248,10 +299,30 @@
       "days": "Giorni",
       "hours": "Ore",
       "mins": "Minuti",
-      "secs": "Secondi"
+      "secs": "Secondi",
+      "abbr": { "d": "g", "h": "h", "m": "min", "s": "s" }
     },
     "featuresListLabel": "Elenco delle funzionalità proposte"
   },
+  "economy": {
+    "weeklyTitle": "Trofei settimanali",
+    "weeklySubtitle": "+1 per ogni check-in (con limite settimanale).",
+    "total": "{{count}} trofei",
+    "used": "{{used}} / {{cap}} questa settimana",
+    "remaining": "{{remain}} rimanenti",
+    "capReached": "Hai raggiunto il limite settimanale. Torna domani ✨",
+    "dailyHint": "Suggerimento: segna la sfida di oggi per +1 immediato.",
+    "streakBonusesTitle": "Bonus serie",
+    "streakAt": "{{at}} giorni",
+    "bonus": "+{{bonus}}",
+    "pb": "La tua serie migliore: {{days}} giorni"
+  },
+  "microEarnedTitle": "Trofeo ottenuto",
+  "microEarnedMessage": "+{{count}} oggi ✨",
+  "microCapTitle": "Limite raggiunto",
+  "microCapMessage": "Hai raggiunto il limite settimanale dei micro-trofei.",
+  "streakBonusTitle": "Bonus serie",
+  "streakBonusMessage": "🎯 +{{bonus}} per {{streak}} giorni di fila!",
   "permissionDenied": "Permesso negato",
   "mustAllowNotifications": "Devi consentire le notifiche per ricevere avvisi.",
   "error": "Errore",
@@ -388,50 +459,103 @@
     "shareError": "Condivisione fallita"
   },
   "pioneerModal": {
-    "title": "🎖️ Benvenuto tra i Pioneer!",
-    "description": "Fai parte dei <b>primi {{first}}</b> iscritti.\nTi è stato assegnato un badge <b>Pioneer</b> e ottieni <b>+{{trophies}} trofei</b> 🏆.",
-    "cta": "Fantastico!",
-    "closeA11y": "Chiudi il messaggio Pioneer"
+    "title": "Sei un pioniere 🚀",
+    "description": "Fai parte dei primi <b>{{first}}</b> utenti di ChallengeTies. Per ringraziarti, ti regaliamo <b>{{trophies}}</b> trofei bonus 🎁",
+    "cta": "Fantastico, grazie!",
+    "closeA11y": "Chiudi finestra pionieri"
+  },
+  "notificationsScreen": {
+    "title": "Inviti e notifiche",
+    "subtitle": "Gestisci i tuoi inviti duo e segui il loro stato.",
+    "tabInbox": "Ricevuti",
+    "filterAll": "Tutti",
+    "filterDuo": "Solo duo",
+    "expiresInShort": "Scade tra {{time}}",
+    "expired": "Scaduta",
+    "remain": {
+      "d": "{{count}} g",
+      "h": "{{count}} h",
+      "m": "{{count}} min"
+    },
+    "tabSent": "Inviati",
+    "tabAccepted": "Accettati",
+    "tabRefused": "Rifiutati",
+    "challenge": "Sfida",
+    "open": "Apri",
+    "cancelShort": "Annulla",
+    "cancelTitle": "Annullare l'invito?",
+    "cancelMessage": "Questo invito verrà annullato.",
+    "cancelConfirm": "Annulla",
+    "cancelled": "Invito annullato",
+    "emptyTitle": "Ancora nulla",
+    "emptyText": "I tuoi inviti appariranno qui.",
+    "a11y": {
+      "accept": "Accetta l'invito",
+      "refuse": "Rifiuta l'invito",
+      "cancel": "Annulla l'invito",
+      "open": "Apri la sfida"
+    },
+    "status": {
+      "pending": "In attesa",
+      "accepted": "Accettata",
+      "refused": "Rifiutata",
+      "cancelled": "Annullata"
+    }
   },
   "invitationS": {
-      "shareTitle": "Invito Duo",
-      "shareMessageWithTitle": "Ti invito a iniziare « {{title}} » per {{days}} giorni con me!",
-      "title": "Invita un amico",
-    "subtitleDirect": "Inserisci l'esatto nome utente del tuo amico per inviargli un invito.",
+    "shareTitle": "Invito in coppia",
+    "sendTitle": "Invita un amico",
+    "shareSubtitle": "Genera un link per “{{challenge}}” ({{days}} giorni). Se l’app è installata → apertura diretta. Altrimenti → Store.",
+    "shareHint": "Il link è universale e funziona ovunque.",
+    "shareMessage": "Unisciti a me su “{{title}}”!",
+    "generateAndShare": "Genera e condividi",
+    "shareMessageWithTitle": "Ti invito a iniziare « {{title}} » per {{days}} giorni con me!",
+
+    "title": "Invita un amico",
+    "subtitleDirect": "Inserisci il nome utente esatto del tuo amico per inviargli un invito.",
     "usernamePlaceholder": "Nome utente",
     "send": "Invia invito",
     "sentShort": "Invito inviato!",
+    "sent": "Invito inviato ✅",
+
     "confirmReset": {
-      "title": "Passare a Duo?",
-      "message": "Se invii un invito perderai i tuoi progressi in solitaria e ricomincerai da 0 in duo. Sei sicuro di voler continuare?"
+      "title": "Passare alla modalità coppia?",
+      "message": "Se invii un invito, i tuoi progressi da solo verranno azzerati. Continuare?"
     },
-      "errors": {
-        "alreadyInvited": "Hai già un invito attivo per questa sfida.",
-        "autoInvite": "Non puoi accettare il tuo stesso invito.",
-        "expired": "Questo invito è scaduto.",
-        "unknown": "Si è verificato un errore.",
-         "alreadyInDuoForChallenge": "Impossibile invitare questo utente: è già in un duo per questa sfida.",
-        "inviterAlreadyStarted": "Hai già iniziato questa sfida da solo.",
-        "duoAlready": "Sei già in un duo per questa sfida.",
-        "permissions": "Permessi insufficienti. Assicurati di essere connesso e che le regole di Firestore lo permettano.",
+
+    "errors": {
+      "alreadyInvited": "Hai già un invito in sospeso per questa sfida.",
+      "expired": "Questo invito è scaduto.",
+      "unknown": "Si è verificato un errore imprevisto.",
+      "inviterAlreadyStarted": "Hai già iniziato questa sfida da solo.",
+      "alreadyInDuoForChallenge": "Questo utente è già in una coppia per questa sfida.",
+      "duoAlready": "Sei già in coppia per questa sfida.",
+      "permissions": "Autorizzazioni insufficienti. Controlla la connessione o le regole di Firestore.",
       "userNotFound": "Nessun utente trovato con questo nome.",
       "usernameRequired": "Inserisci il nome utente del tuo amico.",
-      "params": "Parametri non validi per l’invito.",
+      "params": "Parametri di invito non validi.",
+      "autoInvite": "Non puoi invitare te stesso.",
       "inviterHasPendingForChallenge": "Hai già un invito in sospeso per questa sfida.",
       "inviteeHasPendingForChallenge": "Questo utente ha già un invito in sospeso per questa sfida."
-      },
-      "confirmStartDuoTitle": "Iniziare in Duo?",
-      "confirmStartDuoMessage": "Se inizi in Duo, i tuoi progressi da solo saranno azzerati. Continuare?",
-      "actions": {
-        "cancel": "Annulla",
-        "continue": "Continua"
-      }
     },
+
+    "confirmStartDuoTitle": "Iniziare in coppia?",
+    "confirmStartDuoMessage": "I tuoi progressi da solo verranno azzerati. Continuare?",
+
+    "actions": {
+      "cancel": "Annulla",
+      "continue": "Continua"
+    }
+  },
     "pendingInvite": "Invito in corso",
-"commonS": { "close": "Chiudi", "notLoggedIn": "Devi effettuare l’accesso.", "sending": "Invio…",
-    "cancel": "No",
-    "continue": "Sì, continua" }
-,
+"commonS": {
+    "close": "Chiudi",
+    "notLoggedIn": "Devi effettuare l’accesso.",
+    "errorTitle": "Errore",
+    "sending": "Invio…",
+    "cancel": "Annulla",
+    "continue": "Continua"
+  },
 "profileS": {
     "bioLabel": "Bio",
     "locationLabel": "Località",
@@ -441,8 +565,11 @@
   "addInterestsHere": "Aggiungi i tuoi interessi",
 "firstPick": {
   "title": "Scegli la tua prima sfida!",
+  "offlineDuo": "Sei offline. Riconnettiti per invitare un amico a un duo.",
   "subtitle": "Vuoi iniziare in…",
   "chooseSolo": "Scegli Solo",
+  "alreadyInvited": "Hai già un invito in sospeso per questa sfida.",
+  "duoBadge": "Duo",
   "chooseDuo": "Scegli Duo",
   "modeDuo": "Duo (consigliato)",
   "modeSolo": "Solo",
@@ -462,13 +589,25 @@
   "skip": "Salta",
   "challenge": "Sfida",
   "misc": "Varie",
-  "error": "Errore",
-  "oops": "Ops…"
+  "networkError": "Problema di connessione",
+  "info": "Informazioni",
+  "oops": "Ops…",
+  "close": "Chiudi",
+  "error": "Oops",
+    "unexpectedError": "Si è verificato un errore inatteso. Riprova.",
+  "loadError": "Impossibile aggiornare. Trascina verso il basso per riprovare."
 }
 ,
+"getInspired": "Lasciati ispirare",
+  "tipsAndTricks": "Suggerimenti & trucchi",
+  "leaderboardTitle": "Classifica",
+  "whatsNew": "Novità",
+  "faqShort": "FAQ",
  "questions": {
     "title": "Domande frequenti",
     "searchPlaceholder": "🔍 Cerca una domanda…",
+    "expandAll": "Espandi tutto",
+      "collapseAll": "Comprimi tutto",
     "overview": {
       "title": "Benvenuto nella FAQ ✨",
       "body": "Qui trovi le risposte alle domande più comuni per sfruttare al massimo ChallengeTies."
@@ -502,53 +641,64 @@
       "contact": "Il nostro team è qui per te. Scrivici direttamente dall’app tramite 'Contatta il supporto' o sul nostro sito 🌍."
     }
   },
-  "faqShort": "FAQ",
-    "spotlight": "In evidenza",
-  "refreshDaily": "Nuove sfide da domani ✨",
   "challengeDetails": {
-    "untitled": "Sfida senza titolo",
-    "uncategorized": "Non categorizzata",
-    "invite": "Invita",
-    "days":  "giorni",
-    "shareMessage":"Unisciti a me in “{{title}}” su ChallengeTies!",
-    "reviewAfterComplete":"⚠️ Devi completare questa sfida prima di lasciare una recensione 🏆",
-    "needHelp": "Hai bisogno di consigli?",
-    "inviteError": "Errore durante la creazione dell'invito",
-    "noDescription": "Nessuna descrizione disponibile",
-    "fetchError": "Impossibile recuperare la sfida.",
-    "joinError": "Impossibile partecipare alla sfida. Riprova.",
-    "saveError": "Impossibile salvare. Riprova.",
+    "noDescription": "Nessuna descrizione disponibile.",
+    "untitled": "Sfida",
+    "fetchError": "Impossibile caricare la sfida.",
+    "joinError": "Impossibile unirsi alla sfida. Riprova più tardi.",
     "completeError": "Impossibile completare la sfida.",
-    "chatAccessDenied": "Devi partecipare alla sfida per aprire la chat.",
     "loading": "Caricamento…",
-    "participant": "partecipante",
-    "participants": "partecipanti",
-    "takeChallenge": "Partecipa alla sfida",
+
+    "shareMessage": "Unisciti a me in « {{title}} » su ChallengeTies!",
+    "participants": "{{count}} partecipante",
+    "participants_plural": "{{count}} partecipanti",
+
+    "takeChallenge": "Accetta la sfida",
     "inProgress": "In corso",
+    "markToday": "Segna oggi",
+    "markTodayHint": "Aggiungi la giornata di oggi ai tuoi progressi.",
+    "completeChallenge": "Completa la sfida",
+
+    "reviewAfterComplete": "⚠️ Devi completare questa sfida prima di lasciare una recensione 🏆",
+
+    "chat": "Chat",
+    "days": "giorni",
+
+    "save": "Salva",
+    "saved": "Salvato",
+    "saveError": "Impossibile salvare la sfida.",
+
+    "share": "Condividi",
+    "shareA11y": "Condividi questa sfida",
+    "linkCopied": "Link copiato negli appunti.",
+
+    "stats": "Statistiche",
+    "statsA11y": "Visualizza statistiche",
+
+    "invite": "Invita un amico",
+    "inviteAFriend": "Invita un amico",
+    "inviteError": "Impossibile inviare l’invito.",
+    "inviteA11y": "Invita un amico a questa sfida",
+
+    "needHelp": "Hai bisogno di consigli?",
+    "leaveReview": "Lascia una recensione",
+    "alreadyReviewed": "Hai già recensito questa sfida.",
+    "reviewSectionTitle": "Cosa ne pensano gli altri",
+    "noReviewsYet": "Non ci sono ancora recensioni per questa sfida.",
+    "yourReview": "La tua recensione",
+    "reviewPlaceholder": "Condividi le tue impressioni dopo aver completato la sfida…",
+    "submitReview": "Invia",
+    "deleteReview": "Elimina",
+    "confirmDeleteReview": "Eliminare questa recensione?",
+
+    "uncategorized": "Senza categoria",
     "daysCompleted": "giorni completati",
     "alreadyMarked": "Già segnato oggi",
-    "markToday": "Segna oggi",
-    "completeChallenge": "Completa la sfida",
-    "chat": "Chat",
-    "save": "Salva",
-    "saved": "Salvata",
-    "share": "Condividi",
-    "stats": "Statistica",
-    "inviteA11y": "Invita un amico a questa sfida",
-    "leaveReview": "Lascia una recensione",
-  "alreadyReviewed": "Hai già lasciato una recensione per questa sfida.",
-  "reviewSectionTitle": "Cosa ne pensano gli altri",
-  "noReviewsYet": "Non ci sono ancora recensioni per questa sfida.",
-  "yourReview": "La tua recensione",
-  "reviewPlaceholder": "Condividi le tue impressioni dopo aver completato questa sfida...",
-  "submitReview": "Invia",
-  "deleteReview": "Elimina",
-  "confirmDeleteReview": "Eliminare questa recensione?",
-    "shareA11y": "Condividi questa sfida",
-    "chatA11y": "Apri la chat della sfida",
-    "statsA11y": "Vedi statistiche",
+
     "challenge": "Sfida",
     "accessDenied": "Accesso negato",
+    "chatAccessDenied": "Devi prima accettare la sfida per accedere alla chat.",
+
     "backButton": "Indietro",
     "backButtonHint": "Torna alla schermata precedente"
   },
@@ -574,6 +724,120 @@
     "first_connection": "Prima connessione",
     "profile_completed": "Profilo completato",
     "finishChallenge_10": "Serio con le sfide",
+    "finishDuoChallenge_1": "Primo duo completato",
+  "finishDuoChallenge_3": "Duo affiatato",
+  "finishDuoChallenge_5": "Coppia inarrestabile",
+  "finishDuoChallenge_10": "Duo leggendario",
+
+  "duoStreak_3": "Serie duo ×3",
+  "duoStreak_7": "Serie duo ×7",
+  "duoStreak_14": "Serie duo ×14",
+  "duoStreak_21": "Serie duo ×21",
+  "duoStreak_30": "Serie duo ×30",
+
+  "perfectMonth_1": "Mese perfetto",
+  "perfectMonth_3": "3 mesi perfetti",
+  "perfectMonth_6": "6 mesi perfetti",
+  "perfectMonth_12": "Anno perfetto",
+
+  "categoriesMastered_3": "3 categorie padroneggiate",
+  "categoriesMastered_5": "5 categorie padroneggiate",
+  "categoriesMastered_8": "8 categorie padroneggiate",
+  "categoriesMastered_10": "10 categorie padroneggiate",
+
+  "referralsRegistered_1": "1 referral registrato",
+  "referralsRegistered_3": "3 referral registrati",
+  "referralsRegistered_5": "5 referral registrati",
+  "referralsRegistered_10": "10 referral registrati",
+
+  "duoMessages_10": "10 messaggi in duo",
+  "duoMessages_50": "50 messaggi in duo",
+  "duoMessages_100": "100 messaggi in duo",
+  "duoMessages_250": "250 messaggi in duo",
+  "duoMessages_500": "500 messaggi in duo",
+
+  "focusDays_3": "3 giorni di focus",
+  "focusDays_7": "7 giorni di focus",
+  "focusDays_14": "14 giorni di focus",
+  "focusDays_21": "21 giorni di focus",
+  "focusDays_30": "30 giorni di focus",
+
+  "dailyCompletion_3": "3 giorni consecutivi completati",
+  "dailyCompletion_7": "7 giorni consecutivi completati",
+  "dailyCompletion_14": "14 giorni consecutivi completati",
+  "dailyCompletion_21": "21 giorni consecutivi completati",
+  "dailyCompletion_30": "30 giorni consecutivi completati",
+
+  "challengeAdopted_10": "Sfida adottata da 10 persone",
+  "challengeAdopted_50": "Sfida adottata da 50 persone",
+  "challengeAdopted_100": "Sfida adottata da 100 persone",
+  "challengeAdopted_250": "Sfida adottata da 250 persone",
+  "finishDuoChallenge_1_desc": "Completa la tua prima sfida in coppia con un amico.",
+  "finishDuoChallenge_3_desc": "Completa 3 sfide in duo — il lavoro di squadra paga.",
+  "finishDuoChallenge_5_desc": "5 sfide in coppia — collabori alla perfezione.",
+  "finishDuoChallenge_10_desc": "10 sfide in duo — una leggenda vivente!",
+
+  "duoStreak_3_desc": "Rimani sincronizzato per 3 giorni di fila.",
+  "duoStreak_7_desc": "7 giorni consecutivi in duo — costanza e forza.",
+  "duoStreak_14_desc": "14 giorni di perfetta sintonia.",
+  "duoStreak_21_desc": "21 giorni insieme — disciplina pura.",
+  "duoStreak_30_desc": "30 giorni perfetti in duo — rispetto assoluto.",
+
+  "perfectMonth_1_desc": "Completa un mese intero senza errori.",
+  "perfectMonth_3_desc": "3 mesi perfetti — costanza straordinaria.",
+  "perfectMonth_6_desc": "6 mesi perfetti — disciplina d’élite.",
+  "perfectMonth_12_desc": "12 mesi perfetti — un anno impeccabile.",
+
+  "categoriesMastered_3_desc": "Padroneggia 3 categorie di sfide.",
+  "categoriesMastered_5_desc": "Padroneggia 5 categorie — equilibrio vero.",
+  "categoriesMastered_8_desc": "8 categorie dominate — esplori tutto.",
+  "categoriesMastered_10_desc": "10 categorie complete — un esempio di equilibrio.",
+
+  "referralsRegistered_1_desc": "Invita il tuo primo amico a unirsi.",
+  "referralsRegistered_3_desc": "3 amici si sono uniti — la tua community cresce.",
+  "referralsRegistered_5_desc": "5 amici ispirati dalla tua energia.",
+  "referralsRegistered_10_desc": "10 amici iscritti — stai costruendo una comunità.",
+
+  "duoMessages_10_desc": "Invia 10 messaggi in una chat duo.",
+  "duoMessages_50_desc": "50 messaggi — la comunicazione è la chiave.",
+  "duoMessages_100_desc": "100 messaggi — vera collaborazione.",
+  "duoMessages_250_desc": "250 messaggi — legame forte.",
+  "duoMessages_500_desc": "500 messaggi — amicizia e motivazione.",
+
+  "focusDays_3_desc": "Rimani concentrato per 3 giorni di fila.",
+  "focusDays_7_desc": "7 giorni di puro focus — precisione mentale.",
+  "focusDays_14_desc": "14 giorni di chiarezza e determinazione.",
+  "focusDays_21_desc": "21 giorni di attenzione costante.",
+  "focusDays_30_desc": "30 giorni di focus assoluto — controllo totale.",
+
+  "dailyCompletion_3_desc": "Completa gli obiettivi per 3 giorni consecutivi.",
+  "dailyCompletion_7_desc": "7 giorni perfetti — abitudine creata.",
+  "dailyCompletion_14_desc": "14 giorni consecutivi — ritmo costante.",
+  "dailyCompletion_21_desc": "21 giorni di disciplina pura.",
+  "dailyCompletion_30_desc": "30 giorni perfetti — controllo assoluto.",
+
+  "challengeAdopted_10_desc": "La tua sfida è stata seguita da 10 persone.",
+  "challengeAdopted_50_desc": "50 persone hanno adottato la tua idea.",
+  "challengeAdopted_100_desc": "100 utenti ispirati dalla tua sfida.",
+  "challengeAdopted_250_desc": "250 partecipanti — la tua idea si diffonde.",
+  "challengeAdopted_500_desc": "500 persone — stai guidando un movimento.",
+
+  "seasonal_1_desc": "Partecipa a un evento stagionale.",
+  "seasonal_3_desc": "Completa 3 eventi stagionali.",
+  "seasonal_5_desc": "5 stagioni completate — evoluzione continua.",
+  "seasonal_10_desc": "10 eventi completati — parte della storia.",
+
+  "zeroMissLongRun_30_desc": "30 giorni senza errori.",
+  "zeroMissLongRun_60_desc": "60 giorni perfetti — inarrestabile.",
+  "challengeAdopted_500": "Sfida adottata da 500 persone",
+
+  "seasonal_1": "Evento stagionale completato",
+  "seasonal_3": "3 eventi stagionali completati",
+  "seasonal_5": "5 eventi stagionali completati",
+  "seasonal_10": "10 eventi stagionali completati",
+
+  "zeroMissLongRun_30": "Zero errori in 30 giorni",
+  "zeroMissLongRun_60": "Zero errori in 60 giorni",
     "finishChallenge_1": "Prima sfida completata",
     "finishChallenge_3": "Principiante motivato",
     "finishChallenge_25": "Macchina delle sfide",
@@ -640,24 +904,48 @@
 },
 "missedChallenge": {
   "adNotReady": "La pubblicità non è ancora pronta. Riprova tra qualche istante.",
-  "title": "Rischio di fallimento!",
-  "subtitle": "Hai saltato 2 giorni o più. Cosa vuoi fare?",
-  "reset": {
-    "title": "Reset",
-    "subtitle": "Ricomincia da capo"
-  },
-  "ad": {
-    "title": "Guarda una pubblicità",
-    "subtitle": "Continua la serie"
-  },
-  "useTrophies": {
-    "title": "Usa {{count}} trofei",
-    "subtitle": "Mantieni i tuoi progressi"
-  }
+  "confirmResetTitle": "Confermare?",
+"confirmResetText": "Hai uno Streak Pass disponibile. Vuoi davvero azzerare la tua serie?"
+,
+  "title": "Hai mancato una sfida",
+    "subtitle": "Nessun problema, puoi ancora salvare la tua serie e restare in gioco 💪",
+
+    "reset": {
+      "title": "Reimposta la mia serie",
+      "subtitle": "Ricomincia questa sfida e ricostruisci la tua disciplina."
+    },
+
+    "streakPass": {
+      "title": "Usa uno Streak Pass",
+      "subtitle": "Mantieni intatta la tua serie grazie al tuo Streak Pass."
+    },
+
+    "ad": {
+      "title": "Guarda un annuncio per salvare la serie",
+      "subtitle": "Guarda un breve video per non perdere la tua serie."
+    },
+
+    "useTrophies": {
+      "title": "Spendi {{count}} trofei per salvare la serie",
+      "subtitle": "Scambia alcuni trofei per proteggere i tuoi progressi."
+    }
 },
 "privacyPolicy": {
   "title": "Politica sulla Privacy",
   "introductionTitle": "Introduzione",
+   "lastUpdated": "Ultimo aggiornamento: {{date}}",
+    "legalBasisTitle": "Basi giuridiche (GDPR)",
+    "legalBasisText": "Ai sensi del GDPR, trattiamo i tuoi dati sulla base di: (i) consenso (es. notifiche, pubblicità personalizzata), (ii) esecuzione del contratto quando utilizzi l’app, (iii) nostro legittimo interesse a migliorare la sicurezza e contrastare le frodi e (iv) rispetto di obblighi di legge.",
+    "retentionTitle": "Periodi di conservazione",
+    "retentionText": "I dati sono conservati per il tempo necessario alle finalità perseguite: account e progressi finché l’account esiste; log tecnici fino a 13 mesi; dati pubblicitari e analitici secondo le policy dei partner; registri delle richieste di esercizio diritti fino a 6 anni in archivio legale.",
+    "transfersTitle": "Trasferimenti fuori dall’Unione Europea",
+    "transfersText": "I nostri fornitori (es. Firebase, Google AdMob) possono trattare dati fuori dall’UE. In tali casi, facciamo affidamento su garanzie riconosciute (Clausole Contrattuali Standard e misure complementari) per assicurare un adeguato livello di protezione.",
+    "childrenTitle": "Tutela dei minori",
+    "childrenText": "L’app non è destinata ai bambini di età inferiore a 13 anni (o età minima locale). Se i dati di un minore sono stati trattati per errore, contattaci per la loro pronta cancellazione.",
+    "manageCookiesCta": "Gestisci le preferenze cookie",
+    "manageCookiesUrl": "https://your-domain.example/cmp",
+    "supervisoryAuthorityCta": "Contatta l’autorità di controllo (CNIL)",
+    "supervisoryAuthorityUrl": "https://www.cnil.fr/fr/plaintes",
   "introductionText": "In {{appName}} la protezione della tua privacy è la nostra priorità. Questa politica spiega come raccogliamo, utilizziamo, proteggiamo e condividiamo i tuoi dati personali in conformità al GDPR.",
   "dataCollectedTitle": "Quali dati raccogliamo",
   "dataCollectedText": "Per offrirti un'esperienza personalizzata possiamo raccogliere i seguenti dati:",
@@ -708,44 +996,51 @@
 },
 "completedOnDate": "Completato"
 ,
-  "completion": {
-  "trophies": "trofei",
-  "reward": "Hai guadagnato {{count}} trofei!",
-  "finalTitle": "Congratulazioni!",
-  "finalMessage": "Hai guadagnato {{count}} trofei!",
-  "errorFinalizing": "Errore durante il completamento della sfida.",
-  "errorFinalizingMessage": "Errore durante il completamento della sfida.",
-  "adNotReadyTitle": "Annuncio non disponibile",
-  "adNotReady": "L'annuncio non è ancora pronto. Riprova più tardi.",
-  "continue": "Continua",
-  "loadingAd": "Preparazione del video…",
-  "doubleTrophies": "Raddoppia i tuoi trofei",
-  "youAreAwesome": "Sei fantastico!",
-  "keepItUp": "Continua così!",
-  "successIsYours": "Il successo è tuo!",
-  "everyEffortCounts": "Ogni sforzo conta!",
-  "neverGiveUp": "Non arrenderti mai!",
-  "youAreOnTrack": "Sei sulla strada giusta!",
-  "excellenceAwaits": "L'eccellenza ti aspetta!",
-  "headHeldHigh": "A testa alta!",
-  "persistencePays": "La perseveranza paga!",
-  "challengesMakeYouStronger": "Le sfide ti rendono più forte!"
-},
+"completion": {
+    "trophies": "trofei",
+    "finalTitle": "Congratulazioni!",
+    "adNotReadyTitle": "Annuncio non disponibile",
+    "continue": "Continua",
+    "loadingAd": "Preparazione del video…",
+    "doubleTrophies": "Raddoppia i miei trofei",
+    "reward": "+{{count}} trofei",
+    "finalMessage": "Ottimo! Hai guadagnato {{count}} trofei.",
+    "adNotReady": "L’annuncio con ricompensa non è pronto. Riprova più tardi.",
+    "errorFinalizing": "Errore di completamento",
+    "errorFinalizingMessage": "Qualcosa è andato storto. Riprova.",
+    "watchAdHint": "Guarda un annuncio per raddoppiare la ricompensa.",
+    "wellDone": "Ben fatto!",
+    "youAreAwesome": "Sei fantastico! ✨",
+    "keepItUp": "Continua così! 💪",
+    "successIsYours": "Il successo è tuo! 🏆",
+    "everyEffortCounts": "Ogni sforzo conta. 🌱",
+    "neverGiveUp": "Non mollare mai! 🚀",
+    "youAreOnTrack": "Sei sulla strada giusta! ✅",
+    "excellenceAwaits": "Ti attende l’eccellenza. ⭐",
+    "headHeldHigh": "A testa alta — ottimo lavoro! 🙌",
+    "persistencePays": "La costanza ripaga. 🔁",
+    "challengesMakeYouStronger": "Le sfide ti rendono più forte. 🧠"
+  },
   "featureDetail": {
     "votes": "{{count}} voto",
     "votes_plural": "{{count}} voti",
     "vote": "Vota",
     "alreadyVoted": "Hai già votato.",
-    "share": "Condividi"
-
+    "share": "Condividi",
+    "overlayLabel": "Schermata dettagli funzione"
   },
   "durationModal": {
-    "title": "Seleziona la durata (giorni)",
+    "title": "Scegli la durata",
     "days": "{{count}} giorno",
     "days_plural": "{{count}} giorni",
     "confirm": "Conferma",
-    "cancel": "Annulla"
+    "cancel": "Annulla",
+    "optionLabel": "{{count}} giorno",
+    "optionLabel_plural": "{{count}} giorni",
+    "optionHint": "Seleziona questa durata",
+    "closeBackdrop": "Chiudi la finestra"
   },
+  "pleaseWait": "Attendi…",
   "chat": {
     "goBack": "Indietro",
     "title": "Chat \"{{title}}\"",
@@ -754,9 +1049,101 @@
     "sendButton": "Invia",
     "errorSending": "Errore nell'invio del messaggio"
   },
+  "referral": {
+    "menu":"Condividi e guadagna",
+    "history": {
+      "title": "I miei invitati",
+      "subtitle": "{{total}} in totale • {{activated}} attivo/i",
+      "filters": {
+        "all": "Tutti",
+        "activated": "Attivati",
+        "pending": "In attesa"
+      },
+      "empty": "Ancora nessun invitato.",
+      "invitedOn": "Invitato il {{date}}",
+      "activatedOn": "Attivato il {{date}}",
+      "status": {
+        "activated": "ATTIVO",
+        "pending": "IN ATTESA"
+      }
+    },
+    "share": {
+      "title": "Condividi & Guadagna",
+      "subtitle": "Invita i tuoi amici. Quando iniziano la loro prima sfida, guadagni trofei. Raggiungi i traguardi per sbloccare bonus 💎",
+      "linksTitle": "I tuoi link",
+      "linkApp": "Link App",
+      "linkWeb": "Link Web",
+      "copy": "Copia",
+      "copiedTitle": "Copiato ✅",
+      "copiedMsg": "Link copiato negli appunti.",
+      "shareBtn": "Condividi",
+      "cardCta": "Crea la mia Share Card",
+      "statsTitle": "Le tue statistiche",
+      "bigCountSuffix": "referral attivati",
+      "tipNext": "Ancora {{remaining}} per raggiungere il traguardo {{milestone}}.",
+      "tipAllReached": "Tutti i traguardi attuali raggiunti. Grande 🔥",
+      "milestoneLabel": "{{count}} attivazioni",
+      "claim": "Riscatta",
+      "historyCta": "Vedi i miei referral",
+      "banner": {
+        "amount": "+{{amount}} trofei",
+        "message": "Traguardo referral riscattato — ottimo lavoro 💪"
+      },
+      "nativeShare": {
+        "title": "{{appName}} — Unisciti a me!",
+        "message": "Vieni a sfidarti con me su {{appName}} 💪\\n\\nLink diretto (app): {{appLink}}\\nLink web: {{webLink}}"
+      },
+      "errors": {
+        "title": "Errore",
+        "loadStats": "Impossibile caricare le statistiche dei referral.",
+        "alreadyClaimed": "Questo traguardo è già stato riscattato.",
+        "notReached": "Traguardo non ancora raggiunto.",
+        "claimFailed": "Impossibile riscattare questo traguardo.",
+        "oops": "Ops"
+      }
+    },
+    "shareCard": {
+      "title": "La tua carta di referral",
+      "subtitle": "Condividila ovunque per aumentare i tuoi inviti 🚀",
+      "defaultUsername": "Nuovo Challenger",
+      "tagline": "Unisciti a me. Mettiamoci alla prova 🔥",
+      "footer": "Scansiona il QR o tocca il link",
+      "actions": {
+        "save": "Salva",
+        "share": "Condividi"
+      },
+      "alerts": {
+        "permission": {
+          "title": "Autorizzazione necessaria",
+          "media": "Consenti l’accesso a Foto per salvare la carta."
+        },
+        "saved": {
+          "title": "Salvato ✅",
+          "msg": "La carta è stata aggiunta alla tua galleria."
+        },
+        "error": {
+          "title": "Errore"
+        },
+        "saveFailed": "Impossibile salvare l’immagine.",
+        "shareUnavailable": {
+          "title": "Condivisione non disponibile",
+          "msg": "La condivisione nativa non è disponibile su questo dispositivo."
+        },
+        "shareFailed": "Impossibile condividere l’immagine."
+      }
+    },
+    "share1": {
+    "title": "Inviti — {{appName}}",
+    "inviteMessage": "Unisciti a me su {{appName}} 👇\n{{webLink}}\n(oppure apri l’app: {{appLink}})",
+    "notLoggedIn": "Non connesso"
+  },
+    "nudge": {
+    "title": "🎁 Ricompensa disponibile",
+    "body": "Puoi riscattare la ricompensa per la tappa {{milestone}}. Apri Share & Earn!"
+  }
+  },
   "close": "Chiudi",
   "uncategorized": "Senza categoria",
-  "noDescriptionAvailable": "Descrizione non disponibile",
   "imageNotAvailable": "Immagine non disponibile",
   "participant": "partecipante",
   "participants": "partecipanti",
@@ -768,26 +1155,120 @@
   "noAchievementsYet": "Nessun traguardo ancora",
   "chooseCategory": "Scegli una categoria",
   "category": "Categoria",
+  "networkError": "Problema di rete. Riprova.",
   "resetFilters": "Reimposta filtri",
   "closeModal": "Chiudi",
   "untitledChallenge": "Sfida senza titolo",
-  "miscellaneous": "Varie",
   "failedToLoadChallenges": "Impossibile caricare le sfide.",
   "noChallengesFound": "Nessuna sfida trovata!",
-  "mysteriousChallenge": "Sfida misteriosa",
-  "logoChallengeTies": "Logo di ChallengeTies",
-  "defyYourLimits": "Supera i tuoi limiti",
-  "joinVibrantCommunity": "Unisciti a una community vivace e spingi i tuoi confini ogni giorno!",
-  "launchAdventure": "Inizia l'avventura",
   "popularChallenges": "Sfide popolari",
-  "noChallengesAvailable": "Nessuna sfida disponibile",
-  "challengesComingSoon": "Nuove sfide in arrivo!",
-  "discover": "Scopri",
-  "tipsAndTricks": "Suggerimenti & Trucchi",
+  "origin": {
+    "all": "Tutti",
+    "existing": "Ufficiali",
+    "created": "Creati dalla community"
+  },
+  "participants_one": "partecipante",
+  "participants_other": "partecipanti",
+  "saveChallenge": "Salva sfida",
+  "clearSearch": "Cancella",
+  "removeFromSaved": "Rimuovi dai salvati",
+  "noChallengesIcon": "Icona di ricerca",
+  "draft": { "title": "Bozza", "restored": "La tua bozza è stata ripristinata." },
+  "challengeC": { "validation": {
+    "titleTooShort": "Il titolo è troppo corto (almeno 6 caratteri).",
+    "descTooShort": "La descrizione è troppo corta (almeno 20 caratteri).",
+    "titleInvalidChars": "Il titolo deve contenere lettere."
+  }},
+  "imageTooBig": "Immagine troppo grande (max {{mb}} MB).",
+  "imageTooSmall": "Immagine troppo piccola (min 600×400).",
+  "quality": {
+    "hintBoostStart": "Suggerimento: indica un obiettivo numerico e una durata.",
+    "hintBoostMid": "Quasi fatto: aggiungi un'azione concreta al giorno.",
+    "hintGreat": "Perfetto! La tua sfida è chiara e motivante ✨"
+  },
+  "a11y": { "typeHere": "Scrivi qui",
+"close": "Chiudi" },
+  "badges": {
+    "pioneer": "Pioniere"
+  },
+  "logoChallengeTies": "Logo di ChallengeTies",
+
+  "defyYourLimits": "Sfida i tuoi limiti, una sfida alla volta.",
+  "joinVibrantCommunity": "Unisciti a una community che vuole riprendere il controllo della propria vita.",
+  "launchAdventure": "Inizia l’avventura",
+  "discover": "Scopri le sfide",
+
+  "mysteriousChallenge": "Sfida misteriosa",
+  "noDescriptionAvailable": "Non c’è ancora una descrizione disponibile per questa sfida.",
+  "miscellaneous": "Varie",
+
+  "dailyChallenges": "Sfide del giorno",
+  "spotlight": "In evidenza",
+  "refreshDaily": "Nuove sfide da domani ✨",
+  "noChallengesAvailable": "Nessuna sfida disponibile al momento.",
+  "challengesComingSoon": "Presto arriveranno nuove sfide, resta connesso!",
+
+  "dailyBonus": {
+    "title": "Bonus quotidiano",
+    "subtitle": "Gira la ruota misteriosa per rivelare la tua ricompensa 🎁",
+    "hint": "Apri una ruota misteriosa per ottenere una ricompensa.",
+    "tag": "Esclusiva del giorno",
+    "shortCta": "1 clic, 1 sorpresa",
+    "error": "Impossibile recuperare il bonus di oggi al momento.",
+    "congrats": "Bravo!",
+    "loading": "Apertura del forziere misterioso...",
+    "teaser": "Tocca per scoprire la tua ricompensa misteriosa.",
+    "visualHint": "La tua ricompensa viene aggiunta al tuo account non appena giri la ruota. Mantieni la serie per sbloccare ancora più bonus ✨",
+    "spinning": "Rotazione in corso...",
+    "cta": "Gira la ruota",
+    "again": "Rivedi la ruota",
+    "reward": {
+      "streakPass": "Hai ottenuto {{count}} Streak Pass 🎫",
+      "trophies": "Hai ottenuto {{count}} trofei 🏆",
+      "xpBoost": "Boost XP: +{{count}} trofei ⚡",
+      "miniChallenge": "Il mini-challenge di oggi è sbloccato e ora appare nella schermata iniziale 👇",
+      "tempBadge": "Badge temporaneo sbloccato per oggi {{emoji}}",
+      "default": "Ricompensa sbloccata 🎁"
+    }
+  },
+  "inventory": {
+  "title": "Inventario",
+  "subtitle": "Gestisci qui i tuoi bonus speciali e le protezioni della streak.",
+  "sectionSubtitle": "Dai un’occhiata a tutti i tuoi bonus speciali e alle protezioni della streak.",
+  "totalItems": "{{count}} oggetti",
+  "itemHint": "Vedi più informazioni su questo oggetto.",
+  "emptyTitle": "Ancora nessun bonus",
+  "emptyText": "Completa le sfide e gira la ruota del giorno per riempire il tuo inventario.",
+  "streakHint": "Gli Streak Pass vengono usati automaticamente nella schermata di sfida mancata per salvare la tua streak.",
+  "items": {
+    "streakPass": {
+      "title": "Streak Pass",
+      "subtitle": "Protegge la tua streak una volta quando salti una sfida."
+    }
+  }
+}
+,
+  "dailyMini": {
+    "cta": "L'ho fatto",
+    "doneTitle": "Ben fatto 🎉",
+    "doneMessage": "Mini-challenge completato, i tuoi trofei sono stati aggiornati."
+  },
   "leaderboard": {
     "errorFetch": "Errore durante il recupero della classifica",
+    "shareDialogTitle":"Condividi la mia RankCard",
+    "shareHint": "Condividi la tua carta classifica",
+    "retry": "Riprova",
     "notEnough": "Non ci sono abbastanza giocatori per mostrare il podio.",
     "profileOf": "Profilo di {{name}}",
+    "description": "Scopri i migliori giocatori e la tua posizione in tempo reale.",
+    "enableLocationHint": "Apri le impostazioni per attivare la posizione.",
+    "filterHint": {
+      "region": "Vedi i giocatori della tua regione",
+      "national": "Vedi i giocatori del tuo paese",
+      "global": "Vedi tutti i giocatori"
+    },
+    "currentTop3": "Top 3 attuale",
+    "share": "Condividi",
     "unknown": "Sconosciuto",
     "locationDisabled": "La tua posizione non può essere determinata perché i servizi di localizzazione non sono attivati",
     "enableLocation": "Abilita localizzazione",
@@ -861,12 +1342,26 @@
     "sendButtonLabel": "Invia messaggio"
   },
   "challengeHelper": {
-  "explanation": "Spiegazione",
-  "resources": "Risorse utili",
   "videos": "Video consigliati",
   "noData": "Nessun aiuto disponibile per questa sfida al momento.",
+  "openImage": "Apri illustrazione",
+  "openShare": "Apri / Condividi",
+  "share": "Condividi",
+  "shareMessage": {
+    "titleLine": "⭐ {{title}}",
+    "bodyLine": "{{body}}",
+    "tagline": "Un minuto? Una competenza! ⚡",
+    "cta": "Apri in ChallengeTies",
+    "linkLabel": "Vedi la mini-lezione",
+    "shareAlt": "Scopri questa mini-lezione su ChallengeTies: {{link}}"
+  },
+  "open": "Apri",
+  "copy": "Copia",
+  "copySummary": "Copia mini corso",
+  "explanation": "Mini corso",
   "examples": "Esempi",
-  "suggestion": "Suggerimenti?"
+  "resources": "Risorse",
+  "suggestion": "Vuoi proporre un miglioramento? Scrivici."
 },
   "contact": {
     "errorTitle": "Errore",
@@ -945,18 +1440,24 @@
   "yourDescriptionHere": "La tua descrizione qui…",
   "exTitle": "Es: 30 giorni di lettura",
   "exDescription": "Es: Leggere 10 pagine al giorno e condividere le note…",
-  "pleaseWait": "Attendere…",
   "ok": "OK",
   "charsRemaining_one": "{{count}} carattere rimanente",
 "charsRemaining_other": "{{count}} caratteri rimanenti",
 "completionLabel": "Completamento"
 ,
 "duoInfoModal": {
-  "title": "Invita un amico",
-  "desc": "Per invitare un amico, ti basta inserire il suo username e attendere la sua risposta.\n\nSe non conosci il suo username, non preoccuparti: chiediglielo (è visibile nella sezione Il Mio Account) e potrai invitarlo più tardi dalla sfida desiderata.",
-  "button": "Capito"
-}
-,
+    "title": "Sfide in duo",
+    "badge": "Modalità Duo",
+    "desc": "Invita un amico, progredite insieme e seguite i vostri progressi sincronizzati in tempo reale.",
+    "tips": {
+      "fast": "Invito in 2 clic, link condivisibile ovunque.",
+      "sync": "Progressi sincronizzati e notifiche istantanee.",
+      "safe": "Controlli anti-spam e annullamento con un tocco."
+    },
+    "openInbox": "Vedi i miei inviti",
+    "inviteNow": "Invita un amico",
+    "button": "Capito"
+  },
   "loginRequired": "Devi essere connesso per creare una sfida.",
   "createChallengeFailed": "Impossibile creare la sfida al momento. Riprova più tardi.",
   "challengeSubmittedForReview": "La tua sfida è stata inviata e sarà visibile una volta approvata da un amministratore.",
@@ -3206,39 +3707,50 @@
   "challengeNotFound": "Sfida non trovata.",
   "unableToFinalizeChallenge": "Impossibile completare la sfida.",
   "errorLoadingSavedChallenges": "Impossibile caricare le sfide salvate: {{message}}",
+  "rateUs": "Valuta l’app",
   "notificationsPush": {
     "title": "ChallengeTies",
-    "morning1": "☀️ Nuovo giorno, un passo verso il tuo obiettivo!",
-    "morning2": "Oggi ce la fai! 💪",
-    "evening1": "🌙 È ora di spuntare la giornata. Piccoli passi, grandi risultati.",
-    "evening2": "Un altro giorno di costanza. Grande!",
-    "nudgeBody": "Ehi! Non dimenticare «{{title}}» — {{from}} fa il tifo per te 💪",
+    "morning1": "Iniziamo la giornata con una sfida veloce?",
+    "inviteAcceptedToast": "Il tuo invito è stato accettato 🎉",
+    "inviteRefusedToast": "Il tuo invito è stato rifiutato 🙏",
+    "opened": "Notifica aperta",
+    "morning2": "Le 9! Scegli una sfida e parti.",
+    "evening1": "La tua sfida serale ti aspetta. Ci sei?",
+    "evening2": "Bastano due minuti per fare progressi oggi.",
+    "nudgeBody": "{{from}} ti invita a riprendere “{{title}}” — andiamo! 💪",
     "invitationAccepted": "{{username}} ha accettato il tuo invito!",
     "invitationRefused": "{{username}} ha rifiutato il tuo invito."
   },
 "editYourReview": "Modifica la tua recensione",
-"saveReview": "Salva"
-,
+  "deleteReview": "Elimina recensione",
+  "saveReview": "Salva",
+  "oops": "Ops",
+  "writeSomething": "Scrivi qualcosa prima di inviare 😉",
+  "maxChars": "Max 500 caratteri",
+  "cannotSaveReview": "Impossibile salvare la recensione al momento.",
 "duo": {
-  "title": "Sfida in duo",
-  "you": "Tu",
-  "nudge": "Incoraggia",
-  "leading": "Sei in vantaggio!",
-  "nudgeNoToken": "Il tuo partner non ha abilitato le notifiche o non ha aperto l’app dopo l’aggiornamento.",
-  "nudgeDisabled": "Il tuo partner ha disattivato le notifiche.",
-  "nudgeNoUser": "Partner non trovato.",
-  "tied": "Parità",
-  "nudgeUnregistered": "Il token del tuo partner non è più valido. Chiedigli di aprire l’app per riattivare le notifiche.",
-  "nudgeExpoError": "Errore del servizio di notifiche. Riprova più tardi.",
-  "behind": "Sei indietro",
-  "nudgeSent": "Incitamento inviato ✅",
-  "nudgeFailed": "Impossibile inviare la notifica.",
-  "nudgeUnavailable": "Funzione disponibile solo per le sfide in duo.",
-  "nudgeHint": "Tocca per incoraggiare. Tieni premuto per aprire la chat.",
-   "loadingPartner": "Caricamento compagno...",
-   "partner": "Compagno"
-}
-,
+    "title": "Sfida in coppia",
+    "you": "Tu",
+    "partner": "Partner",
+
+    "leading": "Sei in vantaggio!",
+    "tied": "Parità",
+    "behind": "Sei indietro",
+
+    "loadingPartner": "Caricamento partner…",
+
+    "nudge": "Incoraggia",
+    "nudgeHint": "Tocca per incoraggiare. Tieni premuto per aprire la chat.",
+    "nudgeSent": "Incoraggiamento inviato ✅",
+    "nudgeFailed": "Impossibile inviare la notifica.",
+    "nudgeUnavailable": "Disponibile solo per le sfide in coppia.",
+
+    "nudgeNoUser": "Partner non trovato.",
+    "nudgeNoToken": "Il tuo partner non ha attivato le notifiche o non ha ancora aperto l’app dopo l’aggiornamento.",
+    "nudgeDisabled": "Il tuo partner ha disattivato le notifiche.",
+    "nudgeUnregistered": "Il token del tuo partner non è valido. Chiedigli di aprire l’app per riattivarlo.",
+    "nudgeExpoError": "Errore del servizio di notifica. Riprova più tardi."
+  },
   "invitation": {
     "subtitle": "Sei stato invitato alla sfida {challengeId}!",
     "accepting": "Accettazione in corso...",
@@ -3271,11 +3783,17 @@
   "settingsPage": {
     "location": "Localizzazione",
     "handleLocation": "Abilita o disabilita la localizzazione",
-    "enabled": "Localizzazione abilitata",
-    "updated": "Localizzazione aggiornata con successo",
+    "enableInSystem": "Attiva le notifiche nelle impostazioni di sistema.",
+    "locationTip": "Attiva la posizione nelle impostazioni di sistema per suggerimenti nelle vicinanze.",
+    "openMailError": "Impossibile aprire l'app di posta.",
+    "enabled": "Attivato",
+    "updated": "Preferenze aggiornate",
     "error": "Aggiornamento della localizzazione non riuscito"
   },
   "discoverAppInFewSteps": "Scopri l'app in pochi passaggi",
+  "support": "Supporto",
+  "dangerZone": "Zona pericolosa",
+  "appVersion": "Versione",
   "homePageDescription": "Benvenuto! Gestisci {challenges}, raggiungi {goals} e naviga tramite {access} per iniziare la tua avventura.",
   "profileDescription": "Controlla le tue {stats}, scopri i tuoi {badges} e {personalize} per rendere l'app tua.",
   "focusPageDescription": "Concentrati sulle tue {challenges} e segui il tuo {progress} per rimanere motivato.",
@@ -3283,6 +3801,14 @@
   "homePageTitle": "Home",
   "focusPageTitle": "Focus",
   "explorePageTitle": "Esplora",
+  "copied": "Copiato",
+  "copiedToClipboard": "Copiato negli appunti.",
+  "verified": "Verificato",
+  "verify": "Verifica",
+  "sending": "Invio…",
+  "emailVerification": "Verifica email",
+  "verificationEmailSent": "Email di verifica inviata.",
+  "notSet": "Non impostato",
   "activity": "Attività",
   "listOfNotifications": "Elenco delle notifiche",
   "viewInvitation": "Invito alla sfida {{challenge}}",
@@ -3329,51 +3855,73 @@
       "hint": "Vedi notifiche e attività recenti"
     }
   },
+  "share": "Condividi",
+  "shareStatsMessage": "Ecco le mie statistiche di ChallengeTies 🔥",
   "statDescription": {
-    "savedChallenges": "Numero totale di sfide salvate.",
-    "ongoingChallenges": "Sfide attualmente in corso.",
-    "completedChallenges": "Sfide completate con successo.",
-    "successRate": "Percentuale di successo basata sulle sfide completate.",
-    "trophies": "Numero totale di trofei ottenuti.",
-    "unlockedAchievements": "Obiettivi sbloccati.",
-    "longestStreak": "La tua serie attiva più lunga di giorni."
+    "savedChallenges": "Numero di sfide salvate",
+    "ongoingChallenges": "Numero di sfide in corso",
+    "completedChallenges": "Numero di sfide completate",
+    "successRate": "Tasso di successo complessivo",
+    "trophies": "Trofei ottenuti",
+    "unlockedAchievements": "Obiettivi sbloccati",
+    "longestStreak": "Serie più lunga di giorni validati"
   },
   "pleaseAcceptRules": "Si prega di selezionare la casella per accettare le regole.",
   "errorSavingRulesAcceptance": "Errore durante il salvataggio dell'accettazione delle regole.",
-  "iHaveReadRules": "Ho letto e accetto le regole della chat.",
-  "iUnderstand": "Ho capito",
-  "acceptRulesCheckbox": "Accetto le regole della chat",
-  "acceptRulesButton": "Conferma accettazione regole",
-  "tutorial": {
-    "welcome": {
-      "title": "Benvenuto su ChallengeTies!",
-      "description": "Scopri un'avventura unica, sfide coinvolgenti e una community ispiratrice. Pronto ad accettare la sfida?"
-    },
-    "index": {
-      "title": "Scopri l’essenziale",
-      "description": "Scopri sfide popolari, consulta la classifica, esplora le novità, proponi idee e ricevi consigli utili per migliorare."
-    },
-    "profile": {
-      "title": "Il tuo profilo, la tua storia",
-      "description": "Accedi a info, statistiche, successi e sfide create, in corso, salvate o completate. Tutto in un unico posto."
-    },
-    "videoStep": {
-    "title": "Benvenuto in una sfida 🎯",
-    "description": "Qui puoi accettare una sfida, monitorare i tuoi progressi, vedere le tue statistiche… e soprattutto accedere a consigli, esempi concreti e risorse audio o video per aiutarti a riuscire 💡🔥"
+  "chatRules": {
+    "title": "Benvenuto nella chat",
+    "message": "Prima di partecipare, ti preghiamo di seguire le regole: sii gentile, rispetta gli altri, evita contenuti offensivi o discriminatori e niente spam. Creiamo insieme uno spazio positivo e stimolante!"
   },
-    "focus": {
-      "title": "Rimani concentrato",
-      "description": "Guarda i tuoi trofei, crea una sfida e segui quelle in corso o da fare oggi."
+  "iHaveReadRules": "Ho letto e accetto le regole.",
+  "acceptRulesButton": "Accetto e comprendo",
+  "iUnderstand": "Capisco",
+  "acceptRulesCheckbox": "Accetto le regole della chat",
+ "tutorial": {
+  "daily": {
+    "title": "Le tue sfide del giorno",
+    "description": "Ogni giorno, 5 sfide selezionate per te. Torna spesso per non perderti nulla."
+  },
+  "discover": {
+    "title": "Ispirati",
+    "description": "Accedi a consigli, classifica, novità e FAQ per continuare a migliorare."
+  },
+  "welcome": {
+    "title": "Benvenuto!",
+    "description": "Facciamo un tour rapidissimo per mostrarti il meglio di ChallengeTies."
+  },
+  "profile": {
+    "title": "Il tuo profilo",
+    "description": "Ritrova sfide, ricompense e preferenze in un unico posto."
+  },
+  "videoStep": {
+    "title": "Consigli rapidi",
+    "description": "Un breve video per ispirarti e aumentare la motivazione."
+  },
+  "tapAnywhere": "Tocca ovunque per continuare",
+  "buttons": {
+    "start": "Inizia",
+    "next": "Avanti",
+    "skip": "Salta",
+    "finish": "Fine"
+  },
+  "index": {
+    "welcome": {
+      "title": "Benvenuto su ChallengeTies ✨",
+      "description": "Un mini tour per iniziare. Puoi saltarlo in qualsiasi momento."
     },
-    "explore": {
-      "title": "Esplora senza limiti",
-      "description": "Esplora le sfide create dalla community, usa i filtri e aggiungi ai preferiti."
+    "cta": {
+      "title": "Inizia l’avventura",
+      "description": "Tocca qui per esplorare tutte le sfide e trovare la prossima in pochi secondi."
     },
-    "buttons": {
-      "start": "Inizia",
-      "skip": "Salta",
-      "next": "Avanti",
-      "finish": "Si parte!"
+    "daily": {
+      "title": "Sfide del giorno",
+      "description": "Ogni giorno una nuova selezione. Perfetta se non sai da dove cominciare."
+    },
+    "discover": {
+      "title": "Ispirati",
+      "description": "Consigli, classifica, novità, FAQ… tutto ciò che serve per restare motivato."
     }
   }
+}
+
 }

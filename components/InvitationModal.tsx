@@ -1,5 +1,5 @@
 // components/InvitationModal.tsx
-import React, { useEffect, useMemo, useState } from "react";
+import React, { useEffect, useMemo, useRef, useState, useCallback } from "react";
 import {
   View,
   Text,
@@ -7,6 +7,9 @@ import {
   Modal,
   StyleSheet,
   ActivityIndicator,
+  Platform,
+   ToastAndroid,
+   Alert,
 } from "react-native";
 import Animated, { FadeInUp } from "react-native-reanimated";
 import { useTranslation } from "react-i18next";
@@ -22,6 +25,9 @@ import {
 } from "@/services/invitationService";
 import { useTheme } from "@/context/ThemeContext";
 import designSystem, { Theme } from "@/theme/designSystem";
+import * as Haptics from "expo-haptics";
+import { logEvent } from "@/src/analytics";
+import { softRefuseOpenInvitation } from "@/services/invitationService";
 
 type InvitationModalProps = {
   visible: boolean;
@@ -49,24 +55,26 @@ const InvitationModal: React.FC<InvitationModalProps> = ({
   const [inviterUsername, setInviterUsername] = useState("");
   const [challengeTitle, setChallengeTitle] = useState("");
   const [errorMsg, setErrorMsg] = useState<string>("");
+  const mountedRef = useRef(true);
+ const lastLoadKeyRef = useRef<string>(""); // protège contre les updates d’état d’une ancienne invite
 
-  const closeAll = () => {
-  try { onClose(); } finally { clearInvitation?.(); }
-};
+ useEffect(() => {
+   mountedRef.current = true;
+   return () => { mountedRef.current = false; };
+ }, []);
 
-const showInfo = (msg: string) => {
-  if (!msg) return;
-  // Android: Toast plus léger; iOS: Alert
-  try {
-    // @ts-ignore
-    const { Platform, ToastAndroid, Alert } = require("react-native");
-    if (Platform.OS === "android" && ToastAndroid) {
-      ToastAndroid.show(msg, ToastAndroid.LONG);
-      return;
-    }
-    Alert?.alert?.("", msg);
-  } catch { /* no-op */ }
-};
+const closeAll = () => {
+   try { onClose(); } finally { clearInvitation?.(); }
+ };
+
+ const showInfo = (msg: string) => {
+   if (!msg) return;
+   if (Platform.OS === "android") {
+     ToastAndroid.show(msg, ToastAndroid.LONG);
+   } else {
+     Alert.alert("", msg);
+   }
+ };
 
 
   const isDarkMode = theme === "dark";
@@ -83,63 +91,97 @@ const showInfo = (msg: string) => {
 
   const expired = useMemo(() => (inv ? isInvitationExpired(inv) : false), [inv]);
 
-  // ===== Load invitation + infos affichage =====
   useEffect(() => {
-    const load = async () => {
-      if (!visible || !inviteId || !auth.currentUser) return;
-      try {
-        setFetching(true);
-        setErrorMsg("");
+  const load = async () => {
+     if (!visible || !inviteId) return;
+     if (!auth.currentUser?.uid) {
+       showInfo(t("invitation.errors.notLogged", { defaultValue: "Tu dois être connecté." }));
+       closeAll();
+       return;
+     }
+     const loadKey = `${inviteId}_${Date.now()}`;
+     lastLoadKeyRef.current = loadKey;
+     try {
+       setFetching(true);
+       setErrorMsg("");
 
-        // 1) Invitation
-        const data = await getInvitation(inviteId);
-        setInv(data);
+       // 1) Invitation
+       const data = await getInvitation(inviteId);
+       if (!mountedRef.current || lastLoadKeyRef.current !== loadKey) return;
+       setInv(data);
 
-        // Auto-fermeture si invalid/expired une fois l'UI montée
-if (!data) {
-  showInfo(t("invitation.invalidMessage", { defaultValue: "Cette invitation est introuvable ou a été supprimée." }));
-  closeAll();
-  return;
-}
-if (isInvitationExpired(data)) {
-  showInfo(t("invitation.expiredMessage", {
-    defaultValue: "Cette invitation a expiré. Demande à ton ami d'en renvoyer une nouvelle."
-  }));
-  closeAll();
-  return;
-}
+       // Auto-fermeture si invalid/expired une fois l'UI montée
+       if (!data) {
+         showInfo(t("invitation.invalidMessage", { defaultValue: "Cette invitation est introuvable ou a été supprimée." }));
+         closeAll();
+         return;
+       }
+       if (isInvitationExpired(data)) {
+         showInfo(t("invitation.expiredMessage", {
+           defaultValue: "Cette invitation a expiré. Demande à ton ami d'en renvoyer une nouvelle."
+         }));
+         closeAll();
+         return;
+       }
 
-        // 2) Inviter username
-        if (data?.inviterId) {
-          const inviterSnap = await getDoc(doc(db, "users", data.inviterId));
-          setInviterUsername(
-            (inviterSnap.exists() && (inviterSnap.data() as any)?.username) ||
-              t("invitation.userFallback", { defaultValue: "Utilisateur" })
-          );
-        }
+       // 2) Inviter username
+       if (data.inviterId) {
+         const inviterSnap = await getDoc(doc(db, "users", data.inviterId));
+         if (!mountedRef.current || lastLoadKeyRef.current !== loadKey) return;
+         setInviterUsername(
+           (inviterSnap.exists() && (inviterSnap.data() as any)?.username) ||
+           t("invitation.userFallback", { defaultValue: "Utilisateur" })
+         );
+       }
 
-        // 3) Challenge title (depuis prop ou inv)
-        const targetChallengeId = data?.challengeId || challengeId;
-        if (targetChallengeId) {
-          const chSnap = await getDoc(doc(db, "challenges", targetChallengeId));
-          setChallengeTitle(
-            (chSnap.exists() && (chSnap.data() as any)?.title) ||
-              t("challengeDetails.untitled", { defaultValue: "Défi" })
-          );
-        }
-      } catch (e) {
-        console.error("❌ InvitationModal load error:", e);
-        setErrorMsg(t("invitation.errors.unknown", { defaultValue: "Erreur inconnue." }));
-      } finally {
-        setFetching(false);
-      }
-    };
-    load();
+       // 3) Challenge title (i18n via chatId si dispo, sinon fallback)
+       const targetChallengeId = data.challengeId || challengeId;
+       if (targetChallengeId) {
+         const chSnap = await getDoc(doc(db, "challenges", targetChallengeId));
+         if (!mountedRef.current || lastLoadKeyRef.current !== loadKey) return;
+         if (chSnap.exists()) {
+           const ch = chSnap.data() as any;
+           const chatId = ch?.chatId || targetChallengeId;
+           const i18nTitle = t(`challenges.${chatId}.title`, { defaultValue: ch?.title || "" });
+           setChallengeTitle(i18nTitle || ch?.title || t("challengeDetails.untitled", { defaultValue: "Défi" }));
+         } else {
+           setChallengeTitle(t("challengeDetails.untitled", { defaultValue: "Défi" }));
+         }
+       }
+       logEvent("invite_modal_open", { inviteId, challengeId: targetChallengeId }).catch(() => {});
+     } catch (e) {
+       console.error("❌ InvitationModal load error:", e);
+       if (mountedRef.current && lastLoadKeyRef.current === loadKey) {
+         setErrorMsg(t("invitation.errors.unknown", { defaultValue: "Erreur inconnue." }));
+       }
+     } finally {
+       if (mountedRef.current && lastLoadKeyRef.current === loadKey) {
+         setFetching(false);
+       }
+     }
+   };
+   load();
   }, [visible, inviteId, challengeId, t]);
+
+  // Reset propres quand on ferme / change d’invite
+  useEffect(() => {
+    if (!visible) {
+      setInv(null);
+      setErrorMsg("");
+      setShowRestartConfirm(false);
+      setFetching(false);
+      setLoading(false);
+    }
+  }, [visible]);
+  useEffect(() => {
+    // nouvelle invite => nettoie l’état UX
+    setErrorMsg("");
+    setShowRestartConfirm(false);
+  }, [inviteId]);
 
   // ===== Actions =====
 
-  const handleAccept = async () => {
+  const handleAccept = useCallback(async () => {
   // Anti double-tap / actions pendant le fetch
   // (si tu as un state `fetching`, laisse-le ici ; sinon enlève la partie `|| fetching`)
   if (loading || fetching) return;
@@ -152,6 +194,13 @@ if (isInvitationExpired(data)) {
     setErrorMsg(t("invitation.errors.unknown", { defaultValue: "Erreur." }));
     return;
   }
+  // UX immédiate : empêcher d’accepter sa propre invitation
+  if (inv.inviterId === meId) {
+    setErrorMsg(t("invitation.errors.autoInvite", {
+      defaultValue: "Tu ne peux pas accepter ta propre invitation."
+    }));
+    return;
+  }
   if (expired) {
     setErrorMsg(t("invitation.errors.expired", { defaultValue: "Invitation expirée." }));
     // UX: on ferme proprement, l’invite est caduque
@@ -162,6 +211,7 @@ if (isInvitationExpired(data)) {
 
   setLoading(true);
   setErrorMsg("");
+  Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium).catch(()=>{});
 
   try {
     // Relecture minimale de mon profil pour déterminer mon état actuel
@@ -208,6 +258,8 @@ if (isInvitationExpired(data)) {
 
     // 3) Acceptation finale (le service gère la bascule solo->duo si nécessaire côté serveur)
     await acceptInvitation(inviteId);
+     logEvent("invite_accept", { inviteId, challengeId: inv.challengeId || challengeId }).catch?.(()=>{});
+     Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success).catch(()=>{});
 
     // 4) Fermeture propre + nettoyage de l’état d’invitation
     onClose();
@@ -226,6 +278,14 @@ if (isInvitationExpired(data)) {
       setErrorMsg(t("invitation.errors.expired", { defaultValue: "Invitation expirée." }));
       onClose();
       clearInvitation?.();
+      } else if (msg.includes("non_autorise") || msg.includes("non autoris") || msg.includes("permission")) {
+      setErrorMsg(t("invitation.errors.permission", { defaultValue: "Action non autorisée." }));
+      onClose();
+      clearInvitation?.();
+    } else if (msg.includes("invitation_deja_traitee") || msg.includes("déjà") && msg.includes("trait")) {
+      setErrorMsg(t("invitation.errors.processed", { defaultValue: "Invitation déjà traitée." }));
+      onClose();
+      clearInvitation?.();
     } else if (msg.includes("already_in_duo") || msg.includes("alreadyinduo") || msg.includes("duo")) {
       setErrorMsg(
         t("invitation.errors.alreadyInDuoForChallenge", {
@@ -234,22 +294,29 @@ if (isInvitationExpired(data)) {
       );
       onClose();
       clearInvitation?.();
+       } else if (msg.includes("challenge_introuvable")) {
+      setErrorMsg(t("invitation.errors.challengeMissing", { defaultValue: "Défi introuvable." }));
+      onClose();
+      clearInvitation?.();
     } else {
       setErrorMsg(t("invitation.errors.unknown", { defaultValue: "Erreur." }));
     }
   } finally {
     setLoading(false);
   }
-};
+}, [loading, fetching, inviteId, inv, isForMe, expired, challengeId, t]);
 
 
-  const handleConfirmRestart = async () => {
+  const handleConfirmRestart = useCallback(async () => {
     if (!inviteId || !auth.currentUser || !inv) return;
+    if (loading || fetching) return;
     setLoading(true);
     setErrorMsg("");
     try {
+      Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success).catch(()=>{});
       // Pas de reset manuel : acceptInvitation gère déjà le remplacement SOLO -> DUO
       await acceptInvitation(inviteId);
+      logEvent("invite_accept_restart", { inviteId, challengeId: inv.challengeId || challengeId }).catch?.(()=>{});
       setShowRestartConfirm(false);
       onClose();
       clearInvitation?.();
@@ -259,28 +326,38 @@ if (isInvitationExpired(data)) {
     } finally {
       setLoading(false);
     }
-  };
+}, [inviteId, inv, loading, fetching, challengeId, t]);
 
-  const handleRefuse = async () => {
-    if (!inviteId || !inv) return;
+  const handleRefuse = useCallback( async () => {
+   if (!inviteId || !inv || loading || fetching) return;
     setLoading(true);
     setErrorMsg("");
     try {
       if (inv.kind === "direct") {
         await refuseInvitationDirect(inviteId);
       } else {
-        // OPEN : refus explicite (status = refused + inviteeId = me)
-        await refuseOpenInvitation(inviteId);
+       // OPEN : refus explicite (status = refused + inviteeId = me)
+      await refuseOpenInvitation(inviteId);
       }
+      logEvent("invite_refuse", { inviteId, challengeId: inv.challengeId || challengeId }).catch?.(()=>{});
+      Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light).catch(()=>{});
       onClose();
       clearInvitation?.();
     } catch (e) {
       console.error("❌ Invitation refuse error:", e);
       setErrorMsg(t("invitation.errors.unknown", { defaultValue: "Erreur." }));
+      const msg = String((e as any)?.message || "").toLowerCase();
+    if (msg.includes("invitation_deja_traitee")) {
+      setErrorMsg(t("invitation.errors.processed", { defaultValue: "Invitation déjà traitée." }));
+    } else if (msg.includes("non_autorise") || msg.includes("permission")) {
+      setErrorMsg(t("invitation.errors.permission", { defaultValue: "Action non autorisée." }));
+    } else {
+      setErrorMsg(t("invitation.errors.unknown", { defaultValue: "Erreur." }));
+    }
     } finally {
       setLoading(false);
     }
-  };
+ }, [inviteId, inv, loading, fetching, challengeId, t]);
 
   // ===== Styles =====
   const styles = StyleSheet.create({
@@ -383,8 +460,13 @@ modalView: {
             })}
           </Text>
           <View  style={styles.buttonRow}>
-            <TouchableOpacity style={[styles.btn, styles.neutral]} onPress={closeAll} 
-            >
+   <TouchableOpacity
+     style={[styles.btn, styles.neutral]}
+     onPress={closeAll}
+     accessibilityRole="button"
+     accessibilityLabel={t("commonS.close", { defaultValue: "Fermer" })}
+     testID="invite-close"
+   >
               <Text style={[styles.btnText, styles.neutralText]}>
                 {t("commonS.close", { defaultValue: "Fermer" })}
               </Text>
@@ -466,6 +548,7 @@ modalView: {
             accessibilityRole="button"
   accessibilityLabel={t("invitation.accept", { defaultValue: "Accepter" })}
   accessibilityHint={t("invitation.acceptHint", { defaultValue: "Accepter l’invitation et démarrer en Duo." })}
+  testID="invite-accept"
           >
             {loading ? <ActivityIndicator color="#fff" /> : (
               <Text style={styles.btnText}>
@@ -482,6 +565,7 @@ modalView: {
             accessibilityRole="button"
   accessibilityLabel={t("invitation.refuse", { defaultValue: "Refuser" })}
   accessibilityHint={t("invitation.refuseHint", { defaultValue: "Refuser l’invitation et fermer." })}
+  testID="invite-refuse"
           >
             {loading ? <ActivityIndicator color="#fff" /> : (
               <Text style={styles.btnText}>
@@ -510,6 +594,9 @@ modalView: {
           style={[styles.btn, styles.neutral]}
           onPress={() => setShowRestartConfirm(false)}
           activeOpacity={0.85}
+          accessibilityRole="button"
+   accessibilityLabel={t("invitation.cancel", { defaultValue: "Annuler" })}
+   testID="invite-restart-cancel"
         >
           <Text style={[styles.btnText, styles.neutralText]}>
             {t("invitation.cancel", { defaultValue: "Annuler" })}
@@ -520,6 +607,9 @@ modalView: {
           onPress={handleConfirmRestart}
           disabled={loading || fetching}
           activeOpacity={0.85}
+          accessibilityRole="button"
+   accessibilityLabel={t("invitation.continue", { defaultValue: "Continuer" })}
+   testID="invite-restart-continue"
         >
           {loading ? <ActivityIndicator color="#fff" /> : (
             <Text style={styles.btnText}>
@@ -538,7 +628,15 @@ modalView: {
       animationType="fade"
       statusBarTranslucent
       presentationStyle="overFullScreen"
-      onRequestClose={closeAll}
+      onRequestClose={async () => {
+   try {
+     if (inv && inv.kind === "open" && inv.status === "pending") {
+       await softRefuseOpenInvitation(inviteId!);
+     }
+   } catch {} finally {
+     closeAll();
+   }
+ }}
     >
       <View style={[StyleSheet.absoluteFillObject, styles.centeredView]}>
         <Animated.View entering={FadeInUp.duration(250)} style={styles.modalView}>

@@ -1,4 +1,4 @@
-import React, { useState, useRef, useEffect, useCallback, useMemo  } from "react";
+import React, { useState, useRef, useEffect, useCallback, useMemo, memo, useContext  } from "react";
 import {
   View,
   Text,
@@ -12,6 +12,7 @@ import {
   Dimensions,
   StatusBar,
   Alert,
+  Keyboard,
 } from "react-native";
 import { useLocalSearchParams, useNavigation } from "expo-router";
 import { Ionicons } from "@expo/vector-icons";
@@ -25,9 +26,15 @@ import { Theme } from "../../theme/designSystem";
 import designSystem from "../../theme/designSystem";
 import { updateDoc, doc, getDoc } from "firebase/firestore";
 import ChatWelcomeModal from "../../components/ChatWelcomeModal";
+import BannerSlot from "@/components/BannerSlot";
+import { useAdsVisibility } from "../../src/context/AdsVisibilityContext";
+import { BottomTabBarHeightContext } from "@react-navigation/bottom-tabs";
+import * as Haptics from "expo-haptics";
 
-const { width: SCREEN_WIDTH, height: SCREEN_HEIGHT } = Dimensions.get("window");
+const { width: SCREEN_WIDTH} = Dimensions.get("window");
 const SPACING = 18;
+const SLOWMODE_MS = 2500;              // ✦ anti-flood
+const REPLY_EXCERPT_MAX = 80;
 
 const normalizeSize = (size: number) => {
   const baseWidth = 375;
@@ -80,18 +87,15 @@ const OrbBackground = ({ theme }: { theme: Theme }) => (
 
 const getDynamicStyles = (currentTheme: Theme, isDarkMode: boolean) => ({
   container: { backgroundColor: currentTheme.colors.background },
-  // On laisse voir le fond orbe
   gradientContainer: { backgroundColor: currentTheme.colors.cardBackground + "00" },
   headerGradient: {
     colors: [currentTheme.colors.primary, currentTheme.colors.secondary] as const,
   },
-  headerTitle: { color: "#FFFFFF" }, // titre blanc lisible sur gradient
+  headerTitle: { color: "#FFFFFF" },
   backButtonIcon: { color: "#FFFFFF" },
 
-  // Liste transparente pour voir le fond
   messageList: { backgroundColor: "transparent" },
 
-  // On garde juste la bordure via hairline, le fond est géré par <LinearGradient/>
   myMessageBubble: {
     borderColor: isDarkMode ? "rgba(255,255,255,0.14)" : "rgba(0,0,0,0.08)",
   },
@@ -122,18 +126,188 @@ interface ChatMessage {
   id: string;
   text: string;
   textKey?: string;
-  timestamp: Date | { toMillis?: () => number } | number; // ← tolerate Firestore TS
+  timestamp: Date | { toMillis?: () => number } | number;
   userId: string;
   username: string;
   avatar: string;
   reported: boolean;
   type?: "system" | "text";
   systemType?: "welcome" | string;
-  pinned?: boolean;          // ← important
+  pinned?: boolean;
   centered?: boolean;
   style?: string;
 }
 
+type ReplyContext = {
+  id: string;
+  username: string;
+  text: string;
+} | null;
+
+/** Utils */
+const toMs = (ts: any) => {
+  if (!ts) return 0;
+  if (ts instanceof Date) return ts.getTime();
+  if (typeof ts === "number") return ts;
+  return typeof ts?.toMillis === "function" ? ts.toMillis() : 0;
+};
+
+/** MessageItem optimisé (memo) */
+const MessageItem = memo(function MessageItem({
+  item,
+  isDarkMode,
+  currentTheme,
+  dynamicStyles,
+  t,
+  challengeId,
+  onReply,
+}: {
+  item: ChatMessage;
+  isDarkMode: boolean;
+  currentTheme: Theme;
+  dynamicStyles: ReturnType<typeof getDynamicStyles>;
+  t: (k: string, o?: any) => string;
+  challengeId: string;
+  onReply: (ctx: ReplyContext) => void;
+}) {
+  // Branche système : message d'accueil
+  if (item.type === "system" && item.systemType === "welcome") {
+    const body = item.textKey ? t(item.textKey) : item.text || "";
+    return (
+      <View style={styles.systemWelcomeRow}>
+        <View
+          style={[
+            styles.systemWelcomeWrap,
+            {
+              borderColor: currentTheme.colors.secondary,
+              backgroundColor: currentTheme.colors.secondary + "14",
+            },
+          ]}
+        >
+          <Text
+            style={[
+              styles.systemWelcomeTitle,
+              { color: currentTheme.colors.secondary },
+            ]}
+          >
+            {t("chat.welcomeTitle", { defaultValue: "Bienvenue 👋" })}
+          </Text>
+          <Text
+            style={[
+              styles.systemWelcomeText,
+              { color: isDarkMode ? currentTheme.colors.textPrimary : "#222" },
+            ]}
+          >
+            {body}
+          </Text>
+        </View>
+      </View>
+    );
+  }
+
+  const isMyMessage = item.userId === auth.currentUser?.uid;
+
+  const myBubbleColors: [string, string] = useMemo(
+    () => [currentTheme.colors.primary, currentTheme.colors.secondary],
+    [currentTheme.colors.primary, currentTheme.colors.secondary]
+  );
+
+  const otherBubbleColors: [string, string] = useMemo(
+    () =>
+      isDarkMode
+        ? ["rgba(255,255,255,0.10)", "rgba(255,255,255,0.03)"]
+        : ["rgba(0,0,0,0.05)", "rgba(0,0,0,0.02)"],
+    [isDarkMode]
+  );
+
+  const borderClr = useMemo(
+    () => (isDarkMode ? "rgba(255,255,255,0.14)" : "rgba(0,0,0,0.08)"),
+    [isDarkMode]
+  );
+
+  const handleReportMessage = useCallback(async () => {
+    if (item.reported) return; // idempotent
+    try {
+      const messageRef = doc(db, "chats", challengeId, "messages", item.id);
+      await updateDoc(messageRef, { reported: true });
+      Alert.alert(t("success"), t("messageReported"));
+    } catch (error) {
+      console.error("Erreur report:", error);
+      Alert.alert(t("error"), t("reportMessageFailed"));
+    }
+  }, [challengeId, item.id, item.reported, t]);
+
+  return (
+    <View
+      style={[
+        styles.messageRow,
+        isMyMessage ? styles.myMessageRow : styles.otherMessageRow,
+      ]}
+    >
+      {!isMyMessage && (
+        <View style={styles.avatarContainer}>
+          <Ionicons
+            name="person-circle-outline"
+            size={normalizeSize(32)}
+            color={dynamicStyles.avatarIcon.color}
+          />
+        </View>
+      )}
+
+      <TouchableOpacity
+        activeOpacity={0.95}
+        delayLongPress={250}
+        onLongPress={() => {
+          if (isMyMessage) return; // on ne répond pas à soi-même
+          Haptics.selectionAsync().catch(() => {});
+          onReply({ id: item.id, username: item.username, text: item.text });
+        }}
+        accessibilityLabel={t("challengeChat.longPressReply", { defaultValue: "Répondre à ce message" })}
+        accessibilityRole="button"
+      >
+        <LinearGradient
+        colors={isMyMessage ? myBubbleColors : otherBubbleColors}
+        start={{ x: 0, y: 0 }}
+        end={{ x: 1, y: 1 }}
+        style={[
+          styles.messageBubble,
+          { borderColor: borderClr },
+          isMyMessage ? styles.myMessageBubble : styles.otherMessageBubble,
+        ]}
+      >
+        {!isMyMessage && (
+          <Text style={[styles.username, dynamicStyles.username]}>
+            {item.username}
+          </Text>
+        )}
+
+        <Text
+          style={[
+            styles.messageText,
+            isMyMessage ? { color: "#fff" } : dynamicStyles.messageText,
+          ]}
+        >
+          {item.text}
+        </Text>
+
+        {!isMyMessage && !item.reported && (
+          <TouchableOpacity
+            style={[styles.reportButton, dynamicStyles.reportButton]}
+            onPress={handleReportMessage}
+            accessibilityLabel={t("reportMessage")}
+          >
+            <Text
+              style={[styles.reportButtonText, dynamicStyles.reportButtonText]}
+            >
+              {t("report")}
+            </Text>
+          </TouchableOpacity>
+        )}
+      </LinearGradient>
+      </TouchableOpacity>
+    </View>
+  );
+});
 
 export default function ChallengeChat() {
   const { t } = useTranslation();
@@ -143,75 +317,95 @@ export default function ChallengeChat() {
   const { theme } = useTheme();
   const isDarkMode = theme === "dark";
   const currentTheme = isDarkMode ? designSystem.darkTheme : designSystem.lightTheme;
-  const dynamicStyles = getDynamicStyles(currentTheme, isDarkMode);
-const [composerHeight, setComposerHeight] = useState(SPACING * 4);
-const { messages, sendMessage } = useChat(challengeId as string);
+
+  // ⚡ memo: évite recalcul + re-renders
+  const dynamicStyles = useMemo(() => getDynamicStyles(currentTheme, isDarkMode), [currentTheme, isDarkMode]);
+
+  const [composerHeight, setComposerHeight] = useState(SPACING * 4);
+  const { messages, sendMessage } = useChat(challengeId as string);
+  const [isDuoChat, setIsDuoChat] = useState<boolean>(false);
   const [newMessage, setNewMessage] = useState("");
   const [isListReady, setIsListReady] = useState(false);
   const [modalVisible, setModalVisible] = useState(false);
   const flatListRef = useRef<FlatList<ChatMessage>>(null);
   const insets = useSafeAreaInsets();
+  const { showBanners } = useAdsVisibility();
+  const tabBarHeight = (useContext(BottomTabBarHeightContext) ?? 0) as number;
+  const [adHeight, setAdHeight] = useState<number>(0);
+  const [isKeyboardVisible, setIsKeyboardVisible] = useState(false);
+  const lastSentRef = useRef<number>(0);
+  const [cooldownLeft, setCooldownLeft] = useState<number>(0);
+  const [replyTo, setReplyTo] = useState<ReplyContext>(null);
 
-// helper simple pour normaliser le timestamp (Firestore/Date/number)
-// helper pour normaliser le timestamp
-const toMs = (ts: any) => {
-  if (!ts) return 0;
-  if (ts instanceof Date) return ts.getTime();
-  if (typeof ts === "number") return ts;
-  return typeof ts?.toMillis === "function" ? ts.toMillis() : 0;
-};
+  const clearReply = useCallback(() => setReplyTo(null), []);
+  const excerpt = useCallback((s: string) => {
+    const one = (s || "").replace(/\s+/g, " ").trim();
+    return one.length > REPLY_EXCERPT_MAX ? one.slice(0, REPLY_EXCERPT_MAX - 1) + "…" : one;
+  }, []);
 
-// messages triés: pinned d'abord, puis timestamp asc
-const sortedMessages = useMemo<ChatMessage[]>(() => {
-  const arr = (Array.isArray(messages) ? messages : []) as ChatMessage[];
-  return arr.slice().sort((a, b) => {
-    const pa = a?.pinned ? 1 : 0;
-    const pb = b?.pinned ? 1 : 0;
-    if (pa !== pb) return pb - pa; // pinned en premier
-    return toMs(a.timestamp) - toMs(b.timestamp);
-  });
-}, [messages]);
+  // Tick du slowmode (sans timer permanent)
+  useEffect(() => {
+    if (cooldownLeft <= 0) return;
+    const id = setInterval(() => {
+      setCooldownLeft((m) => Math.max(0, m - 200));
+    }, 200);
+    return () => clearInterval(id);
+  }, [cooldownLeft]);
 
-// Fallback : si aucun welcome dans le snapshot, on injecte un message système local
-const finalMessages = useMemo<ChatMessage[]>(() => {
-  const arr = [...sortedMessages];
-  const hasWelcome = arr.some(
-    (m) => m?.type === "system" && m?.systemType === "welcome"
-  );
-  if (!hasWelcome) {
-    arr.unshift({
-      id: "welcome-local",
-      text: "",
-      textKey: "chat.systemWelcome",
-      timestamp: Date.now(),
-      userId: "system",
-      username: "Moderation",
-      avatar: "",
-      reported: false,
-      type: "system",
-      systemType: "welcome",
-      pinned: true,
-      centered: true,
-      style: "notice",
-    } as ChatMessage);
-  }
-  return arr;
-}, [sortedMessages]);
+  useEffect(() => {
+    const sh = Keyboard.addListener(Platform.OS === "ios" ? "keyboardWillShow" : "keyboardDidShow", () => setIsKeyboardVisible(true));
+    const hh = Keyboard.addListener(Platform.OS === "ios" ? "keyboardWillHide" : "keyboardDidHide", () => setIsKeyboardVisible(false));
+    return () => { sh.remove(); hh.remove(); };
+  }, []);
 
-// DEBUG court: vérifie ce que le flatlist reçoit
-useEffect(() => {
-  const head = finalMessages.slice(0, 3).map((m) => ({
-    id: m.id,
-    type: m.type,
-    systemType: m.systemType,
-    pinned: m.pinned,
-    textKey: m.textKey,
-  }));
-  console.log("▶ finalMessages(head):", head);
-}, [finalMessages]);
 
-  
-  // Vérif règles (logique inchangée)
+  // messages triés: pinned d'abord, puis timestamp asc
+  const sortedMessages = useMemo<ChatMessage[]>(() => {
+    const arr = (Array.isArray(messages) ? messages : []) as ChatMessage[];
+    return arr.slice().sort((a, b) => {
+      const pa = a?.pinned ? 1 : 0;
+      const pb = b?.pinned ? 1 : 0;
+      if (pa !== pb) return pb - pa;
+      return toMs(a.timestamp) - toMs(b.timestamp);
+    });
+  }, [messages]);
+
+  // Fallback welcome local si rien dans Firestore
+  const finalMessages = useMemo<ChatMessage[]>(() => {
+    const arr = [...sortedMessages];
+    const hasWelcome = arr.some((m) => m?.type === "system" && m?.systemType === "welcome");
+    if (!hasWelcome) {
+      arr.unshift({
+        id: "welcome-local",
+        text: "",
+        textKey: "chat.systemWelcome",
+        timestamp: Date.now(),
+        userId: "system",
+        username: "Moderation",
+        avatar: "",
+        reported: false,
+        type: "system",
+        systemType: "welcome",
+        pinned: true,
+        centered: true,
+        style: "notice",
+      } as ChatMessage);
+    }
+    return arr;
+  }, [sortedMessages]);
+
+  useEffect(() => {
+    const head = finalMessages.slice(0, 3).map((m) => ({
+      id: m.id,
+      type: m.type,
+      systemType: m.systemType,
+      pinned: m.pinned,
+      textKey: m.textKey,
+    }));
+    console.log("▶ finalMessages(head):", head);
+  }, [finalMessages]);
+
+  // Vérif règles (inchangé)
   useEffect(() => {
     const checkRulesAcceptance = async () => {
       const userId = auth.currentUser?.uid;
@@ -230,158 +424,133 @@ useEffect(() => {
     checkRulesAcceptance();
   }, [challengeId]);
 
+   // 🔎 Détection robuste si le thread est un chat de DUO
+  useEffect(() => {
+    const run = async () => {
+      try {
+        const uid = auth.currentUser?.uid;
+        if (!uid || !challengeId) return setIsDuoChat(false);
+        // 1) On regarde d'abord dans mes CurrentChallenges (source de vérité locale)
+        const meRef = doc(db, "users", uid);
+        const meSnap = await getDoc(meRef);
+        let duo = false;
+        if (meSnap.exists()) {
+          const data = meSnap.data() as any;
+          const arr: any[] = Array.isArray(data.CurrentChallenges) ? data.CurrentChallenges : [];
+          // on compare id OU challengeId pour tolérer les deux schémas
+          const found = arr.find((c) => {
+            const cid = (c?.challengeId ?? c?.id);
+            return String(cid) === String(challengeId);
+          });
+          duo = !!found?.duo;
+        }
+        // 2) Fallback : si le doc de chat porte un flag isDuoThread
+        if (!duo) {
+          const chatRef = doc(db, "chats", String(challengeId));
+          const chatSnap = await getDoc(chatRef);
+          if (chatSnap.exists()) {
+            const cdata = chatSnap.data() as any;
+            if (typeof cdata?.isDuoThread === "boolean") duo = cdata.isDuoThread;
+          }
+        }
+        setIsDuoChat(duo);
+      } catch {
+        setIsDuoChat(false);
+      }
+    };
+    run();
+  }, [challengeId]);
+
   const handleSend = useCallback(async () => {
-    if (!newMessage.trim()) return;
+    const content = newMessage.trim();
+    if (!content) return;
+    const now = Date.now();
+    const elapsed = now - lastSentRef.current;
+    if (elapsed < SLOWMODE_MS) {
+      const left = SLOWMODE_MS - elapsed;
+      setCooldownLeft(left);
+      Haptics.notificationAsync(Haptics.NotificationFeedbackType.Warning).catch(() => {});
+      return;
+    }
     try {
-      await sendMessage(challengeId as string, newMessage);
+      // ↩️ Insère le contexte de réponse en en-tête (lisible + backend inchangé)
+      const decorated = replyTo
+        ? `↩️ @${replyTo.username}: “${excerpt(replyTo.text)}”\n${content}`
+        : content;
+      // ➡️ Passe le flag DUO pour créditer duoMessages côté métriques/succès
+      await sendMessage(challengeId as string, decorated, { isDuo: isDuoChat });
+      lastSentRef.current = now;
+      setCooldownLeft(SLOWMODE_MS);
+      setReplyTo(null);
       setNewMessage("");
-      flatListRef.current?.scrollToEnd({ animated: true });
+      // scroll à la fin après envoi
+      requestAnimationFrame(() => {
+        flatListRef.current?.scrollToEnd({ animated: true });
+      });
     } catch (error) {
       console.error("Error sending message:", error);
       Alert.alert(t("error"), t("errorSendingMessage"));
     }
-  }, [newMessage, challengeId, sendMessage, t]);
+ }, [newMessage, challengeId, sendMessage, t, replyTo, excerpt, isDuoChat]);
 
+  // Auto-scroll quand messages prêts
   useEffect(() => {
-    if (messages.length > 0 && isListReady) {
-      flatListRef.current?.scrollToEnd({ animated: true });
+    if (finalMessages.length > 0 && isListReady) {
+      requestAnimationFrame(() => {
+        flatListRef.current?.scrollToEnd({ animated: true });
+      });
     }
-  }, [messages, isListReady]);
+  }, [finalMessages.length, isListReady]);
 
   const handleListLayout = useCallback(() => {
-    if (messages.length > 0 && !isListReady) {
+    if (finalMessages.length > 0 && !isListReady) {
       flatListRef.current?.scrollToEnd({ animated: false });
       setIsListReady(true);
     }
-  }, [messages.length, isListReady]);
+  }, [finalMessages.length, isListReady]);
+
+  const keyExtractor = useCallback((item: ChatMessage) => item.id, []);
 
   const renderMessage = useCallback(
-  ({ item }: { item: ChatMessage }) => {
-    // 👇 BRANCHE SYSTÈME: message d’accueil
-    if (item.type === "system" && item.systemType === "welcome") {
-      const body = item.textKey ? t(item.textKey) : (item.text || "");
-      return (
-        <View style={styles.systemWelcomeRow}>
-          <View
-            style={[
-              styles.systemWelcomeWrap,
-              {
-                borderColor: currentTheme.colors.secondary,
-                backgroundColor: currentTheme.colors.secondary + "14",
-              },
-            ]}
-          >
-            <Text
-              style={[
-                styles.systemWelcomeTitle,
-                { color: currentTheme.colors.secondary },
-              ]}
-            >
-              {t("chat.welcomeTitle", { defaultValue: "Bienvenue 👋" })}
-            </Text>
-            <Text
-              style={[
-                styles.systemWelcomeText,
-                { color: isDarkMode ? currentTheme.colors.textPrimary : "#222" },
-              ]}
-            >
-              {body}
-            </Text>
-          </View>
-        </View>
-      );
-    }
-
-      const isMyMessage = item.userId === auth.currentUser?.uid;
-
-      const handleReportMessage = async () => {
-        try {
-          const messageRef = doc(db, "chats", challengeId as string, "messages", item.id);
-          await updateDoc(messageRef, { reported: true });
-          Alert.alert(t("success"), t("messageReported"));
-        } catch (error) {
-          console.error("Erreur report:", error);
-          Alert.alert(t("error"), t("reportMessageFailed"));
-        }
-      };
-
-      const myBubbleColors: [string, string] = [
-        currentTheme.colors.primary,
-        currentTheme.colors.secondary,
-      ];
-      const otherBubbleColors: [string, string] = isDarkMode
-        ? ["rgba(255,255,255,0.10)", "rgba(255,255,255,0.03)"]
-        : ["rgba(0,0,0,0.05)", "rgba(0,0,0,0.02)"];
-
-      const borderClr = isDarkMode ? "rgba(255,255,255,0.14)" : "rgba(0,0,0,0.08)";
-
-      return (
-        <View
-          style={[
-            styles.messageRow,
-            isMyMessage ? styles.myMessageRow : styles.otherMessageRow,
-          ]}
-        >
-          {!isMyMessage && (
-            <View style={styles.avatarContainer}>
-              <Ionicons
-                name="person-circle-outline"
-                size={normalizeSize(32)}
-                color={dynamicStyles.avatarIcon.color}
-              />
-            </View>
-          )}
-
-          <LinearGradient
-            colors={isMyMessage ? myBubbleColors : otherBubbleColors}
-            start={{ x: 0, y: 0 }}
-            end={{ x: 1, y: 1 }}
-            style={[
-              styles.messageBubble,
-              { borderColor: borderClr },
-              isMyMessage ? styles.myMessageBubble : styles.otherMessageBubble,
-            ]}
-          >
-            {!isMyMessage && (
-              <Text style={[styles.username, dynamicStyles.username]}>
-                {item.username}
-              </Text>
-            )}
-
-            <Text
-              style={[
-                styles.messageText,
-                isMyMessage ? { color: "#fff" } : dynamicStyles.messageText,
-              ]}
-            >
-              {item.text}
-            </Text>
-
-            {!isMyMessage && !item.reported && (
-              <TouchableOpacity
-                style={[styles.reportButton, dynamicStyles.reportButton]}
-                onPress={handleReportMessage}
-                accessibilityLabel={t("reportMessage")}
-              >
-                <Text style={[styles.reportButtonText, dynamicStyles.reportButtonText]}>
-                  {t("report")}
-                </Text>
-              </TouchableOpacity>
-            )}
-          </LinearGradient>
-        </View>
-      );
-    },
-    [challengeId, t, dynamicStyles, currentTheme.colors, isDarkMode]
+    ({ item }: { item: ChatMessage }) => (
+      <MessageItem
+        item={item}
+        isDarkMode={isDarkMode}
+        currentTheme={currentTheme}
+        dynamicStyles={dynamicStyles}
+        t={t as any}
+        challengeId={challengeId as string}
+        onReply={(ctx) => setReplyTo(ctx)}
+      />
+    ),
+    [isDarkMode, currentTheme, dynamicStyles, t, challengeId]
   );
+
+  const headerGradientColors = dynamicStyles.headerGradient.colors;
+  const placeholderColor = dynamicStyles.input.placeholderTextColor;
+  const inputBorderColor = dynamicStyles.input.borderColor;
+  const inputBg = dynamicStyles.input.backgroundColor;
+  const inputTextColor = dynamicStyles.input.color;
+  const backIconColor = dynamicStyles.backButtonIcon.color;
+  const sendIconColor = dynamicStyles.sendButtonIcon.color;
 
   const challengeTitle =
     typeof challengeTitleParam === "string"
       ? challengeTitleParam
       : challengeTitleParam?.[0] || "";
 
+  const canSend = newMessage.trim().length > 0;
+  const showAds = !!showBanners;
+  const showBanner = useMemo(() => showAds && !isKeyboardVisible, [showAds, isKeyboardVisible]);
+
+  // --- Offsets bas unifiés (safe-area + tabbar + bannière)
+  const bottomUIOffset = (tabBarHeight || 0) + (insets.bottom || 0);
+  const bannerOffset = showBanner ? adHeight + 6 : 0; // 6px de respiration
+  const composerBottomSpace = bottomUIOffset + bannerOffset;
+
   return (
-    <SafeAreaView style={[styles.container, dynamicStyles.container]}>
+    <View style={{ flex: 1 }}>
+      <SafeAreaView style={[styles.container, dynamicStyles.container]}>
       <StatusBar
         translucent
         backgroundColor="transparent"
@@ -401,16 +570,16 @@ useEffect(() => {
         onClose={() => setModalVisible(false)}
       />
 
-      {/* Header dégradé, hairline subtile */}
+      {/* Header */}
       <LinearGradient
-        colors={getDynamicStyles(currentTheme, isDarkMode).headerGradient.colors}
+        colors={headerGradientColors}
         style={[
           styles.header,
           {
             paddingTop: insets.top,
             borderBottomWidth: StyleSheet.hairlineWidth,
             borderBottomColor: isDarkMode ? "rgba(255,255,255,0.12)" : "rgba(0,0,0,0.08)",
-            shadowOpacity: 0, // kill shadow
+            shadowOpacity: 0,
             elevation: 0,
           },
         ]}
@@ -422,87 +591,163 @@ useEffect(() => {
           testID="back-button"
           activeOpacity={0.7}
         >
-          <Ionicons
-            name="chevron-back"
-            size={normalizeSize(22)}
-            color={getDynamicStyles(currentTheme, isDarkMode).backButtonIcon.color}
-          />
+          <Ionicons name="chevron-back" size={normalizeSize(22)} color={backIconColor} />
         </TouchableOpacity>
-        <Text style={[styles.headerTitle, getDynamicStyles(currentTheme, isDarkMode).headerTitle]}>
+        <Text style={[styles.headerTitle, dynamicStyles.headerTitle]}>
           {challengeTitle || t("challengeChat.defaultTitle")}
         </Text>
         <View style={{ width: normalizeSize(22) }} />
       </LinearGradient>
 
       <KeyboardAvoidingView
-  style={styles.chatContainer}
-  behavior={Platform.OS === "ios" ? "padding" : "height"}  // 👈 mieux pour Android
-  keyboardVerticalOffset={insets.top + normalizeSize(56)}  // 👈 ~ hauteur header
->
-
+        style={styles.chatContainer}
+        behavior={Platform.OS === "ios" ? "padding" : "height"}
+        keyboardVerticalOffset={insets.top + normalizeSize(56)}
+      >
         <FlatList
           ref={flatListRef}
           data={finalMessages}
           renderItem={renderMessage}
-          keyExtractor={(item) => item.id}
+          keyExtractor={keyExtractor}
           contentContainerStyle={[
-    styles.messageList,
-    dynamicStyles.messageList,
-    { paddingBottom: composerHeight + (insets.bottom || 0) + SPACING } // 👈 NEW
-  ]}
-          initialNumToRender={10}
-          windowSize={5}
+            styles.messageList,
+            dynamicStyles.messageList,
+            {
+              paddingBottom: composerHeight + SPACING + composerBottomSpace,
+            },
+          ]}
+          initialNumToRender={12}
+          maxToRenderPerBatch={12}
+          updateCellsBatchingPeriod={50}
+          windowSize={7}
           onLayout={handleListLayout}
           onContentSizeChange={() => flatListRef.current?.scrollToEnd({ animated: true })}
           showsVerticalScrollIndicator={false}
+          removeClippedSubviews
+          keyboardShouldPersistTaps="handled"
+          keyboardDismissMode={Platform.OS === "ios" ? "interactive" : "on-drag"}
         />
 
         {/* Barre d’entrée “glass” premium */}
         <View
-  style={[
-    styles.inputWrapper,
-    dynamicStyles.inputWrapper,
-    { paddingBottom: insets.bottom || SPACING },
-  ]}
-  onLayout={(e) => setComposerHeight(e.nativeEvent.layout.height)}   // 👈 NEW
->
+          style={[
+            styles.inputWrapper,
+            dynamicStyles.inputWrapper,
+            { paddingBottom: insets.bottom || SPACING, marginBottom: bannerOffset },
+          ]}
+          onLayout={(e) => setComposerHeight(e.nativeEvent.layout.height)}
+        >
+          {!!replyTo && (
+            <View style={[styles.replyPreview, { borderColor: inputBorderColor, backgroundColor: inputBg }]}>
+              <View style={{ flex: 1 }}>
+                <Text style={[styles.replyTitle, { color: currentTheme.colors.secondary }]}>
+                  ↩️ {t("challengeChat.replyingTo", { defaultValue: "En réponse à" })} @{replyTo.username}
+                </Text>
+                <Text
+                  numberOfLines={2}
+                  style={[styles.replyExcerpt, { color: dynamicStyles.messageText.color }]}
+                >
+                  {replyTo.text}
+                </Text>
+              </View>
+              <TouchableOpacity
+                onPress={clearReply}
+                accessibilityLabel={t("common.close", { defaultValue: "Fermer" })}
+                hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
+                style={styles.replyClose}
+              >
+                <Ionicons name="close" size={normalizeSize(16)} color={dynamicStyles.messageText.color as string} />
+              </TouchableOpacity>
+            </View>
+          )}
           <TextInput
             style={[
               styles.input,
               {
-                borderColor: getDynamicStyles(currentTheme, isDarkMode).input.borderColor,
-                backgroundColor: getDynamicStyles(currentTheme, isDarkMode).input.backgroundColor,
-                color: getDynamicStyles(currentTheme, isDarkMode).input.color,
+                borderColor: inputBorderColor,
+                backgroundColor: inputBg,
+                color: inputTextColor,
               },
             ]}
             placeholder={t("challengeChat.placeholder")}
-            placeholderTextColor={getDynamicStyles(currentTheme, isDarkMode).input.placeholderTextColor}
+            placeholderTextColor={placeholderColor as string}
             value={newMessage}
             onChangeText={setNewMessage}
             multiline
             accessibilityLabel={t("challengeChat.inputA11yLabel")}
             accessibilityHint={t("challengeChat.inputA11yHint")}
             testID="message-input"
+            returnKeyType="send"
+            onSubmitEditing={handleSend}
+            blurOnSubmit={false}
           />
           <LinearGradient
             colors={[currentTheme.colors.secondary, currentTheme.colors.primary]}
             start={{ x: 0, y: 0 }}
             end={{ x: 1, y: 1 }}
-            style={styles.sendButton}
+            style={[
+              styles.sendButton,
+              (!canSend || cooldownLeft > 0) && { opacity: 0.5 },
+            ]}
           >
-            <TouchableOpacity onPress={handleSend} activeOpacity={0.85}>
-              <Ionicons
-                name="send"
-                size={normalizeSize(18)}
-                color={getDynamicStyles(currentTheme, isDarkMode).sendButtonIcon.color}
-              />
+            <TouchableOpacity
+              onPress={handleSend}
+              activeOpacity={0.85}
+              disabled={!canSend || cooldownLeft > 0}
+              hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
+              accessibilityLabel={t("challengeChat.sendA11yLabel", { defaultValue: "Envoyer le message" })}
+              accessibilityHint={
+                cooldownLeft > 0
+                  ? t("challengeChat.slowmodeHint", {
+                      defaultValue: "Patiente un instant avant d’envoyer un nouveau message.",
+                    })
+                  : undefined
+              }
+            >
+              <Ionicons name="send" size={normalizeSize(18)} color={sendIconColor} />
             </TouchableOpacity>
           </LinearGradient>
         </View>
       </KeyboardAvoidingView>
-    </SafeAreaView>
+   </SafeAreaView>
+
+      {/* Hairline au-dessus de la bannière dockée */}
+      {showBanner && adHeight > 0 && (
+        <View
+          pointerEvents="none"
+          style={{
+            position: "absolute",
+            left: 0,
+            right: 0,
+            bottom: (tabBarHeight as number) + insets.bottom + adHeight + 6,
+            height: StyleSheet.hairlineWidth,
+            backgroundColor: isDarkMode ? "rgba(255,255,255,0.12)" : "rgba(0,0,0,0.08)",
+            zIndex: 9999,
+          }}
+        />
+      )}
+
+      {/* Bannière dockée bas (masquée si clavier ouvert) */}
+      {showBanner && (
+        <View
+          style={{
+            position: "absolute",
+            left: 0,
+            right: 0,
+            bottom: (tabBarHeight as number) + insets.bottom,
+            alignItems: "center",
+            backgroundColor: "transparent",
+            paddingBottom: 6,
+            zIndex: 100,
+          }}
+          pointerEvents="box-none"
+        >
+          <BannerSlot docked onHeight={(h) => setAdHeight(h)} />
+        </View>
+      )}
+    </View>
   );
-}
+  }
 
 const styles = StyleSheet.create({
   container: { flex: 1 },
@@ -527,7 +772,13 @@ const styles = StyleSheet.create({
     textAlign: "center",
     flex: 1,
   },
-
+bannerContainer: {
+    paddingHorizontal: SPACING,
+    paddingTop: SPACING / 2,
+    paddingBottom: SPACING / 2,
+    backgroundColor: "transparent",
+    alignSelf: "stretch",
+  },
   chatContainer: { flex: 1 },
 
   messageList: {
@@ -541,6 +792,29 @@ const styles = StyleSheet.create({
     marginVertical: normalizeSize(8),
     alignItems: "flex-end",
   },
+  replyPreview: {
+    flexDirection: "row",
+    alignItems: "flex-start",
+    borderWidth: StyleSheet.hairlineWidth,
+    borderRadius: normalizeSize(14),
+    paddingVertical: normalizeSize(8),
+    paddingHorizontal: SPACING * 0.8,
+    marginBottom: normalizeSize(8),
+  },
+  replyTitle: {
+    fontFamily: "Comfortaa_700Bold",
+    fontSize: normalizeSize(12),
+    marginBottom: normalizeSize(4),
+  },
+  replyExcerpt: {
+    fontFamily: "Comfortaa_400Regular",
+    fontSize: normalizeSize(12),
+    opacity: 0.9,
+  },
+  replyClose: {
+    marginLeft: SPACING,
+    paddingTop: normalizeSize(2),
+  },
   myMessageRow: { justifyContent: "flex-end" },
   otherMessageRow: { justifyContent: "flex-start" },
 
@@ -551,7 +825,6 @@ const styles = StyleSheet.create({
     borderRadius: normalizeSize(20),
     padding: SPACING,
     borderWidth: StyleSheet.hairlineWidth,
-    // no heavy shadows
     shadowOpacity: 0,
     elevation: 0,
   },
@@ -604,36 +877,33 @@ const styles = StyleSheet.create({
     fontSize: normalizeSize(12),
     fontFamily: "Comfortaa_700Bold",
   },
+
   systemWelcomeRow: {
-  flexDirection: "row",
-  justifyContent: "center",
-  marginVertical: normalizeSize(10),
-},
-
-systemWelcomeWrap: {
-  alignSelf: "center",
-  maxWidth: "92%",
-  paddingVertical: normalizeSize(12),
-  paddingHorizontal: normalizeSize(14),
-  borderRadius: normalizeSize(14),
-  borderWidth: 1.5,
-  borderStyle: "dashed",
-},
-
-systemWelcomeTitle: {
-  fontFamily: "Comfortaa_700Bold",
-  fontSize: normalizeSize(13),
-  textAlign: "center",
-  marginBottom: normalizeSize(6),
-},
-
-systemWelcomeText: {
-  fontFamily: "Comfortaa_400Regular",
-  fontSize: normalizeSize(13),
-  lineHeight: normalizeSize(18),
-  textAlign: "center",
-},
-
+    flexDirection: "row",
+    justifyContent: "center",
+    marginVertical: normalizeSize(10),
+  },
+  systemWelcomeWrap: {
+    alignSelf: "center",
+    maxWidth: "92%",
+    paddingVertical: normalizeSize(12),
+    paddingHorizontal: normalizeSize(14),
+    borderRadius: normalizeSize(14),
+    borderWidth: 1.5,
+    borderStyle: "dashed",
+  },
+  systemWelcomeTitle: {
+    fontFamily: "Comfortaa_700Bold",
+    fontSize: normalizeSize(13),
+    textAlign: "center",
+    marginBottom: normalizeSize(6),
+  },
+  systemWelcomeText: {
+    fontFamily: "Comfortaa_400Regular",
+    fontSize: normalizeSize(13),
+    lineHeight: normalizeSize(18),
+    textAlign: "center",
+  },
 
   // Orbes
   orb: { position: "absolute", opacity: 0.9 },

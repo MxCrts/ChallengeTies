@@ -5,8 +5,9 @@ import * as Localization from "expo-localization";
 import i18n from "../i18n";
 
 /** ⇣ aligne avec i18n.ts */
-type Language = "en" | "fr" | "es" | "de" | "zh" | "ar" | "hi" | "ru" | "it";
-const SUPPORTED_LANGS: Language[] = ["en","fr","es","de","zh","ar","hi","ru","it"];
+type Language = "en" | "fr" | "es" | "de" | "zh" | "ar" | "hi" | "ru" | "it" | "pt" | "ja" | "ko";
+const SUPPORTED_LANGS: Language[] = ["en","fr","es","de","zh","ar","hi","ru","it","pt","ja","ko"];
+
 
 interface LanguageContextProps {
   language: Language;

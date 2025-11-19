@@ -7,13 +7,13 @@ import { normalize } from "../utils/normalize";
 
 const CIRCLE_SIZE = normalize(55);
 
-const iconMap: Record<number, keyof typeof Ionicons.glyphMap> = {
-  0: "sparkles",
-  1: "home-outline",
-  2: "person-outline",
-  3: "flash-outline",
-  4: "compass-outline",
-};
+// Map parfaitement cohérente avec les 4 étapes du tutoriel
+ const iconMap: Record<number, keyof typeof Ionicons.glyphMap> = {
+   0: "sparkles",        // Welcome
+   1: "arrow-forward",   // Lancer l'aventure (CTA)
+   2: "flame-outline",   // Défis du jour
+   3: "bulb-outline",    // S’inspirer
+ };
 
 export default function TutorialIcon({ step }: { step: number }) {
   const iconName = iconMap[step] || "star";

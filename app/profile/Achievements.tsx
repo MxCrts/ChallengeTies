@@ -1,4 +1,4 @@
-import React, { useEffect, useState, useMemo, useCallback } from "react";
+import React, { useEffect, useState, useMemo, useCallback, useRef  } from "react";
 import {
   View,
   Text,
@@ -9,12 +9,11 @@ import {
   SafeAreaView,
   TouchableOpacity,
   StatusBar,
-  Platform,
 } from "react-native";
 import { Ionicons } from "@expo/vector-icons";
 import { doc, onSnapshot } from "firebase/firestore";
 import { LinearGradient } from "expo-linear-gradient";
-import Animated, { ZoomIn, FadeInUp } from "react-native-reanimated";
+import Animated, { ZoomIn, FadeInUp, useSharedValue, withTiming } from "react-native-reanimated";
 import { db, auth } from "../../constants/firebase-config";
 import { useTrophy } from "../../context/TrophyContext";
 import { achievementsList } from "../../helpers/achievementsConfig";
@@ -24,9 +23,12 @@ import { Theme } from "../../theme/designSystem";
 import CustomHeader from "@/components/CustomHeader";
 import { useTranslation } from "react-i18next";
 import { useRouter } from "expo-router";
-import { BannerAd, BannerAdSize } from "react-native-google-mobile-ads";
-import { adUnitIds } from "@/constants/admob";
+import BannerSlot from "@/components/BannerSlot";
+import { useBottomTabBarHeight } from "@react-navigation/bottom-tabs";
+import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { useAdsVisibility } from "../../src/context/AdsVisibilityContext";
+import * as Haptics from "expo-haptics";
+import type { SectionListRenderItemInfo } from "react-native";
 
 const SPACING = 18; // Aligné avec CompletedChallenges.tsx
 const { width: SCREEN_WIDTH, height: SCREEN_HEIGHT } = Dimensions.get("window");
@@ -36,7 +38,6 @@ const normalizeSize = (size: number) => {
   return Math.round(size * scale);
 };
 
-const BANNER_HEIGHT = normalizeSize(50);
 
 /** Util pour ajouter une alpha sans casser les gradients */
 const withAlpha = (color: string, alpha: number) => {
@@ -65,6 +66,7 @@ interface Achievement {
   trophies: number;
   isClaimable: boolean;
   isCompleted: boolean;
+  isNew?: boolean;
 }
 
 interface AchievementSection {
@@ -117,6 +119,7 @@ export default function AchievementsScreen() {
   const router = useRouter();
   const [sections, setSections] = useState<AchievementSection[]>([]);
   const [loading, setLoading] = useState(true);
+  const [refreshing, setRefreshing] = useState(false);
   const { setTrophyData } = useTrophy();
   const { theme } = useTheme();
   const isDarkMode = theme === "dark";
@@ -124,9 +127,25 @@ export default function AchievementsScreen() {
     () => (isDarkMode ? designSystem.darkTheme : designSystem.lightTheme),
     [isDarkMode]
   );
-  const npa = (globalThis as any).__NPA__ === true;
-  const { showBanners } = useAdsVisibility();
-  const bottomPadding = showBanners ? BANNER_HEIGHT + normalizeSize(90) : normalizeSize(90);
+ const { showBanners } = useAdsVisibility();
+const insets = useSafeAreaInsets();
+// Rendre l'accès au tabBarHeight sûr même hors Tab Navigator
+let tabBarHeight = 0;
+try {
+  tabBarHeight = useBottomTabBarHeight();
+} catch (_e) {
+  tabBarHeight = 0; // fallback si l'écran n'est pas dans un BottomTabNavigator
+}
+const [adHeight, setAdHeight] = useState(0);
+
+const bottomPadding =
+  normalizeSize(90) +
+  (showBanners ? adHeight : 0) +
+  (tabBarHeight || 0) +
+  insets.bottom;
+
+const progressSV = useSharedValue(0);
+  const totalRef = useRef(0);
 
   useEffect(() => {
     const userId = auth.currentUser?.uid;
@@ -150,6 +169,7 @@ export default function AchievementsScreen() {
               trophies: (val as any).points,
               isClaimable: pending.has(key),
               isCompleted: obtained.has(key),
+              isNew: pending.has(key) && !obtained.has(key),
             });
           } else {
             Object.entries(
@@ -162,6 +182,7 @@ export default function AchievementsScreen() {
                 trophies: subVal.points,
                 isClaimable: pending.has(id),
                 isCompleted: obtained.has(id),
+                isNew: pending.has(id) && !obtained.has(id),
               });
             });
           }
@@ -193,6 +214,12 @@ export default function AchievementsScreen() {
 
         setSections(secs);
         setLoading(false);
+        // anime la barre de progression quand les données arrivent
+        const totalNow = secs.reduce((s, sec) => s + sec.data.length, 0);
+        const doneNow = secs.reduce((s, sec) => s + sec.data.filter(x => x.isCompleted).length, 0);
+        totalRef.current = totalNow;
+        const ratio = totalNow ? doneNow / totalNow : 0;
+        progressSV.value = withTiming(ratio, { duration: 600 });
       },
       (error) => {
         console.error("Erreur onSnapshot:", error);
@@ -213,20 +240,6 @@ export default function AchievementsScreen() {
         0
       ),
     [sections]
-  );
-  const metadata = useMemo(
-    () => ({
-      title: t("yourAchievements"),
-      description: t("firstAchievementsPrompt"),
-      url: `https://challengeme.com/achievements/${auth.currentUser?.uid}`,
-      structuredData: {
-        "@context": "https://schema.org",
-        "@type": "WebPage",
-        name: t("yourAchievements"),
-        description: t("firstAchievementsPrompt"),
-      },
-    }),
-    [t]
   );
 
   const renderSectionHeader = useCallback(
@@ -270,7 +283,7 @@ export default function AchievementsScreen() {
   );
 
   const renderItem = useCallback(
-    ({ item, index }: { item: Achievement; index: number }) => (
+    ({ item, index }: SectionListRenderItemInfo<Achievement, AchievementSection>) => (
       <Animated.View
         entering={ZoomIn.delay(index * 75)}
         style={styles.cardWrapper}
@@ -278,7 +291,7 @@ export default function AchievementsScreen() {
         <TouchableOpacity
           activeOpacity={0.9}
           onPress={() =>
-            item.isClaimable && setTrophyData(item.trophies, item.identifier)
+            item.isClaimable && (Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium).catch(()=>{}), setTrophyData(item.trophies, item.identifier))
           }
           accessibilityLabel={t(item.identifier)}
           accessibilityHint={
@@ -331,6 +344,11 @@ export default function AchievementsScreen() {
                 >
                   {item.trophies}
                 </Text>
+                {!!item.isNew && (
+                  <View style={styles.newBadge}>
+                    <Text style={styles.newBadgeText}>{String(t("new"))}</Text>
+                  </View>
+                )}
               </View>
               <View style={styles.details}>
                 <Text
@@ -411,6 +429,12 @@ export default function AchievementsScreen() {
     ),
     [t, currentTheme, setTrophyData, isDarkMode]
   );
+
+  const onRefresh = useCallback(() => {
+    setRefreshing(true);
+    // L’écoute Firestore rafraîchit automatiquement; on arrête juste l’UI refresh
+    setTimeout(() => setRefreshing(false), 600);
+  }, []);
 
   if (loading) {
     return (
@@ -496,18 +520,23 @@ export default function AchievementsScreen() {
         </Animated.View>
       </View>
       {showBanners && (
-        <View style={styles.bannerContainer}>
-          <BannerAd
-  unitId={adUnitIds.banner}
-  size={BannerAdSize.BANNER}
-  requestOptions={{ requestNonPersonalizedAdsOnly: npa }}
-  onAdFailedToLoad={(err) =>
-    console.error("Échec chargement bannière (Achievements...):", err)
-  }
-/>
+  <View
+    style={{
+      position: "absolute",
+      left: 0,
+      right: 0,
+      bottom: (tabBarHeight || 0) + insets.bottom,
+      alignItems: "center",
+      backgroundColor: "transparent",
+      paddingBottom: 6,
+      zIndex: 9999,
+    }}
+    pointerEvents="box-none"
+  >
+    <BannerSlot onHeight={(h) => setAdHeight(h)} />
+  </View>
+)}
 
-        </View>
-      )}
     </LinearGradient>
   </SafeAreaView>
 );
@@ -553,10 +582,11 @@ export default function AchievementsScreen() {
       <View style={styles.container}>
         <View style={styles.progressBarWrapper}>
           <View style={[styles.progressBarBackground, { backgroundColor: currentTheme.colors.border }]}>
-            <View
+            <Animated.View
               style={[
                 styles.progressBarFill,
-                { width: `${(done / total) * 100}%`, backgroundColor: currentTheme.colors.secondary },
+                // largeur animée (progressSV ∈ [0,1])
+                { width: `${Math.round(progressSV.value * 100)}%`, backgroundColor: currentTheme.colors.secondary },
               ]}
             />
           </View>
@@ -576,21 +606,29 @@ export default function AchievementsScreen() {
           maxToRenderPerBatch={10}
           windowSize={5}
           contentInset={{ top: SPACING, bottom: 0 }}
+          stickySectionHeadersEnabled
+          refreshing={refreshing}
+          onRefresh={onRefresh}
         />
       </View>
       {showBanners && (
-        <View style={styles.bannerContainer}>
-          <BannerAd
-  unitId={adUnitIds.banner}
-  size={BannerAdSize.BANNER}
-  requestOptions={{ requestNonPersonalizedAdsOnly: npa }}
-  onAdFailedToLoad={(err) =>
-    console.error("Échec chargement bannière (Achievements...):", err)
-  }
-/>
+  <View
+    style={{
+      position: "absolute",
+      left: 0,
+      right: 0,
+      bottom: tabBarHeight + insets.bottom,
+      alignItems: "center",
+      backgroundColor: "transparent",
+      paddingBottom: 6,
+      zIndex: 9999,
+    }}
+    pointerEvents="box-none"
+  >
+    <BannerSlot onHeight={(h) => setAdHeight(h)} />
+  </View>
+)}
 
-        </View>
-      )}
     </LinearGradient>
   </SafeAreaView>
 );
@@ -719,6 +757,19 @@ bgOrbBottom: {
     paddingVertical: SPACING * 1.5,
     paddingHorizontal: SPACING, // Restaure un padding naturel
     paddingBottom: normalizeSize(80), // Aligné avec CompletedChallenges.tsx
+  },
+  newBadge: {
+    marginTop: normalizeSize(6),
+    paddingHorizontal: 8,
+    paddingVertical: 2,
+    borderRadius: 999,
+    backgroundColor: "#22C55E",
+  },
+  newBadgeText: {
+    fontSize: normalizeSize(10),
+    fontFamily: "Comfortaa_700Bold",
+    color: "#fff",
+    letterSpacing: 0.3,
   },
   cardWrapper: {
     marginBottom: SPACING * 1.5, // Aligné avec CompletedChallenges.tsx

@@ -9,6 +9,7 @@ import {
 import { db, auth } from "../constants/firebase-config";
 import { checkForAchievements } from "../helpers/trophiesHelpers";
 import { achievementsList } from "../helpers/achievementsConfig";
+import { serverTimestamp, type FieldValue } from "firebase/firestore";
 
 interface ProfileUpdateContextProps {
   triggerProfileUpdate: () => Promise<void>;
@@ -23,6 +24,24 @@ export const ProfileUpdateProvider: React.FC<{ children: ReactNode }> = ({
   children,
 }) => {
   const [profileUpdated, setProfileUpdated] = useState(false);
+
+  const parseInterests = (v: any): string[] =>
+    Array.isArray(v)
+      ? v.map((s) => String(s).trim()).filter(Boolean)
+      : String(v || "")
+          .split(",")
+          .map((s) => s.trim())
+          .filter(Boolean);
+
+  const isProfileCompleteServerSide = (userData: any): boolean => {
+    const nameOk = String(userData?.displayName || "").trim().length >= 2;
+    const bioOk = String(userData?.bio || "").trim().length >= 10;
+    const locOk = String(userData?.location || "").trim().length >= 2;
+    const picOk = !!String(userData?.profileImage || "").trim();
+    const ints = parseInterests(userData?.interests);
+    const interestOk = ints.length > 0;
+    return nameOk && bioOk && locOk && picOk && interestOk;
+  };
 
   const triggerProfileUpdate = async () => {
     const userId = auth.currentUser?.uid;
@@ -48,17 +67,14 @@ export const ProfileUpdateProvider: React.FC<{ children: ReactNode }> = ({
       newAchievements.push("first_connection");
     }
 
-    // Forcer "profile_completed" si le profil semble complet
-    // On s'assure ici que les champs attendus sont présents et, pour interests, qu'il s'agit d'un tableau non vide
-    if (
-      userData.bio &&
-      userData.location &&
-      userData.profileImage &&
-      Array.isArray(userData.interests) &&
-      userData.interests.length > 0 &&
-      !userData.achievements?.includes("profile_completed") &&
-      !userData.newAchievements?.includes("profile_completed")
-    ) {
+    // ✅ "profile_completed" robuste (accepte interests string/array + mini longueurs)
+    const canMarkProfileCompleted = isProfileCompleteServerSide(userData);
+    const alreadyProfileCompleted =
+      userData?.achievements?.includes("profile_completed") ||
+      userData?.newAchievements?.includes("profile_completed") ||
+      userData?.profileCompleted === true ||
+      userData?.stats?.profile?.completed === true;
+    if (canMarkProfileCompleted && !alreadyProfileCompleted) {
       newAchievements.push("profile_completed");
     }
 
@@ -92,11 +108,20 @@ export const ProfileUpdateProvider: React.FC<{ children: ReactNode }> = ({
     }, 0);
 
     // Met à jour Firestore avec les nouveaux succès et incrémente les trophées
-    await updateDoc(userRef, {
+    const patch: any = {
       newAchievements: arrayUnion(...newAchievements),
       achievements: arrayUnion(...newAchievements),
       trophies: increment(totalTrophies),
-    });
+    };
+    // 🏁 Pose aussi les flags "profil complet" si applicable (idempotent)
+    if (canMarkProfileCompleted) {
+      patch.profileCompleted = true;
+      patch["stats.profile.completed"] = true;
+      if (!userData?.profileCompletedAt) {
+        patch.profileCompletedAt = serverTimestamp();
+      }
+    }
+    await updateDoc(userRef, patch);
 
     console.log(
       `✅ Succès ajoutés: ${newAchievements.join(

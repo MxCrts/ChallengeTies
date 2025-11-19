@@ -17,7 +17,7 @@ import {
   Keyboard
 } from "react-native";
 import { useRouter } from "expo-router";
-import { doc, updateDoc, getDoc } from "firebase/firestore";
+import { doc, updateDoc, getDoc, serverTimestamp, type FieldValue } from "firebase/firestore";
 import { auth, db, storage } from "../../constants/firebase-config";
 import * as ImagePicker from "expo-image-picker";
 import { TextInput } from "react-native-paper";
@@ -30,35 +30,29 @@ import designSystem from "../../theme/designSystem";
 import CustomHeader from "@/components/CustomHeader";
 import Animated, { FadeInUp, ZoomIn } from "react-native-reanimated";
 import { useTranslation } from "react-i18next";
-import { Ionicons } from "@expo/vector-icons";
 import { BlurView } from "expo-blur";
 import type { ViewStyle } from "react-native";
-import { BannerAd, BannerAdSize } from "react-native-google-mobile-ads";
-import { adUnitIds } from "@/constants/admob";
-import { useAdsVisibility } from "../../src/context/AdsVisibilityContext";
+import BannerSlot from "@/components/BannerSlot";
+ import { useBottomTabBarHeight } from "@react-navigation/bottom-tabs";
+ import { useSafeAreaInsets } from "react-native-safe-area-context";
+ import { useAdsVisibility } from "../../src/context/AdsVisibilityContext";
 
 const SPACING = 15;
 
 const { width: SCREEN_WIDTH, height: SCREEN_HEIGHT } = Dimensions.get("window");
-
-// Auto-compact on small screens (e.g., iPhone SE / older Androids)
-const IS_COMPACT = SCREEN_HEIGHT < 720;
-
-// Slightly tighter scaler on compact screens
-const n = (size: number) => Math.round(normalizeSize(IS_COMPACT ? size * 0.9 : size));
-
-// Vertical rhythm tuned for compact
-const V_SPACING = IS_COMPACT ? 10 : 15;
-
-
-
+// 🔼 Déclare normalizeSize AVANT de l’utiliser dans n()
 const normalizeSize = (size: number) => {
   const baseWidth = 375;
   const scale = Math.min(Math.max(SCREEN_WIDTH / baseWidth, 0.7), 1.8);
   return Math.round(size * scale);
 };
 
-const BANNER_HEIGHT = normalizeSize(50);
+// Auto-compact on small screens (e.g., iPhone SE / older Androids)
+const IS_COMPACT = SCREEN_HEIGHT < 720;
+// Slightly tighter scaler on compact screens
+const n = (size: number) => Math.round(normalizeSize(IS_COMPACT ? size * 0.9 : size));
+// Vertical rhythm tuned for compact
+const V_SPACING = IS_COMPACT ? 10 : 15;
 
 /** Util pour ajouter une alpha sans casser les gradients */
 const withAlpha = (color: string, alpha: number) => {
@@ -92,6 +86,42 @@ const toDisplayString = (v: any): string => {
 // 👇 Trim sécurisé: retourne toujours une string trimée
 const safeTrim = (v: any): string => toDisplayString(v).trim();
 
+// 👇 Parse robuste: accepte string "a, b" ou array ["a","b"]
+const parseInterests = (v: any): string[] =>
+  Array.isArray(v)
+    ? v.map((s) => String(s).trim()).filter(Boolean)
+    : String(v || "")
+        .split(",")
+        .map((s) => s.trim())
+        .filter(Boolean);
+
+// 👇 Détermine si le profil est complet côté client (idempotent)
+const isProfileCompleteLocal = (data: {
+  displayName?: any;
+  bio?: any;
+  location?: any;
+  profileImage?: any;
+  interests?: any;
+}): boolean => {
+  const hasName = safeTrim(data.displayName).length >= 2; // mini lisible
+  const hasBio = safeTrim(data.bio).length >= 10;         // mini utile
+  const hasLoc = safeTrim(data.location).length >= 2;
+  const hasPic = !!safeTrim(data.profileImage);
+  const ints = parseInterests(data.interests);
+  const hasInterests = ints.length > 0;
+  return hasName && hasBio && hasLoc && hasPic && hasInterests;
+};
+
+// ========= Safe TabBar Height (évite le crash hors Tabs) =========
+function useTabBarHeightSafe(): number {
+  // On tente d'utiliser le hook officiel; s'il n'y a pas de Tabs, il throw → fallback 0
+  try {
+    return useBottomTabBarHeight();
+  } catch {
+    return 0;
+  }
+}
+
 // ==== GlassCard (défini au module scope) ====
 type GlassCardProps = {
   isDarkMode: boolean;
@@ -117,7 +147,6 @@ const GlassCard: React.FC<GlassCardProps> = ({
       <BlurView
         intensity={45}
         tint={isDarkMode ? "dark" : "light"}
-        experimentalBlurMethod="dimezisBlurView"
         style={StyleSheet.absoluteFill}
       />
       <LinearGradient
@@ -149,24 +178,34 @@ interface User {
 export default function UserInfo() {
   const { t } = useTranslation();
   const router = useRouter();
+  // 🔒 Limites & règles UX
+  const MAX_NAME = 32;
+  const MAX_BIO = 240;
+  const MAX_LOCATION = 60;
+  const MAX_INTERESTS = 160;
   const [user, setUser] = useState<User | null>(null);
   const [displayName, setDisplayName] = useState("");
   const [bio, setBio] = useState("");
   const [profileImage, setProfileImage] = useState<string | null>(null);
   const [location, setLocation] = useState("");
   const [interests, setInterests] = useState("");
-  const [isLoading, setIsLoading] = useState(false);
+  const [isLoading, setIsLoading] = useState(true);
   const { theme } = useTheme();
-  const npa = (globalThis as any).__NPA__ === true;
 
   const isDarkMode = theme === "dark";
+  const insets = useSafeAreaInsets();
+ const tabBarHeight = useTabBarHeightSafe();
+ const [adHeight, setAdHeight] = useState(0);
   const currentTheme: Theme = useMemo(
     () => (isDarkMode ? designSystem.darkTheme : designSystem.lightTheme),
     [isDarkMode]
   );
   const navigatedRef = useRef(false);
   const { showBanners } = useAdsVisibility();
- const bottomPadding = showBanners ? BANNER_HEIGHT + n(40) : n(40);
+ const bottomPadding = useMemo(
+    () => n(40) + (showBanners ? adHeight : 0) + tabBarHeight + insets.bottom,
+    [adHeight, insets.bottom, showBanners, tabBarHeight]
+  );
 
   // États de focus pour chaque champ
   const [isDisplayNameFocused, setIsDisplayNameFocused] = useState(false);
@@ -204,7 +243,6 @@ const hasChanges = useMemo(() => {
   // Chargement des données utilisateur
   useEffect(() => {
     const fetchUserData = async () => {
-      setIsLoading(true);
       try {
         const currentUser = auth.currentUser;
         if (!currentUser) throw new Error(t("userNotAuthenticated"));
@@ -299,18 +337,40 @@ const hasChanges = useMemo(() => {
 
   // Sauvegarde des modifications
   const handleSave = useCallback(async () => {
+    // 🔍 Validations front rapides avant write
+  const tooLong =
+    displayName.trim().length > MAX_NAME ||
+    bio.trim().length > MAX_BIO ||
+    location.trim().length > MAX_LOCATION ||
+    interests.trim().length > MAX_INTERESTS;
+  if (tooLong) {
+    Alert.alert(
+      t("error"),
+      t("profileFieldTooLong", {
+        defaultValue:
+          "Certains champs dépassent la longueur autorisée. Réduis un peu le texte et réessaie.",
+      })
+    );
+    return;
+  }
   if (!user?.uid) {
     Alert.alert(t("error"), t("userNotFound"));
     return;
   }
 
   // ✅ On construit dynamiquement ce qui change VRAIMENT (et non vide)
-  const updateData: Partial<User> = {};
+  const updateData: Partial<User & {
+    profileCompleted?: boolean;
+    profileCompletedAt?: FieldValue | Date;
+    "stats.profile.completed"?: boolean;
+  }> = {};
 
 const cleanDisplay = safeTrim(displayName);
 const cleanBio = safeTrim(bio);
 const cleanLocation = safeTrim(location);
-const cleanInterests = safeTrim(interests);
+// Normalise les intérêts: "a,  b ,, c" -> "a, b, c"
+const interestsArray = parseInterests(interests);
+const cleanInterests = interestsArray.join(", ");
 
 if (cleanDisplay && cleanDisplay !== safeTrim(user.displayName)) {
   updateData.displayName = cleanDisplay;
@@ -329,6 +389,23 @@ if (cleanInterests && cleanInterests !== safeTrim(user.interests)) {
   // remplace par: cleanInterests.split(",").map(s => s.trim()).filter(Boolean)
   updateData.interests = cleanInterests;
 }
+
+// ✅ Si, avec les valeurs à jour (côté client), le profil devient complet,
+  // on pose des flags server-friendly (idempotent côté rules/serveur).
+  const prospective = {
+    displayName: cleanDisplay || user.displayName,
+    bio: cleanBio || user.bio,
+    location: cleanLocation || user.location,
+    profileImage: (profileImage || user.profileImage) ?? "",
+    interests: cleanInterests || user.interests,
+  };
+  const willBeComplete = isProfileCompleteLocal(prospective);
+  if (willBeComplete) {
+    updateData.profileCompleted = true as any;
+    updateData["stats.profile.completed"] = true as any;
+    // profileCompletedAt → côté serveur (évite le décalage d’horloge client)
+    (updateData as any).profileCompletedAt = serverTimestamp();
+  }
 
 
   // Rien de pertinent à mettre à jour → on informe et on sort
@@ -353,24 +430,6 @@ if (cleanInterests && cleanInterests !== safeTrim(user.interests)) {
     if (!navigatedRef.current) setIsLoading(false);
   }
 }, [user, displayName, bio, profileImage, location, interests, router, t]);
-
-
-
-  // Métadonnées SEO
-  const metadata = useMemo(
-    () => ({
-      title: t("yourProfile"),
-      description: t("editProfile.description"),
-      url: `https://challengeme.com/profile/edit/${auth.currentUser?.uid}`,
-      structuredData: {
-        "@context": "https://schema.org",
-        "@type": "WebPage",
-        name: t("editProfile.title"),
-        description: t("editProfile.description"),
-      },
-    }),
-    [t]
-  );
 
   if (isLoading) {
     return (
@@ -536,7 +595,7 @@ if (cleanInterests && cleanInterests !== safeTrim(user.interests)) {
       mode="flat"
       style={[styles.input, { fontSize: normalizeSize(14) }]}
       value={displayName}
-      onChangeText={setDisplayName}
+      onChangeText={(v) => setDisplayName(v.slice(0, MAX_NAME))}
       onFocus={() => setIsDisplayNameFocused(true)}
       onBlur={() => setIsDisplayNameFocused(false)}
       textColor={isDarkMode ? currentTheme.colors.textPrimary : "#000"}
@@ -576,7 +635,7 @@ if (cleanInterests && cleanInterests !== safeTrim(user.interests)) {
       mode="flat"
       style={[styles.input, styles.multilineInput, { fontSize: normalizeSize(14) }]}
       value={bio}
-      onChangeText={setBio}
+      onChangeText={(v) => setBio(v.slice(0, MAX_BIO))}
       onFocus={() => setIsBioFocused(true)}
       onBlur={() => setIsBioFocused(false)}
       multiline
@@ -618,7 +677,7 @@ if (cleanInterests && cleanInterests !== safeTrim(user.interests)) {
       mode="flat"
       style={[styles.input, { fontSize: normalizeSize(14) }]}
       value={location}
-      onChangeText={setLocation}
+      onChangeText={(v) => setLocation(v.slice(0, MAX_LOCATION))}
       onFocus={() => setIsLocationFocused(true)}
       onBlur={() => setIsLocationFocused(false)}
       textColor={isDarkMode ? currentTheme.colors.textPrimary : "#000"}
@@ -658,7 +717,7 @@ if (cleanInterests && cleanInterests !== safeTrim(user.interests)) {
       mode="flat"
       style={[styles.input, { fontSize: normalizeSize(14) }]}
       value={interests}
-      onChangeText={setInterests}
+      onChangeText={(v) => setInterests(v.slice(0, MAX_INTERESTS))}
       onFocus={() => setIsInterestsFocused(true)}
       onBlur={() => setIsInterestsFocused(false)}
       textColor={isDarkMode ? currentTheme.colors.textPrimary : "#000"}
@@ -731,18 +790,23 @@ if (cleanInterests && cleanInterests !== safeTrim(user.interests)) {
             </Animated.View>
           </ScrollView>
         </KeyboardAvoidingView>
-        {showBanners && (
-   <View style={styles.bannerContainer}>
-     <BannerAd
-       unitId={adUnitIds.banner}
-       size={BannerAdSize.BANNER}
-       requestOptions={{ requestNonPersonalizedAdsOnly: npa }}
-       onAdFailedToLoad={(err) =>
-         console.error("Échec chargement bannière (UserInfo):", err)
-       }
-     />
+        {showBanners ? (
+   <View
+     style={{
+       position: "absolute",
+       left: 0,
+       right: 0,
+       bottom: tabBarHeight + insets.bottom,
+       alignItems: "center",
+       backgroundColor: "transparent",
+       paddingBottom: 6,
+       zIndex: 9999,
+     }}
+     pointerEvents="box-none"
+   >
+     <BannerSlot onHeight={(h) => setAdHeight(h)} />
    </View>
- )}
+) : null}
       </LinearGradient>
     </SafeAreaView>
   );
@@ -776,22 +840,6 @@ const styles = StyleSheet.create({
     shadowRadius: n(7),
     elevation: 8,
   },
-  headerWrapper: {
-    width: "100%",
-    paddingHorizontal: SPACING,
-    paddingVertical: SPACING,
-    position: "relative",
-  },
-  backButton: {
-    position: "absolute",
-    top:
-      Platform.OS === "android" ? StatusBar.currentHeight ?? SPACING : SPACING,
-    left: SPACING,
-    zIndex: 10,
-    padding: SPACING / 2,
-    backgroundColor: "rgba(0, 0, 0, 0.5)",
-    borderRadius: normalizeSize(20),
-  },
   loadingContainer: {
     flex: 1,
     justifyContent: "center",
@@ -818,16 +866,6 @@ const styles = StyleSheet.create({
     borderRadius: n(IS_COMPACT ? 57 : 64),
     resizeMode: "cover",
   },
-  bannerContainer: {
-   width: "100%",
-   alignItems: "center",
-   paddingVertical: SPACING / 2,
-   backgroundColor: "transparent",
-   position: "absolute",
-   bottom: 0,
-   left: 0,
-   right: 0,
- },
   addImageText: {
     fontSize: normalizeSize(16),
     fontFamily: "Comfortaa_700Bold",

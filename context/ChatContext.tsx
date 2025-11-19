@@ -11,15 +11,12 @@ import {
   addDoc,
   onSnapshot,
   query,
-  orderBy,
   serverTimestamp,
-  updateDoc,
   doc,
-  increment,
 } from "firebase/firestore";
 import { db, auth } from "../constants/firebase-config";
 import { checkForAchievements } from "../helpers/trophiesHelpers";
-
+import { recordChatMessage, incDuoMessages } from "@/src/services/metricsService";
 // On décrit TOUS les champs possibles, y compris ceux des messages système
 export interface ChatMessage {
   id: string;
@@ -39,7 +36,7 @@ export interface ChatMessage {
 
 interface ChatContextType {
   messages: ChatMessage[];
-  sendMessage: (challengeId: string, text: string) => Promise<void>;
+  sendMessage: (challengeId: string, text: string, meta?: { isDuo?: boolean }) => Promise<void>;
   fetchMessages: (challengeId: string) => () => void;
   loadingMessages: boolean;
 }
@@ -90,6 +87,13 @@ const q = query(messagesRef);
           };
         });
 
+        // ✅ Tri local chronologique (pas d'index Firestore requis)
+        fetched.sort((a, b) => {
+          const ta = toDateSafe(a.timestamp).getTime();
+          const tb = toDateSafe(b.timestamp).getTime();
+          return ta - tb;
+        });
+
         setMessages(fetched);
         setLoadingMessages(false);
       },
@@ -102,27 +106,40 @@ const q = query(messagesRef);
     return unsubscribe;
   }, []);
 
-  const sendMessage = useCallback(async (challengeId: string, text: string) => {
+   const sendMessage = useCallback(async (
+    challengeId: string,
+    text: string,
+    meta?: { isDuo?: boolean }
+  ) => {
     if (!auth.currentUser) throw new Error("User not authenticated.");
-
+const trimmed = (text ?? "").trim();
+    if (!trimmed) return;
     const { uid, displayName, photoURL } = auth.currentUser;
     const messageRef = collection(db, "chats", challengeId, "messages");
 
-    await addDoc(messageRef, {
-      text,
-      userId: uid,
-      username: displayName || "Anonymous",
-      avatar: photoURL || "",
-      reported: false,
-      type: "text",
-      timestamp: serverTimestamp(),
-      createdAt: serverTimestamp(),
-    });
+    try {
+      await addDoc(messageRef, {
+        text: trimmed,
+        userId: uid,
+        username: displayName || "Anonymous",
+        avatar: photoURL || "",
+        reported: false,
+        type: "text",
+        timestamp: serverTimestamp(),
+        createdAt: serverTimestamp(),
+      });
+      // ✅ Succès messageSent → stats.messageSent.total (source unique)
+      try { await recordChatMessage(uid); } catch {}
 
-    // compteur utilisateur + trophées
-    const userRef = doc(db, "users", uid);
-    await updateDoc(userRef, { messageSent: increment(1) });
-    await checkForAchievements(uid);
+    // ✅ Si chat DUO → incrémente aussi stats.duo.messages
+      if (meta?.isDuo) {
+        try { await incDuoMessages(uid, 1); } catch {}
+      }
+      try { await checkForAchievements(uid); } catch {}
+    } catch (e) {
+      console.error("Error sending message:", (e as any)?.message ?? e);
+      throw e;
+    }
   }, []);
 
   return (

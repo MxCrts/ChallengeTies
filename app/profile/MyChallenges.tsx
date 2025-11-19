@@ -5,7 +5,6 @@ import {
   FlatList,
   TouchableOpacity,
   ActivityIndicator,
-  Image,
   Dimensions,
   StyleSheet,
   SafeAreaView,
@@ -23,15 +22,24 @@ import { Theme } from "../../theme/designSystem";
 import designSystem from "../../theme/designSystem";
 import CustomHeader from "@/components/CustomHeader";
 import { useTranslation } from "react-i18next";
-import { BannerAd, BannerAdSize } from "react-native-google-mobile-ads";
-import { adUnitIds } from "@/constants/admob";
+import BannerSlot from "@/components/BannerSlot";
+import { useBottomTabBarHeight } from "@react-navigation/bottom-tabs";
+import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { useAdsVisibility } from "../../src/context/AdsVisibilityContext";
+import { Image as ExpoImage } from "expo-image";
+import type { ListRenderItem } from "react-native";
+import * as Haptics from "expo-haptics";
 
 const SPACING = 18; // Déjà aligné avec CompletedChallenges.tsx et Achievements.tsx
 const { width: SCREEN_WIDTH, height: SCREEN_HEIGHT } = Dimensions.get("window");
 const ITEM_WIDTH = SCREEN_WIDTH * 0.9; // Conservé
 const ITEM_HEIGHT = SCREEN_WIDTH * 0.45;
-const CARD_MARGIN = SCREEN_WIDTH * 0.02;
+const ROW_HEIGHT = ITEM_HEIGHT + SPACING * 1.5;
+const getItemLayoutConst = (_: any, index: number) => ({
+  length: normalizeSize(ROW_HEIGHT),
+  offset: normalizeSize(ROW_HEIGHT) * index,
+  index,
+});
 
 const normalizeSize = (size: number) => {
   const baseWidth = 375;
@@ -39,7 +47,6 @@ const normalizeSize = (size: number) => {
   return Math.round(size * scale);
 };
 
- const BANNER_HEIGHT = normalizeSize(50);
 
 /** Util pour ajouter une alpha sans casser les gradients */
 const withAlpha = (color: string, alpha: number) => {
@@ -72,6 +79,7 @@ interface Challenge {
   participantsCount: number;
   chatId?: string;
   approved: boolean;
+  updatedAt?: any;
 }
 
 export default function MyChallenges() {
@@ -81,13 +89,19 @@ export default function MyChallenges() {
   const [isLoading, setIsLoading] = useState(true);
   const { theme } = useTheme();
   const isDarkMode = theme === "dark";
-  const currentTheme: Theme = useMemo(
-    () => (isDarkMode ? designSystem.darkTheme : designSystem.lightTheme),
-    [isDarkMode]
-  );
-  const npa = (globalThis as any).__NPA__ === true;
+  const currentTheme: Theme = useMemo(() => (
+    isDarkMode ? designSystem.darkTheme : designSystem.lightTheme
+  ), [isDarkMode]);
   const { showBanners } = useAdsVisibility();
-  const bottomPadding = showBanners ? BANNER_HEIGHT + normalizeSize(90) : normalizeSize(90);
+const insets = useSafeAreaInsets();
+  // Safe: support écran hors BottomTabs
+  const tabBarHeight = (() => { try { return useBottomTabBarHeight(); } catch { return 0; } })();
+  const [adHeight, setAdHeight] = useState(0);
+  const bottomPadding = useMemo(
+    () => normalizeSize(90) + (showBanners ? adHeight : 0) + tabBarHeight + insets.bottom,
+    [adHeight, showBanners, tabBarHeight, insets.bottom]
+  );
+
 
   useEffect(() => {
     const userId = auth.currentUser?.uid;
@@ -101,7 +115,12 @@ export default function MyChallenges() {
       userRef,
       async (snapshot) => {
         if (snapshot.exists()) {
-          const { createdChallenges = [] } = snapshot.data();
+          const { createdChallenges = [] } = snapshot.data() || {};
+          if (!Array.isArray(createdChallenges) || createdChallenges.length === 0) {
+            setMyChallenges([]);
+            setIsLoading(false);
+            return;
+          }
 
           const raw = await Promise.all(
             createdChallenges.map(async ({ id, ...rest }) => {
@@ -141,7 +160,16 @@ export default function MyChallenges() {
                   })
                 : t("noCategory"),
             }))
-            .filter((c) => c.approved);
+            .filter((c) => c.approved)
+            // Tri: d'abord par popularité, puis par date (si dispo), puis alpha
+            .sort((a, b) => {
+              const p = (b.participantsCount || 0) - (a.participantsCount || 0);
+              if (p !== 0) return p;
+              const da = a.updatedAt ? new Date(a.updatedAt).getTime() : 0;
+              const dbb = b.updatedAt ? new Date(b.updatedAt).getTime() : 0;
+              if (dbb !== da) return dbb - da;
+              return String(a.title || "").localeCompare(String(b.title || ""));
+            });
 
           setMyChallenges(translated);
         }
@@ -164,30 +192,14 @@ export default function MyChallenges() {
         description: item.description || "",
         imageUrl: item.imageUrl || "",
       }).toString();
-      router.push(
-        `/challenge-details/${encodeURIComponent(item.id)}?${params}`
-      );
+      Haptics.selectionAsync().catch(() => {});
+      router.push(`/challenge-details/${encodeURIComponent(item.id)}?${params}`);
     },
     [router]
   );
 
-  const metadata = useMemo(
-    () => ({
-      title: t("myChallenges"),
-      description: t("createFirstChallenge"),
-      url: `https://challengeme.com/mychallenges/${auth.currentUser?.uid}`,
-      structuredData: {
-        "@context": "https://schema.org",
-        "@type": "WebPage",
-        name: t("myChallenges"),
-        description: t("createFirstChallenge"),
-      },
-    }),
-    [t]
-  );
-
-  const renderChallenge = useCallback(
-    ({ item, index }: { item: Challenge; index: number }) => (
+  const renderChallenge: ListRenderItem<Challenge> = useCallback(
+    ({ item, index }) => (
       <Animated.View
         entering={ZoomIn.delay(index * 100)}
         style={styles.cardWrapper}
@@ -216,9 +228,12 @@ export default function MyChallenges() {
             ]} // Bordure dynamique
           >
             {item.imageUrl ? (
-              <Image
+              <ExpoImage
                 source={{ uri: item.imageUrl }}
                 style={styles.cardImage}
+                contentFit="cover"
+                transition={200}
+                placeholder={{ blurhash: "LKO2?U%2Tw=w]~RBVZRi};RPxuwH" }}
                 accessibilityLabel={t("challengeImage", { title: item.title })}
               />
             ) : (
@@ -258,7 +273,7 @@ export default function MyChallenges() {
               >
                 {item.category}
               </Text>
-              {!!item.participantsCount && (
+              {typeof item.participantsCount === "number" && item.participantsCount > 0 && (
                 <Text
                   style={[
                     styles.participantsText,
@@ -267,9 +282,7 @@ export default function MyChallenges() {
                 >
                   {t(
                     item.participantsCount > 1 ? "participants" : "participant",
-                    {
-                      count: item.participantsCount,
-                    }
+                    { count: item.participantsCount }
                   )}
                 </Text>
               )}
@@ -421,23 +434,29 @@ export default function MyChallenges() {
             initialNumToRender={10}
             maxToRenderPerBatch={10}
             windowSize={5}
-             contentInset={{ top: SPACING, bottom: 0 }}
+            getItemLayout={getItemLayoutConst}
+            contentInset={{ top: SPACING, bottom: 0 }}
           />
         )}
       </View>
       {showBanners && (
-        <View style={styles.bannerContainer}>
-          <BannerAd
-  unitId={adUnitIds.banner}
-  size={BannerAdSize.BANNER}
-  requestOptions={{ requestNonPersonalizedAdsOnly: npa }}
-  onAdFailedToLoad={(err) =>
-    console.error("Échec chargement bannière (MyChallenges):", err)
-  }
-/>
+  <View
+    style={{
+      position: "absolute",
+      left: 0,
+      right: 0,
+      bottom: tabBarHeight + insets.bottom,
+      alignItems: "center",
+      backgroundColor: "transparent",
+      paddingBottom: 6,
+      zIndex: 9999,
+    }}
+    pointerEvents="box-none"
+  >
+    <BannerSlot onHeight={(h) => setAdHeight(h)} />
+  </View>
+)}
 
-        </View>
-      )}
     </LinearGradient>
   </SafeAreaView>
 );
@@ -478,16 +497,6 @@ bgOrbBottom: {
   height: SCREEN_WIDTH * 1.1,
   borderRadius: SCREEN_WIDTH * 0.55,
 },
-bannerContainer: {
-   width: "100%",
-   alignItems: "center",
-   paddingVertical: SPACING / 2,
-   backgroundColor: "transparent",
-   position: "absolute",
-   bottom: 0,
-   left: 0,
-   right: 0,
- },
   listContent: {
     paddingVertical: SPACING * 1.5,
     paddingHorizontal: SCREEN_WIDTH * 0.025,
@@ -602,15 +611,5 @@ bannerContainer: {
     textAlign: "center",
     marginTop: SPACING / 2,
     maxWidth: SCREEN_WIDTH * 0.75, // Responsive
-  },
-  backButton: {
-    position: "absolute",
-    top:
-      Platform.OS === "android" ? StatusBar.currentHeight ?? SPACING : SPACING,
-    left: SPACING,
-    zIndex: 10,
-    padding: SPACING / 2,
-    backgroundColor: "rgba(0, 0, 0, 0.5)", // Fond semi-transparent, aligné avec CompletedChallenges.tsx
-    borderRadius: normalizeSize(20), // Bordure arrondie
   },
 });

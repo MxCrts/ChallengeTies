@@ -1,4 +1,4 @@
-import React from "react";
+import React, { useEffect, useRef } from "react";
 import {
   View,
   Text,
@@ -6,6 +6,8 @@ import {
   StyleSheet,
   Pressable,
   Platform,
+  AccessibilityInfo,
+  BackHandler,
 } from "react-native";
 import { Ionicons } from "@expo/vector-icons";
 import { useTranslation } from "react-i18next";
@@ -21,6 +23,8 @@ import { useTheme } from "../context/ThemeContext";
 import designSystem, { Theme } from "../theme/designSystem";
 import TutorialIcon from "./TutorialIcon";
 import TutorialVideoWrapper from "./TutorialVideoWrapper";
+import { TUTORIAL_STEPS } from "./TutorialSteps";
+import * as Haptics from "expo-haptics";
 
 interface TutorialModalProps {
   step: number;
@@ -30,7 +34,7 @@ interface TutorialModalProps {
   onFinish: () => void;
 }
 
-const SPACING = normalize(15);
+const TOTAL_STEPS = TUTORIAL_STEPS.length;
 
 const TutorialModal: React.FC<TutorialModalProps> = ({
   step,
@@ -42,151 +46,141 @@ const TutorialModal: React.FC<TutorialModalProps> = ({
   const { t } = useTranslation();
   const { theme } = useTheme();
   const isDarkMode = theme === "dark";
-  const currentTheme: Theme = isDarkMode
-    ? designSystem.darkTheme
-    : designSystem.lightTheme;
+  const currentTheme: Theme = isDarkMode ? designSystem.darkTheme : designSystem.lightTheme;
 
+  // --- micro-animation CTA
   const scale = useSharedValue(1);
-  const buttonAnimatedStyle = useAnimatedStyle(() => ({
-    transform: [{ scale: scale.value }],
-  }));
+  const buttonAnimatedStyle = useAnimatedStyle(() => ({ transform: [{ scale: scale.value }] }));
+  const handlePressIn = () => (scale.value = withTiming(0.95, { duration: 100 }));
+  const handlePressOut = () => (scale.value = withTiming(1, { duration: 100 }));
 
-  const handlePressIn = () => {
-    scale.value = withTiming(0.95, { duration: 100 });
-  };
-
-  const handlePressOut = () => {
-    scale.value = withTiming(1, { duration: 100 });
-  };
-
-  const getModalContent = () => {
-    switch (step) {
-      case 0:
-        return {
-          title: t("tutorial.welcome.title"),
-          description: t("tutorial.welcome.description"),
-        };
-      case 1:
-        return {
-          title: t("tutorial.index.title"),
-          description: t("tutorial.index.description"),
-        };
-      case 2:
-        return {
-          title: t("tutorial.profile.title"),
-          description: t("tutorial.profile.description"),
-        };
-      case 3:
-        return {
-          title: t("tutorial.focus.title"),
-          description: t("tutorial.focus.description"),
-        };
-      case 4:
-        return {
-          title: t("tutorial.explore.title"),
-          description: t("tutorial.explore.description"),
-        };
-      case 5:
-        return {
-          title: t("tutorial.videoStep.title"),
-          description: t("tutorial.videoStep.description"),
-        };
-      default:
-        return { title: "", description: "" };
+  // --- lock pour éviter double navigation
+  const lockRef = useRef(false);
+  const safeGo = (fn: () => void) => {
+    if (lockRef.current) return;
+    lockRef.current = true;
+    try {
+      fn();
+    } finally {
+      setTimeout(() => (lockRef.current = false), 350);
     }
   };
 
-  const { title, description } = getModalContent();
+  // --- a11y: annoncer le titre à chaque step
+  useEffect(() => {
+    const titleKey = TUTORIAL_STEPS[step]?.titleKey;
+    if (titleKey) AccessibilityInfo.announceForAccessibility(t(titleKey));
+  }, [step, t]);
+
+  const title = t(TUTORIAL_STEPS[step]?.titleKey ?? "");
+  const description = t(TUTORIAL_STEPS[step]?.descriptionKey ?? "");
+
+  const isWelcome = step === 0;
+  const isLast = step === TOTAL_STEPS - 1;
+
+  // --- Back Android: skip (pas d’historique dans le tuto)
+  useEffect(() => {
+    const sub = BackHandler.addEventListener("hardwareBackPress", () => {
+      safeGo(onSkip);
+      return true;
+    });
+    return () => sub.remove();
+  }, [onSkip]);
 
   return (
     <TutorialVideoWrapper
       step={step}
-     title={
-  <Animated.View entering={FadeInUp.delay(150)}>
-    <Text
-      style={[styles.modalTitle, { color: currentTheme.colors.primary }]}
-      allowFontScaling={false}
-      {...(Platform.OS === "android"
-        ? { textBreakStrategy: "simple" as const }
-        : {})}
-    >
-      {title}
-    </Text>
-  </Animated.View>
-}
-description={
-  <Animated.View entering={FadeInUp.delay(250)}>
-    <Text
-      style={[
-       styles.modalDescription,
-       { color: "#fff" }, // 👈 toujours blanc
-     ]}
-      allowFontScaling={false}
-      {...(Platform.OS === "android"
-        ? { textBreakStrategy: "simple" as const }
-        : {})}
-    >
-      {description}
-    </Text>
-  </Animated.View>
-}
-
-
+      title={
+        <Animated.View entering={FadeInUp.delay(150)}>
+          <Text
+            style={[styles.modalTitle, { color: currentTheme.colors.primary }]}
+            allowFontScaling={false}
+            {...(Platform.OS === "android" ? { textBreakStrategy: "simple" as const } : {})}
+          >
+            {title}
+          </Text>
+        </Animated.View>
+      }
+      description={
+        <Animated.View entering={FadeInUp.delay(250)}>
+          <Text
+            style={[styles.modalDescription, { color: "#fff" }]}
+            allowFontScaling={false}
+            {...(Platform.OS === "android" ? { textBreakStrategy: "simple" as const } : {})}
+          >
+            {description}
+          </Text>
+        </Animated.View>
+      }
       icon={<TutorialIcon step={step} />}
     >
-      {step === 0 && (
+      {/* Dots de progression */}
+      <View style={{ flexDirection: "row", gap: 6, marginBottom: normalize(6) }}>
+        {Array.from({ length: TOTAL_STEPS }).map((_, i) => (
+          <View
+            key={i}
+            style={{
+              width: normalize(i === step ? 16 : 8),
+              height: normalize(8),
+              borderRadius: 999,
+              backgroundColor:
+                i <= step ? currentTheme.colors.secondary : "rgba(255,255,255,0.25)",
+              opacity: i === step ? 1 : 0.7,
+              transform: [{ scale: i === step ? 1.05 : 1 }],
+            }}
+          />
+        ))}
+      </View>
+
+      {isWelcome && (
         <View style={styles.centeredButtonContainer}>
           <Animated.View style={buttonAnimatedStyle}>
             <Pressable
               onPressIn={handlePressIn}
               onPressOut={handlePressOut}
-              onPress={onStart}
+              onPress={() => {
+                Haptics.selectionAsync().catch(() => {});
+                safeGo(onStart);
+              }}
               accessibilityLabel={t("tutorial.buttons.start")}
             >
               <LinearGradient
-                colors={[
-                  currentTheme.colors.primary,
-                  currentTheme.colors.secondary,
-                ]}
+                colors={[currentTheme.colors.primary, currentTheme.colors.secondary]}
                 style={styles.gradientButton}
               >
-                <Text style={styles.actionButtonText}>
-                  {t("tutorial.buttons.start")}
-                </Text>
+                <Text style={styles.actionButtonText}>{t("tutorial.buttons.start")}</Text>
               </LinearGradient>
             </Pressable>
           </Animated.View>
 
           <TouchableOpacity
-            onPress={onSkip}
+            onPress={() => {
+              Haptics.notificationAsync(Haptics.NotificationFeedbackType.Warning).catch(() => {});
+              safeGo(onSkip);
+            }}
             style={styles.skipButton}
             accessibilityLabel={t("tutorial.buttons.skip")}
           >
-            <Text
-              style={[
-                styles.skipButtonText,
-                { color: currentTheme.colors.textSecondary },
-              ]}
-            >
+            <Text style={[styles.skipButtonText, { color: currentTheme.colors.textSecondary }]}>
               {t("tutorial.buttons.skip")}
             </Text>
           </TouchableOpacity>
         </View>
       )}
 
-      {step > 0 && step <= 4 && (
+      {!isWelcome && !isLast && (
         <Animated.View style={[buttonAnimatedStyle, styles.bottomButton]}>
           <Pressable
             onPressIn={handlePressIn}
             onPressOut={handlePressOut}
-            onPress={onNext}
+            onPress={() => {
+              Haptics.selectionAsync().catch(() => {});
+              safeGo(onNext);
+            }}
             accessibilityLabel={t("tutorial.buttons.next")}
           >
             <LinearGradient
-              colors={[
-                currentTheme.colors.primary,
-                currentTheme.colors.secondary,
-              ]}
+              colors={[currentTheme.colors.primary, currentTheme.colors.secondary]}
               style={styles.gradientButton}
             >
               <Ionicons
@@ -196,27 +190,37 @@ description={
               />
             </LinearGradient>
           </Pressable>
+
+          {/* Skip discret */}
+          <TouchableOpacity
+            onPress={() => {
+              safeGo(onSkip);
+            }}
+            style={{ marginTop: normalize(8), alignSelf: "center" }}
+          >
+            <Text style={[styles.skipButtonText, { color: "#ddd" }]}>
+              {t("tutorial.buttons.skip")}
+            </Text>
+          </TouchableOpacity>
         </Animated.View>
       )}
 
-      {step === 5 && (
+      {isLast && (
         <Animated.View style={[buttonAnimatedStyle, styles.bottomButton]}>
           <Pressable
             onPressIn={handlePressIn}
             onPressOut={handlePressOut}
-            onPress={onFinish}
+            onPress={() => {
+              Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success).catch(() => {});
+              safeGo(onFinish);
+            }}
             accessibilityLabel={t("tutorial.buttons.finish")}
           >
             <LinearGradient
-              colors={[
-                currentTheme.colors.primary,
-                currentTheme.colors.secondary,
-              ]}
+              colors={[currentTheme.colors.primary, currentTheme.colors.secondary]}
               style={styles.gradientButton}
             >
-              <Text style={styles.actionButtonText}>
-                {t("tutorial.buttons.finish")}
-              </Text>
+              <Text style={styles.actionButtonText}>{t("tutorial.buttons.finish")}</Text>
             </LinearGradient>
           </Pressable>
         </Animated.View>
@@ -232,10 +236,10 @@ const styles = StyleSheet.create({
     textAlign: "center",
     marginBottom: normalize(6),
     includeFontPadding: true,
-   ...(Platform.OS === "android" ? { textBreakStrategy: "simple" } : null),
- textAlignVertical: "center", 
- maxWidth: "92%",
-   alignSelf: "center",
+    ...(Platform.OS === "android" ? { textBreakStrategy: "simple" } : null),
+    textAlignVertical: "center",
+    maxWidth: "92%",
+    alignSelf: "center",
   },
   modalDescription: {
     fontSize: normalize(14),
@@ -243,13 +247,13 @@ const styles = StyleSheet.create({
     textAlign: "center",
     opacity: 0.85,
     marginBottom: normalize(12),
-    lineHeight: Math.round(normalize(14) * 1.55), // ≈ 21
- maxWidth: "92%",
- includeFontPadding: true,
- textAlignVertical: "center",
- ...(Platform.OS === "android" ? { textBreakStrategy: "simple" as const } : null),
- paddingTop: normalize(2),
-   paddingBottom: normalize(2),
+    lineHeight: Math.round(normalize(14) * 1.55),
+    maxWidth: "92%",
+    includeFontPadding: true,
+    textAlignVertical: "center",
+    ...(Platform.OS === "android" ? { textBreakStrategy: "simple" as const } : null),
+    paddingTop: normalize(2),
+    paddingBottom: normalize(2),
   },
   centeredButtonContainer: {
     flexDirection: "column",
@@ -271,8 +275,8 @@ const styles = StyleSheet.create({
     fontFamily: "Comfortaa_700Bold",
     color: "#fff",
     includeFontPadding: true,
-   lineHeight: Math.round(normalize(15) * 1.35),
-   ...(Platform.OS === "android" ? { textBreakStrategy: "simple" } : null),
+    lineHeight: Math.round(normalize(15) * 1.35),
+    ...(Platform.OS === "android" ? { textBreakStrategy: "simple" } : null),
   },
   skipButton: {
     justifyContent: "center",
@@ -286,9 +290,9 @@ const styles = StyleSheet.create({
   },
   bottomButton: {
     alignItems: "center",
-   justifyContent: "center",
-   alignSelf: "center",
-   marginTop: normalize(10),
+    justifyContent: "center",
+    alignSelf: "center",
+    marginTop: normalize(10),
   },
 });
 

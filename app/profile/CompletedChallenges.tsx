@@ -1,11 +1,10 @@
-import React, { useEffect, useState, useCallback } from "react";
+import React, { useEffect, useState, useCallback, useMemo  } from "react";
 import {
   View,
   Text,
   FlatList,
   TouchableOpacity,
   ActivityIndicator,
-  Image,
   Alert,
   Dimensions,
   SafeAreaView,
@@ -24,9 +23,13 @@ import { useTheme } from "@/context/ThemeContext";
 import designSystem, { Theme } from "@/theme/designSystem";
 import CustomHeader from "@/components/CustomHeader";
 import { useTranslation } from "react-i18next";
-import { BannerAd, BannerAdSize } from "react-native-google-mobile-ads";
- import { adUnitIds } from "@/constants/admob";
+import BannerSlot from "@/components/BannerSlot";
+import { useBottomTabBarHeight } from "@react-navigation/bottom-tabs";
+import { useSafeAreaInsets } from "react-native-safe-area-context";
  import { useAdsVisibility } from "../../src/context/AdsVisibilityContext";
+ import type { ListRenderItem } from "react-native";
+import * as Haptics from "expo-haptics";
+import { Image as ExpoImage } from "expo-image";
 
 // Dimensions & responsivité
 const { width: SCREEN_WIDTH, height: SCREEN_HEIGHT } = Dimensions.get("window");
@@ -40,7 +43,6 @@ const normalizeSize = (size: number) => {
   return Math.round(size * scale);
 };
 
-const BANNER_HEIGHT = normalizeSize(50);
 
 /** Util pour ajouter une alpha sans casser les gradients */
 const withAlpha = (color: string, alpha: number) => {
@@ -78,14 +80,27 @@ interface CompletedChallenge {
 export default function CompletedChallenges() {
   const { t, i18n } = useTranslation();
   const router = useRouter();
-  const npa = (globalThis as any).__NPA__ === true;
   const { theme } = useTheme();
   const isDarkMode = theme === "dark";
-  const currentTheme: Theme = isDarkMode
-    ? designSystem.darkTheme
-    : designSystem.lightTheme;
-const { showBanners } = useAdsVisibility();
-const bottomPadding = showBanners ? BANNER_HEIGHT + normalizeSize(90) : normalizeSize(90);
+  const currentTheme: Theme = useMemo(
+    () => (isDarkMode ? designSystem.darkTheme : designSystem.lightTheme),
+    [isDarkMode]
+  );
+  const { showBanners } = useAdsVisibility();
+  const insets = useSafeAreaInsets();
+  // safe: peut être appelé hors BottomTabs
+  const tabBarHeight = (() => {
+    try { return useBottomTabBarHeight(); } catch { return 0; }
+  })();
+  const [adHeight, setAdHeight] = useState(0);
+const bottomPadding = useMemo(
+    () =>
+      normalizeSize(90) +
+      (showBanners ? adHeight : 0) +
+      tabBarHeight +
+      insets.bottom,
+    [adHeight, showBanners, tabBarHeight, insets.bottom]
+  );
   const [completedChallenges, setCompletedChallenges] = useState<
     CompletedChallenge[]
   >([]);
@@ -95,6 +110,24 @@ const bottomPadding = showBanners ? BANNER_HEIGHT + normalizeSize(90) : normaliz
     title: string;
     history: { completedAt: string; selectedDays: number }[];
   } | null>(null);
+
+  // Format date localisée robuste
+  const formatDate = useCallback(
+    (isoLike: string) => {
+      const d = new Date(isoLike);
+      if (Number.isNaN(d.getTime())) return isoLike ?? "";
+      try {
+        return new Intl.DateTimeFormat(i18n.language || "en", {
+          year: "numeric",
+          month: "short",
+          day: "numeric",
+        }).format(d);
+      } catch {
+        return d.toLocaleDateString();
+      }
+    },
+    [i18n.language]
+  );
 
   useEffect(() => {
     const userId = auth.currentUser?.uid;
@@ -113,32 +146,37 @@ const bottomPadding = showBanners ? BANNER_HEIGHT + normalizeSize(90) : normaliz
         }
 
         const raw = snapshot.data()?.CompletedChallenges || [];
-        const challenges: CompletedChallenge[] = raw.map((c: any) => ({
+        const challenges: CompletedChallenge[] = (raw as any[]).map((c) => ({
           id: c.id,
           chatId: c.chatId,
           title: String(
-  c.chatId
-    ? t(`challenges.${c.chatId}.title`, { defaultValue: c.title })
-    : c.title || t("challengeSaved")
-),
-description: String(
-  c.chatId
-    ? t(`challenges.${c.chatId}.description`, {
-        defaultValue: c.description || "",
-      })
-    : c.description || ""
-),
-category: String(
-  c.category
-    ? t(`categories.${c.category}`, { defaultValue: c.category })
-    : t("noCategory")
-),
-
+            c.chatId
+              ? t(`challenges.${c.chatId}.title`, { defaultValue: c.title })
+              : c.title || t("challengeSaved")
+          ),
+          description: String(
+            c.chatId
+              ? t(`challenges.${c.chatId}.description`, {
+                  defaultValue: c.description || "",
+                })
+              : c.description || ""
+          ),
+          category: String(
+            c.category
+              ? t(`categories.${c.category}`, { defaultValue: c.category })
+              : t("noCategory")
+          ),
           imageUrl: c.imageUrl || "",
           completedAt: c.completedAt || "",
           selectedDays: c.selectedDays || 0,
-          history: c.history || [],
-        }));
+          history: Array.isArray(c.history) ? c.history : [],
+        }))
+        // tri récent → ancien (fallback si date invalide)
+        .sort((a, b) => {
+          const da = new Date(a.completedAt).getTime() || 0;
+          const db = new Date(b.completedAt).getTime() || 0;
+          return db - da;
+        });
 
         setCompletedChallenges(challenges);
         setIsLoading(false);
@@ -169,12 +207,13 @@ category: String(
   );
 
   const openHistoryModal = useCallback((item: CompletedChallenge) => {
-    setSelectedHistory({ title: item.title, history: item.history! });
+    setSelectedHistory({ title: item.title, history: item.history || [] });
     setHistoryModalVisible(true);
+    Haptics.selectionAsync().catch(() => {});
   }, []);
 
-  const renderChallenge = useCallback(
-    ({ item, index }: { item: CompletedChallenge; index: number }) => (
+  const renderChallenge: ListRenderItem<CompletedChallenge> = useCallback(
+    ({ item, index }) => (
       <Animated.View
         entering={FadeInUp.delay(index * 100)}
         style={styles.cardWrapper}
@@ -202,9 +241,12 @@ category: String(
             ]}
           >
             {item.imageUrl ? (
-              <Image
+              <ExpoImage
                 source={{ uri: item.imageUrl }}
                 style={styles.cardImage}
+                contentFit="cover"
+                transition={200}
+                placeholder={{ blurhash: "LKO2?U%2Tw=w]~RBVZRi};RPxuwH" }}
                 accessibilityLabel={String(t("challengeImage", { title: item.title }))}
               />
             ) : (
@@ -241,7 +283,7 @@ category: String(
                   { color: currentTheme.colors.textSecondary },
                 ]}
               >
-                {String(t("completedOn"))} {new Date(item.completedAt).toLocaleDateString()}
+                {String(t("completedOn"))} {formatDate(item.completedAt)}
               </Text>
               <Text
                 style={[
@@ -385,18 +427,23 @@ category: String(
         </Animated.View>
       </View>
       {showBanners && (
-   <View style={styles.bannerContainer}>
-     <BannerAd
-  unitId={adUnitIds.banner}
-  size={BannerAdSize.BANNER}
-  requestOptions={{ requestNonPersonalizedAdsOnly: npa }}
-  onAdFailedToLoad={(err) =>
-    console.error("Échec chargement bannière (CompletedChallenges ...):", err)
-  }
-/>
+  <View
+    style={{
+      position: "absolute",
+      left: 0,
+      right: 0,
+      bottom: tabBarHeight + insets.bottom,
+      alignItems: "center",
+      backgroundColor: "transparent",
+      paddingBottom: 6,
+      zIndex: 9999,
+    }}
+    pointerEvents="box-none"
+  >
+    <BannerSlot onHeight={(h) => setAdHeight(h)} />
+  </View>
+)}
 
-   </View>
- )}
     </LinearGradient>
   </SafeAreaView>
 );
@@ -452,6 +499,11 @@ category: String(
       showsVerticalScrollIndicator={false}
       initialNumToRender={10}
       windowSize={5}
+      getItemLayout={(_, index) => ({
+       length: normalizeSize(ITEM_HEIGHT + SPACING * 1.5),
+        offset: normalizeSize(ITEM_HEIGHT + SPACING * 1.5) * index,
+        index,
+      })}
       contentInset={{ top: SPACING, bottom: 0 }}
     />
 
@@ -500,8 +552,7 @@ category: String(
                           },
                         ]}
                       >
-                        {String(t("completedOnDate"))}{" "}
-                        {new Date(item.completedAt).toLocaleDateString()} -{" "}
+                        {String(t("completedOnDate"))} {formatDate(item.completedAt)} -{" "}
                         {item.selectedDays} {String(t("days"))}
                       </Text>
                     </Animated.View>
@@ -536,19 +587,24 @@ category: String(
       </Modal>
     )}
   </View>
-  {showBanners && (
-   <View style={styles.bannerContainer}>
-     <BannerAd
-  unitId={adUnitIds.banner}
-  size={BannerAdSize.BANNER}
-  requestOptions={{ requestNonPersonalizedAdsOnly: npa }}
-  onAdFailedToLoad={(err) =>
-    console.error("Échec chargement bannière (CompletedChallenges ...):", err)
-  }
-/>
+ {showBanners && (
+  <View
+    style={{
+      position: "absolute",
+      left: 0,
+      right: 0,
+      bottom: tabBarHeight + insets.bottom,
+      alignItems: "center",
+      backgroundColor: "transparent",
+      paddingBottom: 6,
+      zIndex: 9999,
+    }}
+    pointerEvents="box-none"
+  >
+    <BannerSlot onHeight={(h) => setAdHeight(h)} />
+  </View>
+)}
 
-   </View>
- )}
 </LinearGradient>
     </SafeAreaView>
   );
@@ -577,16 +633,6 @@ const styles = StyleSheet.create({
     paddingVertical: SPACING,
     position: "relative",
   },
-  bannerContainer: {
-   width: "100%",
-   alignItems: "center",
-   paddingVertical: SPACING / 2,
-   backgroundColor: "transparent",
-   position: "absolute",
-   bottom: 0,
-   left: 0,
-   right: 0,
- },
   listContent: {
     paddingVertical: SPACING * 1.5,
     paddingHorizontal: SCREEN_WIDTH * 0.025,

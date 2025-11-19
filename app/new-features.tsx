@@ -11,18 +11,20 @@ import {
   StatusBar,
   Alert,
   Platform,
-  Share,
+  RefreshControl,
+  I18nManager,
 } from "react-native";
 import {
-  collection,
-  onSnapshot,
-  updateDoc,
-  doc,
-  getDoc,
-  addDoc,
-  increment,
-  setDoc,
-} from "firebase/firestore";
+   collection,
+   onSnapshot,
+   updateDoc,
+   doc,
+   getDoc,
+   addDoc,
+   increment,
+   setDoc,
+   runTransaction,
+ } from "firebase/firestore";
 import { onAuthStateChanged } from "firebase/auth";
 import { db, auth } from "../constants/firebase-config";
 import { Ionicons } from "@expo/vector-icons";
@@ -45,6 +47,11 @@ import {
 import { useRouter } from "expo-router";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { useAdsVisibility } from "../src/context/AdsVisibilityContext";
+import * as Haptics from "expo-haptics";
+import { useShareCard } from "@/hooks/useShareCard";
+import { FeatureShareCard } from "@/components/ShareCards";
+import { checkForAchievements } from "../helpers/trophiesHelpers";
+import { incStat } from "@/src/services/metricsService";
 
 const SPACING = 15;
 const { width: SCREEN_WIDTH, height: SCREEN_HEIGHT } = Dimensions.get("window");
@@ -54,7 +61,6 @@ const normalizeSize = (size: number) => {
   return Math.round(size * scale);
 };
 
-/** Util robuste pour ajouter une alpha sans casser les gradients */
 const withAlpha = (color: string, alpha: number) => {
   const clamp = (n: number, min = 0, max = 1) => Math.min(Math.max(n, min), max);
   const a = clamp(alpha);
@@ -99,9 +105,10 @@ interface User {
 }
 
 export default function NewFeatures() {
-  const { t } = useTranslation();
+  const { t, i18n } = useTranslation();
   const [features, setFeatures] = useState<Feature[]>([]);
   const [loading, setLoading] = useState(true);
+  const [refreshing, setRefreshing] = useState(false);
   const [userVote, setUserVote] = useState<string | null>(null);
   const [countdown, setCountdown] = useState<CountdownValues>({
     days: 0,
@@ -109,6 +116,14 @@ export default function NewFeatures() {
     mins: 0,
     secs: 0,
   });
+
+// Pull-to-Refresh (le flux est realtime via onSnapshot, ici on gère juste l'UI)
+  const onRefresh = useCallback(() => {
+    setRefreshing(true);
+    const tid = setTimeout(() => setRefreshing(false), 600);
+    return () => clearTimeout(tid);
+  }, []);
+
   const npa = (globalThis as any).__NPA__ === true;
   const [user, setUser] = useState<User | null>(null);
   const [showExplanationModal, setShowExplanationModal] = useState(false);
@@ -126,6 +141,16 @@ export default function NewFeatures() {
 
   // ↓↓↓ DANS le composant NewFeatures
   const { showInterstitials } = useAdsVisibility();
+
+  // === ShareCard: feature ===
+  const { ref: featureShareRef, share: shareFeatureCard } = useShareCard();
+  const [featureSharePayload, setFeatureSharePayload] = useState<{
+    id: string;
+    title: string;
+    votes: number;
+    username?: string;
+    deepLink?: string;
+  } | null>(null);
 
   const interstitialAdUnitId = __DEV__
     ? TestIds.INTERSTITIAL
@@ -256,9 +281,9 @@ export default function NewFeatures() {
     return unsubscribe;
   }, [user?.uid]);
 
-  // ⏱️ Compte à rebours → FIN SEPTEMBRE
+ // ⏱️ Compte à rebours basé sur i18n.deadlineIso + progression du mois
   useEffect(() => {
-    const targetDate = new Date("2025-09-30T23:59:59Z");
+    const targetDate = new Date("2025-11-30T23:59:59Z");
     const updateTimer = () => {
       const diff = targetDate.getTime() - Date.now();
       if (diff <= 0) {
@@ -266,7 +291,7 @@ export default function NewFeatures() {
         return;
       }
       setCountdown({
-        days: Math.floor(diff / (1000 * 60 * 60 * 24)),
+       days: Math.floor(diff / (1000 * 60 * 60 * 24)),
         hours: Math.floor((diff % (1000 * 60 * 60 * 24)) / (1000 * 60 * 60)),
         mins: Math.floor((diff % (1000 * 60 * 60)) / (1000 * 60)),
         secs: Math.floor((diff % (1000 * 60)) / 1000),
@@ -276,6 +301,47 @@ export default function NewFeatures() {
     const interval = setInterval(updateTimer, 1000);
     return () => clearInterval(interval);
   }, []);
+
+  // Footer countdown (ancien rendu)
+  const renderCountdown = useCallback(
+    () => (
+      <Animated.View entering={FadeInUp} style={styles.countdownContainer}>
+        <LinearGradient
+          colors={[
+            withAlpha(currentTheme.colors.secondary, 1),
+            withAlpha(currentTheme.colors.primary, 1),
+          ]}
+          style={styles.countdownGradient}
+          start={{ x: 0, y: 0 }}
+          end={{ x: 1, y: 1 }}
+        >
+          {(["days", "hours", "mins", "secs"] as const).map((unit, index) => (
+            <Animated.View key={unit} entering={FadeInUp.delay(index * 120)} style={styles.countdownBox}>
+              <Text style={[styles.countdownNumber, { color: currentTheme.colors.textPrimary }]}>
+                {countdown[unit]}
+              </Text>
+              <Text
+  style={[
+    styles.countdownLabel,
+    { color: currentTheme.colors.textPrimary },
+    {
+      writingDirection: I18nManager.isRTL ? "rtl" : "ltr",
+      textAlign: "center",
+    },
+  ]}
+  numberOfLines={1}
+  adjustsFontSizeToFit
+>
+  {t(`newFeatures.countdown.${unit}`)}
+</Text>
+
+            </Animated.View>
+          ))}
+        </LinearGradient>
+      </Animated.View>
+    ),
+    [countdown, t, currentTheme]
+  );
 
   // Vote
   const handleVote = useCallback(
@@ -295,19 +361,23 @@ export default function NewFeatures() {
         return;
       }
       try {
-        const featureRef = doc(
-          db,
-          "polls",
-          "new-features",
-          "features",
-          featureId
-        );
+        const featureRef = doc(db, "polls", "new-features", "features", featureId);
         const userRef = doc(db, "users", user.uid);
-        await Promise.all([
-          updateDoc(featureRef, { votes: increment(1) }),
-          updateDoc(userRef, { votedFor: featureId }),
-        ]);
+
+        // 🚧 Transaction atomique : n'incrémente que si l'user n'a pas encore voté
+        await runTransaction(db, async (tx) => {
+          const userSnap = await tx.get(userRef);
+          const already = userSnap.exists() ? userSnap.data()?.votedFor : null;
+          if (already) {
+            throw new Error("already_voted");
+          }
+          tx.update(featureRef, { votes: increment(1) });
+          tx.update(userRef, { votedFor: featureId });
+        });
+        // 3) ✅ SUCCESS COUNTER normalisé pour achievements: stats.voteFeature.total
+        try { await incStat(user.uid, "voteFeature.total", 1); } catch {}
         setUserVote(featureId);
+        try { await checkForAchievements(user.uid); } catch {}
 
         const canShowAd = await checkAdCooldown();
         if (showInterstitials && canShowAd && adLoaded && interstitialRef.current) {
@@ -328,6 +398,12 @@ export default function NewFeatures() {
           t("newFeatures.voteRegisteredMessage")
         );
       } catch (error) {
+        if (error?.message === "already_voted") {
+          // cas rare : double-tap / multi-device → UI cohérente
+          setUserVote((prev) => prev ?? featureId);
+          Alert.alert(t("newFeatures.alreadyVotedTitle"), t("newFeatures.alreadyVotedMessage"));
+          return;
+        }
         console.error("Erreur lors du vote:", error);
         Alert.alert(
           t("newFeatures.voteErrorTitle"),
@@ -359,12 +435,16 @@ export default function NewFeatures() {
             username: user.username || t("newFeatures.unknown"),
           }
         );
+        // 1) marque le choix utilisateur (idempotent)
         await setDoc(
           doc(db, "users", user.uid),
           { votedFor: featureRef.id },
           { merge: true }
         );
+        // 2) ✅ SUCCESS COUNTER normalisé pour achievements: stats.voteFeature.total
+        try { await incStat(user.uid, "voteFeature.total", 1); } catch {}
         setUserVote(featureRef.id);
+        try { await checkForAchievements(user.uid); } catch {}
 
         const canShowAd = await checkAdCooldown();
         if (showInterstitials && canShowAd && adLoaded && interstitialRef.current) {
@@ -393,16 +473,45 @@ export default function NewFeatures() {
   const handleShareFeature = useCallback(
     async (feature: Feature) => {
       try {
-        await Share.share({
-          message: `${t("newFeatures.shareMessage")} ${feature.title}`,
-          url: `https://challengeme.com/features/${feature.id}`,
+        try { await Haptics.selectionAsync(); } catch {}
+        // 1) Prépare la payload → on va rendre la carte cachée
+        //    ❌ plus d’URL; ✅ début de la description
+        const rawDesc = feature.description?.toString?.() || "";
+        const trimmed = rawDesc.replace(/\s+/g, " ").trim();
+        const snippet = trimmed.length > 140 ? trimmed.slice(0, 140) + "…" : trimmed;
+
+        // Ligne meta traduite: "X votes • par Y" (si dispo)
+        const metaParts: string[] = [
+          t("newFeatures.votes", { count: feature.votes ?? 0 }),
+        ];
+        if (feature.username) {
+          metaParts.push(`${t("newFeatures.by")} ${feature.username}`);
+        }
+        const metaLine = metaParts.join(" • ");
+        setFeatureSharePayload({
+          id: feature.id,
           title: feature.title,
+          votes: feature.votes ?? 0,
+          username: feature.username,
         });
+        // 2) Laisse React peindre la vue invisible
+        await new Promise<void>((resolve) => requestAnimationFrame(() => resolve()));
+        // 3) Capture + partage via le hook (image PNG)
+        await shareFeatureCard(
+          `ct-feature-${feature.id}-${Date.now()}.png`,
+          t("newFeatures.shareDialogTitle", { defaultValue: "Partager cette nouveauté" })
+        );
+        // ✅ SUCCESS COUNTER pour achievements: stats.shareChallenge.total
+        try { await incStat(auth.currentUser?.uid as string, "shareChallenge.total", 1); } catch {}
+        try { await checkForAchievements(auth.currentUser?.uid as string); } catch {}
       } catch (error) {
         console.error("Erreur partage:", error);
+      } finally {
+        // 4) Nettoyage
+        setFeatureSharePayload(null);
       }
     },
-    [t]
+     [t, shareFeatureCard]
   );
 
   // Feature Item (UI only)
@@ -434,14 +543,22 @@ export default function NewFeatures() {
             >
               <View style={styles.featureHeaderRow}>
                 <Text
-                  style={[
-                    styles.featureTitle,
-                    { color: isDarkMode ? currentTheme.colors.textPrimary : "#000000" },
-                  ]}
-                  numberOfLines={2}
-                >
-                  {item.title}
-                </Text>
+  style={[
+    styles.featureTitle,
+    { color: isDarkMode ? currentTheme.colors.textPrimary : "#000000" },
+    {
+      writingDirection: I18nManager.isRTL ? "rtl" : "ltr",
+      textAlign: I18nManager.isRTL ? "right" : "left",
+    },
+  ]}
+  numberOfLines={2}
+  adjustsFontSizeToFit
+  minimumFontScale={0.9}   // ✅ ne descend jamais en dessous de 90% de la taille
+>
+  {item.title}
+</Text>
+
+
                 <View style={styles.votesPill}>
                   <Ionicons
                     name="heart-outline"
@@ -464,63 +581,91 @@ export default function NewFeatures() {
               </View>
 
               {item.username && (
-                <Text
-                  style={[
-                    styles.featureUsername,
-                    {
-                      color: isDarkMode ? "#A0A0A0" : currentTheme.colors.textSecondary,
-                    },
-                  ]}
-                >
-                  {t("newFeatures.by")} {item.username}
-                </Text>
+              <Text
+    style={[
+      styles.featureUsername,
+      { color: isDarkMode ? "#A0A0A0" : currentTheme.colors.textSecondary },
+      {
+        writingDirection: I18nManager.isRTL ? "rtl" : "ltr",
+        textAlign: I18nManager.isRTL ? "right" : "left",
+      },
+    ]}
+    numberOfLines={1}
+    adjustsFontSizeToFit
+  >
+    {t("newFeatures.by")} {item.username}
+  </Text>
               )}
 
               {item.description && (
                 <Text
-                  style={[
-                    styles.featureDescription,
-                    { color: currentTheme.colors.textSecondary },
-                  ]}
-                  numberOfLines={SCREEN_WIDTH > 600 ? 4 : 2}
-                >
-                  {item.description}
-                </Text>
+    style={[
+      styles.featureDescription,
+      { color: currentTheme.colors.textSecondary },
+      {
+        writingDirection: I18nManager.isRTL ? "rtl" : "ltr",
+        textAlign: I18nManager.isRTL ? "right" : "left",
+      },
+    ]}
+    numberOfLines={SCREEN_WIDTH > 600 ? 4 : 2}
+    ellipsizeMode="tail"    // ✅ on coupe proprement à la fin
+  >
+    {item.description}
+  </Text>
+
               )}
+              <View style={styles.cardActionsRow}>
+                <TouchableOpacity
+                  onPress={() => {
+                    if (!userVote) handleVote(item.id);
+                  }}
+                  disabled={!!userVote}
+                  style={[
+                    styles.voteBtn,
+                    {
+                      backgroundColor: userVote
+                        ? withAlpha("#000", 0.25)
+                        : currentTheme.colors.primary,
+                    },
+                  ]}
+                  accessibilityRole="button"
+                  accessibilityState={{ disabled: !!userVote }}
+                  accessibilityLabel={
+                    userVote
+                      ? t("newFeatures.alreadyVotedTitle")
+                      : t("newFeatures.vote", { defaultValue: "Voter" })
+                  }
+                >
+                  <Text
+                    style={[
+                      styles.voteBtnText,
+                      { color: currentTheme.colors.textPrimary },
+                    ]}
+                  >
+                    {userVote
+                      ? t("newFeatures.alreadyVotedShort", { defaultValue: "Déjà voté" })
+                      : t("newFeatures.vote", { defaultValue: "Voter" })}
+                  </Text>
+                </TouchableOpacity>
+
+                <TouchableOpacity
+                  onPress={() => handleShareFeature(item)}
+                  style={styles.shareBtn}
+                  accessibilityRole="button"
+                  accessibilityLabel={t("newFeatures.shareFeature", { defaultValue: "Partager la fonctionnalité" })}
+                >
+                  <Ionicons name="share-social-outline" size={normalizeSize(16)} color={isDarkMode ? "#fff" : "#111"} />
+                  <Text style={[styles.shareBtnText, { color: isDarkMode ? "#fff" : "#111" }]}>
+                    {t("newFeatures.share", { defaultValue: "Partager" })}
+                  </Text>
+                </TouchableOpacity>
+              </View>
+
             </LinearGradient>
           </TouchableOpacity>
         </Animated.View>
       )),
-    [t, currentTheme, selectedFeature, isDarkMode]
-  );
-
-  // Compte à rebours (UI only)
-  const renderCountdown = useCallback(
-    () => (
-      <Animated.View entering={FadeInUp} style={styles.countdownContainer}>
-        <LinearGradient
-          colors={[
-            withAlpha(currentTheme.colors.secondary, 1),
-            withAlpha(currentTheme.colors.primary, 1),
-          ]}
-          style={styles.countdownGradient}
-          start={{ x: 0, y: 0 }}
-          end={{ x: 1, y: 1 }}
-        >
-          {(["days", "hours", "mins", "secs"] as const).map((unit, index) => (
-            <Animated.View key={unit} entering={FadeInUp.delay(index * 120)} style={styles.countdownBox}>
-              <Text style={[styles.countdownNumber, { color: currentTheme.colors.textPrimary }]}>
-                {countdown[unit]}
-              </Text>
-              <Text style={[styles.countdownLabel, { color: currentTheme.colors.textPrimary }]}>
-                {t(`newFeatures.countdown.${unit}`)}
-              </Text>
-            </Animated.View>
-          ))}
-        </LinearGradient>
-      </Animated.View>
-    ),
-    [countdown, t, currentTheme]
+   [t, currentTheme, selectedFeature, isDarkMode, userVote, handleShareFeature, handleVote]
   );
 
   // Métadonnées (inchangé)
@@ -528,7 +673,7 @@ export default function NewFeatures() {
     () => ({
       title: t("newFeatures.title"),
       description: t("newFeatures.description"),
-      url: "https://challengeme.com/features",
+      url: `https://challengeme.com/${i18n.language}/features`,
       structuredData: {
         "@context": "https://schema.org",
         "@type": "ItemList",
@@ -540,11 +685,15 @@ export default function NewFeatures() {
         })),
       },
     }),
-    [t, features]
+   [t, features, i18n]
   );
 
-  const monthLabel = t("newFeatures.monthLabel", { defaultValue: "Mise à jour • Septembre" });
-
+  // Libellé du mois (fallback sûr si la clé n'est pas encore traduite)
+  const monthLabel = useMemo(
+    () => t("newFeatures.monthLabel", { defaultValue: "Mise à jour • Novembre" }),
+    [t]
+  );
+ 
   const createStyles = (isDarkMode: boolean) =>
     StyleSheet.create({
       safeArea: {
@@ -561,7 +710,7 @@ export default function NewFeatures() {
       /** HERO HEADER (premium) */
       heroHeader: {
         marginHorizontal: SPACING,
-        marginTop: SPACING,
+        marginTop: Math.max(SPACING - 4, 8),
         borderRadius: normalizeSize(22),
         overflow: "hidden",
         borderWidth: StyleSheet.hairlineWidth,
@@ -635,7 +784,8 @@ export default function NewFeatures() {
 
       featuresWindow: {
         flex: 1,
-        marginVertical: normalizeSize(12),
+        marginTop: normalizeSize(1),
+        marginBottom: normalizeSize(1),
         borderRadius: normalizeSize(25),
         overflow: "hidden",
         backgroundColor: isDarkMode ? "transparent" : withAlpha("#fff", 0.08),
@@ -705,11 +855,10 @@ export default function NewFeatures() {
         lineHeight: normalizeSize(20),
         textAlign: "left",
       },
-
       bottomContainer: {
         alignItems: "center",
-        paddingVertical: normalizeSize(22),
-        marginTop: normalizeSize(10),
+        paddingVertical: normalizeSize(5),
+        marginTop: normalizeSize(1),
       },
       countdownContainer: {
         width: "100%",
@@ -720,7 +869,15 @@ export default function NewFeatures() {
         justifyContent: "space-between",
         padding: normalizeSize(16),
         borderRadius: normalizeSize(18),
+        // fond légèrement translucide pour un look “verre” propre en clair/sombre
         backgroundColor: withAlpha("#fff", isDarkMode ? 0.08 : 0.95),
+        borderWidth: StyleSheet.hairlineWidth,
+        borderColor: withAlpha("#000", isDarkMode ? 0.15 : 0.08),
+        shadowColor: "#000",
+        shadowOffset: { width: 0, height: normalizeSize(3) },
+        shadowOpacity: isDarkMode ? 0.25 : 0.12,
+        shadowRadius: normalizeSize(5),
+        elevation: 3,
       },
       countdownBox: {
         alignItems: "center",
@@ -737,9 +894,9 @@ export default function NewFeatures() {
       },
 
       proposeButton: {
-        paddingVertical: normalizeSize(15),
-        paddingHorizontal: normalizeSize(30),
-        borderRadius: normalizeSize(30),
+        paddingVertical: normalizeSize(10),
+        paddingHorizontal: normalizeSize(16),
+        borderRadius: normalizeSize(14),
         shadowColor: "#000",
         shadowOffset: { width: 0, height: normalizeSize(3) },
         shadowOpacity: 0.3,
@@ -747,10 +904,9 @@ export default function NewFeatures() {
         elevation: 5,
       },
       proposeButtonText: {
-        fontSize: normalizeSize(14),
+        fontSize: normalizeSize(12),
         fontFamily: "Comfortaa_700Bold",
       },
-
       thankYouText: {
         fontSize: normalizeSize(14),
         fontFamily: "Comfortaa_400Regular",
@@ -774,6 +930,37 @@ export default function NewFeatures() {
         textAlign: "center",
         padding: normalizeSize(15),
       },
+      /** Actions inline dans la carte */
+      cardActionsRow: {
+        flexDirection: "row",
+        justifyContent: "space-between",
+        alignItems: "center",
+        marginTop: normalizeSize(12),
+      },
+      voteBtn: {
+        paddingVertical: normalizeSize(10),
+        paddingHorizontal: normalizeSize(16),
+        borderRadius: normalizeSize(999),
+      },
+      voteBtnText: {
+        fontSize: normalizeSize(13),
+        fontFamily: "Comfortaa_700Bold",
+      },
+      shareBtn: {
+        flexDirection: "row",
+        alignItems: "center",
+        paddingVertical: normalizeSize(8),
+        paddingHorizontal: normalizeSize(12),
+        borderRadius: normalizeSize(999),
+        backgroundColor: withAlpha("#fff", isDarkMode ? 0.12 : 0.9),
+        borderWidth: StyleSheet.hairlineWidth,
+        borderColor: withAlpha("#000", 0.08),
+      },
+      shareBtnText: {
+        marginLeft: 6,
+        fontSize: normalizeSize(12),
+        fontFamily: "Comfortaa_700Bold",
+      },
     });
 
   const styles = useMemo(() => createStyles(isDarkMode), [isDarkMode]);
@@ -794,10 +981,22 @@ export default function NewFeatures() {
           style={styles.loadingContainer}
         >
           <ActivityIndicator size="large" color={currentTheme.colors.secondary} />
-          <Text style={[styles.loadingText, { color: currentTheme.colors.textPrimary }]}>
-            {t("newFeatures.loading")}
-          </Text>
-        </LinearGradient>
+          <Text
+  style={[
+    styles.loadingText,
+    { color: currentTheme.colors.textPrimary },
+    {
+      writingDirection: I18nManager.isRTL ? "rtl" : "ltr",
+      textAlign: "center",
+    },
+  ]}
+  numberOfLines={2}
+  adjustsFontSizeToFit
+>
+  {t("newFeatures.loading")}
+</Text>
+
+        </LinearGradient>        
       </SafeAreaView>
     );
   }
@@ -865,18 +1064,50 @@ export default function NewFeatures() {
             end={{ x: 1, y: 1 }}
           >
             <View style={styles.monthPill}>
-              <Text style={styles.monthPillText}>{monthLabel}</Text>
+              <Text
+  style={[
+    styles.monthPillText,
+    { writingDirection: I18nManager.isRTL ? "rtl" : "ltr" },
+  ]}
+  numberOfLines={1}
+  adjustsFontSizeToFit
+>
+  {monthLabel}
+</Text>
+
             </View>
-            <Text style={styles.heroTitle}>
-              {t("newFeatures.heroTitleSep", {
-                defaultValue: "Vote les nouveautés qui arrivent fin septembre 🚀",
-              })}
-            </Text>
-            <Text style={styles.heroSubtitle}>
-              {t("newFeatures.heroSubtitleSep", {
-                defaultValue: "Ta voix compte : propose, vote et suis l’évolution des features.",
-              })}
-            </Text>
+            <Text
+  style={[
+    styles.heroTitle,
+    {
+      writingDirection: I18nManager.isRTL ? "rtl" : "ltr",
+      textAlign: I18nManager.isRTL ? "right" : "left",
+    },
+  ]}
+  numberOfLines={2}
+  adjustsFontSizeToFit
+>
+  {t("newFeatures.heroTitleSep", {
+    defaultValue: "Vote les nouveautés qui arrivent fin novembre 🚀",
+  })}
+</Text>
+
+           <Text
+  style={[
+    styles.heroSubtitle,
+    {
+      writingDirection: I18nManager.isRTL ? "rtl" : "ltr",
+      textAlign: I18nManager.isRTL ? "right" : "left",
+    },
+  ]}
+  numberOfLines={3}
+  adjustsFontSizeToFit
+>
+  {t("newFeatures.heroSubtitleNov", {
+    defaultValue: "Ta voix compte : propose, vote et suis l’évolution des features.",
+  })}
+</Text>
+
           </LinearGradient>
         </View>
 
@@ -907,22 +1138,67 @@ export default function NewFeatures() {
                 contentInset={{ top: SPACING, bottom: normalizeSize(40) }}
                 accessibilityRole="list"
                 accessibilityLabel={t("newFeatures.featuresListLabel")}
+                refreshControl={
+                  <RefreshControl
+                    refreshing={refreshing}
+                    onRefresh={onRefresh}
+                    tintColor={currentTheme.colors.secondary}
+                    colors={[currentTheme.colors.secondary]}
+                    progressViewOffset={SPACING}
+                  />
+                }
               />
             ) : (
-              <Text style={[styles.noFeaturesText, { color: currentTheme.colors.textSecondary }]}>
-                {t("newFeatures.noFeatures")}
-              </Text>
+              <View style={{ alignItems: "center", paddingVertical: normalizeSize(20) }}>
+                <Text
+  style={[
+    styles.noFeaturesText,
+    { color: currentTheme.colors.textSecondary },
+    {
+      writingDirection: I18nManager.isRTL ? "rtl" : "ltr",
+      textAlign: "center",
+    },
+  ]}
+  numberOfLines={3}
+  adjustsFontSizeToFit
+>
+  {t("newFeatures.noFeatures")}
+</Text>
+
+                <TouchableOpacity
+                  style={[styles.proposeButton, { backgroundColor: currentTheme.colors.primary, marginTop: normalizeSize(6) }]}
+                  onPress={() => setShowProposeModal(true)}
+                  accessibilityRole="button"
+                >
+                  <Text style={[styles.proposeButtonText, { color: currentTheme.colors.textPrimary }]}>
+                    {t("newFeatures.proposeIdea")}
+                  </Text>
+                </TouchableOpacity>
+              </View>
             )}
           </View>
 
+        {/* —— Footer ANCIEN : countdown + message/bouton —— */}
           <Animated.View entering={FadeInUp.delay(400)} style={styles.bottomContainer}>
             {renderCountdown()}
             {userVote ? (
-              <Text style={[styles.thankYouText, { color: currentTheme.colors.textSecondary }]}>
-                {t("newFeatures.thankYouForVote", {
-                  featureTitle: features.find((f) => f.id === userVote)?.title || "???",
-                })}
-              </Text>
+              <Text
+  style={[
+    styles.thankYouText,
+    { color: currentTheme.colors.textSecondary },
+    {
+      writingDirection: I18nManager.isRTL ? "rtl" : "ltr",
+      textAlign: "center",
+    },
+  ]}
+  numberOfLines={3}
+  adjustsFontSizeToFit
+>
+  {t("newFeatures.thankYouForVote", {
+    featureTitle: features.find((f) => f.id === userVote)?.title || "???",
+  })}
+</Text>
+
             ) : (
               <Animated.View entering={ZoomIn.delay(500)}>
                 <TouchableOpacity
@@ -967,6 +1243,29 @@ export default function NewFeatures() {
           />
         )}
       </SafeAreaView>
+      {/* ——— Carte de partage invisible, capturable (parité Tips/Leaderboard) ——— */}
+    {featureSharePayload && (
+      <View
+        style={{
+          position: "absolute",
+          opacity: 0,
+          pointerEvents: "none",
+          left: 0,
+          top: 0,
+        }}
+        accessibilityElementsHidden
+        importantForAccessibility="no-hide-descendants"
+      >
+        <FeatureShareCard
+   ref={featureShareRef}
+          featureTitle={featureSharePayload.title}
+          i18n={{
+            kicker: t("newFeatures.share.kicker"), // ✅ fix key: sharE -> share
+            footer: t("newFeatures.share.footerWithDays", { days: Math.max(0, countdown.days) })
+          }}
+        />
+      </View>
+    )}
     </LinearGradient>
   );
 }

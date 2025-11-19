@@ -3,7 +3,7 @@ var __importDefault = (this && this.__importDefault) || function (mod) {
     return (mod && mod.__esModule) ? mod : { "default": mod };
 };
 Object.defineProperty(exports, "__esModule", { value: true });
-exports.invitationsOnWrite = exports.dl = void 0;
+exports.claimReferralMilestone = exports.onUserActivated = exports.referralsOnFirstActivation = exports.invitationsOnWrite = exports.dl = void 0;
 const express_1 = __importDefault(require("express"));
 const cors_1 = __importDefault(require("cors"));
 const https_1 = require("firebase-functions/v2/https");
@@ -15,13 +15,13 @@ const CLOUDINARY_BG_PUBLIC_ID = "ct_share_bg1"; // asset source (PNG)
 const APP_SCHEME = "myapp";
 const ANDROID_PACKAGE = "com.mxcrts.ChallengeTies";
 const WEB_HOSTING = "https://challengeme-d7fef.web.app";
-const IOS_STORE_URL = "https://apps.apple.com/app/idXXXXXXXX"; // TODO: real App Store id
+const IOS_STORE_URL = "https://apps.apple.com/app/id6751504640";
 const ANDROID_STORE_URL = "https://play.google.com/store/apps/details?id=com.mxcrts.ChallengeTies";
 // Bots (FB/Twitter/WhatsApp/etc.)
 const BOT_UA = /(facebookexternalhit|Twitterbot|Slackbot|WhatsApp|TelegramBot|LinkedInBot|Discordbot|Pinterest|SkypeUriPreview|Googlebot|bingbot)/i;
 const INV = " "; // espace non vide pour éviter les fallbacks titre/desc
 /** =========================
- *  I18N (9 langues)
+ *  I18N (12  langues)
  *  ========================= */
 const I18N = {
     ar: { join: "انضم إليّ في هذا التحدي! 🚀" },
@@ -33,7 +33,11 @@ const I18N = {
     it: { join: "Unisciti a me in questa sfida! 🚀" },
     ru: { join: "Присоединяйся ко мне в этом челлендже! 🚀" },
     zh: { join: "加入我的挑战吧！🚀" },
+    pt: { join: "Junta-te a mim neste desafio! 🚀" },
+    ja: { join: "このチャレンジに一緒に挑戦しよう！🚀" },
+    ko: { join: "이 챌린지에 나와 함께 도전하자! 🚀" },
 };
+
 function t(lang) {
     const key = (lang || "fr").toLowerCase();
     return I18N[key] || I18N.fr;
@@ -215,3 +219,9 @@ ${iosAppId ? `<meta property="al:ios:app_store_id" content="${iosAppId}">` : ""}
 exports.dl = (0, https_1.onRequest)({ region: "europe-west1", cors: true }, app);
 var invitationsOnWrite_1 = require("./invitationsOnWrite");
 Object.defineProperty(exports, "invitationsOnWrite", { enumerable: true, get: function () { return invitationsOnWrite_1.invitationsOnWrite; } });
+var referralsOnFirstActivation_1 = require("./referralsOnFirstActivation");
+Object.defineProperty(exports, "referralsOnFirstActivation", { enumerable: true, get: function () { return referralsOnFirstActivation_1.referralsOnFirstActivation; } });
+var referralRewards_1 = require("./referralRewards");
+Object.defineProperty(exports, "onUserActivated", { enumerable: true, get: function () { return referralRewards_1.onUserActivated; } });
+var referralClaim_1 = require("./referralClaim");
+Object.defineProperty(exports, "claimReferralMilestone", { enumerable: true, get: function () { return referralClaim_1.claimReferralMilestone; } });

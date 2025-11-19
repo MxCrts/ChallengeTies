@@ -4,6 +4,7 @@ import React, {
   useRef,
   useCallback,
   useMemo,
+  startTransition,
 } from "react";
 import {
   View,
@@ -17,9 +18,11 @@ import {
   ScrollView,
   Dimensions,
   StatusBar,
+  InteractionManager,
   Platform,
   Modal,
 } from "react-native";
+import { Image as ExpoImage } from "expo-image";
 import { SafeAreaView } from "react-native-safe-area-context";
 import { Ionicons } from "@expo/vector-icons";
 import { useRouter, useLocalSearchParams } from "expo-router";
@@ -57,8 +60,11 @@ import { useAdsVisibility } from "../../src/context/AdsVisibilityContext";
 import { CARD_HEIGHT, CARD_WIDTH } from "@/components/ShareCard";
 import { Share } from "react-native";
 import type { ViewStyle } from "react-native";
-import { adUnitIds } from "@/constants/admob";
 import PioneerBadge from "@/components/PioneerBadge";
+import BannerSlot from "@/components/BannerSlot";
+import { useBottomTabBarHeight } from "@react-navigation/bottom-tabs";
+import { useFocusEffect } from "@react-navigation/native";
+import { useSafeAreaInsets } from "react-native-safe-area-context";
 import Animated, {
   useSharedValue,
   useAnimatedStyle,
@@ -69,24 +75,54 @@ import Animated, {
   Easing,
   runOnJS,              // 👈 AJOUT
 } from "react-native-reanimated";
-import { sendDuoNudge } from "@/services/notificationService";
-import {
-  BannerAd,
-  BannerAdSize,
-  TestIds,
-} from "react-native-google-mobile-ads";
 import * as Linking from "expo-linking";
 import SendInvitationModal from "@/components/SendInvitationModal";
 import * as Localization from "expo-localization";
+import type { ModalProps } from "react-native";
+import * as Haptics from "expo-haptics";
+import { bumpCounterAndMaybeReview, maybeAskForReview } from "../../src/services/reviewService"
+import { recordSelectDays, recordDailyGlobalMark, incStat } from "../../src/services/metricsService";
+import NetInfo from "@react-native-community/netinfo";
+import { canInvite } from "../../utils/canInvite";
+import { usePathname } from "expo-router";
+
+
+function useTabBarHeightSafe(): number {
+  try {
+    return useBottomTabBarHeight();
+  } catch (_e) {
+    return 0;
+  }
+}
+
 
 const { width: SCREEN_WIDTH, height: SCREEN_HEIGHT } = Dimensions.get("window");
+const IS_SMALL = SCREEN_WIDTH < 360;
 const SPACING = 15;
-const BANNER_HEIGHT = 50;
 const normalizeSize = (size: number) => {
   const scale = SCREEN_WIDTH / 375;
   return Math.round(size * scale);
 };
 const HERO_H = Math.max(240, Math.round(SCREEN_HEIGHT * 0.35));
+
+const introModalProps: Partial<ModalProps> = Platform.select<Partial<ModalProps>>({
+  ios: {
+    presentationStyle: "overFullScreen",
+    transparent: true,
+    statusBarTranslucent: true,
+    animationType: "fade",
+  } as const,
+  android: {
+    // presentationStyle ignoré par Android
+    transparent: false,
+    statusBarTranslucent: false,
+    animationType: "fade",
+    hardwareAccelerated: true,
+  } as const,
+  default: {
+    animationType: "fade",
+  } as const,
+})!;
 
 /** Fond orbe premium, non interactif */
 const OrbBackground = ({ theme }: { theme: Theme }) => (
@@ -179,7 +215,6 @@ interface DuoChallengeData {
 export default function ChallengeDetails() {
   const { theme } = useTheme();
   const [marking, setMarking] = useState(false);
-  const [sendingNudge, setSendingNudge] = useState(false);
   const [duoState, setDuoState] = useState<{
   enabled: boolean;
   partnerId?: string;
@@ -193,11 +228,26 @@ export default function ChallengeDetails() {
   const { t, i18n } = useTranslation();
   const { showBanners } = useAdsVisibility();
   const justJoinedRef = useRef(false);
- const bottomInset = showBanners ? BANNER_HEIGHT + SPACING * 2 : SPACING * 2;
-const npa = (globalThis as any).__NPA__ === true;
 const IS_COMPACT = SCREEN_WIDTH < 380; // très petits écrans (iPhone SE/Android compacts)
 const [confirmResetVisible, setConfirmResetVisible] = useState(false);
 const [sendInviteVisible, setSendInviteVisible] = useState(false);
+const insets = useSafeAreaInsets();
+const [adHeight, setAdHeight] = useState(0);
+  // 🆕 callback stable pour éviter un re-render en boucle quand BannerSlot mesure
+  const onBannerHeight = useCallback((h: number) => {
+    if (h !== adHeight) setAdHeight(h);
+  }, [adHeight]);
+
+  // 🆕 état réseau : interdit l’invitation hors-ligne (UX claire)
+  const [isOffline, setIsOffline] = useState(false);
+  useEffect(() => {
+    const sub = NetInfo.addEventListener((s) => {
+      const off = s.isConnected === false || s.isInternetReachable === false;
+      setIsOffline(!!off);
+    });
+    return () => sub();
+  }, []);
+
 
   const router = useRouter();
     const pct = (num = 0, den = 0) => (den > 0 ? Math.min(100, Math.max(0, Math.round((num / den) * 100))) : 0);
@@ -207,6 +257,7 @@ const [sendInviteVisible, setSendInviteVisible] = useState(false);
 const startedRef = useRef(false);
 const myImgReady = useRef(false);
 const partnerImgReady = useRef(false);
+const tabBarHeight = useTabBarHeightSafe();
 const startTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
 
@@ -215,18 +266,33 @@ useEffect(() => {
   firstMountRef.current = false;
 }, []);
 
-
+// 🆕 Affiche les reviews après les animations/gestes initiaux (perf perçue)
 useEffect(() => {
-  leaderPulse.value = withRepeat(
-    withSequence(
-      withTiming(1, { duration: 1400, easing: Easing.out(Easing.quad) }),
-      withTiming(0, { duration: 1400, easing: Easing.in(Easing.quad) })
-    ),
-    -1, // -1 = repeat infini
-    true // reverse = true pour alterner
-  );
+  let timeout: ReturnType<typeof setTimeout> | null = null;
+  const task = InteractionManager.runAfterInteractions(() => {
+    timeout = setTimeout(() => setShowReviews(true), 220);
+  });
+
+  return () => {
+    if (timeout) clearTimeout(timeout);
+    task?.cancel?.();
+  };
 }, []);
 
+// 🆕 Démarrer/stopper l'animation quand l'écran est focus (perf batterie + évite jank en background)
+useFocusEffect(
+  useCallback(() => {
+    leaderPulse.value = withRepeat(
+      withSequence(
+        withTiming(1, { duration: 1400, easing: Easing.out(Easing.quad) }),
+        withTiming(0, { duration: 1400, easing: Easing.in(Easing.quad) })
+      ),
+      -1,
+      true
+    );
+    return () => { leaderPulse.value = 0; };
+  }, [leaderPulse])
+);
   
   const params = useLocalSearchParams<{
     id?: string;
@@ -238,15 +304,20 @@ useEffect(() => {
     selectedDays?: string;
     completedDays?: string;
   }>();
+  
   const [invitation, setInvitation] = useState<{ id: string } | null>(null);
-  const [invitationModalVisible, setInvitationModalVisible] = useState(false);
+ const [invitationModalVisible, setInvitationModalVisible] = useState(false);
+ const processedInviteIdsRef = useRef<Set<string>>(new Set());
+ const inviteOpenGuardRef = useRef(false);
+  
   const id = params.id || "";
 const isReload = !!(params as any)?.reload;
 const shouldEnterAnim =
   Platform.OS === "ios" && !isReload; // ➜ pas d'entering sur Android ni après reload
 
-  const { savedChallenges, addChallenge, removeChallenge } =
-    useSavedChallenges();
+   const { savedChallenges, addChallenge, removeChallenge } = useSavedChallenges();
+  // 🆕 lookup O(1) au lieu d'un some() à chaque render
+  const savedIds = useMemo(() => new Set<string>(savedChallenges.map(ch => ch.id)), [savedChallenges]);
   const {
     currentChallenges,
     takeChallenge,
@@ -265,10 +336,7 @@ const currentChallenge = useMemo(() => {
   const [duoChallengeData, setDuoChallengeData] =
     useState<DuoChallengeData | null>(null);
 
-  const bannerAdUnitId = __DEV__ ? TestIds.BANNER : adUnitIds.banner;
-
-
-  const [loading, setLoading] = useState(true);
+  const [showReviews, setShowReviews] = useState(false);
   const [challengeImage, setChallengeImage] = useState<string | null>(null);
   const [daysOptions, setDaysOptions] = useState<number[]>([
     7, 14, 21, 30, 60, 90, 180, 365,
@@ -287,6 +355,7 @@ const currentChallenge = useMemo(() => {
   const [routeDescription, setRouteDescription] = useState(
     params.description || t("challengeDetails.noDescription")
   );
+  const [loading, setLoading] = useState(true);
 
   const [myAvatar, setMyAvatar] = useState<string>("");
   const [myName, setMyName] = useState<string>("");
@@ -304,7 +373,6 @@ const assetsReady =
   const [userCount, setUserCount] = useState(0);
   const [stats, setStats] = useState<Stat[]>([]);
   const [modalVisible, setModalVisible] = useState(false);
-  const [inviteConfirmVisible, setInviteConfirmVisible] = useState(false);
   const [completionModalVisible, setCompletionModalVisible] = useState(false);
   const [statsModalVisible, setStatsModalVisible] = useState(false);
   const [pendingFavorite, setPendingFavorite] = useState<boolean | null>(null);
@@ -316,12 +384,14 @@ const [introBlocking, setIntroBlocking] = useState(false); // blocks UI & hides 
 const fadeOpacity = useSharedValue(1); // pour fade-out
 const shakeMy = useSharedValue(0);
 const shakePartner = useSharedValue(0);
-const hasShownIntro = useRef(false);
-
-const IS_SMALL = SCREEN_WIDTH < 360;
+// Padding bas pour le ScrollView
+const bottomInset = useMemo(() => {
+  const h = showBanners && !introBlocking ? adHeight : 0;
+  return SPACING * 2 + h + tabBarHeight + insets.bottom;
+}, [showBanners, introBlocking, adHeight, tabBarHeight, insets.bottom]);
+  
 const AVA = IS_SMALL ? normalizeSize(96) : normalizeSize(120);
 const GAP = IS_SMALL ? 16 : 24;
-const TITLE = IS_SMALL ? normalizeSize(34) : normalizeSize(42);
 
 const challengeTakenOptimistic = challengeTaken || justJoinedRef.current;
 
@@ -331,6 +401,7 @@ const isSoloInThisChallenge = !!currentChallenge && !isDuo;
 
 const canInviteFriend = !isDuo;
 
+const isDisabledMark = marking || isMarkedToday(id, finalSelectedDays);
 
   // ⚙️ Pré-sélection depuis le deep link ?days=XX (si valide)
 useEffect(() => {
@@ -719,83 +790,62 @@ useEffect(() => {
 }, [id]);
 
 useEffect(() => {
-  let cancelled = false;
+   if (!duoState?.enabled || !duoState?.partnerId) {
+     setDuoChallengeData(null);
+     return;
+   }
+   const partnerRef = doc(db, "users", duoState.partnerId);
+   const unsub = onSnapshot(partnerRef, async (partnerSnap) => {
+     if (!partnerSnap.exists()) {
+       setDuoChallengeData(null);
+       return;
+     }
+     const partnerData = partnerSnap.data() as any;
+     const partnerName =
+       partnerData.username ||
+       partnerData.displayName ||
+       (typeof partnerData.email === "string" ? partnerData.email.split("@")[0] : "") ||
+       t("duo.partner");
+     const rawAvatar =
+       partnerData.profileImage ||
+       partnerData.avatar ||
+       partnerData.avatarUrl ||
+       partnerData.photoURL ||
+       partnerData.photoUrl ||
+       partnerData.imageUrl ||
+       "";
+     let resolvedPartnerAvatar = "";
+     try { resolvedPartnerAvatar = (await resolveAvatarUrl(rawAvatar)) || rawAvatar; } catch {}
+     if (!resolvedPartnerAvatar) {
+       resolvedPartnerAvatar = `https://ui-avatars.com/api/?name=${encodeURIComponent(partnerName || "P")}`;
+     }
 
-  const run = async () => {
-    if (!duoState?.enabled || !duoState?.partnerId) {
-  return;
-}
+     // entrée miroir côté partenaire
+     const partnerList: any[] = Array.isArray(partnerData.CurrentChallenges)
+       ? partnerData.CurrentChallenges
+       : [];
+     const mirror = partnerList.find((c: any) => {
+       if (duoState.uniqueKey && c?.uniqueKey) return c.uniqueKey === duoState.uniqueKey;
+       const cid = c?.challengeId ?? c?.id;
+       return cid === id && c?.selectedDays === (duoState.selectedDays || 0);
+     });
 
-    try {
-      const partnerRef = doc(db, "users", duoState.partnerId);
-      const partnerSnap = await getDoc(partnerRef);
-      if (!partnerSnap.exists()) {
-        if (!cancelled) setDuoChallengeData(null);
-        return;
-      }
+     setPartnerAvatar(resolvedPartnerAvatar);
+     setDuoChallengeData({
+       duo: true,
+       duoUser: {
+         id: duoState.partnerId,
+         name: partnerName,
+         avatar: resolvedPartnerAvatar,
+         completedDays: mirror?.completedDays || 0,
+         selectedDays: mirror?.selectedDays || duoState.selectedDays || 0,
+         isPioneer: !!partnerData.isPioneer,
+       },
+     });
+   }, (e) => console.error("❌ partner onSnapshot error:", e));
 
-      const partnerData = partnerSnap.data() as any;
-
-      const partnerName =
-        partnerData.username ||
-        partnerData.displayName ||
-        (typeof partnerData.email === "string"
-          ? partnerData.email.split("@")[0]
-          : "") ||
-        t("duo.partner");
-
-      const rawAvatar =
-        partnerData.profileImage ||
-        partnerData.avatar ||
-        partnerData.avatarUrl ||
-        partnerData.photoURL ||
-        partnerData.photoUrl ||
-        partnerData.imageUrl ||
-        "";
-
-      let resolvedPartnerAvatar = "";
-      try {
-        resolvedPartnerAvatar = (await resolveAvatarUrl(rawAvatar)) || rawAvatar;
-      } catch {}
-      if (!resolvedPartnerAvatar) {
-        resolvedPartnerAvatar = `https://ui-avatars.com/api/?name=${encodeURIComponent(
-          partnerName || "P"
-        )}`;
-      }
-
-      // entrée miroir chez le partenaire
-      const partnerList: any[] = Array.isArray(partnerData.CurrentChallenges)
-        ? partnerData.CurrentChallenges
-        : [];
-      const mirror = partnerList.find((c: any) => {
-        if (duoState.uniqueKey && c?.uniqueKey) return c.uniqueKey === duoState.uniqueKey;
-        const cid = c?.challengeId ?? c?.id;
-        return cid === id && c?.selectedDays === duoState.selectedDays;
-      });
-
-      if (!cancelled) {
-        setPartnerAvatar(resolvedPartnerAvatar);
-        setDuoChallengeData({
-          duo: true,
-          duoUser: {
-            id: duoState.partnerId,
-            name: partnerName,
-            avatar: resolvedPartnerAvatar,
-            completedDays: mirror?.completedDays || 0,
-            selectedDays: mirror?.selectedDays || duoState.selectedDays || 0,
-            isPioneer: !!partnerData.isPioneer,
-          },
-        });
-      }
-    } catch (e) {
-      console.error("❌ load partner failed:", e);
-    }
-  };
-
-  run();
-  return () => { cancelled = true; };
-}, [duoState?.enabled, duoState?.partnerId, duoState?.selectedDays, duoState?.uniqueKey, id, t]);
-
+   return () => unsub();
+ }, [duoState?.enabled, duoState?.partnerId, duoState?.selectedDays, duoState?.uniqueKey, id, t]);
 
 useEffect(() => {
   if (!id) return;
@@ -973,100 +1023,94 @@ useEffect(() => {
 }, [id, t, resetSoloProgressIfNeeded]);
 
 
-// Ouvre le modal si ?invite=... est présent (via route OU via deep link brut)
-useEffect(() => {
-  const openFromParams = (inviteParam?: string) => {
-    if (!inviteParam) return;
-    if (auth.currentUser) {
-      setInvitation({ id: String(inviteParam) });
-      // petit délai pour laisser l'écran se charger
-      setTimeout(() => setInvitationModalVisible(true), 200);
-    } else {
-      // si non connecté → on redirige vers login en préservant l'invite
-      router.replace(`/login?redirect=challenge-details/${params.id}&invite=${inviteParam}`);
-    }
-  };
+const pathname = usePathname();
+ useEffect(() => {
+   const openFromParamOrUrl = (inviteParam?: string) => {
+     const idStr = String(inviteParam || "");
+     if (!idStr) return;
+     if (processedInviteIdsRef.current.has(idStr)) return;
+     if (inviteOpenGuardRef.current) return; // anti double open
 
-  // 1) Si expo-router nous a déjà passé ?invite
-  if (params?.invite) {
-    openFromParams(String(params.invite));
-  }
+     // Si pas connecté, redirige vers login en préservant l’invite
+     if (!auth.currentUser) {
+       const redirect = encodeURIComponent(`/challenge-details/${params.id}`);
+       router.replace(`/login?redirect=${redirect}&invite=${encodeURIComponent(idStr)}`);
+       return;
+     }
 
-  // 2) Fallback: lire l’URL initiale (si l’app a été ouverte par un lien)
-  Linking.getInitialURL().then((url) => {
-    if (!url) return;
-    try {
-      const parsed = Linking.parse(url);
-      const invite = String(parsed?.queryParams?.invite || "");
-      if (invite) openFromParams(invite);
-    } catch {}
-  });
+     inviteOpenGuardRef.current = true;
+     processedInviteIdsRef.current.add(idStr);
+     setInvitation({ id: idStr });
+     setTimeout(() => {
+       setInvitationModalVisible(true);
+       inviteOpenGuardRef.current = false;
+     }, 150);
 
-  // 3) Fallback live: si un lien arrive pendant que l’app est ouverte
-  const sub = Linking.addEventListener("url", ({ url }) => {
-    try {
-      const parsed = Linking.parse(url);
-      const invite = String(parsed?.queryParams?.invite || "");
-      if (invite) openFromParams(invite);
-    } catch {}
-  });
+     // ⚠️ enlève le param ?invite de l’URL courante pour éviter ré-ouverture
+     try {
+       const cleanUrl = pathname || `/challenge-details/${params.id}`;
+       router.replace(cleanUrl as any);
+     } catch {}
+   };
 
-  return () => {
-    // API SDK48/49: sub.remove(); SDK50+: sub.remove() aussi
-    (sub as any)?.remove?.();
-  };
-}, [params?.id, params?.invite, router]);
+   // 1) Param route
+   if (params?.invite) openFromParamOrUrl(String(params.invite));
 
+   // 2) Initial URL
+   Linking.getInitialURL().then((url) => {
+     if (!url) return;
+     const parsed = Linking.parse(url);
+     const invite = String(parsed?.queryParams?.invite || "");
+     if (invite) openFromParamOrUrl(invite);
+   });
 
+   // 3) URL runtime
+   const sub = Linking.addEventListener("url", ({ url }) => {
+     const parsed = Linking.parse(url);
+     const invite = String(parsed?.queryParams?.invite || "");
+     if (invite) openFromParamOrUrl(invite);
+   });
+   return () => (sub as any)?.remove?.();
+ }, [params?.id, params?.invite, router, pathname]);
 
-  const isSavedChallenge = (challengeId: string) =>
-    savedChallenges.some((ch) => ch.id === challengeId);
+  const isSavedChallenge = useCallback((challengeId: string) => savedIds.has(challengeId), [savedIds]);
 
+const completions = useMemo(() => currentChallenge?.completionDates || [], [currentChallenge?.completionDates]);
+// 🆕 Set pour test O(1) et re-calcul du calendrier mémoïsé
+const completionSet = useMemo(() => new Set(completions), [completions]);
 
-  // 👇 TOP-LEVEL, pas dans une fonction
-const completions = useMemo(
-  () => currentChallenge?.completionDates || [],
-  [currentChallenge?.completionDates]
-);
-
-const getCalendarDays = (): (null | { day: number; date: Date; completed: boolean })[] => {
+const calendarDays = useMemo(() => {
   const year = currentMonth.getFullYear();
   const month = currentMonth.getMonth();
   const numDays = new Date(year, month + 1, 0).getDate();
   const firstDayIndex = new Date(year, month, 1).getDay();
-
   const calendar: (null | { day: number; date: Date; completed: boolean })[] = [];
   for (let i = 0; i < firstDayIndex; i++) calendar.push(null);
-
   for (let day = 1; day <= numDays; day++) {
     const dateObj = new Date(year, month, day);
-    const dateStr = dateObj.toDateString();
-    const completed = completions.includes(dateStr);
+    const completed = completionSet.has(dateObj.toDateString());
     calendar.push({ day, date: dateObj, completed });
   }
   return calendar;
-};
+}, [currentMonth, completionSet]);
 
-
-  const calendarDays = getCalendarDays();
-
-  const goToPrevMonth = () => {
+ const goToPrevMonth = useCallback(() => {
     const newMonth = new Date(
       currentMonth.getFullYear(),
       currentMonth.getMonth() - 1,
       1
     );
-    setCurrentMonth(newMonth);
-  };
+    startTransition(() => setCurrentMonth(newMonth));
+  }, [currentMonth]);
 
-  const goToNextMonth = () => {
+  const goToNextMonth = useCallback(() => {
     const newMonth = new Date(
       currentMonth.getFullYear(),
       currentMonth.getMonth() + 1,
       1
     );
-    setCurrentMonth(newMonth);
-  };
+   startTransition(() => setCurrentMonth(newMonth));
+  }, [currentMonth]);
 
   const monthName = currentMonth.toLocaleString(i18n.language, {
     month: "long",
@@ -1081,6 +1125,15 @@ const getCalendarDays = (): (null | { day: number; date: Date; completed: boolea
     finalSelectedDays > 0
       ? Math.min(1, finalCompletedDays / finalSelectedDays)
       : 0;
+
+      // Map la durée sélectionnée vers nos paliers d'achievements (7/30/90/180/365)
+ const bucketizeDays = (n: number): 7 | 30 | 90 | 180 | 365 => {
+   if (n <= 7) return 7;
+   if (n <= 30) return 30;
+   if (n <= 90) return 90;
+   if (n <= 180) return 180;
+   return 365;
+ };
 
   const handleTakeChallenge = useCallback(async () => {
   if (challengeTaken || !id) return;
@@ -1100,10 +1153,12 @@ const getCalendarDays = (): (null | { day: number; date: Date; completed: boolea
     }
     const challengeData = challengeSnap.data();
 
-    // 2) UI optimiste IMMÉDIATE
-    justJoinedRef.current = true;
-    setFinalSelectedDays(localSelectedDays);
-    setFinalCompletedDays(0);
+    // 2) UI optimiste IMMÉDIATE (non bloquante)
+    startTransition(() => {
+      justJoinedRef.current = true;
+      setFinalSelectedDays(localSelectedDays);
+      setFinalCompletedDays(0);
+    });
 
     // 3) Contexte (persistance locale) — ok de l’attendre pour être cohérent
     await takeChallenge(
@@ -1118,6 +1173,17 @@ const getCalendarDays = (): (null | { day: number; date: Date; completed: boolea
       },
       localSelectedDays
     );
+
+    // 🔢 Metrics: sélectionner une durée compte pour les succès (7/30/90/180/365)
+  try {
+    const uid = auth.currentUser?.uid;
+    if (uid) {
+      await recordSelectDays(uid, bucketizeDays(localSelectedDays));
+      await checkForAchievements(uid);
+    }
+  } catch (e) {
+    console.warn("recordSelectDays failed (non-bloquant):", e);
+  }
 
     // 4) Préfetch de l’image pour éviter le flash si tu scrolles/remontes
     if (challengeData.imageUrl) {
@@ -1142,10 +1208,11 @@ const getCalendarDays = (): (null | { day: number; date: Date; completed: boolea
 
     // ❌ plus de router.replace() ici
   } catch (err) {
-    // si fail => rollback minimal de l’optimisme
-    justJoinedRef.current = false;
-    setFinalSelectedDays(0);
-    setFinalCompletedDays(0);
+    startTransition(() => {
+      justJoinedRef.current = false;
+      setFinalSelectedDays(0);
+      setFinalCompletedDays(0);
+    });
     Alert.alert(
       t("alerts.error"),
       err instanceof Error ? err.message : t("challengeDetails.joinError")
@@ -1156,115 +1223,56 @@ const getCalendarDays = (): (null | { day: number; date: Date; completed: boolea
 }, [id, challengeTaken, localSelectedDays, takeChallenge, t]);
 
 
-  const handleSaveChallenge = useCallback(async () => {
-    if (!id) return;
-    setPendingFavorite(!isSavedChallenge(id));
-    try {
-      const challengeRef = doc(db, "challenges", id);
-      const challengeSnap = await getDoc(challengeRef);
-      if (!challengeSnap.exists()) {
-        Alert.alert(t("alerts.error"), t("challengeDetails.fetchError"));
-        setPendingFavorite(null);
-        return;
-      }
-      const challengeData = challengeSnap.data();
-      const challengeObj = {
-        id,
-        title: challengeData.title || "Untitled Challenge",
-        category: challengeData.category || "Uncategorized",
-        description: challengeData.description || "No description available",
-        daysOptions: challengeData.daysOptions || [
-          7, 14, 21, 30, 60, 90, 180, 365,
-        ],
-        chatId: challengeData.chatId || id,
-        imageUrl: challengeData.imageUrl || "",
-      };
-      if (isSavedChallenge(id)) {
-        await removeChallenge(id);
-      } else {
-        await addChallenge(challengeObj);
-      }
-      setPendingFavorite(null);
-    } catch (err) {
-      Alert.alert(
-        t("alerts.error"),
-        err instanceof Error ? err.message : t("challengeDetails.saveError")
-      );
-      setPendingFavorite(null);
-    }
-  }, [id, savedChallenges, addChallenge, removeChallenge]);
+  const saveBusyRef = useRef(false);
 
-const handleNudgePartner = useCallback(async () => {
-  if (!isDuo || !(duoState?.partnerId || duoChallengeData?.duoUser?.id)) {
+const handleSaveChallenge = useCallback(async () => {
+  if (!id || saveBusyRef.current) return;
+  saveBusyRef.current = true;
 
-  Alert.alert(
-    t("alerts.error"),
-    t("duo.nudgeUnavailable", { defaultValue: "Fonction réservée aux défis en duo." })
-  );
-  return;
-}
-  if (sendingNudge) return;
+  const wasSaved = isSavedChallenge(id);
+  setPendingFavorite(!wasSaved); // 👈 optimiste immédiat
 
   try {
-    setSendingNudge(true);
-    const res = await sendDuoNudge({
-      toUserId: duoState?.partnerId || duoChallengeData?.duoUser?.id!,
-      challengeTitle: routeTitle || t("challengeDetails.untitled"),
-    });
+    const challengeRef = doc(db, "challenges", id);
+    const challengeSnap = await getDoc(challengeRef);
+    if (!challengeSnap.exists()) throw new Error("not_found");
 
-    if (res.ok) {
-      Alert.alert(
-        t("duo.nudge", { defaultValue: "Encourager" }),
-        t("duo.nudgeSent", { defaultValue: "Encouragement envoyé ✅" })
-      );
-      return;
+    const d = challengeSnap.data();
+    const obj = {
+      id,
+      title: d.title || "Untitled Challenge",
+      category: d.category || "Uncategorized",
+      description: d.description || "No description available",
+      daysOptions: d.daysOptions || [7,14,21,30,60,90,180,365],
+      chatId: d.chatId || id,
+      imageUrl: d.imageUrl || "",
+    };
+
+    if (wasSaved) await removeChallenge(id);
+    else {
+      await addChallenge(obj);
+      // 🔢 Metrics succès : saveChallenge
+      try {
+        const uid = auth.currentUser?.uid;
+        if (uid) {
+          const userRef = doc(db, "users", uid);
+          await updateDoc(userRef, { saveChallenge: increment(1) });
+          await checkForAchievements(uid);
+        }
+      } catch (e) {
+        console.warn("saveChallenge metric failed (non-bloquant):", e);
+      }
     }
 
-    // Messages d'erreur plus explicites (UN SEUL bloc)
-    let msg = t("duo.nudgeFailed", {
-      defaultValue: "Impossible d'envoyer la notification.",
-    });
-
-    if (res.reason === "no-token") {
-      msg = t("duo.nudgeNoToken", {
-        defaultValue:
-          "Ton partenaire n’a pas activé les notifications ou n’a pas encore ouvert l’app depuis la mise à jour.",
-      });
-    } else if (res.reason === "disabled") {
-      msg = t("duo.nudgeDisabled", {
-        defaultValue: "Ton partenaire a désactivé les notifications.",
-      });
-    } else if (res.reason === "no-user") {
-      msg = t("duo.nudgeNoUser", { defaultValue: "Partenaire introuvable." });
-    } else if (res.reason === "unregistered") {
-      msg = t("duo.nudgeUnregistered", {
-        defaultValue:
-          "Le token de ton partenaire n’est plus valide. Demande-lui d’ouvrir l’app pour réactiver les notifications.",
-      });
-    } else if (res.reason === "expo-error") {
-      msg = t("duo.nudgeExpoError", {
-        defaultValue:
-          "Erreur du service de notifications. Réessaie un peu plus tard.",
-      });
-    }
-
-    Alert.alert(t("alerts.error"), msg);
-  } catch (e) {
-    Alert.alert(
-      t("alerts.error"),
-      t("duo.nudgeFailed", { defaultValue: "Impossible d'envoyer la notification." })
-    );
+  } catch (err) {
+    // rollback optimiste
+    setPendingFavorite(null);
+    Alert.alert(t("alerts.error"), t("challengeDetails.saveError"));
   } finally {
-    setSendingNudge(false);
+    saveBusyRef.current = false;
+    setPendingFavorite(null);
   }
-}, [
-  duoChallengeData?.duo,
-  currentChallenge?.duoPartnerId,
-  routeTitle,
-  t,
-  sendingNudge,
-]);
-
+}, [id, addChallenge, removeChallenge, isSavedChallenge, t]);
 
 
   const handleShowCompleteModal = useCallback(() => {
@@ -1299,8 +1307,8 @@ const handleNudgePartner = useCallback(async () => {
       return;
     }
     router.push(
-      `/challenge-chat/${id}?title=${encodeURIComponent(routeTitle)}`
-    );
+  `/challenge-chat/${id}?title=${encodeURIComponent(routeTitle)}&duo=${isDuo ? "1" : "0"}`
+);
   }, [id, challengeTaken , routeTitle, router]);
 
   // Langue sûre pour le partage (Jamais de split sur undefined)
@@ -1339,32 +1347,38 @@ const getShareLang = (i18nLang?: string) => {
 const handleShareChallenge = useCallback(async () => {
   try {
     const shareLang = getShareLang(i18n?.language as string | undefined);
-    // ⚠️ Utiliser la Cloud Function (pas le domaine web.app)
-    const base = "https://europe-west1-challengeme-d7fef.cloudfunctions.net/dl";
-
-    const params = new URLSearchParams({
-      id,
-      title: routeTitle,
-      shareLang,
-      v: String(Date.now()),
-    });
-
+     // ✅ Lien universel hébergé : ouvre l'app si installée, sinon Store
+    const base = "https://links.challengeties.app/i";
+    const params = new URLSearchParams();
+    params.set("id", id);
+    params.set("title", routeTitle);
+    params.set("lang", shareLang);
+    // petit cache-busting pour les previews (WA/iMessage)
+    params.set("v", String(Date.now()));
     const appLink = `${base}?${params.toString()}`;
     const message = `${t("challengeDetails.shareMessage", { title: routeTitle })}\n${appLink}`;
 
     const result = await Share.share(
-      { title: t("challengeDetails.share"), message },
+      { title: t("challengeDetails.share"), message, url: appLink },
       { dialogTitle: t("challengeDetails.share") }
     );
 
-    if (result.action === Share.sharedAction) {
-      const userId = auth.currentUser?.uid;
-      if (userId) {
-        const userRef = doc(db, "users", userId);
-        await updateDoc(userRef, { shareChallenge: increment(1) });
-        await checkForAchievements(userId);
+   if (result.action === Share.sharedAction) {
+      const uid = auth.currentUser?.uid;
+      if (uid) {
+        // ✅ Succès: shareChallenge → incrémente UNIQUEMENT si réellement partagé
+        await incStat(uid, "shareChallenge.total", 1);
+        await checkForAchievements(uid);
       }
     }
+    else {
+  // Fallback discret : copie le lien dans le presse-papier
+  try {
+    const { setStringAsync } = await import("expo-clipboard");
+    await setStringAsync(appLink);
+    Alert.alert(t("challengeDetails.share"), t("challengeDetails.linkCopied"));
+  } catch {}
+}
   } catch (error: any) {
     console.error("❌ handleShareChallenge error:", error);
     Alert.alert(t("alerts.shareError"), error?.message || String(error));
@@ -1372,9 +1386,17 @@ const handleShareChallenge = useCallback(async () => {
 }, [id, routeTitle, t, lang]);
 
 
-const handleInviteFriend = useCallback(() => {
+
+const handleInviteFriend = useCallback(async () => {
+  Haptics.selectionAsync().catch(()=>{});
   try {
     if (!id) return;
+
+    // 0) Hors-ligne -> message clair
+    if (isOffline) {
+      Alert.alert(t("common.networkError"), t("firstPick.offlineDuo") || "Connecte-toi à Internet pour inviter un ami en duo.");
+      return;
+    }
 
     // 1) Interdit si déjà en DUO
     if (isDuo) {
@@ -1382,19 +1404,30 @@ const handleInviteFriend = useCallback(() => {
       return;
     }
 
-    // 2) Si déjà en SOLO (streak 0 ou > 0) → confirmation obligatoire
+    // 2) Anti-doublon : refuse si une invitation PENDING existe déjà pour ce défi
+    const res = await canInvite(id);
+    if (!res.ok) {
+      const msg =
+        res.reason === "pending-invite"
+          ? t("firstPick.alreadyInvited") || "Tu as déjà une invitation en attente pour ce défi."
+          : t("common.oops");
+      Alert.alert(t("common.info"), msg);
+      return;
+    }
+
+    // 3) Si déjà en SOLO (streak 0 ou > 0) → confirmation obligatoire
     if (isSoloInThisChallenge) {
       setConfirmResetVisible(true);
       return;
     }
 
-    // 3) Sinon (pas pris du tout) → on ouvre directement le SendInvitationModal
+    // 4) Sinon (pas pris du tout) → ouvre directement le SendInvitationModal
     setSendInviteVisible(true);
   } catch (err) {
     console.error("❌ handleInviteFriend error:", err);
     Alert.alert(t("alerts.error"), t("invitationS.errors.unknown"));
   }
-}, [id, isDuo, isSoloInThisChallenge, t]);
+}, [id, isDuo, isSoloInThisChallenge, isOffline, t]);
 
 
   const handleViewStats = useCallback(() => {
@@ -1409,7 +1442,22 @@ const handleInviteFriend = useCallback(() => {
   try {
     setMarking(true);
     // ⚠️ on laisse le contexte faire ses vérifications (rupture, modal, etc.)
-    const res = await markToday(id, finalSelectedDays);
+    await markToday(id, finalSelectedDays);
+    await Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
+try {
+  await bumpCounterAndMaybeReview(`markToday:${id}:${finalSelectedDays}`, 7);
+} catch {}
+// 🔢 Metrics : streak "au moins 1 validation / jour" + succès
+try {
+  const uid = auth.currentUser?.uid;
+  if (uid) {
+    await recordDailyGlobalMark(uid, new Date());
+    await checkForAchievements(uid);
+  }
+} catch (e) {
+  console.warn("recordDailyGlobalMark failed (non-bloquant):", e);
+}
+
 
   } catch (e) {
     console.error("markToday failed", e);
@@ -1418,6 +1466,12 @@ const handleInviteFriend = useCallback(() => {
     setMarking(false);
   }
 }, [marking, id, finalSelectedDays, isMarkedToday, markToday, t]);
+
+  // 🆕 styles/objets stables pour ScrollView afin d’éviter re-renders
+const scrollContentStyle = useMemo(
+  () => [styles.scrollPad, { paddingBottom: bottomInset + SPACING }],
+  [bottomInset]
+);
 
   return (
     <LinearGradient
@@ -1439,20 +1493,24 @@ const handleInviteFriend = useCallback(() => {
 />
       <ConfettiCannon
         ref={confettiRef}
-        count={150}
+        count={120}
         origin={{ x: -10, y: 0 }}
         autoStart={false}
-        fadeOut={false}
+        fadeOut 
         explosionSpeed={800}
         fallSpeed={3000}
       />
-      <Animated.View entering={firstMountRef.current && shouldEnterAnim ? FadeInUp : undefined}
-                style={styles.backButtonContainer}
-                renderToHardwareTextureAndroid
-                needsOffscreenAlphaCompositing>
+      <Animated.View
+   entering={firstMountRef.current && shouldEnterAnim ? FadeInUp : undefined}
+   style={[styles.backButtonContainer, { top: insets.top + 6 }]}
+   renderToHardwareTextureAndroid
+   needsOffscreenAlphaCompositing
+   pointerEvents="box-none"
+ >
         <TouchableOpacity
           onPress={() => router.back()}
-          style={[styles.backButton, styles.backButtonOverlay]}
+          style={[styles.backButton, styles.backButtonOverlay, { width: 44, height: 44, borderRadius: 22, justifyContent: "center", alignItems: "center" }]}
+    hitSlop={{ top: 12, bottom: 12, left: 12, right: 12 }}
           accessibilityLabel={t("backButton")}
           accessibilityHint={t("backButtonHint")}
           accessibilityRole="button"
@@ -1466,19 +1524,30 @@ const handleInviteFriend = useCallback(() => {
         </TouchableOpacity>
       </Animated.View>
       <ScrollView
-  style={{ flex: 1 }}
-  removeClippedSubviews={false}
-  keyboardShouldPersistTaps="handled"
-  showsVerticalScrollIndicator={false}
-  contentContainerStyle={{ paddingBottom: bottomInset + SPACING }}
-  contentInsetAdjustmentBehavior="never"
-  overScrollMode="never"
->
+        style={{ flex: 1 }}
+        removeClippedSubviews={true}              // 🆕 recycle views (perf grandes descriptions)
+        keyboardShouldPersistTaps="handled"
+        showsVerticalScrollIndicator={false}
+        contentContainerStyle={scrollContentStyle}
+        contentInsetAdjustmentBehavior="never"
+        overScrollMode="never"
+      >
   <View style={styles.imageContainer}>
     {challengeImage ? (
       <>
-        <Image source={{ uri: challengeImage }} style={styles.image} resizeMode="cover" />
+        {/* 🆕 ExpoImage = cache memory/disk + transition native */}
+        <ExpoImage
+  source={{ uri: challengeImage }}
+  style={styles.image}
+  contentFit="cover"
+  cachePolicy="disk"          // 👈 force disque pour retours
+  transition={150}
+  priority="high"             // 👈 charge en priorité
+  recyclingKey={challengeImage} // 👈 évite leaks sur switch d’images
+/>
+
         <LinearGradient
+        pointerEvents="none"
           colors={["rgba(0,0,0,0)", "rgba(0,0,0,0.35)", "rgba(0,0,0,0.6)"]}
           start={{ x: 0, y: 0 }} end={{ x: 0, y: 1 }} style={styles.heroOverlay}
         />
@@ -1486,7 +1555,9 @@ const handleInviteFriend = useCallback(() => {
     ) : (
       <View style={[styles.imagePlaceholder, { backgroundColor: currentTheme.colors.overlay }]}>
         <Ionicons name="image-outline" size={normalizeSize(80)} color={currentTheme.colors.textPrimary} />
-        <Text style={[styles.noImageText, { color: currentTheme.colors.textPrimary }]}>Image non disponible</Text>
+        <Text style={[styles.noImageText, { color: currentTheme.colors.textPrimary }]}>
+  {t("challengeDetails.noImage")}
+</Text>
       </View>
     )}
   </View>
@@ -1534,8 +1605,8 @@ const handleInviteFriend = useCallback(() => {
   <View style={styles.chip}>
     <Ionicons name="person-outline" size={14} color="#fff" />
     <Text style={styles.chipText}>
-      {userCount} {t(`challengeDetails.participant${userCount > 1 ? "s" : ""}`)}
-    </Text>
+  {t("challengeDetails.participants", { count: userCount })}
+</Text>
   </View>
 </View>
           {!challengeTakenOptimistic  && (
@@ -1612,11 +1683,16 @@ const handleInviteFriend = useCallback(() => {
 
         {/* Barre perso */}
         <View
-          style={[
-            styles.progressBarBackground,
-            { backgroundColor: currentTheme.colors.border },
-          ]}
-        >
+  accessibilityRole="progressbar"
+  accessibilityLiveRegion="polite"
+  accessibilityValue={{
+    min: 0,
+    max: finalSelectedDays || 0,
+    now: finalCompletedDays || 0,
+    text: `${finalCompletedDays}/${finalSelectedDays}`
+  }}
+  style={[styles.progressBarBackground, { backgroundColor: currentTheme.colors.border }]}
+>
           <LinearGradient
             colors={
               isDarkMode
@@ -1700,21 +1776,15 @@ const handleInviteFriend = useCallback(() => {
               let iconColor = currentTheme.colors.textSecondary;
 
               if (tied) {
-                bannerBg = isDarkMode
-                  ? { backgroundColor: "rgba(255,255,255,0.08)" }
-                  : { backgroundColor: "rgba(0,0,0,0.06)" };
-                textStyle = { color: currentTheme.colors.textSecondary };
+                bannerBg = { backgroundColor: isDarkMode ? "rgba(255,255,255,0.08)" : "rgba(0,0,0,0.06)" };
+textStyle = { color: isDarkMode ? "#E6E6E6" : "#333333" };
               } else if (iLead) {
-                bannerBg = isDarkMode
-                  ? { backgroundColor: "rgba(255,215,0,0.18)" }
-                  : { backgroundColor: "#FFF4CC" };
-                textStyle = isDarkMode ? { color: "#FFD700" } : { color: "#8A6A00" };
+                bannerBg = { backgroundColor: isDarkMode ? "rgba(255,215,0,0.18)" : "#FFF4CC" };
+textStyle = { color: isDarkMode ? "#FFE07A" : "#5C4A00" };
                 iconColor = isDarkMode ? "#FFD700" : "#8A6A00";
               } else {
-                bannerBg = isDarkMode
-                  ? { backgroundColor: "rgba(255,122,122,0.18)" }
-                  : { backgroundColor: "#FFE5E5" };
-                textStyle = isDarkMode ? { color: "#FF9999" } : { color: "#B30000" };
+                bannerBg = { backgroundColor: isDarkMode ? "rgba(255,122,122,0.18)" : "#FFE5E5" };
+textStyle = { color: isDarkMode ? "#FFB3B3" : "#8A0000" };
                 iconColor = isDarkMode ? "#FF9999" : "#B30000";
               }
 
@@ -1873,35 +1943,6 @@ const handleInviteFriend = useCallback(() => {
               </View>
             </View>
 
-            {/* CTA Duo */}
-            <View style={styles.duoCtas}>
-              <TouchableOpacity
-                onPress={handleNudgePartner}
-                onLongPress={handleNavigateToChat}
-                activeOpacity={0.9}
-                disabled={sendingNudge}
-                accessibilityLabel={t("duo.nudge")}
-                accessibilityHint={t("duo.nudgeHint", {
-                  defaultValue: "Appuie pour encourager. Appui long pour ouvrir le chat.",
-                })}
-              >
-                <LinearGradient
-                  colors={
-                    sendingNudge
-                      ? ["#6b7280", "#6b7280"]
-                      : [currentTheme.colors.secondary, currentTheme.colors.primary]
-                  }
-                  start={{ x: 0, y: 0 }}
-                  end={{ x: 1, y: 1 }}
-                  style={styles.duoBtn}
-                >
-                  <Ionicons name="megaphone-outline" size={18} color="#fff" style={{ marginRight: 6 }} />
-                  <Text style={styles.duoBtnText}>
-                    {sendingNudge ? t("commonS.sending", { defaultValue: "Envoi..." }) : t("duo.nudge")}
-                  </Text>
-                </LinearGradient>
-              </TouchableOpacity>
-            </View>
           </>
         );
       })()}
@@ -1921,9 +1962,10 @@ const handleInviteFriend = useCallback(() => {
     {/* Bouton marquer aujourd'hui (commun) */}
     <TouchableOpacity
       style={styles.markTodayButton}
+      accessibilityHint={t("challengeDetails.markTodayHint")}
       accessibilityRole="button"
       onPress={handleMarkTodayPress}
- disabled={marking || isMarkedToday(id, finalSelectedDays)}
+      disabled={marking || isMarkedToday(id, finalSelectedDays)}
       accessibilityLabel={
         isMarkedToday(id, finalSelectedDays)
           ? t("challengeDetails.alreadyMarked")
@@ -2137,12 +2179,12 @@ const handleInviteFriend = useCallback(() => {
               </Text>
             </TouchableOpacity>
             <TouchableOpacity
-  style={[styles.actionIcon, { opacity: canInviteFriend ? 1 : 0.4 }]}
+  style={[styles.actionIcon, { opacity: canInviteFriend && !isOffline ? 1 : 0.4 }]}
   onPress={canInviteFriend ? handleInviteFriend : undefined}
   accessibilityRole="button"
   accessibilityLabel={t("inviteAFriend")}
   testID="invite-button"
-  disabled={!canInviteFriend}
+  disabled={!canInviteFriend || isOffline}
 >
   <Ionicons
     name="person-add-outline"
@@ -2208,10 +2250,13 @@ const handleInviteFriend = useCallback(() => {
             </TouchableOpacity>
           </Animated.View>
         </Animated.View>
-        <ChallengeReviews
-  challengeId={id}
-  selectedDays={finalSelectedDays}
-/>
+        {/* 🆕 Lazy mount des reviews après les interactions (fluidité initiale) */}
+{showReviews && (
+  <ChallengeReviews
+    challengeId={id}
+    selectedDays={finalSelectedDays}
+  />
+)}
       </ScrollView>
 
       <DurationSelectionModal
@@ -2242,27 +2287,38 @@ const handleInviteFriend = useCallback(() => {
         goToPrevMonth={goToPrevMonth}
         goToNextMonth={goToNextMonth}
       />
-      {showBanners && (
-  <View style={styles.bannerContainer}>
-    <BannerAd
-  unitId={bannerAdUnitId}
-  size={BannerAdSize.BANNER}
-  requestOptions={{ requestNonPersonalizedAdsOnly: npa }}
-  onAdFailedToLoad={(err) =>
-    console.error("Échec chargement bannière", err)
-  }
-/>
-
+      {showBanners && !introBlocking && (
+  <View
+    style={{
+      position: "absolute",
+      left: 0,
+      right: 0,
+      bottom: tabBarHeight + insets.bottom, // 👈 juste au-dessus de la TabBar + safe area
+      alignItems: "center",
+      backgroundColor: "transparent",
+      zIndex: 9999,
+      paddingBottom: 6,
+    }}
+    pointerEvents="box-none"
+  >
+    <BannerSlot onHeight={onBannerHeight} />
   </View>
 )}
 
+
       <InvitationModal
-        visible={invitationModalVisible}
-        inviteId={invitation?.id || null}
-        challengeId={id}
-        onClose={() => setInvitationModalVisible(false)}
-        clearInvitation={() => setInvitation(null)} // 👈 ICI
-      />
+   key={invitation?.id || "no-invite"}  // remount propre si id change
+   visible={invitationModalVisible}
+   inviteId={invitation?.id || null}
+   challengeId={id}
+   onClose={() => {
+     setInvitationModalVisible(false);
+   }}
+   clearInvitation={() => {
+     if (invitation?.id) processedInviteIdsRef.current.add(invitation.id);
+     setInvitation(null);
+   }}
+ />
       {loading && (
   <View style={styles.loadingOverlay}>
     <ActivityIndicator size="large" color={currentTheme.colors.secondary} />
@@ -2329,10 +2385,10 @@ const handleInviteFriend = useCallback(() => {
   challengeTitle={routeTitle}
   onClose={() => setSendInviteVisible(false)}
   onSent={() => {
-    // UX : toast/alert “Invitation envoyée” si le composant ne s’en charge pas déjà
-    // Alert.alert(t("duo.nudge"), t("invitationS.sent", { defaultValue: "Invitation envoyée ✅" }));
-    setSendInviteVisible(false);
-  }}
+  Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success).catch(()=>{});
+  Alert.alert(t("duo.nudge"), t("invitationS.sent", { defaultValue: "Invitation envoyée ✅" }));
+  setSendInviteVisible(false);
+}}
 />
 
 
@@ -2342,15 +2398,10 @@ const handleInviteFriend = useCallback(() => {
 )}
 <Modal
   visible={introVisible}
-  presentationStyle="fullScreen"
-  animationType="fade"
-  statusBarTranslucent
-  transparent
-  hardwareAccelerated
-  onShow={() => setIntroBlocking(true)}
   onRequestClose={() => setIntroVisible(false)}
+  onShow={() => setIntroBlocking(true)}
   onDismiss={() => setIntroBlocking(false)}
-
+  {...introModalProps}
 >
   <Animated.View
     style={[styles.vsModalRoot, fadeStyle]}
@@ -2382,6 +2433,7 @@ const handleInviteFriend = useCallback(() => {
   source={{ uri: myAvatar || `https://ui-avatars.com/api/?name=${encodeURIComponent(myName || "You")}` }}
   style={[styles.vsAvatarXL, { width: AVA, height: AVA, borderRadius: AVA/2 }]}
   onLoad={() => { myImgReady.current = true; tryStart(); }}
+  onError={() => { myImgReady.current = true; tryStart(); }}  // 👈 fail-safe
 />
             {/* glow ring */}
             <Animated.View style={[styles.vsGlowRing]} />
@@ -2413,6 +2465,7 @@ const handleInviteFriend = useCallback(() => {
   source={{ uri: partnerAvatar || `https://ui-avatars.com/api/?name=${encodeURIComponent(duoChallengeData?.duoUser?.name || "P")}` }}
   style={[styles.vsAvatarXL, { width: AVA, height: AVA, borderRadius: AVA/2 }]}
   onLoad={() => { partnerImgReady.current = true; tryStart(); }}
+  onError={() => { partnerImgReady.current = true; tryStart(); }} // 👈 fail-safe
 />
             {/* glow ring */}
             <Animated.View style={[styles.vsGlowRing, { borderColor: "#00FFFF55", shadowColor: "#00FFFF" }]} />
@@ -2446,19 +2499,18 @@ const styles = StyleSheet.create({
    borderBottomRightRadius: normalizeSize(30),
    overflow: "hidden",
   marginBottom: SPACING, 
+  shadowColor: "#000",
+    shadowOpacity: 0.18,
+    shadowRadius: 14,
+    shadowOffset: { width: 0, height: 10 },
+    elevation: 10,
 },
-
-  bannerContainer: {
-    position: "absolute",
-    bottom: 0,
-    width: SCREEN_WIDTH,
-    alignItems: "center",
-    backgroundColor: "transparent",
-    zIndex: 1, // Assure que la bannière reste au-dessus mais ne coupe pas
-  },
   image: {
     width: "100%",
     height: "100%",
+    backfaceVisibility: "hidden",
+    borderBottomLeftRadius: normalizeSize(30),
+    borderBottomRightRadius: normalizeSize(30),
   },
   hiddenShareCanvas: {
   position: "absolute",
@@ -2484,12 +2536,14 @@ loadingText: {
   fontFamily: "Comfortaa_400Regular",
 },
 
-  backButtonContainer: {
+backButtonContainer: {
     position: "absolute",
-    top:
-      Platform.OS === "android" ? StatusBar.currentHeight ?? SPACING : SPACING,
+    // la valeur sera surchargée à l’usage avec insets.top
+    top: 0,
     left: SPACING,
-    zIndex: 20, // Augmente le zIndex pour être au-dessus de l'image et du gradient
+    zIndex: 50,        // plus haut que tout le reste
+    elevation: 50,
+    pointerEvents: "box-none",
   },
   orb: {
   position: "absolute",
@@ -2516,9 +2570,11 @@ loadingText: {
     padding: SPACING / 2,
   },
   backButtonOverlay: {
-    backgroundColor: "rgba(0, 0, 0, 0.5)", // Overlay semi-transparent
+    backgroundColor: "rgba(0, 0, 0, 0.42)", // 🧼 plus doux
     borderRadius: normalizeSize(20),
-    padding: SPACING / 2,
+    padding: 0,
+    borderWidth: 1, // 🆕 halo fin premium
+    borderColor: "rgba(255,255,255,0.12)",
   },
   imagePlaceholder: {
     flex: 1,
@@ -2579,7 +2635,7 @@ confirmBtnOkText: {
   color: "#000",
   fontWeight: "700",
 },
-
+scrollPad: { paddingBottom: SPACING },
   chipRow: {
   flexDirection: "row",
   flexWrap: "wrap",
@@ -2863,25 +2919,6 @@ vsBadgeCompact: {
 vsTextCompact: {
   fontSize: normalizeSize(14),
 },
-  duoCtas: {
-  marginTop: SPACING,
-  alignItems: "center",
-  // ✅ NEW: évite que le CTA colle à la barre
-  paddingTop: 2,
-},
-  duoBtn: {
-    flexDirection: "row",
-    alignItems: "center",
-    paddingVertical: 10,
-    paddingHorizontal: 16,
-    borderRadius: 999,
-  },
-  duoBtnText: {
-    color: "#fff",
-    fontFamily: "Comfortaa_700Bold",
-    fontSize: normalizeSize(14),
-  },
-
   noImageText: {
     marginTop: SPACING,
     fontFamily: "Comfortaa_400Regular",
@@ -2994,6 +3031,10 @@ progressSection: {
     borderRadius: normalizeSize(5),
     overflow: "hidden",
     marginTop: SPACING,
+    shadowColor: "#000",
+    shadowOpacity: 0.08,
+    shadowRadius: 4,
+    shadowOffset: { width: 0, height: 2 },
   },
   progressBarFill: {
     height: "100%",
@@ -3049,6 +3090,9 @@ progressSection: {
     textAlign: "center",
     includeFontPadding: false,     // compacte le text verticalement
     lineHeight: normalizeSize(18),
+    textShadowColor: "rgba(0,0,0,0.12)",
+    textShadowOffset: { width: 0, height: 1 },
+    textShadowRadius: 1.2,
   },
   loadingContainer: {
     flex: 1,
