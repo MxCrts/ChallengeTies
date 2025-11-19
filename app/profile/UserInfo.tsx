@@ -189,7 +189,8 @@ export default function UserInfo() {
   const [profileImage, setProfileImage] = useState<string | null>(null);
   const [location, setLocation] = useState("");
   const [interests, setInterests] = useState("");
-  const [isLoading, setIsLoading] = useState(true);
+  const [isFetching, setIsFetching] = useState(true); // chargement initial du profil
+const [isLoading, setIsLoading] = useState(false); 
   const { theme } = useTheme();
 
   const isDarkMode = theme === "dark";
@@ -266,7 +267,7 @@ const hasChanges = useMemo(() => {
           t("errorFetchingProfile") + `: ${error.message}`
         );
       } finally {
-        setIsLoading(false);
+        setIsFetching(false);
       }
     };
     fetchUserData();
@@ -381,49 +382,51 @@ if (cleanBio && cleanBio !== safeTrim(user.bio)) {
 if ((profileImage || null) !== (user.profileImage || null)) {
   updateData.profileImage = profileImage || null;
 }
-if (cleanLocation && cleanLocation !== safeTrim(user.location)) {
-  updateData.location = cleanLocation;
-}
-if (cleanInterests && cleanInterests !== safeTrim(user.interests)) {
-  // 📝 on stocke en string; si tu veux un tableau en DB,
-  // remplace par: cleanInterests.split(",").map(s => s.trim()).filter(Boolean)
-  updateData.interests = cleanInterests;
-}
+
 
 // ✅ Si, avec les valeurs à jour (côté client), le profil devient complet,
   // on pose des flags server-friendly (idempotent côté rules/serveur).
-  const prospective = {
-    displayName: cleanDisplay || user.displayName,
-    bio: cleanBio || user.bio,
-    location: cleanLocation || user.location,
-    profileImage: (profileImage || user.profileImage) ?? "",
-    interests: cleanInterests || user.interests,
-  };
-  const willBeComplete = isProfileCompleteLocal(prospective);
-  if (willBeComplete) {
-    updateData.profileCompleted = true as any;
-    updateData["stats.profile.completed"] = true as any;
-    // profileCompletedAt → côté serveur (évite le décalage d’horloge client)
-    (updateData as any).profileCompletedAt = serverTimestamp();
-  }
+  if (cleanLocation && cleanLocation !== safeTrim(user.location)) {
+  updateData.location = cleanLocation;
+}
+if (interestsArray.length > 0 && cleanInterests !== safeTrim(user.interests)) {
+  updateData.interests = interestsArray as any;
+}
 
+// ✅ Si, avec les valeurs à jour (côté client), le profil devient complet,
+const prospective = {
+  displayName: cleanDisplay || user.displayName,
+  bio: cleanBio || user.bio,
+  location: cleanLocation || user.location,
+  profileImage: (profileImage || user.profileImage) ?? "",
+  interests: interestsArray.length > 0 ? interestsArray : user.interests,
+};
+const willBeComplete = isProfileCompleteLocal(prospective);
+if (willBeComplete) {
+  updateData.profileCompleted = true as any;
+  // profileCompletedAt → côté serveur
+  (updateData as any).profileCompletedAt = serverTimestamp();
+}
 
-  // Rien de pertinent à mettre à jour → on informe et on sort
-  if (Object.keys(updateData).length === 0) {
-    Alert.alert(t("info"), t("noChangesDetected"));
-    return;
-  }
+// On met toujours à jour updatedAt
+(updateData as any).updatedAt = serverTimestamp();
+
+// Rien de pertinent à mettre à jour → on informe et on sort
+if (Object.keys(updateData).length === 0) {
+  Alert.alert(t("info"), t("noChangesDetected"));
+  return;
+}
 
   setIsLoading(true);
   try {
     const userRef = doc(db, "users", user.uid);
     await updateDoc(userRef, updateData);
-    await checkForAchievements(user.uid);
-    Keyboard.dismiss();
-   navigatedRef.current = true;
-   setIsLoading(false);
-   router.replace("/(tabs)/profile");
-   return;
+await checkForAchievements(user.uid);
+Keyboard.dismiss();
+navigatedRef.current = true;
+setIsLoading(false);
+router.back(); // 👈 retour natif, sans flash
+return;
   } catch (error: any) {
     Alert.alert(t("error"), t("profileUpdateFailed") + `: ${error.message}`);
   } finally {
@@ -431,7 +434,7 @@ if (cleanInterests && cleanInterests !== safeTrim(user.interests)) {
   }
 }, [user, displayName, bio, profileImage, location, interests, router, t]);
 
-  if (isLoading) {
+  if (isFetching) {
     return (
       <SafeAreaView style={styles.safeArea}>
         <StatusBar

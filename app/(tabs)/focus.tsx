@@ -16,7 +16,7 @@ import { useRouter } from "expo-router";
 import { LinearGradient } from "expo-linear-gradient";
 import { Ionicons } from "@expo/vector-icons";
 import ConfettiCannon from "react-native-confetti-cannon";
-import { doc, onSnapshot, collection, query, where } from "firebase/firestore";
+import { doc, onSnapshot } from "firebase/firestore";
 import { db, auth } from "../../constants/firebase-config";
 import { useCurrentChallenges } from "../../context/CurrentChallengesContext";
 import { useTheme } from "../../context/ThemeContext";
@@ -38,26 +38,27 @@ const IMG_BLURHASH = "LEHLk~WB2yk8pyo0adR*.7kCMdnj";
 
 const normalizeSize = (size: number) => {
   const baseWidth = 375;
-  const scale = Math.min(Math.max(SCREEN_WIDTH / baseWidth, 0.7), 1.8); // Limite l'échelle
+  const scale = Math.min(Math.max(SCREEN_WIDTH / baseWidth, 0.7), 1.8);
   return Math.round(size * scale);
 };
 
 // util couleur -> rgba avec alpha
 const withAlpha = (color: string, alpha: number) => {
-  const clamp = (n: number, min = 0, max = 1) => Math.min(Math.max(n, min), max);
+  const clamp = (n: number, min = 0, max = 1) =>
+    Math.min(Math.max(n, min), max);
   const a = clamp(alpha);
 
   if (/^rgba?\(/i.test(color)) {
     const nums = color.match(/[\d.]+/g) || [];
-    const [r="0", g="0", b="0"] = nums;
+    const [r = "0", g = "0", b = "0"] = nums;
     return `rgba(${r}, ${g}, ${b}, ${a})`;
   }
   let hex = color.replace("#", "");
-  if (hex.length === 3) hex = hex.split("").map(c => c + c).join("");
+  if (hex.length === 3) hex = hex.split("").map((c) => c + c).join("");
   if (hex.length >= 6) {
-    const r = parseInt(hex.slice(0,2),16);
-    const g = parseInt(hex.slice(2,4),16);
-    const b = parseInt(hex.slice(4,6),16);
+    const r = parseInt(hex.slice(0, 2), 16);
+    const g = parseInt(hex.slice(2, 4), 16);
+    const b = parseInt(hex.slice(4, 6), 16);
     return `rgba(${r}, ${g}, ${b}, ${a})`;
   }
   return `rgba(0,0,0,${a})`;
@@ -77,22 +78,63 @@ const SPACER_BOTTOM = (SCREEN_WIDTH - BOTTOM_ITEM_WIDTH) / 2;
 interface CurrentChallengeExtended {
   id: string;
   title: string;
-  challengeId?: string;    // ⇐ si présent dans ton contexte
-  docId?: string; 
+  challengeId?: string;
+  docId?: string;
   chatId?: string;
   imageUrl?: string;
   selectedDays: number;
   completedDays: number;
-  lastMarkedDate?: string | null;
+  // peut être string, Date, Timestamp Firestore...
+  lastMarkedDate?: any;
   participants?: number;
   category?: string;
   description?: string;
   uniqueKey?: string;
 }
 
+// 🔍 Normalisation de la date "marqué aujourd'hui" (string / Date / Timestamp)
+const isSameCalendarDay = (a: Date, b: Date) =>
+  a.getFullYear() === b.getFullYear() &&
+  a.getMonth() === b.getMonth() &&
+  a.getDate() === b.getDate();
+
+const isMarkedToday = (lastMarkedRaw: any): boolean => {
+  if (!lastMarkedRaw) return false;
+
+  let d: Date | null = null;
+
+  // Firestore Timestamp
+  if (lastMarkedRaw?.toDate && typeof lastMarkedRaw.toDate === "function") {
+    d = lastMarkedRaw.toDate();
+  } else if (lastMarkedRaw instanceof Date) {
+    d = lastMarkedRaw;
+  } else if (typeof lastMarkedRaw === "string") {
+    // gère ISO, toDateString, etc.
+    const parsed = new Date(lastMarkedRaw);
+    if (!isNaN(parsed.getTime())) d = parsed;
+  } else if (
+    typeof lastMarkedRaw === "object" &&
+    typeof lastMarkedRaw.seconds === "number"
+  ) {
+    // autre format de timestamp { seconds, nanoseconds }
+    d = new Date(lastMarkedRaw.seconds * 1000);
+  }
+
+  if (!d) return false;
+  const now = new Date();
+  return isSameCalendarDay(d, now);
+};
+
+type IntervalId = ReturnType<typeof setInterval>;
+
 export default function FocusScreen() {
   const { t } = useTranslation();
-  const { tutorialStep, isTutorialActive, skipTutorial, setTutorialStep } = useTutorial();
+  const {
+    tutorialStep,
+    isTutorialActive,
+    skipTutorial,
+    setTutorialStep,
+  } = useTutorial();
   const router = useRouter();
   const { currentChallenges, markToday } = useCurrentChallenges();
   const { theme } = useTheme();
@@ -105,10 +147,11 @@ export default function FocusScreen() {
   const [isLoading, setIsLoading] = useState(true);
   const [userTrophies, setUserTrophies] = useState(0);
   const [refreshing, setRefreshing] = useState(false);
+
   // Focus timer (Pomodoro)
   const [focusVisible, setFocusVisible] = useState(false);
   const [focusRunning, setFocusRunning] = useState(false);
-  const [focusSecondsLeft, setFocusSecondsLeft] = useState(25 * 60); // 25:00 par défaut
+  const [focusSecondsLeft, setFocusSecondsLeft] = useState(25 * 60);
   const [focusLabel, setFocusLabel] = useState<"FOCUS" | "BREAK">("FOCUS");
 
   const confettiRef = useRef<ConfettiCannon | null>(null);
@@ -118,31 +161,33 @@ export default function FocusScreen() {
   const flatListTopRef = useRef<RNAnimated.FlatList<any>>(null);
   const flatListBottomRef = useRef<RNAnimated.FlatList<any>>(null);
 
- type IntervalId = ReturnType<typeof setInterval>;
- const [participantsMap, setParticipantsMap] = useState<Record<string, number>>({});
-
-const topAutoScrollRef = useRef<IntervalId | null>(null);
-const bottomAutoScrollRef = useRef<IntervalId | null>(null);
+  const topAutoScrollRef = useRef<IntervalId | null>(null);
+  const bottomAutoScrollRef = useRef<IntervalId | null>(null);
 
   const topIndexRef = useRef(0);
   const bottomIndexRef = useRef(0);
 
-const getParticipantsCount = (item: any) => {
-  // on essaie d’abord chatId (le plus fiable pour “mapper” avec Explore),
-  // puis docId/challengeId/id, puis fallbacks locaux éventuels :
-  return (
-    (item?.chatId && participantsMap[item.chatId]) ??
-    (item?.docId && participantsMap[item.docId]) ??
-    (item?.challengeId && participantsMap[item.challengeId]) ??
-    (item?.id && participantsMap[item.id]) ??
-    (typeof item?.participantsCount === "number" ? item.participantsCount : undefined) ??
-    (typeof item?.participants === "number" ? item.participants : 0)
-  );
-};
-
+  // 🔄 Loading selon les challenges courants
   useEffect(() => {
     setIsLoading(false);
   }, [currentChallenges]);
+
+  // 🔥 Récupération live des trophées utilisateur
+  useEffect(() => {
+    const uid = auth.currentUser?.uid;
+    if (!uid) return;
+
+    const unsub = onSnapshot(doc(db, "users", uid), (snap) => {
+      if (snap.exists()) {
+        const data = snap.data() as any;
+        const trophies =
+          typeof data?.trophies === "number" ? data.trophies : 0;
+        setUserTrophies(trophies);
+      }
+    });
+
+    return () => unsub();
+  }, []);
 
   const today = new Date().toDateString();
 
@@ -164,34 +209,18 @@ const getParticipantsCount = (item: any) => {
     };
   });
 
-// 🔁 Un SEUL listener (comme Explore) : on remplit la map par doc.id et par chatId
-useEffect(() => {
-  const q = query(collection(db, "challenges"), where("approved", "==", true));
-  const unsub = onSnapshot(q, (snap) => {
-    const next: Record<string, number> = {};
-    snap.forEach((d) => {
-      const data: any = d.data();
-      const count = Number(data?.participantsCount ?? data?.participants ?? 0);
-      next[d.id] = count;               // clé par doc.id
-      if (data?.chatId) next[data.chatId] = count; // alias par chatId
-    });
-    setParticipantsMap(next);
-  });
-  return () => unsub();
-}, []);
-
-
-
   const enrichedChallenges = translatedChallenges.map((item) => ({
-  ...item,
-  // priors : challengeId (si tu le stockes), sinon chatId (tu le set = doc.id côté Explore), sinon id
-  docId: (item as any).challengeId || item.chatId || item.id,
-}));
+    ...item,
+    docId: (item as any).challengeId || item.chatId || item.id,
+  }));
 
-  const notMarkedToday = enrichedChallenges.filter((ch) => ch.lastMarkedDate !== today);
+  const notMarkedToday = enrichedChallenges.filter(
+    (ch) => !isMarkedToday(ch.lastMarkedDate)
+  );
+  const markedToday = enrichedChallenges.filter((ch) =>
+    isMarkedToday(ch.lastMarkedDate)
+  );
 
- const markedToday     = enrichedChallenges.filter((ch) => ch.lastMarkedDate === today);
- // KPIs calculés
   const kpis = useMemo(() => {
     const remaining = notMarkedToday.length;
     const completed = markedToday.length;
@@ -199,16 +228,19 @@ useEffect(() => {
     const pct = total > 0 ? Math.round((completed / total) * 100) : 0;
     return { remaining, completed, total, pct };
   }, [notMarkedToday.length, markedToday.length, enrichedChallenges.length]);
-  const pctLabel = useMemo(() => `${kpis.completed}/${kpis.total} • ${kpis.pct}%`, [kpis.completed, kpis.total, kpis.pct]);
 
-  // Pull-to-refresh (le flux Firestore mettra à jour les listes ; on affiche un feedback)
+  const pctLabel = useMemo(
+    () => `${kpis.completed}/${kpis.total} • ${kpis.pct}%`,
+    [kpis.completed, kpis.total, kpis.pct]
+  );
+
+  // Pull-to-refresh visuel (données driven par Firestore)
   const onRefresh = useCallback(() => {
     setRefreshing(true);
-    // petit délai UX ; la synchro réelle est driven par les listeners
     setTimeout(() => setRefreshing(false), 650);
   }, []);
 
-  // Action: marquer aujourd'hui (avec confettis + haptics)
+  // ✅ Action: marquer aujourd'hui (confettis + haptics)
   const safeMarkToday = useCallback(
     async (item: CurrentChallengeExtended) => {
       try {
@@ -217,9 +249,10 @@ useEffect(() => {
       try {
         await markToday(item.id, item.selectedDays);
         try {
-          await Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
+          await Haptics.notificationAsync(
+            Haptics.NotificationFeedbackType.Success
+          );
         } catch {}
-        // petit délai pour laisser l'UI se mettre à jour
         setTimeout(() => {
           if (confettiRef.current?.start) {
             confettiRef.current.start();
@@ -227,7 +260,9 @@ useEffect(() => {
         }, 120);
       } catch (e) {
         try {
-          await Haptics.notificationAsync(Haptics.NotificationFeedbackType.Error);
+          await Haptics.notificationAsync(
+            Haptics.NotificationFeedbackType.Error
+          );
         } catch {}
       }
     },
@@ -283,11 +318,14 @@ useEffect(() => {
     const id = setInterval(() => {
       setFocusSecondsLeft((s) => {
         if (s <= 1) {
-          // cycle terminé
-          try { Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success); } catch {}
+          try {
+            Haptics.notificationAsync(
+              Haptics.NotificationFeedbackType.Success
+            );
+          } catch {}
           setFocusRunning(false);
           setTimeout(() => confettiRef.current?.start?.(), 80);
-          // bascule automatique vers BREAK 5:00 après un focus
+
           if (focusLabel === "FOCUS") {
             setFocusLabel("BREAK");
             setFocusSecondsLeft(5 * 60);
@@ -309,22 +347,32 @@ useEffect(() => {
     setFocusSecondsLeft(25 * 60);
     setFocusRunning(false);
   }, []);
+
   const closeFocus = useCallback(() => {
     setFocusVisible(false);
     setFocusRunning(false);
   }, []);
+
   const toggleFocus = useCallback(async () => {
-    try { await Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light); } catch {}
+    try {
+      await Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
+    } catch {}
     setFocusRunning((r) => !r);
   }, []);
+
   const resetFocus = useCallback(() => {
     setFocusRunning(false);
     setFocusLabel("FOCUS");
     setFocusSecondsLeft(25 * 60);
   }, []);
+
   const formatTime = useCallback((total: number) => {
-    const m = Math.floor(total / 60).toString().padStart(2, "0");
-    const s = Math.floor(total % 60).toString().padStart(2, "0");
+    const m = Math.floor(total / 60)
+      .toString()
+      .padStart(2, "0");
+    const s = Math.floor(total % 60)
+      .toString()
+      .padStart(2, "0");
     return `${m}:${s}`;
   }, []);
 
@@ -441,9 +489,9 @@ useEffect(() => {
           )}
           <LinearGradient
             colors={[
-    withAlpha(currentTheme.colors.overlay, 0.25),
-    withAlpha("#000000", 0.85),
-  ]}
+              withAlpha(currentTheme.colors.overlay, 0.25),
+              withAlpha("#000000", 0.85),
+            ]}
             style={styles.topItemOverlay}
           >
             <Text
@@ -456,28 +504,12 @@ useEffect(() => {
             >
               {item.title}
             </Text>
-            <View style={{ flexDirection: "row", alignItems: "center" }}>
-  <Ionicons
-    name="people"
-    size={normalizeSize(14)} 
-    color={currentTheme.colors.trophy}
-    style={{ marginRight: 4 }}
-  />
-  {(() => {
-    const count = getParticipantsCount(item);
-    return (
-      <Text style={[styles.topItemParticipants /* ou bottom... */, { color: currentTheme.colors.trophy }]}>
-        {`${count} ${t("participants", { count })}`}
-      </Text>
-    );
-  })()}
-</View>
-
+            
           </LinearGradient>
         </LinearGradient>
       </TouchableOpacity>
 
-      {item.lastMarkedDate !== today && (
+      {!isMarkedToday(item.lastMarkedDate) && (
         <TouchableOpacity
           style={[
             styles.markTodayButton,
@@ -562,9 +594,9 @@ useEffect(() => {
           )}
           <LinearGradient
             colors={[
-    withAlpha(currentTheme.colors.overlay, 0.25),
-    withAlpha("#000000", 0.85),
-  ]}
+              withAlpha(currentTheme.colors.overlay, 0.25),
+              withAlpha("#000000", 0.85),
+            ]}
             style={styles.bottomItemOverlay}
           >
             <Text
@@ -576,38 +608,35 @@ useEffect(() => {
             >
               {item.title}
             </Text>
-           <View style={{ flexDirection: "row", alignItems: "center" }}>
-  <Ionicons
-    name="people"
-    size={normalizeSize(14)} 
-    color={currentTheme.colors.trophy}
-    style={{ marginRight: 4 }}
-  />
-  {(() => {
-    const count = getParticipantsCount(item);
-    return (
-      <Text style={[styles.bottomItemParticipants /* ou bottom... */, { color: currentTheme.colors.trophy }]}>
-        {`${count} ${t("participants", { count })}`}
-      </Text>
-    );
-  })()}
-</View>
-
+            
           </LinearGradient>
         </LinearGradient>
       </TouchableOpacity>
     </RNAnimated.View>
   );
 
-  // ⚠️ Déclarer TOUS les hooks AVANT tout return conditionnel
-  const renderTop = useCallback(renderTopItem, [currentTheme, isDarkMode, today]);
-  const renderBottom = useCallback(renderBottomItem, [currentTheme, isDarkMode]);
+  const renderTop = useCallback(renderTopItem, [
+    currentTheme,
+    isDarkMode,
+  ]);
+  const renderBottom = useCallback(renderBottomItem, [
+    currentTheme,
+    isDarkMode,
+  ]);
   const getTopLayout = useCallback(
-    (_: any, index: number) => ({ length: EFFECTIVE_TOP_ITEM_WIDTH, offset: EFFECTIVE_TOP_ITEM_WIDTH * index, index }),
+    (_: any, index: number) => ({
+      length: EFFECTIVE_TOP_ITEM_WIDTH,
+      offset: EFFECTIVE_TOP_ITEM_WIDTH * index,
+      index,
+    }),
     []
   );
   const getBottomLayout = useCallback(
-    (_: any, index: number) => ({ length: EFFECTIVE_BOTTOM_ITEM_WIDTH, offset: EFFECTIVE_BOTTOM_ITEM_WIDTH * index, index }),
+    (_: any, index: number) => ({
+      length: EFFECTIVE_BOTTOM_ITEM_WIDTH,
+      offset: EFFECTIVE_BOTTOM_ITEM_WIDTH * index,
+      index,
+    }),
     []
   );
 
@@ -622,7 +651,10 @@ useEffect(() => {
           ]}
           style={styles.loadingContainer}
         >
-          <ActivityIndicator size="large" color={currentTheme.colors.primary} />
+          <ActivityIndicator
+            size="large"
+            color={currentTheme.colors.primary}
+          />
           <Text
             style={[
               styles.loadingText,
@@ -636,34 +668,41 @@ useEffect(() => {
     );
   }
 
-
   return (
     <GlobalLayout>
       <LinearGradient
-  colors={[
-    withAlpha(currentTheme.colors.background, 1),
-    withAlpha(currentTheme.colors.cardBackground, 1),
-    withAlpha(currentTheme.colors.primary, 0.13),
-  ]}
-  style={styles.gradientContainer}
-  start={{ x: 0, y: 0 }}
-  end={{ x: 1, y: 1 }}
->
-  {/* Orbes décoratives */}
-  <LinearGradient
-    pointerEvents="none"
-    colors={[withAlpha(currentTheme.colors.primary, 0.28), "transparent"]}
-    style={styles.bgOrbTop}
-    start={{ x: 0.2, y: 0 }}
-    end={{ x: 1, y: 1 }}
-  />
-  <LinearGradient
-    pointerEvents="none"
-    colors={[withAlpha(currentTheme.colors.secondary, 0.25), "transparent"]}
-    style={styles.bgOrbBottom}
-    start={{ x: 1, y: 0 }}
-    end={{ x: 0, y: 1 }}
-  />
+        colors={[
+          withAlpha(currentTheme.colors.background, 1),
+          withAlpha(currentTheme.colors.cardBackground, 1),
+          withAlpha(currentTheme.colors.primary, 0.13),
+        ]}
+        style={styles.gradientContainer}
+        start={{ x: 0, y: 0 }}
+        end={{ x: 1, y: 1 }}
+      >
+        {/* Orbes décoratives */}
+        <LinearGradient
+          pointerEvents="none"
+          colors={[
+            withAlpha(currentTheme.colors.primary, 0.28),
+            "transparent",
+          ]}
+          style={styles.bgOrbTop}
+          start={{ x: 0.2, y: 0 }}
+          end={{ x: 1, y: 1 }}
+        />
+        <LinearGradient
+          pointerEvents="none"
+          colors={[
+            withAlpha(currentTheme.colors.secondary, 0.25),
+            "transparent",
+          ]}
+          style={styles.bgOrbBottom}
+          start={{ x: 1, y: 0 }}
+          end={{ x: 0, y: 1 }}
+        />
+
+        {/* Header trophées + création */}
         <View style={styles.headerWrapper}>
           <View style={styles.headerContainer}>
             <TouchableOpacity
@@ -673,7 +712,9 @@ useEffect(() => {
                   backgroundColor: isDarkMode
                     ? currentTheme.colors.cardBackground
                     : "#FF8C00",
-                  borderColor: isDarkMode ? currentTheme.colors.border : "#FFF",
+                  borderColor: isDarkMode
+                    ? currentTheme.colors.border
+                    : "#FFF",
                 },
               ]}
               onPress={() => router.push("/profile")}
@@ -684,12 +725,18 @@ useEffect(() => {
               <Ionicons
                 name="trophy-outline"
                 size={normalizeSize(28)}
-                color={isDarkMode ? currentTheme.colors.trophy : "#FFF"}
+                color={
+                  isDarkMode ? currentTheme.colors.trophy : "#FFFFFF"
+                }
               />
               <Text
                 style={[
                   styles.trophyText,
-                  { color: isDarkMode ? currentTheme.colors.trophy : "#FFF" },
+                  {
+                    color: isDarkMode
+                      ? currentTheme.colors.trophy
+                      : "#FFFFFF",
+                  },
                 ]}
               >
                 {userTrophies}
@@ -709,33 +756,63 @@ useEffect(() => {
               <Ionicons
                 name="add-circle-outline"
                 size={normalizeSize(28)}
-                color={isDarkMode ? "#000000" : currentTheme.colors.textPrimary}
+                color={
+                  isDarkMode
+                    ? "#000000"
+                    : currentTheme.colors.textPrimary
+                }
               />
             </TouchableOpacity>
           </View>
+
           {/* KPI strip */}
-          {/* KPI strip (centered, single pill) */}
           <View style={styles.kpiStrip}>
             <View
               style={[
                 styles.kpiPill,
                 {
-                  borderColor: withAlpha(currentTheme.colors.secondary, 0.6),
+                  borderColor: withAlpha(
+                    currentTheme.colors.secondary,
+                    0.6
+                  ),
                   alignSelf: "center",
                 },
               ]}
               accessibilityRole="summary"
-              accessibilityLabel={t("remainingToday", { defaultValue: "À faire aujourd’hui" })}
+              accessibilityLabel={t("remainingToday", {
+                defaultValue: "À faire aujourd’hui",
+              })}
             >
-              <Ionicons name="flash-outline" size={normalizeSize(16)} color={currentTheme.colors.secondary} />
-              <Text style={[styles.kpiText, { color: currentTheme.colors.textPrimary }]}>
-                {t("remainingToday", { defaultValue: "À faire aujourd’hui" })}: {kpis.remaining}
+              <Ionicons
+                name="flash-outline"
+                size={normalizeSize(16)}
+                color={currentTheme.colors.secondary}
+              />
+              <Text
+                style={[
+                  styles.kpiText,
+                  { color: currentTheme.colors.textPrimary },
+                ]}
+              >
+                {t("remainingToday", {
+                  defaultValue: "À faire aujourd’hui",
+                })}
+                : {kpis.remaining}
               </Text>
             </View>
           </View>
+
           {/* Progression du jour */}
           <View
-            style={[styles.progressTrack, { backgroundColor: withAlpha(currentTheme.colors.textSecondary, 0.15) }]}
+            style={[
+              styles.progressTrack,
+              {
+                backgroundColor: withAlpha(
+                  currentTheme.colors.textSecondary,
+                  0.15
+                ),
+              },
+            ]}
             accessibilityRole="progressbar"
             accessibilityValue={{ now: kpis.pct, min: 0, max: 100 }}
           >
@@ -749,7 +826,12 @@ useEffect(() => {
               ]}
             />
           </View>
-          <Text style={[styles.progressLabel, { color: currentTheme.colors.textSecondary }]}>
+          <Text
+            style={[
+              styles.progressLabel,
+              { color: currentTheme.colors.textSecondary },
+            ]}
+          >
             {pctLabel}
           </Text>
         </View>
@@ -759,24 +841,68 @@ useEffect(() => {
           <TouchableOpacity
             onPress={openFocus}
             activeOpacity={0.9}
-            style={[styles.actionBtn, { backgroundColor: currentTheme.colors.secondary }]}
+            style={[
+              styles.actionBtn,
+              { backgroundColor: currentTheme.colors.secondary },
+            ]}
             accessibilityRole="button"
-            accessibilityLabel={t("startFocus", { defaultValue: "Lancer Focus 25:00" })}
+            accessibilityLabel={t("startFocus", {
+              defaultValue: "Lancer Focus 25:00",
+            })}
             testID="cta-start-focus"
           >
-            <Ionicons name="timer-outline" size={normalizeSize(18)} color={isDarkMode ? "#000" : currentTheme.colors.textPrimary} />
-            <Text style={[styles.actionBtnText, { color: isDarkMode ? "#000" : currentTheme.colors.textPrimary }]}>25:00 Focus</Text>
+            <Ionicons
+              name="timer-outline"
+              size={normalizeSize(18)}
+              color={
+                isDarkMode ? "#000000" : currentTheme.colors.textPrimary
+              }
+            />
+            <Text
+              style={[
+                styles.actionBtnText,
+                {
+                  color: isDarkMode
+                    ? "#000000"
+                    : currentTheme.colors.textPrimary,
+                },
+              ]}
+            >
+              25:00 Focus
+            </Text>
           </TouchableOpacity>
+
           <TouchableOpacity
             onPress={() => router.push("/explore")}
             activeOpacity={0.9}
-            style={[styles.actionBtnGhost, { borderColor: withAlpha(currentTheme.colors.secondary, 0.6) }]}
+            style={[
+              styles.actionBtnGhost,
+              {
+                borderColor: withAlpha(
+                  currentTheme.colors.secondary,
+                  0.6
+                ),
+              },
+            ]}
             accessibilityRole="button"
-            accessibilityLabel={t("discoverChallenges", { defaultValue: "Découvrir des défis" })}
+            accessibilityLabel={t("discoverChallenges", {
+              defaultValue: "Découvrir des défis",
+            })}
             testID="cta-discover"
           >
-            <Ionicons name="compass-outline" size={normalizeSize(18)} color={currentTheme.colors.secondary} />
-            <Text style={[styles.actionBtnGhostText, { color: currentTheme.colors.secondary }]}>{t("discover", { defaultValue: "Découvrir" })}</Text>
+            <Ionicons
+              name="compass-outline"
+              size={normalizeSize(18)}
+              color={currentTheme.colors.secondary}
+            />
+            <Text
+              style={[
+                styles.actionBtnGhostText,
+                { color: currentTheme.colors.secondary },
+              ]}
+            >
+              {t("discover", { defaultValue: "Découvrir" })}
+            </Text>
           </TouchableOpacity>
         </View>
 
@@ -785,13 +911,16 @@ useEffect(() => {
           contentContainerStyle={styles.scrollContent}
           showsVerticalScrollIndicator={false}
           refreshControl={
-            // @ts-ignore (RN type sometimes picky)
+            // @ts-ignore
             <RefreshControl
               refreshing={refreshing}
               onRefresh={onRefresh}
               tintColor={currentTheme.colors.secondary}
               colors={[currentTheme.colors.secondary]}
-              progressBackgroundColor={withAlpha(currentTheme.colors.cardBackground, 1)}
+              progressBackgroundColor={withAlpha(
+                currentTheme.colors.cardBackground,
+                1
+              )}
             />
           }
         >
@@ -804,7 +933,7 @@ useEffect(() => {
                   color: isDarkMode
                     ? currentTheme.colors.textPrimary
                     : "#000000",
-                }, // Blanc en dark, noir en light
+                },
               ]}
             >
               {t("dailyChallenges")}
@@ -815,7 +944,11 @@ useEffect(() => {
                 <RNAnimated.FlatList
                   ref={flatListTopRef}
                   data={notMarkedToday}
-                  keyExtractor={(item, index) => String(item.uniqueKey || item.docId || item.id || index)}
+                  keyExtractor={(item, index) =>
+                    String(
+                      item.uniqueKey || item.docId || item.id || index
+                    )
+                  }
                   horizontal
                   showsHorizontalScrollIndicator={false}
                   decelerationRate="fast"
@@ -824,7 +957,13 @@ useEffect(() => {
                   snapToAlignment="center"
                   contentContainerStyle={{ paddingHorizontal: SPACER_TOP }}
                   onScroll={RNAnimated.event(
-                    [{ nativeEvent: { contentOffset: { x: scrollXTop } } }],
+                    [
+                      {
+                        nativeEvent: {
+                          contentOffset: { x: scrollXTop },
+                        },
+                      },
+                    ],
                     { useNativeDriver: true }
                   )}
                   scrollEventThrottle={16}
@@ -867,10 +1006,14 @@ useEffect(() => {
                   currentTheme.colors.cardBackground + "F0",
                 ]}
                 style={[
-  styles.emptyTopContainer,
-  { borderWidth: 2.5, borderColor: isDarkMode ? currentTheme.colors.secondary : "#FF8C00" }
-]}
-
+                  styles.emptyTopContainer,
+                  {
+                    borderWidth: 2.5,
+                    borderColor: isDarkMode
+                      ? currentTheme.colors.secondary
+                      : "#FF8C00",
+                  },
+                ]}
               >
                 <Animated.View entering={FadeInUp.delay(100)}>
                   <Ionicons
@@ -936,7 +1079,7 @@ useEffect(() => {
                   color: isDarkMode
                     ? currentTheme.colors.textPrimary
                     : "#000000",
-                }, // Blanc en dark, noir en light
+                },
               ]}
             >
               {t("completedChallengesScreenTitle")} {t("today")}
@@ -947,16 +1090,28 @@ useEffect(() => {
                 <RNAnimated.FlatList
                   ref={flatListBottomRef}
                   data={markedToday}
-                  keyExtractor={(item, index) => String(item.uniqueKey || item.docId || item.id || index)}
+                  keyExtractor={(item, index) =>
+                    String(
+                      item.uniqueKey || item.docId || item.id || index
+                    )
+                  }
                   horizontal
                   showsHorizontalScrollIndicator={false}
                   decelerationRate="fast"
                   bounces={false}
                   snapToInterval={EFFECTIVE_BOTTOM_ITEM_WIDTH}
                   snapToAlignment="center"
-                  contentContainerStyle={{ paddingHorizontal: SPACER_BOTTOM }}
+                  contentContainerStyle={{
+                    paddingHorizontal: SPACER_BOTTOM,
+                  }}
                   onScroll={RNAnimated.event(
-                    [{ nativeEvent: { contentOffset: { x: scrollXBottom } } }],
+                    [
+                      {
+                        nativeEvent: {
+                          contentOffset: { x: scrollXBottom },
+                        },
+                      },
+                    ],
                     { useNativeDriver: true }
                   )}
                   scrollEventThrottle={16}
@@ -967,7 +1122,9 @@ useEffect(() => {
                   initialNumToRender={3}
                   windowSize={5}
                   removeClippedSubviews
-                  accessibilityLabel={t("completedChallengesScreenTitle")}
+                  accessibilityLabel={t(
+                    "completedChallengesScreenTitle"
+                  )}
                 />
                 <View style={styles.pagination}>
                   {markedToday.map((_, index) => (
@@ -1004,7 +1161,7 @@ useEffect(() => {
             )}
           </View>
 
-          {/* Confettis: démarrage via ref.start() pour éviter le montage permanent */}
+          {/* Confettis */}
           <ConfettiCannon
             ref={confettiRef}
             autoStart={false}
@@ -1017,49 +1174,160 @@ useEffect(() => {
         </ScrollView>
 
         {/* —— Focus Timer Modal —— */}
-        <Modal visible={focusVisible} transparent animationType="fade" onRequestClose={closeFocus}>
+        <Modal
+          visible={focusVisible}
+          transparent
+          animationType="fade"
+          onRequestClose={closeFocus}
+        >
           <View style={styles.focusBackdrop}>
-            <View style={[styles.focusCard, { backgroundColor: withAlpha(currentTheme.colors.cardBackground, 0.96), borderColor: currentTheme.colors.border }]}>
-              <Text style={[styles.focusLabel, { color: focusLabel === "FOCUS" ? currentTheme.colors.secondary : currentTheme.colors.trophy }]}>
-                {focusLabel === "FOCUS" ? t("focus", { defaultValue: "FOCUS" }) : t("break", { defaultValue: "PAUSE" })}
+            <View
+              style={[
+                styles.focusCard,
+                {
+                  backgroundColor: withAlpha(
+                    currentTheme.colors.cardBackground,
+                    0.96
+                  ),
+                  borderColor: currentTheme.colors.border,
+                },
+              ]}
+            >
+              <Text
+                style={[
+                  styles.focusLabel,
+                  {
+                    color:
+                      focusLabel === "FOCUS"
+                        ? currentTheme.colors.secondary
+                        : currentTheme.colors.trophy,
+                  },
+                ]}
+              >
+                {focusLabel === "FOCUS"
+                  ? t("focus", { defaultValue: "FOCUS" })
+                  : t("break", { defaultValue: "PAUSE" })}
               </Text>
-              <Text style={[styles.focusTimer, { color: currentTheme.colors.textPrimary }]} accessibilityLabel={formatTime(focusSecondsLeft)}>
+              <Text
+                style={[
+                  styles.focusTimer,
+                  {
+                    color: isDarkMode
+                      ? currentTheme.colors.textPrimary
+                      : "#111111",
+                  },
+                ]}
+                accessibilityLabel={formatTime(focusSecondsLeft)}
+              >
                 {formatTime(focusSecondsLeft)}
               </Text>
               <View style={styles.focusButtons}>
                 <TouchableOpacity
                   onPress={toggleFocus}
-                  style={[styles.focusPrimary, { backgroundColor: currentTheme.colors.secondary }]}
+                  style={[
+                    styles.focusPrimary,
+                    { backgroundColor: currentTheme.colors.secondary },
+                  ]}
                   accessibilityRole="button"
-                  accessibilityLabel={focusRunning ? t("pause", { defaultValue: "Pause" }) : t("start", { defaultValue: "Démarrer" })}
-                  accessibilityHint={t("startFocus", { defaultValue: "Lancer ou mettre en pause le minuteur." })}
-
+                  accessibilityLabel={
+                    focusRunning
+                      ? t("pause", { defaultValue: "Pause" })
+                      : t("start", { defaultValue: "Démarrer" })
+                  }
+                  accessibilityHint={t("startFocus", {
+                    defaultValue:
+                      "Lancer ou mettre en pause le minuteur.",
+                  })}
                 >
-                  <Ionicons name={focusRunning ? "pause-circle-outline" : "play-circle-outline"} size={normalizeSize(24)} color={isDarkMode ? "#000" : currentTheme.colors.textPrimary} />
-                  <Text style={[styles.focusPrimaryText, { color: isDarkMode ? "#000" : currentTheme.colors.textPrimary }]}>
-                    {focusRunning ? t("pause", { defaultValue: "Pause" }) : t("start", { defaultValue: "Démarrer" })}
+                  <Ionicons
+                    name={
+                      focusRunning
+                        ? "pause-circle-outline"
+                        : "play-circle-outline"
+                    }
+                    size={normalizeSize(24)}
+                    color={
+                      isDarkMode
+                        ? "#000000"
+                        : currentTheme.colors.textPrimary
+                    }
+                  />
+                  <Text
+                    style={[
+                      styles.focusPrimaryText,
+                      {
+                        color:
+                          isDarkMode
+                            ? "#000000"
+                            : currentTheme.colors.textPrimary,
+                      },
+                    ]}
+                  >
+                    {focusRunning
+                      ? t("pause", { defaultValue: "Pause" })
+                      : t("start", { defaultValue: "Démarrer" })}
                   </Text>
                 </TouchableOpacity>
+
                 <TouchableOpacity
                   onPress={resetFocus}
-                  style={[styles.focusSecondary, { borderColor: withAlpha(currentTheme.colors.secondary, 0.6) }]}
+                  style={[
+                    styles.focusSecondary,
+                    {
+                      borderColor: withAlpha(
+                        currentTheme.colors.secondary,
+                        0.6
+                      ),
+                    },
+                  ]}
                   accessibilityRole="button"
-                  accessibilityLabel={t("reset", { defaultValue: "Réinitialiser" })}
-                  accessibilityHint={t("resetTimerHint", { defaultValue: "Réinitialise à 25:00 Focus." })}
+                  accessibilityLabel={t("reset", {
+                    defaultValue: "Réinitialiser",
+                  })}
+                  accessibilityHint={t("resetTimerHint", {
+                    defaultValue: "Réinitialise à 25:00 Focus.",
+                  })}
                 >
-                  <Ionicons name="refresh-outline" size={normalizeSize(22)} color={currentTheme.colors.secondary} />
+                  <Ionicons
+                    name="refresh-outline"
+                    size={normalizeSize(22)}
+                    color={currentTheme.colors.secondary}
+                  />
                 </TouchableOpacity>
+
                 <TouchableOpacity
                   onPress={closeFocus}
-                  style={[styles.focusSecondary, { borderColor: withAlpha(currentTheme.colors.textSecondary, 0.5) }]}
+                  style={[
+                    styles.focusSecondary,
+                    {
+                      borderColor: withAlpha(
+                        currentTheme.colors.textSecondary,
+                        0.5
+                      ),
+                    },
+                  ]}
                   accessibilityRole="button"
-                  accessibilityLabel={t("close", { defaultValue: "Fermer" })}
+                  accessibilityLabel={t("close", {
+                    defaultValue: "Fermer",
+                  })}
                 >
-                  <Ionicons name="close-outline" size={normalizeSize(22)} color={currentTheme.colors.textSecondary} />
+                  <Ionicons
+                    name="close-outline"
+                    size={normalizeSize(22)}
+                    color={currentTheme.colors.textSecondary}
+                  />
                 </TouchableOpacity>
               </View>
-              <Text style={[styles.focusHint, { color: currentTheme.colors.textSecondary }]}>
-                {t("focusHint", { defaultValue: "Astuce : verrouille ton écran pour éviter les distractions." })}
+              <Text
+                style={[
+                  styles.focusHint,
+                  { color: currentTheme.colors.textSecondary },
+                ]}
+              >
+                {t("focusHint", {
+                  defaultValue:
+                    "Astuce : verrouille ton écran pour éviter les distractions.",
+                })}
               </Text>
             </View>
           </View>
@@ -1089,7 +1357,7 @@ const styles = StyleSheet.create({
   headerWrapper: {
     paddingHorizontal: SPACING,
     paddingVertical: SPACING,
-    paddingTop: SPACING * 2.5, // Aligné avec Notifications.tsx
+    paddingTop: SPACING * 2.5,
     position: "relative",
   },
   headerContainer: {
@@ -1148,7 +1416,7 @@ const styles = StyleSheet.create({
     marginTop: normalizeSize(12),
     flexDirection: "row",
     alignItems: "center",
-    justifyContent: "center", 
+    justifyContent: "center",
   },
   kpiPill: {
     flexDirection: "row",
@@ -1161,10 +1429,6 @@ const styles = StyleSheet.create({
     backgroundColor: "rgba(255,255,255,0.06)",
   },
   kpiText: {
-    fontFamily: "Comfortaa_700Bold",
-    fontSize: normalizeSize(13),
-  },
-  kpiButtonText: {
     fontFamily: "Comfortaa_700Bold",
     fontSize: normalizeSize(13),
   },
@@ -1210,7 +1474,11 @@ const styles = StyleSheet.create({
     borderWidth: 2.5,
     overflow: "hidden",
   },
-  topItemImage: { width: "100%", height: "100%", resizeMode: "cover" },
+  topItemImage: {
+    width: "100%",
+    height: "100%",
+    resizeMode: "cover",
+  },
   topItemOverlay: {
     position: "absolute",
     bottom: 0,
@@ -1244,21 +1512,21 @@ const styles = StyleSheet.create({
     fontFamily: "Comfortaa_700Bold",
   },
   bgOrbTop: {
-  position: "absolute",
-  top: -SCREEN_WIDTH * 0.25,
-  left: -SCREEN_WIDTH * 0.2,
-  width: SCREEN_WIDTH * 0.9,
-  height: SCREEN_WIDTH * 0.9,
-  borderRadius: SCREEN_WIDTH * 0.45,
-},
-bgOrbBottom: {
-  position: "absolute",
-  bottom: -SCREEN_WIDTH * 0.3,
-  right: -SCREEN_WIDTH * 0.25,
-  width: SCREEN_WIDTH * 1.1,
-  height: SCREEN_WIDTH * 1.1,
-  borderRadius: SCREEN_WIDTH * 0.55,
-},
+    position: "absolute",
+    top: -SCREEN_WIDTH * 0.25,
+    left: -SCREEN_WIDTH * 0.2,
+    width: SCREEN_WIDTH * 0.9,
+    height: SCREEN_WIDTH * 0.9,
+    borderRadius: SCREEN_WIDTH * 0.45,
+  },
+  bgOrbBottom: {
+    position: "absolute",
+    bottom: -SCREEN_WIDTH * 0.3,
+    right: -SCREEN_WIDTH * 0.25,
+    width: SCREEN_WIDTH * 1.1,
+    height: SCREEN_WIDTH * 1.1,
+    borderRadius: SCREEN_WIDTH * 0.55,
+  },
   bottomCarouselContainer: {
     marginBottom: normalizeSize(30),
   },
@@ -1283,7 +1551,11 @@ bgOrbBottom: {
     borderWidth: 2.5,
     overflow: "hidden",
   },
-  bottomItemImage: { width: "100%", height: "100%", resizeMode: "cover" },
+  bottomItemImage: {
+    width: "100%",
+    height: "100%",
+    resizeMode: "cover",
+  },
   bottomItemOverlay: {
     position: "absolute",
     bottom: 0,
@@ -1469,14 +1741,14 @@ bgOrbBottom: {
   modalTitle: {
     fontSize: normalizeSize(24),
     fontFamily: "Comfortaa_700Bold",
-    color: "#000",
+    color: "#000000",
     marginBottom: normalizeSize(12),
     textAlign: "center",
   },
   modalDescription: {
     fontSize: normalizeSize(18),
     fontFamily: "Comfortaa_400Regular",
-    color: "#333",
+    color: "#333333",
     textAlign: "center",
     marginBottom: normalizeSize(20),
   },

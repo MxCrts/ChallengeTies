@@ -89,7 +89,6 @@ const tokensMatchWordStarts = (text: string, query: string) => {
 
 
 const capitalize = (s: string) => s.charAt(0).toUpperCase() + s.slice(1);
-const BANNER_HEIGHT = normalizeSize(50);
 
 interface Challenge {
   id: string;
@@ -219,8 +218,6 @@ const ExploreHeader = React.memo(
   }) => {
     const { t, i18n } = useTranslation();
     const dynamicStyles = getDynamicStyles(currentTheme, isDarkMode);
-
-    useEffect(() => {}, [i18n.language]);
 
     return (
       <Animated.View
@@ -528,9 +525,6 @@ const safeNavigate = (path: string) => {
   router.push(path);
 };
 
-  // Force re-render sur changement de langue
-  useEffect(() => {}, [i18n.language]);
-
    // Firestore fetch (une seule fois) → on garde "raw", la traduction est dérivée
   useEffect(() => {
     const q = query(
@@ -667,36 +661,50 @@ const safeNavigate = (path: string) => {
 
 
 
-  const toggleSaved = useCallback((ch: Challenge) => {
-   const id = ch.id;
-   const was = isSaved(id);
-   // 1) override optimiste local (pas de cleanup → pas de double/triple rerender)
-   setOptimisticSaved((prev) => {
-     const next = new Set(prev);
-     if (was) next.delete(id); else next.add(id);
-     return next;
-   });
-   // 2) fire-and-forget l’update backend (sans await)
-   const p = was ? removeChallenge(id) : addChallenge({
-     id: ch.id,
-     title: ch.title,
-     category: ch.category,
-     description: ch.description,
-     imageUrl: ch.imageUrl,
-     daysOptions: ch.daysOptions,
-     chatId: ch.chatId,
-   });
-   p.catch((err) => {
-     console.error(err);
-     Alert.alert(t("error"), t("toggleFavoriteFailed"));
-     // rollback si échec
-     setOptimisticSaved((prev) => {
-       const next = new Set(prev);
-       if (was) next.add(id); else next.delete(id);
-       return next;
-     });
-   });
- }, [isSaved, addChallenge, removeChallenge, t]);
+    const toggleSaved = useCallback(
+    (ch: Challenge) => {
+      // 🔐 Si l'utilisateur est invité, on ouvre le gate et on arrête là
+      if (!gate()) return;
+
+      const id = ch.id;
+      const was = isSaved(id);
+
+      // 1) override optimiste local
+      setOptimisticSaved((prev) => {
+        const next = new Set(prev);
+        if (was) next.delete(id);
+        else next.add(id);
+        return next;
+      });
+
+      // 2) fire-and-forget l’update backend
+      const p = was
+        ? removeChallenge(id)
+        : addChallenge({
+            id: ch.id,
+            title: ch.title,
+            category: ch.category,
+            description: ch.description,
+            imageUrl: ch.imageUrl,
+            daysOptions: ch.daysOptions,
+            chatId: ch.chatId,
+          });
+
+      p.catch((err) => {
+        console.error(err);
+        Alert.alert(t("error"), t("toggleFavoriteFailed"));
+        // rollback si échec
+        setOptimisticSaved((prev) => {
+          const next = new Set(prev);
+          if (was) next.add(id);
+          else next.delete(id);
+          return next;
+        });
+      });
+    },
+    [gate, isSaved, addChallenge, removeChallenge, t]
+  );
+
 
 const onSearchChange = useCallback((text: string) => {
   setSearchQuery(text);

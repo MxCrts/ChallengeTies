@@ -15,7 +15,7 @@ import { Picker } from "@react-native-picker/picker";
 import * as Notifications from "expo-notifications";
 import { Ionicons } from "@expo/vector-icons";
 import { useTheme } from "../../context/ThemeContext";
-import { useRouter } from "expo-router";
+import { useRouter, Link } from "expo-router";
 import { auth, db } from "../../constants/firebase-config";
 import { doc, updateDoc, onSnapshot } from "firebase/firestore";
 import AsyncStorage from "@react-native-async-storage/async-storage";
@@ -28,7 +28,6 @@ import CustomHeader from "@/components/CustomHeader";
 import GlobalLayout from "../../components/GlobalLayout";
 import i18n from "../../i18n";
 import { fetchAndSaveUserLocation } from "../../services/locationService";
-import { Link } from "expo-router"; 
 import { useFocusEffect } from "@react-navigation/native";
 import { shareReferralLink } from "@/src/referral/shareReferral";
 import * as Application from "expo-application";
@@ -46,12 +45,12 @@ import { maybeAskForReview, openStoreListing } from "@/src/services/reviewServic
 import { tap, success, warning } from "@/src/utils/haptics";
 import * as Device from "expo-device";
 
-const SPACING = 18; // Aligné avec ExploreScreen.tsx, Notifications.tsx, etc.
+const SPACING = 18;
 const { width: SCREEN_WIDTH, height: SCREEN_HEIGHT } = Dimensions.get("window");
 
 const normalizeSize = (size: number) => {
   const baseWidth = 375;
-  const scale = Math.min(Math.max(SCREEN_WIDTH / baseWidth, 0.7), 1.8); // Limite l'échelle
+  const scale = Math.min(Math.max(SCREEN_WIDTH / baseWidth, 0.7), 1.8);
   return Math.round(size * scale);
 };
 
@@ -62,22 +61,57 @@ const withAlpha = (color: string, alpha: number) => {
 
   if (/^rgba?\(/i.test(color)) {
     const nums = color.match(/[\d.]+/g) || [];
-    const [r="0", g="0", b="0"] = nums;
+    const [r = "0", g = "0", b = "0"] = nums;
     return `rgba(${r}, ${g}, ${b}, ${a})`;
   }
   let hex = color.replace("#", "");
-  if (hex.length === 3) hex = hex.split("").map(c => c + c).join("");
+  if (hex.length === 3) hex = hex.split("").map((c) => c + c).join("");
   if (hex.length >= 6) {
-    const r = parseInt(hex.slice(0,2),16);
-    const g = parseInt(hex.slice(2,4),16);
-    const b = parseInt(hex.slice(4,6),16);
+    const r = parseInt(hex.slice(0, 2), 16);
+    const g = parseInt(hex.slice(2, 4), 16);
+    const b = parseInt(hex.slice(4, 6), 16);
     return `rgba(${r}, ${g}, ${b}, ${a})`;
   }
   return `rgba(0,0,0,${a})`;
 };
 
-
 const SHOW_PREMIUM = false as const;
+
+// 🌍 Langues supportées
+const SUPPORTED_LANGUAGES = [
+  "ar",
+  "de",
+  "en",
+  "es",
+  "fr",
+  "hi",
+  "it",
+  "ja",
+  "ko",
+  "pt",
+  "ru",
+  "zh",
+] as const;
+type SupportedLanguageCode = (typeof SUPPORTED_LANGUAGES)[number];
+
+// Normalisation "safe" des codes de langue
+const normalizeLanguageCode = (
+  lng?: string | null
+): SupportedLanguageCode => {
+  const fallback: SupportedLanguageCode = "en";
+  if (!lng) return fallback;
+
+  const list = SUPPORTED_LANGUAGES as readonly string[];
+
+  // valeur exacte
+  if (list.includes(lng)) return lng as SupportedLanguageCode;
+
+  // base (ex: fr-FR → fr)
+  const base = lng.split("-")[0];
+  if (list.includes(base)) return base as SupportedLanguageCode;
+
+  return fallback;
+};
 
 const getDynamicStyles = (currentTheme: Theme, isDarkMode: boolean) => ({
   gradientContainer: {
@@ -109,19 +143,13 @@ const getDynamicStyles = (currentTheme: Theme, isDarkMode: boolean) => ({
       : currentTheme.colors.primary,
   },
   buttonGradient: {
-    colors: [
-      currentTheme.colors.primary,
-      currentTheme.colors.secondary,
-    ] as const,
+    colors: [currentTheme.colors.primary, currentTheme.colors.secondary] as const,
   },
   accountButtonText: {
     color: currentTheme.colors.textPrimary,
   },
   adminButtonGradient: {
-    colors: [
-      currentTheme.colors.primary,
-      currentTheme.colors.secondary,
-    ] as const,
+    colors: [currentTheme.colors.primary, currentTheme.colors.secondary] as const,
   },
   adminButtonText: {
     color: currentTheme.colors.textPrimary,
@@ -144,37 +172,51 @@ export default function Settings() {
   const { theme, toggleTheme } = useTheme();
   const router = useRouter();
   const isActiveRef = useRef(true);
-const [deviceName, setDeviceName] = useState<string>("Unknown");
+  const [deviceName, setDeviceName] = useState<string>("Unknown");
   const [isSubscribed, setIsSubscribed] = useState(true);
-const scrollRef = useRef<ScrollView>(null);
+  const scrollRef = useRef<ScrollView>(null);
   const [notificationsEnabled, setNotificationsEnabled] = useState(true);
   const [locationEnabled, setLocationEnabled] = useState(true);
   const isDarkMode = theme === "dark";
   const currentTheme = isDarkMode
     ? designSystem.darkTheme
     : designSystem.lightTheme;
-    const { claimable } = useReferralStatus();
-const claimableCount = claimable.length;
+  const { claimable } = useReferralStatus();
+  const claimableCount = claimable.length;
 
- // Version réelle de l’app (affiche X.Y.Z (build))
+  // 🔒 Langue "safe" utilisée partout dans ce composant
+  const safeLanguage = useMemo(
+    () => normalizeLanguageCode(language || i18next.language),
+    [language, i18next.language]
+  );
+
+  // Version réelle de l’app
   const appVersion = useMemo(() => {
     const v = Application.nativeApplicationVersion ?? "1.0.0";
-    const b = Application.nativeBuildVersion ? ` (${Application.nativeBuildVersion})` : "";
+    const b = Application.nativeBuildVersion
+      ? ` (${Application.nativeBuildVersion})`
+      : "";
     return `${v}${b}`;
   }, []);
 
-  // Styles dynamiques mémorisés (évite recalculs/re-renders)
+  // Styles dynamiques mémorisés
   const dynamicStyles = useMemo(
     () => getDynamicStyles(currentTheme, isDarkMode),
     [currentTheme, isDarkMode]
   );
 
-// ✅ Remplace l’ancienne implémentation d’openSupport (deviceName venait de Application)
+  // Support mail
   const openSupport = useCallback(() => {
     tap();
     const subject = encodeURIComponent("Support ChallengeTies");
     const body = encodeURIComponent(
-      `Bonjour,\n\nJ’ai besoin d’aide.\n\n---\nLangue: ${language}\nThème: ${isDarkMode ? "dark" : "light"}\nVersion: ${appVersion}\nUID: ${auth.currentUser?.uid ?? "guest"}\nDevice: ${deviceName}\nApp ID: ${Application.applicationId ?? "Unknown"}\n---`
+      `Bonjour,\n\nJ’ai besoin d’aide.\n\n---\nLangue: ${safeLanguage}\nThème: ${
+        isDarkMode ? "dark" : "light"
+      }\nVersion: ${appVersion}\nUID: ${
+        auth.currentUser?.uid ?? "guest"
+      }\nDevice: ${deviceName}\nApp ID: ${
+        Application.applicationId ?? "Unknown"
+      }\n---`
     );
     Linking.openURL(
       `mailto:support@challengeties.app?subject=${subject}&body=${body}`
@@ -186,13 +228,14 @@ const claimableCount = claimable.length;
         })
       );
     });
-  }, [language, isDarkMode, appVersion, deviceName, t]);
+  }, [safeLanguage, isDarkMode, appVersion, deviceName, t]);
 
-    useEffect(() => {
-  // envoie une notif locale 1 seule fois par palier claimable
-  nudgeClaimableOnce(claimable);
-}, [claimable]);
+  // Nudge referral
+  useEffect(() => {
+    nudgeClaimableOnce(claimable);
+  }, [claimable]);
 
+  // Permissions notifs
   useEffect(() => {
     (async () => {
       try {
@@ -204,6 +247,7 @@ const claimableCount = claimable.length;
     })();
   }, []);
 
+  // 🔁 Listener i18next : juste un rerender, PAS de changeLanguage ici
   useEffect(() => {
     const handleLanguageChanged = () => {
       setLangUpdate((prev) => !prev);
@@ -214,7 +258,7 @@ const claimableCount = claimable.length;
     };
   }, [i18next]);
 
-  // Résolution robuste du nom d’appareil (pas d’API async requise)
+  // Nom d’appareil
   useEffect(() => {
     try {
       const anyDev = Device as any;
@@ -231,12 +275,13 @@ const claimableCount = claimable.length;
     }
   }, []);
 
- useFocusEffect(
+  useFocusEffect(
     React.useCallback(() => {
       scrollRef.current?.scrollTo({ y: 0, animated: false });
     }, [])
   );
 
+  // Sync avec Firestore (notifications, location, langue)
   useEffect(() => {
     const userId = auth.currentUser?.uid;
     if (!userId) {
@@ -249,23 +294,31 @@ const claimableCount = claimable.length;
     const unsubscribe = onSnapshot(
       userRef,
       (snapshot) => {
-        if (!isActiveRef.current || !auth.currentUser) {
-          return;
-        }
+        if (!isActiveRef.current || !auth.currentUser) return;
 
         if (snapshot.exists()) {
-          const data = snapshot.data();
-          setNotificationsEnabled(data.notificationsEnabled ?? true);
-          setLocationEnabled(data.locationEnabled ?? true);
-          if (data.language && data.language !== language) {
-            setLanguage(data.language);
-            i18next.changeLanguage(data.language);
+          const data = snapshot.data() as any;
+
+          setNotificationsEnabled(
+            data.notificationsEnabled ?? true
+          );
+          setLocationEnabled(
+            data.locationEnabled ?? true
+          );
+
+          if (data.language) {
+            const normalized = normalizeLanguageCode(data.language);
+            if (normalized !== language) {
+              setLanguage(normalized);
+              i18next.changeLanguage(normalized);
+            }
           }
         }
       },
       (error) => {
         console.error("Erreur onSnapshot Settings:", error.message);
         if (error.code === "permission-denied" && !auth.currentUser) {
+          // ignore si user déconnecté
         } else {
           Alert.alert(t("error"), t("unknownError"));
         }
@@ -276,7 +329,7 @@ const claimableCount = claimable.length;
       isActiveRef.current = false;
       unsubscribe();
     };
-  }, [t, language, setLanguage, router]);
+  }, [t, language, setLanguage, router, i18next]);
 
   const savePreferences = async (updates: { [key: string]: any }) => {
     const userId = auth.currentUser?.uid;
@@ -291,85 +344,84 @@ const claimableCount = claimable.length;
     }
   };
 
-  const [saving, setSaving] = useState<{notif?: boolean; loc?: boolean}>({});
+  const [saving, setSaving] = useState<{ notif?: boolean; loc?: boolean }>({});
 
-  // --- Actions utilitaires ---
   const openSystemSettings = useCallback(() => {
-    try { Linking.openSettings?.(); } catch {}
+    try {
+      Linking.openSettings?.();
+    } catch {}
   }, []);
 
+  const handleNotificationsToggle = async (value: boolean) => {
+    if (saving.notif) return;
+    tap();
+    setSaving((s) => ({ ...s, notif: true }));
+    setNotificationsEnabled(value);
 
-const handleNotificationsToggle = async (value: boolean) => {
-  if (saving.notif) return;
-  tap();
-  setSaving((s) => ({ ...s, notif: true }));
-  setNotificationsEnabled(value);
-
-  try {
-    if (value) {
-      const ok = await enableNotificationsFromSettings();
-      if (!ok) {
-        warning();
-        setNotificationsEnabled(false);
-        Alert.alert(
-          t("permissionDenied"),
-          t("mustAllowNotifications"),
-          [
-            { text: t("cancel"), style: "cancel" },
-            { text: t("openSettings"), onPress: () => Linking.openSettings?.() },
-          ],
-          { cancelable: true }
-        );
-      }
-    } else {
-      await disableNotificationsFromSettings();
-    }
-  } catch (e) {
-    console.error("❌ handleNotificationsToggle:", e);
-    Alert.alert(t("error"), t("failedToSavePreferences"));
-    setNotificationsEnabled(!value); // rollback UI
-  } finally {
-    setSaving((s) => ({ ...s, notif: false }));
-  }
-};
-
-const handleLocationToggle = async (value: boolean) => {
-  if (saving.loc) return;
-  tap();
-  setSaving((s) => ({ ...s, loc: true }));
-  setLocationEnabled(value);
-
-  try {
-    if (value) {
-      const ok = await enableLocationFromSettings();
-      if (!ok) {
-        warning();
-        setLocationEnabled(false);
-        Alert.alert(
-          t("permissionDenied"),
-          t("settingsPage.error"),
-          [
-            { text: t("cancel"), style: "cancel" },
-            { text: t("openSettings"), onPress: () => Linking.openSettings?.() },
-          ],
-          { cancelable: true }
-        );
+    try {
+      if (value) {
+        const ok = await enableNotificationsFromSettings();
+        if (!ok) {
+          warning();
+          setNotificationsEnabled(false);
+          Alert.alert(
+            t("permissionDenied"),
+            t("mustAllowNotifications"),
+            [
+              { text: t("cancel"), style: "cancel" },
+              { text: t("openSettings"), onPress: () => Linking.openSettings?.() },
+            ],
+            { cancelable: true }
+          );
+        }
       } else {
-         success();
-        Alert.alert(t("settingsPage.enabled"), t("settingsPage.updated"));
+        await disableNotificationsFromSettings();
       }
-    } else {
-      await disableLocationFromSettings();
+    } catch (e) {
+      console.error("❌ handleNotificationsToggle:", e);
+      Alert.alert(t("error"), t("failedToSavePreferences"));
+      setNotificationsEnabled(!value);
+    } finally {
+      setSaving((s) => ({ ...s, notif: false }));
     }
-  } catch (e) {
-    console.error("❌ handleLocationToggle:", e);
-    Alert.alert(t("error"), t("failedToSavePreferences"));
-    setLocationEnabled(!value); // rollback UI
-  } finally {
-    setSaving((s) => ({ ...s, loc: false }));
-  }
-};
+  };
 
+  const handleLocationToggle = async (value: boolean) => {
+    if (saving.loc) return;
+    tap();
+    setSaving((s) => ({ ...s, loc: true }));
+    setLocationEnabled(value);
+
+    try {
+      if (value) {
+        const ok = await enableLocationFromSettings();
+        if (!ok) {
+          warning();
+          setLocationEnabled(false);
+          Alert.alert(
+            t("permissionDenied"),
+            t("settingsPage.error"),
+            [
+              { text: t("cancel"), style: "cancel" },
+              { text: t("openSettings"), onPress: () => Linking.openSettings?.() },
+            ],
+            { cancelable: true }
+          );
+        } else {
+          success();
+          Alert.alert(t("settingsPage.enabled"), t("settingsPage.updated"));
+        }
+      } else {
+        await disableLocationFromSettings();
+      }
+    } catch (e) {
+      console.error("❌ handleLocationToggle:", e);
+      Alert.alert(t("error"), t("failedToSavePreferences"));
+      setLocationEnabled(!value);
+    } finally {
+      setSaving((s) => ({ ...s, loc: false }));
+    }
+  };
 
   const clearCache = async () => {
     try {
@@ -432,33 +484,32 @@ const handleLocationToggle = async (value: boolean) => {
 
   const adminUID = "GiN2yTfA7NWISeb4QjXmDPq5TgK2";
 
-
   return (
-    <GlobalLayout key={language}>
+    <GlobalLayout key={safeLanguage}>
       <StatusBar style={isDarkMode ? "light" : "dark"} translucent />
       <CustomHeader title={t("settings")} />
       <LinearGradient
-  colors={[
-    withAlpha(currentTheme.colors.background, 1),
-    withAlpha(currentTheme.colors.cardBackground, 1),
-    withAlpha(currentTheme.colors.primary, 0.12),
-  ]}
-  style={[styles.gradientContainer, dynamicStyles.gradientContainer]}
-  start={{ x: 0, y: 0 }}
-  end={{ x: 1, y: 1 }}
->
-  <LinearGradient
-  pointerEvents="none"
-  colors={[withAlpha(currentTheme.colors.primary, 0.28), "transparent"]}
-  style={styles.bgOrbTop}
-/>
-<LinearGradient
-  pointerEvents="none"
-  colors={[withAlpha(currentTheme.colors.secondary, 0.25), "transparent"]}
-  style={styles.bgOrbBottom}
-/>
+        colors={[
+          withAlpha(currentTheme.colors.background, 1),
+          withAlpha(currentTheme.colors.cardBackground, 1),
+          withAlpha(currentTheme.colors.primary, 0.12),
+        ]}
+        style={[styles.gradientContainer, dynamicStyles.gradientContainer]}
+        start={{ x: 0, y: 0 }}
+        end={{ x: 1, y: 1 }}
+      >
+        <LinearGradient
+          pointerEvents="none"
+          colors={[withAlpha(currentTheme.colors.primary, 0.28), "transparent"]}
+          style={styles.bgOrbTop}
+        />
+        <LinearGradient
+          pointerEvents="none"
+          colors={[withAlpha(currentTheme.colors.secondary, 0.25), "transparent"]}
+          style={styles.bgOrbBottom}
+        />
         <ScrollView
-        ref={scrollRef}
+          ref={scrollRef}
           contentContainerStyle={styles.scrollContent}
           showsVerticalScrollIndicator={false}
         >
@@ -468,11 +519,11 @@ const handleLocationToggle = async (value: boolean) => {
               {t("preferences")}
             </Text>
             <LinearGradient
-    colors={[currentTheme.colors.secondary, currentTheme.colors.primary]}
-    start={{ x: 0, y: 0 }}
-    end={{ x: 1, y: 0 }}
-    style={styles.sectionAccent}
-  />
+              colors={[currentTheme.colors.secondary, currentTheme.colors.primary]}
+              start={{ x: 0, y: 0 }}
+              end={{ x: 1, y: 0 }}
+              style={styles.sectionAccent}
+            />
             <Animated.View
               entering={FadeInUp.delay(200)}
               style={[styles.card, dynamicStyles.card]}
@@ -482,23 +533,39 @@ const handleLocationToggle = async (value: boolean) => {
                   {t("notifications")}
                 </Text>
                 <Switch
-  value={notificationsEnabled}
-  onValueChange={handleNotificationsToggle}
-  trackColor={dynamicStyles.switch.trackColor}
-  thumbColor={dynamicStyles.switch.thumbColor}
-  style={styles.switch}
-  accessibilityLabel={t("handleNotifications")}
-/>
+                  value={notificationsEnabled}
+                  onValueChange={handleNotificationsToggle}
+                  trackColor={dynamicStyles.switch.trackColor}
+                  thumbColor={dynamicStyles.switch.thumbColor}
+                  style={styles.switch}
+                  accessibilityLabel={t("handleNotifications")}
+                  disabled={saving.notif}
+                />
               </View>
-              {/* Lien vers Réglages système si notifs OFF */}
               {!notificationsEnabled && (
-                <TouchableOpacity onPress={openSystemSettings} style={{ paddingHorizontal: SPACING, paddingBottom: normalizeSize(12) }}>
-                  <Text style={{ fontFamily: "Comfortaa_400Regular", fontSize: normalizeSize(14), color: currentTheme.colors.textSecondary }}>
-                    {t("settingsPage.enableInSystem", { defaultValue: "Activez les notifications dans les réglages système." })}
+                <TouchableOpacity
+                  onPress={openSystemSettings}
+                  style={{
+                    paddingHorizontal: SPACING,
+                    paddingBottom: normalizeSize(12),
+                  }}
+                >
+                  <Text
+                    style={{
+                      fontFamily: "Comfortaa_400Regular",
+                      fontSize: normalizeSize(14),
+                      color: currentTheme.colors.textSecondary,
+                    }}
+                  >
+                    {t("settingsPage.enableInSystem", {
+                      defaultValue:
+                        "Activez les notifications dans les réglages système.",
+                    })}
                   </Text>
                 </TouchableOpacity>
               )}
             </Animated.View>
+
             <Animated.View
               entering={FadeInUp.delay(250)}
               style={[styles.card, dynamicStyles.card]}
@@ -518,16 +585,33 @@ const handleLocationToggle = async (value: boolean) => {
                   }
                   style={styles.switch}
                   accessibilityLabel={t("handleLocation")}
+                  disabled={saving.loc}
                 />
               </View>
               {!locationEnabled && (
-                <TouchableOpacity onPress={openSystemSettings} style={{ paddingHorizontal: SPACING, paddingBottom: normalizeSize(12) }}>
-                  <Text style={{ fontFamily: "Comfortaa_400Regular", fontSize: normalizeSize(14), color: currentTheme.colors.textSecondary }}>
-                    {t("settingsPage.locationTip", { defaultValue: "Activez la localisation dans les réglages système pour des suggestions proches." })}
+                <TouchableOpacity
+                  onPress={openSystemSettings}
+                  style={{
+                    paddingHorizontal: SPACING,
+                    paddingBottom: normalizeSize(12),
+                  }}
+                >
+                  <Text
+                    style={{
+                      fontFamily: "Comfortaa_400Regular",
+                      fontSize: normalizeSize(14),
+                      color: currentTheme.colors.textSecondary,
+                    }}
+                  >
+                    {t("settingsPage.locationTip", {
+                      defaultValue:
+                        "Activez la localisation dans les réglages système pour des suggestions proches.",
+                    })}
                   </Text>
                 </TouchableOpacity>
               )}
             </Animated.View>
+
             <Animated.View
               entering={FadeInUp.delay(300)}
               style={[styles.card, dynamicStyles.card]}
@@ -546,172 +630,211 @@ const handleLocationToggle = async (value: boolean) => {
                 />
               </View>
             </Animated.View>
+
+            {/* Langue */}
             <Animated.View
-  entering={FadeInUp.delay(300)}
-  style={[styles.card, dynamicStyles.card]}
->
-  <View style={styles.settingItem}>
-    <Text style={[styles.settingLabel, dynamicStyles.settingLabel]}>
-      {t("language")}
-    </Text>
-    {/* NOUVEAU wrapper pour donner du flex au Picker */}
-   <View style={styles.pickerContainer}>
-    <Picker
-    selectedValue={language}
-    mode="dropdown"
-    dropdownIconColor={
-      isDarkMode ? currentTheme.colors.textPrimary : currentTheme.colors.primary
-    }
-    prompt={t("chooseLanguage")}
-    style={[styles.languagePicker, dynamicStyles.languagePicker]}
-    itemStyle={{
-      fontSize: normalizeSize(18),
-      height: normalizeSize(60),
-      textAlignVertical: "center",
-      lineHeight: normalizeSize(24),
-    }}
-    onValueChange={(itemValue) => {
-      setLanguage(itemValue);
-      i18next.changeLanguage(itemValue);
-      savePreferences({ language: itemValue });
-    }}
-    accessibilityLabel={t("language")}
-  >
-    <Picker.Item label="العربية" value="ar" />
-    <Picker.Item label="Deutsch" value="de" />
-    <Picker.Item label="English" value="en" />
-    <Picker.Item label="Español" value="es" />
-    <Picker.Item label="Français" value="fr" />
-    <Picker.Item label="हिन्दी" value="hi" />
-    <Picker.Item label="Italiano" value="it" />
-    <Picker.Item label="日本語" value="ja" />      {/* 🇯🇵 ajouté */}
-    <Picker.Item label="한국어" value="ko" />       {/* 🇰🇷 ajouté */}
-    <Picker.Item label="Português" value="pt" />  {/* 🇵🇹🇧🇷 ajouté */}
-    <Picker.Item label="Русский" value="ru" />
-    <Picker.Item label="中文" value="zh" />
-  </Picker>
-
-</View>
-
-  </View>
-</Animated.View>
-
+              entering={FadeInUp.delay(300)}
+              style={[styles.card, dynamicStyles.card]}
+            >
+              <View style={styles.settingItem}>
+                <Text style={[styles.settingLabel, dynamicStyles.settingLabel]}>
+                  {t("language")}
+                </Text>
+                <View style={styles.pickerContainer}>
+                  <Picker
+                    selectedValue={safeLanguage}
+                    mode="dropdown"
+                    dropdownIconColor={
+                      isDarkMode
+                        ? currentTheme.colors.textPrimary
+                        : currentTheme.colors.primary
+                    }
+                    prompt={t("chooseLanguage")}
+                    style={[styles.languagePicker, dynamicStyles.languagePicker]}
+                    itemStyle={{
+                      fontSize: normalizeSize(18),
+                      height: normalizeSize(60),
+                      textAlignVertical: "center",
+                      lineHeight: normalizeSize(24),
+                    }}
+                    onValueChange={(itemValue) => {
+                      if (!itemValue) return;
+                      const normalized = normalizeLanguageCode(
+                        String(itemValue)
+                      );
+                      setLanguage(normalized);
+                      i18next.changeLanguage(normalized);
+                      savePreferences({ language: normalized });
+                    }}
+                    accessibilityLabel={t("language")}
+                  >
+                    <Picker.Item label="العربية" value="ar" />
+                    <Picker.Item label="Deutsch" value="de" />
+                    <Picker.Item label="English" value="en" />
+                    <Picker.Item label="Español" value="es" />
+                    <Picker.Item label="Français" value="fr" />
+                    <Picker.Item label="हिन्दी" value="hi" />
+                    <Picker.Item label="Italiano" value="it" />
+                    <Picker.Item label="日本語" value="ja" />
+                    <Picker.Item label="한국어" value="ko" />
+                    <Picker.Item label="Português" value="pt" />
+                    <Picker.Item label="Русский" value="ru" />
+                    <Picker.Item label="中文" value="zh" />
+                  </Picker>
+                </View>
+              </View>
+            </Animated.View>
           </Animated.View>
 
           {/* === Section Premium === */}
-{SHOW_PREMIUM && (
-  <Animated.View entering={FadeInUp.delay(420)} style={styles.section}>
-    <Text style={[styles.sectionHeader, dynamicStyles.sectionHeader]}>
-      {t("premium.title", { defaultValue: "Premium" })}
-    </Text>
+          {SHOW_PREMIUM && (
+            <Animated.View entering={FadeInUp.delay(420)} style={styles.section}>
+              <Text style={[styles.sectionHeader, dynamicStyles.sectionHeader]}>
+                {t("premium.title", { defaultValue: "Premium" })}
+              </Text>
 
-    <LinearGradient
-      colors={[currentTheme.colors.secondary, currentTheme.colors.primary]}
-      start={{ x: 0, y: 0 }}
-      end={{ x: 1, y: 0 }}
-      style={styles.sectionAccent}
-    />
+              <LinearGradient
+                colors={[
+                  currentTheme.colors.secondary,
+                  currentTheme.colors.primary,
+                ]}
+                start={{ x: 0, y: 0 }}
+                end={{ x: 1, y: 0 }}
+                style={styles.sectionAccent}
+              />
 
-    <View style={[styles.premiumCard, dynamicStyles.card]}>
-      <View style={styles.premiumHeaderRow}>
-        <View style={styles.premiumTitleRow}>
-          <Ionicons
-            name="trophy-outline"
-            size={normalizeSize(22)}
-            color={currentTheme.colors.secondary}
-          />
-          <Text style={[styles.premiumTitle]}>
-            {t("premium.header", { defaultValue: "ChallengeTies Premium" })}
-          </Text>
-        </View>
+              <View style={[styles.premiumCard, dynamicStyles.card]}>
+                <View style={styles.premiumHeaderRow}>
+                  <View style={styles.premiumTitleRow}>
+                    <Ionicons
+                      name="trophy-outline"
+                      size={normalizeSize(22)}
+                      color={currentTheme.colors.secondary}
+                    />
+                    <Text style={[styles.premiumTitle]}>
+                      {t("premium.header", {
+                        defaultValue: "ChallengeTies Premium",
+                      })}
+                    </Text>
+                  </View>
 
-        <View
-          style={[
-            styles.premiumBadge,
-            {
-              backgroundColor: isSubscribed
-                ? "rgba(34,197,94,0.18)"
-                : "rgba(255,140,0,0.15)",
-              borderColor: isSubscribed ? "#22C55E" : "#FF8C00",
-            },
-          ]}
-        >
-          <Ionicons
-            name={isSubscribed ? "checkmark-circle-outline" : "sparkles-outline"}
-            size={normalizeSize(16)}
-            color={isSubscribed ? "#22C55E" : "#FF8C00"}
-            style={{ marginRight: 6 }}
-          />
-          <Text
-            style={[
-              styles.premiumBadgeText,
-              { color: isSubscribed ? "#22C55E" : "#FF8C00" },
-            ]}
-          >
-            {isSubscribed
-              ? t("premium.active", { defaultValue: "Actif" })
-              : t("premium.discover", { defaultValue: "Découvrir" })}
-          </Text>
-        </View>
-      </View>
+                  <View
+                    style={[
+                      styles.premiumBadge,
+                      {
+                        backgroundColor: isSubscribed
+                          ? "rgba(34,197,94,0.18)"
+                          : "rgba(255,140,0,0.15)",
+                        borderColor: isSubscribed ? "#22C55E" : "#FF8C00",
+                      },
+                    ]}
+                  >
+                    <Ionicons
+                      name={
+                        isSubscribed
+                          ? "checkmark-circle-outline"
+                          : "sparkles-outline"
+                      }
+                      size={normalizeSize(16)}
+                      color={isSubscribed ? "#22C55E" : "#FF8C00"}
+                      style={{ marginRight: 6 }}
+                    />
+                    <Text
+                      style={[
+                        styles.premiumBadgeText,
+                        { color: isSubscribed ? "#22C55E" : "#FF8C00" },
+                      ]}
+                    >
+                      {isSubscribed
+                        ? t("premium.active", { defaultValue: "Actif" })
+                        : t("premium.discover", { defaultValue: "Découvrir" })}
+                    </Text>
+                  </View>
+                </View>
 
-      <Text style={[styles.premiumDesc, { color: currentTheme.colors.textSecondary }]}>
-        {t("premium.subtitle", {
-          defaultValue:
-            "Supprime les pubs, débloque le mode Duo illimité, les stats avancées, et d’autres bonus exclusifs.",
-        })}
-      </Text>
+                <Text
+                  style={[
+                    styles.premiumDesc,
+                    { color: currentTheme.colors.textSecondary },
+                  ]}
+                >
+                  {t("premium.subtitle", {
+                    defaultValue:
+                      "Supprime les pubs, débloque le mode Duo illimité, les stats avancées, et d’autres bonus exclusifs.",
+                  })}
+                </Text>
 
-      <TouchableOpacity
-        onPress={() => router.push("/about/Settings-premium")}
-        accessibilityLabel={t("premium.open", { defaultValue: "Voir Premium" })}
-        testID="open-premium"
-        activeOpacity={0.9}
-        style={styles.premiumCta}
-      >
-        <LinearGradient
-          colors={[currentTheme.colors.secondary, currentTheme.colors.primary]}
-          start={{ x: 0, y: 0 }}
-          end={{ x: 1, y: 1 }}
-          style={styles.premiumGradient}
-        >
-          <Ionicons name="diamond-outline" size={normalizeSize(18)} color="#fff" style={{ marginRight: 8 }} />
-          <Text style={styles.premiumCtaText}>
-            {isSubscribed
-              ? t("premium.manage", { defaultValue: "Gérer mon Premium" })
-              : t("premium.get", { defaultValue: "Découvrir Premium" })}
-          </Text>
-        </LinearGradient>
-      </TouchableOpacity>
+                <TouchableOpacity
+                  onPress={() => router.push("/about/Settings-premium")}
+                  accessibilityLabel={t("premium.open", {
+                    defaultValue: "Voir Premium",
+                  })}
+                  testID="open-premium"
+                  activeOpacity={0.9}
+                  style={styles.premiumCta}
+                >
+                  <LinearGradient
+                    colors={[
+                      currentTheme.colors.secondary,
+                      currentTheme.colors.primary,
+                    ]}
+                    start={{ x: 0, y: 0 }}
+                    end={{ x: 1, y: 1 }}
+                    style={styles.premiumGradient}
+                  >
+                    <Ionicons
+                      name="diamond-outline"
+                      size={normalizeSize(18)}
+                      color="#fff"
+                      style={{ marginRight: 8 }}
+                    />
+                    <Text style={styles.premiumCtaText}>
+                      {isSubscribed
+                        ? t("premium.manage", {
+                            defaultValue: "Gérer mon Premium",
+                          })
+                        : t("premium.get", {
+                            defaultValue: "Découvrir Premium",
+                          })}
+                    </Text>
+                  </LinearGradient>
+                </TouchableOpacity>
 
-      <View style={styles.premiumBullets}>
-        {[
-          t("premium.benefit.noAds", { defaultValue: "Aucune publicité" }),
-          t("premium.benefit.duo", { defaultValue: "Duo illimité" }),
-          t("premium.benefit.stats", { defaultValue: "Statistiques avancées" }),
-          t("premium.benefit.support", { defaultValue: "Support prioritaire" }),
-        ].map((label, idx) => (
-          <View key={idx} style={styles.premiumBulletRow}>
-            <Ionicons
-              name="checkmark-done-outline"
-              size={normalizeSize(16)}
-              color={currentTheme.colors.secondary}
-            />
-            <Text
-              style={[
-                styles.premiumBulletText,
-                { color: currentTheme.colors.textSecondary },
-              ]}
-            >
-              {label}
-            </Text>
-          </View>
-        ))}
-      </View>
-    </View>
-  </Animated.View>
-)}
-
+                <View style={styles.premiumBullets}>
+                  {[
+                    t("premium.benefit.noAds", {
+                      defaultValue: "Aucune publicité",
+                    }),
+                    t("premium.benefit.duo", {
+                      defaultValue: "Duo illimité",
+                    }),
+                    t("premium.benefit.stats", {
+                      defaultValue: "Statistiques avancées",
+                    }),
+                    t("premium.benefit.support", {
+                      defaultValue: "Support prioritaire",
+                    }),
+                  ].map((label, idx) => (
+                    <View key={idx} style={styles.premiumBulletRow}>
+                      <Ionicons
+                        name="checkmark-done-outline"
+                        size={normalizeSize(16)}
+                        color={currentTheme.colors.secondary}
+                      />
+                      <Text
+                        style={[
+                          styles.premiumBulletText,
+                          { color: currentTheme.colors.textSecondary },
+                        ]}
+                      >
+                        {label}
+                      </Text>
+                    </View>
+                  ))}
+                </View>
+              </View>
+            </Animated.View>
+          )}
 
           {/* Section Compte */}
           <Animated.View entering={FadeInUp.delay(500)} style={styles.section}>
@@ -719,34 +842,41 @@ const handleLocationToggle = async (value: boolean) => {
               {t("account")}
             </Text>
             <LinearGradient
-    colors={[currentTheme.colors.secondary, currentTheme.colors.primary]}
-    start={{ x: 0, y: 0 }}
-    end={{ x: 1, y: 0 }}
-    style={styles.sectionAccent}
-  />
-  {claimableCount > 0 && (
-  <TouchableOpacity
-    onPress={() => router.push("/referral/ShareAndEarn")}
-    accessibilityLabel={t("referral.banner.open")}
-    style={styles.claimBanner}
-    activeOpacity={0.9}
-  >
-    <View style={styles.claimBannerLeft}>
-      <Ionicons name="gift-outline" size={normalizeSize(18)} color="#111" />
-    </View>
-    <View style={{ flex: 1 }}>
-      <Text style={styles.claimBannerTitle}>
-        {t("referral.banner.title")}
-      </Text>
-      <Text style={styles.claimBannerText}>
-        {t("referral.banner.subtitle", { count: claimableCount })}
-      </Text>
-    </View>
-    <View style={styles.claimBannerCta}>
-      <Text style={styles.claimBannerCtaText}>{t("referral.banner.cta")}</Text>
-    </View>
-  </TouchableOpacity>
-)}
+              colors={[currentTheme.colors.secondary, currentTheme.colors.primary]}
+              start={{ x: 0, y: 0 }}
+              end={{ x: 1, y: 0 }}
+              style={styles.sectionAccent}
+            />
+
+            {claimableCount > 0 && (
+              <TouchableOpacity
+                onPress={() => router.push("/referral/ShareAndEarn")}
+                accessibilityLabel={t("referral.banner.open")}
+                style={styles.claimBanner}
+                activeOpacity={0.9}
+              >
+                <View style={styles.claimBannerLeft}>
+                  <Ionicons
+                    name="gift-outline"
+                    size={normalizeSize(18)}
+                    color="#111"
+                  />
+                </View>
+                <View style={{ flex: 1 }}>
+                  <Text style={styles.claimBannerTitle}>
+                    {t("referral.banner.title")}
+                  </Text>
+                  <Text style={styles.claimBannerText}>
+                    {t("referral.banner.subtitle", { count: claimableCount })}
+                  </Text>
+                </View>
+                <View style={styles.claimBannerCta}>
+                  <Text style={styles.claimBannerCtaText}>
+                    {t("referral.banner.cta")}
+                  </Text>
+                </View>
+              </TouchableOpacity>
+            )}
 
             <Animated.View entering={FadeInUp.delay(600)}>
               <TouchableOpacity
@@ -777,62 +907,79 @@ const handleLocationToggle = async (value: boolean) => {
                 </LinearGradient>
               </TouchableOpacity>
             </Animated.View>
+
             <Animated.View entering={FadeInUp.delay(650)}>
-  <TouchableOpacity
-    style={styles.accountButton}
-    onPress={() => router.push("/userAccount")}
-    accessibilityLabel={t("account")}
-    testID="user-account-button"
-  >
-    <LinearGradient
-      colors={dynamicStyles.buttonGradient.colors}
-      style={styles.buttonGradient}
-      start={{ x: 1, y: 1 }}
-      end={{ x: 0, y: 0 }}
-    >
-      <Ionicons
-        name="shield-outline"
-        size={normalizeSize(20)}
-        color={currentTheme.colors.textPrimary}
-      />
-      <Text
-        style={[
-          styles.accountButtonText,
-          dynamicStyles.accountButtonText,
-        ]}
-      >
-        {t("account")}
-      </Text>
-    </LinearGradient>
-  </TouchableOpacity>
-</Animated.View>
-<Animated.View entering={FadeInUp.delay(675)}>
-  <TouchableOpacity
-    style={styles.accountButton}
-    onPress={async () => {
-      tap();
-      try { await shareReferralLink(); } catch (e) {}
-    }}
-    accessibilityLabel={t("inviteFriends") || "Inviter des amis"}
-    testID="invite-friends-button"
-  >
-    <LinearGradient
-      colors={dynamicStyles.buttonGradient.colors}
-      style={styles.buttonGradient}
-      start={{ x: 1, y: 1 }}
-      end={{ x: 0, y: 0 }}
-    >
-      <Ionicons name="send-outline" size={normalizeSize(20)} color={currentTheme.colors.textPrimary} />
-      <Text style={[styles.accountButtonText, dynamicStyles.accountButtonText]}>
-        {t("inviteFriends") || "Inviter des amis"}
-      </Text>
-    </LinearGradient>
-  </TouchableOpacity>
-</Animated.View>
+              <TouchableOpacity
+                style={styles.accountButton}
+                onPress={() => router.push("/userAccount")}
+                accessibilityLabel={t("account")}
+                testID="user-account-button"
+              >
+                <LinearGradient
+                  colors={dynamicStyles.buttonGradient.colors}
+                  style={styles.buttonGradient}
+                  start={{ x: 1, y: 1 }}
+                  end={{ x: 0, y: 0 }}
+                >
+                  <Ionicons
+                    name="shield-outline"
+                    size={normalizeSize(20)}
+                    color={currentTheme.colors.textPrimary}
+                  />
+                  <Text
+                    style={[
+                      styles.accountButtonText,
+                      dynamicStyles.accountButtonText,
+                    ]}
+                  >
+                    {t("account")}
+                  </Text>
+                </LinearGradient>
+              </TouchableOpacity>
+            </Animated.View>
+
+            <Animated.View entering={FadeInUp.delay(675)}>
+              <TouchableOpacity
+                style={styles.accountButton}
+                onPress={async () => {
+                  tap();
+                  try {
+                    await shareReferralLink();
+                  } catch (e) {}
+                }}
+                accessibilityLabel={t("inviteFriends") || "Inviter des amis"}
+                testID="invite-friends-button"
+              >
+                <LinearGradient
+                  colors={dynamicStyles.buttonGradient.colors}
+                  style={styles.buttonGradient}
+                  start={{ x: 1, y: 1 }}
+                  end={{ x: 0, y: 0 }}
+                >
+                  <Ionicons
+                    name="send-outline"
+                    size={normalizeSize(20)}
+                    color={currentTheme.colors.textPrimary}
+                  />
+                  <Text
+                    style={[
+                      styles.accountButtonText,
+                      dynamicStyles.accountButtonText,
+                    ]}
+                  >
+                    {t("inviteFriends") || "Inviter des amis"}
+                  </Text>
+                </LinearGradient>
+              </TouchableOpacity>
+            </Animated.View>
+
             <Animated.View entering={FadeInUp.delay(700)}>
               <TouchableOpacity
                 style={styles.accountButton}
-                onPress={async () => { tap(); await clearCache(); }}
+                onPress={async () => {
+                  tap();
+                  await clearCache();
+                }}
                 accessibilityLabel={t("clearCache")}
                 testID="clear-cache-button"
               >
@@ -858,60 +1005,70 @@ const handleLocationToggle = async (value: boolean) => {
                 </LinearGradient>
               </TouchableOpacity>
             </Animated.View>
-<Animated.View entering={FadeInUp.delay(540)}>
-  <TouchableOpacity
-    style={styles.accountButton}
-    onPress={() => router.push("/referral/ShareAndEarn")}
-    accessibilityLabel={t("referral.menu")}
-    testID="share-earn-button"
-  >
-    <LinearGradient
-      colors={dynamicStyles.buttonGradient.colors}
-      style={styles.buttonGradient}
-      start={{ x: 1, y: 1 }}
-      end={{ x: 0, y: 0 }}
-    >
-      <Ionicons
-        name="gift-outline"
-        size={normalizeSize(20)}
-        color={currentTheme.colors.textPrimary}
-      />
-      <Text
-        style={[
-          styles.accountButtonText,
-          dynamicStyles.accountButtonText,
-        ]}
-      >
-         {t("referral.menu")}
-      </Text>
 
-      {/* BADGE si des paliers sont claimables */}
-      {claimable.length > 0 && (
-        <View
-          style={{
-            marginLeft: normalizeSize(8),
-            paddingHorizontal: normalizeSize(10),
-            paddingVertical: normalizeSize(6),
-            borderRadius: 999,
-            borderWidth: 1.2,
-            borderColor: "#111",
-            backgroundColor: "#FFB800",
-          }}
-        >
-          <Text style={{ fontWeight: "900", color: "#111", fontSize: normalizeSize(12) }}>
-  {t("referral.badge", { defaultValue: "+ Récompense" })}
-</Text>
-        </View>
-      )}
-    </LinearGradient>
-  </TouchableOpacity>
-</Animated.View>
+            <Animated.View entering={FadeInUp.delay(540)}>
+              <TouchableOpacity
+                style={styles.accountButton}
+                onPress={() => router.push("/referral/ShareAndEarn")}
+                accessibilityLabel={t("referral.menu")}
+                testID="share-earn-button"
+              >
+                <LinearGradient
+                  colors={dynamicStyles.buttonGradient.colors}
+                  style={styles.buttonGradient}
+                  start={{ x: 1, y: 1 }}
+                  end={{ x: 0, y: 0 }}
+                >
+                  <Ionicons
+                    name="gift-outline"
+                    size={normalizeSize(20)}
+                    color={currentTheme.colors.textPrimary}
+                  />
+                  <Text
+                    style={[
+                      styles.accountButtonText,
+                      dynamicStyles.accountButtonText,
+                    ]}
+                  >
+                    {t("referral.menu")}
+                  </Text>
 
+                  {claimable.length > 0 && (
+                    <View
+                      style={{
+                        marginLeft: normalizeSize(8),
+                        paddingHorizontal: normalizeSize(10),
+                        paddingVertical: normalizeSize(6),
+                        borderRadius: 999,
+                        borderWidth: 1.2,
+                        borderColor: "#111",
+                        backgroundColor: "#FFB800",
+                      }}
+                    >
+                      <Text
+                        style={{
+                          fontWeight: "900",
+                          color: "#111",
+                          fontSize: normalizeSize(12),
+                        }}
+                      >
+                        {t("referral.badge", {
+                          defaultValue: "+ Récompense",
+                        })}
+                      </Text>
+                    </View>
+                  )}
+                </LinearGradient>
+              </TouchableOpacity>
+            </Animated.View>
 
             <Animated.View entering={FadeInUp.delay(800)}>
               <TouchableOpacity
                 style={styles.accountButton}
-                onPress={async () => { tap(); await handleLogout(); }}
+                onPress={async () => {
+                  tap();
+                  await handleLogout();
+                }}
                 accessibilityLabel={t("logout")}
                 testID="logout-button"
               >
@@ -939,42 +1096,62 @@ const handleLocationToggle = async (value: boolean) => {
             </Animated.View>
 
             {/* Support */}
-<Animated.View entering={FadeInUp.delay(720)}>
-  <TouchableOpacity
-    style={styles.accountButton}
-    onPress={openSupport}
-    accessibilityLabel={t("support")}
-    testID="support-button"
-  >
-    <LinearGradient
-      colors={dynamicStyles.buttonGradient.colors}
-      style={styles.buttonGradient}
-      start={{ x: 1, y: 1 }}
-      end={{ x: 0, y: 0 }}
-    >
-      <Ionicons name="help-buoy-outline" size={normalizeSize(20)} color={currentTheme.colors.textPrimary} />
-      <Text style={[styles.accountButtonText, dynamicStyles.accountButtonText]}>
-        {t("support")}
-      </Text>
-    </LinearGradient>
-  </TouchableOpacity>
-</Animated.View>
+            <Animated.View entering={FadeInUp.delay(720)}>
+              <TouchableOpacity
+                style={styles.accountButton}
+                onPress={openSupport}
+                accessibilityLabel={t("support")}
+                testID="support-button"
+              >
+                <LinearGradient
+                  colors={dynamicStyles.buttonGradient.colors}
+                  style={styles.buttonGradient}
+                  start={{ x: 1, y: 1 }}
+                  end={{ x: 0, y: 0 }}
+                >
+                  <Ionicons
+                    name="help-buoy-outline"
+                    size={normalizeSize(20)}
+                    color={currentTheme.colors.textPrimary}
+                  />
+                  <Text
+                    style={[
+                      styles.accountButtonText,
+                      dynamicStyles.accountButtonText,
+                    ]}
+                  >
+                    {t("support")}
+                  </Text>
+                </LinearGradient>
+              </TouchableOpacity>
+            </Animated.View>
+
             {/* Danger Zone */}
-            <Animated.View entering={FadeInUp.delay(860)} style={{ marginTop: SPACING }}>
+            <Animated.View
+              entering={FadeInUp.delay(860)}
+              style={{ marginTop: SPACING }}
+            >
               <Text style={[styles.sectionHeader, dynamicStyles.sectionHeader]}>
                 {t("dangerZone", { defaultValue: "Zone dangereuse" })}
               </Text>
               <LinearGradient
-                colors={[currentTheme.colors.error, withAlpha(currentTheme.colors.error, 0.8)]}
+                colors={[
+                  currentTheme.colors.error,
+                  withAlpha(currentTheme.colors.error, 0.8),
+                ]}
                 start={{ x: 0, y: 0 }}
                 end={{ x: 1, y: 0 }}
                 style={styles.sectionAccent}
               />
             </Animated.View>
+
             <Animated.View entering={FadeInUp.delay(900)}>
               <TouchableOpacity
                 style={styles.accountButton}
-                onPress={async () => { tap(); await handleDeleteAccount(); }}
+                onPress={async () => {
+                  tap();
+                  await handleDeleteAccount();
+                }}
                 accessibilityLabel={t("deleteAccount")}
                 testID="delete-account-button"
               >
@@ -1000,6 +1177,7 @@ const handleLocationToggle = async (value: boolean) => {
                 </LinearGradient>
               </TouchableOpacity>
             </Animated.View>
+
             {auth.currentUser && auth.currentUser.uid === adminUID && (
               <>
                 <Animated.View entering={FadeInUp.delay(1000)}>
@@ -1027,6 +1205,7 @@ const handleLocationToggle = async (value: boolean) => {
                     </TouchableOpacity>
                   </Link>
                 </Animated.View>
+
                 <Animated.View entering={FadeInUp.delay(1050)}>
                   <Link href="/AdminModerateChallenges" asChild>
                     <TouchableOpacity
@@ -1052,31 +1231,34 @@ const handleLocationToggle = async (value: boolean) => {
                     </TouchableOpacity>
                   </Link>
                 </Animated.View>
+
                 <Animated.View entering={FadeInUp.delay(1150)}>
-  <Link href="/admin/events" asChild>
-    <TouchableOpacity
-      style={styles.adminButton}
-      accessibilityLabel={t("adminEvents", { defaultValue: "Admin Events" })}
-      testID="admin-events-button"
-    >
-      <LinearGradient
-        colors={dynamicStyles.adminButtonGradient.colors}
-        style={styles.adminButtonGradient}
-        start={{ x: 0, y: 0 }}
-        end={{ x: 1, y: 1 }}
-      >
-        <Text
-          style={[
-            styles.adminButtonText,
-            dynamicStyles.adminButtonText,
-          ]}
-        >
-          {t("adminEvents", { defaultValue: "Admin Events" })}
-        </Text>
-      </LinearGradient>
-    </TouchableOpacity>
-  </Link>
-</Animated.View>
+                  <Link href="/admin/events" asChild>
+                    <TouchableOpacity
+                      style={styles.adminButton}
+                      accessibilityLabel={t("adminEvents", {
+                        defaultValue: "Admin Events",
+                      })}
+                      testID="admin-events-button"
+                    >
+                      <LinearGradient
+                        colors={dynamicStyles.adminButtonGradient.colors}
+                        style={styles.adminButtonGradient}
+                        start={{ x: 0, y: 0 }}
+                        end={{ x: 1, y: 1 }}
+                      >
+                        <Text
+                          style={[
+                            styles.adminButtonText,
+                            dynamicStyles.adminButtonText,
+                          ]}
+                        >
+                          {t("adminEvents", { defaultValue: "Admin Events" })}
+                        </Text>
+                      </LinearGradient>
+                    </TouchableOpacity>
+                  </Link>
+                </Animated.View>
 
                 <Animated.View entering={FadeInUp.delay(1100)}>
                   <Link href="/AdminModerateChats" asChild>
@@ -1113,11 +1295,11 @@ const handleLocationToggle = async (value: boolean) => {
               {t("about")}
             </Text>
             <LinearGradient
-    colors={[currentTheme.colors.secondary, currentTheme.colors.primary]}
-    start={{ x: 0, y: 0 }}
-    end={{ x: 1, y: 0 }}
-    style={styles.sectionAccent}
-  />
+              colors={[currentTheme.colors.secondary, currentTheme.colors.primary]}
+              start={{ x: 0, y: 0 }}
+              end={{ x: 1, y: 0 }}
+              style={styles.sectionAccent}
+            />
             {["/about/History", "/about/PrivacyPolicy", "/about/Contact"].map(
               (path, index) => (
                 <Animated.View
@@ -1133,7 +1315,9 @@ const handleLocationToggle = async (value: boolean) => {
                     )}
                     testID={`about-link-${index}`}
                   >
-                    <Text style={[styles.aboutLink, dynamicStyles.aboutLink]}>
+                    <Text
+                      style={[styles.aboutLink, dynamicStyles.aboutLink]}
+                    >
                       {t(
                         [
                           "aboutChallengeTies",
@@ -1146,42 +1330,43 @@ const handleLocationToggle = async (value: boolean) => {
                 </Animated.View>
               )
             )}
-{/* Bouton Noter l’app */}
-<Animated.View entering={FadeInUp.delay(1650)}>
-  <TouchableOpacity
-    onPress={async () => {
-      tap();
-      const shown = await maybeAskForReview().catch(() => false);
-      if (!shown) {
-        await openStoreListing().catch(() => {});
-      }
-    }}
-    accessibilityLabel={t("rateUs")}
-    testID="rate-app-button"
-    style={styles.accountButton}
-  >
-    <LinearGradient
-      colors={dynamicStyles.buttonGradient.colors}
-      style={styles.buttonGradient}
-      start={{ x: 1, y: 1 }}
-      end={{ x: 0, y: 0 }}
-    >
-      <Ionicons
-        name="star-outline"
-        size={normalizeSize(20)}
-        color={currentTheme.colors.textPrimary}
-      />
-      <Text
-        style={[
-          styles.accountButtonText,
-          dynamicStyles.accountButtonText,
-        ]}
-      >
-        {t("rateUs")}
-      </Text>
-    </LinearGradient>
-  </TouchableOpacity>
-</Animated.View>
+
+            {/* Bouton Noter l’app */}
+            <Animated.View entering={FadeInUp.delay(1650)}>
+              <TouchableOpacity
+                onPress={async () => {
+                  tap();
+                  const shown = await maybeAskForReview().catch(() => false);
+                  if (!shown) {
+                    await openStoreListing().catch(() => {});
+                  }
+                }}
+                accessibilityLabel={t("rateUs")}
+                testID="rate-app-button"
+                style={styles.accountButton}
+              >
+                <LinearGradient
+                  colors={dynamicStyles.buttonGradient.colors}
+                  style={styles.buttonGradient}
+                  start={{ x: 1, y: 1 }}
+                  end={{ x: 0, y: 0 }}
+                >
+                  <Ionicons
+                    name="star-outline"
+                    size={normalizeSize(20)}
+                    color={currentTheme.colors.textPrimary}
+                  />
+                  <Text
+                    style={[
+                      styles.accountButtonText,
+                      dynamicStyles.accountButtonText,
+                    ]}
+                  >
+                    {t("rateUs")}
+                  </Text>
+                </LinearGradient>
+              </TouchableOpacity>
+            </Animated.View>
 
             <Animated.View entering={FadeInUp.delay(1700)}>
               <Text style={[styles.appVersion, dynamicStyles.appVersion]}>
@@ -1242,11 +1427,11 @@ const styles = StyleSheet.create({
     paddingHorizontal: SPACING,
   },
   pickerContainer: {
-   flex: 1,
-   overflow: "hidden",
-   justifyContent: "center",      // on garde le centrage vertical
-    alignItems: "flex-end", 
- },
+    flex: 1,
+    overflow: "hidden",
+    justifyContent: "center",
+    alignItems: "flex-end",
+  },
   settingLabel: {
     fontSize: normalizeSize(18),
     fontFamily: "Comfortaa_400Regular",
@@ -1255,14 +1440,14 @@ const styles = StyleSheet.create({
     transform: [{ scale: SCREEN_WIDTH < 360 ? 0.85 : 1 }],
   },
   languagePicker: {
-   width: SCREEN_WIDTH * 0.4,         // largeur fixe pour éviter la coupure
+    width: SCREEN_WIDTH * 0.4,
     height: normalizeSize(60),
     textAlignVertical: "center",
     fontFamily: "Comfortaa_400Regular",
     fontSize: normalizeSize(16),
     lineHeight: normalizeSize(20),
     paddingVertical: normalizeSize(2),
-},
+  },
   accountButton: {
     borderRadius: normalizeSize(16),
     marginBottom: SPACING,
@@ -1274,51 +1459,51 @@ const styles = StyleSheet.create({
     elevation: 8,
   },
   claimBanner: {
-  flexDirection: "row",
-  alignItems: "center",
-  gap: normalizeSize(10),
-  backgroundColor: "#FFF1C9",
-  borderColor: "#FFB800",
-  borderWidth: 1.5,
-  borderRadius: normalizeSize(14),
-  paddingVertical: normalizeSize(10),
-  paddingHorizontal: normalizeSize(12),
-  marginBottom: SPACING,
-},
-claimBannerLeft: {
-  width: normalizeSize(34),
-  height: normalizeSize(34),
-  borderRadius: normalizeSize(17),
-  alignItems: "center",
-  justifyContent: "center",
-  backgroundColor: "#FFE9A6",
-  borderColor: "#FFB800",
-  borderWidth: 1,
-},
-claimBannerTitle: {
-  fontFamily: "Comfortaa_700Bold",
-  fontSize: normalizeSize(14),
-  color: "#111",
-},
-claimBannerText: {
-  fontFamily: "Comfortaa_400Regular",
-  fontSize: normalizeSize(12),
-  color: "#7C5800",
-  marginTop: 2,
-},
-claimBannerCta: {
-  paddingHorizontal: normalizeSize(10),
-  paddingVertical: normalizeSize(6),
-  borderRadius: 999,
-  borderWidth: 1.2,
-  borderColor: "#111",
-  backgroundColor: "#FFB800",
-},
-claimBannerCtaText: {
-  fontFamily: "Comfortaa_700Bold",
-  fontSize: normalizeSize(12),
-  color: "#111",
-},
+    flexDirection: "row",
+    alignItems: "center",
+    gap: normalizeSize(10),
+    backgroundColor: "#FFF1C9",
+    borderColor: "#FFB800",
+    borderWidth: 1.5,
+    borderRadius: normalizeSize(14),
+    paddingVertical: normalizeSize(10),
+    paddingHorizontal: normalizeSize(12),
+    marginBottom: SPACING,
+  },
+  claimBannerLeft: {
+    width: normalizeSize(34),
+    height: normalizeSize(34),
+    borderRadius: normalizeSize(17),
+    alignItems: "center",
+    justifyContent: "center",
+    backgroundColor: "#FFE9A6",
+    borderColor: "#FFB800",
+    borderWidth: 1,
+  },
+  claimBannerTitle: {
+    fontFamily: "Comfortaa_700Bold",
+    fontSize: normalizeSize(14),
+    color: "#111",
+  },
+  claimBannerText: {
+    fontFamily: "Comfortaa_400Regular",
+    fontSize: normalizeSize(12),
+    color: "#7C5800",
+    marginTop: 2,
+  },
+  claimBannerCta: {
+    paddingHorizontal: normalizeSize(10),
+    paddingVertical: normalizeSize(6),
+    borderRadius: 999,
+    borderWidth: 1.2,
+    borderColor: "#111",
+    backgroundColor: "#FFB800",
+  },
+  claimBannerCtaText: {
+    fontFamily: "Comfortaa_700Bold",
+    fontSize: normalizeSize(12),
+    color: "#111",
+  },
   buttonGradient: {
     flexDirection: "row",
     alignItems: "center",
@@ -1345,21 +1530,21 @@ claimBannerCtaText: {
     elevation: 8,
   },
   bgOrbTop: {
-  position: "absolute",
-  top: -SCREEN_WIDTH * 0.25,
-  left: -SCREEN_WIDTH * 0.2,
-  width: SCREEN_WIDTH * 0.9,
-  height: SCREEN_WIDTH * 0.9,
-  borderRadius: SCREEN_WIDTH * 0.45,
-},
-bgOrbBottom: {
-  position: "absolute",
-  bottom: -SCREEN_WIDTH * 0.3,
-  right: -SCREEN_WIDTH * 0.25,
-  width: SCREEN_WIDTH * 1.1,
-  height: SCREEN_WIDTH * 1.1,
-  borderRadius: SCREEN_WIDTH * 0.55,
-},
+    position: "absolute",
+    top: -SCREEN_WIDTH * 0.25,
+    left: -SCREEN_WIDTH * 0.2,
+    width: SCREEN_WIDTH * 0.9,
+    height: SCREEN_WIDTH * 0.9,
+    borderRadius: SCREEN_WIDTH * 0.45,
+  },
+  bgOrbBottom: {
+    position: "absolute",
+    bottom: -SCREEN_WIDTH * 0.3,
+    right: -SCREEN_WIDTH * 0.25,
+    width: SCREEN_WIDTH * 1.1,
+    height: SCREEN_WIDTH * 1.1,
+    borderRadius: SCREEN_WIDTH * 0.55,
+  },
   adminButtonGradient: {
     paddingVertical: normalizeSize(14),
     paddingHorizontal: SPACING * 1.5,
@@ -1388,7 +1573,7 @@ bgOrbBottom: {
     fontFamily: "Comfortaa_400Regular",
     marginTop: SPACING,
   },
-    premiumCard: {
+  premiumCard: {
     borderRadius: normalizeSize(20),
     paddingVertical: normalizeSize(16),
     paddingHorizontal: SPACING,
@@ -1428,13 +1613,12 @@ bgOrbBottom: {
     fontFamily: "Comfortaa_700Bold",
   },
   sectionAccent: {
-  height: 3,
-  borderRadius: 3,
-  marginTop: 4,
-  marginBottom: SPACING * 0.8,
-  opacity: 0.9,
-},
-
+    height: 3,
+    borderRadius: 3,
+    marginTop: 4,
+    marginBottom: SPACING * 0.8,
+    opacity: 0.9,
+  },
   premiumDesc: {
     fontSize: normalizeSize(14),
     fontFamily: "Comfortaa_400Regular",
@@ -1476,5 +1660,4 @@ bgOrbBottom: {
     fontSize: normalizeSize(14),
     fontFamily: "Comfortaa_400Regular",
   },
-
 });

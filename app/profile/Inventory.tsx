@@ -56,10 +56,19 @@ const InventoryScreen: React.FC = () => {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
-  const insets = useSafeAreaInsets();
-  const tabBarHeight = useBottomTabBarHeight();
+   const insets = useSafeAreaInsets();
+
+  // 🔒 Safe tabBarHeight: évite l'erreur "Couldn't find the bottom tab bar height"
+  let tabBarHeight = 0;
+  try {
+    tabBarHeight = useBottomTabBarHeight();
+  } catch (_e) {
+    tabBarHeight = 0; // fallback si l'écran n'est pas rendu dans un BottomTabNavigator
+  }
+
   const { showBanners } = useAdsVisibility();
   const [adHeight, setAdHeight] = useState(0);
+
 
   const bottomPadding =
     (showBanners ? adHeight : 0) +

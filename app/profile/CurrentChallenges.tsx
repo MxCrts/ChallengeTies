@@ -17,6 +17,7 @@ import {
   SafeAreaView,
   StatusBar,
   Platform,
+  PlatformColor,
 } from "react-native";
 import { LinearGradient } from "expo-linear-gradient";
 import { useCurrentChallenges } from "../../context/CurrentChallengesContext";
@@ -25,10 +26,16 @@ import { useRouter } from "expo-router";
 import { Ionicons } from "@expo/vector-icons";
 import ConfettiCannon from "react-native-confetti-cannon";
 import * as Progress from "react-native-progress";
-import Animated, {
+import Animated,
+{
   FadeInUp,
   FadeOutRight,
   ZoomIn,
+  Easing,
+  useSharedValue,
+  useAnimatedStyle,
+  withTiming,
+  withSequence,
 } from "react-native-reanimated";
 import { useTheme } from "../../context/ThemeContext";
 import { useTranslation } from "react-i18next";
@@ -38,10 +45,8 @@ import CustomHeader from "@/components/CustomHeader";
 import BannerSlot from "@/components/BannerSlot";
 import { useBottomTabBarHeight } from "@react-navigation/bottom-tabs";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
- import { useAdsVisibility } from "../../src/context/AdsVisibilityContext";
- import * as Haptics from "expo-haptics";
-import { Easing, useSharedValue, useAnimatedStyle, withTiming, withSequence } from "react-native-reanimated";
-import { PlatformColor } from "react-native";
+import { useAdsVisibility } from "../../src/context/AdsVisibilityContext";
+import * as Haptics from "expo-haptics";
 import { Audio } from "expo-av";
 import { Image as ExpoImage } from "expo-image";
 
@@ -50,11 +55,6 @@ const { width: SCREEN_WIDTH, height: SCREEN_HEIGHT } = Dimensions.get("window");
 const ITEM_WIDTH = SCREEN_WIDTH * 0.9;
 const ITEM_HEIGHT = SCREEN_WIDTH * 0.42;
 const ROW_HEIGHT = ITEM_HEIGHT + SPACING * 1.5;
-const getItemLayoutConst = (_: any, index: number) => ({
-  length: normalizeSize(ROW_HEIGHT),
-  offset: normalizeSize(ROW_HEIGHT) * index,
-  index,
-});
 
 const normalizeSize = (size: number) => {
   const baseWidth = 375;
@@ -62,6 +62,11 @@ const normalizeSize = (size: number) => {
   return Math.round(size * scale);
 };
 
+const getItemLayoutConst = (_: any, index: number) => ({
+  length: normalizeSize(ROW_HEIGHT),
+  offset: normalizeSize(ROW_HEIGHT) * index,
+  index,
+});
 
 /** Util pour ajouter une alpha sans casser les gradients */
 const withAlpha = (color: string, alpha: number) => {
@@ -84,6 +89,14 @@ const withAlpha = (color: string, alpha: number) => {
   return `rgba(0,0,0,${a})`;
 };
 
+// ====== Safe TabBar Height (aucun crash hors Bottom Tabs) ======
+function useTabBarHeightSafe(): number {
+  try {
+    return useBottomTabBarHeight();
+  } catch {
+    return 0;
+  }
+}
 
 interface Challenge {
   id: string;
@@ -96,6 +109,12 @@ interface Challenge {
   selectedDays: number;
   completedDays: number;
   lastMarkedDate?: string | null;
+
+  // champs duo optionnels, si présents dans CurrentChallenges
+  duo?: boolean;
+  duoPartnerId?: string;
+  duoPartnerUsername?: string;
+  uniqueKey?: string;
 }
 
 export default function CurrentChallenges() {
@@ -103,6 +122,7 @@ export default function CurrentChallenges() {
   const { t, i18n } = useTranslation();
   const { currentChallenges, markToday, removeChallenge, isMarkedToday } =
     useCurrentChallenges();
+
   const [isLoading, setIsLoading] = useState(true);
   const [confettiActive, setConfettiActive] = useState(false);
   const [localChallenges, setLocalChallenges] = useState<Challenge[]>([]);
@@ -111,20 +131,10 @@ export default function CurrentChallenges() {
   const { showBanners } = useAdsVisibility();
   const insets = useSafeAreaInsets();
   const [markingId, setMarkingId] = useState<string | null>(null);
-
-  // ✅ Hook tab bar height sécurisé (évite le crash hors BottomTabs)
-  const useOptionalTabBarHeight = () => {
-    try {
-      return useBottomTabBarHeight();
-    } catch {
-      return 0;
-    }
-  };
-  const tabBarHeight = useOptionalTabBarHeight();
-
+  const tabBarHeight = useTabBarHeightSafe();
   const [adHeight, setAdHeight] = useState(0);
 
-const bottomPadding = useMemo(
+  const bottomPadding = useMemo(
     () =>
       normalizeSize(90) +
       (showBanners ? adHeight : 0) +
@@ -140,14 +150,12 @@ const bottomPadding = useMemo(
     [isDarkMode]
   );
 
-  // Log pour déboguer
-  useEffect(() => {}, [currentChallenges]);
-
-  // 🔊 Son de gain (optionnel, silencieux si le fichier n’existe pas)
+  // 🔊 Son de gain (optionnel)
   const gainWhooshRef = useRef<Audio.Sound | null>(null);
   const gainDingRef = useRef<Audio.Sound | null>(null);
   const gainSparkleRef = useRef<Audio.Sound | null>(null);
- const isPlayingFxRef = useRef(false);
+  const isPlayingFxRef = useRef(false);
+
   useEffect(() => {
     let mounted = true;
     (async () => {
@@ -162,71 +170,76 @@ const bottomPadding = useMemo(
           interruptionModeIOS: 1,
         });
         const [{ sound: w }, { sound: d }, { sound: sp }] = await Promise.all([
-       Audio.Sound.createAsync(require("../../assets/music/gain_whoosh.wav"), { shouldPlay: false }),
-       Audio.Sound.createAsync(require("../../assets/music/gain_ding.wav"),   { shouldPlay: false }),
-       Audio.Sound.createAsync(require("../../assets/music/gain_sparkle.wav"),{ shouldPlay: false }),
-     ]);
-     if (mounted) {
-       gainWhooshRef.current = w;
-       gainDingRef.current = d;
-       gainSparkleRef.current = sp;
-       await gainWhooshRef.current.setVolumeAsync(0.55);
-       await gainDingRef.current.setVolumeAsync(0.8);
-       await gainSparkleRef.current.setVolumeAsync(0.65);
-     }
+          Audio.Sound.createAsync(
+            require("../../assets/music/gain_whoosh.wav"),
+            { shouldPlay: false }
+          ),
+          Audio.Sound.createAsync(
+            require("../../assets/music/gain_ding.wav"),
+            { shouldPlay: false }
+          ),
+          Audio.Sound.createAsync(
+            require("../../assets/music/gain_sparkle.wav"),
+            { shouldPlay: false }
+          ),
+        ]);
+        if (mounted) {
+          gainWhooshRef.current = w;
+          gainDingRef.current = d;
+          gainSparkleRef.current = sp;
+          await gainWhooshRef.current.setVolumeAsync(0.55);
+          await gainDingRef.current.setVolumeAsync(0.8);
+          await gainSparkleRef.current.setVolumeAsync(0.65);
+        }
       } catch {
-        // Pas de fichier ? Pas grave: on ignore.
+        // Pas de fichier ? On ignore.
       }
     })();
     return () => {
       mounted = false;
       gainWhooshRef.current?.unloadAsync().catch(() => {});
-   gainDingRef.current?.unloadAsync().catch(() => {});
-   gainSparkleRef.current?.unloadAsync().catch(() => {});
+      gainDingRef.current?.unloadAsync().catch(() => {});
+      gainSparkleRef.current?.unloadAsync().catch(() => {});
     };
   }, []);
 
-   // 🎵 Stack audio premium (whoosh -> ding -> sparkle) + petit haptic
+  // 🎵 Stack audio premium (whoosh -> ding -> sparkle) + haptic
   const playSuccessFx = useCallback(async () => {
     if (isPlayingFxRef.current) return;
     try {
       isPlayingFxRef.current = true;
-      // haptic léger immédiat
       Haptics.selectionAsync().catch(() => {});
-      // whoosh tout de suite
       await gainWhooshRef.current?.replayAsync();
-      // petit délai puis ding
       setTimeout(() => {
         gainDingRef.current?.replayAsync().catch(() => {});
       }, 90);
-      // puis sparkle
       setTimeout(() => {
         gainSparkleRef.current?.replayAsync().catch(() => {});
       }, 180);
     } finally {
-      setTimeout(() => { isPlayingFxRef.current = false; }, 380);
+      setTimeout(() => {
+        isPlayingFxRef.current = false;
+      }, 380);
     }
   }, []);
 
+  // Challenges localisés + dédupliqués
   const translatedChallenges = useMemo(() => {
     if (!currentChallenges || !Array.isArray(currentChallenges)) {
       return [];
     }
 
-    // Filtrage assoupli : accepter les challenges avec id
-    const validChallenges = currentChallenges.filter((item) => item.id);
+    const validChallenges = currentChallenges.filter((item: any) => item.id);
 
-    // Déduplication basée sur uniqueKey ou id_selectedDays
     const uniqueChallenges = Array.from(
       new Map(
-        validChallenges.map((item) => [
+        validChallenges.map((item: any) => [
           item.uniqueKey || `${item.id}_${item.selectedDays}`,
           item,
         ])
       ).values()
     ) as Challenge[];
 
-    // Traduction des champs
     return uniqueChallenges.map((item) => ({
       ...item,
       title: item.chatId
@@ -248,38 +261,7 @@ const bottomPadding = useMemo(
     setIsLoading(false);
   }, [translatedChallenges]);
 
-  const handleMarkToday = useCallback(
-    async (id: string, selectedDays: number) => {
-      if (markingId) return;
-      try {
-        setMarkingId(`${id}_${selectedDays}`);
-        const result = await markToday(id, selectedDays);
-        if (result?.success) {
-          Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
-          setConfettiActive(true);
-          // 🔊 stack audio premium
-         playSuccessFx();
-          // 💫 effet mini-gain avec Reanimated
-          gainOpacity.value = withSequence(
-            withTiming(1, { duration: 200, easing: Easing.out(Easing.ease) }),
-            withTiming(0, { duration: 600, easing: Easing.in(Easing.ease) })
-          );
-          gainY.value = withSequence(
-            withTiming(-25, { duration: 400, easing: Easing.out(Easing.quad) }),
-            withTiming(0, { duration: 600, easing: Easing.in(Easing.quad) })
-          );
-        }
-      } catch (err) {
-        console.error("Erreur markToday:", err);
-        Alert.alert(t("error"), t("markTodayFailed"));
-      } finally {
-        setMarkingId(null);
-      }
-    },
-    [markToday, t, markingId, playSuccessFx]
-  );
-
- // 🎯 Animation Reanimated pour le "+1🏆"
+  // 🎯 Animation Reanimated pour le "+1🏆"
   const gainOpacity = useSharedValue(0);
   const gainY = useSharedValue(0);
 
@@ -288,38 +270,81 @@ const bottomPadding = useMemo(
     transform: [{ translateY: gainY.value }],
   }));
 
+  const handleMarkToday = useCallback(
+    async (id: string, selectedDays: number) => {
+      const key = `${id}_${selectedDays}`;
+      if (markingId) return;
+      try {
+        setMarkingId(key);
+        const result = await markToday(id, selectedDays);
+        if (result?.success) {
+          Haptics.notificationAsync(
+            Haptics.NotificationFeedbackType.Success
+          ).catch(() => {});
+          setConfettiActive(true);
+          await playSuccessFx();
+          // 💫 effet mini-gain
+          gainOpacity.value = withSequence(
+            withTiming(1, { duration: 200, easing: Easing.out(Easing.ease) }),
+            withTiming(0, { duration: 600, easing: Easing.in(Easing.ease) })
+          );
+          gainY.value = withSequence(
+            withTiming(-25, {
+              duration: 400,
+              easing: Easing.out(Easing.quad),
+            }),
+            withTiming(0, { duration: 600, easing: Easing.in(Easing.quad) })
+          );
+        }
+      } catch (err) {
+        console.error("Erreur markToday:", err);
+        Alert.alert(String(t("error")), String(t("markTodayFailed")));
+      } finally {
+        setMarkingId(null);
+      }
+    },
+    [markToday, t, markingId, playSuccessFx, gainOpacity, gainY]
+  );
+
   const handleRemove = useCallback(
     (id: string, selectedDays: number, index: number) => {
       Alert.alert(
-        t("abandonChallenge"),
-        t("abandonChallengeConfirm"),
+        String(t("abandonChallenge")),
+        String(t("abandonChallengeConfirm")),
         [
           {
-            text: t("cancel"),
+            text: String(t("cancel")),
             style: "cancel",
             onPress: () => {
               swipeableRefs.current[index]?.close();
             },
           },
           {
-            text: t("continue"),
+            text: String(t("continue")),
             style: "destructive",
             onPress: async () => {
-              try {
-                setLocalChallenges((prev) =>
-                  prev.filter(
-                    (c) => !(c.id === id && c.selectedDays === selectedDays)
-                  )
-                );
-                await removeChallenge(id, selectedDays);
-                // Supprimé : await updateDoc(doc(db, "challenges", id), { participantsCount: increment(-1) });
-                Alert.alert(t("abandoned"), t("challengeAbandoned"));
-              } catch (err) {
-                console.error("Erreur removeChallenge:", err);
-                Alert.alert(t("error"), t("failedToAbandonChallenge"));
-                swipeableRefs.current[index]?.close();
-              }
-            },
+  try {
+    setLocalChallenges((prev) =>
+      prev.filter(
+        (c) => !(c.id === id && c.selectedDays === selectedDays)
+      )
+    );
+    await removeChallenge(id, selectedDays);
+    swipeableRefs.current[index]?.close(); // 👈 ajoute ça ici
+    Alert.alert(
+      String(t("abandoned")),
+      String(t("challengeAbandoned"))
+    );
+  } catch (err) {
+    console.error("Erreur removeChallenge:", err);
+    Alert.alert(
+      String(t("error")),
+      String(t("failedToAbandonChallenge"))
+    );
+    swipeableRefs.current[index]?.close();
+  }
+},
+
           },
         ],
         { cancelable: true }
@@ -328,37 +353,39 @@ const bottomPadding = useMemo(
     [removeChallenge, t]
   );
 
-  // Swipe en 2 temps : on prépare l'action à l'ouverture, et on confirme par tap
-  const pendingDeleteRef = useRef<null | (() => void)>(null);
-  const renderRightActions = useCallback(
-    (index: number) => (
-      <View
-        style={styles.swipeActionsContainer}
-        pointerEvents="box-none"
+ const renderRightActions = useCallback(
+  (item: Challenge, index: number) => (
+    <View style={styles.swipeActionsContainer} pointerEvents="box-none">
+      <TouchableOpacity
+        activeOpacity={0.9}
+        style={styles.trashButton}
+        onPress={() => handleRemove(item.id, item.selectedDays, index)}
+        accessible
+        accessibilityRole="button"
+        accessibilityLabel={String(t("deleteChallenge"))}
+        accessibilityHint={String(t("confirmDeletionHint"))}
+        hitSlop={{ top: 14, bottom: 14, left: 14, right: 14 }}
       >
-        <TouchableOpacity
-          activeOpacity={0.9}
-          style={styles.trashButton}
-          onPress={() => pendingDeleteRef.current?.()}
-          accessible
-          accessibilityRole="button"
-          accessibilityLabel={String(t("deleteChallenge"))}
-          accessibilityHint={String(t("confirmDeletionHint"))}
-          hitSlop={{ top: 14, bottom: 14, left: 14, right: 14 }}
-        >
-          <LinearGradient
-            colors={["#F43F5E", "#DC2626"]}
-            start={{ x: 0, y: 0 }}
-            end={{ x: 1, y: 1 }}
-            style={StyleSheet.absoluteFillObject}
-          />
-          <Ionicons name="trash-outline" size={normalizeSize(26)} color="#fff" />
-          <Text style={styles.trashLabel}>{t("delete")}</Text>
-        </TouchableOpacity>
-      </View>
-    ),
-    [t]
-  );
+        <LinearGradient
+          colors={["#F43F5E", "#DC2626"]}
+          start={{ x: 0, y: 0 }}
+          end={{ x: 1, y: 1 }}
+          style={StyleSheet.absoluteFillObject}
+        />
+        <Ionicons
+          name="trash-outline"
+          size={normalizeSize(26)}
+          color="#fff"
+        />
+        <Text style={styles.trashLabel}>
+  {t("delete")}
+</Text>
+      </TouchableOpacity>
+    </View>
+  ),
+  [handleRemove, t]
+);
+
 
   const navigateToDetail = useCallback(
     (item: Challenge) => {
@@ -371,24 +398,36 @@ const bottomPadding = useMemo(
       )}?title=${titleParam}&selectedDays=${item.selectedDays}&completedDays=${
         item.completedDays
       }&category=${catParam}&description=${descParam}&imageUrl=${imgParam}`;
-      Haptics.selectionAsync().finally(() => router.push(route));
+      Haptics.selectionAsync()
+        .catch(() => {})
+        .finally(() => router.push(route));
     },
     [router]
   );
 
   const renderItem = useCallback(
     ({ item, index }: { item: Challenge; index: number }) => {
+      const key = item.uniqueKey || `${item.id}_${item.selectedDays}`;
       const marked = isMarkedToday(item.id, item.selectedDays);
-      const progress = Math.max(0, Math.min(1, (item.completedDays || 0) / Math.max(1, item.selectedDays || 1)));
-      const key = `${item.id}_${item.selectedDays}`;
+      const progress = Math.max(
+        0,
+        Math.min(
+          1,
+          (item.completedDays || 0) / Math.max(1, item.selectedDays || 1)
+        )
+      );
       const borderColor = isDarkMode
         ? currentTheme.colors.secondary
         : "#FF8C00";
+      const percentLabel = `${Math.round(progress * 100)}%`;
 
       const animatedStyle = {
         transform: [{ scale: marked ? 0.98 : 1 }],
         opacity: marked ? 0.9 : 1,
       };
+
+      const isDuo = !!item.duo;
+      const partnerName = item.duoPartnerUsername;
 
       return (
         <Animated.View
@@ -403,116 +442,204 @@ const bottomPadding = useMemo(
             testID={`challenge-swipe-${key}`}
           >
             <Swipeable
-              ref={(ref: any) => {
-                swipeableRefs.current[index] = ref;
-              }}
-              renderRightActions={() => renderRightActions(index)}
-              overshootRight={false}
-              onSwipeableOpen={() => {
-                Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light).catch(() => {});
-                pendingDeleteRef.current = () => {
-                  handleRemove(item.id, item.selectedDays, index);
-                  pendingDeleteRef.current = null;
-                };
-              }}
-              onSwipeableClose={() => { pendingDeleteRef.current = null; }}
-            >
+  ref={(ref: any) => {
+    swipeableRefs.current[index] = ref;
+  }}
+  renderRightActions={() => renderRightActions(item, index)}
+  overshootRight={false}
+  onSwipeableOpen={() => {
+    Haptics.impactAsync(
+      Haptics.ImpactFeedbackStyle.Light
+    ).catch(() => {});
+  }}
+>
+
               <TouchableOpacity
                 style={styles.cardContainer}
                 onPress={() => navigateToDetail(item)}
-                activeOpacity={0.8}
-                accessibilityLabel={String(t("viewChallengeDetails", { title: item.title }))}
+                activeOpacity={0.9}
+                accessibilityLabel={String(
+                  t("viewChallengeDetails", { title: item.title })
+                )}
                 accessibilityHint={String(t("viewDetails"))}
                 accessibilityRole="button"
                 testID={`challenge-card-${key}`}
               >
+                {/* Glow subtil derrière la card */}
+                <View style={styles.cardGlow} />
                 <LinearGradient
                   colors={[
-                    currentTheme.colors.cardBackground,
-                    currentTheme.colors.cardBackground + "F0",
+                    withAlpha(currentTheme.colors.cardBackground, 0.98),
+                    withAlpha(currentTheme.colors.cardBackground, 0.86),
                   ]}
                   style={[styles.card, { borderColor }]}
                 >
                   <ExpoImage
-                    source={{ uri: item.imageUrl || "https://via.placeholder.com/70" }}
+                    source={{
+                      uri:
+                        item.imageUrl ||
+                        "https://via.placeholder.com/70?text=Challenge",
+                    }}
                     style={styles.cardImage}
                     contentFit="cover"
                     transition={200}
-                    placeholder={{ blurhash: "LKO2?U%2Tw=w]~RBVZRi};RPxuwH" }}
-                    accessibilityLabel={String(t("challengeImage", { title: item.title }))}
-                  />
-                  <View style={styles.cardContent}>
-                    <Text
-                      style={[
-                        styles.challengeTitle,
-                        {
-                          color: isDarkMode
-                            ? currentTheme.colors.textPrimary
-                            : "#000000",
-                        },
-                      ]}
-                      numberOfLines={1}
-                    >
-                      {item.title}
-                    </Text>
-                    {item.day !== undefined && (
-                      <Text
-                        style={[
-                          styles.challengeDay,
-                          { color: currentTheme.colors.textSecondary },
-                        ]}
-                      >
-                        {String(t("day"))} {item.day}
-                      </Text>
+                    placeholder={{
+                      blurhash: "LKO2?U%2Tw=w]~RBVZRi};RPxuwH",
+                    }}
+                    accessibilityLabel={String(
+                      t("challengeImage", { title: item.title })
                     )}
-                    <View style={styles.progressContainer}>
-                      <Progress.Bar
-                        progress={progress}
-                        width={null}
-                        height={normalizeSize(6)}
-                        borderRadius={normalizeSize(3)}
-                        color={currentTheme.colors.secondary}
-                        unfilledColor={withAlpha(
-                          currentTheme.colors.secondary,
-                          0.15
-                        )}
-                        borderWidth={0}
-                        animationType="spring"
-                        style={styles.progressBar}
-                      />
+                  />
+
+                  <View style={styles.cardContent}>
+                    {/* Ligne haute : catégorie + tag duo */}
+                    <View style={styles.cardTopRow}>
+                      <View style={styles.categoryPill}>
+                        <Text
+                          style={[
+                            styles.categoryText,
+                            { color: currentTheme.colors.textSecondary },
+                          ]}
+                          numberOfLines={1}
+                        >
+                          {item.category}
+                        </Text>
+                      </View>
+                      {isDuo && (
+                        <View style={styles.duoPill}>
+                          <Ionicons
+                            name="people-outline"
+                            size={normalizeSize(14)}
+                            color="#0b1120"
+                          />
+                          <Text style={styles.duoPillText} numberOfLines={1}>
+                            {t("duoModeShort", { defaultValue: "Duo" })}
+                          </Text>
+                        </View>
+                      )}
+                    </View>
+
+                    {/* Titre + méta jour / partenaire */}
+                    <View style={styles.cardTitleBlock}>
                       <Text
                         style={[
-                          styles.progressText,
-                          { color: currentTheme.colors.secondary },
+                          styles.challengeTitle,
+                          {
+                            color: isDarkMode
+                              ? currentTheme.colors.textPrimary
+                              : "#000000",
+                          },
                         ]}
+                        numberOfLines={1}
                       >
-                        {item.completedDays}/{item.selectedDays} {String(t("days"))}
+                        {item.title}
                       </Text>
+
+                      <View style={styles.metaRow}>
+                        {item.day !== undefined && (
+                          <Text
+                            style={[
+                              styles.challengeDay,
+                              { color: currentTheme.colors.textSecondary },
+                            ]}
+                            numberOfLines={1}
+                          >
+                            {String(t("day"))} {item.day}
+                          </Text>
+                        )}
+                        {isDuo && partnerName && (
+                          <Text
+                            style={[
+                              styles.partnerLabel,
+                              { color: currentTheme.colors.textSecondary },
+                            ]}
+                            numberOfLines={1}
+                          >
+                            {t("withUser", {
+                              defaultValue: "avec {{username}}",
+                              username: partnerName,
+                            })}
+                          </Text>
+                        )}
+                      </View>
                     </View>
+
+                    {/* Progress + stats */}
+                    <View style={styles.progressRow}>
+                      <View style={styles.progressContainer}>
+                        <Progress.Bar
+  progress={progress}
+  width={null}
+  height={normalizeSize(5)}
+  borderRadius={normalizeSize(3)}
+  color={currentTheme.colors.secondary}
+  unfilledColor={withAlpha(
+    currentTheme.colors.secondary,
+    0.14
+  )}
+  borderWidth={0}
+  animationType="spring"
+  style={styles.progressBar}
+/>
+
+
+                      </View>
+                      <View style={styles.progressMeta}>
+                        <View style={styles.progressChip}>
+                          <Ionicons
+                            name="flame-outline"
+                            size={normalizeSize(13)}
+                            color={currentTheme.colors.secondary}
+                          />
+                          <Text
+                            style={[
+                              styles.progressChipText,
+                              { color: currentTheme.colors.secondary },
+                            ]}
+                          >
+                            {percentLabel}
+                          </Text>
+                        </View>
+                        <Text
+                          style={[
+                            styles.progressText,
+                            { color: currentTheme.colors.textSecondary },
+                          ]}
+                        >
+                          {item.completedDays}/{item.selectedDays}{" "}
+                          {String(t("days"))}
+                        </Text>
+                      </View>
+                    </View>
+
+                    {/* Bouton marquer aujourd'hui */}
                     <TouchableOpacity
                       style={[
                         styles.markTodayButton,
-                        (marked || (markingId === key)) && styles.disabledMarkButton,
+                        (marked || markingId === key) &&
+                          styles.disabledMarkButton,
                       ]}
-                      onPress={() =>
-                        handleMarkToday(item.id, item.selectedDays)
-                      }
-                      disabled={marked || (markingId === key)}
+                      onPress={() => handleMarkToday(item.id, item.selectedDays)}
+                      disabled={marked || markingId === key}
                       accessibilityLabel={
                         marked
                           ? t("alreadyMarkedToday", { title: item.title })
                           : t("markToday", { title: item.title })
                       }
-                      accessibilityHint={marked ? String(t("alreadyMarked")) : String(t("markTodayButton"))}
+                      accessibilityHint={
+                        marked
+                          ? String(t("alreadyMarked"))
+                          : String(t("markTodayButton"))
+                      }
                       accessibilityRole="button"
                       testID={`mark-today-${key}`}
                     >
                       <LinearGradient
                         colors={
-                          marked
+                          marked || markingId === key
                             ? isDarkMode
-                              ? ["#4A4A4A", "#2A2A2A"]
-                              : ["#000000", "#333333"]
+                              ? ["#4B5563", "#1F2937"]
+                              : ["#E5E7EB", "#D1D5DB"]
                             : [
                                 currentTheme.colors.secondary,
                                 currentTheme.colors.primary,
@@ -520,46 +647,67 @@ const bottomPadding = useMemo(
                         }
                         style={styles.markTodayGradient}
                       >
-                        <Text
-                          style={[
-                            styles.markTodayText,
-                            {
-                              color: marked
-                                ? "#FFFFFF"
-                                : currentTheme.colors.textPrimary,
-                              textAlign: "center",
-                            },
-                          ]}
-                        >
-                          {marked ? t("alreadyMarked") : t("markTodayButton")}
-                        </Text>
-                         {!marked && (
+                        <View style={styles.markTodayContent}>
+                          <Ionicons
+                            name={
+                              marked || markingId === key
+                                ? "checkmark-done-outline"
+                                : "sparkles-outline"
+                            }
+                            size={normalizeSize(16)}
+                            color={
+                              marked || markingId === key
+                                ? isDarkMode
+                                  ? "#F9FAFB"
+                                  : "#111827"
+                                : "#0b1120"
+                            }
+                          />
+                          <Text
+                            style={[
+                              styles.markTodayText,
+                              {
+                                color:
+                                  marked || markingId === key
+                                    ? isDarkMode
+                                      ? "#F9FAFB"
+                                      : "#111827"
+                                    : "#0b1120",
+                              },
+                            ]}
+                          >
+                            {marked
+                              ? t("alreadyMarked")
+                              : markingId === key
+                              ? t("markingInProgress", {
+                                  defaultValue: "Enregistrement…",
+                                })
+                              : t("markTodayButton")}
+                          </Text>
+                        </View>
+
+                        {/* Petit point lumineux quand non marqué */}
+                        {!marked && markingId !== key && (
                           <Animated.View
                             entering={FadeInUp.delay(200)}
-                            style={{
-                              position: "absolute",
-                              top: -8,
-                              right: 10,
-                              backgroundColor: withAlpha(
-                                currentTheme.colors.secondary,
-                                0.25
-                              ),
-                              borderRadius: 999,
-                              width: 6,
-                              height: 6,
-                            }}
+                            style={[
+                              styles.markTodayDot,
+                              {
+                                backgroundColor: withAlpha(
+                                  currentTheme.colors.secondary,
+                                  0.35
+                                ),
+                              },
+                            ]}
                           />
                         )}
-                         {marked && (
+
+                        {/* +1🏆 animé quand marqué */}
+                        {(marked || markingId === key) && (
                           <Animated.View
                             style={[
                               gainStyle,
-                              {
-                                position: "absolute",
-                                top: -28,
-                                right: 18,
-                                backgroundColor: "transparent",
-                              },
+                              styles.gainTrophyContainer,
                             ]}
                           >
                             <Text
@@ -567,7 +715,10 @@ const bottomPadding = useMemo(
                                 color: currentTheme.colors.secondary,
                                 fontSize: normalizeSize(13),
                                 fontWeight: "700",
-                                textShadowColor: withAlpha(currentTheme.colors.primary, 0.3),
+                                textShadowColor: withAlpha(
+                                  currentTheme.colors.primary,
+                                  0.3
+                                ),
                                 textShadowRadius: 6,
                                 includeFontPadding: false,
                               }}
@@ -594,6 +745,8 @@ const bottomPadding = useMemo(
       navigateToDetail,
       t,
       isDarkMode,
+      gainStyle,
+      markingId,
     ]
   );
 
@@ -603,12 +756,21 @@ const bottomPadding = useMemo(
         entering={FadeInUp.delay(100)}
         style={styles.noChallengesContent}
       >
-        <Ionicons
-          name="hourglass-outline"
-          size={normalizeSize(60)}
-          color={currentTheme.colors.textSecondary}
-          accessibilityLabel={String(t("waitingChallengeIcon"))}
-        />
+        <View style={styles.emptyIconWrapper}>
+          <LinearGradient
+            colors={[
+              withAlpha(currentTheme.colors.secondary, 0.15),
+              "transparent",
+            ]}
+            style={styles.emptyIconGlow}
+          />
+          <Ionicons
+            name="hourglass-outline"
+            size={normalizeSize(60)}
+            color={currentTheme.colors.textSecondary}
+            accessibilityLabel={String(t("waitingChallengeIcon"))}
+          />
+        </View>
         <Text
           style={[
             styles.noChallengesText,
@@ -631,7 +793,7 @@ const bottomPadding = useMemo(
         </Text>
       </Animated.View>
     ),
-    [currentTheme, t]
+    [currentTheme, t, isDarkMode]
   );
 
   if (isLoading) {
@@ -644,10 +806,10 @@ const bottomPadding = useMemo(
         />
         <LinearGradient
           colors={[
-  withAlpha(currentTheme.colors.background, 1),
-  withAlpha(currentTheme.colors.cardBackground, 1),
-  withAlpha(currentTheme.colors.primary, 0.13),
-]}
+            withAlpha(currentTheme.colors.background, 1),
+            withAlpha(currentTheme.colors.cardBackground, 1),
+            withAlpha(currentTheme.colors.primary, 0.13),
+          ]}
           style={styles.loadingContainer}
         >
           <ActivityIndicator size="large" color={currentTheme.colors.primary} />
@@ -671,179 +833,168 @@ const bottomPadding = useMemo(
         backgroundColor="transparent"
         barStyle={isDarkMode ? "light-content" : "dark-content"}
       />
-                <LinearGradient
-  colors={[
-    withAlpha(currentTheme.colors.background, 1),
-    withAlpha(currentTheme.colors.cardBackground, 1),
-    withAlpha(currentTheme.colors.primary, 0.13),
-  ]}
-  style={styles.gradientContainer}
-  start={{ x: 0, y: 0 }}
-  end={{ x: 1, y: 1 }}
->
-  {/* Orbes premium en arrière-plan */}
-  <LinearGradient
-    pointerEvents="none"
-    colors={[withAlpha(currentTheme.colors.primary, 0.28), "transparent"]}
-    style={styles.bgOrbTop}
-    start={{ x: 0.2, y: 0 }}
-    end={{ x: 1, y: 1 }}
-  />
-  <LinearGradient
-    pointerEvents="none"
-    colors={[withAlpha(currentTheme.colors.secondary, 0.25), "transparent"]}
-    style={styles.bgOrbBottom}
-    start={{ x: 1, y: 0 }}
-    end={{ x: 0, y: 1 }}
-  />
-
-  {/* Header fusionné (pas de séparation) */}
-  <CustomHeader
-    title={String(t("ongoingChallenges"))}
-    backgroundColor="transparent"
-    useBlur={false}
-    showHairline={false}
-  />
-
-  {/* Contenu */}
-  <View style={styles.container}>
-    {localChallenges.length === 0 ? (
-      renderEmptyState()
-    ) : (
-      <FlatList
-        data={localChallenges}
-        renderItem={renderItem}
-        keyExtractor={(item) => (item as any).uniqueKey || `current-${item.id}_${item.selectedDays}`}
-        contentContainerStyle={[
-          styles.listContent,
-          { flexGrow: 1, paddingBottom: bottomPadding },
+      <LinearGradient
+        colors={[
+          withAlpha(currentTheme.colors.background, 1),
+          withAlpha(currentTheme.colors.cardBackground, 1),
+          withAlpha(currentTheme.colors.primary, 0.13),
         ]}
-        removeClippedSubviews
-        showsVerticalScrollIndicator={false}
-        initialNumToRender={6}
-        maxToRenderPerBatch={6}
-        windowSize={7}
-        getItemLayout={getItemLayoutConst}
-        contentInset={{ top: SPACING, bottom: 0 }}
-        accessibilityRole="list"
-        accessibilityLabel={String(t("listOfOngoingChallenges"))}
-        testID="challenges-list"
-      />
-    )}
-    {confettiActive && (
-      <ConfettiCannon
-        count={100}
-        origin={{ x: -10, y: 0 }}
-        autoStart
-        fadeOut
-        ref={confettiRef}
-        onAnimationEnd={() => setConfettiActive(false)}
-      />
-    )}
-  </View>
-  {showBanners && (
-  <View
-    style={{
-      position: "absolute",
-      left: 0,
-      right: 0,
-      bottom: tabBarHeight + insets.bottom,
-      alignItems: "center",
-      backgroundColor: "transparent",
-      paddingBottom: 6,
-      zIndex: 9999,
-    }}
-    pointerEvents="box-none"
-  >
-    <BannerSlot onHeight={(h) => setAdHeight(h)} />
-  </View>
-)}
+        style={styles.gradientContainer}
+        start={{ x: 0, y: 0 }}
+        end={{ x: 1, y: 1 }}
+      >
+        {/* Orbes premium en arrière-plan */}
+        <LinearGradient
+          pointerEvents="none"
+          colors={[withAlpha(currentTheme.colors.primary, 0.28), "transparent"]}
+          style={styles.bgOrbTop}
+          start={{ x: 0.2, y: 0 }}
+          end={{ x: 1, y: 1 }}
+        />
+        <LinearGradient
+          pointerEvents="none"
+          colors={[
+            withAlpha(currentTheme.colors.secondary, 0.25),
+            "transparent",
+          ]}
+          style={styles.bgOrbBottom}
+          start={{ x: 1, y: 0 }}
+          end={{ x: 0, y: 1 }}
+        />
 
-</LinearGradient>
+        <CustomHeader
+          title={String(t("ongoingChallenges"))}
+          backgroundColor="transparent"
+          useBlur={false}
+          showHairline={false}
+        />
 
+        <View style={styles.container}>
+          {localChallenges.length === 0 ? (
+            renderEmptyState()
+          ) : (
+            <FlatList
+              data={localChallenges}
+              renderItem={renderItem}
+              keyExtractor={(item) =>
+                item.uniqueKey ||
+                `current-${item.id}_${item.selectedDays}`
+              }
+              contentContainerStyle={[
+                styles.listContent,
+                { flexGrow: 1, paddingBottom: bottomPadding },
+              ]}
+              removeClippedSubviews
+              showsVerticalScrollIndicator={false}
+              initialNumToRender={6}
+              maxToRenderPerBatch={6}
+              windowSize={7}
+              getItemLayout={getItemLayoutConst}
+              contentInset={{ top: SPACING, bottom: 0 }}
+              accessibilityRole="list"
+              accessibilityLabel={String(t("listOfOngoingChallenges"))}
+              testID="challenges-list"
+            />
+          )}
+          {confettiActive && (
+            <ConfettiCannon
+              count={100}
+              origin={{ x: -10, y: 0 }}
+              autoStart
+              fadeOut
+              ref={confettiRef}
+              onAnimationEnd={() => setConfettiActive(false)}
+            />
+          )}
+        </View>
+
+        {showBanners && (
+          <View
+            style={{
+              position: "absolute",
+              left: 0,
+              right: 0,
+              bottom: tabBarHeight + insets.bottom,
+              alignItems: "center",
+              backgroundColor: "transparent",
+              paddingBottom: 6,
+              zIndex: 9999,
+            }}
+            pointerEvents="box-none"
+          >
+            <BannerSlot onHeight={(h) => setAdHeight(h)} />
+          </View>
+        )}
+      </LinearGradient>
     </SafeAreaView>
   );
 }
 
 const styles = StyleSheet.create({
-safeArea: {
+  safeArea: {
     flex: 1,
     paddingTop: 0,
-  },  
+  },
   gradientContainer: {
-  flex: 1,
-},
-bgOrbTop: {
-  position: "absolute",
-  top: -SCREEN_WIDTH * 0.25,
-  left: -SCREEN_WIDTH * 0.2,
-  width: SCREEN_WIDTH * 0.9,
-  height: SCREEN_WIDTH * 0.9,
-  borderRadius: SCREEN_WIDTH * 0.45,
-},
-bgOrbBottom: {
-  position: "absolute",
-  bottom: -SCREEN_WIDTH * 0.3,
-  right: -SCREEN_WIDTH * 0.25,
-  width: SCREEN_WIDTH * 1.1,
-  height: SCREEN_WIDTH * 1.1,
-  borderRadius: SCREEN_WIDTH * 0.55,
-},
+    flex: 1,
+  },
+  bgOrbTop: {
+    position: "absolute",
+    top: -SCREEN_WIDTH * 0.25,
+    left: -SCREEN_WIDTH * 0.2,
+    width: SCREEN_WIDTH * 0.9,
+    height: SCREEN_WIDTH * 0.9,
+    borderRadius: SCREEN_WIDTH * 0.45,
+  },
+  bgOrbBottom: {
+    position: "absolute",
+    bottom: -SCREEN_WIDTH * 0.3,
+    right: -SCREEN_WIDTH * 0.25,
+    width: SCREEN_WIDTH * 1.1,
+    height: SCREEN_WIDTH * 1.1,
+    borderRadius: SCREEN_WIDTH * 0.55,
+  },
 
   container: { flex: 1 },
-  headerWrapper: {
-    paddingHorizontal: SPACING,
-    paddingVertical: SPACING,
-    paddingTop: SPACING * 2.5,
-    position: "relative",
-  },
-  headerContent: {
-    flexDirection: "row",
-    alignItems: "center",
-    justifyContent: "space-between",
-  },
-  shareButton: {
-    padding: normalizeSize(10),
-  },
-  backButton: {
-    position: "absolute",
-    top:
-      Platform.OS === "android" ? StatusBar.currentHeight ?? SPACING : SPACING,
-    left: SPACING,
-    zIndex: 10,
-    padding: SPACING / 2,
-    backgroundColor: "rgba(0, 0, 0, 0.5)",
-    borderRadius: normalizeSize(20),
-  },
+
   listContent: {
     paddingVertical: SPACING * 1.5,
     paddingHorizontal: SCREEN_WIDTH * 0.025,
   },
-  noChallengesContainer: {
-    flex: 1,
-    justifyContent: "center",
-    alignItems: "center",
-    paddingHorizontal: SPACING,
-  },
+
   noChallengesContent: {
     flex: 1,
     alignItems: "center",
     justifyContent: "center",
     height: SCREEN_HEIGHT * 0.85,
+    paddingHorizontal: SPACING * 2,
+  },
+  emptyIconWrapper: {
+    width: normalizeSize(100),
+    height: normalizeSize(100),
+    borderRadius: normalizeSize(50),
+    justifyContent: "center",
+    alignItems: "center",
+    marginBottom: SPACING,
+    overflow: "hidden",
+  },
+  emptyIconGlow: {
+    ...StyleSheet.absoluteFillObject,
+    opacity: 0.9,
   },
   noChallengesText: {
     fontSize: normalizeSize(22),
     fontFamily: "Comfortaa_700Bold",
-    marginTop: SPACING,
     textAlign: "center",
+    marginBottom: SPACING / 2,
   },
   noChallengesSubtext: {
     fontSize: normalizeSize(18),
     fontFamily: "Comfortaa_400Regular",
     textAlign: "center",
-    marginTop: SPACING / 2,
     maxWidth: SCREEN_WIDTH * 0.75,
   },
+
   cardWrapper: {
     marginBottom: SPACING * 1.5,
     borderRadius: normalizeSize(25),
@@ -856,7 +1007,16 @@ bgOrbBottom: {
       Platform.OS === "ios"
         ? "transparent"
         : PlatformColor("@android:color/background_dark"),
-        overflow: "hidden",
+    overflow: "hidden",
+  },
+  cardGlow: {
+    position: "absolute",
+    top: 0,
+    left: 0,
+    right: 0,
+    height: normalizeSize(26),
+    opacity: 0.25,
+    backgroundColor: "rgba(255,255,255,0.12)",
   },
   cardContainer: {
     width: ITEM_WIDTH,
@@ -883,46 +1043,137 @@ bgOrbBottom: {
     flex: 1,
     justifyContent: "space-between",
   },
+
+  cardTopRow: {
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "space-between",
+    marginBottom: normalizeSize(4),
+  },
+  categoryPill: {
+    paddingHorizontal: normalizeSize(8),
+    paddingVertical: normalizeSize(3),
+    borderRadius: 999,
+    backgroundColor: "rgba(148, 163, 184, 0.18)",
+    maxWidth: "70%",
+  },
+  categoryText: {
+    fontSize: normalizeSize(11.5),
+    fontFamily: "Comfortaa_400Regular",
+  },
+  duoPill: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 4,
+    paddingHorizontal: normalizeSize(8),
+    paddingVertical: normalizeSize(3),
+    borderRadius: 999,
+    backgroundColor: "#FDE68A",
+  },
+  duoPillText: {
+    fontSize: normalizeSize(11),
+    fontFamily: "Comfortaa_700Bold",
+    color: "#0b1120",
+  },
+
+  cardTitleBlock: {
+    marginBottom: normalizeSize(6),
+  },
   challengeTitle: {
     fontSize: normalizeSize(16),
     fontFamily: "Comfortaa_700Bold",
     marginBottom: normalizeSize(2),
   },
+  metaRow: {
+    flexDirection: "row",
+    alignItems: "center",
+    flexWrap: "wrap",
+    gap: 8,
+  },
   challengeDay: {
-    fontSize: normalizeSize(14),
+    fontSize: normalizeSize(13),
     fontFamily: "Comfortaa_400Regular",
-    marginTop: normalizeSize(4),
   },
-  progressContainer: {
-    marginVertical: normalizeSize(8),
-  },
-  progressBar: {
-    flex: 1,
-  },
-  progressText: {
+  partnerLabel: {
     fontSize: normalizeSize(12.5),
     fontFamily: "Comfortaa_400Regular",
-    marginTop: normalizeSize(6),
   },
+progressRow: {
+  flexDirection: "row",
+  alignItems: "center",
+  marginVertical: normalizeSize(4),
+},
+  progressContainer: {
+  flex: 1,
+  marginRight: normalizeSize(8),
+  justifyContent: "center",
+},
+  progressBar: {
+  width: "100%",
+  alignSelf: "stretch",
+},
+  progressMeta: {
+    alignItems: "flex-end",
+    justifyContent: "center",
+    gap: 2,
+  },
+ progressChip: {
+  flexDirection: "row",
+  alignItems: "center",
+  paddingHorizontal: normalizeSize(7),
+  paddingVertical: normalizeSize(2),
+  borderRadius: 999,
+  backgroundColor: "rgba(15, 23, 42, 0.9)",
+},
+  progressChipText: {
+    fontSize: normalizeSize(11.5),
+    fontFamily: "Comfortaa_700Bold",
+    marginLeft: 4,
+  },
+  progressText: {
+  fontSize: normalizeSize(11.5),
+  fontFamily: "Comfortaa_400Regular",
+},
   markTodayButton: {
     borderRadius: normalizeSize(18),
     overflow: "hidden",
     marginTop: normalizeSize(10),
   },
   disabledMarkButton: {
-    opacity: 0.7,
+    opacity: 0.9,
   },
   markTodayGradient: {
-    paddingVertical: normalizeSize(10),
+    paddingVertical: normalizeSize(9),
     paddingHorizontal: SPACING * 1.2,
     alignItems: "center",
     justifyContent: "center",
     borderRadius: normalizeSize(18),
   },
+  markTodayContent: {
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "center",
+    gap: 8,
+  },
   markTodayText: {
     fontFamily: "Comfortaa_700Bold",
     fontSize: normalizeSize(14.5),
   },
+  markTodayDot: {
+    position: "absolute",
+    top: -8,
+    right: 10,
+    borderRadius: 999,
+    width: 7,
+    height: 7,
+  },
+  gainTrophyContainer: {
+    position: "absolute",
+    top: -28,
+    right: 18,
+    backgroundColor: "transparent",
+  },
+
   loadingContainer: {
     flex: 1,
     justifyContent: "center",
@@ -935,6 +1186,7 @@ bgOrbBottom: {
     fontFamily: "Comfortaa_400Regular",
     textAlign: "center",
   },
+
   // --- Swipe delete premium
   swipeActionsContainer: {
     height: "100%",
@@ -943,7 +1195,6 @@ bgOrbBottom: {
     paddingRight: normalizeSize(10),
   },
   trashButton: {
-    // pill centré verticalement, dimension stable quel que soit le device
     width: Math.min(ITEM_WIDTH * 0.26, 120),
     height: Math.max(normalizeSize(ROW_HEIGHT * 0.72), 64),
     borderTopLeftRadius: normalizeSize(22),
@@ -953,13 +1204,12 @@ bgOrbBottom: {
     overflow: "hidden",
     justifyContent: "center",
     alignItems: "center",
-    // légère ombre premium
     shadowColor: "#000",
     shadowOffset: { width: 0, height: 6 },
     shadowOpacity: 0.25,
     shadowRadius: 10,
     elevation: 8,
-    gap: normalizeSize(6),
+    gap: normalizeSize(4),
   },
   trashLabel: {
     color: "#fff",

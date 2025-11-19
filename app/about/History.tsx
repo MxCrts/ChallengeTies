@@ -5,7 +5,7 @@ import {
   StyleSheet,
   ScrollView,
   Dimensions,
-  Platform
+  Platform,
 } from "react-native";
 import { StatusBar } from "expo-status-bar";
 import { SafeAreaView, useSafeAreaInsets } from "react-native-safe-area-context";
@@ -33,6 +33,7 @@ export default function History() {
   const { theme } = useTheme();
   const isDarkMode = theme === "dark";
   const insets = useSafeAreaInsets();
+
   const currentTheme: Theme = useMemo(
     () => (isDarkMode ? designSystem.darkTheme : designSystem.lightTheme),
     [isDarkMode]
@@ -40,13 +41,21 @@ export default function History() {
 
   return (
     <LinearGradient
-      colors={[currentTheme.colors.background, currentTheme.colors.cardBackground + "F0"]}
+      colors={[
+        currentTheme.colors.background,
+        currentTheme.colors.cardBackground + "F0",
+      ]}
       style={styles.container}
       start={{ x: 0, y: 0 }}
       end={{ x: 1, y: 1 }}
     >
       {/* Orbes décoratifs en arrière-plan */}
-      <View style={styles.orbsContainer} pointerEvents="none" accessibilityElementsHidden importantForAccessibility="no">
+      <View
+        style={styles.orbsContainer}
+        pointerEvents="none"
+        accessibilityElementsHidden
+        importantForAccessibility="no"
+      >
         {/* Orbe principal */}
         <LinearGradient
           colors={[
@@ -57,7 +66,7 @@ export default function History() {
             styles.orb,
             styles.orbLg,
             { top: -SCREEN_WIDTH * 0.25, left: -SCREEN_WIDTH * 0.15 },
-            Platform.OS === "web" ? { filter: "blur(12px)" as any } : null,
+            Platform.OS === "web" ? ({ filter: "blur(12px)" } as any) : null,
           ]}
         />
         {/* Orbe secondaire */}
@@ -70,7 +79,7 @@ export default function History() {
             styles.orb,
             styles.orbMd,
             { top: SCREEN_HEIGHT * 0.15, right: -SCREEN_WIDTH * 0.25 },
-            Platform.OS === "web" ? { filter: "blur(12px)" as any } : null,
+            Platform.OS === "web" ? ({ filter: "blur(12px)" } as any) : null,
           ]}
         />
         {/* Orbe tertiaire */}
@@ -83,12 +92,17 @@ export default function History() {
             styles.orb,
             styles.orbSm,
             { bottom: -SCREEN_WIDTH * 0.1, left: SCREEN_WIDTH * 0.15 },
-            Platform.OS === "web" ? { filter: "blur(12px)" as any } : null,
+            Platform.OS === "web" ? ({ filter: "blur(12px)" } as any) : null,
           ]}
         />
       </View>
 
-      <SafeAreaView style={[styles.safeArea, { paddingTop: insets.top + SPACING * 0.5 }]}>
+      <SafeAreaView
+        style={[
+          styles.safeArea,
+          { paddingTop: insets.top + SPACING * 0.5 },
+        ]}
+      >
         <StatusBar style={isDarkMode ? "light" : "dark"} />
 
         <CustomHeader title={t("history.title")} />
@@ -101,7 +115,10 @@ export default function History() {
           keyboardShouldPersistTaps="handled"
         >
           {/* Logo animé */}
-          <Animated.View entering={FadeInUp.delay(150).duration(600)} style={styles.logoContainer}>
+          <Animated.View
+            entering={FadeInUp.delay(150).duration(600)}
+            style={styles.logoContainer}
+          >
             <Image
               source={require("../../assets/images/icon2.png")}
               style={styles.logo}
@@ -114,11 +131,20 @@ export default function History() {
 
           {/* Intro */}
           <Card currentTheme={currentTheme} isDarkMode={isDarkMode} delay={250}>
-            <Text style={[styles.paragraph, { color: currentTheme.colors.textSecondary }]}>
+            <Text
+              style={[
+                styles.paragraph,
+                { color: currentTheme.colors.textSecondary },
+              ]}
+            >
               <Text
                 style={[
                   styles.boldText,
-                  { color: isDarkMode ? currentTheme.colors.textPrimary : "#FF8C00" },
+                  {
+                    color: isDarkMode
+                      ? currentTheme.colors.textPrimary
+                      : "#FF8C00",
+                  },
                 ]}
               >
                 {t("appName")}
@@ -129,9 +155,26 @@ export default function History() {
 
           {/* Fonctionnalités clés */}
           <Card currentTheme={currentTheme} isDarkMode={isDarkMode} delay={350}>
-            <Text style={[styles.subtitle, { color: currentTheme.colors.secondary }]}>
+            <Text
+              style={[
+                styles.subtitle,
+                { color: currentTheme.colors.secondary },
+              ]}
+            >
               {t("history.featuresTitle")}
             </Text>
+
+            <View style={styles.sectionAccentWrapper}>
+              <LinearGradient
+                colors={[
+                  currentTheme.colors.secondary,
+                  currentTheme.colors.primary,
+                ]}
+                start={{ x: 0, y: 0 }}
+                end={{ x: 1, y: 0 }}
+                style={styles.sectionAccent}
+              />
+            </View>
 
             {[
               {
@@ -168,58 +211,114 @@ export default function History() {
 
           {/* Motivation */}
           <Card currentTheme={currentTheme} isDarkMode={isDarkMode} delay={450}>
-            <Text style={[styles.subtitle, { color: currentTheme.colors.secondary }]}>
+            <Text
+              style={[
+                styles.subtitle,
+                { color: currentTheme.colors.secondary },
+              ]}
+            >
               {t("history.motivationTitle")}
             </Text>
-            <Text style={[styles.paragraph, { color: currentTheme.colors.textSecondary }]}>
+            <Text
+              style={[
+                styles.paragraph,
+                { color: currentTheme.colors.textSecondary },
+              ]}
+            >
               {t("history.motivation")}
             </Text>
           </Card>
 
           {/* Sens du logo */}
           <Card currentTheme={currentTheme} isDarkMode={isDarkMode} delay={550}>
-            <Text style={[styles.subtitle, { color: currentTheme.colors.secondary }]}>
+            <Text
+              style={[
+                styles.subtitle,
+                { color: currentTheme.colors.secondary },
+              ]}
+            >
               {t("history.logoMeaningTitle")}
             </Text>
-            <Text style={[styles.paragraph, { color: currentTheme.colors.textSecondary }]}>
+            <Text
+              style={[
+                styles.paragraph,
+                { color: currentTheme.colors.textSecondary },
+              ]}
+            >
               {t("history.logoMeaning")}
             </Text>
           </Card>
 
           {/* Vision */}
           <Card currentTheme={currentTheme} isDarkMode={isDarkMode} delay={650}>
-            <Text style={[styles.subtitle, { color: currentTheme.colors.secondary }]}>
+            <Text
+              style={[
+                styles.subtitle,
+                { color: currentTheme.colors.secondary },
+              ]}
+            >
               {t("history.visionTitle")}
             </Text>
-            <Text style={[styles.paragraph, { color: currentTheme.colors.textSecondary }]}>
+            <Text
+              style={[
+                styles.paragraph,
+                { color: currentTheme.colors.textSecondary },
+              ]}
+            >
               {t("history.vision")}
             </Text>
           </Card>
 
           {/* Débuts */}
           <Card currentTheme={currentTheme} isDarkMode={isDarkMode} delay={750}>
-            <Text style={[styles.subtitle, { color: currentTheme.colors.secondary }]}>
+            <Text
+              style={[
+                styles.subtitle,
+                { color: currentTheme.colors.secondary },
+              ]}
+            >
               {t("history.beginningsTitle")}
             </Text>
-            <Text style={[styles.paragraph, { color: currentTheme.colors.textSecondary }]}>
+            <Text
+              style={[
+                styles.paragraph,
+                { color: currentTheme.colors.textSecondary },
+              ]}
+            >
               {t("history.beginnings")}
             </Text>
           </Card>
 
           {/* Engagement communautaire */}
           <Card currentTheme={currentTheme} isDarkMode={isDarkMode} delay={850}>
-            <Text style={[styles.subtitle, { color: currentTheme.colors.secondary }]}>
+            <Text
+              style={[
+                styles.subtitle,
+                { color: currentTheme.colors.secondary },
+              ]}
+            >
               {t("history.communityEngagementTitle")}
             </Text>
-            <Text style={[styles.paragraph, { color: currentTheme.colors.textSecondary }]}>
+            <Text
+              style={[
+                styles.paragraph,
+                { color: currentTheme.colors.textSecondary },
+              ]}
+            >
               {t("history.communityEngagement")}
             </Text>
           </Card>
 
           {/* Message final */}
-          <Animated.View entering={FadeInUp.delay(950)} style={styles.footer}>
+          <Animated.View
+            entering={FadeInUp.delay(950)}
+            style={styles.footer}
+          >
             <LinearGradient
-              colors={[currentTheme.colors.overlay, currentTheme.colors.border]}
+              colors={[
+                currentTheme.colors.overlay,
+                currentTheme.colors.border,
+              ]}
               style={styles.footerGradient}
               start={{ x: 0, y: 0 }}
               end={{ x: 1, y: 1 }}
@@ -227,13 +326,21 @@ export default function History() {
               <Text
                 style={[
                   styles.footerText,
-                  { color: isDarkMode ? currentTheme.colors.textPrimary : "#000000" },
+                  {
+                    color: isDarkMode
+                      ? currentTheme.colors.textPrimary
+                      : "#000000",
+                  },
                 ]}
               >
                 <Text
                   style={[
                     styles.boldText,
-                    { color: isDarkMode ? currentTheme.colors.textPrimary : "#000000" },
+                    {
+                      color: isDarkMode
+                        ? currentTheme.colors.textPrimary
+                        : "#000000",
+                    },
                   ]}
                 >
                   {t("history.finalThanksTitle")}
@@ -259,18 +366,31 @@ const Card = memo(function Card({
   isDarkMode: boolean;
   delay?: number;
 }) {
+  const borderPrimary = currentTheme.colors.primary;
+  const borderSecondary = currentTheme.colors.secondary;
+
   return (
     <Animated.View
       entering={FadeInUp.delay(delay)}
-      style={[
-        styles.card,
-        {
-          borderColor: isDarkMode ? currentTheme.colors.secondary : "#FF8C00",
-          backgroundColor: currentTheme.colors.cardBackground + "80",
-        },
-      ]}
+      style={styles.cardOuter}
     >
-      {children}
+      <LinearGradient
+        colors={[borderSecondary + "CC", borderPrimary + "AA"]}
+        start={{ x: 0, y: 0 }}
+        end={{ x: 1, y: 1 }}
+        style={styles.cardGradient}
+      >
+        <View
+          style={[
+            styles.cardInner,
+            {
+              backgroundColor: currentTheme.colors.cardBackground + "E6",
+            },
+          ]}
+        >
+          {children}
+        </View>
+      </LinearGradient>
     </Animated.View>
   );
 });
@@ -290,18 +410,37 @@ const FeatureItem = memo(function FeatureItem({
 }) {
   return (
     <View style={styles.featureItem}>
-      <Ionicons
-        name={icon}
-        size={normalizeSize(20)}
-        color={currentTheme.colors.secondary}
-        style={styles.featureIcon}
-        accessibilityLabel={title}
-      />
-      <Text style={[styles.featureText, { color: currentTheme.colors.textSecondary }]}>
+      <LinearGradient
+        colors={[
+          currentTheme.colors.secondary + "EE",
+          currentTheme.colors.primary + "CC",
+        ]}
+        start={{ x: 0, y: 0 }}
+        end={{ x: 1, y: 1 }}
+        style={styles.featureIconWrapper}
+      >
+        <Ionicons
+          name={icon}
+          size={normalizeSize(18)}
+          color={isDarkMode ? "#000" : "#fff"}
+          accessibilityLabel={title}
+        />
+      </LinearGradient>
+
+      <Text
+        style={[
+          styles.featureText,
+          { color: currentTheme.colors.textSecondary },
+        ]}
+      >
         <Text
           style={[
             styles.boldText,
-            { color: isDarkMode ? currentTheme.colors.textPrimary : "#FF8C00" },
+            {
+              color: isDarkMode
+                ? currentTheme.colors.textPrimary
+                : "#FF8C00",
+            },
           ]}
         >
           {title}
@@ -357,31 +496,39 @@ const styles = StyleSheet.create({
     marginBottom: SPACING * 1.5,
   },
   logo: {
-  width: SCREEN_WIDTH * 0.38,
+    width: SCREEN_WIDTH * 0.38,
     height: SCREEN_WIDTH * 0.38,
     borderRadius: (SCREEN_WIDTH * 0.38) / 2,
     overflow: "hidden",
-  },                    // crop propre si l’image dépasse
+  },
 
   // --- Cards ---
- card: {
-  borderRadius: normalizeSize(22),
-  padding: SPACING,
-  marginBottom: SPACING,
-  borderWidth: 2.5,
-
-  // ⬇️ tue l’ombre
-  shadowColor: "transparent",
-  shadowOffset: { width: 0, height: 0 },
-  shadowOpacity: 0,
-  shadowRadius: 0,
-  elevation: 0,
-},
+  cardOuter: {
+    marginBottom: SPACING,
+    borderRadius: normalizeSize(22),
+    // Ombre douce premium
+    shadowColor: "#000",
+    shadowOffset: { width: 0, height: normalizeSize(6) },
+    shadowOpacity: 0.25,
+    shadowRadius: normalizeSize(10),
+    elevation: 8,
+  },
+  cardGradient: {
+    borderRadius: normalizeSize(22),
+    padding: 1.5,
+  },
+  cardInner: {
+    borderRadius: normalizeSize(20),
+    padding: SPACING,
+    borderWidth: 1.2,
+    borderColor: "rgba(255,255,255,0.06)",
+    backdropFilter: Platform.OS === "web" ? ("blur(8px)" as any) : undefined,
+  },
 
   subtitle: {
     fontSize: normalizeSize(22),
     fontFamily: "Comfortaa_700Bold",
-    marginBottom: SPACING,
+    marginBottom: SPACING * 0.8,
     textAlign: "left",
   },
   paragraph: {
@@ -393,15 +540,28 @@ const styles = StyleSheet.create({
     fontFamily: "Comfortaa_700Bold",
   },
 
+  sectionAccentWrapper: {
+    marginBottom: SPACING * 0.8,
+  },
+  sectionAccent: {
+    height: 3,
+    borderRadius: 999,
+    opacity: 0.9,
+  },
+
   // --- Features ---
   featureItem: {
     flexDirection: "row",
     alignItems: "flex-start",
     marginBottom: SPACING,
   },
-  featureIcon: {
-    marginRight: SPACING,
-    marginTop: normalizeSize(3),
+  featureIconWrapper: {
+    width: normalizeSize(34),
+    height: normalizeSize(34),
+    borderRadius: normalizeSize(17),
+    alignItems: "center",
+    justifyContent: "center",
+    marginRight: SPACING * 0.8,
   },
   featureText: {
     flex: 1,

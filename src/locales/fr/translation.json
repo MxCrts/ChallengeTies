@@ -671,6 +671,7 @@
   "dailyCompletion_14_desc": "14 jours d’enchaînement parfait.",
   "dailyCompletion_21_desc": "21 jours de discipline constante.",
   "dailyCompletion_30_desc": "30 jours sans rater un seul jour, maître de la régularité.",
+  
 
   "challengeAdopted_10_desc": "Ton défi a été adopté par 10 personnes.",
   "challengeAdopted_50_desc": "50 personnes ont suivi ton idée.",
@@ -708,6 +709,8 @@
     "messageSent_1": "Premier message envoyé",
     "messageSent_10": "Esprit d’équipe",
     "messageSent_50": "Communauté active",
+    "messageSent_100": "Voix qui compte",
+  "messageSent_200": "Maître du chat",
     "shareChallenge_1": "J’aime partager",
     "shareChallenge_5": "Influenceur en herbe",
     "shareChallenge_20": "Leader de communauté",
@@ -718,6 +721,7 @@
     "voteFeature_5": "J’adore voter",
     "saveChallenge_1": "Défi sauvegardé",
     "saveChallenge_5": "5 défis sauvegardés",
+    "saveChallenge_10": "Collectionneur en herbe",
     "challengeCreated_1": "Créateur de défis",
     "challengeCreated_5": "Je suis inspiré",
     "challengeCreated_10": "Innovateur",
@@ -725,6 +729,7 @@
   "finishDuoChallenge_3": "Équipe soudée",
   "finishDuoChallenge_5": "Duo redoutable",
   "finishDuoChallenge_10": "Légendes du duo",
+  
 
   "duoStreak_3": "Série duo ×3",
   "duoStreak_7": "Série duo ×7",
@@ -741,6 +746,7 @@
   "categoriesMastered_5": "5 catégories maîtrisées",
   "categoriesMastered_8": "8 catégories maîtrisées",
   "categoriesMastered_10": "10 catégories maîtrisées",
+  
 
   "referralsRegistered_1": "1 filleul inscrit",
   "referralsRegistered_3": "3 filleuls inscrits",
@@ -1380,6 +1386,55 @@
   "inviteFriend_10": "Roi du réseau",
   "voteFeature_1": "Premier vote",
   "voteFeature_5": "J’aime voter",
+  "saveChallenge_10": "Collectionneur en herbe",
+
+  "messageSent_100": "Voix qui compte",
+  "messageSent_200": "Maître du chat",
+
+  "categoriesMastered_3": "Multi-spécialiste",
+  "categoriesMastered_5": "Maître des catégories",
+
+  "challengeAdopted_10": "Routine en construction",
+  "challengeAdopted_50": "Routine solide",
+  "challengeAdopted_100": "Mode de vie ChallengeTies",
+
+  "dailyCompletion_7": "Semaine parfaite",
+  "dailyCompletion_30": "Mois d'acier",
+  "dailyCompletion_60": "Deux mois d'élite",
+
+  "duoMessages_20": "Coéquipiers en ligne",
+  "duoMessages_100": "Team ultra connectée",
+
+  "duoStreak_7": "Duo synchronisé",
+  "duoStreak_30": "Duo légendaire",
+
+  "finishDuoChallenge_1": "Premier défi en duo",
+  "finishDuoChallenge_5": "Duo confirmé",
+  "finishDuoChallenge_10": "Duo imbattable",
+
+  "focusDays_7": "Semaine focus",
+  "focusDays_21": "Mission focus 21",
+  "focusDays_42": "Mode laser 42",
+
+  "perfectMonth_1": "Premier mois parfait",
+  "perfectMonth_3": "Trimestre irréprochable",
+  "perfectMonth_6": "Demi-année sans faille",
+
+  "referralsRegistered_1": "Premier parrainage validé",
+  "referralsRegistered_3": "Ambassadeur en devenir",
+  "referralsRegistered_5": "Super ambassadeur",
+
+  "seasonal_1": "Explorateur saisonnier",
+  "seasonal_3": "Maître des saisons",
+
+  "zeroMissLongRun_30": "Zéro faute sur 30 jours",
+  "zeroMissLongRun_60": "Zéro faute sur 60 jours",
+
+  "voteFeature_10": "Co-créateur de l'app",
+
+  "shareChallenge_10": "Partageur en série",
+
+  "inviteFriend_3": "Créateur d'équipe",
   "saveChallenge_1": "Défi enregistré",
   "saveChallenge_5": "5 défis enregistrés",
   "challengeCreated_1": "Créateur de défi",
@@ -1411,6 +1466,53 @@
     "messageSent_50": "50 messages : ambassadeur·rice de la communauté.",
     "shareChallenge_1": "Partagez un défi pour la première fois.",
     "shareChallenge_5": "5 partages : influenceur en devenir.",
+    "saveChallenge_10": "Enregistre 10 défis dans tes favoris — tu commences à bâtir une vraie bibliothèque de challenges.",
+
+    "messageSent_100": "Envoie 100 messages : ta voix commence à vraiment compter dans la communauté.",
+    "messageSent_200": "Envoie 200 messages : tu es devenu une vraie présence dans les discussions.",
+
+    "categoriesMastered_3": "Maîtrise au moins 3 catégories de défis avec régularité et engagement.",
+    "categoriesMastered_5": "Maîtrise 5 catégories ou plus — tu progresses sur tous les fronts.",
+
+    "challengeAdopted_10": "Réintègre au moins 10 fois un défi dans ton quotidien. Tu testes, tu ajustes, tu avances.",
+    "challengeAdopted_50": "Réintègre 50 fois un défi dans ta routine : tu construis un style de vie solide.",
+    "challengeAdopted_100": "Réintègre 100 fois un défi : ChallengeTies fait officiellement partie de ton mode de vie.",
+
+    "dailyCompletion_7": "Valide ton ou tes défis 7 jours d’affilée sans rater une seule journée.",
+    "dailyCompletion_30": "Valide tes défis tous les jours pendant 30 jours consécutifs.",
+    "dailyCompletion_60": "Valide tes défis tous les jours pendant 60 jours d’affilée : discipline niveau élite.",
+
+    "duoMessages_20": "Échange au moins 20 messages avec ton partenaire en duo — la team prend forme.",
+    "duoMessages_100": "Échange 100 messages ou plus en duo : communication au max pour ne rien lâcher.",
+
+    "duoStreak_7": "Toi et ton duo validez vos défis 7 jours d’affilée, ensemble.",
+    "duoStreak_30": "Toi et ton duo validez vos défis 30 jours d’affilée : connexion et discipline au top.",
+
+    "finishDuoChallenge_1": "Termine ton premier défi en duo : vous venez d’écrire votre première victoire.",
+    "finishDuoChallenge_5": "Termine 5 défis en duo : vous formez une équipe solide.",
+    "finishDuoChallenge_10": "Termine 10 défis en duo : votre duo est officiellement imbattable.",
+
+    "focusDays_7": "Reste focus sur tes défis pendant 7 jours consécutifs, sans te disperser.",
+    "focusDays_21": "Garde le focus 21 jours d’affilée pour ancrer de nouvelles habitudes.",
+    "focusDays_42": "Reste concentré 42 jours : ton cerveau est en pleine reprogrammation positive.",
+
+    "perfectMonth_1": "Complète un mois entier sans oublier une seule journée de validation.",
+    "perfectMonth_3": "Complète 3 mois parfaits : régularité à toute épreuve.",
+    "perfectMonth_6": "Complète 6 mois sans aucune faille : constance rare et puissante.",
+
+    "referralsRegistered_1": "Invite une personne qui s’inscrit vraiment sur ChallengeTies.",
+    "referralsRegistered_3": "3 personnes que tu as invitées se sont inscrites : tu inspires ton entourage.",
+    "referralsRegistered_5": "5 personnes que tu as invitées se sont inscrites : tu deviens un véritable ambassadeur.",
+
+    "seasonal_1": "Participe à 1 événement ou défi saisonnier spécial dans ChallengeTies.",
+    "seasonal_3": "Participe à 3 événements ou défis saisonniers : tu profites de chaque moment fort de l’année.",
+
+    "zeroMissLongRun_30": "Ne rate aucune journée de validation sur une période de 30 jours.",
+    "zeroMissLongRun_60": "Ne rate aucune journée de validation sur une période de 60 jours : zéro excuse, zéro oubli.",
+
+    "voteFeature_10": "Vote pour au moins 10 nouveautés : tu aides à façonner l’avenir de l’app.",
+    "shareChallenge_10": "Partage un défi 10 fois ou plus : tu fais circuler la motivation autour de toi.",
+    "inviteFriend_3": "Invite au moins 3 amis à te rejoindre sur ChallengeTies et commence à construire ton équipe.",
     "shareChallenge_20": "20 partages : leader incontesté.",
     "inviteFriend_1": "Invitez votre premier ami.",
     "inviteFriend_5": "5 invitations : élargissez votre équipe.",

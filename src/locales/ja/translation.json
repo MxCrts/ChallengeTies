@@ -1455,6 +1455,55 @@
 
   "saveChallenge_1": "チャレンジを保存",
   "saveChallenge_5": "5つのチャレンジを保存",
+  "saveChallenge_10": "若きコレクター",
+
+  "messageSent_100": "影響力のある声",
+  "messageSent_200": "チャットマスター",
+
+  "categoriesMastered_3": "マルチスペシャリスト",
+  "categoriesMastered_5": "カテゴリーの達人",
+
+  "challengeAdopted_10": "ルーティン構築中",
+  "challengeAdopted_50": "安定したルーティン",
+  "challengeAdopted_100": "ChallengeTies ライフスタイル",
+
+  "dailyCompletion_7": "完璧な一週間",
+  "dailyCompletion_30": "鉄の一ヶ月",
+  "dailyCompletion_60": "エリート二ヶ月",
+
+  "duoMessages_20": "オンライン相棒",
+  "duoMessages_100": "超接続チーム",
+
+  "duoStreak_7": "同期デュオ",
+  "duoStreak_30": "伝説のデュオ",
+
+  "finishDuoChallenge_1": "初のデュオチャレンジ",
+  "finishDuoChallenge_5": "確立したデュオ",
+  "finishDuoChallenge_10": "無敵のデュオ",
+
+  "focusDays_7": "集中の一週間",
+  "focusDays_21": "集中ミッション21",
+  "focusDays_42": "レーザーモード42",
+
+  "perfectMonth_1": "初の完璧な月",
+  "perfectMonth_3": "完璧な四半期",
+  "perfectMonth_6": "半年間の無欠陥",
+
+  "referralsRegistered_1": "初の成功紹介",
+  "referralsRegistered_3": "成長中のアンバサダー",
+  "referralsRegistered_5": "スーパーアンバサダー",
+
+  "seasonal_1": "季節の探検者",
+  "seasonal_3": "季節の達人",
+
+  "zeroMissLongRun_30": "30日間ミスなし",
+  "zeroMissLongRun_60": "60日間ミスなし",
+
+  "voteFeature_10": "アプリ共同クリエイター",
+
+  "shareChallenge_10": "シリアルシェアラー",
+
+  "inviteFriend_3": "チームビルダー",
 
   "challengeCreated_1": "チャレンジクリエイター",
   "challengeCreated_5": "インスパイアされた",
@@ -1502,6 +1551,40 @@
 
     "saveChallenge_1": "初めてチャレンジを保存。",
     "saveChallenge_5": "5つ保存：立派なコレクター。",
+    "saveChallenge_10": "お気に入りに10個のチャレンジを保存 — 自分だけのチャレンジライブラリを構築中。",
+  "messageSent_100": "100件のメッセージを送信：あなたの声がコミュニティで存在感を持ち始める。",
+  "messageSent_200": "200件送信：会話の中心的存在に。",
+  "categoriesMastered_3": "少なくとも3カテゴリを継続的にマスター。",
+  "categoriesMastered_5": "5カテゴリ以上をマスター — 全方向に成長中。",
+  "challengeAdopted_10": "日常に10回以上チャレンジを再導入。",
+  "challengeAdopted_50": "50回再導入：強固なライフスタイルを築く。",
+  "challengeAdopted_100": "100回再導入：ChallengeTiesは生活の一部。",
+  "dailyCompletion_7": "7日連続でチャレンジを達成。",
+  "dailyCompletion_30": "30日間連続達成。",
+  "dailyCompletion_60": "60日連続 — エリート級の集中力。",
+  "duoMessages_20": "相棒と20件以上のメッセージ交換。",
+  "duoMessages_100": "100件以上交換 — 完全なコミュニケーション。",
+  "duoStreak_7": "2人で7日連続チャレンジ成功。",
+  "duoStreak_30": "30日連続 — 絆と規律が最高潮。",
+  "finishDuoChallenge_1": "初めてのデュオチャレンジ達成。",
+  "finishDuoChallenge_5": "5つのデュオチャレンジ達成 — 強力なチームに。",
+  "finishDuoChallenge_10": "10個達成 — 無敵のデュオ。",
+  "focusDays_7": "7日間集中を維持。",
+  "focusDays_21": "21日間継続して集中 — 習慣の確立。",
+  "focusDays_42": "42日間集中 — 脳がポジティブに再構築される。",
+  "perfectMonth_1": "1ヶ月間完璧に継続。",
+  "perfectMonth_3": "3ヶ月連続パーフェクト。",
+  "perfectMonth_6": "6ヶ月間一度も欠かさず — 稀有な規律。",
+  "referralsRegistered_1": "実際に登録した1人を招待。",
+  "referralsRegistered_3": "3人登録 — 周囲に良い影響を与えている。",
+  "referralsRegistered_5": "5人登録 — 真のアンバサダー。",
+  "seasonal_1": "季節イベントに1回参加。",
+  "seasonal_3": "3回参加 — 一年の特別な瞬間を満喫。",
+  "zeroMissLongRun_30": "30日連続ノーミス。",
+  "zeroMissLongRun_60": "60日連続ノーミス — 言い訳なし。",
+  "voteFeature_10": "10の機能に投票 — アプリの未来を形作る。",
+  "shareChallenge_10": "10回以上チャレンジを共有。",
+  "inviteFriend_3": "3人以上招待し、自分のチームを作る。",
 
     "challengeCreated_1": "初めてカスタムチャレンジを作成。",
     "challengeCreated_5": "5つ作成：クリエイティブ！",

@@ -194,7 +194,7 @@ const totalInventoryItems = useMemo(() => {
       {
         name: t("notifications"),
         icon: "notifications-outline",
-        navigateTo: "profile/Notifications",
+        navigateTo: "profile/notifications",
         testID: "notifications-button",
         unclaimedCount: userData?.unreadNotifications ?? 0,
         accessibilityLabel: t("access.notifications.label"),

@@ -8,7 +8,6 @@ import {
   Alert,
   ScrollView,
   Image,
-  Dimensions,
   StatusBar,
   Platform,
   SafeAreaView,
@@ -46,7 +45,6 @@ import { getStorage, ref as storageRef, uploadBytes, getDownloadURL } from "fire
 import { auth, db } from "../constants/firebase-config";
 import * as Haptics from "expo-haptics";
 import { Image as RNImage } from "react-native";
-import { checkForAchievements } from "../helpers/trophiesHelpers";
 
 /* -------- Constantes UI -------- */
 const SPACING = 20;
@@ -123,7 +121,6 @@ const npa = (globalThis as any).__NPA__ === true;
   const [submitting, setSubmitting] = useState(false);
   const [category, setCategory] = useState<CategoryLabel>(defaultCategories[0]);
   const [issues, setIssues] = useState<string[]>([]);
-  const [draftLoaded, setDraftLoaded] = useState(false);
   const submittingRef = useRef(false);
 
   /* ====== Interstitiel (non premium) — inchangé ====== */
@@ -194,7 +191,6 @@ const npa = (globalThis as any).__NPA__ === true;
          setDescription(draft.description ?? "");
          setImageUri(draft.imageUri ?? null);
          setCategory(draft.category ?? defaultCategories[0]);
-         setDraftLoaded(true);
          Alert.alert(t("draft.title"), t("draft.restored"));
        }
      } catch {}
@@ -287,7 +283,7 @@ const npa = (globalThis as any).__NPA__ === true;
     } catch {
       return null; // on ne bloque pas la création si l’upload échoue
     }
-  }, []);
+  }, [t]);
 
   /* ====== Validation & Création ====== */
   const titleLeft = TITLE_MAX - title.length;
@@ -298,16 +294,21 @@ const npa = (globalThis as any).__NPA__ === true;
     () => title.trim().length >= MIN_TITLE && /[A-Za-zÀ-ÿ]/.test(title),
     [title]
   );
-  const descOK = useMemo(
+    const descOK = useMemo(
     () => description.trim().length >= MIN_DESC,
     [description]
   );
- const categoryOK = !!category; // le Picker a toujours une valeur ; garde le test pour la cohérence
- const REQUIRED_COUNT = 3; // titre, description, catégorie
- const completeness = useMemo(() => {
-   const count = [titleOK, descOK, categoryOK].filter(Boolean).length;
-   return count / REQUIRED_COUNT;
- }, [titleOK, descOK, categoryOK]);
+  const categoryOK = !!category; // le Picker a toujours une valeur ; garde le test pour la cohérence
+
+  // ✅ Image prise en compte pour la complétion (mais pas obligatoire pour créer)
+  const imageOK = !!imageUri;
+
+  const REQUIRED_COUNT = 4; // titre, description, catégorie, image
+  const completeness = useMemo(() => {
+    const count = [titleOK, descOK, categoryOK, imageOK].filter(Boolean).length;
+    return count / REQUIRED_COUNT;
+  }, [titleOK, descOK, categoryOK, imageOK]);
+
 
  // ✅ Messages helper/erreur (i18n + fallback)
   const titleTooShort = title.trim().length > 0 && title.trim().length < MIN_TITLE;
@@ -350,6 +351,13 @@ const npa = (globalThis as any).__NPA__ === true;
           defaultValue: `Explique concrètement (≥ ${MIN_DESC} caractères).`,
         })
       : null;
+
+      // 🔢 Score de qualité (lisibilité / concret / longueur)
+  const qualityScore = useMemo(
+    () => scoreQuality(title, description),
+    [title, description]
+  );
+  const qualityPct = Math.round(qualityScore * 100);
 
  useEffect(() => {
    setIssues(describeIssues(t, title, description));
@@ -494,10 +502,15 @@ const npa = (globalThis as any).__NPA__ === true;
         </View>
 
         <Text style={[styles.hintText, { marginTop: 6, color: current.colors.textSecondary }]}>
-   {completeness < 1
-     ? t("quality.fillRequired", { defaultValue: "Remplis titre, description (≥ 20 caractères) et catégorie pour atteindre 100%." })
-     : t("quality.hintGreat", { defaultValue: "Parfait ! Tu peux créer ton défi." })}
- </Text>
+  {completeness < 1
+    ? t("quality.fillRequired", {
+        defaultValue:
+          "Remplis titre, description (≥ 20 caractères), catégorie et image pour atteindre 100%.",
+      })
+    : t("quality.hintGreat", {
+        defaultValue: "Parfait ! Tu peux créer ton défi.",
+      })}
+</Text>
 
 <KeyboardAvoidingView behavior={Platform.OS === "ios" ? "padding" : undefined} style={{ flex: 1 }}>
         <ScrollView
@@ -645,6 +658,26 @@ const npa = (globalThis as any).__NPA__ === true;
                     {description || (t("yourDescriptionHere") || "Ta description ici…")}
                   </Text>
                 </View>
+              </View>
+
+              {/* Indicateur de qualité global (titre + description) */}
+              <View style={styles.qualityRow}>
+                <Ionicons
+                  name="star-outline"
+                  size={16}
+                  color={current.colors.secondary}
+                />
+                <Text
+                  style={[
+                    styles.hintText,
+                    { color: current.colors.textSecondary },
+                  ]}
+                >
+                  {t("quality.scoreLabel", {
+                    defaultValue: "Qualité du défi",
+                  })}
+                  : {qualityPct}%
+                </Text>
               </View>
 
               {issues.length > 0 && (
@@ -857,6 +890,12 @@ const styles = StyleSheet.create({
     fontSize: 12,
     fontFamily: "Comfortaa_400Regular",
     marginRight: 8,
+  },
+  qualityRow: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 6,
+    marginTop: 6,
   },
   progressFill: { height: "100%", borderRadius: 999 },
 

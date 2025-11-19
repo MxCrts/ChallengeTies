@@ -1446,6 +1446,55 @@
 
   "saveChallenge_1": "챌린지 저장됨",
   "saveChallenge_5": "5개 저장 완료",
+  "saveChallenge_10": "신흥 수집가",
+
+  "messageSent_100": "영향력 있는 목소리",
+  "messageSent_200": "채팅 마스터",
+
+  "categoriesMastered_3": "멀티 스페셜리스트",
+  "categoriesMastered_5": "카테고리 마스터",
+
+  "challengeAdopted_10": "루틴 형성 중",
+  "challengeAdopted_50": "탄탄한 루틴",
+  "challengeAdopted_100": "ChallengeTies 라이프스타일",
+
+  "dailyCompletion_7": "완벽한 일주일",
+  "dailyCompletion_30": "강철 같은 한 달",
+  "dailyCompletion_60": "엘리트 두 달",
+
+  "duoMessages_20": "온라인 팀메이트",
+  "duoMessages_100": "초연결 팀",
+
+  "duoStreak_7": "싱크된 듀오",
+  "duoStreak_30": "전설의 듀오",
+
+  "finishDuoChallenge_1": "첫 듀오 챌린지",
+  "finishDuoChallenge_5": "확립된 듀오",
+  "finishDuoChallenge_10": "무적의 듀오",
+
+  "focusDays_7": "포커스 주간",
+  "focusDays_21": "포커스 미션 21",
+  "focusDays_42": "레이저 모드 42",
+
+  "perfectMonth_1": "첫 완벽한 한 달",
+  "perfectMonth_3": "완벽한 분기",
+  "perfectMonth_6": "반년 무결점",
+
+  "referralsRegistered_1": "첫 성공 추천",
+  "referralsRegistered_3": "떠오르는 앰배서더",
+  "referralsRegistered_5": "슈퍼 앰배서더",
+
+  "seasonal_1": "계절 탐험가",
+  "seasonal_3": "계절 마스터",
+
+  "zeroMissLongRun_30": "30일 연속 노미스",
+  "zeroMissLongRun_60": "60일 연속 노미스",
+
+  "voteFeature_10": "앱 공동 제작자",
+
+  "shareChallenge_10": "연속 공유러",
+
+  "inviteFriend_3": "팀 빌더",
 
   "challengeCreated_1": "챌린지 생성자",
   "challengeCreated_5": "영감 받았어요",
@@ -1484,6 +1533,40 @@
     "inviteFriend_10": "10명 초대: 네트워크의 왕.",
     "voteFeature_1": "기능에 처음으로 투표하세요.",
     "voteFeature_5": "5번 투표: 당신의 목소리를 들려주세요.",
+    "saveChallenge_10": "도전 과제 10개를 즐겨찾기에 저장 — 당신만의 라이브러리를 만들고 있습니다.",
+  "messageSent_100": "메시지 100개 전송: 커뮤니티에서 당신의 목소리가 들리기 시작합니다.",
+  "messageSent_200": "메시지 200개 전송: 이제 대화에서 확실한 존재감입니다.",
+  "categoriesMastered_3": "최소 3개의 카테고리를 꾸준히 마스터하세요.",
+  "categoriesMastered_5": "5개 이상 마스터 — 전방위적 성장.",
+  "challengeAdopted_10": "일상에 도전을 10번 이상 재도입하세요.",
+  "challengeAdopted_50": "50번 재도입 — 탄탄한 루틴 구축.",
+  "challengeAdopted_100": "100번 재도입 — ChallengeTies가 삶의 일부입니다.",
+  "dailyCompletion_7": "7일 연속 도전 완료.",
+  "dailyCompletion_30": "30일 연속 도전 완료.",
+  "dailyCompletion_60": "60일 연속 — 엘리트급 규율.",
+  "duoMessages_20": "듀오 파트너와 메시지 20개 이상 교환.",
+  "duoMessages_100": "100개 이상 — 최고 수준의 소통.",
+  "duoStreak_7": "7일 연속 듀오 도전 성공.",
+  "duoStreak_30": "30일 연속 — 최고의 연결과 규율.",
+  "finishDuoChallenge_1": "첫 듀오 도전 완료.",
+  "finishDuoChallenge_5": "5개 완료 — 강력한 팀.",
+  "finishDuoChallenge_10": "10개 완료 — 무적의 듀오.",
+  "focusDays_7": "7일 동안 집중 유지.",
+  "focusDays_21": "21일 집중 — 습관 형성.",
+  "focusDays_42": "42일 집중 — 뇌의 긍정적 재프로그래밍.",
+  "perfectMonth_1": "완벽한 한 달 달성.",
+  "perfectMonth_3": "3개월 완벽 달성.",
+  "perfectMonth_6": "6개월 완벽 달성 — 드문 강한 규율.",
+  "referralsRegistered_1": "실제로 가입한 1명을 초대.",
+  "referralsRegistered_3": "3명 가입 — 주변을 고무하는 존재.",
+  "referralsRegistered_5": "5명 가입 — 진정한 앰배서더.",
+  "seasonal_1": "시즌 이벤트 1회 참여.",
+  "seasonal_3": "3회 참여 — 특별한 순간을 모두 즐김.",
+  "zeroMissLongRun_30": "30일 동안 단 하루도 놓치지 않음.",
+  "zeroMissLongRun_60": "60일 내내 놓치지 않음 — 변명 없음.",
+  "voteFeature_10": "10개의 기능에 투표 — 앱의 미래를 함께 만듦.",
+  "shareChallenge_10": "도전 과제를 10회 이상 공유.",
+  "inviteFriend_3": "3명 이상의 친구를 초대하고 팀을 구축하세요.",
     "saveChallenge_1": "첫 챌린지를 저장하세요.",
     "saveChallenge_5": "5개의 챌린지 저장: 숙련된 수집가.",
     "challengeCreated_1": "첫 번째 맞춤 챌린지를 만드세요.",

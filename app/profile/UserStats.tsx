@@ -191,62 +191,42 @@ const tabBarHeight = useTabBarHeightSafe();
     };
   }, [savedChallenges, currentChallenges, userDoc]);
 
-  // Calcul des stats (cartes UI)
+  // Calcul des stats (cartes UI) basé sur numericStats → une seule source de vérité
   const computedStats: Stat[] = useMemo(() => {
     if (!userDoc) return [];
 
-    const uniqueOngoing = new Map(
-      currentChallenges.map((ch: Challenge) => [
-        `${ch.id}_${ch.selectedDays}`,
-        ch,
-      ])
-    );
+    const { saved, ongoing, completed, successRatePct, longestStreak, trophies, achievements } =
+      numericStats;
 
-    const totalSaved = savedChallenges.length;
-    const totalOngoing = uniqueOngoing.size;
-    const totalCompleted = currentChallenges.filter(
-      (challenge: Challenge) =>
-        challenge.completedDays === challenge.selectedDays
-    ).length;
-
-    const successRate =
-      totalOngoing + totalCompleted > 0
-        ? Math.round((totalCompleted / (totalOngoing + totalCompleted)) * 100)
-        : 0;
-
-    const longestStreak = userDoc.longestStreak || 0;
-    const trophies = userDoc.trophies || 0;
-    const achievementsUnlocked = userDoc.achievements?.length || 0;
     // Helpers de formatage localisé
     const nf = (n: number) => Number(n || 0).toLocaleString(i18n.language);
-    const pct = (n: number) => `${nf(n)}%`;
     const daysLabel = t("days"); // ex: "jours"
 
     return [
       {
         name: t("savedChallenges"),
-        value: nf(totalSaved),
+        value: nf(saved),
         icon: "bookmark-outline",
         accessibilityLabel: t("savedChallenges"),
         accessibilityHint: t("statDescription.savedChallenges"),
       },
       {
         name: t("ongoingChallenges"),
-        value: nf(totalOngoing),
+        value: nf(ongoing),
         icon: "hourglass-outline",
         accessibilityLabel: t("ongoingChallenges"),
         accessibilityHint: t("statDescription.ongoingChallenges"),
       },
       {
         name: t("completedChallenges"),
-        value: nf(totalCompleted),
+        value: nf(completed),
         icon: "trophy-outline",
         accessibilityLabel: t("completedChallenges"),
         accessibilityHint: t("statDescription.completedChallenges"),
       },
       {
         name: t("successRate"),
-       value: pct(successRate),
+        value: `${nf(successRatePct)}%`,
         icon: "stats-chart-outline",
         accessibilityLabel: t("successRate"),
         accessibilityHint: t("statDescription.successRate"),
@@ -260,7 +240,7 @@ const tabBarHeight = useTabBarHeightSafe();
       },
       {
         name: t("unlockedAchievements"),
-        value: nf(achievementsUnlocked),
+        value: nf(achievements),
         icon: "ribbon-outline",
         accessibilityLabel: t("unlockedAchievements"),
         accessibilityHint: t("statDescription.unlockedAchievements"),
@@ -273,7 +253,7 @@ const tabBarHeight = useTabBarHeightSafe();
         accessibilityHint: t("statDescription.longestStreak"),
       },
     ];
-  }, [savedChallenges, currentChallenges, userDoc, t, i18n.language]);
+  }, [numericStats, t, i18n.language, userDoc]);
   
 // ==== Carte stat ultra-perf (memo) ====
   const StatCard = memo(({ item, index }: { item: Stat; index: number }) => (
@@ -359,15 +339,6 @@ const tabBarHeight = useTabBarHeightSafe();
       const username = (userDoc as any)?.displayName ?? null;
       const avatarUri = (userDoc as any)?.profileImage ?? null;
 
-      // ——— On construit une liste i18n de 4 KPI max (propre & non coupée) ———
-      const daysShort = t("daysShort", { defaultValue: "j" }) as string; // ex: "j" / "d"
-      const items = [
-        { label: t("completedChallenges"), value: String(numericStats.completed) },
-        { label: t("successRate"), value: `${numericStats.successRatePct}%` },
-        { label: t("longestStreak"), value: `${numericStats.longestStreak} ${daysShort}` },
-        { label: t("trophies"), value: String(numericStats.trophies) },
-      ];
-
       setSharePayload({ username, avatarUri, stats: numericStats });
       // Laisse le temps au composant caché de se monter
       await new Promise<void>((resolve) => requestAnimationFrame(() => resolve()));
@@ -380,21 +351,6 @@ const tabBarHeight = useTabBarHeightSafe();
       console.error("Erreur lors du partage :", error);
     }
   }, [t, numericStats, userDoc, share]);
-
-  const metadata = useMemo(
-    () => ({
-      title: t("statistics"),
-      description: t("shareStatsMessage"),
-      url: `https://challengeme.com/${i18n.language}/stats/${auth.currentUser?.uid}`,
-      structuredData: {
-        "@context": "https://schema.org",
-        "@type": "WebPage",
-        name: t("statistics"),
-        description: t("shareStatsMessage"),
-      },
-    }),
-    [t, i18n.language]
-  );
 
   if (isLoading) {
     return (

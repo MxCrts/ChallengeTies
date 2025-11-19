@@ -13,7 +13,13 @@ import {
 import { Ionicons } from "@expo/vector-icons";
 import { doc, onSnapshot } from "firebase/firestore";
 import { LinearGradient } from "expo-linear-gradient";
-import Animated, { ZoomIn, FadeInUp, useSharedValue, withTiming } from "react-native-reanimated";
+import Animated, {
+  ZoomIn,
+  FadeInUp,
+  useSharedValue,
+  withTiming,
+  useAnimatedStyle,
+} from "react-native-reanimated";
 import { db, auth } from "../../constants/firebase-config";
 import { useTrophy } from "../../context/TrophyContext";
 import { achievementsList } from "../../helpers/achievementsConfig";
@@ -146,6 +152,12 @@ const bottomPadding =
 
 const progressSV = useSharedValue(0);
   const totalRef = useRef(0);
+  const progressAnimatedStyle = useAnimatedStyle(() => {
+    const ratio = Math.max(0, Math.min(progressSV.value, 1));
+    return {
+      width: `${Math.round(ratio * 100)}%`,
+    };
+  });
 
   useEffect(() => {
     const userId = auth.currentUser?.uid;
@@ -582,13 +594,13 @@ const progressSV = useSharedValue(0);
       <View style={styles.container}>
         <View style={styles.progressBarWrapper}>
           <View style={[styles.progressBarBackground, { backgroundColor: currentTheme.colors.border }]}>
-            <Animated.View
-              style={[
-                styles.progressBarFill,
-                // largeur animée (progressSV ∈ [0,1])
-                { width: `${Math.round(progressSV.value * 100)}%`, backgroundColor: currentTheme.colors.secondary },
-              ]}
-            />
+              <Animated.View
+      style={[
+        styles.progressBarFill,
+        progressAnimatedStyle,
+        { backgroundColor: currentTheme.colors.secondary },
+      ]}
+    />
           </View>
           <Text style={[styles.progressText, { color: currentTheme.colors.secondary }]}>
   {String(t("trophiesProgress", { completed: done, total }))}

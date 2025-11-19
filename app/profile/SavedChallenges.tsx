@@ -35,16 +35,16 @@ import { Theme } from "../../theme/designSystem";
 import designSystem from "../../theme/designSystem";
 import CustomHeader from "@/components/CustomHeader";
 import BannerSlot from "@/components/BannerSlot";
- import { useBottomTabBarHeight } from "@react-navigation/bottom-tabs";
- import { useSafeAreaInsets } from "react-native-safe-area-context";
- import { useAdsVisibility } from "../../src/context/AdsVisibilityContext";
+import { useBottomTabBarHeight } from "@react-navigation/bottom-tabs";
+import { useSafeAreaInsets } from "react-native-safe-area-context";
+import { useAdsVisibility } from "../../src/context/AdsVisibilityContext";
 import { Image as ExpoImage } from "expo-image";
 import type { ListRenderItem } from "react-native";
 
-const SPACING = 18; // Aligné avec CurrentChallenges.tsx
+const SPACING = 18;
 const { width: SCREEN_WIDTH, height: SCREEN_HEIGHT } = Dimensions.get("window");
-const ITEM_WIDTH = SCREEN_WIDTH * 0.9; // Aligné avec CurrentChallenges.tsx
-const ITEM_HEIGHT = SCREEN_WIDTH * 0.45; // Aligné avec CurrentChallenges.tsx
+const ITEM_WIDTH = SCREEN_WIDTH * 0.9;
+const ITEM_HEIGHT = SCREEN_WIDTH * 0.45;
 
 const normalizeSize = (size: number) => {
   const baseWidth = 375;
@@ -73,7 +73,6 @@ const withAlpha = (color: string, alpha: number) => {
   return `rgba(0,0,0,${a})`;
 };
 
-
 interface Challenge {
   id: string;
   chatId?: string;
@@ -84,13 +83,14 @@ interface Challenge {
   daysOptions?: number[];
 }
 
+type SwipeableHandle = { close: () => void } | null;
+
 export default function SavedChallengesScreen() {
   const { t, i18n } = useTranslation();
   const { savedChallenges, removeChallenge } = useSavedChallenges();
   const [isLoading, setIsLoading] = useState(true);
   const [localChallenges, setLocalChallenges] = useState<Challenge[]>([]);
   const router = useRouter();
-  type SwipeableHandle = { close: () => void } | null;
   const swipeableRefs = useRef<SwipeableHandle[]>([]);
   const { theme } = useTheme();
   const isDarkMode = theme === "dark";
@@ -98,24 +98,26 @@ export default function SavedChallengesScreen() {
     () => (isDarkMode ? designSystem.darkTheme : designSystem.lightTheme),
     [isDarkMode]
   );
-   const { showBanners } = useAdsVisibility();
-   const insets = useSafeAreaInsets();
- const tabBarHeight = (() => {
-   try { return useBottomTabBarHeight(); } catch { return 0; }
- })();
- const [adHeight, setAdHeight] = useState(0);
- const bottomPadding =
-   normalizeSize(90) +
-   (showBanners ? adHeight : 0) +
-   tabBarHeight +
-   insets.bottom;
 
+  const { showBanners } = useAdsVisibility();
+  const insets = useSafeAreaInsets();
+  const tabBarHeight = (() => {
+    try {
+      return useBottomTabBarHeight();
+    } catch {
+      return 0;
+    }
+  })();
+  const [adHeight, setAdHeight] = useState(0);
+  const bottomPadding =
+    normalizeSize(90) + (showBanners ? adHeight : 0) + tabBarHeight + insets.bottom;
+
+  // Dédup + traduction
   const translatedChallenges = useMemo(() => {
     if (!savedChallenges || !Array.isArray(savedChallenges)) {
       return [];
     }
 
-    // Dédupliquer
     const uniqueArr = Array.from(
       new Map(
         savedChallenges
@@ -124,7 +126,6 @@ export default function SavedChallengesScreen() {
       ).values()
     );
 
-    // Traduction de chaque champ
     return uniqueArr.map((item) => ({
       ...item,
       title: item.chatId
@@ -153,12 +154,14 @@ export default function SavedChallengesScreen() {
       const descParam = encodeURIComponent(item.description || "");
       const imgParam = encodeURIComponent(item.imageUrl || "");
       const selectedDays = item.daysOptions?.[0] || 7;
+
       const route = `/challenge-details/${encodeURIComponent(
         item.id
       )}?title=${titleParam}&selectedDays=${selectedDays}&completedDays=0&category=${catParam}&description=${descParam}&imageUrl=${imgParam}`;
+
       router.push(route);
     },
-    [router, t]
+    [router]
   );
 
   const handleRemoveChallenge = useCallback(
@@ -194,7 +197,7 @@ export default function SavedChallengesScreen() {
     [removeChallenge, t]
   );
 
-  // Swipe en 2 temps : pill premium centrée + haptic léger
+  // Swipe en 2 temps + pill premium
   const pendingDeleteRef = useRef<(() => void) | null>(null);
   const renderRightActions = useCallback(
     (_index: number) => (
@@ -227,12 +230,12 @@ export default function SavedChallengesScreen() {
     ({ item, index }) => {
       const borderColor = isDarkMode
         ? currentTheme.colors.secondary
-        : "#FF8C00"; // Aligné avec CurrentChallenges.tsx
+        : "#FF8C00";
 
       return (
         <Animated.View
           entering={ZoomIn.delay(index * 50)}
-          exiting={FadeOutRight.duration(300)}
+          exiting={FadeOutRight.duration(260)}
           style={styles.cardWrapper}
         >
           <View
@@ -243,12 +246,15 @@ export default function SavedChallengesScreen() {
           >
             <Swipeable
               ref={(ref) => {
-                swipeableRefs.current[index] = (ref as unknown as SwipeableHandle) ?? null;
+                swipeableRefs.current[index] =
+                  (ref as unknown as SwipeableHandle) ?? null;
               }}
               renderRightActions={() => renderRightActions(index)}
               overshootRight={false}
               onSwipeableOpen={() => {
-                Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light).catch(() => {});
+                Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light).catch(
+                  () => {}
+                );
                 pendingDeleteRef.current = () => {
                   handleRemoveChallenge(item.id, index);
                   pendingDeleteRef.current = null;
@@ -261,7 +267,7 @@ export default function SavedChallengesScreen() {
               <TouchableOpacity
                 style={styles.cardContainer}
                 onPress={() => navigateToChallengeDetails(item)}
-                activeOpacity={0.8}
+                activeOpacity={0.9}
                 accessibilityLabel={t("viewChallengeDetails", {
                   title: item.title,
                 })}
@@ -269,22 +275,60 @@ export default function SavedChallengesScreen() {
                 accessibilityRole="button"
                 testID={`challenge-card-${item.id}`}
               >
+                {/* Glow subtil top */}
+                <View style={styles.cardGlow} />
+
                 <LinearGradient
                   colors={[
-                    currentTheme.colors.cardBackground,
-                    currentTheme.colors.cardBackground + "F0",
+                    withAlpha(currentTheme.colors.cardBackground, 0.98),
+                    withAlpha(currentTheme.colors.cardBackground, 0.86),
                   ]}
                   style={[styles.card, { borderColor }]}
                 >
                   <ExpoImage
-                    source={{ uri: item.imageUrl || "https://via.placeholder.com/70" }}
+                    source={{
+                      uri:
+                        item.imageUrl ||
+                        "https://via.placeholder.com/70?text=Challenge",
+                    }}
                     style={styles.cardImage}
                     contentFit="cover"
                     transition={200}
-                    placeholder={{ blurhash: "LKO2?U%2Tw=w]~RBVZRi};RPxuwH" }}
-                    accessibilityLabel={t("challengeImage", { title: item.title })}
+                    placeholder={{
+                      blurhash: "LKO2?U%2Tw=w]~RBVZRi};RPxuwH",
+                    }}
+                    accessibilityLabel={t("challengeImage", {
+                      title: item.title,
+                    })}
                   />
+
                   <View style={styles.cardContent}>
+                    {/* Ligne haute : catégorie + badge "Enregistré" */}
+                    <View style={styles.cardTopRow}>
+                      <View style={styles.categoryPill}>
+                        <Text
+                          style={[
+                            styles.categoryText,
+                            { color: currentTheme.colors.textSecondary },
+                          ]}
+                          numberOfLines={1}
+                        >
+                          {item.category || t("miscellaneous")}
+                        </Text>
+                      </View>
+                      <View style={styles.savedPill}>
+                        <Ionicons
+                          name="bookmark-outline"
+                          size={normalizeSize(13)}
+                          color="#0b1120"
+                        />
+                        <Text style={styles.savedPillText} numberOfLines={1}>
+                          {t("savedShort", { defaultValue: "Enregistré" })}
+                        </Text>
+                      </View>
+                    </View>
+
+                    {/* Titre + description courte */}
                     <Text
                       style={[
                         styles.challengeTitle,
@@ -294,45 +338,60 @@ export default function SavedChallengesScreen() {
                             : "#000000",
                         },
                       ]}
-                      numberOfLines={1}
+                      numberOfLines={2}
                     >
                       {item.title}
                     </Text>
-                    <Text
-                      style={[
-                        styles.challengeCategory,
-                        { color: currentTheme.colors.textSecondary },
-                      ]}
-                    >
-                      {item.category || t("miscellaneous")}
-                    </Text>
-                    <TouchableOpacity
-                      style={styles.viewButton}
-                      onPress={() => navigateToChallengeDetails(item)}
-                      accessibilityLabel={t("viewChallengeDetails", {
-                        title: item.title,
-                      })}
-                      accessibilityHint={t("viewDetails")}
-                      accessibilityRole="button"
-                      testID={`view-details-${item.id}`}
-                    >
-                      <LinearGradient
-                        colors={[
-                          currentTheme.colors.secondary,
-                          currentTheme.colors.primary,
+
+                    {!!item.description && (
+                      <Text
+                        style={[
+                          styles.challengeDescription,
+                          { color: currentTheme.colors.textSecondary },
                         ]}
-                        style={styles.viewButtonGradient}
+                        numberOfLines={2}
                       >
-                        <Text
-                          style={[
-                            styles.viewButtonText,
-                            { color: currentTheme.colors.textPrimary },
+                        {item.description}
+                      </Text>
+                    )}
+
+                    {/* CTA Voir les détails */}
+                    <View style={styles.footerRow}>
+                      <TouchableOpacity
+                        style={styles.viewButton}
+                        onPress={() => navigateToChallengeDetails(item)}
+                        accessibilityLabel={t("viewChallengeDetails", {
+                          title: item.title,
+                        })}
+                        accessibilityHint={t("viewDetails")}
+                        accessibilityRole="button"
+                        testID={`view-details-${item.id}`}
+                      >
+                        <LinearGradient
+                          colors={[
+                            currentTheme.colors.secondary,
+                            currentTheme.colors.primary,
                           ]}
+                          style={styles.viewButtonGradient}
                         >
-                          {t("viewDetails")}
-                        </Text>
-                      </LinearGradient>
-                    </TouchableOpacity>
+                          <View style={styles.viewButtonContent}>
+                            <Text
+                              style={[
+                                styles.viewButtonText,
+                                { color: "#0b1120" },
+                              ]}
+                            >
+                              {t("viewDetails")}
+                            </Text>
+                            <Ionicons
+                              name="chevron-forward"
+                              size={normalizeSize(14)}
+                              color="#0b1120"
+                            />
+                          </View>
+                        </LinearGradient>
+                      </TouchableOpacity>
+                    </View>
                   </View>
                 </LinearGradient>
               </TouchableOpacity>
@@ -341,13 +400,7 @@ export default function SavedChallengesScreen() {
         </Animated.View>
       );
     },
-    [
-      navigateToChallengeDetails,
-      handleRemoveChallenge,
-      currentTheme,
-      t,
-      isDarkMode,
-    ]
+    [navigateToChallengeDetails, handleRemoveChallenge, currentTheme, t, isDarkMode]
   );
 
   const renderEmptyState = useCallback(
@@ -384,7 +437,7 @@ export default function SavedChallengesScreen() {
         </Text>
       </Animated.View>
     ),
-    [currentTheme, t]
+    [currentTheme, t, isDarkMode]
   );
 
   if (isLoading) {
@@ -397,10 +450,10 @@ export default function SavedChallengesScreen() {
         />
         <LinearGradient
           colors={[
-  withAlpha(currentTheme.colors.background, 1),
-  withAlpha(currentTheme.colors.cardBackground, 1),
-  withAlpha(currentTheme.colors.primary, 0.13),
-]}
+            withAlpha(currentTheme.colors.background, 1),
+            withAlpha(currentTheme.colors.cardBackground, 1),
+            withAlpha(currentTheme.colors.primary, 0.13),
+          ]}
           style={styles.loadingContainer}
         >
           <ActivityIndicator size="large" color={currentTheme.colors.primary} />
@@ -424,121 +477,124 @@ export default function SavedChallengesScreen() {
         backgroundColor="transparent"
         barStyle={isDarkMode ? "light-content" : "dark-content"}
       />
-                <LinearGradient
-  colors={[
-    withAlpha(currentTheme.colors.background, 1),
-    withAlpha(currentTheme.colors.cardBackground, 1),
-    withAlpha(currentTheme.colors.primary, 0.13),
-  ]}
-  style={styles.gradientContainer}
-  start={{ x: 0, y: 0 }}
-  end={{ x: 1, y: 1 }}
->
-  {/* Orbes premium en arrière-plan */}
-  <LinearGradient
-    pointerEvents="none"
-    colors={[withAlpha(currentTheme.colors.primary, 0.28), "transparent"]}
-    style={styles.bgOrbTop}
-    start={{ x: 0.2, y: 0 }}
-    end={{ x: 1, y: 1 }}
-  />
-  <LinearGradient
-    pointerEvents="none"
-    colors={[withAlpha(currentTheme.colors.secondary, 0.25), "transparent"]}
-    style={styles.bgOrbBottom}
-    start={{ x: 1, y: 0 }}
-    end={{ x: 0, y: 1 }}
-  />
+      <LinearGradient
+        colors={[
+          withAlpha(currentTheme.colors.background, 1),
+          withAlpha(currentTheme.colors.cardBackground, 1),
+          withAlpha(currentTheme.colors.primary, 0.13),
+        ]}
+        style={styles.gradientContainer}
+        start={{ x: 0, y: 0 }}
+        end={{ x: 1, y: 1 }}
+      >
+        {/* Orbes premium */}
+        <LinearGradient
+          pointerEvents="none"
+          colors={[withAlpha(currentTheme.colors.primary, 0.28), "transparent"]}
+          style={styles.bgOrbTop}
+          start={{ x: 0.2, y: 0 }}
+          end={{ x: 1, y: 1 }}
+        />
+        <LinearGradient
+          pointerEvents="none"
+          colors={[withAlpha(currentTheme.colors.secondary, 0.25), "transparent"]}
+          style={styles.bgOrbBottom}
+          start={{ x: 1, y: 0 }}
+          end={{ x: 0, y: 1 }}
+        />
 
-  {/* Header sans séparation */}
-  <CustomHeader
-    title={t("savedChallengesScreenTitle")}
-    backgroundColor="transparent"
-    useBlur={false}
-    showHairline={false}
-  />
+        <CustomHeader
+          title={t("savedChallengesScreenTitle")}
+          backgroundColor="transparent"
+          useBlur={false}
+          showHairline={false}
+        />
 
-  {/* Contenu */}
-  <View style={styles.container}>
-    {localChallenges.length === 0 ? (
-      renderEmptyState()
-    ) : (
-      <FlatList
-        data={localChallenges}
-        renderItem={renderChallengeItem}
-        keyExtractor={(item) => `saved-${item.id}`}
-        contentContainerStyle={[styles.listContent, { flexGrow: 1, paddingBottom: bottomPadding }]}
-        showsVerticalScrollIndicator={false}
-        initialNumToRender={5}
-        maxToRenderPerBatch={5}
-        windowSize={5}
-        getItemLayout={(data, index) => ({
-          length: normalizeSize(ITEM_HEIGHT + SPACING * 1.5),
-          offset: normalizeSize(ITEM_HEIGHT + SPACING * 1.5) * index,
-          index,
-        })}
-        contentInset={{ top: SPACING, bottom: 0 }}
-        accessibilityRole="list"
-        accessibilityLabel={t("listOfSavedChallenges")}
-        testID="saved-challenges-list"
-      />
-    )}
-  </View>
-  {showBanners && (
-   <View
-     style={{
-       position: "absolute",
-       left: 0,
-       right: 0,
-       bottom: tabBarHeight + insets.bottom,
-       alignItems: "center",
-       backgroundColor: "transparent",
-       paddingBottom: 6,
-       zIndex: 9999,
-     }}
-     pointerEvents="box-none"
-   >
-     <BannerSlot onHeight={(h) => setAdHeight(h)} />
-   </View>
- )}
-</LinearGradient>
+        <View style={styles.container}>
+          {localChallenges.length === 0 ? (
+            renderEmptyState()
+          ) : (
+            <FlatList
+              data={localChallenges}
+              renderItem={renderChallengeItem}
+              keyExtractor={(item) => `saved-${item.id}`}
+              contentContainerStyle={[
+                styles.listContent,
+                { flexGrow: 1, paddingBottom: bottomPadding },
+              ]}
+              showsVerticalScrollIndicator={false}
+              initialNumToRender={5}
+              maxToRenderPerBatch={5}
+              windowSize={5}
+              getItemLayout={(_, index) => ({
+                length: normalizeSize(ITEM_HEIGHT + SPACING * 1.5),
+                offset: normalizeSize(ITEM_HEIGHT + SPACING * 1.5) * index,
+                index,
+              })}
+              contentInset={{ top: SPACING, bottom: 0 }}
+              accessibilityRole="list"
+              accessibilityLabel={t("listOfSavedChallenges")}
+              testID="saved-challenges-list"
+            />
+          )}
+        </View>
 
+        {showBanners && (
+          <View
+            style={{
+              position: "absolute",
+              left: 0,
+              right: 0,
+              bottom: tabBarHeight + insets.bottom,
+              alignItems: "center",
+              backgroundColor: "transparent",
+              paddingBottom: 6,
+              zIndex: 9999,
+            }}
+            pointerEvents="box-none"
+          >
+            <BannerSlot onHeight={(h) => setAdHeight(h)} />
+          </View>
+        )}
+      </LinearGradient>
     </SafeAreaView>
   );
 }
 
 const styles = StyleSheet.create({
   safeArea: {
-  flex: 1,
-  paddingTop: 0,
-  backgroundColor: "transparent",
-},
+    flex: 1,
+    paddingTop: 0,
+    backgroundColor: "transparent",
+  },
   container: { flex: 1 },
+
+  gradientContainer: {
+    flex: 1,
+  },
+  bgOrbTop: {
+    position: "absolute",
+    top: -SCREEN_WIDTH * 0.25,
+    left: -SCREEN_WIDTH * 0.2,
+    width: SCREEN_WIDTH * 0.9,
+    height: SCREEN_WIDTH * 0.9,
+    borderRadius: SCREEN_WIDTH * 0.45,
+  },
+  bgOrbBottom: {
+    position: "absolute",
+    bottom: -SCREEN_WIDTH * 0.3,
+    right: -SCREEN_WIDTH * 0.25,
+    width: SCREEN_WIDTH * 1.1,
+    height: SCREEN_WIDTH * 1.1,
+    borderRadius: SCREEN_WIDTH * 0.55,
+  },
+
   headerWrapper: {
     paddingHorizontal: SPACING,
     paddingVertical: SPACING,
     paddingTop: SPACING * 2.5,
     position: "relative",
   },
-  gradientContainer: {
-  flex: 1,
-},
-bgOrbTop: {
-  position: "absolute",
-  top: -SCREEN_WIDTH * 0.25,
-  left: -SCREEN_WIDTH * 0.2,
-  width: SCREEN_WIDTH * 0.9,
-  height: SCREEN_WIDTH * 0.9,
-  borderRadius: SCREEN_WIDTH * 0.45,
-},
-bgOrbBottom: {
-  position: "absolute",
-  bottom: -SCREEN_WIDTH * 0.3,
-  right: -SCREEN_WIDTH * 0.25,
-  width: SCREEN_WIDTH * 1.1,
-  height: SCREEN_WIDTH * 1.1,
-  borderRadius: SCREEN_WIDTH * 0.55,
-},
   backButton: {
     position: "absolute",
     top:
@@ -546,14 +602,16 @@ bgOrbBottom: {
     left: SPACING,
     zIndex: 10,
     padding: SPACING / 2,
-    backgroundColor: "rgba(0, 0, 0, 0.5)", // Overlay premium
+    backgroundColor: "rgba(0, 0, 0, 0.5)",
     borderRadius: normalizeSize(20),
   },
+
   listContent: {
     paddingVertical: SPACING * 1.5,
     paddingHorizontal: SCREEN_WIDTH * 0.025,
     paddingBottom: normalizeSize(80),
   },
+
   cardWrapper: {
     marginBottom: SPACING * 1.5,
     borderRadius: normalizeSize(25),
@@ -569,18 +627,27 @@ bgOrbBottom: {
     overflow: "hidden",
     alignSelf: "center",
   },
+  cardGlow: {
+    position: "absolute",
+    top: 0,
+    left: 0,
+    right: 0,
+    height: normalizeSize(24),
+    opacity: 0.25,
+    backgroundColor: "rgba(255,255,255,0.12)",
+  },
   card: {
     flexDirection: "row",
     alignItems: "center",
-    padding: normalizeSize(18),
+    padding: normalizeSize(16),
     borderRadius: normalizeSize(25),
     borderWidth: 2.5,
   },
   cardImage: {
-    width: normalizeSize(70),
+    width: normalizeSize(66),
     aspectRatio: 1,
     borderRadius: normalizeSize(16),
-    marginRight: SPACING * 1.2,
+    marginRight: SPACING * 0.95,
     borderWidth: 2,
     borderColor: "rgba(255, 255, 255, 0.6)",
   },
@@ -588,33 +655,78 @@ bgOrbBottom: {
     flex: 1,
     justifyContent: "space-between",
   },
+
+  cardTopRow: {
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "space-between",
+    marginBottom: normalizeSize(4),
+  },
+  categoryPill: {
+    paddingHorizontal: normalizeSize(8),
+    paddingVertical: normalizeSize(3),
+    borderRadius: 999,
+    backgroundColor: "rgba(148, 163, 184, 0.18)",
+    maxWidth: "70%",
+  },
+  categoryText: {
+    fontSize: normalizeSize(11.5),
+    fontFamily: "Comfortaa_400Regular",
+  },
+  savedPill: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 4,
+    paddingHorizontal: normalizeSize(8),
+    paddingVertical: normalizeSize(3),
+    borderRadius: 999,
+    backgroundColor: "#FDE68A",
+  },
+  savedPillText: {
+    fontSize: normalizeSize(11),
+    fontFamily: "Comfortaa_700Bold",
+    color: "#0b1120",
+  },
+
   challengeTitle: {
-    fontSize: normalizeSize(18),
+    fontSize: normalizeSize(17),
     fontFamily: "Comfortaa_700Bold",
     marginBottom: normalizeSize(4),
   },
-  challengeCategory: {
-    fontSize: normalizeSize(16),
+  challengeDescription: {
+    fontSize: normalizeSize(13.5),
     fontFamily: "Comfortaa_400Regular",
-    marginTop: normalizeSize(4),
+    marginBottom: normalizeSize(6),
   },
+
+  footerRow: {
+    marginTop: normalizeSize(2),
+    alignItems: "flex-end",
+  },
+
   viewButton: {
     borderRadius: normalizeSize(18),
     overflow: "hidden",
-    marginTop: normalizeSize(10),
+    alignSelf: "flex-end",
   },
   viewButtonGradient: {
-    paddingVertical: normalizeSize(12),
+    paddingVertical: normalizeSize(9),
     paddingHorizontal: SPACING * 1.2,
     alignItems: "center",
     justifyContent: "center",
     borderRadius: normalizeSize(18),
   },
+  viewButtonContent: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 6,
+  },
   viewButtonText: {
     fontFamily: "Comfortaa_700Bold",
-    fontSize: normalizeSize(16),
+    fontSize: normalizeSize(14.5),
     textAlign: "center",
   },
+
   loadingContainer: {
     flex: 1,
     justifyContent: "center",
@@ -627,6 +739,7 @@ bgOrbBottom: {
     fontFamily: "Comfortaa_400Regular",
     textAlign: "center",
   },
+
   noChallengesContent: {
     flex: 1,
     alignItems: "center",
@@ -646,6 +759,7 @@ bgOrbBottom: {
     marginTop: SPACING / 2,
     maxWidth: SCREEN_WIDTH * 0.75,
   },
+
   swipeActionsContainer: {
     height: "100%",
     justifyContent: "center",
