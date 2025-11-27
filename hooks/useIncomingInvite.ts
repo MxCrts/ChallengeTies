@@ -5,6 +5,8 @@ import * as ExpoLinking from "expo-linking";
 import AsyncStorage from "@react-native-async-storage/async-storage";
 import { useRouter, useSegments } from "expo-router";
 import { auth } from "../constants/firebase-config";
+import { InteractionManager } from "react-native";
+
 
 type ParsedInvite = { inviteId: string; challengeId: string } | null;
 
@@ -57,26 +59,30 @@ export function useIncomingInvite(enabled = true) {
 
   // Redirige selon état de connexion
   const handleInvite = async (inv: ParsedInvite) => {
-    if (!inv) return;
-    const key = `${inv.challengeId}:${inv.inviteId}`;
-    if (handledRef.current === key) return;
-    handledRef.current = key;
+  if (!inv) return;
+  const key = `${inv.challengeId}:${inv.inviteId}`;
+  if (handledRef.current === key) return;
+  handledRef.current = key;
 
-    const isLoggedIn = !!auth.currentUser?.uid;
+  const isLoggedIn = !!auth.currentUser?.uid;
 
-    if (!isLoggedIn) {
-      await AsyncStorage.setItem(PENDING_KEY, JSON.stringify(inv));
-      // on privilégie l’inscription (meilleur taux d’activation)
-      router.replace({ pathname: "/register", params: { fromInvite: "1" } });
-      return;
-    }
+  // ✅ attendre une frame UI avant toute navigation
+  await new Promise<void>((res) =>
+    InteractionManager.runAfterInteractions(() => res())
+  );
 
-    // connecté → on pousse direct la page du challenge avec le param ?invite=
-    router.push({
-      pathname: `/challenge-details/${inv.challengeId}`,
-      params: { invite: inv.inviteId },
-    });
-  };
+  if (!isLoggedIn) {
+    await AsyncStorage.setItem(PENDING_KEY, JSON.stringify(inv));
+    router.replace({ pathname: "/register", params: { fromInvite: "1" } });
+    return;
+  }
+
+  router.push({
+    pathname: `/challenge-details/${inv.challengeId}`,
+    params: { invite: inv.inviteId },
+  });
+};
+
 
   // Consomme un pending en stockage (après login ou retour app)
   const consumePending = async () => {
@@ -120,7 +126,7 @@ export function useIncomingInvite(enabled = true) {
     };
     // Re-essaye quand le segment change (utile après login)
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [enabled, segments.join("-")]);
+ }, [enabled, Array.isArray(segments) ? segments.join("-") : ""]);
 }
 
 /** Helper optionnel pour relancer une vérification manuelle (ex: après login) */

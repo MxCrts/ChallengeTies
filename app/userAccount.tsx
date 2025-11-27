@@ -1,4 +1,4 @@
-import React, { useEffect, useState } from "react";
+import React, { useEffect, useState, useMemo, useCallback } from "react";
 import {
   View,
   Text,
@@ -10,6 +10,8 @@ import {
   StatusBar,
   Platform,
   SafeAreaView,
+  ActivityIndicator,
+  Pressable,
 } from "react-native";
 import { Ionicons } from "@expo/vector-icons";
 import { LinearGradient } from "expo-linear-gradient";
@@ -23,6 +25,7 @@ import designSystem from "../theme/designSystem";
 import CustomHeader from "../components/CustomHeader";
 import * as Clipboard from "expo-clipboard";
 import { tap, success } from "@/src/utils/haptics";
+import { useToast } from "@/src/ui/Toast";
 
 const { width: SCREEN_WIDTH } = Dimensions.get("window");
 const normalizeSize = (size: number) => {
@@ -35,6 +38,7 @@ const SPACING = 15;
 
 export default function UserAccount() {
   const { t } = useTranslation();
+  const { show } = useToast();
   const { theme } = useTheme();
   const router = useRouter();
   const isDarkMode = theme === "dark";
@@ -43,6 +47,7 @@ export default function UserAccount() {
     : designSystem.lightTheme;
 
   const user = auth.currentUser;
+
   const [creationTime, setCreationTime] = useState<string | null>(null);
   const [lastLoginTime, setLastLoginTime] = useState<string | null>(null);
   const [verifSending, setVerifSending] = useState(false);
@@ -84,42 +89,47 @@ export default function UserAccount() {
     }
   }, [user, router]);
 
-  const copy = async (value?: string | null, label?: string) => {
-    if (!value) return;
-    tap();
-    try {
-      await Clipboard.setStringAsync(value);
-      success();
-      Alert.alert(
-        label ?? t("copied"),
-        t("copiedToClipboard", { defaultValue: "Copié dans le presse-papiers." })
-      );
-    } catch {
-      // on ne casse rien si le presse-papiers plante
-    }
-  };
+  const copy = useCallback(
+    async (value?: string | null, label?: string) => {
+      if (!value) return;
+      tap();
+      try {
+        await Clipboard.setStringAsync(value);
+        success();
+        show(
+          t("copiedToClipboard", {
+            defaultValue: "Copié dans le presse-papiers.",
+          }),
+          "success"
+        );
+      } catch {
+        show(t("unknownError"), "error");
+      }
+    },
+    [show, t]
+  );
 
-  const resendVerification = async () => {
+  const resendVerification = useCallback(async () => {
     if (!auth.currentUser || auth.currentUser.emailVerified) return;
     tap();
     setVerifSending(true);
     try {
       await sendEmailVerification(auth.currentUser);
       success();
-      Alert.alert(
-        t("emailVerification"),
+      show(
         t("verificationEmailSent", {
           defaultValue: "Email de vérification envoyé.",
-        })
+        }),
+        "success"
       );
     } catch (e) {
-      Alert.alert(t("error"), t("unknownError"));
+      show(t("unknownError"), "error");
     } finally {
       setVerifSending(false);
     }
-  };
+  }, [show, t]);
 
-  const handleSignOut = async () => {
+  const handleSignOut = useCallback(async () => {
     tap();
     Alert.alert(
       t("logout"),
@@ -134,22 +144,22 @@ export default function UserAccount() {
           onPress: async () => {
             try {
               await auth.signOut();
-              Alert.alert(t("loggedOut"), t("disconnected"));
+              show(t("disconnected"), "success");
               router.replace("/login");
             } catch (error) {
               console.error("SignOut error:", error);
-              Alert.alert(t("error"), t("logoutFailed"));
+              show(t("logoutFailed"), "error");
             }
           },
         },
       ],
       { cancelable: true }
     );
-  };
+  }, [router, show, t]);
 
   // Méthode principale de connexion (email / Google / Apple…)
   const primaryProviderId = user?.providerData?.[0]?.providerId ?? "password";
-  const providerLabel = (() => {
+  const providerLabel = useMemo(() => {
     switch (primaryProviderId) {
       case "password":
         return t("auth.emailPassword", {
@@ -164,396 +174,408 @@ export default function UserAccount() {
       default:
         return t("auth.otherProvider", { defaultValue: "Autre méthode" });
     }
-  })();
+  }, [primaryProviderId, t]);
+
+  const badgeVerified = user?.emailVerified;
 
   return (
-    <>
-      <LinearGradient
-        colors={[
-          currentTheme.colors.background,
-          currentTheme.colors.cardBackground + "F0",
-        ]}
-        style={styles.gradientContainer}
-        start={{ x: 0, y: 0 }}
-        end={{ x: 1, y: 1 }}
-      >
-        <SafeAreaView style={styles.safeArea}>
-          <StatusBar
-            translucent
-            backgroundColor="transparent"
-            barStyle={isDarkMode ? "light-content" : "dark-content"}
-          />
-          <CustomHeader title={t("myAccount")} />
+    <LinearGradient
+      colors={[
+        currentTheme.colors.background,
+        currentTheme.colors.cardBackground + "F0",
+      ]}
+      style={styles.gradientContainer}
+      start={{ x: 0, y: 0 }}
+      end={{ x: 1, y: 1 }}
+    >
+      <SafeAreaView style={styles.safeArea}>
+        <StatusBar
+          translucent
+          backgroundColor="transparent"
+          barStyle={isDarkMode ? "light-content" : "dark-content"}
+        />
+        <CustomHeader title={t("myAccount")} />
 
-          <ScrollView
-            contentContainerStyle={styles.scrollContent}
-            showsVerticalScrollIndicator={false}
+        <ScrollView
+          contentContainerStyle={styles.scrollContent}
+          showsVerticalScrollIndicator={false}
+        >
+          {/* 📧 Email + statut vérification */}
+          <Animated.View
+            entering={FadeInUp.delay(100)}
+            style={[
+              styles.infoCard,
+              {
+                borderColor: currentTheme.colors.border,
+                backgroundColor: isDarkMode
+                  ? "rgba(255, 255, 255, 0.05)"
+                  : "#FFFFFF",
+              },
+            ]}
           >
-            {/* 📧 Email + statut vérification */}
-            <Animated.View
-              entering={FadeInUp.delay(100)}
-              style={[
-                styles.infoCard,
-                {
-                  borderColor: currentTheme.colors.border,
-                  backgroundColor: isDarkMode
-                    ? "rgba(255, 255, 255, 0.05)"
-                    : "#FFFFFF",
-                },
-              ]}
-            >
-              <View style={styles.rowBetween}>
-                <Text
+            <View style={styles.rowBetween}>
+              <Text
+                style={[
+                  styles.label,
+                  { color: currentTheme.colors.secondary },
+                ]}
+              >
+                {t("email")}
+              </Text>
+
+              {badgeVerified ? (
+                <View
                   style={[
-                    styles.label,
-                    { color: currentTheme.colors.secondary },
+                    styles.badge,
+                    {
+                      borderColor: "#22C55E",
+                      backgroundColor: "rgba(34,197,94,0.15)",
+                    },
                   ]}
                 >
-                  {t("email")}
-                </Text>
-                {user?.emailVerified ? (
-                  <View
-                    style={[
-                      styles.badge,
-                      {
-                        borderColor: "#22C55E",
-                        backgroundColor: "rgba(34,197,94,0.15)",
-                      },
-                    ]}
-                  >
-                    <Ionicons
-                      name="checkmark-circle-outline"
-                      size={normalizeSize(14)}
-                      color="#22C55E"
-                    />
-                    <Text
-                      style={[styles.badgeText, { color: "#14532D" }]}
-                    >
-                      {t("verified")}
-                    </Text>
-                  </View>
-                ) : (
-                  <TouchableOpacity
-                    onPress={resendVerification}
-                    disabled={verifSending}
-                    style={[
-                      styles.badge,
-                      {
-                        borderColor: "#FF8C00",
-                        backgroundColor: "rgba(255,140,0,0.12)",
-                      },
-                    ]}
-                    accessibilityLabel={t("resendVerification")}
-                    testID="resend-verification"
-                  >
+                  <Ionicons
+                    name="checkmark-circle-outline"
+                    size={normalizeSize(14)}
+                    color="#22C55E"
+                  />
+                  <Text style={[styles.badgeText, { color: "#14532D" }]}>
+                    {t("verified")}
+                  </Text>
+                </View>
+              ) : (
+                <Pressable
+                  onPress={resendVerification}
+                  disabled={verifSending}
+                  style={({ pressed }) => [
+                    styles.badge,
+                    {
+                      borderColor: "#FF8C00",
+                      backgroundColor: "rgba(255,140,0,0.12)",
+                      opacity: verifSending ? 0.7 : pressed ? 0.9 : 1,
+                    },
+                  ]}
+                  accessibilityLabel={t("resendVerification")}
+                  testID="resend-verification"
+                >
+                  {verifSending ? (
+                    <ActivityIndicator size="small" color="#FF8C00" />
+                  ) : (
                     <Ionicons
                       name="mail-outline"
                       size={normalizeSize(14)}
                       color="#FF8C00"
                     />
-                    <Text
-                      style={[styles.badgeText, { color: "#7C2D12" }]}
-                    >
-                      {verifSending ? t("sending") : t("verify")}
-                    </Text>
-                  </TouchableOpacity>
-                )}
-              </View>
-              <TouchableOpacity
-                onPress={() => copy(user?.email, t("email"))}
-                activeOpacity={0.8}
-              >
-                <View style={styles.copyRow}>
-                  <Text
-                    style={[
-                      styles.value,
-                      {
-                        color: isDarkMode
-                          ? currentTheme.colors.textPrimary
-                          : "#111111",
-                        flex: 1,
-                      },
-                    ]}
-                    numberOfLines={1}
-                    ellipsizeMode="middle"
-                  >
-                    {user?.email || "-"}
-                  </Text>
-                  {!!user?.email && (
-                    <Ionicons
-                      name="copy-outline"
-                      size={normalizeSize(18)}
-                      color={currentTheme.colors.secondary}
-                    />
                   )}
-                </View>
-              </TouchableOpacity>
-            </Animated.View>
+                  <Text style={[styles.badgeText, { color: "#7C2D12" }]}>
+                    {verifSending ? t("sending") : t("verify")}
+                  </Text>
+                </Pressable>
+              )}
+            </View>
 
-            {/* 👤 Username */}
-            <Animated.View
-              entering={FadeInUp.delay(200)}
-              style={[
-                styles.infoCard,
-                {
-                  borderColor: currentTheme.colors.border,
-                  backgroundColor: isDarkMode
-                    ? "rgba(255, 255, 255, 0.05)"
-                    : "#FFFFFF",
-                },
-              ]}
+            <TouchableOpacity
+              onPress={() => copy(user?.email, t("email"))}
+              activeOpacity={0.8}
             >
-              <View style={styles.rowBetween}>
+              <View style={styles.copyRow}>
                 <Text
                   style={[
-                    styles.label,
-                    { color: currentTheme.colors.secondary },
+                    styles.value,
+                    {
+                      color: isDarkMode
+                        ? currentTheme.colors.textPrimary
+                        : "#111111",
+                      flex: 1,
+                    },
                   ]}
+                  numberOfLines={1}
+                  ellipsizeMode="middle"
                 >
-                  {t("username")}
+                  {user?.email || "-"}
                 </Text>
-                {user?.displayName ? null : (
-                  <View
-                    style={[
-                      styles.badge,
-                      { borderColor: currentTheme.colors.border },
-                    ]}
-                  >
-                    <Ionicons
-                      name="person-circle-outline"
-                      size={normalizeSize(14)}
-                      color={currentTheme.colors.secondary}
-                    />
-                    <Text
-                      style={[
-                        styles.badgeText,
-                        { color: currentTheme.colors.secondary },
-                      ]}
-                    >
-                      {t("notSet", { defaultValue: "Non défini" })}
-                    </Text>
-                  </View>
+                {!!user?.email && (
+                  <Ionicons
+                    name="copy-outline"
+                    size={normalizeSize(18)}
+                    color={currentTheme.colors.secondary}
+                  />
                 )}
               </View>
-              <TouchableOpacity
-                onPress={() => copy(user?.displayName, t("username"))}
-                activeOpacity={0.8}
-              >
-                <View style={styles.copyRow}>
-                  <Text
-                    style={[
-                      styles.value,
-                      {
-                        color: isDarkMode
-                          ? currentTheme.colors.textPrimary
-                          : "#111111",
-                        flex: 1,
-                      },
-                    ]}
-                    numberOfLines={1}
-                    ellipsizeMode="tail"
-                  >
-                    {user?.displayName || "-"}
-                  </Text>
-                  {!!user?.displayName && (
-                    <Ionicons
-                      name="copy-outline"
-                      size={normalizeSize(18)}
-                      color={currentTheme.colors.secondary}
-                    />
-                  )}
-                </View>
-              </TouchableOpacity>
-            </Animated.View>
+            </TouchableOpacity>
+          </Animated.View>
 
-            {/* 🔐 Méthode de connexion + UID */}
-            <Animated.View
-              entering={FadeInUp.delay(260)}
-              style={[
-                styles.infoCard,
-                {
-                  borderColor: currentTheme.colors.border,
-                  backgroundColor: isDarkMode
-                    ? "rgba(255, 255, 255, 0.05)"
-                    : "#FFFFFF",
-                },
-              ]}
-            >
-              <View style={styles.rowBetween}>
-                <Text
-                  style={[
-                    styles.label,
-                    { color: currentTheme.colors.secondary },
-                  ]}
-                >
-                  {t("signInMethod", {
-                    defaultValue: "Méthode de connexion",
-                  })}
-                </Text>
-                <Ionicons
-                  name="shield-checkmark-outline"
-                  size={normalizeSize(18)}
-                  color={currentTheme.colors.secondary}
-                />
-              </View>
-              <Text
-                style={[
-                  styles.value,
-                  {
-                    color: isDarkMode
-                      ? currentTheme.colors.textPrimary
-                      : "#111111",
-                    marginBottom: normalizeSize(10),
-                  },
-                ]}
-              >
-                {providerLabel}
-              </Text>
-
-              <Text
-                style={[
-                  styles.label,
-                  {
-                    color: currentTheme.colors.secondary,
-                    marginTop: normalizeSize(6),
-                  },
-                ]}
-              >
-                {t("userId", { defaultValue: "ID utilisateur" })}
-              </Text>
-              <TouchableOpacity
-                onPress={() => copy(user?.uid, t("userId", { defaultValue: "ID utilisateur" }))}
-                activeOpacity={0.8}
-              >
-                <View style={styles.copyRow}>
-                  <Text
-                    style={[
-                      styles.value,
-                      {
-                        color: isDarkMode
-                          ? currentTheme.colors.textPrimary
-                          : "#111111",
-                        flex: 1,
-                      },
-                    ]}
-                    numberOfLines={1}
-                    ellipsizeMode="middle"
-                  >
-                    {user?.uid || "-"}
-                  </Text>
-                  {!!user?.uid && (
-                    <Ionicons
-                      name="copy-outline"
-                      size={normalizeSize(18)}
-                      color={currentTheme.colors.secondary}
-                    />
-                  )}
-                </View>
-              </TouchableOpacity>
-            </Animated.View>
-
-            {/* 📅 Dates de compte */}
-            <Animated.View
-              entering={FadeInUp.delay(320)}
-              style={[
-                styles.infoCard,
-                {
-                  borderColor: currentTheme.colors.border,
-                  backgroundColor: isDarkMode
-                    ? "rgba(255, 255, 255, 0.05)"
-                    : "#FFFFFF",
-                },
-              ]}
-            >
+          {/* 👤 Username */}
+          <Animated.View
+            entering={FadeInUp.delay(200)}
+            style={[
+              styles.infoCard,
+              {
+                borderColor: currentTheme.colors.border,
+                backgroundColor: isDarkMode
+                  ? "rgba(255, 255, 255, 0.05)"
+                  : "#FFFFFF",
+              },
+            ]}
+          >
+            <View style={styles.rowBetween}>
               <Text
                 style={[
                   styles.label,
                   { color: currentTheme.colors.secondary },
                 ]}
               >
-                {t("creationDate")}
-              </Text>
-              <Text
-                style={[
-                  styles.value,
-                  {
-                    color: isDarkMode
-                      ? currentTheme.colors.textPrimary
-                      : "#111111",
-                    marginBottom: normalizeSize(10),
-                  },
-                ]}
-              >
-                {creationTime || "-"}
+                {t("username")}
               </Text>
 
-              <Text
-                style={[
-                  styles.label,
-                  { color: currentTheme.colors.secondary },
-                ]}
-              >
-                {t("lastLogin", {
-                  defaultValue: "Dernière connexion",
-                })}
-              </Text>
-              <Text
-                style={[
-                  styles.value,
-                  {
-                    color: isDarkMode
-                      ? currentTheme.colors.textPrimary
-                      : "#111111",
-                  },
-                ]}
-              >
-                {lastLoginTime || "-"}
-              </Text>
-            </Animated.View>
-
-            {/* 🚪 Logout */}
-            <Animated.View
-              entering={FadeInUp.delay(400)}
-              style={styles.buttonWrapper}
-            >
-              <TouchableOpacity style={styles.button} onPress={handleSignOut}>
-                <LinearGradient
-                  colors={[
-                    currentTheme.colors.primary,
-                    currentTheme.colors.secondary,
+              {user?.displayName ? null : (
+                <View
+                  style={[
+                    styles.badge,
+                    { borderColor: currentTheme.colors.border },
                   ]}
-                  style={styles.buttonGradient}
-                  start={{ x: 1, y: 1 }}
-                  end={{ x: 0, y: 0 }}
                 >
                   <Ionicons
-                    name="log-out-outline"
-                    size={normalizeSize(20)}
-                    color={
-                      isDarkMode
-                        ? currentTheme.colors.textPrimary
-                        : "#111111"
-                    }
+                    name="person-circle-outline"
+                    size={normalizeSize(14)}
+                    color={currentTheme.colors.secondary}
                   />
                   <Text
                     style={[
-                      styles.buttonText,
-                      {
-                        color: isDarkMode
-                          ? currentTheme.colors.textPrimary
-                          : "#111111",
-                      },
+                      styles.badgeText,
+                      { color: currentTheme.colors.secondary },
                     ]}
                   >
-                    {t("logout")}
+                    {t("notSet", { defaultValue: "Non défini" })}
                   </Text>
-                </LinearGradient>
-              </TouchableOpacity>
-            </Animated.View>
-          </ScrollView>
-        </SafeAreaView>
-      </LinearGradient>
-    </>
+                </View>
+              )}
+            </View>
+
+            <TouchableOpacity
+              onPress={() => copy(user?.displayName, t("username"))}
+              activeOpacity={0.8}
+            >
+              <View style={styles.copyRow}>
+                <Text
+                  style={[
+                    styles.value,
+                    {
+                      color: isDarkMode
+                        ? currentTheme.colors.textPrimary
+                        : "#111111",
+                      flex: 1,
+                    },
+                  ]}
+                  numberOfLines={1}
+                  ellipsizeMode="tail"
+                >
+                  {user?.displayName || "-"}
+                </Text>
+                {!!user?.displayName && (
+                  <Ionicons
+                    name="copy-outline"
+                    size={normalizeSize(18)}
+                    color={currentTheme.colors.secondary}
+                  />
+                )}
+              </View>
+            </TouchableOpacity>
+          </Animated.View>
+
+          {/* 🔐 Méthode de connexion + UID */}
+          <Animated.View
+            entering={FadeInUp.delay(260)}
+            style={[
+              styles.infoCard,
+              {
+                borderColor: currentTheme.colors.border,
+                backgroundColor: isDarkMode
+                  ? "rgba(255, 255, 255, 0.05)"
+                  : "#FFFFFF",
+              },
+            ]}
+          >
+            <View style={styles.rowBetween}>
+              <Text
+                style={[
+                  styles.label,
+                  { color: currentTheme.colors.secondary },
+                ]}
+              >
+                {t("signInMethod", {
+                  defaultValue: "Méthode de connexion",
+                })}
+              </Text>
+              <Ionicons
+                name="shield-checkmark-outline"
+                size={normalizeSize(18)}
+                color={currentTheme.colors.secondary}
+              />
+            </View>
+
+            <Text
+              style={[
+                styles.value,
+                {
+                  color: isDarkMode
+                    ? currentTheme.colors.textPrimary
+                    : "#111111",
+                  marginBottom: normalizeSize(10),
+                },
+              ]}
+            >
+              {providerLabel}
+            </Text>
+
+            <Text
+              style={[
+                styles.label,
+                {
+                  color: currentTheme.colors.secondary,
+                  marginTop: normalizeSize(6),
+                },
+              ]}
+            >
+              {t("userId", { defaultValue: "ID utilisateur" })}
+            </Text>
+
+            <TouchableOpacity
+              onPress={() =>
+                copy(
+                  user?.uid,
+                  t("userId", { defaultValue: "ID utilisateur" })
+                )
+              }
+              activeOpacity={0.8}
+            >
+              <View style={styles.copyRow}>
+                <Text
+                  style={[
+                    styles.value,
+                    {
+                      color: isDarkMode
+                        ? currentTheme.colors.textPrimary
+                        : "#111111",
+                      flex: 1,
+                    },
+                  ]}
+                  numberOfLines={1}
+                  ellipsizeMode="middle"
+                >
+                  {user?.uid || "-"}
+                </Text>
+                {!!user?.uid && (
+                  <Ionicons
+                    name="copy-outline"
+                    size={normalizeSize(18)}
+                    color={currentTheme.colors.secondary}
+                  />
+                )}
+              </View>
+            </TouchableOpacity>
+          </Animated.View>
+
+          {/* 📅 Dates de compte */}
+          <Animated.View
+            entering={FadeInUp.delay(320)}
+            style={[
+              styles.infoCard,
+              {
+                borderColor: currentTheme.colors.border,
+                backgroundColor: isDarkMode
+                  ? "rgba(255, 255, 255, 0.05)"
+                  : "#FFFFFF",
+              },
+            ]}
+          >
+            <Text
+              style={[
+                styles.label,
+                { color: currentTheme.colors.secondary },
+              ]}
+            >
+              {t("creationDate")}
+            </Text>
+            <Text
+              style={[
+                styles.value,
+                {
+                  color: isDarkMode
+                    ? currentTheme.colors.textPrimary
+                    : "#111111",
+                  marginBottom: normalizeSize(10),
+                },
+              ]}
+            >
+              {creationTime || "-"}
+            </Text>
+
+            <Text
+              style={[
+                styles.label,
+                { color: currentTheme.colors.secondary },
+              ]}
+            >
+              {t("lastLogin", {
+                defaultValue: "Dernière connexion",
+              })}
+            </Text>
+            <Text
+              style={[
+                styles.value,
+                {
+                  color: isDarkMode
+                    ? currentTheme.colors.textPrimary
+                    : "#111111",
+                },
+              ]}
+            >
+              {lastLoginTime || "-"}
+            </Text>
+          </Animated.View>
+
+          {/* 🚪 Logout */}
+          <Animated.View
+            entering={FadeInUp.delay(400)}
+            style={styles.buttonWrapper}
+          >
+            <TouchableOpacity style={styles.button} onPress={handleSignOut}>
+              <LinearGradient
+                colors={[
+                  currentTheme.colors.primary,
+                  currentTheme.colors.secondary,
+                ]}
+                style={styles.buttonGradient}
+                start={{ x: 1, y: 1 }}
+                end={{ x: 0, y: 0 }}
+              >
+                <Ionicons
+                  name="log-out-outline"
+                  size={normalizeSize(20)}
+                  color={
+                    isDarkMode
+                      ? currentTheme.colors.textPrimary
+                      : "#111111"
+                  }
+                />
+                <Text
+                  style={[
+                    styles.buttonText,
+                    {
+                      color: isDarkMode
+                        ? currentTheme.colors.textPrimary
+                        : "#111111",
+                    },
+                  ]}
+                >
+                  {t("logout")}
+                </Text>
+              </LinearGradient>
+            </TouchableOpacity>
+          </Animated.View>
+        </ScrollView>
+      </SafeAreaView>
+    </LinearGradient>
   );
 }
 

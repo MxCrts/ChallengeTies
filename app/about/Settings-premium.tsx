@@ -4,7 +4,6 @@ import {
   Text,
   StyleSheet,
   TouchableOpacity,
-  Alert,
   ActivityIndicator,
   Platform,
   StatusBar,
@@ -22,6 +21,8 @@ import { doc, getDoc, updateDoc, serverTimestamp } from "firebase/firestore";
 import { useAdsVisibility } from "../../src/context/AdsVisibilityContext";
 import { useRouter } from "expo-router";
 import { useIAP } from "expo-iap";
+import { useToast } from "@/src/ui/Toast";
+import { tap, success, warning } from "@/src/utils/haptics";
 
 const PRODUCT_ID = "challengeties_premium_monthly";
 const SPACING = 20;
@@ -33,6 +34,7 @@ export default function SettingsPremium() {
   const current = isDark ? designSystem.darkTheme : designSystem.lightTheme;
   const { showBanners, showInterstitials, isAdmin } = useAdsVisibility();
   const router = useRouter();
+  const { show: showToast } = useToast();
 
   const uid = auth.currentUser?.uid;
   const isLoggedIn = !!uid;
@@ -54,20 +56,21 @@ export default function SettingsPremium() {
       try {
         const currentUid = auth.currentUser?.uid;
         if (!currentUid) {
-          Alert.alert(
-            t("error", "Erreur"),
-            t(
-              "premiumNoUserOnPurchase",
-              "Aucun utilisateur connecté au moment de l’achat. Réessaie après t’être reconnecté."
-            )
+          warning();
+          setPurchasing(false);
+          showToast(
+            t("premiumNoUserOnPurchase", {
+              defaultValue:
+                "Aucun utilisateur connecté au moment de l’achat. Réessaie après t’être reconnecté.",
+            }),
+            "error"
           );
           return;
         }
 
-        // Mise à jour Firestore : ton app lit déjà ces flags partout
         await updateDoc(doc(db, "users", currentUid), {
-          premium: true, // clé principale
-          isPremium: true, // compat avec l’existant
+          premium: true,
+          isPremium: true,
           premiumSince: serverTimestamp(),
           premiumPlatform: Platform.OS,
           premiumProductId:
@@ -78,39 +81,53 @@ export default function SettingsPremium() {
 
         setUserPremium(true);
 
-        // On marque la transaction comme terminée côté Store
         await finishTransaction({
           purchase,
-          // Premium = non consommable (on ne “mange” pas l’achat)
           isConsumable: false,
         });
 
         setPurchasing(false);
-        Alert.alert(
-          t("success", "Succès"),
-          t("purchaseSuccess", "Merci, Premium activé 🎉")
+        success();
+        showToast(
+          t("purchaseSuccess", {
+            defaultValue:
+              "Merci pour ton soutien ❤️ Toutes les pubs sont désactivées.",
+          }),
+          "success"
         );
       } catch (error: any) {
         console.error("IAP / Firestore premium error:", error?.message || error);
         setPurchasing(false);
-        Alert.alert(
-          t("error", "Erreur"),
-          t(
-            "premiumActivationFailed",
-            "Activation impossible pour le moment. Contacte le support si le problème persiste."
-          )
+        warning();
+        showToast(
+          t("premiumActivationFailed", {
+            defaultValue:
+              "Activation impossible pour le moment. Contacte le support si le problème persiste.",
+          }),
+          "error"
         );
       }
     },
     onPurchaseError: (error) => {
       console.error("IAP purchase error:", error);
       setPurchasing(false);
-      Alert.alert(
-        t("error", "Erreur"),
-        t("purchaseFailed", "Achat interrompu.")
-      );
+      if ((error as any)?.code !== "E_USER_CANCELLED") {
+        warning();
+        showToast(
+          t("purchaseFailed", {
+            defaultValue: "Achat interrompu.",
+          }),
+          "error"
+        );
+      }
     },
   });
+
+  // 🔐 Sécurise products pour éviter tout crash silencieux
+  const safeProducts = products ?? [];
+  const debugInfo = __DEV__
+    ? `IAP connected=${connected ? "yes" : "no"} | products=${safeProducts.length}`
+    : "";
 
   const connecting = !connected;
 
@@ -145,9 +162,7 @@ export default function SettingsPremium() {
       try {
         await fetchProducts({
           skus: [PRODUCT_ID],
-          // le type exact (in-app / subs) dépendra de ta config Store,
-          // mais l’API se charge de mapper correctement côté plateforme
-          type: "in-app",
+          type: "subs",
         });
       } catch (e) {
         console.warn("IAP fetchProducts error:", e);
@@ -164,71 +179,78 @@ export default function SettingsPremium() {
     return false;
   }, [isAdmin, userPremium, showBanners, showInterstitials]);
 
- const buy = useCallback(
-  async (productId: string) => {
-    if (isAdmin) {
-      Alert.alert(
-        t("info", "Info"),
-        t("adminNoNeedPremium", "Les admins n’ont pas besoin de Premium.")
-      );
-      return;
-    }
-    if (!isLoggedIn) {
-      Alert.alert(
-        t("info", "Info"),
-        t(
-          "premiumLoginRequired",
-          "Connecte-toi à ton compte pour passer en Premium et supprimer toutes les pubs."
-        )
-      );
-      router.push("/login");
-      return;
-    }
-    if (!connected) {
-      Alert.alert(
-        t("info", "Info"),
-        t(
-          "storeNotConnected",
-          "La boutique n’est pas encore prête. Réessaie dans quelques secondes."
-        )
-      );
-      return;
-    }
+  const buy = useCallback(
+    async (productId: string) => {
+      tap();
 
-    try {
-      setPurchasing(true);
-      await requestPurchase({
-        request: {
-          ios: { sku: productId },
-          android: { skus: [productId] },
-        },
-        type: "in-app", // 👈 ICI LE FIX
-      });
-    } catch (e: any) {
-      console.error("IAP requestPurchase error:", e);
-      if (e?.code !== "E_USER_CANCELLED") {
-        Alert.alert(
-          t("error", "Erreur"),
-          t("purchaseFailed", "Achat interrompu.")
+      if (isAdmin) {
+        showToast(
+          t("adminNoNeedPremium", {
+            defaultValue: "Les admins n’ont pas besoin de Premium.",
+          }),
+          "info"
         );
+        return;
       }
-      setPurchasing(false);
-    }
-  },
-  [isAdmin, isLoggedIn, connected, requestPurchase, router, t]
-);
+      if (!isLoggedIn) {
+        showToast(
+          t("premiumLoginRequired", {
+            defaultValue:
+              "Connecte-toi à ton compte pour passer en Premium et supprimer toutes les pubs.",
+          }),
+          "info"
+        );
+        router.push("/login");
+        return;
+      }
+      if (!connected) {
+        showToast(
+          t("storeNotConnected", {
+            defaultValue:
+              "La boutique n’est pas encore prête. Réessaie dans quelques secondes.",
+          }),
+          "info"
+        );
+        return;
+      }
 
+      try {
+        setPurchasing(true);
+        await requestPurchase({
+          request: {
+            ios: { sku: productId },
+            android: { skus: [productId] },
+          },
+          type: "subs",
+        });
+      } catch (e: any) {
+        console.error("IAP requestPurchase error:", e);
+        if (e?.code !== "E_USER_CANCELLED") {
+          warning();
+          showToast(
+            t("purchaseFailed", {
+              defaultValue: "Achat interrompu.",
+            }),
+            "error"
+          );
+        }
+        setPurchasing(false);
+      }
+    },
+    [isAdmin, isLoggedIn, connected, requestPurchase, router, t, showToast]
+  );
 
   // ---- Restore = resynchroniser Firestore pour ce compte ----
   const restore = useCallback(async () => {
+    tap();
     const currentUid = auth.currentUser?.uid;
     if (!currentUid) {
-      Alert.alert(
-        t("info", "Info"),
-        t(
-          "premiumLoginToRestore",
-          "Connecte-toi à ton compte pour restaurer tes achats Premium."
-        )
+      showToast(
+        t("premiumLoginToRestore", {
+          defaultValue:
+            "Connecte-toi à ton compte pour restaurer tes achats Premium.",
+        }),
+        "info"
       );
       return;
     }
@@ -241,58 +263,62 @@ export default function SettingsPremium() {
       setUserPremium(isPremium);
 
       if (isPremium) {
-        Alert.alert(
-          t("success", "Succès"),
-          t(
-            "premiumActive",
-            "Premium actif — merci pour ton soutien ❤️ L’app reste 100 % jouable pour tous."
-          )
+        success();
+        showToast(
+          t("premiumActive", {
+            defaultValue:
+              "Premium actif — merci pour ton soutien ❤️ Toutes les pubs sont désactivées.",
+          }),
+          "success"
         );
       } else {
-        Alert.alert(
-          t("info", "Info"),
-          t(
-            "nothingToRestore",
-            "Aucun achat Premium trouvé pour ce compte. Vérifie que tu es connecté avec le bon compte."
-          )
+        showToast(
+          t("nothingToRestore", {
+            defaultValue:
+              "Aucun achat Premium trouvé pour ce compte. Vérifie que tu es connecté avec le bon compte.",
+          }),
+          "info"
         );
       }
     } catch (e) {
       console.error("restore Firestore error:", e);
-      Alert.alert(
-        t("error", "Erreur"),
-        t("restoreFailed", "Restauration impossible pour le moment.")
+      warning();
+      showToast(
+        t("restoreFailed", {
+          defaultValue: "Restauration impossible pour le moment.",
+        }),
+        "error"
       );
     } finally {
       setRestoring(false);
     }
-  }, [t]);
+  }, [t, showToast]);
 
   const perks = [
     {
-      icon: "logo-no-smoking",
-      label: t(
-        "perks.noInterstitals",
-        "Aucune pub interstitielle (pas de coupure brutale)"
-      ),
+      icon: "close-circle-outline",
+      label: t("perks.noInterstitals", {
+        defaultValue: "Plus aucune pub interstitielle (écrans plein)",
+      }),
     },
     {
-      icon: "image-outline",
-      label: t("perks.noBanners", "Aucune bannière affichée dans l’app"),
+      icon: "images-outline",
+      label: t("perks.noBanners", {
+        defaultValue: "Plus aucune bannière dans l’app",
+      }),
     },
     {
-      icon: "sparkles-outline",
-      label: t(
-        "perks.premiumTheme",
-        "Ambiance visuelle plus clean et immersive"
-      ),
+      icon: "chatbubbles-outline",
+      label: t("perks.prioritySupport", {
+        defaultValue: "Support email prioritaire en cas de problème",
+      }),
     },
     {
       icon: "heart-outline",
-      label: t(
-        "perks.supportProject",
-        "Tu soutiens directement le développement de ChallengeTies (pas de pay-to-win)"
-      ),
+      label: t("perks.supportProject", {
+        defaultValue:
+          "Tu soutiens directement le développement de ChallengeTies (pas de pay-to-win)",
+      }),
     },
   ];
 
@@ -311,7 +337,22 @@ export default function SettingsPremium() {
         start={{ x: 0, y: 0 }}
         end={{ x: 1, y: 1 }}
       >
-        <CustomHeader title={t("premiumTitle", "Premium")} />
+        <CustomHeader title={t("premiumTitle", { defaultValue: "Premium" })} />
+
+        {/* Debug IAP en DEV uniquement */}
+        {__DEV__ && (
+          <View style={{ paddingHorizontal: SPACING, paddingBottom: 4 }}>
+            <Text
+              style={{
+                color: current.colors.textSecondary,
+                fontSize: 12,
+                fontFamily: "Comfortaa_400Regular",
+              }}
+            >
+              {debugInfo}
+            </Text>
+          </View>
+        )}
 
         {initializing ? (
           <View style={styles.center}>
@@ -322,7 +363,7 @@ export default function SettingsPremium() {
                 { color: current.colors.textSecondary },
               ]}
             >
-              {t("loading", "Chargement...")}
+              {t("loading", { defaultValue: "Chargement..." })}
             </Text>
           </View>
         ) : (
@@ -346,8 +387,8 @@ export default function SettingsPremium() {
                   style={[styles.title, { color: current.colors.textPrimary }]}
                 >
                   {isEffectivelyPremium
-                    ? t("youArePremium", "Tu es Premium ✨")
-                    : t("notPremiumYet", "Passe en Premium")}
+                    ? t("youArePremium", { defaultValue: "Premium actif ✨" })
+                    : t("notPremiumYet", { defaultValue: "Passe en Premium" })}
                 </Text>
               </View>
               <Text
@@ -356,10 +397,10 @@ export default function SettingsPremium() {
                   { color: current.colors.textSecondary },
                 ]}
               >
-                {t(
-                  "premiumExplainer",
-                  "Premium supprime les publicités et améliore ton confort, sans aucun avantage pay-to-win."
-                )}
+                {t("premiumExplainer", {
+                  defaultValue:
+                    "Premium supprime toutes les pubs de ChallengeTies. Pas d’avantage pay-to-win : juste une expérience plus fluide et un gros coup de pouce au projet.",
+                })}
               </Text>
             </LinearGradient>
 
@@ -412,7 +453,9 @@ export default function SettingsPremium() {
                         { color: current.colors.textSecondary },
                       ]}
                     >
-                      {t("storeConnecting", "Connexion à la boutique...")}
+                      {t("storeConnecting", {
+                        defaultValue: "Connexion à la boutique...",
+                      })}
                     </Text>
                   </View>
                 ) : !isLoggedIn ? (
@@ -423,14 +466,17 @@ export default function SettingsPremium() {
                         { color: current.colors.textSecondary },
                       ]}
                     >
-                      {t(
-                        "premiumLoginRequired",
-                        "Connecte-toi à ton compte pour passer en Premium et supprimer toutes les pubs."
-                      )}
+                      {t("premiumLoginRequired", {
+                        defaultValue:
+                          "Connecte-toi à ton compte pour passer en Premium et supprimer toutes les pubs.",
+                      })}
                     </Text>
 
                     <TouchableOpacity
-                      onPress={() => router.push("/login")}
+                      onPress={() => {
+                        tap();
+                        router.push("/login");
+                      }}
                       activeOpacity={0.9}
                       style={{ marginTop: 12 }}
                     >
@@ -454,25 +500,25 @@ export default function SettingsPremium() {
                             { color: current.colors.textPrimary },
                           ]}
                         >
-                          {t("goToLogin", "Me connecter")}
+                          {t("goToLogin", { defaultValue: "Me connecter" })}
                         </Text>
                       </LinearGradient>
                     </TouchableOpacity>
                   </View>
-                ) : products.length === 0 ? (
+               ) : safeProducts.length === 0 ? (
                   <Text
                     style={[
                       styles.subtitle,
                       { color: current.colors.textSecondary },
                     ]}
                   >
-                    {t(
-                      "noProducts",
-                      "Produits indisponibles pour l’instant. Réessaie plus tard."
-                    )}
+                    {t("noProducts", {
+                      defaultValue:
+                        "Produits indisponibles pour l’instant. Réessaie plus tard.",
+                    })}
                   </Text>
                 ) : (
-                  products.map((p) => (
+                  safeProducts.map((p) => (
                     <View key={p.id} style={styles.productRow}>
                       <View style={{ flex: 1 }}>
                         <Text
@@ -481,7 +527,8 @@ export default function SettingsPremium() {
                             { color: current.colors.textPrimary },
                           ]}
                         >
-                          {p.title?.replace(/\(.*\)$/, "").trim() || "Premium"}
+                          {p.title?.replace(/\(.*\)$/, "").trim() ||
+                            "ChallengeTies Premium"}
                         </Text>
                         <Text
                           style={[
@@ -490,10 +537,10 @@ export default function SettingsPremium() {
                           ]}
                         >
                           {p.description ||
-                            t(
-                              "premiumProductDesc",
-                              "Suppression totale des pubs + expérience plus fluide."
-                            )}
+                            t("premiumProductDesc", {
+                              defaultValue:
+                                "Supprime toutes les pubs de l’app et soutiens les futures mises à jour.",
+                            })}
                         </Text>
                       </View>
 
@@ -530,7 +577,7 @@ export default function SettingsPremium() {
                                 ]}
                               >
                                 {p.displayPrice ??
-                                  t("buy", "Acheter")}
+                                  t("buy", { defaultValue: "Acheter" })}
                               </Text>
                             </>
                           )}
@@ -564,7 +611,9 @@ export default function SettingsPremium() {
                           { color: current.colors.secondary },
                         ]}
                       >
-                        {t("restorePurchases", "Restaurer mes achats")}
+                        {t("restorePurchases", {
+                          defaultValue: "Restaurer mes achats",
+                        })}
                       </Text>
                     </>
                   )}
@@ -587,10 +636,10 @@ export default function SettingsPremium() {
                     { color: current.colors.textSecondary },
                   ]}
                 >
-                  {t(
-                    "premiumActive",
-                    "Premium actif — merci pour ton soutien ❤️ L’app reste 100 % jouable pour tous."
-                  )}
+                  {t("premiumActive", {
+                    defaultValue:
+                      "Premium actif — merci pour ton soutien ❤️ Toutes les pubs sont désactivées.",
+                  })}
                 </Text>
               </LinearGradient>
             )}
@@ -617,8 +666,12 @@ const styles = StyleSheet.create({
   },
   row: { flexDirection: "row", alignItems: "center", marginBottom: 6 },
   title: { fontFamily: "Comfortaa_700Bold", fontSize: 20 },
-  subtitle: { fontFamily: "Comfortaa_400Regular", fontSize: 15, lineHeight: 20 },
-  perksWrap: { marginBottom: SPACING - 6 },
+  subtitle: {
+    fontFamily: "Comfortaa_400Regular",
+    fontSize: 15,
+    lineHeight: 20,
+  },
+  perksWrap: { marginBottom: SPACING - 6, marginTop: 4 },
   perk: {
     borderWidth: 1.5,
     borderRadius: 14,
@@ -629,7 +682,11 @@ const styles = StyleSheet.create({
     alignItems: "center",
     gap: 10,
   },
-  perkText: { fontFamily: "Comfortaa_500Medium", fontSize: 15, flexShrink: 1 },
+  perkText: {
+    fontFamily: "Comfortaa_500Medium",
+    fontSize: 15,
+    flexShrink: 1,
+  },
   productRow: {
     flexDirection: "row",
     alignItems: "center",
@@ -637,7 +694,11 @@ const styles = StyleSheet.create({
     marginTop: 8,
   },
   productTitle: { fontFamily: "Comfortaa_700Bold", fontSize: 16 },
-  productDesc: { fontFamily: "Comfortaa_400Regular", fontSize: 13, marginTop: 2 },
+  productDesc: {
+    fontFamily: "Comfortaa_400Regular",
+    fontSize: 13,
+    marginTop: 2,
+  },
   buyBtn: {
     borderRadius: 12,
     paddingVertical: 10,

@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useCallback, useMemo, useRef  } from "react";
+import React, { useState, useEffect, useCallback, useMemo, useRef } from "react";
 import {
   View,
   StyleSheet,
@@ -9,15 +9,21 @@ import {
   ScrollView,
   ActivityIndicator,
   SafeAreaView,
-  Alert,
   Dimensions,
   Text,
   StatusBar,
   StyleProp,
-  Keyboard
+  Keyboard,
+  AccessibilityInfo,
 } from "react-native";
 import { useRouter } from "expo-router";
-import { doc, updateDoc, getDoc, serverTimestamp, type FieldValue } from "firebase/firestore";
+import {
+  doc,
+  updateDoc,
+  getDoc,
+  serverTimestamp,
+  type FieldValue,
+} from "firebase/firestore";
 import { auth, db, storage } from "../../constants/firebase-config";
 import * as ImagePicker from "expo-image-picker";
 import { TextInput } from "react-native-paper";
@@ -28,18 +34,28 @@ import { useTheme } from "../../context/ThemeContext";
 import { Theme } from "../../theme/designSystem";
 import designSystem from "../../theme/designSystem";
 import CustomHeader from "@/components/CustomHeader";
-import Animated, { FadeInUp, ZoomIn } from "react-native-reanimated";
+import Animated, {
+  FadeInUp,
+  ZoomIn,
+  useSharedValue,
+  useAnimatedStyle,
+  withTiming,
+  withSequence,
+  withDelay,
+  Easing,
+} from "react-native-reanimated";
 import { useTranslation } from "react-i18next";
 import { BlurView } from "expo-blur";
 import type { ViewStyle } from "react-native";
 import BannerSlot from "@/components/BannerSlot";
- import { useBottomTabBarHeight } from "@react-navigation/bottom-tabs";
- import { useSafeAreaInsets } from "react-native-safe-area-context";
- import { useAdsVisibility } from "../../src/context/AdsVisibilityContext";
+import { useBottomTabBarHeight } from "@react-navigation/bottom-tabs";
+import { useSafeAreaInsets } from "react-native-safe-area-context";
+import { useAdsVisibility } from "../../src/context/AdsVisibilityContext";
+import * as Haptics from "expo-haptics";
 
 const SPACING = 15;
-
 const { width: SCREEN_WIDTH, height: SCREEN_HEIGHT } = Dimensions.get("window");
+
 // 🔼 Déclare normalizeSize AVANT de l’utiliser dans n()
 const normalizeSize = (size: number) => {
   const baseWidth = 375;
@@ -50,13 +66,15 @@ const normalizeSize = (size: number) => {
 // Auto-compact on small screens (e.g., iPhone SE / older Androids)
 const IS_COMPACT = SCREEN_HEIGHT < 720;
 // Slightly tighter scaler on compact screens
-const n = (size: number) => Math.round(normalizeSize(IS_COMPACT ? size * 0.9 : size));
+const n = (size: number) =>
+  Math.round(normalizeSize(IS_COMPACT ? size * 0.9 : size));
 // Vertical rhythm tuned for compact
 const V_SPACING = IS_COMPACT ? 10 : 15;
 
 /** Util pour ajouter une alpha sans casser les gradients */
 const withAlpha = (color: string, alpha: number) => {
-  const clamp = (n: number, min = 0, max = 1) => Math.min(Math.max(n, min), max);
+  const clamp = (n: number, min = 0, max = 1) =>
+    Math.min(Math.max(n, min), max);
   const a = clamp(alpha);
 
   if (/^rgba?\(/i.test(color)) {
@@ -74,7 +92,6 @@ const withAlpha = (color: string, alpha: number) => {
   }
   return `rgba(0,0,0,${a})`;
 };
-
 
 // 👇 Normalise n'importe quelle valeur "profil" en string d'affichage
 const toDisplayString = (v: any): string => {
@@ -104,7 +121,7 @@ const isProfileCompleteLocal = (data: {
   interests?: any;
 }): boolean => {
   const hasName = safeTrim(data.displayName).length >= 2; // mini lisible
-  const hasBio = safeTrim(data.bio).length >= 10;         // mini utile
+  const hasBio = safeTrim(data.bio).length >= 10; // mini utile
   const hasLoc = safeTrim(data.location).length >= 2;
   const hasPic = !!safeTrim(data.profileImage);
   const ints = parseInterests(data.interests);
@@ -114,7 +131,6 @@ const isProfileCompleteLocal = (data: {
 
 // ========= Safe TabBar Height (évite le crash hors Tabs) =========
 function useTabBarHeightSafe(): number {
-  // On tente d'utiliser le hook officiel; s'il n'y a pas de Tabs, il throw → fallback 0
   try {
     return useBottomTabBarHeight();
   } catch {
@@ -163,26 +179,38 @@ const GlassCard: React.FC<GlassCardProps> = ({
   );
 };
 
-
-
 interface User {
   uid: string;
   displayName?: string | null;
   bio?: string | null;
   profileImage?: string | null;
   location?: string | null;
-  interests?: string | string[] | null; // 👈 peut arriver en array depuis la base
+  interests?: string | string[] | null;
+
+  // ➕ pour ne pas réécrire inutilement profileCompletedAt
+  profileCompleted?: boolean | null;
+  profileCompletedAt?: any;
 }
 
+type ToastType = "success" | "error" | "info";
+
+interface ToastState {
+  type: ToastType;
+  message: string;
+}
+
+const TOAST_DURATION = 2200;
 
 export default function UserInfo() {
   const { t } = useTranslation();
   const router = useRouter();
+
   // 🔒 Limites & règles UX
   const MAX_NAME = 32;
   const MAX_BIO = 240;
   const MAX_LOCATION = 60;
   const MAX_INTERESTS = 160;
+
   const [user, setUser] = useState<User | null>(null);
   const [displayName, setDisplayName] = useState("");
   const [bio, setBio] = useState("");
@@ -190,20 +218,20 @@ export default function UserInfo() {
   const [location, setLocation] = useState("");
   const [interests, setInterests] = useState("");
   const [isFetching, setIsFetching] = useState(true); // chargement initial du profil
-const [isLoading, setIsLoading] = useState(false); 
+  const [isLoading, setIsLoading] = useState(false);
   const { theme } = useTheme();
 
   const isDarkMode = theme === "dark";
   const insets = useSafeAreaInsets();
- const tabBarHeight = useTabBarHeightSafe();
- const [adHeight, setAdHeight] = useState(0);
+  const tabBarHeight = useTabBarHeightSafe();
+  const [adHeight, setAdHeight] = useState(0);
   const currentTheme: Theme = useMemo(
     () => (isDarkMode ? designSystem.darkTheme : designSystem.lightTheme),
     [isDarkMode]
   );
   const navigatedRef = useRef(false);
   const { showBanners } = useAdsVisibility();
- const bottomPadding = useMemo(
+  const bottomPadding = useMemo(
     () => n(40) + (showBanners ? adHeight : 0) + tabBarHeight + insets.bottom,
     [adHeight, insets.bottom, showBanners, tabBarHeight]
   );
@@ -214,39 +242,101 @@ const [isLoading, setIsLoading] = useState(false);
   const [isLocationFocused, setIsLocationFocused] = useState(false);
   const [isInterestsFocused, setIsInterestsFocused] = useState(false);
 
+  // Toast state
+  const [toast, setToast] = useState<ToastState | null>(null);
+  const toastOpacity = useSharedValue(0);
+  const toastTranslateY = useSharedValue(-10);
+  const [reduceMotion, setReduceMotion] = useState(false);
+
   // ✅ Y a-t-il au moins une vraie modification par rapport aux valeurs en base ?
-const hasChanges = useMemo(() => {
-  if (!user) return false;
+  const hasChanges = useMemo(() => {
+    if (!user) return false;
 
-  const baseDisplay = safeTrim(user.displayName);
-  const baseBio = safeTrim(user.bio);
-  const baseLocation = safeTrim(user.location);
-  const baseInterests = safeTrim(user.interests);
-  const baseProfileImage = user.profileImage || null;
+    const baseDisplay = safeTrim(user.displayName);
+    const baseBio = safeTrim(user.bio);
+    const baseLocation = safeTrim(user.location);
+    const baseInterests = safeTrim(user.interests);
+    const baseProfileImage = user.profileImage || null;
 
-  const cleanDisplay = safeTrim(displayName);
-  const cleanBio = safeTrim(bio);
-  const cleanLocation = safeTrim(location);
-  const cleanInterests = safeTrim(interests);
-  const nextProfileImage = profileImage || null;
+    const cleanDisplay = safeTrim(displayName);
+    const cleanBio = safeTrim(bio);
+    const cleanLocation = safeTrim(location);
+    const cleanInterests = safeTrim(interests);
+    const nextProfileImage = profileImage || null;
 
-  return (
-    (cleanDisplay && cleanDisplay !== baseDisplay) ||
-    (cleanBio && cleanBio !== baseBio) ||
-    (nextProfileImage !== baseProfileImage) ||
-    (cleanLocation && cleanLocation !== baseLocation) ||
-    (cleanInterests && cleanInterests !== baseInterests)
+    return (
+      (cleanDisplay && cleanDisplay !== baseDisplay) ||
+      (cleanBio && cleanBio !== baseBio) ||
+      (nextProfileImage !== baseProfileImage) ||
+      (cleanLocation && cleanLocation !== baseLocation) ||
+      (cleanInterests && cleanInterests !== baseInterests)
+    );
+  }, [user, displayName, bio, profileImage, location, interests]);
+
+  // Reduce motion
+  useEffect(() => {
+    let mounted = true;
+    AccessibilityInfo.isReduceMotionEnabled()
+      .then((v) => mounted && setReduceMotion(!!v))
+      .catch(() => {});
+    const sub = AccessibilityInfo.addEventListener?.(
+      "reduceMotionChanged",
+      (v) => mounted && setReduceMotion(!!v)
+    );
+    return () => {
+      mounted = false;
+      // @ts-ignore compat RN
+      sub?.remove?.();
+    };
+  }, []);
+
+  const toastStyle = useAnimatedStyle(() => ({
+    opacity: toastOpacity.value,
+    transform: [{ translateY: toastTranslateY.value }],
+  }));
+
+  const showToast = useCallback(
+    (type: ToastType, message: string) => {
+      setToast({ type, message });
+
+      toastOpacity.value = 0;
+      toastTranslateY.value = -10;
+
+      toastOpacity.value = withSequence(
+        withTiming(1, { duration: 200, easing: Easing.out(Easing.ease) }),
+        withDelay(
+          TOAST_DURATION,
+          withTiming(0, { duration: 320, easing: Easing.in(Easing.ease) })
+        )
+      );
+
+      toastTranslateY.value = withSequence(
+        withTiming(0, { duration: 200, easing: Easing.out(Easing.ease) }),
+        withDelay(
+          TOAST_DURATION,
+          withTiming(-10, { duration: 320, easing: Easing.in(Easing.ease) })
+        )
+      );
+
+      if (!reduceMotion) {
+        Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light).catch(() => {});
+      }
+
+      setTimeout(() => {
+        setToast((current) =>
+          current && current.message === message ? null : current
+        );
+      }, TOAST_DURATION + 450);
+    },
+    [reduceMotion, toastOpacity, toastTranslateY]
   );
-}, [user, displayName, bio, profileImage, location, interests]);
-
-
 
   // Chargement des données utilisateur
   useEffect(() => {
     const fetchUserData = async () => {
       try {
         const currentUser = auth.currentUser;
-        if (!currentUser) throw new Error(t("userNotAuthenticated"));
+        if (!currentUser) throw new Error(String(t("userNotAuthenticated")));
         const userId = currentUser.uid;
         const userRef = doc(db, "users", userId);
         const userSnap = await getDoc(userRef);
@@ -259,19 +349,20 @@ const hasChanges = useMemo(() => {
           setLocation(userData.location || "");
           setInterests(toDisplayString(userData.interests));
         } else {
-          throw new Error(t("profileNotFound"));
+          throw new Error(String(t("profileNotFound")));
         }
       } catch (error: any) {
-        Alert.alert(
-          t("error"),
-          t("errorFetchingProfile") + `: ${error.message}`
+        console.error("Error fetching profile:", error);
+        showToast(
+          "error",
+          `${t("errorFetchingProfile")}: ${error?.message ?? ""}`
         );
       } finally {
         setIsFetching(false);
       }
     };
     fetchUserData();
-  }, [t]);
+  }, [t, showToast]);
 
   // Sélection de l'image
   const pickImage = useCallback(async () => {
@@ -279,7 +370,7 @@ const hasChanges = useMemo(() => {
       const { status } =
         await ImagePicker.requestMediaLibraryPermissionsAsync();
       if (status !== "granted") {
-        Alert.alert(t("permissionDenied"), t("photoPermissionDenied"));
+        showToast("error", String(t("photoPermissionDenied")));
         return;
       }
       const result = await ImagePicker.launchImageLibraryAsync({
@@ -292,7 +383,7 @@ const hasChanges = useMemo(() => {
         const uri = result.assets[0].uri;
         const currentUser = auth.currentUser;
         if (!currentUser) {
-          Alert.alert(t("error"), t("userNotAuthenticated"));
+          showToast("error", String(t("userNotAuthenticated")));
           return;
         }
         setIsLoading(true);
@@ -309,22 +400,26 @@ const hasChanges = useMemo(() => {
           null,
           (error) => {
             setIsLoading(false);
-            Alert.alert(
-              t("uploadError"),
-              t("uploadFailed") + `: ${error.message}`
+            console.error("Upload error:", error);
+            showToast(
+              "error",
+              `${t("uploadFailed")}: ${error?.message ?? ""}`
             );
           },
           async () => {
             try {
-              const downloadURL = await getDownloadURL(uploadTask.snapshot.ref);
+              const downloadURL = await getDownloadURL(
+                uploadTask.snapshot.ref
+              );
               setProfileImage(downloadURL);
               setIsLoading(false);
-              Alert.alert(t("success"), t("profileImageUpdated"));
+              showToast("success", String(t("profileImageUpdated")));
             } catch (urlError: any) {
               setIsLoading(false);
-              Alert.alert(
-                t("error"),
-                t("uploadFailed") + `: ${urlError.message}`
+              console.error("URL error:", urlError);
+              showToast(
+                "error",
+                `${t("uploadFailed")}: ${urlError?.message ?? ""}`
               );
             }
           }
@@ -332,107 +427,141 @@ const hasChanges = useMemo(() => {
       }
     } catch (error: any) {
       setIsLoading(false);
-      Alert.alert(t("error"), t("uploadFailed") + `: ${error.message}`);
+      console.error("pickImage error:", error);
+      showToast("error", `${t("uploadFailed")}: ${error?.message ?? ""}`);
     }
-  }, [t]);
+  }, [t, showToast]);
 
   // Sauvegarde des modifications
   const handleSave = useCallback(async () => {
     // 🔍 Validations front rapides avant write
-  const tooLong =
-    displayName.trim().length > MAX_NAME ||
-    bio.trim().length > MAX_BIO ||
-    location.trim().length > MAX_LOCATION ||
-    interests.trim().length > MAX_INTERESTS;
-  if (tooLong) {
-    Alert.alert(
-      t("error"),
-      t("profileFieldTooLong", {
-        defaultValue:
-          "Certains champs dépassent la longueur autorisée. Réduis un peu le texte et réessaie.",
-      })
-    );
-    return;
-  }
-  if (!user?.uid) {
-    Alert.alert(t("error"), t("userNotFound"));
-    return;
-  }
+    const tooLong =
+      displayName.trim().length > MAX_NAME ||
+      bio.trim().length > MAX_BIO ||
+      location.trim().length > MAX_LOCATION ||
+      interests.trim().length > MAX_INTERESTS;
+    if (tooLong) {
+      showToast(
+        "error",
+        t("profileFieldTooLong", {
+          defaultValue:
+            "Certains champs dépassent la longueur autorisée. Réduis un peu le texte et réessaie.",
+        }) as string
+      );
+      return;
+    }
+    if (!user?.uid) {
+      showToast("error", String(t("userNotFound")));
+      return;
+    }
 
-  // ✅ On construit dynamiquement ce qui change VRAIMENT (et non vide)
-  const updateData: Partial<User & {
-    profileCompleted?: boolean;
-    profileCompletedAt?: FieldValue | Date;
-    "stats.profile.completed"?: boolean;
-  }> = {};
+    // ✅ On construit dynamiquement ce qui change VRAIMENT (et non vide)
+    const updateData: Partial<
+      User & {
+        profileCompleted?: boolean;
+        profileCompletedAt?: FieldValue | Date;
+        "stats.profile.completed"?: boolean;
+      }
+    > = {};
 
-const cleanDisplay = safeTrim(displayName);
-const cleanBio = safeTrim(bio);
-const cleanLocation = safeTrim(location);
-// Normalise les intérêts: "a,  b ,, c" -> "a, b, c"
-const interestsArray = parseInterests(interests);
-const cleanInterests = interestsArray.join(", ");
+    const cleanDisplay = safeTrim(displayName);
+    const cleanBio = safeTrim(bio);
+    const cleanLocation = safeTrim(location);
+    // Normalise les intérêts
+    const interestsArray = parseInterests(interests);
+    const cleanInterests = interestsArray.join(", ");
 
-if (cleanDisplay && cleanDisplay !== safeTrim(user.displayName)) {
-  updateData.displayName = cleanDisplay;
-}
-if (cleanBio && cleanBio !== safeTrim(user.bio)) {
-  updateData.bio = cleanBio;
-}
-if ((profileImage || null) !== (user.profileImage || null)) {
-  updateData.profileImage = profileImage || null;
-}
+    if (cleanDisplay && cleanDisplay !== safeTrim(user.displayName)) {
+      updateData.displayName = cleanDisplay;
+    }
+    if (cleanBio && cleanBio !== safeTrim(user.bio)) {
+      updateData.bio = cleanBio;
+    }
+    if ((profileImage || null) !== (user.profileImage || null)) {
+      updateData.profileImage = profileImage || null;
+    }
 
+    if (cleanLocation && cleanLocation !== safeTrim(user.location)) {
+      updateData.location = cleanLocation;
+    }
+    if (
+      interestsArray.length > 0 &&
+      cleanInterests !== safeTrim(user.interests)
+    ) {
+      updateData.interests = interestsArray as any;
+    }
 
-// ✅ Si, avec les valeurs à jour (côté client), le profil devient complet,
-  // on pose des flags server-friendly (idempotent côté rules/serveur).
-  if (cleanLocation && cleanLocation !== safeTrim(user.location)) {
-  updateData.location = cleanLocation;
-}
-if (interestsArray.length > 0 && cleanInterests !== safeTrim(user.interests)) {
-  updateData.interests = interestsArray as any;
-}
+    // ✅ prospective complet (on mélange next + base)
+    const prospective = {
+      displayName: cleanDisplay || user.displayName,
+      bio: cleanBio || user.bio,
+      location: cleanLocation || user.location,
+      profileImage: (profileImage || user.profileImage) ?? "",
+      interests: interestsArray.length > 0 ? interestsArray : user.interests,
+    };
 
-// ✅ Si, avec les valeurs à jour (côté client), le profil devient complet,
-const prospective = {
-  displayName: cleanDisplay || user.displayName,
-  bio: cleanBio || user.bio,
-  location: cleanLocation || user.location,
-  profileImage: (profileImage || user.profileImage) ?? "",
-  interests: interestsArray.length > 0 ? interestsArray : user.interests,
-};
-const willBeComplete = isProfileCompleteLocal(prospective);
-if (willBeComplete) {
-  updateData.profileCompleted = true as any;
-  // profileCompletedAt → côté serveur
-  (updateData as any).profileCompletedAt = serverTimestamp();
-}
+    const willBeComplete = isProfileCompleteLocal(prospective);
+    const wasComplete = !!(user as any)?.profileCompleted;
+    // ✅ On ne "stamp" la complétion qu'une seule fois
+    if (willBeComplete && !wasComplete) {
+      (updateData as any).profileCompleted = true;
+      (updateData as any).profileCompletedAt = serverTimestamp();
+      (updateData as any)["stats.profile.completed"] = true;
+    }
 
-// On met toujours à jour updatedAt
-(updateData as any).updatedAt = serverTimestamp();
+    // On met toujours à jour updatedAt
+    (updateData as any).updatedAt = serverTimestamp();
 
-// Rien de pertinent à mettre à jour → on informe et on sort
-if (Object.keys(updateData).length === 0) {
-  Alert.alert(t("info"), t("noChangesDetected"));
-  return;
-}
+    // Rien de pertinent à mettre à jour → on informe et on sort
+    if (Object.keys(updateData).length === 0) {
+      showToast("info", String(t("noChangesDetected")));
+      return;
+    }
 
-  setIsLoading(true);
-  try {
-    const userRef = doc(db, "users", user.uid);
-    await updateDoc(userRef, updateData);
-await checkForAchievements(user.uid);
-Keyboard.dismiss();
-navigatedRef.current = true;
-setIsLoading(false);
-router.back(); // 👈 retour natif, sans flash
-return;
-  } catch (error: any) {
-    Alert.alert(t("error"), t("profileUpdateFailed") + `: ${error.message}`);
-  } finally {
-    if (!navigatedRef.current) setIsLoading(false);
-  }
-}, [user, displayName, bio, profileImage, location, interests, router, t]);
+    setIsLoading(true);
+    try {
+      const userRef = doc(db, "users", user.uid);
+      await updateDoc(userRef, updateData);
+      // ✅ Achievements check safe (profil)
+      try {
+        await checkForAchievements(user.uid);
+      } catch (e) {
+        __DEV__ &&
+          console.warn(
+            "[achievements] check profile save:",
+            (e as any)?.message ?? e
+          );
+      }
+
+      Keyboard.dismiss();
+      navigatedRef.current = true;
+      setIsLoading(false);
+      showToast("success", String(t("profileUpdatedSuccess")));
+      // petit délai pour laisser le toast s'afficher
+      setTimeout(() => {
+        router.back();
+      }, 450);
+      return;
+    } catch (error: any) {
+      console.error("profile update error:", error);
+      showToast(
+        "error",
+        `${t("profileUpdateFailed")}: ${error?.message ?? ""}`
+      );
+    } finally {
+      if (!navigatedRef.current) setIsLoading(false);
+    }
+  }, [
+    user,
+    displayName,
+    bio,
+    profileImage,
+    location,
+    interests,
+    router,
+    t,
+    showToast,
+  ]);
 
   if (isFetching) {
     return (
@@ -472,61 +601,70 @@ return;
 
   return (
     <SafeAreaView style={styles.safeArea}>
-  <StatusBar
-    translucent
-    backgroundColor="transparent"
-    barStyle={isDarkMode ? "light-content" : "dark-content"}
-  />
+      <StatusBar
+        translucent
+        backgroundColor="transparent"
+        barStyle={isDarkMode ? "light-content" : "dark-content"}
+      />
 
-  <LinearGradient
-  colors={[
-    withAlpha(currentTheme.colors.background, 1),
-    withAlpha(currentTheme.colors.cardBackground, 1),
-    withAlpha(currentTheme.colors.primary, 0.13),
-  ]}
-  style={styles.gradientContainer}
-  start={{ x: 0, y: 0 }}
-  end={{ x: 1, y: 1 }}
->
-  <LinearGradient
-  pointerEvents="none"
-  colors={[withAlpha(currentTheme.colors.primary, 0.28), "transparent"]}
-  style={styles.bgOrbTop}
-  start={{ x: 0.2, y: 0 }}
-  end={{ x: 1, y: 1 }}
-/>
-<LinearGradient
-  pointerEvents="none"
-  colors={[withAlpha(currentTheme.colors.secondary, 0.25), "transparent"]}
-  style={styles.bgOrbBottom}
-  start={{ x: 1, y: 0 }}
-  end={{ x: 0, y: 1 }}
-/>
-    <CustomHeader
-      title={t("yourProfile")}
-      backgroundColor="transparent"
-      useBlur={false}
-      showHairline={false}
-    />
+      <LinearGradient
+        colors={[
+          withAlpha(currentTheme.colors.background, 1),
+          withAlpha(currentTheme.colors.cardBackground, 1),
+          withAlpha(currentTheme.colors.primary, 0.13),
+        ]}
+        style={styles.gradientContainer}
+        start={{ x: 0, y: 0 }}
+        end={{ x: 1, y: 1 }}
+      >
+        <LinearGradient
+          pointerEvents="none"
+          colors={[withAlpha(currentTheme.colors.primary, 0.28), "transparent"]}
+          style={styles.bgOrbTop}
+          start={{ x: 0.2, y: 0 }}
+          end={{ x: 1, y: 1 }}
+        />
+        <LinearGradient
+          pointerEvents="none"
+          colors={[
+            withAlpha(currentTheme.colors.secondary, 0.25),
+            "transparent",
+          ]}
+          style={styles.bgOrbBottom}
+          start={{ x: 1, y: 0 }}
+          end={{ x: 0, y: 1 }}
+        />
+
+        <CustomHeader
+          title={t("yourProfile")}
+          backgroundColor="transparent"
+          useBlur={false}
+          showHairline={false}
+        />
+
         <KeyboardAvoidingView
           style={styles.container}
           behavior={Platform.OS === "ios" ? "padding" : undefined}
           keyboardVerticalOffset={Platform.OS === "ios" ? 100 : 0}
         >
           <ScrollView
-            contentContainerStyle={[styles.contentContainer, { paddingBottom: bottomPadding }]}
-  keyboardShouldPersistTaps="handled"
-  showsVerticalScrollIndicator={false}
-  bounces={false}
+            contentContainerStyle={[
+              styles.contentContainer,
+              { paddingBottom: bottomPadding },
+            ]}
+            keyboardShouldPersistTaps="handled"
+            showsVerticalScrollIndicator={false}
+            bounces={false}
           >
-
             <Animated.View
               entering={ZoomIn.delay(100)}
               style={styles.imageContainer}
             >
               <TouchableOpacity
                 onPress={pickImage}
-                accessibilityLabel={t("accessibility.editProfileImage.label")}
+                accessibilityLabel={t(
+                  "accessibility.editProfileImage.label"
+                )}
                 accessibilityHint={t("accessibility.editProfileImage.hint")}
                 accessibilityRole="button"
                 testID="profile-image-button"
@@ -574,177 +712,287 @@ return;
                 </LinearGradient>
               </TouchableOpacity>
             </Animated.View>
-<GlassCard
-  isDarkMode={isDarkMode}
-  overlayLightColor={withAlpha("#FFFFFF", 0.6)}
-  overlayLightColor2={withAlpha("#FFF5E6", 0.4)}
-  overlayDarkColor={withAlpha("#FFFFFF", 0.03)}
-  overlayDarkColor2={withAlpha("#FFFFFF", 0.02)}
-  style={[styles.formCard, { borderColor: isDarkMode ? currentTheme.colors.secondary : "#FFB800" }]}
->
-  {/* Nom */}
-  <Animated.View
-    entering={FadeInUp.delay(200)}
-    style={[
-      styles.inputWrapper,
-      {
-        backgroundColor: isDarkMode ? "rgba(0,0,0,0.3)" : "rgba(255,255,255,0.2)",
-        borderColor: isDarkMode ? currentTheme.colors.secondary : "#FFB800",
-      },
-    ]}
-  >
-    <TextInput
-      label={t("name")}
-      mode="flat"
-      style={[styles.input, { fontSize: normalizeSize(14) }]}
-      value={displayName}
-      onChangeText={(v) => setDisplayName(v.slice(0, MAX_NAME))}
-      onFocus={() => setIsDisplayNameFocused(true)}
-      onBlur={() => setIsDisplayNameFocused(false)}
-      textColor={isDarkMode ? currentTheme.colors.textPrimary : "#000"}
-      underlineColor="transparent"
-      activeUnderlineColor={currentTheme.colors.secondary}
-      placeholderTextColor={isDarkMode ? "#FFD700" : currentTheme.colors.textSecondary}
-      theme={{
-        colors: {
-          background: "transparent",
-          text: isDarkMode ? currentTheme.colors.textPrimary : "#000",
-          primary: isDarkMode ? "#FFEC8B" : currentTheme.colors.secondary,
-          placeholder: isDarkMode ? "#FFD700" : currentTheme.colors.textSecondary,
-          onSurface: isDarkMode ? (!isDisplayNameFocused ? "#FFD700" : currentTheme.colors.textPrimary) : currentTheme.colors.textSecondary,
-        },
-        fonts: { regular: { fontFamily: "Comfortaa_400Regular" } },
-      }}
-      dense
-      accessibilityLabel={t("accessibility.usernameField.label")}
-      accessibilityHint={t("accessibility.usernameField.hint")}
-      testID="input-displayName"
-    />
-  </Animated.View>
 
-  {/* Bio */}
-  <Animated.View
-    entering={FadeInUp.delay(300)}
-    style={[
-      styles.inputWrapper,
-      {
-        backgroundColor: isDarkMode ? "rgba(0,0,0,0.3)" : "rgba(255,255,255,0.2)",
-        borderColor: isDarkMode ? currentTheme.colors.secondary : "#FFB800",
-      },
-    ]}
-  >
-    <TextInput
-      label={t("bio")}
-      mode="flat"
-      style={[styles.input, styles.multilineInput, { fontSize: normalizeSize(14) }]}
-      value={bio}
-      onChangeText={(v) => setBio(v.slice(0, MAX_BIO))}
-      onFocus={() => setIsBioFocused(true)}
-      onBlur={() => setIsBioFocused(false)}
-      multiline
-      numberOfLines={3}
-      textColor={isDarkMode ? currentTheme.colors.textPrimary : "#000"}
-      underlineColor="transparent"
-      activeUnderlineColor={currentTheme.colors.secondary}
-      placeholderTextColor={isDarkMode ? "#FFD700" : currentTheme.colors.textSecondary}
-      theme={{
-        colors: {
-          background: "transparent",
-          text: isDarkMode ? currentTheme.colors.textPrimary : "#000",
-          primary: isDarkMode ? "#FFEC8B" : currentTheme.colors.secondary,
-          placeholder: isDarkMode ? "#FFD700" : currentTheme.colors.textSecondary,
-          onSurface: isDarkMode ? (!isBioFocused ? "#FFD700" : currentTheme.colors.textPrimary) : currentTheme.colors.textSecondary,
-        },
-        fonts: { regular: { fontFamily: "Comfortaa_400Regular" } },
-      }}
-      dense
-      accessibilityLabel={t("accessibility.bioField.label")}
-      accessibilityHint={t("accessibility.bioField.hint")}
-      testID="input-bio"
-    />
-  </Animated.View>
+            <GlassCard
+              isDarkMode={isDarkMode}
+              overlayLightColor={withAlpha("#FFFFFF", 0.6)}
+              overlayLightColor2={withAlpha("#FFF5E6", 0.4)}
+              overlayDarkColor={withAlpha("#FFFFFF", 0.03)}
+              overlayDarkColor2={withAlpha("#FFFFFF", 0.02)}
+              style={[
+                styles.formCard,
+                {
+                  borderColor: isDarkMode
+                    ? currentTheme.colors.secondary
+                    : "#FFB800",
+                },
+              ]}
+            >
+              {/* Nom */}
+              <Animated.View
+                entering={FadeInUp.delay(200)}
+                style={[
+                  styles.inputWrapper,
+                  {
+                    backgroundColor: isDarkMode
+                      ? "rgba(0,0,0,0.3)"
+                      : "rgba(255,255,255,0.2)",
+                    borderColor: isDarkMode
+                      ? currentTheme.colors.secondary
+                      : "#FFB800",
+                  },
+                ]}
+              >
+                <TextInput
+                  label={t("name")}
+                  mode="flat"
+                  style={[styles.input, { fontSize: normalizeSize(14) }]}
+                  value={displayName}
+                  onChangeText={(v) => setDisplayName(v.slice(0, MAX_NAME))}
+                  onFocus={() => setIsDisplayNameFocused(true)}
+                  onBlur={() => setIsDisplayNameFocused(false)}
+                  textColor={
+                    isDarkMode ? currentTheme.colors.textPrimary : "#000"
+                  }
+                  underlineColor="transparent"
+                  activeUnderlineColor={currentTheme.colors.secondary}
+                  placeholderTextColor={
+                    isDarkMode
+                      ? "#FFD700"
+                      : currentTheme.colors.textSecondary
+                  }
+                  theme={{
+                    colors: {
+                      background: "transparent",
+                      text: isDarkMode
+                        ? currentTheme.colors.textPrimary
+                        : "#000",
+                      primary: isDarkMode
+                        ? "#FFEC8B"
+                        : currentTheme.colors.secondary,
+                      placeholder: isDarkMode
+                        ? "#FFD700"
+                        : currentTheme.colors.textSecondary,
+                      onSurface: isDarkMode
+                        ? !isDisplayNameFocused
+                          ? "#FFD700"
+                          : currentTheme.colors.textPrimary
+                        : currentTheme.colors.textSecondary,
+                    },
+                    fonts: {
+                      regular: { fontFamily: "Comfortaa_400Regular" },
+                    },
+                  }}
+                  dense
+                  accessibilityLabel={t(
+                    "accessibility.usernameField.label"
+                  )}
+                  accessibilityHint={t("accessibility.usernameField.hint")}
+                  testID="input-displayName"
+                />
+              </Animated.View>
 
-  {/* Localisation */}
-  <Animated.View
-    entering={FadeInUp.delay(400)}
-    style={[
-      styles.inputWrapper,
-      {
-        backgroundColor: isDarkMode ? "rgba(0,0,0,0.3)" : "rgba(255,255,255,0.2)",
-        borderColor: isDarkMode ? currentTheme.colors.secondary : "#FFB800",
-      },
-    ]}
-  >
-    <TextInput
-      label={t("location")}
-      mode="flat"
-      style={[styles.input, { fontSize: normalizeSize(14) }]}
-      value={location}
-      onChangeText={(v) => setLocation(v.slice(0, MAX_LOCATION))}
-      onFocus={() => setIsLocationFocused(true)}
-      onBlur={() => setIsLocationFocused(false)}
-      textColor={isDarkMode ? currentTheme.colors.textPrimary : "#000"}
-      underlineColor="transparent"
-      activeUnderlineColor={currentTheme.colors.secondary}
-      placeholderTextColor={isDarkMode ? "#FFD700" : currentTheme.colors.textSecondary}
-      theme={{
-        colors: {
-          background: "transparent",
-          text: isDarkMode ? currentTheme.colors.textPrimary : "#000",
-          primary: isDarkMode ? "#FFEC8B" : currentTheme.colors.secondary,
-          placeholder: isDarkMode ? "#FFD700" : currentTheme.colors.textSecondary,
-          onSurface: isDarkMode ? (!isLocationFocused ? "#FFD700" : currentTheme.colors.textPrimary) : currentTheme.colors.textSecondary,
-        },
-        fonts: { regular: { fontFamily: "Comfortaa_400Regular" } },
-      }}
-      dense
-      accessibilityLabel={t("accessibility.locationField.label")}
-      accessibilityHint={t("accessibility.locationField.hint")}
-      testID="input-location"
-    />
-  </Animated.View>
+              {/* Bio */}
+              <Animated.View
+                entering={FadeInUp.delay(300)}
+                style={[
+                  styles.inputWrapper,
+                  {
+                    backgroundColor: isDarkMode
+                      ? "rgba(0,0,0,0.3)"
+                      : "rgba(255,255,255,0.2)",
+                    borderColor: isDarkMode
+                      ? currentTheme.colors.secondary
+                      : "#FFB800",
+                  },
+                ]}
+              >
+                <TextInput
+                  label={t("bio")}
+                  mode="flat"
+                  style={[
+                    styles.input,
+                    styles.multilineInput,
+                    { fontSize: normalizeSize(14) },
+                  ]}
+                  value={bio}
+                  onChangeText={(v) => setBio(v.slice(0, MAX_BIO))}
+                  onFocus={() => setIsBioFocused(true)}
+                  onBlur={() => setIsBioFocused(false)}
+                  multiline
+                  numberOfLines={3}
+                  textColor={
+                    isDarkMode ? currentTheme.colors.textPrimary : "#000"
+                  }
+                  underlineColor="transparent"
+                  activeUnderlineColor={currentTheme.colors.secondary}
+                  placeholderTextColor={
+                    isDarkMode
+                      ? "#FFD700"
+                      : currentTheme.colors.textSecondary
+                  }
+                  theme={{
+                    colors: {
+                      background: "transparent",
+                      text: isDarkMode
+                        ? currentTheme.colors.textPrimary
+                        : "#000",
+                      primary: isDarkMode
+                        ? "#FFEC8B"
+                        : currentTheme.colors.secondary,
+                      placeholder: isDarkMode
+                        ? "#FFD700"
+                        : currentTheme.colors.textSecondary,
+                      onSurface: isDarkMode
+                        ? !isBioFocused
+                          ? "#FFD700"
+                          : currentTheme.colors.textPrimary
+                        : currentTheme.colors.textSecondary,
+                    },
+                    fonts: {
+                      regular: { fontFamily: "Comfortaa_400Regular" },
+                    },
+                  }}
+                  dense
+                  accessibilityLabel={t("accessibility.bioField.label")}
+                  accessibilityHint={t("accessibility.bioField.hint")}
+                  testID="input-bio"
+                />
+              </Animated.View>
 
-  {/* Intérêts */}
-  <Animated.View
-    entering={FadeInUp.delay(500)}
-    style={[
-      styles.inputWrapper,
-      {
-        backgroundColor: isDarkMode ? "rgba(0,0,0,0.3)" : "rgba(255,255,255,0.2)",
-        borderColor: isDarkMode ? currentTheme.colors.secondary : "#FFB800",
-      },
-    ]}
-  >
-    <TextInput
-      label={t("interests")}
-      mode="flat"
-      style={[styles.input, { fontSize: normalizeSize(14) }]}
-      value={interests}
-      onChangeText={(v) => setInterests(v.slice(0, MAX_INTERESTS))}
-      onFocus={() => setIsInterestsFocused(true)}
-      onBlur={() => setIsInterestsFocused(false)}
-      textColor={isDarkMode ? currentTheme.colors.textPrimary : "#000"}
-      underlineColor="transparent"
-      activeUnderlineColor={currentTheme.colors.secondary}
-      placeholder={t("interestsPlaceholder")}
-      placeholderTextColor={isDarkMode ? "#FFD700" : currentTheme.colors.textSecondary}
-      theme={{
-        colors: {
-          background: "transparent",
-          text: isDarkMode ? currentTheme.colors.textPrimary : "#000",
-          primary: isDarkMode ? "#FFEC8B" : currentTheme.colors.secondary,
-          placeholder: isDarkMode ? "#FFD700" : currentTheme.colors.textSecondary,
-          onSurface: isDarkMode ? (!isInterestsFocused ? "#FFD700" : currentTheme.colors.textPrimary) : currentTheme.colors.textSecondary,
-        },
-        fonts: { regular: { fontFamily: "Comfortaa_400Regular" } },
-      }}
-      dense
-      accessibilityLabel={t("accessibility.interestsField.label")}
-      accessibilityHint={t("accessibility.interestsField.hint")}
-      testID="input-interests"
-    />
-  </Animated.View>
-</GlassCard>
+              {/* Localisation */}
+              <Animated.View
+                entering={FadeInUp.delay(400)}
+                style={[
+                  styles.inputWrapper,
+                  {
+                    backgroundColor: isDarkMode
+                      ? "rgba(0,0,0,0.3)"
+                      : "rgba(255,255,255,0.2)",
+                    borderColor: isDarkMode
+                      ? currentTheme.colors.secondary
+                      : "#FFB800",
+                  },
+                ]}
+              >
+                <TextInput
+                  label={t("location")}
+                  mode="flat"
+                  style={[styles.input, { fontSize: normalizeSize(14) }]}
+                  value={location}
+                  onChangeText={(v) => setLocation(v.slice(0, MAX_LOCATION))}
+                  onFocus={() => setIsLocationFocused(true)}
+                  onBlur={() => setIsLocationFocused(false)}
+                  textColor={
+                    isDarkMode ? currentTheme.colors.textPrimary : "#000"
+                  }
+                  underlineColor="transparent"
+                  activeUnderlineColor={currentTheme.colors.secondary}
+                  placeholderTextColor={
+                    isDarkMode
+                      ? "#FFD700"
+                      : currentTheme.colors.textSecondary
+                  }
+                  theme={{
+                    colors: {
+                      background: "transparent",
+                      text: isDarkMode
+                        ? currentTheme.colors.textPrimary
+                        : "#000",
+                      primary: isDarkMode
+                        ? "#FFEC8B"
+                        : currentTheme.colors.secondary,
+                      placeholder: isDarkMode
+                        ? "#FFD700"
+                        : currentTheme.colors.textSecondary,
+                      onSurface: isDarkMode
+                        ? !isLocationFocused
+                          ? "#FFD700"
+                          : currentTheme.colors.textPrimary
+                        : currentTheme.colors.textSecondary,
+                    },
+                    fonts: {
+                      regular: { fontFamily: "Comfortaa_400Regular" },
+                    },
+                  }}
+                  dense
+                  accessibilityLabel={t(
+                    "accessibility.locationField.label"
+                  )}
+                  accessibilityHint={t(
+                    "accessibility.locationField.hint"
+                  )}
+                  testID="input-location"
+                />
+              </Animated.View>
+
+              {/* Intérêts */}
+              <Animated.View
+                entering={FadeInUp.delay(500)}
+                style={[
+                  styles.inputWrapper,
+                  {
+                    backgroundColor: isDarkMode
+                      ? "rgba(0,0,0,0.3)"
+                      : "rgba(255,255,255,0.2)",
+                    borderColor: isDarkMode
+                      ? currentTheme.colors.secondary
+                      : "#FFB800",
+                  },
+                ]}
+              >
+                <TextInput
+                  label={t("interests")}
+                  mode="flat"
+                  style={[styles.input, { fontSize: normalizeSize(14) }]}
+                  value={interests}
+                  onChangeText={(v) => setInterests(v.slice(0, MAX_INTERESTS))}
+                  onFocus={() => setIsInterestsFocused(true)}
+                  onBlur={() => setIsInterestsFocused(false)}
+                  textColor={
+                    isDarkMode ? currentTheme.colors.textPrimary : "#000"
+                  }
+                  underlineColor="transparent"
+                  activeUnderlineColor={currentTheme.colors.secondary}
+                  placeholder={t("interestsPlaceholder")}
+                  placeholderTextColor={
+                    isDarkMode
+                      ? "#FFD700"
+                      : currentTheme.colors.textSecondary
+                  }
+                  theme={{
+                    colors: {
+                      background: "transparent",
+                      text: isDarkMode
+                        ? currentTheme.colors.textPrimary
+                        : "#000",
+                      primary: isDarkMode
+                        ? "#FFEC8B"
+                        : currentTheme.colors.secondary,
+                      placeholder: isDarkMode
+                        ? "#FFD700"
+                        : currentTheme.colors.textSecondary,
+                      onSurface: isDarkMode
+                        ? !isInterestsFocused
+                          ? "#FFD700"
+                          : currentTheme.colors.textPrimary
+                        : currentTheme.colors.textSecondary,
+                    },
+                    fonts: {
+                      regular: { fontFamily: "Comfortaa_400Regular" },
+                    },
+                  }}
+                  dense
+                  accessibilityLabel={t(
+                    "accessibility.interestsField.label"
+                  )}
+                  accessibilityHint={t(
+                    "accessibility.interestsField.hint"
+                  )}
+                  testID="input-interests"
+                />
+              </Animated.View>
+            </GlassCard>
 
             {/* Bouton Sauvegarder */}
             <Animated.View
@@ -752,64 +1000,114 @@ return;
               style={styles.saveButtonWrapper}
             >
               <TouchableOpacity
-  onPress={handleSave}
-  disabled={!hasChanges || isLoading}
-  activeOpacity={0.7}
-  accessibilityLabel={t("accessibility.saveProfileChanges.label")}
-  accessibilityHint={t("accessibility.saveProfileChanges.hint")}
-  accessibilityRole="button"
-  testID="save-button"
->
-  <LinearGradient
-    colors={
-      isDarkMode
-        ? [currentTheme.colors.secondary, currentTheme.colors.primary]
-        : ["#FF8C00", "#FFA500"]
-    }
-    style={[
-      styles.saveButton,
-      {
-        borderWidth: isDarkMode ? 1 : 2,
-        borderColor: isDarkMode ? currentTheme.colors.secondary : "#FFB800",
-        opacity: !hasChanges || isLoading ? 0.6 : 1, // 👈 feedback visuel
-      },
-    ]}
-  >
-    {isLoading ? (
-      <ActivityIndicator color={isDarkMode ? "#FFFFFF" : "#333333"} />
-    ) : (
-      <Text
-        style={[
-          styles.saveButtonText,
-          { color: isDarkMode ? "#FFFFFF" : "#333333" },
-        ]}
-      >
-        {t("save")}
-      </Text>
-    )}
-  </LinearGradient>
-</TouchableOpacity>
-
+                onPress={handleSave}
+                disabled={!hasChanges || isLoading}
+                activeOpacity={0.7}
+                accessibilityLabel={t(
+                  "accessibility.saveProfileChanges.label"
+                )}
+                accessibilityHint={t(
+                  "accessibility.saveProfileChanges.hint"
+                )}
+                accessibilityRole="button"
+                testID="save-button"
+              >
+                <LinearGradient
+                  colors={
+                    isDarkMode
+                      ? [
+                          currentTheme.colors.secondary,
+                          currentTheme.colors.primary,
+                        ]
+                      : ["#FF8C00", "#FFA500"]
+                  }
+                  style={[
+                    styles.saveButton,
+                    {
+                      borderWidth: isDarkMode ? 1 : 2,
+                      borderColor: isDarkMode
+                        ? currentTheme.colors.secondary
+                        : "#FFB800",
+                      opacity: !hasChanges || isLoading ? 0.6 : 1,
+                    },
+                  ]}
+                >
+                  {isLoading ? (
+                    <ActivityIndicator
+                      color={isDarkMode ? "#FFFFFF" : "#333333"}
+                    />
+                  ) : (
+                    <Text
+                      style={[
+                        styles.saveButtonText,
+                        { color: isDarkMode ? "#FFFFFF" : "#333333" },
+                      ]}
+                    >
+                      {t("save")}
+                    </Text>
+                  )}
+                </LinearGradient>
+              </TouchableOpacity>
             </Animated.View>
           </ScrollView>
         </KeyboardAvoidingView>
+
+        {/* Toast premium */}
+        {toast && (
+          <Animated.View
+            pointerEvents="box-none"
+            style={[
+              styles.toastContainer,
+              {
+                bottom:
+                  showBanners && adHeight
+                    ? tabBarHeight + insets.bottom + adHeight + SPACING
+                    : SPACING * 2.4,
+              },
+              toastStyle,
+            ]}
+          >
+            <View
+              style={[
+                styles.toastInner,
+                toast.type === "success" && styles.toastSuccess,
+                toast.type === "error" && styles.toastError,
+                toast.type === "info" && styles.toastInfo,
+              ]}
+            >
+              <Text>
+                {
+                  {
+                    success: "✅",
+                    error: "⚠️",
+                    info: "ℹ️",
+                  }[toast.type]
+                }
+              </Text>
+              <Text style={styles.toastText} numberOfLines={3}>
+                {toast.message}
+              </Text>
+            </View>
+          </Animated.View>
+        )}
+
         {showBanners ? (
-   <View
-     style={{
-       position: "absolute",
-       left: 0,
-       right: 0,
-       bottom: tabBarHeight + insets.bottom,
-       alignItems: "center",
-       backgroundColor: "transparent",
-       paddingBottom: 6,
-       zIndex: 9999,
-     }}
-     pointerEvents="box-none"
-   >
-     <BannerSlot onHeight={(h) => setAdHeight(h)} />
-   </View>
-) : null}
+          <View
+            style={{
+              position: "absolute",
+              left: 0,
+              right: 0,
+              bottom: tabBarHeight + insets.bottom,
+              alignItems: "center",
+              backgroundColor: "transparent",
+              paddingBottom: 6,
+              zIndex: 9999,
+            }}
+            pointerEvents="box-none"
+          >
+            <BannerSlot onHeight={(h) => setAdHeight(h)} />
+          </View>
+        ) : null}
       </LinearGradient>
     </SafeAreaView>
   );
@@ -817,9 +1115,9 @@ return;
 
 const styles = StyleSheet.create({
   safeArea: {
-  flex: 1,
-  paddingTop: 0,
-},
+    flex: 1,
+    paddingTop: 0,
+  },
   gradientContainer: {
     flex: 1,
   },
@@ -877,7 +1175,7 @@ const styles = StyleSheet.create({
   },
   inputWrapper: {
     width: "100%",
-    marginBottom: V_SPACING, // tighter
+    marginBottom: V_SPACING,
     borderRadius: n(14),
     borderWidth: 1.5,
     overflow: "hidden",
@@ -887,32 +1185,32 @@ const styles = StyleSheet.create({
     width: "100%",
     fontFamily: "Comfortaa_400Regular",
     paddingHorizontal: V_SPACING,
-    paddingVertical: n(10),          // tighter field height
+    paddingVertical: n(10),
     backgroundColor: "transparent",
     borderRadius: n(14),
-    minHeight: n(44),                // consistent height
+    minHeight: n(44),
   },
   formCard: {
-  width: "100%",
-  borderWidth: 1.5,
-  borderRadius: normalizeSize(18),
-  marginBottom: SPACING,
-  overflow: "hidden",
-},
+    width: "100%",
+    borderWidth: 1.5,
+    borderRadius: normalizeSize(18),
+    marginBottom: SPACING,
+    overflow: "hidden",
+  },
 
-glassWrap: {
-  borderRadius: normalizeSize(18),
-  overflow: "hidden",
-  borderWidth: 1.5,
-  // ✅ aucune ombre, aucun elevation
-},
+  glassWrap: {
+    borderRadius: normalizeSize(18),
+    overflow: "hidden",
+    borderWidth: 1.5,
+  },
 
-glassInner: {
-  paddingVertical: SPACING,
-  paddingHorizontal: SPACING,
-},
+  glassInner: {
+    paddingVertical: SPACING,
+    paddingHorizontal: SPACING,
+  },
+
   multilineInput: {
-    minHeight: n(IS_COMPACT ? 76 : 88), // denser bio
+    minHeight: n(IS_COMPACT ? 76 : 88),
     textAlignVertical: "top",
     paddingTop: n(10),
   },
@@ -939,7 +1237,7 @@ glassInner: {
     fontFamily: "Comfortaa_700Bold",
   },
 
-  // Background orbs keep as-is but adapt to compact
+  // Background orbs
   bgOrbTop: {
     position: "absolute",
     top: -SCREEN_WIDTH * (IS_COMPACT ? 0.28 : 0.25),
@@ -955,5 +1253,45 @@ glassInner: {
     width: SCREEN_WIDTH * (IS_COMPACT ? 1.05 : 1.1),
     height: SCREEN_WIDTH * (IS_COMPACT ? 1.05 : 1.1),
     borderRadius: SCREEN_WIDTH * 0.55,
+  },
+
+  // Toast premium
+  toastContainer: {
+    position: "absolute",
+    left: 0,
+    right: 0,
+    alignItems: "center",
+    justifyContent: "center",
+    paddingHorizontal: SPACING,
+  },
+  toastInner: {
+    flexDirection: "row",
+    alignItems: "center",
+    paddingHorizontal: SPACING,
+    paddingVertical: n(10),
+    borderRadius: n(20),
+    backgroundColor: "#E5E7EB",
+    shadowColor: "#000",
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.25,
+    shadowRadius: 8,
+    elevation: 10,
+    gap: normalizeSize(8),
+  },
+  toastSuccess: {
+    backgroundColor: "#BBF7D0",
+  },
+  toastError: {
+    backgroundColor: "#FECACA",
+  },
+  toastInfo: {
+    backgroundColor: "#E0F2FE",
+  },
+  toastText: {
+    fontFamily: "Comfortaa_700Bold",
+    fontSize: normalizeSize(13),
+    color: "#0b1120",
+    flexShrink: 1,
+    marginLeft: 4,
   },
 });

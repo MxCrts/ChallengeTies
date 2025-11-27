@@ -17,11 +17,7 @@ export const fetchAndSaveUserLocation = async (): Promise<boolean> => {
     const location = await Location.getCurrentPositionAsync({
       accuracy: Location.Accuracy.Highest,
     });
-    console.log(
-      "📍 Coordonnées GPS réelles:",
-      location.coords.latitude,
-      location.coords.longitude
-    );
+    
 
     // 3. Reverse geocode
     let geocode: Location.LocationGeocodedAddress[] = [];
@@ -30,7 +26,7 @@ export const fetchAndSaveUserLocation = async (): Promise<boolean> => {
         latitude: location.coords.latitude,
         longitude: location.coords.longitude,
       });
-      console.log("🌍 Réponse reverseGeocode:", geocode);
+      
     } catch (e) {
       console.warn("⚠️ Échec reverseGeocode, on utilise fallback Madrid.", e);
     }
@@ -50,7 +46,7 @@ export const fetchAndSaveUserLocation = async (): Promise<boolean> => {
         region = "Community of Madrid";
     }
 
-    console.log("✅ Pays:", country, "🏞️ Région:", region);
+    
 
     // 5. Met à jour Firestore
     const userId = auth.currentUser?.uid;
@@ -73,9 +69,7 @@ export const fetchAndSaveUserLocation = async (): Promise<boolean> => {
       updatedAt: serverTimestamp(),
     });
 
-    console.log(
-      `✅ Localisation enregistrée pour ${userId} : ${region}, ${country}`
-    );
+    
     return true;
   } catch (error) {
     console.error("❌ Erreur fetchAndSaveUserLocation:", error);

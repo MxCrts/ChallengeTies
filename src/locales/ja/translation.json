@@ -515,6 +515,8 @@
     "bonus": "+{{bonus}}",
     "pb": "あなたの最長連続記録：{{days}} 日"
   },
+  "savedShort": "保存済み"
+,
 
   "microEarnedTitle": "トロフィー獲得",
   "microEarnedMessage": "今日 +{{count}} トロフィー ✨",
@@ -532,8 +534,9 @@
     "loading": "読み込み中…",
 
     "shareMessage": "ChallengeTies の「{{title}}」に一緒に挑戦しよう！",
-    "participants": "{{count}} 人参加",
-    "participants_plural": "{{count}} 人参加",
+    "participants_one": "{{count}} 参加者",
+"participants_other": "{{count}} 参加者"
+,
 
     "takeChallenge": "チャレンジを開始",
     "inProgress": "進行中",
@@ -993,10 +996,16 @@
     "optionHint": "この期間を選択",
     "closeBackdrop": "ウィンドウを閉じる"
   },
+  "messageReported": "メッセージを通報しました。ご協力ありがとうございます。",
+"reportMessageFailed": "メッセージを通報できませんでした。しばらくしてからもう一度お試しください。",
+"reportMessage": "このメッセージを通報",
+"report": "通報する",
   "pleaseWait": "少々お待ちください…",
   "chat": {
     "goBack": "戻る",
     "title": "チャット {{title}}",
+    "systemWelcome": "このチャレンジのチャットへようこそ。質問や進捗を共有して、お互いを応援しましょう。思いやりを忘れず、ルールを守ってください 🤝",
+  "welcomeTitle": "ようこそ 👋",
     "messagesList": "メッセージ一覧",
     "placeholder": "メッセージを入力…",
     "sendButton": "メッセージを送信",
@@ -1007,11 +1016,21 @@
     "locationLabel": "所在地",
     "interestsLabel": "興味・関心"
   },
+  "inviteFriends": "友だちを招待",
+  
   "referral": {
-    "menu": "Share & Earn",
+    "menu": "シェア＆ゲット",
     "history": {
       "title": "紹介履歴",
       "subtitle": "合計 {{total}} 名 • {{activated}} 名が有効化",
+      "loading": "紹介履歴を読み込み中です…",
+          "emptyTitle": "まだ紹介したユーザーがいません",
+          "notLoggedInTitle": "紹介履歴を見るにはログインしてください",
+          "notLoggedInBody": "招待した人を追跡するには、アカウントを作成するかログインしてください。",
+          "stats": {
+            "invited": "招待数",
+            "activated": "有効化数"
+          },
       "filters": {
         "all": "すべて",
         "activated": "有効化済み",
@@ -1035,6 +1054,10 @@
       "linksTitle": "あなたのリンク",
       "linkApp": "アプリリンク",
       "linkWeb": "Webリンク",
+       "auth": {
+          "title": "ログインが必要です",
+          "subtitle": "Share & Earn を利用するにはログインしてください。"
+        },
       "copy": "コピー",
       "copiedTitle": "コピー完了 ✅",
       "copiedMsg": "クリップボードにコピーしました。",
@@ -1058,12 +1081,19 @@
       "errors": {
         "title": "エラー",
         "loadStats": "紹介データを読み込めませんでした。",
+        "notUnlocked": "このマイルストーンはまだ解除されていません。しばらくしてからもう一度お試しください。",
         "alreadyClaimed": "この報酬はすでに受け取り済みです。",
         "notReached": "まだ到達していません。",
         "claimFailed": "この報酬を受け取れませんでした。",
         "oops": "おっと"
       }
     },
+    "notif": {
+    "milestoneUnlocked": {
+      "title": "マイルストーン解除 🎉",
+      "body": "今すぐ +{{bonus}} トロフィーを受け取れます！"
+    }
+  },
     "share1": {
       "title": "招待 — {{appName}}",
       "inviteMessage": "{{appName}} で一緒にチャレンジしよう 👇\n{{webLink}}\n(アプリで開く：{{appLink}})",
@@ -1155,6 +1185,7 @@
   "quality": {
     "hintBoostStart": "ヒント：数値目標と期間を明確にすると良いです。",
     "hintBoostMid": "もう少し：毎日の具体的なアクションを加えると完璧！",
+    "scoreLabel": "チャレンジの品質",
     "hintGreat": "完璧！チャレンジが明確でやる気が出ます ✨"
   },
 
@@ -1222,14 +1253,19 @@
   "refreshDaily": "明日新しいチャレンジが追加されます ✨",
   "noChallengesAvailable": "現在利用できるチャレンジはありません。",
   "challengesComingSoon": "新しいチャレンジがまもなく登場します！",
-
-  "screen8": {
-    "readyQuestion": "チャレンジする準備はできた？",
-    "adventureStart": "あなたの冒険は今始まります！挑戦し、成長し、仲間とつながろう。",
-    "imReady": "準備できた",
-    "startAppLabel": "アプリを開始"
+ "screen1": {
+    "logoLabel": "ChallengeTies ロゴ",
+    "presentationText": "より良い自分への旅が、いま始まる。",
+    "nextButtonLabel": "次の画面へ進む"
   },
-
+  "screen8": {
+    "skip": "スキップ",
+    "readyQuestion": "挑戦する準備はできた？",
+    "adventureStart": "冒険はここから！最初のチャレンジを選んで、1日ずつ前へ進もう。",
+    "imReady": "準備OK！",
+    "imReadyHint": "冒険を始めて、最初のチャレンジを選ぼう。",
+    "startAppLabel": "アプリを始める"
+  },
   "screen7": {
     "title": "報酬を獲得しよう",
     "description": "チャレンジを達成してトロフィーを集め、動画を見て報酬を2倍にしよう！",
@@ -1266,21 +1302,13 @@
     "description": "魅力的なチャレンジから選び、毎日を成功への一歩にしよう。",
     "nextButtonLabel": "次へ進む"
   },
-
-  "screen1": {
-    "logoLabel": "ChallengeTies ロゴ",
-    "presentationText": "あなたの成長への旅はここから始まる。",
-    "nextButtonLabel": "次へ進む"
-  },
-
-  "challengeChat": {
-    "backButton": "戻る",
-    "defaultTitle": "チャレンジチャット",
-    "placeholder": "メッセージを入力…",
-    "inputA11yLabel": "メッセージ入力欄",
-    "inputA11yHint": "ここにメッセージを入力",
-    "sendButtonLabel": "送信"
-  },
+"challengeChat": {
+  "longPressReply": "このメッセージに返信する",
+  "replyingTo": "返信先",
+  "sendA11yLabel": "メッセージを送信",
+  "slowmodeHint": "新しいメッセージを送信する前に少しお待ちください。",
+  "slowmodeCountdown": "次のメッセージを送るまであと {{s}} 秒お待ちください"
+},
   "contact": {
     "errorTitle": "エラー",
     "errorMessage": "すべての項目を入力してください。",
@@ -2309,7 +2337,50 @@
     "illustrationSuggeree": "整理されたデスクと、整頓されたデジタルフォルダが表示されたコンピューター画面",
     "imageHelper": "https://firebasestorage.googleapis.com/v0/b/challengeme-d7fef.appspot.com/o/Challenges-Helper%2Fch-organisation-digitale.png?alt=media"
   },
+"premiumTitle": "プレミアム",
+  "premiumNoUserOnPurchase": "購入時にログイン中のユーザーがいませんでした。サインインしてからもう一度お試しください。",
+  "purchaseSuccess": "ご支援ありがとうございます ❤️ すべての広告がオフになりました。",
+  "premiumActivationFailed": "現在プレミアムを有効化できませんでした。問題が続く場合はサポートまでご連絡ください。",
+  "purchaseFailed": "購入がキャンセルされました。",
+  "adminNoNeedPremium": "管理者はプレミアムを利用する必要はありません。",
+  "premiumLoginRequired": "プレミアムにアップグレードして広告をすべて削除するには、アカウントにサインインしてください。",
+  "storeNotConnected": "ストアの準備がまだできていません。数秒後にもう一度お試しください。",
+  "premiumLoginToRestore": "プレミアム購入を復元するには、アカウントにサインインしてください。",
+  "premiumActive": "プレミアム有効 — ご支援ありがとうございます ❤️ すべての広告が無効になっています。",
+  "nothingToRestore": "このアカウントのプレミアム購入が見つかりませんでした。正しいアカウントでサインインしているかご確認ください。",
+  "restoreFailed": "現在、購入を復元できません。",
+  "youArePremium": "プレミアム有効 ✨",
+  "notPremiumYet": "プレミアムにアップグレード",
+  "premiumExplainer": "プレミアムは ChallengeTies からすべての広告を削除します。ペイ・トゥ・ウィンの特典は一切なく、よりスムーズな体験とプロジェクトへの大きなサポートになります。",
+  "storeConnecting": "ストアに接続しています…",
+  "premiumProductDesc": "アプリ内のすべての広告を削除し、今後のアップデートを支援します。",
+  "restorePurchases": "購入を復元",
+  "noProducts": "現在、商品は利用できません。後でもう一度お試しください。",
+  "goToLogin": "サインイン",
 
+  "perks": {
+    "noInterstitals": "フルスクリーンのインタースティシャル広告は一切表示されません",
+    "noBanners": "アプリ内のバナー広告は一切表示されません",
+    "prioritySupport": "トラブル時はメールによる優先サポート",
+    "supportProject": "ペイ・トゥ・ウィンなしで ChallengeTies の開発を直接支援できます"
+  },
+
+  "premium": {
+    "title": "プレミアム",
+    "header": "ChallengeTies プレミアム",
+    "active": "有効",
+    "discover": "詳しく見る",
+    "subtitle": "アプリのすべての広告を取り除き、ChallengeTies を応援しましょう。ペイ・トゥ・ウィン要素はなく、全員が同じルールでプレイできます。",
+    "open": "プレミアムを表示",
+    "manage": "自分のプレミアムを管理",
+    "get": "プレミアムを詳しく見る",
+    "benefit": {
+      "noAds": "アプリ内に広告は一切表示されません",
+      "prioritySupport": "メールによる優先サポート",
+      "fairPlay": "ペイ・トゥ・ウィンの優位性なしで、全員同じ体験",
+      "supportProject": "今後の ChallengeTies アップデートの資金になります"
+    }
+  },
   "challengePenseePositive": {
     "miniCours": "🧘‍♀️ ネガティブな思考をポジティブに変えることは、人生を大きく前向きにしてくれる強力なスキルです。『できない』と思ったら『できる。挑戦する価値がある』と言ってみましょう ✨。自分の思考を観察し、方向づける力があなたを大きく成長させます 🌈",
     "exemples": [
@@ -3694,7 +3765,12 @@
     "title": "最初のチャレンジを選ぼう！",
     "subtitle": "どのモードで始めたい？",
     "chooseSolo": "ソロを選ぶ",
+    "chooseSoloShort": "ソロで選ぶ",
+"chooseDuoShort": "デュオで選ぶ",
     "chooseDuo": "デュオを選ぶ",
+    "cardHint": "タップしてこのチャレンジを選択します。",
+    "emptyTitle": "今はチャレンジがありません",
+    "emptySubtitle": "引っ張って更新するか、もう一度試してね。",
     "modeDuo": "デュオ（おすすめ）",
     "modeSolo": "ソロ",
     "duoBadge": "デュオ",
@@ -3704,8 +3780,6 @@
     "day_one": "{{count}} 日",
     "day_other": "{{count}} 日",
     "chooseMode": "モードを選択",
-    "chooseSoloShort": "ソロを選択",
-    "chooseDuoShort": "デュオを選択",
     "skip": "スキップ",
     "alert": {
       "missingChoiceTitle": "選択されていません",
@@ -3779,52 +3853,48 @@
   "acceptRulesCheckbox": "チャットのルールに同意する",
 
   "tutorial": {
-    "daily": {
-      "title": "今日のチャレンジ",
-      "description": "毎日、あなたのために選ばれたチャレンジが5つ。こまめにチェックして見逃さないようにしよう。"
+    "steps": {
+      "welcome": {
+        "title": "ChallengeTiesへようこそ ✨",
+        "description": "30秒でアプリの重要な機能を素早く紹介します。"
+      },
+      "explore": {
+        "title": "チャレンジを探す",
+        "description": "カテゴリ別に80以上のチャレンジを発見。やる気を引き出すものを見つけよう。"
+      },
+      "create": {
+        "title": "チャレンジを作成",
+        "description": "期間、目標、進捗を自由に設定。自分の習慣づくりをデザインしよう。"
+      },
+      "focus": {
+        "title": "フォーカスモード",
+        "description": "集中力を高める没入型タイマー。時間・セッション・継続度を記録。"
+      },
+      "duo": {
+        "title": "デュオチャレンジ",
+        "description": "友達を招待して一緒に進もう。同期された進捗とモチベアップ通知付き。"
+      },
+      "profile": {
+        "title": "プロフィール＆進捗",
+        "description": "進行中・保存済みチャレンジ、実績、統計、設定をチェック。"
+      },
+      "vote": {
+        "title": "新機能への投票",
+        "description": "アプリの未来を決めよう。次に実装してほしい機能を選んで投票。"
+      }
     },
-    "discover": {
-      "title": "インスピレーション",
-      "description": "ティップス、ランキング、新機能、FAQ にアクセスして、さらに高みを目指そう。"
-    },
-    "welcome": {
-      "title": "ようこそ！",
-      "description": "ChallengeTies の魅力をサクッと紹介する、超ショート・ツアーです。"
-    },
-    "profile": {
-      "title": "あなたのプロフィール",
-      "description": "チャレンジ、報酬、各種設定を一箇所で確認できるマイページです。"
-    },
-    "videoStep": {
-      "title": "即効ヒント",
-      "description": "モチベーションを一気に上げる、短いインスピレーション動画。"
-    },
-    "tapAnywhere": "画面のどこかをタップして続行",
     "buttons": {
-      "start": "始める",
+      "start": "開始",
       "next": "次へ",
       "skip": "スキップ",
       "finish": "完了"
-    },
-    "index": {
-      "welcome": {
-        "title": "ChallengeTies へようこそ ✨",
-        "description": "最初の一歩をスムーズにするためのミニツアーです。いつでもスキップできます。"
-      },
-      "cta": {
-        "title": "冒険をスタート",
-        "description": "ここをタップして、すべてのチャレンジをブラウズして、数秒で次のチャレンジを見つけよう。"
-      },
-      "daily": {
-        "title": "今日のチャレンジ",
-        "description": "毎日、新しいおすすめチャレンジが表示されます。何から始めればいいか迷ったときに最適。"
-      },
-      "discover": {
-        "title": "インスピレーションを得る",
-        "description": "ティップス、ランキング、新機能、FAQ など、成長とモチベ維持に役立つ情報がここに。"
-      }
     }
   },
+  "focusDuration": "集中時間",
+  "breakDuration": "休憩時間",
+  "start": "開始",
+  "focusHint": "ヒント：気が散らないように画面をロックしよう。",
+  "remainingToday": "今日やること",
 
   "categories": {
     "Santé": "健康",
@@ -3843,30 +3913,33 @@
     "État d'esprit": "マインドセット",
     "Autres": "その他"
   },
-
-  "challengeHelper": {
+"challengeHelper": {
     "videos": "おすすめ動画",
-    "noData": "このチャレンジには、まだヘルプ情報が登録されていません。",
+    "noData": "このチャレンジのヘルプはまだ利用できません。",
     "examples": "例",
     "openImage": "イラストを開く",
     "openShare": "開く / 共有する",
     "copy": "コピー",
-    "copySummary": "ミニコースをコピー",
+    "copySummary": "ミニコースをコピーする",
     "explanation": "ミニコース",
     "resources": "リソース",
-    "suggestion": "改善アイデアがある？ 気軽にメッセージを送ってね。",
+    "suggestion": "改善アイデアがありますか？ぜひ教えてください。",
     "share": "共有",
     "shareMessage": {
       "titleLine": "⭐ {{title}}",
       "bodyLine": "{{body}}",
-      "tagline": "1分あったら？ 1つスキルアップ！ ⚡",
+      "tagline": "1分で、新しいスキルを。⚡",
       "cta": "ChallengeTies で開く",
       "linkLabel": "ミニコースを見る",
-      "shareAlt": "このミニコースを ChallengeTies でチェックしよう：{{link}}"
+      "shareAlt": "ChallengeTies でこのミニコースをチェックしよう：{{link}}"
     },
-    "open": "開く"
+    "open": "開く",
+    "missingId": "このヘルプコンテンツが見つかりませんでした。",
+    "loading": "チャレンジヘルプを読み込み中…",
+    "genericTitle": "チャレンジヘルプ",
+    "noContent": "このチャレンジのヘルプコンテンツは、まだ準備中です。後でもう一度確認するか、必要であればご連絡ください。",
+    "shareImageDialog": "画像を共有"
   },
-
   "questions": {
     "title": "よくある質問",
     "expandAll": "すべて開く",

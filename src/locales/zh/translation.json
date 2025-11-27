@@ -569,6 +569,12 @@
   "addInterestsHere": "添加你的兴趣",
 "firstPick": {
   "title": "选择你的第一个挑战！",
+  "cardHint": "点击选择这个挑战。",
+    "emptyTitle": "暂时没有挑战",
+    "emptySubtitle": "下拉刷新或再试一次。",
+    "chooseMode": "选择模式",
+    "chooseSoloShort": "选择单人",
+"chooseDuoShort": "选择双人",
   "subtitle": "你想开始于…",
   "chooseSolo": "选择单人",
   "offlineDuo": "您当前离线。请重新连接以邀请好友一起参与双人挑战。",
@@ -645,6 +651,8 @@
   "loadError": "无法刷新。下拉以重试。"
 }
 ,
+"savedShort": "已保存"
+,
   "challengeDetails": {
     "noDescription": "暂无描述。",
     "untitled": "挑战",
@@ -654,8 +662,9 @@
     "loading": "加载中…",
 
     "shareMessage": "快来加入我，一起挑战《{{title}}》！在 ChallengeTies 上见！",
-    "participants": "{{count}} 位参与者",
-    "participants_plural": "{{count}} 位参与者",
+    "participants_one": "{{count}} 名参与者",
+"participants_other": "{{count}} 名参与者"
+,
 
     "takeChallenge": "接受挑战",
     "inProgress": "进行中",
@@ -1043,20 +1052,36 @@
     "optionHint": "选择该时长",
     "closeBackdrop": "关闭窗口"
   },
+  "messageReported": "消息已被举报，感谢你的提醒。",
+"reportMessageFailed": "无法举报该消息，请稍后重试。",
+"reportMessage": "举报此消息",
+"report": "举报",
   "pleaseWait": "请稍候…",
   "chat": {
     "goBack": "返回",
     "title": "{{title}} 聊天",
     "messagesList": "消息列表",
     "placeholder": "输入消息…",
+    "systemWelcome": "欢迎来到本挑战的聊天区。分享你的问题和进展，互相鼓励——请保持友善并遵守规则 🤝",
+  "welcomeTitle": "欢迎 👋",
     "sendButton": "发送消息",
     "errorSending": "发送消息出错"
   },
-   "referral": {
-    "menu":"分享赢奖励",
+   "inviteFriends": "邀请好友",
+   "inviteAFriend": "邀请好友",
+  "referral": {
+    "menu": "分享赚奖励",
     "history": {
       "title": "我的推荐",
       "subtitle": "共 {{total}} 个 • 已激活 {{activated}} 个",
+      "loading": "正在加载你的邀请记录…",
+        "emptyTitle": "暂时还没有受邀用户",
+        "notLoggedInTitle": "登录后即可查看你的受邀用户",
+        "notLoggedInBody": "创建账户或登录，才能追踪你邀请的朋友。",
+        "stats": {
+          "invited": "已邀请",
+          "activated": "已激活"
+        },
       "filters": {
         "all": "全部",
         "activated": "已激活",
@@ -1076,6 +1101,10 @@
       "linksTitle": "你的链接",
       "linkApp": "App 链接",
       "linkWeb": "网页链接",
+      "auth": {
+          "title": "需要登录",
+          "subtitle": "登录后即可使用 Share & Earn 功能。"
+        },
       "copy": "复制",
       "copiedTitle": "已复制 ✅",
       "copiedMsg": "链接已复制到剪贴板。",
@@ -1101,10 +1130,17 @@
         "loadStats": "无法加载你的推荐数据。",
         "alreadyClaimed": "该里程碑已领取。",
         "notReached": "尚未达到里程碑。",
+        "notUnlocked": "此里程碑尚未解锁。请稍后再试。",
         "claimFailed": "无法领取该里程碑。",
         "oops": "哎呀"
       }
     },
+    "notif": {
+    "milestoneUnlocked": {
+      "title": "里程碑已解锁 🎉",
+      "body": "你现在可以领取 +{{bonus}} 奖杯！"
+    }
+  },
     "shareCard": {
       "title": "你的推荐卡",
       "subtitle": "到处分享，提升你的邀请效率 🚀",
@@ -1190,6 +1226,7 @@
   "quality": {
     "hintBoostStart": "提示：请明确量化目标和持续时间。",
     "hintBoostMid": "再完善一点：加入每天一个具体动作。",
+    "scoreLabel": "挑战质量",
     "hintGreat": "完美！你的挑战清晰且有激励性 ✨"
   },
   "a11y": { "typeHere": "在此输入",
@@ -1297,11 +1334,18 @@
     "listLabel": "排名玩家列表",
     "noPlayers": "此排行榜暂无玩家。"
   },
+  "screen1": {
+    "logoLabel": "ChallengeTies 标志",
+    "presentationText": "成为更好的自己，从现在开始。",
+    "nextButtonLabel": "继续到下一页"
+  },
   "screen8": {
-    "readyQuestion": "准备好接受挑战了吗？",
-    "adventureStart": "你的冒险现在开始！立即加入，进步并融入激励人的社区。",
-    "imReady": "我准备好了",
-    "startAppLabel": "打开应用"
+    "skip": "跳过",
+    "readyQuestion": "准备好迎接挑战了吗？",
+    "adventureStart": "你的旅程现在开始！选择第一个挑战，一天一步向前。",
+    "imReady": "我准备好了！",
+    "imReadyHint": "开始旅程并选择你的第一个挑战。",
+    "startAppLabel": "开始使用"
   },
   "screen7": {
     "title": "获取奖励",
@@ -1334,41 +1378,40 @@
     "description": "从激励性挑战中选择，让每一天成为成功的开始。",
     "nextButtonLabel": "继续下一步"
   },
-  "screen1": {
-    "logoLabel": "ChallengeTies 徽标",
-    "presentationText": "你的个人成长之旅从现在开始。加入追求卓越的充满活力社区。",
-    "nextButtonLabel": "继续下一步"
-  },
-  "challengeChat": {
-    "backButton": "返回",
-    "defaultTitle": "挑战聊天",
-    "placeholder": "你的消息…",
-    "inputA11yLabel": "消息输入框",
-    "inputA11yHint": "在此输入消息",
-    "sendButtonLabel": "发送消息"
-  },
-  "challengeHelper": {
-  "videos": "推荐视频",
-  "noData": "当前暂无该挑战的帮助内容。",
-  "openImage": "打开插图",
-  "openShare": "打开 / 分享",
-  "copy": "复制",
-  "shareMessage": {
-    "titleLine": "⭐ {{title}}",
-    "bodyLine": "{{body}}",
-    "tagline": "有一分钟吗？学个新技能！⚡",
-    "cta": "在 ChallengeTies 中打开",
-    "linkLabel": "查看迷你课程",
-    "shareAlt": "来 ChallengeTies 看这门迷你课程：{{link}}"
-  },
-  "share": "分享",
-  "open": "打开",
-  "copySummary": "复制迷你课程",
-  "explanation": "迷你课程",
-  "examples": "示例",
-  "resources": "资源",
-  "suggestion": "想提出改进建议？请写信给我们。"
+ "challengeChat": {
+  "longPressReply": "回复此消息",
+  "replyingTo": "正在回复",
+  "sendA11yLabel": "发送消息",
+  "slowmodeHint": "请稍等片刻再发送新消息。",
+  "slowmodeCountdown": "请再等待 {{s}} 秒后再发送下一条消息"
 },
+"challengeHelper": {
+    "videos": "推荐视频",
+    "noData": "目前暂时没有这个挑战的辅助内容。",
+    "examples": "示例",
+    "openImage": "打开插图",
+    "openShare": "打开 / 分享",
+    "copy": "复制",
+    "copySummary": "复制微课程内容",
+    "explanation": "微课程",
+    "resources": "资源",
+    "suggestion": "想提出改进建议吗？欢迎给我们写信。",
+    "share": "分享",
+    "shareMessage": {
+      "titleLine": "⭐ {{title}}",
+      "bodyLine": "{{body}}",
+      "tagline": "一分钟，一项技能！⚡",
+      "cta": "在 ChallengeTies 中打开",
+      "linkLabel": "查看微课程",
+      "shareAlt": "在 ChallengeTies 上查看这个微课程：{{link}}"
+    },
+    "open": "打开",
+    "missingId": "未找到该辅助内容。",
+    "loading": "正在加载挑战辅助内容…",
+    "genericTitle": "挑战辅助",
+    "noContent": "该挑战的辅助内容尚未提供。请稍后再来查看，或在需要时联系我们。",
+    "shareImageDialog": "分享图片"
+  },
   "contact": {
     "errorTitle": "错误",
     "errorMessage": "请填写所有字段。",
@@ -2141,7 +2184,50 @@
 ]
 
   },
+"premiumTitle": "高级版",
+  "premiumNoUserOnPurchase": "购买时没有已登录的用户。请先登录账号后再试一次。",
+  "purchaseSuccess": "感谢你的支持 ❤️ 所有广告都已关闭。",
+  "premiumActivationFailed": "目前无法激活高级版。如问题持续，请联系客服支持。",
+  "purchaseFailed": "购买已取消。",
+  "adminNoNeedPremium": "管理员不需要购买高级版。",
+  "premiumLoginRequired": "请登录账号以升级到高级版并移除所有广告。",
+  "storeNotConnected": "商店尚未准备好。请稍后再试。",
+  "premiumLoginToRestore": "请登录账号以恢复你的高级版购买。",
+  "premiumActive": "高级版已启用 — 感谢你的支持 ❤️ 所有广告都已关闭。",
+  "nothingToRestore": "未在此账号下找到高级版购买记录。请确认你登录的是正确账号。",
+  "restoreFailed": "目前无法恢复购买。",
+  "youArePremium": "高级版已启用 ✨",
+  "notPremiumYet": "升级到高级版",
+  "premiumExplainer": "高级版会移除 ChallengeTies 中的所有广告。没有任何“氪金制胜”的优势，只是更流畅的体验以及对项目的大力支持。",
+  "storeConnecting": "正在连接商店…",
+  "premiumProductDesc": "移除应用内所有广告，并支持未来的更新。",
+  "restorePurchases": "恢复我的购买",
+  "noProducts": "目前没有可用商品。请稍后再试。",
+  "goToLogin": "登录",
 
+  "perks": {
+    "noInterstitals": "不再显示全屏插屏广告",
+    "noBanners": "应用内不再显示任何横幅广告",
+    "prioritySupport": "出现问题时享受优先邮箱客服",
+    "supportProject": "你在直接支持 ChallengeTies 的开发（没有“氪金制胜”）"
+  },
+
+  "premium": {
+    "title": "高级版",
+    "header": "ChallengeTies 高级版",
+    "active": "已启用",
+    "discover": "了解更多",
+    "subtitle": "移除应用中的所有广告，并支持 ChallengeTies。没有任何“氪金制胜”机制，所有人都在同一规则下体验应用。",
+    "open": "查看高级版",
+    "manage": "管理我的高级版",
+    "get": "了解高级版",
+    "benefit": {
+      "noAds": "整个应用中不再显示广告",
+      "prioritySupport": "优先邮箱客服",
+      "fairPlay": "没有“氪金制胜”优势，所有用户体验相同",
+      "supportProject": "帮助资助 ChallengeTies 的后续更新"
+    }
+  },
   "challengeModeAvion": {
     "miniCours": "🔅 在这个充斥通知的世界里，一小时的飞行模式能帮助你集中思绪，摆脱信息过载。它是一个充电情感电池的宁静气泡。利用这段时间来反思、阅读、头脑风暴或放松自己。📵 享受安静，完成重要任务或静静品杯咖啡。记住，你的大脑也需要休息才能高效运转。🌴",
     "exemples": [
@@ -3955,52 +4041,48 @@
   "pleaseAcceptRules": "请勾选框以接受规则。",
   "errorSavingRulesAcceptance": "保存接受规则时出错。",
   "acceptRulesCheckbox": "接受聊天规则",
+  "remainingToday": "今天要做的",
+  "focusDuration": "专注时长",
+  "breakDuration": "休息时长",
+  "start": "开始",
+  "focusHint": "小提示：锁定屏幕以避免分心。",
   "tutorial": {
-  "daily": {
-    "title": "你的每日挑战",
-    "description": "每天为你精选 5 个挑战。记得常回来看看！"
-  },
-  "discover": {
-    "title": "获取灵感",
-    "description": "访问技巧、排行榜、新功能和常见问题，持续进步。"
-  },
-  "welcome": {
-    "title": "欢迎！",
-    "description": "带你快速浏览 ChallengeTies 的精彩亮点。"
-  },
-  "profile": {
-    "title": "你的个人资料",
-    "description": "在同一个地方查看挑战、奖励和偏好设置。"
-  },
-  "videoStep": {
-    "title": "快速小技巧",
-    "description": "一段简短视频，激发灵感并提升动力。"
-  },
-  "tapAnywhere": "点击任意位置继续",
-  "buttons": {
-    "start": "开始",
-    "next": "下一步",
-    "skip": "跳过",
-    "finish": "完成"
-  },
-  "index": {
-    "welcome": {
-      "title": "欢迎来到 ChallengeTies ✨",
-      "description": "一个迷你导览，帮助你快速上手。随时可以跳过。"
+    "steps": {
+      "welcome": {
+        "title": "欢迎使用 ChallengeTies ✨",
+        "description": "30 秒快速了解应用的核心功能。"
+      },
+      "explore": {
+        "title": "探索挑战",
+        "description": "发现 80 多个按类别组织的挑战。选择激励你的并立即开始。"
+      },
+      "create": {
+        "title": "创建你的挑战",
+        "description": "自定义时长、目标和进度。成为你自律旅程的设计师。"
+      },
+      "focus": {
+        "title": "专注模式",
+        "description": "沉浸式计时器帮助你集中注意力。跟踪时间、进程和坚持度。"
+      },
+      "duo": {
+        "title": "双人挑战",
+        "description": "邀请好友一起进步。实时同步与激励提醒。"
+      },
+      "profile": {
+        "title": "你的资料与进度",
+        "description": "查看当前挑战、已保存项目、成就、统计与设置。"
+      },
+      "vote": {
+        "title": "为新功能投票",
+        "description": "决定应用未来的发展方向。投票你最希望看到的功能。"
+      }
     },
-    "cta": {
-      "title": "开始你的冒险",
-      "description": "点击这里探索所有挑战，几秒内找到下一个适合你的挑战。"
-    },
-    "daily": {
-      "title": "今日挑战",
-      "description": "每天一组全新挑战。如果你不知道从哪里开始，这里最合适。"
-    },
-    "discover": {
-      "title": "获取灵感",
-      "description": "技巧、排行榜、新功能、常见问题…保持动力所需的一切。"
+    "buttons": {
+      "start": "开始",
+      "next": "下一步",
+      "skip": "跳过",
+      "finish": "完成"
     }
   }
-}
 
 }

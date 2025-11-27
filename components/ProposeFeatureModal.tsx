@@ -1,4 +1,4 @@
-import React, { useMemo, useState, useCallback, useRef } from "react";
+import React, { useMemo, useState, useCallback, useRef, useEffect } from "react";
 import {
   Modal,
   View,
@@ -14,6 +14,7 @@ import {
   ActivityIndicator,
   Dimensions,
   ScrollView,
+  AccessibilityInfo,
 } from "react-native";
 import { Ionicons } from "@expo/vector-icons";
 import { LinearGradient } from "expo-linear-gradient";
@@ -69,49 +70,94 @@ export default function ProposeFeatureModal({
   const [title, setTitle] = useState("");
   const [description, setDescription] = useState("");
   const [submitting, setSubmitting] = useState(false);
+  const [reduceMotion, setReduceMotion] = useState(false);
 
   const titleInputRef = useRef<TextInput>(null);
 
   const titleLen = title.trim().length;
   const descLen = description.trim().length;
   const titleLeft = Math.max(0, TITLE_MAX - titleLen);
-  const descLeft  = Math.max(0, DESC_MAX - descLen);
+  const descLeft = Math.max(0, DESC_MAX - descLen);
 
   const titleValid = titleLen >= 6 && titleLen <= TITLE_MAX;
-  const descValid  = descLen <= DESC_MAX; // facultatif
-  const canSubmit  = titleValid && descValid && !submitting;
+  const descValid = descLen <= DESC_MAX; // facultatif
+  const canSubmit = titleValid && descValid && !submitting;
 
-  const styles = useMemo(() => createStyles(isDark, currentTheme, insets), [isDark, currentTheme, insets]);
+  const styles = useMemo(
+    () => createStyles(isDark, currentTheme, insets),
+    [isDark, currentTheme, insets]
+  );
+
+  // Respect des préférences d’accessibilité (Reduce Motion)
+  useEffect(() => {
+    let isMounted = true;
+    AccessibilityInfo.isReduceMotionEnabled()
+      .then((v) => {
+        if (isMounted) setReduceMotion(!!v);
+      })
+      .catch(() => {});
+    const sub = AccessibilityInfo.addEventListener?.("reduceMotionChanged", (v) => {
+      if (isMounted) setReduceMotion(!!v);
+    });
+    return () => {
+      isMounted = false;
+      // @ts-ignore RN compat
+      sub?.remove?.();
+    };
+  }, []);
 
   const handleClose = useCallback(async () => {
-    try { await Haptics.selectionAsync(); } catch {}
+    try {
+      if (!reduceMotion) {
+        await Haptics.selectionAsync();
+      }
+    } catch {}
     onClose();
-  }, [onClose]);
+  }, [onClose, reduceMotion]);
 
   const handleSubmission = useCallback(async () => {
     if (!canSubmit) {
-      try { await Haptics.notificationAsync(Haptics.NotificationFeedbackType.Warning); } catch {}
-      Alert.alert(t("proposeFeature.errorTitle"), t("proposeFeature.errorNoTitle"));
+      try {
+        if (!reduceMotion) {
+          await Haptics.notificationAsync(Haptics.NotificationFeedbackType.Warning);
+        }
+      } catch {}
+      Alert.alert(
+        t("proposeFeature.errorTitle", { defaultValue: "Oups" }),
+        t("proposeFeature.errorNoTitle", {
+          defaultValue: "Ajoute un titre suffisamment clair pour ta proposition.",
+        })
+      );
       return;
     }
     try {
       setSubmitting(true);
       await onSubmit(title.trim(), description.trim() || undefined);
-      try { await Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success); } catch {}
+      try {
+        if (!reduceMotion) {
+          await Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
+        }
+      } catch {}
       setTitle("");
       setDescription("");
       onClose();
     } catch (e) {
       console.error(e);
-      try { await Haptics.notificationAsync(Haptics.NotificationFeedbackType.Error); } catch {}
+      try {
+        if (!reduceMotion) {
+          await Haptics.notificationAsync(Haptics.NotificationFeedbackType.Error);
+        }
+      } catch {}
       Alert.alert(
-        t("proposeFeature.errorTitle"),
-        t("proposeFeature.submitFailed", { defaultValue: "Échec de l’envoi. Réessaie." })
+        t("proposeFeature.errorTitle", { defaultValue: "Oups" }),
+        t("proposeFeature.submitFailed", {
+          defaultValue: "Échec de l’envoi. Réessaie un peu plus tard.",
+        })
       );
     } finally {
       setSubmitting(false);
     }
-  }, [canSubmit, onSubmit, title, description, t, onClose]);
+  }, [canSubmit, onSubmit, title, description, t, onClose, reduceMotion]);
 
   return (
     <Modal
@@ -124,11 +170,17 @@ export default function ProposeFeatureModal({
     >
       {/* Overlay plein écran, centrage absolu */}
       <Animated.View
-        entering={FadeIn.duration(160)}
-        exiting={FadeOut.duration(140)}
+        entering={reduceMotion ? undefined : FadeIn.duration(160)}
+        exiting={reduceMotion ? undefined : FadeOut.duration(140)}
         style={styles.overlay}
         accessibilityViewIsModal
-        accessibilityLabel={t("proposeFeature.a11yOverlay", { defaultValue: "Proposer une fonctionnalité" })}
+        accessible
+        accessibilityLabel={t("proposeFeature.a11yOverlay", {
+          defaultValue: "Proposer une fonctionnalité",
+        })}
+        accessibilityHint={t("proposeFeature.a11yOverlayHint", {
+          defaultValue: "Remplis le formulaire pour suggérer une nouvelle idée.",
+        })}
       >
         {/* Backdrop cliquable pour fermer */}
         <TouchableWithoutFeedback onPress={handleClose}>
@@ -139,15 +191,25 @@ export default function ProposeFeatureModal({
         <KeyboardAvoidingView
           behavior={Platform.OS === "ios" ? "padding" : undefined}
           style={styles.kav}
-          keyboardVerticalOffset={Platform.OS === "ios" ? Math.max(insets.top, 16) : 0}
+          keyboardVerticalOffset={
+            Platform.OS === "ios" ? Math.max(insets.top, 16) + 24 : 0
+          }
         >
-          <Animated.View entering={ZoomIn.springify().damping(18)} exiting={ZoomOut.duration(140)} style={styles.cardShadow}>
+          <Animated.View
+            entering={
+              reduceMotion
+                ? undefined
+                : ZoomIn.springify().damping(18).stiffness(180)
+            }
+            exiting={reduceMotion ? undefined : ZoomOut.duration(140)}
+            style={styles.cardShadow}
+          >
             {/* Liseré premium */}
             <LinearGradient
               colors={
                 [
                   withAlpha(currentTheme.colors.secondary, 0.9),
-                  withAlpha(currentTheme.colors.primary,   0.9),
+                  withAlpha(currentTheme.colors.primary, 0.9),
                 ] as const
               }
               start={{ x: 0, y: 0 }}
@@ -174,16 +236,26 @@ export default function ProposeFeatureModal({
                   <TouchableOpacity
                     onPress={handleClose}
                     accessibilityRole="button"
-                    accessibilityLabel={t("common.close")}
+                    accessibilityLabel={t("common.close", { defaultValue: "Fermer" })}
                     hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
                   >
-                    <Ionicons name="close" size={normalize(22)} color={isDark ? "#fff" : "#111"} />
+                    <Ionicons
+                      name="close"
+                      size={normalize(22)}
+                      color={isDark ? "#fff" : "#111"}
+                    />
                   </TouchableOpacity>
                 </View>
 
-                <Text style={[styles.subtitle, { color: currentTheme.colors.textSecondary }]}>
+                <Text
+                  style={[
+                    styles.subtitle,
+                    { color: currentTheme.colors.textSecondary },
+                  ]}
+                >
                   {t("proposeFeature.subtitle", {
-                    defaultValue: "Une idée précise ? Décris-la clairement pour que la communauté puisse voter.",
+                    defaultValue:
+                      "Une idée précise ? Décris-la clairement pour que la communauté puisse voter.",
                   })}
                 </Text>
 
@@ -196,14 +268,26 @@ export default function ProposeFeatureModal({
                 >
                   {/* Titre */}
                   <View style={styles.inputBlock}>
-                    <View style={styles.labelRow}>
-                      <Text style={[styles.label, { color: currentTheme.colors.textSecondary }]}>
-                        {t("proposeFeature.labelTitle", { defaultValue: "Titre (obligatoire)" })}
+                    <View className="labelRow" style={styles.labelRow}>
+                      <Text
+                        style={[
+                          styles.label,
+                          { color: currentTheme.colors.textSecondary },
+                        ]}
+                      >
+                        {t("proposeFeature.labelTitle", {
+                          defaultValue: "Titre (obligatoire)",
+                        })}
                       </Text>
                       <Text
                         style={[
                           styles.counter,
-                          { color: titleLeft <= 8 ? "#FF6B6B" : currentTheme.colors.textSecondary },
+                          {
+                            color:
+                              titleLeft <= 8
+                                ? "#FF6B6B"
+                                : currentTheme.colors.textSecondary,
+                          },
                         ]}
                       >
                         {titleLeft}
@@ -216,14 +300,20 @@ export default function ProposeFeatureModal({
                       onChangeText={(v) => setTitle(v.slice(0, TITLE_MAX))}
                       onBlur={() => setTitle((v) => v.trimStart())}
                       placeholder={t("proposeFeature.placeholderTitle")}
-                      placeholderTextColor={withAlpha(currentTheme.colors.textSecondary, 0.8)}
+                      placeholderTextColor={withAlpha(
+                        currentTheme.colors.textSecondary,
+                        0.8
+                      )}
                       style={[
                         styles.input,
                         {
-                          backgroundColor: isDark ? withAlpha("#FFFFFF", 0.06) : withAlpha("#000000", 0.04),
-                          borderColor: titleLen === 0
-                            ? withAlpha(currentTheme.colors.border, 0.6)
-                            : titleValid
+                          backgroundColor: isDark
+                            ? withAlpha("#FFFFFF", 0.06)
+                            : withAlpha("#000000", 0.04),
+                          borderColor:
+                            titleLen === 0
+                              ? withAlpha(currentTheme.colors.border, 0.6)
+                              : titleValid
                               ? withAlpha("#00C853", 0.6)
                               : withAlpha("#FF6B6B", 0.6),
                         },
@@ -233,13 +323,17 @@ export default function ProposeFeatureModal({
                       onSubmitEditing={Keyboard.dismiss}
                       accessible
                       accessibilityLabel={t("proposeFeature.placeholderTitle")}
-                      accessibilityHint={t("proposeFeature.a11yTitleHint", { defaultValue: "Entre un titre clair et concis." })}
+                      accessibilityHint={t("proposeFeature.a11yTitleHint", {
+                        defaultValue: "Entre un titre clair et concis.",
+                      })}
                       maxLength={TITLE_MAX}
                       autoCapitalize="sentences"
                     />
                     {!titleValid && titleLen > 0 && (
                       <Text style={[styles.helper, { color: "#FF6B6B" }]}>
-                        {t("proposeFeature.titleRule", { defaultValue: "Entre 6 et 60 caractères." })}
+                        {t("proposeFeature.titleRule", {
+                          defaultValue: "Entre 6 et 60 caractères.",
+                        })}
                       </Text>
                     )}
                   </View>
@@ -247,13 +341,25 @@ export default function ProposeFeatureModal({
                   {/* Description */}
                   <View style={styles.inputBlock}>
                     <View style={styles.labelRow}>
-                      <Text style={[styles.label, { color: currentTheme.colors.textSecondary }]}>
-                        {t("proposeFeature.labelDescription", { defaultValue: "Description (optionnel)" })}
+                      <Text
+                        style={[
+                          styles.label,
+                          { color: currentTheme.colors.textSecondary },
+                        ]}
+                      >
+                        {t("proposeFeature.labelDescription", {
+                          defaultValue: "Description (optionnel)",
+                        })}
                       </Text>
                       <Text
                         style={[
                           styles.counter,
-                          { color: descLeft <= 20 ? "#FF9E3D" : currentTheme.colors.textSecondary },
+                          {
+                            color:
+                              descLeft <= 20
+                                ? "#FF9E3D"
+                                : currentTheme.colors.textSecondary,
+                          },
                         ]}
                       >
                         {descLeft}
@@ -265,12 +371,17 @@ export default function ProposeFeatureModal({
                       onChangeText={(v) => setDescription(v.slice(0, DESC_MAX))}
                       onBlur={() => setDescription((v) => v.trimStart())}
                       placeholder={t("proposeFeature.placeholderDescription")}
-                      placeholderTextColor={withAlpha(currentTheme.colors.textSecondary, 0.8)}
+                      placeholderTextColor={withAlpha(
+                        currentTheme.colors.textSecondary,
+                        0.8
+                      )}
                       style={[
                         styles.input,
                         styles.textArea,
                         {
-                          backgroundColor: isDark ? withAlpha("#FFFFFF", 0.05) : withAlpha("#000000", 0.035),
+                          backgroundColor: isDark
+                            ? withAlpha("#FFFFFF", 0.05)
+                            : withAlpha("#000000", 0.035),
                           borderColor: withAlpha(currentTheme.colors.border, 0.7),
                         },
                       ]}
@@ -278,7 +389,9 @@ export default function ProposeFeatureModal({
                       textAlignVertical="top"
                       returnKeyType="done"
                       accessible
-                      accessibilityLabel={t("proposeFeature.placeholderDescription")}
+                      accessibilityLabel={t(
+                        "proposeFeature.placeholderDescription"
+                      )}
                       maxLength={DESC_MAX}
                       autoCapitalize="sentences"
                     />
@@ -286,9 +399,21 @@ export default function ProposeFeatureModal({
 
                   {/* Tips */}
                   <View style={styles.chipsRow}>
-                    <Chip text={t("proposeFeature.chipImpact",  { defaultValue: "Impact clair" })} />
-                    <Chip text={t("proposeFeature.chipFeasible", { defaultValue: "Faisable" })} />
-                    <Chip text={t("proposeFeature.chipPrecise",  { defaultValue: "Précis" })} />
+                    <Chip
+                      text={t("proposeFeature.chipImpact", {
+                        defaultValue: "Impact clair",
+                      })}
+                    />
+                    <Chip
+                      text={t("proposeFeature.chipFeasible", {
+                        defaultValue: "Faisable",
+                      })}
+                    />
+                    <Chip
+                      text={t("proposeFeature.chipPrecise", {
+                        defaultValue: "Précis",
+                      })}
+                    />
                   </View>
 
                   {/* CTA */}
@@ -298,14 +423,28 @@ export default function ProposeFeatureModal({
                     activeOpacity={0.92}
                     accessibilityRole="button"
                     accessibilityState={{ disabled: !canSubmit }}
+                    accessibilityLabel={t("proposeFeature.submitButton", {
+                      defaultValue: "Envoyer la proposition",
+                    })}
+                    accessibilityHint={t(
+                      "proposeFeature.a11ySubmitHint",
+                      {
+                        defaultValue:
+                          "Valide ta proposition pour qu’elle soit visible dans les votes.",
+                      }
+                    )}
                     testID="submit-feature"
                     style={{ width: "100%", marginTop: 10 }}
                   >
                     <LinearGradient
                       colors={
                         [
-                          canSubmit ? currentTheme.colors.secondary : withAlpha(currentTheme.colors.secondary, 0.5),
-                          canSubmit ? currentTheme.colors.primary   : withAlpha(currentTheme.colors.primary,   0.5),
+                          canSubmit
+                            ? currentTheme.colors.secondary
+                            : withAlpha(currentTheme.colors.secondary, 0.5),
+                          canSubmit
+                            ? currentTheme.colors.primary
+                            : withAlpha(currentTheme.colors.primary, 0.5),
                         ] as const
                       }
                       start={{ x: 0, y: 0 }}
@@ -313,7 +452,10 @@ export default function ProposeFeatureModal({
                       style={styles.submitBtn}
                     >
                       {submitting ? (
-                        <ActivityIndicator size="small" color={currentTheme.colors.textPrimary} />
+                        <ActivityIndicator
+                          size="small"
+                          color={currentTheme.colors.textPrimary}
+                        />
                       ) : (
                         <>
                           <Ionicons
@@ -322,7 +464,12 @@ export default function ProposeFeatureModal({
                             color={currentTheme.colors.textPrimary}
                             style={{ marginRight: 8 }}
                           />
-                          <Text style={[styles.submitText, { color: currentTheme.colors.textPrimary }]}>
+                          <Text
+                            style={[
+                              styles.submitText,
+                              { color: currentTheme.colors.textPrimary },
+                            ]}
+                          >
                             {t("proposeFeature.submitButton")}
                           </Text>
                         </>
@@ -343,7 +490,12 @@ export default function ProposeFeatureModal({
 function Chip({ text }: { text: string }) {
   return (
     <View style={chipStyles.chip}>
-      <Ionicons name="shield-checkmark-outline" size={14} color="#fff" style={{ marginRight: 6 }} />
+      <Ionicons
+        name="shield-checkmark-outline"
+        size={14}
+        color="#fff"
+        style={{ marginRight: 6 }}
+      />
       <Text style={chipStyles.text}>{text}</Text>
     </View>
   );
@@ -364,7 +516,11 @@ const chipStyles = StyleSheet.create({
 });
 
 /* ---------- Styles ---------- */
-const createStyles = (isDark: boolean, current: Theme, insets: { top: number; bottom: number }) =>
+const createStyles = (
+  isDark: boolean,
+  current: Theme,
+  insets: { top: number; bottom: number }
+) =>
   StyleSheet.create({
     overlay: {
       ...StyleSheet.absoluteFillObject,
@@ -394,7 +550,9 @@ const createStyles = (isDark: boolean, current: Theme, insets: { top: number; bo
       borderRadius: 22,
     },
     card: {
-      backgroundColor: isDark ? withAlpha(current.colors.cardBackground, 0.92) : withAlpha("#ffffff", 0.98),
+      backgroundColor: isDark
+        ? withAlpha(current.colors.cardBackground, 0.92)
+        : withAlpha("#ffffff", 0.98),
       borderRadius: 20,
       padding: 16,
       borderWidth: StyleSheet.hairlineWidth,

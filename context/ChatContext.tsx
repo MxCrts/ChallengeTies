@@ -5,6 +5,7 @@ import React, {
   useState,
   useEffect,
   useCallback,
+  useRef,
 } from "react";
 import {
   collection,
@@ -55,6 +56,21 @@ const toDateSafe = (ts: any): Date => {
 export const ChatProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
   const [messages, setMessages] = useState<ChatMessage[]>([]);
   const [loadingMessages, setLoadingMessages] = useState<boolean>(true);
+
+  // 🔔 Coalescer achievements (évite 10 checks d'affilée en chat)
+  const achTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const achUserRef = useRef<string | null>(null);
+  const scheduleAchievementsCheck = (uid?: string | null, delay = 500) => {
+    if (!uid) return;
+    achUserRef.current = uid;
+    if (achTimerRef.current) clearTimeout(achTimerRef.current);
+    achTimerRef.current = setTimeout(() => {
+      const u = achUserRef.current;
+      if (!u) return;
+      checkForAchievements(u).catch(() => {});
+      achTimerRef.current = null;
+    }, delay);
+  };
 
   const fetchMessages = useCallback((challengeId: string) => {
     const messagesRef = collection(db, "chats", challengeId, "messages");
@@ -112,7 +128,7 @@ const q = query(messagesRef);
     meta?: { isDuo?: boolean }
   ) => {
     if (!auth.currentUser) throw new Error("User not authenticated.");
-const trimmed = (text ?? "").trim();
+    const trimmed = (text ?? "").trim();
     if (!trimmed) return;
     const { uid, displayName, photoURL } = auth.currentUser;
     const messageRef = collection(db, "chats", challengeId, "messages");
@@ -135,11 +151,22 @@ const trimmed = (text ?? "").trim();
       if (meta?.isDuo) {
         try { await incDuoMessages(uid, 1); } catch {}
       }
-      try { await checkForAchievements(uid); } catch {}
+      // 🔔 check coalescé
+      scheduleAchievementsCheck(uid);
     } catch (e) {
       console.error("Error sending message:", (e as any)?.message ?? e);
       throw e;
     }
+  }, []);
+
+  // Cleanup timer
+  useEffect(() => {
+    return () => {
+      if (achTimerRef.current) {
+        clearTimeout(achTimerRef.current);
+        achTimerRef.current = null;
+      }
+    };
   }, []);
 
   return (

@@ -109,13 +109,23 @@ const isoWeekKey = (d = new Date()) => {
   return `${dt.getUTCFullYear()}-W${weekNo}`;
 };
 
+// ✅ Sanitization & cap hebdo (évite NaN / valeurs négatives / dépassement)
+const sanitizeMicroWeek = (input: any, key: string): { key: string; used: number } => {
+  const usedRaw = Number(input?.used ?? 0);
+  const usedSafe = Number.isFinite(usedRaw) ? usedRaw : 0;
+  return {
+    key,
+    used: clampNum(Math.floor(usedSafe), 0, TROPHY.MICRO_WEEKLY_CAP),
+  };
+};
+
 export const getMicroWeek = async (): Promise<{ key: string; used: number }> => {
   const key = isoWeekKey();
   const raw = await AsyncStorage.getItem(MICRO_BANK_KEY);
   try {
     const parsed = raw ? JSON.parse(raw) : { key, used: 0 };
-    if (parsed.key !== key) return { key, used: 0 };
-    return parsed;
+    if (parsed?.key !== key) return { key, used: 0 };
+    return sanitizeMicroWeek(parsed, key);
   } catch {
     return { key, used: 0 };
   }
@@ -124,8 +134,16 @@ export const getMicroWeek = async (): Promise<{ key: string; used: number }> => 
 export const incMicroWeek = async (): Promise<number> => {
   const key = isoWeekKey();
   const cur = await getMicroWeek();
-  const used = cur.key === key ? (cur.used || 0) + 1 : 1;
-  await AsyncStorage.setItem(MICRO_BANK_KEY, JSON.stringify({ key, used }));
+  const prevUsed = cur.key === key ? (cur.used || 0) : 0;
+  const used =
+    prevUsed >= TROPHY.MICRO_WEEKLY_CAP
+      ? TROPHY.MICRO_WEEKLY_CAP
+      : prevUsed + 1;
+
+  await AsyncStorage.setItem(
+    MICRO_BANK_KEY,
+    JSON.stringify({ key, used })
+  );
   // 🔔 Notifie l’UI (Profile, UserStats, etc.) qu’un micro a été consommé
   try {
     DeviceEventEmitter.emit(MICRO_WEEK_UPDATED_EVENT, { key, used });

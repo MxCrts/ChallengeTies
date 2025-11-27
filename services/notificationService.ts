@@ -7,10 +7,17 @@ import { doc, getDoc, updateDoc, setDoc } from "firebase/firestore";
 import { db, auth } from "../constants/firebase-config";
 import i18n from "../i18n";
 
+type LocalizedPayload = {
+  titleKey?: string;
+  bodyKey?: string;
+  params?: Record<string, any>;
+};
+
 /** IDs persistés (utile si on veut annuler vite fait) */
 const STORAGE_KEYS = {
   morningId: "notif.morning.id",
   eveningId: "notif.evening.id",
+  dailyScheduled: "notif.daily.scheduled.v1",
 } as const;
 
 /** Tags internes pour repérer/annuler proprement nos notif planifiées */
@@ -22,13 +29,16 @@ const TAGS = {
 /** Petit mutex process pour éviter les chevauchements */
 let SCHEDULING_LOCK = false;
 
+/** ✅ Garde-fou session (évite reschedule en boucle dans le même run) */
+let DAILY_SCHEDULED_IN_SESSION = false;
+
 /* ------------------------- Notification handler ------------------------- */
 Notifications.setNotificationHandler({
   handleNotification: async () => ({
     shouldShowAlert: true,
     shouldPlaySound: true,
     shouldSetBadge: false,
-    // ✅ nécessaires selon ta d.ts
+    // pour la d.ts expo
     shouldShowBanner: true,
     shouldShowList: true,
   }),
@@ -47,7 +57,6 @@ export const ensureAndroidChannelAsync = async () => {
     lockscreenVisibility: Notifications.AndroidNotificationVisibility.PUBLIC,
   });
 };
-
 
 /* ----------------------------- Permissions ----------------------------- */
 export const requestNotificationPermissions = async (): Promise<boolean> => {
@@ -163,7 +172,12 @@ export const cancelDailyNotifications = async (): Promise<void> => {
     if (eveningId) await Notifications.cancelScheduledNotificationAsync(eveningId).catch(() => {});
     await cancelByTag(TAGS.MORNING);
     await cancelByTag(TAGS.EVENING);
-    await AsyncStorage.multiRemove([STORAGE_KEYS.morningId, STORAGE_KEYS.eveningId]);
+    await AsyncStorage.multiRemove([
+      STORAGE_KEYS.morningId,
+      STORAGE_KEYS.eveningId,
+      STORAGE_KEYS.dailyScheduled, // ✅ reset flag aussi
+    ]);
+    DAILY_SCHEDULED_IN_SESSION = false;
   } catch (e) {
     console.warn("⚠️ cancelDailyNotifications:", e);
   }
@@ -178,6 +192,18 @@ export const scheduleDailyNotifications = async (): Promise<boolean> => {
   SCHEDULING_LOCK = true;
 
   try {
+    // ✅ 0bis) Idempotence hard: si déjà schedulé (session ou storage) → skip total
+    if (DAILY_SCHEDULED_IN_SESSION) {
+      __DEV__ && console.log("✅ Daily notifs déjà schedulées (session) — skip.");
+      return true;
+    }
+    const already = await AsyncStorage.getItem(STORAGE_KEYS.dailyScheduled);
+    if (already === "1") {
+      DAILY_SCHEDULED_IN_SESSION = true;
+      __DEV__ && console.log("✅ Daily notifs déjà schedulées (storage) — skip.");
+      return true;
+    }
+
     // 0) Android channel + permissions
     await ensureAndroidChannelAsync();
 
@@ -233,12 +259,27 @@ export const scheduleDailyNotifications = async (): Promise<boolean> => {
       i18n.t("notificationsPush.evening2", { lng: language }),
     ].filter(Boolean);
 
-    // 4) Triggers quotidiens cross-platform
+    // 4) Triggers quotidiens cross-platform (⚠️ pas de CALENDAR Android)
     let morningTrigger: Notifications.NotificationTriggerInput;
     let eveningTrigger: Notifications.NotificationTriggerInput;
 
-    if (Platform.OS === "ios") {
-      // iOS → CALENDAR (supporté)
+    if (Platform.OS === "android") {
+      // ✅ Android: PAS de type CALENDAR (sinon crash native)
+      morningTrigger = {
+        hour: 9,
+        minute: 0,
+        repeats: true,
+        channelId: "default",
+      } as any;
+
+      eveningTrigger = {
+        hour: 19,
+        minute: 0,
+        repeats: true,
+        channelId: "default",
+      } as any;
+    } else {
+      // ✅ iOS: calendar ok
       morningTrigger = {
         type: Notifications.SchedulableTriggerInputTypes.CALENDAR,
         hour: 9,
@@ -254,40 +295,9 @@ export const scheduleDailyNotifications = async (): Promise<boolean> => {
         second: 0,
         repeats: true,
       } as Notifications.CalendarTriggerInput;
-    } else {
-      // Android → TIME_INTERVAL (CALENDAR non supporté dans ton contexte)
-      const now = new Date();
-
-      const computeSecondsUntil = (targetHour: number) => {
-        const first = new Date(now);
-        first.setHours(targetHour, 0, 0, 0);
-        if (first <= now) {
-          first.setDate(first.getDate() + 1);
-        }
-        const diffMs = first.getTime() - now.getTime();
-        const seconds = Math.max(60, Math.round(diffMs / 1000)); // min 60s
-        return seconds;
-      };
-
-      const secondsUntilMorning = computeSecondsUntil(9);
-      const secondsUntilEvening = computeSecondsUntil(19);
-
-      morningTrigger = {
-        type: Notifications.SchedulableTriggerInputTypes.TIME_INTERVAL,
-        seconds: secondsUntilMorning,
-        repeats: true,
-        channelId: "default",
-      } as Notifications.TimeIntervalTriggerInput;
-
-      eveningTrigger = {
-        type: Notifications.SchedulableTriggerInputTypes.TIME_INTERVAL,
-        seconds: secondsUntilEvening,
-        repeats: true,
-        channelId: "default",
-      } as Notifications.TimeIntervalTriggerInput;
     }
 
-    // 5) Planification — on garde les tags
+    // 5) Planification — on garde les tags + type pour router ensuite
     const morningId = await Notifications.scheduleNotificationAsync({
       content: {
         title: i18n.t("notificationsPush.title", { lng: language }),
@@ -295,7 +305,11 @@ export const scheduleDailyNotifications = async (): Promise<boolean> => {
           morningMessages[Math.floor(Math.random() * morningMessages.length)] ||
           "",
         sound: "default",
-        data: { __tag: TAGS.MORNING },
+        data: {
+          __tag: TAGS.MORNING,
+          type: "daily-reminder",
+          slot: "morning",
+        },
       },
       trigger: morningTrigger,
     });
@@ -307,7 +321,11 @@ export const scheduleDailyNotifications = async (): Promise<boolean> => {
           eveningMessages[Math.floor(Math.random() * eveningMessages.length)] ||
           "",
         sound: "default",
-        data: { __tag: TAGS.EVENING },
+        data: {
+          __tag: TAGS.EVENING,
+          type: "daily-reminder",
+          slot: "evening",
+        },
       },
       trigger: eveningTrigger,
     });
@@ -315,9 +333,11 @@ export const scheduleDailyNotifications = async (): Promise<boolean> => {
     await AsyncStorage.multiSet([
       [STORAGE_KEYS.morningId, morningId],
       [STORAGE_KEYS.eveningId, eveningId],
+      [STORAGE_KEYS.dailyScheduled, "1"],
     ]);
 
     __DEV__ && console.log("✅ Scheduled:", { morningId, eveningId });
+    DAILY_SCHEDULED_IN_SESSION = true;
     return true;
   } catch (error) {
     console.error("❌ Erreur planification notifications:", error);
@@ -327,10 +347,17 @@ export const scheduleDailyNotifications = async (): Promise<boolean> => {
   }
 };
 
+/** ✅ Si tu veux forcer un reschedule (debug / changement langue / heure) */
+export const resetDailyNotificationsFlag = async () => {
+  DAILY_SCHEDULED_IN_SESSION = false;
+  await AsyncStorage.removeItem(STORAGE_KEYS.dailyScheduled);
+};
 
-
-/* -------------------- Invitation locale immédiate -------------------- */
-export const sendInvitationNotification = async (userId: string, message: string): Promise<void> => {
+/* -------------------- Notification locale immédiate -------------------- */
+export const sendInvitationNotification = async (
+  userId: string,
+  messageOrLocalized: string | LocalizedPayload
+): Promise<void> => {
   try {
     const userRef = doc(db, "users", userId);
     const userSnap = await getDoc(userRef);
@@ -339,10 +366,33 @@ export const sendInvitationNotification = async (userId: string, message: string
       return;
     }
     const language = userSnap.data().language || "en";
+
+    const toStr = (v: any) => (typeof v === "string" ? v : String(v ?? ""));
+    let title = toStr(i18n.t("notificationsPush.title", { lng: language }));
+    let body = "";
+
+    if (typeof messageOrLocalized === "string") {
+      body = messageOrLocalized;
+    } else {
+      const { titleKey, bodyKey, params } = messageOrLocalized || {};
+      if (titleKey) {
+        title = toStr(
+          i18n.t(titleKey, { lng: language, ...(params || {}) })
+        );
+      }
+      if (bodyKey) {
+        body = toStr(i18n.t(bodyKey, { lng: language, ...(params || {}) }));
+      }
+    }
+
     await Notifications.scheduleNotificationAsync({
       content: {
-        title: i18n.t("notificationsPush.title", { lng: language }),
-        body: message,
+        title,
+        body,
+        sound: "default",
+        data: {
+          ...(typeof messageOrLocalized === "string" ? {} : messageOrLocalized),
+        },
       },
       trigger: null,
     });
@@ -351,8 +401,25 @@ export const sendInvitationNotification = async (userId: string, message: string
   }
 };
 
-/* ---------------- Expo push (nudge duo) — inchangé sauf cleanup ---------------- */
-type ExpoPushError = { ok: false; code?: string; message?: string; details?: any };
+/* ---------------- Referral local nudge (optionnel mais prêt) ---------------- */
+export const sendReferralMilestoneLocalNudge = async (
+  userId: string,
+  payload: { bonus: number; milestones: number[]; activatedCount: number }
+) => {
+  return sendInvitationNotification(userId, {
+    titleKey: "referral.notif.milestoneUnlocked.title",
+    bodyKey: "referral.notif.milestoneUnlocked.body",
+    params: payload,
+  });
+};
+
+/* ---------------- Expo push (duo & invites) ---------------- */
+type ExpoPushError = {
+  ok: false;
+  code?: string;
+  message?: string;
+  details?: any;
+};
 type ExpoPushOk = { ok: true };
 type ExpoPushResult = ExpoPushOk | ExpoPushError;
 
@@ -372,14 +439,25 @@ const sendPushToExpoToken = async (
         "accept-encoding": "gzip, deflate",
         "content-type": "application/json",
       },
-      body: JSON.stringify({ to: expoPushToken, sound: "default", title, body, data }),
+      body: JSON.stringify({
+        to: expoPushToken,
+        sound: "default",
+        title,
+        body,
+        data,
+      }),
     });
     const json = await resp.json().catch(() => null);
     const d = json?.data;
     if (d?.status === "ok") return { ok: true };
     if (d?.status === "error") {
       const code = d?.details?.error || d?.__errorCode || undefined;
-      return { ok: false, code, message: d?.message, details: d?.details };
+      return {
+        ok: false,
+        code,
+        message: d?.message,
+        details: d?.details,
+      };
     }
     return { ok: false, message: "Unknown Expo response", details: json };
   } catch (e: any) {
@@ -388,12 +466,15 @@ const sendPushToExpoToken = async (
   }
 };
 
+/** ✅ Nudge duo → utilisé par le bouton “Encourager” sur challenge-details/[id] */
 export const sendDuoNudge = async ({
   toUserId,
   challengeTitle,
+  challengeId, // optionnel pour routing précis
 }: {
   toUserId: string;
   challengeTitle: string;
+  challengeId?: string;
 }): Promise<{
   ok: boolean;
   reason?:
@@ -415,12 +496,14 @@ export const sendDuoNudge = async ({
     if (!toSnap.exists()) return { ok: false, reason: "no-user" };
 
     const to = toSnap.data() as any;
-    if (to.notificationsEnabled === false) return { ok: false, reason: "disabled" };
+    if (to.notificationsEnabled === false)
+      return { ok: false, reason: "disabled" };
 
     const token: string | undefined = to.expoPushToken;
     const looksLikeExpo =
       typeof token === "string" &&
-      (token.includes("ExponentPushToken") || token.includes("ExpoPushToken"));
+      (token.includes("ExponentPushToken") ||
+        token.includes("ExpoPushToken"));
 
     if (!token || !looksLikeExpo) {
       console.warn("⚠️ Pas de expoPushToken valable pour", toUserId);
@@ -438,6 +521,7 @@ export const sendDuoNudge = async ({
     const result = await sendPushToExpoToken(token, title, body, {
       type: "duo-nudge",
       challengeTitle,
+      challengeId: challengeId ?? null,
       fromUserId: from.uid,
     });
 
@@ -450,11 +534,201 @@ export const sendDuoNudge = async ({
       } catch (e) {
         console.warn("⚠️ Impossible de nettoyer token expiré:", e);
       }
-      return { ok: false, reason: "unregistered", expoCode: code, expoMessage: message };
+      return {
+        ok: false,
+        reason: "unregistered",
+        expoCode: code,
+        expoMessage: message,
+      };
     }
-    return { ok: false, reason: "expo-error", expoCode: code, expoMessage: message };
+    return {
+      ok: false,
+      reason: "expo-error",
+      expoCode: code,
+      expoMessage: message,
+    };
   } catch (e) {
     console.error("❌ sendDuoNudge:", e);
+    return { ok: false, reason: "error" };
+  }
+};
+
+/** ✅ Push pour informer l’inviteur quand l’invitation est acceptée / refusée */
+export const sendInviteStatusPush = async ({
+  inviterId,
+  inviteeId,
+  status,
+  challengeId,
+  challengeTitle,
+  inviteeUsername,
+}: {
+  inviterId: string;
+  inviteeId?: string | null;
+  status: "accepted" | "refused";
+  challengeId: string;
+  challengeTitle?: string | null;
+  inviteeUsername?: string | null;
+}): Promise<{
+  ok: boolean;
+  reason?:
+    | "no-user"
+    | "disabled"
+    | "no-token"
+    | "unregistered"
+    | "expo-error"
+    | "error";
+  expoCode?: string;
+  expoMessage?: string;
+}> => {
+  try {
+    const inviterRef = doc(db, "users", inviterId);
+    const inviterSnap = await getDoc(inviterRef);
+    if (!inviterSnap.exists()) return { ok: false, reason: "no-user" };
+
+    const inviter = inviterSnap.data() as any;
+    if (inviter.notificationsEnabled === false)
+      return { ok: false, reason: "disabled" };
+
+    const token: string | undefined = inviter.expoPushToken;
+    const looksLikeExpo =
+      typeof token === "string" &&
+      (token.includes("ExponentPushToken") ||
+        token.includes("ExpoPushToken"));
+
+    if (!token || !looksLikeExpo) {
+      console.warn("⚠️ Pas de expoPushToken valable pour", inviterId);
+      return { ok: false, reason: "no-token" };
+    }
+
+    const lang = inviter.language || "en";
+    const prefix =
+      status === "accepted"
+        ? "notificationsPush.inviteAccepted"
+        : "notificationsPush.inviteRefused";
+
+    const title = i18n.t(`${prefix}.title`, {
+      lng: lang,
+      username: inviteeUsername || "",
+    });
+    const body = i18n.t(`${prefix}.body`, {
+      lng: lang,
+      username: inviteeUsername || "",
+      title: challengeTitle || "",
+    });
+
+    const result = await sendPushToExpoToken(token, title, body, {
+      type: "invite-status",
+      status,
+      challengeId,
+      inviteeId: inviteeId ?? null,
+    });
+
+    if (!isExpoPushError(result)) return { ok: true };
+
+    const { code, message } = result;
+    if (code === "DeviceNotRegistered") {
+      try {
+        await updateDoc(inviterRef, { expoPushToken: null });
+      } catch (e) {
+        console.warn("⚠️ Impossible de nettoyer token expiré:", e);
+      }
+      return {
+        ok: false,
+        reason: "unregistered",
+        expoCode: code,
+        expoMessage: message,
+      };
+    }
+    return {
+      ok: false,
+      reason: "expo-error",
+      expoCode: code,
+      expoMessage: message,
+    };
+  } catch (e) {
+    console.error("❌ sendInviteStatusPush:", e);
+    return { ok: false, reason: "error" };
+  }
+};
+
+/** ✅ Notif parrain : “vous êtes désormais le parrain de username” */
+export const sendReferralNewChildPush = async ({
+  sponsorId,
+  childUsername,
+}: {
+  sponsorId: string;
+  childUsername: string;
+}): Promise<{
+  ok: boolean;
+  reason?:
+    | "no-user"
+    | "disabled"
+    | "no-token"
+    | "unregistered"
+    | "expo-error"
+    | "error";
+  expoCode?: string;
+  expoMessage?: string;
+}> => {
+  try {
+    const sponsorRef = doc(db, "users", sponsorId);
+    const sponsorSnap = await getDoc(sponsorRef);
+    if (!sponsorSnap.exists()) return { ok: false, reason: "no-user" };
+
+    const sponsor = sponsorSnap.data() as any;
+    if (sponsor.notificationsEnabled === false)
+      return { ok: false, reason: "disabled" };
+
+    const token: string | undefined = sponsor.expoPushToken;
+    const looksLikeExpo =
+      typeof token === "string" &&
+      (token.includes("ExponentPushToken") ||
+        token.includes("ExpoPushToken"));
+
+    if (!token || !looksLikeExpo) {
+      console.warn("⚠️ Pas de expoPushToken valable pour", sponsorId);
+      return { ok: false, reason: "no-token" };
+    }
+
+    const lang = sponsor.language || "en";
+    const title = i18n.t("referral.notif.newChild.title", {
+      lng: lang,
+      username: childUsername,
+    });
+    const body = i18n.t("referral.notif.newChild.body", {
+      lng: lang,
+      username: childUsername,
+    });
+
+    const result = await sendPushToExpoToken(token, title, body, {
+      type: "referral_new_child",
+      username: childUsername,
+    });
+
+    if (!isExpoPushError(result)) return { ok: true };
+
+    const { code, message } = result;
+    if (code === "DeviceNotRegistered") {
+      try {
+        await updateDoc(sponsorRef, { expoPushToken: null });
+      } catch (e) {
+        console.warn("⚠️ Impossible de nettoyer token expiré:", e);
+      }
+      return {
+        ok: false,
+        reason: "unregistered",
+        expoCode: code,
+        expoMessage: message,
+      };
+    }
+    return {
+      ok: false,
+      reason: "expo-error",
+      expoCode: code,
+      expoMessage: message,
+    };
+  } catch (e) {
+    console.error("❌ sendReferralNewChildPush:", e);
     return { ok: false, reason: "error" };
   }
 };
@@ -472,7 +746,10 @@ export const enableNotificationsFromSettings = async (): Promise<boolean> => {
     await registerForPushNotificationsAsync();
     await scheduleDailyNotifications(); // idempotent maintenant
     const uid = auth.currentUser?.uid;
-    if (uid) await updateDoc(doc(db, "users", uid), { notificationsEnabled: true });
+    if (uid)
+      await updateDoc(doc(db, "users", uid), {
+        notificationsEnabled: true,
+      });
     return true;
   } catch (e) {
     console.error("❌ enableNotificationsFromSettings:", e);
@@ -484,7 +761,10 @@ export const disableNotificationsFromSettings = async (): Promise<void> => {
   try {
     await cancelDailyNotifications();
     const uid = auth.currentUser?.uid;
-    if (uid) await updateDoc(doc(db, "users", uid), { notificationsEnabled: false });
+    if (uid)
+      await updateDoc(doc(db, "users", uid), {
+        notificationsEnabled: false,
+      });
   } catch (e) {
     console.error("❌ disableNotificationsFromSettings:", e);
   }
@@ -498,33 +778,99 @@ export const startNotificationResponseListener = (
   onToast?: (text: string) => void
 ) => {
   if (responseSub) return; // idempotent
-  responseSub = Notifications.addNotificationResponseReceivedListener((resp) => {
-    try {
-      const data: any = resp.notification.request.content.data || {};
-      const type = data?.type;
+  responseSub =
+    Notifications.addNotificationResponseReceivedListener((resp) => {
+      try {
+        const data: any = resp.notification.request.content.data || {};
+        const type = data?.type;
 
-      if (type === "invite-status") {
-        // data: { type: 'invite-status', status, challengeId, inviteeId }
-        const status: string = data?.status ?? "";
-        const challengeId: string | undefined = data?.challengeId;
+        // ✅ helper: garantit un string (évite string | object)
+        const tSafe = (key: string, options?: Record<string, any>) => {
+          const res = i18n.t(key, {
+            ...(options || {}),
+            returnObjects: false,
+          });
+          return typeof res === "string" ? res : String(res ?? "");
+        };
 
-        if (challengeId) {
-          onNavigate(`/challenge-details/${challengeId}`);
+        // Daily reminders → home / index
+        if (type === "daily-reminder") {
+          onNavigate("/");
+          if (onToast) {
+            onToast(tSafe("notificationsPush.opened"));
+          }
+          return;
         }
-        if (onToast) {
-          const key = status === "accepted"
-            ? "notificationsPush.inviteAcceptedToast"
-            : status === "refused"
-            ? "notificationsPush.inviteRefusedToast"
-            : "notificationsPush.opened";
-          onToast(i18n.t(key));
+
+        if (type === "invite-status") {
+          // data: { type: 'invite-status', status, challengeId, inviteeId }
+          const status: string = data?.status ?? "";
+          const challengeId: string | undefined = data?.challengeId;
+
+          if (challengeId) {
+            onNavigate(`/challenge-details/${challengeId}`);
+          }
+          if (onToast) {
+            const key =
+              status === "accepted"
+                ? "notificationsPush.inviteAcceptedToast"
+                : status === "refused"
+                ? "notificationsPush.inviteRefusedToast"
+                : "notificationsPush.opened";
+            onToast(tSafe(key));
+          }
+          return;
         }
+
+        if (type === "duo-nudge") {
+          const challengeId: string | undefined = data?.challengeId;
+          if (challengeId) {
+            onNavigate(`/challenge-details/${challengeId}`);
+          } else {
+            onNavigate("/current-challenges");
+          }
+          if (onToast) {
+            onToast(tSafe("notificationsPush.duoNudgeOpened", {}));
+          }
+          return;
+        }
+
+        if (type === "referral_milestone_unlocked") {
+          onNavigate("/referral/ShareAndEarn");
+
+          if (onToast) {
+            const titleKey = data?.titleKey || "referral.nudge.title";
+            const bodyKey = data?.bodyKey || "referral.nudge.body";
+            const params = data?.params || {};
+
+            const toastText =
+              tSafe(titleKey, params) ||
+              tSafe(bodyKey, params) ||
+              tSafe("referral.nudge.title");
+
+            onToast(toastText);
+          }
+          return;
+        }
+
+        if (type === "referral_new_child") {
+          onNavigate("/referral/ShareAndEarn");
+          if (onToast) {
+            const username: string = data?.username || "";
+            onToast(
+              tSafe("referral.notif.newChild.toast", {
+                username,
+              })
+            );
+          }
+          return;
+        }
+
+        // Fallback générique éventuellement
+      } catch (e) {
+        console.warn("⚠️ startNotificationResponseListener error:", e);
       }
-      // Tu pourras ajouter d’autres types ici: duo-nudge, special-event, etc.
-    } catch (e) {
-      console.warn("⚠️ startNotificationResponseListener error:", e);
-    }
-  });
+    });
 };
 
 export const stopNotificationResponseListener = () => {

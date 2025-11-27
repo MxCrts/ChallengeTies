@@ -1,4 +1,5 @@
-import React, { useEffect, useMemo, useRef } from "react";
+// components/MissedChallengeModal.tsx
+import React, { useEffect, useMemo, useRef, useState } from "react";
 import {
   Modal,
   View,
@@ -9,16 +10,17 @@ import {
   Alert,
   Platform,
   AccessibilityInfo,
+  ScrollView,
+  useWindowDimensions,
 } from "react-native";
 import { LinearGradient } from "expo-linear-gradient";
 import { Ionicons } from "@expo/vector-icons";
-import Animated, { FadeIn, FadeOut } from "react-native-reanimated";
+import Animated, { FadeInUp, FadeOut } from "react-native-reanimated";
 import designSystem from "../theme/designSystem";
 import { useTranslation } from "react-i18next";
 import { useAdsVisibility } from "../src/context/AdsVisibilityContext";
 import { useTheme } from "../context/ThemeContext";
 import * as Haptics from "expo-haptics";
-import { useCurrentChallenges } from "../context/CurrentChallengesContext";
 
 const { width: SCREEN_WIDTH, height: SCREEN_HEIGHT } = Dimensions.get("window");
 
@@ -34,8 +36,9 @@ interface MissedChallengeModalProps {
   onWatchAd: () => void;
   onUseTrophies: () => void;
   trophyCost: number;
+  preloadRewarded?: () => void;
 
-  /** Nouveau : Streak Pass */
+  /** Streak Pass */
   hasStreakPass?: boolean;
   onUseStreakPass?: () => void;
 }
@@ -47,6 +50,7 @@ const MissedChallengeModal: React.FC<MissedChallengeModalProps> = ({
   onWatchAd,
   onUseTrophies,
   trophyCost,
+  preloadRewarded,
   hasStreakPass,
   onUseStreakPass,
 }) => {
@@ -56,25 +60,51 @@ const MissedChallengeModal: React.FC<MissedChallengeModalProps> = ({
   const current = isDark ? designSystem.darkTheme : designSystem.lightTheme;
 
   const { showRewarded } = useAdsVisibility();
-  const { preloadRewarded } = useCurrentChallenges();
-
   const canShowRewarded = !!showRewarded;
   const canUseStreakPass = !!hasStreakPass && !!onUseStreakPass;
+
+  const { height: H } = useWindowDimensions();
+  const modalMaxH = Math.min(H * 0.85, 760);
+  const modalMinH = Math.min(H * 0.55, 520); // ✅ évite l’effet “bande”
+  const optionsMaxH = Math.max(
+    normalizeSize(160),
+    modalMaxH - normalizeSize(210)
+  ); // ✅ zone scroll clampée (petits écrans)
+
+  const [reduceMotion, setReduceMotion] = useState(false);
 
   // — Précharge la rewarded quand le modal s’ouvre
   useEffect(() => {
     if (visible) {
       try {
-        preloadRewarded();
+        preloadRewarded?.();
       } catch {}
-      // focus vocal pour a11y
       setTimeout(() => {
         AccessibilityInfo.announceForAccessibility?.(
-          t("missedChallenge.title") as string
+          t("missedChallenge.title", {
+            defaultValue: "Tu as manqué un défi",
+          }) as string
         );
       }, 100);
     }
   }, [visible, preloadRewarded, t]);
+
+  // — Respect Reduce Motion (animations + haptics)
+  useEffect(() => {
+    let mounted = true;
+    AccessibilityInfo.isReduceMotionEnabled()
+      .then((v) => mounted && setReduceMotion(!!v))
+      .catch(() => {});
+    const sub = AccessibilityInfo.addEventListener?.(
+      "reduceMotionChanged",
+      (v) => mounted && setReduceMotion(!!v)
+    );
+    return () => {
+      mounted = false;
+      // @ts-ignore compat RN
+      sub?.remove?.();
+    };
+  }, []);
 
   // — Gardes anti double-tap
   const lockRef = useRef(false);
@@ -82,9 +112,11 @@ const MissedChallengeModal: React.FC<MissedChallengeModalProps> = ({
     if (lockRef.current) return;
     lockRef.current = true;
     try {
-      await Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium).catch(
-        () => {}
-      );
+      if (!reduceMotion) {
+        await Haptics.impactAsync(
+          Haptics.ImpactFeedbackStyle.Medium
+        ).catch(() => {});
+      }
       await fn();
     } finally {
       setTimeout(() => {
@@ -95,48 +127,67 @@ const MissedChallengeModal: React.FC<MissedChallengeModalProps> = ({
 
   if (!visible) return null;
 
- const gradBg = useMemo<[string, string]>(
-  () =>
-    isDark
-      ? [current.colors.cardBackground, current.colors.background]
-      : ["#1E1E1E", "#3A3A3A"],
-  [isDark, current.colors.cardBackground, current.colors.background]
-);
+  const gradBg = useMemo<[string, string]>(
+    () =>
+      isDark
+        ? [current.colors.cardBackground, current.colors.background]
+        : ["#111827", "#0B1020"],
+    [isDark, current.colors.cardBackground, current.colors.background]
+  );
 
+  const gradBorder = useMemo<[string, string, string]>(
+    () =>
+      isDark
+        ? [
+            "rgba(255,255,255,0.10)",
+            "rgba(255,255,255,0.04)",
+            "rgba(255,255,255,0.08)",
+          ]
+        : [
+            "rgba(255,255,255,0.15)",
+            "rgba(255,255,255,0.06)",
+            "rgba(255,255,255,0.12)",
+          ],
+    [isDark]
+  );
 
   const handleReset = () =>
-  withLock(() => {
-    if (canUseStreakPass) {
-      // Petit message de confirmation si un Streak Pass est disponible
-      Alert.alert(
-        t("missedChallenge.confirmResetTitle", "Confirmer ?"),
-        t(
-          "missedChallenge.confirmResetText",
-          "Tu as un Streak Pass disponible. Veux-tu vraiment remettre ta série à zéro ?"
-        ),
-        [
-          { text: t("common.cancel", "Annuler"), style: "cancel" },
-          {
-            text: t("common.confirm", "Oui, réinitialiser"),
-            style: "destructive",
-            onPress: () => {
-              onReset();
-              onClose();
+    withLock(() => {
+      if (canUseStreakPass) {
+        Alert.alert(
+          t("missedChallenge.confirmResetTitle", {
+            defaultValue: "Confirmer ?",
+          }),
+          t("missedChallenge.confirmResetText", {
+            defaultValue:
+              "Tu as un Streak Pass disponible. Veux-tu vraiment remettre ta série à zéro ?",
+          }),
+          [
+            {
+              text: t("common.cancel", { defaultValue: "Annuler" }),
+              style: "cancel",
             },
-          },
-        ]
-      );
-    } else {
-      // Flow normal
-      onReset();
-      onClose();
-    }
-  });
-
+            {
+              text: t("common.confirm", {
+                defaultValue: "Oui, réinitialiser",
+              }),
+              style: "destructive",
+              onPress: () => {
+                onReset();
+                onClose();
+              },
+            },
+          ]
+        );
+      } else {
+        onReset();
+        onClose();
+      }
+    });
 
   const handleWatch = () =>
     withLock(() => {
-      onWatchAd(); // flow rewarded géré côté contexte
+      onWatchAd();
     });
 
   const handleUseTrophies = () =>
@@ -168,248 +219,390 @@ const MissedChallengeModal: React.FC<MissedChallengeModalProps> = ({
         style={styles.overlay}
         accessible
         accessibilityViewIsModal
-        accessibilityLabel={t("missedChallenge.title")}
-        accessibilityHint={t("missedChallenge.subtitle")}
+        accessibilityLabel={t("missedChallenge.title", {
+          defaultValue: "Tu as manqué un défi",
+        })}
+        accessibilityHint={t("missedChallenge.subtitle", {
+          defaultValue: "Choisis comment gérer ta série.",
+        })}
       >
         <Animated.View
-          entering={FadeIn.duration(240)}
-          exiting={FadeOut.duration(180)}
-          style={styles.modalContainer}
+          entering={reduceMotion ? undefined : FadeInUp.duration(260)}
+          exiting={reduceMotion ? undefined : FadeOut.duration(180)}
+          style={[
+            styles.modalContainer,
+            { maxHeight: modalMaxH, minHeight: modalMinH },
+          ]}
         >
-          <LinearGradient colors={gradBg} style={styles.modalContent}>
-            <View style={styles.header}>
-              <Ionicons
-                name="warning-outline"
-                size={normalizeSize(48)}
-                color={current.colors.error || "#FF4444"}
-              />
-              <Text
-                style={[
-                  styles.title,
-                  {
-                    color: current.colors.textPrimary,
-                    fontFamily: current.typography.title.fontFamily,
-                  },
-                ]}
-                accessibilityRole="header"
-              >
-                {t("missedChallenge.title")}
-              </Text>
-              <Text
-                style={[
-                  styles.subtitle,
-                  {
-                    color: current.colors.textSecondary,
-                    fontFamily: current.typography.body.fontFamily,
-                  },
-                ]}
-              >
-                {t("missedChallenge.subtitle")}
-              </Text>
-            </View>
-
-            <View style={styles.optionsContainer}>
-              {/* Reset streak */}
-              <TouchableOpacity
-                style={styles.optionButton}
-                onPress={handleReset}
-                activeOpacity={0.85}
-                accessibilityRole="button"
-                accessibilityLabel={t("missedChallenge.reset.title")}
-                accessibilityHint={t("missedChallenge.reset.subtitle")}
-                testID="missed-modal-reset"
-              >
-                <LinearGradient
-                  colors={[current.colors.secondary, current.colors.primary]}
-                  style={styles.optionGradient}
-                >
+          <LinearGradient colors={gradBorder} style={styles.borderWrap}>
+            <LinearGradient colors={gradBg} style={styles.modalContent}>
+              {/* HEADER */}
+              <View style={styles.header}>
+                <View style={styles.headerIconWrap}>
                   <Ionicons
-                    name="refresh-outline"
-                    size={normalizeSize(28)}
-                    color="#FFF"
+                    name="warning-outline"
+                    size={normalizeSize(44)}
+                    color={current.colors.error || "#FF4444"}
                   />
-                  <View style={styles.optionTextContainer}>
-                    <Text
-                      style={[
-                        styles.optionText,
-                        { fontFamily: current.typography.title.fontFamily },
-                      ]}
-                    >
-                      {t("missedChallenge.reset.title")}
-                    </Text>
-                    <Text
-                      style={[
-                        styles.optionSubtext,
-                        { fontFamily: current.typography.body.fontFamily },
-                      ]}
-                    >
-                      {t("missedChallenge.reset.subtitle")}
-                    </Text>
-                  </View>
-                </LinearGradient>
-              </TouchableOpacity>
+                </View>
 
-              {/* Streak Pass (si dispo) */}
-              {canUseStreakPass && (
-                <TouchableOpacity
-                  style={styles.optionButton}
-                  onPress={handleUseStreakPass}
-                  activeOpacity={0.85}
-                  accessibilityRole="button"
-                  accessibilityLabel={t("missedChallenge.streakPass.title")}
-                  accessibilityHint={t(
-                    "missedChallenge.streakPass.subtitle"
-                  )}
-                  testID="missed-modal-streak-pass"
+                <Text
+                  style={[
+                    styles.title,
+                    {
+                      color: current.colors.textPrimary,
+                      fontFamily: current.typography.title.fontFamily,
+                    },
+                  ]}
+                  accessibilityRole="header"
                 >
-                  <LinearGradient
-                    colors={[current.colors.secondary, current.colors.primary]}
-                    style={styles.optionGradient}
+                  {t("missedChallenge.title", {
+                    defaultValue: "Tu as manqué un défi",
+                  })}
+                </Text>
+
+                <Text
+                  style={[
+                    styles.subtitle,
+                    {
+                      color: current.colors.textSecondary,
+                      fontFamily: current.typography.body.fontFamily,
+                    },
+                  ]}
+                >
+                  {t("missedChallenge.subtitle", {
+                    defaultValue:
+                      "Ta série est en danger… mais tu peux encore la sauver.",
+                  })}
+                </Text>
+              </View>
+
+              {/* OPTIONS scrollables */}
+              <ScrollView
+                style={{ maxHeight: optionsMaxH }}
+                contentContainerStyle={styles.scrollContent}
+                showsVerticalScrollIndicator={false}
+                bounces={Platform.OS === "ios"}
+                overScrollMode="never"
+              >
+                <View style={styles.optionsContainer}>
+                  {/* Reset streak */}
+                  <TouchableOpacity
+                    style={styles.optionButton}
+                    onPress={handleReset}
+                    activeOpacity={0.88}
+                    accessibilityRole="button"
+                    accessibilityLabel={t("missedChallenge.reset.title", {
+                      defaultValue: "Recommencer la série",
+                    })}
+                    accessibilityHint={t(
+                      "missedChallenge.reset.subtitle",
+                      {
+                        defaultValue:
+                          "Remettre ta série à zéro et repartir depuis le jour 1.",
+                      }
+                    )}
+                    testID="missed-modal-reset"
                   >
-                    <Ionicons
-                      name="ticket-outline"
-                      size={normalizeSize(28)}
-                      color="#FFF"
-                    />
-                    <View style={styles.optionTextContainer}>
-                      <Text
-                        style={[
-                          styles.optionText,
-                          {
-                            fontFamily:
-                              current.typography.title.fontFamily,
-                          },
-                        ]}
-                      >
-                        {t("missedChallenge.streakPass.title")}
-                      </Text>
-                      <Text
-                        style={[
-                          styles.optionSubtext,
-                          {
-                            fontFamily:
-                              current.typography.body.fontFamily,
-                          },
-                        ]}
-                      >
-                        {t("missedChallenge.streakPass.subtitle")}
-                      </Text>
-                    </View>
-                  </LinearGradient>
-                </TouchableOpacity>
-              )}
+                    <LinearGradient
+                      colors={[
+                        current.colors.secondary,
+                        current.colors.primary,
+                      ]}
+                      style={styles.optionGradient}
+                    >
+                      <View style={styles.optionIconWrap}>
+                        <Ionicons
+                          name="refresh-outline"
+                          size={normalizeSize(24)}
+                          color="#FFF"
+                        />
+                      </View>
+                      <View style={styles.optionTextContainer}>
+                        <Text
+                          style={[
+                            styles.optionText,
+                            {
+                              fontFamily:
+                                current.typography.title.fontFamily,
+                            },
+                          ]}
+                        >
+                          {t("missedChallenge.reset.title", {
+                            defaultValue: "Recommencer la série",
+                          })}
+                        </Text>
+                        <Text
+                          style={[
+                            styles.optionSubtext,
+                            {
+                              fontFamily:
+                                current.typography.body.fontFamily,
+                            },
+                          ]}
+                        >
+                          {t("missedChallenge.reset.subtitle", {
+                            defaultValue:
+                              "Remettre ta série à zéro et repartir depuis le jour 1.",
+                          })}
+                        </Text>
+                      </View>
+                      <Ionicons
+                        name="chevron-forward"
+                        size={normalizeSize(18)}
+                        color="rgba(255,255,255,0.9)"
+                      />
+                    </LinearGradient>
+                  </TouchableOpacity>
 
-              {/* Watch rewarded */}
+                  {/* Streak Pass */}
+                  {canUseStreakPass && (
+                    <TouchableOpacity
+                      style={styles.optionButton}
+                      onPress={handleUseStreakPass}
+                      activeOpacity={0.88}
+                      accessibilityRole="button"
+                      accessibilityLabel={t(
+                        "missedChallenge.streakPass.title",
+                        {
+                          defaultValue: "Utiliser un Streak Pass",
+                        }
+                      )}
+                      accessibilityHint={t(
+                        "missedChallenge.streakPass.subtitle",
+                        {
+                          defaultValue:
+                            "Annuler ce jour manqué et garder ta série intacte.",
+                        }
+                      )}
+                      testID="missed-modal-streak-pass"
+                    >
+                      <LinearGradient
+                        colors={[
+                          current.colors.secondary,
+                          current.colors.primary,
+                        ]}
+                        style={styles.optionGradient}
+                      >
+                        <View style={styles.optionIconWrap}>
+                          <Ionicons
+                            name="ticket-outline"
+                            size={normalizeSize(24)}
+                            color="#FFF"
+                          />
+                        </View>
+                        <View style={styles.optionTextContainer}>
+                          <Text
+                            style={[
+                              styles.optionText,
+                              {
+                                fontFamily:
+                                  current.typography.title.fontFamily,
+                              },
+                            ]}
+                          >
+                            {t("missedChallenge.streakPass.title", {
+                              defaultValue: "Utiliser un Streak Pass",
+                            })}
+                          </Text>
+                          <Text
+                            style={[
+                              styles.optionSubtext,
+                              {
+                                fontFamily:
+                                  current.typography.body.fontFamily,
+                              },
+                            ]}
+                          >
+                            {t("missedChallenge.streakPass.subtitle", {
+                              defaultValue:
+                                "Annuler ce jour manqué et garder ta série intacte.",
+                            })}
+                          </Text>
+                        </View>
+                        <Ionicons
+                          name="chevron-forward"
+                          size={normalizeSize(18)}
+                          color="rgba(255,255,255,0.9)"
+                        />
+                      </LinearGradient>
+                    </TouchableOpacity>
+                  )}
+
+                  {/* Watch rewarded */}
+                  <TouchableOpacity
+                    style={[
+                      styles.optionButton,
+                      !canShowRewarded && { opacity: 0.55 },
+                    ]}
+                    onPress={handleWatch}
+                    activeOpacity={0.88}
+                    disabled={!canShowRewarded}
+                    accessibilityRole="button"
+                    accessibilityState={{ disabled: !canShowRewarded }}
+                    accessibilityLabel={t("missedChallenge.ad.title", {
+                      defaultValue: "Regarder une vidéo pour sauver ta série",
+                    })}
+                    accessibilityHint={t(
+                      "missedChallenge.ad.subtitle",
+                      {
+                        defaultValue:
+                          "Regarder une vidéo sponsorisée pour annuler ce jour manqué.",
+                      }
+                    )}
+                    testID="missed-modal-watch-ad"
+                  >
+                    <LinearGradient
+                      colors={[
+                        current.colors.primary,
+                        current.colors.secondary,
+                      ]}
+                      style={styles.optionGradient}
+                    >
+                      <View style={styles.optionIconWrap}>
+                        <Ionicons
+                          name="play-circle-outline"
+                          size={normalizeSize(24)}
+                          color="#FFF"
+                        />
+                      </View>
+                      <View style={styles.optionTextContainer}>
+                        <Text
+                          style={[
+                            styles.optionText,
+                            {
+                              fontFamily:
+                                current.typography.title.fontFamily,
+                            },
+                          ]}
+                        >
+                          {t("missedChallenge.ad.title", {
+                            defaultValue:
+                              "Regarder une vidéo pour sauver ta série",
+                          })}
+                        </Text>
+                        <Text
+                          style={[
+                            styles.optionSubtext,
+                            {
+                              fontFamily:
+                                current.typography.body.fontFamily,
+                            },
+                          ]}
+                        >
+                          {t("missedChallenge.ad.subtitle", {
+                            defaultValue:
+                              "Regarder une vidéo sponsorisée pour annuler ce jour manqué.",
+                          })}
+                        </Text>
+                      </View>
+                      <Ionicons
+                        name="chevron-forward"
+                        size={normalizeSize(18)}
+                        color="rgba(255,255,255,0.9)"
+                      />
+                    </LinearGradient>
+                  </TouchableOpacity>
+
+                  {/* Use trophies */}
+                  <TouchableOpacity
+                    style={styles.optionButton}
+                    onPress={handleUseTrophies}
+                    activeOpacity={0.88}
+                    accessibilityRole="button"
+                    accessibilityLabel={t(
+                      "missedChallenge.useTrophies.title",
+                      {
+                        count: trophyCost,
+                        defaultValue:
+                          "Utiliser {{count}} trophées pour sauver ta série",
+                      }
+                    )}
+                    accessibilityHint={t(
+                      "missedChallenge.useTrophies.subtitle",
+                      {
+                        defaultValue:
+                          "Dépenser des trophées gagnés pour ignorer ce jour manqué.",
+                      }
+                    )}
+                    testID="missed-modal-use-trophies"
+                  >
+                    <LinearGradient
+                      colors={["#FACC15", current.colors.primary]}
+                      style={styles.optionGradient}
+                    >
+                      <View style={styles.optionIconWrap}>
+                        <Ionicons
+                          name="trophy-outline"
+                          size={normalizeSize(24)}
+                          color="#FFF"
+                        />
+                      </View>
+                      <View style={styles.optionTextContainer}>
+                        <Text
+                          style={[
+                            styles.optionText,
+                            {
+                              fontFamily:
+                                current.typography.title.fontFamily,
+                            },
+                          ]}
+                        >
+                          {t("missedChallenge.useTrophies.title", {
+                            count: trophyCost,
+                            defaultValue:
+                              "Utiliser {{count}} trophées pour sauver ta série",
+                          })}
+                        </Text>
+                        <Text
+                          style={[
+                            styles.optionSubtext,
+                            {
+                              fontFamily:
+                                current.typography.body.fontFamily,
+                            },
+                          ]}
+                        >
+                          {t("missedChallenge.useTrophies.subtitle", {
+                            defaultValue:
+                              "Dépenser des trophées gagnés pour ignorer ce jour manqué.",
+                          })}
+                        </Text>
+                      </View>
+                      <Ionicons
+                        name="chevron-forward"
+                        size={normalizeSize(18)}
+                        color="rgba(255,255,255,0.9)"
+                      />
+                    </LinearGradient>
+                  </TouchableOpacity>
+                </View>
+
+                <View style={{ height: normalizeSize(10) }} />
+              </ScrollView>
+
+              {/* CLOSE */}
               <TouchableOpacity
                 style={[
-                  styles.optionButton,
-                  !canShowRewarded && { opacity: 0.5 },
+                  styles.closeButton,
+                  { backgroundColor: current.colors.error || "#FF4444" },
                 ]}
-                onPress={handleWatch}
-                activeOpacity={0.85}
-                disabled={!canShowRewarded}
+                onPress={onClose}
                 accessibilityRole="button"
-                accessibilityLabel={t("missedChallenge.ad.title")}
-                accessibilityHint={t("missedChallenge.ad.subtitle")}
-                testID="missed-modal-watch-ad"
+                accessibilityLabel={t("a11y.close", {
+                  defaultValue: "Fermer",
+                })}
+                testID="missed-modal-close"
+                hitSlop={{ top: 12, bottom: 12, left: 12, right: 12 }}
+                activeOpacity={0.92}
               >
-                <LinearGradient
-                  colors={[current.colors.primary, current.colors.secondary]}
-                  style={styles.optionGradient}
-                >
-                  <Ionicons
-                    name="play-circle-outline"
-                    size={normalizeSize(28)}
-                    color="#FFF"
-                  />
-                  <View style={styles.optionTextContainer}>
-                    <Text
-                      style={[
-                        styles.optionText,
-                        { fontFamily: current.typography.title.fontFamily },
-                      ]}
-                    >
-                      {t("missedChallenge.ad.title")}
-                    </Text>
-                    <Text
-                      style={[
-                        styles.optionSubtext,
-                        { fontFamily: current.typography.body.fontFamily },
-                      ]}
-                    >
-                      {t("missedChallenge.ad.subtitle")}
-                    </Text>
-                  </View>
-                </LinearGradient>
+                <Ionicons
+                  name="close"
+                  size={normalizeSize(18)}
+                  color="#FFF"
+                />
               </TouchableOpacity>
-
-              {/* Use trophies */}
-              <TouchableOpacity
-                style={styles.optionButton}
-                onPress={handleUseTrophies}
-                activeOpacity={0.85}
-                accessibilityRole="button"
-                accessibilityLabel={t(
-                  "missedChallenge.useTrophies.title",
-                  { count: trophyCost }
-                )}
-                accessibilityHint={t(
-                  "missedChallenge.useTrophies.subtitle"
-                )}
-                testID="missed-modal-use-trophies"
-              >
-                <LinearGradient
-                  colors={["#FACC15", current.colors.primary]}
-                  style={styles.optionGradient}
-                >
-                  <Ionicons
-                    name="trophy-outline"
-                    size={normalizeSize(28)}
-                    color="#FFF"
-                  />
-                  <View style={styles.optionTextContainer}>
-                    <Text
-                      style={[
-                        styles.optionText,
-                        { fontFamily: current.typography.title.fontFamily },
-                      ]}
-                    >
-                      {t("missedChallenge.useTrophies.title", {
-                        count: trophyCost,
-                      })}
-                    </Text>
-                    <Text
-                      style={[
-                        styles.optionSubtext,
-                        { fontFamily: current.typography.body.fontFamily },
-                      ]}
-                    >
-                      {t("missedChallenge.useTrophies.subtitle")}
-                    </Text>
-                  </View>
-                </LinearGradient>
-              </TouchableOpacity>
-            </View>
-
-            <TouchableOpacity
-              style={[
-                styles.closeButton,
-                {
-                  backgroundColor:
-                    current.colors.error || "#FF4444",
-                },
-              ]}
-              onPress={onClose}
-              accessibilityRole="button"
-              accessibilityLabel={t("a11y.close")}
-              testID="missed-modal-close"
-            >
-              <Ionicons
-                name="close-circle"
-                size={normalizeSize(36)}
-                color="#FFF"
-              />
-            </TouchableOpacity>
+            </LinearGradient>
           </LinearGradient>
         </Animated.View>
       </View>
@@ -424,81 +617,125 @@ const styles = StyleSheet.create({
     left: 0,
     right: 0,
     bottom: 0,
-    backgroundColor: "rgba(0, 0, 0, 0.75)",
+    backgroundColor: "rgba(0, 0, 0, 0.78)",
     justifyContent: "center",
     alignItems: "center",
     paddingHorizontal: normalizeSize(12),
   },
+
   modalContainer: {
-    width: SCREEN_WIDTH * 0.9,
-    maxWidth: normalizeSize(420),
-    maxHeight: SCREEN_HEIGHT * 0.85,
-    borderRadius: normalizeSize(24),
+    width: SCREEN_WIDTH * 0.92,
+    maxWidth: normalizeSize(440),
+    borderRadius: normalizeSize(26),
     overflow: "hidden",
   },
+
+  borderWrap: {
+    padding: 1.2,
+    borderRadius: normalizeSize(26),
+  },
+
   modalContent: {
     width: "100%",
-    padding: normalizeSize(24),
-    borderRadius: normalizeSize(24),
+    padding: normalizeSize(18),
+    borderRadius: normalizeSize(25),
     shadowColor: "#000",
     shadowOffset: { width: 0, height: normalizeSize(12) },
-    shadowOpacity: 0.6,
+    shadowOpacity: 0.65,
     shadowRadius: normalizeSize(20),
     elevation: 25,
   },
+
   header: {
     alignItems: "center",
-    marginBottom: normalizeSize(24),
+    marginBottom: normalizeSize(12),
+    paddingTop: normalizeSize(6),
   },
+  headerIconWrap: {
+    width: normalizeSize(62),
+    height: normalizeSize(62),
+    borderRadius: normalizeSize(31),
+    alignItems: "center",
+    justifyContent: "center",
+    backgroundColor: "rgba(255,255,255,0.06)",
+    marginBottom: normalizeSize(8),
+  },
+
   title: {
-    fontSize: normalizeSize(28),
-    color: "#FFF",
-    marginTop: normalizeSize(12),
+    fontSize: normalizeSize(24),
+    marginTop: normalizeSize(4),
     textAlign: "center",
   },
   subtitle: {
-    fontSize: normalizeSize(16),
-    color: "#D1D5DB",
+    fontSize: normalizeSize(15),
     textAlign: "center",
-    marginTop: normalizeSize(8),
-    paddingHorizontal: normalizeSize(10),
+    marginTop: normalizeSize(6),
+    paddingHorizontal: normalizeSize(8),
+    lineHeight: normalizeSize(20),
   },
+
+  scrollContent: {
+    paddingBottom: normalizeSize(4),
+  },
+
   optionsContainer: {
-    gap: normalizeSize(16),
+    gap: normalizeSize(12),
   },
+
   optionButton: {
     borderRadius: normalizeSize(16),
     overflow: "hidden",
-    elevation: 8,
+    elevation: 6,
   },
+
   optionGradient: {
     flexDirection: "row",
     alignItems: "center",
-    padding: normalizeSize(16),
+    paddingVertical: normalizeSize(14),
+    paddingHorizontal: normalizeSize(14),
     borderRadius: normalizeSize(16),
-    minHeight: normalizeSize(70),
+    minHeight: normalizeSize(68),
   },
+
+  optionIconWrap: {
+    width: normalizeSize(38),
+    height: normalizeSize(38),
+    borderRadius: normalizeSize(12),
+    backgroundColor: "rgba(255,255,255,0.18)",
+    alignItems: "center",
+    justifyContent: "center",
+    marginRight: normalizeSize(12),
+  },
+
   optionTextContainer: {
     flex: 1,
-    marginLeft: normalizeSize(12),
   },
   optionText: {
-    fontSize: normalizeSize(18),
+    fontSize: normalizeSize(17),
     color: "#FFF",
-    lineHeight: normalizeSize(22),
+    lineHeight: normalizeSize(21),
   },
   optionSubtext: {
-    fontSize: normalizeSize(14),
-    color: "#E5E7EB",
+    fontSize: normalizeSize(13),
+    color: "rgba(255,255,255,0.9)",
     lineHeight: normalizeSize(18),
+    marginTop: 2,
   },
+
   closeButton: {
     position: "absolute",
-    top: normalizeSize(3),
-    right: normalizeSize(3),
-    borderRadius: normalizeSize(18),
-    padding: normalizeSize(6),
+    top: normalizeSize(8),
+    right: normalizeSize(8),
+    width: normalizeSize(34),
+    height: normalizeSize(34),
+    borderRadius: normalizeSize(17),
+    alignItems: "center",
+    justifyContent: "center",
     elevation: 10,
+    shadowColor: "#000",
+    shadowOpacity: 0.25,
+    shadowRadius: 6,
+    shadowOffset: { width: 0, height: 2 },
   },
 });
 

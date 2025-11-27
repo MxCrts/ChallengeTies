@@ -12,11 +12,11 @@ import {
   TouchableOpacity,
   StyleSheet,
   ActivityIndicator,
-  Alert,
   Dimensions,
   SafeAreaView,
   StatusBar,
   Platform,
+  AccessibilityInfo,
   PlatformColor,
 } from "react-native";
 import { LinearGradient } from "expo-linear-gradient";
@@ -34,6 +34,7 @@ import Animated,
   Easing,
   useSharedValue,
   useAnimatedStyle,
+  withDelay,
   withTiming,
   withSequence,
 } from "react-native-reanimated";
@@ -55,6 +56,7 @@ const { width: SCREEN_WIDTH, height: SCREEN_HEIGHT } = Dimensions.get("window");
 const ITEM_WIDTH = SCREEN_WIDTH * 0.9;
 const ITEM_HEIGHT = SCREEN_WIDTH * 0.42;
 const ROW_HEIGHT = ITEM_HEIGHT + SPACING * 1.5;
+const TOAST_DURATION = 2600;
 
 const normalizeSize = (size: number) => {
   const baseWidth = 375;
@@ -117,6 +119,8 @@ interface Challenge {
   uniqueKey?: string;
 }
 
+type ToastType = "success" | "error" | "info";
+
 export default function CurrentChallenges() {
   const router = useRouter();
   const { t, i18n } = useTranslation();
@@ -131,6 +135,8 @@ export default function CurrentChallenges() {
   const { showBanners } = useAdsVisibility();
   const insets = useSafeAreaInsets();
   const [markingId, setMarkingId] = useState<string | null>(null);
+  const [gainKey, setGainKey] = useState<string | null>(null);
+  const [reduceMotion, setReduceMotion] = useState(false);
   const tabBarHeight = useTabBarHeightSafe();
   const [adHeight, setAdHeight] = useState(0);
 
@@ -155,6 +161,62 @@ export default function CurrentChallenges() {
   const gainDingRef = useRef<Audio.Sound | null>(null);
   const gainSparkleRef = useRef<Audio.Sound | null>(null);
   const isPlayingFxRef = useRef(false);
+
+  // 🥐 Toast local (premium, pas d'Alert moche)
+  const [toast, setToast] = useState<{
+    type: ToastType;
+    message: string;
+  } | null>(null);
+  const toastOpacity = useSharedValue(0);
+  const toastTranslateY = useSharedValue(-10);
+
+  const toastAnimatedStyle = useAnimatedStyle(() => ({
+    opacity: toastOpacity.value,
+    transform: [{ translateY: toastTranslateY.value }],
+  }));
+
+  const showToast = useCallback(
+  (type: ToastType, message: string) => {
+    setToast({ type, message });
+    toastOpacity.value = 0;
+    toastTranslateY.value = -10;
+
+    toastOpacity.value = withSequence(
+      withTiming(1, { duration: 200, easing: Easing.out(Easing.ease) }),
+      withDelay(
+        TOAST_DURATION,
+        withTiming(0, {
+          duration: 300,
+          easing: Easing.in(Easing.ease),
+        })
+      )
+    );
+
+    toastTranslateY.value = withSequence(
+      withTiming(0, { duration: 200, easing: Easing.out(Easing.ease) }),
+      withDelay(
+        TOAST_DURATION,
+        withTiming(-10, {
+          duration: 300,
+          easing: Easing.in(Easing.ease),
+        })
+      )
+    );
+
+    if (!reduceMotion) {
+      Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light).catch(() => {});
+    }
+
+    // Nettoyage
+    setTimeout(() => {
+      setToast((current) =>
+        current && current.message === message ? null : current
+      );
+    }, TOAST_DURATION + 400);
+  },
+  [reduceMotion, toastOpacity, toastTranslateY]
+);
+
 
   useEffect(() => {
     let mounted = true;
@@ -203,12 +265,33 @@ export default function CurrentChallenges() {
     };
   }, []);
 
+  // ✅ Respect Reduce Motion (haptics)
+  useEffect(() => {
+    let mounted = true;
+    AccessibilityInfo.isReduceMotionEnabled()
+      .then((v) => mounted && setReduceMotion(!!v))
+      .catch(() => {});
+    const sub = AccessibilityInfo.addEventListener?.(
+      "reduceMotionChanged",
+      (v) => mounted && setReduceMotion(!!v)
+    );
+    return () => {
+      mounted = false;
+      // @ts-ignore compat RN
+      sub?.remove?.();
+    };
+  }, []);
+
   // 🎵 Stack audio premium (whoosh -> ding -> sparkle) + haptic
   const playSuccessFx = useCallback(async () => {
     if (isPlayingFxRef.current) return;
     try {
       isPlayingFxRef.current = true;
-      Haptics.selectionAsync().catch(() => {});
+      if (!reduceMotion) {
+        Haptics.notificationAsync(
+          Haptics.NotificationFeedbackType.Success
+        ).catch(() => {});
+      }
       await gainWhooshRef.current?.replayAsync();
       setTimeout(() => {
         gainDingRef.current?.replayAsync().catch(() => {});
@@ -221,7 +304,7 @@ export default function CurrentChallenges() {
         isPlayingFxRef.current = false;
       }, 380);
     }
-  }, []);
+  }, [reduceMotion]);
 
   // Challenges localisés + dédupliqués
   const translatedChallenges = useMemo(() => {
@@ -270,6 +353,14 @@ export default function CurrentChallenges() {
     transform: [{ translateY: gainY.value }],
   }));
 
+  // 💣 Confirmation abandon challenge (remplace Alert)
+  const [pendingRemoval, setPendingRemoval] = useState<{
+    id: string;
+    selectedDays: number;
+    index: number;
+    title?: string;
+  } | null>(null);
+
   const handleMarkToday = useCallback(
     async (id: string, selectedDays: number) => {
       const key = `${id}_${selectedDays}`;
@@ -278,12 +369,10 @@ export default function CurrentChallenges() {
         setMarkingId(key);
         const result = await markToday(id, selectedDays);
         if (result?.success) {
-          Haptics.notificationAsync(
-            Haptics.NotificationFeedbackType.Success
-          ).catch(() => {});
           setConfettiActive(true);
           await playSuccessFx();
           // 💫 effet mini-gain
+          setGainKey(key);
           gainOpacity.value = withSequence(
             withTiming(1, { duration: 200, easing: Easing.out(Easing.ease) }),
             withTiming(0, { duration: 600, easing: Easing.in(Easing.ease) })
@@ -295,97 +384,107 @@ export default function CurrentChallenges() {
             }),
             withTiming(0, { duration: 600, easing: Easing.in(Easing.quad) })
           );
+          setTimeout(() => setGainKey(null), 900);
+          showToast("success", String(t("dayMarkedSuccess")));
+        } else {
+          showToast("error", String(t("markTodayFailed")));
         }
       } catch (err) {
         console.error("Erreur markToday:", err);
-        Alert.alert(String(t("error")), String(t("markTodayFailed")));
+        if (!reduceMotion) {
+          Haptics.notificationAsync(
+            Haptics.NotificationFeedbackType.Error
+          ).catch(() => {});
+        }
+        showToast("error", String(t("markTodayFailed")));
       } finally {
         setMarkingId(null);
       }
     },
-    [markToday, t, markingId, playSuccessFx, gainOpacity, gainY]
+    [
+      markToday,
+      t,
+      markingId,
+      playSuccessFx,
+      gainOpacity,
+      gainY,
+      reduceMotion,
+      showToast,
+    ]
   );
 
   const handleRemove = useCallback(
-    (id: string, selectedDays: number, index: number) => {
-      Alert.alert(
-        String(t("abandonChallenge")),
-        String(t("abandonChallengeConfirm")),
-        [
-          {
-            text: String(t("cancel")),
-            style: "cancel",
-            onPress: () => {
-              swipeableRefs.current[index]?.close();
-            },
-          },
-          {
-            text: String(t("continue")),
-            style: "destructive",
-            onPress: async () => {
-  try {
-    setLocalChallenges((prev) =>
-      prev.filter(
-        (c) => !(c.id === id && c.selectedDays === selectedDays)
-      )
-    );
-    await removeChallenge(id, selectedDays);
-    swipeableRefs.current[index]?.close(); // 👈 ajoute ça ici
-    Alert.alert(
-      String(t("abandoned")),
-      String(t("challengeAbandoned"))
-    );
-  } catch (err) {
-    console.error("Erreur removeChallenge:", err);
-    Alert.alert(
-      String(t("error")),
-      String(t("failedToAbandonChallenge"))
-    );
-    swipeableRefs.current[index]?.close();
-  }
-},
-
-          },
-        ],
-        { cancelable: true }
-      );
+    (id: string, selectedDays: number, index: number, title?: string) => {
+      setPendingRemoval({ id, selectedDays, index, title });
+      if (!reduceMotion) {
+        Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium).catch(() => {});
+      }
     },
-    [removeChallenge, t]
+    [reduceMotion]
   );
 
- const renderRightActions = useCallback(
-  (item: Challenge, index: number) => (
-    <View style={styles.swipeActionsContainer} pointerEvents="box-none">
-      <TouchableOpacity
-        activeOpacity={0.9}
-        style={styles.trashButton}
-        onPress={() => handleRemove(item.id, item.selectedDays, index)}
-        accessible
-        accessibilityRole="button"
-        accessibilityLabel={String(t("deleteChallenge"))}
-        accessibilityHint={String(t("confirmDeletionHint"))}
-        hitSlop={{ top: 14, bottom: 14, left: 14, right: 14 }}
-      >
-        <LinearGradient
-          colors={["#F43F5E", "#DC2626"]}
-          start={{ x: 0, y: 0 }}
-          end={{ x: 1, y: 1 }}
-          style={StyleSheet.absoluteFillObject}
-        />
-        <Ionicons
-          name="trash-outline"
-          size={normalizeSize(26)}
-          color="#fff"
-        />
-        <Text style={styles.trashLabel}>
-  {t("delete")}
-</Text>
-      </TouchableOpacity>
-    </View>
-  ),
-  [handleRemove, t]
-);
+  const confirmRemove = useCallback(async () => {
+    if (!pendingRemoval) return;
+    const { id, selectedDays, index, title } = pendingRemoval;
+    try {
+      setLocalChallenges((prev) =>
+        prev.filter((c) => !(c.id === id && c.selectedDays === selectedDays))
+      );
+      await removeChallenge(id, selectedDays);
+      swipeableRefs.current[index]?.close();
+      showToast(
+        "success",
+        title
+          ? String(t("challengeAbandonedWithName", { title }))
+          : String(t("challengeAbandoned"))
+      );
+    } catch (err) {
+      console.error("Erreur removeChallenge:", err);
+      showToast("error", String(t("failedToAbandonChallenge")));
+      swipeableRefs.current[index]?.close();
+    } finally {
+      setPendingRemoval(null);
+    }
+  }, [pendingRemoval, removeChallenge, t, showToast]);
 
+  const cancelRemove = useCallback(() => {
+    if (pendingRemoval) {
+      const { index } = pendingRemoval;
+      swipeableRefs.current[index]?.close();
+    }
+    setPendingRemoval(null);
+  }, [pendingRemoval]);
+
+  const renderRightActions = useCallback(
+    (item: Challenge, index: number) => (
+      <View style={styles.swipeActionsContainer} pointerEvents="box-none">
+        <TouchableOpacity
+          activeOpacity={0.9}
+          style={styles.trashButton}
+          onPress={() => handleRemove(item.id, item.selectedDays, index, item.title)}
+          accessible
+          accessibilityRole="button"
+          accessibilityLabel={String(t("deleteChallenge"))}
+          accessibilityHint={String(t("confirmDeletionHint"))}
+          hitSlop={{ top: 14, bottom: 14, left: 14, right: 14 }}
+        >
+          <LinearGradient
+            colors={["#F43F5E", "#DC2626"]}
+            start={{ x: 0, y: 0 }}
+            end={{ x: 1, y: 1 }}
+            style={StyleSheet.absoluteFillObject}
+          />
+          <Ionicons
+            name="trash-outline"
+            size={normalizeSize(26)}
+            color="#fff"
+          />
+          <Text style={styles.trashLabel}>{t("delete")}</Text>
+        </TouchableOpacity>
+      </View>
+    ),
+    [handleRemove, t]
+  );
 
   const navigateToDetail = useCallback(
     (item: Challenge) => {
@@ -442,18 +541,19 @@ export default function CurrentChallenges() {
             testID={`challenge-swipe-${key}`}
           >
             <Swipeable
-  ref={(ref: any) => {
-    swipeableRefs.current[index] = ref;
-  }}
-  renderRightActions={() => renderRightActions(item, index)}
-  overshootRight={false}
-  onSwipeableOpen={() => {
-    Haptics.impactAsync(
-      Haptics.ImpactFeedbackStyle.Light
-    ).catch(() => {});
-  }}
->
-
+              ref={(ref: any) => {
+                swipeableRefs.current[index] = ref;
+              }}
+              renderRightActions={() => renderRightActions(item, index)}
+              overshootRight={false}
+              onSwipeableOpen={() => {
+                if (!reduceMotion) {
+                  Haptics.impactAsync(
+                    Haptics.ImpactFeedbackStyle.Light
+                  ).catch(() => {});
+                }
+              }}
+            >
               <TouchableOpacity
                 style={styles.cardContainer}
                 onPress={() => navigateToDetail(item)}
@@ -568,21 +668,19 @@ export default function CurrentChallenges() {
                     <View style={styles.progressRow}>
                       <View style={styles.progressContainer}>
                         <Progress.Bar
-  progress={progress}
-  width={null}
-  height={normalizeSize(5)}
-  borderRadius={normalizeSize(3)}
-  color={currentTheme.colors.secondary}
-  unfilledColor={withAlpha(
-    currentTheme.colors.secondary,
-    0.14
-  )}
-  borderWidth={0}
-  animationType="spring"
-  style={styles.progressBar}
-/>
-
-
+                          progress={progress}
+                          width={null}
+                          height={normalizeSize(5)}
+                          borderRadius={normalizeSize(3)}
+                          color={currentTheme.colors.secondary}
+                          unfilledColor={withAlpha(
+                            currentTheme.colors.secondary,
+                            0.14
+                          )}
+                          borderWidth={0}
+                          animationType="spring"
+                          style={styles.progressBar}
+                        />
                       </View>
                       <View style={styles.progressMeta}>
                         <View style={styles.progressChip}>
@@ -703,12 +801,9 @@ export default function CurrentChallenges() {
                         )}
 
                         {/* +1🏆 animé quand marqué */}
-                        {(marked || markingId === key) && (
+                        {gainKey === key && (
                           <Animated.View
-                            style={[
-                              gainStyle,
-                              styles.gainTrophyContainer,
-                            ]}
+                            style={[gainStyle, styles.gainTrophyContainer]}
                           >
                             <Text
                               style={{
@@ -741,12 +836,13 @@ export default function CurrentChallenges() {
       currentTheme,
       isMarkedToday,
       handleMarkToday,
-      handleRemove,
       navigateToDetail,
       t,
       isDarkMode,
       gainStyle,
       markingId,
+      gainKey,
+      reduceMotion,
     ]
   );
 
@@ -907,6 +1003,156 @@ export default function CurrentChallenges() {
             />
           )}
         </View>
+
+        {/* ✅ Toast premium */}
+        {toast && (
+          <Animated.View
+            style={[
+              styles.toastContainer,
+              toastAnimatedStyle,
+              {
+                top: insets.top + normalizeSize(10),
+              },
+            ]}
+            pointerEvents="none"
+          >
+            <View
+              style={[
+                styles.toastContent,
+                {
+                  backgroundColor:
+                    toast.type === "success"
+                      ? withAlpha(currentTheme.colors.secondary, 0.92)
+                      : toast.type === "error"
+                      ? withAlpha("#DC2626", 0.94)
+                      : withAlpha(currentTheme.colors.cardBackground, 0.96),
+                },
+              ]}
+            >
+              <Ionicons
+                name={
+                  toast.type === "success"
+                    ? "checkmark-circle-outline"
+                    : toast.type === "error"
+                    ? "alert-circle-outline"
+                    : "information-circle-outline"
+                }
+                size={normalizeSize(18)}
+                color={
+                  toast.type === "error"
+                    ? "#F9FAFB"
+                    : "#0b1120"
+                }
+                style={{ marginRight: 8 }}
+              />
+              <Text
+                style={[
+                  styles.toastText,
+                  {
+                    color:
+                      toast.type === "error"
+                        ? "#F9FAFB"
+                        : "#0b1120",
+                  },
+                ]}
+                numberOfLines={2}
+              >
+                {toast.message}
+              </Text>
+            </View>
+          </Animated.View>
+        )}
+
+        {/* ✅ Modal de confirmation d'abandon (remplace Alert) */}
+        {pendingRemoval && (
+          <View style={styles.confirmOverlay} pointerEvents="auto">
+            <Animated.View
+              entering={ZoomIn.duration(200)}
+              style={styles.confirmCardWrapper}
+            >
+              <LinearGradient
+                colors={[
+                  withAlpha(currentTheme.colors.cardBackground, 0.98),
+                  withAlpha(currentTheme.colors.cardBackground, 0.92),
+                ]}
+                style={styles.confirmCard}
+              >
+                <View style={styles.confirmIconWrapper}>
+                  <LinearGradient
+                    colors={["#F97373", "#DC2626"]}
+                    style={styles.confirmIconCircle}
+                  >
+                    <Ionicons
+                      name="trash-outline"
+                      size={normalizeSize(26)}
+                      color="#F9FAFB"
+                    />
+                  </LinearGradient>
+                </View>
+                <Text
+                  style={[
+                    styles.confirmTitle,
+                    {
+                      color: isDarkMode
+                        ? currentTheme.colors.textPrimary
+                        : "#000000",
+                    },
+                  ]}
+                >
+                  {String(t("abandonChallenge"))}
+                </Text>
+                <Text
+                  style={[
+                    styles.confirmSubtitle,
+                    { color: currentTheme.colors.textSecondary },
+                  ]}
+                >
+                  {pendingRemoval.title
+                    ? t("abandonChallengeConfirmWithName", {
+                        title: pendingRemoval.title,
+                      })
+                    : t("abandonChallengeConfirm")}
+                </Text>
+
+                <View style={styles.confirmButtonsRow}>
+                  <TouchableOpacity
+                    style={styles.confirmSecondaryButton}
+                    onPress={cancelRemove}
+                    accessibilityRole="button"
+                    accessibilityLabel={String(t("cancel"))}
+                  >
+                    <Text
+                      style={[
+                        styles.confirmSecondaryText,
+                        { color: currentTheme.colors.textPrimary },
+                      ]}
+                    >
+                      {String(t("cancel"))}
+                    </Text>
+                  </TouchableOpacity>
+
+                  <TouchableOpacity
+                    style={styles.confirmPrimaryButton}
+                    onPress={confirmRemove}
+                    accessibilityRole="button"
+                    accessibilityLabel={String(t("continue"))}
+                  >
+                    <LinearGradient
+                      colors={["#F97373", "#DC2626"]}
+                      start={{ x: 0, y: 0 }}
+                      end={{ x: 1, y: 1 }}
+                      style={styles.confirmPrimaryGradient}
+                    >
+                      <Text style={styles.confirmPrimaryText}>
+                        {String(t("continue"))}
+                      </Text>
+                    </LinearGradient>
+                  </TouchableOpacity>
+                </View>
+              </LinearGradient>
+            </Animated.View>
+          </View>
+        )}
 
         {showBanners && (
           <View
@@ -1098,42 +1344,42 @@ const styles = StyleSheet.create({
     fontSize: normalizeSize(12.5),
     fontFamily: "Comfortaa_400Regular",
   },
-progressRow: {
-  flexDirection: "row",
-  alignItems: "center",
-  marginVertical: normalizeSize(4),
-},
+  progressRow: {
+    flexDirection: "row",
+    alignItems: "center",
+    marginVertical: normalizeSize(4),
+  },
   progressContainer: {
-  flex: 1,
-  marginRight: normalizeSize(8),
-  justifyContent: "center",
-},
+    flex: 1,
+    marginRight: normalizeSize(8),
+    justifyContent: "center",
+  },
   progressBar: {
-  width: "100%",
-  alignSelf: "stretch",
-},
+    width: "100%",
+    alignSelf: "stretch",
+  },
   progressMeta: {
     alignItems: "flex-end",
     justifyContent: "center",
     gap: 2,
   },
- progressChip: {
-  flexDirection: "row",
-  alignItems: "center",
-  paddingHorizontal: normalizeSize(7),
-  paddingVertical: normalizeSize(2),
-  borderRadius: 999,
-  backgroundColor: "rgba(15, 23, 42, 0.9)",
-},
+  progressChip: {
+    flexDirection: "row",
+    alignItems: "center",
+    paddingHorizontal: normalizeSize(7),
+    paddingVertical: normalizeSize(2),
+    borderRadius: 999,
+    backgroundColor: "rgba(15, 23, 42, 0.9)",
+  },
   progressChipText: {
     fontSize: normalizeSize(11.5),
     fontFamily: "Comfortaa_700Bold",
     marginLeft: 4,
   },
   progressText: {
-  fontSize: normalizeSize(11.5),
-  fontFamily: "Comfortaa_400Regular",
-},
+    fontSize: normalizeSize(11.5),
+    fontFamily: "Comfortaa_400Regular",
+  },
   markTodayButton: {
     borderRadius: normalizeSize(18),
     overflow: "hidden",
@@ -1216,5 +1462,110 @@ progressRow: {
     fontFamily: "Comfortaa_700Bold",
     fontSize: normalizeSize(12),
     letterSpacing: 0.3,
+  },
+
+  // Toast
+  toastContainer: {
+    position: "absolute",
+    left: SPACING,
+    right: SPACING,
+    zIndex: 99999,
+  },
+  toastContent: {
+    flexDirection: "row",
+    alignItems: "center",
+    paddingVertical: normalizeSize(10),
+    paddingHorizontal: normalizeSize(14),
+    borderRadius: normalizeSize(16),
+    shadowColor: "#000",
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.25,
+    shadowRadius: 10,
+    elevation: 10,
+  },
+  toastText: {
+    flex: 1,
+    fontSize: normalizeSize(13.5),
+    fontFamily: "Comfortaa_400Regular",
+  },
+
+  // Confirm overlay
+  confirmOverlay: {
+    ...StyleSheet.absoluteFillObject,
+    backgroundColor: "rgba(15,23,42,0.6)",
+    justifyContent: "center",
+    alignItems: "center",
+    zIndex: 99998,
+  },
+  confirmCardWrapper: {
+    width: SCREEN_WIDTH * 0.85,
+  },
+  confirmCard: {
+    borderRadius: normalizeSize(22),
+    paddingHorizontal: SPACING,
+    paddingTop: SPACING * 1.5,
+    paddingBottom: SPACING,
+    shadowColor: "#000",
+    shadowOffset: { width: 0, height: 8 },
+    shadowOpacity: 0.3,
+    shadowRadius: 16,
+    elevation: 12,
+  },
+  confirmIconWrapper: {
+    alignItems: "center",
+    marginBottom: SPACING,
+  },
+  confirmIconCircle: {
+    width: normalizeSize(52),
+    height: normalizeSize(52),
+    borderRadius: normalizeSize(26),
+    justifyContent: "center",
+    alignItems: "center",
+  },
+  confirmTitle: {
+    fontSize: normalizeSize(20),
+    fontFamily: "Comfortaa_700Bold",
+    textAlign: "center",
+    marginBottom: normalizeSize(6),
+  },
+  confirmSubtitle: {
+    fontSize: normalizeSize(14.5),
+    fontFamily: "Comfortaa_400Regular",
+    textAlign: "center",
+    marginBottom: SPACING,
+  },
+  confirmButtonsRow: {
+    flexDirection: "row",
+    justifyContent: "space-between",
+    gap: SPACING,
+  },
+  confirmSecondaryButton: {
+    flex: 1,
+    borderRadius: normalizeSize(16),
+    borderWidth: 1,
+    borderColor: withAlpha("#9CA3AF", 0.6),
+    paddingVertical: normalizeSize(10),
+    alignItems: "center",
+    justifyContent: "center",
+  },
+  confirmSecondaryText: {
+    fontSize: normalizeSize(14.5),
+    fontFamily: "Comfortaa_700Bold",
+  },
+  confirmPrimaryButton: {
+    flex: 1,
+    borderRadius: normalizeSize(16),
+    overflow: "hidden",
+  },
+  confirmPrimaryGradient: {
+    paddingVertical: normalizeSize(10),
+    alignItems: "center",
+    justifyContent: "center",
+    borderRadius: normalizeSize(16),
+  },
+  confirmPrimaryText: {
+    fontSize: normalizeSize(14.5),
+    fontFamily: "Comfortaa_700Bold",
+    color: "#F9FAFB",
   },
 });

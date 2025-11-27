@@ -94,6 +94,8 @@ export async function bumpDuoStreak(uid: string, duoStreakNow: number) {
  * - et le compteur `stats.categories.mastered`
  */
 export async function addCompletedCategory(uid: string, category?: string | null) {
+  const clean = String(category || "").trim();
+  if (!clean) return;
   const ref = userRef(uid);
   await runTransaction(db, async (tx) => {
     const snap = await tx.get(ref);
@@ -102,8 +104,8 @@ export async function addCompletedCategory(uid: string, category?: string | null
     }
     const data = snap.data() || {};
     const curr: string[] = Array.isArray(data.categoriesCompleted) ? data.categoriesCompleted : [];
-    if (curr.includes(category)) return;
-    const next = [...curr, String(category)];
+    if (curr.includes(clean)) return;
+    const next = [...curr, clean];
     tx.update(ref, {
       categoriesCompleted: next,
       "stats.categories.mastered": next.length,

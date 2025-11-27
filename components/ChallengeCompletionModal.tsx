@@ -1,4 +1,4 @@
-import React, { useEffect, useState, useRef, useMemo  } from "react";
+import React, { useEffect, useState, useRef, useMemo } from "react";
 import {
   Modal,
   View,
@@ -7,6 +7,7 @@ import {
   StyleSheet,
   Animated,
   Dimensions,
+  AccessibilityInfo,
 } from "react-native";
 import { Ionicons } from "@expo/vector-icons";
 import { LinearGradient } from "expo-linear-gradient";
@@ -102,16 +103,21 @@ export default function ChallengeCompletionModal({
   const { t } = useTranslation();
   const { showRewarded } = useAdsVisibility() as any;
   const canShowRewarded = !!showRewarded;
-const safeReward = useMemo(() => {
-    const r = Math.round(baseReward * Math.max(1, selectedDays) / 7);
+
+  const safeReward = useMemo(() => {
+    const r = Math.round((baseReward * Math.max(1, selectedDays)) / 7);
     return Math.max(1, r);
   }, [selectedDays]);
+
   const { theme } = useTheme();
   const isDarkMode = theme === "dark";
   const currentTheme: Theme = isDarkMode
     ? designSystem.darkTheme
     : designSystem.lightTheme;
   const dynamicStyles = getDynamicStyles(currentTheme, isDarkMode);
+
+  // Accessibilité / animations
+  const [reduceMotion, setReduceMotion] = useState(false);
 
   // Toast state
   const [toastText, setToastText] = useState<string>("");
@@ -122,21 +128,23 @@ const safeReward = useMemo(() => {
   // Busy guard
   const [busy, setBusy] = useState(false);
   const busyRef = useRef(false);
- 
 
   // Navigation
   const router = useRouter();
   const didNavigateRef = useRef(false);
 
-   // Vidéo / fallback image
+  // Vidéo / fallback image
   const videoRef = useRef<Video>(null);
   const [videoOk, setVideoOk] = useState(true);
 
   // Loop handle pour stopper proprement
   const loopRef = useRef<Animated.CompositeAnimation | null>(null);
-  useEffect(() => () => {
-    loopRef.current?.stop?.();
-  }, []);
+  useEffect(
+    () => () => {
+      loopRef.current?.stop?.();
+    },
+    []
+  );
 
   // Animations
   const [motivationalPhrase, setMotivationalPhrase] = useState<string>("");
@@ -148,32 +156,39 @@ const safeReward = useMemo(() => {
 
   // Data
   const [userTrophies, setUserTrophies] = useState<number>(0);
-  const { completeChallenge, requestRewardedAd, preloadRewarded } = useCurrentChallenges();
+  const { completeChallenge, requestRewardedAd, preloadRewarded } =
+    useCurrentChallenges();
 
-  // Toast helper
-  const showToast = (msg: string, duration = 1200) => {
-    setToastText(msg);
-    setToastVisible(true);
-    Animated.parallel([
-      Animated.timing(toastOpacity, { toValue: 1, duration: 220, useNativeDriver: true }),
-      Animated.timing(toastTranslate, { toValue: 0, duration: 220, useNativeDriver: true }),
-    ]).start(() => {
-      setTimeout(() => {
-        Animated.parallel([
-          Animated.timing(toastOpacity, { toValue: 0, duration: 200, useNativeDriver: true }),
-          Animated.timing(toastTranslate, { toValue: 30, duration: 200, useNativeDriver: true }),
-        ]).start(() => setToastVisible(false));
-      }, duration);
+  useEffect(() => {
+    busyRef.current = busy;
+  }, [busy]);
+
+  // Accessibilité : réduire animations
+  useEffect(() => {
+    let mounted = true;
+    AccessibilityInfo.isReduceMotionEnabled().then((enabled) => {
+      if (mounted) setReduceMotion(!!enabled);
     });
-  };
+    const sub = AccessibilityInfo.addEventListener(
+      "reduceMotionChanged",
+      (enabled) => {
+        setReduceMotion(!!enabled);
+      }
+    );
+    return () => {
+      mounted = false;
+      // @ts-ignore RN <=0.72 compat
+      sub?.remove?.();
+    };
+  }, []);
 
- useEffect(() => { busyRef.current = busy; }, [busy]);
-
-  // Précharge la rewarded côté contexte à chaque ouverture
+  // Précharge la rewarded à chaque ouverture
   useEffect(() => {
     if (visible) {
-      try { preloadRewarded(); } catch {}
-      // reset état vidéo et animations
+      try {
+        preloadRewarded();
+      } catch {}
+      // reset vidéo & animations
       setVideoOk(true);
       loopRef.current?.stop?.();
     }
@@ -190,43 +205,115 @@ const safeReward = useMemo(() => {
     return () => unsubscribe();
   }, []);
 
+  // Toast helper
+  const showToast = (msg: string, duration = 1200) => {
+    setToastText(msg);
+    setToastVisible(true);
+    Animated.parallel([
+      Animated.timing(toastOpacity, {
+        toValue: 1,
+        duration: 220,
+        useNativeDriver: true,
+      }),
+      Animated.timing(toastTranslate, {
+        toValue: 0,
+        duration: 220,
+        useNativeDriver: true,
+      }),
+    ]).start(() => {
+      setTimeout(() => {
+        Animated.parallel([
+          Animated.timing(toastOpacity, {
+            toValue: 0,
+            duration: 200,
+            useNativeDriver: true,
+          }),
+          Animated.timing(toastTranslate, {
+            toValue: 30,
+            duration: 200,
+            useNativeDriver: true,
+          }),
+        ]).start(() => setToastVisible(false));
+      }, duration);
+    });
+  };
+
   // Open/close animations
   useEffect(() => {
     if (visible) {
-      const phrase = motivationalPhrases[Math.floor(Math.random() * motivationalPhrases.length)];
+      const phrase =
+        motivationalPhrases[
+          Math.floor(Math.random() * motivationalPhrases.length)
+        ];
       setMotivationalPhrase(phrase);
 
-      // (re)lance la video proprement
-      (async () => {
-        try {
-          await videoRef.current?.setStatusAsync({ positionMillis: 0, shouldPlay: true });
-        } catch {
-          setVideoOk(false);
-        }
-      })();
+      if (!reduceMotion) {
+        // relance la vidéo
+        (async () => {
+          try {
+            await videoRef.current?.setStatusAsync({
+              positionMillis: 0,
+              shouldPlay: true,
+            });
+          } catch {
+            setVideoOk(false);
+          }
+        })();
 
-      Animated.parallel([
-        Animated.timing(fadeAnim, { toValue: 1, duration: 1000, useNativeDriver: true }),
-        Animated.spring(scaleAnim, { toValue: 1, friction: 6, tension: 120, useNativeDriver: true }),
-        Animated.timing(rotateAnim, { toValue: 1, duration: 600, useNativeDriver: true }),
-        Animated.timing(videoFadeAnim, { toValue: 1, duration: 1200, useNativeDriver: true }),
-      ]).start();
+        Animated.parallel([
+          Animated.timing(fadeAnim, {
+            toValue: 1,
+            duration: 1000,
+            useNativeDriver: true,
+          }),
+          Animated.spring(scaleAnim, {
+            toValue: 1,
+            friction: 6,
+            tension: 120,
+            useNativeDriver: true,
+          }),
+          Animated.timing(rotateAnim, {
+            toValue: 1,
+            duration: 600,
+            useNativeDriver: true,
+          }),
+          Animated.timing(videoFadeAnim, {
+            toValue: 1,
+            duration: 1200,
+            useNativeDriver: true,
+          }),
+        ]).start();
 
-      // loop pulsation contrôlée (réf pour cleanup)
-      loopRef.current = Animated.loop(
-        Animated.sequence([
-          Animated.timing(glowAnim, { toValue: 1.2, duration: 700, useNativeDriver: true }),
-          Animated.timing(glowAnim, { toValue: 0.8, duration: 700, useNativeDriver: true }),
-        ]),
-      );
-      loopRef.current.start();
+        // loop pulsation
+        loopRef.current = Animated.loop(
+          Animated.sequence([
+            Animated.timing(glowAnim, {
+              toValue: 1.2,
+              duration: 700,
+              useNativeDriver: true,
+            }),
+            Animated.timing(glowAnim, {
+              toValue: 0.8,
+              duration: 700,
+              useNativeDriver: true,
+            }),
+          ])
+        );
+        loopRef.current.start();
+      } else {
+        // Mode reduceMotion : on montre direct l'état final, sans animations
+        fadeAnim.setValue(1);
+        scaleAnim.setValue(1);
+        rotateAnim.setValue(1);
+        videoFadeAnim.setValue(1);
+        glowAnim.setValue(1);
+      }
     } else {
       fadeAnim.setValue(0);
       scaleAnim.setValue(0.8);
       rotateAnim.setValue(0);
       glowAnim.setValue(0.8);
       videoFadeAnim.setValue(0);
-      // stop anims & vidéo pour batterie
       loopRef.current?.stop?.();
       (async () => {
         try {
@@ -236,13 +323,16 @@ const safeReward = useMemo(() => {
       })();
       setBusy(false);
     }
-  }, [visible, fadeAnim, scaleAnim, rotateAnim, glowAnim, videoFadeAnim]);
+  }, [visible, fadeAnim, scaleAnim, rotateAnim, glowAnim, videoFadeAnim, reduceMotion]);
 
   // Success + navigation smooth
   const showSuccessAndNavigate = async (count: number) => {
     try {
-      await Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
+      await Haptics.notificationAsync(
+        Haptics.NotificationFeedbackType.Success
+      );
     } catch {}
+
     showToast(t("completion.finalMessage", { count }), 1000);
 
     setTimeout(() => {
@@ -262,7 +352,7 @@ const safeReward = useMemo(() => {
     if (busyRef.current) return;
     setBusy(true);
 
-   const calculatedReward = safeReward;
+    const calculatedReward = safeReward;
 
     if (doubleReward) {
       if (!canShowRewarded) {
@@ -299,7 +389,6 @@ const safeReward = useMemo(() => {
     }
   };
 
-  // Anim helpers
   const rotateInterpolate = rotateAnim.interpolate({
     inputRange: [0, 1],
     outputRange: ["-3deg", "0deg"],
@@ -313,10 +402,16 @@ const safeReward = useMemo(() => {
       transparent
       animationType="none"
       onRequestClose={onClose}
-      onDismiss={() => { loopRef.current?.stop?.(); }}
+      onDismiss={() => {
+        loopRef.current?.stop?.();
+      }}
       statusBarTranslucent
     >
-      <View style={[styles.fullOverlay, dynamicStyles.fullOverlay]}>
+      <View
+        style={[styles.fullOverlay, dynamicStyles.fullOverlay]}
+        accessibilityViewIsModal
+        accessibilityLiveRegion="polite"
+      >
         <Animated.View
           style={[
             styles.modalContainer,
@@ -326,6 +421,8 @@ const safeReward = useMemo(() => {
               transform: [{ scale: scaleAnim }, { rotate: rotateInterpolate }],
             },
           ]}
+          accessible
+          accessibilityLabel={t("completion.modalTitle") || "Challenge complété"}
         >
           <LinearGradient
             colors={dynamicStyles.modalGradient.colors}
@@ -350,22 +447,34 @@ const safeReward = useMemo(() => {
                 colors={dynamicStyles.glowGradient.colors}
                 style={styles.glowEffect}
               >
-                <View style={[styles.videoContainer, dynamicStyles.videoBorder]}>
+                <View
+                  style={[styles.videoContainer, dynamicStyles.videoBorder]}
+                  accessibilityLabel={t("completion.animationLabel") || ""}
+                  accessible={false}
+                >
                   {videoOk ? (
                     <Video
                       ref={videoRef}
                       source={require("../assets/videos/trophy-animation.mp4")}
                       style={styles.video}
                       resizeMode={ResizeMode.COVER}
-                      shouldPlay
-                      isLooping
+                      shouldPlay={!reduceMotion}
+                      isLooping={!reduceMotion}
                       isMuted={false}
                       onError={() => setVideoOk(false)}
                     />
                   ) : (
-                    // ✅ Fallback ultra léger si la vidéo échoue (réseau ou device ancien)
-                    <View style={[styles.video, { alignItems: "center", justifyContent: "center" }]}>
-                      <Ionicons name="trophy" size={normalizeSize(72)} color={currentTheme.colors.secondary} />
+                    <View
+                      style={[
+                        styles.video,
+                        { alignItems: "center", justifyContent: "center" },
+                      ]}
+                    >
+                      <Ionicons
+                        name="trophy"
+                        size={normalizeSize(72)}
+                        color={currentTheme.colors.secondary}
+                      />
                       <Text
                         style={{
                           marginTop: 8,
@@ -383,7 +492,10 @@ const safeReward = useMemo(() => {
             </Animated.View>
 
             <Text
-              style={[styles.motivationalText, dynamicStyles.motivationalText]}
+              style={[
+                styles.motivationalText,
+                dynamicStyles.motivationalText,
+              ]}
             >
               {t(motivationalPhrase)}
             </Text>
@@ -425,6 +537,12 @@ const safeReward = useMemo(() => {
                 style={styles.buttonGradient}
               >
                 <View style={styles.buttonContent}>
+                  <Ionicons
+                    name="checkmark-circle-outline"
+                    size={normalizeSize(20)}
+                    color={dynamicStyles.buttonIcon.color}
+                    style={styles.buttonIcon}
+                  />
                   <Text
                     style={[
                       styles.buttonGradientText,
@@ -439,7 +557,7 @@ const safeReward = useMemo(() => {
               </LinearGradient>
             </TouchableOpacity>
 
-            {/* Doubler (rewarded centralisée) */}
+            {/* Doubler (rewarded) */}
             <TouchableOpacity
               onPress={() => handleComplete(true)}
               activeOpacity={0.7}
@@ -450,7 +568,11 @@ const safeReward = useMemo(() => {
               ]}
               accessibilityRole="button"
               accessibilityLabel={t("completion.doubleTrophies")}
-              accessibilityHint={t("completion.watchAdHint", { defaultValue: "Watch an ad to double your reward." })}
+              accessibilityHint={
+                t("completion.watchAdHint", {
+                  defaultValue: "Watch an ad to double your reward.",
+                }) || undefined
+              }
               testID="complete-with-ad"
             >
               <LinearGradient

@@ -1,9 +1,18 @@
 // components/TutorialVideoWrapper.tsx
-import React, { ReactNode, ReactElement } from "react";
-import { View, StyleSheet, Text, StyleProp, ViewStyle, Platform } from "react-native";
+import React, { ReactNode, ReactElement, useMemo } from "react";
+import {
+  View,
+  StyleSheet,
+  Text,
+  StyleProp,
+  ViewStyle,
+  Platform,
+} from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { useTheme } from "@/context/ThemeContext";
 import { normalize } from "@/utils/normalize";
+import { LinearGradient } from "expo-linear-gradient";
+import { Video, ResizeMode } from "expo-av";
 
 interface Props {
   step: number;
@@ -13,6 +22,20 @@ interface Props {
   icon?: ReactNode;
   containerStyle?: StyleProp<ViewStyle>;
 }
+
+/**
+ * ✅ Mapping vidéo = même index que TUTORIAL_STEPS
+ * Tu mettras tes vraies vidéos ici ensuite.
+ */
+const VIDEO_BY_STEP = [
+  require("@/assets/videos/videoTuto1.mp4"), // 0 welcome
+  require("@/assets/videos/videoTuto2.mp4"), // 1 explore
+  require("@/assets/videos/videoTuto3.mp4"), // 2 create
+  require("@/assets/videos/videoTuto4.mp4"), // 3 focus
+  require("@/assets/videos/videoTuto5.mp4"), // 4 duo
+  require("@/assets/videos/videoTuto1.mp4"), // 5 profile
+  require("@/assets/videos/videoTuto1.mp4"), // 6 vote
+];
 
 const TutorialVideoWrapper = ({
   step,
@@ -26,6 +49,8 @@ const TutorialVideoWrapper = ({
   const { theme } = useTheme();
   const isDarkMode = theme === "dark";
 
+  const videoSource = VIDEO_BY_STEP[step] ?? VIDEO_BY_STEP[0];
+
   // applique #fff à titre/desc sans écraser leurs styles
   const renderWithWhiteText = (node: ReactNode) => {
     if (React.isValidElement(node)) {
@@ -38,20 +63,51 @@ const TutorialVideoWrapper = ({
     return <Text style={styles.whiteText}>{node}</Text>;
   };
 
+  const bottomPadding = useMemo(
+    () =>
+      normalize(12) +
+      Math.max(insets.bottom, Platform.OS === "ios" ? normalize(8) : 0),
+    [insets.bottom]
+  );
+
   return (
     <View style={styles.fullscreenContainer} pointerEvents="box-none">
-      {/* Fond neutre sombre (pas de vidéo) */}
-      <View style={[StyleSheet.absoluteFill, { backgroundColor: "rgba(0,0,0,0.75)" }]} />
+      {/* ✅ VIDEO BACKGROUND full screen */}
+      <Video
+        source={videoSource}
+        style={StyleSheet.absoluteFill}
+        resizeMode={ResizeMode.COVER}
+        isLooping
+        isMuted
+        shouldPlay
+        rate={1.0}
+        volume={0}
+        useNativeControls={false}
+      />
+
+      {/* ✅ Overlay ciné (lisibilité premium) */}
+      <LinearGradient
+        colors={[
+          "rgba(0,0,0,0.35)",
+          "rgba(0,0,0,0.55)",
+          "rgba(0,0,0,0.9)",
+        ]}
+        style={StyleSheet.absoluteFill}
+      />
 
       {/* Pane bas (titre/desc/boutons) */}
       <View
         style={[
           styles.bottomOverlay,
           {
-            paddingBottom: normalize(12) + Math.max(insets.bottom, Platform.OS === "ios" ? normalize(8) : 0),
-            backgroundColor: "rgba(0,0,0,0.9)",
+            paddingBottom: bottomPadding,
+            backgroundColor: "rgba(0,0,0,0.88)",
             borderTopLeftRadius: normalize(20),
             borderTopRightRadius: normalize(20),
+            borderWidth: 1,
+            borderColor: isDarkMode
+              ? "rgba(255,255,255,0.08)"
+              : "rgba(255,255,255,0.12)",
           },
           containerStyle,
         ]}
@@ -61,12 +117,17 @@ const TutorialVideoWrapper = ({
       >
         <View style={styles.textContainer}>
           {icon ? <View style={styles.iconWrap}>{icon}</View> : null}
+
           <View style={styles.textGroup}>
             {renderWithWhiteText(title)}
             {renderWithWhiteText(description)}
           </View>
+
           {children}
         </View>
+
+        {/* petit safe-area visuel (ultra clean) */}
+        <View style={{ height: normalize(2) }} />
       </View>
     </View>
   );

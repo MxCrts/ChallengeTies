@@ -34,9 +34,9 @@ function pickRandomReward(): DailyRewardResult {
   const roll = getRandomInt(1, 100);
 
   // 40% — Streak Pass (ressource premium)
-  if (roll <= 30) {
-    return { type: "streakPass", amount: 1 };
-  }
+  if (roll <= 40) {
+  return { type: "streakPass", amount: 1 };
+}
 
   // 60% — Coffre de trophées
   const amount = getRandomInt(3, 14);
@@ -150,3 +150,75 @@ export async function consumeStreakPass(): Promise<void> {
     });
   });
 }
+
+/**
+ * Reroll du bonus du jour (1 fois max / jour, seulement si déjà claim)
+ * - nécessite lastClaimDate === today
+ * - bloque si lastRerollDate === today
+ * - attribue une nouvelle récompense
+ */
+export async function claimDailyBonusReroll(): Promise<DailyRewardResult> {
+  const currentUser = auth.currentUser;
+  if (!currentUser) throw new Error("Utilisateur non connecté");
+
+  const uid = currentUser.uid;
+  const userRef = doc(db, "users", uid);
+  const today = todayKey();
+
+  let chosenReward: DailyRewardResult | null = null;
+
+  await runTransaction(db, async (tx) => {
+    const snap = await tx.get(userRef);
+    if (!snap.exists()) throw new Error("Document utilisateur introuvable");
+
+    const data = snap.data() || {};
+    const lastClaimDate: string | undefined = data?.dailyBonus?.lastClaimDate;
+    const lastRerollDate: string | undefined = data?.dailyBonus?.lastRerollDate;
+
+    // 🔐 doit avoir claim une première fois aujourd'hui
+    if (lastClaimDate !== today) {
+      throw new Error("Bonus du jour non réclamé");
+    }
+
+    // 🔐 reroll déjà utilisé aujourd'hui => on bloque
+    if (lastRerollDate === today) {
+      throw new Error("Relance déjà utilisée aujourd'hui");
+    }
+
+    const reward = pickRandomReward();
+    chosenReward = reward;
+
+    const updates: any = {
+      "dailyBonus.lastRerollDate": today,
+      "dailyBonus.rerolledAt": serverTimestamp(),
+      "dailyBonus.lastRerollType": reward.type,
+
+      // ✅ Stats reroll
+      "stats.dailyBonus.rerollsTotal": increment(1),
+      [`stats.dailyBonus.rerollsByType.${reward.type}`]: increment(1),
+    };
+
+    // Application de la récompense reroll
+    switch (reward.type) {
+      case "streakPass": {
+        updates["inventory.streakPass"] = increment(reward.amount);
+        updates["stats.streakPass.fromDailyReroll"] = increment(reward.amount);
+        break;
+      }
+      case "trophies": {
+        updates["trophies"] = increment(reward.amount);
+        updates["totalTrophies"] = increment(reward.amount);
+        break;
+      }
+    }
+
+    tx.update(userRef, updates);
+  });
+
+  if (!chosenReward) {
+    throw new Error("Échec de la transaction reroll");
+  }
+
+  return chosenReward;
+}
+

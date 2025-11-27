@@ -491,6 +491,7 @@
     "bonus": "+{{bonus}}",
     "pb": "Ton meilleur streak : {{days}} jours"
   },
+  "savedShort": "Enregistré",
   
 "microEarnedTitle": "Trophée gagné",
   "microEarnedMessage": "+{{count}} trophée aujourd’hui ✨",
@@ -507,8 +508,8 @@
     "loading": "Chargement…",
 
     "shareMessage": "Rejoins-moi sur « {{title}} » sur ChallengeTies !",
-    "participants": "{{count}} participant",
-    "participants_plural": "{{count}} participants",
+    "participants_one": "{{count}} participant",
+"participants_other": "{{count}} participants",
 
     "takeChallenge": "Relever le défi",
     "inProgress": "En cours",
@@ -965,18 +966,35 @@
     "messagesList": "Liste des messages",
     "placeholder": "Tapez un message…",
     "sendButton": "Envoyer le message",
-    "errorSending": "Erreur d’envoi du message"
+    "errorSending": "Erreur d’envoi du message",
+    "systemWelcome": "Bienvenue dans l’espace de discussion de ce défi. Partage tes questions, tes progrès et encourage les autres — reste bienveillant et respecte les règles 🤝",
+  "welcomeTitle": "Bienvenue 👋"
   },
+  "success": "Succès",
+"messageReported": "Message signalé. Merci pour ta vigilance.",
+"reportMessageFailed": "Impossible de signaler le message. Réessaie plus tard.",
+"reportMessage": "Signaler ce message",
+"report": "Signaler",
   "profileS": {
     "bioLabel": "Bio",
     "locationLabel": "Localisation",
     "interestsLabel": "Centres d’intérêt"
   },
+  "inviteFriends": "Inviter des amis",
   "referral": {
-    "menu": "Share & Earn",
+    "menu": "Partager & gagner",
+    
     "history": {
       "title": "Mes filleuls",
       "subtitle": "{{total}} au total • {{activated}} activé(s)",
+      "loading": "Chargement de ton historique…",
+        "emptyTitle": "Aucun filleul pour le moment",
+        "notLoggedInTitle": "Connecte-toi pour voir tes filleuls",
+        "notLoggedInBody": "Crée un compte ou connecte-toi pour suivre les personnes que tu as invitées.",
+        "stats": {
+          "invited": "Invités",
+          "activated": "Activés"
+        },
       "filters": {
         "all": "Tous",
         "activated": "Activés",
@@ -1010,6 +1028,10 @@
       "tipNext": "Plus que {{remaining}} pour atteindre le palier {{milestone}}.",
       "tipAllReached": "Tous les paliers actuels sont atteints. Respect 🔥",
       "milestoneLabel": "{{count}} activations",
+      "auth": {
+          "title": "Connexion requise",
+          "subtitle": "Connecte-toi pour accéder à Share & Earn."
+        },
       "claim": "Réclamer",
       "historyCta": "Voir mes filleuls",
       "banner": {
@@ -1022,6 +1044,7 @@
       },
       "errors": {
         "title": "Erreur",
+        "notUnlocked": "Ce palier n’est pas encore débloqué. Réessaie bientôt.",
         "loadStats": "Impossible de charger vos stats de parrainage.",
         "alreadyClaimed": "Ce palier a déjà été réclamé.",
         "notReached": "Palier non atteint.",
@@ -1029,6 +1052,12 @@
         "oops": "Oups"
       }
     },
+    "notif": {
+    "milestoneUnlocked": {
+      "title": "Palier débloqué 🎉",
+      "body": "Tu peux maintenant réclamer +{{bonus}} trophées !"
+    }
+  },
     "share1": {
     "title": "Invitations — {{appName}}",
     "inviteMessage": "Viens faire un défi avec moi sur {{appName}} 👇\n{{webLink}}\n(ou ouvre l’app : {{appLink}})",
@@ -1112,7 +1141,8 @@
   "quality": {
     "hintBoostStart": "Astuce: précise un objectif chiffré et une durée.",
     "hintBoostMid": "Encore un petit effort : ajoute une action concrète par jour.",
-    "hintGreat": "Parfait ! Ton défi est clair et motivant ✨"
+    "hintGreat": "Parfait ! Ton défi est clair et motivant ✨",
+    "scoreLabel": "Qualité du défi"
   },
   "a11y": {
     "typeHere": "Saisis le contenu ici",
@@ -1176,10 +1206,13 @@
   "noChallengesAvailable": "Aucun défi disponible pour le moment.",
   "challengesComingSoon": "De nouveaux défis arrivent très bientôt, reste connecté !",
   "screen8": {
+    "skip": "Passer",
     "readyQuestion": "Prêt à relever le défi ?",
-    "adventureStart": "Votre aventure commence maintenant ! Lancez-vous, progressez et rejoignez notre communauté inspirante.",
-    "imReady": "Je suis prêt",
+    "adventureStart": "L’aventure commence maintenant ! Choisis ton premier défi et avance un jour à la fois.",
+    "imReady": "Je suis prêt !",
+    "imReadyHint": "Commencer l’aventure et choisir ton premier challenge.",
     "startAppLabel": "Lancer l’app"
+    
   },
   "screen7": {
     "title": "Gagnez des récompenses",
@@ -1214,17 +1247,24 @@
   },
   "screen1": {
     "logoLabel": "Logo ChallengeTies",
-    "presentationText": "Votre voyage vers la croissance personnelle commence maintenant.",
+    "presentationText": "Ton voyage vers une meilleure version de toi commence maintenant.",
     "nextButtonLabel": "Continuer vers l’écran suivant"
+    
   },
   "challengeChat": {
-    "backButton": "Retour",
-    "defaultTitle": "Chat du défi",
-    "placeholder": "Votre message…",
-    "inputA11yLabel": "Champ de saisie du message",
-    "inputA11yHint": "Tapez votre message ici",
-    "sendButtonLabel": "Envoyer"
-  },
+  "backButton": "Retour",
+  "defaultTitle": "Chat du défi",
+  "placeholder": "Votre message…",
+  "inputA11yLabel": "Champ de saisie du message",
+  "inputA11yHint": "Tapez votre message ici",
+  "sendButtonLabel": "Envoyer",
+
+  "longPressReply": "Répondre à ce message",
+  "replyingTo": "En réponse à",
+  "sendA11yLabel": "Envoyer le message",
+  "slowmodeHint": "Patiente un instant avant d’envoyer un nouveau message.",
+  "slowmodeCountdown": "Patiente encore {{s}}s avant le prochain message"
+},
   "contact": {
     "errorTitle": "Erreur",
     "errorMessage": "Veuillez remplir tous les champs.",
@@ -1817,7 +1857,6 @@
   "imagePickFailed": "Impossible de sélectionner l'image.",
   "allFieldsRequired": "Tous les champs sont requis (l'image est optionnelle).",
   "mustBeLoggedIn": "Vous devez être connecté pour créer un défi.",
-  "success": "Succès",
   "challengeCreated": "Votre défi a été créé !",
   "invalidCredentials": "Identifiant ou mot de passe incorrect",
   "challengeCreateFailed": "Impossible de créer le défi.",
@@ -2343,6 +2382,50 @@
     ],
     "illustrationSuggeree": "Personne pratiquant une posture de yoga en extérieur au lever du soleil",
     "imageHelper": "https://firebasestorage.googleapis.com/v0/b/challengeme-d7fef.appspot.com/o/Challenges-Helper%2Fch-daily-yoga.png?alt=media"
+  },
+  "premiumTitle": "Premium",
+  "premiumNoUserOnPurchase": "Aucun utilisateur connecté au moment de l’achat. Réessaie après t’être reconnecté.",
+  "purchaseSuccess": "Merci pour ton soutien ❤️ Toutes les pubs sont désactivées.",
+  "premiumActivationFailed": "Activation impossible pour le moment. Contacte le support si le problème persiste.",
+  "purchaseFailed": "Achat interrompu.",
+  "adminNoNeedPremium": "Les admins n’ont pas besoin de Premium.",
+  "premiumLoginRequired": "Connecte-toi à ton compte pour passer en Premium et supprimer toutes les pubs.",
+  "storeNotConnected": "La boutique n’est pas encore prête. Réessaie dans quelques secondes.",
+  "premiumLoginToRestore": "Connecte-toi à ton compte pour restaurer tes achats Premium.",
+  "premiumActive": "Premium actif — merci pour ton soutien ❤️ Toutes les pubs sont désactivées.",
+  "nothingToRestore": "Aucun achat Premium trouvé pour ce compte. Vérifie que tu es connecté avec le bon compte.",
+  "restoreFailed": "Restauration impossible pour le moment.",
+  "youArePremium": "Premium actif ✨",
+  "notPremiumYet": "Passe en Premium",
+  "premiumExplainer": "Premium supprime toutes les pubs de ChallengeTies. Pas d’avantage pay-to-win : juste une expérience plus fluide et un gros coup de pouce au projet.",
+  "storeConnecting": "Connexion à la boutique...",
+  "premiumProductDesc": "Supprime toutes les pubs de l’app et soutiens les futures mises à jour.",
+  "restorePurchases": "Restaurer mes achats",
+  "noProducts": "Produits indisponibles pour l’instant. Réessaie plus tard.",
+  "goToLogin": "Me connecter",
+
+  "perks": {
+    "noInterstitals": "Plus aucune pub interstitielle (écrans plein)",
+    "noBanners": "Plus aucune bannière dans l’app",
+    "prioritySupport": "Support email prioritaire en cas de problème",
+    "supportProject": "Tu soutiens directement le développement de ChallengeTies (pas de pay-to-win)"
+  },
+
+  "premium": {
+    "title": "Premium",
+    "header": "ChallengeTies Premium",
+    "active": "Actif",
+    "discover": "Découvrir",
+    "subtitle": "Supprime toutes les pubs de l’app et soutiens ChallengeTies. Aucune mécanique pay-to-win : tout le monde joue avec les mêmes règles.",
+    "open": "Voir Premium",
+    "manage": "Gérer mon Premium",
+    "get": "Découvrir Premium",
+    "benefit": {
+      "noAds": "Plus aucune publicité dans l’app",
+      "prioritySupport": "Support email prioritaire",
+      "fairPlay": "Aucun avantage pay-to-win, même expérience pour tous",
+      "supportProject": "Tu finances les prochaines mises à jour de ChallengeTies"
+    }
   },
   "declutterSpace": {
     "miniCours": "Désencombrer, ce n’est pas juste ranger : c’est créer un espace qui soutient la productivité et la sérénité 🧘‍♀️. Chaque objet porte une énergie – et les objets inutilisés peuvent devenir des distractions ou sources d’anxiété 😓. Commencez petit : choisissez une zone chaque jour. Demandez‑vous : est‑ce utile ? Me rend‑il heureux ? Faire la différence entre valeur émotionnelle et utilitaire vous aide à décider ce qui nourrit votre vie. 💼",
@@ -3587,6 +3670,9 @@
   "firstPick": {
     "title": "Choisis ton premier challenge !",
     "subtitle": "Tu veux commencer en…",
+    "cardHint": "Appuie pour sélectionner ce défi.",
+    "emptyTitle": "Aucun défi pour l’instant",
+    "emptySubtitle": "Tire pour rafraîchir ou réessaie.",
     "chooseSolo": "Choisir en Solo",
     "chooseDuo": "Choisir en Duo",
     "modeDuo": "Duo (recommandé)",
@@ -3673,53 +3759,50 @@
     "authRequiredLater": "Continuer en visiteur",
   "acceptRulesCheckbox": "Accepter les règles du chat",
   "tutorial": {
-  "daily": {
-    "title": "Tes défis du jour",
-    "description": "Chaque jour, 5 défis sélectionnés pour toi. Reviens souvent pour ne rien rater."
+  "steps": {
+    "welcome": {
+      "title": "Bienvenue sur ChallengeTies ✨",
+      "description": "On te montre les fonctionnalités essentielles pour maîtriser l’app en 30 secondes."
+    },
+    "explore": {
+      "title": "Explorer les défis",
+      "description": "Découvre plus de 80 défis organisés par catégories. Trouve celui qui te motive le plus et lance-toi."
+    },
+    "create": {
+      "title": "Créer ton challenge",
+      "description": "Personnalise ton challenge : durée, objectifs, progression… Devient l’architecte de ta discipline."
+    },
+    "focus": {
+      "title": "Mode Focus",
+      "description": "Un chronomètre immersif pour t’aider à te concentrer. Suis ton temps, tes sessions et ton constance."
+    },
+    "duo": {
+      "title": "Challenges en duo",
+      "description": "Invite un ami et progressez ensemble. Notifications, progression synchronisée et duo motivant."
+    },
+    "profile": {
+      "title": "Ton profil & progression",
+      "description": "Retrouve tes défis en cours, sauvegardés, succès, statistiques et paramètres."
+    },
+    "vote": {
+      "title": "Vote pour les nouveautés",
+      "description": "Tu peux influencer le futur de l’app. Vote pour les fonctionnalités que tu veux voir en premier."
+    }
   },
-  "discover": {
-    "title": "Inspire-toi",
-    "description": "Accède aux tips, au classement, aux nouveautés et à la FAQ pour aller toujours plus loin."
-  },
-  "welcome": {
-    "title": "Bienvenue !",
-    "description": "On fait un tour ultra rapide pour te montrer le meilleur de ChallengeTies."
-  },
-  "profile": {
-    "title": "Ton profil",
-    "description": "Retrouve tes défis, tes récompenses et tes préférences au même endroit."
-  },
-  "videoStep": {
-    "title": "Astuces express",
-    "description": "Une courte vidéo pour t’inspirer et booster ta motivation."
-  },
-  "tapAnywhere": "Appuie n’importe où pour continuer",
+
   "buttons": {
     "start": "Commencer",
     "next": "Suivant",
     "skip": "Passer",
     "finish": "Terminer"
-  },
-  "index": {
-    "welcome": {
-      "title": "Bienvenue sur ChallengeTies ✨",
-      "description": "On fait un mini tour pour t’aider à prendre tes marques. Tu peux passer à tout moment."
-    },
-    "cta": {
-      "title": "Lancer l’aventure",
-      "description": "Appuie ici pour explorer tous les défis et trouver ton prochain challenge en quelques secondes."
-    },
-    "daily": {
-      "title": "Défis du jour",
-      "description": "Chaque jour, une nouvelle sélection prête à être lancée. Idéal si tu ne sais pas par où commencer."
-    },
-    "discover": {
-      "title": "S’inspirer",
-      "description": "Tips, classement, nouveautés, FAQ… tout ce qu’il te faut pour progresser et rester motivé."
-    }
   }
 }
 ,
+"focusDuration": "Durée Focus",
+  "breakDuration": "Durée Pause",
+  "start": "Démarrer",
+  "focusHint": "Astuce : verrouille ton écran pour éviter les distractions.",
+"remainingToday": "À faire aujourd’hui",
   "categories": {
     "Santé": "Santé",
     "Fitness": "Fitness",
@@ -3743,22 +3826,27 @@
     "noData": "Aucune aide disponible pour ce challenge pour le moment.",
     "examples": "Exemples",
     "openImage": "Ouvrir l’illustration",
-  "openShare": "Ouvrir / Partager",
-  "copy": "Copier",
-  "copySummary": "Copier le mini-cours",
-  "explanation": "Mini-cours",
-  "resources": "Ressources",
-  "suggestion": "Tu veux proposer une amélioration ? Écris-nous.",
-  "share": "Partager",
-  "shareMessage": {
-    "titleLine": "⭐ {{title}}",
-    "bodyLine": "{{body}}",
-    "tagline": "Une minute ? Une compétence ! ⚡",
-    "cta": "Ouvrir dans ChallengeTies",
-    "linkLabel": "Voir le mini-cours",
-    "shareAlt": "Découvre ce mini-cours sur ChallengeTies : {{link}}"
-  },
-  "open": "Ouvrir"
+    "openShare": "Ouvrir / Partager",
+    "copy": "Copier",
+    "copySummary": "Copier le mini-cours",
+    "explanation": "Mini-cours",
+    "resources": "Ressources",
+    "suggestion": "Tu veux proposer une amélioration ? Écris-nous.",
+    "share": "Partager",
+    "shareMessage": {
+      "titleLine": "⭐ {{title}}",
+      "bodyLine": "{{body}}",
+      "tagline": "Une minute ? Une compétence ! ⚡",
+      "cta": "Ouvrir dans ChallengeTies",
+      "linkLabel": "Voir le mini-cours",
+      "shareAlt": "Découvre ce mini-cours sur ChallengeTies : {{link}}"
+    },
+    "open": "Ouvrir",
+    "missingId": "Ce contenu d’aide est introuvable.",
+    "loading": "Chargement de l’aide du défi…",
+    "genericTitle": "Aide du défi",
+    "noContent": "Le contenu d’aide pour ce défi n’est pas encore disponible. Reviens bientôt ou contacte-nous si besoin.",
+    "shareImageDialog": "Partager l’image"
   },
   
    "questions": {

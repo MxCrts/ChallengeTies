@@ -1,4 +1,4 @@
-import React, { createContext, useContext, useEffect, useState } from "react";
+import React, { createContext, useContext, useEffect, useState, useRef } from "react";
 import { onAuthStateChanged, User, signOut } from "firebase/auth";
 import { auth } from "../constants/firebase-config";
 import AsyncStorage from "@react-native-async-storage/async-storage";
@@ -13,6 +13,53 @@ import {
   requestNotificationPermissions,
   registerForPushNotificationsAsync,
 } from "@/services/notificationService";
+import { logEvent } from "@/src/analytics";
+import * as Linking from "expo-linking";
+import { handleReferralUrl } from "@/services/referralLinking";
+import { getDisplayUsername } from "@/services/invitationService";
+
+
+// ✅ Ne laisse passer ici QUE les liens referral
+const isReferralUrl = (url?: string | null) => {
+  if (!url) return false;
+  const u = url.toLowerCase();
+  // adapte aux patterns exacts de tes referrals
+  return (
+    u.includes("/ref/") ||          // ex: challengeties.app/ref/xxx
+    u.includes("refuid=") ||        // ex: ?refUid=xxx
+    u.includes("ref=") ||           // ex: ?ref=xxx
+    u.includes("ties_ref=")         // au cas où tu as un param custom
+  );
+};
+
+
+const REFERRER_KEY = "ties_referrer_id";
+const REFERRER_SRC_KEY = "ties_referrer_src";
+const REFERRER_TS_KEY = "ties_referrer_ts";
+const REFERRAL_JUST_ACTIVATED_KEY = "ties_referral_just_activated";
+
+async function consumePendingReferrer(uid: string) {
+  const [[, referrerId], [, src], [, ts]] = await AsyncStorage.multiGet([
+    REFERRER_KEY,
+    REFERRER_SRC_KEY,
+    REFERRER_TS_KEY,
+  ]);
+
+  const cleanRef = String(referrerId ?? "").trim();
+  const cleanSrc = String(src ?? "").trim() || "share";
+  const cleanTs = Number(ts ?? 0);
+
+  return { cleanRef, cleanSrc, cleanTs };
+}
+
+async function clearPendingReferrer() {
+  await AsyncStorage.multiRemove([
+    REFERRER_KEY,
+    REFERRER_SRC_KEY,
+    REFERRER_TS_KEY,
+  ]);
+}
+
 
 interface AuthContextType {
   user: User | null;
@@ -30,12 +77,127 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({
   const [user, setUser] = useState<User | null>(null);
   const [loading, setLoading] = useState(true);
   const [checkingAuth, setCheckingAuth] = useState(true);
+    const referralHandledOnce = useRef(false);
+
+      // ✅ Capture globale des liens referral (cold + warm start)
+  useEffect(() => {
+    if (referralHandledOnce.current) return;
+    referralHandledOnce.current = true;
+
+    let sub: any;
+
+        (async () => {
+      try {
+        const initialUrl = await Linking.getInitialURL();
+        console.log("🧊 [referral] initialUrl =", initialUrl);
+        if (isReferralUrl(initialUrl)) {
+          await handleReferralUrl(initialUrl);
+        }
+
+        sub = Linking.addEventListener("url", async ({ url }) => {
+          console.log("🔥 [referral] event url =", url);
+          if (isReferralUrl(url)) {
+            await handleReferralUrl(url);
+          }
+        });
+      } catch (e) {
+        console.log("❌ [referral] global link capture error:", e);
+      }
+    })();
+
+
+    return () => {
+      try {
+        sub?.remove?.();
+      } catch {}
+    };
+  }, []);
+
 
   useEffect(() => {
+    let alive = true;
+const authFailsafe = setTimeout(() => {
+  if (!alive) return;
+  setLoading(false);
+  setCheckingAuth(false);
+}, 3500);
   const unsubscribe = onAuthStateChanged(auth, (firebaseUser) => {
+    clearTimeout(authFailsafe);
     if (firebaseUser) {
       console.log("✅ Utilisateur connecté:", firebaseUser.email);
       setUser(firebaseUser);
+
+            // ✅ Referral activation post-login (flow principal)
+      (async () => {
+        try {
+          const uid = firebaseUser.uid;
+          const { cleanRef, cleanSrc } = await consumePendingReferrer(uid);
+
+          if (!cleanRef) return; // pas de ref pending
+
+          // ignore self-ref
+          if (cleanRef === uid) {
+            await clearPendingReferrer();
+            return;
+          }
+
+          const userRef = doc(db, "users", uid);
+
+          const activated = await runTransaction(db, async (tx) => {
+            const uSnap = await tx.get(userRef);
+            if (!uSnap.exists()) {
+              // doc pas encore créé (peut arriver juste après register)
+              // on laisse register créer le doc puis on retentera au prochain login
+              return false;
+            }
+
+            const data = uSnap.data() as any;
+
+            const alreadyHasReferrer =
+              !!data?.referrerId ||
+              !!data?.referral?.referrerId;
+
+            const alreadyActivated =
+              data?.activated === true ||
+              data?.referralActivated === true;
+
+            if (alreadyHasReferrer || alreadyActivated) {
+              return false;
+            }
+
+            tx.update(userRef, {
+              referrerId: cleanRef,
+              activated: true,
+              referralActivated: true, // tolérance compat fallback
+              referral: {
+                referrerId: cleanRef,
+                src: cleanSrc,
+                activatedAt: new Date(),
+              },
+              updatedAt: new Date(),
+            });
+
+            return true;
+          });
+
+          await clearPendingReferrer();
+
+          if (activated) {
+            // petit flag local si tu veux afficher un toast / reward UI
+            await AsyncStorage.setItem(REFERRAL_JUST_ACTIVATED_KEY, "1");
+
+            try {
+              await logEvent("referral_activated", {
+                referrerId: cleanRef,
+                src: cleanSrc,
+              });
+            } catch {}
+          }
+        } catch (e) {
+          console.log("[referral] activation post-login error:", e);
+        }
+      })();
+
 
       (async () => {
   try {
@@ -60,14 +222,15 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({
 
       // Écritures utilisateur — doivent se faire en UNE seule écriture (conforme à tes rules)
       tx.set(
-        userRef,
-        {
-          isPioneer: isPioneer,
-          pioneerRewardGranted: isPioneer,
-          trophies: isPioneer ? increment(50) : increment(0),
-        },
-        { merge: true }
-      );
+  userRef,
+  {
+    isPioneer: isPioneer,
+    pioneerRewardGranted: isPioneer,
+    trophies: isPioneer ? increment(50) : increment(0),
+    updatedAt: new Date(),
+  },
+  { merge: true }
+);
 
       if (isPioneer) {
         tx.update(counterRef, { count: current + 1 });
@@ -116,7 +279,11 @@ AsyncStorage.setItem(
 
   });
 
-  return () => unsubscribe();
+  return () => {
+  alive = false;
+  clearTimeout(authFailsafe);
+  unsubscribe();
+};
 }, []);
 
 useEffect(() => {
@@ -198,9 +365,13 @@ useEffect(() => {
   if (!user) return;
   const inviterId = user.uid;
 
-  const qInv = query(collection(db, "invitations"), where("inviterId", "==", inviterId));
+  // 👉 L’invitateur écoute désormais SES invitations acceptées
+  const qInv = query(
+    collection(db, "invitations"),
+    where("inviterId", "==", inviterId),
+    where("status", "==", "accepted")
+  );
 
-  // Mémoire locale simple contre double-traitement (sur ce run uniquement)
   const treated = new Set<string>();
 
   const unsubscribe = onSnapshot(qInv, async (snapshot) => {
@@ -208,12 +379,11 @@ useEffect(() => {
       const id = change.doc.id;
       const data = change.doc.data() as any;
 
-      // On ne traite que si status == accepted
-      // et qu'on n'a pas déjà traité ce docId dans ce run
-      if (data?.status !== "accepted" || treated.has(id)) continue;
+      if (treated.has(id)) continue;
 
-      // Optionnel: éviter de traiter les "added" déjà acceptées avant le montage
-      // -> on autorise quand même, car la suite est idempotente.
+      // sécurité : une invitation acceptée DOIT avoir un inviteeId
+      if (!data.inviteeId) continue;
+
       treated.add(id);
 
       try {
@@ -232,6 +402,7 @@ useEffect(() => {
   return () => unsubscribe();
 }, [user?.uid]);
 
+
 // Remplace/insère l’entrée locale de l’invitateur par une entrée DUO propre et idempotente.
 // - Si une entrée SOLO existe pour ce challenge => elle est remplacée
 // - Si une entrée DUO existe déjà => on ne duplique pas
@@ -243,9 +414,11 @@ const ensureDuoMirrorForInviter = async (opts: {
   selectedDays: number;
 }) => {
   const { inviterId, challengeId, inviteeId, selectedDays } = opts;
-  if (!inviterId || !challengeId || !inviteeId || !Number.isInteger(selectedDays) || selectedDays <= 0) {
-    return;
-  }
+
+  // 🛡️ Sécurité absolue : on ne crée jamais un duo avec soi-même
+  if (!inviterId || !challengeId || !inviteeId) return;
+  if (inviterId === inviteeId) return;
+  if (!Number.isInteger(selectedDays) || selectedDays <= 0) return;
 
   const userRef = doc(db, "users", inviterId);
   const challengeRef = doc(db, "challenges", challengeId);
@@ -273,37 +446,39 @@ const uniqueKey = `${challengeId}_${selectedDays}_${pair}`;
       (currentEntry?.duoPartnerId === inviteeId || !currentEntry?.duoPartnerId) &&
       (currentEntry?.selectedDays === selectedDays || !currentEntry?.selectedDays);
 
+      // ✅ Si déjà DUO correct → on sort sans écrire (évite conflits)
+    if (alreadyDuo) {
+      return;
+    }
+
     // 2) Construire l’entrée DUO cible
     const duoEntry = {
-      challengeId,
-      id: challengeId,
-      title: cData.title || "Challenge",
-      description: cData.description || "",
-      imageUrl: cData.imageUrl || "",
-      chatId: cData.chatId || challengeId,
-      selectedDays,
-      completedDays: 0,
-      completionDates: [],
-      lastMarkedDate: null,
-      streak: 0,
-      duo: true,
-      duoPartnerId: inviteeId,
-      uniqueKey,
-    };
+  challengeId,
+  id: challengeId,
+  title: cData.title || "Challenge",
+  description: cData.description || "",
+  imageUrl: cData.imageUrl || "",
+  chatId: cData.chatId || challengeId,
+  selectedDays,
+  completedDays: 0,
+  completionDates: [],
+  lastMarkedDate: null,
+  streak: 0,
+  duo: true,
+  duoPartnerId: inviteeId,
+  duoPartnerUsername: await getDisplayUsername(inviteeId), // ⭐ OBLIGATOIRE
+  uniqueKey,
+};
+
 
     // 3) Prépare la nouvelle liste: remplace SOLO/ancienne entrée par DUO, ou append si absent
     let next: any[];
     if (idx >= 0) {
-      // si entrée déjà duo correcte => no-op total
-      if (alreadyDuo) {
-        next = list; // pas de write inutile
-      } else {
-        next = [...list];
-        next[idx] = { ...duoEntry };
-      }
+      next = [...list];
+      next[idx] = { ...duoEntry };
     } else {
       next = [...list, duoEntry];
-    }
+   }
 
     // 4) users/{inviterId}: n’écrit que si nécessaire (réduit les conflits + coûts)
     const mustWriteUser = next !== list;
@@ -355,10 +530,8 @@ const uniqueKey = `${challengeId}_${selectedDays}_${pair}`;
 
 
   return (
-  <AuthContext.Provider
-    value={{ user, setUser, loading, checkingAuth, logout }}
-  >
-    {checkingAuth ? null : children}
+  <AuthContext.Provider value={{ user, setUser, loading, checkingAuth, logout }}>
+    {children}
   </AuthContext.Provider>
 );
 

@@ -3,7 +3,7 @@ var __importDefault = (this && this.__importDefault) || function (mod) {
     return (mod && mod.__esModule) ? mod : { "default": mod };
 };
 Object.defineProperty(exports, "__esModule", { value: true });
-exports.claimReferralMilestone = exports.onUserActivated = exports.referralsOnFirstActivation = exports.invitationsOnWrite = exports.dl = void 0;
+exports.onUserActivated = exports.claimReferralMilestone = exports.invitationsOnWrite = exports.dl = void 0;
 const express_1 = __importDefault(require("express"));
 const cors_1 = __importDefault(require("cors"));
 const https_1 = require("firebase-functions/v2/https");
@@ -21,7 +21,7 @@ const ANDROID_STORE_URL = "https://play.google.com/store/apps/details?id=com.mxc
 const BOT_UA = /(facebookexternalhit|Twitterbot|Slackbot|WhatsApp|TelegramBot|LinkedInBot|Discordbot|Pinterest|SkypeUriPreview|Googlebot|bingbot)/i;
 const INV = " "; // espace non vide pour éviter les fallbacks titre/desc
 /** =========================
- *  I18N (12  langues)
+ *  I18N (12 langues)
  *  ========================= */
 const I18N = {
     ar: { join: "انضم إليّ في هذا التحدي! 🚀" },
@@ -37,7 +37,6 @@ const I18N = {
     ja: { join: "このチャレンジに一緒に挑戦しよう！🚀" },
     ko: { join: "이 챌린지에 나와 함께 도전하자! 🚀" },
 };
-
 function t(lang) {
     const key = (lang || "fr").toLowerCase();
     return I18N[key] || I18N.fr;
@@ -112,31 +111,52 @@ app.get(["/", "/dl"], (req, res) => {
     const ua = String(req.headers["user-agent"] || "");
     const isBot = BOT_UA.test(ua);
     const lang = String(req.query.lang || "fr").toLowerCase();
-    const id = String(req.query.id || "");
-    const rawTitle = String(req.query.title || ""); // pour anti-cache OG
-    // 🔑 paramètres d’invitation (si présents)
-    const invite = String(req.query.invite || "");
-    const days = String(req.query.days || "");
+    // 🔥 2 MODES POSSIBLES :
+    // A) Referral: ?ref=UID&src=share
+    // B) Challenge invite/share: ?id=CHALLENGE_ID&invite=INV&days=XX
+    // ✅ Backward compatible: ref peut s'appeler ref / refUid / referrerId
+    const ref = String(req.query.ref ||
+        req.query.refUid ||
+        req.query.referrerId ||
+        "").trim();
+    const src = String(req.query.src || "share").trim() || "share";
+    // ✅ id peut venir d'anciennes variantes aussi si besoin
+    const id = String(req.query.id ||
+        req.query.challengeId ||
+        "").trim();
+    const rawTitle = String(req.query.title || "");
+    const invite = String(req.query.invite || "").trim();
+    const days = String(req.query.days || "").trim();
     const L = t(lang);
-    // ==== Deep links ====
-    // Query à transmettre à l’app (ou au web fallback) pour ouvrir le modal invitation
-    const sharedQuery = qs({ invite, days });
-    // Paths
-    const path = id ? `challenge-details/${encodeURIComponent(id)}` : `challenge-details`;
-    // App deep link (avec query)
+    // ==== Build path + query selon mode ====
+    // ==== Build path + query selon mode ====
+    let path = "";
+    let sharedQuery = "";
+    // 0) Cas vide total → on renvoie vers la home (évite myapp://challenge-details fantôme)
+    if (!ref && !id && !invite) {
+        path = "";
+        sharedQuery = "";
+    }
+    else if (ref && !id) {
+        // ✅ MODE REFERRAL
+        path = `ref/${encodeURIComponent(ref)}`;
+        sharedQuery = qs({ src });
+    }
+    else {
+        // ✅ MODE CHALLENGE / INVITATION
+        sharedQuery = qs({ invite, days, ref, src });
+        path = id
+            ? `challenge-details/${encodeURIComponent(id)}`
+            : `challenge-details`;
+    }
     const appDeepLink = `${APP_SCHEME}://${path}${sharedQuery}`;
-    // Web fallback
     const webFallback = `${WEB_HOSTING}/${path}${sharedQuery}`;
-    // Android intent
     const androidIntent = `intent://${path}${sharedQuery}` +
         `#Intent;scheme=${APP_SCHEME};package=${ANDROID_PACKAGE};end`;
-    // Image OG (anti-cache)
     const ogImageUrl = buildOgUrl(`${rawTitle}|${lang}`);
-    // Texte d’aperçu SOUS l’image (pas incrusté)
     const ogTitle = "ChallengeTies";
     const ogDesc = L.join || INV;
     const iosAppId = getIosAppId(IOS_STORE_URL);
-    // HEAD (balises OG/Twitter strictes + App Links hints)
     const head = `<!doctype html>
 <html lang="${lang}">
 <head>
@@ -162,7 +182,7 @@ app.get(["/", "/dl"], (req, res) => {
 <meta name="twitter:description" content="${escapeHtml(ogDesc)}">
 <meta name="twitter:image" content="${ogImageUrl}">
 
-<!-- App Links (hint pour OS/navigateurs) -->
+<!-- App Links -->
 <meta property="al:ios:url" content="${appDeepLink}">
 <meta property="al:ios:app_name" content="ChallengeTies">
 ${iosAppId ? `<meta property="al:ios:app_store_id" content="${iosAppId}">` : ""}
@@ -173,13 +193,11 @@ ${iosAppId ? `<meta property="al:ios:app_store_id" content="${iosAppId}">` : ""}
 </head>`;
     let body;
     if (isBot) {
-        // Bots: on ne rend RIEN de visible (uniquement l'image via OG)
         body = `
 <body style="margin:0;background:#0b1020"><!-- empty for bots --></body>
 </html>`;
     }
     else {
-        // Humains: redirection intelligente
         body = `
 <body>
 <script>
@@ -219,9 +237,7 @@ ${iosAppId ? `<meta property="al:ios:app_store_id" content="${iosAppId}">` : ""}
 exports.dl = (0, https_1.onRequest)({ region: "europe-west1", cors: true }, app);
 var invitationsOnWrite_1 = require("./invitationsOnWrite");
 Object.defineProperty(exports, "invitationsOnWrite", { enumerable: true, get: function () { return invitationsOnWrite_1.invitationsOnWrite; } });
-var referralsOnFirstActivation_1 = require("./referralsOnFirstActivation");
-Object.defineProperty(exports, "referralsOnFirstActivation", { enumerable: true, get: function () { return referralsOnFirstActivation_1.referralsOnFirstActivation; } });
-var referralRewards_1 = require("./referralRewards");
-Object.defineProperty(exports, "onUserActivated", { enumerable: true, get: function () { return referralRewards_1.onUserActivated; } });
 var referralClaim_1 = require("./referralClaim");
 Object.defineProperty(exports, "claimReferralMilestone", { enumerable: true, get: function () { return referralClaim_1.claimReferralMilestone; } });
+var referralRewards_1 = require("./referralRewards");
+Object.defineProperty(exports, "onUserActivated", { enumerable: true, get: function () { return referralRewards_1.onUserActivated; } });

@@ -6,9 +6,10 @@
     "public": "public",
     "ignore": ["firebase.json", "**/.*", "**/node_modules/**"],
     "rewrites": [
-      { "source": "/challenge-details/**", "destination": "/index.html" },
-      { "source": "/dl", "function": "dl" },
-      { "source": "/dl/**", "function": "dl" }
-    ]
+  { "source": "/challenge-details/**", "destination": "/index.html" },
+  { "source": "/ref/**", "destination": "/index.html" },
+  { "source": "/dl", "function": "dl" },
+  { "source": "/dl/**", "function": "dl" }
+]
   }
 }

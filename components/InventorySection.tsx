@@ -8,6 +8,7 @@ import {
   PixelRatio,
   Dimensions,
   ActivityIndicator,
+  AccessibilityRole,
 } from "react-native";
 import { Ionicons } from "@expo/vector-icons";
 import { useTranslation } from "react-i18next";
@@ -23,8 +24,16 @@ const normalize = (size: number) => {
   return Math.round(PixelRatio.roundToNearestPixel(normalizedSize));
 };
 
+type UserInventory = {
+  streakPass?: number;
+  // futur : xpBoost?: number; superPass?: number; etc.
+  [key: string]: number | undefined;
+};
+
 type InventorySectionProps = {
-  userData?: any | null;
+  userData?: {
+    inventory?: UserInventory;
+  } | null;
   loading?: boolean;
   onPressItem?: (key: string) => void;
 };
@@ -40,7 +49,7 @@ type InventoryItem = {
 
 const InventorySection: React.FC<InventorySectionProps> = ({
   userData,
-  loading,
+  loading = false,
   onPressItem,
 }) => {
   const { t } = useTranslation();
@@ -50,7 +59,7 @@ const InventorySection: React.FC<InventorySectionProps> = ({
     ? designSystem.darkTheme
     : designSystem.lightTheme;
 
-  const inventory = (userData as any)?.inventory || {};
+  const inventory: UserInventory = (userData?.inventory ?? {}) as UserInventory;
 
   const items: InventoryItem[] = useMemo(() => {
     const result: InventoryItem[] = [];
@@ -72,7 +81,7 @@ const InventorySection: React.FC<InventorySectionProps> = ({
       });
     }
 
-    // 👉 ici tu pourras mapper d'autres items plus tard (ex: "xpBoost", "superPass", etc.)
+    // 👉 futur : mapper ici d'autres items (xpBoost, superPass, etc.)
 
     return result;
   }, [inventory, t]);
@@ -83,6 +92,8 @@ const InventorySection: React.FC<InventorySectionProps> = ({
     () => items.reduce((sum, it) => sum + (it.count || 0), 0),
     [items]
   );
+
+  const containerRole: AccessibilityRole = "summary";
 
   return (
     <View
@@ -97,8 +108,9 @@ const InventorySection: React.FC<InventorySectionProps> = ({
             : "rgba(0,0,0,0.05)",
         },
       ]}
-      accessibilityRole="summary"
+      accessibilityRole={containerRole}
       accessibilityLabel={t("inventory.title", "Inventaire")}
+      accessibilityHint={t("inventory.subtitle", "Gère ici tes bonus spéciaux et protections de série.")}
     >
       {/* Header */}
       <View style={styles.headerRow}>
@@ -263,10 +275,9 @@ const InventorySection: React.FC<InventorySectionProps> = ({
               ]}
             >
               {t(
-  "inventory.streakHint",
-  "Tu peux utiliser tes Streak Pass dans l'écran d'un défi manqué pour sauver ta série."
-)}
-
+                "inventory.streakHint",
+                "Tu peux utiliser tes Streak Pass dans l'écran d'un défi manqué pour sauver ta série."
+              )}
             </Text>
           </View>
         </View>
@@ -433,4 +444,4 @@ const styles = StyleSheet.create({
   },
 });
 
-export default InventorySection;
+export default React.memo(InventorySection);

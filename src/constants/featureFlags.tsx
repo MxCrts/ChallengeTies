@@ -27,34 +27,52 @@ export const FeatureFlagsProvider: React.FC<{ children: React.ReactNode }> = ({ 
   const [isReady, setIsReady] = useState(false);
 
   useEffect(() => {
-    // ⚠️ Assure-toi d’avoir le document Firestore: collection "meta", document "flags"
-    // Chemin: meta/flags  (pas une collection "flags" seule)
     const ref = doc(db, "meta", "flags");
 
-    // 1) lecture initiale
-    getDoc(ref)
-      .then((snap) => {
+    let unsub: (() => void) | null = null;
+    let alive = true;
+
+    const failsafe = setTimeout(() => {
+      if (alive) setIsReady(true);
+    }, 1500);
+
+    (async () => {
+      try {
+        const snap = await getDoc(ref);
         if (snap.exists()) {
           const data = snap.data() as Partial<Flags>;
           setFlags((prev) => ({ ...prev, ...data }));
         }
-        setIsReady(true);
-      })
-      .catch(() => setIsReady(true));
-
-    // 2) écoute temps réel
-    const unsub = onSnapshot(ref, (snap) => {
-      if (snap.exists()) {
-        const data = snap.data() as Partial<Flags>;
-        setFlags((prev) => ({ ...prev, ...data }));
+      } catch {
+        // ignore
+      } finally {
+        if (alive) setIsReady(true);
       }
-    });
+    })();
 
-    return () => unsub();
+    try {
+      unsub = onSnapshot(ref, (snap) => {
+        if (snap.exists()) {
+          const data = snap.data() as Partial<Flags>;
+          setFlags((prev) => ({ ...prev, ...data }));
+        }
+      });
+    } catch {}
+
+    return () => {
+      alive = false;
+      clearTimeout(failsafe);
+      unsub?.();
+    };
   }, []);
 
   const value = useMemo(() => ({ flags, isReady }), [flags, isReady]);
-  return <FeatureFlagsContext.Provider value={value}>{children}</FeatureFlagsContext.Provider>;
+  return (
+    <FeatureFlagsContext.Provider value={value}>
+      {children}
+    </FeatureFlagsContext.Provider>
+  );
 };
+
 
 export const useFlags = () => useContext(FeatureFlagsContext);

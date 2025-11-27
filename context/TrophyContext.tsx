@@ -1,3 +1,4 @@
+// context/TrophyContext.tsx
 import React, {
   createContext,
   useContext,
@@ -13,16 +14,19 @@ import { useProfileUpdate } from "./ProfileUpdateContext";
 import { auth } from "../constants/firebase-config";
 
 interface TrophyContextProps {
-  // existant
   showTrophyModal: boolean;
   trophiesEarned: number;
   achievementEarned: string | null;
   isDoubleReward: boolean;
+
+  // derived helpful values
+  finalTrophies: number;
+
   setShowTrophyModal: (visible: boolean) => void;
   setTrophyData: (trophies: number, achievement: string) => void;
   activateDoubleReward: () => void;
   resetTrophyData: () => Promise<void>;
-  // bonus non-cassants (utiles si tu veux les lire)
+
   isClaiming?: boolean;
   closeTrophyModal?: () => void;
   canClaim?: boolean;
@@ -31,106 +35,111 @@ interface TrophyContextProps {
 const TrophyContext = createContext<TrophyContextProps | undefined>(undefined);
 
 export const TrophyProvider: React.FC<{ children: ReactNode }> = ({ children }) => {
-  const [showTrophyModal, setShowTrophyModal] = useState<boolean>(false);
-  const [trophiesEarned, setTrophiesEarned] = useState<number>(0);
+  const [showTrophyModal, setShowTrophyModal] = useState(false);
+  const [trophiesEarned, setTrophiesEarned] = useState(0);
   const [achievementEarned, setAchievementEarned] = useState<string | null>(null);
-  const [isDoubleReward, setIsDoubleReward] = useState<boolean>(false);
+  const [isDoubleReward, setIsDoubleReward] = useState(false);
 
-  // Nouveaux états premium
-  const [isClaiming, setIsClaiming] = useState<boolean>(false);
-  const [lastActionAt, setLastActionAt] = useState<number>(0);
-  const recentClaimsRef = useRef<Set<string>>(new Set()); // anti double-claim local
+  const [isClaiming, setIsClaiming] = useState(false);
+
+  // refs perf (pas de rerender pour un cooldown)
+  const lastActionAtRef = useRef(0);
+  const recentClaimsRef = useRef<Set<string>>(new Set());
 
   const { triggerProfileUpdate } = useProfileUpdate();
 
-  /** Cooldown anti-spam (tap, pub, etc.) */
+  /** Cooldown anti spam */
   const withinCooldown = useCallback((ms = 800) => {
     const now = Date.now();
-    if (now - lastActionAt < ms) return true;
-    setLastActionAt(now);
+    if (now - lastActionAtRef.current < ms) return true;
+    lastActionAtRef.current = now;
     return false;
-  }, [lastActionAt]);
+  }, []);
 
-  /** Ouverture modale + pré-chargement des infos (idempotent, anti-spam) */
-  const setTrophyData = useCallback((trophies: number, achievement: string) => {
-    if (!trophies || !achievement) return;
-    if (withinCooldown(400)) return;
+  /** Open modal with data */
+  const setTrophyData = useCallback(
+    (trophies: number, achievement: string) => {
+      if (!trophies || !achievement) return;
+      if (withinCooldown(350)) return;
 
-    // si la même récompense est déjà en cours/ouverte on ignore
-    if (showTrophyModal && achievementEarned === achievement) return;
+      // si déjà ouvert sur le même succès => ignore
+      if (showTrophyModal && achievementEarned === achievement) return;
 
-    setTrophiesEarned(trophies);
-    setAchievementEarned(achievement);
-    setIsDoubleReward(false);
-    setShowTrophyModal(true);
-    // haptique léger pour feedback premium
-    Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium).catch(() => {});
-  }, [achievementEarned, showTrophyModal, withinCooldown]);
+      setTrophiesEarned(trophies);
+      setAchievementEarned(achievement);
+      setIsDoubleReward(false);
+      setShowTrophyModal(true);
 
-  /** Active le x2 après pub/condition */
+      Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium).catch(() => {});
+    },
+    [withinCooldown, showTrophyModal, achievementEarned]
+  );
+
+  /** Double after ad */
   const activateDoubleReward = useCallback(() => {
-    if (withinCooldown(500)) return;
+    if (withinCooldown(450)) return;
     setIsDoubleReward(true);
     Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success).catch(() => {});
   }, [withinCooldown]);
 
-  /** Ferme proprement la modale (sans reset des states métier) */
+  /** Close only UI */
   const closeTrophyModal = useCallback(() => {
     setShowTrophyModal(false);
   }, []);
 
-  /** Idempotence locale pour empêcher double soumission */
+  /** Anti double claim local */
   const alreadyClaimedLocally = useCallback((id: string) => {
     if (!id) return false;
     const s = recentClaimsRef.current;
     if (s.has(id)) return true;
-    // expire localement après ~3s
     s.add(id);
     setTimeout(() => s.delete(id), 3000);
     return false;
   }, []);
 
-  /** Claim atomique + UI optimiste + haptics + refresh profil */
+  /** Claim atomique */
   const resetTrophyData = useCallback(async () => {
     const userId = auth.currentUser?.uid;
     const id = achievementEarned;
-    if (!userId || !id) {
-      console.warn("⚠️ Aucun utilisateur ou succès sélectionné pour la réclamation.");
-      return;
-    }
-    if (withinCooldown(400)) return;
-    if (alreadyClaimedLocally(id)) return; // anti double tap ultra-rapide
 
-    const finalTrophies = isDoubleReward ? trophiesEarned * 2 : trophiesEarned;
+    if (!userId || !id) return;
+    if (isClaiming) return;
+    if (withinCooldown(400)) return;
+    if (alreadyClaimedLocally(id)) return;
+
     setIsClaiming(true);
 
     try {
-      // feedback immédiat
       Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light).catch(() => {});
-      // Transaction serveur (vérifie pending côté Firestore)
       await claimAchievement(userId, id, isDoubleReward);
 
-      // Succès 🎉
       Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success).catch(() => {});
-      // Ferme d’abord pour laisser place aux toasts/animations d’UI
       setShowTrophyModal(false);
 
-      // Petite pause le temps d’éventuelles animations de sortie
-      await new Promise((r) => setTimeout(r, 500));
-
-      // Refresh profil (trophies, achievements, newAchievements…)
+      await new Promise((r) => setTimeout(r, 450));
       await triggerProfileUpdate();
-    } catch (error: any) {
-      console.error("❌ Erreur lors de la réclamation du trophée :", error);
+    } catch (error) {
+      console.error("❌ claimAchievement erreur:", error);
       Haptics.notificationAsync(Haptics.NotificationFeedbackType.Error).catch(() => {});
     } finally {
-      // Réinitialisation des états
       setIsClaiming(false);
       setTrophiesEarned(0);
       setAchievementEarned(null);
       setIsDoubleReward(false);
     }
-  }, [achievementEarned, trophiesEarned, isDoubleReward, triggerProfileUpdate, withinCooldown, alreadyClaimedLocally]);
+  }, [
+    achievementEarned,
+    isDoubleReward,
+    triggerProfileUpdate,
+    withinCooldown,
+    alreadyClaimedLocally,
+    isClaiming,
+  ]);
+
+  const finalTrophies = useMemo(
+    () => (isDoubleReward ? trophiesEarned * 2 : trophiesEarned),
+    [isDoubleReward, trophiesEarned]
+  );
 
   const canClaim = useMemo(
     () => !!achievementEarned && trophiesEarned > 0 && !isClaiming,
@@ -140,16 +149,15 @@ export const TrophyProvider: React.FC<{ children: ReactNode }> = ({ children }) 
   return (
     <TrophyContext.Provider
       value={{
-        // existant
         showTrophyModal,
         trophiesEarned,
         achievementEarned,
         isDoubleReward,
+        finalTrophies,
         setShowTrophyModal,
         setTrophyData,
         activateDoubleReward,
         resetTrophyData,
-        // bonus
         isClaiming,
         closeTrophyModal,
         canClaim,

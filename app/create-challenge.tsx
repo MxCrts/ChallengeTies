@@ -5,7 +5,6 @@ import {
   TextInput,
   StyleSheet,
   TouchableOpacity,
-  Alert,
   ScrollView,
   Image,
   StatusBar,
@@ -45,6 +44,9 @@ import { getStorage, ref as storageRef, uploadBytes, getDownloadURL } from "fire
 import { auth, db } from "../constants/firebase-config";
 import * as Haptics from "expo-haptics";
 import { Image as RNImage } from "react-native";
+
+// Toast premium
+import { useToast } from "../src/ui/Toast";
 
 /* -------- Constantes UI -------- */
 const SPACING = 20;
@@ -114,6 +116,18 @@ export default function CreateChallenge() {
   const current = isDark ? designSystem.darkTheme : designSystem.lightTheme;
   const router = useRouter();
 const npa = (globalThis as any).__NPA__ === true;
+const { show } = useToast();
+  const softHaptic = useCallback(async (type: "success" | "error" | "warning" = "success") => {
+    try {
+      if (type === "error") {
+        await Haptics.notificationAsync(Haptics.NotificationFeedbackType.Error);
+      } else if (type === "warning") {
+        await Haptics.notificationAsync(Haptics.NotificationFeedbackType.Warning);
+      } else {
+        await Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
+      }
+    } catch {}
+  }, []);
 
   const [title, setTitle] = useState("");
   const [description, setDescription] = useState("");
@@ -128,8 +142,8 @@ const npa = (globalThis as any).__NPA__ === true;
   const interstitialAdUnitId = __DEV__
     ? TestIds.INTERSTITIAL
     : Platform.select({
-        ios: "ca-app-pub-4725616526467159/4942270608",
-        android: "ca-app-pub-4725616526467159/6097960289",
+        ios: "ca-app-pub-4725616526467159/3625641580",
+        android: "ca-app-pub-4725616526467159/1602005670",
       })!;
   const interstitialRef = useRef<InterstitialAd | null>(null);
   const [adLoaded, setAdLoaded] = useState(false);
@@ -191,11 +205,15 @@ const npa = (globalThis as any).__NPA__ === true;
          setDescription(draft.description ?? "");
          setImageUri(draft.imageUri ?? null);
          setCategory(draft.category ?? defaultCategories[0]);
-         Alert.alert(t("draft.title"), t("draft.restored"));
+         show(
+           t("draft.restored", { defaultValue: "Brouillon restauré ✅" }),
+           "info"
+         );
+         softHaptic("success");
        }
      } catch {}
    })();
- }, [t]);
+ }, [t, show, softHaptic]);
 
 
   const checkAdCooldownCreate = useCallback(async () => {
@@ -237,9 +255,10 @@ const npa = (globalThis as any).__NPA__ === true;
       });
       if (!canceled && assets?.[0]?.uri) { setImageUri(assets[0].uri); saveDraft({ imageUri: assets[0].uri }); }
     } catch {
-      Alert.alert(t("error"), t("imagePickFailed"));
+      show(t("imagePickFailed", { defaultValue: "Impossible d’ouvrir la galerie." }), "error");
+      softHaptic("error");
     }
-  }, [t, saveDraft]);
+   }, [t, saveDraft, show, softHaptic]);
 
   /* ====== Upload vers Storage (si image) ====== */
   const uploadImageIfNeeded = useCallback(async (localUri: string | null, nameHint: string) => {
@@ -252,8 +271,9 @@ const npa = (globalThis as any).__NPA__ === true;
        const res = await fetch(localUri);
        const buf = await res.blob();
        if (buf.size > IMAGE_MAX_BYTES) {
-         Alert.alert(t("error"), t("imageTooBig", { mb: 5 }));
+         show(t("imageTooBig", { mb: 5, defaultValue: "Image trop lourde (>5MB)." }), "error");
          reject = true;
+         softHaptic("error");
        }
      } catch {}
 
@@ -261,8 +281,9 @@ const npa = (globalThis as any).__NPA__ === true;
      await new Promise<void>((resolve) => {
        RNImage.getSize(localUri, (w, h) => {
          if (w < 600 || h < 400) {
-           Alert.alert(t("error"), t("imageTooSmall"));
+           show(t("imageTooSmall", { defaultValue: "Image trop petite (min 600x400)." }), "error");
            reject = true;
+           softHaptic("error");
          }
          resolve();
        }, () => resolve());
@@ -283,7 +304,7 @@ const npa = (globalThis as any).__NPA__ === true;
     } catch {
       return null; // on ne bloque pas la création si l’upload échoue
     }
-  }, [t]);
+   }, [t, show, softHaptic]);
 
   /* ====== Validation & Création ====== */
   const titleLeft = TITLE_MAX - title.length;
@@ -367,26 +388,29 @@ const npa = (globalThis as any).__NPA__ === true;
 
   const handleSubmit = useCallback(async () => {
     if (!title.trim() || !description.trim()) {
-      Alert.alert(t("error"), t("allFieldsRequired"));
+      show(t("allFieldsRequired", { defaultValue: "Titre et description requis." }), "error");
+      softHaptic("warning");
       return;
     }
 
     const currentIssues = describeIssues(t, title, description);
    if (currentIssues.length) {
-     Alert.alert(t("error"), currentIssues.join("\n"));
+     show(currentIssues[0], "error"); // on montre le 1er problème, le reste est déjà en UI inline
+     softHaptic("warning");
      return;
    }
 
     const user = auth.currentUser;
     if (!user) {
-      Alert.alert(t("error"), t("loginRequired"));
+      show(t("loginRequired", { defaultValue: "Connecte-toi pour créer un défi." }), "error");
+      softHaptic("error");
       return;
     }
 
     if (submitting || submittingRef.current) return;
     setSubmitting(true);
     submittingRef.current = true;
-    try { await Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium); } catch {}
+    try { await Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light); } catch {}
 
     try {
       // 1) Upload image si fournie
@@ -422,29 +446,24 @@ const npa = (globalThis as any).__NPA__ === true;
 
       // 5) Confirmation + navigation
       try { await AsyncStorage.removeItem(DRAFT_KEY); } catch {}
-      Alert.alert(
-        t("success", { defaultValue: "Succès" }),
+      show(
         t("challengeSubmittedForReview", {
-          defaultValue:
-            "Ton défi a été soumis et sera visible dès qu’un admin l’aura approuvé.",
+          defaultValue: "Défi soumis 🎉 Il sera visible après validation.",
         }),
-        [{
-   text: t("ok", { defaultValue: "OK" }),
-   onPress: () => {
-  try { (router as any).dismiss?.(); } catch {}
-  setTimeout(() => router.replace("/focus"), 10);
-}
- }]
+        "success"
       );
+      softHaptic("success");
+      try { (router as any).dismiss?.(); } catch {}
+      setTimeout(() => router.replace("/focus"), 250);
     } catch (e: any) {
       console.error("Create challenge error:", e?.message ?? e);
-      Alert.alert(
-        t("error"),
+      show(
         t("createChallengeFailed", {
-          defaultValue:
-            "Impossible de créer le défi pour le moment. Réessaie plus tard.",
-        })
+          defaultValue: "Impossible de créer le défi. Réessaie plus tard.",
+        }),
+        "error"
       );
+      softHaptic("error");
     } finally {
       setSubmitting(false);
       submittingRef.current = false;
@@ -459,6 +478,8 @@ const npa = (globalThis as any).__NPA__ === true;
     uploadImageIfNeeded,
     tryShowCreateInterstitial,
     submitting,
+    show,
+    softHaptic,
   ]);
 
   /* ====== UI ====== */

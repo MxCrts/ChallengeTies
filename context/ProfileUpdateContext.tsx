@@ -4,12 +4,10 @@ import {
   updateDoc,
   arrayUnion,
   getDoc,
-  increment,
 } from "firebase/firestore";
 import { db, auth } from "../constants/firebase-config";
 import { checkForAchievements } from "../helpers/trophiesHelpers";
-import { achievementsList } from "../helpers/achievementsConfig";
-import { serverTimestamp, type FieldValue } from "firebase/firestore";
+import { serverTimestamp } from "firebase/firestore";
 
 interface ProfileUpdateContextProps {
   triggerProfileUpdate: () => Promise<void>;
@@ -48,87 +46,77 @@ export const ProfileUpdateProvider: React.FC<{ children: ReactNode }> = ({
     if (!userId) return;
 
     const userRef = doc(db, "users", userId);
-    const userDoc = await getDoc(userRef);
-    if (!userDoc.exists()) return;
+    let userData: any = null;
+    try {
+      const userDoc = await getDoc(userRef);
+      if (!userDoc.exists()) return;
+      userData = userDoc.data();
+      __DEV__ && console.log("📢 Firestore Data (Avant update) :", userData);
+      __DEV__ && console.log("📢 Succès déjà obtenus :", userData.achievements);
+      __DEV__ && console.log("📢 Succès en attente :", userData.newAchievements);
+    } catch (e: any) {
+      __DEV__ && console.warn("[ProfileUpdate] getDoc error:", e?.message ?? e);
+      return;
+    }
 
-    const userData = userDoc.data();
-    console.log("📢 Firestore Data (Avant update) :", userData);
-    console.log("📢 Succès déjà obtenus :", userData.achievements);
-    console.log("📢 Succès en attente :", userData.newAchievements);
+    // 1) Détection standard (défensive + idempotente)
+    //    checkForAchievements gère déjà first_connection / profile_completed
+    //    et n'ajoute que dans newAchievements (pending).
+    let unlockedByCheck: string[] = [];
+    try {
+      unlockedByCheck = await checkForAchievements(userId);
+    } catch (e: any) {
+      __DEV__ && console.warn("[ProfileUpdate] checkForAchievements error:", e?.message ?? e);
+    }
 
-    // Récupère les nouveaux succès via la vérification
-    let newAchievements: string[] = await checkForAchievements(userId);
+    // 2) Forçage de garde (au cas où un champ serait manquant côté check)
+    const achieved = new Set<string>(Array.isArray(userData.achievements) ? userData.achievements : []);
+    const pending = new Set<string>(Array.isArray(userData.newAchievements) ? userData.newAchievements : []);
+    const forced: string[] = [];
 
-    // Forcer "first_connection" si non présent
-    if (
-      !userData.achievements?.includes("first_connection") &&
-      !userData.newAchievements?.includes("first_connection")
-    ) {
-      newAchievements.push("first_connection");
+    if (!achieved.has("first_connection") && !pending.has("first_connection")) {
+      forced.push("first_connection");
     }
 
     // ✅ "profile_completed" robuste (accepte interests string/array + mini longueurs)
     const canMarkProfileCompleted = isProfileCompleteServerSide(userData);
     const alreadyProfileCompleted =
-      userData?.achievements?.includes("profile_completed") ||
-      userData?.newAchievements?.includes("profile_completed") ||
+      achieved.has("profile_completed") ||
+      pending.has("profile_completed") ||
       userData?.profileCompleted === true ||
       userData?.stats?.profile?.completed === true;
     if (canMarkProfileCompleted && !alreadyProfileCompleted) {
-      newAchievements.push("profile_completed");
+      forced.push("profile_completed");
     }
 
-    if (newAchievements.length === 0) return;
+    if (forced.length) {
+      const patch: any = {
+        newAchievements: arrayUnion(...forced),
+      };
 
-    // Si "first_connection" n'est pas déjà dans newAchievements, l'ajouter manuellement (optionnel)
-    if (!userData.newAchievements?.includes("first_connection")) {
-      await updateDoc(userRef, {
-        newAchievements: arrayUnion("first_connection"),
-      });
-      console.log("🔥 Ajout manuel de 'first_connection' à Firestore !");
-    }
-
-    // Calcul du nombre total de trophées gagnés
-    let totalTrophies = newAchievements.reduce((acc, achievementKey) => {
-      Object.entries(achievementsList).forEach(([key, value]) => {
-        if (typeof value === "object" && "name" in value && "points" in value) {
-          if (achievementKey === key) {
-            acc += value.points;
-          }
-        } else {
-          Object.entries(value).forEach(([threshold, achievementData]) => {
-            if (`${key}-${threshold}` === achievementKey) {
-              acc += (achievementData as { name: string; points: number })
-                .points;
-            }
-          });
+      // 🏁 Pose aussi les flags "profil complet" si applicable (idempotent)
+      if (canMarkProfileCompleted) {
+        patch.profileCompleted = true;
+        patch["stats.profile.completed"] = true;
+        if (!userData?.profileCompletedAt) {
+          patch.profileCompletedAt = serverTimestamp();
         }
-      });
-      return acc;
-    }, 0);
+      }
 
-    // Met à jour Firestore avec les nouveaux succès et incrémente les trophées
-    const patch: any = {
-      newAchievements: arrayUnion(...newAchievements),
-      achievements: arrayUnion(...newAchievements),
-      trophies: increment(totalTrophies),
-    };
-    // 🏁 Pose aussi les flags "profil complet" si applicable (idempotent)
-    if (canMarkProfileCompleted) {
-      patch.profileCompleted = true;
-      patch["stats.profile.completed"] = true;
-      if (!userData?.profileCompletedAt) {
-        patch.profileCompletedAt = serverTimestamp();
+      try {
+        await updateDoc(userRef, patch);
+        __DEV__ && console.log(`🔥 Succès forcés en pending : ${forced.join(", ")}`);
+      } catch (e: any) {
+        __DEV__ && console.warn("[ProfileUpdate] updateDoc forced error:", e?.message ?? e);
       }
     }
-    await updateDoc(userRef, patch);
 
-    console.log(
-      `✅ Succès ajoutés: ${newAchievements.join(
-        ", "
-      )} | Trophées gagnés: ${totalTrophies}`
-    );
-    setProfileUpdated((prev) => !prev);
+    // 3) Rien à claim ici.
+    //    Les trophées sont crédités UNIQUEMENT via claimAchievement()
+    //    dans TrophyModal pour éviter double attribution.
+    if (unlockedByCheck.length || forced.length) {
+      setProfileUpdated((prev) => !prev);
+    }
   };
 
   return (

@@ -29,7 +29,11 @@ import NetInfo from "@react-native-community/netinfo";
 
 const { width: SCREEN_WIDTH, height: SCREEN_HEIGHT } = Dimensions.get("window");
 const normalize = (size: number) =>
-  Math.round(PixelRatio.roundToNearestPixel(size * (Math.min(SCREEN_WIDTH, SCREEN_HEIGHT) / 375)));
+  Math.round(
+    PixelRatio.roundToNearestPixel(
+      size * (Math.min(SCREEN_WIDTH, SCREEN_HEIGHT) / 375)
+    )
+  );
 
 const BACKGROUND_COLOR = "#FFF8E7";
 const PRIMARY_COLOR = "#FFB800";
@@ -198,9 +202,12 @@ export default function ForgotPassword() {
     AccessibilityInfo.isReduceMotionEnabled().then((enabled) => {
       if (mounted) setReduceMotion(!!enabled);
     });
-    const reduceSub = AccessibilityInfo.addEventListener("reduceMotionChanged", (enabled) => {
-      setReduceMotion(!!enabled);
-    });
+    const reduceSub = AccessibilityInfo.addEventListener(
+      "reduceMotionChanged",
+      (enabled) => {
+        setReduceMotion(!!enabled);
+      }
+    );
     return () => {
       netSub && netSub();
       mounted = false;
@@ -251,7 +258,10 @@ export default function ForgotPassword() {
     }
 
     if (isOffline) {
-      setMsg({ type: "error", text: t("networkError") || "Problème réseau. Réessaie." });
+      setMsg({
+        type: "error",
+        text: t("networkError") || "Problème réseau. Réessaie.",
+      });
       triggerShake();
       Haptics.notificationAsync(Haptics.NotificationFeedbackType.Error).catch(() => {});
       return;
@@ -261,22 +271,28 @@ export default function ForgotPassword() {
       setLoading(true);
       await sendPasswordResetEmail(auth, e);
       setMsg({ type: "success", text: t("resetLinkSent") });
+      setEmail(""); // ✅ on clear le champ après succès
       Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success).catch(() => {});
     } catch (error: any) {
-      // mapping propre sans divulguer si l’email existe ou pas
       const code = error?.code as string | undefined;
       const map: Record<string, string> = {
         "auth/invalid-email": t("invalidEmailFormat"),
         "auth/network-request-failed": t("networkError"),
-        // "auth/user-not-found": t("resetLinkSent") // <- si tu veux TOUJOURS dire “Lien envoyé”
       };
+
       if (code === "auth/user-not-found") {
+        // ✅ On ne leak pas l’existence du compte, mais on reste en “succès”
         setMsg({ type: "success", text: t("resetLinkSent") });
+        setEmail("");
+        Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success).catch(() => {});
       } else {
-        setMsg({ type: "error", text: map[code || ""] || t("unknownError") });
+        setMsg({
+          type: "error",
+          text: map[code || ""] || t("unknownError"),
+        });
+        triggerShake();
+        Haptics.notificationAsync(Haptics.NotificationFeedbackType.Error).catch(() => {});
       }
-      triggerShake();
-      Haptics.notificationAsync(Haptics.NotificationFeedbackType.Error).catch(() => {});
     } finally {
       setLoading(false);
     }
@@ -292,6 +308,7 @@ export default function ForgotPassword() {
         contentContainerStyle={styles.container}
         keyboardShouldPersistTaps="handled"
         contentInsetAdjustmentBehavior="always"
+        keyboardDismissMode="on-drag"
       >
         {/* Vagues */}
         {waves.map((wave, index) => (
@@ -311,7 +328,7 @@ export default function ForgotPassword() {
           onPress={() => !loading && router.back()}
           accessibilityLabel={t("backToLogin")}
           accessibilityRole="button"
-       android_ripple={{ color: "rgba(0,0,0,0.06)", borderless: true }}
+          android_ripple={{ color: "rgba(0,0,0,0.06)", borderless: true }}
         >
           <Ionicons name="arrow-back" size={normalize(28)} color={TEXT_COLOR} />
         </Pressable>
@@ -335,12 +352,18 @@ export default function ForgotPassword() {
         {isOffline && (
           <View style={styles.offlineBanner} accessibilityRole="alert">
             <Ionicons name="cloud-offline-outline" size={16} color="#111827" />
-            <Text style={styles.offlineText}>{t("networkError") || "Connexion réseau indisponible"}</Text>
+            <Text style={styles.offlineText}>
+              {t("networkError") || "Connexion réseau indisponible"}
+            </Text>
           </View>
         )}
 
         {/* Email */}
-        <View style={styles.inputContainer} accessibilityLabel={t("resetForm")} accessible>
+        <View
+          style={styles.inputContainer}
+          accessibilityLabel={t("resetForm")}
+          accessible
+        >
           <TextInput
             placeholder={t("yourEmailAddress")}
             placeholderTextColor="rgba(50,50,50,0.5)"
@@ -368,7 +391,11 @@ export default function ForgotPassword() {
               hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}
               accessibilityLabel={t("clear") || "Effacer"}
             >
-              <Ionicons name="close-circle" size={18} color="rgba(0,0,0,0.35)" />
+              <Ionicons
+                name="close-circle"
+                size={18}
+                color="rgba(0,0,0,0.35)"
+              />
             </TouchableOpacity>
           )}
         </View>
@@ -388,29 +415,39 @@ export default function ForgotPassword() {
         )}
 
         {/* CTA */}
-        <Animated.View style={{ transform: [{ scale: Animated.multiply(ctaScale, ctaPulse) }] }}>
-          <Pressable
-            style={[styles.resetButton, disabledCTA && styles.disabledButton]}
-            onPressIn={pressIn}
-            onPressOut={pressOut}
-            android_ripple={{ color: "rgba(0,0,0,0.06)", borderless: false }}
-            onPress={!disabledCTA ? handleResetPassword : undefined}
-            disabled={disabledCTA}
-            accessibilityLabel={t("sendResetLink")}
-            accessibilityHint={t("sendResetLinkHint") || undefined}
-            accessibilityRole="button"
-            accessibilityState={{ disabled: disabledCTA }}
-          >
-            {loading ? (
-              <ActivityIndicator color={TEXT_COLOR} size="small" />
-            ) : (
-              <View style={styles.btnRow}>
-                <Ionicons name="mail-open-outline" size={18} color={TEXT_COLOR} />
-                <Text style={styles.resetButtonText}>{t("sendLink")}</Text>
-              </View>
-            )}
-          </Pressable>
-        </Animated.View>
+<Animated.View
+  style={[
+    styles.ctaWrapper,
+    { transform: [{ scale: Animated.multiply(ctaScale, ctaPulse) }] },
+  ]}
+>
+  <Pressable
+    style={[styles.resetButton, disabledCTA && styles.disabledButton]}
+    onPressIn={pressIn}
+    onPressOut={pressOut}
+    android_ripple={{ color: "rgba(0,0,0,0.06)", borderless: false }}
+    onPress={!disabledCTA ? handleResetPassword : undefined}
+    disabled={disabledCTA}
+    accessibilityLabel={t("sendResetLink")}
+    accessibilityHint={t("sendResetLinkHint") || undefined}
+    accessibilityRole="button"
+    accessibilityState={{ disabled: disabledCTA }}
+  >
+    {loading ? (
+      <ActivityIndicator color={TEXT_COLOR} size="small" />
+    ) : (
+      <View style={styles.btnRow}>
+        <Ionicons
+          name="mail-open-outline"
+          size={18}
+          color={TEXT_COLOR}
+        />
+        <Text style={styles.resetButtonText}>{t("sendLink")}</Text>
+      </View>
+    )}
+  </Pressable>
+</Animated.View>
+
       </ScrollView>
     </KeyboardAvoidingView>
   );
@@ -458,6 +495,7 @@ const styles = StyleSheet.create({
     textAlign: "center",
     width: "90%",
     marginBottom: 10,
+    fontFamily: "Comfortaa_700Bold",
   },
   successText: {
     color: "#059669",
@@ -466,6 +504,7 @@ const styles = StyleSheet.create({
     textAlign: "center",
     width: "90%",
     marginBottom: 10,
+    fontFamily: "Comfortaa_700Bold",
   },
   inputContainer: {
     position: "absolute",
@@ -474,6 +513,13 @@ const styles = StyleSheet.create({
     alignItems: "center",
     flexDirection: "row",
   },
+  ctaWrapper: {
+  position: "absolute",
+  bottom: "12%",
+  left: 0,
+  right: 0,
+  alignItems: "center",
+},
   input: {
     flex: 1,
     height: normalize(55),
@@ -492,20 +538,18 @@ const styles = StyleSheet.create({
   },
   trailingBtn: { marginLeft: 8, padding: 4 },
   resetButton: {
-    position: "absolute",
-    bottom: "12%",
-    width: "90%",
-    backgroundColor: BUTTON_COLOR,
-    paddingVertical: normalize(14),
-    borderRadius: normalize(25),
-    alignItems: "center",
-    borderWidth: 2,
-    borderColor: PRIMARY_COLOR,
-    shadowColor: PRIMARY_COLOR,
-    shadowOffset: { width: 0, height: 3 },
-    shadowOpacity: 0.3,
-    shadowRadius: 5,
-  },
+  width: "90%",
+  backgroundColor: BUTTON_COLOR,
+  paddingVertical: normalize(14),
+  borderRadius: normalize(25),
+  alignItems: "center",
+  borderWidth: 2,
+  borderColor: PRIMARY_COLOR,
+  shadowColor: PRIMARY_COLOR,
+  shadowOffset: { width: 0, height: 3 },
+  shadowOpacity: 0.3,
+  shadowRadius: 5,
+},
   btnRow: { flexDirection: "row", alignItems: "center", gap: 8 },
   disabledButton: { opacity: 0.5 },
   resetButtonText: {
@@ -516,6 +560,8 @@ const styles = StyleSheet.create({
   offlineBanner: {
     position: "absolute",
     top: "20%",
+    left: "5%",
+    right: "5%", // ✅ centré & safe sur tous les écrans
     flexDirection: "row",
     alignItems: "center",
     gap: 8,

@@ -1,4 +1,4 @@
-import React, { useEffect, useState, useCallback, useMemo } from "react";
+import React, { useEffect, useState, useCallback } from "react";
 import {
   View,
   Text,
@@ -27,28 +27,35 @@ import * as Clipboard from "expo-clipboard";
 import * as Haptics from "expo-haptics";
 import { Ionicons } from "@expo/vector-icons";
 import { Share } from "react-native";
-import { I18nManager } from "react-native";
-import { useShareCard } from "@/hooks/useShareCard";
-import { HelperShareCard, EXPORT_W, EXPORT_H } from "@/components/ShareCards";
+
+const { width: SCREEN_WIDTH } = Dimensions.get("window");
+const SPACING = 16;
+
 function truncate(s: string, n = 180) {
   if (!s) return "";
   const clean = s.replace(/\s+/g, " ").trim();
   return clean.length > n ? clean.slice(0, n - 1).trim() + "…" : clean;
 }
 
-function buildHelperShare({ id, title, mini }: { id: string; title: string; mini: string }) {
-  // lien propre + UTM pour mesurer
-  const url = `https://challengeties.app/challenge-helper/${encodeURIComponent(id)}?utm_source=app&utm_medium=share&utm_campaign=helper`;
+function buildHelperShare({
+  id,
+  title,
+  mini,
+}: {
+  id: string;
+  title: string;
+  mini: string;
+}) {
+  const url = `https://challengeties.app/challenge-helper/${encodeURIComponent(
+    id
+  )}?utm_source=app&utm_medium=share&utm_campaign=helper`;
   const tagline = "Got a minute? Get a skill! ⚡";
   const header = `⭐ ${title}`;
   const body = truncate(mini, 220);
-  const message =
-    `${header}\n\n${body}\n\n${tagline}\n${url}`;
+  const message = `${header}\n\n${body}\n\n${tagline}\n${url}`;
   return { message, url };
 }
 
-
-const { width: SCREEN_WIDTH } = Dimensions.get("window");
 const normalizeFont = (size: number) => {
   const base = 375;
   const scale = Math.min(Math.max(SCREEN_WIDTH / base, 0.7), 1.8);
@@ -100,11 +107,8 @@ const OrbBackground = ({ theme }: { theme: Theme }) => (
   </View>
 );
 
-const SPACING = 16;
-
 const getTransString = (tFn: any, key: string, fallback = ""): string => {
   const val = tFn(key, { defaultValue: fallback });
-  // si la clé n'existe pas, i18n renvoie souvent la clé elle-même
   if (!val || val === key) return fallback;
   return String(val);
 };
@@ -115,7 +119,6 @@ const getTransArray = <T = any>(
   fallback: T[] = []
 ): T[] => {
   const val = tFn(key, { returnObjects: true, defaultValue: fallback });
-  // si la clé n'existe pas, on obtient souvent 'key' (string) -> pas un array
   return Array.isArray(val) ? (val as T[]) : fallback;
 };
 
@@ -128,15 +131,11 @@ export default function ChallengeHelperScreen() {
     ? designSystem.darkTheme
     : designSystem.lightTheme;
 
-  // 1) States + fetch factorisé
   const [docTitle, setDocTitle] = useState("");
   const [helperData, setHelperData] = useState<any>(null);
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
   const [softError, setSoftError] = useState<string | null>(null);
-  // ——— Partage image (ShareCards) ———
-  const { ref: shareRef, share } = useShareCard();
-  const [sharePayload, setSharePayload] = useState<{ title: string; summary: string } | null>(null);
 
   const fetchAll = useCallback(async () => {
     if (!id) return;
@@ -150,7 +149,11 @@ export default function ChallengeHelperScreen() {
       } else {
         setDocTitle("");
       }
-      const q2 = query(collection(db, "challenge-helpers"), where("chatId", "==", id));
+
+      const q2 = query(
+        collection(db, "challenge-helpers"),
+        where("chatId", "==", id)
+      );
       const snap2 = await getDocs(q2);
       if (!snap2.empty) {
         setHelperData(snap2.docs[0].data());
@@ -176,24 +179,29 @@ export default function ChallengeHelperScreen() {
     fetchAll();
   }, [fetchAll]);
 
-  // 3) Récupérer le titre traduit depuis le namespace "challenges"
-  //    avec fallback sur docTitle
- const title = getTransString(t, `challenges.${id}.title`, docTitle);
+  const title = getTransString(t, `challenges.${id}.title`, docTitle);
 
-  // 4) Contenu traduits
- const miniCours = getTransString(t, `${id}.miniCours`, helperData?.miniCours || "");
+  const miniCours = getTransString(
+    t,
+    `${id}.miniCours`,
+    helperData?.miniCours || ""
+  );
 
-const exemples = getTransArray<string>(t, `${id}.exemples`, helperData?.exemples || []);
+  const exemples = getTransArray<string>(
+    t,
+    `${id}.exemples`,
+    helperData?.exemples || []
+  );
 
-const ressources = getTransArray<{ title: string; url: string; type?: string }>(
-  t,
-  `${id}.ressources`,
-  helperData?.ressources || []
-);
+  const ressources = getTransArray<{ title: string; url: string; type?: string }>(
+    t,
+    `${id}.ressources`,
+    helperData?.ressources || []
+  );
 
-  // 5) Loader global
   const missingMiniCours = !miniCours || !miniCours.trim();
- if (loading || !title || missingMiniCours || !helperData) {
+
+  if (loading || !title || missingMiniCours || !helperData) {
     return (
       <View
         style={[
@@ -206,7 +214,6 @@ const ressources = getTransArray<{ title: string; url: string; type?: string }>(
     );
   }
 
-  // 6) Cache‑bust de l’image
   const rawImage = helperData.imageHelper as string | undefined;
   const imageUri = rawImage
     ? `${rawImage}${rawImage.includes("?") ? "&" : "?"}t=${Date.now()}`
@@ -251,7 +258,9 @@ const ressources = getTransArray<{ title: string; url: string; type?: string }>(
                 if (await Linking.canOpenURL(imageUri)) Linking.openURL(imageUri);
               }}
               accessibilityRole="imagebutton"
-              accessibilityLabel={t("challengeHelper.openImage", { defaultValue: "Ouvrir l’illustration" })}
+              accessibilityLabel={t("challengeHelper.openImage", {
+                defaultValue: "Ouvrir l’illustration",
+              })}
             >
               <Image
                 source={{ uri: imageUri }}
@@ -267,118 +276,144 @@ const ressources = getTransArray<{ title: string; url: string; type?: string }>(
           <View style={styles.actionsRow}>
             {/* Partager (message + lien profond) */}
             <TouchableOpacity
-              style={[styles.actionBtn, { borderColor: currentTheme.colors.primary }]}
+              style={[
+                styles.actionBtn,
+                { borderColor: currentTheme.colors.primary },
+              ]}
               onPress={async () => {
-                Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium).catch(() => {});
-                const payload = buildHelperShare({ id, title, mini: miniCours });
+                Haptics.impactAsync(
+                  Haptics.ImpactFeedbackStyle.Medium
+                ).catch(() => {});
+                const payload = buildHelperShare({
+                  id,
+                  title,
+                  mini: miniCours,
+                });
                 try {
                   await Share.share({
                     message: payload.message,
-                    url: payload.url, // iOS utilise url si présent
+                    url: payload.url,
                     title: `Partager • ${title}`,
                   });
                 } catch {}
               }}
-              accessibilityLabel={t("challengeHelper.share", { defaultValue: "Partager" })}
+              accessibilityLabel={t("challengeHelper.share", {
+                defaultValue: "Partager",
+              })}
             >
-              <Ionicons name="share-social-outline" size={18} color={currentTheme.colors.primary} />
-              <Text style={[styles.actionText, { color: currentTheme.colors.primary }]}>
+              <Ionicons
+                name="share-social-outline"
+                size={18}
+                color={currentTheme.colors.primary}
+              />
+              <Text
+                style={[
+                  styles.actionText,
+                  { color: currentTheme.colors.primary },
+                ]}
+              >
                 {t("challengeHelper.share", { defaultValue: "Partager" })}
               </Text>
             </TouchableOpacity>
 
-            {/* Partager l'image (ShareCards en 1080×1350) */}
+            {/* Copier le mini-cours */}
             <TouchableOpacity
-              style={[styles.actionBtn, { borderColor: currentTheme.colors.secondary }]}
-              onPress={async () => {
-                try { await Haptics.selectionAsync(); } catch {}
-                setSharePayload({ title, summary: miniCours });
-                // Laisse React monter la carte invisible
-                await new Promise<void>((r) => requestAnimationFrame(() => r()));
-                await share(
-                  `ct-helper-${id}-${Date.now()}.png`,
-                  t("challengeHelper.shareImageDialog", { defaultValue: "Partager l’image" })
-                );
-                setSharePayload(null);
-              }}
-              accessibilityLabel={t("challengeHelper.shareImage", { defaultValue: "Partager l’image" })}
-            >
-              <Ionicons name="image-outline" size={18} color={currentTheme.colors.secondary} />
-              <Text style={[styles.actionText, { color: currentTheme.colors.secondary }]}>
-                {t("challengeHelper.shareImage", { defaultValue: "Image" })}
-              </Text>
-            </TouchableOpacity>
-
-            {/* Ouvrir (web) */}
-            <TouchableOpacity
-              style={[styles.actionBtn, { borderColor: currentTheme.colors.secondary }]}
-              onPress={async () => {
-                Haptics.selectionAsync().catch(() => {});
-                const url = `https://challengeties.app/challenge/${id}`;
-                const ok = await Linking.canOpenURL(url);
-                Linking.openURL(ok ? url : "https://challengeties.app").catch(() => {});
-              }}
-              accessibilityLabel={t("challengeHelper.open", { defaultValue: "Ouvrir" })}
-            >
-              <Ionicons name="open-outline" size={18} color={currentTheme.colors.secondary} />
-              <Text style={[styles.actionText, { color: currentTheme.colors.secondary }]}>
-                {t("challengeHelper.open", { defaultValue: "Ouvrir" })}
-              </Text>
-            </TouchableOpacity>
-
-            <TouchableOpacity
-              style={[styles.actionBtn, { borderColor: currentTheme.colors.secondary }]}
+              style={[
+                styles.actionBtn,
+                { borderColor: currentTheme.colors.secondary },
+              ]}
               onPress={async () => {
                 await Clipboard.setStringAsync(miniCours);
-                Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success).catch(() => {});
+                Haptics.notificationAsync(
+                  Haptics.NotificationFeedbackType.Success
+                ).catch(() => {});
               }}
-              accessibilityLabel={t("challengeHelper.copySummary", { defaultValue: "Copier le mini-cours" })}
+              accessibilityLabel={t("challengeHelper.copySummary", {
+                defaultValue: "Copier le mini-cours",
+              })}
             >
-              <Ionicons name="copy-outline" size={18} color={currentTheme.colors.secondary} />
-              <Text style={[styles.actionText, { color: currentTheme.colors.secondary }]}>
+              <Ionicons
+                name="copy-outline"
+                size={18}
+                color={currentTheme.colors.secondary}
+              />
+              <Text
+                style={[
+                  styles.actionText,
+                  { color: currentTheme.colors.secondary },
+                ]}
+              >
                 {t("challengeHelper.copy", { defaultValue: "Copier" })}
               </Text>
             </TouchableOpacity>
           </View>
 
           {softError && (
-            <View style={[styles.errorBanner, { borderColor: currentTheme.colors.error }]}>
-              <Ionicons name="alert-circle-outline" size={18} color={currentTheme.colors.error} />
-              <Text style={[styles.errorText, { color: currentTheme.colors.error }]}>
-                {t("common.loadError", { defaultValue: "Impossible de rafraîchir. Balaye vers le bas pour réessayer." })}
+            <View
+              style={[
+                styles.errorBanner,
+                { borderColor: currentTheme.colors.error },
+              ]}
+            >
+              <Ionicons
+                name="alert-circle-outline"
+                size={18}
+                color={currentTheme.colors.error}
+              />
+              <Text
+                style={[
+                  styles.errorText,
+                  { color: currentTheme.colors.error },
+                ]}
+              >
+                {t("common.loadError", {
+                  defaultValue:
+                    "Impossible de rafraîchir. Balaye vers le bas pour réessayer.",
+                })}
               </Text>
             </View>
           )}
 
-          {/* Mini‑cours */}
+          {/* Mini-cours */}
           <Animated.View
             entering={FadeInDown.duration(500)}
             style={[
-  styles.card,
-  {
-    backgroundColor: isDark
-      ? "rgba(255,255,255,0.06)"
-      : "rgba(0,0,0,0.04)",
-    borderColor: isDark
-      ? "rgba(255,255,255,0.14)"
-      : "rgba(0,0,0,0.08)",
-    borderWidth: StyleSheet.hairlineWidth,
-  },
-]}
+              styles.card,
+              {
+                backgroundColor: isDark
+                  ? "rgba(255,255,255,0.06)"
+                  : "rgba(0,0,0,0.04)",
+                borderColor: isDark
+                  ? "rgba(255,255,255,0.14)"
+                  : "rgba(0,0,0,0.08)",
+                borderWidth: StyleSheet.hairlineWidth,
+              },
+            ]}
           >
             <View style={styles.sectionHeaderRow}>
-              <View style={[styles.sectionAccent, { backgroundColor: currentTheme.colors.primary }]} />
-            <Text
-              style={[
-                styles.sectionTitle,
-                { color: currentTheme.colors.primary },
-              ]}
-            >
-              🎓 {t("challengeHelper.explanation")}
-            </Text>
+              <View
+                style={[
+                  styles.sectionAccent,
+                  { backgroundColor: currentTheme.colors.primary },
+                ]}
+              />
+              <Text
+                style={[
+                  styles.sectionTitle,
+                  { color: currentTheme.colors.primary },
+                ]}
+              >
+                🎓{" "}
+                {t("challengeHelper.explanation", {
+                  defaultValue: "Explication du mini-cours",
+                })}
+              </Text>
             </View>
             <Text
-              style={[styles.text, { color: currentTheme.colors.textSecondary }]}
+              style={[
+                styles.text,
+                { color: currentTheme.colors.textSecondary },
+              ]}
             >
               {miniCours}
             </Text>
@@ -389,27 +424,35 @@ const ressources = getTransArray<{ title: string; url: string; type?: string }>(
             <Animated.View
               entering={FadeInDown.delay(200).duration(500)}
               style={[
-  styles.card,
-  {
-    backgroundColor: isDark
-      ? "rgba(255,255,255,0.06)"
-      : "rgba(0,0,0,0.04)",
-    borderColor: isDark
-      ? "rgba(255,255,255,0.14)"
-      : "rgba(0,0,0,0.08)",
-    borderWidth: StyleSheet.hairlineWidth,
-  },
-]}
+                styles.card,
+                {
+                  backgroundColor: isDark
+                    ? "rgba(255,255,255,0.06)"
+                    : "rgba(0,0,0,0.04)",
+                  borderColor: isDark
+                    ? "rgba(255,255,255,0.14)"
+                    : "rgba(0,0,0,0.08)",
+                  borderWidth: StyleSheet.hairlineWidth,
+                },
+              ]}
             >
               <View style={styles.sectionHeaderRow}>
-                <View style={[styles.sectionAccent, { backgroundColor: currentTheme.colors.primary }]} />
+                <View
+                  style={[
+                    styles.sectionAccent,
+                    { backgroundColor: currentTheme.colors.primary },
+                  ]}
+                />
                 <Text
                   style={[
                     styles.sectionTitle,
                     { color: currentTheme.colors.primary },
                   ]}
                 >
-                  💡 {t("challengeHelper.examples")}
+                  💡{" "}
+                  {t("challengeHelper.examples", {
+                    defaultValue: "Exemples concrets",
+                  })}
                 </Text>
               </View>
               {exemples.map((ex, i) => (
@@ -430,47 +473,58 @@ const ressources = getTransArray<{ title: string; url: string; type?: string }>(
           )}
 
           {/* Ressources */}
-          {Array.isArray(ressources) && ressources.some(r => !!r?.url) && (
+          {Array.isArray(ressources) && ressources.some((r) => !!r?.url) && (
             <Animated.View
               entering={FadeInDown.delay(400).duration(500)}
               style={[
-  styles.card,
-  {
-    backgroundColor: isDark
-      ? "rgba(255,255,255,0.06)"
-      : "rgba(0,0,0,0.04)",
-    borderColor: isDark
-      ? "rgba(255,255,255,0.14)"
-      : "rgba(0,0,0,0.08)",
-    borderWidth: StyleSheet.hairlineWidth,
-  },
-]}
+                styles.card,
+                {
+                  backgroundColor: isDark
+                    ? "rgba(255,255,255,0.06)"
+                    : "rgba(0,0,0,0.04)",
+                  borderColor: isDark
+                    ? "rgba(255,255,255,0.14)"
+                    : "rgba(0,0,0,0.08)",
+                  borderWidth: StyleSheet.hairlineWidth,
+                },
+              ]}
             >
               <View style={styles.sectionHeaderRow}>
-                <View style={[styles.sectionAccent, { backgroundColor: currentTheme.colors.primary }]} />
+                <View
+                  style={[
+                    styles.sectionAccent,
+                    { backgroundColor: currentTheme.colors.primary },
+                  ]}
+                />
                 <Text
                   style={[
                     styles.sectionTitle,
                     { color: currentTheme.colors.primary },
                   ]}
                 >
-                  🔗 {t("challengeHelper.resources")}
+                  🔗{" "}
+                  {t("challengeHelper.resources", {
+                    defaultValue: "Ressources utiles",
+                  })}
                 </Text>
               </View>
               {ressources
-                .filter(r => !!r?.url)
+                .filter((r) => !!r?.url)
                 .map((r, i) => {
                   const url = String(r.url);
                   const isYT = /youtu\.?be/.test(url);
                   const isPDF = /\.pdf(\?|$)/i.test(url);
-                  const icon: keyof typeof Ionicons.glyphMap =
-                    isYT ? "logo-youtube" : isPDF ? "document-text-outline" : "open-outline";
+                  const icon: keyof typeof Ionicons.glyphMap = isYT
+                    ? "logo-youtube"
+                    : isPDF
+                    ? "document-text-outline"
+                    : "open-outline";
                   return (
                     <TouchableOpacity
                       key={i}
                       style={styles.resourceRow}
                       onPress={async () => {
-                        Haptics.selectionAsync().catch(()=>{});
+                        Haptics.selectionAsync().catch(() => {});
                         if (await Linking.canOpenURL(url)) Linking.openURL(url);
                       }}
                       accessibilityRole="link"
@@ -505,10 +559,18 @@ const ressources = getTransArray<{ title: string; url: string; type?: string }>(
                 { color: currentTheme.colors.textSecondary },
               ]}
             >
-              📩 {t("challengeHelper.suggestion")}
+              📩{" "}
+              {t("challengeHelper.suggestion", {
+                defaultValue:
+                  "Une idée pour améliorer ce mini-cours ? Écris-nous :",
+              })}
             </Text>
             <TouchableOpacity
-              onPress={() => Linking.openURL("mailto:support@challengeties.app")}
+              onPress={() =>
+                Linking.openURL("mailto:support@challengeties.app").catch(
+                  () => {}
+                )
+              }
             >
               <Text
                 style={[
@@ -522,21 +584,9 @@ const ressources = getTransArray<{ title: string; url: string; type?: string }>(
           </View>
         </ScrollView>
       </SafeAreaView>
-      {/* ——— Carte de partage invisible, capturable ——— */}
-      {sharePayload && (
-   <View style={{ position: "absolute", opacity: 0, pointerEvents: "none" }}>
-     <HelperShareCard
-       ref={shareRef}
-       title={sharePayload.title}
-       summary={sharePayload.summary}
-       exportSize={{ width: EXPORT_W, height: EXPORT_H }}  // ✅ 1080×1350 net
-     />
-   </View>
- )}
     </LinearGradient>
   );
 }
-
 
 const styles = StyleSheet.create({
   container: { flex: 1 },
@@ -554,7 +604,7 @@ const styles = StyleSheet.create({
     justifyContent: "center",
     alignItems: "center",
   },
-    // Orbes
+  // Orbes
   orb: {
     position: "absolute",
     opacity: 0.9,
@@ -563,6 +613,7 @@ const styles = StyleSheet.create({
     flexDirection: "row",
     gap: 10,
     marginBottom: SPACING * 1.4,
+    flexWrap: "wrap",
   },
   actionBtn: {
     flexDirection: "row",
@@ -609,19 +660,16 @@ const styles = StyleSheet.create({
     borderRadius: 6,
     opacity: 0.9,
   },
-  // Card : fond “glass”, on coupe les grosses ombres (on les gère via la bordure subtile)
   card: {
     borderRadius: 18,
     padding: SPACING,
     marginBottom: SPACING * 1.4,
-    // kill heavy shadows
     shadowColor: "transparent",
     shadowOffset: { width: 0, height: 0 },
     shadowOpacity: 0,
     shadowRadius: 0,
     elevation: 0,
   },
-
   image: {
     width: "100%",
     height: 240,
@@ -629,7 +677,6 @@ const styles = StyleSheet.create({
     marginBottom: SPACING * 1.4,
     backgroundColor: "#ccc",
   },
-  
   sectionTitle: {
     fontSize: normalizeFont(21),
     fontFamily: "Comfortaa_700Bold",

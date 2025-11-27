@@ -7,10 +7,9 @@ import {
   Dimensions,
   Animated,
   ActivityIndicator,
-  Platform,
-  Easing,
   AppState,
   AccessibilityInfo,
+  Easing,
 } from "react-native";
 import { useRouter } from "expo-router";
 import { Ionicons } from "@expo/vector-icons";
@@ -62,7 +61,6 @@ export default function Screen1() {
 
   const timersRef = useRef<number[]>([]);
   const appStateRef = useRef(AppState.currentState);
-  const animsRef = useRef<Animated.CompositeAnimation[]>([]);
   const ctaShownRef = useRef(false);
   const playbackMsRef = useRef(0);
 
@@ -76,7 +74,12 @@ export default function Screen1() {
   // Control play state based on focus/app state/navigation
   useEffect(() => {
     const recompute = () =>
-      setShouldPlay(isFocused && appStateRef.current === "active" && !isNavigating && !reduceMotion);
+      setShouldPlay(
+        isFocused &&
+          appStateRef.current === "active" &&
+          !isNavigating &&
+          !reduceMotion
+      );
     recompute();
     const sub = AppState.addEventListener("change", (s) => {
       appStateRef.current = s;
@@ -85,11 +88,14 @@ export default function Screen1() {
     return () => sub.remove();
   }, [isFocused, isNavigating, reduceMotion]);
 
+  // Preload vidéo
   useEffect(() => {
     let mounted = true;
     (async () => {
       try {
-        const asset = Asset.fromModule(require("../../../assets/videos/test4.mp4"));
+        const asset = Asset.fromModule(
+          require("../../../assets/videos/test4.mp4")
+        );
         if (!asset.downloaded) {
           await asset.downloadAsync();
         }
@@ -127,13 +133,41 @@ export default function Screen1() {
     }
     const anim = Animated.sequence([
       Animated.parallel([
-        Animated.timing(introOverlayOpacity, { toValue: 1, duration: 800, easing: Easing.out(Easing.cubic), useNativeDriver: true }),
-        Animated.timing(introTextOpacity, { toValue: 1, duration: 800, easing: Easing.out(Easing.cubic), useNativeDriver: true }),
+        Animated.timing(introOverlayOpacity, {
+          toValue: 1,
+          duration: 800,
+          easing: Easing?.out
+            ? Easing.out(Easing.cubic)
+            : undefined,
+          useNativeDriver: true,
+        }),
+        Animated.timing(introTextOpacity, {
+          toValue: 1,
+          duration: 800,
+          easing: Easing?.out
+            ? Easing.out(Easing.cubic)
+            : undefined,
+          useNativeDriver: true,
+        }),
       ]),
       Animated.delay(2200),
       Animated.parallel([
-        Animated.timing(introTextOpacity, { toValue: 0, duration: 800, easing: Easing.in(Easing.cubic), useNativeDriver: true }),
-        Animated.timing(introOverlayOpacity, { toValue: 0, duration: 800, easing: Easing.in(Easing.cubic), useNativeDriver: true }),
+        Animated.timing(introTextOpacity, {
+          toValue: 0,
+          duration: 800,
+          easing: Easing?.in
+            ? Easing.in(Easing.cubic)
+            : undefined,
+          useNativeDriver: true,
+        }),
+        Animated.timing(introOverlayOpacity, {
+          toValue: 0,
+          duration: 800,
+          easing: Easing?.in
+            ? Easing.in(Easing.cubic)
+            : undefined,
+          useNativeDriver: true,
+        }),
       ]),
     ]);
     anim.start();
@@ -143,15 +177,41 @@ export default function Screen1() {
     return () => anim.stop();
   }, [introOverlayOpacity, introTextOpacity, reduceMotion]);
 
-  // Apparition logo + texte final + CTA plus tôt (10s max) ou quand la vidéo a joué 9s
+  // Apparition logo + texte final + CTA (9s de playback ou fallback 10s)
   const showCTA = useCallback(() => {
     if (ctaShownRef.current) return;
     ctaShownRef.current = true;
     Animated.parallel([
-      Animated.timing(challengeTiesOpacity, { toValue: 1, duration: 900, easing: Easing.out(Easing.cubic), useNativeDriver: true }),
-      Animated.spring(challengeTiesScale, { toValue: 1, speed: 10, bounciness: 6, useNativeDriver: true }),
-      Animated.timing(finalTextOpacity, { toValue: 1, duration: 900, easing: Easing.out(Easing.cubic), useNativeDriver: true }),
-      Animated.timing(buttonOpacity, { toValue: 1, duration: 900, easing: Easing.out(Easing.cubic), useNativeDriver: true }),
+      Animated.timing(challengeTiesOpacity, {
+        toValue: 1,
+        duration: 900,
+        easing: Easing?.out
+          ? Easing.out(Easing.cubic)
+          : undefined,
+        useNativeDriver: true,
+      }),
+      Animated.spring(challengeTiesScale, {
+        toValue: 1,
+        speed: 10,
+        bounciness: 6,
+        useNativeDriver: true,
+      }),
+      Animated.timing(finalTextOpacity, {
+        toValue: 1,
+        duration: 900,
+        easing: Easing?.out
+          ? Easing.out(Easing.cubic)
+          : undefined,
+        useNativeDriver: true,
+      }),
+      Animated.timing(buttonOpacity, {
+        toValue: 1,
+        duration: 900,
+        easing: Easing?.out
+          ? Easing.out(Easing.cubic)
+          : undefined,
+        useNativeDriver: true,
+      }),
     ]).start();
   }, [buttonOpacity, challengeTiesOpacity, challengeTiesScale, finalTextOpacity]);
 
@@ -175,8 +235,12 @@ export default function Screen1() {
       timersRef.current = [];
       const v = videoRef.current;
       if (v) {
-        try { v.stopAsync?.(); } catch {}
-        try { v.unloadAsync?.(); } catch {}
+        try {
+          v.stopAsync?.();
+        } catch {}
+        try {
+          v.unloadAsync?.();
+        } catch {}
       }
     };
   }, []);
@@ -193,9 +257,9 @@ export default function Screen1() {
     setVideoLoaded(true);
     setVideoError(null);
   };
+
   const onVideoError = (e: any) => {
-    const msg =
-      e?.nativeEvent?.error ?? e?.message ?? "Video error";
+    const msg = e?.nativeEvent?.error ?? e?.message ?? "Video error";
     setVideoError(msg);
     // On ne bloque pas l'onboarding : on montre le CTA
     showCTA();
@@ -207,11 +271,19 @@ export default function Screen1() {
 
     const v = videoRef.current;
     if (v) {
-      try { await v.stopAsync?.(); } catch {}
-      try { await v.unloadAsync?.(); } catch {}
+      try {
+        await v.stopAsync?.();
+      } catch {}
+      try {
+        await v.unloadAsync?.();
+      } catch {}
     }
 
-    Animated.timing(fadeAnim, { toValue: 0, duration: 280, useNativeDriver: true }).start(async () => {
+    Animated.timing(fadeAnim, {
+      toValue: 0,
+      duration: 280,
+      useNativeDriver: true,
+    }).start(async () => {
       try {
         await AsyncStorage.removeItem("hasCompletedTutorialAfterSignup");
         setIsTutorialActive?.(false);
@@ -223,30 +295,53 @@ export default function Screen1() {
     });
   }, [fadeAnim, isNavigating, nav, setIsTutorialActive, setTutorialStep]);
 
-  if (!fontsLoaded) return null;
+  if (!fontsLoaded) {
+    return (
+      <View style={styles.fontLoader}>
+        <ActivityIndicator size="large" color="#FFB800" />
+      </View>
+    );
+  }
 
   return (
-    <Animated.View style={[styles.fullscreenContainer, { opacity: fadeAnim }]}>
+    <Animated.View
+      style={[styles.fullscreenContainer, { opacity: fadeAnim }]}
+    >
       <StatusBar style="light" translucent backgroundColor="transparent" />
 
       {/* Skip top-right (safe-area) */}
       {showSkip && (
-        <View style={[styles.topBar, { paddingTop: Math.max(insets.top, 12), paddingRight: 12 }]}>
+        <View
+          style={[
+            styles.topBar,
+            {
+              paddingTop: Math.max(insets.top, 12),
+              paddingRight: 12,
+            },
+          ]}
+        >
           <TouchableOpacity
             onPress={finishOnboarding}
             accessibilityRole="button"
             accessibilityLabel={t("screen8.skip") || "Passer"}
+            accessibilityHint={
+              t("tutorial.buttons.skip") ||
+              "Passer l’intro et commencer le tutoriel."
+            }
             hitSlop={{ top: 8, right: 8, bottom: 8, left: 8 }}
             style={styles.skipPill}
             disabled={isNavigating}
           >
             <Ionicons name="close" size={16} color="#fff" />
-            <Text style={styles.skipText}>{t("tutorial.buttons.skip") || "Passer"}</Text>
+            <Text style={styles.skipText}>
+              {t("tutorial.buttons.skip") || "Passer"}
+            </Text>
           </TouchableOpacity>
         </View>
       )}
 
       <View style={styles.container}>
+        {/* Fond vidéo */}
         <Video
           ref={videoRef}
           source={require("../../../assets/videos/test4.mp4")}
@@ -271,18 +366,27 @@ export default function Screen1() {
           </View>
         )}
 
-        {/* assombrissement doux */}
+        {/* assombrissement doux + vignette premium */}
         <LinearGradient
-          colors={["rgba(0,0,0,0.45)", "rgba(0,0,0,0.15)", "transparent"]}
-          locations={[0, 0.25, 1]}
+          colors={[
+            "rgba(0,0,0,0.70)",
+            "rgba(0,0,0,0.45)",
+            "rgba(0,0,0,0.20)",
+            "rgba(0,0,0,0.70)",
+          ]}
+          locations={[0, 0.25, 0.6, 1]}
           style={StyleSheet.absoluteFillObject}
         />
 
         {/* Overlay intro (0→~3s) */}
-        <Animated.View style={[styles.overlay, { opacity: introOverlayOpacity }]} />
+        <Animated.View
+          style={[styles.overlay, { opacity: introOverlayOpacity }]}
+        />
 
         {/* Logo haut */}
-        <Animated.View style={[styles.logoContainer, { opacity: challengeTiesOpacity }]}>
+        <Animated.View
+          style={[styles.logoContainer, { opacity: challengeTiesOpacity }]}
+        >
           <Image
             source={require("../../../assets/images/icon2.png")}
             style={styles.logo}
@@ -293,14 +397,29 @@ export default function Screen1() {
         </Animated.View>
 
         {/* Texte intro */}
-        <Animated.View style={[styles.introTextContainer, { opacity: introTextOpacity }]}>
-          <Text style={styles.introText}>{t("screen1.presentationText")}</Text>
+        <Animated.View
+          style={[
+            styles.introTextContainer,
+            { opacity: introTextOpacity },
+          ]}
+        >
+          <Text style={styles.introText}>
+            {t("screen1.presentationText")}
+          </Text>
         </Animated.View>
 
         {/* “ChallengeTies” titre */}
-        <Animated.View style={[styles.challengeTiesContainer, { opacity: challengeTiesOpacity }]}>
+        <Animated.View
+          style={[
+            styles.challengeTiesContainer,
+            { opacity: challengeTiesOpacity },
+          ]}
+        >
           <Animated.Text
-            style={[styles.challengeTiesText, { transform: [{ scale: challengeTiesScale }] }]}
+            style={[
+              styles.challengeTiesText,
+              { transform: [{ scale: challengeTiesScale }] },
+            ]}
             numberOfLines={1}
             adjustsFontSizeToFit
             minimumFontScale={0.8}
@@ -310,22 +429,44 @@ export default function Screen1() {
         </Animated.View>
 
         {/* CTA final + texte */}
-        <Animated.View style={[styles.finalTextContainer, { opacity: finalTextOpacity, paddingBottom: Math.max(insets.bottom, 20) }]}>
+        <Animated.View
+          style={[
+            styles.finalTextContainer,
+            {
+              opacity: finalTextOpacity,
+              paddingBottom: Math.max(insets.bottom, 20),
+            },
+          ]}
+        >
           <Text style={styles.finalText}>{t("screen8.readyQuestion")}</Text>
+
           <TouchableOpacity
-            style={styles.readyButton}
             onPress={finishOnboarding}
             disabled={isNavigating}
             accessibilityRole="button"
             accessibilityLabel={t("screen8.imReady")}
+            accessibilityHint={t("screen8.imReadyHint") || undefined}
+            activeOpacity={0.9}
           >
-            {isNavigating ? (
-              <ActivityIndicator color="#000" />
-            ) : (
-              <Animated.Text style={[styles.readyButtonText, { opacity: buttonOpacity }]}>
-                {t("screen8.imReady")}
-              </Animated.Text>
-            )}
+            <LinearGradient
+              colors={["#FFB800", "#FF8A00"]}
+              start={{ x: 0, y: 0 }}
+              end={{ x: 1, y: 1 }}
+              style={styles.readyButton}
+            >
+              {isNavigating ? (
+                <ActivityIndicator color="#000" />
+              ) : (
+                <Animated.Text
+                  style={[
+                    styles.readyButtonText,
+                    { opacity: buttonOpacity },
+                  ]}
+                >
+                  {t("screen8.imReady")}
+                </Animated.Text>
+              )}
+            </LinearGradient>
           </TouchableOpacity>
         </Animated.View>
       </View>
@@ -337,6 +478,12 @@ const styles = StyleSheet.create({
   fullscreenContainer: {
     flex: 1,
     backgroundColor: "black",
+  },
+  fontLoader: {
+    flex: 1,
+    backgroundColor: "black",
+    alignItems: "center",
+    justifyContent: "center",
   },
   container: {
     flex: 1,
@@ -381,7 +528,7 @@ const styles = StyleSheet.create({
   },
   logoContainer: {
     position: "absolute",
-    top: height * 0.02,
+    top: height * 0.06,
     alignSelf: "center",
   },
   logo: {
@@ -390,9 +537,10 @@ const styles = StyleSheet.create({
   },
   introTextContainer: {
     position: "absolute",
-    top: height * 0.25,
-    width: "90%",
+    top: height * 0.28,
+    width: "88%",
     alignItems: "center",
+    alignSelf: "center",
   },
   introText: {
     fontSize: 20,
@@ -430,15 +578,17 @@ const styles = StyleSheet.create({
     marginBottom: 20,
   },
   readyButton: {
-    backgroundColor: "#FFB800",
     paddingVertical: 12,
-    paddingHorizontal: 24,
+    paddingHorizontal: 28,
     borderRadius: 30,
     shadowColor: "#000",
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.3,
-    shadowRadius: 4,
-    elevation: 5,
+    shadowOffset: { width: 0, height: 3 },
+    shadowOpacity: 0.35,
+    shadowRadius: 6,
+    elevation: 6,
+    minWidth: 220,
+    alignItems: "center",
+    justifyContent: "center",
   },
   readyButtonText: {
     fontSize: 18,

@@ -15,7 +15,11 @@ type Ctx = {
 };
 
 const VisitorContext = createContext<Ctx | null>(null);
-export const useVisitor = () => useContext(VisitorContext)!;
+export const useVisitor = () => {
+  const ctx = useContext(VisitorContext);
+  if (!ctx) throw new Error("useVisitor must be used within VisitorProvider");
+  return ctx;
+};
 
 // --- UI du modal ---
 function AuthGateModal({
@@ -62,17 +66,19 @@ const [hydrated, setHydrated] = useState(false);
       }
     })();
   }, []);
-  const setGuest = (v: boolean) => {
-    setIsGuest(v);
-    AsyncStorage.setItem('@ct.isGuest', v ? '1' : '0').catch(()=>{});
-  };
+ const setGuest = (v: boolean, persist = true) => {
+  setIsGuest(v);
+  if (persist) {
+    AsyncStorage.setItem("@ct.isGuest", v ? "1" : "0").catch(() => {});
+  }
+};
 
   // Si l’utilisateur se connecte, on sort du mode invité automatiquement
   const [isAuthenticated, setIsAuthenticated] = useState<boolean>(!!auth.currentUser?.uid);
   useEffect(() => {
     const unsub = auth.onAuthStateChanged(u => {
       setIsAuthenticated(!!u?.uid);
-      if (u?.uid) setGuest(false);
+     if (u?.uid) setGuest(false, false);
     });
     return unsub;
   }, []);

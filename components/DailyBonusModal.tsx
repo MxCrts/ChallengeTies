@@ -43,6 +43,13 @@ type Props = {
   onClaim: () => Promise<DailyRewardResult | null>;
   reward: DailyRewardResult | null;
   loading: boolean;
+
+  // ✅ reroll
+  canReroll?: boolean;
+  onReroll?: () => Promise<DailyRewardResult | null>;
+  rerollLoading?: boolean;
+  rerollAdReady?: boolean;
+  rerollAdLoading?: boolean;
 };
 
 const DailyBonusModal: React.FC<Props> = ({
@@ -51,6 +58,11 @@ const DailyBonusModal: React.FC<Props> = ({
   onClaim,
   reward,
   loading,
+  canReroll = false,
+  onReroll,
+  rerollLoading = false,
+  rerollAdReady = false,
+  rerollAdLoading = false,
 }) => {
   const { t } = useTranslation();
   const insets = useSafeAreaInsets();
@@ -420,6 +432,45 @@ const DailyBonusModal: React.FC<Props> = ({
   </Animated.View>
 )}
 
+{hasClaimed && canReroll && !!onReroll && (
+  <View style={{ alignItems: "center", marginTop: 4 }}>
+    <TouchableOpacity
+      onPress={onReroll}
+      disabled={!rerollAdReady || rerollLoading}
+      activeOpacity={0.9}
+      style={[
+        styles.rerollButton,
+        (!rerollAdReady || rerollLoading) && styles.rerollButtonDisabled,
+      ]}
+      accessibilityRole="button"
+      accessibilityLabel={t("dailyBonus.rerollCta", "Regarder une pub pour relancer")}
+      accessibilityHint={t("dailyBonus.rerollHint", "Autorise une seule relance par jour")}
+    >
+      <LinearGradient
+        colors={["#FFE082", "#FFC107", "#FF8F00"]}
+        start={{ x: 0, y: 0 }}
+        end={{ x: 1, y: 1 }}
+        style={styles.rerollButtonInner}
+      >
+        <Text style={styles.rerollButtonText}>
+          {rerollLoading
+            ? t("dailyBonus.rerollLoading", "Pub…")
+            : rerollAdReady
+            ? t("dailyBonus.rerollCta", "🎬 Regarder une pub pour relancer")
+            : t("dailyBonus.rerollUnavailable", "Pub en chargement…")}
+        </Text>
+      </LinearGradient>
+    </TouchableOpacity>
+
+    {!rerollAdReady && !rerollAdLoading && (
+      <Text style={styles.rerollSubText}>
+        {t("dailyBonus.rerollTryLater", "Réessaie dans quelques instants.")}
+      </Text>
+    )}
+  </View>
+)}
+
+
               {/* --- AIDE/INFO --- */}
               <View style={styles.infoBox}>
                 <Text style={styles.infoText}>
@@ -528,6 +579,37 @@ const styles = StyleSheet.create({
     shadowOpacity: 0.45,
     shadowRadius: 10,
   },
+  rerollButton: {
+  marginTop: 6,
+  borderRadius: 999,
+  overflow: "hidden",
+  width: "88%",
+  borderWidth: 1,
+  borderColor: "rgba(255,213,79,0.95)",
+},
+rerollButtonInner: {
+  paddingVertical: 10,
+  paddingHorizontal: 14,
+  alignItems: "center",
+  justifyContent: "center",
+},
+rerollButtonText: {
+  color: "#111",
+  fontSize: normalize(13),
+  fontFamily: "Comfortaa_700Bold",
+  textAlign: "center",
+},
+rerollButtonDisabled: {
+  opacity: 0.55,
+},
+rerollSubText: {
+  marginTop: 4,
+  fontSize: normalize(11),
+  color: "rgba(255,255,255,0.6)",
+  fontFamily: "Comfortaa_400Regular",
+  textAlign: "center",
+},
+
     wheel: {
     width: "100%",
     height: "100%",

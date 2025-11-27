@@ -14,9 +14,9 @@ import {
   ActivityIndicator,
   Dimensions,
   SafeAreaView,
-  Alert,
   StatusBar,
   Platform,
+  AccessibilityInfo,
 } from "react-native";
 import { LinearGradient } from "expo-linear-gradient";
 import Swipeable from "react-native-gesture-handler/Swipeable";
@@ -26,6 +26,12 @@ import Animated, {
   FadeInUp,
   FadeOutRight,
   ZoomIn,
+  useSharedValue,
+  useAnimatedStyle,
+  withTiming,
+  withSequence,
+  withDelay,
+  Easing,
 } from "react-native-reanimated";
 import * as Haptics from "expo-haptics";
 import { useSavedChallenges } from "../../context/SavedChallengesContext";
@@ -85,6 +91,15 @@ interface Challenge {
 
 type SwipeableHandle = { close: () => void } | null;
 
+type ToastType = "success" | "error" | "info";
+
+interface ToastState {
+  type: ToastType;
+  message: string;
+}
+
+const TOAST_DURATION = 2000;
+
 export default function SavedChallengesScreen() {
   const { t, i18n } = useTranslation();
   const { savedChallenges, removeChallenge } = useSavedChallenges();
@@ -111,6 +126,68 @@ export default function SavedChallengesScreen() {
   const [adHeight, setAdHeight] = useState(0);
   const bottomPadding =
     normalizeSize(90) + (showBanners ? adHeight : 0) + tabBarHeight + insets.bottom;
+
+  const [toast, setToast] = useState<ToastState | null>(null);
+  const toastOpacity = useSharedValue(0);
+  const toastTranslateY = useSharedValue(-10);
+  const [reduceMotion, setReduceMotion] = useState(false);
+
+  // Respect reduce motion
+  useEffect(() => {
+    let mounted = true;
+    AccessibilityInfo.isReduceMotionEnabled()
+      .then((v) => mounted && setReduceMotion(!!v))
+      .catch(() => {});
+    const sub = AccessibilityInfo.addEventListener?.(
+      "reduceMotionChanged",
+      (v) => mounted && setReduceMotion(!!v)
+    );
+    return () => {
+      mounted = false;
+      // @ts-ignore compat RN
+      sub?.remove?.();
+    };
+  }, []);
+
+  const toastStyle = useAnimatedStyle(() => ({
+    opacity: toastOpacity.value,
+    transform: [{ translateY: toastTranslateY.value }],
+  }));
+
+  const showToast = useCallback(
+    (type: ToastType, message: string) => {
+      setToast({ type, message });
+      toastOpacity.value = 0;
+      toastTranslateY.value = -10;
+
+      toastOpacity.value = withSequence(
+        withTiming(1, { duration: 200, easing: Easing.out(Easing.ease) }),
+        withDelay(
+          TOAST_DURATION,
+          withTiming(0, { duration: 300, easing: Easing.in(Easing.ease) })
+        )
+      );
+
+      toastTranslateY.value = withSequence(
+        withTiming(0, { duration: 200, easing: Easing.out(Easing.ease) }),
+        withDelay(
+          TOAST_DURATION,
+          withTiming(-10, { duration: 300, easing: Easing.in(Easing.ease) })
+        )
+      );
+
+      if (!reduceMotion) {
+        Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light).catch(() => {});
+      }
+
+      setTimeout(() => {
+        setToast((current) =>
+          current && current.message === message ? null : current
+        );
+      }, TOAST_DURATION + 400);
+    },
+    [reduceMotion, toastOpacity, toastTranslateY]
+  );
 
   // Dédup + traduction
   const translatedChallenges = useMemo(() => {
@@ -165,39 +242,26 @@ export default function SavedChallengesScreen() {
   );
 
   const handleRemoveChallenge = useCallback(
-    (id: string, index: number) => {
-      Alert.alert(
-        t("deleteChallenge"),
-        t("deleteChallengeConfirm"),
-        [
-          {
-            text: t("cancel"),
-            style: "cancel",
-            onPress: () => swipeableRefs.current[index]?.close(),
-          },
-          {
-            text: t("continue"),
-            style: "destructive",
-            onPress: async () => {
-              try {
-                setLocalChallenges((prev) => prev.filter((c) => c.id !== id));
-                await removeChallenge(id);
-                Alert.alert(t("deleted"), t("challengeDeletedSuccess"));
-              } catch (err) {
-                console.error("Erreur removeChallenge:", err);
-                Alert.alert(t("error"), t("failedToDeleteChallenge"));
-                swipeableRefs.current[index]?.close();
-              }
-            },
-          },
-        ],
-        { cancelable: true }
-      );
+    async (id: string, index: number) => {
+      const prev = localChallenges;
+      // Optimistic UI
+      setLocalChallenges((current) => current.filter((c) => c.id !== id));
+      try {
+        await removeChallenge(id);
+        swipeableRefs.current[index]?.close();
+        showToast("success", String(t("challengeDeletedSuccess")));
+      } catch (err) {
+        console.error("Erreur removeChallenge:", err);
+        // rollback UI
+        setLocalChallenges(prev);
+        swipeableRefs.current[index]?.close();
+        showToast("error", String(t("failedToDeleteChallenge")));
+      }
     },
-    [removeChallenge, t]
+    [localChallenges, removeChallenge, t, showToast]
   );
 
-  // Swipe en 2 temps + pill premium
+  // Swipe en 2 temps + pill premium (swipe + tap sur poubelle)
   const pendingDeleteRef = useRef<(() => void) | null>(null);
   const renderRightActions = useCallback(
     (_index: number) => (
@@ -400,7 +464,13 @@ export default function SavedChallengesScreen() {
         </Animated.View>
       );
     },
-    [navigateToChallengeDetails, handleRemoveChallenge, currentTheme, t, isDarkMode]
+    [
+      navigateToChallengeDetails,
+      handleRemoveChallenge,
+      currentTheme,
+      t,
+      isDarkMode,
+    ]
   );
 
   const renderEmptyState = useCallback(
@@ -538,6 +608,38 @@ export default function SavedChallengesScreen() {
             />
           )}
         </View>
+
+        {/* Toast premium */}
+        {toast && (
+          <Animated.View
+            pointerEvents="box-none"
+            style={[styles.toastContainer, toastStyle]}
+          >
+            <View
+              style={[
+                styles.toastInner,
+                toast.type === "success" && styles.toastSuccess,
+                toast.type === "error" && styles.toastError,
+                toast.type === "info" && styles.toastInfo,
+              ]}
+            >
+              <Ionicons
+                name={
+                  toast.type === "success"
+                    ? "checkmark-circle-outline"
+                    : toast.type === "error"
+                    ? "alert-circle-outline"
+                    : "information-circle-outline"
+                }
+                size={normalizeSize(18)}
+                color="#0b1120"
+              />
+              <Text style={styles.toastText} numberOfLines={2}>
+                {toast.message}
+              </Text>
+            </View>
+          </Animated.View>
+        )}
 
         {showBanners && (
           <View
@@ -788,5 +890,45 @@ const styles = StyleSheet.create({
     fontFamily: "Comfortaa_700Bold",
     fontSize: normalizeSize(12),
     letterSpacing: 0.3,
+  },
+
+  // Toast premium
+  toastContainer: {
+    position: "absolute",
+    left: 0,
+    right: 0,
+    bottom: SPACING * 2.4,
+    alignItems: "center",
+    justifyContent: "center",
+    paddingHorizontal: SPACING,
+  },
+  toastInner: {
+    flexDirection: "row",
+    alignItems: "center",
+    paddingHorizontal: SPACING,
+    paddingVertical: normalizeSize(10),
+    borderRadius: normalizeSize(20),
+    backgroundColor: "#E5E7EB",
+    shadowColor: "#000",
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.25,
+    shadowRadius: 8,
+    elevation: 10,
+    gap: normalizeSize(8),
+  },
+  toastSuccess: {
+    backgroundColor: "#BBF7D0",
+  },
+  toastError: {
+    backgroundColor: "#FECACA",
+  },
+  toastInfo: {
+    backgroundColor: "#E0F2FE",
+  },
+  toastText: {
+    fontFamily: "Comfortaa_700Bold",
+    fontSize: normalizeSize(13),
+    color: "#0b1120",
+    flexShrink: 1,
   },
 });

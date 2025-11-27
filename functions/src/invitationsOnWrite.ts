@@ -20,18 +20,20 @@ interface Invitation {
   lastStatusNotified?: InvitationStatus | null; // 👈 anti-doublon
 }
 
-function titleFor(lang: string | undefined) {
-  const L = (lang || "en").toLowerCase();
-  switch (L) {
-    case "fr":
-    case "es":
-    case "de":
-    case "it":
-      return "ChallengeTies";
-    default:
-      return "ChallengeTies";
-  }
+/** Normalise une langue vers nos 12 locales supportées */
+function normalizeLang(lang: string | undefined) {
+  const base = String(lang || "en")
+    .toLowerCase()
+    .split(/[-_]/)[0];
+  const supported = ["fr","en","es","de","it","pt","zh","ja","ko","ar","hi","ru"];
+  return supported.includes(base) ? base : "en";
 }
+
+function titleFor(_lang: string | undefined) {
+  // Titre identique partout (brand). Gardé pour extensibilité future.
+  return "ChallengeTies";
+}
+
 
 function bodyFor(
   status: InvitationStatus,
@@ -41,23 +43,39 @@ function bodyFor(
 ) {
   const name = inviteeUsername || "Your partner";
   const ct = challengeTitle ? ` « ${challengeTitle} »` : "";
-  const L = (lang || "en").toLowerCase();
+  const L = normalizeLang(lang);
 
   if (status === "accepted") {
     switch (L) {
       case "fr": return `${name} a accepté ton invitation${ct} 🎉`;
+      case "en": return `${name} accepted your invitation${ct} 🎉`;
       case "es": return `${name} aceptó tu invitación${ct} 🎉`;
       case "de": return `${name} hat deine Einladung${ct} angenommen 🎉`;
       case "it": return `${name} ha accettato il tuo invito${ct} 🎉`;
+      case "pt": return `${name} aceitou o teu convite${ct} 🎉`;
+      case "ru": return `${name} принял(а) твоё приглашение${ct} 🎉`;
+      case "ar": return `${name} قبل دعوتك${ct} 🎉`;
+      case "hi": return `${name} ने तुम्हारा निमंत्रण स्वीकार किया${ct} 🎉`;
+      case "zh": return `${name} 接受了你的邀请${ct} 🎉`;
+      case "ja": return `${name} があなたの招待${ct}を承認しました 🎉`;
+      case "ko": return `${name} 님이 당신의 초대${ct}를 수락했어요 🎉`;
       default:   return `${name} accepted your invitation${ct} 🎉`;
     }
   }
   if (status === "refused") {
     switch (L) {
       case "fr": return `${name} a refusé ton invitation${ct} 🙏`;
+      case "en": return `${name} refused your invitation${ct} 🙏`;
       case "es": return `${name} rechazó tu invitación${ct} 🙏`;
       case "de": return `${name} hat deine Einladung${ct} abgelehnt 🙏`;
       case "it": return `${name} ha rifiutato il tuo invito${ct} 🙏`;
+      case "pt": return `${name} recusou o teu convite${ct} 🙏`;
+      case "ru": return `${name} отклонил(а) твоё приглашение${ct} 🙏`;
+      case "ar": return `${name} رفض دعوتك${ct} 🙏`;
+      case "hi": return `${name} ने तुम्हारा निमंत्रण अस्वीकार कर दिया${ct} 🙏`;
+      case "zh": return `${name} 拒绝了你的邀请${ct} 🙏`;
+      case "ja": return `${name} があなたの招待${ct}を辞退しました 🙏`;
+      case "ko": return `${name} 님이 당신의 초대${ct}를 거절했어요 🙏`;
       default:   return `${name} refused your invitation${ct} 🙏`;
     }
   }

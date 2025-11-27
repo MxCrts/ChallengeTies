@@ -17,9 +17,18 @@ import {
   AppState,
 } from "react-native";
 import { StatusBar as ExpoStatusBar } from "expo-status-bar";
-import { createUserWithEmailAndPassword, updateProfile } from "firebase/auth";
+import {
+  createUserWithEmailAndPassword,
+  updateProfile,
+} from "firebase/auth";
 import { auth, db } from "../constants/firebase-config";
-import { doc, setDoc, updateDoc, serverTimestamp } from "firebase/firestore";
+import {
+  doc,
+  setDoc,
+  updateDoc,
+  getDoc,  
+  serverTimestamp,
+} from "firebase/firestore";
 import { Ionicons } from "@expo/vector-icons";
 import { useTranslation } from "react-i18next";
 import { askPermissionsOnceAfterSignup } from "../services/permissionsOnboarding";
@@ -32,15 +41,21 @@ import { useIsFocused } from "@react-navigation/native";
 import NetInfo from "@react-native-community/netinfo";
 import { Easing as RNEasing } from "react-native";
 import { useRouter } from "expo-router";
+import {
+ checkAndGrantPioneerIfEligible,
+ checkAndGrantAmbassadorRewards,
+  checkAndGrantAmbassadorMilestones,
+} from "@/src/referral/pioneerChecker";
 
-
-const { width: SCREEN_WIDTH, height: SCREEN_HEIGHT } = Dimensions.get("window");
+const { width: SCREEN_WIDTH, height: SCREEN_HEIGHT } =
+  Dimensions.get("window");
 
 const normalize = (size: number) => {
   const scale = Math.min(SCREEN_WIDTH, SCREEN_HEIGHT) / 375;
   return Math.round(PixelRatio.roundToNearestPixel(size * scale));
 };
 
+const BACKGROUND_COLOR = "#FFF8E7";
 const PRIMARY_COLOR = "#FFB800";
 const TEXT_COLOR = "#333";
 const BUTTON_COLOR = "#FFFFFF";
@@ -49,6 +64,7 @@ const circleSize = Math.min(SCREEN_WIDTH, SCREEN_HEIGHT) * 0.85;
 const circleTop = SCREEN_HEIGHT * 0.35;
 const waveCount = 4;
 const SPACING = normalize(15);
+
 const Wave = React.memo(
   ({
     opacity,
@@ -64,11 +80,12 @@ const Wave = React.memo(
     top: number;
   }) => (
     <Animated.View
-      // ⚠️ Empêche la pruning et toute interaction
       collapsable={false}
       pointerEvents="none"
       renderToHardwareTextureAndroid
       shouldRasterizeIOS
+      accessibilityElementsHidden
+      importantForAccessibility="no-hide-descendants"
       style={{
         width: size,
         height: size,
@@ -86,11 +103,11 @@ const Wave = React.memo(
   )
 );
 
-
 export default function Register() {
   const { t } = useTranslation();
   const router = useRouter();
   const nav = useNavGuard(router);
+
   const [email, setEmail] = useState("");
   const [username, setUsername] = useState("");
   const [password, setPassword] = useState("");
@@ -101,95 +118,99 @@ export default function Register() {
   const [showConfirmPassword, setShowConfirmPassword] = useState(false);
   const [isOffline, setIsOffline] = useState(false);
   const [reduceMotion, setReduceMotion] = useState(false);
+
   const isFocused = useIsFocused();
- const appStateRef = useRef(AppState.currentState);
- const animsRef = useRef<Animated.CompositeAnimation[]>([]);
- const formOpacity = useRef(new Animated.Value(0)).current;
- const formTranslate = useRef(new Animated.Value(12)).current;
- const ctaScale = useRef(new Animated.Value(1)).current;
- const ctaPulse = useRef(new Animated.Value(1)).current;
- const emailRef = useRef<TextInput | null>(null);
- const usernameRef = useRef<TextInput | null>(null);
- const passwordRef = useRef<TextInput | null>(null);
- const confirmRef = useRef<TextInput | null>(null);
-  
-  // ✅ DANS LE COMPOSANT
-const shakeAnim = useRef(new Animated.Value(0)).current;
+  const appStateRef = useRef(AppState.currentState);
+  const animsRef = useRef<Animated.CompositeAnimation[]>([]);
+  const formOpacity = useRef(new Animated.Value(0)).current;
+  const formTranslate = useRef(new Animated.Value(12)).current;
+  const ctaScale = useRef(new Animated.Value(1)).current;
+  const ctaPulse = useRef(new Animated.Value(1)).current;
 
-// Validation identique login
- const isValidEmail = React.useCallback((e: string) => /\S+@\S+\.\S+/.test(e), []);
- const formValid = React.useMemo(
-   () =>
-     isValidEmail(email.trim()) &&
-     username.trim().length >= 2 &&
-     password.trim().length >= 6 &&
-     confirmPassword.trim() === password.trim(),
-   [email, username, password, confirmPassword, isValidEmail]
- );
+  const emailRef = useRef<TextInput | null>(null);
+  const usernameRef = useRef<TextInput | null>(null);
+  const passwordRef = useRef<TextInput | null>(null);
+  const confirmRef = useRef<TextInput | null>(null);
 
- // Press feedback CTA
- const pressIn = () => {
-   // pas d'anim si bouton désactivé (accessibilité/cohérence)
-   if (disabledCTA) return;
-   Animated.timing(ctaScale, { toValue: 0.98, duration: 80, useNativeDriver: true }).start();
- };
- const pressOut = () =>
-  Animated.timing(ctaScale, {
-    toValue: 1,
-    duration: 120,
-    easing: RNEasing.out(RNEasing.quad),
-    useNativeDriver: true,
-  }).start();
+  // Shake pour la bannière d’erreur
+  const shakeAnim = useRef(new Animated.Value(0)).current;
 
+  // évite setState après unmount
+  const isMountedRef = useRef(true);
+  const clearErrorTimeoutRef =
+    useRef<ReturnType<typeof setTimeout> | null>(null);
+  const submittingRef = useRef(false);
 
-const triggerShake = React.useCallback(() => {
-  shakeAnim.setValue(0);
-  Animated.sequence([
-    Animated.timing(shakeAnim, { toValue: 10,  duration: 50, useNativeDriver: true }),
-    Animated.timing(shakeAnim, { toValue: -10, duration: 50, useNativeDriver: true }),
-    Animated.timing(shakeAnim, { toValue: 6,  duration: 50, useNativeDriver: true }),
-    Animated.timing(shakeAnim, { toValue: 0,  duration: 50, useNativeDriver: true }),
-  ]).start();
-}, [shakeAnim]);
- 
-// évite setState après unmount
-const isMountedRef = useRef(true);
-// on stocke nos timeouts pour les nettoyer
-const clearErrorTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
-const submittingRef = useRef(false);
+  // Helpers
+  const isValidEmail = React.useCallback(
+    (e: string) => /\S+@\S+\.\S+/.test(e),
+    []
+  );
 
+  const formValid = React.useMemo(
+    () =>
+      isValidEmail(email.trim()) &&
+      username.trim().length >= 2 &&
+      password.trim().length >= 6 &&
+      confirmPassword.trim() === password.trim(),
+    [email, username, password, confirmPassword, isValidEmail]
+  );
 
-// helper sécurisé pour afficher/effacer un message d’erreur
-const showError = React.useCallback((msg: string) => {
-  // stoppe un éventuel ancien timer
-  if (clearErrorTimeoutRef.current) {
-    clearTimeout(clearErrorTimeoutRef.current);
-    clearErrorTimeoutRef.current = null;
-  }
-  if (isMountedRef.current) {
-    setErrorMessage(msg);
-    triggerShake();
-  }
-  // on efface après 5s si toujours monté
-  clearErrorTimeoutRef.current = setTimeout(() => {
-    if (isMountedRef.current) {
-      setErrorMessage("");
-    }
-    clearErrorTimeoutRef.current = null;
-  }, 5000);
-}, [triggerShake]);
+  const triggerShake = React.useCallback(() => {
+    shakeAnim.setValue(0);
+    Animated.sequence([
+      Animated.timing(shakeAnim, {
+        toValue: 10,
+        duration: 50,
+        useNativeDriver: true,
+      }),
+      Animated.timing(shakeAnim, {
+        toValue: -10,
+        duration: 50,
+        useNativeDriver: true,
+      }),
+      Animated.timing(shakeAnim, {
+        toValue: 6,
+        duration: 50,
+        useNativeDriver: true,
+      }),
+      Animated.timing(shakeAnim, {
+        toValue: 0,
+        duration: 50,
+        useNativeDriver: true,
+      }),
+    ]).start();
+  }, [shakeAnim]);
 
-// helper haptics safe
-const safeHapticsError = React.useCallback(async () => {
-  try {
-    await HapticsModule.notificationAsync(
-      HapticsModule.NotificationFeedbackType.Error
-    );
-  } catch {
-    // on ignore silencieusement si indisponible
-  }
-}, []);
+  const showError = React.useCallback(
+    (msg: string) => {
+      if (clearErrorTimeoutRef.current) {
+        clearTimeout(clearErrorTimeoutRef.current);
+        clearErrorTimeoutRef.current = null;
+      }
+      if (isMountedRef.current) {
+        setErrorMessage(msg);
+        triggerShake();
+      }
+      clearErrorTimeoutRef.current = setTimeout(() => {
+        if (isMountedRef.current) {
+          setErrorMessage("");
+        }
+        clearErrorTimeoutRef.current = null;
+      }, 5000);
+    },
+    [triggerShake]
+  );
 
+  const safeHapticsError = React.useCallback(async () => {
+    try {
+      await HapticsModule.notificationAsync(
+        HapticsModule.NotificationFeedbackType.Error
+      );
+    } catch {}
+  }, []);
+
+  // Vagues de fond
   const wavesRef = useRef(
     Array.from({ length: waveCount }, (_, index) => ({
       opacity: new Animated.Value(0.3 - index * 0.05),
@@ -233,7 +254,8 @@ const safeHapticsError = React.useCallback(async () => {
       );
 
     const start = () => {
-      if (!isFocused || appStateRef.current !== "active" || reduceMotion) return;
+      if (!isFocused || appStateRef.current !== "active" || reduceMotion)
+        return;
       animsRef.current = buildAnims();
       animsRef.current.forEach((a) => a.start());
     };
@@ -242,7 +264,8 @@ const safeHapticsError = React.useCallback(async () => {
       animsRef.current = [];
     };
 
-    if (isFocused) start(); else stop();
+    if (isFocused) start();
+    else stop();
 
     const sub = AppState.addEventListener("change", (s) => {
       appStateRef.current = s;
@@ -256,222 +279,362 @@ const safeHapticsError = React.useCallback(async () => {
     };
   }, [isFocused, waves, reduceMotion]);
 
- // Réseau : bannière offline
- useEffect(() => {
-   const sub = NetInfo.addEventListener((s) => {
-     const off = s.isConnected === false || s.isInternetReachable === false;
-     setIsOffline(!!off);
-   });
-   return () => sub && sub();
- }, []);
-
- useEffect(() => {
-   let loop: Animated.CompositeAnimation | null = null;
-   if (formValid && !loading) {
-     loop = Animated.loop(
-       Animated.sequence([
-         Animated.timing(ctaPulse, { toValue: 1.02, duration: 650, useNativeDriver: true }),
-         Animated.timing(ctaPulse, { toValue: 1.0, duration: 650, useNativeDriver: true }),
-       ])
-     );
-     loop.start();
-   }
-   return () => loop?.stop();
- }, [formValid, loading, ctaPulse]);
-
- // Accessibilité : réduire animations
- useEffect(() => {
-   let mounted = true;
-   AccessibilityInfo.isReduceMotionEnabled().then((enabled) => {
-     if (mounted) setReduceMotion(!!enabled);
-   });
-   const sub = AccessibilityInfo.addEventListener("reduceMotionChanged", (enabled) => {
-     setReduceMotion(!!enabled);
-   });
-   return () => {
-     mounted = false;
-     // @ts-ignore RN <= 0.72 compat
-     sub?.remove?.();
-   };
- }, []);
-
-
+  // Réseau : bannière offline
   useEffect(() => {
-  return () => {
-    isMountedRef.current = false;
-    if (clearErrorTimeoutRef.current) {
-      clearTimeout(clearErrorTimeoutRef.current);
-      clearErrorTimeoutRef.current = null;
-    }
-  };
-}, []);
+    const sub = NetInfo.addEventListener((s) => {
+      const off =
+        s.isConnected === false ||
+        s.isInternetReachable === false;
+      setIsOffline(!!off);
+    });
+    return () => sub && sub();
+  }, []);
 
-useEffect(() => {
-   const task = InteractionManager.runAfterInteractions(() => {
-     Animated.parallel([
-       Animated.timing(formOpacity, { toValue: 1, duration: 300, useNativeDriver: true }),
- Animated.timing(formTranslate, { toValue: 0, duration: 300, easing: RNEasing.out(RNEasing.cubic), useNativeDriver: true }),
-     ]).start();
-   });
-   return () => task.cancel();
- }, []);
+  // Pulse CTA (respect reduceMotion + offline)
+  useEffect(() => {
+    let loop: Animated.CompositeAnimation | null = null;
+    if (formValid && !loading && !isOffline && !reduceMotion) {
+      loop = Animated.loop(
+        Animated.sequence([
+          Animated.timing(ctaPulse, {
+            toValue: 1.02,
+            duration: 650,
+            useNativeDriver: true,
+          }),
+          Animated.timing(ctaPulse, {
+            toValue: 1.0,
+            duration: 650,
+            useNativeDriver: true,
+          }),
+        ])
+      );
+      loop.start();
+    }
+    return () => loop?.stop();
+  }, [formValid, loading, isOffline, reduceMotion, ctaPulse]);
+
+  // Accessibilité : réduire animations
+  useEffect(() => {
+    let mounted = true;
+    AccessibilityInfo.isReduceMotionEnabled().then((enabled) => {
+      if (mounted) setReduceMotion(!!enabled);
+    });
+    const sub = AccessibilityInfo.addEventListener(
+      "reduceMotionChanged",
+      (enabled) => {
+        setReduceMotion(!!enabled);
+      }
+    );
+    return () => {
+      mounted = false;
+      // @ts-ignore RN <= 0.72 compat
+      sub?.remove?.();
+    };
+  }, []);
+
+  // Clean unmount
+  useEffect(() => {
+    return () => {
+      isMountedRef.current = false;
+      if (clearErrorTimeoutRef.current) {
+        clearTimeout(clearErrorTimeoutRef.current);
+        clearErrorTimeoutRef.current = null;
+      }
+    };
+  }, []);
+
+  // Entrée du card / form
+  useEffect(() => {
+    const task = InteractionManager.runAfterInteractions(() => {
+      Animated.parallel([
+        Animated.timing(formOpacity, {
+          toValue: 1,
+          duration: 300,
+          useNativeDriver: true,
+        }),
+        Animated.timing(formTranslate, {
+          toValue: 0,
+          duration: 300,
+          easing: RNEasing.out(RNEasing.cubic),
+          useNativeDriver: true,
+        }),
+      ]).start();
+    });
+    return () => task.cancel();
+  }, []);
+
+  // Press feedback CTA
+  const disabledCTA = loading || !formValid || isOffline;
+  const pressIn = () => {
+    if (disabledCTA) return;
+    Animated.timing(ctaScale, {
+      toValue: 0.98,
+      duration: 80,
+      useNativeDriver: true,
+    }).start();
+  };
+  const pressOut = () =>
+    Animated.timing(ctaScale, {
+      toValue: 1,
+      duration: 120,
+      easing: RNEasing.out(RNEasing.quad),
+      useNativeDriver: true,
+    }).start();
 
   const handleRegister = async () => {
     if (submittingRef.current || loading) return;
-submittingRef.current = true;
-    // reset propre sans timer direct
-if (isMountedRef.current) setErrorMessage("");
+    submittingRef.current = true;
 
-if (!email.trim() || !username.trim() || !password || !confirmPassword) {
-    showError(t("fillAllFields"));
-    safeHapticsError();
-    submittingRef.current = false;          // 👈 libère le garde
-    return;
-  }
-if (password !== confirmPassword) {
-    showError(t("passwordsDoNotMatch"));
-    safeHapticsError();
-    submittingRef.current = false;          // 👈 libère le garde
-    return;
-  }
- if (password.trim().length < 6) {
-   showError(t("weakPassword"));
-   safeHapticsError();
-   submittingRef.current = false;
-   return;
- }
+    if (isMountedRef.current) setErrorMessage("");
 
- if (isOffline) {
-    showError(t("networkError") || "Problème réseau. Réessaie.");
-    safeHapticsError();
-    submittingRef.current = false;
-    return;
-  }
+    if (
+      !email.trim() ||
+      !username.trim() ||
+      !password ||
+      !confirmPassword
+    ) {
+      showError(t("fillAllFields"));
+      safeHapticsError();
+      submittingRef.current = false;
+      return;
+    }
+    if (password !== confirmPassword) {
+      showError(t("passwordsDoNotMatch"));
+      safeHapticsError();
+      submittingRef.current = false;
+      return;
+    }
+    if (password.trim().length < 6) {
+      showError(t("weakPassword"));
+      safeHapticsError();
+      submittingRef.current = false;
+      return;
+    }
+    if (isOffline) {
+      showError(
+        t("networkError") ||
+          "Problème réseau. Réessaie."
+      );
+      safeHapticsError();
+      submittingRef.current = false;
+      return;
+    }
+
     setLoading(true);
     try {
-      const userCredential = await createUserWithEmailAndPassword(
-        auth,
-        email.trim(),
-        password.trim()
-      );
-      try { await HapticsModule.notificationAsync(HapticsModule.NotificationFeedbackType.Success); } catch {}
+      const userCredential =
+        await createUserWithEmailAndPassword(
+          auth,
+          email.trim(),
+          password.trim()
+        );
+
+      try {
+        await HapticsModule.notificationAsync(
+          HapticsModule.NotificationFeedbackType
+            .Success
+        );
+      } catch {}
+
       const user = userCredential.user;
       const userId = user.uid;
-      // Mettre à jour le displayName (blindé)
-try {
-  await updateProfile(user, { displayName: username.trim() });
-} catch { /* on ignore, on ne bloque pas le flow */ }
 
-// Récupérer et sauvegarder la localisation (non bloquant)
-try {
-  await askPermissionsOnceAfterSignup();
-} catch { /* on ignore proprement */ }
+      // displayName
+      try {
+        await updateProfile(user, {
+          displayName: username.trim(),
+        });
+      } catch {}
 
+      // Permissions & localisation (non bloquant)
+      try {
+        await askPermissionsOnceAfterSignup();
+      } catch {}
 
-      // Sauvegarder les données utilisateur dans Firestore
-      await setDoc(doc(db, "users", userId), {
-        uid: userId,
-        email: email.trim(),
-        username: username.trim(),
-        bio: "",
-        location: "",
-        profileImage: "",
-        interests: [],
-        achievements: [],
-        newAchievements: ["first_connection"],
-        trophies: 0,
-        completedChallengesCount: 0,
-        CompletedChallenges: [],
-        SavedChallenges: [],
-        customChallenges: [],
-        CurrentChallenges: [],
-        longestStreak: 0,
-        shareChallenge: 0,
-        voteFeature: 0,
-        language: i18n.language,
-        locationEnabled: true,
-        notificationsEnabled: true,
-        country: "Unknown",
-        region: "Unknown",
-        createdAt: serverTimestamp(),
-        updatedAt: serverTimestamp(),
-        isPioneer: false, // 👈 ajouté
-  pioneerRewardGranted: false,
+      // User doc Firestore (compatible avec les rules + AuthProvider)
+      const userRef = doc(db, "users", userId);
+
+      let existingSnap;
+      try {
+        existingSnap = await getDoc(userRef);
+      } catch (e) {
+        console.log("[register] getDoc users error:", e);
+      }
+
+      // ✅ REFERRAL FAST-TRACK : validation immédiate après inscription
+      // (pioneerChecker lit ties_referrer_id ou referrerId, attribue B,
+      //  récompense B, récompense A + notif + Share&Earn)
+      try {
+        await checkAndGrantPioneerIfEligible();
+        await checkAndGrantAmbassadorRewards();
+        await checkAndGrantAmbassadorMilestones();
+      } catch {}
+
+      if (!existingSnap || !existingSnap.exists()) {
+        // 👉 Doc n'existe pas encore : on peut faire un create complet (rules: allow create)
+        await setDoc(userRef, {
+          uid: userId,
+          email: email.trim(),
+          username: username.trim(),
+          bio: "",
+          location: "",
+          profileImage: "",
+          interests: [],
+          achievements: [],
+          newAchievements: ["first_connection"],
+          trophies: 0,
+          completedChallengesCount: 0,
+          CompletedChallenges: [],
+          SavedChallenges: [],
+          customChallenges: [],
+          CurrentChallenges: [],
+          longestStreak: 0,
+          shareChallenge: 0,
+          voteFeature: 0,
+          language: i18n.language,
+          locationEnabled: true,
+          notificationsEnabled: true,
+          country: "Unknown",
+          region: "Unknown",
+          createdAt: serverTimestamp(),
+          updatedAt: serverTimestamp(),
+          isPioneer: false,
+          pioneerRewardGranted: false,
+          activated: false,
+referral: {
+  activatedCount: 0,
+  claimedMilestones: [],
+  pendingMilestones: [],
+},
+        });
+      } else {
+        // 👉 Doc déjà créé par AuthProvider / succès / pionnier :
+        // On fait un UPDATE minimal qui respecte profileUpdateOk() dans les rules
+        try {
+          await updateDoc(userRef, {
+            username: username.trim(),
+            language: i18n.language,
+            updatedAt: serverTimestamp(),
+          });
+        } catch (e) {
+          console.log("[register] updateDoc users error:", e);
+          // on n'empêche pas le flux de continuer juste pour ça
+        }
+      }
+
+            // 🔹 Analytics non bloquant : ne JAMAIS casser le register à cause d'un event
+            // 🔹 Analytics non bloquant
+      logEvent("register_success").catch((e: any) => {
+        console.log(
+          "[analytics] register_success failed:",
+          e?.code || e?.message || e
+        );
       });
-try {
-  const referrerId = await AsyncStorage.getItem("ties_referrer_id");
-  if (referrerId && referrerId !== userId) {
-    // Attache le parrain à ce nouvel utilisateur
-    await updateDoc(doc(db, "users", userId), {
-      referrerId,
-      updatedAt: serverTimestamp(),
-    });
-    await logEvent("ref_attributed", { referrerId });
-    await AsyncStorage.removeItem("ties_referrer_id");
-  }
-} catch (e) {
-  console.log("[referral] attribution error:", (e as any)?.message ?? e);
-}
 
-      await logEvent("register_success");
-      
+      InteractionManager.runAfterInteractions(() => {
+        if (isMountedRef.current) {
+          nav.replace("/screen/onboarding/Screen1");
+        }
+      });
 
-InteractionManager.runAfterInteractions(() => {
-  if (isMountedRef.current) {
-    nav.replace("/screen/onboarding/Screen1");
-  }
-});
 
-    } catch (error: any) {
+       } catch (error: any) {
+      const code = error?.code ?? "unknown";
+      const message = error?.message ?? "";
+
+      console.log(
+        "🔥 register error:",
+        code,
+        message,
+        JSON.stringify(error ?? {}, null, 2)
+      );
+
       const errorMessages: Record<string, string> = {
-        "auth/email-already-in-use": t("emailAlreadyInUse"),
-        "auth/invalid-email": t("invalidEmailFormat"),
-        "auth/weak-password": t("weakPassword"),
-        "auth/network-request-failed": t("networkError"),
+        "auth/email-already-in-use": t("emailAlreadyInUse") || "Cet email est déjà utilisé.",
+        "auth/invalid-email": t("invalidEmailFormat") || "Format d'email invalide.",
+        "auth/weak-password": t("weakPassword") || "Mot de passe trop faible.",
+        "auth/network-request-failed": t("networkError") || "Problème réseau. Réessaie.",
+        // 🔹 cas très fréquents non mappés chez toi
+        "auth/too-many-requests":
+          t("tooManyRequests") || "Trop de tentatives, réessaie plus tard.",
+        "permission-denied":
+          t("permissionDenied") || "Accès refusé, vérifie ta connexion ou réessaie.",
+        "auth/operation-not-allowed":
+          t("operationNotAllowed") ||
+          "Cette opération n'est pas autorisée sur ce projet.",
       };
-      showError(errorMessages[error.code] || t("unknownError"));
-safeHapticsError();
+
+      // En dev, on affiche aussi le code d'erreur pour debug précis
+      const baseMessage =
+        errorMessages[code] || t("unknownError") || "Une erreur inconnue est survenue.";
+      const finalMessage =
+        __DEV__ && code !== "unknown"
+          ? `${baseMessage} (${code})`
+          : baseMessage;
+
+      showError(finalMessage);
+      safeHapticsError();
     } finally {
-     submittingRef.current = false;
-if (isMountedRef.current) setLoading(false);
+      submittingRef.current = false;
+      if (isMountedRef.current) setLoading(false);
     }
+
   };
 
-// navigation protégée pendant un submit/chargement
-const guarded = <T extends (...args: any[]) => any>(fn: T) => (...args: Parameters<T>) => {
-  if (loading || submittingRef.current) return;
-  return fn(...args);
-};
-const goLogin = guarded(() => nav.replace("/login"));
-
-// état désactivé du CTA (offline inclus)
-const disabledCTA = loading || !formValid || isOffline;
+  // navigation protégée pendant un submit / chargement
+  const guarded =
+    <T extends (...args: any[]) => any>(fn: T) =>
+    (...args: Parameters<T>) => {
+      if (loading || submittingRef.current) return;
+      return fn(...args);
+    };
+  const goLogin = guarded(() => nav.replace("/login"));
 
   return (
     <KeyboardAvoidingView
-      style={styles.flexContainer}
+      style={[
+        styles.flexContainer,
+        { backgroundColor: BACKGROUND_COLOR },
+      ]}
       behavior={Platform.OS === "ios" ? "padding" : undefined}
-      keyboardVerticalOffset={Platform.OS === "ios" ? normalize(60) : 0}
+      keyboardVerticalOffset={
+        Platform.OS === "ios" ? normalize(60) : 0
+      }
     >
-      <ExpoStatusBar style="dark" backgroundColor="transparent" />
-        {waves.map((wave, index) => (
-          <Wave
-            key={index}
-            opacity={wave.opacity}
-            scale={wave.scale}
-            borderWidth={wave.borderWidth}
-            size={circleSize}
-            top={circleTop}
-          />
-        ))}
+      <ExpoStatusBar
+        style="dark"
+        backgroundColor={BACKGROUND_COLOR}
+      />
+
+      {/* Vagues de fond */}
+      {waves.map((wave, index) => (
+        <Wave
+          key={index}
+          opacity={wave.opacity}
+          scale={wave.scale}
+          borderWidth={wave.borderWidth}
+          size={circleSize}
+          top={circleTop}
+        />
+      ))}
 
       <ScrollView
-  style={[styles.flexContainer, { backgroundColor: "transparent" }]}
-  contentContainerStyle={[styles.container, { minHeight: SCREEN_HEIGHT, paddingBottom: SPACING * 2 }]}
-  keyboardShouldPersistTaps="handled"
-  keyboardDismissMode="on-drag"
-  removeClippedSubviews={false}
->
+        style={[
+          styles.flexContainer,
+          { backgroundColor: "transparent" },
+        ]}
+        contentContainerStyle={[
+          styles.container,
+          {
+            minHeight: SCREEN_HEIGHT,
+            paddingBottom: SPACING * 2,
+          },
+        ]}
+        keyboardShouldPersistTaps="handled"
+        keyboardDismissMode="on-drag"
+        removeClippedSubviews={false}
+      >
+        {/* Header */}
         <View style={styles.headerContainer}>
           <Text
             style={styles.brandTitle}
@@ -484,19 +647,38 @@ const disabledCTA = loading || !formValid || isOffline;
             <Text style={styles.highlight}>C</Text>hallenge
             <Text style={styles.highlight}>T</Text>ies
           </Text>
-          <Text style={styles.tagline}>{t("joinUsAndChallenge")}</Text>
+          <Text style={styles.tagline}>
+            {t("joinUsAndChallenge")}
+          </Text>
         </View>
+
+        {/* Bannière offline */}
         {isOffline && (
-          <View style={styles.offlineBanner} accessibilityRole="alert">
-            <Ionicons name="cloud-offline-outline" size={16} color="#111827" />
+          <View
+            style={styles.offlineBanner}
+            accessibilityRole="alert"
+          >
+            <Ionicons
+              name="cloud-offline-outline"
+              size={16}
+              color="#111827"
+            />
             <Text style={styles.offlineText}>
-              {t("networkError") || "Connexion réseau indisponible"}
+              {t("networkError") ||
+                "Connexion réseau indisponible"}
             </Text>
           </View>
         )}
 
+        {/* Card form */}
         <Animated.View
-          style={[styles.card, { opacity: formOpacity, transform: [{ translateY: formTranslate }] }]}
+          style={[
+            styles.card,
+            {
+              opacity: formOpacity,
+              transform: [{ translateY: formTranslate }],
+            },
+          ]}
           accessibilityLabel={t("registrationForm")}
           accessible
         >
@@ -504,69 +686,111 @@ const disabledCTA = loading || !formValid || isOffline;
             <Animated.View
               accessibilityRole="alert"
               accessibilityLiveRegion="polite"
-              style={[styles.errorBanner, { transform: [{ translateX: shakeAnim }] }]}
+              style={[
+                styles.errorBanner,
+                { transform: [{ translateX: shakeAnim }] },
+              ]}
             >
-              <Ionicons name="alert-circle" size={18} color="#fff" />
-              <Text style={styles.errorBannerText}>{errorMessage}</Text>
+              <Ionicons
+                name="alert-circle"
+                size={18}
+                color="#fff"
+              />
+              <Text style={styles.errorBannerText}>
+                {errorMessage}
+              </Text>
             </Animated.View>
           )}
 
           {/* Email */}
           <View style={styles.inputWrap}>
-            <Ionicons name="mail-outline" size={18} color={PRIMARY_COLOR} style={styles.leadingIcon} />
+            <Ionicons
+              name="mail-outline"
+              size={18}
+              color={PRIMARY_COLOR}
+              style={styles.leadingIcon}
+            />
             <TextInput
               ref={emailRef}
               autoFocus
-            placeholder={t("emailPlaceholder")}
-            placeholderTextColor="rgba(50,50,50,0.5)"
-            style={styles.input}
-            value={email}
-            onChangeText={setEmail}
-            keyboardType="email-address"
-            autoCapitalize="none"
-            accessibilityLabel={t("email")}
-            autoComplete="email"
-            autoCorrect={false}
-            testID="email-input"
-            maxLength={100}
-            textContentType="emailAddress"
-            returnKeyType="next"
-            onSubmitEditing={() => usernameRef.current?.focus()}
-            blurOnSubmit={false}
-          />
-          {!!email && (
-            <TouchableOpacity onPress={() => setEmail("")} style={styles.trailingBtn} hitSlop={{ top:10,bottom:10,left:10,right:10 }}>
-              <Ionicons name="close-circle" size={18} color="rgba(0,0,0,0.35)" />
-            </TouchableOpacity>
-          )}
+              placeholder={t("emailPlaceholder")}
+              placeholderTextColor="rgba(50,50,50,0.5)"
+              style={styles.input}
+              value={email}
+              onChangeText={setEmail}
+              keyboardType="email-address"
+              autoCapitalize="none"
+              accessibilityLabel={t("email")}
+              autoComplete="email"
+              autoCorrect={false}
+              testID="email-input"
+              maxLength={100}
+              textContentType="emailAddress"
+              returnKeyType="next"
+              onSubmitEditing={() =>
+                usernameRef.current?.focus()
+              }
+              blurOnSubmit={false}
+            />
+            {!!email && (
+              <TouchableOpacity
+                onPress={() => setEmail("")}
+                style={styles.trailingBtn}
+                hitSlop={{
+                  top: 10,
+                  bottom: 10,
+                  left: 10,
+                  right: 10,
+                }}
+                accessibilityLabel={t("clear") || "Effacer"}
+              >
+                <Ionicons
+                  name="close-circle"
+                  size={18}
+                  color="rgba(0,0,0,0.35)"
+                />
+              </TouchableOpacity>
+            )}
           </View>
 
           {/* Username */}
           <View style={styles.inputWrap}>
-            <Ionicons name="person-outline" size={18} color={PRIMARY_COLOR} style={styles.leadingIcon} />
+            <Ionicons
+              name="person-outline"
+              size={18}
+              color={PRIMARY_COLOR}
+              style={styles.leadingIcon}
+            />
             <TextInput
               ref={usernameRef}
-            placeholder={t("username")}
-            placeholderTextColor="rgba(50,50,50,0.5)"
-            style={styles.input}
-            value={username}
-            onChangeText={setUsername}
-            accessibilityLabel={t("username")}
-            autoComplete="username"
-            testID="username-input"
-            autoCorrect={false}
-            autoCapitalize="none"
-             maxLength={40}
-            textContentType="username"
-          returnKeyType="next"
-            onSubmitEditing={() => passwordRef.current?.focus()}
-            blurOnSubmit={false}
-          />
+              placeholder={t("username")}
+              placeholderTextColor="rgba(50,50,50,0.5)"
+              style={styles.input}
+              value={username}
+              onChangeText={setUsername}
+              accessibilityLabel={t("username")}
+              autoComplete="username"
+              testID="username-input"
+              autoCorrect={false}
+              autoCapitalize="none"
+              maxLength={40}
+              textContentType="username"
+              returnKeyType="next"
+              onSubmitEditing={() =>
+                passwordRef.current?.focus()
+              }
+              blurOnSubmit={false}
+            />
           </View>
 
           {/* Password */}
           <View style={styles.inputWrap}>
-            <Ionicons name="lock-closed-outline" size={18} color={PRIMARY_COLOR} style={styles.leadingIcon} />
+            <Ionicons
+              name="lock-closed-outline"
+              size={18}
+              color={PRIMARY_COLOR}
+              style={styles.leadingIcon}
+            />
             <TextInput
               ref={passwordRef}
               placeholder={t("passwordPlaceholder")}
@@ -580,15 +804,26 @@ const disabledCTA = loading || !formValid || isOffline;
               testID="password-input"
               textContentType="newPassword"
               returnKeyType="next"
-              onSubmitEditing={() => confirmRef.current?.focus()}
+              onSubmitEditing={() =>
+                confirmRef.current?.focus()
+              }
             />
             <TouchableOpacity
-              onPress={() => setShowPassword((prev) => !prev)}
+              onPress={() =>
+                setShowPassword((prev) => !prev)
+              }
               accessibilityLabel={
-                showPassword ? t("hidePassword") : t("showPassword")
+                showPassword
+                  ? t("hidePassword")
+                  : t("showPassword")
               }
               style={styles.trailingBtn}
-              hitSlop={{ top:10,bottom:10,left:10,right:10 }}
+              hitSlop={{
+                top: 10,
+                bottom: 10,
+                left: 10,
+                right: 10,
+              }}
             >
               <Ionicons
                 name={showPassword ? "eye-off" : "eye"}
@@ -597,9 +832,15 @@ const disabledCTA = loading || !formValid || isOffline;
               />
             </TouchableOpacity>
           </View>
+
           {/* Confirm Password */}
           <View style={styles.inputWrap}>
-            <Ionicons name="shield-checkmark-outline" size={18} color={PRIMARY_COLOR} style={styles.leadingIcon} />
+            <Ionicons
+              name="shield-checkmark-outline"
+              size={18}
+              color={PRIMARY_COLOR}
+              style={styles.leadingIcon}
+            />
             <TextInput
               ref={confirmRef}
               placeholder={t("confirmPassword")}
@@ -613,16 +854,27 @@ const disabledCTA = loading || !formValid || isOffline;
               testID="confirm-password-input"
               textContentType="newPassword"
               maxLength={100}
-             returnKeyType="done"
-              onSubmitEditing={formValid ? handleRegister : undefined}
+              returnKeyType="done"
+              onSubmitEditing={
+                formValid ? handleRegister : undefined
+              }
             />
             <TouchableOpacity
-              onPress={() => setShowConfirmPassword((prev) => !prev)}
-              accessibilityLabel={
-                showConfirmPassword ? t("hidePassword") : t("showPassword")
+              onPress={() =>
+                setShowConfirmPassword((prev) => !prev)
               }
-             style={styles.trailingBtn}
-              hitSlop={{ top:10,bottom:10,left:10,right:10 }}
+              accessibilityLabel={
+                showConfirmPassword
+                  ? t("hidePassword")
+                  : t("showPassword")
+              }
+              style={styles.trailingBtn}
+              hitSlop={{
+                top: 10,
+                bottom: 10,
+                left: 10,
+                right: 10,
+              }}
             >
               <Ionicons
                 name={showConfirmPassword ? "eye-off" : "eye"}
@@ -633,36 +885,63 @@ const disabledCTA = loading || !formValid || isOffline;
           </View>
         </Animated.View>
 
-          <Animated.View style={{ transform: [{ scale: Animated.multiply(ctaScale, ctaPulse) }] }}>
+        {/* CTA Register */}
+        <Animated.View
+          style={{
+            transform: [
+              {
+                scale: Animated.multiply(
+                  ctaScale,
+                  ctaPulse
+                ),
+              },
+            ],
+          }}
+        >
           <TouchableOpacity
-            style={[styles.registerButton, disabledCTA && styles.disabledButton]}
+            style={[
+              styles.registerButton,
+              disabledCTA && styles.disabledButton,
+            ]}
             onPressIn={pressIn}
             onPressOut={pressOut}
             onPress={!disabledCTA ? handleRegister : undefined}
             disabled={disabledCTA}
             accessibilityRole="button"
             accessibilityLabel={t("signup")}
-            accessibilityHint={t("createAccountHint") || undefined}
+            accessibilityHint={
+              t("createAccountHint") || undefined
+            }
             accessibilityState={{ disabled: disabledCTA }}
             testID="register-button"
           >
             {loading ? (
-              <ActivityIndicator color={TEXT_COLOR} size="small" />
+              <ActivityIndicator
+                color={TEXT_COLOR}
+                size="small"
+              />
             ) : (
-              <Text style={styles.registerButtonText}>{t("signup")}</Text>
+              <Text style={styles.registerButtonText}>
+                {t("signup")}
+              </Text>
             )}
           </TouchableOpacity>
-          </Animated.View>
-          <Text style={styles.loginText} accessibilityLabel={t("login")}>
-            {t("alreadyHaveAccount")}{" "}
-            <Text
-              style={styles.loginLink}
-              onPress={goLogin}
-              accessibilityRole="link"
-            >
-              {t("loginHere")}
-            </Text>
+        </Animated.View>
+
+        {/* Lien login */}
+        <Text
+          style={styles.loginText}
+          accessibilityLabel={t("login")}
+        >
+          {t("alreadyHaveAccount")}{" "}
+          <Text
+            style={styles.loginLink}
+            onPress={goLogin}
+            accessibilityRole="link"
+          >
+            {t("loginHere")}
           </Text>
+        </Text>
       </ScrollView>
     </KeyboardAvoidingView>
   );
@@ -682,7 +961,7 @@ const styles = StyleSheet.create({
     width: "90%",
     maxWidth: 600,
     alignItems: "center",
-    marginTop: SCREEN_HEIGHT * 0.08, // Dynamique selon la taille de l'écran
+    marginTop: SCREEN_HEIGHT * 0.08,
   },
   card: {
     width: Math.min(420, SCREEN_WIDTH - SPACING * 2),
@@ -734,7 +1013,7 @@ const styles = StyleSheet.create({
     flexShrink: 1,
   },
 
-  // Inputs avec icônes (alignement login)
+  // Inputs
   inputWrap: {
     width: "100%",
     flexDirection: "row",
@@ -748,12 +1027,7 @@ const styles = StyleSheet.create({
   },
   leadingIcon: { marginRight: 8, opacity: 0.9 },
   trailingBtn: { marginLeft: 8, padding: 4 },
-  footerContainer: {
-    width: "90%",
-    maxWidth: 600,
-    alignItems: "center",
-    marginBottom: SCREEN_HEIGHT * 0.08, // Dynamique
-  },
+
   brandTitle: {
     fontSize: normalize(34),
     color: TEXT_COLOR,
@@ -773,14 +1047,7 @@ const styles = StyleSheet.create({
     fontFamily: "Comfortaa_400Regular",
     maxWidth: "90%",
   },
-  errorText: {
-    color: "#FF4B4B",
-    fontSize: normalize(14),
-    fontWeight: "600",
-    textAlign: "center",
-    marginVertical: SPACING,
-    width: "100%",
-  },
+
   input: {
     flex: 1,
     height: normalize(52),
@@ -788,6 +1055,7 @@ const styles = StyleSheet.create({
     fontSize: normalize(15),
     fontFamily: "Comfortaa_400Regular",
   },
+
   registerButton: {
     width: Math.min(420, SCREEN_WIDTH - SPACING * 2),
     backgroundColor: BUTTON_COLOR,
@@ -811,13 +1079,14 @@ const styles = StyleSheet.create({
     fontSize: normalize(16),
     fontFamily: "Comfortaa_700Bold",
   },
+
   loginText: {
     color: TEXT_COLOR,
     textAlign: "center",
     fontSize: normalize(14),
     fontFamily: "Comfortaa_400Regular",
     marginTop: SPACING,
-    marginBottom: SPACING*2, // + air pour éviter d’être coupé
+    marginBottom: SPACING * 2,
   },
   loginLink: {
     color: PRIMARY_COLOR,

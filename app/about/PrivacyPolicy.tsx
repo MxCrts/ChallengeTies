@@ -1,11 +1,11 @@
-import React, { useMemo, memo } from "react";
+import React, { useMemo, memo, ReactNode } from "react";
 import {
   View,
   Text,
   StyleSheet,
   ScrollView,
   Dimensions,
-Linking,
+  Linking,
   Platform,
 } from "react-native";
 import { StatusBar } from "expo-status-bar";
@@ -148,31 +148,64 @@ export default function PrivacyPolicy() {
     { icon: "swap-horizontal-outline", key: "portability" },
   ];
 
-  return (
-  <LinearGradient
-    colors={[currentTheme.colors.background, currentTheme.colors.cardBackground]}
-    start={{ x: 0, y: 0 }}
-    end={{ x: 1, y: 1 }}
-    style={{ flex: 1 }}
-  >
-    <OrbBackground theme={currentTheme} />
-
-    <SafeAreaView style={[styles.safeArea, { paddingTop: insets.top + SPACING * 0.5 }]}>
-      <StatusBar style={isDarkMode ? "light" : "dark"} />
-      <CustomHeader title={t("privacyPolicy.title")} />
-      <ScrollView
-        contentContainerStyle={[styles.contentContainer, { maxWidth: 720, alignSelf: "center" }]}
-        showsVerticalScrollIndicator={false}
-        contentInsetAdjustmentBehavior="automatic"
-        keyboardDismissMode="on-drag"
-        keyboardShouldPersistTaps="handled"
+  // Helper pour toutes les cartes (gradient + fond verre dépoli)
+  const renderCard = (delay: number, children: ReactNode) => (
+    <Animated.View
+      entering={FadeInUp.delay(delay)}
+      style={styles.cardOuter}
+    >
+      <LinearGradient
+        colors={[
+          currentTheme.colors.secondary + "D0",
+          currentTheme.colors.primary + "B0",
+        ]}
+        start={{ x: 0, y: 0 }}
+        end={{ x: 1, y: 1 }}
+        style={styles.cardGradient}
       >
+        <View
+          style={[
+            styles.cardInner,
+            { backgroundColor: currentTheme.colors.cardBackground + "F2" },
+          ]}
+        >
+          {children}
+        </View>
+      </LinearGradient>
+    </Animated.View>
+  );
+
+  return (
+    <LinearGradient
+      colors={[currentTheme.colors.background, currentTheme.colors.cardBackground]}
+      start={{ x: 0, y: 0 }}
+      end={{ x: 1, y: 1 }}
+      style={styles.container}
+    >
+      <OrbBackground theme={currentTheme} />
+
+      <SafeAreaView
+        style={[styles.safeArea, { paddingTop: insets.top + SPACING * 0.5 }]}
+      >
+        <StatusBar style={isDarkMode ? "light" : "dark"} />
+        <CustomHeader title={t("privacyPolicy.title")} />
+
+        <ScrollView
+          contentContainerStyle={[
+            styles.contentContainer,
+            { maxWidth: 720, alignSelf: "center" },
+          ]}
+          showsVerticalScrollIndicator={false}
+          contentInsetAdjustmentBehavior="automatic"
+          keyboardDismissMode="on-drag"
+          keyboardShouldPersistTaps="handled"
+        >
           {/* Logo sans cadre (cercle parfait, pas d'ombre) */}
           <Animated.View
             entering={FadeInUp.delay(200).duration(800)}
             style={styles.logoContainer}
           >
-           <Image
+            <Image
               source={require("../../assets/images/icon2.png")}
               style={styles.logo}
               contentFit="cover"
@@ -189,194 +222,332 @@ export default function PrivacyPolicy() {
           />
 
           {/* Intro */}
-          <Animated.View
-            entering={FadeInUp.delay(400)}
-            style={[styles.card, { borderColor }]}
-          >
-            <Text style={[styles.subtitle, { color: currentTheme.colors.secondary }]}>
-              {t("privacyPolicy.introductionTitle")}
-            </Text>
-            <Text style={[styles.paragraph, { color: currentTheme.colors.textSecondary }]}>
+          {renderCard(
+            400,
+            <>
               <Text
                 style={[
-                  styles.boldText,
-                  { color: isDarkMode ? currentTheme.colors.textPrimary : "#FF8C00" },
+                  styles.subtitle,
+                  { color: currentTheme.colors.secondary },
                 ]}
               >
-                {t("appName")}
-              </Text>{" "}
-              {t("privacyPolicy.introductionText", { appName: "ChallengeTies" })}
-            </Text>
-          </Animated.View>
+                {t("privacyPolicy.introductionTitle")}
+              </Text>
+              <Text
+                style={[
+                  styles.paragraph,
+                  { color: currentTheme.colors.textSecondary },
+                ]}
+              >
+                <Text
+                  style={[
+                    styles.boldText,
+                    {
+                      color: isDarkMode
+                        ? currentTheme.colors.textPrimary
+                        : "#FF8C00",
+                    },
+                  ]}
+                >
+                  {t("appName")}
+                </Text>{" "}
+                {t("privacyPolicy.introductionText", { appName: "ChallengeTies" })}
+              </Text>
+            </>
+          )}
 
           {/* Data Collected */}
-          <Animated.View entering={FadeInUp.delay(600)} style={[styles.card, { borderColor }]}>
-            <Text style={[styles.subtitle, { color: currentTheme.colors.secondary }]}>
-              {t("privacyPolicy.dataCollectedTitle")}
-            </Text>
-            <Text style={[styles.paragraph, { color: currentTheme.colors.textSecondary }]}>
-              {t("privacyPolicy.dataCollectedText")}
-            </Text>
-            {dataCollectedItems.map((it, i) => (
-              <BulletItem
-                key={i}
-                icon={it.icon}
-                text={t(`privacyPolicy.dataCollectedItems.${it.key}`)}
-                color={currentTheme.colors.secondary}
-                textColor={currentTheme.colors.textSecondary}
-              />
-            ))}
-          </Animated.View>
+          {renderCard(
+            600,
+            <>
+              <Text
+                style={[
+                  styles.subtitle,
+                  { color: currentTheme.colors.secondary },
+                ]}
+              >
+                {t("privacyPolicy.dataCollectedTitle")}
+              </Text>
+              <Text
+                style={[
+                  styles.paragraph,
+                  { color: currentTheme.colors.textSecondary },
+                ]}
+              >
+                {t("privacyPolicy.dataCollectedText")}
+              </Text>
+              {dataCollectedItems.map((it, i) => (
+                <BulletItem
+                  key={i}
+                  icon={it.icon}
+                  text={t(`privacyPolicy.dataCollectedItems.${it.key}`)}
+                  color={currentTheme.colors.secondary}
+                  textColor={currentTheme.colors.textSecondary}
+                />
+              ))}
+            </>
+          )}
 
           {/* Data Usage */}
-          <Animated.View entering={FadeInUp.delay(800)} style={[styles.card, { borderColor }]}>
-            <Text style={[styles.subtitle, { color: currentTheme.colors.secondary }]}>
-              {t("privacyPolicy.dataUsageTitle")}
-            </Text>
-            <Text style={[styles.paragraph, { color: currentTheme.colors.textSecondary }]}>
-              {t("privacyPolicy.dataUsageText")}
-            </Text>
-            {dataUsageItems.map((it, i) => (
-              <BulletItem
-                key={i}
-                icon={it.icon}
-                text={t(`privacyPolicy.dataUsageItems.${it.key}`)}
-                color={currentTheme.colors.secondary}
-                textColor={currentTheme.colors.textSecondary}
-              />
-            ))}
-          </Animated.View>
+          {renderCard(
+            800,
+            <>
+              <Text
+                style={[
+                  styles.subtitle,
+                  { color: currentTheme.colors.secondary },
+                ]}
+              >
+                {t("privacyPolicy.dataUsageTitle")}
+              </Text>
+              <Text
+                style={[
+                  styles.paragraph,
+                  { color: currentTheme.colors.textSecondary },
+                ]}
+              >
+                {t("privacyPolicy.dataUsageText")}
+              </Text>
+              {dataUsageItems.map((it, i) => (
+                <BulletItem
+                  key={i}
+                  icon={it.icon}
+                  text={t(`privacyPolicy.dataUsageItems.${it.key}`)}
+                  color={currentTheme.colors.secondary}
+                  textColor={currentTheme.colors.textSecondary}
+                />
+              ))}
+            </>
+          )}
 
           {/* Data Sharing */}
-          <Animated.View entering={FadeInUp.delay(1000)} style={[styles.card, { borderColor }]}>
-            <Text style={[styles.subtitle, { color: currentTheme.colors.secondary }]}>
-              {t("privacyPolicy.dataSharingTitle")}
-            </Text>
-            <Text style={[styles.paragraph, { color: currentTheme.colors.textSecondary }]}>
-              {t("privacyPolicy.dataSharingText")}
-            </Text>
-            {dataSharingItems.map((it, i) => (
-              <BulletItem
-                key={i}
-                icon={it.icon}
-                text={t(`privacyPolicy.dataSharingItems.${it.key}`)}
-                color={currentTheme.colors.secondary}
-                textColor={currentTheme.colors.textSecondary}
-              />
-            ))}
-          </Animated.View>
+          {renderCard(
+            1000,
+            <>
+              <Text
+                style={[
+                  styles.subtitle,
+                  { color: currentTheme.colors.secondary },
+                ]}
+              >
+                {t("privacyPolicy.dataSharingTitle")}
+              </Text>
+              <Text
+                style={[
+                  styles.paragraph,
+                  { color: currentTheme.colors.textSecondary },
+                ]}
+              >
+                {t("privacyPolicy.dataSharingText")}
+              </Text>
+              {dataSharingItems.map((it, i) => (
+                <BulletItem
+                  key={i}
+                  icon={it.icon}
+                  text={t(`privacyPolicy.dataSharingItems.${it.key}`)}
+                  color={currentTheme.colors.secondary}
+                  textColor={currentTheme.colors.textSecondary}
+                />
+              ))}
+            </>
+          )}
 
           {/* Security */}
-          <Animated.View entering={FadeInUp.delay(1200)} style={[styles.card, { borderColor }]}>
-            <Text style={[styles.subtitle, { color: currentTheme.colors.secondary }]}>
-              {t("privacyPolicy.securityTitle")}
-            </Text>
-            <Text style={[styles.paragraph, { color: currentTheme.colors.textSecondary }]}>
-              {t("privacyPolicy.securityText")}
-            </Text>
-            {securityItems.map((it, i) => (
-              <BulletItem
-                key={i}
-                icon={it.icon}
-                text={t(`privacyPolicy.securityItems.${it.key}`)}
-                color={currentTheme.colors.secondary}
-                textColor={currentTheme.colors.textSecondary}
-              />
-            ))}
-          </Animated.View>
+          {renderCard(
+            1200,
+            <>
+              <Text
+                style={[
+                  styles.subtitle,
+                  { color: currentTheme.colors.secondary },
+                ]}
+              >
+                {t("privacyPolicy.securityTitle")}
+              </Text>
+              <Text
+                style={[
+                  styles.paragraph,
+                  { color: currentTheme.colors.textSecondary },
+                ]}
+              >
+                {t("privacyPolicy.securityText")}
+              </Text>
+              {securityItems.map((it, i) => (
+                <BulletItem
+                  key={i}
+                  icon={it.icon}
+                  text={t(`privacyPolicy.securityItems.${it.key}`)}
+                  color={currentTheme.colors.secondary}
+                  textColor={currentTheme.colors.textSecondary}
+                />
+              ))}
+            </>
+          )}
 
           {/* User Rights */}
-          <Animated.View entering={FadeInUp.delay(1400)} style={[styles.card, { borderColor }]}>
-            <Text style={[styles.subtitle, { color: currentTheme.colors.secondary }]}>
-              {t("privacyPolicy.userRightsTitle")}
-            </Text>
-            <Text style={[styles.paragraph, { color: currentTheme.colors.textSecondary }]}>
-              {t("privacyPolicy.userRightsText")}
-            </Text>
-            {userRightsItems.map((it, i) => (
-              <BulletItem
-                key={i}
-                icon={it.icon}
-                text={t(`privacyPolicy.userRightsItems.${it.key}`)}
-                color={currentTheme.colors.secondary}
-                textColor={currentTheme.colors.textSecondary}
-              />
-            ))}
-          </Animated.View>
+          {renderCard(
+            1400,
+            <>
+              <Text
+                style={[
+                  styles.subtitle,
+                  { color: currentTheme.colors.secondary },
+                ]}
+              >
+                {t("privacyPolicy.userRightsTitle")}
+              </Text>
+              <Text
+                style={[
+                  styles.paragraph,
+                  { color: currentTheme.colors.textSecondary },
+                ]}
+              >
+                {t("privacyPolicy.userRightsText")}
+              </Text>
+              {userRightsItems.map((it, i) => (
+                <BulletItem
+                  key={i}
+                  icon={it.icon}
+                  text={t(`privacyPolicy.userRightsItems.${it.key}`)}
+                  color={currentTheme.colors.secondary}
+                  textColor={currentTheme.colors.textSecondary}
+                />
+              ))}
+            </>
+          )}
 
           {/* Legal basis (GDPR), retention, transfers, children */}
-          <Section currentTheme={currentTheme} borderColor={borderColor} delay={1500}
+          <Section
+            currentTheme={currentTheme}
+            delay={1500}
             title={t("privacyPolicy.legalBasisTitle")}
             text={t("privacyPolicy.legalBasisText")}
           />
-          <Section currentTheme={currentTheme} borderColor={borderColor} delay={1600}
+          <Section
+            currentTheme={currentTheme}
+            delay={1600}
             title={t("privacyPolicy.retentionTitle")}
             text={t("privacyPolicy.retentionText")}
           />
-          <Section currentTheme={currentTheme} borderColor={borderColor} delay={1700}
+          <Section
+            currentTheme={currentTheme}
+            delay={1700}
             title={t("privacyPolicy.transfersTitle")}
             text={t("privacyPolicy.transfersText")}
           />
-          <Section currentTheme={currentTheme} borderColor={borderColor} delay={1800}
+          <Section
+            currentTheme={currentTheme}
+            delay={1800}
             title={t("privacyPolicy.childrenTitle")}
             text={t("privacyPolicy.childrenText")}
           />
 
           {/* Cookies */}
-          <Animated.View entering={FadeInUp.delay(1600)} style={[styles.card, { borderColor }]}>
-            <Text style={[styles.subtitle, { color: currentTheme.colors.secondary }]}>
-              {t("privacyPolicy.cookiesTitle")}
-            </Text>
-            <Text style={[styles.paragraph, { color: currentTheme.colors.textSecondary }]}>
-              {t("privacyPolicy.cookiesText")}
-            </Text>
-            <Text
-              style={[styles.link, { color: isDarkMode ? currentTheme.colors.textPrimary : "#FF8C00" }]}
-              accessibilityRole="link"
-              onPress={() => Linking.openURL(t("privacyPolicy.manageCookiesUrl"))}
-            >
-              {t("privacyPolicy.manageCookiesCta")}
-            </Text>
-          </Animated.View>
+          {renderCard(
+            1900,
+            <>
+              <Text
+                style={[
+                  styles.subtitle,
+                  { color: currentTheme.colors.secondary },
+                ]}
+              >
+                {t("privacyPolicy.cookiesTitle")}
+              </Text>
+              <Text
+                style={[
+                  styles.paragraph,
+                  { color: currentTheme.colors.textSecondary },
+                ]}
+              >
+                {t("privacyPolicy.cookiesText")}
+              </Text>
+              <Text
+                style={[
+                  styles.link,
+                  {
+                    color: isDarkMode
+                      ? currentTheme.colors.textPrimary
+                      : "#FF8C00",
+                  },
+                ]}
+                accessibilityRole="link"
+                onPress={() =>
+                  Linking.openURL(t("privacyPolicy.manageCookiesUrl"))
+                }
+              >
+                {t("privacyPolicy.manageCookiesCta")}
+              </Text>
+            </>
+          )}
 
           {/* Updates */}
-          <Animated.View entering={FadeInUp.delay(1800)} style={[styles.card, { borderColor }]}>
-            <Text style={[styles.subtitle, { color: currentTheme.colors.secondary }]}>
-              {t("privacyPolicy.updatesTitle")}
-            </Text>
-            <Text style={[styles.paragraph, { color: currentTheme.colors.textSecondary }]}>
-              {t("privacyPolicy.updatesText")}
-            </Text>
-          </Animated.View>
+          <Section
+            currentTheme={currentTheme}
+            delay={2000}
+            title={t("privacyPolicy.updatesTitle")}
+            text={t("privacyPolicy.updatesText")}
+          />
 
           {/* Contact */}
-          <Animated.View entering={FadeInUp.delay(2000)} style={[styles.card, { borderColor }]}>
-            <Text style={[styles.subtitle, { color: currentTheme.colors.secondary }]}>
-              {t("privacyPolicy.contactTitle")}
-            </Text>
-            <Text style={[styles.paragraph, { color: currentTheme.colors.textSecondary }]}>
-              {t("privacyPolicy.contactText")}
-            </Text>
-            <Text
-              style={[
-                styles.contactEmail,
-                { color: isDarkMode ? currentTheme.colors.textPrimary : "#FF8C00" },
-              ]}
-              selectable
-            >
-              {t("privacyPolicy.contactEmail")}
-            </Text>
-            <Text
-              style={[styles.link, { color: isDarkMode ? currentTheme.colors.textPrimary : "#FF8C00" }]}
-              accessibilityRole="link"
-              onPress={() => Linking.openURL(t("privacyPolicy.supervisoryAuthorityUrl"))}
-            >
-              {t("privacyPolicy.supervisoryAuthorityCta")}
-            </Text>
-          </Animated.View>
+          {renderCard(
+            2100,
+            <>
+              <Text
+                style={[
+                  styles.subtitle,
+                  { color: currentTheme.colors.secondary },
+                ]}
+              >
+                {t("privacyPolicy.contactTitle")}
+              </Text>
+              <Text
+                style={[
+                  styles.paragraph,
+                  { color: currentTheme.colors.textSecondary },
+                ]}
+              >
+                {t("privacyPolicy.contactText")}
+              </Text>
+              <Text
+                style={[
+                  styles.contactEmail,
+                  {
+                    color: isDarkMode
+                      ? currentTheme.colors.textPrimary
+                      : "#FF8C00",
+                  },
+                ]}
+                selectable
+              >
+                {t("privacyPolicy.contactEmail")}
+              </Text>
+              <Text
+                style={[
+                  styles.link,
+                  {
+                    color: isDarkMode
+                      ? currentTheme.colors.textPrimary
+                      : "#FF8C00",
+                  },
+                ]}
+                accessibilityRole="link"
+                onPress={() =>
+                  Linking.openURL(
+                    t("privacyPolicy.supervisoryAuthorityUrl")
+                  )
+                }
+              >
+                {t("privacyPolicy.supervisoryAuthorityCta")}
+              </Text>
+            </>
+          )}
 
           {/* Final Message */}
-          <Animated.View entering={FadeInUp.delay(2200)} style={styles.footer}>
+          <Animated.View
+            entering={FadeInUp.delay(2200)}
+            style={styles.footer}
+          >
             <LinearGradient
               colors={[currentTheme.colors.overlay, currentTheme.colors.border]}
               style={styles.footerGradient}
@@ -387,7 +558,9 @@ export default function PrivacyPolicy() {
                 style={[
                   styles.footerText,
                   {
-                    color: isDarkMode ? currentTheme.colors.textPrimary : "#000000",
+                    color: isDarkMode
+                      ? currentTheme.colors.textPrimary
+                      : "#000000",
                   },
                 ]}
               >
@@ -396,13 +569,19 @@ export default function PrivacyPolicy() {
             </LinearGradient>
           </Animated.View>
         </ScrollView>
-    </SafeAreaView>
-  </LinearGradient>
-);
+      </SafeAreaView>
+    </LinearGradient>
+  );
 }
 
 // ==== UI mini-composants (perf & propreté) ====
-const SmallBadge = memo(function SmallBadge({ text, color }: { text: string; color: string }) {
+const SmallBadge = memo(function SmallBadge({
+  text,
+  color,
+}: {
+  text: string;
+  color: string;
+}) {
   return (
     <View style={[styles.badge, { borderColor: color }]}>
       <Ionicons name="time-outline" size={14} color="#111" />
@@ -412,23 +591,78 @@ const SmallBadge = memo(function SmallBadge({ text, color }: { text: string; col
 });
 
 const BulletItem = memo(function BulletItem({
-  icon, text, color, textColor,
-}: { icon: React.ComponentProps<typeof Ionicons>["name"]; text: string; color: string; textColor: string }) {
+  icon,
+  text,
+  color,
+  textColor,
+}: {
+  icon: React.ComponentProps<typeof Ionicons>["name"];
+  text: string;
+  color: string;
+  textColor: string;
+}) {
   return (
     <View style={styles.featureItem}>
-      <Ionicons name={icon} size={normalizeSize(20)} color={color} style={styles.featureIcon} />
+      <Ionicons
+        name={icon}
+        size={normalizeSize(20)}
+        color={color}
+        style={styles.featureIcon}
+      />
       <Text style={[styles.featureText, { color: textColor }]}>{text}</Text>
     </View>
   );
 });
 
 const Section = memo(function Section({
-  title, text, currentTheme, borderColor, delay = 1500,
-}: { title: string; text: string; currentTheme: Theme; borderColor: string; delay?: number }) {
+  title,
+  text,
+  currentTheme,
+  delay = 1500,
+}: {
+  title: string;
+  text: string;
+  currentTheme: Theme;
+  delay?: number;
+}) {
   return (
-    <Animated.View entering={FadeInUp.delay(delay)} style={[styles.card, { borderColor }]}>
-      <Text style={[styles.subtitle, { color: currentTheme.colors.secondary }]}>{title}</Text>
-      <Text style={[styles.paragraph, { color: currentTheme.colors.textSecondary }]}>{text}</Text>
+    <Animated.View
+      entering={FadeInUp.delay(delay)}
+      style={styles.cardOuter}
+    >
+      <LinearGradient
+        colors={[
+          currentTheme.colors.secondary + "D0",
+          currentTheme.colors.primary + "B0",
+        ]}
+        start={{ x: 0, y: 0 }}
+        end={{ x: 1, y: 1 }}
+        style={styles.cardGradient}
+      >
+        <View
+          style={[
+            styles.cardInner,
+            { backgroundColor: currentTheme.colors.cardBackground + "F2" },
+          ]}
+        >
+          <Text
+            style={[
+              styles.subtitle,
+              { color: currentTheme.colors.secondary },
+            ]}
+          >
+            {title}
+          </Text>
+          <Text
+            style={[
+              styles.paragraph,
+              { color: currentTheme.colors.textSecondary },
+            ]}
+          >
+            {text}
+          </Text>
+        </View>
+      </LinearGradient>
     </Animated.View>
   );
 });
@@ -450,6 +684,13 @@ const styles = StyleSheet.create({
     alignItems: "center",
     marginBottom: SPACING * 2,
   },
+  logo: {
+    width: SCREEN_WIDTH * 0.4,
+    height: SCREEN_WIDTH * 0.4,
+    borderRadius: (SCREEN_WIDTH * 0.4) / 2,
+    overflow: "hidden",
+  },
+
   // mini badge
   badge: {
     alignSelf: "center",
@@ -467,27 +708,41 @@ const styles = StyleSheet.create({
     fontFamily: "Comfortaa_700Bold",
     color: "#111",
   },
+
   link: {
     marginTop: 8,
     textDecorationLine: "underline",
     fontFamily: "Comfortaa_400Regular",
   },
-  logo: {
-    width: SCREEN_WIDTH * 0.4,
-    height: SCREEN_WIDTH * 0.4,
-    borderRadius: (SCREEN_WIDTH * 0.4) / 2,
-    overflow: "hidden",
+
+  // ===== Card (outer + gradient + inner) =====
+  cardOuter: {
+    marginBottom: SPACING,
+    borderRadius: normalizeSize(20),
+    shadowColor: "#000",
+    shadowOffset: { width: 0, height: normalizeSize(6) },
+    shadowOpacity: 0.25,
+    shadowRadius: normalizeSize(10),
+    elevation: 8,
+  },
+  cardGradient: {
+    borderRadius: normalizeSize(20),
+    padding: 1.5,
+  },
+  cardInner: {
+    borderRadius: normalizeSize(18),
+    padding: SPACING,
+    borderWidth: 1.2,
+    borderColor: "rgba(255,255,255,0.06)",
   },
 
-  // ===== Card sans grosses ombres =====
+  // ancien style card – gardé si besoin ailleurs
   card: {
     backgroundColor: "transparent",
     borderRadius: normalizeSize(20),
     padding: SPACING,
     marginBottom: SPACING,
     borderWidth: 2.5,
-
-    // kill shadows (iOS + Android)
     shadowColor: "transparent",
     shadowOffset: { width: 0, height: 0 },
     shadowOpacity: 0,

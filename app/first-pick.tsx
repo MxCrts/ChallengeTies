@@ -6,7 +6,6 @@ import {
   TouchableOpacity,
   ActivityIndicator,
   FlatList,
-  Alert,
   Animated,
   AccessibilityInfo,
   Pressable,
@@ -45,16 +44,20 @@ import { checkForAchievements } from "../helpers/trophiesHelpers";
 import { canInvite } from "@/utils/canInvite";
 import { useTutorial } from "../context/TutorialContext";
 
+// Toast premium
+import { useToast } from "../src/ui/Toast";
+
 const SPACING = 16;
 
 type Challenge = {
   id: string;
-  title: string;
-  description: string;
-  category: string;
+  title?: string;          
+ description?: string;    
+ category?: string; 
   imageUrl?: string;
   chatId?: string;
   daysOptions?: number[];
+  rawCategory?: string; 
 };
 
 const DEFAULT_DAYS = [7, 14, 21, 30, 60, 90];
@@ -65,12 +68,26 @@ const FALLBACK_IMG = RNImage.resolveAssetSource(
 
 
 export default function FirstPick() {
-  const { t } = useTranslation();
+  const { t, i18n } = useTranslation();
   const { theme } = useTheme();
   const isDark = theme === "dark";
   const currentTheme = isDark ? designSystem.darkTheme : designSystem.lightTheme;
   const insets = useSafeAreaInsets();
   const { width, height } = useWindowDimensions();
+
+  const { show } = useToast();
+
+  const softHaptic = useCallback(async (type: "success" | "error" | "warning" = "success") => {
+    try {
+      if (type === "error") {
+        await Haptics.notificationAsync(Haptics.NotificationFeedbackType.Error);
+      } else if (type === "warning") {
+        await Haptics.notificationAsync(Haptics.NotificationFeedbackType.Warning);
+      } else {
+        await Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
+      }
+    } catch {}
+  }, []);
  const CARD_W = useMemo(() => (width - SPACING * 3) / 2, [width]);
  const CARD_H = useMemo(() => Math.min(220, height * 0.28), [height]);
 
@@ -209,13 +226,16 @@ const daysRows = useMemo(() => {
 
       const list: Challenge[] = snap.docs.map((d) => {
         const data: any = d.data();
+        const chatId = data?.chatId || d.id;
+        const rawCat = data?.category || "Miscellaneous";
         return {
           id: d.id,
-          title: data?.chatId ? (data?.title || data?.chatId) : (data?.title || t("common.challenge")),
-          description: data?.description || "",
-          category: data?.category || t("common.misc"),
+          title: data?.title || chatId,            // raw fallback
+   description: data?.description || "",
+   category: rawCat,                         // raw
+   rawCategory: rawCat,
           imageUrl: data?.imageUrl || "https://via.placeholder.com/600x400",
-          chatId: data?.chatId || d.id,
+          chatId,
           daysOptions: Array.isArray(data?.daysOptions) && data.daysOptions.length ? data.daysOptions : DEFAULT_DAYS,
         };
       });
@@ -240,21 +260,19 @@ const daysRows = useMemo(() => {
     fetchChallenges();
   }, [fetchChallenges]);
 
-  // Échantillon : 1 aléatoire par catégorie (max 6)
-useEffect(() => {
-  if (!pool.length) {
-    setItems([]);
-    return;
-  }
+  const sampleFromPool = useCallback((list: Challenge[]) => {
+  if (!list.length) return [];
 
   const byCat: Record<string, Challenge[]> = {};
-  for (const c of pool) {
-    const cat = c.category || "Divers";
+  for (const c of list) {
+    const cat = c.rawCategory || c.category || "Miscellaneous";
     if (!byCat[cat]) byCat[cat] = [];
     byCat[cat].push(c);
   }
+
   const cats = Object.keys(byCat).sort(() => Math.random() - 0.5);
   const sampled: Challenge[] = [];
+
   for (const cat of cats) {
     const arr = byCat[cat];
     const pick = arr[Math.floor(Math.random() * arr.length)];
@@ -262,10 +280,17 @@ useEffect(() => {
     if (sampled.length >= 6) break;
   }
 
-  setItems(sampled);
+  return sampled;
+}, []);
 
-  // si l'élément sélectionné n'est plus dans l'échantillon, on le désélectionne
-  setSelected((prev) => (prev && !sampled.find((s) => s.id === prev.id) ? null : prev));
+
+  // Échantillon : 1 aléatoire par catégorie (max 6)
+useEffect(() => {
+  const sampled = sampleFromPool(pool);
+  setItems(sampled);
+  setSelected(prev =>
+    prev && !sampled.find(s => s.id === prev.id) ? null : prev
+  );
 }, [pool]); // ✅ uniquement pool
 
 
@@ -281,18 +306,26 @@ useEffect(() => {
     fetchChallenges();
   }, [fetchChallenges]);
 
-  // ✅ Helper : valider le choix et lancer le tutoriel sur la Home
+ // ✅ Helper : valider le choix et lancer le tutoriel sur la Home
   const goHomeAndStartTutorial = useCallback(async () => {
     await AsyncStorage.setItem("firstPickDone", "1");
-    startTutorial();              // active overlay + step 0 (welcome)
+    startTutorial(); // active overlay + step 0 (welcome)
     safeReplace({ pathname: "/" });
   }, [safeReplace, startTutorial]);
+
+  // ✅ Helper : aller Home sans lancer le tutoriel (skip)
+  const goHomeWithoutTutorial = useCallback(async () => {
+    await AsyncStorage.setItem("firstPickDone", "1");
+    try {
+      skipTutorial(); // ✅ marque le tuto comme complété/skip côté contexte
+    } catch {}
+    safeReplace({ pathname: "/" });
+  }, [safeReplace, skipTutorial]);
 
   // ⏭️ Ignorer le FirstPick et marquer le tuto comme complété (pas d’overlay)
   const onSkip = async () => {
     await AsyncStorage.setItem("firstPickSkipped", "1");
-    skipTutorial();               // désactive le tuto et pose le flag "done"
-    safeReplace({ pathname: "/" });
+    await goHomeWithoutTutorial();
   };
 
   const handleInvitationSent = async () => {
@@ -308,19 +341,34 @@ useEffect(() => {
   const onConfirm = async () => {
     if (submittingRef.current || submitting) return;
     if (!selected) {
-      Alert.alert(t("firstPick.alert.missingChoiceTitle"), t("firstPick.alert.missingChoiceBody"));
+      show(
+        t("firstPick.alert.missingChoiceBody", {
+          defaultValue: "Choisis un défi pour continuer.",
+        }),
+        "warning"
+      );
+      softHaptic("warning");
       return;
     }
     if (mode === "none") {
-      Alert.alert(t("firstPick.alert.modeTitle"), t("firstPick.alert.modeBody"));
+      show(
+        t("firstPick.alert.modeBody", {
+          defaultValue: "Choisis un mode (solo ou duo).",
+        }),
+        "warning"
+      );
+      softHaptic("warning");
       return;
     }
     // 🚫 Duo impossible hors-ligne (création d'invite = réseau requis)
     if (mode === "duo" && isOffline) {
-      Alert.alert(
-        t("common.networkError"),
-        t("firstPick.offlineDuo") || "Connecte-toi à Internet pour inviter un ami en duo."
+      show(
+        t("firstPick.offlineDuo", {
+          defaultValue: "Connecte-toi à Internet pour inviter un ami en duo.",
+        }),
+        "error"
       );
+      softHaptic("error");
       return;
     }
 submittingRef.current = true;
@@ -335,10 +383,11 @@ submittingRef.current = true;
       const challengeObj = {
         id: selected.id,
         title: selected.title || data?.title || t("common.challenge"),
-        category: selected.category || data?.category || t("common.misc"),
+ category: selected.category || data?.category || t("common.misc"),
+ chatId: selected.chatId || data?.chatId || selected.id,
+ rawCategory: selected.rawCategory || data?.category || "Miscellaneous",
         description: selected.description || data?.description || "",
         daysOptions: selected.daysOptions || data?.daysOptions || DEFAULT_DAYS,
-        chatId: selected.chatId || selected.id,
         imageUrl: selected.imageUrl || data?.imageUrl || "",
       };
 
@@ -370,7 +419,8 @@ submittingRef.current = true;
       res.reason === "pending-invite"
         ? t("firstPick.alreadyInvited") || "Invitation déjà envoyée pour ce défi."
         : t("common.oops");
-    Alert.alert(t("common.info"), msg);
+    show(msg, "info");
+    softHaptic("warning");
     return;
   }
   setInfoDuoVisible(true);
@@ -379,7 +429,11 @@ submittingRef.current = true;
 
     } catch (e: any) {
       console.error("first-pick confirm error", e);
-      Alert.alert(t("common.error"), e?.message || t("common.oops"));
+      show(
+        e?.message || t("common.oops", { defaultValue: "Oups, réessaie." }),
+        "error"
+      );
+      softHaptic("error");
     } finally {
       setSubmitting(false);
       submittingRef.current = false;
@@ -410,6 +464,18 @@ submittingRef.current = true;
  }) => {
   const [imgUri, setImgUri] = useState<string>(item.imageUrl || FALLBACK_IMG);
 
+  const translatedTitle = useMemo(() => {
+   const key = item.chatId ? `challenges.${item.chatId}.title` : "";
+   return item.chatId
+     ? (t(key, { defaultValue: item.title }) as string)
+     : (item.title || t("common.challenge"));
+ }, [item.chatId, item.title, t, i18n.language]);
+
+ const translatedCategory = useMemo(() => {
+   const rawCat = item.rawCategory || item.category || "Miscellaneous";
+   return t(`categories.${rawCat}`, { defaultValue: rawCat }) as string;
+ }, [item.rawCategory, item.category, t, i18n.language]);
+
     // Si la source change (reshuffle / fetch), on réinitialise
     useEffect(() => {
       setImgUri(item.imageUrl || FALLBACK_IMG);
@@ -423,7 +489,7 @@ submittingRef.current = true;
           bounciness: 6,
           useNativeDriver: true,
         }).start();
-       }, [isSel]);
+        }, [isSel, reduceMotion]);
       return (
         <Animated.View style={{ transform: [{ scale }] }}>
           <TouchableOpacity
@@ -465,10 +531,10 @@ submittingRef.current = true;
             />
             <View style={styles.cardLabelWrap}>
               <Text numberOfLines={2} style={[styles.cardTitle, { color: "#fff" }]}>
-                {item.title}
+                {translatedTitle}
               </Text>
               <Text numberOfLines={1} style={[styles.cardCat, { color: "#ddd" }]}>
-                {item.category}
+                {translatedCategory}
               </Text>
             </View>
             {isSel && (
@@ -571,9 +637,13 @@ const blurhash = useMemo(
             </Text>
             <TouchableOpacity
    onPress={() => {
-    // reshuffle localement sans réseau
-     setItems(prev => [...prev].sort(() => Math.random() - 0.5));
-     try { Haptics.selectionAsync(); } catch {}
+    // ✅ nouveau tirage des 6 défis (sans réseau)
+    const sampled = sampleFromPool(pool);
+    setItems(sampled);
+    setSelected(prev =>
+      prev && !sampled.find(s => s.id === prev.id) ? null : prev
+    );
+    try { Haptics.selectionAsync(); } catch {}
    }}
    accessibilityLabel={t("common.shuffle") || "Mélanger"}
    style={{ padding: 8, marginTop: 8 }}

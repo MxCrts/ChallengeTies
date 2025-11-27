@@ -1,143 +1,385 @@
 // app/referral/ShareAndEarn.tsx
-import React, { useEffect, useMemo, useRef, useState, useCallback } from "react";
-import { View, Text, StyleSheet, TouchableOpacity, Share, Alert, Animated, Easing, Platform, ScrollView, useWindowDimensions } from "react-native";
+import React, {
+  useEffect,
+  useMemo,
+  useRef,
+  useState,
+  useCallback,
+} from "react";
+import {
+  View,
+  Text,
+  StyleSheet,
+  TouchableOpacity,
+  Share,
+  ScrollView,
+  useWindowDimensions,
+  Animated,
+  Easing,
+  AccessibilityInfo,
+} from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 import { useRouter } from "expo-router";
 import { Ionicons } from "@expo/vector-icons";
 import * as Clipboard from "expo-clipboard";
-import { auth, db } from "@/constants/firebase-config";
-import { collection, getDocs, query, where, getDoc, doc } from "firebase/firestore";
-import { buildAppLink, buildWebLink, getAppNameFallback } from "@/src/referral/links";
+import AsyncStorage from "@react-native-async-storage/async-storage";
+import {
+  collection,
+  getDocs,
+  query,
+  where,
+  getDoc,
+  doc,
+} from "firebase/firestore";
+import {
+  buildAppLink,
+  buildWebLink,
+  getAppNameFallback,
+} from "@/src/referral/links";
 import { logEvent } from "@/src/analytics";
 import { useFocusEffect } from "@react-navigation/native";
-import { getFunctions, httpsCallable } from "firebase/functions";
-import { app } from "@/constants/firebase-config";
+import { auth, db, app } from "@/constants/firebase-config";
 import { useTranslation } from "react-i18next";
 import { maybeAskForReview } from "@/src/services/reviewService";
-import { tap, success, warning, error, soft } from "@/src/utils/haptics";
+import { tap, success } from "@/src/utils/haptics";
 import { LinearGradient } from "expo-linear-gradient";
 import { useTheme } from "@/context/ThemeContext";
 import designSystem from "@/theme/designSystem";
+import { getFunctions, httpsCallable } from "firebase/functions";
 
 const REWARDS: Record<number, number> = { 5: 20, 10: 60, 25: 200 };
 const MILESTONES = [5, 10, 25];
 const P = 16;
+const REF_STORAGE_KEY = "ties_referrer_id";
+
+// Toast types
+type ToastType = "success" | "error" | "info";
+interface ToastState {
+  type: ToastType;
+  message: string;
+}
+const TOAST_DURATION = 2200;
+
+type PendingReferrerState =
+  | { status: "idle" }
+  | { status: "pending"; referrerId: string; referrerUsername?: string }
+  | { status: "linked"; referrerId: string; referrerUsername?: string };
 
 export default function ShareAndEarn() {
   const { t } = useTranslation();
   const { theme } = useTheme();
   const isDark = theme === "dark";
-  const palette = isDark ? designSystem.darkTheme.colors : designSystem.lightTheme.colors;
+  const palette = isDark
+    ? designSystem.darkTheme.colors
+    : designSystem.lightTheme.colors;
+
   const { width } = useWindowDimensions();
+  const normalize = useCallback(
+    (size: number) => {
+      const baseWidth = 375;
+      const scale = Math.min(Math.max(width / baseWidth, 0.7), 1.9);
+      return Math.round(size * scale);
+    },
+    [width]
+  );
+  const styles = useMemo(() => makeStyles(normalize), [normalize]);
+
+  const pageBgTop = isDark ? "#020617" : "#F3F4F6";
+  const pageBgBottom = isDark ? palette.cardBackground : "#F9FAFB";
+  const textPrimary = isDark ? palette.textPrimary : "#111827";
+  const textSecondary = isDark ? palette.textSecondary : "rgba(15,23,42,0.7)";
+  const cardBg = isDark ? "rgba(15,23,42,0.96)" : "#FFFFFF";
+  const cardBorder = isDark
+    ? "rgba(148,163,184,0.4)"
+    : "rgba(15,23,42,0.08)";
+
   const me = auth.currentUser?.uid;
-  const [activatedCount, setActivatedCount] = useState(0);
-  const [claimed, setClaimed] = useState<number[]>([]);
-  const [loading, setLoading] = useState(true);
   const router = useRouter();
 
-  const [rewardBanner, setRewardBanner] = useState<{ visible: boolean; amount: number }>({ visible: false, amount: 0 });
-  const bannerY = React.useRef(new Animated.Value(-80)).current;
-  const [confetti, setConfetti] = useState<{ id: number; x: number; y: number; char: string }[]>([]);
-  const confettiId = React.useRef(0);
+  const [activatedCount, setActivatedCount] = useState(0);
+  const [claimed, setClaimed] = useState<number[]>([]);
+  const [pending, setPending] = useState<number[]>([]);
+  const [loading, setLoading] = useState(true);
+
+  // ✅ État parrain détecté côté filleul
+  const [pendingReferrer, setPendingReferrer] = useState<PendingReferrerState>({
+    status: "idle",
+  });
+
+  const [rewardBanner, setRewardBanner] = useState<{
+    visible: boolean;
+    amount: number;
+  }>({ visible: false, amount: 0 });
+
+  const bannerY = useRef(new Animated.Value(-80)).current;
+  const [confetti, setConfetti] = useState<
+    { id: number; x: number; y: number; char: string }[]
+  >([]);
+  const confettiId = useRef(0);
   const bannerTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const confettiTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const isFetchingRef = useRef(false);
 
-  const appLink = useMemo(() => (me ? buildAppLink(me) : ""), [me]);
-  const webLink = useMemo(() => (me ? buildWebLink(me) : ""), [me]);
+  const src = "settings_shareearn";
+  const appLink = useMemo(() => (me ? buildAppLink(me, src) : ""), [me, src]);
+  const webLink = useMemo(() => (me ? buildWebLink(me, src) : ""), [me, src]);
 
-  const fetchStats = React.useCallback(async () => {
+  // === Toast premium ===
+  const [toast, setToast] = useState<ToastState | null>(null);
+  const toastOpacity = useRef(new Animated.Value(0)).current;
+  const toastTranslateY = useRef(new Animated.Value(10)).current;
+  const toastTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const [reduceMotion, setReduceMotion] = useState(false);
+
+  useEffect(() => {
+    let mounted = true;
+    AccessibilityInfo.isReduceMotionEnabled()
+      .then((v) => mounted && setReduceMotion(!!v))
+      .catch(() => {});
+    const sub = AccessibilityInfo.addEventListener?.(
+      "reduceMotionChanged",
+      (v) => mounted && setReduceMotion(!!v)
+    );
+    return () => {
+      mounted = false;
+      // @ts-ignore RN compat
+      sub?.remove?.();
+    };
+  }, []);
+
+  const showToast = useCallback(
+    (type: ToastType, message: string) => {
+      setToast({ type, message });
+
+      if (toastTimerRef.current) {
+        clearTimeout(toastTimerRef.current);
+        toastTimerRef.current = null;
+      }
+
+      toastOpacity.setValue(0);
+      toastTranslateY.setValue(10);
+
+      Animated.parallel([
+        Animated.timing(toastOpacity, {
+          toValue: 1,
+          duration: reduceMotion ? 0 : 200,
+          easing: Easing.out(Easing.ease),
+          useNativeDriver: true,
+        }),
+        Animated.timing(toastTranslateY, {
+          toValue: 0,
+          duration: reduceMotion ? 0 : 200,
+          easing: Easing.out(Easing.ease),
+          useNativeDriver: true,
+        }),
+      ]).start();
+
+      toastTimerRef.current = setTimeout(() => {
+        Animated.parallel([
+          Animated.timing(toastOpacity, {
+            toValue: 0,
+            duration: reduceMotion ? 0 : 220,
+            easing: Easing.in(Easing.ease),
+            useNativeDriver: true,
+          }),
+          Animated.timing(toastTranslateY, {
+            toValue: 10,
+            duration: reduceMotion ? 0 : 220,
+            easing: Easing.in(Easing.ease),
+            useNativeDriver: true,
+          }),
+        ]).start(() => {
+          setToast((current) =>
+            current && current.message === message ? null : current
+          );
+        });
+      }, TOAST_DURATION);
+    },
+    [reduceMotion, toastOpacity, toastTranslateY]
+  );
+
+  // ✅ Detect parrain (filleul)
+  const fetchPendingReferrer = useCallback(async () => {
+    if (!me) {
+      setPendingReferrer({ status: "idle" });
+      return;
+    }
+
     try {
-       if (isFetchingRef.current) return;
+      const stored = await AsyncStorage.getItem(REF_STORAGE_KEY);
+      const cleanStored = stored?.trim();
+
+      const meRef = doc(db, "users", me);
+      const meSnap = await getDoc(meRef);
+      const meData = meSnap.exists() ? (meSnap.data() as any) : null;
+
+      const linkedReferrerId = meData?.referrerId?.trim?.();
+
+      // Cas 1 : déjà lié en base → on clear le storage, on affiche "linked"
+      if (linkedReferrerId) {
+        if (cleanStored && cleanStored === linkedReferrerId) {
+          await AsyncStorage.multiRemove([
+            "ties_referrer_id",
+            "ties_referrer_src",
+            "ties_referrer_ts",
+          ]);
+        }
+
+        // fetch username du parrain si possible
+        let refUsername: string | undefined;
+        try {
+          const refSnap = await getDoc(doc(db, "users", linkedReferrerId));
+          if (refSnap.exists()) {
+            const rd = refSnap.data() as any;
+            refUsername =
+              rd?.username || rd?.displayName || rd?.name || undefined;
+          }
+        } catch {}
+
+        setPendingReferrer({
+          status: "linked",
+          referrerId: linkedReferrerId,
+          referrerUsername: refUsername,
+        });
+        return;
+      }
+
+      // Cas 2 : storage existe mais pas encore lié → pending
+      if (cleanStored) {
+        let refUsername: string | undefined;
+        try {
+          const refSnap = await getDoc(doc(db, "users", cleanStored));
+          if (refSnap.exists()) {
+            const rd = refSnap.data() as any;
+            refUsername =
+              rd?.username || rd?.displayName || rd?.name || undefined;
+          }
+        } catch {}
+
+        setPendingReferrer({
+          status: "pending",
+          referrerId: cleanStored,
+          referrerUsername: refUsername,
+        });
+        return;
+      }
+
+      setPendingReferrer({ status: "idle" });
+    } catch (e) {
+      console.log("[referral] fetchPendingReferrer error:", e);
+      setPendingReferrer({ status: "idle" });
+    }
+  }, [me]);
+
+  const fetchStats = useCallback(async () => {
+    try {
+      if (!me) {
+        setLoading(false);
+        return;
+      }
+      if (isFetchingRef.current) return;
       isFetchingRef.current = true;
-      if (!me) return;
 
       const meRef = doc(db, "users", me);
       const meSnap = await getDoc(meRef);
 
       let serverCount: number | undefined;
       let serverClaimed: number[] = [];
+      let serverPending: number[] = [];
 
       if (meSnap.exists()) {
         const data = meSnap.data() as any;
         serverCount = data?.referral?.activatedCount;
+
         serverClaimed = Array.isArray(data?.referral?.claimedMilestones)
           ? data.referral.claimedMilestones
           : [];
+
+        serverPending = Array.isArray(data?.referral?.pendingMilestones)
+          ? data.referral.pendingMilestones
+          : [];
+
         setClaimed(serverClaimed);
+        setPending(serverPending);
       }
 
       if (typeof serverCount === "number") {
         setActivatedCount(serverCount);
-        try { await logEvent("share_open" as any); } catch {}
+        try {
+          await logEvent("share_open" as any);
+        } catch {}
         return;
       }
 
-      // Fallback: comptage client
-      const q = query(
+      const qUsers = query(
         collection(db, "users"),
-        where("referrerId", "==", me),
-        where("activated", "==", true)
+        where("referrerId", "==", me)
       );
-      const snap = await getDocs(q);
-      setActivatedCount(snap.size);
-      try { await logEvent("share_open" as any); } catch {}
+      const snap = await getDocs(qUsers);
+
+      const activated = snap.docs.filter((d) => {
+        const u = d.data() as any;
+        return u?.activated === true || u?.referralActivated === true;
+      }).length;
+
+      setActivatedCount(activated);
+
+      try {
+        await logEvent("share_open" as any);
+      } catch {}
     } catch (e: any) {
       console.log("[share] load error:", e?.message ?? e);
-      Alert.alert(t("referral.share.errors.title"), t("referral.share.errors.loadStats"));
+      showToast(
+        "error",
+        String(t("referral.share.errors.loadStats") || "Erreur de chargement")
+      );
     } finally {
       setLoading(false);
       isFetchingRef.current = false;
     }
-  }, [me, t]);
+  }, [me, t, showToast]);
 
-  const showRewardBanner = (amount: number) => {
-    setRewardBanner({ visible: true, amount });
-    Animated.timing(bannerY, { toValue: 0, duration: 280, easing: Easing.out(Easing.cubic), useNativeDriver: true }).start();
-    if (bannerTimerRef.current) clearTimeout(bannerTimerRef.current);
-    bannerTimerRef.current = setTimeout(() => {
-      Animated.timing(bannerY, { toValue: -80, duration: 260, easing: Easing.in(Easing.cubic), useNativeDriver: true }).start(() => {
-        setRewardBanner({ visible: false, amount: 0 });
-      });
-    }, 2200);
-  };
+  const showRewardBanner = useCallback(
+    (amount: number) => {
+      setRewardBanner({ visible: true, amount });
+      Animated.timing(bannerY, {
+        toValue: 0,
+        duration: 280,
+        easing: Easing.out(Easing.cubic),
+        useNativeDriver: true,
+      }).start();
 
-  const fireConfetti = () => {
-    const chars = ["🎉","🎊","🏆","✨","💥","👏"];
-    const batch: typeof confetti = Array.from({ length: 18 }).map(() => ({
+      if (bannerTimerRef.current) clearTimeout(bannerTimerRef.current);
+      bannerTimerRef.current = setTimeout(() => {
+        Animated.timing(bannerY, {
+          toValue: -80,
+          duration: 260,
+          easing: Easing.in(Easing.cubic),
+          useNativeDriver: true,
+        }).start(() => {
+          setRewardBanner({ visible: false, amount: 0 });
+        });
+      }, 2200);
+    },
+    [bannerY]
+  );
+
+  const fireConfetti = useCallback(() => {
+    const chars = ["🎉", "🎊", "🏆", "✨", "💥", "👏"];
+    const baseWidth = Math.max(320, width - 40);
+    const batch = Array.from({ length: 18 }).map(() => ({
       id: ++confettiId.current,
-      x: Math.random() * Math.max(320, width - 40) + 20,
+      x: Math.random() * baseWidth + 20,
       y: -20 - Math.random() * 40,
       char: chars[Math.floor(Math.random() * chars.length)],
     }));
     setConfetti(batch);
+
     if (confettiTimerRef.current) clearTimeout(confettiTimerRef.current);
     confettiTimerRef.current = setTimeout(() => setConfetti([]), 1200);
-  };
+  }, [width]);
 
-  const renderConfetti = () => {
-    return confetti.map((c) => (
-      <Animated.Text
-        key={c.id}
-        style={{
-          position: "absolute",
-          left: c.x,
-          top: c.y,
-          fontSize: 20 + Math.random() * 8,
-          transform: [{
-            translateY: bannerY.interpolate({
-              inputRange: [-80, 0],
-              outputRange: [0, 180 + Math.random() * 60],
-            }),
-          }],
-        }}
-      >
-        {c.char}
-      </Animated.Text>
-    ));
-  };
-
-  const claimMilestone = React.useCallback(
+  const claimMilestone = useCallback(
     async (m: number) => {
       if (!me) return;
       try {
@@ -152,47 +394,100 @@ export default function ShareAndEarn() {
         success();
         showRewardBanner(amount);
         fireConfetti();
-        try { await maybeAskForReview(); } catch {}
-        try { await logEvent("share_claim_success" as any, { milestone: m }); } catch {}
+
+        try {
+          await maybeAskForReview();
+        } catch {}
+        try {
+          await logEvent("share_claim_success" as any, { milestone: m });
+        } catch {}
       } catch (e: any) {
         const msg =
-          e?.message?.includes("already_claimed") ? t("referral.share.errors.alreadyClaimed")
-          : e?.message?.includes("not_reached") ? t("referral.share.errors.notReached")
-          : t("referral.share.errors.claimFailed");
-        Alert.alert(t("referral.share.errors.oops"), msg);
-        try { await logEvent("share_claim_error" as any, { milestone: m, error: String(e?.message || e) }); } catch {}
+          e?.message?.includes("already_claimed")
+            ? t("referral.share.errors.alreadyClaimed")
+            : e?.message?.includes("not_reached")
+            ? t("referral.share.errors.notReached")
+            : e?.message?.includes("not_unlocked")
+            ? t("referral.share.errors.notUnlocked")
+            : t("referral.share.errors.claimFailed");
+
+        showToast("error", String(msg));
+
+        try {
+          await logEvent("share_claim_error" as any, {
+            milestone: m,
+            error: String(e?.message || e),
+          });
+        } catch {}
       }
     },
-    [me, fetchStats, t]
+    [me, fetchStats, t, showRewardBanner, fireConfetti, showToast]
   );
+
+  const renderConfetti = () =>
+    confetti.map((c) => (
+      <Animated.Text
+        key={c.id}
+        style={[
+          styles.confetti,
+          {
+            left: c.x,
+            top: c.y,
+            fontSize: normalize(18 + Math.random() * 8),
+            transform: [
+              {
+                translateY: bannerY.interpolate({
+                  inputRange: [-80, 0],
+                  outputRange: [0, 180 + Math.random() * 60],
+                }),
+              },
+            ],
+          },
+        ]}
+      >
+        {c.char}
+      </Animated.Text>
+    ));
 
   useEffect(() => {
     fetchStats();
+    fetchPendingReferrer();
     return () => {
       if (bannerTimerRef.current) clearTimeout(bannerTimerRef.current);
       if (confettiTimerRef.current) clearTimeout(confettiTimerRef.current);
+      if (toastTimerRef.current) clearTimeout(toastTimerRef.current);
     };
-  }, [fetchStats]);
+  }, [fetchStats, fetchPendingReferrer]);
 
   useFocusEffect(
-    React.useCallback(() => {
+    useCallback(() => {
       setLoading(true);
       fetchStats();
-    }, [fetchStats])
+      fetchPendingReferrer();
+    }, [fetchStats, fetchPendingReferrer])
   );
 
-  const nextMilestone = React.useMemo(() => {
+  const nextMilestone = useMemo(() => {
     for (const m of MILESTONES) if (activatedCount < m) return m;
     return null;
   }, [activatedCount]);
 
   const onCopy = async (text: string, kind: "app" | "web") => {
-     tap();
+    tap();
     try {
       await Clipboard.setStringAsync(text);
       success();
-      Alert.alert(t("referral.share.copiedTitle"), t("referral.share.copiedMsg"));
-      try { await logEvent("share_link_copied", { kind }); } catch {}
+      showToast(
+        "success",
+        String(
+          t("referral.share.copiedMsg", {
+            defaultValue: "Lien copié dans le presse-papiers",
+          })
+        )
+      );
+      try {
+        await logEvent("share_link_copied", { kind });
+      } catch {}
     } catch {}
   };
 
@@ -200,302 +495,874 @@ export default function ShareAndEarn() {
     tap();
     try {
       const appName = getAppNameFallback();
+
+      // 1) Récupère la trad
+      let message = t("referral.share.nativeShare.message", {
+        appName,
+        appLink,
+        webLink,
+      });
+
+      // 2) Sécurise
+      if (typeof message !== "string") {
+        message = String(message ?? "");
+      }
+
+      // 3) Remplace "\n" textuels par vrais retours à la ligne
+      message = message.replace(/\\n/g, "\n").trim();
+
+      // 4) Fallback
+      if (!message.length) {
+        message = `${appName}\n\n${webLink}\n${appLink}`;
+      }
+
       await Share.share({
         title: t("referral.share.nativeShare.title", { appName }),
-        message: t("referral.share.nativeShare.message", { appName, appLink, webLink }),
+        message,
       });
+
       success();
-      try { await logEvent("share_native_opened"); } catch {}
+      try {
+        await logEvent("share_native_opened");
+      } catch {}
     } catch (e: any) {
       if (e?.message) console.log("Share error:", e.message);
     }
   };
 
-  // ===== UI helpers: Progress + LinkRow =====
   const Progress = ({ value, max }: { value: number; max: number }) => {
     const pct = Math.max(0, Math.min(1, max > 0 ? value / max : 0));
     return (
-      <View style={styles.progressWrap} accessibilityRole="progressbar" accessibilityValue={{ now: Math.round(pct * 100), min: 0, max: 100 }}>
-        <Animated.View style={[styles.progressBar, { width: `${pct * 100}%` }]} />
+      <View
+        style={[
+          styles.progressWrap,
+          {
+            backgroundColor: isDark
+              ? "rgba(148,163,184,0.18)"
+              : "rgba(15,23,42,0.05)",
+            borderColor: isDark
+              ? "rgba(148,163,184,0.5)"
+              : "rgba(15,23,42,0.12)",
+          },
+        ]}
+        accessibilityRole={"progressbar" as any}
+        accessibilityValue={{ now: Math.round(pct * 100), min: 0, max: 100 }}
+      >
+        <View
+          style={[
+            styles.progressBar,
+            {
+              width: `${pct * 100}%`,
+              backgroundColor: palette.primary,
+            },
+          ]}
+        />
       </View>
     );
   };
 
   const LinkRow = React.memo(function LinkRow({
-    label, value, onCopyPress
-  }: { label: string; value: string; onCopyPress: () => void }) {
+    label,
+    value,
+    onCopyPress,
+  }: {
+    label: string;
+    value: string;
+    onCopyPress: () => void;
+  }) {
     return (
-      <>
+      <View style={{ marginTop: 8 }}>
         <View style={styles.row}>
-          <Text style={styles.label}>{label}</Text>
-          <TouchableOpacity style={styles.copyBtn} onPress={onCopyPress} accessibilityLabel={label}>
-            <Ionicons name="copy-outline" size={18} />
-            <Text style={styles.copyTxt}>{t("referral.share.copy")}</Text>
+          <Text style={[styles.label, { color: textSecondary }]}>{label}</Text>
+          <TouchableOpacity
+            style={[
+              styles.copyBtn,
+              {
+                backgroundColor: isDark ? "rgba(15,23,42,0.9)" : "#FFE9A6",
+                borderColor: isDark ? "rgba(148,163,184,0.7)" : "#FFB800",
+              },
+            ]}
+            onPress={onCopyPress}
+            accessibilityLabel={label}
+            accessibilityRole="button"
+          >
+            <Ionicons
+              name="copy-outline"
+              size={normalize(16)}
+              color={isDark ? "#F9FAFB" : "#111827"}
+            />
+            <Text
+              style={[
+                styles.copyTxt,
+                { color: isDark ? "#F9FAFB" : "#111827" },
+              ]}
+            >
+              {t("referral.share.copy")}
+            </Text>
           </TouchableOpacity>
         </View>
-        <Text numberOfLines={2} selectable style={styles.link}>{value || "—"}</Text>
-      </>
+
+        <Text
+          numberOfLines={2}
+          selectable
+          style={[styles.link, { color: textPrimary }]}
+        >
+          {value || "—"}
+        </Text>
+      </View>
     );
   });
 
-  // ===== Non-auth guard =====
+  // 🔒 Cas non connecté
   if (!me) {
     return (
-      <View style={[styles.container, { alignItems: "center", justifyContent: "center" }]}>
-        <Ionicons name="lock-closed-outline" size={28} color="#111" />
-        <Text style={[styles.title, { marginTop: 8 }]}>{t("referral.share.auth.title", { defaultValue: "Connexion requise" })}</Text>
-        <Text style={styles.subtitle}>{t("referral.share.auth.subtitle", { defaultValue: "Connecte-toi pour accéder à Share & Earn." })}</Text>
-        <TouchableOpacity onPress={() => router.replace("/login")} style={[styles.shareBtn, { marginTop: 16 }]}>
-          <Ionicons name="log-in-outline" size={18} color="#111" />
-          <Text style={styles.shareTxt}>{t("login", { defaultValue: "Se connecter" })}</Text>
-        </TouchableOpacity>
-      </View>
+      <SafeAreaView
+        style={[styles.safeArea, { backgroundColor: pageBgTop }]}
+        edges={["top", "left", "right", "bottom"]}
+      >
+        <LinearGradient
+          colors={[pageBgTop, pageBgBottom]}
+          style={[styles.container, styles.center]}
+        >
+          <View
+            style={[
+              styles.card,
+              {
+                borderWidth: 1,
+                borderColor: cardBorder,
+                backgroundColor: cardBg,
+                alignItems: "center",
+                maxWidth: 340,
+              },
+            ]}
+          >
+            <View
+              style={[
+                styles.lockCircle,
+                {
+                  backgroundColor: isDark
+                    ? "rgba(148,163,184,0.18)"
+                    : "#FFF1C9",
+                },
+              ]}
+            >
+              <Ionicons
+                name="lock-closed-outline"
+                size={normalize(24)}
+                color={palette.primary}
+              />
+            </View>
+
+            <Text
+              style={[
+                styles.title,
+                { marginTop: 0, color: textPrimary, textAlign: "center" },
+              ]}
+            >
+              {t("referral.share.auth.title", {
+                defaultValue: "Connexion requise",
+              })}
+            </Text>
+            <Text
+              style={[
+                styles.subtitle,
+                {
+                  color: textSecondary,
+                  textAlign: "center",
+                  marginTop: 6,
+                },
+              ]}
+            >
+              {t("referral.share.auth.subtitle", {
+                defaultValue: "Connecte-toi pour accéder à Share & Earn.",
+              })}
+            </Text>
+
+            <TouchableOpacity
+              onPress={() => router.replace("/login")}
+              style={[
+                styles.shareBtn,
+                {
+                  marginTop: 18,
+                  backgroundColor: palette.primary,
+                  borderColor: isDark ? "#020617" : "#111827",
+                },
+              ]}
+              accessibilityRole="button"
+            >
+              <Ionicons
+                name="log-in-outline"
+                size={normalize(16)}
+                color={isDark ? "#020617" : "#111827"}
+              />
+              <Text
+                style={[
+                  styles.shareTxt,
+                  { color: isDark ? "#020617" : "#111827" },
+                ]}
+              >
+                {t("login", { defaultValue: "Se connecter" })}
+              </Text>
+            </TouchableOpacity>
+          </View>
+        </LinearGradient>
+      </SafeAreaView>
     );
   }
 
   return (
-    <SafeAreaView style={styles.safeArea} edges={["top", "left", "right"]}>
-    <View style={styles.container}>
-      {rewardBanner.visible && (
-        <Animated.View
-          style={{
-            position: "absolute",
-            top: 12,
-            left: 12,
-            right: 12,
-            transform: [{ translateY: bannerY }],
-            backgroundColor: "#111",
-            borderColor: "#FFB800",
-            borderWidth: 2,
-            borderRadius: 14,
-            paddingVertical: 10,
-            paddingHorizontal: 14,
-            zIndex: 99,
-          }}
-        >
-          <Text style={{ color: "#FFB800", fontWeight: "800", fontSize: 16 }}>
-            {t("referral.share.banner.amount", { amount: rewardBanner.amount })}
-          </Text>
-          <Text style={{ color: "#fff", marginTop: 2 }}>
-            {t("referral.share.banner.message")}
-          </Text>
-        </Animated.View>
-      )}
-
-      {/* Confettis emoji overlay */}
-      <View pointerEvents="none" style={{ position: "absolute", top: 0, left: 0, right: 0, bottom: 0 }}>
-        {renderConfetti()}
-      </View>
-
-      <ScrollView
-        contentContainerStyle={styles.scrollContent}
-        showsVerticalScrollIndicator={false}
-        keyboardShouldPersistTaps="handled"
+    <SafeAreaView
+      style={[styles.safeArea, { backgroundColor: pageBgTop }]}
+      edges={["top", "left", "right", "bottom"]}
+    >
+      <LinearGradient
+        colors={[pageBgTop, pageBgBottom]}
+        start={{ x: 0, y: 0 }}
+        end={{ x: 0.9, y: 1 }}
+        style={styles.container}
       >
-        <Text style={styles.title}>{t("referral.share.title")}</Text>
-        <Text style={styles.subtitle}>{t("referral.share.subtitle")}</Text>
+        {rewardBanner.visible && (
+          <Animated.View
+            style={[
+              styles.banner,
+              {
+                transform: [{ translateY: bannerY }],
+                backgroundColor: isDark ? "#020617" : "#0F172A",
+                borderColor: palette.primary,
+              },
+            ]}
+          >
+            <Text style={[styles.bannerAmount, { color: palette.primary }]}>
+              {t("referral.share.banner.amount", {
+                amount: rewardBanner.amount,
+              })}
+            </Text>
+            <Text style={styles.bannerMsg}>
+              {t("referral.share.banner.message")}
+            </Text>
+          </Animated.View>
+        )}
 
-      <View style={styles.card}>
-          <Text style={styles.sectionTitle}>{t("referral.share.linksTitle")}</Text>
-          <LinkRow label={t("referral.share.linkApp")} value={appLink} onCopyPress={() => onCopy(appLink, "app")} />
-          <LinkRow label={t("referral.share.linkWeb")} value={webLink} onCopyPress={() => onCopy(webLink, "web")} />
-          <TouchableOpacity style={styles.shareBtn} onPress={onNativeShare}>
-            <Ionicons name="share-social-outline" size={18} color="#111" />
-            <Text style={styles.shareTxt}>{t("referral.share.shareBtn")}</Text>
-          </TouchableOpacity>
+        <View pointerEvents="none" style={StyleSheet.absoluteFill}>
+          {renderConfetti()}
         </View>
 
-      <View style={{ height: 8 }} />
-        <TouchableOpacity
-          onPress={() => router.push("/referral/ShareCard")}
-          style={styles.cardCta}
-          accessibilityLabel={t("referral.share.cardCta")}
-          testID="open-share-card"
+        <ScrollView
+          contentContainerStyle={styles.scrollContent}
+          showsVerticalScrollIndicator={false}
+          keyboardShouldPersistTaps="handled"
         >
-          <Ionicons name="image-outline" size={18} color="#111" />
-          <Text style={styles.cardCtaTxt}>{t("referral.share.cardCta")}</Text>
-        </TouchableOpacity>
+          <Text style={[styles.title, { color: textPrimary }]}>
+            {t("referral.share.title")}
+          </Text>
+          <Text style={[styles.subtitle, { color: textSecondary }]}>
+            {t("referral.share.subtitle")}
+          </Text>
 
-       <View style={styles.card}>
-          <Text style={styles.sectionTitle}>{t("referral.share.statsTitle")}</Text>
-          {loading ? (
-            <View style={styles.skeletonRow} accessible accessibilityLabel={t("loading", { defaultValue: "Chargement" })}>
-              <View style={styles.skeletonDot} />
-              <View style={styles.skeletonBar} />
-            </View>
-          ) : (
-            <Text style={styles.bigCount}>
-              {activatedCount} <Text style={styles.small}>{t("referral.share.bigCountSuffix")}</Text>
-            </Text>
-          )}
-
-        {!!nextMilestone && !loading && (
-            <>
-              <Progress value={activatedCount} max={nextMilestone} />
-              <Text style={styles.tip}>
-                {t("referral.share.tipNext", {
-                  remaining: Math.max(0, nextMilestone - activatedCount),
-                  milestone: nextMilestone,
-                })}
-              </Text>
-            </>
-          )}
-          {!nextMilestone && !loading && (
-            <Text style={styles.tip}>{t("referral.share.tipAllReached")}</Text>
-          )}
-
-          <View style={styles.milestones}>
-            {MILESTONES.map((m) => {
-              const reached = activatedCount >= m;
-              const isClaimed = claimed.includes(m);
-              return (
+          {/* ✅ Bloc filleul : parrain détecté */}
+          {pendingReferrer.status !== "idle" && (
+            <View
+              style={[
+                styles.card,
+                {
+                  backgroundColor: cardBg,
+                  borderColor: isDark ? cardBorder : "#22C55E",
+                  borderWidth: 1.5,
+                },
+              ]}
+            >
+              <View style={{ flexDirection: "row", alignItems: "center" }}>
                 <View
-                  key={m}
                   style={[
-                    styles.milestone,
-                    reached && styles.milestoneReached,
-                    isClaimed && { borderColor: "#22C55E", backgroundColor: "#DCFCE7" },
+                    styles.lockCircle,
+                    {
+                      width: normalize(40),
+                      height: normalize(40),
+                      borderRadius: normalize(20),
+                      marginBottom: 0,
+                      backgroundColor: isDark
+                        ? "rgba(34,197,94,0.15)"
+                        : "#DCFCE7",
+                    },
                   ]}
                 >
+                  <Ionicons
+                    name={
+                      pendingReferrer.status === "pending"
+                        ? "hourglass-outline"
+                        : "checkmark-circle-outline"
+                    }
+                    size={normalize(20)}
+                    color="#22C55E"
+                  />
+                </View>
+
+                <View style={{ marginLeft: 10, flex: 1 }}>
                   <Text
                     style={[
-                      styles.milestoneTxt,
-                      reached && styles.milestoneTxtReached,
+                      styles.sectionTitle,
+                      { color: textPrimary, marginBottom: 2 },
                     ]}
                   >
-                    {t("referral.share.milestoneLabel", { count: m })}
-                    {isClaimed ? " ✅" : ""}
+                    {pendingReferrer.status === "pending"
+                      ? t("referral.invited.title", {
+                          defaultValue: "Invitation détectée 🎁",
+                        })
+                      : t("referral.invited.linkedTitle", {
+                          defaultValue: "Parrainage activé ✅",
+                        })}
                   </Text>
 
-                  {reached && !isClaimed && (
-                    <TouchableOpacity
-                      style={{
-                        marginTop: 6,
-                        alignSelf: "flex-start",
-                        paddingHorizontal: 10,
-                        paddingVertical: 6,
-                        borderRadius: 999,
-                        borderWidth: 1,
-                        borderColor: "#111",
-                        backgroundColor: "#FFB800",
-                      }}
-                      onPress={() => claimMilestone(m)}
-                      accessibilityRole="button"
-                      accessibilityLabel={t("referral.share.claim")}
+                  <Text
+                    style={[
+                      styles.tip,
+                      { color: textSecondary, marginTop: 0 },
+                    ]}
+                  >
+                    {pendingReferrer.status === "pending"
+                      ? t("referral.invited.body", {
+                          defaultValue:
+                            "Tu as été invité par un utilisateur. Ta récompense sera activée automatiquement après ton inscription.",
+                        })
+                      : t("referral.invited.linkedBody", {
+                          defaultValue:
+                            "Ton parrainage est lié. Merci d’avoir rejoint ChallengeTies !",
+                        })}
+                  </Text>
+
+                  {!!pendingReferrer.referrerUsername && (
+                    <Text
+                      style={[
+                        styles.tip,
+                        { color: textPrimary, marginTop: 6 },
+                      ]}
                     >
-                      <Text style={{ fontWeight: "800", color: "#111" }}>
-                        {t("referral.share.claim")}
+                      {t("referral.invited.by", {
+                        defaultValue: "Parrain :",
+                      })}{" "}
+                      <Text style={{ fontWeight: "900" }}>
+                        @{pendingReferrer.referrerUsername}
                       </Text>
-                    </TouchableOpacity>
+                    </Text>
                   )}
                 </View>
-              );
-            })}
+              </View>
+            </View>
+          )}
+
+          {/* Liens de parrainage */}
+          <View
+            style={[
+              styles.card,
+              {
+                backgroundColor: cardBg,
+                borderColor: isDark ? cardBorder : "#FFB800",
+              },
+            ]}
+          >
+            <Text style={[styles.sectionTitle, { color: textPrimary }]}>
+              {t("referral.share.linksTitle")}
+            </Text>
+
+            <LinkRow
+              label={t("referral.share.linkApp")}
+              value={appLink}
+              onCopyPress={() => onCopy(appLink, "app")}
+            />
+            <LinkRow
+              label={t("referral.share.linkWeb")}
+              value={webLink}
+              onCopyPress={() => onCopy(webLink, "web")}
+            />
+
+            <TouchableOpacity
+              style={[
+                styles.shareBtn,
+                {
+                  backgroundColor: palette.primary,
+                  borderColor: isDark ? "#020617" : "#111827",
+                },
+              ]}
+              onPress={onNativeShare}
+              accessibilityRole="button"
+            >
+              <Ionicons
+                name="share-social-outline"
+                size={normalize(16)}
+                color={isDark ? "#020617" : "#111827"}
+              />
+              <Text
+                style={[
+                  styles.shareTxt,
+                  { color: isDark ? "#020617" : "#111827" },
+                ]}
+              >
+                {t("referral.share.shareBtn")}
+              </Text>
+            </TouchableOpacity>
           </View>
-        </View>
-      <TouchableOpacity
-          onPress={() => router.push("/referral/History")}
-          style={[styles.cardCta, { marginTop: 8 }]}
-          accessibilityLabel={t("referral.share.historyCta")}
-          testID="open-referral-history"
-        >
-          <Ionicons name="people-outline" size={18} color="#111" />
-          <Text style={styles.cardCtaTxt}>{t("referral.share.historyCta")}</Text>
-        </TouchableOpacity>
-      </ScrollView>
-    </View>
+
+          <TouchableOpacity
+            onPress={() => router.push("/referral/ShareCard")}
+            style={[
+              styles.cardCta,
+              {
+                backgroundColor: isDark ? "rgba(15,23,42,0.9)" : "#FFF1C9",
+                borderColor: isDark ? cardBorder : "#FFB800",
+              },
+            ]}
+            accessibilityLabel={t("referral.share.cardCta")}
+            accessibilityRole="button"
+            testID="open-share-card"
+          >
+            <Ionicons
+              name="image-outline"
+              size={normalize(16)}
+              color={isDark ? "#E5E7EB" : "#111827"}
+            />
+            <Text style={[styles.cardCtaTxt, { color: textPrimary }]}>
+              {t("referral.share.cardCta")}
+            </Text>
+          </TouchableOpacity>
+
+          {/* Stats & paliers */}
+          <View
+            style={[
+              styles.card,
+              {
+                backgroundColor: cardBg,
+                borderColor: isDark ? cardBorder : "#FFB800",
+              },
+            ]}
+          >
+            <Text style={[styles.sectionTitle, { color: textPrimary }]}>
+              {t("referral.share.statsTitle")}
+            </Text>
+
+            {loading ? (
+              <View
+                style={styles.skeletonRow}
+                accessible
+                accessibilityLabel={t("loading", {
+                  defaultValue: "Chargement",
+                })}
+              >
+                <View
+                  style={[
+                    styles.skeletonDot,
+                    {
+                      backgroundColor: isDark
+                        ? "rgba(148,163,184,0.5)"
+                        : "#EEE2B7",
+                    },
+                  ]}
+                />
+                <View
+                  style={[
+                    styles.skeletonBar,
+                    {
+                      backgroundColor: isDark
+                        ? "rgba(148,163,184,0.25)"
+                        : "#F5E4B5",
+                    },
+                  ]}
+                />
+              </View>
+            ) : (
+              <Text style={[styles.bigCount, { color: textPrimary }]}>
+                {activatedCount}{" "}
+                <Text style={[styles.small, { color: textSecondary }]}>
+                  {t("referral.share.bigCountSuffix")}
+                </Text>
+              </Text>
+            )}
+
+            {!!nextMilestone && !loading && (
+              <>
+                <Progress value={activatedCount} max={nextMilestone} />
+                <Text style={[styles.tip, { color: textSecondary }]}>
+                  {t("referral.share.tipNext", {
+                    remaining: Math.max(0, nextMilestone - activatedCount),
+                    milestone: nextMilestone,
+                  })}
+                </Text>
+              </>
+            )}
+
+            {!nextMilestone && !loading && (
+              <Text style={[styles.tip, { color: textSecondary }]}>
+                {t("referral.share.tipAllReached")}
+              </Text>
+            )}
+
+            <View style={styles.milestones}>
+              {MILESTONES.map((m) => {
+                const reached = activatedCount >= m;
+                const isClaimed = claimed.includes(m);
+                const isPending = pending.includes(m);
+
+                const isClaimable =
+                  reached && !isClaimed && (isPending || pending.length === 0);
+
+                const bg = isClaimed
+                  ? "#DCFCE7"
+                  : reached
+                  ? "#D9F99D"
+                  : isDark
+                  ? "rgba(15,23,42,0.9)"
+                  : "#FFF1C9";
+
+                const border = isClaimed
+                  ? "#22C55E"
+                  : reached
+                  ? "#65A30D"
+                  : "#FFB800";
+
+                const textColor = isClaimed
+                  ? "#14532D"
+                  : reached
+                  ? "#2D5900"
+                  : "#7C5800";
+
+                return (
+                  <View
+                    key={m}
+                    style={[
+                      styles.milestone,
+                      { borderColor: border, backgroundColor: bg },
+                    ]}
+                  >
+                    <Text
+                      style={[styles.milestoneTxt, { color: textColor }]}
+                    >
+                      {t("referral.share.milestoneLabel", { count: m })}
+                      {isClaimed ? " ✅" : ""}
+                    </Text>
+
+                    {isClaimable && (
+                      <TouchableOpacity
+                        style={styles.claimBtn}
+                        onPress={() => claimMilestone(m)}
+                        accessibilityRole="button"
+                        accessibilityLabel={t("referral.share.claim")}
+                      >
+                        <Text style={styles.claimTxt}>
+                          {t("referral.share.claim")}
+                        </Text>
+                      </TouchableOpacity>
+                    )}
+                  </View>
+                );
+              })}
+            </View>
+          </View>
+
+          <TouchableOpacity
+            onPress={() => router.push("/referral/History")}
+            style={[
+              styles.cardCta,
+              {
+                marginTop: 8,
+                backgroundColor: isDark ? "rgba(15,23,42,0.9)" : "#FFF1C9",
+                borderColor: isDark ? cardBorder : "#FFB800",
+              },
+            ]}
+            accessibilityLabel={t("referral.share.historyCta")}
+            accessibilityRole="button"
+            testID="open-referral-history"
+          >
+            <Ionicons
+              name="people-outline"
+              size={normalize(16)}
+              color={isDark ? "#E5E7EB" : "#111827"}
+            />
+            <Text style={[styles.cardCtaTxt, { color: textPrimary }]}>
+              {t("referral.share.historyCta")}
+            </Text>
+          </TouchableOpacity>
+        </ScrollView>
+
+        {/* Toast premium bottom */}
+        {toast && (
+          <Animated.View
+            pointerEvents="box-none"
+            style={[
+              styles.toastContainer,
+              {
+                opacity: toastOpacity,
+                transform: [{ translateY: toastTranslateY }],
+              },
+            ]}
+          >
+            <View
+              style={[
+                styles.toastInner,
+                toast.type === "success" && styles.toastSuccess,
+                toast.type === "error" && styles.toastError,
+                toast.type === "info" && styles.toastInfo,
+              ]}
+            >
+              <Text style={styles.toastIcon}>
+                {
+                  {
+                    success: "✅",
+                    error: "⚠️",
+                    info: "ℹ️",
+                  }[toast.type]
+                }
+              </Text>
+              <Text style={styles.toastText} numberOfLines={3}>
+                {toast.message}
+              </Text>
+            </View>
+          </Animated.View>
+        )}
+      </LinearGradient>
     </SafeAreaView>
   );
 }
 
-const styles = StyleSheet.create({
-  container: { flex: 1, backgroundColor: "#FFF8E7" },
-  scrollContent: {
-    padding: P,
-    paddingBottom: P * 4,
-    rowGap: P,
-    paddingTop: P
-  },
-  safeArea: {
-    flex: 1,
-    backgroundColor: "#FFF8E7",
-  },
-  title: { fontSize: 24, fontWeight: "700", color: "#111" },
-  subtitle: { fontSize: 14, color: "#333" },
-  card: {
-    backgroundColor: "#fff",
-    borderRadius: 16,
-    padding: P,
-    borderWidth: 2,
-    borderColor: "#FFB800",
-    shadowColor: "#000",
-    shadowOffset: { width: 0, height: 6 },
-    shadowOpacity: 0.15,
-    shadowRadius: 8,
-    elevation: 6,
-    rowGap: 8
-  },
-  cardCta: {
-    alignSelf: "flex-start",
-    flexDirection: "row",
-    alignItems: "center",
-    gap: 8,
-    borderRadius: 999,
-    paddingHorizontal: 14,
-    paddingVertical: 10,
-    backgroundColor: "#FFF1C9",
-    borderWidth: 1,
-    borderColor: "#FFB800",
-  },
-  cardCtaTxt: { fontWeight: "800", color: "#111" },
-  sectionTitle: { fontSize: 16, fontWeight: "700", color: "#111", marginBottom: 6 },
-  row: { flexDirection: "row", alignItems: "center", justifyContent: "space-between" },
-  label: { fontSize: 14, color: "#333" },
- link: { fontSize: 12, color: "#111", opacity: 0.9, marginTop: 2 },
-  copyBtn: {
-    flexDirection: "row", alignItems: "center",
-    gap: 6, paddingHorizontal: 10, paddingVertical: 6,
-    borderRadius: 999, backgroundColor: "#FFE9A6", borderWidth: 1, borderColor: "#FFB800",
-  },
-  copyTxt: { color: "#111", fontWeight: "600" },
-  shareBtn: {
-    marginTop: 8,
-    alignSelf: "flex-start",
-    flexDirection: "row", alignItems: "center", gap: 8,
-    backgroundColor: "#FFB800", borderColor: "#111", borderWidth: 1.5,
-    paddingHorizontal: 14, paddingVertical: 10, borderRadius: 999,
-  },
-  shareTxt: { color: "#111", fontWeight: "700" },
-  bigCount: { fontSize: 28, fontWeight: "800", color: "#111", marginTop: 4 },
-  small: { fontSize: 14, fontWeight: "600", color: "#333" },
-  tip: { fontSize: 13, color: "#333", marginTop: 4 },
-  bold: { fontWeight: "800", color: "#111" },
-  milestones: { flexDirection: "row", gap: 8, marginTop: 8, flexWrap: "wrap" },
-  milestone: {
-    paddingHorizontal: 10, paddingVertical: 6,
-    borderRadius: 999, borderWidth: 1, borderColor: "#FFB800",
-    backgroundColor: "#FFF1C9",
-  },
-  milestoneReached: { backgroundColor: "#D9F99D", borderColor: "#65A30D" },
-  milestoneTxt: { fontSize: 12, color: "#7C5800", fontWeight: "700" },
-  milestoneTxtReached: { color: "#2D5900" },
-  // Skeleton + Progress
-  skeletonRow: {
-    flexDirection: "row",
-    alignItems: "center",
-    gap: 10,
-    paddingVertical: 4
-  },
-  skeletonDot: { width: 14, height: 14, borderRadius: 7, backgroundColor: "#EEE2B7" },
-  skeletonBar: { flex: 1, height: 12, borderRadius: 6, backgroundColor: "#F5E4B5" },
-  progressWrap: {
-    height: 10,
-    backgroundColor: "#FFF1C9",
-    borderRadius: 999,
-    overflow: "hidden",
-    borderWidth: 1,
-    borderColor: "#FFB800",
-    marginTop: 8
-  },
-  progressBar: { height: "100%", backgroundColor: "#FFB800" }
-});
+const makeStyles = (normalize: (n: number) => number) =>
+  StyleSheet.create({
+    container: { flex: 1 },
+    safeArea: { flex: 1 },
+
+    center: { alignItems: "center", justifyContent: "center" },
+
+    scrollContent: {
+      padding: P,
+      paddingBottom: P * 4,
+      paddingTop: P,
+    },
+
+    title: {
+      fontSize: normalize(22),
+      fontWeight: "800",
+    },
+    subtitle: {
+      fontSize: normalize(13),
+      marginTop: 4,
+      fontWeight: "500",
+    },
+
+    card: {
+      borderRadius: 16,
+      padding: P,
+      borderWidth: 2,
+      shadowColor: "#000",
+      shadowOffset: { width: 0, height: 6 },
+      shadowOpacity: 0.08,
+      shadowRadius: 8,
+      elevation: 4,
+      marginTop: P,
+    },
+
+    sectionTitle: {
+      fontSize: normalize(15),
+      fontWeight: "800",
+      marginBottom: 6,
+    },
+
+    row: {
+      flexDirection: "row",
+      alignItems: "center",
+      justifyContent: "space-between",
+    },
+    label: { fontSize: normalize(13) },
+    link: {
+      fontSize: normalize(11),
+      opacity: 0.95,
+      marginTop: 2,
+    },
+
+    copyBtn: {
+      flexDirection: "row",
+      alignItems: "center",
+      paddingHorizontal: 10,
+      paddingVertical: 6,
+      borderRadius: 999,
+      borderWidth: 1,
+    },
+    copyTxt: {
+      fontWeight: "700",
+      fontSize: normalize(12),
+      marginLeft: 6,
+    },
+
+    shareBtn: {
+      marginTop: 10,
+      alignSelf: "flex-start",
+      flexDirection: "row",
+      alignItems: "center",
+      borderWidth: 1.5,
+      paddingHorizontal: 14,
+      paddingVertical: 10,
+      borderRadius: 999,
+    },
+    shareTxt: {
+      fontWeight: "800",
+      marginLeft: 8,
+      fontSize: normalize(13),
+    },
+
+    cardCta: {
+      alignSelf: "flex-start",
+      flexDirection: "row",
+      alignItems: "center",
+      borderRadius: 999,
+      paddingHorizontal: 14,
+      paddingVertical: 10,
+      borderWidth: 1,
+      marginTop: P,
+    },
+    cardCtaTxt: {
+      fontWeight: "800",
+      marginLeft: 8,
+      fontSize: normalize(13),
+    },
+
+    bigCount: {
+      fontSize: normalize(26),
+      fontWeight: "900",
+      marginTop: 4,
+    },
+    small: {
+      fontSize: normalize(13),
+      fontWeight: "700",
+    },
+    tip: {
+      fontSize: normalize(12),
+      marginTop: 6,
+      fontWeight: "600",
+    },
+
+    milestones: {
+      flexDirection: "row",
+      flexWrap: "wrap",
+      marginTop: 10,
+    },
+    milestone: {
+      paddingHorizontal: 10,
+      paddingVertical: 6,
+      borderRadius: 999,
+      borderWidth: 1,
+      marginRight: 8,
+      marginBottom: 8,
+    },
+    milestoneTxt: {
+      fontSize: normalize(11),
+      fontWeight: "800",
+    },
+
+    claimBtn: {
+      marginTop: 6,
+      alignSelf: "flex-start",
+      paddingHorizontal: 10,
+      paddingVertical: 6,
+      borderRadius: 999,
+      borderWidth: 1,
+      borderColor: "#111827",
+      backgroundColor: "#FFB800",
+    },
+    claimTxt: {
+      fontWeight: "900",
+      color: "#111827",
+      fontSize: normalize(11),
+    },
+
+    skeletonRow: {
+      flexDirection: "row",
+      alignItems: "center",
+      paddingVertical: 4,
+      marginTop: 6,
+    },
+    skeletonDot: { width: 14, height: 14, borderRadius: 7 },
+    skeletonBar: { flex: 1, height: 12, borderRadius: 6, marginLeft: 10 },
+
+    progressWrap: {
+      height: 10,
+      borderRadius: 999,
+      overflow: "hidden",
+      borderWidth: 1,
+      marginTop: 8,
+    },
+    progressBar: { height: "100%" },
+
+    banner: {
+      position: "absolute",
+      top: 12,
+      left: 12,
+      right: 12,
+      borderWidth: 2,
+      borderRadius: 14,
+      paddingVertical: 10,
+      paddingHorizontal: 14,
+      zIndex: 99,
+    },
+    bannerAmount: {
+      fontWeight: "900",
+      fontSize: normalize(15),
+    },
+    bannerMsg: {
+      color: "#F9FAFB",
+      marginTop: 2,
+      fontWeight: "600",
+      fontSize: normalize(12),
+    },
+
+    confetti: {
+      position: "absolute",
+    },
+
+    lockCircle: {
+      width: 56,
+      height: 56,
+      borderRadius: 28,
+      alignItems: "center",
+      justifyContent: "center",
+      marginBottom: 12,
+    },
+
+    // Toast
+    toastContainer: {
+      position: "absolute",
+      left: P,
+      right: P,
+      bottom: P * 2.5,
+      alignItems: "center",
+      justifyContent: "center",
+    },
+    toastInner: {
+      flexDirection: "row",
+      alignItems: "center",
+      paddingHorizontal: 12,
+      paddingVertical: 8,
+      borderRadius: 999,
+      backgroundColor: "rgba(15,23,42,0.95)",
+      shadowColor: "#000",
+      shadowOffset: { width: 0, height: 4 },
+      shadowOpacity: 0.25,
+      shadowRadius: 8,
+      elevation: 8,
+    },
+    toastText: {
+      marginLeft: 8,
+      fontSize: normalize(12),
+      fontWeight: "700",
+      color: "#F9FAFB",
+      flexShrink: 1,
+    },
+    toastSuccess: {
+      backgroundColor: "#16A34A",
+    },
+    toastError: {
+      backgroundColor: "#DC2626",
+    },
+    toastInfo: {
+      backgroundColor: "#0F172A",
+    },
+    toastIcon: {
+      fontSize: normalize(14),
+      color: "#F9FAFB",
+    },
+  });

@@ -15,9 +15,9 @@ const ANDROID_STORE_URL =
   "https://play.google.com/store/apps/details?id=com.mxcrts.ChallengeTies";
 
 // Bots (FB/Twitter/WhatsApp/etc.)
+// ↑ liste élargie pour sécuriser l'aperçu OG sur un max de plateformes
 const BOT_UA =
-  /(facebookexternalhit|Twitterbot|Slackbot|WhatsApp|TelegramBot|LinkedInBot|Discordbot|Pinterest|SkypeUriPreview|Googlebot|bingbot)/i;
-
+  /(facebookexternalhit|Twitterbot|Slackbot|WhatsApp|TelegramBot|LinkedInBot|Discordbot|DiscordBot|Pinterest|SkypeUriPreview|Googlebot|bingbot)/i;
 const INV = " "; // espace non vide pour éviter les fallbacks titre/desc
 
 /** =========================
@@ -39,9 +39,18 @@ const I18N = {
 } as const;
 
 
+type LangKey = keyof typeof I18N;
+
+/**
+ * Normalise la langue :
+ *   - gère fr / fr-FR / fr_fr
+ *   - fallback propre sur fr
+ */
 function t(lang: string) {
-  const key = (lang || "fr").toLowerCase();
-  return I18N[key as keyof typeof I18N] || I18N.fr;
+  const base = (lang || "fr").toLowerCase();
+  const short = base.split(/[-_]/)[0] as LangKey;
+  const key: LangKey = short in I18N ? short : "fr";
+  return I18N[key];
 }
 
 /** =========================
@@ -51,7 +60,7 @@ const app = express();
 app.use(cors({ origin: true }));
 
 /** Helpers */
-function escapeHtml(s: string) {
+function escapeHtml(s: string): string {
   return String(s)
     .replace(/&/g, "&amp;")
     .replace(/</g, "&lt;")
@@ -60,7 +69,7 @@ function escapeHtml(s: string) {
 }
 
 /** Build querystring only with truthy values */
-function qs(obj: Record<string, string | number | undefined | null>) {
+function qs(obj: Record<string, string | number | undefined | null>): string {
   const p = new URLSearchParams();
   Object.entries(obj).forEach(([k, v]) => {
     if (v !== undefined && v !== null) {
@@ -117,50 +126,107 @@ app.get("/img", (_req, res) => {
  *  - invite    : invitation document id (déclenche le modal in-app)
  *  - days      : nombre de jours suggéré (passé en query à l’app)
  */
-app.get(["/", "/dl"], (req, res) => {
+app.get(["/", "/dl", "/i"], (req, res) => {
   const ua = String(req.headers["user-agent"] || "");
   const isBot = BOT_UA.test(ua);
 
-  const lang = String(req.query.lang || "fr").toLowerCase();
-  const id = String(req.query.id || "");
-  const rawTitle = String(req.query.title || ""); // pour anti-cache OG
+  // Langue : priorité au ?lang=, sinon première langue d'Accept-Language, fallback fr
+  const rawLangHeader = String(req.headers["accept-language"] || "fr")
+    .split(",")[0]
+    .trim();
+  const langParam = String(req.query.lang || "").trim();
+  const lang = (langParam || rawLangHeader || "fr").toLowerCase();
 
-  // 🔑 paramètres d’invitation (si présents)
-  const invite = String(req.query.invite || "");
-  const days = String(req.query.days || "");
+  // Mode debug: ?debug=1 → renvoie un JSON au lieu de rediriger (hyper utile en dev)
+  const isDebug =
+    String(req.query.debug || "").toLowerCase() === "1" ||
+    String(req.query.debug || "").toLowerCase() === "true";
+
+// 🔥 2 MODES POSSIBLES :
+  // A) Referral: ?ref=UID&src=share
+  // B) Challenge invite/share: ?id=CHALLENGE_ID&invite=INV&days=XX
+
+  // ✅ Backward compatible: ref peut s'appeler ref / refUid / referrerId
+  const ref = String(
+    req.query.ref ||
+      req.query.refUid ||
+      req.query.referrerId ||
+      ""
+  ).trim();
+
+  const src = String(req.query.src || "share").trim() || "share";
+
+  // ✅ id peut venir d'anciennes variantes aussi si besoin
+  const id = String(
+    req.query.id ||
+      req.query.challengeId ||
+      ""
+  ).trim();
+
+  const rawTitle = String(req.query.title || "");
+
+  const invite = String(req.query.invite || "").trim();
+  const days = String(req.query.days || "").trim();
 
   const L = t(lang);
 
-  // ==== Deep links ====
-  // Query à transmettre à l’app (ou au web fallback) pour ouvrir le modal invitation
-  const sharedQuery = qs({ invite, days });
+  // ==== Build path + query selon mode ====
+  let path = "";
+  let sharedQuery = "";
 
-  // Paths
-  const path = id ? `challenge-details/${encodeURIComponent(id)}` : `challenge-details`;
+  // 0) Cas vide total → on renvoie vers la home (évite myapp://challenge-details fantôme)
+  if (!ref && !id && !invite) {
+    path = "";
+    sharedQuery = "";
+  } else if (ref && !id) {
+    // ✅ MODE REFERRAL
+    path = `ref/${encodeURIComponent(ref)}`;
+    sharedQuery = qs({ src });
+  } else {
+    // ✅ MODE CHALLENGE / INVITATION
+    sharedQuery = qs({ invite, days, ref, src });
+    path = id
+      ? `challenge-details/${encodeURIComponent(id)}`
+      : `challenge-details`;
+  }
 
-  // App deep link (avec query)
   const appDeepLink = `${APP_SCHEME}://${path}${sharedQuery}`;
-
-  // Web fallback
   const webFallback = `${WEB_HOSTING}/${path}${sharedQuery}`;
 
-  // Android intent
   const androidIntent =
     `intent://${path}${sharedQuery}` +
     `#Intent;scheme=${APP_SCHEME};package=${ANDROID_PACKAGE};end`;
 
-  // Image OG (anti-cache)
   const ogImageUrl = buildOgUrl(`${rawTitle}|${lang}`);
 
-  // Texte d’aperçu SOUS l’image (pas incrusté)
   const ogTitle = "ChallengeTies";
   const ogDesc = L.join || INV;
 
   const iosAppId = getIosAppId(IOS_STORE_URL);
 
-  // HEAD (balises OG/Twitter strictes + App Links hints)
+  // 🧪 MODE DEBUG → SUPER PRATIQUE POUR TESTER LES LIENS SANS REDIRECT
+  if (isDebug) {
+    res.set("Cache-Control", "no-store");
+    return res.status(200).json({
+      ok: true,
+      isBot,
+      ua,
+      lang,
+      path,
+      sharedQuery,
+      appDeepLink,
+      webFallback,
+      androidIntent,
+      ref,
+      id,
+      invite,
+      days,
+      src,
+    });
+  }
+
   const head = `<!doctype html>
-<html lang="${lang}">
+<html lang="${escapeHtml(lang.split(/[-_]/)[0] || "fr")}">
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width,initial-scale=1">
@@ -184,7 +250,7 @@ app.get(["/", "/dl"], (req, res) => {
 <meta name="twitter:description" content="${escapeHtml(ogDesc)}">
 <meta name="twitter:image" content="${ogImageUrl}">
 
-<!-- App Links (hint pour OS/navigateurs) -->
+<!-- App Links -->
 <meta property="al:ios:url" content="${appDeepLink}">
 <meta property="al:ios:app_name" content="ChallengeTies">
 ${iosAppId ? `<meta property="al:ios:app_store_id" content="${iosAppId}">` : ""}
@@ -197,12 +263,10 @@ ${iosAppId ? `<meta property="al:ios:app_store_id" content="${iosAppId}">` : ""}
   let body: string;
 
   if (isBot) {
-    // Bots: on ne rend RIEN de visible (uniquement l'image via OG)
     body = `
 <body style="margin:0;background:#0b1020"><!-- empty for bots --></body>
 </html>`;
   } else {
-    // Humains: redirection intelligente
     body = `
 <body>
 <script>
@@ -238,16 +302,15 @@ ${iosAppId ? `<meta property="al:ios:app_store_id" content="${iosAppId}">` : ""}
   res.status(200).send(head + body);
 });
 
+
 /** =========================
  *  EXPORT
  *  ========================= */
 export const dl = onRequest({ region: "europe-west1", cors: true }, app);
 
 export { invitationsOnWrite } from "./invitationsOnWrite";
-export { referralsOnFirstActivation } from "./referralsOnFirstActivation";
-export { onUserActivated } from "./referralRewards";
 export { claimReferralMilestone } from "./referralClaim";
-
+export { onUserActivated } from "./referralRewards";
 
 
 

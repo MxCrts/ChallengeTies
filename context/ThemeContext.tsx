@@ -2,13 +2,14 @@ import React, {
   createContext,
   useContext,
   useState,
-  useEffect,
   ReactNode,
+  useCallback,
+  useMemo,
 } from "react";
 
 interface ThemeContextType {
   theme: "light" | "dark";
-  toggleTheme: () => void; // Plus besoin de Promise<void> sans AsyncStorage
+  toggleTheme: () => void;
 }
 
 interface ThemeProviderProps {
@@ -23,20 +24,14 @@ const ThemeContext = createContext<ThemeContextType>({
 export const ThemeProvider: React.FC<ThemeProviderProps> = ({ children }) => {
   const [theme, setTheme] = useState<"light" | "dark">("light");
 
-  const toggleTheme = () => {
-    console.log("🎨 ToggleTheme appelé, thème actuel :", theme);
-    const newTheme = theme === "light" ? "dark" : "light";
-    setTheme(newTheme);
-    console.log("🎨 Nouveau thème défini :", newTheme);
-  };
+  const toggleTheme = useCallback(() => {
+    setTheme((prev) => (prev === "light" ? "dark" : "light"));
+  }, []);
 
-  console.log("✅ ThemeProvider rendu avec theme :", theme);
+  // ✅ value stable → moins de re-renders en cascade
+  const value = useMemo(() => ({ theme, toggleTheme }), [theme, toggleTheme]);
 
-  return (
-    <ThemeContext.Provider value={{ theme, toggleTheme }}>
-      {children}
-    </ThemeContext.Provider>
-  );
+  return <ThemeContext.Provider value={value}>{children}</ThemeContext.Provider>;
 };
 
 export const useTheme = () => useContext(ThemeContext);

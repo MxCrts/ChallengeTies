@@ -1,4 +1,4 @@
-import React, { useState, useRef, useEffect } from "react";
+import React, { useState, useRef, useEffect, useCallback, useMemo } from "react";
 import {
   View,
   Text,
@@ -23,18 +23,28 @@ import { doc, updateDoc } from "firebase/firestore";
 
 const { width: SCREEN_WIDTH, height: SCREEN_HEIGHT } = Dimensions.get("window");
 
+const normalize = (size: number) => {
+  const baseWidth = 375;
+  const scale = Math.min(Math.max(SCREEN_WIDTH / baseWidth, 0.8), 1.4);
+  return Math.round(size * scale);
+};
+
 interface Message {
   id: string;
   text: string;
   timestamp: Date;
   userId: string;
   username: string;
-  avatar: string;
-  reported: boolean;
+ avatar?: string;   // 👈 optionnel
+  reported?: boolean;
 }
 
 /** Fond orbes premium, non interactif */
-const OrbBackground = ({ colors }: { colors: { primary: string; secondary: string; background: string } }) => (
+const OrbBackground = ({
+  colors,
+}: {
+  colors: { primary: string; secondary: string; background: string };
+}) => (
   <View style={StyleSheet.absoluteFill} pointerEvents="none">
     <LinearGradient
       colors={[colors.secondary + "55", colors.primary + "11"]}
@@ -77,15 +87,19 @@ export default function ChallengeChat() {
   const { t } = useTranslation();
   const { theme } = useTheme();
   const isDarkMode = theme === "dark";
-  const currentTheme = isDarkMode ? designSystem.darkTheme : designSystem.lightTheme;
+  const currentTheme = isDarkMode
+    ? designSystem.darkTheme
+    : designSystem.lightTheme;
 
   const [route, setRoute] = useState<any>(null);
   const [navigation, setNavigation] = useState<any>(null);
 
-  // Lazy load navigation hooks (on ne touche pas la logique)
+  // Lazy load navigation hooks (on garde ta logique)
   useEffect(() => {
     (async () => {
-      const { useRoute, useNavigation } = await import("@react-navigation/native");
+      const { useRoute, useNavigation } = await import(
+        "@react-navigation/native"
+      );
       setRoute(() => useRoute());
       setNavigation(() => useNavigation());
     })();
@@ -94,7 +108,13 @@ export default function ChallengeChat() {
   if (!route || !navigation) {
     return (
       <View style={[styles.center, { flex: 1 }]}>
-        <Text style={{ color: currentTheme.colors.textPrimary, fontFamily: "Comfortaa_400Regular" }}>
+        <Text
+          style={{
+            color: currentTheme.colors.textPrimary,
+            fontFamily: "Comfortaa_400Regular",
+            fontSize: normalize(15),
+          }}
+        >
           {t("loading", { defaultValue: "Chargement..." })}
         </Text>
       </View>
@@ -108,122 +128,220 @@ export default function ChallengeChat() {
 
   const { messages, sendMessage } = useChat(challengeId);
   const [newMessage, setNewMessage] = useState("");
-  const flatListRef = useRef<FlatList>(null);
+  const flatListRef = useRef<FlatList<Message>>(null);
 
   const headerGradient: readonly [string, string] = [
     currentTheme.colors.primary,
     currentTheme.colors.secondary,
   ] as const;
 
-  const glassBg = isDarkMode ? "rgba(255,255,255,0.06)" : "rgba(0,0,0,0.04)";
-  const hairline = isDarkMode ? "rgba(255,255,255,0.12)" : "rgba(0,0,0,0.10)";
+  const glassBg = isDarkMode
+    ? "rgba(15,23,42,0.9)"
+    : "rgba(255,255,255,0.9)";
+  const hairline = isDarkMode
+    ? "rgba(255,255,255,0.12)"
+    : "rgba(0,0,0,0.10)";
 
-  const handleSend = async () => {
-    if (newMessage.trim().length === 0) return;
+  const canSend = newMessage.trim().length > 0;
+
+  const handleSend = useCallback(async () => {
+    const content = newMessage.trim();
+    if (!content.length) return;
+
     try {
-      await sendMessage(challengeId, newMessage);
+      await sendMessage(challengeId, content);
       setNewMessage("");
       flatListRef.current?.scrollToEnd({ animated: true });
     } catch (error) {
       console.error(t("chat.errorSending"), error);
+      Alert.alert(
+        t("error", { defaultValue: "Erreur" }),
+        t("chat.errorSending", {
+          defaultValue: "Impossible d'envoyer le message.",
+        }) as string
+      );
     }
-  };
+  }, [newMessage, sendMessage, challengeId, t]);
 
-  const renderMessage = ({ item }: { item: Message }) => {
-    const isMyMessage = item.userId === auth.currentUser?.uid;
-
-    const handleReportMessage = async () => {
+  const handleReportMessage = useCallback(
+    async (messageId: string) => {
       try {
-        const messageRef = doc(db, "chats", challengeId, "messages", item.id);
+        const messageRef = doc(db, "chats", challengeId, "messages", messageId);
         await updateDoc(messageRef, { reported: true });
-        Alert.alert(t("success"), t("messageReported", { defaultValue: "Message signalé." }));
+
+        Alert.alert(
+          t("success", { defaultValue: "Succès" }),
+          t("messageReported", {
+            defaultValue: "Message signalé.",
+          }) as string
+        );
       } catch (error) {
         console.error("Erreur report:", error);
-        Alert.alert(t("error"), t("reportMessageFailed", { defaultValue: "Impossible de signaler le message." }));
+        Alert.alert(
+          t("error", { defaultValue: "Erreur" }),
+          t("reportMessageFailed", {
+            defaultValue: "Impossible de signaler le message.",
+          }) as string
+        );
       }
-    };
+    },
+    [challengeId, t]
+  );
 
-    const myBubbleColors: [string, string] = [
-      currentTheme.colors.primary,
-      currentTheme.colors.secondary,
-    ];
-    const otherBubbleColors: [string, string] = isDarkMode
-      ? ["rgba(255,255,255,0.08)", "rgba(255,255,255,0.02)"]
-      : ["rgba(0,0,0,0.04)", "rgba(0,0,0,0.02)"];
+  const renderMessage = useCallback(
+    ({ item }: { item: Message }) => {
+      const isMyMessage = item.userId === auth.currentUser?.uid;
 
-    return (
-      <View
-        style={[
-          styles.messageRow,
-          isMyMessage ? styles.myMessageRow : styles.otherMessageRow,
-        ]}
-      >
-        {!isMyMessage && (
-          <View style={styles.avatarContainer}>
-            <Ionicons
-              name="person-circle-outline"
-              size={32}
-              color={currentTheme.colors.secondary}
-            />
-          </View>
-        )}
+      const myBubbleColors: [string, string] = [
+        currentTheme.colors.primary,
+        currentTheme.colors.secondary,
+      ];
+      const otherBubbleColors: [string, string] = isDarkMode
+        ? ["rgba(255,255,255,0.08)", "rgba(255,255,255,0.02)"]
+        : ["rgba(0,0,0,0.04)", "rgba(0,0,0,0.02)"];
 
-        <LinearGradient
-          colors={isMyMessage ? myBubbleColors : otherBubbleColors}
-          start={{ x: 0, y: 0 }}
-          end={{ x: 1, y: 1 }}
+      const accessibleLabel = isMyMessage
+        ? (t("chat.myMessageA11y", {
+            defaultValue: "Ton message",
+          }) as string)
+        : (t("chat.userMessageA11y", {
+            user: item.username,
+            defaultValue: `Message de ${item.username}`,
+          }) as string);
+
+      return (
+        <View
           style={[
-            styles.messageBubble,
-            { borderColor: hairline },
-            isMyMessage ? styles.myMessageBubble : styles.otherMessageBubble,
+            styles.messageRow,
+            isMyMessage ? styles.myMessageRow : styles.otherMessageRow,
           ]}
+          accessible
+          accessibilityLabel={accessibleLabel}
         >
           {!isMyMessage && (
-            <Text
-              style={[
-                styles.username,
-                { color: currentTheme.colors.secondary },
-              ]}
-            >
-              {item.username}
-            </Text>
+            <View style={styles.avatarContainer}>
+              <Ionicons
+                name="person-circle-outline"
+                size={normalize(32)}
+                color={currentTheme.colors.secondary}
+              />
+            </View>
           )}
 
-          <Text
+          <LinearGradient
+            colors={isMyMessage ? myBubbleColors : otherBubbleColors}
+            start={{ x: 0, y: 0 }}
+            end={{ x: 1, y: 1 }}
             style={[
-              styles.messageText,
-              isMyMessage
-                ? { color: "#fff" }
-                : { color: isDarkMode ? currentTheme.colors.textPrimary : "#222" },
+              styles.messageBubble,
+              { borderColor: hairline },
+              isMyMessage ? styles.myMessageBubble : styles.otherMessageBubble,
             ]}
           >
-            {item.text}
-          </Text>
-
-          {!isMyMessage && !item.reported && (
-            <TouchableOpacity
-              style={[
-                styles.reportButton,
-                { backgroundColor: "#EF4444" },
-              ]}
-              onPress={handleReportMessage}
-              accessibilityLabel={t("reportMessage", { defaultValue: "Signaler ce message" })}
-            >
-              <Text style={styles.reportButtonText}>
-                {t("report", { defaultValue: "Signaler" })}
+            {!isMyMessage && (
+              <Text
+                style={[
+                  styles.username,
+                  { color: currentTheme.colors.secondary },
+                ]}
+                numberOfLines={1}
+              >
+                {item.username}
               </Text>
-            </TouchableOpacity>
-          )}
-        </LinearGradient>
+            )}
+
+            <Text
+              style={[
+                styles.messageText,
+                isMyMessage
+                  ? { color: "#fff" }
+                  : {
+                      color: isDarkMode
+                        ? currentTheme.colors.textPrimary
+                        : "#222",
+                    },
+              ]}
+            >
+              {item.text}
+            </Text>
+
+            {!isMyMessage && !item.reported && (
+              <TouchableOpacity
+                style={styles.reportButton}
+                onPress={() => handleReportMessage(item.id)}
+                accessibilityLabel={t("reportMessage", {
+                  defaultValue: "Signaler ce message",
+                })}
+              >
+                <Text style={styles.reportButtonText}>
+                  {t("report", { defaultValue: "Signaler" })}
+                </Text>
+              </TouchableOpacity>
+            )}
+
+            {!isMyMessage && item.reported && (
+              <Text style={styles.reportedTag}>
+                {t("messageAlreadyReported", {
+                  defaultValue: "Message signalé",
+                })}
+              </Text>
+            )}
+          </LinearGradient>
+        </View>
+      );
+    },
+    [currentTheme.colors.primary, currentTheme.colors.secondary, hairline, isDarkMode, handleReportMessage, t]
+  );
+
+  const renderEmpty = useCallback(
+    () => (
+      <View style={styles.emptyState}>
+        <Ionicons
+          name="chatbubble-ellipses-outline"
+          size={normalize(40)}
+          color={
+            isDarkMode
+              ? "rgba(248,250,252,0.75)"
+              : "rgba(15,23,42,0.6)"
+          }
+        />
+        <Text
+          style={[
+            styles.emptyTitle,
+            {
+              color: isDarkMode
+                ? currentTheme.colors.textPrimary
+                : "#111827",
+            },
+          ]}
+        >
+          {t("chat.emptyTitle", {
+            defaultValue: "Aucun message pour l’instant",
+          })}
+        </Text>
+        <Text
+          style={[
+            styles.emptySubtitle,
+            { color: currentTheme.colors.textSecondary },
+          ]}
+        >
+          {t("chat.emptySubtitle", {
+            defaultValue: "Sois le premier à lancer la conversation ✨",
+          })}
+        </Text>
       </View>
-    );
-  };
+    ),
+    [currentTheme, isDarkMode, t]
+  );
 
   return (
     <View style={{ flex: 1 }}>
       {/* Fond gradient + orbes */}
       <LinearGradient
-        colors={[currentTheme.colors.background, currentTheme.colors.cardBackground + "F0"]}
+        colors={[
+          currentTheme.colors.background,
+          currentTheme.colors.cardBackground + "F0",
+        ]}
         style={StyleSheet.absoluteFill}
       />
       <OrbBackground
@@ -235,26 +353,32 @@ export default function ChallengeChat() {
       />
 
       <SafeAreaView style={{ flex: 1 }}>
-        {/* Header premium (gradient fin + titre centré + back subtil) */}
+        {/* Header premium */}
         <LinearGradient colors={headerGradient} style={styles.header}>
           <TouchableOpacity
             onPress={() => navigation.goBack()}
-            accessibilityLabel={t("chat.goBack")}
+            accessibilityLabel={t("chat.goBack", {
+              defaultValue: "Revenir en arrière",
+            })}
             style={styles.backBtn}
             activeOpacity={0.7}
           >
-            <Ionicons name="chevron-back" size={22} color="#fff" />
+            <Ionicons name="chevron-back" size={normalize(20)} color="#fff" />
           </TouchableOpacity>
-          <Text style={styles.headerTitle}>
-            {t("chat.title", { title: challengeTitle })}
+          <Text style={styles.headerTitle} numberOfLines={1}>
+            {t("chat.title", {
+              title: challengeTitle,
+              defaultValue: `Chat - ${challengeTitle}`,
+            })}
           </Text>
-          <View style={{ width: 36 }} />
+          {/* Espace réservé pour centrer le titre */}
+          <View style={{ width: normalize(36) }} />
         </LinearGradient>
 
         <KeyboardAvoidingView
           style={styles.chatContainer}
           behavior={Platform.OS === "ios" ? "padding" : undefined}
-          keyboardVerticalOffset={Platform.OS === "ios" ? 100 : 0}
+          keyboardVerticalOffset={Platform.OS === "ios" ? 90 : 0}
         >
           <FlatList
             ref={flatListRef}
@@ -262,9 +386,15 @@ export default function ChallengeChat() {
             renderItem={renderMessage}
             keyExtractor={(item) => item.id}
             contentContainerStyle={styles.messageList}
-            onContentSizeChange={() => flatListRef.current?.scrollToEnd({ animated: true })}
-            accessibilityLabel={t("chat.messagesList")}
+            onContentSizeChange={() =>
+              flatListRef.current?.scrollToEnd({ animated: true })
+            }
+            accessibilityLabel={t("chat.messagesList", {
+              defaultValue: "Liste des messages du chat",
+            })}
             showsVerticalScrollIndicator={false}
+            keyboardShouldPersistTaps="handled"
+            ListEmptyComponent={renderEmpty}
           />
 
           {/* Barre d’entrée “glass” */}
@@ -278,23 +408,48 @@ export default function ChallengeChat() {
               style={[
                 styles.input,
                 {
-                  color: isDarkMode ? currentTheme.colors.textPrimary : "#000",
+                  color: isDarkMode
+                    ? currentTheme.colors.textPrimary
+                    : "#000",
                 },
               ]}
-              placeholder={t("chat.placeholder")}
-              placeholderTextColor={isDarkMode ? "rgba(255,255,255,0.6)" : "rgba(0,0,0,0.45)"}
+              placeholder={t("chat.placeholder", {
+                defaultValue: "Écris un message…",
+              })}
+              placeholderTextColor={
+                isDarkMode
+                  ? "rgba(248,250,252,0.65)"
+                  : "rgba(15,23,42,0.45)"
+              }
               value={newMessage}
               onChangeText={setNewMessage}
               multiline
+              accessibilityLabel={t("chat.inputA11y", {
+                defaultValue: "Champ de saisie du message",
+              })}
             />
             <LinearGradient
-              colors={[currentTheme.colors.secondary, currentTheme.colors.primary]}
+              colors={[
+                currentTheme.colors.secondary,
+                currentTheme.colors.primary,
+              ]}
               start={{ x: 0, y: 0 }}
               end={{ x: 1, y: 1 }}
-              style={styles.sendBtn}
+              style={[
+                styles.sendBtn,
+                { opacity: canSend ? 1 : 0.4 },
+              ]}
             >
-              <TouchableOpacity onPress={handleSend} activeOpacity={0.8}>
-                <Ionicons name="send" size={18} color="#fff" />
+              <TouchableOpacity
+                onPress={handleSend}
+                activeOpacity={0.8}
+                disabled={!canSend}
+                accessibilityRole="button"
+                accessibilityLabel={t("chat.sendMessage", {
+                  defaultValue: "Envoyer le message",
+                })}
+              >
+                <Ionicons name="send" size={normalize(18)} color="#fff" />
               </TouchableOpacity>
             </LinearGradient>
           </View>
@@ -313,12 +468,12 @@ const styles = StyleSheet.create({
     flexDirection: "row",
     alignItems: "center",
     paddingHorizontal: 12,
-    paddingVertical: 12,
+    paddingVertical: 10,
   },
   backBtn: {
-    width: 36,
-    height: 36,
-    borderRadius: 18,
+    width: normalize(36),
+    height: normalize(36),
+    borderRadius: normalize(18),
     alignItems: "center",
     justifyContent: "center",
   },
@@ -326,7 +481,7 @@ const styles = StyleSheet.create({
     flex: 1,
     textAlign: "center",
     color: "#fff",
-    fontSize: 18,
+    fontSize: normalize(17),
     fontFamily: "Comfortaa_700Bold",
   },
 
@@ -334,7 +489,7 @@ const styles = StyleSheet.create({
   messageList: {
     paddingHorizontal: 12,
     paddingTop: 10,
-    paddingBottom: 90,
+    paddingBottom: normalize(90),
   },
 
   messageRow: {
@@ -350,20 +505,20 @@ const styles = StyleSheet.create({
   messageBubble: {
     maxWidth: "78%",
     borderRadius: 18,
-    paddingVertical: 10,
+    paddingVertical: 8,
     paddingHorizontal: 12,
     borderWidth: StyleSheet.hairlineWidth,
   },
-  myMessageBubble: { marginLeft: "22%" },
-  otherMessageBubble: { marginRight: "22%" },
+  myMessageBubble: { marginLeft: "18%" },
+  otherMessageBubble: { marginRight: "18%" },
 
   username: {
     fontFamily: "Comfortaa_700Bold",
-    marginBottom: 4,
-    fontSize: 12,
+    marginBottom: 2,
+    fontSize: normalize(11),
   },
   messageText: {
-    fontSize: 15,
+    fontSize: normalize(14.5),
     fontFamily: "Comfortaa_400Regular",
   },
 
@@ -387,12 +542,12 @@ const styles = StyleSheet.create({
     paddingHorizontal: 10,
     paddingVertical: 8,
     fontFamily: "Comfortaa_400Regular",
-    fontSize: 15,
+    fontSize: normalize(14),
   },
   sendBtn: {
-    width: 40,
-    height: 40,
-    borderRadius: 20,
+    width: normalize(40),
+    height: normalize(40),
+    borderRadius: normalize(20),
     alignItems: "center",
     justifyContent: "center",
     marginLeft: 8,
@@ -400,15 +555,41 @@ const styles = StyleSheet.create({
   reportButton: {
     marginTop: 5,
     backgroundColor: "#EF4444",
-    paddingVertical: 5,
-    paddingHorizontal: 10,
-    borderRadius: 5,
+    paddingVertical: 4,
+    paddingHorizontal: 8,
+    borderRadius: 6,
     alignSelf: "flex-end",
   },
   reportButtonText: {
     color: "#FFF",
-    fontSize: 12,
+    fontSize: normalize(11),
     fontFamily: "Comfortaa_700Bold",
+  },
+  reportedTag: {
+    marginTop: 4,
+    alignSelf: "flex-end",
+    fontSize: normalize(10.5),
+    fontFamily: "Comfortaa_400Regular",
+    color: "rgba(248,250,252,0.85)",
+  },
+
+  emptyState: {
+    flexGrow: 1,
+    alignItems: "center",
+    justifyContent: "center",
+    paddingHorizontal: 32,
+  },
+  emptyTitle: {
+    marginTop: 10,
+    fontFamily: "Comfortaa_700Bold",
+    fontSize: normalize(16),
+    textAlign: "center",
+  },
+  emptySubtitle: {
+    marginTop: 6,
+    fontFamily: "Comfortaa_400Regular",
+    fontSize: normalize(13),
+    textAlign: "center",
   },
 
   // orbes

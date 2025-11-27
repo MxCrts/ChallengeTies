@@ -79,7 +79,7 @@ const Chip = ({
   </View>
 );
 
-/** ⭐️ Sélecteur d’étoiles – accessible & réutilisable */
+/** ⭐️ Sélecteur d’étoiles – accessible & multilingue */
 const Stars = ({
   value,
   onChange,
@@ -91,7 +91,9 @@ const Stars = ({
   size?: number;
   color?: string;
 }) => {
+  const { t } = useTranslation();
   const stars = [1, 2, 3, 4, 5];
+
   return (
     <View style={{ flexDirection: "row", alignItems: "center" }}>
       {stars.map((s) => (
@@ -103,7 +105,10 @@ const Stars = ({
           style={{ marginRight: 4 }}
           hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
           accessibilityRole="button"
-          accessibilityLabel={`${s} ${s === 1 ? "star" : "stars"}`}
+          accessibilityLabel={t("reviews.starsLabel", {
+            count: s,
+            defaultValue: s === 1 ? "1 étoile" : "{{count}} étoiles",
+          })}
         >
           <Ionicons
             name={s <= value ? "star" : "star-outline"}
@@ -200,6 +205,9 @@ const ChallengeReviews: React.FC<Props> = ({ challengeId, selectedDays }) => {
   const [avatarCache, setAvatarCache] = useState<Record<string, string>>({});
   const resolvingRef = useRef<Set<string>>(new Set());
 
+  const anonymousLabel = t("common.anonymous", { defaultValue: "Anonyme" });
+  const daysShort = t("daysShort", { defaultValue: "j" });
+
   // 🔴 Temps réel: avis
   useEffect(() => {
     if (!normId) {
@@ -220,7 +228,7 @@ const ChallengeReviews: React.FC<Props> = ({ challengeId, selectedDays }) => {
           return {
             id: d.id,
             userId: data.userId,
-            username: data.username ?? "Anonyme",
+            username: data.username ?? anonymousLabel,
             avatar: data.avatar ?? "",
             daysSelected: Number(data.daysSelected ?? 0),
             text: data.text ?? "",
@@ -237,7 +245,7 @@ const ChallengeReviews: React.FC<Props> = ({ challengeId, selectedDays }) => {
       }
     );
     return () => unsub();
-  }, [normId]);
+  }, [normId, anonymousLabel]);
 
   // ✅ Éligibilité + jours + "déjà noté"
   useEffect(() => {
@@ -405,14 +413,22 @@ const ChallengeReviews: React.FC<Props> = ({ challengeId, selectedDays }) => {
   const handleSubmit = useCallback(async () => {
     const trimmed = text.trim();
     if (!trimmed)
-      return Alert.alert(t("oops", { defaultValue: "Oups" }), t("writeSomething", { defaultValue: "Écris un petit retour avant d’envoyer 😉" }));
+      return Alert.alert(
+        t("oops", { defaultValue: "Oups" }),
+        t("writeSomething", {
+          defaultValue: "Écris un petit retour avant d’envoyer 😉",
+        })
+      );
     if (trimmed.length > 500)
-      return Alert.alert(t("oops", { defaultValue: "Oups" }), t("maxChars", { defaultValue: "Max 500 caractères" }));
+      return Alert.alert(
+        t("oops", { defaultValue: "Oups" }),
+        t("maxChars", { defaultValue: "Max 500 caractères" })
+      );
 
     try {
       setSubmitting(true);
 
-      let username = currentUser?.displayName || "Anonyme";
+      let username = currentUser?.displayName || anonymousLabel;
       let avatarRaw = currentUser?.photoURL || "";
       try {
         const userSnap = await getDoc(doc(db, "users", currentUserId));
@@ -475,7 +491,7 @@ const ChallengeReviews: React.FC<Props> = ({ challengeId, selectedDays }) => {
           text: trimmed,
           createdAt: Timestamp.now(),
           rating: Math.max(1, Math.min(5, rating || 5)),
-        },
+        } as Review,
         ...prev,
       ]);
       if (avatar) setAvatarCache((p) => ({ ...p, [currentUserId]: avatar }));
@@ -487,7 +503,9 @@ const ChallengeReviews: React.FC<Props> = ({ challengeId, selectedDays }) => {
       console.error("review submit/update error:", e?.message || e);
       Alert.alert(
         t("error", { defaultValue: "Erreur" }),
-        t("cannotSaveReview", { defaultValue: "Impossible d’enregistrer l’avis pour le moment." })
+        t("cannotSaveReview", {
+          defaultValue: "Impossible d’enregistrer l’avis pour le moment.",
+        })
       );
     } finally {
       setSubmitting(false);
@@ -502,12 +520,16 @@ const ChallengeReviews: React.FC<Props> = ({ challengeId, selectedDays }) => {
     normId,
     rating,
     effectiveDays,
+    anonymousLabel,
   ]);
 
   const handleDelete = useCallback(
     async (reviewId: string) => {
       Alert.alert(t("challengeDetails.confirmDeleteReview"), "", [
-        { text: t("common.cancel", { defaultValue: "Annuler" }), style: "cancel" },
+        {
+          text: t("common.cancel", { defaultValue: "Annuler" }),
+          style: "cancel",
+        },
         {
           text: t("common.delete", { defaultValue: "Supprimer" }),
           style: "destructive",
@@ -549,11 +571,13 @@ const ChallengeReviews: React.FC<Props> = ({ challengeId, selectedDays }) => {
                   <Text
                     style={{
                       fontWeight: "800",
-                      color: isDarkMode ? currentTheme.colors.textPrimary : "#000",
+                      color: isDarkMode
+                        ? currentTheme.colors.textPrimary
+                        : "#000",
                     }}
                     numberOfLines={1}
                   >
-                    {r.username || "Anonyme"}
+                    {r.username || anonymousLabel}
                   </Text>
                   <Text
                     style={{
@@ -562,22 +586,30 @@ const ChallengeReviews: React.FC<Props> = ({ challengeId, selectedDays }) => {
                       marginTop: 2,
                     }}
                   >
-                    {formatDate(r.createdAt)}
+                    {formatDate(r.createdAt as Timestamp)}
                   </Text>
                 </View>
                 <Chip bg={chipBG} fg={chipFG}>
-                  {r.daysSelected} j
+                  {r.daysSelected} {daysShort}
                 </Chip>
               </View>
 
               {/* Stars + Content */}
-              <View style={{ marginBottom: 6, flexDirection: "row", alignItems: "center" }}>
+              <View
+                style={{
+                  marginBottom: 6,
+                  flexDirection: "row",
+                  alignItems: "center",
+                }}
+              >
                 <Stars value={r.rating || 0} />
               </View>
 
               <Text
                 style={{
-                  color: isDarkMode ? currentTheme.colors.textPrimary : "#000",
+                  color: isDarkMode
+                    ? currentTheme.colors.textPrimary
+                    : "#000",
                   lineHeight: 20,
                 }}
               >
@@ -607,7 +639,11 @@ const ChallengeReviews: React.FC<Props> = ({ challengeId, selectedDays }) => {
                       hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
                       style={styles.actionIcon}
                     >
-                      <Ionicons name="trash-outline" size={18} color="#FF5757" />
+                      <Ionicons
+                        name="trash-outline"
+                        size={18}
+                        color="#FF5757"
+                      />
                     </TouchableOpacity>
                   </>
                 )}
@@ -641,6 +677,8 @@ const ChallengeReviews: React.FC<Props> = ({ challengeId, selectedDays }) => {
       handleOpenEdit,
       isDarkMode,
       t,
+      anonymousLabel,
+      daysShort,
     ]
   );
 
@@ -659,12 +697,14 @@ const ChallengeReviews: React.FC<Props> = ({ challengeId, selectedDays }) => {
             end={{ x: 1, y: 1 }}
             style={styles.cta}
           >
-            <Text style={styles.ctaText}>{t("challengeDetails.leaveReview")}</Text>
+            <Text style={styles.ctaText}>
+              {t("challengeDetails.leaveReview")}
+            </Text>
           </LinearGradient>
         </TouchableOpacity>
       ) : null}
 
-      {!canReview && (
+      {!canReview && !alreadyReviewed && (
         <Text
           style={{
             textAlign: "center",
@@ -699,7 +739,13 @@ const ChallengeReviews: React.FC<Props> = ({ challengeId, selectedDays }) => {
         end={{ x: 1, y: 1 }}
         style={styles.headerWrap}
       >
-        <View style={{ flexDirection: "row", alignItems: "center", justifyContent: "center" }}>
+        <View
+          style={{
+            flexDirection: "row",
+            alignItems: "center",
+            justifyContent: "center",
+          }}
+        >
           <Ionicons
             name="chatbubbles-outline"
             size={18}
@@ -711,7 +757,9 @@ const ChallengeReviews: React.FC<Props> = ({ challengeId, selectedDays }) => {
               fontSize: 18,
               fontWeight: "800",
               letterSpacing: 0.2,
-              color: isDarkMode ? currentTheme.colors.textPrimary : currentTheme.colors.secondary,
+              color: isDarkMode
+                ? currentTheme.colors.textPrimary
+                : currentTheme.colors.secondary,
             }}
             numberOfLines={1}
           >
@@ -721,7 +769,10 @@ const ChallengeReviews: React.FC<Props> = ({ challengeId, selectedDays }) => {
 
         <View style={styles.headerStats}>
           {loading ? (
-            <ActivityIndicator size="small" color={currentTheme.colors.primary} />
+            <ActivityIndicator
+              size="small"
+              color={currentTheme.colors.primary}
+            />
           ) : reviews.length > 0 ? (
             <>
               <Stars value={Math.round(average)} size={16} />
@@ -729,7 +780,9 @@ const ChallengeReviews: React.FC<Props> = ({ challengeId, selectedDays }) => {
                 style={{
                   marginLeft: 8,
                   fontWeight: "700",
-                  color: isDarkMode ? currentTheme.colors.textPrimary : "#000",
+                  color: isDarkMode
+                    ? currentTheme.colors.textPrimary
+                    : "#000",
                 }}
                 numberOfLines={1}
               >
@@ -737,8 +790,13 @@ const ChallengeReviews: React.FC<Props> = ({ challengeId, selectedDays }) => {
               </Text>
             </>
           ) : (
-            <Text style={{ fontWeight: "700", color: currentTheme.colors.textSecondary }}>
-              0 · 0
+            <Text
+              style={{
+                fontWeight: "700",
+                color: currentTheme.colors.textSecondary,
+              }}
+            >
+              {t("challengeDetails.noReviewsStats", { defaultValue: "0 · 0" })}
             </Text>
           )}
         </View>
@@ -746,7 +804,10 @@ const ChallengeReviews: React.FC<Props> = ({ challengeId, selectedDays }) => {
 
       {/* Liste */}
       {loading ? (
-        <ActivityIndicator size="large" color={currentTheme.colors.primary} />
+        <ActivityIndicator
+          size="large"
+          color={currentTheme.colors.primary}
+        />
       ) : reviews.length === 0 ? (
         <Text style={{ color: currentTheme.colors.textSecondary }}>
           {t("challengeDetails.noReviewsYet")}
@@ -770,13 +831,21 @@ const ChallengeReviews: React.FC<Props> = ({ challengeId, selectedDays }) => {
         <View
           style={{
             flex: 1,
-            backgroundColor: isDarkMode ? "rgba(0,0,0,0.6)" : "rgba(0,0,0,0.45)",
+            backgroundColor: isDarkMode
+              ? "rgba(0,0,0,0.6)"
+              : "rgba(0,0,0,0.45)",
             justifyContent: "center",
             padding: 20,
           }}
         >
           <View style={getModalCardStyle(currentTheme, isDarkMode)}>
-            <View style={{ flexDirection: "row", alignItems: "center", marginBottom: 12 }}>
+            <View
+              style={{
+                flexDirection: "row",
+                alignItems: "center",
+                marginBottom: 12,
+              }}
+            >
               <Ionicons
                 name="create-outline"
                 size={18}
@@ -784,9 +853,15 @@ const ChallengeReviews: React.FC<Props> = ({ challengeId, selectedDays }) => {
                 style={{ marginRight: 6 }}
               />
               <Text
-                style={{ fontWeight: "800", fontSize: 16, color: currentTheme.colors.textPrimary }}
+                style={{
+                  fontWeight: "800",
+                  fontSize: 16,
+                  color: currentTheme.colors.textPrimary,
+                }}
               >
-                {isEditing ? t("editYourReview") : t("challengeDetails.yourReview")}
+                {isEditing
+                  ? t("editYourReview")
+                  : t("challengeDetails.yourReview")}
               </Text>
             </View>
 
@@ -801,7 +876,9 @@ const ChallengeReviews: React.FC<Props> = ({ challengeId, selectedDays }) => {
               onChangeText={setText}
               placeholder={t("challengeDetails.reviewPlaceholder")}
               maxLength={500}
-              placeholderTextColor={isDarkMode ? "rgba(255,255,255,0.6)" : "#666"}
+              placeholderTextColor={
+                isDarkMode ? "rgba(255,255,255,0.6)" : "#666"
+              }
               style={getTextareaStyle(currentTheme, isDarkMode)}
             />
             <Text
@@ -828,13 +905,19 @@ const ChallengeReviews: React.FC<Props> = ({ challengeId, selectedDays }) => {
                 style={{ paddingVertical: 10, paddingHorizontal: 12 }}
               >
                 <Text style={{ color: currentTheme.colors.textSecondary }}>
-                  {t("common.cancel") || "Annuler"}
+                  {t("common.cancel", { defaultValue: "Annuler" })}
                 </Text>
               </TouchableOpacity>
 
-              <TouchableOpacity onPress={submitting ? undefined : handleSubmit} activeOpacity={0.85}>
+              <TouchableOpacity
+                onPress={submitting ? undefined : handleSubmit}
+                activeOpacity={0.85}
+              >
                 <LinearGradient
-                  colors={[currentTheme.colors.primary, currentTheme.colors.secondary]}
+                  colors={[
+                    currentTheme.colors.primary,
+                    currentTheme.colors.secondary,
+                  ]}
                   start={{ x: 0, y: 0 }}
                   end={{ x: 1, y: 1 }}
                   style={{
@@ -850,7 +933,9 @@ const ChallengeReviews: React.FC<Props> = ({ challengeId, selectedDays }) => {
                     <ActivityIndicator size="small" color="#fff" />
                   ) : (
                     <Text style={{ color: "#fff", fontWeight: "800" }}>
-                      {isEditing ? t("saveReview") : t("challengeDetails.submitReview")}
+                      {isEditing
+                        ? t("saveReview")
+                        : t("challengeDetails.submitReview")}
                     </Text>
                   )}
                 </LinearGradient>
@@ -864,35 +949,36 @@ const ChallengeReviews: React.FC<Props> = ({ challengeId, selectedDays }) => {
 };
 
 // ✅ Helpers pour styles dynamiques (hors StyleSheet)
-const getModalCardStyle = (currentTheme: any, isDark: boolean) => ({
-  backgroundColor: currentTheme.colors.background,
-  borderRadius: 20,
-  padding: 20,
-  shadowColor: "#000",
-  shadowOpacity: 0.25,
-  shadowOffset: { width: 0, height: 8 },
-  shadowRadius: 16,
-  elevation: 8,
-  borderWidth: StyleSheet.hairlineWidth,
-  borderColor: isDark ? "rgba(255,255,255,0.08)" : "rgba(0,0,0,0.08)",
-} as const);
+const getModalCardStyle = (currentTheme: any, isDark: boolean) =>
+  ({
+    backgroundColor: currentTheme.colors.background,
+    borderRadius: 20,
+    padding: 20,
+    shadowColor: "#000",
+    shadowOpacity: 0.25,
+    shadowOffset: { width: 0, height: 8 },
+    shadowRadius: 16,
+    elevation: 8,
+    borderWidth: StyleSheet.hairlineWidth,
+    borderColor: isDark ? "rgba(255,255,255,0.08)" : "rgba(0,0,0,0.08)",
+  } as const);
 
-const getTextareaStyle = (currentTheme: any, isDark: boolean) => ({
-  height: 130,
-  borderRadius: 12,
-  padding: 12,
-  backgroundColor: currentTheme.colors.cardBackground,
-  color: isDark ? currentTheme.colors.textPrimary : "#000",
-  textAlignVertical: "top" as "top",
-  borderWidth: 1,
-  borderColor: isDark ? "rgba(255,255,255,0.08)" : "rgba(0,0,0,0.08)",
-} as const);
+const getTextareaStyle = (currentTheme: any, isDark: boolean) =>
+  ({
+    height: 130,
+    borderRadius: 12,
+    padding: 12,
+    backgroundColor: currentTheme.colors.cardBackground,
+    color: isDark ? currentTheme.colors.textPrimary : "#000",
+    textAlignVertical: "top" as "top",
+    borderWidth: 1,
+    borderColor: isDark ? "rgba(255,255,255,0.08)" : "rgba(0,0,0,0.08)",
+  } as const);
 
 const styles = StyleSheet.create({
   cardInner: {
     borderRadius: 16,
     padding: 14,
-    // un seul backgroundColor, transparent
     backgroundColor: "transparent",
   },
   cardHeader: {
@@ -923,7 +1009,6 @@ const styles = StyleSheet.create({
     justifyContent: "center",
     flexDirection: "row",
     flexWrap: "wrap",
-    // ❌ pas de gap (pas toujours typé côté RN) → on gère le spacing localement
   },
   actionsRow: {
     flexDirection: "row",
@@ -934,4 +1019,5 @@ const styles = StyleSheet.create({
     marginLeft: 12,
   },
 });
+
 export default ChallengeReviews;

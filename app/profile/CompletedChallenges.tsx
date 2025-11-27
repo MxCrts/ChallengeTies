@@ -53,14 +53,21 @@ const withAlpha = (color: string, alpha: number) => {
     const [r = "0", g = "0", b = "0"] = nums;
     return `rgba(${r}, ${g}, ${b}, ${a})`;
   }
+
   let hex = color.replace("#", "");
-  if (hex.length === 3) hex = hex.split("").map((c) => c + c).join("");
+  if (hex.length === 3) {
+    hex = hex
+      .split("")
+      .map((c) => c + c)
+      .join("");
+  }
   if (hex.length >= 6) {
     const r = parseInt(hex.slice(0, 2), 16);
     const g = parseInt(hex.slice(2, 4), 16);
     const b = parseInt(hex.slice(4, 6), 16);
     return `rgba(${r}, ${g}, ${b}, ${a})`;
   }
+
   return `rgba(0,0,0,${a})`;
 };
 
@@ -97,6 +104,7 @@ export default function CompletedChallenges() {
   const router = useRouter();
   const { theme } = useTheme();
   const isDarkMode = theme === "dark";
+
   const currentTheme: Theme = useMemo(
     () => (isDarkMode ? designSystem.darkTheme : designSystem.lightTheme),
     [isDarkMode]
@@ -104,13 +112,15 @@ export default function CompletedChallenges() {
 
   const { showBanners } = useAdsVisibility();
   const insets = useSafeAreaInsets();
-  const tabBarHeight = (() => {
-    try {
-      return useBottomTabBarHeight();
-    } catch {
-      return 0;
-    }
-  })();
+
+  // Hook appelé une seule fois, niveau racine (OK avec rules of hooks)
+  let tabBarHeight = 0;
+  try {
+    tabBarHeight = useBottomTabBarHeight();
+  } catch {
+    tabBarHeight = 0;
+  }
+
   const [adHeight, setAdHeight] = useState(0);
   const bottomPadding = useMemo(
     () =>
@@ -121,9 +131,9 @@ export default function CompletedChallenges() {
     [adHeight, showBanners, tabBarHeight, insets.bottom]
   );
 
-  const [completedChallenges, setCompletedChallenges] = useState<
-    CompletedChallenge[]
-  >([]);
+  const [completedChallenges, setCompletedChallenges] = useState<CompletedChallenge[]>(
+    []
+  );
   const [isLoading, setIsLoading] = useState(true);
   const [historyModalVisible, setHistoryModalVisible] = useState(false);
   const [selectedHistory, setSelectedHistory] = useState<{
@@ -153,6 +163,7 @@ export default function CompletedChallenges() {
     const userId = auth.currentUser?.uid;
     if (!userId) {
       setIsLoading(false);
+      setCompletedChallenges([]);
       return;
     }
 
@@ -165,14 +176,18 @@ export default function CompletedChallenges() {
           return;
         }
 
-        const raw = snapshot.data()?.CompletedChallenges || [];
-        const challenges: CompletedChallenge[] = (raw as any[])
-          .map((c) => ({
-            id: c.id,
+        const raw = snapshot.data()?.CompletedChallenges;
+        const array = Array.isArray(raw) ? raw : [];
+
+        const challenges: CompletedChallenge[] = array
+          .map((c: any): CompletedChallenge => ({
+            id: String(c.id ?? c.challengeId ?? ""),
             chatId: c.chatId,
             title: String(
               c.chatId
-                ? t(`challenges.${c.chatId}.title`, { defaultValue: c.title })
+                ? t(`challenges.${c.chatId}.title`, {
+                    defaultValue: c.title || "",
+                  })
                 : c.title || t("challengeSaved")
             ),
             description: String(
@@ -191,8 +206,8 @@ export default function CompletedChallenges() {
             completedAt: c.completedAt || "",
             selectedDays: c.selectedDays || 0,
             history: normalizeHistory(c.history),
-
           }))
+          .filter((c) => !!c.id) // évite les entrées corrompues
           .sort((a, b) => {
             const da = new Date(a.completedAt).getTime() || 0;
             const db = new Date(b.completedAt).getTime() || 0;
@@ -225,6 +240,7 @@ export default function CompletedChallenges() {
         `&category=${encodeURIComponent(item.category || String(t("noCategory")))}` +
         `&description=${encodeURIComponent(item.description || "")}` +
         `&imageUrl=${encodeURIComponent(item.imageUrl || "")}`;
+
       router.push(route as any);
     },
     [router, t]
@@ -407,86 +423,92 @@ export default function CompletedChallenges() {
                 </View>
 
                 {/* Boutons en bas : historique (si dispo) + voir détails */}
-                {/* Boutons en bas : historique (si dispo) + voir détails */}
-<View style={styles.footerRow}>
-  {item.history && item.history.length > 0 && (
-    <TouchableOpacity
-      style={styles.historyButton}
-      onPress={() => openHistoryModal(item)}
-      accessibilityLabel={String(t("history"))}
-      accessibilityHint={String(t("viewHistoryHint"))}
-      testID={`history-button-${item.id}`}
-    >
-      <LinearGradient
-        colors={[
-          currentTheme.colors.secondary,
-          currentTheme.colors.primary,
-        ]}
-        style={styles.historyButtonGradient}
-      >
-        <Ionicons
-          name="time-outline"
-          size={normalizeSize(14)}
-          color={currentTheme.colors.textPrimary}
-        />
-        <Text
-          style={[
-            styles.historyButtonText,
-            { color: currentTheme.colors.textPrimary },
-          ]}
-          numberOfLines={1}
-        >
-          {t("historyOf")}
-        </Text>
-      </LinearGradient>
-    </TouchableOpacity>
-  )}
+                <View style={styles.footerRow}>
+                  {item.history && item.history.length > 0 && (
+                    <TouchableOpacity
+                      style={styles.historyButton}
+                      onPress={() => openHistoryModal(item)}
+                      accessibilityLabel={String(t("history"))}
+                      accessibilityHint={String(t("viewHistoryHint"))}
+                      accessibilityRole="button"
+                      testID={`history-button-${item.id}`}
+                    >
+                      <LinearGradient
+                        colors={[
+                          currentTheme.colors.secondary,
+                          currentTheme.colors.primary,
+                        ]}
+                        style={styles.historyButtonGradient}
+                      >
+                        <Ionicons
+                          name="time-outline"
+                          size={normalizeSize(14)}
+                          color={currentTheme.colors.textPrimary}
+                        />
+                        <Text
+                          style={[
+                            styles.historyButtonText,
+                            { color: currentTheme.colors.textPrimary },
+                          ]}
+                          numberOfLines={1}
+                        >
+                          {t("historyOf")}
+                        </Text>
+                      </LinearGradient>
+                    </TouchableOpacity>
+                  )}
 
-  <View style={styles.footerRight}>
-    <TouchableOpacity
-      style={styles.viewButton}
-      onPress={() => navigateToChallengeDetails(item)}
-      accessibilityLabel={String(
-        t("viewChallengeDetails", { title: item.title })
-      )}
-      accessibilityHint={String(t("viewDetails"))}
-      accessibilityRole="button"
-      testID={`view-details-${item.id}`}
-    >
-      <LinearGradient
-        colors={[
-          currentTheme.colors.secondary,
-          currentTheme.colors.primary,
-        ]}
-        style={styles.viewButtonGradient}
-      >
-        <View style={styles.viewButtonContent}>
-          <Text
-            style={[
-              styles.viewButtonText,
-              { color: "#0b1120" },
-            ]}
-          >
-            {t("viewDetails")}
-          </Text>
-          <Ionicons
-            name="chevron-forward"
-            size={normalizeSize(14)}
-            color="#0b1120"
-          />
-        </View>
-      </LinearGradient>
-    </TouchableOpacity>
-  </View>
-</View>
-
+                  <View style={styles.footerRight}>
+                    <TouchableOpacity
+                      style={styles.viewButton}
+                      onPress={() => navigateToChallengeDetails(item)}
+                      accessibilityLabel={String(
+                        t("viewChallengeDetails", { title: item.title })
+                      )}
+                      accessibilityHint={String(t("viewDetails"))}
+                      accessibilityRole="button"
+                      testID={`view-details-${item.id}`}
+                    >
+                      <LinearGradient
+                        colors={[
+                          currentTheme.colors.secondary,
+                          currentTheme.colors.primary,
+                        ]}
+                        style={styles.viewButtonGradient}
+                      >
+                        <View style={styles.viewButtonContent}>
+                          <Text
+                            style={[
+                              styles.viewButtonText,
+                              { color: "#0b1120" },
+                            ]}
+                          >
+                            {t("viewDetails")}
+                          </Text>
+                          <Ionicons
+                            name="chevron-forward"
+                            size={normalizeSize(14)}
+                            color="#0b1120"
+                          />
+                        </View>
+                      </LinearGradient>
+                    </TouchableOpacity>
+                  </View>
+                </View>
               </View>
             </LinearGradient>
           </TouchableOpacity>
         </Animated.View>
       );
     },
-    [navigateToChallengeDetails, openHistoryModal, currentTheme, t, isDarkMode, formatDate]
+    [
+      navigateToChallengeDetails,
+      openHistoryModal,
+      currentTheme,
+      t,
+      isDarkMode,
+      formatDate,
+    ]
   );
 
   if (isLoading) {
@@ -512,7 +534,7 @@ export default function CompletedChallenges() {
               { color: currentTheme.colors.textPrimary },
             ]}
           >
-            {String(t("loadingProfile"))}
+            {String(t("loadingCompletedChallenges") || t("loadingProfile"))}
           </Text>
         </LinearGradient>
       </SafeAreaView>
@@ -675,6 +697,7 @@ export default function CompletedChallenges() {
             showsVerticalScrollIndicator={false}
             initialNumToRender={10}
             windowSize={5}
+            removeClippedSubviews
             getItemLayout={(_, index) => ({
               length: normalizeSize(ITEM_HEIGHT + SPACING * 1.5),
               offset: normalizeSize(ITEM_HEIGHT + SPACING * 1.5) * index,
@@ -693,13 +716,18 @@ export default function CompletedChallenges() {
               <View
                 style={[
                   styles.modalContainer,
-                  { backgroundColor: `${currentTheme.colors.overlay}80` },
+                  {
+                    backgroundColor: withAlpha(
+                      currentTheme.colors.overlay,
+                      0.7
+                    ),
+                  },
                 ]}
               >
                 <LinearGradient
                   colors={[
-                    currentTheme.colors.cardBackground,
-                    currentTheme.colors.cardBackground + "F0",
+                    withAlpha(currentTheme.colors.cardBackground, 0.98),
+                    withAlpha(currentTheme.colors.cardBackground, 0.92),
                   ]}
                   style={styles.modalContent}
                 >
@@ -719,20 +747,20 @@ export default function CompletedChallenges() {
                   <FlatList
                     data={selectedHistory.history}
                     keyExtractor={(_, i) => `${i}`}
+                    showsVerticalScrollIndicator={false}
                     renderItem={({ item }) => (
                       <Animated.View
-  entering={FadeInUp.delay(80)}
-  style={[
-    styles.historyItem,
-    {
-      borderBottomColor: withAlpha(
-        currentTheme.colors.textSecondary,
-        0.22
-      ),
-    },
-  ]}
->
-
+                        entering={FadeInUp.delay(80)}
+                        style={[
+                          styles.historyItem,
+                          {
+                            borderBottomColor: withAlpha(
+                              currentTheme.colors.textSecondary,
+                              0.22
+                            ),
+                          },
+                        ]}
+                      >
                         <Text
                           style={[
                             styles.historyText,
@@ -756,6 +784,7 @@ export default function CompletedChallenges() {
                     onPress={() => setHistoryModalVisible(false)}
                     accessibilityLabel={String(t("closeModal"))}
                     accessibilityHint={String(t("closeModalHint"))}
+                    accessibilityRole="button"
                     testID="close-modal-button"
                   >
                     <LinearGradient
@@ -811,7 +840,6 @@ const styles = StyleSheet.create({
   container: {
     flex: 1,
   },
-
   gradientContainer: {
     flex: 1,
   },
@@ -831,7 +859,6 @@ const styles = StyleSheet.create({
     height: SCREEN_WIDTH * 1.1,
     borderRadius: SCREEN_WIDTH * 0.55,
   },
-
   backButton: {
     position: "absolute",
     top:
@@ -847,13 +874,11 @@ const styles = StyleSheet.create({
     paddingVertical: SPACING,
     position: "relative",
   },
-
   listContent: {
     paddingVertical: SPACING * 1.5,
     paddingHorizontal: SCREEN_WIDTH * 0.025,
     paddingBottom: normalizeSize(80),
   },
-
   cardWrapper: {
     marginBottom: SPACING * 1.5,
     borderRadius: normalizeSize(25),
@@ -906,7 +931,6 @@ const styles = StyleSheet.create({
     flex: 1,
     justifyContent: "space-between",
   },
-
   cardTopRow: {
     flexDirection: "row",
     alignItems: "center",
@@ -938,7 +962,6 @@ const styles = StyleSheet.create({
     fontFamily: "Comfortaa_700Bold",
     color: "#0b1120",
   },
-
   challengeTitle: {
     fontSize: normalizeSize(17),
     fontFamily: "Comfortaa_700Bold",
@@ -949,7 +972,6 @@ const styles = StyleSheet.create({
     fontFamily: "Comfortaa_400Regular",
     marginBottom: normalizeSize(6),
   },
-
   metaRow: {
     flexDirection: "row",
     alignItems: "center",
@@ -973,7 +995,6 @@ const styles = StyleSheet.create({
     fontSize: normalizeSize(12.5),
     fontFamily: "Comfortaa_400Regular",
   },
-
   progressChip: {
     flexDirection: "row",
     alignItems: "center",
@@ -987,35 +1008,35 @@ const styles = StyleSheet.create({
     fontFamily: "Comfortaa_700Bold",
     marginLeft: 4,
   },
-footerRow: {
-  flexDirection: "column",
-  alignItems: "stretch",
-  gap: normalizeSize(8),
-  marginTop: normalizeSize(4),
-},
-footerRight: {
-  alignSelf: "flex-end",
-},
-historyButton: {
-  borderRadius: normalizeSize(18),
-  overflow: "hidden",
-  alignSelf: "flex-start",
-  width: "100%",
-},
-historyButtonGradient: {
-  paddingVertical: normalizeSize(10),
-  paddingHorizontal: normalizeSize(14),
-  borderRadius: normalizeSize(18),
-  flexDirection: "row",
-  alignItems: "center",
-  justifyContent: "flex-start",
-  gap: normalizeSize(8),
-},
-historyButtonText: {
-  fontFamily: "Comfortaa_700Bold",
-  fontSize: normalizeSize(13),
-  includeFontPadding: false,
-},
+  footerRow: {
+    flexDirection: "column",
+    alignItems: "stretch",
+    gap: normalizeSize(8),
+    marginTop: normalizeSize(4),
+  },
+  footerRight: {
+    alignSelf: "flex-end",
+  },
+  historyButton: {
+    borderRadius: normalizeSize(18),
+    overflow: "hidden",
+    alignSelf: "flex-start",
+    width: "100%",
+  },
+  historyButtonGradient: {
+    paddingVertical: normalizeSize(10),
+    paddingHorizontal: normalizeSize(14),
+    borderRadius: normalizeSize(18),
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "flex-start",
+    gap: normalizeSize(8),
+  },
+  historyButtonText: {
+    fontFamily: "Comfortaa_700Bold",
+    fontSize: normalizeSize(13),
+    includeFontPadding: false,
+  },
   viewButton: {
     borderRadius: normalizeSize(18),
     overflow: "hidden",
@@ -1038,7 +1059,6 @@ historyButtonText: {
     fontSize: normalizeSize(14.5),
     textAlign: "center",
   },
-
   loadingContainer: {
     flex: 1,
     justifyContent: "center",
@@ -1051,7 +1071,6 @@ historyButtonText: {
     fontFamily: "Comfortaa_400Regular",
     textAlign: "center",
   },
-
   noChallengesContainer: {
     flex: 1,
   },
@@ -1075,7 +1094,6 @@ historyButtonText: {
     marginTop: SPACING / 2,
     maxWidth: SCREEN_WIDTH * 0.75,
   },
-
   modalContainer: {
     flex: 1,
     justifyContent: "center",
@@ -1099,9 +1117,9 @@ historyButtonText: {
     textAlign: "center",
   },
   historyItem: {
-  paddingVertical: SPACING / 2,
-  borderBottomWidth: StyleSheet.hairlineWidth,
-},
+    paddingVertical: SPACING / 2,
+    borderBottomWidth: StyleSheet.hairlineWidth,
+  },
   historyText: {
     fontSize: normalizeSize(16),
     fontFamily: "Comfortaa_400Regular",

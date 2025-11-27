@@ -9,7 +9,6 @@ import {
   Dimensions,
   SafeAreaView,
   StatusBar,
-  Alert,
   Platform,
   RefreshControl,
   I18nManager,
@@ -52,6 +51,7 @@ import { useShareCard } from "@/hooks/useShareCard";
 import { FeatureShareCard } from "@/components/ShareCards";
 import { checkForAchievements } from "../helpers/trophiesHelpers";
 import { incStat } from "@/src/services/metricsService";
+import { useToast } from "@/src/ui/Toast";
 
 const SPACING = 15;
 const { width: SCREEN_WIDTH, height: SCREEN_HEIGHT } = Dimensions.get("window");
@@ -106,6 +106,7 @@ interface User {
 
 export default function NewFeatures() {
   const { t, i18n } = useTranslation();
+  const { show } = useToast();
   const [features, setFeatures] = useState<Feature[]>([]);
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
@@ -155,8 +156,8 @@ export default function NewFeatures() {
   const interstitialAdUnitId = __DEV__
     ? TestIds.INTERSTITIAL
     : Platform.select({
-        ios: "ca-app-pub-4725616526467159/4942270608",
-        android: "ca-app-pub-4725616526467159/6097960289",
+        ios: "ca-app-pub-4725616526467159/3625641580",
+        android: "ca-app-pub-4725616526467159/1602005670",
       })!;
 
   const interstitialRef = React.useRef<InterstitialAd | null>(null);
@@ -347,17 +348,13 @@ export default function NewFeatures() {
   const handleVote = useCallback(
     async (featureId: string) => {
       if (!user?.uid) {
-        Alert.alert(
-          t("newFeatures.loginRequiredTitle"),
-          t("newFeatures.loginRequiredMessage")
-        );
+        show(t("newFeatures.loginRequiredMessage"), "warning");
+        try { Haptics.notificationAsync(Haptics.NotificationFeedbackType.Warning); } catch {}
         return;
       }
       if (userVote) {
-        Alert.alert(
-          t("newFeatures.alreadyVotedTitle"),
-          t("newFeatures.alreadyVotedMessage")
-        );
+        show(t("newFeatures.alreadyVotedMessage"), "info");
+        try { Haptics.selectionAsync(); } catch {}
         return;
       }
       try {
@@ -393,35 +390,36 @@ export default function NewFeatures() {
           } catch {}
         }
 
-        Alert.alert(
-          t("newFeatures.voteRegisteredTitle"),
-          t("newFeatures.voteRegisteredMessage")
-        );
+        show(t("newFeatures.voteRegisteredMessage"), "success");
+        try { Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success); } catch {}
       } catch (error) {
         if (error?.message === "already_voted") {
           // cas rare : double-tap / multi-device → UI cohérente
           setUserVote((prev) => prev ?? featureId);
-          Alert.alert(t("newFeatures.alreadyVotedTitle"), t("newFeatures.alreadyVotedMessage"));
+          show(t("newFeatures.alreadyVotedMessage"), "info");
+          try { Haptics.selectionAsync(); } catch {}
           return;
         }
         console.error("Erreur lors du vote:", error);
-        Alert.alert(
-          t("newFeatures.voteErrorTitle"),
-          t("newFeatures.voteErrorMessage")
-        );
+        show(t("newFeatures.voteErrorMessage"), "error");
+        try { Haptics.notificationAsync(Haptics.NotificationFeedbackType.Error); } catch {}
       }
     },
-    [user, userVote, adLoaded, t, checkAdCooldown, markAdShown, showInterstitials]
+    [user, userVote, adLoaded, t, checkAdCooldown, markAdShown, showInterstitials, show]
   );
 
   // Proposition de fonctionnalité
   const handleProposeFeature = useCallback(
+    
     async (title: string, description?: string) => {
       if (!user?.uid) {
-        Alert.alert(
-          t("newFeatures.loginRequiredTitle"),
-          t("newFeatures.loginRequiredMessage")
-        );
+        show(t("newFeatures.loginRequiredMessage"), "warning");
+        try { Haptics.notificationAsync(Haptics.NotificationFeedbackType.Warning); } catch {}
+        return;
+      }
+      if (userVote) {
+        show(t("newFeatures.alreadyVotedMessage"), "info");
+        try { Haptics.selectionAsync(); } catch {}
         return;
       }
       try {
@@ -454,19 +452,15 @@ export default function NewFeatures() {
           interstitialRef.current.load();
         }
 
-        Alert.alert(
-          t("newFeatures.proposalSentTitle"),
-          t("newFeatures.proposalSentMessage")
-        );
+        show(t("newFeatures.proposalSentMessage"), "success");
+        try { Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success); } catch {}
       } catch (error) {
         console.error("Erreur lors de la proposition:", error);
-        Alert.alert(
-          t("newFeatures.proposalErrorTitle"),
-          t("newFeatures.proposalErrorMessage")
-        );
+        show(t("newFeatures.proposalErrorMessage"), "error");
+        try { Haptics.notificationAsync(Haptics.NotificationFeedbackType.Error); } catch {}
       }
     },
-    [user, adLoaded, t, checkAdCooldown, markAdShown, showInterstitials]
+    [user, userVote, adLoaded, t, checkAdCooldown, markAdShown, showInterstitials, show]
   );
 
   // Partage de fonctionnalité
@@ -502,8 +496,11 @@ export default function NewFeatures() {
           t("newFeatures.shareDialogTitle", { defaultValue: "Partager cette nouveauté" })
         );
         // ✅ SUCCESS COUNTER pour achievements: stats.shareChallenge.total
-        try { await incStat(auth.currentUser?.uid as string, "shareChallenge.total", 1); } catch {}
-        try { await checkForAchievements(auth.currentUser?.uid as string); } catch {}
+        const uid = auth.currentUser?.uid;
+        if (uid) {
+          try { await incStat(uid, "shareChallenge.total", 1); } catch {}
+          try { await checkForAchievements(uid); } catch {}
+        }
       } catch (error) {
         console.error("Erreur partage:", error);
       } finally {

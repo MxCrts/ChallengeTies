@@ -16,11 +16,14 @@ import {
   ActivityIndicator,
   Image,
   ScrollView,
+  useWindowDimensions,
   Dimensions,
   StatusBar,
   InteractionManager,
   Platform,
+  AccessibilityInfo,
   Modal,
+  BackHandler,
 } from "react-native";
 import { Image as ExpoImage } from "expo-image";
 import { SafeAreaView } from "react-native-safe-area-context";
@@ -36,6 +39,7 @@ import {
   getDocs,
   query,
   collection,
+  serverTimestamp,
   where,
 } from "firebase/firestore";
 import { db, auth } from "../../constants/firebase-config";
@@ -57,7 +61,6 @@ import ChallengeReviews from "../../components/ChallengeReviews";
 import { storage } from "../../constants/firebase-config";
 import { getDownloadURL, ref } from "firebase/storage";
 import { useAdsVisibility } from "../../src/context/AdsVisibilityContext";
-import { CARD_HEIGHT, CARD_WIDTH } from "@/components/ShareCard";
 import { Share } from "react-native";
 import type { ViewStyle } from "react-native";
 import PioneerBadge from "@/components/PioneerBadge";
@@ -80,11 +83,13 @@ import SendInvitationModal from "@/components/SendInvitationModal";
 import * as Localization from "expo-localization";
 import type { ModalProps } from "react-native";
 import * as Haptics from "expo-haptics";
-import { bumpCounterAndMaybeReview, maybeAskForReview } from "../../src/services/reviewService"
+import { bumpCounterAndMaybeReview } from "../../src/services/reviewService"
 import { recordSelectDays, recordDailyGlobalMark, incStat } from "../../src/services/metricsService";
 import NetInfo from "@react-native-community/netinfo";
 import { canInvite } from "../../utils/canInvite";
 import { usePathname } from "expo-router";
+import { useAuth } from "@/context/AuthProvider"; // si ce n'est pas déjà le cas
+
 
 
 function useTabBarHeightSafe(): number {
@@ -191,12 +196,6 @@ const dayIcons: Record<
   365: "rocket-outline",
 };
 
-interface Stat {
-  name: string;
-  value: number | string;
-  icon: string;
-}
-
 interface DuoUser {
   id: string;
   name: string;
@@ -211,9 +210,93 @@ interface DuoChallengeData {
   duoUser: DuoUser;
 }
 
+type RawChallengeEntry = {
+  challengeId?: string;
+  id?: string;
+  uniqueKey?: string;
+  duo?: boolean;
+  duoPartnerId?: string | null;
+  duoPartnerUsername?: string | null;
+  selectedDays?: number;
+  // ... le reste, on ne touche pas ici
+};
+
+function deriveDuoInfoFromUniqueKey(
+  entry: RawChallengeEntry,
+  currentUserId: string | undefined | null
+) {
+  if (!entry || !currentUserId) {
+    return {
+      isDuo: !!entry?.duo,
+      duoPartnerId: entry?.duoPartnerId ?? null,
+      duoPartnerUsername: entry?.duoPartnerUsername ?? null,
+    };
+  }
+
+  const rawKey = entry.uniqueKey;
+  if (!rawKey || typeof rawKey !== "string") {
+    return {
+      isDuo: !!entry?.duo,
+      duoPartnerId: entry?.duoPartnerId ?? null,
+      duoPartnerUsername: entry?.duoPartnerUsername ?? null,
+    };
+  }
+
+  // On cherche le segment "uidA-uidB" à la fin du uniqueKey
+  const parts = rawKey.split("_");
+  if (parts.length < 3) {
+    return {
+      isDuo: !!entry?.duo,
+      duoPartnerId: entry?.duoPartnerId ?? null,
+      duoPartnerUsername: entry?.duoPartnerUsername ?? null,
+    };
+  }
+
+  const pairSegment = parts[parts.length - 1]; // "uidA-uidB"
+  if (!pairSegment.includes("-")) {
+    return {
+      isDuo: !!entry?.duo,
+      duoPartnerId: entry?.duoPartnerId ?? null,
+      duoPartnerUsername: entry?.duoPartnerUsername ?? null,
+    };
+  }
+
+  const [uidA, uidB] = pairSegment.split("-");
+  if (!uidA || !uidB) {
+    return {
+      isDuo: !!entry?.duo,
+      duoPartnerId: entry?.duoPartnerId ?? null,
+      duoPartnerUsername: entry?.duoPartnerUsername ?? null,
+    };
+  }
+
+  let partnerId: string | null = null;
+  if (uidA === currentUserId) partnerId = uidB;
+  else if (uidB === currentUserId) partnerId = uidA;
+  else partnerId = null;
+
+  const isDuo = partnerId !== null;
+
+  return {
+    isDuo,
+    duoPartnerId: partnerId,
+    // on garde l'ancien username si on l'a, sinon on reconstruit ailleurs au besoin
+    duoPartnerUsername: entry?.duoPartnerUsername ?? null,
+  };
+}
+
+
 
 export default function ChallengeDetails() {
   const { theme } = useTheme();
+  const { user } = useAuth();
+  const { width: W, height: H } = useWindowDimensions();
+  const heroH = useMemo(
+    () => Math.max(240, Math.round(H * 0.35)),
+    [H]
+  );
+  const isCompactWide = W >= 700; // tablette / grands écrans
+  const actionIconWidth = isCompactWide ? "25%" : "50%";
   const [marking, setMarking] = useState(false);
   const [duoState, setDuoState] = useState<{
   enabled: boolean;
@@ -228,6 +311,8 @@ export default function ChallengeDetails() {
   const { t, i18n } = useTranslation();
   const { showBanners } = useAdsVisibility();
   const justJoinedRef = useRef(false);
+  // 🧹 Anti-doublon solo+duo : évite boucle de nettoyage
+  const cleanupSoloRef = useRef(false);
 const IS_COMPACT = SCREEN_WIDTH < 380; // très petits écrans (iPhone SE/Android compacts)
 const [confirmResetVisible, setConfirmResetVisible] = useState(false);
 const [sendInviteVisible, setSendInviteVisible] = useState(false);
@@ -235,8 +320,8 @@ const insets = useSafeAreaInsets();
 const [adHeight, setAdHeight] = useState(0);
   // 🆕 callback stable pour éviter un re-render en boucle quand BannerSlot mesure
   const onBannerHeight = useCallback((h: number) => {
-    if (h !== adHeight) setAdHeight(h);
-  }, [adHeight]);
+    setAdHeight((prev) => (prev === h ? prev : h));
+  }, []);
 
   // 🆕 état réseau : interdit l’invitation hors-ligne (UX claire)
   const [isOffline, setIsOffline] = useState(false);
@@ -251,6 +336,29 @@ const [adHeight, setAdHeight] = useState(0);
 
   const router = useRouter();
     const pct = (num = 0, den = 0) => (den > 0 ? Math.min(100, Math.max(0, Math.round((num / den) * 100))) : 0);
+
+    // ✅ Safe back pour deeplink (si pas de stack -> home)
+  const handleSafeBack = useCallback(() => {
+    // expo-router peut exposer canGoBack selon version
+    // @ts-ignore
+    if (router.canGoBack?.()) {
+      router.back();
+      return true;
+    }
+    router.replace("/");
+    return true;
+  }, [router]);
+
+  // ✅ Hardware back Android
+  useFocusEffect(
+    useCallback(() => {
+      const sub = BackHandler.addEventListener(
+        "hardwareBackPress",
+        handleSafeBack
+      );
+      return () => sub.remove();
+    }, [handleSafeBack])
+  );
 
   // pulse subtil autour de l'avatar du leader
   const leaderPulse = useSharedValue(0);
@@ -307,8 +415,19 @@ useFocusEffect(
   
   const [invitation, setInvitation] = useState<{ id: string } | null>(null);
  const [invitationModalVisible, setInvitationModalVisible] = useState(false);
+ const [inviteLoading, setInviteLoading] = useState(false);
  const processedInviteIdsRef = useRef<Set<string>>(new Set());
  const inviteOpenGuardRef = useRef(false);
+ const markInviteAsHandled = useCallback((inviteId?: string | null) => {
+  if (!inviteId) return;
+
+  // Marque l'ID comme traitée pour ne jamais ré-ouvrir le modal
+  processedInviteIdsRef.current.add(inviteId);
+
+  // Nettoie l'état local si c'est la même invite
+  setInvitation((prev) => (prev?.id === inviteId ? null : prev));
+}, []);
+
   
   const id = params.id || "";
 const isReload = !!(params as any)?.reload;
@@ -328,10 +447,26 @@ const shouldEnterAnim =
   } = useCurrentChallenges();
   const lastIntroKeyRef = useRef<string | null>(null);
 
+// ✅ Résout UNE seule entrée "courante" avec priorité DUO
 const currentChallenge = useMemo(() => {
-  return currentChallenges.find((ch) => ch.id === id || ch.challengeId === id);
+  const matches = currentChallenges.filter(
+    (ch) => (ch.challengeId ?? ch.id) === id
+  );
+  if (matches.length === 0) return undefined;
+  // priorité duo si présent
+  const duo = matches.find((m) => !!m.duo);
+  return duo || matches[0];
 }, [currentChallenges, id]);
 
+ // 🧠 Duo dérivé de façon déterministe à partir du uniqueKey + userId
+  const derivedDuo = useMemo(
+    () =>
+      deriveDuoInfoFromUniqueKey(
+        (currentChallenge || {}) as RawChallengeEntry,
+        user?.uid
+      ),
+    [currentChallenge, user?.uid]
+  );
 
   const [duoChallengeData, setDuoChallengeData] =
     useState<DuoChallengeData | null>(null);
@@ -341,9 +476,8 @@ const currentChallenge = useMemo(() => {
   const [daysOptions, setDaysOptions] = useState<number[]>([
     7, 14, 21, 30, 60, 90, 180, 365,
   ]);
-  const challengeTaken =
-  !!currentChallenge ||
-  currentChallenges.some((ch) => ch.challengeId === id || ch.id === id);
+  
+  const challengeTaken = !!currentChallenge;
 
   const [routeTitle, setRouteTitle] = useState(
     params.title || t("challengeDetails.untitled")
@@ -371,7 +505,6 @@ const assetsReady =
   const [finalSelectedDays, setFinalSelectedDays] = useState<number>(0);
   const [finalCompletedDays, setFinalCompletedDays] = useState<number>(0);
   const [userCount, setUserCount] = useState(0);
-  const [stats, setStats] = useState<Stat[]>([]);
   const [modalVisible, setModalVisible] = useState(false);
   const [completionModalVisible, setCompletionModalVisible] = useState(false);
   const [statsModalVisible, setStatsModalVisible] = useState(false);
@@ -384,6 +517,23 @@ const [introBlocking, setIntroBlocking] = useState(false); // blocks UI & hides 
 const fadeOpacity = useSharedValue(1); // pour fade-out
 const shakeMy = useSharedValue(0);
 const shakePartner = useSharedValue(0);
+
+const popMy = useSharedValue(0);
+const popPartner = useSharedValue(0);
+
+const [reduceMotion, setReduceMotion] = useState(false);
+useEffect(() => {
+  let sub: any;
+  AccessibilityInfo.isReduceMotionEnabled()
+    .then((v) => setReduceMotion(!!v))
+    .catch(() => {});
+  // écoute si l'utilisateur change l'option pendant l'app
+  sub = (AccessibilityInfo as any).addEventListener?.(
+    "reduceMotionChanged",
+    (v: boolean) => setReduceMotion(!!v)
+  );
+  return () => sub?.remove?.();
+}, []);
 // Padding bas pour le ScrollView
 const bottomInset = useMemo(() => {
   const h = showBanners && !introBlocking ? adHeight : 0;
@@ -395,13 +545,90 @@ const GAP = IS_SMALL ? 16 : 24;
 
 const challengeTakenOptimistic = challengeTaken || justJoinedRef.current;
 
-const isDuo = !!duoState?.enabled;   // une seule source = pas de flicker
-// Déjà en SOLO dans ce challenge (peu importe le streak) ?
+// 🧠 partenaire effectif calculé à partir du uniqueKey OU du state
+const effectiveDuoPartnerId =
+  derivedDuo.duoPartnerId ||
+  duoState?.partnerId ||
+  currentChallenge?.duoPartnerId ||
+  null;
+
+// 🧠 isDuo = priorité au calcul dérivé, puis au state, puis aux champs bruts
+const isDuo =
+  !!derivedDuo.isDuo ||
+  !!duoState?.enabled ||
+  !!(currentChallenge && currentChallenge.duo) ||
+  !!effectiveDuoPartnerId;
+
+// ✅ SOLO uniquement si aucune info duo ne ressort
 const isSoloInThisChallenge = !!currentChallenge && !isDuo;
 
-const canInviteFriend = !isDuo;
 
 const isDisabledMark = marking || isMarkedToday(id, finalSelectedDays);
+
+// 🆕 Sync immédiate avec le contexte quand le challenge passe en DUO
+useEffect(() => {
+  if (!currentChallenge || !currentChallenge.duo || !currentChallenge.duoPartnerId) return;
+
+  // 1) On met à jour l'état DUO local si besoin
+  setDuoState((prev) => {
+    const selectedDays =
+      currentChallenge.selectedDays ??
+      prev?.selectedDays ??
+      finalSelectedDays ??
+      0;
+
+    const uniqueKey =
+      currentChallenge.uniqueKey ||
+      prev?.uniqueKey ||
+      `${currentChallenge.challengeId ?? currentChallenge.id}_${selectedDays}`;
+
+    const partnerId = currentChallenge.duoPartnerId;
+
+    // Rien ne change ? => on évite un re-render inutile
+    if (
+      prev &&
+      prev.enabled &&
+      prev.partnerId === partnerId &&
+      prev.selectedDays === selectedDays &&
+      prev.uniqueKey === uniqueKey
+    ) {
+      return prev;
+    }
+
+    return {
+      enabled: true,
+      partnerId,
+      selectedDays,
+      uniqueKey,
+    };
+  });
+
+  // 2) On aligne aussi la progression locale sur celle du doc utilisateur
+  if (
+    typeof currentChallenge.selectedDays === "number" &&
+    currentChallenge.selectedDays > 0 &&
+    currentChallenge.selectedDays !== finalSelectedDays
+  ) {
+    setFinalSelectedDays(currentChallenge.selectedDays);
+  }
+
+  if (
+    typeof currentChallenge.completedDays === "number" &&
+    currentChallenge.completedDays >= 0 &&
+    currentChallenge.completedDays !== finalCompletedDays
+  ) {
+    setFinalCompletedDays(currentChallenge.completedDays);
+  }
+}, [
+  currentChallenge?.duo,
+  currentChallenge?.duoPartnerId,
+  currentChallenge?.selectedDays,
+  currentChallenge?.completedDays,
+  currentChallenge?.id,
+  finalSelectedDays,
+  finalCompletedDays,
+]);
+
 
   // ⚙️ Pré-sélection depuis le deep link ?days=XX (si valide)
 useEffect(() => {
@@ -435,7 +662,7 @@ const resetSoloProgressIfNeeded = useCallback(async () => {
       const snap = await tx.get(userRef);
       if (!snap.exists()) return;
 
-      const data = snap.data() as any;
+      let data = snap.data() as any;
       const list = Array.isArray(data?.CurrentChallenges) ? data.CurrentChallenges : [];
 
       let changed = false;
@@ -473,15 +700,15 @@ const fadeStyle = useAnimatedStyle<ViewStyle>(() => ({
 
 const shakeStyleMy = useAnimatedStyle<ViewStyle>(() => ({
   transform: [
-    { translateX: shakeMy.value * 6 },
-    { scale: 1.18 },
+    { translateX: shakeMy.value * 3 }, // micro-shake premium
+    { scale: interpolate(popMy.value, [0, 1], [1, 1.12]) },
   ] as ViewStyle["transform"],
 }));
 
 const shakeStylePartner = useAnimatedStyle<ViewStyle>(() => ({
   transform: [
-    { translateX: shakePartner.value * 6 },
-    { scale: 1.18 },
+    { translateX: shakePartner.value * 3 },
+    { scale: interpolate(popPartner.value, [0, 1], [1, 1.12]) },
   ] as ViewStyle["transform"],
 }));
 
@@ -495,54 +722,95 @@ const pulseStyle = useAnimatedStyle<ViewStyle>(() => ({
 
 useEffect(() => {
   if (!isDuo) return;
+  if (!duoChallengeData?.duoUser) return; // ⬅️ on attend que le partenaire soit chargé
 
   const introKey =
-    duoState?.uniqueKey || `${id}_${duoState?.selectedDays || 0}_${duoState?.partnerId || ""}`;
+    duoState?.uniqueKey ||
+    `${id}_${duoState?.selectedDays || 0}_${
+      duoState?.partnerId || duoChallengeData.duoUser.id
+    }`;
 
   if (!introKey || lastIntroKeyRef.current === introKey) return;
 
   lastIntroKeyRef.current = introKey;
   setIntroVisible(true);
-}, [isDuo, duoState?.uniqueKey, duoState?.selectedDays, duoState?.partnerId, id]);
+}, [
+  isDuo,
+  id,
+  duoState?.uniqueKey,
+  duoState?.selectedDays,
+  duoState?.partnerId,
+  duoChallengeData?.duoUser?.id,
+]);
+
 
 const startVsIntro = useCallback(() => {
-  // 3 shakes chacun
+  // Respect accessibilité : pas d'anim agressive
+  if (reduceMotion) {
+    fadeOpacity.value = withTiming(0, { duration: 450 }, () => {
+      runOnJS(setIntroVisible)(false);
+      runOnJS(setIntroBlocking)(false);
+      startedRef.current = false;
+      myImgReady.current = false;
+      partnerImgReady.current = false;
+    });
+    return;
+  }
+
+  // petit "impact" haptique premium
+  Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium).catch(() => {});
+
+  // Pop scale synchro (court et cinématique)
+  popMy.value = 0;
+  popPartner.value = 0;
+  popMy.value = withSequence(
+    withTiming(1, { duration: 220, easing: Easing.out(Easing.cubic) }),
+    withTiming(0, { duration: 260, easing: Easing.inOut(Easing.quad) })
+  );
+  popPartner.value = withSequence(
+    withTiming(1, { duration: 220, easing: Easing.out(Easing.cubic) }),
+    withTiming(0, { duration: 260, easing: Easing.inOut(Easing.quad) })
+  );
+
+  // Micro-shake x2 (plus rapide, moins "jeu mobile")
   shakeMy.value = withSequence(
     withRepeat(
       withSequence(
-        withTiming(-1, { duration: 80 }),
-        withTiming( 1, { duration: 80 }),
-        withTiming( 0, { duration: 80 })
+        withTiming(-1, { duration: 55, easing: Easing.out(Easing.quad) }),
+        withTiming( 1, { duration: 55, easing: Easing.out(Easing.quad) }),
+        withTiming( 0, { duration: 55 })
       ),
-      3, // ✅ 3 cycles
+      2,
       true
     ),
-    withTiming(0, { duration: 60 })
+    withTiming(0, { duration: 40 })
   );
 
   shakePartner.value = withSequence(
     withRepeat(
       withSequence(
-        withTiming( 1, { duration: 80 }),
-        withTiming(-1, { duration: 80 }),
-        withTiming( 0, { duration: 80 })
+        withTiming( 1, { duration: 55 }),
+        withTiming(-1, { duration: 55 }),
+        withTiming( 0, { duration: 55 })
       ),
-      3, // ✅ 3 cycles
+      2,
       true
     ),
-    withTiming(0, { duration: 60 }, () => {
-      // ✅ fermeture douce de l’overlay à la fin du partner
-      fadeOpacity.value = withTiming(0, { duration: 500 }, () => {
-  runOnJS(setIntroVisible)(false);
-  runOnJS(setIntroBlocking)(false);
-  // reset pour la prochaine fois
-  startedRef.current = false;
-  myImgReady.current = false;
-  partnerImgReady.current = false;
-      });
+    withTiming(0, { duration: 40 }, () => {
+      fadeOpacity.value = withTiming(
+        0,
+        { duration: 420, easing: Easing.inOut(Easing.quad) },
+        () => {
+          runOnJS(setIntroVisible)(false);
+          runOnJS(setIntroBlocking)(false);
+          startedRef.current = false;
+          myImgReady.current = false;
+          partnerImgReady.current = false;
+        }
+      );
     })
   );
-}, []);
+}, [reduceMotion, fadeOpacity, popMy, popPartner, shakeMy, shakePartner]);
 
 const tryStart = useCallback(() => {
   if (startedRef.current) return;
@@ -588,25 +856,25 @@ useEffect(() => {
 
 useEffect(() => {
   if (!introVisible) return;
-  if (!assetsReady) return; // attend que les URIs soient connues et la vue montée
 
-  // petit coussin pour laisser React monter les <Image/>
-  if (startTimerRef.current) clearTimeout(startTimerRef.current);
-  startTimerRef.current = setTimeout(() => {
-    // démarrage « propre » seulement si les deux images ont tiré onLoad
-    if (!startedRef.current && myImgReady.current && partnerImgReady.current) {
-      startedRef.current = true;
-      startVsIntro();
-    }
-  }, 400);
+  // Si les assets sont prêts, on fait le démarrage "propre"
+  if (assetsReady) {
+    if (startTimerRef.current) clearTimeout(startTimerRef.current);
+    startTimerRef.current = setTimeout(() => {
+      if (!startedRef.current && myImgReady.current && partnerImgReady.current) {
+        startedRef.current = true;
+        startVsIntro();
+      }
+    }, 400);
+  }
 
-  // hard fallback si onLoad ne vient jamais (réseaux pourris)
+  // Dans TOUS les cas : hard-fallback pour ne JAMAIS rester bloqué sur le spinner
   const hard = setTimeout(() => {
     if (!startedRef.current) {
       startedRef.current = true;
       startVsIntro();
     }
-  }, 2500);
+  }, assetsReady ? 2500 : 2200);
 
   return () => {
     if (startTimerRef.current) {
@@ -618,9 +886,8 @@ useEffect(() => {
 }, [introVisible, assetsReady, startVsIntro]);
 
 
-
 // Résout une URL d'avatar quelle que soit la forme : http(s) (Firebase ou non), gs://, ou path Storage
-const resolveAvatarUrl = async (raw?: string): Promise<string> => {
+const resolveAvatarUrl = useCallback(async (raw?: string): Promise<string> => {
   if (!raw) return "";
   const url = raw.trim();
 
@@ -654,81 +921,100 @@ const resolveAvatarUrl = async (raw?: string): Promise<string> => {
   } catch {
     return "";
   }
-};
+}, []);
+
 useEffect(() => {
   const uid = auth.currentUser?.uid;
   if (!uid || !id) return;
 
-  // déduplication (évite d'ouvrir plusieurs fois le même doc)
-  const opened = new Set<string>();
+  // On garde ici ce qui a déjà été traité (deeplink + modal déjà ouvert)
+  const alreadyProcessed = processedInviteIdsRef.current;
 
-  // on gardera ici un éventuel unsub du fallback
-  let fallbackUnsub: (() => void) | undefined;
-
-  const qPending = query(
+  // 🧩 On essaie d'abord la requête "propre" avec status == pending + challengeId
+  const baseQuery = query(
     collection(db, "invitations"),
     where("inviteeId", "==", uid),
-    where("status", "==", "pending")
+    where("status", "==", "pending"),
+    where("challengeId", "==", id)
   );
 
+  let fallbackUnsub: (() => void) | undefined;
+
   const unsubMain = onSnapshot(
-    qPending,
+    baseQuery,
     (snap) => {
-      snap.docChanges().forEach((chg) => {
-        const docId = chg.doc.id;
-        const data = chg.doc.data() as any;
-        if (data.challengeId === id && !opened.has(docId)) {
-          opened.add(docId);
-          setInvitation({ id: docId });
-          setInvitationModalVisible(true);
-        }
+      snap.docChanges().forEach((change) => {
+        const docId = change.doc.id;
+        const data = change.doc.data() as any;
+
+        // ✅ On ne traite que les "added" (pas les removed/modified)
+        if (change.type !== "added") return;
+
+        // ✅ Si déjà traité par un deeplink ou un précédent affichage, on ignore
+        if (alreadyProcessed.has(docId)) return;
+
+        // Juste au cas où : status & challengeId
+        if (data.status !== "pending") return;
+        if (data.challengeId !== id) return;
+
+        processedInviteIdsRef.current.add(docId);
+        setInvitation({ id: docId });
+        setInvitationModalVisible(true);
       });
     },
-    async (err) => {
+    (err) => {
       console.warn(
-        "⚠️ Snapshot (inviteeId+status) a échoué, fallback sans index:",
+        "⚠️ Snapshot invitations (query complète) a échoué, fallback sans index :",
         err?.message || err
       );
-      // Fallback: écoute "inviteeId" uniquement puis filtre en JS
-      const qByInvitee = query(
+
+      // 🔁 Fallback : on écoute juste inviteeId et on filtre en JS
+      const qFallback = query(
         collection(db, "invitations"),
         where("inviteeId", "==", uid)
       );
-      fallbackUnsub = onSnapshot(qByInvitee, (snap2) => {
-        snap2.docChanges().forEach((chg) => {
-          const docId = chg.doc.id;
-          const data = chg.doc.data() as any;
-          if (
-            data.status === "pending" &&
-            data.challengeId === id &&
-            !opened.has(docId)
-          ) {
-            opened.add(docId);
-            setInvitation({ id: docId });
-            setInvitationModalVisible(true);
-          }
+
+      fallbackUnsub = onSnapshot(qFallback, (snap2) => {
+        snap2.docChanges().forEach((change) => {
+          const docId = change.doc.id;
+          const data = change.doc.data() as any;
+
+          if (alreadyProcessed.has(docId)) return;
+          if (data.status !== "pending") return;
+          if (data.challengeId !== id) return;
+          if (change.type !== "added" && change.type !== "modified") return;
+
+          processedInviteIdsRef.current.add(docId);
+          setInvitation({ id: docId });
+          setInvitationModalVisible(true);
         });
       });
     }
   );
 
-  // Vérif immédiate (au cas où)
+  // 🔍 Vérif immédiate au montage (sans attendre un changement)
   (async () => {
     try {
       const snap = await getDocs(
-        query(collection(db, "invitations"), where("inviteeId", "==", uid))
+        query(
+          collection(db, "invitations"),
+          where("inviteeId", "==", uid),
+          where("status", "==", "pending"),
+          where("challengeId", "==", id)
+        )
       );
+
       snap.forEach((d) => {
+        const docId = d.id;
         const data = d.data() as any;
-        if (
-          data.status === "pending" &&
-          data.challengeId === id &&
-          !opened.has(d.id)
-        ) {
-          opened.add(d.id);
-          setInvitation({ id: d.id });
-          setInvitationModalVisible(true);
-        }
+
+        if (alreadyProcessed.has(docId)) return;
+        if (data.status !== "pending") return;
+        if (data.challengeId !== id) return;
+
+        processedInviteIdsRef.current.add(docId);
+        setInvitation({ id: docId });
+        setInvitationModalVisible(true);
       });
     } catch (e) {
       console.error("❌ Vérif immédiate invitations échouée:", e);
@@ -741,53 +1027,110 @@ useEffect(() => {
   };
 }, [id]);
 
+
 useEffect(() => {
   const uid = auth.currentUser?.uid;
   if (!uid || !id) return;
 
-  const unsub = onSnapshot(doc(db, "users", uid), (snap) => {
-    const data = snap.data() as any;
-    const list: any[] = Array.isArray(data?.CurrentChallenges) ? data.CurrentChallenges : [];
+  const userRef = doc(db, "users", uid);
 
-    // Robust matching (id || challengeId) + selectedDays si dispo + uniqueKey si présent
-    const entry = list.find((c) => {
-      const cid = c?.challengeId ?? c?.id;
-      if (!cid) return false;
-      // si on a déjà un selectedDays local ou context
-      const sd = c?.selectedDays ?? finalSelectedDays ?? (Number(params.selectedDays) || undefined);
+  const unsub = onSnapshot(
+    userRef,
+    (snap) => {
+      let data = snap.data() as any;
+      const list: any[] = Array.isArray(data?.CurrentChallenges)
+        ? data.CurrentChallenges
+        : [];
 
-      // uniqueKey prioritaire si présent
-      if (c?.uniqueKey && (currentChallenge?.uniqueKey || `${id}_${sd}`)) {
-        return c.uniqueKey === (currentChallenge?.uniqueKey || `${id}_${sd}`);
-      }
-      return cid === id; // fallback
-    });
-
-    if (!entry) {
-      setDuoState((prev) => (prev?.enabled ? { enabled: false } : prev));
-      return;
-    }
-
-    // Toujours garder ces deux-là sync depuis Firestore
-    setFinalSelectedDays(entry.selectedDays || 0);
-    setFinalCompletedDays(entry.completedDays || 0);
-
-    if (entry.duo && entry.duoPartnerId) {
-      setDuoState({
-        enabled: true,
-        partnerId: entry.duoPartnerId,
-        selectedDays: entry.selectedDays,
-        uniqueKey: entry.uniqueKey || `${entry.challengeId ?? entry.id}_${entry.selectedDays}`,
+      // ✅ Match toutes les entrées liées à ce challenge
+      const matches = list.filter((c) => {
+        const cid = c?.challengeId ?? c?.id;
+        return cid === id;
       });
-    } else {
-      setDuoState({ enabled: false });
-      // On ne force pas duoChallengeData ici, un autre effet le remettra à null
+
+      // ✅ S'il y a un duo, il gagne la priorité
+      const entry = matches.find((m) => !!m.duo) || matches[0];
+
+      if (!entry) {
+        setDuoState((prev) => (prev?.enabled ? { enabled: false } : prev));
+        return;
+      }
+
+      // 🧹 Auto-cleanup : si duo + solo coexistent, on supprime solo
+      if (
+        matches.length > 1 &&
+        matches.some((m) => !!m.duo) &&
+        matches.some((m) => !m.duo) &&
+        !cleanupSoloRef.current
+      ) {
+        cleanupSoloRef.current = true;
+
+        runTransaction(db, async (tx) => {
+          const snap2 = await tx.get(userRef);
+          if (!snap2.exists()) return;
+          const data2 = snap2.data() as any;
+          const list2: any[] = Array.isArray(data2?.CurrentChallenges)
+            ? data2.CurrentChallenges
+            : [];
+          const cleaned = list2.filter((c) => {
+            const cid = c?.challengeId ?? c?.id;
+            // garde tout sauf SOLO de ce challenge quand DUO existe
+            if (cid === id && !c?.duo) return false;
+            return true;
+          });
+          tx.update(userRef, { CurrentChallenges: cleaned });
+        })
+          .catch((e) => console.warn("cleanup solo failed (non bloquant):", e))
+          .finally(() => {
+            cleanupSoloRef.current = false;
+          });
+      }
+
+             // Toujours garder ces deux-là sync depuis Firestore
+      setFinalSelectedDays(entry.selectedDays || 0);
+      setFinalCompletedDays(entry.completedDays || 0);
+
+      // 🧠 on recalcule le duo à partir du uniqueKey + uid courant
+      const { isDuo, duoPartnerId } = deriveDuoInfoFromUniqueKey(
+        {
+          challengeId: entry.challengeId ?? entry.id,
+          id: entry.id,
+          uniqueKey: entry.uniqueKey,
+          duo: entry.duo,
+          duoPartnerId: entry.duoPartnerId,
+          duoPartnerUsername: entry.duoPartnerUsername,
+          selectedDays: entry.selectedDays,
+        },
+        uid
+      );
+
+      if (isDuo && duoPartnerId) {
+        setDuoState({
+          enabled: true,
+          partnerId: duoPartnerId,
+          selectedDays: entry.selectedDays,
+          uniqueKey:
+            entry.uniqueKey ||
+            `${entry.challengeId ?? entry.id}_${entry.selectedDays}`,
+        });
+      } else {
+        // on ne casse pas tout si déjà false
+        setDuoState((prev) => (prev?.enabled ? { enabled: false } : prev));
+        // duoChallengeData sera remis à null par l'autre effet
+      }
+
+
+    },
+    (error) => {
+      // 💡 évite "Uncaught Error in snapshot listener"
+      console.error("❌ user CurrentChallenges snapshot error:", error);
     }
-  });
+  );
 
   return () => unsub();
   // ⚠️ ne mets pas finalSelectedDays ici dans les deps pour éviter les boucles
 }, [id]);
+
 
 useEffect(() => {
    if (!duoState?.enabled || !duoState?.partnerId) {
@@ -892,58 +1235,6 @@ useEffect(() => {
 }, [id, t]);
 
 
-  useEffect(() => {
-  if (!currentChallenge) return;
-
-    const totalSaved = savedChallenges.length;
-    const uniqueOngoing = new Map(
-      currentChallenges.map((ch: any) => [`${ch.id}_${ch.selectedDays}`, ch])
-    );
-    const totalOngoing = uniqueOngoing.size;
-    const totalCompleted = currentChallenges.filter(
-      (challenge) => challenge.completedDays === challenge.selectedDays
-    ).length;
-    const successRate =
-      totalOngoing + totalCompleted > 0
-        ? Math.round((totalCompleted / (totalOngoing + totalCompleted)) * 100)
-        : 0;
-    const longestStreak = 0;
-    const trophies = 0;
-    const achievementsUnlocked = 0;
-
-    const newStats: Stat[] = [
-      { name: "Challenges Saved", value: totalSaved, icon: "bookmark-outline" },
-      {
-        name: "Ongoing Challenges",
-        value: totalOngoing,
-        icon: "hourglass-outline",
-      },
-      {
-        name: "Challenges Completed",
-        value: totalCompleted,
-        icon: "trophy-outline",
-      },
-      {
-        name: "Success Rate",
-        value: `${successRate}%`,
-        icon: "stats-chart-outline",
-      },
-      { name: "Trophies", value: trophies, icon: "medal-outline" },
-      {
-        name: "Achievements Unlocked",
-        value: achievementsUnlocked,
-        icon: "ribbon-outline",
-      },
-      {
-        name: "Longest Streak",
-        value: `${longestStreak} days`,
-        icon: "flame-outline",
-      },
-    ];
-    setStats(newStats);
-  }, [savedChallenges, currentChallenges, currentChallenge]);
-  
-
 // Avatar du user courant
 // Avatar + Nom du user courant
 useEffect(() => {
@@ -1024,54 +1315,202 @@ useEffect(() => {
 
 
 const pathname = usePathname();
- useEffect(() => {
-   const openFromParamOrUrl = (inviteParam?: string) => {
-     const idStr = String(inviteParam || "");
-     if (!idStr) return;
-     if (processedInviteIdsRef.current.has(idStr)) return;
-     if (inviteOpenGuardRef.current) return; // anti double open
+const currentUid = auth.currentUser?.uid || null;
 
-     // Si pas connecté, redirige vers login en préservant l’invite
-     if (!auth.currentUser) {
-       const redirect = encodeURIComponent(`/challenge-details/${params.id}`);
-       router.replace(`/login?redirect=${redirect}&invite=${encodeURIComponent(idStr)}`);
-       return;
-     }
+// 🆕 Helper : récupère un username propre pour stocker dans inviteeUsername
+const getInviteeUsername = useCallback(async (uid: string): Promise<string | null> => {
+  try {
+    const snap = await getDoc(doc(db, "users", uid));
+    if (!snap.exists()) return null;
+    const u = snap.data() as any;
+    return (
+      u.username ||
+      u.displayName ||
+      (typeof u.email === "string" ? u.email.split("@")[0] : null)
+    );
+  } catch {
+    return null;
+  }
+}, []);
 
-     inviteOpenGuardRef.current = true;
-     processedInviteIdsRef.current.add(idStr);
-     setInvitation({ id: idStr });
-     setTimeout(() => {
-       setInvitationModalVisible(true);
-       inviteOpenGuardRef.current = false;
-     }, 150);
+useEffect(() => {
+  const openFromParamOrUrl = async (inviteParam?: string) => {
+    const idStr = String(inviteParam || "").trim();
+    if (!idStr) return;
+    if (processedInviteIdsRef.current.has(idStr)) return;
+    if (inviteOpenGuardRef.current) return; // anti double open
 
-     // ⚠️ enlève le param ?invite de l’URL courante pour éviter ré-ouverture
-     try {
-       const cleanUrl = pathname || `/challenge-details/${params.id}`;
-       router.replace(cleanUrl as any);
-     } catch {}
-   };
+    // 🔐 Re-snapshot live de l'utilisateur au moment T
+    const liveUid = auth.currentUser?.uid || null;
 
-   // 1) Param route
-   if (params?.invite) openFromParamOrUrl(String(params.invite));
+    // Pas connecté → on garde le flow login + redirect + invite
+    if (!liveUid) {
+      try {
+        const redirectTarget = `/challenge-details/${params.id || id}`;
+        const redirect = encodeURIComponent(redirectTarget);
+        router.replace(
+          `/login?redirect=${redirect}&invite=${encodeURIComponent(idStr)}` as any
+        );
+      } catch (e) {
+        console.warn("[invite] redirect to login failed:", e);
+      }
+      return;
+    }
 
-   // 2) Initial URL
-   Linking.getInitialURL().then((url) => {
-     if (!url) return;
-     const parsed = Linking.parse(url);
-     const invite = String(parsed?.queryParams?.invite || "");
-     if (invite) openFromParamOrUrl(invite);
-   });
+    inviteOpenGuardRef.current = true;
+    setInviteLoading(true);
 
-   // 3) URL runtime
-   const sub = Linking.addEventListener("url", ({ url }) => {
-     const parsed = Linking.parse(url);
-     const invite = String(parsed?.queryParams?.invite || "");
-     if (invite) openFromParamOrUrl(invite);
-   });
-   return () => (sub as any)?.remove?.();
- }, [params?.id, params?.invite, router, pathname]);
+    try {
+      // 🧾 Vérifie que l’invitation existe
+      const snap = await getDoc(doc(db, "invitations", idStr));
+      if (!snap.exists()) {
+        console.warn("[invite] invitation doc inexistant pour id =", idStr);
+        return;
+      }
+
+      let data = snap.data() as any;
+
+      // Invitation plus valable
+      if (data.status !== "pending") {
+        console.warn("[invite] invitation non pending, statut =", data.status);
+        return;
+      }
+
+      // 🚫 L'inviteur ne peut pas "accepter" sa propre open-invite
+      if (data.inviterId === liveUid) {
+        console.warn("[invite] user est l'inviteur, ignore le lien");
+        return;
+      }
+
+      // === CAS 1 : invitation classique (directe, avec inviteeId fixé) ===
+      if (data.kind !== "open") {
+        if (data.inviteeId !== liveUid) {
+          console.warn("[invite] doc ne concerne pas ce user (direct invite)");
+          return;
+        }
+      } else {
+        // === CAS 2 : OPEN INVITE ===
+        if (data.inviteeId && data.inviteeId !== liveUid) {
+          console.warn("[invite] open invite déjà prise par un autre user");
+          return;
+        }
+
+        if (!data.inviteeId) {
+          console.log(
+            "[invite] open invite sans inviteeId → tentative de claim pour",
+            liveUid
+          );
+
+          const inviteeUsername = liveUid
+            ? await getInviteeUsername(liveUid)
+            : null;
+
+          try {
+            await runTransaction(db, async (tx) => {
+              const ref = doc(db, "invitations", idStr);
+              const snap2 = await tx.get(ref);
+              if (!snap2.exists()) throw new Error("invite_not_found");
+
+              const d2 = snap2.data() as any;
+              if (d2.status !== "pending") throw new Error("not_pending");
+
+              // si quelqu'un l'a prise entre-temps, on stoppe
+              if (d2.inviteeId && d2.inviteeId !== liveUid) {
+                throw new Error("already_taken");
+              }
+
+              tx.update(ref, {
+                inviteeId: liveUid,
+                inviteeUsername: inviteeUsername || null,
+                updatedAt: serverTimestamp(),
+              });
+            });
+
+            console.log("[invite] open invite CLAIMED par", liveUid);
+
+            // 🔁 On recharge la version à jour (inviteeId / inviteeUsername remplis)
+            try {
+              const freshSnap = await getDoc(doc(db, "invitations", idStr));
+              if (freshSnap.exists()) {
+                data = freshSnap.data() as any;
+              }
+            } catch (e) {
+              console.warn("[invite] refresh invitation after claim failed:", e);
+            }
+          } catch (e) {
+            console.warn("[invite] claim open invite failed:", e);
+            return; // on ne montre pas de modal si on ne peut pas revendiquer
+          }
+        }
+      }
+
+      // Si le lien pointe vers un autre challenge, on redirige dessus
+      if (data.challengeId && data.challengeId !== id) {
+        try {
+          router.replace(
+            `/challenge-details/${data.challengeId}?invite=${encodeURIComponent(
+              idStr
+            )}` as any
+          );
+        } catch (e) {
+          console.warn("[invite] redirect vers bon challenge échoué:", e);
+        }
+        return;
+      }
+
+      // ✅ OK : on ouvre le modal une seule fois
+      processedInviteIdsRef.current.add(idStr);
+      setInvitation({ id: idStr });
+      setInvitationModalVisible(true);
+
+      // Nettoie l’URL en enlevant ?invite (évite re-open au re-render)
+      try {
+        const cleanUrl = pathname || `/challenge-details/${id}`;
+        router.replace(cleanUrl as any);
+      } catch (e) {
+        console.warn("[invite] cleanUrl failed:", e);
+      }
+    } catch (e) {
+      console.error("❌ openFromParamOrUrl failed:", e);
+    } finally {
+      inviteOpenGuardRef.current = false;
+      setInviteLoading(false);
+    }
+  };
+
+  let urlSub: any;
+
+  // 1) Param route déjà mappé par expo-router
+  if (params?.invite) {
+    openFromParamOrUrl(String(params.invite));
+  }
+
+  // 2) Initial URL (app tuée puis ouverte via lien)
+  Linking.getInitialURL()
+    .then((initialUrl) => {
+      if (!initialUrl) return;
+      const parsed = Linking.parse(initialUrl);
+      const invite = String(parsed?.queryParams?.invite || "");
+      if (invite) openFromParamOrUrl(invite);
+    })
+    .catch((e) => console.warn("⚠️ getInitialURL error:", e));
+
+  // 3) URLs runtime (app déjà ouverte, clic depuis WhatsApp, SMS, etc.)
+  urlSub = Linking.addEventListener("url", ({ url }) => {
+    try {
+      const parsed = Linking.parse(url);
+      const invite = String(parsed?.queryParams?.invite || "");
+      if (invite) openFromParamOrUrl(invite);
+    } catch (e) {
+      console.warn("⚠️ Linking url handler error:", e);
+    }
+  });
+
+  return () => {
+    (urlSub as any)?.remove?.();
+  };
+}, [id, params?.invite, pathname, router, currentUid, params.id]);
+
 
   const isSavedChallenge = useCallback((challengeId: string) => savedIds.has(challengeId), [savedIds]);
 
@@ -1224,6 +1663,7 @@ const calendarDays = useMemo(() => {
 
 
   const saveBusyRef = useRef(false);
+  const markBusyRef = useRef(false);
 
 const handleSaveChallenge = useCallback(async () => {
   if (!id || saveBusyRef.current) return;
@@ -1279,10 +1719,13 @@ const handleSaveChallenge = useCallback(async () => {
     setCompletionModalVisible(true);
   }, [finalSelectedDays]);
 
-  const handleClaimTrophiesWithoutAd = useCallback(async () => {
+    const handleClaimTrophiesWithoutAd = useCallback(async () => {
     try {
       await completeChallenge(id, finalSelectedDays, false);
-      
+
+      // 🎉 Confettis premium sur validation sans pub
+      confettiRef.current?.start?.();
+
       setCompletionModalVisible(false);
     } catch (error) {
       Alert.alert(t("alerts.error"), t("challengeDetails.completeError"));
@@ -1292,11 +1735,16 @@ const handleSaveChallenge = useCallback(async () => {
   const handleClaimTrophiesWithAd = useCallback(async () => {
     try {
       await completeChallenge(id, finalSelectedDays, true);
+
+      // 🎉 Confettis premium aussi quand on regarde une pub
+      confettiRef.current?.start?.();
+
       setCompletionModalVisible(false);
     } catch (error) {
       Alert.alert(t("alerts.error"), t("challengeDetails.completeError"));
     }
   }, [id, finalSelectedDays, completeChallenge]);
+
 
   const handleNavigateToChat = useCallback(() => {
     if (!challengeTaken ) {
@@ -1311,7 +1759,7 @@ const handleSaveChallenge = useCallback(async () => {
 );
   }, [id, challengeTaken , routeTitle, router]);
 
-  // Langue sûre pour le partage (Jamais de split sur undefined)
+// Langue sûre pour le partage (jamais de split sur undefined)
 const getShareLang = (i18nLang?: string) => {
   // 1) i18n si dispo
   if (typeof i18nLang === "string" && i18nLang.length > 0) {
@@ -1322,7 +1770,9 @@ const getShareLang = (i18nLang?: string) => {
   try {
     const locs = (Localization as any)?.getLocales?.();
     if (Array.isArray(locs) && locs[0]?.languageTag) {
-      const l = String(locs[0].languageTag).split(/[-_]/)[0]?.toLowerCase();
+      const l = String(locs[0].languageTag)
+        .split(/[-_]/)[0]
+        ?.toLowerCase();
       if (l) return l;
     }
   } catch {}
@@ -1334,7 +1784,7 @@ const getShareLang = (i18nLang?: string) => {
       if (l) return l;
     }
   } catch {}
-  // 4) Web fallback éventuel
+  // 4) Web fallback éventuel (web only)
   const navLang = (globalThis as any)?.navigator?.language;
   if (typeof navLang === "string" && navLang.length > 0) {
     const l = navLang.split(/[-_]/)[0]?.toLowerCase();
@@ -1344,48 +1794,83 @@ const getShareLang = (i18nLang?: string) => {
   return "en";
 };
 
+// 🔗 Construction du lien de partage 100 % safe RN/Hermes (pas de URLSearchParams)
+const buildShareUrl = (challengeId: string, title: string, lang: string) => {
+  const entries: [string, string][] = [
+    ["id", challengeId],
+    ["title", title],
+    ["lang", lang],
+    // petit cache-busting pour les aperçus (WhatsApp / iMessage)
+    ["v", String(Date.now())],
+  ];
+
+  const qs = entries
+    .filter(([, value]) => typeof value === "string" && value.length > 0)
+    .map(
+      ([k, v]) =>
+        `${encodeURIComponent(k)}=${encodeURIComponent(v)}`
+    )
+    .join("&");
+
+  return `https://links.challengeties.app/i?${qs}`;
+};
+
 const handleShareChallenge = useCallback(async () => {
+  if (!id) return;
+
   try {
     const shareLang = getShareLang(i18n?.language as string | undefined);
-     // ✅ Lien universel hébergé : ouvre l'app si installée, sinon Store
-    const base = "https://links.challengeties.app/i";
-    const params = new URLSearchParams();
-    params.set("id", id);
-    params.set("title", routeTitle);
-    params.set("lang", shareLang);
-    // petit cache-busting pour les previews (WA/iMessage)
-    params.set("v", String(Date.now()));
-    const appLink = `${base}?${params.toString()}`;
-    const message = `${t("challengeDetails.shareMessage", { title: routeTitle })}\n${appLink}`;
+    const safeTitle =
+      routeTitle && routeTitle.trim().length > 0
+        ? routeTitle.trim()
+        : t("challengeDetails.untitled");
 
-    const result = await Share.share(
-      { title: t("challengeDetails.share"), message, url: appLink },
-      { dialogTitle: t("challengeDetails.share") }
-    );
+    const appLink = buildShareUrl(id, safeTitle, shareLang);
+    const message = `${t("challengeDetails.shareMessage", {
+      title: safeTitle,
+    })}\n${appLink}`;
 
-   if (result.action === Share.sharedAction) {
+    // Payload compatible Android / iOS
+    const payload: any = {
+      title: t("challengeDetails.share"),
+      message,
+    };
+
+    // Sur iOS seulement, on ajoute url (Android n'en a pas besoin,
+    // et certains bridges cassent quand l'url est mal gérée)
+    if (Platform.OS === "ios") {
+      payload.url = appLink;
+    }
+
+    const result = await Share.share(payload, {
+      dialogTitle: t("challengeDetails.share"),
+    });
+
+    if (result.action === Share.sharedAction) {
       const uid = auth.currentUser?.uid;
       if (uid) {
-        // ✅ Succès: shareChallenge → incrémente UNIQUEMENT si réellement partagé
         await incStat(uid, "shareChallenge.total", 1);
         await checkForAchievements(uid);
       }
+    } else {
+      // Annulé → on copie le lien en fallback discret
+      try {
+        const { setStringAsync } = await import("expo-clipboard");
+        await setStringAsync(appLink);
+        Alert.alert(
+          t("challengeDetails.share"),
+          t("challengeDetails.linkCopied")
+        );
+      } catch {}
     }
-    else {
-  // Fallback discret : copie le lien dans le presse-papier
-  try {
-    const { setStringAsync } = await import("expo-clipboard");
-    await setStringAsync(appLink);
-    Alert.alert(t("challengeDetails.share"), t("challengeDetails.linkCopied"));
-  } catch {}
-}
   } catch (error: any) {
     console.error("❌ handleShareChallenge error:", error);
-    Alert.alert(t("alerts.shareError"), error?.message || String(error));
+    Alert.alert(
+      t("alerts.shareError"),
+      error?.message || String(error)
+    );
   }
-}, [id, routeTitle, t, lang]);
-
-
+}, [id, routeTitle, t, i18n?.language]);
 
 const handleInviteFriend = useCallback(async () => {
   Haptics.selectionAsync().catch(()=>{});
@@ -1429,6 +1914,18 @@ const handleInviteFriend = useCallback(async () => {
   }
 }, [id, isDuo, isSoloInThisChallenge, isOffline, t]);
 
+const handleInviteButtonPress = useCallback(() => {
+  if (isDuo) {
+    Alert.alert(
+      t("alerts.info", { defaultValue: "Info" }),
+      t("invitationS.errors.duoAlready", {
+        defaultValue: "Tu es déjà en duo sur ce défi.",
+      })
+    );
+    return;
+  }
+  handleInviteFriend();
+}, [isDuo, handleInviteFriend, t]);
 
   const handleViewStats = useCallback(() => {
     if (!challengeTaken ) return;
@@ -1436,10 +1933,11 @@ const handleInviteFriend = useCallback(async () => {
   }, [challengeTaken ]);
 
   const handleMarkTodayPress = useCallback(async () => {
-  if (marking) return;
+  if (marking || markBusyRef.current) return;
   if (isMarkedToday(id, finalSelectedDays)) return;
 
   try {
+    markBusyRef.current = true;
     setMarking(true);
     // ⚠️ on laisse le contexte faire ses vérifications (rupture, modal, etc.)
     await markToday(id, finalSelectedDays);
@@ -1464,6 +1962,7 @@ try {
     Alert.alert(t("alerts.error"), t("challengeDetails.markError") || "Erreur");
   } finally {
     setMarking(false);
+    markBusyRef.current = false;
   }
 }, [marking, id, finalSelectedDays, isMarkedToday, markToday, t]);
 
@@ -1508,7 +2007,7 @@ const scrollContentStyle = useMemo(
    pointerEvents="box-none"
  >
         <TouchableOpacity
-          onPress={() => router.back()}
+          onPress={handleSafeBack}
           style={[styles.backButton, styles.backButtonOverlay, { width: 44, height: 44, borderRadius: 22, justifyContent: "center", alignItems: "center" }]}
     hitSlop={{ top: 12, bottom: 12, left: 12, right: 12 }}
           accessibilityLabel={t("backButton")}
@@ -1525,25 +2024,26 @@ const scrollContentStyle = useMemo(
       </Animated.View>
       <ScrollView
         style={{ flex: 1 }}
-        removeClippedSubviews={true}              // 🆕 recycle views (perf grandes descriptions)
+        removeClippedSubviews={Platform.OS === "android"}           
         keyboardShouldPersistTaps="handled"
         showsVerticalScrollIndicator={false}
         contentContainerStyle={scrollContentStyle}
         contentInsetAdjustmentBehavior="never"
         overScrollMode="never"
       >
-  <View style={styles.imageContainer}>
+  <View style={[styles.imageContainer, { height: heroH }]}>
     {challengeImage ? (
       <>
         {/* 🆕 ExpoImage = cache memory/disk + transition native */}
         <ExpoImage
   source={{ uri: challengeImage }}
-  style={styles.image}
+  style={[styles.image, { height: heroH }]}
   contentFit="cover"
   cachePolicy="disk"          // 👈 force disque pour retours
   transition={150}
   priority="high"             // 👈 charge en priorité
-  recyclingKey={challengeImage} // 👈 évite leaks sur switch d’images
+  recyclingKey={challengeImage}
+  accessibilityLabel={routeTitle}
 />
 
         <LinearGradient
@@ -1553,7 +2053,10 @@ const scrollContentStyle = useMemo(
         />
       </>
     ) : (
-      <View style={[styles.imagePlaceholder, { backgroundColor: currentTheme.colors.overlay }]}>
+      <View style={[
+        styles.imagePlaceholder,
+        { backgroundColor: currentTheme.colors.overlay, height: heroH }
+      ]}>
         <Ionicons name="image-outline" size={normalizeSize(80)} color={currentTheme.colors.textPrimary} />
         <Text style={[styles.noImageText, { color: currentTheme.colors.textPrimary }]}>
   {t("challengeDetails.noImage")}
@@ -1575,6 +2078,7 @@ const scrollContentStyle = useMemo(
                 color: isDarkMode ? currentTheme.colors.textPrimary : "#000000",
               }, // Couleur dynamique
             ]}
+            accessibilityRole="header"
           >
             {routeTitle}
           </Text>
@@ -1960,12 +2464,12 @@ textStyle = { color: isDarkMode ? "#FFB3B3" : "#8A0000" };
 
 
     {/* Bouton marquer aujourd'hui (commun) */}
-    <TouchableOpacity
+        <TouchableOpacity
       style={styles.markTodayButton}
       accessibilityHint={t("challengeDetails.markTodayHint")}
       accessibilityRole="button"
       onPress={handleMarkTodayPress}
-      disabled={marking || isMarkedToday(id, finalSelectedDays)}
+      disabled={isDisabledMark}
       accessibilityLabel={
         isMarkedToday(id, finalSelectedDays)
           ? t("challengeDetails.alreadyMarked")
@@ -1991,26 +2495,29 @@ textStyle = { color: isDarkMode ? "#FFB3B3" : "#8A0000" };
         </View>
       ) : (
         <LinearGradient
-  colors={
-    marking
-      ? ["#6b7280", "#6b7280"]            // gris pendant l’envoi
-      : [currentTheme.colors.primary, currentTheme.colors.secondary]
-  }
-  style={styles.markTodayButtonGradient}
-  start={{ x: 0, y: 0 }}
-  end={{ x: 1, y: 1 }}
->
+          colors={
+            marking
+              ? ["#6b7280", "#6b7280"] // gris pendant l’envoi
+              : [currentTheme.colors.primary, currentTheme.colors.secondary]
+          }
+          style={styles.markTodayButtonGradient}
+          start={{ x: 0, y: 0 }}
+          end={{ x: 1, y: 1 }}
+        >
           <Text
             style={[
               styles.markTodayButtonText,
               { color: currentTheme.colors.textPrimary },
             ]}
           >
-             {marking ? t("commonS.sending", { defaultValue: "Envoi..." }) : t("challengeDetails.markToday")}
+            {marking
+              ? t("commonS.sending", { defaultValue: "Envoi..." })
+              : t("challengeDetails.markToday")}
           </Text>
         </LinearGradient>
       )}
     </TouchableOpacity>
+
   </Animated.View>
 )}
 
@@ -2073,43 +2580,42 @@ textStyle = { color: isDarkMode ? "#FFB3B3" : "#8A0000" };
           >
             {routeDescription}
           </Text>
-          {challengeTakenOptimistic  &&
-            finalSelectedDays > 0 &&
-            finalCompletedDays >= finalSelectedDays && (
-              <TouchableOpacity
-                style={styles.completeChallengeButton}
-                onPress={handleShowCompleteModal}
-                accessibilityRole="button"
-                accessibilityLabel="Terminer le défi"
-                testID="complete-challenge-button"
+                    {showCompleteButton && (
+            <TouchableOpacity
+              style={styles.completeChallengeButton}
+              onPress={handleShowCompleteModal}
+              accessibilityRole="button"
+              accessibilityLabel="Terminer le défi"
+              testID="complete-challenge-button"
+            >
+              <LinearGradient
+                colors={[
+                  currentTheme.colors.primary,
+                  currentTheme.colors.secondary,
+                ]}
+                style={styles.completeChallengeButtonGradient}
+                start={{ x: 0, y: 0 }}
+                end={{ x: 1, y: 1 }}
               >
-                <LinearGradient
-                  colors={[
-                    currentTheme.colors.primary,
-                    currentTheme.colors.secondary,
+                <Text
+                  style={[
+                    styles.completeChallengeButtonText,
+                    { color: currentTheme.colors.textPrimary },
                   ]}
-                  style={styles.completeChallengeButtonGradient}
-                  start={{ x: 0, y: 0 }}
-                  end={{ x: 1, y: 1 }}
                 >
-                  <Text
-                    style={[
-                      styles.completeChallengeButtonText,
-                      { color: currentTheme.colors.textPrimary },
-                    ]}
-                  >
-                    {t("challengeDetails.completeChallenge")}
-                  </Text>
-                </LinearGradient>
-              </TouchableOpacity>
-            )}
+                  {t("challengeDetails.completeChallenge")}
+                </Text>
+              </LinearGradient>
+            </TouchableOpacity>
+          )}
+
 
             
           <Animated.View entering={firstMountRef.current && shouldEnterAnim ? FadeInUp.delay(300) : undefined}
     style={styles.actionIconsContainer}
   >
             <TouchableOpacity
-              style={styles.actionIcon}
+              style={[styles.actionIcon, { width: actionIconWidth }]}
               onPress={handleNavigateToChat}
               accessibilityRole="button"
               accessibilityLabel={t("challengeDetails.chatA11y")}
@@ -2131,7 +2637,7 @@ textStyle = { color: isDarkMode ? "#FFB3B3" : "#8A0000" };
               </Text>
             </TouchableOpacity>
             <TouchableOpacity
-              style={styles.actionIcon}
+              style={[styles.actionIcon, { width: actionIconWidth }]}
               onPress={handleSaveChallenge}
               accessibilityRole="button"
               accessibilityLabel={
@@ -2179,12 +2685,17 @@ textStyle = { color: isDarkMode ? "#FFB3B3" : "#8A0000" };
               </Text>
             </TouchableOpacity>
             <TouchableOpacity
-  style={[styles.actionIcon, { opacity: canInviteFriend && !isOffline ? 1 : 0.4 }]}
-  onPress={canInviteFriend ? handleInviteFriend : undefined}
+  style={[
+    styles.actionIcon,
+    {
+      width: actionIconWidth,
+      opacity: isDuo ? 0.6 : 1,
+    },
+  ]}
+  onPress={handleInviteButtonPress}
   accessibilityRole="button"
   accessibilityLabel={t("inviteAFriend")}
   testID="invite-button"
-  disabled={!canInviteFriend || isOffline}
 >
   <Ionicons
     name="person-add-outline"
@@ -2203,8 +2714,9 @@ textStyle = { color: isDarkMode ? "#FFB3B3" : "#8A0000" };
 
 
 
+
             <TouchableOpacity
-              style={styles.actionIcon}
+              style={[styles.actionIcon, { width: actionIconWidth }]}
               onPress={handleShareChallenge}
               accessibilityRole="button"
               accessibilityLabel={t("challengeDetails.shareA11y")}
@@ -2226,7 +2738,10 @@ textStyle = { color: isDarkMode ? "#FFB3B3" : "#8A0000" };
               </Text>
             </TouchableOpacity>
             <TouchableOpacity
-              style={[styles.actionIcon, { opacity: challengeTaken  ? 1 : 0.5 }]}
+              style={[
+                styles.actionIcon,
+                { width: actionIconWidth, opacity: challengeTaken ? 1 : 0.5 }
+              ]}
               onPress={challengeTaken  ? handleViewStats : undefined}
               accessibilityLabel={t("challengeDetails.statsA11y")}
               accessibilityRole="button"
@@ -2307,18 +2822,40 @@ textStyle = { color: isDarkMode ? "#FFB3B3" : "#8A0000" };
 
 
       <InvitationModal
-   key={invitation?.id || "no-invite"}  // remount propre si id change
-   visible={invitationModalVisible}
-   inviteId={invitation?.id || null}
-   challengeId={id}
-   onClose={() => {
-     setInvitationModalVisible(false);
-   }}
-   clearInvitation={() => {
-     if (invitation?.id) processedInviteIdsRef.current.add(invitation.id);
-     setInvitation(null);
-   }}
- />
+  key={invitation?.id || "no-invite"}
+  visible={invitationModalVisible}
+  inviteId={invitation?.id || null}
+  challengeId={id}
+  onClose={() => {
+    markInviteAsHandled(invitation?.id);
+    setInvitationModalVisible(false);
+  }}
+  clearInvitation={() => {
+    markInviteAsHandled(invitation?.id);
+  }}
+/>
+
+
+
+       {inviteLoading && !loading && (
+        <View style={styles.loadingOverlay}>
+          <ActivityIndicator
+            size="large"
+            color={currentTheme.colors.secondary}
+          />
+          <Text
+            style={[
+              styles.loadingText,
+              { color: currentTheme.colors.textSecondary },
+            ]}
+          >
+            {t("challengeDetails.loadingInvite", {
+              defaultValue: "Ouverture de l’invitation…",
+            })}
+          </Text>
+        </View>
+      )}
+
       {loading && (
   <View style={styles.loadingOverlay}>
     <ActivityIndicator size="large" color={currentTheme.colors.secondary} />
@@ -2383,6 +2920,7 @@ textStyle = { color: isDarkMode ? "#FFB3B3" : "#8A0000" };
   challengeId={id}
   selectedDays={localSelectedDays}
   challengeTitle={routeTitle}
+  isDuo={isDuo}
   onClose={() => setSendInviteVisible(false)}
   onSent={() => {
   Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success).catch(()=>{});
@@ -2492,33 +3030,24 @@ const styles = StyleSheet.create({
     flex: 1,
   },
   carouselContainer: { position: "relative", height: 0 },
-  imageContainer: {
+ imageContainer: {
     width: "100%",
-  height: HERO_H,                  // fixe
-   borderBottomLeftRadius: normalizeSize(30),
-   borderBottomRightRadius: normalizeSize(30),
-   overflow: "hidden",
-  marginBottom: SPACING, 
-  shadowColor: "#000",
+    borderBottomLeftRadius: normalizeSize(30),
+    borderBottomRightRadius: normalizeSize(30),
+    overflow: "hidden",
+    marginBottom: SPACING,
+    shadowColor: "#000",
     shadowOpacity: 0.18,
     shadowRadius: 14,
     shadowOffset: { width: 0, height: 10 },
     elevation: 10,
-},
+  },
   image: {
     width: "100%",
-    height: "100%",
     backfaceVisibility: "hidden",
     borderBottomLeftRadius: normalizeSize(30),
     borderBottomRightRadius: normalizeSize(30),
   },
-  hiddenShareCanvas: {
-  position: "absolute",
-  left: -9999,   // ❗ rendu offscreen mais présent dans l’arbre
-  top: -9999,
-  width: CARD_WIDTH,
-  height: CARD_HEIGHT,
-},
   loadingOverlay: {
   position: "absolute",
   left: 0,
@@ -3079,8 +3608,7 @@ progressSection: {
    actionIcon: {
      alignItems: "center",
      justifyContent: "center",
-    marginHorizontal: 0,
-    width: '50%',
+     marginHorizontal: 0,
      minHeight: normalizeSize(90),
    },
   actionIconLabel: {

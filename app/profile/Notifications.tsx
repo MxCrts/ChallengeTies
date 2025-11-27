@@ -1,5 +1,10 @@
 // app/profile/notifications.tsx
-import React, { useCallback, useEffect, useMemo, useRef, useState  } from "react";
+import React, {
+  useCallback,
+  useEffect,
+  useMemo,
+  useState,
+} from "react";
 import {
   View,
   Text,
@@ -23,39 +28,34 @@ import {
   onSnapshot,
   orderBy,
   query,
-  serverTimestamp,
   Timestamp,
-  updateDoc,
   where,
 } from "firebase/firestore";
 import { db } from "@/constants/firebase-config";
 import { useRouter } from "expo-router";
 import { useToast } from "@/src/ui/Toast";
-import { warmChallengeMetas, readTitleSync } from "../../src/services/challengeMetaCache";
+import {
+  warmChallengeMetas,
+  readTitleSync,
+} from "@/src/services/challengeMetaCache";
+import {
+  acceptInvitation,
+  refuseInvitationDirect,
+  refuseOpenInvitation,
+  cancelInvitationByInviter,
+  isInvitationExpired,
+  type Invitation as ServiceInvitation,
+} from "@/services/invitationService";
 
-
-type Invitation = {
-  id: string;
-  challengeId: string;
-  inviterId: string;
-  inviteeId?: string | null;
-  inviteeUsername?: string | null;
-  selectedDays: number;
-  status: "pending" | "accepted" | "refused" | "cancelled";
-  kind?: "open" | "direct";
-  createdAt?: Timestamp;
-  updatedAt?: Timestamp;
-  expiresAt?: Timestamp;
-  acceptedAt?: Timestamp;
-};
+type Invitation = ServiceInvitation & { id: string };
 
 type FilterTab = "inbox" | "sent" | "accepted" | "refused";
 type Scope = "all" | "duo";
 
 const NotificationsScreen: React.FC = () => {
   const { user } = useAuth();
-  const { t, i18n } = useTranslation();
-  const { theme } = useTheme();
+  const { t } = useTranslation();
+  const { theme } = useTheme(); // laissé comme dans ta version (même si pas utilisé)
   const router = useRouter();
   const { show } = useToast();
 
@@ -66,8 +66,8 @@ const NotificationsScreen: React.FC = () => {
   const [active, setActive] = useState<FilterTab>("inbox");
   const [scope, setScope] = useState<Scope>("all");
   const [nowMs, setNowMs] = useState<number>(Date.now());
-  
-   // Ticker pour forcer un re-render toutes les 60s (compte à rebours)
+
+  // Ticker pour forcer un re-render toutes les 60s (compte à rebours)
   useEffect(() => {
     const id = setInterval(() => setNowMs(Date.now()), 60_000);
     return () => clearInterval(id);
@@ -96,7 +96,9 @@ const NotificationsScreen: React.FC = () => {
       qInbox,
       (snap) => {
         const rows: Invitation[] = [];
-        snap.forEach((d) => rows.push({ id: d.id, ...(d.data() as any) }));
+        snap.forEach((d) =>
+          rows.push({ id: d.id, ...(d.data() as ServiceInvitation) })
+        );
         setInbox(rows);
         setLoading(false);
       },
@@ -107,7 +109,9 @@ const NotificationsScreen: React.FC = () => {
       qSent,
       (snap) => {
         const rows: Invitation[] = [];
-        snap.forEach((d) => rows.push({ id: d.id, ...(d.data() as any) }));
+        snap.forEach((d) =>
+          rows.push({ id: d.id, ...(d.data() as ServiceInvitation) })
+        );
         setSent(rows);
         setLoading(false);
       },
@@ -123,8 +127,8 @@ const NotificationsScreen: React.FC = () => {
   // Warm cache des titres en batch pour un rendu premium
   useEffect(() => {
     const ids = new Set<string>();
-    inbox.forEach(i => ids.add(i.challengeId));
-    sent.forEach(i => ids.add(i.challengeId));
+    inbox.forEach((i) => ids.add(i.challengeId));
+    sent.forEach((i) => ids.add(i.challengeId));
     if (ids.size) {
       warmChallengeMetas(Array.from(ids)).catch(() => {});
     }
@@ -140,17 +144,19 @@ const NotificationsScreen: React.FC = () => {
   const list = useMemo(() => {
     const byTab = (() => {
       switch (active) {
-      case "inbox":
-        return inbox.filter((r) => r.status === "pending");
-      case "sent":
-        return sent.filter((r) => r.status === "pending");
-      case "accepted":
-        return [...inbox, ...sent].filter((r) => r.status === "accepted");
-      case "refused":
-        return [...inbox, ...sent].filter((r) => r.status === "refused" || r.status === "cancelled");
-      default:
-        return [];
-    }
+        case "inbox":
+          return inbox.filter((r) => r.status === "pending");
+        case "sent":
+          return sent.filter((r) => r.status === "pending");
+        case "accepted":
+          return [...inbox, ...sent].filter((r) => r.status === "accepted");
+        case "refused":
+          return [...inbox, ...sent].filter(
+            (r) => r.status === "refused" || r.status === "cancelled"
+          );
+        default:
+          return [];
+      }
     })();
     // mini-scope: "duo" n’affiche que les invitations (actuellement tout est duo)
     return scope === "duo" ? byTab /* déjà duo */ : byTab;
@@ -159,74 +165,170 @@ const NotificationsScreen: React.FC = () => {
   // 🚀 Prefetch titres des challenges visibles (cache + déduplication)
   useEffect(() => {
     try {
-      const ids = list.map((it) => String(it.challengeId || "")).filter(Boolean);
+      const ids = list
+        .map((it) => String(it.challengeId || ""))
+        .filter(Boolean);
       if (ids.length) void warmChallengeMetas(ids);
     } catch {
       // no-op
     }
   }, [list]);
 
-  // --------- Actions ----------
-  const accept = useCallback(async (inv: Invitation) => {
-    if (!user?.uid) return;
-    try {
-      // Règles: pour accept (open/direct), on met status, updatedAt et acceptedAt
-      await updateDoc(doc(db, "invitations", inv.id), {
-        status: "accepted",
-        updatedAt: serverTimestamp(),
-        acceptedAt: serverTimestamp(),
-        // pour OPEN, c’est généralement déjà set côté service;
-        // si jamais l’open n’avait pas d’inviteeId, c’est refusé par rules -> on ne touche pas ici
+  // ------ Helpers countdown & badge ------
+  const formatRemaining = useCallback(
+    (ms: number) => {
+      if (ms <= 0) {
+        return t("notificationsScreen.expired", { defaultValue: "Expirée" });
+      }
+      const m = Math.floor(ms / 60000);
+      if (m < 60) {
+        return t("notificationsScreen.remain.m", {
+          defaultValue: "{{count}} min",
+          count: m,
+        });
+      }
+      const h = Math.floor(m / 60);
+      if (h < 24) {
+        return t("notificationsScreen.remain.h", {
+          defaultValue: "{{count}} h",
+          count: h,
+        });
+      }
+      const d = Math.floor(h / 24);
+      return t("notificationsScreen.remain.d", {
+        defaultValue: "{{count}} j",
+        count: d,
       });
-      show(t("invitationS.sentShort"), "success");
-      // Redirige vers la page challenge pour démarrer
-      router.push(`/challenge-details/${inv.challengeId}`);
-    } catch (e: any) {
-      console.log("accept error", e);
-      Alert.alert(t("commonS.errorTitle", { defaultValue: "Erreur" }), t("invitationS.errors.unknown"));
-    }
-  }, [router, show, t, user?.uid]);
+    },
+    [t]
+  );
 
-  const refuse = useCallback(async (inv: Invitation) => {
-    if (!user?.uid) return;
-    try {
-      await updateDoc(doc(db, "invitations", inv.id), {
-        status: "refused",
-        updatedAt: serverTimestamp(),
-      });
-      show(t("notificationsPush.invitationRefused", { username: "" }), "info");
-    } catch (e: any) {
-      console.log("refuse error", e);
-      Alert.alert(t("commonS.errorTitle", { defaultValue: "Erreur" }), t("invitationS.errors.unknown"));
-    }
-  }, [show, t, user?.uid]);
-
-  const cancel = useCallback(async (inv: Invitation) => {
-    // uniquement l’inviter
-    Alert.alert(
-      t("notificationsScreen.cancelTitle", { defaultValue: "Annuler l’invitation ?" }),
-      t("notificationsScreen.cancelMessage", { defaultValue: "Cette invitation sera annulée." }),
-      [
-        { text: t("commonS.cancel"), style: "cancel" },
-        {
-          text: t("notificationsScreen.cancelConfirm", { defaultValue: "Annuler" }),
-          style: "destructive",
-          onPress: async () => {
-            try {
-              await updateDoc(doc(db, "invitations", inv.id), {
-                status: "cancelled",
-                updatedAt: serverTimestamp(),
-              });
-              show(t("notificationsScreen.cancelled", { defaultValue: "Invitation annulée" }), "info");
-            } catch (e: any) {
-              console.log("cancel error", e);
-              Alert.alert(t("commonS.errorTitle", { defaultValue: "Erreur" }), t("invitationS.errors.unknown"));
-            }
-          },
-        },
-      ]
+  const ExpireBadge: React.FC<{ expiresAt?: Timestamp }> = ({ expiresAt }) => {
+    if (!expiresAt) return null;
+    const ms = expiresAt.toMillis() - nowMs;
+    const isExpired = ms <= 0;
+    const label = isExpired
+      ? t("notificationsScreen.expired", { defaultValue: "Expirée" })
+      : t("notificationsScreen.expiresInShort", {
+          defaultValue: "Expire dans {{time}}",
+          time: formatRemaining(ms),
+        });
+    // Couleur en fonction de l’urgence
+    let bg = "#1f2937"; // neutre
+    if (isExpired) bg = "#b91c1c"; // rouge
+    else if (ms < 24 * 3600 * 1000) bg = "#dc2626"; // <24h rouge vif
+    else if (ms < 72 * 3600 * 1000) bg = "#d97706"; // <72h orange
+    else bg = "#374151"; // gris foncé
+    return (
+      <View style={[styles.badgeExpire, { backgroundColor: bg }]}>
+        <Ionicons
+          name={isExpired ? "alert-circle-outline" : "time-outline"}
+          size={14}
+          color="#fff"
+        />
+        <Text style={styles.badgeExpireText}>{label}</Text>
+      </View>
     );
-  }, [show, t]);
+  };
+
+  // --------- Actions (⚡ via invitationService) ----------
+  const accept = useCallback(
+    async (inv: Invitation) => {
+      if (!user?.uid) return;
+
+      // Check expiration côté client (UX + évite une erreur inutile)
+      if (isInvitationExpired(inv)) {
+        show(
+          t("notificationsScreen.expiredToast", {
+            defaultValue: "Cette invitation a expiré.",
+          }),
+          "info"
+        );
+        return;
+      }
+
+      try {
+        await acceptInvitation(inv.id);
+        show(t("invitationS.sentShort"), "success");
+        // Redirige vers la page challenge pour démarrer
+        router.push(`/challenge-details/${inv.challengeId}`);
+      } catch (e: any) {
+        console.log("accept error", e);
+        Alert.alert(
+          t("commonS.errorTitle", { defaultValue: "Erreur" }),
+          t("invitationS.errors.unknown")
+        );
+      }
+    },
+    [router, show, t, user?.uid]
+  );
+
+  const refuse = useCallback(
+    async (inv: Invitation) => {
+      if (!user?.uid) return;
+      try {
+        if (inv.kind === "open") {
+          await refuseOpenInvitation(inv.id);
+        } else {
+          await refuseInvitationDirect(inv.id);
+        }
+        show(
+          t("notificationsPush.invitationRefused", {
+            username: inv.inviteeUsername || "",
+          }),
+          "info"
+        );
+      } catch (e: any) {
+        console.log("refuse error", e);
+        Alert.alert(
+          t("commonS.errorTitle", { defaultValue: "Erreur" }),
+          t("invitationS.errors.unknown")
+        );
+      }
+    },
+    [show, t, user?.uid]
+  );
+
+  const cancel = useCallback(
+    async (inv: Invitation) => {
+      // uniquement l’inviter (enforced par invitationService)
+      Alert.alert(
+        t("notificationsScreen.cancelTitle", {
+          defaultValue: "Annuler l’invitation ?",
+        }),
+        t("notificationsScreen.cancelMessage", {
+          defaultValue: "Cette invitation sera annulée.",
+        }),
+        [
+          { text: t("commonS.cancel"), style: "cancel" },
+          {
+            text: t("notificationsScreen.cancelConfirm", {
+              defaultValue: "Annuler",
+            }),
+            style: "destructive",
+            onPress: async () => {
+              try {
+                await cancelInvitationByInviter(inv.id);
+                show(
+                  t("notificationsScreen.cancelled", {
+                    defaultValue: "Invitation annulée",
+                  }),
+                  "info"
+                );
+              } catch (e: any) {
+                console.log("cancel error", e);
+                Alert.alert(
+                  t("commonS.errorTitle", { defaultValue: "Erreur" }),
+                  t("invitationS.errors.unknown")
+                );
+              }
+            },
+          },
+        ]
+      );
+    },
+    [show, t]
+  );
 
   // --------- UI ----------
   const Header = () => (
@@ -236,33 +338,47 @@ const NotificationsScreen: React.FC = () => {
       end={{ x: 1, y: 1 }}
       style={styles.header}
     >
-      <Text style={styles.title}>{t("notificationsScreen.title", { defaultValue: "Invitations & Notifications" })}</Text>
+      <Text style={styles.title}>
+        {t("notificationsScreen.title", {
+          defaultValue: "Invitations & Notifications",
+        })}
+      </Text>
       <Text style={styles.subtitle}>
-        {t("notificationsScreen.subtitle", { defaultValue: "Gère tes invitations duo et suivez leurs statuts." })}
+        {t("notificationsScreen.subtitle", {
+          defaultValue: "Gère tes invitations duo et suivez leurs statuts.",
+        })}
       </Text>
 
       <View style={styles.tabs}>
         <Tab
           active={active === "inbox"}
-          label={t("notificationsScreen.tabInbox", { defaultValue: "Reçues" })}
+          label={t("notificationsScreen.tabInbox", {
+            defaultValue: "Reçues",
+          })}
           icon="mail-unread-outline"
           onPress={() => setActive("inbox")}
         />
         <Tab
           active={active === "sent"}
-          label={t("notificationsScreen.tabSent", { defaultValue: "Envoyées" })}
+          label={t("notificationsScreen.tabSent", {
+            defaultValue: "Envoyées",
+          })}
           icon="paper-plane-outline"
           onPress={() => setActive("sent")}
         />
         <Tab
           active={active === "accepted"}
-          label={t("notificationsScreen.tabAccepted", { defaultValue: "Acceptées" })}
+          label={t("notificationsScreen.tabAccepted", {
+            defaultValue: "Acceptées",
+          })}
           icon="checkmark-done-outline"
           onPress={() => setActive("accepted")}
         />
         <Tab
           active={active === "refused"}
-          label={t("notificationsScreen.tabRefused", { defaultValue: "Refusées" })}
+          label={t("notificationsScreen.tabRefused", {
+            defaultValue: "Refusées",
+          })}
           icon="close-circle-outline"
           onPress={() => setActive("refused")}
         />
@@ -272,56 +388,21 @@ const NotificationsScreen: React.FC = () => {
       <View style={styles.scopeRow}>
         <Chip
           active={scope === "all"}
-          label={t("notificationsScreen.filterAll", { defaultValue: "Tous" })}
+          label={t("notificationsScreen.filterAll", {
+            defaultValue: "Tous",
+          })}
           onPress={() => setScope("all")}
         />
         <Chip
           active={scope === "duo"}
-          label={t("notificationsScreen.filterDuo", { defaultValue: "Duo uniquement" })}
+          label={t("notificationsScreen.filterDuo", {
+            defaultValue: "Duo uniquement",
+          })}
           onPress={() => setScope("duo")}
         />
       </View>
     </LinearGradient>
   );
-
-  // ------ Helpers countdown & badge ------
-const formatRemaining = useCallback((ms: number) => {
-  if (ms <= 0) {
-    return t("notificationsScreen.expired", { defaultValue: "Expirée" });
-  }
-  const m = Math.floor(ms / 60000);
-  if (m < 60) {
-    return t("notificationsScreen.remain.m", { defaultValue: "{{count}} min", count: m });
-  }
-  const h = Math.floor(m / 60);
-  if (h < 24) {
-    return t("notificationsScreen.remain.h", { defaultValue: "{{count}} h", count: h });
-  }
-  const d = Math.floor(h / 24);
-  return t("notificationsScreen.remain.d", { defaultValue: "{{count}} j", count: d });
-}, [t]);
-
-  const ExpireBadge: React.FC<{ expiresAt?: Timestamp }> = ({ expiresAt }) => {
-   if (!expiresAt) return null;
-    const ms = expiresAt.toMillis() - nowMs;
-    const isExpired = ms <= 0;
-    const label = isExpired
-      ? t("notificationsScreen.expired", { defaultValue: "Expirée" })
-      : t("notificationsScreen.expiresInShort", { defaultValue: "Expire dans {{time}}" , time: formatRemaining(ms) });
-    // Couleur en fonction de l’urgence
-    let bg = "#1f2937"; // neutre
-    if (isExpired) bg = "#b91c1c";       // rouge
-    else if (ms < 24 * 3600 * 1000) bg = "#dc2626"; // <24h rouge vif
-    else if (ms < 72 * 3600 * 1000) bg = "#d97706"; // <72h orange
-    else bg = "#374151"; // gris foncé
-    return (
-      <View style={[styles.badgeExpire, { backgroundColor: bg }]}>
-        <Ionicons name={isExpired ? "alert-circle-outline" : "time-outline"} size={14} color="#fff" />
-        <Text style={styles.badgeExpireText}>{label}</Text>
-      </View>
-    );
-  };
-
 
   const renderItem = ({ item }: { item: Invitation }) => (
     <Animated.View entering={FadeInUp.springify().mass(0.8)} style={styles.cardWrap}>
@@ -332,12 +413,17 @@ const formatRemaining = useCallback((ms: number) => {
           </View>
           <View style={{ flex: 1 }}>
             <Text style={styles.cardTitle} numberOfLines={1}>
-              {t("notificationsScreen.challenge", { defaultValue: "Défi" })} • {readTitleSync(item.challengeId) || item.challengeId}
+              {t("notificationsScreen.challenge", {
+                defaultValue: "Défi",
+              })}{" "}
+              • {readTitleSync(item.challengeId) || item.challengeId}
             </Text>
             <Text style={styles.cardMeta} numberOfLines={1}>
               {item.selectedDays} {t("challengeDetails.days")}
               {"  •  "}
-              {t(`notificationsScreen.status.${item.status}`, { defaultValue: item.status })}
+              {t(`notificationsScreen.status.${item.status}`, {
+                defaultValue: item.status,
+              })}
             </Text>
           </View>
           <ExpireBadge expiresAt={item.expiresAt} />
@@ -365,7 +451,9 @@ const formatRemaining = useCallback((ms: number) => {
           {/* SENT PENDING: Cancel */}
           {active === "sent" && item.status === "pending" && (
             <SecondaryButton
-              title={t("notificationsScreen.cancelShort", { defaultValue: "Annuler" })}
+              title={t("notificationsScreen.cancelShort", {
+                defaultValue: "Annuler",
+              })}
               icon="trash-outline"
               onPress={() => cancel(item)}
               a11y={t("notificationsScreen.a11y.cancel")}
@@ -375,9 +463,13 @@ const formatRemaining = useCallback((ms: number) => {
           {/* Accepted: Ouvrir challenge */}
           {active === "accepted" && (
             <PrimaryButton
-              title={t("notificationsScreen.open", { defaultValue: "Ouvrir" })}
+              title={t("notificationsScreen.open", {
+                defaultValue: "Ouvrir",
+              })}
               icon="arrow-forward-outline"
-              onPress={() => router.push(`/challenge-details/${item.challengeId}`)}
+              onPress={() =>
+                router.push(`/challenge-details/${item.challengeId}`)
+              }
               a11y={t("notificationsScreen.a11y.open")}
             />
           )}
@@ -390,10 +482,14 @@ const formatRemaining = useCallback((ms: number) => {
     <View style={styles.empty}>
       <Ionicons name="notifications-off-outline" size={36} color="#94a3b8" />
       <Text style={styles.emptyTitle}>
-        {t("notificationsScreen.emptyTitle", { defaultValue: "Rien pour le moment" })}
+        {t("notificationsScreen.emptyTitle", {
+          defaultValue: "Rien pour le moment",
+        })}
       </Text>
       <Text style={styles.emptyText}>
-        {t("notificationsScreen.emptyText", { defaultValue: "Tes invitations apparaîtront ici." })}
+        {t("notificationsScreen.emptyText", {
+          defaultValue: "Tes invitations apparaîtront ici.",
+        })}
       </Text>
     </View>
   );
@@ -415,9 +511,17 @@ const formatRemaining = useCallback((ms: number) => {
           initialNumToRender={10}
           windowSize={7}
           removeClippedSubviews
-          getItemLayout={(_, index) => ({ length: 92, offset: 92 * index, index })}
+          getItemLayout={(_, index) => ({
+            length: 92,
+            offset: 92 * index,
+            index,
+          })}
           refreshControl={
-            <RefreshControl refreshing={refreshing} onRefresh={onRefresh} tintColor="#fff" />
+            <RefreshControl
+              refreshing={refreshing}
+              onRefresh={onRefresh}
+              tintColor="#fff"
+            />
           }
         />
       )}
@@ -426,20 +530,26 @@ const formatRemaining = useCallback((ms: number) => {
 };
 
 // --------- UI atoms ----------
-const Tab: React.FC<{ active: boolean; label: string; icon: any; onPress: () => void }> = ({
-  active,
-  label,
-  icon,
-  onPress,
-}) => (
+const Tab: React.FC<{
+  active: boolean;
+  label: string;
+  icon: any;
+  onPress: () => void;
+}> = ({ active, label, icon, onPress }) => (
   <TouchableOpacity
     onPress={onPress}
     accessibilityRole="button"
     accessibilityLabel={label}
     style={[styles.tab, active && styles.tabActive]}
   >
-    <Ionicons name={icon} size={16} color={active ? "#111827" : "#e5e7eb"} />
-    <Text style={[styles.tabText, active && styles.tabTextActive]}>{label}</Text>
+    <Ionicons
+      name={icon}
+      size={16}
+      color={active ? "#111827" : "#e5e7eb"}
+    />
+    <Text style={[styles.tabText, active && styles.tabTextActive]}>
+      {label}
+    </Text>
   </TouchableOpacity>
 );
 
@@ -477,14 +587,20 @@ const SecondaryButton: React.FC<{
   </TouchableOpacity>
 );
 
-const Chip: React.FC<{ active: boolean; label: string; onPress: () => void }> = ({ active, label, onPress }) => (
+const Chip: React.FC<{
+  active: boolean;
+  label: string;
+  onPress: () => void;
+}> = ({ active, label, onPress }) => (
   <TouchableOpacity
     onPress={onPress}
     accessibilityRole="button"
     accessibilityLabel={label}
     style={[styles.chip, active && styles.chipActive]}
   >
-    <Text style={[styles.chipText, active && styles.chipTextActive]}>{label}</Text>
+    <Text style={[styles.chipText, active && styles.chipTextActive]}>
+      {label}
+    </Text>
   </TouchableOpacity>
 );
 
@@ -541,7 +657,12 @@ const styles = StyleSheet.create({
     borderColor: "rgba(255,255,255,0.06)",
     padding: 14,
   },
-  row: { flexDirection: "row", gap: 12, alignItems: "center", marginBottom: 10 },
+  row: {
+    flexDirection: "row",
+    gap: 12,
+    alignItems: "center",
+    marginBottom: 10,
+  },
   badge: {
     width: 32,
     height: 32,
@@ -601,7 +722,11 @@ const styles = StyleSheet.create({
   secondaryBtnText: { color: "#e5e7eb", fontWeight: "700" },
 
   empty: { alignItems: "center", paddingVertical: 32, gap: 8 },
-  emptyTitle: { color: "#e5e7eb", fontSize: 16, fontFamily: "Comfortaa_700Bold" },
+  emptyTitle: {
+    color: "#e5e7eb",
+    fontSize: 16,
+    fontFamily: "Comfortaa_700Bold",
+  },
   emptyText: { color: "#94a3b8" },
 
   loader: { padding: 24, alignItems: "center" },

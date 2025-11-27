@@ -1,12 +1,18 @@
 // src/context/AdsVisibilityContext.tsx
-import React, { createContext, useContext, useMemo } from "react";
+import React, {
+  createContext,
+  useContext,
+  useMemo,
+  useEffect,
+  useState,
+} from "react";
 import { useFlags } from "../constants/featureFlags";
 import { useAuth } from "../../context/AuthProvider";
 import { usePathname } from "expo-router";
 import { usePremium } from "../../src/context/PremiumContext";
 
 const ADMIN_UIDS = new Set<string>([
-  "GiN2yTfA7NWISeb4QjXmDPq5TgK2", // UID admin
+  "GiN2yTfA7NWISeb4QjXmDPq5TgK2",
 ]);
 
 type AdsVisibility = {
@@ -31,13 +37,44 @@ export const AdsVisibilityProvider: React.FC<{ children: React.ReactNode }> = ({
   const { flags } = useFlags();
   const { user } = useAuth();
   const pathname = usePathname();
+  const { isPremiumUser } = usePremium();
 
   const isAdmin = !!user && ADMIN_UIDS.has(user.uid);
-  const { isPremiumUser } = usePremium();
   const isPremium = !!isPremiumUser;
 
-  const adsReady = (globalThis as any).__ADS_READY__ === true;
-  const canRequestAds = (globalThis as any).__CAN_REQUEST_ADS__ !== false;
+  // Lecture initiale
+  const [adsReady, setAdsReady] = useState(
+    (globalThis as any).__ADS_READY__ === true
+  );
+  const [canRequestAds, setCanRequestAds] = useState(
+    (globalThis as any).__CAN_REQUEST_ADS__ !== false
+  );
+
+  // Polling léger boot — MAIS sans aucun log
+  useEffect(() => {
+    let mounted = true;
+
+    const tick = () => {
+      if (!mounted) return;
+
+      const r = (globalThis as any).__ADS_READY__ === true;
+      const c = (globalThis as any).__CAN_REQUEST_ADS__ !== false;
+
+      // setState uniquement si changement réel
+      setAdsReady((prev) => (prev !== r ? r : prev));
+      setCanRequestAds((prev) => (prev !== c ? c : prev));
+
+      if (r && c) clearInterval(id);
+    };
+
+    const id = setInterval(tick, 500);
+    tick();
+
+    return () => {
+      mounted = false;
+      clearInterval(id);
+    };
+  }, []);
 
   const isAuthRoute =
     pathname === "/login" ||
@@ -45,13 +82,8 @@ export const AdsVisibilityProvider: React.FC<{ children: React.ReactNode }> = ({
     pathname === "/forgot-password";
 
   const value = useMemo<AdsVisibility>(() => {
-    // Tant que le SDK n’est pas prêt OU Google n’autorise pas la requête → tout masqué
-    if (!adsReady || !canRequestAds) {
-      __DEV__ &&
-        console.log("[AdsVisibility] ads not ready or disallowed → hide ALL", {
-          adsReady,
-          canRequestAds,
-        });
+    // tant que pas prêt → pubs masquées
+    if (!adsReady || !canRequestAds || isAuthRoute) {
       return {
         showBanners: false,
         showInterstitials: false,
@@ -61,39 +93,25 @@ export const AdsVisibilityProvider: React.FC<{ children: React.ReactNode }> = ({
       };
     }
 
-    // Routes d’auth → on masque tout
-    if (isAuthRoute) {
-      __DEV__ && console.log("[AdsVisibility] auth route → hide ALL ads");
-      return {
-        showBanners: false,
-        showInterstitials: false,
-        showRewarded: false,
-        isAdmin,
-        isPremium,
-      };
-    }
-
-    // Admin ou Premium → aucune pub du tout (bannière, interstitiel, rewarded)
+    // admin ou premium → rien
     const hideAll = isAdmin || isPremium;
 
-    const computed = {
+    return {
       showBanners: !hideAll,
       showInterstitials: !hideAll,
       showRewarded: !hideAll,
       isAdmin,
       isPremium,
     };
-
-    __DEV__ &&
-      console.log("[AdsVisibility] ✅ computed", {
-        pathname,
-        adsReady,
-        canRequestAds,
-        ...computed,
-      });
-
-    return computed;
-  }, [adsReady, canRequestAds, isAuthRoute, isAdmin, isPremium, pathname]);
+  }, [
+    adsReady,
+    canRequestAds,
+    isAuthRoute,
+    isAdmin,
+    isPremium,
+    pathname,
+    flags, // garde si tu changes flags live
+  ]);
 
   return (
     <AdsVisibilityContext.Provider value={value}>

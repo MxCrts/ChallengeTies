@@ -1,4 +1,5 @@
-import React, { useEffect, useRef } from "react";
+// components/TutorialModal.tsx
+import React, { useEffect, useRef, useMemo } from "react";
 import {
   View,
   Text,
@@ -46,13 +47,21 @@ const TutorialModal: React.FC<TutorialModalProps> = ({
   const { t } = useTranslation();
   const { theme } = useTheme();
   const isDarkMode = theme === "dark";
-  const currentTheme: Theme = isDarkMode ? designSystem.darkTheme : designSystem.lightTheme;
+  const currentTheme: Theme = isDarkMode
+    ? designSystem.darkTheme
+    : designSystem.lightTheme;
+
+  const safeStep = Math.min(Math.max(step, 0), TOTAL_STEPS - 1);
 
   // --- micro-animation CTA
   const scale = useSharedValue(1);
-  const buttonAnimatedStyle = useAnimatedStyle(() => ({ transform: [{ scale: scale.value }] }));
-  const handlePressIn = () => (scale.value = withTiming(0.95, { duration: 100 }));
-  const handlePressOut = () => (scale.value = withTiming(1, { duration: 100 }));
+  const buttonAnimatedStyle = useAnimatedStyle(() => ({
+    transform: [{ scale: scale.value }],
+  }));
+  const handlePressIn = () =>
+    (scale.value = withTiming(0.96, { duration: 90 }));
+  const handlePressOut = () =>
+    (scale.value = withTiming(1, { duration: 90 }));
 
   // --- lock pour éviter double navigation
   const lockRef = useRef(false);
@@ -68,17 +77,13 @@ const TutorialModal: React.FC<TutorialModalProps> = ({
 
   // --- a11y: annoncer le titre à chaque step
   useEffect(() => {
-    const titleKey = TUTORIAL_STEPS[step]?.titleKey;
-    if (titleKey) AccessibilityInfo.announceForAccessibility(t(titleKey));
-  }, [step, t]);
+    const titleKey = TUTORIAL_STEPS[safeStep]?.titleKey;
+    if (titleKey) {
+      AccessibilityInfo.announceForAccessibility(t(titleKey));
+    }
+  }, [safeStep, t]);
 
-  const title = t(TUTORIAL_STEPS[step]?.titleKey ?? "");
-  const description = t(TUTORIAL_STEPS[step]?.descriptionKey ?? "");
-
-  const isWelcome = step === 0;
-  const isLast = step === TOTAL_STEPS - 1;
-
-  // --- Back Android: skip (pas d’historique dans le tuto)
+  // --- Back Android: skip
   useEffect(() => {
     const sub = BackHandler.addEventListener("hardwareBackPress", () => {
       safeGo(onSkip);
@@ -87,51 +92,77 @@ const TutorialModal: React.FC<TutorialModalProps> = ({
     return () => sub.remove();
   }, [onSkip]);
 
+  const title = t(TUTORIAL_STEPS[safeStep]?.titleKey ?? "");
+  const description = t(TUTORIAL_STEPS[safeStep]?.descriptionKey ?? "");
+
+  const isWelcome = safeStep === 0;
+  const isLast = safeStep === TOTAL_STEPS - 1;
+
+  const progressLabel = useMemo(
+    () => `${safeStep + 1} / ${TOTAL_STEPS}`,
+    [safeStep]
+  );
+
   return (
     <TutorialVideoWrapper
-      step={step}
+      step={safeStep}
       title={
-        <Animated.View entering={FadeInUp.delay(150)}>
+        <Animated.View entering={FadeInUp.delay(140)}>
           <Text
             style={[styles.modalTitle, { color: currentTheme.colors.primary }]}
             allowFontScaling={false}
-            {...(Platform.OS === "android" ? { textBreakStrategy: "simple" as const } : {})}
+            {...(Platform.OS === "android"
+              ? { textBreakStrategy: "simple" as const }
+              : {})}
           >
             {title}
           </Text>
         </Animated.View>
       }
       description={
-        <Animated.View entering={FadeInUp.delay(250)}>
+        <Animated.View entering={FadeInUp.delay(230)}>
           <Text
             style={[styles.modalDescription, { color: "#fff" }]}
             allowFontScaling={false}
-            {...(Platform.OS === "android" ? { textBreakStrategy: "simple" as const } : {})}
+            {...(Platform.OS === "android"
+              ? { textBreakStrategy: "simple" as const }
+              : {})}
           >
             {description}
           </Text>
         </Animated.View>
       }
-      icon={<TutorialIcon step={step} />}
+      icon={<TutorialIcon step={safeStep} />}
     >
-      {/* Dots de progression */}
-      <View style={{ flexDirection: "row", gap: 6, marginBottom: normalize(6) }}>
-        {Array.from({ length: TOTAL_STEPS }).map((_, i) => (
-          <View
-            key={i}
-            style={{
-              width: normalize(i === step ? 16 : 8),
-              height: normalize(8),
-              borderRadius: 999,
-              backgroundColor:
-                i <= step ? currentTheme.colors.secondary : "rgba(255,255,255,0.25)",
-              opacity: i === step ? 1 : 0.7,
-              transform: [{ scale: i === step ? 1.05 : 1 }],
-            }}
-          />
-        ))}
+      {/* ✅ Progress mini label */}
+      <Text style={styles.progressText} accessibilityLabel={`Step ${progressLabel}`}>
+        {t("tutorial.progress", { defaultValue: "Étape" })} {progressLabel}
+      </Text>
+
+      {/* Dots de progression premium */}
+      <View style={styles.dotsRow}>
+        {Array.from({ length: TOTAL_STEPS }).map((_, i) => {
+          const active = i === safeStep;
+          const passed = i < safeStep;
+          return (
+            <View
+              key={i}
+              style={[
+                styles.dot,
+                active && styles.dotActive,
+                passed && styles.dotPassed,
+                {
+                  backgroundColor: active || passed
+                    ? currentTheme.colors.secondary
+                    : "rgba(255,255,255,0.22)",
+                },
+              ]}
+            />
+          );
+        })}
       </View>
 
+      {/* STEP 0 — Welcome */}
       {isWelcome && (
         <View style={styles.centeredButtonContainer}>
           <Animated.View style={buttonAnimatedStyle}>
@@ -145,29 +176,42 @@ const TutorialModal: React.FC<TutorialModalProps> = ({
               accessibilityLabel={t("tutorial.buttons.start")}
             >
               <LinearGradient
-                colors={[currentTheme.colors.primary, currentTheme.colors.secondary]}
+                colors={[
+                  currentTheme.colors.primary,
+                  currentTheme.colors.secondary,
+                ]}
                 style={styles.gradientButton}
               >
-                <Text style={styles.actionButtonText}>{t("tutorial.buttons.start")}</Text>
+                <Text style={styles.actionButtonText}>
+                  {t("tutorial.buttons.start")}
+                </Text>
               </LinearGradient>
             </Pressable>
           </Animated.View>
 
           <TouchableOpacity
             onPress={() => {
-              Haptics.notificationAsync(Haptics.NotificationFeedbackType.Warning).catch(() => {});
+              Haptics.notificationAsync(
+                Haptics.NotificationFeedbackType.Warning
+              ).catch(() => {});
               safeGo(onSkip);
             }}
             style={styles.skipButton}
             accessibilityLabel={t("tutorial.buttons.skip")}
           >
-            <Text style={[styles.skipButtonText, { color: currentTheme.colors.textSecondary }]}>
+            <Text
+              style={[
+                styles.skipButtonText,
+                { color: currentTheme.colors.textSecondary },
+              ]}
+            >
               {t("tutorial.buttons.skip")}
             </Text>
           </TouchableOpacity>
         </View>
       )}
 
+      {/* STEPS 1..5 */}
       {!isWelcome && !isLast && (
         <Animated.View style={[buttonAnimatedStyle, styles.bottomButton]}>
           <Pressable
@@ -180,47 +224,55 @@ const TutorialModal: React.FC<TutorialModalProps> = ({
             accessibilityLabel={t("tutorial.buttons.next")}
           >
             <LinearGradient
-              colors={[currentTheme.colors.primary, currentTheme.colors.secondary]}
+              colors={[
+                currentTheme.colors.primary,
+                currentTheme.colors.secondary,
+              ]}
               style={styles.gradientButton}
             >
               <Ionicons
                 name="chevron-forward"
-                size={normalize(24)}
-                color={currentTheme.colors.textPrimary}
+                size={normalize(22)}
+                color={"#fff"}
               />
             </LinearGradient>
           </Pressable>
 
-          {/* Skip discret */}
           <TouchableOpacity
-            onPress={() => {
-              safeGo(onSkip);
-            }}
-            style={{ marginTop: normalize(8), alignSelf: "center" }}
+            onPress={() => safeGo(onSkip)}
+            style={styles.skipMini}
           >
-            <Text style={[styles.skipButtonText, { color: "#ddd" }]}>
+            <Text style={[styles.skipButtonText, { color: "#e5e7eb" }]}>
               {t("tutorial.buttons.skip")}
             </Text>
           </TouchableOpacity>
         </Animated.View>
       )}
 
+      {/* STEP 6 — Finish */}
       {isLast && (
         <Animated.View style={[buttonAnimatedStyle, styles.bottomButton]}>
           <Pressable
             onPressIn={handlePressIn}
             onPressOut={handlePressOut}
             onPress={() => {
-              Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success).catch(() => {});
+              Haptics.notificationAsync(
+                Haptics.NotificationFeedbackType.Success
+              ).catch(() => {});
               safeGo(onFinish);
             }}
             accessibilityLabel={t("tutorial.buttons.finish")}
           >
             <LinearGradient
-              colors={[currentTheme.colors.primary, currentTheme.colors.secondary]}
+              colors={[
+                currentTheme.colors.primary,
+                currentTheme.colors.secondary,
+              ]}
               style={styles.gradientButton}
             >
-              <Text style={styles.actionButtonText}>{t("tutorial.buttons.finish")}</Text>
+              <Text style={styles.actionButtonText}>
+                {t("tutorial.buttons.finish")}
+              </Text>
             </LinearGradient>
           </Pressable>
         </Animated.View>
@@ -236,31 +288,68 @@ const styles = StyleSheet.create({
     textAlign: "center",
     marginBottom: normalize(6),
     includeFontPadding: true,
-    ...(Platform.OS === "android" ? { textBreakStrategy: "simple" } : null),
     textAlignVertical: "center",
     maxWidth: "92%",
     alignSelf: "center",
+    ...(Platform.OS === "android"
+      ? { textBreakStrategy: "simple" }
+      : null),
   },
+
   modalDescription: {
     fontSize: normalize(14),
     fontFamily: "Comfortaa_400Regular",
     textAlign: "center",
-    opacity: 0.85,
-    marginBottom: normalize(12),
+    opacity: 0.88,
+    marginBottom: normalize(10),
     lineHeight: Math.round(normalize(14) * 1.55),
     maxWidth: "92%",
     includeFontPadding: true,
     textAlignVertical: "center",
-    ...(Platform.OS === "android" ? { textBreakStrategy: "simple" as const } : null),
-    paddingTop: normalize(2),
-    paddingBottom: normalize(2),
+    ...(Platform.OS === "android"
+      ? { textBreakStrategy: "simple" as const }
+      : null),
   },
+
+  progressText: {
+    fontSize: normalize(12),
+    fontFamily: "Comfortaa_400Regular",
+    color: "rgba(255,255,255,0.85)",
+    marginBottom: normalize(6),
+    textAlign: "center",
+  },
+
+  dotsRow: {
+    flexDirection: "row",
+    gap: 6,
+    marginBottom: normalize(8),
+    justifyContent: "center",
+    alignItems: "center",
+  },
+
+  dot: {
+    width: normalize(8),
+    height: normalize(8),
+    borderRadius: 999,
+    opacity: 0.7,
+    transform: [{ scale: 1 }],
+  },
+  dotActive: {
+    width: normalize(18),
+    opacity: 1,
+    transform: [{ scale: 1.08 }],
+  },
+  dotPassed: {
+    opacity: 0.95,
+  },
+
   centeredButtonContainer: {
     flexDirection: "column",
     alignItems: "center",
     justifyContent: "center",
-    marginTop: normalize(10),
+    marginTop: normalize(8),
   },
+
   gradientButton: {
     paddingVertical: normalize(10),
     paddingHorizontal: normalize(20),
@@ -270,14 +359,18 @@ const styles = StyleSheet.create({
     justifyContent: "center",
     minWidth: normalize(100),
   },
+
   actionButtonText: {
     fontSize: normalize(15),
     fontFamily: "Comfortaa_700Bold",
     color: "#fff",
     includeFontPadding: true,
     lineHeight: Math.round(normalize(15) * 1.35),
-    ...(Platform.OS === "android" ? { textBreakStrategy: "simple" } : null),
+    ...(Platform.OS === "android"
+      ? { textBreakStrategy: "simple" }
+      : null),
   },
+
   skipButton: {
     justifyContent: "center",
     paddingHorizontal: normalize(12),
@@ -288,11 +381,17 @@ const styles = StyleSheet.create({
     fontFamily: "Comfortaa_400Regular",
     color: "#ddd",
   },
+
   bottomButton: {
     alignItems: "center",
     justifyContent: "center",
     alignSelf: "center",
-    marginTop: normalize(10),
+    marginTop: normalize(6),
+  },
+
+  skipMini: {
+    marginTop: normalize(8),
+    alignSelf: "center",
   },
 });
 

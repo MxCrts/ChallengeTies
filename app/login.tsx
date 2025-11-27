@@ -1,5 +1,11 @@
-// app/login.tsx (ou où se trouve ton écran Login)
-import React, { useState, useEffect, useCallback, useRef, useMemo } from "react";
+// app/login.tsx
+import React, {
+  useState,
+  useEffect,
+  useCallback,
+  useRef,
+  useMemo,
+} from "react";
 import {
   View,
   Text,
@@ -16,7 +22,8 @@ import {
   ScrollView,
   Keyboard,
   InteractionManager,
-   AppState,
+  AppState,
+  AccessibilityInfo,
 } from "react-native";
 import { useIsFocused } from "@react-navigation/native";
 import { useSafeAreaInsets, SafeAreaView } from "react-native-safe-area-context";
@@ -31,7 +38,11 @@ import { useVisitor } from "@/context/VisitorContext";
 import { useNavGuard } from "@/hooks/useNavGuard";
 import * as Haptics from "expo-haptics";
 import NetInfo from "@react-native-community/netinfo";
-import { AccessibilityInfo } from "react-native";
+import {
+  checkAndGrantPioneerIfEligible,
+  checkAndGrantAmbassadorRewards,
+  checkAndGrantAmbassadorMilestones,
+} from "@/src/referral/pioneerChecker";
 
 const { width: SCREEN_WIDTH, height: SCREEN_HEIGHT } = Dimensions.get("window");
 const normalize = (size: number) => {
@@ -144,20 +155,25 @@ export default function Login() {
   const nav = useNavGuard(router);
   const insets = useSafeAreaInsets();
   const { setGuest } = useVisitor();
- const isFocused = useIsFocused();
- const appStateRef = useRef(AppState.currentState);
- const animsRef = useRef<Animated.CompositeAnimation[]>([]);
+  const isFocused = useIsFocused();
+
+  const appStateRef = useRef(AppState.currentState);
+  const animsRef = useRef<Animated.CompositeAnimation[]>([]);
+  const isMountedRef = useRef(true);
+  const submittingRef = useRef(false);
+
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [loading, setLoading] = useState(false);
   const [errorMessage, setErrorMessage] = useState("");
   const [showPassword, setShowPassword] = useState(false); // toggle
-  const [peekPressed, setPeekPressed] = useState(false);   // press & hold
-const [isOffline, setIsOffline] = useState(false);
-const [reduceMotion, setReduceMotion] = useState(false);
-  const isMountedRef = useRef(true);
-  const submittingRef = useRef(false);
+  const [peekPressed, setPeekPressed] = useState(false); // press & hold
+  const [isOffline, setIsOffline] = useState(false);
+  const [reduceMotion, setReduceMotion] = useState(false);
+
   const ctaPulse = useRef(new Animated.Value(1)).current;
+  const ctaScale = useRef(new Animated.Value(1)).current;
+
   const emailRef = useRef<TextInput | null>(null);
   const passwordRef = useRef<TextInput | null>(null);
 
@@ -174,7 +190,36 @@ const [reduceMotion, setReduceMotion] = useState(false);
     };
   }, []);
 
-  // ——— Background subtle animation
+  // ——— Network status
+  useEffect(() => {
+    const sub = NetInfo.addEventListener((state) => {
+      const explicitlyOffline =
+        state.isConnected === false || state.isInternetReachable === false;
+      setIsOffline(!!explicitlyOffline);
+    });
+    return () => sub && sub();
+  }, []);
+
+  // ——— Accessibility: reduce motion
+  useEffect(() => {
+    let mounted = true;
+    AccessibilityInfo.isReduceMotionEnabled().then((enabled) => {
+      if (mounted) setReduceMotion(!!enabled);
+    });
+    const sub = AccessibilityInfo.addEventListener(
+      "reduceMotionChanged",
+      (enabled) => {
+        setReduceMotion(!!enabled);
+      }
+    );
+    return () => {
+      mounted = false;
+      // @ts-ignore RN <=0.72 compat
+      sub?.remove?.();
+    };
+  }, []);
+
+  // ——— Background waves
   const waves = useRef(
     Array.from({ length: WAVE_COUNT }, (_, index) => ({
       opacity: new Animated.Value(0.18 - index * 0.04),
@@ -182,17 +227,6 @@ const [reduceMotion, setReduceMotion] = useState(false);
       borderWidth: index === 0 ? normalize(5) : normalize(2),
     }))
   ).current;
-
-  useEffect(() => {
-  const sub = NetInfo.addEventListener((state) => {
-    // On ne dit "offline" que si on sait que c'est faux.
-    const explicitlyOffline =
-      state.isConnected === false || state.isInternetReachable === false;
-    setIsOffline(!!explicitlyOffline);
-  });
-  return () => sub && sub();
-}, []);
-
 
   useEffect(() => {
     const buildAnims = () =>
@@ -232,19 +266,18 @@ const [reduceMotion, setReduceMotion] = useState(false);
       );
 
     const start = () => {
-  if (!isFocused || appStateRef.current !== "active" || reduceMotion) return;
-  animsRef.current = buildAnims();
-  animsRef.current.forEach((a) => a.start());
-};
+      if (!isFocused || appStateRef.current !== "active" || reduceMotion) return;
+      animsRef.current = buildAnims();
+      animsRef.current.forEach((a) => a.start());
+    };
     const stop = () => {
       animsRef.current.forEach((a) => a.stop());
       animsRef.current = [];
     };
 
-    // focus screen
-    if (isFocused) start(); else stop();
+    if (isFocused) start();
+    else stop();
 
-    // app state
     const sub = AppState.addEventListener("change", (s) => {
       appStateRef.current = s;
       if (s === "active" && isFocused) start();
@@ -263,54 +296,77 @@ const [reduceMotion, setReduceMotion] = useState(false);
   useEffect(() => {
     const task = InteractionManager.runAfterInteractions(() => {
       Animated.parallel([
-        Animated.timing(cardOpacity, { toValue: 1, duration: 320, easing: Easing.out(Easing.cubic), useNativeDriver: true }),
-        Animated.timing(cardTranslate, { toValue: 0, duration: 320, easing: Easing.out(Easing.cubic), useNativeDriver: true }),
+        Animated.timing(cardOpacity, {
+          toValue: 1,
+          duration: 320,
+          easing: Easing.out(Easing.cubic),
+          useNativeDriver: true,
+        }),
+        Animated.timing(cardTranslate, {
+          toValue: 0,
+          duration: 320,
+          easing: Easing.out(Easing.cubic),
+          useNativeDriver: true,
+        }),
       ]).start();
     });
     return () => task.cancel();
   }, []);
-
-  useEffect(() => {
-  let mounted = true;
-  AccessibilityInfo.isReduceMotionEnabled().then((enabled) => {
-    if (mounted) setReduceMotion(!!enabled);
-  });
-  const sub = AccessibilityInfo.addEventListener("reduceMotionChanged", (enabled) => {
-    setReduceMotion(!!enabled);
-  });
-  return () => {
-    mounted = false;
-    // @ts-ignore RN <=0.72 compat
-    sub?.remove?.();
-  };
-}, []);
-
 
   // ——— Error banner shake
   const shake = useRef(new Animated.Value(0)).current;
   const triggerShake = useCallback(() => {
     shake.setValue(0);
     Animated.sequence([
-      Animated.timing(shake, { toValue: 10, duration: 55, useNativeDriver: true }),
-      Animated.timing(shake, { toValue: -10, duration: 55, useNativeDriver: true }),
-      Animated.timing(shake, { toValue: 6, duration: 55, useNativeDriver: true }),
-      Animated.timing(shake, { toValue: 0, duration: 55, useNativeDriver: true }),
+      Animated.timing(shake, {
+        toValue: 10,
+        duration: 55,
+        useNativeDriver: true,
+      }),
+      Animated.timing(shake, {
+        toValue: -10,
+        duration: 55,
+        useNativeDriver: true,
+      }),
+      Animated.timing(shake, {
+        toValue: 6,
+        duration: 55,
+        useNativeDriver: true,
+      }),
+      Animated.timing(shake, {
+        toValue: 0,
+        duration: 55,
+        useNativeDriver: true,
+      }),
     ]).start();
   }, [shake]);
 
   // ——— Validation
   const isValidEmail = useCallback((e: string) => /\S+@\S+\.\S+/.test(e), []);
-  const formValid = useMemo(() => isValidEmail(email.trim()) && password.trim().length >= 6, [email, password, isValidEmail]);
+  const formValid = useMemo(
+    () => isValidEmail(email.trim()) && password.trim().length >= 6,
+    [email, password, isValidEmail]
+  );
 
   // ——— CTA press feedback
-  const ctaScale = useRef(new Animated.Value(1)).current;
-const pressIn = () => {
-    // Pas d’haptics ni d’anim si bouton désactivé
+  const pressIn = () => {
     if (!formValid || loading || isOffline) return;
-    Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium).catch(()=>{});
-    Animated.timing(ctaScale, { toValue: 0.98, duration: 80, useNativeDriver: true }).start();
-  };  const pressOut = () => Animated.timing(ctaScale, { toValue: 1, duration: 120, easing: Easing.out(Easing.quad), useNativeDriver: true }).start();
+    Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium).catch(() => {});
+    Animated.timing(ctaScale, {
+      toValue: 0.98,
+      duration: 80,
+      useNativeDriver: true,
+    }).start();
+  };
+  const pressOut = () =>
+    Animated.timing(ctaScale, {
+      toValue: 1,
+      duration: 120,
+      easing: Easing.out(Easing.quad),
+      useNativeDriver: true,
+    }).start();
 
+  // ——— Login handler
   const handleLogin = useCallback(async () => {
     if (submittingRef.current || loading) return;
     submittingRef.current = true;
@@ -319,10 +375,26 @@ const pressIn = () => {
     const e = email.trim();
     const p = password.trim();
 
+    if (isOffline) {
+      if (isMountedRef.current) {
+        setErrorMessage(
+          t("networkError") || "Problème réseau. Réessaie."
+        );
+        Haptics.notificationAsync(
+          Haptics.NotificationFeedbackType.Error
+        ).catch(() => {});
+        triggerShake();
+      }
+      submittingRef.current = false;
+      return;
+    }
+
     if (!e || !p) {
       if (isMountedRef.current) {
         setErrorMessage(t("fillEmailPassword"));
-        Haptics.notificationAsync(Haptics.NotificationFeedbackType.Error).catch(()=>{});
+        Haptics.notificationAsync(
+          Haptics.NotificationFeedbackType.Error
+        ).catch(() => {});
         triggerShake();
       }
       submittingRef.current = false;
@@ -331,7 +403,9 @@ const pressIn = () => {
     if (!isValidEmail(e)) {
       if (isMountedRef.current) {
         setErrorMessage(t("invalidEmail"));
-        Haptics.notificationAsync(Haptics.NotificationFeedbackType.Error).catch(()=>{});
+        Haptics.notificationAsync(
+          Haptics.NotificationFeedbackType.Error
+        ).catch(() => {});
         triggerShake();
       }
       submittingRef.current = false;
@@ -341,34 +415,101 @@ const pressIn = () => {
     try {
       if (isMountedRef.current) setLoading(true);
       await signInWithEmailAndPassword(auth, e, p);
-await Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success).catch(()=>{});
-      // store last email for next time
-      AsyncStorage.setItem("login.lastEmail", e).catch(() => {});
+await Haptics.notificationAsync(
+        Haptics.NotificationFeedbackType.Success
+      ).catch(() => {});
 
+      AsyncStorage.setItem("login.lastEmail", e).catch(() => {});
       setGuest(false);
+// ✅ REFERRAL FAST-TRACK : validation immédiate après login
+      // (si B vient d’un lien ref, pioneerChecker va :
+      //  - attribuer B
+      //  - récompenser B
+      //  - récompenser A + notif + Share&Earn)
+      try {
+        await checkAndGrantPioneerIfEligible();
+        await checkAndGrantAmbassadorRewards();
+        await checkAndGrantAmbassadorMilestones();
+      } catch {}
+  
+
+// ✅ Si un deeplink pending existe → on route DIRECT vers la cible
+try {
+  const pendingRaw = await AsyncStorage.getItem("ties_pending_link");
+  if (pendingRaw) {
+    await AsyncStorage.removeItem("ties_pending_link");
+    const pending = JSON.parse(pendingRaw);
+
+    const challengeId =
+      typeof pending?.challengeId === "string" ? pending.challengeId : null;
+    const inviteId =
+      typeof pending?.inviteId === "string" ? pending.inviteId : null;
+
+    if (challengeId && inviteId) {
       InteractionManager.runAfterInteractions(() => {
-        if (isMountedRef.current) router.replace("/");
+        if (!isMountedRef.current) return;
+        router.replace({
+          pathname: "/profile/notifications",
+          params: { challengeId, invite: inviteId },
+        });
       });
+      return; // ⛔️ très important: stop ici
+    }
+
+    if (challengeId) {
+      InteractionManager.runAfterInteractions(() => {
+        if (!isMountedRef.current) return;
+        router.replace(`/challenge-details/${challengeId}`);
+      });
+      return; // ⛔️ stop ici
+    }
+  }
+} catch {}
+
+// ✅ Sinon, flow normal → on passe par "/" pour laisser AppNavigator décider
+InteractionManager.runAfterInteractions(() => {
+  if (isMountedRef.current) router.replace("/");
+});
+
     } catch (error: any) {
       const errorCode = error?.code;
-      const invalidCredentials = ["auth/user-not-found", "auth/wrong-password", "auth/invalid-credential"];
+      const invalidCredentials = [
+        "auth/user-not-found",
+        "auth/wrong-password",
+        "auth/invalid-credential",
+      ];
       if (invalidCredentials.includes(errorCode)) {
-        if (isMountedRef.current) setErrorMessage(t("invalidCredentials"));
+        if (isMountedRef.current)
+          setErrorMessage(t("invalidCredentials"));
       } else {
         const map: Record<string, string> = {
           "auth/invalid-email": t("invalidEmailFormat"),
           "auth/too-many-requests": t("tooManyRequests"),
-          "auth/network-request-failed": t("networkError") || "Problème réseau. Réessaie.",
+          "auth/network-request-failed":
+            t("networkError") || "Problème réseau. Réessaie.",
         };
-        if (isMountedRef.current) setErrorMessage(map[errorCode] || t("unknownError"));
+        if (isMountedRef.current)
+          setErrorMessage(map[errorCode] || t("unknownError"));
       }
-      Haptics.notificationAsync(Haptics.NotificationFeedbackType.Error).catch(()=>{});
+      Haptics.notificationAsync(
+        Haptics.NotificationFeedbackType.Error
+      ).catch(() => {});
       triggerShake();
     } finally {
       submittingRef.current = false;
       if (isMountedRef.current) setLoading(false);
     }
-  }, [email, password, t, router, isValidEmail, loading, setGuest, triggerShake]);
+  }, [
+    email,
+    password,
+    t,
+    router,
+    isValidEmail,
+    loading,
+    setGuest,
+    triggerShake,
+    isOffline,
+  ]);
 
   // Auto-dismiss error after 5s
   useEffect(() => {
@@ -378,32 +519,44 @@ await Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success).catch(
     }
   }, [errorMessage]);
 
-
+  // ——— CTA pulse (désactivé si reduceMotion ou offline)
   useEffect(() => {
-  let loop: Animated.CompositeAnimation | null = null;
-  if (formValid && !loading) {
-    loop = Animated.loop(
-      Animated.sequence([
-        Animated.timing(ctaPulse, { toValue: 1.02, duration: 650, useNativeDriver: true }),
-        Animated.timing(ctaPulse, { toValue: 1.0, duration: 650, useNativeDriver: true }),
-      ])
-    );
-    loop.start();
-  }
-  return () => loop?.stop();
-}, [formValid, loading, ctaPulse]);
+    let loop: Animated.CompositeAnimation | null = null;
+    if (formValid && !loading && !isOffline && !reduceMotion) {
+      loop = Animated.loop(
+        Animated.sequence([
+          Animated.timing(ctaPulse, {
+            toValue: 1.02,
+            duration: 650,
+            useNativeDriver: true,
+          }),
+          Animated.timing(ctaPulse, {
+            toValue: 1.0,
+            duration: 650,
+            useNativeDriver: true,
+          }),
+        ])
+      );
+      loop.start();
+    }
+    return () => loop?.stop();
+  }, [formValid, loading, isOffline, reduceMotion, ctaPulse]);
 
   const goSignUp = () => nav.replace("/register");
   const goForgot = () => nav.push("/forgot-password");
-  const guarded = <T extends (...args: any[]) => any>(fn: T) => (...args: Parameters<T>) => {
-    if (loading || submittingRef.current) return;
-    return fn(...args);
-  };
-  const goSignUpGuarded = guarded(() => nav.replace("/register"));
-  const goForgotGuarded = guarded(() => nav.push("/forgot-password"));
-  const disabledCTA = !formValid || loading || isOffline;
 
-  const passwordVisible = showPassword || peekPressed; // toggle OR long-press peek
+  const guarded =
+    <T extends (...args: any[]) => any>(fn: T) =>
+    (...args: Parameters<T>) => {
+      if (loading || submittingRef.current) return;
+      return fn(...args);
+    };
+
+  const goSignUpGuarded = guarded(goSignUp);
+  const goForgotGuarded = guarded(goForgot);
+
+  const disabledCTA = !formValid || loading || isOffline;
+  const passwordVisible = showPassword || peekPressed;
 
   return (
     <SafeAreaView style={{ flex: 1, backgroundColor: COLORS.background }}>
@@ -413,7 +566,11 @@ await Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success).catch(
         style={{ flex: 1, backgroundColor: COLORS.background }}
         contentContainerStyle={[
           styles.scrollContent,
-          { minHeight: SCREEN_HEIGHT - insets.top - insets.bottom, paddingBottom: SPACING * 2 },
+          {
+            minHeight:
+              SCREEN_HEIGHT - insets.top - insets.bottom,
+            paddingBottom: SPACING * 2,
+          },
         ]}
         contentInsetAdjustmentBehavior="always"
         keyboardShouldPersistTaps="handled"
@@ -422,42 +579,89 @@ await Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success).catch(
       >
         {/* BACKGROUND WAVES */}
         {waves.map((w, i) => (
-          <Wave key={`wave-${i}`} opacity={w.opacity} scale={w.scale} borderWidth={w.borderWidth} size={CIRCLE_SIZE} top={CIRCLE_TOP} />
+          <Wave
+            key={`wave-${i}`}
+            opacity={w.opacity}
+            scale={w.scale}
+            borderWidth={w.borderWidth}
+            size={CIRCLE_SIZE}
+            top={CIRCLE_TOP}
+          />
         ))}
 
         {/* BRAND */}
         <View style={styles.headerContainer}>
-          <Text style={styles.brandTitle} numberOfLines={1} adjustsFontSizeToFit accessibilityRole="header" accessibilityLabel="ChallengeTies">
+          <Text
+            style={styles.brandTitle}
+            numberOfLines={1}
+            adjustsFontSizeToFit
+            accessibilityRole="header"
+            accessibilityLabel="ChallengeTies"
+          >
             <Text style={styles.highlight}>C</Text>hallenge
             <Text style={styles.highlight}>T</Text>ies
           </Text>
-          <Text style={styles.tagline} accessibilityLabel={t("appTagline")}>
+          <Text
+            style={styles.tagline}
+            accessibilityLabel={t("appTagline")}
+          >
             {t("appTagline")}
           </Text>
         </View>
-{isOffline && (
-  <View style={styles.offlineBanner} accessibilityRole="alert">
-    <Ionicons name="cloud-offline-outline" size={16} color="#111827" />
-    <Text style={styles.offlineText}>{t("networkError") || "Connexion réseau indisponible"}</Text>
-  </View>
-)}
+
+        {isOffline && (
+          <View style={styles.offlineBanner} accessibilityRole="alert">
+            <Ionicons
+              name="cloud-offline-outline"
+              size={16}
+              color="#111827"
+            />
+            <Text style={styles.offlineText}>
+              {t("networkError") ||
+                "Connexion réseau indisponible"}
+            </Text>
+          </View>
+        )}
+
         {/* FORM CARD */}
-        <Animated.View style={[styles.card, { opacity: cardOpacity, transform: [{ translateY: cardTranslate }] }]}>
+        <Animated.View
+          style={[
+            styles.card,
+            {
+              opacity: cardOpacity,
+              transform: [{ translateY: cardTranslate }],
+            },
+          ]}
+        >
           {/* Error banner */}
           {errorMessage ? (
             <Animated.View
               accessibilityRole="alert"
               accessibilityLiveRegion="polite"
-              style={[styles.errorBanner, { transform: [{ translateX: shake }] }]}
+              style={[
+                styles.errorBanner,
+                { transform: [{ translateX: shake }] },
+              ]}
             >
-              <Ionicons name="alert-circle" size={18} color="#fff" />
-              <Text style={styles.errorBannerText}>{errorMessage}</Text>
+              <Ionicons
+                name="alert-circle"
+                size={18}
+                color="#fff"
+              />
+              <Text style={styles.errorBannerText}>
+                {errorMessage}
+              </Text>
             </Animated.View>
           ) : null}
 
           {/* E-mail */}
           <View style={styles.inputWrap}>
-            <Ionicons name="mail-outline" size={18} color={COLORS.primaryDark} style={styles.leadingIcon} />
+            <Ionicons
+              name="mail-outline"
+              size={18}
+              color={COLORS.primaryDark}
+              style={styles.leadingIcon}
+            />
             <TextInput
               ref={emailRef}
               placeholder={t("emailPlaceholder")}
@@ -470,33 +674,49 @@ await Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success).catch(
               autoCapitalize="none"
               maxLength={100}
               autoComplete="email"
-             textContentType="emailAddress"
+              textContentType="emailAddress"
               accessibilityLabel={t("emailPlaceholder")}
               returnKeyType="next"
-              onSubmitEditing={() => passwordRef.current?.focus()}
+              onSubmitEditing={() =>
+                passwordRef.current?.focus()
+              }
               blurOnSubmit={false}
               autoFocus
             />
             {!!email && (
               <TouchableOpacity
                 onPress={() => setEmail("")}
-                hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}
+                hitSlop={{
+                  top: 10,
+                  bottom: 10,
+                  left: 10,
+                  right: 10,
+                }}
                 accessibilityLabel={t("clear") || "Effacer"}
                 style={styles.trailingBtn}
               >
-                <Ionicons name="close-circle" size={18} color="rgba(0,0,0,0.35)" />
+                <Ionicons
+                  name="close-circle"
+                  size={18}
+                  color="rgba(0,0,0,0.35)"
+                />
               </TouchableOpacity>
             )}
           </View>
 
           {/* Password */}
           <View style={styles.inputWrap}>
-            <Ionicons name="lock-closed-outline" size={18} color={COLORS.primaryDark} style={styles.leadingIcon} />
+            <Ionicons
+              name="lock-closed-outline"
+              size={18}
+              color={COLORS.primaryDark}
+              style={styles.leadingIcon}
+            />
             <TextInput
               ref={passwordRef}
               placeholder={t("passwordPlaceholder")}
               placeholderTextColor={COLORS.placeholder}
-              style={[styles.input]}
+              style={styles.input}
               value={password}
               maxLength={100}
               onChangeText={setPassword}
@@ -505,7 +725,9 @@ await Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success).catch(
               textContentType="password"
               accessibilityLabel={t("passwordPlaceholder")}
               returnKeyType="done"
-              onSubmitEditing={formValid ? handleLogin : undefined}
+              onSubmitEditing={
+                !disabledCTA ? handleLogin : undefined
+              }
             />
             {/* Peek (press&hold) */}
             <TouchableOpacity
@@ -513,37 +735,88 @@ await Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success).catch(
               onPressOut={() => setPeekPressed(false)}
               onPress={() => setShowPassword((v) => !v)}
               style={styles.trailingBtn}
-              hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}
-              accessibilityLabel={passwordVisible ? t("hidePassword") : t("showPassword")}
+              hitSlop={{
+                top: 10,
+                bottom: 10,
+                left: 10,
+                right: 10,
+              }}
+              accessibilityLabel={
+                passwordVisible
+                  ? t("hidePassword")
+                  : t("showPassword")
+              }
             >
-              <Ionicons name={passwordVisible ? "eye-off" : "eye"} size={20} color={COLORS.primaryDark} />
+              <Ionicons
+                name={passwordVisible ? "eye-off" : "eye"}
+                size={20}
+                color={COLORS.primaryDark}
+              />
             </TouchableOpacity>
           </View>
 
           {/* Forgot */}
-           <TouchableOpacity onPress={goForgotGuarded} accessibilityLabel={t("forgotPassword")} accessibilityRole="link">
-            <Text style={styles.forgotPassword}>{t("forgotPassword")}</Text>
+          <TouchableOpacity
+            onPress={goForgotGuarded}
+            accessibilityLabel={t("forgotPassword")}
+            accessibilityRole="link"
+          >
+            <Text style={styles.forgotPassword}>
+              {t("forgotPassword")}
+            </Text>
           </TouchableOpacity>
 
           {/* CTA */}
-          <Animated.View style={{ transform: [{ scale: Animated.multiply(ctaScale, ctaPulse) }] }}>
+          <Animated.View
+            style={{
+              transform: [
+                {
+                  scale: Animated.multiply(
+                    ctaScale,
+                    ctaPulse
+                  ),
+                },
+              ],
+            }}
+          >
             <Pressable
-              style={[styles.loginButton, disabledCTA && styles.disabledButton]}
+              style={[
+                styles.loginButton,
+                disabledCTA && styles.disabledButton,
+              ]}
               onPressIn={pressIn}
               onPressOut={pressOut}
-              android_ripple={{ color: "rgba(0,0,0,0.06)", borderless: false }}
-              onPress={!disabledCTA ? handleLogin : undefined}
+              android_ripple={{
+                color: "rgba(0,0,0,0.06)",
+                borderless: false,
+              }}
+              onPress={
+                !disabledCTA ? handleLogin : undefined
+              }
               disabled={disabledCTA}
               accessibilityRole="button"
               accessibilityLabel={t("login")}
               accessibilityState={{ disabled: disabledCTA }}
             >
               {loading ? (
-                <ActivityIndicator color={COLORS.text} size="small" />
+                <ActivityIndicator
+                  color={COLORS.text}
+                  size="small"
+                />
               ) : (
                 <View style={styles.loginBtnContent}>
-                  <Ionicons name="log-in-outline" size={18} color={COLORS.text} />
-                  <Text numberOfLines={1} ellipsizeMode="tail" style={styles.loginButtonText}>{t("login")}</Text>
+                  <Ionicons
+                    name="log-in-outline"
+                    size={18}
+                    color={COLORS.text}
+                  />
+                  <Text
+                    numberOfLines={1}
+                    ellipsizeMode="tail"
+                    style={styles.loginButtonText}
+                  >
+                    {t("login")}
+                  </Text>
                 </View>
               )}
             </Pressable>
@@ -552,7 +825,9 @@ await Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success).catch(
           {/* Divider */}
           <View style={styles.dividerRow}>
             <View style={styles.divider} />
-            <Text style={styles.dividerText}>{t("or") || "ou"}</Text>
+            <Text style={styles.dividerText}>
+              {t("or") || "ou"}
+            </Text>
             <View style={styles.divider} />
           </View>
 
@@ -560,17 +835,29 @@ await Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success).catch(
           <TouchableOpacity
             style={styles.guestButton}
             onPress={async () => {
-              await AsyncStorage.removeItem("pendingTutorial");
+              await AsyncStorage.removeItem(
+                "pendingTutorial"
+              );
               setGuest(true);
               InteractionManager.runAfterInteractions(() => {
                 if (isMountedRef.current) router.replace("/");
               });
             }}
             accessibilityRole="button"
-            accessibilityLabel={t("continueAsGuest") || "Continuer en tant que visiteur"}
+            accessibilityLabel={
+              t("continueAsGuest") ||
+              "Continuer en tant que visiteur"
+            }
           >
-            <Ionicons name="walk-outline" size={18} color={COLORS.primary} />
-            <Text style={styles.guestButtonText}>{t("continueAsGuest") || "Continuer en tant que visiteur"}</Text>
+            <Ionicons
+              name="walk-outline"
+              size={18}
+              color={COLORS.primary}
+            />
+            <Text style={styles.guestButtonText}>
+              {t("continueAsGuest") ||
+                "Continuer en tant que visiteur"}
+            </Text>
           </TouchableOpacity>
         </Animated.View>
 
@@ -578,7 +865,12 @@ await Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success).catch(
         <View style={styles.footerInline}>
           <Text style={styles.signupText}>
             {t("noAccount")}{" "}
-            <Text style={styles.signupLink} onPress={goSignUpGuarded} accessibilityRole="link" accessibilityLabel={t("signupHere")}>
+            <Text
+              style={styles.signupLink}
+              onPress={goSignUpGuarded}
+              accessibilityRole="link"
+              accessibilityLabel={t("signupHere")}
+            >
               {t("signupHere")}
             </Text>
           </Text>
@@ -623,23 +915,23 @@ const styles = StyleSheet.create({
     fontFamily: "Comfortaa_400Regular",
     maxWidth: "90%",
   },
-offlineBanner: {
-  flexDirection: "row",
-  alignItems: "center",
-  gap: 8,
-  backgroundColor: "#FDE68A", // jaune doux
-  borderColor: "rgba(0,0,0,0.08)",
-  borderWidth: 1,
-  paddingVertical: 8,
-  paddingHorizontal: 12,
-  borderRadius: 12,
-  marginBottom: 10,
-},
-offlineText: {
-  color: "#111827",
-  fontSize: normalize(12),
-  fontFamily: "Comfortaa_700Bold",
-},
+  offlineBanner: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 8,
+    backgroundColor: "#FDE68A",
+    borderColor: "rgba(0,0,0,0.08)",
+    borderWidth: 1,
+    paddingVertical: 8,
+    paddingHorizontal: 12,
+    borderRadius: 12,
+    marginBottom: 10,
+  },
+  offlineText: {
+    color: "#111827",
+    fontSize: normalize(12),
+    fontFamily: "Comfortaa_700Bold",
+  },
 
   // Card
   card: {
@@ -655,7 +947,7 @@ offlineText: {
     elevation: 6,
     borderWidth: 1,
     borderColor: COLORS.border,
-    backdropFilter: "blur(8px)" as any, // iOS only, ignoré ailleurs
+    backdropFilter: "blur(8px)" as any, // iOS only
   },
 
   // Error banner
@@ -724,7 +1016,11 @@ offlineText: {
     shadowRadius: normalize(5),
     elevation: 5,
   },
-  loginBtnContent: { flexDirection: "row", alignItems: "center", gap: 8 },
+  loginBtnContent: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 8,
+  },
   disabledButton: { opacity: 0.5 },
   loginButtonText: {
     color: COLORS.text,
@@ -776,5 +1072,8 @@ offlineText: {
     fontSize: normalize(14),
     fontFamily: "Comfortaa_400Regular",
   },
-  signupLink: { color: COLORS.primary, fontFamily: "Comfortaa_700Bold" },
+  signupLink: {
+    color: COLORS.primary,
+    fontFamily: "Comfortaa_700Bold",
+  },
 });

@@ -1,16 +1,33 @@
-import React, { useState, useEffect, useMemo, useCallback, useRef  } from "react";
+import React, { useState, useEffect, useMemo, useCallback, useRef } from "react";
 import {
-   View, Text, FlatList, TextInput, TouchableOpacity, ActivityIndicator,
-   Alert, Modal, Dimensions, ScrollView, KeyboardAvoidingView, Platform,
-   StyleSheet, Keyboard, InteractionManager,
- } from "react-native";
+  View,
+  Text,
+  FlatList,
+  TextInput,
+  TouchableOpacity,
+  ActivityIndicator,
+  Alert,
+  Modal,
+  Dimensions,
+  ScrollView,
+  KeyboardAvoidingView,
+  Platform,
+  StyleSheet,
+  Keyboard,
+  InteractionManager,
+} from "react-native";
 import { Image as RNImage } from "react-native";
 import { Ionicons } from "@expo/vector-icons";
 import { useRouter } from "expo-router";
-import { collection, onSnapshot, query, where, orderBy  } from "firebase/firestore";
+import { collection, onSnapshot, query, where, orderBy } from "firebase/firestore";
 import { db } from "../../constants/firebase-config";
 import { LinearGradient } from "expo-linear-gradient";
-import Animated, { FadeInUp, useSharedValue, useAnimatedStyle, withSpring } from "react-native-reanimated";
+import Animated, {
+  FadeInUp,
+  useSharedValue,
+  useAnimatedStyle,
+  withSpring,
+} from "react-native-reanimated";
 import * as Haptics from "expo-haptics";
 import { useSavedChallenges } from "../../context/SavedChallengesContext";
 import { useTheme } from "../../context/ThemeContext";
@@ -28,15 +45,14 @@ import { useSafeAreaInsets } from "react-native-safe-area-context";
 import useGateForGuest from "@/hooks/useGateForGuest";
 import RequireAuthModal from "@/components/RequireAuthModal";
 
+// ---------- Helpers globaux (UX / erreurs) ----------
 
-// Dimensions responsives
 const SPACING = 18; // Aligné avec Notifications.tsx, FocusScreen.tsx, etc.
 const { width: SCREEN_WIDTH, height: SCREEN_HEIGHT } = Dimensions.get("window");
+
 // Hauteur item stable pour getItemLayout (évite les re-calculs)
 const ITEM_HEIGHT =
-  SPACING * 1.5 + /* wrapper margin */
-  180 /* image normalized base, sera normalisé visuellement */ +
-  12 /* paddings approx */;
+  SPACING * 1.5 + /* wrapper margin */ 180 /* image normalized base */ + 12 /* paddings approx */;
 
 const normalizeSize = (size: number) => {
   const baseWidth = 375;
@@ -51,15 +67,15 @@ const withAlpha = (color: string, alpha: number) => {
 
   if (/^rgba?\(/i.test(color)) {
     const nums = color.match(/[\d.]+/g) || [];
-    const [r="0", g="0", b="0"] = nums;
+    const [r = "0", g = "0", b = "0"] = nums;
     return `rgba(${r}, ${g}, ${b}, ${a})`;
   }
   let hex = color.replace("#", "");
-  if (hex.length === 3) hex = hex.split("").map(c => c + c).join("");
+  if (hex.length === 3) hex = hex.split("").map((c) => c + c).join("");
   if (hex.length >= 6) {
-    const r = parseInt(hex.slice(0,2),16);
-    const g = parseInt(hex.slice(2,4),16);
-    const b = parseInt(hex.slice(4,6),16);
+    const r = parseInt(hex.slice(0, 2), 16);
+    const g = parseInt(hex.slice(2, 4), 16);
+    const b = parseInt(hex.slice(4, 6), 16);
     return `rgba(${r}, ${g}, ${b}, ${a})`;
   }
   return `rgba(0,0,0,${a})`;
@@ -80,15 +96,31 @@ const tokensMatchWordStarts = (text: string, query: string) => {
   const tokens = q.split(/\s+/).filter(Boolean);
   if (tokens.length === 0) return true;
 
-  // Découpe le texte en "mots" rudimentaires
   const words = t.split(/[^a-z0-9]+/i).filter(Boolean);
-  return tokens.every(token =>
-    words.some(w => w.startsWith(token))
+  return tokens.every((token) => words.some((w) => w.startsWith(token)));
+};
+
+const capitalize = (s: string) => (s ? s.charAt(0).toUpperCase() + s.slice(1) : s);
+
+// Alerte d’erreur centralisée (UX premium + i18n + haptics)
+const showErrorAlert = (
+  t: (key: string, opts?: Record<string, any>) => string,
+  messageKey: string,
+  fallbackMessage: string
+) => {
+  try {
+    Haptics.notificationAsync(Haptics.NotificationFeedbackType.Error).catch(() => {});
+  } catch {
+    // pas grave si haptics plante
+  }
+
+  Alert.alert(
+    t("error", { defaultValue: "Oups..." }),
+    t(messageKey, { defaultValue: fallbackMessage })
   );
 };
 
-
-const capitalize = (s: string) => s.charAt(0).toUpperCase() + s.slice(1);
+// ---------- Types ----------
 
 interface Challenge {
   id: string;
@@ -117,6 +149,8 @@ interface ChallengeRaw {
   chatId?: string | null;
   approved?: boolean;
 }
+
+// ---------- Styles dynamiques dépendants du thème ----------
 
 const getDynamicStyles = (currentTheme: Theme, isDarkMode: boolean) => ({
   searchContainer: {
@@ -184,6 +218,9 @@ const getDynamicStyles = (currentTheme: Theme, isDarkMode: boolean) => ({
     color: currentTheme.colors.textPrimary,
   },
 });
+
+// ---------- Header (search + filtres) ----------
+
 const ExploreHeader = React.memo(
   ({
     searchQuery,
@@ -216,68 +253,61 @@ const ExploreHeader = React.memo(
     isDarkMode: boolean;
     inputRef: React.RefObject<TextInput>;
   }) => {
-    const { t, i18n } = useTranslation();
+    const { t } = useTranslation();
     const dynamicStyles = getDynamicStyles(currentTheme, isDarkMode);
 
     return (
-      <Animated.View
-        entering={FadeInUp.delay(100)}
-        style={styles.headerWrapper}
-      >
-
+      <Animated.View entering={FadeInUp.delay(100)} style={styles.headerWrapper}>
         {/* Barre de recherche */}
         <TouchableOpacity activeOpacity={1} onPress={() => inputRef.current?.focus()}>
-        <LinearGradient
-          colors={[
-            currentTheme.colors.cardBackground,
-            currentTheme.colors.cardBackground + "F0",
-          ]}
-          style={[styles.searchContainer, dynamicStyles.searchContainer]}
-        >
-          <Ionicons
-            name="search"
-            size={normalizeSize(20)}
-            color={currentTheme.colors.textSecondary}
-            style={styles.searchIcon}
-          />
-          <TextInput
-  ref={inputRef}
-  style={[styles.searchInput, dynamicStyles.searchInput]}
-  placeholder={t("searchPlaceholder")}
-  placeholderTextColor={currentTheme.colors.textSecondary}
-  value={searchQuery}
-  onChangeText={onSearchChange}
-  returnKeyType="search"
-  autoCorrect={false}
-  onSubmitEditing={Keyboard.dismiss}
-  autoCapitalize="none"
-  blurOnSubmit={false}
-  enterKeyHint="search"
-  keyboardAppearance={isDarkMode ? "dark" : "light"}
-  onFocus={() => {
-    // Force le focus (fix certains devices)
-    inputRef.current?.focus();
-  }}
-  accessibilityLabel={t("searchPlaceholder")}
-/>
-{!!searchQuery && (
-            <TouchableOpacity
-              onPress={() => {
-                onSearchChange("");
-                Keyboard.dismiss();
+          <LinearGradient
+            colors={[currentTheme.colors.cardBackground, currentTheme.colors.cardBackground + "F0"]}
+            style={[styles.searchContainer, dynamicStyles.searchContainer]}
+          >
+            <Ionicons
+              name="search"
+              size={normalizeSize(20)}
+              color={currentTheme.colors.textSecondary}
+              style={styles.searchIcon}
+            />
+            <TextInput
+              ref={inputRef}
+              style={[styles.searchInput, dynamicStyles.searchInput]}
+              placeholder={t("searchPlaceholder")}
+              placeholderTextColor={currentTheme.colors.textSecondary}
+              value={searchQuery}
+              onChangeText={onSearchChange}
+              returnKeyType="search"
+              autoCorrect={false}
+              onSubmitEditing={Keyboard.dismiss}
+              autoCapitalize="none"
+              blurOnSubmit={false}
+              enterKeyHint="search"
+              keyboardAppearance={isDarkMode ? "dark" : "light"}
+              onFocus={() => {
+                // Force le focus (fix certains devices)
+                inputRef.current?.focus();
               }}
-              accessibilityRole="button"
-              accessibilityLabel={t("clearSearch")}
-              hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}
-            >
-              <Ionicons
-                name="close-circle"
-                size={normalizeSize(20)}
-                color={currentTheme.colors.textSecondary}
-              />
-            </TouchableOpacity>
-          )}
-        </LinearGradient>
+              accessibilityLabel={t("searchPlaceholder")}
+            />
+            {!!searchQuery && (
+              <TouchableOpacity
+                onPress={() => {
+                  onSearchChange("");
+                  Keyboard.dismiss();
+                }}
+                accessibilityRole="button"
+                accessibilityLabel={t("clearSearch")}
+                hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}
+              >
+                <Ionicons
+                  name="close-circle"
+                  size={normalizeSize(20)}
+                  color={currentTheme.colors.textSecondary}
+                />
+              </TouchableOpacity>
+            )}
+          </LinearGradient>
         </TouchableOpacity>
 
         {/* Filtres */}
@@ -293,10 +323,12 @@ const ExploreHeader = React.memo(
               style={styles.filterIcon}
             />
             <Text style={[styles.filterText, dynamicStyles.filterText]}>
-   {originFilter === "Existing" ? t("origin.existing") :
-    originFilter === "Created" ? t("origin.created") :
-    t("origin.all")}
- </Text>
+              {originFilter === "Existing"
+                ? t("origin.existing")
+                : originFilter === "Created"
+                ? t("origin.created")
+                : t("origin.all")}
+            </Text>
           </TouchableOpacity>
 
           <TouchableOpacity
@@ -348,10 +380,7 @@ const ExploreHeader = React.memo(
             onPressOut={onCloseCategoryModal}
           >
             <LinearGradient
-              colors={[
-                currentTheme.colors.cardBackground,
-                currentTheme.colors.cardBackground + "F0",
-              ]}
+              colors={[currentTheme.colors.cardBackground, currentTheme.colors.cardBackground + "F0"]}
               style={styles.modalContainer}
             >
               <Text style={[styles.modalTitle, dynamicStyles.modalTitle]}>
@@ -370,13 +399,20 @@ const ExploreHeader = React.memo(
                     <TouchableOpacity
                       key={rawCat}
                       onPress={() => {
-                        try { Haptics.selectionAsync(); } catch {}
+                        try {
+                          Haptics.selectionAsync();
+                        } catch {}
                         onCategorySelect(rawCat);
                       }}
                       style={[
-  styles.modalItem,
-  { borderBottomColor: withAlpha(currentTheme.colors.border, isDarkMode ? 0.6 : 0.4) },
-]}
+                        styles.modalItem,
+                        {
+                          borderBottomColor: withAlpha(
+                            currentTheme.colors.border,
+                            isDarkMode ? 0.6 : 0.4
+                          ),
+                        },
+                      ]}
                     >
                       <Ionicons
                         name="pricetag-outline"
@@ -404,6 +440,8 @@ const ExploreHeader = React.memo(
   }
 );
 
+// ---------- Screen principal ----------
+
 export default function ExploreScreen() {
   const { t, i18n } = useTranslation();
   const searchRef = useRef<TextInput>(null);
@@ -412,120 +450,154 @@ export default function ExploreScreen() {
   const [loading, setLoading] = useState(true);
   const [searchQuery, setSearchQuery] = useState("");
   const [categoryFilter, setCategoryFilter] = useState("All");
-  const [originFilter, setOriginFilter] = useState<"Existing"|"Created"|"All">("Existing");
+  const [originFilter, setOriginFilter] = useState<"Existing" | "Created" | "All">("Existing");
   const [isCategoryModalVisible, setIsCategoryModalVisible] = useState(false);
   const [optimisticSaved, setOptimisticSaved] = useState<Set<string>>(new Set());
 
   const router = useRouter();
   const { isSaved, addChallenge, removeChallenge } = useSavedChallenges();
   const { theme } = useTheme();
-  const { tutorialStep, setTutorialStep, skipTutorial, isTutorialActive } =
-    useTutorial();
+  const { tutorialStep, setTutorialStep, skipTutorial, isTutorialActive } = useTutorial();
   const isDarkMode = theme === "dark";
-  const currentTheme: Theme = isDarkMode
-    ? designSystem.darkTheme
-    : designSystem.lightTheme;
-const { showBanners } = useAdsVisibility();
- const insets = useSafeAreaInsets();
-const tabBarHeight = useBottomTabBarHeight();
+  const currentTheme: Theme = isDarkMode ? designSystem.darkTheme : designSystem.lightTheme;
+  const { showBanners } = useAdsVisibility();
+  const insets = useSafeAreaInsets();
+  const tabBarHeight = useBottomTabBarHeight();
 
+  const [adHeight, setAdHeight] = useState(0);
+  const unmountedRef = useRef(false);
 
-const [adHeight, setAdHeight] = useState(0);
-const unmountedRef = useRef(false);
+  const listBottomPadding =
+    (showBanners ? adHeight : 0) + tabBarHeight + insets.bottom + normalizeSize(20);
 
-const listBottomPadding =
-  (showBanners ? adHeight : 0) + tabBarHeight + insets.bottom + normalizeSize(20);
+  const { gate, modalVisible, closeGate } = useGateForGuest();
 
-const { gate, modalVisible, closeGate } = useGateForGuest();
+  const shouldAnimateItems =
+    !searchQuery && categoryFilter === "All" && originFilter === "All";
 
-const shouldAnimateItems = !searchQuery && categoryFilter === "All" && originFilter === "All";
+  const ChallengeCard = React.memo(function ChallengeCard({
+    item,
+    index,
+    onPress,
+    onToggleSaved,
+    saved,
+    pending,
+    theme,
+    isDark,
+  }: any) {
+    const scale = useSharedValue(1);
+    const rStyle = useAnimatedStyle(
+      () => ({
+        transform: [{ scale: scale.value }],
+      }),
+      []
+    );
 
-const ChallengeCard = React.memo(function ChallengeCard({
-   item, index, onPress, onToggleSaved, saved, pending, theme, isDark
- }: any) {
-  // Anim scale sur l’icône bookmark
-   const scale = useSharedValue(1);
-   const rStyle = useAnimatedStyle(() => ({
-     transform: [{ scale: scale.value }],
-   }), []);
+    const onPressBookmark = () => {
+      Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light).catch(() => {});
+      scale.value = 0.94;
+      scale.value = withSpring(1, { damping: 18, stiffness: 260, mass: 0.7 });
+      onToggleSaved();
+    };
 
-   const onPressBookmark = () => {
-     Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light).catch(() => {});
-     scale.value = 0.94;
-     scale.value = withSpring(1, { damping: 18, stiffness: 260, mass: 0.7 });
-     onToggleSaved();
-   };
-   return (
-     <Animated.View
-       {...(shouldAnimateItems ? { entering: FadeInUp.delay(120 + index * 35) } : {})}
-       style={styles.cardWrapper}
-     >
-       <TouchableOpacity
-         activeOpacity={0.9}
-         style={styles.cardContainer}
-         onPress={onPress}
-         accessibilityRole="button"
-         accessibilityLabel={item.title}
-       >
-         <LinearGradient
-           colors={[theme.colors.cardBackground, theme.colors.cardBackground + "F0"]}
-           style={[styles.cardGradient, getDynamicStyles(theme, isDark).cardGradient]}
-         >
-           <RNImage
-   source={ item.imageUrl ? { uri: item.imageUrl } : require("../../assets/images/chalkboard.png") }
-   defaultSource={require("../../assets/images/chalkboard.png")}
-   style={styles.cardImage}
-   accessibilityIgnoresInvertColors
- />
-           <LinearGradient
-             colors={[withAlpha(theme.colors.overlay, 0.1), withAlpha("#000", 0.8)]}
-             style={styles.cardOverlay}
-           >
-             <Text style={[styles.cardTitle, getDynamicStyles(theme, isDark).cardTitle]} numberOfLines={2}>
-               {item.title}
-             </Text>
-             <Text style={[styles.cardCategory, getDynamicStyles(theme, isDark).cardCategory]}>
-               {item.category}
-             </Text>
-             <View style={{ flexDirection: "row", alignItems: "center" }}>
-               <Ionicons name="people" size={normalizeSize(14)} color={theme.colors.trophy} style={{ marginRight: 4 }} />
-               <Text style={[styles.cardParticipants, getDynamicStyles(theme, isDark).cardParticipants]}>
-                 {`${item.participantsCount || 0} ${t("participants", { count: item.participantsCount || 0 })}`}
-               </Text>
-             </View>
-           </LinearGradient>
-           <TouchableOpacity
-             onPress={onPressBookmark}
-             disabled={pending}
-             hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}
-             style={[ styles.bookmarkButton, getDynamicStyles(theme, isDark).bookmarkButton ]}
-             accessibilityRole="button"
-             accessibilityLabel={saved ? t("removeFromSaved") : t("saveChallenge")}
-           >
-             <Animated.View style={rStyle}>
-              <Ionicons
-                name={saved ? "bookmark" : "bookmark-outline"}
-                size={normalizeSize(22)}
-                color={saved ? theme.colors.secondary : theme.colors.textPrimary}
-              />
-            </Animated.View>
-           </TouchableOpacity>
-         </LinearGradient>
-       </TouchableOpacity>
-     </Animated.View>
-   );
- });
+    return (
+      <Animated.View
+        {...(shouldAnimateItems
+          ? { entering: FadeInUp.delay(120 + index * 35) }
+          : {})}
+        style={styles.cardWrapper}
+      >
+        <TouchableOpacity
+          activeOpacity={0.9}
+          style={styles.cardContainer}
+          onPress={onPress}
+          accessibilityRole="button"
+          accessibilityLabel={item.title}
+        >
+          <LinearGradient
+            colors={[theme.colors.cardBackground, theme.colors.cardBackground + "F0"]}
+            style={[styles.cardGradient, getDynamicStyles(theme, isDark).cardGradient]}
+          >
+            <RNImage
+              source={
+                item.imageUrl
+                  ? { uri: item.imageUrl }
+                  : require("../../assets/images/chalkboard.png")
+              }
+              defaultSource={require("../../assets/images/chalkboard.png")}
+              style={styles.cardImage}
+              accessibilityIgnoresInvertColors
+            />
+            <LinearGradient
+              colors={[withAlpha(theme.colors.overlay, 0.1), withAlpha("#000", 0.8)]}
+              style={styles.cardOverlay}
+            >
+              <Text
+                style={[styles.cardTitle, getDynamicStyles(theme, isDark).cardTitle]}
+                numberOfLines={2}
+              >
+                {item.title}
+              </Text>
+              <Text
+                style={[styles.cardCategory, getDynamicStyles(theme, isDark).cardCategory]}
+              >
+                {item.category}
+              </Text>
+              <View style={{ flexDirection: "row", alignItems: "center" }}>
+                <Ionicons
+                  name="people"
+                  size={normalizeSize(14)}
+                  color={theme.colors.trophy}
+                  style={{ marginRight: 4 }}
+                />
+                <Text
+                  style={[
+                    styles.cardParticipants,
+                    getDynamicStyles(theme, isDark).cardParticipants,
+                  ]}
+                >
+                  {`${item.participantsCount || 0} ${t("participants", {
+                    count: item.participantsCount || 0,
+                  })}`}
+                </Text>
+              </View>
+            </LinearGradient>
+            <TouchableOpacity
+              onPress={onPressBookmark}
+              disabled={pending}
+              hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}
+              style={[
+                styles.bookmarkButton,
+                getDynamicStyles(theme, isDark).bookmarkButton,
+              ]}
+              accessibilityRole="button"
+              accessibilityLabel={
+                saved ? t("removeFromSaved") : t("saveChallenge")
+              }
+            >
+              <Animated.View style={rStyle}>
+                <Ionicons
+                  name={saved ? "bookmark" : "bookmark-outline"}
+                  size={normalizeSize(22)}
+                  color={saved ? theme.colors.secondary : theme.colors.textPrimary}
+                />
+              </Animated.View>
+            </TouchableOpacity>
+          </LinearGradient>
+        </TouchableOpacity>
+      </Animated.View>
+    );
+  });
 
-const safeNavigate = (path: string) => {
-  // Vérifie si route challenge → nécessite login
-  if (path.startsWith("/challenge-details")) {
-    if (gate()) router.push(path);
-    return;
-  }
-  router.push(path);
-};
+  const safeNavigate = (path: string) => {
+    if (path.startsWith("/challenge-details")) {
+      if (gate()) router.push(path);
+      return;
+    }
+    router.push(path);
+  };
 
-   // Firestore fetch (une seule fois) → on garde "raw", la traduction est dérivée
+  // Firestore fetch (une seule fois) → on garde "raw", la traduction est dérivée
   useEffect(() => {
     const q = query(
       collection(db, "challenges"),
@@ -559,23 +631,31 @@ const safeNavigate = (path: string) => {
         // ⚡️ Déporte le prefetch après les interactions → pas de freeze du premier paint
         InteractionManager.runAfterInteractions(() => {
           const urls = Array.from(
-            new Set(fetched.map((c) => c.imageUrl).filter(Boolean) as string[])
-          ).slice(0, 20); // limite raisonnable
+            new Set(
+              fetched.map((c) => c.imageUrl).filter(Boolean) as string[]
+            )
+          ).slice(0, 20);
           urls.forEach((u) => RNImage.prefetch(u).catch(() => {}));
         });
       },
       (error) => {
         console.error(error);
-        Alert.alert(t("error"), t("loadChallengesFailed"));
-        if (!unmountedRef.current) setLoading(false);
+        if (!unmountedRef.current) {
+          setLoading(false);
+          // 🔔 Erreur chargement challenges (centralisé)
+          showErrorAlert(
+            t,
+            "loadChallengesFailed",
+            "Impossible de charger les défis. Réessaie dans un instant."
+          );
+        }
       }
     );
     return () => {
       unmountedRef.current = true;
       unsubscribe();
     };
-  }, []);
-  
+  }, [t]);
 
   // Projection "vue" (traduite) → recalculée quand la langue change
   const challenges: Challenge[] = useMemo(() => {
@@ -589,11 +669,12 @@ const safeNavigate = (path: string) => {
         title: (r.chatId
           ? t(`challenges.${r.chatId}.title`, { defaultValue: r.title })
           : r.title) as string,
-        description: (r.chatId
-          ? t(`challenges.${r.chatId}.description`, {
-              defaultValue: r.description,
-            })
-          : r.description) || (t("noDescription") as string),
+        description:
+          (r.chatId
+            ? t(`challenges.${r.chatId}.description`, {
+                defaultValue: r.description,
+              })
+            : r.description) || (t("noDescription") as string),
         imageUrl: r.imageUrl ?? undefined,
         participantsCount: r.participantsCount ?? 0,
         creatorId: r.creatorId ?? undefined,
@@ -609,41 +690,58 @@ const safeNavigate = (path: string) => {
   }, [rawChallenges]);
 
   const filteredChallenges = useMemo(() => {
-    const base = (!searchQuery && categoryFilter === "All" && originFilter === "All")
-      ? challenges
-      : challenges.filter((c) => {
-          const matchesSearch =
-            tokensMatchWordStarts(`${c.title} ${c.description}`, searchQuery);
-          const matchesCategory =
-            categoryFilter === "All" || c.rawCategory === categoryFilter;
-          const matchesOrigin =
-            originFilter === "All" ||
-            (originFilter === "Existing" ? !c.creatorId : !!c.creatorId);
-          return matchesSearch && matchesCategory && matchesOrigin;
-        });
+    const base =
+      !searchQuery && categoryFilter === "All" && originFilter === "All"
+        ? challenges
+        : challenges.filter((c) => {
+            const matchesSearch = tokensMatchWordStarts(
+              `${c.title} ${c.description}`,
+              searchQuery
+            );
+            const matchesCategory =
+              categoryFilter === "All" || c.rawCategory === categoryFilter;
+            const matchesOrigin =
+              originFilter === "All" ||
+              (originFilter === "Existing" ? !c.creatorId : !!c.creatorId);
+            return matchesSearch && matchesCategory && matchesOrigin;
+          });
 
     if (!searchQuery) {
       // Sans recherche : popularité d’abord
-      return base.slice().sort((a, b) => (b.participantsCount ?? 0) - (a.participantsCount ?? 0));
+      return base
+        .slice()
+        .sort(
+          (a, b) =>
+            (b.participantsCount ?? 0) - (a.participantsCount ?? 0)
+        );
     }
 
-    // Score de pertinence simple et efficace
+    // Score de pertinence
     const q = normalizeText(searchQuery).trim();
     const tokens = q.split(/\s+/).filter(Boolean);
+
     const score = (c: Challenge) => {
       const titleN = normalizeText(c.title);
       const descN = normalizeText(c.description);
       let s = 0;
       for (const token of tokens) {
-        // titre : début de string > début de mot > substring
         if (titleN.startsWith(token)) s += 120;
-        else if (titleN.split(/[^a-z0-9]+/i).some(w => w.startsWith(token))) s += 100;
+        else if (
+          titleN
+            .split(/[^a-z0-9]+/i)
+            .some((w) => w.startsWith(token))
+        )
+          s += 100;
         else if (titleN.includes(token)) s += 40;
-        // description : moins pondérée
-        if (descN.split(/[^a-z0-9]+/i).some(w => w.startsWith(token))) s += 30;
+
+        if (
+          descN
+            .split(/[^a-z0-9]+/i)
+            .some((w) => w.startsWith(token))
+        )
+          s += 30;
         else if (descN.includes(token)) s += 10;
       }
-      // petit bonus popularité
       s += Math.min(50, (c.participantsCount ?? 0) * 0.1);
       return s;
     };
@@ -659,9 +757,7 @@ const safeNavigate = (path: string) => {
     });
   }, [challenges, searchQuery, categoryFilter, originFilter]);
 
-
-
-    const toggleSaved = useCallback(
+  const toggleSaved = useCallback(
     (ch: Challenge) => {
       // 🔐 Si l'utilisateur est invité, on ouvre le gate et on arrête là
       if (!gate()) return;
@@ -677,7 +773,7 @@ const safeNavigate = (path: string) => {
         return next;
       });
 
-      // 2) fire-and-forget l’update backend
+      // 2) fire-and-forget backend
       const p = was
         ? removeChallenge(id)
         : addChallenge({
@@ -692,7 +788,12 @@ const safeNavigate = (path: string) => {
 
       p.catch((err) => {
         console.error(err);
-        Alert.alert(t("error"), t("toggleFavoriteFailed"));
+        // 🔔 Erreur favoris (centralisé)
+        showErrorAlert(
+          t,
+          "toggleFavoriteFailed",
+          "Impossible de mettre à jour tes favoris. Réessaie dans un instant."
+        );
         // rollback si échec
         setOptimisticSaved((prev) => {
           const next = new Set(prev);
@@ -705,45 +806,54 @@ const safeNavigate = (path: string) => {
     [gate, isSaved, addChallenge, removeChallenge, t]
   );
 
-
-const onSearchChange = useCallback((text: string) => {
-  setSearchQuery(text);
-}, []);
+  const onSearchChange = useCallback((text: string) => {
+    setSearchQuery(text);
+  }, []);
 
   const resetFilters = useCallback(() => {
     setSearchQuery("");
     setCategoryFilter("All");
     setOriginFilter("Existing");
   }, []);
+
   const selectCategory = useCallback((cat: string) => {
     setCategoryFilter(cat);
     setIsCategoryModalVisible(false);
   }, []);
+
   const toggleCategoryModal = useCallback(
     () => setIsCategoryModalVisible((v) => !v),
     []
   );
+
   const closeCategoryModal = useCallback(
     () => setIsCategoryModalVisible(false),
     []
   );
+
   const toggleOrigin = useCallback(
-    () => setOriginFilter((o) => (o === "Existing" ? "Created" : o === "Created" ? "All" : "Existing")),
+    () =>
+      setOriginFilter((o) =>
+        o === "Existing" ? "Created" : o === "Created" ? "All" : "Existing"
+      ),
     []
   );
 
   const dynamicStyles = getDynamicStyles(currentTheme, isDarkMode);
 
-   // 🧭 Scroll en haut quand la recherche / les filtres changent (UX premium, supprime tout "gap")
+  // 🧭 Scroll top quand recherche/filtres changent
   const scrollTop = useCallback(() => {
     requestAnimationFrame(() => {
       listRef.current?.scrollToOffset({ offset: 0, animated: false });
     });
   }, []);
-  useEffect(() => { scrollTop(); }, [searchQuery, categoryFilter, originFilter, scrollTop]);
 
-  // Renders & helpers mémoïsés pour éviter re-créations à chaque render
+  useEffect(() => {
+    scrollTop();
+  }, [searchQuery, categoryFilter, originFilter, scrollTop]);
+
   const keyExtractor = useCallback((item: Challenge) => item.id, []);
+
   const getItemLayout = useCallback(
     (_: any, index: number) => ({
       length: ITEM_HEIGHT,
@@ -752,6 +862,7 @@ const onSearchChange = useCallback((text: string) => {
     }),
     []
   );
+
   const renderItem = useCallback(
     ({ item, index }: { item: Challenge; index: number }) => (
       <ChallengeCard
@@ -759,8 +870,8 @@ const onSearchChange = useCallback((text: string) => {
         index={index}
         theme={currentTheme}
         isDark={isDarkMode}
-        saved={ optimisticSaved.has(item.id) ? true : isSaved(item.id) }
-        pending={ false }
+        saved={optimisticSaved.has(item.id) ? true : isSaved(item.id)}
+        pending={false}
         onPress={() =>
           safeNavigate(
             `/challenge-details/${item.id}?title=${encodeURIComponent(
@@ -781,16 +892,16 @@ const onSearchChange = useCallback((text: string) => {
       <GlobalLayout>
         <LinearGradient
           colors={[
-    withAlpha(currentTheme.colors.background, 1),
-    withAlpha(currentTheme.colors.cardBackground, 1),
-    withAlpha(currentTheme.colors.primary, 0.13),
-  ]}
-  style={{
-    flex: 1,
-    justifyContent: "center",
-    alignItems: "center",
-    paddingHorizontal: SPACING,
-  }}
+            withAlpha(currentTheme.colors.background, 1),
+            withAlpha(currentTheme.colors.cardBackground, 1),
+            withAlpha(currentTheme.colors.primary, 0.13),
+          ]}
+          style={{
+            flex: 1,
+            justifyContent: "center",
+            alignItems: "center",
+            paddingHorizontal: SPACING,
+          }}
         >
           <ActivityIndicator size="large" color={currentTheme.colors.primary} />
           <Text
@@ -812,58 +923,60 @@ const onSearchChange = useCallback((text: string) => {
   return (
     <GlobalLayout>
       <KeyboardAvoidingView
-  style={{ flex: 1 }}
-  behavior={Platform.OS === "ios" ? "padding" : undefined}
-  keyboardVerticalOffset={tabBarHeight}   // 👈 au lieu d’un nombre fixe
->
-         <CustomHeader title={t("exploreChallenges")} />
+        style={{ flex: 1 }}
+        behavior={Platform.OS === "ios" ? "padding" : undefined}
+        keyboardVerticalOffset={tabBarHeight}
+      >
+        <CustomHeader title={t("exploreChallenges")} />
         <LinearGradient
-  colors={[
-    withAlpha(currentTheme.colors.background, 1),
-    withAlpha(currentTheme.colors.cardBackground, 1),
-    withAlpha(currentTheme.colors.primary, 0.12),
-  ]}
-  style={styles.gradientContainer}
-  start={{ x: 0, y: 0 }}
-  end={{ x: 1, y: 1 }}
->
-  {/* Orbes décoratives */}
-  <LinearGradient
-    pointerEvents="none"
-    colors={[withAlpha(currentTheme.colors.primary, 0.28), "transparent"]}
-    style={styles.bgOrbTop}
-    start={{ x: 0.2, y: 0 }}
-    end={{ x: 1, y: 1 }}
-  />
-  <LinearGradient
-    pointerEvents="none"
-    colors={[withAlpha(currentTheme.colors.secondary, 0.25), "transparent"]}
-    style={styles.bgOrbBottom}
-    start={{ x: 1, y: 0 }}
-    end={{ x: 0, y: 1 }}
-  />
+          colors={[
+            withAlpha(currentTheme.colors.background, 1),
+            withAlpha(currentTheme.colors.cardBackground, 1),
+            withAlpha(currentTheme.colors.primary, 0.12),
+          ]}
+          style={styles.gradientContainer}
+          start={{ x: 0, y: 0 }}
+          end={{ x: 1, y: 1 }}
+        >
+          {/* Orbes décoratives */}
+          <LinearGradient
+            pointerEvents="none"
+            colors={[withAlpha(currentTheme.colors.primary, 0.28), "transparent"]}
+            style={styles.bgOrbTop}
+            start={{ x: 0.2, y: 0 }}
+            end={{ x: 1, y: 1 }}
+          />
+          <LinearGradient
+            pointerEvents="none"
+            colors={[withAlpha(currentTheme.colors.secondary, 0.25), "transparent"]}
+            style={styles.bgOrbBottom}
+            start={{ x: 1, y: 0 }}
+            end={{ x: 0, y: 1 }}
+          />
 
-  <FlatList
-    ref={listRef}
-    data={filteredChallenges}
-    keyExtractor={keyExtractor}
-    initialNumToRender={10}
-    maxToRenderPerBatch={10}
-    updateCellsBatchingPeriod={30}
-    windowSize={12}
-    getItemLayout={getItemLayout}
-    keyboardShouldPersistTaps="always"     // 👈 important
-    keyboardDismissMode="on-drag" 
-    removeClippedSubviews={false}       
-    extraData={{                          
-      optimisticSaved, searchQuery, categoryFilter, originFilter
-    }}
-    showsVerticalScrollIndicator={false}
-    contentContainerStyle={{
-      paddingBottom: listBottomPadding,
-      paddingHorizontal: SPACING / 2,
-    }}
-
+          <FlatList
+            ref={listRef}
+            data={filteredChallenges}
+            keyExtractor={keyExtractor}
+            initialNumToRender={10}
+            maxToRenderPerBatch={10}
+            updateCellsBatchingPeriod={30}
+            windowSize={12}
+            getItemLayout={getItemLayout}
+            keyboardShouldPersistTaps="always"
+            keyboardDismissMode="on-drag"
+            removeClippedSubviews={false}
+            extraData={{
+              optimisticSaved,
+              searchQuery,
+              categoryFilter,
+              originFilter,
+            }}
+            showsVerticalScrollIndicator={false}
+            contentContainerStyle={{
+              paddingBottom: listBottomPadding,
+              paddingHorizontal: SPACING / 2,
+            }}
             ListHeaderComponent={
               <ExploreHeader
                 searchQuery={searchQuery}
@@ -904,7 +1017,10 @@ const onSearchChange = useCallback((text: string) => {
                     {t("noChallengesFound")}
                   </Text>
                   <Text
-                    style={[styles.emptySubtitle, dynamicStyles.emptySubtitle]}
+                    style={[
+                      styles.emptySubtitle,
+                      dynamicStyles.emptySubtitle,
+                    ]}
                   >
                     {t("tryDifferentSearch")}
                   </Text>
@@ -917,52 +1033,58 @@ const onSearchChange = useCallback((text: string) => {
       </KeyboardAvoidingView>
 
       {showBanners && !isTutorialActive && (
-  <View
-    style={{
-      position: "absolute",
-      left: 0,
-      right: 0,
-      bottom: tabBarHeight + insets.bottom, // ✅ juste au-dessus de la TabBar + safe area
-      alignItems: "center",
-      zIndex: 9999,
-      backgroundColor: "transparent",
-      paddingBottom: 6,
-    }}
-    pointerEvents="box-none"
-  >
-    <BannerSlot onHeight={(h) => setAdHeight(h)} />
-  </View>
-)}
-
+        <View
+          style={{
+            position: "absolute",
+            left: 0,
+            right: 0,
+            bottom: tabBarHeight + insets.bottom,
+            alignItems: "center",
+            zIndex: 9999,
+            backgroundColor: "transparent",
+            paddingBottom: 6,
+          }}
+          pointerEvents="box-none"
+        >
+          <BannerSlot onHeight={(h) => setAdHeight(h)} />
+        </View>
+      )}
 
       {isTutorialActive && tutorialStep >= 4 && (
-  <TutorialModal
-    step={tutorialStep}
-    onNext={() => setTutorialStep(5)} // ← quand on clique sur "suivant" à l'étape 4
-    onStart={() => {}}
-    onSkip={skipTutorial}
-    onFinish={() => {
-      skipTutorial();
-      setTutorialStep(0); // ← facultatif : reset pour les prochaines fois
-    }}
-  />
-)}
-<RequireAuthModal visible={modalVisible} onClose={closeGate} />
+        <TutorialModal
+          step={tutorialStep}
+          onNext={() => setTutorialStep(5)}
+          onStart={() => {}}
+          onSkip={skipTutorial}
+          onFinish={() => {
+            skipTutorial();
+            setTutorialStep(0);
+          }}
+        />
+      )}
+
+      <RequireAuthModal visible={modalVisible} onClose={closeGate} />
     </GlobalLayout>
   );
 }
 
+// ---------- Styles ----------
+
 const styles = StyleSheet.create({
   headerWrapper: {
-  paddingHorizontal: SPACING,
-  paddingVertical: SPACING * 1.5,
-  backgroundColor: "transparent", // laisse le LinearGradient gérer
-  // Optionnel: petite ombre quand sticky
-  ...Platform.select({
-    ios: { shadowColor: "#000", shadowOpacity: 0.06, shadowRadius: 8, shadowOffset: { width: 0, height: 4 } },
-    android: { elevation: 2 },
-  }),
-},
+    paddingHorizontal: SPACING,
+    paddingVertical: SPACING * 1.5,
+    backgroundColor: "transparent",
+    ...Platform.select({
+      ios: {
+        shadowColor: "#000",
+        shadowOpacity: 0.06,
+        shadowRadius: 8,
+        shadowOffset: { width: 0, height: 4 },
+      },
+      android: { elevation: 2 },
+    }),
+  },
   searchContainer: {
     flexDirection: "row",
     alignItems: "center",
@@ -1054,28 +1176,28 @@ const styles = StyleSheet.create({
     marginBottom: normalizeSize(8),
   },
   gradientContainer: { flex: 1 },
-bgOrbTop: {
-  position: "absolute",
-  top: -SCREEN_WIDTH * 0.25,
-  left: -SCREEN_WIDTH * 0.2,
-  width: SCREEN_WIDTH * 0.9,
-  height: SCREEN_WIDTH * 0.9,
-  borderRadius: SCREEN_WIDTH * 0.45,
-},
-bgOrbBottom: {
-  position: "absolute",
-  bottom: -SCREEN_WIDTH * 0.3,
-  right: -SCREEN_WIDTH * 0.25,
-  width: SCREEN_WIDTH * 1.1,
-  height: SCREEN_WIDTH * 1.1,
-  borderRadius: SCREEN_WIDTH * 0.55,
-},
+  bgOrbTop: {
+    position: "absolute",
+    top: -SCREEN_WIDTH * 0.25,
+    left: -SCREEN_WIDTH * 0.2,
+    width: SCREEN_WIDTH * 0.9,
+    height: SCREEN_WIDTH * 0.9,
+    borderRadius: SCREEN_WIDTH * 0.45,
+  },
+  bgOrbBottom: {
+    position: "absolute",
+    bottom: -SCREEN_WIDTH * 0.3,
+    right: -SCREEN_WIDTH * 0.25,
+    width: SCREEN_WIDTH * 1.1,
+    height: SCREEN_WIDTH * 1.1,
+    borderRadius: SCREEN_WIDTH * 0.55,
+  },
   modalItem: {
     flexDirection: "row",
     alignItems: "center",
     paddingVertical: normalizeSize(12),
     borderBottomWidth: 1,
-    borderBottomColor: "#E0E0E0", // Valeur statique, ajustée dynamiquement si besoin
+    borderBottomColor: "#E0E0E0",
   },
   modalIcon: {
     marginRight: normalizeSize(8),
@@ -1161,11 +1283,11 @@ bgOrbBottom: {
     maxWidth: SCREEN_WIDTH * 0.75,
   },
   bannerContainer: {
-  width: "100%",
-  alignItems: "center",
-  justifyContent: "center",
-  backgroundColor: "transparent",
-},
+    width: "100%",
+    alignItems: "center",
+    justifyContent: "center",
+    backgroundColor: "transparent",
+  },
   blurView: {
     position: "absolute",
     top: 0,

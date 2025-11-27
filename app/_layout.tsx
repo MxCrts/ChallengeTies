@@ -4,6 +4,7 @@ import { GestureHandlerRootView } from "react-native-gesture-handler";
 import { Stack, useRouter, usePathname } from "expo-router";
 import { StyleSheet, AppState, Platform } from "react-native";
 import { Provider as PaperProvider } from "react-native-paper";
+
 import { ProfileUpdateProvider } from "../context/ProfileUpdateContext";
 import { TrophyProvider } from "../context/TrophyContext";
 import { SavedChallengesProvider } from "../context/SavedChallengesContext";
@@ -13,47 +14,55 @@ import { ThemeProvider } from "../context/ThemeContext";
 import { LanguageProvider } from "../context/LanguageContext";
 import { TutorialProvider } from "../context/TutorialContext";
 import TrophyModal from "../components/TrophyModal";
+
 import {
   useFonts,
   Comfortaa_400Regular,
   Comfortaa_700Bold,
 } from "@expo-google-fonts/comfortaa";
+
 import { I18nextProvider } from "react-i18next";
 import i18n from "../i18n";
+
 import { useAuth } from "../context/AuthProvider";
 import { AuthProvider } from "../context/AuthProvider";
+
 import * as SplashScreen from "expo-splash-screen";
 import { FeatureFlagsProvider, useFlags } from "../src/constants/featureFlags";
+
 import * as Linking from "expo-linking";
 import { AdsVisibilityProvider } from "../src/context/AdsVisibilityContext";
+
 import mobileAds, {
   MaxAdContentRating,
   RequestConfiguration,
   AdsConsent,
   AdsConsentStatus,
-  AdsConsentPrivacyOptionsRequirementStatus,
 } from "react-native-google-mobile-ads";
-import { VisitorProvider } from "@/context/VisitorContext";
-import { useVisitor } from "@/context/VisitorContext";
-import { logEvent } from "../src/analytics"; 
+
+import { VisitorProvider, useVisitor } from "@/context/VisitorContext";
+import { logEvent } from "../src/analytics";
 import AsyncStorage from "@react-native-async-storage/async-storage";
+
 import {
   checkAndGrantPioneerIfEligible,
   checkAndGrantAmbassadorRewards,
   checkAndGrantAmbassadorMilestones,
 } from "@/src/referral/pioneerChecker";
+
 import { bumpCounterAndMaybeReview } from "@/src/services/reviewService";
+
 import * as Notifications from "expo-notifications";
-import { useIncomingInvite } from "../hooks/useIncomingInvite";
+
 import {
   startNotificationResponseListener,
   stopNotificationResponseListener,
   ensureAndroidChannelAsync,
   scheduleDailyNotifications,
 } from "@/services/notificationService";
-// en haut de app/_layout.tsx
-import { ToastProvider, useToast } from "../src/ui/Toast";
 
+// Toast
+import { ToastProvider, useToast } from "../src/ui/Toast";
 
 // =========================
 // AppNavigator : redirection initiale + Splash
@@ -69,50 +78,73 @@ const AppNavigator: React.FC = () => {
     Comfortaa_700Bold,
   });
 
+  // ✅ FAILSAFE hydration visiteur non bloquante après hardReady
+  const [hardReady, setHardReady] = React.useState(false);
+  useEffect(() => {
+    const t = setTimeout(() => setHardReady(true), 3500);
+    return () => clearTimeout(t);
+  }, []);
+
+  // Analytics + review gentle ping
+  useEffect(() => {
+    logEvent("app_open" as any).catch(() => {});
+    bumpCounterAndMaybeReview("app_open", 7).catch(() => {});
+  }, []);
 
   useEffect(() => {
-  logEvent("app_open");
-}, []);
+    // ⛔️ tant que Auth / Fonts pas prêts → ne route pas
+   if (loading || checkingAuth || (!fontsLoaded && !hardReady) || (!hydrated && !hardReady)) {
+  return;
+}
 
-useEffect(() => { bumpCounterAndMaybeReview("app_open", 7).catch(()=>{}); }, []);
+// ✅ Si un deep link challenge a été détecté, on laisse DeepLinkManager gérer.
+    if ((globalThis as any).__DL_BLOCK_ROOT_REDIRECT__ === true) {
+      SplashScreen.hideAsync().catch(() => {});
+      return;
+    }
 
-
-  useEffect(() => {
-    // ⛔️ tant que Auth/Fonts/Visitor pas prêts → ne route pas
-    if (loading || checkingAuth || !fontsLoaded || !hydrated) return;
+    // Si on n'est pas sur "/" on ne force pas une redirection,
+    // mais on cache le splash quand même.
     if (pathname !== "/") {
       SplashScreen.hideAsync().catch(() => {});
       return;
     }
 
-    if (user) {
+    if (user || isGuest) {
       router.replace("/(tabs)");
-    } else if (isGuest) {
-      router.replace("/(tabs)"); // Home (tabs) en visiteur
     } else {
       router.replace("/login");
     }
+
     SplashScreen.hideAsync().catch(() => {});
-  }, [user, loading, pathname, router, isGuest, fontsLoaded, hydrated]);
+  }, [
+    user,
+    loading,
+    checkingAuth,
+    pathname,
+    router,
+    isGuest,
+    fontsLoaded,
+    hydrated,
+    hardReady,
+  ]);
 
- useEffect(() => {
-  if (loading || checkingAuth || !fontsLoaded || !hydrated) return;
-  if (!user) return;
+  // Parrainage (Pioneer / Ambassador) uniquement user connecté
+  useEffect(() => {
+    if (loading || checkingAuth || !fontsLoaded || (!hydrated && !hardReady))
+      return;
+    if (!user) return;
 
-  checkAndGrantPioneerIfEligible().catch(() => {});
-  checkAndGrantAmbassadorRewards().catch(() => {});
-  checkAndGrantAmbassadorMilestones().catch(() => {});
-}, [user, loading, checkingAuth, fontsLoaded, hydrated]);
+    checkAndGrantPioneerIfEligible().catch(() => {});
+    checkAndGrantAmbassadorRewards().catch(() => {});
+    checkAndGrantAmbassadorMilestones().catch(() => {});
+  }, [user, loading, checkingAuth, fontsLoaded, hydrated, hardReady]);
 
-
-  if (loading || checkingAuth || !fontsLoaded || !hydrated) return null;
+  // On ne rend rien : seulement redirection + splash
+  if (loading || checkingAuth || !fontsLoaded || (!hydrated && !hardReady))
+    return null;
   return null;
-
-  
-
 };
-
-
 
 // =========================
 // FlagsGate : bloque le rendu tant que les flags ne sont pas prêts
@@ -124,11 +156,9 @@ const FlagsGate: React.FC<{ children: React.ReactNode }> = ({ children }) => {
 };
 
 // =========================
-// ConsentGate : UMP (AdsConsent) + MobileAds
+// ConsentGate : UMP (AdsConsent) + MobileAds (NON BLOQUANT)
 // =========================
 const ConsentGate: React.FC<{ children: React.ReactNode }> = ({ children }) => {
-  const [ready, setReady] = React.useState(false);
-
   useEffect(() => {
     let cancelled = false;
 
@@ -136,16 +166,12 @@ const ConsentGate: React.FC<{ children: React.ReactNode }> = ({ children }) => {
       try {
         console.log("🧩 [ConsentGate] UMP via AdsConsent + MobileAds…");
         (globalThis as any).__ADS_READY__ = false;
-        (globalThis as any).__NPA__ = true; // par défaut
+        (globalThis as any).__NPA__ = true;
 
-        // 1) UMP: met à jour l’info de consentement
         await AdsConsent.requestInfoUpdate();
-
-        // 2) Si un formulaire est nécessaire/disponible, l’afficher
         const info = await AdsConsent.getConsentInfo();
         console.log("[UMP] consentInfo:", info);
 
-        // Montre le formulaire si requis
         if (
           info.isConsentFormAvailable &&
           (info.status === AdsConsentStatus.REQUIRED ||
@@ -154,28 +180,24 @@ const ConsentGate: React.FC<{ children: React.ReactNode }> = ({ children }) => {
           await AdsConsent.loadAndShowConsentFormIfRequired();
         }
 
-        // Re-lis l’état après affichage éventuel
         const consentInfo = await AdsConsent.getConsentInfo();
         const canRequestAds = consentInfo.canRequestAds === true;
 
-        // 3) Détermine NPA à partir des choix (si disponibles)
         let npa = true;
         try {
           const choices = await AdsConsent.getUserChoices();
           const personalisedAllowed = choices?.selectPersonalisedAds === true;
           npa = !personalisedAllowed;
-        } catch {
-          // si pas de choix explicites → rester en NPA par défaut (true)
-        }
+        } catch {}
 
         (globalThis as any).__NPA__ = npa;
 
-        // 4) Configure et initialise le SDK MobileAds
         const requestConfig: RequestConfiguration = {
           tagForChildDirectedTreatment: false,
           tagForUnderAgeOfConsent: false,
           maxAdContentRating: MaxAdContentRating.PG,
         };
+
         await mobileAds().setRequestConfiguration(requestConfig);
         await mobileAds().initialize();
 
@@ -187,11 +209,12 @@ const ConsentGate: React.FC<{ children: React.ReactNode }> = ({ children }) => {
             " NPA =",
             npa
           );
-          setReady(true);
         }
       } catch (e) {
         console.log("❌ [ConsentGate] Erreur init:", e);
-        if (!cancelled) setReady(true); // on ne bloque pas l’UI
+        if (!cancelled) {
+          (globalThis as any).__ADS_READY__ = false;
+        }
       }
     })();
 
@@ -200,102 +223,224 @@ const ConsentGate: React.FC<{ children: React.ReactNode }> = ({ children }) => {
     };
   }, []);
 
-  if (!ready) return null;
   return <>{children}</>;
 };
 
-
 // =========================
-// DeepLinkManager : actif seulement si enableDeepLinks = true
+// DeepLinkManager : SAFE, idempotent, auth-aware
 // =========================
 const DeepLinkManager: React.FC = () => {
   const router = useRouter();
   const { flags } = useFlags();
+  const { user, loading, checkingAuth } = useAuth();
+
+  // Dédup local + global (si remount)
+  const lastUrlRef = React.useRef<string | null>(null);
+  const handledInitialRef = React.useRef(false);
+
+  const getGlobalLast = () =>
+    (globalThis as any).__DL_LAST_URL__ as string | undefined;
+  const setGlobalLast = (u: string) => {
+    (globalThis as any).__DL_LAST_URL__ = u;
+  };
+
+  const handleDeepLink = React.useCallback(
+    async (url: string) => {
+      if (!url) return;
+
+      // ✅ dedupe global
+      const globalLast = getGlobalLast();
+      if (globalLast === url) return;
+      setGlobalLast(url);
+
+      // ✅ dedupe local
+      if (lastUrlRef.current === url) return;
+      lastUrlRef.current = url;
+
+      // ✅ parsing robuste Expo
+      const parsed = Linking.parse(url);
+      const path = parsed.path || "";
+      const qp = (parsed.queryParams || {}) as Record<string, any>;
+
+      // -------------------------
+      // 1) REFERRAL LINKS
+      // -------------------------
+      const refFromQuery = typeof qp.ref === "string" ? qp.ref : null;
+      const refFromPath =
+        path.startsWith("ref/") ? path.split("ref/")[1] : null;
+
+      const refUid = refFromQuery || refFromPath;
+      if (refUid) {
+        try {
+          await AsyncStorage.setItem(
+            "ties_referrer_id",
+            decodeURIComponent(refUid)
+          );
+          __DEV__ && console.log("✅ [DeepLink] ref stored:", refUid);
+        } catch {}
+        return; // ❗️on ne navigue jamais sur un referral
+      }
+
+      // -------------------------
+      // 2) CHALLENGE / INVITE LINKS
+      // -------------------------
+      let challengeId: string | undefined;
+      let inviteId: string | undefined;
+      let selectedDays: number | undefined;
+
+      // ✅ 2.1 Universal links: /i?id=CHALLENGE&invite=INVITE&days=N
+      const idFromQuery = typeof qp.id === "string" ? qp.id : undefined;
+      const inviteFromQuery = typeof qp.invite === "string" ? qp.invite : undefined;
+      const daysFromQuery =
+        typeof qp.days === "string" || typeof qp.days === "number"
+          ? Number(qp.days)
+          : undefined;
+
+      if (idFromQuery) {
+        challengeId = idFromQuery;
+        inviteId = inviteFromQuery;
+        if (Number.isFinite(daysFromQuery) && (daysFromQuery as number) > 0) {
+          selectedDays = daysFromQuery as number;
+        }
+      }
+
+      // ✅ 2.2 Legacy paths
+      if (!challengeId) {
+        if (path.startsWith("challenge/")) {
+          challengeId = path.split("challenge/")[1]?.split("/")[0];
+          inviteId = inviteFromQuery;
+        } else if (path.startsWith("challenge-details/")) {
+          challengeId = path.split("challenge-details/")[1]?.split("/")[0];
+          inviteId = inviteFromQuery;
+        } else if (path === "i" && idFromQuery) {
+          // sécurité si Expo parse path "i"
+          challengeId = idFromQuery;
+          inviteId = inviteFromQuery;
+        }
+      }
+
+      if (!challengeId) return;
+
+      // ✅ on bloque le redirect root (AppNavigator) dès qu'on a un DL challenge
+      (globalThis as any).__DL_BLOCK_ROOT_REDIRECT__ = true;
+
+      // ✅ Si pas connecté OU auth pas prête → on stocke, on laisse AppNavigator aller login
+      if (!user || loading || checkingAuth) {
+        try {
+          await AsyncStorage.setItem(
+            "ties_pending_link",
+            JSON.stringify({
+              challengeId,
+              inviteId: inviteId || null,
+              selectedDays: selectedDays || null,
+              t: Date.now(),
+            })
+          );
+          __DEV__ &&
+            console.log("🕓 [DeepLink] pending stored:", {
+              challengeId,
+              inviteId,
+            });
+        } catch {}
+        return;
+      }
+
+      // ✅ User ready → navigation propre
+      router.push({
+        pathname: `/challenge-details/${challengeId}`,
+        params: inviteId
+          ? {
+              invite: inviteId,
+              days: selectedDays ? String(selectedDays) : undefined,
+            }
+          : {},
+      });
+    },
+    [router, user, loading, checkingAuth]
+  );
 
   useEffect(() => {
     if (!flags.enableDeepLinks) return;
 
-    const handleDeepLink = ({ url }: { url: string }) => {
-  // --- EXISTANT (challenge) ---
-  let challengeId: string | undefined;
-  let inviteId: string | null | undefined;
-
-  if (
-    url.startsWith("myapp://challenge/") ||
-    url.startsWith("https://challengeme-d7fef.web.app/challenge/")
-  ) {
-    const parsedUrl = new URL(url);
-    challengeId = parsedUrl.pathname.split("/challenge/")[1]?.split("?")[0];
-    inviteId = parsedUrl.searchParams.get("invite");
-  }
-
-  // --- NOUVEAU : referral ---
-  try {
-    const parsed = new URL(url);
-
-    // myapp://ref/<uid>
-    if (url.startsWith("myapp://ref/")) {
-      const refUid = parsed.pathname.split("/ref/")[1];
-      if (refUid) {
-        void AsyncStorage.setItem("ties_referrer_id", refUid);
-      }
-    }
-
-    // https web function: .../r?ref=<uid>
-    const refParam = parsed.searchParams.get("ref");
-    if (refParam) {
-      void AsyncStorage.setItem("ties_referrer_id", refParam);
-    }
-  } catch {
-    // ignore
-  }
-
-  if (challengeId && inviteId) {
-    router.push({
-      pathname: "profile/notifications",
-      params: { challengeId, invite: inviteId },
+    const sub = Linking.addEventListener("url", ({ url }) => {
+      handleDeepLink(url);
     });
-  }
-};
 
-    const subscription = Linking.addEventListener("url", handleDeepLink);
+    if (!handledInitialRef.current) {
+      handledInitialRef.current = true;
+      Linking.getInitialURL()
+        .then((url) => {
+          if (url) handleDeepLink(url);
+        })
+        .catch(() => {});
+    }
 
-    Linking.getInitialURL()
-      .then((url) => {
-        if (url) handleDeepLink({ url });
-      })
-      .catch(() => {});
+    return () => sub.remove();
+  }, [flags.enableDeepLinks, handleDeepLink]);
 
-    return () => {
-      subscription.remove();
-    };
-  }, [router, flags.enableDeepLinks]);
+  // ✅ Consomme un pending link après login
+  useEffect(() => {
+    if (!flags.enableDeepLinks) return;
+    if (!user || loading || checkingAuth) return;
+
+    (async () => {
+      try {
+        const raw = await AsyncStorage.getItem("ties_pending_link");
+        if (!raw) return;
+        const parsed = JSON.parse(raw || "{}");
+        const challengeId = parsed?.challengeId;
+        const inviteId = parsed?.inviteId;
+        const selectedDays = parsed?.selectedDays;
+        if (!challengeId) return;
+
+        await AsyncStorage.removeItem("ties_pending_link");
+        (globalThis as any).__DL_BLOCK_ROOT_REDIRECT__ = true;
+
+        router.push({
+          pathname: `/challenge-details/${String(challengeId)}`,
+          params: inviteId
+            ? {
+                invite: String(inviteId),
+                days: selectedDays ? String(selectedDays) : undefined,
+              }
+            : {},
+        });
+      } catch {}
+    })();
+  }, [flags.enableDeepLinks, user, loading, checkingAuth, router]);
 
   return null;
 };
 
+
+// =========================
+// NotificationsBootstrap : notifs locales + push + navigation
+// =========================
 const NotificationsBootstrap: React.FC = () => {
   const { user } = useAuth();
   const router = useRouter();
   const { show } = useToast();
 
+  // Channel Android au boot
   useEffect(() => {
     if (Platform.OS === "android") {
       ensureAndroidChannelAsync().catch(() => {});
     }
   }, []);
 
+  // Daily notifications (idempotent, seulement si user connecté)
   useEffect(() => {
     if (!user) return;
     (async () => {
-      if (Platform.OS === "android") {
-        await ensureAndroidChannelAsync();
-      }
-      await scheduleDailyNotifications();
+      try {
+        if (Platform.OS === "android") await ensureAndroidChannelAsync();
+        await scheduleDailyNotifications();
+      } catch {}
     })();
   }, [user]);
 
-   useEffect(() => {
+  // Quand l’app redevient active → on s’assure que les daily notifs sont bien en place (toujours idempotent)
+  useEffect(() => {
     const sub = AppState.addEventListener("change", (state) => {
       if (state === "active" && user) {
         scheduleDailyNotifications().catch(() => {});
@@ -304,34 +449,45 @@ const NotificationsBootstrap: React.FC = () => {
     return () => sub.remove();
   }, [user]);
 
+  // Listener global (app déjà ouverte / en background)
   useEffect(() => {
     startNotificationResponseListener(
       (path) => router.push(path),
-      (text) => show(text, "success") // ⬅️ feedback visuel
+      (text) => show(text, "success")
     );
 
+    // Cold start : l’app est ouverte via un tap sur une notif alors que le listener
+    // n’était pas encore attaché → on consomme "la dernière réponse"
     (async () => {
-      const last = await Notifications.getLastNotificationResponseAsync();
-      const data: any = last?.notification?.request?.content?.data || null;
-      if (!data) return;
+      try {
+        const last = await Notifications.getLastNotificationResponseAsync();
+        const data: any = last?.notification?.request?.content?.data || null;
+        if (!data) return;
 
-      const type = String(data?.type || data?.__tag || "").toLowerCase();
-      if (type === "invite-status" && data?.challengeId) {
-        show(i18n.t("notificationsPush.opened"), "info"); // petit hint optionnel
-        router.push(`/challenge-details/${String(data.challengeId)}`);
-      } else if (type === "duo-nudge") {
-        show(i18n.t("notificationsPush.opened"), "info");
-        router.push("/profile/notifications");
-      } else if (type === "daily_morning_v1" || type === "daily_evening_v1") {
-        router.push("/(tabs)");
-      } else if (data?.challengeId) {
-        router.push({
-          pathname: "profile/notifications",
-          params: { challengeId: String(data.challengeId), invite: String(data.invite || "") },
-        });
-      } else {
-        router.push("/(tabs)");
-      }
+        // Navigation cohérente avec notificationService
+        handleNotificationNavigation(router, data);
+
+        // Petit toast contextuel (optionnel mais sympa)
+        const tSafe = (key: string, options?: Record<string, any>) => {
+          const res = i18n.t(key, {
+            ...(options || {}),
+            returnObjects: false,
+          });
+          return typeof res === "string" ? res : String(res ?? "");
+        };
+
+        const type = String(data?.type || data?.__tag || "").toLowerCase();
+
+        if (type === "duo-nudge") {
+          show(tSafe("notificationsPush.duoNudgeOpened"), "success");
+        } else if (
+          type === "invite-status" ||
+          type === "daily-reminder" ||
+          type.startsWith("referral")
+        ) {
+          show(tSafe("notificationsPush.opened"), "info");
+        }
+      } catch {}
     })().catch(() => {});
 
     return () => {
@@ -339,79 +495,86 @@ const NotificationsBootstrap: React.FC = () => {
     };
   }, [router, show]);
 
-
   return null;
 };
 
 // =========================
- // RootLayout
+// RootLayout (UNIQUE export)
 // =========================
 export default function RootLayout() {
   useEffect(() => {
     SplashScreen.preventAutoHideAsync().catch(() => {});
+
+    // ✅ failsafe global : quoi qu’il arrive, on sort du splash
+    const t = setTimeout(() => {
+      SplashScreen.hideAsync().catch(() => {});
+    }, 5000);
+
+    return () => clearTimeout(t);
   }, []);
 
-  // ✅ Active l’autocapture des liens d’invitation dès le boot (no-op si rien à traiter)
-  useIncomingInvite(true);
 
   return (
     <GestureHandlerRootView style={{ flex: 1 }}>
       <ToastProvider>
-      <FeatureFlagsProvider>
-        <FlagsGate>
-          <AuthProvider>
-            <LanguageProvider>
-              <I18nextProvider i18n={i18n}>
-                <ThemeProvider>
-                  <PaperProvider>
-                    <ProfileUpdateProvider>
-                      <TrophyProvider>
-                        <SavedChallengesProvider>
-                          <CurrentChallengesProvider>
-                            <ChatProvider>
-                              <TutorialProvider isFirstLaunch={false}>
-                                <VisitorProvider>
-                                  {/* ✅ GATE UMP + Ads en premier */}
-                                  <ConsentGate>
-  {/* ✅ Monte le provider APRÈS UMP/Ads */}
-  <AdsVisibilityProvider>
-    <DeepLinkManager />
-    <NotificationsBootstrap />
+        <FeatureFlagsProvider>
+          <FlagsGate>
+            <AuthProvider>
+              <LanguageProvider>
+                <I18nextProvider i18n={i18n}>
+                  <ThemeProvider>
+                    <PaperProvider>
+                      <ProfileUpdateProvider>
+                        <TrophyProvider>
+                          <SavedChallengesProvider>
+                            <CurrentChallengesProvider>
+                              <ChatProvider>
+                                <TutorialProvider isFirstLaunch={false}>
+                                  <VisitorProvider>
+                                    <ConsentGate>
+                                      <AdsVisibilityProvider>
+                                        <DeepLinkManager />
+                                        <NotificationsBootstrap />
 
-    <Stack
-      screenOptions={{
-        headerShown: false,
-        animation: "fade",
-        animationDuration: 400,
-      }}
-    >
-      <Stack.Screen name="(tabs)" options={{ headerShown: false }} />
-      <Stack.Screen name="login" />
-      <Stack.Screen name="register" />
-      <Stack.Screen name="forgot-password" />
-      <Stack.Screen name="profile/notifications" />
-      <Stack.Screen name="handleInvite" />
-    </Stack>
+                                        <Stack
+                                          screenOptions={{
+                                            headerShown: false,
+                                            animation: "fade",
+                                            animationDuration: 400,
+                                          }}
+                                        >
+                                          <Stack.Screen
+                                            name="(tabs)"
+                                            options={{ headerShown: false }}
+                                          />
+                                          <Stack.Screen name="login" />
+                                          <Stack.Screen name="register" />
+                                          <Stack.Screen name="forgot-password" />
+                                          <Stack.Screen name="profile/notifications" />
+                                          <Stack.Screen name="handleInvite" />
+                                        </Stack>
 
-    <AppNavigator />
-    <TrophyModal challengeId="" selectedDays={0} />
-  </AdsVisibilityProvider>
-</ConsentGate>
-
-                                </VisitorProvider>
-                              </TutorialProvider>
-                            </ChatProvider>
-                          </CurrentChallengesProvider>
-                        </SavedChallengesProvider>
-                      </TrophyProvider>
-                    </ProfileUpdateProvider>
-                  </PaperProvider>
-                </ThemeProvider>
-              </I18nextProvider>
-            </LanguageProvider>
-          </AuthProvider>
-        </FlagsGate>
-      </FeatureFlagsProvider>
+                                        <AppNavigator />
+                                        <TrophyModal
+                                          challengeId=""
+                                          selectedDays={0}
+                                        />
+                                      </AdsVisibilityProvider>
+                                    </ConsentGate>
+                                  </VisitorProvider>
+                                </TutorialProvider>
+                              </ChatProvider>
+                            </CurrentChallengesProvider>
+                          </SavedChallengesProvider>
+                        </TrophyProvider>
+                      </ProfileUpdateProvider>
+                    </PaperProvider>
+                  </ThemeProvider>
+                </I18nextProvider>
+              </LanguageProvider>
+            </AuthProvider>
+          </FlagsGate>
+        </FeatureFlagsProvider>
       </ToastProvider>
     </GestureHandlerRootView>
   );
@@ -432,41 +595,52 @@ const styles = StyleSheet.create({
   },
 });
 
-function handleNotificationNavigation(router: ReturnType<typeof useRouter>, data: any) {
+// Helper générique : navigation alignée sur notificationService
+function handleNotificationNavigation(
+  router: ReturnType<typeof useRouter>,
+  data: any
+) {
   const type = String(data?.type || data?.__tag || "").toLowerCase();
+  const challengeId: string | undefined = data?.challengeId;
 
-  if (type === "invite-status" && data?.challengeId) {
-    router.push(`/challenge-details/${String(data.challengeId)}`);
+  // ✅ Daily reminders → home / index
+  if (type === "daily-reminder") {
+    router.push("/");
     return;
   }
 
+  // ✅ Statut d’invitation (acceptée / refusée)
+  if (type === "invite-status") {
+    if (challengeId) {
+      router.push(`/challenge-details/${String(challengeId)}`);
+    } else {
+      router.push("/(tabs)");
+    }
+    return;
+  }
+
+  // ✅ Nudge duo : va idéalement sur le défi, sinon sur la liste des challenges
   if (type === "duo-nudge") {
-    router.push("/profile/notifications");
+    if (challengeId) {
+      router.push(`/challenge-details/${String(challengeId)}`);
+    } else {
+      router.push("/current-challenges");
+    }
     return;
   }
 
-  if (type === "daily_morning_v1" || type === "daily_evening_v1") {
-    router.push("/(tabs)");
-    return;
-  }
-
-  if (type.includes("referral")) {
+  // ✅ Referral — milestones & nouveaux filleuls
+  if (type === "referral_milestone_unlocked" || type === "referral_new_child") {
     router.push("/referral/ShareAndEarn");
     return;
   }
 
-  if (data?.challengeId) {
-    router.push({
-      pathname: "profile/notifications",
-      params: {
-        challengeId: String(data.challengeId),
-        invite: String(data.invite || ""),
-      },
-    });
+  // ✅ Fallback avec challengeId → page du défi
+  if (challengeId) {
+    router.push(`/challenge-details/${String(challengeId)}`);
     return;
   }
 
+  // ✅ Fallback global → onglets
   router.push("/(tabs)");
 }
-
-

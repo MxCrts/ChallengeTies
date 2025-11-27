@@ -1,4 +1,12 @@
-import React, { useState, useRef, useEffect, useCallback, useMemo, memo, useContext  } from "react";
+import React, {
+  useState,
+  useRef,
+  useEffect,
+  useCallback,
+  useMemo,
+  memo,
+  useContext,
+} from "react";
 import {
   View,
   Text,
@@ -11,7 +19,6 @@ import {
   SafeAreaView,
   Dimensions,
   StatusBar,
-  Alert,
   Keyboard,
 } from "react-native";
 import { useLocalSearchParams, useNavigation } from "expo-router";
@@ -22,18 +29,19 @@ import { useChat } from "../../context/ChatContext";
 import { useTheme } from "../../context/ThemeContext";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { useTranslation } from "react-i18next";
-import { Theme } from "../../theme/designSystem";
-import designSystem from "../../theme/designSystem";
+import designSystem, { Theme } from "../../theme/designSystem";
 import { updateDoc, doc, getDoc } from "firebase/firestore";
 import ChatWelcomeModal from "../../components/ChatWelcomeModal";
 import BannerSlot from "@/components/BannerSlot";
 import { useAdsVisibility } from "../../src/context/AdsVisibilityContext";
 import { BottomTabBarHeightContext } from "@react-navigation/bottom-tabs";
 import * as Haptics from "expo-haptics";
+import { useToast } from "@/src/ui/Toast";
+import { tap, success, warning } from "@/src/utils/haptics";
 
-const { width: SCREEN_WIDTH} = Dimensions.get("window");
+const { width: SCREEN_WIDTH } = Dimensions.get("window");
 const SPACING = 18;
-const SLOWMODE_MS = 2500;              // ✦ anti-flood
+const SLOWMODE_MS = 2500; // anti-flood
 const REPLY_EXCERPT_MAX = 80;
 
 const normalizeSize = (size: number) => {
@@ -87,7 +95,9 @@ const OrbBackground = ({ theme }: { theme: Theme }) => (
 
 const getDynamicStyles = (currentTheme: Theme, isDarkMode: boolean) => ({
   container: { backgroundColor: currentTheme.colors.background },
-  gradientContainer: { backgroundColor: currentTheme.colors.cardBackground + "00" },
+  gradientContainer: {
+    backgroundColor: currentTheme.colors.cardBackground + "00",
+  },
   headerGradient: {
     colors: [currentTheme.colors.primary, currentTheme.colors.secondary] as const,
   },
@@ -97,28 +107,44 @@ const getDynamicStyles = (currentTheme: Theme, isDarkMode: boolean) => ({
   messageList: { backgroundColor: "transparent" },
 
   myMessageBubble: {
-    borderColor: isDarkMode ? "rgba(255,255,255,0.14)" : "rgba(0,0,0,0.08)",
+    borderColor: isDarkMode
+      ? "rgba(255,255,255,0.14)"
+      : "rgba(0,0,0,0.08)",
   },
   otherMessageBubble: {
-    borderColor: isDarkMode ? "rgba(255,255,255,0.14)" : "rgba(0,0,0,0.08)",
+    borderColor: isDarkMode
+      ? "rgba(255,255,255,0.14)"
+      : "rgba(0,0,0,0.08)",
   },
 
-  messageText: { color: isDarkMode ? currentTheme.colors.textPrimary : "#222" },
+  messageText: {
+    color: isDarkMode ? currentTheme.colors.textPrimary : "#222222",
+  },
   username: { color: currentTheme.colors.secondary },
 
   inputWrapper: {
-    backgroundColor: isDarkMode ? "rgba(255,255,255,0.06)" : "rgba(0,0,0,0.04)",
-    borderTopColor: isDarkMode ? "rgba(255,255,255,0.14)" : "rgba(0,0,0,0.08)",
+    backgroundColor: isDarkMode
+      ? "rgba(255,255,255,0.06)"
+      : "rgba(0,0,0,0.04)",
+    borderTopColor: isDarkMode
+      ? "rgba(255,255,255,0.14)"
+      : "rgba(0,0,0,0.08)",
   },
   input: {
-    borderColor: isDarkMode ? "rgba(255,255,255,0.14)" : "rgba(0,0,0,0.08)",
-    backgroundColor: isDarkMode ? "rgba(255,255,255,0.04)" : "rgba(0,0,0,0.03)",
-    color: isDarkMode ? currentTheme.colors.textPrimary : "#000",
-    placeholderTextColor: isDarkMode ? "rgba(255,255,255,0.6)" : "rgba(0,0,0,0.45)",
+    borderColor: isDarkMode
+      ? "rgba(255,255,255,0.14)"
+      : "rgba(0,0,0,0.08)",
+    backgroundColor: isDarkMode
+      ? "rgba(255,255,255,0.04)"
+      : "rgba(0,0,0,0.03)",
+    color: isDarkMode ? currentTheme.colors.textPrimary : "#000000",
+    placeholderTextColor: isDarkMode
+      ? "rgba(255,255,255,0.6)"
+      : "rgba(0,0,0,0.45)",
   },
-  sendButtonIcon: { color: "#fff" },
+  sendButtonIcon: { color: "#FFFFFF" },
   reportButton: { backgroundColor: currentTheme.colors.error },
-  reportButtonText: { color: "#fff" },
+  reportButtonText: { color: "#FFFFFF" },
   avatarIcon: { color: currentTheme.colors.secondary },
 });
 
@@ -161,6 +187,7 @@ const MessageItem = memo(function MessageItem({
   t,
   challengeId,
   onReply,
+  showToast,
 }: {
   item: ChatMessage;
   isDarkMode: boolean;
@@ -169,6 +196,7 @@ const MessageItem = memo(function MessageItem({
   t: (k: string, o?: any) => string;
   challengeId: string;
   onReply: (ctx: ReplyContext) => void;
+  showToast: (msg: string, type?: "success" | "error" | "info") => void;
 }) {
   // Branche système : message d'accueil
   if (item.type === "system" && item.systemType === "welcome") {
@@ -195,7 +223,11 @@ const MessageItem = memo(function MessageItem({
           <Text
             style={[
               styles.systemWelcomeText,
-              { color: isDarkMode ? currentTheme.colors.textPrimary : "#222" },
+              {
+                color: isDarkMode
+                  ? currentTheme.colors.textPrimary
+                  : "#222222",
+              },
             ]}
           >
             {body}
@@ -227,15 +259,29 @@ const MessageItem = memo(function MessageItem({
 
   const handleReportMessage = useCallback(async () => {
     if (item.reported) return; // idempotent
+    tap();
     try {
       const messageRef = doc(db, "chats", challengeId, "messages", item.id);
       await updateDoc(messageRef, { reported: true });
-      Alert.alert(t("success"), t("messageReported"));
+      success();
+      showToast(
+        t("messageReported", {
+          defaultValue: "Message signalé à la modération.",
+        }),
+        "success"
+      );
     } catch (error) {
       console.error("Erreur report:", error);
-      Alert.alert(t("error"), t("reportMessageFailed"));
+      warning();
+      showToast(
+        t("reportMessageFailed", {
+          defaultValue:
+            "Impossible de signaler ce message pour le moment. Réessaie plus tard.",
+        }),
+        "error"
+      );
     }
-  }, [challengeId, item.id, item.reported, t]);
+  }, [challengeId, item.id, item.reported, t, showToast]);
 
   return (
     <View
@@ -262,48 +308,53 @@ const MessageItem = memo(function MessageItem({
           Haptics.selectionAsync().catch(() => {});
           onReply({ id: item.id, username: item.username, text: item.text });
         }}
-        accessibilityLabel={t("challengeChat.longPressReply", { defaultValue: "Répondre à ce message" })}
+        accessibilityLabel={t("challengeChat.longPressReply", {
+          defaultValue: "Répondre à ce message",
+        })}
         accessibilityRole="button"
       >
         <LinearGradient
-        colors={isMyMessage ? myBubbleColors : otherBubbleColors}
-        start={{ x: 0, y: 0 }}
-        end={{ x: 1, y: 1 }}
-        style={[
-          styles.messageBubble,
-          { borderColor: borderClr },
-          isMyMessage ? styles.myMessageBubble : styles.otherMessageBubble,
-        ]}
-      >
-        {!isMyMessage && (
-          <Text style={[styles.username, dynamicStyles.username]}>
-            {item.username}
-          </Text>
-        )}
-
-        <Text
+          colors={isMyMessage ? myBubbleColors : otherBubbleColors}
+          start={{ x: 0, y: 0 }}
+          end={{ x: 1, y: 1 }}
           style={[
-            styles.messageText,
-            isMyMessage ? { color: "#fff" } : dynamicStyles.messageText,
+            styles.messageBubble,
+            { borderColor: borderClr },
+            isMyMessage ? styles.myMessageBubble : styles.otherMessageBubble,
           ]}
         >
-          {item.text}
-        </Text>
-
-        {!isMyMessage && !item.reported && (
-          <TouchableOpacity
-            style={[styles.reportButton, dynamicStyles.reportButton]}
-            onPress={handleReportMessage}
-            accessibilityLabel={t("reportMessage")}
-          >
-            <Text
-              style={[styles.reportButtonText, dynamicStyles.reportButtonText]}
-            >
-              {t("report")}
+          {!isMyMessage && (
+            <Text style={[styles.username, dynamicStyles.username]}>
+              {item.username}
             </Text>
-          </TouchableOpacity>
-        )}
-      </LinearGradient>
+          )}
+
+          <Text
+            style={[
+              styles.messageText,
+              isMyMessage ? { color: "#FFFFFF" } : dynamicStyles.messageText,
+            ]}
+          >
+            {item.text}
+          </Text>
+
+          {!isMyMessage && !item.reported && (
+            <TouchableOpacity
+              style={[styles.reportButton, dynamicStyles.reportButton]}
+              onPress={handleReportMessage}
+              accessibilityLabel={t("reportMessage")}
+            >
+              <Text
+                style={[
+                  styles.reportButtonText,
+                  dynamicStyles.reportButtonText,
+                ]}
+              >
+                {t("report")}
+              </Text>
+            </TouchableOpacity>
+          )}
+        </LinearGradient>
       </TouchableOpacity>
     </View>
   );
@@ -311,15 +362,23 @@ const MessageItem = memo(function MessageItem({
 
 export default function ChallengeChat() {
   const { t } = useTranslation();
-  const { id: challengeIdParam, title: challengeTitleParam } = useLocalSearchParams();
-  const challengeId = Array.isArray(challengeIdParam) ? challengeIdParam[0] : challengeIdParam;
+  const { show: showToast } = useToast();
+  const { id: challengeIdParam, title: challengeTitleParam } =
+    useLocalSearchParams();
+  const challengeId = Array.isArray(challengeIdParam)
+    ? challengeIdParam[0]
+    : challengeIdParam;
   const navigation = useNavigation();
   const { theme } = useTheme();
   const isDarkMode = theme === "dark";
-  const currentTheme = isDarkMode ? designSystem.darkTheme : designSystem.lightTheme;
+  const currentTheme = isDarkMode
+    ? designSystem.darkTheme
+    : designSystem.lightTheme;
 
-  // ⚡ memo: évite recalcul + re-renders
-  const dynamicStyles = useMemo(() => getDynamicStyles(currentTheme, isDarkMode), [currentTheme, isDarkMode]);
+  const dynamicStyles = useMemo(
+    () => getDynamicStyles(currentTheme, isDarkMode),
+    [currentTheme, isDarkMode]
+  );
 
   const [composerHeight, setComposerHeight] = useState(SPACING * 4);
   const { messages, sendMessage } = useChat(challengeId as string);
@@ -340,7 +399,9 @@ export default function ChallengeChat() {
   const clearReply = useCallback(() => setReplyTo(null), []);
   const excerpt = useCallback((s: string) => {
     const one = (s || "").replace(/\s+/g, " ").trim();
-    return one.length > REPLY_EXCERPT_MAX ? one.slice(0, REPLY_EXCERPT_MAX - 1) + "…" : one;
+    return one.length > REPLY_EXCERPT_MAX
+      ? one.slice(0, REPLY_EXCERPT_MAX - 1) + "…"
+      : one;
   }, []);
 
   // Tick du slowmode (sans timer permanent)
@@ -353,11 +414,19 @@ export default function ChallengeChat() {
   }, [cooldownLeft]);
 
   useEffect(() => {
-    const sh = Keyboard.addListener(Platform.OS === "ios" ? "keyboardWillShow" : "keyboardDidShow", () => setIsKeyboardVisible(true));
-    const hh = Keyboard.addListener(Platform.OS === "ios" ? "keyboardWillHide" : "keyboardDidHide", () => setIsKeyboardVisible(false));
-    return () => { sh.remove(); hh.remove(); };
+    const sh = Keyboard.addListener(
+      Platform.OS === "ios" ? "keyboardWillShow" : "keyboardDidShow",
+      () => setIsKeyboardVisible(true)
+    );
+    const hh = Keyboard.addListener(
+      Platform.OS === "ios" ? "keyboardWillHide" : "keyboardDidHide",
+      () => setIsKeyboardVisible(false)
+    );
+    return () => {
+      sh.remove();
+      hh.remove();
+    };
   }, []);
-
 
   // messages triés: pinned d'abord, puis timestamp asc
   const sortedMessages = useMemo<ChatMessage[]>(() => {
@@ -373,7 +442,9 @@ export default function ChallengeChat() {
   // Fallback welcome local si rien dans Firestore
   const finalMessages = useMemo<ChatMessage[]>(() => {
     const arr = [...sortedMessages];
-    const hasWelcome = arr.some((m) => m?.type === "system" && m?.systemType === "welcome");
+    const hasWelcome = arr.some(
+      (m) => m?.type === "system" && m?.systemType === "welcome"
+    );
     if (!hasWelcome) {
       arr.unshift({
         id: "welcome-local",
@@ -394,24 +465,17 @@ export default function ChallengeChat() {
     return arr;
   }, [sortedMessages]);
 
-  useEffect(() => {
-    const head = finalMessages.slice(0, 3).map((m) => ({
-      id: m.id,
-      type: m.type,
-      systemType: m.systemType,
-      pinned: m.pinned,
-      textKey: m.textKey,
-    }));
-    console.log("▶ finalMessages(head):", head);
-  }, [finalMessages]);
-
-  // Vérif règles (inchangé)
+  // Vérif règles (inchangé fonctionnellement, juste propre)
   useEffect(() => {
     const checkRulesAcceptance = async () => {
       const userId = auth.currentUser?.uid;
       if (!userId || !challengeId) return;
 
-      const acceptanceRef = doc(db, `users/${userId}/acceptedChatRules`, challengeId as string);
+      const acceptanceRef = doc(
+        db,
+        `users/${userId}/acceptedChatRules`,
+        challengeId as string
+      );
       const acceptanceDoc = await getDoc(acceptanceRef);
       if (acceptanceDoc.exists()) return;
 
@@ -424,35 +488,44 @@ export default function ChallengeChat() {
     checkRulesAcceptance();
   }, [challengeId]);
 
-   // 🔎 Détection robuste si le thread est un chat de DUO
+  // 🔎 Détection robuste si le thread est un chat de DUO
   useEffect(() => {
     const run = async () => {
       try {
         const uid = auth.currentUser?.uid;
-        if (!uid || !challengeId) return setIsDuoChat(false);
+        if (!uid || !challengeId) {
+          setIsDuoChat(false);
+          return;
+        }
+
         // 1) On regarde d'abord dans mes CurrentChallenges (source de vérité locale)
         const meRef = doc(db, "users", uid);
         const meSnap = await getDoc(meRef);
         let duo = false;
         if (meSnap.exists()) {
           const data = meSnap.data() as any;
-          const arr: any[] = Array.isArray(data.CurrentChallenges) ? data.CurrentChallenges : [];
-          // on compare id OU challengeId pour tolérer les deux schémas
+          const arr: any[] = Array.isArray(data.CurrentChallenges)
+            ? data.CurrentChallenges
+            : [];
           const found = arr.find((c) => {
-            const cid = (c?.challengeId ?? c?.id);
+            const cid = c?.challengeId ?? c?.id;
             return String(cid) === String(challengeId);
           });
           duo = !!found?.duo;
         }
+
         // 2) Fallback : si le doc de chat porte un flag isDuoThread
         if (!duo) {
           const chatRef = doc(db, "chats", String(challengeId));
           const chatSnap = await getDoc(chatRef);
           if (chatSnap.exists()) {
             const cdata = chatSnap.data() as any;
-            if (typeof cdata?.isDuoThread === "boolean") duo = cdata.isDuoThread;
+            if (typeof cdata?.isDuoThread === "boolean") {
+              duo = cdata.isDuoThread;
+            }
           }
         }
+
         setIsDuoChat(duo);
       } catch {
         setIsDuoChat(false);
@@ -464,34 +537,61 @@ export default function ChallengeChat() {
   const handleSend = useCallback(async () => {
     const content = newMessage.trim();
     if (!content) return;
+
     const now = Date.now();
     const elapsed = now - lastSentRef.current;
     if (elapsed < SLOWMODE_MS) {
       const left = SLOWMODE_MS - elapsed;
       setCooldownLeft(left);
-      Haptics.notificationAsync(Haptics.NotificationFeedbackType.Warning).catch(() => {});
+      warning();
+      showToast(
+        t("challengeChat.slowmodeShort", {
+          defaultValue: "Ralentis un peu, tu pourras renvoyer dans un instant 😉",
+        }),
+        "info"
+      );
       return;
     }
+
     try {
-      // ↩️ Insère le contexte de réponse en en-tête (lisible + backend inchangé)
       const decorated = replyTo
-        ? `↩️ @${replyTo.username}: “${excerpt(replyTo.text)}”\n${content}`
+        ? `↩️ @${replyTo.username}: “${excerpt(
+            replyTo.text
+          )}”\n${content}`
         : content;
-      // ➡️ Passe le flag DUO pour créditer duoMessages côté métriques/succès
+
+      // Passage du flag isDuo pour tes métriques / succès
       await sendMessage(challengeId as string, decorated, { isDuo: isDuoChat });
+
       lastSentRef.current = now;
       setCooldownLeft(SLOWMODE_MS);
       setReplyTo(null);
       setNewMessage("");
-      // scroll à la fin après envoi
+
       requestAnimationFrame(() => {
         flatListRef.current?.scrollToEnd({ animated: true });
       });
     } catch (error) {
       console.error("Error sending message:", error);
-      Alert.alert(t("error"), t("errorSendingMessage"));
+      warning();
+      showToast(
+        t("errorSendingMessage", {
+          defaultValue:
+            "Message non envoyé. Vérifie ta connexion et réessaie.",
+        }),
+        "error"
+      );
     }
- }, [newMessage, challengeId, sendMessage, t, replyTo, excerpt, isDuoChat]);
+  }, [
+    newMessage,
+    challengeId,
+    sendMessage,
+    t,
+    replyTo,
+    excerpt,
+    isDuoChat,
+    showToast,
+  ]);
 
   // Auto-scroll quand messages prêts
   useEffect(() => {
@@ -521,9 +621,10 @@ export default function ChallengeChat() {
         t={t as any}
         challengeId={challengeId as string}
         onReply={(ctx) => setReplyTo(ctx)}
+        showToast={showToast}
       />
     ),
-    [isDarkMode, currentTheme, dynamicStyles, t, challengeId]
+    [isDarkMode, currentTheme, dynamicStyles, t, challengeId, showToast]
   );
 
   const headerGradientColors = dynamicStyles.headerGradient.colors;
@@ -541,175 +642,256 @@ export default function ChallengeChat() {
 
   const canSend = newMessage.trim().length > 0;
   const showAds = !!showBanners;
-  const showBanner = useMemo(() => showAds && !isKeyboardVisible, [showAds, isKeyboardVisible]);
+  const showBanner = useMemo(
+    () => showAds && !isKeyboardVisible,
+    [showAds, isKeyboardVisible]
+  );
 
-  // --- Offsets bas unifiés (safe-area + tabbar + bannière)
+  // Offsets bas unifiés (safe-area + tabbar + bannière)
   const bottomUIOffset = (tabBarHeight || 0) + (insets.bottom || 0);
-  const bannerOffset = showBanner ? adHeight + 6 : 0; // 6px de respiration
+  const bannerOffset = showBanner ? adHeight + 6 : 0; // petite respiration
   const composerBottomSpace = bottomUIOffset + bannerOffset;
+
+  const cooldownSeconds = Math.ceil(cooldownLeft / 1000);
 
   return (
     <View style={{ flex: 1 }}>
       <SafeAreaView style={[styles.container, dynamicStyles.container]}>
-      <StatusBar
-        translucent
-        backgroundColor="transparent"
-        barStyle={isDarkMode ? "light-content" : "dark-content"}
-      />
-
-      {/* Fond gradient + orbes */}
-      <LinearGradient
-        colors={[currentTheme.colors.background, currentTheme.colors.cardBackground + "F0"]}
-        style={StyleSheet.absoluteFill}
-      />
-      <OrbBackground theme={currentTheme} />
-
-      <ChatWelcomeModal
-        chatId={challengeId as string}
-        visible={modalVisible}
-        onClose={() => setModalVisible(false)}
-      />
-
-      {/* Header */}
-      <LinearGradient
-        colors={headerGradientColors}
-        style={[
-          styles.header,
-          {
-            paddingTop: insets.top,
-            borderBottomWidth: StyleSheet.hairlineWidth,
-            borderBottomColor: isDarkMode ? "rgba(255,255,255,0.12)" : "rgba(0,0,0,0.08)",
-            shadowOpacity: 0,
-            elevation: 0,
-          },
-        ]}
-      >
-        <TouchableOpacity
-          onPress={() => (navigation as any).goBack()}
-          style={styles.backButton}
-          accessibilityLabel={t("challengeChat.backButton")}
-          testID="back-button"
-          activeOpacity={0.7}
-        >
-          <Ionicons name="chevron-back" size={normalizeSize(22)} color={backIconColor} />
-        </TouchableOpacity>
-        <Text style={[styles.headerTitle, dynamicStyles.headerTitle]}>
-          {challengeTitle || t("challengeChat.defaultTitle")}
-        </Text>
-        <View style={{ width: normalizeSize(22) }} />
-      </LinearGradient>
-
-      <KeyboardAvoidingView
-        style={styles.chatContainer}
-        behavior={Platform.OS === "ios" ? "padding" : "height"}
-        keyboardVerticalOffset={insets.top + normalizeSize(56)}
-      >
-        <FlatList
-          ref={flatListRef}
-          data={finalMessages}
-          renderItem={renderMessage}
-          keyExtractor={keyExtractor}
-          contentContainerStyle={[
-            styles.messageList,
-            dynamicStyles.messageList,
-            {
-              paddingBottom: composerHeight + SPACING + composerBottomSpace,
-            },
-          ]}
-          initialNumToRender={12}
-          maxToRenderPerBatch={12}
-          updateCellsBatchingPeriod={50}
-          windowSize={7}
-          onLayout={handleListLayout}
-          onContentSizeChange={() => flatListRef.current?.scrollToEnd({ animated: true })}
-          showsVerticalScrollIndicator={false}
-          removeClippedSubviews
-          keyboardShouldPersistTaps="handled"
-          keyboardDismissMode={Platform.OS === "ios" ? "interactive" : "on-drag"}
+        <StatusBar
+          translucent
+          backgroundColor="transparent"
+          barStyle={isDarkMode ? "light-content" : "dark-content"}
         />
 
-        {/* Barre d’entrée “glass” premium */}
-        <View
-          style={[
-            styles.inputWrapper,
-            dynamicStyles.inputWrapper,
-            { paddingBottom: insets.bottom || SPACING, marginBottom: bannerOffset },
+        {/* Fond gradient + orbes */}
+        <LinearGradient
+          colors={[
+            currentTheme.colors.background,
+            currentTheme.colors.cardBackground + "F0",
           ]}
-          onLayout={(e) => setComposerHeight(e.nativeEvent.layout.height)}
+          style={StyleSheet.absoluteFill}
+        />
+        <OrbBackground theme={currentTheme} />
+
+        <ChatWelcomeModal
+          chatId={challengeId as string}
+          visible={modalVisible}
+          onClose={() => setModalVisible(false)}
+        />
+
+        {/* Header */}
+        <LinearGradient
+          colors={headerGradientColors}
+          style={[
+            styles.header,
+            {
+              paddingTop: insets.top,
+              borderBottomWidth: StyleSheet.hairlineWidth,
+              borderBottomColor: isDarkMode
+                ? "rgba(255,255,255,0.12)"
+                : "rgba(0,0,0,0.08)",
+              shadowOpacity: 0,
+              elevation: 0,
+            },
+          ]}
         >
-          {!!replyTo && (
-            <View style={[styles.replyPreview, { borderColor: inputBorderColor, backgroundColor: inputBg }]}>
-              <View style={{ flex: 1 }}>
-                <Text style={[styles.replyTitle, { color: currentTheme.colors.secondary }]}>
-                  ↩️ {t("challengeChat.replyingTo", { defaultValue: "En réponse à" })} @{replyTo.username}
-                </Text>
-                <Text
-                  numberOfLines={2}
-                  style={[styles.replyExcerpt, { color: dynamicStyles.messageText.color }]}
-                >
-                  {replyTo.text}
-                </Text>
-              </View>
-              <TouchableOpacity
-                onPress={clearReply}
-                accessibilityLabel={t("common.close", { defaultValue: "Fermer" })}
-                hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
-                style={styles.replyClose}
-              >
-                <Ionicons name="close" size={normalizeSize(16)} color={dynamicStyles.messageText.color as string} />
-              </TouchableOpacity>
-            </View>
-          )}
-          <TextInput
-            style={[
-              styles.input,
+          <TouchableOpacity
+            onPress={() => (navigation as any).goBack()}
+            style={styles.backButton}
+            accessibilityLabel={t("challengeChat.backButton")}
+            testID="back-button"
+            activeOpacity={0.7}
+          >
+            <Ionicons
+              name="chevron-back"
+              size={normalizeSize(22)}
+              color={backIconColor}
+            />
+          </TouchableOpacity>
+          <Text style={[styles.headerTitle, dynamicStyles.headerTitle]}>
+            {challengeTitle || t("challengeChat.defaultTitle")}
+            {isDuoChat ? " · Duo" : ""}
+          </Text>
+          <View style={{ width: normalizeSize(36) }} />
+        </LinearGradient>
+
+        <KeyboardAvoidingView
+          style={styles.chatContainer}
+          behavior={Platform.OS === "ios" ? "padding" : "height"}
+          keyboardVerticalOffset={insets.top + normalizeSize(56)}
+        >
+          <FlatList
+            ref={flatListRef}
+            data={finalMessages}
+            renderItem={renderMessage}
+            keyExtractor={keyExtractor}
+            contentContainerStyle={[
+              styles.messageList,
+              dynamicStyles.messageList,
               {
-                borderColor: inputBorderColor,
-                backgroundColor: inputBg,
-                color: inputTextColor,
+                paddingBottom: composerHeight + SPACING + composerBottomSpace,
               },
             ]}
-            placeholder={t("challengeChat.placeholder")}
-            placeholderTextColor={placeholderColor as string}
-            value={newMessage}
-            onChangeText={setNewMessage}
-            multiline
-            accessibilityLabel={t("challengeChat.inputA11yLabel")}
-            accessibilityHint={t("challengeChat.inputA11yHint")}
-            testID="message-input"
-            returnKeyType="send"
-            onSubmitEditing={handleSend}
-            blurOnSubmit={false}
+            initialNumToRender={12}
+            maxToRenderPerBatch={12}
+            updateCellsBatchingPeriod={50}
+            windowSize={7}
+            onLayout={handleListLayout}
+            onContentSizeChange={() =>
+              flatListRef.current?.scrollToEnd({ animated: true })
+            }
+            showsVerticalScrollIndicator={false}
+            removeClippedSubviews
+            keyboardShouldPersistTaps="handled"
+            keyboardDismissMode={
+              Platform.OS === "ios" ? "interactive" : "on-drag"
+            }
           />
-          <LinearGradient
-            colors={[currentTheme.colors.secondary, currentTheme.colors.primary]}
-            start={{ x: 0, y: 0 }}
-            end={{ x: 1, y: 1 }}
+
+          {/* Barre d’entrée glass premium */}
+          <View
             style={[
-              styles.sendButton,
-              (!canSend || cooldownLeft > 0) && { opacity: 0.5 },
+              styles.inputWrapper,
+              dynamicStyles.inputWrapper,
+              {
+                paddingBottom: insets.bottom || SPACING,
+                marginBottom: bannerOffset,
+              },
             ]}
+            onLayout={(e) => setComposerHeight(e.nativeEvent.layout.height)}
           >
-            <TouchableOpacity
-              onPress={handleSend}
-              activeOpacity={0.85}
-              disabled={!canSend || cooldownLeft > 0}
-              hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
-              accessibilityLabel={t("challengeChat.sendA11yLabel", { defaultValue: "Envoyer le message" })}
-              accessibilityHint={
-                cooldownLeft > 0
-                  ? t("challengeChat.slowmodeHint", {
-                      defaultValue: "Patiente un instant avant d’envoyer un nouveau message.",
-                    })
-                  : undefined
-              }
+            {!!replyTo && (
+              <View
+                style={[
+                  styles.replyPreview,
+                  {
+                    borderColor: inputBorderColor,
+                    backgroundColor: inputBg,
+                  },
+                ]}
+              >
+                <View style={{ flex: 1 }}>
+                  <Text
+                    style={[
+                      styles.replyTitle,
+                      { color: currentTheme.colors.secondary },
+                    ]}
+                  >
+                    ↩️{" "}
+                    {t("challengeChat.replyingTo", {
+                      defaultValue: "En réponse à",
+                    })}{" "}
+                    @{replyTo.username}
+                  </Text>
+                  <Text
+                    numberOfLines={2}
+                    style={[
+                      styles.replyExcerpt,
+                      { color: dynamicStyles.messageText.color },
+                    ]}
+                  >
+                    {replyTo.text}
+                  </Text>
+                </View>
+                <TouchableOpacity
+                  onPress={clearReply}
+                  accessibilityLabel={t("common.close", {
+                    defaultValue: "Fermer",
+                  })}
+                  hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
+                  style={styles.replyClose}
+                >
+                  <Ionicons
+                    name="close"
+                    size={normalizeSize(16)}
+                    color={dynamicStyles.messageText.color as string}
+                  />
+                </TouchableOpacity>
+              </View>
+            )}
+
+            <TextInput
+              style={[
+                styles.input,
+                {
+                  borderColor: inputBorderColor,
+                  backgroundColor: inputBg,
+                  color: inputTextColor,
+                },
+              ]}
+              placeholder={t("challengeChat.placeholder")}
+              placeholderTextColor={placeholderColor as string}
+              value={newMessage}
+              onChangeText={setNewMessage}
+              multiline
+              accessibilityLabel={t("challengeChat.inputA11yLabel")}
+              accessibilityHint={t("challengeChat.inputA11yHint")}
+              testID="message-input"
+              returnKeyType="send"
+              onSubmitEditing={handleSend}
+              blurOnSubmit={false}
+            />
+
+            <LinearGradient
+              colors={[
+                currentTheme.colors.secondary,
+                currentTheme.colors.primary,
+              ]}
+              start={{ x: 0, y: 0 }}
+              end={{ x: 1, y: 1 }}
+              style={[
+                styles.sendButton,
+                (!canSend || cooldownLeft > 0) && { opacity: 0.5 },
+              ]}
             >
-              <Ionicons name="send" size={normalizeSize(18)} color={sendIconColor} />
-            </TouchableOpacity>
-          </LinearGradient>
-        </View>
-      </KeyboardAvoidingView>
-   </SafeAreaView>
+              <TouchableOpacity
+                onPress={handleSend}
+                activeOpacity={0.85}
+                disabled={!canSend || cooldownLeft > 0}
+                hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
+                accessibilityLabel={t("challengeChat.sendA11yLabel", {
+                  defaultValue: "Envoyer le message",
+                })}
+                accessibilityHint={
+                  cooldownLeft > 0
+                    ? t("challengeChat.slowmodeHint", {
+                        defaultValue:
+                          "Patiente un instant avant d’envoyer un nouveau message.",
+                      })
+                    : undefined
+                }
+              >
+                <Ionicons
+                  name="send"
+                  size={normalizeSize(18)}
+                  color={sendIconColor}
+                />
+              </TouchableOpacity>
+            </LinearGradient>
+          </View>
+
+          {cooldownLeft > 0 && (
+            <View style={{ alignItems: "center", marginBottom: 4 }}>
+              <Text
+                style={[
+                  styles.cooldownText,
+                  {
+                    color: isDarkMode
+                      ? "rgba(255,255,255,0.7)"
+                      : "rgba(0,0,0,0.6)",
+                  },
+                ]}
+              >
+                {t("challengeChat.slowmodeCountdown", {
+                  defaultValue:
+                    "Patiente encore {{s}}s avant le prochain message",
+                  s: cooldownSeconds,
+                })}
+              </Text>
+            </View>
+          )}
+        </KeyboardAvoidingView>
+      </SafeAreaView>
 
       {/* Hairline au-dessus de la bannière dockée */}
       {showBanner && adHeight > 0 && (
@@ -721,7 +903,9 @@ export default function ChallengeChat() {
             right: 0,
             bottom: (tabBarHeight as number) + insets.bottom + adHeight + 6,
             height: StyleSheet.hairlineWidth,
-            backgroundColor: isDarkMode ? "rgba(255,255,255,0.12)" : "rgba(0,0,0,0.08)",
+            backgroundColor: isDarkMode
+              ? "rgba(255,255,255,0.12)"
+              : "rgba(0,0,0,0.08)",
             zIndex: 9999,
           }}
         />
@@ -747,7 +931,7 @@ export default function ChallengeChat() {
       )}
     </View>
   );
-  }
+}
 
 const styles = StyleSheet.create({
   container: { flex: 1 },
@@ -772,13 +956,7 @@ const styles = StyleSheet.create({
     textAlign: "center",
     flex: 1,
   },
-bannerContainer: {
-    paddingHorizontal: SPACING,
-    paddingTop: SPACING / 2,
-    paddingBottom: SPACING / 2,
-    backgroundColor: "transparent",
-    alignSelf: "stretch",
-  },
+
   chatContainer: { flex: 1 },
 
   messageList: {
@@ -791,29 +969,6 @@ bannerContainer: {
     flexDirection: "row",
     marginVertical: normalizeSize(8),
     alignItems: "flex-end",
-  },
-  replyPreview: {
-    flexDirection: "row",
-    alignItems: "flex-start",
-    borderWidth: StyleSheet.hairlineWidth,
-    borderRadius: normalizeSize(14),
-    paddingVertical: normalizeSize(8),
-    paddingHorizontal: SPACING * 0.8,
-    marginBottom: normalizeSize(8),
-  },
-  replyTitle: {
-    fontFamily: "Comfortaa_700Bold",
-    fontSize: normalizeSize(12),
-    marginBottom: normalizeSize(4),
-  },
-  replyExcerpt: {
-    fontFamily: "Comfortaa_400Regular",
-    fontSize: normalizeSize(12),
-    opacity: 0.9,
-  },
-  replyClose: {
-    marginLeft: SPACING,
-    paddingTop: normalizeSize(2),
   },
   myMessageRow: { justifyContent: "flex-end" },
   otherMessageRow: { justifyContent: "flex-start" },
@@ -866,6 +1021,7 @@ bannerContainer: {
     alignItems: "center",
     justifyContent: "center",
   },
+
   reportButton: {
     marginTop: SPACING / 2,
     paddingVertical: normalizeSize(6),
@@ -903,6 +1059,35 @@ bannerContainer: {
     fontSize: normalizeSize(13),
     lineHeight: normalizeSize(18),
     textAlign: "center",
+  },
+
+  replyPreview: {
+    flexDirection: "row",
+    alignItems: "flex-start",
+    borderWidth: StyleSheet.hairlineWidth,
+    borderRadius: normalizeSize(14),
+    paddingVertical: normalizeSize(8),
+    paddingHorizontal: SPACING * 0.8,
+    marginBottom: normalizeSize(8),
+  },
+  replyTitle: {
+    fontFamily: "Comfortaa_700Bold",
+    fontSize: normalizeSize(12),
+    marginBottom: normalizeSize(4),
+  },
+  replyExcerpt: {
+    fontFamily: "Comfortaa_400Regular",
+    fontSize: normalizeSize(12),
+    opacity: 0.9,
+  },
+  replyClose: {
+    marginLeft: SPACING,
+    paddingTop: normalizeSize(2),
+  },
+
+  cooldownText: {
+    fontFamily: "Comfortaa_400Regular",
+    fontSize: normalizeSize(12),
   },
 
   // Orbes

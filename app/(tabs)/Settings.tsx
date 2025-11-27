@@ -1,4 +1,10 @@
-import React, { useState, useEffect, useRef, useMemo, useCallback } from "react";
+import React, {
+  useState,
+  useEffect,
+  useRef,
+  useMemo,
+  useCallback,
+} from "react";
 import {
   View,
   Text,
@@ -26,24 +32,26 @@ import { useLanguage } from "../../context/LanguageContext";
 import designSystem, { Theme } from "../../theme/designSystem";
 import CustomHeader from "@/components/CustomHeader";
 import GlobalLayout from "../../components/GlobalLayout";
-import i18n from "../../i18n";
-import { fetchAndSaveUserLocation } from "../../services/locationService";
 import { useFocusEffect } from "@react-navigation/native";
 import { shareReferralLink } from "@/src/referral/shareReferral";
 import * as Application from "expo-application";
 import {
   enableNotificationsFromSettings,
   disableNotificationsFromSettings,
-} from "../../services/notificationService";
+} from "@/services/notificationService";
 import {
   enableLocationFromSettings,
   disableLocationFromSettings,
 } from "../../services/locationService";
 import { useReferralStatus } from "@/src/referral/useReferralStatus";
 import { nudgeClaimableOnce } from "@/src/referral/nudge";
-import { maybeAskForReview, openStoreListing } from "@/src/services/reviewService";
+import {
+  maybeAskForReview,
+  openStoreListing,
+} from "@/src/services/reviewService";
 import { tap, success, warning } from "@/src/utils/haptics";
 import * as Device from "expo-device";
+import { useToast } from "@/src/ui/Toast";
 
 const SPACING = 18;
 const { width: SCREEN_WIDTH, height: SCREEN_HEIGHT } = Dimensions.get("window");
@@ -56,7 +64,8 @@ const normalizeSize = (size: number) => {
 
 // rgba helper (hex/rgb -> rgba avec alpha)
 const withAlpha = (color: string, alpha: number) => {
-  const clamp = (n: number, min = 0, max = 1) => Math.min(Math.max(n, min), max);
+  const clamp = (n: number, min = 0, max = 1) =>
+    Math.min(Math.max(n, min), max);
   const a = clamp(alpha);
 
   if (/^rgba?\(/i.test(color)) {
@@ -75,7 +84,7 @@ const withAlpha = (color: string, alpha: number) => {
   return `rgba(0,0,0,${a})`;
 };
 
-const SHOW_PREMIUM = false as const;
+const SHOW_PREMIUM = true as const;
 
 // 🌍 Langues supportées
 const SUPPORTED_LANGUAGES = [
@@ -143,13 +152,19 @@ const getDynamicStyles = (currentTheme: Theme, isDarkMode: boolean) => ({
       : currentTheme.colors.primary,
   },
   buttonGradient: {
-    colors: [currentTheme.colors.primary, currentTheme.colors.secondary] as const,
+    colors: [
+      currentTheme.colors.primary,
+      currentTheme.colors.secondary,
+    ] as const,
   },
   accountButtonText: {
     color: currentTheme.colors.textPrimary,
   },
   adminButtonGradient: {
-    colors: [currentTheme.colors.primary, currentTheme.colors.secondary] as const,
+    colors: [
+      currentTheme.colors.primary,
+      currentTheme.colors.secondary,
+    ] as const,
   },
   adminButtonText: {
     color: currentTheme.colors.textPrimary,
@@ -173,7 +188,7 @@ export default function Settings() {
   const router = useRouter();
   const isActiveRef = useRef(true);
   const [deviceName, setDeviceName] = useState<string>("Unknown");
-  const [isSubscribed, setIsSubscribed] = useState(true);
+  const [isPremium, setIsPremium] = useState(false);
   const scrollRef = useRef<ScrollView>(null);
   const [notificationsEnabled, setNotificationsEnabled] = useState(true);
   const [locationEnabled, setLocationEnabled] = useState(true);
@@ -183,6 +198,7 @@ export default function Settings() {
     : designSystem.lightTheme;
   const { claimable } = useReferralStatus();
   const claimableCount = claimable.length;
+  const { show: showToast } = useToast();
 
   // 🔒 Langue "safe" utilisée partout dans ce composant
   const safeLanguage = useMemo(
@@ -205,6 +221,32 @@ export default function Settings() {
     [currentTheme, isDarkMode]
   );
 
+  // Helpers Alert
+  const showErrorAlert = useCallback(
+    (titleKey: string, messageKey: string) => {
+      Alert.alert(t(titleKey), t(messageKey));
+    },
+    [t]
+  );
+
+  const showSystemSettingsAlert = useCallback(
+    (titleKey: string, messageKey: string) => {
+      Alert.alert(
+        t(titleKey),
+        t(messageKey),
+        [
+          { text: t("cancel"), style: "cancel" },
+          {
+            text: t("openSettings"),
+            onPress: () => Linking.openSettings?.(),
+          },
+        ],
+        { cancelable: true }
+      );
+    },
+    [t]
+  );
+
   // Support mail
   const openSupport = useCallback(() => {
     tap();
@@ -221,21 +263,16 @@ export default function Settings() {
     Linking.openURL(
       `mailto:support@challengeties.app?subject=${subject}&body=${body}`
     ).catch(() => {
-      Alert.alert(
-        t("error"),
-        t("settingsPage.openMailError", {
-          defaultValue: "Impossible d’ouvrir votre application mail.",
-        })
-      );
+      showErrorAlert("error", "settingsPage.openMailError");
     });
-  }, [safeLanguage, isDarkMode, appVersion, deviceName, t]);
+  }, [safeLanguage, isDarkMode, appVersion, deviceName, showErrorAlert]);
 
   // Nudge referral
   useEffect(() => {
     nudgeClaimableOnce(claimable);
   }, [claimable]);
 
-  // Permissions notifs
+  // Permissions notifs (état système)
   useEffect(() => {
     (async () => {
       try {
@@ -243,7 +280,9 @@ export default function Settings() {
         if (status !== "granted") {
           setNotificationsEnabled(false);
         }
-      } catch {}
+      } catch {
+        // soft fail
+      }
     })();
   }, []);
 
@@ -277,11 +316,15 @@ export default function Settings() {
 
   useFocusEffect(
     React.useCallback(() => {
+      isActiveRef.current = true;
       scrollRef.current?.scrollTo({ y: 0, animated: false });
+      return () => {
+        isActiveRef.current = false;
+      };
     }, [])
   );
 
-  // Sync avec Firestore (notifications, location, langue)
+  // Sync avec Firestore (notifications, location, langue, premium)
   useEffect(() => {
     const userId = auth.currentUser?.uid;
     if (!userId) {
@@ -299,12 +342,12 @@ export default function Settings() {
         if (snapshot.exists()) {
           const data = snapshot.data() as any;
 
-          setNotificationsEnabled(
-            data.notificationsEnabled ?? true
-          );
-          setLocationEnabled(
-            data.locationEnabled ?? true
-          );
+          setNotificationsEnabled(data.notificationsEnabled ?? true);
+          setLocationEnabled(data.locationEnabled ?? true);
+
+          // 🔓 Premium réel (depuis Firestore : premium / isPremium)
+          const premiumFlag = !!(data.premium ?? data.isPremium);
+          setIsPremium(premiumFlag);
 
           if (data.language) {
             const normalized = normalizeLanguageCode(data.language);
@@ -316,20 +359,19 @@ export default function Settings() {
         }
       },
       (error) => {
-        console.error("Erreur onSnapshot Settings:", error.message);
+        console.error("Erreur onSnapshot Settings:", error);
+        // permission-denied en déconnexion : on ignore
         if (error.code === "permission-denied" && !auth.currentUser) {
-          // ignore si user déconnecté
-        } else {
-          Alert.alert(t("error"), t("unknownError"));
+          return;
         }
+        showErrorAlert("error", "unknownError");
       }
     );
 
     return () => {
-      isActiveRef.current = false;
       unsubscribe();
     };
-  }, [t, language, setLanguage, router, i18next]);
+  }, [t, language, setLanguage, router, i18next, showErrorAlert]);
 
   const savePreferences = async (updates: { [key: string]: any }) => {
     const userId = auth.currentUser?.uid;
@@ -339,7 +381,7 @@ export default function Settings() {
         await updateDoc(userRef, updates);
       } catch (error) {
         console.error("failedToSavePreferences", error);
-        Alert.alert(t("error"), t("failedToSavePreferences"));
+        showErrorAlert("error", "failedToSavePreferences");
       }
     }
   };
@@ -349,7 +391,9 @@ export default function Settings() {
   const openSystemSettings = useCallback(() => {
     try {
       Linking.openSettings?.();
-    } catch {}
+    } catch {
+      // si ça plante, on reste silencieux
+    }
   }, []);
 
   const handleNotificationsToggle = async (value: boolean) => {
@@ -364,22 +408,31 @@ export default function Settings() {
         if (!ok) {
           warning();
           setNotificationsEnabled(false);
-          Alert.alert(
-            t("permissionDenied"),
-            t("mustAllowNotifications"),
-            [
-              { text: t("cancel"), style: "cancel" },
-              { text: t("openSettings"), onPress: () => Linking.openSettings?.() },
-            ],
-            { cancelable: true }
+          showSystemSettingsAlert(
+            "permissionDenied",
+            "mustAllowNotifications"
+          );
+        } else {
+          success();
+          showToast(
+            t("notificationsEnabled", {
+              defaultValue: "Notifications activées ✅",
+            }),
+            "success"
           );
         }
       } else {
         await disableNotificationsFromSettings();
+        showToast(
+          t("notificationsDisabled", {
+            defaultValue: "Notifications désactivées.",
+          }),
+          "info"
+        );
       }
     } catch (e) {
       console.error("❌ handleNotificationsToggle:", e);
-      Alert.alert(t("error"), t("failedToSavePreferences"));
+      showErrorAlert("error", "failedToSavePreferences");
       setNotificationsEnabled(!value);
     } finally {
       setSaving((s) => ({ ...s, notif: false }));
@@ -398,25 +451,28 @@ export default function Settings() {
         if (!ok) {
           warning();
           setLocationEnabled(false);
-          Alert.alert(
-            t("permissionDenied"),
-            t("settingsPage.error"),
-            [
-              { text: t("cancel"), style: "cancel" },
-              { text: t("openSettings"), onPress: () => Linking.openSettings?.() },
-            ],
-            { cancelable: true }
-          );
+          showSystemSettingsAlert("permissionDenied", "settingsPage.error");
         } else {
           success();
-          Alert.alert(t("settingsPage.enabled"), t("settingsPage.updated"));
+          showToast(
+            t("settingsPage.locationOn", {
+              defaultValue: "Localisation activée ✅",
+            }),
+            "success"
+          );
         }
       } else {
         await disableLocationFromSettings();
+        showToast(
+          t("settingsPage.locationOff", {
+            defaultValue: "Localisation désactivée.",
+          }),
+          "info"
+        );
       }
     } catch (e) {
       console.error("❌ handleLocationToggle:", e);
-      Alert.alert(t("error"), t("failedToSavePreferences"));
+      showErrorAlert("error", "failedToSavePreferences");
       setLocationEnabled(!value);
     } finally {
       setSaving((s) => ({ ...s, loc: false }));
@@ -424,12 +480,36 @@ export default function Settings() {
   };
 
   const clearCache = async () => {
-    try {
-      await AsyncStorage.clear();
-      Alert.alert(t("cacheCleared"), t("tempDataDeleted"));
-    } catch (error) {
-      Alert.alert(t("error"), t("failedToClearCache"));
-    }
+    Alert.alert(
+      t("clearCache"),
+      t("clearCacheConfirm", {
+        defaultValue:
+          "Voulez-vous vraiment vider le cache ? Certaines données temporaires seront supprimées.",
+      }),
+      [
+        { text: t("cancel"), style: "cancel" },
+        {
+          text: t("confirm", { defaultValue: "Confirmer" }),
+          style: "destructive",
+          onPress: async () => {
+            try {
+              await AsyncStorage.clear();
+              success();
+              showToast(
+                t("cacheCleared", {
+                  defaultValue: "Cache vidé avec succès ✅",
+                }),
+                "success"
+              );
+            } catch (error) {
+              console.error("❌ clearCache:", error);
+              showErrorAlert("error", "failedToClearCache");
+            }
+          },
+        },
+      ],
+      { cancelable: true }
+    );
   };
 
   const handleLogout = async () => {
@@ -443,13 +523,17 @@ export default function Settings() {
           style: "destructive",
           onPress: async () => {
             try {
+              tap();
               isActiveRef.current = false;
               await auth.signOut();
               router.replace("/login");
-              Alert.alert(t("loggedOut"), t("disconnected"));
+              showToast(
+                t("loggedOut", { defaultValue: "Déconnecté." }),
+                "info"
+              );
             } catch (error) {
               console.error("Erreur déconnexion:", error);
-              Alert.alert(t("error"), t("logoutFailed"));
+              showErrorAlert("error", "logoutFailed");
             }
           },
         },
@@ -459,27 +543,48 @@ export default function Settings() {
   };
 
   const handleDeleteAccount = () => {
-    Alert.alert(t("deleteAccount"), t("deleteAccountConfirm"), [
-      { text: t("cancel"), style: "cancel" },
-      {
-        text: t("delete"),
-        style: "destructive",
-        onPress: async () => {
-          try {
-            const user = auth.currentUser;
-            if (user) {
+    Alert.alert(
+      t("deleteAccount"),
+      t("deleteAccountConfirm"),
+      [
+        { text: t("cancel"), style: "cancel" },
+        {
+          text: t("delete"),
+          style: "destructive",
+          onPress: async () => {
+            try {
+              const user = auth.currentUser;
+              if (!user) {
+                showErrorAlert("error", "noUserConnected");
+                return;
+              }
               await user.delete();
-              Alert.alert(t("accountDeleted"), t("accountDeletedSuccess"));
+              showToast(
+                t("accountDeleted", {
+                  defaultValue: "Compte supprimé.",
+                }),
+                "success"
+              );
               router.replace("/login");
-            } else {
-              Alert.alert(t("error"), t("noUserConnected"));
+            } catch (error: any) {
+              console.error("❌ deleteAccount:", error);
+              if (error?.code === "auth/requires-recent-login") {
+                Alert.alert(
+                  t("error"),
+                  t("deleteAccountReauth", {
+                    defaultValue:
+                      "Pour des raisons de sécurité, reconnecte-toi avant de supprimer ton compte.",
+                  })
+                );
+              } else {
+                showErrorAlert("error", "failedToDeleteAccount");
+              }
             }
-          } catch (error) {
-            Alert.alert(t("error"), t("failedToDeleteAccount"));
-          }
+          },
         },
-      },
-    ]);
+      ],
+      { cancelable: true }
+    );
   };
 
   const adminUID = "GiN2yTfA7NWISeb4QjXmDPq5TgK2";
@@ -505,7 +610,10 @@ export default function Settings() {
         />
         <LinearGradient
           pointerEvents="none"
-          colors={[withAlpha(currentTheme.colors.secondary, 0.25), "transparent"]}
+          colors={[
+            withAlpha(currentTheme.colors.secondary, 0.25),
+            "transparent",
+          ]}
           style={styles.bgOrbBottom}
         />
         <ScrollView
@@ -519,7 +627,10 @@ export default function Settings() {
               {t("preferences")}
             </Text>
             <LinearGradient
-              colors={[currentTheme.colors.secondary, currentTheme.colors.primary]}
+              colors={[
+                currentTheme.colors.secondary,
+                currentTheme.colors.primary,
+              ]}
               start={{ x: 0, y: 0 }}
               end={{ x: 1, y: 0 }}
               style={styles.sectionAccent}
@@ -529,7 +640,9 @@ export default function Settings() {
               style={[styles.card, dynamicStyles.card]}
             >
               <View style={styles.settingItem}>
-                <Text style={[styles.settingLabel, dynamicStyles.settingLabel]}>
+                <Text
+                  style={[styles.settingLabel, dynamicStyles.settingLabel]}
+                >
                   {t("notifications")}
                 </Text>
                 <Switch
@@ -571,7 +684,9 @@ export default function Settings() {
               style={[styles.card, dynamicStyles.card]}
             >
               <View style={styles.settingItem}>
-                <Text style={[styles.settingLabel, dynamicStyles.settingLabel]}>
+                <Text
+                  style={[styles.settingLabel, dynamicStyles.settingLabel]}
+                >
                   {t("location")}
                 </Text>
                 <Switch
@@ -617,12 +732,17 @@ export default function Settings() {
               style={[styles.card, dynamicStyles.card]}
             >
               <View style={styles.settingItem}>
-                <Text style={[styles.settingLabel, dynamicStyles.settingLabel]}>
+                <Text
+                  style={[styles.settingLabel, dynamicStyles.settingLabel]}
+                >
                   {t("darkMode")}
                 </Text>
                 <Switch
                   value={isDarkMode}
-                  onValueChange={toggleTheme}
+                  onValueChange={() => {
+                    tap();
+                    toggleTheme();
+                  }}
                   trackColor={dynamicStyles.switch.trackColor}
                   thumbColor={dynamicStyles.switch.thumbColor}
                   style={styles.switch}
@@ -637,7 +757,9 @@ export default function Settings() {
               style={[styles.card, dynamicStyles.card]}
             >
               <View style={styles.settingItem}>
-                <Text style={[styles.settingLabel, dynamicStyles.settingLabel]}>
+                <Text
+                  style={[styles.settingLabel, dynamicStyles.settingLabel]}
+                >
                   {t("language")}
                 </Text>
                 <View style={styles.pickerContainer}>
@@ -689,7 +811,9 @@ export default function Settings() {
           {/* === Section Premium === */}
           {SHOW_PREMIUM && (
             <Animated.View entering={FadeInUp.delay(420)} style={styles.section}>
-              <Text style={[styles.sectionHeader, dynamicStyles.sectionHeader]}>
+              <Text
+                style={[styles.sectionHeader, dynamicStyles.sectionHeader]}
+              >
                 {t("premium.title", { defaultValue: "Premium" })}
               </Text>
 
@@ -722,32 +846,34 @@ export default function Settings() {
                     style={[
                       styles.premiumBadge,
                       {
-                        backgroundColor: isSubscribed
+                        backgroundColor: isPremium
                           ? "rgba(34,197,94,0.18)"
                           : "rgba(255,140,0,0.15)",
-                        borderColor: isSubscribed ? "#22C55E" : "#FF8C00",
+                        borderColor: isPremium ? "#22C55E" : "#FF8C00",
                       },
                     ]}
                   >
                     <Ionicons
                       name={
-                        isSubscribed
+                        isPremium
                           ? "checkmark-circle-outline"
                           : "sparkles-outline"
                       }
                       size={normalizeSize(16)}
-                      color={isSubscribed ? "#22C55E" : "#FF8C00"}
+                      color={isPremium ? "#22C55E" : "#FF8C00"}
                       style={{ marginRight: 6 }}
                     />
                     <Text
                       style={[
                         styles.premiumBadgeText,
-                        { color: isSubscribed ? "#22C55E" : "#FF8C00" },
+                        { color: isPremium ? "#22C55E" : "#FF8C00" },
                       ]}
                     >
-                      {isSubscribed
+                      {isPremium
                         ? t("premium.active", { defaultValue: "Actif" })
-                        : t("premium.discover", { defaultValue: "Découvrir" })}
+                        : t("premium.discover", {
+                            defaultValue: "Découvrir",
+                          })}
                     </Text>
                   </View>
                 </View>
@@ -760,7 +886,7 @@ export default function Settings() {
                 >
                   {t("premium.subtitle", {
                     defaultValue:
-                      "Supprime les pubs, débloque le mode Duo illimité, les stats avancées, et d’autres bonus exclusifs.",
+                      "Supprime toutes les pubs de l’app et soutiens ChallengeTies. Aucune mécanique pay-to-win : tout le monde joue avec les mêmes règles.",
                   })}
                 </Text>
 
@@ -789,7 +915,7 @@ export default function Settings() {
                       style={{ marginRight: 8 }}
                     />
                     <Text style={styles.premiumCtaText}>
-                      {isSubscribed
+                      {isPremium
                         ? t("premium.manage", {
                             defaultValue: "Gérer mon Premium",
                           })
@@ -803,16 +929,14 @@ export default function Settings() {
                 <View style={styles.premiumBullets}>
                   {[
                     t("premium.benefit.noAds", {
-                      defaultValue: "Aucune publicité",
+                      defaultValue: "Plus aucune publicité dans l’app",
                     }),
-                    t("premium.benefit.duo", {
-                      defaultValue: "Duo illimité",
+                    t("premium.benefit.prioritySupport", {
+                      defaultValue: "Support email prioritaire",
                     }),
-                    t("premium.benefit.stats", {
-                      defaultValue: "Statistiques avancées",
-                    }),
-                    t("premium.benefit.support", {
-                      defaultValue: "Support prioritaire",
+                    t("premium.benefit.supportProject", {
+                      defaultValue:
+                        "Tu finances les prochaines mises à jour de ChallengeTies",
                     }),
                   ].map((label, idx) => (
                     <View key={idx} style={styles.premiumBulletRow}>
@@ -842,7 +966,10 @@ export default function Settings() {
               {t("account")}
             </Text>
             <LinearGradient
-              colors={[currentTheme.colors.secondary, currentTheme.colors.primary]}
+              colors={[
+                currentTheme.colors.secondary,
+                currentTheme.colors.primary,
+              ]}
               start={{ x: 0, y: 0 }}
               end={{ x: 1, y: 0 }}
               style={styles.sectionAccent}
@@ -867,7 +994,9 @@ export default function Settings() {
                     {t("referral.banner.title")}
                   </Text>
                   <Text style={styles.claimBannerText}>
-                    {t("referral.banner.subtitle", { count: claimableCount })}
+                    {t("referral.banner.subtitle", {
+                      count: claimableCount,
+                    })}
                   </Text>
                 </View>
                 <View style={styles.claimBannerCta}>
@@ -945,7 +1074,9 @@ export default function Settings() {
                   tap();
                   try {
                     await shareReferralLink();
-                  } catch (e) {}
+                  } catch {
+                    // soft fail
+                  }
                 }}
                 accessibilityLabel={t("inviteFriends") || "Inviter des amis"}
                 testID="invite-friends-button"
@@ -1131,7 +1262,9 @@ export default function Settings() {
               entering={FadeInUp.delay(860)}
               style={{ marginTop: SPACING }}
             >
-              <Text style={[styles.sectionHeader, dynamicStyles.sectionHeader]}>
+              <Text
+                style={[styles.sectionHeader, dynamicStyles.sectionHeader]}
+              >
                 {t("dangerZone", { defaultValue: "Zone dangereuse" })}
               </Text>
               <LinearGradient
@@ -1253,7 +1386,9 @@ export default function Settings() {
                             dynamicStyles.adminButtonText,
                           ]}
                         >
-                          {t("adminEvents", { defaultValue: "Admin Events" })}
+                          {t("adminEvents", {
+                            defaultValue: "Admin Events",
+                          })}
                         </Text>
                       </LinearGradient>
                     </TouchableOpacity>
@@ -1295,7 +1430,10 @@ export default function Settings() {
               {t("about")}
             </Text>
             <LinearGradient
-              colors={[currentTheme.colors.secondary, currentTheme.colors.primary]}
+              colors={[
+                currentTheme.colors.secondary,
+                currentTheme.colors.primary,
+              ]}
               start={{ x: 0, y: 0 }}
               end={{ x: 1, y: 0 }}
               style={styles.sectionAccent}
@@ -1583,17 +1721,20 @@ const styles = StyleSheet.create({
     shadowRadius: normalizeSize(8),
     elevation: 10,
     borderWidth: 2.5,
-    overflow: "hidden",
+    overflow: "visible",
   },
   premiumHeaderRow: {
     flexDirection: "row",
     alignItems: "center",
     justifyContent: "space-between",
     marginBottom: normalizeSize(10),
+    columnGap: normalizeSize(8),
   },
   premiumTitleRow: {
     flexDirection: "row",
     alignItems: "center",
+    flexShrink: 1,
+    maxWidth: "70%",
   },
   premiumTitle: {
     fontSize: normalizeSize(18),
@@ -1603,13 +1744,15 @@ const styles = StyleSheet.create({
   premiumBadge: {
     flexDirection: "row",
     alignItems: "center",
-    paddingHorizontal: normalizeSize(10),
+    paddingHorizontal: normalizeSize(12),
     paddingVertical: normalizeSize(6),
     borderRadius: normalizeSize(999),
     borderWidth: 1,
+    marginLeft: normalizeSize(8),
+    flexShrink: 0,
   },
   premiumBadgeText: {
-    fontSize: normalizeSize(12),
+    fontSize: normalizeSize(11),
     fontFamily: "Comfortaa_700Bold",
   },
   sectionAccent: {
