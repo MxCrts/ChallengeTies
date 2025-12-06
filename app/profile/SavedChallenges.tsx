@@ -17,6 +17,7 @@ import {
   StatusBar,
   Platform,
   AccessibilityInfo,
+  I18nManager,
 } from "react-native";
 import { LinearGradient } from "expo-linear-gradient";
 import Swipeable from "react-native-gesture-handler/Swipeable";
@@ -400,20 +401,29 @@ export default function SavedChallengesScreen() {
                           color: isDarkMode
                             ? currentTheme.colors.textPrimary
                             : "#000000",
+                          writingDirection: I18nManager.isRTL ? "rtl" : "ltr",
+                          textAlign: I18nManager.isRTL ? "right" : "left",
                         },
                       ]}
                       numberOfLines={2}
+                      ellipsizeMode="tail"
+                      adjustsFontSizeToFit
                     >
                       {item.title}
                     </Text>
 
-                    {!!item.description && (
+                                        {!!item.description && (
                       <Text
                         style={[
                           styles.challengeDescription,
-                          { color: currentTheme.colors.textSecondary },
+                          {
+                            color: currentTheme.colors.textSecondary,
+                            writingDirection: I18nManager.isRTL ? "rtl" : "ltr",
+                            textAlign: I18nManager.isRTL ? "right" : "left",
+                          },
                         ]}
                         numberOfLines={2}
+                        ellipsizeMode="tail"
                       >
                         {item.description}
                       </Text>
@@ -774,6 +784,8 @@ const styles = StyleSheet.create({
   categoryText: {
     fontSize: normalizeSize(11.5),
     fontFamily: "Comfortaa_400Regular",
+    writingDirection: I18nManager.isRTL ? "rtl" : "ltr",
+   textAlign: I18nManager.isRTL ? "right" : "left",
   },
   savedPill: {
     flexDirection: "row",
@@ -788,6 +800,8 @@ const styles = StyleSheet.create({
     fontSize: normalizeSize(11),
     fontFamily: "Comfortaa_700Bold",
     color: "#0b1120",
+    writingDirection: I18nManager.isRTL ? "rtl" : "ltr",
+   textAlign: I18nManager.isRTL ? "right" : "left",
   },
 
   challengeTitle: {
@@ -827,6 +841,7 @@ const styles = StyleSheet.create({
     fontFamily: "Comfortaa_700Bold",
     fontSize: normalizeSize(14.5),
     textAlign: "center",
+    writingDirection: I18nManager.isRTL ? "rtl" : "ltr",
   },
 
   loadingContainer: {
@@ -840,6 +855,7 @@ const styles = StyleSheet.create({
     fontSize: normalizeSize(18),
     fontFamily: "Comfortaa_400Regular",
     textAlign: "center",
+    writingDirection: I18nManager.isRTL ? "rtl" : "ltr",
   },
 
   noChallengesContent: {
@@ -853,6 +869,7 @@ const styles = StyleSheet.create({
     fontFamily: "Comfortaa_700Bold",
     marginTop: SPACING,
     textAlign: "center",
+    writingDirection: I18nManager.isRTL ? "rtl" : "ltr",
   },
   noChallengesSubtext: {
     fontSize: normalizeSize(18),
@@ -860,6 +877,7 @@ const styles = StyleSheet.create({
     textAlign: "center",
     marginTop: SPACING / 2,
     maxWidth: SCREEN_WIDTH * 0.75,
+    writingDirection: I18nManager.isRTL ? "rtl" : "ltr",
   },
 
   swipeActionsContainer: {
@@ -930,5 +948,7 @@ const styles = StyleSheet.create({
     fontSize: normalizeSize(13),
     color: "#0b1120",
     flexShrink: 1,
+    writingDirection: I18nManager.isRTL ? "rtl" : "ltr",
+   textAlign: I18nManager.isRTL ? "right" : "left",
   },
 });

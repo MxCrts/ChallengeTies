@@ -131,7 +131,12 @@ export default function ShareAndEarn() {
   const toastTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const [reduceMotion, setReduceMotion] = useState(false);
 
+  // 🔒 Monté/démonté pour éviter les setState inutiles
+  const isMountedRef = useRef(true);
+
   useEffect(() => {
+    isMountedRef.current = true;
+
     let mounted = true;
     AccessibilityInfo.isReduceMotionEnabled()
       .then((v) => mounted && setReduceMotion(!!v))
@@ -140,8 +145,16 @@ export default function ShareAndEarn() {
       "reduceMotionChanged",
       (v) => mounted && setReduceMotion(!!v)
     );
+
     return () => {
       mounted = false;
+      isMountedRef.current = false;
+
+      // Nettoyage des timers (toast, confettis, bannière)
+      if (bannerTimerRef.current) clearTimeout(bannerTimerRef.current);
+      if (confettiTimerRef.current) clearTimeout(confettiTimerRef.current);
+      if (toastTimerRef.current) clearTimeout(toastTimerRef.current);
+
       // @ts-ignore RN compat
       sub?.remove?.();
     };
@@ -149,6 +162,8 @@ export default function ShareAndEarn() {
 
   const showToast = useCallback(
     (type: ToastType, message: string) => {
+      if (!isMountedRef.current) return;
+
       setToast({ type, message });
 
       if (toastTimerRef.current) {
@@ -189,6 +204,7 @@ export default function ShareAndEarn() {
             useNativeDriver: true,
           }),
         ]).start(() => {
+          if (!isMountedRef.current) return;
           setToast((current) =>
             current && current.message === message ? null : current
           );
@@ -200,8 +216,10 @@ export default function ShareAndEarn() {
 
   // ✅ Detect parrain (filleul)
   const fetchPendingReferrer = useCallback(async () => {
-    if (!me) {
-      setPendingReferrer({ status: "idle" });
+    if (!me || !isMountedRef.current) {
+      if (isMountedRef.current) {
+        setPendingReferrer({ status: "idle" });
+      }
       return;
     }
 
@@ -236,6 +254,7 @@ export default function ShareAndEarn() {
           }
         } catch {}
 
+        if (!isMountedRef.current) return;
         setPendingReferrer({
           status: "linked",
           referrerId: linkedReferrerId,
@@ -256,6 +275,7 @@ export default function ShareAndEarn() {
           }
         } catch {}
 
+        if (!isMountedRef.current) return;
         setPendingReferrer({
           status: "pending",
           referrerId: cleanStored,
@@ -264,9 +284,11 @@ export default function ShareAndEarn() {
         return;
       }
 
+      if (!isMountedRef.current) return;
       setPendingReferrer({ status: "idle" });
     } catch (e) {
       console.log("[referral] fetchPendingReferrer error:", e);
+      if (!isMountedRef.current) return;
       setPendingReferrer({ status: "idle" });
     }
   }, [me]);
@@ -274,7 +296,9 @@ export default function ShareAndEarn() {
   const fetchStats = useCallback(async () => {
     try {
       if (!me) {
-        setLoading(false);
+        if (isMountedRef.current) {
+          setLoading(false);
+        }
         return;
       }
       if (isFetchingRef.current) return;
@@ -299,14 +323,20 @@ export default function ShareAndEarn() {
           ? data.referral.pendingMilestones
           : [];
 
-        setClaimed(serverClaimed);
-        setPending(serverPending);
+        if (isMountedRef.current) {
+          setClaimed(serverClaimed);
+          setPending(serverPending);
+        }
       }
 
       if (typeof serverCount === "number") {
-        setActivatedCount(serverCount);
+        if (isMountedRef.current) {
+          setActivatedCount(serverCount);
+        }
+
         try {
-          await logEvent("share_open" as any);
+          const r = logEvent("share_open" as any);
+          (r as any)?.catch?.(() => {});
         } catch {}
         return;
       }
@@ -322,25 +352,36 @@ export default function ShareAndEarn() {
         return u?.activated === true || u?.referralActivated === true;
       }).length;
 
-      setActivatedCount(activated);
+      if (isMountedRef.current) {
+        setActivatedCount(activated);
+      }
 
       try {
-        await logEvent("share_open" as any);
+        const r = logEvent("share_open" as any);
+        (r as any)?.catch?.(() => {});
       } catch {}
     } catch (e: any) {
       console.log("[share] load error:", e?.message ?? e);
-      showToast(
-        "error",
-        String(t("referral.share.errors.loadStats") || "Erreur de chargement")
-      );
+      if (isMountedRef.current) {
+        showToast(
+          "error",
+          String(
+            t("referral.share.errors.loadStats") || "Erreur de chargement"
+          )
+        );
+      }
     } finally {
-      setLoading(false);
+      if (isMountedRef.current) {
+        setLoading(false);
+      }
       isFetchingRef.current = false;
     }
   }, [me, t, showToast]);
 
   const showRewardBanner = useCallback(
     (amount: number) => {
+      if (!isMountedRef.current) return;
+
       setRewardBanner({ visible: true, amount });
       Animated.timing(bannerY, {
         toValue: 0,
@@ -357,6 +398,7 @@ export default function ShareAndEarn() {
           easing: Easing.in(Easing.cubic),
           useNativeDriver: true,
         }).start(() => {
+          if (!isMountedRef.current) return;
           setRewardBanner({ visible: false, amount: 0 });
         });
       }, 2200);
@@ -365,6 +407,8 @@ export default function ShareAndEarn() {
   );
 
   const fireConfetti = useCallback(() => {
+    if (!isMountedRef.current) return;
+
     const chars = ["🎉", "🎊", "🏆", "✨", "💥", "👏"];
     const baseWidth = Math.max(320, width - 40);
     const batch = Array.from({ length: 18 }).map(() => ({
@@ -376,7 +420,10 @@ export default function ShareAndEarn() {
     setConfetti(batch);
 
     if (confettiTimerRef.current) clearTimeout(confettiTimerRef.current);
-    confettiTimerRef.current = setTimeout(() => setConfetti([]), 1200);
+    confettiTimerRef.current = setTimeout(() => {
+      if (!isMountedRef.current) return;
+      setConfetti([]);
+    }, 1200);
   }, [width]);
 
   const claimMilestone = useCallback(
@@ -387,7 +434,9 @@ export default function ShareAndEarn() {
         const callable = httpsCallable(functions, "claimReferralMilestone");
         await callable({ milestone: m });
 
-        setLoading(true);
+        if (isMountedRef.current) {
+          setLoading(true);
+        }
         await fetchStats();
 
         const amount = REWARDS[m] ?? 0;
@@ -396,10 +445,14 @@ export default function ShareAndEarn() {
         fireConfetti();
 
         try {
-          await maybeAskForReview();
+          // on ne bloque pas l'UI sur l’analytics
+          const r = maybeAskForReview();
+          (r as any)?.catch?.(() => {});
         } catch {}
+
         try {
-          await logEvent("share_claim_success" as any, { milestone: m });
+          const r = logEvent("share_claim_success" as any, { milestone: m });
+          (r as any)?.catch?.(() => {});
         } catch {}
       } catch (e: any) {
         const msg =
@@ -414,10 +467,11 @@ export default function ShareAndEarn() {
         showToast("error", String(msg));
 
         try {
-          await logEvent("share_claim_error" as any, {
+          const r = logEvent("share_claim_error" as any, {
             milestone: m,
             error: String(e?.message || e),
           });
+          (r as any)?.catch?.(() => {});
         } catch {}
       }
     },
@@ -449,22 +503,21 @@ export default function ShareAndEarn() {
       </Animated.Text>
     ));
 
-  useEffect(() => {
-    fetchStats();
-    fetchPendingReferrer();
-    return () => {
-      if (bannerTimerRef.current) clearTimeout(bannerTimerRef.current);
-      if (confettiTimerRef.current) clearTimeout(confettiTimerRef.current);
-      if (toastTimerRef.current) clearTimeout(toastTimerRef.current);
-    };
-  }, [fetchStats, fetchPendingReferrer]);
-
+  // 🔁 Chargement sur focus (et 1er affichage)
   useFocusEffect(
     useCallback(() => {
-      setLoading(true);
+      if (!me) {
+        if (isMountedRef.current) {
+          setLoading(false);
+        }
+        return;
+      }
+      if (isMountedRef.current) {
+        setLoading(true);
+      }
       fetchStats();
       fetchPendingReferrer();
-    }, [fetchStats, fetchPendingReferrer])
+    }, [fetchStats, fetchPendingReferrer, me])
   );
 
   const nextMilestone = useMemo(() => {
@@ -486,7 +539,8 @@ export default function ShareAndEarn() {
         )
       );
       try {
-        await logEvent("share_link_copied", { kind });
+        const r = logEvent("share_link_copied", { kind });
+        (r as any)?.catch?.(() => {});
       } catch {}
     } catch {}
   };
@@ -523,7 +577,8 @@ export default function ShareAndEarn() {
 
       success();
       try {
-        await logEvent("share_native_opened");
+        const r = logEvent("share_native_opened");
+        (r as any)?.catch?.(() => {});
       } catch {}
     } catch (e: any) {
       if (e?.message) console.log("Share error:", e.message);
@@ -758,6 +813,9 @@ export default function ShareAndEarn() {
           <Text style={[styles.subtitle, { color: textSecondary }]}>
             {t("referral.share.subtitle")}
           </Text>
+          <Text style={[styles.tip, { color: textSecondary }]}>
+           {t("referral.share.howTo")}
+         </Text>
 
           {/* ✅ Bloc filleul : parrain détecté */}
           {pendingReferrer.status !== "idle" && (
@@ -970,11 +1028,12 @@ export default function ShareAndEarn() {
               </View>
             ) : (
               <Text style={[styles.bigCount, { color: textPrimary }]}>
-                {activatedCount}{" "}
+                {t("referral.share.activatedReferrals")}:{" "}
                 <Text style={[styles.small, { color: textSecondary }]}>
-                  {t("referral.share.bigCountSuffix")}
+                  {activatedCount}
                 </Text>
               </Text>
+
             )}
 
             {!!nextMilestone && !loading && (
@@ -1242,33 +1301,42 @@ const makeStyles = (normalize: (n: number) => number) =>
       marginTop: 10,
     },
     milestone: {
-      paddingHorizontal: 10,
-      paddingVertical: 6,
-      borderRadius: 999,
-      borderWidth: 1,
-      marginRight: 8,
-      marginBottom: 8,
-    },
-    milestoneTxt: {
-      fontSize: normalize(11),
-      fontWeight: "800",
-    },
+  flexDirection: "row",           // 👉 texte + bouton sur une ligne
+  alignItems: "center",
+  justifyContent: "space-between",
+  paddingHorizontal: 12,
+  paddingVertical: 8,
+  borderRadius: 999,
+  borderWidth: 1,
+  marginRight: 8,
+  marginBottom: 8,
+},
+ milestoneTxt: {
+  fontSize: normalize(11),
+  fontWeight: "800",
+  flexShrink: 1,                  // évite que le texte prenne tout l’espace
+},
+   claimBtn: {
+  marginLeft: 10,
+  paddingHorizontal: 12,
+  paddingVertical: 6,
+  borderRadius: 999,
+  borderWidth: 1,
+  borderColor: "#111827",
+  backgroundColor: "#111827",     // 👉 bouton sombre, bien séparé du badge
+  // légère ombre pour donner un côté premium
+  shadowColor: "#000",
+  shadowOffset: { width: 0, height: 2 },
+  shadowOpacity: 0.18,
+  shadowRadius: 4,
+  elevation: 3,
+},
 
-    claimBtn: {
-      marginTop: 6,
-      alignSelf: "flex-start",
-      paddingHorizontal: 10,
-      paddingVertical: 6,
-      borderRadius: 999,
-      borderWidth: 1,
-      borderColor: "#111827",
-      backgroundColor: "#FFB800",
-    },
-    claimTxt: {
-      fontWeight: "900",
-      color: "#111827",
-      fontSize: normalize(11),
-    },
+claimTxt: {
+  fontWeight: "900",
+  color: "#F9FAFB",               // texte blanc sur bouton sombre
+  fontSize: normalize(11),
+},
 
     skeletonRow: {
       flexDirection: "row",

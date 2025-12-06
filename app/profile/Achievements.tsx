@@ -10,6 +10,7 @@ import {
   TouchableOpacity,
   StatusBar,
   RefreshControl,
+  I18nManager,
 } from "react-native";
 import { Ionicons } from "@expo/vector-icons";
 import { doc, onSnapshot } from "firebase/firestore";
@@ -429,9 +430,9 @@ export default function AchievementsScreen() {
 
       return (
         <Animated.View
-          entering={ZoomIn.delay(index * 55)}
-          style={styles.cardWrapper}
-        >
+  entering={index < 15 ? ZoomIn.delay(index * 55) : undefined}
+  style={styles.cardWrapper}
+>
           <TouchableOpacity
             activeOpacity={0.9}
             onPress={() => onPressAchievement(item)}
@@ -615,25 +616,31 @@ export default function AchievementsScreen() {
         </View>
 
         <SectionList
-          sections={sections}
-          keyExtractor={(item) => item.id}
-          renderSectionHeader={renderSectionHeader}
-          renderItem={renderItem}
-          stickySectionHeadersEnabled
-          showsVerticalScrollIndicator={false}
-          contentContainerStyle={[styles.listContent, { paddingBottom: bottomPadding }]}
-          initialNumToRender={10}
-          maxToRenderPerBatch={10}
-          windowSize={7}
-          removeClippedSubviews
-          refreshControl={
-            <RefreshControl
-              refreshing={refreshing}
-              onRefresh={onRefresh}
-              tintColor={currentTheme.colors.primary}
-            />
-          }
-        />
+  sections={sections}
+  keyExtractor={(item) => item.id}
+  renderSectionHeader={renderSectionHeader}
+  renderItem={renderItem}
+  stickySectionHeadersEnabled
+  showsVerticalScrollIndicator={false}
+  contentContainerStyle={[styles.listContent, { paddingBottom: bottomPadding }]}
+
+  // ✅ Virtualisation plus généreuse mais stable
+  initialNumToRender={14}
+  maxToRenderPerBatch={20}
+  windowSize={12}
+
+  // ✅ Laisse RN CLIPPER les vues hors écran pour éviter la surcharge
+  removeClippedSubviews={true}
+
+  refreshControl={
+    <RefreshControl
+      refreshing={refreshing}
+      onRefresh={onRefresh}
+      tintColor={currentTheme.colors.primary}
+    />
+  }
+/>
+
 
         {showBanners && (
           <View style={{ position: "absolute", left: 0, right: 0, bottom: tabBarHeight + insets.bottom, alignItems: "center", paddingBottom: 6, zIndex: 9999 }} pointerEvents="box-none">
@@ -677,6 +684,7 @@ const styles = StyleSheet.create({
     fontSize: normalizeSize(16),
     fontFamily: "Comfortaa_400Regular",
     textAlign: "center",
+    writingDirection: I18nManager.isRTL ? "rtl" : "ltr",
   },
 
   emptyContainer: { flex: 1 },
@@ -691,6 +699,7 @@ const styles = StyleSheet.create({
     fontFamily: "Comfortaa_700Bold",
     marginTop: SPACING,
     textAlign: "center",
+    writingDirection: I18nManager.isRTL ? "rtl" : "ltr",
   },
   emptySubtitle: {
     fontSize: normalizeSize(15),
@@ -698,6 +707,7 @@ const styles = StyleSheet.create({
     textAlign: "center",
     marginTop: SPACING / 2,
     maxWidth: SCREEN_WIDTH * 0.8,
+    writingDirection: I18nManager.isRTL ? "rtl" : "ltr",
   },
 
   progressBarWrapper: {
@@ -716,6 +726,8 @@ const styles = StyleSheet.create({
   progressText: {
     fontSize: normalizeSize(14),
     fontFamily: "Comfortaa_700Bold",
+    writingDirection: I18nManager.isRTL ? "rtl" : "ltr",
+   textAlign: "center",
   },
 
   listContent: {
@@ -746,6 +758,8 @@ const styles = StyleSheet.create({
     fontSize: normalizeSize(16),
     fontFamily: "Comfortaa_700Bold",
     color: "#FFFFFF",
+    writingDirection: I18nManager.isRTL ? "rtl" : "ltr",
+   textAlign: I18nManager.isRTL ? "right" : "left",
   },
   sectionRight: { marginLeft: 8, alignItems: "flex-end" },
   sectionCount: {
@@ -753,6 +767,8 @@ const styles = StyleSheet.create({
     fontFamily: "Comfortaa_700Bold",
     color: "#FFFFFF",
     opacity: 0.9,
+    writingDirection: I18nManager.isRTL ? "rtl" : "ltr",
+   textAlign: I18nManager.isRTL ? "right" : "left",
   },
   sectionPercent: {
     fontSize: normalizeSize(10),
@@ -760,6 +776,8 @@ const styles = StyleSheet.create({
     color: "#FFFFFF",
     opacity: 0.9,
     marginTop: 2,
+    writingDirection: I18nManager.isRTL ? "rtl" : "ltr",
+   textAlign: I18nManager.isRTL ? "right" : "left",
   },
 
   cardWrapper: {
@@ -794,6 +812,8 @@ const styles = StyleSheet.create({
     fontSize: normalizeSize(12),
     fontFamily: "Comfortaa_700Bold",
     marginTop: 4,
+    writingDirection: I18nManager.isRTL ? "rtl" : "ltr",
+   textAlign: "center",
   },
   newBadge: {
     marginTop: 6,
@@ -807,12 +827,16 @@ const styles = StyleSheet.create({
     fontFamily: "Comfortaa_700Bold",
     color: "#fff",
     letterSpacing: 0.3,
+    writingDirection: I18nManager.isRTL ? "rtl" : "ltr",
+   textAlign: "center",
   },
 
   details: { flex: 1, paddingHorizontal: 8 },
   cardTitle: {
     fontSize: normalizeSize(15),
     fontFamily: "Comfortaa_700Bold",
+    writingDirection: I18nManager.isRTL ? "rtl" : "ltr",
+   textAlign: I18nManager.isRTL ? "right" : "left",
   },
   completedTitle: { textDecorationLine: "line-through", opacity: 0.7 },
   claimableTitle: { fontStyle: "italic" },
@@ -821,6 +845,8 @@ const styles = StyleSheet.create({
     fontFamily: "Comfortaa_400Regular",
     marginTop: 4,
     lineHeight: normalizeSize(16),
+    writingDirection: I18nManager.isRTL ? "rtl" : "ltr",
+   textAlign: I18nManager.isRTL ? "right" : "left",
   },
 
   action: { alignItems: "flex-end", justifyContent: "center" },
@@ -836,13 +862,18 @@ const styles = StyleSheet.create({
     fontSize: normalizeSize(11),
     fontFamily: "Comfortaa_700Bold",
     color: "#FFFFFF",
+    writingDirection: I18nManager.isRTL ? "rtl" : "ltr",
+   textAlign: "center",
   },
   chipOk: {
     backgroundColor: "#DCFCE7",
     borderWidth: 1,
     borderColor: "#22C55E",
   },
-  chipOkText: { color: "#14532D" },
+  chipOkText: { color: "#14532D",
+    writingDirection: I18nManager.isRTL ? "rtl" : "ltr",
+   textAlign: "center",
+   },
   chipPending: {
     backgroundColor: "rgba(148,163,184,0.18)",
     borderWidth: 1,

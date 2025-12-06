@@ -776,14 +776,31 @@
     "understood": "Entendido"
   },
   "trophyModal": {
-    "congrats": "¡Felicidades! 🎉",
-    "reward": "+{{count}} Trofeos",
-    "message": "{{message}}",
-    "claim": "Reclamar",
-    "doubleReward": "Doblar tus trofeos",
-    "doubleMessage": "🔥 ¡Has ganado {{count}} trofeos!",
-    "claimMessage": "🎉 ¡Has ganado {{count}} trofeos!"
-  },
+  "congrats": "¡Felicidades! 🎉",
+  "reward": "+{{count}} trofeo(s)",
+  "message": "{{message}}",
+  "claim": "Reclamar",
+  "doubleReward": "Duplica tus trofeos",
+  "doubleMessage": "🔥 ¡Has ganado {{count}} trofeos!",
+  "claimMessage": "🎉 ¡Has ganado {{count}} trofeos!",
+
+  "title": "¡Trofeo desbloqueado!",
+  "subtitle": "Acabas de alcanzar un nuevo hito.",
+  "defaultName": "Logro misterioso",
+  "defaultDescription": "Sigue así — cada trofeo demuestra tu disciplina.",
+
+  "ribbon": "Recompensa desbloqueada",
+
+  "trophiesTitle": "Trofeos ganados",
+  "trophiesHint": "Se suman a tu total de ChallengeTies.",
+
+  "cta": "Recoger",
+  "ctaLoading": "Cargando…",
+  "secondaryCta": "Más tarde",
+
+  "doubleBadge": "x2 activado"
+}
+,
   "achievements": {
     "first_connection": "Primera conexión",
     "profile_completed": "Perfil completado",
@@ -941,6 +958,9 @@
     "close": "Cerrar",
     "prevMonth": "Mes anterior",
     "nextMonth": "Mes siguiente",
+    "completed": "Hecho",
+"pending": "Por hacer"
+,
     "title": "{{month}} {{year}}",
     "weekdays": ["Dom", "Lun", "Mar", "Mié", "Jue", "Vie", "Sáb"],
     "months": [
@@ -1013,7 +1033,11 @@
     "introductionText": "En {{appName}}, proteger tu privacidad es primordial. Esta política explica cómo recopilamos, usamos, protegemos y compartimos tus datos personales cumpliendo plenamente con el RGPD.",
     "dataCollectedTitle": "Datos que recopilamos",
     "dataCollectedText": "Para ofrecerte una experiencia personalizada, podemos recopilar lo siguiente:",
-    "dataCollectedItems": {
+    "screenA11yLabel": "Pantalla de la política de privacidad de ChallengeTies",
+  "logoAlt": "Logo de ChallengeTies",
+  "dataCollectedItems": {
+    "deviceInfo": "Datos técnicos del dispositivo (modelo, sistema, idioma, país aproximado)",
+    "usageAnalytics": "Eventos de uso (pantallas visitadas, acciones en la app, rendimiento)",
       "nameEmail": "Nombre y correo electrónico",
       "profilePhoto": "Foto de perfil",
       "progress": "Tu progreso y logros",
@@ -1025,6 +1049,7 @@
     "dataUsageItems": {
       "personalize": "Personalizar tu experiencia",
       "analyze": "Analizar tu progreso",
+          "adsAndMonetization": "Mostrar anuncios, medir su rendimiento y prevenir el fraude publicitario",
       "notify": "Enviar notificaciones útiles",
       "improve": "Mejorar nuestros servicios"
     },
@@ -1094,7 +1119,7 @@
   },
   "durationModal": {
     "title": "Elige la duración",
-    "days": "{{count}} día",
+"days": "{{count}} días",
     "days_plural": "{{count}} días",
     "confirm": "Confirmar",
     "cancel": "Cancelar",
@@ -1121,9 +1146,18 @@
 "inviteAFriend": "Invitar a un amigo",
 "inviteFriends": "Invitar a un amigo",
    "referral": {
+    "invited": {
+  "title": "Invitación detectada 🎁",
+  "body": "Has sido invitado por un usuario. Tu recompensa se activará automáticamente después de registrarte.",
+  "linkedTitle": "Parentesco activado ✅",
+  "linkedBody": "Tu enlace de invitación está activo. ¡Gracias por unirte a ChallengeTies!",
+  "by": "Padrino:"
+},
     "menu": "Comparte y gana",
     "history": {
       "title": "Mis referidos",
+      "activatedOnLabel": "Activado el",
+    "invitedOnLabel": "Invitado el",
       "subtitle": "{{total}} en total • {{activated}} activado(s)",
       "loading": "Cargando tu historial…",
         "emptyTitle": "Todavía no tienes referidos",
@@ -1148,8 +1182,10 @@
     },
     "share": {
       "title": "Comparte y Gana",
+      "activatedReferrals": "Referidos activados",
       "subtitle": "Invita a tus amigos. Cuando empiezan su primer reto, ganas trofeos. Completa hitos para desbloquear bonos 💎",
       "linksTitle": "Tus enlaces",
+          "howTo": "Invita a tus amigos con el botón Compartir o enviando tu Share Card: cada referido activado desbloquea recompensas.",
       "linkApp": "Enlace de la app",
       "linkWeb": "Enlace web",
       "auth": {
@@ -1187,11 +1223,17 @@
       }
     },
     "notif": {
-    "milestoneUnlocked": {
-      "title": "Nivel desbloqueado 🎉",
-      "body": "¡Ahora puedes reclamar +{{bonus}} trofeos!"
-    }
+  "milestoneUnlocked": {
+    "title": "Nivel desbloqueado 🎉",
+    "body": "Felicidades, acabas de ganar +{{bonus}} trofeos gracias a tu programa de referidos. Abre Share & Earn para reclamar tu recompensa."
   },
+  "newChild": {
+    "title": "🎉 Nuevo ahijado",
+    "body": "Felicidades, uno de tus ahijados acaba de activarse y ganas +{{bonus}} trofeos.",
+    "toast": "Nuevo ahijado (+{{bonus}} trofeos) 🎉"
+  }
+}
+,
     "shareCard": {
       "title": "Tu tarjeta de referidos",
       "subtitle": "Compártela en todas partes para impulsar tus invitaciones 🚀",
@@ -1272,13 +1314,19 @@
     "titleTooShort": "El título es demasiado corto (6+ caracteres).",
     "descTooShort": "La descripción es demasiado corta (20+ caracteres).",
     "titleInvalidChars": "El título debe contener letras."
-  }},
+  },
+"hint": {
+      "titleHelper": "Título claro (≥ {{min}} caracteres).",
+      "descHelper": "Explica de forma concreta (≥ {{min}} caracteres)."
+    }},
   "imageTooBig": "Imagen demasiado grande (máx. {{mb}} MB).",
   "imageTooSmall": "Imagen demasiado pequeña (mín. 600×400).",
   "quality": {
     "hintBoostStart": "Consejo: especifica un objetivo numérico y una duración.",
     "hintBoostMid": "Ya casi: añade una acción concreta por día.",
     "scoreLabel": "Calidad del desafío",
+        "fillRequired": "Completa título, descripción (≥ 20 caracteres), categoría e imagen para llegar al 100%."
+,
     "hintGreat": "¡Perfecto! Tu desafío es claro y motivador ✨"
   },
   "a11y": { "typeHere": "Escribe aquí",
@@ -1305,6 +1353,10 @@
   "challengesComingSoon": "Muy pronto llegarán nuevos desafíos, ¡permanece atento!",
   "leaderboard": {
     "errorFetch": "Error al obtener la tabla de clasificación",
+    "shareCard": {
+  "kicker": "Mi clasificación",
+  "body": "Esta semana estoy en el puesto #{{rank}} en ChallengeTies. Únete a mí y sube en el ranking 💥"
+},
     "shareDialogTitle":"Compartir mi tarjeta de ranking",
     "shareHint": "Comparte tu tarjeta de rango",
     "retry": "Reintentar",
@@ -1388,6 +1440,7 @@
   "challengeChat": {
   "longPressReply": "Responder a este mensaje",
   "replyingTo": "Respondiendo a",
+  "placeholder": "Escribe tu mensaje…",
   "sendA11yLabel": "Enviar el mensaje",
   "slowmodeHint": "Espera un momento antes de enviar un nuevo mensaje.",
   "slowmodeCountdown": "Espera {{s}}s antes de enviar otro mensaje"
@@ -1531,17 +1584,65 @@
   "mysteryAchievement": "Logro misterioso.",
   "newAchievement": "¡Nuevo logro!",
   "sections": {
-    "débuts": "Comienzos",
-    "defisTermines": "Desafíos completados",
-    "engagement": "Compromiso",
-    "serieDeFeu": "Racha",
-    "communication": "Comunicación",
-    "partage": "Compartidos",
-    "reseau": "Red",
-    "influence": "Influencia",
-    "collection": "Colección",
-    "creation": "Creación",
-    "divers": "Varios"
+  "débuts": "Comienzos",
+  "defisTermines": "Desafíos completados",
+  "engagement": "Compromiso",
+  "serieDeFeu": "Racha de fuego",
+  "communication": "Comunicación",
+  "partage": "Compartidos",
+  "reseau": "Red",
+  "influence": "Influencia",
+  "collection": "Colección",
+  "creation": "Creación",
+  "duo": "Dúo",
+  "constance": "Constancia",
+  "focus": "Enfoque",
+  "maitrise": "Maestría",
+  "discipline": "Disciplina",
+  "events": "Eventos",
+  "divers": "Varios"
+},
+"welcomeBonus": {
+  "title": "Bono de conexión",
+  "subtitle": "Día {{day}} de {{total}} • ¡Sigue así!",
+  "ribbon": "Pack de bienvenida ChallengeTies",
+
+  "todayRewardTitle": "Recompensa del día",
+
+  "reward": {
+    "trophies": "{{count}} trofeos extra",
+    "streakPass": "{{count}} Streak Pass para proteger tu racha",
+    "premium": "{{count}} días de ChallengeTies Premium"
+  },
+
+  "premiumHint": "Durante este periodo: sin anuncios y acceso ilimitado a ChallengeTies.",
+
+  "dayBadge": "Día {{day}}",
+  "dayLabel": "Día {{day}}",
+
+  "claimed": "Recuperado",
+  "today": "Hoy",
+
+  "bottomHint": "Conéctate cada día para desbloquear el 100% del pack.",
+
+  "cta": "Recuperar mi recompensa",
+  "ctaLoading": "Un momento…",
+
+  "error": "No se puede recuperar el bono de bienvenida por ahora."
+}
+
+,
+"premiumTrialActivated": {
+    "title": "ChallengeTies Premium activado ✨",
+    "message": "Acabas de desbloquear 7 días de ChallengeTies Premium: sin anuncios y toda la experiencia sin límites. ¡Aprovecha al máximo tu impulso!"
+  },
+  "premiumEndModal": {
+    "title": "Fin de tu ChallengeTies Premium",
+    "description": "Tu acceso Premium de 7 días ha terminado. Si ChallengeTies te ayuda a mantener el rumbo, únete al movimiento y apoya el proyecto para volver a desbloquear la experiencia sin anuncios.",
+    "closeA11y": "Cerrar la ventana",
+    "closeCta": "Seguir gratis",
+    "joinA11y": "Unirte al movimiento Premium",
+    "joinCta": "Unirte al movimiento Premium"
   },
   "finishChallenge_1": "Primer desafío completado",
   "finishChallenge_3": "Principiante motivado",
@@ -1701,12 +1802,13 @@
     "first_connection": "Primera conexión: ¡bienvenido!",
     "profile_completed": "Perfil completado: ¡estás listo para brillar!"
   },
+  "dailySelectedSubtitle": "5 retos seleccionados para ti hoy.",
   "profile_completed": "Perfil completado",
   "categories": {
     "Santé": "Salud",
     "Fitness": "Fitness",
     "Finance": "Finanzas",
-    "Mode De Vie": "Estilo de vida",
+    "Mode de Vie": "Estilo de vida",
     "Éducation": "Educación",
     "Créativité": "Creatividad",
     "Carrière": "Carrera",
@@ -1719,6 +1821,14 @@
     "État d'esprit": "Mentalidad",
     "Autres": "Otros"
   },
+  "signInMethod": "Método de inicio de sesión",
+  "userId": "ID de usuario",
+  "lastLogin": "Último inicio de sesión",
+  "auth": {
+    "emailPassword": "Correo electrónico y contraseña"
+  },
+  "participantsLabel": "Participantes"
+,
   "challenges": {
     "eatHealthy": {
       "title": "Come sano cada día",
@@ -3891,7 +4001,47 @@
   "unableToFinalizeChallenge": "No se pudo finalizar el desafío.",
   "errorLoadingSavedChallenges": "No se pudieron cargar los desafíos guardados: {{message}}",
   "rateUs": "Calificar la app",
+  "shareCardT": {
+  "a11yTitle": "Tarjeta de compartir desafío",
+  "a11yHint": "Previsualiza la tarjeta antes de compartirla con tus amigos.",
+
+  "tagline": "¿Un desafío? Lógralo.",
+
+  "duoBadge": "DESAFÍO EN DÚO",
+  "soloBadge": "FOCO EN SOLITARIO",
+  "milestoneVariants": [
+  "Hemos mantenido el ritmo durante {{days}} días… y esto es solo el comienzo.",
+  "Día tras día, nos volvemos imparables. Ya van {{days}} días.",
+  "La constancia nos transforma. {{days}} días completados.",
+  "{{days}} días de disciplina. Lo demás llegará.",
+  "Cada día cuenta. {{days}} días, y seguimos adelante."
+]
+,
+  "milestoneMessage": "Hemos aguantado {{days}} días… y esto es solo el comienzo.",
+
+  "completedLabel": "He completado este desafío",
+  "daysLabel": "{{days}} días de enfoque",
+
+  "leading": "¡Vas en cabeza!",
+  "behind": "¡Alcánzalo!",
+  "tie": "Empate perfecto",
+
+  "me": "Yo",
+  "partner": "Mi compañero",
+
+  "footerLine1": "Únete a mí en ChallengeTies",
+  "footerLine2": "Desafíos, enfoque y victorias cada día."
+},
   "notificationsPush": {
+    "inviteAccepted": {
+  "title": "Invitación aceptada 🎉",
+  "body": "{{username}} aceptó tu desafío «{{title}}»!"
+},
+"inviteRefused": {
+  "title": "Invitación rechazada ❌",
+  "body": "{{username}} rechazó tu desafío «{{title}}»."
+}
+,
     "title": "ChallengeTies",
     "morning1": "¿Arrancamos el día con un reto rápido?",
     "inviteAcceptedToast": "Tu invitación fue aceptada 🎉",
@@ -4049,42 +4199,45 @@
   "breakDuration": "Duración de Pausa",
   "start": "Empezar",
   "focusHint": "Consejo: bloquea tu pantalla para evitar distracciones.",
-  "tutorial": {
+   "tutorial": {
+    "progress": "Paso",
+    "progressA11y": "Paso {{current}} de {{total}}",
+    "welcomeTagline": "Tu viaje comienza aquí.",
     "steps": {
       "welcome": {
-        "title": "¡Bienvenido a ChallengeTies ✨!",
-        "description": "Te mostramos lo esencial para dominar la app en 30 segundos."
+        "title": "Bienvenido a ChallengeTies ✨",
+        "description": "En unos pocos pasos te mostramos las funciones esenciales para dominar la app en menos de 30 segundos."
       },
       "explore": {
-        "title": "Explorar desafíos",
-        "description": "Descubre más de 80 desafíos organizados por categorías. Elige el que más te motive."
+        "title": "Explorar los desafíos",
+        "description": "Descubre decenas de desafíos organizados por categorías. Encuentra el que más te motive y lanza tu primer reto."
       },
       "create": {
         "title": "Crear tu desafío",
-        "description": "Personaliza duración, objetivos y progreso. Conviértete en el arquitecto de tu disciplina."
+        "description": "Personaliza tu desafío: duración, objetivos, progreso… Conviértete en el arquitecto de tu disciplina."
       },
       "focus": {
         "title": "Modo Focus",
-        "description": "Un temporizador inmersivo para concentrarte mejor. Sigue tu tiempo, sesiones y constancia."
+        "description": "Un temporizador inmersivo para ayudarte a concentrarte. Sigue tu tiempo, tus sesiones y tu constancia."
       },
       "duo": {
         "title": "Desafíos en dúo",
-        "description": "Invita a un amigo y progresen juntos. Sincronización en tiempo real y motivación extra."
+        "description": "Invita a un amigo y progresen juntos. Notificaciones, progreso sincronizado y motivación extra."
       },
       "profile": {
         "title": "Tu perfil y progreso",
-        "description": "Encuentra tus desafíos activos, guardados, logros, estadísticas y ajustes."
+        "description": "Encuentra tus desafíos en curso, guardados, tus logros, estadísticas detalladas y todos tus ajustes."
       },
       "vote": {
-        "title": "Vota nuevas funciones",
-        "description": "Influye en el futuro de la app. Vota las funciones que quieras ver primero."
+        "title": "Vota por las novedades",
+        "description": "Puedes influir en el futuro de la app. Vota por las funciones que quieres ver primero."
       }
     },
     "buttons": {
-      "start": "Comenzar",
+      "start": "Empezar",
       "next": "Siguiente",
-      "skip": "Saltar",
-      "finish": "Terminar"
+      "skip": "Omitir",
+      "finish": "Finalizar"
     }
   }
 

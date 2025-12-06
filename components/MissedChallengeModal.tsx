@@ -65,15 +65,15 @@ const MissedChallengeModal: React.FC<MissedChallengeModalProps> = ({
 
   const { height: H } = useWindowDimensions();
   const modalMaxH = Math.min(H * 0.85, 760);
-  const modalMinH = Math.min(H * 0.55, 520); // ✅ évite l’effet “bande”
+  const modalMinH = Math.min(H * 0.55, 520); // évite l’effet “bande”
   const optionsMaxH = Math.max(
     normalizeSize(160),
     modalMaxH - normalizeSize(210)
-  ); // ✅ zone scroll clampée (petits écrans)
+  );
 
   const [reduceMotion, setReduceMotion] = useState(false);
 
-  // — Précharge la rewarded quand le modal s’ouvre
+  // Précharge la rewarded quand le modal s’ouvre
   useEffect(() => {
     if (visible) {
       try {
@@ -89,7 +89,7 @@ const MissedChallengeModal: React.FC<MissedChallengeModalProps> = ({
     }
   }, [visible, preloadRewarded, t]);
 
-  // — Respect Reduce Motion (animations + haptics)
+  // Respect Reduce Motion (animations + haptics)
   useEffect(() => {
     let mounted = true;
     AccessibilityInfo.isReduceMotionEnabled()
@@ -106,7 +106,7 @@ const MissedChallengeModal: React.FC<MissedChallengeModalProps> = ({
     };
   }, []);
 
-  // — Gardes anti double-tap
+  // Gardes anti double-tap
   const lockRef = useRef(false);
   const withLock = async (fn: () => void | Promise<void>) => {
     if (lockRef.current) return;
@@ -208,7 +208,7 @@ const MissedChallengeModal: React.FC<MissedChallengeModalProps> = ({
     <Modal
       visible={visible}
       transparent
-      animationType="none"
+      animationType="fade"
       onRequestClose={onClose}
       statusBarTranslucent
       {...(Platform.OS === "ios"
@@ -338,8 +338,8 @@ const MissedChallengeModal: React.FC<MissedChallengeModalProps> = ({
                             {
                               fontFamily:
                                 current.typography.body.fontFamily,
-                            },
-                          ]}
+                              },
+                            ]}
                         >
                           {t("missedChallenge.reset.subtitle", {
                             defaultValue:
@@ -441,7 +441,8 @@ const MissedChallengeModal: React.FC<MissedChallengeModalProps> = ({
                     accessibilityRole="button"
                     accessibilityState={{ disabled: !canShowRewarded }}
                     accessibilityLabel={t("missedChallenge.ad.title", {
-                      defaultValue: "Regarder une vidéo pour sauver ta série",
+                      defaultValue:
+                        "Regarder une vidéo pour sauver ta série",
                     })}
                     accessibilityHint={t(
                       "missedChallenge.ad.subtitle",
@@ -487,8 +488,8 @@ const MissedChallengeModal: React.FC<MissedChallengeModalProps> = ({
                             {
                               fontFamily:
                                 current.typography.body.fontFamily,
-                            },
-                          ]}
+                              },
+                            ]}
                         >
                           {t("missedChallenge.ad.subtitle", {
                             defaultValue:
@@ -560,8 +561,8 @@ const MissedChallengeModal: React.FC<MissedChallengeModalProps> = ({
                             {
                               fontFamily:
                                 current.typography.body.fontFamily,
-                            },
-                          ]}
+                              },
+                            ]}
                         >
                           {t("missedChallenge.useTrophies.subtitle", {
                             defaultValue:
@@ -611,12 +612,9 @@ const MissedChallengeModal: React.FC<MissedChallengeModalProps> = ({
 };
 
 const styles = StyleSheet.create({
+  // 🔥 FIX ICI : OVERLAY FULLSCREEN + CENTRÉ, PAS ABSOLUTE
   overlay: {
-    position: "absolute",
-    top: 0,
-    left: 0,
-    right: 0,
-    bottom: 0,
+    flex: 1,
     backgroundColor: "rgba(0, 0, 0, 0.78)",
     justifyContent: "center",
     alignItems: "center",

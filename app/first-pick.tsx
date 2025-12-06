@@ -124,7 +124,7 @@ export default function FirstPick() {
 
   const router = useRouter();
   const { takeChallenge } = useCurrentChallenges();
-  const { startTutorial, skipTutorial } = useTutorial();
+  const { startTutorial } = useTutorial();
 
   // Fade-in d'écran (désactivé si reduce motion)
   const introOpacity = useRef(new Animated.Value(0)).current;
@@ -313,19 +313,12 @@ useEffect(() => {
     safeReplace({ pathname: "/" });
   }, [safeReplace, startTutorial]);
 
-  // ✅ Helper : aller Home sans lancer le tutoriel (skip)
-  const goHomeWithoutTutorial = useCallback(async () => {
-    await AsyncStorage.setItem("firstPickDone", "1");
-    try {
-      skipTutorial(); // ✅ marque le tuto comme complété/skip côté contexte
-    } catch {}
-    safeReplace({ pathname: "/" });
-  }, [safeReplace, skipTutorial]);
+
 
   // ⏭️ Ignorer le FirstPick et marquer le tuto comme complété (pas d’overlay)
   const onSkip = async () => {
     await AsyncStorage.setItem("firstPickSkipped", "1");
-    await goHomeWithoutTutorial();
+   await goHomeAndStartTutorial();
   };
 
   const handleInvitationSent = async () => {
@@ -458,6 +451,28 @@ submittingRef.current = true;
     try { await Haptics.selectionAsync(); } catch {}
   }, []);
 
+  // ✅ Label a11y du CTA, toujours cohérent avec l'état courant
+  const ctaA11yLabel = useMemo(() => {
+    if (!selected) {
+      return t("firstPick.a11yCtaNoChallenge", {
+        defaultValue: "Choisis un défi, puis un mode pour continuer.",
+      }) as string;
+    }
+    if (mode === "none") {
+      return t("firstPick.a11yCtaNoMode", {
+        title: selected.title || (t("common.challenge") as string),
+        defaultValue:
+          "Tu as choisi un défi, choisis maintenant le mode solo ou duo.",
+      }) as string;
+    }
+    return t("firstPick.a11yCtaFull", {
+      mode: mode === "duo" ? t("firstPick.modeDuo") : t("firstPick.modeSolo"),
+      days,
+      title: selected.title || (t("common.challenge") as string),
+      defaultValue: "Commencer le défi avec les options sélectionnées.",
+    }) as string;
+  }, [mode, selected, days, t]);
+
   // ---- Card subcomponent (mémoïsé)
   const Card = React.memo(({ item, isSel, onPress }:{
    item: Challenge; isSel: boolean; onPress: () => void;
@@ -496,12 +511,18 @@ submittingRef.current = true;
             onPress={onPress}
             activeOpacity={0.9}
             style={[
-   styles.card,
-   { width: CARD_W, height: CARD_H, borderColor: isSel ? currentTheme.colors.secondary : currentTheme.colors.border,
-     backgroundColor: currentTheme.colors.cardBackground }
- ]}
+              styles.card,
+              {
+                width: CARD_W,
+                height: CARD_H,
+                borderColor: isSel
+                  ? currentTheme.colors.secondary
+                  : currentTheme.colors.border,
+                backgroundColor: currentTheme.colors.cardBackground,
+              },
+            ]}
             accessibilityRole="button"
-            accessibilityLabel={item.title}
+            accessibilityLabel={`${translatedTitle} — ${translatedCategory}`}
             accessibilityHint={t("firstPick.cardHint") || undefined}
           >
 
@@ -792,21 +813,34 @@ const blurhash = useMemo(
   <Animated.View style={{ transform: [{ scale: ctaPulse }] }}>
     <TouchableOpacity
       onPress={onConfirm}
-      disabled={mode === "none" || !selected || submitting || (mode === "duo" && isOffline)}
+      disabled={
+        mode === "none" ||
+        !selected ||
+        submitting ||
+        (mode === "duo" && isOffline)
+      }
       activeOpacity={0.9}
       accessibilityRole="button"
-      accessibilityLabel={
-        mode === "none"
-          ? (t("firstPick.chooseMode") || "Choisir un mode")
-          : mode === "duo"
-            ? t("firstPick.chooseDuo")
-            : t("firstPick.chooseSolo")
-      }
-      accessibilityState={{ disabled: mode === "none" || !selected || submitting || (mode === "duo" && isOffline) }}
+      accessibilityLabel={ctaA11yLabel}
+      accessibilityState={{
+        disabled:
+          mode === "none" ||
+          !selected ||
+          submitting ||
+          (mode === "duo" && isOffline),
+      }}
       testID="firstpick-cta"
       style={[
         styles.primaryCtaCompact,
-         { opacity: mode !== "none" && selected && !submitting && !(mode === "duo" && isOffline) ? 1 : 0.6 }
+        {
+           opacity:
+             mode !== "none" &&
+             selected &&
+             !submitting &&
+             !(mode === "duo" && isOffline)
+               ? 1
+               : 0.6,
+         }
       ]}
     >
       {submitting ? (

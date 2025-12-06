@@ -31,6 +31,8 @@ import { Share } from "react-native";
 const { width: SCREEN_WIDTH } = Dimensions.get("window");
 const SPACING = 16;
 
+type HelperResource = { title: string; url: string; type?: string };
+
 function truncate(s: string, n = 180) {
   if (!s) return "";
   const clean = s.replace(/\s+/g, " ").trim();
@@ -113,6 +115,7 @@ const getTransString = (tFn: any, key: string, fallback = ""): string => {
   return String(val);
 };
 
+// On garde le helper générique même si on ne l’utilise plus pour exemples/ressources
 const getTransArray = <T = any>(
   tFn: any,
   key: string,
@@ -124,7 +127,7 @@ const getTransArray = <T = any>(
 
 export default function ChallengeHelperScreen() {
   const { id } = useLocalSearchParams<{ id: string }>();
-  const { t } = useTranslation();
+  const { t, i18n } = useTranslation();
   const { theme } = useTheme();
   const isDark = theme === "dark";
   const currentTheme: Theme = isDark
@@ -181,25 +184,134 @@ export default function ChallengeHelperScreen() {
 
   const title = getTransString(t, `challenges.${id}.title`, docTitle);
 
+  // miniCours : on garde ta logique actuelle (fallback Firestore si pas de clé i18n)
+   // miniCours : on garde ta logique actuelle (fallback Firestore si pas de clé i18n)
   const miniCours = getTransString(
     t,
     `${id}.miniCours`,
     helperData?.miniCours || ""
   );
 
-  const exemples = getTransArray<string>(
-    t,
-    `${id}.exemples`,
-    helperData?.exemples || []
-  );
+    // ✅ EXEMPLES — priorité i18n, fallback Firestore
+  const buildExemples = (): string[] => {
+    // 1. Essai direct : tableau / objet complet (cas normal i18n)
+    const raw = t(`${id}.exemples`, {
+      returnObjects: true,
+    }) as unknown;
 
-  const ressources = getTransArray<{ title: string; url: string; type?: string }>(
-    t,
-    `${id}.ressources`,
-    helperData?.ressources || []
-  );
+    if (Array.isArray(raw)) {
+      return raw.map((v) => String(v));
+    }
+
+    if (raw && typeof raw === "object") {
+      return Object.values(raw).map((v) => String(v));
+    }
+
+    // 2. Cas où i18next a "applati" en id.exemples.0, id.exemples.1, etc.
+    const collected: string[] = [];
+    for (let i = 0; i < 10; i++) {
+      const val = t(`${id}.exemples.${i}`, {
+        defaultValue: "",
+      }) as string;
+
+      if (!val || val === `${id}.exemples.${i}`) {
+        break;
+      }
+      collected.push(val);
+    }
+
+    if (collected.length > 0) {
+      return collected;
+    }
+
+    // 3. Dernier recours : Firestore (FR)
+    if (Array.isArray(helperData?.exemples)) {
+      return helperData.exemples as string[];
+    }
+
+    return [];
+  };
+
+    // ✅ RESSOURCES — priorité i18n, fallback Firestore
+   // ✅ RESSOURCES — utilise UNIQUEMENT la langue courante (sans fallback i18n)
+    // ✅ RESSOURCES — utilise la langue courante, puis sa base (it-IT → it), sans fallback FR
+  const buildRessources = (): HelperResource[] => {
+    // Namespace principal (souvent "translation")
+    const nsOption = i18n.options?.defaultNS || i18n.options?.ns || "translation";
+    const ns = Array.isArray(nsOption) ? nsOption[0] : nsOption;
+
+    // On teste d'abord la langue exacte (ex: "it-IT"), puis sa base ("it")
+    const langCandidates: string[] = [];
+    if (i18n.language) langCandidates.push(i18n.language);
+    const base = i18n.language?.split?.("-")?.[0];
+    if (base && base !== i18n.language) langCandidates.push(base);
+
+    let raw: unknown = undefined;
+
+    for (const lang of langCandidates) {
+      const res = i18n.getResource(lang, ns as string, `${id}.ressources`);
+      if (res) {
+        raw = res;
+        break;
+      }
+    }
+
+    let items: any[] = [];
+
+    if (Array.isArray(raw)) {
+      items = raw;
+    } else if (raw && typeof raw === "object") {
+      // Cas objet indexé { "0": {...}, "1": {...} }
+      items = Object.values(raw);
+    }
+
+    const mapped: HelperResource[] = items
+      .map((item) => {
+        if (!item) return null;
+
+        // Sécurité si un jour c'est juste une string
+        if (typeof item === "string") {
+          return {
+            title: item,
+            url: item,
+          } as HelperResource;
+        }
+
+        const title = String((item as any).title ?? "").trim();
+        const url = String((item as any).url ?? "").trim();
+        const type = (item as any).type
+          ? String((item as any).type)
+          : undefined;
+
+        if (!url) return null;
+
+        return { title, url, type };
+      })
+      .filter(Boolean) as HelperResource[];
+
+    // ✅ Si on a trouvé des ressources dans la langue courante / base → on les utilise
+    if (mapped.length > 0) {
+      return mapped;
+    }
+
+    // ♻️ Fallback final : Firestore (ancienne source FR)
+    if (Array.isArray(helperData?.ressources)) {
+      return helperData.ressources as HelperResource[];
+    }
+
+    return [];
+  };
+
+
+  const exemples: string[] = buildExemples();
+
+  // ✅ RESSOURCES — on laisse Firestore tranquille (FR/EN OK pour toi)
+  const ressources: HelperResource[] = buildRessources();
+
 
   const missingMiniCours = !miniCours || !miniCours.trim();
+
+
 
   if (loading || !title || missingMiniCours || !helperData) {
     return (

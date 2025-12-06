@@ -51,7 +51,7 @@ type FAQItem = {
 };
 
 export default function FAQScreen() {
-  const { t } = useTranslation();
+ const { t, i18n } = useTranslation();
   const { theme } = useTheme();
   const isDark = theme === "dark";
   const current = isDark ? designSystem.darkTheme : designSystem.lightTheme;
@@ -162,15 +162,15 @@ export default function FAQScreen() {
   );
 
   const filtered = useMemo(() => {
-    const qLower = query.trim().toLowerCase();
+    const qLower = query.trim().toLocaleLowerCase(i18n.language);
     if (!qLower) return data;
     return data.filter(
       (it) =>
-        it.q.toLowerCase().includes(qLower) ||
-        it.a.toLowerCase().includes(qLower) ||
-        (it.tag ?? "").toLowerCase().includes(qLower)
+        it.q.toLocaleLowerCase(i18n.language).includes(qLower) ||
+        it.a.toLocaleLowerCase(i18n.language).includes(qLower) ||
+        (it.tag ?? "").toLocaleLowerCase(i18n.language).includes(qLower)
     );
-  }, [query, data]);
+  }, [query, data, i18n.language]);
 
   const toggle = (key: string) => {
     LayoutAnimation.configureNext(LayoutAnimation.Presets.easeInEaseOut);
@@ -197,23 +197,32 @@ export default function FAQScreen() {
   const escape = (s: string) => s.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
   const renderHighlighted = useCallback(
     (text: string) => {
-      if (!query.trim()) return <Text>{text}</Text>;
-      const parts = text.split(new RegExp(`(${escape(query)})`, "ig"));
+      const trimmed = query.trim();
+      if (!trimmed) return <Text>{text}</Text>;
+
+      const safe = escape(trimmed);
+      const regex = new RegExp(`(${safe})`, "ig");
+      const lowerQuery = trimmed.toLocaleLowerCase(i18n.language);
+
+      const parts = text.split(regex);
       return (
         <Text>
-          {parts.map((p, i) =>
-            p.toLowerCase() === query.toLowerCase() ? (
-              <Text key={i} style={styles.highlight}>
+          {parts.map((p, i) => {
+            const isMatch =
+              p.toLocaleLowerCase(i18n.language) === lowerQuery;
+            return (
+              <Text
+                key={i}
+                style={isMatch ? styles.highlight : undefined}
+              >
                 {p}
               </Text>
-            ) : (
-              <Text key={i}>{p}</Text>
-            )
-          )}
+            );
+          })}
         </Text>
       );
     },
-    [query]
+    [query, i18n.language]
   );
 
   const expandAll = () => {
@@ -254,11 +263,24 @@ export default function FAQScreen() {
             value={query}
             onChangeText={setQuery}
             placeholder={t("questions.searchPlaceholder", { defaultValue: "Rechercher une question..." })}
-            placeholderTextColor={isDark ? current.colors.textSecondary : "#666"}
-            style={[styles.searchInput, { color: isDark ? current.colors.textPrimary : "#111" }]}
+           placeholderTextColor={isDark ? current.colors.textSecondary : "#666"}
+            style={[
+              styles.searchInput,
+              {
+                color: isDark ? current.colors.textPrimary : "#111",
+                textAlign: I18nManager.isRTL ? "right" : "left",
+                writingDirection: I18nManager.isRTL ? "rtl" : "ltr",
+              },
+            ]}
             autoCorrect={false}
             autoCapitalize="none"
             returnKeyType="search"
+            accessibilityLabel={t("questions.searchA11yLabel", {
+              defaultValue: "Rechercher une question dans la FAQ",
+            })}
+            importantForAccessibility="yes"
+            selectionColor={current.colors.primary}
+            cursorColor={current.colors.primary}
           />
           {!!query && (
             <TouchableOpacity onPress={() => setQuery("")} hitSlop={10}>
@@ -269,13 +291,29 @@ export default function FAQScreen() {
 
         {/* bulk controls */}
         <View style={styles.bulkRow}>
-          <TouchableOpacity onPress={expandAll} style={[styles.bulkBtn, { backgroundColor: current.colors.primary }]}>
+          <TouchableOpacity
+            onPress={expandAll}
+            style={[styles.bulkBtn, { backgroundColor: current.colors.primary }]}
+            accessibilityRole="button"
+            accessibilityLabel={t("questions.expandAll", { defaultValue: "Tout ouvrir" })}
+            accessibilityHint={t("questions.expandAllHint", {
+              defaultValue: "Ouvre toutes les réponses de la FAQ",
+            })}
+          >
             <Ionicons name="chevron-down-circle-outline" size={16} color={current.colors.textPrimary} />
             <Text style={[styles.bulkText, { color: current.colors.textPrimary }]}>
               {t("questions.expandAll", { defaultValue: "Tout ouvrir" })}
             </Text>
           </TouchableOpacity>
-          <TouchableOpacity onPress={collapseAll} style={[styles.bulkBtn, { backgroundColor: isDark ? "#2b2b30" : "#EEE" }]}>
+          <TouchableOpacity
+            onPress={collapseAll}
+            style={[styles.bulkBtn, { backgroundColor: isDark ? "#2b2b30" : "#EEE" }]}
+            accessibilityRole="button"
+            accessibilityLabel={t("questions.collapseAll", { defaultValue: "Tout fermer" })}
+            accessibilityHint={t("questions.collapseAllHint", {
+              defaultValue: "Ferme toutes les réponses de la FAQ",
+            })}
+          >
             <Ionicons name="chevron-up-circle-outline" size={16} color={isDark ? "#fff" : "#111"} />
             <Text style={[styles.bulkText, { color: isDark ? "#fff" : "#111" }]}>
               {t("questions.collapseAll", { defaultValue: "Tout fermer" })}
@@ -330,9 +368,15 @@ export default function FAQScreen() {
 
         {/* Accordions */}
         <ScrollView
-        ref={scrollRef}
+          ref={scrollRef}
           contentContainerStyle={{ paddingBottom: 32 }}
           showsVerticalScrollIndicator={false}
+          keyboardShouldPersistTaps="handled"
+          scrollEventThrottle={16}
+          accessibilityRole="list"
+          accessibilityLabel={t("questions.listA11yLabel", {
+            defaultValue: "Liste des questions fréquentes",
+          })}
         >
           {filtered.map((item) => {
             const opened = !!openKeys[item.key];
@@ -355,6 +399,18 @@ export default function FAQScreen() {
                   style={styles.cardHeader}
                   onPress={() => toggle(item.key)}
                   activeOpacity={0.9}
+                  accessibilityRole="button"
+                  accessibilityState={{ expanded: opened }}
+                  accessibilityLabel={item.q}
+                  accessibilityHint={
+                    opened
+                      ? t("questions.collapseOneHint", {
+                          defaultValue: "Replier la réponse à cette question",
+                        })
+                      : t("questions.expandOneHint", {
+                          defaultValue: "Déplier la réponse à cette question",
+                        })
+                  }
                 >
                   <View style={styles.qRow}>
                     {item.icon && (
@@ -406,10 +462,16 @@ export default function FAQScreen() {
                       <TouchableOpacity
                         onPress={() => {
   router.push("/about/Contact");
-}}
-
+                        }}
                         style={styles.contactBtn}
                         activeOpacity={0.9}
+                        accessibilityRole="button"
+                        accessibilityLabel={t("questions.contactCta", {
+                          defaultValue: "Contacter le support",
+                        })}
+                        accessibilityHint={t("questions.contactCtaHint", {
+                          defaultValue: "Ouvre la page de contact du support ChallengeTies",
+                        })}
                       >
                         <LinearGradient
                           colors={[current.colors.secondary, current.colors.primary]}
@@ -433,8 +495,21 @@ export default function FAQScreen() {
           {filtered.length === 0 && (
             <View style={styles.emptyWrap}>
               <Ionicons name="help-circle-outline" size={22} color={current.colors.textSecondary} />
-              <Text style={[styles.emptyText, { color: current.colors.textSecondary }]}>
-                {t("questions.noResult", { defaultValue: "Aucun résultat. Essayez d’autres mots-clés." })}
+              <Text
+                style={[
+                  styles.emptyText,
+                  { color: current.colors.textSecondary },
+                  {
+                    writingDirection: I18nManager.isRTL ? "rtl" : "ltr",
+                    textAlign: I18nManager.isRTL ? "right" : "center",
+                  },
+                ]}
+                numberOfLines={3}
+                adjustsFontSizeToFit
+              >
+                {t("questions.noResult", {
+                  defaultValue: "Aucun résultat. Essayez d’autres mots-clés.",
+                })}
               </Text>
             </View>
           )}

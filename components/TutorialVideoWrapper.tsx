@@ -1,5 +1,11 @@
 // components/TutorialVideoWrapper.tsx
-import React, { ReactNode, ReactElement, useMemo } from "react";
+import React, {
+  ReactNode,
+  ReactElement,
+  useMemo,
+  useEffect,
+  useState,
+} from "react";
 import {
   View,
   StyleSheet,
@@ -7,12 +13,19 @@ import {
   StyleProp,
   ViewStyle,
   Platform,
+  AccessibilityInfo,
 } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { useTheme } from "@/context/ThemeContext";
 import { normalize } from "@/utils/normalize";
 import { LinearGradient } from "expo-linear-gradient";
 import { Video, ResizeMode } from "expo-av";
+import Animated, {
+  FadeIn,
+  FadeOut,
+  SlideInUp,
+  SlideOutDown,
+} from "react-native-reanimated";
 
 interface Props {
   step: number;
@@ -33,8 +46,8 @@ const VIDEO_BY_STEP = [
   require("@/assets/videos/videoTuto3.mp4"), // 2 create
   require("@/assets/videos/videoTuto4.mp4"), // 3 focus
   require("@/assets/videos/videoTuto5.mp4"), // 4 duo
-  require("@/assets/videos/videoTuto1.mp4"), // 5 profile
-  require("@/assets/videos/videoTuto1.mp4"), // 6 vote
+  require("@/assets/videos/videoTuto1.mp4"), // 5 profile (placeholder)
+  require("@/assets/videos/videoTuto1.mp4"), // 6 vote (placeholder)
 ];
 
 const TutorialVideoWrapper = ({
@@ -50,6 +63,31 @@ const TutorialVideoWrapper = ({
   const isDarkMode = theme === "dark";
 
   const videoSource = VIDEO_BY_STEP[step] ?? VIDEO_BY_STEP[0];
+
+  const [reduceMotion, setReduceMotion] = useState(false);
+
+  useEffect(() => {
+    let mounted = true;
+
+    AccessibilityInfo.isReduceMotionEnabled()
+      .then((enabled) => {
+        if (mounted) setReduceMotion(!!enabled);
+      })
+      .catch(() => {});
+
+    const sub = AccessibilityInfo.addEventListener(
+      "reduceMotionChanged",
+      (enabled) => {
+        setReduceMotion(!!enabled);
+      }
+    );
+
+    return () => {
+      mounted = false;
+      // @ts-ignore compat RN < 0.73
+      sub?.remove?.();
+    };
+  }, []);
 
   // applique #fff à titre/desc sans écraser leurs styles
   const renderWithWhiteText = (node: ReactNode) => {
@@ -72,36 +110,49 @@ const TutorialVideoWrapper = ({
 
   return (
     <View style={styles.fullscreenContainer} pointerEvents="box-none">
-      {/* ✅ VIDEO BACKGROUND full screen */}
-      <Video
-        source={videoSource}
+      {/* ✅ VIDEO BACKGROUND full screen + fade-in */}
+      <Animated.View
         style={StyleSheet.absoluteFill}
-        resizeMode={ResizeMode.COVER}
-        isLooping
-        isMuted
-        shouldPlay
-        rate={1.0}
-        volume={0}
-        useNativeControls={false}
-      />
+        entering={FadeIn.duration(280)}
+        exiting={FadeOut.duration(180)}
+        pointerEvents="none"
+      >
+        <Video
+          source={videoSource}
+          style={StyleSheet.absoluteFill}
+          resizeMode={ResizeMode.COVER}
+          isLooping={!reduceMotion}
+          isMuted
+          shouldPlay={!reduceMotion}
+          rate={1.0}
+          volume={0}
+          useNativeControls={false}
+          // Accessibilité : purement décoratif
+          accessible={false}
+          accessibilityElementsHidden
+          importantForAccessibility="no-hide-descendants"
+        />
 
-      {/* ✅ Overlay ciné (lisibilité premium) */}
-      <LinearGradient
-        colors={[
-          "rgba(0,0,0,0.35)",
-          "rgba(0,0,0,0.55)",
-          "rgba(0,0,0,0.9)",
-        ]}
-        style={StyleSheet.absoluteFill}
-      />
+        {/* ✅ Overlay ciné (vignettage + lisibilité premium) */}
+        <LinearGradient
+          colors={[
+            "rgba(0,0,0,0.35)",
+            "rgba(0,0,0,0.55)",
+            "rgba(0,0,0,0.9)",
+          ]}
+          style={StyleSheet.absoluteFill}
+        />
+      </Animated.View>
 
-      {/* Pane bas (titre/desc/boutons) */}
-      <View
+      {/* Pane bas (titre/desc/boutons) — bande ciné responsive */}
+      <Animated.View
+        entering={SlideInUp.springify().damping(18).stiffness(210)}
+        exiting={SlideOutDown.duration(200)}
         style={[
           styles.bottomOverlay,
           {
             paddingBottom: bottomPadding,
-            backgroundColor: "rgba(0,0,0,0.88)",
+            backgroundColor: "rgba(0,0,0,0.90)",
             borderTopLeftRadius: normalize(20),
             borderTopRightRadius: normalize(20),
             borderWidth: 1,
@@ -128,7 +179,7 @@ const TutorialVideoWrapper = ({
 
         {/* petit safe-area visuel (ultra clean) */}
         <View style={{ height: normalize(2) }} />
-      </View>
+      </Animated.View>
     </View>
   );
 };
@@ -146,10 +197,13 @@ const styles = StyleSheet.create({
     bottom: 0,
     paddingVertical: normalize(10),
     paddingHorizontal: normalize(16),
+    alignSelf: "center",
+    maxWidth: 640, // ✅ sur tablette / grands écrans : bande centrée
   },
   textContainer: {
     alignItems: "center",
     justifyContent: "center",
+    width: "100%",
   },
   iconWrap: {
     marginBottom: normalize(8),

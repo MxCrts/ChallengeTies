@@ -12,7 +12,9 @@ import {
   NativeScrollEvent,
   RefreshControl,
   AccessibilityInfo,
+  BackHandler,   
 } from "react-native";
+import { useFocusEffect } from "@react-navigation/native"; // 🆕
 import { useRouter } from "expo-router";
 import { LinearGradient } from "expo-linear-gradient";
 import { Ionicons } from "@expo/vector-icons";
@@ -280,43 +282,73 @@ export default function FocusScreen() {
     };
   }, []);
 
-  const uniqueChallenges = Array.from(
-    new Map(currentChallenges.map((ch: any) => [ch.uniqueKey, ch])).values()
-  ) as CurrentChallengeExtended[];
+    const uniqueChallenges = useMemo(
+    () =>
+      Array.from(
+        new Map(
+          currentChallenges.map((ch: any) => [
+            ch.uniqueKey || ch.id,
+            ch,
+          ])
+        ).values()
+      ) as CurrentChallengeExtended[],
+    [currentChallenges]
+  );
 
-  const translatedChallenges = uniqueChallenges.map((item) => {
-    const key = item.chatId || item.id;
-    return {
-      ...item,
-      title: t(`challenges.${key}.title`, { defaultValue: item.title }),
-      description: t(`challenges.${key}.description`, {
-        defaultValue: item.description || "",
+  const translatedChallenges = useMemo(
+    () =>
+      uniqueChallenges.map((item) => {
+        const key = item.chatId || item.id;
+        return {
+          ...item,
+          title: t(`challenges.${key}.title`, { defaultValue: item.title }),
+          description: t(`challenges.${key}.description`, {
+            defaultValue: item.description || "",
+          }),
+          category: item.category
+            ? t(`categories.${item.category}`, {
+                defaultValue: item.category,
+              })
+            : t("miscellaneous"),
+        };
       }),
-      category: item.category
-        ? t(`categories.${item.category}`, { defaultValue: item.category })
-        : t("miscellaneous"),
-    };
-  });
-
-  const enrichedChallenges = translatedChallenges.map((item) => ({
-    ...item,
-    docId: (item as any).challengeId || item.chatId || item.id,
-  }));
-
-  const notMarkedToday = enrichedChallenges.filter(
-    (ch) => !isMarkedToday(ch.lastMarkedDate)
-  );
-  const markedToday = enrichedChallenges.filter((ch) =>
-    isMarkedToday(ch.lastMarkedDate)
+    [uniqueChallenges, t]
   );
 
-  const kpis = useMemo(() => {
+  const enrichedChallenges = useMemo(
+    () =>
+      translatedChallenges.map((item) => ({
+        ...item,
+        docId: (item as any).challengeId || item.chatId || item.id,
+      })),
+    [translatedChallenges]
+  );
+
+  const notMarkedToday = useMemo(
+    () =>
+      enrichedChallenges.filter((ch) => !isMarkedToday(ch.lastMarkedDate)),
+    [enrichedChallenges]
+  );
+
+  const markedToday = useMemo(
+    () =>
+      enrichedChallenges.filter((ch) => isMarkedToday(ch.lastMarkedDate)),
+    [enrichedChallenges]
+  );
+
+
+ const kpis = useMemo(() => {
     const remaining = notMarkedToday.length;
     const completed = markedToday.length;
     const total = enrichedChallenges.length;
     const pct = total > 0 ? Math.round((completed / total) * 100) : 0;
     return { remaining, completed, total, pct };
   }, [notMarkedToday.length, markedToday.length, enrichedChallenges.length]);
+
+  const hasAnyChallenge = useMemo(
+    () => enrichedChallenges.length > 0,
+    [enrichedChallenges.length]
+  ); // 🆕
 
   const pctLabel = useMemo(
     () => `${kpis.completed}/${kpis.total} • ${kpis.pct}%`,
@@ -531,14 +563,52 @@ export default function FocusScreen() {
     return `${m}:${s}`;
   }, []);
 
-  useEffect(() => {
-    startTopAutoScroll();
-    startBottomAutoScroll();
-    return () => {
-      if (topAutoScrollRef.current) clearInterval(topAutoScrollRef.current);
-      if (bottomAutoScrollRef.current) clearInterval(bottomAutoScrollRef.current);
-    };
-  }, [notMarkedToday, markedToday, startTopAutoScroll, startBottomAutoScroll]);
+   useFocusEffect(
+    useCallback(() => {
+      startTopAutoScroll();
+      startBottomAutoScroll();
+
+      return () => {
+        if (topAutoScrollRef.current) {
+          clearInterval(topAutoScrollRef.current);
+          topAutoScrollRef.current = null;
+        }
+        if (bottomAutoScrollRef.current) {
+          clearInterval(bottomAutoScrollRef.current);
+          bottomAutoScrollRef.current = null;
+        }
+      };
+    }, [startTopAutoScroll, startBottomAutoScroll])
+  );
+
+    useFocusEffect(
+    useCallback(() => {
+      const onBackPress = () => {
+        // 1) Si le timer Focus est ouvert → on ferme le modal
+        if (focusVisible) {
+          closeFocus();
+          return true;
+        }
+
+        // 2) Si le tuto est actif sur cette étape → on le skip
+        if (isTutorialActive && tutorialStep === 3) {
+          skipTutorial();
+          return true;
+        }
+
+        // 3) Sinon on laisse le navigateur gérer le back
+        return false;
+      };
+
+      const sub = BackHandler.addEventListener(
+        "hardwareBackPress",
+        onBackPress
+      );
+
+      return () => sub.remove();
+    }, [focusVisible, closeFocus, isTutorialActive, tutorialStep, skipTutorial])
+  );
+
 
   const handleScrollBeginDragTop = () => {
     if (topAutoScrollRef.current) {
@@ -828,8 +898,16 @@ export default function FocusScreen() {
     );
   };
 
-  const renderTop = useCallback(renderTopItem, [currentTheme, isDarkMode, safeMarkToday, locallyMarkedKeys, markingKey]);
-  const renderBottom = useCallback(renderBottomItem, [currentTheme, isDarkMode]);
+   const renderTop = useCallback(
+    renderTopItem,
+    [currentTheme, isDarkMode, safeMarkToday, locallyMarkedKeys, markingKey]
+  );
+
+  const renderBottom = useCallback(
+    renderBottomItem,
+    [currentTheme, isDarkMode]
+  );
+
 
   const getTopLayout = useCallback(
     (_: any, index: number) => ({
@@ -1203,17 +1281,20 @@ export default function FocusScreen() {
               }
             />
             <Text
-              style={[
-                styles.actionBtnText,
-                {
-                  color: isDarkMode
-                    ? "#000000"
-                    : currentTheme.colors.textPrimary,
-                },
-              ]}
-            >
-              {String(focusMinutes).padStart(2, "0")}:00 Focus
-            </Text>
+  style={[
+    styles.actionBtnText,
+    {
+      color: isDarkMode
+        ? "#000000"
+        : currentTheme.colors.textPrimary,
+    },
+  ]}
+>
+  {`${String(focusMinutes).padStart(2, "0")}:00 ${t("focusShort", {
+    defaultValue: "Focus",
+  })}`}
+</Text>
+
           </TouchableOpacity>
 
           <TouchableOpacity
@@ -1244,6 +1325,9 @@ export default function FocusScreen() {
                 styles.actionBtnGhostText,
                 { color: currentTheme.colors.secondary },
               ]}
+              numberOfLines={1}              // 🆕
+    adjustsFontSizeToFit           // 🆕
+    minimumFontScale={0.75} 
             >
               {t("discover", { defaultValue: "Découvrir" })}
             </Text>
@@ -1505,16 +1589,19 @@ export default function FocusScreen() {
             )}
           </View>
 
-          {/* Confettis */}
-          <ConfettiCannon
-            ref={confettiRef}
-            autoStart={false}
-            count={180}
-            origin={{ x: SCREEN_WIDTH / 2, y: 0 }}
-            fadeOut
-            explosionSpeed={820}
-            fallSpeed={3200}
-          />
+                    {/* Confettis (uniquement si au moins un challenge) */}
+          {hasAnyChallenge && (
+            <ConfettiCannon
+              ref={confettiRef}
+              autoStart={false}
+              count={180}
+              origin={{ x: SCREEN_WIDTH / 2, y: 0 }}
+              fadeOut
+              explosionSpeed={820}
+              fallSpeed={3200}
+            />
+          )}
+
         </ScrollView>
 
         {/* —— Focus Timer Modal —— */}
@@ -2212,11 +2299,14 @@ const styles = StyleSheet.create({
     paddingHorizontal: SPACING,
   },
   quickActions: {
-    flexDirection: "row",
-    gap: normalizeSize(10),
-    paddingHorizontal: SPACING,
-    marginTop: normalizeSize(10),
-  },
+  flexDirection: "row",
+  justifyContent: "center",          // 🆕 centre horizontalement la rangée
+  alignItems: "center",              // 🆕 verticalement propre
+  gap: normalizeSize(10),
+  paddingHorizontal: SPACING,
+  marginTop: normalizeSize(10),
+  flexWrap: "wrap",                  // 🆕 si l’écran est petit, ça passe sur 2 lignes proprement
+},
   actionBtn: {
     flexDirection: "row",
     alignItems: "center",
@@ -2238,11 +2328,14 @@ const styles = StyleSheet.create({
     paddingHorizontal: normalizeSize(14),
     borderWidth: 1,
     backgroundColor: "rgba(255,255,255,0.03)",
+    flexShrink: 1,  
   },
   actionBtnGhostText: {
-    fontFamily: "Comfortaa_700Bold",
-    fontSize: normalizeSize(13),
-  },
+  fontFamily: "Comfortaa_700Bold",
+  fontSize: normalizeSize(13),
+  flexShrink: 1,                 // 🆕 le texte se compresse au lieu de déborder
+},
+
   loadingText: {
     marginTop: normalizeSize(20),
     fontSize: normalizeSize(18),

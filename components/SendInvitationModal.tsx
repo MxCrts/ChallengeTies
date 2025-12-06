@@ -36,6 +36,9 @@ import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { LinearGradient } from "expo-linear-gradient";
 import { Dimensions } from "react-native";
 
+const DAY_OPTIONS = [7, 14, 21, 30, 60, 90, 180, 365];
+
+
 type Props = {
   visible: boolean;
   challengeId: string;
@@ -136,6 +139,13 @@ const SendInvitationModal: React.FC<Props> = ({
   const [error, setError] = useState<string>("");
   const [reduceMotion, setReduceMotion] = useState(false);
 
+  const [localDays, setLocalDays] = useState(selectedDays);
+
+useEffect(() => {
+  if (visible) setLocalDays(selectedDays);
+}, [visible, selectedDays]);
+
+
   // Anti double-tap court
   const tapGateRef = useRef<number>(0);
 
@@ -202,7 +212,7 @@ const SendInvitationModal: React.FC<Props> = ({
         );
         return;
       }
-      if (!challengeId || !Number.isFinite(selectedDays) || selectedDays <= 0) {
+      if (!challengeId || !Number.isFinite(localDays) || localDays <= 0) {
         setError(
           t("invitationS.errors.invalidPayload", {
             defaultValue: "Données d’invitation invalides.",
@@ -217,17 +227,14 @@ const SendInvitationModal: React.FC<Props> = ({
       }
 
       // 1) Idempotent: récupère ou crée une OPEN PENDING
-      const { id: inviteId } = await getOrCreateOpenInvitation(
-        challengeId,
-        selectedDays
-      );
+      const { id: inviteId } = await getOrCreateOpenInvitation(challengeId, localDays);
 
       // 2) URL universelle
       const lang = getShareLang(i18n?.language as string | undefined);
       const url = buildUniversalLink({
         challengeId,
         inviteId,
-        selectedDays,
+        selectedDays: localDays,
         lang,
         title: challengeTitle,
       });
@@ -257,7 +264,7 @@ const SendInvitationModal: React.FC<Props> = ({
           logEvent("invite_share_success", {
             inviteId,
             challengeId,
-            selectedDays,
+            selectedDays: localDays,
             platform: Platform.OS,
           });
         } catch {}
@@ -283,7 +290,7 @@ const SendInvitationModal: React.FC<Props> = ({
             logEvent("invite_share_dismiss_copied", {
               inviteId,
               challengeId,
-              selectedDays,
+              selectedDays: localDays,
             });
           } catch {}
           if (!reduceMotion) {
@@ -298,7 +305,7 @@ const SendInvitationModal: React.FC<Props> = ({
             logEvent("invite_share_dismiss_no_clipboard", {
               inviteId,
               challengeId,
-              selectedDays,
+              selectedDays: localDays,
             });
           } catch {}
         }
@@ -347,7 +354,7 @@ const SendInvitationModal: React.FC<Props> = ({
         logEvent("invite_share_error", {
           error: raw?.slice?.(0, 300) || String(e),
           challengeId,
-          selectedDays,
+          selectedDays: localDays,
           platform: Platform.OS,
         });
       } catch {}
@@ -357,7 +364,7 @@ const SendInvitationModal: React.FC<Props> = ({
   }, [
     busy,
     challengeId,
-    selectedDays,
+    localDays,
     i18n?.language,
     t,
     onClose,
@@ -445,17 +452,18 @@ const SendInvitationModal: React.FC<Props> = ({
                 </Text>
 
                 <Text style={styles.subtitle}>
-                  {t("invitationS.shareSubtitle", {
-                    challenge:
-                      challengeTitle ||
-                      t("challengeDetails.untitled", {
-                        defaultValue: "Défi",
-                      }),
-                    days: selectedDays,
-                    defaultValue:
-                      "Génère un lien d’invitation ({{days}} jours). S’il a l’app → ouverture directe. Sinon → Store.",
-                  })}
-                </Text>
+  {t("invitationS.shareSubtitle", {
+    challenge:
+      challengeTitle ||
+      t("challengeDetails.untitled", {
+        defaultValue: "Défi",
+      }),
+    days: localDays,
+    defaultValue:
+      "Génère un lien d’invitation ({{days}} jours). S’il a l’app → ouverture directe. Sinon → Store.",
+  })}
+</Text>
+
 
                 {!!error && (
                   <Text
@@ -475,6 +483,45 @@ const SendInvitationModal: React.FC<Props> = ({
                     })}
                   </Text>
                 )}
+
+                <View style={styles.daysContainer}>
+  <Text style={styles.daysLabel}>
+    {t("invitationS.selectDays", {
+      defaultValue: "Choisis la durée du défi",
+    })}
+  </Text>
+
+  <View style={styles.daysRow}>
+    {DAY_OPTIONS.map((d) => {
+      const selected = d === localDays;
+      return (
+        <TouchableOpacity
+          key={d}
+          onPress={() => {
+            setLocalDays(d);
+            if (!reduceMotion) Haptics.selectionAsync().catch(() => {});
+          }}
+          style={[
+            styles.dayChip,
+            selected && styles.dayChipSelected,
+          ]}
+          accessibilityRole="button"
+          accessibilityLabel={`${d} jours`}
+        >
+          <Text
+            style={[
+              styles.dayChipText,
+              selected && styles.dayChipTextSelected,
+            ]}
+          >
+            {d}
+          </Text>
+        </TouchableOpacity>
+      );
+    })}
+  </View>
+</View>
+
 
                 <View style={styles.buttonsRow}>
                   <TouchableOpacity
@@ -582,6 +629,47 @@ const createStyles = (
         },
       }),
     },
+    daysContainer: {
+  marginTop: 14,
+  marginBottom: 6,
+},
+daysLabel: {
+  fontFamily: "Comfortaa_700Bold",
+  fontSize: normalize(13),
+  textAlign: "center",
+  color: th.colors.textPrimary,
+  marginBottom: 8,
+},
+daysRow: {
+  flexDirection: "row",
+  flexWrap: "wrap",
+  justifyContent: "center",
+  gap: 8,
+},
+dayChip: {
+  paddingVertical: 6,
+  paddingHorizontal: 14,
+  borderRadius: 20,
+  borderWidth: 1,
+  borderColor: withAlpha(th.colors.border, 0.6),
+  backgroundColor: isDark
+    ? withAlpha("#020617", 0.95) // slate-950
+    : withAlpha("#E5E7EB", 0.95), // gray-200
+},
+dayChipSelected: {
+  backgroundColor: isDark ? "#FACC15" : "#111827", // jaune vif en dark, bleu nuit en light
+  borderColor: isDark ? "#FACC15" : "#111827",
+},
+dayChipText: {
+  fontFamily: "Comfortaa_700Bold",
+  fontSize: normalize(12),
+  color: isDark ? "#E5E7EB" : "#111827",
+},
+dayChipTextSelected: {
+  color: isDark ? "#111827" : "#F9FAFB",
+},
+
+
     title: {
       fontFamily: "Comfortaa_700Bold",
       fontSize: normalize(18),

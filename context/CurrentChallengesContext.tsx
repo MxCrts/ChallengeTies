@@ -20,7 +20,11 @@ import {
   StyleSheet,
   View,
   AccessibilityInfo,
+  Text,
+  Animated,
+  Easing,
 } from "react-native";
+import { Ionicons } from "@expo/vector-icons";
 import {
   checkForAchievements,
   deductTrophies,
@@ -59,6 +63,9 @@ import {
 } from "@/src/services/metricsService";
 import { incStat, setBool } from "@/src/services/metricsService";
 import * as Haptics from "expo-haptics";
+import { LinearGradient } from "expo-linear-gradient";
+
+
 
 interface Challenge {
   id: string;
@@ -93,6 +100,13 @@ async function addParticipantToChallengeGlobal(
 
 // --- Helpers stables ---
 const makeUK = (id: string, days: number) => `${id}_${days}`;
+
+// Clé duo canonique, avec UIDs triés pour être identiques chez A et B
+const makeDuoUK = (id: string, days: number, u1: string, u2: string) => {
+  const [a, b] = [u1, u2].sort(); // ordre stable
+  return `${id}_${days}_${a}-${b}`;
+};
+
 const clamp = (v: number, max: number) => Math.min(Math.max(v, 0), max);
 const uniq = <T,>(arr: T[]) => Array.from(new Set(arr));
 
@@ -120,6 +134,22 @@ const sameChallengeLoose = (a: any, b: any) => {
   const aid = (a as any)?.challengeId ?? a?.id;
   const bid = (b as any)?.challengeId ?? b?.id;
   return aid === bid && Number(a?.selectedDays) === Number(b?.selectedDays);
+};
+
+// 🔍 Helper unique pour retrouver un challenge dans un tableau
+// → Ne dépend plus de uniqueKey, uniquement de (challengeId || id) + selectedDays
+const findChallengeIndexByIdAndDays = (
+  arr: CurrentChallenge[],
+  id: string,
+  selectedDays: number
+): number => {
+  return arr.findIndex((c: any) => {
+    const cid = c?.challengeId ?? c?.id;
+    return (
+      cid === id &&
+      Number(c?.selectedDays ?? 0) === Number(selectedDays)
+    );
+  });
 };
 
 // --- PerfectMonth helpers ---
@@ -176,12 +206,14 @@ export interface CurrentChallenge extends Challenge {
 
 interface CurrentChallengesContextType {
   currentChallenges: CurrentChallenge[];
-  setCurrentChallenges: React.Dispatch<
-    React.SetStateAction<CurrentChallenge[]>
-  >;
+  setCurrentChallenges: React.Dispatch<React.SetStateAction<CurrentChallenge[]>>;
   simulatedToday: Date | null;
   setSimulatedToday: React.Dispatch<React.SetStateAction<Date | null>>;
-  takeChallenge: (challenge: Challenge, selectedDays: number) => Promise<void>;
+  takeChallenge: (
+    challenge: Challenge,
+    selectedDays: number,
+    options?: { duo?: boolean; duoPartnerId?: string }
+  ) => Promise<void>;
   removeChallenge: (id: string, selectedDays: number) => Promise<void>;
   markToday: (
     id: string,
@@ -202,6 +234,7 @@ interface CurrentChallengesContextType {
   requestRewardedAd: () => Promise<boolean>;
   preloadRewarded: () => void;
 }
+
 
 const CurrentChallengesContext =
   createContext<CurrentChallengesContextType | null>(null);
@@ -229,7 +262,6 @@ export const CurrentChallengesProvider: React.FC<{
     pathname === "/forgot-password";
 
   // Garde globale init ads + NPA
-  const adsReady = (globalThis as any).__ADS_READY__ === true;
 
   const interstitialRef = useRef<InterstitialAd | null>(null);
   const rewardedRef = useRef<RewardedAd | null>(null);
@@ -239,6 +271,37 @@ export const CurrentChallengesProvider: React.FC<{
   const npa = (globalThis as any).__NPA__ === true;
 
   const graceShownRef = useRef<Record<string, boolean>>({});
+
+   // 🔔 Petit système de toast inline (success / info / warning / error)
+  const [toastState, setToastState] = useState<{
+    visible: boolean;
+    kind: "success" | "error" | "info" | "warning";
+    title: string;
+    message: string;
+  }>({
+    visible: false,
+    kind: "info",
+    title: "",
+    message: "",
+  });
+
+    // 🎛 Animation pour le toast premium
+  const toastAnim = useRef(new Animated.Value(0)).current;
+
+  useEffect(() => {
+    if (toastState.visible) {
+      toastAnim.setValue(0);
+      Animated.timing(toastAnim, {
+        toValue: 1,
+        duration: 260,
+        easing: Easing.out(Easing.ease),
+        useNativeDriver: true,
+      }).start();
+    }
+  }, [toastState.visible, toastAnim]);
+
+
+  const toastTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
   const [modalVisible, setModalVisible] = useState(false);
   const [adLoaded, setAdLoaded] = useState(false);
@@ -295,6 +358,16 @@ export const CurrentChallengesProvider: React.FC<{
     };
   }, []);
 
+  // 🧹 Cleanup du timer de toast à l'unmount
+  useEffect(() => {
+    return () => {
+      if (toastTimerRef.current) {
+        clearTimeout(toastTimerRef.current);
+        toastTimerRef.current = null;
+      }
+    };
+  }, []);
+
   const notify = (
     kind: "success" | "error" | "info" | "warning",
     title: string,
@@ -317,6 +390,41 @@ export const CurrentChallengesProvider: React.FC<{
     } else {
       Alert.alert(title, message);
     }
+  };
+
+   // 🌈 Toast premium (utilisé pour "marquer aujourd'hui" & autres succès discrets)
+  const showToast = (
+    kind: "success" | "error" | "info" | "warning",
+    title: string,
+    message: string
+  ) => {
+    try {
+      if (!reduceMotion) {
+        const map = {
+          success: Haptics.NotificationFeedbackType.Success,
+          error: Haptics.NotificationFeedbackType.Error,
+          info: Haptics.NotificationFeedbackType.Success,
+          warning: Haptics.NotificationFeedbackType.Warning,
+        } as const;
+        Haptics.notificationAsync(map[kind]).catch(() => {});
+      }
+    } catch {}
+
+    if (toastTimerRef.current) {
+      clearTimeout(toastTimerRef.current);
+      toastTimerRef.current = null;
+    }
+
+    setToastState({
+      visible: true,
+      kind,
+      title,
+      message,
+    });
+
+    toastTimerRef.current = setTimeout(() => {
+      setToastState((prev) => ({ ...prev, visible: false }));
+    }, 3200);
   };
 
   const scheduleAchievementsCheck = (uid?: string | null, delay = 350) => {
@@ -363,8 +471,9 @@ export const CurrentChallengesProvider: React.FC<{
   const interRetryRef = useRef(0);
   const interTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
-  useEffect(() => {
-    if (!adsReady || isAuthRoute || !showInterstitials) {
+    useEffect(() => {
+    // 👉 On fait confiance à AdsVisibilityContext : si showInterstitials est false, on ne charge pas.
+    if (isAuthRoute || !showInterstitials) {
       interstitialRef.current = null;
       setAdLoaded(false);
       if (interTimerRef.current) {
@@ -428,14 +537,15 @@ export const CurrentChallengesProvider: React.FC<{
       interstitialRef.current = null;
       setAdLoaded(false);
     };
-  }, [adsReady, isAuthRoute, showInterstitials, interstitialAdUnitId, npa]);
+  }, [isAuthRoute, showInterstitials, interstitialAdUnitId, npa]);
+
 
   // Rewarded backoff & timers
   const rewardRetryRef = useRef(0);
   const rewardTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
-  useEffect(() => {
-    if (!adsReady || isAuthRoute || !showRewarded) {
+   useEffect(() => {
+    if (isAuthRoute || !showRewarded) {
       rewardedRef.current = null;
       setRewardLoaded(false);
       if (rewardTimerRef.current) {
@@ -502,7 +612,8 @@ export const CurrentChallengesProvider: React.FC<{
       rewardedRef.current = null;
       setRewardLoaded(false);
     };
-  }, [adsReady, isAuthRoute, showRewarded, rewardedAdUnitId, npa]);
+  }, [isAuthRoute, showRewarded, rewardedAdUnitId, npa]);
+
 
   // --- Duo reconciliation helper ---
   async function reconcileDuoLinks(
@@ -631,43 +742,60 @@ export const CurrentChallengesProvider: React.FC<{
             ? userData.CurrentChallenges
             : [];
 
+                    const userId = user.uid;
+
+          const normalizeUniqueKey = (ch: CurrentChallenge): string => {
+            const id = (ch as any)?.challengeId ?? ch.id;
+            const days = Number(ch.selectedDays);
+
+            // Si déjà une clé, on la garde (mais on corrige les duos mal formés)
+            if (ch.duo && ch.duoPartnerId && userId) {
+              return makeDuoUK(id, days, userId, ch.duoPartnerId);
+            }
+
+            return ch.uniqueKey || makeUK(id, days);
+          };
+
           const uniqueChallenges = Array.from(
-            new Map(
-              rawList.map((ch: CurrentChallenge) => {
-                const key =
-                  ch?.uniqueKey ||
-                  makeUK(ch?.id as string, Number(ch?.selectedDays));
-                return [key, { ...ch, uniqueKey: key } as CurrentChallenge];
-              })
-            ).values()
-          );
+  new Map(
+    rawList.map((ch: CurrentChallenge) => {
+      const key = normalizeUniqueKey(ch);
+      return [key, { ...ch, uniqueKey: key } as CurrentChallenge];
+    })
+  ).values()
+);
 
-          const prev = currentChallengesRef.current;
-          const hash = (c: CurrentChallenge) =>
-            [
-              c.uniqueKey,
-              c.completedDays,
-              (c as any)?.lastMarkedKey,
-              (c as any)?.streak,
-            ].join("|");
-          const same =
-            prev.length === uniqueChallenges.length &&
-            prev.every((x, i) => hash(x) === hash(uniqueChallenges[i]));
-          if (!same) setCurrentChallenges(uniqueChallenges);
+// ✅ Diff rapide pour éviter les re-renders inutiles
+const prev = currentChallengesRef.current;
+const hash = (c: CurrentChallenge) =>
+  [
+    c.uniqueKey,
+    c.completedDays,
+    (c as any)?.lastMarkedKey,
+    (c as any)?.streak,
+  ].join("|");
 
-          scheduleAchievementsCheck(userId);
+const same =
+  prev.length === uniqueChallenges.length &&
+  prev.every((x, i) => hash(x) === hash(uniqueChallenges[i]));
 
-          try {
-            finalizePerfectMonthIfNeeded(getToday(), userId);
-          } catch {}
+if (!same) {
+  setCurrentChallenges(uniqueChallenges);
+}
 
-          if (auth.currentUser?.uid) {
-            void reconcileDuoLinks(
-              userId,
-              uniqueChallenges,
-              setCurrentChallenges
-            );
-          }
+// 🧩 IMPORTANT : réconciliation duo → solo si le partenaire a quitté
+if (userId) {
+  // On lance ça en "fire and forget", pas besoin d'attendre
+  void reconcileDuoLinks(userId, uniqueChallenges, setCurrentChallenges);
+}
+
+scheduleAchievementsCheck(userId);
+
+try {
+  finalizePerfectMonthIfNeeded(getToday(), userId);
+} catch {}
+
+
         },
         (error) => {
           console.error(
@@ -719,7 +847,10 @@ export const CurrentChallengesProvider: React.FC<{
       return;
     }
 
-    const uniqueKey = makeUK(challenge.id, selectedDays);
+     const uniqueKey =
+      options?.duo && options.duoPartnerId
+        ? makeDuoUK(challenge.id, selectedDays, userId, options.duoPartnerId)
+        : makeUK(challenge.id, selectedDays);
 
     if (currentChallenges.find((ch) => ch.uniqueKey === uniqueKey)) {
       notify(
@@ -816,21 +947,26 @@ export const CurrentChallengesProvider: React.FC<{
       const userSnap = await getDoc(userRef);
       if (!userSnap.exists()) return;
 
-      const userData = userSnap.data();
+            const userData = userSnap.data();
       const currentChallengesArr: CurrentChallenge[] = Array.isArray(
         userData.CurrentChallenges
       )
         ? userData.CurrentChallenges
         : [];
 
-      const challengeToRemove = currentChallengesArr.find(
-        (ch) => ch.uniqueKey === uniqueKey
+      const idxToRemove = findChallengeIndexByIdAndDays(
+        currentChallengesArr,
+        id,
+        selectedDays
       );
-      if (!challengeToRemove) return;
+      if (idxToRemove === -1) return;
+
+      const challengeToRemove = currentChallengesArr[idxToRemove];
 
       const updatedChallenges = currentChallengesArr.filter(
-        (ch) => ch.uniqueKey !== uniqueKey
+        (_ch, i) => i !== idxToRemove
       );
+
 
       await updateDoc(userRef, { CurrentChallenges: updatedChallenges });
 
@@ -867,14 +1003,15 @@ export const CurrentChallengesProvider: React.FC<{
     }
   };
 
-  const isMarkedToday = (id: string, selectedDays: number): boolean => {
-    const uniqueKey = makeUK(id, selectedDays);
-    const ch = currentChallenges.find((c) => c.uniqueKey === uniqueKey);
-    if (!ch) return false;
+   const isMarkedToday = (id: string, selectedDays: number): boolean => {
+    const idx = findChallengeIndexByIdAndDays(currentChallenges, id, selectedDays);
+    if (idx === -1) return false;
+    const ch = currentChallenges[idx];
     const todayKey = dayKeyUTC(getToday());
     const lastKey = coerceToDayKey(ch.lastMarkedKey ?? ch.lastMarkedDate);
     return !!lastKey && lastKey === todayKey;
   };
+
 
     const markToday = async (id: string, selectedDays: number) => {
     const userId = auth.currentUser?.uid;
@@ -895,7 +1032,16 @@ export const CurrentChallengesProvider: React.FC<{
       let needsComplete = false;
       let newStreak = 0;
 
-      await runTransaction(db, async (tx) => {
+      // Flags pour contrôler un SEUL toast en sortie
+     let microEarned = 0;
+     let streakBonus:
+       | {
+           bonus: number;
+           streak: number;
+         }
+       | null = null;
+
+            await runTransaction(db, async (tx) => {
         const snap = await tx.get(userRef);
         if (!snap.exists()) throw new Error("user doc not found");
         const data = snap.data() as any;
@@ -905,23 +1051,24 @@ export const CurrentChallengesProvider: React.FC<{
           ? data.CurrentChallenges
           : [];
 
-        // 🔍 1) On essaye d’abord avec uniqueKey (format normal)
-        let idx = arr.findIndex((c) => c.uniqueKey === uniqueKey);
-
-        // 🔍 2) Fallback : on cherche par challengeId + selectedDays
-        if (idx === -1) {
-          idx = arr.findIndex((c: any) => {
-            const cid = c?.challengeId ?? c?.id;
-            return (
-              cid === id &&
-              Number(c?.selectedDays ?? 0) === Number(selectedDays)
-            );
-          });
-        }
-
+        // ✅ Utilise le helper pour trouver l'index
+        const idx = findChallengeIndexByIdAndDays(arr, id, selectedDays);
         if (idx === -1) throw new Error("challengeNotFound");
 
         const ch: any = { ...arr[idx] };
+
+        // ✅ Normaliser le uniqueKey SANS casser le duo
+        const isDuo = !!ch.duo && !!ch.duoPartnerId;
+        const canonicalKey = isDuo
+          ? makeDuoUK(
+              (ch as any)?.challengeId ?? ch.id,
+              Number(ch.selectedDays),
+              userId,
+              ch.duoPartnerId as string
+            )
+          : makeUK((ch as any)?.challengeId ?? ch.id, Number(ch.selectedDays));
+
+        ch.uniqueKey = canonicalKey;
 
         if (Number(ch.completedDays || 0) >= Number(ch.selectedDays)) {
           throw new Error("alreadyCompleted");
@@ -955,6 +1102,8 @@ export const CurrentChallengesProvider: React.FC<{
         }
       });
 
+
+
       if (missedDays >= 2) {
         const uKey = uniqueKey;
         if (!graceShownRef.current[uKey]) {
@@ -985,15 +1134,8 @@ export const CurrentChallengesProvider: React.FC<{
           try {
             DeviceEventEmitter.emit(MICRO_WEEK_UPDATED_EVENT, next);
           } catch {}
-          notify(
-            "success",
-            t("microEarnedTitle", "Trophées gagnés"),
-            t("microEarnedMessage", {
-              count: TROPHY.MICRO_PER_DAY,
-              defaultValue:
-                "Tu as gagné {{count}} trophée(s) bonus aujourd’hui !",
-            })
-          );
+          // On enregistre juste le gain pour le toast final
+         microEarned = TROPHY.MICRO_PER_DAY;
         }
       } catch {}
 
@@ -1005,27 +1147,22 @@ export const CurrentChallengesProvider: React.FC<{
           await updateDoc(doc(db, "users", userId), {
             trophies: increment(hit.bonus),
           });
-          notify(
-            "success",
-            t("streakBonusTitle", "Bonus de série"),
-            t("streakBonusMessage", {
-              bonus: hit.bonus,
-              streak: newStreak,
-              defaultValue:
-                "Bravo ! Ta série de {{streak}} jours t’apporte {{bonus}} trophée(s) bonus.",
-            })
-          );
+          // On garde l’info pour le toast final unique
+         streakBonus = {
+           bonus: hit.bonus,
+           streak: newStreak,
+         };
         }
       } catch {}
 
-      try {
+           try {
         const justSawRewarded =
           Date.now() -
             (Number(await AsyncStorage.getItem("lastRewardedTime")) ||
               0) <
           60_000;
+
         if (
-          adsReady &&
           showInterstitials &&
           !isAuthRoute &&
           !justSawRewarded
@@ -1051,6 +1188,7 @@ export const CurrentChallengesProvider: React.FC<{
         );
       }
 
+
       if (needsComplete) {
         if (!inFlightCompletes.current.has(uniqueKey)) {
           inFlightCompletes.current.add(uniqueKey);
@@ -1061,11 +1199,39 @@ export const CurrentChallengesProvider: React.FC<{
           }
         }
       } else {
-        notify(
-          "success",
-          t("markedTitle", "Progression validée"),
-          t("markedMessage", "Jour marqué avec succès.")
-        );
+        // 🌟 Toast premium pour le marquage du jour (sans Alert bloquante)
+         // ✅ Un seul toast en bas, priorité :
+       // 1) Bonus de série
+       // 2) Micro-trophées
+       // 3) Simple "jour marqué"
+       if (streakBonus) {
+         showToast(
+           "success",
+           t("streakBonusTitle", "Bonus de série"),
+           t("streakBonusMessage", {
+             bonus: streakBonus.bonus,
+             streak: streakBonus.streak,
+             defaultValue:
+               "Bravo ! Ta série de {{streak}} jours t’apporte {{bonus}} trophée(s) bonus.",
+           })
+         );
+       } else if (microEarned > 0) {
+         showToast(
+           "success",
+           t("microEarnedTitle", "Trophées gagnés"),
+           t("microEarnedMessage", {
+             count: microEarned,
+             defaultValue:
+               "Tu as gagné {{count}} trophée(s) bonus aujourd’hui !",
+           })
+         );
+       } else {
+         showToast(
+           "success",
+           t("markedTitle", "Progression validée"),
+           t("markedMessage", "Jour marqué avec succès.")
+         );
+      }
       }
 
       scheduleAchievementsCheck(userId);
@@ -1073,13 +1239,13 @@ export const CurrentChallengesProvider: React.FC<{
     } catch (error: any) {
       const msg = String(error?.message || error);
       if (msg === "alreadyCompleted") {
-        notify(
+        showToast(
           "info",
           t("alreadyMarkedTitle", "Défi déjà terminé"),
           t("alreadyCompleted", "Ce défi est déjà complété.")
         );
       } else if (msg === "alreadyMarked") {
-        notify(
+       showToast(
           "info",
           t("alreadyMarkedTitle", "Déjà validé"),
           t(
@@ -1088,14 +1254,14 @@ export const CurrentChallengesProvider: React.FC<{
           )
         );
       } else if (msg === "challengeNotFound") {
-        notify(
+        showToast(
           "error",
           t("error", "Erreur"),
           t("challengeNotFound", "Défi introuvable.")
         );
       } else {
         console.error("❌ Erreur lors du marquage :", msg);
-        notify(
+        showToast(
           "error",
           t("error", "Erreur"),
           t(
@@ -1129,35 +1295,35 @@ export const CurrentChallengesProvider: React.FC<{
 
         const userData = userSnap.data();
         const currentChallengesArray: CurrentChallenge[] = Array.isArray(
-          userData.CurrentChallenges
-        )
-          ? userData.CurrentChallenges
-          : [];
+  userData.CurrentChallenges
+)
+  ? userData.CurrentChallenges
+  : [];
 
-        const challengeIndex = currentChallengesArray.findIndex(
-          (ch) => ch.uniqueKey === uniqueKey
-        );
-        if (challengeIndex === -1) {
-          console.log(
-            "Challenge non trouvé pour reset :",
-            uniqueKey
-          );
-          return;
-        }
+const challengeIndex = findChallengeIndexByIdAndDays(
+  currentChallengesArray,
+  id,
+  selectedDays
+);
+if (challengeIndex === -1) {
+  console.log("Challenge non trouvé pour reset :", uniqueKey);
+  return;
+}
 
-        const updated = {
-          ...currentChallengesArray[challengeIndex],
-        } as any;
-        pushCompletion(updated, today);
-        updated.streak = 1;
-        updated.completedDays = Math.min(
-          1,
-          Number(updated.selectedDays || 1)
-        );
+const updated = {
+  ...currentChallengesArray[challengeIndex],
+} as any;
+pushCompletion(updated, today);
+updated.streak = 1;
+updated.completedDays = Math.min(
+  1,
+  Number(updated.selectedDays || 1)
+);
 
-        const updatedArray = currentChallengesArray.map((ch, i) =>
-          i === challengeIndex ? updated : ch
-        );
+const updatedArray = currentChallengesArray.map((ch, i) =>
+  i === challengeIndex ? updated : ch
+);
+
 
         await updateDoc(userRef, { CurrentChallenges: updatedArray });
         setCurrentChallenges(updatedArray);
@@ -1298,10 +1464,14 @@ export const CurrentChallengesProvider: React.FC<{
       )
         ? userData.CurrentChallenges
         : [];
-      const index = arr.findIndex((ch) => ch.uniqueKey === uniqueKey);
-      if (index === -1) return;
+      const index = findChallengeIndexByIdAndDays(arr, id, selectedDays);
+if (index === -1) {
+  console.log("Challenge non trouvé pour handleWatchAd :", uniqueKey);
+  return;
+}
 
-      const updated = { ...arr[index] } as any;
+const updated = { ...arr[index] } as any;
+
       pushCompletion(updated, today);
       updated.streak = Number(updated.streak || 0) + 1;
       updated.completedDays = clamp(
@@ -1389,16 +1559,19 @@ export const CurrentChallengesProvider: React.FC<{
           ? userData.CurrentChallenges
           : [];
 
-      const challengeIndex = currentChallengesArray.findIndex(
-        (ch) => ch.uniqueKey === uniqueKey
-      );
-      if (challengeIndex === -1) {
-        console.log(
-          "Challenge non trouvé pour useTrophies :",
-          uniqueKey
-        );
-        return;
-      }
+      const challengeIndex = findChallengeIndexByIdAndDays(
+  currentChallengesArray,
+  id,
+  selectedDays
+);
+if (challengeIndex === -1) {
+  console.log(
+    "Challenge non trouvé pour useTrophies :",
+    uniqueKey
+  );
+  return;
+}
+
 
       const success = await deductTrophies(userId, trophyCost);
       if (!success) {
@@ -1510,15 +1683,16 @@ export const CurrentChallengesProvider: React.FC<{
         ? userData.CurrentChallenges
         : [];
 
-      const index = arr.findIndex((ch) => ch.uniqueKey === uniqueKey);
-      if (index === -1) {
-        __DEV__ &&
-          console.log(
-            "Challenge non trouvé pour Streak Pass :",
-            uniqueKey
-          );
-        return;
-      }
+      const index = findChallengeIndexByIdAndDays(arr, id, selectedDays);
+if (index === -1) {
+  __DEV__ &&
+    console.log(
+      "Challenge non trouvé pour Streak Pass :",
+      uniqueKey
+    );
+  return;
+}
+
 
       const updated = { ...arr[index] } as any;
       pushCompletion(updated, today);
@@ -1634,265 +1808,256 @@ export const CurrentChallengesProvider: React.FC<{
     })();
   };
 
-  const completeChallenge = async (
-    id: string,
-    selectedDays: number,
-    doubleReward: boolean = false
-  ) => {
-    const userId = auth.currentUser?.uid;
-    if (!userId) return;
+ const completeChallenge = async (
+  id: string,
+  selectedDays: number,
+  doubleReward: boolean = false
+) => {
+  const userId = auth.currentUser?.uid;
+  if (!userId) return;
 
-    const uniqueKey = makeUK(id, selectedDays);
-    const todayIso = getToday().toISOString();
+  const uniqueKey = makeUK(id, selectedDays);
+  const today = getToday();
+  const todayIso = today.toISOString();
+  const todayKey = dayKeyUTC(today);
 
-    try {
-      if (inFlightCompletes.current.has(uniqueKey)) {
-        __DEV__ &&
-          console.log(
-            "[completeChallenge] skip (in-flight)",
-            uniqueKey
-          );
-        return;
-      }
-      inFlightCompletes.current.add(uniqueKey);
+  try {
+    if (inFlightCompletes.current.has(uniqueKey)) {
+      __DEV__ &&
+        console.log("[completeChallenge] skip (in-flight)", uniqueKey);
+      return;
+    }
+    inFlightCompletes.current.add(uniqueKey);
 
-      const userRef = doc(db, "users", userId);
-      const challengeRef = doc(db, "challenges", id);
-      const todayKey = dayKeyUTC(getToday());
+    const userRef = doc(db, "users", userId);
+    const challengeRef = doc(db, "challenges", id);
 
-      let finalTrophiesComputed = 0;
-      let toCompleteSnapshot: CurrentChallenge | null = null;
+    let finalTrophiesComputed = 0;
+    let toCompleteSnapshot: CurrentChallenge | null = null;
 
-      await runTransaction(db, async (tx) => {
-        const uSnap = await tx.get(userRef);
-        if (!uSnap.exists()) throw new Error("user doc not found");
-        const uData = uSnap.data();
-        const curr: CurrentChallenge[] = Array.isArray(
-          uData.CurrentChallenges
-        )
-          ? uData.CurrentChallenges
-          : [];
-        const idx = curr.findIndex((c) => c.uniqueKey === uniqueKey);
-        if (idx === -1)
-          throw new Error("challengeNotFound");
-        const toComplete = { ...curr[idx] };
-        toCompleteSnapshot = toComplete;
+    await runTransaction(db, async (tx) => {
+      // 1️⃣ READ USER
+      const uSnap = await tx.get(userRef);
+      if (!uSnap.exists()) throw new Error("user doc not found");
+      const uData = uSnap.data();
+      const curr: CurrentChallenge[] = Array.isArray(uData.CurrentChallenges)
+        ? uData.CurrentChallenges
+        : [];
 
-        const myKeys: string[] =
-          (toComplete as any).completionDateKeys ??
-          (toComplete.completionDates || [])
-            .map(coerceToDayKey)
-            .filter(Boolean);
-        const keysSorted = uniq(myKeys).sort();
+      const idx = findChallengeIndexByIdAndDays(curr, id, selectedDays);
+      if (idx === -1) throw new Error("challengeNotFound");
 
-        let partnerFinishKey: string | null = null;
-        if (toComplete.duo && toComplete.duoPartnerId) {
-          const pRef = doc(db, "users", toComplete.duoPartnerId);
-          const pSnap = await tx.get(pRef).catch(
-            () => null as any
-          );
-          if (pSnap?.exists()) {
-            const pData = pSnap.data();
-            const pArr: CurrentChallenge[] = Array.isArray(
-              pData.CurrentChallenges
-            )
-              ? pData.CurrentChallenges
-              : [];
-            const p = pArr.find((ch) => {
-              if (ch?.uniqueKey === uniqueKey) return true;
-              const cid = (ch as any)?.challengeId ?? ch?.id;
-              return (
-                cid === id &&
-                Number(ch?.selectedDays) ===
-                  Number(selectedDays)
-              );
-            });
-            const pKeys: string[] =
-              (p as any)?.completionDateKeys ??
-              (p?.completionDates || [])
-                .map(coerceToDayKey)
-                .filter(Boolean);
-            if (pKeys?.length)
-              partnerFinishKey = pKeys[pKeys.length - 1];
-          }
-        }
+      const toComplete = { ...curr[idx] } as any;
+      toCompleteSnapshot = toComplete;
 
-        const { total } = computeChallengeTrophies({
-          selectedDays,
-          completionKeys: keysSorted,
-          myFinishKey: todayKey,
-          partnerFinishKey,
-          isDuo: !!toComplete.duo,
-          isDoubleReward: !!doubleReward,
-          longestStreak: Number(uData?.longestStreak || 0),
-        });
-        finalTrophiesComputed = total;
-
-        const done: any[] = Array.isArray(
-          uData.CompletedChallenges
-        )
-          ? uData.CompletedChallenges
-          : [];
-        const prevIdx = done.findIndex((e) => e.id === id);
-        const newDone = {
-          ...toComplete,
-          completedAt: todayIso,
-          ...(keysSorted?.length
-            ? { completionDateKeys: keysSorted }
-            : {}),
-          history:
-            prevIdx !== -1
-              ? [
-                  ...(done[prevIdx].history || []),
-                  {
-                    completedAt: done[prevIdx].completedAt,
-                    selectedDays: done[prevIdx].selectedDays,
-                  },
-                ]
-              : [],
-        };
-        if (prevIdx !== -1) done[prevIdx] = newDone;
-        else done.push(newDone);
-
-        const newCurr = curr.filter((_, i) => i !== idx);
-
-        tx.update(userRef, {
-          CurrentChallenges: newCurr,
-          CompletedChallenges: done,
-          trophies: increment(finalTrophiesComputed),
-          completedChallengesCount: increment(1),
-          CompletedChallengeIds: arrayUnion(id),
-          "stats.completed.total": increment(1),
-          ["stats.completed.byDays." +
-          String(selectedDays)]: increment(1),
-        });
-
-        const cSnap = await tx.get(challengeRef);
-        if (cSnap.exists()) {
-          const cData = cSnap.data();
-          const users: string[] = Array.isArray(
-            cData.usersTakingChallenge
+      // Normaliser la clé (solo ou duo)
+      const isDuo = !!toComplete.duo && !!toComplete.duoPartnerId;
+      const canonicalKey = isDuo
+        ? makeDuoUK(
+            (toComplete as any)?.challengeId ?? toComplete.id,
+            Number(toComplete.selectedDays),
+            userId,
+            toComplete.duoPartnerId as string
           )
-            ? cData.usersTakingChallenge
-            : [];
-          tx.update(challengeRef, {
-            participantsCount: Math.max(
-              (cData.participantsCount || 1) - 1,
-              0
-            ),
-            usersTakingChallenge: users.filter(
-              (uid) => uid !== userId
-            ),
-          });
-        }
-
-        if (toComplete.duo && toComplete.duoPartnerId) {
-          const pRef = doc(db, "users", toComplete.duoPartnerId);
-          const pSnap = await tx.get(pRef).catch(
-            () => null as any
+        : makeUK(
+            (toComplete as any)?.challengeId ?? toComplete.id,
+            Number(toComplete.selectedDays)
           );
-          if (pSnap?.exists()) {
-            const pData = pSnap.data();
-            const pArr: CurrentChallenge[] = Array.isArray(
-              pData.CurrentChallenges
-            )
-              ? pData.CurrentChallenges
-              : [];
-            const pIdx = pArr.findIndex(
-              (ch) => ch.uniqueKey === uniqueKey
+      toComplete.uniqueKey = canonicalKey;
+
+      // 2️⃣ READ PARTNER (si duo) — AVANT TOUT WRITE
+      let partnerFinishKey: string | null = null;
+      let partnerRef: ReturnType<typeof doc> | null = null;
+      let partnerCurr: CurrentChallenge[] = [];
+
+      if (isDuo && toComplete.duoPartnerId) {
+        partnerRef = doc(db, "users", toComplete.duoPartnerId);
+        const pSnap = await tx.get(partnerRef).catch(() => null as any);
+        if (pSnap?.exists()) {
+          const pData = pSnap.data();
+          partnerCurr = Array.isArray(pData.CurrentChallenges)
+            ? pData.CurrentChallenges
+            : [];
+
+          const p = partnerCurr.find((ch: any) => {
+            if (ch?.uniqueKey === canonicalKey) return true;
+            const cid = (ch as any)?.challengeId ?? ch?.id;
+            return (
+              cid === id &&
+              Number(ch?.selectedDays) === Number(selectedDays)
             );
-            if (pIdx !== -1) {
-              const pNew = pArr.filter(
-                (_x, i) => i !== pIdx
-              );
-              tx.update(pRef, { CurrentChallenges: pNew });
-            }
+          });
+
+          const pKeys: string[] =
+            (p as any)?.completionDateKeys ??
+            (p?.completionDates || [])
+              .map(coerceToDayKey)
+              .filter(Boolean);
+
+          if (pKeys?.length) {
+            partnerFinishKey = pKeys[pKeys.length - 1];
           }
         }
+      }
+
+      // 3️⃣ READ CHALLENGE DOC — TOUJOURS AVANT LES WRITES
+      const cSnap = await tx.get(challengeRef).catch(() => null as any);
+      const cData = cSnap?.exists() ? cSnap.data() : null;
+
+      // 4️⃣ Calcul des trophées
+      const myKeys: string[] =
+        (toComplete as any).completionDateKeys ??
+        (toComplete.completionDates || [])
+          .map(coerceToDayKey)
+          .filter(Boolean);
+
+      const keysSorted = uniq(myKeys).sort();
+
+      const { total } = computeChallengeTrophies({
+        selectedDays,
+        completionKeys: keysSorted,
+        myFinishKey: todayKey,
+        partnerFinishKey,
+        isDuo: !!toComplete.duo,
+        isDoubleReward: !!doubleReward,
+        longestStreak: Number(uData?.longestStreak || 0),
+      });
+      finalTrophiesComputed = total;
+
+      // 5️⃣ Mise à jour CompletedChallenges & CurrentChallenges côté USER
+      const done: any[] = Array.isArray(uData.CompletedChallenges)
+        ? uData.CompletedChallenges
+        : [];
+
+      const prevIdx = done.findIndex((e) => e.id === id);
+
+      const newDone = {
+        ...toComplete,
+        completedAt: todayIso,
+        ...(keysSorted?.length ? { completionDateKeys: keysSorted } : {}),
+        history:
+          prevIdx !== -1
+            ? [
+                ...(done[prevIdx].history || []),
+                {
+                  completedAt: done[prevIdx].completedAt,
+                  selectedDays: done[prevIdx].selectedDays,
+                },
+              ]
+            : [],
+      };
+
+      if (prevIdx !== -1) done[prevIdx] = newDone;
+      else done.push(newDone);
+
+      const newCurr = curr.filter((_, i) => i !== idx);
+
+      tx.update(userRef, {
+        CurrentChallenges: newCurr,
+        CompletedChallenges: done,
+        trophies: increment(finalTrophiesComputed),
+        completedChallengesCount: increment(1),
+        CompletedChallengeIds: arrayUnion(id),
+        "stats.completed.total": increment(1),
+        ["stats.completed.byDays." + String(selectedDays)]: increment(1),
       });
 
-      try {
-        if (toCompleteSnapshot) {
-          const completedCategory =
-            (toCompleteSnapshot as any)?.category ??
-            (toCompleteSnapshot as any)?.categoryId;
-          await addCompletedCategory(userId, completedCategory);
-
-          const isSeasonal =
-            (toCompleteSnapshot as any)?.seasonal === true;
-          if (isSeasonal) await recordSeasonalCompleted(userId);
-
-          if (toCompleteSnapshot.duo) {
-            await recordDuoFinish(userId);
-          }
-        }
-      } catch {}
-
-      try {
-        const keys =
-          (toCompleteSnapshot as any)
-            ?.completionDateKeys as string[] | undefined;
-        if (
-          Array.isArray(keys) &&
-          keys.length === selectedDays &&
-          selectedDays >= 30
-        ) {
-          const sorted = [...keys].sort();
-          let consecutive = true;
-          for (let i = 1; i < sorted.length; i++) {
-            if (diffDaysUTC(sorted[i - 1], sorted[i]) !== 1) {
-              consecutive = false;
-              break;
-            }
-          }
-          if (consecutive) {
-            if (selectedDays >= 30)
-              await setBool(userId, "zeroMissLongRun30", true);
-            if (selectedDays >= 60)
-              await setBool(userId, "zeroMissLongRun60", true);
-          }
-        }
-      } catch (e: any) {
-        __DEV__ &&
-          console.warn(
-            "[achievements] zero-miss check error:",
-            e?.message ?? e
-          );
+      // 6️⃣ Mise à jour du challenge global (participants)
+      if (cData) {
+        const users: string[] = Array.isArray(cData.usersTakingChallenge)
+          ? cData.usersTakingChallenge
+          : [];
+        tx.update(challengeRef, {
+          participantsCount: Math.max((cData.participantsCount || 1) - 1, 0),
+          usersTakingChallenge: users.filter((uid: string) => uid !== userId),
+        });
       }
 
-      notify(
-        "success",
-        t("finalCongratsTitle", "Bravo !"),
-        t("finalCongratsMessage", {
-          count: finalTrophiesComputed,
-          defaultValue:
-            "Défi complété ! Tu as gagné {{count}} trophées.",
-        }),
-        [
-          {
-            text: t("ok", "OK"),
-            style: "default",
-          },
-        ]
-      );
-      scheduleAchievementsCheck(userId);
-    } catch (error: any) {
-      console.error(
-        "❌ Erreur completeChallenge :",
-        error.message
-      );
-      notify(
-        "error",
-        t("error", "Erreur"),
-        t(
-          "unableToFinalizeChallenge",
-          "Impossible de finaliser ce défi."
-        )
-      );
-    } finally {
-      inFlightCompletes.current.delete(uniqueKey);
+      // 7️⃣ Si duo → supprimer le défi du partenaire (comportement actuel conservé)
+      if (isDuo && partnerRef && partnerCurr.length) {
+        const duoKey = toComplete.uniqueKey as string;
+        const pIdx = partnerCurr.findIndex((ch: any) => {
+          if (ch?.uniqueKey === duoKey) return true;
+          const cid = ch?.challengeId ?? ch?.id;
+          return cid === id && Number(ch?.selectedDays) === Number(selectedDays);
+        });
+
+        if (pIdx !== -1) {
+          const pNew = partnerCurr.filter((_x, i) => i !== pIdx);
+          tx.update(partnerRef, { CurrentChallenges: pNew });
+        }
+      }
+    });
+
+    // 8️⃣ Stats supplémentaires / achievements hors transaction
+    try {
+      if (toCompleteSnapshot) {
+        const completedCategory =
+          (toCompleteSnapshot as any)?.category ??
+          (toCompleteSnapshot as any)?.categoryId;
+        await addCompletedCategory(userId, completedCategory);
+
+        const isSeasonal = (toCompleteSnapshot as any)?.seasonal === true;
+        if (isSeasonal) await recordSeasonalCompleted(userId);
+
+        if (toCompleteSnapshot.duo) {
+          await recordDuoFinish(userId);
+        }
+      }
+    } catch {}
+
+    try {
+      const keys =
+        (toCompleteSnapshot as any)?.completionDateKeys as
+          | string[]
+          | undefined;
+      if (Array.isArray(keys) && keys.length === selectedDays && selectedDays >= 30) {
+        const sorted = [...keys].sort();
+        let consecutive = true;
+        for (let i = 1; i < sorted.length; i++) {
+          if (diffDaysUTC(sorted[i - 1], sorted[i]) !== 1) {
+            consecutive = false;
+            break;
+          }
+        }
+        if (consecutive) {
+          if (selectedDays >= 30)
+            await setBool(userId, "zeroMissLongRun30", true);
+          if (selectedDays >= 60)
+            await setBool(userId, "zeroMissLongRun60", true);
+        }
+      }
+    } catch (e: any) {
+      __DEV__ &&
+        console.warn("[achievements] zero-miss check error:", e?.message ?? e);
     }
-  };
+
+    // 9️⃣ Feedback UI
+    showToast(
+      "success",
+      t("finalCongratsTitle", "Bravo !"),
+      t("finalCongratsMessage", {
+        count: finalTrophiesComputed,
+        defaultValue: "Défi complété ! Tu as gagné {{count}} trophées.",
+      })
+    );
+    scheduleAchievementsCheck(userId);
+  } catch (error: any) {
+    console.error("❌ Erreur completeChallenge :", error.message);
+    notify(
+      "error",
+      t("error", "Erreur"),
+      t(
+        "unableToFinalizeChallenge",
+        "Impossible de finaliser ce défi."
+      )
+    );
+  } finally {
+    inFlightCompletes.current.delete(uniqueKey);
+  }
+};
+
+
 
   const simulateStreak = async (
     id: string,
@@ -2048,6 +2213,91 @@ export const CurrentChallengesProvider: React.FC<{
               />
             );
           })()}
+          {toastState.visible && (
+  <View
+    pointerEvents="box-none"
+    style={styles.toastContainer}
+  >
+    <Animated.View
+      style={[
+        styles.toastAnimatedWrapper,
+        {
+          opacity: toastAnim,
+          transform: [
+            toastAnim.interpolate({
+              inputRange: [0, 1],
+              outputRange: [16, 0],
+            }) && {
+              translateY: toastAnim.interpolate({
+                inputRange: [0, 1],
+                outputRange: [16, 0],
+              }),
+            },
+            {
+              scale: toastAnim.interpolate({
+                inputRange: [0, 1],
+                outputRange: [0.96, 1],
+              }),
+            },
+          ].filter(Boolean) as any,
+        },
+      ]}
+    >
+      <LinearGradient
+        colors={
+          toastState.kind === "success"
+            ? ["#2ecc71", "#27ae60"]
+            : toastState.kind === "error"
+            ? ["#e74c3c", "#c0392b"]
+            : toastState.kind === "warning"
+            ? ["#f1c40f", "#f39c12"]
+            : ["#3498db", "#2980b9"]
+        }
+        start={{ x: 0, y: 0 }}
+        end={{ x: 1, y: 1 }}
+        style={styles.toastInner}
+      >
+        <View style={styles.toastContentRow}>
+          <View style={styles.toastIconWrapper}>
+            <Ionicons
+              name={
+                toastState.kind === "success"
+                  ? "checkmark-circle"
+                  : toastState.kind === "error"
+                  ? "close-circle"
+                  : toastState.kind === "warning"
+                  ? "alert-circle"
+                  : "information-circle"
+              }
+              size={22}
+              color="#FFFFFF"
+            />
+          </View>
+          <View style={styles.toastTextWrapper}>
+            <Text style={styles.toastTitle} numberOfLines={1}>
+              {toastState.title}
+            </Text>
+            {!!toastState.message && (
+              <Text style={styles.toastMessage} numberOfLines={2}>
+                {toastState.message}
+              </Text>
+            )}
+          </View>
+        </View>
+
+        <View style={styles.toastPill}>
+          <Text style={styles.toastPillText}>
+            {t(
+              "toast.keepGoing",
+              "Garde le rythme 🔥"
+            )}
+          </Text>
+        </View>
+      </LinearGradient>
+    </Animated.View>
+  </View>
+)}
+
       </View>
     </CurrentChallengesContext.Provider>
   );
@@ -2057,6 +2307,69 @@ const styles = StyleSheet.create({
   providerContainer: {
     flex: 1,
     position: "relative",
+  },
+    toastContainer: {
+    position: "absolute",
+    left: 0,
+    right: 0,
+    bottom: 32,
+    alignItems: "center",
+    justifyContent: "center",
+    paddingHorizontal: 16,
+  },
+    toastInner: {
+    width: "100%",
+    borderRadius: 20,
+    paddingVertical: 14,
+    paddingHorizontal: 16,
+    backgroundColor: "rgba(10, 10, 10, 0.9)", // fallback derrière le gradient
+  },
+
+   toastTitle: {
+    fontSize: 15,
+    fontWeight: "700",
+    color: "#FFFFFF",
+    marginBottom: 2,
+  },
+  toastMessage: {
+    fontSize: 13,
+    lineHeight: 18,
+    color: "#F5F5F5",
+  },
+    toastAnimatedWrapper: {
+    maxWidth: "96%",
+    borderRadius: 20,
+    overflow: "hidden",
+    shadowColor: "#000",
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.35,
+    shadowRadius: 10,
+    elevation: 10,
+  },
+  toastContentRow: {
+    flexDirection: "row",
+    alignItems: "center",
+  },
+  toastIconWrapper: {
+    marginRight: 10,
+  },
+  toastTextWrapper: {
+    flex: 1,
+  },
+  toastPill: {
+    marginTop: 8,
+    alignSelf: "flex-start",
+    paddingHorizontal: 10,
+    paddingVertical: 4,
+    borderRadius: 999,
+    backgroundColor: "rgba(0, 0, 0, 0.22)",
+  },
+  toastPillText: {
+    fontSize: 11,
+    fontWeight: "600",
+    color: "#FFFFFF",
+    textTransform: "uppercase",
+    letterSpacing: 0.4,
   },
 });
 

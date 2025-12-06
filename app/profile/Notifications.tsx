@@ -15,6 +15,8 @@ import {
   Alert,
   ActivityIndicator,
   Platform,
+  Dimensions,
+ I18nManager,
 } from "react-native";
 import { LinearGradient } from "expo-linear-gradient";
 import Animated, { FadeInUp } from "react-native-reanimated";
@@ -30,6 +32,7 @@ import {
   query,
   Timestamp,
   where,
+  getDoc,
 } from "firebase/firestore";
 import { db } from "@/constants/firebase-config";
 import { useRouter } from "expo-router";
@@ -47,14 +50,24 @@ import {
   type Invitation as ServiceInvitation,
 } from "@/services/invitationService";
 
-type Invitation = ServiceInvitation & { id: string };
+const { width: SCREEN_WIDTH } = Dimensions.get("window");
+
+const normalizeSize = (size: number) => {
+  const baseWidth = 375;
+  const scale = Math.min(Math.max(SCREEN_WIDTH / baseWidth, 0.7), 1.8);
+  return Math.round(size * scale);
+};
+
+
+type Invitation = ServiceInvitation & { id: string; chatId?: string };
+
 
 type FilterTab = "inbox" | "sent" | "accepted" | "refused";
 type Scope = "all" | "duo";
 
 const NotificationsScreen: React.FC = () => {
   const { user } = useAuth();
-  const { t } = useTranslation();
+  const { t, i18n } = useTranslation();
   const { theme } = useTheme(); // laissé comme dans ta version (même si pas utilisé)
   const router = useRouter();
   const { show } = useToast();
@@ -66,6 +79,9 @@ const NotificationsScreen: React.FC = () => {
   const [active, setActive] = useState<FilterTab>("inbox");
   const [scope, setScope] = useState<Scope>("all");
   const [nowMs, setNowMs] = useState<number>(Date.now());
+  const [titlesByChallengeId, setTitlesByChallengeId] = useState<
+    Record<string, string>
+  >({});
 
   // Ticker pour forcer un re-render toutes les 60s (compte à rebours)
   useEffect(() => {
@@ -133,6 +149,96 @@ const NotificationsScreen: React.FC = () => {
       warmChallengeMetas(Array.from(ids)).catch(() => {});
     }
   }, [inbox, sent]);
+
+  // 🔤 Titres localisés des challenges (comme sur index)
+  useEffect(() => {
+    const ids = new Set<string>();
+    inbox.forEach((i) => ids.add(i.challengeId));
+    sent.forEach((i) => ids.add(i.challengeId));
+
+    if (!ids.size) {
+      setTitlesByChallengeId({});
+      return;
+    }
+
+    let cancelled = false;
+
+    const run = async () => {
+      try {
+        const entries: [string, string][] = [];
+
+        await Promise.all(
+          Array.from(ids).map(async (id) => {
+            try {
+              const ref = doc(db, "challenges", id);
+              const snap = await getDoc(ref);
+
+              if (snap.exists()) {
+                const data = snap.data() as any;
+                const chatId = data?.chatId;
+                const rawTitle =
+                  data?.title || readTitleSync(id) || String(id);
+
+                let title: string;
+
+                if (chatId) {
+                  // 🧠 Comme dans index : challenges.<chatId>.title
+                  title =
+                    t(`challenges.${chatId}.title`, {
+                      defaultValue: rawTitle,
+                    }) || rawTitle;
+                } else {
+                  // Fallback : on tente avec l'id comme clé, sinon brut
+                  title =
+                    t(`challenges.${id}.title`, {
+                      defaultValue: rawTitle,
+                    }) || rawTitle;
+                }
+
+                entries.push([id, title]);
+              } else {
+                const fallback =
+                  readTitleSync(id) ||
+                  t("mysteriousChallenge", {
+                    defaultValue: "Défi mystère",
+                  }) ||
+                  String(id);
+                entries.push([id, fallback]);
+              }
+            } catch {
+              const fallback =
+                readTitleSync(id) ||
+                t("mysteriousChallenge", {
+                  defaultValue: "Défi mystère",
+                }) ||
+                String(id);
+              entries.push([id, fallback]);
+            }
+          })
+        );
+
+        if (!cancelled) {
+          setTitlesByChallengeId((prev) => {
+            const next = { ...prev };
+            entries.forEach(([id, title]) => {
+              next[id] = title;
+            });
+            return next;
+          });
+        }
+      } catch {
+        // no-op
+      }
+    };
+
+    run();
+
+    return () => {
+      cancelled = true;
+    };
+    // 🔁 On relance quand la langue change
+  }, [inbox, sent, i18n.language, t]);
+
 
   const onRefresh = useCallback(() => {
     // listeners temps réel -> simple feedback
@@ -226,7 +332,13 @@ const NotificationsScreen: React.FC = () => {
           size={14}
           color="#fff"
         />
-        <Text style={styles.badgeExpireText}>{label}</Text>
+         <Text
+          style={styles.badgeExpireText}
+          numberOfLines={1}
+          adjustsFontSizeToFit
+        >
+          {label}
+        </Text>
       </View>
     );
   };
@@ -338,12 +450,20 @@ const NotificationsScreen: React.FC = () => {
       end={{ x: 1, y: 1 }}
       style={styles.header}
     >
-      <Text style={styles.title}>
+      <Text
+        style={styles.title}
+        numberOfLines={2}
+        adjustsFontSizeToFit
+      >
         {t("notificationsScreen.title", {
           defaultValue: "Invitations & Notifications",
         })}
       </Text>
-      <Text style={styles.subtitle}>
+      <Text
+        style={styles.subtitle}
+        numberOfLines={2}
+        adjustsFontSizeToFit
+      >
         {t("notificationsScreen.subtitle", {
           defaultValue: "Gère tes invitations duo et suivez leurs statuts.",
         })}
@@ -404,89 +524,119 @@ const NotificationsScreen: React.FC = () => {
     </LinearGradient>
   );
 
-  const renderItem = ({ item }: { item: Invitation }) => (
-    <Animated.View entering={FadeInUp.springify().mass(0.8)} style={styles.cardWrap}>
-      <View style={styles.card}>
-        <View style={styles.row}>
-          <View style={styles.badge}>
-            <Ionicons name="flash-outline" size={18} color="#fff" />
-          </View>
-          <View style={{ flex: 1 }}>
-            <Text style={styles.cardTitle} numberOfLines={1}>
-              {t("notificationsScreen.challenge", {
-                defaultValue: "Défi",
-              })}{" "}
-              • {readTitleSync(item.challengeId) || item.challengeId}
-            </Text>
-            <Text style={styles.cardMeta} numberOfLines={1}>
-              {item.selectedDays} {t("challengeDetails.days")}
-              {"  •  "}
-              {t(`notificationsScreen.status.${item.status}`, {
-                defaultValue: item.status,
-              })}
-            </Text>
-          </View>
-          <ExpireBadge expiresAt={item.expiresAt} />
-        </View>
+    const renderItem = ({ item }: { item: Invitation }) => {
+    const localizedTitle =
+      titlesByChallengeId[item.challengeId] ||
+      readTitleSync(item.challengeId) ||
+      item.challengeId;
 
-        <View style={styles.actions}>
-          {/* INBOX PENDING: Accept / Refuse */}
-          {active === "inbox" && item.status === "pending" && (
-            <>
-              <PrimaryButton
-                title={t("invitationS.actions.continue")}
-                icon="checkmark-outline"
-                onPress={() => accept(item)}
-                a11y={t("notificationsScreen.a11y.accept")}
-              />
+    return (
+      <Animated.View
+        entering={FadeInUp.springify().mass(0.8)}
+        style={styles.cardWrap}
+      >
+        <View style={styles.card}>
+          <View style={styles.row}>
+            <View style={styles.badge}>
+              <Ionicons name="flash-outline" size={18} color="#fff" />
+            </View>
+
+            <View style={{ flex: 1 }}>
+              <Text
+                style={styles.cardTitle}
+                numberOfLines={2}
+                adjustsFontSizeToFit
+              >
+                {localizedTitle}
+              </Text>
+
+              <Text
+                style={styles.cardMeta}
+                numberOfLines={1}
+                adjustsFontSizeToFit
+              >
+                {item.selectedDays} {t("challengeDetails.days")}
+                {"  •  "}
+                {t(`notificationsScreen.status.${item.status}`, {
+                  defaultValue: item.status,
+                })}
+              </Text>
+            </View>
+
+            {item.status === "pending" && (
+              <ExpireBadge expiresAt={item.expiresAt} />
+            )}
+          </View>
+
+          <View style={styles.actions}>
+            {/* INBOX PENDING: Accept / Refuse */}
+            {active === "inbox" && item.status === "pending" && (
+              <>
+                <PrimaryButton
+                  title={t("invitationS.actions.continue")}
+                  icon="checkmark-outline"
+                  onPress={() => accept(item)}
+                  a11y={t("notificationsScreen.a11y.accept")}
+                />
+                <SecondaryButton
+                  title={t("invitationS.actions.cancel")}
+                  icon="close-outline"
+                  onPress={() => refuse(item)}
+                  a11y={t("notificationsScreen.a11y.refuse")}
+                />
+              </>
+            )}
+
+            {/* SENT PENDING: Cancel */}
+            {active === "sent" && item.status === "pending" && (
               <SecondaryButton
-                title={t("invitationS.actions.cancel")}
-                icon="close-outline"
-                onPress={() => refuse(item)}
-                a11y={t("notificationsScreen.a11y.refuse")}
+                title={t("notificationsScreen.cancelShort", {
+                  defaultValue: "Annuler",
+                })}
+                icon="trash-outline"
+                onPress={() => cancel(item)}
+                a11y={t("notificationsScreen.a11y.cancel")}
               />
-            </>
-          )}
+            )}
 
-          {/* SENT PENDING: Cancel */}
-          {active === "sent" && item.status === "pending" && (
-            <SecondaryButton
-              title={t("notificationsScreen.cancelShort", {
-                defaultValue: "Annuler",
-              })}
-              icon="trash-outline"
-              onPress={() => cancel(item)}
-              a11y={t("notificationsScreen.a11y.cancel")}
-            />
-          )}
-
-          {/* Accepted: Ouvrir challenge */}
-          {active === "accepted" && (
-            <PrimaryButton
-              title={t("notificationsScreen.open", {
-                defaultValue: "Ouvrir",
-              })}
-              icon="arrow-forward-outline"
-              onPress={() =>
-                router.push(`/challenge-details/${item.challengeId}`)
-              }
-              a11y={t("notificationsScreen.a11y.open")}
-            />
-          )}
+            {/* Accepted: Ouvrir challenge */}
+            {active === "accepted" && (
+              <PrimaryButton
+                title={t("notificationsScreen.open", {
+                  defaultValue: "Ouvrir",
+                })}
+                icon="arrow-forward-outline"
+                onPress={() =>
+                  router.push(`/challenge-details/${item.challengeId}`)
+                }
+                a11y={t("notificationsScreen.a11y.open")}
+              />
+            )}
+          </View>
         </View>
-      </View>
-    </Animated.View>
-  );
+      </Animated.View>
+    );
+  };
+
 
   const Empty = () => (
     <View style={styles.empty}>
       <Ionicons name="notifications-off-outline" size={36} color="#94a3b8" />
-      <Text style={styles.emptyTitle}>
+      <Text
+        style={styles.emptyTitle}
+        numberOfLines={1}
+        adjustsFontSizeToFit
+      >
+
         {t("notificationsScreen.emptyTitle", {
           defaultValue: "Rien pour le moment",
         })}
       </Text>
-      <Text style={styles.emptyText}>
+      <Text
+        style={styles.emptyText}
+        numberOfLines={2}
+        adjustsFontSizeToFit
+      >
         {t("notificationsScreen.emptyText", {
           defaultValue: "Tes invitations apparaîtront ici.",
         })}
@@ -495,6 +645,24 @@ const NotificationsScreen: React.FC = () => {
   );
 
   return (
+  <LinearGradient
+    colors={["#0f172a", "#1e293b", "#0f172a"]}
+    start={{ x: 0, y: 0 }}
+    end={{ x: 1, y: 1 }}
+    style={{ flex: 1 }}
+  >
+    {/* Orbes décoratives */}
+    <LinearGradient
+      pointerEvents="none"
+      colors={["rgba(255,184,0,0.22)", "transparent"]}
+      style={styles.bgOrbTop}
+    />
+    <LinearGradient
+      pointerEvents="none"
+      colors={["rgba(255,184,0,0.18)", "transparent"]}
+      style={styles.bgOrbBottom}
+    />
+
     <View style={styles.container}>
       <Header />
       {loading ? (
@@ -526,6 +694,7 @@ const NotificationsScreen: React.FC = () => {
         />
       )}
     </View>
+</LinearGradient>
   );
 };
 
@@ -547,7 +716,11 @@ const Tab: React.FC<{
       size={16}
       color={active ? "#111827" : "#e5e7eb"}
     />
-    <Text style={[styles.tabText, active && styles.tabTextActive]}>
+     <Text
+      style={[styles.tabText, active && styles.tabTextActive]}
+      numberOfLines={1}
+      adjustsFontSizeToFit
+    >
       {label}
     </Text>
   </TouchableOpacity>
@@ -566,7 +739,13 @@ const PrimaryButton: React.FC<{
     accessibilityLabel={a11y || title}
   >
     {icon ? <Ionicons name={icon} size={18} color="#0f172a" /> : null}
-    <Text style={styles.primaryBtnText}>{title}</Text>
+     <Text
+      style={styles.primaryBtnText}
+      numberOfLines={1}
+      adjustsFontSizeToFit
+    >
+      {title}
+    </Text>
   </TouchableOpacity>
 );
 
@@ -583,7 +762,13 @@ const SecondaryButton: React.FC<{
     accessibilityLabel={a11y || title}
   >
     {icon ? <Ionicons name={icon} size={18} color="#e5e7eb" /> : null}
-    <Text style={styles.secondaryBtnText}>{title}</Text>
+    <Text
+      style={styles.secondaryBtnText}
+      numberOfLines={1}
+      adjustsFontSizeToFit
+    >
+      {title}
+    </Text>
   </TouchableOpacity>
 );
 
@@ -598,7 +783,11 @@ const Chip: React.FC<{
     accessibilityLabel={label}
     style={[styles.chip, active && styles.chipActive]}
   >
-    <Text style={[styles.chipText, active && styles.chipTextActive]}>
+    <Text
+      style={[styles.chipText, active && styles.chipTextActive]}
+      numberOfLines={1}
+      adjustsFontSizeToFit
+    >
       {label}
     </Text>
   </TouchableOpacity>
@@ -608,23 +797,32 @@ export default NotificationsScreen;
 
 // --------- Styles ----------
 const styles = StyleSheet.create({
-  container: { flex: 1, backgroundColor: "#0b1220" },
+  container: {
+  flex: 1,
+  backgroundColor: "transparent", // anciennement noir
+},
   header: {
-    paddingTop: Platform.select({ ios: 64, android: 28 }),
-    paddingBottom: 16,
-    paddingHorizontal: 16,
-    borderBottomLeftRadius: 16,
-    borderBottomRightRadius: 16,
-  },
+  paddingTop: Platform.select({ ios: 64, android: 34 }),
+  paddingBottom: 24,
+  paddingHorizontal: 18,
+  borderBottomLeftRadius: 22,
+  borderBottomRightRadius: 22,
+  backgroundColor: "rgba(0,0,0,0.15)",
+  backdropFilter: "blur(12px)",
+},
   title: {
     color: "#fff",
-    fontSize: 22,
+    fontSize: normalizeSize(22),
     fontFamily: "Comfortaa_700Bold",
     marginBottom: 6,
+    textAlign: I18nManager.isRTL ? "right" : "left",
+    writingDirection: I18nManager.isRTL ? "rtl" : "ltr",
   },
   subtitle: {
     color: "#cbd5e1",
-    fontSize: 14,
+    fontSize: normalizeSize(14),
+    textAlign: I18nManager.isRTL ? "right" : "left",
+    writingDirection: I18nManager.isRTL ? "rtl" : "ltr",
     marginBottom: 16,
   },
   tabs: {
@@ -640,23 +838,43 @@ const styles = StyleSheet.create({
     paddingHorizontal: 12,
     borderRadius: 999,
     borderWidth: 1,
-    borderColor: "rgba(255,255,255,0.15)",
+    borderColor: "rgba(255,255,255,0.25)",
+backgroundColor: "rgba(255,255,255,0.06)",
+
   },
   tabActive: {
-    backgroundColor: "#f8fafc",
-    borderColor: "#f8fafc",
+    backgroundColor: "#FFB800",
+borderColor: "#FFB800",
+shadowColor: "#FFB800",
+shadowOpacity: 0.3,
+shadowRadius: 6,
+shadowOffset: { width: 0, height: 2 },
+elevation: 3,
+
   },
-  tabText: { color: "#e5e7eb", fontSize: 13 },
-  tabTextActive: { color: "#111827", fontWeight: "700" },
+  tabText: {
+    color: "#e5e7eb",
+    fontSize: normalizeSize(13),
+    writingDirection: I18nManager.isRTL ? "rtl" : "ltr",
+    textAlign: "center",
+  },
+  tabTextActive: {  color: "#1a1a1a",
+fontWeight: "800",},
 
   cardWrap: { marginBottom: 12 },
   card: {
-    backgroundColor: "#0f172a",
-    borderRadius: 16,
-    borderWidth: 1,
-    borderColor: "rgba(255,255,255,0.06)",
-    padding: 14,
-  },
+  backgroundColor: "rgba(255,255,255,0.06)",
+  borderRadius: 18,
+  padding: 16,
+  borderWidth: 1.2,
+  borderColor: "rgba(255,255,255,0.12)",
+  shadowColor: "#000",
+  shadowOffset: { width: 0, height: 4 },
+  shadowOpacity: 0.25,
+  shadowRadius: 8,
+  elevation: 6,
+},
+
   row: {
     flexDirection: "row",
     gap: 12,
@@ -664,13 +882,36 @@ const styles = StyleSheet.create({
     marginBottom: 10,
   },
   badge: {
-    width: 32,
-    height: 32,
-    borderRadius: 16,
-    backgroundColor: "#22c55e",
-    alignItems: "center",
-    justifyContent: "center",
-  },
+  width: 36,
+  height: 36,
+  borderRadius: 18,
+  backgroundColor: "#FFB800",
+  alignItems: "center",
+  justifyContent: "center",
+  shadowColor: "#FFB800",
+  shadowOpacity: 0.45,
+  shadowRadius: 6,
+  shadowOffset: { width: 0, height: 2 },
+},
+
+  bgOrbTop: {
+  position: "absolute",
+  top: -SCREEN_WIDTH * 0.4,
+  left: -SCREEN_WIDTH * 0.2,
+  width: SCREEN_WIDTH * 1.2,
+  height: SCREEN_WIDTH * 1.2,
+  borderRadius: SCREEN_WIDTH * 0.6,
+},
+
+bgOrbBottom: {
+  position: "absolute",
+  bottom: -SCREEN_WIDTH * 0.5,
+  right: -SCREEN_WIDTH * 0.3,
+  width: SCREEN_WIDTH * 1.4,
+  height: SCREEN_WIDTH * 1.4,
+  borderRadius: SCREEN_WIDTH * 0.7,
+},
+
   scopeRow: {
     flexDirection: "row",
     gap: 8,
@@ -691,15 +932,34 @@ const styles = StyleSheet.create({
     paddingHorizontal: 10,
     borderRadius: 999,
   },
-  badgeExpireText: { color: "#fff", fontSize: 12, fontWeight: "700" },
+ badgeExpireText: {
+    color: "#fff",
+    fontSize: normalizeSize(12),
+    fontWeight: "700",
+    writingDirection: I18nManager.isRTL ? "rtl" : "ltr",
+  },
   chipActive: {
     backgroundColor: "#111827",
     borderColor: "#e5e7eb",
   },
-  chipText: { color: "#e5e7eb", fontSize: 12 },
+  chipText: {
+    color: "#e5e7eb",
+    fontSize: normalizeSize(12),
+    writingDirection: I18nManager.isRTL ? "rtl" : "ltr",
+    textAlign: "center",
+  },
   chipTextActive: { color: "#fff", fontWeight: "700" },
-  cardTitle: { color: "#fff", fontSize: 15, fontFamily: "Comfortaa_700Bold" },
-  cardMeta: { color: "#94a3b8", marginTop: 2 },
+  cardTitle: {
+  color: "#fff",
+  fontSize: normalizeSize(18),
+  fontFamily: "Comfortaa_700Bold",
+  marginBottom: 2,
+},
+cardMeta: {
+  color: "rgba(255,255,255,0.75)",
+  fontSize: normalizeSize(13),
+  marginTop: 4,
+},
 
   actions: { flexDirection: "row", gap: 10, marginTop: 6 },
   primaryBtn: {
@@ -710,7 +970,12 @@ const styles = StyleSheet.create({
     paddingVertical: 10,
     borderRadius: 12,
   },
-  primaryBtnText: { color: "#0f172a", fontWeight: "700" },
+ primaryBtnText: {
+    color: "#0f172a",
+    fontWeight: "700",
+    fontSize: normalizeSize(13),
+    writingDirection: I18nManager.isRTL ? "rtl" : "ltr",
+  },
   secondaryBtn: {
     flexDirection: "row",
     gap: 8,
@@ -719,15 +984,27 @@ const styles = StyleSheet.create({
     paddingVertical: 10,
     borderRadius: 12,
   },
-  secondaryBtnText: { color: "#e5e7eb", fontWeight: "700" },
+  secondaryBtnText: {
+    color: "#e5e7eb",
+    fontWeight: "700",
+    fontSize: normalizeSize(13),
+    writingDirection: I18nManager.isRTL ? "rtl" : "ltr",
+  },
 
   empty: { alignItems: "center", paddingVertical: 32, gap: 8 },
   emptyTitle: {
     color: "#e5e7eb",
-    fontSize: 16,
+   fontSize: normalizeSize(16),
     fontFamily: "Comfortaa_700Bold",
+    textAlign: I18nManager.isRTL ? "right" : "center",
+    writingDirection: I18nManager.isRTL ? "rtl" : "ltr",
   },
-  emptyText: { color: "#94a3b8" },
+  emptyText: {
+    color: "#94a3b8",
+    fontSize: normalizeSize(13),
+    textAlign: I18nManager.isRTL ? "right" : "center",
+    writingDirection: I18nManager.isRTL ? "rtl" : "ltr",
+  },
 
   loader: { padding: 24, alignItems: "center" },
 });

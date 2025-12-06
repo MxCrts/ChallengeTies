@@ -1,4 +1,11 @@
-import React, { useEffect, useMemo, useState, useCallback } from "react";
+import React, {
+  useEffect,
+  useMemo,
+  useState,
+  useCallback,
+  useRef,
+  memo,
+} from "react";
 import {
   View,
   Text,
@@ -37,8 +44,14 @@ type Row = {
 type FilterKey = "all" | "activated" | "pending";
 const P = 16;
 
-/** Fond orbes premium, non interactif */
-const OrbBackground = ({ theme, width }: { theme: Theme; width: number }) => (
+/** Fond orbes premium, non interactif (mémoïsé) */
+const OrbBackgroundBase = ({
+  theme,
+  width,
+}: {
+  theme: Theme;
+  width: number;
+}) => (
   <View style={StyleSheet.absoluteFill} pointerEvents="none">
     <LinearGradient
       colors={[theme.colors.secondary + "55", theme.colors.primary + "11"]}
@@ -75,6 +88,8 @@ const OrbBackground = ({ theme, width }: { theme: Theme; width: number }) => (
   </View>
 );
 
+const OrbBackground = memo(OrbBackgroundBase);
+
 export default function ReferralHistory() {
   const { t } = useTranslation();
   const { theme } = useTheme();
@@ -83,7 +98,7 @@ export default function ReferralHistory() {
     ? designSystem.darkTheme
     : designSystem.lightTheme;
 
-      const textPrimary = isDarkMode
+  const textPrimary = isDarkMode
     ? currentTheme.colors.textPrimary
     : "#111827"; // noir lisible en light
 
@@ -91,10 +106,9 @@ export default function ReferralHistory() {
     ? currentTheme.colors.textSecondary
     : "rgba(15,23,42,0.7)";
 
-
   const { width } = useWindowDimensions();
   const router = useRouter();
-  const me = auth.currentUser?.uid;
+  const me = auth.currentUser?.uid ?? null;
 
   const normalize = useCallback(
     (size: number) => {
@@ -111,45 +125,90 @@ export default function ReferralHistory() {
   const [loading, setLoading] = useState(true);
   const [filter, setFilter] = useState<FilterKey>("all");
 
+  const isMountedRef = useRef(true);
+
+  useEffect(() => {
+    isMountedRef.current = true;
+    return () => {
+      isMountedRef.current = false;
+    };
+  }, []);
+
   useEffect(() => {
     if (!me) {
-      setRows([]);
-      setLoading(false);
+      // Pas connecté → pas de subscription Firestore
+      if (isMountedRef.current) {
+        setRows([]);
+        setLoading(false);
+      }
       return;
     }
-    setLoading(true);
+
+    if (isMountedRef.current) {
+      setLoading(true);
+    }
 
     const baseQ = query(
-      collection(db, "users"),
-      where("referrerId", "==", me),
-      orderBy("createdAt", "desc")
-    );
+  collection(db, "users"),
+  where("referrerId", "==", me)
+  // on trie côté client, ça évite les problèmes d'index / champs manquants
+);
+
 
     const unsub = onSnapshot(
       baseQ,
       (snap) => {
+        if (!isMountedRef.current) return;
+
         const list: Row[] = [];
         snap.forEach((d) => {
-          const data = d.data() as any;
-          list.push({
-            id: d.id,
-            username: data?.username,
-            email: data?.email,
-            activated: !!data?.activated,
-            createdAt: data?.createdAt,
-            activatedAt: data?.activatedAt,
-          });
-        });
-        setRows(list);
+  const data = d.data() as any;
+
+  // ✅ Cohérent avec ShareAndEarn : activated ou referralActivated
+  const activatedFlag =
+    data?.activated === true || data?.referralActivated === true;
+
+  // ✅ Dates : on essaye d'utiliser activatedAt, sinon createdAt
+  const createdAt = data?.createdAt ?? null;
+  const activatedAt =
+    data?.activatedAt ??
+    data?.referralActivatedAt ??
+    (activatedFlag ? createdAt : null);
+
+  list.push({
+    id: d.id,
+    username: data?.username,
+    email: data?.email,
+    activated: activatedFlag,
+    createdAt,
+    activatedAt,
+  });
+});
+
+// Tri côté client : plus récent en premier, fallback propre
+list.sort((a, b) => {
+  const getDate = (row: Row) => {
+    const raw = row.activatedAt || row.createdAt;
+    return raw?.toDate?.() ?? new Date(0);
+  };
+  return getDate(b).getTime() - getDate(a).getTime();
+});
+
+setRows(list);
+setLoading(false);
+
         setLoading(false);
       },
       (err) => {
         console.log("[referral/history] error:", err?.message || err);
+        if (!isMountedRef.current) return;
         setLoading(false);
       }
     );
 
-    return () => unsub();
+    return () => {
+      unsub();
+    };
   }, [me]);
 
   const filtered = useMemo(() => {
@@ -163,10 +222,115 @@ export default function ReferralHistory() {
     [rows]
   );
 
-  const headerColors: [string, string] = [
-    currentTheme.colors.primary,
-    currentTheme.colors.secondary,
-  ];
+  const headerColors: [string, string] = useMemo(
+    () => [currentTheme.colors.primary, currentTheme.colors.secondary],
+    [currentTheme.colors.primary, currentTheme.colors.secondary]
+  );
+
+    const renderItem = useCallback(
+    ({ item }: { item: Row }) => {
+      const when = item.activated
+        ? item.activatedAt?.toDate?.()
+        : item.createdAt?.toDate?.();
+
+      // ✅ Date simple, type 05/12/2025
+      const whenTxt = when ? dayjs(when).format("DD/MM/YYYY") : null;
+
+      // ✅ Label i18n + fallback
+      const baseLabel = item.activated
+        ? t("referral.history.activatedOnLabel", {
+            defaultValue: "Activated on",
+          })
+        : t("referral.history.invitedOnLabel", {
+            defaultValue: "Invited on",
+          });
+
+      // ✅ Si pas de date → juste le label, sinon label + date
+      const metaText = whenTxt ? `${baseLabel} ${whenTxt}` : baseLabel;
+
+      const isActivated = !!item.activated;
+      const displayName =
+        item.username || item.email || item.id.slice(0, 6) || "—";
+
+      return (
+        <View
+          style={[
+            styles.row,
+            {
+              backgroundColor: isActivated
+                ? isDarkMode
+                  ? "#022C22"
+                  : "#F0FDF4"
+                : isDarkMode
+                ? "rgba(0,0,0,0.6)"
+                : "#FFFFFF",
+              borderColor: isActivated
+                ? "#22C55E"
+                : currentTheme.colors.primary,
+            },
+          ]}
+          accessible
+          accessibilityLabel={`${displayName}. ${metaText}. ${
+            isActivated
+              ? t("referral.history.status.activated")
+              : t("referral.history.status.pending")
+          }`}
+        >
+          <View style={styles.avatarCircle}>
+            <Ionicons
+              name={isActivated ? "checkmark-circle" : "time-outline"}
+              size={normalize(24)}
+              color={isActivated ? "#22C55E" : currentTheme.colors.primary}
+            />
+          </View>
+
+          <View style={styles.rowTextBlock}>
+            <Text
+              style={[styles.name, { color: textPrimary }]}
+              numberOfLines={1}
+            >
+              {displayName}
+            </Text>
+
+            <Text
+              style={[styles.meta, { color: textSecondary }]}
+              numberOfLines={1}
+            >
+              {metaText}
+            </Text>
+          </View>
+
+          <View
+            style={[
+              styles.badgeBase,
+              isActivated ? styles.badgeOk : styles.badgePending,
+            ]}
+          >
+            <Text
+              style={[
+                styles.badgeTxtBase,
+                isActivated ? styles.badgeTxtOk : styles.badgeTxtPending,
+              ]}
+            >
+              {isActivated
+                ? t("referral.history.status.activated")
+                : t("referral.history.status.pending")}
+            </Text>
+          </View>
+        </View>
+      );
+    },
+    [
+      currentTheme.colors.primary,
+      isDarkMode,
+      normalize,
+      styles,
+      t,
+      textPrimary,
+      textSecondary,
+    ]
+  );
+
 
   return (
     <LinearGradient
@@ -251,7 +415,9 @@ export default function ReferralHistory() {
                 <Text
                   style={[
                     styles.statsValue,
-                   { color: textPrimary }
+                    {
+                      color: textPrimary,
+                    },
                   ]}
                 >
                   {rows.length}
@@ -360,12 +526,7 @@ export default function ReferralHistory() {
               size={normalize(40)}
               color={currentTheme.colors.secondary}
             />
-            <Text
-              style={[
-                styles.emptyTitle,
-                { color: textPrimary }
-              ]}
-            >
+            <Text style={[styles.emptyTitle, { color: textPrimary }]}>
               {t("referral.history.notLoggedInTitle", {
                 defaultValue: "Connecte-toi pour voir ton historique",
               })}
@@ -389,12 +550,7 @@ export default function ReferralHistory() {
               size={normalize(40)}
               color={currentTheme.colors.secondary}
             />
-            <Text
-              style={[
-                styles.emptyTitle,
-                { color: textPrimary }
-              ]}
-            >
+            <Text style={[styles.emptyTitle, { color: textPrimary }]}>
               {t("referral.history.emptyTitle", {
                 defaultValue: "Aucun invité pour le moment",
               })}
@@ -425,103 +581,7 @@ export default function ReferralHistory() {
             accessibilityLabel={t("referral.history.listLabel", {
               defaultValue: "Historique des filleuls",
             })}
-            renderItem={({ item }) => {
-              const when = item.activated
-                ? item.activatedAt?.toDate?.()
-                : item.createdAt?.toDate?.();
-              const whenTxt = when
-                ? dayjs(when).format("DD MMM YYYY")
-                : "—";
-
-              const metaText = item.activated
-                ? t("referral.history.activatedOn", { date: whenTxt })
-                : t("referral.history.invitedOn", { date: whenTxt });
-
-              const isActivated = !!item.activated;
-
-              return (
-                <View
-                  style={[
-                    styles.row,
-                    {
-                      backgroundColor: isActivated
-                        ? isDarkMode
-                          ? "#022C22"
-                          : "#F0FDF4"
-                        : isDarkMode
-                        ? "rgba(0,0,0,0.6)"
-                        : "#FFFFFF",
-                      borderColor: isActivated
-                        ? "#22C55E"
-                        : currentTheme.colors.primary,
-                    },
-                  ]}
-                  accessible
-                  accessibilityLabel={`${item.username || item.email || item.id.slice(0, 6)}. ${metaText}. ${
-                    isActivated
-                      ? t("referral.history.status.activated")
-                      : t("referral.history.status.pending")
-                  }`}
-                >
-                  <View style={styles.avatarCircle}>
-                    <Ionicons
-                      name={isActivated ? "checkmark-circle" : "time-outline"}
-                      size={normalize(24)}
-                      color={
-                        isActivated
-                          ? "#22C55E"
-                          : currentTheme.colors.primary
-                      }
-                    />
-                  </View>
-
-                  <View style={styles.rowTextBlock}>
-                    <Text
-  style={[
-    styles.name,
-    { color: textPrimary },
-  ]}
-  numberOfLines={1}
->
-  {item.username || item.email || item.id.slice(0, 6)}
-</Text>
-
-<Text
-  style={[
-    styles.meta,
-    { color: textSecondary },
-  ]}
-  numberOfLines={1}
->
-  {metaText}
-</Text>
-
-                  </View>
-
-                  <View
-                    style={[
-                      styles.badgeBase,
-                      isActivated
-                        ? styles.badgeOk
-                        : styles.badgePending,
-                    ]}
-                  >
-                    <Text
-                      style={[
-                        styles.badgeTxtBase,
-                        isActivated
-                          ? styles.badgeTxtOk
-                          : styles.badgeTxtPending,
-                      ]}
-                    >
-                      {isActivated
-                        ? t("referral.history.status.activated")
-                        : t("referral.history.status.pending")}
-                    </Text>
-                  </View>
-                </View>
-              );
-            }}
+            renderItem={renderItem}
           />
         )}
       </SafeAreaView>

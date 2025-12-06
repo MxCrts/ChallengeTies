@@ -1,21 +1,19 @@
 // components/TrophyModal.tsx
-import React, { useEffect, useState, useCallback, useRef, useMemo } from "react";
+import React, { useEffect } from "react";
 import {
+  Modal,
   View,
   Text,
-  TouchableOpacity,
   StyleSheet,
+  TouchableOpacity,
   Dimensions,
   Platform,
-  Vibration,
   Pressable,
-  Modal,
-  ActivityIndicator,
+  I18nManager,
 } from "react-native";
+import { LinearGradient } from "expo-linear-gradient";
 import { Ionicons } from "@expo/vector-icons";
-import Reanimated, {
-  FadeIn,
-  FadeOut,
+import Animated, {
   ZoomIn,
   ZoomOut,
   useSharedValue,
@@ -24,636 +22,781 @@ import Reanimated, {
   withTiming,
   useAnimatedStyle,
 } from "react-native-reanimated";
-import { Animated as RNAnimated } from "react-native";
-import { Video, ResizeMode, AVPlaybackStatusSuccess } from "expo-av";
-import { LinearGradient } from "expo-linear-gradient";
-import { useTrophy } from "../context/TrophyContext";
-import { useTheme } from "../context/ThemeContext";
-import designSystem, { Theme } from "../theme/designSystem";
-import { useTranslation } from "react-i18next";
-import { useAdsVisibility } from "../src/context/AdsVisibilityContext";
-import { useCurrentChallenges } from "../context/CurrentChallengesContext";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import * as Haptics from "expo-haptics";
+import { useTranslation } from "react-i18next";
+import { useTheme } from "../context/ThemeContext";
+import designSystem, { Theme } from "../theme/designSystem";
+import { useTrophy } from "../context/TrophyContext";
+ import {
+   RewardedAd,
+   RewardedAdEventType,
+   AdEventType,
+ } from "react-native-google-mobile-ads";
+ import { adUnitIds } from "@/constants/admob"; // tu l'as déjà dans ton projet
+
+
 
 const { width: SCREEN_WIDTH, height: SCREEN_HEIGHT } = Dimensions.get("window");
-const scaleBase = Math.min(SCREEN_WIDTH / 375, SCREEN_HEIGHT / 812);
-const normalizeSize = (n: number) => Math.max(1, Math.round(n * scaleBase));
-const SPACING = normalizeSize(14);
 
-interface TrophyModalProps {
-  challengeId: string;
-  selectedDays: number;
-}
+const normalize = (size: number) => {
+  const base = 375;
+  const scale = Math.min(SCREEN_WIDTH, SCREEN_HEIGHT) / base;
+  return Math.round(size * scale);
+};
 
-const TrophyModal: React.FC<TrophyModalProps> = ({ challengeId, selectedDays }) => {
+const TrophyModal: React.FC = () => {
   const { t } = useTranslation();
-  const insets = useSafeAreaInsets();
   const { theme } = useTheme();
-  const isDarkMode = theme === "dark";
-  const currentTheme: Theme = isDarkMode
+  const insets = useSafeAreaInsets();
+  const isDark = theme === "dark";
+  const currentTheme: Theme = isDark
     ? designSystem.darkTheme
     : designSystem.lightTheme;
 
+  // 🔗 Contexte existant – on ne change pas l’API
   const {
     showTrophyModal,
     trophiesEarned,
     achievementEarned,
-    activateDoubleReward,
+    isDoubleReward,
+    finalTrophies,
     resetTrophyData,
-    closeTrophyModal,
     isClaiming,
+    closeTrophyModal,
     canClaim,
-    setShowTrophyModal,
+    activateDoubleReward,  
   } = useTrophy();
 
-  const { requestRewardedAd, preloadRewarded } = useCurrentChallenges();
-  const { showRewarded } = useAdsVisibility() as any;
-  const canShowRewarded = !!showRewarded;
+   // --- Rewarded Ad ---
+ const rewarded = React.useMemo(
+   () =>
+     RewardedAd.createForAdRequest(adUnitIds.rewarded, {
+       requestNonPersonalizedAdsOnly: true,
+     }),
+   []
+ );
 
-  const [reward, setReward] = useState<number>(0);
-  const [adWatched, setAdWatched] = useState(false);
-  const [adBusy, setAdBusy] = useState(false);
-  const [message, setMessage] = useState("");
-  const [bgFailed, setBgFailed] = useState(false);
-  const [trophyVidFailed, setTrophyVidFailed] = useState(false);
-  const [shouldPlay, setShouldPlay] = useState(false);
+ const [adReady, setAdReady] = React.useState(false);
+ const [adLoading, setAdLoading] = React.useState(false);
 
-  const videoBgRef = useRef<Video>(null);
-  const videoTrophyRef = useRef<Video>(null);
-  const guardRef = useRef<ReturnType<typeof setTimeout> | null>(null);
-  const closeTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+ useEffect(() => {
+   const unsubLoaded = rewarded.addAdEventListener(
+     RewardedAdEventType.LOADED,
+     () => setAdReady(true)
+   );
 
-  // Animations premium stables
-  const cardEnter = ZoomIn.springify().damping(18);
-  const cardExit = ZoomOut.duration(140);
+   const unsubError = rewarded.addAdEventListener(
+     AdEventType.ERROR,
+     () => setAdReady(false)
+   );
 
-  const defaultBaseReward = useMemo(
-    () => trophiesEarned || Math.max(3, Math.round(5 * (selectedDays / 7))),
-    [trophiesEarned, selectedDays]
-  );
+   const unsubClosed = rewarded.addAdEventListener(
+     AdEventType.CLOSED,
+     () => {
+       setAdReady(false);
+       rewarded.load();
+     }
+   );
 
-  const withAlpha = useCallback((hex: string, a: number) => {
-    const clamp = (x: number, min = 0, max = 1) =>
-      Math.min(Math.max(x, min), max);
-    const alpha = Math.round(clamp(a) * 255)
-      .toString(16)
-      .padStart(2, "0");
-    const clean = hex.replace("#", "");
-    if (clean.length === 3)
-      return `#${clean[0]}${clean[0]}${clean[1]}${clean[1]}${clean[2]}${clean[2]}${alpha}`;
-    return `#${clean}${alpha}`;
-  }, []);
+   rewarded.load();
 
-  // Preload rewarded au moment où ça s’ouvre
+   return () => {
+     unsubLoaded();
+     unsubError();
+     unsubClosed();
+   };
+ }, [rewarded]);
+
+
+  // 🔥 pulse sur le gros trophée
+  const pulseSV = useSharedValue(0);
+
   useEffect(() => {
     if (!showTrophyModal) return;
-    try {
-      preloadRewarded();
-    } catch {}
-  }, [showTrophyModal, preloadRewarded]);
-
-  // Init / reset état à l’ouverture + lecture vidéo
-  useEffect(() => {
-    if (showTrophyModal) {
-      setReward(defaultBaseReward);
-      setAdWatched(false);
-      setAdBusy(false);
-      setMessage("");
-      setBgFailed(false);
-      setTrophyVidFailed(false);
-      setShouldPlay(true);
-
-      try {
-        Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
-      } catch {}
-      try {
-        Vibration.vibrate(25);
-      } catch {}
-
-      // petite pulse sur le médaillon
-      pulseSV.value = 0;
-      pulseSV.value = withRepeat(
-        withSequence(
-          withTiming(1, { duration: 1400 }),
-          withTiming(0, { duration: 1400 })
-        ),
-        -1,
-        true
-      );
-    } else {
-      setShouldPlay(false);
-      if (guardRef.current) clearTimeout(guardRef.current);
-      if (closeTimeoutRef.current) clearTimeout(closeTimeoutRef.current);
-      pulseSV.value = 0;
-    }
-  }, [showTrophyModal, defaultBaseReward]);
-
-  // Cleanup sur unmount
-  useEffect(() => {
-    return () => {
-      if (guardRef.current) clearTimeout(guardRef.current);
-      if (closeTimeoutRef.current) clearTimeout(closeTimeoutRef.current);
-      videoBgRef.current?.unloadAsync().catch(() => {});
-      videoTrophyRef.current?.unloadAsync().catch(() => {});
-    };
-  }, []);
-
-  // ===== Close WITHOUT claim (important UX) =====
-  const closeManually = useCallback(() => {
-    if (isClaiming) return; // on évite de casser une transaction en cours
-    if (closeTrophyModal) return closeTrophyModal();
-    // fallback au cas où
-    setShowTrophyModal?.(false);
-  }, [closeTrophyModal, setShowTrophyModal, isClaiming]);
-
-  const handleDouble = useCallback(async () => {
-    if (adBusy || isClaiming) return;
-
-    if (!canShowRewarded) {
-      setMessage(
-        t("completion.adNotReady", {
-          defaultValue: "Vidéo pas prête, réessaie dans 2–3 secondes.",
-        })
-      );
-      return;
-    }
-
-    setAdBusy(true);
-    try {
-      guardRef.current = setTimeout(() => setAdBusy(false), 12000);
-      const ok = await requestRewardedAd();
-      if (guardRef.current) clearTimeout(guardRef.current);
-
-      if (ok) {
-        setAdWatched(true);
-        activateDoubleReward();
-
-        const doubled = defaultBaseReward * 2;
-        setReward(doubled);
-
-        setMessage(
-          t("trophyModal.doubleMessage", {
-            count: doubled,
-            defaultValue: `Récompense doublée : ${doubled}`,
-          })
-        );
-
-        try {
-          Haptics.notificationAsync(
-            Haptics.NotificationFeedbackType.Success
-          );
-        } catch {}
-      } else {
-        setMessage(
-          t("completion.adNotReady", {
-            defaultValue: "Vidéo pas prête, réessaie dans 2–3 secondes.",
-          })
-        );
-      }
-    } catch {
-      setMessage(
-        t("completion.adNotReady", {
-          defaultValue: "Vidéo pas prête, réessaie dans 2–3 secondes.",
-        })
-      );
-    } finally {
-      setAdBusy(false);
-    }
-  }, [
-    adBusy,
-    isClaiming,
-    canShowRewarded,
-    requestRewardedAd,
-    activateDoubleReward,
-    defaultBaseReward,
-    t,
-  ]);
-
-  const handleClaim = useCallback(() => {
-    if (!canClaim || isClaiming) return;
-
-    try {
-      Haptics.selectionAsync();
-    } catch {}
-    try {
-      Vibration.vibrate(20);
-    } catch {}
-
-    setMessage(
-      t("trophyModal.claimMessage", {
-        count: reward,
-        defaultValue: `+${reward} trophées ajoutés ✅`,
-      })
+    pulseSV.value = 0;
+    pulseSV.value = withRepeat(
+      withSequence(
+        withTiming(1, { duration: 900 }),
+        withTiming(0, { duration: 900 })
+      ),
+      -1,
+      true
     );
+    try {
+      Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
+    } catch {}
+  }, [showTrophyModal, pulseSV]);
 
-    if (closeTimeoutRef.current) clearTimeout(closeTimeoutRef.current);
-    closeTimeoutRef.current = setTimeout(() => {
-      resetTrophyData();
-    }, 650);
-  }, [reward, resetTrophyData, t, canClaim, isClaiming]);
-
-    // subtle pulse style
-  // ⚠️ hook AVANT tout return conditionnel
-  const pulseSV = useSharedValue(0);
-  const pulseStyle = useAnimatedStyle(() => {
-    const s = 1 + pulseSV.value * 0.03;
-    const o = 0.85 + pulseSV.value * 0.15;
-    return { transform: [{ scale: s }], opacity: o };
+  const trophyPulseStyle = useAnimatedStyle(() => {
+    const scale = 1 + pulseSV.value * 0.08;
+    const shadowOpacity = 0.25 + pulseSV.value * 0.25;
+    return {
+      transform: [{ scale }],
+      shadowOpacity,
+    };
   });
 
-  // Sécurise: pas de modal si fermé
   if (!showTrophyModal) return null;
 
-  const textPrimary = isDarkMode
-    ? currentTheme.colors.textPrimary
-    : "#0B0F1C";
-  const textSecondary = isDarkMode
-    ? currentTheme.colors.textSecondary
-    : "rgba(11,15,28,0.75)";
+  const topPadding = Math.max(insets.top + normalize(12), normalize(24));
+  const bottomPadding = Math.max(insets.bottom + normalize(12), normalize(24));
+
+  const title = t("trophyModal.title", {
+    defaultValue: "Trophée débloqué !",
+  });
+
+  const subtitle = t("trophyModal.subtitle", {
+    defaultValue: "Tu viens de franchir un cap dans ta progression.",
+  });
+
+  const achievementTitle = t(
+    achievementEarned || "trophyModal.defaultName",
+    {
+      defaultValue: achievementEarned || "Succès mystère",
+    }
+  );
+
+  const description = t(`descriptions.${achievementEarned}`, {
+    defaultValue: t("trophyModal.defaultDescription", {
+      defaultValue:
+        "Continue sur cette lancée : chaque trophée est une preuve concrète de ta discipline.",
+    }),
+  });
+
+  const ribbonLabel = t("trophyModal.ribbon", {
+    defaultValue: "Récompense débloquée",
+  });
+
+  const trophiesTitle = t("trophyModal.trophiesTitle", {
+    defaultValue: "Trophées gagnés",
+  });
+
+  const trophiesHint = t("trophyModal.trophiesHint", {
+    defaultValue: "Ils s’ajoutent à ton total ChallengeTies.",
+  });
+
+  const ctaLabel = isClaiming
+    ? t("trophyModal.ctaLoading", { defaultValue: "En cours…" })
+    : t("trophyModal.cta", { defaultValue: "Récupérer" });
+
+  const doubleBadgeLabel = t("trophyModal.doubleBadge", {
+    defaultValue: "x2 activé",
+  });
+
+  const handleClose = () => {
+    try {
+      Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light).catch(() => {});
+    } catch {}
+    closeTrophyModal && closeTrophyModal();
+  };
+
+  const handleClaim = async () => {
+    if (!canClaim || isClaiming) return;
+    try {
+      Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium).catch(() => {});
+    } catch {}
+    await resetTrophyData();
+  };
+
+   const handleDoubleReward = async () => {
+   if (!adReady || adLoading || isDoubleReward) return;
+
+   setAdLoading(true);
+   let rewardEarned = false;
+
+   try {
+     const subEarn = rewarded.addAdEventListener(
+       RewardedAdEventType.EARNED_REWARD,
+       () => {
+         rewardEarned = true;
+       }
+     );
+
+     const subClose = rewarded.addAdEventListener(
+       AdEventType.CLOSED,
+       () => {
+         subEarn();
+         subClose();
+         setAdLoading(false);
+
+         if (rewardEarned) {
+           try {
+             Haptics.notificationAsync(
+               Haptics.NotificationFeedbackType.Success
+             ).catch(() => {});
+           } catch {}
+
+           activateDoubleReward();
+         }
+       }
+     );
+
+     await rewarded.show();
+   } catch (e) {
+     setAdLoading(false);
+   }
+ };
 
 
   return (
     <Modal
       visible={showTrophyModal}
       transparent
-      animationType="none"
-      onRequestClose={closeManually}
+      animationType="fade"
       statusBarTranslucent
-      presentationStyle={Platform.OS === "ios" ? "overFullScreen" : undefined}
-      accessibilityViewIsModal
+      onRequestClose={handleClose}
+      {...(Platform.OS === "ios"
+        ? { presentationStyle: "overFullScreen" as const }
+        : {})}
     >
-      <Reanimated.View
-        entering={FadeIn.duration(140)}
-        exiting={FadeOut.duration(120)}
-        style={styles.root}
+      <View
+        style={[
+          styles.overlay,
+          {
+            paddingTop: topPadding,
+            paddingBottom: bottomPadding,
+          },
+        ]}
       >
-        {/* ===== Fond vidéo / fallback ===== */}
-        {!bgFailed ? (
-          <Video
-            ref={videoBgRef}
-            source={require("../assets/videos/intro-video8.mp4")}
-            style={StyleSheet.absoluteFillObject}
-            resizeMode={ResizeMode.COVER}
-            isLooping
-            shouldPlay={shouldPlay}
-            isMuted
-            onError={() => setBgFailed(true)}
-            onLoad={(st) => {
-              const s = st as AVPlaybackStatusSuccess;
-              if (!s.isLoaded) setBgFailed(true);
-            }}
-          />
-        ) : (
-          <LinearGradient
-            colors={[
-              withAlpha(currentTheme.colors.primary, 0.25),
-              withAlpha(currentTheme.colors.secondary, 0.25),
-            ]}
-            style={StyleSheet.absoluteFillObject}
-          />
-        )}
+        {/* tap en dehors pour fermer */}
+        <Pressable style={StyleSheet.absoluteFill} onPress={handleClose} />
 
-        {/* Backdrop */}
-        <Pressable
-          style={styles.backdrop}
-          onPress={closeManually}
-          accessibilityLabel={t("commonS.close", { defaultValue: "Fermer" })}
-          accessibilityRole="button"
-        />
-
-        <View
-          style={[
-            styles.center,
-            {
-              paddingTop: Math.max(12, insets.top * 0.35),
-              paddingBottom: Math.max(12, insets.bottom * 0.35),
-              paddingHorizontal: 16,
-            },
-          ]}
-          pointerEvents="box-none"
+        <Animated.View
+          entering={ZoomIn.springify().damping(18)}
+          exiting={ZoomOut.duration(160)}
+          style={styles.modalContainer}
         >
-          {/* ===== CARD ===== */}
-          <Reanimated.View
-            entering={cardEnter}
-            exiting={cardExit}
-            style={[
-              styles.card,
-              {
-                backgroundColor: currentTheme.colors.background,
-                borderColor: withAlpha(currentTheme.colors.border, 0.6),
-              },
-            ]}
-            testID="trophy-card"
-            accessibilityRole="summary"
+          {/* Border gradient flashy */}
+          <LinearGradient
+            colors={["#FACC15", "#FB7185", "#38BDF8"]}
+            start={{ x: 0, y: 0 }}
+            end={{ x: 1, y: 1 }}
+            style={styles.borderWrap}
           >
-            {/* Header */}
-            <View style={styles.header}>
-              <TouchableOpacity
-                onPress={closeManually}
-                accessibilityLabel={t("commonS.close", { defaultValue: "Fermer" })}
-                hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}
-                testID="trophy-close"
-              >
-                <Ionicons name="close" size={normalizeSize(20)} color={textPrimary} />
-              </TouchableOpacity>
-
-              <Text
-                style={[styles.title, { color: textPrimary }]}
-                numberOfLines={2}
-                accessibilityRole="header"
-              >
-                {t("trophyModal.congrats", { defaultValue: "Bravo ! 🎉" })}
-              </Text>
-
-              <View style={{ width: normalizeSize(20) }} />
-            </View>
-
-            {/* Trophy animation */}
-            <View style={styles.animationContainer}>
-              <Reanimated.View style={pulseStyle}>
+            {/* Fond “glass” clair / sombre */}
+            <LinearGradient
+              colors={
+                isDark
+                  ? ["rgba(15,23,42,0.98)", "rgba(17,24,39,0.98)"]
+                  : ["rgba(248,250,252,0.98)", "rgba(239,246,255,0.96)"]
+              }
+              style={styles.modalBackground}
+            >
+              {/* Ruban top */}
+              <View style={styles.ribbonWrapper}>
                 <LinearGradient
-                  colors={[
-                    withAlpha(currentTheme.colors.primary, 0.7),
-                    withAlpha(currentTheme.colors.secondary, 0.4),
-                    "transparent",
-                  ]}
-                  style={styles.glow}
+                  colors={["#F97316", "#FACC15"]}
+                  start={{ x: 0, y: 0 }}
+                  end={{ x: 1, y: 0 }}
+                  style={styles.ribbon}
                 >
-                  <View style={[styles.videoCircle, { borderColor: currentTheme.colors.primary }]}>
-                    {!trophyVidFailed ? (
-                      <Video
-                        ref={videoTrophyRef}
-                        source={require("../assets/videos/trophy-animation.mp4")}
-                        style={StyleSheet.absoluteFillObject}
-                        resizeMode={ResizeMode.COVER}
-                        isLooping
-                        shouldPlay={shouldPlay}
-                        isMuted
-                        usePoster
-                        posterSource={require("../assets/images/trophy-poster.png")}
-                        onError={() => setTrophyVidFailed(true)}
-                      />
-                    ) : (
-                      <View style={styles.fallbackIcon}>
-                        <Ionicons name="trophy" size={normalizeSize(64)} color={textPrimary} />
-                      </View>
-                    )}
-                  </View>
+                  <Ionicons
+                    name="trophy"
+                    size={normalize(16)}
+                    color="#0F172A"
+                  />
+                  <Text
+                    style={[
+                      styles.ribbonText,
+                      {
+                        writingDirection: I18nManager.isRTL ? "rtl" : "ltr",
+                        textAlign: I18nManager.isRTL ? "right" : "left",
+                      },
+                    ]}
+                  >
+                    {ribbonLabel}
+                  </Text>
+                  <Ionicons
+                    name="trophy"
+                    size={normalize(16)}
+                    color="#0F172A"
+                  />
                 </LinearGradient>
-              </Reanimated.View>
-            </View>
+              </View>
 
-            {/* Texts */}
-            <View style={{ alignItems: "center", paddingHorizontal: 12 }}>
-              <Text style={[styles.rewardText, { color: currentTheme.colors.secondary }]}>
-                {t("trophyModal.reward", {
-                  count: reward,
-                  defaultValue: `+${reward} trophées`,
-                })}
-              </Text>
+              {/* Header */}
+              <View style={styles.header}>
+                <Animated.View
+                  style={[styles.trophyCircle, trophyPulseStyle]}
+                >
+                  <Ionicons
+                    name="trophy"
+                    size={normalize(46)}
+                    color="#FACC15"
+                  />
+                  <View style={styles.trophyGlow} />
 
-              {achievementEarned ? (
-                <Text style={[styles.achievementText, { color: currentTheme.colors.primary }]}>
-                  🏆{" "}
-                  {t(`achievements.${achievementEarned}`, {
-                    defaultValue: t(achievementEarned),
-                  })}
-                </Text>
-              ) : null}
+                  {isDoubleReward && (
+                    <View style={styles.doubleBadge}>
+                      <Text
+                        style={[
+                          styles.doubleBadgeText,
+                          {
+                            writingDirection: I18nManager.isRTL ? "rtl" : "ltr",
+                            textAlign: "center",
+                          },
+                        ]}
+                      >
+                        {doubleBadgeLabel}
+                      </Text>
+                    </View>
+                  )}
+                </Animated.View>
 
-              {!!message && (
                 <Text
                   style={[
-                    styles.message,
-                    { color: isDarkMode ? "#8BFFB0" : "#0E9F6E" },
+                    styles.title,
+                    {
+                      color: isDark
+                        ? currentTheme.colors.textPrimary
+                        : "#020617",
+                      writingDirection: I18nManager.isRTL ? "rtl" : "ltr",
+                      textAlign: "center",
+                    },
+                  ]}
+                  numberOfLines={2}
+                  adjustsFontSizeToFit
+                >
+                  {title}
+                </Text>
+
+                <Text
+                  style={[
+                    styles.subtitle,
+                    {
+                      color: isDark
+                        ? currentTheme.colors.textSecondary
+                        : "rgba(15,23,42,0.76)",
+                      writingDirection: I18nManager.isRTL ? "rtl" : "ltr",
+                      textAlign: "center",
+                    },
                   ]}
                 >
-                  {message}
+                  {subtitle}
                 </Text>
-              )}
-            </View>
+              </View>
 
-            {/* Buttons */}
-            <View style={styles.buttons}>
-              <GradientButton
-                onPress={handleClaim}
-                text={t("trophyModal.claim", { defaultValue: "Récupérer 🎁" })}
-                iconName="checkmark-circle-outline"
-                gradientColors={[currentTheme.colors.primary, currentTheme.colors.secondary]}
-                disabled={!canClaim || isClaiming}
-                loading={isClaiming}
-              />
+              {/* Carte des trophées */}
+              <View style={styles.trophiesCardWrapper}>
+                <LinearGradient
+                  colors={["#F97316", "#FACC15", "#22C55E"]}
+                  start={{ x: 0, y: 0 }}
+                  end={{ x: 1, y: 1 }}
+                  style={styles.trophiesCardBorder}
+                >
+                  <View style={styles.trophiesCard}>
+                    <View style={styles.trophiesIconCircle}>
+                      <Ionicons
+                        name="trophy"
+                        size={normalize(26)}
+                        color="#FACC15"
+                      />
+                    </View>
+                    <View style={styles.trophiesTextBlock}>
+                      <Text
+                        style={[
+                          styles.trophiesLabel,
+                          {
+                            writingDirection: I18nManager.isRTL ? "rtl" : "ltr",
+                            textAlign: I18nManager.isRTL ? "right" : "left",
+                          },
+                        ]}
+                      >
+                        {trophiesTitle}
+                      </Text>
+                      <Text
+                        style={[
+                          styles.trophiesValue,
+                          {
+                            writingDirection: I18nManager.isRTL ? "rtl" : "ltr",
+                            textAlign: I18nManager.isRTL ? "right" : "left",
+                          },
+                        ]}
+                      >
+                        {isDoubleReward ? `+${finalTrophies}` : `+${trophiesEarned}`}
+                      </Text>
+                      <Text
+                        style={[
+                          styles.trophiesHint,
+                          {
+                            writingDirection: I18nManager.isRTL ? "rtl" : "ltr",
+                            textAlign: I18nManager.isRTL ? "right" : "left",
+                          },
+                        ]}
+                        numberOfLines={2}
+                      >
+                        {trophiesHint}
+                      </Text>
+                    </View>
+                  </View>
+                </LinearGradient>
+              </View>
 
-              {!adWatched && !isClaiming && (
-                <GradientButton
-                  onPress={handleDouble}
-                  text={t("trophyModal.doubleReward", {
-                    defaultValue: "Doubler la récompense",
-                  })}
-                  iconName="videocam-outline"
-                  gradientColors={[currentTheme.colors.secondary, currentTheme.colors.primary]}
-                  disabled={!canShowRewarded || adBusy}
-                  loading={adBusy}
+              {/* Description du succès */}
+              <View style={styles.achievementBlock}>
+                <Text
+                  style={[
+                    styles.achievementTitle,
+                    {
+                      color: isDark
+                        ? currentTheme.colors.textPrimary
+                        : "#0F172A",
+                      writingDirection: I18nManager.isRTL ? "rtl" : "ltr",
+                      textAlign: "center",
+                    },
+                  ]}
+                  numberOfLines={2}
+                >
+                  {achievementTitle}
+                </Text>
+                <Text
+                  style={[
+                    styles.achievementDescription,
+                    {
+                      color: isDark
+                        ? currentTheme.colors.textSecondary
+                        : "rgba(15,23,42,0.76)",
+                      writingDirection: I18nManager.isRTL ? "rtl" : "ltr",
+                      textAlign: "center",
+                    },
+                  ]}
+                  numberOfLines={4}
+                >
+                  {description}
+                </Text>
+              </View>
+
+                            {/* Boutons actions */}
+              <View style={styles.actionsRow}>
+                {!isDoubleReward && (
+                  <TouchableOpacity
+                    onPress={handleDoubleReward}
+                    activeOpacity={0.9}
+                    disabled={!adReady || adLoading}
+                    style={[
+                      styles.doubleRewardButton,
+                      (!adReady || adLoading) && { opacity: 0.5 },
+                    ]}
+                    accessibilityRole="button"
+                    accessibilityLabel={t(
+                      "trophyModal.doubleReward",
+                      "Regarder une vidéo pour doubler la récompense"
+                    )}
+                  >
+                    <LinearGradient
+                      colors={["#4ade80", "#16a34a"]}
+                      start={{ x: 0, y: 0 }}
+                      end={{ x: 1, y: 1 }}
+                      style={styles.doubleRewardInner}
+                    >
+                      <Ionicons
+                        name="play-circle"
+                        size={normalize(16)}
+                        color="#fff"
+                      />
+                      <Text
+                        style={[
+                          styles.doubleRewardText,
+                          {
+                            writingDirection: I18nManager.isRTL ? "rtl" : "ltr",
+                            textAlign: "center",
+                          },
+                        ]}
+                        numberOfLines={2}
+                        adjustsFontSizeToFit
+                      >
+                        {adLoading
+                          ? t("trophyModal.loadingAd", "Chargement…")
+                          : t(
+                              "trophyModal.doubleReward",
+                              "Regarder une vidéo → x2"
+                            )}
+                      </Text>
+                    </LinearGradient>
+                  </TouchableOpacity>
+                )}
+
+                <TouchableOpacity
+                  onPress={handleClaim}
+                  activeOpacity={0.9}
+                  style={[
+                    styles.primaryButton,
+                    (!canClaim || isClaiming) && { opacity: 0.7 },
+                  ]}
+                  disabled={!canClaim || isClaiming}
+                  accessibilityRole="button"
+                  accessibilityLabel={ctaLabel}
+                >
+                  <LinearGradient
+                    colors={[
+                      currentTheme.colors.secondary,
+                      currentTheme.colors.primary,
+                    ]}
+                    start={{ x: 0, y: 0 }}
+                    end={{ x: 1, y: 0 }}
+                    style={styles.primaryButtonInner}
+                  >
+                    <Text
+                      style={[
+                        styles.primaryButtonText,
+                        {
+                          writingDirection: I18nManager.isRTL ? "rtl" : "ltr",
+                          textAlign: "center",
+                        },
+                      ]}
+                      numberOfLines={1}
+                      adjustsFontSizeToFit
+                    >
+                      {ctaLabel}
+                    </Text>
+                    <Ionicons
+                      name="arrow-forward"
+                      size={normalize(16)}
+                      color="#FFF"
+                    />
+                  </LinearGradient>
+                </TouchableOpacity>
+              </View>
+
+
+              {/* Close X */}
+              <TouchableOpacity
+                style={styles.closeButton}
+                onPress={handleClose}
+                accessibilityRole="button"
+                accessibilityLabel={t("a11y.close", {
+                  defaultValue: "Fermer",
+                })}
+              >
+                <Ionicons
+                  name="close"
+                  size={normalize(18)}
+                  color={isDark ? "#E5E7EB" : "#111827"}
                 />
-              )}
-            </View>
-          </Reanimated.View>
-          {/* ===== END CARD ===== */}
-        </View>
-      </Reanimated.View>
+              </TouchableOpacity>
+            </LinearGradient>
+          </LinearGradient>
+        </Animated.View>
+      </View>
     </Modal>
   );
 };
 
-interface GradientButtonProps {
-  onPress: () => void;
-  text: string;
-  iconName?: keyof typeof Ionicons.glyphMap;
-  gradientColors: readonly [string, string, ...string[]];
-  disabled?: boolean;
-  loading?: boolean;
-}
-
-const GradientButton: React.FC<GradientButtonProps> = React.memo(
-  ({ onPress, text, iconName, gradientColors, disabled, loading }) => {
-    const scale = useRef(new RNAnimated.Value(1)).current;
-
-    const pressIn = () => {
-      if (disabled) return;
-      try { Vibration.vibrate(12); } catch {}
-      RNAnimated.spring(scale, {
-        toValue: 0.96,
-        friction: 6,
-        useNativeDriver: true,
-      }).start();
-    };
-
-    const pressOut = () => {
-      RNAnimated.spring(scale, {
-        toValue: 1,
-        friction: 6,
-        useNativeDriver: true,
-      }).start(() => {
-        if (!disabled) onPress();
-      });
-    };
-
-    return (
-      <TouchableOpacity
-        onPressIn={pressIn}
-        onPressOut={pressOut}
-        activeOpacity={0.85}
-        style={[btnStyles.wrap, disabled && { opacity: 0.55 }]}
-        accessibilityRole="button"
-        accessibilityState={{ disabled: !!disabled, busy: !!loading }}
-      >
-        <RNAnimated.View style={{ transform: [{ scale }] }}>
-          <LinearGradient
-            colors={gradientColors}
-            start={{ x: 0, y: 0 }}
-            end={{ x: 1, y: 0 }}
-            style={btnStyles.gradient}
-          >
-            <View style={btnStyles.content}>
-              {loading ? (
-                <ActivityIndicator size="small" color="#FFF" style={{ marginRight: 8 }} />
-              ) : (
-                iconName && (
-                  <Ionicons
-                    name={iconName}
-                    size={normalizeSize(18)}
-                    color="#FFFFFF"
-                    style={btnStyles.icon}
-                  />
-                )
-              )}
-
-              <Text style={btnStyles.text} adjustsFontSizeToFit numberOfLines={1}>
-                {text}
-              </Text>
-            </View>
-          </LinearGradient>
-        </RNAnimated.View>
-      </TouchableOpacity>
-    );
-  }
-);
-
-/* Styles */
 const styles = StyleSheet.create({
-  root: { flex: 1 },
-  backdrop: {
-    ...StyleSheet.absoluteFillObject,
-    backgroundColor: "rgba(0,0,0,0.6)",
+  overlay: {
+    flex: 1,
+    backgroundColor: "rgba(15,23,42,0.88)",
+    justifyContent: "center",
+    alignItems: "center",
+    paddingHorizontal: normalize(16),
   },
-  center: { flex: 1, alignItems: "center", justifyContent: "center" },
-  card: {
-    width: "92%",
-    maxWidth: 460,
-    borderRadius: 22,
-    borderWidth: StyleSheet.hairlineWidth,
-    paddingVertical: SPACING,
-    paddingHorizontal: SPACING,
+  modalContainer: {
+    width: SCREEN_WIDTH * 0.94,
+    maxWidth: normalize(460),
+    borderRadius: normalize(28),
+    overflow: "hidden",
+  },
+  borderWrap: {
+    borderRadius: normalize(28),
+    padding: 2,
+  },
+  modalBackground: {
+    borderRadius: normalize(26),
+    paddingVertical: normalize(16),
+    paddingHorizontal: normalize(14),
+  },
+  ribbonWrapper: {
+    alignItems: "center",
+    marginBottom: normalize(6),
+  },
+  ribbon: {
+    borderRadius: normalize(999),
+    paddingHorizontal: normalize(16),
+    paddingVertical: normalize(6),
+    flexDirection: "row",
+    alignItems: "center",
+    gap: normalize(6),
     shadowColor: "#000",
-    shadowOffset: { width: 0, height: Platform.OS === "android" ? 6 : 10 },
-    shadowOpacity: 0.25,
-    shadowRadius: 16,
-    elevation: 10,
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.28,
+    shadowRadius: 9,
+    elevation: 5,
+  },
+  ribbonText: {
+    fontSize: normalize(11),
+    fontWeight: "700",
+    color: "#0F172A",
+    textTransform: "uppercase",
+    letterSpacing: 0.8,
   },
   header: {
+    alignItems: "center",
+    marginTop: normalize(4),
+    marginBottom: normalize(10),
+  },
+ actionsRow: {
     flexDirection: "row",
     alignItems: "center",
     justifyContent: "space-between",
-    marginBottom: SPACING,
+    marginTop: normalize(14),
+    gap: normalize(10),
   },
-  title: {
-    fontSize: normalizeSize(22),
-    fontFamily: "Comfortaa_700Bold",
-    textAlign: "center",
+  doubleRewardButton: {
     flex: 1,
-    paddingHorizontal: 8,
+    borderRadius: normalize(999),
   },
-  animationContainer: {
-    width: "100%",
-    alignItems: "center",
-    marginBottom: SPACING,
-  },
-  glow: {
-    width: normalizeSize(172),
-    height: normalizeSize(172),
-    borderRadius: normalizeSize(86),
-    alignItems: "center",
-    justifyContent: "center",
-  },
-  videoCircle: {
-    width: normalizeSize(140),
-    height: normalizeSize(140),
-    borderRadius: normalizeSize(70),
-    overflow: "hidden",
-    borderWidth: 3,
-    backgroundColor: "#000",
-    shadowColor: "#000",
-    shadowOffset: { width: 0, height: 6 },
-    shadowOpacity: 0.35,
-    shadowRadius: 10,
-    elevation: 10,
-  },
-  fallbackIcon: { flex: 1, alignItems: "center", justifyContent: "center" },
-  rewardText: {
-    fontSize: normalizeSize(20),
-    fontFamily: "Comfortaa_700Bold",
-    textAlign: "center",
-    textShadowColor: "rgba(0,0,0,0.18)",
-    textShadowOffset: { width: 1, height: 1 },
-    textShadowRadius: 2,
-    marginBottom: 4,
-  },
-  achievementText: {
-    fontSize: normalizeSize(16),
-    fontFamily: "Comfortaa_600SemiBold" as any,
-    textAlign: "center",
-    marginTop: 2,
-    marginBottom: 8,
-  },
-  message: {
-    fontSize: normalizeSize(14),
-    fontFamily: "Comfortaa_400Regular",
-    textAlign: "center",
-    marginTop: 6,
-  },
-  buttons: { marginTop: SPACING, alignItems: "center" },
-});
-
-const btnStyles = StyleSheet.create({
-  wrap: {
-    width: "92%",
-    marginVertical: normalizeSize(6),
-    alignSelf: "center",
-    shadowColor: "#000",
-    shadowOffset: { width: 0, height: 4 },
-    shadowOpacity: 0.22,
-    shadowRadius: 6,
-    elevation: 8,
-  },
-  gradient: {
-    paddingVertical: normalizeSize(14),
-    paddingHorizontal: normalizeSize(22),
-    borderRadius: normalizeSize(24),
-    borderWidth: 1,
-    borderColor: "rgba(255,255,255,0.12)",
-  },
-  content: {
+  doubleRewardInner: {
+    paddingVertical: normalize(9),
+    paddingHorizontal: normalize(10),
+    borderRadius: normalize(999),
     flexDirection: "row",
     alignItems: "center",
     justifyContent: "center",
+    gap: normalize(6),
   },
-  icon: { marginRight: normalizeSize(6) },
-  text: {
-    color: "#fff",
-    fontSize: normalizeSize(15),
+  trophyCircle: {
+    width: normalize(84),
+    height: normalize(84),
+    borderRadius: normalize(42),
+    alignItems: "center",
+    justifyContent: "center",
+    backgroundColor: "rgba(15,23,42,0.96)",
+    borderWidth: 1.5,
+    borderColor: "rgba(250,204,21,0.85)",
+    marginBottom: normalize(8),
+    shadowColor: "#FACC15",
+    shadowOffset: { width: 0, height: 10 },
+    shadowRadius: 18,
+  },
+  trophyGlow: {
+    position: "absolute",
+    width: "140%",
+    height: "140%",
+    borderRadius: 999,
+    backgroundColor: "rgba(250,204,21,0.16)",
+  },
+  doubleBadge: {
+    position: "absolute",
+    bottom: -normalize(4),
+    right: -normalize(4),
+    paddingHorizontal: normalize(8),
+    paddingVertical: normalize(2),
+    borderRadius: normalize(999),
+    backgroundColor: "#22C55E",
+    borderWidth: 1,
+    borderColor: "#16A34A",
+  },
+  doubleBadgeText: {
+    fontSize: normalize(9),
     fontFamily: "Comfortaa_700Bold",
+    color: "#ECFDF5",
+    letterSpacing: 0.4,
+    textTransform: "uppercase",
+  },
+  title: {
+    fontSize: normalize(22),
+    fontFamily: "Comfortaa_700Bold",
+  },
+  subtitle: {
+    fontSize: normalize(13),
+    fontFamily: "Comfortaa_400Regular",
+    marginTop: normalize(4),
+  },
+  trophiesCardWrapper: {
+    marginTop: normalize(4),
+    marginBottom: normalize(10),
+  },
+  trophiesCardBorder: {
+    borderRadius: normalize(18),
+    padding: 1.5,
+  },
+  trophiesCard: {
+    borderRadius: normalize(16),
+    paddingVertical: normalize(10),
+    paddingHorizontal: normalize(10),
+    flexDirection: "row",
+    alignItems: "center",
+    backgroundColor: "rgba(15,23,42,0.96)",
+  },
+  trophiesIconCircle: {
+    width: normalize(46),
+    height: normalize(46),
+    borderRadius: normalize(23),
+    alignItems: "center",
+    justifyContent: "center",
+    backgroundColor: "rgba(15,23,42,1)",
+    borderWidth: 1,
+    borderColor: "rgba(250,204,21,0.85)",
+    marginRight: normalize(10),
+  },
+  trophiesTextBlock: {
+    flex: 1,
+  },
+  trophiesLabel: {
+    fontSize: normalize(12),
+    fontFamily: "Comfortaa_400Regular",
+    color: "#F9FAFB",
+    opacity: 0.85,
+  },
+  trophiesValue: {
+    fontSize: normalize(20),
+    fontFamily: "Comfortaa_700Bold",
+    color: "#FEF9C3",
+    marginTop: 2,
+  },
+  trophiesHint: {
+    fontSize: normalize(11),
+    fontFamily: "Comfortaa_400Regular",
+    color: "rgba(241,245,249,0.9)",
+    marginTop: 2,
+  },
+  achievementBlock: {
+    marginTop: normalize(6),
+  },
+  achievementTitle: {
+    fontSize: normalize(16),
+    fontFamily: "Comfortaa_700Bold",
+    marginBottom: normalize(4),
+  },
+  achievementDescription: {
+    fontSize: normalize(13),
+    fontFamily: "Comfortaa_400Regular",
+    lineHeight: normalize(18),
+  },
+  doubleRewardText: {
+    fontSize: normalize(12),
+    fontFamily: "Comfortaa_700Bold",
+    color: "#fff",
     textAlign: "center",
+  },
+  primaryButton: {
+    flex: 1,
+  },
+  primaryButtonInner: {
+    borderRadius: normalize(999),
+    paddingVertical: normalize(9),
+    paddingHorizontal: normalize(10),
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "center",
+    gap: normalize(6),
+  },
+  primaryButtonText: {
+    fontSize: normalize(13),
+    fontFamily: "Comfortaa_700Bold",
+    color: "#FFFFFF",
+  },
+  closeButton: {
+    position: "absolute",
+    top: normalize(10),
+    right: normalize(10),
+    width: normalize(28),
+    height: normalize(28),
+    borderRadius: normalize(14),
+    alignItems: "center",
+    justifyContent: "center",
+    backgroundColor: "rgba(15,23,42,0.9)",
   },
 });
 

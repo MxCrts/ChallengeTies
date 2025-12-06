@@ -4,7 +4,7 @@ import { auth } from "../constants/firebase-config";
 import AsyncStorage from "@react-native-async-storage/async-storage";
 import { fetchAndSaveUserLocation } from "../services/locationService";
 import { db } from "../constants/firebase-config";
-import { collection, query, where, onSnapshot, doc, runTransaction } from "firebase/firestore";
+import { collection, query, where, onSnapshot, doc, runTransaction, getDoc, } from "firebase/firestore";
 import { increment } from "firebase/firestore";
 import { setDoc, updateDoc, arrayUnion } from "firebase/firestore";
 import { AppState, Platform  } from "react-native";
@@ -12,11 +12,21 @@ import {
   ensureAndroidChannelAsync,
   requestNotificationPermissions,
   registerForPushNotificationsAsync,
+  sendReferralNewChildPush,
+  sendInvitationNotification,
 } from "@/services/notificationService";
+
 import { logEvent } from "@/src/analytics";
 import * as Linking from "expo-linking";
 import { handleReferralUrl } from "@/services/referralLinking";
 import { getDisplayUsername } from "@/services/invitationService";
+import {
+  checkAndGrantPioneerIfEligible,
+  checkAndGrantAmbassadorRewards,
+  checkAndGrantAmbassadorMilestones,
+  checkAndNotifyReferralMilestones,
+} from "../src/referral/pioneerChecker";
+
 
 
 // ✅ Ne laisse passer ici QUE les liens referral
@@ -37,6 +47,9 @@ const REFERRER_KEY = "ties_referrer_id";
 const REFERRER_SRC_KEY = "ties_referrer_src";
 const REFERRER_TS_KEY = "ties_referrer_ts";
 const REFERRAL_JUST_ACTIVATED_KEY = "ties_referral_just_activated";
+const REFERRAL_TROPHY_BONUS = 50; 
+// 🔧 Mets ici le nombre de trophées que tu donnes réellement pour 1 filleul activé
+
 
 async function consumePendingReferrer(uid: string) {
   const [[, referrerId], [, src], [, ts]] = await AsyncStorage.multiGet([
@@ -182,7 +195,7 @@ const authFailsafe = setTimeout(() => {
 
           await clearPendingReferrer();
 
-          if (activated) {
+                    if (activated) {
             // petit flag local si tu veux afficher un toast / reward UI
             await AsyncStorage.setItem(REFERRAL_JUST_ACTIVATED_KEY, "1");
 
@@ -192,11 +205,52 @@ const authFailsafe = setTimeout(() => {
                 src: cleanSrc,
               });
             } catch {}
+
+            // 🔔 Notif parrain : "Vous êtes désormais le parrain de X"
+            // 🔔 Notif parrain : "Vous êtes désormais le parrain de X"
+try {
+  const childUsername =
+    (await getDisplayUsername(firebaseUser.uid)) ||
+    firebaseUser.displayName ||
+    (firebaseUser.email
+      ? firebaseUser.email.split("@")[0]
+      : "New user");
+
+  const pushRes = await sendReferralNewChildPush({
+    sponsorId: cleanRef,
+    childUsername,
+  });
+
+  console.log(
+    "[referral] sendReferralNewChildPush result:",
+    pushRes
+  );
+} catch (e) {
+  console.log(
+    "[referral] sendReferralNewChildPush error (exception):",
+    (e as any)?.message ?? e
+  );
+}
+
           }
+
         } catch (e) {
           console.log("[referral] activation post-login error:", e);
         }
       })();
+
+// 🔥 Lancer tous les checks referral en tâche de fond
+  (async () => {
+    try {
+      await Promise.all([
+        checkAndGrantAmbassadorRewards(),
+        checkAndGrantAmbassadorMilestones(),
+        checkAndNotifyReferralMilestones(), // 🆕 nudge palier basé sur claimedMilestones
+      ]);
+    } catch (e) {
+      console.log("[referral] global checks error:", e);
+    }
+  })();
 
 
       (async () => {
@@ -290,60 +344,86 @@ useEffect(() => {
   const uid = user?.uid;
   if (!uid) return;
 
+  // 💡 Pas de setup push sur web
+  if (Platform.OS === "web") {
+    console.log("🌐 Web environment → skip push setup");
+    return;
+  }
+
   let unsubAppState: (() => void) | undefined;
   let mounted = true;
 
   (async () => {
     try {
-      // 1) S’assurer du channel Android + permission
-if (Platform.OS === "android") {
-  await ensureAndroidChannelAsync();
-}
+      // 1) Channel Android + permissions
+      if (Platform.OS === "android") {
+        await ensureAndroidChannelAsync();
+      }
+
       const granted = await requestNotificationPermissions();
       console.log("🔔 Permission notifications (AuthProvider):", granted);
 
       if (!granted) {
-        // On ne force pas notificationsEnabled si refusé
+        // On documente clairement le refus (optionnel)
+        try {
+          await updateDoc(doc(db, "users", uid), {
+            notificationsEnabled: false,
+            debugAuthProviderLastToken: null,
+            expoPushToken: null,
+          });
+        } catch (e) {
+          console.warn("⚠️ Impossible d'écrire le refus de notif:", e);
+        }
         return;
       }
 
       // 2) Récupérer le token (idempotent) et l’écrire en base
       const token = await registerForPushNotificationsAsync();
-if (!mounted) return;
+      if (!mounted) return;
 
-// 🔎 DEBUG
-console.log("🔔 Token from AuthProvider effect:", token);
+      console.log("🔔 Token from AuthProvider effect:", token);
 
-if (token) {
-  await setDoc(
-    doc(db, "users", uid),
-    {
-      expoPushToken: token,
-      notificationsEnabled: true,
-      expoPushUpdatedAt: new Date(),
-      debugAuthProviderLastToken: token, // 👈 trace debug
-    },
-    { merge: true }
-  );
-}
+      if (token) {
+        await setDoc(
+          doc(db, "users", uid),
+          {
+            expoPushToken: token,
+            notificationsEnabled: true,
+            expoPushUpdatedAt: new Date(),
+            debugAuthProviderLastToken: token,
+          },
+          { merge: true }
+        );
+      }
 
+      // 🔎 Vérification immédiate dans Firestore pour ce user
+      try {
+        const snap = await getDoc(doc(db, "users", uid));
+        const data = snap.exists() ? snap.data() : null;
+        console.log("🔎 Firestore user push snapshot (AuthProvider):", {
+          exists: snap.exists(),
+          expoPushToken: data?.expoPushToken ?? null,
+          notificationsEnabled: data?.notificationsEnabled ?? null,
+        });
+      } catch (e) {
+        console.warn("⚠️ Impossible de relire le doc user après set token:", e);
+      }
 
       // 3) Rafraîchir le token à chaque retour au foreground
       const sub = AppState.addEventListener("change", async (state) => {
         if (state !== "active") return;
         try {
           const refreshed = await registerForPushNotificationsAsync();
-          console.log("🔁 Foreground refresh token:", refreshed); // 👈 DEBUG
+          console.log("🔁 Foreground refresh token:", refreshed);
 
-if (refreshed) {
-  await updateDoc(doc(db, "users", uid), {
-    expoPushToken: refreshed,
-    notificationsEnabled: true,
-    expoPushUpdatedAt: new Date(),
-    debugAuthProviderLastToken: refreshed, // 👈 trace debug
-  });
-}
-
+          if (refreshed) {
+            await updateDoc(doc(db, "users", uid), {
+              expoPushToken: refreshed,
+              notificationsEnabled: true,
+              expoPushUpdatedAt: new Date(),
+              debugAuthProviderLastToken: refreshed,
+            });
+          }
         } catch (e) {
           console.warn("⚠️ Refresh expo token failed:", e);
         }
@@ -357,7 +437,9 @@ if (refreshed) {
 
   return () => {
     mounted = false;
-    try { unsubAppState?.(); } catch {}
+    try {
+      unsubAppState?.();
+    } catch {}
   };
 }, [user?.uid]);
 
@@ -365,7 +447,7 @@ useEffect(() => {
   if (!user) return;
   const inviterId = user.uid;
 
-  // 👉 L’invitateur écoute désormais SES invitations acceptées
+  // 👉 L’invitateur écoute SES invitations ACCEPTÉES
   const qInv = query(
     collection(db, "invitations"),
     where("inviterId", "==", inviterId),
@@ -387,6 +469,7 @@ useEffect(() => {
       treated.add(id);
 
       try {
+        // 1️⃣ On s’assure que le duo est bien créé côté invitateur
         await ensureDuoMirrorForInviter({
           inviterId,
           challengeId: data.challengeId,
@@ -396,6 +479,125 @@ useEffect(() => {
       } catch (e) {
         console.error("❌ ensureDuoMirrorForInviter failed:", e);
       }
+
+      try {
+        // 2️⃣ Notif locale immédiate pour l’invitateur (fallback simple)
+        // On réutilise les mêmes clés i18n que pour le push distant :
+        // notificationsPush.inviteAccepted.title / .body
+        await sendInvitationNotification(inviterId, {
+          titleKey: "notificationsPush.inviteAccepted.title",
+          bodyKey: "notificationsPush.inviteAccepted.body",
+          params: {
+            username: data.inviteeUsername || "",
+            // challengeTitle non stocké dans l’invitation → optionnel
+            title: data.challengeTitle || "",
+          },
+          type: "invite-status",
+        });
+      } catch (e) {
+        console.error(
+          "❌ sendInvitationNotification (accepted) failed:",
+          (e as any)?.message ?? e
+        );
+      }
+    }
+  });
+
+  return () => unsubscribe();
+}, [user?.uid]);
+
+useEffect(() => {
+  if (!user) return;
+  const inviterId = user.uid;
+
+  // 👉 L’invitateur écoute SES invitations REFUSÉES
+  const qInvRefused = query(
+    collection(db, "invitations"),
+    where("inviterId", "==", inviterId),
+    where("status", "==", "refused")
+  );
+
+  const treatedRefused = new Set<string>();
+
+  const unsubscribe = onSnapshot(qInvRefused, async (snapshot) => {
+    for (const change of snapshot.docChanges()) {
+      const id = change.doc.id;
+      const data = change.doc.data() as any;
+
+      if (treatedRefused.has(id)) continue;
+
+      treatedRefused.add(id);
+
+      try {
+        // Notif locale immédiate pour informer que l’invitation a été refusée
+        await sendInvitationNotification(inviterId, {
+          titleKey: "notificationsPush.inviteRefused.title",
+          bodyKey: "notificationsPush.inviteRefused.body",
+          params: {
+            username: data.inviteeUsername || "",
+            title: data.challengeTitle || "",
+          },
+          type: "invite-status",
+        });
+      } catch (e) {
+        console.error(
+          "❌ sendInvitationNotification (refused) failed:",
+          (e as any)?.message ?? e
+        );
+      }
+    }
+  });
+
+  return () => unsubscribe();
+}, [user?.uid]);
+
+useEffect(() => {
+  if (!user) return;
+  const uid = user.uid;
+
+  const userRef = doc(db, "users", uid);
+
+  let initialized = false;
+  let prevActivatedCount: number | null = null;
+
+  const unsubscribe = onSnapshot(userRef, async (snap) => {
+    if (!snap.exists()) return;
+    const data = snap.data() as any;
+
+    const activatedCount = Number(data?.referral?.activatedCount ?? 0);
+
+    // 🧊 Premier snapshot : on initialise, PAS de notif
+    if (!initialized) {
+      initialized = true;
+      prevActivatedCount = activatedCount;
+      return;
+    }
+
+    // 1️⃣ Nouveau filleul activé (activatedCount ↑)
+    if (
+      prevActivatedCount === null ||
+      activatedCount > prevActivatedCount
+    ) {
+      prevActivatedCount = activatedCount;
+
+      try {
+        await sendInvitationNotification(uid, {
+          titleKey: "referral.notif.newChild.title",
+          bodyKey: "referral.notif.newChild.body",
+          params: {
+            bonus: REFERRAL_TROPHY_BONUS,
+            activatedCount,
+          },
+          type: "referral_new_child",
+        });
+      } catch (e) {
+        console.error(
+          "❌ sendInvitationNotification (newChild) failed:",
+          (e as any)?.message ?? e
+        );
+      }
+    } else {
+      prevActivatedCount = activatedCount;
     }
   });
 
@@ -415,82 +617,87 @@ const ensureDuoMirrorForInviter = async (opts: {
 }) => {
   const { inviterId, challengeId, inviteeId, selectedDays } = opts;
 
-  // 🛡️ Sécurité absolue : on ne crée jamais un duo avec soi-même
   if (!inviterId || !challengeId || !inviteeId) return;
   if (inviterId === inviteeId) return;
   if (!Number.isInteger(selectedDays) || selectedDays <= 0) return;
+
+  // ✅ On récupère le username AVANT la transaction
+  const partnerUsername = (await getDisplayUsername(inviteeId)) ?? null;
 
   const userRef = doc(db, "users", inviterId);
   const challengeRef = doc(db, "challenges", challengeId);
 
   await runTransaction(db, async (tx) => {
-    const [uSnap, cSnap] = await Promise.all([tx.get(userRef), tx.get(challengeRef)]);
-    if (!uSnap.exists() || !cSnap.exists()) throw new Error("user/challenge introuvable");
+    const [uSnap, cSnap] = await Promise.all([
+      tx.get(userRef),
+      tx.get(challengeRef),
+    ]);
+    if (!uSnap.exists() || !cSnap.exists()) {
+      throw new Error("user/challenge introuvable");
+    }
 
     const uData = uSnap.data() as any;
     const cData = cSnap.data() as any;
 
-    const list: any[] = Array.isArray(uData?.CurrentChallenges) ? uData.CurrentChallenges : [];
-    const pair = [inviterId, inviteeId].sort().join("-");
-const uniqueKey = `${challengeId}_${selectedDays}_${pair}`;
+    const list: any[] = Array.isArray(uData?.CurrentChallenges)
+      ? uData.CurrentChallenges
+      : [];
 
-    // 1) État actuel côté inviter
+    const pair = [inviterId, inviteeId].sort().join("-");
+    const uniqueKey = `${challengeId}_${selectedDays}_${pair}`;
+
     const idx = list.findIndex((c: any) => {
-  const cid = c?.challengeId ?? c?.id;
-  return (c?.uniqueKey && c.uniqueKey === uniqueKey) || cid === challengeId;
-});
+      const cid = c?.challengeId ?? c?.id;
+      return (c?.uniqueKey && c.uniqueKey === uniqueKey) || cid === challengeId;
+    });
 
     const currentEntry = idx >= 0 ? list[idx] : null;
+
     const alreadyDuo =
       !!currentEntry?.duo &&
       (currentEntry?.duoPartnerId === inviteeId || !currentEntry?.duoPartnerId) &&
       (currentEntry?.selectedDays === selectedDays || !currentEntry?.selectedDays);
 
-      // ✅ Si déjà DUO correct → on sort sans écrire (évite conflits)
     if (alreadyDuo) {
       return;
     }
 
-    // 2) Construire l’entrée DUO cible
     const duoEntry = {
-  challengeId,
-  id: challengeId,
-  title: cData.title || "Challenge",
-  description: cData.description || "",
-  imageUrl: cData.imageUrl || "",
-  chatId: cData.chatId || challengeId,
-  selectedDays,
-  completedDays: 0,
-  completionDates: [],
-  lastMarkedDate: null,
-  streak: 0,
-  duo: true,
-  duoPartnerId: inviteeId,
-  duoPartnerUsername: await getDisplayUsername(inviteeId), // ⭐ OBLIGATOIRE
-  uniqueKey,
-};
+      challengeId,
+      id: challengeId,
+      title: cData.title || "Challenge",
+      description: cData.description || "",
+      imageUrl: cData.imageUrl || "",
+      chatId: cData.chatId || challengeId,
+      selectedDays,
+      completedDays: 0,
+      completionDates: [],
+      completionDateKeys: [],
+      lastMarkedDate: null,
+      lastMarkedKey: null,
+      streak: 0,
+      duo: true,
+      duoPartnerId: inviteeId,
+      duoPartnerUsername: partnerUsername,
+      uniqueKey,
+    };
 
-
-    // 3) Prépare la nouvelle liste: remplace SOLO/ancienne entrée par DUO, ou append si absent
     let next: any[];
     if (idx >= 0) {
       next = [...list];
       next[idx] = { ...duoEntry };
     } else {
       next = [...list, duoEntry];
-   }
-
-    // 4) users/{inviterId}: n’écrit que si nécessaire (réduit les conflits + coûts)
-    const mustWriteUser = next !== list;
-    if (mustWriteUser) {
-      tx.update(userRef, {
-        CurrentChallenges: next,
-        updatedAt: new Date(),
-      });
     }
 
-    // 5) challenges/{challengeId}: ajoute l’inviter dans usersTakingChallenge si manquant + count
-    const users: string[] = Array.isArray(cData?.usersTakingChallenge) ? cData.usersTakingChallenge : [];
+    tx.update(userRef, {
+      CurrentChallenges: next,
+      updatedAt: new Date(),
+    });
+
+    const users: string[] = Array.isArray(cData?.usersTakingChallenge)
+      ? cData.usersTakingChallenge
+      : [];
     const inviterAlreadyIn = users.includes(inviterId);
 
     if (!inviterAlreadyIn) {
@@ -500,11 +707,11 @@ const uniqueKey = `${challengeId}_${selectedDays}_${pair}`;
         updatedAt: new Date(),
       });
     } else {
-      // on garde la cohérence des règles avec updatedAt sans toucher au reste
       tx.update(challengeRef, { updatedAt: new Date() });
     }
   });
 };
+
 
 
   // Fonction de déconnexion

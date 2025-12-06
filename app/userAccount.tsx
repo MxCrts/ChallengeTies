@@ -9,10 +9,10 @@ import {
   Dimensions,
   StatusBar,
   Platform,
-  SafeAreaView,
   ActivityIndicator,
   Pressable,
 } from "react-native";
+import { SafeAreaView } from "react-native-safe-area-context";
 import { Ionicons } from "@expo/vector-icons";
 import { LinearGradient } from "expo-linear-gradient";
 import { useTheme } from "../context/ThemeContext";
@@ -24,7 +24,7 @@ import { useTranslation } from "react-i18next";
 import designSystem from "../theme/designSystem";
 import CustomHeader from "../components/CustomHeader";
 import * as Clipboard from "expo-clipboard";
-import { tap, success } from "@/src/utils/haptics";
+import { tap, success, warning } from "@/src/utils/haptics";
 import { useToast } from "@/src/ui/Toast";
 
 const { width: SCREEN_WIDTH } = Dimensions.get("window");
@@ -38,7 +38,7 @@ const SPACING = 15;
 
 export default function UserAccount() {
   const { t } = useTranslation();
-  const { show } = useToast();
+  const { show: showToast } = useToast();
   const { theme } = useTheme();
   const router = useRouter();
   const isDarkMode = theme === "dark";
@@ -52,15 +52,23 @@ export default function UserAccount() {
   const [lastLoginTime, setLastLoginTime] = useState<string | null>(null);
   const [verifSending, setVerifSending] = useState(false);
 
-  // Format propre des dates (création + dernier login)
+  // Redirection soft si plus de user (par ex. après logout ailleurs)
   useEffect(() => {
     if (!auth.currentUser) {
       router.replace("/login");
+    }
+  }, [router]);
+
+  // Format propre des dates (création + dernier login)
+  useEffect(() => {
+    if (!user) {
+      setCreationTime("-");
+      setLastLoginTime("-");
       return;
     }
 
     try {
-      if (user?.metadata?.creationTime) {
+      if (user.metadata?.creationTime) {
         const d = new Date(user.metadata.creationTime);
         const formatted = d.toLocaleDateString(undefined, {
           year: "numeric",
@@ -72,7 +80,7 @@ export default function UserAccount() {
         setCreationTime("-");
       }
 
-      if (user?.metadata?.lastSignInTime) {
+      if (user.metadata?.lastSignInTime) {
         const d2 = new Date(user.metadata.lastSignInTime);
         const formatted2 = d2.toLocaleDateString(undefined, {
           year: "numeric",
@@ -87,50 +95,54 @@ export default function UserAccount() {
       setCreationTime("-");
       setLastLoginTime("-");
     }
-  }, [user, router]);
+  }, [user]);
 
   const copy = useCallback(
-    async (value?: string | null, label?: string) => {
+    async (value?: string | null) => {
       if (!value) return;
       tap();
       try {
         await Clipboard.setStringAsync(value);
         success();
-        show(
+        showToast(
           t("copiedToClipboard", {
             defaultValue: "Copié dans le presse-papiers.",
           }),
           "success"
         );
       } catch {
-        show(t("unknownError"), "error");
+        warning();
+        showToast(t("unknownError"), "error");
       }
     },
-    [show, t]
+    [showToast, t]
   );
 
   const resendVerification = useCallback(async () => {
-    if (!auth.currentUser || auth.currentUser.emailVerified) return;
+    const currentUser = auth.currentUser;
+    if (!currentUser || currentUser.emailVerified) return;
+
     tap();
     setVerifSending(true);
     try {
-      await sendEmailVerification(auth.currentUser);
+      await sendEmailVerification(currentUser);
       success();
-      show(
+      showToast(
         t("verificationEmailSent", {
           defaultValue: "Email de vérification envoyé.",
         }),
         "success"
       );
     } catch (e) {
-      show(t("unknownError"), "error");
+      console.error("resendVerification error:", e);
+      warning();
+      showToast(t("unknownError"), "error");
     } finally {
       setVerifSending(false);
     }
-  }, [show, t]);
+  }, [showToast, t]);
 
-  const handleSignOut = useCallback(async () => {
-    tap();
+  const handleSignOut = useCallback(() => {
     Alert.alert(
       t("logout"),
       t("logoutConfirm", {
@@ -143,19 +155,30 @@ export default function UserAccount() {
           style: "destructive",
           onPress: async () => {
             try {
+              tap();
               await auth.signOut();
-              show(t("disconnected"), "success");
               router.replace("/login");
+              showToast(
+                t("loggedOut", { defaultValue: "Déconnecté." }),
+                "info"
+              );
             } catch (error) {
-              console.error("SignOut error:", error);
-              show(t("logoutFailed"), "error");
+              console.error("SignOut error from UserAccount:", error);
+              warning();
+              showToast(
+                t("logoutFailed", {
+                  defaultValue:
+                    "La déconnexion a échoué. Réessaie dans quelques instants.",
+                }),
+                "error"
+              );
             }
           },
         },
       ],
       { cancelable: true }
     );
-  }, [router, show, t]);
+  }, [router, showToast, t]);
 
   // Méthode principale de connexion (email / Google / Apple…)
   const primaryProviderId = user?.providerData?.[0]?.providerId ?? "password";
@@ -176,7 +199,37 @@ export default function UserAccount() {
     }
   }, [primaryProviderId, t]);
 
-  const badgeVerified = user?.emailVerified;
+  const badgeVerified = !!user?.emailVerified;
+
+  // Si plus de user → on laisse la redirection gérer, écran neutre
+  if (!user) {
+    return (
+      <LinearGradient
+        colors={[
+          currentTheme.colors.background,
+          currentTheme.colors.cardBackground + "F0",
+        ]}
+        style={styles.gradientContainer}
+        start={{ x: 0, y: 0 }}
+        end={{ x: 1, y: 1 }}
+      >
+        <SafeAreaView style={styles.safeArea}>
+          <StatusBar
+            translucent
+            backgroundColor="transparent"
+            barStyle={isDarkMode ? "light-content" : "dark-content"}
+          />
+          <CustomHeader title={t("myAccount", { defaultValue: "Mon compte" })} />
+          <View style={styles.center}>
+            <ActivityIndicator
+              size="large"
+              color={currentTheme.colors.secondary}
+            />
+          </View>
+        </SafeAreaView>
+      </LinearGradient>
+    );
+  }
 
   return (
     <LinearGradient
@@ -194,7 +247,7 @@ export default function UserAccount() {
           backgroundColor="transparent"
           barStyle={isDarkMode ? "light-content" : "dark-content"}
         />
-        <CustomHeader title={t("myAccount")} />
+        <CustomHeader title={t("myAccount", { defaultValue: "Mon compte" })} />
 
         <ScrollView
           contentContainerStyle={styles.scrollContent}
@@ -238,7 +291,14 @@ export default function UserAccount() {
                     size={normalizeSize(14)}
                     color="#22C55E"
                   />
-                  <Text style={[styles.badgeText, { color: "#14532D" }]}>
+                  <Text
+                    style={[
+                      styles.badgeText,
+                      {
+                        color: "#14532D",
+                      },
+                    ]}
+                  >
                     {t("verified")}
                   </Text>
                 </View>
@@ -255,6 +315,10 @@ export default function UserAccount() {
                     },
                   ]}
                   accessibilityLabel={t("resendVerification")}
+                  accessibilityHint={t("resendVerificationHint", {
+                    defaultValue:
+                      "Envoie un nouvel email de vérification à ton adresse.",
+                  })}
                   testID="resend-verification"
                 >
                   {verifSending ? (
@@ -266,16 +330,29 @@ export default function UserAccount() {
                       color="#FF8C00"
                     />
                   )}
-                  <Text style={[styles.badgeText, { color: "#7C2D12" }]}>
-                    {verifSending ? t("sending") : t("verify")}
+                  <Text
+                    style={[
+                      styles.badgeText,
+                      {
+                        color: "#7C2D12",
+                      },
+                    ]}
+                  >
+                    {verifSending
+                      ? t("sending", { defaultValue: "Envoi..." })
+                      : t("verify")}
                   </Text>
                 </Pressable>
               )}
             </View>
 
             <TouchableOpacity
-              onPress={() => copy(user?.email, t("email"))}
+              onPress={() => copy(user.email)}
               activeOpacity={0.8}
+              accessibilityLabel={t("copyEmail")}
+              accessibilityHint={t("copyFieldHint", {
+                defaultValue: "Copie cette information dans le presse-papiers.",
+              })}
             >
               <View style={styles.copyRow}>
                 <Text
@@ -291,9 +368,9 @@ export default function UserAccount() {
                   numberOfLines={1}
                   ellipsizeMode="middle"
                 >
-                  {user?.email || "-"}
+                  {user.email || "-"}
                 </Text>
-                {!!user?.email && (
+                {!!user.email && (
                   <Ionicons
                     name="copy-outline"
                     size={normalizeSize(18)}
@@ -327,7 +404,7 @@ export default function UserAccount() {
                 {t("username")}
               </Text>
 
-              {user?.displayName ? null : (
+              {user.displayName ? null : (
                 <View
                   style={[
                     styles.badge,
@@ -352,8 +429,12 @@ export default function UserAccount() {
             </View>
 
             <TouchableOpacity
-              onPress={() => copy(user?.displayName, t("username"))}
+              onPress={() => copy(user.displayName)}
               activeOpacity={0.8}
+              accessibilityLabel={t("copyUsername")}
+              accessibilityHint={t("copyFieldHint", {
+                defaultValue: "Copie cette information dans le presse-papiers.",
+              })}
             >
               <View style={styles.copyRow}>
                 <Text
@@ -369,9 +450,9 @@ export default function UserAccount() {
                   numberOfLines={1}
                   ellipsizeMode="tail"
                 >
-                  {user?.displayName || "-"}
+                  {user.displayName || "-"}
                 </Text>
-                {!!user?.displayName && (
+                {!!user.displayName && (
                   <Ionicons
                     name="copy-outline"
                     size={normalizeSize(18)}
@@ -440,13 +521,12 @@ export default function UserAccount() {
             </Text>
 
             <TouchableOpacity
-              onPress={() =>
-                copy(
-                  user?.uid,
-                  t("userId", { defaultValue: "ID utilisateur" })
-                )
-              }
+              onPress={() => copy(user.uid)}
               activeOpacity={0.8}
+              accessibilityLabel={t("copyUserId")}
+              accessibilityHint={t("copyFieldHint", {
+                defaultValue: "Copie cette information dans le presse-papiers.",
+              })}
             >
               <View style={styles.copyRow}>
                 <Text
@@ -462,9 +542,9 @@ export default function UserAccount() {
                   numberOfLines={1}
                   ellipsizeMode="middle"
                 >
-                  {user?.uid || "-"}
+                  {user.uid || "-"}
                 </Text>
-                {!!user?.uid && (
+                {!!user.uid && (
                   <Ionicons
                     name="copy-outline"
                     size={normalizeSize(18)}
@@ -539,7 +619,15 @@ export default function UserAccount() {
             entering={FadeInUp.delay(400)}
             style={styles.buttonWrapper}
           >
-            <TouchableOpacity style={styles.button} onPress={handleSignOut}>
+            <TouchableOpacity
+              style={styles.button}
+              onPress={handleSignOut}
+              accessibilityLabel={t("logout")}
+              accessibilityHint={t("logoutConfirm", {
+                defaultValue: "Ouvre une fenêtre pour confirmer la déconnexion.",
+              })}
+              testID="logout-from-account"
+            >
               <LinearGradient
                 colors={[
                   currentTheme.colors.primary,
@@ -592,6 +680,14 @@ const styles = StyleSheet.create({
     paddingHorizontal: SPACING,
     paddingBottom: normalizeSize(80),
     alignItems: "center",
+    width: "100%",
+    maxWidth: 600,
+    alignSelf: "center",
+  },
+  center: {
+    flex: 1,
+    justifyContent: "center",
+    alignItems: "center",
   },
   infoCard: {
     width: "100%",
@@ -599,6 +695,11 @@ const styles = StyleSheet.create({
     borderRadius: normalizeSize(14),
     padding: normalizeSize(16),
     marginBottom: normalizeSize(16),
+    shadowColor: "#000",
+    shadowOffset: { width: 0, height: normalizeSize(4) },
+    shadowOpacity: 0.18,
+    shadowRadius: normalizeSize(6),
+    elevation: 6,
   },
   rowBetween: {
     flexDirection: "row",
@@ -640,6 +741,11 @@ const styles = StyleSheet.create({
   button: {
     borderRadius: normalizeSize(16),
     overflow: "hidden",
+    shadowColor: "#000",
+    shadowOffset: { width: 0, height: normalizeSize(4) },
+    shadowOpacity: 0.28,
+    shadowRadius: normalizeSize(6),
+    elevation: 8,
   },
   buttonGradient: {
     flexDirection: "row",

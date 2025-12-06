@@ -1,10 +1,14 @@
 // components/BannerSlot.tsx
 import React, { useMemo, useRef, useState, useEffect } from "react";
-import { View, useWindowDimensions, Animated, LayoutChangeEvent } from "react-native";
-import { BannerAd, BannerAdSize, TestIds } from "react-native-google-mobile-ads";
+import {
+  View,
+  useWindowDimensions,
+  Animated,
+  LayoutChangeEvent,
+  Keyboard,
+} from "react-native";
+import { BannerAd, BannerAdSize } from "react-native-google-mobile-ads";
 import { adUnitIds } from "@/constants/admob";
-import { Keyboard } from "react-native";
-
 
 type Props = {
   /** Appelé quand la bannière est affichée et mesurée (hauteur réelle en px) */
@@ -21,15 +25,13 @@ const BannerSlot: React.FC<Props> = ({ onHeight, docked = false }) => {
   const lastHeightRef = useRef<number>(0);
   const { width } = useWindowDimensions();
 
-  // Flags globaux éventuels
+  // Flags globaux éventuels (posés par ConsentGate)
   const npa = (globalThis as any).__NPA__ === true;
-  const canRequestAds = (globalThis as any).__CAN_REQUEST_ADS__ !== false;
+  const rawCanRequest = (globalThis as any).__CAN_REQUEST_ADS__;
+  const canRequestAds = rawCanRequest !== false;
 
-  // UnitId mémoïsé
-  const unitId = useMemo(
-    () => (__DEV__ ? TestIds.BANNER : adUnitIds.banner),
-    [adUnitIds.banner]
-  );
+  // UnitId mémoïsé — logique test/prod centralisée dans adUnitIds
+  const unitId = useMemo(() => adUnitIds.banner, []);
 
   // Anim d’apparition / disparition
   useEffect(() => {
@@ -40,7 +42,7 @@ const BannerSlot: React.FC<Props> = ({ onHeight, docked = false }) => {
     }).start();
   }, [visible, slide]);
 
-  // Sécurité unmount (évite setState après unmount si l’ad répond tard)
+  // Sécurité unmount
   useEffect(() => {
     isMountedRef.current = true;
     return () => {
@@ -48,14 +50,15 @@ const BannerSlot: React.FC<Props> = ({ onHeight, docked = false }) => {
     };
   }, []);
 
+  // Écoute clavier
   useEffect(() => {
-   const sh = Keyboard.addListener("keyboardDidShow", () => setKb(true));
-   const hh = Keyboard.addListener("keyboardDidHide", () => setKb(false));
-   return () => { sh.remove(); hh.remove(); };
- }, []);
-
-  // Pas d’ads si désactivées globalement
-  if (!canRequestAds || kb) return null;
+    const sh = Keyboard.addListener("keyboardDidShow", () => setKb(true));
+    const hh = Keyboard.addListener("keyboardDidHide", () => setKb(false));
+    return () => {
+      sh.remove();
+      hh.remove();
+    };
+  }, []);
 
   const handleLayout = (e: LayoutChangeEvent) => {
     if (!visible) return;
@@ -66,6 +69,23 @@ const BannerSlot: React.FC<Props> = ({ onHeight, docked = false }) => {
     }
   };
 
+  // 👉 Décision d’affichage
+  const hideForKeyboard = kb && docked;
+  const shouldHide = !canRequestAds || hideForKeyboard;
+
+  // ✅ Quand on doit cacher la bannière (no ads / clavier docked),
+  // on remet proprement la hauteur à 0 **après** le render via un effet.
+  useEffect(() => {
+    if (shouldHide && lastHeightRef.current !== 0) {
+      lastHeightRef.current = 0;
+      onHeight?.(0);
+    }
+  }, [shouldHide, onHeight]);
+
+  if (shouldHide) {
+    return <View style={{ width: "100%", height: 0 }} pointerEvents="none" />;
+  }
+
   return (
     <Animated.View
       style={{
@@ -75,7 +95,7 @@ const BannerSlot: React.FC<Props> = ({ onHeight, docked = false }) => {
           {
             translateY: slide.interpolate({
               inputRange: [0, 1],
-              outputRange: [60, 0], // petit slide-in quand ça apparaît
+              outputRange: [60, 0],
             }),
           },
         ],
@@ -87,7 +107,6 @@ const BannerSlot: React.FC<Props> = ({ onHeight, docked = false }) => {
         style={{
           width,
           alignItems: "center",
-          // Si docked (fixe en bas), on évite toute couleur parasite
           backgroundColor: "transparent",
         }}
         pointerEvents="box-none"
@@ -96,28 +115,30 @@ const BannerSlot: React.FC<Props> = ({ onHeight, docked = false }) => {
           unitId={unitId}
           size={BannerAdSize.ANCHORED_ADAPTIVE_BANNER}
           requestOptions={{
-            // Prend en charge le mode NPA (non-personnalisé)
             requestNonPersonalizedAdsOnly: npa ? true : false,
-            // Certaines intégrations exigent aussi l’extra 'npa'
             networkExtras: npa ? { npa: "1" } : undefined,
           }}
           onAdLoaded={() => {
             if (!isMountedRef.current) return;
             setVisible(true);
-            // Première estimation (au cas où onLayout tarde)
+
             if (lastHeightRef.current === 0) {
               lastHeightRef.current = 50;
               onHeight?.(50);
             }
-            __DEV__ &&
-              console.log(
-                "📢 Banner loaded",
-                { unitId, docked, width, npa }
-              );
+
+            console.log("📢 [BannerSlot] Banner loaded", {
+              unitId,
+              docked,
+              width,
+              npa,
+            });
           }}
           onAdFailedToLoad={(e) => {
             if (!isMountedRef.current) return;
-            __DEV__ && console.log("🛑 Banner ERROR:", e);
+
+            console.log("🛑 [BannerSlot] Banner ERROR:", e);
+
             setVisible(false);
             if (lastHeightRef.current !== 0) {
               lastHeightRef.current = 0;

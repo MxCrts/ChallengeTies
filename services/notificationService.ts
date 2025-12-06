@@ -11,7 +11,9 @@ type LocalizedPayload = {
   titleKey?: string;
   bodyKey?: string;
   params?: Record<string, any>;
+  type?: string;
 };
+
 
 /** IDs persistés (utile si on veut annuler vite fait) */
 const STORAGE_KEYS = {
@@ -33,16 +35,65 @@ let SCHEDULING_LOCK = false;
 let DAILY_SCHEDULED_IN_SESSION = false;
 
 /* ------------------------- Notification handler ------------------------- */
+/* ------------------------- Notification handler ------------------------- */
 Notifications.setNotificationHandler({
-  handleNotification: async () => ({
-    shouldShowAlert: true,
-    shouldPlaySound: true,
-    shouldSetBadge: false,
-    // pour la d.ts expo
-    shouldShowBanner: true,
-    shouldShowList: true,
-  }),
+  handleNotification: async (notification) => {
+    try {
+      const data: any = notification?.request?.content?.data || {};
+      const type = data?.type;
+      const slot = data?.slot; // "morning" | "evening"
+
+      if (type === "daily-reminder") {
+        const now = new Date();
+        const hour = now.getHours(); // 0–23
+
+        const isMorning = slot === "morning";
+        const isEvening = slot === "evening";
+
+        // 👉 On n'affiche que si on est VRAIMENT à la bonne heure
+        const shouldShow =
+          (isMorning && hour === 9) ||
+          (isEvening && hour === 19);
+
+        if (!shouldShow) {
+          console.log(
+            "⏱️ Daily-reminder reçu hors plage autorisée → masqué.",
+            { hour, slot, type }
+          );
+
+          return {
+            shouldShowAlert: false,
+            shouldPlaySound: false,
+            shouldSetBadge: false,
+            // pour la d.ts expo (iOS 15+)
+            shouldShowBanner: false,
+            shouldShowList: false,
+          };
+        }
+      }
+
+      // ✅ Tous les autres types de notif restent affichés normalement
+      return {
+        shouldShowAlert: true,
+        shouldPlaySound: true,
+        shouldSetBadge: false,
+        shouldShowBanner: true,
+        shouldShowList: true,
+      };
+    } catch (e) {
+      console.warn("⚠️ handleNotification error:", e);
+      // En cas de bug, on préfère afficher la notif plutôt que rien
+      return {
+        shouldShowAlert: true,
+        shouldPlaySound: true,
+        shouldSetBadge: false,
+        shouldShowBanner: true,
+        shouldShowList: true,
+      };
+    }
+  },
 });
+
 
 /* --------------------------- Android Channel --------------------------- */
 export const ensureAndroidChannelAsync = async () => {
@@ -204,21 +255,28 @@ export const scheduleDailyNotifications = async (): Promise<boolean> => {
       return true;
     }
 
-    // 0) Android channel + permissions
+        // 0) Android channel + permissions (centralisé, style "grosse app")
     await ensureAndroidChannelAsync();
 
-    const { status } = await Notifications.getPermissionsAsync();
-    let final = status;
-    if (final !== "granted") {
-      const req = await Notifications.requestPermissionsAsync();
-      final = req.status;
-    }
-    if (final !== "granted") {
+    const granted = await requestNotificationPermissions();
+    if (!granted) {
       console.warn("⚠️ Notifications pas autorisées — planification ignorée.");
       return false;
     }
 
+    // 🔥 Anti-bug hard reset global (AVANT toute décision, pour nettoyer les anciens schedulers buggés)
+    try {
+      const all = await Notifications.getAllScheduledNotificationsAsync();
+      for (const n of all) {
+        try {
+          await Notifications.cancelScheduledNotificationAsync(n.identifier);
+        } catch {}
+      }
+    } catch {}
+
+    // ✅ On s'assure que le token est à jour (expo + FCM), mais on ne bloque pas sur le résultat
     await registerForPushNotificationsAsync();
+
 
     // 1) Sanity user
     const userId = auth.currentUser?.uid;
@@ -234,6 +292,7 @@ export const scheduleDailyNotifications = async (): Promise<boolean> => {
     }
 
     const language = udata?.language || "en";
+
 
     // 2) Nettoyage STRICT par tags + anciens IDs
     await cancelByTag(TAGS.MORNING);
@@ -259,43 +318,19 @@ export const scheduleDailyNotifications = async (): Promise<boolean> => {
       i18n.t("notificationsPush.evening2", { lng: language }),
     ].filter(Boolean);
 
-    // 4) Triggers quotidiens cross-platform (⚠️ pas de CALENDAR Android)
-    let morningTrigger: Notifications.NotificationTriggerInput;
-    let eveningTrigger: Notifications.NotificationTriggerInput;
+        // 4) Triggers quotidiens cross-platform
+    const morningTrigger = {
+      hour: 9,
+      minute: 0,
+      repeats: true,
+    } as any as Notifications.NotificationTriggerInput;
 
-    if (Platform.OS === "android") {
-      // ✅ Android: PAS de type CALENDAR (sinon crash native)
-      morningTrigger = {
-        hour: 9,
-        minute: 0,
-        repeats: true,
-        channelId: "default",
-      } as any;
+    const eveningTrigger = {
+      hour: 19,
+      minute: 0,
+      repeats: true,
+    } as any as Notifications.NotificationTriggerInput;
 
-      eveningTrigger = {
-        hour: 19,
-        minute: 0,
-        repeats: true,
-        channelId: "default",
-      } as any;
-    } else {
-      // ✅ iOS: calendar ok
-      morningTrigger = {
-        type: Notifications.SchedulableTriggerInputTypes.CALENDAR,
-        hour: 9,
-        minute: 0,
-        second: 0,
-        repeats: true,
-      } as Notifications.CalendarTriggerInput;
-
-      eveningTrigger = {
-        type: Notifications.SchedulableTriggerInputTypes.CALENDAR,
-        hour: 19,
-        minute: 0,
-        second: 0,
-        repeats: true,
-      } as Notifications.CalendarTriggerInput;
-    }
 
     // 5) Planification — on garde les tags + type pour router ensuite
     const morningId = await Notifications.scheduleNotificationAsync({
@@ -401,16 +436,55 @@ export const sendInvitationNotification = async (
   }
 };
 
+
+const REFERRAL_MILESTONE_PREFIX = "referral.milestone.notified";
+const INVITE_STATUS_NOTIF_PREFIX = "invite.status.notified";
+
+
 /* ---------------- Referral local nudge (optionnel mais prêt) ---------------- */
 export const sendReferralMilestoneLocalNudge = async (
   userId: string,
-  payload: { bonus: number; milestones: number[]; activatedCount: number }
+  payload: {
+    bonus: number;
+    milestones: number[];
+    activatedCount: number;
+    username?: string; // 🆕 pour afficher "parrain de username"
+  }
 ) => {
-  return sendInvitationNotification(userId, {
-    titleKey: "referral.notif.milestoneUnlocked.title",
-    bodyKey: "referral.notif.milestoneUnlocked.body",
-    params: payload,
-  });
+  try {
+    // 1) Déterminer le palier réellement atteint (le plus haut <= activatedCount)
+    const reached = payload.milestones
+      .filter((m) => typeof m === "number" && m <= payload.activatedCount)
+      .sort((a, b) => a - b)
+      .pop();
+
+    if (!reached) {
+      // Aucun palier réellement atteint → pas de notif
+      return;
+    }
+
+    // 2) Clé unique pour ce user + ce palier
+    const key = `${REFERRAL_MILESTONE_PREFIX}.${userId}.${reached}`;
+
+    const already = await AsyncStorage.getItem(key);
+    if (already === "1") {
+      // 🔁 Ce palier a déjà déclenché une notif sur cet appareil → skip
+      return;
+    }
+
+    // 3) On envoie la notif locale (comme avant)
+    await sendInvitationNotification(userId, {
+      titleKey: "referral.notif.milestoneUnlocked.title",
+      bodyKey: "referral.notif.milestoneUnlocked.body",
+      params: payload,
+      type: "referral_milestone_unlocked",
+    });
+
+    // 4) On marque ce palier comme notifié
+    await AsyncStorage.setItem(key, "1");
+  } catch (e) {
+    console.error("❌ sendReferralMilestoneLocalNudge (idempotent) error:", e);
+  }
 };
 
 /* ---------------- Expo push (duo & invites) ---------------- */
@@ -501,9 +575,8 @@ export const sendDuoNudge = async ({
 
     const token: string | undefined = to.expoPushToken;
     const looksLikeExpo =
-      typeof token === "string" &&
-      (token.includes("ExponentPushToken") ||
-        token.includes("ExpoPushToken"));
+  typeof token === "string" && token.trim().length > 0;
+
 
     if (!token || !looksLikeExpo) {
       console.warn("⚠️ Pas de expoPushToken valable pour", toUserId);
@@ -591,9 +664,7 @@ export const sendInviteStatusPush = async ({
 
     const token: string | undefined = inviter.expoPushToken;
     const looksLikeExpo =
-      typeof token === "string" &&
-      (token.includes("ExponentPushToken") ||
-        token.includes("ExpoPushToken"));
+      typeof token === "string" && token.trim().length > 0;
 
     if (!token || !looksLikeExpo) {
       console.warn("⚠️ Pas de expoPushToken valable pour", inviterId);
@@ -601,6 +672,20 @@ export const sendInviteStatusPush = async ({
     }
 
     const lang = inviter.language || "en";
+
+    // 🔒 Garde-fou idempotent : même invit / même status → une seule notif
+    const safeUsernameForKey =
+      (inviteeUsername || "").toString().replace(/[^a-zA-Z0-9_-]/g, "_") ||
+      "unknown";
+    const dedupeKey = `${INVITE_STATUS_NOTIF_PREFIX}.${inviterId}.${challengeId}.${status}.${safeUsernameForKey}`;
+
+    const already = await AsyncStorage.getItem(dedupeKey);
+    if (already === "1") {
+      // On considère que la notif a déjà été envoyée pour ce couple
+      // (inviter + challenge + status + invitee) → on ne renvoie rien
+      return { ok: true };
+    }
+
     const prefix =
       status === "accepted"
         ? "notificationsPush.inviteAccepted"
@@ -623,7 +708,13 @@ export const sendInviteStatusPush = async ({
       inviteeId: inviteeId ?? null,
     });
 
-    if (!isExpoPushError(result)) return { ok: true };
+    if (!isExpoPushError(result)) {
+      // ✅ On marque cette notif comme envoyée (idempotence)
+      try {
+        await AsyncStorage.setItem(dedupeKey, "1");
+      } catch {}
+      return { ok: true };
+    }
 
     const { code, message } = result;
     if (code === "DeviceNotRegistered") {
@@ -650,6 +741,7 @@ export const sendInviteStatusPush = async ({
     return { ok: false, reason: "error" };
   }
 };
+
 
 /** ✅ Notif parrain : “vous êtes désormais le parrain de username” */
 export const sendReferralNewChildPush = async ({
@@ -681,9 +773,8 @@ export const sendReferralNewChildPush = async ({
 
     const token: string | undefined = sponsor.expoPushToken;
     const looksLikeExpo =
-      typeof token === "string" &&
-      (token.includes("ExponentPushToken") ||
-        token.includes("ExpoPushToken"));
+  typeof token === "string" && token.trim().length > 0;
+
 
     if (!token || !looksLikeExpo) {
       console.warn("⚠️ Pas de expoPushToken valable pour", sponsorId);

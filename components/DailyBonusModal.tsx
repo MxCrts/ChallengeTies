@@ -302,14 +302,22 @@ const DailyBonusModal: React.FC<Props> = ({
       visible={visible}
       animationType="fade"
       transparent
+      statusBarTranslucent
+      presentationStyle="overFullScreen"
       onRequestClose={onClose}
     >
       <TouchableWithoutFeedback
         onPress={() => {
-          if (!isSpinning) onClose();
+          // 🔒 on ne ferme pas pendant le spin ou la relance
+          if (!isSpinning && !rerollLoading) onClose();
         }}
       >
-        <View style={styles.backdrop}>
+        <View
+          style={styles.backdrop}
+          accessible
+          accessibilityViewIsModal
+          accessibilityLiveRegion="polite"
+        >
           <TouchableWithoutFeedback>
             {/* bloque la propagation */}
             <View
@@ -436,7 +444,7 @@ const DailyBonusModal: React.FC<Props> = ({
   <View style={{ alignItems: "center", marginTop: 4 }}>
     <TouchableOpacity
       onPress={onReroll}
-      disabled={!rerollAdReady || rerollLoading}
+      disabled={isSpinning || !rerollAdReady || rerollLoading}
       activeOpacity={0.9}
       style={[
         styles.rerollButton,

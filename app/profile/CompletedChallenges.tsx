@@ -12,6 +12,7 @@ import {
   StatusBar,
   StyleSheet,
   Platform,
+  I18nManager,
 } from "react-native";
 import { Ionicons } from "@expo/vector-icons";
 import { useRouter } from "expo-router";
@@ -357,6 +358,7 @@ export default function CompletedChallenges() {
                     },
                   ]}
                   numberOfLines={2}
+                  ellipsizeMode="tail"
                 >
                   {item.title}
                 </Text>
@@ -368,6 +370,8 @@ export default function CompletedChallenges() {
                       { color: currentTheme.colors.textSecondary },
                     ]}
                     numberOfLines={2}
+                    ellipsizeMode="tail"
+                    
                   >
                     {item.description}
                   </Text>
@@ -947,6 +951,8 @@ const styles = StyleSheet.create({
   categoryText: {
     fontSize: normalizeSize(11.5),
     fontFamily: "Comfortaa_400Regular",
+    writingDirection: I18nManager.isRTL ? "rtl" : "ltr",
+   textAlign: I18nManager.isRTL ? "right" : "left",
   },
   completedPill: {
     flexDirection: "row",
@@ -961,16 +967,22 @@ const styles = StyleSheet.create({
     fontSize: normalizeSize(11),
     fontFamily: "Comfortaa_700Bold",
     color: "#0b1120",
+    writingDirection: I18nManager.isRTL ? "rtl" : "ltr",
+   textAlign: I18nManager.isRTL ? "right" : "left",
   },
   challengeTitle: {
     fontSize: normalizeSize(17),
     fontFamily: "Comfortaa_700Bold",
     marginBottom: normalizeSize(4),
+    writingDirection: I18nManager.isRTL ? "rtl" : "ltr",
+   textAlign: I18nManager.isRTL ? "right" : "left",
   },
   challengeDescription: {
     fontSize: normalizeSize(13.5),
     fontFamily: "Comfortaa_400Regular",
     marginBottom: normalizeSize(6),
+    writingDirection: I18nManager.isRTL ? "rtl" : "ltr",
+   textAlign: I18nManager.isRTL ? "right" : "left",
   },
   metaRow: {
     flexDirection: "row",
@@ -990,10 +1002,14 @@ const styles = StyleSheet.create({
   challengeDate: {
     fontSize: normalizeSize(12.5),
     fontFamily: "Comfortaa_400Regular",
+    writingDirection: I18nManager.isRTL ? "rtl" : "ltr",
+   textAlign: I18nManager.isRTL ? "right" : "left",
   },
   challengeCategory: {
     fontSize: normalizeSize(12.5),
     fontFamily: "Comfortaa_400Regular",
+    writingDirection: I18nManager.isRTL ? "rtl" : "ltr",
+   textAlign: I18nManager.isRTL ? "right" : "left",
   },
   progressChip: {
     flexDirection: "row",
@@ -1007,6 +1023,8 @@ const styles = StyleSheet.create({
     fontSize: normalizeSize(11.5),
     fontFamily: "Comfortaa_700Bold",
     marginLeft: 4,
+    writingDirection: I18nManager.isRTL ? "rtl" : "ltr",
+   textAlign: I18nManager.isRTL ? "right" : "left",
   },
   footerRow: {
     flexDirection: "column",
@@ -1036,6 +1054,8 @@ const styles = StyleSheet.create({
     fontFamily: "Comfortaa_700Bold",
     fontSize: normalizeSize(13),
     includeFontPadding: false,
+    writingDirection: I18nManager.isRTL ? "rtl" : "ltr",
+   textAlign: I18nManager.isRTL ? "right" : "left",
   },
   viewButton: {
     borderRadius: normalizeSize(18),
@@ -1058,6 +1078,7 @@ const styles = StyleSheet.create({
     fontFamily: "Comfortaa_700Bold",
     fontSize: normalizeSize(14.5),
     textAlign: "center",
+    writingDirection: I18nManager.isRTL ? "rtl" : "ltr",
   },
   loadingContainer: {
     flex: 1,
@@ -1070,6 +1091,7 @@ const styles = StyleSheet.create({
     fontSize: normalizeSize(18),
     fontFamily: "Comfortaa_400Regular",
     textAlign: "center",
+    writingDirection: I18nManager.isRTL ? "rtl" : "ltr",
   },
   noChallengesContainer: {
     flex: 1,
@@ -1086,6 +1108,7 @@ const styles = StyleSheet.create({
     fontFamily: "Comfortaa_700Bold",
     marginTop: SPACING,
     textAlign: "center",
+    writingDirection: I18nManager.isRTL ? "rtl" : "ltr",
   },
   noChallengesSubtext: {
     fontSize: normalizeSize(18),
@@ -1093,6 +1116,7 @@ const styles = StyleSheet.create({
     textAlign: "center",
     marginTop: SPACING / 2,
     maxWidth: SCREEN_WIDTH * 0.75,
+    writingDirection: I18nManager.isRTL ? "rtl" : "ltr",
   },
   modalContainer: {
     flex: 1,
@@ -1115,6 +1139,7 @@ const styles = StyleSheet.create({
     fontFamily: "Comfortaa_700Bold",
     marginBottom: SPACING,
     textAlign: "center",
+    writingDirection: I18nManager.isRTL ? "rtl" : "ltr",
   },
   historyItem: {
     paddingVertical: SPACING / 2,
@@ -1123,6 +1148,8 @@ const styles = StyleSheet.create({
   historyText: {
     fontSize: normalizeSize(16),
     fontFamily: "Comfortaa_400Regular",
+    writingDirection: I18nManager.isRTL ? "rtl" : "ltr",
+   textAlign: I18nManager.isRTL ? "right" : "left",
   },
   closeButton: {
     marginTop: SPACING,
@@ -1140,5 +1167,6 @@ const styles = StyleSheet.create({
     fontFamily: "Comfortaa_700Bold",
     fontSize: normalizeSize(16),
     textAlign: "center",
+    writingDirection: I18nManager.isRTL ? "rtl" : "ltr",
   },
 });

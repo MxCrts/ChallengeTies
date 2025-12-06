@@ -10,7 +10,6 @@ import {
   ScrollView,
   StatusBar,
   RefreshControl,
-  Share,
 } from "react-native";
 import AsyncStorage from "@react-native-async-storage/async-storage";
 import { Ionicons, MaterialCommunityIcons } from "@expo/vector-icons";
@@ -462,7 +461,7 @@ const podium = useMemo(() => topN(filteredPlayers, 3), [filteredPlayers]);
     const myIndex = basis.findIndex((p) => p.id === currentUser.id);
     const myRank = myIndex >= 0 ? myIndex + 1 : undefined;
     return (
-      <View style={styles.myRankCard} accessibilityRole="summary">
+      <View style={styles.myRankCard}>
         <View style={styles.myRankLeft}>
           <Image
             source={
@@ -701,6 +700,9 @@ const podium = useMemo(() => topN(filteredPlayers, 3), [filteredPlayers]);
           contentContainerStyle={styles.scrollContent}
           showsVerticalScrollIndicator={false}
           contentInset={{ top: SPACING, bottom: normalizeSize(80) }}
+          keyboardDismissMode="on-drag"
+          keyboardShouldPersistTaps="handled"
+          scrollEventThrottle={16}
           refreshControl={
             <RefreshControl
               refreshing={refreshing}

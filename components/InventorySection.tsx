@@ -8,6 +8,7 @@ import {
   PixelRatio,
   Dimensions,
   ActivityIndicator,
+  I18nManager,
   AccessibilityRole,
 } from "react-native";
 import { Ionicons } from "@expo/vector-icons";
@@ -337,11 +338,15 @@ const styles = StyleSheet.create({
   title: {
     fontSize: normalize(16),
     fontFamily: "Comfortaa_700Bold",
+    writingDirection: I18nManager.isRTL ? "rtl" : "ltr",
+   textAlign: I18nManager.isRTL ? "right" : "left",
   },
   subtitle: {
     fontSize: normalize(12),
     fontFamily: "Comfortaa_400Regular",
     marginBottom: normalize(8),
+    writingDirection: I18nManager.isRTL ? "rtl" : "ltr",
+   textAlign: I18nManager.isRTL ? "right" : "left",
   },
   pill: {
     flexDirection: "row",
@@ -354,6 +359,8 @@ const styles = StyleSheet.create({
   pillText: {
     fontSize: normalize(11),
     fontFamily: "Comfortaa_400Regular",
+    writingDirection: I18nManager.isRTL ? "rtl" : "ltr",
+   textAlign: I18nManager.isRTL ? "right" : "left",
   },
   list: {
     marginTop: normalize(4),
@@ -387,6 +394,8 @@ const styles = StyleSheet.create({
     flex: 1,
     fontSize: normalize(14),
     fontFamily: "Comfortaa_700Bold",
+    writingDirection: I18nManager.isRTL ? "rtl" : "ltr",
+   textAlign: I18nManager.isRTL ? "right" : "left",
   },
   badgeCount: {
     borderRadius: 999,
@@ -402,6 +411,8 @@ const styles = StyleSheet.create({
   itemSubtitle: {
     fontSize: normalize(11),
     fontFamily: "Comfortaa_400Regular",
+    writingDirection: I18nManager.isRTL ? "rtl" : "ltr",
+   textAlign: I18nManager.isRTL ? "right" : "left",
   },
   helperBox: {
     flexDirection: "row",
@@ -416,6 +427,8 @@ const styles = StyleSheet.create({
     flex: 1,
     fontSize: normalize(11),
     fontFamily: "Comfortaa_400Regular",
+    writingDirection: I18nManager.isRTL ? "rtl" : "ltr",
+   textAlign: I18nManager.isRTL ? "right" : "left",
   },
   emptyState: {
     alignItems: "center",
@@ -425,12 +438,15 @@ const styles = StyleSheet.create({
     fontSize: normalize(14),
     fontFamily: "Comfortaa_700Bold",
     marginTop: normalize(6),
+    writingDirection: I18nManager.isRTL ? "rtl" : "ltr",
+   textAlign: I18nManager.isRTL ? "right" : "left",
   },
   emptyText: {
     fontSize: normalize(12),
     fontFamily: "Comfortaa_400Regular",
     marginTop: normalize(2),
     textAlign: "center",
+    writingDirection: I18nManager.isRTL ? "rtl" : "ltr",
   },
   loadingRow: {
     flexDirection: "row",
@@ -441,6 +457,8 @@ const styles = StyleSheet.create({
   loadingText: {
     fontSize: normalize(12),
     fontFamily: "Comfortaa_400Regular",
+    writingDirection: I18nManager.isRTL ? "rtl" : "ltr",
+   textAlign: I18nManager.isRTL ? "right" : "left",
   },
 });
 

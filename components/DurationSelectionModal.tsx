@@ -1,4 +1,11 @@
-import React, { useEffect, useMemo, useRef, useState, useCallback } from "react";
+// components/DurationSelectionModal.tsx
+import React, {
+  useEffect,
+  useMemo,
+  useRef,
+  useState,
+  useCallback,
+} from "react";
 import {
   Modal,
   View,
@@ -9,19 +16,9 @@ import {
   BackHandler,
   AccessibilityInfo,
   ScrollView,
-  Platform,
+  Pressable,
 } from "react-native";
 import { Ionicons } from "@expo/vector-icons";
-import Animated, {
-  FadeInUp,
-  FadeOutDown,
-  Layout,
-  useSharedValue,
-  withTiming,
-  useAnimatedStyle,
-  withSpring,
-  runOnJS,
-} from "react-native-reanimated";
 import { LinearGradient } from "expo-linear-gradient";
 import { useTranslation } from "react-i18next";
 import { useTheme } from "../context/ThemeContext";
@@ -30,9 +27,14 @@ import designSystem from "../theme/designSystem";
 import * as Haptics from "expo-haptics";
 
 const normalize = (size: number) => {
-  // Échelle cohérente cross-devices
   const baseWidth = 375;
-  const width = Math.max(320, Math.min(1024, require("react-native").Dimensions.get("window").width));
+  const width = Math.max(
+    320,
+    Math.min(
+      1024,
+      require("react-native").Dimensions.get("window").width
+    )
+  );
   const scale = Math.min(Math.max(width / baseWidth, 0.7), 1.8);
   return Math.round(size * scale);
 };
@@ -47,9 +49,6 @@ interface DurationSelectionModalProps {
   dayIcons: Record<number, keyof typeof Ionicons.glyphMap>;
 }
 
-const EXIT_ANIM_MS = 300;
-const REOPEN_COOLDOWN_MS = 400;
-
 const DurationSelectionModal: React.FC<DurationSelectionModalProps> = ({
   visible,
   daysOptions,
@@ -63,88 +62,46 @@ const DurationSelectionModal: React.FC<DurationSelectionModalProps> = ({
   const { t } = useTranslation();
   const { theme } = useTheme();
   const isDarkMode = theme === "dark";
-  const currentTheme: Theme = isDarkMode ? designSystem.darkTheme : designSystem.lightTheme;
+  const currentTheme: Theme = isDarkMode
+    ? designSystem.darkTheme
+    : designSystem.lightTheme;
 
-  // Responsive caps
   const CARD_MAX_W = Math.min(width - 32, 420);
-  const CARD_MAX_H = Math.min(height * 0.9, 620);
+  const CARD_MAX_H = Math.min(height - 96, 620);
 
-  // Montage/fermeture contrôlés
-  const [mounted, setMounted] = useState(false);
-  const [closing, setClosing] = useState(false);
-  const lastCloseAtRef = useRef(0);
-
-  // Guard double validation
   const [confirming, setConfirming] = useState(false);
 
-  // Anim
-  const pressScale = useSharedValue(1);
-  const cardScale = useSharedValue(0.9);
-
-  const buttonAnimatedStyle = useAnimatedStyle(() => ({
-    transform: [{ scale: pressScale.value }],
-  }));
-  const cardAnimatedStyle = useAnimatedStyle(() => ({
-    transform: [{ scale: cardScale.value }],
-  }));
-
-  // Synchronisation visible -> mounted
+  // Bouton retour Android : ferme le modal
   useEffect(() => {
-    if (visible) {
-      if (Date.now() - lastCloseAtRef.current < REOPEN_COOLDOWN_MS) return;
-      setClosing(false);
-      setMounted(true);
-      requestAnimationFrame(() => {
-        cardScale.value = withSpring(1, { damping: 12, stiffness: 120 });
-      });
-      // Focus vocal
-      AccessibilityInfo.announceForAccessibility?.(t("durationModal.title"));
-    } else if (mounted && !closing) {
-      setClosing(true);
-      cardScale.value = withTiming(0.9, { duration: 160 }, () => {
-        runOnJS(setMounted)(false);
-        runOnJS(setClosing)(false);
-        lastCloseAtRef.current = Date.now();
-      });
-    }
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [visible]);
-
-  // Android Back button => cancel
-  useEffect(() => {
-    if (!mounted) return;
+    if (!visible) return;
     const sub = BackHandler.addEventListener("hardwareBackPress", () => {
       onCancel?.();
       return true;
     });
     return () => sub.remove();
-  }, [mounted, onCancel]);
+  }, [visible, onCancel]);
+
+  useEffect(() => {
+    if (visible) {
+      AccessibilityInfo.announceForAccessibility?.(
+        t("durationModal.title", { defaultValue: "Choisis la durée" })
+      );
+    }
+  }, [visible, t]);
 
   const handleSelectDays = useCallback(
     (days: number) => {
-      pressScale.value = withTiming(1.08, { duration: 90 }, () => {
-        pressScale.value = withTiming(1, { duration: 90 });
-      });
       Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium).catch(() => {});
       onSelectDays(days);
     },
-    [onSelectDays, pressScale]
+    [onSelectDays]
   );
-
-  const handlePressIn = useCallback(() => {
-    pressScale.value = withTiming(0.96, { duration: 90 });
-    Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light).catch(() => {});
-  }, [pressScale]);
-
-  const handlePressOut = useCallback(() => {
-    pressScale.value = withTiming(1, { duration: 90 });
-  }, [pressScale]);
 
   const safeConfirm = useCallback(() => {
     if (confirming) return;
     setConfirming(true);
     try {
-      onConfirm?.(); // parent ferme le modal
+      onConfirm?.();
     } finally {
       setTimeout(() => setConfirming(false), 500);
     }
@@ -152,67 +109,73 @@ const DurationSelectionModal: React.FC<DurationSelectionModalProps> = ({
 
   const iconsMap = useMemo(() => dayIcons, [dayIcons]);
 
-  if (!mounted) return null;
+  if (!visible) return null;
 
   return (
     <Modal
-      visible={mounted}
+      visible={visible}
       transparent
-      animationType="none"
+      animationType="fade"
       statusBarTranslucent
       onRequestClose={onCancel}
-      supportedOrientations={["portrait", "portrait-upside-down", "landscape", "landscape-left", "landscape-right"]}
+      presentationStyle="overFullScreen"
     >
-      {/* Backdrop */}
-      <View style={styles.modalRoot} pointerEvents="box-none">
-        <TouchableOpacity
-          activeOpacity={1}
+      {/* OVERLAY FULLSCREEN CENTRÉ SIMPLE */}
+      <View
+        style={styles.overlay}
+        accessible
+        accessibilityViewIsModal
+        accessibilityLiveRegion="polite"
+      >
+        {/* Backdrop tappable */}
+        <Pressable
+          style={StyleSheet.absoluteFill}
           onPress={onCancel}
-          style={styles.backdrop}
           accessibilityRole="button"
-          accessibilityLabel={t("durationModal.closeBackdrop")}
+          accessibilityLabel={t("durationModal.closeBackdrop", {
+            defaultValue: "Fermer le choix de durée",
+          })}
         />
 
-        {/* Carte */}
-        <View style={styles.centerWrap} pointerEvents="box-none">
-        <Animated.View
-          entering={FadeInUp.springify()}
-          exiting={FadeOutDown.duration(EXIT_ANIM_MS)}
+        {/* Carte centrée */}
+        <View
           style={[
             styles.modalContent,
-            cardAnimatedStyle,
             {
               backgroundColor: currentTheme.colors.cardBackground,
-               width: Math.min(width - 32, 420),
-              maxHeight: Math.min(height * 0.9, 620),
-              
+              width: CARD_MAX_W,
+              maxHeight: CARD_MAX_H,
             },
           ]}
         >
           <ScrollView
-            style={{ alignSelf: "stretch" }}
+            style={{
+              alignSelf: "stretch",
+              maxHeight: CARD_MAX_H - normalize(120),
+            }}
             contentContainerStyle={styles.scrollCC}
             bounces={false}
             showsVerticalScrollIndicator={false}
           >
             <Text
-              style={[styles.modalTitle, { color: currentTheme.colors.secondary }]}
+              style={[
+                styles.modalTitle,
+                { color: currentTheme.colors.secondary },
+              ]}
               accessibilityRole="header"
             >
               {t("durationModal.title")}
             </Text>
 
             <View style={styles.gridContainer}>
-              {daysOptions.map((days, index) => {
+              {daysOptions.map((days) => {
                 const selected = selectedDays === days;
-                const iconName = iconsMap[days] || ("calendar-outline" as keyof typeof Ionicons.glyphMap);
+                const iconName =
+                  iconsMap[days] ||
+                  ("calendar-outline" as keyof typeof Ionicons.glyphMap);
+
                 return (
-                  <Animated.View
-                    key={days}
-                    entering={FadeInUp.delay(80 + index * 50)}
-                    layout={Layout.springify()}
-                    style={styles.gridItem}
-                  >
+                  <View key={days} style={styles.gridItem}>
                     <TouchableOpacity
                       style={[
                         styles.dayOption,
@@ -221,53 +184,64 @@ const DurationSelectionModal: React.FC<DurationSelectionModalProps> = ({
                           backgroundColor: selected
                             ? currentTheme.colors.primary
                             : currentTheme.colors.background,
-                          shadowColor: selected ? currentTheme.colors.primary : "#000",
+                          shadowColor: selected
+                            ? currentTheme.colors.primary
+                            : "#000",
                         },
                       ]}
                       onPress={() => handleSelectDays(days)}
-                      activeOpacity={0.85}
-                      onPressIn={handlePressIn}
-                      onPressOut={handlePressOut}
+                      activeOpacity={0.9}
                       accessibilityRole="button"
-                      accessibilityLabel={t("durationModal.optionLabel", { count: days })}
+                      accessibilityLabel={t(
+                        "durationModal.optionLabel",
+                        { count: days }
+                      )}
                       accessibilityHint={t("durationModal.optionHint")}
                     >
                       <Ionicons
                         name={iconName}
                         size={normalize(18)}
-                        color={selected ? "#fff" : currentTheme.colors.secondary}
+                        color={
+                          selected ? "#fff" : currentTheme.colors.secondary
+                        }
                       />
                       <Text
                         style={[
                           styles.dayOptionText,
-                          { color: selected ? "#fff" : currentTheme.colors.textSecondary },
+                          {
+                            color: selected
+                              ? "#fff"
+                              : currentTheme.colors.textSecondary,
+                          },
                         ]}
                       >
                         {t("durationModal.days", { count: days })}
                       </Text>
                     </TouchableOpacity>
-                  </Animated.View>
+                  </View>
                 );
               })}
             </View>
           </ScrollView>
 
-          {/* Actions */}
-          <Animated.View entering={FadeInUp.delay(180)} style={[buttonAnimatedStyle, styles.btnWrap]}>
+          {/* Bouton confirmer */}
+          <View style={styles.btnWrap}>
             <TouchableOpacity
               style={styles.button}
               onPress={safeConfirm}
               activeOpacity={0.85}
-              onPressIn={handlePressIn}
-              onPressOut={handlePressOut}
               disabled={confirming}
               accessibilityRole="button"
               accessibilityLabel={t("durationModal.confirm")}
             >
               <LinearGradient
                 colors={[
-                  confirming ? currentTheme.colors.textSecondary : currentTheme.colors.primary,
-                  confirming ? currentTheme.colors.textSecondary : currentTheme.colors.secondary,
+                  confirming
+                    ? currentTheme.colors.textSecondary
+                    : currentTheme.colors.primary,
+                  confirming
+                    ? currentTheme.colors.textSecondary
+                    : currentTheme.colors.secondary,
                 ]}
                 style={styles.buttonGradient}
               >
@@ -278,28 +252,30 @@ const DurationSelectionModal: React.FC<DurationSelectionModalProps> = ({
                 </Text>
               </LinearGradient>
             </TouchableOpacity>
-          </Animated.View>
+          </View>
 
-          <Animated.View entering={FadeInUp.delay(220)} style={[buttonAnimatedStyle, styles.btnWrapLast]}>
+          {/* Bouton annuler */}
+          <View style={styles.btnWrapLast}>
             <TouchableOpacity
               style={styles.button}
               onPress={onCancel}
               activeOpacity={0.85}
-              onPressIn={handlePressIn}
-              onPressOut={handlePressOut}
               accessibilityRole="button"
               accessibilityLabel={t("durationModal.cancel")}
             >
               <LinearGradient
-                colors={[currentTheme.colors.error, currentTheme.colors.error + "CC"]}
+                colors={[
+                  currentTheme.colors.error,
+                  currentTheme.colors.error + "CC",
+                ]}
                 style={styles.buttonGradient}
               >
-                <Text style={styles.buttonText}>{t("durationModal.cancel")}</Text>
+                <Text style={styles.buttonText}>
+                  {t("durationModal.cancel")}
+                </Text>
               </LinearGradient>
             </TouchableOpacity>
-          </Animated.View>
-          
-        </Animated.View>
+          </View>
         </View>
       </View>
     </Modal>
@@ -307,20 +283,14 @@ const DurationSelectionModal: React.FC<DurationSelectionModalProps> = ({
 };
 
 const styles = StyleSheet.create({
-  modalRoot: {
+  // overlay FULLSCREEN + centrage
+  overlay: {
     flex: 1,
-    justifyContent: "center",
-    alignItems: "center",
-  },
-  backdrop: {
-    ...StyleSheet.absoluteFillObject,
     backgroundColor: "rgba(0,0,0,0.7)",
-  },
-  centerWrap: {
-    ...StyleSheet.absoluteFillObject,
     justifyContent: "center",
     alignItems: "center",
-    paddingHorizontal: 16, // marges sûres sur petits écrans
+    paddingHorizontal: 16,
+    paddingVertical: 32,
   },
   modalContent: {
     borderRadius: normalize(16),
@@ -334,7 +304,6 @@ const styles = StyleSheet.create({
     shadowOpacity: 0.3,
     shadowRadius: normalize(10),
     elevation: 8,
-    alignSelf: "center",
   },
   scrollCC: {
     paddingBottom: normalize(10),

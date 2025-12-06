@@ -203,12 +203,13 @@ export default function Register() {
   );
 
   const safeHapticsError = React.useCallback(async () => {
+    if (reduceMotion) return;
     try {
       await HapticsModule.notificationAsync(
         HapticsModule.NotificationFeedbackType.Error
       );
-    } catch {}
-  }, []);
+   } catch {}
+  }, [reduceMotion]);
 
   // Vagues de fond
   const wavesRef = useRef(
@@ -367,6 +368,11 @@ export default function Register() {
   const disabledCTA = loading || !formValid || isOffline;
   const pressIn = () => {
     if (disabledCTA) return;
+    if (!reduceMotion) {
+      HapticsModule.impactAsync(
+      HapticsModule.ImpactFeedbackStyle.Medium
+     ).catch(() => {});
+    }
     Animated.timing(ctaScale, {
       toValue: 0.98,
       duration: 80,
@@ -430,10 +436,11 @@ export default function Register() {
         );
 
       try {
-        await HapticsModule.notificationAsync(
-          HapticsModule.NotificationFeedbackType
-            .Success
-        );
+        if (!reduceMotion) {
+         await HapticsModule.notificationAsync(
+           HapticsModule.NotificationFeedbackType.Success
+          );
+        }
       } catch {}
 
       const user = userCredential.user;
@@ -530,6 +537,13 @@ referral: {
           e?.code || e?.message || e
         );
       });
+
+      try {
+        await AsyncStorage.setItem(
+        "login.lastEmail",
+          email.trim()
+        );
+      } catch {}
 
       InteractionManager.runAfterInteractions(() => {
         if (isMountedRef.current) {

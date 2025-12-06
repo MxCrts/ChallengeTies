@@ -1,4 +1,11 @@
-import React, { useEffect, useMemo, useState, useCallback } from "react";
+// app/(tabs)/settingspremium.tsx
+
+import React, {
+  useEffect,
+  useMemo,
+  useState,
+  useCallback,
+} from "react";
 import {
   View,
   Text,
@@ -8,8 +15,9 @@ import {
   Platform,
   StatusBar,
   ScrollView,
-  SafeAreaView,
+  InteractionManager,
 } from "react-native";
+import { SafeAreaView } from "react-native-safe-area-context";
 import { LinearGradient } from "expo-linear-gradient";
 import { Ionicons } from "@expo/vector-icons";
 import { useTranslation } from "react-i18next";
@@ -131,11 +139,13 @@ export default function SettingsPremium() {
 
   const connecting = !connected;
 
-  // ---- Firestore: lire flag utilisateur ----
+  // ---- Firestore: lire flag utilisateur (déféré après animations) ----
   useEffect(() => {
-    const loadUserFlag = async () => {
+    let isMounted = true;
+    const task = InteractionManager.runAfterInteractions(async () => {
       const currentUid = auth.currentUser?.uid;
       if (!currentUid) {
+        if (!isMounted) return;
         setUserPremium(false);
         setInitializing(false);
         return;
@@ -143,22 +153,31 @@ export default function SettingsPremium() {
       try {
         const snap = await getDoc(doc(db, "users", currentUid));
         const data = (snap.exists() ? snap.data() : {}) as any;
+        if (!isMounted) return;
         setUserPremium(!!(data.premium ?? data.isPremium));
       } catch (e) {
         console.warn("Error loading user premium flag:", e);
+        if (!isMounted) return;
         setUserPremium(false);
       } finally {
-        setInitializing(false);
+        if (isMounted) {
+          setInitializing(false);
+        }
       }
-    };
+    });
 
-    loadUserFlag();
+    return () => {
+      isMounted = false;
+      // @ts-ignore compat
+      task?.cancel?.();
+    };
   }, []);
 
-  // ---- IAP: fetch produits quand connecté ----
+  // ---- IAP: fetch produits quand connecté (après interactions) ----
   useEffect(() => {
     if (!connected) return;
-    const loadProducts = async () => {
+
+    const task = InteractionManager.runAfterInteractions(async () => {
       try {
         await fetchProducts({
           skus: [PRODUCT_ID],
@@ -167,8 +186,12 @@ export default function SettingsPremium() {
       } catch (e) {
         console.warn("IAP fetchProducts error:", e);
       }
+    });
+
+    return () => {
+      // @ts-ignore compat
+      task?.cancel?.();
     };
-    loadProducts();
   }, [connected, fetchProducts]);
 
   // ---- Statut combiné : admin OU flag Firestore OU pubs déjà désactivées ----
@@ -294,50 +317,58 @@ export default function SettingsPremium() {
     }
   }, [t, showToast]);
 
-  const perks = [
-    {
-      icon: "close-circle-outline",
-      label: t("perks.noInterstitals", {
-        defaultValue: "Plus aucune pub interstitielle (écrans plein)",
-      }),
-    },
-    {
-      icon: "images-outline",
-      label: t("perks.noBanners", {
-        defaultValue: "Plus aucune bannière dans l’app",
-      }),
-    },
-    {
-      icon: "chatbubbles-outline",
-      label: t("perks.prioritySupport", {
-        defaultValue: "Support email prioritaire en cas de problème",
-      }),
-    },
-    {
-      icon: "heart-outline",
-      label: t("perks.supportProject", {
-        defaultValue:
-          "Tu soutiens directement le développement de ChallengeTies (pas de pay-to-win)",
-      }),
-    },
-  ];
+  // ---- Perks mémoïsés ----
+  const perks = useMemo(
+    () => [
+      {
+        icon: "close-circle-outline",
+        label: t("perks.noInterstitals", {
+          defaultValue: "Plus aucune pub interstitielle (écrans plein)",
+        }),
+      },
+      {
+        icon: "images-outline",
+        label: t("perks.noBanners", {
+          defaultValue: "Plus aucune bannière dans l’app",
+        }),
+      },
+      {
+        icon: "chatbubbles-outline",
+        label: t("perks.prioritySupport", {
+          defaultValue: "Support email prioritaire en cas de problème",
+        }),
+      },
+      {
+        icon: "heart-outline",
+        label: t("perks.supportProject", {
+          defaultValue:
+            "Tu soutiens directement le développement de ChallengeTies (pas de pay-to-win)",
+        }),
+      },
+    ],
+    [t]
+  );
 
   return (
     <SafeAreaView
       style={[styles.safeArea, { backgroundColor: current.colors.background }]}
+      edges={["top", "right", "left"]}
     >
       <StatusBar
         translucent
         backgroundColor="transparent"
         barStyle={isDark ? "light-content" : "dark-content"}
       />
+
       <LinearGradient
         colors={[current.colors.background, current.colors.cardBackground]}
         style={{ flex: 1 }}
         start={{ x: 0, y: 0 }}
         end={{ x: 1, y: 1 }}
       >
-        <CustomHeader title={t("premiumTitle", { defaultValue: "Premium" })} />
+        <CustomHeader
+          title={t("premiumTitle", { defaultValue: "Premium" })}
+        />
 
         {/* Debug IAP en DEV uniquement */}
         {__DEV__ && (
@@ -367,7 +398,13 @@ export default function SettingsPremium() {
             </Text>
           </View>
         ) : (
-          <ScrollView contentContainerStyle={{ padding: SPACING }}>
+          <ScrollView
+            contentContainerStyle={{
+              padding: SPACING,
+              paddingBottom: SPACING * 2.2,
+            }}
+            showsVerticalScrollIndicator={false}
+          >
             {/* Status Card */}
             <LinearGradient
               colors={[
@@ -387,8 +424,12 @@ export default function SettingsPremium() {
                   style={[styles.title, { color: current.colors.textPrimary }]}
                 >
                   {isEffectivelyPremium
-                    ? t("youArePremium", { defaultValue: "Premium actif ✨" })
-                    : t("notPremiumYet", { defaultValue: "Passe en Premium" })}
+                    ? t("youArePremium", {
+                        defaultValue: "Premium actif ✨",
+                      })
+                    : t("notPremiumYet", {
+                        defaultValue: "Passe en Premium",
+                      })}
                 </Text>
               </View>
               <Text
@@ -423,7 +464,12 @@ export default function SettingsPremium() {
                   <Text
                     style={[
                       styles.perkText,
-                      { color: current.colors.textPrimary },
+                      {
+                        // 🔥 Texte bien lisible : blanc en dark, noir en light
+                        color: isDark
+                          ? current.colors.textPrimary
+                          : "#000000",
+                      },
                     ]}
                   >
                     {p.label}
@@ -479,6 +525,7 @@ export default function SettingsPremium() {
                       }}
                       activeOpacity={0.9}
                       style={{ marginTop: 12 }}
+                      testID="premium-go-login"
                     >
                       <LinearGradient
                         colors={[
@@ -500,12 +547,14 @@ export default function SettingsPremium() {
                             { color: current.colors.textPrimary },
                           ]}
                         >
-                          {t("goToLogin", { defaultValue: "Me connecter" })}
+                          {t("goToLogin", {
+                            defaultValue: "Me connecter",
+                          })}
                         </Text>
                       </LinearGradient>
                     </TouchableOpacity>
                   </View>
-               ) : safeProducts.length === 0 ? (
+                ) : safeProducts.length === 0 ? (
                   <Text
                     style={[
                       styles.subtitle,
@@ -526,6 +575,7 @@ export default function SettingsPremium() {
                             styles.productTitle,
                             { color: current.colors.textPrimary },
                           ]}
+                          numberOfLines={1}
                         >
                           {p.title?.replace(/\(.*\)$/, "").trim() ||
                             "ChallengeTies Premium"}
@@ -549,6 +599,7 @@ export default function SettingsPremium() {
                         onPress={() => buy(p.id)}
                         activeOpacity={0.9}
                         style={{ opacity: purchasing ? 0.6 : 1 }}
+                        testID="premium-buy-button"
                       >
                         <LinearGradient
                           colors={[
@@ -595,6 +646,7 @@ export default function SettingsPremium() {
                     styles.restoreBtn,
                     { opacity: restoring ? 0.6 : 1 },
                   ]}
+                  testID="premium-restore-button"
                 >
                   {restoring ? (
                     <ActivityIndicator color={current.colors.secondary} />
@@ -652,11 +704,16 @@ export default function SettingsPremium() {
 
 const styles = StyleSheet.create({
   safeArea: { flex: 1 },
-  center: { alignItems: "center", justifyContent: "center", padding: SPACING },
+  center: {
+    alignItems: "center",
+    justifyContent: "center",
+    padding: SPACING,
+  },
   loadingText: {
     marginTop: 8,
     fontFamily: "Comfortaa_400Regular",
     fontSize: 16,
+    textAlign: "center",
   },
   card: {
     borderWidth: 2,
@@ -683,7 +740,7 @@ const styles = StyleSheet.create({
     gap: 10,
   },
   perkText: {
-    fontFamily: "Comfortaa_500Medium",
+    fontFamily: "Comfortaa_400Regular",
     fontSize: 15,
     flexShrink: 1,
   },

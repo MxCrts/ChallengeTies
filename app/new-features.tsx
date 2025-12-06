@@ -43,7 +43,6 @@ import {
   AdEventType,
   TestIds,
 } from "react-native-google-mobile-ads";
-import { useRouter } from "expo-router";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { useAdsVisibility } from "../src/context/AdsVisibilityContext";
 import * as Haptics from "expo-haptics";
@@ -54,7 +53,7 @@ import { incStat } from "@/src/services/metricsService";
 import { useToast } from "@/src/ui/Toast";
 
 const SPACING = 15;
-const { width: SCREEN_WIDTH, height: SCREEN_HEIGHT } = Dimensions.get("window");
+const { width: SCREEN_WIDTH } = Dimensions.get("window");
 const normalizeSize = (size: number) => {
   const baseWidth = 375;
   const scale = Math.min(Math.max(SCREEN_WIDTH / baseWidth, 0.7), 1.8);
@@ -134,7 +133,6 @@ export default function NewFeatures() {
   const [adLoaded, setAdLoaded] = useState(false);
   const { theme } = useTheme();
   const isDarkMode = theme === "dark";
-  const router = useRouter();
   const insets = useSafeAreaInsets();
   const currentTheme: Theme = isDarkMode
     ? designSystem.darkTheme
@@ -960,7 +958,7 @@ export default function NewFeatures() {
       },
     });
 
-  const styles = useMemo(() => createStyles(isDarkMode), [isDarkMode]);
+  const styles = useMemo(() => createStyles(isDarkMode), [isDarkMode, insets]);
 
   if (loading) {
     return (
@@ -1124,6 +1122,9 @@ export default function NewFeatures() {
                 keyExtractor={(item) => item.id}
                 contentContainerStyle={styles.featuresContent}
                 showsVerticalScrollIndicator={false}
+                keyboardDismissMode="on-drag"
+               keyboardShouldPersistTaps="handled"
+               scrollEventThrottle={16}
                 initialNumToRender={10}
                 maxToRenderPerBatch={10}
                 windowSize={7}
@@ -1257,8 +1258,8 @@ export default function NewFeatures() {
    ref={featureShareRef}
           featureTitle={featureSharePayload.title}
           i18n={{
-            kicker: t("newFeatures.share.kicker"), // ✅ fix key: sharE -> share
-            footer: t("newFeatures.share.footerWithDays", { days: Math.max(0, countdown.days) })
+            kicker: t("newFeatures.sharE.kicker"), // ✅ fix key: sharE -> share
+            footer: t("newFeatures.sharE.footerWithDays", { days: Math.max(0, countdown.days) })
           }}
         />
       </View>

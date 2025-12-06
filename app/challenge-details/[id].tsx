@@ -70,14 +70,16 @@ import { useFocusEffect } from "@react-navigation/native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import Animated, {
   useSharedValue,
-  useAnimatedStyle,
+   useAnimatedStyle,
   withRepeat,
-  withSequence,
-  withTiming,
-  interpolate,
-  Easing,
-  runOnJS,              // 👈 AJOUT
-} from "react-native-reanimated";
+   withSequence,
+   withTiming,
+   interpolate,
+   Easing,
+   runOnJS,
+   FadeOut, 
+ } from "react-native-reanimated";
+ import { BlurView } from "expo-blur";
 import * as Linking from "expo-linking";
 import SendInvitationModal from "@/components/SendInvitationModal";
 import * as Localization from "expo-localization";
@@ -88,9 +90,8 @@ import { recordSelectDays, recordDailyGlobalMark, incStat } from "../../src/serv
 import NetInfo from "@react-native-community/netinfo";
 import { canInvite } from "../../utils/canInvite";
 import { usePathname } from "expo-router";
-import { useAuth } from "@/context/AuthProvider"; // si ce n'est pas déjà le cas
-
-
+import { useAuth } from "@/context/AuthProvider"; 
+import ShareCardModal from "@/components/ShareCardModal";
 
 function useTabBarHeightSafe(): number {
   try {
@@ -109,6 +110,10 @@ const normalizeSize = (size: number) => {
   return Math.round(size * scale);
 };
 const HERO_H = Math.max(240, Math.round(SCREEN_HEIGHT * 0.35));
+
+const pct = (num = 0, den = 0) =>
+  den > 0 ? Math.min(100, Math.max(0, Math.round((num / den) * 100))) : 0;
+
 
 const introModalProps: Partial<ModalProps> = Platform.select<Partial<ModalProps>>({
   ios: {
@@ -196,35 +201,49 @@ const dayIcons: Record<
   365: "rocket-outline",
 };
 
-interface DuoUser {
-  id: string;
-  name: string;
-  avatar: string;
-  completedDays: number;
-  selectedDays: number;
-  isPioneer?: boolean;
-}
+ interface DuoUser {
+   id: string;
+   name: string;
+   avatar: string;
+   completedDays: number;
+   selectedDays: number;
+   isPioneer?: boolean;
+ }
 
-interface DuoChallengeData {
-  duo: boolean;
-  duoUser: DuoUser;
-}
+ interface DuoChallengeData {
+   duo: boolean;
+   duoUser: DuoUser;
+ }
 
-type RawChallengeEntry = {
-  challengeId?: string;
-  id?: string;
-  uniqueKey?: string;
-  duo?: boolean;
-  duoPartnerId?: string | null;
-  duoPartnerUsername?: string | null;
-  selectedDays?: number;
-  // ... le reste, on ne touche pas ici
-};
+ type RawChallengeEntry = {
+   challengeId?: string;
+   id?: string;
+   uniqueKey?: string;
+   duo?: boolean;
+   duoPartnerId?: string | null;
+   duoPartnerUsername?: string | null;
+   selectedDays?: number;
+ };
 
-function deriveDuoInfoFromUniqueKey(
+export function deriveDuoInfoFromUniqueKey(
   entry: RawChallengeEntry,
   currentUserId: string | undefined | null
 ) {
+  // 🛑 Si le doc indique explicitement SOLO → on respecte ça
+  const explicitSolo =
+    entry &&
+    entry.duo === false &&
+    !entry.duoPartnerId &&
+    !entry.duoPartnerUsername;
+
+  if (explicitSolo) {
+    return {
+      isDuo: false,
+      duoPartnerId: null,
+      duoPartnerUsername: null,
+    };
+  }
+
   if (!entry || !currentUserId) {
     return {
       isDuo: !!entry?.duo,
@@ -242,7 +261,6 @@ function deriveDuoInfoFromUniqueKey(
     };
   }
 
-  // On cherche le segment "uidA-uidB" à la fin du uniqueKey
   const parts = rawKey.split("_");
   if (parts.length < 3) {
     return {
@@ -280,11 +298,9 @@ function deriveDuoInfoFromUniqueKey(
   return {
     isDuo,
     duoPartnerId: partnerId,
-    // on garde l'ancien username si on l'a, sinon on reconstruit ailleurs au besoin
     duoPartnerUsername: entry?.duoPartnerUsername ?? null,
   };
 }
-
 
 
 export default function ChallengeDetails() {
@@ -302,7 +318,7 @@ export default function ChallengeDetails() {
   enabled: boolean;
   partnerId?: string;
   selectedDays?: number;
-  uniqueKey?: string;
+  uniqueKey?: string | null;   // 👈 ajoute null
 } | null>(null);
   const isDarkMode = theme === "dark";
   const currentTheme: Theme = isDarkMode
@@ -335,7 +351,6 @@ const [adHeight, setAdHeight] = useState(0);
 
 
   const router = useRouter();
-    const pct = (num = 0, den = 0) => (den > 0 ? Math.min(100, Math.max(0, Math.round((num / den) * 100))) : 0);
 
     // ✅ Safe back pour deeplink (si pas de stack -> home)
   const handleSafeBack = useCallback(() => {
@@ -412,10 +427,16 @@ useFocusEffect(
     selectedDays?: string;
     completedDays?: string;
   }>();
+
+  // 🆕 si on arrive avec ?invite=... → overlay actif dès le 1er render
+const [deeplinkBooting, setDeeplinkBooting] = useState(
+  () => !!params?.invite
+);
   
   const [invitation, setInvitation] = useState<{ id: string } | null>(null);
  const [invitationModalVisible, setInvitationModalVisible] = useState(false);
  const [inviteLoading, setInviteLoading] = useState(false);
+ 
  const processedInviteIdsRef = useRef<Set<string>>(new Set());
  const inviteOpenGuardRef = useRef(false);
  const markInviteAsHandled = useCallback((inviteId?: string | null) => {
@@ -447,26 +468,25 @@ const shouldEnterAnim =
   } = useCurrentChallenges();
   const lastIntroKeyRef = useRef<string | null>(null);
 
-// ✅ Résout UNE seule entrée "courante" avec priorité DUO
-const currentChallenge = useMemo(() => {
-  const matches = currentChallenges.filter(
-    (ch) => (ch.challengeId ?? ch.id) === id
-  );
-  if (matches.length === 0) return undefined;
-  // priorité duo si présent
-  const duo = matches.find((m) => !!m.duo);
-  return duo || matches[0];
-}, [currentChallenges, id]);
+// ✅ Résout UNE seule entrée "courante" avec priorité DUO (si présente)
+ const currentChallenge = useMemo(() => {
+   const matches = currentChallenges.filter(
+     (ch) => (ch.challengeId ?? ch.id) === id
+   );
+   if (matches.length === 0) return undefined;
+   const duo = matches.find((m) => !!m.duo);
+   return duo || matches[0];
+ }, [currentChallenges, id]);
 
  // 🧠 Duo dérivé de façon déterministe à partir du uniqueKey + userId
-  const derivedDuo = useMemo(
-    () =>
-      deriveDuoInfoFromUniqueKey(
-        (currentChallenge || {}) as RawChallengeEntry,
-        user?.uid
-      ),
-    [currentChallenge, user?.uid]
-  );
+ const derivedDuo = useMemo(
+   () =>
+     deriveDuoInfoFromUniqueKey(
+       (currentChallenge || {}) as RawChallengeEntry,
+       user?.uid
+     ),
+   [currentChallenge, user?.uid]
+ );
 
   const [duoChallengeData, setDuoChallengeData] =
     useState<DuoChallengeData | null>(null);
@@ -477,7 +497,6 @@ const currentChallenge = useMemo(() => {
     7, 14, 21, 30, 60, 90, 180, 365,
   ]);
   
-  const challengeTaken = !!currentChallenge;
 
   const [routeTitle, setRouteTitle] = useState(
     params.title || t("challengeDetails.untitled")
@@ -489,8 +508,9 @@ const currentChallenge = useMemo(() => {
   const [routeDescription, setRouteDescription] = useState(
     params.description || t("challengeDetails.noDescription")
   );
-  const [loading, setLoading] = useState(true);
+    const [loading, setLoading] = useState(true);
 
+  
   const [myAvatar, setMyAvatar] = useState<string>("");
   const [myName, setMyName] = useState<string>("");
   const [myIsPioneer, setMyIsPioneer] = useState(false);
@@ -517,6 +537,8 @@ const [introBlocking, setIntroBlocking] = useState(false); // blocks UI & hides 
 const fadeOpacity = useSharedValue(1); // pour fade-out
 const shakeMy = useSharedValue(0);
 const shakePartner = useSharedValue(0);
+const [shareCardVisible, setShareCardVisible] = useState(false);
+
 
 const popMy = useSharedValue(0);
 const popPartner = useSharedValue(0);
@@ -543,33 +565,52 @@ const bottomInset = useMemo(() => {
 const AVA = IS_SMALL ? normalizeSize(96) : normalizeSize(120);
 const GAP = IS_SMALL ? 16 : 24;
 
-const challengeTakenOptimistic = challengeTaken || justJoinedRef.current;
+const isHydrating = useMemo(
+  () => !challenge && loading,
+  [challenge, loading]
+);
 
-// 🧠 partenaire effectif calculé à partir du uniqueKey OU du state
-const effectiveDuoPartnerId =
-  derivedDuo.duoPartnerId ||
-  duoState?.partnerId ||
-  currentChallenge?.duoPartnerId ||
-  null;
+useEffect(() => {
+  if (!isHydrating) return;
 
-// 🧠 isDuo = priorité au calcul dérivé, puis au state, puis aux champs bruts
-const isDuo =
-  !!derivedDuo.isDuo ||
-  !!duoState?.enabled ||
-  !!(currentChallenge && currentChallenge.duo) ||
-  !!effectiveDuoPartnerId;
+  const timeout = setTimeout(() => {
+    // Hard fail-safe : on coupe le chargement si Firestore traîne
+    setLoading(false);
+  }, 2500);
 
-// ✅ SOLO uniquement si aucune info duo ne ressort
-const isSoloInThisChallenge = !!currentChallenge && !isDuo;
+  return () => clearTimeout(timeout);
+}, [isHydrating]);
+
+
+ const challengeTaken = !!currentChallenge;
+ const challengeTakenOptimistic = challengeTaken || justJoinedRef.current;
+
+ // 🧠 partenaire effectif calculé à partir du uniqueKey OU du state
+ const effectiveDuoPartnerId =
+   derivedDuo.duoPartnerId ||
+   duoState?.partnerId ||
+   currentChallenge?.duoPartnerId ||
+   null;
+
+ // 🧠 isDuo = priorité au calcul dérivé, puis au state, puis aux champs bruts
+ const isDuo =
+   !!derivedDuo.isDuo ||
+   !!duoState?.enabled ||
+   !!(currentChallenge && currentChallenge.duo) ||
+   !!effectiveDuoPartnerId;
+
+ // ✅ SOLO uniquement si aucune info duo ne ressort
+ const isSoloInThisChallenge = !!currentChallenge && !isDuo;
 
 
 const isDisabledMark = marking || isMarkedToday(id, finalSelectedDays);
+
+
 
 // 🆕 Sync immédiate avec le contexte quand le challenge passe en DUO
 useEffect(() => {
   if (!currentChallenge || !currentChallenge.duo || !currentChallenge.duoPartnerId) return;
 
-  // 1) On met à jour l'état DUO local si besoin
   setDuoState((prev) => {
     const selectedDays =
       currentChallenge.selectedDays ??
@@ -580,11 +621,10 @@ useEffect(() => {
     const uniqueKey =
       currentChallenge.uniqueKey ||
       prev?.uniqueKey ||
-      `${currentChallenge.challengeId ?? currentChallenge.id}_${selectedDays}`;
+      null; // 👈 plus de clé inventée sans pair
 
     const partnerId = currentChallenge.duoPartnerId;
 
-    // Rien ne change ? => on évite un re-render inutile
     if (
       prev &&
       prev.enabled &&
@@ -603,7 +643,6 @@ useEffect(() => {
     };
   });
 
-  // 2) On aligne aussi la progression locale sur celle du doc utilisateur
   if (
     typeof currentChallenge.selectedDays === "number" &&
     currentChallenge.selectedDays > 0 &&
@@ -674,7 +713,7 @@ const resetSoloProgressIfNeeded = useCallback(async () => {
           return {
             ...c,
             completedDays: 0,
-            completionDates: [], // reset propre
+            completionDates: [],
           };
         }
         return c;
@@ -688,6 +727,7 @@ const resetSoloProgressIfNeeded = useCallback(async () => {
     console.error("❌ resetSoloProgressIfNeeded failed:", e);
   }
 }, [id]);
+
 
 const lang = useMemo(
   () => String(i18n?.language || "fr").split("-")[0].toLowerCase(),
@@ -1027,7 +1067,6 @@ useEffect(() => {
   };
 }, [id]);
 
-
 useEffect(() => {
   const uid = auth.currentUser?.uid;
   if (!uid || !id) return;
@@ -1086,9 +1125,19 @@ useEffect(() => {
           });
       }
 
-             // Toujours garder ces deux-là sync depuis Firestore
-      setFinalSelectedDays(entry.selectedDays || 0);
-      setFinalCompletedDays(entry.completedDays || 0);
+     // Toujours garder ces deux-là sync depuis Firestore
+setFinalSelectedDays(entry.selectedDays || 0);
+
+// ✅ completedDays robuste : chiffre direct OU length de completionDates
+let computedCompleted = 0;
+if (typeof entry.completedDays === "number") {
+  computedCompleted = entry.completedDays;
+} else if (Array.isArray(entry.completionDates)) {
+  computedCompleted = entry.completionDates.length;
+}
+
+setFinalCompletedDays(computedCompleted);
+
 
       // 🧠 on recalcule le duo à partir du uniqueKey + uid courant
       const { isDuo, duoPartnerId } = deriveDuoInfoFromUniqueKey(
@@ -1114,21 +1163,15 @@ useEffect(() => {
             `${entry.challengeId ?? entry.id}_${entry.selectedDays}`,
         });
       } else {
-        // on ne casse pas tout si déjà false
         setDuoState((prev) => (prev?.enabled ? { enabled: false } : prev));
-        // duoChallengeData sera remis à null par l'autre effet
       }
-
-
     },
     (error) => {
-      // 💡 évite "Uncaught Error in snapshot listener"
       console.error("❌ user CurrentChallenges snapshot error:", error);
     }
   );
 
   return () => unsub();
-  // ⚠️ ne mets pas finalSelectedDays ici dans les deps pour éviter les boucles
 }, [id]);
 
 
@@ -1168,23 +1211,40 @@ useEffect(() => {
        ? partnerData.CurrentChallenges
        : [];
      const mirror = partnerList.find((c: any) => {
-       if (duoState.uniqueKey && c?.uniqueKey) return c.uniqueKey === duoState.uniqueKey;
-       const cid = c?.challengeId ?? c?.id;
-       return cid === id && c?.selectedDays === (duoState.selectedDays || 0);
-     });
+  if (duoState.uniqueKey && c?.uniqueKey) return c.uniqueKey === duoState.uniqueKey;
+  const cid = c?.challengeId ?? c?.id;
+  return cid === id && c?.selectedDays === (duoState.selectedDays || 0);
+});
 
-     setPartnerAvatar(resolvedPartnerAvatar);
-     setDuoChallengeData({
-       duo: true,
-       duoUser: {
-         id: duoState.partnerId,
-         name: partnerName,
-         avatar: resolvedPartnerAvatar,
-         completedDays: mirror?.completedDays || 0,
-         selectedDays: mirror?.selectedDays || duoState.selectedDays || 0,
-         isPioneer: !!partnerData.isPioneer,
-       },
-     });
+// ✅ jours sélectionnés : miroir > duoState > 0
+const partnerSelectedDays =
+  (typeof mirror?.selectedDays === "number" && mirror.selectedDays > 0)
+    ? mirror.selectedDays
+    : (duoState.selectedDays || 0);
+
+// ✅ completedDays robuste : chiffre direct OU length de completionDates
+let partnerCompleted = 0;
+if (mirror) {
+  if (typeof mirror.completedDays === "number") {
+    partnerCompleted = mirror.completedDays;
+  } else if (Array.isArray(mirror.completionDates)) {
+    partnerCompleted = mirror.completionDates.length;
+  }
+}
+
+setPartnerAvatar(resolvedPartnerAvatar);
+setDuoChallengeData({
+  duo: true,
+  duoUser: {
+    id: duoState.partnerId,
+    name: partnerName,
+    avatar: resolvedPartnerAvatar,
+    completedDays: partnerCompleted,
+    selectedDays: partnerSelectedDays,
+    isPioneer: !!partnerData.isPioneer,
+  },
+});
+
    }, (e) => console.error("❌ partner onSnapshot error:", e));
 
    return () => unsub();
@@ -1224,10 +1284,12 @@ useEffect(() => {
       );
 
       setLoading(false);
+      setDeeplinkBooting(false); 
     },
     (error) => {
       console.error("❌ Erreur récupération défi :", error);
       setLoading(false);
+      setDeeplinkBooting(false); 
     }
   );
 
@@ -1340,6 +1402,14 @@ useEffect(() => {
     if (processedInviteIdsRef.current.has(idStr)) return;
     if (inviteOpenGuardRef.current) return; // anti double open
 
+    // 🆕 On annonce qu'on boot via deeplink d'invit
+    setDeeplinkBooting(true);
+    setInviteLoading(true);
+    inviteOpenGuardRef.current = true;
+
+    // 🆕 Flag pour savoir si on va VRAIMENT afficher le modal
+    let willShowModal = false;
+
     // 🔐 Re-snapshot live de l'utilisateur au moment T
     const liveUid = auth.currentUser?.uid || null;
 
@@ -1353,12 +1423,14 @@ useEffect(() => {
         );
       } catch (e) {
         console.warn("[invite] redirect to login failed:", e);
+      } finally {
+        // ❌ Pas de modal → on coupe l’overlay
+        inviteOpenGuardRef.current = false;
+        setInviteLoading(false);
+        setDeeplinkBooting(false);
       }
       return;
     }
-
-    inviteOpenGuardRef.current = true;
-    setInviteLoading(true);
 
     try {
       // 🧾 Vérifie que l’invitation existe
@@ -1454,6 +1526,11 @@ useEffect(() => {
           );
         } catch (e) {
           console.warn("[invite] redirect vers bon challenge échoué:", e);
+        } finally {
+          // ❌ on ne montre pas de modal ici, ce sera géré dans l'autre screen
+          inviteOpenGuardRef.current = false;
+          setInviteLoading(false);
+          setDeeplinkBooting(false);
         }
         return;
       }
@@ -1462,6 +1539,7 @@ useEffect(() => {
       processedInviteIdsRef.current.add(idStr);
       setInvitation({ id: idStr });
       setInvitationModalVisible(true);
+      willShowModal = true; // ✅ on va laisser l’overlay vivre jusqu’à onLoaded()
 
       // Nettoie l’URL en enlevant ?invite (évite re-open au re-render)
       try {
@@ -1474,7 +1552,13 @@ useEffect(() => {
       console.error("❌ openFromParamOrUrl failed:", e);
     } finally {
       inviteOpenGuardRef.current = false;
-      setInviteLoading(false);
+      if (!willShowModal) {
+        // ❌ pas de modal → on coupe l’overlay ici
+        setInviteLoading(false);
+        setDeeplinkBooting(false);
+      }
+      // ✅ si willShowModal = true → on laisse l’overlay,
+      // il sera coupé par InvitationModal.onLoaded
     }
   };
 
@@ -1514,24 +1598,76 @@ useEffect(() => {
 
   const isSavedChallenge = useCallback((challengeId: string) => savedIds.has(challengeId), [savedIds]);
 
-const completions = useMemo(() => currentChallenge?.completionDates || [], [currentChallenge?.completionDates]);
-// 🆕 Set pour test O(1) et re-calcul du calendrier mémoïsé
-const completionSet = useMemo(() => new Set(completions), [completions]);
+const completions = useMemo(
+  () => currentChallenge?.completionDates || [],
+  [currentChallenge?.completionDates]
+);
+
+// 🆕 Set normalisé en "YYYY-MM-DD" (supporte string & Timestamp)
+const completionSet = useMemo(() => {
+  if (!Array.isArray(completions)) return new Set<string>();
+
+  const normalized = completions
+    .map((raw) => {
+      if (!raw) return null;
+      const v: any = raw;
+
+      // Firestore Timestamp { seconds, nanoseconds }
+      if (v && typeof v === "object" && typeof v.seconds === "number") {
+        const d = new Date(v.seconds * 1000);
+        const y = d.getFullYear();
+        const m = String(d.getMonth() + 1).padStart(2, "0");
+        const day = String(d.getDate()).padStart(2, "0");
+        return `${y}-${m}-${day}`;
+      }
+
+      // String : "2025-12-01" ou "2025-12-01T10:12:00Z"
+      if (typeof v === "string") {
+        const s = v.slice(0, 10);
+        if (/^\d{4}-\d{2}-\d{2}$/.test(s)) return s;
+      }
+
+      return null;
+    })
+    .filter((s): s is string => !!s);
+
+  return new Set(normalized);
+}, [completions]);
 
 const calendarDays = useMemo(() => {
   const year = currentMonth.getFullYear();
   const month = currentMonth.getMonth();
   const numDays = new Date(year, month + 1, 0).getDate();
-  const firstDayIndex = new Date(year, month, 1).getDay();
-  const calendar: (null | { day: number; date: Date; completed: boolean })[] = [];
-  for (let i = 0; i < firstDayIndex; i++) calendar.push(null);
+
+  const jsWeekday = new Date(year, month, 1).getDay(); // 0 = dimanche, 1 = lundi...
+  const firstDayIndex = (jsWeekday + 6) % 7; // on aligne sur lundi
+
+  const calendar: (null | { day: number; date: Date; completed: boolean })[] =
+    [];
+
+  // Cases vides avant le 1er
+  for (let i = 0; i < firstDayIndex; i++) {
+    calendar.push(null);
+  }
+
+  // Jours du mois
   for (let day = 1; day <= numDays; day++) {
     const dateObj = new Date(year, month, day);
-    const completed = completionSet.has(dateObj.toDateString());
+
+    // ✅ clé locale "YYYY-MM-DD" (plus de décalage UTC)
+    const key = [
+      year,
+      String(month + 1).padStart(2, "0"),
+      String(day).padStart(2, "0"),
+    ].join("-");
+
+    const completed = completionSet.has(key);
     calendar.push({ day, date: dateObj, completed });
   }
+
   return calendar;
 }, [currentMonth, completionSet]);
+
 
  const goToPrevMonth = useCallback(() => {
     const newMonth = new Date(
@@ -1714,10 +1850,12 @@ const handleSaveChallenge = useCallback(async () => {
   }
 }, [id, addChallenge, removeChallenge, isSavedChallenge, t]);
 
+const handleShowCompleteModal = useCallback(() => {
+  if (!id) return;
+  if (!finalSelectedDays || finalSelectedDays <= 0) return;
+  setCompletionModalVisible(true);
+}, [id, finalSelectedDays]);
 
-  const handleShowCompleteModal = useCallback(() => {
-    setCompletionModalVisible(true);
-  }, [finalSelectedDays]);
 
     const handleClaimTrophiesWithoutAd = useCallback(async () => {
     try {
@@ -1879,7 +2017,10 @@ const handleInviteFriend = useCallback(async () => {
 
     // 0) Hors-ligne -> message clair
     if (isOffline) {
-      Alert.alert(t("common.networkError"), t("firstPick.offlineDuo") || "Connecte-toi à Internet pour inviter un ami en duo.");
+      Alert.alert(
+        t("common.networkError"),
+        t("firstPick.offlineDuo") || "Connecte-toi à Internet pour inviter un ami en duo."
+      );
       return;
     }
 
@@ -1894,19 +2035,20 @@ const handleInviteFriend = useCallback(async () => {
     if (!res.ok) {
       const msg =
         res.reason === "pending-invite"
-          ? t("firstPick.alreadyInvited") || "Tu as déjà une invitation en attente pour ce défi."
+          ? t("firstPick.alreadyInvited") ||
+            "Tu as déjà une invitation en attente pour ce défi."
           : t("common.oops");
       Alert.alert(t("common.info"), msg);
       return;
     }
 
-    // 3) Si déjà en SOLO (streak 0 ou > 0) → confirmation obligatoire
+    // 3) Si déjà en SOLO → confirmation reset
     if (isSoloInThisChallenge) {
       setConfirmResetVisible(true);
       return;
     }
 
-    // 4) Sinon (pas pris du tout) → ouvre directement le SendInvitationModal
+    // 4) Sinon, ouvre directement le SendInvitationModal
     setSendInviteVisible(true);
   } catch (err) {
     console.error("❌ handleInviteFriend error:", err);
@@ -1927,12 +2069,14 @@ const handleInviteButtonPress = useCallback(() => {
   handleInviteFriend();
 }, [isDuo, handleInviteFriend, t]);
 
+
   const handleViewStats = useCallback(() => {
     if (!challengeTaken ) return;
     setStatsModalVisible(true);
   }, [challengeTaken ]);
 
   const handleMarkTodayPress = useCallback(async () => {
+  if (!id || !challengeTaken) return;
   if (marking || markBusyRef.current) return;
   if (isMarkedToday(id, finalSelectedDays)) return;
 
@@ -1964,13 +2108,22 @@ try {
     setMarking(false);
     markBusyRef.current = false;
   }
-}, [marking, id, finalSelectedDays, isMarkedToday, markToday, t]);
+}, [marking, challengeTaken, id, finalSelectedDays, isMarkedToday, markToday, t]);
 
   // 🆕 styles/objets stables pour ScrollView afin d’éviter re-renders
 const scrollContentStyle = useMemo(
   () => [styles.scrollPad, { paddingBottom: bottomInset + SPACING }],
   [bottomInset]
 );
+
+  const loadingLabel = inviteLoading
+    ? t("challengeDetails.loadingInvite", {
+        defaultValue: "Ouverture de l’invitation…",
+      })
+    : t("challengeDetails.loading", {
+        defaultValue: "Chargement du défi…",
+      });
+
 
   return (
     <LinearGradient
@@ -2024,7 +2177,7 @@ const scrollContentStyle = useMemo(
       </Animated.View>
       <ScrollView
         style={{ flex: 1 }}
-        removeClippedSubviews={Platform.OS === "android"}           
+        removeClippedSubviews={false}          
         keyboardShouldPersistTaps="handled"
         showsVerticalScrollIndicator={false}
         contentContainerStyle={scrollContentStyle}
@@ -2107,11 +2260,13 @@ const scrollContentStyle = useMemo(
 
   {/* Participants */}
   <View style={styles.chip}>
-    <Ionicons name="person-outline" size={14} color="#fff" />
-    <Text style={styles.chipText}>
-  {t("challengeDetails.participants", { count: userCount })}
-</Text>
-  </View>
+  <Ionicons name="person-outline" size={14} color="#fff" />
+  <Text style={styles.chipText}>
+    {t("challengeDetails.participantsLabel", {
+      defaultValue: "Participants",
+    })}{": "}{userCount}
+  </Text>
+</View>
 </View>
           {!challengeTakenOptimistic  && (
             <TouchableOpacity
@@ -2527,16 +2682,19 @@ textStyle = { color: isDarkMode ? "#FFB3B3" : "#8A0000" };
   >
                   <Pressable
                     onPress={() => {
-  if (challenge?.chatId) {
-    router.push(`/challenge-helper/${challenge.chatId}`);
-  } else {
-    console.warn("❌ Aucun chatId disponible pour ce challenge");
-    Alert.alert(t("alerts.error"), t("alerts.noHelperAvailable"));
-  }
-}}
-                    android_ripple={{ color: "#fff", borderless: false }}
-                    accessibilityLabel="HelpButton"
-                    accessibilityHint="Navigate to challenge help content"
+    if (challenge?.chatId) {
+      router.push(`/challenge-helper/${challenge.chatId}`);
+    } else {
+      console.warn("❌ Aucun chatId disponible pour ce challenge");
+      Alert.alert(t("alerts.error"), t("alerts.noHelperAvailable"));
+    }
+  }}
+  android_ripple={{ color: "#fff", borderless: false }}
+  accessibilityRole="button"
+  accessibilityLabel={t("challengeDetails.needHelp")}
+  accessibilityHint={t("challengeDetails.needHelpHint", {
+    defaultValue: "Ouvre une page d’aide détaillée pour ce défi.",
+  })}
                     style={({ pressed }) => ({
     opacity: pressed ? 0.8 : 1,
     borderRadius: 24,
@@ -2717,7 +2875,7 @@ textStyle = { color: isDarkMode ? "#FFB3B3" : "#8A0000" };
 
             <TouchableOpacity
               style={[styles.actionIcon, { width: actionIconWidth }]}
-              onPress={handleShareChallenge}
+              onPress={() => setShareCardVisible(true)}
               accessibilityRole="button"
               accessibilityLabel={t("challengeDetails.shareA11y")}
               testID="share-button"
@@ -2833,37 +2991,80 @@ textStyle = { color: isDarkMode ? "#FFB3B3" : "#8A0000" };
   clearInvitation={() => {
     markInviteAsHandled(invitation?.id);
   }}
+  // 🆕 Quand le modal a fini de charger -> on coupe l’overlay deeplink/invite
+  onLoaded={() => {
+    setInviteLoading(false);
+    setDeeplinkBooting(false);
+  }}
 />
 
+{isHydrating && (
+  <Animated.View
+    // ⚠️ plus d'entering/exiting, pour éviter les soucis de hitbox fantôme
+    style={styles.loadingOverlay}
+    pointerEvents="none" // ✅ ne bloque PLUS JAMAIS les interactions
+  >
+    <BlurView
+      intensity={40}
+      tint={isDarkMode ? "dark" : "light"}
+      style={StyleSheet.absoluteFill}
+    />
 
-
-       {inviteLoading && !loading && (
-        <View style={styles.loadingOverlay}>
-          <ActivityIndicator
-            size="large"
-            color={currentTheme.colors.secondary}
+    <View style={styles.loadingCard}>
+      <LinearGradient
+        colors={[
+          currentTheme.colors.primary,
+          currentTheme.colors.secondary,
+        ]}
+        start={{ x: 0, y: 0 }}
+        end={{ x: 1, y: 1 }}
+        style={styles.loadingIconRing}
+      >
+        <View style={styles.loadingIconInner}>
+          <Ionicons
+            name={inviteLoading ? "people-circle-outline" : "aperture-outline"}
+            size={normalizeSize(26)}
+            color="#fff"
           />
-          <Text
-            style={[
-              styles.loadingText,
-              { color: currentTheme.colors.textSecondary },
-            ]}
-          >
-            {t("challengeDetails.loadingInvite", {
-              defaultValue: "Ouverture de l’invitation…",
-            })}
-          </Text>
         </View>
-      )}
+      </LinearGradient>
 
-      {loading && (
-  <View style={styles.loadingOverlay}>
-    <ActivityIndicator size="large" color={currentTheme.colors.secondary} />
-    <Text style={[styles.loadingText, { color: currentTheme.colors.textSecondary }]}>
-      {t("challengeDetails.loading")}
-    </Text>
-  </View>
+      <View style={styles.loadingTextBlock}>
+        <ActivityIndicator
+          size="small"
+          color={currentTheme.colors.secondary}
+          style={{ marginBottom: 8 }}
+        />
+
+        <Text
+          style={[
+            styles.loadingText,
+            { color: currentTheme.colors.textPrimary },
+          ]}
+        >
+          {loadingLabel}
+        </Text>
+
+        <Text
+          style={[
+            styles.loadingSubText,
+            { color: currentTheme.colors.textSecondary },
+          ]}
+        >
+          {inviteLoading
+            ? t("challengeDetails.loadingInviteHint", {
+                defaultValue: "On prépare ton duo et la page du défi…",
+              })
+            : t("challengeDetails.loadingHint", {
+                defaultValue: "Synchronisation de tes données et du défi…",
+              })}
+        </Text>
+      </View>
+    </View>
+  </Animated.View>
 )}
+
+
 {/* ⚠️ Confirmation : passer en Duo réinitialise ta progression solo */}
 {/* ⚠️ Confirmation : si déjà en SOLO, accepter bascule en DUO et remet à 0 le solo */}
 <Modal
@@ -2914,6 +3115,22 @@ textStyle = { color: isDarkMode ? "#FFB3B3" : "#8A0000" };
     </View>
   </View>
 </Modal>
+
+<ShareCardModal
+  visible={shareCardVisible}
+  onClose={() => setShareCardVisible(false)}
+  challengeTitle={routeTitle || ""}
+  daysCompleted={finalCompletedDays}
+  totalDays={finalSelectedDays}
+  isDuo={!!isDuo}
+  userName={myName || ""}
+  partnerName={duoChallengeData?.duoUser?.name || ""}
+  userAvatar={myAvatar}
+partnerAvatar={duoChallengeData?.duoUser?.avatar}
+partnerDaysCompleted={duoChallengeData?.duoUser?.completedDays ?? 0}
+
+/>
+
 
 <SendInvitationModal
   visible={sendInviteVisible}
@@ -3049,22 +3266,71 @@ const styles = StyleSheet.create({
     borderBottomRightRadius: normalizeSize(30),
   },
   loadingOverlay: {
-  position: "absolute",
-  left: 0,
-  right: 0,
-  top: 0,
-  bottom: 0,
-  alignItems: "center",
-  justifyContent: "center",
-  backgroundColor: "rgba(0,0,0,0.35)",
-  zIndex: 999,
-},
-loadingText: {
-  marginTop: 12,
-  fontSize: normalizeSize(16),
-  fontFamily: "Comfortaa_400Regular",
-},
+    position: "absolute",
+    left: 0,
+    right: 0,
+    top: 0,
+    bottom: 0,
+    justifyContent: "center",
+    alignItems: "center",
+    zIndex: 9999,
+    elevation: 9999,
+    // on laisse le fond transparent, c’est le BlurView qui gère le rendu
+    backgroundColor: "transparent",
+    paddingHorizontal: 24,
+  },
 
+  loadingCard: {
+    minWidth: 260,
+    maxWidth: 320,
+    borderRadius: 24,
+    paddingVertical: 18,
+    paddingHorizontal: 18,
+    alignItems: "center",
+    justifyContent: "center",
+    backgroundColor: "rgba(10, 10, 15, 0.92)", // bon rendu en dark
+    shadowColor: "#000",
+    shadowOffset: { width: 0, height: 10 },
+    shadowOpacity: 0.35,
+    shadowRadius: 22,
+    elevation: 16,
+    overflow: "hidden",
+  },
+
+  loadingIconRing: {
+    width: 56,
+    height: 56,
+    borderRadius: 28,
+    alignItems: "center",
+    justifyContent: "center",
+    marginBottom: 14,
+  },
+
+  loadingIconInner: {
+    width: 40,
+    height: 40,
+    borderRadius: 20,
+    backgroundColor: "rgba(0,0,0,0.55)",
+    alignItems: "center",
+    justifyContent: "center",
+  },
+
+  loadingTextBlock: {
+    alignItems: "center",
+  },
+
+  loadingText: {
+    fontSize: 16,
+    fontWeight: "600",
+    textAlign: "center",
+  },
+
+  loadingSubText: {
+    marginTop: 4,
+    fontSize: 13,
+    lineHeight: 18,
+    textAlign: "center",
+  },
 backButtonContainer: {
     position: "absolute",
     // la valeur sera surchargée à l’usage avec insets.top

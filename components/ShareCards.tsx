@@ -418,39 +418,53 @@ i18n?: { kicker?: string; body?: (rank: number|string)=>string };
     unameLen > 10 ? 28 : 32; // max 32
 
   return (
-    <ExportableCard ref={ref} palette={palette} logoSource={logoSource} qrValue={qrValue}>
-       <Text style={s.kicker}>{i18n?.kicker ?? "My ranking"}</Text>
+        <ExportableCard ref={ref} palette={palette} logoSource={logoSource} qrValue={qrValue}>
+      <Text style={s.kicker}>
+        {i18n?.kicker ??
+          t("leaderboard.shareCard.kicker", {
+            defaultValue: "My ranking",
+          })}
+      </Text>
+
       <View style={s.row}>
-  <ExpoImage
-    source={avatarUri ? { uri: avatarUri } : IMG_DEFAULT_AVATAR}
-    style={s.avatar}
-    contentFit="cover"
-    cachePolicy="memory-disk"
-    transition={120}
-    priority="high"
-    accessibilityLabel={avatarUri ? "Avatar utilisateur" : "Avatar par défaut"}
-  />
+        <ExpoImage
+          source={avatarUri ? { uri: avatarUri } : IMG_DEFAULT_AVATAR}
+          style={s.avatar}
+          contentFit="cover"
+          cachePolicy="memory-disk"
+          transition={120}
+          priority="high"
+          accessibilityLabel={avatarUri ? "Avatar utilisateur" : "Avatar par défaut"}
+        />
 
-  <View style={{ flex: 1 }}>
-    <Text
-      numberOfLines={1}
-      // Start grand puis auto-shrink si besoin (iOS/Android OK en RN récent)
-      adjustsFontSizeToFit
-      minimumFontScale={0.7}
-      maxFontSizeMultiplier={1.0}
-      style={[s.title, { fontSize: usernameFontSize, lineHeight: usernameFontSize + 4 }]}
-      allowFontScaling={false}
-    >
-      @{username}
-    </Text>
-    <Text style={s.meta} numberOfLines={1}>
-      #{rank} • {trophies ?? 0}🏆
-    </Text>
-  </View>
-</View>
+        <View style={{ flex: 1 }}>
+          <Text
+            numberOfLines={1}
+            adjustsFontSizeToFit
+            minimumFontScale={0.7}
+            maxFontSizeMultiplier={1.0}
+            style={[s.title, { fontSize: usernameFontSize, lineHeight: usernameFontSize + 4 }]}
+            allowFontScaling={false}
+          >
+            @{username}
+          </Text>
+          <Text style={s.meta} numberOfLines={1}>
+            #{rank} • {trophies ?? 0}🏆
+          </Text>
+        </View>
+      </View>
 
-<Text style={s.body}>
-{i18n?.body ? i18n.body(rank) : `I'm #${rank} this week! Challenge me on ChallengeTies and climb the leaderboard 💥`}      </Text>    </ExportableCard>
+      <Text style={s.body}>
+        {i18n?.body
+          ? i18n.body(rank)
+          : t("leaderboard.shareCard.body", {
+              rank,
+              defaultValue:
+                "I'm #{{rank}} this week on ChallengeTies. Join me and climb the leaderboard 💥",
+            })}
+      </Text>
+    </ExportableCard>
+
   );
 });
 RankShareCard.displayName = "RankShareCard";

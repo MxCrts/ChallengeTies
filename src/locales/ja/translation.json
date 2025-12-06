@@ -650,16 +650,32 @@
     "outcome": "投票期間終了後、最も票を集めた機能が実装されます。",
     "understood": "了解"
   },
+"trophyModal": {
+  "congrats": "おめでとう！🎉",
+  "reward": "+{{count}} トロフィー",
+  "message": "{{message}}",
+  "claim": "受け取る",
+  "doubleReward": "トロフィーを2倍にする",
+  "doubleMessage": "🔥 {{count}} 個のトロフィーを獲得！",
+  "claimMessage": "🎉 {{count}} 個のトロフィーを獲得！",
 
-  "trophyModal": {
-    "congrats": "おめでとう！🎉",
-    "reward": "+{{count}} トロフィー",
-    "message": "{{message}}",
-    "claim": "受け取る",
-    "doubleReward": "トロフィーを2倍に",
-    "doubleMessage": "🔥 {{count}} トロフィー獲得！",
-    "claimMessage": "🎉 {{count}} トロフィーを獲得しました！"
-  },
+  "title": "トロフィー解除！",
+  "subtitle": "新しいマイルストーンに到達しました。",
+  "defaultName": "ミステリー実績",
+  "defaultDescription": "続けていこう。1つ1つのトロフィーが君の継続力の証だ。",
+
+  "ribbon": "報酬解除",
+
+  "trophiesTitle": "獲得したトロフィー",
+  "trophiesHint": "ChallengeTies の合計に追加されました。",
+
+  "cta": "受け取る",
+  "ctaLoading": "読み込み中…",
+  "secondaryCta": "あとで",
+
+  "doubleBadge": "x2 有効"
+}
+,
   "achievements": {
     "first_connection": "初回ログイン",
 
@@ -828,6 +844,9 @@
   "statsModal": {
     "close": "閉じる",
     "prevMonth": "前の月",
+    "completed": "完了",
+"pending": "未完了"
+,
     "nextMonth": "次の月",
     "title": "{{month}} {{year}}",
 
@@ -903,7 +922,11 @@
     "introductionText": "ChallengeTiesでは、お客様のプライバシー保護を最優先としています。本ポリシーでは、GDPRに完全準拠した形で、お客様の個人データをどのように収集・利用・保護・共有するのかをご説明します。",
     "dataCollectedTitle": "収集するデータ",
     "dataCollectedText": "パーソナライズされた体験をご提供するため、次のような情報を収集する場合があります：",
-    "dataCollectedItems": {
+    "screenA11yLabel": "ChallengeTies プライバシーポリシー画面",
+  "logoAlt": "ChallengeTies のロゴ",
+  "dataCollectedItems": {
+    "deviceInfo": "デバイスの技術情報（モデル、OS、言語、おおよその国）",
+    "usageAnalytics": "利用状況のイベント（表示した画面、アプリ内の操作、パフォーマンス）",
       "nameEmail": "氏名およびメールアドレス",
       "profilePhoto": "プロフィール写真",
       "progress": "チャレンジにおける進捗・達成状況",
@@ -916,6 +939,7 @@
       "personalize": "体験をパーソナライズするため",
       "analyze": "進捗状況を分析するため",
       "notify": "有用な通知をお届けするため",
+          "adsAndMonetization": "広告を表示し、その効果を測定し、不正な広告行為を防止するため",
       "improve": "サービスを改善するため"
     },
     "dataSharingTitle": "データの共有",
@@ -1019,9 +1043,18 @@
   "inviteFriends": "友だちを招待",
   
   "referral": {
+    "invited": {
+  "title": "招待を検出しました 🎁",
+  "body": "ユーザーから招待されました。登録後、自動的に報酬が有効になります。",
+  "linkedTitle": "紹介が有効化されました ✅",
+  "linkedBody": "紹介がリンクされました。ChallengeTies へようこそ！",
+  "by": "紹介者："
+},
     "menu": "シェア＆ゲット",
     "history": {
       "title": "紹介履歴",
+      "activatedOnLabel": "有効化日",
+    "invitedOnLabel": "招待日",
       "subtitle": "合計 {{total}} 名 • {{activated}} 名が有効化",
       "loading": "紹介履歴を読み込み中です…",
           "emptyTitle": "まだ紹介したユーザーがいません",
@@ -1050,8 +1083,10 @@
     },
     "share": {
       "title": "Share & Earn",
+      "activatedReferrals": "有効化された招待ユーザー",
       "subtitle": "友達を招待しよう。彼らが最初のチャレンジを開始すると、あなたがトロフィーを獲得！段階的な報酬をアンロックしてボーナスを手に入れよう 💎",
       "linksTitle": "あなたのリンク",
+          "howTo": "「共有」ボタンやShare Cardを送って友だちを招待しよう。招待された友だちが有効化されるたびに報酬が手に入ります。",
       "linkApp": "アプリリンク",
       "linkWeb": "Webリンク",
        "auth": {
@@ -1089,11 +1124,17 @@
       }
     },
     "notif": {
-    "milestoneUnlocked": {
-      "title": "マイルストーン解除 🎉",
-      "body": "今すぐ +{{bonus}} トロフィーを受け取れます！"
-    }
+  "milestoneUnlocked": {
+    "title": "マイルストーン達成 🎉",
+    "body": "おめでとう！招待のおかげで +{{bonus}} 個のトロフィーを獲得しました。Share & Earn を開いて報酬を受け取りましょう。"
   },
+  "newChild": {
+    "title": "🎉 新しい招待ユーザー",
+    "body": "おめでとう！あなたの招待ユーザーの1人がアクティブになり、+{{bonus}} 個のトロフィーを獲得しました！",
+    "toast": "新しい招待ユーザー（+{{bonus}} 個のトロフィー）🎉"
+  }
+}
+,
     "share1": {
       "title": "招待 — {{appName}}",
       "inviteMessage": "{{appName}} で一緒にチャレンジしよう 👇\n{{webLink}}\n(アプリで開く：{{appLink}})",
@@ -1176,6 +1217,10 @@
       "titleTooShort": "タイトルが短すぎます（6文字以上）。",
       "descTooShort": "説明が短すぎます（20文字以上）。",
       "titleInvalidChars": "タイトルには文字が含まれている必要があります。"
+    },
+    "hint": {
+      "titleHelper": "明確なタイトル（≥ {{min}} 文字）。",
+      "descHelper": "具体的に説明してください（≥ {{min}} 文字）。"
     }
   },
 
@@ -1186,7 +1231,9 @@
     "hintBoostStart": "ヒント：数値目標と期間を明確にすると良いです。",
     "hintBoostMid": "もう少し：毎日の具体的なアクションを加えると完璧！",
     "scoreLabel": "チャレンジの品質",
-    "hintGreat": "完璧！チャレンジが明確でやる気が出ます ✨"
+    "hintGreat": "完璧！チャレンジが明確でやる気が出ます ✨",
+        "fillRequired": "タイトル、説明（≥20文字）、カテゴリ、画像を入力して100％に到達させてください。"
+
   },
 
   "a11y": {
@@ -1200,6 +1247,10 @@
 
   "leaderboard": {
     "errorFetch": "ランキングを取得できませんでした",
+    "shareCard": {
+  "kicker": "今週の順位",
+  "body": "今週のChallengeTiesで私は第#{{rank}}位です。一緒にランキングを駆け上がろう💥"
+},
     "shareDialogTitle": "RankCard を共有",
     "shareHint": "あなたのランクカードを共有",
     "retry": "再試行",
@@ -1258,6 +1309,7 @@
     "presentationText": "より良い自分への旅が、いま始まる。",
     "nextButtonLabel": "次の画面へ進む"
   },
+  "dailySelectedSubtitle": "今日はあなたのために厳選されたチャレンジが5つ。",
   "screen8": {
     "skip": "スキップ",
     "readyQuestion": "挑戦する準備はできた？",
@@ -1305,6 +1357,7 @@
 "challengeChat": {
   "longPressReply": "このメッセージに返信する",
   "replyingTo": "返信先",
+  "placeholder": "メッセージを書いてください…",
   "sendA11yLabel": "メッセージを送信",
   "slowmodeHint": "新しいメッセージを送信する前に少しお待ちください。",
   "slowmodeCountdown": "次のメッセージを送るまであと {{s}} 秒お待ちください"
@@ -1401,19 +1454,67 @@
   "newAchievement": "新しい実績！",
 
   "sections": {
-    "débuts": "スタート",
-    "defisTermines": "完了したチャレンジ",
-    "engagement": "エンゲージメント",
-    "serieDeFeu": "連続達成",
-    "communication": "コミュニケーション",
-    "partage": "シェア",
-    "reseau": "ネットワーク",
-    "influence": "影響力",
-    "collection": "コレクション",
-    "creation": "クリエーション",
-    "divers": "その他"
+  "débuts": "はじまり",
+  "defisTermines": "達成したチャレンジ",
+  "engagement": "コミットメント",
+  "serieDeFeu": "連続記録",
+  "communication": "コミュニケーション",
+  "partage": "シェア",
+  "reseau": "ネットワーク",
+  "influence": "影響力",
+  "collection": "コレクション",
+  "creation": "クリエイション",
+  "duo": "デュオ",
+  "constance": "継続",
+  "focus": "フォーカス",
+  "maitrise": "マスタリー",
+  "discipline": "規律",
+  "events": "イベント",
+  "divers": "その他"
+}
+,
+"welcomeBonus": {
+  "title": "ログインボーナス",
+  "subtitle": "{{total}}日中 {{day}}日目 • 続けよう！",
+  "ribbon": "ChallengeTies ウェルカムパック",
+
+  "todayRewardTitle": "本日の報酬",
+
+  "reward": {
+    "trophies": "ボーナストロフィー {{count}} 個",
+    "streakPass": "連続記録を守る Streak Pass {{count}} 個",
+    "premium": "ChallengeTies プレミアム {{count}} 日間"
   },
 
+  "premiumHint": "この期間、広告なし＆ChallengeTies を無制限で利用できます。",
+
+  "dayBadge": "{{day}}日目",
+  "dayLabel": "{{day}}日目",
+
+  "claimed": "獲得済み",
+  "today": "今日",
+
+  "bottomHint": "毎日ログインして全ての報酬を解放しよう。",
+
+  "cta": "報酬を受け取る",
+  "ctaLoading": "少々お待ちください…",
+
+  "error": "現在ウェルカムボーナスを受け取れません。"
+}
+
+,
+"premiumTrialActivated": {
+    "title": "ChallengeTies プレミアムが有効になりました ✨",
+    "message": "ChallengeTies プレミアムを7日間分アンロックしました。広告なしで、すべての機能を制限なく楽しめます。この勢いを最大限に活かそう！"
+  },
+  "premiumEndModal": {
+    "title": "ChallengeTies プレミアム期間が終了しました",
+    "description": "7日間のプレミアムアクセスが終了しました。もし ChallengeTies があなたの継続を助けてくれているなら、ムーブメントに参加してプロジェクトを応援し、もう一度広告なし体験をアンロックしよう。",
+    "closeA11y": "ウィンドウを閉じる",
+    "closeCta": "無料のまま続ける",
+    "joinA11y": "プレミアムのムーブメントに参加する",
+    "joinCta": "プレミアムのムーブメントに参加する"
+  },
   "dailyBonus": {
     "title": "今日のボーナス",
     "subtitle": "ミステリールーレットを回して報酬をゲット 🎁",
@@ -1966,8 +2067,48 @@
   "unableToMarkWithTrophies": "トロフィーで記録できませんでした。",
   "errorLoadingSavedChallenges": "保存されたチャレンジを読み込めませんでした：{{message}}",
   "rateUs": "アプリを評価する",
+  "shareCardT": {
+  "a11yTitle": "チャレンジ共有カード",
+  "a11yHint": "共有する前にカードをプレビューできます。",
+
+  "tagline": "チャレンジがある？ やり遂げよう。",
+
+  "duoBadge": "デュオチャレンジ",
+  "soloBadge": "ソロフォーカス",
+
+  "completedLabel": "このチャレンジを達成しました",
+  "daysLabel": "{{days}}日間のフォーカス",
+
+  "leading": "リードしている！",
+  "milestoneVariants": [
+  "{{days}}日続けてきた… ここからが本当のスタートだ。",
+  "日々積み重ねて、止められない存在になる。{{days}}日達成。",
+  "継続は自分を変える。{{days}}日完了。",
+  "{{days}}日の規律。あとは自然についてくる。",
+  "毎日が大切。{{days}}日達成、そしてまだ続く。"
+]
+,
+  "behind": "追いつこう！",
+  "tie": "完全に同点",
+  "milestoneMessage": "{{days}}日間やり抜いてきた… ここからが本当のスタートだ。",
+
+  "me": "自分",
+  "partner": "パートナー",
+
+  "footerLine1": "ChallengeTiesで一緒に始めよう",
+  "footerLine2": "チャレンジ、集中、毎日の勝利。"
+},
 
   "notificationsPush": {
+    "inviteAccepted": {
+  "title": "招待が承認されました 🎉",
+  "body": "{{username}} があなたのチャレンジ「{{title}}」を承認しました！"
+},
+"inviteRefused": {
+  "title": "招待が拒否されました ❌",
+  "body": "{{username}} があなたのチャレンジ「{{title}}」を拒否しました。"
+}
+,
     "title": "ChallengeTies",
     "morning1": "良い一日の始まりに小さなチャレンジをしよう！",
     "morning2": "9時！今日のチャレンジを選んでスタートしよう。",
@@ -3853,38 +3994,41 @@
   "acceptRulesCheckbox": "チャットのルールに同意する",
 
   "tutorial": {
+    "progress": "ステップ",
+    "progressA11y": "{{current}} / {{total}} のステップ",
+    "welcomeTagline": "あなたの旅はここから始まります。",
     "steps": {
       "welcome": {
-        "title": "ChallengeTiesへようこそ ✨",
-        "description": "30秒でアプリの重要な機能を素早く紹介します。"
+        "title": "ChallengeTies へようこそ ✨",
+        "description": "数ステップで主要な機能を紹介します。30 秒以内にアプリを使いこなせるようになります。"
       },
       "explore": {
-        "title": "チャレンジを探す",
-        "description": "カテゴリ別に80以上のチャレンジを発見。やる気を引き出すものを見つけよう。"
+        "title": "チャレンジを見つける",
+        "description": "カテゴリ別に並んだ数多くのチャレンジをチェック。自分のモチベが上がるものを見つけて、最初のチャレンジを始めよう。"
       },
       "create": {
-        "title": "チャレンジを作成",
-        "description": "期間、目標、進捗を自由に設定。自分の習慣づくりをデザインしよう。"
+        "title": "自分のチャレンジを作成",
+        "description": "期間、目標、進捗などを自由にカスタマイズ。自分の習慣とデisciplineをデザインしよう。"
       },
       "focus": {
         "title": "フォーカスモード",
-        "description": "集中力を高める没入型タイマー。時間・セッション・継続度を記録。"
+        "description": "集中をサポートする没入型タイマー。時間・セッション回数・継続度をしっかり記録。"
       },
       "duo": {
         "title": "デュオチャレンジ",
-        "description": "友達を招待して一緒に進もう。同期された進捗とモチベアップ通知付き。"
+        "description": "友だちを招待して一緒に進もう。通知や同期された進捗で、お互いにモチベーションアップ。"
       },
       "profile": {
-        "title": "プロフィール＆進捗",
-        "description": "進行中・保存済みチャレンジ、実績、統計、設定をチェック。"
+        "title": "プロフィールと進捗",
+        "description": "進行中・保存済みのチャレンジ、実績、詳しい統計、各種設定をここでまとめて確認。"
       },
       "vote": {
-        "title": "新機能への投票",
-        "description": "アプリの未来を決めよう。次に実装してほしい機能を選んで投票。"
+        "title": "新機能に投票",
+        "description": "アプリの未来を一緒につくろう。まず実装してほしい機能に投票してね。"
       }
     },
     "buttons": {
-      "start": "開始",
+      "start": "スタート",
       "next": "次へ",
       "skip": "スキップ",
       "finish": "完了"
@@ -3913,6 +4057,14 @@
     "État d'esprit": "マインドセット",
     "Autres": "その他"
   },
+  "signInMethod": "サインイン方法",
+  "userId": "ユーザーID",
+  "lastLogin": "最終ログイン",
+  "auth": {
+    "emailPassword": "メールアドレス＋パスワード"
+  },
+  "participantsLabel": "参加者"
+,
 "challengeHelper": {
     "videos": "おすすめ動画",
     "noData": "このチャレンジのヘルプはまだ利用できません。",

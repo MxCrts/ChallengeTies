@@ -76,6 +76,16 @@ import {
   AdEventType,
 } from "react-native-google-mobile-ads";
 import { adUnitIds } from "@/constants/admob";
+import WelcomeBonusModal, {
+  WelcomeRewardKind,
+} from "../../components/WelcomeBonusModal";
+import {
+  computeWelcomeBonusState,
+  claimWelcomeBonus,
+  WelcomeBonusState,
+} from "../../src/services/welcomeBonusService";
+import { useToast } from "../../src/ui/Toast";
+
 
 const { width: SCREEN_WIDTH, height: SCREEN_HEIGHT } = Dimensions.get("window");
 const BLURHASH = "L5H2EC=PM+yV0g-mq.wG9c010J}I";
@@ -104,6 +114,9 @@ interface Challenge {
 
 // --- Daily picks helpers ---
 const DAILY_PICKS_KEY = "daily_picks_v1";
+// 🔑 Nouveau: versionner le cache pour éviter les vieux objets cassés
+const CHALLENGES_CACHE_KEY = "challenges_cache_v2";
+
 
 // ✅ Local day (midnight device) -> pour les 5 défis du jour
 const todayKeyLocal = () => {
@@ -146,13 +159,84 @@ function seededShuffle<T>(arr: T[], seedInt: number): T[] {
   return a;
 }
 
+function buildDailyPicksFromBase(
+  base: Challenge[],
+  cachedDailyRaw: string | null,
+  userId: string | undefined | null
+): Challenge[] {
+  if (!base.length) return [];
+
+  const today = todayKeyLocal();
+  const byId = new Map(base.map((c) => [c.id, c]));
+
+  let picks: Challenge[] = [];
+
+  // 1) Si on a un cache DAILY_PICKS pour aujourd'hui, on le respecte au max
+  if (cachedDailyRaw) {
+    try {
+      const parsed = JSON.parse(cachedDailyRaw);
+      if (parsed?.date === today && Array.isArray(parsed.ids)) {
+        picks = parsed.ids
+          .map((id: string) => byId.get(id))
+          .filter(Boolean) as Challenge[];
+      }
+    } catch {
+      // cache illisible → on ignore
+    }
+  }
+
+  // 2) Si moins de 5, on complète avec d'autres défis aléatoires
+  if (picks.length < 5) {
+    const alreadyIds = new Set(picks.map((p) => p.id));
+    const remaining = base.filter((c) => !alreadyIds.has(c.id));
+    if (remaining.length) {
+      const seed = hashStringToInt(
+        `${today}#${userId ?? "global"}#fallback`
+      );
+      const shuffledRest = seededShuffle(remaining, seed);
+      const needed = Math.max(0, 5 - picks.length);
+      picks = [...picks, ...shuffledRest.slice(0, needed)];
+    }
+  }
+
+  // 3) Si toujours vide (ou trop peu) → on shuffle tout
+  if (!picks.length) {
+    const seed = hashStringToInt(`${today}#${userId ?? "global"}`);
+    picks = seededShuffle(base, seed).slice(0, 5);
+  }
+
+  return picks;
+}
+
+// --- Welcome Login Bonus UI mirror (doit matcher welcomeBonusService) ---
+const WELCOME_REWARDS_UI: { type: WelcomeRewardKind; amount: number }[] = [
+  { type: "trophies", amount: 10 },   // Jour 1
+  { type: "trophies", amount: 15 },   // Jour 2
+  { type: "streakPass", amount: 1 },  // Jour 3
+  { type: "trophies", amount: 20 },   // Jour 4
+  { type: "streakPass", amount: 1 },  // Jour 5
+  { type: "trophies", amount: 25 },   // Jour 6
+  { type: "premium", amount: 7 },   // Jour 7 (jours de premium)
+];
+
+const WELCOME_TOTAL_DAYS = WELCOME_REWARDS_UI.length;
+
+
+
 export default function HomeScreen() {
   const { t, i18n } = useTranslation();
   const router = useRouter();
   const [loading, setLoading] = useState(false);
   const [user, setUser] = useState<User | null>(null);
   const [isMounted, setIsMounted] = useState(false);
-  const [userData, setUserData] = useState<any | null>(null);
+    const [userData, setUserData] = useState<any | null>(null);
+  const [welcomeState, setWelcomeState] = useState<WelcomeBonusState | null>(null);
+  const [welcomeVisible, setWelcomeVisible] = useState(false);
+  const [welcomeLoading, setWelcomeLoading] = useState(false);
+  const [pendingWelcomeAfterTutorial, setPendingWelcomeAfterTutorial] =
+  useState(false);
+  const [welcomeGuardDay, setWelcomeGuardDay] = useState<number | null>(null);
+
   const [dailyBonusVisible, setDailyBonusVisible] = useState(false);
   const [hasClaimedDailyBonus, setHasClaimedDailyBonus] = useState(false);
   const [dailyBonusLoading, setDailyBonusLoading] = useState(false);
@@ -172,6 +256,8 @@ export default function HomeScreen() {
   const [allChallenges, setAllChallenges] = useState<Challenge[]>([]);
   const [dailyFive, setDailyFive] = useState<Challenge[]>([]);
   const [showPioneerModal, setShowPioneerModal] = useState(false);
+  const [showPremiumEndModal, setShowPremiumEndModal] = useState(false);
+  const { show: showToast } = useToast();
 
   const {
     tutorialStep,
@@ -198,7 +284,12 @@ export default function HomeScreen() {
     [isScreenFocused, isTutorialActive, videoReady]
   );
 
-  const handleAdHeight = useCallback((h: number) => setAdHeight(h), []);
+  // 🧩 DIFF 1 — log quand BannerSlot remonte une hauteur
+const handleAdHeight = useCallback((h: number) => {
+  console.log("[ADS][HomeScreen] handleAdHeight called with:", h);
+  setAdHeight(h);
+}, []);
+
 
   const HERO_BASE_HEIGHT = normalize(405);
   const HERO_TOTAL_HEIGHT = HERO_BASE_HEIGHT + insets.top;
@@ -208,6 +299,8 @@ export default function HomeScreen() {
     tabBarHeight +
     insets.bottom +
     SPACING * 2;
+
+    const shouldShowBanner = showBanners && !isTutorialActive;
 
   const isDarkMode = theme === "dark";
   const currentTheme: Theme = isDarkMode
@@ -228,6 +321,35 @@ export default function HomeScreen() {
 
   const canRerollDailyBonus =
     !!userData && claimedTodayUTC && !hasRerolledTodayUTC;
+
+      const effectiveWelcomeReward =
+    welcomeState &&
+    !welcomeState.completed &&
+    welcomeState.currentDay >= 0 &&
+    welcomeState.currentDay < WELCOME_TOTAL_DAYS
+      ? WELCOME_REWARDS_UI[welcomeState.currentDay]
+      : null;
+
+      // 🧩 DIFF 2 — Logs de debug pubs sur HomeScreen
+useEffect(() => {
+  const adsReady = (globalThis as any).__ADS_READY__;
+  const canRequestAds = (globalThis as any).__CAN_REQUEST_ADS__;
+  const npa = (globalThis as any).__NPA__;
+
+  console.log(
+    "[ADS][HomeScreen] state =",
+    {
+      showBanners,
+      isTutorialActive,
+      adHeight,
+      adsReady,
+      canRequestAds,
+      npa,
+    }
+  );
+}, [showBanners, isTutorialActive, adHeight]);
+
+
 
   useEffect(() => {
     let ran = false;
@@ -288,6 +410,109 @@ export default function HomeScreen() {
       setDailyReward(null);
     }
   }, [userData?.dailyBonus?.lastClaimDate]);
+
+  useEffect(() => {
+  if (!userData) {
+    setWelcomeState(null);
+    setWelcomeVisible(false);
+    setPendingWelcomeAfterTutorial(false);
+    setWelcomeGuardDay(null); // reset propre quand pas de user
+    return;
+  }
+
+  try {
+    const state = computeWelcomeBonusState(userData);
+    setWelcomeState(state);
+
+    // Si tout est terminé → on ne force plus rien
+    if (!state.canClaimToday || state.completed) {
+      return;
+    }
+
+    // 🛡️ Garde : si on a déjà ouvert ce "currentDay", on ne ré-ouvre pas
+    if (welcomeGuardDay === state.currentDay) {
+      return;
+    }
+
+    if (isTutorialActive) {
+      setPendingWelcomeAfterTutorial(true);
+    } else {
+      setWelcomeVisible(true);
+    }
+
+    // On marque ce jour comme "déjà affiché"
+    setWelcomeGuardDay(state.currentDay);
+  } catch (e) {
+    console.warn("[HomeScreen] computeWelcomeBonusState error:", e);
+  }
+}, [userData, isTutorialActive, welcomeGuardDay]);
+
+
+    useEffect(() => {
+    if (
+      !isTutorialActive &&
+      pendingWelcomeAfterTutorial &&
+      welcomeState &&
+      welcomeState.canClaimToday &&
+      !welcomeState.completed
+    ) {
+      setWelcomeVisible(true);
+      setPendingWelcomeAfterTutorial(false);
+    }
+  }, [isTutorialActive, pendingWelcomeAfterTutorial, welcomeState]);
+
+
+    useEffect(() => {
+    if (!user || !userData) return;
+
+    // 1) On ne montre le modal que si le welcomeLoginBonus est terminé
+    const welcome = (userData as any).welcomeLoginBonus;
+    if (!welcome || welcome.completed !== true) return;
+
+    // 2) On regarde l'état premium
+    const premium = (userData as any).premium;
+    if (!premium || typeof premium !== "object") return;
+
+    // 3) Si l'utilisateur est premium "payant", on ne montre jamais ce modal
+    const isPayingPremium =
+      premium.isPremium === true ||
+      premium.premium === true ||
+      premium.isSubscribed === true ||
+      premium.isLifetime === true;
+
+    if (isPayingPremium) return;
+
+    // 4) On lit la date de fin du tempPremiumUntil (essai 7 jours)
+    const tempUntil = premium.tempPremiumUntil;
+    if (!tempUntil || typeof tempUntil !== "string") return;
+
+    const expiresMs = Date.parse(tempUntil);
+    if (Number.isNaN(expiresMs)) return;
+
+    const now = Date.now();
+    // Si encore actif → rien à faire
+    if (now <= expiresMs) return;
+
+    // 5) Clé de garde pour ne pas re-afficher indéfiniment
+    const key = `premiumEndModalShown_v1_${user.uid}`;
+
+    const checkAndShow = async () => {
+      try {
+        const last = await AsyncStorage.getItem(key);
+
+        // Si on a déjà montré le modal pour CETTE date d'expiration → on ne re-show pas
+        if (last === tempUntil) return;
+
+        setShowPremiumEndModal(true);
+        await AsyncStorage.setItem(key, tempUntil);
+      } catch {
+        // on ne casse pas l'UI si AsyncStorage plante
+      }
+    };
+
+    checkAndShow();
+  }, [user, userData]);
+
 
   useFocusEffect(
     useCallback(() => {
@@ -386,21 +611,61 @@ export default function HomeScreen() {
     });
   }, [dailyFive, allChallenges]);
 
-  const fetchChallenges = async () => {
-    setLoading(true);
+   const fetchChallenges = async () => {
+    let hydratedFromCache = false;
+
     try {
-      const cachedChallenges = await AsyncStorage.getItem("challenges_cache");
+      setLoading(true);
+
+      // 1) Lire cache challenges + DAILY_PICKS en parallèle
+      const [cachedChallenges, cachedDaily] = await Promise.all([
+        AsyncStorage.getItem(CHALLENGES_CACHE_KEY),
+        AsyncStorage.getItem(DAILY_PICKS_KEY),
+      ]);
+
       let base: Challenge[] = [];
+
       if (cachedChallenges) {
-        base = JSON.parse(cachedChallenges);
+  try {
+    const parsed = JSON.parse(cachedChallenges);
+
+    base = Array.isArray(parsed)
+      ? parsed.map((c: any) => ({
+          ...c,
+          // 💎 Fallback garanti pour les vieilles entrées sans image / image vide
+          imageUrl:
+            (typeof c.imageUrl === "string" && c.imageUrl.trim().length > 0)
+              ? c.imageUrl
+              : "https://via.placeholder.com/600x400?text=ChallengeTies",
+        }))
+      : [];
+  } catch {
+    base = [];
+  }
+}
+
+
+      // 2) Si on a déjà une base locale → on hydrate tout de suite l'écran
+      if (base.length) {
+        const picks = buildDailyPicksFromBase(
+          base,
+          cachedDaily,
+          user?.uid
+        );
+
         setAllChallenges(base);
+        setDailyFive(picks);
+        hydratedFromCache = true;
+        setLoading(false); // ✅ on arrête le spinner, même si le réseau travaille encore
       }
 
+      // 3) Requête Firestore pour rafraîchir les données (en arrière-plan si cache déjà affiché)
       const challengesQuery = query(
         collection(db, "challenges"),
         where("approved", "==", true)
       );
       const querySnapshot = await getDocs(challengesQuery);
+
       const fetched: Challenge[] = querySnapshot.docs.map((snap) => {
         const data = snap.data() as any;
         return {
@@ -414,7 +679,11 @@ export default function HomeScreen() {
           category: data?.category
             ? t(`categories.${data.category}`)
             : t("miscellaneous"),
-          imageUrl: data?.imageUrl || "https://via.placeholder.com/300",
+          imageUrl:
+  typeof data?.imageUrl === "string" && data.imageUrl.trim().length > 0
+    ? data.imageUrl
+    : "https://via.placeholder.com/600x400?text=ChallengeTies",
+
           day: data?.day,
           approved: data?.approved,
         };
@@ -428,48 +697,55 @@ export default function HomeScreen() {
         .slice()
         .sort((a, b) => (b.imageUrl ? 1 : 0) - (a.imageUrl ? 1 : 0));
       const shuffled = seededShuffle(sorted, seed);
+      const picksFresh = shuffled.slice(0, 5);
 
-      const picks = shuffled.slice(0, 5);
-
+      // 4) Mettre à jour l’état avec les données fraîches
       setAllChallenges(fetched);
-      setDailyFive(picks);
+      setDailyFive(picksFresh);
 
+      // 5) Mettre à jour les caches (base + DAILY_PICKS)
       Promise.allSettled([
-        AsyncStorage.setItem("challenges_cache", JSON.stringify(fetched)),
+        AsyncStorage.setItem(CHALLENGES_CACHE_KEY, JSON.stringify(fetched)),
         AsyncStorage.setItem(
           DAILY_PICKS_KEY,
-          JSON.stringify({ date: key, ids: picks.map((p) => p.id) })
+          JSON.stringify({
+            date: key,
+            ids: picksFresh.map((p) => p.id),
+          })
         ),
       ]).catch(() => {});
     } catch (error) {
-      const cachedChallenges = await AsyncStorage.getItem("challenges_cache");
-      const cachedDaily = await AsyncStorage.getItem(DAILY_PICKS_KEY);
-      if (cachedChallenges) {
-        const base: Challenge[] = JSON.parse(cachedChallenges);
-        setAllChallenges(base);
-        if (cachedDaily) {
-          const parsed = JSON.parse(cachedDaily);
-          if (parsed?.date === todayKeyLocal() && Array.isArray(parsed.ids)) {
-            const picks = parsed.ids
-              .map((id: string) => base.find((c) => c.id === id))
-              .filter(Boolean) as Challenge[];
-            setDailyFive(picks.slice(0, 5));
-          } else {
-            const seed = hashStringToInt(
-              `${todayKeyLocal()}#${user?.uid ?? "global"}`
+      console.warn("[HomeScreen] fetchChallenges error:", (error as any)?.message ?? error);
+
+      // 6) Si le cache n'a PAS pu hydrater l’UI, on tente un fallback propre
+      if (!hydratedFromCache) {
+        try {
+          const cachedChallenges = await AsyncStorage.getItem(CHALLENGES_CACHE_KEY);
+          const cachedDaily = await AsyncStorage.getItem(DAILY_PICKS_KEY);
+
+          if (cachedChallenges) {
+            const base: Challenge[] = JSON.parse(cachedChallenges);
+            const picks = buildDailyPicksFromBase(
+              base,
+              cachedDaily,
+              user?.uid
             );
-            const shuffled = seededShuffle(base, seed);
-            setDailyFive(shuffled.slice(0, 5));
+            setAllChallenges(base);
+            setDailyFive(picks);
+          } else {
+            setAllChallenges([]);
+            setDailyFive([]);
           }
+        } catch {
+          setAllChallenges([]);
+          setDailyFive([]);
         }
-      } else {
-        setAllChallenges([]);
-        setDailyFive([]);
       }
     } finally {
       setLoading(false);
     }
   };
+
 
   useEffect(() => {
     let cancelled = false;
@@ -560,6 +836,65 @@ export default function HomeScreen() {
       setDailyBonusLoading(false);
     }
   };
+
+  const handleClaimWelcomeBonus = async () => {
+  if (!user || welcomeLoading || !welcomeState) return;
+
+  const isPremiumDay =
+    !welcomeState.completed &&
+    welcomeState.currentDay >= 0 &&
+    welcomeState.currentDay < WELCOME_TOTAL_DAYS &&
+    WELCOME_REWARDS_UI[welcomeState.currentDay].type === "premium";
+
+  try {
+    setWelcomeLoading(true);
+    try {
+      await Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
+    } catch {}
+
+    const { state } = await claimWelcomeBonus(user.uid);
+
+    // 🔁 mise à jour locale
+    setWelcomeState(state);
+    setWelcomeVisible(false);
+    // 🛡️ On marque ce jour comme déjà traité, pour être sûr
+    setWelcomeGuardDay(state.currentDay);
+
+    // Refresh userData Firestore...
+    const userRef = doc(db, "users", user.uid);
+    const snap = await getDoc(userRef);
+    if (snap.exists()) {
+      setUserData(snap.data());
+    }
+
+    // ... puis ton toast premium si besoin
+    if (isPremiumDay) {
+      const title = t(
+        "premiumTrialActivated.title",
+        "Premium ChallengeTies activé ✨"
+      );
+      const message = t(
+        "premiumTrialActivated.message",
+        "Tu viens de débloquer 7 jours de ChallengeTies Premium : aucune publicité et toute l'expérience en illimité. Profite à fond de ta lancée !"
+      );
+      showToast(`${title}\n${message}`, "success", { durationMs: 3500 });
+    }
+  } catch (e: any) {
+    console.error("WelcomeBonus error", e);
+    Alert.alert(
+      t("common.error", "Oups"),
+      e?.message ||
+        t(
+          "welcomeBonus.error",
+          "Impossible de récupérer le bonus de bienvenue pour le moment."
+        )
+    );
+  } finally {
+    setWelcomeLoading(false);
+  }
+};
+
+
 
   const handleRerollDailyBonus = async (): Promise<DailyRewardResult | null> => {
     if (!userData || rerollLoading || !canRerollDailyBonus) return null;
@@ -665,6 +1000,8 @@ export default function HomeScreen() {
   };
 
   return (
+
+    
     <SafeAreaView style={{ flex: 1 }} edges={["bottom"]}>
       <StatusBar
         barStyle={isDarkMode ? "light-content" : "dark-content"}
@@ -692,7 +1029,6 @@ export default function HomeScreen() {
           contentInset={{ top: 0, bottom: SPACING }}
           keyboardShouldPersistTaps="handled"
           keyboardDismissMode="on-drag"
-          removeClippedSubviews
           scrollEventThrottle={16}
         >
           {/* SECTION HERO */}
@@ -992,7 +1328,7 @@ export default function HomeScreen() {
                   },
                 ]}
               >
-                {t("dailyChallengesSubtitle", {
+                {t("dailySelectedSubtitle", {
                   defaultValue:
                     "5 défis sélectionnés pour toi, renouvelés chaque jour.",
                 })}
@@ -1031,17 +1367,18 @@ export default function HomeScreen() {
                     }}
                   >
                     <Image
-                      source={{ uri: dailyFive[0].imageUrl }}
-                      style={stylesDaily.heroImage}
-                      contentFit="cover"
-                      transition={180}
-                      cachePolicy="memory-disk"
-                      priority="high"
-                      recyclingKey={dailyFive[0].id}
-                      placeholder={BLURHASH}
-                      placeholderContentFit="cover"
-                      allowDownscaling
-                    />
+  source={{ uri: dailyFive[0].imageUrl }}
+  style={stylesDaily.heroImage}
+  contentFit="cover"
+  transition={180}
+  cachePolicy="memory-disk"
+  priority="high"
+  placeholder={BLURHASH}
+  placeholderContentFit="cover"
+  allowDownscaling
+/>
+
+
                     <LinearGradient
                       colors={["rgba(0,0,0,0.15)", "rgba(0,0,0,0.85)"]}
                       style={stylesDaily.heroOverlay}
@@ -1102,18 +1439,19 @@ export default function HomeScreen() {
                           );
                         }}
                       >
-                        <Image
-                          source={{ uri: item.imageUrl }}
-                          style={stylesDaily.miniImage}
-                          contentFit="cover"
-                          transition={140}
-                          cachePolicy="memory-disk"
-                          priority="high"
-                          recyclingKey={item.id}
-                          placeholder={BLURHASH}
-                          placeholderContentFit="cover"
-                          allowDownscaling
-                        />
+                       <Image
+  source={{ uri: item.imageUrl }}
+  style={stylesDaily.miniImage}
+  contentFit="cover"
+  transition={140}
+  cachePolicy="memory-disk"
+  priority="high"
+  placeholder={BLURHASH}
+  placeholderContentFit="cover"
+  allowDownscaling
+/>
+
+
                         <LinearGradient
                           colors={[
                             "rgba(0,0,0,0.05)",
@@ -1330,7 +1668,8 @@ export default function HomeScreen() {
           </View>
         </ScrollView>
 
-        {showBanners && !isTutorialActive && adHeight > 0 && (
+                {/* Hairline au-dessus de la bannière */}
+        {shouldShowBanner && adHeight > 0 && (
           <View
             pointerEvents="none"
             style={{
@@ -1346,23 +1685,32 @@ export default function HomeScreen() {
             }}
           />
         )}
-        {showBanners && !isTutorialActive && (
-          <View
-            style={{
-              position: "absolute",
-              left: 0,
-              right: 0,
-              bottom: tabBarHeight + insets.bottom,
-              alignItems: "center",
-              zIndex: 9999,
-              backgroundColor: "transparent",
-              paddingBottom: 6,
-            }}
-            pointerEvents="box-none"
-          >
-            <BannerSlot onHeight={handleAdHeight} docked />
-          </View>
+
+        {/* Bannière dockée au-dessus de la TabBar */}
+        {shouldShowBanner && (
+          <>
+            {console.log(
+              "[ADS][HomeScreen] Rendering BannerSlot with adHeight:",
+              adHeight
+            )}
+            <View
+              style={{
+                position: "absolute",
+                left: 0,
+                right: 0,
+                bottom: tabBarHeight + insets.bottom,
+                alignItems: "center",
+                zIndex: 9999,
+                backgroundColor: "transparent",
+                paddingBottom: 6,
+              }}
+              pointerEvents="box-none"
+            >
+              <BannerSlot onHeight={handleAdHeight} docked />
+            </View>
+          </>
         )}
+
 
         {isTutorialActive && (
           <>
@@ -1386,6 +1734,19 @@ export default function HomeScreen() {
           </>
         )}
 
+         {effectiveWelcomeReward && welcomeState && (
+          <WelcomeBonusModal
+            visible={welcomeVisible}
+            onClose={() => setWelcomeVisible(false)}
+            onClaim={handleClaimWelcomeBonus}
+            currentDay={welcomeState.currentDay}
+            totalDays={WELCOME_TOTAL_DAYS}
+            rewardType={effectiveWelcomeReward.type}
+            rewardAmount={effectiveWelcomeReward.amount}
+            loading={welcomeLoading}
+          />
+        )}
+
         <DailyBonusModal
           visible={dailyBonusVisible}
           onClose={handleCloseDailyModal}
@@ -1401,7 +1762,7 @@ export default function HomeScreen() {
 
         <RequireAuthModal visible={modalVisible} onClose={closeGate} />
 
-        <Modal
+                <Modal
           visible={showPioneerModal}
           transparent
           animationType="fade"
@@ -1446,6 +1807,86 @@ export default function HomeScreen() {
             </View>
           </View>
         </Modal>
+
+        {/* 💎 Modal fin de Premium ChallengeTies */}
+        <Modal
+          visible={showPremiumEndModal}
+          transparent
+          animationType="fade"
+          onRequestClose={() => setShowPremiumEndModal(false)}
+        >
+          <View style={staticStyles.blurView}>
+            <View style={staticStyles.modalContainer}>
+              <Ionicons
+                name="diamond-outline"
+                size={normalize(36)}
+                color="#6366F1"
+              />
+
+              <Text
+                style={staticStyles.modalTitle}
+                numberOfLines={2}
+                adjustsFontSizeToFit
+              >
+                {t("premiumEndModal.title", "Fin de ton Premium ChallengeTies")}
+              </Text>
+
+              <Text style={staticStyles.modalDescription}>
+                {t(
+                  "premiumEndModal.description",
+                  "Ton accès Premium de 7 jours est terminé. Si ChallengeTies t'aide à garder le cap, rejoins le mouvement et soutiens le projet pour débloquer à nouveau l'expérience sans publicité."
+                )}
+              </Text>
+
+              <View style={staticStyles.buttonContainer}>
+                <TouchableOpacity
+                  onPress={() => setShowPremiumEndModal(false)}
+                  style={[
+                    staticStyles.actionButton,
+                    { backgroundColor: "#E5E7EB" },
+                  ]}
+                  accessibilityLabel={t(
+                    "premiumEndModal.closeA11y",
+                    "Fermer la fenêtre"
+                  )}
+                >
+                  <Text
+                    style={[
+                      staticStyles.actionButtonText,
+                      { color: "#111827" },
+                    ]}
+                  >
+                    {t("premiumEndModal.closeCta", "Continuer gratuitement")}
+                  </Text>
+                </TouchableOpacity>
+
+                <TouchableOpacity
+                  onPress={() => {
+                    setShowPremiumEndModal(false);
+                    // 🔁 À ajuster quand tu auras un vrai écran Premium
+                    safeNavigate("/settings", "premium-end-modal");
+                  }}
+                  style={[
+                    staticStyles.actionButton,
+                    { marginLeft: normalize(10) },
+                  ]}
+                  accessibilityLabel={t(
+                    "premiumEndModal.joinA11y",
+                    "Rejoindre le mouvement Premium"
+                  )}
+                >
+                  <Text style={staticStyles.actionButtonText}>
+                    {t(
+                      "premiumEndModal.joinCta",
+                      "Rejoindre le mouvement Premium"
+                    )}
+                  </Text>
+                </TouchableOpacity>
+              </View>
+            </View>
+          </View>
+        </Modal>
+
       </LinearGradient>
     </SafeAreaView>
   );

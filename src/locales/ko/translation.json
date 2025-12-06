@@ -650,16 +650,32 @@
     "outcome": "투표 기간이 끝나면 가장 많은 득표를 얻은 기능이 구현됩니다.",
     "understood": "확인"
   },
+"trophyModal": {
+  "congrats": "축하합니다! 🎉",
+  "reward": "+{{count}} 트로피",
+  "message": "{{message}}",
+  "claim": "받기",
+  "doubleReward": "트로피 두 배로",
+  "doubleMessage": "🔥 {{count}}개의 트로피를 획득했습니다!",
+  "claimMessage": "🎉 {{count}}개의 트로피를 획득했습니다!",
 
-  "trophyModal": {
-    "congrats": "축하합니다! 🎉",
-    "reward": "+{{count}} 트로피",
-    "message": "{{message}}",
-    "claim": "받기",
-    "doubleReward": "트로피 2배 받기",
-    "doubleMessage": "🔥 {{count}} 트로피를 획득했습니다!",
-    "claimMessage": "🎉 {{count}} 트로피 획득!"
-  },
+  "title": "트로피 잠금 해제!",
+  "subtitle": "새로운 성취를 달성했습니다.",
+  "defaultName": "미스터리 업적",
+  "defaultDescription": "계속하세요 — 모든 트로피는 당신의 꾸준함을 증명합니다.",
+
+  "ribbon": "보상 잠금 해제",
+
+  "trophiesTitle": "획득한 트로피",
+  "trophiesHint": "ChallengeTies 총합에 추가되었습니다.",
+
+  "cta": "받기",
+  "ctaLoading": "로딩 중…",
+  "secondaryCta": "나중에",
+
+  "doubleBadge": "x2 활성화"
+}
+,
   "achievements": {
     "first_connection": "첫 로그인",
 
@@ -829,6 +845,9 @@
     "close": "닫기",
     "prevMonth": "이전 달",
     "nextMonth": "다음 달",
+    "completed": "완료됨",
+"pending": "해야 할 일"
+,
     "title": "{{month}} {{year}}",
 
     "weekdays": ["일", "월", "화", "수", "목", "금", "토"],
@@ -893,7 +912,11 @@
     "introductionText": "ChallengeTies는 귀하의 프라이버시 보호를 최우선으로 합니다. 이 정책은 GDPR에 따라 귀하의 개인 데이터를 어떻게 수집, 사용, 보호 및 공유하는지 설명합니다.",
     "dataCollectedTitle": "수집하는 데이터",
     "dataCollectedText": "맞춤형 경험을 제공하기 위해 다음과 같은 데이터를 수집할 수 있습니다:",
-    "dataCollectedItems": {
+    "screenA11yLabel": "ChallengeTies 개인정보 처리방침 화면",
+  "logoAlt": "ChallengeTies 로고",
+  "dataCollectedItems": {
+    "deviceInfo": "기기 기술 정보(모델, OS, 언어, 대략적인 국가)",
+    "usageAnalytics": "사용 이벤트(방문한 화면, 앱 내 동작, 성능)",
       "nameEmail": "이름 및 이메일 주소",
       "profilePhoto": "프로필 사진",
       "progress": "챌린지 진행 상황 및 달성 기록",
@@ -906,6 +929,7 @@
       "personalize": "개인화된 경험 제공",
       "analyze": "진행 상황 분석",
       "notify": "유용한 알림 제공",
+          "adsAndMonetization": "광고를 표시하고 성능을 측정하며 광고 사기를 방지하기 위해 사용",
       "improve": "서비스 개선"
     },
     "dataSharingTitle": "데이터 공유",
@@ -977,7 +1001,7 @@
   },
   "durationModal": {
     "title": "기간 선택",
-    "days": "{{count}}일",
+    "days": "{{count}} 일",
     "days_plural": "{{count}}일",
     "confirm": "확인",
     "cancel": "취소",
@@ -1009,9 +1033,18 @@
   "inviteFriends": "친구 초대",
   
   "referral": {
+    "invited": {
+  "title": "초대 감지됨 🎁",
+  "body": "사용자로부터 초대를 받았습니다. 보상은 가입 후 자동으로 활성화됩니다.",
+  "linkedTitle": "추천 활성화됨 ✅",
+  "linkedBody": "추천이 연결되었습니다. ChallengeTies에 가입해 주셔서 감사합니다!",
+  "by": "추천인:"
+},
     "menu": "공유하고 보상받기",
     "history": {
       "title": "내 추천 기록",
+      "activatedOnLabel": "활성화 날짜",
+    "invitedOnLabel": "초대한 날짜",
       "subtitle": "총 {{total}}명 • {{activated}}명 활성화됨",
       "loading": "추천 내역을 불러오는 중…",
         "emptyTitle": "아직 초대한 친구가 없어요",
@@ -1040,9 +1073,11 @@
     },
     "share": {
       "title": "Share & Earn",
+      "activatedReferrals": "활성화된 추천인",
       "subtitle": "친구를 초대하세요. 친구가 첫 번째 챌린지를 시작하면 당신이 트로피를 획득합니다. 단계별 보상을 달성해 보너스를 잠금 해제하세요 💎",
       "linksTitle": "내 링크",
       "linkApp": "앱 링크",
+          "howTo": "공유 버튼이나 Share Card를 보내서 친구를 초대하세요. 활성화된 추천 한 명마다 보상이 지급됩니다.",
       "linkWeb": "웹 링크",
       "auth": {
           "title": "로그인이 필요합니다",
@@ -1079,11 +1114,17 @@
       }
     },
     "notif": {
-    "milestoneUnlocked": {
-      "title": "마일스톤 달성 🎉",
-      "body": "지금 +{{bonus}} 트로피를 받을 수 있어요!"
-    }
+  "milestoneUnlocked": {
+    "title": "마일스톤 달성 🎉",
+    "body": "축하합니다! 추천으로 +{{bonus}}개의 트로피를 획득했어요. Share & Earn을 열어 보상을 받아가세요."
   },
+  "newChild": {
+    "title": "🎉 새로운 추천 유저",
+    "body": "축하합니다! 당신의 추천 유저 중 한 명이 방금 활성화되어 +{{bonus}}개의 트로피를 받았어요!",
+    "toast": "새로운 추천 유저 (+{{bonus}}개 트로피) 🎉"
+  }
+}
+,
     "share1": {
       "title": "초대 — {{appName}}",
       "inviteMessage": "{{appName}}에서 함께 챌린지하자 👇\n{{webLink}}\n(또는 앱에서 열기: {{appLink}})",
@@ -1166,6 +1207,10 @@
       "titleTooShort": "제목이 너무 짧습니다 (6자 이상).",
       "descTooShort": "설명이 너무 짧습니다 (20자 이상).",
       "titleInvalidChars": "제목에는 문자(알파벳 또는 한글)가 포함되어야 합니다."
+    },
+    "hint": {
+      "titleHelper": "명확한 제목 (≥ {{min}}자).",
+      "descHelper": "구체적으로 설명하세요 (≥ {{min}}자)."
     }
   },
 
@@ -1176,7 +1221,8 @@
     "hintBoostStart": "팁: 명확한 숫자 목표와 기간을 지정하면 좋아요.",
     "hintBoostMid": "거의 다 왔어요: 매일 실천할 행동을 추가해 보세요.",
     "scoreLabel": "챌린지 품질",
-    "hintGreat": "완벽해요! 당신의 챌린지는 명확하고 동기부여됩니다 ✨"
+    "hintGreat": "완벽해요! 당신의 챌린지는 명확하고 동기부여됩니다 ✨",
+    "fillRequired": "제목, 설명(≥ 20자), 카테고리 및 이미지를 입력하여 100%를 달성하세요."
   },
 
   "a11y": {
@@ -1192,6 +1238,10 @@
     "errorFetch": "순위를 불러올 수 없습니다",
     "shareDialogTitle": "내 RankCard 공유",
     "shareHint": "내 순위 카드를 공유하기",
+    "shareCard": {
+  "kicker": "내 순위",
+  "body": "이번 주 ChallengeTies에서 나는 #{{rank}}위야. 같이 도전해서 랭킹을 올려보자 💥"
+},
     "retry": "다시 시도",
     "description": "최고 플레이어와 당신의 순위를 실시간으로 확인하세요.",
     "notEnough": "상위 3명을 표시하기에 플레이어 수가 부족합니다.",
@@ -1280,7 +1330,7 @@
     "description": "매일 체크인하는 습관을 유지하세요. 트로피와 업적이 점점 열립니다!",
     "nextButtonLabel": "다음으로"
   },
-
+"dailySelectedSubtitle": "오늘 당신을 위해 엄선된 5개의 챌린지.",
   "screen3": {
     "title": "나만의 챌린지 만들기",
     "description": "일상에 맞게 챌린지를 맞춤 설정하세요. 개인 목표로 동기부여를 높여보세요.",
@@ -1295,6 +1345,7 @@
 "challengeChat": {
   "longPressReply": "이 메시지에 답장하기",
   "replyingTo": "답장 대상",
+  "placeholder": "메시지를 입력하세요…",
   "sendA11yLabel": "메시지 보내기",
   "slowmodeHint": "새 메시지를 보내기 전에 잠시만 기다려 주세요.",
   "slowmodeCountdown": "다음 메시지를 보내기까지 {{s}}초 더 기다려 주세요"
@@ -1389,21 +1440,67 @@
   "inProgress": "진행 중",
   "mysteryAchievement": "미스터리 업적.",
   "newAchievement": "새로운 업적!",
+"sections": {
+  "débuts": "시작",
+  "defisTermines": "완료한 챌린지",
+  "engagement": "몰입과 약속",
+  "serieDeFeu": "연속 기록",
+  "communication": "소통",
+  "partage": "공유",
+  "reseau": "네트워크",
+  "influence": "영향력",
+  "collection": "컬렉션",
+  "creation": "창작",
+  "duo": "듀오",
+  "constance": "지속성",
+  "focus": "집중",
+  "maitrise": "숙련",
+  "discipline": "규율",
+  "events": "이벤트",
+  "divers": "기타"
+},
+"welcomeBonus": {
+  "title": "로그인 보너스",
+  "subtitle": "{{total}}일 중 {{day}}일째 • 계속해서 나아가세요!",
+  "ribbon": "ChallengeTies 웰컴 패키지",
 
-  "sections": {
-    "débuts": "시작",
-    "defisTermines": "완료한 챌린지",
-    "engagement": "참여",
-    "serieDeFeu": "연속 성공",
-    "communication": "소통",
-    "partage": "공유",
-    "reseau": "네트워크",
-    "influence": "영향력",
-    "collection": "수집",
-    "creation": "창작",
-    "divers": "기타"
+  "todayRewardTitle": "오늘의 보상",
+
+  "reward": {
+    "trophies": "보너스 트로피 {{count}}개",
+    "streakPass": "연속 기록을 보호하는 Streak Pass {{count}}개",
+    "premium": "ChallengeTies 프리미엄 {{count}}일"
   },
 
+  "premiumHint": "이 기간 동안 광고 없이 ChallengeTies를 무제한 이용할 수 있습니다.",
+
+  "dayBadge": "{{day}}일째",
+  "dayLabel": "{{day}}일째",
+
+  "claimed": "획득함",
+  "today": "오늘",
+
+  "bottomHint": "매일 로그인하여 모든 보상을 해제하세요.",
+
+  "cta": "보상 받기",
+  "ctaLoading": "잠시만요…",
+
+  "error": "현재 웰컴 보너스를 받을 수 없습니다."
+}
+
+,
+"premiumTrialActivated": {
+    "title": "ChallengeTies 프리미엄이 활성화되었어요 ✨",
+    "message": "지금 막 7일 동안 사용할 수 있는 ChallengeTies 프리미엄을 열었어요. 광고 없이, 모든 기능을 제한 없이 즐겨 보세요. 이 흐름을 최대한 활용해요!"
+  },
+  "premiumEndModal": {
+    "title": "ChallengeTies 프리미엄이 종료되었어요",
+    "description": "7일간의 프리미엄 이용 기간이 끝났어요. ChallengeTies가 당신이 꾸준히 나아가는 데 도움이 된다면, 이 무브먼트에 함께하고 프로젝트를 응원해서 다시 광고 없는 경험을 열어 보세요.",
+    "closeA11y": "창 닫기",
+    "closeCta": "무료로 계속하기",
+    "joinA11y": "프리미엄 무브먼트에 참여하기",
+    "joinCta": "프리미엄 무브먼트에 참여하기"
+  },
   "dailyBonus": {
     "title": "오늘의 보너스",
     "subtitle": "미스터리 룰렛을 돌려 보상을 확인하세요 🎁",
@@ -1948,8 +2045,48 @@
   "unableToMarkWithTrophies": "트로피로 체크할 수 없습니다.",
   "errorLoadingSavedChallenges": "저장된 도전을 불러올 수 없습니다: {{message}}",
   "rateUs": "앱 평가하기",
+  "shareCardT": {
+  "a11yTitle": "챌린지 공유 카드",
+  "a11yHint": "카드를 친구에게 공유하기 전에 미리보기하세요.",
+
+  "tagline": "챌린지가 있다면? 끝내라.",
+
+  "duoBadge": "듀오 챌린지",
+  "soloBadge": "솔로 포커스",
+
+  "completedLabel": "이 챌린지를 완료했습니다",
+  "daysLabel": "{{days}}일의 집중",
+
+  "leading": "당신이 앞서가고 있어요!",
+  "milestoneVariants": [
+  "{{days}}일 동안 이어왔다… 이제부터가 진짜 시작이다.",
+  "하루하루 우리는 멈출 수 없는 존재가 된다. 벌써 {{days}}일.",
+  "꾸준함이 우리를 변화시킨다. {{days}}일 달성.",
+  "{{days}}일의 규율. 나머지는 자연스럽게 따라온다.",
+  "하루하루가 중요하다. {{days}}일, 그리고 계속된다."
+]
+,
+  "behind": "따라잡으세요!",
+  "milestoneMessage": "{{days}}일 동안 버텨 왔어… 이제부터가 진짜 시작이야.",
+  "tie": "완벽한 동률",
+
+  "me": "나",
+  "partner": "파트너",
+
+  "footerLine1": "ChallengeTies에 함께하세요",
+  "footerLine2": "챌린지, 집중, 그리고 매일의 승리."
+},
 
   "notificationsPush": {
+    "inviteAccepted": {
+  "title": "초대가 수락되었습니다 🎉",
+  "body": "{{username}} 님이 당신의 챌린지 \"{{title}}\"을(를) 수락했습니다!"
+},
+"inviteRefused": {
+  "title": "초대가 거절되었습니다 ❌",
+  "body": "{{username}} 님이 당신의 챌린지 \"{{title}}\"을(를) 거절했습니다."
+}
+,
     "title": "ChallengeTies",
     "morning1": "하루를 잘 시작할 수 있는 작은 도전 어때요?",
     "morning2": "9시! 오늘의 도전을 선택해보세요.",
@@ -3855,38 +3992,41 @@
   "acceptRulesCheckbox": "채팅 규칙에 동의합니다",
 
   "tutorial": {
+    "progress": "단계",
+    "progressA11y": "{{total}}단계 중 {{current}}단계",
+    "welcomeTagline": "당신의 여정이 여기서 시작됩니다.",
     "steps": {
       "welcome": {
         "title": "ChallengeTies에 오신 것을 환영합니다 ✨",
-        "description": "30초 만에 앱의 핵심 기능을 빠르게 소개합니다."
+        "description": "몇 가지 짧은 단계만으로 핵심 기능을 소개해 드립니다. 30초 안에 앱 사용법을 익힐 수 있어요."
       },
       "explore": {
-        "title": "챌린지 탐색",
-        "description": "카테고리별 80개 이상의 챌린지를 발견하세요. 당신을 동기부여하는 것을 선택하고 바로 시작하세요."
+        "title": "챌린지 둘러보기",
+        "description": "카테고리별로 정리된 수많은 챌린지를 탐색하세요. 가장 동기부여가 되는 챌린지를 골라 첫 번째 도전을 시작해 보세요."
       },
       "create": {
         "title": "나만의 챌린지 만들기",
-        "description": "기간, 목표, 진행도를 자유롭게 설정하세요. 당신의 규율을 직접 설계하세요."
+        "description": "기간, 목표, 진행 상황 등을 자유롭게 설정하세요. 스스로의 규율을 설계하는 아키텍트가 되어 보세요."
       },
       "focus": {
         "title": "포커스 모드",
-        "description": "집중을 돕는 몰입형 타이머. 시간, 세션, 꾸준함을 추적하세요."
+        "description": "집중을 도와주는 몰입형 타이머입니다. 시간, 세션, 그리고 꾸준함까지 한눈에 확인하세요."
       },
       "duo": {
         "title": "듀오 챌린지",
-        "description": "친구를 초대해 함께 성장하세요. 실시간 동기화와 푸시 알림 제공."
+        "description": "친구를 초대해서 함께 도전하세요. 알림과 동기화된 진행 상황으로 서로에게 큰 동기부여가 됩니다."
       },
       "profile": {
         "title": "프로필 & 진행 상황",
-        "description": "현재 챌린지, 저장한 챌린지, 업적, 통계, 설정을 모두 확인하세요."
+        "description": "진행 중 및 저장된 챌린지, 업적, 자세한 통계와 모든 설정을 한 곳에서 확인할 수 있습니다."
       },
       "vote": {
         "title": "새 기능 투표",
-        "description": "앱의 미래를 직접 결정하세요. 원하는 기능에 투표하세요."
+        "description": "앱의 미래에 직접 참여할 수 있어요. 가장 먼저 보고 싶은 기능에 투표해 주세요."
       }
     },
     "buttons": {
-      "start": "시작",
+      "start": "시작하기",
       "next": "다음",
       "skip": "건너뛰기",
       "finish": "완료"
@@ -3915,6 +4055,14 @@
     "État d'esprit": "마인드셋",
     "Autres": "기타"
   },
+  "signInMethod": "로그인 방법",
+  "userId": "사용자 ID",
+  "lastLogin": "마지막 로그인",
+  "auth": {
+    "emailPassword": "이메일 + 비밀번호"
+  },
+  "participantsLabel": "참가자"
+,
 
   "challengeHelper": {
     "videos": "추천 동영상",

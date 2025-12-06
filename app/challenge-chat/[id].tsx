@@ -554,24 +554,26 @@ export default function ChallengeChat() {
     }
 
     try {
-      const decorated = replyTo
-        ? `↩️ @${replyTo.username}: “${excerpt(
-            replyTo.text
-          )}”\n${content}`
-        : content;
+  tap(); // petit feedback sur l’envoi
 
-      // Passage du flag isDuo pour tes métriques / succès
-      await sendMessage(challengeId as string, decorated, { isDuo: isDuoChat });
+  const decorated = replyTo
+    ? `↩️ @${replyTo.username}: “${excerpt(
+        replyTo.text
+      )}”\n${content}`
+    : content;
 
-      lastSentRef.current = now;
-      setCooldownLeft(SLOWMODE_MS);
-      setReplyTo(null);
-      setNewMessage("");
+  await sendMessage(challengeId as string, decorated, { isDuo: isDuoChat });
 
-      requestAnimationFrame(() => {
-        flatListRef.current?.scrollToEnd({ animated: true });
-      });
-    } catch (error) {
+  lastSentRef.current = now;
+  setCooldownLeft(SLOWMODE_MS);
+  setReplyTo(null);
+  setNewMessage("");
+
+  requestAnimationFrame(() => {
+    flatListRef.current?.scrollToEnd({ animated: true });
+  });
+} catch (error) {
+
       console.error("Error sending message:", error);
       warning();
       showToast(
@@ -654,6 +656,15 @@ export default function ChallengeChat() {
 
   const cooldownSeconds = Math.ceil(cooldownLeft / 1000);
 
+    const rawPlaceholder = t("challengeChat.placeholder", { defaultValue: "" });
+  const inputPlaceholder =
+    !rawPlaceholder || rawPlaceholder === "challengeChat.placeholder"
+      ? t("challengeChat.placeholderFallback", {
+          defaultValue: "Écris ton message…",
+        })
+      : rawPlaceholder;
+
+
   return (
     <View style={{ flex: 1 }}>
       <SafeAreaView style={[styles.container, dynamicStyles.container]}>
@@ -696,18 +707,27 @@ export default function ChallengeChat() {
           ]}
         >
           <TouchableOpacity
-            onPress={() => (navigation as any).goBack()}
-            style={styles.backButton}
-            accessibilityLabel={t("challengeChat.backButton")}
-            testID="back-button"
-            activeOpacity={0.7}
-          >
-            <Ionicons
-              name="chevron-back"
-              size={normalizeSize(22)}
-              color={backIconColor}
-            />
-          </TouchableOpacity>
+  onPress={() => {
+    // petit feedback premium
+    Haptics.selectionAsync().catch(() => {});
+    // ferme le clavier + nettoie le reply
+    Keyboard.dismiss();
+    setReplyTo(null);
+    // retour écran précédent
+    (navigation as any).goBack();
+  }}
+  style={styles.backButton}
+  accessibilityLabel={t("challengeChat.backButton")}
+  testID="back-button"
+  activeOpacity={0.7}
+>
+  <Ionicons
+    name="chevron-back"
+    size={normalizeSize(22)}
+    color={backIconColor}
+  />
+</TouchableOpacity>
+
           <Text style={[styles.headerTitle, dynamicStyles.headerTitle]}>
             {challengeTitle || t("challengeChat.defaultTitle")}
             {isDuoChat ? " · Duo" : ""}
@@ -716,37 +736,39 @@ export default function ChallengeChat() {
         </LinearGradient>
 
         <KeyboardAvoidingView
-          style={styles.chatContainer}
-          behavior={Platform.OS === "ios" ? "padding" : "height"}
-          keyboardVerticalOffset={insets.top + normalizeSize(56)}
-        >
+  style={styles.chatContainer}
+  behavior={Platform.OS === "ios" ? "padding" : undefined}
+  keyboardVerticalOffset={
+    Platform.OS === "ios" ? insets.top + normalizeSize(56) : 0
+  }
+>
+
           <FlatList
-            ref={flatListRef}
-            data={finalMessages}
-            renderItem={renderMessage}
-            keyExtractor={keyExtractor}
-            contentContainerStyle={[
-              styles.messageList,
-              dynamicStyles.messageList,
-              {
-                paddingBottom: composerHeight + SPACING + composerBottomSpace,
-              },
-            ]}
-            initialNumToRender={12}
-            maxToRenderPerBatch={12}
-            updateCellsBatchingPeriod={50}
-            windowSize={7}
-            onLayout={handleListLayout}
-            onContentSizeChange={() =>
-              flatListRef.current?.scrollToEnd({ animated: true })
-            }
-            showsVerticalScrollIndicator={false}
-            removeClippedSubviews
-            keyboardShouldPersistTaps="handled"
-            keyboardDismissMode={
-              Platform.OS === "ios" ? "interactive" : "on-drag"
-            }
-          />
+  ref={flatListRef}
+  data={finalMessages}
+  renderItem={renderMessage}
+  keyExtractor={keyExtractor}
+  contentContainerStyle={[
+    styles.messageList,
+    dynamicStyles.messageList,
+    {
+      paddingBottom: composerHeight + SPACING + composerBottomSpace,
+    },
+  ]}
+  initialNumToRender={12}
+  maxToRenderPerBatch={12}
+  updateCellsBatchingPeriod={50}
+  windowSize={7}
+  onLayout={handleListLayout}
+  showsVerticalScrollIndicator={false}
+  removeClippedSubviews
+  keyboardShouldPersistTaps="handled"
+  keyboardDismissMode={
+    Platform.OS === "ios" ? "interactive" : "on-drag"
+  }
+  scrollEventThrottle={16}
+/>
+
 
           {/* Barre d’entrée glass premium */}
           <View

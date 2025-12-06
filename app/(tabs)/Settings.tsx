@@ -1067,43 +1067,6 @@ export default function Settings() {
               </TouchableOpacity>
             </Animated.View>
 
-            <Animated.View entering={FadeInUp.delay(675)}>
-              <TouchableOpacity
-                style={styles.accountButton}
-                onPress={async () => {
-                  tap();
-                  try {
-                    await shareReferralLink();
-                  } catch {
-                    // soft fail
-                  }
-                }}
-                accessibilityLabel={t("inviteFriends") || "Inviter des amis"}
-                testID="invite-friends-button"
-              >
-                <LinearGradient
-                  colors={dynamicStyles.buttonGradient.colors}
-                  style={styles.buttonGradient}
-                  start={{ x: 1, y: 1 }}
-                  end={{ x: 0, y: 0 }}
-                >
-                  <Ionicons
-                    name="send-outline"
-                    size={normalizeSize(20)}
-                    color={currentTheme.colors.textPrimary}
-                  />
-                  <Text
-                    style={[
-                      styles.accountButtonText,
-                      dynamicStyles.accountButtonText,
-                    ]}
-                  >
-                    {t("inviteFriends") || "Inviter des amis"}
-                  </Text>
-                </LinearGradient>
-              </TouchableOpacity>
-            </Animated.View>
-
             <Animated.View entering={FadeInUp.delay(700)}>
               <TouchableOpacity
                 style={styles.accountButton}

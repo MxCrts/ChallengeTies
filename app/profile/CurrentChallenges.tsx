@@ -18,6 +18,7 @@ import {
   Platform,
   AccessibilityInfo,
   PlatformColor,
+   I18nManager,
 } from "react-native";
 import { LinearGradient } from "expo-linear-gradient";
 import { useCurrentChallenges } from "../../context/CurrentChallengesContext";
@@ -628,12 +629,17 @@ export default function CurrentChallenges() {
                             color: isDarkMode
                               ? currentTheme.colors.textPrimary
                               : "#000000",
+                            writingDirection: I18nManager.isRTL ? "rtl" : "ltr",
+                            textAlign: I18nManager.isRTL ? "right" : "left",
                           },
                         ]}
                         numberOfLines={1}
+                        ellipsizeMode="tail"
+                        adjustsFontSizeToFit
                       >
                         {item.title}
                       </Text>
+
 
                       <View style={styles.metaRow}>
                         {item.day !== undefined && (
@@ -1233,12 +1239,14 @@ const styles = StyleSheet.create({
     fontFamily: "Comfortaa_700Bold",
     textAlign: "center",
     marginBottom: SPACING / 2,
+    writingDirection: I18nManager.isRTL ? "rtl" : "ltr",
   },
   noChallengesSubtext: {
     fontSize: normalizeSize(18),
     fontFamily: "Comfortaa_400Regular",
     textAlign: "center",
     maxWidth: SCREEN_WIDTH * 0.75,
+    writingDirection: I18nManager.isRTL ? "rtl" : "ltr",
   },
 
   cardWrapper: {
@@ -1306,6 +1314,8 @@ const styles = StyleSheet.create({
   categoryText: {
     fontSize: normalizeSize(11.5),
     fontFamily: "Comfortaa_400Regular",
+    writingDirection: I18nManager.isRTL ? "rtl" : "ltr",
+   textAlign: I18nManager.isRTL ? "right" : "left",
   },
   duoPill: {
     flexDirection: "row",
@@ -1339,10 +1349,14 @@ const styles = StyleSheet.create({
   challengeDay: {
     fontSize: normalizeSize(13),
     fontFamily: "Comfortaa_400Regular",
+    writingDirection: I18nManager.isRTL ? "rtl" : "ltr",
+   textAlign: I18nManager.isRTL ? "right" : "left",
   },
   partnerLabel: {
     fontSize: normalizeSize(12.5),
     fontFamily: "Comfortaa_400Regular",
+    writingDirection: I18nManager.isRTL ? "rtl" : "ltr",
+   textAlign: I18nManager.isRTL ? "right" : "left",
   },
   progressRow: {
     flexDirection: "row",
@@ -1379,6 +1393,8 @@ const styles = StyleSheet.create({
   progressText: {
     fontSize: normalizeSize(11.5),
     fontFamily: "Comfortaa_400Regular",
+    writingDirection: I18nManager.isRTL ? "rtl" : "ltr",
+   textAlign: I18nManager.isRTL ? "right" : "left",
   },
   markTodayButton: {
     borderRadius: normalizeSize(18),
@@ -1404,6 +1420,7 @@ const styles = StyleSheet.create({
   markTodayText: {
     fontFamily: "Comfortaa_700Bold",
     fontSize: normalizeSize(14.5),
+    writingDirection: I18nManager.isRTL ? "rtl" : "ltr",
   },
   markTodayDot: {
     position: "absolute",
@@ -1431,6 +1448,7 @@ const styles = StyleSheet.create({
     fontSize: normalizeSize(18),
     fontFamily: "Comfortaa_400Regular",
     textAlign: "center",
+    writingDirection: I18nManager.isRTL ? "rtl" : "ltr",
   },
 
   // --- Swipe delete premium
@@ -1487,6 +1505,7 @@ const styles = StyleSheet.create({
     flex: 1,
     fontSize: normalizeSize(13.5),
     fontFamily: "Comfortaa_400Regular",
+     writingDirection: I18nManager.isRTL ? "rtl" : "ltr",
   },
 
   // Confirm overlay
@@ -1527,12 +1546,14 @@ const styles = StyleSheet.create({
     fontFamily: "Comfortaa_700Bold",
     textAlign: "center",
     marginBottom: normalizeSize(6),
+     writingDirection: I18nManager.isRTL ? "rtl" : "ltr",
   },
   confirmSubtitle: {
     fontSize: normalizeSize(14.5),
     fontFamily: "Comfortaa_400Regular",
     textAlign: "center",
     marginBottom: SPACING,
+     writingDirection: I18nManager.isRTL ? "rtl" : "ltr",
   },
   confirmButtonsRow: {
     flexDirection: "row",

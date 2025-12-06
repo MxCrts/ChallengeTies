@@ -9,6 +9,7 @@ import {
   ScrollView,
   Dimensions,
   StatusBar,
+  I18nManager,
 } from "react-native";
 
 import { useRouter } from "expo-router";
@@ -115,7 +116,7 @@ export default function ProfileScreen() {
   const { profileUpdated } = useProfileUpdate();
   const { theme } = useTheme();
   const isDarkMode = theme === "dark";
-  const { t } = useTranslation();
+  const { t, i18n } = useTranslation();
   const { showBanners } = useAdsVisibility();
  const insets = useSafeAreaInsets();
 const tabBarHeight = useBottomTabBarHeight();
@@ -182,99 +183,102 @@ const totalInventoryItems = useMemo(() => {
 
     // Sections
   const sections = useMemo<ProfileSection[]>(
-    () => [
-      {
-        name: t("editProfile"),
-        icon: "person-circle-outline",
-        navigateTo: "profile/UserInfo",
-        testID: "edit-profile-button",
-        accessibilityLabel: t("access.editProfile.label"),
-        accessibilityHint: t("access.editProfile.hint"),
-      },
-      {
-        name: t("notifications"),
-        icon: "notifications-outline",
-        navigateTo: "profile/notifications",
-        testID: "notifications-button",
-        unclaimedCount: userData?.unreadNotifications ?? 0,
-        accessibilityLabel: t("access.notifications.label"),
-        accessibilityHint: t("access.notifications.hint"),
-      },
-      {
-        name: t("statistics"),
-        icon: "stats-chart-outline",
-        navigateTo: "profile/UserStats",
-        testID: "stats-button",
-        accessibilityLabel: t("access.statistics.label"),
-        accessibilityHint: t("access.statistics.hint"),
-      },
-      {
-        name: t("ongoingChallenges"),
-        icon: "flag-outline",
-        navigateTo: "profile/CurrentChallenges",
-        testID: "current-challenges-button",
-        accessibilityLabel: t("access.ongoingChallenges.label"),
-        accessibilityHint: t("access.ongoingChallenges.hint"),
-      },
-      {
-        name: t("favorites"),
-        icon: "bookmark-outline",
-        navigateTo: "profile/SavedChallenges",
-        testID: "favorites-button",
-        accessibilityLabel: t("access.favorites.label"),
-        accessibilityHint: t("access.favorites.hint"),
-      },
-      {
-        name: t("completedChallenges"),
-        icon: "checkmark-done-outline",
-        navigateTo: "profile/CompletedChallenges",
-        testID: "completed-challenges-button",
-        accessibilityLabel: t("access.completedChallenges.label"),
-        accessibilityHint: t("access.completedChallenges.hint"),
-      },
-      {
-        name: t("rewards"),
-        icon: "medal-outline",
-        navigateTo: "profile/Achievements",
-        testID: "achievements-button",
-        unclaimedCount: userData?.newAchievements?.length ?? 0,
-        accessibilityLabel: t("access.rewards.label"),
-        accessibilityHint: t("access.rewards.hint"),
-      },
-      {
-        name: t("inventory.title"),
-        icon: "briefcase-outline",
-        navigateTo: "profile/Inventory",
-        testID: "inventory-button",
-        unclaimedCount: totalInventoryItems,
-        accessibilityLabel: t("access.inventory.label", {
-          defaultValue: "Ouvrir ton inventaire",
-        }),
-        accessibilityHint: t("access.inventory.hint", {
-          defaultValue: "Voir et gérer tes bonus et protections de série.",
-        }),
-      },
-      {
-        name: t("myChallenges"),
-        icon: "create-outline",
-        navigateTo: "profile/MyChallenges",
-        testID: "my-challenges-button",
-        accessibilityLabel: t("access.myChallenges.label"),
-        accessibilityHint: t("access.myChallenges.hint"),
-      },
-    ],
-    [t, userData, totalInventoryItems]
-  );
+  () => [
+    {
+      name: t("editProfile"),
+      icon: "person-circle-outline",
+      navigateTo: "profile/UserInfo",
+      testID: "edit-profile-button",
+      accessibilityLabel: t("access.editProfile.label"),
+      accessibilityHint: t("access.editProfile.hint"),
+    },
+    {
+      name: t("notifications"),
+      icon: "notifications-outline",
+      navigateTo: "profile/notifications",
+      testID: "notifications-button",
+      unclaimedCount: userData?.unreadNotifications ?? 0,
+      accessibilityLabel: t("access.notifications.label"),
+      accessibilityHint: t("access.notifications.hint"),
+    },
+    {
+      name: t("ongoingChallenges"),
+      icon: "flag-outline",
+      navigateTo: "profile/CurrentChallenges",
+      testID: "current-challenges-button",
+      accessibilityLabel: t("access.ongoingChallenges.label"),
+      accessibilityHint: t("access.ongoingChallenges.hint"),
+    },
+    {
+      name: t("completedChallenges"),
+      icon: "checkmark-done-outline",
+      navigateTo: "profile/CompletedChallenges",
+      testID: "completed-challenges-button",
+      accessibilityLabel: t("access.completedChallenges.label"),
+      accessibilityHint: t("access.completedChallenges.hint"),
+    },
+    {
+      name: t("statistics"),
+      icon: "stats-chart-outline",
+      navigateTo: "profile/UserStats",
+      testID: "stats-button",
+      accessibilityLabel: t("access.statistics.label"),
+      accessibilityHint: t("access.statistics.hint"),
+    },
+    {
+      name: t("favorites"),
+      icon: "bookmark-outline",
+      navigateTo: "profile/SavedChallenges",
+      testID: "favorites-button",
+      accessibilityLabel: t("access.favorites.label"),
+      accessibilityHint: t("access.favorites.hint"),
+    },
+    {
+      name: t("rewards"),
+      icon: "medal-outline",
+      navigateTo: "profile/Achievements",
+      testID: "achievements-button",
+      unclaimedCount: userData?.newAchievements?.length ?? 0,
+      accessibilityLabel: t("access.rewards.label"),
+      accessibilityHint: t("access.rewards.hint"),
+    },
+    {
+      name: t("inventory.title"),
+      icon: "briefcase-outline",
+      navigateTo: "profile/Inventory",
+      testID: "inventory-button",
+      unclaimedCount: totalInventoryItems,
+      accessibilityLabel: t("access.inventory.label", {
+        defaultValue: "Ouvrir ton inventaire",
+      }),
+      accessibilityHint: t("access.inventory.hint", {
+        defaultValue: "Voir et gérer tes bonus et protections de série.",
+      }),
+    },
+    {
+      name: t("myChallenges"),
+      icon: "create-outline",
+      navigateTo: "profile/MyChallenges",
+      testID: "my-challenges-button",
+      accessibilityLabel: t("access.myChallenges.label"),
+      accessibilityHint: t("access.myChallenges.hint"),
+    },
+  ],
+  // 🔑 on force le recalcul quand la langue change
+  [t, i18n.language, userData, totalInventoryItems]
+);
+
 
 
   // Grille des sections (2 par ligne)
   const rows = useMemo<ProfileSection[][]>(() => {
-    const split: ProfileSection[][] = [];
-    for (let i = 0; i < sections.length; i += 2) {
-      split.push(sections.slice(i, i + 2));
-    }
-    return split;
-  }, [sections]);
+  const split: ProfileSection[][] = [];
+  for (let i = 0; i < sections.length; i += 2) {
+    split.push(sections.slice(i, i + 2));
+  }
+  return split;
+}, [sections, i18n.language]);
+
 
   if (isLoading) {
     return (
@@ -298,6 +302,8 @@ const totalInventoryItems = useMemo(() => {
               styles.loadingText,
               { color: currentTheme.colors.textSecondary },
             ]}
+            numberOfLines={2}
+            adjustsFontSizeToFit
           >
             {t("loadingProfile")}
           </Text>
@@ -333,6 +339,8 @@ const totalInventoryItems = useMemo(() => {
                 styles.loadingText,
                 { color: currentTheme.colors.textSecondary },
               ]}
+              numberOfLines={3}
+              adjustsFontSizeToFit
             >
               {error || t("profile.noData")}
             </Text>
@@ -378,7 +386,7 @@ const totalInventoryItems = useMemo(() => {
   />
 
   <CustomHeader
-    title={t("yourProfile")}
+    title={t("yourProfile", { defaultValue: "Ton profil" })}
     backgroundColor="transparent"
     useBlur={false}
     showHairline={false}
@@ -388,6 +396,11 @@ const totalInventoryItems = useMemo(() => {
     contentContainerStyle={[styles.scrollContent, { paddingBottom: bottomContentPadding }]}
     showsVerticalScrollIndicator={false}
     contentInset={{ top: SPACING, bottom: normalizeSize(80) }}
+    keyboardShouldPersistTaps="handled"
+   accessibilityRole="scrollbar"
+   accessibilityLabel={t("profile.sectionsListA11y", {
+     defaultValue: "Contenu du profil et liste des sections",
+   })}
   >
 
             {/* Carte Profil */}
@@ -432,6 +445,7 @@ const totalInventoryItems = useMemo(() => {
                           : "#FFB800",
                       },
                     ]}
+                    accessibilityRole="image"
                     accessibilityLabel={
   (userData?.isPioneer ? "Pioneer · " : "") +
   t("profile.avatar", { username: userData?.username ?? "Utilisateur" })
@@ -479,7 +493,8 @@ const totalInventoryItems = useMemo(() => {
                       styles.username,
                       { color: isDarkMode ? currentTheme.colors.textPrimary : "#111" },
                     ]}
-                    numberOfLines={1}
+                    numberOfLines={2}
+                    adjustsFontSizeToFit
                   >
                     {userData?.username || t("yourProfile")}
                   </Text>
@@ -497,6 +512,8 @@ const totalInventoryItems = useMemo(() => {
         styles.fieldLabel,
         { color: isDarkMode ? currentTheme.colors.textSecondary : "#333" },
       ]}
+      numberOfLines={1}
+      adjustsFontSizeToFit
     >
       {t("profileS.bioLabel", { defaultValue: "Bio" })}
     </Text>
@@ -508,6 +525,7 @@ const totalInventoryItems = useMemo(() => {
           { color: isDarkMode ? currentTheme.colors.textPrimary : "#111" },
         ]}
         numberOfLines={3}
+        adjustsFontSizeToFit
       >
         {userData.bio.trim()}
       </Text>
@@ -534,6 +552,8 @@ const totalInventoryItems = useMemo(() => {
         styles.fieldLabel,
         { color: isDarkMode ? currentTheme.colors.textSecondary : "#333" },
       ]}
+       numberOfLines={1}
+      adjustsFontSizeToFit
     >
       {t("profileS.locationLabel", { defaultValue: "Location" })}
     </Text>
@@ -547,6 +567,7 @@ const totalInventoryItems = useMemo(() => {
             { marginLeft: 6, color: isDarkMode ? currentTheme.colors.textPrimary : "#111" },
           ]}
           numberOfLines={1}
+          adjustsFontSizeToFit
         >
           {userData.location.trim()}
         </Text>
@@ -574,6 +595,8 @@ const totalInventoryItems = useMemo(() => {
         styles.fieldLabel,
         { color: isDarkMode ? currentTheme.colors.textSecondary : "#333" },
       ]}
+      numberOfLines={1}
+      adjustsFontSizeToFit
     >
       {t("profileS.interestsLabel", { defaultValue: "Interests" })}
     </Text>
@@ -588,6 +611,7 @@ const totalInventoryItems = useMemo(() => {
                 { color: isDarkMode ? currentTheme.colors.textPrimary : "#111" },
               ]}
               numberOfLines={1}
+              adjustsFontSizeToFit
             >
               {tag}
             </Text>
@@ -627,92 +651,98 @@ const totalInventoryItems = useMemo(() => {
             />
 
             {/* Sections / Boutons */}
-            <View style={styles.sectionsContainer}>
-              {rows.map((row, rowIndex) => (
-                <Animated.View
-                  key={rowIndex}
-                  entering={FadeInUp.delay(500 + rowIndex * 100)}
-                  style={{
-                    ...styles.rowContainer,
-                    justifyContent:
-                      row.length === 1 ? "center" : "space-between",
-                  }}
-                >
-                  {row.map((section, index) => (
-                    <Animated.View
-                      key={index}
-                      entering={ZoomIn.delay(200 + index * 50)}
-                      style={styles.sectionButton}
-                    >
-                      <TouchableOpacity
-                        onPress={() => router.push(section.navigateTo)}
-                        accessibilityLabel={section.accessibilityLabel}
-                        accessibilityHint={section.accessibilityHint}
-                        accessibilityRole="button"
-                        testID={section.testID}
-                        activeOpacity={0.7}
-                      >
-                        <LinearGradient
-                          colors={
-                            isDarkMode
-                              ? [
-                                  currentTheme.colors.cardBackground,
-                                  currentTheme.colors.background,
-                                ]
-                              : ["#FFFFFF", "#FFF5E6"]
-                          }
-                          style={[
-                            styles.sectionGradient,
-                            {
-                              borderWidth: isDarkMode ? 1 : 2,
-                              borderColor: isDarkMode
-                                ? currentTheme.colors.secondary
-                                : "#FFB800",
-                            },
-                          ]}
-                          start={{ x: 0, y: 0 }}
-                          end={{ x: 1, y: 1 }}
-                        >
-                          <View style={styles.iconContainer}>
-                            <Ionicons
-                              name={
-                                section.icon as keyof typeof Ionicons.glyphMap
-                              }
-                              size={normalizeSize(32)}
-                              color={currentTheme.colors.secondary}
-                            />
-                            {section.unclaimedCount > 0 && (
-                              <Animated.View
-                                entering={ZoomIn}
-                                style={styles.badgeDot}
-                              >
-                                {section.unclaimedCount > 1 && (
-                                  <Text style={styles.badgeText}>
-                                    {section.unclaimedCount}
-                                  </Text>
-                                )}
-                              </Animated.View>
-                            )}
-                          </View>
-                          <Text
-                            style={{
-                              ...styles.sectionText,
-                              color: isDarkMode
-                                ? currentTheme.colors.textPrimary
-                                : "#333333",
-                            }}
-                            numberOfLines={1}
-                            adjustsFontSizeToFit
-                          >
-                            {section.name}
-                          </Text>
-                        </LinearGradient>
-                      </TouchableOpacity>
-                    </Animated.View>
-                  ))}
-                </Animated.View>
-              ))}
-            </View>
+            <View key={i18n.language} style={styles.sectionsContainer}>
+  {rows.map((row, rowIndex) => (
+    <Animated.View
+      key={rowIndex}
+      entering={FadeInUp.delay(500 + rowIndex * 100)}
+      style={[
+        styles.rowContainer,
+        {
+          justifyContent: row.length === 1 ? "center" : "space-between",
+        },
+      ]}
+    >
+      {row.map((section, index) => (
+        <Animated.View
+          key={index}
+          entering={ZoomIn.delay(200 + index * 50)}
+          style={styles.sectionButton}
+        >
+          <TouchableOpacity
+            onPress={() => router.push(section.navigateTo)}
+            accessibilityLabel={section.accessibilityLabel}
+            accessibilityHint={section.accessibilityHint}
+            accessibilityRole="button"
+            testID={section.testID}
+            activeOpacity={0.7}
+            style={styles.sectionTouchable}      // 🆕 important
+          >
+            <LinearGradient
+              colors={
+                isDarkMode
+                  ? [
+                      currentTheme.colors.cardBackground,
+                      currentTheme.colors.background,
+                    ]
+                  : ["#FFFFFF", "#FFF5E6"]
+              }
+              style={[
+                styles.sectionGradient,
+                {
+                  borderWidth: isDarkMode ? 1 : 2,
+                  borderColor: isDarkMode
+                    ? currentTheme.colors.secondary
+                    : "#FFB800",
+                },
+              ]}
+              start={{ x: 0, y: 0 }}
+              end={{ x: 1, y: 1 }}
+            >
+              <View style={styles.iconContainer}>
+                <Ionicons
+                  name={
+                    section.icon as keyof typeof Ionicons.glyphMap
+                  }
+                  size={normalizeSize(32)}
+                  color={currentTheme.colors.secondary}
+                />
+                {(section.unclaimedCount ?? 0) > 0 && (
+                  <Animated.View
+                    entering={ZoomIn}
+                    style={styles.badgeDot}
+                  >
+                    {(section.unclaimedCount ?? 0) > 1 && (
+                      <Text style={styles.badgeText}>
+                        {section.unclaimedCount}
+                      </Text>
+                    )}
+                  </Animated.View>
+                )}
+              </View>
+
+              <Text
+                style={[
+                  styles.sectionText,
+                  {
+                    color: isDarkMode
+                      ? currentTheme.colors.textPrimary
+                      : "#333333",
+                  },
+                ]}
+                numberOfLines={2}
+                adjustsFontSizeToFit
+              >
+                {section.name}
+              </Text>
+            </LinearGradient>
+          </TouchableOpacity>
+        </Animated.View>
+      ))}
+    </Animated.View>
+  ))}
+</View>
+
           </ScrollView>
         {/* Bannière pub */}
         {/* Bannière dockée au-dessus de la TabBar (iOS + Android) */}
@@ -773,12 +803,16 @@ fieldLabel: {
   fontSize: normalizeSize(13),
   opacity: 0.9,
   marginBottom: normalizeSize(6),
+  writingDirection: I18nManager.isRTL ? "rtl" : "ltr",
+ textAlign: I18nManager.isRTL ? "right" : "left",
 },
 
 fieldValue: {
   fontFamily: "Comfortaa_400Regular",
   fontSize: normalizeSize(14),
   lineHeight: normalizeSize(18),
+  writingDirection: I18nManager.isRTL ? "rtl" : "ltr",
+ textAlign: I18nManager.isRTL ? "right" : "left",
 },
 softDivider: {             // AVANT: marginVertical: normalizeSize(8)
   height: 1,
@@ -915,6 +949,8 @@ editFabText: {
     textShadowColor: SHADOW_COLOR,
     textShadowOffset: { width: 0, height: 2 },
     textShadowRadius: 4,
+    writingDirection: I18nManager.isRTL ? "rtl" : "ltr",
+    textAlign: I18nManager.isRTL ? "right" : "center",
   },
 
   detailsContainer: {
@@ -954,7 +990,6 @@ editFabText: {
     margin: normalizeSize(4),
     backgroundColor: BORDER_COLOR_LIGHT,
   },
-
   moreInterests: {
     fontSize: normalizeSize(12),
     fontFamily: "Comfortaa_400Regular",
@@ -964,27 +999,27 @@ editFabText: {
     margin: normalizeSize(4),
     backgroundColor: BORDER_COLOR_LIGHT,
   },
-
   sectionsContainer: {
     marginTop: SPACING,
   },
-
+  sectionTouchable: {
+  flex: 1,                  // 👉 le touchable remplit toute la carte
+},
   rowContainer: {
     flexDirection: "row",
     marginBottom: SPACING,
+    alignItems: "stretch",
   },
-
   sectionButton: {
     width: "48%",
-    borderRadius: normalizeSize(15),
-    overflow: "hidden",
-    shadowColor: SHADOW_COLOR,
-    shadowOffset: { width: 0, height: normalizeSize(2) },
-    shadowOpacity: 0.1,
-    shadowRadius: normalizeSize(4),
-    elevation: 3,
-    minHeight: normalizeSize(100),
-    marginBottom: SPACING,
+  borderRadius: normalizeSize(15),
+  overflow: "hidden",
+  shadowColor: SHADOW_COLOR,
+  shadowOffset: { width: 0, height: normalizeSize(2) },
+  shadowOpacity: 0.1,
+  shadowRadius: normalizeSize(4),
+  elevation: 3,
+  minHeight: normalizeSize(110),
   },
 gradientContainer: { flex: 1 },
 
@@ -1008,11 +1043,13 @@ bgOrbBottom: {
 
   sectionGradient: {
     flex: 1,
-    width: "100%",
-    paddingVertical: normalizeSize(20),
-    alignItems: "center",
-    justifyContent: "center",
-    borderRadius: normalizeSize(15),
+  width: "100%",
+  minHeight: normalizeSize(110),          // même base que sectionButton
+  paddingVertical: normalizeSize(14),
+  paddingHorizontal: normalizeSize(10),
+  alignItems: "center",
+  justifyContent: "space-between",        // icon + texte bien respirent
+  borderRadius: normalizeSize(15),
   },
 
   iconContainer: {
@@ -1026,6 +1063,7 @@ bgOrbBottom: {
     textAlign: "center",
     maxWidth: "100%",
     flexShrink: 1,
+    writingDirection: I18nManager.isRTL ? "rtl" : "ltr",
   },
 
   loadingContainer: {
@@ -1043,14 +1081,14 @@ bgOrbBottom: {
     marginTop: normalizeSize(10),
     fontSize: normalizeSize(16),
     fontFamily: "Comfortaa_400Regular",
+    writingDirection: I18nManager.isRTL ? "rtl" : "ltr",
+    textAlign: "center",
   },
 bannerContainer: {
   width: "100%",
   alignItems: "center",
   backgroundColor: "transparent",
 },
-
-
   blurView: {
     position: "absolute",
     top: 0,

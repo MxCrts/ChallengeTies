@@ -16,8 +16,6 @@ import { doc, onSnapshot } from "firebase/firestore";
 import type { DimensionValue } from "react-native";
 import { useTrophiesEconomy } from "../hooks/useTrophiesEconomy";
 import { Ionicons } from "@expo/vector-icons";
-import { DeviceEventEmitter } from "react-native";
-import { useFocusEffect } from "@react-navigation/native";
 import { useMicroWeek } from "../hooks/useMicroWeek";
 
 type UserSnapshot = {
@@ -72,11 +70,10 @@ export default function WeeklyTrophiesCard({ defaultExpanded = false }: Props) {
 
   const progressWidth: DimensionValue = `${Math.round(pct * 100)}%`;
 
-
-const onToggle = () => {
+  const onToggle = useCallback(() => {
     LayoutAnimation.configureNext(LayoutAnimation.Presets.easeInEaseOut);
     setExpanded((v) => !v);
-  };
+  }, []);
 
   const CompactSummary = () => (
     <>

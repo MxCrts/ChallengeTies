@@ -631,13 +631,31 @@
     "understood": "Got it"
   },
   "trophyModal": {
-    "congrats": "Félicitations !",
-    "reward": "Vous gagnez {{count}} trophées !",
-    "claim": "Réclamer",
-    "doubleReward": "Doubler la récompense",
-    "doubleMessage": "🔥 You earned {{count}} trophies!",
-    "claimMessage": "🎉 You earned {{count}} trophies!"
-  },
+  "congrats": "Congratulations! 🎉",
+  "reward": "+{{count}} trophy(ies)",
+  "message": "{{message}}",
+  "claim": "Claim",
+  "doubleReward": "Double your trophies",
+  "doubleMessage": "🔥 You earned {{count}} trophies!",
+  "claimMessage": "🎉 You earned {{count}} trophies!",
+
+  "title": "Trophy unlocked!",
+  "subtitle": "You just reached a new milestone.",
+  "defaultName": "Mystery achievement",
+  "defaultDescription": "Keep going — every trophy proves your discipline.",
+
+  "ribbon": "Reward unlocked",
+
+  "trophiesTitle": "Trophies earned",
+  "trophiesHint": "They are added to your ChallengeTies total.",
+
+  "cta": "Collect",
+  "ctaLoading": "Loading…",
+  "secondaryCta": "Later",
+
+  "doubleBadge": "x2 active"
+}
+,
   "coverImage": "Cover image (optional)",
   "pickAnImage": "Pick an image",
   "edit": "Edit",
@@ -824,6 +842,9 @@
     "close": "Fermer",
     "prevMonth": "Mois précédent",
     "nextMonth": "Mois suivant",
+    "completed": "Done",
+"pending": "To do"
+,
     "title": "{{month}} {{year}}",
     "weekdays": ["Dim", "Lun", "Mar", "Mer", "Jeu", "Ven", "Sam"],
     "months": [
@@ -877,6 +898,7 @@
       "subtitle": "Trade some trophies to protect your progress."
     }
   },
+  "dailySelectedSubtitle": "5 challenges handpicked for you today.",
   "privacyPolicy": {
     "title": "Privacy Policy",
     "introductionTitle": "Introduction",
@@ -896,7 +918,11 @@
     "introductionText": "At {{appName}}, protecting your privacy is paramount. This policy explains how we collect, use, protect, and share your personal data in full compliance with GDPR.",
     "dataCollectedTitle": "Data We Collect",
     "dataCollectedText": "To provide you a personalized experience, we may collect the following:",
-    "dataCollectedItems": {
+    "screenA11yLabel": "ChallengeTies privacy policy screen",
+  "logoAlt": "ChallengeTies logo",
+  "dataCollectedItems": {
+    "deviceInfo": "Technical device data (model, OS, language, approximate country)",
+    "usageAnalytics": "Usage events (visited screens, actions in the app, performance)",
       "nameEmail": "Name and email address",
       "profilePhoto": "Profile photo",
       "progress": "Your challenge progress & achievements",
@@ -908,6 +934,7 @@
     "dataUsageItems": {
       "personalize": "Personalize your experience",
       "analyze": "Analyze your progress",
+          "adsAndMonetization": "Show ads, measure their performance, and prevent ad fraud",
       "notify": "Send you useful notifications",
       "improve": "Improve our services"
     },
@@ -977,7 +1004,7 @@
   },
   "durationModal": {
    "title": "Choose duration",
-    "days": "{{count}} day",
+    "days": "{{count}} days",
     "days_plural": "{{count}} days",
     "confirm": "Confirm",
     "cancel": "Cancel",
@@ -1004,9 +1031,18 @@
 "inviteAFriend": "Invite a friend",
 "inviteFriends": "Invite a friend",
   "referral": {
+    "invited": {
+  "title": "Invitation detected 🎁",
+  "body": "You were invited by a user. Your reward will activate automatically after you register.",
+  "linkedTitle": "Referral activated ✅",
+  "linkedBody": "Your referral is linked. Thanks for joining ChallengeTies!",
+  "by": "Referrer:"
+},
     "menu": "Share & Earn",
     "history": {
       "title": "My referrals",
+      "activatedOnLabel": "Activated on",
+    "invitedOnLabel": "Invited on",
       "subtitle": "{{total}} total • {{activated}} activated",
       "loading": "Loading your referral history…",
         "emptyTitle": "No referrals yet",
@@ -1030,15 +1066,23 @@
       }
     },
     "notif": {
-    "milestoneUnlocked": {
-      "title": "Milestone unlocked 🎉",
-      "body": "You can now claim +{{bonus}} trophies!"
-    }
+  "milestoneUnlocked": {
+    "title": "Milestone unlocked 🎉",
+    "body": "Congrats! You just earned +{{bonus}} trophies thanks to your referrals. Open Share & Earn to claim your reward."
   },
+  "newChild": {
+    "title": "🎉 New referral",
+    "body": "Nice! One of your referrals just activated and you earned +{{bonus}} trophies!",
+    "toast": "New referral (+{{bonus}} trophies) 🎉"
+  }
+}
+,
     "share": {
       "title": "Share & Earn",
+      "activatedReferrals": "Activated referrals",
       "subtitle": "Invite your friends. When they start their first challenge, you earn trophies. Hit milestones to unlock bonuses 💎",
       "linksTitle": "Your links",
+          "howTo": "Invite friends with the Share button or by sending your Share Card – every activated referral unlocks rewards.",
       "linkApp": "App link",
       "linkWeb": "Web link",
       "copy": "Copy",
@@ -1152,13 +1196,18 @@
     "titleTooShort": "The title is too short (6+ characters).",
     "descTooShort": "The description is too short (20+ characters).",
     "titleInvalidChars": "The title must contain letters."
-  }},
+  },
+"hint": {
+      "titleHelper": "Clear title (≥ {{min}} characters).",
+      "descHelper": "Explain concretely (≥ {{min}} characters)."
+    }},
   "imageTooBig": "Image too large (max {{mb}} MB).",
   "imageTooSmall": "Image too small (min 600×400).",
   "quality": {
     "hintBoostStart": "Tip: specify a numeric goal and a duration.",
     "hintBoostMid": "Almost there: add one concrete action per day.",
     "hintGreat": "Perfect! Your challenge is clear and motivating ✨",
+        "fillRequired": "Fill in title, description (≥ 20 characters), category and image to reach 100%.",
     "scoreLabel": "Challenge quality"
   },
   "logoChallengeTies": "ChallengeTies logo",
@@ -1274,6 +1323,10 @@
   "leaderboard": {
     "errorFetch": "Error fetching leaderboard",
     "shareHint": "Share your rank card",
+    "shareCard": {
+  "kicker": "My ranking",
+  "body": "I'm #{{rank}} this week on ChallengeTies. Join me and climb the leaderboard 💥"
+},
     "retry": "Retry",
     "shareDialogTitle":"Share my RankCard",
     "notEnough": "Not enough players to display the podium.",
@@ -1358,6 +1411,7 @@
   "longPressReply": "Reply to this message",
   "replyingTo": "Replying to",
   "sendA11yLabel": "Send the message",
+   "placeholder": "Write your message…",
   "slowmodeHint": "Please wait a moment before sending a new message.",
   "slowmodeCountdown": "Wait {{s}}s before sending another message"
 },
@@ -1795,19 +1849,67 @@
     "description": "Adopt a relaxing bedtime routine to improve sleep quality."
   }
   },
-  "sections": {
-    "débuts": "Beginnings",
-    "defisTermines": "Finished Challenges",
-    "engagement": "Commitment",
-    "serieDeFeu": "Streak",
-    "communication": "Communication",
-    "partage": "Shares",
-    "reseau": "Network",
-    "influence": "Influence",
-    "collection": "Collection",
-    "creation": "Creation",
-    "divers": "Miscellaneous"
+ "welcomeBonus": {
+  "title": "Login Bonus",
+  "subtitle": "Day {{day}} of {{total}} • Keep going!",
+  "ribbon": "ChallengeTies Welcome Pack",
+
+  "todayRewardTitle": "Today's Reward",
+
+  "reward": {
+    "trophies": "{{count}} bonus trophies",
+    "streakPass": "{{count}} Streak Pass to protect your streak",
+    "premium": "{{count}} days of ChallengeTies Premium"
   },
+
+  "premiumHint": "During this period: no ads and full unlimited access to ChallengeTies.",
+
+  "dayBadge": "Day {{day}}",
+  "dayLabel": "Day {{day}}",
+
+  "claimed": "Claimed",
+  "today": "Today",
+
+  "bottomHint": "Log in every day to unlock 100% of the pack.",
+
+  "cta": "Claim my reward",
+  "ctaLoading": "One moment…",
+
+  "error": "Unable to claim your welcome bonus right now."
+}
+,
+
+"premiumTrialActivated": {
+    "title": "ChallengeTies Premium activated ✨",
+    "message": "You just unlocked 7 days of ChallengeTies Premium: no ads and the full experience with no limits. Make the most of your momentum!"
+  },
+  "premiumEndModal": {
+    "title": "Your ChallengeTies Premium has ended",
+    "description": "Your 7-day Premium access is over. If ChallengeTies helps you stay on track, join the movement and support the project to unlock the ad-free experience again.",
+    "closeA11y": "Close the window",
+    "closeCta": "Continue for free",
+    "joinA11y": "Join the Premium movement",
+    "joinCta": "Join the Premium movement"
+  },
+  "sections": {
+  "débuts": "First steps",
+  "defisTermines": "Completed challenges",
+  "engagement": "Commitment",
+  "serieDeFeu": "Hot streak",
+  "communication": "Communication",
+  "partage": "Shares",
+  "reseau": "Network",
+  "influence": "Influence",
+  "collection": "Collection",
+  "creation": "Creation",
+  "duo": "Duo",
+  "constance": "Consistency",
+  "focus": "Focus",
+  "maitrise": "Mastery",
+  "discipline": "Discipline",
+  "events": "Events",
+  "divers": "Miscellaneous"
+},
   "challengeAlimentationConsciente": {
     "miniCours": "Mindful eating 🍽️ is a process that involves savoring every bite 🥣, taking time to appreciate the flavors, textures, and aromas of food 🍒, and becoming aware of the satisfaction and fullness they bring 👌. It can help you balance your diet, avoid cravings, and eat healthier 🥦. To do this, eliminate all distractions (TV, phone, reading) during meals 🚫📺📱📖, listen to your body image and be aware of hunger and satiety cues 🔎.",
     "exemples": [
@@ -3721,7 +3823,7 @@
     "Santé": "Health",
     "Fitness": "Fitness",
     "Finance": "Finance",
-    "Mode De Vie": "Lifestyle",
+    "Mode de Vie": "Lifestyle",
     "Éducation": "Education",
     "Créativité": "Creativity",
     "Carrière": "Career",
@@ -3734,6 +3836,14 @@
     "État d'esprit": "Mindset",
     "Autres":"Miscellaneous"
   },
+  "signInMethod": "Sign-in method",
+  "userId": "User ID",
+  "lastLogin": "Last login",
+  "auth": {
+    "emailPassword": "Email + password"
+  },
+  "participantsLabel": "Participants"
+,
   "unableToMarkChallenge": "Unable to mark the challenge.",
   "streakResetTitle": "Streak Reset",
   "streakResetMessage": "Your streak has been reset to 1.",
@@ -3788,7 +3898,47 @@
       "cancelled": "Cancelled"
     }
   },
+  "shareCardT": {
+  "a11yTitle": "Challenge share card",
+  "a11yHint": "Preview the card before sharing it with your friends.",
+
+  "tagline": "Got a challenge? Get it done.",
+
+  "duoBadge": "DUO CHALLENGE",
+  "soloBadge": "SOLO FOCUS",
+  "milestoneVariants": [
+  "We’ve stayed consistent for {{days}} days… and this is only the beginning.",
+  "Day after day, we become unstoppable. Already {{days}} days.",
+  "Consistency transforms us. {{days}} days completed.",
+  "{{days}} days of discipline. The rest will follow.",
+  "Every day counts. {{days}} days in, and we keep going."
+]
+,
+  "milestoneMessage": "We’ve stuck with it for {{days}} days… and we’re just getting started.",
+
+  "completedLabel": "I completed this challenge",
+  "daysLabel": "{{days}} days of focus",
+
+  "leading": "You’re leading!",
+  "behind": "Catch up!",
+  "tie": "Perfect tie",
+
+  "me": "Me",
+  "partner": "My partner",
+
+  "footerLine1": "Join me on ChallengeTies",
+  "footerLine2": "Challenges, focus, and victories every day."
+},
   "notificationsPush": {
+    "inviteAccepted": {
+  "title": "Invitation accepted 🎉",
+  "body": "{{username}} accepted your challenge \"{{title}}\"!"
+},
+"inviteRefused": {
+  "title": "Invitation refused ❌",
+  "body": "{{username}} refused your challenge \"{{title}}\"."
+}
+,
   "title": "ChallengeTies",
     "morning1": "Kick off your day with a quick challenge?",
      "inviteAcceptedToast": "Your invitation was accepted 🎉",
@@ -3958,34 +4108,37 @@
   "start": "Start",
   "focusHint": "Tip: lock your screen to avoid distractions.",
   "tutorial": {
+    "progress": "Step",
+    "progressA11y": "Step {{current}} of {{total}}",
+    "welcomeTagline": "Your journey starts here.",
     "steps": {
       "welcome": {
         "title": "Welcome to ChallengeTies ✨",
-        "description": "A quick tour to master the key features of the app in 30 seconds."
+        "description": "In a few short steps, we’ll show you the key features so you can master the app in under 30 seconds."
       },
       "explore": {
-        "title": "Explore challenges",
-        "description": "Discover over 80 challenges by category. Pick what inspires you and start instantly."
+        "title": "Explore the challenges",
+        "description": "Browse dozens of challenges by category. Find the one that motivates you most and start your first run."
       },
       "create": {
         "title": "Create your challenge",
-        "description": "Customize duration, goals, and progress. Become the architect of your discipline."
+        "description": "Customize your challenge: duration, goals, progression… Become the architect of your own discipline."
       },
       "focus": {
-        "title": "Focus Mode",
-        "description": "An immersive timer to help you concentrate. Track time, sessions, and consistency."
+        "title": "Focus mode",
+        "description": "An immersive timer to help you concentrate. Track your time, your sessions and your consistency."
       },
       "duo": {
         "title": "Duo challenges",
-        "description": "Invite a friend and progress together. Real-time sync, notifications and motivation."
+        "description": "Invite a friend and progress together. Live notifications, synchronized progression and extra motivation."
       },
       "profile": {
         "title": "Your profile & progress",
-        "description": "Find your current, saved challenges, achievements, stats and preferences."
+        "description": "Find your current and saved challenges, your achievements, detailed stats and all your settings."
       },
       "vote": {
         "title": "Vote for new features",
-        "description": "Help shape the future of the app. Vote for the features you want next."
+        "description": "You can influence the future of the app. Vote for the features you want to see first."
       }
     },
     "buttons": {
@@ -3994,8 +4147,7 @@
       "skip": "Skip",
       "finish": "Finish"
     }
-  }
-,
+  },
 "challengeHelper": {
     "videos": "Recommended videos",
     "noData": "No help is available for this challenge yet.",

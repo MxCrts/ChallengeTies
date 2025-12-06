@@ -47,20 +47,19 @@ import RequireAuthModal from "@/components/RequireAuthModal";
 
 // ---------- Helpers globaux (UX / erreurs) ----------
 
-const SPACING = 18; // Aligné avec Notifications.tsx, FocusScreen.tsx, etc.
+const SPACING = 18;
 const { width: SCREEN_WIDTH, height: SCREEN_HEIGHT } = Dimensions.get("window");
 
 // Hauteur item stable pour getItemLayout (évite les re-calculs)
 const ITEM_HEIGHT =
-  SPACING * 1.5 + /* wrapper margin */ 180 /* image normalized base */ + 12 /* paddings approx */;
+  SPACING * 1.5 + 180 /* image normalized base */ + 12 /* paddings approx */;
 
 const normalizeSize = (size: number) => {
   const baseWidth = 375;
-  const scale = Math.min(Math.max(SCREEN_WIDTH / baseWidth, 0.7), 1.8); // Limite l'échelle
+  const scale = Math.min(Math.max(SCREEN_WIDTH / baseWidth, 0.7), 1.8);
   return Math.round(size * scale);
 };
 
-// rgba helper (hex/rgb -> rgba avec alpha)
 const withAlpha = (color: string, alpha: number) => {
   const clamp = (n: number, min = 0, max = 1) => Math.min(Math.max(n, min), max);
   const a = clamp(alpha);
@@ -81,7 +80,6 @@ const withAlpha = (color: string, alpha: number) => {
   return `rgba(0,0,0,${a})`;
 };
 
-// Normalise (lowercase + sans accents)
 const normalizeText = (s: string) =>
   (s || "")
     .toLowerCase()
@@ -111,7 +109,7 @@ const showErrorAlert = (
   try {
     Haptics.notificationAsync(Haptics.NotificationFeedbackType.Error).catch(() => {});
   } catch {
-    // pas grave si haptics plante
+    // ignore
   }
 
   Alert.alert(
@@ -136,7 +134,6 @@ interface Challenge {
   chatId: string;
 }
 
-// On sépare la couche "raw" (Firestore) de la couche "vue" traduite
 interface ChallengeRaw {
   id: string;
   title?: string;
@@ -254,7 +251,10 @@ const ExploreHeader = React.memo(
     inputRef: React.RefObject<TextInput>;
   }) => {
     const { t } = useTranslation();
-    const dynamicStyles = getDynamicStyles(currentTheme, isDarkMode);
+    const dynamicStyles = useMemo(
+      () => getDynamicStyles(currentTheme, isDarkMode),
+      [currentTheme, isDarkMode]
+    );
 
     return (
       <Animated.View entering={FadeInUp.delay(100)} style={styles.headerWrapper}>
@@ -285,7 +285,6 @@ const ExploreHeader = React.memo(
               enterKeyHint="search"
               keyboardAppearance={isDarkMode ? "dark" : "light"}
               onFocus={() => {
-                // Force le focus (fix certains devices)
                 inputRef.current?.focus();
               }}
               accessibilityLabel={t("searchPlaceholder")}
@@ -315,6 +314,8 @@ const ExploreHeader = React.memo(
           <TouchableOpacity
             onPress={onOriginToggle}
             style={[styles.filterButton, dynamicStyles.filterButton]}
+            accessibilityRole="button"
+            accessibilityLabel={t("origin.filter")}
           >
             <Ionicons
               name="options-outline"
@@ -334,6 +335,8 @@ const ExploreHeader = React.memo(
           <TouchableOpacity
             onPress={onToggleCategoryModal}
             style={[styles.filterButton, dynamicStyles.filterButton]}
+            accessibilityRole="button"
+            accessibilityLabel={t("chooseCategory")}
           >
             <Ionicons
               name="filter-outline"
@@ -355,6 +358,8 @@ const ExploreHeader = React.memo(
         <TouchableOpacity
           onPress={onResetFilters}
           style={[styles.resetButton, dynamicStyles.resetButton]}
+          accessibilityRole="button"
+          accessibilityLabel={t("resetFilters")}
         >
           <Ionicons
             name="refresh-outline"
@@ -440,6 +445,134 @@ const ExploreHeader = React.memo(
   }
 );
 
+// ---------- Card séparée (memo + anim) ----------
+
+const ChallengeCard = React.memo(function ChallengeCard({
+  item,
+  index,
+  onPress,
+  onToggleSaved,
+  saved,
+  pending,
+  theme,
+  isDark,
+  t,
+}: {
+  item: Challenge;
+  index: number;
+  onPress: () => void;
+  onToggleSaved: () => void;
+  saved: boolean;
+  pending: boolean;
+  theme: Theme;
+  isDark: boolean;
+  t: (k: string, o?: any) => string;
+}) {
+  const scale = useSharedValue(1);
+  const rStyle = useAnimatedStyle(
+    () => ({
+      transform: [{ scale: scale.value }],
+    }),
+    []
+  );
+  const dynamicStyles = useMemo(
+    () => getDynamicStyles(theme, isDark),
+    [theme, isDark]
+  );
+
+  const onPressBookmark = () => {
+    Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light).catch(() => {});
+    scale.value = 0.94;
+    scale.value = withSpring(1, { damping: 18, stiffness: 260, mass: 0.7 });
+    onToggleSaved();
+  };
+
+  return (
+    <Animated.View
+      entering={FadeInUp.delay(120 + index * 35)}
+      style={styles.cardWrapper}
+    >
+      <TouchableOpacity
+        activeOpacity={0.9}
+        style={styles.cardContainer}
+        onPress={onPress}
+        accessibilityRole="button"
+        accessibilityLabel={item.title}
+      >
+        <LinearGradient
+          colors={[theme.colors.cardBackground, theme.colors.cardBackground + "F0"]}
+          style={[styles.cardGradient, dynamicStyles.cardGradient]}
+        >
+          <RNImage
+            source={
+              item.imageUrl
+                ? { uri: item.imageUrl }
+                : require("../../assets/images/chalkboard.png")
+            }
+            defaultSource={require("../../assets/images/chalkboard.png")}
+            style={styles.cardImage}
+            accessibilityIgnoresInvertColors
+          />
+          <LinearGradient
+            colors={[withAlpha(theme.colors.overlay, 0.1), withAlpha("#000", 0.8)]}
+            style={styles.cardOverlay}
+          >
+            <Text
+              style={[styles.cardTitle, dynamicStyles.cardTitle]}
+              numberOfLines={2}
+            >
+              {item.title}
+            </Text>
+            <Text
+              style={[styles.cardCategory, dynamicStyles.cardCategory]}
+              numberOfLines={1}
+            >
+              {item.category}
+            </Text>
+            <View style={{ flexDirection: "row", alignItems: "center" }}>
+              <Ionicons
+                name="people"
+                size={normalizeSize(14)}
+                color={theme.colors.trophy}
+                style={{ marginRight: 4 }}
+              />
+              <Text
+  style={[
+    styles.cardParticipants,
+    getDynamicStyles(theme, isDark).cardParticipants,
+  ]}
+>
+  {t("participantsLabel", { defaultValue: "Participants" })} :{" "}
+  {item.participantsCount ?? 0}
+</Text>
+
+            </View>
+          </LinearGradient>
+          <TouchableOpacity
+            onPress={onPressBookmark}
+            disabled={pending}
+            hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}
+            style={[
+              styles.bookmarkButton,
+              dynamicStyles.bookmarkButton,
+            ]}
+            accessibilityRole="button"
+            accessibilityLabel={saved ? t("removeFromSaved") : t("saveChallenge")}
+          >
+            <Animated.View style={rStyle}>
+              <Ionicons
+                name={saved ? "bookmark" : "bookmark-outline"}
+                size={normalizeSize(22)}
+                color={saved ? theme.colors.secondary : theme.colors.textPrimary}
+              />
+            </Animated.View>
+          </TouchableOpacity>
+        </LinearGradient>
+      </TouchableOpacity>
+    </Animated.View>
+  );
+});
+
 // ---------- Screen principal ----------
 
 export default function ExploreScreen() {
@@ -475,119 +608,10 @@ export default function ExploreScreen() {
   const shouldAnimateItems =
     !searchQuery && categoryFilter === "All" && originFilter === "All";
 
-  const ChallengeCard = React.memo(function ChallengeCard({
-    item,
-    index,
-    onPress,
-    onToggleSaved,
-    saved,
-    pending,
-    theme,
-    isDark,
-  }: any) {
-    const scale = useSharedValue(1);
-    const rStyle = useAnimatedStyle(
-      () => ({
-        transform: [{ scale: scale.value }],
-      }),
-      []
-    );
-
-    const onPressBookmark = () => {
-      Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light).catch(() => {});
-      scale.value = 0.94;
-      scale.value = withSpring(1, { damping: 18, stiffness: 260, mass: 0.7 });
-      onToggleSaved();
-    };
-
-    return (
-      <Animated.View
-        {...(shouldAnimateItems
-          ? { entering: FadeInUp.delay(120 + index * 35) }
-          : {})}
-        style={styles.cardWrapper}
-      >
-        <TouchableOpacity
-          activeOpacity={0.9}
-          style={styles.cardContainer}
-          onPress={onPress}
-          accessibilityRole="button"
-          accessibilityLabel={item.title}
-        >
-          <LinearGradient
-            colors={[theme.colors.cardBackground, theme.colors.cardBackground + "F0"]}
-            style={[styles.cardGradient, getDynamicStyles(theme, isDark).cardGradient]}
-          >
-            <RNImage
-              source={
-                item.imageUrl
-                  ? { uri: item.imageUrl }
-                  : require("../../assets/images/chalkboard.png")
-              }
-              defaultSource={require("../../assets/images/chalkboard.png")}
-              style={styles.cardImage}
-              accessibilityIgnoresInvertColors
-            />
-            <LinearGradient
-              colors={[withAlpha(theme.colors.overlay, 0.1), withAlpha("#000", 0.8)]}
-              style={styles.cardOverlay}
-            >
-              <Text
-                style={[styles.cardTitle, getDynamicStyles(theme, isDark).cardTitle]}
-                numberOfLines={2}
-              >
-                {item.title}
-              </Text>
-              <Text
-                style={[styles.cardCategory, getDynamicStyles(theme, isDark).cardCategory]}
-              >
-                {item.category}
-              </Text>
-              <View style={{ flexDirection: "row", alignItems: "center" }}>
-                <Ionicons
-                  name="people"
-                  size={normalizeSize(14)}
-                  color={theme.colors.trophy}
-                  style={{ marginRight: 4 }}
-                />
-                <Text
-                  style={[
-                    styles.cardParticipants,
-                    getDynamicStyles(theme, isDark).cardParticipants,
-                  ]}
-                >
-                  {`${item.participantsCount || 0} ${t("participants", {
-                    count: item.participantsCount || 0,
-                  })}`}
-                </Text>
-              </View>
-            </LinearGradient>
-            <TouchableOpacity
-              onPress={onPressBookmark}
-              disabled={pending}
-              hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}
-              style={[
-                styles.bookmarkButton,
-                getDynamicStyles(theme, isDark).bookmarkButton,
-              ]}
-              accessibilityRole="button"
-              accessibilityLabel={
-                saved ? t("removeFromSaved") : t("saveChallenge")
-              }
-            >
-              <Animated.View style={rStyle}>
-                <Ionicons
-                  name={saved ? "bookmark" : "bookmark-outline"}
-                  size={normalizeSize(22)}
-                  color={saved ? theme.colors.secondary : theme.colors.textPrimary}
-                />
-              </Animated.View>
-            </TouchableOpacity>
-          </LinearGradient>
-        </TouchableOpacity>
-      </Animated.View>
-    );
-  });
+  const dynamicStyles = useMemo(
+    () => getDynamicStyles(currentTheme, isDarkMode),
+    [currentTheme, isDarkMode]
+  );
 
   const safeNavigate = (path: string) => {
     if (path.startsWith("/challenge-details")) {
@@ -597,7 +621,7 @@ export default function ExploreScreen() {
     router.push(path);
   };
 
-  // Firestore fetch (une seule fois) → on garde "raw", la traduction est dérivée
+  // Firestore fetch
   useEffect(() => {
     const q = query(
       collection(db, "challenges"),
@@ -606,6 +630,7 @@ export default function ExploreScreen() {
       orderBy("createdAt", "desc")
     );
     unmountedRef.current = false;
+
     const unsubscribe = onSnapshot(
       q,
       async (querySnapshot) => {
@@ -624,16 +649,15 @@ export default function ExploreScreen() {
             approved: true,
           };
         });
+
         if (!unmountedRef.current) {
           setRawChallenges(fetched);
           setLoading(false);
         }
-        // ⚡️ Déporte le prefetch après les interactions → pas de freeze du premier paint
+
         InteractionManager.runAfterInteractions(() => {
           const urls = Array.from(
-            new Set(
-              fetched.map((c) => c.imageUrl).filter(Boolean) as string[]
-            )
+            new Set(fetched.map((c) => c.imageUrl).filter(Boolean) as string[])
           ).slice(0, 20);
           urls.forEach((u) => RNImage.prefetch(u).catch(() => {}));
         });
@@ -642,7 +666,6 @@ export default function ExploreScreen() {
         console.error(error);
         if (!unmountedRef.current) {
           setLoading(false);
-          // 🔔 Erreur chargement challenges (centralisé)
           showErrorAlert(
             t,
             "loadChallengesFailed",
@@ -657,7 +680,7 @@ export default function ExploreScreen() {
     };
   }, [t]);
 
-  // Projection "vue" (traduite) → recalculée quand la langue change
+  // Projection vue traduite
   const challenges: Challenge[] = useMemo(() => {
     return rawChallenges.map((r) => {
       const rawCat = r.category ?? "Miscellaneous";
@@ -707,7 +730,6 @@ export default function ExploreScreen() {
           });
 
     if (!searchQuery) {
-      // Sans recherche : popularité d’abord
       return base
         .slice()
         .sort(
@@ -716,7 +738,6 @@ export default function ExploreScreen() {
         );
     }
 
-    // Score de pertinence
     const q = normalizeText(searchQuery).trim();
     const tokens = q.split(/\s+/).filter(Boolean);
 
@@ -759,13 +780,11 @@ export default function ExploreScreen() {
 
   const toggleSaved = useCallback(
     (ch: Challenge) => {
-      // 🔐 Si l'utilisateur est invité, on ouvre le gate et on arrête là
       if (!gate()) return;
 
       const id = ch.id;
       const was = isSaved(id);
 
-      // 1) override optimiste local
       setOptimisticSaved((prev) => {
         const next = new Set(prev);
         if (was) next.delete(id);
@@ -773,7 +792,6 @@ export default function ExploreScreen() {
         return next;
       });
 
-      // 2) fire-and-forget backend
       const p = was
         ? removeChallenge(id)
         : addChallenge({
@@ -788,13 +806,11 @@ export default function ExploreScreen() {
 
       p.catch((err) => {
         console.error(err);
-        // 🔔 Erreur favoris (centralisé)
         showErrorAlert(
           t,
           "toggleFavoriteFailed",
           "Impossible de mettre à jour tes favoris. Réessaie dans un instant."
         );
-        // rollback si échec
         setOptimisticSaved((prev) => {
           const next = new Set(prev);
           if (was) next.add(id);
@@ -839,9 +855,6 @@ export default function ExploreScreen() {
     []
   );
 
-  const dynamicStyles = getDynamicStyles(currentTheme, isDarkMode);
-
-  // 🧭 Scroll top quand recherche/filtres changent
   const scrollTop = useCallback(() => {
     requestAnimationFrame(() => {
       listRef.current?.scrollToOffset({ offset: 0, animated: false });
@@ -854,20 +867,11 @@ export default function ExploreScreen() {
 
   const keyExtractor = useCallback((item: Challenge) => item.id, []);
 
-  const getItemLayout = useCallback(
-    (_: any, index: number) => ({
-      length: ITEM_HEIGHT,
-      offset: ITEM_HEIGHT * index,
-      index,
-    }),
-    []
-  );
-
   const renderItem = useCallback(
     ({ item, index }: { item: Challenge; index: number }) => (
       <ChallengeCard
         item={item}
-        index={index}
+        index={shouldAnimateItems ? index : 0}
         theme={currentTheme}
         isDark={isDarkMode}
         saved={optimisticSaved.has(item.id) ? true : isSaved(item.id)}
@@ -882,9 +886,10 @@ export default function ExploreScreen() {
           )
         }
         onToggleSaved={() => toggleSaved(item)}
+        t={t}
       />
     ),
-    [currentTheme, isDarkMode, optimisticSaved, isSaved, toggleSaved]
+    [currentTheme, isDarkMode, optimisticSaved, isSaved, toggleSaved, t, shouldAnimateItems]
   );
 
   if (loading) {
@@ -892,8 +897,8 @@ export default function ExploreScreen() {
       <GlobalLayout>
         <LinearGradient
           colors={[
-            withAlpha(currentTheme.colors.background, 1),
-            withAlpha(currentTheme.colors.cardBackground, 1),
+            currentTheme.colors.background,
+            currentTheme.colors.cardBackground,
             withAlpha(currentTheme.colors.primary, 0.13),
           ]}
           style={{
@@ -930,8 +935,8 @@ export default function ExploreScreen() {
         <CustomHeader title={t("exploreChallenges")} />
         <LinearGradient
           colors={[
-            withAlpha(currentTheme.colors.background, 1),
-            withAlpha(currentTheme.colors.cardBackground, 1),
+            currentTheme.colors.background,
+            currentTheme.colors.cardBackground,
             withAlpha(currentTheme.colors.primary, 0.12),
           ]}
           style={styles.gradientContainer}
@@ -961,8 +966,8 @@ export default function ExploreScreen() {
             initialNumToRender={10}
             maxToRenderPerBatch={10}
             updateCellsBatchingPeriod={30}
+            key={`${categoryFilter}-${originFilter}-${!!searchQuery}`}
             windowSize={12}
-            getItemLayout={getItemLayout}
             keyboardShouldPersistTaps="always"
             keyboardDismissMode="on-drag"
             removeClippedSubviews={false}
@@ -1094,10 +1099,10 @@ const styles = StyleSheet.create({
     borderRadius: normalizeSize(16),
     shadowColor: "#000",
     shadowOffset: { width: 0, height: normalizeSize(5) },
-    shadowOpacity: 0.35,
+    shadowOpacity: 0.28,
     shadowRadius: normalizeSize(8),
     minHeight: normalizeSize(48),
-    elevation: 10,
+    elevation: 8,
     paddingRight: normalizeSize(8),
   },
   searchIcon: {
@@ -1123,7 +1128,7 @@ const styles = StyleSheet.create({
     borderRadius: normalizeSize(12),
     shadowColor: "#000",
     shadowOffset: { width: 0, height: normalizeSize(3) },
-    shadowOpacity: 0.3,
+    shadowOpacity: 0.25,
     shadowRadius: normalizeSize(6),
     elevation: 8,
   },
@@ -1144,9 +1149,9 @@ const styles = StyleSheet.create({
     alignItems: "center",
     shadowColor: "#000",
     shadowOffset: { width: 0, height: normalizeSize(3) },
-    shadowOpacity: 0.3,
+    shadowOpacity: 0.22,
     shadowRadius: normalizeSize(6),
-    elevation: 8,
+    elevation: 6,
   },
   resetIcon: {
     marginRight: normalizeSize(6),
@@ -1211,7 +1216,7 @@ const styles = StyleSheet.create({
     borderRadius: normalizeSize(20),
     shadowColor: "#000",
     shadowOffset: { width: 0, height: normalizeSize(5) },
-    shadowOpacity: 0.35,
+    shadowOpacity: 0.32,
     shadowRadius: normalizeSize(8),
     elevation: 10,
   },
@@ -1262,7 +1267,7 @@ const styles = StyleSheet.create({
     borderRadius: normalizeSize(20),
     shadowColor: "#000",
     shadowOffset: { width: 0, height: normalizeSize(5) },
-    shadowOpacity: 0.35,
+    shadowOpacity: 0.32,
     shadowRadius: normalizeSize(8),
     elevation: 10,
   },

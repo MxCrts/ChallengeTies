@@ -8,6 +8,7 @@ import {
   ActivityIndicator,
   Dimensions,
   StatusBar,
+  I18nManager,
 } from "react-native";
 import { Ionicons } from "@expo/vector-icons";
 import { doc, onSnapshot } from "firebase/firestore";
@@ -576,6 +577,8 @@ const styles = StyleSheet.create({
     marginTop: normalize(8),
     fontSize: normalize(14),
     fontFamily: "Comfortaa_400Regular",
+    textAlign: "center",
+   writingDirection: I18nManager.isRTL ? "rtl" : "ltr",
   },
   errorBox: {
     alignItems: "center",
@@ -586,6 +589,7 @@ const styles = StyleSheet.create({
     fontSize: normalize(14),
     fontFamily: "Comfortaa_400Regular",
     textAlign: "center",
+    writingDirection: I18nManager.isRTL ? "rtl" : "ltr",
   },
   heroCard: {
     borderRadius: normalize(22),
@@ -608,11 +612,15 @@ const styles = StyleSheet.create({
   heroTitle: {
     fontSize: normalize(18),
     fontFamily: "Comfortaa_700Bold",
+     writingDirection: I18nManager.isRTL ? "rtl" : "ltr",
+   textAlign: I18nManager.isRTL ? "right" : "left",
   },
   heroSubtitle: {
     fontSize: normalize(12),
     fontFamily: "Comfortaa_400Regular",
     marginBottom: normalize(10),
+     writingDirection: I18nManager.isRTL ? "rtl" : "ltr",
+   textAlign: I18nManager.isRTL ? "right" : "left",
   },
   heroBadge: {
     flexDirection: "row",
@@ -625,6 +633,8 @@ const styles = StyleSheet.create({
   heroBadgeText: {
     fontSize: normalize(11),
     fontFamily: "Comfortaa_400Regular",
+    writingDirection: I18nManager.isRTL ? "rtl" : "ltr",
+   textAlign: "center",
   },
   heroStatsRow: {
     flexDirection: "row",
@@ -642,6 +652,8 @@ const styles = StyleSheet.create({
     fontFamily: "Comfortaa_400Regular",
     opacity: 0.85,
     marginBottom: normalize(2),
+    writingDirection: I18nManager.isRTL ? "rtl" : "ltr",
+   textAlign: I18nManager.isRTL ? "right" : "left",
   },
   statValueRow: {
     flexDirection: "row",
@@ -652,6 +664,8 @@ const styles = StyleSheet.create({
     fontSize: normalize(16),
     fontFamily: "Comfortaa_700Bold",
     color: "#FFFFFF",
+    writingDirection: I18nManager.isRTL ? "rtl" : "ltr",
+   textAlign: "left",
   },
   section: {
     marginTop: normalize(8),
@@ -661,12 +675,16 @@ const styles = StyleSheet.create({
     fontSize: normalize(16),
     fontFamily: "Comfortaa_700Bold",
     marginBottom: normalize(4),
+    writingDirection: I18nManager.isRTL ? "rtl" : "ltr",
+   textAlign: I18nManager.isRTL ? "right" : "left",
   },
   sectionSubtitle: {
     fontSize: normalize(12),
     fontFamily: "Comfortaa_400Regular",
     opacity: 0.9,
     marginBottom: normalize(8),
+    writingDirection: I18nManager.isRTL ? "rtl" : "ltr",
+   textAlign: I18nManager.isRTL ? "right" : "left",
   },
   itemsList: {
     marginTop: normalize(2),
@@ -700,6 +718,8 @@ const styles = StyleSheet.create({
     flex: 1,
     fontSize: normalize(14),
     fontFamily: "Comfortaa_700Bold",
+    writingDirection: I18nManager.isRTL ? "rtl" : "ltr",
+   textAlign: I18nManager.isRTL ? "right" : "left",
   },
   itemCountBadge: {
     borderRadius: 999,
@@ -711,10 +731,14 @@ const styles = StyleSheet.create({
     fontSize: normalize(11),
     fontFamily: "Comfortaa_700Bold",
     color: "#FFD54F",
+    writingDirection: I18nManager.isRTL ? "rtl" : "ltr",
+   textAlign: "center",
   },
   itemSubtitle: {
     fontSize: normalize(11),
     fontFamily: "Comfortaa_400Regular",
+    writingDirection: I18nManager.isRTL ? "rtl" : "ltr",
+   textAlign: I18nManager.isRTL ? "right" : "left",
   },
   emptyState: {
     alignItems: "center",
@@ -724,12 +748,15 @@ const styles = StyleSheet.create({
     fontSize: normalize(14),
     fontFamily: "Comfortaa_700Bold",
     marginTop: normalize(6),
+    writingDirection: I18nManager.isRTL ? "rtl" : "ltr",
+   textAlign: "center",
   },
   emptyText: {
     fontSize: normalize(12),
     fontFamily: "Comfortaa_400Regular",
     marginTop: normalize(4),
-    textAlign: "center",
+    writingDirection: I18nManager.isRTL ? "rtl" : "ltr",
+   textAlign: "center",
   },
   helperBox: {
     flexDirection: "row",
@@ -744,6 +771,8 @@ const styles = StyleSheet.create({
     flex: 1,
     fontSize: normalize(12),
     fontFamily: "Comfortaa_400Regular",
+    writingDirection: I18nManager.isRTL ? "rtl" : "ltr",
+   textAlign: I18nManager.isRTL ? "right" : "left",
   },
 });
 

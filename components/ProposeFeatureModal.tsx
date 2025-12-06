@@ -611,7 +611,7 @@ const createStyles = (
       fontFamily: "Comfortaa_400Regular",
       fontSize: 14,
       borderWidth: 1.5,
-      color: current.colors.textPrimary,
+      color: isDark ? current.colors.textPrimary : "#111111",
     },
     textArea: { minHeight: 110 },
     chipsRow: {

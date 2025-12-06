@@ -108,74 +108,27 @@ export default function Screen1() {
       mounted = false;
     };
   }, []);
-
   // Lecture/pause pilotées quand shouldPlay change
   useEffect(() => {
     const v = videoRef.current;
-    if (!v) return;
+
+    // 🔒 Tant que la vidéo n'est pas chargée, on ne touche à rien
+    if (!v || !videoLoaded) return;
+
     (async () => {
       try {
-        if (shouldPlay && videoLoaded) {
+        if (shouldPlay) {
           await v.playAsync();
         } else {
           await v.pauseAsync();
         }
-      } catch {}
+      } catch (e) {
+        console.warn("[OnboardingVideo] play/pause error", e);
+      }
     })();
   }, [shouldPlay, videoLoaded]);
 
-  // Intro overlay + texte (0 → ~3s visible, fade out ~1s)
-  useEffect(() => {
-    if (reduceMotion) {
-      introOverlayOpacity.setValue(0);
-      introTextOpacity.setValue(0);
-      return;
-    }
-    const anim = Animated.sequence([
-      Animated.parallel([
-        Animated.timing(introOverlayOpacity, {
-          toValue: 1,
-          duration: 800,
-          easing: Easing?.out
-            ? Easing.out(Easing.cubic)
-            : undefined,
-          useNativeDriver: true,
-        }),
-        Animated.timing(introTextOpacity, {
-          toValue: 1,
-          duration: 800,
-          easing: Easing?.out
-            ? Easing.out(Easing.cubic)
-            : undefined,
-          useNativeDriver: true,
-        }),
-      ]),
-      Animated.delay(2200),
-      Animated.parallel([
-        Animated.timing(introTextOpacity, {
-          toValue: 0,
-          duration: 800,
-          easing: Easing?.in
-            ? Easing.in(Easing.cubic)
-            : undefined,
-          useNativeDriver: true,
-        }),
-        Animated.timing(introOverlayOpacity, {
-          toValue: 0,
-          duration: 800,
-          easing: Easing?.in
-            ? Easing.in(Easing.cubic)
-            : undefined,
-          useNativeDriver: true,
-        }),
-      ]),
-    ]);
-    anim.start();
-    // Skip après 3s
-    const skipTimer = setTimeout(() => setShowSkip(true), 3000);
-    timersRef.current.push(skipTimer as unknown as number);
-    return () => anim.stop();
-  }, [introOverlayOpacity, introTextOpacity, reduceMotion]);
+
 
   // Apparition logo + texte final + CTA (9s de playback ou fallback 10s)
   const showCTA = useCallback(() => {
@@ -217,16 +170,27 @@ export default function Screen1() {
 
   useEffect(() => {
     if (reduceMotion) {
-      // En reduced motion, on affiche direct le CTA
+      // Mode accessibilité : on montre directement le CTA,
+      // le bouton "Passer" sera géré dans l'effet dédié au skip.
       showCTA();
+    }
+  }, [showCTA, reduceMotion]);
+
+    // Bouton "Passer" visible à partir de 3s
+  useEffect(() => {
+    if (reduceMotion) {
+      // En mode réduit, on le montre directement
       setShowSkip(true);
       return;
     }
-    // file d’attente max 10s si la vidéo met du temps à buffer
-    const fallbackTimer = setTimeout(() => showCTA(), 10000);
-    timersRef.current.push(fallbackTimer as unknown as number);
-    return () => clearTimeout(fallbackTimer);
-  }, [showCTA, reduceMotion]);
+
+    const id = setTimeout(() => {
+      setShowSkip(true);
+    }, 3000);
+
+    return () => clearTimeout(id);
+  }, [reduceMotion]);
+
 
   // Clean video + timers on unmount
   useEffect(() => {
@@ -245,13 +209,23 @@ export default function Screen1() {
     };
   }, []);
 
-  const onPlaybackStatusUpdate = (status: AVPlaybackStatus) => {
-    if (!status || !("positionMillis" in status)) return;
-    playbackMsRef.current = status.positionMillis ?? 0;
-    if (playbackMsRef.current >= 9000 && !ctaShownRef.current) {
+    const onPlaybackStatusUpdate = (status: AVPlaybackStatus) => {
+    if (!status || !("isLoaded" in status) || !status.isLoaded) {
+      return;
+    }
+
+    const pos = "positionMillis" in status && status.positionMillis != null
+      ? status.positionMillis
+      : 0;
+
+    playbackMsRef.current = pos;
+
+    // ✅ Pop CTA exactement à 35s de lecture
+    if (!reduceMotion && !ctaShownRef.current && pos >= 35000) {
       showCTA();
     }
   };
+
 
   const onVideoLoad = () => {
     setVideoLoaded(true);
@@ -279,6 +253,20 @@ export default function Screen1() {
       } catch {}
     }
 
+    // Si l'utilisateur a demandé la réduction des animations,
+    // on passe directement à la suite sans fade.
+    if (reduceMotion) {
+      try {
+        await AsyncStorage.removeItem("hasCompletedTutorialAfterSignup");
+        setIsTutorialActive?.(false);
+        setTutorialStep?.(0);
+        nav.replace("/first-pick");
+      } catch {
+        setIsNavigating(false);
+      }
+      return;
+    }
+
     Animated.timing(fadeAnim, {
       toValue: 0,
       duration: 280,
@@ -293,7 +281,7 @@ export default function Screen1() {
         setIsNavigating(false);
       }
     });
-  }, [fadeAnim, isNavigating, nav, setIsTutorialActive, setTutorialStep]);
+  }, [fadeAnim, isNavigating, nav, setIsTutorialActive, setTutorialStep, reduceMotion]);
 
   if (!fontsLoaded) {
     return (
@@ -357,6 +345,10 @@ export default function Screen1() {
           onLoad={onVideoLoad}
           onError={onVideoError}
           onPlaybackStatusUpdate={onPlaybackStatusUpdate}
+           // Accessibilité : décoratif, ne pas l'annoncer
+          accessible={false}
+          accessibilityElementsHidden
+          importantForAccessibility="no-hide-descendants"
         />
 
         {/* Loader discret tant que la vidéo n’est pas prête */}

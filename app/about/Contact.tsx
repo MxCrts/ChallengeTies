@@ -91,13 +91,14 @@ export default function Contact() {
     [isDarkMode]
   );
 
-  // --- helpers
   const openUrl = useCallback(
     async (url: string) => {
       try {
         tap();
         const can = await Linking.canOpenURL(url);
-        if (!can) throw new Error("cannot_open");
+        if (!can) {
+          throw new Error("cannot_open");
+        }
         await Linking.openURL(url);
         success();
       } catch {
@@ -136,7 +137,6 @@ export default function Contact() {
     [t, showToast]
   );
 
-  // helper pour cartes premium (gradient + verre dépoli)
   const renderCard = (delay: number, children: React.ReactNode) => (
     <Animated.View entering={FadeInUp.delay(delay)} style={styles.cardOuter}>
       <LinearGradient
@@ -159,6 +159,11 @@ export default function Contact() {
       </LinearGradient>
     </Animated.View>
   );
+
+  const screenA11yLabel =
+    t("contact.screenA11yLabel", {
+      defaultValue: "Écran de contact ChallengeTies",
+    }) || "Contact";
 
   return (
     <LinearGradient
@@ -185,6 +190,10 @@ export default function Contact() {
           ]}
           showsVerticalScrollIndicator={false}
           keyboardShouldPersistTaps="handled"
+          keyboardDismissMode="on-drag"
+          contentInsetAdjustmentBehavior="automatic"
+          accessible
+          accessibilityLabel={screenA11yLabel}
         >
           {/* Logo rond sans ombre */}
           <Animated.View
@@ -236,6 +245,7 @@ export default function Contact() {
               onOpen={() => openUrl("mailto:support@challengeties.app")}
               onCopy={() => copyToClipboard("support@challengeties.app")}
               currentTheme={currentTheme}
+              isDarkMode={isDarkMode}
             />
           )}
 
@@ -246,13 +256,12 @@ export default function Contact() {
               icon="logo-instagram"
               title={t("contact.instagramSection")}
               value={t("contact.instagramHandle")}
-              onOpen={() =>
-                openUrl("https://www.instagram.com/challengeties")
-              }
+              onOpen={() => openUrl("https://www.instagram.com/challengeties")}
               onCopy={() =>
                 copyToClipboard("https://www.instagram.com/challengeties")
               }
               currentTheme={currentTheme}
+              isDarkMode={isDarkMode}
               testID="instagram-link"
             />
           )}
@@ -264,13 +273,12 @@ export default function Contact() {
               icon="logo-facebook"
               title={t("contact.facebookSection")}
               value={t("contact.facebookHandle")}
-              onOpen={() =>
-                openUrl("https://www.facebook.com/challengeties")
-              }
+              onOpen={() => openUrl("https://www.facebook.com/challengeties")}
               onCopy={() =>
                 copyToClipboard("https://www.facebook.com/challengeties")
               }
               currentTheme={currentTheme}
+              isDarkMode={isDarkMode}
               testID="facebook-link"
             />
           )}
@@ -311,6 +319,7 @@ const LinkRow = React.memo(function LinkRow({
   onOpen,
   onCopy,
   currentTheme,
+  isDarkMode,
   testID,
 }: {
   icon: keyof typeof Ionicons.glyphMap;
@@ -319,9 +328,18 @@ const LinkRow = React.memo(function LinkRow({
   onOpen: () => void;
   onCopy: () => void;
   currentTheme: Theme;
+  isDarkMode: boolean;
   testID?: string;
 }) {
   const { t } = useTranslation();
+
+  const trailingIconColor = isDarkMode
+    ? currentTheme.colors.textPrimary
+    : "#111111";
+
+  const copyBg = isDarkMode ? "rgba(255,241,201,0.9)" : "#FFF1C9";
+  const copyBorder = isDarkMode ? "rgba(255,184,0,0.9)" : "#FFB800";
+  const copyTextColor = isDarkMode ? "#000000" : "#111111";
 
   return (
     <View style={styles.linkRowWrap}>
@@ -330,6 +348,9 @@ const LinkRow = React.memo(function LinkRow({
         testID={testID}
         accessibilityRole="button"
         accessibilityLabel={title}
+        accessibilityHint={t("contact.accessibility.openLinkHint", {
+          defaultValue: "Ouvre le lien de contact associé.",
+        })}
         style={styles.linkRowPressable}
         android_ripple={{ color: "#00000010", borderless: false }}
         hitSlop={8}
@@ -359,7 +380,7 @@ const LinkRow = React.memo(function LinkRow({
             {value}
           </Text>
         </View>
-        <Ionicons name="open-outline" size={18} color="#111" />
+        <Ionicons name="open-outline" size={18} color={trailingIconColor} />
       </Pressable>
 
       <View style={{ height: 8 }} />
@@ -368,11 +389,27 @@ const LinkRow = React.memo(function LinkRow({
         onPress={onCopy}
         accessibilityRole="button"
         accessibilityLabel={t("share.copy", { defaultValue: "Copier" })}
+        accessibilityHint={t("contact.accessibility.copyHint", {
+          defaultValue: "Copie ces informations dans le presse-papiers.",
+        })}
         hitSlop={8}
-        style={styles.copyBtn}
+        style={[
+          styles.copyBtn,
+          {
+            backgroundColor: copyBg,
+            borderColor: copyBorder,
+          },
+        ]}
       >
-        <Ionicons name="copy-outline" size={16} color="#111" />
-        <Text style={styles.copyTxt}>
+        <Ionicons name="copy-outline" size={16} color={copyTextColor} />
+        <Text
+          style={[
+            styles.copyTxt,
+            {
+              color: copyTextColor,
+            },
+          ]}
+        >
           {t("share.copy", { defaultValue: "Copier" })}
         </Text>
       </TouchableOpacity>
@@ -466,14 +503,11 @@ const styles = StyleSheet.create({
     borderRadius: 999,
     paddingHorizontal: 12,
     paddingVertical: 8,
-    backgroundColor: "#FFF1C9",
     borderWidth: 1,
-    borderColor: "#FFB800",
   },
   copyTxt: {
     fontFamily: "Comfortaa_700Bold",
     fontSize: normalizeSize(14),
-    color: "#111",
   },
 
   footer: {

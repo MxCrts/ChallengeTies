@@ -6,7 +6,6 @@ import {
   ScrollView,
   Dimensions,
   Linking,
-  Platform,
 } from "react-native";
 import { StatusBar } from "expo-status-bar";
 import { SafeAreaView, useSafeAreaInsets } from "react-native-safe-area-context";
@@ -25,8 +24,12 @@ const SPACING = 15;
 
 const normalizeSize = (size: number) => {
   const scale = SCREEN_WIDTH / 375;
-  return Math.round(size * scale);
+  const clamped = Math.min(Math.max(scale, 0.7), 1.9);
+  return Math.round(size * clamped);
 };
+
+// ⚠️ Date de dernière mise à jour – à mettre à jour MANUELLEMENT
+const LAST_UPDATED = "29/11/2025";
 
 // Interface pour les items des listes avec typage précis des icônes
 interface ListItem {
@@ -47,14 +50,20 @@ interface ListItem {
     | "eye-outline"
     | "checkmark-done-outline"
     | "hand-right-outline"
-    | "swap-horizontal-outline";
+    | "swap-horizontal-outline"
+    | "phone-portrait-outline";
   key: string;
 }
 
 /** Fond orbe léger, non interactif */
-const OrbBackground = ({ theme }: { theme: Theme }) => {
+const OrbBackground = memo(function OrbBackground({ theme }: { theme: Theme }) {
   return (
-    <View style={StyleSheet.absoluteFill} pointerEvents="none">
+    <View
+      style={StyleSheet.absoluteFill}
+      pointerEvents="none"
+      accessibilityElementsHidden
+      importantForAccessibility="no-hide-descendants"
+    >
       {/* Orbe en haut à gauche */}
       <LinearGradient
         colors={[theme.colors.secondary + "55", theme.colors.primary + "11"]}
@@ -96,31 +105,31 @@ const OrbBackground = ({ theme }: { theme: Theme }) => {
       />
     </View>
   );
-};
+});
 
 export default function PrivacyPolicy() {
   const { t } = useTranslation();
   const { theme } = useTheme();
   const isDarkMode = theme === "dark";
   const insets = useSafeAreaInsets();
+
   const currentTheme: Theme = useMemo(
     () => (isDarkMode ? designSystem.darkTheme : designSystem.lightTheme),
     [isDarkMode]
   );
 
   const borderColor = isDarkMode ? currentTheme.colors.secondary : "#FF8C00";
-  const lastUpdated = useMemo(() => {
-    // ⚠️ si tu veux une date figée depuis le back, remplace ici
-    const d = new Date();
-    return d.toLocaleDateString();
-  }, []);
 
+  // ⚙️ Listes alignées avec ce que fait l’app (Firebase, analytics, pubs, notifs, etc.)
   const dataCollectedItems: ListItem[] = [
     { icon: "person-outline", key: "nameEmail" },
     { icon: "image-outline", key: "profilePhoto" },
     { icon: "trophy-outline", key: "progress" },
     { icon: "heart-outline", key: "interests" },
     { icon: "time-outline", key: "browsingHistory" },
+    // Données techniques (Firebase / AdMob / analytics)
+    { icon: "phone-portrait-outline", key: "deviceInfo" },
+    { icon: "analytics-outline", key: "usageAnalytics" },
   ];
 
   const dataUsageItems: ListItem[] = [
@@ -128,10 +137,12 @@ export default function PrivacyPolicy() {
     { icon: "analytics-outline", key: "analyze" },
     { icon: "notifications-outline", key: "notify" },
     { icon: "settings-outline", key: "improve" },
+    // pubs + mesure de performance
+    { icon: "construct-outline", key: "adsAndMonetization" },
   ];
 
   const dataSharingItems: ListItem[] = [
-    { icon: "construct-outline", key: "techPartners" },
+    { icon: "construct-outline", key: "techPartners" }, // Firebase, hébergeurs, analytics, AdMob
     { icon: "shield-outline", key: "legalAuthorities" },
     { icon: "lock-closed-outline", key: "securityServices" },
   ];
@@ -150,10 +161,7 @@ export default function PrivacyPolicy() {
 
   // Helper pour toutes les cartes (gradient + fond verre dépoli)
   const renderCard = (delay: number, children: ReactNode) => (
-    <Animated.View
-      entering={FadeInUp.delay(delay)}
-      style={styles.cardOuter}
-    >
+    <Animated.View entering={FadeInUp.delay(delay)} style={styles.cardOuter}>
       <LinearGradient
         colors={[
           currentTheme.colors.secondary + "D0",
@@ -174,6 +182,15 @@ export default function PrivacyPolicy() {
       </LinearGradient>
     </Animated.View>
   );
+
+  const openUrlSafe = (url: string | undefined) => {
+    if (!url) return;
+    try {
+      Linking.openURL(url);
+    } catch {
+      // soft fail
+    }
+  };
 
   return (
     <LinearGradient
@@ -199,6 +216,9 @@ export default function PrivacyPolicy() {
           contentInsetAdjustmentBehavior="automatic"
           keyboardDismissMode="on-drag"
           keyboardShouldPersistTaps="handled"
+          accessibilityLabel={t("privacyPolicy.screenA11yLabel", {
+            defaultValue: "Politique de confidentialité de ChallengeTies",
+          })}
         >
           {/* Logo sans cadre (cercle parfait, pas d'ombre) */}
           <Animated.View
@@ -212,12 +232,13 @@ export default function PrivacyPolicy() {
               transition={120}
               cachePolicy="memory-disk"
               accessibilityLabel={t("privacyPolicy.logoAlt")}
+              accessibilityRole="image"
             />
           </Animated.View>
 
           {/* Last updated */}
           <SmallBadge
-            text={t("privacyPolicy.lastUpdated", { date: lastUpdated })}
+            text={t("privacyPolicy.lastUpdated", { date: LAST_UPDATED })}
             color={borderColor}
           />
 
@@ -251,12 +272,14 @@ export default function PrivacyPolicy() {
                 >
                   {t("appName")}
                 </Text>{" "}
-                {t("privacyPolicy.introductionText", { appName: "ChallengeTies" })}
+                {t("privacyPolicy.introductionText", {
+                  appName: "ChallengeTies",
+                })}
               </Text>
             </>
           )}
 
-          {/* Data Collected */}
+          {/* Données collectées */}
           {renderCard(
             600,
             <>
@@ -288,7 +311,7 @@ export default function PrivacyPolicy() {
             </>
           )}
 
-          {/* Data Usage */}
+          {/* Utilisation des données */}
           {renderCard(
             800,
             <>
@@ -320,7 +343,7 @@ export default function PrivacyPolicy() {
             </>
           )}
 
-          {/* Data Sharing */}
+          {/* Partage des données */}
           {renderCard(
             1000,
             <>
@@ -352,7 +375,7 @@ export default function PrivacyPolicy() {
             </>
           )}
 
-          {/* Security */}
+          {/* Sécurité */}
           {renderCard(
             1200,
             <>
@@ -384,7 +407,7 @@ export default function PrivacyPolicy() {
             </>
           )}
 
-          {/* User Rights */}
+          {/* Droits des utilisateurs */}
           {renderCard(
             1400,
             <>
@@ -416,7 +439,7 @@ export default function PrivacyPolicy() {
             </>
           )}
 
-          {/* Legal basis (GDPR), retention, transfers, children */}
+          {/* Base légale, conservation, transferts, enfants */}
           <Section
             currentTheme={currentTheme}
             delay={1500}
@@ -442,7 +465,7 @@ export default function PrivacyPolicy() {
             text={t("privacyPolicy.childrenText")}
           />
 
-          {/* Cookies */}
+          {/* Cookies & traceurs (inclure UMP / AdMob dans les textes i18n) */}
           {renderCard(
             1900,
             <>
@@ -473,7 +496,7 @@ export default function PrivacyPolicy() {
                 ]}
                 accessibilityRole="link"
                 onPress={() =>
-                  Linking.openURL(t("privacyPolicy.manageCookiesUrl"))
+                  openUrlSafe(t("privacyPolicy.manageCookiesUrl") as string)
                 }
               >
                 {t("privacyPolicy.manageCookiesCta")}
@@ -481,7 +504,7 @@ export default function PrivacyPolicy() {
             </>
           )}
 
-          {/* Updates */}
+          {/* Mises à jour */}
           <Section
             currentTheme={currentTheme}
             delay={2000}
@@ -489,7 +512,7 @@ export default function PrivacyPolicy() {
             text={t("privacyPolicy.updatesText")}
           />
 
-          {/* Contact */}
+          {/* Contact & autorité de contrôle (CNIL etc.) */}
           {renderCard(
             2100,
             <>
@@ -533,8 +556,8 @@ export default function PrivacyPolicy() {
                 ]}
                 accessibilityRole="link"
                 onPress={() =>
-                  Linking.openURL(
-                    t("privacyPolicy.supervisoryAuthorityUrl")
+                  openUrlSafe(
+                    t("privacyPolicy.supervisoryAuthorityUrl") as string
                   )
                 }
               >
@@ -543,11 +566,8 @@ export default function PrivacyPolicy() {
             </>
           )}
 
-          {/* Final Message */}
-          <Animated.View
-            entering={FadeInUp.delay(2200)}
-            style={styles.footer}
-          >
+          {/* Message final */}
+          <Animated.View entering={FadeInUp.delay(2200)} style={styles.footer}>
             <LinearGradient
               colors={[currentTheme.colors.overlay, currentTheme.colors.border]}
               style={styles.footerGradient}
@@ -626,10 +646,7 @@ const Section = memo(function Section({
   delay?: number;
 }) {
   return (
-    <Animated.View
-      entering={FadeInUp.delay(delay)}
-      style={styles.cardOuter}
-    >
+    <Animated.View entering={FadeInUp.delay(delay)} style={styles.cardOuter}>
       <LinearGradient
         colors={[
           currentTheme.colors.secondary + "D0",
@@ -734,20 +751,6 @@ const styles = StyleSheet.create({
     padding: SPACING,
     borderWidth: 1.2,
     borderColor: "rgba(255,255,255,0.06)",
-  },
-
-  // ancien style card – gardé si besoin ailleurs
-  card: {
-    backgroundColor: "transparent",
-    borderRadius: normalizeSize(20),
-    padding: SPACING,
-    marginBottom: SPACING,
-    borderWidth: 2.5,
-    shadowColor: "transparent",
-    shadowOffset: { width: 0, height: 0 },
-    shadowOpacity: 0,
-    shadowRadius: 0,
-    elevation: 0,
   },
 
   subtitle: {

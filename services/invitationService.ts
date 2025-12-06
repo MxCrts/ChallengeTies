@@ -177,7 +177,7 @@ export async function getOrCreateOpenInvitation(
   );
   const snap = await getDocs(qPend);
 
-  let reusableOpen: string | null = null;
+    let reusableOpen: string | null = null;
   const toCancel: string[] = [];
 
   snap.forEach((d) => {
@@ -190,11 +190,23 @@ export async function getOrCreateOpenInvitation(
       return;
     }
 
-    // OPEN encore valide → candidate à la réutilisation
-    if (inv.kind === "open" && !reusableOpen) {
-      reusableOpen = d.id;
+    // OPEN encore valide
+    if (inv.kind === "open") {
+      // Si les selectedDays NE correspondent PAS à la valeur demandée
+      // on annule aussi (on ne veut jamais réutiliser une invite 10 j
+      // quand l'utilisateur a choisi 30 j, par exemple).
+      if (inv.selectedDays !== selectedDays) {
+        toCancel.push(d.id);
+        return;
+      }
+
+      // Sinon, elle matche exactement → candidate à la réutilisation
+      if (!reusableOpen) {
+        reusableOpen = d.id;
+      }
     }
   });
+
 
   // Cleanup des PENDING à annuler
   for (const id of toCancel) {
@@ -545,21 +557,31 @@ export async function acceptInvitation(inviteId: string): Promise<void> {
       finalInv.inviteeUsername ??
       (await getDisplayUsername(inviteeIdForNotif));
 
-    try {
-      await sendInviteStatusPush({
+// 🔥 Fallback top 3 mondiale
+    const safeUsername = inviteeUsernameFinal || "Partner";
+    const safeChallengeTitle = challengeTitle || "Challenge";
+
+        try {
+      const pushRes = await sendInviteStatusPush({
         inviterId: finalInv.inviterId,
         inviteeId: inviteeIdForNotif,
         status: "accepted",
         challengeId: finalInv.challengeId,
-        challengeTitle,
-        inviteeUsername: inviteeUsernameFinal ?? undefined,
+        challengeTitle: safeChallengeTitle,
+        inviteeUsername: safeUsername,
       });
+
+      console.log(
+        "[notif] sendInviteStatusPush(accepted) result:",
+        pushRes
+      );
     } catch (e) {
       console.log(
-        "[notif] sendInviteStatusPush(accepted) error:",
+        "[notif] sendInviteStatusPush(accepted) error (exception):",
         (e as any)?.message ?? e
       );
     }
+
 
     try {
       await logEvent("invite_accepted", {
@@ -606,32 +628,42 @@ export async function refuseInvitationDirect(
   if (inv.inviteeId !== me) throw new Error("non_autorise");
 
   const inviteeUsername =
-    inv.inviteeUsername ?? (await getDisplayUsername(me));
+  inv.inviteeUsername ?? (await getDisplayUsername(me));
 
-  await updateDoc(ref, {
+const safeUsername = inviteeUsername || "Partner";
+
+await updateDoc(ref, {
+  status: "refused",
+  updatedAt: serverTimestamp(),
+  ...(inviteeUsername ? { inviteeUsername } : {}),
+});
+
+try {
+  let challengeTitle: string | undefined;
+  try {
+    const chSnap = await getDoc(doc(db, "challenges", inv.challengeId));
+    if (chSnap.exists()) {
+      const ch = chSnap.data() as any;
+      challengeTitle = ch?.title || undefined;
+    }
+  } catch {}
+
+  const safeChallengeTitle = challengeTitle || "Challenge";
+
+  const pushRes = await sendInviteStatusPush({
+    inviterId: inv.inviterId,
+    inviteeId: me,
     status: "refused",
-    updatedAt: serverTimestamp(),
-    ...(inviteeUsername ? { inviteeUsername } : {}),
+    challengeId: inv.challengeId,
+    challengeTitle: safeChallengeTitle,
+    inviteeUsername: safeUsername,
   });
 
-  try {
-    let challengeTitle: string | undefined;
-    try {
-      const chSnap = await getDoc(doc(db, "challenges", inv.challengeId));
-      if (chSnap.exists()) {
-        const ch = chSnap.data() as any;
-        challengeTitle = ch?.title || undefined;
-      }
-    } catch {}
 
-    await sendInviteStatusPush({
-      inviterId: inv.inviterId,
-      inviteeId: me,
-      status: "refused",
-      challengeId: inv.challengeId,
-      challengeTitle,
-      inviteeUsername: inviteeUsername ?? undefined,
-    });
+    console.log(
+      "[notif] sendInviteStatusPush(refused_direct) result:",
+      pushRes
+    );
 
     await logEvent("invite_refused", {
       inviteId,
@@ -640,6 +672,7 @@ export async function refuseInvitationDirect(
       inviterId: inv.inviterId,
       inviteeId: me,
     });
+
   } catch (e) {
     console.log(
       "[notif/analytics] refuseInvitationDirect error:",
@@ -689,33 +722,43 @@ export async function refuseOpenInvitation(
   if (inv.status !== "pending") throw new Error("invitation_deja_traitee");
 
   const inviteeUsername =
-    inv.inviteeUsername ?? (await getDisplayUsername(me));
+  inv.inviteeUsername ?? (await getDisplayUsername(me));
 
-  await updateDoc(ref, {
+const safeUsername = inviteeUsername || "Partner";
+
+await updateDoc(ref, {
+  inviteeId: me,
+  inviteeUsername: inviteeUsername ?? null,
+  status: "refused",
+  updatedAt: serverTimestamp(),
+});
+
+try {
+  let challengeTitle: string | undefined;
+  try {
+    const chSnap = await getDoc(doc(db, "challenges", inv.challengeId));
+    if (chSnap.exists()) {
+      const ch = chSnap.data() as any;
+      challengeTitle = ch?.title || undefined;
+    }
+  } catch {}
+
+  const safeChallengeTitle = challengeTitle || "Challenge";
+
+  const pushRes = await sendInviteStatusPush({
+    inviterId: inv.inviterId,
     inviteeId: me,
-    inviteeUsername: inviteeUsername ?? null,
     status: "refused",
-    updatedAt: serverTimestamp(),
+    challengeId: inv.challengeId,
+    challengeTitle: safeChallengeTitle,
+    inviteeUsername: safeUsername,
   });
 
-  try {
-    let challengeTitle: string | undefined;
-    try {
-      const chSnap = await getDoc(doc(db, "challenges", inv.challengeId));
-      if (chSnap.exists()) {
-        const ch = chSnap.data() as any;
-        challengeTitle = ch?.title || undefined;
-      }
-    } catch {}
 
-    await sendInviteStatusPush({
-      inviterId: inv.inviterId,
-      inviteeId: me,
-      status: "refused",
-      challengeId: inv.challengeId,
-      challengeTitle,
-      inviteeUsername: inviteeUsername ?? undefined,
-    });
+    console.log(
+      "[notif] sendInviteStatusPush(refused_open) result:",
+      pushRes
+    );
 
     await logEvent("invite_refused", {
       inviteId,
@@ -724,6 +767,7 @@ export async function refuseOpenInvitation(
       inviterId: inv.inviterId,
       inviteeId: me,
     });
+
   } catch (e) {
     console.log(
       "[notif/analytics] refuseOpenInvitation error:",

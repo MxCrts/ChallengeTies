@@ -6,7 +6,6 @@ import React, {
   useEffect,
   useState,
 } from "react";
-import { useFlags } from "../constants/featureFlags";
 import { useAuth } from "../../context/AuthProvider";
 import { usePathname } from "expo-router";
 import { usePremium } from "../../src/context/PremiumContext";
@@ -14,6 +13,12 @@ import { usePremium } from "../../src/context/PremiumContext";
 const ADMIN_UIDS = new Set<string>([
   "GiN2yTfA7NWISeb4QjXmDPq5TgK2",
 ]);
+
+// 🔥 IMPORTANT TEMPORAIRE :
+// Tant que tu es en internal testing / closed testing,
+// on force l’affichage des pubs, même si consent / flags pas OK.
+// Quand tu passes en vraie prod publique, remets à false.
+const FORCE_SHOW_ADS_FOR_TESTING = false;
 
 type AdsVisibility = {
   showBanners: boolean;
@@ -34,7 +39,6 @@ const AdsVisibilityContext = createContext<AdsVisibility>({
 export const AdsVisibilityProvider: React.FC<{ children: React.ReactNode }> = ({
   children,
 }) => {
-  const { flags } = useFlags();
   const { user } = useAuth();
   const pathname = usePathname();
   const { isPremiumUser } = usePremium();
@@ -50,7 +54,7 @@ export const AdsVisibilityProvider: React.FC<{ children: React.ReactNode }> = ({
     (globalThis as any).__CAN_REQUEST_ADS__ !== false
   );
 
-  // Polling léger boot — MAIS sans aucun log
+  // Polling léger boot — sans log
   useEffect(() => {
     let mounted = true;
 
@@ -60,7 +64,6 @@ export const AdsVisibilityProvider: React.FC<{ children: React.ReactNode }> = ({
       const r = (globalThis as any).__ADS_READY__ === true;
       const c = (globalThis as any).__CAN_REQUEST_ADS__ !== false;
 
-      // setState uniquement si changement réel
       setAdsReady((prev) => (prev !== r ? r : prev));
       setCanRequestAds((prev) => (prev !== c ? c : prev));
 
@@ -81,9 +84,26 @@ export const AdsVisibilityProvider: React.FC<{ children: React.ReactNode }> = ({
     pathname === "/register" ||
     pathname === "/forgot-password";
 
-  const value = useMemo<AdsVisibility>(() => {
-    // tant que pas prêt → pubs masquées
-    if (!adsReady || !canRequestAds || isAuthRoute) {
+    const value = useMemo<AdsVisibility>(() => {
+    const hideAll = isAdmin || isPremium;
+
+    // 🔓 MODE TEST : on ignore adsReady / canRequestAds,
+    // mais on respecte TOUJOURS admin / premium.
+    if (FORCE_SHOW_ADS_FOR_TESTING) {
+      return {
+        showBanners: !isAuthRoute && !hideAll,
+        showInterstitials: !isAuthRoute && !hideAll,
+        showRewarded: !isAuthRoute && !hideAll,
+        isAdmin,
+        isPremium,
+      };
+    }
+
+    // 🔐 MODE NORMAL : en dev on respecte adsReady, en release on ne bloque pas dessus
+    const adsUnlocked =
+      (__DEV__ ? adsReady : true) && canRequestAds && !isAuthRoute;
+
+    if (!adsUnlocked) {
       return {
         showBanners: false,
         showInterstitials: false,
@@ -93,9 +113,7 @@ export const AdsVisibilityProvider: React.FC<{ children: React.ReactNode }> = ({
       };
     }
 
-    // admin ou premium → rien
-    const hideAll = isAdmin || isPremium;
-
+    // admin ou premium → pas de pubs
     return {
       showBanners: !hideAll,
       showInterstitials: !hideAll,
@@ -110,8 +128,8 @@ export const AdsVisibilityProvider: React.FC<{ children: React.ReactNode }> = ({
     isAdmin,
     isPremium,
     pathname,
-    flags, // garde si tu changes flags live
   ]);
+
 
   return (
     <AdsVisibilityContext.Provider value={value}>

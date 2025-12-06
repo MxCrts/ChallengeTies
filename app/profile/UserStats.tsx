@@ -257,75 +257,80 @@ const tabBarHeight = useTabBarHeightSafe();
   
 // ==== Carte stat ultra-perf (memo) ====
   const StatCard = memo(({ item, index }: { item: Stat; index: number }) => (
-      <Animated.View
-        entering={ZoomIn.delay(index * 40)}
-        style={styles.statCardWrapper}
-        accessibilityRole="summary"
+  <Animated.View
+    entering={ZoomIn.delay(index * 40)}
+    style={styles.statCardWrapper}
+    accessibilityRole="summary"
+  >
+    <LinearGradient
+      colors={[
+        currentTheme.colors.cardBackground,
+        currentTheme.colors.cardBackground + "F0",
+      ]}
+      style={[
+        styles.statCard,
+        {
+          borderColor: isDarkMode
+            ? currentTheme.colors.secondary
+            : "#FF8C00",
+        },
+      ]}
+    >
+      <View
+        style={[
+          styles.iconContainer,
+          { backgroundColor: currentTheme.colors.secondary + "1A" },
+        ]}
       >
-        <LinearGradient
-          colors={[
-            currentTheme.colors.cardBackground,
-            currentTheme.colors.cardBackground + "F0",
-          ]}
+        <Ionicons
+          // fallback défensif si jamais
+          name={(item.icon as any) || "stats-chart-outline"}
+          size={normalizeSize(36)}
+          color={currentTheme.colors.secondary}
+          accessibilityLabel={item.accessibilityLabel}
+          accessibilityHint={item.accessibilityHint}
+        />
+      </View>
+      <View style={styles.statContent}>
+        <Text
           style={[
-            styles.statCard,
+            styles.statName,
             {
-              borderColor: isDarkMode
-                ? currentTheme.colors.secondary
-                : "#FF8C00",
+              color: isDarkMode
+                ? currentTheme.colors.textPrimary
+                : "#000000",
+              writingDirection: I18nManager.isRTL ? "rtl" : "ltr",
+              textAlign: I18nManager.isRTL ? "right" : "left",
             },
           ]}
+          accessibilityLabel={item.accessibilityLabel}
+          accessibilityHint={item.accessibilityHint}
+          numberOfLines={2}
+          adjustsFontSizeToFit
         >
-          <View
-            style={[
-              styles.iconContainer,
-              { backgroundColor: currentTheme.colors.secondary + "1A" },
-            ]}
-          >
-            <Ionicons
-              // fallback défensif si jamais
-              name={(item.icon as any) || "stats-chart-outline"}
-              size={normalizeSize(36)}
-              color={currentTheme.colors.secondary}
-              accessibilityLabel={item.accessibilityLabel}
-              accessibilityHint={item.accessibilityHint}
-           />
-          </View>
-          <View style={styles.statContent}>
-            <Text
-              style={[
-                styles.statName,
-                {
-                  color: isDarkMode
-                    ? currentTheme.colors.textPrimary
-                    : "#000000",
-                    writingDirection: I18nManager.isRTL ? "rtl" : "ltr",
-                    textAlign: I18nManager.isRTL ? "right" : "left",
-                },
-              ]}
-              accessibilityLabel={item.accessibilityLabel}
-              accessibilityHint={item.accessibilityHint}
-            >
-              {item.name}
-            </Text>
-            <Text
-              style={[
-                styles.statValue,
-               {
-                  color: currentTheme.colors.secondary,
-                  writingDirection: I18nManager.isRTL ? "rtl" : "ltr",
-                  textAlign: I18nManager.isRTL ? "right" : "left",
-                },
-              ]}
-              accessibilityLabel={item.accessibilityLabel + "Value"}
-              accessibilityHint={item.accessibilityHint}
-            >
-              {item.value}
-            </Text>
-          </View>
-        </LinearGradient>
-      </Animated.View>
-    ));
+          {item.name}
+        </Text>
+        <Text
+          style={[
+            styles.statValue,
+            {
+              color: currentTheme.colors.secondary,
+              writingDirection: I18nManager.isRTL ? "rtl" : "ltr",
+              textAlign: I18nManager.isRTL ? "right" : "left",
+            },
+          ]}
+          accessibilityLabel={`${item.accessibilityLabel} value`}
+          accessibilityHint={item.accessibilityHint}
+          numberOfLines={1}
+          adjustsFontSizeToFit
+        >
+          {item.value}
+        </Text>
+      </View>
+    </LinearGradient>
+  </Animated.View>
+));
+
 
   // (Optionnel) afficher un displayName utile en debug
   (StatCard as any).displayName = "StatCard";
@@ -578,12 +583,11 @@ const styles = StyleSheet.create({
   listContainer: {
     paddingVertical: SPACING * 1.5,
     paddingHorizontal: SPACING / 2,
-    paddingBottom: normalizeSize(60),
   },
   headerCardWrap: {
     paddingHorizontal: SPACING,
-    marginTop: SPACING / 2,
-    marginBottom: SPACING,
+    marginTop: SPACING,
+   marginBottom: SPACING * 1.2,
   },
   statCardWrapper: {
     marginBottom: SPACING * 1.5,
@@ -638,6 +642,7 @@ const styles = StyleSheet.create({
     fontSize: normalizeSize(18),
     fontFamily: "Comfortaa_400Regular",
     textAlign: "center",
+    writingDirection: I18nManager.isRTL ? "rtl" : "ltr",
   },
   emptyContainer: {
     flex: 1,
@@ -650,12 +655,14 @@ const styles = StyleSheet.create({
     fontFamily: "Comfortaa_700Bold",
     textAlign: "center",
     marginBottom: SPACING,
+    writingDirection: I18nManager.isRTL ? "rtl" : "ltr",
   },
   emptySubtext: {
     fontSize: normalizeSize(18),
     fontFamily: "Comfortaa_400Regular",
     textAlign: "center",
     opacity: 0.8,
+    writingDirection: I18nManager.isRTL ? "rtl" : "ltr",
   },
   gradientContainer: {
   flex: 1,

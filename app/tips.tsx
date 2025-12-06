@@ -284,6 +284,7 @@ export default function Conseils() {
           accessibilityRole="list"
           accessibilityLabel={t("tips.listAccessibility")}
           keyboardShouldPersistTaps="handled"
+          keyboardDismissMode="on-drag"
           scrollEventThrottle={16}
         >
           {/* Header logo + sous-titre */}
@@ -319,7 +320,7 @@ export default function Conseils() {
           </Animated.View>
 
           {/* Liste des tips */}
-          <View style={styles.tipsContainer} role="list">
+          <View style={styles.tipsContainer}>
             {filteredTips.map((conseil, index) => (
               <React.Fragment key={conseil.id}>
                 <Animated.View

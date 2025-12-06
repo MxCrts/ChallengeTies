@@ -111,6 +111,7 @@ const TutorialModal: React.FC<TutorialModalProps> = ({
           <Text
             style={[styles.modalTitle, { color: currentTheme.colors.primary }]}
             allowFontScaling={false}
+            accessibilityRole="header"
             {...(Platform.OS === "android"
               ? { textBreakStrategy: "simple" as const }
               : {})}
@@ -134,33 +135,58 @@ const TutorialModal: React.FC<TutorialModalProps> = ({
       }
       icon={<TutorialIcon step={safeStep} />}
     >
-      {/* ✅ Progress mini label */}
-      <Text style={styles.progressText} accessibilityLabel={`Step ${progressLabel}`}>
-        {t("tutorial.progress", { defaultValue: "Étape" })} {progressLabel}
-      </Text>
+      {/* ✅ tagline premium uniquement sur le welcome */}
+      {isWelcome && (
+        <Animated.View entering={FadeInUp.delay(260)}>
+          <Text style={styles.welcomeTagline}>
+            {t("tutorial.welcomeTagline", {
+              defaultValue: "Ton voyage commence ici.",
+            })}
+          </Text>
+        </Animated.View>
+      )}
 
-      {/* Dots de progression premium */}
-      <View style={styles.dotsRow}>
-        {Array.from({ length: TOTAL_STEPS }).map((_, i) => {
-          const active = i === safeStep;
-          const passed = i < safeStep;
-          return (
-            <View
-              key={i}
-              style={[
-                styles.dot,
-                active && styles.dotActive,
-                passed && styles.dotPassed,
-                {
-                  backgroundColor: active || passed
-                    ? currentTheme.colors.secondary
-                    : "rgba(255,255,255,0.22)",
-                },
-              ]}
-            />
-          );
-        })}
-      </View>
+      {/* ✅ Bloc progression + dots (bien centré, animé) */}
+      <Animated.View
+        entering={FadeInUp.delay(280)}
+        style={styles.progressBlock}
+      >
+        <Text
+          style={styles.progressText}
+          accessibilityLabel={t("tutorial.progressA11y", {
+            current: safeStep + 1,
+            total: TOTAL_STEPS,
+          })}
+        >
+          {t("tutorial.progress", { defaultValue: "Étape" })} {progressLabel}
+        </Text>
+
+        {/* Dots de progression premium */}
+        <View style={styles.dotsRow}>
+          {Array.from({ length: TOTAL_STEPS }).map((_, i) => {
+            const active = i === safeStep;
+            const passed = i < safeStep;
+            const scale = active ? 1.2 : passed ? 1.05 : 1;
+            return (
+              <Animated.View
+                key={i}
+                style={[
+                  styles.dot,
+                  active && styles.dotActive,
+                  passed && styles.dotPassed,
+                  {
+                    backgroundColor:
+                      active || passed
+                        ? currentTheme.colors.secondary
+                        : "rgba(255,255,255,0.22)",
+                    transform: [{ scale }],
+                  },
+                ]}
+              />
+            );
+          })}
+        </View>
+      </Animated.View>
 
       {/* STEP 0 — Welcome */}
       {isWelcome && (
@@ -301,7 +327,7 @@ const styles = StyleSheet.create({
     fontFamily: "Comfortaa_400Regular",
     textAlign: "center",
     opacity: 0.88,
-    marginBottom: normalize(10),
+    marginBottom: normalize(8),
     lineHeight: Math.round(normalize(14) * 1.55),
     maxWidth: "92%",
     includeFontPadding: true,
@@ -309,6 +335,20 @@ const styles = StyleSheet.create({
     ...(Platform.OS === "android"
       ? { textBreakStrategy: "simple" as const }
       : null),
+  },
+
+  welcomeTagline: {
+    fontSize: normalize(13),
+    fontFamily: "Comfortaa_400Regular",
+    color: "rgba(255,255,255,0.92)",
+    textAlign: "center",
+    marginBottom: normalize(8),
+  },
+
+  progressBlock: {
+    alignItems: "center",
+    justifyContent: "center",
+    marginBottom: normalize(6),
   },
 
   progressText: {
@@ -322,7 +362,7 @@ const styles = StyleSheet.create({
   dotsRow: {
     flexDirection: "row",
     gap: 6,
-    marginBottom: normalize(8),
+    marginBottom: normalize(4),
     justifyContent: "center",
     alignItems: "center",
   },
@@ -332,12 +372,10 @@ const styles = StyleSheet.create({
     height: normalize(8),
     borderRadius: 999,
     opacity: 0.7,
-    transform: [{ scale: 1 }],
   },
   dotActive: {
     width: normalize(18),
     opacity: 1,
-    transform: [{ scale: 1.08 }],
   },
   dotPassed: {
     opacity: 0.95,
@@ -392,6 +430,10 @@ const styles = StyleSheet.create({
   skipMini: {
     marginTop: normalize(8),
     alignSelf: "center",
+    paddingVertical: normalize(4),
+    paddingHorizontal: normalize(10),
+    borderRadius: 999,
+    backgroundColor: "rgba(15,23,42,0.78)",
   },
 });
 

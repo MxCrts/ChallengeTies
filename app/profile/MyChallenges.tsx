@@ -9,6 +9,7 @@ import {
   StyleSheet,
   SafeAreaView,
   StatusBar,
+  I18nManager,
 } from "react-native";
 import { Ionicons } from "@expo/vector-icons";
 import { useRouter } from "expo-router";
@@ -584,16 +585,22 @@ const styles = StyleSheet.create({
     fontSize: normalizeSize(18),
     fontFamily: "Comfortaa_700Bold",
     marginBottom: normalizeSize(4),
+    writingDirection: I18nManager.isRTL ? "rtl" : "ltr",
+   textAlign: I18nManager.isRTL ? "right" : "left",
   },
   challengeCategory: {
     fontSize: normalizeSize(16),
     fontFamily: "Comfortaa_400Regular",
     marginTop: normalizeSize(4),
+    writingDirection: I18nManager.isRTL ? "rtl" : "ltr",
+   textAlign: I18nManager.isRTL ? "right" : "left",
   },
   participantsText: {
     fontSize: normalizeSize(14),
     fontFamily: "Comfortaa_400Regular",
     marginTop: normalizeSize(4),
+    writingDirection: I18nManager.isRTL ? "rtl" : "ltr",
+   textAlign: I18nManager.isRTL ? "right" : "left",
   },
   viewButton: {
     borderRadius: normalizeSize(18),
@@ -611,6 +618,7 @@ const styles = StyleSheet.create({
     fontFamily: "Comfortaa_700Bold",
     fontSize: normalizeSize(16),
     textAlign: "center",
+    writingDirection: I18nManager.isRTL ? "rtl" : "ltr",
   },
   loadingContainer: {
     flex: 1,
@@ -623,6 +631,7 @@ const styles = StyleSheet.create({
     fontSize: normalizeSize(18),
     fontFamily: "Comfortaa_400Regular",
     textAlign: "center",
+    writingDirection: I18nManager.isRTL ? "rtl" : "ltr",
   },
   noChallengesContainer: {
     flex: 1,
@@ -639,6 +648,7 @@ const styles = StyleSheet.create({
     fontFamily: "Comfortaa_700Bold",
     marginTop: SPACING,
     textAlign: "center",
+    writingDirection: I18nManager.isRTL ? "rtl" : "ltr",
   },
   noChallengesSubtext: {
     fontSize: normalizeSize(18),
@@ -646,5 +656,6 @@ const styles = StyleSheet.create({
     textAlign: "center",
     marginTop: SPACING / 2,
     maxWidth: SCREEN_WIDTH * 0.75,
+    writingDirection: I18nManager.isRTL ? "rtl" : "ltr",
   },
 });

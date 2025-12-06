@@ -14,6 +14,7 @@ import {
   StatusBar,
   StyleProp,
   Keyboard,
+  I18nManager,
   AccessibilityInfo,
 } from "react-native";
 import { useRouter } from "expo-router";
@@ -22,6 +23,7 @@ import {
   updateDoc,
   getDoc,
   serverTimestamp,
+  arrayUnion,
   type FieldValue,
 } from "firebase/firestore";
 import { auth, db, storage } from "../../constants/firebase-config";
@@ -521,17 +523,77 @@ export default function UserInfo() {
     setIsLoading(true);
     try {
       const userRef = doc(db, "users", user.uid);
-      await updateDoc(userRef, updateData);
-      // ✅ Achievements check safe (profil)
-      try {
-        await checkForAchievements(user.uid);
-      } catch (e) {
-        __DEV__ &&
-          console.warn(
-            "[achievements] check profile save:",
-            (e as any)?.message ?? e
-          );
-      }
+await updateDoc(userRef, updateData);
+
+// 🔁 Relecture Firestore + garde "profile_completed" ultra robuste
+try {
+  const snap = await getDoc(userRef);
+  if (snap.exists()) {
+    const fresh = snap.data() as any;
+
+    const parseInterestsServer = (v: any): string[] =>
+      Array.isArray(v)
+        ? v.map((s) => String(s).trim()).filter(Boolean)
+        : String(v || "")
+            .split(",")
+            .map((s) => s.trim())
+            .filter(Boolean);
+
+    const nameOk = String(fresh?.displayName || "").trim().length >= 2;
+    const bioOk = String(fresh?.bio || "").trim().length >= 10;
+    const locOk = String(fresh?.location || "").trim().length >= 2;
+    const picOk = !!String(fresh?.profileImage || "").trim();
+    const ints = parseInterestsServer(fresh?.interests);
+    const interestsOk = ints.length > 0;
+
+    const canMarkProfileCompleted =
+      nameOk && bioOk && locOk && picOk && interestsOk;
+
+    const achievements: string[] = Array.isArray(fresh.achievements)
+      ? fresh.achievements
+      : [];
+    const pending: string[] = Array.isArray(fresh.newAchievements)
+      ? fresh.newAchievements
+      : [];
+
+    const alreadyProfileCompleted =
+      achievements.includes("profile_completed") ||
+      pending.includes("profile_completed") ||
+      fresh?.profileCompleted === true ||
+      fresh?.stats?.profile?.completed === true;
+
+    if (canMarkProfileCompleted && !alreadyProfileCompleted) {
+      await updateDoc(userRef, {
+        newAchievements: arrayUnion("profile_completed"),
+        profileCompleted: true,
+        "stats.profile.completed": true,
+        profileCompletedAt:
+          fresh.profileCompletedAt || serverTimestamp(),
+      } as any);
+
+      __DEV__ &&
+        console.log("🔥 profile_completed forcé après édition du profil");
+    }
+  }
+} catch (e: any) {
+  __DEV__ &&
+    console.warn(
+      "[UserInfo] post-save profile_completed guard error:",
+      e?.message ?? e
+    );
+}
+
+// ✅ Achievements généraux (au cas où d'autres succès se débloquent)
+try {
+  await checkForAchievements(user.uid);
+} catch (e) {
+  __DEV__ &&
+    console.warn(
+      "[achievements] check profile save:",
+      (e as any)?.message ?? e
+    );
+}
+
 
       Keyboard.dismiss();
       navigatedRef.current = true;
@@ -591,6 +653,8 @@ export default function UserInfo() {
               styles.loadingText,
               { color: currentTheme.colors.textPrimary },
             ]}
+            numberOfLines={2}
+            adjustsFontSizeToFit
           >
             {t("loadingProfile")}
           </Text>
@@ -636,7 +700,7 @@ export default function UserInfo() {
         />
 
         <CustomHeader
-          title={t("yourProfile")}
+          title={t("yourProfile", { defaultValue: "Ton profil" })}
           backgroundColor="transparent"
           useBlur={false}
           showHairline={false}
@@ -655,6 +719,10 @@ export default function UserInfo() {
             keyboardShouldPersistTaps="handled"
             showsVerticalScrollIndicator={false}
             bounces={false}
+            accessibilityRole="scrollbar"
+           accessibilityLabel={t("userInfo.formScrollA11y", {
+             defaultValue: "Formulaire d’édition du profil et bouton de sauvegarde",
+           })}
           >
             <Animated.View
               entering={ZoomIn.delay(100)}
@@ -705,6 +773,8 @@ export default function UserInfo() {
                         styles.addImageText,
                         { color: currentTheme.colors.textPrimary },
                       ]}
+                      numberOfLines={2}
+                      adjustsFontSizeToFit
                     >
                       {t("addProfilePhoto")}
                     </Text>
@@ -1042,6 +1112,8 @@ export default function UserInfo() {
                         styles.saveButtonText,
                         { color: isDarkMode ? "#FFFFFF" : "#333333" },
                       ]}
+                      numberOfLines={1}
+                      adjustsFontSizeToFit
                     >
                       {t("save")}
                     </Text>
@@ -1084,7 +1156,11 @@ export default function UserInfo() {
                   }[toast.type]
                 }
               </Text>
-              <Text style={styles.toastText} numberOfLines={3}>
+              <Text
+                style={styles.toastText}
+                numberOfLines={3}
+               adjustsFontSizeToFit
+              >
                 {toast.message}
               </Text>
             </View>
@@ -1151,6 +1227,7 @@ const styles = StyleSheet.create({
     fontSize: normalizeSize(18),
     fontFamily: "Comfortaa_400Regular",
     textAlign: "center",
+    writingDirection: I18nManager.isRTL ? "rtl" : "ltr",
   },
   imageGradient: {
     width: n(IS_COMPACT ? 120 : 136),
@@ -1172,6 +1249,7 @@ const styles = StyleSheet.create({
     fontFamily: "Comfortaa_700Bold",
     textAlign: "center",
     paddingHorizontal: SPACING * 1.5,
+    writingDirection: I18nManager.isRTL ? "rtl" : "ltr",
   },
   inputWrapper: {
     width: "100%",
@@ -1189,6 +1267,7 @@ const styles = StyleSheet.create({
     backgroundColor: "transparent",
     borderRadius: n(14),
     minHeight: n(44),
+    textAlign: I18nManager.isRTL ? "right" : "left",
   },
   formCard: {
     width: "100%",
@@ -1235,6 +1314,8 @@ const styles = StyleSheet.create({
   saveButtonText: {
     fontSize: n(18),
     fontFamily: "Comfortaa_700Bold",
+    textAlign: "center",
+    writingDirection: I18nManager.isRTL ? "rtl" : "ltr",
   },
 
   // Background orbs
@@ -1293,5 +1374,7 @@ const styles = StyleSheet.create({
     color: "#0b1120",
     flexShrink: 1,
     marginLeft: 4,
+    textAlign: I18nManager.isRTL ? "right" : "left",
+    writingDirection: I18nManager.isRTL ? "rtl" : "ltr",
   },
 });

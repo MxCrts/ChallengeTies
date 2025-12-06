@@ -1,5 +1,11 @@
 // app/referral/ShareCard.tsx
-import React, { useCallback, useMemo, useRef, useState, useEffect } from "react";
+import React, {
+  useCallback,
+  useMemo,
+  useRef,
+  useState,
+  useEffect,
+} from "react";
 import {
   View,
   Text,
@@ -89,7 +95,11 @@ export default function ShareCard() {
   const toastTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const [reduceMotion, setReduceMotion] = useState(false);
 
+  const isMountedRef = useRef(true);
+
   useEffect(() => {
+    isMountedRef.current = true;
+
     let mounted = true;
     AccessibilityInfo.isReduceMotionEnabled()
       .then((v) => mounted && setReduceMotion(!!v))
@@ -98,8 +108,10 @@ export default function ShareCard() {
       "reduceMotionChanged",
       (v) => mounted && setReduceMotion(!!v)
     );
+
     return () => {
       mounted = false;
+      isMountedRef.current = false;
       // @ts-ignore RN compat
       sub?.remove?.();
       if (toastTimerRef.current) clearTimeout(toastTimerRef.current);
@@ -108,6 +120,8 @@ export default function ShareCard() {
 
   const showToast = useCallback(
     (type: ToastType, message: string) => {
+      if (!isMountedRef.current) return;
+
       setToast({ type, message });
 
       if (toastTimerRef.current) {
@@ -148,6 +162,7 @@ export default function ShareCard() {
             useNativeDriver: true,
           }),
         ]).start(() => {
+          if (!isMountedRef.current) return;
           setToast((current) =>
             current && current.message === message ? null : current
           );
@@ -171,7 +186,6 @@ export default function ShareCard() {
   const onSave = useCallback(async () => {
     tap();
     try {
-      // Demande de permission *avant* busy pour éviter l'état bloqué
       const { status } = await MediaLibrary.requestPermissionsAsync();
       if (status !== "granted") {
         showToast(
@@ -186,6 +200,7 @@ export default function ShareCard() {
         return;
       }
 
+      if (!isMountedRef.current) return;
       setBusy("save");
 
       const uri = await captureCard();
@@ -215,18 +230,34 @@ export default function ShareCard() {
         )
       );
     } finally {
-      setBusy(null);
+      if (isMountedRef.current) {
+        setBusy(null);
+      }
     }
   }, [t, captureCard, showToast]);
 
   const onShare = useCallback(async () => {
     tap();
     try {
+      if (!webLink) {
+        showToast(
+          "error",
+          String(
+            t("referral.shareCard.alerts.missingLink", {
+              defaultValue: "Lien de parrainage introuvable.",
+            })
+          )
+        );
+        return;
+      }
+
+      if (!isMountedRef.current) return;
       setBusy("share");
 
       const uri = await captureCard();
 
-      if (await Sharing.isAvailableAsync()) {
+      const canShare = await Sharing.isAvailableAsync();
+      if (canShare) {
         await Sharing.shareAsync(uri);
         success();
 
@@ -264,9 +295,11 @@ export default function ShareCard() {
         )
       );
     } finally {
-      setBusy(null);
+      if (isMountedRef.current) {
+        setBusy(null);
+      }
     }
-  }, [t, captureCard, showToast]);
+  }, [t, captureCard, showToast, webLink]);
 
   // Backgrounds pour lisibilité QR
   const qrBg = isDark ? "rgba(255,255,255,0.06)" : "#FFF7D6";
@@ -343,7 +376,8 @@ export default function ShareCard() {
                 defaultValue: "QR code de parrainage",
               })}
             >
-              <QRCode value={webLink} size={qrSize} />
+              {/* QR Code fallback si jamais webLink est vide (ultra rare) */}
+              <QRCode value={webLink || "https://challenge-ties.app"} size={qrSize} />
             </View>
 
             <Text

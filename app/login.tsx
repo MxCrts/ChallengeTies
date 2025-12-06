@@ -350,7 +350,7 @@ export default function Login() {
 
   // ——— CTA press feedback
   const pressIn = () => {
-    if (!formValid || loading || isOffline) return;
+    if (!formValid || loading || isOffline || reduceMotion) return;
     Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium).catch(() => {});
     Animated.timing(ctaScale, {
       toValue: 0.98,
@@ -380,9 +380,11 @@ export default function Login() {
         setErrorMessage(
           t("networkError") || "Problème réseau. Réessaie."
         );
+        if (!reduceMotion) {
         Haptics.notificationAsync(
-          Haptics.NotificationFeedbackType.Error
-        ).catch(() => {});
+            Haptics.NotificationFeedbackType.Error
+          ).catch(() => {});
+        }
         triggerShake();
       }
       submittingRef.current = false;
@@ -392,9 +394,11 @@ export default function Login() {
     if (!e || !p) {
       if (isMountedRef.current) {
         setErrorMessage(t("fillEmailPassword"));
-        Haptics.notificationAsync(
-          Haptics.NotificationFeedbackType.Error
-        ).catch(() => {});
+        if (!reduceMotion) {
+          Haptics.notificationAsync(
+            Haptics.NotificationFeedbackType.Error
+          ).catch(() => {});
+        }
         triggerShake();
       }
       submittingRef.current = false;
@@ -403,9 +407,11 @@ export default function Login() {
     if (!isValidEmail(e)) {
       if (isMountedRef.current) {
         setErrorMessage(t("invalidEmail"));
-        Haptics.notificationAsync(
-          Haptics.NotificationFeedbackType.Error
-        ).catch(() => {});
+        if (!reduceMotion) {
+          Haptics.notificationAsync(
+            Haptics.NotificationFeedbackType.Error
+          ).catch(() => {});
+        }
         triggerShake();
       }
       submittingRef.current = false;
@@ -415,9 +421,11 @@ export default function Login() {
     try {
       if (isMountedRef.current) setLoading(true);
       await signInWithEmailAndPassword(auth, e, p);
-await Haptics.notificationAsync(
-        Haptics.NotificationFeedbackType.Success
-      ).catch(() => {});
+if (!reduceMotion) {
+        Haptics.notificationAsync(
+          Haptics.NotificationFeedbackType.Success
+        ).catch(() => {});
+      }
 
       AsyncStorage.setItem("login.lastEmail", e).catch(() => {});
       setGuest(false);
@@ -491,9 +499,11 @@ InteractionManager.runAfterInteractions(() => {
         if (isMountedRef.current)
           setErrorMessage(map[errorCode] || t("unknownError"));
       }
-      Haptics.notificationAsync(
-        Haptics.NotificationFeedbackType.Error
-      ).catch(() => {});
+      if (!reduceMotion) {
+        Haptics.notificationAsync(
+          Haptics.NotificationFeedbackType.Error
+        ).catch(() => {});
+      }
       triggerShake();
     } finally {
       submittingRef.current = false;
@@ -509,6 +519,7 @@ InteractionManager.runAfterInteractions(() => {
     setGuest,
     triggerShake,
     isOffline,
+    reduceMotion,
   ]);
 
   // Auto-dismiss error after 5s

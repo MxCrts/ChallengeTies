@@ -53,8 +53,8 @@ export default function History() {
       <View
         style={styles.orbsContainer}
         pointerEvents="none"
-        accessibilityElementsHidden
-        importantForAccessibility="no"
+        accessibilityElementsHidden={true}
+        importantForAccessibility="no-hide-descendants"
       >
         {/* Orbe principal */}
         <LinearGradient
@@ -113,6 +113,9 @@ export default function History() {
           contentInsetAdjustmentBehavior="automatic"
           keyboardDismissMode="on-drag"
           keyboardShouldPersistTaps="handled"
+          accessibilityLabel={t("history.screenA11yLabel", {
+            defaultValue: "Historique et vision de ChallengeTies",
+          })}
         >
           {/* Logo animé */}
           <Animated.View
@@ -126,6 +129,7 @@ export default function History() {
               transition={120}
               cachePolicy="memory-disk"
               accessibilityLabel={t("history.logoAlt")}
+              accessibilityRole="image"
             />
           </Animated.View>
 
@@ -310,10 +314,7 @@ export default function History() {
           </Card>
 
           {/* Message final */}
-          <Animated.View
-            entering={FadeInUp.delay(950)}
-            style={styles.footer}
-          >
+          <Animated.View entering={FadeInUp.delay(950)} style={styles.footer}>
             <LinearGradient
               colors={[
                 currentTheme.colors.overlay,
@@ -370,10 +371,7 @@ const Card = memo(function Card({
   const borderSecondary = currentTheme.colors.secondary;
 
   return (
-    <Animated.View
-      entering={FadeInUp.delay(delay)}
-      style={styles.cardOuter}
-    >
+    <Animated.View entering={FadeInUp.delay(delay)} style={styles.cardOuter}>
       <LinearGradient
         colors={[borderSecondary + "CC", borderPrimary + "AA"]}
         start={{ x: 0, y: 0 }}
@@ -506,7 +504,6 @@ const styles = StyleSheet.create({
   cardOuter: {
     marginBottom: SPACING,
     borderRadius: normalizeSize(22),
-    // Ombre douce premium
     shadowColor: "#000",
     shadowOffset: { width: 0, height: normalizeSize(6) },
     shadowOpacity: 0.25,
@@ -522,6 +519,7 @@ const styles = StyleSheet.create({
     padding: SPACING,
     borderWidth: 1.2,
     borderColor: "rgba(255,255,255,0.06)",
+    // blur visuel uniquement web (mobile ignore)
     backdropFilter: Platform.OS === "web" ? ("blur(8px)" as any) : undefined,
   },
 
