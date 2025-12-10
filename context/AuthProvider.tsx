@@ -15,10 +15,14 @@ import {
   sendReferralNewChildPush,
   sendInvitationNotification,
 } from "@/services/notificationService";
-
+import {
+  handleReferralUrl,
+  REFERRER_KEY,
+  REFERRER_SRC_KEY,
+  REFERRER_TS_KEY,
+} from "@/services/referralLinking";
 import { logEvent } from "@/src/analytics";
 import * as Linking from "expo-linking";
-import { handleReferralUrl } from "@/services/referralLinking";
 import { getDisplayUsername } from "@/services/invitationService";
 import {
   checkAndGrantPioneerIfEligible,
@@ -28,49 +32,58 @@ import {
 } from "../src/referral/pioneerChecker";
 
 
-
-// ✅ Ne laisse passer ici QUE les liens referral
-const isReferralUrl = (url?: string | null) => {
-  if (!url) return false;
-  const u = url.toLowerCase();
-  // adapte aux patterns exacts de tes referrals
-  return (
-    u.includes("/ref/") ||          // ex: challengeties.app/ref/xxx
-    u.includes("refuid=") ||        // ex: ?refUid=xxx
-    u.includes("ref=") ||           // ex: ?ref=xxx
-    u.includes("ties_ref=")         // au cas où tu as un param custom
-  );
-};
-
-
-const REFERRER_KEY = "ties_referrer_id";
-const REFERRER_SRC_KEY = "ties_referrer_src";
-const REFERRER_TS_KEY = "ties_referrer_ts";
 const REFERRAL_JUST_ACTIVATED_KEY = "ties_referral_just_activated";
-const REFERRAL_TROPHY_BONUS = 50; 
-// 🔧 Mets ici le nombre de trophées que tu donnes réellement pour 1 filleul activé
-
+const REFERRAL_TROPHY_BONUS = 10;
+const LEGACY_REFERRER_KEY = "ties_referrer_id";
+const LEGACY_REFERRER_SRC_KEY = "ties_referrer_src";
+const LEGACY_REFERRER_TS_KEY = "ties_referrer_ts";
 
 async function consumePendingReferrer(uid: string) {
-  const [[, referrerId], [, src], [, ts]] = await AsyncStorage.multiGet([
+  // On lit à la fois les nouvelles clés ET les anciennes pour être 100% compatible
+  const entries = await AsyncStorage.multiGet([
     REFERRER_KEY,
     REFERRER_SRC_KEY,
     REFERRER_TS_KEY,
+    LEGACY_REFERRER_KEY,
+    LEGACY_REFERRER_SRC_KEY,
+    LEGACY_REFERRER_TS_KEY,
   ]);
 
-  const cleanRef = String(referrerId ?? "").trim();
-  const cleanSrc = String(src ?? "").trim() || "share";
-  const cleanTs = Number(ts ?? 0);
+  const map = Object.fromEntries(entries);
+
+  // 🔑 On prend en priorité les nouvelles clés, sinon les legacy
+  const referrerId =
+    (map[REFERRER_KEY] ?? map[LEGACY_REFERRER_KEY] ?? "").toString().trim();
+  const srcRaw =
+    (map[REFERRER_SRC_KEY] ?? map[LEGACY_REFERRER_SRC_KEY] ?? "").toString();
+  const tsRaw =
+    (map[REFERRER_TS_KEY] ?? map[LEGACY_REFERRER_TS_KEY] ?? "0").toString();
+
+  const cleanRef = referrerId;
+  const cleanSrc = srcRaw.trim() || "share";
+  const cleanTs = Number(tsRaw || 0);
+
+  console.log("[referral] consumePendingReferrer merged keys ->", {
+    cleanRef,
+    cleanSrc,
+    cleanTs,
+  });
 
   return { cleanRef, cleanSrc, cleanTs };
 }
 
 async function clearPendingReferrer() {
+  // On nettoie toutes les variantes possibles de clés
   await AsyncStorage.multiRemove([
     REFERRER_KEY,
     REFERRER_SRC_KEY,
     REFERRER_TS_KEY,
+    LEGACY_REFERRER_KEY,
+    LEGACY_REFERRER_SRC_KEY,
+    LEGACY_REFERRER_TS_KEY,
   ]);
+
+  console.log("[referral] clearPendingReferrer -> all keys removed");
 }
 
 
@@ -93,38 +106,37 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({
     const referralHandledOnce = useRef(false);
 
       // ✅ Capture globale des liens referral (cold + warm start)
-  useEffect(() => {
-    if (referralHandledOnce.current) return;
-    referralHandledOnce.current = true;
+ useEffect(() => {
+  if (referralHandledOnce.current) return;
+  referralHandledOnce.current = true;
 
-    let sub: any;
+  let sub: any;
 
-        (async () => {
-      try {
-        const initialUrl = await Linking.getInitialURL();
-        console.log("🧊 [referral] initialUrl =", initialUrl);
-        if (isReferralUrl(initialUrl)) {
-          await handleReferralUrl(initialUrl);
-        }
-
-        sub = Linking.addEventListener("url", async ({ url }) => {
-          console.log("🔥 [referral] event url =", url);
-          if (isReferralUrl(url)) {
-            await handleReferralUrl(url);
-          }
-        });
-      } catch (e) {
-        console.log("❌ [referral] global link capture error:", e);
+  (async () => {
+    try {
+      const initialUrl = await Linking.getInitialURL();
+      console.log("🧊 [referral] initialUrl =", initialUrl);
+      // 👉 On laisse handleReferralUrl décider si c’est un lien de parrainage ou pas
+      if (initialUrl) {
+        await handleReferralUrl(initialUrl);
       }
-    })();
 
+      sub = Linking.addEventListener("url", async ({ url }) => {
+        console.log("🔥 [referral] event url =", url);
+        // idem ici, aucun filtre en amont
+        await handleReferralUrl(url);
+      });
+    } catch (e) {
+      console.log("❌ [referral] global link capture error:", e);
+    }
+  })();
 
-    return () => {
-      try {
-        sub?.remove?.();
-      } catch {}
-    };
-  }, []);
+  return () => {
+    try {
+      sub?.remove?.();
+    } catch {}
+  };
+}, []);
 
 
   useEffect(() => {
@@ -134,19 +146,57 @@ const authFailsafe = setTimeout(() => {
   setLoading(false);
   setCheckingAuth(false);
 }, 3500);
-  const unsubscribe = onAuthStateChanged(auth, (firebaseUser) => {
+  const unsubscribe = onAuthStateChanged(auth,async  (firebaseUser) => {
     clearTimeout(authFailsafe);
     if (firebaseUser) {
-      console.log("✅ Utilisateur connecté:", firebaseUser.email);
-      setUser(firebaseUser);
+  console.log("✅ Utilisateur connecté:", firebaseUser.email);
+  setUser(firebaseUser);
 
-            // ✅ Referral activation post-login (flow principal)
-      (async () => {
-        try {
-          const uid = firebaseUser.uid;
-          const { cleanRef, cleanSrc } = await consumePendingReferrer(uid);
+  // ---------------------------------------------------------
+    // 🚨  SAFETY CHECK : NE RIEN ÉCRIRE tant que register
+    //      n'a pas créé un userDoc COMPLET.
+    // ---------------------------------------------------------
+    const uid = firebaseUser.uid;
+    const userRef = doc(db, "users", uid);
+    const snap = await getDoc(userRef);
 
-          if (!cleanRef) return; // pas de ref pending
+    if (!snap.exists()) {
+      console.log("⛔ AuthProvider: userDoc n'existe pas encore → on NE fait AUCUNE écriture !");
+
+      // On stoppe toutes les features (pionnier, referral, tokens, etc.)
+      // jusqu'à ce que register.tsx ait créé le doc complet.
+      setLoading(false);
+      setCheckingAuth(false);
+      return;
+    }
+
+    console.log("👍 AuthProvider: userDoc détecté → on peut appliquer les features.");
+
+  // ✅ Referral activation post-login (force l’écriture sur le doc user)
+  (async () => {
+    try {
+      const uid = firebaseUser.uid;
+
+// 🔥 Re-capture l'URL initiale AU MOMENT DU LOGIN
+try {
+  const initialUrl = await Linking.getInitialURL();
+  console.log("🧊 [referral][login] initialUrl =", initialUrl);
+  if (initialUrl) {
+    await handleReferralUrl(initialUrl);
+  }
+} catch (e) {
+  console.log("[referral][login] capture error:", e);
+}
+
+
+      const { cleanRef, cleanSrc } = await consumePendingReferrer(uid);
+      console.log("[referral][login] consumePendingReferrer ->", {
+        cleanRef,
+        cleanSrc,
+      });
+
+      if (!cleanRef) return; // pas de ref pending
+ // pas de ref pending
 
           // ignore self-ref
           if (cleanRef === uid) {
@@ -154,90 +204,84 @@ const authFailsafe = setTimeout(() => {
             return;
           }
 
-          const userRef = doc(db, "users", uid);
+                    const userRef = doc(db, "users", uid);
 
           const activated = await runTransaction(db, async (tx) => {
             const uSnap = await tx.get(userRef);
-            if (!uSnap.exists()) {
-              // doc pas encore créé (peut arriver juste après register)
-              // on laisse register créer le doc puis on retentera au prochain login
-              return false;
-            }
-
-            const data = uSnap.data() as any;
+            const data = uSnap.exists() ? (uSnap.data() as any) : {};
 
             const alreadyHasReferrer =
-              !!data?.referrerId ||
-              !!data?.referral?.referrerId;
+              !!data?.referrerId || !!data?.referral?.referrerId;
 
-            const alreadyActivated =
-              data?.activated === true ||
-              data?.referralActivated === true;
+            const alreadyActivated = data?.activated === true;
 
+
+            // Si le user a déjà un parrain ou est déjà activé → on ne fait rien
             if (alreadyHasReferrer || alreadyActivated) {
               return false;
             }
 
-            tx.update(userRef, {
-              referrerId: cleanRef,
-              activated: true,
-              referralActivated: true, // tolérance compat fallback
-              referral: {
+            // 1️⃣ On marque UNIQUEMENT le FILLEUL comme activé
+            //    (le PARRAIN sera mis à jour côté serveur par la Cloud Function onUserActivated)
+            tx.set(
+              userRef,
+              {
                 referrerId: cleanRef,
-                src: cleanSrc,
-                activatedAt: new Date(),
+                activated: true,  
+                referral: {
+                  ...(data?.referral || {}),
+                  referrerId: cleanRef,
+                  src: cleanSrc,
+                  activatedAt: new Date(),
+                },
+                updatedAt: new Date(),
               },
-              updatedAt: new Date(),
-            });
+              { merge: true }
+            );
 
             return true;
           });
 
+
+          // 👉 Quoi qu’il arrive, on nettoie le referrer local
           await clearPendingReferrer();
 
-                    if (activated) {
-            // petit flag local si tu veux afficher un toast / reward UI
+          if (activated) {
+            // Flag local + analytics
             await AsyncStorage.setItem(REFERRAL_JUST_ACTIVATED_KEY, "1");
+            await logEvent("referral_activated", { referrerId: cleanRef, src: cleanSrc });
 
+            // ATTRIBUTION IMMÉDIATE DES 10 TROPHÉES (filleul + parrain)
+            await Promise.allSettled([
+              updateDoc(doc(db, "users", uid), { trophies: increment(10) }),
+            ]);
+
+            // Notif push au parrain
             try {
-              await logEvent("referral_activated", {
-                referrerId: cleanRef,
-                src: cleanSrc,
+              const childUsername =
+                (await getDisplayUsername(firebaseUser.uid)) ||
+                firebaseUser.displayName ||
+                (firebaseUser.email?.split("@")[0] ?? "Nouveau joueur");
+
+              await sendReferralNewChildPush({
+                sponsorId: cleanRef,
+                childUsername,
               });
-            } catch {}
-
-            // 🔔 Notif parrain : "Vous êtes désormais le parrain de X"
-            // 🔔 Notif parrain : "Vous êtes désormais le parrain de X"
-try {
-  const childUsername =
-    (await getDisplayUsername(firebaseUser.uid)) ||
-    firebaseUser.displayName ||
-    (firebaseUser.email
-      ? firebaseUser.email.split("@")[0]
-      : "New user");
-
-  const pushRes = await sendReferralNewChildPush({
-    sponsorId: cleanRef,
-    childUsername,
-  });
-
-  console.log(
-    "[referral] sendReferralNewChildPush result:",
-    pushRes
-  );
-} catch (e) {
-  console.log(
-    "[referral] sendReferralNewChildPush error (exception):",
-    (e as any)?.message ?? e
-  );
-}
-
+            } catch (e) {
+              console.log("[referral] push new child failed:", e);
+            }
+          } else {
+            console.log(
+              "[referral] rien activé (déjà parrainé ou déjà activé) → referrer nettoyé"
+            );
           }
-
         } catch (e) {
           console.log("[referral] activation post-login error:", e);
         }
       })();
+
+
+
 
 // 🔥 Lancer tous les checks referral en tâche de fond
   (async () => {
@@ -272,7 +316,7 @@ try {
       }
 
       const current = cSnap.data()?.count ?? 0;
-      const isPioneer = current < 1000;
+      const isPioneer = current < 2000;
 
       // Écritures utilisateur — doivent se faire en UNE seule écriture (conforme à tes rules)
       tx.set(
@@ -480,26 +524,9 @@ useEffect(() => {
         console.error("❌ ensureDuoMirrorForInviter failed:", e);
       }
 
-      try {
-        // 2️⃣ Notif locale immédiate pour l’invitateur (fallback simple)
-        // On réutilise les mêmes clés i18n que pour le push distant :
-        // notificationsPush.inviteAccepted.title / .body
-        await sendInvitationNotification(inviterId, {
-          titleKey: "notificationsPush.inviteAccepted.title",
-          bodyKey: "notificationsPush.inviteAccepted.body",
-          params: {
-            username: data.inviteeUsername || "",
-            // challengeTitle non stocké dans l’invitation → optionnel
-            title: data.challengeTitle || "",
-          },
-          type: "invite-status",
-        });
-      } catch (e) {
-        console.error(
-          "❌ sendInvitationNotification (accepted) failed:",
-          (e as any)?.message ?? e
-        );
-      }
+      // ❌ Plus AUCUNE notification locale ici.
+      // ✅ Les notifs accept/refuse sont gérées uniquement par sendInviteStatusPush (Expo Push),
+      //    déjà idempotent via AsyncStorage.
     }
   });
 
@@ -525,26 +552,10 @@ useEffect(() => {
       const data = change.doc.data() as any;
 
       if (treatedRefused.has(id)) continue;
-
       treatedRefused.add(id);
 
-      try {
-        // Notif locale immédiate pour informer que l’invitation a été refusée
-        await sendInvitationNotification(inviterId, {
-          titleKey: "notificationsPush.inviteRefused.title",
-          bodyKey: "notificationsPush.inviteRefused.body",
-          params: {
-            username: data.inviteeUsername || "",
-            title: data.challengeTitle || "",
-          },
-          type: "invite-status",
-        });
-      } catch (e) {
-        console.error(
-          "❌ sendInvitationNotification (refused) failed:",
-          (e as any)?.message ?? e
-        );
-      }
+      // ❌ On ne déclenche plus de notification locale ici.
+      // Le push "refused" est déjà géré par sendInviteStatusPush côté invitee.
     }
   });
 
@@ -552,58 +563,54 @@ useEffect(() => {
 }, [user?.uid]);
 
 useEffect(() => {
-  if (!user) return;
-  const uid = user.uid;
+   if (!user) return;
+   const uid = user.uid;
+   const userRef = doc(db, "users", uid);
 
-  const userRef = doc(db, "users", uid);
+   let prevCount = 0;
+   let initialized = false;
 
-  let initialized = false;
-  let prevActivatedCount: number | null = null;
+   const unsubscribe = onSnapshot(userRef, (snap) => {
+     if (!snap.exists()) return;
+     const data = snap.data() as any;
+     const currentCount = Number(data?.referral?.activatedCount ?? 0);
 
-  const unsubscribe = onSnapshot(userRef, async (snap) => {
-    if (!snap.exists()) return;
-    const data = snap.data() as any;
+     // Premier snapshot → on initialise seulement
+     if (!initialized) {
+       prevCount = currentCount;
+       initialized = true;
+       return;
+     }
 
-    const activatedCount = Number(data?.referral?.activatedCount ?? 0);
+     // NOUVEAU FILLEUL ACTIVÉ → on donne +10 trophées par filleul ajouté
+     if (currentCount > prevCount) {
+       const bonus = (currentCount - prevCount) * 10;
 
-    // 🧊 Premier snapshot : on initialise, PAS de notif
-    if (!initialized) {
-      initialized = true;
-      prevActivatedCount = activatedCount;
-      return;
-    }
+       updateDoc(userRef, {
+         trophies: increment(bonus),
+       }).catch((e) => {
+         console.warn("[referral] Échec +10 trophées parrain (mais pas grave):", e);
+       });
 
-    // 1️⃣ Nouveau filleul activé (activatedCount ↑)
-    if (
-      prevActivatedCount === null ||
-      activatedCount > prevActivatedCount
-    ) {
-      prevActivatedCount = activatedCount;
+       console.log(`[referral] +${bonus} trophées pour ${currentCount} filleuls activés !`);
 
-      try {
-        await sendInvitationNotification(uid, {
-          titleKey: "referral.notif.newChild.title",
-          bodyKey: "referral.notif.newChild.body",
-          params: {
-            bonus: REFERRAL_TROPHY_BONUS,
-            activatedCount,
-          },
-          type: "referral_new_child",
-        });
-      } catch (e) {
-        console.error(
-          "❌ sendInvitationNotification (newChild) failed:",
-          (e as any)?.message ?? e
-        );
-      }
-    } else {
-      prevActivatedCount = activatedCount;
-    }
-  });
+       // Envoi de la notif (comme avant)
+       sendInvitationNotification(uid, {
+         titleKey: "referral.notif.newChild.title",
+         bodyKey: "referral.notif.newChild.body",
+         params: {
+           bonus: REFERRAL_TROPHY_BONUS,
+           activatedCount: currentCount,
+         },
+         type: "referral_new_child",
+       }).catch(() => {});
+     }
 
-  return () => unsubscribe();
-}, [user?.uid]);
+     prevCount = currentCount;
+   });
 
+   return () => unsubscribe();
+ }, [user?.uid]);
 
 // Remplace/insère l’entrée locale de l’invitateur par une entrée DUO propre et idempotente.
 // - Si une entrée SOLO existe pour ce challenge => elle est remplacée

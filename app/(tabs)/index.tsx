@@ -17,7 +17,10 @@ import {
   PixelRatio,
   Alert,
   InteractionManager,
+  Animated as RNAnimated,
+  Easing,
 } from "react-native";
+
 import { SafeAreaView } from "react-native-safe-area-context";
 import Animated from "react-native-reanimated";
 import { useRouter, useLocalSearchParams } from "expo-router";
@@ -28,6 +31,7 @@ import { Video, ResizeMode } from "expo-av";
 import { Image } from "expo-image";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import BannerSlot from "@/components/BannerSlot";
+import LottieView from "lottie-react-native";
 import { useFocusEffect } from "@react-navigation/native";
 import {
   useAnimatedStyle,
@@ -101,6 +105,8 @@ const ITEM_WIDTH = Math.min(SCREEN_WIDTH * 0.85, normalize(400));
 const ITEM_HEIGHT = Math.min(SCREEN_HEIGHT * 0.32, normalize(240));
 
 const SPACING = normalize(15);
+const CONTENT_W = Math.min(SCREEN_WIDTH - SPACING * 2, normalize(420));
+const IS_SMALL = SCREEN_WIDTH < 360;
 
 interface Challenge {
   id: string;
@@ -210,13 +216,13 @@ function buildDailyPicksFromBase(
 
 // --- Welcome Login Bonus UI mirror (doit matcher welcomeBonusService) ---
 const WELCOME_REWARDS_UI: { type: WelcomeRewardKind; amount: number }[] = [
-  { type: "trophies", amount: 10 },   // Jour 1
-  { type: "trophies", amount: 15 },   // Jour 2
-  { type: "streakPass", amount: 1 },  // Jour 3
-  { type: "trophies", amount: 20 },   // Jour 4
-  { type: "streakPass", amount: 1 },  // Jour 5
-  { type: "trophies", amount: 25 },   // Jour 6
-  { type: "premium", amount: 7 },   // Jour 7 (jours de premium)
+  { type: "trophies", amount: 8 },   // Jour 1
+  { type: "trophies", amount: 12 },  // Jour 2
+  { type: "streakPass", amount: 1 }, // Jour 3
+  { type: "trophies", amount: 15 },  // Jour 4
+  { type: "streakPass", amount: 1 }, // Jour 5
+  { type: "trophies", amount: 20 },  // Jour 6
+  { type: "premium", amount: 7 },    // Jour 7 (jours premium)
 ];
 
 const WELCOME_TOTAL_DAYS = WELCOME_REWARDS_UI.length;
@@ -258,6 +264,7 @@ export default function HomeScreen() {
   const [showPioneerModal, setShowPioneerModal] = useState(false);
   const [showPremiumEndModal, setShowPremiumEndModal] = useState(false);
   const { show: showToast } = useToast();
+  
 
   const {
     tutorialStep,
@@ -278,6 +285,40 @@ export default function HomeScreen() {
 
   const [isScreenFocused, setIsScreenFocused] = useState(true);
   const [videoReady, setVideoReady] = useState(false);
+    // 🔥 New Year sprint: days left + clock animation
+  const daysLeftInYear = useMemo(() => {
+    const now = new Date();
+    const end = new Date(now.getFullYear(), 11, 31);
+    // On se met en fin de journée pour éviter les arrondis chelous
+    end.setHours(23, 59, 59, 999);
+    const diffMs = end.getTime() - now.getTime();
+    const diffDays = Math.ceil(diffMs / (1000 * 60 * 60 * 24));
+    return Math.max(diffDays, 0);
+  }, []);
+
+  const newYearClockRotation = useRef(new RNAnimated.Value(0)).current;
+
+  const hasActiveChallenges = useMemo(() => {
+    const list = (userData as any)?.CurrentChallenges;
+    if (!Array.isArray(list)) return false;
+    // Si au moins un challenge non terminé, on considère qu'une "série" est en cours
+    return list.some((c) => !c?.completed && !c?.archived);
+  }, [userData]);
+
+  const newYearCtaLabel = hasActiveChallenges
+    ? t("newYear.ctaContinue", "Continuer ma série")
+    : t("newYear.ctaStart", "Lancer mon sprint");
+
+  const newYearCtaSubtitle = hasActiveChallenges
+    ? t(
+        "newYear.subtitleHasSeries",
+        "Tu as déjà lancé ton année. Ne casse pas ta série."
+      )
+    : t(
+        "newYear.subtitleNoSeries",
+        "Profite des derniers jours pour lancer un sprint qui va tout changer."
+      );
+
 
   const heroShouldPlay = useMemo(
     () => isScreenFocused && !isTutorialActive && videoReady,
@@ -416,7 +457,7 @@ useEffect(() => {
     setWelcomeState(null);
     setWelcomeVisible(false);
     setPendingWelcomeAfterTutorial(false);
-    setWelcomeGuardDay(null); // reset propre quand pas de user
+    setWelcomeGuardDay(null);
     return;
   }
 
@@ -424,12 +465,15 @@ useEffect(() => {
     const state = computeWelcomeBonusState(userData);
     setWelcomeState(state);
 
-    // Si tout est terminé → on ne force plus rien
+    // NE JAMAIS faire setWelcomeVisible(false) ici
+    // On ne touche à visible que quand on sait exactement ce qu’on veut
+
     if (!state.canClaimToday || state.completed) {
+      setWelcomeVisible(false);
       return;
     }
 
-    // 🛡️ Garde : si on a déjà ouvert ce "currentDay", on ne ré-ouvre pas
+    // Protection anti-rebond
     if (welcomeGuardDay === state.currentDay) {
       return;
     }
@@ -437,16 +481,14 @@ useEffect(() => {
     if (isTutorialActive) {
       setPendingWelcomeAfterTutorial(true);
     } else {
-      setWelcomeVisible(true);
+      setWelcomeVisible(true); // ← on ouvre seulement ici
     }
 
-    // On marque ce jour comme "déjà affiché"
     setWelcomeGuardDay(state.currentDay);
   } catch (e) {
     console.warn("[HomeScreen] computeWelcomeBonusState error:", e);
   }
-}, [userData, isTutorialActive, welcomeGuardDay]);
-
+}, [userData, isTutorialActive, welcomeGuardDay]); // welcomeGuardDay toujours dans les deps
 
     useEffect(() => {
     if (
@@ -527,6 +569,24 @@ useEffect(() => {
   useEffect(() => {
     fadeAnim.value = withTiming(1, { duration: 1500 });
   }, [fadeAnim]);
+
+    // ⏱️ Animation douce de l'horloge New Year
+  useEffect(() => {
+    const loopAnim = RNAnimated.loop(
+      RNAnimated.timing(newYearClockRotation, {
+        toValue: 1,
+        duration: 6000,
+        easing: Easing.linear,
+        useNativeDriver: true,
+      })
+    );
+    loopAnim.start();
+
+    return () => {
+      loopAnim.stop();
+    };
+  }, [newYearClockRotation]);
+
 
   // ✅ Rewarded ad (reroll daily bonus)
   const rerollAd = useMemo(
@@ -766,6 +826,16 @@ useEffect(() => {
     [gate, router, isMounted, hydrated]
   );
 
+    const handleNewYearPress = useCallback(() => {
+    // Si série en cours → on renvoie vers Focus, sinon vers Explore pour lancer un sprint
+    if (hasActiveChallenges) {
+      safeNavigate("/focus", "new-year-continue-series");
+    } else {
+      safeNavigate("/explore", "new-year-start-sprint");
+    }
+  }, [hasActiveChallenges, safeNavigate]);
+
+
   const dynamicStyles = useMemo(
     () => getDynamicStyles(currentTheme, isDarkMode),
     [currentTheme, isDarkMode]
@@ -837,14 +907,17 @@ useEffect(() => {
     }
   };
 
-  const handleClaimWelcomeBonus = async () => {
+const handleClaimWelcomeBonus = async () => {
   if (!user || welcomeLoading || !welcomeState) return;
+
+  // On fige le "jour" au moment du clic pour savoir si c'est un jour premium
+  const clickedDay = welcomeState.currentDay;
 
   const isPremiumDay =
     !welcomeState.completed &&
-    welcomeState.currentDay >= 0 &&
-    welcomeState.currentDay < WELCOME_TOTAL_DAYS &&
-    WELCOME_REWARDS_UI[welcomeState.currentDay].type === "premium";
+    clickedDay >= 0 &&
+    clickedDay < WELCOME_TOTAL_DAYS &&
+    WELCOME_REWARDS_UI[clickedDay].type === "premium";
 
   try {
     setWelcomeLoading(true);
@@ -854,11 +927,12 @@ useEffect(() => {
 
     const { state } = await claimWelcomeBonus(user.uid);
 
-    // 🔁 mise à jour locale
-    setWelcomeState(state);
+    // 💎 Anti-flicker : on FERME le modal tout de suite,
+    // dans le même render où on met à jour le state
     setWelcomeVisible(false);
-    // 🛡️ On marque ce jour comme déjà traité, pour être sûr
-    setWelcomeGuardDay(state.currentDay);
+
+    // 🔁 mise à jour locale du welcomeState
+    setWelcomeState(state);
 
     // Refresh userData Firestore...
     const userRef = doc(db, "users", user.uid);
@@ -867,7 +941,7 @@ useEffect(() => {
       setUserData(snap.data());
     }
 
-    // ... puis ton toast premium si besoin
+    // 🥂 Toast premium si c'était un jour premium AU MOMENT DU CLIC
     if (isPremiumDay) {
       const title = t(
         "premiumTrialActivated.title",
@@ -893,7 +967,6 @@ useEffect(() => {
     setWelcomeLoading(false);
   }
 };
-
 
 
   const handleRerollDailyBonus = async (): Promise<DailyRewardResult | null> => {
@@ -1031,282 +1104,458 @@ useEffect(() => {
           keyboardDismissMode="on-drag"
           scrollEventThrottle={16}
         >
-          {/* SECTION HERO */}
-          <Animated.View
-            collapsable={false}
-            renderToHardwareTextureAndroid
-            needsOffscreenAlphaCompositing
+                  {/* SECTION HERO */}
+        <Animated.View
+          collapsable={false}
+          renderToHardwareTextureAndroid
+          needsOffscreenAlphaCompositing
+          style={[
+            staticStyles.heroSection,
+            { height: HERO_TOTAL_HEIGHT },
+            fadeStyle,
+          ]}
+        >
+          <Video
+            ref={heroVideoRef}
             style={[
-              staticStyles.heroSection,
-              { height: HERO_TOTAL_HEIGHT },
-              fadeStyle,
+              staticStyles.backgroundVideo,
+              {
+                top: -insets.top,
+                height: HERO_TOTAL_HEIGHT,
+              },
+            ]}
+            resizeMode={ResizeMode.COVER}
+            source={require("../../assets/videos/Hero-Bgopti.mp4")}
+            onReadyForDisplay={() => setVideoReady(true)}
+            shouldPlay={heroShouldPlay}
+            isLooping
+            isMuted
+            onError={() => {
+              setVideoReady(false);
+            }}
+            onPlaybackStatusUpdate={async (status: any) => {
+              if (status?.isLoaded && heroShouldPlay && !status.isPlaying) {
+                try {
+                  await heroVideoRef.current?.playAsync?.();
+                } catch {}
+              }
+            }}
+          />
+
+          <LinearGradient
+            colors={[currentTheme.colors.overlay, "rgba(0,0,0,0.2)"]}
+            style={[
+              staticStyles.heroOverlay,
+              {
+                top: -insets.top,
+                height: HERO_TOTAL_HEIGHT,
+              },
+            ]}
+            pointerEvents="none"
+          />
+
+          <View
+            style={[
+              staticStyles.heroContent,
+              { paddingTop: insets.top + normalize(10) },
             ]}
           >
-            <Video
-              ref={heroVideoRef}
-              style={[
-                staticStyles.backgroundVideo,
-                {
-                  top: -insets.top,
-                  height: HERO_TOTAL_HEIGHT,
-                },
-              ]}
-              resizeMode={ResizeMode.COVER}
-              source={require("../../assets/videos/Hero-Bgopti.mp4")}
-              onReadyForDisplay={() => setVideoReady(true)}
-              shouldPlay={heroShouldPlay}
-              isLooping
-              isMuted
-              onError={() => {
-                setVideoReady(false);
-              }}
-              onPlaybackStatusUpdate={async (status: any) => {
-                if (status?.isLoaded && heroShouldPlay && !status.isPlaying) {
-                  try {
-                    await heroVideoRef.current?.playAsync?.();
-                  } catch {}
-                }
-              }}
+            <Image
+              source={require("../../assets/images/GreatLogo1.png")}
+              style={staticStyles.logo}
+              resizeMode="contain"
+              accessibilityLabel={t("logoChallengeTies")}
+              transition={200}
             />
 
-            <LinearGradient
-              colors={[currentTheme.colors.overlay, "rgba(0,0,0,0.2)"]}
-              style={[
-                staticStyles.heroOverlay,
-                {
-                  top: -insets.top,
-                  height: HERO_TOTAL_HEIGHT,
-                },
-              ]}
-              pointerEvents="none"
-            />
-
-            <View
-              style={[
-                staticStyles.heroContent,
-                { paddingTop: insets.top + normalize(10) },
-              ]}
+            <Text
+              style={[staticStyles.heroTitle, dynamicStyles.heroTitle]}
+              numberOfLines={2}
+              adjustsFontSizeToFit
             >
-              <Image
-                source={require("../../assets/images/GreatLogo1.png")}
-                style={staticStyles.logo}
-                resizeMode="contain"
-                accessibilityLabel={t("logoChallengeTies")}
-                transition={200}
-              />
+              {t("defyYourLimits")}
+            </Text>
 
-              <Text
-                style={[staticStyles.heroTitle, dynamicStyles.heroTitle]}
-                numberOfLines={2}
-                adjustsFontSizeToFit
-              >
-                {t("defyYourLimits")}
-              </Text>
-
-              <Text
-                style={[staticStyles.heroSubtitle, dynamicStyles.heroSubtitle]}
-              >
-                {t("joinVibrantCommunity")}
-              </Text>
-
-              <TouchableOpacity
-                onPress={async () => {
-                  try {
-                    await Haptics.impactAsync(
-                      Haptics.ImpactFeedbackStyle.Medium
-                    );
-                  } catch {}
-                  safeNavigate("/explore");
-                }}
-                accessibilityRole="button"
-                accessibilityLabel={t("launchAdventure")}
-                accessibilityHint={t("discover", {
-                  defaultValue: "Découvrir les défis",
-                })}
-                testID="cta-button"
-                hitSlop={{ top: 8, bottom: 8, left: 12, right: 12 }}
-                onPressIn={() => {
-                  ctaScale.value = withSpring(0.96, {
-                    damping: 18,
-                    stiffness: 220,
-                  });
-                }}
-                onPressOut={() => {
-                  ctaScale.value = withSpring(1, {
-                    damping: 16,
-                    stiffness: 180,
-                  });
-                }}
-              >
-                <Animated.View style={ctaAnimStyle}>
-                  <LinearGradient
-                    colors={[
-                      currentTheme.colors.secondary,
-                      currentTheme.colors.primary,
-                    ]}
-                    style={[staticStyles.ctaButton, dynamicStyles.ctaButton]}
-                  >
-                    <Text
-                      style={[staticStyles.ctaText, dynamicStyles.ctaText]}
-                      numberOfLines={1}
-                      adjustsFontSizeToFit
-                    >
-                      {t("launchAdventure")}
-                    </Text>
-                    <Ionicons
-                      name="arrow-forward"
-                      size={normalize(20)}
-                      style={dynamicStyles.ctaIcon}
-                    />
-                  </LinearGradient>
-                </Animated.View>
-              </TouchableOpacity>
-            </View>
-          </Animated.View>
-
-          {/* WEEKLY TROPHIES */}
-          <View style={staticStyles.headerCardWrap} accessibilityRole="summary">
-            <WeeklyTrophiesCard />
-          </View>
-
-          {/* BONUS DU JOUR */}
-          {canClaimDailyBonus && (
-            <View
-              style={staticStyles.dailyBonusWrapper}
-              accessibilityElementsHidden={isTutorialActive}
-              importantForAccessibility={
-                isTutorialActive ? "no-hide-descendants" : "auto"
-              }
+            <Text
+              style={[staticStyles.heroSubtitle, dynamicStyles.heroSubtitle]}
             >
-              <TouchableOpacity
-                onPress={async () => {
-                  if (!canClaimDailyBonus || dailyBonusLoading) return;
-                  try {
-                    await Haptics.impactAsync(
-                      Haptics.ImpactFeedbackStyle.Medium
-                    );
-                  } catch {}
-                  setDailyBonusVisible(true);
-                }}
-                activeOpacity={0.9}
-                disabled={dailyBonusLoading}
-                accessibilityRole="button"
-                accessibilityLabel={t("dailyBonus.title", "Bonus du jour")}
-                accessibilityHint={t(
-                  "dailyBonus.hint",
-                  "Ouvre une roue mystère pour gagner une récompense."
-                )}
-              >
+              {t("joinVibrantCommunity")}
+            </Text>
+
+            <TouchableOpacity
+              onPress={async () => {
+                try {
+                  await Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
+                } catch {}
+                safeNavigate("/explore");
+              }}
+              accessibilityRole="button"
+              accessibilityLabel={t("launchAdventure")}
+              accessibilityHint={t("discover", {
+                defaultValue: "Découvrir les défis",
+              })}
+              testID="cta-button"
+              hitSlop={{ top: 8, bottom: 8, left: 12, right: 12 }}
+              onPressIn={() => {
+                ctaScale.value = withSpring(0.96, {
+                  damping: 18,
+                  stiffness: 220,
+                });
+              }}
+              onPressOut={() => {
+                ctaScale.value = withSpring(1, {
+                  damping: 16,
+                  stiffness: 180,
+                });
+              }}
+            >
+              <Animated.View style={ctaAnimStyle}>
                 <LinearGradient
-                  colors={
-                    isDarkMode
-                      ? ["#3B2F11", "#1F1308"]
-                      : ["#F6A623", "#C47100"]
-                  }
-                  start={{ x: 0, y: 0 }}
-                  end={{ x: 1, y: 1 }}
+                  colors={[
+                    currentTheme.colors.secondary,
+                    currentTheme.colors.primary,
+                  ]}
+                  style={[staticStyles.ctaButton, dynamicStyles.ctaButton]}
+                >
+                  <Text
+                    style={[staticStyles.ctaText, dynamicStyles.ctaText]}
+                    numberOfLines={1}
+                    adjustsFontSizeToFit
+                  >
+                    {t("launchAdventure")}
+                  </Text>
+                  <Ionicons
+                    name="arrow-forward"
+                    size={normalize(20)}
+                    style={dynamicStyles.ctaIcon}
+                  />
+                </LinearGradient>
+              </Animated.View>
+            </TouchableOpacity>
+          </View>
+        </Animated.View>
+
+        {/* SECTION NEW YEAR / FIN D'ANNÉE */}
+        <Animated.View
+            entering={FadeInUp.delay(100).springify()}
+            style={staticStyles.newYearWrapper}
+            renderToHardwareTextureAndroid
+          >
+            {/* Fond ultra premium avec dégradé néon + overlay étoilé */}
+            <LinearGradient
+              colors={
+                isDarkMode
+                  ? ["#0F0F2E", "#1A0033", "#000000"]
+                  : ["#1E0033", "#2D0066", "#000"]
+              }
+              start={{ x: 0, y: 0 }}
+              end={{ x: 1, y: 1 }}
+              style={staticStyles.newYearCard}
+            >
+              {/* Particules / confettis animés en arrière-plan */}
+              <View style={StyleSheet.absoluteFill}>
+                <RNAnimated.View
                   style={[
-                    staticStyles.dailyBonusOuter,
-                    dailyBonusLoading && { opacity: 0.7 },
+                    StyleSheet.absoluteFill,
+                    {
+                      opacity: newYearClockRotation.interpolate({
+                        inputRange: [0, 1],
+                        outputRange: [0.15, 0.4],
+                      }),
+                    },
                   ]}
                 >
-                  <BlurView
-                    intensity={isDarkMode ? 45 : 35}
-                    tint="dark"
-                    style={staticStyles.dailyBonusBlur}
+                  <Image
+                    source={require("../../assets/images/stars-particle.jpg")}
+                    style={{ width: "100%", height: "100%" }}
+                    resizeMode="cover"
+                  />
+                </RNAnimated.View>
+              </View>
+
+              <BlurView intensity={80} tint="dark" style={staticStyles.newYearBlur}>
+              <View style={staticStyles.newYearContentRow}>
+                {/* Bloc texte */}
+                <View style={staticStyles.newYearTextCol}>
+                  <Text
+                    style={[staticStyles.newYearEyebrow, { color: "#FF6B6B" }]}
+                    numberOfLines={1}
+                    adjustsFontSizeToFit
                   >
-                    <View style={staticStyles.dailyBonusContentRow}>
-                      <View style={staticStyles.dailyBonusTextCol}>
-                        <View style={staticStyles.dailyBonusTag}>
-                          <Ionicons
-                            name="sparkles"
-                            size={normalize(14)}
-                            color="#FFEB3B"
-                          />
-                          <Text style={staticStyles.dailyBonusTagText}>
-                            {t(
-                              "dailyBonus.tag",
-                              "EXCLU DU JOUR"
-                            ).toUpperCase()}
-                          </Text>
-                        </View>
+                    {t("newYear.eyebrow", "Sprint de fin d'année")}
+                  </Text>
 
-                        <Text
-                          style={[
-                            staticStyles.dailyBonusTitle,
-                            !isDarkMode && { color: "#FFFDF5" },
-                          ]}
-                          numberOfLines={1}
-                          adjustsFontSizeToFit
-                        >
-                          🎁 {t("dailyBonus.title", "Bonus du jour")}
-                        </Text>
+                  <Text
+                    style={[staticStyles.newYearTitle, { fontSize: normalize(28), lineHeight: normalize(32) }]}
+                    numberOfLines={2}
+                    adjustsFontSizeToFit
+                  >
+                    {t("newYear.title", "Chaque jour compte.")}
+                  </Text>
+                  {daysLeftInYear > 0 && (
+  <Text
+    style={{
+      color: "#FFB800",
+      fontSize: normalize(38),
+      fontFamily: "Comfortaa_700Bold",
+      lineHeight: normalize(44),
+      marginTop: normalize(6),
+    }}
+    numberOfLines={1}
+    adjustsFontSizeToFit={true}
+    allowFontScaling={false} // ça fait exactement le même job que minimumFontMultiplier mais sans erreur
+  >
+    {t("newYear.daysLeftBig", { count: daysLeftInYear })}
+  </Text>
+)}
 
-                        <Text
-                          style={[
-                            staticStyles.dailyBonusText,
-                            !isDarkMode && {
-                              color: "rgba(255,255,255,0.95)",
-                            },
-                          ]}
-                          numberOfLines={2}
-                        >
-                          {dailyBonusLoading
-                            ? t(
-                                "dailyBonus.loading",
-                                "Ouverture du coffre mystère..."
-                              )
-                            : t(
-                                "dailyBonus.teaser",
-                                "Touche pour découvrir ta récompense mystère."
-                              )}
-                        </Text>
-                      </View>
+                  <Text
+  style={[
+    staticStyles.newYearSubtitle,
+    {
+      fontSize: normalize(13.5),
+      lineHeight: normalize(19),
+      textAlign: "left",
+      opacity: 0.95,
+    },
+  ]}
+  numberOfLines={3}
+  adjustsFontSizeToFit={true}
+>
+  {newYearCtaSubtitle}
+</Text>
 
-                      <View style={staticStyles.dailyBonusIconCol}>
-                        <LinearGradient
-                          colors={
-                            isDarkMode
-                              ? ["#FFB800", "#FF6F00"]
-                              : ["#FFCA28", "#FF8F00"]
-                          }
-                          start={{ x: 0, y: 0 }}
-                          end={{ x: 1, y: 1 }}
-                          style={staticStyles.dailyBonusIconCircleOuter}
-                        >
-                          <View
-                            style={staticStyles.dailyBonusIconCircleInner}
-                          >
-                            <Ionicons
-                              name="gift-outline"
-                              size={normalize(26)}
-                              color="#FFF8E1"
-                            />
-                          </View>
-                        </LinearGradient>
-                        <Text
-                          style={[
-                            staticStyles.dailyBonusPillText,
-                            !isDarkMode && {
-                              color: "#FFF8E1",
-                              borderColor: "rgba(255,248,225,0.6)",
-                            },
-                          ]}
-                          numberOfLines={1}
-                          adjustsFontSizeToFit
-                        >
-                          {t(
-                            "dailyBonus.shortCta",
-                            "1 clic, 1 surprise"
-                          )}
-                        </Text>
-                      </View>
+                  <View style={staticStyles.newYearFooterRow}>
+                    <View style={staticStyles.newYearDaysPill}>
+                      <Ionicons
+                        name="sparkles"
+                        size={normalize(14)}
+                        color="#E5E7EB"
+                      />
+                      <Text
+                        style={staticStyles.newYearDaysText}
+                        numberOfLines={1}
+                        adjustsFontSizeToFit
+                      >
+                        {t("newYear.daysLeft", {
+                          defaultValue: "{{count}} jours restants cette année",
+                          count: daysLeftInYear,
+                        })}
+                      </Text>
                     </View>
-                  </BlurView>
-                </LinearGradient>
-              </TouchableOpacity>
-            </View>
-          )}
+                  </View>
+                </View>
+
+                {/* Bloc cercle / horloge */}
+                <View style={staticStyles.newYearCircleCol}>
+  <View style={staticStyles.newYearCircleOuter}>
+    {/* Glow gold qui pulse quand il reste peu de jours */}
+    <RNAnimated.View
+      style={[
+        StyleSheet.absoluteFillObject,
+        {
+          backgroundColor: "#D4AF37",
+          borderRadius: normalize(50),
+          opacity: newYearClockRotation.interpolate({
+            inputRange: [0, 0.5, 1],
+            outputRange: daysLeftInYear <= 7 ? [0.2, 0.45, 0.2] : [0, 0, 0],
+          }),
+        },
+      ]}
+    />
+
+    {/* Feux d’artifice en fond */}
+    <RNAnimated.View
+      pointerEvents="none"
+      style={[
+        StyleSheet.absoluteFillObject,
+        { opacity: daysLeftInYear <= 25 ? 1 : 0 },
+      ]}
+    >
+      <LottieView
+        source={require("../../assets/lotties/fireworksY.json")}
+        autoPlay
+        loop
+        style={{ width: "150%", height: "150%", marginLeft: -25, marginTop: -25 }}
+        speed={daysLeftInYear <= 3 ? 1.6 : 1}
+      />
+    </RNAnimated.View>
+
+    {/* HORLOGE GOLD QUI PREND 100% DU CERCLE – RIEN D'AUTRE DEDANS */}
+    <LottieView
+      source={require("../../assets/lotties/clock.json")}
+      autoPlay
+      loop
+      speed={daysLeftInYear <= 7 ? 1.5 : 1.0}
+      style={StyleSheet.absoluteFillObject} // 100% du cercle, bord à bord
+    />
+  </View>
+
+  {/* LE BOUTON CTA JUSTE EN DESSOUS – COMME AVANT */}
+  <TouchableOpacity
+    onPress={async () => {
+      try {
+        await Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
+      } catch {}
+      handleNewYearPress();
+    }}
+    activeOpacity={0.9}
+    accessibilityRole="button"
+    accessibilityLabel={newYearCtaLabel}
+    accessibilityHint={t("newYear.ctaHint")}
+    style={staticStyles.newYearCtaButton}
+  >
+    <LinearGradient
+      colors={["#F97316", "#FB923C"]}
+      start={{ x: 0, y: 0 }}
+      end={{ x: 1, y: 1 }}
+      style={staticStyles.newYearCtaGradient}
+    >
+      <Text style={staticStyles.newYearCtaText} numberOfLines={1} adjustsFontSizeToFit>
+        {newYearCtaLabel}
+      </Text>
+      <Ionicons
+        name={hasActiveChallenges ? "flame-outline" : "play"}
+        size={normalize(18)}
+        color="#0B1120"
+      />
+    </LinearGradient>
+  </TouchableOpacity>
+</View>
+              </View>
+            </BlurView>
+          </LinearGradient>
+        </Animated.View>
+
+        {/* BONUS DU JOUR */}
+        {canClaimDailyBonus && (
+          <View
+            style={staticStyles.dailyBonusWrapper}
+            accessibilityElementsHidden={isTutorialActive}
+            importantForAccessibility={
+              isTutorialActive ? "no-hide-descendants" : "auto"
+            }
+          >
+            <TouchableOpacity
+              onPress={async () => {
+                if (!canClaimDailyBonus || dailyBonusLoading) return;
+                try {
+                  await Haptics.impactAsync(
+                    Haptics.ImpactFeedbackStyle.Medium
+                  );
+                } catch {}
+                setDailyBonusVisible(true);
+              }}
+              activeOpacity={0.9}
+              disabled={dailyBonusLoading}
+              accessibilityRole="button"
+              accessibilityLabel={t("dailyBonus.title", "Bonus du jour")}
+              accessibilityHint={t(
+                "dailyBonus.hint",
+                "Ouvre une roue mystère pour gagner une récompense."
+              )}
+            >
+              <LinearGradient
+                colors={
+                  isDarkMode ? ["#3B2F11", "#1F1308"] : ["#F6A623", "#C47100"]
+                }
+                start={{ x: 0, y: 0 }}
+                end={{ x: 1, y: 1 }}
+                style={[
+                  staticStyles.dailyBonusOuter,
+                  dailyBonusLoading && { opacity: 0.7 },
+                ]}
+              >
+                <BlurView
+                  intensity={isDarkMode ? 45 : 35}
+                  tint="dark"
+                  style={staticStyles.dailyBonusBlur}
+                >
+                  <View style={staticStyles.dailyBonusContentRow}>
+                    <View style={staticStyles.dailyBonusTextCol}>
+                      <View style={staticStyles.dailyBonusTag}>
+                        <Ionicons
+                          name="sparkles"
+                          size={normalize(14)}
+                          color="#FFEB3B"
+                        />
+                        <Text style={staticStyles.dailyBonusTagText}>
+                          {t("dailyBonus.tag", "EXCLU DU JOUR").toUpperCase()}
+                        </Text>
+                      </View>
+
+                      <Text
+                        style={[
+                          staticStyles.dailyBonusTitle,
+                          !isDarkMode && { color: "#FFFDF5" },
+                        ]}
+                        numberOfLines={1}
+                        adjustsFontSizeToFit
+                      >
+                        🎁 {t("dailyBonus.title", "Bonus du jour")}
+                      </Text>
+
+                      <Text
+                        style={[
+                          staticStyles.dailyBonusText,
+                          !isDarkMode && {
+                            color: "rgba(255,255,255,0.95)",
+                          },
+                        ]}
+                        numberOfLines={2}
+                      >
+                        {dailyBonusLoading
+                          ? t(
+                              "dailyBonus.loading",
+                              "Ouverture du coffre mystère..."
+                            )
+                          : t(
+                              "dailyBonus.teaser",
+                              "Touche pour découvrir ta récompense mystère."
+                            )}
+                      </Text>
+                    </View>
+
+                    <View style={staticStyles.dailyBonusIconCol}>
+                      <LinearGradient
+                        colors={
+                          isDarkMode
+                            ? ["#FFB800", "#FF6F00"]
+                            : ["#FFCA28", "#FF8F00"]
+                        }
+                        start={{ x: 0, y: 0 }}
+                        end={{ x: 1, y: 1 }}
+                        style={staticStyles.dailyBonusIconCircleOuter}
+                      >
+                        <View style={staticStyles.dailyBonusIconCircleInner}>
+                          <Ionicons
+                            name="gift-outline"
+                            size={normalize(26)}
+                            color="#FFF8E1"
+                          />
+                        </View>
+                      </LinearGradient>
+                      <Text
+                        style={[
+                          staticStyles.dailyBonusPillText,
+                          !isDarkMode && {
+                            color: "#FFF8E1",
+                            borderColor: "rgba(255,248,225,0.6)",
+                          },
+                        ]}
+                        numberOfLines={1}
+                        adjustsFontSizeToFit
+                      >
+                        {t("dailyBonus.shortCta", "1 clic, 1 surprise")}
+                      </Text>
+                    </View>
+                  </View>
+                </BlurView>
+              </LinearGradient>
+            </TouchableOpacity>
+          </View>
+        )}
+
 
           {/* DAILY FIVE */}
           <View style={staticStyles.section}>
@@ -1522,6 +1771,11 @@ useEffect(() => {
                 </Text>
               </Animated.View>
             )}
+          </View>
+
+        {/* WEEKLY TROPHIES */}
+          <View style={staticStyles.headerCardWrap} accessibilityRole="summary">
+            <WeeklyTrophiesCard />
           </View>
 
           {/* INSPIRE-TOI */}
@@ -1897,14 +2151,162 @@ const staticStyles = StyleSheet.create({
     flex: 1,
     backgroundColor: "transparent",
   },
+    newYearWrapper: {
+    paddingHorizontal: SPACING,
+    // bien décollé du hero, mais sans toucher au Daily Bonus
+    marginTop: SPACING * 1.4,
+    marginBottom: SPACING * 1.4,
+    width: "100%",
+    alignItems: "center",
+  },
+  newYearContentRow: {
+    flexDirection: IS_SMALL ? "column" : "row",
+    alignItems: IS_SMALL ? "flex-start" : "center",
+    justifyContent: "space-between",
+    gap: normalize(12),
+  },
+  newYearCircleCol: {
+    flex: IS_SMALL ? 0 : 0.9,
+    alignItems: "center",
+    justifyContent: "center",
+    marginTop: IS_SMALL ? normalize(12) : 0,
+    width: IS_SMALL ? "100%" : undefined,
+  },
+
+
+  newYearBlur: {
+    paddingVertical: normalize(14),
+    paddingHorizontal: normalize(14),
+    borderRadius: normalize(22),
+    overflow: "hidden",
+  },
+  newYearTextCol: {
+    flex: 1.3,
+    paddingRight: normalize(6),
+  },
+  newYearEyebrow: {
+    fontSize: normalize(11),
+    fontFamily: "Comfortaa_700Bold",
+    textTransform: "uppercase",
+    letterSpacing: 1,
+    color: "rgba(226,232,240,0.85)",
+    marginBottom: normalize(4),
+  },
+  newYearTitle: {
+    fontSize: normalize(20),
+    fontFamily: "Comfortaa_700Bold",
+    color: "#F9FAFB",
+    marginBottom: normalize(6),
+    lineHeight: normalize(24),
+  },
+  newYearSubtitle: {
+  fontSize: normalize(14),
+  fontFamily: "Comfortaa_400Regular",
+  color: "rgba(226,232,240,0.9)",
+  lineHeight: normalize(20),
+  marginBottom: normalize(10),
+  textAlign: "left",
+},
+  newYearFooterRow: {
+    flexDirection: "row",
+    alignItems: "center",
+    marginTop: normalize(2),
+  },
+  newYearDaysPill: {
+    flexDirection: "row",
+    alignItems: "center",
+    paddingHorizontal: normalize(10),
+    paddingVertical: normalize(5),
+    borderRadius: normalize(999),
+    backgroundColor: "rgba(15,23,42,0.75)",
+    borderWidth: StyleSheet.hairlineWidth,
+    borderColor: "rgba(148,163,184,0.75)",
+    gap: normalize(6),
+  },
+  newYearDaysText: {
+    fontSize: normalize(11),
+    fontFamily: "Comfortaa_600SemiBold",
+    color: "#E5E7EB",
+  },
+  newYearCircleOuter: {
+    width: normalize(90),
+    height: normalize(90),
+    borderRadius: normalize(45),
+    borderWidth: normalize(3),
+    borderColor: "rgba(248,250,252,0.18)",
+    alignItems: "center",
+    justifyContent: "center",
+    marginBottom: normalize(10),
+    backgroundColor: "rgba(15,23,42,0.85)",
+  },
+  newYearCircleInner: {
+    width: normalize(72),
+    height: normalize(72),
+    borderRadius: normalize(36),
+    alignItems: "center",
+    justifyContent: "center",
+    backgroundColor: "rgba(15,23,42,0.95)",
+    position: "relative",
+  },
+  newYearCircleNumber: {
+    fontSize: normalize(20),
+    fontFamily: "Comfortaa_700Bold",
+    color: "#F9FAFB",
+  },
+  newYearCard: {
+    width: "100%",
+    maxWidth: CONTENT_W,
+    borderRadius: normalize(22),
+    overflow: "hidden",
+    borderWidth: StyleSheet.hairlineWidth,
+    borderColor: "rgba(148,163,184,0.45)",
+    shadowColor: "#000",
+    shadowOffset: { width: 0, height: normalize(10) },
+    shadowOpacity: 0.45,
+    shadowRadius: normalize(18),
+    elevation: 8,
+  },
+  newYearCircleLabel: {
+    fontSize: normalize(11),
+    fontFamily: "Comfortaa_400Regular",
+    color: "rgba(148,163,184,0.95)",
+  },
+  newYearClockPointer: {
+    position: "absolute",
+    top: normalize(6),
+    right: normalize(8),
+  },
+  newYearCtaButton: {
+    width: "100%",
+  },
+  newYearCtaGradient: {
+    borderRadius: normalize(999),
+    paddingVertical: normalize(9),
+    paddingHorizontal: normalize(14),
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "space-between",
+    shadowColor: "#000",
+    shadowOffset: { width: 0, height: normalize(4) },
+    shadowOpacity: 0.25,
+    shadowRadius: normalize(8),
+    elevation: 6,
+  },
+  newYearCtaText: {
+    fontSize: normalize(13),
+    fontFamily: "Comfortaa_700Bold",
+    color: "#0B1120",
+    marginRight: normalize(8),
+  },
   gradientContainer: {
     flex: 1,
     paddingBottom: normalize(10),
   },
-  scrollContent: {
+    scrollContent: {
     flexGrow: 1,
-    paddingBottom: normalize(100),
+    paddingBottom: SPACING * 5, // rythme global homogène
   },
+
   bannerContainer: {
     width: "100%",
     alignItems: "center",
@@ -1991,13 +2393,15 @@ const staticStyles = StyleSheet.create({
     marginRight: SPACING / 2,
     lineHeight: normalize(22),
   },
-  section: {
-    paddingTop: SPACING * 1.2,
-    paddingBottom: SPACING,
+    section: {
+    paddingTop: SPACING * 1.1,
+    paddingBottom: SPACING * 1.1,
     paddingHorizontal: SPACING,
-    marginBottom: SPACING * 0.5,
+    // léger espace sous le bloc, mais pas un cratère
+    marginBottom: SPACING * 1.1,
     overflow: "visible",
   },
+
   sectionTitle: {
     fontSize: normalize(24),
     fontFamily: "Comfortaa_700Bold",
@@ -2018,11 +2422,13 @@ const staticStyles = StyleSheet.create({
     shadowRadius: normalize(5),
     elevation: 3,
   },
-  dailyBonusWrapper: {
+    dailyBonusWrapper: {
     paddingHorizontal: SPACING,
-    marginTop: normalize(4),
-    marginBottom: normalize(10),
+    // bien séparé visuellement du New Year
+    marginTop: SPACING * 0.3,
+    marginBottom: SPACING * 1.6,
   },
+
   dailyBonusOuter: {
     borderRadius: normalize(20),
     padding: normalize(1.5),
@@ -2173,11 +2579,12 @@ const staticStyles = StyleSheet.create({
     borderTopLeftRadius: normalize(18),
     borderTopRightRadius: normalize(18),
   },
-  headerCardWrap: {
+   headerCardWrap: {
     paddingHorizontal: SPACING,
-    marginTop: normalize(8),
-    marginBottom: normalize(6),
+    marginTop: SPACING,
+    marginBottom: SPACING,
   },
+
   challengeTitle: {
     fontSize: normalize(16),
     fontFamily: "Comfortaa_700Bold",
@@ -2218,10 +2625,11 @@ const staticStyles = StyleSheet.create({
   spacer: {
     height: normalize(5),
   },
-  discoverSection: {
+    discoverSection: {
     paddingHorizontal: SPACING,
-    paddingTop: SPACING * 1.2,
-    paddingBottom: SPACING * 1.4,
+    // un peu moins de padding pour remonter visuellement le titre
+    paddingTop: SPACING,
+    paddingBottom: SPACING * 1.3,
     alignItems: "center",
     backgroundColor: "rgba(0, 0, 0, 0.12)",
   },
@@ -2274,10 +2682,12 @@ const staticStyles = StyleSheet.create({
     zIndex: 5,
     position: "relative",
   },
-  discoverWrapper: {
+    discoverWrapper: {
     width: "100%",
     alignItems: "center",
-    marginTop: 0,
+    // plus petit pour casser le "gros trou" que tu vois actuellement
+    marginTop: SPACING * 0.7,
+    marginBottom: SPACING * 1.6,
   },
   discoverCardText: {
     fontSize: normalize(13),
@@ -2405,8 +2815,6 @@ const getDynamicStyles = (currentTheme: Theme, isDarkMode: boolean) => ({
   },
 });
 
-const CONTENT_W = Math.min(SCREEN_WIDTH - SPACING * 2, normalize(420));
-const IS_SMALL = SCREEN_WIDTH < 360;
 
 const stylesDaily = StyleSheet.create({
   wrap: {
@@ -2424,7 +2832,7 @@ const stylesDaily = StyleSheet.create({
   },
   heroCard: {
     width: CONTENT_W,
-    height: normalize(220),
+    aspectRatio: 1.6,
     borderRadius: normalize(18),
     overflow: "hidden",
     marginBottom: SPACING,
@@ -2441,19 +2849,17 @@ const stylesDaily = StyleSheet.create({
   },
   titleRow: {
     position: "relative",
-    zIndex: 5,
-    elevation: 5,
     alignItems: "center",
     width: "100%",
-    marginBottom: SPACING,
+    marginBottom: SPACING, // spacing propre avant la hero card
   },
   heroOverlay: {
-    position: "absolute",
-    left: 0,
-    right: 0,
-    bottom: 0,
-    top: 0,
-  },
+   position: "absolute",
+   left: 0,
+   right: 0,
+   bottom: 0,
+   height: "55%",
+ },
   heroTextZone: {
     position: "absolute",
     bottom: SPACING,
@@ -2501,7 +2907,7 @@ const stylesDaily = StyleSheet.create({
   },
   miniCard: {
     width: (CONTENT_W - SPACING) / 2,
-    height: normalize(120),
+    aspectRatio: 1.6,
     borderRadius: normalize(16),
     overflow: "hidden",
     marginBottom: SPACING,
@@ -2540,12 +2946,12 @@ const stylesDaily = StyleSheet.create({
     height: "100%",
   },
   miniOverlay: {
-    position: "absolute",
-    left: 0,
-    right: 0,
-    bottom: 0,
-    top: 0,
-  },
+   position: "absolute",
+   left: 0,
+   right: 0,
+   bottom: 0,
+   height: "60%",
+ },
   footHint: {
     marginTop: 2,
     fontSize: normalize(12),

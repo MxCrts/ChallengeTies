@@ -336,10 +336,16 @@ export default function CreateChallenge() {
     }
   }, [t, saveDraft, show, softHaptic]);
 
+  type UploadResult = { url: string | null; rejected: boolean };
+
+
   /* ====== Upload vers Storage (si image) ====== */
+    /* ====== Upload vers Storage (si image) ====== */
   const uploadImageIfNeeded = useCallback(
-    async (localUri: string | null, nameHint: string) => {
-      if (!localUri) return null;
+    async (localUri: string | null, nameHint: string): Promise<UploadResult> => {
+      // Pas d'image → rien à uploader, mais pas une "rejection"
+      if (!localUri) return { url: null, rejected: false };
+
       try {
         let reject = false;
 
@@ -358,7 +364,9 @@ export default function CreateChallenge() {
             reject = true;
             softHaptic("error");
           }
-        } catch {}
+        } catch {
+          // si on n'arrive pas à lire la taille, on ne bloque pas ici
+        }
 
         // Dimensions minimales (ex: 600x400)
         await new Promise<void>((resolve) => {
@@ -381,8 +389,12 @@ export default function CreateChallenge() {
           );
         });
 
-        if (reject) return null;
+        // 🔒 Cas "rejet dur" → on bloque la création
+        if (reject) {
+          return { url: null, rejected: true };
+        }
 
+        // Upload normal (si tout est ok)
         const resp = await fetch(localUri);
         const blob = await resp.blob();
 
@@ -398,13 +410,17 @@ export default function CreateChallenge() {
 
         await uploadBytes(ref, blob, { contentType: "image/jpeg" });
         const url = await getDownloadURL(ref);
-        return url;
+
+        return { url, rejected: false };
       } catch {
-        return null; // on ne bloque pas la création si l’upload échoue
+        // ⚠️ Problème réseau / storage → on NE BLOQUE PAS la création,
+        // on renverra juste null, rejected:false
+        return { url: null, rejected: false };
       }
     },
     [t, show, softHaptic]
   );
+
 
   /* ====== Validation & Création ====== */
   const titleLeft = TITLE_MAX - title.length;
@@ -529,7 +545,18 @@ export default function CreateChallenge() {
 
     try {
       // 1) Upload image si fournie
-      const uploadedUrl = await uploadImageIfNeeded(imageUri, title);
+            // 1) Upload image si fournie
+      const { url: uploadedUrl, rejected } = await uploadImageIfNeeded(
+        imageUri,
+        title
+      );
+
+      // 🔥 Si l'image a été REJETÉE (trop petite / trop lourde),
+      // on arrête là : les toasts sont déjà affichés.
+      if (rejected) {
+        return;
+      }
+
 
       // 2) Créer le document challenge (approved:false)
       const payload = {

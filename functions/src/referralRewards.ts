@@ -8,25 +8,30 @@ const db = getFirestore();
 
 const MILESTONES = [5, 10, 25] as const;
 
+
 export const onUserActivated = onDocumentWritten(
   {
     region: "europe-west1",
     document: "users/{uid}",
   },
   async (event) => {
-    const before = event.data?.before?.data() as any | undefined;
+        const before = event.data?.before?.data() as any | undefined;
     const after  = event.data?.after?.data()  as any | undefined;
     if (!after) return; // deleted
 
-    // only flip false -> true
-    const wasActivated = before?.activated === true;
-    const isActivated  = after?.activated === true;
-    if (wasActivated || !isActivated) return;
+    // ✅ On ne traite que les users activés avec un parrain
+    const isActivated = !!after?.activated;
+    if (!isActivated) return;
 
     const referrerId: string | undefined = after?.referrerId;
     if (!referrerId) return;
 
+    // ✅ Anti double-traitement : si on a déjà une date d'activation, on sort
+    const alreadyRecorded = !!before?.referral?.activatedAt;
+    if (alreadyRecorded) return;
+
     const referrerRef = db.collection("users").doc(referrerId);
+
 
     // 🔢 count activated referees (server truth)
     const qSnap = await db
@@ -37,8 +42,20 @@ export const onUserActivated = onDocumentWritten(
       .get();
 
     const activatedCount = qSnap.data().count;
+    const FILLEUL_ID = event.params.uid;
+const filleulRef = db.collection("users").doc(FILLEUL_ID);
+
 
     await db.runTransaction(async (tx) => {
+      // ⭐ NEW: force server-side activation to avoid race conditions
+      tx.update(filleulRef, {
+        activated: true,
+        referral: {
+          ...(after.referral || {}),
+          activatedAt: FieldValue.serverTimestamp(),
+        },
+        updatedAt: FieldValue.serverTimestamp(),
+      });
       const refSnap = await tx.get(referrerRef);
       if (!refSnap.exists) return;
 
@@ -57,12 +74,22 @@ export const onUserActivated = onDocumentWritten(
           !pending.includes(m)
       );
 
-      // ✅ update stats always
+            // ✅ update stats + reward de base (1 seule fois par filleul)
       tx.update(referrerRef, {
         "referral.activatedCount": activatedCount,
         "referral.updatedAt": FieldValue.serverTimestamp(),
+        trophies: FieldValue.increment(10),
+        totalTrophies: FieldValue.increment(10),
         updatedAt: FieldValue.serverTimestamp(),
       });
+
+      tx.update(filleulRef, {
+        trophies: FieldValue.increment(10),
+        totalTrophies: FieldValue.increment(10),
+        updatedAt: FieldValue.serverTimestamp(),
+      });
+
+
 
       if (newlyReached.length === 0) return;
 
@@ -81,10 +108,10 @@ export const onUserActivated = onDocumentWritten(
         titleKey: "referral.notif.milestoneUnlocked.title",
         bodyKey: "referral.notif.milestoneUnlocked.body",
         params: {
-          bonus: newlyReached.reduce((s, m) => s + (m === 5 ? 20 : m === 10 ? 60 : 200), 0),
-          milestones: newlyReached,
-          activatedCount,
-        },
+  bonus: newlyReached.reduce((s, m) => s + (m === 5 ? 50 : m === 10 ? 100 : 300), 0),
+  milestones: newlyReached,
+  activatedCount,
+},
         createdAt: FieldValue.serverTimestamp(),
         read: false,
         type: "referral_milestone_unlocked",

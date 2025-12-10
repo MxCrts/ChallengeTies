@@ -10,9 +10,9 @@ if (!(0, app_1.getApps)().length)
 const db = (0, firestore_1.getFirestore)();
 const ALLOWED = [5, 10, 25];
 const REWARDS = {
-    5: 20,
-    10: 60,
-    25: 200,
+    5: 50,
+    10: 100,
+    25: 300,
 };
 exports.claimReferralMilestone = (0, https_1.onCall)({ region: "europe-west1" }, async (req) => {
     const uid = req.auth?.uid;

@@ -15,39 +15,50 @@ type ParsedReferral = {
 };
 
 function isReferralUrl(rawUrl: string) {
+  if (!rawUrl) return false;
+
   const url = rawUrl.trim();
 
+  // ✅ 0) Détection simple/robuste AVANT tout parse
+  //    → marche pour https://...dl?ref=xxx
+  //    → marche pour ties://ref/xxx
+  //    → marche pour n'importe quel truc qui contient ces patterns
+  if (
+    /:\/\/ref\//i.test(url) ||         // schéma app: myapp://ref/xxx
+    /\/ref\//i.test(url) ||           // chemin: .../ref/xxx
+    /[?&]refuid=/i.test(url) ||       // query: ?refUid=xxx
+    /[?&]referrerid=/i.test(url) ||   // query: ?referrerId=xxx
+    /[?&]ref=/i.test(url)             // query: ?ref=xxx
+  ) {
+    return true;
+  }
+
+  // ✅ 1) On garde malgré tout le parse Expo comme bonus
   try {
     const parsed = Linking.parse(url);
 
-    const host = String((parsed as any).hostname || "").trim().toLowerCase();
+    const host = String((parsed as any).hostname || "")
+      .trim()
+      .toLowerCase();
     const path = String(parsed.path || "").trim().toLowerCase();
     const qp: any = parsed.queryParams || {};
 
-    // ✅ 1) Format app scheme:
-    // myapp://ref/<uid>  -> host="ref", path="<uid>"
+    // Format app scheme: myapp://ref/<uid>  -> host="ref", path="<uid>"
     if (host === "ref") return true;
 
-    // ✅ 2) Format path:
-    // myapp://something/ref/<uid> OR https://.../ref/<uid>
+    // Format path: myapp://something/ref/<uid> OR https://.../ref/<uid>
     if (path.startsWith("ref/") || path.includes("/ref/")) return true;
 
-    // ✅ 3) Format query:
-    // ?refUid=... OR ?ref=... OR ?referrerId=...
+    // Format query: ?refUid=... OR ?ref=... OR ?referrerId=...
     if (qp.refUid || qp.ref || qp.referrerId) return true;
 
     return false;
   } catch {
-    // fallback simple si parse fail
-    return (
-      /:\/\/ref\//i.test(url) ||
-      /\/ref\//i.test(url) ||
-      /[?&]refUid=/i.test(url) ||
-      /[?&]ref=/i.test(url) ||
-      /[?&]referrerId=/i.test(url)
-    );
+    // Si parse plante, on retombe sur le test brut
+    return false;
   }
 }
+
 
 
 // Parse solide qui accepte plusieurs formats
@@ -60,46 +71,59 @@ function parseReferralUrl(rawUrl: string): ParsedReferral {
     // expo-linking parse: marche sur ties://, https://, etc.
     const parsed = Linking.parse(url);
 
-    // ex: ties://ref/<uid>  -> parsed.path = "ref/<uid>"
+    const qp: any = parsed.queryParams || {};
     const path = (parsed.path || "").trim();
     const segments = path.split("/").filter(Boolean);
 
-    // 1) Format principal: /ref/:uid
-    if (segments[0] === "ref" && segments[1]) {
+    // 🔥 FULL QUERY CAPTURE (toutes variantes)
+    const queryRef =
+      qp.ref ||
+      qp.refUid ||
+      qp.refuid ||
+      qp.referrerId ||
+      qp.referrerid ||
+      null;
+
+    if (queryRef) {
+      referrerId = String(queryRef).trim();
+    }
+    // 🔥 Path-based capture: /ref/<uid>
+    if (!referrerId && segments[0] === "ref" && segments[1]) {
       referrerId = segments[1];
     }
 
-    // 2) Format query: ?refUid=xxx
-    const qp: any = parsed.queryParams || {};
-    if (!referrerId && qp.refUid) {
-      referrerId = String(qp.refUid);
+    // 🔥 Fallback brut Android : recherche /ref/<uid> dans l’URL complète
+    if (!referrerId && /\/ref\/([^/?#]+)/i.test(url)) {
+      referrerId = url.match(/\/ref\/([^/?#]+)/i)?.[1] || null;
     }
 
-    // 3) Fallback query: ?ref=xxx
-    if (!referrerId && qp.ref) {
-      referrerId = String(qp.ref);
+    // 🔥 src
+    if (qp.src) {
+      src = String(qp.src).trim() || "share";
     }
-
-    // src
-    if (qp.src) src = String(qp.src).trim() || "share";
   } catch (e) {
     // Fallback manuel si parse fail
+    // 🔥 Fallback robuste quand Linking.parse retourne vide (Android)
     try {
       const u = new URL(url);
       const qp = u.searchParams;
 
-      referrerId =
-        qp.get("refUid") ||
+      const raw =
         qp.get("ref") ||
-        null;
+        qp.get("refUid") ||
+        qp.get("refuid") ||
+        qp.get("referrerId") ||
+        qp.get("referrerid");
+
+      if (raw) {
+        referrerId = String(raw).trim();
+      }
+
+      if (!referrerId && /\/ref\/([^/?#]+)/i.test(url)) {
+        referrerId = url.match(/\/ref\/([^/?#]+)/i)?.[1] || null;
+      }
 
       src = qp.get("src") || "share";
-
-      // si /ref/<uid> en path
-      if (!referrerId) {
-        const segs = u.pathname.split("/").filter(Boolean);
-        if (segs[0] === "ref" && segs[1]) referrerId = segs[1];
-      }
     } catch {}
   }
 
@@ -143,19 +167,20 @@ export async function handleReferralUrl(rawUrl?: string | null) {
     return false;
   }
 
-  try {
+    try {
     const existing = await AsyncStorage.getItem(REFERRER_KEY);
 
-    if (existing) {
-      console.log("🟡 [referral] already had referrer locally:", existing);
-    } else {
-      await AsyncStorage.multiSet([
-        [REFERRER_KEY, referrerId],
-        [REFERRER_SRC_KEY, src],
-        [REFERRER_TS_KEY, String(Date.now())],
-      ]);
-      console.log("✅ [referral] stored pending referrer locally:", referrerId);
-    }
+    await AsyncStorage.multiSet([
+      [REFERRER_KEY, referrerId],
+      [REFERRER_SRC_KEY, src],
+      [REFERRER_TS_KEY, String(Date.now())],
+    ]);
+
+    console.log("✅ [referral] stored/overwrote pending referrer locally:", {
+      previous: existing,
+      next: referrerId,
+      src,
+    });
 
     // analytics best-effort
     try {
@@ -163,9 +188,11 @@ export async function handleReferralUrl(rawUrl?: string | null) {
         referrerId,
         src,
         alreadyHadReferrer: !!existing,
+        overwritten: !!existing && existing !== referrerId,
         warmStartLoggedIn: !!me,
       });
     } catch {}
+
 
     return true;
   } catch (e) {

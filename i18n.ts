@@ -16,6 +16,7 @@ import es from "./src/locales/es/translation.json";
 import pt from "./src/locales/pt/translation.json";
 import ja from "./src/locales/ja/translation.json";
 import ko from "./src/locales/ko/translation.json";
+import nl from "./src/locales/nl/translation.json";
 
 
 const resources = {
@@ -31,6 +32,7 @@ const resources = {
   pt: { translation: pt }, // 👈 ajouté
   ja: { translation: ja }, // 👈 ajouté
   ko: { translation: ko },
+  nl: { translation: nl },
 };
 
 const SUPPORTED_LANGS = [
@@ -46,6 +48,7 @@ const SUPPORTED_LANGS = [
   "pt",
   "ja",
   "ko",
+  "nl",
 ] as const;
 
 
@@ -80,6 +83,7 @@ const pickSupported = (tag: string): string => {
   "pt",
   "ja",
   "ko",
+  "nl",
 ] as const;
   return (SUPPORTED as readonly string[]).includes(lang) ? lang : "en";
 };
@@ -122,6 +126,7 @@ i18n
   "pt",
   "ja",
   "ko",
+  "nl",
 ],
 
     nonExplicitSupportedLngs: true,

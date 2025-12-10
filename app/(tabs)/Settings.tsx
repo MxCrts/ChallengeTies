@@ -100,6 +100,7 @@ const SUPPORTED_LANGUAGES = [
   "pt",
   "ru",
   "zh",
+  "nl",
 ] as const;
 type SupportedLanguageCode = (typeof SUPPORTED_LANGUAGES)[number];
 
@@ -335,38 +336,40 @@ export default function Settings() {
     const userRef = doc(db, "users", userId);
 
     const unsubscribe = onSnapshot(
-      userRef,
-      (snapshot) => {
-        if (!isActiveRef.current || !auth.currentUser) return;
+  userRef,
+  (snapshot) => {
+    if (!isActiveRef.current || !auth.currentUser) return;
 
-        if (snapshot.exists()) {
-          const data = snapshot.data() as any;
+    if (snapshot.exists()) {
+      const data = snapshot.data() as any;
 
-          setNotificationsEnabled(data.notificationsEnabled ?? true);
-          setLocationEnabled(data.locationEnabled ?? true);
+      setNotificationsEnabled(data.notificationsEnabled ?? true);
+      setLocationEnabled(data.locationEnabled ?? true);
 
-          // 🔓 Premium réel (depuis Firestore : premium / isPremium)
-          const premiumFlag = !!(data.premium ?? data.isPremium);
-          setIsPremium(premiumFlag);
+      const premiumFlag = !!(data.premium ?? data.isPremium);
+      setIsPremium(premiumFlag);
 
-          if (data.language) {
-            const normalized = normalizeLanguageCode(data.language);
-            if (normalized !== language) {
-              setLanguage(normalized);
-              i18next.changeLanguage(normalized);
-            }
-          }
+      if (data.language) {
+        const normalized = normalizeLanguageCode(data.language);
+        if (normalized !== language) {
+          setLanguage(normalized);
+          i18next.changeLanguage(normalized);
         }
-      },
-      (error) => {
-        console.error("Erreur onSnapshot Settings:", error);
-        // permission-denied en déconnexion : on ignore
-        if (error.code === "permission-denied" && !auth.currentUser) {
-          return;
-        }
-        showErrorAlert("error", "unknownError");
       }
-    );
+    }
+  },
+  (error) => {
+    // 👉 Cas typique : l'utilisateur vient d'être déconnecté,
+    // les règles refusent la lecture de /users/{userId} → on ignore.
+    if (error.code === "permission-denied") {
+      return;
+    }
+
+    console.error("Erreur onSnapshot Settings:", error);
+    showErrorAlert("error", "unknownError");
+  }
+);
+
 
     return () => {
       unsubscribe();
@@ -799,6 +802,7 @@ export default function Settings() {
                     <Picker.Item label="Italiano" value="it" />
                     <Picker.Item label="日本語" value="ja" />
                     <Picker.Item label="한국어" value="ko" />
+                    <Picker.Item label="Nederlands" value="nl" />
                     <Picker.Item label="Português" value="pt" />
                     <Picker.Item label="Русский" value="ru" />
                     <Picker.Item label="中文" value="zh" />

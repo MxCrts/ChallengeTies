@@ -276,74 +276,7 @@ export default function UserAccount() {
                 {t("email")}
               </Text>
 
-              {badgeVerified ? (
-                <View
-                  style={[
-                    styles.badge,
-                    {
-                      borderColor: "#22C55E",
-                      backgroundColor: "rgba(34,197,94,0.15)",
-                    },
-                  ]}
-                >
-                  <Ionicons
-                    name="checkmark-circle-outline"
-                    size={normalizeSize(14)}
-                    color="#22C55E"
-                  />
-                  <Text
-                    style={[
-                      styles.badgeText,
-                      {
-                        color: "#14532D",
-                      },
-                    ]}
-                  >
-                    {t("verified")}
-                  </Text>
-                </View>
-              ) : (
-                <Pressable
-                  onPress={resendVerification}
-                  disabled={verifSending}
-                  style={({ pressed }) => [
-                    styles.badge,
-                    {
-                      borderColor: "#FF8C00",
-                      backgroundColor: "rgba(255,140,0,0.12)",
-                      opacity: verifSending ? 0.7 : pressed ? 0.9 : 1,
-                    },
-                  ]}
-                  accessibilityLabel={t("resendVerification")}
-                  accessibilityHint={t("resendVerificationHint", {
-                    defaultValue:
-                      "Envoie un nouvel email de vérification à ton adresse.",
-                  })}
-                  testID="resend-verification"
-                >
-                  {verifSending ? (
-                    <ActivityIndicator size="small" color="#FF8C00" />
-                  ) : (
-                    <Ionicons
-                      name="mail-outline"
-                      size={normalizeSize(14)}
-                      color="#FF8C00"
-                    />
-                  )}
-                  <Text
-                    style={[
-                      styles.badgeText,
-                      {
-                        color: "#7C2D12",
-                      },
-                    ]}
-                  >
-                    {verifSending
-                      ? t("sending", { defaultValue: "Envoi..." })
-                      : t("verify")}
-                  </Text>
-                </Pressable>
-              )}
+             
             </View>
 
             <TouchableOpacity
@@ -414,7 +347,7 @@ export default function UserAccount() {
                   <Ionicons
                     name="person-circle-outline"
                     size={normalizeSize(14)}
-                    color={currentTheme.colors.secondary}
+                    color={currentTheme.colors.primary}
                   />
                   <Text
                     style={[
@@ -619,47 +552,6 @@ export default function UserAccount() {
             entering={FadeInUp.delay(400)}
             style={styles.buttonWrapper}
           >
-            <TouchableOpacity
-              style={styles.button}
-              onPress={handleSignOut}
-              accessibilityLabel={t("logout")}
-              accessibilityHint={t("logoutConfirm", {
-                defaultValue: "Ouvre une fenêtre pour confirmer la déconnexion.",
-              })}
-              testID="logout-from-account"
-            >
-              <LinearGradient
-                colors={[
-                  currentTheme.colors.primary,
-                  currentTheme.colors.secondary,
-                ]}
-                style={styles.buttonGradient}
-                start={{ x: 1, y: 1 }}
-                end={{ x: 0, y: 0 }}
-              >
-                <Ionicons
-                  name="log-out-outline"
-                  size={normalizeSize(20)}
-                  color={
-                    isDarkMode
-                      ? currentTheme.colors.textPrimary
-                      : "#111111"
-                  }
-                />
-                <Text
-                  style={[
-                    styles.buttonText,
-                    {
-                      color: isDarkMode
-                        ? currentTheme.colors.textPrimary
-                        : "#111111",
-                    },
-                  ]}
-                >
-                  {t("logout")}
-                </Text>
-              </LinearGradient>
-            </TouchableOpacity>
           </Animated.View>
         </ScrollView>
       </SafeAreaView>

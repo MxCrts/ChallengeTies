@@ -474,16 +474,17 @@ export default function FAQScreen() {
                         })}
                       >
                         <LinearGradient
-                          colors={[current.colors.secondary, current.colors.primary]}
-                          style={styles.contactBtnGrad}
-                          start={{ x: 0, y: 0 }}
-                          end={{ x: 1, y: 1 }}
-                        >
-                          <Ionicons name="mail-outline" size={16} color="#111" />
-                          <Text style={styles.contactBtnText}>
-                            {t("questions.contactCta", { defaultValue: "Contacter le support" })}
-                          </Text>
-                        </LinearGradient>
+  colors={[current.colors.secondary, current.colors.primary]}
+  style={[styles.contactBtnGrad, { paddingHorizontal: 16 }]}
+  start={{ x: 0, y: 0 }}
+  end={{ x: 1, y: 1 }}
+>
+  <Ionicons name="mail-open-outline" size={20} color="#111" />
+  <Text style={[styles.contactBtnText, { fontSize: 15 }]}>
+    {t("questions.contactCta")}
+  </Text>
+</LinearGradient>
+
                       </TouchableOpacity>
                     )}
                   </View>

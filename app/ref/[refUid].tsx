@@ -7,10 +7,12 @@ import { useTranslation } from "react-i18next";
 import { logEvent } from "@/src/analytics";
 import { auth, db } from "@/constants/firebase-config";
 import { doc, getDoc } from "firebase/firestore";
+import {
+  REFERRER_KEY,
+  REFERRER_SRC_KEY,
+  REFERRER_TS_KEY,
+} from "@/services/referralLinking";
 
-const REFERRER_KEY = "ties_referrer_id";
-const REFERRER_SRC_KEY = "ties_referrer_src";
-const REFERRER_TS_KEY = "ties_referrer_ts";
 
 export default function ReferralCatcher() {
   const { t } = useTranslation();

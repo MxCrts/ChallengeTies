@@ -130,6 +130,8 @@ export default function ShareAndEarn() {
   const toastTranslateY = useRef(new Animated.Value(10)).current;
   const toastTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const [reduceMotion, setReduceMotion] = useState(false);
+  const [claimingMilestone, setClaimingMilestone] = useState<number | null>(null);
+
 
   // 🔒 Monté/démonté pour éviter les setState inutiles
   const isMountedRef = useRef(true);
@@ -311,10 +313,28 @@ export default function ShareAndEarn() {
       let serverClaimed: number[] = [];
       let serverPending: number[] = [];
 
-      if (meSnap.exists()) {
+            if (meSnap.exists()) {
         const data = meSnap.data() as any;
-        serverCount = data?.referral?.activatedCount;
 
+        // 🔎 Debug propre pour vérifier en prod ce que tu reçois
+        console.log("[share] referral snapshot:", data?.referral);
+
+        // 1) Lecture propre du compteur serveur
+        serverCount =
+          typeof data?.referral?.activatedCount === "number"
+            ? data.referral.activatedCount
+            : undefined;
+
+        // 2) Fallback ultra safe : si pas de compteur mais une liste de filleuls existe
+        const children = Array.isArray(data?.referral?.children)
+          ? data.referral.children
+          : [];
+
+        if (typeof serverCount !== "number" && children.length > 0) {
+          serverCount = children.length;
+        }
+
+        // 3) Milestones côté serveur
         serverClaimed = Array.isArray(data?.referral?.claimedMilestones)
           ? data.referral.claimedMilestones
           : [];
@@ -328,6 +348,7 @@ export default function ShareAndEarn() {
           setPending(serverPending);
         }
       }
+
 
       if (typeof serverCount === "number") {
         if (isMountedRef.current) {
@@ -426,57 +447,62 @@ export default function ShareAndEarn() {
     }, 1200);
   }, [width]);
 
-  const claimMilestone = useCallback(
-    async (m: number) => {
-      if (!me) return;
-      try {
-        const functions = getFunctions(app, "europe-west1");
-        const callable = httpsCallable(functions, "claimReferralMilestone");
-        await callable({ milestone: m });
+ const claimMilestone = useCallback(
+  async (m: number) => {
+    if (!me) return;
+    if (claimingMilestone === m) return; // déjà en cours pour ce palier
 
-        if (isMountedRef.current) {
-          setLoading(true);
-        }
-        await fetchStats();
+    try {
+      setClaimingMilestone(m);
+      const functions = getFunctions(app, "europe-west1");
+      const callable = httpsCallable(functions, "claimReferralMilestone");
+      await callable({ milestone: m });
 
-        const amount = REWARDS[m] ?? 0;
-        success();
-        showRewardBanner(amount);
-        fireConfetti();
-
-        try {
-          // on ne bloque pas l'UI sur l’analytics
-          const r = maybeAskForReview();
-          (r as any)?.catch?.(() => {});
-        } catch {}
-
-        try {
-          const r = logEvent("share_claim_success" as any, { milestone: m });
-          (r as any)?.catch?.(() => {});
-        } catch {}
-      } catch (e: any) {
-        const msg =
-          e?.message?.includes("already_claimed")
-            ? t("referral.share.errors.alreadyClaimed")
-            : e?.message?.includes("not_reached")
-            ? t("referral.share.errors.notReached")
-            : e?.message?.includes("not_unlocked")
-            ? t("referral.share.errors.notUnlocked")
-            : t("referral.share.errors.claimFailed");
-
-        showToast("error", String(msg));
-
-        try {
-          const r = logEvent("share_claim_error" as any, {
-            milestone: m,
-            error: String(e?.message || e),
-          });
-          (r as any)?.catch?.(() => {});
-        } catch {}
+      if (isMountedRef.current) {
+        setLoading(true);
       }
-    },
-    [me, fetchStats, t, showRewardBanner, fireConfetti, showToast]
-  );
+      await fetchStats();
+
+      const amount = REWARDS[m] ?? 0;
+      success();
+      showRewardBanner(amount);
+      fireConfetti();
+
+      try {
+        const r = maybeAskForReview();
+        (r as any)?.catch?.(() => {});
+      } catch {}
+
+      try {
+        const r = logEvent("share_claim_success" as any, { milestone: m });
+        (r as any)?.catch?.(() => {});
+      } catch {}
+    } catch (e: any) {
+      const msg =
+        e?.message?.includes("already_claimed")
+          ? t("referral.share.errors.alreadyClaimed")
+          : e?.message?.includes("not_reached")
+          ? t("referral.share.errors.notReached")
+          : e?.message?.includes("not_unlocked")
+          ? t("referral.share.errors.notUnlocked")
+          : t("referral.share.errors.claimFailed");
+
+      showToast("error", String(msg));
+
+      try {
+        const r = logEvent("share_claim_error" as any, {
+          milestone: m,
+          error: String(e?.message || e),
+        });
+        (r as any)?.catch?.(() => {});
+      } catch {}
+    } finally {
+      setClaimingMilestone(null);
+    }
+  },
+  [me, fetchStats, t, showRewardBanner, fireConfetti, showToast, claimingMilestone]
+);
+
 
   const renderConfetti = () =>
     confetti.map((c) => (
@@ -1100,11 +1126,12 @@ export default function ShareAndEarn() {
 
                     {isClaimable && (
                       <TouchableOpacity
-                        style={styles.claimBtn}
-                        onPress={() => claimMilestone(m)}
-                        accessibilityRole="button"
-                        accessibilityLabel={t("referral.share.claim")}
-                      >
+  style={styles.claimBtn}
+  onPress={() => claimMilestone(m)}
+  disabled={claimingMilestone === m || loading}
+  accessibilityRole="button"
+  accessibilityLabel={t("referral.share.claim")}
+>
                         <Text style={styles.claimTxt}>
                           {t("referral.share.claim")}
                         </Text>

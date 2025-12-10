@@ -1,6 +1,9 @@
 import express from "express";
 import cors from "cors";
 import { onRequest } from "firebase-functions/v2/https";
+import { initializeApp } from "firebase-admin/app";
+
+initializeApp();
 
 /** =========================
  *  CONFIG
@@ -36,6 +39,7 @@ const I18N = {
   pt: { join: "Junta-te a mim neste desafio! 🚀" },
   ja: { join: "このチャレンジに一緒に挑戦しよう！🚀" },
   ko: { join: "이 챌린지에 나와 함께 도전하자! 🚀" },
+  nl: { join: "Doe met mij mee aan deze challenge! 🚀" },
 } as const;
 
 

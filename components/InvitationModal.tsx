@@ -718,6 +718,13 @@ const InvitationModal: React.FC<InvitationModalProps> = ({
           backgroundColor: currentTheme.colors.border,
           marginBottom: normalize(12),
         },
+        durationText: {
+          fontSize: normalize(13),
+          fontFamily: "Comfortaa_500Medium",
+          marginBottom: normalize(10),
+          textAlign: "center",
+          color: currentTheme.colors.textPrimary,
+        },
         tagText: {
           fontSize: normalize(13),
           fontFamily: "Comfortaa_400Regular",
@@ -884,6 +891,11 @@ const InvitationModal: React.FC<InvitationModalProps> = ({
       );
     }
 
+    const daysCount =
+      typeof inv?.selectedDays === "number" && inv.selectedDays > 0
+        ? inv.selectedDays
+        : undefined;
+
     const usernameForTitle =
       inviterUsername ||
       t("invitation.someone", { defaultValue: "Quelqu'un" });
@@ -897,10 +909,21 @@ const InvitationModal: React.FC<InvitationModalProps> = ({
           })}
         </Text>
 
+        {/* Tag avec le titre du défi */}
         {!!challengeTitle && (
           <View style={styles.tag}>
             <Text style={styles.tagText}>{challengeTitle}</Text>
           </View>
+        )}
+
+        {/* 🔥 Durée du défi (toujours affichée si présente dans l’invitation) */}
+        {typeof daysCount === "number" && (
+          <Text style={styles.durationText}>
+            {t("invitation.duration", {
+              count: daysCount,
+              defaultValue: "{{count}} jours de défi",
+            })}
+          </Text>
         )}
 
         <Text style={styles.modalText}>

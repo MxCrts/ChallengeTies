@@ -60,6 +60,8 @@ import {
   ensureAndroidChannelAsync,
   scheduleDailyNotifications,
 } from "@/services/notificationService";
+import { handleReferralUrl } from "@/services/referralLinking";
+
 
 // Toast
 import { ToastProvider, useToast } from "../src/ui/Toast";
@@ -316,7 +318,7 @@ const DeepLinkManager: React.FC = () => {
       const path = parsed.path || "";
       const qp = (parsed.queryParams || {}) as Record<string, any>;
 
-      // -------------------------
+           // -------------------------
       // 1) REFERRAL LINKS
       // -------------------------
       const refFromQuery = typeof qp.ref === "string" ? qp.ref : null;
@@ -324,16 +326,28 @@ const DeepLinkManager: React.FC = () => {
         path.startsWith("ref/") ? path.split("ref/")[1] : null;
 
       const refUid = refFromQuery || refFromPath;
+
       if (refUid) {
         try {
-          await AsyncStorage.setItem(
-            "ties_referrer_id",
-            decodeURIComponent(refUid)
-          );
-          __DEV__ && console.log("✅ [DeepLink] ref stored:", refUid);
-        } catch {}
-        return; // ❗️on ne navigue jamais sur un referral
+          // 🧠 On délègue TOUT à handleReferralUrl :
+          // - parse robuste (ref / refUid / referrerId / path / query)
+          // - ignore self-ref
+          // - écrit REFERRER_KEY, REFERRER_SRC_KEY, REFERRER_TS_KEY
+          await handleReferralUrl(url);
+
+          __DEV__ &&
+            console.log("[DeepLink] referral handled via handleReferralUrl:", {
+              refUid,
+            });
+        } catch (e) {
+          console.log("❌ [DeepLink] referral handle error:", e);
+        }
+
+        // ❗️Très important : pour un lien de parrainage, on ne navigue pas.
+        // On laisse le flow normal (login/register → index) gérer.
+        return;
       }
+
 
       // -------------------------
       // 2) CHALLENGE / INVITE LINKS

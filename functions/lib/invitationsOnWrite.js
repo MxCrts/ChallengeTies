@@ -4,40 +4,56 @@ exports.invitationsOnWrite = void 0;
 // functions/src/invitationsOnWrite.ts
 const firestore_1 = require("firebase-functions/v2/firestore");
 const firestore_2 = require("firebase-admin/firestore");
-const app_1 = require("firebase-admin/app");
-(0, app_1.initializeApp)();
 const db = (0, firestore_2.getFirestore)();
-function titleFor(lang) {
-    const L = (lang || "en").toLowerCase();
-    switch (L) {
-        case "fr":
-        case "es":
-        case "de":
-        case "it":
-            return "ChallengeTies";
-        default:
-            return "ChallengeTies";
-    }
+/** Normalise une langue vers nos 12 locales supportées */
+function normalizeLang(lang) {
+    const base = String(lang || "en")
+        .toLowerCase()
+        .split(/[-_]/)[0];
+    const supported = ["fr", "en", "es", "de", "it", "pt", "zh", "ja", "ko", "ar", "hi", "ru", "nl"];
+    return supported.includes(base) ? base : "en";
+}
+function titleFor(_lang) {
+    // Titre identique partout (brand). Gardé pour extensibilité future.
+    return "ChallengeTies";
 }
 function bodyFor(status, lang, inviteeUsername, challengeTitle) {
     const name = inviteeUsername || "Your partner";
     const ct = challengeTitle ? ` « ${challengeTitle} »` : "";
-    const L = (lang || "en").toLowerCase();
+    const L = normalizeLang(lang);
     if (status === "accepted") {
         switch (L) {
             case "fr": return `${name} a accepté ton invitation${ct} 🎉`;
+            case "en": return `${name} accepted your invitation${ct} 🎉`;
             case "es": return `${name} aceptó tu invitación${ct} 🎉`;
             case "de": return `${name} hat deine Einladung${ct} angenommen 🎉`;
             case "it": return `${name} ha accettato il tuo invito${ct} 🎉`;
+            case "pt": return `${name} aceitou o teu convite${ct} 🎉`;
+            case "ru": return `${name} принял(а) твоё приглашение${ct} 🎉`;
+            case "ar": return `${name} قبل دعوتك${ct} 🎉`;
+            case "hi": return `${name} ने तुम्हारा निमंत्रण स्वीकार किया${ct} 🎉`;
+            case "zh": return `${name} 接受了你的邀请${ct} 🎉`;
+            case "ja": return `${name} があなたの招待${ct}を承認しました 🎉`;
+            case "ko": return `${name} 님이 당신의 초대${ct}를 수락했어요 🎉`;
+            case "nl": return `${name} heeft je uitnodiging${ct} geaccepteerd 🎉`;
             default: return `${name} accepted your invitation${ct} 🎉`;
         }
     }
     if (status === "refused") {
         switch (L) {
             case "fr": return `${name} a refusé ton invitation${ct} 🙏`;
+            case "en": return `${name} refused your invitation${ct} 🙏`;
             case "es": return `${name} rechazó tu invitación${ct} 🙏`;
             case "de": return `${name} hat deine Einladung${ct} abgelehnt 🙏`;
             case "it": return `${name} ha rifiutato il tuo invito${ct} 🙏`;
+            case "pt": return `${name} recusou o teu convite${ct} 🙏`;
+            case "ru": return `${name} отклонил(а) твоё приглашение${ct} 🙏`;
+            case "ar": return `${name} رفض دعوتك${ct} 🙏`;
+            case "hi": return `${name} ने तुम्हारा निमंत्रण अस्वीकार कर दिया${ct} 🙏`;
+            case "zh": return `${name} 拒绝了你的邀请${ct} 🙏`;
+            case "ja": return `${name} があなたの招待${ct}を辞退しました 🙏`;
+            case "ko": return `${name} 님이 당신의 초대${ct}를 거절했어요 🙏`;
+            case "nl": return `${name} heeft je uitnodiging${ct} geweigerd 🙏`;
             default: return `${name} refused your invitation${ct} 🙏`;
         }
     }

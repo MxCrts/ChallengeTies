@@ -46,6 +46,61 @@ import {
  checkAndGrantAmbassadorRewards,
   checkAndGrantAmbassadorMilestones,
 } from "@/src/referral/pioneerChecker";
+// en haut du fichier register.tsx
+import * as Notifications from "expo-notifications";
+
+async function fastActivateReferrer(userId: string) {
+  try {
+    const entries = await AsyncStorage.multiGet([
+      "ties_referrer_id",
+      "ties_referrer_src",
+      "ties_referrer_ts",
+      "referrer_id",
+      "referrer_src",
+      "referrer_ts",
+    ]);
+
+    const map = Object.fromEntries(entries);
+    const cleanRef = (map["ties_referrer_id"] ?? map["referrer_id"] ?? "").toString().trim();
+    const cleanSrc = (map["ties_referrer_src"] ?? map["referrer_src"] ?? "share").toString();
+
+    if (!cleanRef || cleanRef === userId) {
+      return; // rien à activer
+    }
+
+    const userRef = doc(db, "users", userId);
+
+    await updateDoc(userRef, {
+      referrerId: cleanRef,
+      activated: true,
+      referral: {
+        referrerId: cleanRef,
+        src: cleanSrc,
+        activatedAt: new Date(),
+        activatedCount: 0,
+        claimedMilestones: [],
+        pendingMilestones: [],
+      },
+      updatedAt: new Date(),
+    });
+
+    // Nettoyage des clés
+    await AsyncStorage.multiRemove([
+      "ties_referrer_id",
+      "ties_referrer_src",
+      "ties_referrer_ts",
+      "referrer_id",
+      "referrer_src",
+      "referrer_ts",
+    ]);
+
+    console.log("[register] fastActivateReferrer -> SUCCESS", cleanRef);
+
+  } catch (e) {
+    console.log("[register] fastActivateReferrer ERROR", e);
+  }
+}
+
 
 const { width: SCREEN_WIDTH, height: SCREEN_HEIGHT } =
   Dimensions.get("window");
@@ -453,10 +508,19 @@ export default function Register() {
         });
       } catch {}
 
-      // Permissions & localisation (non bloquant)
+            // Permissions & localisation (non bloquant)
+      let notificationsGranted = false;
       try {
         await askPermissionsOnceAfterSignup();
-      } catch {}
+
+        // On lit l'état réel système juste après le flow de permissions
+        const { status } = await Notifications.getPermissionsAsync();
+        notificationsGranted = status === "granted";
+      } catch {
+        // En cas d'erreur, on laisse notificationsGranted à false
+        notificationsGranted = false;
+      }
+
 
       // User doc Firestore (compatible avec les rules + AuthProvider)
       const userRef = doc(db, "users", userId);
@@ -472,9 +536,7 @@ export default function Register() {
       // (pioneerChecker lit ties_referrer_id ou referrerId, attribue B,
       //  récompense B, récompense A + notif + Share&Earn)
       try {
-        await checkAndGrantPioneerIfEligible();
-        await checkAndGrantAmbassadorRewards();
-        await checkAndGrantAmbassadorMilestones();
+        
       } catch {}
 
       if (!existingSnap || !existingSnap.exists()) {
@@ -500,7 +562,7 @@ export default function Register() {
           voteFeature: 0,
           language: i18n.language,
           locationEnabled: true,
-          notificationsEnabled: true,
+          notificationsEnabled: notificationsGranted,
           country: "Unknown",
           region: "Unknown",
           createdAt: serverTimestamp(),
@@ -514,18 +576,70 @@ referral: {
   pendingMilestones: [],
 },
         });
+
+        // 🔥 Activation immédiate du parrain (cas où le doc vient d'être créé)
+try {
+  await fastActivateReferrer(userId);
+} catch (e) {
+  console.log("[register] fastActivateReferrer (create) failed:", e);
+}
       } else {
-        // 👉 Doc déjà créé par AuthProvider / succès / pionnier :
-        // On fait un UPDATE minimal qui respecte profileUpdateOk() dans les rules
         try {
-          await updateDoc(userRef, {
-            username: username.trim(),
-            language: i18n.language,
+          const data = existingSnap.data() || {};
+          const patch: any = {
             updatedAt: serverTimestamp(),
-          });
+          };
+
+          // Champs de base jamais mis par AuthProvider
+          if (!data.email) patch.email = email.trim();
+          if (!data.username) patch.username = username.trim();
+
+          if (!data.bio) patch.bio = "";
+          if (!data.location) patch.location = "";
+          if (!data.profileImage) patch.profileImage = "";
+
+          if (!data.interests) patch.interests = [];
+          if (!data.achievements) patch.achievements = [];
+          if (!data.newAchievements) patch.newAchievements = ["first_connection"];
+
+          // Ne touche jamais les trophées si AuthProvider les a déjà mis
+          if (data.trophies === undefined) patch.trophies = 0;
+
+          // Listes challenges
+          if (!data.CompletedChallenges) patch.CompletedChallenges = [];
+          if (!data.SavedChallenges) patch.SavedChallenges = [];
+          if (!data.customChallenges) patch.customChallenges = [];
+          if (!data.CurrentChallenges) patch.CurrentChallenges = [];
+
+          if (data.longestStreak === undefined) patch.longestStreak = 0;
+          if (data.shareChallenge === undefined) patch.shareChallenge = 0;
+          if (data.voteFeature === undefined) patch.voteFeature = 0;
+
+          // Localisation & permissions
+          if (!data.country) patch.country = "Unknown";
+          if (!data.region) patch.region = "Unknown";
+          patch.locationEnabled = data.locationEnabled ?? true;
+          patch.notificationsEnabled = notificationsGranted;
+
+          // Referral baseline si inexistant
+          if (!data.referral) {
+            patch.referral = {
+              activatedCount: 0,
+              claimedMilestones: [],
+              pendingMilestones: [],
+            };
+          }
+
+          await updateDoc(userRef, patch);
+          // 🔥 Activation immédiate du parrainage (fiable en Internal Sharing)
+try {
+  await fastActivateReferrer(userId);
+} catch (e) {
+  console.log("[register] fastActivateReferrer failed:", e);
+}
+
         } catch (e) {
-          console.log("[register] updateDoc users error:", e);
-          // on n'empêche pas le flux de continuer juste pour ça
+          console.log("[register] safePatch update error:", e);
         }
       }
 

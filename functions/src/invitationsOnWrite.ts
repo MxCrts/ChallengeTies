@@ -1,9 +1,7 @@
 // functions/src/invitationsOnWrite.ts
 import { onDocumentWritten } from "firebase-functions/v2/firestore";
 import { getFirestore } from "firebase-admin/firestore";
-import { initializeApp } from "firebase-admin/app";
 
-initializeApp();
 const db = getFirestore();
 
 type InvitationStatus = "pending" | "accepted" | "refused" | "cancelled";
@@ -25,7 +23,7 @@ function normalizeLang(lang: string | undefined) {
   const base = String(lang || "en")
     .toLowerCase()
     .split(/[-_]/)[0];
-  const supported = ["fr","en","es","de","it","pt","zh","ja","ko","ar","hi","ru"];
+  const supported = ["fr","en","es","de","it","pt","zh","ja","ko","ar","hi","ru","nl"];
   return supported.includes(base) ? base : "en";
 }
 
@@ -59,6 +57,7 @@ function bodyFor(
       case "zh": return `${name} 接受了你的邀请${ct} 🎉`;
       case "ja": return `${name} があなたの招待${ct}を承認しました 🎉`;
       case "ko": return `${name} 님이 당신의 초대${ct}를 수락했어요 🎉`;
+      case "nl": return `${name} heeft je uitnodiging${ct} geaccepteerd 🎉`;
       default:   return `${name} accepted your invitation${ct} 🎉`;
     }
   }
@@ -76,6 +75,7 @@ function bodyFor(
       case "zh": return `${name} 拒绝了你的邀请${ct} 🙏`;
       case "ja": return `${name} があなたの招待${ct}を辞退しました 🙏`;
       case "ko": return `${name} 님이 당신의 초대${ct}를 거절했어요 🙏`;
+      case "nl": return `${name} heeft je uitnodiging${ct} geweigerd 🙏`;
       default:   return `${name} refused your invitation${ct} 🙏`;
     }
   }

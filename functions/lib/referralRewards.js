@@ -17,10 +17,11 @@ exports.onUserActivated = (0, firestore_1.onDocumentWritten)({
     const after = event.data?.after?.data();
     if (!after)
         return; // deleted
-    // only flip false -> true
-    const wasActivated = before?.activated === true;
-    const isActivated = after?.activated === true;
-    if (wasActivated || !isActivated)
+    // ⭐ NEW: always detect transition false -> true even if other writes overlapped
+    const wasActivated = !!before?.activated;
+    const isActivated = !!after?.activated;
+    const justActivated = !wasActivated && isActivated;
+    if (!justActivated)
         return;
     const referrerId = after?.referrerId;
     if (!referrerId)
@@ -34,7 +35,18 @@ exports.onUserActivated = (0, firestore_1.onDocumentWritten)({
         .count()
         .get();
     const activatedCount = qSnap.data().count;
+    const FILLEUL_ID = event.params.uid;
+    const filleulRef = db.collection("users").doc(FILLEUL_ID);
     await db.runTransaction(async (tx) => {
+        // ⭐ NEW: force server-side activation to avoid race conditions
+        tx.update(filleulRef, {
+            activated: true,
+            referral: {
+                ...(after.referral || {}),
+                activatedAt: firestore_2.FieldValue.serverTimestamp(),
+            },
+            updatedAt: firestore_2.FieldValue.serverTimestamp(),
+        });
         const refSnap = await tx.get(referrerRef);
         if (!refSnap.exists)
             return;
@@ -54,6 +66,7 @@ exports.onUserActivated = (0, firestore_1.onDocumentWritten)({
             "referral.updatedAt": firestore_2.FieldValue.serverTimestamp(),
             updatedAt: firestore_2.FieldValue.serverTimestamp(),
         });
+        // ⭐⭐⭐ REWARD DE BASE : +10 PARRAIN & +10 FILLEUL ⭐⭐⭐
         if (newlyReached.length === 0)
             return;
         // ✅ unlock pending milestones
@@ -70,7 +83,7 @@ exports.onUserActivated = (0, firestore_1.onDocumentWritten)({
             titleKey: "referral.notif.milestoneUnlocked.title",
             bodyKey: "referral.notif.milestoneUnlocked.body",
             params: {
-                bonus: newlyReached.reduce((s, m) => s + (m === 5 ? 20 : m === 10 ? 60 : 200), 0),
+                bonus: newlyReached.reduce((s, m) => s + (m === 5 ? 50 : m === 10 ? 100 : 300), 0),
                 milestones: newlyReached,
                 activatedCount,
             },

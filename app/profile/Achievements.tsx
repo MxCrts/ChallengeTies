@@ -181,6 +181,8 @@ export default function AchievementsScreen() {
   const [refreshing, setRefreshing] = useState(false);
 
   const { setTrophyData } = useTrophy();
+  const [disableAnimations, setDisableAnimations] = useState(false);
+  const hasSeenFirstSnapshot = React.useRef(false);
   const { theme } = useTheme();
   const isDarkMode = theme === "dark";
   const currentTheme: Theme = useMemo(
@@ -296,14 +298,22 @@ export default function AchievementsScreen() {
         });
 
         setSections(secs);
-        setLoading(false);
+setLoading(false);
 
-        const totalNow = secs.reduce((s, sec) => s + sec.data.length, 0);
-        const doneNow = secs.reduce(
-          (s, sec) => s + sec.data.filter((x) => x.isCompleted).length,
-          0
-        );
-        progressSV.value = withTiming(totalNow ? doneNow / totalNow : 0, { duration: 650 });
+// ✅ À partir du 2ᵉ snapshot (ex: après un claim), on coupe les animations d'entrée
+if (!hasSeenFirstSnapshot.current) {
+  hasSeenFirstSnapshot.current = true;
+} else if (!disableAnimations) {
+  setDisableAnimations(true);
+}
+
+const totalNow = secs.reduce((s, sec) => s + sec.data.length, 0);
+const doneNow = secs.reduce(
+  (s, sec) => s + sec.data.filter((x) => x.isCompleted).length,
+  0
+);
+progressSV.value = withTiming(totalNow ? doneNow / totalNow : 0, { duration: 650 });
+
       },
       (error) => {
         console.error("Erreur onSnapshot achievements:", error);
@@ -341,8 +351,12 @@ export default function AchievementsScreen() {
       const percent = Math.round(ratio * 100);
 
       return (
-        <Animated.View
-          entering={FadeInUp.delay(section.index * 90)}
+         <Animated.View
+    entering={
+      disableAnimations
+        ? undefined
+        : FadeInUp.delay(section.index * 90)
+    }
           style={styles.sectionHeader}
         >
           <LinearGradient
@@ -377,7 +391,7 @@ export default function AchievementsScreen() {
         </Animated.View>
       );
     },
-    [t, currentTheme]
+    [t, currentTheme, disableAnimations]
   );
 
   const onPressAchievement = useCallback(
@@ -430,9 +444,14 @@ export default function AchievementsScreen() {
 
       return (
         <Animated.View
-  entering={index < 15 ? ZoomIn.delay(index * 55) : undefined}
+  entering={
+    !disableAnimations && index < 15
+      ? ZoomIn.delay(index * 55)
+      : undefined
+  }
   style={styles.cardWrapper}
 >
+
           <TouchableOpacity
             activeOpacity={0.9}
             onPress={() => onPressAchievement(item)}
@@ -541,7 +560,7 @@ export default function AchievementsScreen() {
         </Animated.View>
       );
     },
-    [cardBg, borderSoft, currentTheme, onPressAchievement, t, textPrimary, textSecondary]
+    [cardBg, borderSoft, currentTheme, onPressAchievement, t, textPrimary, textSecondary, disableAnimations]
   );
 
   const renderItem = useCallback(

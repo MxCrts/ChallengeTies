@@ -49,7 +49,7 @@ type Props = {
   onSent?: () => void; // succès (toast géré parent)
 };
 
-/** Normalise vers l’une des 12 locales supportées: ar, de, en, es, fr, hi, it, ru, zh, pt, ja, ko */
+/** Normalise vers l’une des 12 locales supportées: ar, de, en, es, fr, hi, it, ru, zh, pt, ja, ko, nl */
 const getShareLang = (i18nLang?: string) => {
   const normalize = (tag?: string | null) => {
     if (!tag) return null;
@@ -70,6 +70,7 @@ const getShareLang = (i18nLang?: string) => {
         "pt",
         "ja",
         "ko",
+         "nl", 
       ].includes(base)
     ) {
       return base;

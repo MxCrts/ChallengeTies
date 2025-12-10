@@ -533,6 +533,11 @@ const assetsReady =
   const [currentMonth, setCurrentMonth] = useState(new Date());
   const [challenge, setChallenge] = useState<any>(null);
 const [introVisible, setIntroVisible] = useState(false);
+// ✅ Un challenge a une page d'aide SEULEMENT s'il est approuvé + possède un chatId
+const hasHelper = useMemo(
+  () => !!(challenge && challenge.chatId && challenge.approved === true),
+  [challenge]
+);
 const [introBlocking, setIntroBlocking] = useState(false); // blocks UI & hides StatusBar while true
 const fadeOpacity = useSharedValue(1); // pour fade-out
 const shakeMy = useSharedValue(0);
@@ -2677,59 +2682,65 @@ textStyle = { color: isDarkMode ? "#FFB3B3" : "#8A0000" };
 )}
 
 
-           <Animated.View entering={firstMountRef.current && shouldEnterAnim ? FadeIn : undefined}
+           {hasHelper && (
+  <Animated.View
+    entering={firstMountRef.current && shouldEnterAnim ? FadeIn : undefined}
     style={{ marginTop: SPACING * 1.5, alignItems: "center", zIndex: 0 }}
   >
-                  <Pressable
-                    onPress={() => {
-    if (challenge?.chatId) {
-      router.push(`/challenge-helper/${challenge.chatId}`);
-    } else {
-      console.warn("❌ Aucun chatId disponible pour ce challenge");
-      Alert.alert(t("alerts.error"), t("alerts.noHelperAvailable"));
-    }
-  }}
-  android_ripple={{ color: "#fff", borderless: false }}
-  accessibilityRole="button"
-  accessibilityLabel={t("challengeDetails.needHelp")}
-  accessibilityHint={t("challengeDetails.needHelpHint", {
-    defaultValue: "Ouvre une page d’aide détaillée pour ce défi.",
-  })}
-                    style={({ pressed }) => ({
-    opacity: pressed ? 0.8 : 1,
-    borderRadius: 24,
-    overflow: "hidden",
-    // Ombres iOS ok, mais sur Android on coupe l'elevation :
-    shadowColor: "#000",
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.2,
-    shadowRadius: 4,
-    elevation: Platform.OS === "android" ? 0 : 5, // ✅ important
-    width: "90%",
-    maxWidth: 380,
-    marginTop: SPACING * 1.2, // ✅ assure un vrai espace sous la section au-dessus
-  })}
-                  >
-                    <LinearGradient
-                      colors={[currentTheme.colors.secondary, currentTheme.colors.primary]}
-                      start={{ x: 0, y: 0 }}
-                      end={{ x: 1, y: 1 }}
-                      style={{
-                        flexDirection: "row",
-                        alignItems: "center",
-                        justifyContent: "center",
-                        paddingVertical: 14,
-                        paddingHorizontal: 20,
-                        borderRadius: 24,
-                      }}
-                    >
-                      <Ionicons name="bulb-outline" size={20} color="#fff" style={{ marginRight: 8 }} />
-                      <Text style={{ color: "#fff", fontWeight: "600", fontSize: 16 }}>
-                        {t("challengeDetails.needHelp")}
-                      </Text>
-                    </LinearGradient>
-                  </Pressable>
-                </Animated.View>
+    <Pressable
+      onPress={() => {
+        // Ici, on est garanti d'avoir un chatId valide
+        router.push(`/challenge-helper/${challenge!.chatId}`);
+      }}
+      android_ripple={{ color: "#fff", borderless: false }}
+      accessibilityRole="button"
+      accessibilityLabel={t("challengeDetails.needHelp")}
+      accessibilityHint={t("challengeDetails.needHelpHint", {
+        defaultValue: "Ouvre une page d’aide détaillée pour ce défi.",
+      })}
+      style={({ pressed }) => ({
+        opacity: pressed ? 0.8 : 1,
+        borderRadius: 24,
+        overflow: "hidden",
+        shadowColor: "#000",
+        shadowOffset: { width: 0, height: 2 },
+        shadowOpacity: 0.2,
+        shadowRadius: 4,
+        elevation: Platform.OS === "android" ? 0 : 5,
+        width: "90%",
+        maxWidth: 380,
+        marginTop: SPACING * 1.2,
+      })}
+    >
+      <LinearGradient
+        colors={[currentTheme.colors.secondary, currentTheme.colors.primary]}
+        start={{ x: 0, y: 0 }}
+        end={{ x: 1, y: 1 }}
+        style={{
+          flexDirection: "row",
+          alignItems: "center",
+          justifyContent: "center",
+          paddingVertical: 14,
+          paddingHorizontal: 20,
+          borderRadius: 24,
+        }}
+      >
+        <Ionicons
+          name="bulb-outline"
+          size={20}
+          color="#fff"
+          style={{ marginRight: 8 }}
+        />
+        <Text
+          style={{ color: "#fff", fontWeight: "600", fontSize: 16 }}
+        >
+          {t("challengeDetails.needHelp")}
+        </Text>
+      </LinearGradient>
+    </Pressable>
+  </Animated.View>
+)}
+
           <Text
             style={[
               styles.infoDescriptionRecipe,

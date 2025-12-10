@@ -96,27 +96,18 @@ export async function checkAndGrantAmbassadorRewards() {
   if (!me) return;
 
   const activatedCount = await getActivatedReferralsCount(me);
-
   const { meRef, meData } = await getMeData(me);
 
   const alreadyPaidFor = Number(meData?.ambassadorPaidFor ?? 0);
-  const delta = activatedCount - alreadyPaidFor;
-  if (delta <= 0) return;
 
-  const TROPHY_PER_ACTIVATION = 10;
-  const payout = delta * TROPHY_PER_ACTIVATION;
-
-  try {
+  // On met juste à jour le compteur, PAS de trophées ici.
+  if (activatedCount > alreadyPaidFor) {
     await updateDoc(meRef, {
-      trophies: increment(payout),
       ambassadorPaidFor: activatedCount,
     });
-
-    await logEvent("ambassador_reward", { activatedCount, delta, payout });
-  } catch (e) {
-    console.log("[ambassador] reward error:", (e as any)?.message ?? e);
   }
 }
+
 
 /**
  * Paliers Ambassador : 5/10/25 activations

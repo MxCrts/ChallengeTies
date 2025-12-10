@@ -8,9 +8,9 @@ const db = getFirestore();
 
 const ALLOWED = [5, 10, 25] as const;
 const REWARDS: Record<(typeof ALLOWED)[number], number> = {
-  5: 20,
-  10: 60,
-  25: 200,
+  5: 50,
+  10: 100,
+  25: 300,
 };
 
 export const claimReferralMilestone = onCall<{ milestone: number }>(

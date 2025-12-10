@@ -465,22 +465,10 @@ export async function acceptInvitation(inviteId: string): Promise<void> {
     throw e;
   }
 
-  // 7) Construire l'entrée DUO pour l'INVITÉ uniquement
-  //    → on part d'une base NEUVE pour éviter de traîner un "duo: false"
-
+      // 7) Construire / appliquer l'entrée DUO pour l'INVITÉ
   const baseInviteeList: any[] = Array.isArray(inviteeData?.CurrentChallenges)
     ? inviteeData.CurrentChallenges
     : [];
-
-  // On supprime tout ce qui concerne déjà ce challenge (solo ou ancien duo)
-  const cleanInviteeList = baseInviteeList.filter((c: any) => {
-    const cid = c?.challengeId ?? c?.id;
-    const sameId = cid === inv.challengeId;
-    const sameKey =
-      typeof c?.uniqueKey === "string" &&
-      c.uniqueKey.startsWith(`${inv.challengeId}_`);
-    return !(sameId || sameKey);
-  });
 
   // pairKey = toujours la même pour les 2 users, peu importe l'ordre
   const pairKey = [inviterId, inviteeId].sort().join("-");
@@ -488,7 +476,8 @@ export async function acceptInvitation(inviteId: string): Promise<void> {
 
   const now = new Date();
 
-  const inviteeDuoEntry: any = {
+  // 🧱 Modèle "référence" DUO (qu'on va merge si une entrée existe déjà)
+  const duoTemplate: any = {
     challengeId: inv.challengeId,
     id: inv.challengeId,
     title: ch.title || "Challenge",
@@ -496,6 +485,7 @@ export async function acceptInvitation(inviteId: string): Promise<void> {
     imageUrl: ch.imageUrl || "",
     chatId: ch.chatId || inv.challengeId,
     selectedDays: inv.selectedDays,
+    // completedDays / streak / dates peuvent être conservés si déjà présents
     completedDays: 0,
     completionDates: [],
     completionDateKeys: [],
@@ -511,13 +501,35 @@ export async function acceptInvitation(inviteId: string): Promise<void> {
     seasonal: !!ch.seasonal,
   };
 
-  if (ch.slug) inviteeDuoEntry.slug = ch.slug;
-  if (ch.category) inviteeDuoEntry.category = ch.category;
-  if (ch.categoryId) inviteeDuoEntry.categoryId = ch.categoryId;
+  if (ch.slug) duoTemplate.slug = ch.slug;
+  if (ch.category) duoTemplate.category = ch.category;
+  if (ch.categoryId) duoTemplate.categoryId = ch.categoryId;
 
-  const finalInviteeChallenges = [...cleanInviteeList, inviteeDuoEntry];
 
-  // 8) UPDATE 2 : doc user de l'INVITÉ uniquement
+  // 🔍 On supprime TOUTES les anciennes entrées pour ce challenge
+//     (solo + éventuelles anciennes variantes) et on insère UNE seule entrée DUO propre
+// 🧨 NO MERGE — version finale TIES
+// On retire TOUT ce qui concerne ce challenge (solo ou ancienne version)
+// Et on ajoute 1 entrée DUO NEUVE à 0 jours
+const filteredInviteeList: any[] = [];
+
+for (const c of baseInviteeList) {
+  const cid = c?.challengeId ?? c?.id;
+  const sameId =
+    cid === inv.challengeId ||
+    (typeof c?.uniqueKey === "string" &&
+      c.uniqueKey.startsWith(`${inv.challengeId}_`));
+
+  if (!sameId) {
+    filteredInviteeList.push(c);
+  }
+}
+
+// 🔥 On ajoute UNE SEULE entrée DUO fraîche (sans récupérer progression SOLO)
+const finalInviteeChallenges = [...filteredInviteeList, duoTemplate];
+
+
+  // 8) UPDATE : doc user de l'INVITÉ (toujours en DUO, 100 % sûr)
   try {
     console.log(
       "[invite] acceptInvitation: update CurrentChallenges pour",
@@ -537,6 +549,8 @@ export async function acceptInvitation(inviteId: string): Promise<void> {
     );
     throw e;
   }
+
+
 
   // 9) Post-traitement : notif + analytics
   try {
@@ -562,14 +576,16 @@ export async function acceptInvitation(inviteId: string): Promise<void> {
     const safeChallengeTitle = challengeTitle || "Challenge";
 
         try {
-      const pushRes = await sendInviteStatusPush({
+            const pushRes = await sendInviteStatusPush({
         inviterId: finalInv.inviterId,
+        inviteId, // 🔑 idempotence par invitation
         inviteeId: inviteeIdForNotif,
         status: "accepted",
         challengeId: finalInv.challengeId,
         challengeTitle: safeChallengeTitle,
         inviteeUsername: safeUsername,
       });
+
 
       console.log(
         "[notif] sendInviteStatusPush(accepted) result:",
@@ -650,14 +666,16 @@ try {
 
   const safeChallengeTitle = challengeTitle || "Challenge";
 
-  const pushRes = await sendInviteStatusPush({
+   const pushRes = await sendInviteStatusPush({
     inviterId: inv.inviterId,
+    inviteId, // 🔑 même id que dans la collection invitations
     inviteeId: me,
     status: "refused",
     challengeId: inv.challengeId,
     challengeTitle: safeChallengeTitle,
     inviteeUsername: safeUsername,
   });
+
 
 
     console.log(
@@ -745,14 +763,16 @@ try {
 
   const safeChallengeTitle = challengeTitle || "Challenge";
 
-  const pushRes = await sendInviteStatusPush({
+    const pushRes = await sendInviteStatusPush({
     inviterId: inv.inviterId,
+    inviteId, // 🔑
     inviteeId: me,
     status: "refused",
     challengeId: inv.challengeId,
     challengeTitle: safeChallengeTitle,
     inviteeUsername: safeUsername,
   });
+
 
 
     console.log(

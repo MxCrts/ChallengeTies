@@ -33,6 +33,7 @@ const WEEKDAYS_FALLBACK: Record<string, string[]> = {
   pt: ["Seg", "Ter", "Qua", "Qui", "Sex", "Sáb", "Dom"],
   ja: ["月", "火", "水", "木", "金", "土", "日"],
   ko: ["월", "화", "수", "목", "금", "토", "일"],
+  nl: ["Ma", "Di", "Wo", "Do", "Vr", "Za", "Zo"],
 };
 
 interface Props {

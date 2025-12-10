@@ -434,11 +434,20 @@ export default function CurrentChallenges() {
       await removeChallenge(id, selectedDays);
       swipeableRefs.current[index]?.close();
       showToast(
-        "success",
-        title
-          ? String(t("challengeAbandonedWithName", { title }))
-          : String(t("challengeAbandoned"))
-      );
+     "success",
+     title
+       ? String(
+           t("challengeAbandonedWithName", {
+             title,
+             defaultValue: `Challenge "${title}" abandonné.`,
+           })
+         )
+       : String(
+           t("challengeAbandoned", {
+             defaultValue: "Challenge abandonné.",
+           })
+         )
+   );
     } catch (err) {
       console.error("Erreur removeChallenge:", err);
       showToast("error", String(t("failedToAbandonChallenge")));
@@ -1107,18 +1116,7 @@ export default function CurrentChallenges() {
                 >
                   {String(t("abandonChallenge"))}
                 </Text>
-                <Text
-                  style={[
-                    styles.confirmSubtitle,
-                    { color: currentTheme.colors.textSecondary },
-                  ]}
-                >
-                  {pendingRemoval.title
-                    ? t("abandonChallengeConfirmWithName", {
-                        title: pendingRemoval.title,
-                      })
-                    : t("abandonChallengeConfirm")}
-                </Text>
+                
 
                 <View style={styles.confirmButtonsRow}>
                   <TouchableOpacity
@@ -1545,7 +1543,7 @@ const styles = StyleSheet.create({
     fontSize: normalizeSize(20),
     fontFamily: "Comfortaa_700Bold",
     textAlign: "center",
-    marginBottom: normalizeSize(6),
+    marginBottom: normalizeSize(14),
      writingDirection: I18nManager.isRTL ? "rtl" : "ltr",
   },
   confirmSubtitle: {

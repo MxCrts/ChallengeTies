@@ -230,25 +230,30 @@ setLoading(false);
     const renderItem = useCallback(
     ({ item }: { item: Row }) => {
       const when = item.activated
-        ? item.activatedAt?.toDate?.()
-        : item.createdAt?.toDate?.();
+  ? item.activatedAt?.toDate?.()
+  : item.createdAt?.toDate?.();
 
-      // ✅ Date simple, type 05/12/2025
-      const whenTxt = when ? dayjs(when).format("DD/MM/YYYY") : null;
+// ✅ Date simple, type 05/12/2025
+const whenTxt = when ? dayjs(when).format("DD/MM/YYYY") : null;
 
-      // ✅ Label i18n + fallback
-      const baseLabel = item.activated
-        ? t("referral.history.activatedOnLabel", {
-            defaultValue: "Activated on",
-          })
-        : t("referral.history.invitedOnLabel", {
-            defaultValue: "Invited on",
-          });
+const isActivated = !!item.activated;
 
-      // ✅ Si pas de date → juste le label, sinon label + date
-      const metaText = whenTxt ? `${baseLabel} ${whenTxt}` : baseLabel;
+// ✅ Pour les activés : juste "Activé"
+// ✅ Pour les invités : "Invité le 05/12/2025" (si tu veux garder la date)
+const baseLabel = isActivated
+  ? t("referral.history.status.activated", {
+      defaultValue: "Activé",
+    })
+  : t("referral.history.invitedOnLabel", {
+      defaultValue: "Invited on",
+    });
 
-      const isActivated = !!item.activated;
+const metaText = isActivated
+  ? baseLabel // 👉 juste "Activé"
+  : whenTxt
+  ? `${baseLabel} ${whenTxt}`
+  : baseLabel;
+
       const displayName =
         item.username || item.email || item.id.slice(0, 6) || "—";
 

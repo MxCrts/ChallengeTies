@@ -1,4 +1,18 @@
 "use strict";
+var __createBinding = (this && this.__createBinding) || (Object.create ? (function(o, m, k, k2) {
+    if (k2 === undefined) k2 = k;
+    var desc = Object.getOwnPropertyDescriptor(m, k);
+    if (!desc || ("get" in desc ? !m.__esModule : desc.writable || desc.configurable)) {
+      desc = { enumerable: true, get: function() { return m[k]; } };
+    }
+    Object.defineProperty(o, k2, desc);
+}) : (function(o, m, k, k2) {
+    if (k2 === undefined) k2 = k;
+    o[k2] = m[k];
+}));
+var __exportStar = (this && this.__exportStar) || function(m, exports) {
+    for (var p in m) if (p !== "default" && !Object.prototype.hasOwnProperty.call(exports, p)) __createBinding(exports, m, p);
+};
 var __importDefault = (this && this.__importDefault) || function (mod) {
     return (mod && mod.__esModule) ? mod : { "default": mod };
 };
@@ -7,6 +21,8 @@ exports.onUserActivated = exports.claimReferralMilestone = exports.invitationsOn
 const express_1 = __importDefault(require("express"));
 const cors_1 = __importDefault(require("cors"));
 const https_1 = require("firebase-functions/v2/https");
+const app_1 = require("firebase-admin/app");
+(0, app_1.initializeApp)();
 /** =========================
  *  CONFIG
  *  ========================= */
@@ -18,7 +34,8 @@ const WEB_HOSTING = "https://challengeme-d7fef.web.app";
 const IOS_STORE_URL = "https://apps.apple.com/app/id6751504640";
 const ANDROID_STORE_URL = "https://play.google.com/store/apps/details?id=com.mxcrts.ChallengeTies";
 // Bots (FB/Twitter/WhatsApp/etc.)
-const BOT_UA = /(facebookexternalhit|Twitterbot|Slackbot|WhatsApp|TelegramBot|LinkedInBot|Discordbot|Pinterest|SkypeUriPreview|Googlebot|bingbot)/i;
+// ↑ liste élargie pour sécuriser l'aperçu OG sur un max de plateformes
+const BOT_UA = /(facebookexternalhit|Twitterbot|Slackbot|WhatsApp|TelegramBot|LinkedInBot|Discordbot|DiscordBot|Pinterest|SkypeUriPreview|Googlebot|bingbot)/i;
 const INV = " "; // espace non vide pour éviter les fallbacks titre/desc
 /** =========================
  *  I18N (12 langues)
@@ -36,10 +53,18 @@ const I18N = {
     pt: { join: "Junta-te a mim neste desafio! 🚀" },
     ja: { join: "このチャレンジに一緒に挑戦しよう！🚀" },
     ko: { join: "이 챌린지에 나와 함께 도전하자! 🚀" },
+    nl: { join: "Doe met mij mee aan deze challenge! 🚀" },
 };
+/**
+ * Normalise la langue :
+ *   - gère fr / fr-FR / fr_fr
+ *   - fallback propre sur fr
+ */
 function t(lang) {
-    const key = (lang || "fr").toLowerCase();
-    return I18N[key] || I18N.fr;
+    const base = (lang || "fr").toLowerCase();
+    const short = base.split(/[-_]/)[0];
+    const key = short in I18N ? short : "fr";
+    return I18N[key];
 }
 /** =========================
  *  APP
@@ -107,10 +132,18 @@ app.get("/img", (_req, res) => {
  *  - invite    : invitation document id (déclenche le modal in-app)
  *  - days      : nombre de jours suggéré (passé en query à l’app)
  */
-app.get(["/", "/dl"], (req, res) => {
+app.get(["/", "/dl", "/i"], (req, res) => {
     const ua = String(req.headers["user-agent"] || "");
     const isBot = BOT_UA.test(ua);
-    const lang = String(req.query.lang || "fr").toLowerCase();
+    // Langue : priorité au ?lang=, sinon première langue d'Accept-Language, fallback fr
+    const rawLangHeader = String(req.headers["accept-language"] || "fr")
+        .split(",")[0]
+        .trim();
+    const langParam = String(req.query.lang || "").trim();
+    const lang = (langParam || rawLangHeader || "fr").toLowerCase();
+    // Mode debug: ?debug=1 → renvoie un JSON au lieu de rediriger (hyper utile en dev)
+    const isDebug = String(req.query.debug || "").toLowerCase() === "1" ||
+        String(req.query.debug || "").toLowerCase() === "true";
     // 🔥 2 MODES POSSIBLES :
     // A) Referral: ?ref=UID&src=share
     // B) Challenge invite/share: ?id=CHALLENGE_ID&invite=INV&days=XX
@@ -128,7 +161,6 @@ app.get(["/", "/dl"], (req, res) => {
     const invite = String(req.query.invite || "").trim();
     const days = String(req.query.days || "").trim();
     const L = t(lang);
-    // ==== Build path + query selon mode ====
     // ==== Build path + query selon mode ====
     let path = "";
     let sharedQuery = "";
@@ -157,8 +189,28 @@ app.get(["/", "/dl"], (req, res) => {
     const ogTitle = "ChallengeTies";
     const ogDesc = L.join || INV;
     const iosAppId = getIosAppId(IOS_STORE_URL);
+    // 🧪 MODE DEBUG → SUPER PRATIQUE POUR TESTER LES LIENS SANS REDIRECT
+    if (isDebug) {
+        res.set("Cache-Control", "no-store");
+        return res.status(200).json({
+            ok: true,
+            isBot,
+            ua,
+            lang,
+            path,
+            sharedQuery,
+            appDeepLink,
+            webFallback,
+            androidIntent,
+            ref,
+            id,
+            invite,
+            days,
+            src,
+        });
+    }
     const head = `<!doctype html>
-<html lang="${lang}">
+<html lang="${escapeHtml(lang.split(/[-_]/)[0] || "fr")}">
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width,initial-scale=1">
@@ -241,3 +293,4 @@ var referralClaim_1 = require("./referralClaim");
 Object.defineProperty(exports, "claimReferralMilestone", { enumerable: true, get: function () { return referralClaim_1.claimReferralMilestone; } });
 var referralRewards_1 = require("./referralRewards");
 Object.defineProperty(exports, "onUserActivated", { enumerable: true, get: function () { return referralRewards_1.onUserActivated; } });
+__exportStar(require("./referralOnUserWrite"), exports);

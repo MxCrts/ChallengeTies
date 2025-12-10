@@ -282,7 +282,7 @@ export default function NewFeatures() {
 
  // ⏱️ Compte à rebours basé sur i18n.deadlineIso + progression du mois
   useEffect(() => {
-    const targetDate = new Date("2025-11-30T23:59:59Z");
+    const targetDate = new Date("2025-12-31T23:59:59Z");
     const updateTimer = () => {
       const diff = targetDate.getTime() - Date.now();
       if (diff <= 0) {
@@ -685,7 +685,7 @@ export default function NewFeatures() {
 
   // Libellé du mois (fallback sûr si la clé n'est pas encore traduite)
   const monthLabel = useMemo(
-    () => t("newFeatures.monthLabel", { defaultValue: "Mise à jour • Novembre" }),
+    () => t("newFeatures.monthLabel", { defaultValue: "Mise à jour • Décembre" }),
     [t]
   );
  
@@ -1083,7 +1083,7 @@ export default function NewFeatures() {
   adjustsFontSizeToFit
 >
   {t("newFeatures.heroTitleSep", {
-    defaultValue: "Vote les nouveautés qui arrivent fin novembre 🚀",
+    defaultValue: "Vote les nouveautés qui arrivent fin décembre 🚀",
   })}
 </Text>
 

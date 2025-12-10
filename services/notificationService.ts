@@ -439,6 +439,13 @@ export const sendInvitationNotification = async (
 
 const REFERRAL_MILESTONE_PREFIX = "referral.milestone.notified";
 const INVITE_STATUS_NOTIF_PREFIX = "invite.status.notified";
+// Garde-fous mémoire pour éviter les doublons concurrents
+const inFlightInviteStatusKeys = new Set<string>();
+const inFlightReferralKeys = new Set<string>();
+const REFERRAL_NEW_CHILD_PREFIX = "referral.newChild.notified";
+const inFlightReferralNewChildKeys = new Set<string>();
+
+
 
 
 /* ---------------- Referral local nudge (optionnel mais prêt) ---------------- */
@@ -465,23 +472,34 @@ export const sendReferralMilestoneLocalNudge = async (
 
     // 2) Clé unique pour ce user + ce palier
     const key = `${REFERRAL_MILESTONE_PREFIX}.${userId}.${reached}`;
-
-    const already = await AsyncStorage.getItem(key);
-    if (already === "1") {
-      // 🔁 Ce palier a déjà déclenché une notif sur cet appareil → skip
+        // 🔒 Lock mémoire pour éviter les doublons concurrents dans la même session
+    if (inFlightReferralKeys.has(key)) {
       return;
     }
+    inFlightReferralKeys.add(key);
 
-    // 3) On envoie la notif locale (comme avant)
-    await sendInvitationNotification(userId, {
-      titleKey: "referral.notif.milestoneUnlocked.title",
-      bodyKey: "referral.notif.milestoneUnlocked.body",
-      params: payload,
-      type: "referral_milestone_unlocked",
-    });
 
-    // 4) On marque ce palier comme notifié
-    await AsyncStorage.setItem(key, "1");
+        try {
+      const already = await AsyncStorage.getItem(key);
+      if (already === "1") {
+        // Ce palier a déjà déclenché une notif sur cet appareil → skip
+        return;
+      }
+
+      // 3) On envoie la notif locale (comme avant)
+      await sendInvitationNotification(userId, {
+        titleKey: "referral.notif.milestoneUnlocked.title",
+        bodyKey: "referral.notif.milestoneUnlocked.body",
+        params: payload,
+        type: "referral_milestone_unlocked",
+      });
+
+      // 4) On marque ce palier comme notifié
+      await AsyncStorage.setItem(key, "1");
+    } finally {
+      inFlightReferralKeys.delete(key);
+    }
+
   } catch (e) {
     console.error("❌ sendReferralMilestoneLocalNudge (idempotent) error:", e);
   }
@@ -629,6 +647,7 @@ export const sendDuoNudge = async ({
 /** ✅ Push pour informer l’inviteur quand l’invitation est acceptée / refusée */
 export const sendInviteStatusPush = async ({
   inviterId,
+  inviteId,
   inviteeId,
   status,
   challengeId,
@@ -636,6 +655,7 @@ export const sendInviteStatusPush = async ({
   inviteeUsername,
 }: {
   inviterId: string;
+  inviteId: string;
   inviteeId?: string | null;
   status: "accepted" | "refused";
   challengeId: string;
@@ -653,6 +673,15 @@ export const sendInviteStatusPush = async ({
   expoCode?: string;
   expoMessage?: string;
 }> => {
+  // 🔒 clé d'idempotence ultra-stable : inviteId + status + inviter
+  const dedupeKey = `${INVITE_STATUS_NOTIF_PREFIX}.${inviterId}.${inviteId}.${status}`;
+
+  // 1) Lock mémoire (évite doublons concurrents dans la même session)
+  if (inFlightInviteStatusKeys.has(dedupeKey)) {
+    return { ok: true };
+  }
+  inFlightInviteStatusKeys.add(dedupeKey);
+
   try {
     const inviterRef = doc(db, "users", inviterId);
     const inviterSnap = await getDoc(inviterRef);
@@ -673,16 +702,9 @@ export const sendInviteStatusPush = async ({
 
     const lang = inviter.language || "en";
 
-    // 🔒 Garde-fou idempotent : même invit / même status → une seule notif
-    const safeUsernameForKey =
-      (inviteeUsername || "").toString().replace(/[^a-zA-Z0-9_-]/g, "_") ||
-      "unknown";
-    const dedupeKey = `${INVITE_STATUS_NOTIF_PREFIX}.${inviterId}.${challengeId}.${status}.${safeUsernameForKey}`;
-
+    // 🔒 Garde-fou idempotent (persistant) : même invit / même status → une seule notif
     const already = await AsyncStorage.getItem(dedupeKey);
     if (already === "1") {
-      // On considère que la notif a déjà été envoyée pour ce couple
-      // (inviter + challenge + status + invitee) → on ne renvoie rien
       return { ok: true };
     }
 
@@ -709,7 +731,7 @@ export const sendInviteStatusPush = async ({
     });
 
     if (!isExpoPushError(result)) {
-      // ✅ On marque cette notif comme envoyée (idempotence)
+      // ✅ On marque cette notif comme envoyée (idempotence persistante)
       try {
         await AsyncStorage.setItem(dedupeKey, "1");
       } catch {}
@@ -739,10 +761,14 @@ export const sendInviteStatusPush = async ({
   } catch (e) {
     console.error("❌ sendInviteStatusPush:", e);
     return { ok: false, reason: "error" };
+  } finally {
+    inFlightInviteStatusKeys.delete(dedupeKey);
   }
 };
 
 
+
+/** ✅ Notif parrain : “vous êtes désormais le parrain de username” */
 /** ✅ Notif parrain : “vous êtes désormais le parrain de username” */
 export const sendReferralNewChildPush = async ({
   sponsorId,
@@ -762,7 +788,23 @@ export const sendReferralNewChildPush = async ({
   expoCode?: string;
   expoMessage?: string;
 }> => {
+  // 🔒 Clé d'idempotence ultra-stable : sponsor + username (normalisé)
+  const normalizedUsername = (childUsername || "").trim().toLowerCase();
+  const dedupeKey = `${REFERRAL_NEW_CHILD_PREFIX}.${sponsorId}.${normalizedUsername}`;
+
+  // 1) Lock mémoire (évite doublons concurrents dans la même session)
+  if (inFlightReferralNewChildKeys.has(dedupeKey)) {
+    return { ok: true };
+  }
+  inFlightReferralNewChildKeys.add(dedupeKey);
+
   try {
+    // 2) Garde-fou persistant (AsyncStorage) → si déjà notifié, on skip
+    const already = await AsyncStorage.getItem(dedupeKey);
+    if (already === "1") {
+      return { ok: true };
+    }
+
     const sponsorRef = doc(db, "users", sponsorId);
     const sponsorSnap = await getDoc(sponsorRef);
     if (!sponsorSnap.exists()) return { ok: false, reason: "no-user" };
@@ -773,8 +815,7 @@ export const sendReferralNewChildPush = async ({
 
     const token: string | undefined = sponsor.expoPushToken;
     const looksLikeExpo =
-  typeof token === "string" && token.trim().length > 0;
-
+      typeof token === "string" && token.trim().length > 0;
 
     if (!token || !looksLikeExpo) {
       console.warn("⚠️ Pas de expoPushToken valable pour", sponsorId);
@@ -796,7 +837,13 @@ export const sendReferralNewChildPush = async ({
       username: childUsername,
     });
 
-    if (!isExpoPushError(result)) return { ok: true };
+    if (!isExpoPushError(result)) {
+      // ✅ On marque cette notif comme envoyée (idempotence persistante)
+      try {
+        await AsyncStorage.setItem(dedupeKey, "1");
+      } catch {}
+      return { ok: true };
+    }
 
     const { code, message } = result;
     if (code === "DeviceNotRegistered") {
@@ -821,8 +868,11 @@ export const sendReferralNewChildPush = async ({
   } catch (e) {
     console.error("❌ sendReferralNewChildPush:", e);
     return { ok: false, reason: "error" };
+  } finally {
+    inFlightReferralNewChildKeys.delete(dedupeKey);
   }
 };
+
 
 /* ---------------- Toggles Settings (idempotents) ---------------- */
 export const enableNotificationsFromSettings = async (): Promise<boolean> => {

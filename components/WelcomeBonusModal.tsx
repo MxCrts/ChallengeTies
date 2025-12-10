@@ -5,9 +5,9 @@ import {
   View,
   Text,
   StyleSheet,
-  TouchableOpacity,
   Dimensions,
   Platform,
+  TouchableOpacity,
 } from "react-native";
 import { LinearGradient } from "expo-linear-gradient";
 import { Ionicons } from "@expo/vector-icons";
@@ -21,12 +21,17 @@ import Animated, {
   withRepeat,
   withSequence,
   withTiming,
-} from "react-native-reanimated";
+  withSpring,
+  Easing,
+ } from "react-native-reanimated";
 import { useTranslation } from "react-i18next";
 import { useTheme } from "../context/ThemeContext";
 import designSystem, { Theme } from "../theme/designSystem";
 import * as Haptics from "expo-haptics";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
+import LottieView from "lottie-react-native";
+import type { ViewStyle } from "react-native";
+import ConfettiCannon from "react-native-confetti-cannon";
 
 const { width: SCREEN_WIDTH, height: SCREEN_HEIGHT } = Dimensions.get("window");
 
@@ -43,6 +48,9 @@ type WelcomeBonusReward = {
   days?: number;
 };
 
+/**
+ * Mapping fixe des 7 jours (pour la grille en bas)
+ */
 const WELCOME_REWARDS: WelcomeBonusReward[] = [
   { type: "trophies", amount: 8 }, // Jour 1
   { type: "trophies", amount: 12 }, // Jour 2
@@ -52,7 +60,6 @@ const WELCOME_REWARDS: WelcomeBonusReward[] = [
   { type: "trophies", amount: 20 }, // Jour 6
   { type: "premium", days: 7 }, // Jour 7
 ];
-
 
 export type WelcomeBonusModalProps = {
   visible: boolean;
@@ -91,6 +98,97 @@ const WelcomeBonusModal: React.FC<WelcomeBonusModalProps> = ({
   const clampedTotal = Math.max(1, totalDays || 1);
   const dayIndex = Math.min(Math.max(currentDay, 0), clampedTotal - 1);
   const displayDay = dayIndex + 1;
+
+  // 🔥 ANIMATIONS — Carte / coffre / halo
+  const cardScale = useSharedValue(0.9);
+  const chestBob = useSharedValue(0);
+  const chestScale = useSharedValue(1);
+  const todayPulse = useSharedValue(0);
+  const globalGlow = useSharedValue(0);
+  
+
+  useEffect(() => {
+    if (!visible) return;
+
+    // scale d'apparition de la carte
+    cardScale.value = 0.9;
+    cardScale.value = withSpring(1, { damping: 18, stiffness: 220 });
+
+    // léger "bob" vertical du coffre + breathing scale
+    chestBob.value = 0;
+    chestBob.value = withRepeat(
+      withSequence(
+        withTiming(-6, {
+          duration: 600,
+          easing: Easing.inOut(Easing.quad),
+        }),
+        withTiming(0, {
+          duration: 600,
+          easing: Easing.inOut(Easing.quad),
+        })
+      ),
+      -1,
+      true
+    );
+
+    chestScale.value = withRepeat(
+      withSequence(
+        withTiming(1.04, { duration: 800 }),
+        withTiming(1, { duration: 800 })
+      ),
+      -1,
+      true
+    );
+
+    // halo sur la récompense du jour
+    todayPulse.value = withRepeat(
+      withSequence(
+        withTiming(1, { duration: 1400 }),
+        withTiming(0, { duration: 1400 })
+      ),
+      -1,
+      true
+    );
+
+    try {
+      Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
+    } catch {}
+    // Glow global de la carte – effet "divin" sans confettis
+    globalGlow.value = withRepeat(
+      withSequence(
+        withTiming(1, { duration: 1800 }),
+        withTiming(0.3, { duration: 1800 })
+      ),
+      -1,
+      true
+    );
+  }, [visible, cardScale, chestBob, chestScale, todayPulse]);
+
+  const cardAnimatedStyle = useAnimatedStyle(() => ({
+    transform: [{ scale: cardScale.value }],
+  }));
+
+  const chestAnimatedStyle = useAnimatedStyle(() => {
+    return {
+      transform: [
+        { translateY: chestBob.value },
+        { scale: chestScale.value },
+      ] as any, // 👈 cast pour calmer TS sur le type de transform
+    };
+  });
+
+  const todayGlowStyle = useAnimatedStyle(() => {
+    const scale = 1 + todayPulse.value * 0.06;
+    const opacity = 0.45 + todayPulse.value * 0.35;
+    return {
+      transform: [{ scale }] as any,
+      opacity,
+    };
+  });
+
+  const globalGlowStyle = useAnimatedStyle(() => ({
+    opacity: globalGlow.value * 0.25,
+  }));
 
   const title = useMemo(
     () =>
@@ -148,12 +246,12 @@ const WelcomeBonusModal: React.FC<WelcomeBonusModalProps> = ({
     [t]
   );
 
-  // Gradients principaux : board + contour
+  // Gradients
   const gradBg = useMemo<[string, string, string]>(
     () =>
       isDark
         ? ["#020617", "#020617", "#020617"]
-        : ["#0F172A", "#020617", "#020617"],
+        : ["#020617", "#020617", "#020617"],
     [isDark]
   );
 
@@ -182,7 +280,6 @@ const WelcomeBonusModal: React.FC<WelcomeBonusModalProps> = ({
     [isDark]
   );
 
-  // 🔥 mapping propre type -> icône
   const getIconForKind = (
     kind: WelcomeRewardKind
   ): keyof typeof Ionicons.glyphMap => {
@@ -198,33 +295,6 @@ const WelcomeBonusModal: React.FC<WelcomeBonusModalProps> = ({
   };
 
   const baseRewardIcon = getIconForKind(rewardType);
-
-  // Pulse sur la carte du jour
-  const pulseSV = useSharedValue(0);
-  useEffect(() => {
-    if (!visible) return;
-    pulseSV.value = 0;
-    pulseSV.value = withRepeat(
-      withSequence(
-        withTiming(1, { duration: 1400 }),
-        withTiming(0, { duration: 1400 })
-      ),
-      -1,
-      true
-    );
-    try {
-      Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
-    } catch {}
-  }, [visible, pulseSV]);
-
-  const todayGlowStyle = useAnimatedStyle(() => {
-    const scale = 1 + pulseSV.value * 0.06;
-    const opacity = 0.55 + pulseSV.value * 0.3;
-    return {
-      transform: [{ scale }],
-      opacity,
-    };
-  });
 
   if (!visible) return null;
 
@@ -245,7 +315,6 @@ const WelcomeBonusModal: React.FC<WelcomeBonusModalProps> = ({
     }
   };
 
-  // Disposition des tuiles de jours
   const columns = clampedTotal <= 3 ? clampedTotal : 4;
   const dayTileWidth =
     columns === 1
@@ -256,8 +325,9 @@ const WelcomeBonusModal: React.FC<WelcomeBonusModalProps> = ({
       ? "30%"
       : "22%";
 
-  // Progression (barre + pastilles)
-  const progressRatio = (displayDay - 1) / (clampedTotal - 1 || 1);
+  const progressRatio = clampedTotal <= 1 
+  ? 1 
+  : ((displayDay - 1) / (clampedTotal - 1));
 
   return (
     <Modal
@@ -283,17 +353,29 @@ const WelcomeBonusModal: React.FC<WelcomeBonusModalProps> = ({
         ]}
       >
         <Animated.View
+          style={[
+            StyleSheet.absoluteFillObject,
+            globalGlowStyle,
+            {
+              backgroundColor: "#FCD34D",
+              borderRadius: normalize(34),
+              marginHorizontal: normalize(20),
+            },
+          ]}
+          pointerEvents="none"
+        />
+        <Animated.View
           entering={FadeInUp.duration(260)}
           exiting={FadeOut.duration(180)}
-          style={styles.modalContainer}
+          style={[styles.modalContainer, cardAnimatedStyle]}
         >
           <LinearGradient colors={gradBorder} style={styles.borderWrap}>
             <LinearGradient colors={gradBg} style={styles.modalBackground}>
               <LinearGradient colors={gradBoard} style={styles.boardInner}>
-                {/* Badge / ruban top */}
+                {/* Ruban top */}
                 <View style={styles.ribbonWrapper}>
                   <LinearGradient
-                    colors={["rgba(251,191,36,1)", "rgba(245,158,11,1)"]}
+                    colors={["#FCD34D", "#F59E0B", "#DC2626"]}
                     start={{ x: 0, y: 0 }}
                     end={{ x: 1, y: 0 }}
                     style={styles.ribbon}
@@ -316,16 +398,19 @@ const WelcomeBonusModal: React.FC<WelcomeBonusModalProps> = ({
                   </LinearGradient>
                 </View>
 
-                {/* Header */}
-                <View style={styles.header}>
-                  <View style={styles.iconCircle}>
-                    <Ionicons
-                      name={baseRewardIcon}
-                      size={normalize(40)}
-                      color="#FFE082"
-                    />
-                  </View>
+                {/* Hero coffre Lottie */}
+                <Animated.View style={[styles.chestIconWrap, chestAnimatedStyle]}>
+                  <LottieView
+                    source={require("../assets/lotties/welcomeChest.json")}
+                    autoPlay
+                    loop={false}
+                    style={styles.chestLottie}
+                    resizeMode="contain"
+                  />
+                </Animated.View>
 
+                {/* Header titre + sous-titre */}
+                <View style={styles.header}>
                   <Text
                     style={[
                       styles.title,
@@ -379,14 +464,14 @@ const WelcomeBonusModal: React.FC<WelcomeBonusModalProps> = ({
                   </View>
                 </View>
 
-                {/* 🔥 Carte récompense du jour ULTRA FLASHY (fond clair) */}
+                {/* Carte récompense du jour */}
                 <Animated.View
                   entering={ZoomIn.springify().damping(20)}
                   exiting={ZoomOut.duration(140)}
                   style={styles.todayCardWrapper}
                 >
                   <LinearGradient
-                    colors={["#FFEDD5", "#FED7AA", "#FDBA74"]}
+                    colors={["#FFF8E1", "#FEF3C7", "#FDE68A"]}
                     style={styles.todayCard}
                   >
                     <Animated.View
@@ -401,20 +486,14 @@ const WelcomeBonusModal: React.FC<WelcomeBonusModalProps> = ({
                     </View>
                     <View style={styles.todayTextBlock}>
                       <Text
-                        style={[
-                          styles.todayTitle,
-                          { color: "#7C2D12" },
-                        ]}
+                        style={[styles.todayTitle, { color: "#7C2D12" }]}
                       >
                         {t("welcomeBonus.todayRewardTitle", {
                           defaultValue: "Récompense du jour",
                         })}
                       </Text>
                       <Text
-                        style={[
-                          styles.todayReward,
-                          { color: "#1F2937" },
-                        ]}
+                        style={[styles.todayReward, { color: "#1F2937" }]}
                         numberOfLines={2}
                         adjustsFontSizeToFit
                       >
@@ -422,10 +501,7 @@ const WelcomeBonusModal: React.FC<WelcomeBonusModalProps> = ({
                       </Text>
                       {rewardType === "premium" && (
                         <Text
-                          style={[
-                            styles.todayHint,
-                            { color: "#4B5563" },
-                          ]}
+                          style={[styles.todayHint, { color: "#4B5563" }]}
                           numberOfLines={2}
                         >
                           {t("welcomeBonus.premiumHint", {
@@ -446,94 +522,92 @@ const WelcomeBonusModal: React.FC<WelcomeBonusModalProps> = ({
                   </LinearGradient>
                 </Animated.View>
 
-                {/* Grille des jours façon “tableau de loot” */}
-                {/* Grille des jours façon “tableau de loot” */}
-<View style={styles.gridWrapper}>
-  {Array.from({ length: clampedTotal }).map((_, idx) => {
-    const isPast = idx < dayIndex;
-    const isToday = idx === dayIndex;
-    const isFuture = idx > dayIndex;
+                {/* Grille des jours façon lootboard */}
+                <View style={styles.gridWrapper}>
+                  {Array.from({ length: clampedTotal }).map((_, idx) => {
+                    const isPast = idx < dayIndex;
+                    const isToday = idx === dayIndex;
+                    const isFuture = idx > dayIndex;
 
-    // 🔥 type de récompense réel du jour basé sur WELCOME_REWARDS
-    const config = WELCOME_REWARDS[idx];
-    const dayKind: WelcomeRewardKind = config?.type ?? "trophies";
-    const iconName = getIconForKind(dayKind);
+                    const config = WELCOME_REWARDS[idx];
+                    const dayKind: WelcomeRewardKind =
+                      config?.type ?? "trophies";
+                    const iconName = getIconForKind(dayKind);
 
-    const tileColors: [string, string] = isToday
-      ? ["#FACC15", "#FB7185"]
-      : isPast
-      ? ["rgba(34,197,94,0.9)", "rgba(22,163,74,0.95)"]
-      : ["rgba(148,163,184,0.95)", "rgba(100,116,139,0.95)"];
+                    const tileColors: [string, string] = isToday
+                      ? ["#FACC15", "#FB7185"]
+                      : isPast
+                      ? ["rgba(34,197,94,0.9)", "rgba(22,163,74,0.95)"]
+                      : ["rgba(148,163,184,0.95)", "rgba(100,116,139,0.95)"];
 
-    const iconColor = isToday
-      ? "#1F2937"
-      : isPast
-      ? "#ECFDF3"
-      : "#E5E7EB";
+                    const iconColor = isToday
+                      ? "#1F2937"
+                      : isPast
+                      ? "#ECFDF3"
+                      : "#E5E7EB";
 
-    const overlayBadgeIcon: keyof typeof Ionicons.glyphMap | null = isPast
-      ? "checkmark-circle"
-      : isFuture
-      ? "lock-closed"
-      : null;
+                    const overlayBadgeIcon:
+                      | keyof typeof Ionicons.glyphMap
+                      | null = isPast
+                      ? "checkmark-circle"
+                      : isFuture
+                      ? "lock-closed"
+                      : null;
 
-    const overlayBadgeColor = isPast ? "#BBF7D0" : "#E5E7EB";
+                    const overlayBadgeColor = isPast ? "#BBF7D0" : "#E5E7EB";
 
-    return (
-      <View
-        key={idx}
-        style={[
-          styles.dayTileOuter,
-          { width: dayTileWidth as any },
-        ]}
-      >
-        <LinearGradient
-          colors={tileColors}
-          start={{ x: 0, y: 0 }}
-          end={{ x: 1, y: 1 }}
-          style={styles.dayTileBorder}
-        >
-          <View style={styles.dayTileInner}>
-            <View style={styles.dayIconWrap}>
-              <Ionicons
-                name={iconName}
-                size={normalize(22)}
-                color={iconColor}
-              />
+                    return (
+                      <View
+                        key={idx}
+                        style={[
+                          styles.dayTileOuter,
+                          { width: dayTileWidth as any },
+                        ]}
+                      >
+                        <LinearGradient
+                          colors={tileColors}
+                          start={{ x: 0, y: 0 }}
+                          end={{ x: 1, y: 1 }}
+                          style={styles.dayTileBorder}
+                        >
+                          <View style={styles.dayTileInner}>
+                            <View style={styles.dayIconWrap}>
+                              <Ionicons
+                                name={iconName}
+                                size={normalize(22)}
+                                color={iconColor}
+                              />
+                              {overlayBadgeIcon && (
+                                <View style={styles.dayBadgeOverlay}>
+                                  <Ionicons
+                                    name={overlayBadgeIcon}
+                                    size={normalize(14)}
+                                    color={overlayBadgeColor}
+                                  />
+                                </View>
+                              )}
+                            </View>
 
-              {overlayBadgeIcon && (
-                <View style={styles.dayBadgeOverlay}>
-                  <Ionicons
-                    name={overlayBadgeIcon}
-                    size={normalize(14)}
-                    color={overlayBadgeColor}
-                  />
+                            <Text style={styles.dayLabel}>
+                              {t("welcomeBonus.dayLabel", {
+                                day: idx + 1,
+                                defaultValue: `Jour ${idx + 1}`,
+                              })}
+                            </Text>
+
+                            {isPast && (
+                              <Text style={styles.dayStatus}>
+                                {t("welcomeBonus.claimed", {
+                                  defaultValue: "Récupéré",
+                                })}
+                              </Text>
+                            )}
+                          </View>
+                        </LinearGradient>
+                      </View>
+                    );
+                  })}
                 </View>
-              )}
-            </View>
-
-            <Text style={styles.dayLabel}>
-              {t("welcomeBonus.dayLabel", {
-                day: idx + 1,
-                defaultValue: `Jour ${idx + 1}`,
-              })}
-            </Text>
-
-            {isPast && (
-              <Text style={styles.dayStatus}>
-                {t("welcomeBonus.claimed", {
-                  defaultValue: "Récupéré",
-                })}
-              </Text>
-            )}
-            {/* ✅ plus de texte "Bientôt" pour les jours futurs */}
-          </View>
-        </LinearGradient>
-      </View>
-    );
-  })}
-</View>
-
 
                 {/* CTA principal */}
                 <TouchableOpacity
@@ -608,29 +682,29 @@ const WelcomeBonusModal: React.FC<WelcomeBonusModalProps> = ({
 
 const styles = StyleSheet.create({
   overlay: {
-    flex: 1,
-    backgroundColor: "rgba(15,23,42,0.92)",
-    justifyContent: "center",
-    alignItems: "center",
-    paddingHorizontal: normalize(12),
-  },
-  modalContainer: {
-    width: SCREEN_WIDTH * 0.94,
-    maxWidth: normalize(460),
-    borderRadius: normalize(30),
-    overflow: "hidden",
-  },
-  borderWrap: {
-    padding: 2,
-    borderRadius: normalize(30),
-  },
+     flex: 1,
+     backgroundColor: "rgba(15,23,42,0.92)",
+     justifyContent: "center",
+     alignItems: "center",
+     paddingHorizontal: normalize(12),
+   },
+   modalContainer: {
+     width: SCREEN_WIDTH * 0.94,
+     maxWidth: normalize(460),
+     borderRadius: normalize(30),
+     overflow: "hidden",
+   },
+   borderWrap: {
+     padding: 2,
+     borderRadius: normalize(30),
+   },
   modalBackground: {
-    borderRadius: normalize(28),
-    padding: normalize(4),
-  },
+     borderRadius: normalize(28),
+     padding: normalize(4),
+   },
   boardInner: {
     borderRadius: normalize(24),
-    paddingVertical: normalize(18),
+    paddingVertical: normalize(24), // 👈 un peu plus d’air en haut/bas
     paddingHorizontal: normalize(16),
   },
   ribbonWrapper: {
@@ -657,20 +731,22 @@ const styles = StyleSheet.create({
     textTransform: "uppercase",
     letterSpacing: 0.7,
   },
+  chestIconWrap: {
+    width: normalize(150),          // 👈 coffre plus gros
+    height: normalize(150),
+    alignSelf: "center",
+    justifyContent: "center",
+    alignItems: "center",
+    marginTop: normalize(4),        // 👈 descend légèrement sous le ruban
+    marginBottom: normalize(10),
+  },
+  chestLottie: {
+    width: "100%",
+    height: "100%",
+  },
   header: {
     alignItems: "center",
-    marginBottom: normalize(12),
-  },
-  iconCircle: {
-    width: normalize(64),
-    height: normalize(64),
-    borderRadius: normalize(32),
-    alignItems: "center",
-    justifyContent: "center",
-    marginBottom: normalize(8),
-    backgroundColor: "rgba(15,23,42,0.95)",
-    borderWidth: 1,
-    borderColor: "rgba(248,250,252,0.18)",
+    marginBottom: normalize(10),
   },
   title: {
     fontSize: normalize(22),
@@ -713,7 +789,7 @@ const styles = StyleSheet.create({
     backgroundColor: "#FACC15",
   },
   todayCardWrapper: {
-    marginTop: normalize(6),
+    marginTop: normalize(4),
     marginBottom: normalize(12),
   },
   todayCard: {
@@ -725,7 +801,7 @@ const styles = StyleSheet.create({
     overflow: "hidden",
     position: "relative",
     shadowColor: "#000",
-    shadowOffset: { width: 0, height: 6 },
+    shadowOffset: { width: 0, height: normalize(6) },
     shadowOpacity: 0.3,
     shadowRadius: 14,
     elevation: 8,
@@ -835,17 +911,6 @@ const styles = StyleSheet.create({
     fontSize: normalize(10),
     color: "#BBF7D0",
     marginTop: normalize(2),
-  },
-  dayStatusToday: {
-    fontSize: normalize(10),
-    color: "#FEF9C3",
-    marginTop: normalize(2),
-  },
-  dayStatusFuture: {
-    fontSize: normalize(10),
-    color: "#E5E7EB",
-    marginTop: normalize(2),
-    opacity: 0.85,
   },
   ctaButton: {
     marginTop: normalize(10),
