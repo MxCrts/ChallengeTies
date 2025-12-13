@@ -17,14 +17,16 @@ exports.onUserActivated = (0, firestore_1.onDocumentWritten)({
     const after = event.data?.after?.data();
     if (!after)
         return; // deleted
-    // ⭐ NEW: always detect transition false -> true even if other writes overlapped
-    const wasActivated = !!before?.activated;
+    // ✅ On ne traite que les users activés avec un parrain
     const isActivated = !!after?.activated;
-    const justActivated = !wasActivated && isActivated;
-    if (!justActivated)
+    if (!isActivated)
         return;
     const referrerId = after?.referrerId;
     if (!referrerId)
+        return;
+    // ✅ Anti double-traitement : si on a déjà une date d'activation, on sort
+    const alreadyRecorded = !!before?.referral?.activatedAt;
+    if (alreadyRecorded)
         return;
     const referrerRef = db.collection("users").doc(referrerId);
     // 🔢 count activated referees (server truth)
@@ -60,13 +62,19 @@ exports.onUserActivated = (0, firestore_1.onDocumentWritten)({
         const newlyReached = MILESTONES.filter((m) => activatedCount >= m &&
             !claimed.includes(m) &&
             !pending.includes(m));
-        // ✅ update stats always
+        // ✅ update stats + reward de base (1 seule fois par filleul)
         tx.update(referrerRef, {
             "referral.activatedCount": activatedCount,
             "referral.updatedAt": firestore_2.FieldValue.serverTimestamp(),
+            trophies: firestore_2.FieldValue.increment(10),
+            totalTrophies: firestore_2.FieldValue.increment(10),
             updatedAt: firestore_2.FieldValue.serverTimestamp(),
         });
-        // ⭐⭐⭐ REWARD DE BASE : +10 PARRAIN & +10 FILLEUL ⭐⭐⭐
+        tx.update(filleulRef, {
+            trophies: firestore_2.FieldValue.increment(10),
+            totalTrophies: firestore_2.FieldValue.increment(10),
+            updatedAt: firestore_2.FieldValue.serverTimestamp(),
+        });
         if (newlyReached.length === 0)
             return;
         // ✅ unlock pending milestones

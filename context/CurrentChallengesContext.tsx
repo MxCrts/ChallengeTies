@@ -627,11 +627,10 @@ async function reconcileDuoLinks(
   myChallenges: CurrentChallenge[],
   setCurrent: React.Dispatch<React.SetStateAction<CurrentChallenge[]>>
 ) {
-  const myDuo = myChallenges.filter(c => c.duo && c.duoPartnerId);
+  const myDuo = myChallenges.filter((c) => c.duo && c.duoPartnerId);
   if (!myDuo.length) return;
 
-  const updatesForMe: Record<string, boolean> = {};
-  const partnerWrites: Array<Promise<void>> = [];
+  const shouldDowngradeKeys = new Set<string>();
 
   for (const ch of myDuo) {
     const partnerId = ch.duoPartnerId!;
@@ -643,8 +642,9 @@ async function reconcileDuoLinks(
       const partnerRef = doc(db, "users", partnerId);
       const snap = await getDoc(partnerRef);
 
+      // si partner doc n'existe pas → je repasse solo
       if (!snap.exists()) {
-        updatesForMe[ch.uniqueKey!] = true;
+        if (ch.uniqueKey) shouldDowngradeKeys.add(ch.uniqueKey);
         continue;
       }
 
@@ -653,72 +653,47 @@ async function reconcileDuoLinks(
         ? partnerData.CurrentChallenges
         : [];
 
-      const pSame = list.filter(
-        p => (p.challengeId ?? p.id) === baseId &&
-             Number(p.selectedDays) === days
-      );
+      const partnerHasSame = list.some((p: any) => {
+        if (p?.uniqueKey === duoKey) return true;
+        const cid = p?.challengeId ?? p?.id;
+        return cid === baseId && Number(p?.selectedDays) === days;
+      });
 
-      const pDuo = pSame.find(p => p.duo && p.duoPartnerId === myUserId);
-      const pSolo = pSame.find(p => !p.duo);
-
-      // 🟢 Cas 1 — Partenaire déjà DUO → OK
-      if (pDuo) {
-        continue;
+      // 🔥 partner n'a plus le challenge (ou plus le duo) → je repasse solo
+      if (!partnerHasSame) {
+        if (ch.uniqueKey) shouldDowngradeKeys.add(ch.uniqueKey);
       }
-
-      // 🔥 Cas 2 — Partenaire a un SOLO → ON LE SUPPRIME puis ON LE RECRÉE EN DUO 0 JOURS
-      if (pSolo) {
-        const cleaned = list.filter(
-          p => !(
-            (p.challengeId ?? p.id) === baseId &&
-            Number(p.selectedDays) === days &&
-            !p.duo
-          )
-        );
-
-        const newDuo: CurrentChallenge = {
-          ...pSolo,
-          completedDays: 0,
-          completionDates: [],
-          completionDateKeys: [],
-          streak: 0,
-          duo: true,
-          duoPartnerId: myUserId,
-          uniqueKey: duoKey,
-        };
-
-        cleaned.push(newDuo);
-
-        partnerWrites.push(
-          updateDoc(partnerRef, { CurrentChallenges: cleaned })
-        );
-
-        continue;
-      }
-
-      // 🔥 Cas 3 — Partenaire n’a PLUS LE CHALLENGE → je repasse SOLO
-      updatesForMe[ch.uniqueKey!] = true;
-
     } catch (e) {
-      console.warn("reconcile error →", e);
+      __DEV__ && console.warn("[reconcileDuoLinks] read partner error:", e);
+      // en cas d'erreur réseau, on ne downgrade pas par sécurité
     }
   }
 
-  // 🔵 Apply SOLO fallback for me
-  if (Object.keys(updatesForMe).length) {
-    const meRef = doc(db, "users", myUserId);
-    const newMine = myChallenges.map(c =>
-      updatesForMe[c.uniqueKey!]
-        ? { ...c, duo: false, duoPartnerId: null, uniqueKey: makeUK(c.id, c.selectedDays) }
-        : c
-    );
+  if (!shouldDowngradeKeys.size) return;
+
+  const meRef = doc(db, "users", myUserId);
+
+  const newMine = myChallenges.map((c) => {
+    if (!c.uniqueKey) return c;
+    if (!shouldDowngradeKeys.has(c.uniqueKey)) return c;
+
+    const baseId = (c as any)?.challengeId ?? c.id;
+    const days = Number(c.selectedDays);
+
+    return {
+      ...c,
+      duo: false,
+      duoPartnerId: null,
+      duoPartnerUsername: null,
+      uniqueKey: makeUK(baseId, days),
+    };
+  });
+
+  try {
     await updateDoc(meRef, { CurrentChallenges: newMine });
     setCurrent(newMine);
-  }
-
-  // 🟣 Apply upgrades for partner
-  if (partnerWrites.length) {
-    await Promise.all(partnerWrites);
+  } catch (e: any) {
+    console.warn("[reconcileDuoLinks] update self error:", e?.message ?? e);
   }
 }
 
@@ -768,16 +743,15 @@ async function reconcileDuoLinks(
                     const userId = user.uid;
 
           const normalizeUniqueKey = (ch: CurrentChallenge): string => {
-            const id = (ch as any)?.challengeId ?? ch.id;
-            const days = Number(ch.selectedDays);
+  // 🔒 JAMAIS recalculer une clé existante
+  if (ch.uniqueKey) return ch.uniqueKey;
 
-            // Si déjà une clé, on la garde (mais on corrige les duos mal formés)
-            if (ch.duo && ch.duoPartnerId && userId) {
-              return makeDuoUK(id, days, userId, ch.duoPartnerId);
-            }
+  const id = (ch as any)?.challengeId ?? ch.id;
+  const days = Number(ch.selectedDays);
 
-            return ch.uniqueKey || makeUK(id, days);
-          };
+  return ch.uniqueKey ?? makeUK(id, days);
+};
+
 
           const uniqueChallenges = Array.from(
   new Map(
@@ -804,12 +778,23 @@ const same =
 
 if (!same) {
   setCurrentChallenges(uniqueChallenges);
-}
 
-// 🧩 IMPORTANT : réconciliation duo → solo si le partenaire a quitté
-if (userId) {
-  // On lance ça en "fire and forget", pas besoin d'attendre
-  void reconcileDuoLinks(userId, uniqueChallenges, setCurrentChallenges);
+  // ✅ Auto-reconcile DUO → SOLO (sans écrire chez le partner)
+  try {
+    const hasDuo = uniqueChallenges.some((c) => c.duo && c.duoPartnerId);
+    if (hasDuo) {
+      // throttle anti-spam
+      const now = Date.now();
+      (globalThis as any).__lastReconcileAt = (globalThis as any).__lastReconcileAt || 0;
+
+      if (now - (globalThis as any).__lastReconcileAt > 1500) {
+        (globalThis as any).__lastReconcileAt = now;
+
+        // ⚠️ IMPORTANT: on ne passe que des données "fraîches"
+        reconcileDuoLinks(userId, uniqueChallenges, setCurrentChallenges);
+      }
+    }
+  } catch {}
 }
 
 scheduleAchievementsCheck(userId);
@@ -951,73 +936,38 @@ try {
     }
   };
 
-  const removeChallenge = async (id: string, selectedDays: number): Promise<void> => {
+ const removeChallenge = async (id: string, selectedDays: number): Promise<void> => {
   const userId = auth.currentUser?.uid;
   if (!userId) return;
 
-  const uniqueKeySolo = makeUK(id, selectedDays);
-
-  if (inFlightRemovals.current.has(uniqueKeySolo)) return;
-  inFlightRemovals.current.add(uniqueKeySolo);
+  const key = makeUK(id, selectedDays);
+  if (inFlightRemovals.current.has(key)) return;
+  inFlightRemovals.current.add(key);
 
   try {
     const userRef = doc(db, "users", userId);
-    const userSnap = await getDoc(userRef);
-    if (!userSnap.exists()) return;
 
-    const userData = userSnap.data();
-    const curr: CurrentChallenge[] = Array.isArray(userData.CurrentChallenges)
-      ? userData.CurrentChallenges
-      : [];
+    await runTransaction(db, async (tx) => {
+      const snap = await tx.get(userRef);
+      if (!snap.exists()) return;
 
-    const idx = findChallengeIndexByIdAndDays(curr, id, selectedDays);
-    if (idx === -1) return;
-
-    const ch = curr[idx];
-    const isDuo = !!ch.duo && !!ch.duoPartnerId;
-    const partnerId = ch.duoPartnerId as string | undefined;
-
-    // --- 1️⃣ SI SOLO → suppression simple ---
-    if (!isDuo || !partnerId) {
-      const next = curr.filter((_, i) => i !== idx);
-      await updateDoc(userRef, { CurrentChallenges: next });
-      return;
-    }
-
-    // --- 2️⃣ DUO → A supprime → B passe en SOLO ---
-    const partnerRef = doc(db, "users", partnerId);
-    const pSnap = await getDoc(partnerRef);
-
-    if (pSnap.exists()) {
-      const pData = pSnap.data() as any;
-      const pList: CurrentChallenge[] = Array.isArray(pData.CurrentChallenges)
-        ? pData.CurrentChallenges
+      const data = snap.data() as any;
+      const curr: CurrentChallenge[] = Array.isArray(data.CurrentChallenges)
+        ? data.CurrentChallenges
         : [];
 
-      const pIdx = findChallengeIndexByIdAndDays(pList, id, selectedDays);
+      const idx = findChallengeIndexByIdAndDays(curr, id, selectedDays);
+      if (idx === -1) return;
 
-      if (pIdx !== -1) {
-        const pCh = { ...pList[pIdx] };
+      // 🔥 IMPORTANT : on supprime UNIQUEMENT chez moi
+      const next = curr.filter((_, i) => i !== idx);
+      tx.update(userRef, { CurrentChallenges: next });
+    });
 
-        // --- conversion DUO → SOLO ---
-        pCh.duo = false;
-        pCh.duoPartnerId = null;
-        pCh.duoPartnerUsername = null;
-        pCh.uniqueKey = makeUK(id, selectedDays);
-
-        const newP = pList.map((c, i) => (i === pIdx ? pCh : c));
-        await updateDoc(partnerRef, { CurrentChallenges: newP });
-      }
-    }
-
-    // --- 3️⃣ Supprimer le duo chez A ---
-    const newSelf = curr.filter((_, i) => i !== idx);
-    await updateDoc(userRef, { CurrentChallenges: newSelf });
-
-  } catch (e) {
-    console.error("❌ removeChallenge DUO error:", e);
+  } catch (e: any) {
+    console.error("❌ removeChallenge error:", e?.message ?? e);
   } finally {
-    inFlightRemovals.current.delete(uniqueKeySolo);
+    inFlightRemovals.current.delete(key);
   }
 };
 

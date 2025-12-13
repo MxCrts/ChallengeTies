@@ -505,30 +505,16 @@ export async function acceptInvitation(inviteId: string): Promise<void> {
   if (ch.category) duoTemplate.category = ch.category;
   if (ch.categoryId) duoTemplate.categoryId = ch.categoryId;
 
-
-  // 🔍 On supprime TOUTES les anciennes entrées pour ce challenge
-//     (solo + éventuelles anciennes variantes) et on insère UNE seule entrée DUO propre
-// 🧨 NO MERGE — version finale TIES
-// On retire TOUT ce qui concerne ce challenge (solo ou ancienne version)
-// Et on ajoute 1 entrée DUO NEUVE à 0 jours
-const filteredInviteeList: any[] = [];
-
-for (const c of baseInviteeList) {
-  const cid = c?.challengeId ?? c?.id;
-  const sameId =
-    cid === inv.challengeId ||
-    (typeof c?.uniqueKey === "string" &&
-      c.uniqueKey.startsWith(`${inv.challengeId}_`));
-
-  if (!sameId) {
-    filteredInviteeList.push(c);
+  // ✅ IMPORTANT: ne jamais matcher "startsWith(challengeId + '_')" car ça supprime aussi
+  // d’autres défis dont l’id commence pareil. On supprime UNIQUEMENT le même challenge.
+  const filteredInviteeList: any[] = [];
+  for (const c of baseInviteeList) {
+    const cid = c?.challengeId ?? c?.id;
+    if (cid !== inv.challengeId) filteredInviteeList.push(c);
   }
-}
 
-// 🔥 On ajoute UNE SEULE entrée DUO fraîche (sans récupérer progression SOLO)
-const finalInviteeChallenges = [...filteredInviteeList, duoTemplate];
-
-
+  // ✅ On ajoute 1 seule entrée DUO propre avec uniqueKey "pair" (identique inviter/invitee)
+  const finalInviteeChallenges = [...filteredInviteeList, duoTemplate];
   // 8) UPDATE : doc user de l'INVITÉ (toujours en DUO, 100 % sûr)
   try {
     console.log(
@@ -550,7 +536,28 @@ const finalInviteeChallenges = [...filteredInviteeList, duoTemplate];
     throw e;
   }
 
-
+// ✅ SAFETY: si une autre logique a ré-écrit derrière (race), on force le flag duo
+  // sans toucher au reste (uniquement l’entrée "uniqueKey" qu’on vient d’ajouter).
+  try {
+    const afterSnap = await getDoc(inviteeRef);
+    if (afterSnap.exists()) {
+      const arr: any[] = Array.isArray(afterSnap.data()?.CurrentChallenges)
+        ? afterSnap.data()!.CurrentChallenges
+        : [];
+      const idx = arr.findIndex((c) => c?.uniqueKey === uniqueKey);
+      if (idx >= 0 && arr[idx]?.duo !== true) {
+        const next = [...arr];
+        next[idx] = {
+          ...next[idx],
+          duo: true,
+          duoPartnerId: inviterId,
+          duoPartnerUsername: inviterUsernameFromUser ?? null,
+          uniqueKey,
+        };
+        await updateDoc(inviteeRef, { CurrentChallenges: next, updatedAt: serverTimestamp() });
+      }
+    }
+  } catch {}
 
   // 9) Post-traitement : notif + analytics
   try {

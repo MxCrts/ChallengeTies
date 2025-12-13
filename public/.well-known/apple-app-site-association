@@ -3,7 +3,7 @@
     "apps": [],
     "details": [
       {
-        "appID": "YOUR_TEAM_ID.com.mxcrts.ChallengeTies",
+        "appID": "C3235NU4QN.com.mxcrts.ChallengeTies",
         "paths": ["/challenge/*"]
       }
     ]

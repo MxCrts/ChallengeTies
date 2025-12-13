@@ -14,7 +14,7 @@ import { ThemeProvider } from "../context/ThemeContext";
 import { LanguageProvider } from "../context/LanguageContext";
 import { TutorialProvider } from "../context/TutorialContext";
 import TrophyModal from "../components/TrophyModal";
-
+import { PremiumProvider } from "@/src/context/PremiumContext";
 import {
   useFonts,
   Comfortaa_400Regular,
@@ -600,6 +600,7 @@ export default function RootLayout() {
                                 <TutorialProvider isFirstLaunch={false}>
                                   <VisitorProvider>
                                     <ConsentGate>
+                                      <PremiumProvider>
                                       <AdsVisibilityProvider>
                                         <DeepLinkManager />
                                         <NotificationsBootstrap />
@@ -626,6 +627,7 @@ export default function RootLayout() {
                                         <TrophyModal />
 
                                       </AdsVisibilityProvider>
+                                      </PremiumProvider>
                                     </ConsentGate>
                                   </VisitorProvider>
                                 </TutorialProvider>

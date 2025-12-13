@@ -38,6 +38,22 @@ const LEGACY_REFERRER_KEY = "ties_referrer_id";
 const LEGACY_REFERRER_SRC_KEY = "ties_referrer_src";
 const LEGACY_REFERRER_TS_KEY = "ties_referrer_ts";
 
+// ✅ helpers (TOP LEVEL) : empêche la création d'un doc user "partiel"
+const sleep = (ms: number) => new Promise((r) => setTimeout(r, ms));
+
+async function waitForUserDoc(uid: string, tries = 30, delayMs = 200) {
+  const ref = doc(db, "users", uid);
+  for (let i = 0; i < tries; i++) {
+    try {
+      const snap = await getDoc(ref);
+      if (snap.exists()) return true;
+    } catch {}
+    await sleep(delayMs);
+  }
+  return false;
+}
+
+
 async function consumePendingReferrer(uid: string) {
   // On lit à la fois les nouvelles clés ET les anciennes pour être 100% compatible
   const entries = await AsyncStorage.multiGet([
@@ -48,6 +64,7 @@ async function consumePendingReferrer(uid: string) {
     LEGACY_REFERRER_SRC_KEY,
     LEGACY_REFERRER_TS_KEY,
   ]);
+
 
   const map = Object.fromEntries(entries);
 
@@ -150,27 +167,29 @@ const authFailsafe = setTimeout(() => {
     clearTimeout(authFailsafe);
     if (firebaseUser) {
   console.log("✅ Utilisateur connecté:", firebaseUser.email);
-  setUser(firebaseUser);
 
-  // ---------------------------------------------------------
-    // 🚨  SAFETY CHECK : NE RIEN ÉCRIRE tant que register
-    //      n'a pas créé un userDoc COMPLET.
-    // ---------------------------------------------------------
-    const uid = firebaseUser.uid;
-    const userRef = doc(db, "users", uid);
-    const snap = await getDoc(userRef);
+  const uid = firebaseUser.uid;
+  const userRef = doc(db, "users", uid);
 
-    if (!snap.exists()) {
-      console.log("⛔ AuthProvider: userDoc n'existe pas encore → on NE fait AUCUNE écriture !");
+  // ✅ On attend que Register ait créé le doc COMPLET
+  let snap = await getDoc(userRef);
 
-      // On stoppe toutes les features (pionnier, referral, tokens, etc.)
-      // jusqu'à ce que register.tsx ait créé le doc complet.
+  if (!snap.exists()) {
+    console.log("⏳ AuthProvider: userDoc absent → wait (register create)...");
+    const ok = await waitForUserDoc(uid);
+    if (!ok) {
+      console.log("⛔ AuthProvider: userDoc toujours absent → on stoppe, pas d'écriture");
       setLoading(false);
       setCheckingAuth(false);
       return;
     }
+    snap = await getDoc(userRef);
+  }
 
-    console.log("👍 AuthProvider: userDoc détecté → on peut appliquer les features.");
+  // ✅ Maintenant seulement, on expose l'user → les useEffect([user?.uid]) peuvent tourner
+  setUser(firebaseUser);
+
+  console.log("👍 AuthProvider: userDoc détecté → on peut appliquer les features.");
 
   // ✅ Referral activation post-login (force l’écriture sur le doc user)
   (async () => {
@@ -573,6 +592,17 @@ useEffect(() => {
    const unsubscribe = onSnapshot(userRef, (snap) => {
      if (!snap.exists()) return;
      const data = snap.data() as any;
+
+// 🔒 PROTECTION DUO — NE JAMAIS TOUCHER
+const current = Array.isArray(data?.CurrentChallenges)
+  ? data.CurrentChallenges
+  : [];
+
+if (current.some(c => c?.duo === true)) {
+  // ⚠️ snapshot informatif seulement — aucune logique métier ici
+  return;
+}
+
      const currentCount = Number(data?.referral?.activatedCount ?? 0);
 
      // Premier snapshot → on initialise seulement

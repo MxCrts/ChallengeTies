@@ -23,7 +23,7 @@ import {
 } from "react-native";
 import Animated, { FadeInUp } from "react-native-reanimated";
 import { useTranslation } from "react-i18next";
-import { doc, getDoc } from "firebase/firestore";
+import { doc, getDoc, updateDoc  } from "firebase/firestore";
 import { db, auth } from "@/constants/firebase-config";
 import {
   acceptInvitation,
@@ -50,6 +50,60 @@ const normalize = (size: number) => {
   const scale = Math.min(Math.max(width / baseWidth, 0.7), 1.8);
   return Math.round(size * scale);
 };
+
+// ✅ SAFETY FIX: après acceptInvitation, on force une cohérence minimale
+// Objectif: si une autre écriture a remis une entrée solo (duo:false),
+// on réapplique l'entrée duo à partir de l'invitation acceptée.
+async function acceptInvitationSafetyFix(opts: { inviteId: string; challengeId: string }) {
+  const me = auth.currentUser?.uid;
+  if (!me) return;
+
+  const invSnap = await getDoc(doc(db, "invitations", opts.inviteId));
+  if (!invSnap.exists()) return;
+  const inv = invSnap.data() as any;
+  if (inv?.status !== "accepted") return;
+
+  const inviterId = inv?.inviterId;
+  const inviteeId = inv?.inviteeId;
+  if (!inviterId || !inviteeId) return;
+  if (inviteeId !== me) return;
+
+  const userRef = doc(db, "users", me);
+  const uSnap = await getDoc(userRef);
+  if (!uSnap.exists()) return;
+  const u = uSnap.data() as any;
+
+  const list: any[] = Array.isArray(u?.CurrentChallenges) ? u.CurrentChallenges : [];
+
+  // PairKey identique inviter/invitee
+  const pairKey = [inviterId, inviteeId].sort().join("-");
+  const uniqueKey = `${inv.challengeId}_${inv.selectedDays}_${pairKey}`;
+
+  const idx = list.findIndex((c: any) => {
+    const cid = c?.challengeId ?? c?.id;
+    return (c?.uniqueKey && c.uniqueKey === uniqueKey) || cid === inv.challengeId;
+  });
+  if (idx < 0) return;
+
+  const entry = list[idx];
+  // ✅ si déjà duo:true + bon partnerId → OK
+  if (entry?.duo === true && entry?.duoPartnerId === inviterId) return;
+
+  const next = [...list];
+  next[idx] = {
+    ...entry,
+    duo: true,
+    duoPartnerId: inviterId,
+    // on garde le username si déjà présent, sinon on prend celui de l'invitation si dispo
+    duoPartnerUsername: entry?.duoPartnerUsername ?? null,
+    selectedDays: inv.selectedDays ?? entry?.selectedDays,
+    challengeId: inv.challengeId ?? entry?.challengeId,
+    id: inv.challengeId ?? entry?.id,
+    uniqueKey,
+  };
+
+  await updateDoc(userRef, { CurrentChallenges: next });
+}
 
 type InvitationModalProps = {
   visible: boolean;
@@ -390,8 +444,7 @@ const InvitationModal: React.FC<InvitationModalProps> = ({
 
       const alreadyInDuoActive = current.some((c) => {
         const cid = c?.challengeId ?? c?.id;
-        const same =
-          cid === targetId || c?.uniqueKey?.startsWith?.(targetId + "_");
+        const same = cid === targetId;
         const isDuo = c?.duo === true;
         const sel = Number(c?.selectedDays ?? 0);
         const done = Number(c?.completedDays ?? 0);
@@ -411,9 +464,7 @@ const InvitationModal: React.FC<InvitationModalProps> = ({
 
       const hasSolo = current.some((c) => {
         const cid = c?.challengeId ?? c?.id;
-        const same =
-          cid === targetId || c?.uniqueKey?.startsWith?.(targetId + "_");
-        return same && !c?.duo;
+        return cid === targetId && !c?.duo;
       });
 
       if (hasSolo) {
@@ -423,6 +474,13 @@ const InvitationModal: React.FC<InvitationModalProps> = ({
       }
 
       await acceptInvitation(inviteId);
+
+       // ✅ SAFETY (fix "duo:false" overwrite) : on relit le doc user et on vérifie que l'entrée
+      // du challenge est bien en duo (dans certains cas, une autre écriture ré-applique une version solo).
+      try {
+        await new Promise((r) => setTimeout(r, 350));
+        await acceptInvitationSafetyFix({ inviteId, challengeId: targetId });
+      } catch {}
 
       logEvent("invite_accept", {
         inviteId,
@@ -549,6 +607,12 @@ const InvitationModal: React.FC<InvitationModalProps> = ({
       }
 
       await acceptInvitation(inviteId);
+
+// ✅ SAFETY (fix "duo:false" overwrite) idem si restart
+      try {
+        await new Promise((r) => setTimeout(r, 350));
+        await acceptInvitationSafetyFix({ inviteId, challengeId: inv.challengeId || challengeId });
+      } catch {}
 
       logEvent("invite_accept_restart", {
         inviteId,
