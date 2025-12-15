@@ -619,8 +619,6 @@ export default function RootLayout() {
                                           <Stack.Screen name="login" />
                                           <Stack.Screen name="register" />
                                           <Stack.Screen name="forgot-password" />
-                                          <Stack.Screen name="profile/notifications" />
-                                          <Stack.Screen name="handleInvite" />
                                         </Stack>
 
                                         <AppNavigator />

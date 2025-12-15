@@ -23,6 +23,7 @@ import {
   Text,
   Animated,
   Easing,
+  AppState,
 } from "react-native";
 import { Ionicons } from "@expo/vector-icons";
 import {
@@ -299,6 +300,57 @@ export const CurrentChallengesProvider: React.FC<{
       }).start();
     }
   }, [toastState.visible, toastAnim]);
+
+  // ✅ Heartbeat pour downgrade DUO → SOLO même si mon doc ne bouge pas
+useEffect(() => {
+  let mounted = true;
+  let intervalId: ReturnType<typeof setInterval> | null = null;
+
+  const run = async () => {
+    try {
+      const uid = auth.currentUser?.uid;
+      if (!uid) return;
+
+      const mine = currentChallengesRef.current || [];
+      const hasDuo = mine.some((c) => c.duo && c.duoPartnerId);
+      if (!hasDuo) return;
+
+      // throttle global anti-spam
+      const now = Date.now();
+      (globalThis as any).__lastReconcileAt =
+        (globalThis as any).__lastReconcileAt || 0;
+
+      if (now - (globalThis as any).__lastReconcileAt < 1500) return;
+      (globalThis as any).__lastReconcileAt = now;
+
+      await reconcileDuoLinks(uid, mine, setCurrentChallenges);
+    } catch {}
+  };
+
+  // 1) Run once
+  void run();
+
+  // 2) Run when app returns foreground
+  const sub = AppState.addEventListener("change", (state) => {
+    if (!mounted) return;
+    if (state === "active") void run();
+  });
+
+  // 3) Small interval (safe & light)
+  intervalId = setInterval(() => {
+    if (!mounted) return;
+    void run();
+  }, 4000);
+
+  return () => {
+    mounted = false;
+    try {
+      // @ts-ignore compat
+      sub?.remove?.();
+    } catch {}
+    if (intervalId) clearInterval(intervalId);
+  };
+}, []);
 
 
   const toastTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);

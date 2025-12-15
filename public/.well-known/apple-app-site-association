@@ -4,7 +4,10 @@
     "details": [
       {
         "appID": "C3235NU4QN.com.mxcrts.ChallengeTies",
-        "paths": ["/challenge/*"]
+        "paths": [
+          "/i*",
+          "/challenge/*"
+        ]
       }
     ]
   }
