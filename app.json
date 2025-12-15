@@ -151,7 +151,6 @@
     }
   ],
   "expo-mail-composer",
-  "./plugins/withKotlinStdlibPin",
   "expo-iap"
 ],
     "newArchEnabled": false,
