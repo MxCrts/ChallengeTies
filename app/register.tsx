@@ -21,7 +21,7 @@ import {
   createUserWithEmailAndPassword,
   updateProfile,
 } from "firebase/auth";
-import { auth, db } from "../constants/firebase-config";
+import { auth, db } from "@/constants/firebase-config";
 import {
   doc,
   setDoc,

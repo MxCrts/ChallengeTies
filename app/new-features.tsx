@@ -25,7 +25,7 @@ import {
    runTransaction,
  } from "firebase/firestore";
 import { onAuthStateChanged } from "firebase/auth";
-import { db, auth } from "../constants/firebase-config";
+import { db, auth } from "@/constants/firebase-config";
 import { Ionicons } from "@expo/vector-icons";
 import Animated, { FadeInUp, ZoomIn } from "react-native-reanimated";
 import { LinearGradient } from "expo-linear-gradient";

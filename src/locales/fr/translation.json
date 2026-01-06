@@ -28,6 +28,101 @@
   "notSet": "Non défini",
   "tipsTricks": "Astuces & conseils",
   "home": "Accueil",
+  "homeZ": {
+    "hero": {
+      "brand": "ChallengeTies",
+      "headline": "Le déclic du jour.",
+      "sub": "Un défi. Un clic. Et si tu veux tenir : Duo.",
+      "duoProof": "Le Duo transforme l’essai.",
+      "ctaShort": "Commencer",
+      "ctaA11y": "Commencer et choisir un défi"
+    },
+
+    "todayHub": {
+      "badge": "AUJOURD’HUI",
+
+      "primaryActiveShort": "Marquer",
+      "primaryDuoShort": "Duo",
+
+      "titleActive2": "Marque aujourd’hui. Protège ta série.",
+      "titleNone2": "Choisis un défi. Commence aujourd’hui.",
+      "subActive2": "1 clic pour valider. Ensuite : invite quelqu’un et double tes chances de tenir.",
+      "subNone2": "Le plus dur, c’est le premier pas. Solo, duo… ou crée le tien.",
+
+      "primaryActiveHint2": "Valide ton jour en un clic.",
+      "progress": "{{done}}/{{total}} jours",
+      "micro2": "Duo = motivation x2. Fais-le maintenant.",
+
+      "openActiveA11y": "Ouvrir le défi actif",
+      "openActiveHint": "Ouvre ton défi pour voir ta progression et inviter un ami.",
+
+      "createSub": "Ton défi, tes règles.",
+
+      "primaryDuoA11y": "Inviter un ami en duo",
+      "primaryDuoHint": "Choisis un défi, puis invite quelqu’un en duo.",
+      "soloCardA11y": "Choisir un défi en solo",
+      "soloCardHint": "Ouvre Explore pour choisir un défi solo.",
+      "soloCard": "Solo",
+      "soloCardSub": "Choisis. Lance. Tiens.",
+      "solo": "Continuer en solo",
+      "soloA11y": "Continuer en solo",
+      "soloHint": "Choisis un défi sans partenaire.",
+      "inviteSub2": "Invite. Tiens. Gagne.",
+
+      "metaActive": "{{count}} défi(s) actif(s)",
+      "metaNone": "Aucun défi actif",
+      "titleActive": "Marque ton défi. Garde ta série.",
+      "titleNone": "Choisis un défi et commence aujourd’hui.",
+      "subActive": "1 clic pour marquer, 1 clic pour inviter un ami. La viralité vient du Duo.",
+      "subNone": "Le plus dur, c’est le premier pas. Prends un défi (solo ou duo) ou crée le tien.",
+      "primaryActive": "Marquer aujourd’hui",
+      "primaryNone": "Choisir un défi",
+      "invite": "Inviter (Duo)",
+      "create": "Créer",
+      "micro": "Duo = rétention x2. Invite maintenant.",
+      "primaryActiveA11y": "Marquer aujourd’hui",
+      "primaryNoneA11y": "Choisir un défi",
+      "primaryActiveHint": "Ouvre l’écran Focus pour marquer ton jour.",
+      "primaryNoneHint": "Ouvre Explore pour choisir ton premier défi.",
+      "inviteA11y": "Inviter un ami en duo",
+      "inviteHint": "Ouvre ton défi pour inviter un ami et lancer un duo.",
+      "createA11y": "Créer un défi",
+      "createHint": "Ouvre ton espace pour créer un défi et le partager."
+    },
+
+    "duoNudge": {
+      "a11y": "Recommandation Duo",
+      "title": "Le Duo te fait tenir.",
+      "sub": "Invite quelqu’un. Même défi, même rythme.",
+      "cta": "Duo",
+      "ctaA11y": "Inviter un ami en duo",
+      "solo": "Rester solo",
+      "soloA11y": "Rester en solo"
+    },
+
+    "dailyPicks": {
+      "seeAll": "Tout voir dans Explore",
+      "seeAllA11y": "Voir tous les défis",
+      "seeAllHint": "Ouvre Explore pour découvrir tous les défis."
+    },
+
+    "discover": {
+      "title": "Découvrir",
+      "subtitle2": "L’essentiel. Le reste en bas.",
+      "leaderboard": "Classement",
+      "leaderboardSub2": "Social proof. Motivation.",
+      "leaderboardA11y": "Ouvrir le classement",
+      "leaderboardHint": "Compare ta progression avec les autres.",
+      "tips": "Tips",
+      "tipsSub2": "1 minute. Action immédiate.",
+      "tipsA11y": "Ouvrir les conseils",
+      "tipsHint": "Découvre des conseils rapides pour tenir ton défi.",
+      "newFeatures": "Nouveautés",
+      "newFeaturesSub": "Découvre. Vote. Influence l’app.",
+      "newFeaturesA11y": "Nouveautés",
+      "newFeaturesHint": "Découvre les nouveautés et vote pour la suite."
+    }
+  },
   "profile": "Profil",
   "yourProfile": "Votre profil",
   "addBioHere": "Ajoutez une bio ici",
@@ -503,6 +598,11 @@
   "streakBonusMessage": "🎯 +{{bonus}} pour {{streak}} jours d’affilée !",
   "challengeDetails": {
     "noDescription": "Aucune description disponible",
+    "participantsLabel": "Participants",
+    "takeChallengeA11y": "Prendre le défi",
+    "takeChallengeHint": "Ouvre la sélection de durée, puis confirme pour commencer.",
+    "completeChallengeA11y": "Terminer le défi",
+    "completeChallengeHint": "Ouvre l’écran de validation pour récupérer tes trophées.",
     "fetchError": "Impossible de récupérer le défi.",
     "untitled": "Défi",
     "joinError": "Impossible de rejoindre le défi. Veuillez réessayer.",
@@ -511,7 +611,7 @@
 
     "shareMessage": "Rejoins-moi sur « {{title}} » sur ChallengeTies !",
     "participants_one": "{{count}} participant",
-"participants_other": "{{count}} participants",
+    "participants_other": "{{count}} participants",
 
     "takeChallenge": "Relever le défi",
     "inProgress": "En cours",
@@ -560,7 +660,24 @@
     "chatAccessDenied": "Tu dois d’abord prendre le défi pour accéder au chat.",
 
     "backButton": "Retour",
-    "backButtonHint": "Revenir à l’écran précédent"
+    "backButtonHint": "Revenir à l’écran précédent",
+
+    "actions": {
+      "best": "Best",
+      "inviteA11y": "Inviter un ami en duo",
+      "inviteHint": "Envoie une invitation pour transformer ce défi en duel duo.",
+      "inviteHintDuo": "Tu es déjà en duo sur ce défi.",
+      "inviteHintOffline": "Connexion requise pour inviter un ami.",
+      "inviteSub": "Le plus viral : duel en temps réel",
+      "shareHint": "Génère une carte stylée à partager.",
+      "shareSub": "Carte premium + lien",
+      "chatHint": "Ouvre le chat du défi.",
+      "chatSub": "Motivation + preuves",
+      "saveHint": "Ajoute ce défi à tes favoris.",
+      "saveSub": "Retrouve-le en 1 tap",
+      "statsHint": "Voir ton calendrier & progression.",
+      "statsSub": "Streaks + mois"
+    }
   },
  "editYourReview": "Modifier ton avis",
   "deleteReview": "Supprimer l’avis",
@@ -573,6 +690,7 @@
     "title": "Défi en duo",
     "you": "Toi",
     "partner": "Partenaire",
+    "modeShort": "Duo",
 
     "leading": "Tu mènes !",
     "tied": "Égalité",
@@ -1503,6 +1621,11 @@
     "subtitle": "Lance la roue mystère pour révéler ta récompense 🎁",
     "error": "Impossible de récupérer le bonus du jour pour le moment.",
     "tag": "Exclu du Jour",
+    "badge": "RÉCOMPENSE",
+    "oncePerDay": "1 / jour",
+    "teaser2": "Ouvre maintenant et découvre ta récompense mystère.",
+    "cta": "Ouvrir",
+    "micro": "Rapide. Simple. Reward.",
 "shortCta": "1 clique, 1 surprise",
     "hint": "Ouvre une roue mystère pour gagner une récompense.",
     "loading": "Ouverture du coffre mystère...",
@@ -1510,7 +1633,6 @@
     "teaser": "Touche pour découvrir ta récompense mystère.",
     "visualHint": "Ta récompense est ajoutée à ton compte dès que tu lances la roue. Continue ta série pour débloquer encore plus de bonus ✨",
     "spinning": "Lancement...",
-    "cta": "Lancer la roue",
     "again": "Revoir la roue",
 
     "reward": {
@@ -2128,6 +2250,18 @@
   },
   "invitationS": {
     "shareTitle": "Invitation Duo",
+    "later": "Plus tard",
+    "subtitle": "Partage un lien. Ton ami rejoint ce défi en Duo.",
+  "whyDuo": "À deux, tu tiens plus longtemps. C’est simple et ça marche.",
+    "startSoloShort": "Solo",
+    "durationLabel": "Durée",
+    "ctaInvite": "Inviter",
+    "startSolo": "Commencer en solo",
+    "a11yStartSoloHint": "Démarre ce défi en solo maintenant.",
+    "ctaChange": "Changer",
+    "ctaDone": "OK",
+    "changeDuration": "Modifier la durée",
+    "linkCopiedInline": "Lien copié ✅ Tu peux le coller où tu veux.",
     "sendTitle": "Inviter un ami",
     "shareSubtitle": "Génère un lien pour « {{challenge}} » ({{days}} jours). S’il a l’app → ouverture directe. Sinon → Store.",
     "shareHint": "Le lien est universel et fonctionne partout.",
@@ -2175,6 +2309,8 @@
     "close": "Fermer",
     "notLoggedIn": "Tu dois être connecté.",
     "sending": "Envoi…",
+    "edit": "Modifier",
+    "hide": "Masquer",
     "cancel": "Annuler",
     "continue": "Continuer",
     "errorTitle": "Erreur"
@@ -3839,33 +3975,63 @@
   "receivedOn": "Reçue le {{date}}",
   "locale": "fr-FR",
   "firstPick": {
-    "title": "Choisis ton premier challenge !",
-    "subtitle": "Tu veux commencer en…",
-    "cardHint": "Appuie pour sélectionner ce défi.",
-    "emptyTitle": "Aucun défi pour l’instant",
-    "emptySubtitle": "Tire pour rafraîchir ou réessaie.",
-    "chooseSolo": "Choisir en Solo",
-    "chooseDuo": "Choisir en Duo",
-    "modeDuo": "Duo (recommandé)",
-    "modeSolo": "Solo",
-     "duoBadge": "Duo",
-     "alreadyInvited": "Tu as déjà une invitation en attente pour ce défi.",
-    "durationLabel": "Durée :",
-    "offlineDuo": "Tu es hors-ligne. Reconnecte-toi pour inviter un ami en duo.",
-    "day_one": "{{count}} j",
-    "chooseMode": "Choisir un mode",
-    "chooseSoloShort": "Choisir en solo",
-    "chooseDuoShort": "Choisir en duo",
-    "day_other": "{{count}} j",
-    "skip": "Ignorer",
-    "alert": {
-      "missingChoiceTitle": "Choix manquant",
-      "missingChoiceBody": "Sélectionne un challenge.",
-      "modeTitle": "Mode",
-      "modeBody": "Choisis Duo ou Solo."
-    }
+  "day_one": "{{count}} jour",
+  "day_other": "{{count}} jours",
+
+  "progress": "Étape {{current}} sur {{total}}",
+  "cardHint": "Appuie pour sélectionner.",
+
+  "step1": {
+    "title": "Commence ton aventure",
+    "subtitle": "Choisis un défi. On commence.",
+    "cta": "Suite",
+    "ctaDisabled": "Choisis",
+    "shuffleLink": "Pas trouvé ? Montre-moi d’autres défis",
+    "shuffleA11y": "Afficher d’autres défis"
   },
-  
+
+  "step2": {
+    "title": "Solo ou Duo ?",
+    "subtitle": "En duo, tu tiens plus longtemps. Et c’est plus dur d’abandonner.",
+    "duoDesc": "En duo, tu restes constant. Invite un ami juste après.",
+    "cta": "Suite",
+    "ctaDisabled": "Choisis",
+    "duoTitle": "Duo",
+    "duoOfflineLine": "Connexion requise pour inviter.",
+    "soloTitle": "Solo",
+    "soloDesc": "Démarrage immédiat, sans invitation.",
+    "hintDuo": "Invite un ami juste après.",
+    "hintDuoOffline": "Internet requis.",
+    "hintSolo": "Tu démarres immédiatement."
+  },
+
+  "step3": {
+    "title": "Combien de temps peux-tu tenir ?",
+    "subtitle": "7 jours est un excellent départ. Tu pourras ajuster plus tard.",
+    "cta": "Go",
+    "ctaDisabled": "Choisis",
+    "durationLabel": "Durée",
+    "durationNote": "Tu pourras toujours ajuster plus tard.",
+    "recapDuo": "Mode : Duo",
+    "recapSolo": "Mode : Solo"
+  },
+
+  "duoBadge": "DUO",
+  "offlineDuo": "Connecte-toi à Internet pour inviter un ami en duo.",
+  "offlineDuoShort": "Réseau",
+  "alreadyInvited": "Invitation déjà envoyée pour ce défi.",
+
+  "a11yCtaNoChallenge": "Choisis un défi pour continuer.",
+  "a11yCtaFull": "Continuer en {{mode}}, {{days}} jours, défi {{title}}.",
+
+  "emptyTitle": "Aucun défi disponible",
+  "emptySubtitle": "Tire vers le bas pour réessayer.",
+
+  "alert": {
+    "missingChoiceBody": "Choisis un défi pour continuer."
+  }
+}
+,
   "access": {
     "editProfile": {
       "label": "Modifier le profil",
@@ -3931,6 +4097,8 @@
   "acceptRulesCheckbox": "Accepter les règles du chat",
  "tutorial": {
   "progress": "Étape",
+  "open": "Tutoriel",
+    "openHint": "Découvre comment utiliser ChallengeTies en 30 secondes",
     "progressA11y": "Étape {{current}} sur {{total}}",
     "welcomeTagline": "Ton voyage commence ici.",
     "steps": {
@@ -4068,15 +4236,18 @@
   },
   "common": {
     "back": "Retour",
+    "retry": "Réessayer",
+    "loading": "Chargement...",
+    "recommended": "Recommandé",
+    "networkError": "Problème de connexion",
+    "oops": "Oups, réessaie.",
+    "challenge": "Défi",
+    "misc": "Divers",
     "skip": "Ignorer",
-    "challenge": "Challenge",
     "error": "Oups",
     "unexpectedError": "Une erreur inattendue s’est produite. Merci de réessayer.",
-    "misc": "Divers",
-    "oops": "Oups…",
     "loadError": "Impossible de rafraîchir. Balaye vers le bas pour réessayer.",
     "close": "Fermer",
-    "networkError": "Problème de connexion",
     "info": "Info"
   },
   "inventory": {

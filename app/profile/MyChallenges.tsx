@@ -14,7 +14,7 @@ import {
 import { Ionicons } from "@expo/vector-icons";
 import { useRouter } from "expo-router";
 import { doc, onSnapshot, getDoc } from "firebase/firestore";
-import { db, auth } from "../../constants/firebase-config";
+import { db, auth } from "@/constants/firebase-config";
 import Animated, { FadeInUp, ZoomIn } from "react-native-reanimated";
 import { LinearGradient } from "expo-linear-gradient";
 import { useTheme } from "../../context/ThemeContext";

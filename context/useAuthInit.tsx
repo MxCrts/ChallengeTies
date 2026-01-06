@@ -1,7 +1,7 @@
 import config from "../config";
 import { useEffect, useState } from "react";
 import { onAuthStateChanged } from "firebase/auth";
-import { auth } from "../constants/firebase-config";
+import { auth } from "@/constants/firebase-config";
 import {
   initializeUserInFirestore,
   initializeLeaderboardEntry,

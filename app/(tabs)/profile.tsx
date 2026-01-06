@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useMemo } from "react";
+import React, { useState, useEffect, useMemo, useCallback } from "react";
 import {
   View,
   Text,
@@ -10,12 +10,12 @@ import {
   Dimensions,
   StatusBar,
   I18nManager,
+  Modal,
 } from "react-native";
-
 import { useRouter } from "expo-router";
 import { Ionicons } from "@expo/vector-icons";
 import { doc, onSnapshot } from "firebase/firestore";
-import { auth, db } from "../../constants/firebase-config";
+import { auth, db } from "@/constants/firebase-config";
 import { LinearGradient } from "expo-linear-gradient";
 import { useProfileUpdate } from "../../context/ProfileUpdateContext";
 import { useTheme } from "../../context/ThemeContext";
@@ -24,12 +24,13 @@ import CustomHeader from "@/components/CustomHeader";
 import Animated, { FadeInUp, ZoomIn } from "react-native-reanimated";
 import GlobalLayout from "../../components/GlobalLayout";
 import designSystem from "../../theme/designSystem";
-import { useTranslation } from "react-i18next";
+import { useTranslation, Trans  } from "react-i18next";
 // ✅ à ajouter
 import BannerSlot from "@/components/BannerSlot";
 // 🆕 Inventaire (résumé)
 import InventorySection from "@/components/InventorySection";
-
+import { useFocusEffect } from "@react-navigation/native";
+import AsyncStorage from "@react-native-async-storage/async-storage";
 import { BlurView } from "expo-blur";
 import { useTutorial } from "../../context/TutorialContext";
 import TutorialModal from "../../components/TutorialModal";
@@ -121,6 +122,7 @@ export default function ProfileScreen() {
  const insets = useSafeAreaInsets();
 const tabBarHeight = useBottomTabBarHeight();
 const [adHeight, setAdHeight] = useState(0);
+const [showPioneerModal, setShowPioneerModal] = useState(false);
 
 const bottomContentPadding =
   (showBanners ? adHeight : 0) + tabBarHeight + insets.bottom + normalizeSize(90);
@@ -137,6 +139,7 @@ const totalInventoryItems = useMemo(() => {
     return sum;
   }, 0);
 }, [userData]);
+const handleAdHeight = useCallback((h:number)=>setAdHeight(h),[]);
 
 
    const {
@@ -180,6 +183,38 @@ const totalInventoryItems = useMemo(() => {
 
     return () => unsubscribe();
   }, [profileUpdated, t]);
+
+useFocusEffect(
+  useCallback(() => {
+    let cancelled = false;
+
+    const checkPioneerFlag = async () => {
+      try {
+        const flag = await AsyncStorage.getItem("pioneerJustGranted");
+        if (cancelled) return;
+
+        if (flag === "1") {
+          setShowPioneerModal(true);
+
+          // ✅ évite tout rebond / re-open même si la nav bug
+          await AsyncStorage.multiRemove([
+            "pioneerJustGranted",
+          ]);
+        }
+      } catch {}
+    };
+
+    // only if user loaded (sinon inutile)
+    if (auth.currentUser?.uid) {
+      checkPioneerFlag();
+    }
+
+    return () => {
+      cancelled = true;
+    };
+  }, [])
+);
+
 
     // Sections
   const sections = useMemo<ProfileSection[]>(
@@ -397,7 +432,7 @@ const totalInventoryItems = useMemo(() => {
     showsVerticalScrollIndicator={false}
     contentInset={{ top: SPACING, bottom: normalizeSize(80) }}
     keyboardShouldPersistTaps="handled"
-   accessibilityRole="scrollbar"
+   accessibilityRole="summary"
    accessibilityLabel={t("profile.sectionsListA11y", {
      defaultValue: "Contenu du profil et liste des sections",
    })}
@@ -760,7 +795,7 @@ const totalInventoryItems = useMemo(() => {
     }}
     pointerEvents="box-none"
   >
-    <BannerSlot onHeight={(h) => setAdHeight(h)} />
+    <BannerSlot onHeight={handleAdHeight} />
   </View>
 )}
 
@@ -779,6 +814,48 @@ const totalInventoryItems = useMemo(() => {
             />
           </BlurView>
         )}
+        {/* 🌟 Modal Pioneer (1000 premiers) — déclenché uniquement à l’ouverture du profil */}
+<Modal
+  visible={showPioneerModal}
+  transparent
+  animationType="fade"
+  onRequestClose={() => setShowPioneerModal(false)}
+>
+  <View style={styles.blurView}>
+    <View style={styles.modalContainer}>
+      <Ionicons name="sparkles" size={normalizeSize(36)} color="#FFB800" />
+
+      <Text style={styles.modalTitle} numberOfLines={2} adjustsFontSizeToFit>
+        {t("pioneerModal.title")}
+      </Text>
+
+      <Text style={styles.modalDescription}>
+  <Trans
+    i18nKey="pioneerModal.description"
+    values={{ first: 1000, trophies: 50 }}
+    components={{
+      b: <Text style={styles.modalBold} />,
+    }}
+  />
+</Text>
+
+      <TouchableOpacity
+        onPress={() => setShowPioneerModal(false)}
+        style={styles.nextButton}
+        accessibilityRole="button"
+        accessibilityLabel={t("pioneerModal.closeA11y", {
+          defaultValue: "Fermer la fenêtre Pioneer",
+        })}
+      >
+        <Text style={styles.nextButtonText}>
+          {t("pioneerModal.cta", { defaultValue: "Let's go 🚀" })}
+        </Text>
+        <Ionicons name="arrow-forward" size={normalizeSize(16)} color="#FFF" />
+      </TouchableOpacity>
+    </View>
+  </View>
+</Modal>
+
       </LinearGradient>
     </GlobalLayout>
   );
@@ -870,7 +947,9 @@ editFab: {
   shadowOpacity: 0.25,
   shadowRadius: 6,
 },
-
+modalBold: {
+  fontFamily: "Comfortaa_700Bold",
+},
 editFabInner: {
   flexDirection: "row",
   alignItems: "center",

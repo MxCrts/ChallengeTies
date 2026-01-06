@@ -12,7 +12,7 @@ import {
 import { Ionicons } from "@expo/vector-icons";
 import { LinearGradient } from "expo-linear-gradient";
 import { doc, onSnapshot } from "firebase/firestore";
-import { auth, db } from "../constants/firebase-config";
+import { auth, db } from "@/constants/firebase-config";
 import { useCurrentChallenges } from "../context/CurrentChallengesContext";
 import { Video, ResizeMode } from "expo-av";
 import { useTranslation } from "react-i18next";

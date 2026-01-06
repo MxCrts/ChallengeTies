@@ -24,7 +24,7 @@ import {
 import { useLocalSearchParams, useNavigation } from "expo-router";
 import { Ionicons } from "@expo/vector-icons";
 import { LinearGradient } from "expo-linear-gradient";
-import { auth, db } from "../../constants/firebase-config";
+import { auth, db } from "@/constants/firebase-config";
 import { useChat } from "../../context/ChatContext";
 import { useTheme } from "../../context/ThemeContext";
 import { useSafeAreaInsets } from "react-native-safe-area-context";

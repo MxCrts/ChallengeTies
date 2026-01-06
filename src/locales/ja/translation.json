@@ -527,26 +527,26 @@
   "streakBonusTitle": "連続ボーナス",
   "streakBonusMessage": "🎯 {{streak}} 日連続達成で +{{bonus}} ！",
 
-  "challengeDetails": {
-    "noDescription": "説明がありません",
+"challengeDetails": {
+    "noDescription": "説明はありません",
+    "participantsLabel": "参加者",
     "fetchError": "チャレンジを取得できませんでした。",
     "untitled": "チャレンジ",
-    "joinError": "チャレンジに参加できませんでした。再試行してください。",
-    "completeError": "チャレンジを完了できませんでした。",
+    "joinError": "参加できませんでした。もう一度お試しください。",
+    "completeError": "完了できませんでした。",
     "loading": "読み込み中…",
 
-    "shareMessage": "ChallengeTies の「{{title}}」に一緒に挑戦しよう！",
-    "participants_one": "{{count}} 参加者",
-"participants_other": "{{count}} 参加者"
-,
+    "shareMessage": "ChallengeTiesで「{{title}}」に一緒に参加しよう！",
+    "participants_one": "参加者 {{count}} 人",
+    "participants_other": "参加者 {{count}} 人",
 
-    "takeChallenge": "チャレンジを開始",
+    "takeChallenge": "チャレンジに参加",
     "inProgress": "進行中",
-    "markToday": "今日をマーク",
-    "markTodayHint": "今日の進捗を追加します。",
-    "completeChallenge": "チャレンジを完了",
+    "markToday": "今日を記録",
+    "markTodayHint": "今日の分を進捗に追加します。",
+    "completeChallenge": "チャレンジ完了",
 
-    "reviewAfterComplete": "⚠️ このチャレンジを完了するとレビューを投稿できます 🏆",
+    "reviewAfterComplete": "⚠️ レビューするにはこのチャレンジを完了する必要があります 🏆",
 
     "chat": "チャット",
     "days": "日",
@@ -557,39 +557,59 @@
 
     "share": "共有",
     "shareA11y": "このチャレンジを共有",
-    "linkCopied": "リンクをコピーしました",
+    "linkCopied": "リンクをクリップボードにコピーしました",
 
     "stats": "統計",
     "statsA11y": "統計を見る",
 
-    "invite": "友達を招待",
-    "inviteAFriend": "友達を招待",
-    "inviteError": "招待の共有に失敗しました",
-    "inviteA11y": "このチャレンジに友達を招待",
+    "invite": "友だちを招待",
+    "inviteAFriend": "友だちを招待",
+    "inviteError": "招待を共有できませんでした",
+    "inviteA11y": "このチャレンジに友だちを招待",
 
-    "needHelp": "アドバイスが必要？",
+    "needHelp": "ヒントが必要？",
     "leaveReview": "レビューを書く",
-    "alreadyReviewed": "このチャレンジにはすでにレビュー済みです。",
-    "reviewSectionTitle": "みんなのレビュー",
-    "noReviewsYet": "まだレビューがありません。",
+    "alreadyReviewed": "このチャレンジはすでにレビュー済みです。",
+    "reviewSectionTitle": "みんなの感想",
+    "noReviewsYet": "このチャレンジにはまだレビューがありません。",
     "yourReview": "あなたのレビュー",
-    "reviewPlaceholder": "チャレンジを終えてどう感じたかを書いてみよう…",
+    "reviewPlaceholder": "完了後の感想を共有してね…",
     "submitReview": "送信",
     "deleteReview": "削除",
     "confirmDeleteReview": "このレビューを削除しますか？",
 
     "uncategorized": "未分類",
-    "daysCompleted": "日間達成",
+    "daysCompleted": "完了した日数",
+    "takeChallengeA11y": "チャレンジを開始",
+  "takeChallengeHint": "期間を選択し、確認して開始します。",
+  "completeChallengeA11y": "チャレンジを完了",
+  "completeChallengeHint": "報酬を受け取るための完了画面を開きます。",
     "alreadyMarked": "今日はすでに記録済み",
 
     "challenge": "チャレンジ",
     "accessDenied": "アクセス拒否",
-    "chatAccessDenied": "チャットに入るにはチャレンジに参加する必要があります。",
+    "chatAccessDenied": "チャットを見るには先にチャレンジに参加してください。",
 
     "backButton": "戻る",
-    "backButtonHint": "前の画面に戻る"
-  },
+    "backButtonHint": "前の画面に戻る",
 
+    "actions": {
+      "best": "おすすめ",
+      "inviteA11y": "デュオに友だちを招待",
+      "inviteHint": "招待を送ってリアルタイムのデュオ対決にしよう。",
+      "inviteHintDuo": "このチャレンジはすでにデュオです。",
+      "inviteHintOffline": "招待には接続が必要です。",
+      "inviteSub": "最も拡散：リアルタイム対決",
+      "shareHint": "おしゃれな共有カードを作成。",
+      "shareSub": "プレミアムカード＋リンク",
+      "chatHint": "チャレンジのチャットを開く。",
+      "chatSub": "モチベ＋証拠",
+      "saveHint": "このチャレンジをお気に入りに追加。",
+      "saveSub": "1タップで見つかる",
+      "statsHint": "カレンダーと進捗を見る。",
+      "statsSub": "連続＋月"
+    }
+  },
   "editYourReview": "レビューを編集",
   "deleteReview": "レビューを削除",
   "saveReview": "保存",
@@ -601,6 +621,7 @@
   "duo": {
     "title": "デュオチャレンジ",
     "you": "あなた",
+    "modeShort": "デュオ",
     "partner": "パートナー",
 
     "leading": "あなたがリード中！",
@@ -2190,9 +2211,81 @@
     "notForYouTitle": "おっと",
     "notForYouMessage": "この招待はこのアカウント向けではありません。"
   },
-
+  "homeZ": {
+    "hero": {
+      "brand": "ChallengeTies",
+      "headline": "今日のきっかけ。",
+      "sub": "1つの挑戦。1タップ。続けたいなら：デュオ。",
+      "duoProof": "デュオなら続く。",
+      "ctaShort": "始める",
+      "ctaA11y": "始めてチャレンジを選ぶ"
+    },
+    "todayHub": {
+      "badge": "今日",
+      "primaryActiveShort": "記録",
+      "primaryDuoShort": "デュオ",
+      "titleActive2": "今日記録。連続を守ろう。",
+      "titleNone2": "チャレンジを選ぶ。今日始めよう。",
+      "subActive2": "1タップで記録。その後：誰かを招待して継続率を倍に。",
+      "subNone2": "一番難しいのは最初の一歩。ソロ、デュオ…または作成。",
+      "primaryActiveHint2": "1タップで今日を記録。",
+      "progress": "{{done}}/{{total}}日",
+      "micro2": "デュオ＝モチベーション×2。今すぐ。",
+      "openActiveA11y": "進行中のチャレンジを開く",
+      "openActiveHint": "進捗確認や友達招待のために開く。",
+      "createSub": "あなたの挑戦、あなたのルール。",
+      "primaryDuoA11y": "デュオで友達を招待",
+      "primaryDuoHint": "チャレンジを選んでデュオに招待。",
+      "soloCardA11y": "ソロチャレンジを選択",
+      "soloCardHint": "Exploreを開いてソロを選択。",
+      "soloCard": "ソロ",
+      "soloCardSub": "選ぶ。始める。続ける。",
+      "solo": "ソロで続ける",
+      "soloA11y": "ソロで続ける",
+      "soloHint": "パートナーなしで挑戦。",
+      "inviteSub2": "招待。継続。成功。"
+    },
+    "duoNudge": {
+      "a11y": "デュオのおすすめ",
+      "title": "デュオなら続けられる。",
+      "sub": "誰かを招待。同じ挑戦、同じペース。",
+      "cta": "デュオ",
+      "ctaA11y": "デュオで友達を招待",
+      "solo": "ソロのまま",
+      "soloA11y": "ソロのまま"
+    },
+    "discover": {
+      "title": "発見",
+      "subtitle2": "大事なもの。残りは下に。",
+      "leaderboard": "ランキング",
+      "leaderboardSub2": "社会的証明。モチベーション。",
+      "leaderboardA11y": "ランキングを開く",
+      "leaderboardHint": "他の人と進捗を比較。",
+      "tips": "ヒント",
+      "tipsSub2": "1分。即行動。",
+      "tipsA11y": "ヒントを開く",
+      "tipsHint": "続けるための簡単なヒント。",
+      "newFeatures": "新機能",
+      "newFeaturesSub": "発見。投票。アプリを進化。",
+      "newFeaturesA11y": "新機能",
+      "newFeaturesHint": "新機能を見て次を投票。"
+    }
+  }
+,
   "invitationS": {
     "shareTitle": "デュオ招待",
+    "later": "あとで",
+    "ctaInvite": "招待する",
+    "startSoloShort": "ソロ",
+    "subtitle": "リンクを共有。友だちはこのチャレンジにデュオで参加できます。",
+  "whyDuo": "2人だと続けやすい。シンプルで、ちゃんと効く。",
+    "ctaChange": "変更",
+    "startSolo": "ソロで開始",
+    "a11yStartSoloHint": "今すぐこのチャレンジをソロで開始します。",
+    "ctaDone": "OK",
+    "durationLabel": "期間",
+    "changeDuration": "期間を変更",
+    "linkCopiedInline": "リンクをコピーしました ✅ どこにでも貼り付けできます。",
     "sendTitle": "友達を招待",
     "shareSubtitle": "「{{challenge}}」（{{days}}日間）用のリンクを生成。アプリ → 直接開く。未インストール → ストアへ。",
     "shareHint": "このリンクはどこでも使えるユニバーサルリンクです。",
@@ -2241,6 +2334,8 @@
     "close": "閉じる",
     "notLoggedIn": "ログインが必要です。",
     "sending": "送信中…",
+    "edit": "編集",
+    "hide": "非表示",
     "cancel": "キャンセル",
     "continue": "続ける",
     "errorTitle": "エラー"
@@ -3936,35 +4031,6 @@
   "invitationToChallenge": "チャレンジ「{{challenge}}」への招待",
   "receivedOn": "{{date}} に受信",
   "locale": "ja-JP",
-
-  "firstPick": {
-    "title": "最初のチャレンジを選ぼう！",
-    "subtitle": "どのモードで始めたい？",
-    "chooseSolo": "ソロを選ぶ",
-    "chooseSoloShort": "ソロで選ぶ",
-"chooseDuoShort": "デュオで選ぶ",
-    "chooseDuo": "デュオを選ぶ",
-    "cardHint": "タップしてこのチャレンジを選択します。",
-    "emptyTitle": "今はチャレンジがありません",
-    "emptySubtitle": "引っ張って更新するか、もう一度試してね。",
-    "modeDuo": "デュオ（おすすめ）",
-    "modeSolo": "ソロ",
-    "duoBadge": "デュオ",
-    "alreadyInvited": "このチャレンジにはすでに保留中の招待があります。",
-    "durationLabel": "期間：",
-    "offlineDuo": "オフラインです。デュオ招待を送るには再接続してください。",
-    "day_one": "{{count}} 日",
-    "day_other": "{{count}} 日",
-    "chooseMode": "モードを選択",
-    "skip": "スキップ",
-    "alert": {
-      "missingChoiceTitle": "選択されていません",
-      "missingChoiceBody": "チャレンジを選択してください。",
-      "modeTitle": "モード",
-      "modeBody": "デュオまたはソロを選択してください。"
-    }
-  },
-
   "access": {
     "editProfile": {
       "label": "プロフィール編集",
@@ -4030,6 +4096,8 @@
 
   "tutorial": {
     "progress": "ステップ",
+    "open": "チュートリアル",
+    "openHint": "30秒でChallengeTiesの使い方を確認しよう",
     "progressA11y": "{{current}} / {{total}} のステップ",
     "welcomeTagline": "あなたの旅はここから始まります。",
     "steps": {
@@ -4165,21 +4233,72 @@
       "contact": "困ったときは、アプリ内の「サポートに連絡」ボタンから、または公式サイトのコンタクトページからいつでもメッセージを送ってください 🌍。"
     }
   },
-
-  "common": {
+"common": {
     "back": "戻る",
-    "skip": "スキップ",
+    "retry": "再試行",
+    "loading": "読み込み中...",
+    "recommended": "おすすめ",
+    "networkError": "接続に問題があります",
+    "oops": "おっと、もう一度試してね。",
     "challenge": "チャレンジ",
-    "error": "エラー",
-    "unexpectedError": "予期せぬエラーが発生しました。もう一度お試しください。",
     "misc": "その他",
-    "oops": "おっと…",
-    "loadError": "更新できませんでした。下にスワイプして再読み込みしてください。",
+    "skip": "スキップ",
+    "error": "エラー",
+    "unexpectedError": "予期しないエラーが発生しました。もう一度お試しください。",
+    "loadError": "更新できません。下にスワイプして再試行してください。",
     "close": "閉じる",
-    "networkError": "通信エラーが発生しました",
     "info": "情報"
   },
-
+ "firstPick": {
+  "day_one": "{{count}}日",
+  "day_other": "{{count}}日",
+  "progress": "{{total}} 中 {{current}}",
+  "cardHint": "タップして選択。",
+  "step1": {
+    "title": "旅を始めよう",
+    "subtitle": "チャレンジを選ぼう。さあ開始。",
+    "cta": "次へ",
+    "ctaDisabled": "選ぶ",
+    "shuffleLink": "見つからない？別の候補を見る",
+    "shuffleA11y": "他のチャレンジを表示"
+  },
+  "step2": {
+    "title": "ソロ or デュオ？",
+    "subtitle": "デュオの方が続きやすい。やめにくくなる。",
+    "duoDesc": "デュオなら継続しやすい。次に友だちを招待してね。",
+    "cta": "次へ",
+    "ctaDisabled": "選ぶ",
+    "duoTitle": "デュオ",
+    "duoOfflineLine": "招待には接続が必要です。",
+    "soloTitle": "ソロ",
+    "soloDesc": "すぐ開始。招待なし。",
+    "hintDuo": "次に友だちを招待してね。",
+    "hintDuoOffline": "ネットが必要です。",
+    "hintSolo": "すぐ始まります。"
+  },
+  "step3": {
+    "title": "どれくらい続けられる？",
+    "subtitle": "7日がおすすめ。あとで調整できます。",
+    "cta": "開始",
+    "ctaDisabled": "選ぶ",
+    "durationLabel": "期間",
+    "durationNote": "あとでいつでも調整できます。",
+    "recapDuo": "モード：デュオ",
+    "recapSolo": "モード：ソロ"
+  },
+  "duoBadge": "DUO",
+  "offlineDuo": "デュオで友だちを招待するにはネット接続が必要です。",
+  "offlineDuoShort": "回線",
+  "alreadyInvited": "このチャレンジの招待はすでに送信されています。",
+  "a11yCtaNoChallenge": "続けるにはチャレンジを選んでください。",
+  "a11yCtaFull": "{{mode}}で続行、{{days}}日、チャレンジ「{{title}}」。",
+  "emptyTitle": "利用できるチャレンジがありません",
+  "emptySubtitle": "下に引っ張って再試行。",
+  "alert": {
+    "missingChoiceBody": "続けるにはチャレンジを選んでください。"
+  }
+}
+,
   "inventory": {
     "title": "インベントリ",
     "subtitle": "ここで特別ボーナスとストリーク保護アイテムを管理できます。",

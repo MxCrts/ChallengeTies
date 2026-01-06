@@ -12,7 +12,7 @@ import {
   FlatList,
 } from "react-native";
 import { useTranslation } from "react-i18next";
-import { auth, db, storage } from "../constants/firebase-config";
+import { auth, db, storage } from "@/constants/firebase-config";
 import {
   Timestamp,
   doc,

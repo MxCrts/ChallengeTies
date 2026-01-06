@@ -15,7 +15,7 @@ import {
   serverTimestamp,
   doc,
 } from "firebase/firestore";
-import { db, auth } from "../constants/firebase-config";
+import { db, auth } from "@/constants/firebase-config";
 import { checkForAchievements } from "../helpers/trophiesHelpers";
 import { recordChatMessage, incDuoMessages } from "@/src/services/metricsService";
 // On décrit TOUS les champs possibles, y compris ceux des messages système

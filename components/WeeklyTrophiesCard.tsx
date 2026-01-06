@@ -11,7 +11,7 @@ import {
 } from "react-native";
 import { LinearGradient } from "expo-linear-gradient";
 import { useTranslation } from "react-i18next";
-import { auth, db } from "../constants/firebase-config";
+import { auth, db } from "@/constants/firebase-config";
 import { doc, onSnapshot } from "firebase/firestore";
 import type { DimensionValue } from "react-native";
 import { useTrophiesEconomy } from "../hooks/useTrophiesEconomy";

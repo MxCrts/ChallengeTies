@@ -4,7 +4,7 @@ import Constants from "expo-constants";
 import { Platform } from "react-native";
 import AsyncStorage from "@react-native-async-storage/async-storage";
 import { doc, getDoc, updateDoc, setDoc } from "firebase/firestore";
-import { db, auth } from "../constants/firebase-config";
+import { db, auth } from "@/constants/firebase-config";
 import i18n from "../i18n";
 
 type LocalizedPayload = {

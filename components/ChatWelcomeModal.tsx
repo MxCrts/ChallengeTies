@@ -18,7 +18,7 @@ import { LinearGradient } from "expo-linear-gradient";
 import Animated, { FadeInDown, FadeOut, FadeIn } from "react-native-reanimated";
 import * as Haptics from "expo-haptics";
 
-import { auth, db } from "../constants/firebase-config";
+import { auth, db } from "@/constants/firebase-config";
 import { useTheme } from "../context/ThemeContext";
 import { useTranslation } from "react-i18next";
 import designSystem from "../theme/designSystem";

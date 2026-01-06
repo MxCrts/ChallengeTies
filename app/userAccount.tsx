@@ -17,7 +17,7 @@ import { Ionicons } from "@expo/vector-icons";
 import { LinearGradient } from "expo-linear-gradient";
 import { useTheme } from "../context/ThemeContext";
 import { useRouter } from "expo-router";
-import { auth } from "../constants/firebase-config";
+import { auth } from "@/constants/firebase-config";
 import { sendEmailVerification } from "firebase/auth";
 import Animated, { FadeInUp } from "react-native-reanimated";
 import { useTranslation } from "react-i18next";

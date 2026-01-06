@@ -26,7 +26,7 @@ import {
   arrayUnion,
   type FieldValue,
 } from "firebase/firestore";
-import { auth, db, storage } from "../../constants/firebase-config";
+import { auth, db, storage } from "@/constants/firebase-config";
 import * as ImagePicker from "expo-image-picker";
 import { TextInput } from "react-native-paper";
 import { LinearGradient } from "expo-linear-gradient";

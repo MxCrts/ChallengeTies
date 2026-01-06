@@ -24,7 +24,7 @@ import Animated, {
   withRepeat,
   withSequence,
 } from "react-native-reanimated";
-import { db, auth } from "../../constants/firebase-config";
+import { db, auth } from "@/constants/firebase-config";
 import { useTrophy } from "../../context/TrophyContext";
 import { achievementsList } from "../../helpers/achievementsConfig";
 import { useTheme } from "../../context/ThemeContext";

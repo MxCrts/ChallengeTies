@@ -5,7 +5,7 @@ import {
   serverTimestamp,
   increment,
 } from "firebase/firestore";
-import { db, auth } from "../constants/firebase-config";
+import { db, auth } from "@/constants/firebase-config";
 
 // 👉 On ne garde que ces 2 types de récompenses
 export type DailyRewardType = "streakPass" | "trophies";

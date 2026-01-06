@@ -1,7 +1,7 @@
 // src/services/helperService.ts
 
 import { doc, getDoc } from "firebase/firestore";
-import { db } from "../constants/firebase-config";
+import { db } from "@/constants/firebase-config";
 
 export type ChallengeHelperContent = {
   titre: string;

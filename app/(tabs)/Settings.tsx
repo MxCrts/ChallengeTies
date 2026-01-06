@@ -22,7 +22,7 @@ import * as Notifications from "expo-notifications";
 import { Ionicons } from "@expo/vector-icons";
 import { useTheme } from "../../context/ThemeContext";
 import { useRouter, Link } from "expo-router";
-import { auth, db } from "../../constants/firebase-config";
+import { auth, db } from "@/constants/firebase-config";
 import { doc, updateDoc, onSnapshot } from "firebase/firestore";
 import AsyncStorage from "@react-native-async-storage/async-storage";
 import { LinearGradient } from "expo-linear-gradient";
@@ -147,11 +147,13 @@ const getDynamicStyles = (currentTheme: Theme, isDarkMode: boolean) => ({
     thumbColor: isDarkMode ? currentTheme.colors.textPrimary : "#fff",
   },
   languagePicker: {
-    color: currentTheme.colors.textSecondary,
-    dropdownIconColor: isDarkMode
-      ? currentTheme.colors.textPrimary
-      : currentTheme.colors.primary,
-  },
+  color: isDarkMode
+    ? currentTheme.colors.textPrimary
+    : currentTheme.colors.textSecondary,
+  dropdownIconColor: isDarkMode
+    ? currentTheme.colors.textPrimary
+    : currentTheme.colors.primary,
+},
   buttonGradient: {
     colors: [
       currentTheme.colors.primary,
@@ -839,11 +841,14 @@ export default function Settings() {
                       size={normalizeSize(22)}
                       color={currentTheme.colors.secondary}
                     />
-                    <Text style={[styles.premiumTitle]}>
-                      {t("premium.header", {
-                        defaultValue: "ChallengeTies Premium",
-                      })}
-                    </Text>
+                    <Text
+  style={[
+    styles.premiumTitle,
+    { color: isDarkMode ? currentTheme.colors.textPrimary : "#000" },
+  ]}
+>
+  {t("premium.header", { defaultValue: "ChallengeTies Premium" })}
+</Text>
                   </View>
 
                   <View

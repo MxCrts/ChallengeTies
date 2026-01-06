@@ -1,5 +1,5 @@
 // components/WelcomeBonusModal.tsx
-import React, { useEffect, useMemo } from "react";
+import React, { useEffect, useMemo, useRef, useState } from "react";
 import {
   Modal,
   View,
@@ -32,6 +32,9 @@ import { useSafeAreaInsets } from "react-native-safe-area-context";
 import LottieView from "lottie-react-native";
 import type { ViewStyle } from "react-native";
 import ConfettiCannon from "react-native-confetti-cannon";
+import { BlurView } from "expo-blur";
+import { Pressable } from "react-native";
+
 
 const { width: SCREEN_WIDTH, height: SCREEN_HEIGHT } = Dimensions.get("window");
 
@@ -105,10 +108,14 @@ const WelcomeBonusModal: React.FC<WelcomeBonusModalProps> = ({
   const chestScale = useSharedValue(1);
   const todayPulse = useSharedValue(0);
   const globalGlow = useSharedValue(0);
-  
+const [showConfetti, setShowConfetti] = useState(false);
+const [claimSuccess, setClaimSuccess] = useState(false);
 
   useEffect(() => {
     if (!visible) return;
+    setClaimSuccess(false);
+setShowConfetti(false);
+globalGlow.value = 0.2;
 
     // scale d'apparition de la carte
     cardScale.value = 0.9;
@@ -162,11 +169,20 @@ const WelcomeBonusModal: React.FC<WelcomeBonusModalProps> = ({
       -1,
       true
     );
-  }, [visible, cardScale, chestBob, chestScale, todayPulse]);
+  }, [visible, cardScale, chestBob, chestScale, todayPulse, globalGlow]);
 
-  const cardAnimatedStyle = useAnimatedStyle(() => ({
-    transform: [{ scale: cardScale.value }],
-  }));
+
+const cardAnimatedStyle = useAnimatedStyle<ViewStyle>(() => {
+  const lift = (1 - cardScale.value) * 16;
+
+  return {
+    transform: [
+      { scale: cardScale.value },
+      { translateY: lift },
+    ] as any,
+  };
+});
+
 
   const chestAnimatedStyle = useAnimatedStyle(() => {
     return {
@@ -299,21 +315,43 @@ const WelcomeBonusModal: React.FC<WelcomeBonusModalProps> = ({
   if (!visible) return null;
 
   const handleClaimPress = async () => {
-    if (loading) return;
+  if (loading) return;
+
+  // haptique + punch du coffre
+  try {
+    await Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Heavy).catch(() => {});
+  } catch {}
+
+  chestScale.value = withSequence(
+    withTiming(1.12, { duration: 120 }),
+    withSpring(1, { damping: 12, stiffness: 220 })
+  );
+
+  try {
+    await onClaim();
+
+    // ✅ moment dopamine
+    setClaimSuccess(true);
+    setShowConfetti(true);
 
     try {
-      await Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium).catch(
-        () => {}
-      );
+      await Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success).catch(() => {});
     } catch {}
 
-    try {
-      await onClaim();
+    // laisse le wow et ferme
+    setTimeout(() => {
+      setShowConfetti(false);
+      setClaimSuccess(false);
       onClose();
-    } catch (e) {
-      console.error("WelcomeBonus onClaim error:", e);
-    }
-  };
+    }, 700);
+  } catch (e) {
+    console.error("WelcomeBonus onClaim error:", e);
+    try {
+      await Haptics.notificationAsync(Haptics.NotificationFeedbackType.Error).catch(() => {});
+    } catch {}
+  }
+};
+
 
   const columns = clampedTotal <= 3 ? clampedTotal : 4;
   const dayTileWidth =
@@ -352,6 +390,29 @@ const WelcomeBonusModal: React.FC<WelcomeBonusModalProps> = ({
           },
         ]}
       >
+        {/* Backdrop premium */}
+{Platform.OS === "ios" ? (
+  <BlurView intensity={35} tint="dark" style={StyleSheet.absoluteFillObject} />
+) : (
+  <View
+    style={[
+      StyleSheet.absoluteFillObject,
+      { backgroundColor: "rgba(0,0,0,0.25)" },
+    ]}
+  />
+)}
+
+{/* Confetti au claim */}
+{showConfetti && (
+  <ConfettiCannon
+    count={90}
+    origin={{ x: SCREEN_WIDTH / 2, y: 0 }}
+    fadeOut
+    fallSpeed={2600}
+    explosionSpeed={520}
+  />
+)}
+
         <Animated.View
           style={[
             StyleSheet.absoluteFillObject,
@@ -474,9 +535,15 @@ const WelcomeBonusModal: React.FC<WelcomeBonusModalProps> = ({
                     colors={["#FFF8E1", "#FEF3C7", "#FDE68A"]}
                     style={styles.todayCard}
                   >
-                    <Animated.View
-                      style={[styles.todayGlow, todayGlowStyle]}
-                    />
+                    <Animated.View style={[styles.todayGlow, todayGlowStyle]} pointerEvents="none">
+  <LinearGradient
+    colors={["rgba(251,146,60,0.55)", "transparent", "rgba(236,72,153,0.18)"]}
+    style={StyleSheet.absoluteFillObject}
+    start={{ x: 0, y: 0 }}
+    end={{ x: 1, y: 1 }}
+  />
+</Animated.View>
+
                     <View style={styles.todayIconCircle}>
                       <Ionicons
                         name={baseRewardIcon}
@@ -499,6 +566,13 @@ const WelcomeBonusModal: React.FC<WelcomeBonusModalProps> = ({
                       >
                         {rewardLabel}
                       </Text>
+                      {claimSuccess && (
+  <Animated.View entering={FadeInUp.duration(220)} style={{ marginTop: normalize(6) }}>
+    <Text style={styles.claimedNow}>
+      {t("welcomeBonus.claimSuccess", { defaultValue: "Ajouté ✅" })}
+    </Text>
+  </Animated.View>
+)}
                       {rewardType === "premium" && (
                         <Text
                           style={[styles.todayHint, { color: "#4B5563" }]}
@@ -610,20 +684,31 @@ const WelcomeBonusModal: React.FC<WelcomeBonusModalProps> = ({
                 </View>
 
                 {/* CTA principal */}
-                <TouchableOpacity
-                  style={[styles.ctaButton, loading && { opacity: 0.7 }]}
-                  activeOpacity={0.9}
-                  onPress={handleClaimPress}
-                  disabled={loading}
-                  accessibilityRole="button"
-                  accessibilityLabel={ctaLabel}
-                >
+                <Pressable
+  onPress={handleClaimPress}
+  disabled={loading}
+  accessibilityRole="button"
+  accessibilityLabel={ctaLabel}
+  style={({ pressed }) => [
+    styles.ctaButton,
+    loading && { opacity: 0.7 },
+    pressed && { transform: [{ scale: 0.985 }] }, // 👈 press premium
+  ]}
+>
+
                   <LinearGradient
                     colors={[current.colors.secondary, current.colors.primary]}
                     style={styles.ctaInner}
                     start={{ x: 0, y: 0 }}
                     end={{ x: 1, y: 0 }}
                   >
+                    <LinearGradient
+  colors={["rgba(255,255,255,0.32)", "transparent"]}
+  style={StyleSheet.absoluteFillObject}
+  start={{ x: 0, y: 0 }}
+  end={{ x: 0, y: 1 }}
+  pointerEvents="none"
+/>
                     <Text
                       style={[
                         styles.ctaText,
@@ -644,7 +729,7 @@ const WelcomeBonusModal: React.FC<WelcomeBonusModalProps> = ({
                       color="#FFF"
                     />
                   </LinearGradient>
-                </TouchableOpacity>
+                </Pressable>
 
                 {/* Hint bas */}
                 <Text
@@ -688,12 +773,13 @@ const styles = StyleSheet.create({
      alignItems: "center",
      paddingHorizontal: normalize(12),
    },
-   modalContainer: {
-     width: SCREEN_WIDTH * 0.94,
-     maxWidth: normalize(460),
-     borderRadius: normalize(30),
-     overflow: "hidden",
-   },
+  modalContainer: {
+  width: SCREEN_WIDTH * 0.94,
+  maxWidth: normalize(460),
+  borderRadius: normalize(30),
+  overflow: "hidden",
+} as ViewStyle,
+
    borderWrap: {
      padding: 2,
      borderRadius: normalize(30),
@@ -731,6 +817,22 @@ const styles = StyleSheet.create({
     textTransform: "uppercase",
     letterSpacing: 0.7,
   },
+  ctaInner: {
+  borderRadius: normalize(999),
+  paddingVertical: normalize(11),
+  paddingHorizontal: normalize(18),
+  flexDirection: "row",
+  alignItems: "center",
+  justifyContent: "center",
+  borderWidth: 1,
+  borderColor: "rgba(255,255,255,0.22)",
+  shadowColor: "#000",
+  shadowOffset: { width: 0, height: 10 },
+  shadowOpacity: 0.35,
+  shadowRadius: 16,
+  elevation: 10,
+},
+
   chestIconWrap: {
     width: normalize(150),          // 👈 coffre plus gros
     height: normalize(150),
@@ -798,6 +900,8 @@ const styles = StyleSheet.create({
     paddingHorizontal: normalize(12),
     flexDirection: "row",
     alignItems: "center",
+    borderWidth: 1,
+borderColor: "rgba(249,115,22,0.55)",
     overflow: "hidden",
     position: "relative",
     shadowColor: "#000",
@@ -806,14 +910,15 @@ const styles = StyleSheet.create({
     shadowRadius: 14,
     elevation: 8,
   },
-  todayGlow: {
-    position: "absolute",
-    top: -normalize(40),
-    bottom: -normalize(40),
-    left: -normalize(60),
-    right: -normalize(60),
-    backgroundColor: "rgba(251,146,60,0.35)",
-  },
+ todayGlow: {
+  ...StyleSheet.absoluteFillObject,
+  opacity: 0.55,
+},
+claimedNow: {
+  color: "#065F46",
+  fontWeight: "800",
+  fontSize: normalize(12),
+},
   todayIconCircle: {
     width: normalize(56),
     height: normalize(56),
@@ -915,14 +1020,6 @@ const styles = StyleSheet.create({
   ctaButton: {
     marginTop: normalize(10),
     marginBottom: normalize(4),
-  },
-  ctaInner: {
-    borderRadius: normalize(999),
-    paddingVertical: normalize(10),
-    paddingHorizontal: normalize(18),
-    flexDirection: "row",
-    alignItems: "center",
-    justifyContent: "center",
   },
   ctaText: {
     fontSize: normalize(15),

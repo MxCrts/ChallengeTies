@@ -1,6 +1,7 @@
-import { initializeApp } from "firebase/app";
+// constants/firebase-config.ts
+import { initializeApp, getApps, getApp } from "firebase/app";
 import { getFirestore } from "firebase/firestore";
-import { initializeAuth, getReactNativePersistence } from "firebase/auth";
+import { initializeAuth, getReactNativePersistence, getAuth } from "firebase/auth";
 import AsyncStorage from "@react-native-async-storage/async-storage";
 import { getStorage } from "firebase/storage";
 
@@ -14,10 +15,19 @@ const firebaseConfig = {
   measurementId: "G-71TM15XWT8",
 };
 
-export const app = initializeApp(firebaseConfig);
+// ✅ Singleton app
+export const app = getApps().length ? getApp() : initializeApp(firebaseConfig);
 
 export const db = getFirestore(app);
 export const storage = getStorage(app);
-export const auth = initializeAuth(app, {
-  persistence: getReactNativePersistence(AsyncStorage),
-});
+
+// ✅ Singleton auth (évite "already-initialized")
+export const auth = (() => {
+  try {
+    return getAuth(app);
+  } catch {
+    return initializeAuth(app, {
+      persistence: getReactNativePersistence(AsyncStorage),
+    });
+  }
+})();

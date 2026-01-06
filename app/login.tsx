@@ -29,7 +29,7 @@ import { useIsFocused } from "@react-navigation/native";
 import { useSafeAreaInsets, SafeAreaView } from "react-native-safe-area-context";
 import { useRouter } from "expo-router";
 import { signInWithEmailAndPassword } from "firebase/auth";
-import { auth } from "../constants/firebase-config";
+import { auth } from "@/constants/firebase-config";
 import { Ionicons } from "@expo/vector-icons";
 import { useTranslation } from "react-i18next";
 import { StatusBar as ExpoStatusBar } from "expo-status-bar";

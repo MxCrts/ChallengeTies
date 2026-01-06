@@ -4,7 +4,7 @@ import { Linking } from "react-native";
 import * as ExpoLinking from "expo-linking";
 import AsyncStorage from "@react-native-async-storage/async-storage";
 import { useRouter, useSegments } from "expo-router";
-import { auth } from "../constants/firebase-config";
+import { auth } from "@/constants/firebase-config";
 import { InteractionManager } from "react-native";
 
 

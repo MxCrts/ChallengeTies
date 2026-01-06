@@ -14,7 +14,7 @@ import {
 } from "react-native";
 import { Ionicons } from "@expo/vector-icons";
 import { LinearGradient } from "expo-linear-gradient";
-import { auth, db } from "../constants/firebase-config";
+import { auth, db } from "@/constants/firebase-config";
 import { useChat } from "../context/ChatContext";
 import designSystem from "../theme/designSystem";
 import { useTranslation } from "react-i18next";

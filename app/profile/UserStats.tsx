@@ -13,7 +13,7 @@ import {
 } from "react-native";
 import { Ionicons } from "@expo/vector-icons";
 import { doc, onSnapshot } from "firebase/firestore";
-import { db, auth } from "../../constants/firebase-config";
+import { db, auth } from "@/constants/firebase-config";
 import { useSavedChallenges } from "../../context/SavedChallengesContext";
 import { useCurrentChallenges } from "../../context/CurrentChallengesContext";
 import { LinearGradient } from "expo-linear-gradient";

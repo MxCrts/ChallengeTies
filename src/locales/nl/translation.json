@@ -536,66 +536,88 @@
   "microCapMessage": "Je hebt de wekelijkse limiet van micro-trofeeën bereikt.",
   "streakBonusTitle": "Reeksbonus",
   "streakBonusMessage": "🎯 +{{bonus}} voor {{streak}} dagen op rij!",
-  "challengeDetails": {
+ "challengeDetails": {
     "noDescription": "Geen beschrijving beschikbaar",
-    "fetchError": "De uitdaging kan niet worden opgehaald.",
+    "participantsLabel": "Deelnemers",
+    "fetchError": "Kan de uitdaging niet ophalen.",
     "untitled": "Uitdaging",
-    "joinError": "De uitdaging kan niet worden joinen. Probeer het opnieuw.",
-    "completeError": "De uitdaging kan niet worden voltooid.",
-    "loading": "Bezig met laden…",
+    "joinError": "Kan niet deelnemen. Probeer het opnieuw.",
+    "completeError": "Kan de uitdaging niet voltooien.",
+    "loading": "Laden…",
 
-    "shareMessage": "Doe met mij mee aan « {{title}} » op ChallengeTies!",
+    "shareMessage": "Doe met me mee aan “{{title}}” op ChallengeTies!",
     "participants_one": "{{count}} deelnemer",
     "participants_other": "{{count}} deelnemers",
 
     "takeChallenge": "Uitdaging aangaan",
     "inProgress": "Bezig",
-    "markToday": "Vandaag markeren",
+    "markToday": "Vandaag afvinken",
     "markTodayHint": "Voeg vandaag toe aan je voortgang.",
-    "completeChallenge": "Uitdaging voltooien",
+    "completeChallenge": "Uitdaging afronden",
 
-    "reviewAfterComplete": "⚠️ Je moet deze challenge voltooien voordat je een review kunt achterlaten 🏆",
+    "reviewAfterComplete": "⚠️ Je moet deze uitdaging afronden om een review te plaatsen 🏆",
 
     "chat": "Chat",
     "days": "dagen",
 
     "save": "Opslaan",
     "saved": "Opgeslagen",
-    "saveError": "Deze uitdaging kan niet worden opgeslagen",
+    "saveError": "Kan deze uitdaging niet opslaan",
 
     "share": "Delen",
     "shareA11y": "Deze uitdaging delen",
-    "linkCopied": "Link gekopieerd naar het klembord",
+    "linkCopied": "Link gekopieerd naar klembord",
 
     "stats": "Statistieken",
     "statsA11y": "Statistieken bekijken",
 
     "invite": "Vriend uitnodigen",
     "inviteAFriend": "Vriend uitnodigen",
-    "inviteError": "De uitnodiging kan niet worden gedeeld",
-    "inviteA11y": "Een vriend voor deze uitdaging uitnodigen",
+    "inviteError": "Kan de uitnodiging niet delen",
+    "inviteA11y": "Een vriend uitnodigen voor deze uitdaging",
 
-    "needHelp": "Nood aan tips?",
-    "leaveReview": "Review achterlaten",
-    "alreadyReviewed": "Je hebt al een review voor deze challenge achtergelaten.",
+    "needHelp": "Tips nodig?",
+    "leaveReview": "Review plaatsen",
+    "alreadyReviewed": "Je hebt deze uitdaging al beoordeeld.",
     "reviewSectionTitle": "Wat zij ervan vonden",
-    "noReviewsYet": "Nog geen reviews voor deze challenge.",
+    "noReviewsYet": "Nog geen reviews voor deze uitdaging.",
     "yourReview": "Jouw review",
-    "reviewPlaceholder": "Deel je ervaring nadat je deze challenge hebt afgerond…",
-    "submitReview": "Verzenden",
+    "reviewPlaceholder": "Deel hoe het voelde nadat je deze uitdaging afrondde…",
+    "submitReview": "Versturen",
     "deleteReview": "Verwijderen",
+     "takeChallengeA11y": "Start de uitdaging",
+  "takeChallengeHint": "Opent de duurselectie en bevestigt om te starten.",
+  "completeChallengeA11y": "Uitdaging voltooien",
+  "completeChallengeHint": "Opent het voltooiingsscherm om beloningen te ontvangen.",
     "confirmDeleteReview": "Deze review verwijderen?",
 
     "uncategorized": "Zonder categorie",
-    "daysCompleted": "voltooide dagen",
-    "alreadyMarked": "Vandaag al gevalideerd",
+    "daysCompleted": "dagen voltooid",
+    "alreadyMarked": "Vandaag al afgevinkt",
 
     "challenge": "Uitdaging",
     "accessDenied": "Toegang geweigerd",
-    "chatAccessDenied": "Je moet de uitdaging eerst starten om toegang te krijgen tot de chat.",
+    "chatAccessDenied": "Je moet eerst de uitdaging aangaan om toegang tot de chat te krijgen.",
 
     "backButton": "Terug",
-    "backButtonHint": "Terugkeren naar het vorige scherm"
+    "backButtonHint": "Terug naar het vorige scherm",
+
+    "actions": {
+      "best": "Top",
+      "inviteA11y": "Vriend uitnodigen voor duo",
+      "inviteHint": "Stuur een uitnodiging om dit een live duo-duel te maken.",
+      "inviteHintDuo": "Je bent al duo op deze uitdaging.",
+      "inviteHintOffline": "Verbinding vereist om een vriend uit te nodigen.",
+      "inviteSub": "Meest viraal: live duel",
+      "shareHint": "Maak een stijlvolle deelkaart.",
+      "shareSub": "Premium kaart + link",
+      "chatHint": "Open de chat van de uitdaging.",
+      "chatSub": "Motivatie + bewijs",
+      "saveHint": "Voeg deze uitdaging toe aan je favorieten.",
+      "saveSub": "Vind in 1 tik",
+      "statsHint": "Bekijk kalender en voortgang.",
+      "statsSub": "Reeksen + maand"
+    }
   },
 
   "editYourReview": "Je review bewerken",
@@ -609,6 +631,7 @@
   "duo": {
     "title": "Duo-uitdaging",
     "you": "Jij",
+    "modeShort": "Duo",
     "partner": "Partner",
 
     "leading": "Je ligt voor!",
@@ -2216,9 +2239,81 @@
     "notForYouTitle": "Oeps",
     "notForYouMessage": "Deze uitnodiging is niet bedoeld voor dit account."
   },
-
+"homeZ": {
+    "hero": {
+      "brand": "ChallengeTies",
+      "headline": "De trigger van vandaag.",
+      "sub": "Eén uitdaging. Eén tik. Wil je volhouden: Duo.",
+      "duoProof": "Duo helpt je vol te houden.",
+      "ctaShort": "Starten",
+      "ctaA11y": "Starten en een uitdaging kiezen"
+    },
+    "todayHub": {
+      "badge": "VANDAAG",
+      "primaryActiveShort": "Markeer",
+      "primaryDuoShort": "Duo",
+      "titleActive2": "Markeer vandaag. Bescherm je streak.",
+      "titleNone2": "Kies een uitdaging. Begin vandaag.",
+      "subActive2": "1 tik om te markeren. Daarna: nodig iemand uit en verdubbel je kans om vol te houden.",
+      "subNone2": "Het moeilijkste is de eerste stap. Solo, Duo… of maak er één.",
+      "primaryActiveHint2": "Markeer vandaag met één tik.",
+      "progress": "{{done}}/{{total}} dagen",
+      "micro2": "Duo = motivatie x2. Doe het nu.",
+      "openActiveA11y": "Open actieve uitdaging",
+      "openActiveHint": "Bekijk je voortgang en nodig een vriend uit.",
+      "createSub": "Jouw uitdaging, jouw regels.",
+      "primaryDuoA11y": "Nodig een vriend uit voor Duo",
+      "primaryDuoHint": "Kies een uitdaging en nodig iemand uit voor Duo.",
+      "soloCardA11y": "Kies een solo-uitdaging",
+      "soloCardHint": "Open Explore om een solo-uitdaging te kiezen.",
+      "soloCard": "Solo",
+      "soloCardSub": "Kies. Start. Houd vol.",
+      "solo": "Ga solo verder",
+      "soloA11y": "Ga solo verder",
+      "soloHint": "Kies een uitdaging zonder partner.",
+      "inviteSub2": "Nodig uit. Houd vol. Win."
+    },
+    "duoNudge": {
+      "a11y": "Duo-aanbeveling",
+      "title": "Duo helpt je vol te houden.",
+      "sub": "Nodig iemand uit. Zelfde uitdaging, zelfde ritme.",
+      "cta": "Duo",
+      "ctaA11y": "Nodig een vriend uit voor Duo",
+      "solo": "Blijf solo",
+      "soloA11y": "Blijf solo"
+    },
+    "discover": {
+      "title": "Ontdekken",
+      "subtitle2": "Het essentiële. De rest hieronder.",
+      "leaderboard": "Ranglijst",
+      "leaderboardSub2": "Social proof. Motivatie.",
+      "leaderboardA11y": "Open ranglijst",
+      "leaderboardHint": "Vergelijk je voortgang met anderen.",
+      "tips": "Tips",
+      "tipsSub2": "1 minuut. Directe actie.",
+      "tipsA11y": "Open tips",
+      "tipsHint": "Snelle tips om je uitdaging vol te houden.",
+      "newFeatures": "Nieuw",
+      "newFeaturesSub": "Ontdek. Stem. Beïnvloed de app.",
+      "newFeaturesA11y": "Nieuw",
+      "newFeaturesHint": "Ontdek nieuwe functies en stem op wat volgt."
+    }
+  }
+,
   "invitationS": {
     "shareTitle": "Duo-uitnodiging",
+    "later": "Later",
+    "durationLabel": "Duur",
+    "subtitle": "Deel een link. Je vriend doet mee aan deze challenge in Duo.",
+  "whyDuo": "Met z’n tweeën houd je het langer vol. Simpel—en het werkt.",
+    "startSolo": "Solo starten",
+    "startSoloShort": "Solo",
+    "a11yStartSoloHint": "Begin deze uitdaging nu solo.",
+    "ctaInvite": "Uitnodigen",
+    "ctaChange": "Wijzigen",
+    "ctaDone": "OK",
+    "changeDuration": "Duur wijzigen",
+    "linkCopiedInline": "Link gekopieerd ✅ Plak ’m waar je wilt.",
     "sendTitle": "Nodig een vriend uit",
     "shareSubtitle": "Genereer een link voor « {{challenge}} » ({{days}} dagen). Als hij de app heeft → directe opening. Zo niet → Store.",
     "shareHint": "De link is universeel en werkt overal.",
@@ -2268,6 +2363,8 @@
     "notLoggedIn": "Je moet ingelogd zijn.",
     "sending": "Bezig met verzenden…",
     "cancel": "Annuleren",
+    "edit": "Bewerken",
+    "hide": "Verbergen",
     "continue": "Doorgaan",
     "errorTitle": "Fout"
   },
@@ -4095,33 +4192,6 @@
   "invitationToChallenge": "Uitnodiging voor de challenge {{challenge}}",
   "receivedOn": "Ontvangen op {{date}}",
   "locale": "nl-NL",
-  "firstPick": {
-    "title": "Kies je eerste challenge!",
-    "subtitle": "Je wilt beginnen met…",
-    "cardHint": "Tik om deze challenge te kiezen.",
-    "emptyTitle": "Nog geen challenge",
-    "emptySubtitle": "Trek omlaag om te verversen of probeer het opnieuw.",
-    "chooseSolo": "Solo kiezen",
-    "chooseDuo": "Duo kiezen",
-    "modeDuo": "Duo (aanbevolen)",
-    "modeSolo": "Solo",
-    "duoBadge": "Duo",
-    "alreadyInvited": "Je hebt al een openstaande uitnodiging voor deze challenge.",
-    "durationLabel": "Duur:",
-    "offlineDuo": "Je bent offline. Maak opnieuw verbinding om een vriend voor een duo uit te nodigen.",
-    "day_one": "{{count}} d",
-    "chooseMode": "Kies een modus",
-    "chooseSoloShort": "Solo",
-    "chooseDuoShort": "Duo",
-    "day_other": "{{count}} d",
-    "skip": "Overslaan",
-    "alert": {
-      "missingChoiceTitle": "Geen keuze gemaakt",
-      "missingChoiceBody": "Selecteer een challenge.",
-      "modeTitle": "Modus",
-      "modeBody": "Kies Duo of Solo."
-    }
-  },
   "access": {
     "editProfile": {
       "label": "Profiel bewerken",
@@ -4186,6 +4256,8 @@
   "acceptRulesCheckbox": "De chatregels accepteren",
   "tutorial": {
     "progress": "Stap",
+    "open": "Tutorial",
+    "openHint": "Ontdek hoe je ChallengeTies in 30 seconden gebruikt",
     "progressA11y": "Stap {{current}} van {{total}}",
     "welcomeTagline": "Je reis begint hier.",
     "steps": {
@@ -4319,17 +4391,70 @@
   },
   "common": {
     "back": "Terug",
+    "retry": "Opnieuw proberen",
+    "loading": "Bezig met laden...",
+    "recommended": "Aanbevolen",
+    "networkError": "Verbindingsprobleem",
+    "oops": "Oeps, probeer opnieuw.",
+    "challenge": "Uitdaging",
+    "misc": "Overig",
     "skip": "Overslaan",
-    "challenge": "Challenge",
     "error": "Oeps",
     "unexpectedError": "Er is een onverwachte fout opgetreden. Probeer het opnieuw.",
-    "misc": "Diversen",
-    "oops": "Oeps…",
-    "loadError": "Kan niet verversen. Veeg omlaag om het opnieuw te proberen.",
+    "loadError": "Kan niet vernieuwen. Veeg omlaag om opnieuw te proberen.",
     "close": "Sluiten",
-    "networkError": "Verbindingsprobleem",
     "info": "Info"
   },
+  "firstPick": {
+  "day_one": "{{count}} dag",
+  "day_other": "{{count}} dagen",
+  "progress": "Stap {{current}} van {{total}}",
+  "cardHint": "Tik om te kiezen.",
+  "step1": {
+    "title": "Start je avontuur",
+    "subtitle": "Kies een challenge. Let’s go.",
+    "cta": "Volg.",
+    "ctaDisabled": "Kies",
+    "shuffleLink": "Niet gevonden? Laat andere zien",
+    "shuffleA11y": "Andere challenges tonen"
+  },
+  "step2": {
+    "title": "Solo of Duo?",
+    "subtitle": "In Duo hou je het langer vol. Stoppen is moeilijker.",
+    "duoDesc": "In Duo blijf je consistent. Nodig daarna meteen een vriend uit.",
+    "cta": "Volg.",
+    "ctaDisabled": "Kies",
+    "duoTitle": "Duo",
+    "duoOfflineLine": "Verbinding nodig om uit te nodigen.",
+    "soloTitle": "Solo",
+    "soloDesc": "Direct starten, geen uitnodiging.",
+    "hintDuo": "Nodig daarna meteen een vriend uit.",
+    "hintDuoOffline": "Internet nodig.",
+    "hintSolo": "Je start meteen."
+  },
+  "step3": {
+    "title": "Hoe lang houd jij vol?",
+    "subtitle": "7 dagen is een sterke start. Je kunt later aanpassen.",
+    "cta": "Start",
+    "ctaDisabled": "Kies",
+    "durationLabel": "Duur",
+    "durationNote": "Je kunt later altijd aanpassen.",
+    "recapDuo": "Modus: Duo",
+    "recapSolo": "Modus: Solo"
+  },
+  "duoBadge": "DUO",
+  "offlineDuo": "Maak verbinding met internet om in Duo-modus een vriend uit te nodigen.",
+  "offlineDuoShort": "Net",
+  "alreadyInvited": "Er is al een uitnodiging verzonden voor deze challenge.",
+  "a11yCtaNoChallenge": "Kies een challenge om door te gaan.",
+  "a11yCtaFull": "Doorgaan in {{mode}}, {{days}} dagen, challenge {{title}}.",
+  "emptyTitle": "Geen challenges beschikbaar",
+  "emptySubtitle": "Trek omlaag om opnieuw te proberen.",
+  "alert": {
+    "missingChoiceBody": "Kies een challenge om door te gaan."
+  }
+}
+,
   "inventory": {
     "title": "Inventaris",
     "subtitle": "Beheer hier je speciale bonussen en streak-beschermingen.",

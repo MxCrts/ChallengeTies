@@ -45,7 +45,7 @@ import {
   uploadBytes,
   getDownloadURL,
 } from "firebase/storage";
-import { auth, db } from "../constants/firebase-config";
+import { auth, db } from "@/constants/firebase-config";
 import * as Haptics from "expo-haptics";
 import { Image as RNImage } from "react-native";
 

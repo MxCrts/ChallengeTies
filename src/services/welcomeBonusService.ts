@@ -1,6 +1,6 @@
 // src/services/welcomeBonusService.ts
 import { doc, runTransaction } from "firebase/firestore";
-import { db } from "../../constants/firebase-config";
+import { db } from "@/constants/firebase-config";
 
 export type WelcomeBonusReward =
   | { type: "trophies"; amount: number }

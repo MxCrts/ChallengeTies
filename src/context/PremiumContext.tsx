@@ -6,8 +6,8 @@ import React, {
   useState,
 } from "react";
 import { onAuthStateChanged } from "firebase/auth";
-import { doc, onSnapshot, Timestamp } from "firebase/firestore";
-import { auth, db } from "@/constants/firebase-config";
+import { doc, onSnapshot, Timestamp, updateDoc } from "firebase/firestore";
+import { auth, db } from "@/constants/firebase-config"; 
 
 type PremiumCtx = {
   /** true si l'utilisateur est premium (admin, abo, ou premium temporaire actif) */
@@ -34,24 +34,27 @@ type PremiumField =
   | boolean
   | {
       isPremium?: boolean;
+      premium?: boolean;
+      isSubscribed?: boolean;
+      isLifetime?: boolean;
       tempPremiumUntil?: string | Date | Timestamp | null;
     };
 
-const hasTempPremiumActive = (premium: PremiumField): boolean => {
-  if (!premium || typeof premium !== "object") return false;
-
-  const raw = premium.tempPremiumUntil;
-
-  let expireMs: number | null = null;
-
-  if (raw instanceof Date) {
-    expireMs = raw.getTime();
-  } else if (raw instanceof Timestamp) {
-    expireMs = raw.toMillis();
-  } else if (typeof raw === "string") {
+const getExpireMs = (raw: any): number | null => {
+  if (!raw) return null;
+  if (raw instanceof Date) return raw.getTime();
+  if (raw instanceof Timestamp) return raw.toMillis();
+  if (typeof raw === "string") {
     const parsed = Date.parse(raw);
-    expireMs = Number.isNaN(parsed) ? null : parsed;
+    return Number.isNaN(parsed) ? null : parsed;
   }
+  return null;
+};
+
+const hasTempPremiumActive = (premiumObj: any): boolean => {
+  if (!premiumObj || typeof premiumObj !== "object") return false;
+
+  const expireMs = getExpireMs(premiumObj.tempPremiumUntil);
 
   if (!expireMs) return false;
   return expireMs > Date.now();
@@ -91,30 +94,100 @@ export const PremiumProvider: React.FC<{ children: React.ReactNode }> = ({
       setLoading(true);
 
       userUnsub = onSnapshot(
-        userRef,
-        (snap) => {
-          const data = snap.exists() ? (snap.data() as any) : {};
+  userRef,
+  (snap) => {
+    const data = snap.exists() ? (snap.data() as any) : {};
 
-          const premiumField: PremiumField = data.premium;
+    const premiumField: PremiumField = data.premium;
 
-          // 1) Flags "simples" / historiques
+console.log("[PremiumContext] premiumField =", premiumField);
+console.log("[PremiumContext] isPremium =", data.isPremium, "premium=", data.premium);
+
+
+    // ✅ premium object safe
+          const premiumObj =
+            premiumField && typeof premiumField === "object" ? premiumField : null;
+
+          // 1) Flags "simples" / historiques (bool ONLY)
           const hasLegacyFlag =
-            data.isPremium === true || premiumField === true;
+            data.isPremium === true ||
+            premiumField === true ||
+            data.premium === true;
 
-          // 2) Premium temporaire ou structuré (objet avec tempPremiumUntil)
-          const hasTempPremium = hasTempPremiumActive(premiumField);
+          // 1bis) Flags dans premium object (comme ailleurs dans ton app)
+          const hasPremiumObjectFlag =
+            premiumObj?.isPremium === true ||
+            premiumObj?.premium === true ||
+            premiumObj?.isSubscribed === true ||
+            premiumObj?.isLifetime === true;
 
-          const nextIsPremium = hasLegacyFlag || hasTempPremium;
+    // 2) Premium temporaire (support aussi anciens schémas)
+          const expireMsFromObj = premiumObj ? getExpireMs(premiumObj.tempPremiumUntil) : null;
+          const expireMsFromRoot = getExpireMs(data.tempPremiumUntil) ?? getExpireMs(data.premiumUntil);
 
-          setIsPremiumUser(nextIsPremium);
-          setLoading(false);
-        },
-        (err) => {
-          console.warn("Premium snapshot error:", err);
-          setIsPremiumUser(false);
-          setLoading(false);
-        }
-      );
+          const expireMs = expireMsFromObj ?? expireMsFromRoot;
+          const hasTempPremium = typeof expireMs === "number" ? expireMs > Date.now() : false;
+          const isTempExpired = typeof expireMs === "number" ? expireMs <= Date.now() : false;
+
+    const nextIsPremium = hasLegacyFlag || hasPremiumObjectFlag || hasTempPremium;
+
+          // ✅ Optionnel mais recommandé : auto-clean si expiré (évite “fantôme” côté data)
+          // -> On ne supprime PAS le champ, on le met à null pour rester compatible et éviter les boucles.
+          if (isTempExpired) {
+            try {
+              if (premiumObj?.tempPremiumUntil) {
+                updateDoc(userRef, {
+                  "premium.tempPremiumUntil": null,
+                }).catch(() => {});
+              } else if (data.tempPremiumUntil) {
+                updateDoc(userRef, { tempPremiumUntil: null }).catch(() => {});
+              } else if (data.premiumUntil) {
+                updateDoc(userRef, { premiumUntil: null }).catch(() => {});
+              }
+            } catch {}
+          }
+
+    // 🔥 LOGS DIAGNOSTIC (à garder 1 run)
+    try {
+      const raw =
+        premiumObj?.tempPremiumUntil ?? data.tempPremiumUntil ?? data.premiumUntil ?? null;
+
+      const parsed =
+        typeof raw === "string"
+          ? Date.parse(raw)
+          : raw instanceof Timestamp
+          ? raw.toMillis()
+          : raw instanceof Date
+          ? raw.getTime()
+          : null;
+
+      console.log("🧾 [Premium] debug", {
+        uid: snap.id,
+        isPremiumField: data.isPremium,
+        premiumRootType: typeof data.premium,
+        premiumFieldValue: data.premium,
+        tempPremiumUntilRaw: raw,
+        parsedExpireMs: parsed,
+        nowMs: Date.now(),
+        hasLegacyFlag,
+        hasPremiumObjectFlag,
+        hasTempPremium,
+        nextIsPremium,
+      });
+    } catch (e) {
+      console.log("🧾 [Premium] debug error", e);
+    }
+
+    setIsPremiumUser(nextIsPremium);
+    setLoading(false);
+  },
+  (err) => {
+    console.warn("Premium snapshot error:", err);
+    setIsPremiumUser(false);
+    setLoading(false);
+  }
+);
+
     });
 
     return () => {

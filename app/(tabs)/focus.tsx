@@ -20,7 +20,7 @@ import { LinearGradient } from "expo-linear-gradient";
 import { Ionicons } from "@expo/vector-icons";
 import ConfettiCannon from "react-native-confetti-cannon";
 import { doc, onSnapshot } from "firebase/firestore";
-import { db, auth } from "../../constants/firebase-config";
+import { db, auth } from "@/constants/firebase-config";
 import { useCurrentChallenges } from "../../context/CurrentChallengesContext";
 import { useTheme } from "../../context/ThemeContext";
 import { Theme } from "../../theme/designSystem";

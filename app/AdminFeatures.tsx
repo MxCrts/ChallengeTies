@@ -15,7 +15,7 @@ import {
   deleteDoc,
   doc,
 } from "firebase/firestore";
-import { db, auth } from "../constants/firebase-config";
+import { db, auth } from "@/constants/firebase-config";
 import BackButton from "../components/BackButton";
 
 // Définition du type Feature pour typer les données des propositions

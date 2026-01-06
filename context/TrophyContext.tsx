@@ -11,7 +11,7 @@ import React, {
 import * as Haptics from "expo-haptics";
 import { claimAchievement } from "../helpers/trophiesHelpers";
 import { useProfileUpdate } from "./ProfileUpdateContext";
-import { auth } from "../constants/firebase-config";
+import { auth } from "@/constants/firebase-config";
 
 interface TrophyContextProps {
   showTrophyModal: boolean;

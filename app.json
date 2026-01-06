@@ -2,7 +2,7 @@
   "expo": {
     "name": "ChallengeTies",
     "slug": "ChallengeMe",
-    "version": "1.0.2",
+    "version": "1.0.7",
     "orientation": "portrait",
     "icon": "./assets/images/icon.png",
     "splash": {
@@ -14,7 +14,7 @@
     "userInterfaceStyle": "automatic",
     "ios": {
       "supportsTablet": false,
-      "buildNumber": "46",
+      "buildNumber": "47",
       "bundleIdentifier": "com.mxcrts.ChallengeTies",
       "googleServicesFile": "./GoogleService-Info.plist",
       "associatedDomains": [
@@ -69,16 +69,6 @@
           "autoVerify": true,
           "data": [
             {
-              "scheme": "myapp",
-              "host": "challenge",
-              "pathPrefix": "/"
-            },
-            {
-              "scheme": "myapp",
-              "host": "challenge-details",
-              "pathPrefix": "/"
-            },
-            {
               "scheme": "https",
               "host": "challengeties.app",
               "pathPrefix": "/challenge-details"
@@ -117,42 +107,43 @@
       "favicon": "./assets/images/favicon.png"
     },
     "plugins": [
-  "expo-router",
-  [
-    "expo-splash-screen",
-    {
-      "image": "./assets/images/splash.png",
-      "resizeMode": "contain",
-      "backgroundColor": "#ffffff"
-    }
-  ],
-  "expo-font",
-  "expo-localization",
-  [
-    "react-native-google-mobile-ads",
-    {
-      "androidAppId": "ca-app-pub-4725616526467159~2289013149",
-      "iosAppId": "ca-app-pub-4725616526467159~9688398116"
-    }
-  ],
-  [
-    "expo-notifications",
-    {
-      "icon": "./assets/notification-icon.png",
-      "color": "#FFB800",
-      "sounds": []
-    }
-  ],
-  [
-    "expo-image-picker",
-    {
-      "photosPermission": "Accéder à vos photos pour choisir une image de profil.",
-      "cameraPermission": "Accéder à l'appareil photo pour prendre une photo de profil."
-    }
-  ],
-  "expo-mail-composer",
-  "expo-iap"
-],
+      "expo-router",
+      [
+        "expo-splash-screen",
+        {
+          "image": "./assets/images/splash.png",
+          "resizeMode": "contain",
+          "backgroundColor": "#ffffff"
+        }
+      ],
+      "expo-font",
+      "expo-localization",
+      [
+        "react-native-google-mobile-ads",
+        {
+          "androidAppId": "ca-app-pub-4725616526467159~2289013149",
+          "iosAppId": "ca-app-pub-4725616526467159~9688398116"
+        }
+      ],
+      [
+        "expo-notifications",
+        {
+          "icon": "./assets/notification-icon.png",
+          "color": "#FFB800",
+          "sounds": []
+        }
+      ],
+      [
+        "expo-image-picker",
+        {
+          "photosPermission": "Accéder à vos photos pour choisir une image de profil.",
+          "cameraPermission": "Accéder à l'appareil photo pour prendre une photo de profil."
+        }
+      ],
+      "expo-mail-composer",
+      "expo-iap",
+      "expo-tracking-transparency"
+    ],
     "newArchEnabled": false,
     "experiments": {
       "typedRoutes": true

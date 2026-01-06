@@ -17,13 +17,15 @@ import {
   Platform,
   Share,
   Pressable,
-  Alert,
   AccessibilityInfo,
+  ScrollView,
+  useWindowDimensions,
 } from "react-native";
 import { useTranslation } from "react-i18next";
 import { useTheme } from "@/context/ThemeContext";
 import designSystem, { Theme } from "@/theme/designSystem";
 import { auth } from "@/constants/firebase-config";
+import { Ionicons } from "@expo/vector-icons";
 import {
   getOrCreateOpenInvitation,
   buildUniversalLink,
@@ -34,7 +36,8 @@ import { logEvent } from "@/src/analytics";
 import Animated, { FadeIn, FadeOut, ZoomIn, ZoomOut } from "react-native-reanimated";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { LinearGradient } from "expo-linear-gradient";
-import { Dimensions } from "react-native";
+import { usePathname } from "expo-router";
+
 
 const DAY_OPTIONS = [7, 14, 21, 30, 60, 90, 180, 365];
 
@@ -46,7 +49,8 @@ type Props = {
   challengeTitle?: string;
   isDuo?: boolean;
   onClose: () => void;
-  onSent?: () => void; // succès (toast géré parent)
+  onSent?: (result: "shared" | "dismiss" | "start_solo") => void;
+
 };
 
 /** Normalise vers l’une des 12 locales supportées: ar, de, en, es, fr, hi, it, ru, zh, pt, ja, ko, nl */
@@ -98,13 +102,6 @@ const getShareLang = (i18nLang?: string) => {
   return n || "en";
 };
 
-const { width: SCREEN_W, height: SCREEN_H } = Dimensions.get("window");
-const normalize = (n: number) => {
-  const base = 375;
-  const scale = Math.min(Math.max(SCREEN_W / base, 0.85), 1.4);
-  return Math.round(n * scale);
-};
-
 const withAlpha = (hex: string, a: number) => {
   const clamp = (x: number, min = 0, max = 1) => Math.min(Math.max(x, min), max);
   const alpha = Math.round(clamp(a) * 255)
@@ -132,23 +129,36 @@ const SendInvitationModal: React.FC<Props> = ({
   const { t, i18n } = useTranslation();
   const { theme } = useTheme();
   const insets = useSafeAreaInsets();
+  const { width: screenW, height: screenH } = useWindowDimensions();
+const pathname = usePathname();
+
 
   const isDark = theme === "dark";
   const th: Theme = isDark ? designSystem.darkTheme : designSystem.lightTheme;
 
   const [busy, setBusy] = useState(false);
+  const [cooldown, setCooldown] = useState(false);
   const [error, setError] = useState<string>("");
   const [reduceMotion, setReduceMotion] = useState(false);
 
   const [localDays, setLocalDays] = useState(selectedDays);
+  const [showDays, setShowDays] = useState(false);
 
 useEffect(() => {
   if (visible) setLocalDays(selectedDays);
 }, [visible, selectedDays]);
 
+const scale = useMemo(() => {
+    const base = 375;
+    return Math.min(Math.max(screenW / base, 0.85), 1.4);
+  }, [screenW]);
+  const n = useCallback((v: number) => Math.round(v * scale), [scale]);
+
 
   // Anti double-tap court
   const tapGateRef = useRef<number>(0);
+  const isSharingRef = useRef(false);
+
 
   // ✅ Respect Reduce Motion (haptics + animations)
   useEffect(() => {
@@ -175,6 +185,7 @@ useEffect(() => {
       } catch {}
       setError("");
       setBusy(false);
+      setShowDays(false);
     }
   }, [visible, challengeId, selectedDays]);
 
@@ -184,8 +195,25 @@ useEffect(() => {
       setBusy(false);
       setError("");
       tapGateRef.current = 0;
+      setShowDays(false);
     }
   }, [visible]);
+
+  const handleLater = useCallback(async () => {
+  // ✅ Si un share est en cours, on ne fait rien (évite états bizarres)
+  if (busy || isSharingRef.current) return;
+
+  try {
+    if (!reduceMotion) Haptics.selectionAsync().catch(() => {});
+    logEvent?.("invite_start_solo_clicked", { challengeId, selectedDays: localDays });
+  } catch {}
+
+  // ✅ Event unique. Le parent décide (takeChallenge + goHome).
+  onSent?.("start_solo");
+  onClose();
+}, [busy, reduceMotion, challengeId, localDays, onSent, onClose]);
+
+const shareLocked = busy || cooldown || isSharingRef.current;
 
   const handleShare = useCallback(async () => {
     if (busy) return;
@@ -258,59 +286,62 @@ useEffect(() => {
           ? { title: titleTxt, message: msgTxt }
           : { title: titleTxt, message: msgTxt, url };
 
-      const res = await Share.share(payload, { dialogTitle: titleTxt });
+     isSharingRef.current = true;
+
+(globalThis as any).__FROM_SHARE_SHEET__ = {
+  ts: Date.now(),
+  returnTo: pathname || "/(tabs)",
+};
+(globalThis as any).__LAST_STABLE_PATH__ = pathname || "/(tabs)";
+
+
+const res = await Share.share(payload, { dialogTitle: titleTxt });
+
+isSharingRef.current = false;
+
+// 🧹 cleanup soft (sécurité) — ne surtout pas delete trop tôt
+setTimeout(() => {
+  const v = (globalThis as any).__FROM_SHARE_SHEET__;
+  const ts = typeof v === "number" ? v : v?.ts;
+  if (typeof ts === "number" && Date.now() - ts > 20000) {
+    delete (globalThis as any).__FROM_SHARE_SHEET__;
+  }
+}, 22000);
+
 
       if (res.action === Share.sharedAction) {
-        try {
-          logEvent("invite_share_success", {
-            inviteId,
-            challengeId,
-            selectedDays: localDays,
-            platform: Platform.OS,
-          });
-        } catch {}
-        if (!reduceMotion) {
-          Haptics.notificationAsync(
-            Haptics.NotificationFeedbackType.Success
-          ).catch(() => {});
-        }
-        onSent?.();
-        onClose();
-      } else {
-        // Dismiss → on tente de sauver l’effort en copiant le lien
-        try {
-          const { setStringAsync } = await import("expo-clipboard");
-          await setStringAsync(url);
-          Alert.alert(
-            t("common.info", { defaultValue: "Info" }),
-            t("invitationS.linkCopied", {
-              defaultValue: "Lien copié dans le presse-papier.",
-            })
-          );
-          try {
-            logEvent("invite_share_dismiss_copied", {
-              inviteId,
-              challengeId,
-              selectedDays: localDays,
-            });
-          } catch {}
-          if (!reduceMotion) {
-            Haptics.notificationAsync(
-              Haptics.NotificationFeedbackType.Success
-            ).catch(() => {});
-          }
-          onSent?.();
-          onClose();
-        } catch {
-          try {
-            logEvent("invite_share_dismiss_no_clipboard", {
-              inviteId,
-              challengeId,
-              selectedDays: localDays,
-            });
-          } catch {}
-        }
-      }
+  try {
+    logEvent("invite_share_success", {
+      inviteId,
+      challengeId,
+      selectedDays: localDays,
+      platform: Platform.OS,
+    });
+  } catch {}
+  if (!reduceMotion) {
+    Haptics.notificationAsync(
+      Haptics.NotificationFeedbackType.Success
+    ).catch(() => {});
+  }
+
+  // ✅ IMPORTANT: succès réel
+  onSent?.("shared");
+  onClose();
+} else {
+  // ✅ Dismiss / Cancel -> on ferme et on reste sur l'écran courant
+  try {
+    logEvent?.("invite_share_dismissed", {
+      inviteId,
+      challengeId,
+      selectedDays: localDays,
+      platform: Platform.OS,
+    });
+  } catch {}
+
+  onSent?.("dismiss");
+}
+
+
     } catch (e: any) {
       console.error("❌ SendInvitationModal share-link error:", e);
       const raw = String(e?.message || "");
@@ -333,9 +364,7 @@ useEffect(() => {
         msg.includes("non_autorise")
       ) {
         setError(
-          t("invitationS.errors.permission", {
-            defaultValue: "Action non autorisée.",
-          })
+          t("invitationS.errors.permissions", { defaultValue: "Action non autorisée." })
         );
       } else if (msg.includes("params_invalid")) {
         setError(
@@ -360,10 +389,15 @@ useEffect(() => {
         });
       } catch {}
     } finally {
-      setBusy(false);
-    }
+  isSharingRef.current = false;
+  setBusy(false);
+  // ✅ micro-cooldown anti "tap fantôme" au retour de la share sheet (Android surtout)
+  setCooldown(true);
+  setTimeout(() => setCooldown(false), 350);
+}
   }, [
     busy,
+    cooldown,
     challengeId,
     localDays,
     i18n?.language,
@@ -376,13 +410,21 @@ useEffect(() => {
   ]);
 
   const styles = useMemo(
-    () => createStyles(isDark, th, insets),
-    [isDark, th, insets]
+    () => createStyles(isDark, th, insets, screenW, screenH, n),
+    [isDark, th, insets, screenW, screenH, n]
   );
 
-  const handleRequestClose = () => {
-    if (!busy) onClose();
-  };
+  const compact = showDays;
+  const soloBtnLabel = useMemo(() => {
+  // ✅ Toujours court => jamais coupé
+  return t("invitationS.startSoloShort", { defaultValue: "Solo" }) as string;
+}, [t]);
+
+const handleRequestClose = () => {
+  // 🚫 interdit toute fermeture pendant un share
+  if (shareLocked) return;
+  onClose();
+};
 
   return (
     <Modal
@@ -411,7 +453,7 @@ useEffect(() => {
         <Pressable
           style={styles.backdrop}
           onPress={handleRequestClose}
-          disabled={busy}
+          disabled={shareLocked}
           accessibilityRole="button"
           accessibilityLabel={t("commonS.close", { defaultValue: "Fermer" })}
         />
@@ -420,7 +462,7 @@ useEffect(() => {
           behavior={Platform.OS === "ios" ? "padding" : undefined}
           keyboardVerticalOffset={
             Platform.OS === "ios"
-              ? Math.max(insets.top, 20) + normalize(16)
+              ? Math.max(insets.top, 20) + n(16)
               : 0
           }
           style={styles.kav}
@@ -445,129 +487,222 @@ useEffect(() => {
               end={{ x: 1, y: 1 }}
               style={styles.borderGlow}
             >
-              <View style={styles.card}>
-                <Text style={styles.title} accessibilityRole="header">
-                  {t("invitationS.sendTitle", {
-                    defaultValue: "Inviter un ami",
-                  })}
-                </Text>
+             <View style={[styles.card, compact && styles.cardCompact]}>
+  {/* Header */}
+  <View style={[styles.headerRow, compact && styles.headerRowCompact]}>
 
-                <Text style={styles.subtitle}>
-  {t("invitationS.shareSubtitle", {
-    challenge:
-      challengeTitle ||
-      t("challengeDetails.untitled", {
-        defaultValue: "Défi",
-      }),
-    days: localDays,
-    defaultValue:
-      "Génère un lien d’invitation ({{days}} jours). S’il a l’app → ouverture directe. Sinon → Store.",
-  })}
+    <View style={styles.titleRow}>
+      <View style={styles.titleIcon}>
+        <Ionicons name="people" size={16} color={stylesVars.iconColor(isDark)} />
+      </View>
+
+      <View style={styles.titleCol}>
+        <Text style={styles.title} accessibilityRole="header">
+          {t("invitationS.sendTitle", { defaultValue: "Inviter un ami" })}
+        </Text>
+        <Text style={styles.subtitleInline} numberOfLines={2}>
+          {t("invitationS.subtitle", {
+            defaultValue: "Partage un lien. Ton ami rejoint ce défi en Duo.",
+          })}
+        </Text>
+      </View>
+    </View>
+
+    <TouchableOpacity
+      onPress={handleRequestClose}
+      disabled={shareLocked}
+      hitSlop={10}
+      accessibilityRole="button"
+      accessibilityLabel={t("commonS.close", { defaultValue: "Fermer" })}
+      style={styles.closeBtn}
+    >
+      <Ionicons name="close" size={18} color={stylesVars.iconColor(isDark)} />
+    </TouchableOpacity>
+  </View>
+
+{/* Body (scrollable slot) */}
+<ScrollView
+  style={styles.bodyScroll}
+  contentContainerStyle={styles.bodyScrollContent}
+  showsVerticalScrollIndicator={false}
+  bounces={false}
+  overScrollMode="never"
+  keyboardShouldPersistTaps="handled"
+  nestedScrollEnabled
+>
+  {!!challengeTitle && (
+    <View style={[styles.challengePill, compact && styles.challengePillCompact]}>
+      <Ionicons name="flame" size={14} color={stylesVars.accent(th)} />
+      <Text style={styles.challengePillText} numberOfLines={1}>
+        {challengeTitle}
+      </Text>
+    </View>
+  )}
+
+  {/* Why Duo (micro UX Apple Keynote) */}
+  <View style={[styles.whyBox, compact && styles.whyBoxCompact]}>
+    <Ionicons name="sparkles" size={16} color={stylesVars.accent(th)} />
+    <Text style={styles.whyText}>
+      {t("invitationS.whyDuo", {
+        defaultValue: "À deux, tu tiens plus longtemps. C’est simple et ça marche.",
+      })}
+    </Text>
+  </View>
+
+  {!!error && (
+    <View
+      style={styles.alertBox}
+      accessibilityRole="alert"
+      accessibilityLiveRegion="polite"
+    >
+      <Ionicons
+        name="alert-circle"
+        size={16}
+        color={stylesVars.errorColor(isDark, th)}
+      />
+      <Text style={styles.errorText}>{error}</Text>
+    </View>
+  )}
+
+  <View style={[styles.sectionCard, compact && styles.sectionCardCompact]}>
+    <View style={styles.daysTopRow}>
+      <Text style={styles.daysInlineLabel}>
+        {t("invitationS.durationLabel", { defaultValue: "Durée" })}:{" "}
+        {t("firstPick.day", { count: localDays }) as string}
+      </Text>
+
+      <TouchableOpacity
+        onPress={() => {
+          setShowDays((v) => !v);
+          if (!reduceMotion) Haptics.selectionAsync().catch(() => {});
+        }}
+        hitSlop={10}
+        accessibilityRole="button"
+        accessibilityLabel={t("invitationS.changeDuration", {
+          defaultValue: "Modifier la durée",
+        })}
+        style={styles.daysToggleBtn}
+        disabled={shareLocked}
+      >
+        <Text style={styles.daysToggleText}>
+          {showDays
+            ? (t("invitationS.ctaDone", { defaultValue: "OK" }) as string)
+            : (t("invitationS.ctaChange", { defaultValue: "Changer" }) as string)}
+        </Text>
+        <Ionicons
+          name={showDays ? "chevron-up" : "chevron-down"}
+          size={14}
+          color={stylesVars.accent(th)}
+        />
+      </TouchableOpacity>
+    </View>
+
+    {showDays && (
+      <View style={[styles.daysRow, styles.daysRowScrollable]}>
+        {DAY_OPTIONS.map((d) => {
+          const selected = d === localDays;
+          return (
+            <TouchableOpacity
+              key={d}
+              onPress={() => {
+                setLocalDays(d);
+                if (!reduceMotion) Haptics.selectionAsync().catch(() => {});
+              }}
+              style={[
+                styles.dayChip,
+                styles.dayChipScrollable,
+                selected && styles.dayChipSelected,
+              ]}
+              accessibilityRole="button"
+              accessibilityState={{ selected }}
+              accessibilityLabel={t("firstPick.day", { count: d }) as string}
+              disabled={shareLocked}
+            >
+              <Text
+                style={[
+                  styles.dayChipText,
+                  selected && styles.dayChipTextSelected,
+                ]}
+              >
+                {d}
+              </Text>
+            </TouchableOpacity>
+          );
+        })}
+      </View>
+    )}
+  </View>
+</ScrollView>
+
+
+
+  {/* Buttons */}
+  <View style={[styles.buttonsRow, compact && styles.buttonsRowCompact]}>
+    <TouchableOpacity
+  style={[
+    styles.btn,
+    styles.secondaryBtn,
+    compact && styles.btnCompact,
+    compact && styles.secondaryBtnCompact,
+  ]}
+  onPress={handleLater}
+  disabled={shareLocked}
+  activeOpacity={0.9}
+  accessibilityRole="button"
+  accessibilityLabel={t("invitationS.startSolo", { defaultValue: "Commencer en solo" })}
+  testID="send-invite-start-solo"
+>
+  <View style={styles.secondaryInner}>
+    <Ionicons
+      name="person"
+      size={16}
+      color={stylesVars.iconColor(isDark)}
+      style={styles.secondaryIcon}
+    />
+    <Text
+  style={styles.secondaryText}
+  numberOfLines={1}
+  ellipsizeMode="tail"
+>
+  {soloBtnLabel}
 </Text>
+  </View>
+</TouchableOpacity>
 
 
-                {!!error && (
-                  <Text
-                    style={styles.error}
-                    accessibilityRole="alert"
-                    accessibilityLiveRegion="polite"
-                  >
-                    {error}
-                  </Text>
-                )}
-
-                {!error && (
-                  <Text style={styles.hint}>
-                    {t("invitationS.shareHint", {
-                      defaultValue:
-                        "Le lien est universel et fonctionne partout (WhatsApp, SMS, réseaux…).",
-                    })}
-                  </Text>
-                )}
-
-                <View style={styles.daysContainer}>
-  <Text style={styles.daysLabel}>
-    {t("invitationS.selectDays", {
-      defaultValue: "Choisis la durée du défi",
-    })}
-  </Text>
-
-  <View style={styles.daysRow}>
-    {DAY_OPTIONS.map((d) => {
-      const selected = d === localDays;
-      return (
-        <TouchableOpacity
-          key={d}
-          onPress={() => {
-            setLocalDays(d);
-            if (!reduceMotion) Haptics.selectionAsync().catch(() => {});
-          }}
-          style={[
-            styles.dayChip,
-            selected && styles.dayChipSelected,
-          ]}
-          accessibilityRole="button"
-          accessibilityLabel={`${d} jours`}
-        >
-          <Text
-            style={[
-              styles.dayChipText,
-              selected && styles.dayChipTextSelected,
-            ]}
-          >
-            {d}
-          </Text>
-        </TouchableOpacity>
-      );
-    })}
+    <TouchableOpacity
+      onPress={handleShare}
+      disabled={shareLocked}
+      activeOpacity={0.92}
+      accessibilityRole="button"
+      accessibilityLabel={t("invitationS.ctaInvite", { defaultValue: "Inviter" })}
+      testID="send-invite-share"
+      style={styles.primaryBtnWrap}
+    >
+      <LinearGradient
+        colors={[
+          withAlpha(th.colors.secondary, isDark ? 0.95 : 0.98),
+          withAlpha(th.colors.primary, isDark ? 0.92 : 0.98),
+        ]}
+        start={{ x: 0, y: 0 }}
+        end={{ x: 1, y: 1 }}
+        style={[styles.primaryBtn, compact && styles.primaryBtnCompact]}
+      >
+        {busy ? (
+          <ActivityIndicator color="#000" />
+        ) : (
+          <>
+            <Ionicons name="send" size={16} color="#000" />
+ <Text style={styles.primaryText}>
+   {t("invitationS.ctaInvite", { defaultValue: "Inviter" })}
+ </Text>
+          </>
+        )}
+      </LinearGradient>
+    </TouchableOpacity>
   </View>
 </View>
 
-
-                <View style={styles.buttonsRow}>
-                  <TouchableOpacity
-                    style={[styles.btn, styles.cancelBtn]}
-                    onPress={handleRequestClose}
-                    disabled={busy}
-                    activeOpacity={0.88}
-                    accessibilityRole="button"
-                    accessibilityLabel={t("commonS.cancel", {
-                      defaultValue: "Annuler",
-                    })}
-                    testID="send-invite-cancel"
-                  >
-                    <Text style={styles.cancelText}>
-                      {t("commonS.cancel", { defaultValue: "Annuler" })}
-                    </Text>
-                  </TouchableOpacity>
-
-                  <TouchableOpacity
-                    style={[styles.btn, styles.sendBtn]}
-                    onPress={handleShare}
-                    disabled={busy}
-                    activeOpacity={0.9}
-                    accessibilityRole="button"
-                    accessibilityLabel={t("invitationS.generateAndShare", {
-                      defaultValue: "Générer & partager",
-                    })}
-                    accessibilityHint={t("invitationS.shareHint", {
-                      defaultValue:
-                        "Génère un lien universel à partager à ton ami.",
-                    })}
-                    testID="send-invite-share"
-                  >
-                    {busy ? (
-                      <ActivityIndicator color="#fff" />
-                    ) : (
-                      <Text style={styles.sendText}>
-                        {t("invitationS.generateAndShare", {
-                          defaultValue: "Générer & partager",
-                        })}
-                      </Text>
-                    )}
-                  </TouchableOpacity>
-                </View>
-              </View>
             </LinearGradient>
           </Animated.View>
         </KeyboardAvoidingView>
@@ -576,10 +711,22 @@ useEffect(() => {
   );
 };
 
+const stylesVars = {
+  iconColor: (isDark: boolean) => (isDark ? "#F8FAFC" : "#0B1220"),
+  iconMuted: (isDark: boolean, th: Theme) => (isDark ? withAlpha("#F8FAFC", 0.7) : withAlpha(th.colors.textPrimary, 0.7)),
+  successColor: (isDark: boolean) => (isDark ? "#34D399" : "#059669"),
+  errorColor: (isDark: boolean, th: Theme) => (isDark ? "#FB7185" : th.colors.error),
+  accent: (th: Theme) => th.colors.primary || "#FF7A18",
+};
+
+
 const createStyles = (
   isDark: boolean,
   th: Theme,
-  insets: { top: number; bottom: number }
+  insets: { top: number; bottom: number },
+  screenW: number,
+  screenH: number,
+  n: (v: number) => number
 ) =>
   StyleSheet.create({
     overlay: {
@@ -589,148 +736,444 @@ const createStyles = (
     },
     backdrop: {
       ...StyleSheet.absoluteFillObject,
-      backgroundColor: "rgba(0,0,0,0.65)",
+      backgroundColor: isDark ? "rgba(0,0,0,0.78)" : "rgba(0,0,0,0.60)",
     },
     kav: {
-      width: "100%",
-      alignItems: "center",
-      paddingHorizontal: 16,
-      paddingTop: Math.max(insets.top, 18),
-      paddingBottom: Math.max(insets.bottom, 18),
-    },
+  flexGrow: 1,
+  width: "100%",
+  alignItems: "center",
+  justifyContent: "center",
+  paddingHorizontal: 16,
+  paddingTop: Math.max(insets.top, 12),
+  paddingBottom: Math.max(insets.bottom, 12),
+},
+
     cardShadow: {
-      width: "100%",
-      maxWidth: 420,
-      borderRadius: 22,
-      overflow: "hidden",
-      maxHeight: SCREEN_H - (insets.top + insets.bottom) - normalize(48),
-    },
+  width: "100%",
+  maxWidth: 420,
+  borderRadius: 26,
+  overflow: "hidden",
+
+ maxHeight: screenH - (insets.top + insets.bottom) - n(28),
+  minHeight: n(320),
+
+  alignSelf: "stretch",
+},
+titleCol: {
+  flex: 1,
+  minWidth: 0,
+},
     borderGlow: {
-      padding: 1.4,
-      borderRadius: 22,
-    },
-    card: {
-      borderRadius: 20,
-      paddingVertical: 18,
-      paddingHorizontal: 16,
-      backgroundColor: isDark
-        ? withAlpha(th.colors.cardBackground, 0.96)
-        : withAlpha("#ffffff", 0.98),
-      borderWidth: StyleSheet.hairlineWidth,
-      borderColor: withAlpha(th.colors.border, 0.6),
-      ...Platform.select({
-        ios: {
-          shadowColor: "#000",
-          shadowOffset: { width: 0, height: 8 },
-          shadowOpacity: 0.22,
-          shadowRadius: 18,
-        },
-        android: {
-          elevation: 8,
-        },
-      }),
-    },
-    daysContainer: {
-  marginTop: 14,
-  marginBottom: 6,
+  padding: 1.6,
+  borderRadius: 26,
+
+  // ✅ fait remplir le wrapper
+  flex: 1,
 },
-daysLabel: {
-  fontFamily: "Comfortaa_700Bold",
-  fontSize: normalize(13),
-  textAlign: "center",
-  color: th.colors.textPrimary,
-  marginBottom: 8,
+    contentScroll: {
+  width: "100%",
+  flexGrow: 0,
+  flexShrink: 1,
+  minHeight: 0,
 },
-daysRow: {
+
+contentScrollContent: {
+  paddingBottom: 6, // ✅ évite le cut visuel bas
+},
+
+contentScrollable: {
+  flexShrink: 1,
+  minHeight: 0,
+},
+
+daysRowScrollable: {
+  marginTop: 10,
   flexDirection: "row",
   flexWrap: "wrap",
   justifyContent: "center",
   gap: 8,
+  paddingHorizontal: 2,
+  paddingBottom: 2,
 },
-dayChip: {
-  paddingVertical: 6,
-  paddingHorizontal: 14,
-  borderRadius: 20,
+dayChipScrollable: {
+  minWidth: n(60),
+  paddingVertical: 8,
+  paddingHorizontal: 10,
+},
+    // ✅ Glass card premium (plus de “blanc plat”)
+    card: {
+  borderRadius: 24,
+  paddingVertical: 18,
+  paddingHorizontal: 16,
+  backgroundColor: isDark ? withAlpha("#0B1220", 0.92) : withAlpha("#FFFFFF", 0.96),
   borderWidth: 1,
-  borderColor: withAlpha(th.colors.border, 0.6),
-  backgroundColor: isDark
-    ? withAlpha("#020617", 0.95) // slate-950
-    : withAlpha("#E5E7EB", 0.95), // gray-200
+  borderColor: isDark ? withAlpha("#FFFFFF", 0.10) : withAlpha("#0B1220", 0.08),
+
+  // ✅ layout colonne + autorise le ScrollView à scroller
+  flex: 1,
+  flexDirection: "column",
+  minHeight: 0,
+
+  ...Platform.select({
+    ios: {
+      shadowColor: "#000",
+      shadowOffset: { width: 0, height: 10 },
+      shadowOpacity: 0.25,
+      shadowRadius: 22,
+    },
+    android: { elevation: 10 },
+  }),
 },
-dayChipSelected: {
-  backgroundColor: isDark ? "#FACC15" : "#111827", // jaune vif en dark, bleu nuit en light
-  borderColor: isDark ? "#FACC15" : "#111827",
-},
-dayChipText: {
-  fontFamily: "Comfortaa_700Bold",
-  fontSize: normalize(12),
-  color: isDark ? "#E5E7EB" : "#111827",
-},
-dayChipTextSelected: {
-  color: isDark ? "#111827" : "#F9FAFB",
+bodyScroll: {
+  // ✅ le “slot” scrollable entre header et boutons
+  flex: 1,
+  minHeight: 0,
+  width: "100%",
 },
 
+bodyScrollContent: {
+  paddingBottom: 12, // ✅ évite cut sous le dernier élément
+},
+    headerRow: {
+      flexDirection: "row",
+      alignItems: "center",
+      justifyContent: "space-between",
+      marginBottom: 12,
+    },
+    titleRow: {
+      flexDirection: "row",
+      alignItems: "center",
+      gap: 10,
+      flex: 1,
+      minWidth: 0,
+    },
+    titleIcon: {
+      width: 30,
+      height: 30,
+      borderRadius: 10,
+      alignItems: "center",
+      justifyContent: "center",
+      backgroundColor: isDark ? withAlpha(th.colors.primary, 0.18) : withAlpha(th.colors.primary, 0.14),
+     borderWidth: 1,
+     borderColor: isDark ? withAlpha(th.colors.primary, 0.30) : withAlpha(th.colors.primary, 0.26),
+    },
 
     title: {
       fontFamily: "Comfortaa_700Bold",
-      fontSize: normalize(18),
-      color: th.colors.secondary,
-      textAlign: "center",
-      marginBottom: 6,
+      fontSize: n(18),
+      color: isDark ? "#F8FAFC" : "#0B1220",
+      textAlign: "left",
+      flexShrink: 1,
+    },
+    subtitleInline: {
+      marginTop: 2,
+      fontFamily: "Comfortaa_400Regular",
+      fontSize: n(12.5),
+      color: isDark ? withAlpha("#F8FAFC", 0.72) : withAlpha("#0B1220", 0.62),
+      lineHeight: n(17),
     },
     subtitle: {
       fontFamily: "Comfortaa_400Regular",
-      fontSize: normalize(13),
-      color: th.colors.textSecondary,
-      textAlign: "center",
+      fontSize: n(13),
+      color: isDark ? withAlpha("#F8FAFC", 0.78) : withAlpha("#0B1220", 0.72),
+      textAlign: "left",
       marginBottom: 10,
+      lineHeight: n(18),
     },
-    hint: {
-      marginTop: 2,
-      fontSize: normalize(11),
-      color: th.colors.textSecondary,
-      textAlign: "center",
-    },
-    error: {
-      marginTop: 8,
-      fontSize: normalize(12),
-      color: th.colors.error,
-      textAlign: "center",
-    },
-    buttonsRow: {
-      flexDirection: "row",
-      justifyContent: "space-between",
-      marginTop: 18,
-      gap: 10,
-    },
-    btn: {
-      flex: 1,
+
+    closeBtn: {
+      width: 34,
+      height: 34,
+      borderRadius: 12,
       alignItems: "center",
       justifyContent: "center",
-      paddingVertical: 11,
+      backgroundColor: isDark ? withAlpha("#FFFFFF", 0.08) : withAlpha("#0B1220", 0.06),
+      borderWidth: 1,
+      borderColor: isDark ? withAlpha("#FFFFFF", 0.12) : withAlpha("#0B1220", 0.08),
+    },
+
+    hint: {
+      marginTop: 2,
+      fontSize: n(11.5),
+      color: isDark ? withAlpha("#F8FAFC", 0.65) : withAlpha("#0B1220", 0.58),
+      textAlign: "left",
+      lineHeight: n(16),
+      marginBottom: 10,
+    },
+
+    // ✅ Alert premium
+    alertBox: {
+      marginTop: 2,
+      marginBottom: 10,
+      paddingVertical: 10,
+      paddingHorizontal: 12,
       borderRadius: 14,
-      shadowColor: "#000",
-      shadowOffset: { width: 0, height: 4 },
-      shadowOpacity: 0.18,
-      shadowRadius: 7,
-      elevation: 5,
+      backgroundColor: isDark ? withAlpha("#FB7185", 0.12) : withAlpha("#FB7185", 0.10),
+      borderWidth: 1,
+      borderColor: isDark ? withAlpha("#FB7185", 0.25) : withAlpha("#FB7185", 0.20),
+      flexDirection: "row",
+      alignItems: "center",
+      gap: 10,
     },
-    cancelBtn: {
-      backgroundColor: withAlpha(th.colors.border, 0.95),
-    },
-    sendBtn: {
-      backgroundColor: th.colors.primary,
-    },
-    cancelText: {
+    errorText: {
+      flex: 1,
+      fontSize: n(12),
+      color: isDark ? "#FEE2E2" : "#9F1239",
       fontFamily: "Comfortaa_700Bold",
-      color: th.colors.textPrimary,
-      fontSize: normalize(14),
+      lineHeight: n(16),
     },
-    sendText: {
+    content: {
+  marginTop: 0,
+  flexShrink: 1,
+  minHeight: 0,
+},
+
+contentCompact: {
+  flexShrink: 1,
+  minHeight: 0,
+},
+headerRowCompact: {
+  marginBottom: 6,
+},
+challengePillCompact: {
+  marginBottom: 6,
+  paddingVertical: 6,
+},
+sectionCardCompact: {
+  padding: 9,
+  marginBottom: 2,
+},
+buttonsRowCompact: {
+  marginTop: 8,
+},
+btnCompact: {
+  paddingVertical: 11,
+},
+
+secondaryBtnCompact: {
+  // rien d'obligatoire, mais on garde la cohérence
+},
+
+primaryBtnCompact: {
+  paddingVertical: 12,
+},
+
+    challengePill: {
+  alignSelf: "flex-start",
+  flexDirection: "row",
+  alignItems: "center",
+  gap: 8,
+  paddingVertical: 8,
+  paddingHorizontal: 12,
+  borderRadius: 999,
+  marginBottom: 12,
+  backgroundColor: isDark ? withAlpha("#FFFFFF", 0.06) : withAlpha("#0B1220", 0.05),
+  borderWidth: 1,
+  borderColor: isDark ? withAlpha("#FFFFFF", 0.10) : withAlpha("#0B1220", 0.08),
+},
+challengePillText: {
+  fontFamily: "Comfortaa_700Bold",
+  fontSize: n(12.5),
+  color: isDark ? withAlpha("#F8FAFC", 0.88) : withAlpha("#0B1220", 0.78),
+  maxWidth: 300,
+},
+    // ✅ Compact mode (quand showDays=true) => garantit que ça rentre sans scroll
+    cardCompact: {
+  paddingVertical: 12,
+  paddingBottom: 10,
+},
+whyBox: {
+  flexDirection: "row",
+  alignItems: "center",
+ gap: 10,
+  paddingVertical: 10,
+  paddingHorizontal: 12,
+  borderRadius: 16,
+  marginBottom: 10,
+  backgroundColor: isDark ? withAlpha(th.colors.primary, 0.10) : withAlpha(th.colors.primary, 0.08),
+  borderWidth: 1,
+  borderColor: isDark ? withAlpha(th.colors.primary, 0.22) : withAlpha(th.colors.primary, 0.18),
+},
+whyBoxCompact: {
+  paddingVertical: 8,
+  marginBottom: 8,
+},
+whyText: {
+  flex: 1,
+  minWidth: 0,
+  fontFamily: "Comfortaa_700Bold",
+  fontSize: n(12.5),
+  lineHeight: n(17),
+  color: isDark ? withAlpha("#F8FAFC", 0.92) : withAlpha("#0B1220", 0.78),
+},
+    daysRowCompact: {
+      marginTop: 1,
+      gap: 1,
+      // 4 colonnes stable (évite les retours de ligne bizarres)
+    },
+    dayChipCompact: {
+  width: Math.floor((Math.min(screenW, 420) - 16 * 2 - 12 * 2 - 8 * 3) / 4),
+  minWidth: 0,
+  paddingVertical: 8,
+  paddingHorizontal: 1,
+},
+dayChipTextCompact: {
+  fontSize: n(12),
+},
+
+    // ✅ Section surface (durée)
+    sectionCard: {
+      marginTop: 4,
+      marginBottom: 6,
+      padding: 12,
+     paddingBottom: 10,
+      borderRadius: 18,
+      backgroundColor: isDark ? withAlpha("#FFFFFF", 0.07) : withAlpha("#0B1220", 0.035),
+      borderWidth: 1,
+      marginHorizontal: 2,
+      borderColor: isDark ? withAlpha("#FFFFFF", 0.10) : withAlpha("#0B1220", 0.08),
+    },
+
+    daysContainer: { marginTop: 0, marginBottom: 0 },
+
+    daysTopRow: {
+      flexDirection: "row",
+      alignItems: "center",
+      justifyContent: "space-between",
+      gap: 10,
+    },
+    daysInlineLabel: {
       fontFamily: "Comfortaa_700Bold",
-      color: "#fff",
-      fontSize: normalize(14),
+      fontSize: n(13),
+      color: isDark ? "#F8FAFC" : "#0B1220",
+      flexShrink: 1,
+    },
+
+    daysToggleBtn: {
+      flexDirection: "row",
+      alignItems: "center",
+      gap: 6,
+      paddingVertical: 7,
+ paddingHorizontal: 10,
+ borderRadius: 999,
+      backgroundColor: isDark ? withAlpha("#FFFFFF", 0.08) : withAlpha("#0B1220", 0.06),
+      borderWidth: 1,
+      borderColor: isDark ? withAlpha("#FFFFFF", 0.12) : withAlpha("#0B1220", 0.08),
+    },
+    daysToggleText: {
+      fontFamily: "Comfortaa_700Bold",
+      fontSize: n(11.5),
+      color: isDark ? "#F8FAFC" : "#0B1220",
+    },
+daysRow: {
+     marginTop: 8,              // ✅ moins d’espace sous le header Durée
+     flexDirection: "row",
+     flexWrap: "wrap",
+     justifyContent: "center",
+     gap: 8,                    // ✅ serré mais respirant
+     paddingHorizontal: 2,      // ✅ évite que ça “touche” la bordure
+   },
+    // ✅ Chips contrastées
+    dayChip: {
+       minWidth: n(64),
+      alignItems: "center",
+     paddingVertical: 9,
+     paddingHorizontal: 10,
+ borderRadius: 999,
+      borderWidth: 1,
+      borderColor: isDark ? withAlpha("#FFFFFF", 0.14) : withAlpha("#0B1220", 0.12),
+      backgroundColor: isDark ? withAlpha("#0B1220", 0.72) : withAlpha("#FFFFFF", 0.92),
+    },
+    dayChipSelected: {
+      backgroundColor: th.colors.primary,  // ✅ brand (orange)
+     borderColor: withAlpha(th.colors.primary, 0.95),
+      ...Platform.select({
+   ios: { shadowColor: "#000", shadowOpacity: 0.22, shadowRadius: 10, shadowOffset: { width: 0, height: 6 } },
+   android: { elevation: 6 },
+ }),
+    },
+    dayChipText: {
+      fontFamily: "Comfortaa_700Bold",
+     fontSize: n(13),
+      color: isDark ? "#F8FAFC" : "#0B1220",
+    },
+    dayChipTextSelected: {
+      color: "#0B1220",
+    },
+    dayChipUnit: {
+      fontFamily: "Comfortaa_700Bold",
+      fontSize: n(10),
+      color: isDark ? withAlpha("#F8FAFC", 0.6) : withAlpha("#0B1220", 0.5),
+    },
+    dayChipUnitSelected: {
+      color: isDark ? withAlpha("#0B1220", 0.65) : withAlpha("#F8FAFC", 0.75),
+    },
+    secondaryInner: {
+  flexDirection: "row",
+  alignItems: "center",
+  justifyContent: "center",
+  gap: 6,        // au lieu de 8
+  width: "100%",
+},
+
+secondaryIcon: {
+  marginTop: Platform.OS === "ios" ? 0 : 1, // micro align visuel
+},
+buttonsRow: {
+  flexDirection: "row",
+  justifyContent: "space-between",
+  marginTop: 12,
+  gap: 10,
+
+  // ✅ footer fixe (ne se fait plus bouffer)
+  flexShrink: 0,
+},
+    btn: {
+  flex: 1,
+  alignItems: "center",
+  justifyContent: "center",
+  paddingVertical: 13,
+  borderRadius: 16,
+},
+    // ✅ Secondary button
+    secondaryBtn: {
+      backgroundColor: isDark ? withAlpha("#FFFFFF", 0.08) : withAlpha("#0B1220", 0.06),
+      borderWidth: 1,
+      borderColor: isDark ? withAlpha("#FFFFFF", 0.12) : withAlpha("#0B1220", 0.10),
+    },
+    secondaryText: {
+  fontFamily: "Comfortaa_700Bold",
+  color: isDark ? "#F8FAFC" : "#0B1220",
+  fontSize: n(14),
+
+  // ✅ anti-coupure
+  flexShrink: 1,
+  minWidth: 0,
+  textAlign: "center",
+},
+    // ✅ Primary button gradient wrap
+    primaryBtnWrap: { flex: 1, borderRadius: 16, overflow: "hidden" },
+    primaryBtn: {
+  flexDirection: "row",
+  alignItems: "center",
+  justifyContent: "center",
+  gap: 8,
+  borderRadius: 16,
+  paddingVertical: 13,
+},
+    scroll: {
+      flexGrow: 0,
+      marginTop: 0,
+    },
+    scrollContent: {
+      paddingBottom: 10, // ✅ évite le “cut” visuel au bas
+    },
+    primaryText: {
+      fontFamily: "Comfortaa_700Bold",
+      color: "#000",
+      fontSize: n(14.5),
     },
   });
+
 
 export default SendInvitationModal;

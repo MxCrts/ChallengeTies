@@ -17,7 +17,7 @@ import {
   deleteDoc,
   updateDoc,
 } from "firebase/firestore";
-import { db, auth } from "../constants/firebase-config";
+import { db, auth } from "@/constants/firebase-config";
 import BackButton from "../components/BackButton";
 import { useTranslation } from "react-i18next";
 

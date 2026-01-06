@@ -41,10 +41,10 @@ export const AdsVisibilityProvider: React.FC<{ children: React.ReactNode }> = ({
 }) => {
   const { user } = useAuth();
   const pathname = usePathname();
-  const { isPremiumUser } = usePremium();
+  const { isPremiumUser, loading: premiumLoading } = usePremium();
+const isPremium = isPremiumUser === true;
 
   const isAdmin = !!user && ADMIN_UIDS.has(user.uid);
-  const isPremium = !!isPremiumUser;
 
   // Lecture initiale
   const [adsReady, setAdsReady] = useState(
@@ -85,7 +85,7 @@ export const AdsVisibilityProvider: React.FC<{ children: React.ReactNode }> = ({
     pathname === "/forgot-password";
 
     const value = useMemo<AdsVisibility>(() => {
-    const hideAll = isAdmin || isPremium;
+    const hideAll = isAdmin || (!premiumLoading && isPremium);
 
     // 🔓 MODE TEST : on ignore adsReady / canRequestAds,
     // mais on respecte TOUJOURS admin / premium.
@@ -128,6 +128,7 @@ export const AdsVisibilityProvider: React.FC<{ children: React.ReactNode }> = ({
     isAdmin,
     isPremium,
     pathname,
+    premiumLoading,
   ]);
 
 

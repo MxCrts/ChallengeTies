@@ -1,6 +1,6 @@
 import * as Location from "expo-location";
 import { doc, updateDoc, getDoc, serverTimestamp } from "firebase/firestore";
-import { db, auth } from "../constants/firebase-config";
+import { db, auth } from "@/constants/firebase-config";
 
 // Récupère la localisation réelle, reverse-geocode, et met à jour Firestore
 export const fetchAndSaveUserLocation = async (): Promise<boolean> => {

@@ -8,7 +8,7 @@ import {
   arrayUnion,
   arrayRemove,
 } from "firebase/firestore";
-import { db } from "../constants/firebase-config";
+import { db } from "@/constants/firebase-config";
 import { achievementsList } from "./achievementsConfig";
 
 /** ---------- Utils sûrs ---------- */

@@ -527,26 +527,26 @@
   "streakBonusTitle": "연속 보너스",
   "streakBonusMessage": "🎯 {{streak}}일 연속 달성으로 +{{bonus}}!",
 
-  "challengeDetails": {
+"challengeDetails": {
     "noDescription": "설명이 없습니다",
+    "participantsLabel": "참가자",
     "fetchError": "챌린지를 불러올 수 없습니다.",
     "untitled": "챌린지",
-    "joinError": "챌린지 참여에 실패했습니다. 다시 시도하세요.",
-    "completeError": "챌린지를 완료할 수 없습니다.",
+    "joinError": "참가할 수 없습니다. 다시 시도해 주세요.",
+    "completeError": "완료할 수 없습니다.",
     "loading": "로딩 중…",
 
-    "shareMessage": "ChallengeTies에서 '{{title}}' 챌린지에 함께 도전하자!",
-    "participants_one": "{{count}} 참가자",
-"participants_other": "{{count}} 참가자"
-,
+    "shareMessage": "ChallengeTies에서 “{{title}}”에 함께 참여해요!",
+    "participants_one": "{{count}}명 참가",
+    "participants_other": "{{count}}명 참가",
 
-    "takeChallenge": "챌린지 시작",
+    "takeChallenge": "챌린지 참여",
     "inProgress": "진행 중",
-    "markToday": "오늘 체크하기",
-    "markTodayHint": "오늘의 진행도를 추가합니다.",
+    "markToday": "오늘 체크",
+    "markTodayHint": "오늘을 진행 상황에 추가합니다.",
     "completeChallenge": "챌린지 완료",
 
-    "reviewAfterComplete": "⚠️ 이 챌린지를 완료해야 리뷰를 남길 수 있어요 🏆",
+    "reviewAfterComplete": "⚠️ 리뷰를 남기려면 이 챌린지를 완료해야 합니다 🏆",
 
     "chat": "채팅",
     "days": "일",
@@ -564,22 +564,26 @@
 
     "invite": "친구 초대",
     "inviteAFriend": "친구 초대",
-    "inviteError": "초대 공유에 실패했습니다",
+    "inviteError": "초대를 공유할 수 없습니다",
     "inviteA11y": "이 챌린지에 친구 초대",
 
-    "needHelp": "도움이 필요하신가요?",
+    "needHelp": "도움이 필요해요?",
     "leaveReview": "리뷰 남기기",
     "alreadyReviewed": "이미 이 챌린지에 리뷰를 남겼습니다.",
-    "reviewSectionTitle": "모든 리뷰",
-    "noReviewsYet": "아직 리뷰가 없습니다.",
+    "reviewSectionTitle": "사람들의 후기",
+    "noReviewsYet": "아직 이 챌린지에 리뷰가 없습니다.",
     "yourReview": "내 리뷰",
-    "reviewPlaceholder": "챌린지를 끝낸 후 느낀 점을 적어보세요…",
-    "submitReview": "전송",
+    "reviewPlaceholder": "챌린지를 완료한 후 느낌을 공유해 주세요…",
+    "submitReview": "보내기",
     "deleteReview": "삭제",
-    "confirmDeleteReview": "이 리뷰를 삭제하시겠습니까?",
+    "confirmDeleteReview": "이 리뷰를 삭제할까요?",
 
-    "uncategorized": "분류 없음",
-    "daysCompleted": "일 완료",
+    "uncategorized": "미분류",
+     "takeChallengeA11y": "챌린지 시작",
+  "takeChallengeHint": "기간을 선택한 후 확인하여 시작합니다.",
+  "completeChallengeA11y": "챌린지 완료",
+  "completeChallengeHint": "보상을 받기 위해 완료 화면을 엽니다.",
+    "daysCompleted": "완료한 일수",
     "alreadyMarked": "오늘은 이미 체크됨",
 
     "challenge": "챌린지",
@@ -587,7 +591,24 @@
     "chatAccessDenied": "채팅에 들어가려면 먼저 챌린지에 참여해야 합니다.",
 
     "backButton": "뒤로",
-    "backButtonHint": "이전 화면으로 돌아가기"
+    "backButtonHint": "이전 화면으로 돌아가기",
+
+    "actions": {
+      "best": "추천",
+      "inviteA11y": "듀오로 친구 초대",
+      "inviteHint": "초대를 보내 실시간 듀오 대결로 바꿔보세요.",
+      "inviteHintDuo": "이미 이 챌린지는 듀오입니다.",
+      "inviteHintOffline": "친구를 초대하려면 연결이 필요합니다.",
+      "inviteSub": "가장 바이럴: 실시간 대결",
+      "shareHint": "멋진 공유 카드를 생성합니다.",
+      "shareSub": "프리미엄 카드 + 링크",
+      "chatHint": "챌린지 채팅을 엽니다.",
+      "chatSub": "동기부여 + 증거",
+      "saveHint": "이 챌린지를 즐겨찾기에 추가합니다.",
+      "saveSub": "1탭으로 찾기",
+      "statsHint": "캘린더와 진행 상황 보기.",
+      "statsSub": "연속 + 월"
+    }
   },
 
   "editYourReview": "리뷰 수정",
@@ -601,6 +622,7 @@
   "duo": {
     "title": "듀오 챌린지",
     "you": "나",
+    "modeShort": "듀오",
     "partner": "파트너",
 
     "leading": "당신이 앞서고 있어요!",
@@ -2166,9 +2188,81 @@
     "notForYouTitle": "오류",
     "notForYouMessage": "이 초대는 현재 계정의 것이 아닙니다."
   },
-
+"homeZ": {
+    "hero": {
+      "brand": "ChallengeTies",
+      "headline": "오늘의 계기.",
+      "sub": "하나의 도전. 한 번의 탭. 계속하려면: 듀오.",
+      "duoProof": "듀오는 지속하게 만듭니다.",
+      "ctaShort": "시작",
+      "ctaA11y": "시작하고 도전 선택"
+    },
+    "todayHub": {
+      "badge": "오늘",
+      "primaryActiveShort": "기록",
+      "primaryDuoShort": "듀오",
+      "titleActive2": "오늘 기록하세요. 연속을 지키세요.",
+      "titleNone2": "도전을 선택하세요. 오늘 시작하세요.",
+      "subActive2": "한 번의 탭으로 기록. 그다음: 초대하고 지속 확률을 두 배로.",
+      "subNone2": "가장 어려운 건 첫걸음입니다. 솔로, 듀오… 또는 생성.",
+      "primaryActiveHint2": "한 번의 탭으로 오늘을 기록.",
+      "progress": "{{done}}/{{total}}일",
+      "micro2": "듀오 = 동기 x2. 지금 하세요.",
+      "openActiveA11y": "활성 도전 열기",
+      "openActiveHint": "진행 상황 확인 및 친구 초대를 위해 열기.",
+      "createSub": "당신의 도전, 당신의 규칙.",
+      "primaryDuoA11y": "듀오로 친구 초대",
+      "primaryDuoHint": "도전을 선택한 후 듀오로 초대하세요.",
+      "soloCardA11y": "솔로 도전 선택",
+      "soloCardHint": "Explore에서 솔로 도전 선택.",
+      "soloCard": "솔로",
+      "soloCardSub": "선택. 시작. 지속.",
+      "solo": "솔로 유지",
+      "soloA11y": "솔로 유지",
+      "soloHint": "파트너 없이 도전.",
+      "inviteSub2": "초대. 지속. 성공."
+    },
+    "duoNudge": {
+      "a11y": "듀오 추천",
+      "title": "듀오는 계속하게 합니다.",
+      "sub": "누군가를 초대하세요. 같은 도전, 같은 리듬.",
+      "cta": "듀오",
+      "ctaA11y": "듀오로 친구 초대",
+      "solo": "솔로 유지",
+      "soloA11y": "솔로 유지"
+    },
+    "discover": {
+      "title": "탐색",
+      "subtitle2": "핵심만. 나머지는 아래.",
+      "leaderboard": "순위표",
+      "leaderboardSub2": "사회적 증거. 동기부여.",
+      "leaderboardA11y": "순위표 열기",
+      "leaderboardHint": "다른 사람과 진행 상황 비교.",
+      "tips": "팁",
+      "tipsSub2": "1분. 즉각 실행.",
+      "tipsA11y": "팁 열기",
+      "tipsHint": "도전을 유지하는 빠른 팁.",
+      "newFeatures": "새 기능",
+      "newFeaturesSub": "탐색. 투표. 앱에 영향.",
+      "newFeaturesA11y": "새 기능",
+      "newFeaturesHint": "새 기능을 보고 다음을 투표하세요."
+    }
+  }
+,
   "invitationS": {
     "shareTitle": "듀오 초대",
+    "later": "나중에",
+    "startSoloShort": "솔로",
+      "subtitle": "링크를 공유하세요. 친구가 이 챌린지에 듀오로 참여합니다.",
+  "whyDuo": "둘이면 더 오래 꾸준히 할 수 있어요. 간단하지만 확실합니다.",
+     "ctaInvite": "초대",
+     "startSolo": "혼자 시작하기",
+    "a11yStartSoloHint": "지금 이 챌린지를 혼자 시작하세요.",
+    "ctaChange": "변경",
+    "ctaDone": "확인",
+    "durationLabel": "기간",
+    "changeDuration": "기간 변경",
+    "linkCopiedInline": "링크 복사 완료 ✅ 어디든 붙여넣을 수 있어요.",
     "sendTitle": "친구 초대",
     "shareSubtitle": "« {{challenge}} » ({{days}}일) 초대 링크를 생성하세요. 앱이 있으면 바로 열리고, 없으면 스토어로 이동합니다.",
     "shareHint": "링크는 어디서든 작동하는 범용 링크입니다.",
@@ -2218,6 +2312,8 @@
     "notLoggedIn": "로그인이 필요합니다.",
     "sending": "전송 중…",
     "cancel": "취소",
+    "edit": "편집",
+    "hide": "숨기기",
     "continue": "계속",
     "errorTitle": "오류"
   },
@@ -3935,34 +4031,6 @@
   "receivedOn": "{{date}} 수신",
   "locale": "ko-KR",
 
-  "firstPick": {
-    "title": "첫 번째 챌린지를 선택하세요!",
-    "subtitle": "어떤 방식으로 시작할까요?",
-    "chooseSolo": "솔로 선택",
-    "chooseDuo": "듀오 선택",
-    "chooseSoloShort": "솔로로 선택",
-"chooseDuoShort": "듀오로 선택",
-    "cardHint": "탭하여 이 챌린지를 선택하세요.",
-    "emptyTitle": "아직 챌린지가 없어요",
-    "emptySubtitle": "아래로 당겨 새로고침하거나 다시 시도하세요.",
-    "modeDuo": "듀오 (추천)",
-    "modeSolo": "솔로",
-    "duoBadge": "듀오",
-    "alreadyInvited": "이 챌린지에는 이미 대기 중인 초대가 있습니다.",
-    "durationLabel": "기간:",
-    "offlineDuo": "현재 오프라인입니다. 듀오 초대를 보내려면 연결하세요.",
-    "day_one": "{{count}}일",
-    "day_other": "{{count}}일",
-    "chooseMode": "모드 선택",
-    "skip": "건너뛰기",
-    "alert": {
-      "missingChoiceTitle": "선택되지 않음",
-      "missingChoiceBody": "챌린지를 선택해주세요.",
-      "modeTitle": "모드 선택",
-      "modeBody": "듀오 또는 솔로를 선택해주세요."
-    }
-  },
-
   "access": {
     "editProfile": {
       "label": "프로필 수정",
@@ -4028,6 +4096,8 @@
 
   "tutorial": {
     "progress": "단계",
+    "open": "튜토리얼",
+    "openHint": "30초 만에 ChallengeTies 사용법을 알아보세요",
     "progressA11y": "{{total}}단계 중 {{current}}단계",
     "welcomeTagline": "당신의 여정이 여기서 시작됩니다.",
     "steps": {
@@ -4165,21 +4235,72 @@
       "contact": "문제가 있다면 앱 내 ‘지원팀에 문의하기’ 버튼 또는 공식 웹사이트의 연락 페이지를 통해 언제든 문의해주세요 🌍."
     }
   },
-
-  "common": {
-    "back": "뒤로가기",
-    "skip": "건너뛰기",
+"common": {
+    "back": "뒤로",
+    "retry": "다시 시도",
+    "loading": "로딩 중...",
+    "recommended": "추천",
+    "networkError": "연결 문제가 있어요",
+    "oops": "앗, 다시 시도해줘.",
     "challenge": "챌린지",
-    "error": "오류",
-    "unexpectedError": "예기치 않은 오류가 발생했습니다. 다시 시도해주세요.",
     "misc": "기타",
-    "oops": "앗…",
-    "loadError": "새로고침할 수 없습니다. 아래로 당겨 다시 시도하세요.",
+    "skip": "건너뛰기",
+    "error": "오류",
+    "unexpectedError": "예기치 않은 오류가 발생했어요. 다시 시도해 주세요.",
+    "loadError": "새로고침할 수 없어요. 아래로 내려 다시 시도해 주세요.",
     "close": "닫기",
-    "networkError": "네트워크 연결 문제",
     "info": "정보"
   },
-
+  "firstPick": {
+  "day_one": "{{count}}일",
+  "day_other": "{{count}}일",
+  "progress": "{{total}} 중 {{current}}",
+  "cardHint": "탭해서 선택하세요.",
+  "step1": {
+    "title": "여정을 시작하세요",
+    "subtitle": "챌린지를 고르세요. 시작합니다.",
+    "cta": "다음",
+    "ctaDisabled": "선택",
+    "shuffleLink": "마음에 없나요? 다른 것 보기",
+    "shuffleA11y": "다른 챌린지 보기"
+  },
+  "step2": {
+    "title": "솔로 or 듀오?",
+    "subtitle": "듀오면 더 오래 꾸준해져요. 포기하기도 더 어려워요.",
+    "duoDesc": "듀오로 꾸준히. 바로 친구를 초대하세요.",
+    "cta": "다음",
+    "ctaDisabled": "선택",
+    "duoTitle": "듀오",
+    "duoOfflineLine": "초대하려면 연결이 필요해요.",
+    "soloTitle": "솔로",
+    "soloDesc": "즉시 시작, 초대 없음.",
+    "hintDuo": "바로 친구를 초대하세요.",
+    "hintDuoOffline": "인터넷 필요.",
+    "hintSolo": "바로 시작해요."
+  },
+  "step3": {
+    "title": "얼마나 버틸 수 있나요?",
+    "subtitle": "7일은 좋은 시작이에요. 나중에 조정할 수 있어요.",
+    "cta": "시작",
+    "ctaDisabled": "선택",
+    "durationLabel": "기간",
+    "durationNote": "나중에 언제든 조정할 수 있어요.",
+    "recapDuo": "모드: 듀오",
+    "recapSolo": "모드: 솔로"
+  },
+  "duoBadge": "DUO",
+  "offlineDuo": "듀오 모드에서 친구를 초대하려면 인터넷에 연결하세요.",
+  "offlineDuoShort": "네트",
+  "alreadyInvited": "이 챌린지에 대한 초대가 이미 전송되었습니다.",
+  "a11yCtaNoChallenge": "계속하려면 챌린지를 선택하세요.",
+  "a11yCtaFull": "{{mode}} 모드로 계속, {{days}}일, 챌린지 {{title}}.",
+  "emptyTitle": "사용 가능한 챌린지가 없어요",
+  "emptySubtitle": "아래로 당겨 다시 시도하세요.",
+  "alert": {
+    "missingChoiceBody": "계속하려면 챌린지를 선택하세요."
+  }
+}
+,
   "inventory": {
     "title": "인벤토리",
     "subtitle": "특별 보너스 및 스트릭 보호 아이템을 관리하세요.",

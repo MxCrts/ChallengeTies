@@ -42,7 +42,7 @@ import {
   serverTimestamp,
   where,
 } from "firebase/firestore";
-import { db, auth } from "../../constants/firebase-config";
+import { db, auth } from "@/constants/firebase-config";
 import ConfettiCannon from "react-native-confetti-cannon";
 import { LinearGradient } from "expo-linear-gradient";
 import { useSavedChallenges } from "../../context/SavedChallengesContext";
@@ -92,6 +92,8 @@ import { canInvite } from "../../utils/canInvite";
 import { usePathname } from "expo-router";
 import { useAuth } from "@/context/AuthProvider"; 
 import ShareCardModal from "@/components/ShareCardModal";
+
+const short = (s: string, max = 16) => (s.length > max ? s.slice(0, max - 1).trim() + "…" : s);
 
 function useTabBarHeightSafe(): number {
   try {
@@ -2024,7 +2026,9 @@ const handleInviteFriend = useCallback(async () => {
     if (isOffline) {
       Alert.alert(
         t("common.networkError"),
-        t("firstPick.offlineDuo") || "Connecte-toi à Internet pour inviter un ami en duo."
+        t("firstPick.offlineDuo", {
+          defaultValue: "Connecte-toi à Internet pour inviter un ami en duo.",
+        })
       );
       return;
     }
@@ -2040,8 +2044,9 @@ const handleInviteFriend = useCallback(async () => {
     if (!res.ok) {
       const msg =
         res.reason === "pending-invite"
-          ? t("firstPick.alreadyInvited") ||
-            "Tu as déjà une invitation en attente pour ce défi."
+          ? t("firstPick.alreadyInvited", {
+              defaultValue: "Tu as déjà une invitation en attente pour ce défi.",
+            })
           : t("common.oops");
       Alert.alert(t("common.info"), msg);
       return;
@@ -2108,7 +2113,10 @@ try {
 
   } catch (e) {
     console.error("markToday failed", e);
-    Alert.alert(t("alerts.error"), t("challengeDetails.markError") || "Erreur");
+    Alert.alert(
+      t("alerts.error"),
+      t("challengeDetails.markError", { defaultValue: "Erreur" })
+    );
   } finally {
     setMarking(false);
     markBusyRef.current = false;
@@ -2277,7 +2285,12 @@ const scrollContentStyle = useMemo(
             <TouchableOpacity
               style={styles.takeChallengeButton}
               onPress={() => setModalVisible(true)}
-              accessibilityLabel="Prendre le défi"
+             accessibilityLabel={t("challengeDetails.takeChallengeA11y", {
+                defaultValue: "Prendre le défi",
+              })}
+              accessibilityHint={t("challengeDetails.takeChallengeHint", {
+                defaultValue: "Ouvre la sélection de durée, puis confirme pour commencer.",
+              })}
               testID="take-challenge-button"
               accessibilityRole="button"
             >
@@ -2754,7 +2767,12 @@ textStyle = { color: isDarkMode ? "#FFB3B3" : "#8A0000" };
               style={styles.completeChallengeButton}
               onPress={handleShowCompleteModal}
               accessibilityRole="button"
-              accessibilityLabel="Terminer le défi"
+               accessibilityLabel={t("challengeDetails.completeChallengeA11y", {
+                defaultValue: "Terminer le défi",
+              })}
+              accessibilityHint={t("challengeDetails.completeChallengeHint", {
+                defaultValue: "Ouvre l’écran de validation pour récupérer tes trophées.",
+              })}
               testID="complete-challenge-button"
             >
               <LinearGradient
@@ -2780,158 +2798,180 @@ textStyle = { color: isDarkMode ? "#FFB3B3" : "#8A0000" };
 
 
             
-          <Animated.View entering={firstMountRef.current && shouldEnterAnim ? FadeInUp.delay(300) : undefined}
-    style={styles.actionIconsContainer}
-  >
-            <TouchableOpacity
-              style={[styles.actionIcon, { width: actionIconWidth }]}
-              onPress={handleNavigateToChat}
+          {/* ✅ ACTIONS — version “Keynote” : tuiles nettes + microcopy + anti-texte-coupé */}
+          <Animated.View
+            entering={firstMountRef.current && shouldEnterAnim ? FadeInUp.delay(300) : undefined}
+            style={styles.actionGrid}
+          >
+            {/* INVITER (prioritaire / viral) */}
+            <Pressable
+              style={({ pressed }) => [
+                styles.actionTile,
+                { width: actionIconWidth, opacity: pressed ? 0.85 : 1 },
+                (isDuo || isOffline) && { opacity: 0.55 },
+                !isDarkMode && { backgroundColor: "rgba(0,0,0,0.04)", borderColor: "rgba(0,0,0,0.08)" },
+              ]}
+              onPress={handleInviteButtonPress}
+              disabled={isDuo || isOffline}
               accessibilityRole="button"
-              accessibilityLabel={t("challengeDetails.chatA11y")}
-              testID="chat-button"
-            >
-              <Ionicons
-                name="chatbubble-ellipses-outline"
-                size={normalizeSize(22)} // Taille réduite pour compacité
-                color={currentTheme.colors.textSecondary}
-              />
-              <Text
-                style={[
-                  styles.actionIconLabel,
-                  { color: currentTheme.colors.textSecondary },
-                ]}
-       
-              >
-                {t("challengeDetails.chat")}
-              </Text>
-            </TouchableOpacity>
-            <TouchableOpacity
-              style={[styles.actionIcon, { width: actionIconWidth }]}
-              onPress={handleSaveChallenge}
-              accessibilityRole="button"
-              accessibilityLabel={
-                isSavedChallenge(id)
-                  ? t("challengeDetails.removeSavedA11y")
-                  : t("challengeDetails.saveA11y")
+              accessibilityLabel={t("challengeDetails.actions.inviteA11y")}
+              accessibilityHint={
+                isOffline
+                  ? t("challengeDetails.actions.inviteHintOffline")
+                  : isDuo
+                  ? t("challengeDetails.actions.inviteHintDuo")
+                  : t("challengeDetails.actions.inviteHint")
               }
-              testID="save-button"
+              testID="invite-button"
+              hitSlop={10}
             >
-              <Ionicons
-                name={
-                  pendingFavorite !== null
-                    ? pendingFavorite
-                      ? "bookmark"
-                      : "bookmark-outline"
-                    : isSavedChallenge(id)
-                    ? "bookmark"
-                    : "bookmark-outline"
-                }
-                size={normalizeSize(22)} // Taille réduite
-                color={
-                  pendingFavorite !== null
-                    ? pendingFavorite
-                      ? currentTheme.colors.secondary
-                      : currentTheme.colors.textSecondary
-                    : isSavedChallenge(id)
-                    ? currentTheme.colors.secondary
-                    : currentTheme.colors.textSecondary
-                }
-              />
-              <Text
-                style={[
-                  styles.actionIconLabel,
-                  { color: currentTheme.colors.textSecondary },
-                ]}
-        
-              >
-                {pendingFavorite !== null
-                  ? pendingFavorite
-                    ? t("challengeDetails.saved")
-                    : t("challengeDetails.save")
-                  : isSavedChallenge(id)
-                  ? t("challengeDetails.saved")
-                  : t("challengeDetails.save")}
+              <View style={styles.actionTopRow}>
+                <Ionicons name="person-add-outline" size={normalizeSize(22)} color={currentTheme.colors.textSecondary} />
+                <View style={styles.actionPill}>
+                  <Text style={[styles.actionPillText, { color: currentTheme.colors.textPrimary }]}>
+                    {t("challengeDetails.actions.best")}
+                  </Text>
+                </View>
+              </View>
+              <Text style={[styles.actionTitle, { color: currentTheme.colors.textPrimary }]}>
+                {short(t("inviteAFriend"), 14)}
               </Text>
-            </TouchableOpacity>
-            <TouchableOpacity
-  style={[
-    styles.actionIcon,
-    {
-      width: actionIconWidth,
-      opacity: isDuo ? 0.6 : 1,
-    },
-  ]}
-  onPress={handleInviteButtonPress}
-  accessibilityRole="button"
-  accessibilityLabel={t("inviteAFriend")}
-  testID="invite-button"
->
-  <Ionicons
-    name="person-add-outline"
-    size={normalizeSize(22)}
-    color={currentTheme.colors.textSecondary}
-  />
-  <Text
-    style={[
-      styles.actionIconLabel,
-      { color: currentTheme.colors.textSecondary },
-    ]}
-  >
-    {t("inviteAFriend")}
-  </Text>
-</TouchableOpacity>
+              <Text style={[styles.actionSub, { color: currentTheme.colors.textSecondary }]}>
+                {t("challengeDetails.actions.inviteSub")}
+              </Text>
+            </Pressable>
 
-
-
-
-            <TouchableOpacity
-              style={[styles.actionIcon, { width: actionIconWidth }]}
+            {/* PARTAGER (carte) */}
+            <Pressable
+              style={({ pressed }) => [
+                styles.actionTile,
+                { width: actionIconWidth, opacity: pressed ? 0.85 : 1 },
+                !isDarkMode && { backgroundColor: "rgba(0,0,0,0.04)", borderColor: "rgba(0,0,0,0.08)" },
+              ]}
               onPress={() => setShareCardVisible(true)}
               accessibilityRole="button"
               accessibilityLabel={t("challengeDetails.shareA11y")}
+              accessibilityHint={t("challengeDetails.actions.shareHint")}
               testID="share-button"
+              hitSlop={10}
             >
-              <Ionicons
-                name="share-social-outline"
-                size={normalizeSize(22)}
-                color={currentTheme.colors.textSecondary}
-              />
-              <Text
-                style={[
-                  styles.actionIconLabel,
-                  { color: currentTheme.colors.textSecondary },
-                ]}
- 
-              >
-                {t("challengeDetails.share")}
+              <View style={styles.actionTopRow}>
+                <Ionicons name="share-social-outline" size={normalizeSize(22)} color={currentTheme.colors.textSecondary} />
+              </View>
+              <Text style={[styles.actionTitle, { color: currentTheme.colors.textPrimary }]}>
+                {short(t("challengeDetails.share"), 14)}
               </Text>
-            </TouchableOpacity>
-            <TouchableOpacity
-              style={[
-                styles.actionIcon,
-                { width: actionIconWidth, opacity: challengeTaken ? 1 : 0.5 }
-              ]}
-              onPress={challengeTaken  ? handleViewStats : undefined}
-              accessibilityLabel={t("challengeDetails.statsA11y")}
-              accessibilityRole="button"
-              testID="stats-button"
-              disabled={!challengeTaken }
-            >
-              <Ionicons
-                name="stats-chart-outline"
-                size={normalizeSize(22)}
-                color={currentTheme.colors.textSecondary}
-              />
-              <Text
-                style={[
-                  styles.actionIconLabel,
-                  { color: currentTheme.colors.textSecondary },
-                ]}
+              <Text style={[styles.actionSub, { color: currentTheme.colors.textSecondary }]}>
+                {t("challengeDetails.actions.shareSub")}
+              </Text>
+            </Pressable>
 
-              >
-                {t("challengeDetails.stats")}
+            {/* CHAT */}
+            <Pressable
+              style={({ pressed }) => [
+                styles.actionTile,
+                { width: actionIconWidth, opacity: pressed ? 0.85 : 1 },
+                !isDarkMode && { backgroundColor: "rgba(0,0,0,0.04)", borderColor: "rgba(0,0,0,0.08)" },
+              ]}
+              onPress={handleNavigateToChat}
+              accessibilityRole="button"
+              accessibilityLabel={t("challengeDetails.chatA11y")}
+              accessibilityHint={t("challengeDetails.actions.chatHint")}
+              testID="chat-button"
+              hitSlop={10}
+            >
+              <View style={styles.actionTopRow}>
+                <Ionicons name="chatbubble-ellipses-outline" size={normalizeSize(22)} color={currentTheme.colors.textSecondary} />
+              </View>
+              <Text style={[styles.actionTitle, { color: currentTheme.colors.textPrimary }]}>
+                {short(t("challengeDetails.chat"), 14)}
               </Text>
-            </TouchableOpacity>
+              <Text style={[styles.actionSub, { color: currentTheme.colors.textSecondary }]}>
+                {t("challengeDetails.actions.chatSub")}
+              </Text>
+            </Pressable>
+
+            {/* SAUVEGARDER */}
+            <Pressable
+              style={({ pressed }) => [
+                styles.actionTile,
+                { width: actionIconWidth, opacity: pressed ? 0.85 : 1 },
+                !isDarkMode && { backgroundColor: "rgba(0,0,0,0.04)", borderColor: "rgba(0,0,0,0.08)" },
+              ]}
+              onPress={handleSaveChallenge}
+              accessibilityRole="button"
+              accessibilityLabel={
+                isSavedChallenge(id) ? t("challengeDetails.removeSavedA11y") : t("challengeDetails.saveA11y")
+              }
+              accessibilityHint={t("challengeDetails.actions.saveHint")}
+              testID="save-button"
+              hitSlop={10}
+            >
+              <View style={styles.actionTopRow}>
+                <Ionicons
+                  name={
+                    pendingFavorite !== null
+                      ? pendingFavorite
+                        ? "bookmark"
+                        : "bookmark-outline"
+                      : isSavedChallenge(id)
+                      ? "bookmark"
+                      : "bookmark-outline"
+                  }
+                  size={normalizeSize(22)}
+                  color={
+                    pendingFavorite !== null
+                      ? pendingFavorite
+                        ? currentTheme.colors.secondary
+                        : currentTheme.colors.textSecondary
+                      : isSavedChallenge(id)
+                      ? currentTheme.colors.secondary
+                      : currentTheme.colors.textSecondary
+                  }
+                />
+              </View>
+              <Text style={[styles.actionTitle, { color: currentTheme.colors.textPrimary }]}>
+                {short(
+                  pendingFavorite !== null
+                    ? pendingFavorite
+                      ? t("challengeDetails.saved")
+                      : t("challengeDetails.save")
+                    : isSavedChallenge(id)
+                    ? t("challengeDetails.saved")
+                    : t("challengeDetails.save"),
+                  14
+                )}
+              </Text>
+              <Text style={[styles.actionSub, { color: currentTheme.colors.textSecondary }]}>
+                {t("challengeDetails.actions.saveSub")}
+              </Text>
+            </Pressable>
+
+            {/* STATS */}
+            <Pressable
+              style={({ pressed }) => [
+                styles.actionTile,
+                { width: actionIconWidth, opacity: pressed ? 0.85 : challengeTaken ? 1 : 0.55 },
+                !isDarkMode && { backgroundColor: "rgba(0,0,0,0.04)", borderColor: "rgba(0,0,0,0.08)" },
+              ]}
+              onPress={challengeTaken ? handleViewStats : undefined}
+              disabled={!challengeTaken}
+              accessibilityRole="button"
+              accessibilityLabel={t("challengeDetails.statsA11y")}
+              accessibilityHint={t("challengeDetails.actions.statsHint")}
+              testID="stats-button"
+              hitSlop={10}
+            >
+              <View style={styles.actionTopRow}>
+                <Ionicons name="stats-chart-outline" size={normalizeSize(22)} color={currentTheme.colors.textSecondary} />
+              </View>
+              <Text style={[styles.actionTitle, { color: currentTheme.colors.textPrimary }]}>
+                {short(t("challengeDetails.stats"), 14)}
+              </Text>
+              <Text style={[styles.actionSub, { color: currentTheme.colors.textSecondary }]}>
+                {t("challengeDetails.actions.statsSub")}
+              </Text>
+            </Pressable>
           </Animated.View>
         </Animated.View>
         {/* 🆕 Lazy mount des reviews après les interactions (fluidité initiale) */}
@@ -3873,31 +3913,59 @@ progressSection: {
     lineHeight: normalizeSize(22),
     fontFamily: "Comfortaa_400Regular",
   },
-  actionIconsContainer: {
+  // ✅ ACTION GRID (tuiles premium, anti texte coupé)
+  actionGrid: {
     flexDirection: "row",
     flexWrap: "wrap",
-    justifyContent: "space-between", 
-    alignItems: "center",
+    justifyContent: "space-between",
+    alignItems: "stretch",
     marginTop: SPACING * 2,
     width: "100%",
-    paddingHorizontal: SPACING / 2
+    gap: 12,
   },
-   actionIcon: {
-     alignItems: "center",
-     justifyContent: "center",
-     marginHorizontal: 0,
-     minHeight: normalizeSize(90),
-   },
-  actionIconLabel: {
-    marginTop: normalizeSize(6),
+  actionTile: {
+    borderRadius: 18,
+    paddingVertical: 14,
+    paddingHorizontal: 14,
+    borderWidth: 1,
+    borderColor: "rgba(255,255,255,0.10)",
+    backgroundColor: "rgba(255,255,255,0.07)",
+    minHeight: 104,
+    justifyContent: "flex-start",
+  },
+  actionTopRow: {
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "space-between",
+    marginBottom: 10,
+  },
+  actionTitle: {
+    fontFamily: "Comfortaa_700Bold",
     fontSize: normalizeSize(14),
-    fontFamily: "Comfortaa_400Regular",
-    textAlign: "center",
-    includeFontPadding: false,     // compacte le text verticalement
+    includeFontPadding: false,
     lineHeight: normalizeSize(18),
-    textShadowColor: "rgba(0,0,0,0.12)",
-    textShadowOffset: { width: 0, height: 1 },
-    textShadowRadius: 1.2,
+  },
+  actionSub: {
+    marginTop: 6,
+    fontFamily: "Comfortaa_400Regular",
+    fontSize: normalizeSize(12),
+    includeFontPadding: false,
+    lineHeight: normalizeSize(16),
+    opacity: 0.92,
+  },
+  actionPill: {
+    paddingHorizontal: 10,
+    paddingVertical: 4,
+    borderRadius: 999,
+    backgroundColor: "rgba(255,215,0,0.18)",
+    borderWidth: 1,
+    borderColor: "rgba(255,215,0,0.35)",
+  },
+  actionPillText: {
+    fontFamily: "Comfortaa_700Bold",
+    fontSize: normalizeSize(11),
+    letterSpacing: 0.2,
+    includeFontPadding: false,
   },
   loadingContainer: {
     flex: 1,

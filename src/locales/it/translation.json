@@ -504,8 +504,81 @@
       "cancelled": "Annullata"
     }
   },
+  "homeZ": {
+    "hero": {
+      "brand": "ChallengeTies",
+      "headline": "La scintilla di oggi.",
+      "sub": "Una sfida. Un tap. E se vuoi resistere: Duo.",
+      "duoProof": "Il Duo ti fa resistere.",
+      "ctaShort": "Inizia",
+      "ctaA11y": "Inizia e scegli una sfida"
+    },
+    "todayHub": {
+      "badge": "OGGI",
+      "primaryActiveShort": "Segna",
+      "primaryDuoShort": "Duo",
+      "titleActive2": "Segna oggi. Proteggi la tua serie.",
+      "titleNone2": "Scegli una sfida. Inizia oggi.",
+      "subActive2": "1 tap per segnare. Poi: invita qualcuno e raddoppia le possibilità di resistere.",
+      "subNone2": "La parte più difficile è il primo passo. Solo, Duo… o creane una.",
+      "primaryActiveHint2": "Segna la giornata con un solo tap.",
+      "progress": "{{done}}/{{total}} giorni",
+      "micro2": "Duo = motivazione x2. Fallo ora.",
+      "openActiveA11y": "Apri la sfida attiva",
+      "openActiveHint": "Apri la sfida per vedere i progressi e invitare un amico.",
+      "createSub": "La tua sfida, le tue regole.",
+      "primaryDuoA11y": "Invita un amico in Duo",
+      "primaryDuoHint": "Scegli una sfida e invita qualcuno in Duo.",
+      "soloCardA11y": "Scegli una sfida in solitaria",
+      "soloCardHint": "Apri Esplora per scegliere una sfida solitaria.",
+      "soloCard": "Solo",
+      "soloCardSub": "Scegli. Inizia. Resisti.",
+      "solo": "Continua in solo",
+      "soloA11y": "Continua in solo",
+      "soloHint": "Scegli una sfida senza partner.",
+      "inviteSub2": "Invita. Resisti. Vinci."
+    },
+    "duoNudge": {
+      "a11y": "Suggerimento Duo",
+      "title": "Il Duo ti fa resistere.",
+      "sub": "Invita qualcuno. Stessa sfida, stesso ritmo.",
+      "cta": "Duo",
+      "ctaA11y": "Invita un amico in Duo",
+      "solo": "Resta solo",
+      "soloA11y": "Resta solo"
+    },
+    "discover": {
+      "title": "Scopri",
+      "subtitle2": "L’essenziale. Il resto sotto.",
+      "leaderboard": "Classifica",
+      "leaderboardSub2": "Prova sociale. Motivazione.",
+      "leaderboardA11y": "Apri la classifica",
+      "leaderboardHint": "Confronta i tuoi progressi con gli altri.",
+      "tips": "Tips",
+      "tipsSub2": "1 minuto. Azione immediata.",
+      "tipsA11y": "Apri i consigli",
+      "tipsHint": "Consigli rapidi per mantenere la sfida.",
+      "newFeatures": "Novità",
+      "newFeaturesSub": "Scopri. Vota. Influenza l’app.",
+      "newFeaturesA11y": "Novità",
+      "newFeaturesHint": "Scopri le novità e vota cosa viene dopo."
+    }
+  }
+,
   "invitationS": {
     "shareTitle": "Invito in coppia",
+    "later": "Più tardi",
+    "ctaInvite": "Invita",
+    "subtitle": "Condividi un link. Il tuo amico si unisce a questa sfida in Duo.",
+  "whyDuo": "In due resisti più a lungo. È semplice e funziona.",
+    "startSoloShort": "Solo",
+    "startSolo": "Inizia da solo",
+    "a11yStartSoloHint": "Inizia questa sfida da solo adesso.",
+    "ctaChange": "Modifica",
+    "ctaDone": "OK",
+    "durationLabel": "Durata",
+    "changeDuration": "Modifica durata",
+    "linkCopiedInline": "Link copiato ✅ Incollalo dove vuoi.",
     "sendTitle": "Invita un amico",
     "shareSubtitle": "Genera un link per “{{challenge}}” ({{days}} giorni). Se l’app è installata → apertura diretta. Altrimenti → Store.",
     "shareHint": "Il link è universale e funziona ovunque.",
@@ -556,6 +629,8 @@
     "errorTitle": "Errore",
     "sending": "Invio…",
     "cancel": "Annulla",
+    "edit": "Modifica",
+    "hide": "Nascondi",
     "continue": "Continua"
   },
 "profileS": {
@@ -565,45 +640,70 @@
   },
   "addLocationHere": "Aggiungi una località",
   "addInterestsHere": "Aggiungi i tuoi interessi",
-"firstPick": {
-  "title": "Scegli la tua prima sfida!",
-  "offlineDuo": "Sei offline. Riconnettiti per invitare un amico a un duo.",
-  "subtitle": "Vuoi iniziare in…",
-  "chooseSoloShort": "Scegli in solo",
-  "chooseMode": "Scegli una modalità",
-"chooseDuoShort": "Scegli in duo",
-  "cardHint": "Tocca per selezionare questa sfida.",
-    "emptyTitle": "Nessuna sfida per ora",
-    "emptySubtitle": "Trascina per aggiornare o riprova.",
-  "chooseSolo": "Scegli Solo",
-  "alreadyInvited": "Hai già un invito in sospeso per questa sfida.",
-  "duoBadge": "Duo",
-  "chooseDuo": "Scegli Duo",
-  "modeDuo": "Duo (consigliato)",
-  "modeSolo": "Solo",
-  "durationLabel": "Durata:",
-  "day_one": "{{count}} g",
-  "day_other": "{{count}} g",
-  "skip": "Salta",
-  "alert": {
-    "missingChoiceTitle": "Scelta mancante",
-    "missingChoiceBody": "Seleziona una sfida.",
-    "modeTitle": "Modalità",
-    "modeBody": "Scegli Duo o Solo."
-  }
-},
 "common": {
-  "back": "Indietro",
-  "skip": "Salta",
-  "challenge": "Sfida",
-  "misc": "Varie",
-  "networkError": "Problema di connessione",
-  "info": "Informazioni",
-  "oops": "Ops…",
-  "close": "Chiudi",
-  "error": "Oops",
-    "unexpectedError": "Si è verificato un errore inatteso. Riprova.",
-  "loadError": "Impossibile aggiornare. Trascina verso il basso per riprovare."
+    "back": "Indietro",
+    "retry": "Riprova",
+    "loading": "Caricamento...",
+    "recommended": "Consigliato",
+    "networkError": "Problema di connessione",
+    "oops": "Ops, riprova.",
+    "challenge": "Sfida",
+    "misc": "Varie",
+    "skip": "Salta",
+    "error": "Ops",
+    "unexpectedError": "Si è verificato un errore imprevisto. Riprova.",
+    "loadError": "Impossibile aggiornare. Scorri verso il basso per riprovare.",
+    "close": "Chiudi",
+    "info": "Info"
+  },
+  "firstPick": {
+  "day_one": "{{count}} giorno",
+  "day_other": "{{count}} giorni",
+  "progress": "Passo {{current}} di {{total}}",
+  "cardHint": "Tocca per selezionare.",
+  "step1": {
+    "title": "Inizia la tua avventura",
+    "subtitle": "Scegli una sfida. Si parte.",
+    "cta": "Avanti",
+    "ctaDisabled": "Scegli",
+    "shuffleLink": "Non ti convince? Mostramene altre",
+    "shuffleA11y": "Mostra altre sfide"
+  },
+  "step2": {
+    "title": "Solo o Duo?",
+    "subtitle": "In Duo resisti di più. E mollare è più difficile.",
+    "duoDesc": "In Duo resti costante. Invita un amico subito dopo.",
+    "cta": "Avanti",
+    "ctaDisabled": "Scegli",
+    "duoTitle": "Duo",
+    "duoOfflineLine": "Connessione necessaria per invitare.",
+    "soloTitle": "Solo",
+    "soloDesc": "Parti subito, senza invito.",
+    "hintDuo": "Invita un amico subito dopo.",
+    "hintDuoOffline": "Internet necessario.",
+    "hintSolo": "Parti subito."
+  },
+  "step3": {
+    "title": "Per quanto resisti?",
+    "subtitle": "7 giorni è un ottimo inizio. Potrai modificare dopo.",
+    "cta": "Vai",
+    "ctaDisabled": "Scegli",
+    "durationLabel": "Durata",
+    "durationNote": "Potrai sempre modificare più tardi.",
+    "recapDuo": "Modalità: Duo",
+    "recapSolo": "Modalità: Solo"
+  },
+  "duoBadge": "DUO",
+  "offlineDuo": "Connettiti a internet per invitare un amico in modalità Duo.",
+  "offlineDuoShort": "Rete",
+  "alreadyInvited": "Un invito è già stato inviato per questa sfida.",
+  "a11yCtaNoChallenge": "Scegli una sfida per continuare.",
+  "a11yCtaFull": "Continua in modalità {{mode}}, {{days}} giorni, sfida {{title}}.",
+  "emptyTitle": "Nessuna sfida disponibile",
+  "emptySubtitle": "Trascina verso il basso per riprovare.",
+  "alert": {
+    "missingChoiceBody": "Scegli una sfida per continuare."
+  }
 }
 ,
 "getInspired": "Lasciati ispirare",
@@ -651,18 +751,18 @@
   },
   "savedShort": "Salvato"
 ,
-  "challengeDetails": {
-    "noDescription": "Nessuna descrizione disponibile.",
+ "challengeDetails": {
+    "noDescription": "Nessuna descrizione disponibile",
+    "participantsLabel": "Partecipanti",
+    "fetchError": "Impossibile recuperare la sfida.",
     "untitled": "Sfida",
-    "fetchError": "Impossibile caricare la sfida.",
-    "joinError": "Impossibile unirsi alla sfida. Riprova più tardi.",
+    "joinError": "Impossibile partecipare alla sfida. Riprova.",
     "completeError": "Impossibile completare la sfida.",
     "loading": "Caricamento…",
 
-    "shareMessage": "Unisciti a me in « {{title}} » su ChallengeTies!",
+    "shareMessage": "Unisciti a me su « {{title}} » su ChallengeTies!",
     "participants_one": "{{count}} partecipante",
-"participants_other": "{{count}} partecipanti"
-,
+    "participants_other": "{{count}} partecipanti",
 
     "takeChallenge": "Accetta la sfida",
     "inProgress": "In corso",
@@ -670,36 +770,40 @@
     "markTodayHint": "Aggiungi la giornata di oggi ai tuoi progressi.",
     "completeChallenge": "Completa la sfida",
 
-    "reviewAfterComplete": "⚠️ Devi completare questa sfida prima di lasciare una recensione 🏆",
+    "reviewAfterComplete": "⚠️ Devi completare questa sfida per poter lasciare una recensione 🏆",
 
     "chat": "Chat",
     "days": "giorni",
 
     "save": "Salva",
     "saved": "Salvato",
-    "saveError": "Impossibile salvare la sfida.",
+    "saveError": "Impossibile salvare questa sfida",
 
     "share": "Condividi",
     "shareA11y": "Condividi questa sfida",
-    "linkCopied": "Link copiato negli appunti.",
+    "linkCopied": "Link copiato negli appunti",
 
     "stats": "Statistiche",
-    "statsA11y": "Visualizza statistiche",
+    "statsA11y": "Vedi statistiche",
 
     "invite": "Invita un amico",
     "inviteAFriend": "Invita un amico",
-    "inviteError": "Impossibile inviare l’invito.",
+    "inviteError": "Impossibile condividere l’invito",
     "inviteA11y": "Invita un amico a questa sfida",
 
     "needHelp": "Hai bisogno di consigli?",
     "leaveReview": "Lascia una recensione",
-    "alreadyReviewed": "Hai già recensito questa sfida.",
-    "reviewSectionTitle": "Cosa ne pensano gli altri",
-    "noReviewsYet": "Non ci sono ancora recensioni per questa sfida.",
+    "alreadyReviewed": "Hai già lasciato una recensione per questa sfida.",
+    "reviewSectionTitle": "Cosa ne pensano",
+    "noReviewsYet": "Nessuna recensione per questa sfida al momento.",
     "yourReview": "La tua recensione",
-    "reviewPlaceholder": "Condividi le tue impressioni dopo aver completato la sfida…",
+    "reviewPlaceholder": "Condividi come ti sei sentito dopo aver completato questa sfida…",
     "submitReview": "Invia",
     "deleteReview": "Elimina",
+    "takeChallengeA11y": "Avvia la sfida",
+  "takeChallengeHint": "Apre la selezione della durata e conferma l’inizio.",
+  "completeChallengeA11y": "Completa la sfida",
+  "completeChallengeHint": "Apre la schermata finale per ottenere le ricompense.",
     "confirmDeleteReview": "Eliminare questa recensione?",
 
     "uncategorized": "Senza categoria",
@@ -711,7 +815,24 @@
     "chatAccessDenied": "Devi prima accettare la sfida per accedere alla chat.",
 
     "backButton": "Indietro",
-    "backButtonHint": "Torna alla schermata precedente"
+    "backButtonHint": "Torna alla schermata precedente",
+
+    "actions": {
+      "best": "Top",
+      "inviteA11y": "Invita un amico in duo",
+      "inviteHint": "Invia un invito per trasformarla in un duello in duo in tempo reale.",
+      "inviteHintDuo": "Sei già in duo su questa sfida.",
+      "inviteHintOffline": "Connessione necessaria per invitare un amico.",
+      "inviteSub": "Più virale: duello in tempo reale",
+      "shareHint": "Genera una card elegante da condividere.",
+      "shareSub": "Card premium + link",
+      "chatHint": "Apri la chat della sfida.",
+      "chatSub": "Motivazione + prove",
+      "saveHint": "Aggiungi questa sfida ai preferiti.",
+      "saveSub": "Ritrovala in 1 tap",
+      "statsHint": "Vedi calendario e progressi.",
+      "statsSub": "Streak + mese"
+    }
   },
   "explanation": {
     "title": "La tua voce conta!",
@@ -4087,6 +4208,7 @@
 "duo": {
     "title": "Sfida in coppia",
     "you": "Tu",
+    "modeShort": "Duo" ,
     "partner": "Partner",
 
     "leading": "Sei in vantaggio!",
@@ -4240,6 +4362,8 @@
   "focusHint": "Suggerimento: blocca lo schermo per evitare distrazioni.",
  "tutorial": {
   "progress": "Passo",
+  "open": "Tutorial",
+    "openHint": "Scopri come usare ChallengeTies in 30 secondi",
     "progressA11y": "Passo {{current}} di {{total}}",
     "welcomeTagline": "Il tuo viaggio inizia qui.",
     "steps": {

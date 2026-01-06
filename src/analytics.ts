@@ -2,7 +2,7 @@
 import AsyncStorage from "@react-native-async-storage/async-storage";
 import Constants from "expo-constants";
 import { addDoc, collection, serverTimestamp } from "firebase/firestore";
-import { auth, db } from "../constants/firebase-config";
+import { auth, db } from "@/constants/firebase-config";
 
 /** Active/désactive le log si besoin (garde sur true en prod) */
 const ENABLE_ANALYTICS = true;

@@ -24,7 +24,7 @@ import { useTranslation } from "react-i18next";
 import { useTheme } from "../../context/ThemeContext";
 import designSystem from "../../theme/designSystem";
 import CustomHeader from "@/components/CustomHeader";
-import { auth, db } from "../../constants/firebase-config";
+import { auth, db } from "@/constants/firebase-config";
 import { doc, getDoc, updateDoc, serverTimestamp } from "firebase/firestore";
 import { useAdsVisibility } from "../../src/context/AdsVisibilityContext";
 import { useRouter } from "expo-router";

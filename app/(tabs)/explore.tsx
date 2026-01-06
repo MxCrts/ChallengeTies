@@ -20,7 +20,7 @@ import { Image as RNImage } from "react-native";
 import { Ionicons } from "@expo/vector-icons";
 import { useRouter } from "expo-router";
 import { collection, onSnapshot, query, where, orderBy } from "firebase/firestore";
-import { db } from "../../constants/firebase-config";
+import { db } from "@/constants/firebase-config";
 import { LinearGradient } from "expo-linear-gradient";
 import Animated, {
   FadeInUp,

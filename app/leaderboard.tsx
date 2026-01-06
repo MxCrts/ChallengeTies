@@ -23,7 +23,7 @@ import {
   doc,
   getDoc,
 } from "firebase/firestore";
-import { db, auth } from "../constants/firebase-config";
+import { db, auth } from "@/constants/firebase-config";
 import { useRouter } from "expo-router";
 import { SafeAreaView } from "react-native-safe-area-context";
 import Animated, { FadeInUp, ZoomIn } from "react-native-reanimated";

@@ -5,7 +5,7 @@ import {
   arrayUnion,
   getDoc,
 } from "firebase/firestore";
-import { db, auth } from "../constants/firebase-config";
+import { db, auth } from "@/constants/firebase-config";
 import { checkForAchievements } from "../helpers/trophiesHelpers";
 import { serverTimestamp } from "firebase/firestore";
 

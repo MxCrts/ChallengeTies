@@ -62,11 +62,35 @@ import {
 } from "@/services/notificationService";
 import { handleReferralUrl } from "@/services/referralLinking";
 
-
+import {
+  getTrackingPermissionsAsync,
+  requestTrackingPermissionsAsync,
+} from "expo-tracking-transparency";
 // Toast
 import { ToastProvider, useToast } from "../src/ui/Toast";
 
 const FORCE_ADS_DEBUG = true;
+
+const getShareSheetTs = () => {
+  const v = (globalThis as any).__FROM_SHARE_SHEET__;
+  if (!v) return null;
+  if (typeof v === "number") return v;
+  if (typeof v?.ts === "number") return v.ts;
+  return null;
+};
+
+const consumeShareSheetFlagIfExpired = (maxMs = 20000) => {
+  const ts = getShareSheetTs();
+  if (!ts) return false;
+  const age = Date.now() - ts;
+  if (age < 0) return false;
+  // true = encore actif, on doit bloquer la redirection root
+  if (age <= maxMs) return true;
+  // expiré → cleanup
+  delete (globalThis as any).__FROM_SHARE_SHEET__;
+  return false;
+};
+
 
 // =========================
 // AppNavigator : redirection initiale + Splash
@@ -76,6 +100,17 @@ const AppNavigator: React.FC = () => {
   const router = useRouter();
   const pathname = usePathname();
   const { isGuest, hydrated } = useVisitor();
+
+    // ✅ garde la dernière route "stable" (≠ "/") pour revenir après ShareSheet
+  const lastStablePathRef = React.useRef<string>("/(tabs)");
+
+  useEffect(() => {
+    if (pathname && pathname !== "/") {
+      lastStablePathRef.current = pathname;
+      (globalThis as any).__LAST_STABLE_PATH__ = pathname;
+    }
+  }, [pathname]);
+
 
   const [fontsLoaded] = useFonts({
     Comfortaa_400Regular,
@@ -96,10 +131,30 @@ const AppNavigator: React.FC = () => {
   }, []);
 
   useEffect(() => {
-    // ⛔️ tant que Auth / Fonts pas prêts → ne route pas
-   if (loading || checkingAuth || (!fontsLoaded && !hardReady) || (!hydrated && !hardReady)) {
+  // ⛔️ tant que Auth / Fonts pas prêts → ne route pas
+  if (
+    loading ||
+    checkingAuth ||
+    (!fontsLoaded && !hardReady) ||
+    (!hydrated && !hardReady)
+  ) {
+    return;
+  }
+
+  // ✅ Guard : retour de Share Sheet Android (cancel/dismiss)
+// Si Expo repasse par "/" on REPLACE vers la dernière route stable (sinon écran blanc).
+const shareActive = consumeShareSheetFlagIfExpired(20000);
+if (shareActive && pathname === "/") {
+  const back =
+    (globalThis as any).__LAST_STABLE_PATH__ ||
+    lastStablePathRef.current ||
+    "/(tabs)";
+
+  router.replace(back);
+  SplashScreen.hideAsync().catch(() => {});
   return;
 }
+
 
 // ✅ Si un deep link challenge a été détecté, on laisse DeepLinkManager gérer.
     if ((globalThis as any).__DL_BLOCK_ROOT_REDIRECT__ === true) {
@@ -107,12 +162,20 @@ const AppNavigator: React.FC = () => {
       return;
     }
 
+    
+
     // Si on n'est pas sur "/" on ne force pas une redirection,
     // mais on cache le splash quand même.
     if (pathname !== "/") {
       SplashScreen.hideAsync().catch(() => {});
       return;
     }
+
+    // ✅ Si on est déjà dans l’arbo tabs, inutile de replace (évite des jumps)
+if (pathname.startsWith("/(tabs)")) {
+  SplashScreen.hideAsync().catch(() => {});
+  return;
+}
 
     if (user || isGuest) {
       router.replace("/(tabs)");
@@ -169,6 +232,7 @@ const ConsentGate: React.FC<{ children: React.ReactNode }> = ({ children }) => {
     (async () => {
       try {
         console.log("🧩 [ConsentGate] UMP via AdsConsent + MobileAds…");
+
         (globalThis as any).__ADS_READY__ = false;
         (globalThis as any).__NPA__ = true;
         (globalThis as any).__CAN_REQUEST_ADS__ = true; // valeur safe par défaut
@@ -572,6 +636,30 @@ const NotificationsBootstrap: React.FC = () => {
 export default function RootLayout() {
   useEffect(() => {
     SplashScreen.preventAutoHideAsync().catch(() => {});
+
+    // ✅ ATT: request at the VERY START of app lifecycle (before any SDK/analytics).
+    // Apple review on iPadOS must see the system prompt on first launch when status is "undetermined".
+    if (Platform.OS === "ios") {
+      (async () => {
+        try {
+          const cur = await getTrackingPermissionsAsync();
+          const status = cur?.status as string | undefined;
+
+          if (status === "undetermined") {
+            const req = await requestTrackingPermissionsAsync();
+            (globalThis as any).__ATT_STATUS__ =
+              (req?.status as string | undefined) ?? status ?? "unknown";
+          } else {
+            (globalThis as any).__ATT_STATUS__ = status || "unknown";
+          }
+        } catch (e) {
+          (globalThis as any).__ATT_STATUS__ = "error";
+        }
+      })();
+    } else {
+      (globalThis as any).__ATT_STATUS__ = "not-ios";
+    }
+    
 
     // ✅ failsafe global : quoi qu’il arrive, on sort du splash
     const t = setTimeout(() => {

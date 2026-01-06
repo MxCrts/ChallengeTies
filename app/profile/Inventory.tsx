@@ -13,7 +13,7 @@ import {
 import { Ionicons } from "@expo/vector-icons";
 import { doc, onSnapshot } from "firebase/firestore";
 
-import { auth, db } from "../../constants/firebase-config";
+import { auth, db } from "@/constants/firebase-config";
 import GlobalLayout from "../../components/GlobalLayout";
 import CustomHeader from "@/components/CustomHeader";
 import { LinearGradient } from "expo-linear-gradient";

@@ -11,7 +11,7 @@ import {
   Dimensions,
 } from "react-native";
 import { TrophyProvider } from "../../context/TrophyContext";
-import { auth, db } from "../../constants/firebase-config";
+import { auth, db } from "@/constants/firebase-config";
 import { doc, onSnapshot } from "firebase/firestore";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import Animated, {

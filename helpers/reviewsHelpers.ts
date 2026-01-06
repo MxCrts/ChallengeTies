@@ -10,7 +10,7 @@ import {
   getDoc,
   Timestamp,
 } from "firebase/firestore";
-import { db } from "../constants/firebase-config";
+import { db } from "@/constants/firebase-config";
 
 export interface Review {
   id: string;

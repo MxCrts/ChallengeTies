@@ -19,7 +19,7 @@ import {
 } from "react-native";
 import { useRouter } from "expo-router";
 import { sendPasswordResetEmail } from "firebase/auth";
-import { auth } from "../constants/firebase-config";
+import { auth } from "@/constants/firebase-config";
 import { Ionicons } from "@expo/vector-icons";
 import { StatusBar as ExpoStatusBar } from "expo-status-bar";
 import { useTranslation } from "react-i18next";

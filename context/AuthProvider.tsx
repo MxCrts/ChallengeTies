@@ -1,9 +1,9 @@
 import React, { createContext, useContext, useEffect, useState, useRef } from "react";
 import { onAuthStateChanged, User, signOut } from "firebase/auth";
-import { auth } from "../constants/firebase-config";
+import { auth } from "@/constants/firebase-config";
 import AsyncStorage from "@react-native-async-storage/async-storage";
 import { fetchAndSaveUserLocation } from "../services/locationService";
-import { db } from "../constants/firebase-config";
+import { db } from "@/constants/firebase-config";
 import { collection, query, where, onSnapshot, doc, runTransaction, getDoc, } from "firebase/firestore";
 import { increment } from "firebase/firestore";
 import { setDoc, updateDoc, arrayUnion } from "firebase/firestore";

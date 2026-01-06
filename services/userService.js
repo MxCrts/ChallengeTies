@@ -1,5 +1,5 @@
 import { doc, getDoc, setDoc, updateDoc } from "firebase/firestore";
-import { db } from "../constants/firebase-config";
+import { db } from "@/constants/firebase-config";
 import { awardTrophiesAndCheckAchievements } from "../helpers/trophiesHelpers";
 
 /**
