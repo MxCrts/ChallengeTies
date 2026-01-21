@@ -30,7 +30,7 @@ import { Image as ExpoImage } from "expo-image";
 import type { ListRenderItem } from "react-native";
 import * as Haptics from "expo-haptics";
 
-const SPACING = 18; // Aligné avec CompletedChallenges / Achievements
+const SPACING = 18;
 const { width: SCREEN_WIDTH, height: SCREEN_HEIGHT } = Dimensions.get("window");
 
 const normalizeSize = (size: number) => {
@@ -39,9 +39,9 @@ const normalizeSize = (size: number) => {
   return Math.round(size * scale);
 };
 
-const ITEM_WIDTH = SCREEN_WIDTH * 0.9;
-const ITEM_HEIGHT = SCREEN_WIDTH * 0.45;
-const ROW_HEIGHT = ITEM_HEIGHT + SPACING * 1.5;
+const ITEM_WIDTH = SCREEN_WIDTH * 0.92;
+const ITEM_HEIGHT = SCREEN_WIDTH * 0.46;
+const ROW_HEIGHT = ITEM_HEIGHT + SPACING * 1.45;
 
 const getItemLayoutConst = (_: any, index: number) => ({
   length: normalizeSize(ROW_HEIGHT),
@@ -157,9 +157,7 @@ export default function MyChallenges() {
             .map((item) => ({
               ...item,
               title: item.chatId
-                ? t(`challenges.${item.chatId}.title`, {
-                    defaultValue: item.title,
-                  })
+                ? t(`challenges.${item.chatId}.title`, { defaultValue: item.title })
                 : item.title,
               description: item.chatId
                 ? t(`challenges.${item.chatId}.description`, {
@@ -167,14 +165,11 @@ export default function MyChallenges() {
                   })
                 : item.description,
               category: item.category
-                ? t(`categories.${item.category}`, {
-                    defaultValue: item.category,
-                  })
+                ? t(`categories.${item.category}`, { defaultValue: item.category })
                 : t("noCategory"),
             }))
             .filter((c) => c.approved)
             .sort((a, b) => {
-              // Tri: popularité > date maj > alpha
               const p = (b.participantsCount || 0) - (a.participantsCount || 0);
               if (p !== 0) return p;
               const da = a.updatedAt ? new Date(a.updatedAt).getTime() : 0;
@@ -205,172 +200,303 @@ export default function MyChallenges() {
         imageUrl: item.imageUrl || "",
       }).toString();
       Haptics.selectionAsync().catch(() => {});
-      router.push(
-        `/challenge-details/${encodeURIComponent(item.id)}?${params}`
-      );
+      router.push(`/challenge-details/${encodeURIComponent(item.id)}?${params}`);
     },
     [router]
   );
 
   const renderChallenge: ListRenderItem<Challenge> = useCallback(
-    ({ item, index }) => (
-      <Animated.View
-        entering={ZoomIn.delay(index * 100)}
-        style={styles.cardWrapper}
-      >
-        <TouchableOpacity
-          style={styles.cardContainer}
-          onPress={() => navigateToChallengeDetails(item)}
-          activeOpacity={0.8}
-          accessibilityLabel={String(
-            t("viewChallengeDetails", { title: item.title })
-          )}
-          accessibilityHint={String(t("viewDetails"))}
-          accessibilityRole="button"
-          testID={`challenge-${item.id}`}
-        >
-          <LinearGradient
-            colors={[
-              currentTheme.colors.cardBackground,
-              currentTheme.colors.cardBackground + "F0",
-            ]}
-            style={[
-              styles.card,
-              {
-                borderColor: isDarkMode
-                  ? currentTheme.colors.secondary
-                  : "#FF8C00",
-              },
-            ]}
-          >
-            {item.imageUrl ? (
-              <ExpoImage
-                source={{ uri: item.imageUrl }}
-                style={styles.cardImage}
-                contentFit="cover"
-                transition={200}
-                placeholder={{
-                  blurhash: "LKO2?U%2Tw=w]~RBVZRi};RPxuwH",
-                }}
-                accessibilityLabel={String(
-                  t("challengeImage", { title: item.title })
-                )}
-              />
-            ) : (
-              <View
-                style={[
-                  styles.placeholderImage,
-                  { backgroundColor: currentTheme.colors.overlay },
-                ]}
-              >
-                <Ionicons
-                  name="image-outline"
-                  size={normalizeSize(30)}
-                  color={currentTheme.colors.textSecondary}
-                  accessibilityLabel={String(t("noImage"))}
-                />
-              </View>
-            )}
+    ({ item, index }) => {
+      const hasImage = !!item.imageUrl;
+      const participants = typeof item.participantsCount === "number" ? item.participantsCount : 0;
 
-            <View style={styles.cardContent}>
-              <Text
+      const border = isDarkMode
+        ? withAlpha("#FFFFFF", 0.12)
+        : withAlpha("#000000", 0.08);
+
+      const cardBg = isDarkMode
+        ? withAlpha(currentTheme.colors.cardBackground, 0.62)
+        : withAlpha("#FFFFFF", 0.92);
+
+      const softShadow = isDarkMode ? "rgba(0,0,0,0.55)" : "rgba(0,0,0,0.18)";
+
+      return (
+        <Animated.View entering={ZoomIn.delay(index * 70)} style={styles.cardWrapper}>
+          <TouchableOpacity
+            style={styles.cardContainer}
+            onPress={() => navigateToChallengeDetails(item)}
+            activeOpacity={0.85}
+            accessibilityLabel={String(t("viewChallengeDetails", { title: item.title }))}
+            accessibilityHint={String(t("viewDetails"))}
+            accessibilityRole="button"
+            testID={`challenge-${item.id}`}
+          >
+            {/* Glass base */}
+            <View
+              style={[
+                styles.cardGlass,
+                {
+                  backgroundColor: cardBg,
+                  borderColor: border,
+                  shadowColor: softShadow,
+                },
+              ]}
+            >
+              {/* Sheen premium */}
+              <LinearGradient
+                pointerEvents="none"
+                colors={[
+                  "transparent",
+                  isDarkMode ? "rgba(255,255,255,0.10)" : "rgba(255,255,255,0.70)",
+                  "transparent",
+                ]}
+                start={{ x: 0, y: 0 }}
+                end={{ x: 1, y: 1 }}
+                style={styles.cardSheen}
+              />
+
+              {/* Accent glow */}
+              <View
+                pointerEvents="none"
                 style={[
-                  styles.challengeTitle,
+                  styles.cardGlow,
                   {
-                    color: isDarkMode
-                      ? currentTheme.colors.textPrimary
-                      : "#000000",
+                    backgroundColor: withAlpha(currentTheme.colors.primary, isDarkMode ? 0.16 : 0.10),
                   },
                 ]}
-                numberOfLines={1}
-              >
-                {item.title}
-              </Text>
+              />
 
-              <Text
+              {/* Left media */}
+              <View
                 style={[
-                  styles.challengeCategory,
-                  { color: currentTheme.colors.textSecondary },
+                  styles.mediaWrap,
+                  {
+                    borderColor: isDarkMode
+                      ? withAlpha("#FFFFFF", 0.14)
+                      : withAlpha("#000000", 0.08),
+                    backgroundColor: isDarkMode
+                      ? withAlpha("#FFFFFF", 0.05)
+                      : withAlpha("#000000", 0.03),
+                  },
                 ]}
-                numberOfLines={1}
               >
-                {item.category}
-              </Text>
-
-              {typeof item.participantsCount === "number" &&
-                item.participantsCount > 0 && (
-                  <Text
+                {hasImage ? (
+                  <ExpoImage
+                    source={{ uri: item.imageUrl }}
+                    style={styles.cardImage}
+                    contentFit="cover"
+                    transition={220}
+                    placeholder={{ blurhash: "LKO2?U%2Tw=w]~RBVZRi};RPxuwH" }}
+                    accessibilityLabel={String(t("challengeImage", { title: item.title }))}
+                  />
+                ) : (
+                  <View
                     style={[
-                      styles.participantsText,
-                      { color: currentTheme.colors.secondary },
+                      styles.placeholderImage,
+                      { backgroundColor: withAlpha(currentTheme.colors.overlay, isDarkMode ? 0.22 : 0.12) },
                     ]}
-                    numberOfLines={1}
                   >
-                    {t(
-                      item.participantsCount > 1
-                        ? "participants"
-                        : "participant",
-                      { count: item.participantsCount }
-                    )}
-                  </Text>
+                    <Ionicons
+                      name="image-outline"
+                      size={normalizeSize(22)}
+                      color={currentTheme.colors.textSecondary}
+                      accessibilityLabel={String(t("noImage"))}
+                    />
+                  </View>
                 )}
 
-              <TouchableOpacity
-                style={styles.viewButton}
-                onPress={() => navigateToChallengeDetails(item)}
-                accessibilityLabel={String(t("viewDetails"))}
-                accessibilityRole="button"
-              >
-                <LinearGradient
-                  colors={[
-                    currentTheme.colors.secondary,
-                    currentTheme.colors.primary,
-                  ]}
-                  style={styles.viewButtonGradient}
-                >
-                  <Text
+                {/* Small corner badge if popular */}
+                {participants > 0 && (
+                  <View
                     style={[
-                      styles.viewButtonText,
-                      { color: currentTheme.colors.textPrimary },
+                      styles.cornerBadge,
+                      {
+                        backgroundColor: isDarkMode
+                          ? withAlpha("#000000", 0.35)
+                          : withAlpha("#FFFFFF", 0.80),
+                        borderColor: isDarkMode
+                          ? withAlpha("#FFFFFF", 0.16)
+                          : withAlpha("#000000", 0.10),
+                      },
                     ]}
                   >
-                    {String(t("viewDetails"))}
-                  </Text>
-                </LinearGradient>
-              </TouchableOpacity>
+                    <Ionicons
+                      name="people-outline"
+                      size={normalizeSize(12)}
+                      color={currentTheme.colors.textSecondary}
+                    />
+                    <Text
+                      style={[
+                        styles.cornerBadgeText,
+                        { color: currentTheme.colors.textSecondary },
+                      ]}
+                      numberOfLines={1}
+                    >
+                      {participants}
+                    </Text>
+                  </View>
+                )}
+              </View>
+
+              {/* Right content */}
+              <View style={styles.cardContent}>
+                <View style={styles.topRow}>
+                  <View style={styles.textBlock}>
+                    <Text
+                      style={[
+                        styles.challengeTitle,
+                        { color: currentTheme.colors.textPrimary },
+                      ]}
+                      numberOfLines={1}
+                    >
+                      {item.title}
+                    </Text>
+
+                    <View style={styles.metaRow}>
+                      <View
+                        style={[
+                          styles.categoryPill,
+                          {
+                            backgroundColor: isDarkMode
+                              ? withAlpha("#FFFFFF", 0.06)
+                              : withAlpha("#000000", 0.04),
+                            borderColor: isDarkMode
+                              ? withAlpha("#FFFFFF", 0.12)
+                              : withAlpha("#000000", 0.08),
+                          },
+                        ]}
+                      >
+                        <Ionicons
+                          name="pricetag-outline"
+                          size={normalizeSize(12)}
+                          color={currentTheme.colors.textSecondary}
+                        />
+                        <Text
+                          style={[
+                            styles.challengeCategory,
+                            { color: currentTheme.colors.textSecondary },
+                          ]}
+                          numberOfLines={1}
+                        >
+                          {item.category}
+                        </Text>
+                      </View>
+
+                      {participants > 0 && (
+                        <View
+                          style={[
+                            styles.participantsPill,
+                            {
+                              backgroundColor: withAlpha(currentTheme.colors.secondary, isDarkMode ? 0.14 : 0.12),
+                              borderColor: withAlpha(currentTheme.colors.secondary, isDarkMode ? 0.26 : 0.22),
+                            },
+                          ]}
+                        >
+                          <Ionicons
+                            name="sparkles"
+                            size={normalizeSize(12)}
+                            color={currentTheme.colors.secondary}
+                          />
+                          <Text
+                            style={[
+                              styles.participantsText,
+                              { color: currentTheme.colors.secondary },
+                            ]}
+                            numberOfLines={1}
+                          >
+                            {t(participants > 1 ? "participants" : "participant", { count: participants })}
+                          </Text>
+                        </View>
+                      )}
+                    </View>
+                  </View>
+
+                  <Ionicons
+                    name={I18nManager.isRTL ? "chevron-back" : "chevron-forward"}
+                    size={normalizeSize(18)}
+                    color={withAlpha(currentTheme.colors.textSecondary, 0.85)}
+                    accessibilityElementsHidden
+                    importantForAccessibility="no"
+                  />
+                </View>
+
+                {/* CTA */}
+                <TouchableOpacity
+                  style={styles.viewButton}
+                  onPress={() => navigateToChallengeDetails(item)}
+                  accessibilityLabel={String(t("viewDetails"))}
+                  accessibilityRole="button"
+                  activeOpacity={0.9}
+                >
+                  <LinearGradient
+                    colors={[
+                      withAlpha(currentTheme.colors.secondary, 0.95),
+                      withAlpha(currentTheme.colors.primary, 0.95),
+                    ]}
+                    style={styles.viewButtonGradient}
+                    start={{ x: 0, y: 0 }}
+                    end={{ x: 1, y: 1 }}
+                  >
+                    <Ionicons
+                      name="arrow-forward-circle"
+                      size={normalizeSize(16)}
+                      color={withAlpha("#FFFFFF", isDarkMode ? 0.92 : 0.96)}
+                      style={{ marginRight: normalizeSize(8) }}
+                    />
+                    <Text
+                      style={[
+                        styles.viewButtonText,
+                        { color: withAlpha("#FFFFFF", isDarkMode ? 0.92 : 0.96) },
+                      ]}
+                      numberOfLines={1}
+                    >
+                      {String(t("viewDetails"))}
+                    </Text>
+                  </LinearGradient>
+                </TouchableOpacity>
+              </View>
             </View>
-          </LinearGradient>
-        </TouchableOpacity>
-      </Animated.View>
-    ),
+          </TouchableOpacity>
+        </Animated.View>
+      );
+    },
     [currentTheme, navigateToChallengeDetails, t, isDarkMode]
   );
 
   const renderEmptyState = useCallback(
     () => (
       <View style={styles.noChallengesContainer}>
-        <Animated.View
-          entering={FadeInUp.delay(100)}
-          style={styles.noChallengesContent}
-        >
-          <Ionicons
-            name="create-outline"
-            size={normalizeSize(60)}
-            color={currentTheme.colors.textSecondary}
-            accessibilityLabel={String(t("noChallengesCreated"))}
-          />
+        <Animated.View entering={FadeInUp.delay(120)} style={styles.noChallengesContent}>
+          <View
+            style={[
+              styles.emptyIconWrap,
+              {
+                backgroundColor: isDarkMode
+                  ? withAlpha("#FFFFFF", 0.06)
+                  : withAlpha("#000000", 0.04),
+                borderColor: isDarkMode
+                  ? withAlpha("#FFFFFF", 0.12)
+                  : withAlpha("#000000", 0.08),
+              },
+            ]}
+          >
+            <Ionicons
+              name="create-outline"
+              size={normalizeSize(34)}
+              color={currentTheme.colors.textSecondary}
+              accessibilityLabel={String(t("noChallengesCreated"))}
+            />
+          </View>
+
           <Text
             style={[
               styles.noChallengesText,
-              {
-                color: isDarkMode
-                  ? currentTheme.colors.textPrimary
-                  : currentTheme.colors.textSecondary,
-              },
+              { color: currentTheme.colors.textPrimary },
             ]}
           >
             {String(t("noChallengesCreated"))}
           </Text>
+
           <Text
             style={[
               styles.noChallengesSubtext,
@@ -379,6 +505,23 @@ export default function MyChallenges() {
           >
             {String(t("createFirstChallenge"))}
           </Text>
+
+          <View style={styles.emptyHintRow}>
+            <Ionicons
+              name="sparkles-outline"
+              size={normalizeSize(16)}
+              color={currentTheme.colors.secondary}
+            />
+            <Text
+              style={[
+                styles.emptyHintText,
+                { color: currentTheme.colors.textSecondary },
+              ]}
+            >
+              {String(t("common.tip", "Astuce"))} :{" "}
+              {String(t("createChallengeHint", "Un bon titre + une image = plus de participants."))}
+            </Text>
+          </View>
         </Animated.View>
       </View>
     ),
@@ -401,16 +544,8 @@ export default function MyChallenges() {
           ]}
           style={styles.loadingContainer}
         >
-          <ActivityIndicator
-            size="large"
-            color={currentTheme.colors.primary}
-          />
-          <Text
-            style={[
-              styles.loadingText,
-              { color: currentTheme.colors.textPrimary },
-            ]}
-          >
+          <ActivityIndicator size="large" color={currentTheme.colors.primary} />
+          <Text style={[styles.loadingText, { color: currentTheme.colors.textPrimary }]}>
             {String(t("loadingChallenges"))}
           </Text>
         </LinearGradient>
@@ -446,10 +581,7 @@ export default function MyChallenges() {
         />
         <LinearGradient
           pointerEvents="none"
-          colors={[
-            withAlpha(currentTheme.colors.secondary, 0.25),
-            "transparent",
-          ]}
+          colors={[withAlpha(currentTheme.colors.secondary, 0.25), "transparent"]}
           style={styles.bgOrbBottom}
           start={{ x: 1, y: 0 }}
           end={{ x: 0, y: 1 }}
@@ -507,16 +639,10 @@ export default function MyChallenges() {
 }
 
 const styles = StyleSheet.create({
-  safeArea: {
-    flex: 1,
-    paddingTop: 0,
-  },
-  container: {
-    flex: 1,
-  },
-  gradientContainer: {
-    flex: 1,
-  },
+  safeArea: { flex: 1, paddingTop: 0 },
+  container: { flex: 1 },
+  gradientContainer: { flex: 1 },
+
   bgOrbTop: {
     position: "absolute",
     top: -SCREEN_WIDTH * 0.25,
@@ -533,109 +659,213 @@ const styles = StyleSheet.create({
     height: SCREEN_WIDTH * 1.1,
     borderRadius: SCREEN_WIDTH * 0.55,
   },
+
   listContent: {
-    paddingVertical: SPACING * 1.5,
-    paddingHorizontal: SCREEN_WIDTH * 0.025,
+    paddingVertical: SPACING * 1.2,
+    paddingHorizontal: SCREEN_WIDTH * 0.02,
     paddingBottom: normalizeSize(80),
   },
+
   cardWrapper: {
-    marginBottom: SPACING * 1.5,
-    borderRadius: normalizeSize(25),
-    shadowColor: "#000",
-    shadowOffset: { width: 0, height: normalizeSize(5) },
-    shadowOpacity: 0.35,
-    shadowRadius: normalizeSize(8),
-    elevation: 10,
-  },
-  cardContainer: {
-    width: ITEM_WIDTH,
-    borderRadius: normalizeSize(25),
-    overflow: "hidden",
+    marginBottom: SPACING * 1.15,
+    borderRadius: normalizeSize(26),
     alignSelf: "center",
   },
-  card: {
+
+  cardContainer: {
+    width: ITEM_WIDTH,
+    borderRadius: normalizeSize(26),
+    overflow: "visible",
+    alignSelf: "center",
+  },
+
+  cardGlass: {
     flexDirection: "row",
     alignItems: "center",
-    padding: normalizeSize(18),
-    borderRadius: normalizeSize(25),
-    borderWidth: 2.5,
     minHeight: ITEM_HEIGHT,
+    borderRadius: normalizeSize(26),
+    borderWidth: StyleSheet.hairlineWidth,
+    padding: normalizeSize(14),
+    overflow: "hidden",
+    shadowOffset: { width: 0, height: normalizeSize(10) },
+    shadowOpacity: 0.22,
+    shadowRadius: normalizeSize(14),
+    elevation: 10,
   },
+
+  cardSheen: {
+    position: "absolute",
+    top: -normalizeSize(26),
+    left: -normalizeSize(70),
+    width: "175%",
+    height: normalizeSize(86),
+    transform: [{ rotate: "-12deg" }],
+    opacity: 0.82,
+  },
+
+  cardGlow: {
+    position: "absolute",
+    top: -normalizeSize(26),
+    right: -normalizeSize(22),
+    width: normalizeSize(120),
+    height: normalizeSize(120),
+    borderRadius: 999,
+  },
+
+  mediaWrap: {
+    width: normalizeSize(76),
+    height: normalizeSize(76),
+    borderRadius: normalizeSize(18),
+    borderWidth: StyleSheet.hairlineWidth,
+    overflow: "hidden",
+    marginRight: normalizeSize(12),
+  },
+
   cardImage: {
-    width: normalizeSize(70),
-    aspectRatio: 1,
-    borderRadius: normalizeSize(16),
-    marginRight: SPACING * 1.2,
-    borderWidth: 2,
-    borderColor: "rgba(255, 255, 255, 0.6)",
+    width: "100%",
+    height: "100%",
   },
+
   placeholderImage: {
-    width: normalizeSize(70),
-    height: normalizeSize(70),
-    borderRadius: normalizeSize(16),
+    width: "100%",
+    height: "100%",
     justifyContent: "center",
     alignItems: "center",
-    marginRight: SPACING * 1.2,
   },
+
+  cornerBadge: {
+    position: "absolute",
+    bottom: normalizeSize(6),
+    right: normalizeSize(6),
+    borderRadius: 999,
+    paddingHorizontal: normalizeSize(7),
+    paddingVertical: normalizeSize(3),
+    flexDirection: "row",
+    alignItems: "center",
+    gap: normalizeSize(4),
+    borderWidth: StyleSheet.hairlineWidth,
+  },
+
+  cornerBadgeText: {
+    fontFamily: "Comfortaa_700Bold",
+    fontSize: normalizeSize(10),
+    includeFontPadding: false,
+    writingDirection: I18nManager.isRTL ? "rtl" : "ltr",
+    textAlign: "center",
+  },
+
   cardContent: {
     flex: 1,
     justifyContent: "space-between",
+    minHeight: normalizeSize(76),
   },
+
+  topRow: {
+    flexDirection: "row",
+    alignItems: "flex-start",
+    justifyContent: "space-between",
+    gap: normalizeSize(10),
+  },
+
+  textBlock: {
+    flex: 1,
+  },
+
   challengeTitle: {
-    fontSize: normalizeSize(18),
+    fontSize: normalizeSize(17),
     fontFamily: "Comfortaa_700Bold",
-    marginBottom: normalizeSize(4),
+    marginBottom: normalizeSize(6),
+    includeFontPadding: false,
     writingDirection: I18nManager.isRTL ? "rtl" : "ltr",
-   textAlign: I18nManager.isRTL ? "right" : "left",
+    textAlign: I18nManager.isRTL ? "right" : "left",
   },
+
+  metaRow: {
+    flexDirection: "row",
+    alignItems: "center",
+    flexWrap: "wrap",
+    gap: normalizeSize(8),
+  },
+
+  categoryPill: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: normalizeSize(6),
+    borderRadius: 999,
+    paddingHorizontal: normalizeSize(10),
+    paddingVertical: normalizeSize(6),
+    borderWidth: StyleSheet.hairlineWidth,
+    maxWidth: "100%",
+  },
+
   challengeCategory: {
-    fontSize: normalizeSize(16),
+    fontSize: normalizeSize(12),
     fontFamily: "Comfortaa_400Regular",
-    marginTop: normalizeSize(4),
+    includeFontPadding: false,
     writingDirection: I18nManager.isRTL ? "rtl" : "ltr",
-   textAlign: I18nManager.isRTL ? "right" : "left",
+    textAlign: I18nManager.isRTL ? "right" : "left",
+    maxWidth: SCREEN_WIDTH * 0.48,
   },
+
+  participantsPill: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: normalizeSize(6),
+    borderRadius: 999,
+    paddingHorizontal: normalizeSize(10),
+    paddingVertical: normalizeSize(6),
+    borderWidth: StyleSheet.hairlineWidth,
+  },
+
   participantsText: {
-    fontSize: normalizeSize(14),
-    fontFamily: "Comfortaa_400Regular",
-    marginTop: normalizeSize(4),
+    fontSize: normalizeSize(12),
+    fontFamily: "Comfortaa_700Bold",
+    includeFontPadding: false,
     writingDirection: I18nManager.isRTL ? "rtl" : "ltr",
-   textAlign: I18nManager.isRTL ? "right" : "left",
+    textAlign: I18nManager.isRTL ? "right" : "left",
   },
+
   viewButton: {
-    borderRadius: normalizeSize(18),
+    marginTop: normalizeSize(12),
+    borderRadius: normalizeSize(16),
     overflow: "hidden",
-    marginTop: normalizeSize(10),
+    alignSelf: I18nManager.isRTL ? "flex-start" : "flex-start",
   },
+
   viewButtonGradient: {
-    paddingVertical: normalizeSize(12),
-    paddingHorizontal: SPACING * 1.2,
+    flexDirection: "row",
     alignItems: "center",
     justifyContent: "center",
-    borderRadius: normalizeSize(18),
+    paddingVertical: normalizeSize(11),
+    paddingHorizontal: normalizeSize(14),
+    borderRadius: normalizeSize(16),
   },
+
   viewButtonText: {
     fontFamily: "Comfortaa_700Bold",
-    fontSize: normalizeSize(16),
+    fontSize: normalizeSize(13),
+    includeFontPadding: false,
     textAlign: "center",
     writingDirection: I18nManager.isRTL ? "rtl" : "ltr",
   },
+
   loadingContainer: {
     flex: 1,
     justifyContent: "center",
     alignItems: "center",
     paddingHorizontal: SPACING,
   },
+
   loadingText: {
     marginTop: normalizeSize(20),
-    fontSize: normalizeSize(18),
+    fontSize: normalizeSize(16),
     fontFamily: "Comfortaa_400Regular",
     textAlign: "center",
     writingDirection: I18nManager.isRTL ? "rtl" : "ltr",
   },
-  noChallengesContainer: {
-    flex: 1,
-  },
+
+  noChallengesContainer: { flex: 1 },
+
   noChallengesContent: {
     flex: 1,
     alignItems: "center",
@@ -643,19 +873,50 @@ const styles = StyleSheet.create({
     height: SCREEN_HEIGHT * 0.85,
     paddingHorizontal: SPACING,
   },
+
+  emptyIconWrap: {
+    width: normalizeSize(74),
+    height: normalizeSize(74),
+    borderRadius: 999,
+    alignItems: "center",
+    justifyContent: "center",
+    borderWidth: StyleSheet.hairlineWidth,
+    marginBottom: normalizeSize(14),
+  },
+
   noChallengesText: {
-    fontSize: normalizeSize(22),
+    fontSize: normalizeSize(20),
     fontFamily: "Comfortaa_700Bold",
-    marginTop: SPACING,
+    marginTop: normalizeSize(8),
     textAlign: "center",
     writingDirection: I18nManager.isRTL ? "rtl" : "ltr",
   },
+
   noChallengesSubtext: {
-    fontSize: normalizeSize(18),
+    fontSize: normalizeSize(15),
     fontFamily: "Comfortaa_400Regular",
     textAlign: "center",
-    marginTop: SPACING / 2,
-    maxWidth: SCREEN_WIDTH * 0.75,
+    marginTop: normalizeSize(8),
+    maxWidth: SCREEN_WIDTH * 0.78,
     writingDirection: I18nManager.isRTL ? "rtl" : "ltr",
+  },
+
+  emptyHintRow: {
+    marginTop: normalizeSize(14),
+    flexDirection: "row",
+    alignItems: "center",
+    gap: normalizeSize(8),
+    paddingHorizontal: normalizeSize(12),
+    paddingVertical: normalizeSize(10),
+    borderRadius: normalizeSize(16),
+    backgroundColor: withAlpha("#000000", 0.06),
+  },
+
+  emptyHintText: {
+    flex: 1,
+    fontSize: normalizeSize(12),
+    fontFamily: "Comfortaa_400Regular",
+    writingDirection: I18nManager.isRTL ? "rtl" : "ltr",
+    textAlign: I18nManager.isRTL ? "right" : "left",
   },
 });

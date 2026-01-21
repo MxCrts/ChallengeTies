@@ -27,8 +27,8 @@ import designSystem, { Theme } from "@/theme/designSystem";
 import { auth } from "@/constants/firebase-config";
 import { Ionicons } from "@expo/vector-icons";
 import {
-  getOrCreateOpenInvitation,
   buildUniversalLink,
+  getOrCreateOpenInvitation,
 } from "@/services/invitationService";
 import * as Localization from "expo-localization";
 import * as Haptics from "expo-haptics";
@@ -36,11 +36,17 @@ import { logEvent } from "@/src/analytics";
 import Animated, { FadeIn, FadeOut, ZoomIn, ZoomOut } from "react-native-reanimated";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { LinearGradient } from "expo-linear-gradient";
-import { usePathname } from "expo-router";
-
+import AsyncStorage from "@react-native-async-storage/async-storage";
 
 const DAY_OPTIONS = [7, 14, 21, 30, 60, 90, 180, 365];
+const FIRSTPICK_SHARE_IN_PROGRESS_KEY = "ties_firstpick_share_in_progress_v1";
 
+const setShareInProgress = async (v: boolean) => {
+  try {
+    if (v) await AsyncStorage.setItem(FIRSTPICK_SHARE_IN_PROGRESS_KEY, "1");
+    else await AsyncStorage.removeItem(FIRSTPICK_SHARE_IN_PROGRESS_KEY);
+  } catch {}
+};
 
 type Props = {
   visible: boolean;
@@ -49,7 +55,7 @@ type Props = {
   challengeTitle?: string;
   isDuo?: boolean;
   onClose: () => void;
-  onSent?: (result: "shared" | "dismiss" | "start_solo") => void;
+  onSent?: (result: "shared" | "dismiss" | "start_solo", meta?: { inviteId?: string }) => void;
 
 };
 
@@ -130,14 +136,12 @@ const SendInvitationModal: React.FC<Props> = ({
   const { theme } = useTheme();
   const insets = useSafeAreaInsets();
   const { width: screenW, height: screenH } = useWindowDimensions();
-const pathname = usePathname();
-
 
   const isDark = theme === "dark";
   const th: Theme = isDark ? designSystem.darkTheme : designSystem.lightTheme;
 
   const [busy, setBusy] = useState(false);
-  const [cooldown, setCooldown] = useState(false);
+  
   const [error, setError] = useState<string>("");
   const [reduceMotion, setReduceMotion] = useState(false);
 
@@ -210,10 +214,11 @@ const scale = useMemo(() => {
 
   // ✅ Event unique. Le parent décide (takeChallenge + goHome).
   onSent?.("start_solo");
+  await setShareInProgress(false);
   onClose();
 }, [busy, reduceMotion, challengeId, localDays, onSent, onClose]);
 
-const shareLocked = busy || cooldown || isSharingRef.current;
+const shareLocked = busy || isSharingRef.current;
 
   const handleShare = useCallback(async () => {
     if (busy) return;
@@ -286,64 +291,32 @@ const shareLocked = busy || cooldown || isSharingRef.current;
           ? { title: titleTxt, message: msgTxt }
           : { title: titleTxt, message: msgTxt, url };
 
-     isSharingRef.current = true;
+ isSharingRef.current = true;
 
-(globalThis as any).__FROM_SHARE_SHEET__ = {
-  ts: Date.now(),
-  returnTo: pathname || "/(tabs)",
-};
-(globalThis as any).__LAST_STABLE_PATH__ = pathname || "/(tabs)";
+      // ✅ CRITIQUE: flags AVANT ShareSheet (Android peut "repasser" par "/")
+      await setShareInProgress(true);
 
+      await Share.share(payload, { dialogTitle: titleTxt });
 
-const res = await Share.share(payload, { dialogTitle: titleTxt });
+try {
+  logEvent?.("invite_share_sheet_closed", {
+    inviteId,
+    challengeId,
+    selectedDays: localDays,
+    platform: Platform.OS,
+  });
+} catch {}
 
-isSharingRef.current = false;
-
-// 🧹 cleanup soft (sécurité) — ne surtout pas delete trop tôt
-setTimeout(() => {
-  const v = (globalThis as any).__FROM_SHARE_SHEET__;
-  const ts = typeof v === "number" ? v : v?.ts;
-  if (typeof ts === "number" && Date.now() - ts > 20000) {
-    delete (globalThis as any).__FROM_SHARE_SHEET__;
-  }
-}, 22000);
-
-
-      if (res.action === Share.sharedAction) {
-  try {
-    logEvent("invite_share_success", {
-      inviteId,
-      challengeId,
-      selectedDays: localDays,
-      platform: Platform.OS,
-    });
-  } catch {}
-  if (!reduceMotion) {
-    Haptics.notificationAsync(
-      Haptics.NotificationFeedbackType.Success
-    ).catch(() => {});
-  }
-
-  // ✅ IMPORTANT: succès réel
-  onSent?.("shared");
-  onClose();
-} else {
-  // ✅ Dismiss / Cancel -> on ferme et on reste sur l'écran courant
-  try {
-    logEvent?.("invite_share_dismissed", {
-      inviteId,
-      challengeId,
-      selectedDays: localDays,
-      platform: Platform.OS,
-    });
-  } catch {}
-
-  onSent?.("dismiss");
-}
+// ✅ Flow unique : on ne devine pas iOS/Android
+// Le parent affichera "Bien envoyé ? Oui/Non"
+onSent?.("dismiss", { inviteId });
+onClose();
+return;
 
 
     } catch (e: any) {
       console.error("❌ SendInvitationModal share-link error:", e);
+      await setShareInProgress(false);
       const raw = String(e?.message || "");
       const msg = raw.toLowerCase();
 
@@ -391,13 +364,10 @@ setTimeout(() => {
     } finally {
   isSharingRef.current = false;
   setBusy(false);
-  // ✅ micro-cooldown anti "tap fantôme" au retour de la share sheet (Android surtout)
-  setCooldown(true);
-  setTimeout(() => setCooldown(false), 350);
 }
+
   }, [
     busy,
-    cooldown,
     challengeId,
     localDays,
     i18n?.language,

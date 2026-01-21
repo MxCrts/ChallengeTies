@@ -35,6 +35,10 @@ import { StatsShareCard } from "@/components/ShareCards";
 
 const SPACING = 15;
 const { width: SCREEN_WIDTH } = Dimensions.get("window");
+const { height: SCREEN_HEIGHT } = Dimensions.get("window");
+const IS_COMPACT = SCREEN_HEIGHT < 720;
+const V_SPACING = IS_COMPACT ? 12 : 15;
+
 
 const normalizeSize = (size: number) => {
   const baseWidth = 375;
@@ -263,35 +267,55 @@ const tabBarHeight = useTabBarHeightSafe();
     accessibilityRole="summary"
   >
     <LinearGradient
-      colors={[
-        currentTheme.colors.cardBackground,
-        currentTheme.colors.cardBackground + "F0",
-      ]}
-      style={[
-        styles.statCard,
-        {
-          borderColor: isDarkMode
-            ? currentTheme.colors.secondary
-            : "#FF8C00",
-        },
-      ]}
-    >
-      <View
-        style={[
-          styles.iconContainer,
-          { backgroundColor: currentTheme.colors.secondary + "1A" },
-        ]}
-      >
-        <Ionicons
-          // fallback défensif si jamais
-          name={(item.icon as any) || "stats-chart-outline"}
-          size={normalizeSize(36)}
-          color={currentTheme.colors.secondary}
-          accessibilityLabel={item.accessibilityLabel}
-          accessibilityHint={item.accessibilityHint}
-        />
-      </View>
-      <View style={styles.statContent}>
+  colors={[
+    withAlpha(currentTheme.colors.cardBackground, isDarkMode ? 0.74 : 0.92),
+    withAlpha(currentTheme.colors.cardBackground, isDarkMode ? 0.58 : 0.82),
+  ]}
+  style={[
+    styles.statCard,
+    {
+      borderColor: isDarkMode
+        ? withAlpha("#FFFFFF", 0.14)
+        : withAlpha("#000000", 0.08),
+    },
+  ]}
+>
+  {/* sheen diagonal */}
+  <LinearGradient
+    pointerEvents="none"
+    colors={[
+      "transparent",
+      isDarkMode ? "rgba(255,255,255,0.10)" : "rgba(255,255,255,0.55)",
+      "transparent",
+    ]}
+    start={{ x: 0, y: 0 }}
+    end={{ x: 1, y: 1 }}
+    style={styles.cardSheen}
+  />
+
+  <View
+    style={[
+      styles.iconContainer,
+      {
+        backgroundColor: isDarkMode
+          ? "rgba(255,255,255,0.06)"
+          : "rgba(0,0,0,0.04)",
+        borderColor: isDarkMode
+          ? withAlpha("#FFFFFF", 0.14)
+          : withAlpha("#000000", 0.08),
+      },
+    ]}
+  >
+    <Ionicons
+      name={(item.icon as any) || "stats-chart-outline"}
+      size={normalizeSize(28)}
+      color={currentTheme.colors.secondary}
+      accessibilityLabel={item.accessibilityLabel}
+      accessibilityHint={item.accessibilityHint}
+    />
+  </View>
+
+  <View style={styles.statContent}>
         <Text
           style={[
             styles.statName,
@@ -482,19 +506,190 @@ const tabBarHeight = useTabBarHeightSafe();
 
     <FlatList
       ListHeaderComponent={
-        <View style={styles.headerCardWrap} accessibilityRole="summary">
-          <WeeklyTrophiesCard />
-        </View>
-      }
+  <View style={styles.headerStack} accessibilityRole="summary">
+    {/* ===== HERO (NO REDUNDANT LABELS) ===== */}
+<Animated.View entering={FadeInUp.delay(60)} style={styles.heroWrap}>
+  <LinearGradient
+    colors={[
+      withAlpha(currentTheme.colors.cardBackground, isDarkMode ? 0.78 : 0.94),
+      withAlpha(currentTheme.colors.cardBackground, isDarkMode ? 0.60 : 0.86),
+    ]}
+    style={[
+      styles.heroCard,
+      {
+        borderColor: isDarkMode
+          ? withAlpha("#FFFFFF", 0.14)
+          : withAlpha("#000000", 0.08),
+      },
+    ]}
+  >
+    <LinearGradient
+      pointerEvents="none"
+      colors={[
+        "transparent",
+        isDarkMode ? "rgba(255,255,255,0.10)" : "rgba(255,255,255,0.55)",
+        "transparent",
+      ]}
+      start={{ x: 0, y: 0 }}
+      end={{ x: 1, y: 1 }}
+      style={styles.heroSheen}
+    />
+    <View
+      pointerEvents="none"
+      style={[
+        styles.heroGlow,
+        {
+          backgroundColor: withAlpha(
+            currentTheme.colors.secondary,
+            isDarkMode ? 0.16 : 0.10
+          ),
+        },
+      ]}
+    />
+
+    {/* Title row */}
+    <View style={styles.heroTopRow}>
+      <View style={styles.heroIdentity}>
+        <Text
+          style={[styles.heroKicker, { color: currentTheme.colors.textSecondary }]}
+          numberOfLines={1}
+        >
+          {t("myCTStats", { defaultValue: "Mes stats ChallengeTies" })}
+        </Text>
+
+        <Text
+          style={[
+            styles.heroTitle,
+            { color: isDarkMode ? currentTheme.colors.textPrimary : "#000000" },
+          ]}
+          numberOfLines={1}
+          adjustsFontSizeToFit
+        >
+          {(userDoc as any)?.displayName ||
+            t("statistics", { defaultValue: "Statistiques" })}
+        </Text>
+      </View>
+
+      <View
+        style={[
+          styles.heroAvatarPill,
+          {
+            borderColor: isDarkMode
+              ? withAlpha("#FFFFFF", 0.14)
+              : withAlpha("#000000", 0.08),
+            backgroundColor: isDarkMode
+              ? "rgba(255,255,255,0.06)"
+              : "rgba(0,0,0,0.04)",
+          },
+        ]}
+      >
+        <Ionicons
+          name="share-outline"
+          size={normalizeSize(16)}
+          color={currentTheme.colors.secondary}
+          accessibilityLabel={t("share")}
+        />
+      </View>
+    </View>
+
+    {/* Pills row: ICON + VALUE only (no translated labels => no cuts) */}
+    <View style={styles.heroPillsRow}>
+      <View style={styles.heroPill}>
+        <Ionicons
+          name="trophy-outline"
+          size={normalizeSize(14)}
+          color={currentTheme.colors.secondary}
+        />
+        <Text
+          style={[
+            styles.heroPillValue,
+            { color: isDarkMode ? currentTheme.colors.textPrimary : "#000000" },
+          ]}
+          numberOfLines={1}
+          adjustsFontSizeToFit
+        >
+          {String(numericStats.completed)}
+        </Text>
+      </View>
+
+      <View style={styles.heroPill}>
+        <Ionicons
+          name="stats-chart-outline"
+          size={normalizeSize(14)}
+          color={currentTheme.colors.secondary}
+        />
+        <Text
+          style={[
+            styles.heroPillValue,
+            { color: isDarkMode ? currentTheme.colors.textPrimary : "#000000" },
+          ]}
+          numberOfLines={1}
+          adjustsFontSizeToFit
+        >
+          {String(numericStats.successRatePct)}%
+        </Text>
+      </View>
+
+      <View style={styles.heroPill}>
+        <Ionicons
+          name="flame-outline"
+          size={normalizeSize(14)}
+          color={currentTheme.colors.secondary}
+        />
+        <Text
+          style={[
+            styles.heroPillValue,
+            { color: isDarkMode ? currentTheme.colors.textPrimary : "#000000" },
+          ]}
+          numberOfLines={1}
+          adjustsFontSizeToFit
+        >
+          {String(numericStats.longestStreak)}
+          <Text style={[styles.heroPillUnit, { color: currentTheme.colors.textSecondary }]}>
+            {" "}
+            {t("daysShort", { defaultValue: "j" })}
+          </Text>
+        </Text>
+      </View>
+
+      <View style={styles.heroPill}>
+        <Ionicons
+          name="medal-outline"
+          size={normalizeSize(14)}
+          color={currentTheme.colors.secondary}
+        />
+        <Text
+          style={[
+            styles.heroPillValue,
+            { color: isDarkMode ? currentTheme.colors.textPrimary : "#000000" },
+          ]}
+          numberOfLines={1}
+          adjustsFontSizeToFit
+        >
+          {String(numericStats.trophies)}
+        </Text>
+      </View>
+    </View>
+  </LinearGradient>
+</Animated.View>
+
+
+    {/* ===== Weekly Card (existing) ===== */}
+    <View style={styles.headerCardWrap} accessibilityRole="summary">
+      <WeeklyTrophiesCard />
+    </View>
+  </View>
+}
+
       data={computedStats}
       renderItem={({ item, index }) => <StatCard item={item} index={index} />}
       keyExtractor={(item, index) => `${item.name}-${index}`}
       contentContainerStyle={[
-        styles.listContainer,
-        { flexGrow: 1, paddingBottom: bottomPadding }
-      ]}
+  styles.listContainer,
+  { flexGrow: 1, paddingBottom: bottomPadding },
+]}
       showsVerticalScrollIndicator={false}
-      removeClippedSubviews
+     removeClippedSubviews={Platform.OS === "android"}
       initialNumToRender={6}
       maxToRenderPerBatch={6}
       windowSize={7}
@@ -581,56 +776,198 @@ const styles = StyleSheet.create({
     padding: SPACING / 2,
   },
   listContainer: {
-    paddingVertical: SPACING * 1.5,
-    paddingHorizontal: SPACING / 2,
-  },
-  headerCardWrap: {
-    paddingHorizontal: SPACING,
-    marginTop: SPACING,
-   marginBottom: SPACING * 1.2,
-  },
-  statCardWrapper: {
-    marginBottom: SPACING * 1.5,
-    borderRadius: normalizeSize(25),
-    shadowColor: "#000",
-    shadowOffset: { width: 0, height: normalizeSize(5) },
-    shadowOpacity: 0.3,
-    shadowRadius: normalizeSize(8),
-    elevation: 8,
-  },
-  statCard: {
-    flexDirection: "row",
-    alignItems: "center",
-    paddingVertical: normalizeSize(20),
-    paddingHorizontal: normalizeSize(18),
-    borderRadius: normalizeSize(25),
-    overflow: "hidden",
-    borderWidth: 2.5,
-    backgroundColor: "rgba(255,255,255,0.04)",
-  },
-  iconContainer: {
-    width: normalizeSize(60),
-    height: normalizeSize(60),
-    borderRadius: normalizeSize(30),
-    justifyContent: "center",
-    alignItems: "center",
-    marginRight: SPACING * 1.2,
-    backgroundColor: "#FFDD95" + "20",
-  },
+  paddingTop: V_SPACING,
+  paddingHorizontal: SPACING,
+  paddingBottom: normalizeSize(40),
+},
+headerCardWrap: {
+  paddingHorizontal: SPACING,
+  marginTop: V_SPACING,
+  marginBottom: V_SPACING * 1.1,
+},
+statCardWrapper: {
+  marginBottom: V_SPACING,
+  borderRadius: normalizeSize(22),
+  shadowColor: "#000",
+  shadowOffset: { width: 0, height: normalizeSize(10) },
+  shadowOpacity: Platform.OS === "ios" ? 0.14 : 0,
+  shadowRadius: normalizeSize(18),
+  elevation: Platform.OS === "android" ? 3 : 0,
+},
+statCard: {
+  flexDirection: "row",
+  alignItems: "center",
+  paddingVertical: normalizeSize(IS_COMPACT ? 14 : 16),
+  paddingHorizontal: normalizeSize(16),
+  borderRadius: normalizeSize(22),
+  overflow: "hidden",
+  borderWidth: StyleSheet.hairlineWidth,
+},
+iconContainer: {
+  width: normalizeSize(IS_COMPACT ? 50 : 54),
+  height: normalizeSize(IS_COMPACT ? 50 : 54),
+  borderRadius: 999,
+  justifyContent: "center",
+  alignItems: "center",
+  marginRight: normalizeSize(12),
+  borderWidth: StyleSheet.hairlineWidth,
+},
   statContent: {
     flex: 1,
   },
   statName: {
-    fontSize: normalizeSize(18),
-    fontFamily: "Comfortaa_400Regular",
-    marginBottom: normalizeSize(4),
-    textAlign: "left",
-  },
-  statValue: {
-    fontSize: normalizeSize(22),
-    fontFamily: "Comfortaa_700Bold",
-    textAlign: "left",
-  },
+  fontSize: normalizeSize(14.5),
+  fontFamily: "Comfortaa_400Regular",
+  marginBottom: normalizeSize(4),
+  opacity: 0.9,
+  writingDirection: I18nManager.isRTL ? "rtl" : "ltr",
+  textAlign: I18nManager.isRTL ? "right" : "left",
+},
+headerStack: {
+  paddingTop: V_SPACING,
+},
+
+heroWrap: {
+  paddingHorizontal: SPACING,
+  marginBottom: V_SPACING,
+},
+
+heroCard: {
+  borderRadius: normalizeSize(22),
+  paddingVertical: normalizeSize(IS_COMPACT ? 14 : 16),
+  paddingHorizontal: normalizeSize(16),
+  borderWidth: StyleSheet.hairlineWidth,
+  overflow: "hidden",
+},
+
+heroSheen: {
+  position: "absolute",
+  top: -normalizeSize(28),
+  left: -normalizeSize(70),
+  width: "170%",
+  height: normalizeSize(92),
+  transform: [{ rotate: "-12deg" }],
+  opacity: 0.85,
+},
+
+heroGlow: {
+  position: "absolute",
+  top: -normalizeSize(18),
+  right: -normalizeSize(18),
+  width: normalizeSize(120),
+  height: normalizeSize(120),
+  borderRadius: 999,
+  opacity: 1,
+},
+heroPillsRow: {
+  flexDirection: "row",
+  flexWrap: "wrap",
+  gap: normalizeSize(10),
+},
+
+heroPill: {
+  flexGrow: 1,
+  minWidth: "47%",
+  borderRadius: normalizeSize(16),
+  paddingVertical: normalizeSize(10),
+  paddingHorizontal: normalizeSize(12),
+  borderWidth: StyleSheet.hairlineWidth,
+  flexDirection: "row",
+  alignItems: "center",
+  gap: normalizeSize(8),
+  backgroundColor: IS_COMPACT ? "rgba(255,255,255,0.04)" : "transparent",
+  borderColor: withAlpha("#000000", 0.06),
+},
+
+heroPillValue: {
+  fontSize: normalizeSize(16),
+  fontFamily: "Comfortaa_700Bold",
+  includeFontPadding: false,
+  writingDirection: I18nManager.isRTL ? "rtl" : "ltr",
+  textAlign: I18nManager.isRTL ? "right" : "left",
+  flexShrink: 1,
+},
+
+heroPillUnit: {
+  fontSize: normalizeSize(12.5),
+  fontFamily: "Comfortaa_400Regular",
+  includeFontPadding: false,
+},
+heroTopRow: {
+  flexDirection: "row",
+  alignItems: "center",
+  justifyContent: "space-between",
+  marginBottom: normalizeSize(12),
+},
+
+heroIdentity: {
+  flex: 1,
+  paddingRight: normalizeSize(10),
+},
+
+heroKicker: {
+  fontSize: normalizeSize(12.5),
+  fontFamily: "Comfortaa_400Regular",
+  opacity: 0.9,
+  marginBottom: normalizeSize(4),
+  writingDirection: I18nManager.isRTL ? "rtl" : "ltr",
+  textAlign: I18nManager.isRTL ? "right" : "left",
+},
+
+heroTitle: {
+  fontSize: normalizeSize(18),
+  fontFamily: "Comfortaa_700Bold",
+  includeFontPadding: false,
+  writingDirection: I18nManager.isRTL ? "rtl" : "ltr",
+  textAlign: I18nManager.isRTL ? "right" : "left",
+},
+
+heroAvatarPill: {
+  width: normalizeSize(38),
+  height: normalizeSize(38),
+  borderRadius: 999,
+  alignItems: "center",
+  justifyContent: "center",
+  borderWidth: StyleSheet.hairlineWidth,
+},
+
+heroChipsRow: {
+  flexDirection: "row",
+  flexWrap: "wrap",
+  gap: normalizeSize(10),
+},
+
+heroChip: {
+  flexGrow: 1,
+  minWidth: "47%",
+  borderRadius: normalizeSize(16),
+  paddingVertical: normalizeSize(10),
+  paddingHorizontal: normalizeSize(12),
+  borderWidth: StyleSheet.hairlineWidth,
+  flexDirection: "row",
+  alignItems: "center",
+  gap: normalizeSize(8),
+},
+
+heroChipValue: {
+  fontSize: normalizeSize(16),
+  fontFamily: "Comfortaa_700Bold",
+  includeFontPadding: false,
+},
+
+heroChipLabel: {
+  flex: 1,
+  fontSize: normalizeSize(12.5),
+  fontFamily: "Comfortaa_400Regular",
+  opacity: 0.9,
+},
+statValue: {
+  fontSize: normalizeSize(22),
+  fontFamily: "Comfortaa_700Bold",
+  includeFontPadding: false,
+  writingDirection: I18nManager.isRTL ? "rtl" : "ltr",
+  textAlign: I18nManager.isRTL ? "right" : "left",
+},
   loadingContainer: {
     flex: 1,
     justifyContent: "center",
@@ -670,19 +1007,27 @@ const styles = StyleSheet.create({
 },
 bgOrbTop: {
   position: "absolute",
-  top: -SCREEN_WIDTH * 0.25,
-  left: -SCREEN_WIDTH * 0.2,
-  width: SCREEN_WIDTH * 0.9,
-  height: SCREEN_WIDTH * 0.9,
+  top: -SCREEN_WIDTH * (IS_COMPACT ? 0.28 : 0.25),
+  left: -SCREEN_WIDTH * (IS_COMPACT ? 0.22 : 0.2),
+  width: SCREEN_WIDTH * (IS_COMPACT ? 0.85 : 0.9),
+  height: SCREEN_WIDTH * (IS_COMPACT ? 0.85 : 0.9),
   borderRadius: SCREEN_WIDTH * 0.45,
+},
+cardSheen: {
+  position: "absolute",
+  top: -normalizeSize(28),
+  left: -normalizeSize(60),
+  width: "160%",
+  height: normalizeSize(86),
+  transform: [{ rotate: "-12deg" }],
+  opacity: 0.85,
 },
 bgOrbBottom: {
   position: "absolute",
-  bottom: -SCREEN_WIDTH * 0.3,
-  right: -SCREEN_WIDTH * 0.25,
-  width: SCREEN_WIDTH * 1.1,
-  height: SCREEN_WIDTH * 1.1,
+  bottom: -SCREEN_WIDTH * (IS_COMPACT ? 0.32 : 0.3),
+  right: -SCREEN_WIDTH * (IS_COMPACT ? 0.27 : 0.25),
+  width: SCREEN_WIDTH * (IS_COMPACT ? 1.05 : 1.1),
+  height: SCREEN_WIDTH * (IS_COMPACT ? 1.05 : 1.1),
   borderRadius: SCREEN_WIDTH * 0.55,
 },
-
 });

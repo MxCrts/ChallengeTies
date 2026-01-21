@@ -1,9 +1,8 @@
 import express from "express";
-import cors from "cors";
 import { onRequest } from "firebase-functions/v2/https";
-import { initializeApp } from "firebase-admin/app";
+import { initializeApp, getApps } from "firebase-admin/app";
 
-initializeApp();
+if (!getApps().length) initializeApp();
 
 /** =========================
  *  CONFIG
@@ -51,8 +50,8 @@ type LangKey = keyof typeof I18N;
  *   - fallback propre sur fr
  */
 function t(lang: string) {
-  const base = (lang || "fr").toLowerCase();
-  const short = base.split(/[-_]/)[0] as LangKey;
+  const base = String(lang || "fr").toLowerCase().trim();
+  const short = (base.split(/[-_]/)[0] || "fr") as LangKey;
   const key: LangKey = short in I18N ? short : "fr";
   return I18N[key];
 }
@@ -61,7 +60,6 @@ function t(lang: string) {
  *  APP
  *  ========================= */
 const app = express();
-app.use(cors({ origin: true }));
 
 /** Helpers */
 function escapeHtml(s: string): string {
@@ -130,7 +128,7 @@ app.get("/img", (_req, res) => {
  *  - invite    : invitation document id (déclenche le modal in-app)
  *  - days      : nombre de jours suggéré (passé en query à l’app)
  */
-app.get(["/", "/dl", "/i"], (req, res) => {
+app.get(["/", "/i"], (req, res) => {
   const ua = String(req.headers["user-agent"] || "");
   const isBot = BOT_UA.test(ua);
 
@@ -315,6 +313,7 @@ export const dl = onRequest({ region: "europe-west1", cors: true }, app);
 export { invitationsOnWrite } from "./invitationsOnWrite";
 export { claimReferralMilestone } from "./referralClaim";
 export { onUserActivated } from "./referralRewards";
+export { sendDuoNudge } from "./duoNudge";
 
 
 

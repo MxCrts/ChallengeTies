@@ -5,16 +5,25 @@ exports.invitationsOnWrite = void 0;
 const firestore_1 = require("firebase-functions/v2/firestore");
 const firestore_2 = require("firebase-admin/firestore");
 const db = (0, firestore_2.getFirestore)();
-/** Normalise une langue vers nos 12 locales supportées */
+const LOCK_TTL_MS = 2 * 60 * 1000; // 2 minutes
+function isLockExpired(lock) {
+    if (!lock)
+        return true;
+    const s = String(lock || "");
+    // lockKey = "accepted:1700000000000"
+    const parts = s.split(":");
+    const ts = Number(parts[1] || 0);
+    if (!ts)
+        return true;
+    return Date.now() - ts > LOCK_TTL_MS;
+}
+/** Normalise une langue vers nos locales supportées */
 function normalizeLang(lang) {
-    const base = String(lang || "en")
-        .toLowerCase()
-        .split(/[-_]/)[0];
+    const base = String(lang || "en").toLowerCase().split(/[-_]/)[0];
     const supported = ["fr", "en", "es", "de", "it", "pt", "zh", "ja", "ko", "ar", "hi", "ru", "nl"];
     return supported.includes(base) ? base : "en";
 }
 function titleFor(_lang) {
-    // Titre identique partout (brand). Gardé pour extensibilité future.
     return "ChallengeTies";
 }
 function bodyFor(status, lang, inviteeUsername, challengeTitle) {
@@ -59,75 +68,147 @@ function bodyFor(status, lang, inviteeUsername, challengeTitle) {
     }
     return "";
 }
-async function sendExpoPush(to, title, body, data) {
-    const resp = await fetch("https://exp.host/--/api/v2/push/send", {
-        method: "POST",
-        headers: {
-            accept: "application/json",
-            "accept-encoding": "gzip, deflate",
-            "content-type": "application/json",
-        },
-        body: JSON.stringify({ to, sound: "default", title, body, data }),
-    });
-    const json = (await resp.json().catch(() => null));
-    const d = json?.data;
-    if (d?.status === "ok")
-        return { ok: true };
-    const code = d?.details?.error || d?.__errorCode || undefined;
-    return { ok: false, code, message: d?.message, details: d?.details };
+function isExpoToken(t) {
+    return (typeof t === "string" &&
+        (t.includes("ExponentPushToken") || t.includes("ExpoPushToken")));
+}
+async function sendExpoPushBatch(messages) {
+    // Timeout dur pour éviter une function pendue
+    const controller = new AbortController();
+    const timeout = setTimeout(() => controller.abort(), 10000);
+    try {
+        const resp = await fetch("https://exp.host/--/api/v2/push/send", {
+            method: "POST",
+            headers: {
+                accept: "application/json",
+                "accept-encoding": "gzip, deflate",
+                "content-type": "application/json",
+            },
+            body: JSON.stringify(messages.map((m) => ({
+                to: m.to,
+                sound: "default",
+                title: m.title,
+                body: m.body,
+                data: m.data,
+            }))),
+            signal: controller.signal,
+        });
+        // ✅ Si Expo renvoie un status HTTP non-2xx, on throw => retry automatique CF
+        if (!resp.ok) {
+            const text = await resp.text().catch(() => "");
+            throw new Error(`expo_http_${resp.status}: ${text?.slice?.(0, 250) || ""}`);
+        }
+        const json = (await resp.json().catch(() => null));
+        // ✅ Format attendu: { data: [ { status: "ok"|"error", ... } ] }
+        const arr = Array.isArray(json?.data) ? json.data : [];
+        // ✅ Si réponse anormale => throw => retry
+        if (!Array.isArray(arr)) {
+            throw new Error("expo_bad_response_shape");
+        }
+        return arr;
+    }
+    finally {
+        clearTimeout(timeout);
+    }
 }
 /**
- * Envoie une notif à l’INVITEUR quand une invitation passe de "pending" → "accepted" | "refused".
- * Idempotent grâce à lastStatusNotified.
+ * Notif INVITEUR quand invitation passe pending -> accepted/refused.
+ * Idempotence safe: on "claim" l'envoi via transaction (CAS),
+ * puis on send, puis on "finalize" lastStatusNotified.
  */
 exports.invitationsOnWrite = (0, firestore_1.onDocumentWritten)({ region: "europe-west1", document: "invitations/{inviteId}" }, async (event) => {
     const before = event.data?.before?.data();
     const after = event.data?.after?.data();
     const inviteId = event.params?.inviteId;
-    // On ne traite que les mises à jour
+    // updates only
     if (!before || !after)
         return;
-    // Doit venir de "pending" et aller vers "accepted" ou "refused"
-    if (before.status !== "pending")
+    // pending -> accepted/refused only
+    if (before.status === after.status)
         return;
     if (after.status !== "accepted" && after.status !== "refused")
         return;
-    // Anti-doublon (retries) : si déjà notifié pour ce status, on sort
-    if (after.lastStatusNotified === after.status) {
-        console.log("[invite] already notified", { inviteId, status: after.status });
+    const inviteRef = event.data?.after?.ref;
+    if (!inviteRef)
         return;
-    }
     const inviterId = after.inviterId;
     if (!inviterId)
         return;
-    // Récup INVITEUR
+    // ✅ CAS: un seul worker gagne le droit d'envoyer (anti retries / double trigger)
+    // On utilise un champ "notifyLock" transient, puis on set lastStatusNotified seulement si send OK.
+    const lockKey = `${after.status}:${Date.now()}`; // unique-ish
+    let claimed = false;
+    try {
+        await db.runTransaction(async (tx) => {
+            const snap = await tx.get(inviteRef);
+            if (!snap.exists)
+                return;
+            const cur = snap.data();
+            // Déjà notifié => stop
+            if (cur?.lastStatusNotified === after.status)
+                return;
+            // Déjà locké par un autre => stop
+            if (typeof cur?.notifyLock === "string" &&
+                cur.notifyLock.length > 0 &&
+                !isLockExpired(cur.notifyLock))
+                return;
+            tx.update(inviteRef, { notifyLock: lockKey });
+            claimed = true;
+        });
+    }
+    catch (e) {
+        console.warn("[invite] lock transaction failed", inviteId, e?.message ?? e);
+        return;
+    }
+    if (!claimed) {
+        // Un autre worker a géré, ou déjà notifié
+        return;
+    }
+    // Load inviter
     const inviterSnap = await db.doc(`users/${inviterId}`).get();
-    if (!inviterSnap.exists)
-        return;
-    const inviter = inviterSnap.data();
-    if (inviter?.notificationsEnabled === false)
-        return;
-    // Tokens (support single string OR array)
-    const rawTokens = inviter?.expoPushTokens ??
-        inviter?.expoPushToken ??
-        inviter?.pushTokens ??
-        inviter?.pushToken;
-    const tokens = Array.isArray(rawTokens)
-        ? rawTokens.filter(Boolean)
-        : rawTokens
-            ? [rawTokens]
-            : [];
-    const expoTokens = tokens.filter((t) => typeof t === "string" && (t.includes("ExponentPushToken") || t.includes("ExpoPushToken")));
-    if (expoTokens.length === 0) {
-        console.log("[invite] no expo tokens for inviter", { inviterId });
-        // on marque quand même comme notifié pour éviter les retries looping
+    if (!inviterSnap.exists) {
+        // release lock (best effort)
         try {
-            await event.data?.after?.ref.update({ lastStatusNotified: after.status });
+            await inviteRef.set({ notifyLock: firestore_2.FieldValue.delete() }, { merge: true });
         }
         catch { }
         return;
     }
-    // Username invité si manquant
+    const inviter = inviterSnap.data();
+    if (inviter?.notificationsEnabled === false) {
+        try {
+            await inviteRef.set({ notifyLock: firestore_2.FieldValue.delete(), lastStatusNotified: after.status }, { merge: true });
+        }
+        catch { }
+        return;
+    }
+    // Tokens: merge single + array, unique, only Expo tokens
+    const mergedTokens = new Set();
+    const tArr = inviter?.expoPushTokens;
+    if (Array.isArray(tArr))
+        for (const t of tArr)
+            if (isExpoToken(t))
+                mergedTokens.add(t);
+    if (isExpoToken(inviter?.expoPushToken))
+        mergedTokens.add(inviter.expoPushToken);
+    // legacy fallback (si tu as encore des vieux champs)
+    const legacyArr = inviter?.pushTokens;
+    if (Array.isArray(legacyArr))
+        for (const t of legacyArr)
+            if (isExpoToken(t))
+                mergedTokens.add(t);
+    if (isExpoToken(inviter?.pushToken))
+        mergedTokens.add(inviter.pushToken);
+    const expoTokens = Array.from(mergedTokens);
+    if (expoTokens.length === 0) {
+        // finalize: on marque notifié (sinon tu vas retry en boucle à chaque update)
+        try {
+            await inviteRef.set({ notifyLock: firestore_2.FieldValue.delete(), lastStatusNotified: after.status }, { merge: true });
+        }
+        catch { }
+        return;
+    }
+    // Resolve invitee username (best effort)
     let inviteeUsername = after.inviteeUsername || null;
     if (!inviteeUsername && after.inviteeId) {
         const inviteeSnap = await db.doc(`users/${after.inviteeId}`).get().catch(() => null);
@@ -138,7 +219,7 @@ exports.invitationsOnWrite = (0, firestore_1.onDocumentWritten)({ region: "europ
                 (typeof u?.email === "string" ? u.email.split("@")[0] : null) ||
                 null;
     }
-    // Titre du challenge (facultatif mais sympa)
+    // Resolve challenge title (best effort)
     let challengeTitle = null;
     if (after.challengeId) {
         const chSnap = await db.doc(`challenges/${after.challengeId}`).get().catch(() => null);
@@ -147,48 +228,69 @@ exports.invitationsOnWrite = (0, firestore_1.onDocumentWritten)({ region: "europ
     const lang = inviter?.language || "en";
     const title = titleFor(lang);
     const body = bodyFor(after.status, lang, inviteeUsername, challengeTitle);
-    if (!body) {
-        // marque notifié quand même (anti-retry)
-        try {
-            await event.data?.after?.ref.update({ lastStatusNotified: after.status });
-        }
-        catch { }
-        return;
-    }
-    // Envoi à tous les devices expo
-    const failures = [];
-    for (const token of expoTokens) {
-        const res = await sendExpoPush(token, title, body, {
-            type: "invite-status",
-            status: after.status,
-            inviteId,
-            challengeId: after.challengeId || "",
-            inviteeId: after.inviteeId || "",
+    // Payload stable (inviteeId peut être null: open refused/accepted set par ton service)
+    const dataPayload = {
+        kind: "invite_status",
+        status: after.status,
+        inviteId,
+        challengeId: after.challengeId || "",
+        inviteeId: after.inviteeId || "",
+    };
+    // Send to all devices
+    const invalid = [];
+    let successCount = 0;
+    const makeChunks = (arr, size) => {
+        const out = [];
+        for (let i = 0; i < arr.length; i += size)
+            out.push(arr.slice(i, i + size));
+        return out;
+    };
+    for (const chunk of makeChunks(expoTokens, 100)) {
+        const results = await sendExpoPushBatch(chunk.map((to) => ({ to, title, body, data: dataPayload })));
+        results.forEach((r, idx) => {
+            const token = chunk[idx];
+            if (r?.status === "ok") {
+                successCount++;
+                return;
+            }
+            const code = r?.details?.error;
+            console.warn("[invite] push failed", { inviteId, token, code });
+            if (code === "DeviceNotRegistered")
+                invalid.push(token);
         });
-        if (!res.ok) {
-            console.warn("[invite] push failed", { token, code: res.code, details: res.details });
-            if (res.code === "DeviceNotRegistered")
-                failures.push(token);
-        }
     }
-    // Nettoyage tokens invalides
-    if (failures.length > 0) {
+    // Cleanup invalid tokens
+    if (invalid.length > 0) {
         try {
-            const keep = expoTokens.filter((t) => !failures.includes(t));
-            if (Array.isArray(inviter?.expoPushTokens)) {
-                await inviterSnap.ref.update({ expoPushTokens: keep });
+            const updates = {};
+            updates.expoPushTokens = firestore_2.FieldValue.arrayRemove(...invalid);
+            if (typeof inviter?.expoPushToken === "string" && invalid.includes(inviter.expoPushToken)) {
+                updates.expoPushToken = firestore_2.FieldValue.delete();
             }
-            else {
-                await inviterSnap.ref.update({ expoPushToken: keep[0] ?? null });
-            }
+            await inviterSnap.ref.set(updates, { merge: true });
         }
-        catch { }
+        catch (e) {
+            console.warn("[invite] token cleanup failed", inviteId, e?.message ?? e);
+        }
     }
-    // Marque comme notifié pour idempotence
+    // ✅ Finalize:
     try {
-        await event.data?.after?.ref.update({ lastStatusNotified: after.status });
+        if (successCount > 0) {
+            await inviteRef.set({ notifyLock: firestore_2.FieldValue.delete(), lastStatusNotified: after.status }, { merge: true });
+        }
+        else {
+            // On libère le lock…
+            await inviteRef.set({ notifyLock: firestore_2.FieldValue.delete() }, { merge: true });
+            // …mais on force un retry si on avait des tokens (sinon inutile)
+            // => Cloud Functions retente automatiquement (at-least-once)
+            throw new Error("expo_push_all_failed");
+        }
     }
     catch (e) {
-        console.warn("[invite] could not set lastStatusNotified", e);
+        console.warn("[invite] finalize failed", inviteId, e?.message ?? e);
+        // Important: on re-throw seulement si c'est notre "all failed"
+        if (String(e?.message || "").includes("expo_push_all_failed")) {
+            throw e;
+        }
     }
 });

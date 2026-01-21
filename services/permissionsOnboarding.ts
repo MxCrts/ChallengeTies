@@ -5,7 +5,7 @@ import { Linking, Platform } from "react-native";
 import AsyncStorage from "@react-native-async-storage/async-storage";
 import { doc, setDoc } from "firebase/firestore";
 import { db, auth } from "@/constants/firebase-config";
-import { scheduleDailyNotifications } from "@/services/notificationService";
+import { rescheduleNextDailyIfNeeded } from "@/services/notificationService";
 
 const ASKED_KEY_PREFIX = "onboarding.permissions.askedOnce:";
 
@@ -52,7 +52,7 @@ export async function askPermissionsOnceAfterSignup() {
 
   // 4) Planification silencieuse si granted
   if (notifGranted) {
-    await scheduleDailyNotifications();
+   await rescheduleNextDailyIfNeeded();
   }
 
   // 5) Marque comme fait pour CE user

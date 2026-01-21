@@ -373,8 +373,8 @@ const TabsLayout = () => {
           name="index"
           options={{
             tabBarTestID: "tab-home",
-            tabBarLabel: t("home"),
-            tabBarAccessibilityLabel: t("home"),
+            tabBarLabel: t("homeX"),
+            tabBarAccessibilityLabel: t("homeX"),
             tabBarIcon: ({ color, focused }) => (
               <AnimatedTabIcon
                 name="home"

@@ -11,6 +11,7 @@ import {
   StatusBar,
   Platform,
   RefreshControl,
+  useWindowDimensions,
   I18nManager,
 } from "react-native";
 import {
@@ -59,6 +60,11 @@ const normalizeSize = (size: number) => {
   const scale = Math.min(Math.max(SCREEN_WIDTH / baseWidth, 0.7), 1.8);
   return Math.round(size * scale);
 };
+
+const { width } = useWindowDimensions();
+const isTablet = width >= 700;
+const pagePad = Math.max(12, Math.min(20, Math.round(width * 0.04)));
+
 
 const withAlpha = (color: string, alpha: number) => {
   const clamp = (n: number, min = 0, max = 1) => Math.min(Math.max(n, min), max);
@@ -110,6 +116,7 @@ export default function NewFeatures() {
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
   const [userVote, setUserVote] = useState<string | null>(null);
+    const [votedTitle, setVotedTitle] = useState<string | null>(null);
   const [countdown, setCountdown] = useState<CountdownValues>({
     days: 0,
     hours: 0,
@@ -280,26 +287,31 @@ export default function NewFeatures() {
     return unsubscribe;
   }, [user?.uid]);
 
- // ⏱️ Compte à rebours basé sur i18n.deadlineIso + progression du mois
-  useEffect(() => {
-    const targetDate = new Date("2025-12-31T23:59:59Z");
-    const updateTimer = () => {
-      const diff = targetDate.getTime() - Date.now();
-      if (diff <= 0) {
-        setCountdown({ days: 0, hours: 0, mins: 0, secs: 0 });
-        return;
-      }
-      setCountdown({
-       days: Math.floor(diff / (1000 * 60 * 60 * 24)),
-        hours: Math.floor((diff % (1000 * 60 * 60 * 24)) / (1000 * 60 * 60)),
-        mins: Math.floor((diff % (1000 * 60 * 60)) / (1000 * 60)),
-        secs: Math.floor((diff % (1000 * 60)) / 1000),
-      });
-    };
-    updateTimer();
-    const interval = setInterval(updateTimer, 1000);
-    return () => clearInterval(interval);
-  }, []);
+  // ⏱️ Compte à rebours → fin février (2026-02-28 23:59:59, Europe/Paris)
+useEffect(() => {
+  const iso = t("newFeatures.deadlineIso", { defaultValue: "2026-02-28T23:59:59+01:00" });
+  const targetDate = new Date(iso);
+
+  const updateTimer = () => {
+    const diff = targetDate.getTime() - Date.now();
+    if (diff <= 0 || !Number.isFinite(targetDate.getTime())) {
+      setCountdown({ days: 0, hours: 0, mins: 0, secs: 0 });
+      return;
+    }
+    setCountdown({
+      days: Math.floor(diff / (1000 * 60 * 60 * 24)),
+      hours: Math.floor((diff % (1000 * 60 * 60 * 24)) / (1000 * 60 * 60)),
+      mins: Math.floor((diff % (1000 * 60 * 60)) / (1000 * 60)),
+      secs: Math.floor((diff % (1000 * 60)) / 1000),
+    });
+  };
+
+  updateTimer();
+  const interval = setInterval(updateTimer, 1000);
+  return () => clearInterval(interval);
+}, [t, i18n.language]);
+
+
 
   // Footer countdown (ancien rendu)
   const renderCountdown = useCallback(
@@ -372,6 +384,10 @@ export default function NewFeatures() {
         // 3) ✅ SUCCESS COUNTER normalisé pour achievements: stats.voteFeature.total
         try { await incStat(user.uid, "voteFeature.total", 1); } catch {}
         setUserVote(featureId);
+                // ✅ UI only: mémorise le titre voté (évite ??? si la liste n'inclut pas encore l'item)
+        const justVoted = features.find((f) => f.id === featureId);
+        if (justVoted?.title) setVotedTitle(justVoted.title);
+
         try { await checkForAchievements(user.uid); } catch {}
 
         const canShowAd = await checkAdCooldown();
@@ -403,7 +419,7 @@ export default function NewFeatures() {
         try { Haptics.notificationAsync(Haptics.NotificationFeedbackType.Error); } catch {}
       }
     },
-    [user, userVote, adLoaded, t, checkAdCooldown, markAdShown, showInterstitials, show]
+    [user, userVote, adLoaded, t, checkAdCooldown, markAdShown, showInterstitials, show, features]
   );
 
   // Proposition de fonctionnalité
@@ -440,6 +456,8 @@ export default function NewFeatures() {
         // 2) ✅ SUCCESS COUNTER normalisé pour achievements: stats.voteFeature.total
         try { await incStat(user.uid, "voteFeature.total", 1); } catch {}
         setUserVote(featureRef.id);
+        setVotedTitle(title);
+
         try { await checkForAchievements(user.uid); } catch {}
 
         const canShowAd = await checkAdCooldown();
@@ -651,7 +669,7 @@ export default function NewFeatures() {
                 >
                   <Ionicons name="share-social-outline" size={normalizeSize(16)} color={isDarkMode ? "#fff" : "#111"} />
                   <Text style={[styles.shareBtnText, { color: isDarkMode ? "#fff" : "#111" }]}>
-                    {t("newFeatures.share", { defaultValue: "Partager" })}
+                    {t("newFeatures.shareLabel", { defaultValue: "Partager" })}
                   </Text>
                 </TouchableOpacity>
               </View>
@@ -683,11 +701,23 @@ export default function NewFeatures() {
    [t, features, i18n]
   );
 
-  // Libellé du mois (fallback sûr si la clé n'est pas encore traduite)
-  const monthLabel = useMemo(
-    () => t("newFeatures.monthLabel", { defaultValue: "Mise à jour • Décembre" }),
-    [t]
-  );
+ // ✅ Month label dynamique basé sur deadlineIso
+  const monthLabel = useMemo(() => {
+    const iso = t("newFeatures.deadlineIso", {
+      defaultValue: "2026-02-28T23:59:59+01:00",
+    });
+    const d = new Date(iso);
+    // si parsing foire → fallback Feb
+    const mm = Number.isFinite(d.getTime())
+      ? String(d.getMonth() + 1).padStart(2, "0")
+      : "02";
+
+    const monthName = t(`newFeatures.months.${mm}`, { defaultValue: "Février" });
+    return t("newFeatures.monthLabelTpl", {
+      month: monthName,
+      defaultValue: `Mise à jour • ${monthName}`,
+    });
+  }, [t, i18n.language]);
  
   const createStyles = (isDarkMode: boolean) =>
     StyleSheet.create({
@@ -704,7 +734,7 @@ export default function NewFeatures() {
 
       /** HERO HEADER (premium) */
       heroHeader: {
-        marginHorizontal: SPACING,
+        marginHorizontal: pagePad,
         marginTop: Math.max(SPACING - 4, 8),
         borderRadius: normalizeSize(22),
         overflow: "hidden",
@@ -753,6 +783,30 @@ export default function NewFeatures() {
         height: SCREEN_WIDTH * 0.9,
         borderRadius: SCREEN_WIDTH * 0.45,
       },
+      thankYouPillWrap: {
+  width: "100%",
+  alignItems: "center",
+  marginTop: normalizeSize(2),
+},
+
+thankYouPill: {
+  flexDirection: "row",
+  alignItems: "center",
+  gap: normalizeSize(8),
+  paddingVertical: normalizeSize(10),
+  paddingHorizontal: normalizeSize(14),
+  borderRadius: 999,
+  borderWidth: StyleSheet.hairlineWidth,
+  borderColor: withAlpha("#fff", isDarkMode ? 0.14 : 0.22),
+  maxWidth: "92%",
+},
+
+thankYouPillText: {
+  fontSize: normalizeSize(13),
+  fontFamily: "Comfortaa_700Bold",
+  includeFontPadding: false,
+},
+
       bgOrbBottom: {
         position: "absolute",
         bottom: -SCREEN_WIDTH * 0.3,
@@ -818,16 +872,16 @@ export default function NewFeatures() {
         marginBottom: normalizeSize(6),
       },
       votesPill: {
-        flexDirection: "row",
-        alignItems: "center",
-        gap: 6,
-        paddingVertical: 4,
-        paddingHorizontal: 10,
-        borderRadius: 999,
-        backgroundColor: withAlpha("#000", 0.1),
-        borderWidth: StyleSheet.hairlineWidth,
-        borderColor: withAlpha("#fff", 0.12),
-      },
+  flexDirection: "row",
+  alignItems: "center",
+  paddingVertical: 4,
+  paddingHorizontal: 10,
+  borderRadius: 999,
+  backgroundColor: isDarkMode ? withAlpha("#000", 0.22) : withAlpha("#000", 0.06),
+  borderWidth: StyleSheet.hairlineWidth,
+  borderColor: withAlpha("#fff", isDarkMode ? 0.14 : 0.0),
+},
+
       votesPillText: {
         fontSize: normalizeSize(12),
         fontFamily: "Comfortaa_700Bold",
@@ -860,29 +914,34 @@ export default function NewFeatures() {
         marginBottom: normalizeSize(16),
       },
       countdownGradient: {
-        flexDirection: "row",
-        justifyContent: "space-between",
-        padding: normalizeSize(16),
-        borderRadius: normalizeSize(18),
-        // fond légèrement translucide pour un look “verre” propre en clair/sombre
-        backgroundColor: withAlpha("#fff", isDarkMode ? 0.08 : 0.95),
-        borderWidth: StyleSheet.hairlineWidth,
-        borderColor: withAlpha("#000", isDarkMode ? 0.15 : 0.08),
-        shadowColor: "#000",
-        shadowOffset: { width: 0, height: normalizeSize(3) },
-        shadowOpacity: isDarkMode ? 0.25 : 0.12,
-        shadowRadius: normalizeSize(5),
-        elevation: 3,
-      },
+  flexDirection: "row",
+  justifyContent: "space-between",
+  padding: normalizeSize(14),
+  borderRadius: normalizeSize(18),
+
+  backgroundColor: isDarkMode ? withAlpha("#111", 0.35) : withAlpha("#fff", 0.92),
+  borderWidth: StyleSheet.hairlineWidth,
+  borderColor: isDarkMode ? withAlpha("#fff", 0.16) : withAlpha("#000", 0.08),
+
+  shadowColor: "#000",
+  shadowOffset: { width: 0, height: normalizeSize(3) },
+  shadowOpacity: isDarkMode ? 0.25 : 0.10,
+  shadowRadius: normalizeSize(6),
+  elevation: 3,
+},
+
       countdownBox: {
         alignItems: "center",
         flex: 1,
         marginHorizontal: normalizeSize(4),
       },
       countdownNumber: {
-        fontSize: normalizeSize(20),
-        fontFamily: "Comfortaa_700Bold",
-      },
+  fontSize: normalizeSize(20),
+  fontFamily: "Comfortaa_700Bold",
+  includeFontPadding: false,
+  ...(Platform.OS === "ios" ? { fontVariant: ["tabular-nums"] } : null),
+},
+
       countdownLabel: {
         fontSize: normalizeSize(10),
         fontFamily: "Comfortaa_400Regular",
@@ -1082,9 +1141,7 @@ export default function NewFeatures() {
   numberOfLines={2}
   adjustsFontSizeToFit
 >
-  {t("newFeatures.heroTitleSep", {
-    defaultValue: "Vote les nouveautés qui arrivent fin décembre 🚀",
-  })}
+  {t("newFeatures.heroTitle")}
 </Text>
 
            <Text
@@ -1098,9 +1155,7 @@ export default function NewFeatures() {
   numberOfLines={3}
   adjustsFontSizeToFit
 >
-  {t("newFeatures.heroSubtitleNov", {
-    defaultValue: "Ta voix compte : propose, vote et suis l’évolution des features.",
-  })}
+  {t("newFeatures.heroSubtitle")}
 </Text>
 
           </LinearGradient>
@@ -1125,14 +1180,12 @@ export default function NewFeatures() {
                 keyboardDismissMode="on-drag"
                keyboardShouldPersistTaps="handled"
                scrollEventThrottle={16}
-                initialNumToRender={10}
-                maxToRenderPerBatch={10}
-                windowSize={7}
-                getItemLayout={(_, index) => ({
-                  length: normalizeSize(130),
-                  offset: normalizeSize(130) * index,
-                  index,
-                })}
+                removeClippedSubviews={Platform.OS === "android"}
+                updateCellsBatchingPeriod={50}
+                initialNumToRender={8}
+                maxToRenderPerBatch={8}
+                windowSize={9}
+
                 contentInset={{ top: SPACING, bottom: normalizeSize(40) }}
                 accessibilityRole="list"
                 accessibilityLabel={t("newFeatures.featuresListLabel")}
@@ -1180,24 +1233,35 @@ export default function NewFeatures() {
           <Animated.View entering={FadeInUp.delay(400)} style={styles.bottomContainer}>
             {renderCountdown()}
             {userVote ? (
-              <Text
-  style={[
-    styles.thankYouText,
-    { color: currentTheme.colors.textSecondary },
-    {
-      writingDirection: I18nManager.isRTL ? "rtl" : "ltr",
-      textAlign: "center",
-    },
-  ]}
-  numberOfLines={3}
-  adjustsFontSizeToFit
->
-  {t("newFeatures.thankYouForVote", {
-    featureTitle: features.find((f) => f.id === userVote)?.title || "???",
-  })}
-</Text>
-
-            ) : (
+  <View style={styles.thankYouPillWrap}>
+    <LinearGradient
+      colors={[
+        withAlpha(currentTheme.colors.secondary, isDarkMode ? 0.55 : 0.22),
+        withAlpha(currentTheme.colors.primary, isDarkMode ? 0.55 : 0.22),
+      ]}
+      start={{ x: 0, y: 0 }}
+      end={{ x: 1, y: 1 }}
+      style={styles.thankYouPill}
+    >
+      <Ionicons
+        name="checkmark-circle-outline"
+        size={normalizeSize(16)}
+        color={currentTheme.colors.textPrimary}
+      />
+      <Text
+        style={[
+          styles.thankYouPillText,
+          { color: currentTheme.colors.textPrimary },
+          { writingDirection: I18nManager.isRTL ? "rtl" : "ltr" },
+        ]}
+        numberOfLines={1}
+        adjustsFontSizeToFit
+      >
+        {t("newFeatures.thankYouShort", { defaultValue: "Merci pour ton vote 💜" })}
+      </Text>
+    </LinearGradient>
+  </View>
+) : (
               <Animated.View entering={ZoomIn.delay(500)}>
                 <TouchableOpacity
                   style={[styles.proposeButton, { backgroundColor: currentTheme.colors.primary }]}
@@ -1258,8 +1322,9 @@ export default function NewFeatures() {
    ref={featureShareRef}
           featureTitle={featureSharePayload.title}
           i18n={{
-            kicker: t("newFeatures.sharE.kicker"), // ✅ fix key: sharE -> share
-            footer: t("newFeatures.sharE.footerWithDays", { days: Math.max(0, countdown.days) })
+            kicker: t("newFeatures.share.kicker"),
+            footer: t("newFeatures.share.footerWithDays", { days: Math.max(0, countdown.days) }),
+
           }}
         />
       </View>

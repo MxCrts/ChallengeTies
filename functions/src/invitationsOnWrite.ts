@@ -1,6 +1,6 @@
 // functions/src/invitationsOnWrite.ts
 import { onDocumentWritten } from "firebase-functions/v2/firestore";
-import { getFirestore } from "firebase-admin/firestore";
+import { getFirestore, FieldValue } from "firebase-admin/firestore";
 
 const db = getFirestore();
 
@@ -15,23 +15,31 @@ interface Invitation {
   selectedDays: number;
   status: InvitationStatus;
   kind: InvitationKind;
-  lastStatusNotified?: InvitationStatus | null; // 👈 anti-doublon
+  lastStatusNotified?: InvitationStatus | null; // anti-doublon
 }
 
-/** Normalise une langue vers nos 12 locales supportées */
+const LOCK_TTL_MS = 2 * 60 * 1000; // 2 minutes
+function isLockExpired(lock: any): boolean {
+  if (!lock) return true;
+  const s = String(lock || "");
+  // lockKey = "accepted:1700000000000"
+  const parts = s.split(":");
+  const ts = Number(parts[1] || 0);
+  if (!ts) return true;
+  return Date.now() - ts > LOCK_TTL_MS;
+}
+
+
+/** Normalise une langue vers nos locales supportées */
 function normalizeLang(lang: string | undefined) {
-  const base = String(lang || "en")
-    .toLowerCase()
-    .split(/[-_]/)[0];
-  const supported = ["fr","en","es","de","it","pt","zh","ja","ko","ar","hi","ru","nl"];
+  const base = String(lang || "en").toLowerCase().split(/[-_]/)[0];
+  const supported = ["fr", "en", "es", "de", "it", "pt", "zh", "ja", "ko", "ar", "hi", "ru", "nl"];
   return supported.includes(base) ? base : "en";
 }
 
 function titleFor(_lang: string | undefined) {
-  // Titre identique partout (brand). Gardé pour extensibilité future.
   return "ChallengeTies";
 }
-
 
 function bodyFor(
   status: InvitationStatus,
@@ -61,6 +69,7 @@ function bodyFor(
       default:   return `${name} accepted your invitation${ct} 🎉`;
     }
   }
+
   if (status === "refused") {
     switch (L) {
       case "fr": return `${name} a refusé ton invitation${ct} 🙏`;
@@ -79,36 +88,71 @@ function bodyFor(
       default:   return `${name} refused your invitation${ct} 🙏`;
     }
   }
+
   return "";
 }
 
-async function sendExpoPush(
-  to: string,
-  title: string,
-  body: string,
-  data?: Record<string, any>
-) {
-  const resp = await fetch("https://exp.host/--/api/v2/push/send", {
-    method: "POST",
-    headers: {
-      accept: "application/json",
-      "accept-encoding": "gzip, deflate",
-      "content-type": "application/json",
-    },
-    body: JSON.stringify({ to, sound: "default", title, body, data }),
-  });
-
-  const json = (await resp.json().catch(() => null)) as any;
-  const d = json?.data;
-  if (d?.status === "ok") return { ok: true as const };
-
-  const code = d?.details?.error || d?.__errorCode || undefined;
-  return { ok: false as const, code, message: d?.message, details: d?.details };
+function isExpoToken(t: any): t is string {
+  return (
+    typeof t === "string" &&
+    (t.includes("ExponentPushToken") || t.includes("ExpoPushToken"))
+  );
 }
 
+async function sendExpoPushBatch(
+  messages: Array<{ to: string; title: string; body: string; data?: Record<string, any> }>
+) {
+  // Timeout dur pour éviter une function pendue
+  const controller = new AbortController();
+  const timeout = setTimeout(() => controller.abort(), 10_000);
+
+  try {
+    const resp = await fetch("https://exp.host/--/api/v2/push/send", {
+      method: "POST",
+      headers: {
+        accept: "application/json",
+        "accept-encoding": "gzip, deflate",
+        "content-type": "application/json",
+      },
+      body: JSON.stringify(
+        messages.map((m) => ({
+          to: m.to,
+          sound: "default",
+          title: m.title,
+          body: m.body,
+          data: m.data,
+        }))
+      ),
+      signal: controller.signal,
+    });
+
+    // ✅ Si Expo renvoie un status HTTP non-2xx, on throw => retry automatique CF
+    if (!resp.ok) {
+      const text = await resp.text().catch(() => "");
+      throw new Error(`expo_http_${resp.status}: ${text?.slice?.(0, 250) || ""}`);
+    }
+
+    const json = (await resp.json().catch(() => null)) as any;
+
+    // ✅ Format attendu: { data: [ { status: "ok"|"error", ... } ] }
+    const arr = Array.isArray(json?.data) ? json.data : [];
+
+    // ✅ Si réponse anormale => throw => retry
+    if (!Array.isArray(arr)) {
+      throw new Error("expo_bad_response_shape");
+    }
+
+    return arr as any[];
+  } finally {
+    clearTimeout(timeout);
+  }
+}
+
+
 /**
- * Envoie une notif à l’INVITEUR quand une invitation passe de "pending" → "accepted" | "refused".
- * Idempotent grâce à lastStatusNotified.
+ * Notif INVITEUR quand invitation passe pending -> accepted/refused.
+ * Idempotence safe: on "claim" l'envoi via transaction (CAS),
+ * puis on send, puis on "finalize" lastStatusNotified.
  */
 export const invitationsOnWrite = onDocumentWritten(
   { region: "europe-west1", document: "invitations/{inviteId}" },
@@ -117,53 +161,95 @@ export const invitationsOnWrite = onDocumentWritten(
     const after = event.data?.after?.data() as Invitation | undefined;
     const inviteId = event.params?.inviteId as string;
 
-    // On ne traite que les mises à jour
+    // updates only
     if (!before || !after) return;
 
-    // Doit venir de "pending" et aller vers "accepted" ou "refused"
-    if (before.status !== "pending") return;
+    // pending -> accepted/refused only
+    if (before.status === after.status) return;
     if (after.status !== "accepted" && after.status !== "refused") return;
 
-    // Anti-doublon (retries) : si déjà notifié pour ce status, on sort
-    if (after.lastStatusNotified === after.status) {
-      console.log("[invite] already notified", { inviteId, status: after.status });
-      return;
-    }
+    const inviteRef = event.data?.after?.ref;
+    if (!inviteRef) return;
 
     const inviterId = after.inviterId;
     if (!inviterId) return;
 
-    // Récup INVITEUR
-    const inviterSnap = await db.doc(`users/${inviterId}`).get();
-    if (!inviterSnap.exists) return;
-    const inviter = inviterSnap.data() as any;
-    if (inviter?.notificationsEnabled === false) return;
+    // ✅ CAS: un seul worker gagne le droit d'envoyer (anti retries / double trigger)
+    // On utilise un champ "notifyLock" transient, puis on set lastStatusNotified seulement si send OK.
+    const lockKey = `${after.status}:${Date.now()}`; // unique-ish
+    let claimed = false;
 
-    // Tokens (support single string OR array)
-    const rawTokens =
-      inviter?.expoPushTokens ??
-      inviter?.expoPushToken ??
-      inviter?.pushTokens ??
-      inviter?.pushToken;
+    try {
+      await db.runTransaction(async (tx) => {
+        const snap = await tx.get(inviteRef);
+        if (!snap.exists) return;
 
-    const tokens: string[] = Array.isArray(rawTokens)
-      ? rawTokens.filter(Boolean)
-      : rawTokens
-      ? [rawTokens]
-      : [];
+        const cur = snap.data() as any;
 
-    const expoTokens = tokens.filter(
-      (t) => typeof t === "string" && (t.includes("ExponentPushToken") || t.includes("ExpoPushToken"))
-    );
+        // Déjà notifié => stop
+        if (cur?.lastStatusNotified === after.status) return;
 
-    if (expoTokens.length === 0) {
-      console.log("[invite] no expo tokens for inviter", { inviterId });
-      // on marque quand même comme notifié pour éviter les retries looping
-      try { await event.data?.after?.ref.update({ lastStatusNotified: after.status }); } catch {}
+        // Déjà locké par un autre => stop
+        if (
+          typeof cur?.notifyLock === "string" &&
+          cur.notifyLock.length > 0 &&
+          !isLockExpired(cur.notifyLock)
+        ) return;
+
+        tx.update(inviteRef, { notifyLock: lockKey });
+        claimed = true;
+      });
+    } catch (e) {
+      console.warn("[invite] lock transaction failed", inviteId, (e as any)?.message ?? e);
       return;
     }
 
-    // Username invité si manquant
+    if (!claimed) {
+      // Un autre worker a géré, ou déjà notifié
+      return;
+    }
+
+    // Load inviter
+    const inviterSnap = await db.doc(`users/${inviterId}`).get();
+    if (!inviterSnap.exists) {
+      // release lock (best effort)
+      try { await inviteRef.set({ notifyLock: FieldValue.delete() }, { merge: true }); } catch {}
+      return;
+    }
+    const inviter = inviterSnap.data() as any;
+    if (inviter?.notificationsEnabled === false) {
+      try {
+        await inviteRef.set(
+          { notifyLock: FieldValue.delete(), lastStatusNotified: after.status },
+          { merge: true }
+        );
+      } catch {}
+      return;
+    }
+
+    // Tokens: merge single + array, unique, only Expo tokens
+    const mergedTokens = new Set<string>();
+    const tArr = inviter?.expoPushTokens;
+    if (Array.isArray(tArr)) for (const t of tArr) if (isExpoToken(t)) mergedTokens.add(t);
+    if (isExpoToken(inviter?.expoPushToken)) mergedTokens.add(inviter.expoPushToken);
+    // legacy fallback (si tu as encore des vieux champs)
+    const legacyArr = inviter?.pushTokens;
+    if (Array.isArray(legacyArr)) for (const t of legacyArr) if (isExpoToken(t)) mergedTokens.add(t);
+    if (isExpoToken(inviter?.pushToken)) mergedTokens.add(inviter.pushToken);
+
+    const expoTokens = Array.from(mergedTokens);
+    if (expoTokens.length === 0) {
+      // finalize: on marque notifié (sinon tu vas retry en boucle à chaque update)
+      try {
+        await inviteRef.set(
+          { notifyLock: FieldValue.delete(), lastStatusNotified: after.status },
+          { merge: true }
+        );
+      } catch {}
+      return;
+    }
+
+    // Resolve invitee username (best effort)
     let inviteeUsername = after.inviteeUsername || null;
     if (!inviteeUsername && after.inviteeId) {
       const inviteeSnap = await db.doc(`users/${after.inviteeId}`).get().catch(() => null);
@@ -175,7 +261,7 @@ export const invitationsOnWrite = onDocumentWritten(
         null;
     }
 
-    // Titre du challenge (facultatif mais sympa)
+    // Resolve challenge title (best effort)
     let challengeTitle: string | null = null;
     if (after.challengeId) {
       const chSnap = await db.doc(`challenges/${after.challengeId}`).get().catch(() => null);
@@ -185,45 +271,79 @@ export const invitationsOnWrite = onDocumentWritten(
     const lang = inviter?.language || "en";
     const title = titleFor(lang);
     const body = bodyFor(after.status, lang, inviteeUsername, challengeTitle);
-    if (!body) {
-      // marque notifié quand même (anti-retry)
-      try { await event.data?.after?.ref.update({ lastStatusNotified: after.status }); } catch {}
-      return;
+
+    // Payload stable (inviteeId peut être null: open refused/accepted set par ton service)
+    const dataPayload = {
+      kind: "invite_status",
+      status: after.status,
+      inviteId,
+      challengeId: after.challengeId || "",
+      inviteeId: after.inviteeId || "",
+    };
+
+    // Send to all devices
+    const invalid: string[] = [];
+    let successCount = 0;
+
+    const makeChunks = (arr: string[], size: number) => {
+      const out: string[][] = [];
+      for (let i = 0; i < arr.length; i += size) out.push(arr.slice(i, i + size));
+      return out;
+    };
+
+    for (const chunk of makeChunks(expoTokens, 100)) {
+      const results = await sendExpoPushBatch(
+        chunk.map((to) => ({ to, title, body, data: dataPayload }))
+      );
+
+      results.forEach((r: any, idx: number) => {
+        const token = chunk[idx];
+        if (r?.status === "ok") {
+          successCount++;
+          return;
+        }
+        const code = r?.details?.error;
+        console.warn("[invite] push failed", { inviteId, token, code });
+        if (code === "DeviceNotRegistered") invalid.push(token);
+      });
     }
 
-    // Envoi à tous les devices expo
-    const failures: string[] = [];
-    for (const token of expoTokens) {
-      const res = await sendExpoPush(token, title, body, {
-        type: "invite-status",
-        status: after.status,
-        inviteId,
-        challengeId: after.challengeId || "",
-        inviteeId: after.inviteeId || "",
-      });
-      if (!res.ok) {
-        console.warn("[invite] push failed", { token, code: res.code, details: res.details });
-        if (res.code === "DeviceNotRegistered") failures.push(token);
+    // Cleanup invalid tokens
+    if (invalid.length > 0) {
+      try {
+        const updates: any = {};
+        updates.expoPushTokens = FieldValue.arrayRemove(...invalid);
+        if (typeof inviter?.expoPushToken === "string" && invalid.includes(inviter.expoPushToken)) {
+          updates.expoPushToken = FieldValue.delete();
+        }
+        await inviterSnap.ref.set(updates, { merge: true });
+      } catch (e) {
+        console.warn("[invite] token cleanup failed", inviteId, (e as any)?.message ?? e);
       }
     }
 
-    // Nettoyage tokens invalides
-    if (failures.length > 0) {
-      try {
-        const keep = expoTokens.filter((t) => !failures.includes(t));
-        if (Array.isArray(inviter?.expoPushTokens)) {
-          await inviterSnap.ref.update({ expoPushTokens: keep });
-        } else {
-          await inviterSnap.ref.update({ expoPushToken: keep[0] ?? null });
-        }
-      } catch {}
-    }
+   // ✅ Finalize:
+try {
+  if (successCount > 0) {
+    await inviteRef.set(
+      { notifyLock: FieldValue.delete(), lastStatusNotified: after.status },
+      { merge: true }
+    );
+  } else {
+    // On libère le lock…
+    await inviteRef.set({ notifyLock: FieldValue.delete() }, { merge: true });
 
-    // Marque comme notifié pour idempotence
-    try {
-      await event.data?.after?.ref.update({ lastStatusNotified: after.status });
-    } catch (e) {
-      console.warn("[invite] could not set lastStatusNotified", e);
-    }
+    // …mais on force un retry si on avait des tokens (sinon inutile)
+    // => Cloud Functions retente automatiquement (at-least-once)
+    throw new Error("expo_push_all_failed");
+  }
+} catch (e) {
+  console.warn("[invite] finalize failed", inviteId, (e as any)?.message ?? e);
+  // Important: on re-throw seulement si c'est notre "all failed"
+  if (String((e as any)?.message || "").includes("expo_push_all_failed")) {
+    throw e;
+  }
+}
+
   }
 );

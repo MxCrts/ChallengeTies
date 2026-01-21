@@ -10,19 +10,20 @@ import {
   AccessibilityInfo,
   Pressable,
   Platform,
+  Modal,
   Image as RNImage,
   ScrollView,
   RefreshControl,
   useWindowDimensions,
   InteractionManager,
 } from "react-native";
-import { useRouter, useRootNavigationState } from "expo-router";
+import { useRouter, useRootNavigationState, usePathname } from "expo-router";
 import { SafeAreaView, useSafeAreaInsets } from "react-native-safe-area-context";
 import { LinearGradient } from "expo-linear-gradient";
 import { Ionicons } from "@expo/vector-icons";
 import { Image } from "expo-image";
 import AsyncStorage from "@react-native-async-storage/async-storage";
-import { collection, getDocs, query, where, doc, getDoc } from "firebase/firestore";
+import { collection, getDocs, query, where, doc, getDoc, deleteDoc } from "firebase/firestore";
 import { db, auth } from "@/constants/firebase-config";
 import { useTheme } from "../context/ThemeContext";
 import designSystem from "../theme/designSystem";
@@ -37,6 +38,8 @@ import { checkForAchievements } from "../helpers/trophiesHelpers";
 import { canInvite } from "@/utils/canInvite";
 import { useToast } from "../src/ui/Toast";
 import { AppState } from "react-native";
+import { getOrCreateOpenInvitation } from "@/services/invitationService";
+
 
 
 const SPACING = 16;
@@ -47,13 +50,27 @@ const GOLD = "#FFD700";
 const CTA_GRAD_A = "#FFB000";
 const CTA_GRAD_B = "#FF8C00";
 const FIRSTPICK_INVITE_SNAPSHOT_KEY = "ties_firstpick_invite_snapshot_v1";
-const FIRSTPICK_INVITE_SNAPSHOT_TTL_MS = 30000;
+const FIRSTPICK_INVITE_SNAPSHOT_TTL_MS = 10 * 60 * 1000; // 10 min (WhatsApp/ShareSheet peut être long)
+const FIRSTPICK_SHARE_IN_PROGRESS_KEY = "ties_firstpick_share_in_progress_v1";
+const HOME_PENDING_INVITE_KEY = "ties_home_pending_invite_v1";
+const FIRSTPICK_POSTSHARE_KEY = "ties_firstpick_postshare_v1";
+const FIRSTPICK_DONE_HARD_KEY = "ties_firstpick_done_hard_v1";
+const FIRSTPICK_DONE_HARD_TTL_MS = 5 * 60 * 1000; // 5 min anti-bounce
+
+
+type PostSharePersisted = {
+  t: number;
+  inviteId?: string | null;
+};
+
+
 type InviteSnapshot = {
   t: number;
   step: 3;
   mode: "duo";
   days: number;
   selected: Challenge;
+  inviteId?: string;
 };
 
 const setGlobalInviteSnap = (snap: InviteSnapshot | null) => {
@@ -98,11 +115,10 @@ export default function FirstPick() {
   const { theme } = useTheme();
   const isDark = theme === "dark";
   const currentTheme = isDark ? designSystem.darkTheme : designSystem.lightTheme;
-
   const insets = useSafeAreaInsets();
   const { width, height } = useWindowDimensions();
   const { show } = useToast();
-
+const pathname = usePathname();
   const router = useRouter();
   const nav = useRootNavigationState();
   const pendingNavRef = useRef<null | { pathname: string; params?: any }>(null);
@@ -111,9 +127,11 @@ export default function FirstPick() {
 
   // ✅ onboarding steps
   const [step, setStep] = useState<Step>(1);
+  const [postShareBusy, setPostShareBusy] = useState(false);
 
   // ✅ Base saine : mode SIMPLE (pas de "none")
   const [mode, setMode] = useState<"solo" | "duo">("duo");
+  
 
 
   const [inviteModalVisible, setInviteModalVisible] = useState(false);
@@ -127,6 +145,10 @@ export default function FirstPick() {
   const [pool, setPool] = useState<Challenge[]>([]);
   const [items, setItems] = useState<Challenge[]>([]);
   const [selected, setSelected] = useState<Challenge | null>(null);
+  const [pendingInvite, setPendingInvite] = useState<null | { inviteId: string }>(null);
+  const [postShareVisible, setPostShareVisible] = useState(false);
+  const [postSharePhase, setPostSharePhase] = useState<"ask" | "fallback">("ask");
+  const [postShareInviteId, setPostShareInviteId] = useState<string | null>(null);
 
   // ✅ par défaut : 7 jours (règle FirstPick)
   const [days, setDays] = useState<number>(7);
@@ -136,6 +158,7 @@ export default function FirstPick() {
 
   const submittingRef = useRef(false);
   const mountedRef = useRef(true);
+  const userClosedInviteModalRef = useRef(false);
 
   // Anim
   const introOpacity = useRef(new Animated.Value(0)).current;
@@ -147,43 +170,115 @@ export default function FirstPick() {
   const stepOpacity = useRef(new Animated.Value(1)).current;
   const stepTranslate = useRef(new Animated.Value(0)).current;
 
-  const persistInviteSnapshot = useCallback(async () => {
-    if (!selected) return;
-    const snap: InviteSnapshot = {
-      t: Date.now(),
-      step: 3,
-      mode: "duo",
-      days,
-      selected,
-    };
+ const persistInviteSnapshot = useCallback(async (inviteId?: string) => {
+  if (!selected) return;
+  const snap: InviteSnapshot = {
+    t: Date.now(),
+    step: 3,
+    mode: "duo",
+    days,
+    selected,
+    inviteId,
+  };
 
-    // ✅ instant (ne dépend pas d’AsyncStorage)
-    setGlobalInviteSnap(snap);
+  setGlobalInviteSnap(snap);
 
-    // ✅ persistant (si remount)
-    try {
-      await AsyncStorage.setItem(FIRSTPICK_INVITE_SNAPSHOT_KEY, JSON.stringify(snap));
-    } catch {}
-  }, [days, selected]);
+  try {
+    await AsyncStorage.setItem(FIRSTPICK_INVITE_SNAPSHOT_KEY, JSON.stringify(snap));
+    await setShareInProgress(true);
+  } catch {}
+}, [days, selected]);
+
 
   const clearInviteSnapshot = useCallback(async () => {
     setGlobalInviteSnap(null);
     try {
       await AsyncStorage.removeItem(FIRSTPICK_INVITE_SNAPSHOT_KEY);
+      await setShareInProgress(false);
     } catch {}
   }, []);
 
+  const clearHomePendingInvite = async () => {
+  try {
+    await AsyncStorage.removeItem(HOME_PENDING_INVITE_KEY);
+  } catch {}
+};
+
+const markHomePendingInvite = async (inviteId: string) => {
+  try {
+    await AsyncStorage.setItem(HOME_PENDING_INVITE_KEY, inviteId);
+  } catch {}
+};
+
+const deleteInvitationByIdSafe = useCallback(async (inviteId?: string) => {
+  if (!inviteId) return;
+  try {
+    await deleteDoc(doc(db, "invitations", inviteId));
+  } catch (e) {
+    // on ne bloque pas l’onboarding si la suppression fail (offline etc.),
+    // mais on nettoie quand même l’UI/snapshot local.
+    console.warn("delete invitation failed", e);
+  }
+}, []);
+
+
+  const setShareInProgress = async (v: boolean) => {
+  try {
+    if (v) await AsyncStorage.setItem(FIRSTPICK_SHARE_IN_PROGRESS_KEY, "1");
+    else await AsyncStorage.removeItem(FIRSTPICK_SHARE_IN_PROGRESS_KEY);
+  } catch {}
+};
+
+const getShareInProgress = async (): Promise<boolean> => {
+  try {
+    const v = await AsyncStorage.getItem(FIRSTPICK_SHARE_IN_PROGRESS_KEY);
+    return v === "1";
+  } catch {
+    return false;
+  }
+};
+
+const persistPostShare = useCallback(async (inviteId?: string | null) => {
+  const payload: PostSharePersisted = { t: Date.now(), inviteId: inviteId ?? null };
+  try {
+    await AsyncStorage.setItem(FIRSTPICK_POSTSHARE_KEY, JSON.stringify(payload));
+  } catch {}
+}, []);
+
+const consumePostShare = useCallback(async () => {
+  try {
+    const raw = await AsyncStorage.getItem(FIRSTPICK_POSTSHARE_KEY);
+    if (!raw) return null;
+    await AsyncStorage.removeItem(FIRSTPICK_POSTSHARE_KEY).catch(() => {});
+    const parsed = JSON.parse(raw || "{}");
+    const ts = Number(parsed?.t || 0);
+    if (!ts || Date.now() - ts > 60_000) return null; // 60s fenêtre, suffisant
+    return { inviteId: parsed?.inviteId ? String(parsed.inviteId) : null };
+  } catch {
+    return null;
+  }
+}, []);
+
+
+
   const restoreInviteSnapshot = useCallback(async () => {
     const now = Date.now();
+    const shareInProgress = await getShareInProgress();
 
     // 1) Essaye global (ultra rapide)
     const g = getGlobalInviteSnap();
     if (g?.t && now - g.t <= FIRSTPICK_INVITE_SNAPSHOT_TTL_MS) {
       if (g?.selected?.id) setSelected(g.selected);
       if (Number.isFinite(g?.days)) setDays(Number(g.days));
+      if (g?.inviteId) setPendingInvite({ inviteId: g.inviteId });
       setMode("duo");
       setStep(3);
-      setInviteModalVisible(true);
+      // ✅ Si share est en cours -> on ré-ouvre
+      // ✅ Sinon -> on respecte la volonté de l'user (s'il l'a fermé)
+      if (shareInProgress && !userClosedInviteModalRef.current) {
+        setInviteModalVisible(true);
+      }
+
       return true;
     }
 
@@ -195,6 +290,7 @@ export default function FirstPick() {
       const ts = Number(s?.t || 0);
       if (!ts || now - ts > FIRSTPICK_INVITE_SNAPSHOT_TTL_MS) {
         await AsyncStorage.removeItem(FIRSTPICK_INVITE_SNAPSHOT_KEY).catch(() => {});
+        await setShareInProgress(false).catch(() => {});
         return false;
       }
 
@@ -203,9 +299,12 @@ export default function FirstPick() {
 
       if (s?.selected?.id) setSelected(s.selected);
       if (Number.isFinite(Number(s?.days))) setDays(Number(s.days));
+      if (s?.inviteId) setPendingInvite({ inviteId: String(s.inviteId) });
       setMode("duo");
       setStep(3);
-      setInviteModalVisible(true);
+      if (shareInProgress && !userClosedInviteModalRef.current) {
+        setInviteModalVisible(true);
+      }
       return true;
     } catch {
       return false;
@@ -384,19 +483,57 @@ export default function FirstPick() {
     }
   }, [nav?.key, router]);
 
-   type InviteResult = "shared" | "dismiss" | "copied" | "start_solo";
+   type InviteResult = "dismiss" | "start_solo";
 
-const ignoreNextResumeRef = useRef(false);
-  
 useEffect(() => {
-  const sub = AppState.addEventListener("change", (state) => {
-    if (state === "active" && ignoreNextResumeRef.current) {
-      restoreInviteSnapshot().catch(() => {});
-      ignoreNextResumeRef.current = false;
+  const sub = AppState.addEventListener("change", async (state) => {
+    if (state !== "active") return;
+
+    // 1) Si on revient du ShareSheet -> on restaure (si besoin) + on affiche "envoyée ?"
+    const shareInProgress = await getShareInProgress();
+    if (shareInProgress) {
+      userClosedInviteModalRef.current = false;
+      await restoreInviteSnapshot().catch(() => {});
+
+      // ⚡️force l'affichage du modal postShare même si remount Android
+      const snap = getGlobalInviteSnap();
+      const inviteId = snap?.inviteId || pendingInvite?.inviteId || null;
+      await persistPostShare(inviteId);
+      await setShareInProgress(false);
     }
+
+    // 2) Consume postShare persisté -> ouvre le modal "Invitation envoyée ?"
+    const ps = await consumePostShare();
+if (ps) {
+  // ✅ garde : si on n'a pas de pendingInvite et pas de snap, on ignore
+  const snap = getGlobalInviteSnap();
+  const hasContext = !!(ps.inviteId || pendingInvite?.inviteId || snap?.selected?.id);
+
+  if (hasContext) {
+    setMode("duo");
+    setStep(3);
+
+    if (ps.inviteId) {
+      setPendingInvite({ inviteId: ps.inviteId });
+      setPostShareInviteId(ps.inviteId);
+    } else {
+      setPostShareInviteId(null);
+    }
+
+    setPostSharePhase("ask");
+    setPostShareVisible(true);
+  }
+}
+
   });
+
   return () => sub.remove();
-}, [restoreInviteSnapshot]);
+}, [
+  restoreInviteSnapshot,
+  pendingInvite?.inviteId,
+  persistPostShare,
+  consumePostShare,
+]);
 
 
   // Fade-in
@@ -542,95 +679,182 @@ useEffect(() => {
     Promise.allSettled(targets.map((u) => RNImage.prefetch(u))).catch(() => {});
   }, [items]);
 
+  useEffect(() => {
+  let alive = true;
+
+  const run = async () => {
+    try {
+      const raw = await AsyncStorage.getItem(FIRSTPICK_DONE_HARD_KEY);
+      if (!alive) return;
+
+      if (!raw) return;
+
+      const ts = Number(raw);
+      if (!Number.isFinite(ts)) {
+        await AsyncStorage.removeItem(FIRSTPICK_DONE_HARD_KEY).catch(() => {});
+        return;
+      }
+
+      // si trop vieux, on purge
+      if (Date.now() - ts > FIRSTPICK_DONE_HARD_TTL_MS) {
+        await AsyncStorage.removeItem(FIRSTPICK_DONE_HARD_KEY).catch(() => {});
+        return;
+      }
+
+      // ✅ Si on est sur FirstPick ("/" chez toi) alors on ESCAPE direct vers tabs.
+      // Ça tue 100% des "retours fantômes" post-navigation.
+      const isOnFirstPick =
+  typeof pathname === "string" &&
+  (pathname.toLowerCase().includes("firstpick") || pathname === "/firstpick");
+
+if (isOnFirstPick) {
+  requestAnimationFrame(() => {
+    safeReplace({ pathname: "/(tabs)" });
+  });
+}
+
+    } catch {}
+  };
+
+  run();
+
+  return () => {
+    alive = false;
+  };
+}, [pathname, safeReplace]);
+
+
   const onRefresh = useCallback(() => {
     setRefreshing(true);
     fetchChallenges();
   }, [fetchChallenges]);
 
-  const goHome = useCallback(async () => {
-    await AsyncStorage.setItem("firstPickDone", "1");
-    await AsyncStorage.removeItem(FIRSTPICK_INVITE_SNAPSHOT_KEY).catch(() => {});
-    setGlobalInviteSnap(null);
-    safeReplace({ pathname: "/" });
-  }, [safeReplace]);
+  const goHome = useCallback(async (opts?: { pendingInviteId?: string }) => {
+  await AsyncStorage.setItem("firstPickDone", "1");
+
+  // ✅ hard reset invite flow flags (anti remount/Android weirdness)
+  await AsyncStorage.removeItem(FIRSTPICK_INVITE_SNAPSHOT_KEY).catch(() => {});
+  await setShareInProgress(false).catch(() => {});
+  if (opts?.pendingInviteId) {
+    await markHomePendingInvite(opts.pendingInviteId);
+  } else {
+    await clearHomePendingInvite();
+  }
+
+  setGlobalInviteSnap(null);
+
+// ✅ hard-done anti-bounce (empêche retour Step1 après navigation)
+await AsyncStorage.setItem(FIRSTPICK_DONE_HARD_KEY, String(Date.now())).catch(() => {});
+
+safeReplace({ pathname: "/(tabs)" });
+
+}, [safeReplace]);
+
 
 const handleInviteDismiss = useCallback(() => {
+  // ✅ l’utilisateur ferme volontairement le modal
+  userClosedInviteModalRef.current = true;
   setInviteModalVisible(false);
-  // optionnel : si tu veux éviter auto-restore si l'user ferme volontairement
-  clearInviteSnapshot().catch(() => {});
-}, [clearInviteSnapshot]);
+  // 🚫 IMPORTANT: on ne clear PAS le snapshot ici
+  // sinon retour shareSheet / remount => step 1
+}, []);
 
 
-const handleInvitationResult = async (result: InviteResult) => {
+const handleInvitationResult = useCallback(
+  async (result: InviteResult, meta?: { inviteId?: string }) => {
+    const inviteId = meta?.inviteId || pendingInvite?.inviteId;
 
- const cameFromShareSheet = result === "shared" || result === "copied" || result === "dismiss";
-  ignoreNextResumeRef.current = cameFromShareSheet;
+    // ✅ SOLO depuis le modal (inchangé)
+    if (result === "start_solo") {
+      setInviteModalVisible(false);
+      await clearInviteSnapshot();
+      await setShareInProgress(false);
 
-  // ✅ SOLO depuis le modal = EXACTEMENT comme si l'user avait choisi solo
-  if (result === "start_solo") {
-    setInviteModalVisible(false);
-    await clearInviteSnapshot();
-    if (!selected) return;
-
-    try {
-      setSubmitting(true);
-      submittingRef.current = true;
-
-      const ref = doc(db, "challenges", selected.id);
-      const snap = await getDoc(ref);
-      const data: any = snap.exists() ? snap.data() : {};
-
-      const challengeObj = {
-        id: selected.id,
-        title: selected.title || data?.title || t("common.challenge"),
-        category: selected.category || data?.category || t("common.misc"),
-        chatId: selected.chatId || data?.chatId || selected.id,
-        rawCategory: selected.rawCategory || data?.category || "Miscellaneous",
-        description: selected.description || data?.description || "",
-        daysOptions: selected.daysOptions || data?.daysOptions || DEFAULT_DAYS,
-        imageUrl: selected.imageUrl || data?.imageUrl || "",
-      };
-
-      await takeChallenge(challengeObj, days);
+      if (!selected) return;
 
       try {
-        const uid = auth.currentUser?.uid;
-        if (uid) {
-          const bucketizeDays = (n: number): 7 | 30 | 90 | 180 | 365 => {
-            if (n <= 7) return 7;
-            if (n <= 30) return 30;
-            if (n <= 90) return 90;
-            if (n <= 180) return 180;
-            return 365;
-          };
-          await recordSelectDays(uid, bucketizeDays(days));
-          await checkForAchievements(uid);
-        }
-      } catch {}
+        setSubmitting(true);
+        submittingRef.current = true;
 
-      await goHome();
-    } catch (e: any) {
-      console.error("first-pick start_solo error", e);
-      show(e?.message || t("common.oops", { defaultValue: "Oups, réessaie." }), "error");
-      softHaptic("error");
-    } finally {
-      setSubmitting(false);
-      submittingRef.current = false;
+        const ref = doc(db, "challenges", selected.id);
+        const snap = await getDoc(ref);
+        const data: any = snap.exists() ? snap.data() : {};
+
+        const challengeObj = {
+          id: selected.id,
+          title: selected.title || data?.title || t("common.challenge"),
+          category: selected.category || data?.category || t("common.misc"),
+          chatId: selected.chatId || data?.chatId || selected.id,
+          rawCategory: selected.rawCategory || data?.category || "Miscellaneous",
+          description: selected.description || data?.description || "",
+          daysOptions: selected.daysOptions || data?.daysOptions || DEFAULT_DAYS,
+          imageUrl: selected.imageUrl || data?.imageUrl || "",
+        };
+
+        await takeChallenge(challengeObj, days);
+
+        try {
+          const uid = auth.currentUser?.uid;
+          if (uid) {
+            const bucketizeDays = (n: number): 7 | 30 | 90 | 180 | 365 => {
+              if (n <= 7) return 7;
+              if (n <= 30) return 30;
+              if (n <= 90) return 90;
+              if (n <= 180) return 180;
+              return 365;
+            };
+            await recordSelectDays(uid, bucketizeDays(days));
+            await checkForAchievements(uid);
+          }
+        } catch {}
+
+        await goHome();
+      } catch (e: any) {
+        console.error("first-pick start_solo error", e);
+        show(e?.message || t("common.oops", { defaultValue: "Oups, réessaie." }), "error");
+        softHaptic("error");
+      } finally {
+        setSubmitting(false);
+        submittingRef.current = false;
+      }
+      return;
     }
-    return;
-  }
 
-  // ✅ NAV UNIQUEMENT si partage réel
-  if (result === "shared") {
+    // ✅ FLOW UNIQUE (iOS + Android)
+    // Après fermeture shareSheet => on affiche TOUJOURS "Invitation envoyée ?"
     setInviteModalVisible(false);
-    await clearInviteSnapshot();
-    await goHome();
-    return;
-  }
+userClosedInviteModalRef.current = true;
 
-  await restoreInviteSnapshot();
-  setInviteModalVisible(true);
-};
+// ✅ on persiste "postShare" pour survivre aux remount Android
+await persistPostShare(inviteId || null);
+
+// ✅ on coupe le flag share (sinon AppState le relance)
+await setShareInProgress(false);
+
+// ✅ UI immédiate (sans attendre AppState)
+setMode("duo");
+setStep(3);
+
+if (inviteId) setPendingInvite({ inviteId });
+
+setPostShareInviteId(inviteId || null);
+setPostSharePhase("ask");
+setPostShareVisible(true);
+
+  },
+  [
+    clearInviteSnapshot,
+    days,
+    goHome,
+    pendingInvite?.inviteId,
+    selected,
+    setShareInProgress,
+    show,
+    softHaptic,
+    t,
+    takeChallenge,
+  ]
+);
 
 
 
@@ -830,20 +1054,20 @@ if (step === 3) {
         return;
       }
 
-      // duo
-      const res = await canInvite(selected.id);
-      if (!res.ok) {
-        const msg =
-          res.reason === "pending-invite"
-            ? (t("firstPick.alreadyInvited", { defaultValue: "Invitation déjà envoyée pour ce défi." }) as string)
-            : (t("common.oops", { defaultValue: "Oups, réessaie." }) as string);
-        show(msg, "info");
-        softHaptic("warning");
-        return;
-      }
+      // ✅ DUO: si déjà pending -> continuer
+if (mode === "duo" && pendingInvite?.inviteId) {
+  await goHome({ pendingInviteId: pendingInvite.inviteId });
+  return;
+}
 
-     await persistInviteSnapshot();
-     setInviteModalVisible(true);
+      // duo
+    // ✅ DUO = toujours récup/crée l'invitation, même si elle existe déjà
+      // => jamais de dead-end "invitation déjà envoyée"
+      const { id: inviteId } = await getOrCreateOpenInvitation(selected.id, days);
+ setPendingInvite({ inviteId });
+ await persistInviteSnapshot(inviteId); // ✅ on stocke le vrai inviteId
+ userClosedInviteModalRef.current = false;
+ setInviteModalVisible(true);
     } catch (e: any) {
       console.error("first-pick confirm error", e);
       show(e?.message || t("common.oops", { defaultValue: "Oups, réessaie." }), "error");
@@ -1481,6 +1705,65 @@ if (step === 3) {
           </View>
         </View>
       </View>
+      {mode === "duo" && pendingInvite?.inviteId && (
+  <View style={{
+    width: "100%",
+    borderWidth: 1,
+    borderColor: "rgba(255,140,0,0.35)",
+    backgroundColor: isDark ? "rgba(255,140,0,0.10)" : "rgba(255,140,0,0.12)",
+    padding: 14,
+    borderRadius: 18,
+    marginBottom: 12,
+  }}>
+    <Text style={{ fontFamily: "Comfortaa_700Bold", fontSize: 14, color: isDark ? "#fff" : "#0B0F17" }}>
+      {t("firstPick.invitePending.title", { defaultValue: "Invitation en attente" }) as string}
+    </Text>
+    <Text style={{ marginTop: 6, fontFamily: "Comfortaa_400Regular", fontSize: 12, lineHeight: 16, color: isDark ? "rgba(255,255,255,0.75)" : "rgba(0,0,0,0.65)" }}>
+      {t("firstPick.invitePending.body", {
+        defaultValue:
+          "Ton ami n’a pas encore répondu. Tu peux renvoyer le lien, ou continuer et ça démarrera dès qu’il accepte.",
+      }) as string}
+    </Text>
+
+    <View style={{ flexDirection: "row", gap: 10, marginTop: 12 }}>
+      <TouchableOpacity
+        onPress={() => {
+   userClosedInviteModalRef.current = false;
+   setInviteModalVisible(true);
+ }}
+        style={{
+          flex: 1,
+          borderRadius: 14,
+          paddingVertical: 12,
+          alignItems: "center",
+          borderWidth: 1,
+          borderColor: "rgba(255,255,255,0.12)",
+          backgroundColor: isDark ? "rgba(255,255,255,0.06)" : "rgba(0,0,0,0.06)",
+        }}
+      >
+         <Text style={{ fontFamily: "Comfortaa_700Bold", fontSize: 13, color: isDark ? "#fff" : "#0B0F17" }}>
+          {t("firstPick.invitePending.resend", { defaultValue: "Renvoyer" }) as string}
+        </Text>
+      </TouchableOpacity>
+
+      <TouchableOpacity
+         onPress={() => goHome({ pendingInviteId: pendingInvite.inviteId })}
+        style={{
+          flex: 1,
+          borderRadius: 14,
+          paddingVertical: 12,
+          alignItems: "center",
+          backgroundColor: "#FF8C00",
+        }}
+      >
+        <Text style={{ fontFamily: "Comfortaa_700Bold", fontSize: 13, color: "#000" }}>
+          {t("firstPick.invitePending.continue", { defaultValue: "Continuer" }) as string}
+        </Text>
+      </TouchableOpacity>
+    </View>
+  </View>
+)}
+
 
       <View
         style={[
@@ -1603,12 +1886,25 @@ if (step === 3) {
               >
                 {/* profondeur keynote */}
                 <LinearGradient
-                  colors={[CTA_GRAD_A, CTA_GRAD_B]}
-                  start={{ x: 0, y: 0 }}
-                  end={{ x: 1, y: 1 }}
-                  style={StyleSheet.absoluteFillObject}
-                />
-                <View pointerEvents="none" style={styles.ctaHighlight} />
+                colors={[CTA_GRAD_A, CTA_GRAD_B]}
+                // ✅ angle plus “cinema” (moins diagonal agressif)
+                start={{ x: 0.08, y: 0.10 }}
+                end={{ x: 0.92, y: 0.90 }}
+                style={StyleSheet.absoluteFillObject}
+              />
+
+              {/* ✅ soft top sheen (plus une bande plate) */}
+              <LinearGradient
+                pointerEvents="none"
+                colors={["rgba(255,255,255,0.30)", "rgba(255,255,255,0.00)"]}
+                start={{ x: 0.5, y: 0 }}
+                end={{ x: 0.5, y: 1 }}
+                style={styles.ctaSheen}
+              />
+
+              {/* ✅ vignette légère pour profondeur (rend le gradient moins “dur”) */}
+              <View pointerEvents="none" style={styles.ctaVignette} />
+
                 {submitting ? (
                   <ActivityIndicator color="#000" />
                 ) : (
@@ -1636,6 +1932,192 @@ if (step === 3) {
         </LinearGradient>
       </Animated.View>
 
+      <Modal
+  visible={postShareVisible}
+  transparent
+  animationType="fade"
+  onRequestClose={() => {}}
+>
+  <View style={{ flex: 1, backgroundColor: "rgba(0,0,0,0.55)", alignItems: "center", justifyContent: "center", padding: 18 }}>
+    <View
+      style={{
+        width: "100%",
+        maxWidth: 520,
+        borderRadius: 22,
+        overflow: "hidden",
+        borderWidth: 1,
+        borderColor: "rgba(255,255,255,0.10)",
+        backgroundColor: isDark ? "rgba(15,18,26,0.96)" : "rgba(255,255,255,0.96)",
+      }}
+    >
+      <LinearGradient
+        colors={isDark ? ["rgba(255,140,0,0.18)", "rgba(0,0,0,0.0)"] : ["rgba(255,140,0,0.18)", "rgba(255,255,255,0.0)"]}
+        start={{ x: 0, y: 0 }}
+        end={{ x: 1, y: 1 }}
+        style={{ padding: 18 }}
+      >
+        <Text style={{ fontFamily: "Comfortaa_700Bold", fontSize: 16, color: isDark ? "#fff" : INK }}>
+          {postSharePhase === "ask"
+            ? (t("firstPick.postShare.titleAsk", { defaultValue: "Invitation envoyée ?" }) as string)
+            : (t("firstPick.postShare.titleFallback", { defaultValue: "Ok. Tu fais quoi maintenant ?" }) as string)}
+        </Text>
+
+        <Text style={{ marginTop: 8, fontFamily: "Comfortaa_400Regular", fontSize: 13, lineHeight: 18, color: isDark ? "rgba(255,255,255,0.74)" : "rgba(0,0,0,0.68)" }}>
+          {postSharePhase === "ask"
+            ? (t("firstPick.postShare.bodyAsk", {
+                defaultValue:
+                  "Android ne confirme pas toujours l’envoi. Dis-nous juste si tu as bien partagé le lien.",
+              }) as string)
+            : (t("firstPick.postShare.bodyFallback", {
+                defaultValue: "Tu peux renvoyer tout de suite, ou basculer en solo pour démarrer maintenant.",
+              }) as string)}
+        </Text>
+
+        <View style={{ flexDirection: "row", gap: 10, marginTop: 14 }}>
+          {postSharePhase === "ask" ? (
+            <>
+              <TouchableOpacity
+                  disabled={postShareBusy}
+                  onPress={async () => {
+                  if (postShareBusy) return;
+                  setPostShareBusy(true);
+                  const inviteId = postShareInviteId || pendingInvite?.inviteId || null;
+
+                  setPostSharePhase("fallback");
+                  userClosedInviteModalRef.current = true;
+
+                  // delete server + cleanup local
+                  if (inviteId) await deleteInvitationByIdSafe(inviteId);
+                  await clearInviteSnapshot();
+                  await setShareInProgress(false);
+                  await clearHomePendingInvite();
+
+                  setPendingInvite(null);
+                  setPostShareInviteId(null);
+                   setPostShareBusy(false);
+                }}
+                style={{
+                  flex: 1,
+                  opacity: postShareBusy ? 0.6 : 1,
+                  borderRadius: 14,
+                  paddingVertical: 12,
+                  alignItems: "center",
+                  borderWidth: 1,
+                  borderColor: isDark ? "rgba(255,255,255,0.12)" : "rgba(0,0,0,0.10)",
+                  backgroundColor: isDark ? "rgba(255,255,255,0.06)" : "rgba(0,0,0,0.06)",
+                }}
+              >
+                <Text style={{ fontFamily: "Comfortaa_700Bold", fontSize: 13, color: isDark ? "#fff" : INK }}>
+                  {t("firstPick.postShare.no", { defaultValue: "Je n’ai pas envoyé" }) as string}
+                </Text>
+              </TouchableOpacity>
+
+              <TouchableOpacity
+                disabled={postShareBusy}
+                onPress={async () => {
+  if (postShareBusy) return;
+  setPostShareBusy(true);
+
+  const inviteId = postShareInviteId || pendingInvite?.inviteId || null;
+
+  // ✅ cleanup UI AVANT nav (anti Android remount/reopen)
+  setPostShareVisible(false);
+  setPostSharePhase("ask");
+  setPostShareInviteId(null);
+  setInviteModalVisible(false);
+
+  // ✅ IMPORTANT : on neutralise toute persistance postShare qui pourrait survivre
+  await AsyncStorage.removeItem(FIRSTPICK_POSTSHARE_KEY).catch(() => {});
+  await setShareInProgress(false);
+
+  try {
+    if (inviteId) await goHome({ pendingInviteId: inviteId });
+    else await goHome();
+  } finally {
+    setPostShareBusy(false);
+  }
+}}
+
+
+                style={{
+                  flex: 1,
+                  opacity: postShareBusy ? 0.6 : 1,
+                  borderRadius: 14,
+                  paddingVertical: 12,
+                  alignItems: "center",
+                  backgroundColor: "#FF8C00",
+                }}
+              >
+                <Text style={{ fontFamily: "Comfortaa_700Bold", fontSize: 13, color: "#000" }}>
+                  {t("firstPick.postShare.yesContinue", { defaultValue: "Oui, continuer" }) as string}
+                </Text>
+              </TouchableOpacity>
+            </>
+          ) : (
+            <>
+              <TouchableOpacity
+                onPress={async () => {
+  if (!selected) return;
+
+  // ✅ reset UI
+  setPostShareVisible(false);
+  setPostSharePhase("ask");
+  setPostShareInviteId(null);
+
+  // ✅ force duo step3
+  setMode("duo");
+  setStep(3);
+
+  // ✅ recrée un snapshot AVANT shareSheet (anti remount)
+  await persistInviteSnapshot(undefined);
+
+  userClosedInviteModalRef.current = false;
+  setInviteModalVisible(true);
+}}
+
+                style={{
+                  flex: 1,
+                  borderRadius: 14,
+                  paddingVertical: 12,
+                  alignItems: "center",
+                  borderWidth: 1,
+                  borderColor: isDark ? "rgba(255,255,255,0.12)" : "rgba(0,0,0,0.10)",
+                  backgroundColor: isDark ? "rgba(255,255,255,0.06)" : "rgba(0,0,0,0.06)",
+                }}
+              >
+                <Text style={{ fontFamily: "Comfortaa_700Bold", fontSize: 13, color: isDark ? "#fff" : INK }}>
+                  {t("firstPick.postShare.resend", { defaultValue: "Renvoyer" }) as string}
+                </Text>
+              </TouchableOpacity>
+
+              <TouchableOpacity
+                onPress={async () => {
+                  // Solo => on délègue à ton flow existant (start_solo)
+                  setPostShareVisible(false);
+                  setPostSharePhase("ask");
+                  await handleInvitationResult("start_solo");
+                }}
+                style={{
+                  flex: 1,
+                  borderRadius: 14,
+                  paddingVertical: 12,
+                  alignItems: "center",
+                  backgroundColor: "#FF8C00",
+                }}
+              >
+                <Text style={{ fontFamily: "Comfortaa_700Bold", fontSize: 13, color: "#000" }}>
+                  {t("firstPick.postShare.switchSolo", { defaultValue: "Passer en solo" }) as string}
+                </Text>
+              </TouchableOpacity>
+            </>
+          )}
+        </View>
+      </LinearGradient>
+    </View>
+  </View>
+</Modal>
+
+
       <SendInvitationModal
         visible={inviteModalVisible}
         onClose={handleInviteDismiss}
@@ -1643,6 +2125,7 @@ if (step === 3) {
         challengeId={selected?.id || ""}
         selectedDays={days}
         challengeTitle={selectedTitle}
+        isDuo={false}
       />
     </SafeAreaView>
   );
@@ -2241,15 +2724,17 @@ durationPillText: {
     width: "100%",
      overflow: "hidden",
   },
-  ctaHighlight: {
-    position: "absolute",
-    top: 0,
-    left: 0,
-    right: 0,
-    height: 18,
-    backgroundColor: "rgba(255,255,255,0.25)",
-  },
+  ctaSheen: {
+  ...StyleSheet.absoluteFillObject,
+  // ✅ effet “verre” doux
+  opacity: 0.9,
+},
 
+ctaVignette: {
+  ...StyleSheet.absoluteFillObject,
+  // ✅ micro vignette (pas visible comme une bande)
+  backgroundColor: "rgba(0,0,0,0.06)",
+},
   primaryCtaTextCompact: {
     color: "#000",
 fontSize: 18,

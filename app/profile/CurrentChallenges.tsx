@@ -17,7 +17,6 @@ import {
   StatusBar,
   Platform,
   AccessibilityInfo,
-  PlatformColor,
    I18nManager,
 } from "react-native";
 import { LinearGradient } from "expo-linear-gradient";
@@ -35,7 +34,6 @@ import Animated,
   Easing,
   useSharedValue,
   useAnimatedStyle,
-  withDelay,
   withTiming,
   withSequence,
 } from "react-native-reanimated";
@@ -57,7 +55,6 @@ const { width: SCREEN_WIDTH, height: SCREEN_HEIGHT } = Dimensions.get("window");
 const ITEM_WIDTH = SCREEN_WIDTH * 0.9;
 const ITEM_HEIGHT = SCREEN_WIDTH * 0.42;
 const ROW_HEIGHT = ITEM_HEIGHT + SPACING * 1.5;
-const TOAST_DURATION = 2600;
 
 const normalizeSize = (size: number) => {
   const baseWidth = 375;
@@ -120,8 +117,6 @@ interface Challenge {
   uniqueKey?: string;
 }
 
-type ToastType = "success" | "error" | "info";
-
 export default function CurrentChallenges() {
   const router = useRouter();
   const { t, i18n } = useTranslation();
@@ -163,61 +158,7 @@ export default function CurrentChallenges() {
   const gainSparkleRef = useRef<Audio.Sound | null>(null);
   const isPlayingFxRef = useRef(false);
 
-  // 🥐 Toast local (premium, pas d'Alert moche)
-  const [toast, setToast] = useState<{
-    type: ToastType;
-    message: string;
-  } | null>(null);
-  const toastOpacity = useSharedValue(0);
-  const toastTranslateY = useSharedValue(-10);
-
-  const toastAnimatedStyle = useAnimatedStyle(() => ({
-    opacity: toastOpacity.value,
-    transform: [{ translateY: toastTranslateY.value }],
-  }));
-
-  const showToast = useCallback(
-  (type: ToastType, message: string) => {
-    setToast({ type, message });
-    toastOpacity.value = 0;
-    toastTranslateY.value = -10;
-
-    toastOpacity.value = withSequence(
-      withTiming(1, { duration: 200, easing: Easing.out(Easing.ease) }),
-      withDelay(
-        TOAST_DURATION,
-        withTiming(0, {
-          duration: 300,
-          easing: Easing.in(Easing.ease),
-        })
-      )
-    );
-
-    toastTranslateY.value = withSequence(
-      withTiming(0, { duration: 200, easing: Easing.out(Easing.ease) }),
-      withDelay(
-        TOAST_DURATION,
-        withTiming(-10, {
-          duration: 300,
-          easing: Easing.in(Easing.ease),
-        })
-      )
-    );
-
-    if (!reduceMotion) {
-      Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light).catch(() => {});
-    }
-
-    // Nettoyage
-    setTimeout(() => {
-      setToast((current) =>
-        current && current.message === message ? null : current
-      );
-    }, TOAST_DURATION + 400);
-  },
-  [reduceMotion, toastOpacity, toastTranslateY]
-);
-
+  
 
   useEffect(() => {
     let mounted = true;
@@ -386,9 +327,7 @@ export default function CurrentChallenges() {
             withTiming(0, { duration: 600, easing: Easing.in(Easing.quad) })
           );
           setTimeout(() => setGainKey(null), 900);
-          showToast("success", String(t("dayMarkedSuccess")));
         } else {
-          showToast("error", String(t("markTodayFailed")));
         }
       } catch (err) {
         console.error("Erreur markToday:", err);
@@ -397,7 +336,6 @@ export default function CurrentChallenges() {
             Haptics.NotificationFeedbackType.Error
           ).catch(() => {});
         }
-        showToast("error", String(t("markTodayFailed")));
       } finally {
         setMarkingId(null);
       }
@@ -410,7 +348,6 @@ export default function CurrentChallenges() {
       gainOpacity,
       gainY,
       reduceMotion,
-      showToast,
     ]
   );
 
@@ -433,29 +370,14 @@ export default function CurrentChallenges() {
       );
       await removeChallenge(id, selectedDays);
       swipeableRefs.current[index]?.close();
-      showToast(
-     "success",
-     title
-       ? String(
-           t("challengeAbandonedWithName", {
-             title,
-             defaultValue: `Challenge "${title}" abandonné.`,
-           })
-         )
-       : String(
-           t("challengeAbandoned", {
-             defaultValue: "Challenge abandonné.",
-           })
-         )
-   );
+
     } catch (err) {
       console.error("Erreur removeChallenge:", err);
-      showToast("error", String(t("failedToAbandonChallenge")));
       swipeableRefs.current[index]?.close();
     } finally {
       setPendingRemoval(null);
     }
-  }, [pendingRemoval, removeChallenge, t, showToast]);
+  }, [pendingRemoval, removeChallenge, t]);
 
   const cancelRemove = useCallback(() => {
     if (pendingRemoval) {
@@ -526,8 +448,13 @@ export default function CurrentChallenges() {
         )
       );
       const borderColor = isDarkMode
-        ? currentTheme.colors.secondary
-        : "#FF8C00";
+  ? withAlpha("#FFFFFF", 0.16)
+  : withAlpha("#000000", 0.10);
+
+const ringGrad = isDarkMode
+  ? (["rgba(255,255,255,0.22)", "rgba(255,255,255,0.06)", "rgba(255,255,255,0.14)"] as const)
+  : (["rgba(0,0,0,0.14)", "rgba(0,0,0,0.05)", "rgba(0,0,0,0.10)"] as const);
+
       const percentLabel = `${Math.round(progress * 100)}%`;
 
       const animatedStyle = {
@@ -545,7 +472,7 @@ export default function CurrentChallenges() {
           style={[styles.cardWrapper, animatedStyle]}
         >
           <View
-            accessibilityLabel={`${t("challenge")} ${item.title}, ${t(
+            accessibilityLabel={`${t("challengeS")} ${item.title}, ${t(
               "swipeToDelete"
             )}`}
             testID={`challenge-swipe-${key}`}
@@ -576,14 +503,37 @@ export default function CurrentChallenges() {
                 testID={`challenge-card-${key}`}
               >
                 {/* Glow subtil derrière la card */}
-                <View style={styles.cardGlow} />
-                <LinearGradient
-                  colors={[
-                    withAlpha(currentTheme.colors.cardBackground, 0.98),
-                    withAlpha(currentTheme.colors.cardBackground, 0.86),
-                  ]}
-                  style={[styles.card, { borderColor }]}
-                >
+                {/* ✅ Ring gradient premium */}
+<LinearGradient
+  colors={ringGrad}
+  start={{ x: 0, y: 0 }}
+  end={{ x: 1, y: 1 }}
+  style={styles.cardRing}
+>
+  {/* ✅ Halo soft (pas de shadow) */}
+  <View pointerEvents="none" style={[styles.cardHalo, { backgroundColor: withAlpha(currentTheme.colors.primary, isDarkMode ? 0.10 : 0.06) }]} />
+
+  {/* ✅ Card */}
+  <LinearGradient
+    colors={[
+      withAlpha(currentTheme.colors.cardBackground, isDarkMode ? 0.92 : 0.96),
+      withAlpha(currentTheme.colors.cardBackground, isDarkMode ? 0.78 : 0.90),
+    ]}
+    style={[styles.card, { borderColor }]}
+  >
+    {/* ✅ Sheen diagonal (Keynote reflection) */}
+    <LinearGradient
+      pointerEvents="none"
+      colors={[
+        "transparent",
+        isDarkMode ? "rgba(255,255,255,0.10)" : "rgba(255,255,255,0.55)",
+        "transparent",
+      ]}
+      start={{ x: 0, y: 0 }}
+      end={{ x: 1, y: 1 }}
+      style={styles.cardSheen}
+    />
+
                   <ExpoImage
                     source={{
                       uri:
@@ -682,21 +632,26 @@ export default function CurrentChallenges() {
                     {/* Progress + stats */}
                     <View style={styles.progressRow}>
                       <View style={styles.progressContainer}>
-                        <Progress.Bar
-                          progress={progress}
-                          width={null}
-                          height={normalizeSize(5)}
-                          borderRadius={normalizeSize(3)}
-                          color={currentTheme.colors.secondary}
-                          unfilledColor={withAlpha(
-                            currentTheme.colors.secondary,
-                            0.14
-                          )}
-                          borderWidth={0}
-                          animationType="spring"
-                          style={styles.progressBar}
-                        />
-                      </View>
+  <View
+    pointerEvents="none"
+    style={[
+      styles.progressTrack,
+      { borderColor: isDarkMode ? "rgba(255,255,255,0.14)" : "rgba(0,0,0,0.08)" },
+    ]}
+  />
+  <Progress.Bar
+    progress={progress}
+    width={null}
+    height={normalizeSize(6)}
+    borderRadius={normalizeSize(999)}
+    color={currentTheme.colors.secondary}
+    unfilledColor="transparent"
+    borderWidth={0}
+    animationType="spring"
+    style={styles.progressBar}
+  />
+</View>
+
                       <View style={styles.progressMeta}>
                         <View style={styles.progressChip}>
                           <Ionicons
@@ -706,9 +661,12 @@ export default function CurrentChallenges() {
                           />
                           <Text
                             style={[
-                              styles.progressChipText,
-                              { color: currentTheme.colors.secondary },
-                            ]}
+  styles.progressChip,
+  {
+    backgroundColor: isDarkMode ? "rgba(255,255,255,0.10)" : "rgba(0,0,0,0.05)",
+    borderColor: isDarkMode ? "rgba(255,255,255,0.14)" : "rgba(0,0,0,0.08)",
+  },
+]}
                           >
                             {percentLabel}
                           </Text>
@@ -840,6 +798,7 @@ export default function CurrentChallenges() {
                       </LinearGradient>
                     </TouchableOpacity>
                   </View>
+                </LinearGradient>
                 </LinearGradient>
               </TouchableOpacity>
             </Swipeable>
@@ -1019,65 +978,6 @@ export default function CurrentChallenges() {
           )}
         </View>
 
-        {/* ✅ Toast premium */}
-        {toast && (
-          <Animated.View
-            style={[
-              styles.toastContainer,
-              toastAnimatedStyle,
-              {
-                top: insets.top + normalizeSize(10),
-              },
-            ]}
-            pointerEvents="none"
-          >
-            <View
-              style={[
-                styles.toastContent,
-                {
-                  backgroundColor:
-                    toast.type === "success"
-                      ? withAlpha(currentTheme.colors.secondary, 0.92)
-                      : toast.type === "error"
-                      ? withAlpha("#DC2626", 0.94)
-                      : withAlpha(currentTheme.colors.cardBackground, 0.96),
-                },
-              ]}
-            >
-              <Ionicons
-                name={
-                  toast.type === "success"
-                    ? "checkmark-circle-outline"
-                    : toast.type === "error"
-                    ? "alert-circle-outline"
-                    : "information-circle-outline"
-                }
-                size={normalizeSize(18)}
-                color={
-                  toast.type === "error"
-                    ? "#F9FAFB"
-                    : "#0b1120"
-                }
-                style={{ marginRight: 8 }}
-              />
-              <Text
-                style={[
-                  styles.toastText,
-                  {
-                    color:
-                      toast.type === "error"
-                        ? "#F9FAFB"
-                        : "#0b1120",
-                  },
-                ]}
-                numberOfLines={2}
-              >
-                {toast.message}
-              </Text>
-            </View>
-          </Animated.View>
-        )}
-
         {/* ✅ Modal de confirmation d'abandon (remplace Alert) */}
         {pendingRemoval && (
           <View style={styles.confirmOverlay} pointerEvents="auto">
@@ -1126,13 +1026,13 @@ export default function CurrentChallenges() {
                     accessibilityLabel={String(t("cancel"))}
                   >
                     <Text
-                      style={[
-                        styles.confirmSecondaryText,
-                        { color: currentTheme.colors.textPrimary },
-                      ]}
-                    >
-                      {String(t("cancel"))}
-                    </Text>
+                    style={[
+                      styles.confirmSecondaryText,
+                      { color: isDarkMode ? currentTheme.colors.textPrimary : "#0B0B10" },
+                    ]}
+                  >
+                    {String(t("cancel"))}
+                  </Text>
                   </TouchableOpacity>
 
                   <TouchableOpacity
@@ -1188,6 +1088,72 @@ const styles = StyleSheet.create({
   gradientContainer: {
     flex: 1,
   },
+  cardWrapper: {
+  marginBottom: SPACING * 1.2,
+  borderRadius: normalizeSize(26),
+  backgroundColor: "transparent",
+  overflow: "visible",
+},
+
+cardContainer: {
+  width: ITEM_WIDTH,
+  borderRadius: normalizeSize(26),
+  overflow: "visible",
+  alignSelf: "center",
+},
+
+cardRing: {
+  borderRadius: normalizeSize(26),
+  padding: normalizeSize(2), // ✅ ring stable
+},
+
+cardHalo: {
+  position: "absolute",
+  top: -normalizeSize(18),
+  right: -normalizeSize(26),
+  width: normalizeSize(110),
+  height: normalizeSize(110),
+  borderRadius: 999,
+  opacity: 0.95,
+},
+card: {
+  flexDirection: "row",
+  alignItems: "center",
+  padding: normalizeSize(14),
+  borderRadius: normalizeSize(24),
+  borderWidth: StyleSheet.hairlineWidth, // ✅ plus fin
+  overflow: "hidden",
+  shadowColor: "#000",
+  shadowOffset: { width: 0, height: 10 },
+  shadowOpacity: Platform.OS === "ios" ? 0.10 : 0,
+  shadowRadius: 18,
+  elevation: Platform.OS === "android" ? 2 : 0,
+},
+progressContainer: {
+  flex: 1,
+  marginRight: normalizeSize(10),
+  justifyContent: "center",
+  position: "relative",
+},
+progressTrack: {
+  position: "absolute",
+  left: 0,
+  right: 0,
+  height: normalizeSize(6),
+  borderRadius: normalizeSize(999),
+  borderWidth: StyleSheet.hairlineWidth,
+  backgroundColor: "transparent",
+},
+cardSheen: {
+  position: "absolute",
+  top: -normalizeSize(26),
+  left: -normalizeSize(50),
+  width: "150%",
+  height: normalizeSize(82),
+  transform: [{ rotate: "-12deg" }],
+  opacity: 0.85,
+},
+
   bgOrbTop: {
     position: "absolute",
     top: -SCREEN_WIDTH * 0.25,
@@ -1246,21 +1212,6 @@ const styles = StyleSheet.create({
     maxWidth: SCREEN_WIDTH * 0.75,
     writingDirection: I18nManager.isRTL ? "rtl" : "ltr",
   },
-
-  cardWrapper: {
-    marginBottom: SPACING * 1.5,
-    borderRadius: normalizeSize(25),
-    shadowColor: "#000",
-    shadowOffset: { width: 0, height: normalizeSize(5) },
-    shadowOpacity: 0.35,
-    shadowRadius: normalizeSize(8),
-    elevation: 10,
-    backgroundColor:
-      Platform.OS === "ios"
-        ? "transparent"
-        : PlatformColor("@android:color/background_dark"),
-    overflow: "hidden",
-  },
   cardGlow: {
     position: "absolute",
     top: 0,
@@ -1270,32 +1221,18 @@ const styles = StyleSheet.create({
     opacity: 0.25,
     backgroundColor: "rgba(255,255,255,0.12)",
   },
-  cardContainer: {
-    width: ITEM_WIDTH,
-    borderRadius: normalizeSize(25),
-    overflow: "hidden",
-    alignSelf: "center",
-  },
-  card: {
-    flexDirection: "row",
-    alignItems: "center",
-    padding: normalizeSize(14),
-    borderRadius: normalizeSize(25),
-    borderWidth: 2.5,
-  },
   cardImage: {
     width: normalizeSize(62),
     aspectRatio: 1,
     borderRadius: normalizeSize(16),
     marginRight: SPACING * 0.9,
-    borderWidth: 2,
-    borderColor: "rgba(255, 255, 255, 0.6)",
+    borderWidth: StyleSheet.hairlineWidth,
+    borderColor: "rgba(255,255,255,0.20)",
   },
   cardContent: {
     flex: 1,
     justifyContent: "space-between",
   },
-
   cardTopRow: {
     flexDirection: "row",
     alignItems: "center",
@@ -1316,20 +1253,22 @@ const styles = StyleSheet.create({
    textAlign: I18nManager.isRTL ? "right" : "left",
   },
   duoPill: {
-    flexDirection: "row",
-    alignItems: "center",
-    gap: 4,
-    paddingHorizontal: normalizeSize(8),
-    paddingVertical: normalizeSize(3),
-    borderRadius: 999,
-    backgroundColor: "#FDE68A",
-  },
-  duoPillText: {
-    fontSize: normalizeSize(11),
-    fontFamily: "Comfortaa_700Bold",
-    color: "#0b1120",
-  },
+  flexDirection: "row",
+  alignItems: "center",
+  gap: 6,
+  paddingHorizontal: normalizeSize(10),
+  paddingVertical: normalizeSize(4),
+  borderRadius: 999,
 
+  backgroundColor: "rgba(255,255,255,0.72)", // light-friendly
+  borderWidth: StyleSheet.hairlineWidth,
+  borderColor: "rgba(0,0,0,0.08)",
+},
+duoPillText: {
+  fontSize: normalizeSize(11.5),
+  fontFamily: "Comfortaa_700Bold",
+  color: "#0B0B10",
+},
   cardTitleBlock: {
     marginBottom: normalizeSize(6),
   },
@@ -1361,11 +1300,6 @@ const styles = StyleSheet.create({
     alignItems: "center",
     marginVertical: normalizeSize(4),
   },
-  progressContainer: {
-    flex: 1,
-    marginRight: normalizeSize(8),
-    justifyContent: "center",
-  },
   progressBar: {
     width: "100%",
     alignSelf: "stretch",
@@ -1376,13 +1310,15 @@ const styles = StyleSheet.create({
     gap: 2,
   },
   progressChip: {
-    flexDirection: "row",
-    alignItems: "center",
-    paddingHorizontal: normalizeSize(7),
-    paddingVertical: normalizeSize(2),
-    borderRadius: 999,
-    backgroundColor: "rgba(15, 23, 42, 0.9)",
-  },
+  flexDirection: "row",
+  alignItems: "center",
+  paddingHorizontal: normalizeSize(8),
+  paddingVertical: normalizeSize(3),
+  borderRadius: 999,
+  backgroundColor: "rgba(255,255,255,0.10)",
+  borderWidth: StyleSheet.hairlineWidth,
+  borderColor: "rgba(255,255,255,0.14)",
+},
   progressChipText: {
     fontSize: normalizeSize(11.5),
     fontFamily: "Comfortaa_700Bold",
@@ -1479,33 +1415,6 @@ const styles = StyleSheet.create({
     fontSize: normalizeSize(12),
     letterSpacing: 0.3,
   },
-
-  // Toast
-  toastContainer: {
-    position: "absolute",
-    left: SPACING,
-    right: SPACING,
-    zIndex: 99999,
-  },
-  toastContent: {
-    flexDirection: "row",
-    alignItems: "center",
-    paddingVertical: normalizeSize(10),
-    paddingHorizontal: normalizeSize(14),
-    borderRadius: normalizeSize(16),
-    shadowColor: "#000",
-    shadowOffset: { width: 0, height: 4 },
-    shadowOpacity: 0.25,
-    shadowRadius: 10,
-    elevation: 10,
-  },
-  toastText: {
-    flex: 1,
-    fontSize: normalizeSize(13.5),
-    fontFamily: "Comfortaa_400Regular",
-     writingDirection: I18nManager.isRTL ? "rtl" : "ltr",
-  },
-
   // Confirm overlay
   confirmOverlay: {
     ...StyleSheet.absoluteFillObject,

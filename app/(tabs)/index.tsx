@@ -1,7 +1,6 @@
 import React, {
   useState,
   useEffect,
-  useLayoutEffect,
   useRef,
   useCallback,
   useMemo,
@@ -18,43 +17,42 @@ import {
   PixelRatio,
   Alert,
   InteractionManager,
-  Animated as RNAnimated,
+  useWindowDimensions,
   Pressable,
+  Modal,
+  Platform,
 } from "react-native";
-
-import { SafeAreaView } from "react-native-safe-area-context";
-import Animated from "react-native-reanimated";
-import { useRouter, useLocalSearchParams } from "expo-router";
+import { useRouter, useLocalSearchParams  } from "expo-router";
 import { db, auth } from "@/constants/firebase-config";
 import { LinearGradient } from "expo-linear-gradient";
 import { onAuthStateChanged, User } from "firebase/auth";
 import { Video, ResizeMode } from "expo-av";
 import { Image } from "expo-image";
-import { useSafeAreaInsets } from "react-native-safe-area-context";
 import BannerSlot from "@/components/BannerSlot";
-import LottieView from "lottie-react-native";
 import { useFocusEffect } from "@react-navigation/native";
-import {
+import Animated, {
   useAnimatedStyle,
   useSharedValue,
   withTiming,
   withSpring,
-  FadeIn,
   Easing,
   FadeInUp,
   withRepeat,
 } from "react-native-reanimated";
 import {
-  collection,
-  getDocs,
-  query,
-  where,
-  doc,
-  getDoc,
-} from "firebase/firestore";
+   collection,
+   getDocs,
+   query,
+   where,
+   doc,
+   getDoc,
+   onSnapshot,
+   limit,
+ } from "firebase/firestore";
+import { SafeAreaView, useSafeAreaInsets } from "react-native-safe-area-context";
 import { Ionicons } from "@expo/vector-icons";
 import { useTheme } from "../../context/ThemeContext";
-import { useTranslation, Trans } from "react-i18next";
+import { useTranslation } from "react-i18next";
 import { Theme } from "../../theme/designSystem";
 import designSystem from "../../theme/designSystem";
 import { fetchAndSaveUserLocation } from "../../services/locationService";
@@ -67,7 +65,6 @@ import { useAdsVisibility } from "../../src/context/AdsVisibilityContext";
 import { useBottomTabBarHeight } from "@react-navigation/bottom-tabs";
 import useGateForGuest from "@/hooks/useGateForGuest";
 import RequireAuthModal from "@/components/RequireAuthModal";
-import { Modal } from "react-native";
 import { TUTORIAL_STEPS } from "../../components/TutorialSteps";
 import * as Haptics from "expo-haptics";
 import DailyBonusModal from "../../components/DailyBonusModal";
@@ -92,27 +89,62 @@ import {
   WelcomeBonusState,
 } from "../../src/services/welcomeBonusService";
 import { useToast } from "../../src/ui/Toast";
+import TodayHub from "@/components/TodayHub/TodayHub";
+import { useTodayHubState } from "@/components/TodayHub/useTodayHubState";
 
 
-
-
-const { width: SCREEN_WIDTH, height: SCREEN_HEIGHT } = Dimensions.get("window");
+const getScreen = () => Dimensions.get("window");
+const { width: SCREEN_WIDTH, height: SCREEN_HEIGHT } = getScreen();
 const BLURHASH = "L5H2EC=PM+yV0g-mq.wG9c010J}I";
 const FALLBACK_CHALLENGE_IMG = require("../../assets/images/backgroundbase.jpg");
 
+const ANDROID_HAIRLINE =
+  Platform.OS === "android"
+    ? Math.max(1 / PixelRatio.get(), 0.75)
+    : StyleSheet.hairlineWidth;
+
+
 const normalize = (size: number) => {
+  // ✅ responsive réel (rotation / tablet / split-screen)
+  const w = getScreen().width;
   const baseWidth = 375;
-  const scale = Math.min(Math.max(SCREEN_WIDTH / baseWidth, 0.7), 1.8);
+  const scale = Math.min(Math.max(w / baseWidth, 0.78), 1.9);
   const normalizedSize = size * scale;
   return Math.round(PixelRatio.roundToNearestPixel(normalizedSize));
 };
 
-const ITEM_WIDTH = Math.min(SCREEN_WIDTH * 0.85, normalize(400));
-const ITEM_HEIGHT = Math.min(SCREEN_HEIGHT * 0.32, normalize(240));
-
 const SPACING = normalize(15);
 const CONTENT_W = Math.min(SCREEN_WIDTH - SPACING * 2, normalize(420));
 const IS_SMALL = SCREEN_WIDTH < 360;
+
+// --- Premium system tokens (minimal diff)
+const R = {
+  outer: 24,
+  card: 22,
+  inner: 18,
+  btn: 16,
+  pill: 999,
+} as const;
+
+const STROKE = "rgba(255,255,255,0.10)";
+const STROKE_SOFT = "rgba(255,255,255,0.07)";
+const GLASS_BG = "rgba(255,255,255,0.06)";
+const GLASS_BG_SOFT = "rgba(255,255,255,0.045)";
+const DARK_BG = "rgba(15,23,42,0.35)";
+
+// Un seul style d’ombre cohérent (évite shadow+elevation partout)
+const shadowSoft = Platform.select({
+  ios: {
+    shadowColor: "#000",
+    shadowOpacity: 0.18,
+    shadowRadius: 14,
+    shadowOffset: { width: 0, height: 10 },
+  },
+  android: { elevation: 0 },
+  default: {},
+});
+
+
 
 
 interface Challenge {
@@ -139,10 +171,20 @@ type CurrentChallengeItem = {
   archived?: boolean;
 };
 
+type PendingInvite = {
+  id: string;
+  challengeId: string;
+  selectedDays?: number;
+  inviteeUsername?: string;
+  createdAt?: any;
+};
+
 // --- Daily picks helpers ---
 const DAILY_PICKS_KEY = "daily_picks_v1";
 // 🔑 Nouveau: versionner le cache pour éviter les vieux objets cassés
 const CHALLENGES_CACHE_KEY = "challenges_cache_v2";
+
+
 
 
 // ✅ Local day (midnight device) -> pour les 5 défis du jour
@@ -185,6 +227,34 @@ function seededShuffle<T>(arr: T[], seedInt: number): T[] {
   }
   return a;
 }
+
+function useUtcDayKeyStable() {
+  const [dayKey, setDayKey] = useState(() => todayKeyUTC());
+
+  useEffect(() => {
+    let timer: any;
+
+    const scheduleNextTick = () => {
+      const now = new Date();
+      // +2s de marge pour éviter les edge-cases
+      const nextUtcMidnight = new Date(
+        Date.UTC(now.getUTCFullYear(), now.getUTCMonth(), now.getUTCDate() + 1, 0, 0, 2)
+      );
+      const ms = Math.max(2_000, nextUtcMidnight.getTime() - now.getTime());
+
+      timer = setTimeout(() => {
+        setDayKey(todayKeyUTC());
+        scheduleNextTick();
+      }, ms);
+    };
+
+    scheduleNextTick();
+    return () => clearTimeout(timer);
+  }, []);
+
+  return dayKey;
+}
+
 
 function buildDailyPicksFromBase(
   base: Challenge[],
@@ -248,15 +318,25 @@ const WELCOME_REWARDS_UI: { type: WelcomeRewardKind; amount: number }[] = [
 
 const WELCOME_TOTAL_DAYS = WELCOME_REWARDS_UI.length;
 
-
-
 export default function HomeScreen() {
   const { t, i18n } = useTranslation();
+  const DAY_UTC = useUtcDayKeyStable();
   const router = useRouter();
+  const params = useLocalSearchParams();
+  // ✅ micro-tuning responsive sans refactor (petits écrans / tablettes)
+  const { width: W, height: H } = useWindowDimensions();
+  const IS_TINY = W < 350;
+  const CONTENT_MAX_W = useMemo(() => {
+    const side = normalize(15) * 2;
+    return Math.min(W - side, normalize(440));
+  }, [W]);
   const [loading, setLoading] = useState(false);
   const [user, setUser] = useState<User | null>(null);
   const [isMounted, setIsMounted] = useState(false);
-    const [userData, setUserData] = useState<any | null>(null);
+  const [pendingInvite, setPendingInvite] = useState<PendingInvite | null>(null);
+  const [userData, setUserData] = useState<any | null>(null);
+  const [duoInvitePending, setDuoInvitePending] = useState(false);
+  const [duoInvitePendingFor, setDuoInvitePendingFor] = useState<string | null>(null);
   const [welcomeState, setWelcomeState] = useState<WelcomeBonusState | null>(null);
   const [welcomeVisible, setWelcomeVisible] = useState(false);
   const [welcomeLoading, setWelcomeLoading] = useState(false);
@@ -286,6 +366,69 @@ export default function HomeScreen() {
   const [activeChallengeMetaOverride, setActiveChallengeMetaOverride] = useState<Challenge | null>(null);
   const [showPremiumEndModal, setShowPremiumEndModal] = useState(false);
   const { show: showToast } = useToast();
+  const [duoNudgeDismissed, setDuoNudgeDismissed] = useState(false);
+ 
+
+
+  // ---------------------------
+  // Onboarding Spotlight (1x)
+  // ---------------------------
+  const SPOTLIGHT_SHOWN_KEY = useMemo(
+    () => `home.onboardingSpotlightShown.v1.${user?.uid ?? "guest"}`,
+    [user?.uid]
+  );
+  const ONBOARDING_JUST_FINISHED_KEY = "onboarding.justFinished.v1";
+  // ✅ post-welcome absorption trigger (1x)
+const POST_WELCOME_ABSORB_KEY = useMemo(
+  () => `home.postWelcomeAbsorb.v1.${user?.uid ?? "guest"}`,
+  [user?.uid]
+);
+
+// ✅ duoPending "first login" pulse (1x)
+const DUO_PENDING_FIRST_KEY = useMemo(
+  () => `home.duoPendingFirst.v1.${user?.uid ?? "guest"}`,
+  [user?.uid]
+);
+const ABSORB_MARK_KEY = useMemo(
+  () => `home.absorbMark.v1.${DAY_UTC}.${user?.uid ?? "guest"}`,
+  [DAY_UTC, user?.uid]
+);
+ // ✅ first solo absorption (1x)
+const FIRST_SOLO_ABSORB_KEY = useMemo(
+  () => `home.firstSoloAbsorb.v1.${user?.uid ?? "guest"}`,
+  [user?.uid]
+);
+
+  const [spotlightVisible, setSpotlightVisible] = useState(false);
+  const [postWelcomeAbsorbArmed, setPostWelcomeAbsorbArmed] = useState(false);
+
+  const [spotRect, setSpotRect] = useState<{
+    x: number;
+    y: number;
+    w: number;
+    h: number;
+  } | null>(null);
+   const [spotlightArmed, setSpotlightArmed] = useState(false);
+  const spotlightOpacity = useSharedValue(0);
+  const spotlightCardScale = useSharedValue(0.985);
+  const duoRing = useSharedValue(0);
+const duoGlow = useSharedValue(0);
+  const spotlightRing = useSharedValue(0);
+const markCtaRef = useRef<any>(null);
+const changingLangRef = useRef(false);
+
+  const spotlightOverlayStyle = useAnimatedStyle(() => ({
+    opacity: spotlightOpacity.value,
+  }));
+  const spotlightCardStyle = useAnimatedStyle(() => ({
+    transform: [{ scale: spotlightCardScale.value }],
+  }));
+  const spotlightRingStyle = useAnimatedStyle(() => {
+    const o = 0.18 + spotlightRing.value * 0.18;
+    const s = 1 + spotlightRing.value * 0.03;
+    return { opacity: o, transform: [{ scale: s }] };
+  });
+
   
 
   const {
@@ -298,9 +441,51 @@ export default function HomeScreen() {
 
   const [tutorialGate, setTutorialGate] = useState(false);
   const isTutorialBlocking = isTutorialActive && tutorialGate;
+  const todayHubYRef = useRef(0);
 
-  const heroVideoRef = useRef<Video | null>(null);
-  const scrollRef = useRef<ScrollView | null>(null);
+
+    // ---------------------------
+  // Spotlight: anti-race / cancelable open
+  // ---------------------------
+  const spotlightOpenTokenRef = useRef(0);
+
+  const isSpotlightBlocked = useCallback(() => {
+    // ⚠️ IMPORTANT: on EXCLUT spotlightVisible ici (sinon on s’auto-bloque)
+    return (
+      isTutorialBlocking ||
+      welcomeVisible ||
+      dailyBonusVisible ||
+      showPremiumEndModal ||
+      modalVisible
+    );
+  }, [isTutorialBlocking, welcomeVisible, dailyBonusVisible, showPremiumEndModal, modalVisible]);
+
+  const forceHideSpotlight = useCallback(() => {
+    // ne consomme pas le flag "shown" (contrairement à dismissSpotlight)
+    setSpotlightArmed(false);
+    setSpotlightVisible(false);
+    setSpotRect(null);
+    spotlightOpacity.value = 0;
+    spotlightRing.value = 0;
+    spotlightCardScale.value = 0.985;
+  }, [spotlightOpacity, spotlightRing, spotlightCardScale]);
+
+    useEffect(() => {
+    if (!spotlightVisible) return;
+    if (!isSpotlightBlocked()) return;
+
+    // Un modal (WelcomeBonus / Daily / Premium / Gate / Tuto) vient d’apparaître :
+    // on coupe le spotlight IMMEDIATEMENT pour éviter l’effet “derrière”.
+    forceHideSpotlight();
+  }, [spotlightVisible, isSpotlightBlocked, forceHideSpotlight]);
+
+ const heroVideoRef = useRef<any>(null);
+  const scrollRef = useRef<any>(null);
+  const heroPlayGuardRef = useRef(false);
+  const SPOT_PAD_X = normalize(12);
+const SPOT_PAD_Y = normalize(10);
+const SPOT_RADIUS = normalize(24);
+
 
   const refreshUserData = useCallback(async () => {
   if (!user?.uid) return;
@@ -316,10 +501,19 @@ export default function HomeScreen() {
     const data = snap.data();
     setUserData(data);
 
-    // ⚠️ Langue : on garde SIMPLE → pas de setLanguage ici
-    const userLanguage = (data as any)?.language;
-    if (userLanguage && userLanguage !== i18n.language) {
-      i18n.changeLanguage(userLanguage);
+const userLanguage = (data as any)?.language;
+    if (
+      userLanguage &&
+      userLanguage !== i18n.language &&
+      !changingLangRef.current
+    ) {
+      changingLangRef.current = true;
+      i18n
+        .changeLanguage(userLanguage)
+        .catch(() => {})
+        .finally(() => {
+          changingLangRef.current = false;
+        });
     }
 
     // Localisation : pareil, simple
@@ -330,6 +524,8 @@ export default function HomeScreen() {
     // silence
   }
 }, [user?.uid, i18n]);
+
+ 
 
 
   const openTutorial = useCallback(async () => {
@@ -376,6 +572,16 @@ useEffect(() => {
 const exploreScale = useSharedValue(1);
 const markScale = useSharedValue(1);
 
+const markPulse = useSharedValue(0);
+const markShine = useSharedValue(-1);
+// ✅ Solo "MARK" extra punch
+const soloNudgePulse = useSharedValue(0);
+const soloNudgeIn = useSharedValue(0); // 0..1 (fade/slide)
+
+// ✅ Duo ring pulse (quand mode == "duo")
+const duoRingPulse = useSharedValue(0);
+
+
 const exploreAnimStyle = useAnimatedStyle(() => ({
   transform: [{ scale: exploreScale.value }],
 }));
@@ -399,6 +605,10 @@ const markAnimStyle = useAnimatedStyle(() => ({
     return Array.isArray(list) ? (list as CurrentChallengeItem[]) : [];
   }, [userData]);
 
+  const activeChallenges = useMemo<CurrentChallengeItem[]>(() => {
+    return currentChallenges.filter((c) => !c?.completed && !c?.archived);
+  }, [currentChallenges]);
+
   const activeChallenge = useMemo<CurrentChallengeItem | null>(() => {
     if (!currentChallenges.length) return null;
     return (
@@ -411,6 +621,16 @@ const markAnimStyle = useAnimatedStyle(() => ({
     const id = (activeChallenge?.challengeId ?? activeChallenge?.id) as any;
     return typeof id === "string" && id.trim().length > 0 ? id.trim() : null;
   }, [activeChallenge]);
+
+  useEffect(() => {
+    // si pas de défi actif, ou si le défi devient duo => on réactive le nudge
+    if (!hasActiveChallenges || !activeChallengeId || activeChallenge?.duo === true) {
+      setDuoNudgeDismissed(false);
+      return;
+    }
+    // si l’utilisateur change de défi actif => on réactive le nudge pour ce nouveau défi
+    setDuoNudgeDismissed(false);
+  }, [hasActiveChallenges, activeChallengeId, activeChallenge?.duo]);
 
   const activeChallengeMeta = useMemo<Challenge | null>(() => {
     // ✅ 1) si on a le doc complet dans CurrentChallenges, on l'utilise direct
@@ -480,7 +700,13 @@ const effectiveActiveMeta = activeChallengeMetaOverride ?? activeChallengeMeta;
   }, []);
 
 
-  const HERO_BASE_HEIGHT = normalize(405);
+  const HERO_BASE_HEIGHT = useMemo(() => {
+    // ✅ évite un hero trop grand sur petits écrans (et trop petit sur grands)
+    const base = normalize(360);
+    const capMin = Math.round(H * 0.44);
+    const capMax = Math.round(H * 0.56);
+    return Math.max(Math.min(base, capMax), capMin);
+  }, [H]);
   const HERO_TOTAL_HEIGHT = HERO_BASE_HEIGHT + insets.top;
 
   const bottomContentPadding =
@@ -509,11 +735,11 @@ const effectiveActiveMeta = activeChallengeMetaOverride ?? activeChallengeMeta;
     canClaimDailyBonusFromUserData(userData);
 
   const claimedTodayUTC =
-    userData?.dailyBonus?.lastClaimDate === todayKeyUTC() ||
+    userData?.dailyBonus?.lastClaimDate === DAY_UTC ||
     hasClaimedDailyBonus;
 
-  const hasRerolledTodayUTC =
-    userData?.dailyBonus?.lastRerollDate === todayKeyUTC();
+   const hasRerolledTodayUTC =
+    userData?.dailyBonus?.lastRerollDate === DAY_UTC;
 
   const canRerollDailyBonus =
     !!userData && claimedTodayUTC && !hasRerolledTodayUTC;
@@ -523,7 +749,497 @@ const effectiveActiveMeta = activeChallengeMetaOverride ?? activeChallengeMeta;
   welcomeVisible ||
   dailyBonusVisible ||
   showPremiumEndModal ||
-  modalVisible;
+  modalVisible ||
+  spotlightVisible;
+
+  
+
+    const dismissSpotlight = useCallback(async () => {
+    setSpotlightArmed(false);
+    setSpotlightVisible(false);
+    setSpotRect(null);
+
+    spotlightOpacity.value = withTiming(0, { duration: 160 });
+    spotlightRing.value = 0;
+
+    try {
+      await AsyncStorage.setItem(SPOTLIGHT_SHOWN_KEY, "1");
+      await AsyncStorage.removeItem(ONBOARDING_JUST_FINISHED_KEY);
+    } catch {}
+  }, [SPOTLIGHT_SHOWN_KEY, spotlightOpacity, spotlightRing]);
+
+  
+
+
+  const openSpotlight = useCallback(async () => {
+    // measure CTA position for perfect overlay
+    const measure = () =>
+      new Promise<{ x: number; y: number; w: number; h: number } | null>(
+        (resolve) => {
+          const node = markCtaRef.current;
+          if (!node?.measureInWindow) return resolve(null);
+          node.measureInWindow((x: number, y: number, w: number, h: number) => {
+            if (!Number.isFinite(x) || !Number.isFinite(y) || w <= 0 || h <= 0)
+              return resolve(null);
+            resolve({ x, y, w, h });
+          });
+        }
+      );
+await new Promise((r) => requestAnimationFrame(() => r(null)));
+    const rect = await measure();
+    if (!rect) return;
+    setSpotRect(rect);
+    setSpotlightVisible(true);
+
+    spotlightOpacity.value = 0;
+    spotlightCardScale.value = 0.985;
+    spotlightRing.value = 0;
+
+    spotlightOpacity.value = withTiming(1, { duration: 220 });
+    spotlightCardScale.value = withSpring(1, { damping: 18, stiffness: 220 });
+    spotlightRing.value = withRepeat(
+      withTiming(1, { duration: 1200, easing: Easing.inOut(Easing.ease) }),
+      -1,
+      true
+    );
+  }, [spotlightOpacity, spotlightCardScale, spotlightRing]);
+
+    const hasOutgoingPendingInvite = useMemo(() => {
+  // pendingInvite existe seulement pour les invites sortantes (inviterId == user.uid) dans ton query
+  // donc on check juste l’essentiel + le bool guard
+  return (
+    !!user?.uid &&
+    duoInvitePending === true &&
+    !!pendingInvite?.challengeId &&
+    pendingInvite.challengeId === duoInvitePendingFor
+  );
+}, [user?.uid, duoInvitePending, pendingInvite?.challengeId, duoInvitePendingFor]);
+
+
+  const todayHubView = useTodayHubState({
+  dayUtc: DAY_UTC,
+  currentChallenges,
+  hasOutgoingPendingInvite,
+  pendingInvite,
+  allChallenges,
+  dailyFive,
+  t,
+});
+
+const todayHubPrimaryMode = todayHubView.primaryMode;
+  const shouldPulsePrimary = useMemo(() => {
+    // Apple-ish: pulse seulement quand il y a une action “à faire”
+    // - mark: tant qu'il reste au moins 1 défi non marqué aujourd’hui
+    // - duoPending: pour rappeler qu’une action est en attente
+    if (todayHubView.primaryMode === "mark") return todayHubView.anyUnmarkedToday;
+    if (todayHubView.primaryMode === "duoPending") return true;
+    return false;
+  }, [todayHubView.primaryMode, todayHubView.anyUnmarkedToday]);
+
+  const tryOpenSpotlightWithRetry = useCallback(
+    async (token: number) => {
+      for (let i = 0; i < 6; i++) {
+        // ✅ cancel si un autre open est déclenché entre-temps
+        if (token !== spotlightOpenTokenRef.current) return;
+
+        // ✅ si un modal arrive (welcome/daily/premium/gate/tuto), on stop
+        if (isSpotlightBlocked()) return;
+
+        // laisse le layout respirer (scroll, fonts, tabbar, etc.)
+        await new Promise((r) => setTimeout(r, i === 0 ? 160 : 220));
+
+        if (token !== spotlightOpenTokenRef.current) return;
+        if (isSpotlightBlocked()) return;
+
+        const node = markCtaRef.current;
+        if (!node?.measureInWindow) continue;
+
+        const rect = await new Promise<{ x: number; y: number; w: number; h: number } | null>(
+          (resolve) => {
+            node.measureInWindow((x: number, y: number, w: number, h: number) => {
+              if (!Number.isFinite(x) || !Number.isFinite(y) || w <= 0 || h <= 0) return resolve(null);
+              resolve({ x, y, w, h });
+            });
+          }
+        );
+
+        if (!rect) continue;
+
+        // ✅ dernière vérif avant d’afficher
+        if (token !== spotlightOpenTokenRef.current) return;
+        if (isSpotlightBlocked()) return;
+
+        setSpotRect(rect);
+        setSpotlightVisible(true);
+
+        spotlightOpacity.value = 0;
+        spotlightCardScale.value = 0.985;
+        spotlightRing.value = 0;
+
+        spotlightOpacity.value = withTiming(1, { duration: 220 });
+        spotlightCardScale.value = withSpring(1, { damping: 18, stiffness: 220 });
+        spotlightRing.value = withRepeat(
+          withTiming(1, { duration: 1200, easing: Easing.inOut(Easing.ease) }),
+          -1,
+          true
+        );
+        return;
+      }
+
+      // si on n'a jamais réussi à mesurer, on désarme pour éviter loop mentale
+      setSpotlightArmed(false);
+    },
+    [
+      isSpotlightBlocked,
+      spotlightOpacity,
+      spotlightCardScale,
+      spotlightRing,
+    ]
+  );
+
+const spotlightAllowed = useMemo(() => {
+   // ✅ simple & robuste : le spotlight ne doit exister QUE si on peut "marquer aujourd’hui"
+   return (
+     hasActiveChallenges &&
+     todayHubView.anyUnmarkedToday &&
+     !hasOutgoingPendingInvite
+   );
+ }, [hasActiveChallenges, todayHubView.anyUnmarkedToday, hasOutgoingPendingInvite]);
+
+const markHaloStyle = useAnimatedStyle(() => {
+  const t = markPulse.value; // 0..1
+  return {
+    opacity: 0.12 + t * 0.18,
+    transform: [{ scale: 1 + t * 0.02 }],
+  };
+});
+
+const markGlowStyle = useAnimatedStyle(() => {
+  const t = markPulse.value;
+  return {
+    opacity: 0.08 + t * 0.14,
+  };
+});
+
+const markShineStyle = useAnimatedStyle(() => ({
+  transform: [{ translateX: markShine.value * 260 }], // ajustable
+  opacity: 0.16,
+}));
+
+const soloNudgeStyle = useAnimatedStyle(() => {
+  const p = soloNudgePulse.value; // 0..1
+  const a = soloNudgeIn.value; // 0..1
+
+  return {
+    opacity: 0.6 * a + 0.4 * a * (0.65 + p * 0.35),
+    transform: [
+      { translateY: (1 - a) * 8 },
+      { scale: 1 + p * 0.015 },
+    ] as any,
+  };
+});
+
+
+
+const absorbToTodayHub = useCallback(async () => {
+    // ✅ autorisé seulement quand l’écran est prêt
+    if (!scrollRef.current) return;
+    if (isAnyBlockingModalOpen && !postWelcomeAbsorbArmed) return;
+
+    // ✅ 1x / jour / user
+    try {
+      const already = await AsyncStorage.getItem(ABSORB_MARK_KEY);
+      if (already === "1") return;
+    } catch {}
+
+    InteractionManager.runAfterInteractions(() => {
+      // 1) scroll vers TodayHub
+      try {
+        scrollRef.current?.scrollTo({
+          y: Math.max(0, todayHubYRef.current - normalize(10)),
+          animated: true,
+        });
+      } catch {}
+
+      // 2) pulse du CTA principal selon le mode (Keynote: “l’action”)
+      const pulse = () => {
+        if (todayHubPrimaryMode === "mark") {
+          markScale.value = withSpring(0.97, { damping: 18, stiffness: 240 });
+          setTimeout(() => {
+            markScale.value = withSpring(1, { damping: 16, stiffness: 200 });
+          }, 220);
+          return;
+        }
+
+        // petit pulse générique (new/duo/pending) via la même anim pour rester cohérent
+        markScale.value = withSpring(0.985, { damping: 18, stiffness: 240 });
+        setTimeout(() => {
+          markScale.value = withSpring(1, { damping: 16, stiffness: 200 });
+        }, 220);
+      };
+      pulse();
+
+      // 3) spotlight seulement si "mark"
+      setTimeout(() => {
+        if (todayHubPrimaryMode !== "mark") return;
+        if (!spotlightAllowed) return;
+        if (isSpotlightBlocked()) return;
+        const token = ++spotlightOpenTokenRef.current;
+        tryOpenSpotlightWithRetry(token);
+      }, 260);
+    });
+
+    try {
+      await AsyncStorage.setItem(ABSORB_MARK_KEY, "1");
+    } catch {}
+  }, [
+    ABSORB_MARK_KEY,
+    isAnyBlockingModalOpen,
+    postWelcomeAbsorbArmed,
+    todayHubPrimaryMode,
+    markScale,
+    isSpotlightBlocked,
+    spotlightAllowed,
+    tryOpenSpotlightWithRetry,
+  ]);
+
+ useEffect(() => {
+  if (!shouldPulsePrimary || isTutorialBlocking || isAnyBlockingModalOpen) {
+    markPulse.value = 0;
+    markShine.value = -1;
+    return;
+  }
+
+  // ✅ pulse commun (mark + duoPending)
+  markPulse.value = withRepeat(
+    withTiming(1, { duration: 1400, easing: Easing.inOut(Easing.ease) }),
+    -1,
+    true
+  );
+
+  // ✅ shine seulement sur "mark" (sinon ça fait trop “mark” sur pending)
+  if (todayHubPrimaryMode === "mark") {
+    markShine.value = withRepeat(
+      withTiming(1, { duration: 1800, easing: Easing.inOut(Easing.ease) }),
+      -1,
+      false
+    );
+  } else {
+    markShine.value = -1;
+  }
+}, [
+  shouldPulsePrimary,
+  todayHubPrimaryMode,
+  isTutorialBlocking,
+  isAnyBlockingModalOpen,
+  markPulse,
+  markShine,
+]);
+
+useEffect(() => {
+  const isMark =
+    todayHubPrimaryMode === "mark" &&
+    !isTutorialBlocking &&
+    !isAnyBlockingModalOpen;
+
+  if (!isMark) {
+    soloNudgePulse.value = 0;
+    soloNudgeIn.value = withTiming(0, { duration: 140 });
+    return;
+  }
+
+  soloNudgeIn.value = withTiming(1, { duration: 220 });
+
+  soloNudgePulse.value = withRepeat(
+    withTiming(1, { duration: 1400, easing: Easing.inOut(Easing.ease) }),
+    -1,
+    true
+  );
+}, [
+  todayHubPrimaryMode,
+  isTutorialBlocking,
+  isAnyBlockingModalOpen,
+  soloNudgePulse,
+  soloNudgeIn,
+]);
+useEffect(() => {
+  const isDuo =
+    todayHubPrimaryMode === "duo" &&
+    !isTutorialBlocking &&
+    !isAnyBlockingModalOpen;
+
+  if (!isDuo) {
+    duoRingPulse.value = 0;
+    return;
+  }
+
+  duoRingPulse.value = withRepeat(
+    withTiming(1, { duration: 1200, easing: Easing.inOut(Easing.ease) }),
+    -1,
+    true
+  );
+}, [
+  todayHubPrimaryMode,
+  isTutorialBlocking,
+  isAnyBlockingModalOpen,
+  duoRingPulse,
+]);
+
+
+
+  // ✅ Si on passe en duoPending, on CONSUME le flag onboarding pour éviter
+  // un spotlight qui pop plus tard quand ça repasse "mark".
+  useEffect(() => {
+    if (todayHubPrimaryMode !== "duoPending") return;
+    (async () => {
+      try {
+        await AsyncStorage.removeItem(ONBOARDING_JUST_FINISHED_KEY);
+      } catch {}
+      setSpotlightArmed(false);
+      setSpotlightVisible(false);
+      spotlightOpacity.value = withTiming(0, { duration: 120 });
+    })();
+  }, [todayHubPrimaryMode, spotlightOpacity]);
+
+useEffect(() => {
+  let cancelled = false;
+
+  const arm = async () => {
+    const fromParam =
+      String((params as any)?.fromOnboarding ?? "") === "1" ||
+      String((params as any)?.onboarding ?? "") === "1";
+
+    let fromStorage = false;
+    try {
+      const v = await AsyncStorage.getItem(ONBOARDING_JUST_FINISHED_KEY);
+      fromStorage = v === "1";
+    } catch {}
+
+    if (!fromParam && !fromStorage) return;
+
+    try {
+      const shown = await AsyncStorage.getItem(SPOTLIGHT_SHOWN_KEY);
+      if (shown === "1") return;
+    } catch {}
+
+    if (!cancelled) setSpotlightArmed(true);
+  };
+
+  arm();
+  return () => {
+    cancelled = true;
+  };
+}, [params, SPOTLIGHT_SHOWN_KEY]);
+
+
+  useEffect(() => {
+    if (!spotlightArmed) return;
+    if (!spotlightAllowed) return;
+
+    // ✅ ne jamais lancer si un modal est visible
+    if (isSpotlightBlocked()) return;
+
+    // déjà affiché / déjà mesuré
+    if (spotlightVisible || spotRect) return;
+
+    // ✅ token: si un modal arrive après la planif, on annule
+    const token = ++spotlightOpenTokenRef.current;
+
+    const task = InteractionManager.runAfterInteractions(() => {
+      setTimeout(() => {
+        // re-check au moment exact de l’open
+        if (token !== spotlightOpenTokenRef.current) return;
+        if (isSpotlightBlocked()) return;
+
+        tryOpenSpotlightWithRetry(token);
+      }, 120);
+    });
+
+    return () => {
+      // ✅ annule implicitement l’open prévu
+      spotlightOpenTokenRef.current++;
+      task?.cancel?.();
+    };
+  }, [
+    spotlightArmed,
+    spotlightAllowed,
+    isSpotlightBlocked,
+    spotlightVisible,
+    spotRect,
+    tryOpenSpotlightWithRetry,
+  ]);
+
+useEffect(() => {
+  let cancelled = false;
+
+  const run = async () => {
+    if (!user?.uid) return;
+    if (!userData) return;
+
+    // ✅ pas de magie si un modal est visible
+    if (
+      isTutorialBlocking ||
+      welcomeVisible ||
+      dailyBonusVisible ||
+      showPremiumEndModal ||
+      modalVisible
+    ) {
+      return;
+    }
+
+    // ✅ absorb déclenchable dans 2 cas:
+    // A) post-welcome armé
+    // B) première fois solo (rail d’activation)
+    let shouldAbsorb = false;
+    try {
+      const armed =
+        postWelcomeAbsorbArmed ||
+        (await AsyncStorage.getItem(POST_WELCOME_ABSORB_KEY)) === "1";
+      if (armed) shouldAbsorb = true;
+    } catch {}
+
+    if (!shouldAbsorb) {
+      try {
+        const seen = await AsyncStorage.getItem(FIRST_SOLO_ABSORB_KEY);
+        if (seen !== "1") shouldAbsorb = true;
+      } catch {}
+    }
+
+    if (!shouldAbsorb) return;
+
+    // ✅ petite latence “Keynote” pour laisser mesurer todayHubY + CTA
+    await new Promise((r) => setTimeout(r, 160));
+    if (cancelled) return;
+
+    await absorbToTodayHub();
+
+    // consume flags
+    try {
+      await AsyncStorage.removeItem(POST_WELCOME_ABSORB_KEY);
+      await AsyncStorage.removeItem(ONBOARDING_JUST_FINISHED_KEY);
+      await AsyncStorage.setItem(FIRST_SOLO_ABSORB_KEY, "1");
+    } catch {}
+
+    if (!cancelled) setPostWelcomeAbsorbArmed(false);
+  };
+
+  run();
+  return () => {
+    cancelled = true;
+  };
+}, [
+  user?.uid,
+  userData,
+  postWelcomeAbsorbArmed,
+  POST_WELCOME_ABSORB_KEY,
+ FIRST_SOLO_ABSORB_KEY,
+ isTutorialBlocking,
+ welcomeVisible,
+  dailyBonusVisible,
+  showPremiumEndModal,
+  modalVisible,
+  absorbToTodayHub,
+]);
 
       const effectiveWelcomeReward =
     welcomeState &&
@@ -665,6 +1381,38 @@ useEffect(() => {
     };
   }, [activeChallengeId, activeChallengeMeta, t]);
 
+  
+
+  useEffect(() => {
+  const isDuo = todayHubPrimaryMode === "duo";
+  const isPending = todayHubPrimaryMode === "duoPending";
+
+  if ((!isDuo && !isPending) || isTutorialBlocking || isAnyBlockingModalOpen) {
+    duoRing.value = 0;
+    duoGlow.value = 0;
+    return;
+  }
+
+  // Duo: pulse doux mais évident
+  duoRing.value = withRepeat(
+    withTiming(1, { duration: isPending ? 1400 : 1100, easing: Easing.inOut(Easing.ease) }),
+    -1,
+    true
+  );
+
+  // Glow plus lent (Apple-ish)
+  duoGlow.value = withRepeat(
+    withTiming(1, { duration: 1600, easing: Easing.inOut(Easing.ease) }),
+    -1,
+    true
+  );
+}, [
+  todayHubPrimaryMode,
+  isTutorialBlocking,
+  isAnyBlockingModalOpen,
+  duoRing,
+  duoGlow,
+]);
    useEffect(() => {
     if (!user || !userData) return;
 
@@ -759,6 +1507,13 @@ useFocusEffect(
   const fadeStyle = useAnimatedStyle(() => ({ opacity: fadeAnim.value }));
 
   const bonusPulse = useSharedValue(0);
+  const duoPendingPulse = useSharedValue(0);
+  const duoPendingCardGlowStyle = useAnimatedStyle(() => {
+  const o = 0.08 + duoPendingPulse.value * 0.14;
+  const s = 1 + duoPendingPulse.value * 0.01;
+  return { opacity: o, transform: [{ scale: s }] };
+});
+
 
 useEffect(() => {
   if (!canClaimDailyBonus || isTutorialBlocking) {
@@ -772,12 +1527,81 @@ useEffect(() => {
   );
 }, [canClaimDailyBonus, isTutorialBlocking, bonusPulse]);
 
+useEffect(() => {
+  if (!user?.uid) {
+    setPendingInvite(null);
+    setDuoInvitePending(false);
+    setDuoInvitePendingFor(null);
+    return;
+  }
+
+  // ✅ invitation pending la plus récente envoyée par l'utilisateur
+  // (si tu as createdAt dans Firestore, ajoute orderBy("createdAt","desc"))
+  const qInv = query(
+    collection(db, "invitations"),
+    where("inviterId", "==", user.uid),
+    where("status", "==", "pending"),
+    limit(1)
+  );
+
+  const unsub = onSnapshot(
+    qInv,
+    (snap) => {
+      if (snap.empty) {
+        setPendingInvite(null);
+        setDuoInvitePending(false);
+        setDuoInvitePendingFor(null);
+        return;
+      }
+
+      const doc0 = snap.docs[0];
+      const data: any = doc0.data();
+
+      const challengeId =
+        typeof data?.challengeId === "string" ? data.challengeId.trim() : "";
+
+      const selectedDays =
+        typeof data?.selectedDays === "number" ? data.selectedDays : undefined;
+
+      setPendingInvite({
+        id: doc0.id,
+        challengeId,
+        selectedDays,
+        inviteeUsername:
+          typeof data?.inviteeUsername === "string" ? data.inviteeUsername : undefined,
+        createdAt: data?.createdAt,
+      });
+
+      setDuoInvitePending(true);
+      setDuoInvitePendingFor(challengeId || null);
+    },
+    () => {
+      setPendingInvite(null);
+      setDuoInvitePending(false);
+      setDuoInvitePendingFor(null);
+    }
+  );
+
+  return () => unsub();
+}, [user?.uid]);
+
+useEffect(() => {
+  if (!duoInvitePending || isTutorialBlocking) {
+    duoPendingPulse.value = 0;
+    return;
+  }
+  duoPendingPulse.value = withRepeat(
+    withTiming(1, { duration: 1400, easing: Easing.inOut(Easing.ease) }),
+    -1,
+    true
+  );
+}, [duoInvitePending, isTutorialBlocking, duoPendingPulse]);
+
 const bonusPulseStyle = useAnimatedStyle(() => {
   // glow discret (pas kitsch)
   const o = 0.10 + bonusPulse.value * 0.10; // 0.10 -> 0.20
   return { opacity: o };
 });
-
 
   useEffect(() => {
     fadeAnim.value = withTiming(1, { duration: 1500 });
@@ -855,7 +1679,6 @@ const bonusPulseStyle = useAnimatedStyle(() => {
     let hydratedFromCache = false;
 
     try {
-      setLoading(true);
 
       // 1) Lire cache challenges + DAILY_PICKS en parallèle
       const [cachedChallenges, cachedDaily] = await Promise.all([
@@ -868,22 +1691,21 @@ const bonusPulseStyle = useAnimatedStyle(() => {
       if (cachedChallenges) {
   try {
     const parsed = JSON.parse(cachedChallenges);
-
     base = Array.isArray(parsed)
       ? parsed.map((c: any) => ({
           ...c,
-          // 💎 Fallback garanti pour les vieilles entrées sans image / image vide
           imageUrl:
-            (typeof c.imageUrl === "string" && c.imageUrl.trim().length > 0)
+            typeof c.imageUrl === "string" && c.imageUrl.trim().length > 0
               ? c.imageUrl
               : undefined,
         }))
       : [];
+
+    if (base.length) setLoading(false);
   } catch {
     base = [];
   }
 }
-
 
       // 2) Si on a déjà une base locale → on hydrate tout de suite l'écran
       if (base.length) {
@@ -896,7 +1718,6 @@ const bonusPulseStyle = useAnimatedStyle(() => {
         setAllChallenges(base);
         setDailyFive(picks);
         hydratedFromCache = true;
-        setLoading(false); // ✅ on arrête le spinner, même si le réseau travaille encore
       }
 
       // 3) Requête Firestore pour rafraîchir les données (en arrière-plan si cache déjà affiché)
@@ -1012,33 +1833,23 @@ const bonusPulseStyle = useAnimatedStyle(() => {
   safeNavigate("/explore", "home-pick-challenge");
 }, [safeNavigate]);
 
-const handleCreateChallengePress = useCallback(async () => {
-  try {
-    await Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
-  } catch {}
-
-  // ✅ route la plus safe vu tes pages existantes
-  // (si tu as déjà un écran “create”, remplace par le bon)
-  safeNavigate("/create-challenge", "home-create-challenge");
-}, [safeNavigate]);
-
 const handleInviteFriendPress = useCallback(async () => {
-  if (!activeChallengeId) {
-    // pas de défi actif → on pousse vers explore (duo mis en avant par ton UI explore)
-    try {
-      await Haptics.selectionAsync();
-    } catch {}
+  const targetId =
+    pendingInvite?.challengeId ??
+    todayHubView.hubChallengeId ??
+    activeChallengeId;
+
+  if (!targetId) {
+    try { await Haptics.selectionAsync(); } catch {}
     safeNavigate("/explore", "home-invite-no-active");
     return;
   }
 
-  try {
-    await Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
-  } catch {}
+  try { await Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium); } catch {}
 
-  // ✅ l’invite est déjà gérée dans challenge-details/[id]
-  safeNavigate(`/challenge-details/${activeChallengeId}`, "home-invite-friend");
-}, [activeChallengeId, safeNavigate]);
+  // ✅ on pousse vers le détail du challenge, et tu peux y afficher un état "invitation envoyée"
+  safeNavigate(`/challenge-details/${targetId}?invitePending=1`, "home-invite-friend");
+}, [pendingInvite?.challengeId, todayHubView.hubChallengeId, activeChallengeId, safeNavigate]);
 
 
   const handleMarkTodayPress = useCallback(async () => {
@@ -1048,6 +1859,14 @@ const handleInviteFriendPress = useCallback(async () => {
     // On centralise l'action “Marquer” dans Focus (déjà ton hub)
     safeNavigate("/focus", "home-mark-today");
   }, [safeNavigate]);
+
+  const handleSpotlightMark = useCallback(async () => {
+    await dismissSpotlight();
+    // slight micro-delay to avoid "double modal" feel
+    setTimeout(() => {
+      handleMarkTodayPress();
+    }, 80);
+  }, [dismissSpotlight, handleMarkTodayPress]);
 
   const handleOpenActiveChallenge = useCallback(async () => {
     if (!activeChallengeId) return;
@@ -1062,23 +1881,6 @@ const handleInviteFriendPress = useCallback(async () => {
     () => t("homeZ.hero.ctaShort", "Explorer"),
     [t]
   );
-  const todayPrimaryLabel = useMemo(() => {
-    // ✅ Inversion : si pas de défi actif → Duo devient le chemin naturel
-    return hasActiveChallenges
-      ? t("homeZ.todayHub.primaryActiveShort", "Marquer")
-      : t("homeZ.todayHub.primaryDuoShort", "Duo");
-  }, [hasActiveChallenges, t]);
-
-  const shouldShowDuoNudge = useMemo(() => {
-  // montre le nudge uniquement si : défi actif + pas déjà en duo
-  return !!hasActiveChallenges && !!activeChallengeId && activeChallenge?.duo !== true;
-}, [hasActiveChallenges, activeChallengeId, activeChallenge?.duo]);
-
-const duoNudgeTitle = useMemo(
-  () => t("homeZ.duoNudge.title", "Tu vas lâcher seul. Pas à deux."),
-  [t]
-);
-
 
   const dynamicStyles = useMemo(
     () => getDynamicStyles(currentTheme, isDarkMode),
@@ -1104,7 +1906,7 @@ const duoNudgeTitle = useMemo(
 
         next.dailyBonus = {
           ...(prev.dailyBonus || {}),
-          lastClaimDate: todayKeyUTC(),
+          lastClaimDate: DAY_UTC,
         };
 
         switch (reward.type) {
@@ -1151,6 +1953,69 @@ const duoNudgeTitle = useMemo(
     }
   };
 
+const todayHubTitle = todayHubView.title;
+const todayHubSub = todayHubView.subtitle;
+// ✅ description safe (affichage preview)
+const todayHubHubDescription = useMemo(() => {
+  const raw = (todayHubView.hubMeta?.description ?? "") as any;
+  const clean = String(raw ?? "").trim();
+  return clean ? clean.replace(/\s+/g, " ") : "";
+}, [todayHubView.hubMeta?.description]);
+
+// ✅ actions TodayHub
+const onOpenHub = useCallback(async () => {
+  const id = todayHubView.hubChallengeId;
+  if (!id) return;
+  try { await Haptics.selectionAsync(); } catch {}
+  safeNavigate(`/challenge-details/${id}`, "home-open-todayhub");
+}, [todayHubView.hubChallengeId, safeNavigate]);
+
+const onPickSolo = useCallback(async () => {
+  try { await Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium); } catch {}
+  safeNavigate("/explore", "home-pick-solo");
+}, [safeNavigate]);
+
+const onCreate = useCallback(async () => {
+  try { await Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium); } catch {}
+  safeNavigate("/create-challenge", "home-create-challenge");
+}, [safeNavigate]);
+
+const onPrimaryPress = useCallback(() => {
+  // mapping clean selon mode
+  if (todayHubPrimaryMode === "mark") return handleMarkTodayPress();
+  if (todayHubPrimaryMode === "new") return handlePickChallengePress();
+  if (todayHubPrimaryMode === "duo") return handleInviteFriendPress();
+  // duoPending
+  return handleInviteFriendPress();
+}, [
+  todayHubPrimaryMode,
+  handleMarkTodayPress,
+  handlePickChallengePress,
+  handleInviteFriendPress,
+]);
+
+// ✅ visuels CTA principal (gradient / icon / label)
+const todayHubPrimaryGradient = useMemo(() => {
+  if (todayHubPrimaryMode === "mark") return ["#F97316", "#FB923C"] as const; // orange action
+  if (todayHubPrimaryMode === "duoPending") return ["#6366F1", "#A78BFA"] as const; // violet pending
+  if (todayHubPrimaryMode === "duo") return ["#22C55E", "#86EFAC"] as const; // green duo
+  return ["#F97316", "#FDBA74"] as const; // new -> explore warm
+}, [todayHubPrimaryMode]);
+
+const todayHubPrimaryIcon = useMemo(() => {
+  if (todayHubPrimaryMode === "mark") return "checkmark-circle-outline";
+  if (todayHubPrimaryMode === "duoPending") return "hourglass-outline";
+  if (todayHubPrimaryMode === "duo") return "people-outline";
+  return "compass-outline";
+}, [todayHubPrimaryMode]);
+
+const todayHubPrimaryLabel = useMemo(() => {
+  if (todayHubPrimaryMode === "mark") return t("homeZ.todayHub.ctaMark", "Marquer");
+  if (todayHubPrimaryMode === "duoPending") return t("homeZ.todayHub.ctaPending", "En attente");
+  if (todayHubPrimaryMode === "duo") return t("homeZ.todayHub.ctaDuo", "Inviter");
+  return t("homeZ.todayHub.ctaNew", "Nouveau défi");
+}, [t, todayHubPrimaryMode]);
+
 const handleClaimWelcomeBonus = async () => {
   if (!user || welcomeLoading || !welcomeState) return;
 
@@ -1173,7 +2038,14 @@ const handleClaimWelcomeBonus = async () => {
 
     // 💎 Anti-flicker : on FERME le modal tout de suite,
     // dans le même render où on met à jour le state
-    setWelcomeVisible(false);
+   setWelcomeVisible(false);
+
+// ✅ on arme l’absorption de façon robuste (storage + state)
+try {
+  await AsyncStorage.setItem(POST_WELCOME_ABSORB_KEY, "1");
+} catch {}
+setPostWelcomeAbsorbArmed(true);
+
 
     // 🔁 mise à jour locale du welcomeState
     setWelcomeState(state);
@@ -1264,7 +2136,7 @@ const handleClaimWelcomeBonus = async () => {
 
         next.dailyBonus = {
           ...(prev.dailyBonus || {}),
-          lastRerollDate: todayKeyUTC(),
+          lastRerollDate: DAY_UTC,
         };
 
         switch (reward.type) {
@@ -1336,6 +2208,7 @@ const handleClaimWelcomeBonus = async () => {
           ref={scrollRef}
           key={layoutKey}
           pointerEvents={isTutorialBlocking ? "none" : "auto"}
+          scrollEnabled={!isTutorialBlocking}
           contentContainerStyle={[
             staticStyles.scrollContent,
             { paddingBottom: bottomContentPadding },
@@ -1377,15 +2250,23 @@ const handleClaimWelcomeBonus = async () => {
             shouldPlay={heroShouldPlay}
             isLooping
             isMuted
+            progressUpdateIntervalMillis={250}
             onError={() => {
               setVideoReady(false);
             }}
-            onPlaybackStatusUpdate={async (status: any) => {
-              if (status?.isLoaded && heroShouldPlay && !status.isPlaying) {
-                try {
-                  await heroVideoRef.current?.playAsync?.();
-                } catch {}
-              }
+            onPlaybackStatusUpdate={(status: any) => {
+              if (!heroShouldPlay) return;
+              if (!status?.isLoaded) return;
+              if (status.isPlaying) return;
+              if (heroPlayGuardRef.current) return;
+
+              heroPlayGuardRef.current = true;
+              heroVideoRef.current
+                ?.playAsync?.()
+                .catch(() => {})
+                .finally(() => {
+                  heroPlayGuardRef.current = false;
+                });
             }}
           />
 
@@ -1408,7 +2289,15 @@ const handleClaimWelcomeBonus = async () => {
             pointerEvents="none"
           />
 
-          <View style={[staticStyles.heroContent, { paddingTop: insets.top + normalize(12) }]}>
+          <View
+            style={[
+              staticStyles.heroContent,
+              {
+                paddingTop: insets.top + normalize(IS_TINY ? 8 : 12),
+                paddingHorizontal: normalize(15),
+              },
+            ]}
+          >
             {/* Brand row : petit logo + label, très Apple */}
             <View style={staticStyles.heroBrandRow}>
               <Image
@@ -1430,7 +2319,7 @@ const handleClaimWelcomeBonus = async () => {
               style={[staticStyles.heroTitleKeynote, dynamicStyles.heroTitle]}
               numberOfLines={2}
               adjustsFontSizeToFit
-              minimumFontScale={0.88}
+              minimumFontScale={IS_TINY ? 0.84 : 0.88}
             >
               {t("homeZ.hero.headline", "Reste régulier.")}
             </Text>
@@ -1440,21 +2329,11 @@ const handleClaimWelcomeBonus = async () => {
               style={[staticStyles.heroSubtitleKeynote, dynamicStyles.heroSubtitle]}
               numberOfLines={2}
               adjustsFontSizeToFit
-              minimumFontScale={0.90}
+              minimumFontScale={IS_TINY ? 0.86 : 0.90}
             >
               {t("homeZ.hero.sub", "Un défi simple. Chaque jour. En solo ou à deux.")}
             </Text>
-            <Text
-  style={[
-    staticStyles.heroDuoProof,
-    { color: "rgba(255,255,255,0.86)" },
-  ]}
-  numberOfLines={1}
-  adjustsFontSizeToFit
-  minimumFontScale={0.92}
->
-  {t("homeZ.hero.duoProof", "Le Duo transforme l’essai.")}
-</Text>
+           
           {/* Tutoriel (icône only) — top-right, ultra discret */}
           <Pressable
             onPress={() => {
@@ -1540,7 +2419,6 @@ const handleClaimWelcomeBonus = async () => {
                     >
                       {heroCtaLabel}
                     </Text>
-                    <Ionicons name="chevron-forward" size={normalize(18)} color="#0B1120" />
                   </View>
                 </LinearGradient>
               </Animated.View>
@@ -1548,427 +2426,36 @@ const handleClaimWelcomeBonus = async () => {
           </View>
         </Animated.View>
         
-{/* TODAY HUB — Keynote System Card */}
-        <View style={staticStyles.todayHubWrap}>
-          <View style={staticStyles.todayHubOuter}>
-            <View
-              style={[
-                staticStyles.todayHubStroke,
-                {
-                  borderColor: isDarkMode
-                    ? "rgba(255,255,255,0.12)"
-                    : "rgba(2,6,23,0.10)",
-                },
-              ]}
-            >
-              <LinearGradient
-                colors={
-                  isDarkMode
-                    ? ["rgba(2,6,23,0.92)", "rgba(2,6,23,0.76)"]
-                    : ["rgba(255,255,255,0.96)", "rgba(255,255,255,0.84)"]
-                }
-                start={{ x: 0, y: 0 }}
-                end={{ x: 1, y: 1 }}
-                style={staticStyles.todayHubCard}
-              >
-                <BlurView
-                  intensity={isDarkMode ? 34 : 22}
-                  tint={isDarkMode ? "dark" : "light"}
-                  style={staticStyles.todayHubBlur}
-                >
-                  {/* Header */}
-                  <View style={staticStyles.todayHubHeaderRow}>
-                    <View style={staticStyles.todayHubBadge}>
-                      <Ionicons name="flash" size={normalize(14)} color="#F97316" />
-                      <Text style={staticStyles.todayHubBadgeText} numberOfLines={1}>
-                        {t("homeZ.todayHub.badge", "AUJOURD’HUI")}
-                      </Text>
-                    </View>
-
-                    <View style={staticStyles.todayHubMetaPill}>
-                      <Ionicons
-                        name={hasActiveChallenges ? "flame" : "sparkles"}
-                        size={normalize(14)}
-                        color={isDarkMode ? "#E2E8F0" : "#0B1120"}
-                      />
-                      <Text
-                        style={[
-                          staticStyles.todayHubMetaText,
-                          { color: isDarkMode ? "#E2E8F0" : "#0B1120" },
-                        ]}
-                        numberOfLines={1}
-                      >
-                        {hasActiveChallenges
-                          ? t("homeZ.todayHub.metaActive", {
-                              defaultValue: "{{count}} défi(s) actif(s)",
-                              count: currentChallenges.filter((c) => !c?.completed && !c?.archived).length,
-                            })
-                          : t("homeZ.todayHub.metaNone", "Aucun défi actif")}
-                      </Text>
-                    </View>
-                  </View>
-
-                  {/* Title + sub */}
-                  <Text
-                    style={[
-                      staticStyles.todayHubTitle,
-                      { color: isDarkMode ? "#F8FAFC" : "#0B1120" },
-                    ]}
-                    numberOfLines={2}
-                  >
-                    {hasActiveChallenges
-                      ? t("homeZ.todayHub.titleActive2", "Marque aujourd’hui. Protège ta série.")
-                       : t("homeZ.todayHub.titleNone2", "À deux, tu tiens. Lance ton Duo.")}
-                  </Text>
-
-                  <Text
-                    style={[
-                      staticStyles.todayHubSub,
-                      {
-                        color: isDarkMode
-                          ? "rgba(226,232,240,0.78)"
-                          : "rgba(15,23,42,0.70)",
-                      },
-                    ]}
-                    numberOfLines={3}
-                  >
-                    {hasActiveChallenges
-                      ? t("homeZ.todayHub.subActive2", "1 clic pour valider. Ensuite : invite quelqu’un et double tes chances de tenir.")
- : t("homeZ.todayHub.subNone2", "Invite maintenant. Le solo, tu pourras le choisir après.")}
-                  </Text>
-
-                  {/* Active Challenge Preview (only when active) */}
-                  {hasActiveChallenges && effectiveActiveMeta && (
-                    <Pressable
-                      onPress={handleOpenActiveChallenge}
-                      accessibilityRole="button"
-                      accessibilityLabel={t(
-                        "homeZ.todayHub.openActiveA11y",
-                        "Ouvrir le défi actif"
-                      )}
-                      accessibilityHint={t(
-                        "homeZ.todayHub.openActiveHint",
-                        "Ouvre le détail du défi actif."
-                      )}
-                      hitSlop={10}
-                      style={({ pressed }) => [
-                        staticStyles.todayHubActiveCard,
-                        pressed && { transform: [{ scale: 0.995 }], opacity: 0.96 },
-                        {
-                          borderColor: isDarkMode
-                            ? "rgba(226,232,240,0.16)"
-                            : "rgba(2,6,23,0.10)",
-                          backgroundColor: isDarkMode
-                            ? "rgba(255,255,255,0.05)"
-                            : "rgba(255,255,255,0.72)",
-                        },
-                      ]}
-                    >
-                      <View style={staticStyles.todayHubActiveLeft}>
-                        <Image
-                          source={getChallengeImageSource(effectiveActiveMeta)}
-                          style={staticStyles.todayHubActiveImg}
-                          contentFit="cover"
-                          transition={180}
-                          cachePolicy="memory-disk"
-                          placeholder={BLURHASH}
-                          placeholderContentFit="cover"
-                          onError={() => markImageBroken(effectiveActiveMeta?.id)}
-                        />
-                      </View>
-
-                      <View style={staticStyles.todayHubActiveMid}>
-                        <Text
-                          style={[
-                            staticStyles.todayHubActiveTitle,
-                            { color: isDarkMode ? "#F8FAFC" : "#0B1120" },
-                          ]}
-                          numberOfLines={1}
-                        >
-                          {effectiveActiveMeta.title || t("home.yourChallenge", "Ton défi")}
-                        </Text>
-                        {!!activeChallengeDescription && (
-                          <Text
-                            style={[
-                              staticStyles.todayHubActiveSub,
-                              { color: isDarkMode ? "rgba(226,232,240,0.70)" : "rgba(15,23,42,0.62)" },
-                            ]}
-                            numberOfLines={1}
-                          >
-                            {activeChallengeDescription}
-                          </Text>
-                        )}
-
-                        {/* Progress */}
-                        <View style={staticStyles.todayHubProgressRow}>
-                          <View
-                            style={[
-                              staticStyles.todayHubProgressTrack,
-                              { backgroundColor: isDarkMode ? "rgba(226,232,240,0.14)" : "rgba(2,6,23,0.10)" },
-                            ]}
-                          >
-                            <View
-                              style={[
-                                staticStyles.todayHubProgressFill,
-                                { width: `${Math.round(activeProgress.pct * 100)}%` },
-                              ]}
-                            />
-                          </View>
-                          <Text
-                            style={[
-                              staticStyles.todayHubProgressText,
-                              { color: isDarkMode ? "rgba(226,232,240,0.70)" : "rgba(15,23,42,0.62)" },
-                            ]}
-                            numberOfLines={1}
-                          >
-                            {t("homeZ.todayHub.progress", {
-                              defaultValue: "{{done}}/{{total}} jours",
-                              done: activeProgress.done,
-                              total: Math.max(activeProgress.total, 0),
-                            })}
-                          </Text>
-                        </View>
-                      </View>
-
-                      <View style={staticStyles.todayHubActiveRight}>
-                        <Ionicons
-                          name="chevron-forward"
-                          size={normalize(18)}
-                          color={isDarkMode ? "rgba(226,232,240,0.85)" : "rgba(2,6,23,0.85)"}
-                        />
-                      </View>
-                    </Pressable>
-                  )}
-
-                  {shouldShowDuoNudge && (
-  <View
-    style={[
-      staticStyles.duoNudgeWrap,
-      {
-        borderColor: isDarkMode ? "rgba(249,115,22,0.28)" : "rgba(249,115,22,0.22)",
-        backgroundColor: isDarkMode ? "rgba(249,115,22,0.12)" : "rgba(249,115,22,0.10)",
-      },
-    ]}
-    accessibilityRole="summary"
-    accessibilityLabel={t("homeZ.duoNudge.a11y", "Recommandation Duo")}
-  >
-    <View style={staticStyles.duoNudgeRow}>
-      <View style={staticStyles.duoNudgeIcon}>
-        <Ionicons name="people" size={normalize(16)} color="#F97316" />
-      </View>
-
-      <View style={{ flex: 1, minWidth: 0 }}>
-        <Text
-          style={[
-            staticStyles.duoNudgeTitle,
-            { color: isDarkMode ? "#F8FAFC" : "#0B1120" },
-          ]}
-          numberOfLines={2}
-        >
-          {duoNudgeTitle}
-        </Text>
-
-        <Text
-          style={[
-            staticStyles.duoNudgeSub,
-            { color: isDarkMode ? "rgba(226,232,240,0.72)" : "rgba(15,23,42,0.62)" },
-          ]}
-          numberOfLines={2}
-        >
-          {t("homeZ.duoNudge.sub", "Invite maintenant. Tu doubleras tes chances de tenir.")}
-        </Text>
-      </View>
-    </View>
-
-    <View style={staticStyles.duoNudgeActions}>
-      <Pressable
-        onPress={handleInviteFriendPress}
-        hitSlop={10}
-        accessibilityRole="button"
-        accessibilityLabel={t("homeZ.duoNudge.ctaA11y", "Inviter un ami en duo")}
-        style={({ pressed }) => [
-          staticStyles.duoNudgeCta,
-          { opacity: pressed ? 0.92 : 1, transform: [{ scale: pressed ? 0.992 : 1 }] },
-        ]}
-      >
-        <LinearGradient
-          colors={["#F97316", "#FB923C"]}
-          start={{ x: 0, y: 0 }}
-          end={{ x: 1, y: 1 }}
-          style={staticStyles.duoNudgeCtaGrad}
-        >
-          <Text style={staticStyles.duoNudgeCtaText} numberOfLines={1}>
-            {t("homeZ.duoNudge.cta", "Duo")}
-          </Text>
-          <Ionicons name="arrow-forward" size={normalize(18)} color="#0B1120" />
-        </LinearGradient>
-      </Pressable>
-
-      <Pressable
-        onPress={handlePickChallengePress}
-        hitSlop={10}
-        accessibilityRole="button"
-        accessibilityLabel={t("homeZ.duoNudge.soloA11y", "Rester en solo")}
-        accessibilityHint={t("homeZ.todayHub.soloHint", "Choisis un défi sans partenaire.")}
-        style={({ pressed }) => [
-          staticStyles.duoNudgeSolo,
-          { opacity: pressed ? 0.75 : 0.92 },
-        ]}
-      >
-        <Text
-          style={[
-            staticStyles.duoNudgeSoloText,
-            { color: isDarkMode ? "rgba(226,232,240,0.70)" : "rgba(15,23,42,0.60)" },
-          ]}
-          numberOfLines={1}
-        >
-          {t("homeZ.duoNudge.solo", "Rester solo")}
-        </Text>
-      </Pressable>
-    </View>
-  </View>
-)}
-
-
-                  {/* Primary CTA */}
-                  <TouchableOpacity
-                    activeOpacity={0.92}
-                    onPress={
-   hasActiveChallenges
-     ? handleMarkTodayPress
-     : handleInviteFriendPress // ✅ Duo devient le CTA principal
- }
-                    accessibilityRole="button"
-                    accessibilityLabel={
-                      hasActiveChallenges
-                        ? t("homeZ.todayHub.primaryActiveA11y", "Marquer aujourd’hui")
-                        : t("homeZ.todayHub.primaryDuoA11y", "Inviter un ami en duo")
-                    }
-                    accessibilityHint={
-                      hasActiveChallenges
-                        ? t("homeZ.todayHub.primaryActiveHint2", "Ouvre Focus pour marquer ton jour.")
-                        : t(
-            "homeZ.todayHub.primaryDuoHint",
-            "Choisis un défi, puis invite quelqu’un en duo."
-          )
-                    }
-                    style={staticStyles.todayHubPrimaryBtnWrap}
-                  >
-                    <LinearGradient
-                      colors={["#F97316", "#FB923C"]}
-                      start={{ x: 0, y: 0 }}
-                      end={{ x: 1, y: 1 }}
-                      style={staticStyles.todayHubPrimaryBtn}
-                    >
-                      <Text
-                        style={staticStyles.todayHubPrimaryText}
-                        numberOfLines={1}
-                        adjustsFontSizeToFit
-                        minimumFontScale={0.92}
-                      >
-                        {todayPrimaryLabel}
-                      </Text>
-                      <Ionicons
-                        name={hasActiveChallenges ? "checkmark-circle" : "arrow-forward"}
-                        size={normalize(19)}
-                        color="#0B1120"
-                      />
-                    </LinearGradient>
-                  </TouchableOpacity>
-                  {!hasActiveChallenges && (
-  <Pressable
-    onPress={handlePickChallengePress}
-    accessibilityRole="button"
-    accessibilityLabel={t("homeZ.todayHub.soloA11y", "Continuer en solo")}
-    accessibilityHint={t("homeZ.todayHub.soloHint", "Choisis un défi sans partenaire.")}
-    hitSlop={10}
-    style={({ pressed }) => [
-      { alignSelf: "center", marginTop: normalize(10), opacity: pressed ? 0.75 : 0.9 },
-    ]}
-  >
-    <Text
-      style={[
-        staticStyles.todayHubSoloLink,
-        { color: isDarkMode ? "rgba(226,232,240,0.72)" : "rgba(15,23,42,0.62)" },
-      ]}
-      numberOfLines={1}
-    >
-      {t("homeZ.todayHub.solo", "Continuer en solo")}
-    </Text>
-  </Pressable>
-)}
-
-
-                  {/* Secondary actions — uniquement “Créer” (Solo déjà via “Continuer en solo”) */}
-<View style={staticStyles.todayHubActionRowSingle}>
-  <Pressable
-    onPress={handleCreateChallengePress}
-    accessibilityRole="button"
-    accessibilityLabel={t("homeZ.todayHub.createA11y", "Créer un défi")}
-    accessibilityHint={t("homeZ.todayHub.createHint", "Crée ton propre défi.")}
-    hitSlop={10}
-    style={({ pressed }) => [
-      staticStyles.todayHubActionCardSingle,
-      {
-        borderColor: isDarkMode ? "rgba(226,232,240,0.18)" : "rgba(2,6,23,0.10)",
-        backgroundColor: isDarkMode ? "rgba(255,255,255,0.05)" : "rgba(255,255,255,0.72)",
-        opacity: pressed ? 0.96 : 1,
-        transform: [{ scale: pressed ? 0.992 : 1 }],
-      },
-    ]}
-  >
-    <View style={[staticStyles.todayHubActionIcon, staticStyles.todayHubActionIconCentered]}>
-      <Ionicons
-        name="add-circle-outline"
-        size={normalize(18)}
-        color={isDarkMode ? "#E2E8F0" : "#0B1120"}
-      />
-    </View>
-
-    <Text
-      style={[
-        staticStyles.todayHubActionTitle,
-        { color: isDarkMode ? "#F8FAFC" : "#0B1120" },
-      ]}
-      numberOfLines={1}
-      adjustsFontSizeToFit
-      minimumFontScale={0.92}
-    >
-      {t("homeZ.todayHub.create", "Créer")}
-    </Text>
-
-    <Text
-      style={[
-        staticStyles.todayHubActionSub,
-        { color: isDarkMode ? "rgba(226,232,240,0.70)" : "rgba(15,23,42,0.62)" },
-      ]}
-      numberOfLines={2}
-      adjustsFontSizeToFit
-      minimumFontScale={0.92}
-    >
-      {t("homeZ.todayHub.createSub", "Ton défi, tes règles")}
-    </Text>
-  </Pressable>
+ <View
+  onLayout={(e) => {
+    todayHubYRef.current = e.nativeEvent.layout.y;
+  }}
+>
+  <TodayHub
+  t={t}
+  isDarkMode={isDarkMode}
+  primaryMode={todayHubView.primaryMode}
+  hasActiveChallenges={todayHubView.hasActiveChallenges}
+  activeCount={todayHubView.activeCount}
+  title={todayHubTitle}
+  sub={todayHubSub}
+  hubMeta={todayHubView.hubMeta}
+  hubDescription={todayHubHubDescription}
+  progressPct={todayHubView.progress.pct}
+  primaryGradient={todayHubPrimaryGradient}
+  primaryIcon={todayHubPrimaryIcon}
+  primaryLabel={todayHubPrimaryLabel}
+  onOpenHub={onOpenHub}
+  onPrimaryPress={onPrimaryPress}
+  onPickSolo={onPickSolo}
+  onCreate={onCreate}
+  CONTENT_MAX_W={CONTENT_MAX_W}
+  staticStyles={staticStyles}
+  normalize={normalize}
+/>
 </View>
 
-
-                  {/* Micro */}
-                  <Text
-                    style={[
-                      staticStyles.todayHubMicro,
-                      { color: isDarkMode ? "rgba(226,232,240,0.58)" : "rgba(15,23,42,0.55)" },
-                    ]}
-                    numberOfLines={1}
-                    adjustsFontSizeToFit
-                    minimumFontScale={0.92}
-                  >
-                    {t("homeZ.todayHub.micro2", "Duo = motivation x2. Fais-le maintenant.")}
-                  </Text>
-                </BlurView>
-              </LinearGradient>
-            </View>
-          </View>
-        </View>
+<View style={{ height: normalize(18) }} />
 
         {/* BONUS DU JOUR — Keynote Reward Card */}
 {canClaimDailyBonus && (
@@ -2023,7 +2510,7 @@ const handleClaimWelcomeBonus = async () => {
             colors={
               isDarkMode
                 ? ["rgba(2,6,23,0.82)", "rgba(2,6,23,0.62)"]
-                : ["rgba(255,255,255,0.92)", "rgba(255,255,255,0.78)"]
+                : ["rgba(255,255,255,0.90)", "rgba(255,248,235,0.78)"]
             }
             start={{ x: 0, y: 0 }}
             end={{ x: 1, y: 1 }}
@@ -2206,7 +2693,7 @@ const handleClaimWelcomeBonus = async () => {
   </View>
 )}
 
-
+<View style={{ height: normalize(14) }} />
 
           {/* DAILY FIVE */}
           <View style={staticStyles.section}>
@@ -2247,8 +2734,8 @@ const handleClaimWelcomeBonus = async () => {
                   renderToHardwareTextureAndroid
                 >
                   <TouchableOpacity
-                    accessibilityRole="imagebutton"
                     activeOpacity={0.95}
+                    accessibilityRole="button"
                     onPress={async () => {
                       try {
                         await Haptics.selectionAsync();
@@ -2323,6 +2810,7 @@ const handleClaimWelcomeBonus = async () => {
                     >
                       <TouchableOpacity
                         activeOpacity={0.95}
+                        accessibilityRole="button"
                         onPress={async () => {
                           try {
                             await Haptics.selectionAsync();
@@ -2475,19 +2963,15 @@ const handleClaimWelcomeBonus = async () => {
             }
           >
             <View
-              style={[
-                staticStyles.discoverCardShell,
-                staticStyles.keynoteCardShell,
-                {
-                  borderColor: isDarkMode
-                    ? "rgba(255,255,255,0.10)"
-                    : "rgba(2,6,23,0.08)",
-                  backgroundColor: isDarkMode
-                    ? "rgba(255,255,255,0.05)"
-                    : "rgba(2,6,23,0.03)",
-                },
-              ]}
-            >
+  style={[
+    staticStyles.discoverCardOuter,
+    {
+      borderColor: isDarkMode ? "rgba(255,255,255,0.10)" : "rgba(2,6,23,0.08)",
+      backgroundColor: isDarkMode ? "rgba(255,255,255,0.05)" : "rgba(2,6,23,0.03)",
+    },
+  ]}
+>
+  <View style={staticStyles.discoverCardInner}>
               <View style={staticStyles.discoverHeader}>
                 <Text
                   style={[
@@ -2500,19 +2984,6 @@ const handleClaimWelcomeBonus = async () => {
                   {t("homeZ.discover.title", "Découvrir")}
                 </Text>
 
-                <Text
-                  style={[
-                    staticStyles.discoverSub,
-                    {
-                      color: isDarkMode
-                        ? "rgba(226,232,240,0.70)"
-                        : "rgba(15,23,42,0.60)",
-                    },
-                  ]}
-                  numberOfLines={1}
-                >
-                  {t("homeZ.discover.subtitle2", "L’essentiel. Le reste en bas.")}
-                </Text>
               </View>
 
               <View style={staticStyles.discoverRow2}>
@@ -2730,6 +3201,7 @@ const handleClaimWelcomeBonus = async () => {
                 />
               </Pressable>
             </View>
+            </View>
           </View>
 
         </ScrollView>
@@ -2800,7 +3272,16 @@ const handleClaimWelcomeBonus = async () => {
          {effectiveWelcomeReward && welcomeState && (
           <WelcomeBonusModal
             visible={welcomeVisible}
-            onClose={() => setWelcomeVisible(false)}
+            onClose={async () => {
+  setWelcomeVisible(false);
+
+  // ✅ même si l'user ferme sans claim, on veut le spotlight "mark today"
+  try {
+    await AsyncStorage.setItem(POST_WELCOME_ABSORB_KEY, "1");
+  } catch {}
+  setPostWelcomeAbsorbArmed(true);
+}}
+
             onClaim={handleClaimWelcomeBonus}
             currentDay={welcomeState.currentDay}
             totalDays={WELCOME_TOTAL_DAYS}
@@ -2900,7 +3381,6 @@ const handleClaimWelcomeBonus = async () => {
             </View>
           </View>
         </Modal>
-
       </LinearGradient>
     </SafeAreaView>
   );
@@ -2921,17 +3401,25 @@ const staticStyles = StyleSheet.create({
     borderWidth: StyleSheet.hairlineWidth,
     overflow: "hidden",
   },
-discoverCardShell: {
+discoverCardOuter: {
   width: "100%",
   maxWidth: CONTENT_W,
   alignSelf: "center",
   borderRadius: normalize(24),
-  padding: normalize(16),
-  borderWidth: StyleSheet.hairlineWidth,
-  borderColor: "rgba(255,255,255,0.10)",
-  backgroundColor: "rgba(255,255,255,0.06)",
-  overflow: "hidden",
+
+  // ✅ shadow ici (pas d'overflow ici)
+  ...shadowSoft,
+
+  borderWidth: ANDROID_HAIRLINE,
+  borderStyle: "solid",
 },
+
+discoverCardInner: {
+  borderRadius: normalize(24),
+  overflow: "hidden",
+  padding: normalize(16),
+},
+
 discoverHeader: {
   alignItems: "center",
   marginBottom: normalize(12),
@@ -2961,7 +3449,7 @@ discoverRow2: {
   marginTop: normalize(10),
   borderRadius: normalize(18),
   padding: normalize(14),
-  borderWidth: StyleSheet.hairlineWidth,
+  borderWidth: ANDROID_HAIRLINE,
   flexDirection: "row",
   alignItems: "center",
   justifyContent: "space-between",
@@ -2974,6 +3462,148 @@ discoverWideLeft: {
   flex: 1,
   minWidth: 0,
 },
+duoCtaGlow: {
+  backgroundColor: "rgba(255,255,255,0.28)",
+},
+
+duoCtaRingWrap: {
+  position: "absolute",
+  right: normalize(14),
+  top: "50%",
+  width: normalize(44),
+  height: normalize(44),
+  marginTop: -normalize(22),
+  alignItems: "center",
+  justifyContent: "center",
+},
+
+duoCtaRing: {
+  width: "100%",
+  height: "100%",
+  borderRadius: normalize(22),
+  borderWidth: 1,
+  borderColor: "rgba(11,17,32,0.20)",
+  overflow: "hidden",
+},
+
+spotRoot: {
+  position: "absolute",
+  left: 0,
+  right: 0,
+  top: 0,
+  bottom: 0,
+  zIndex: 999999,
+},
+duoPendingTitleRow: {
+  flexDirection: "row",
+  alignItems: "center",
+  justifyContent: "space-between",
+  gap: normalize(10),
+  marginBottom: normalize(4),
+},
+
+duoPendingTitle: {
+  fontSize: normalize(13.2),
+  lineHeight: normalize(17),
+  fontFamily: "Comfortaa_700Bold",
+  flex: 1,
+  minWidth: 0,
+  includeFontPadding: false,
+},
+
+duoPendingSub: {
+  fontSize: normalize(12.0),
+  lineHeight: normalize(16),
+  fontFamily: "Comfortaa_400Regular",
+  includeFontPadding: false,
+},
+  spotDim: {
+  ...StyleSheet.absoluteFillObject,
+  backgroundColor: "rgba(0,0,0,0.72)", // au lieu de 0.52
+},
+  spotBlur: {
+    ...StyleSheet.absoluteFillObject,
+  },
+  spotRing: {
+    position: "absolute",
+    borderWidth: 1,
+    borderColor: "rgba(249,115,22,0.55)",
+    backgroundColor: "rgba(249,115,22,0.10)",
+  },
+  spotCtaWrap: {
+    position: "absolute",
+    borderRadius: normalize(18),
+    overflow: "hidden",
+    shadowColor: "#000",
+    shadowOpacity: 0.30,
+    shadowRadius: 22,
+    shadowOffset: { width: 0, height: 12 },
+    elevation: 10,
+  },
+  duoPendingStepsWrap: {
+  marginTop: normalize(8),
+  gap: normalize(6),
+},
+duoPendingStepRow: {
+  flexDirection: "row",
+  alignItems: "center",
+  gap: normalize(8),
+},
+duoPendingStepDot: {
+  width: normalize(6),
+  height: normalize(6),
+  borderRadius: normalize(999),
+  backgroundColor: "#6366F1",
+  marginTop: normalize(1),
+},
+duoPendingStepText: {
+  flex: 1,
+  minWidth: 0,
+  fontSize: normalize(11.6),
+  lineHeight: normalize(15),
+  fontFamily: "Comfortaa_400Regular",
+  includeFontPadding: false,
+},
+  spotCtaGrad: {
+    flex: 1,
+    borderRadius: normalize(18),
+    paddingHorizontal: normalize(14),
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "space-between",
+  },
+  spotCtaText: {
+    fontSize: normalize(14.2),
+    fontFamily: "Comfortaa_700Bold",
+    color: "#0B1120",
+    flex: 1,
+    minWidth: 0,
+    textAlign: "center",
+    includeFontPadding: false,
+  },
+  spotMsgWrap: {
+    position: "absolute",
+  },
+  spotMsgCard: {
+    borderRadius: normalize(18),
+    borderWidth: StyleSheet.hairlineWidth,
+    paddingVertical: normalize(12),
+    paddingHorizontal: normalize(12),
+    overflow: "hidden",
+  },
+  spotMsgTitle: {
+    fontSize: normalize(13.6),
+    lineHeight: normalize(18),
+    fontFamily: "Comfortaa_700Bold",
+    marginBottom: normalize(6),
+    includeFontPadding: false,
+  },
+  spotMsgSub: {
+    fontSize: normalize(12.4),
+    lineHeight: normalize(16.5),
+    fontFamily: "Comfortaa_400Regular",
+    includeFontPadding: false,
+  },
 discoverWideTitle: {
   fontSize: normalize(13.8),
   fontFamily: "Comfortaa_700Bold",
@@ -2985,13 +3615,21 @@ discoverWideSub: {
   fontFamily: "Comfortaa_400Regular",
   includeFontPadding: false,
 },
+markHalo: {
+  borderRadius: normalize(18),
+  backgroundColor: "rgba(255,255,255,0.30)",
+},
+markGlow: {
+  borderRadius: normalize(18),
+  backgroundColor: "rgba(249,115,22,0.28)",
+},
 
   discoverBigCard: {
     flex: 1,
     minHeight: normalize(104),
     borderRadius: normalize(18),
     padding: normalize(14),
-    borderWidth: StyleSheet.hairlineWidth,
+    borderWidth: ANDROID_HAIRLINE,
   },
   discoverBigIcon: {
     width: normalize(34),
@@ -2999,7 +3637,7 @@ discoverWideSub: {
     borderRadius: normalize(17),
     alignItems: "center",
     justifyContent: "center",
-    borderWidth: StyleSheet.hairlineWidth,
+    borderWidth: ANDROID_HAIRLINE,
     marginBottom: normalize(10),
   },
   discoverBigTitle: {
@@ -3012,6 +3650,7 @@ discoverWideSub: {
     lineHeight: normalize(16),
     fontFamily: "Comfortaa_400Regular",
     includeFontPadding: false,
+    opacity: 0.85,
   },
 todayHubHeaderRow: {
     flexDirection: "row",
@@ -3047,6 +3686,77 @@ todayHubHeaderRow: {
    marginBottom: normalize(10),
    opacity: 0.92,
  },
+   duoPendingWrap: {
+    width: "100%",
+    borderRadius: normalize(18),
+    borderWidth: StyleSheet.hairlineWidth,
+    padding: normalize(12),
+    marginBottom: normalize(12),
+    overflow: "hidden",
+  },
+  duoPendingGlow: {
+    position: "absolute",
+    left: normalize(-50),
+    right: normalize(-50),
+    top: normalize(-38),
+    height: normalize(110),
+    borderRadius: normalize(999),
+    transform: [{ rotate: "-8deg" }],
+  },
+  duoPendingRow: {
+    flexDirection: "row",
+    alignItems: "flex-start",
+    gap: normalize(10),
+    marginBottom: normalize(10),
+  },
+  duoPendingIcon: {
+    width: normalize(34),
+    height: normalize(34),
+    borderRadius: normalize(17),
+    alignItems: "center",
+    justifyContent: "center",
+    backgroundColor: "rgba(99,102,241,0.12)",
+    borderWidth: StyleSheet.hairlineWidth,
+    borderColor: "rgba(99,102,241,0.26)",
+  },
+  duoPendingDotWrap: {
+    width: normalize(16),
+    height: normalize(16),
+    alignItems: "center",
+    justifyContent: "center",
+  },
+  duoPendingDot: {
+    width: normalize(8),
+    height: normalize(8),
+    borderRadius: normalize(999),
+    backgroundColor: "#6366F1",
+  },
+  duoPendingActions: {
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "flex-end",
+  },
+  duoPendingCta: {
+    borderRadius: normalize(16),
+    overflow: "hidden",
+    alignSelf: "flex-end",
+    minWidth: normalize(120),
+  },
+  duoPendingCtaGrad: {
+    borderRadius: normalize(16),
+    paddingVertical: normalize(10),
+    paddingHorizontal: normalize(12),
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "space-between",
+    gap: normalize(10),
+  },
+  duoPendingCtaText: {
+    fontSize: normalize(13.2),
+    fontFamily: "Comfortaa_700Bold",
+    color: "#0B1120",
+  },
+
   todayHubActiveImg: {
     width: "100%",
     height: "100%",
@@ -3076,6 +3786,7 @@ todayHubHeaderRow: {
   borderWidth: StyleSheet.hairlineWidth,
   padding: normalize(12),
   marginBottom: normalize(12),
+  backgroundColor: "rgba(249,115,22,0.08)",
 },
 duoNudgeRow: {
   flexDirection: "row",
@@ -3106,7 +3817,7 @@ todayHubActionCardSingle: {
   width: "100%",
   borderRadius: normalize(18),
   padding: normalize(12),
-  maxWidth: Math.min(CONTENT_W, normalize(170)),
+  maxWidth: CONTENT_W,
   borderWidth: StyleSheet.hairlineWidth,
   minHeight: normalize(84),
    alignSelf: "center",
@@ -3152,10 +3863,7 @@ dailyBonusStroke: {
   borderRadius: normalize(24),
   padding: normalize(1),
   borderWidth: StyleSheet.hairlineWidth,
-  shadowOffset: { width: 0, height: normalize(7) },
- shadowOpacity: 0.14,
- shadowRadius: normalize(14),
- elevation: 5,
+ ...shadowSoft,
 },
 
 dailyBonusCard: {
@@ -3226,11 +3934,11 @@ dailyBonusMainRow: {
   gap: normalize(12),
 },
 dailyBonusTitleKeynote: {
-  fontSize: normalize(16.8),
   lineHeight: normalize(21),
   fontFamily: "Comfortaa_700Bold",
   marginBottom: normalize(6),
   includeFontPadding: false,
+  fontSize: normalize(14.6),
 },
 dailyBonusSubKeynote: {
   fontSize: normalize(13.0),
@@ -3270,13 +3978,13 @@ dailyBonusMicro: {
 },
 
 dailyBonusIconWrap: {
-  width: normalize(72),
+  width: normalize(68),
   alignItems: "flex-end",
 },
 
 dailyBonusIconCircleKeynote: {
-  width: normalize(64),
-  height: normalize(64),
+  width: normalize(56),
+ height: normalize(56),
   borderRadius: normalize(32),
   alignItems: "center",
   justifyContent: "center",
@@ -3400,7 +4108,9 @@ duoNudgeSoloText: {
     fontFamily: "Comfortaa_700Bold",
   },
 seeAllWrap: {
-  width: CONTENT_W,
+width: "100%",
+maxWidth: CONTENT_W,
+alignSelf: "center",
   marginTop: normalize(2),
   marginBottom: normalize(6),
 },
@@ -3431,8 +4141,8 @@ seeAllText: {
 },
 todayHubWrap: {
   paddingHorizontal: SPACING,
-  marginTop: SPACING * 1.1,
-  marginBottom: SPACING * 0.9,
+  marginTop: normalize(14), // au lieu de 6
+  marginBottom: normalize(22),
   width: "100%",
   alignItems: "center",
 },
@@ -3444,11 +4154,7 @@ todayHubStroke: {
   borderRadius: normalize(24),
   padding: normalize(1),
  borderWidth: StyleSheet.hairlineWidth,
-  shadowColor: "#000",
- shadowOffset: { width: 0, height: normalize(8) },
- shadowOpacity: 0.14,
- shadowRadius: normalize(14),
- elevation: 5,
+  ...shadowSoft,
 },
 todayHubCard: {
   borderRadius: normalize(23),
@@ -3515,16 +4221,12 @@ todayHubPrimaryBtnWrap: {
 },
 todayHubPrimaryBtn: {
   borderRadius: normalize(18),
-  paddingVertical: normalize(12),
   paddingHorizontal: normalize(14),
   flexDirection: "row",
   alignItems: "center",
   justifyContent: "space-between",
-  shadowColor: "#000",
- shadowOffset: { width: 0, height: normalize(5) },
- shadowOpacity: 0.18,
- shadowRadius: normalize(12),
- elevation: 4,
+  ...shadowSoft,
+  paddingVertical: normalize(14),
 },
 todayHubPrimaryText: {
   fontSize: normalize(14.2),
@@ -3554,11 +4256,7 @@ tutorialFabGlass: {
   justifyContent: "center",
   borderWidth: StyleSheet.hairlineWidth,
   borderColor: "rgba(255,255,255,0.25)",
-  shadowColor: "#000",
-  shadowOffset: { width: 0, height: normalize(6) },
-  shadowOpacity: 0.35,
-  shadowRadius: normalize(10),
-  elevation: 8,
+  ...shadowSoft,
 },
   gradientContainer: {
     flex: 1,
@@ -3569,18 +4267,17 @@ tutorialFabGlass: {
     paddingBottom: SPACING * 5, // rythme global homogène
   },
   heroSection: {
-    width: SCREEN_WIDTH,
-    justifyContent: "center",
-    alignItems: "center",
-    overflow: "hidden",
-    position: "relative",
-    minHeight: normalize(400),
-  },
-  backgroundVideo: {
-    position: "absolute",
-    left: 0,
-    width: SCREEN_WIDTH,
-  },
+  width: "100%",
+  justifyContent: "center",
+  alignItems: "center",
+  overflow: "hidden",
+  position: "relative",
+},
+
+backgroundVideo: {
+  ...StyleSheet.absoluteFillObject,
+}
+,
   heroOverlay: {
     position: "absolute",
     left: 0,
@@ -3602,28 +4299,28 @@ tutorialFabGlass: {
     marginBottom: normalize(12),
   },
   logoKeynote: {
-    width: normalize(75),
-    height: normalize(75),
-  },
+  width: normalize(82), 
+  height: normalize(82),
+},
+heroBrandPillText: {
+  fontSize: normalize(15.2),
+  fontFamily: "Comfortaa_700Bold",
+  color: "#FFFFFF",          // ✅ BLANC NET
+  letterSpacing: 1.6,
+},
   heroBrandPill: {
-    paddingHorizontal: normalize(14),
-    paddingVertical: normalize(7),
-    borderRadius: normalize(999),
-    borderWidth: StyleSheet.hairlineWidth,
-    borderColor: "rgba(255,255,255,0.20)",
-    backgroundColor: "rgba(0,0,0,0.22)",
-  },
-  heroBrandPillText: {
-    fontSize: normalize(13.6),
-    fontFamily: "Comfortaa_700Bold",
-    color: "rgba(255,255,255,0.92)",
-    letterSpacing: 1.2,
-  },
+  paddingHorizontal: normalize(18),
+  paddingVertical: normalize(9),
+  borderRadius: normalize(999),
+  borderWidth: StyleSheet.hairlineWidth,
+  borderColor: "rgba(255,255,255,0.35)",
+  backgroundColor: "rgba(0,0,0,0.28)", // un poil plus dense
+},
  heroTitleKeynote: {
     width: "100%",
     maxWidth: CONTENT_W,
-    fontSize: normalize(31),
-    lineHeight: normalize(35),
+    fontSize: normalize(32.5),
+    lineHeight: normalize(36.5),
     fontFamily: "Comfortaa_700Bold",
     textAlign: "center",
     marginBottom: normalize(10),
@@ -3632,7 +4329,7 @@ tutorialFabGlass: {
   heroSubtitleKeynote: {
     width: "100%",
     maxWidth: CONTENT_W,
-    fontSize: normalize(15.5),
+    fontSize: normalize(15.2),
     lineHeight: normalize(21),
     fontFamily: "Comfortaa_400Regular",
     textAlign: "center",
@@ -3697,97 +4394,8 @@ heroCtaIcon: {
   },
     dailyBonusWrapper: {
     paddingHorizontal: SPACING,
-    // bien séparé visuellement du New Year
-    marginTop: SPACING * 0.3,
-    marginBottom: SPACING * 1.6,
-  },
-  dailyBonusOuter: {
-    borderRadius: normalize(20),
-    padding: normalize(1.5),
-    shadowColor: "#000",
-    shadowOffset: { width: 0, height: normalize(4) },
-    shadowOpacity: 0.22,
-    shadowRadius: normalize(8),
-    elevation: 5,
-  },
-  dailyBonusBlur: {
-    borderRadius: normalize(18),
-    overflow: "hidden",
-  },
-  dailyBonusContentRow: {
-    flexDirection: "row",
-    alignItems: "center",
-    paddingVertical: normalize(12),
-    paddingHorizontal: normalize(14),
-  },
-  dailyBonusTextCol: {
-    flex: 1,
-    paddingRight: normalize(8),
-  },
-  dailyBonusTag: {
-    alignSelf: "flex-start",
-    paddingHorizontal: normalize(10),
-    paddingVertical: normalize(4),
-    borderRadius: normalize(999),
-    backgroundColor: "rgba(0,0,0,0.35)",
-    flexDirection: "row",
-    alignItems: "center",
-    gap: normalize(6),
-    marginBottom: normalize(6),
-  },
-  dailyBonusTagText: {
-    fontSize: normalize(10),
-    fontFamily: "Comfortaa_700Bold",
-    letterSpacing: 1,
-    color: "#FFECB3",
-  },
-  dailyBonusTitle: {
-    fontSize: normalize(16),
-    fontFamily: "Comfortaa_700Bold",
-    color: "#FFF8E1",
-    marginBottom: normalize(4),
-  },
-  dailyBonusText: {
-    fontSize: normalize(13),
-    fontFamily: "Comfortaa_400Regular",
-    color: "rgba(255,255,255,0.9)",
-  },
-  dailyBonusIconCol: {
-    marginLeft: normalize(10),
-    alignItems: "center",
-    justifyContent: "center",
-    minWidth: normalize(72),
-  },
-  dailyBonusIconCircleOuter: {
-    width: normalize(56),
-    height: normalize(56),
-    borderRadius: normalize(28),
-    alignItems: "center",
-    justifyContent: "center",
-    shadowColor: "#000",
-    shadowOffset: { width: 0, height: normalize(3) },
-    shadowOpacity: 0.25,
-    shadowRadius: normalize(6),
-    elevation: 4,
-  },
-  dailyBonusIconCircleInner: {
-    width: normalize(48),
-    height: normalize(48),
-    borderRadius: normalize(24),
-    alignItems: "center",
-    justifyContent: "center",
-    backgroundColor: "rgba(0,0,0,0.35)",
-  },
-  dailyBonusPillText: {
-    marginTop: normalize(6),
-    fontSize: normalize(10),
-    fontFamily: "Comfortaa_700Bold",
-    color: "rgba(255,255,255,0.85)",
-    paddingHorizontal: normalize(8),
-    paddingVertical: normalize(3),
-    borderRadius: normalize(999),
-    borderWidth: StyleSheet.hairlineWidth,
-    borderColor: "rgba(255,255,255,0.4)",
+    marginTop: SPACING * 0.2,
+  marginBottom: SPACING * 1.2,
   },
   challengeImage: {
     width: "100%",
@@ -3820,9 +4428,8 @@ heroCtaIcon: {
     discoverWrapper: {
     width: "100%",
     alignItems: "center",
-    // plus petit pour casser le "gros trou" que tu vois actuellement
-    marginTop: SPACING * 0.7,
     marginBottom: SPACING * 1.6,
+    marginTop: SPACING * 0.5,
   },
   blurView: {
     position: "absolute",
@@ -3882,7 +4489,7 @@ actionButton: {
 
 const getDynamicStyles = (currentTheme: Theme, isDarkMode: boolean) => ({
   heroTitle: {
-    color: currentTheme.colors.textPrimary,
+    color: "#FFFFFF",
   },
   heroSubtitle: {
     color: "rgba(255,255,255,0.94)",
@@ -3923,8 +4530,10 @@ const stylesDaily = StyleSheet.create({
     textAlign: "center",
   },
   heroCard: {
-    width: CONTENT_W,
-    aspectRatio: 1.6,
+    width: "100%",
+maxWidth: CONTENT_W,
+alignSelf: "center",
+     aspectRatio: 1.75,
     borderRadius: normalize(18),
     overflow: "hidden",
     marginBottom: SPACING,
@@ -4002,10 +4611,13 @@ heroCatPillText: {
     fontFamily: "Comfortaa_700Bold",
   },
   grid: {
-    width: CONTENT_W,
+    width: "100%",
+maxWidth: CONTENT_W,
+alignSelf: "center",
     flexDirection: "row",
     flexWrap: "wrap",
     justifyContent: "space-between",
+    gap: normalize(10),
   },
   miniCard: {
     width: (CONTENT_W - SPACING) / 2,

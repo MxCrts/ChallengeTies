@@ -33,6 +33,28 @@ const normalize = (size: number) => {
   return Math.round(size * scale);
 };
 
+const withAlpha = (hexOrColor: string, alpha: number) => {
+  const clamp = (n: number, min = 0, max = 1) => Math.min(Math.max(n, min), max);
+  const a = clamp(alpha);
+
+  if (/^rgba?\(/i.test(hexOrColor)) {
+    const nums = hexOrColor.match(/[\d.]+/g) || [];
+    const [r = "0", g = "0", b = "0"] = nums;
+    return `rgba(${r}, ${g}, ${b}, ${a})`;
+  }
+
+  let hex = hexOrColor.replace("#", "");
+  if (hex.length === 3) hex = hex.split("").map((c) => c + c).join("");
+  if (hex.length >= 6) {
+    const r = parseInt(hex.slice(0, 2), 16);
+    const g = parseInt(hex.slice(2, 4), 16);
+    const b = parseInt(hex.slice(4, 6), 16);
+    return `rgba(${r}, ${g}, ${b}, ${a})`;
+  }
+  return `rgba(0,0,0,${a})`;
+};
+
+
 type UserInventory = {
   streakPass?: number;
   // futurs items: superBoost, rerollToken, etc.
@@ -248,120 +270,129 @@ const InventoryScreen: React.FC = () => {
         >
           {/* Hero / résumé */}
           <View
-            style={[
-              styles.heroCard,
-              {
-                backgroundColor: isDark
-                  ? "rgba(10,10,18,0.95)"
-                  : "rgba(255,255,255,0.97)",
-                borderColor: isDark
-                  ? "rgba(255,255,255,0.12)"
-                  : "rgba(0,0,0,0.06)",
-              },
-            ]}
-          >
-            <View style={styles.heroHeaderRow}>
-              <View style={styles.heroTitleRow}>
-                <Ionicons
-                  name="briefcase-outline"
-                  size={normalize(22)}
-                  color={currentTheme.colors.secondary}
-                />
-                <Text
-                  style={[
-                    styles.heroTitle,
-                    { color: currentTheme.colors.textPrimary },
-                  ]}
-                >
-                  {t("inventory.title", "Inventaire")}
-                </Text>
-              </View>
-
-              {hasItems && (
-                <View
-                  style={[
-                    styles.heroBadge,
-                    {
-                      backgroundColor: isDark
-                        ? "rgba(255,255,255,0.06)"
-                        : "rgba(0,0,0,0.04)",
-                    },
-                  ]}
-                >
-                  <Ionicons
-                    name="sparkles"
-                    size={normalize(14)}
-                    color={currentTheme.colors.secondary}
-                  />
-                  <Text
-                    style={[
-                      styles.heroBadgeText,
-                      { color: currentTheme.colors.textSecondary },
-                    ]}
-                  >
-                    {t("inventory.totalItems", {
-                      defaultValue: "{{count}} objets",
-                      count: totalItems,
-                    })}
-                  </Text>
-                </View>
-              )}
-            </View>
-
-            <Text
-              style={[
-                styles.heroSubtitle,
-                { color: currentTheme.colors.textSecondary },
-              ]}
-            >
-              {t(
-                "inventory.subtitle",
-                "Gère ici tes bonus spéciaux et protections de série."
-              )}
-            </Text>
-
-            <View style={styles.heroStatsRow}>
-              <View style={styles.heroStatCard}>
-                <Text
   style={[
-    styles.statLabel,
-    { color: currentTheme.colors.textSecondary },
+    styles.heroCard,
+    {
+      backgroundColor: isDark
+        ? withAlpha(currentTheme.colors.cardBackground, 0.72)
+        : withAlpha("#FFFFFF", 0.96),
+      borderColor: isDark ? withAlpha("#FFFFFF", 0.12) : withAlpha("#000000", 0.07),
+    },
   ]}
 >
-  {t("inventory.items.streakPass.title", "Streak Pass")}
-</Text>
-                <View style={styles.statValueRow}>
-                  <Ionicons
-                    name="shield-checkmark"
-                    size={normalize(18)}
-                    color="#FFD54F"
-                  />
-                  <Text style={styles.statValueText}>×{streakPassCount}</Text>
-                </View>
-              </View>
+  {/* sheen premium */}
+  <LinearGradient
+    pointerEvents="none"
+    colors={[
+      "transparent",
+      isDark ? "rgba(255,255,255,0.10)" : "rgba(255,255,255,0.70)",
+      "transparent",
+    ]}
+    start={{ x: 0, y: 0 }}
+    end={{ x: 1, y: 1 }}
+    style={styles.heroSheen}
+  />
+  {/* glow orb */}
+  <View
+    pointerEvents="none"
+    style={[
+      styles.heroGlow,
+      { backgroundColor: withAlpha(currentTheme.colors.secondary, isDark ? 0.14 : 0.10) },
+    ]}
+  />
 
-              <View style={styles.heroStatCard}>
-                <Text
-                  style={[
-                    styles.statLabel,
-                    { color: currentTheme.colors.textSecondary },
-                  ]}
-                >
-                  {t("trophiesLabel", "Trophées")}
-                </Text>
-                <View style={styles.statValueRow}>
-                  <Ionicons
-                    name="trophy"
-                    size={normalize(18)}
-                    color={currentTheme.colors.trophy}
-                  />
-                  <Text style={styles.statValueText}>
-                    {userData?.trophies ?? 0}
-                  </Text>
-                </View>
-              </View>
-            </View>
-          </View>
+  <View style={styles.heroHeaderRow}>
+    <View style={styles.heroTitleRow}>
+      <View
+        style={[
+          styles.heroIconPill,
+          {
+            backgroundColor: isDark ? "rgba(255,255,255,0.06)" : "rgba(0,0,0,0.04)",
+            borderColor: isDark ? withAlpha("#FFFFFF", 0.14) : withAlpha("#000000", 0.08),
+          },
+        ]}
+      >
+        <Ionicons name="briefcase-outline" size={normalize(18)} color={currentTheme.colors.secondary} />
+      </View>
+
+      <Text style={[styles.heroTitle, { color: currentTheme.colors.textPrimary }]}>
+        {t("inventory.title", "Inventaire")}
+      </Text>
+    </View>
+
+    {hasItems && (
+      <View
+        style={[
+          styles.heroBadge,
+          {
+            backgroundColor: isDark ? "rgba(255,255,255,0.06)" : "rgba(0,0,0,0.04)",
+            borderColor: isDark ? withAlpha("#FFFFFF", 0.12) : withAlpha("#000000", 0.08),
+          },
+        ]}
+      >
+        <Ionicons name="sparkles" size={normalize(14)} color={currentTheme.colors.secondary} />
+        <Text style={[styles.heroBadgeText, { color: currentTheme.colors.textSecondary }]}>
+          {t("inventory.totalItems", { defaultValue: "{{count}} objets", count: totalItems })}
+        </Text>
+      </View>
+    )}
+  </View>
+
+  <Text style={[styles.heroSubtitle, { color: currentTheme.colors.textSecondary }]}>
+    {t("inventory.subtitle", "Gère ici tes bonus spéciaux et protections de série.")}
+  </Text>
+
+  <View style={styles.heroStatsRow}>
+    {/* Streak Pass */}
+    <View
+      style={[
+        styles.heroStatCard,
+        {
+          backgroundColor: isDark ? "rgba(255,255,255,0.04)" : "rgba(0,0,0,0.03)",
+          borderColor: isDark ? withAlpha("#FFFFFF", 0.12) : withAlpha("#000000", 0.07),
+        },
+      ]}
+    >
+      <Text style={[styles.statLabel, { color: currentTheme.colors.textSecondary }]}>
+        {t("inventory.items.streakPass.title", "Streak Pass")}
+      </Text>
+
+      <View style={styles.statValueRow}>
+        <View style={[styles.statIconBadge, { backgroundColor: withAlpha("#FFD54F", isDark ? 0.16 : 0.22) }]}>
+          <Ionicons name="shield-checkmark" size={normalize(16)} color="#FFD54F" />
+        </View>
+        <Text style={[styles.statValueText, { color: currentTheme.colors.textPrimary }]}>
+          ×{streakPassCount}
+        </Text>
+      </View>
+    </View>
+
+    {/* Trophies */}
+    <View
+      style={[
+        styles.heroStatCard,
+        {
+          backgroundColor: isDark ? "rgba(255,255,255,0.04)" : "rgba(0,0,0,0.03)",
+          borderColor: isDark ? withAlpha("#FFFFFF", 0.12) : withAlpha("#000000", 0.07),
+        },
+      ]}
+    >
+      <Text style={[styles.statLabel, { color: currentTheme.colors.textSecondary }]}>
+        {t("trophiesLabel", "Trophées")}
+      </Text>
+
+      <View style={styles.statValueRow}>
+        <View style={[styles.statIconBadge, { backgroundColor: withAlpha(currentTheme.colors.trophy, isDark ? 0.16 : 0.18) }]}>
+          <Ionicons name="trophy" size={normalize(16)} color={currentTheme.colors.trophy} />
+        </View>
+        <Text style={[styles.statValueText, { color: currentTheme.colors.textPrimary }]}>
+          {userData?.trophies ?? 0}
+        </Text>
+      </View>
+    </View>
+  </View>
+</View>
+
 
           {/* Liste détaillée des items */}
           <View style={styles.section}>
@@ -402,6 +433,18 @@ const InventoryScreen: React.FC = () => {
                       },
                     ]}
                   >
+                    <LinearGradient
+  pointerEvents="none"
+  colors={[
+    "transparent",
+    isDark ? "rgba(255,255,255,0.08)" : "rgba(255,255,255,0.65)",
+    "transparent",
+  ]}
+  start={{ x: 0, y: 0 }}
+  end={{ x: 1, y: 1 }}
+  style={styles.itemSheen}
+/>
+
                     <View
                       style={[
                         styles.itemIconCircle,
@@ -417,22 +460,30 @@ const InventoryScreen: React.FC = () => {
 
                     <View style={styles.itemTextZone}>
                       <View style={styles.itemTitleRow}>
-                        <Text
-                          style={[
-                            styles.itemTitle,
-                            { color: currentTheme.colors.textPrimary },
-                          ]}
-                        >
-                          {t(
-                            "inventory.items.streakPass.title",
-                            "Streak Pass"
-                          )}
-                        </Text>
-                        <View style={styles.itemCountBadge}>
-                          <Text style={styles.itemCountText}>
-                            ×{streakPassCount}
-                          </Text>
-                        </View>
+  <Text
+    style={[
+      styles.itemTitle,
+      { color: currentTheme.colors.textPrimary },
+    ]}
+  >
+    {t("inventory.items.streakPass.title", "Streak Pass")}
+  </Text>
+
+  <View
+    style={[
+      styles.itemCountBadge,
+      {
+        backgroundColor: isDark ? "rgba(255,255,255,0.06)" : "rgba(0,0,0,0.05)",
+        borderColor: isDark ? withAlpha("#FFFFFF", 0.12) : withAlpha("#000000", 0.08),
+      },
+    ]}
+  >
+    <Text style={[styles.itemCountText, { color: currentTheme.colors.textPrimary }]}>
+      ×{streakPassCount}
+    </Text>
+  </View>
+</View>
+
                       </View>
 
                       <Text
@@ -448,7 +499,6 @@ const InventoryScreen: React.FC = () => {
                         )}
                       </Text>
                     </View>
-                  </View>
                 )}
 
                 {/* ⚠️ Futurs items
@@ -506,18 +556,10 @@ const InventoryScreen: React.FC = () => {
               color={currentTheme.colors.secondary}
               style={{ marginRight: normalize(8) }}
             />
-            <Text
-              style={[
-                styles.helperText,
-                { color: currentTheme.colors.textSecondary },
-              ]}
-            >
-              {t(
-  "inventory.streakHint",
-  "Tu peux utiliser tes Streak Pass dans l'écran d'un défi manqué pour sauver ta série."
-)}
+            <Text style={[styles.helperText, { color: currentTheme.colors.textSecondary }]}>
+  {t("inventory.streakHint")}
+</Text>
 
-            </Text>
           </View>
         </ScrollView>
 
@@ -623,13 +665,14 @@ const styles = StyleSheet.create({
    textAlign: I18nManager.isRTL ? "right" : "left",
   },
   heroBadge: {
-    flexDirection: "row",
-    alignItems: "center",
-    borderRadius: 999,
-    paddingHorizontal: normalize(10),
-    paddingVertical: normalize(4),
-    columnGap: normalize(4),
-  },
+  flexDirection: "row",
+  alignItems: "center",
+  borderRadius: 999,
+  paddingHorizontal: normalize(10),
+  paddingVertical: normalize(4),
+  columnGap: normalize(6),
+  borderWidth: StyleSheet.hairlineWidth,
+},
   heroBadgeText: {
     fontSize: normalize(11),
     fontFamily: "Comfortaa_400Regular",
@@ -641,12 +684,13 @@ const styles = StyleSheet.create({
     columnGap: normalize(10),
   },
   heroStatCard: {
-    flex: 1,
-    borderRadius: normalize(14),
-    paddingHorizontal: normalize(10),
-    paddingVertical: normalize(8),
-    backgroundColor: "rgba(0,0,0,0.18)",
-  },
+  flex: 1,
+  borderRadius: normalize(16),
+  paddingHorizontal: normalize(12),
+  paddingVertical: normalize(10),
+  borderWidth: StyleSheet.hairlineWidth,
+  overflow: "hidden",
+},
   statLabel: {
     fontSize: normalize(11),
     fontFamily: "Comfortaa_400Regular",
@@ -661,12 +705,53 @@ const styles = StyleSheet.create({
     columnGap: normalize(6),
   },
   statValueText: {
-    fontSize: normalize(16),
-    fontFamily: "Comfortaa_700Bold",
-    color: "#FFFFFF",
-    writingDirection: I18nManager.isRTL ? "rtl" : "ltr",
-   textAlign: "left",
-  },
+  fontSize: normalize(16),
+  fontFamily: "Comfortaa_700Bold",
+  includeFontPadding: false,
+  writingDirection: I18nManager.isRTL ? "rtl" : "ltr",
+  textAlign: "left",
+},
+heroSheen: {
+  position: "absolute",
+  top: -normalize(30),
+  left: -normalize(70),
+  width: "175%",
+  height: normalize(96),
+  transform: [{ rotate: "-12deg" }],
+  opacity: 0.85,
+},
+heroGlow: {
+  position: "absolute",
+  top: -normalize(18),
+  right: -normalize(18),
+  width: normalize(120),
+  height: normalize(120),
+  borderRadius: 999,
+},
+heroIconPill: {
+  width: normalize(34),
+  height: normalize(34),
+  borderRadius: 999,
+  alignItems: "center",
+  justifyContent: "center",
+  borderWidth: StyleSheet.hairlineWidth,
+},
+statIconBadge: {
+  width: normalize(28),
+  height: normalize(28),
+  borderRadius: 999,
+  alignItems: "center",
+  justifyContent: "center",
+},
+itemSheen: {
+  position: "absolute",
+  top: -normalize(26),
+  left: -normalize(70),
+  width: "175%",
+  height: normalize(84),
+  transform: [{ rotate: "-12deg" }],
+  opacity: 0.75,
+},
   section: {
     marginTop: normalize(8),
     marginBottom: normalize(8),
@@ -690,14 +775,15 @@ const styles = StyleSheet.create({
     marginTop: normalize(2),
   },
   itemCard: {
-    flexDirection: "row",
-    alignItems: "center",
-    paddingHorizontal: normalize(12),
-    paddingVertical: normalize(10),
-    borderRadius: normalize(16),
-    borderWidth: 1,
-    marginBottom: normalize(8),
-  },
+  flexDirection: "row",
+  alignItems: "center",
+  paddingHorizontal: normalize(12),
+  paddingVertical: normalize(10),
+  borderRadius: normalize(16),
+  borderWidth: 1,
+  marginBottom: normalize(8),
+  overflow: "hidden",
+},
   itemIconCircle: {
     width: normalize(34),
     height: normalize(34),
@@ -722,18 +808,18 @@ const styles = StyleSheet.create({
    textAlign: I18nManager.isRTL ? "right" : "left",
   },
   itemCountBadge: {
-    borderRadius: 999,
-    paddingHorizontal: normalize(8),
-    paddingVertical: normalize(2),
-    backgroundColor: "rgba(0,0,0,0.55)",
-  },
-  itemCountText: {
-    fontSize: normalize(11),
-    fontFamily: "Comfortaa_700Bold",
-    color: "#FFD54F",
-    writingDirection: I18nManager.isRTL ? "rtl" : "ltr",
-   textAlign: "center",
-  },
+  borderRadius: 999,
+  paddingHorizontal: normalize(8),
+  paddingVertical: normalize(3),
+  borderWidth: StyleSheet.hairlineWidth,
+},
+ itemCountText: {
+  fontSize: normalize(11),
+  fontFamily: "Comfortaa_700Bold",
+  includeFontPadding: false,
+  writingDirection: I18nManager.isRTL ? "rtl" : "ltr",
+  textAlign: "center",
+},
   itemSubtitle: {
     fontSize: normalize(11),
     fontFamily: "Comfortaa_400Regular",

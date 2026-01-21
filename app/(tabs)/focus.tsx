@@ -126,15 +126,6 @@ const isMarkedToday = (lastMarkedRaw: any): boolean => {
 type IntervalId = ReturnType<typeof setInterval>;
 type TimeoutId = ReturnType<typeof setTimeout>;
 
-type ToastType = "success" | "error" | "info";
-
-type ToastState = {
-  visible: boolean;
-  type: ToastType;
-  title: string;
-  message?: string;
-};
-
 export default function FocusScreen() {
   const { t } = useTranslation();
   const {
@@ -183,65 +174,6 @@ export default function FocusScreen() {
 
   const topIndexRef = useRef(0);
   const bottomIndexRef = useRef(0);
-
-  // —— TOAST PREMIUM —— //
-  const [toast, setToast] = useState<ToastState>({
-    visible: false,
-    type: "info",
-    title: "",
-    message: "",
-  });
-  const toastTimeoutRef = useRef<TimeoutId | null>(null);
-
-  const hideToast = useCallback(() => {
-    setToast((prev) => ({ ...prev, visible: false }));
-    if (toastTimeoutRef.current) {
-      clearTimeout(toastTimeoutRef.current);
-      toastTimeoutRef.current = null;
-    }
-  }, []);
-
-  const showToast = useCallback(
-    (type: ToastType, title: string, message?: string) => {
-      if (!reduceMotion) {
-        if (type === "error") {
-          Haptics.notificationAsync(
-            Haptics.NotificationFeedbackType.Error
-          ).catch(() => {});
-        } else if (type === "success") {
-          Haptics.notificationAsync(
-            Haptics.NotificationFeedbackType.Success
-          ).catch(() => {});
-        } else {
-          Haptics.selectionAsync().catch(() => {});
-        }
-      }
-
-      if (toastTimeoutRef.current) {
-        clearTimeout(toastTimeoutRef.current);
-      }
-
-      setToast({
-        visible: true,
-        type,
-        title,
-        message,
-      });
-
-      toastTimeoutRef.current = setTimeout(() => {
-        hideToast();
-      }, 3500);
-    },
-    [hideToast, reduceMotion]
-  );
-
-  useEffect(() => {
-    return () => {
-      if (toastTimeoutRef.current) {
-        clearTimeout(toastTimeoutRef.current);
-      }
-    };
-  }, []);
 
   // 🔄 Loading selon les challenges courants
   useEffect(() => {
@@ -381,33 +313,9 @@ export default function FocusScreen() {
           return next;
         });
 
-        if (res?.success !== false) {
-          if (!reduceMotion) {
-            Haptics.notificationAsync(
-              Haptics.NotificationFeedbackType.Success
-            ).catch(() => {});
-          }
-
-          showToast(
-            "success",
-            t("dayValidatedTitle", { defaultValue: "Bien joué 🎉" }),
-            t("dayValidatedBody", {
-              defaultValue: "Ta progression a bien été enregistrée pour aujourd’hui.",
-            })
-          );
-        }
-
         setTimeout(() => confettiRef.current?.start?.(), 100);
       } catch (e) {
         console.error("❌ Focus markToday error:", e);
-
-        showToast(
-          "error",
-          t("error", { defaultValue: "Erreur" }),
-          t("markTodayFailed", {
-            defaultValue: "Impossible d’enregistrer aujourd’hui. Réessaie dans un instant.",
-          })
-        );
 
         setLocallyMarkedKeys((prev) => {
           const next = new Set(prev);
@@ -418,7 +326,7 @@ export default function FocusScreen() {
         setMarkingKey(null);
       }
     },
-    [markToday, markingKey, locallyMarkedKeys, reduceMotion, t, showToast]
+    [markToday, markingKey, locallyMarkedKeys, reduceMotion, t]
   );
 
   const handleNavigateToDetails = (item: CurrentChallengeExtended) => {
@@ -776,18 +684,24 @@ export default function FocusScreen() {
             {busy ? (
               <ActivityIndicator color={isDarkMode ? "#000" : "#fff"} />
             ) : (
-              <Text
-                style={[
-                  styles.markTodayButtonText,
-                  {
-                    color: isDarkMode
-                      ? "#000000"
-                      : currentTheme.colors.textPrimary,
-                  },
-                ]}
-              >
-                {t("markToday")}
-              </Text>
+              <View style={styles.markTodayInner}>
+                <Ionicons
+                  name="checkmark-circle-outline"
+                  size={normalizeSize(18)}
+                  color={isDarkMode ? "#000" : "#0b1120"}
+                />
+                <Text
+                  style={[
+                    styles.markTodayButtonText,
+                    { color: isDarkMode ? "#000" : "#0b1120" },
+                  ]}
+                  numberOfLines={1}
+                  adjustsFontSizeToFit
+                  minimumFontScale={0.85}
+                >
+                  {t("markToday")}
+                </Text>
+              </View>
             )}
           </TouchableOpacity>
         )}
@@ -972,42 +886,6 @@ export default function FocusScreen() {
     );
   }
 
-  const toastBg = (() => {
-    switch (toast.type) {
-      case "success":
-        return withAlpha(currentTheme.colors.secondary, isDarkMode ? 0.95 : 0.9);
-      case "error":
-        return withAlpha("#ef4444", 0.96);
-      case "info":
-      default:
-        return withAlpha(currentTheme.colors.cardBackground, 0.98);
-    }
-  })();
-
-  const toastIconName = (() => {
-    switch (toast.type) {
-      case "success":
-        return "checkmark-circle-outline";
-      case "error":
-        return "alert-circle-outline";
-      case "info":
-      default:
-        return "information-circle-outline";
-    }
-  })();
-
-  const toastIconColor = (() => {
-    switch (toast.type) {
-      case "success":
-        return isDarkMode ? "#022c22" : "#064e3b";
-      case "error":
-        return isDarkMode ? "#450a0a" : "#7f1d1d";
-      case "info":
-      default:
-        return isDarkMode ? "#0f172a" : "#0f172a";
-    }
-  })();
-
   return (
     <GlobalLayout>
       <LinearGradient
@@ -1042,300 +920,160 @@ export default function FocusScreen() {
           end={{ x: 0, y: 1 }}
         />
 
-        {/* TOAST GLOBAL */}
-        {toast.visible && (
-          <View pointerEvents="box-none" style={styles.toastWrapper}>
-            <Animated.View
-              entering={FadeInUp.duration(220)}
-              style={[
-                styles.toastContainer,
-                {
-                  backgroundColor: toastBg,
-                  borderColor: withAlpha(currentTheme.colors.border, 0.35),
-                },
-              ]}
-              accessibilityLiveRegion="polite"
-              accessible
-            >
-              <View style={styles.toastIconWrapper}>
-                <Ionicons
-                  name={toastIconName as any}
-                  size={normalizeSize(20)}
-                  color={toastIconColor}
-                />
-              </View>
-              <View style={styles.toastTextWrapper}>
-                <Text
-                  style={[
-                    styles.toastTitle,
-                    {
-                      color:
-                        toast.type === "error"
-                          ? "#fef2f2"
-                          : isDarkMode
-                          ? currentTheme.colors.textPrimary
-                          : "#020617",
-                    },
-                  ]}
-                  numberOfLines={1}
-                >
-                  {toast.title}
-                </Text>
-                {!!toast.message && (
-                  <Text
-                    style={[
-                      styles.toastMessage,
-                      {
-                        color:
-                          toast.type === "error"
-                            ? "#fee2e2"
-                            : isDarkMode
-                            ? currentTheme.colors.textSecondary
-                            : "#1e293b",
-                      },
-                    ]}
-                    numberOfLines={2}
-                  >
-                    {toast.message}
-                  </Text>
-                )}
-              </View>
+        {/* Hero (Apple keynote) */}
+        <View style={styles.headerWrapper}>
+          <LinearGradient
+            colors={[
+              withAlpha(currentTheme.colors.cardBackground, isDarkMode ? 0.60 : 0.92),
+              withAlpha(currentTheme.colors.background, isDarkMode ? 0.40 : 0.86),
+            ]}
+            start={{ x: 0, y: 0 }}
+            end={{ x: 1, y: 1 }}
+            style={[
+              styles.heroCard,
+              { borderColor: withAlpha(currentTheme.colors.border, isDarkMode ? 0.35 : 0.22) },
+            ]}
+          >
+            {/* Top row */}
+            <View style={styles.heroTopRow}>
               <TouchableOpacity
-                onPress={hideToast}
-                hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
+                style={[
+                  styles.trophyContainer,
+                  {
+                    backgroundColor: withAlpha(currentTheme.colors.background, isDarkMode ? 0.45 : 0.55),
+                    borderColor: withAlpha(currentTheme.colors.trophy, isDarkMode ? 0.30 : 0.22),
+                  },
+                ]}
+                onPress={() => router.push("/profile")}
                 accessibilityRole="button"
-                accessibilityLabel={t("close", { defaultValue: "Fermer" })}
+                accessibilityLabel={t("openProfile")}
+                testID="open-profile"
+                activeOpacity={0.85}
               >
                 <Ionicons
-                  name="close-outline"
+                  name="trophy-outline"
                   size={normalizeSize(20)}
-                  color={
-                    isDarkMode
-                      ? currentTheme.colors.textSecondary
-                      : "#0f172a"
-                  }
+                  color={currentTheme.colors.trophy}
+                />
+                <Text style={[styles.trophyText, { color: currentTheme.colors.trophy }]}>
+                  {userTrophies}
+                </Text>
+              </TouchableOpacity>
+
+              <TouchableOpacity
+                style={[
+                  styles.plusButton,
+                  {
+                    backgroundColor: withAlpha(currentTheme.colors.secondary, isDarkMode ? 0.95 : 0.92),
+                    borderColor: withAlpha("#000", isDarkMode ? 0.22 : 0),
+                  },
+                ]}
+                onPress={() => router.push("/create-challenge")}
+                accessibilityRole="button"
+                accessibilityLabel={t("createChallenge")}
+                testID="create-challenge"
+                activeOpacity={0.9}
+              >
+                <Ionicons
+                  name="add"
+                  size={normalizeSize(20)}
+                  color={isDarkMode ? "#000" : "#0b1120"}
                 />
               </TouchableOpacity>
-            </Animated.View>
-          </View>
-        )}
-
-        {/* Header trophées + création */}
-        <View style={styles.headerWrapper}>
-          <View style={styles.headerContainer}>
-            <TouchableOpacity
-              style={[
-                styles.trophyContainer,
-                {
-                  backgroundColor: isDarkMode
-                    ? currentTheme.colors.cardBackground
-                    : "#FF8C00",
-                  borderColor: isDarkMode
-                    ? currentTheme.colors.border
-                    : "#FFF",
-                },
-              ]}
-              onPress={() => router.push("/profile")}
-              accessibilityRole="button"
-              accessibilityLabel={t("openProfile")}
-              testID="open-profile"
-            >
-              <Ionicons
-                name="trophy-outline"
-                size={normalizeSize(28)}
-                color={
-                  isDarkMode ? currentTheme.colors.trophy : "#FFFFFF"
-                }
-              />
-              <Text
-                style={[
-                  styles.trophyText,
-                  {
-                    color: isDarkMode
-                      ? currentTheme.colors.trophy
-                      : "#FFFFFF",
-                  },
-                ]}
-              >
-                {userTrophies}
-              </Text>
-            </TouchableOpacity>
-
-            <TouchableOpacity
-              style={[
-                styles.plusButton,
-                { backgroundColor: currentTheme.colors.secondary },
-              ]}
-              onPress={() => router.push("/create-challenge")}
-              accessibilityRole="button"
-              accessibilityLabel={t("createChallenge")}
-              testID="create-challenge"
-            >
-              <Ionicons
-                name="add-circle-outline"
-                size={normalizeSize(28)}
-                color={
-                  isDarkMode
-                    ? "#000000"
-                    : currentTheme.colors.textPrimary
-                }
-              />
-            </TouchableOpacity>
-          </View>
-
-          {/* KPI strip */}
-          <View style={styles.kpiStrip}>
-            <View
-              style={[
-                styles.kpiPill,
-                {
-                  borderColor: withAlpha(
-                    currentTheme.colors.secondary,
-                    0.6
-                  ),
-                  alignSelf: "center",
-                },
-              ]}
-              accessibilityRole="summary"
-              accessibilityLabel={t("remainingToday", {
-                defaultValue: "À faire aujourd’hui",
-              })}
-            >
-              <Ionicons
-                name="flash-outline"
-                size={normalizeSize(16)}
-                color={currentTheme.colors.secondary}
-              />
-              <Text
-                style={[
-                  styles.kpiText,
-                  {
-                    color: isDarkMode
-                      ? currentTheme.colors.textPrimary
-                      : currentTheme.colors.secondary,
-                  },
-                ]}
-              >
-                {t("remainingToday", {
-                  defaultValue: "À faire aujourd’hui",
-                })}
-                : {kpis.remaining}
-              </Text>
             </View>
-          </View>
 
-          {/* Progression du jour */}
-          <View
-            style={[
-              styles.progressTrack,
-              {
-                backgroundColor: withAlpha(
-                  currentTheme.colors.textSecondary,
-                  0.15
-                ),
-              },
-            ]}
-            accessibilityRole="progressbar"
-            accessibilityValue={{ now: kpis.pct, min: 0, max: 100 }}
-          >
+            {/* Title + KPI */}
+            <View style={styles.heroTitleRow}>
+              <View style={{ flex: 1 }}>
+                <Text style={[styles.heroTitle, { color: currentTheme.colors.textPrimary }]} numberOfLines={1}>
+                  {t("focus", { defaultValue: "Focus" })}
+                </Text>
+                <Text
+                  style={[styles.heroSub, { color: withAlpha(currentTheme.colors.textSecondary, 0.85) }]}
+                  numberOfLines={2}
+                >
+                  {t("remainingToday", { defaultValue: "À faire aujourd’hui" })} : {kpis.remaining}
+                </Text>
+              </View>
+
+              <View
+                style={[
+                  styles.heroPctPill,
+                  { borderColor: withAlpha(currentTheme.colors.secondary, 0.45) },
+                ]}
+                accessibilityRole="summary"
+              >
+                <Text style={[styles.heroPctText, { color: currentTheme.colors.secondary }]}>
+                  {kpis.pct}%
+                </Text>
+                <Text style={[styles.heroPctSub, { color: withAlpha(currentTheme.colors.textSecondary, 0.85) }]}>
+                  {kpis.completed}/{kpis.total}
+                </Text>
+              </View>
+            </View>
+
+            {/* Progress */}
             <View
               style={[
-                styles.progressFill,
-                {
-                  width: `${kpis.pct}%`,
-                  backgroundColor: currentTheme.colors.secondary,
-                },
+                styles.progressTrack,
+                { backgroundColor: withAlpha(currentTheme.colors.textSecondary, isDarkMode ? 0.18 : 0.12) },
               ]}
-            />
-          </View>
-          <Text
-            style={[
-              styles.progressLabel,
-              { color: currentTheme.colors.textSecondary },
-            ]}
-          >
-            {pctLabel}
-          </Text>
-        </View>
-
-        {/* —— Barre d'actions rapides —— */}
-        <View style={styles.quickActions}>
-          <TouchableOpacity
-            onPress={openFocus}
-            activeOpacity={0.9}
-            style={[
-              styles.actionBtn,
-              { backgroundColor: currentTheme.colors.secondary },
-            ]}
-            accessibilityRole="button"
-            accessibilityLabel={t("startFocus", {
-              defaultValue: `Lancer Focus ${focusMinutes}:00`,
-            })}
-            testID="cta-start-focus"
-          >
-            <Ionicons
-              name="timer-outline"
-              size={normalizeSize(18)}
-              color={
-                isDarkMode ? "#000000" : currentTheme.colors.textPrimary
-              }
-            />
-            <Text
-  style={[
-    styles.actionBtnText,
-    {
-      color: isDarkMode
-        ? "#000000"
-        : currentTheme.colors.textPrimary,
-    },
-  ]}
->
-  {`${String(focusMinutes).padStart(2, "0")}:00 ${t("focusShort", {
-    defaultValue: "Focus",
-  })}`}
-</Text>
-
-          </TouchableOpacity>
-
-          <TouchableOpacity
-            onPress={() => router.push("/explore")}
-            activeOpacity={0.9}
-            style={[
-              styles.actionBtnGhost,
-              {
-                borderColor: withAlpha(
-                  currentTheme.colors.secondary,
-                  0.6
-                ),
-              },
-            ]}
-            accessibilityRole="button"
-            accessibilityLabel={t("discoverChallenges", {
-              defaultValue: "Découvrir des défis",
-            })}
-            testID="cta-discover"
-          >
-            <Ionicons
-              name="compass-outline"
-              size={normalizeSize(18)}
-              color={currentTheme.colors.secondary}
-            />
-            <Text
-              style={[
-                styles.actionBtnGhostText,
-                { color: currentTheme.colors.secondary },
-              ]}
-              numberOfLines={1}              // 🆕
-    adjustsFontSizeToFit           // 🆕
-    minimumFontScale={0.75} 
+              accessibilityRole="progressbar"
+              accessibilityValue={{ now: kpis.pct, min: 0, max: 100 }}
             >
-              {t("discover", { defaultValue: "Découvrir" })}
+              <View
+                style={[
+                  styles.progressFill,
+                  { width: `${kpis.pct}%`, backgroundColor: currentTheme.colors.secondary },
+                ]}
+              />
+            </View>
+            <Text style={[styles.progressLabel, { color: withAlpha(currentTheme.colors.textSecondary, 0.85) }]}>
+              {pctLabel}
             </Text>
-          </TouchableOpacity>
-        </View>
 
+            {/* Quick actions (integrées dans le Hero) */}
+            <View style={styles.quickActions}>
+              <TouchableOpacity
+                onPress={openFocus}
+                activeOpacity={0.9}
+                style={[styles.actionBtn, { backgroundColor: currentTheme.colors.secondary }]}
+                accessibilityRole="button"
+                accessibilityLabel={t("startFocus", { defaultValue: `Lancer Focus ${focusMinutes}:00` })}
+                testID="cta-start-focus"
+              >
+                <Ionicons name="timer-outline" size={normalizeSize(18)} color={isDarkMode ? "#000" : "#0b1120"} />
+                <Text style={[styles.actionBtnText, { color: isDarkMode ? "#000" : "#0b1120" }]}>
+                  {`${String(focusMinutes).padStart(2, "0")}:00 ${t("focusShort", { defaultValue: "Focus" })}`}
+                </Text>
+              </TouchableOpacity>
+
+              <TouchableOpacity
+                onPress={() => router.push("/explore")}
+                activeOpacity={0.9}
+                style={[
+                  styles.actionBtnGhost,
+                  { borderColor: withAlpha(currentTheme.colors.secondary, 0.55) },
+                ]}
+                accessibilityRole="button"
+                accessibilityLabel={t("discoverChallenges", { defaultValue: "Découvrir des défis" })}
+                testID="cta-discover"
+              >
+                <Ionicons name="compass-outline" size={normalizeSize(18)} color={currentTheme.colors.secondary} />
+                <Text
+                  style={[styles.actionBtnGhostText, { color: currentTheme.colors.secondary }]}
+                  numberOfLines={1}
+                  adjustsFontSizeToFit
+                  minimumFontScale={0.78}
+                >
+                  {t("discover", { defaultValue: "Découvrir" })}
+                </Text>
+              </TouchableOpacity>
+            </View>
+          </LinearGradient>
+        </View>
         <ScrollView
-          style={styles.scrollContainer}
+         style={styles.scrollContainer}
           contentContainerStyle={styles.scrollContent}
           showsVerticalScrollIndicator={false}
           refreshControl={
@@ -1354,18 +1092,21 @@ export default function FocusScreen() {
         >
           {/* === Carrousel haut : défis à faire === */}
           <View style={styles.topCarouselContainer}>
-            <Text
-              style={[
-                styles.sectionTitle,
-                {
-                  color: isDarkMode
-                    ? currentTheme.colors.textPrimary
-                    : "#000000",
-                },
-              ]}
-            >
-              {t("dailyChallenges")}
-            </Text>
+            <View style={styles.sectionHeaderRow}>
+              <Text style={[styles.sectionTitle, { color: isDarkMode ? currentTheme.colors.textPrimary : "#000" }]}>
+                {t("dailyChallenges")}
+              </Text>
+              <View
+                style={[
+                  styles.sectionCountPill,
+                  { borderColor: withAlpha(currentTheme.colors.border, 0.35) },
+                ]}
+              >
+                <Text style={[styles.sectionCountText, { color: withAlpha(currentTheme.colors.textSecondary, 0.9) }]}>
+                  {notMarkedToday.length}
+                </Text>
+              </View>
+            </View>
 
             {notMarkedToday.length > 0 ? (
               <>
@@ -1500,18 +1241,21 @@ export default function FocusScreen() {
 
           {/* === Carrousel bas : défis complétés aujourd’hui === */}
           <View style={styles.bottomCarouselContainer}>
-            <Text
-              style={[
-                styles.sectionTitle,
-                {
-                  color: isDarkMode
-                    ? currentTheme.colors.textPrimary
-                    : "#000000",
-                },
-              ]}
-            >
-              {t("completedChallengesScreenTitle")} {t("today")}
-            </Text>
+            <View style={styles.sectionHeaderRow}>
+              <Text style={[styles.sectionTitle, { color: isDarkMode ? currentTheme.colors.textPrimary : "#000" }]}>
+                {t("completedChallengesScreenTitle")} {t("today")}
+              </Text>
+              <View
+                style={[
+                  styles.sectionCountPill,
+                  { borderColor: withAlpha(currentTheme.colors.border, 0.35) },
+                ]}
+              >
+                <Text style={[styles.sectionCountText, { color: withAlpha(currentTheme.colors.textSecondary, 0.9) }]}>
+                  {markedToday.length}
+                </Text>
+              </View>
+            </View>
 
             {markedToday.length > 0 ? (
               <>
@@ -1979,45 +1723,126 @@ const styles = StyleSheet.create({
   },
   headerWrapper: {
     paddingHorizontal: SPACING,
-    paddingVertical: SPACING,
-    paddingTop: SPACING * 2.5,
-    position: "relative",
+   paddingTop: SPACING * 1.6,
+   paddingBottom: normalizeSize(10),
+   position: "relative",
   },
   headerContainer: {
     flexDirection: "row",
     justifyContent: "space-between",
     alignItems: "center",
   },
+  heroCard: {
+   width: "100%",
+   borderRadius: normalizeSize(22),
+   borderWidth: 1,
+   padding: normalizeSize(14),
+   overflow: "hidden",
+   shadowColor: "#000",
+   shadowOffset: { width: 0, height: normalizeSize(10) },
+   shadowOpacity: 0.14,
+   shadowRadius: normalizeSize(18),
+   elevation: 6,
+ },
+ heroTopRow: {
+   flexDirection: "row",
+   alignItems: "center",
+   justifyContent: "space-between",
+ },
   trophyContainer: {
     flexDirection: "row",
     alignItems: "center",
     paddingHorizontal: normalizeSize(12),
-    paddingVertical: normalizeSize(8),
-    borderRadius: normalizeSize(20),
-    borderWidth: 1,
+   paddingVertical: normalizeSize(8),
+   borderRadius: normalizeSize(999),
+   borderWidth: 1,
+   gap: normalizeSize(6),
   },
   trophyText: {
-    fontSize: normalizeSize(20),
-    marginLeft: normalizeSize(8),
+    fontSize: normalizeSize(16),
     fontFamily: "Comfortaa_700Bold",
   },
   plusButton: {
-    borderRadius: normalizeSize(50),
-    padding: normalizeSize(8),
+     width: normalizeSize(42),
+   height: normalizeSize(42),
+   borderRadius: normalizeSize(21),
+   alignItems: "center",
+   justifyContent: "center",
+   borderWidth: 1,
   },
+  heroTitleRow: {
+   flexDirection: "row",
+   alignItems: "flex-end",
+   justifyContent: "space-between",
+   marginTop: normalizeSize(10),
+   gap: normalizeSize(10),
+ },
+ heroTitle: {
+   fontFamily: "Comfortaa_700Bold",
+   fontSize: normalizeSize(20),
+   letterSpacing: -0.2,
+ },
+ heroSub: {
+   marginTop: normalizeSize(3),
+   fontFamily: "Comfortaa_400Regular",
+   fontSize: normalizeSize(12.5),
+   lineHeight: normalizeSize(16),
+ },
+ heroPctPill: {
+   minWidth: normalizeSize(70),
+   paddingHorizontal: normalizeSize(10),
+   paddingVertical: normalizeSize(8),
+   borderRadius: normalizeSize(16),
+   borderWidth: 1,
+   alignItems: "center",
+   justifyContent: "center",
+   backgroundColor: "rgba(255,255,255,0.06)",
+ },
+ heroPctText: {
+   fontFamily: "Comfortaa_700Bold",
+   fontSize: normalizeSize(16),
+ },
+ heroPctSub: {
+   marginTop: normalizeSize(2),
+   fontFamily: "Comfortaa_400Regular",
+   fontSize: normalizeSize(11),
+ },
   scrollContainer: {
     flex: 1,
   },
   scrollContent: {
     paddingBottom: normalizeSize(80),
-    paddingTop: normalizeSize(10),
+    paddingTop: normalizeSize(8),
   },
   sectionTitle: {
-    fontSize: normalizeSize(22),
-    fontFamily: "Comfortaa_700Bold",
-    textAlign: "center",
-    marginVertical: normalizeSize(12),
+    fontSize: normalizeSize(18),
+   textAlign: "left",
+   marginVertical: 0,
   },
+  sectionHeaderRow: {
+   flexDirection: "row",
+   alignItems: "center",
+   justifyContent: "space-between",
+   paddingHorizontal: SPACING,
+   marginTop: normalizeSize(14),
+   marginBottom: normalizeSize(10),
+ },
+ sectionCountPill: {
+   minWidth: normalizeSize(34),
+   height: normalizeSize(28),
+   borderRadius: normalizeSize(14),
+   borderWidth: 1,
+   alignItems: "center",
+   justifyContent: "center",
+   paddingHorizontal: normalizeSize(10),
+   backgroundColor: "rgba(255,255,255,0.06)",
+ },
+ sectionCountText: {
+   fontFamily: "Comfortaa_700Bold",
+   fontSize: normalizeSize(12.5),
+   includeFontPadding: false,
+   textAlignVertical: "center",
+ },
   noChallenges: {
     fontSize: normalizeSize(18),
     textAlign: "center",
@@ -2027,13 +1852,13 @@ const styles = StyleSheet.create({
   pagination: {
     flexDirection: "row",
     justifyContent: "center",
-    marginTop: normalizeSize(12),
+   marginTop: normalizeSize(10),
   },
   dot: {
-    width: normalizeSize(8),
-    height: normalizeSize(8),
-    borderRadius: normalizeSize(4),
-    marginHorizontal: normalizeSize(6),
+    width: normalizeSize(6),
+   height: normalizeSize(6),
+   borderRadius: normalizeSize(999),
+   marginHorizontal: normalizeSize(5),
   },
   durationBlock: {
     width: "100%",
@@ -2103,11 +1928,10 @@ const styles = StyleSheet.create({
     fontSize: normalizeSize(13),
   },
   progressTrack: {
-    height: normalizeSize(8),
+    height: normalizeSize(10),
     borderRadius: normalizeSize(999),
     overflow: "hidden",
-    marginTop: normalizeSize(8),
-    marginHorizontal: SPACING,
+    marginTop: normalizeSize(10),
   },
   progressFill: {
     height: "100%",
@@ -2116,9 +1940,8 @@ const styles = StyleSheet.create({
   progressLabel: {
     fontFamily: "Comfortaa_400Regular",
     fontSize: normalizeSize(12),
-    textAlign: "right",
-    marginTop: normalizeSize(6),
-    marginRight: SPACING,
+    textAlign: "left",
+   marginTop: normalizeSize(8),
   },
   topCarouselContainer: {
     marginBottom: normalizeSize(20),
@@ -2130,18 +1953,18 @@ const styles = StyleSheet.create({
   topItemContainer: {
     width: TOP_ITEM_WIDTH,
     height: TOP_ITEM_HEIGHT,
-    borderRadius: normalizeSize(25),
+    borderRadius: normalizeSize(26),
     overflow: "hidden",
     shadowColor: "#000",
-    shadowOffset: { width: 0, height: normalizeSize(5) },
-    shadowOpacity: 0.35,
-    shadowRadius: normalizeSize(8),
-    elevation: 10,
+    shadowOffset: { width: 0, height: normalizeSize(12) },
+   shadowOpacity: 0.22,
+   shadowRadius: normalizeSize(18),
+   elevation: 12,
   },
   topItemGradient: {
     flex: 1,
-    borderRadius: normalizeSize(25),
-    borderWidth: 2.5,
+    borderRadius: normalizeSize(26),
+   borderWidth: 1.2,
     overflow: "hidden",
   },
   topItemImage: {
@@ -2153,7 +1976,7 @@ const styles = StyleSheet.create({
     position: "absolute",
     bottom: 0,
     width: "100%",
-    padding: normalizeSize(12),
+    padding: normalizeSize(14),
     alignItems: "center",
   },
   topItemTitle: {
@@ -2173,14 +1996,25 @@ const styles = StyleSheet.create({
   markTodayButton: {
     marginTop: normalizeSize(12),
     paddingVertical: normalizeSize(10),
-    paddingHorizontal: normalizeSize(16),
-    borderRadius: normalizeSize(18),
+   paddingHorizontal: normalizeSize(14),
+   borderRadius: normalizeSize(999),
     alignSelf: "center",
+    shadowColor: "#000",
+   shadowOffset: { width: 0, height: 8 },
+   shadowOpacity: 0.18,
+   shadowRadius: 12,
+   elevation: 10,
   },
   markTodayButtonText: {
     fontSize: normalizeSize(14),
     fontFamily: "Comfortaa_700Bold",
   },
+  markTodayInner: {
+   flexDirection: "row",
+   alignItems: "center",
+   justifyContent: "center",
+   gap: normalizeSize(8),
+ },
   bgOrbTop: {
     position: "absolute",
     top: -SCREEN_WIDTH * 0.25,
@@ -2207,18 +2041,18 @@ const styles = StyleSheet.create({
   bottomItemContainer: {
     width: BOTTOM_ITEM_WIDTH,
     height: BOTTOM_ITEM_HEIGHT,
-    borderRadius: normalizeSize(25),
+    borderRadius: normalizeSize(24),
     overflow: "hidden",
     shadowColor: "#000",
-    shadowOffset: { width: 0, height: normalizeSize(5) },
-    shadowOpacity: 0.35,
-    shadowRadius: normalizeSize(8),
-    elevation: 10,
+    shadowOffset: { width: 0, height: normalizeSize(10) },
+   shadowOpacity: 0.20,
+   shadowRadius: normalizeSize(16),
+   elevation: 10,
   },
   bottomItemGradient: {
     flex: 1,
-    borderRadius: normalizeSize(25),
-    borderWidth: 2.5,
+    borderRadius: normalizeSize(24),
+   borderWidth: 1.1,
     overflow: "hidden",
   },
   bottomItemImage: {
@@ -2263,7 +2097,7 @@ const styles = StyleSheet.create({
     justifyContent: "center",
     alignItems: "center",
     paddingHorizontal: SPACING,
-    borderRadius: normalizeSize(25),
+   borderRadius: normalizeSize(26),
   },
   emptyTitle: {
     fontSize: normalizeSize(22),
@@ -2300,11 +2134,10 @@ const styles = StyleSheet.create({
   },
   quickActions: {
   flexDirection: "row",
-  justifyContent: "center",          // 🆕 centre horizontalement la rangée
+  justifyContent: "space-between",         // 🆕 centre horizontalement la rangée
   alignItems: "center",              // 🆕 verticalement propre
   gap: normalizeSize(10),
-  paddingHorizontal: SPACING,
-  marginTop: normalizeSize(10),
+  marginTop: normalizeSize(12),
   flexWrap: "wrap",                  // 🆕 si l’écran est petit, ça passe sur 2 lignes proprement
 },
   actionBtn: {
@@ -2314,6 +2147,11 @@ const styles = StyleSheet.create({
     borderRadius: normalizeSize(999),
     paddingVertical: normalizeSize(8),
     paddingHorizontal: normalizeSize(14),
+     shadowColor: "#000",
+   shadowOffset: { width: 0, height: 8 },
+   shadowOpacity: 0.18,
+   shadowRadius: 12,
+   elevation: 8,
   },
   actionBtnText: {
     fontFamily: "Comfortaa_700Bold",
@@ -2345,7 +2183,7 @@ const styles = StyleSheet.create({
   // —— Focus modal —— 
   focusBackdrop: {
     flex: 1,
-    backgroundColor: "rgba(0,0,0,0.55)",
+    backgroundColor: "rgba(0,0,0,0.62)",
     alignItems: "center",
     justifyContent: "center",
     padding: SPACING,
@@ -2356,6 +2194,11 @@ const styles = StyleSheet.create({
     borderWidth: 1,
     padding: normalizeSize(20),
     alignItems: "center",
+    shadowColor: "#000",
+   shadowOffset: { width: 0, height: 14 },
+   shadowOpacity: 0.28,
+   shadowRadius: 20,
+   elevation: 18,
   },
   focusLabel: {
     fontFamily: "Comfortaa_700Bold",
@@ -2422,51 +2265,6 @@ const styles = StyleSheet.create({
     bottom: 0,
     justifyContent: "center",
     alignItems: "center",
-  },
-  // —— Toast —— //
-  toastWrapper: {
-    position: "absolute",
-    top: normalizeSize(40),
-    left: 0,
-    right: 0,
-    alignItems: "center",
-    zIndex: 40,
-  },
-  toastContainer: {
-    flexDirection: "row",
-    alignItems: "center",
-    paddingVertical: normalizeSize(10),
-    paddingHorizontal: normalizeSize(14),
-    borderRadius: normalizeSize(999),
-    maxWidth: SCREEN_WIDTH * 0.92,
-    shadowColor: "#000",
-    shadowOffset: { width: 0, height: 6 },
-    shadowOpacity: 0.25,
-    shadowRadius: 10,
-    elevation: 16,
-    borderWidth: 1,
-  },
-  toastIconWrapper: {
-    width: normalizeSize(26),
-    height: normalizeSize(26),
-    borderRadius: normalizeSize(13),
-    alignItems: "center",
-    justifyContent: "center",
-    backgroundColor: "rgba(15,23,42,0.08)",
-    marginRight: normalizeSize(10),
-  },
-  toastTextWrapper: {
-    flexShrink: 1,
-    marginRight: normalizeSize(6),
-  },
-  toastTitle: {
-    fontFamily: "Comfortaa_700Bold",
-    fontSize: normalizeSize(13),
-  },
-  toastMessage: {
-    fontFamily: "Comfortaa_400Regular",
-    fontSize: normalizeSize(11.5),
-    marginTop: normalizeSize(2),
   },
   modalContainer: {
     backgroundColor: "rgba(255, 255, 255, 0.95)",

@@ -23,10 +23,11 @@ import {
   Platform,
   AccessibilityInfo,
   Modal,
+  Share,
   BackHandler,
 } from "react-native";
 import { Image as ExpoImage } from "expo-image";
-import { SafeAreaView } from "react-native-safe-area-context";
+import { SafeAreaView, useSafeAreaInsets } from "react-native-safe-area-context";
 import { Ionicons } from "@expo/vector-icons";
 import { useRouter, useLocalSearchParams } from "expo-router";
 import {
@@ -41,7 +42,14 @@ import {
   collection,
   serverTimestamp,
   where,
+  limit,
 } from "firebase/firestore";
+import mobileAds, {
+  RewardedAd,
+  RewardedAdEventType,
+  AdEventType,
+  TestIds,
+} from "react-native-google-mobile-ads";
 import { db, auth } from "@/constants/firebase-config";
 import ConfettiCannon from "react-native-confetti-cannon";
 import { LinearGradient } from "expo-linear-gradient";
@@ -51,7 +59,6 @@ import { checkForAchievements } from "../../helpers/trophiesHelpers";
 import ChallengeCompletionModal from "../../components/ChallengeCompletionModal";
 import DurationSelectionModal from "../../components/DurationSelectionModal";
 import StatsModal from "../../components/StatsModal";
-import { FadeInUp, FadeIn } from "react-native-reanimated";
 import { useTheme } from "../../context/ThemeContext";
 import { Theme } from "../../theme/designSystem";
 import designSystem from "../../theme/designSystem";
@@ -61,13 +68,11 @@ import ChallengeReviews from "../../components/ChallengeReviews";
 import { storage } from "../../constants/firebase-config";
 import { getDownloadURL, ref } from "firebase/storage";
 import { useAdsVisibility } from "../../src/context/AdsVisibilityContext";
-import { Share } from "react-native";
 import type { ViewStyle } from "react-native";
 import PioneerBadge from "@/components/PioneerBadge";
 import BannerSlot from "@/components/BannerSlot";
 import { useBottomTabBarHeight } from "@react-navigation/bottom-tabs";
 import { useFocusEffect } from "@react-navigation/native";
-import { useSafeAreaInsets } from "react-native-safe-area-context";
 import Animated, {
   useSharedValue,
    useAnimatedStyle,
@@ -77,7 +82,10 @@ import Animated, {
    interpolate,
    Easing,
    runOnJS,
-   FadeOut, 
+   withSpring,
+   FadeOut,
+  FadeInUp,
+  FadeIn,
  } from "react-native-reanimated";
  import { BlurView } from "expo-blur";
 import * as Linking from "expo-linking";
@@ -92,6 +100,7 @@ import { canInvite } from "../../utils/canInvite";
 import { usePathname } from "expo-router";
 import { useAuth } from "@/context/AuthProvider"; 
 import ShareCardModal from "@/components/ShareCardModal";
+
 
 const short = (s: string, max = 16) => (s.length > max ? s.slice(0, max - 1).trim() + "…" : s);
 
@@ -116,6 +125,13 @@ const HERO_H = Math.max(240, Math.round(SCREEN_HEIGHT * 0.35));
 const pct = (num = 0, den = 0) =>
   den > 0 ? Math.min(100, Math.max(0, Math.round((num / den) * 100))) : 0;
 
+const isIOS = Platform.OS === "ios";
+
+const hapticTap = () => {
+  Haptics.selectionAsync().catch(() => {});
+};
+
+
 
 const introModalProps: Partial<ModalProps> = Platform.select<Partial<ModalProps>>({
   ios: {
@@ -125,9 +141,8 @@ const introModalProps: Partial<ModalProps> = Platform.select<Partial<ModalProps>
     animationType: "fade",
   } as const,
   android: {
-    // presentationStyle ignoré par Android
-    transparent: false,
-    statusBarTranslucent: false,
+    transparent: true,
+    statusBarTranslucent: true,
     animationType: "fade",
     hardwareAccelerated: true,
   } as const,
@@ -180,6 +195,8 @@ const OrbBackground = ({ theme }: { theme: Theme }) => (
     />
   </View>
 );
+
+
 
 
 const dayIcons: Record<
@@ -309,13 +326,20 @@ export default function ChallengeDetails() {
   const { theme } = useTheme();
   const { user } = useAuth();
   const { width: W, height: H } = useWindowDimensions();
+  const isTablet = W >= 700;
   const heroH = useMemo(
     () => Math.max(240, Math.round(H * 0.35)),
     [H]
   );
-  const isCompactWide = W >= 700; // tablette / grands écrans
-  const actionIconWidth = isCompactWide ? "25%" : "50%";
+  // 4 colonnes = cheap. Tablet = 3 colonnes, phone = 2 colonnes.
+  const actionIconWidth = isTablet ? "33.333%" : "50%";
+  const titleLines = isTablet ? 2 : 3;
+  const descLines = isTablet ? 4 : 6;
   const [marking, setMarking] = useState(false);
+  const [outgoingPendingInvite, setOutgoingPendingInvite] = useState<{
+  id: string;
+  inviteeUsername?: string | null;
+} | null>(null);
   const [duoState, setDuoState] = useState<{
   enabled: boolean;
   partnerId?: string;
@@ -331,7 +355,7 @@ export default function ChallengeDetails() {
   const justJoinedRef = useRef(false);
   // 🧹 Anti-doublon solo+duo : évite boucle de nettoyage
   const cleanupSoloRef = useRef(false);
-const IS_COMPACT = SCREEN_WIDTH < 380; // très petits écrans (iPhone SE/Android compacts)
+const IS_COMPACT = W < 380; // ✅ basé sur la largeur actuelle (split-screen/tablette)
 const [confirmResetVisible, setConfirmResetVisible] = useState(false);
 const [sendInviteVisible, setSendInviteVisible] = useState(false);
 const insets = useSafeAreaInsets();
@@ -340,6 +364,7 @@ const [adHeight, setAdHeight] = useState(0);
   const onBannerHeight = useCallback((h: number) => {
     setAdHeight((prev) => (prev === h ? prev : h));
   }, []);
+
 
   // 🆕 état réseau : interdit l’invitation hors-ligne (UX claire)
   const [isOffline, setIsOffline] = useState(false);
@@ -379,12 +404,39 @@ const [adHeight, setAdHeight] = useState(0);
 
   // pulse subtil autour de l'avatar du leader
   const leaderPulse = useSharedValue(0);
+  const duoPendingPulse = useSharedValue(0);
 const startedRef = useRef(false);
 const myImgReady = useRef(false);
 const partnerImgReady = useRef(false);
 const tabBarHeight = useTabBarHeightSafe();
 const startTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
+const duoPendingPulseStyle = useAnimatedStyle(() => {
+  // Ring très visible + léger "glow"
+  const s = 1 + duoPendingPulse.value * 0.28;
+  const o = 0.28 + duoPendingPulse.value * 0.62;
+  return {
+    transform: [{ scale: s }],
+    opacity: o,
+  };
+});
+
+const duoPendingDotStyle = useAnimatedStyle(() => {
+  // Dot qui "respire" + mini pop (Keynote)
+  const s = 1 + duoPendingPulse.value * 0.38;
+  const o = 0.10 + duoPendingPulse.value * 0.28;
+  return {
+    transform: [{ scale: s }],
+    opacity: o,
+  };
+});
+
+const duoPendingGlowStyle = useAnimatedStyle(() => {
+  // Halo externe (super visible mais clean)
+  const s = 1 + duoPendingPulse.value * 0.26;
+  const o = 0.08 + duoPendingPulse.value * 0.22;
+  return { transform: [{ scale: s }], opacity: o };
+});
 
   const firstMountRef = useRef(true);
 useEffect(() => {
@@ -425,6 +477,7 @@ useFocusEffect(
   days?: string;
     title?: string;
     category?: string;
+    openSendInvite?: string;
     description?: string;
     selectedDays?: string;
     completedDays?: string;
@@ -441,6 +494,7 @@ const [deeplinkBooting, setDeeplinkBooting] = useState(
  
  const processedInviteIdsRef = useRef<Set<string>>(new Set());
  const inviteOpenGuardRef = useRef(false);
+ const autoSendInviteOnceRef = useRef(false);
  const markInviteAsHandled = useCallback((inviteId?: string | null) => {
   if (!inviteId) return;
 
@@ -546,6 +600,198 @@ const shakeMy = useSharedValue(0);
 const shakePartner = useSharedValue(0);
 const [shareCardVisible, setShareCardVisible] = useState(false);
 
+ /* -------------------------------------------------------------------------- */
+  /*                           CLAIM (stable refs)                               */
+  /* -------------------------------------------------------------------------- */
+  const claimWithoutAdRef = useRef<(() => Promise<void>) | null>(null);
+  const claimWithAdRef = useRef<(() => Promise<void>) | null>(null);
+
+  const handleClaimTrophiesWithoutAd = useCallback(async () => {
+    try {
+      await completeChallenge(id, finalSelectedDays, false);
+      confettiRef.current?.start?.();
+      setCompletionModalVisible(false);
+    } catch (error) {
+      Alert.alert(t("alerts.error"), t("challengeDetails.completeError"));
+    }
+  }, [id, finalSelectedDays, completeChallenge, t]);
+
+  const handleClaimTrophiesWithAd = useCallback(async () => {
+    try {
+      await completeChallenge(id, finalSelectedDays, true);
+      confettiRef.current?.start?.();
+      setCompletionModalVisible(false);
+    } catch (error) {
+      Alert.alert(t("alerts.error"), t("challengeDetails.completeError"));
+    }
+  }, [id, finalSelectedDays, completeChallenge, t]);
+
+  // ✅ expose des callbacks stables aux listeners (pas de deps instables dans l’effet rewarded)
+  useEffect(() => {
+    claimWithoutAdRef.current = handleClaimTrophiesWithoutAd;
+    claimWithAdRef.current = handleClaimTrophiesWithAd;
+  }, [handleClaimTrophiesWithoutAd, handleClaimTrophiesWithAd]);
+
+/* -------------------------------------------------------------------------- */
+  /*                               REWARDED (PARENT)                            */
+  /* -------------------------------------------------------------------------- */
+  const rewardedRef = useRef<RewardedAd | null>(null);
+  const rewardedEarnedRef = useRef(false);
+  const [rewardedLoaded, setRewardedLoaded] = useState(false);
+  const [rewardedLoading, setRewardedLoading] = useState(false);
+  const [rewardedShowing, setRewardedShowing] = useState(false);
+
+ // ✅ AdUnit stable + PROD ready (évite "TestIds en prod" + évite runtime crash si missing)
+  // ⚠️ Branche EXACTEMENT comme ton index (même source). Ici: EXPO_PUBLIC_ADMOB_REWARDED_DETAILS
+  const REWARDED_UNIT_ID = useMemo(() => {
+    const prod =
+      (process.env.EXPO_PUBLIC_ADMOB_REWARDED_DETAILS as string | undefined) ||
+      (process.env.EXPO_PUBLIC_ADMOB_REWARDED as string | undefined) ||
+      "";
+    return __DEV__ ? TestIds.REWARDED : (prod || TestIds.REWARDED);
+  }, []);
+
+  const ensureRewardedInstance = useCallback(() => {
+    if (rewardedRef.current) return rewardedRef.current;
+    const ad = RewardedAd.createForAdRequest(REWARDED_UNIT_ID, {
+      requestNonPersonalizedAdsOnly: true,
+    });
+    rewardedRef.current = ad;
+    return ad;
+  }, [REWARDED_UNIT_ID]);
+
+ const loadRewarded = useCallback(() => {
+    if (!showBanners) return;
+    if (rewardedLoaded || rewardedLoading) return;
+    const ad = ensureRewardedInstance();
+    rewardedEarnedRef.current = false;
+    setRewardedLoading(true);
+    try { ad.load(); } catch { setRewardedLoading(false); }
+  }, [ensureRewardedInstance, rewardedLoaded, rewardedLoading, showBanners]);
+
+  // ✅ cleanup hard (évite instance/listerners fantômes sur nav back/forward)
+  useEffect(() => {
+    return () => {
+      rewardedRef.current = null;
+      rewardedEarnedRef.current = false;
+    };
+  }, []);
+
+  useEffect(() => {
+    if (!showBanners) {
+      // ✅ reset clean si ads off
+      setRewardedLoaded(false);
+      setRewardedLoading(false);
+      setRewardedShowing(false);
+      rewardedEarnedRef.current = false;
+      return;
+    }
+
+    const ad = ensureRewardedInstance();
+
+    const unsubLoaded = ad.addAdEventListener(RewardedAdEventType.LOADED, () => {
+      setRewardedLoaded(true);
+      setRewardedLoading(false);
+    });
+
+    const unsubEarned = ad.addAdEventListener(
+      RewardedAdEventType.EARNED_REWARD,
+      () => {
+        rewardedEarnedRef.current = true;
+      }
+    );
+
+    const unsubClosed = ad.addAdEventListener(AdEventType.CLOSED, () => {
+      setRewardedShowing(false);
+      setRewardedLoaded(false);
+      setRewardedLoading(false);
+
+      // ✅ on déclenche le claim UNIQUEMENT si reward a été gagné
+      if (rewardedEarnedRef.current) {
+        rewardedEarnedRef.current = false;
+        // IMPORTANT : on fait le claim ici (comme l’exemple index)
+        claimWithAdRef.current?.().catch(() => {});
+      }
+
+      // preload next
+      requestAnimationFrame(() => { try { ad.load(); } catch {} });
+    });
+
+    const unsubErr = ad.addAdEventListener(AdEventType.ERROR, () => {
+      setRewardedShowing(false);
+      setRewardedLoaded(false);
+      setRewardedLoading(false);
+      rewardedEarnedRef.current = false;
+      // retry soft
+      setTimeout(() => {
+        try {
+          ad.load();
+        } catch {}
+      }, 900);
+    });
+
+    // preload initial
+    try {
+      ad.load();
+    } catch {}
+
+    return () => {
+      unsubLoaded();
+      unsubEarned();
+      unsubClosed();
+      unsubErr();
+    };
+  }, [ensureRewardedInstance, showBanners]);
+
+  // quand le modal s'ouvre => on s'assure que c'est preload
+  useEffect(() => {
+    if (!completionModalVisible) return;
+    loadRewarded();
+  }, [completionModalVisible, loadRewarded]);
+
+  const showRewarded = useCallback(async () => {
+    if (!showBanners) {
+      // Ads off -> fallback direct
+     await claimWithAdRef.current?.();
+      return;
+    }
+
+    const ad = ensureRewardedInstance();
+    rewardedEarnedRef.current = false;
+
+    // pas prêt ? on tente un load + message UX
+    if (!rewardedLoaded) {
+      loadRewarded();
+      Alert.alert(
+        t("commonS.loading", { defaultValue: "Chargement…" }),
+        t("commonS.tryAgainInSeconds", {
+          defaultValue: "La vidéo se prépare. Réessaie dans quelques secondes.",
+        })
+      );
+      return;
+    }
+
+    try {
+      setRewardedShowing(true);
+      await ad.show();
+    } catch (e) {
+      setRewardedShowing(false);
+      setRewardedLoaded(false);
+      setRewardedLoading(false);
+      rewardedEarnedRef.current = false;
+      loadRewarded();
+      Alert.alert(
+        t("alerts.error"),
+        t("adsS.rewardedFailed", { defaultValue: "La vidéo n’a pas pu se lancer." })
+      );
+    }
+  }, [
+    ensureRewardedInstance,
+    rewardedLoaded,
+    loadRewarded,
+    showBanners,
+    t,
+  ]);
 
 const popMy = useSharedValue(0);
 const popPartner = useSharedValue(0);
@@ -608,6 +854,22 @@ useEffect(() => {
 
  // ✅ SOLO uniquement si aucune info duo ne ressort
  const isSoloInThisChallenge = !!currentChallenge && !isDuo;
+ const isDuoPendingOut = !!outgoingPendingInvite && !isDuo;
+
+ useEffect(() => {
+  if (!isDuoPendingOut) {
+    duoPendingPulse.value = 0;
+    return;
+  }
+  duoPendingPulse.value = withRepeat(
+    withSequence(
+      withTiming(1, { duration: 900, easing: Easing.out(Easing.cubic) }),
+      withTiming(0, { duration: 900, easing: Easing.in(Easing.cubic) })
+   ),
+   -1,
+   false
+  );
+}, [isDuoPendingOut, duoPendingPulse]);
 
 
 const isDisabledMark = marking || isMarkedToday(id, finalSelectedDays);
@@ -759,13 +1021,11 @@ const shakeStylePartner = useAnimatedStyle<ViewStyle>(() => ({
   ] as ViewStyle["transform"],
 }));
 
-
 const pulseStyle = useAnimatedStyle<ViewStyle>(() => ({
-  transform: [
-    { scale: interpolate(leaderPulse.value, [0, 1], [1, 1.08]) },
-  ] as ViewStyle["transform"],
-  opacity: interpolate(leaderPulse.value, [0, 1], [0.12, 0.28]),
+  transform: [{ scale: interpolate(leaderPulse.value, [0, 1], [1, 1.08]) }],
+  opacity: 1, // ✅ NE JAMAIS baisser la couronne
 }));
+
 
 useEffect(() => {
   if (!isDuo) return;
@@ -1385,6 +1645,42 @@ useEffect(() => {
 
 const pathname = usePathname();
 const currentUid = auth.currentUser?.uid || null;
+useEffect(() => {
+  const uid = auth.currentUser?.uid;
+  if (!uid || !id) return;
+
+  // ✅ On écoute si MOI (inviter) j’ai une invitation pending sur ce challenge
+  const qOut = query(
+    collection(db, "invitations"),
+    where("inviterId", "==", uid),
+    where("challengeId", "==", id),
+    where("status", "==", "pending"),
+    limit(1)
+  );
+
+  const unsub = onSnapshot(
+    qOut,
+    (snap) => {
+      if (snap.empty) {
+        setOutgoingPendingInvite(null);
+        return;
+      }
+      const d = snap.docs[0];
+      const data = d.data() as any;
+      setOutgoingPendingInvite({
+        id: d.id,
+        inviteeUsername: data?.inviteeUsername ?? null,
+      });
+    },
+    () => {
+      // non bloquant
+      setOutgoingPendingInvite(null);
+    }
+  );
+
+  return () => unsub();
+}, [id]);
+
 
 // 🆕 Helper : récupère un username propre pour stocker dans inviteeUsername
 const getInviteeUsername = useCallback(async (uid: string): Promise<string | null> => {
@@ -1569,7 +1865,7 @@ useEffect(() => {
     }
   };
 
-  let urlSub: any;
+   let urlSub: { remove?: () => void } | undefined;
 
   // 1) Param route déjà mappé par expo-router
   if (params?.invite) {
@@ -1587,7 +1883,7 @@ useEffect(() => {
     .catch((e) => console.warn("⚠️ getInitialURL error:", e));
 
   // 3) URLs runtime (app déjà ouverte, clic depuis WhatsApp, SMS, etc.)
-  urlSub = Linking.addEventListener("url", ({ url }) => {
+  const onUrl = ({ url }: { url: string }) => {
     try {
       const parsed = Linking.parse(url);
       const invite = String(parsed?.queryParams?.invite || "");
@@ -1595,15 +1891,23 @@ useEffect(() => {
     } catch (e) {
       console.warn("⚠️ Linking url handler error:", e);
     }
-  });
+  };
+  // ✅ évite les API divergentes (Expo/RN) + cleanup fiable
+  urlSub = (Linking as any).addEventListener?.("url", onUrl);
 
   return () => {
-    (urlSub as any)?.remove?.();
+    urlSub?.remove?.();
   };
-}, [id, params?.invite, pathname, router, currentUid, params.id]);
+}, [id, params?.invite, pathname, router, getInviteeUsername, markInviteAsHandled]);
+
 
 
   const isSavedChallenge = useCallback((challengeId: string) => savedIds.has(challengeId), [savedIds]);
+
+  const savedNow =
+  pendingFavorite !== null
+    ? pendingFavorite
+    : isSavedChallenge(id);
 
 const completions = useMemo(
   () => currentChallenge?.completionDates || [],
@@ -1863,34 +2167,6 @@ const handleShowCompleteModal = useCallback(() => {
   setCompletionModalVisible(true);
 }, [id, finalSelectedDays]);
 
-
-    const handleClaimTrophiesWithoutAd = useCallback(async () => {
-    try {
-      await completeChallenge(id, finalSelectedDays, false);
-
-      // 🎉 Confettis premium sur validation sans pub
-      confettiRef.current?.start?.();
-
-      setCompletionModalVisible(false);
-    } catch (error) {
-      Alert.alert(t("alerts.error"), t("challengeDetails.completeError"));
-    }
-  }, [id, finalSelectedDays, completeChallenge]);
-
-  const handleClaimTrophiesWithAd = useCallback(async () => {
-    try {
-      await completeChallenge(id, finalSelectedDays, true);
-
-      // 🎉 Confettis premium aussi quand on regarde une pub
-      confettiRef.current?.start?.();
-
-      setCompletionModalVisible(false);
-    } catch (error) {
-      Alert.alert(t("alerts.error"), t("challengeDetails.completeError"));
-    }
-  }, [id, finalSelectedDays, completeChallenge]);
-
-
   const handleNavigateToChat = useCallback(() => {
     if (!challengeTaken ) {
       Alert.alert(
@@ -2018,7 +2294,7 @@ const handleShareChallenge = useCallback(async () => {
 }, [id, routeTitle, t, i18n?.language]);
 
 const handleInviteFriend = useCallback(async () => {
-  Haptics.selectionAsync().catch(()=>{});
+  hapticTap();
   try {
     if (!id) return;
 
@@ -2065,6 +2341,36 @@ const handleInviteFriend = useCallback(async () => {
     Alert.alert(t("alerts.error"), t("invitationS.errors.unknown"));
   }
 }, [id, isDuo, isSoloInThisChallenge, isOffline, t]);
+
+useEffect(() => {
+  // 1) Pas de signal -> rien
+  if (!params?.openSendInvite) return;
+
+  // 2) Si on est dans le flow "InvitationModal" (deeplink / pending invite),
+  //    on ne touche à rien. Priorité à ?invite=
+  if (params?.invite) return;
+
+  // 3) Anti double-open
+  if (autoSendInviteOnceRef.current) return;
+  autoSendInviteOnceRef.current = true;
+
+  // 4) On déclenche l’ouverture de ton flow existant
+  const task = InteractionManager.runAfterInteractions(() => {
+    handleInviteFriend(); // garde toutes tes protections (offline, duo, pending, confirm reset)
+  });
+
+  // 5) Nettoyage URL pour éviter ré-ouverture si re-render / retour écran
+  try {
+    const clean = pathname || `/challenge-details/${id}`;
+    router.replace(clean as any);
+  } catch {}
+
+  return () => {
+    // @ts-ignore
+    task?.cancel?.();
+  };
+}, [params?.openSendInvite, params?.invite, pathname, id, router, handleInviteFriend]);
+
 
 const handleInviteButtonPress = useCallback(() => {
   if (isDuo) {
@@ -2137,6 +2443,37 @@ const scrollContentStyle = useMemo(
         defaultValue: "Chargement du défi…",
       });
 
+const DuoAvatar = ({ uri, name }: { uri?: string | null; name?: string }) => {
+  const hasUri = typeof uri === "string" && uri.trim().length > 0;
+
+  return (
+    <View style={styles.duoAvatarShell}>
+      {hasUri ? (
+        <ExpoImage
+  source={{ uri: uri as string }}
+  style={styles.duoEliteAvatar}
+  contentFit="cover"
+  transition={120}
+  cachePolicy="memory-disk"
+  recyclingKey={uri as string}
+/>
+
+      ) : (
+        <LinearGradient
+          colors={["rgba(255,255,255,0.14)", "rgba(255,255,255,0.06)"]}
+          start={{ x: 0, y: 0 }}
+          end={{ x: 1, y: 1 }}
+          style={styles.duoAvatarFallback}
+        >
+          <Text style={styles.duoAvatarInitial}>{getInitial(name)}</Text>
+        </LinearGradient>
+      )}
+      <View style={styles.duoAvatarRing} pointerEvents="none" />
+    </View>
+  );
+};
+
+
 
   return (
     <LinearGradient
@@ -2172,21 +2509,30 @@ const scrollContentStyle = useMemo(
    needsOffscreenAlphaCompositing
    pointerEvents="box-none"
  >
-        <TouchableOpacity
-          onPress={handleSafeBack}
-          style={[styles.backButton, styles.backButtonOverlay, { width: 44, height: 44, borderRadius: 22, justifyContent: "center", alignItems: "center" }]}
-    hitSlop={{ top: 12, bottom: 12, left: 12, right: 12 }}
-          accessibilityLabel={t("backButton")}
-          accessibilityHint={t("backButtonHint")}
-          accessibilityRole="button"
-          testID="back-button"
+        <BlurView
+          intensity={22}
+          tint={isDarkMode ? "dark" : "light"}
+          style={styles.backButtonBlur}
         >
-          <Ionicons
-            name="arrow-back"
-            size={normalizeSize(24)}
-            color={isDarkMode ? "#FFD700" : currentTheme.colors.secondary}
-          />
-        </TouchableOpacity>
+          <Pressable
+            onPress={handleSafeBack}
+            style={({ pressed }) => [
+              styles.backButtonPress,
+              pressed && { transform: [{ scale: 0.97 }], opacity: 0.92 },
+            ]}
+            hitSlop={{ top: 12, bottom: 12, left: 12, right: 12 }}
+            accessibilityLabel={t("backButton")}
+            accessibilityHint={t("backButtonHint")}
+            accessibilityRole="button"
+            testID="back-button"
+          >
+            <Ionicons
+              name="arrow-back"
+              size={normalizeSize(22)}
+              color={isDarkMode ? "#FFD700" : currentTheme.colors.secondary}
+            />
+          </Pressable>
+        </BlurView>
       </Animated.View>
       <ScrollView
         style={{ flex: 1 }}
@@ -2196,6 +2542,7 @@ const scrollContentStyle = useMemo(
         contentContainerStyle={scrollContentStyle}
         contentInsetAdjustmentBehavior="never"
         overScrollMode="never"
+        scrollEventThrottle={16}
       >
   <View style={[styles.imageContainer, { height: heroH }]}>
     {challengeImage ? (
@@ -2214,8 +2561,20 @@ const scrollContentStyle = useMemo(
 
         <LinearGradient
         pointerEvents="none"
-          colors={["rgba(0,0,0,0)", "rgba(0,0,0,0.35)", "rgba(0,0,0,0.6)"]}
+          colors={
+   isDarkMode
+     ? ["rgba(0,0,0,0)", "rgba(0,0,0,0.35)", "rgba(0,0,0,0.65)"]
+     : ["rgba(255,255,255,0)", "rgba(0,0,0,0.18)", "rgba(0,0,0,0.38)"]
+ }
           start={{ x: 0, y: 0 }} end={{ x: 0, y: 1 }} style={styles.heroOverlay}
+        />
+        {/* vignette ultra légère (Keynote) */}
+        <LinearGradient
+          pointerEvents="none"
+          colors={["rgba(0,0,0,0.22)", "rgba(0,0,0,0)", "rgba(0,0,0,0.18)"]}
+          start={{ x: 0.5, y: 0 }}
+          end={{ x: 0.5, y: 1 }}
+          style={styles.heroVignette}
         />
       </>
     ) : (
@@ -2230,13 +2589,26 @@ const scrollContentStyle = useMemo(
       </View>
     )}
   </View>
-        {/* 🔒 réserve d'espace pour le hero, stable dès le 1er frame */}
-        <View style={styles.carouselContainer}>
-          
-        </View>
-        <Animated.View entering={firstMountRef.current && shouldEnterAnim ? FadeInUp.delay(100) : undefined}
-    style={styles.infoRecipeContainer}
-  >
+        {/* CARD “Keynote” qui chevauche le hero */}
+        <Animated.View
+          entering={firstMountRef.current && shouldEnterAnim ? FadeInUp.delay(100) : undefined}
+          style={styles.heroCardWrap}
+        >
+          <BlurView
+            intensity={Platform.OS === "ios" ? 26 : 18}
+            tint={isDarkMode ? "dark" : "light"}
+            style={styles.heroCardBlur}
+          >
+            <LinearGradient
+              colors={
+                isDarkMode
+                  ? ["rgba(20,20,26,0.86)", "rgba(14,14,18,0.74)"]
+                  : ["rgba(255,255,255,0.92)", "rgba(255,255,255,0.82)"]
+              }
+              start={{ x: 0, y: 0 }}
+              end={{ x: 1, y: 1 }}
+              style={styles.heroCardInner}
+            >
           <Text
             style={[
               styles.infoRecipeName,
@@ -2245,6 +2617,8 @@ const scrollContentStyle = useMemo(
               }, // Couleur dynamique
             ]}
             accessibilityRole="header"
+            numberOfLines={titleLines}
+            ellipsizeMode="tail"
           >
             {routeTitle}
           </Text>
@@ -2257,30 +2631,147 @@ const scrollContentStyle = useMemo(
 <View style={styles.chipRow}>
   {/* Jours sélectionnés (si challenge pris) */}
   {finalSelectedDays > 0 && (
-    <View style={styles.chip}>
-      <Ionicons name="calendar-outline" size={14} color="#fff" />
-      <Text style={styles.chipText}>{finalSelectedDays} {t("challengeDetails.days")}</Text>
+    <View
+      style={[
+        styles.chip,
+        isDarkMode ? styles.chipDark : styles.chipLight,
+      ]}
+    >
+      <Ionicons name="calendar-outline" size={14} color={isDarkMode ? "#fff" : "#111"} />
+      <Text style={[styles.chipText, { color: isDarkMode ? "#fff" : "#111" }]}>
+        {finalSelectedDays} {t("challengeDetails.days")}
+      </Text>
     </View>
   )}
 
   {/* Duo actif ? */}
   {isDuo && (
-    <View style={styles.chip}>
-      <Ionicons name="people-outline" size={14} color="#fff" />
-      <Text style={styles.chipText}>{t("duo.title")}</Text>
+    <View style={[styles.chip, isDarkMode ? styles.chipDark : styles.chipLight]}>
+      <Ionicons name="people-outline" size={14} color={isDarkMode ? "#fff" : "#111"} />
+      <Text style={[styles.chipText, { color: isDarkMode ? "#fff" : "#111" }]}>{t("duo.title")}</Text>
     </View>
   )}
 
   {/* Participants */}
-  <View style={styles.chip}>
-  <Ionicons name="person-outline" size={14} color="#fff" />
-  <Text style={styles.chipText}>
+  <View style={[styles.chip, isDarkMode ? styles.chipDark : styles.chipLight]}>
+  <Ionicons name="person-outline" size={14} color={isDarkMode ? "#fff" : "#111"} />
+  <Text style={[styles.chipText, { color: isDarkMode ? "#fff" : "#111" }]}>
     {t("challengeDetails.participantsLabel", {
       defaultValue: "Participants",
     })}{": "}{userCount}
   </Text>
 </View>
 </View>
+{/* ✅ DUO PENDING — Keynote card */}
+{isDuoPendingOut && outgoingPendingInvite?.id && (
+  <View style={styles.duoPendingShell}>
+    {/* LEFT = info cliquable */}
+    <Pressable
+      onPress={() => {
+   Alert.alert(
+     t("duo.pending.title"),
+     t("duo.pending.body"),
+     [
+       {
+         text: t("duo.pending.cancelInvite"),
+         style: "destructive",
+         onPress: async () => {
+           try {
+             if (!outgoingPendingInvite?.id) return;
+             await updateDoc(doc(db, "invitations", outgoingPendingInvite.id), {
+               status: "refused",
+               updatedAt: serverTimestamp(),
+             });
+             Haptics.notificationAsync(
+               Haptics.NotificationFeedbackType.Success
+             ).catch(() => {});
+           } catch {
+             Alert.alert(t("alerts.error"), t("duo.pending.cancelError"));
+           }
+         },
+       },
+       { text: t("commonS.ok", { defaultValue: "OK" }), style: "cancel" },
+     ]
+   );
+ }}
+      style={({ pressed }) => [
+        styles.duoPendingCard,
+        pressed && { transform: [{ scale: 0.995 }], opacity: 0.97 },
+      ]}
+      accessibilityRole="button"
+      accessibilityLabel={t("duo.pending.title")}
+      accessibilityHint={t("duo.pending.body")}
+    >
+      {/* ✅ background premium + stroke interne (au lieu d'un border moche) */}
+      <LinearGradient
+        pointerEvents="none"
+        colors={
+          isDarkMode
+            ? ["rgba(20,20,26,0.78)", "rgba(12,12,16,0.62)"]
+            : ["rgba(255,255,255,0.96)", "rgba(255,255,255,0.90)"]
+        }
+        start={{ x: 0, y: 0 }}
+        end={{ x: 1, y: 1 }}
+        style={StyleSheet.absoluteFill}
+      />
+      <View pointerEvents="none" style={styles.duoPendingStroke} />
+
+      <View style={styles.duoPendingRow}>
+        <View style={styles.duoPendingLeft}>
+        <View style={styles.duoPendingIconWrap}>
+          <Animated.View
+            pointerEvents="none"
+            style={[styles.duoPendingHalo, duoPendingGlowStyle]}
+          />
+          <Animated.View
+            pointerEvents="none"
+            style={[styles.duoPendingRing, duoPendingPulseStyle]}
+          />
+          <Animated.View
+            pointerEvents="none"
+            style={[styles.duoPendingDot, duoPendingDotStyle]}
+          />
+          <Ionicons
+            name="hourglass-outline"
+            size={18}
+            color={isDarkMode ? "#fff" : "#111"}
+          />
+        </View>
+
+        <View style={{ flex: 1, minWidth: 0 }}>
+          <Text style={[styles.duoPendingTitle, { color: isDarkMode ? "rgba(255,255,255,0.96)" : "rgba(0,0,0,0.88)" }]} numberOfLines={1} ellipsizeMode="tail">
+            {t("duo.pending.short", { defaultValue: "Invitation en attente" })}
+          </Text>
+
+          <View style={styles.duoPendingMetaRow}>
+            <View style={styles.duoPendingChip}>
+              <Text style={[styles.duoPendingChipText, { color: isDarkMode ? "rgba(255,255,255,0.88)" : "rgba(55,48,163,0.95)" }]}>PENDING</Text>
+            </View>
+           <Text style={[styles.duoPendingSub, { color: isDarkMode ? "rgba(255,255,255,0.70)" : "rgba(0,0,0,0.52)" }]} numberOfLines={1} ellipsizeMode="tail">
+              {t("invitationS.sentBody", { defaultValue: "On te prévient dès qu’il répond." })}
+            </Text>
+          </View>
+
+          {!!outgoingPendingInvite.inviteeUsername && (
+            <Text style={styles.duoPendingTo} numberOfLines={1} ellipsizeMode="tail">
+              @{outgoingPendingInvite.inviteeUsername}
+            </Text>
+          )}
+        </View>
+      </View>
+
+      <Ionicons
+  name="chevron-forward"
+  size={18}
+  color={isDarkMode ? "rgba(255,255,255,0.85)" : "rgba(0,0,0,0.45)"}
+  style={{ marginLeft: 10, marginRight: 2 }}
+/>
+</View>
+    </Pressable>
+
+  </View>
+)}
+
           {!challengeTakenOptimistic  && (
             <TouchableOpacity
               style={styles.takeChallengeButton}
@@ -2402,238 +2893,175 @@ const scrollContentStyle = useMemo(
       </View>
     )}
 
-    {/* === DUO MODE === */}
-    {/* === DUO MODE === */}
-{isDuo && (
-  duoChallengeData?.duoUser ? (
-    <View
-      style={[
-        styles.duoCard,
-        !isDarkMode && { backgroundColor: "rgba(0,0,0,0.05)", borderColor: "rgba(0,0,0,0.08)" },
-      ]}
-    >
-      {/* Header */}
-      <View style={styles.duoHeader}>
-        <Ionicons
-          name="people-circle-outline"
-          size={normalizeSize(22)}
-          color={currentTheme.colors.secondary}
-          style={{ marginRight: 8 }}
-        />
-        <Text style={[styles.duoTitle, { color: currentTheme.colors.secondary }]}>
-          {t("duo.title")}
-        </Text>
+    {/* === DUO MODE — ELITE (2 barres + battle bonus) === */}
+{isDuo && duoChallengeData?.duoUser && (() => {
+  const meDone = finalCompletedDays || 0;
+  const meTotal = finalSelectedDays || 1;
+
+  const pDone = duoChallengeData.duoUser.completedDays || 0;
+  const pTotal = duoChallengeData.duoUser.selectedDays || 1;
+
+  const mePct = Math.max(0, Math.min(1, meDone / meTotal));
+  const pPct = Math.max(0, Math.min(1, pDone / pTotal));
+
+  const diff = Math.abs(mePct - pPct);
+  const status = mePct > pPct ? "leading" : mePct < pPct ? "behind" : "tied";
+  const dayLead = (meDone - pDone);
+
+  const MeIsLeader = status === "leading";
+  const PartnerIsLeader = status === "behind";
+
+  return (
+    <View style={styles.duoEliteWrap}>
+      {/* === AVATARS + COURONNE (lisible) === */}
+      <View style={styles.duoEliteAvatars}>
+        {/* ME */}
+        <View style={styles.duoEliteCol}>
+          <View style={styles.duoAvatarWrap}>
+            {MeIsLeader && (
+              <Animated.View style={[styles.duoCrownMini, pulseStyle]}>
+                <View style={styles.duoCrownPill}>
+                  <Text style={styles.duoCrownMiniEmoji}>👑</Text>
+                </View>
+              </Animated.View>
+            )}
+           <SmartAvatar uri={myAvatar} name={myName || t("duo.you")} size={74} />
+
+          </View>
+          <Text style={styles.duoEliteName} numberOfLines={1} ellipsizeMode="tail">
+            {myName || t("duo.you")}
+          </Text>
+        </View>
+
+        <View style={styles.duoVsPill}>
+          <Text style={styles.duoVs}>VS</Text>
+        </View>
+
+        {/* PARTNER */}
+        <View style={styles.duoEliteCol}>
+          <View style={styles.duoAvatarWrap}>
+            {PartnerIsLeader && (
+              <Animated.View style={[styles.duoCrownMini, pulseStyle]}>
+                <View style={styles.duoCrownPill}>
+                  <Text style={styles.duoCrownMiniEmoji}>👑</Text>
+                </View>
+              </Animated.View>
+            )}
+            <SmartAvatar
+  uri={duoChallengeData.duoUser.avatar}
+  name={duoChallengeData.duoUser.name}
+  size={74}
+/>
+
+          </View>
+          <Text style={styles.duoEliteName} numberOfLines={1} ellipsizeMode="tail">
+            {duoChallengeData.duoUser.name}
+          </Text>
+        </View>
       </View>
 
-      {/* Versus row */}
-      {(() => {
-        const me = {
-          id: auth.currentUser?.uid || "me",
-          name: t("duo.you"),
-          avatar:
-            myAvatar ||
-            (auth.currentUser as any)?.photoURL ||
-            "https://ui-avatars.com/api/?name=You",
-          completedDays: finalCompletedDays || 0,
-          selectedDays: finalSelectedDays || 0,
-        };
-        const partner = duoChallengeData.duoUser;
-        const myPct = pct(me.completedDays, me.selectedDays);
-        const hisPct = pct(partner.completedDays, partner.selectedDays);
-        const iLead = myPct > hisPct;
-        const tied = myPct === hisPct;
+      {/* === PROGRESS STACK (PRIMARY, lisible) === */}
+      <View style={styles.duoProgressStack}>
+        {/* ME BAR */}
+        <View style={styles.duoBarRow}>
+          <View style={styles.duoBarLabelRow}>
+            <Text style={styles.duoBarLabel} numberOfLines={1} ellipsizeMode="tail">{t("duo.you")}</Text>
+            <Text style={styles.duoBarValue}>{meDone}/{meTotal}</Text>
+          </View>
 
-        return (
-          <>
-            {/* Lead banner */}
-            {(() => {
-              const bannerBase = [styles.duoLeadBanner];
-              let bannerBg: any = {};
-              let textStyle: any = {};
-              let iconColor = currentTheme.colors.textSecondary;
-
-              if (tied) {
-                bannerBg = { backgroundColor: isDarkMode ? "rgba(255,255,255,0.08)" : "rgba(0,0,0,0.06)" };
-textStyle = { color: isDarkMode ? "#E6E6E6" : "#333333" };
-              } else if (iLead) {
-                bannerBg = { backgroundColor: isDarkMode ? "rgba(255,215,0,0.18)" : "#FFF4CC" };
-textStyle = { color: isDarkMode ? "#FFE07A" : "#5C4A00" };
-                iconColor = isDarkMode ? "#FFD700" : "#8A6A00";
-              } else {
-                bannerBg = { backgroundColor: isDarkMode ? "rgba(255,122,122,0.18)" : "#FFE5E5" };
-textStyle = { color: isDarkMode ? "#FFB3B3" : "#8A0000" };
-                iconColor = isDarkMode ? "#FF9999" : "#B30000";
-              }
-
-              return (
-                <View style={[...bannerBase, bannerBg]}>
-                  {tied ? (
-                    <>
-                      <Ionicons
-                        name="remove-outline"
-                        size={16}
-                        color={iconColor}
-                        style={{ marginRight: 6 }}
-                      />
-                      <Text style={[styles.duoLeadText, textStyle]}>{t("duo.tied")}</Text>
-                    </>
-                  ) : iLead ? (
-                    <>
-                      <Ionicons
-                        name="trophy-outline"
-                        size={16}
-                        color={iconColor}
-                        style={{ marginRight: 6 }}
-                      />
-                      <Text style={[styles.duoLeadText, textStyle]}>{t("duo.leading")}</Text>
-                    </>
-                  ) : (
-                    <>
-                      <Ionicons
-                        name="trending-down-outline"
-                        size={16}
-                        color={iconColor}
-                        style={{ marginRight: 6 }}
-                      />
-                      <Text style={[styles.duoLeadText, textStyle]}>{t("duo.behind")}</Text>
-                    </>
-                  )}
-                </View>
-              );
-            })()}
-
-            <View style={[styles.duoRow, IS_COMPACT && styles.duoRowCompact]}>
-              {/* Me */}
-              <View style={styles.duoSide}>
-                <View style={styles.avatarWrap}>
-                  <Image source={{ uri: me.avatar }} style={styles.duoAvatarBig} />
-                  {myIsPioneer && (
-                    <PioneerBadge size="mini" style={{ position: "absolute", bottom: -6, left: -6 }} />
-                  )}
-                  {(iLead && !tied) && (
-                    <View
-                      style={[
-                        styles.crownWrap,
-                        isDarkMode
-                          ? { backgroundColor: "rgba(255,215,0,0.18)", borderWidth: 1, borderColor: "rgba(255,215,0,0.6)" }
-                          : { backgroundColor: "#FFF4CC", borderWidth: 1, borderColor: "#FFE08A" }
-                      ]}
-                    >
-                      <Text style={styles.crownEmoji}>👑</Text>
-                    </View>
-                  )}
-                  {(iLead || tied) && (
-                    <Animated.View
-                      pointerEvents="none"
-                      style={[styles.pulseCircle, pulseStyle, { borderColor: currentTheme.colors.secondary }]}
-                    />
-                  )}
-                </View>
-
-                <Text
-                  style={[styles.duoName, { color: isDarkMode ? currentTheme.colors.textPrimary : "#000" }]}
-                  numberOfLines={1}
-                >
-                  {me.name}
-                </Text>
-
-                <View style={[styles.miniBarBg, { backgroundColor: currentTheme.colors.border }]}>
-                  <LinearGradient
-                    colors={
-                      isDarkMode ? ["#FFD700", "#FFD700"] : [currentTheme.colors.primary, currentTheme.colors.secondary]
-                    }
-                    style={[styles.miniBarFill, { width: `${myPct}%` }]}
-                    start={{ x: 0, y: 0 }}
-                    end={{ x: 1, y: 1 }}
-                  />
-                </View>
-                <Text style={[styles.duoPct, { color: currentTheme.colors.textSecondary }]}>
-                  {me.completedDays}/{me.selectedDays} · {myPct}%
-                </Text>
-              </View>
-
-              {/* VS */}
-              <View style={[styles.vsWrap, IS_COMPACT && styles.vsWrapCompact]}>
-                <LinearGradient
-                  colors={[currentTheme.colors.secondary, currentTheme.colors.primary]}
-                  start={{ x: 0, y: 0 }}
-                  end={{ x: 1, y: 1 }}
-                  style={[styles.vsBadge, IS_COMPACT && styles.vsBadgeCompact]}
-                >
-                  <Text style={[styles.vsText, IS_COMPACT && styles.vsTextCompact]}>VS</Text>
-                </LinearGradient>
-              </View>
-
-              {/* Partner */}
-              <View style={styles.duoSide}>
-                <View style={styles.avatarWrap}>
-                  <Image
-                    source={{
-                      uri:
-                        partnerAvatar ||
-                        partner.avatar ||
-                        `https://ui-avatars.com/api/?name=${encodeURIComponent(partner.name || "P")}`,
-                    }}
-                    style={styles.duoAvatarBig}
-                  />
-                  {partner.isPioneer && (
-                    <PioneerBadge size="mini" style={{ position: "absolute", bottom: -6, left: -6 }} />
-                  )}
-                  {(!iLead && !tied) && (
-                    <View
-                      style={[
-                        styles.crownWrap,
-                        isDarkMode
-                          ? { backgroundColor: "rgba(0,209,255,0.18)", borderWidth: 1, borderColor: "rgba(0,209,255,0.55)" }
-                          : { backgroundColor: "#DFF7FF", borderWidth: 1, borderColor: "#B9ECFF" }
-                      ]}
-                    >
-                      <Text style={styles.crownEmoji}>👑</Text>
-                    </View>
-                  )}
-                  {(!iLead && !tied) && (
-                    <Animated.View
-                      pointerEvents="none"
-                      style={[styles.pulseCircle, pulseStyle, { borderColor: currentTheme.colors.secondary }]}
-                    />
-                  )}
-                </View>
-
-                <Text
-                  style={[styles.duoName, { color: isDarkMode ? currentTheme.colors.textPrimary : "#000" }]}
-                  numberOfLines={1}
-                >
-                  {partner.name}
-                </Text>
-
-                <View style={[styles.miniBarBg, { backgroundColor: currentTheme.colors.border }]}>
-                  <LinearGradient
-                    colors={isDarkMode ? ["#00FFFF", "#00FFFF"] : [currentTheme.colors.secondary, currentTheme.colors.primary]}
-                    style={[styles.miniBarFill, { width: `${hisPct}%` }]}
-                    start={{ x: 0, y: 0 }}
-                    end={{ x: 1, y: 1 }}
-                  />
-                </View>
-                <Text style={[styles.duoPct, { color: currentTheme.colors.textSecondary }]}>
-                  {partner.completedDays}/{partner.selectedDays} · {hisPct}%
-                </Text>
-              </View>
+          <View style={styles.duoBarTrack}>
+            <View style={styles.duoBarTrackSheen} pointerEvents="none" />
+            <View style={styles.duoBarTicks} pointerEvents="none">
+              <View style={styles.duoBarTick} />
+              <View style={styles.duoBarTick} />
+              <View style={styles.duoBarTick} />
+              <View style={styles.duoBarTick} />
             </View>
+            <LinearGradient
+              colors={["#FF9F1C", "#FFD166"]}
+              start={{ x: 0, y: 0 }}
+              end={{ x: 1, y: 0 }}
+              style={[
+  styles.duoBarFill,
+  styles.duoBarFillMe,
+  { width: `${Math.max(2, mePct * 100)}%`, opacity: mePct === 0 ? 0.35 : 1 },
+]}
 
-          </>
-        );
-      })()}
-    </View>
-  ) : (
-    // Loader pendant le fetch du partenaire (évite tout flicker)
-    <View style={{ marginTop: 20, alignItems: "center" }}>
-      <ActivityIndicator size="small" color={currentTheme.colors.secondary} />
-      <Text style={{ color: currentTheme.colors.textSecondary, marginTop: 6 }}>
-        {t("duo.loadingPartner")}
+            />
+          </View>
+        </View>
+
+        {/* PARTNER BAR */}
+        <View style={styles.duoBarRow}>
+          <View style={styles.duoBarLabelRow}>
+            <Text style={styles.duoBarLabel} numberOfLines={1} ellipsizeMode="tail">
+              {duoChallengeData.duoUser.name}
+            </Text>
+            <Text style={styles.duoBarValue}>{pDone}/{pTotal}</Text>
+          </View>
+
+          <View style={styles.duoBarTrack}>
+            <View style={styles.duoBarTrackSheen} pointerEvents="none" />
+            <View style={styles.duoBarTicks} pointerEvents="none">
+              <View style={styles.duoBattleOutline} pointerEvents="none" />
+              <View style={styles.duoBarTick} />
+              <View style={styles.duoBarTick} />
+              <View style={styles.duoBarTick} />
+              <View style={styles.duoBarTick} />
+            </View>
+            <LinearGradient
+              colors={["#00C2FF", "#00FFD1"]}
+              start={{ x: 0, y: 0 }}
+              end={{ x: 1, y: 0 }}
+              style={[
+  styles.duoBarFill,
+  styles.duoBarFillPartner,
+  { width: `${Math.max(2, pPct * 100)}%`, opacity: pPct === 0 ? 0.35 : 1 },
+]}
+
+            />
+          </View>
+        </View>
+      </View>
+
+      {/* === BATTLE BAR (SECONDARY, Netflix vibe) === */}
+      <View style={styles.duoBattleTitleRow}>
+  <Text style={styles.duoBattleTitle}>BATTLE BAR</Text>
+  <Text style={styles.duoBattleMini}>{meDone}/{meTotal} • {pDone}/{pTotal}</Text>
+</View>
+
+      <View style={styles.duoBattleBarWrap}>
+        <View style={styles.duoBattleBar}>
+          <View style={styles.duoBattleRail} pointerEvents="none" />
+          <View style={[styles.duoBattleLeft, { width: `${mePct * 100}%` }]} />
+          <View style={[styles.duoBattleRight, { width: `${pPct * 100}%` }]} />
+          <View style={styles.duoBattleDivider} pointerEvents="none" />
+        </View>
+      </View>
+
+      {/* === STATUT === */}
+      <Text
+        style={[
+          styles.duoEliteStatus,
+          status === "leading" && styles.duoLeading,
+          status === "behind" && styles.duoBehind,
+        ]}
+      >
+        {status === "leading" && `▲ +${Math.abs(dayLead)}`}
+  {status === "behind" && `▼ -${Math.abs(dayLead)}`}
+  {status === "tied" && "—"}
       </Text>
-    </View>
-  )
+      {status !== "tied" && (
+  <Text style={styles.duoEliteSubStatus}>
+    {status === "leading" && t("duo.status.leading", { percent: Math.round(diff * 100) })}
+    {status === "behind" && t("duo.status.behind", { percent: Math.round(diff * 100) })}
+  </Text>
 )}
+    </View>
+  );
+})()}
+
+
 
 
     {/* Bouton marquer aujourd'hui (commun) */}
@@ -2795,184 +3223,157 @@ textStyle = { color: isDarkMode ? "#FFB3B3" : "#8A0000" };
               </LinearGradient>
             </TouchableOpacity>
           )}
-
-
             
-          {/* ✅ ACTIONS — version “Keynote” : tuiles nettes + microcopy + anti-texte-coupé */}
-          <Animated.View
-            entering={firstMountRef.current && shouldEnterAnim ? FadeInUp.delay(300) : undefined}
-            style={styles.actionGrid}
-          >
-            {/* INVITER (prioritaire / viral) */}
-            <Pressable
-              style={({ pressed }) => [
-                styles.actionTile,
-                { width: actionIconWidth, opacity: pressed ? 0.85 : 1 },
-                (isDuo || isOffline) && { opacity: 0.55 },
-                !isDarkMode && { backgroundColor: "rgba(0,0,0,0.04)", borderColor: "rgba(0,0,0,0.08)" },
-              ]}
-              onPress={handleInviteButtonPress}
-              disabled={isDuo || isOffline}
-              accessibilityRole="button"
-              accessibilityLabel={t("challengeDetails.actions.inviteA11y")}
-              accessibilityHint={
-                isOffline
-                  ? t("challengeDetails.actions.inviteHintOffline")
-                  : isDuo
-                  ? t("challengeDetails.actions.inviteHintDuo")
-                  : t("challengeDetails.actions.inviteHint")
-              }
-              testID="invite-button"
-              hitSlop={10}
-            >
-              <View style={styles.actionTopRow}>
-                <Ionicons name="person-add-outline" size={normalizeSize(22)} color={currentTheme.colors.textSecondary} />
-                <View style={styles.actionPill}>
-                  <Text style={[styles.actionPillText, { color: currentTheme.colors.textPrimary }]}>
-                    {t("challengeDetails.actions.best")}
-                  </Text>
-                </View>
-              </View>
-              <Text style={[styles.actionTitle, { color: currentTheme.colors.textPrimary }]}>
-                {short(t("inviteAFriend"), 14)}
-              </Text>
-              <Text style={[styles.actionSub, { color: currentTheme.colors.textSecondary }]}>
-                {t("challengeDetails.actions.inviteSub")}
-              </Text>
-            </Pressable>
+        {/* ACTIONS */}
+<View style={styles.actionsWrap}>
 
-            {/* PARTAGER (carte) */}
-            <Pressable
-              style={({ pressed }) => [
-                styles.actionTile,
-                { width: actionIconWidth, opacity: pressed ? 0.85 : 1 },
-                !isDarkMode && { backgroundColor: "rgba(0,0,0,0.04)", borderColor: "rgba(0,0,0,0.08)" },
-              ]}
-              onPress={() => setShareCardVisible(true)}
-              accessibilityRole="button"
-              accessibilityLabel={t("challengeDetails.shareA11y")}
-              accessibilityHint={t("challengeDetails.actions.shareHint")}
-              testID="share-button"
-              hitSlop={10}
-            >
-              <View style={styles.actionTopRow}>
-                <Ionicons name="share-social-outline" size={normalizeSize(22)} color={currentTheme.colors.textSecondary} />
-              </View>
-              <Text style={[styles.actionTitle, { color: currentTheme.colors.textPrimary }]}>
-                {short(t("challengeDetails.share"), 14)}
-              </Text>
-              <Text style={[styles.actionSub, { color: currentTheme.colors.textSecondary }]}>
-                {t("challengeDetails.actions.shareSub")}
-              </Text>
-            </Pressable>
+  {/* MAIN ACTIONS */}
+  <View style={styles.primaryActions}>
+    {!isDuoPendingOut && (
+    <Pressable
+     onPress={handleInviteButtonPress}
+     accessibilityRole="button"
+     accessibilityLabel={t("challengeDetails.actions.inviteA11y", { defaultValue: "Invite a friend" })}
+     accessibilityHint={t("challengeDetails.actions.inviteHint", { defaultValue: "Opens duo invitation for this challenge." })}
+     style={({ pressed }) => [
+       styles.primaryBtn,
+       styles.primaryBtnInvite,
+       pressed && styles.btnPressed,
+     ]}
+   >
+     <View style={{ width: 26, height: 26, alignItems: "center", justifyContent: "center" }}>
+       <Ionicons name="person-add-outline" size={20} color="#fff" />
+     </View>
 
-            {/* CHAT */}
-            <Pressable
-              style={({ pressed }) => [
-                styles.actionTile,
-                { width: actionIconWidth, opacity: pressed ? 0.85 : 1 },
-                !isDarkMode && { backgroundColor: "rgba(0,0,0,0.04)", borderColor: "rgba(0,0,0,0.08)" },
-              ]}
-              onPress={handleNavigateToChat}
-              accessibilityRole="button"
-              accessibilityLabel={t("challengeDetails.chatA11y")}
-              accessibilityHint={t("challengeDetails.actions.chatHint")}
-              testID="chat-button"
-              hitSlop={10}
-            >
-              <View style={styles.actionTopRow}>
-                <Ionicons name="chatbubble-ellipses-outline" size={normalizeSize(22)} color={currentTheme.colors.textSecondary} />
-              </View>
-              <Text style={[styles.actionTitle, { color: currentTheme.colors.textPrimary }]}>
-                {short(t("challengeDetails.chat"), 14)}
-              </Text>
-              <Text style={[styles.actionSub, { color: currentTheme.colors.textSecondary }]}>
-                {t("challengeDetails.actions.chatSub")}
-              </Text>
-            </Pressable>
+     <Text style={styles.primaryBtnText}>
+       {t("challengeDetails.actions.inviteTitle")}
+     </Text>
 
-            {/* SAUVEGARDER */}
-            <Pressable
-              style={({ pressed }) => [
-                styles.actionTile,
-                { width: actionIconWidth, opacity: pressed ? 0.85 : 1 },
-                !isDarkMode && { backgroundColor: "rgba(0,0,0,0.04)", borderColor: "rgba(0,0,0,0.08)" },
-              ]}
-              onPress={handleSaveChallenge}
-              accessibilityRole="button"
-              accessibilityLabel={
-                isSavedChallenge(id) ? t("challengeDetails.removeSavedA11y") : t("challengeDetails.saveA11y")
-              }
-              accessibilityHint={t("challengeDetails.actions.saveHint")}
-              testID="save-button"
-              hitSlop={10}
-            >
-              <View style={styles.actionTopRow}>
-                <Ionicons
-                  name={
-                    pendingFavorite !== null
-                      ? pendingFavorite
-                        ? "bookmark"
-                        : "bookmark-outline"
-                      : isSavedChallenge(id)
-                      ? "bookmark"
-                      : "bookmark-outline"
-                  }
-                  size={normalizeSize(22)}
-                  color={
-                    pendingFavorite !== null
-                      ? pendingFavorite
-                        ? currentTheme.colors.secondary
-                        : currentTheme.colors.textSecondary
-                      : isSavedChallenge(id)
-                      ? currentTheme.colors.secondary
-                      : currentTheme.colors.textSecondary
-                  }
-                />
-              </View>
-              <Text style={[styles.actionTitle, { color: currentTheme.colors.textPrimary }]}>
-                {short(
-                  pendingFavorite !== null
-                    ? pendingFavorite
-                      ? t("challengeDetails.saved")
-                      : t("challengeDetails.save")
-                    : isSavedChallenge(id)
-                    ? t("challengeDetails.saved")
-                    : t("challengeDetails.save"),
-                  14
-                )}
-              </Text>
-              <Text style={[styles.actionSub, { color: currentTheme.colors.textSecondary }]}>
-                {t("challengeDetails.actions.saveSub")}
-              </Text>
-            </Pressable>
+     <Ionicons name="chevron-forward" size={18} color="#fff" />
+   </Pressable>
+ )}
 
-            {/* STATS */}
-            <Pressable
-              style={({ pressed }) => [
-                styles.actionTile,
-                { width: actionIconWidth, opacity: pressed ? 0.85 : challengeTaken ? 1 : 0.55 },
-                !isDarkMode && { backgroundColor: "rgba(0,0,0,0.04)", borderColor: "rgba(0,0,0,0.08)" },
-              ]}
-              onPress={challengeTaken ? handleViewStats : undefined}
-              disabled={!challengeTaken}
-              accessibilityRole="button"
-              accessibilityLabel={t("challengeDetails.statsA11y")}
-              accessibilityHint={t("challengeDetails.actions.statsHint")}
-              testID="stats-button"
-              hitSlop={10}
-            >
-              <View style={styles.actionTopRow}>
-                <Ionicons name="stats-chart-outline" size={normalizeSize(22)} color={currentTheme.colors.textSecondary} />
-              </View>
-              <Text style={[styles.actionTitle, { color: currentTheme.colors.textPrimary }]}>
-                {short(t("challengeDetails.stats"), 14)}
-              </Text>
-              <Text style={[styles.actionSub, { color: currentTheme.colors.textSecondary }]}>
-                {t("challengeDetails.actions.statsSub")}
-              </Text>
-            </Pressable>
-          </Animated.View>
+
+    <Pressable
+      onPress={() => setShareCardVisible(true)}
+       accessibilityRole="button"
+  accessibilityLabel={t("challengeDetails.actions.shareA11y", { defaultValue: "Share" })}
+  accessibilityHint={t("challengeDetails.actions.shareHint", { defaultValue: "Opens share options for this challenge." })}
+      style={({ pressed }) => [
+        styles.primaryBtn,
+        styles.primaryBtnSecondary,
+        pressed && styles.btnPressed,
+      ]}
+    >
+      <Ionicons name="share-outline" size={20} color="#111" />
+      <Text style={styles.primaryBtnTextSecondary}>{t("challengeDetails.actions.shareTitle")}</Text>
+      <Ionicons name="chevron-forward" size={18} color="rgba(0,0,0,0.5)" />
+    </Pressable>
+  </View>
+
+  {/* QUICK ACTIONS */}
+  <View style={styles.quickActions}>
+    <Pressable
+      onPress={handleNavigateToChat}
+      disabled={!challengeTaken}
+      accessibilityRole="button"
+      accessibilityState={{ disabled: !challengeTaken }}
+      accessibilityLabel={t("challengeDetails.quick.chatA11y", { defaultValue: "Open chat" })}
+      accessibilityHint={t("challengeDetails.quick.chatHint", { defaultValue: "Opens the challenge chat." })}
+      style={({ pressed }) => [
+        styles.quickBtn,
+        !challengeTaken && styles.quickBtnDisabled,
+        pressed && styles.btnPressed,
+      ]}
+    >
+      <Ionicons
+        name="chatbubble-ellipses-outline"
+        size={18}
+        color={!challengeTaken ? "rgba(0,0,0,0.35)" : undefined}
+      />
+      <Text
+  style={styles.quickText}
+  numberOfLines={1}
+  ellipsizeMode="tail"
+  adjustsFontSizeToFit
+  minimumFontScale={0.85}
+>
+  {t("challengeDetails.quick.chat")}
+</Text>
+    </Pressable>
+
+    <Pressable
+      onPress={handleViewStats}
+      disabled={!challengeTaken}
+      accessibilityRole="button"
+      accessibilityState={{ disabled: !challengeTaken }}
+      accessibilityLabel={t("challengeDetails.quick.statsA11y", { defaultValue: "Open stats" })}
+      accessibilityHint={t("challengeDetails.quick.statsHint", { defaultValue: "Opens your progress calendar and stats." })}
+      style={({ pressed }) => [
+        styles.quickBtn,
+        !challengeTaken && styles.quickBtnDisabled,
+        pressed && styles.btnPressed,
+      ]}
+    >
+      <Ionicons
+        name="stats-chart-outline"
+        size={18}
+        color={!challengeTaken ? "rgba(0,0,0,0.35)" : undefined}
+      />
+      <Text
+  style={styles.quickText}
+  numberOfLines={1}
+  ellipsizeMode="tail"
+  adjustsFontSizeToFit
+  minimumFontScale={0.85}
+>
+  {t("challengeDetails.quick.stats")}
+</Text>
+    </Pressable>
+
+    <Pressable
+  onPress={handleSaveChallenge}
+  accessibilityRole="button"
+  accessibilityLabel={
+    savedNow
+      ? t("challengeDetails.quick.savedA11y")
+      : t("challengeDetails.quick.saveA11y")
+  }
+  accessibilityHint={t("challengeDetails.quick.saveHint")}
+  style={({ pressed }) => [
+    styles.quickBtn,
+    pressed && styles.btnPressed,
+  ]}
+>
+  <Ionicons
+    name={savedNow ? "bookmark" : "bookmark-outline"}
+    size={18}
+    color={savedNow ? ACCENT.solid : undefined}
+  />
+
+  <Text
+    style={[
+      styles.quickText,
+      savedNow && styles.quickTextActive,
+    ]}
+    numberOfLines={1}
+    ellipsizeMode="tail"
+    adjustsFontSizeToFit
+    minimumFontScale={0.85}
+  >
+    {savedNow
+      ? t("challengeDetails.quick.saved")
+      : t("challengeDetails.quick.save")}
+  </Text>
+</Pressable>
+
+  </View>
+
+</View>
+
+
+        </LinearGradient>
+          </BlurView>
         </Animated.View>
         {/* 🆕 Lazy mount des reviews après les interactions (fluidité initiale) */}
 {showReviews && (
@@ -2994,13 +3395,27 @@ textStyle = { color: isDarkMode ? "#FFB3B3" : "#8A0000" };
       />
 
       {completionModalVisible && (
-        <ChallengeCompletionModal
-          visible={completionModalVisible}
-          challengeId={id}
-          selectedDays={finalSelectedDays}
-          onClose={() => setCompletionModalVisible(false)}
-        />
-      )}
+  <ChallengeCompletionModal
+    visible={completionModalVisible}
+    challengeId={id}
+    selectedDays={finalSelectedDays}
+    onClose={() => setCompletionModalVisible(false)}
+    onPreloadRewarded={loadRewarded}
+    onShowRewarded={async () => {
+      // showRewarded ne renvoie rien -> on convertit en boolean
+      try {
+        await showRewarded();
+        return true;
+      } catch {
+        return false;
+      }
+    }}
+    canShowRewarded={!!showBanners}
+    rewardedReady={rewardedLoaded}
+    rewardedLoading={rewardedLoading}
+  />
+)}
+
 
       <StatsModal
         visible={statsModalVisible}
@@ -3117,55 +3532,129 @@ textStyle = { color: isDarkMode ? "#FFB3B3" : "#8A0000" };
 
 
 {/* ⚠️ Confirmation : passer en Duo réinitialise ta progression solo */}
-{/* ⚠️ Confirmation : si déjà en SOLO, accepter bascule en DUO et remet à 0 le solo */}
 <Modal
   visible={confirmResetVisible}
   transparent
   animationType="fade"
+  statusBarTranslucent
   onRequestClose={() => setConfirmResetVisible(false)}
 >
   <View style={styles.confirmBackdrop}>
-    <View style={styles.confirmCard}>
-      <Text style={styles.confirmTitle}>
-        {t("invitationS.confirmReset.title", {
-          defaultValue: "Passer en duo ?",
-        })}
-      </Text>
-      <Text style={styles.confirmText}>
-        {t("invitationS.confirmReset.message", {
-          defaultValue:
-            "Si vous envoyez une invitation, vous perdrez votre progression solo pour recommencer à 0 en duo. Êtes-vous sûr de vouloir continuer ?",
-        })}
-      </Text>
+    {/* Backdrop premium (blur + vignette) */}
+    <BlurView intensity={44} tint="dark" style={StyleSheet.absoluteFill} />
+    <LinearGradient
+      pointerEvents="none"
+      colors={["rgba(0,0,0,0.35)", "rgba(0,0,0,0.62)"]}
+      start={{ x: 0.5, y: 0 }}
+      end={{ x: 0.5, y: 1 }}
+      style={StyleSheet.absoluteFill}
+    />
 
-      <View style={styles.confirmRow}>
-        <TouchableOpacity
-          style={[styles.confirmBtn, styles.confirmBtnCancel]}
-          onPress={() => setConfirmResetVisible(false)}
-          accessibilityLabel={t("commonS.cancel")}
+    <Animated.View
+      entering={FadeInUp.duration(240)}
+      style={[
+        styles.confirmCardKeynote,
+        { marginBottom: insets.bottom + 12 },
+      ]}
+    >
+      {/* Glass card */}
+      <BlurView
+        intensity={Platform.OS === "ios" ? 28 : 18}
+        tint="dark"
+        style={styles.confirmCardBlur}
+      >
+        <LinearGradient
+          colors={["rgba(255,255,255,0.10)", "rgba(255,255,255,0.06)"]}
+          start={{ x: 0, y: 0 }}
+          end={{ x: 1, y: 1 }}
+          style={styles.confirmCardInner}
         >
-          <Text style={styles.confirmBtnCancelText}>
-            {t("commonS.cancel", { defaultValue: "Non" })}
-          </Text>
-        </TouchableOpacity>
+          {/* Stroke interne (au lieu d’un border moche) */}
+          <View pointerEvents="none" style={styles.confirmInnerStroke} />
 
-        <TouchableOpacity
-          style={[styles.confirmBtn, styles.confirmBtnOk]}
-          onPress={() => {
-            // Ferme l’alerte et ouvre le vrai SendInvitationModal
-            setConfirmResetVisible(false);
-            setSendInviteVisible(true);
-          }}
-          accessibilityLabel={t("commonS.continue")}
-        >
-          <Text style={styles.confirmBtnOkText}>
-            {t("commonS.continue", { defaultValue: "Oui, continuer" })}
-          </Text>
-        </TouchableOpacity>
-      </View>
-    </View>
+          {/* Header: icon + title */}
+          <View style={styles.confirmHeaderRow}>
+            <View style={styles.confirmIconPill}>
+              <LinearGradient
+                colors={["rgba(255,215,0,0.22)", "rgba(0,255,255,0.16)"]}
+                start={{ x: 0, y: 0 }}
+                end={{ x: 1, y: 1 }}
+                style={StyleSheet.absoluteFill}
+              />
+              <Ionicons name="people-outline" size={18} color="#FFFFFF" />
+            </View>
+
+            <View style={{ flex: 1, minWidth: 0 }}>
+              <Text style={styles.confirmTitleKeynote} numberOfLines={1} ellipsizeMode="tail">
+                {t("invitationS.confirmReset.title", { defaultValue: "Passer en duo" })}
+              </Text>
+              <Text style={styles.confirmSubKeynote} numberOfLines={2} ellipsizeMode="tail">
+                {t("invitationS.confirmReset.sub", {
+                  defaultValue: "Tu redémarres le défi pour avancer ensemble, à égalité.",
+                })}
+              </Text>
+            </View>
+          </View>
+
+          {/* Message card (compact, lisible) */}
+          <View style={styles.confirmMessageCard}>
+            <Ionicons name="refresh-outline" size={16} color="rgba(255,255,255,0.92)" />
+            <Text style={styles.confirmTextKeynote}>
+              {t("invitationS.confirmReset.message", {
+                defaultValue:
+                  "Ta progression solo sera remise à zéro sur ce défi. Ton ami commencera au même niveau.",
+              })}
+            </Text>
+          </View>
+
+          {/* Actions */}
+          <View style={styles.confirmActions}>
+            <Pressable
+              onPress={() => setConfirmResetVisible(false)}
+              style={({ pressed }) => [
+                styles.confirmGhostBtn,
+                pressed && { opacity: 0.85, transform: [{ scale: 0.99 }] },
+              ]}
+              accessibilityRole="button"
+              accessibilityLabel={t("commonS.cancel", { defaultValue: "Annuler" })}
+            >
+              <Text style={styles.confirmGhostText}>
+                {t("commonS.cancel", { defaultValue: "Annuler" })}
+              </Text>
+            </Pressable>
+
+            <Pressable
+              onPress={() => {
+                setConfirmResetVisible(false);
+                setSendInviteVisible(true);
+              }}
+              style={({ pressed }) => [
+                styles.confirmPrimaryBtn,
+                pressed && { transform: [{ scale: 0.985 }] },
+              ]}
+              accessibilityRole="button"
+              accessibilityLabel={t("commonS.continue", { defaultValue: "Continuer" })}
+            >
+              <LinearGradient
+                colors={["#FFD700", "#00FFFF"]}
+                start={{ x: 0, y: 0 }}
+                end={{ x: 1, y: 1 }}
+                style={StyleSheet.absoluteFill}
+              />
+              <View pointerEvents="none" style={styles.confirmPrimarySheen} />
+              <Text style={styles.confirmPrimaryText}>
+                {t("commonS.continue", { defaultValue: "Continuer" })}
+              </Text>
+              <Ionicons name="chevron-forward" size={18} color="#111" />
+            </Pressable>
+          </View>
+        </LinearGradient>
+      </BlurView>
+    </Animated.View>
   </View>
 </Modal>
+
+
 
 <ShareCardModal
   visible={shareCardVisible}
@@ -3191,8 +3680,11 @@ partnerDaysCompleted={duoChallengeData?.duoUser?.completedDays ?? 0}
   isDuo={isDuo}
   onClose={() => setSendInviteVisible(false)}
   onSent={() => {
-  Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success).catch(()=>{});
-  Alert.alert(t("duo.nudge"), t("invitationS.sent", { defaultValue: "Invitation envoyée ✅" }));
+  Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success).catch(() => {});
+  Alert.alert(
+    t("invitationS.sentTitle", { defaultValue: "Invitation envoyée" }),
+    t("invitationS.sentBody", { defaultValue: "On te prévient dès qu’il répond." })
+  );
   setSendInviteVisible(false);
 }}
 />
@@ -3293,6 +3785,143 @@ partnerDaysCompleted={duoChallengeData?.duoUser?.completedDays ?? 0}
   );
 }
 
+// ===== DUO UI: Premium Avatar + Progress Row (NO weird placeholder) =====
+const getInitial = (name?: string) => {
+  const n = (name || "").trim();
+  return n ? n[0]!.toUpperCase() : "•";
+};
+
+const SmartAvatar = ({
+  uri,
+  name,
+  size = 74,
+}: {
+  uri?: string | null;
+  name?: string;
+  size?: number;
+}) => {
+  const [failed, setFailed] = React.useState(false);
+
+  const hasUri = typeof uri === "string" && uri.trim().length > 0;
+  const showImage = hasUri && !failed;
+
+  return (
+    <View
+      style={[
+        styles.avatarShell,
+        {
+          width: size,
+          height: size,
+          borderRadius: size / 2,
+        },
+      ]}
+    >
+      {showImage ? (
+        <Image
+          source={{ uri: uri!.trim() }}
+          style={{ width: size, height: size, borderRadius: size / 2 }}
+          onError={() => setFailed(true)}
+          fadeDuration={120}
+        />
+      ) : (
+        <LinearGradient
+          colors={["rgba(255,255,255,0.20)", "rgba(255,255,255,0.06)"]}
+          start={{ x: 0, y: 0 }}
+          end={{ x: 1, y: 1 }}
+          style={{
+            width: size,
+            height: size,
+            borderRadius: size / 2,
+            alignItems: "center",
+            justifyContent: "center",
+          }}
+        >
+          <View style={styles.avatarFallbackIconWrap}>
+            <Ionicons
+              name="person"
+              size={Math.round(size * 0.34)}
+              color="rgba(255,255,255,0.92)"
+            />
+          </View>
+
+          <Text
+            style={[
+              styles.avatarInitial,
+              { fontSize: Math.round(size * 0.22) },
+            ]}
+          >
+            {getInitial(name)}
+          </Text>
+        </LinearGradient>
+      )}
+
+      {/* Premium ring */}
+      <View
+        style={[styles.avatarRing, { borderRadius: size / 2 }]}
+        pointerEvents="none"
+      />
+
+      {/* Soft top highlight */}
+      <View
+        style={[styles.avatarSpecular, { borderRadius: size / 2 }]}
+        pointerEvents="none"
+      />
+    </View>
+  );
+};
+
+// ===== /DUO UI =====
+
+
+// ✅ Keynote tokens (cohérence + rendu premium)
+const R = {
+  hero: normalizeSize(30),
+  card: 26,
+  pill: 999,
+  btn: normalizeSize(22),
+};
+
+const GLASS = {
+  // plus "Apple glass", moins "gaming"
+  border: "rgba(255,255,255,0.14)",
+  borderSoft: "rgba(255,255,255,0.10)",
+  bg: "rgba(255,255,255,0.08)",
+  bgSoft: "rgba(255,255,255,0.06)",
+  bgDark: "rgba(10, 10, 15, 0.88)",
+};
+
+const ACCENT = {
+  // or plus subtil (moins “#FFD700” brut)
+  solid: "#F4D35E",
+  softBorder: "rgba(244, 211, 94, 0.35)",
+  softFill: "rgba(244, 211, 94, 0.16)",
+  glow: "rgba(244, 211, 94, 0.55)",
+};
+
+const S = {
+  // shadows plus clean (iOS) + elevation modérée (Android)
+  card: Platform.select({
+    ios: {
+      shadowColor: "#000",
+      shadowOpacity: 0.16,
+      shadowRadius: 18,
+      shadowOffset: { width: 0, height: 12 },
+    },
+    android: { elevation: 8 },
+    default: {},
+  }),
+  float: Platform.select({
+    ios: {
+      shadowColor: "#000",
+      shadowOpacity: 0.22,
+      shadowRadius: 20,
+      shadowOffset: { width: 0, height: 14 },
+    },
+    android: { elevation: 10 },
+    default: {},
+  }),
+};
+
 const styles = StyleSheet.create({
   container: {
     flex: 1,
@@ -3300,21 +3929,847 @@ const styles = StyleSheet.create({
   carouselContainer: { position: "relative", height: 0 },
  imageContainer: {
     width: "100%",
-    borderBottomLeftRadius: normalizeSize(30),
-    borderBottomRightRadius: normalizeSize(30),
+    borderBottomLeftRadius: R.hero,
+    borderBottomRightRadius: R.hero,
     overflow: "hidden",
     marginBottom: SPACING,
-    shadowColor: "#000",
-    shadowOpacity: 0.18,
-    shadowRadius: 14,
-    shadowOffset: { width: 0, height: 10 },
-    elevation: 10,
+    ...S.float,
   },
+  confirmBackdrop: {
+  flex: 1,
+  justifyContent: "flex-end",
+  paddingHorizontal: 16,
+  paddingTop: 24,
+},
+
+confirmCardKeynote: {
+  borderRadius: 28,
+  overflow: "hidden",
+  maxWidth: 520,
+  width: "100%",
+  alignSelf: "center",
+  // shadow iOS
+  shadowColor: "#000",
+  shadowOffset: { width: 0, height: 18 },
+  shadowOpacity: 0.35,
+  shadowRadius: 28,
+  // elevation Android
+  elevation: 22,
+},
+
+confirmCardBlur: {
+  borderRadius: 28,
+  overflow: "hidden",
+},
+
+confirmCardInner: {
+  paddingHorizontal: 18,
+  paddingTop: 18,
+  paddingBottom: 14,
+  borderRadius: 28,
+},
+
+confirmInnerStroke: {
+  ...StyleSheet.absoluteFillObject,
+  borderRadius: 28,
+  borderWidth: StyleSheet.hairlineWidth,
+  borderColor: "rgba(255,255,255,0.18)",
+},
+
+confirmHeaderRow: {
+  flexDirection: "row",
+  alignItems: "center",
+  gap: 12,
+  marginBottom: 14,
+},
+
+confirmIconPill: {
+  width: 38,
+  height: 38,
+  borderRadius: 19,
+  alignItems: "center",
+  justifyContent: "center",
+  overflow: "hidden",
+  borderWidth: StyleSheet.hairlineWidth,
+  borderColor: "rgba(255,255,255,0.22)",
+  backgroundColor: "rgba(255,255,255,0.06)",
+},
+
+confirmTitleKeynote: {
+  fontSize: 18,
+  lineHeight: 22,
+  color: "rgba(255,255,255,0.96)",
+  fontFamily: "Comfortaa_700Bold",
+},
+
+confirmSubKeynote: {
+  marginTop: 3,
+  fontSize: 13,
+  lineHeight: 17,
+  color: "rgba(255,255,255,0.72)",
+  fontFamily: "System",
+},
+
+confirmMessageCard: {
+  flexDirection: "row",
+  alignItems: "flex-start",
+  gap: 10,
+  paddingVertical: 12,
+  paddingHorizontal: 12,
+  borderRadius: 18,
+  backgroundColor: "rgba(255,255,255,0.06)",
+  borderWidth: StyleSheet.hairlineWidth,
+  borderColor: "rgba(255,255,255,0.14)",
+  marginBottom: 14,
+},
+
+confirmTextKeynote: {
+  flex: 1,
+  minWidth: 0,
+  fontSize: 13.5,
+  lineHeight: 18,
+  color: "rgba(255,255,255,0.86)",
+  fontFamily: "System",
+},
+
+confirmActions: {
+  flexDirection: "row",
+  gap: 10,
+  paddingTop: 2,
+},
+
+confirmGhostBtn: {
+  flex: 1,
+  height: 48,
+  borderRadius: 16,
+  alignItems: "center",
+  justifyContent: "center",
+  backgroundColor: "rgba(255,255,255,0.06)",
+  borderWidth: StyleSheet.hairlineWidth,
+  borderColor: "rgba(255,255,255,0.16)",
+},
+
+confirmGhostText: {
+  color: "rgba(255,255,255,0.90)",
+  fontSize: 14,
+  fontFamily: "Comfortaa_700Bold",
+},
+
+confirmPrimaryBtn: {
+  flex: 1.2,
+  height: 48,
+  borderRadius: 16,
+  overflow: "hidden",
+  flexDirection: "row",
+  alignItems: "center",
+  justifyContent: "center",
+  gap: 8,
+  borderWidth: StyleSheet.hairlineWidth,
+  borderColor: "rgba(255,255,255,0.18)",
+},
+
+confirmPrimarySheen: {
+  ...StyleSheet.absoluteFillObject,
+  backgroundColor: "rgba(255,255,255,0.18)",
+  opacity: 0.0,
+},
+
+confirmPrimaryText: {
+  color: "#111",
+  fontSize: 14,
+  fontFamily: "Comfortaa_700Bold",
+},
+  // ===== SmartAvatar styles (fallback premium, no octogon) =====
+avatarShell: {
+  position: "relative",
+  alignItems: "center",
+  justifyContent: "center",
+  overflow: "hidden",
+  backgroundColor: "rgba(255,255,255,0.08)",
+  borderWidth: 1,
+  borderColor: "rgba(255,255,255,0.18)",
+  ...S.card,
+},
+avatarRing: {
+  position: "absolute",
+  left: 0,
+  right: 0,
+  top: 0,
+  bottom: 0,
+  borderWidth: 1,
+  borderColor: "rgba(255,255,255,0.22)",
+},
+avatarSpecular: {
+  position: "absolute",
+  left: "10%",
+  right: "10%",
+  top: "8%",
+  height: "42%",
+  backgroundColor: "rgba(255,255,255,0.10)",
+  transform: [{ skewY: "-10deg" }],
+  opacity: 0.85,
+},
+avatarFallbackIconWrap: {
+  width: 30,
+  height: 30,
+  borderRadius: 999,
+  alignItems: "center",
+  justifyContent: "center",
+  backgroundColor: "rgba(0,0,0,0.18)",
+  borderWidth: 1,
+  borderColor: "rgba(255,255,255,0.18)",
+  marginBottom: 6,
+},
+avatarInitial: {
+  fontFamily: "Comfortaa_700Bold",
+  color: "rgba(255,255,255,0.92)",
+  includeFontPadding: false,
+},
+
+// ===== Duo bars: make them pop more =====
+duoBarTrack: {
+  height: 16, // ⬅️ un peu plus épais
+  borderRadius: 999,
+  backgroundColor: Platform.OS === "android"
+   ? "rgba(0,0,0,0.18)"
+   : "rgba(255,255,255,0.10)",
+  overflow: "hidden",
+  borderWidth: 1,
+  borderColor: "rgba(255,255,255,0.20)",
+  position: "relative",
+},
+duoBarTrackSheen: {
+  ...StyleSheet.absoluteFillObject,
+  backgroundColor: "rgba(255,255,255,0.05)",
+},
+duoBarTicks: {
+  ...StyleSheet.absoluteFillObject,
+  flexDirection: "row",
+  justifyContent: "space-evenly",
+  alignItems: "center",
+  opacity: 0.42, // ⬅️ plus visible
+},
+duoBarTick: {
+  width: 1,
+  height: "65%",
+  borderRadius: 1,
+  backgroundColor: Platform.OS === "android"
+   ? "rgba(255,255,255,0.55)"
+   : "rgba(255,255,255,0.30)",
+},
+duoBarFill: {
+  height: "100%",
+  borderRadius: 999,
+},
+
+// ===== Battle bar title =====
+duoBattleTitleRow: {
+  width: "100%",
+  maxWidth: 560,
+  marginTop: 14,
+  marginBottom: 8,
+  paddingHorizontal: 6,
+  flexDirection: "row",
+  alignItems: "baseline",
+  justifyContent: "space-between",
+},
+duoBattleTitle: {
+  fontFamily: "Comfortaa_700Bold",
+  fontSize: normalizeSize(12),
+  letterSpacing: 1.4,
+  opacity: 0.60,
+},
+duoBattleMini: {
+  fontFamily: "Comfortaa_700Bold",
+  fontSize: normalizeSize(11),
+  opacity: Platform.OS === "android" ? 0.85 : 0.40
+},
+
+// ===== Battle bar: more contrast =====
+duoBattleBarWrap: {
+  marginTop: 0, // ⬅️ le titre gère l’espace
+  width: "100%",
+  maxWidth: 560,
+  opacity: 1,
+},
+duoBattleBar: {
+  width: "100%",
+  height: 18,
+  borderRadius: 999,
+  overflow: "hidden",
+  borderWidth: 1,
+  borderColor: "rgba(255,255,255,0.22)",
+  backgroundColor: Platform.OS === "android"
+   ? "rgba(0,0,0,0.12)"
+   : "rgba(255,255,255,0.10)",
+  position: "relative",
+},
+duoBattleRail: {
+  ...StyleSheet.absoluteFillObject,
+  opacity: 0.65,
+  backgroundColor: Platform.OS === "android"
+   ? "rgba(255,255,255,0.08)"
+   : "rgba(255,255,255,0.04)",
+},
+duoBattleDivider: {
+  position: "absolute",
+  left: "50%",
+  top: 1,
+  bottom: 1,
+  width: 3,
+  borderRadius: 2,
+  backgroundColor: "rgba(255,255,255,0.55)",
+  shadowColor: "#000",
+  shadowOpacity: 0.22,
+  shadowRadius: 8,
+  shadowOffset: { width: 0, height: 2 },
+  elevation: 7,
+  opacity: Platform.OS === "android" ? 0.9 : 0.55,
+},
+
+  actionGrid: {
+  marginTop: SPACING * 1.6,
+  flexDirection: "row",
+  paddingHorizontal: 12,
+  flexWrap: "wrap",
+  justifyContent: "center",
+  rowGap: 14,
+},
+duoEliteWrap: {
+  marginTop: SPACING * 1.6,
+  alignItems: "center",
+  width: "100%",
+  paddingHorizontal: 12,
+},
+duoCrownMini: {
+  position: "absolute",
+  top: -10,
+  right: -10,
+  zIndex: 30,
+},
+duoCrownPill: {
+  width: normalizeSize(26),
+  height: normalizeSize(26),
+  borderRadius: normalizeSize(13),
+  alignItems: "center",
+  justifyContent: "center",
+  backgroundColor: "rgba(0,0,0,0.55)",
+  borderWidth: 1,
+  borderColor: "rgba(244, 211, 94, 0.38)",
+  shadowColor: ACCENT.glow,
+  shadowOpacity: 0.35,
+  shadowRadius: 10,
+  shadowOffset: { width: 0, height: 6 },
+  elevation: 8,
+},
+duoCrownMiniEmoji: {
+  fontSize: normalizeSize(14),
+  includeFontPadding: false,
+},
+duoProgressStack: {
+  width: "100%",
+  maxWidth: 560,
+  marginTop: 16,
+  gap: 12,
+},
+
+duoBarRow: {
+  width: "100%",
+},
+
+duoBarLabelRow: {
+  flexDirection: "row",
+  alignItems: "center",
+  justifyContent: "space-between",
+  marginBottom: 6,
+  gap: 10,
+},
+
+duoBarLabel: {
+  fontFamily: "Comfortaa_700Bold",
+  fontSize: normalizeSize(12),
+  opacity: 0.9,
+  flex: 1,
+  minWidth: 0,
+},
+
+duoBarValue: {
+  fontFamily: "Comfortaa_700Bold",
+  fontSize: normalizeSize(12),
+  opacity: 0.55,
+  flexShrink: 0,
+},
+duoBarFillMe: {
+  shadowColor: "#FF9F1C",
+  shadowOpacity: 0.25,
+  shadowRadius: 10,
+  shadowOffset: { width: 0, height: 6 },
+},
+duoBarFillPartner: {
+  shadowColor: "#00C2FF",
+  shadowOpacity: 0.22,
+  shadowRadius: 10,
+  shadowOffset: { width: 0, height: 6 },
+},
+duoBattleLeft: {
+  position: "absolute",
+  left: 0,
+  top: 0,
+  bottom: 0,
+  backgroundColor: "#FF9F1C",
+  opacity: 0.85,
+},
+duoBattleRight: {
+  position: "absolute",
+  right: 0,
+  top: 0,
+  bottom: 0,
+  backgroundColor: "#00C2FF",
+  opacity: 0.85,
+},
+duoBattleOutline: {
+  ...StyleSheet.absoluteFillObject,
+  borderRadius: 999,
+  borderWidth: 1,
+  borderColor: "rgba(0,0,0,0.10)",
+},
+duoPendingShell: {
+   width: "100%",
+   marginTop: 12,
+   gap: 10,
+   alignItems: "stretch",
+ },
+duoEliteAvatars: {
+  width: "100%",
+  maxWidth: 560,
+  flexDirection: "row",
+  alignItems: "center",
+  justifyContent: "space-between",
+  gap: 12,
+  backgroundColor: Platform.OS === "android"
+  ? "rgba(255,255,255,0.10)"
+  : "rgba(255,255,255,0.08)",
+},
+duoPendingCard: {
+  borderRadius: normalizeSize(18),
+  paddingVertical: 12,
+  paddingHorizontal: 12,
+  overflow: "hidden",
+  width: "100%",
+  // ✅ pas de border externe : c’est ça qui fait “gris moche”
+  backgroundColor: "transparent",
+  ...Platform.select({
+    ios: S.card,
+    android: { elevation: 6 },
+    default: {},
+  }),
+},
+duoPendingRow: {
+  flexDirection: "row",
+  alignItems: "center",
+  justifyContent: "space-between",
+},
+duoPendingStroke: {
+  position: "absolute",
+  top: 1,
+  left: 1,
+  right: 1,
+  bottom: 1,
+  borderRadius: normalizeSize(17),
+  borderWidth: StyleSheet.hairlineWidth,
+  borderColor: "rgba(0,0,0,0.10)",
+  // ✅ stroke clair en dark mode
+  ...(Platform.OS === "android"
+    ? {}
+    : {}),
+},
+duoPendingLeft: {
+   flex: 1,
+   flexDirection: "row",
+   alignItems: "center",
+   minWidth: 0,
+ },
+duoPendingIconWrap: {
+ width: 38,
+   height: 38,
+   borderRadius: 999,
+   alignItems: "center",
+   justifyContent: "center",
+   backgroundColor: "rgba(0,0,0,0.22)",
+   borderWidth: 1,
+   borderColor: "rgba(255,255,255,0.16)",
+   overflow: "hidden",
+   marginRight: 12,
+},
+duoPendingHalo: {
+   position: "absolute",
+   width: 42,
+   height: 42,
+   borderRadius: 999,
+   backgroundColor: "rgba(139,92,246,0.22)",
+ },
+duoPendingRing: {
+  position: "absolute",
+   width: 38,
+   height: 38,
+   borderRadius: 999,
+   borderWidth: 2.5,
+   borderColor: "rgba(139,92,246,0.95)",
+},
+duoPendingDot: {
+  position: "absolute",
+   width: 10,
+   height: 10,
+   borderRadius: 999,
+   backgroundColor: "rgba(255,255,255,0.92)",
+   right: 6,
+   top: 6,
+ borderWidth: 1,
+ borderColor: "rgba(255,255,255,0.55)",
+
+},
+duoPendingTitle: {
+   fontFamily: "Comfortaa_700Bold",
+  fontSize: normalizeSize(13.5),
+   includeFontPadding: false,
+   color: "rgba(0,0,0,0.88)",
+},
+duoPendingMetaRow: {
+   flexDirection: "row",
+   alignItems: "center",
+   gap: 8,
+   marginTop: 3,
+ },
+
+ duoPendingChip: {
+   paddingHorizontal: 9,
+   paddingVertical: 4,
+   borderRadius: 999,
+   backgroundColor: "rgba(99,102,241,0.16)",
+  borderWidth: 1,
+  borderColor: "rgba(99,102,241,0.30)",
+ },
+ duoPendingChipText: {
+   fontFamily: "Comfortaa_700Bold",
+   fontSize: 10,
+   letterSpacing: 0.8,
+   color: "rgba(55,48,163,0.95)",
+   includeFontPadding: false,
+ },
+duoPendingSub: {
+   flex: 1,
+   fontFamily: "Comfortaa_400Regular",
+   fontSize: 12,
+   includeFontPadding: false,
+   color: "rgba(0,0,0,0.52)",
+},
+duoPendingTo: {
+  marginTop: 4,
+   fontFamily: "Comfortaa_700Bold",
+   fontSize: 12,
+   includeFontPadding: false,
+   color: "rgba(255,255,255,0.88)",
+},
+ duoPendingCancelBtn: {
+   alignSelf: "flex-end",
+   borderRadius: 14,
+   paddingHorizontal: 14,
+   paddingVertical: 10,
+   borderWidth: 1,
+   backgroundColor: "rgba(255,255,255,0.10)",
+   borderColor: "rgba(255,255,255,0.16)",
+ },
+ duoPendingCancelText: {
+   fontFamily: "Comfortaa_700Bold",
+   fontSize: normalizeSize(11.5),
+   includeFontPadding: false,
+   color: "rgba(255,255,255,0.92)",
+ },
+duoEliteCol: {
+  alignItems: "center",
+   flex: 1,
+  minWidth: 0,
+},
+duoAvatarWrap: {
+  position: "relative",
+  alignItems: "center",
+  justifyContent: "center",
+},
+duoEliteAvatar: {
+  width: "100%",
+  height: "100%",
+  borderRadius: normalizeSize(37),
+  borderWidth: 1.5,
+  borderColor: "rgba(255,255,255,0.22)",
+  backgroundColor: "rgba(255,255,255,0.08)",
+  ...S.card,
+},
+
+duoEliteName: {
+  marginTop: 8,
+  fontFamily: "Comfortaa_700Bold",
+  fontSize: normalizeSize(13),
+  opacity: 0.92,
+  maxWidth: "100%",
+},
+duoVsPill: {
+  paddingHorizontal: 12,
+  paddingVertical: 8,
+  borderRadius: 999,
+  borderWidth: 1,
+  borderColor: "rgba(255,255,255,0.14)",
+  backgroundColor: "rgba(255,255,255,0.06)",
+},
+duoVs: {
+  fontFamily: "Comfortaa_700Bold",
+  fontSize: normalizeSize(12),
+  letterSpacing: 1.6,
+  opacity: 0.55,
+  includeFontPadding: false,
+},
+crownElite: {
+  position: "absolute",
+  top: -18,
+  zIndex: 10,
+},
+duoAvatarShell: {
+  position: "relative",
+  width: normalizeSize(74),
+  height: normalizeSize(74),
+  borderRadius: normalizeSize(37),
+  alignItems: "center",
+  justifyContent: "center",
+  backgroundColor: Platform.OS === "android"
+  ? "rgba(255,255,255,0.10)"
+  : "rgba(255,255,255,0.08)",
+},
+duoEliteBar: {
+  marginTop: 16,
+  width: "100%",
+  maxWidth: 360,
+  height: 10,
+  borderRadius: 999,
+  backgroundColor: "rgba(255,255,255,0.14)",
+  overflow: "hidden",
+},
+duoCrownGlow: {
+  shadowColor: "#FF9F1C",
+  shadowOpacity: 0.9,
+  shadowRadius: 18,
+  shadowOffset: { width: 0, height: 0 },
+},
+
+duoEliteFill: {
+  height: "100%",
+  borderRadius: 999,
+},
+
+duoEliteStatus: {
+  marginTop: 12,
+  fontFamily: "Comfortaa_700Bold",
+  fontSize: normalizeSize(18),
+  opacity: 0.9,
+  textAlign: "center",
+  paddingHorizontal: 10,
+},
+duoEliteSubStatus: {
+  marginTop: 4,
+  fontFamily: "Comfortaa_400Regular",
+  fontSize: normalizeSize(12),
+  color: "rgba(255,255,255,0.72)",
+  textAlign: "center",
+  paddingHorizontal: 10,
+},
+actionsWrap: {
+  marginTop: 24,
+  paddingHorizontal: 16,
+},
+
+
+primaryActions: {
+  gap: 12,
+},
+
+primaryBtn: {
+  flexDirection: "row",
+  alignItems: "center",
+  justifyContent: "space-between",
+  paddingHorizontal: 18,
+  height: 56,
+  borderRadius: 18,
+},
+
+primaryBtnInvite: {
+  backgroundColor: "#6366F1",
+ borderWidth: 1,
+ borderColor: "rgba(255,255,255,0.22)",
+},
+
+primaryBtnSecondary: {
+  backgroundColor: "#fff",
+  borderWidth: 1,
+  borderColor: "rgba(0,0,0,0.12)",
+},
+
+primaryBtnText: {
+  flex: 1,
+  marginLeft: 12,
+  fontSize: 16,
+  fontFamily: "Comfortaa_700Bold",
+  color: "#fff",
+},
+quickTextActive: {
+  color: ACCENT.solid,
+},
+confirmIconWrap: {
+  width: 64,
+  height: 64,
+  borderRadius: 32,
+  backgroundColor: ACCENT.solid,
+  alignItems: "center",
+  justifyContent: "center",
+  marginBottom: 14,
+},
+duoStatusBig: {
+  marginTop: 14,
+  fontFamily: "Comfortaa_700Bold",
+  fontSize: normalizeSize(18),
+},
+primaryBtnTextSecondary: {
+  flex: 1,
+  marginLeft: 12,
+  fontSize: 16,
+  fontFamily: "Comfortaa_700Bold",
+  color: "#111",
+},
+duoKeynoteWrap: {
+  marginTop: SPACING * 1.4,
+  alignItems: "center",
+},
+duoAvatarFallback: {
+  width: "100%",
+  height: "100%",
+  borderRadius: normalizeSize(37),
+  alignItems: "center",
+  justifyContent: "center",
+  backgroundColor: Platform.OS === "android"
+   ? "#FFFFFF"
+   : "rgba(255,255,255,0.08)",
+},
+
+duoAvatarInitial: {
+  fontFamily: "Comfortaa_700Bold",
+  fontSize: normalizeSize(22),
+  color: "rgba(255,255,255,0.92)",
+  includeFontPadding: false,
+},
+
+duoAvatarRing: {
+  position: "absolute",
+  left: 0,
+  top: 0,
+  right: 0,
+  bottom: 0,
+  borderRadius: normalizeSize(37),
+  borderWidth: 1,
+  borderColor: "rgba(255,255,255,0.18)",
+},
+duoKeynoteAvatars: {
+  flexDirection: "row",
+  gap: 48,
+  marginBottom: 16,
+},
+
+duoKeynoteAvatarCol: {
+  alignItems: "center",
+},
+
+duoKeynoteAvatar: {
+  width: normalizeSize(64),
+  height: normalizeSize(64),
+  borderRadius: normalizeSize(32),
+},
+
+duoKeynoteName: {
+  marginTop: 8,
+  fontFamily: "Comfortaa_700Bold",
+  fontSize: normalizeSize(13),
+  opacity: 0.85,
+},
+
+duoKeynoteTrack: {
+  width: "100%",
+  maxWidth: 360,
+  height: 8,
+  borderRadius: 999,
+  backgroundColor: "rgba(255,255,255,0.12)",
+  overflow: "hidden",
+  marginTop: 6,
+},
+
+duoKeynoteFill: {
+  height: "100%",
+  borderRadius: 999,
+  backgroundColor: ACCENT.solid,
+},
+
+duoKeynoteStatus: {
+  marginTop: 12,
+  fontFamily: "Comfortaa_700Bold",
+  fontSize: normalizeSize(15),
+  opacity: 0.85,
+},
+
+duoLeading: {
+  color: ACCENT.solid,
+},
+
+duoBehind: {
+  color: "#FF6B6B",
+},
+
+crownPulse: {
+  position: "absolute",
+  top: -14,
+  zIndex: 2,
+},
+
+quickActions: {
+  flexDirection: "row",
+  gap: 10,
+  marginTop: 14,
+},
+quickBtn: {
+  flex: 1,
+  minWidth: 0, // CRUCIAL pour éviter que le Text force la largeur
+  height: 48,
+  borderRadius: 14,
+  borderWidth: 1,
+  borderColor: "rgba(0,0,0,0.12)",
+  backgroundColor: "rgba(255,255,255,0.86)",
+  flexDirection: "row",
+  alignItems: "center",
+  justifyContent: "center",
+  paddingHorizontal: 10, // un poil moins
+  gap: 6,
+},
+
+quickText: {
+  flexShrink: 1, // CRUCIAL
+  fontSize: 12.5, // stable
+  fontFamily: "Comfortaa_700Bold",
+},
+
+btnPressed: {
+  transform: [{ scale: 0.98 }],
+  opacity: 0.9,
+},
+
   image: {
     width: "100%",
     backfaceVisibility: "hidden",
-    borderBottomLeftRadius: normalizeSize(30),
-    borderBottomRightRadius: normalizeSize(30),
+    borderBottomLeftRadius: R.hero,
+    borderBottomRightRadius: R.hero,
   },
   loadingOverlay: {
     position: "absolute",
@@ -3330,21 +4785,375 @@ const styles = StyleSheet.create({
     backgroundColor: "transparent",
     paddingHorizontal: 24,
   },
+ctaRow: {
+  flexDirection: "row",
+  gap: 12,
+  paddingHorizontal: 16,
+  marginTop: 10,
+  marginBottom: 6,
+},
+
+ctaCard: {
+  flex: 1,
+  borderRadius: 22,
+  overflow: "hidden",
+  minHeight: 118,               // <<< le “poids” Keynote
+  shadowColor: "#000",
+  shadowOpacity: 0.12,
+  shadowRadius: 18,
+  shadowOffset: { width: 0, height: 10 },
+  elevation: 6,
+},
+
+pressed: { opacity: 0.92, transform: [{ scale: 0.99 }] },
+
+ctaGradient: {
+  flex: 1,
+  paddingHorizontal: 14,
+  paddingTop: 14,
+  paddingBottom: 12,
+},
+quickBtnDisabled: {
+    opacity: 0.55,
+  },
+
+ctaPlain: {
+  flex: 1,
+  backgroundColor: "#fff",
+  paddingHorizontal: 14,
+  paddingTop: 14,
+  paddingBottom: 12,
+  borderWidth: 1,
+  borderColor: "rgba(0,0,0,0.07)",
+},
+
+ctaTop: {
+  flexDirection: "row",
+  alignItems: "center",
+  justifyContent: "space-between",
+  marginBottom: 10,
+},
+
+ctaIconWrap: {
+  width: 38,
+  height: 38,
+  borderRadius: 14,
+  alignItems: "center",
+  justifyContent: "center",
+  backgroundColor: "rgba(255,255,255,0.22)",
+},
+
+ctaIconWrapPlain: {
+  backgroundColor: "rgba(0,0,0,0.06)",
+},
+dockCardShareOutline: {
+  borderWidth: 1.5,
+  borderColor: Platform.select({
+    ios: "rgba(255,255,255,0.22)",
+    android: "rgba(255,255,255,0.24)",
+    default: "rgba(255,255,255,0.22)",
+  }) as any,
+},
+
+
+dockHeaderCenteredRow: {
+  flexDirection: "row",
+  alignItems: "center",
+  marginBottom: 8,
+},
+
+dockHeaderSideSlot: {
+  width: 44, // ⬅️ clé du centrage parfait
+  alignItems: "center",
+  justifyContent: "center",
+},
+
+dockHeaderRightSlot: {
+  alignItems: "flex-end",
+},
+
+dockHeaderCenterSlot: {
+  flex: 1,
+  alignItems: "center",
+  justifyContent: "center",
+},
+
+
+
+ctaTitle: {
+  color: "#fff",
+  fontSize: 16,
+  lineHeight: 20,
+  fontFamily: "Comfortaa_700Bold",
+},
+
+ctaSub: {
+  marginTop: 6,
+  color: "rgba(255,255,255,0.92)",
+  fontSize: 12.5,
+  lineHeight: 16,
+  fontFamily: "Comfortaa_400Regular",
+},
+
+ctaTitlePlain: { color: "#111" },
+ctaSubPlain: { color: "rgba(0,0,0,0.62)" },
+
+ctaFooter: {
+  marginTop: "auto",
+  paddingTop: 10,
+},
+// === DOCK (Apple Keynote) ===
+dockWrap: {
+  marginTop: SPACING * 1.6,
+  alignSelf: "center",
+  width: "100%",
+  maxWidth: 760,
+  paddingHorizontal: 12,
+},
+
+dockBlur: {
+  borderRadius: 26,
+  overflow: "hidden",
+  borderWidth: 1,
+  borderColor: GLASS.border,
+  ...S.float,
+},
+
+dockInner: {
+  padding: 12,
+  borderRadius: 26,
+},
+
+dockTopRow: {
+  flexDirection: "row",
+  gap: 12,
+},
+
+dockTopRowCompact: {
+  flexDirection: "column",
+},
+
+dockCard: {
+  flex: 1,
+  borderRadius: 22,
+  overflow: "hidden",
+  alignItems: "center",
+  minHeight: 116,
+},
+
+dockCardPrimary: {
+  ...Platform.select({
+    ios: {
+      shadowColor: "#000",
+      shadowOpacity: 0.16,
+      shadowRadius: 18,
+      shadowOffset: { width: 0, height: 12 },
+    },
+    android: { elevation: 8 },
+    default: {},
+  }),
+},
+
+dockCardGlass: {
+  borderWidth: 1,
+  borderColor: GLASS.borderSoft,
+  backgroundColor: Platform.select({
+    ios: "rgba(255,255,255,0.06)",
+    android: "rgba(255,255,255,0.08)",
+  }) as any,
+},
+
+dockCardDisabled: {
+  opacity: 0.82,
+},
+
+dockPressed: {
+  transform: [{ scale: 0.992 }],
+  opacity: 0.94,
+},
+
+dockCardFill: {
+  flex: 1,
+  paddingHorizontal: 14,
+  paddingTop: 14,
+  paddingBottom: 12,
+},
+
+dockDisabledVeil: {
+  ...StyleSheet.absoluteFillObject,
+  backgroundColor: "rgba(0,0,0,0.20)",
+},
+
+dockCardGlassInner: {
+  flex: 1,
+  paddingHorizontal: 14,
+  paddingTop: 14,
+  paddingBottom: 12,
+},
+
+dockCardHeader: {
+  flexDirection: "row",
+  alignItems: "center",
+  justifyContent: "space-between",
+  marginBottom: 8,
+},
+
+dockRightBits: {
+  flexDirection: "row",
+  alignItems: "center",
+  gap: 8,
+},
+
+dockIconPill: {
+  width: 38,
+  height: 38,
+  borderRadius: 14,
+  alignItems: "center",
+  justifyContent: "center",
+  backgroundColor: "rgba(255,255,255,0.20)",
+  borderWidth: 1,
+  borderColor: "rgba(255,255,255,0.22)",
+},
+
+dockIconPillGlass: {
+  backgroundColor: "rgba(0,0,0,0.06)",
+  borderColor: "rgba(0,0,0,0.10)",
+},
+
+dockMiniPill: {
+  paddingHorizontal: 10,
+  paddingVertical: 6,
+  borderRadius: 999,
+  backgroundColor: "rgba(255,255,255,0.18)",
+  borderWidth: 1,
+  borderColor: "rgba(255,255,255,0.22)",
+},
+
+dockMiniPillText: {
+  fontFamily: "Comfortaa_700Bold",
+  fontSize: 11,
+  color: "#fff",
+  includeFontPadding: false,
+},
+
+dockMiniPillGlass: {
+  backgroundColor: "rgba(0,0,0,0.06)",
+  borderColor: "rgba(0,0,0,0.10)",
+},
+
+dockMiniPillTextGlass: {
+  color: "rgba(0,0,0,0.70)",
+},
+
+dockTitlePrimary: {
+  color: "#fff",
+  fontSize: 16,
+  lineHeight: 20,
+  fontFamily: "Comfortaa_700Bold",
+  includeFontPadding: false,
+},
+
+dockSubPrimary: {
+  marginTop: 6,
+  color: "rgba(255,255,255,0.90)",
+  fontSize: 12.5,
+  lineHeight: 16,
+  fontFamily: "Comfortaa_400Regular",
+  includeFontPadding: false,
+},
+
+dockTitleGlass: {
+  fontSize: 16,
+  lineHeight: 20,
+  fontFamily: "Comfortaa_700Bold",
+  includeFontPadding: false,
+},
+
+dockSubGlass: {
+  marginTop: 6,
+  fontSize: 12.5,
+  lineHeight: 16,
+  fontFamily: "Comfortaa_400Regular",
+  includeFontPadding: false,
+},
+
+dockQuickRow: {
+  marginTop: 12,
+  flexDirection: "row",
+  gap: 10,
+},
+
+dockQuickBtn: {
+  flex: 1,
+  minHeight: 54,
+  borderRadius: 16,
+  alignItems: "center",
+  justifyContent: "center",
+  borderWidth: 1,
+  borderColor: GLASS.borderSoft,
+  backgroundColor: Platform.select({
+    ios: "rgba(255,255,255,0.06)",
+    android: "rgba(255,255,255,0.08)",
+    default: "rgba(255,255,255,0.06)",
+  }) as any,
+},
+
+dockQuickDisabled: {
+  opacity: 0.55,
+},
+
+dockQuickPressed: {
+  transform: [{ scale: 0.988 }],
+  opacity: 0.92,
+},
+
+dockQuickIcon: {
+  width: 34,
+  height: 34,
+  borderRadius: 17,
+  alignItems: "center",
+  justifyContent: "center",
+  backgroundColor: "rgba(0,0,0,0.06)",
+  borderWidth: 1,
+  borderColor: "rgba(0,0,0,0.10)",
+  marginBottom: 6,
+},
+
+dockQuickText: {
+  fontFamily: "Comfortaa_700Bold",
+  fontSize: normalizeSize(11),
+  includeFontPadding: false,
+},
+
+ctaPill: {
+  alignSelf: "flex-start",
+  paddingHorizontal: 10,
+  paddingVertical: 6,
+  borderRadius: 999,
+  backgroundColor: "rgba(255,255,255,0.22)",
+},
+
+ctaPillText: {
+  color: "#fff",
+  fontSize: 11,
+  fontFamily: "Comfortaa_700Bold",
+},
+
+ctaPillPlain: { backgroundColor: "rgba(0,0,0,0.06)" },
+ctaPillTextPlain: { color: "rgba(0,0,0,0.72)" },
 
   loadingCard: {
     minWidth: 260,
     maxWidth: 320,
-    borderRadius: 24,
+    borderRadius: R.card,
     paddingVertical: 18,
     paddingHorizontal: 18,
     alignItems: "center",
     justifyContent: "center",
-    backgroundColor: "rgba(10, 10, 15, 0.92)", // bon rendu en dark
-    shadowColor: "#000",
-    shadowOffset: { width: 0, height: 10 },
-    shadowOpacity: 0.35,
-    shadowRadius: 22,
-    elevation: 16,
+    backgroundColor: GLASS.bgDark,
+    borderWidth: 1,
+    borderColor: "rgba(255,255,255,0.10)",
+    ...S.float,
     overflow: "hidden",
   },
 
@@ -3369,7 +5178,13 @@ const styles = StyleSheet.create({
   loadingTextBlock: {
     alignItems: "center",
   },
-
+heroVignette: {
+    position: "absolute",
+    left: 0,
+    right: 0,
+    top: 0,
+    bottom: 0,
+  },
   loadingText: {
     fontSize: 16,
     fontWeight: "600",
@@ -3411,35 +5226,36 @@ backButtonContainer: {
   shadowRadius: 3,
   elevation: 3,
 },
-
-  backButton: {
-    padding: SPACING / 2,
+backButtonBlur: {
+    width: 44,
+    height: 44,
+    borderRadius: 22,
+    overflow: "hidden",
+    borderWidth: 1,
+    borderColor: GLASS.border,
+    backgroundColor: "rgba(0,0,0,0.16)",
+    ...S.card,
   },
-  backButtonOverlay: {
-    backgroundColor: "rgba(0, 0, 0, 0.42)", // 🧼 plus doux
-    borderRadius: normalizeSize(20),
-    padding: 0,
-    borderWidth: 1, // 🆕 halo fin premium
-    borderColor: "rgba(255,255,255,0.12)",
+  backButtonPress: {
+    flex: 1,
+    alignItems: "center",
+    justifyContent: "center",
   },
   imagePlaceholder: {
     flex: 1,
     justifyContent: "center",
     alignItems: "center",
   },
-  confirmBackdrop: {
-  flex: 1,
-  backgroundColor: "rgba(0,0,0,0.5)",
-  alignItems: "center",
-  justifyContent: "center",
-  padding: 20,
-},
 confirmCard: {
   width: "100%",
   maxWidth: 380,
-  borderRadius: 16,
-  padding: 16,
-  backgroundColor: "#111", // ou currentTheme.colors.cardBackground
+  borderRadius: 18,
+  padding: 18,
+  backgroundColor: GLASS.bgDark,
+  borderWidth: 1,
+  borderColor: GLASS.border,
+  ...S.float,
+
 },
 confirmTitle: {
   fontSize: 18,
@@ -3462,15 +5278,17 @@ confirmRow: {
 confirmBtn: {
   flex: 1,
   paddingVertical: 12,
-  borderRadius: 12,
+ borderRadius: 14,
   alignItems: "center",
 },
 confirmBtnCancel: {
-  backgroundColor: "#333",
+ backgroundColor: "rgba(255,255,255,0.10)",
+  borderWidth: 1,
+  borderColor: "rgba(255,255,255,0.14)",
   marginRight: 8,
 },
 confirmBtnOk: {
-  backgroundColor: "#FFD700",
+  backgroundColor: ACCENT.solid,
   marginLeft: 8,
 },
 confirmBtnCancelText: {
@@ -3494,7 +5312,7 @@ vsOverlay: {
   left: 0,
   right: 0,
   bottom: 0,
-  backgroundColor: "rgba(0,0,0,0.92)",
+  backgroundColor: "rgba(0,0,0,0.94)",
   justifyContent: "center",
   alignItems: "center",
   zIndex: 9999,
@@ -3514,12 +5332,12 @@ vsAvatarXL: {
   height: normalizeSize(120),
   borderRadius: normalizeSize(60),
   borderWidth: 3,
-  borderColor: "#FFD700",
-  shadowColor: "#FFD700",
-  shadowOpacity: 0.35,
-  shadowRadius: 12,
+  borderColor: ACCENT.solid,
+  shadowColor: ACCENT.glow,
+  shadowOpacity: 0.22,
+  shadowRadius: 14,
   shadowOffset: { width: 0, height: 4 },
-  elevation: 8,
+  elevation: 7,
 },
 vsModalRoot: {
   ...StyleSheet.absoluteFillObject,
@@ -3549,10 +5367,10 @@ vsGlowRing: {
   height: normalizeSize(138),
   borderRadius: normalizeSize(69),
   borderWidth: 2,
-  borderColor: "#FFD70055",
-  shadowColor: "#FFD700",
-  shadowOpacity: 0.45,
-  shadowRadius: 16,
+  borderColor: ACCENT.softBorder,
+  shadowColor: ACCENT.glow,
+  shadowOpacity: 0.26,
+  shadowRadius: 18,
   shadowOffset: { width: 0, height: 6 },
   opacity: 0.85,
 },
@@ -3589,7 +5407,7 @@ vsCenter: {
 vsTextBig: {
   fontSize: normalizeSize(42),
   fontFamily: "Comfortaa_700Bold",
-  color: "#FFD700",
+  color: ACCENT.solid,
   letterSpacing: 2,
   textShadowColor: "rgba(0,0,0,0.6)",
   textShadowOffset: { width: 0, height: 2 },
@@ -3601,28 +5419,28 @@ chip: {
   paddingVertical: 6,
   paddingHorizontal: 10,
   borderRadius: 999,
-  backgroundColor: "rgba(0,0,0,0.25)",
+  borderWidth: 1,
   margin: 4, // remplace le gap du parent
 },
+chipDark: {
+    backgroundColor: "rgba(255,255,255,0.10)",
+    borderColor: "rgba(255,255,255,0.16)",
+  },
+  chipLight: {
+    backgroundColor: "rgba(0,0,0,0.06)",
+    borderColor: "rgba(0,0,0,0.08)",
+  },
 chipText: {
-  color: "#fff",
   fontFamily: "Comfortaa_700Bold",
   fontSize: normalizeSize(12),
   marginLeft: 6, // remplace le gap interne
   includeFontPadding: false,
 },
-    duoCard: {
-  marginTop: SPACING * 1.2,
-  borderRadius: normalizeSize(20),
-  padding: SPACING,
-  backgroundColor: "rgba(255,255,255,0.08)",
-  borderWidth: 1,
-  borderColor: "rgba(255,255,255,0.12)",
-
-  // ✅ NEW: largeur confortable et centrée
-  width: "100%",
-  maxWidth: 640,
-  alignSelf: "center",
+duoCard: {
+  marginTop: SPACING * 1.4,
+  paddingVertical: SPACING * 1.2,
+  paddingHorizontal: SPACING,
+  borderRadius: normalizeSize(24),
 },
   duoTitle: {
     fontFamily: "Comfortaa_700Bold",
@@ -3630,15 +5448,10 @@ chipText: {
   },
   duoLeadBanner: {
   alignSelf: "center",
-  flexDirection: "row",
-  alignItems: "center",
-  paddingVertical: 8,           // 6 → 8
-  paddingHorizontal: 12,
+  paddingHorizontal: 14,
+  paddingVertical: 6,
   borderRadius: 999,
-  backgroundColor: "rgba(0,0,0,0.08)",
-  marginBottom: SPACING,
 },
-
   duoLeadText: {
     fontFamily: "Comfortaa_700Bold",
     fontSize: normalizeSize(12),
@@ -3650,12 +5463,11 @@ chipText: {
   justifyContent: "center",
   marginBottom: SPACING,
 },
-
 duoRow: {
   flexDirection: "row",
   alignItems: "center",
   justifyContent: "space-between",
-  gap: 12, // petit gap quand on a la place
+  gap: SPACING * 1.4,
 },
 duoRowCompact: {
   flexDirection: "column",
@@ -3686,13 +5498,11 @@ duoSide: {
     marginBottom: 6,
   },
   duoAvatarBig: {
-  width: normalizeSize(62),
-  height: normalizeSize(62),
-  borderRadius: normalizeSize(31),
-  borderWidth: 2,
-  borderColor: "#FFD700",
+  width: normalizeSize(64),
+  height: normalizeSize(64),
+  borderRadius: normalizeSize(32),
+  borderWidth: 0, // ⛔️ stop bordures
 },
-
 duoName: {
   fontFamily: "Comfortaa_700Bold",
   fontSize: normalizeSize(14),
@@ -3705,17 +5515,12 @@ duoName: {
     height: normalizeSize(68),
     borderRadius: normalizeSize(34),
     borderWidth: 2,
+    opacity: 0.18,
   },
- 
   miniBarBg: {
-  width: "85%",
-  height: normalizeSize(8),
-  borderRadius: normalizeSize(4),
-  overflow: "hidden",
-  marginTop: 8,
-
-  // ✅ NEW: donne plus d’air sur compact
-  alignSelf: "center",
+  width: "90%",
+  height: 6,
+  borderRadius: 3,
 },
   crownEmoji: {
   fontSize: normalizeSize(12),
@@ -3742,25 +5547,21 @@ vsWrapCompact: {
   width: "100%",
   paddingVertical: 6,
 },
-  vsBadge: {
-  paddingVertical: 6,
-  paddingHorizontal: 12,
-  borderRadius: 999,
+vsBadge: {
+  paddingVertical: 4,
+  paddingHorizontal: 10,
+  opacity: 0.35,
 },
-
 // ✅ NEW: badge plus visible en compact
 vsBadgeCompact: {
   alignSelf: "center",
   paddingVertical: 8,
   paddingHorizontal: 16,
 },
-  vsText: {
-  color: "#fff",
-  fontFamily: "Comfortaa_700Bold",
-  fontSize: normalizeSize(12),
-  letterSpacing: 1.5,
+vsText: {
+  fontSize: normalizeSize(11),
+  letterSpacing: 1,
 },
-
 // ✅ NEW: texte un poil plus grand sur compact pour compenser la verticalité
 vsTextCompact: {
   fontSize: normalizeSize(14),
@@ -3770,12 +5571,23 @@ vsTextCompact: {
     fontFamily: "Comfortaa_400Regular",
     fontSize: normalizeSize(16),
   },
-  infoRecipeContainer: {
-    flex: 1,
-    paddingHorizontal: SPACING * 1.5,
-    alignItems: "stretch",
-    justifyContent: "flex-start",
+  heroCardWrap: {
     width: "100%",
+    paddingHorizontal: SPACING * 1.2,
+    marginTop: -normalizeSize(26), // chevauche le hero (Keynote)
+  },
+  heroCardBlur: {
+    borderRadius: R.card,
+    overflow: "hidden",
+    borderWidth: 1,
+    borderColor: GLASS.border,
+    ...S.float,
+  },
+  heroCardInner: {
+    borderRadius: R.card,
+    paddingHorizontal: SPACING * 1.2,
+    paddingTop: SPACING * 1.1,
+    paddingBottom: SPACING * 1.25,
   },
   infoRecipeName: {
     fontSize: normalizeSize(28),
@@ -3807,22 +5619,18 @@ vsTextCompact: {
   marginTop: 12,
 },
 progressSection: {
-    alignSelf: "stretch",
     alignItems: "center",       // on centre le contenu de la section, pas tout l’écran
     paddingHorizontal: SPACING,
     paddingTop: SPACING,
     width: "100%",              // ✅ garantit la pleine largeur (évite les chevaucher)
    maxWidth: 560,
+   alignSelf: "center",
   },
   takeChallengeButton: {
-    borderRadius: normalizeSize(25),
+    borderRadius: R.btn,
     overflow: "hidden",
     marginTop: SPACING,
-    shadowColor: "#000",
-    shadowOffset: { width: 0, height: normalizeSize(4) },
-    shadowOpacity: 0.3,
-    shadowRadius: normalizeSize(6),
-    elevation: 5,
+    ...S.card,
   },
   takeChallengeButtonGradient: {
     paddingVertical: SPACING,
@@ -3840,21 +5648,17 @@ progressSection: {
     includeFontPadding: false,
   },
   markTodayButton: {
-    borderRadius: normalizeSize(25),
+    borderRadius: R.btn,
     overflow: "hidden",
     marginTop: SPACING,
-    shadowColor: "#000",
-    shadowOffset: { width: 0, height: normalizeSize(4) },
-    shadowOpacity: 0.3,
-    shadowRadius: normalizeSize(6),
-    elevation: 5,
+    ...S.card,
   },
   markTodayButtonGradient: {
     paddingVertical: SPACING,
     paddingHorizontal: SPACING * 2,
     alignItems: "center",
     justifyContent: "center",
-    borderRadius: normalizeSize(25), // Ajoute pour cohérence
+    borderRadius: R.btn,
   },
   markTodayButtonText: {
     fontSize: normalizeSize(16),
@@ -3877,10 +5681,10 @@ progressSection: {
     borderRadius: normalizeSize(5),
     overflow: "hidden",
     marginTop: SPACING,
-    shadowColor: "#000",
-    shadowOpacity: 0.08,
-    shadowRadius: 4,
-    shadowOffset: { width: 0, height: 2 },
+    backgroundColor: "rgba(255,255,255,0.10)",
+    borderWidth: 1,
+    borderColor: "rgba(255,255,255,0.10)",
+
   },
   progressBarFill: {
     height: "100%",
@@ -3913,60 +5717,6 @@ progressSection: {
     lineHeight: normalizeSize(22),
     fontFamily: "Comfortaa_400Regular",
   },
-  // ✅ ACTION GRID (tuiles premium, anti texte coupé)
-  actionGrid: {
-    flexDirection: "row",
-    flexWrap: "wrap",
-    justifyContent: "space-between",
-    alignItems: "stretch",
-    marginTop: SPACING * 2,
-    width: "100%",
-    gap: 12,
-  },
-  actionTile: {
-    borderRadius: 18,
-    paddingVertical: 14,
-    paddingHorizontal: 14,
-    borderWidth: 1,
-    borderColor: "rgba(255,255,255,0.10)",
-    backgroundColor: "rgba(255,255,255,0.07)",
-    minHeight: 104,
-    justifyContent: "flex-start",
-  },
-  actionTopRow: {
-    flexDirection: "row",
-    alignItems: "center",
-    justifyContent: "space-between",
-    marginBottom: 10,
-  },
-  actionTitle: {
-    fontFamily: "Comfortaa_700Bold",
-    fontSize: normalizeSize(14),
-    includeFontPadding: false,
-    lineHeight: normalizeSize(18),
-  },
-  actionSub: {
-    marginTop: 6,
-    fontFamily: "Comfortaa_400Regular",
-    fontSize: normalizeSize(12),
-    includeFontPadding: false,
-    lineHeight: normalizeSize(16),
-    opacity: 0.92,
-  },
-  actionPill: {
-    paddingHorizontal: 10,
-    paddingVertical: 4,
-    borderRadius: 999,
-    backgroundColor: "rgba(255,215,0,0.18)",
-    borderWidth: 1,
-    borderColor: "rgba(255,215,0,0.35)",
-  },
-  actionPillText: {
-    fontFamily: "Comfortaa_700Bold",
-    fontSize: normalizeSize(11),
-    letterSpacing: 0.2,
-    includeFontPadding: false,
-  },
   loadingContainer: {
     flex: 1,
     justifyContent: "center",
@@ -3983,7 +5733,7 @@ progressSection: {
     height: normalizeSize(36),
     borderRadius: normalizeSize(18),
     borderWidth: 2,
-    borderColor: "#FFD700",
+   borderColor: ACCENT.solid,
   },
 });
 

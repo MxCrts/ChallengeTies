@@ -44,6 +44,7 @@ import { useBottomTabBarHeight } from "@react-navigation/bottom-tabs";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import useGateForGuest from "@/hooks/useGateForGuest";
 import RequireAuthModal from "@/components/RequireAuthModal";
+import { useCurrentChallenges } from "../../context/CurrentChallengesContext";
 
 // ---------- Helpers globaux (UX / erreurs) ----------
 
@@ -151,26 +152,28 @@ interface ChallengeRaw {
 
 const getDynamicStyles = (currentTheme: Theme, isDarkMode: boolean) => ({
   searchContainer: {
-    borderColor: isDarkMode ? currentTheme.colors.secondary : "#FF8C00",
-    backgroundColor: currentTheme.colors.cardBackground,
+    borderColor: withAlpha(currentTheme.colors.border, isDarkMode ? 0.45 : 0.22),
+   backgroundColor: withAlpha(currentTheme.colors.cardBackground, isDarkMode ? 0.55 : 0.92),
   },
   searchInput: {
     color: isDarkMode ? currentTheme.colors.textPrimary : "#000000",
   },
   filterButton: {
-    backgroundColor: currentTheme.colors.secondary,
+    backgroundColor: withAlpha(currentTheme.colors.cardBackground, isDarkMode ? 0.55 : 0.92),
+   borderColor: withAlpha(currentTheme.colors.border, isDarkMode ? 0.45 : 0.22),
   },
   filterText: {
-    color: isDarkMode ? "#000000" : currentTheme.colors.textPrimary,
+    color: isDarkMode ? currentTheme.colors.textPrimary : "#000000",
   },
   resetButton: {
-    backgroundColor: currentTheme.colors.primary,
+    backgroundColor: withAlpha(currentTheme.colors.cardBackground, isDarkMode ? 0.55 : 0.92),
+   borderColor: withAlpha(currentTheme.colors.border, isDarkMode ? 0.45 : 0.22),
   },
   resetText: {
-    color: currentTheme.colors.textPrimary,
+    color: isDarkMode ? currentTheme.colors.textPrimary : "#000000",
   },
   modalOverlay: {
-    backgroundColor: currentTheme.colors.overlay,
+    backgroundColor: withAlpha("#000", isDarkMode ? 0.55 : 0.35),
   },
   modalTitle: {
     color: currentTheme.colors.textPrimary,
@@ -179,7 +182,7 @@ const getDynamicStyles = (currentTheme: Theme, isDarkMode: boolean) => ({
     color: isDarkMode ? currentTheme.colors.textPrimary : "#000000",
   },
   cardGradient: {
-    borderColor: isDarkMode ? currentTheme.colors.secondary : "#FF8C00",
+    borderColor: withAlpha(currentTheme.colors.border, isDarkMode ? 0.45 : 0.22),
   },
   cardTitle: {
     color: currentTheme.colors.textPrimary,
@@ -191,7 +194,8 @@ const getDynamicStyles = (currentTheme: Theme, isDarkMode: boolean) => ({
     color: currentTheme.colors.trophy,
   },
   bookmarkButton: {
-    backgroundColor: "rgba(0,0,0,0.5)",
+    backgroundColor: withAlpha(currentTheme.colors.cardBackground, isDarkMode ? 0.55 : 0.82),
+    borderColor: withAlpha(currentTheme.colors.border, isDarkMode ? 0.55 : 0.25),
   },
   emptyTitle: {
     color: currentTheme.colors.textPrimary,
@@ -258,6 +262,18 @@ const ExploreHeader = React.memo(
 
     return (
       <Animated.View entering={FadeInUp.delay(100)} style={styles.headerWrapper}>
+    <LinearGradient
+      colors={[
+        withAlpha(currentTheme.colors.cardBackground, isDarkMode ? 0.55 : 0.92),
+        withAlpha(currentTheme.colors.background, isDarkMode ? 0.35 : 0.86),
+      ]}
+      start={{ x: 0, y: 0 }}
+      end={{ x: 1, y: 1 }}
+      style={[
+        styles.headerCard,
+        { borderColor: withAlpha(currentTheme.colors.border, isDarkMode ? 0.45 : 0.22) },
+      ]}
+    >
         {/* Barre de recherche */}
         <TouchableOpacity activeOpacity={1} onPress={() => inputRef.current?.focus()}>
           <LinearGradient
@@ -267,14 +283,14 @@ const ExploreHeader = React.memo(
             <Ionicons
               name="search"
               size={normalizeSize(20)}
-              color={currentTheme.colors.textSecondary}
+              color={isDarkMode ? currentTheme.colors.textSecondary : "#000000"}
               style={styles.searchIcon}
             />
             <TextInput
               ref={inputRef}
               style={[styles.searchInput, dynamicStyles.searchInput]}
               placeholder={t("searchPlaceholder")}
-              placeholderTextColor={currentTheme.colors.textSecondary}
+              placeholderTextColor={(isDarkMode ? currentTheme.colors.textSecondary : withAlpha("#000000", 0.45))}
               value={searchQuery}
               onChangeText={onSearchChange}
               returnKeyType="search"
@@ -302,7 +318,7 @@ const ExploreHeader = React.memo(
                 <Ionicons
                   name="close-circle"
                   size={normalizeSize(20)}
-                  color={currentTheme.colors.textSecondary}
+                  color={isDarkMode ? currentTheme.colors.textSecondary : "#000000"}
                 />
               </TouchableOpacity>
             )}
@@ -320,16 +336,21 @@ const ExploreHeader = React.memo(
             <Ionicons
               name="options-outline"
               size={normalizeSize(18)}
-              color={isDarkMode ? "#000000" : currentTheme.colors.textPrimary}
+              color={"#000000"}
               style={styles.filterIcon}
             />
-            <Text style={[styles.filterText, dynamicStyles.filterText]}>
+            <Text
+              style={[styles.filterText, dynamicStyles.filterText]}
+              numberOfLines={1}
+              ellipsizeMode="tail"
+            >
               {originFilter === "Existing"
-                ? t("origin.existing")
+                ? t("origin.existing", { defaultValue: "Official" })
                 : originFilter === "Created"
-                ? t("origin.created")
-                : t("origin.all")}
+                ? t("origin.created", { defaultValue: "Community" })
+                : t("origin.all", { defaultValue: "All" })}
             </Text>
+            <View style={[styles.chipDot, { backgroundColor: currentTheme.colors.secondary }]} />
           </TouchableOpacity>
 
           <TouchableOpacity
@@ -341,7 +362,7 @@ const ExploreHeader = React.memo(
             <Ionicons
               name="filter-outline"
               size={normalizeSize(18)}
-              color={isDarkMode ? "#000000" : currentTheme.colors.textPrimary}
+              color={"#000000"}
               style={styles.filterIcon}
             />
             <Text style={[styles.filterText, dynamicStyles.filterText]}>
@@ -351,6 +372,7 @@ const ExploreHeader = React.memo(
                     defaultValue: capitalize(categoryFilter),
                   })}
             </Text>
+            <View style={[styles.chipDot, { backgroundColor: currentTheme.colors.secondary }]} />
           </TouchableOpacity>
         </View>
 
@@ -364,7 +386,7 @@ const ExploreHeader = React.memo(
           <Ionicons
             name="refresh-outline"
             size={normalizeSize(18)}
-            color={currentTheme.colors.textPrimary}
+            color={isDarkMode ? currentTheme.colors.textPrimary : "#000000"}
             style={styles.resetIcon}
           />
           <Text style={[styles.resetText, dynamicStyles.resetText]}>
@@ -379,15 +401,19 @@ const ExploreHeader = React.memo(
           animationType="slide"
           onRequestClose={onCloseCategoryModal}
         >
-          <TouchableOpacity
-            style={[styles.modalOverlay, dynamicStyles.modalOverlay]}
-            activeOpacity={1}
-            onPressOut={onCloseCategoryModal}
-          >
-            <LinearGradient
-              colors={[currentTheme.colors.cardBackground, currentTheme.colors.cardBackground + "F0"]}
-              style={styles.modalContainer}
-            >
+          <TouchableOpacity style={[styles.modalOverlay, dynamicStyles.modalOverlay]} activeOpacity={1} onPressOut={onCloseCategoryModal}>
+         <View style={styles.modalSheetWrap} pointerEvents="box-none">
+           <LinearGradient
+             colors={[
+               withAlpha(currentTheme.colors.cardBackground, isDarkMode ? 0.78 : 0.96),
+               withAlpha(currentTheme.colors.background, isDarkMode ? 0.55 : 0.88),
+             ]}
+             style={[
+               styles.modalSheet,
+               { borderColor: withAlpha(currentTheme.colors.border, isDarkMode ? 0.45 : 0.22) },
+             ]}
+           >
+             <View style={styles.modalHandle} />
               <Text style={[styles.modalTitle, dynamicStyles.modalTitle]}>
                 {t("chooseCategory")}
               </Text>
@@ -433,17 +459,36 @@ const ExploreHeader = React.memo(
                       >
                         {label}
                       </Text>
+                      {categoryFilter === rawCat && (
+                       <Ionicons
+                         name="checkmark"
+                         size={normalizeSize(18)}
+                         color={currentTheme.colors.secondary}
+                         style={{ marginLeft: "auto" }}
+                       />
+                     )}
                     </TouchableOpacity>
                   );
                 })}
               </ScrollView>
             </LinearGradient>
+         </View>
           </TouchableOpacity>
         </Modal>
+        </LinearGradient>
       </Animated.View>
     );
   }
 );
+
+type CardBadge = { key: "hot" | "new" | "progress"; icon: any; label: string };
+
+const getPrimaryBadge = (c: Challenge): CardBadge | null => {
+  const p = c.participantsCount ?? 0;
+  if (p >= 10) return { key: "hot", icon: "flame-outline", label: "HOT" };
+  if (c.creatorId) return { key: "new", icon: "sparkles-outline", label: "NEW" };
+  return null;
+};
 
 // ---------- Card séparée (memo + anim) ----------
 
@@ -454,6 +499,7 @@ const ChallengeCard = React.memo(function ChallengeCard({
   onToggleSaved,
   saved,
   pending,
+  inProgress,
   theme,
   isDark,
   t,
@@ -464,6 +510,7 @@ const ChallengeCard = React.memo(function ChallengeCard({
   onToggleSaved: () => void;
   saved: boolean;
   pending: boolean;
+  inProgress: boolean;
   theme: Theme;
   isDark: boolean;
   t: (k: string, o?: any) => string;
@@ -478,6 +525,11 @@ const ChallengeCard = React.memo(function ChallengeCard({
   const dynamicStyles = useMemo(
     () => getDynamicStyles(theme, isDark),
     [theme, isDark]
+  );
+
+  const primaryBadge = useMemo(
+    () => getPrimaryBadge(item),
+    [item.participantsCount, item.creatorId]
   );
 
   const onPressBookmark = () => {
@@ -513,49 +565,135 @@ const ChallengeCard = React.memo(function ChallengeCard({
             style={styles.cardImage}
             accessibilityIgnoresInvertColors
           />
+          {/* Mini badges (Keynote) */}
+           {(primaryBadge || inProgress) && (
+            <View pointerEvents="none" style={styles.badgesStack}>
+              {primaryBadge && (
+                <View
+                  style={[
+                    styles.miniBadge,
+                    {
+                      backgroundColor: isDark
+                        ? "rgba(255,255,255,0.10)"
+                        : "rgba(255,255,255,0.72)",
+                      borderColor: isDark
+                        ? "rgba(255,255,255,0.18)"
+                        : "rgba(0,0,0,0.10)",
+                    },
+                  ]}
+                >
+                  <LinearGradient
+                    colors={[
+                      withAlpha(theme.colors.secondary, isDark ? 0.26 : 0.18),
+                      withAlpha(theme.colors.primary, isDark ? 0.18 : 0.12),
+                    ]}
+                    start={{ x: 0, y: 0 }}
+                    end={{ x: 1, y: 1 }}
+                    style={StyleSheet.absoluteFillObject}
+                  />
+                  <Ionicons
+                    name={primaryBadge.icon}
+                    size={normalizeSize(13)}
+                    color={
+                      isDark
+                        ? "rgba(255,255,255,0.92)"
+                        : "rgba(11,18,32,0.92)"
+                    }
+                  />
+                  <Text
+                    style={[
+                      styles.miniBadgeText,
+                      {
+                        color: isDark
+                          ? "rgba(255,255,255,0.92)"
+                          : "rgba(11,18,32,0.92)",
+                      },
+                    ]}
+                    numberOfLines={1}
+                  >
+                    {primaryBadge.label}
+                  </Text>
+                </View>
+              )}
+
+              {inProgress && (
+                <View
+                  style={[
+                    styles.progressBadge,
+                    {
+                      borderColor: withAlpha(
+                        theme.colors.secondary,
+                        isDark ? 0.42 : 0.28
+                      ),
+                      backgroundColor: isDark
+                        ? "rgba(0,0,0,0.28)"
+                        : "rgba(255,255,255,0.55)",
+                    },
+                  ]}
+                >
+                  <Ionicons
+                    name="checkmark-circle-outline"
+                    size={normalizeSize(14)}
+                    color={withAlpha("#fff", 0.92)}
+                  />
+                </View>
+              )}
+            </View>
+          )}
           <LinearGradient
             colors={[withAlpha(theme.colors.overlay, 0.1), withAlpha("#000", 0.8)]}
             style={styles.cardOverlay}
           >
-            <Text
-              style={[styles.cardTitle, dynamicStyles.cardTitle]}
-              numberOfLines={2}
-            >
-              {item.title}
-            </Text>
-            <Text
-              style={[styles.cardCategory, dynamicStyles.cardCategory]}
-              numberOfLines={1}
-            >
-              {item.category}
-            </Text>
-            <View style={{ flexDirection: "row", alignItems: "center" }}>
-              <Ionicons
-                name="people"
-                size={normalizeSize(14)}
-                color={theme.colors.trophy}
-                style={{ marginRight: 4 }}
-              />
-              <Text
+            <View style={styles.cardMetaRow}>
+    <View
   style={[
-    styles.cardParticipants,
-    getDynamicStyles(theme, isDark).cardParticipants,
+    styles.categoryPill,
+    {
+      borderColor: withAlpha(theme.colors.secondary, isDark ? 0.85 : 0.65),
+      backgroundColor: isDark
+        ? "rgba(0,0,0,0.28)"
+        : "rgba(255,255,255,0.55)",
+        shadowColor: theme.colors.secondary,
+     shadowOpacity: isDark ? 0.22 : 0.14,
+     shadowRadius: isDark ? 10 : 8,
+     shadowOffset: { width: 0, height: 6 },
+     elevation: isDark ? 6 : 4, 
+    },
   ]}
 >
-  {t("participantsLabel", { defaultValue: "Participants" })} :{" "}
-  {item.participantsCount ?? 0}
-</Text>
+  <Text
+    style={[
+      styles.categoryPillText,
+      { color: isDark ? withAlpha("#FFFFFF", 0.92) : withAlpha("#0B1220", 0.92), },
+    ]}
+    numberOfLines={1}
+  >
+    {item.category}
+  </Text>
+</View>
 
-            </View>
+
+    <View style={styles.participantsPill}>
+      <Ionicons name="people-outline" size={normalizeSize(14)} color={withAlpha("#fff", 0.92)} />
+      <Text style={styles.participantsPillText}>
+        {item.participantsCount ?? 0}
+      </Text>
+    </View>
+  </View>
+
+  <Text style={[styles.cardTitle, dynamicStyles.cardTitle]} numberOfLines={2}>
+    {item.title}
+  </Text>
           </LinearGradient>
           <TouchableOpacity
             onPress={onPressBookmark}
             disabled={pending}
             hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}
             style={[
-              styles.bookmarkButton,
-              dynamicStyles.bookmarkButton,
-            ]}
+   styles.bookmarkButton,
+   dynamicStyles.bookmarkButton,
+   { borderWidth: 1, borderColor: (dynamicStyles as any).bookmarkButton.borderColor },
+ ]}
             accessibilityRole="button"
             accessibilityLabel={saved ? t("removeFromSaved") : t("saveChallenge")}
           >
@@ -579,6 +717,7 @@ export default function ExploreScreen() {
   const { t, i18n } = useTranslation();
   const searchRef = useRef<TextInput>(null);
   const listRef = useRef<FlatList<Challenge>>(null);
+  const { currentChallenges } = useCurrentChallenges();
   const [rawChallenges, setRawChallenges] = useState<ChallengeRaw[]>([]);
   const [loading, setLoading] = useState(true);
   const [searchQuery, setSearchQuery] = useState("");
@@ -612,6 +751,16 @@ export default function ExploreScreen() {
     () => getDynamicStyles(currentTheme, isDarkMode),
     [currentTheme, isDarkMode]
   );
+
+  const currentChallengeIds = useMemo(() => {
+    const arr = Array.isArray((currentChallenges as any)) ? (currentChallenges as any) : [];
+    const ids = new Set<string>();
+    arr.forEach((c: any) => {
+      if (c?.challengeId) ids.add(String(c.challengeId));
+      if (c?.id) ids.add(String(c.id));
+    });
+    return ids;
+  }, [currentChallenges]);
 
   const safeNavigate = (path: string) => {
     if (path.startsWith("/challenge-details")) {
@@ -876,6 +1025,7 @@ export default function ExploreScreen() {
         isDark={isDarkMode}
         saved={optimisticSaved.has(item.id) ? true : isSaved(item.id)}
         pending={false}
+        inProgress={currentChallengeIds.has(item.id)}
         onPress={() =>
           safeNavigate(
             `/challenge-details/${item.id}?title=${encodeURIComponent(
@@ -889,7 +1039,7 @@ export default function ExploreScreen() {
         t={t}
       />
     ),
-    [currentTheme, isDarkMode, optimisticSaved, isSaved, toggleSaved, t, shouldAnimateItems]
+     [currentTheme, isDarkMode, optimisticSaved, isSaved, toggleSaved, t, shouldAnimateItems, currentChallengeIds]
   );
 
   if (loading) {
@@ -966,7 +1116,6 @@ export default function ExploreScreen() {
             initialNumToRender={10}
             maxToRenderPerBatch={10}
             updateCellsBatchingPeriod={30}
-            key={`${categoryFilter}-${originFilter}-${!!searchQuery}`}
             windowSize={12}
             keyboardShouldPersistTaps="always"
             keyboardDismissMode="on-drag"
@@ -980,7 +1129,8 @@ export default function ExploreScreen() {
             showsVerticalScrollIndicator={false}
             contentContainerStyle={{
               paddingBottom: listBottomPadding,
-              paddingHorizontal: SPACING / 2,
+              paddingHorizontal: normalizeSize(6),
+               paddingTop: normalizeSize(6),
             }}
             ListHeaderComponent={
               <ExploreHeader
@@ -1078,8 +1228,9 @@ export default function ExploreScreen() {
 const styles = StyleSheet.create({
   headerWrapper: {
     paddingHorizontal: SPACING,
-    paddingVertical: SPACING * 1.5,
-    backgroundColor: "transparent",
+   paddingTop: normalizeSize(10),
+   paddingBottom: normalizeSize(10),
+   backgroundColor: "transparent",
     ...Platform.select({
       ios: {
         shadowColor: "#000",
@@ -1090,19 +1241,31 @@ const styles = StyleSheet.create({
       android: { elevation: 2 },
     }),
   },
+  headerCard: {
+   borderRadius: normalizeSize(22),
+   borderWidth: 1,
+   padding: normalizeSize(12),
+   overflow: "hidden",
+   shadowColor: "#000",
+   shadowOffset: { width: 0, height: 12 },
+   shadowOpacity: 0.12,
+   shadowRadius: 18,
+   elevation: 6,
+ },
   searchContainer: {
     flexDirection: "row",
     alignItems: "center",
-    marginVertical: normalizeSize(12),
-    paddingHorizontal: SPACING,
-    borderWidth: 2.5,
-    borderRadius: normalizeSize(16),
-    shadowColor: "#000",
-    shadowOffset: { width: 0, height: normalizeSize(5) },
-    shadowOpacity: 0.28,
-    shadowRadius: normalizeSize(8),
+    marginTop: normalizeSize(6),
+   marginBottom: normalizeSize(10),
+   paddingHorizontal: normalizeSize(12),
+   borderWidth: 1,
+   borderRadius: normalizeSize(18),
+   shadowColor: "#000",
+   shadowOffset: { width: 0, height: 10 },
+   shadowOpacity: 0.10,
+   shadowRadius: 16,
     minHeight: normalizeSize(48),
-    elevation: 8,
+    elevation: 4,
     paddingRight: normalizeSize(8),
   },
   searchIcon: {
@@ -1111,70 +1274,141 @@ const styles = StyleSheet.create({
   searchInput: {
     flex: 1,
     paddingVertical: normalizeSize(12),
-    fontSize: normalizeSize(16),
+    fontSize: normalizeSize(15),
     fontFamily: "Comfortaa_400Regular",
   },
   filtersContainer: {
     flexDirection: "row",
     justifyContent: "space-between",
+   gap: normalizeSize(10),
   },
   filterButton: {
     flex: 1,
     flexDirection: "row",
     alignItems: "center",
-    justifyContent: "center",
-    padding: normalizeSize(12),
-    marginHorizontal: SPACING / 4,
-    borderRadius: normalizeSize(12),
-    shadowColor: "#000",
-    shadowOffset: { width: 0, height: normalizeSize(3) },
-    shadowOpacity: 0.25,
-    shadowRadius: normalizeSize(6),
-    elevation: 8,
+    justifyContent: "flex-start",
+   paddingVertical: normalizeSize(10),
+   paddingHorizontal: normalizeSize(12),
+   borderRadius: normalizeSize(999),
+   borderWidth: 1,
+   shadowColor: "#000",
+   shadowOffset: { width: 0, height: 10 },
+   shadowOpacity: 0.10,
+   shadowRadius: 16,
+   elevation: 4,
+   minWidth: 0,
   },
   filterIcon: {
     marginRight: normalizeSize(6),
   },
   filterText: {
-    fontSize: normalizeSize(16),
+    fontSize: normalizeSize(13),
     fontFamily: "Comfortaa_700Bold",
+    flexShrink: 1,
+    minWidth: 0,
+  },
+  chipDot: {
+   width: normalizeSize(6),
+   height: normalizeSize(6),
+   borderRadius: normalizeSize(999),
+   marginLeft: "auto",
+   opacity: 0.9,
+ },
+ badgesStack: {
+    position: "absolute",
+    top: normalizeSize(12),
+    left: normalizeSize(12),
+    zIndex: 20,
+    alignItems: "flex-start",
+    gap: normalizeSize(8),
+    maxWidth: "72%",
   },
   resetButton: {
     alignSelf: "center",
-    marginTop: normalizeSize(12),
-    paddingHorizontal: normalizeSize(20),
-    paddingVertical: normalizeSize(10),
-    borderRadius: normalizeSize(20),
+    marginTop: normalizeSize(10),
+   paddingHorizontal: normalizeSize(14),
+   paddingVertical: normalizeSize(10),
+   borderRadius: normalizeSize(999),
     flexDirection: "row",
     alignItems: "center",
-    shadowColor: "#000",
-    shadowOffset: { width: 0, height: normalizeSize(3) },
-    shadowOpacity: 0.22,
-    shadowRadius: normalizeSize(6),
-    elevation: 6,
+    borderWidth: 1,
+   shadowColor: "#000",
+   shadowOffset: { width: 0, height: 10 },
+   shadowOpacity: 0.10,
+   shadowRadius: 16,
+   elevation: 4,
   },
   resetIcon: {
     marginRight: normalizeSize(6),
   },
   resetText: {
-    fontSize: normalizeSize(16),
+    fontSize: normalizeSize(13),
     fontFamily: "Comfortaa_700Bold",
   },
   modalOverlay: {
     flex: 1,
-    justifyContent: "center",
-    paddingHorizontal: SPACING,
+    justifyContent: "flex-end",
   },
-  modalContainer: {
-    borderRadius: normalizeSize(20),
-    padding: SPACING,
-    maxHeight: SCREEN_HEIGHT * 0.6,
+  modalSheetWrap: {
+   width: "100%",
+   paddingHorizontal: SPACING,
+   paddingBottom: normalizeSize(14),
+ },
+ modalSheet: {
+   width: "100%",
+   borderRadius: normalizeSize(22),
+   borderWidth: 1,
+   padding: normalizeSize(14),
+   maxHeight: SCREEN_HEIGHT * 0.62,
+   shadowColor: "#000",
+   shadowOffset: { width: 0, height: 14 },
+   shadowOpacity: 0.22,
+   shadowRadius: 20,
+   elevation: 18,
+ },
+ miniBadge: {
+    position: "relative",
+    flexDirection: "row",
+    alignItems: "center",
+    gap: normalizeSize(6),
+    paddingHorizontal: normalizeSize(10),
+    paddingVertical: normalizeSize(6),
+    borderRadius: normalizeSize(999),
+    borderWidth: StyleSheet.hairlineWidth,
+    overflow: "hidden",
     shadowColor: "#000",
-    shadowOffset: { width: 0, height: normalizeSize(5) },
-    shadowOpacity: 0.35,
-    shadowRadius: normalizeSize(8),
+    shadowOffset: { width: 0, height: 8 },
+    shadowOpacity: 0.14,
+    shadowRadius: 14,
+    elevation: 8,
+  },
+  miniBadgeText: {
+    fontFamily: "Comfortaa_700Bold",
+    fontSize: normalizeSize(11.5),
+    letterSpacing: 0.6,
+  },
+  progressBadge: {
+    position: "relative",
+    width: normalizeSize(30),
+    height: normalizeSize(30),
+    borderRadius: normalizeSize(999),
+    alignItems: "center",
+    justifyContent: "center",
+    borderWidth: StyleSheet.hairlineWidth,
+    shadowColor: "#000",
+    shadowOffset: { width: 0, height: 10 },
+    shadowOpacity: 0.16,
+    shadowRadius: 16,
     elevation: 10,
   },
+ modalHandle: {
+   alignSelf: "center",
+   width: normalizeSize(54),
+   height: normalizeSize(5),
+   borderRadius: normalizeSize(999),
+   backgroundColor: "rgba(255,255,255,0.22)",
+   marginBottom: normalizeSize(10),
+ },
   modalTitle: {
     fontSize: normalizeSize(18),
     fontFamily: "Comfortaa_700Bold",
@@ -1215,19 +1449,56 @@ const styles = StyleSheet.create({
     marginBottom: SPACING * 1.5,
     borderRadius: normalizeSize(20),
     shadowColor: "#000",
-    shadowOffset: { width: 0, height: normalizeSize(5) },
-    shadowOpacity: 0.32,
-    shadowRadius: normalizeSize(8),
-    elevation: 10,
+    shadowOffset: { width: 0, height: 14 },
+   shadowOpacity: 0.16,
+   shadowRadius: 18,
+   elevation: 10,
   },
   cardContainer: {
     borderRadius: normalizeSize(20),
     overflow: "hidden",
   },
   cardGradient: {
-    borderWidth: 2.5,
+    borderWidth: 1,
     borderRadius: normalizeSize(20),
   },
+  cardMetaRow: {
+   flexDirection: "row",
+   alignItems: "center",
+   justifyContent: "space-between",
+   marginBottom: normalizeSize(8),
+ },
+ categoryPill: {
+   maxWidth: "72%",
+   paddingHorizontal: normalizeSize(10),
+   paddingVertical: normalizeSize(6),
+   borderRadius: normalizeSize(999),
+   borderWidth: 1.25,
+   shadowColor: "#000",
+ shadowOffset: { width: 0, height: 8 },
+ shadowOpacity: 0.10,
+ shadowRadius: 12,
+ elevation: 3,
+ },
+ categoryPillText: {
+   fontFamily: "Comfortaa_700Bold",
+   fontSize: normalizeSize(12),
+   letterSpacing: 0.2,
+ },
+ participantsPill: {
+   flexDirection: "row",
+   alignItems: "center",
+   gap: normalizeSize(6),
+   paddingHorizontal: normalizeSize(10),
+   paddingVertical: normalizeSize(6),
+   borderRadius: normalizeSize(999),
+   backgroundColor: "rgba(0,0,0,0.38)",
+ },
+ participantsPillText: {
+   fontFamily: "Comfortaa_700Bold",
+   fontSize: normalizeSize(12),
+   color: "rgba(255,255,255,0.92)",
+ },
   cardImage: {
     width: "100%",
     height: normalizeSize(180),
@@ -1242,7 +1513,7 @@ const styles = StyleSheet.create({
   cardTitle: {
     fontSize: normalizeSize(18),
     fontFamily: "Comfortaa_700Bold",
-    marginBottom: normalizeSize(6),
+    marginBottom: 0,
   },
   cardCategory: {
     fontSize: normalizeSize(16),
@@ -1259,6 +1530,11 @@ const styles = StyleSheet.create({
     right: normalizeSize(12),
     padding: normalizeSize(8),
     borderRadius: normalizeSize(20),
+    shadowColor: "#000",
+   shadowOffset: { width: 0, height: 10 },
+   shadowOpacity: 0.14,
+   shadowRadius: 16,
+   elevation: 8,
   },
   emptyContainer: {
     marginTop: normalizeSize(50),
@@ -1266,10 +1542,10 @@ const styles = StyleSheet.create({
     padding: SPACING,
     borderRadius: normalizeSize(20),
     shadowColor: "#000",
-    shadowOffset: { width: 0, height: normalizeSize(5) },
-    shadowOpacity: 0.32,
-    shadowRadius: normalizeSize(8),
-    elevation: 10,
+    shadowOffset: { width: 0, height: 14 },
+   shadowOpacity: 0.14,
+   shadowRadius: 18,
+   elevation: 10,
   },
   emptyContent: {
     alignItems: "center",

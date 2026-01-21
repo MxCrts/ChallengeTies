@@ -27,7 +27,10 @@
   "verificationEmailSent": "認証メールを送信しました。",
   "notSet": "未設定",
   "tipsTricks": "コツ＆ヒント",
-  "home": "ホーム",
+  "homeX": "ホーム",
+  "home": {
+    "yourChallenge": "あなたのチャレンジ"
+  },
   "profile": "プロフィール",
   "yourProfile": "あなたのプロフィール",
   "addBioHere": "ここに自己紹介を追加",
@@ -276,54 +279,33 @@
   },
 
   "newFeatures": {
-    "loginRequiredTitle": "ログインが必要です",
-
-    "sharE": {
-      "kicker": "投票しよう！",
-      "footerWithDays": "投票終了まであと {{days}} 日 — あなたの一票が未来を作る ✨",
-      "footer": "投票終了間近 — あなたの一票が未来を作る ✨"
-    },
-
-    "shareDialogTitle": "この新機能を共有",
-    "votes_one": "1 票",
-    "deadlineIso": "2025-11-30T23:59:59+01:00",
+    "deadlineIso": "2026-02-28T23:59:59+01:00",
+    "shareLabel": "共有",
 
     "monthLabelTpl": "アップデート • {{month}}",
     "months": {
-      "01": "1月", "02": "2月", "03": "3月", "04": "4月",
-      "05": "5月", "06": "6月", "07": "7月", "08": "8月",
-      "09": "9月", "10": "10月", "11": "11月", "12": "12月"
+      "01": "1月",
+      "02": "2月",
+      "03": "3月",
+      "04": "4月",
+      "05": "5月",
+      "06": "6月",
+      "07": "7月",
+      "08": "8月",
+      "09": "9月",
+      "10": "10月",
+      "11": "11月",
+      "12": "12月"
     },
+
+    "title": "新着情報",
+    "description": "次の機能に投票するか、あなたの案を提案しよう。結果は2月末。",
+
+    "heroTitle": "2月末に追加される新機能に投票しよう 🚀",
+    "heroSubtitle": "あなたの声が大事：提案して、投票して、進捗を追おう。",
 
     "voteCloses": "投票終了まで",
     "thankYouShort": "投票ありがとう 💜",
-
-    "votes_other": "{{count}} 票",
-    "loginRequiredMessage": "投票するにはログインしてください。",
-    "alreadyVotedTitle": "すでに投票済み",
-    "alreadyVotedMessage": "あなたはすでに投票しています。",
-    "voteRegisteredTitle": "投票完了",
-    "voteRegisteredMessage": "ご投票ありがとうございます！",
-    "voteErrorTitle": "エラー",
-    "voteErrorMessage": "問題が発生しました。",
-    "proposalSentTitle": "提案を送信しました",
-    "proposalSentMessage": "あなたのアイデアと投票が送信されました！",
-    "proposalErrorTitle": "エラー",
-    "proposalErrorMessage": "送信できませんでした。",
-    "title": "新着情報",
-    "by": "投稿者",
-    "votes": "票",
-    "openExplanation": "投票の仕組みを見る",
-    "description": "次に追加される機能に投票するか、自分のアイデアを提案しよう！締切：2025年11月30日。",
-    "noFeatures": "現在利用可能な機能はありません。",
-    "monthLabel": "アップデート • 12月",
-  "heroTitleSep": "12月末に追加される新機能に投票しよう 🚀",
-
-    "heroTitleNov": "11月末に登場する新機能に投票しよう 🚀",
-    "heroSubtitleNov": "あなたの声が未来を作る：提案、投票、進捗の確認ができます。",
-
-    "proposeIdea": "アイデアを提案",
-    "thankYouForVote": "投票ありがとうございます：{{featureTitle}}",
 
     "countdown": {
       "days": "日",
@@ -333,21 +315,11 @@
       "abbr": { "d": "日", "h": "時", "m": "分", "s": "秒" }
     },
 
-    "featuresListLabel": "提案された機能一覧",
-    "loading": "読み込み中…",
-
-    "heroSubtitleSep": "あなたの声が未来を作る：提案、投票、進捗の確認ができます。",
-
-    "featureDetails": "詳細：{{title}}",
-    "featureDetailsHint": "機能の詳細ページを開きます",
-    "openExplanationHint": "投票システムの説明を表示",
-    "proposeIdeaHint": "アイデア提案フォームを開く",
-    "shareMessage": "この機能をチェックして投票しよう：",
-    "shareFeature": "機能を共有",
-    "share": "共有",
-    "vote": "投票",
-    "alreadyVotedShort": "投票済み",
-    "unknown": "不明"
+    "share": {
+      "kicker": "投票しよう！",
+      "footerWithDays": "投票はあと{{days}}日で終了 — あなたの声が大事 ✨",
+      "footer": "投票はまもなく終了 — あなたの声が大事 ✨"
+    }
   },
 
   "permissionDenied": "許可が拒否されました",
@@ -465,7 +437,7 @@
   "alreadyMarkedToday": "今日はすでにマーク済みです",
   "alreadyMarked": "すでにマーク済み",
   "loading": "読み込み中…",
-  "challenge": "チャレンジ",
+  "challengeS": "チャレンジ",
   "deleteChallenge": "チャレンジを削除",
   "viewChallengeDetails": "チャレンジの詳細を見る",
   "challengeImage": "チャレンジ画像",
@@ -530,7 +502,32 @@
 "challengeDetails": {
     "noDescription": "説明はありません",
     "participantsLabel": "参加者",
+    "quick": {
+    "chat": "チャット",
+    "stats": "統計",
+    "save": "お気に入り",
+    "chatA11y": "チャットを開く",
+    "chatHint": "チャレンジのチャットを開きます。",
+    "statsA11y": "統計を見る",
+    "statsHint": "進捗と統計を表示します。",
+    "saveA11y": "チャレンジを保存",
+    "saveHint": "このチャレンジをお気に入りに追加または削除します。"
+  },
     "fetchError": "チャレンジを取得できませんでした。",
+    "inviteCta": {
+    "title": "友達を招待",
+    "sub": "デュオで挑戦。より難しく、より強く。",
+    "pill": "デュオモード",
+    "a11y": "チャレンジに友達を招待",
+    "hint": "このチャレンジの招待を開きます。"
+  },
+  "shareCta": {
+    "title": "共有",
+    "sub": "このチャレンジを誰かに送ろう。一瞬がすべてを変えるかもしれない。",
+    "pill": "共有リンク",
+    "a11y": "このチャレンジを共有",
+    "hint": "共有オプションを開きます。"
+  },
     "untitled": "チャレンジ",
     "joinError": "参加できませんでした。もう一度お試しください。",
     "completeError": "完了できませんでした。",
@@ -595,12 +592,19 @@
 
     "actions": {
       "best": "おすすめ",
+      "shareA11y": "このチャレンジを共有",
       "inviteA11y": "デュオに友だちを招待",
       "inviteHint": "招待を送ってリアルタイムのデュオ対決にしよう。",
       "inviteHintDuo": "このチャレンジはすでにデュオです。",
       "inviteHintOffline": "招待には接続が必要です。",
       "inviteSub": "最も拡散：リアルタイム対決",
       "shareHint": "おしゃれな共有カードを作成。",
+      "sectionTitle": "アクション",
+  "inviteTitle": "招待",
+  "shareTitle": "共有",
+  "chatTitle": "チャット",
+  "saveTitle": "お気に入り",
+  "statsTitle": "統計",
       "shareSub": "プレミアムカード＋リンク",
       "chatHint": "チャレンジのチャットを開く。",
       "chatSub": "モチベ＋証拠",
@@ -610,6 +614,10 @@
       "statsSub": "連続＋月"
     }
   },
+  "takeChallengeA11y": "チャレンジを開始",
+    "takeChallengeHint": "期間選択を開き、確認して開始します。",
+    "completeChallengeA11y": "チャレンジを終了",
+    "completeChallengeHint": "完了画面を開いてトロフィーを受け取ります。",
   "editYourReview": "レビューを編集",
   "deleteReview": "レビューを削除",
   "saveReview": "保存",
@@ -617,12 +625,26 @@
   "writeSomething": "送信する前に何か書いてね 😉",
   "maxChars": "最大 500 文字",
   "cannotSaveReview": "現在レビューを保存できません。",
+  "toClaim": "受け取る",
 
   "duo": {
-    "title": "デュオチャレンジ",
+    "leader": "リーダー",
+    "pending": {
+      "title": "招待待ち",
+      "short": "招待待ち",
+      "body": "返信があり次第、通知されます。キャンセルして他の人を招待することもできます。",
+      "cancelInvite": "キャンセル",
+      "cancelError": "現在キャンセルできません。"
+    },
     "you": "あなた",
-    "modeShort": "デュオ",
     "partner": "パートナー",
+    "status": {
+      "leading": "{{percent}}% リード中",
+      "behind": "{{percent}}% 遅れています",
+      "tied": "完全な引き分け"
+    },
+    "title": "デュオチャレンジ",
+    "modeShort": "デュオ",
 
     "leading": "あなたがリード中！",
     "tied": "同点",
@@ -904,26 +926,31 @@
     "confirmResetTitle": "確認",
     "confirmResetText": "ストリークパスがあります。本当にシリーズをリセットしますか？",
     "title": "チャレンジを逃したようです",
-    "subtitle": "心配無用！シリーズを守って続けられるよ 💪",
+    "subtitle": "心配しないで。まだストリークを守る方法があります 💪",
 
     "reset": {
       "title": "シリーズをリセット",
-      "subtitle": "ゼロから再スタートして、 discipline を取り戻そう。"
+      "subtitle": "1日目からやり直します。この操作は元に戻せません。"
     },
+    "pill": {
+   "streakPass": "ストリークパス利用可能",
+   "trophies": "コスト：{{count}} トロフィー"
+ },
 
     "streakPass": {
       "title": "ストリークパスを使う",
-      "subtitle": "ストリークパスでシリーズをそのまま維持。"
+      "subtitle": "ストリークパスを使って記録を維持します。"
     },
 
     "ad": {
       "title": "広告を見てシリーズを守る",
-      "subtitle": "短い動画を見るだけでシリーズを継続できるよ。"
+       "subtitle": "短い動画を見ることでストリークを維持できます。",
+   "disabled": "動画はまだ利用できません。しばらくお待ちください。"
     },
 
     "useTrophies": {
       "title": "{{count}} トロフィーでシリーズを守る",
-      "subtitle": "少しのトロフィーと引き換えで進捗を保護。"
+       "subtitle": "トロフィーを使って進捗を保護します。"
     }
   },
   "privacyPolicy": {
@@ -998,6 +1025,12 @@
   "completedOnDate": "完了日",
   "networkError": "ネットワークエラー。再試行してください。",
   "completion": {
+    "rewardLabel": "報酬",
+  "doubleRewardLabel": "2倍",
+  "footer": "約束を守れた。そうやって自分が変わっていく。",
+  "modalTitle": "チャレンジ完了",
+  "dismiss": "閉じる",
+  "adLoading": "広告を読み込み中",
     "trophies": "トロフィー",
     "finalTitle": "おめでとう！",
     "adNotReadyTitle": "広告を利用できません",
@@ -1073,7 +1106,18 @@
     "optionLabel": "{{count}} 日",
     "optionLabel_plural": "{{count}} 日",
     "optionHint": "この期間を選択",
-    "closeBackdrop": "ウィンドウを閉じる"
+    "closeBackdrop": "ウィンドウを閉じる",
+    "micro": {
+    "3": "開始",
+    "7": "定番",
+    "15": "習慣",
+    "21": "規律",
+    "30": "本気",
+    "60": "覚悟",
+    "90": "精鋭",
+    "180": "変革",
+    "365": "伝説"
+  }
   },
   "messageReported": "メッセージを通報しました。ご協力ありがとうございます。",
 "reportMessageFailed": "メッセージを通報できませんでした。しばらくしてからもう一度お試しください。",
@@ -1093,6 +1137,9 @@
   "profileS": {
     "bioLabel": "自己紹介",
     "locationLabel": "所在地",
+    "heroSub": "強くなるためのすべてを、ひとつに。",
+    "sectionsListA11y": "プロフィール内容とセクション一覧",
+    "noData": "プロフィールデータがありません。",
     "interestsLabel": "興味・関心"
   },
   "inviteFriends": "友だちを招待",
@@ -1251,7 +1298,7 @@
   "origin": {
     "all": "すべて",
     "existing": "公式",
-    "created": "コミュニティ作成"
+    "created": "作成"
   },
 
   "participants_one": "参加者",
@@ -1450,14 +1497,21 @@
     "sendButtonA11y": "メッセージを送信",
     "footerMessage": "できるだけ早くお返事いたします。ChallengeTies をご利用いただきありがとうございます！🚀"
   },
-
-  "pioneerModal": {
-    "title": "あなたはパイオニアです 🚀",
-    "description": "あなたは ChallengeTies の<b>{{first}}</b>人目のユーザーの一人です。感謝を込めて、<b>{{trophies}}</b>個のボーナストロフィーをプレゼントします 🎁",
-    "cta": "ありがとう！",
-    "closeA11y": "パイオニアモーダルを閉じる"
-  },
-
+"pioneerModal": {
+  "pill": "最初の1,000人",
+  "trophiesShort": "トロフィー",
+  "title": "あなたは Pioneer です。",
+  "description": "あなたは最初の <b>{{first}}</b> 人のユーザーの一人です。感謝の気持ちとして <b>{{trophies}}</b> 個のトロフィーと限定バッジを贈ります。",
+  "b1": "Pioneer バッジがプロフィールに表示されます。",
+  "b2": "進捗を加速する即時ボーナス。",
+  "b3": "最初の波のメンバーです。",
+  "cta": "行こう 🚀",
+  "closeA11y": "Pioneer ウィンドウを閉じる",
+  "closeHintA11y": "このウィンドウを閉じてプロフィールに戻ります。",
+  "ctaA11y": "続ける",
+  "ctaHintA11y": "このウィンドウを閉じて続けます。",
+  "foot": "一緒にこの旅を作ってくれてありがとう。"
+},
   "history": {
     "title": "私たちのストーリー",
     "logoAlt": "ChallengeTies のロゴ",
@@ -1530,6 +1584,7 @@
 ,
 "welcomeBonus": {
   "title": "ログインボーナス",
+  "todayShort": "今日" ,
   "subtitle": "{{total}}日中 {{day}}日目 • 続けよう！",
   "ribbon": "ChallengeTies ウェルカムパック",
 
@@ -1573,8 +1628,12 @@
   "dailyBonus": {
     "title": "今日のボーナス",
     "subtitle": "ミステリールーレットを回して報酬をゲット 🎁",
+    "rerollUnavailable": "広告を読み込み中…",
     "error": "今日のボーナスを取得できませんでした。",
     "hint": "ミステリールーレットを開いて報酬を獲得しよう。",
+    "ctaShort": "回す",
+    "spinLockedHint": "広告を見て、もう一度回せます。",
+    "spinHint": "ルーレットを回して報酬を受け取ろう。",
     "tag": "本日の限定",
 "shortCta": "1タップ、1サプライズ",
     "loading": "ミステリーチェストを開く中...",
@@ -2125,6 +2184,9 @@
   "shareCardT": {
   "a11yTitle": "チャレンジ共有カード",
   "a11yHint": "共有する前にカードをプレビューできます。",
+  "heldSolo": "やり切った",
+    "heldDuo": "やり切った",
+    "watermark": "@ChallengeTies",
 
   "tagline": "チャレンジがある？ やり遂げよう。",
 
@@ -2155,6 +2217,10 @@
 },
 
   "notificationsPush": {
+    "daily1": "今日の1チャレンジが、1日を変える。やる？",
+    "duoNudgeOpened": "デュオ：チャレンジを開こう ✅",
+    "daily2": "連続記録を切らないで。今やろう 💪",
+    "daily3": "リマインド：今日もチャレンジが待ってるよ ✨",
     "inviteAccepted": {
   "title": "招待が承認されました 🎉",
   "body": "{{username}} があなたのチャレンジ「{{title}}」を承認しました！"
@@ -2211,22 +2277,40 @@
     "notForYouTitle": "おっと",
     "notForYouMessage": "この招待はこのアカウント向けではありません。"
   },
+  "dailySelectedSubtitleShort": "本日のセレクション。",
   "homeZ": {
+    "duoPending": {
+      "title": "招待を送信", "sub": "保留中。承認後：デュオ開始。", "cta": "見る", "a11y": "デュオ招待が保留中",
+    "steps": {
+      "sent": "招待を送信しました",
+      "waiting": "承認待ち",
+      "ready": "承認されたら：デュオ開始"
+    }
+  },
     "hero": {
       "brand": "ChallengeTies",
       "headline": "今日のきっかけ。",
       "sub": "1つの挑戦。1タップ。続けたいなら：デュオ。",
       "duoProof": "デュオなら続く。",
       "ctaShort": "始める",
-      "ctaA11y": "始めてチャレンジを選ぶ"
+      "ctaA11y": "始めてチャレンジを選ぶ",
+       "ctaHint": "利用可能なチャレンジを確認します。"
     },
     "todayHub": {
       "badge": "今日",
       "primaryActiveShort": "記録",
+      "primaryNoneShort": "選ぶ",
+      "progressA11y": "進捗：{{total}}日のうち{{done}}日完了。",
+      "primaryNewShort": "新規",
+  "primaryNewA11y": "新しいチャレンジを選ぶ",
+  "primaryNewHint": "「探索」を開いて新しいチャレンジを選んでください。",
+  "titleAllDone": "完璧。今日はすべて完了しました。",
+  "subAllDone": "新しいチャレンジを始めるか、誰かが続けられるよう助けよう。",
+      "inviteSubA11y": "誰かを招待して成功率を高めましょう。",
       "primaryDuoShort": "デュオ",
       "titleActive2": "今日記録。連続を守ろう。",
       "titleNone2": "チャレンジを選ぶ。今日始めよう。",
-      "subActive2": "1タップで記録。その後：誰かを招待して継続率を倍に。",
+      "subActive2": "1回タップで確定。",
       "subNone2": "一番難しいのは最初の一歩。ソロ、デュオ…または作成。",
       "primaryActiveHint2": "1タップで今日を記録。",
       "progress": "{{done}}/{{total}}日",
@@ -2252,8 +2336,16 @@
       "cta": "デュオ",
       "ctaA11y": "デュオで友達を招待",
       "solo": "ソロのまま",
-      "soloA11y": "ソロのまま"
+      "soloA11y": "ソロのまま",
+       "ctaHint": "友達を招待して同じチャレンジに挑戦しましょう。",
+      "soloHint": "パートナーなしでこのチャレンジを続ける。"
     },
+    "dailyPicks": {
+    "seeAll": "探索ですべて表示",
+    "sectionA11y": "本日のチャレンジ提案。",
+    "seeAllA11y": "すべてのチャレンジを見る",
+    "seeAllHint": "探索を開いてすべてのチャレンジを確認します。"
+  },
     "discover": {
       "title": "発見",
       "subtitle2": "大事なもの。残りは下に。",
@@ -2268,12 +2360,15 @@
       "newFeatures": "新機能",
       "newFeaturesSub": "発見。投票。アプリを進化。",
       "newFeaturesA11y": "新機能",
-      "newFeaturesHint": "新機能を見て次を投票。"
+      "newFeaturesHint": "新機能を見て次を投票。",
+      "sectionA11y": "チャレンジ、ヒント、新機能を探索します。"
     }
   }
 ,
   "invitationS": {
     "shareTitle": "デュオ招待",
+    "sentTitle": "招待を送信しました",
+    "sentBody": "返信があり次第、通知されます。",
     "later": "あとで",
     "ctaInvite": "招待する",
     "startSoloShort": "ソロ",
@@ -4233,10 +4328,12 @@
       "contact": "困ったときは、アプリ内の「サポートに連絡」ボタンから、または公式サイトのコンタクトページからいつでもメッセージを送ってください 🌍。"
     }
   },
+  "createChallengeHint": "良いタイトル＋画像＝参加者が増える。",
 "common": {
     "back": "戻る",
     "retry": "再試行",
     "loading": "読み込み中...",
+    "tip": "ヒント",
     "recommended": "おすすめ",
     "networkError": "接続に問題があります",
     "oops": "おっと、もう一度試してね。",
@@ -4247,9 +4344,161 @@
     "unexpectedError": "予期しないエラーが発生しました。もう一度お試しください。",
     "loadError": "更新できません。下にスワイプして再試行してください。",
     "close": "閉じる",
-    "info": "情報"
+    "info": "情報",
+ "cancel": "キャンセル",
+ "confirm": "確認",
+    "confirmDestructive": "はい、リセット",
+    "loginRequired": "ログインが必要です。"
+  },
+  "streak": {
+    "confirmReset": {
+      "title": "確認しますか？",
+      "text": "Streak Pass が利用可能です。本当に連続記録をリセットしますか？"
+    },
+    "resetDone": {
+      "title": "連続記録をリセット",
+      "text": "連続記録がリセットされました。今日が新しいスタートになります。"
+    },
+    "resetError": "連続記録をリセットできませんでした。"
+  },
+  "markToast": {
+    "completeTitle": "ミッション完了。✅",
+  "complete": {
+    "lines": [
+      "完了。群衆とは違う。",
+      "やり切った。それが自尊心だ。",
+      "今やったことは、希少で本物。",
+      "自分との約束を守った。",
+      "今、君はもっと危険になった。",
+      "アイデンティティ進化。次のレベルへ。",
+      "試したんじゃない。終わらせた。",
+      "言い訳は通用しない。",
+      "章は終わり。次の任務へ。",
+      "一日を勝ったんじゃない。自分を勝ち取った。"
+    ]
+  }
+,
+    "alreadyMarkedTitle": "完了しています。",
+  "alreadyMarkedMsg": "今日はすでに完了しています。明日また来て。",
+  "alreadyCompletedTitle": "すでに達成済み。",
+  "alreadyCompletedMsg": "このチャレンジは完了しました。新しいものを始めましょう。",
+  "challengeNotFound": "このチャレンジが見つかりません。",
+    "dismiss": "閉じる",
+    "defaultTitle": "完了 ✅",
+    "progressTpl": "{{t}}日中 {{d}}日目",
+
+    "kicker": {
+      "mark": "完了",
+      "streak": "リズム",
+      "complete": "達成",
+      "error": "おっと"
+    },
+
+    "errorTitle": "おっと。完了できませんでした。",
+    "errorMsg": "少し待って、もう一度試してください。",
+
+    "lines": {
+      "early": [
+        "完璧。前に進んでいる。",
+        "また1日。迷うな。",
+        "これが勝ち方だ。",
+        "集中。完了。"
+      ],
+      "mid": [
+        "確実に差がついてきた。",
+        "リズム維持。そのまま行け。",
+        "本当に変わり始めている。"
+      ],
+      "late": [
+        "ラストスパート。",
+        "離すな。今だ。",
+        "最後までやり切る。以上。"
+      ],
+      "generic": [
+        "規律 > モチベーション。",
+        "一つの行動。一つの証明。",
+        "君は少数派だ。"
+      ]
+    }
+  },
+  "toast": {
+    "streakBonus": {
+      "title": "連続ボーナス",
+      "text": "いいね！{{streak}}日連続で{{bonus}}個のボーナストロフィーを獲得しました。"
+    },
+    "microEarned": {
+      "title": "トロフィー獲得",
+      "text": "今日はボーナストロフィーを{{count}}個獲得しました！"
+    },
+    "marked": {
+      "title": "進捗を保存",
+      "text": "今日の記録を完了しました。",
+      "micro": "+{{count}}個のトロフィー。綺麗に決めた。優位に立ってる。"
+    },
+    "alreadyDone": {
+      "title": "チャレンジ完了済み",
+      "text": "このチャレンジはすでに完了しています。"
+    },
+    "alreadyMarked": {
+      "title": "記録済み",
+      "text": "今日はすでにこのチャレンジを記録しています。"
+    },
+    "challengeNotFound": "チャレンジが見つかりません。",
+    "unableToMark": "このチャレンジを記録できません。",
+    "keepGoing": "この調子 🔥"
+  },
+  "challenge": {
+    "alreadyTaken": "チャレンジは進行中です。",
+    "unableToLoad": "チャレンジを読み込めませんでした：{{message}}",
+    "unableToAdd": "チャレンジを追加できませんでした。",
+    "unableToFinalize": "チャレンジを完了できませんでした。",
+    "unableToResetStreak": "連続記録をリセットできませんでした。",
+    "unableToMarkAfterVideo": "動画視聴後に記録できませんでした。",
+    "videoSavedStreak": {
+      "title": "連続記録を保存",
+      "text": "動画のおかげで連続記録を守れました。"
+    },
+    "notEnoughTrophies": {
+      "title": "トロフィー不足",
+      "text": "トロフィーが足りません。"
+    },
+    "trophiesUsed": {
+      "title": "トロフィーを使用",
+      "text": "連続記録を守るために{{cost}}個のトロフィーを使用しました。"
+    },
+    "unableToMarkWithTrophies": "トロフィーで確定できませんでした。"
+  },
+  "streakPass": {
+    "used": {
+      "title": "Streak Pass を使用",
+      "text": "Streak Pass を使って連続記録を守りました。"
+    },
+    "unableToUse": "Streak Pass を使用できませんでした。"
+  },
+  "simulation": {
+    "title": "シミュレーション",
+    "message": "連続記録を{{streak}}日にシミュレーションしました。",
+    "errorTitle": "シミュレーションエラー",
+    "challengeNotFound": "シミュレーション用のチャレンジが見つかりません。",
+    "errorGeneric": "連続記録をシミュレーションできませんでした。"
   },
  "firstPick": {
+  "invitePending": {
+    "title": "招待を待っています",
+    "body": "友だちはまだ返信していません。リンクを再送するか、このまま続けると承認された時点で開始します。",
+    "resend": "再送する",
+    "continue": "続ける"
+  },
+  "postShare": {
+    "titleAsk": "リンクを送信しましたか？",
+      "bodyAsk": "送信が確認できない場合があります。リンクを共有したかどうかだけ教えてください。",
+    "titleFallback": "OK。次はどうしますか？",
+    "bodyFallback": "今すぐ再送するか、ソロに切り替えてすぐ開始できます。",
+    "no": "送っていない",
+    "yesContinue": "はい、続ける",
+    "resend": "再送する",
+    "switchSolo": "ソロに切り替える"
+  },
   "day_one": "{{count}}日",
   "day_other": "{{count}}日",
   "progress": "{{total}} 中 {{current}}",

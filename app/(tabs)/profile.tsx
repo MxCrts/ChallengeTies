@@ -7,7 +7,10 @@ import {
   Image,
   ActivityIndicator,
   ScrollView,
+  Platform,
   Dimensions,
+  useWindowDimensions,
+  PixelRatio,
   StatusBar,
   I18nManager,
   Modal,
@@ -124,8 +127,10 @@ const tabBarHeight = useBottomTabBarHeight();
 const [adHeight, setAdHeight] = useState(0);
 const [showPioneerModal, setShowPioneerModal] = useState(false);
 
+const EXTRA_SCROLL_SPACE = normalizeSize(24); // ✅ petit buffer, pas 90
 const bottomContentPadding =
-  (showBanners ? adHeight : 0) + tabBarHeight + insets.bottom + normalizeSize(90);
+  (showBanners ? adHeight : 0) + tabBarHeight + insets.bottom + EXTRA_SCROLL_SPACE;
+
 
 // 🆕 total d’objets dans l’inventaire (streakPass + futurs items numériques)
 const totalInventoryItems = useMemo(() => {
@@ -228,15 +233,6 @@ useFocusEffect(
       accessibilityHint: t("access.editProfile.hint"),
     },
     {
-      name: t("notifications"),
-      icon: "notifications-outline",
-      navigateTo: "profile/notifications",
-      testID: "notifications-button",
-      unclaimedCount: userData?.unreadNotifications ?? 0,
-      accessibilityLabel: t("access.notifications.label"),
-      accessibilityHint: t("access.notifications.hint"),
-    },
-    {
       name: t("ongoingChallenges"),
       icon: "flag-outline",
       navigateTo: "profile/CurrentChallenges",
@@ -314,6 +310,11 @@ useFocusEffect(
   return split;
 }, [sections, i18n.language]);
 
+const pioneerTextPrimary = isDarkMode ? currentTheme.colors.textPrimary : "#111";
+const pioneerTextSecondary = isDarkMode ? currentTheme.colors.textSecondary : "#2B2B2B";
+const pioneerBulletTextColor = isDarkMode ? currentTheme.colors.textPrimary : "#111";
+
+
 
   if (isLoading) {
     return (
@@ -377,7 +378,7 @@ useFocusEffect(
               numberOfLines={3}
               adjustsFontSizeToFit
             >
-              {error || t("profile.noData")}
+              {error || t("profileS.noData")}
             </Text>
           </View>
         </LinearGradient>
@@ -426,18 +427,39 @@ useFocusEffect(
     useBlur={false}
     showHairline={false}
   />
+  <View style={styles.heroHeader}>
+
+    <Text
+      style={[
+        styles.heroSubtitle,
+        { color: withAlpha(currentTheme.colors.textSecondary, isDarkMode ? 0.85 : 0.75) },
+      ]}
+      numberOfLines={2}
+      adjustsFontSizeToFit
+    >
+      {t("profileS.heroSub", { defaultValue: "Tout ce qui te rend plus fort, au même endroit." })}
+    </Text>
+  </View>
 
   <ScrollView
-    contentContainerStyle={[styles.scrollContent, { paddingBottom: bottomContentPadding }]}
-    showsVerticalScrollIndicator={false}
-    contentInset={{ top: SPACING, bottom: normalizeSize(80) }}
-    keyboardShouldPersistTaps="handled"
-   accessibilityRole="summary"
-   accessibilityLabel={t("profile.sectionsListA11y", {
-     defaultValue: "Contenu du profil et liste des sections",
-   })}
-  >
+  contentContainerStyle={[
+    styles.scrollContent,
+    { paddingBottom: bottomContentPadding },
+  ]}
+  showsVerticalScrollIndicator={false}
+  // ✅ iOS only, sinon double padding + glitches en release Android
+  contentInset={
+    Platform.OS === "ios"
+      ? { top: SPACING, bottom: 0 }
+      : undefined
+  }
+  scrollIndicatorInsets={{
+    bottom: bottomContentPadding,
+  }}
+  keyboardShouldPersistTaps="handled"
+>
 
+<View style={styles.pageInner}>
             {/* Carte Profil */}
             <Animated.View
               entering={FadeInUp.delay(100)}
@@ -451,19 +473,38 @@ useFocusEffect(
                         currentTheme.colors.cardBackground,
                       ]
                     : ["#FFFFFF", "#FFE4B5"]
-                }
-                style={[
+                            }
+                            style={[
                   styles.profileCard,
                   {
-                    borderWidth: 2,
-                    borderColor: isDarkMode
-                      ? currentTheme.colors.secondary
-                      : "#FFB800",
+                    borderWidth: 1,
+                    borderColor: withAlpha(currentTheme.colors.secondary, isDarkMode ? 0.18 : 0.14),
                   },
                 ]}
+
                 start={{ x: 0, y: 0 }}
                 end={{ x: 1, y: 1 }}
               >
+                <LinearGradient
+      pointerEvents="none"
+      colors={[
+        withAlpha(currentTheme.colors.primary, isDarkMode ? 0.18 : 0.12),
+        "transparent",
+      ]}
+      style={styles.cardHaloTop}
+      start={{ x: 0.2, y: 0 }}
+      end={{ x: 1, y: 1 }}
+    />
+    <LinearGradient
+      pointerEvents="none"
+      colors={[
+        withAlpha(currentTheme.colors.secondary, isDarkMode ? 0.14 : 0.10),
+        "transparent",
+      ]}
+      style={styles.cardHaloBottom}
+      start={{ x: 1, y: 0 }}
+      end={{ x: 0, y: 1 }}
+    />
                 <View style={styles.avatarContainer}>
                   <Image
                     source={
@@ -475,9 +516,7 @@ useFocusEffect(
                     style={[
                       styles.avatar,
                       {
-                        borderColor: isDarkMode
-                          ? currentTheme.colors.textPrimary
-                          : "#FFB800",
+                        borderColor: withAlpha(currentTheme.colors.secondary, isDarkMode ? 0.25 : 0.18),
                       },
                     ]}
                     accessibilityRole="image"
@@ -498,10 +537,8 @@ useFocusEffect(
                     style={[
                       styles.trophyBadge,
                       {
-                        backgroundColor: isDarkMode
-                          ? currentTheme.colors.background
-                          : currentTheme.colors.cardBackground,
-                        borderColor: currentTheme.colors.trophy,
+                        backgroundColor: withAlpha(currentTheme.colors.background, isDarkMode ? 0.55 : 0.75),
+                        borderColor: withAlpha(currentTheme.colors.trophy, 0.35),
                       },
                     ]}
                   >
@@ -711,66 +748,106 @@ useFocusEffect(
             accessibilityRole="button"
             testID={section.testID}
             activeOpacity={0.7}
-            style={styles.sectionTouchable}      // 🆕 important
+            style={styles.sectionTouchable}     
           >
             <LinearGradient
-              colors={
-                isDarkMode
-                  ? [
-                      currentTheme.colors.cardBackground,
-                      currentTheme.colors.background,
-                    ]
-                  : ["#FFFFFF", "#FFF5E6"]
-              }
-              style={[
-                styles.sectionGradient,
-                {
-                  borderWidth: isDarkMode ? 1 : 2,
-                  borderColor: isDarkMode
-                    ? currentTheme.colors.secondary
-                    : "#FFB800",
-                },
-              ]}
-              start={{ x: 0, y: 0 }}
-              end={{ x: 1, y: 1 }}
-            >
-              <View style={styles.iconContainer}>
-                <Ionicons
-                  name={
-                    section.icon as keyof typeof Ionicons.glyphMap
-                  }
-                  size={normalizeSize(32)}
-                  color={currentTheme.colors.secondary}
-                />
-                {(section.unclaimedCount ?? 0) > 0 && (
-                  <Animated.View
-                    entering={ZoomIn}
-                    style={styles.badgeDot}
-                  >
-                    {(section.unclaimedCount ?? 0) > 1 && (
-                      <Text style={styles.badgeText}>
-                        {section.unclaimedCount}
-                      </Text>
-                    )}
-                  </Animated.View>
-                )}
-              </View>
+  colors={[
+    withAlpha(currentTheme.colors.secondary, isDarkMode ? 0.22 : 0.16),
+    withAlpha(currentTheme.colors.primary, isDarkMode ? 0.16 : 0.12),
+    withAlpha("#FFFFFF", isDarkMode ? 0.10 : 0.18),
+  ]}
+  start={{ x: 0, y: 0 }}
+  end={{ x: 1, y: 1 }}
+  style={styles.sectionCardOuter}
+>
+  <View
+    style={[
+      styles.sectionCardInner,
+      {
+        backgroundColor: withAlpha(
+          isDarkMode ? currentTheme.colors.cardBackground : "#FFFFFF",
+          isDarkMode ? 0.54 : 0.90
+        ),
+      },
+    ]}
+  >
+    {/* top highlight (premium) */}
+    <LinearGradient
+      pointerEvents="none"
+      colors={[
+        withAlpha("#FFFFFF", isDarkMode ? 0.16 : 0.30),
+        "transparent",
+      ]}
+      start={{ x: 0, y: 0 }}
+      end={{ x: 0, y: 1 }}
+      style={styles.sectionTopHighlight}
+    />
 
-              <Text
-                style={[
-                  styles.sectionText,
-                  {
-                    color: isDarkMode
-                      ? currentTheme.colors.textPrimary
-                      : "#333333",
-                  },
-                ]}
-                numberOfLines={2}
-                adjustsFontSizeToFit
-              >
-                {section.name}
-              </Text>
-            </LinearGradient>
+    {/* halo */}
+    <LinearGradient
+      pointerEvents="none"
+      colors={[
+        withAlpha(currentTheme.colors.primary, isDarkMode ? 0.14 : 0.10),
+        "transparent",
+      ]}
+      style={styles.sectionHalo}
+      start={{ x: 0.2, y: 0 }}
+      end={{ x: 1, y: 1 }}
+    />
+
+    <View style={styles.sectionTopRow}>
+      <View
+        style={[
+          styles.sectionIconBubble,
+          {
+            backgroundColor: withAlpha(
+              currentTheme.colors.background,
+              isDarkMode ? 0.18 : 0.30
+            ),
+            borderColor: withAlpha(
+              currentTheme.colors.secondary,
+              isDarkMode ? 0.16 : 0.12
+            ),
+          },
+        ]}
+      >
+        <Ionicons
+          name={section.icon as keyof typeof Ionicons.glyphMap}
+          size={normalizeSize(20)}
+          color={currentTheme.colors.secondary}
+        />
+
+        {(section.unclaimedCount ?? 0) > 0 && (
+          <Animated.View entering={ZoomIn} style={styles.badgeDot}>
+            {(section.unclaimedCount ?? 0) > 1 && (
+              <Text style={styles.badgeText}>
+   {section.unclaimedCount > 99 ? "99+" : section.unclaimedCount}
+ </Text>
+            )}
+          </Animated.View>
+        )}
+      </View>
+
+      <Ionicons
+        name={I18nManager.isRTL ? "chevron-back" : "chevron-forward"}
+        size={normalizeSize(16)}
+        color={withAlpha(currentTheme.colors.textSecondary, 0.75)}
+      />
+    </View>
+
+    <Text
+      style={[
+        styles.sectionText,
+        { color: isDarkMode ? currentTheme.colors.textPrimary : "#111" },
+      ]}
+      numberOfLines={2}
+      adjustsFontSizeToFit
+    >
+      {section.name}
+    </Text>
+  </View>
+</LinearGradient>
+
           </TouchableOpacity>
         </Animated.View>
       ))}
@@ -778,83 +855,235 @@ useFocusEffect(
   ))}
 </View>
 
-          </ScrollView>
+         <View style={{ height: normalizeSize(10) }} />
+          </View>
+        </ScrollView>
         {/* Bannière pub */}
         {/* Bannière dockée au-dessus de la TabBar (iOS + Android) */}
 {showBanners && (
   <View
-    style={{
-      position: "absolute",
-      left: 0,
-      right: 0,
-      bottom: tabBarHeight + insets.bottom,
-      alignItems: "center",
-      zIndex: 9999,
-      backgroundColor: "transparent",
-      paddingBottom: 6,
-    }}
-    pointerEvents="box-none"
-  >
+  style={{
+    position: "absolute",
+    left: 0,
+    right: 0,
+    bottom: tabBarHeight + insets.bottom,
+    alignItems: "center",
+    zIndex: 50, // ✅ suffisant
+    elevation: 50, // ✅ Android
+    backgroundColor: "transparent",
+    paddingBottom: 6,
+  }}
+  pointerEvents="box-none"
+>
+
     <BannerSlot onHeight={handleAdHeight} />
   </View>
 )}
 
-
-
-
-        {/* Tutoriel actif */}
-        {isTutorialActive && tutorialStep === 2 && (
-          <BlurView intensity={50} style={styles.blurView}>
-            <TutorialModal
-              step={tutorialStep}
-              onNext={() => setTutorialStep(3)}
-              onStart={() => {}}
-              onSkip={skipTutorial}
-              onFinish={skipTutorial}
-            />
-          </BlurView>
-        )}
-        {/* 🌟 Modal Pioneer (1000 premiers) — déclenché uniquement à l’ouverture du profil */}
+        {/* 🌟 Modal Pioneer — Apple Keynote glass */}
 <Modal
   visible={showPioneerModal}
   transparent
   animationType="fade"
+  statusBarTranslucent
   onRequestClose={() => setShowPioneerModal(false)}
+  presentationStyle="overFullScreen"
+ hardwareAccelerated
 >
-  <View style={styles.blurView}>
-    <View style={styles.modalContainer}>
-      <Ionicons name="sparkles" size={normalizeSize(36)} color="#FFB800" />
+  <View style={styles.pioneerOverlay} pointerEvents="auto">
+    {/* Backdrop blur */}
+    <BlurView intensity={55} tint={isDarkMode ? "dark" : "light"} style={StyleSheet.absoluteFill} />
 
-      <Text style={styles.modalTitle} numberOfLines={2} adjustsFontSizeToFit>
-        {t("pioneerModal.title")}
-      </Text>
+    {/* Soft dim */}
+    <View
+      style={[
+        StyleSheet.absoluteFill,
+        { backgroundColor: isDarkMode ? "rgba(0,0,0,0.45)" : "rgba(0,0,0,0.25)" },
+      ]}
+    />
 
-      <Text style={styles.modalDescription}>
-  <Trans
-    i18nKey="pioneerModal.description"
-    values={{ first: 1000, trophies: 50 }}
-    components={{
-      b: <Text style={styles.modalBold} />,
-    }}
-  />
-</Text>
-
-      <TouchableOpacity
-        onPress={() => setShowPioneerModal(false)}
-        style={styles.nextButton}
-        accessibilityRole="button"
-        accessibilityLabel={t("pioneerModal.closeA11y", {
-          defaultValue: "Fermer la fenêtre Pioneer",
-        })}
+    <Animated.View
+   entering={ZoomIn.duration(260)}
+   style={[
+     styles.pioneerWrap,
+     {
+       paddingTop: 0,
+       paddingBottom: 0,
+     },
+   ]}
+ >
+      {/* Card */}
+      <LinearGradient
+        colors={
+          isDarkMode
+            ? [
+                withAlpha(currentTheme.colors.cardBackground, 0.92),
+                withAlpha(currentTheme.colors.background, 0.78),
+              ]
+            : ["rgba(255,255,255,0.92)", "rgba(255,245,230,0.92)"]
+        }
+        start={{ x: 0, y: 0 }}
+        end={{ x: 1, y: 1 }}
+        style={[
+          styles.pioneerCard,
+          {
+            borderColor: withAlpha(currentTheme.colors.secondary, isDarkMode ? 0.35 : 0.45),
+            marginTop: insets.top + normalizeSize(10),
+            marginBottom: insets.bottom + normalizeSize(10),
+          },
+        ]}
       >
-        <Text style={styles.nextButtonText}>
-          {t("pioneerModal.cta", { defaultValue: "Let's go 🚀" })}
-        </Text>
-        <Ionicons name="arrow-forward" size={normalizeSize(16)} color="#FFF" />
-      </TouchableOpacity>
-    </View>
+        {/* Decorative halo */}
+        <LinearGradient
+          pointerEvents="none"
+          colors={[
+            withAlpha(currentTheme.colors.primary, isDarkMode ? 0.35 : 0.25),
+            "transparent",
+          ]}
+          style={styles.pioneerHaloTop}
+          start={{ x: 0.2, y: 0 }}
+          end={{ x: 1, y: 1 }}
+        />
+        <LinearGradient
+          pointerEvents="none"
+          colors={[
+            withAlpha(currentTheme.colors.secondary, isDarkMode ? 0.28 : 0.22),
+            "transparent",
+          ]}
+          style={styles.pioneerHaloBottom}
+          start={{ x: 1, y: 0 }}
+          end={{ x: 0, y: 1 }}
+        />
+
+        {/* Content (scrollable si petit écran) */}
+        <ScrollView
+          style={{ width: "100%" }}
+          contentContainerStyle={styles.pioneerContent}
+          showsVerticalScrollIndicator={false}
+          bounces={false}
+        >
+          {/* Icon ring */}
+          <View style={styles.pioneerHero}>
+            <LinearGradient
+              colors={[
+                withAlpha(currentTheme.colors.secondary, 0.95),
+                withAlpha(currentTheme.colors.primary, 0.85),
+              ]}
+              start={{ x: 0, y: 0 }}
+              end={{ x: 1, y: 1 }}
+              style={styles.pioneerIconRing}
+            >
+              <View
+                style={[
+                  styles.pioneerIconInner,
+                  { backgroundColor: withAlpha(currentTheme.colors.background, isDarkMode ? 0.55 : 0.35) },
+                ]}
+              >
+                <Ionicons name="sparkles" size={normalizeSize(28)} color={isDarkMode ? "#FFD36A" : "#FFB800"} />
+              </View>
+            </LinearGradient>
+
+            <View style={styles.pioneerPillRow}>
+              <View
+                style={[
+                  styles.pioneerPill,
+                  { backgroundColor: withAlpha(currentTheme.colors.secondary, isDarkMode ? 0.16 : 0.12), borderColor: withAlpha(currentTheme.colors.secondary, 0.25) },
+                ]}
+              >
+                <Text style={[styles.pioneerPillText, { color: isDarkMode ? currentTheme.colors.secondary : "#C86A00" }]}>
+                  {t("pioneerModal.pill", { defaultValue: "1000 premiers" })}
+                </Text>
+              </View>
+
+              <View
+                style={[
+                  styles.pioneerPill,
+                  { backgroundColor: withAlpha(currentTheme.colors.trophy, isDarkMode ? 0.14 : 0.10), borderColor: withAlpha(currentTheme.colors.trophy, 0.22) },
+                ]}
+              >
+                <Ionicons name="trophy" size={normalizeSize(14)} color={currentTheme.colors.trophy} />
+                <Text style={[styles.pioneerPillText, { color: currentTheme.colors.trophy, marginLeft: 6 }]}>
+                  +{50} {t("pioneerModal.trophiesShort", { defaultValue: "trophées" })}
+                </Text>
+              </View>
+            </View>
+          </View>
+
+          <Text
+            style={[
+              styles.pioneerTitle,
+              { color: pioneerTextPrimary },
+            ]}
+            numberOfLines={3}
+            adjustsFontSizeToFit
+          >
+            {t("pioneerModal.title", { defaultValue: "Tu fais partie des Pioneers." })}
+          </Text>
+
+          <Text style={[styles.pioneerDesc, { color: pioneerTextSecondary }]}>
+            <Trans
+              i18nKey="pioneerModal.description"
+              values={{ first: 1000, trophies: 50 }}
+              components={{ b: <Text style={[styles.pioneerBold, { color: isDarkMode ? pioneerTextPrimary : "#FF8A00" }]} />,
+              }}
+            />
+          </Text>
+
+          {/* Micro value props */}
+          <View style={styles.pioneerBullets}>
+            <View style={styles.pioneerBulletRow}>
+              <Ionicons name="shield-checkmark-outline" size={normalizeSize(18)} color={currentTheme.colors.secondary} />
+              <Text style={[styles.pioneerBulletText, { color: pioneerBulletTextColor }]}>
+                {t("pioneerModal.b1", { defaultValue: "Badge Pioneer visible sur ton profil." })}
+              </Text>
+            </View>
+
+            <View style={styles.pioneerBulletRow}>
+              <Ionicons name="flash-outline" size={normalizeSize(18)} color={currentTheme.colors.secondary} />
+              <Text style={[styles.pioneerBulletText, { color: pioneerBulletTextColor }]}>
+                {t("pioneerModal.b2", { defaultValue: "Bonus immédiat pour accélérer ta progression." })}
+              </Text>
+            </View>
+
+            <View style={styles.pioneerBulletRow}>
+              <Ionicons name="people-outline" size={normalizeSize(18)} color={currentTheme.colors.secondary} />
+              <Text style={[styles.pioneerBulletText, { color: pioneerBulletTextColor }]}>
+                {t("pioneerModal.b3", { defaultValue: "Tu fais partie de la toute première vague." })}
+              </Text>
+            </View>
+          </View>
+
+          {/* CTA */}
+          <TouchableOpacity
+            onPress={() => setShowPioneerModal(false)}
+            activeOpacity={0.85}
+            style={styles.pioneerCtaWrap}
+            accessibilityRole="button"
+            accessibilityLabel={t("pioneerModal.ctaA11y", { defaultValue: "Continuer" })}
+            accessibilityHint={t("pioneerModal.ctaHintA11y", { defaultValue: "Ferme cette fenêtre et continue." })}
+          >
+            <LinearGradient
+              colors={[currentTheme.colors.secondary, currentTheme.colors.primary]}
+              start={{ x: 0, y: 0 }}
+              end={{ x: 1, y: 1 }}
+              style={styles.pioneerCta}
+            >
+              <Text style={styles.pioneerCtaText}>
+                {t("pioneerModal.cta", { defaultValue: "Let’s go 🚀" })}
+              </Text>
+              <Ionicons name="arrow-forward" size={normalizeSize(16)} color="#FFF" />
+            </LinearGradient>
+          </TouchableOpacity>
+
+          <Text style={[styles.pioneerFoot, { color: withAlpha(currentTheme.colors.textSecondary, 0.85) }]}>
+            {t("pioneerModal.foot", { defaultValue: "Merci de construire l’aventure avec nous." })}
+          </Text>
+        </ScrollView>
+      </LinearGradient>
+    </Animated.View>
   </View>
 </Modal>
+
 
       </LinearGradient>
     </GlobalLayout>
@@ -865,13 +1094,21 @@ const styles = StyleSheet.create({
   container: { flex: 1 },
 
   scrollContent: {
-    padding: SPACING,
-    paddingBottom: normalizeSize(140),
+    paddingHorizontal: normalizeSize(16),
+  paddingTop: normalizeSize(10),
+  paddingBottom: normalizeSize(140),
   },
 inline: {
   flexDirection: "row",
   alignItems: "center",
 },
+ pageInner: {
+   width: "100%",
+   borderRadius: normalizeSize(24),
+   padding: normalizeSize(14),
+   backgroundColor: "rgba(255,255,255,0.02)",
+ },
+
 infoBlock: {               // AVANT: marginBottom: normalizeSize(12)
   marginBottom: normalizeSize(6),
 },
@@ -893,7 +1130,7 @@ fieldValue: {
 },
 softDivider: {             // AVANT: marginVertical: normalizeSize(8)
   height: 1,
-  backgroundColor: "rgba(255,255,255,0.12)",
+  backgroundColor: "rgba(255,255,255,0.08)",
   marginVertical: normalizeSize(1),
 },
 interestsRow: {            // AVANT: gap: normalizeSize(8)
@@ -901,17 +1138,244 @@ interestsRow: {            // AVANT: gap: normalizeSize(8)
   flexWrap: "wrap",
   gap: normalizeSize(3),
 },
+heroHeader: {
+  paddingHorizontal: normalizeSize(18),
+  paddingTop: normalizeSize(6),
+  paddingBottom: normalizeSize(8),
+},
+heroTitle: {
+  fontFamily: "Comfortaa_700Bold",
+  fontSize: normalizeSize(22),
+  letterSpacing: -0.2,
+},
+heroSubtitle: {
+  marginTop: normalizeSize(4),
+  fontFamily: "Comfortaa_400Regular",
+  fontSize: normalizeSize(13),
+  lineHeight: normalizeSize(18),
+},
+
+cardHaloTop: {
+  position: "absolute",
+  top: -SCREEN_WIDTH * 0.22,
+  left: -SCREEN_WIDTH * 0.18,
+  width: SCREEN_WIDTH * 0.70,
+  height: SCREEN_WIDTH * 0.70,
+  borderRadius: SCREEN_WIDTH * 0.35,
+},
+cardHaloBottom: {
+  position: "absolute",
+  bottom: -SCREEN_WIDTH * 0.25,
+  right: -SCREEN_WIDTH * 0.20,
+  width: SCREEN_WIDTH * 0.80,
+  height: SCREEN_WIDTH * 0.80,
+  borderRadius: SCREEN_WIDTH * 0.40,
+},
+
+pioneerOverlay: {
+  position: "absolute",
+  top: 0,
+  left: 0,
+  right: 0,
+  bottom: 0,
+  justifyContent: "center",
+  alignItems: "center",
+  paddingHorizontal: 0,
+},
+
+pioneerWrap: {
+  width: "100%",
+  paddingHorizontal: normalizeSize(16),
+  alignItems: "center",
+  justifyContent: "center",
+  flex: 1,
+},
+
+pioneerCard: {
+  width: "100%",
+  maxWidth: 520,
+  borderRadius: normalizeSize(24),
+  borderWidth: 1,
+  overflow: "hidden",
+  shadowColor: "#000",
+  shadowOffset: { width: 0, height: 10 },
+  shadowOpacity: 0.22,
+  shadowRadius: 18,
+  elevation: 12,
+},
+
+pioneerHaloTop: {
+  position: "absolute",
+  top: -SCREEN_WIDTH * 0.2,
+  left: -SCREEN_WIDTH * 0.15,
+  width: SCREEN_WIDTH * 0.7,
+  height: SCREEN_WIDTH * 0.7,
+  borderRadius: SCREEN_WIDTH * 0.35,
+},
+
+pioneerHaloBottom: {
+  position: "absolute",
+  bottom: -SCREEN_WIDTH * 0.25,
+  right: -SCREEN_WIDTH * 0.2,
+  width: SCREEN_WIDTH * 0.85,
+  height: SCREEN_WIDTH * 0.85,
+  borderRadius: SCREEN_WIDTH * 0.425,
+},
+
+pioneerClose: {
+  position: "absolute",
+  top: normalizeSize(12),
+  right: normalizeSize(12),
+  width: normalizeSize(36),
+  height: normalizeSize(36),
+  borderRadius: normalizeSize(18),
+  alignItems: "center",
+  justifyContent: "center",
+  zIndex: 5,
+  borderWidth: 1,
+  borderColor: "rgba(255,255,255,0.18)",
+},
+
+pioneerContent: {
+  paddingTop: normalizeSize(28),
+  paddingHorizontal: normalizeSize(18),
+  paddingBottom: normalizeSize(18),
+  alignItems: "center",
+},
+
+pioneerHero: {
+  alignItems: "center",
+  marginBottom: normalizeSize(10),
+},
+
+pioneerIconRing: {
+  width: normalizeSize(72),
+  height: normalizeSize(72),
+  borderRadius: normalizeSize(36),
+  alignItems: "center",
+  justifyContent: "center",
+},
+
+pioneerIconInner: {
+  width: normalizeSize(56),
+  height: normalizeSize(56),
+  borderRadius: normalizeSize(28),
+  alignItems: "center",
+  justifyContent: "center",
+  borderWidth: 1,
+  borderColor: "rgba(255,255,255,0.18)",
+},
+
+pioneerPillRow: {
+  flexDirection: "row",
+  flexWrap: "wrap",
+  justifyContent: "center",
+  marginTop: normalizeSize(12),
+  gap: normalizeSize(8),
+},
+
+pioneerPill: {
+  flexDirection: "row",
+  alignItems: "center",
+  paddingHorizontal: normalizeSize(10),
+  paddingVertical: normalizeSize(6),
+  borderRadius: normalizeSize(999),
+  borderWidth: 1,
+},
+
+pioneerPillText: {
+  fontFamily: "Comfortaa_700Bold",
+  fontSize: normalizeSize(12),
+},
+
+pioneerTitle: {
+  fontFamily: "Comfortaa_700Bold",
+  fontSize: normalizeSize(22),
+  textAlign: "center",
+  marginTop: normalizeSize(6),
+},
+
+pioneerDesc: {
+  fontFamily: "Comfortaa_400Regular",
+  fontSize: normalizeSize(14),
+  lineHeight: normalizeSize(20),
+  textAlign: "center",
+  marginTop: normalizeSize(10),
+},
+
+pioneerBold: {
+  fontFamily: "Comfortaa_700Bold",
+},
+
+pioneerBullets: {
+  width: "100%",
+  marginTop: normalizeSize(14),
+  padding: normalizeSize(12),
+  borderRadius: normalizeSize(16),
+  backgroundColor: "rgba(255,255,255,0.06)",
+  borderWidth: 1,
+  borderColor: "rgba(255,255,255,0.12)",
+},
+
+pioneerBulletRow: {
+  flexDirection: "row",
+  alignItems: "flex-start",
+  gap: normalizeSize(10),
+  marginBottom: normalizeSize(10),
+},
+
+pioneerBulletText: {
+  flex: 1,
+  fontFamily: "Comfortaa_400Regular",
+  fontSize: normalizeSize(13),
+  lineHeight: normalizeSize(18),
+},
+
+pioneerCtaWrap: {
+  width: "100%",
+  marginTop: normalizeSize(14),
+},
+
+pioneerCta: {
+  width: "100%",
+  borderRadius: normalizeSize(16),
+  paddingVertical: normalizeSize(12),
+  paddingHorizontal: normalizeSize(14),
+  flexDirection: "row",
+  alignItems: "center",
+  justifyContent: "center",
+  gap: normalizeSize(10),
+  shadowColor: "#000",
+  shadowOffset: { width: 0, height: 8 },
+  shadowOpacity: 0.22,
+  shadowRadius: 12,
+  elevation: 10,
+},
+
+pioneerCtaText: {
+  color: "#fff",
+  fontFamily: "Comfortaa_700Bold",
+  fontSize: normalizeSize(14),
+},
+
+pioneerFoot: {
+  marginTop: normalizeSize(12),
+  fontFamily: "Comfortaa_400Regular",
+  fontSize: normalizeSize(12),
+  textAlign: "center",
+},
 
 placeholderChip: {
   flexDirection: "row",
   alignItems: "center",
   alignSelf: "flex-start",
   borderWidth: 1,
-  borderStyle: "dashed",
-  borderColor: "rgba(255,255,255,0.35)",
+  borderStyle: "solid",
+  borderColor: "rgba(255,255,255,0.16)",
   paddingVertical: normalizeSize(6),
   paddingHorizontal: normalizeSize(10),
   borderRadius: normalizeSize(10),
+  backgroundColor: "rgba(255,255,255,0.04)",
 },
 
 placeholderChipText: {
@@ -981,10 +1445,10 @@ editFabText: {
     padding: normalizeSize(20),
     overflow: "hidden",
     shadowColor: SHADOW_COLOR,
-    shadowOffset: { width: 0, height: normalizeSize(3) },
-    shadowOpacity: 0.2,
-    shadowRadius: normalizeSize(6),
-    elevation: 5,
+    shadowOffset: { width: 0, height: normalizeSize(12) },
+  shadowOpacity: 0.10,
+  shadowRadius: normalizeSize(26),
+  elevation: 2,
   },
 
   avatarContainer: {
@@ -1025,9 +1489,7 @@ editFabText: {
   username: {
     fontSize: normalizeSize(26),
     fontFamily: "Comfortaa_700Bold",
-    textShadowColor: SHADOW_COLOR,
-    textShadowOffset: { width: 0, height: 2 },
-    textShadowRadius: 4,
+    letterSpacing: -0.3,
     writingDirection: I18nManager.isRTL ? "rtl" : "ltr",
     textAlign: I18nManager.isRTL ? "right" : "center",
   },
@@ -1091,14 +1553,64 @@ editFabText: {
   },
   sectionButton: {
     width: "48%",
-  borderRadius: normalizeSize(15),
-  overflow: "hidden",
-  shadowColor: SHADOW_COLOR,
-  shadowOffset: { width: 0, height: normalizeSize(2) },
-  shadowOpacity: 0.1,
-  shadowRadius: normalizeSize(4),
-  elevation: 3,
-  minHeight: normalizeSize(110),
+  borderRadius: normalizeSize(18),
+    overflow: "hidden",
+    shadowColor: "transparent",
+  shadowOpacity: 0,
+  shadowRadius: 0,
+  elevation: 0,
+    minHeight: normalizeSize(112),
+  },
+ sectionCardOuter: {
+   flex: 1,
+   borderRadius: normalizeSize(18),
+   padding: 1.2,              // stroke fin = premium
+ overflow: "hidden",
+ shadowColor: "transparent",
+ shadowOpacity: 0,
+ shadowRadius: 0,
+ elevation: 0,
+ },
+ sectionCardInner: {
+   flex: 1,
+   borderRadius: normalizeSize(17),
+   paddingHorizontal: normalizeSize(12),
+   paddingVertical: normalizeSize(12),
+   justifyContent: "space-between",
+   overflow: "hidden",
+   shadowColor: "transparent",
+ shadowOpacity: 0,
+ shadowRadius: 0,
+ elevation: 0,
+ },
+ sectionTopHighlight: {
+  position: "absolute",
+  top: 0,
+  left: 0,
+  right: 0,
+  height: normalizeSize(22),
+},
+
+  sectionHalo: {
+    position: "absolute",
+    top: -normalizeSize(34),
+    left: -normalizeSize(26),
+    width: normalizeSize(110),
+    height: normalizeSize(110),
+    borderRadius: normalizeSize(55),
+  },
+  sectionTopRow: {
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "space-between",
+  },
+  sectionIconBubble: {
+    width: normalizeSize(42),
+    height: normalizeSize(42),
+    borderRadius: normalizeSize(21),
+    alignItems: "center",
+    justifyContent: "center",
+    borderWidth: 1,
   },
 gradientContainer: { flex: 1 },
 
@@ -1136,10 +1648,10 @@ bgOrbBottom: {
   },
 
   sectionText: {
-    fontSize: normalizeSize(16),
+    fontSize: normalizeSize(13),
     fontFamily: "Comfortaa_700Bold",
-    marginTop: normalizeSize(10),
-    textAlign: "center",
+    marginTop: normalizeSize(8),
+    textAlign: I18nManager.isRTL ? "right" : "left",
     maxWidth: "100%",
     flexShrink: 1,
     writingDirection: I18nManager.isRTL ? "rtl" : "ltr",
@@ -1224,19 +1736,25 @@ bannerContainer: {
     position: "absolute",
     top: normalizeSize(-4),
     right: normalizeSize(-4),
-    minWidth: normalizeSize(16),
-    height: normalizeSize(16),
-    borderRadius: normalizeSize(8),
+    minWidth: normalizeSize(18),
+   height: normalizeSize(18),
+   borderRadius: normalizeSize(999),
     backgroundColor: "#FF4D4F",
-    justifyContent: "center",
     alignItems: "center",
+   justifyContent: "center",
+   paddingHorizontal: normalizeSize(5),
     borderWidth: 1,
     borderColor: "#FFF",
+     overflow: "hidden",
   },
 
   badgeText: {
     color: "#FFF",
     fontSize: normalizeSize(10),
     fontFamily: "Comfortaa_700Bold",
+    lineHeight: normalizeSize(12),         // ✅ centrage vertical stable
+   textAlign: "center",
+   includeFontPadding: false,             // ✅ Android: vire le padding fantôme
+   textAlignVertical: "center",
   },
 });

@@ -3,12 +3,12 @@ var __importDefault = (this && this.__importDefault) || function (mod) {
     return (mod && mod.__esModule) ? mod : { "default": mod };
 };
 Object.defineProperty(exports, "__esModule", { value: true });
-exports.onUserActivated = exports.claimReferralMilestone = exports.invitationsOnWrite = exports.dl = void 0;
+exports.sendDuoNudge = exports.onUserActivated = exports.claimReferralMilestone = exports.invitationsOnWrite = exports.dl = void 0;
 const express_1 = __importDefault(require("express"));
-const cors_1 = __importDefault(require("cors"));
 const https_1 = require("firebase-functions/v2/https");
 const app_1 = require("firebase-admin/app");
-(0, app_1.initializeApp)();
+if (!(0, app_1.getApps)().length)
+    (0, app_1.initializeApp)();
 /** =========================
  *  CONFIG
  *  ========================= */
@@ -47,8 +47,8 @@ const I18N = {
  *   - fallback propre sur fr
  */
 function t(lang) {
-    const base = (lang || "fr").toLowerCase();
-    const short = base.split(/[-_]/)[0];
+    const base = String(lang || "fr").toLowerCase().trim();
+    const short = (base.split(/[-_]/)[0] || "fr");
     const key = short in I18N ? short : "fr";
     return I18N[key];
 }
@@ -56,7 +56,6 @@ function t(lang) {
  *  APP
  *  ========================= */
 const app = (0, express_1.default)();
-app.use((0, cors_1.default)({ origin: true }));
 /** Helpers */
 function escapeHtml(s) {
     return String(s)
@@ -118,7 +117,7 @@ app.get("/img", (_req, res) => {
  *  - invite    : invitation document id (déclenche le modal in-app)
  *  - days      : nombre de jours suggéré (passé en query à l’app)
  */
-app.get(["/", "/dl", "/i"], (req, res) => {
+app.get(["/", "/i"], (req, res) => {
     const ua = String(req.headers["user-agent"] || "");
     const isBot = BOT_UA.test(ua);
     // Langue : priorité au ?lang=, sinon première langue d'Accept-Language, fallback fr
@@ -279,3 +278,5 @@ var referralClaim_1 = require("./referralClaim");
 Object.defineProperty(exports, "claimReferralMilestone", { enumerable: true, get: function () { return referralClaim_1.claimReferralMilestone; } });
 var referralRewards_1 = require("./referralRewards");
 Object.defineProperty(exports, "onUserActivated", { enumerable: true, get: function () { return referralRewards_1.onUserActivated; } });
+var duoNudge_1 = require("./duoNudge");
+Object.defineProperty(exports, "sendDuoNudge", { enumerable: true, get: function () { return duoNudge_1.sendDuoNudge; } });

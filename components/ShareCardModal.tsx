@@ -7,6 +7,7 @@ import {
   StyleSheet,
   TouchableOpacity,
   Platform,
+  Pressable,
 } from "react-native";
 import { LinearGradient } from "expo-linear-gradient";
 import Animated, {
@@ -120,6 +121,14 @@ const ShareCardModal: React.FC<Props> = ({
   const progressLabel =
     totalDays > 0 ? `${daysCompleted}/${totalDays}` : `${daysCompleted}`;
 
+    const heldLine = useMemo(() => {
+    if (isDuo) {
+      return t("shareCardT.heldDuo", { defaultValue: "On a tenu" });
+    }
+    // SOLO: formulation plus “j’ai tenu bon”
+    return t("shareCardT.heldSolo", { defaultValue: "J’ai tenu" });
+  }, [isDuo, t]);
+
   const milestoneText = useMemo(() => {
     const variants = t("shareCardT.milestoneVariants", { returnObjects: true });
     if (Array.isArray(variants)) {
@@ -136,9 +145,13 @@ const ShareCardModal: React.FC<Props> = ({
       if (!cardRef.current) return;
 
       const uri = await captureRef(cardRef, {
-        format: "png",
-        quality: 1,
-      });
+  format: "png",
+  quality: 1,
+  result: "tmpfile",
+  width: 1080,
+  height: 1350,
+});
+
 
       const fileUri = FileSystem.cacheDirectory + "sharecard.png";
       await FileSystem.copyAsync({ from: uri, to: fileUri });
@@ -187,191 +200,247 @@ const ShareCardModal: React.FC<Props> = ({
         />
 
         <Animated.View
-          entering={ZoomIn.springify().damping(18).stiffness(190)}
-          exiting={ZoomOut.duration(140)}
-          style={styles.cardShadow}
-        >
-          <View style={styles.cardPremium} ref={cardRef}>
-            {/* HEADER */}
-            <LinearGradient
-              colors={[th.colors.primary, th.colors.secondary]}
-              style={styles.headerPremium}
-            >
-              <Image
-                source={require("../assets/images/adaptive-icon.png")}
-                style={styles.appLogo}
-                resizeMode="contain"
-                accessibilityLabel={t("shareCardT.logoAlt", {
-                  defaultValue: "Logo ChallengeTies",
-                })}
-              />
+  entering={ZoomIn.springify().damping(18).stiffness(190)}
+  exiting={ZoomOut.duration(140)}
+  style={styles.cardShadow}
+>
+  {/* ✅ WRAP: la carte (capturée) */}
+  <View style={styles.cardFrame} ref={cardRef} collapsable={false}>
+    <LinearGradient
+      colors={[
+        withAlpha("#FFFFFF", 0.22),
+        withAlpha("#FFFFFF", 0.06),
+        withAlpha("#FFFFFF", 0.14),
+      ]}
+      start={{ x: 0.1, y: 0 }}
+      end={{ x: 0.9, y: 1 }}
+      style={styles.cardBorder}
+    >
+      <View style={styles.cardPremium}>
+        {/* Keynote ambient background */}
+        <View pointerEvents="none" style={styles.ambientLayer}>
+          <LinearGradient
+            colors={[withAlpha(th.colors.primary, 0.55), "transparent"]}
+            style={styles.orbA}
+            start={{ x: 0.2, y: 0.2 }}
+            end={{ x: 0.8, y: 0.8 }}
+          />
+          <LinearGradient
+            colors={[withAlpha(th.colors.secondary, 0.45), "transparent"]}
+            style={styles.orbB}
+            start={{ x: 0.8, y: 0.2 }}
+            end={{ x: 0.2, y: 0.8 }}
+          />
+          <LinearGradient
+            colors={[withAlpha("#FFFFFF", 0.14), "transparent"]}
+            style={styles.sheen}
+            start={{ x: 0, y: 0 }}
+            end={{ x: 1, y: 1 }}
+          />
+        </View>
 
-              <Text style={styles.headerTitlePremium}>
+        {/* ✅ LAYOUT verrouillé */}
+        <View style={styles.cardLayout}>
+          {/* HEADER */}
+          <LinearGradient
+            colors={[th.colors.primary, th.colors.secondary]}
+            style={styles.headerPremium}
+          >
+            <View style={styles.headerTopRow}>
+  <Image
+    source={require("../assets/images/adaptive-icon.png")}
+    style={styles.appLogo}
+  />
+
+  {userAvatar && (
+    <Image
+      source={{ uri: userAvatar }}
+      style={styles.headerAvatar}
+    />
+  )}
+</View>
+
+
+            <View style={styles.modePill}>
+              <Text style={styles.modePillText}>
                 {isDuo
-                  ? t("shareCardT.duoBadge", { defaultValue: "DÉFI EN DUO" })
-                  : t("shareCardT.soloBadge", { defaultValue: "FOCUS EN SOLO" })}
+                  ? t("shareCardT.duoBadge", { defaultValue: "DUO" })
+                  : t("shareCardT.soloBadge", { defaultValue: "SOLO" })}
               </Text>
+            </View>
 
-              <Text style={styles.challengeTitlePremium}>{challengeTitle}</Text>
-            </LinearGradient>
+            <Text
+              style={styles.challengeTitlePremium}
+              numberOfLines={1}
+              ellipsizeMode="tail"
+            >
+              {challengeTitle}
+            </Text>
+          </LinearGradient>
 
-            {/* SOLO MODE */}
-            {!isDuo && (
+          {/* BODY */}
+          <View style={styles.bodyPremium}>
+            {!isDuo ? (
               <View style={styles.soloBlockPremium}>
-                {userAvatar && (
-                  <Image source={{ uri: userAvatar }} style={styles.avatarXL} />
+
+
+                {!!userName && (
+                  <Text style={styles.userNamePremium} numberOfLines={1} ellipsizeMode="tail">
+                    {userName}
+                  </Text>
                 )}
 
-                <Text style={styles.userNamePremium}>{userName}</Text>
-
-                <View style={styles.progressBarPremium}>
-                  <View
-                    style={[
-                      styles.progressFillPremium,
-                      { width: `${userPct}%` },
-                    ]}
-                  />
-                </View>
-
-                <Text style={styles.progressLabelPremium}>
-                  {daysCompleted}/{totalDays} · {Math.round(userPct)}%
+                <Text style={styles.heroPct} numberOfLines={1} adjustsFontSizeToFit minimumFontScale={0.75}>
+                  {Math.round(userPct)}%
                 </Text>
 
-                {/* Message inspirant */}
-                <Text style={styles.milestonePremium}>{milestoneText}</Text>
-              </View>
-            )}
+                <Text style={styles.progressLabelPremium} numberOfLines={1} ellipsizeMode="tail">
+                  {heldLine}{" "}
+                  {daysCompleted}/{totalDays}
+                </Text>
 
-            {/* DUO MODE */}
-            {isDuo && (
-              <View style={styles.duoBlockPremium}>
-                <View style={styles.duoStatusRow}>
-                  <Text style={styles.duoStatusText}>
-                    {(() => {
-                      if (userPct > partnerPct) {
-                        return t("shareCardT.leading", {
-                          defaultValue: "Tu mènes la course !",
-                        });
-                      }
-                      if (userPct < partnerPct) {
-                        return t("shareCardT.behind", {
-                          defaultValue: "Rattrape ton partenaire !",
-                        });
-                      }
-                      return t("shareCardT.tie", {
-                        defaultValue: "Égalité parfaite",
-                      });
-                    })()}
-                  </Text>
+                <View style={styles.progressBarPremium}>
+                  <View style={[styles.progressFillPremium, { width: `${userPct}%` }]} />
                 </View>
 
+                <Text style={styles.milestonePremium} numberOfLines={2} ellipsizeMode="tail">
+                  {milestoneText}
+                </Text>
+              </View>
+            ) : (
+              <View style={styles.duoBlockPremium}>
+                <Text style={styles.duoHeadline} numberOfLines={1} ellipsizeMode="tail">
+                  {heldLine}{" "}
+                  {Math.max(daysCompleted, partnerCompleted)}/{totalDays}
+                </Text>
+
                 <View style={styles.duoRowPremium}>
-                  {/* USER */}
                   <View
                     style={[
                       styles.duoSidePremium,
                       userPct >= partnerPct && styles.duoSideHighlight,
                     ]}
                   >
-                    {userAvatar && (
-                      <Image source={{ uri: userAvatar }} style={styles.avatar} />
-                    )}
-                    <Text style={styles.duoNamePremium}>{userName}</Text>
-                    <View style={styles.progressBarMiniPremium}>
-                      <View
-                        style={[
-                          styles.progressFillMiniPremium,
-                          { width: `${userPct}%` },
-                        ]}
-                      />
+                    <View style={styles.avatarRingSm}>
+                      {userAvatar ? (
+                        <Image source={{ uri: userAvatar }} style={styles.avatar} />
+                      ) : (
+                        <View style={[styles.avatar, styles.avatarFallback]} />
+                      )}
                     </View>
-                    <Text style={styles.duoProgressLabel}>
-                      {daysCompleted}/{totalDays} · {Math.round(userPct)}%
+
+                    {!!userName && (
+                      <Text style={styles.duoNamePremium} numberOfLines={1} ellipsizeMode="tail">
+                        {userName}
+                      </Text>
+                    )}
+
+                    <View style={styles.progressBarMiniPremium}>
+                      <View style={[styles.progressFillMiniPremium, { width: `${userPct}%` }]} />
+                    </View>
+
+                    <Text style={styles.duoProgressLabel} numberOfLines={1}>
+                      {daysCompleted}/{totalDays}
                     </Text>
                   </View>
 
-                  {/* VS */}
                   <View style={styles.vsBadge}>
                     <Text style={styles.vsText}>VS</Text>
                   </View>
 
-                  {/* PARTNER */}
                   <View
                     style={[
                       styles.duoSidePremium,
                       partnerPct >= userPct && styles.duoSideHighlight,
                     ]}
                   >
-                    {partnerAvatar && (
-                      <Image
-                        source={{ uri: partnerAvatar }}
-                        style={styles.avatar}
-                      />
+                    <View style={styles.avatarRingSm}>
+                      {partnerAvatar ? (
+                        <Image source={{ uri: partnerAvatar }} style={styles.avatar} />
+                      ) : (
+                        <View style={[styles.avatar, styles.avatarFallback]} />
+                      )}
+                    </View>
+
+                    {!!partnerName && (
+                      <Text style={styles.duoNamePremium} numberOfLines={1} ellipsizeMode="tail">
+                        {partnerName}
+                      </Text>
                     )}
-                    <Text style={styles.duoNamePremium}>{partnerName}</Text>
 
                     <View style={styles.progressBarMiniPremium}>
                       <View
                         style={[
                           styles.progressFillMiniPremium,
-                          {
-                            width: `${partnerPct}%`,
-                            backgroundColor: "#00e6e6",
-                          },
+                          { width: `${partnerPct}%`, backgroundColor: th.colors.secondary },
                         ]}
                       />
                     </View>
-                    <Text style={styles.duoProgressLabel}>
-                      {partnerCompleted}/{totalDays} · {Math.round(partnerPct)}%
+
+                    <Text style={styles.duoProgressLabel} numberOfLines={1}>
+                      {partnerCompleted}/{totalDays}
                     </Text>
                   </View>
                 </View>
 
-                {/* Message inspirant */}
-                <Text style={styles.milestonePremium}>{milestoneText}</Text>
+                <Text style={styles.milestonePremium} numberOfLines={2} ellipsizeMode="tail">
+                  {milestoneText}
+                </Text>
               </View>
             )}
-
-            {/* FOOTER */}
-            <View style={styles.footerPremium}>
-              <Text style={styles.footerLinePremium}>
-                {t("shareCardT.footerLine1")}
-              </Text>
-              <Text style={styles.footerSmallPremium}>
-                {t("shareCardT.footerLine2")}
-              </Text>
-            </View>
           </View>
 
-          {/* Boutons bas */}
-          <View style={styles.actionsRow}>
-            <TouchableOpacity
-              onPress={handleShare}
-              style={styles.shareBtn}
-              activeOpacity={0.9}
-            >
-              <Text style={styles.shareText}>
-                {t("shareCardT.share", { defaultValue: "Partager" })}
-              </Text>
-            </TouchableOpacity>
-            <TouchableOpacity
-              onPress={onClose}
-              style={styles.closeBtn}
-              activeOpacity={0.9}
-              accessibilityRole="button"
-              accessibilityLabel={t("commonS.close", {
-                defaultValue: "Fermer",
+          {/* FOOTER (fix) */}
+          <View style={styles.footerPremium}>
+            <Text style={styles.footerLinePremium} numberOfLines={1} ellipsizeMode="tail">
+              {t("shareCardT.footerLine1", { defaultValue: "ChallengeTies" })}
+            </Text>
+            <Text style={styles.footerSmallPremium} numberOfLines={1} ellipsizeMode="tail">
+              {t("shareCardT.footerLine2", {
+                defaultValue: "Rejoins-nous. Un jour. Un défi. Une victoire.",
               })}
-            >
-              <Text style={styles.closeText}>
-                {t("commonS.close", { defaultValue: "Fermer" })}
-              </Text>
-            </TouchableOpacity>
+            </Text>
           </View>
+
+          {/* watermark (ne casse plus rien) */}
+          <Text style={styles.watermark} numberOfLines={1} ellipsizeMode="clip">
+            {t("shareCardT.watermark", { defaultValue: "@ChallengeTies" })}
+          </Text>
+        </View>
+      </View>
+    </LinearGradient>
+  </View>
+
+  {/* ✅ ACTIONS (hors capture) */}
+  <View style={styles.actionsRow}>
+    <Pressable
+      onPress={handleShare}
+      style={({ pressed }) => [styles.actionBtn, pressed && { opacity: 0.86 }]}
+      accessibilityRole="button"
+      accessibilityLabel={t("shareCardT.shareBtnA11y", { defaultValue: "Partager la carte" })}
+    >
+      <Text style={styles.actionBtnText}>
+        {t("shareCardT.shareBtn", { defaultValue: "Partager" })}
+      </Text>
+    </Pressable>
+
+    <Pressable
+      onPress={onClose}
+      style={({ pressed }) => [styles.actionBtnGhost, pressed && { opacity: 0.86 }]}
+      accessibilityRole="button"
+      accessibilityLabel={t("commonS.close", { defaultValue: "Fermer" })}
+    >
+      <Text style={styles.actionBtnGhostText}>
+        {t("commonS.close", { defaultValue: "Fermer" })}
+      </Text>
+    </Pressable>
+  </View>
+</Animated.View>
+
+
         </Animated.View>
-      </Animated.View>
-    </Modal>
-  );
+      </Modal>
+    );
 };
 
 const createStyles = (
@@ -390,22 +459,154 @@ const createStyles = (
       backgroundColor: "rgba(0,0,0,0.7)",
     },
     cardShadow: {
-      width: "100%",
-      maxWidth: 420,
-      paddingHorizontal: 16,
-    },
-    cardOuter: {
-      borderRadius: 26,
-      padding: 2,
-      marginTop: Math.max(insets.top, 32),
-    },
-    cardPremium: {
-      backgroundColor: withAlpha("#04050C", 0.9),
-      borderRadius: 26,
-      overflow: "hidden",
-      borderWidth: 1,
-      borderColor: withAlpha("#ffffff", 0.12),
-    },
+  width: "100%",
+  paddingHorizontal: 16,
+  alignItems: "center",
+},
+
+cardFrame: {
+  width: Math.min(SCREEN_W - 48, 380),
+  height: Math.round(Math.min(SCREEN_H * 0.62, 520)), // ✅ VERROU: plus de layout aléatoire
+  borderRadius: 28,
+  overflow: "hidden",
+},
+
+cardLayout: {
+  flex: 1,
+},
+
+bodyPremium: {
+  flex: 1,
+  minHeight: 0,
+  paddingHorizontal: 18,
+  paddingVertical: 10,
+  justifyContent: "center",
+},
+
+soloBlockPremium: {
+  flex: 1,
+  minHeight: 0,
+  alignItems: "center",
+  justifyContent: "center",
+  gap: 6,
+},
+
+duoBlockPremium: {
+  flex: 1,
+  minHeight: 0,
+  justifyContent: "center",
+  gap: 8,
+},
+
+footerPremium: {
+  paddingTop: 8,
+  paddingBottom: 14,
+  paddingHorizontal: 18,
+  alignItems: "center",
+},
+
+watermark: {
+  position: "absolute",
+  right: 14,
+  bottom: 10,
+  fontFamily: "Comfortaa_700Bold",
+  fontSize: normalize(10),
+  color: withAlpha("#FFFFFF", 0.30),
+  letterSpacing: 0.8,
+},
+cardContent: {
+  flex: 1,
+},
+cardBorder: {
+  flex: 1,
+  borderRadius: 28,
+  padding: 2,
+},
+
+cardPremium: {
+  flex: 1,
+  borderRadius: 26,
+  overflow: "hidden",
+  backgroundColor: withAlpha("#04050C", 0.92),
+  borderWidth: 1,
+  borderColor: withAlpha("#ffffff", 0.10),
+  justifyContent: "space-between",
+},
+
+headerTopRow: {
+  flexDirection: "row",
+  alignItems: "center",
+  gap: 12,
+  marginBottom: 8,
+},
+
+headerAvatar: {
+  width: 36,
+  height: 36,
+  borderRadius: 18,
+  borderWidth: 1,
+  borderColor: withAlpha("#fff", 0.35),
+},
+
+ambientLayer: {
+  ...StyleSheet.absoluteFillObject,
+},
+
+orbA: {
+  position: "absolute",
+  top: -120,
+  left: -120,
+  width: 320,
+  height: 320,
+  borderRadius: 999,
+},
+
+orbB: {
+  position: "absolute",
+  bottom: -140,
+  right: -140,
+  width: 360,
+  height: 360,
+  borderRadius: 999,
+},
+
+sheen: {
+  position: "absolute",
+  top: -80,
+  left: 40,
+  width: 260,
+  height: 260,
+  borderRadius: 999,
+  transform: [{ rotate: "18deg" }],
+  opacity: 0.9,
+},
+
+modePill: {
+  marginTop: 10,
+  paddingHorizontal: 12,
+  paddingVertical: 6,
+  borderRadius: 999,
+  borderWidth: 1,
+  borderColor: withAlpha("#FFFFFF", 0.30),
+  backgroundColor: withAlpha("#000000", 0.18),
+},
+
+modePillText: {
+  color: "#FFFFFF",
+  fontFamily: "Comfortaa_700Bold",
+  fontSize: normalize(12),
+  letterSpacing: 1.2,
+  opacity: 0.95,
+},
+heroPct: {
+  marginTop: 6,
+  color: "#FFFFFF",
+  fontFamily: "Comfortaa_700Bold",
+  fontSize: normalize(40),
+  letterSpacing: 0.6,
+  textShadowColor: "rgba(0,0,0,0.25)",
+  textShadowRadius: 10,
+},
     shareBtn: {
       paddingVertical: 12,
       paddingHorizontal: 26,
@@ -420,12 +621,52 @@ const createStyles = (
       letterSpacing: 0.6,
       textAlign: "center",
     },
+avatarRing: {
+  width: 108,
+  height: 108,
+  borderRadius: 54,
+  padding: 2,
+  borderWidth: 1,
+  borderColor: withAlpha("#FFFFFF", 0.22),
+  backgroundColor: withAlpha("#000", 0.18),
+  alignItems: "center",
+  justifyContent: "center",
+  marginBottom: 10,
+},
 
-    headerPremium: {
-      padding: 20,
-      alignItems: "center",
-    },
+avatarRingSm: {
+  width: 76,
+  height: 76,
+  borderRadius: 38,
+  padding: 2,
+  borderWidth: 1,
+  borderColor: withAlpha("#FFFFFF", 0.18),
+  backgroundColor: withAlpha("#000", 0.18),
+  alignItems: "center",
+  justifyContent: "center",
+  marginBottom: 6,
+},
 
+avatarFallback: {
+  backgroundColor: withAlpha("#FFFFFF", 0.08),
+  borderWidth: 1,
+  borderColor: withAlpha("#FFFFFF", 0.14),
+},
+
+duoHeadline: {
+  color: "#fff",
+  fontSize: normalize(16),
+  fontFamily: "Comfortaa_700Bold",
+  textAlign: "center",
+  marginBottom: 12,
+  opacity: 0.95,
+},
+headerPremium: {
+  paddingHorizontal: 18,
+  paddingTop: 18,
+  paddingBottom: 14,
+  alignItems: "center",
+},
     headerTitlePremium: {
       fontSize: normalize(14),
       color: "#ffffff",
@@ -440,13 +681,6 @@ const createStyles = (
       fontFamily: "Comfortaa_700Bold",
       textAlign: "center",
     },
-
-    /* SOLO */
-    soloBlockPremium: {
-      alignItems: "center",
-      paddingVertical: 22,
-    },
-
     avatarXL: {
       width: 100,
       height: 100,
@@ -460,16 +694,6 @@ const createStyles = (
       fontFamily: "Comfortaa_700Bold",
       marginBottom: 8,
     },
-
-    progressBarPremium: {
-      width: "70%",
-      height: 12,
-      backgroundColor: "#333",
-      borderRadius: 10,
-      overflow: "hidden",
-      marginTop: 4,
-    },
-
     progressFillPremium: {
       height: "100%",
       backgroundColor: th.colors.primary,
@@ -482,16 +706,52 @@ const createStyles = (
       fontSize: normalize(13),
       fontFamily: "Comfortaa_400Regular",
     },
-
-    /* DUO */
-    duoBlockPremium: {
-      paddingVertical: 20,
-    },
-
     duoStatusRow: {
       alignItems: "center",
       marginBottom: 12,
     },
+actionsRow: {
+  width: Math.min(SCREEN_W - 48, 380),
+  flexDirection: "row",
+  gap: 10,
+  marginTop: 12,
+  paddingHorizontal: 2,
+},
+
+actionBtn: {
+  flex: 1,
+  paddingVertical: 12,
+  borderRadius: 999,
+  backgroundColor: th.colors.primary,
+  alignItems: "center",
+  justifyContent: "center",
+},
+
+actionBtnText: {
+  color: "#fff",
+  fontFamily: "Comfortaa_700Bold",
+  fontSize: normalize(14),
+  letterSpacing: 0.6,
+},
+
+actionBtnGhost: {
+  flex: 1,
+  paddingVertical: 12,
+  borderRadius: 999,
+  borderWidth: 1,
+  borderColor: withAlpha("#FFFFFF", 0.24),
+  backgroundColor: withAlpha("#000", 0.22),
+  alignItems: "center",
+  justifyContent: "center",
+},
+
+actionBtnGhostText: {
+  color: "#fff",
+  fontFamily: "Comfortaa_700Bold",
+  fontSize: normalize(14),
+  letterSpacing: 0.6,
+  opacity: 0.92,
+},
 
     duoStatusText: {
       color: "#fff",
@@ -559,176 +819,71 @@ const createStyles = (
       fontFamily: "Comfortaa_400Regular",
       textAlign: "center",
     },
-
-    progressBarMiniPremium: {
-      width: "80%",
-      height: 8,
-      backgroundColor: "#222",
-      borderRadius: 6,
-      marginTop: 6,
-    },
-
     progressFillMiniPremium: {
       height: "100%",
       backgroundColor: th.colors.primary,
       borderRadius: 6,
     },
+vsBadge: {
+  width: 44,
+  height: 44,
+  borderRadius: 22,
+  justifyContent: "center",
+  alignItems: "center",
+  borderWidth: 1,
+  borderColor: withAlpha("#FFFFFF", 0.22),
+  backgroundColor: withAlpha("#000000", 0.22),
+},
 
-    vsBadge: {
-      width: 50,
-      height: 50,
-      borderRadius: 25,
-      backgroundColor: "#fff",
-      justifyContent: "center",
-      alignItems: "center",
-    },
-    milestonePremium: {
-      marginTop: 10,
-      color: "#fff",
-      fontSize: normalize(13),
-      opacity: 0.9,
-      fontFamily: "Comfortaa_400Regular",
-      textAlign: "center",
-    },
+progressBarPremium: {
+  width: "72%",
+  height: 12,
+  borderRadius: 10,
+  overflow: "hidden",
+  backgroundColor: withAlpha("#FFFFFF", 0.10),
+  borderWidth: 1,
+  borderColor: withAlpha("#FFFFFF", 0.12),
+  marginTop: 6,
+},
 
+progressBarMiniPremium: {
+  width: "82%",
+  height: 8,
+  borderRadius: 999,
+  overflow: "hidden",
+  backgroundColor: withAlpha("#FFFFFF", 0.10),
+  borderWidth: 1,
+  borderColor: withAlpha("#FFFFFF", 0.12),
+  marginTop: 6,
+},
+milestonePremium: {
+  marginTop: 10,
+  color: "#fff",
+  fontSize: normalize(13),
+  opacity: 0.9,
+  fontFamily: "Comfortaa_400Regular",
+  textAlign: "center",
+  paddingHorizontal: 6,     // ✅ évite que ça touche les bords
+},
     vsText: {
       color: "#000",
       fontSize: normalize(16),
       fontFamily: "Comfortaa_700Bold",
     },
-
-    /* FOOTER */
-    footerPremium: {
-      paddingVertical: 20,
-      alignItems: "center",
-    },
-
     footerLinePremium: {
       color: "#fff",
       fontSize: normalize(15),
       fontFamily: "Comfortaa_700Bold",
     },
-
     footerSmallPremium: {
-      marginTop: 4,
-      color: "#ccc",
-      fontSize: normalize(12),
-      fontFamily: "Comfortaa_400Regular",
-    },
+  marginTop: 4,
+  color: "#ccc",
+  fontSize: normalize(12),
+  fontFamily: "Comfortaa_400Regular",
+  textAlign: "center",
+  opacity: 0.92,
+},
 
-    cardInner: {
-      borderRadius: 24,
-      paddingVertical: normalize(24),
-      paddingHorizontal: normalize(20),
-      backgroundColor: withAlpha("#050816", isDark ? 0.9 : 0.88),
-      borderWidth: StyleSheet.hairlineWidth,
-      borderColor: withAlpha("#ffffff", 0.15),
-    },
-    headerRow: {
-      alignItems: "flex-start",
-      marginBottom: normalize(14),
-    },
-    appTitle: {
-      fontFamily: "Comfortaa_700Bold",
-      fontSize: normalize(18),
-      color: "#ffffff",
-      letterSpacing: 1.2,
-    },
-    tagline: {
-      marginTop: 4,
-      fontFamily: "Comfortaa_400Regular",
-      fontSize: normalize(11),
-      color: withAlpha("#ffffff", 0.8),
-    },
-    mainStats: {
-      alignItems: "center",
-      marginVertical: normalize(12),
-    },
-    label: {
-      fontFamily: "Comfortaa_400Regular",
-      fontSize: normalize(12),
-      color: withAlpha("#ffffff", 0.8),
-      textTransform: "uppercase",
-      letterSpacing: 1,
-      marginBottom: 6,
-    },
-    bigNumber: {
-      fontFamily: "Comfortaa_700Bold",
-      fontSize: normalize(40),
-      color: "#ffffff",
-    },
-    subLabel: {
-      marginTop: 4,
-      fontFamily: "Comfortaa_400Regular",
-      fontSize: normalize(13),
-      color: withAlpha("#ffffff", 0.85),
-    },
-    challengeTitle: {
-      marginTop: normalize(10),
-      fontFamily: "Comfortaa_700Bold",
-      fontSize: normalize(16),
-      color: "#ffffff",
-      textAlign: "center",
-    },
-    duoContainer: {
-      marginTop: normalize(18),
-      alignItems: "center",
-    },
-    duoBadge: {
-      paddingHorizontal: 12,
-      paddingVertical: 5,
-      borderRadius: 999,
-      borderWidth: 1,
-      borderColor: withAlpha("#ffffff", 0.5),
-      color: "#ffffff",
-      fontFamily: "Comfortaa_700Bold",
-      fontSize: normalize(11),
-      letterSpacing: 1,
-    },
-    duoNames: {
-      marginTop: 6,
-      fontFamily: "Comfortaa_400Regular",
-      fontSize: normalize(13),
-      color: withAlpha("#ffffff", 0.92),
-    },
-    footer: {
-      marginTop: normalize(24),
-      alignItems: "center",
-    },
-    footerLine: {
-      fontFamily: "Comfortaa_700Bold",
-      fontSize: normalize(14),
-      color: "#ffffff",
-    },
-    footerLineSmall: {
-      marginTop: 4,
-      fontFamily: "Comfortaa_400Regular",
-      fontSize: normalize(11),
-      color: withAlpha("#ffffff", 0.8),
-      textAlign: "center",
-    },
-    actionsRow: {
-      marginTop: 12,
-      marginBottom: Math.max(insets.bottom, 18),
-      alignItems: "center",
-    },
-    closeBtn: {
-      paddingVertical: 10,
-      paddingHorizontal: 22,
-      borderRadius: 999,
-      backgroundColor: isDark
-        ? withAlpha("#ffffff", 0.12) // halo blanc subtil en dark mode
-        : withAlpha("#000000", 0.08), // halo noir en light mode
-      borderWidth: 1,
-      borderColor: withAlpha("#ffffff", 0.25),
-    },
-
-    closeText: {
-      fontFamily: "Comfortaa_700Bold",
-      fontSize: normalize(14),
-      color: "#ffffff", // TOUJOURS lisible
-      letterSpacing: 0.5,
-    },
   });
 
 export default ShareCardModal;

@@ -27,7 +27,10 @@
   "verificationEmailSent": "인증 이메일을 보냈습니다.",
   "notSet": "미설정",
   "tipsTricks": "요령 & 팁",
-  "home": "홈",
+  "homeX": "홈",
+  "home": {
+    "yourChallenge": "당신의 도전"
+  },
   "profile": "프로필",
   "yourProfile": "내 프로필",
   "addBioHere": "여기에 자기소개를 추가하세요",
@@ -276,54 +279,33 @@
   },
 
   "newFeatures": {
-    "loginRequiredTitle": "로그인이 필요합니다",
-
-    "sharE": {
-      "kicker": "투표하러 와!",
-      "footerWithDays": "투표 종료까지 {{days}}일 — 당신의 한 표가 중요해요 ✨",
-      "footer": "투표가 곧 종료됩니다 — 당신의 한 표가 중요해요 ✨"
-    },
-
-    "shareDialogTitle": "이 새 기능을 공유하기",
-    "votes_one": "1표",
-    "deadlineIso": "2025-11-30T23:59:59+01:00",
+    "deadlineIso": "2026-02-28T23:59:59+01:00",
+    "shareLabel": "공유",
 
     "monthLabelTpl": "업데이트 • {{month}}",
     "months": {
-      "01": "1월", "02": "2월", "03": "3월", "04": "4월",
-      "05": "5월", "06": "6월", "07": "7월", "08": "8월",
-      "09": "9월", "10": "10월", "11": "11월", "12": "12월"
+      "01": "1월",
+      "02": "2월",
+      "03": "3월",
+      "04": "4월",
+      "05": "5월",
+      "06": "6월",
+      "07": "7월",
+      "08": "8월",
+      "09": "9월",
+      "10": "10월",
+      "11": "11월",
+      "12": "12월"
     },
+
+    "title": "새 소식",
+    "description": "다음 기능에 투표하거나 너의 아이디어를 제안해봐. 결과는 2월 말 공개!",
+
+    "heroTitle": "2월 말에 추가될 새 기능에 투표해줘 🚀",
+    "heroSubtitle": "네 목소리가 중요해: 제안하고, 투표하고, 진행 상황을 확인해.",
 
     "voteCloses": "투표 종료까지",
     "thankYouShort": "투표해줘서 고마워 💜",
-
-    "votes_other": "{{count}}표",
-    "loginRequiredMessage": "투표하려면 로그인해야 합니다.",
-    "alreadyVotedTitle": "이미 투표함",
-    "alreadyVotedMessage": "이미 투표했습니다.",
-    "voteRegisteredTitle": "투표 완료",
-    "voteRegisteredMessage": "투표해주셔서 감사합니다!",
-    "voteErrorTitle": "오류",
-    "voteErrorMessage": "문제가 발생했습니다.",
-    "proposalSentTitle": "제안이 전송됨",
-    "proposalSentMessage": "아이디어와 투표가 정상적으로 제출되었습니다!",
-    "proposalErrorTitle": "오류",
-    "proposalErrorMessage": "전송할 수 없습니다.",
-    "title": "새 소식",
-    "by": "작성자",
-    "votes": "표",
-    "openExplanation": "투표 방식 보기",
-    "description": "다음에 추가될 기능에 투표하거나 직접 아이디어를 제안하세요! 마감: 2025년 11월 30일.",
-    "noFeatures": "현재 사용할 수 있는 기능이 없습니다.",
-    "monthLabel": "업데이트 • 12월",
-  "heroTitleSep": "12월 말에 출시될 신규 기능에 투표하세요 🚀",
-
-    "heroTitleNov": "11월 말에 출시될 새로운 기능에 투표하세요 🚀",
-    "heroSubtitleNov": "당신의 의견이 중요합니다: 제안하고, 투표하고, 기능의 진행 상황을 확인하세요.",
-
-    "proposeIdea": "아이디어 제안하기",
-    "thankYouForVote": "투표해주셔서 감사합니다: {{featureTitle}}",
 
     "countdown": {
       "days": "일",
@@ -333,21 +315,11 @@
       "abbr": { "d": "일", "h": "시", "m": "분", "s": "초" }
     },
 
-    "featuresListLabel": "제안된 기능 목록",
-    "loading": "불러오는 중…",
-
-    "heroSubtitleSep": "당신의 의견이 중요합니다: 제안하고, 투표하고, 기능의 진행 상황을 확인하세요.",
-
-    "featureDetails": "세부 정보: {{title}}",
-    "featureDetailsHint": "기능 상세 페이지 열기",
-    "openExplanationHint": "투표 시스템의 작동 방식 표시",
-    "proposeIdeaHint": "아이디어 제안 폼 열기",
-    "shareMessage": "이 기능을 확인하고 투표해보세요:",
-    "shareFeature": "기능 공유",
-    "share": "공유",
-    "vote": "투표",
-    "alreadyVotedShort": "투표함",
-    "unknown": "알 수 없음"
+    "share": {
+      "kicker": "투표하러 와!",
+      "footerWithDays": "{{days}}일 후 투표 종료 — 네 목소리가 중요해 ✨",
+      "footer": "곧 투표가 끝나요 — 네 목소리가 중요해 ✨"
+    }
   },
 
   "permissionDenied": "권한이 거부되었습니다",
@@ -465,7 +437,7 @@
   "alreadyMarkedToday": "오늘은 이미 체크되었습니다",
   "alreadyMarked": "이미 체크됨",
   "loading": "로딩 중…",
-  "challenge": "챌린지",
+  "challengeS": "챌린지",
   "deleteChallenge": "챌린지 삭제",
   "viewChallengeDetails": "챌린지 상세보기",
   "challengeImage": "챌린지 이미지",
@@ -530,7 +502,32 @@
 "challengeDetails": {
     "noDescription": "설명이 없습니다",
     "participantsLabel": "참가자",
+    "quick": {
+    "chat": "채팅",
+    "stats": "통계",
+    "save": "즐겨찾기",
+    "chatA11y": "채팅 열기",
+    "chatHint": "챌린지 채팅을 엽니다.",
+    "statsA11y": "통계 보기",
+    "statsHint": "진행 상황과 통계를 엽니다.",
+    "saveA11y": "챌린지 저장",
+    "saveHint": "이 챌린지를 즐겨찾기에 추가하거나 제거합니다."
+  },
     "fetchError": "챌린지를 불러올 수 없습니다.",
+    "inviteCta": {
+    "title": "친구 초대",
+    "sub": "듀오로 도전하세요. 더 어렵고… 더 강해집니다.",
+    "pill": "듀오 모드",
+    "a11y": "챌린지에 친구 초대",
+    "hint": "이 챌린지의 초대를 엽니다."
+  },
+  "shareCta": {
+    "title": "공유",
+    "sub": "이 챌린지를 누군가에게 보내세요. 한 순간이 모든 것을 바꿀 수 있습니다.",
+    "pill": "공유 링크",
+    "a11y": "이 챌린지 공유",
+    "hint": "공유 옵션을 엽니다."
+  },
     "untitled": "챌린지",
     "joinError": "참가할 수 없습니다. 다시 시도해 주세요.",
     "completeError": "완료할 수 없습니다.",
@@ -595,6 +592,7 @@
 
     "actions": {
       "best": "추천",
+       "shareA11y": "이 챌린지 공유",
       "inviteA11y": "듀오로 친구 초대",
       "inviteHint": "초대를 보내 실시간 듀오 대결로 바꿔보세요.",
       "inviteHintDuo": "이미 이 챌린지는 듀오입니다.",
@@ -603,6 +601,12 @@
       "shareHint": "멋진 공유 카드를 생성합니다.",
       "shareSub": "프리미엄 카드 + 링크",
       "chatHint": "챌린지 채팅을 엽니다.",
+       "sectionTitle": "작업",
+  "inviteTitle": "초대",
+  "shareTitle": "공유",
+  "chatTitle": "채팅",
+  "saveTitle": "즐겨찾기",
+  "statsTitle": "통계",
       "chatSub": "동기부여 + 증거",
       "saveHint": "이 챌린지를 즐겨찾기에 추가합니다.",
       "saveSub": "1탭으로 찾기",
@@ -610,6 +614,11 @@
       "statsSub": "연속 + 월"
     }
   },
+  "takeChallengeA11y": "챌린지 시작",
+    "takeChallengeHint": "기간 선택을 연 뒤 확인하여 시작합니다.",
+    "completeChallengeA11y": "챌린지 완료",
+    "completeChallengeHint": "완료 화면을 열어 트로피를 받습니다."
+,
 
   "editYourReview": "리뷰 수정",
   "deleteReview": "리뷰 삭제",
@@ -618,12 +627,26 @@
   "writeSomething": "전송하기 전에 내용을 입력해 주세요 😉",
   "maxChars": "최대 500자",
   "cannotSaveReview": "현재 리뷰를 저장할 수 없습니다.",
+  "toClaim": "수령하기",
 
   "duo": {
-    "title": "듀오 챌린지",
+    "leader": "리더",
+    "pending": {
+      "title": "초대 대기 중",
+      "short": "초대 대기 중",
+      "body": "상대가 응답하면 바로 알려드립니다. 취소하고 다른 사람을 초대할 수도 있습니다.",
+      "cancelInvite": "취소",
+      "cancelError": "지금은 취소할 수 없습니다."
+    },
     "you": "나",
-    "modeShort": "듀오",
     "partner": "파트너",
+    "status": {
+      "leading": "{{percent}}% 앞서고 있음",
+      "behind": "{{percent}}% 뒤처짐",
+      "tied": "완벽한 동률"
+    },
+    "title": "듀오 챌린지",
+    "modeShort": "듀오",
 
     "leading": "당신이 앞서고 있어요!",
     "tied": "동점",
@@ -895,26 +918,31 @@
     "confirmResetTitle": "확인",
     "confirmResetText": "스트릭 패스가 있습니다. 정말로 시리즈를 초기화하시겠습니까？",
     "title": "챌린지를 놓친 것 같아요",
-    "subtitle": "걱정 마세요! 스트릭을 유지할 방법이 있어요 💪",
+    "subtitle": "걱정 마세요. 아직 스트릭을 지킬 수 있어요 💪",
 
     "reset": {
       "title": "시리즈 초기화",
-      "subtitle": "다시 0부터 시작하여 규율을 재정비하세요."
+      "subtitle": "1일차부터 다시 시작합니다. 이 작업은 되돌릴 수 없습니다."
     },
+    "pill": {
+   "streakPass": "스트릭 패스 사용 가능",
+   "trophies": "비용: {{count}} 트로피"
+ },
 
     "streakPass": {
       "title": "스트릭 패스 사용",
-      "subtitle": "스트릭 패스로 기록을 그대로 유지하세요."
+       "subtitle": "스트릭 패스를 사용해 기록을 유지하세요."
     },
 
     "ad": {
       "title": "광고 시청으로 스트릭 유지",
-      "subtitle": "짧은 영상을 시청하면 스트릭을 계속 이어갈 수 있어요."
+       "subtitle": "짧은 영상을 시청하면 스트릭을 유지할 수 있어요.",
+       "disabled": "영상이 아직 준비되지 않았습니다. 잠시만 기다려 주세요."
     },
 
     "useTrophies": {
       "title": "{{count}} 트로피 사용하여 스트릭 유지",
-      "subtitle": "몇 개의 트로피로 진행 상황을 보호합니다."
+      "subtitle": "트로피를 사용해 진행 상황을 보호하세요."
     }
   },
   "privacyPolicy": {
@@ -989,6 +1017,12 @@
   "completedOnDate": "완료일",
   "networkError": "네트워크 오류. 다시 시도해 주세요.",
   "completion": {
+    "rewardLabel": "보상",
+  "doubleRewardLabel": "2배",
+  "footer": "약속을 지켰어. 이렇게 정체성이 바뀐다.",
+  "modalTitle": "챌린지 완료",
+  "dismiss": "닫기",
+  "adLoading": "광고 로딩 중",
     "trophies": "트로피",
     "finalTitle": "축하합니다!",
     "adNotReadyTitle": "광고를 이용할 수 없습니다",
@@ -1064,7 +1098,18 @@
     "optionLabel": "{{count}}일",
     "optionLabel_plural": "{{count}}일",
     "optionHint": "이 기간 선택",
-    "closeBackdrop": "창 닫기"
+    "closeBackdrop": "창 닫기",
+     "micro": {
+    "3": "시작",
+    "7": "기본",
+    "15": "습관",
+    "21": "규율",
+    "30": "진지",
+    "60": "헌신",
+    "90": "엘리트",
+    "180": "변화",
+    "365": "전설"
+  }
   },
   "messageReported": "메시지가 신고되었습니다. 제보해 주셔서 감사합니다.",
 "reportMessageFailed": "메시지를 신고하지 못했습니다. 잠시 후 다시 시도해 주세요.",
@@ -1083,6 +1128,9 @@
   },
   "profileS": {
     "bioLabel": "소개",
+    "heroSub": "너를 더 강하게 만드는 모든 것, 한곳에.",
+    "sectionsListA11y": "프로필 내용 및 섹션 목록",
+    "noData": "프로필 데이터가 없습니다.",
     "locationLabel": "지역",
     "interestsLabel": "관심사"
   },
@@ -1242,7 +1290,7 @@
   "origin": {
     "all": "전체",
     "existing": "공식",
-    "created": "커뮤니티 제작"
+     "created": "생성됨"
   },
 
   "participants_one": "참가자",
@@ -1439,14 +1487,21 @@
     "sendButtonA11y": "메시지 보내기",
     "footerMessage": "최대한 빠르게 답변드릴게요. ChallengeTies를 믿어줘서 감사합니다! 🚀"
   },
-
-  "pioneerModal": {
-    "title": "당신은 개척자입니다 🚀",
-    "description": "당신은 ChallengeTies의 <b>{{first}}</b> 명의 초기 사용자 중 한 명입니다. 감사의 의미로 <b>{{trophies}}</b>개의 보너스 트로피를 드립니다 🎁",
-    "cta": "좋아요, 고마워요!",
-    "closeA11y": "개척자 창 닫기"
-  },
-
+"pioneerModal": {
+  "pill": "선착순 1,000명",
+  "trophiesShort": "트로피",
+  "title": "당신은 Pioneer입니다.",
+  "description": "당신은 첫 <b>{{first}}</b>명의 사용자 중 한 명입니다. 감사의 의미로 <b>{{trophies}}</b>개의 트로피와 한정 배지를 드립니다.",
+  "b1": "Pioneer 배지가 프로필에 표시됩니다.",
+  "b2": "진행을 빠르게 하는 즉시 보너스.",
+  "b3": "가장 첫 번째 물결의 멤버입니다.",
+  "cta": "가자 🚀",
+  "closeA11y": "Pioneer 창 닫기",
+  "closeHintA11y": "이 창을 닫고 프로필로 돌아갑니다.",
+  "ctaA11y": "계속",
+  "ctaHintA11y": "이 창을 닫고 계속합니다.",
+  "foot": "함께 이 여정을 만들어줘서 고마워요."
+},
   "history": {
     "title": "우리의 이야기",
     "logoAlt": "ChallengeTies 로고",
@@ -1517,6 +1572,7 @@
 },
 "welcomeBonus": {
   "title": "로그인 보너스",
+  "todayShort": "오늘",
   "subtitle": "{{total}}일 중 {{day}}일째 • 계속해서 나아가세요!",
   "ribbon": "ChallengeTies 웰컴 패키지",
 
@@ -1560,6 +1616,10 @@
   "dailyBonus": {
     "title": "오늘의 보너스",
     "subtitle": "미스터리 룰렛을 돌려 보상을 확인하세요 🎁",
+     "rerollUnavailable": "광고 로딩 중…",
+     "ctaShort": "돌리기",
+    "spinLockedHint": "광고를 보면 한 번 더 돌릴 수 있어요.",
+    "spinHint": "룰렛을 돌려 보상을 받으세요.",
     "error": "현재 오늘의 보너스를 불러올 수 없습니다.",
     "tag": "오늘의 한정 혜택",
 "shortCta": "1번 터치, 1번 서프라이즈",
@@ -2104,6 +2164,9 @@
   "shareCardT": {
   "a11yTitle": "챌린지 공유 카드",
   "a11yHint": "카드를 친구에게 공유하기 전에 미리보기하세요.",
+  "heldSolo": "끝까지 했다",
+    "heldDuo": "끝까지 해냈다",
+    "watermark": "@ChallengeTies",
 
   "tagline": "챌린지가 있다면? 끝내라.",
 
@@ -2134,6 +2197,10 @@
 },
 
   "notificationsPush": {
+    "daily1": "오늘 한 번의 챌린지가 하루를 바꿔. 준비됐어?",
+    "duoNudgeOpened": "듀오: 챌린지를 열어줘 ✅",
+    "daily2": "연속 기록 끊지 마. 지금 하자 💪",
+    "daily3": "가벼운 알림: 오늘도 챌린지가 기다려 ✨",
     "inviteAccepted": {
   "title": "초대가 수락되었습니다 🎉",
   "body": "{{username}} 님이 당신의 챌린지 \"{{title}}\"을(를) 수락했습니다!"
@@ -2188,11 +2255,21 @@
     "notForYouTitle": "오류",
     "notForYouMessage": "이 초대는 현재 계정의 것이 아닙니다."
   },
+  "dailySelectedSubtitleShort": "오늘의 선택.",
 "homeZ": {
+  "duoPending": {
+    "title": "초대 전송", "sub": "대기 중. 수락하면: 듀오 시작.", "cta": "보기", "a11y": "듀오 초대 대기 중",
+    "steps": {
+      "sent": "초대를 보냈어요",
+      "waiting": "수락 대기 중",
+      "ready": "확인되면: 듀오 시작"
+    }
+  },
     "hero": {
       "brand": "ChallengeTies",
       "headline": "오늘의 계기.",
       "sub": "하나의 도전. 한 번의 탭. 계속하려면: 듀오.",
+      "ctaHint": "사용 가능한 챌린지를 확인하세요.",
       "duoProof": "듀오는 지속하게 만듭니다.",
       "ctaShort": "시작",
       "ctaA11y": "시작하고 도전 선택"
@@ -2200,12 +2277,20 @@
     "todayHub": {
       "badge": "오늘",
       "primaryActiveShort": "기록",
+      "primaryNewShort": "새로",
+  "primaryNewA11y": "새 챌린지 선택",
+  "primaryNewHint": "새 챌린지를 고르려면 탐색을 여세요.",
+  "titleAllDone": "완벽해요. 오늘은 모두 완료했어요.",
+  "subAllDone": "새 챌린지를 시작하거나 누군가가 꾸준히 하도록 도와주세요.",
       "primaryDuoShort": "듀오",
       "titleActive2": "오늘 기록하세요. 연속을 지키세요.",
       "titleNone2": "도전을 선택하세요. 오늘 시작하세요.",
-      "subActive2": "한 번의 탭으로 기록. 그다음: 초대하고 지속 확률을 두 배로.",
+      "subActive2": "탭 1번으로 확인.",
       "subNone2": "가장 어려운 건 첫걸음입니다. 솔로, 듀오… 또는 생성.",
       "primaryActiveHint2": "한 번의 탭으로 오늘을 기록.",
+       "primaryNoneShort": "선택",
+      "progressA11y": "진행 상황: {{total}}일 중 {{done}}일 완료.",
+      "inviteSubA11y": "누군가를 초대하면 성공 확률이 높아집니다.",
       "progress": "{{done}}/{{total}}일",
       "micro2": "듀오 = 동기 x2. 지금 하세요.",
       "openActiveA11y": "활성 도전 열기",
@@ -2226,11 +2311,19 @@
       "a11y": "듀오 추천",
       "title": "듀오는 계속하게 합니다.",
       "sub": "누군가를 초대하세요. 같은 도전, 같은 리듬.",
+      "ctaHint": "친구를 초대해 같은 챌린지를 함께 하세요.",
+      "soloHint": "파트너 없이 이 챌린지를 계속합니다.",
       "cta": "듀오",
       "ctaA11y": "듀오로 친구 초대",
       "solo": "솔로 유지",
       "soloA11y": "솔로 유지"
     },
+    "dailyPicks": {
+    "seeAll": "탐색에서 모두 보기",
+    "sectionA11y": "오늘의 챌린지 추천.",
+    "seeAllA11y": "모든 챌린지 보기",
+    "seeAllHint": "모든 챌린지를 보려면 탐색을 여세요."
+  },
     "discover": {
       "title": "탐색",
       "subtitle2": "핵심만. 나머지는 아래.",
@@ -2242,6 +2335,7 @@
       "tipsSub2": "1분. 즉각 실행.",
       "tipsA11y": "팁 열기",
       "tipsHint": "도전을 유지하는 빠른 팁.",
+      "sectionA11y": "챌린지, 팁 및 새로운 기능을 살펴보세요.",
       "newFeatures": "새 기능",
       "newFeaturesSub": "탐색. 투표. 앱에 영향.",
       "newFeaturesA11y": "새 기능",
@@ -2251,6 +2345,8 @@
 ,
   "invitationS": {
     "shareTitle": "듀오 초대",
+    "sentTitle": "초대가 전송되었습니다",
+    "sentBody": "상대가 응답하면 바로 알려드립니다.",
     "later": "나중에",
     "startSoloShort": "솔로",
       "subtitle": "링크를 공유하세요. 친구가 이 챌린지에 듀오로 참여합니다.",
@@ -4235,9 +4331,11 @@
       "contact": "문제가 있다면 앱 내 ‘지원팀에 문의하기’ 버튼 또는 공식 웹사이트의 연락 페이지를 통해 언제든 문의해주세요 🌍."
     }
   },
+  "createChallengeHint": "좋은 제목 + 이미지 = 더 많은 참여자.",
 "common": {
     "back": "뒤로",
     "retry": "다시 시도",
+     "tip": "팁",
     "loading": "로딩 중...",
     "recommended": "추천",
     "networkError": "연결 문제가 있어요",
@@ -4249,9 +4347,160 @@
     "unexpectedError": "예기치 않은 오류가 발생했어요. 다시 시도해 주세요.",
     "loadError": "새로고침할 수 없어요. 아래로 내려 다시 시도해 주세요.",
     "close": "닫기",
-    "info": "정보"
+    "info": "정보",
+ "cancel": "취소",
+ "confirm": "확인",
+    "confirmDestructive": "예, 초기화",
+    "loginRequired": "로그인이 필요합니다."
+  },
+  "streak": {
+    "confirmReset": {
+      "title": "확인할까요?",
+      "text": "사용 가능한 Streak Pass가 있습니다. 정말 스트릭을 초기화할까요?"
+    },
+    "resetDone": {
+      "title": "스트릭 초기화",
+      "text": "스트릭이 초기화되었습니다. 오늘이 새로운 시작으로 기록됩니다."
+    },
+    "resetError": "스트릭을 초기화할 수 없습니다."
+  },
+   "markToast": {
+    "completeTitle": "미션 완료. ✅",
+  "complete": {
+    "lines": [
+      "완료. 너는 대중이 아니다.",
+      "끝냈다. 그게 자기 존중이다.",
+      "방금 한 일은 희귀하고, 진짜다.",
+      "스스로와의 약속을 지켰다.",
+      "너는 더 위험해졌다.",
+      "정체성 업그레이드. 다음 단계.",
+      "시도한 게 아니다. 완수했다.",
+      "변명은 여기서 끝난다.",
+      "챕터 종료. 다음 미션.",
+      "하루를 이긴 게 아니다. 너 자신을 이겼다."
+    ]
+  },
+    "alreadyMarkedTitle": "이미 완료됨.",
+  "alreadyMarkedMsg": "오늘은 이미 완료됐어요. 내일 다시 오세요.",
+  "alreadyCompletedTitle": "이미 끝났어요.",
+  "alreadyCompletedMsg": "이 챌린지는 완료되었습니다. 새로 시작하세요.",
+  "challengeNotFound": "이 챌린지를 찾을 수 없어요.",
+    "dismiss": "닫기",
+    "defaultTitle": "완료 ✅",
+    "progressTpl": "{{t}}일 중 {{d}}일",
+
+    "kicker": {
+      "mark": "완료",
+      "streak": "리듬",
+      "complete": "달성",
+      "error": "이런"
+    },
+
+    "errorTitle": "이런. 완료되지 않았어요.",
+    "errorMsg": "잠시 후 다시 시도하세요.",
+
+    "lines": {
+      "early": [
+        "완벽해. 계속 가.",
+        "하루 더. 논쟁은 없다.",
+        "이게 이기는 방식이야.",
+        "집중. 완료."
+      ],
+      "mid": [
+        "확실히 앞서가고 있어.",
+        "리듬 유지. 계속.",
+        "너는 진짜로 변하고 있어."
+      ],
+      "late": [
+        "마지막 구간.",
+        "놓지 마. 지금이야.",
+        "끝까지 간다. 끝."
+      ],
+      "generic": [
+        "규율 > 동기부여.",
+        "하나의 행동. 하나의 증거.",
+        "너는 소수야."
+      ]
+    }
+  },
+  "toast": {
+    "streakBonus": {
+      "title": "스트릭 보너스",
+      "text": "좋아요! {{streak}}일 스트릭으로 보너스 트로피 {{bonus}}개를 받았어요."
+    },
+    "microEarned": {
+      "title": "트로피 획득",
+      "text": "오늘 보너스 트로피 {{count}}개를 획득했어요!"
+    },
+    "marked": {
+      "title": "진행 저장",
+      "text": "오늘 기록을 완료했어요.",
+      "micro": "+{{count}} 트로피. 깔끔하다. 네가 우위를 잡았어."
+    },
+    "alreadyDone": {
+      "title": "이미 완료됨",
+      "text": "이 챌린지는 이미 완료되었습니다."
+    },
+    "alreadyMarked": {
+      "title": "이미 기록됨",
+      "text": "오늘은 이미 이 챌린지를 기록했어요."
+    },
+    "challengeNotFound": "챌린지를 찾을 수 없습니다.",
+    "unableToMark": "이 챌린지를 기록할 수 없습니다.",
+    "keepGoing": "계속 가자 🔥"
+  },
+  "challenge": {
+    "alreadyTaken": "챌린지가 이미 진행 중입니다.",
+    "unableToLoad": "챌린지를 불러올 수 없습니다: {{message}}",
+    "unableToAdd": "챌린지를 추가할 수 없습니다.",
+    "unableToFinalize": "챌린지를 완료할 수 없습니다.",
+    "unableToResetStreak": "스트릭을 초기화할 수 없습니다.",
+    "unableToMarkAfterVideo": "영상 후 기록할 수 없습니다.",
+    "videoSavedStreak": {
+      "title": "스트릭 저장",
+      "text": "영상 덕분에 스트릭을 지켰어요."
+    },
+    "notEnoughTrophies": {
+      "title": "트로피 부족",
+      "text": "트로피가 충분하지 않습니다."
+    },
+    "trophiesUsed": {
+      "title": "트로피 사용",
+      "text": "스트릭을 지키기 위해 트로피 {{cost}}개를 사용했어요."
+    },
+    "unableToMarkWithTrophies": "트로피로 확인할 수 없습니다."
+  },
+  "streakPass": {
+    "used": {
+      "title": "Streak Pass 사용",
+      "text": "Streak Pass로 스트릭을 지켰어요."
+    },
+    "unableToUse": "Streak Pass를 사용할 수 없습니다."
+  },
+  "simulation": {
+    "title": "시뮬레이션",
+    "message": "스트릭을 {{streak}}일로 시뮬레이션했어요.",
+    "errorTitle": "시뮬레이션 오류",
+    "challengeNotFound": "시뮬레이션할 챌린지를 찾을 수 없습니다.",
+    "errorGeneric": "스트릭을 시뮬레이션할 수 없습니다."
   },
   "firstPick": {
+    "invitePending": {
+    "title": "초대 대기 중",
+    "body": "친구가 아직 응답하지 않았어요. 링크를 다시 보내거나, 계속 진행하면 수락하는 즉시 시작돼요.",
+    "resend": "다시 보내기",
+    "continue": "계속"
+  },
+  "postShare": {
+     "titleAsk": "링크를 보냈나요?",
+      "bodyAsk": "가끔 전송 확인이 표시되지 않을 수 있어요. 링크를 공유했는지만 알려주세요.",
+    "titleFallback": "좋아요. 이제 뭐 할까요?",
+    "bodyFallback": "지금 바로 다시 보내거나, 솔로로 전환해 바로 시작할 수 있어요.",
+    "no": "보내지 않았어요",
+    "yesContinue": "네, 계속",
+    "resend": "다시 보내기",
+    "switchSolo": "솔로로 전환"
+  },
   "day_one": "{{count}}일",
   "day_other": "{{count}}일",
   "progress": "{{total}} 중 {{current}}",

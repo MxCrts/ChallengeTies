@@ -3,10 +3,7 @@ Object.defineProperty(exports, "__esModule", { value: true });
 exports.claimReferralMilestone = void 0;
 // functions/src/referralClaim.ts
 const https_1 = require("firebase-functions/v2/https");
-const app_1 = require("firebase-admin/app");
 const firestore_1 = require("firebase-admin/firestore");
-if (!(0, app_1.getApps)().length)
-    (0, app_1.initializeApp)();
 const db = (0, firestore_1.getFirestore)();
 const ALLOWED = [5, 10, 25];
 const REWARDS = {
@@ -39,22 +36,34 @@ exports.claimReferralMilestone = (0, https_1.onCall)({ region: "europe-west1" },
         if (activatedCount < milestone) {
             throw new https_1.HttpsError("failed-precondition", "not_reached");
         }
-        if (!pending.includes(milestone)) {
-            // pas encore unlock côté serveur
-            throw new https_1.HttpsError("failed-precondition", "not_unlocked");
-        }
+        // ✅ Idempotence UX: si déjà claim -> OK silencieux (pas d'erreur)
         if (claimed.includes(milestone)) {
-            throw new https_1.HttpsError("already-exists", "already_claimed");
+            return;
+        }
+        // ✅ Doit être pending côté serveur (sinon pas unlock)
+        if (!pending.includes(milestone)) {
+            throw new https_1.HttpsError("failed-precondition", "not_unlocked");
         }
         const reward = REWARDS[milestone] ?? 0;
         tx.update(userRef, {
             trophies: firestore_1.FieldValue.increment(reward),
+            totalTrophies: firestore_1.FieldValue.increment(reward),
             // move pending -> claimed
             "referral.claimedMilestones": firestore_1.FieldValue.arrayUnion(milestone),
             "referral.pendingMilestones": firestore_1.FieldValue.arrayRemove(milestone),
             "referral.lastClaimed": milestone,
             "referral.updatedAt": firestore_1.FieldValue.serverTimestamp(),
             updatedAt: firestore_1.FieldValue.serverTimestamp(),
+        });
+        // ✅ (Optionnel mais top) trace appEvents
+        const appEventRef = db.collection("appEvents").doc();
+        tx.set(appEventRef, {
+            name: "ref_milestone_claimed",
+            params: { milestone, reward },
+            uid,
+            anonId: null,
+            appVersion: null,
+            createdAt: firestore_1.FieldValue.serverTimestamp(),
         });
     });
     return { ok: true };

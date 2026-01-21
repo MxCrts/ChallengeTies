@@ -55,6 +55,7 @@ import { useToast } from "@/src/ui/Toast";
 
 const SPACING = 18;
 const { width: SCREEN_WIDTH, height: SCREEN_HEIGHT } = Dimensions.get("window");
+const EXPLICIT_LOGOUT_KEY = "ties.explicitLogout.v1";
 
 const normalizeSize = (size: number) => {
   const baseWidth = 375;
@@ -187,6 +188,7 @@ export default function Settings() {
   const { t, i18n: i18next } = useTranslation();
   const { language, setLanguage } = useLanguage();
   const [_, setLangUpdate] = useState(false);
+  const [notifPermissionGranted, setNotifPermissionGranted] = useState<boolean | null>(null);
   const { theme, toggleTheme } = useTheme();
   const router = useRouter();
   const isActiveRef = useRef(true);
@@ -275,19 +277,28 @@ export default function Settings() {
     nudgeClaimableOnce(claimable);
   }, [claimable]);
 
-  // Permissions notifs (état système)
-  useEffect(() => {
-    (async () => {
-      try {
-        const { status } = await Notifications.getPermissionsAsync();
-        if (status !== "granted") {
-          setNotificationsEnabled(false);
-        }
-      } catch {
-        // soft fail
-      }
-    })();
+     // --- OS permission sync (notifications) ---
+  const syncNotifPermission = useCallback(async () => {
+    try {
+      const { status } = await Notifications.getPermissionsAsync();
+      setNotifPermissionGranted(status === "granted");
+    } catch {
+      setNotifPermissionGranted(null);
+    }
   }, []);
+
+    // Permissions notifs (état système) — source de vérité OS
+  useEffect(() => {
+    syncNotifPermission();
+  }, [syncNotifPermission]);
+
+  // Resync quand on revient sur Settings (l'utilisateur peut avoir changé dans les réglages système)
+  useFocusEffect(
+    useCallback(() => {
+      syncNotifPermission();
+    }, [syncNotifPermission])
+  );
+
 
   // 🔁 Listener i18next : juste un rerender, PAS de changeLanguage ici
   useEffect(() => {
@@ -345,7 +356,15 @@ export default function Settings() {
     if (snapshot.exists()) {
       const data = snapshot.data() as any;
 
-      setNotificationsEnabled(data.notificationsEnabled ?? true);
+            const prefNotif = data.notificationsEnabled ?? true;
+      setNotificationsEnabled(prefNotif);
+
+      // ✅ Auto-heal : OS granted + Firestore pref false => on corrige Firestore
+      // (cas typique: l'utilisateur a accepté au prompt iOS/Android mais la pref n'a jamais été enregistrée)
+      if (notifPermissionGranted === true && prefNotif === false) {
+        updateDoc(userRef, { notificationsEnabled: true }).catch(() => {});
+      }
+
       setLocationEnabled(data.locationEnabled ?? true);
 
       const premiumFlag = !!(data.premium ?? data.isPremium);
@@ -376,7 +395,8 @@ export default function Settings() {
     return () => {
       unsubscribe();
     };
-  }, [t, language, setLanguage, router, i18next, showErrorAlert]);
+   }, [t, language, setLanguage, router, i18next, showErrorAlert, notifPermissionGranted]);
+
 
   const savePreferences = async (updates: { [key: string]: any }) => {
     const userId = auth.currentUser?.uid;
@@ -400,6 +420,9 @@ export default function Settings() {
       // si ça plante, on reste silencieux
     }
   }, []);
+
+ 
+
 
   const handleNotificationsToggle = async (value: boolean) => {
     if (saving.notif) return;
@@ -499,6 +522,11 @@ export default function Settings() {
           onPress: async () => {
             try {
               await AsyncStorage.clear();
+              const explicit = await AsyncStorage.getItem(EXPLICIT_LOGOUT_KEY);
+              await AsyncStorage.clear();
+              if (explicit) {
+                await AsyncStorage.setItem(EXPLICIT_LOGOUT_KEY, explicit);
+              }
               success();
               showToast(
                 t("cacheCleared", {
@@ -530,6 +558,7 @@ export default function Settings() {
             try {
               tap();
               isActiveRef.current = false;
+              await AsyncStorage.setItem(EXPLICIT_LOGOUT_KEY, "1");
               await auth.signOut();
               router.replace("/login");
               showToast(
@@ -537,6 +566,9 @@ export default function Settings() {
                 "info"
               );
             } catch (error) {
+              try {
+                await AsyncStorage.removeItem(EXPLICIT_LOGOUT_KEY);
+              } catch {}
               console.error("Erreur déconnexion:", error);
               showErrorAlert("error", "logoutFailed");
             }
@@ -651,7 +683,7 @@ export default function Settings() {
                   {t("notifications")}
                 </Text>
                 <Switch
-                  value={notificationsEnabled}
+                  value={!!notificationsEnabled && notifPermissionGranted !== false}
                   onValueChange={handleNotificationsToggle}
                   trackColor={dynamicStyles.switch.trackColor}
                   thumbColor={dynamicStyles.switch.thumbColor}
@@ -660,7 +692,7 @@ export default function Settings() {
                   disabled={saving.notif}
                 />
               </View>
-              {!notificationsEnabled && (
+             {notifPermissionGranted === false && (
                 <TouchableOpacity
                   onPress={openSystemSettings}
                   style={{
@@ -1410,6 +1442,40 @@ export default function Settings() {
               end={{ x: 1, y: 0 }}
               style={styles.sectionAccent}
             />
+
+            {/* ✅ FAQ / Questions (retirée de la Home) */}
+            <Animated.View entering={FadeInUp.delay(1260)}>
+              <TouchableOpacity
+                onPress={() => {
+                  tap();
+                  router.push("/Questions");
+                }}
+                accessibilityLabel={t("faq", { defaultValue: "FAQ" })}
+                testID="open-faq-button"
+                style={styles.accountButton}
+              >
+                <LinearGradient
+                  colors={dynamicStyles.buttonGradient.colors}
+                  style={styles.buttonGradient}
+                  start={{ x: 1, y: 1 }}
+                  end={{ x: 0, y: 0 }}
+                >
+                  <Ionicons
+                    name="help-circle-outline"
+                    size={normalizeSize(20)}
+                    color={currentTheme.colors.textPrimary}
+                  />
+                  <Text
+                    style={[
+                      styles.accountButtonText,
+                      dynamicStyles.accountButtonText,
+                    ]}
+                  >
+                    {t("faq", { defaultValue: "FAQ" })}
+                  </Text>
+                </LinearGradient>
+              </TouchableOpacity>
+            </Animated.View>
             {["/about/History", "/about/PrivacyPolicy", "/about/Contact"].map(
               (path, index) => (
                 <Animated.View

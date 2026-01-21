@@ -35,8 +35,10 @@ import { Image as ExpoImage } from "expo-image";
 // Dimensions & responsivité
 const { width: SCREEN_WIDTH, height: SCREEN_HEIGHT } = Dimensions.get("window");
 const SPACING = 18;
-const ITEM_WIDTH = SCREEN_WIDTH * 0.9;
-const ITEM_HEIGHT = SCREEN_WIDTH * 0.45;
+const ITEM_WIDTH = Math.min(SCREEN_WIDTH * 0.92, 420);
+const ITEM_HEIGHT = Math.max(SCREEN_WIDTH * 0.40, 150);
+const IS_COMPACT = SCREEN_HEIGHT < 720;
+
 
 const normalizeSize = (size: number) => {
   const baseWidth = 375;
@@ -287,8 +289,9 @@ export default function CompletedChallenges() {
                 styles.card,
                 {
                   borderColor: isDarkMode
-                    ? currentTheme.colors.secondary
-                    : "#FF8C00",
+  ? withAlpha("#FFFFFF", 0.14)
+  : withAlpha("#000000", 0.08),
+
                 },
               ]}
             >
@@ -701,7 +704,7 @@ export default function CompletedChallenges() {
             showsVerticalScrollIndicator={false}
             initialNumToRender={10}
             windowSize={5}
-            removeClippedSubviews
+            removeClippedSubviews={Platform.OS === "android"}
             getItemLayout={(_, index) => ({
               length: normalizeSize(ITEM_HEIGHT + SPACING * 1.5),
               offset: normalizeSize(ITEM_HEIGHT + SPACING * 1.5) * index,
@@ -884,14 +887,14 @@ const styles = StyleSheet.create({
     paddingBottom: normalizeSize(80),
   },
   cardWrapper: {
-    marginBottom: SPACING * 1.5,
-    borderRadius: normalizeSize(25),
-    shadowColor: "#000",
-    shadowOffset: { width: 0, height: normalizeSize(5) },
-    shadowOpacity: 0.35,
-    shadowRadius: normalizeSize(8),
-    elevation: 10,
-  },
+  marginBottom: SPACING * 1.15,
+  borderRadius: normalizeSize(24),
+  shadowColor: "#000",
+  shadowOffset: { width: 0, height: normalizeSize(10) },
+  shadowOpacity: Platform.OS === "ios" ? 0.14 : 0,
+  shadowRadius: normalizeSize(18),
+  elevation: Platform.OS === "android" ? 3 : 0,
+},
   cardContainer: {
     width: ITEM_WIDTH,
     borderRadius: normalizeSize(25),
@@ -908,29 +911,29 @@ const styles = StyleSheet.create({
     backgroundColor: "rgba(255,255,255,0.12)",
   },
   card: {
-    flexDirection: "row",
-    alignItems: "center",
-    padding: normalizeSize(16),
-    borderRadius: normalizeSize(25),
-    borderWidth: 2.5,
-    minHeight: ITEM_HEIGHT,
-  },
-  cardImage: {
-    width: normalizeSize(70),
-    height: normalizeSize(70),
-    borderRadius: normalizeSize(16),
-    marginRight: SPACING * 1.1,
-    borderWidth: 2,
-    borderColor: "rgba(255, 255, 255, 0.6)",
-  },
-  placeholderImage: {
-    width: normalizeSize(70),
-    height: normalizeSize(70),
-    borderRadius: normalizeSize(16),
-    justifyContent: "center",
-    alignItems: "center",
-    marginRight: SPACING * 1.1,
-  },
+  flexDirection: "row",
+  alignItems: "center",
+  padding: normalizeSize(IS_COMPACT ? 14 : 16),
+  borderRadius: normalizeSize(24),
+  borderWidth: StyleSheet.hairlineWidth,
+  minHeight: ITEM_HEIGHT,
+},
+ cardImage: {
+  width: normalizeSize(72),
+  height: normalizeSize(72),
+  borderRadius: normalizeSize(18),
+  marginRight: SPACING * 1.05,
+  borderWidth: StyleSheet.hairlineWidth,
+  borderColor: "rgba(255,255,255,0.18)",
+},
+placeholderImage: {
+  width: normalizeSize(72),
+  height: normalizeSize(72),
+  borderRadius: normalizeSize(18),
+  justifyContent: "center",
+  alignItems: "center",
+  marginRight: SPACING * 1.05,
+},
   cardContent: {
     flex: 1,
     justifyContent: "space-between",
@@ -1012,35 +1015,39 @@ const styles = StyleSheet.create({
    textAlign: I18nManager.isRTL ? "right" : "left",
   },
   progressChip: {
-    flexDirection: "row",
-    alignItems: "center",
-    paddingHorizontal: normalizeSize(8),
-    paddingVertical: normalizeSize(3),
-    borderRadius: 999,
-    backgroundColor: "rgba(15, 23, 42, 0.9)",
-  },
-  progressChipText: {
-    fontSize: normalizeSize(11.5),
-    fontFamily: "Comfortaa_700Bold",
-    marginLeft: 4,
-    writingDirection: I18nManager.isRTL ? "rtl" : "ltr",
-   textAlign: I18nManager.isRTL ? "right" : "left",
-  },
-  footerRow: {
-    flexDirection: "column",
-    alignItems: "stretch",
-    gap: normalizeSize(8),
-    marginTop: normalizeSize(4),
-  },
-  footerRight: {
-    alignSelf: "flex-end",
-  },
-  historyButton: {
-    borderRadius: normalizeSize(18),
-    overflow: "hidden",
-    alignSelf: "flex-start",
-    width: "100%",
-  },
+  flexDirection: "row",
+  alignItems: "center",
+  paddingHorizontal: normalizeSize(8),
+  paddingVertical: normalizeSize(3),
+  borderRadius: 999,
+  backgroundColor: "rgba(255,255,255,0.08)",
+  borderWidth: StyleSheet.hairlineWidth,
+  borderColor: "rgba(255,255,255,0.14)",
+},
+progressChipText: {
+  fontSize: normalizeSize(11.5),
+  fontFamily: "Comfortaa_700Bold",
+  marginLeft: 4,
+  includeFontPadding: false,
+  writingDirection: I18nManager.isRTL ? "rtl" : "ltr",
+  textAlign: I18nManager.isRTL ? "right" : "left",
+},
+ footerRow: {
+  flexDirection: "row",
+  alignItems: "center",
+  justifyContent: "space-between",
+  gap: normalizeSize(10),
+  marginTop: normalizeSize(6),
+},
+footerRight: {
+  flexShrink: 0,
+  alignItems: "flex-end",
+},
+historyButton: {
+  borderRadius: normalizeSize(18),
+  overflow: "hidden",
+  flex: 1,
+},
   historyButtonGradient: {
     paddingVertical: normalizeSize(10),
     paddingHorizontal: normalizeSize(14),
@@ -1058,10 +1065,11 @@ const styles = StyleSheet.create({
    textAlign: I18nManager.isRTL ? "right" : "left",
   },
   viewButton: {
-    borderRadius: normalizeSize(18),
-    overflow: "hidden",
-    flexShrink: 0,
-  },
+  borderRadius: normalizeSize(18),
+  overflow: "hidden",
+  flexShrink: 0,
+  minWidth: normalizeSize(132),
+},
   viewButtonGradient: {
     paddingVertical: normalizeSize(9),
     paddingHorizontal: SPACING * 1.2,

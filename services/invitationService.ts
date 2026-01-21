@@ -14,8 +14,7 @@ import {
 } from "firebase/firestore";
 import { db, auth } from "@/constants/firebase-config";
 import { logEvent } from "../src/analytics";
-import { sendInviteStatusPush } from "@/services/notificationService";
-import { dayKeyUTC, coerceToDayKey } from "@/hooks/useTrophiesEconomy";
+import { dayKeyUTC } from "@/hooks/useTrophiesEconomy";
 
 
 /* =========================
@@ -69,44 +68,6 @@ export function isInvitationExpired(inv?: { expiresAt?: Timestamp | null }) {
   return Number.isFinite(ms) && ms < Date.now();
 }
 
-// Vérifie si l'inviteur a déjà une invite PENDING pour ce challenge
-// (OPEN ou DIRECT - utilisé surtout pour le legacy)
-async function hasActiveInvite(params: {
-  inviterId: string;
-  challengeId: string;
-}): Promise<boolean> {
-  const baseQ = query(
-    collection(db, "invitations"),
-    where("inviterId", "==", params.inviterId),
-    where("challengeId", "==", params.challengeId),
-    where("status", "==", "pending")
-  );
-  const snap = await getDocs(baseQ);
-  if (snap.empty) return false;
-
-  let hasNonExpired = false;
-  const toCancel: Array<{ id: string }> = [];
-  snap.forEach((d) => {
-    const data = d.data() as Invitation;
-    if (isInvitationExpired(data)) {
-      toCancel.push({ id: d.id });
-    } else {
-      hasNonExpired = true;
-    }
-  });
-
-  // Nettoyage opportuniste des expirées (les basculer en "cancelled")
-  for (const it of toCancel) {
-    try {
-      await updateDoc(doc(db, "invitations", it.id), {
-        status: "cancelled",
-        updatedAt: serverTimestamp(),
-      });
-    } catch {}
-  }
-  return hasNonExpired;
-}
-
 async function isUserAlreadyInActiveDuoForChallenge(
   userId: string,
   challengeId: string
@@ -120,7 +81,7 @@ async function isUserAlreadyInActiveDuoForChallenge(
   const found = arr.find((c) => {
     const cid = c?.challengeId ?? c?.id;
     const match =
-      cid === challengeId || c?.uniqueKey?.startsWith?.(challengeId + "_");
+       cid === challengeId || (!!c?.uniqueKey && String(c.uniqueKey).startsWith(challengeId + "_"));
     if (!match || !c?.duo) return false;
     const sel = Number(c?.selectedDays ?? 0);
     const done = Number(c?.completedDays ?? 0);
@@ -564,48 +525,6 @@ export async function acceptInvitation(inviteId: string): Promise<void> {
     const finalInvSnap = await getDoc(invitationRef);
     const finalInv = finalInvSnap.data() as Invitation;
 
-    let challengeTitle: string | undefined;
-    try {
-      const chSnap2 = await getDoc(challengeRef);
-      if (chSnap2.exists()) {
-        const ch2 = chSnap2.data() as any;
-        challengeTitle = ch2?.title || undefined;
-      }
-    } catch {}
-
-    const inviteeIdForNotif = finalInv.inviteeId ?? me;
-    const inviteeUsernameFinal =
-      finalInv.inviteeUsername ??
-      (await getDisplayUsername(inviteeIdForNotif));
-
-// 🔥 Fallback top 3 mondiale
-    const safeUsername = inviteeUsernameFinal || "Partner";
-    const safeChallengeTitle = challengeTitle || "Challenge";
-
-        try {
-            const pushRes = await sendInviteStatusPush({
-        inviterId: finalInv.inviterId,
-        inviteId, // 🔑 idempotence par invitation
-        inviteeId: inviteeIdForNotif,
-        status: "accepted",
-        challengeId: finalInv.challengeId,
-        challengeTitle: safeChallengeTitle,
-        inviteeUsername: safeUsername,
-      });
-
-
-      console.log(
-        "[notif] sendInviteStatusPush(accepted) result:",
-        pushRes
-      );
-    } catch (e) {
-      console.log(
-        "[notif] sendInviteStatusPush(accepted) error (exception):",
-        (e as any)?.message ?? e
-      );
-    }
-
-
     try {
       await logEvent("invite_accepted", {
         inviteId,
@@ -622,10 +541,7 @@ export async function acceptInvitation(inviteId: string): Promise<void> {
       );
     }
   } catch (e) {
-    console.log(
-      "[invite] acceptInvitation: erreur post-traitement (notif/analytics)",
-      (e as any)?.message ?? e
-    );
+    console.log("[invite] acceptInvitation: erreur post-traitement (analytics)", (e as any)?.message ?? e);
   }
 }
 
@@ -653,8 +569,6 @@ export async function refuseInvitationDirect(
   const inviteeUsername =
   inv.inviteeUsername ?? (await getDisplayUsername(me));
 
-const safeUsername = inviteeUsername || "Partner";
-
 await updateDoc(ref, {
   status: "refused",
   updatedAt: serverTimestamp(),
@@ -662,33 +576,6 @@ await updateDoc(ref, {
 });
 
 try {
-  let challengeTitle: string | undefined;
-  try {
-    const chSnap = await getDoc(doc(db, "challenges", inv.challengeId));
-    if (chSnap.exists()) {
-      const ch = chSnap.data() as any;
-      challengeTitle = ch?.title || undefined;
-    }
-  } catch {}
-
-  const safeChallengeTitle = challengeTitle || "Challenge";
-
-   const pushRes = await sendInviteStatusPush({
-    inviterId: inv.inviterId,
-    inviteId, // 🔑 même id que dans la collection invitations
-    inviteeId: me,
-    status: "refused",
-    challengeId: inv.challengeId,
-    challengeTitle: safeChallengeTitle,
-    inviteeUsername: safeUsername,
-  });
-
-
-
-    console.log(
-      "[notif] sendInviteStatusPush(refused_direct) result:",
-      pushRes
-    );
 
     await logEvent("invite_refused", {
       inviteId,
@@ -699,10 +586,7 @@ try {
     });
 
   } catch (e) {
-    console.log(
-      "[notif/analytics] refuseInvitationDirect error:",
-      (e as any)?.message ?? e
-    );
+    console.log("[analytics] refuseInvitationDirect error:", (e as any)?.message ?? e);
   }
 }
 
@@ -722,6 +606,17 @@ export async function softRefuseOpenInvitation(
 
   if (inv.kind !== "open") throw new Error("type_incorrect");
   if (inv.status !== "pending") throw new Error("invitation_deja_traitee");
+  // ✅ Edge-case safety: certains docs legacy peuvent ne pas avoir refusedBy
+  // Or ta rule "OPEN soft refuse" utilise resource.data.refusedBy.size()
+  // → on garantit l'existence avant arrayUnion.
+  if (!("refusedBy" in (inv as any)) || !Array.isArray((inv as any).refusedBy)) {
+    try {
+      await updateDoc(ref, {
+        refusedBy: [],
+        updatedAt: serverTimestamp(),
+      });
+    } catch {}
+  }
   await updateDoc(ref, {
     refusedBy: arrayUnion(me),
     updatedAt: serverTimestamp(),
@@ -749,8 +644,6 @@ export async function refuseOpenInvitation(
   const inviteeUsername =
   inv.inviteeUsername ?? (await getDisplayUsername(me));
 
-const safeUsername = inviteeUsername || "Partner";
-
 await updateDoc(ref, {
   inviteeId: me,
   inviteeUsername: inviteeUsername ?? null,
@@ -759,34 +652,7 @@ await updateDoc(ref, {
 });
 
 try {
-  let challengeTitle: string | undefined;
-  try {
-    const chSnap = await getDoc(doc(db, "challenges", inv.challengeId));
-    if (chSnap.exists()) {
-      const ch = chSnap.data() as any;
-      challengeTitle = ch?.title || undefined;
-    }
-  } catch {}
-
-  const safeChallengeTitle = challengeTitle || "Challenge";
-
-    const pushRes = await sendInviteStatusPush({
-    inviterId: inv.inviterId,
-    inviteId, // 🔑
-    inviteeId: me,
-    status: "refused",
-    challengeId: inv.challengeId,
-    challengeTitle: safeChallengeTitle,
-    inviteeUsername: safeUsername,
-  });
-
-
-
-    console.log(
-      "[notif] sendInviteStatusPush(refused_open) result:",
-      pushRes
-    );
-
+  
     await logEvent("invite_refused", {
       inviteId,
       challengeId: inv.challengeId,
@@ -796,10 +662,7 @@ try {
     });
 
   } catch (e) {
-    console.log(
-      "[notif/analytics] refuseOpenInvitation error:",
-      (e as any)?.message ?? e
-    );
+    console.log("[analytics] refuseOpenInvitation error:", (e as any)?.message ?? e);
   }
 }
 

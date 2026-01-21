@@ -1,4 +1,4 @@
-import React, { createContext, useContext, useEffect, useState, useRef } from "react";
+import React, { createContext, useContext, useEffect, useMemo, useRef, useState } from "react";
 import { onAuthStateChanged, User, signOut } from "firebase/auth";
 import { auth } from "@/constants/firebase-config";
 import AsyncStorage from "@react-native-async-storage/async-storage";
@@ -12,20 +12,19 @@ import {
   ensureAndroidChannelAsync,
   requestNotificationPermissions,
   registerForPushNotificationsAsync,
-  sendReferralNewChildPush,
-  sendInvitationNotification,
+  scheduleDailyNotifications,
+  scheduleLateReminderIfNeeded,
+  rescheduleLateIfNeeded,
+  rescheduleNextDailyIfNeeded,
 } from "@/services/notificationService";
 import {
-  handleReferralUrl,
   REFERRER_KEY,
   REFERRER_SRC_KEY,
   REFERRER_TS_KEY,
 } from "@/services/referralLinking";
 import { logEvent } from "@/src/analytics";
-import * as Linking from "expo-linking";
 import { getDisplayUsername } from "@/services/invitationService";
 import {
-  checkAndGrantPioneerIfEligible,
   checkAndGrantAmbassadorRewards,
   checkAndGrantAmbassadorMilestones,
   checkAndNotifyReferralMilestones,
@@ -120,41 +119,9 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({
   const [user, setUser] = useState<User | null>(null);
   const [loading, setLoading] = useState(true);
   const [checkingAuth, setCheckingAuth] = useState(true);
-    const referralHandledOnce = useRef(false);
-
-      // ✅ Capture globale des liens referral (cold + warm start)
- useEffect(() => {
-  if (referralHandledOnce.current) return;
-  referralHandledOnce.current = true;
-
-  let sub: any;
-
-  (async () => {
-    try {
-      const initialUrl = await Linking.getInitialURL();
-      console.log("🧊 [referral] initialUrl =", initialUrl);
-      // 👉 On laisse handleReferralUrl décider si c’est un lien de parrainage ou pas
-      if (initialUrl) {
-        await handleReferralUrl(initialUrl);
-      }
-
-      sub = Linking.addEventListener("url", async ({ url }) => {
-        console.log("🔥 [referral] event url =", url);
-        // idem ici, aucun filtre en amont
-        await handleReferralUrl(url);
-      });
-    } catch (e) {
-      console.log("❌ [referral] global link capture error:", e);
-    }
-  })();
-
-  return () => {
-    try {
-      sub?.remove?.();
-    } catch {}
-  };
-}, []);
-
+  // ✅ Dedupe refs (must be top-level hooks)
+  const treatedAcceptedInvitesRef = useRef<Set<string>>(new Set());
+  const treatedRefusedInvitesRef = useRef<Set<string>>(new Set());
 
   useEffect(() => {
     let alive = true;
@@ -195,19 +162,6 @@ const authFailsafe = setTimeout(() => {
   (async () => {
     try {
       const uid = firebaseUser.uid;
-
-// 🔥 Re-capture l'URL initiale AU MOMENT DU LOGIN
-try {
-  const initialUrl = await Linking.getInitialURL();
-  console.log("🧊 [referral][login] initialUrl =", initialUrl);
-  if (initialUrl) {
-    await handleReferralUrl(initialUrl);
-  }
-} catch (e) {
-  console.log("[referral][login] capture error:", e);
-}
-
-
       const { cleanRef, cleanSrc } = await consumePendingReferrer(uid);
       console.log("[referral][login] consumePendingReferrer ->", {
         cleanRef,
@@ -251,7 +205,6 @@ try {
                   ...(data?.referral || {}),
                   referrerId: cleanRef,
                   src: cleanSrc,
-                  activatedAt: new Date(),
                 },
                 updatedAt: new Date(),
               },
@@ -270,25 +223,6 @@ try {
             await AsyncStorage.setItem(REFERRAL_JUST_ACTIVATED_KEY, "1");
             await logEvent("referral_activated", { referrerId: cleanRef, src: cleanSrc });
 
-            // ATTRIBUTION IMMÉDIATE DES 10 TROPHÉES (filleul + parrain)
-            await Promise.allSettled([
-              updateDoc(doc(db, "users", uid), { trophies: increment(10) }),
-            ]);
-
-            // Notif push au parrain
-            try {
-              const childUsername =
-                (await getDisplayUsername(firebaseUser.uid)) ||
-                firebaseUser.displayName ||
-                (firebaseUser.email?.split("@")[0] ?? "Nouveau joueur");
-
-              await sendReferralNewChildPush({
-                sponsorId: cleanRef,
-                childUsername,
-              });
-            } catch (e) {
-              console.log("[referral] push new child failed:", e);
-            }
           } else {
             console.log(
               "[referral] rien activé (déjà parrainé ou déjà activé) → referrer nettoyé"
@@ -403,22 +337,26 @@ AsyncStorage.setItem(
 };
 }, []);
 
+// en haut du composant AuthProvider
+const pushSetupUidRef = useRef<string | null>(null);
+
 useEffect(() => {
   const uid = user?.uid;
   if (!uid) return;
 
-  // 💡 Pas de setup push sur web
   if (Platform.OS === "web") {
     console.log("🌐 Web environment → skip push setup");
     return;
   }
 
-  let unsubAppState: (() => void) | undefined;
-  let mounted = true;
+  if (pushSetupUidRef.current === uid) return;
+   pushSetupUidRef.current = uid;
 
-  (async () => {
+  let mounted = true;
+  let unsubAppState: (() => void) | undefined;
+
+  const setupOnce = async () => {
     try {
-      // 1) Channel Android + permissions
       if (Platform.OS === "android") {
         await ensureAndroidChannelAsync();
       }
@@ -427,88 +365,63 @@ useEffect(() => {
       console.log("🔔 Permission notifications (AuthProvider):", granted);
 
       if (!granted) {
-        // On documente clairement le refus (optionnel)
         try {
           await updateDoc(doc(db, "users", uid), {
             notificationsEnabled: false,
-            debugAuthProviderLastToken: null,
             expoPushToken: null,
+            expoPushTokens: [],
+            expoPushUpdatedAt: new Date(),
           });
-        } catch (e) {
-          console.warn("⚠️ Impossible d'écrire le refus de notif:", e);
-        }
+        } catch {}
         return;
       }
 
-      // 2) Récupérer le token (idempotent) et l’écrire en base
-      const token = await registerForPushNotificationsAsync();
+      // ✅ Token expo (idempotent)
+      await registerForPushNotificationsAsync();
       if (!mounted) return;
 
-      console.log("🔔 Token from AuthProvider effect:", token);
+      // ✅ Daily schedule (idempotent)
+      await scheduleDailyNotifications();
+      await scheduleLateReminderIfNeeded();
 
-      if (token) {
-        await setDoc(
-          doc(db, "users", uid),
-          {
-            expoPushToken: token,
-            notificationsEnabled: true,
-            expoPushUpdatedAt: new Date(),
-            debugAuthProviderLastToken: token,
-          },
-          { merge: true }
-        );
-      }
-
-      // 🔎 Vérification immédiate dans Firestore pour ce user
-      try {
-        const snap = await getDoc(doc(db, "users", uid));
-        const data = snap.exists() ? snap.data() : null;
-        console.log("🔎 Firestore user push snapshot (AuthProvider):", {
-          exists: snap.exists(),
-          expoPushToken: data?.expoPushToken ?? null,
-          notificationsEnabled: data?.notificationsEnabled ?? null,
-        });
-      } catch (e) {
-        console.warn("⚠️ Impossible de relire le doc user après set token:", e);
-      }
-
-      // 3) Rafraîchir le token à chaque retour au foreground
+      // ✅ Foreground upkeep : daily safety ONLY
       const sub = AppState.addEventListener("change", async (state) => {
         if (state !== "active") return;
-        try {
-          const refreshed = await registerForPushNotificationsAsync();
-          console.log("🔁 Foreground refresh token:", refreshed);
 
-          if (refreshed) {
-            await updateDoc(doc(db, "users", uid), {
-              expoPushToken: refreshed,
-              notificationsEnabled: true,
-              expoPushUpdatedAt: new Date(),
-              debugAuthProviderLastToken: refreshed,
-            });
-          }
+        try {
+          await rescheduleNextDailyIfNeeded();
+          await rescheduleLateIfNeeded();
+          // 🔻 optionnel : évite de refresh token à chaque "active"
+          // await registerForPushNotificationsAsync();
         } catch (e) {
-          console.warn("⚠️ Refresh expo token failed:", e);
+          console.warn("⚠️ Foreground notifications upkeep failed:", e);
         }
       });
 
       unsubAppState = () => sub.remove();
     } catch (e) {
-      console.warn("ensure push setup failed:", e);
+      console.warn("⚠️ ensure push setup failed:", e);
     }
-  })();
+  };
+
+  setupOnce();
 
   return () => {
     mounted = false;
     try {
       unsubAppState?.();
     } catch {}
+    if (pushSetupUidRef.current === uid) pushSetupUidRef.current = null;
   };
 }, [user?.uid]);
+
 
 useEffect(() => {
   if (!user) return;
   const inviterId = user.uid;
+
+  // reset when user changes
+  treatedAcceptedInvitesRef.current = new Set();
 
   // 👉 L’invitateur écoute SES invitations ACCEPTÉES
   const qInv = query(
@@ -517,19 +430,18 @@ useEffect(() => {
     where("status", "==", "accepted")
   );
 
-  const treated = new Set<string>();
-
   const unsubscribe = onSnapshot(qInv, async (snapshot) => {
     for (const change of snapshot.docChanges()) {
+      if (change.type !== "added") continue;
       const id = change.doc.id;
       const data = change.doc.data() as any;
 
-      if (treated.has(id)) continue;
+      if (treatedAcceptedInvitesRef.current.has(id)) continue;
 
       // sécurité : une invitation acceptée DOIT avoir un inviteeId
       if (!data.inviteeId) continue;
 
-      treated.add(id);
+      treatedAcceptedInvitesRef.current.add(id);
 
       try {
         // 1️⃣ On s’assure que le duo est bien créé côté invitateur
@@ -556,6 +468,8 @@ useEffect(() => {
   if (!user) return;
   const inviterId = user.uid;
 
+  treatedRefusedInvitesRef.current = new Set();
+
   // 👉 L’invitateur écoute SES invitations REFUSÉES
   const qInvRefused = query(
     collection(db, "invitations"),
@@ -563,15 +477,14 @@ useEffect(() => {
     where("status", "==", "refused")
   );
 
-  const treatedRefused = new Set<string>();
-
   const unsubscribe = onSnapshot(qInvRefused, async (snapshot) => {
     for (const change of snapshot.docChanges()) {
+       if (change.type !== "added") continue;
       const id = change.doc.id;
       const data = change.doc.data() as any;
 
-      if (treatedRefused.has(id)) continue;
-      treatedRefused.add(id);
+      if (treatedRefusedInvitesRef.current.has(id)) continue;
+       treatedRefusedInvitesRef.current.add(id);
 
       // ❌ On ne déclenche plus de notification locale ici.
       // Le push "refused" est déjà géré par sendInviteStatusPush côté invitee.
@@ -593,16 +506,6 @@ useEffect(() => {
      if (!snap.exists()) return;
      const data = snap.data() as any;
 
-// 🔒 PROTECTION DUO — NE JAMAIS TOUCHER
-const current = Array.isArray(data?.CurrentChallenges)
-  ? data.CurrentChallenges
-  : [];
-
-if (current.some(c => c?.duo === true)) {
-  // ⚠️ snapshot informatif seulement — aucune logique métier ici
-  return;
-}
-
      const currentCount = Number(data?.referral?.activatedCount ?? 0);
 
      // Premier snapshot → on initialise seulement
@@ -614,27 +517,18 @@ if (current.some(c => c?.duo === true)) {
 
      // NOUVEAU FILLEUL ACTIVÉ → on donne +10 trophées par filleul ajouté
      if (currentCount > prevCount) {
-       const bonus = (currentCount - prevCount) * 10;
+  const bonus = (currentCount - prevCount) * 10;
 
-       updateDoc(userRef, {
-         trophies: increment(bonus),
-       }).catch((e) => {
-         console.warn("[referral] Échec +10 trophées parrain (mais pas grave):", e);
-       });
+  updateDoc(userRef, {
+    trophies: increment(bonus),
+  }).catch((e) => {
+    console.warn("[referral] Échec +10 trophées parrain (mais pas grave):", e);
+  });
 
-       console.log(`[referral] +${bonus} trophées pour ${currentCount} filleuls activés !`);
-
-       // Envoi de la notif (comme avant)
-       sendInvitationNotification(uid, {
-         titleKey: "referral.notif.newChild.title",
-         bodyKey: "referral.notif.newChild.body",
-         params: {
-           bonus: REFERRAL_TROPHY_BONUS,
-           activatedCount: currentCount,
-         },
-         type: "referral_new_child",
-       }).catch(() => {});
-     }
+  console.log(
+    `[referral] +${bonus} trophées pour ${currentCount} filleuls activés ! (no local notif)`
+  );
+}
 
      prevCount = currentCount;
    });
@@ -656,7 +550,9 @@ const ensureDuoMirrorForInviter = async (opts: {
 
   if (!inviterId || !challengeId || !inviteeId) return;
   if (inviterId === inviteeId) return;
-  if (!Number.isInteger(selectedDays) || selectedDays <= 0) return;
+  const days = Number(selectedDays);
+if (!Number.isFinite(days) || !Number.isInteger(days) || days <= 0) return;
+
 
   // ✅ On récupère le username AVANT la transaction
   const partnerUsername = (await getDisplayUsername(inviteeId)) ?? null;
@@ -681,7 +577,7 @@ const ensureDuoMirrorForInviter = async (opts: {
       : [];
 
     const pair = [inviterId, inviteeId].sort().join("-");
-    const uniqueKey = `${challengeId}_${selectedDays}_${pair}`;
+    const uniqueKey = `${challengeId}_${days}_${pair}`;
 
     const idx = list.findIndex((c: any) => {
       const cid = c?.challengeId ?? c?.id;
@@ -693,7 +589,7 @@ const ensureDuoMirrorForInviter = async (opts: {
     const alreadyDuo =
       !!currentEntry?.duo &&
       (currentEntry?.duoPartnerId === inviteeId || !currentEntry?.duoPartnerId) &&
-      (currentEntry?.selectedDays === selectedDays || !currentEntry?.selectedDays);
+      (currentEntry?.selectedDays === days || !currentEntry?.selectedDays);
 
     if (alreadyDuo) {
       return;
@@ -706,7 +602,7 @@ const ensureDuoMirrorForInviter = async (opts: {
       description: cData.description || "",
       imageUrl: cData.imageUrl || "",
       chatId: cData.chatId || challengeId,
-      selectedDays,
+      selectedDays: days,
       completedDays: 0,
       completionDates: [],
       completionDateKeys: [],
@@ -758,7 +654,9 @@ const ensureDuoMirrorForInviter = async (opts: {
     if (uid) {
       // On évite d’envoyer des push à cet appareil après déconnexion
       try {
-        await updateDoc(doc(db, "users", uid), { expoPushToken: null });
+        await updateDoc(doc(db, "users", uid), { expoPushToken: null,
+          expoPushTokens: [],
+         });
       } catch (e) {
         console.warn("⚠️ Impossible de nettoyer expoPushToken avant logout:", e);
       }

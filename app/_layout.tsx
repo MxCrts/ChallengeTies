@@ -2,9 +2,8 @@
 import React, { useEffect } from "react";
 import { GestureHandlerRootView } from "react-native-gesture-handler";
 import { Stack, useRouter, usePathname } from "expo-router";
-import { StyleSheet, AppState, Platform } from "react-native";
+import { StyleSheet, Platform, AppState, View} from "react-native";
 import { Provider as PaperProvider } from "react-native-paper";
-
 import { ProfileUpdateProvider } from "../context/ProfileUpdateContext";
 import { TrophyProvider } from "../context/TrophyContext";
 import { SavedChallengesProvider } from "../context/SavedChallengesContext";
@@ -20,54 +19,46 @@ import {
   Comfortaa_400Regular,
   Comfortaa_700Bold,
 } from "@expo-google-fonts/comfortaa";
-
 import { I18nextProvider } from "react-i18next";
 import i18n from "../i18n";
-
 import { useAuth } from "../context/AuthProvider";
 import { AuthProvider } from "../context/AuthProvider";
-
 import * as SplashScreen from "expo-splash-screen";
 import { FeatureFlagsProvider, useFlags } from "../src/constants/featureFlags";
-
 import * as Linking from "expo-linking";
 import { AdsVisibilityProvider } from "../src/context/AdsVisibilityContext";
-
 import mobileAds, {
   MaxAdContentRating,
   RequestConfiguration,
   AdsConsent,
   AdsConsentStatus,
 } from "react-native-google-mobile-ads";
-
 import { VisitorProvider, useVisitor } from "@/context/VisitorContext";
 import { logEvent } from "../src/analytics";
 import AsyncStorage from "@react-native-async-storage/async-storage";
-
 import {
   checkAndGrantPioneerIfEligible,
   checkAndGrantAmbassadorRewards,
   checkAndGrantAmbassadorMilestones,
 } from "@/src/referral/pioneerChecker";
-
 import { bumpCounterAndMaybeReview } from "@/src/services/reviewService";
-
 import * as Notifications from "expo-notifications";
-
 import {
   startNotificationResponseListener,
   stopNotificationResponseListener,
   ensureAndroidChannelAsync,
-  scheduleDailyNotifications,
+  getPathFromNotificationData,
+  markNotifHandledOnColdStart,
+  rescheduleNextDailyIfNeeded,
 } from "@/services/notificationService";
 import { handleReferralUrl } from "@/services/referralLinking";
-
 import {
   getTrackingPermissionsAsync,
   requestTrackingPermissionsAsync,
 } from "expo-tracking-transparency";
-// Toast
 import { ToastProvider, useToast } from "../src/ui/Toast";
+import MarkToastListener from "@/src/ui/MarkToastListener";
+
 
 const FORCE_ADS_DEBUG = true;
 
@@ -78,6 +69,103 @@ const getShareSheetTs = () => {
   if (typeof v?.ts === "number") return v.ts;
   return null;
 };
+
+const getAfterShareIntent = () => {
+  const v = (globalThis as any).__AFTER_SHARE_INTENT__;
+  if (!v) return null;
+  const ts = typeof v?.ts === "number" ? v.ts : null;
+  const path = typeof v?.path === "string" ? v.path : null;
+  if (!ts || !path) return null;
+  return { ts, path };
+};
+
+const consumeAfterShareIntentIfFresh = (maxMs = 25000) => {
+  const it = getAfterShareIntent();
+  if (!it) return null;
+  const age = Date.now() - it.ts;
+  if (age < 0) return null;
+
+  if (age <= maxMs) {
+    // ✅ on consomme immédiatement (anti double-trigger)
+    delete (globalThis as any).__AFTER_SHARE_INTENT__;
+    return it.path as string;
+  }
+
+  delete (globalThis as any).__AFTER_SHARE_INTENT__;
+  return null;
+};
+
+const FIRST_LAUNCH_KEY = "ties.firstLaunch.v1"; // "0" quand onboarding terminé
+const GUEST_KEY = "ties.guest.enabled.v1"; // "1" uniquement si clic "visiteur"
+const EXPLICIT_LOGOUT_KEY = "ties.explicitLogout.v1";
+const HOME_PENDING_INVITE_KEY = "ties_home_pending_invite_v1";
+const FIRSTPICK_DONE_HARD_KEY = "ties_firstpick_done_hard_v1";
+const FIRSTPICK_DONE_HARD_TTL_MS = 5 * 60 * 1000;
+
+
+async function getHomePendingInviteId() {
+  try {
+    const v = await AsyncStorage.getItem(HOME_PENDING_INVITE_KEY);
+    return v ? String(v) : null;
+  } catch {
+    return null;
+  }
+}
+
+async function isFirstPickHardDoneFresh() {
+  try {
+    const raw = await AsyncStorage.getItem(FIRSTPICK_DONE_HARD_KEY);
+    if (!raw) return false;
+    const ts = Number(raw);
+    if (!Number.isFinite(ts)) {
+      await AsyncStorage.removeItem(FIRSTPICK_DONE_HARD_KEY).catch(() => {});
+      return false;
+    }
+    if (Date.now() - ts > FIRSTPICK_DONE_HARD_TTL_MS) {
+      await AsyncStorage.removeItem(FIRSTPICK_DONE_HARD_KEY).catch(() => {});
+      return false;
+    }
+    return true;
+  } catch {
+    return false;
+  }
+}
+
+
+async function getExplicitLogoutFlag() {
+  try {
+    const v = await AsyncStorage.getItem(EXPLICIT_LOGOUT_KEY);
+    return v === "1";
+  } catch {
+    return false;
+  }
+}
+
+async function clearExplicitLogoutFlag() {
+  try {
+    await AsyncStorage.removeItem(EXPLICIT_LOGOUT_KEY);
+  } catch {}
+}
+
+async function isFirstLaunch() {
+  try {
+    const v = await AsyncStorage.getItem(FIRST_LAUNCH_KEY);
+    return v !== "0"; // par défaut = true si absent
+  } catch {
+    return true;
+  }
+}
+
+async function getGuestFlag() {
+  try {
+    const v = await AsyncStorage.getItem(GUEST_KEY);
+    return v === "1";
+  } catch {
+    return false;
+  }
+}
+
+
 
 const consumeShareSheetFlagIfExpired = (maxMs = 20000) => {
   const ts = getShareSheetTs();
@@ -100,6 +188,61 @@ const AppNavigator: React.FC = () => {
   const router = useRouter();
   const pathname = usePathname();
   const { isGuest, hydrated } = useVisitor();
+
+  const [explicitLogout, setExplicitLogout] = React.useState<boolean | null>(
+    null
+  );
+
+  const [firstLaunch, setFirstLaunch] = React.useState<boolean | null>(null);
+const [guestEnabled, setGuestEnabled] = React.useState<boolean | null>(null);
+const [homePendingInviteId, setHomePendingInviteId] = React.useState<string | null>(null);
+
+useEffect(() => {
+  let mounted = true;
+  isFirstLaunch()
+    .then((v) => mounted && setFirstLaunch(v))
+    .catch(() => mounted && setFirstLaunch(true));
+  getGuestFlag()
+    .then((v) => mounted && setGuestEnabled(v))
+    .catch(() => mounted && setGuestEnabled(false));
+    getHomePendingInviteId()
+    .then((v) => mounted && setHomePendingInviteId(v))
+    .catch(() => mounted && setHomePendingInviteId(null));
+  return () => {
+    mounted = false;
+  };
+}, []);
+
+useEffect(() => {
+  let alive = true;
+
+  const refresh = async () => {
+    const v = await getHomePendingInviteId();
+    if (alive) setHomePendingInviteId(v);
+  };
+
+  refresh().catch(() => {});
+
+  const sub = AppState.addEventListener("change", (st) => {
+    if (st === "active") refresh().catch(() => {});
+  });
+
+  return () => {
+    alive = false;
+    sub.remove();
+  };
+}, []);
+
+
+  useEffect(() => {
+    let mounted = true;
+    getExplicitLogoutFlag()
+      .then((v) => mounted && setExplicitLogout(v))
+      .catch(() => mounted && setExplicitLogout(false));
+    return () => {
+      mounted = false;
+    };
+  }, []);
 
     // ✅ garde la dernière route "stable" (≠ "/") pour revenir après ShareSheet
   const lastStablePathRef = React.useRef<string>("/(tabs)");
@@ -135,34 +278,58 @@ const AppNavigator: React.FC = () => {
   if (
     loading ||
     checkingAuth ||
+    explicitLogout === null ||
+    firstLaunch === null ||
+  guestEnabled === null ||
     (!fontsLoaded && !hardReady) ||
     (!hydrated && !hardReady)
   ) {
     return;
   }
 
-  // ✅ Guard : retour de Share Sheet Android (cancel/dismiss)
-// Si Expo repasse par "/" on REPLACE vers la dernière route stable (sinon écran blanc).
-const shareActive = consumeShareSheetFlagIfExpired(20000);
-if (shareActive && pathname === "/") {
+    // ✅ Post-Share intent : force une nav propre APRÈS fermeture ShareSheet
+  const afterSharePath = consumeAfterShareIntentIfFresh(25000);
+  if (afterSharePath) {
+    // Important : on ne dépend pas de pathname === "/"
+    requestAnimationFrame(() => {
+      router.replace(afterSharePath);
+    });
+    SplashScreen.hideAsync().catch(() => {});
+    return;
+  }
+
+  // ✅ Guard global: retour de ShareSheet Android
+   // Tant que shareActive → on BLOQUE tout redirect root (sinon jump + hooks warning)
+   const shareActive = consumeShareSheetFlagIfExpired(20000);
+if (shareActive) {
+  // priorité au "after share intent" s'il existe encore
+  const pendingAfter = getAfterShareIntent();
   const back =
+    pendingAfter?.path ||
     (globalThis as any).__LAST_STABLE_PATH__ ||
     lastStablePathRef.current ||
     "/(tabs)";
 
-  router.replace(back);
+  if (pathname === "/") {
+    requestAnimationFrame(() => {
+      router.replace(back);
+    });
+  }
+
   SplashScreen.hideAsync().catch(() => {});
   return;
 }
 
 
-// ✅ Si un deep link challenge a été détecté, on laisse DeepLinkManager gérer.
-    if ((globalThis as any).__DL_BLOCK_ROOT_REDIRECT__ === true) {
-      SplashScreen.hideAsync().catch(() => {});
-      return;
-    }
-
-    
+// ✅ Si un deep link challenge OU une navigation notif a été détecté(e),
+// on laisse le manager/handler gérer sans que le root redirect écrase.
+if (
+  (globalThis as any).__DL_BLOCK_ROOT_REDIRECT__ === true ||
+  (globalThis as any).__NOTIF_BLOCK_ROOT_REDIRECT__ === true
+) {
+  SplashScreen.hideAsync().catch(() => {});
+  return;
+}
 
     // Si on n'est pas sur "/" on ne force pas une redirection,
     // mais on cache le splash quand même.
@@ -171,29 +338,53 @@ if (shareActive && pathname === "/") {
       return;
     }
 
-    // ✅ Si on est déjà dans l’arbo tabs, inutile de replace (évite des jumps)
-if (pathname.startsWith("/(tabs)")) {
+    // ✅ user connecté → nettoie le flag logout et go tabs
+if (user) {
+  clearExplicitLogoutFlag().catch(() => {});
+  router.replace("/(tabs)");
   SplashScreen.hideAsync().catch(() => {});
   return;
 }
 
-    if (user || isGuest) {
-      router.replace("/(tabs)");
-    } else {
-      router.replace("/login");
-    }
+// ✅ Fresh install → onboarding (prioritaire sur tout)
+if (firstLaunch) {
+  router.replace("/login");
+  SplashScreen.hideAsync().catch(() => {});
+  return;
+}
 
-    SplashScreen.hideAsync().catch(() => {});
+// ✅ Logout explicite → login
+if (explicitLogout) {
+  router.replace("/login");
+  SplashScreen.hideAsync().catch(() => {});
+  return;
+}
+
+// ✅ Guest UNIQUEMENT si flag storage (clic explicite)
+if (guestEnabled) {
+  router.replace("/(tabs)");
+  SplashScreen.hideAsync().catch(() => {});
+  return;
+}
+
+
+// ✅ Sinon → login (par défaut)
+router.replace("/login");
+SplashScreen.hideAsync().catch(() => {});
+
   }, [
     user,
     loading,
     checkingAuth,
     pathname,
     router,
-    isGuest,
     fontsLoaded,
     hydrated,
     hardReady,
+    explicitLogout,
+    firstLaunch,
+  guestEnabled,
+  homePendingInviteId,
   ]);
 
   // Parrainage (Pioneer / Ambassador) uniquement user connecté
@@ -208,7 +399,13 @@ if (pathname.startsWith("/(tabs)")) {
   }, [user, loading, checkingAuth, fontsLoaded, hydrated, hardReady]);
 
   // On ne rend rien : seulement redirection + splash
-  if (loading || checkingAuth || !fontsLoaded || (!hydrated && !hardReady))
+  if (
+    loading ||
+    checkingAuth ||
+    explicitLogout === null ||
+    (!fontsLoaded && !hardReady) ||
+    (!hydrated && !hardReady)
+  )
     return null;
   return null;
 };
@@ -218,7 +415,6 @@ if (pathname.startsWith("/(tabs)")) {
 // =========================
 const FlagsGate: React.FC<{ children: React.ReactNode }> = ({ children }) => {
   const { isReady } = useFlags();
-  if (!isReady) return null; // Splash toujours visible
   return <>{children}</>;
 };
 
@@ -549,9 +745,45 @@ const DeepLinkManager: React.FC = () => {
 // NotificationsBootstrap : notifs locales + push + navigation
 // =========================
 const NotificationsBootstrap: React.FC = () => {
-  const { user } = useAuth();
   const router = useRouter();
   const { show } = useToast();
+
+  // ✅ anti double navigation / double toast (cold start + listener peuvent fire)
+  const lastNavRef = React.useRef<{ path: string; ts: number } | null>(null);
+  const lastToastRef = React.useRef<{ text: string; ts: number } | null>(null);
+
+  const safeNavigate = React.useCallback(
+    (path: string) => {
+      if (!path) return;
+      const now = Date.now();
+      const last = lastNavRef.current;
+
+      // ignore même path dans une fenêtre courte
+      if (last && last.path === path && now - last.ts < 1200) return;
+
+      lastNavRef.current = { path, ts: now };
+      (globalThis as any).__NOTIF_BLOCK_ROOT_REDIRECT__ = true;
+
+      router.push(path);
+    },
+    [router]
+  );
+
+  const safeToast = React.useCallback(
+    (text: string, kind: "success" | "info" | "error" = "info") => {
+      const t = String(text || "").trim();
+      if (!t) return;
+
+      const now = Date.now();
+      const last = lastToastRef.current;
+
+      if (last && last.text === t && now - last.ts < 1200) return;
+
+      lastToastRef.current = { text: t, ts: now };
+      show(t, kind);
+    },
+    [show]
+  );
 
   // Channel Android au boot
   useEffect(() => {
@@ -560,46 +792,27 @@ const NotificationsBootstrap: React.FC = () => {
     }
   }, []);
 
-  // Daily notifications (idempotent, seulement si user connecté)
-  useEffect(() => {
-    if (!user) return;
-    (async () => {
-      try {
-        if (Platform.OS === "android") await ensureAndroidChannelAsync();
-        await scheduleDailyNotifications();
-      } catch {}
-    })();
-  }, [user]);
-
-  // Quand l’app redevient active → on s’assure que les daily notifs sont bien en place (toujours idempotent)
-  useEffect(() => {
-    const sub = AppState.addEventListener("change", (state) => {
-      if (state === "active" && user) {
-        scheduleDailyNotifications().catch(() => {});
-      }
-    });
-    return () => sub.remove();
-  }, [user]);
-
   // Listener global (app déjà ouverte / en background)
   useEffect(() => {
     startNotificationResponseListener(
-      (path) => router.push(path),
-      (text) => show(text, "success")
+      (path) => safeNavigate(path),
+      (text) => safeToast(text, "success")
     );
 
-    // Cold start : l’app est ouverte via un tap sur une notif alors que le listener
-    // n’était pas encore attaché → on consomme "la dernière réponse"
+    // Cold start fallback : l’app ouverte via tap alors que le listener n’était pas encore attaché
     (async () => {
       try {
         const last = await Notifications.getLastNotificationResponseAsync();
         const data: any = last?.notification?.request?.content?.data || null;
         if (!data) return;
+        // ✅ Important: empêche le listener de re-router immédiatement derrière (double trigger)
+         markNotifHandledOnColdStart();
 
-        // Navigation cohérente avec notificationService
-        handleNotificationNavigation(router, data);
+        // ✅ navigation cohérente avec notificationService
+        const path = getPathFromNotificationData(data);
+        safeNavigate(path);
 
-        // Petit toast contextuel (optionnel mais sympa)
+        // Toast contextuel (anti double intégré)
         const tSafe = (key: string, options?: Record<string, any>) => {
           const res = i18n.t(key, {
             ...(options || {}),
@@ -611,13 +824,20 @@ const NotificationsBootstrap: React.FC = () => {
         const type = String(data?.type || data?.__tag || "").toLowerCase();
 
         if (type === "duo-nudge") {
-          show(tSafe("notificationsPush.duoNudgeOpened"), "success");
+          safeToast(tSafe("notificationsPush.duoNudgeOpened"), "success");
         } else if (
           type === "invite-status" ||
           type === "daily-reminder" ||
+          type === "referral_milestone_unlocked" ||
+          type === "referral_new_child" ||
           type.startsWith("referral")
         ) {
-          show(tSafe("notificationsPush.opened"), "info");
+          safeToast(tSafe("notificationsPush.opened"), "info");
+        }
+
+        // ✅ si ouverte via daily → replanifie la prochaine (safe 1x/jour)
+        if (type === "daily-reminder") {
+          rescheduleNextDailyIfNeeded().catch(() => {});
         }
       } catch {}
     })().catch(() => {});
@@ -625,7 +845,18 @@ const NotificationsBootstrap: React.FC = () => {
     return () => {
       stopNotificationResponseListener();
     };
-  }, [router, show]);
+  }, [safeNavigate, safeToast]);
+
+  // ✅ Quand une notif est reçue (même sans tap), on peut replanifier la prochaine daily
+  useEffect(() => {
+    const sub = Notifications.addNotificationReceivedListener((notif) => {
+      const data: any = notif?.request?.content?.data || {};
+      if (data?.type === "daily-reminder") {
+        rescheduleNextDailyIfNeeded().catch(() => {});
+      }
+    });
+    return () => sub.remove();
+  }, []);
 
   return null;
 };
@@ -673,6 +904,8 @@ export default function RootLayout() {
   return (
     <GestureHandlerRootView style={{ flex: 1 }}>
       <ToastProvider>
+        <View style={{ flex: 1 }}>
+        <MarkToastListener />
         <FeatureFlagsProvider>
           <FlagsGate>
             <AuthProvider>
@@ -729,6 +962,7 @@ export default function RootLayout() {
             </AuthProvider>
           </FlagsGate>
         </FeatureFlagsProvider>
+        </View>
       </ToastProvider>
     </GestureHandlerRootView>
   );
@@ -749,52 +983,3 @@ const styles = StyleSheet.create({
   },
 });
 
-// Helper générique : navigation alignée sur notificationService
-function handleNotificationNavigation(
-  router: ReturnType<typeof useRouter>,
-  data: any
-) {
-  const type = String(data?.type || data?.__tag || "").toLowerCase();
-  const challengeId: string | undefined = data?.challengeId;
-
-  // ✅ Daily reminders → home / index
-  if (type === "daily-reminder") {
-    router.push("/");
-    return;
-  }
-
-  // ✅ Statut d’invitation (acceptée / refusée)
-  if (type === "invite-status") {
-    if (challengeId) {
-      router.push(`/challenge-details/${String(challengeId)}`);
-    } else {
-      router.push("/(tabs)");
-    }
-    return;
-  }
-
-  // ✅ Nudge duo : va idéalement sur le défi, sinon sur la liste des challenges
-  if (type === "duo-nudge") {
-    if (challengeId) {
-      router.push(`/challenge-details/${String(challengeId)}`);
-    } else {
-      router.push("/current-challenges");
-    }
-    return;
-  }
-
-  // ✅ Referral — milestones & nouveaux filleuls
-  if (type === "referral_milestone_unlocked" || type === "referral_new_child") {
-    router.push("/referral/ShareAndEarn");
-    return;
-  }
-
-  // ✅ Fallback avec challengeId → page du défi
-  if (challengeId) {
-    router.push(`/challenge-details/${String(challengeId)}`);
-    return;
-  }
-
-  // ✅ Fallback global → onglets
-  router.push("/(tabs)");
-}

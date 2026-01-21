@@ -27,7 +27,10 @@
   "verificationEmailSent": "Verificatie-e-mail verzonden.",
   "notSet": "Niet ingesteld",
   "tipsTricks": "Tips & advies",
-  "home": "Home",
+  "homeX": "Home",
+  "home": {
+    "yourChallenge": "Jouw uitdaging"
+  },
   "profile": "Profiel",
   "yourProfile": "Jouw profiel",
   "addBioHere": "Voeg hier een bio toe",
@@ -288,15 +291,8 @@
     }
   },
   "newFeatures": {
-    "loginRequiredTitle": "Inloggen vereist",
-    "sharE": {
-      "kicker": "Kom stemmen!",
-      "footerWithDays": "Stemmen sluit over {{days}} dagen — jouw stem telt ✨",
-      "footer": "Stemmen sluit binnenkort — jouw stem telt ✨"
-    },
-    "shareDialogTitle": "Deze update delen",
-    "votes_one": "1 stem",
-    "deadlineIso": "2025-11-30T23:59:59+01:00",
+    "deadlineIso": "2026-02-28T23:59:59+01:00",
+    "shareLabel": "Delen",
 
     "monthLabelTpl": "Update • {{month}}",
     "months": {
@@ -314,58 +310,28 @@
       "12": "December"
     },
 
+    "title": "Wat is er nieuw",
+    "description": "Stem op de volgende functie of stel de jouwe voor. Resultaten eind februari.",
+
+    "heroTitle": "Stem op de nieuwtjes die eind februari komen 🚀",
+    "heroSubtitle": "Jouw stem telt: stel voor, stem en volg de ontwikkeling van features.",
+
     "voteCloses": "Stemmen sluit over",
     "thankYouShort": "Bedankt voor je stem 💜",
 
-    "votes_other": "{{count}} stemmen",
-    "loginRequiredMessage": "Log in om te kunnen stemmen.",
-    "alreadyVotedTitle": "Al gestemd",
-    "alreadyVotedMessage": "Je hebt al gestemd.",
-    "voteRegisteredTitle": "Stem geregistreerd",
-    "voteRegisteredMessage": "Bedankt voor je stem!",
-    "voteErrorTitle": "Fout",
-    "voteErrorMessage": "Er is een probleem opgetreden.",
-    "proposalSentTitle": "Voorstel verzonden",
-    "proposalSentMessage": "Je idee is samen met je stem verzonden!",
-    "proposalErrorTitle": "Fout",
-    "proposalErrorMessage": "Verzenden mislukt.",
-    "title": "Wat is nieuw",
-    "by": "door",
-    "votes": "stemmen",
-    "openExplanation": "De uitleg van de stemming bekijken",
-    "description": "Stem op de volgende functionaliteit of stel je eigen idee voor! Eindigt op 30 november 2025.",
-    "noFeatures": "Momenteel geen functies beschikbaar.",
-    "monthLabel": "Update • december",
-    "heroTitleSep": "Stem op de nieuwigheden die eind december komen 🚀",
-    "heroTitleNov": "Stem op de nieuwigheden die eind november komen 🚀",
-    "heroSubtitleNov": "Jouw stem telt: stel voor, stem en volg de evolutie van de functies.",
-    "proposeIdea": "Een idee voorstellen",
-    "thankYouForVote": "Bedankt voor je stem: {{featureTitle}}",
     "countdown": {
       "days": "Dagen",
       "hours": "Uren",
       "mins": "Minuten",
       "secs": "Seconden",
-      "abbr": {
-        "d": "d",
-        "h": "u",
-        "m": "min",
-        "s": "s"
-      }
+      "abbr": { "d": "d", "h": "u", "m": "min", "s": "s" }
     },
-    "featuresListLabel": "Lijst van voorgestelde functies",
-    "loading": "Bezig met laden…",
-    "heroSubtitleSep": "Jouw stem telt: stel voor, stem en volg de evolutie van de functies.",
-    "featureDetails": "Details: {{title}}",
-    "featureDetailsHint": "Opent de detailfiche van de functie",
-    "openExplanationHint": "Toont hoe het stemsysteem werkt",
-    "proposeIdeaHint": "Opent het formulier om een idee voor te stellen",
-    "shareMessage": "Ontdek en stem op deze functie:",
-    "shareFeature": "Functie delen",
-    "share": "Delen",
-    "vote": "Stemmen",
-    "alreadyVotedShort": "Al gestemd",
-    "unknown": "Onbekend"
+
+    "share": {
+      "kicker": "Kom stemmen!",
+      "footerWithDays": "Stemmen sluit over {{days}} dagen — jouw stem telt ✨",
+      "footer": "Stemmen sluit binnenkort — jouw stem telt ✨"
+    }
   },
   "permissionDenied": "Toestemming geweigerd",
   "mustAllowNotifications": "Je moet meldingen toestaan om waarschuwingen te ontvangen.",
@@ -480,7 +446,7 @@
   "alreadyMarkedToday": "Uitdaging vandaag al gemarkeerd",
   "alreadyMarked": "Al gemarkeerd",
   "loading": "Bezig met laden…",
-  "challenge": "Uitdaging",
+  "challengeS": "Uitdaging",
   "deleteChallenge": "Uitdaging verwijderen",
   "viewChallengeDetails": "Details van de uitdaging bekijken",
   "challengeImage": "Afbeelding van de uitdaging",
@@ -539,7 +505,32 @@
  "challengeDetails": {
     "noDescription": "Geen beschrijving beschikbaar",
     "participantsLabel": "Deelnemers",
+    "quick": {
+    "chat": "Chat",
+    "stats": "Stats",
+    "save": "Favorieten",
+    "chatA11y": "Chat openen",
+    "chatHint": "Opent de chat van de uitdaging.",
+    "statsA11y": "Statistieken bekijken",
+    "statsHint": "Opent je voortgang en statistieken.",
+    "saveA11y": "Uitdaging opslaan",
+    "saveHint": "Voegt deze uitdaging toe aan of verwijdert deze uit je favorieten."
+  },
     "fetchError": "Kan de uitdaging niet ophalen.",
+    "inviteCta": {
+    "title": "Vriend uitnodigen",
+    "sub": "Doe het samen. Moeilijker… en krachtiger.",
+    "pill": "Duo-modus",
+    "a11y": "Een vriend uitnodigen voor de uitdaging",
+    "hint": "Opent de uitnodiging voor deze uitdaging."
+  },
+  "shareCta": {
+    "title": "Delen",
+    "sub": "Stuur deze uitdaging naar iemand. Eén moment kan alles veranderen.",
+    "pill": "Deellink",
+    "a11y": "Deze uitdaging delen",
+    "hint": "Opent deelopties."
+  },
     "untitled": "Uitdaging",
     "joinError": "Kan niet deelnemen. Probeer het opnieuw.",
     "completeError": "Kan de uitdaging niet voltooien.",
@@ -605,6 +596,13 @@
     "actions": {
       "best": "Top",
       "inviteA11y": "Vriend uitnodigen voor duo",
+      "sectionTitle": "Acties",
+      "shareA11y": "Deze uitdaging delen",
+  "inviteTitle": "Uitnodigen",
+  "shareTitle": "Delen",
+  "chatTitle": "Chat",
+  "saveTitle": "Favoriet",
+  "statsTitle": "Statistieken",
       "inviteHint": "Stuur een uitnodiging om dit een live duo-duel te maken.",
       "inviteHintDuo": "Je bent al duo op deze uitdaging.",
       "inviteHintOffline": "Verbinding vereist om een vriend uit te nodigen.",
@@ -619,6 +617,10 @@
       "statsSub": "Reeksen + maand"
     }
   },
+  "takeChallengeA11y": "Challenge starten",
+    "takeChallengeHint": "Opent de duurkeuze en bevestig daarna om te starten.",
+    "completeChallengeA11y": "Challenge afronden",
+    "completeChallengeHint": "Opent het voltooiingsscherm om je trofeeën te claimen.",
 
   "editYourReview": "Je review bewerken",
   "deleteReview": "Review verwijderen",
@@ -627,12 +629,26 @@
   "writeSomething": "Schrijf een korte feedback voordat je verzendt 😉",
   "maxChars": "Max. 500 tekens",
   "cannotSaveReview": "De review kan momenteel niet worden opgeslagen.",
+  "toClaim": "Te claimen",
 
   "duo": {
-    "title": "Duo-uitdaging",
+    "leader": "LEIDER",
+    "pending": {
+      "title": "Uitnodiging in afwachting",
+      "short": "Uitnodiging in afwachting",
+      "body": "Je krijgt een melding zodra er wordt gereageerd. Je kunt ook annuleren en iemand anders uitnodigen.",
+      "cancelInvite": "Annuleren",
+      "cancelError": "Annuleren is momenteel niet mogelijk."
+    },
     "you": "Jij",
-    "modeShort": "Duo",
     "partner": "Partner",
+    "status": {
+      "leading": "Je staat {{percent}}% voor",
+      "behind": "Je staat {{percent}}% achter",
+      "tied": "Perfect gelijk"
+    },
+    "title": "Duo-uitdaging",
+    "modeShort": "Duo",
 
     "leading": "Je ligt voor!",
     "tied": "Gelijkstand",
@@ -918,8 +934,12 @@
 
     "reset": {
       "title": "Mijn reeks resetten",
-      "subtitle": "Begin opnieuw met deze uitdaging en bouw je discipline weer op."
+      "subtitle": "Begin opnieuw vanaf dag 1. Deze actie kan niet ongedaan worden gemaakt."
     },
+    "pill": {
+   "streakPass": "Streak Pass beschikbaar",
+   "trophies": "Kosten: {{count}} trofeeën"
+ },
 
     "streakPass": {
       "title": "Een Streak Pass gebruiken",
@@ -928,7 +948,9 @@
 
     "ad": {
       "title": "Een advertentie kijken om je reeks te redden",
-      "subtitle": "Bekijk een korte video om je reeks voort te zetten zonder alles te verliezen."
+      "subtitle": "Bekijk een korte video om je reeks te behouden zonder alles te verliezen.",
+   "disabled": "De video is nog niet beschikbaar. Wacht even."
+
     },
 
     "useTrophies": {
@@ -1025,6 +1047,12 @@
   "networkError": "Netwerkprobleem. Probeer het opnieuw.",
 
   "completion": {
+    "rewardLabel": "Beloning",
+  "doubleRewardLabel": "Dubbel",
+  "footer": "Je hebt je woord gehouden. Zo verandert je identiteit.",
+  "modalTitle": "Challenge voltooid",
+  "dismiss": "Sluiten",
+  "adLoading": "Advertentie wordt geladen",
     "trophies": "trofeeën",
     "finalTitle": "Gefeliciteerd!",
     "adNotReadyTitle": "Advertentie niet beschikbaar",
@@ -1104,7 +1132,19 @@
     "optionLabel": "{{count}} dag",
     "optionLabel_plural": "{{count}} dagen",
     "optionHint": "Deze duur selecteren",
-    "closeBackdrop": "Venster sluiten"
+    "closeBackdrop": "Venster sluiten",
+    "micro": {
+    "3": "Start",
+    "7": "Klassiek",
+    "15": "Gewoonte",
+    "21": "Discipline",
+    "30": "Serieus",
+    "60": "Toewijding",
+    "90": "Elite",
+    "180": "Transformatie",
+    "365": "Legende"
+  }
+
   },
 
   "pleaseWait": "Even geduld…",
@@ -1129,6 +1169,9 @@
   "profileS": {
     "bioLabel": "Bio",
     "locationLabel": "Locatie",
+    "heroSub": "Alles wat je sterker maakt, op één plek.",
+    "sectionsListA11y": "Profielinhoud en sectielijst",
+    "noData": "Geen profielgegevens beschikbaar.",
     "interestsLabel": "Interesses"
   },
 
@@ -1294,7 +1337,7 @@
   "origin": {
     "all": "Alle",
     "existing": "Officiële",
-    "created": "Door de community gemaakt"
+    "created": "Gemaakt"
   },
 
   "participants_one": "deelnemer",
@@ -1486,11 +1529,20 @@
     "footerMessage": "We antwoorden zo snel mogelijk. Bedankt voor je vertrouwen in ChallengeTies! 🚀"
   },
   "pioneerModal": {
-    "title": "Je bent een pionier 🚀",
-    "description": "Je behoort tot de eerste <b>{{first}}</b> gebruikers van ChallengeTies. Om je te bedanken, geven we je <b>{{trophies}}</b> bonustrofeeën 🎁",
-    "cta": "Top, bedankt!",
-    "closeA11y": "Pioniersvenster sluiten"
-  },
+  "pill": "Eerste 1.000",
+  "trophiesShort": "trofeeën",
+  "title": "Jij bent een Pioneer.",
+  "description": "Je behoort tot de eerste <b>{{first}}</b> gebruikers. Als dank geven we je <b>{{trophies}}</b> trofeeën en een exclusieve badge.",
+  "b1": "Pioneer-badge zichtbaar op je profiel.",
+  "b2": "Directe bonus om sneller vooruit te gaan.",
+  "b3": "Je hoort bij de allereerste lichting.",
+  "cta": "Let’s go 🚀",
+  "closeA11y": "Pioneer-venster sluiten",
+  "closeHintA11y": "Sluit dit venster en ga terug naar je profiel.",
+  "ctaA11y": "Doorgaan",
+  "ctaHintA11y": "Sluit dit venster en ga verder.",
+  "foot": "Bedankt dat je dit avontuur met ons bouwt."
+},
   "history": {
     "title": "Ons verhaal",
     "logoAlt": "Logo van ChallengeTies",
@@ -1576,6 +1628,7 @@
 
   "welcomeBonus": {
     "title": "Inlogbonus",
+     "todayShort": "Vandaag",
     "subtitle": "Dag {{day}} van {{total}} • Blijf in je flow!",
 
     "ribbon": "ChallengeTies welkomstpakket",
@@ -1607,7 +1660,11 @@
   "dailyBonus": {
     "title": "Dagbonus",
     "subtitle": "Start het mysterie-rad om je beloning te onthullen 🎁",
+    "rerollUnavailable": "Advertentie wordt geladen…",
     "error": "De dagbonus kan momenteel niet worden opgehaald.",
+    "ctaShort": "Draaien",
+    "spinLockedHint": "Bekijk een advertentie om nog een keer te draaien.",
+    "spinHint": "Draai aan het rad om je beloning te krijgen.",
     "tag": "Dagexclusive",
     "shortCta": "1 klik, 1 verrassing",
     "hint": "Open een mysterie-rad om een beloning te winnen.",
@@ -1813,6 +1870,9 @@
   "shareCardT": {
     "a11yTitle": "Deelkaart van de uitdaging",
     "a11yHint": "Bekijk de kaart vooraf voordat je die met je vrienden deelt.",
+    "heldSolo": "Ik hield vol",
+    "heldDuo": "We hielden vol",
+    "watermark": "@ChallengeTies",
 
     "tagline": "Got a challenge? Get it done.",
 
@@ -2186,6 +2246,10 @@
   "rateUs": "Beoordeel de app",
 
   "notificationsPush": {
+     "daily1": "Eén challenge vandaag kan je dag veranderen. Klaar?",
+     "duoNudgeOpened": "Duo: open de challenge ✅",
+    "daily2": "Breek je streak niet. Doe het nu 💪",
+    "daily3": "Vriendelijke reminder: je challenges wachten vandaag ✨",
     "inviteAccepted": {
       "title": "Uitnodiging geaccepteerd 🎉",
       "body": "{{username}} heeft je challenge « {{title}} » geaccepteerd!"
@@ -2239,22 +2303,40 @@
     "notForYouTitle": "Oeps",
     "notForYouMessage": "Deze uitnodiging is niet bedoeld voor dit account."
   },
+  "dailySelectedSubtitleShort": "Selectie van de dag.",
 "homeZ": {
+  "duoPending": {
+    "title": "Uitnodiging verzonden", "sub": "In afwachting. Na acceptatie: Duo.", "cta": "Bekijken", "a11y": "Duo-uitnodiging in afwachting",
+    "steps": {
+      "sent": "Uitnodiging verzonden",
+      "waiting": "Wachten op acceptatie",
+      "ready": "Zodra bevestigd: Duo start"
+    }
+  },
     "hero": {
       "brand": "ChallengeTies",
       "headline": "De trigger van vandaag.",
       "sub": "Eén uitdaging. Eén tik. Wil je volhouden: Duo.",
       "duoProof": "Duo helpt je vol te houden.",
       "ctaShort": "Starten",
-      "ctaA11y": "Starten en een uitdaging kiezen"
+      "ctaA11y": "Starten en een uitdaging kiezen",
+      "ctaHint": "Ontdek beschikbare uitdagingen."
     },
     "todayHub": {
       "badge": "VANDAAG",
       "primaryActiveShort": "Markeer",
+      "primaryNewShort": "Nieuw",
+  "primaryNewA11y": "Een nieuwe uitdaging kiezen",
+  "primaryNewHint": "Open Verkennen om een nieuwe uitdaging te kiezen.",
+  "titleAllDone": "Perfect. Vandaag is alles afgevinkt.",
+  "subAllDone": "Start een nieuwe uitdaging of help iemand vol te houden.",
+      "primaryNoneShort": "Kiezen",
+      "progressA11y": "Voortgang: {{done}} van {{total}} dagen voltooid.",
+      "inviteSubA11y": "Nodig iemand uit om je kans op succes te vergroten.",
       "primaryDuoShort": "Duo",
       "titleActive2": "Markeer vandaag. Bescherm je streak.",
       "titleNone2": "Kies een uitdaging. Begin vandaag.",
-      "subActive2": "1 tik om te markeren. Daarna: nodig iemand uit en verdubbel je kans om vol te houden.",
+      "subActive2": "1 tik om te bevestigen.",
       "subNone2": "Het moeilijkste is de eerste stap. Solo, Duo… of maak er één.",
       "primaryActiveHint2": "Markeer vandaag met één tik.",
       "progress": "{{done}}/{{total}} dagen",
@@ -2280,7 +2362,9 @@
       "cta": "Duo",
       "ctaA11y": "Nodig een vriend uit voor Duo",
       "solo": "Blijf solo",
-      "soloA11y": "Blijf solo"
+      "soloA11y": "Blijf solo",
+      "ctaHint": "Nodig een vriend uit om samen dezelfde uitdaging aan te gaan.",
+      "soloHint": "Deze uitdaging zonder partner voortzetten."
     },
     "discover": {
       "title": "Ontdekken",
@@ -2296,12 +2380,21 @@
       "newFeatures": "Nieuw",
       "newFeaturesSub": "Ontdek. Stem. Beïnvloed de app.",
       "newFeaturesA11y": "Nieuw",
-      "newFeaturesHint": "Ontdek nieuwe functies en stem op wat volgt."
-    }
+      "newFeaturesHint": "Ontdek nieuwe functies en stem op wat volgt.",
+      "sectionA11y": "Ontdek uitdagingen, tips en nieuwe functies."
+    },
+    "dailyPicks": {
+    "seeAll": "Alles bekijken in Ontdekken",
+    "sectionA11y": "Suggesties voor dagelijkse uitdagingen.",
+    "seeAllA11y": "Alle uitdagingen bekijken",
+    "seeAllHint": "Open Ontdekken om alle uitdagingen te bekijken."
+  }
   }
 ,
   "invitationS": {
     "shareTitle": "Duo-uitnodiging",
+    "sentTitle": "Uitnodiging verzonden",
+    "sentBody": "Je krijgt een melding zodra er wordt gereageerd.",
     "later": "Later",
     "durationLabel": "Duur",
     "subtitle": "Deel een link. Je vriend doet mee aan deze challenge in Duo.",
@@ -4389,9 +4482,11 @@
       "contact": "Ons team staat voor je klaar. Je kunt ons rechtstreeks vanuit de app schrijven via de knop 'Contacter le support', of via de contactpagina op onze website 🌍."
     }
   },
+  "createChallengeHint": "Een goede titel + een afbeelding = meer deelnemers.",
   "common": {
     "back": "Terug",
     "retry": "Opnieuw proberen",
+    "tip": "Tip",
     "loading": "Bezig met laden...",
     "recommended": "Aanbevolen",
     "networkError": "Verbindingsprobleem",
@@ -4403,9 +4498,157 @@
     "unexpectedError": "Er is een onverwachte fout opgetreden. Probeer het opnieuw.",
     "loadError": "Kan niet vernieuwen. Veeg omlaag om opnieuw te proberen.",
     "close": "Sluiten",
-    "info": "Info"
+    "info": "Info",
+ "cancel": "Annuleren",
+ "confirm": "Bevestigen",
+    "confirmDestructive": "Ja, resetten",
+    "loginRequired": "Inloggen vereist."
+  },
+  "streak": {
+    "confirmReset": {
+      "title": "Bevestigen?",
+      "text": "Je hebt een Streak Pass beschikbaar. Wil je je reeks echt resetten?"
+    },
+    "resetDone": {
+      "title": "Reeks gereset",
+      "text": "Je reeks is gereset. Vandaag telt als een nieuwe start."
+    },
+    "resetError": "Kan de reeks niet resetten."
+  },
+  "markToast": {
+    "completeTitle": "Missie voltooid. ✅",
+  "complete": {
+    "lines": [
+      "KLAAR. Jij hoort niet bij de massa.",
+      "Je hebt het afgemaakt. Dat is zelfrespect.",
+      "Wat je net deed: zeldzaam. En echt.",
+      "Je hield je woord. Aan jezelf.",
+      "Je bent net gevaarlijker geworden.",
+      "Identiteit geüpgraded. Volgend niveau.",
+      "Je probeerde niet. Je maakte het af.",
+      "Excuses overleven dit niet.",
+      "Hoofdstuk gesloten. Volgende missie.",
+      "Je won geen dag. Je won jezelf."
+    ]
+  },
+    "alreadyMarkedTitle": "Al gedaan.",
+  "alreadyMarkedMsg": "Vandaag is al afgevinkt. Kom morgen terug.",
+  "alreadyCompletedTitle": "Al afgerond.",
+  "alreadyCompletedMsg": "Deze uitdaging is voltooid. Start een nieuwe.",
+  "challengeNotFound": "Deze uitdaging konden we niet vinden.",
+    "dismiss": "Sluiten",
+    "defaultTitle": "Afgevinkt ✅",
+    "progressTpl": "Dag {{d}} / {{t}}",
+    "kicker": {
+      "mark": "AFGEVINKT",
+      "streak": "RITME",
+      "complete": "VOLTOOID",
+      "error": "OEPS"
+    },
+    "errorTitle": "Oeps. Niet afgevinkt.",
+    "errorMsg": "Probeer het zo opnieuw.",
+    "lines": {
+      "early": [
+        "Perfect. Je gaat vooruit.",
+        "Weer een dag. Geen discussie.",
+        "Zo win je.",
+        "Focus. Afgevinkt."
+      ],
+      "mid": [
+        "Je bouwt een voorsprong op.",
+        "Ritme blijft. Ga door.",
+        "Je verandert echt."
+      ],
+      "late": [
+        "Laatste rechte stuk.",
+        "Niet loslaten. Nu.",
+        "Je maakt het af. Punt."
+      ],
+      "generic": [
+        "Discipline > motivatie.",
+        "Eén actie. Eén bewijs.",
+        "Je hoort bij de weinigen."
+      ]
+    }
+  },
+  "toast": {
+    "streakBonus": {
+      "title": "Reeksbonus",
+      "text": "Nice! Je reeks van {{streak}} dagen levert {{bonus}} bonus-trofee(ën) op."
+    },
+    "microEarned": {
+      "title": "Trofeeën verdiend",
+      "text": "Je hebt vandaag {{count}} bonus-trofee(ën) verdiend!"
+    },
+    "marked": {
+      "title": "Voortgang opgeslagen",
+      "text": "Dag succesvol gemarkeerd.",
+      "micro": "+{{count}} trofeeën. Netjes. Jij pakt het voordeel."
+    },
+    "alreadyDone": {
+      "title": "Uitdaging voltooid",
+      "text": "Deze uitdaging is al voltooid."
+    },
+    "alreadyMarked": {
+      "title": "Al gemarkeerd",
+      "text": "Je hebt vandaag al gemarkeerd voor deze uitdaging."
+    },
+    "challengeNotFound": "Uitdaging niet gevonden.",
+    "unableToMark": "Kan deze uitdaging niet markeren.",
+    "keepGoing": "Ga door 🔥"
+  },
+  "challenge": {
+    "alreadyTaken": "Uitdaging al bezig.",
+    "unableToLoad": "Kan uitdagingen niet laden: {{message}}",
+    "unableToAdd": "Kan uitdaging niet toevoegen.",
+    "unableToFinalize": "Kan deze uitdaging niet afronden.",
+    "unableToResetStreak": "Kan de reeks niet resetten.",
+    "unableToMarkAfterVideo": "Kan niet markeren na de video.",
+    "videoSavedStreak": {
+      "title": "Reeks gered",
+      "text": "Je reeks is gered dankzij de video."
+    },
+    "notEnoughTrophies": {
+      "title": "Niet genoeg trofeeën",
+      "text": "Je hebt niet genoeg trofeeën."
+    },
+    "trophiesUsed": {
+      "title": "Trofeeën gebruikt",
+      "text": "Je gebruikte {{cost}} trofee(ën) om je reeks te redden."
+    },
+    "unableToMarkWithTrophies": "Kan niet bevestigen met trofeeën."
+  },
+  "streakPass": {
+    "used": {
+      "title": "Streak Pass gebruikt",
+      "text": "Je reeks is gered met je Streak Pass."
+    },
+    "unableToUse": "Kan de Streak Pass niet gebruiken."
+  },
+  "simulation": {
+    "title": "Simulatie",
+    "message": "Reeks gesimuleerd naar {{streak}} dagen.",
+    "errorTitle": "Simulatiefout",
+    "challengeNotFound": "Uitdaging niet gevonden voor simulatie.",
+    "errorGeneric": "Kan de reeks niet simuleren."
   },
   "firstPick": {
+    "invitePending": {
+    "title": "Uitnodiging in afwachting",
+    "body": "Je vriend heeft nog niet gereageerd. Je kunt de link opnieuw sturen, of doorgaan en het start zodra hij accepteert.",
+    "resend": "Opnieuw sturen",
+    "continue": "Doorgaan"
+  },
+  "postShare": {
+    "titleAsk": "Link verzonden?",
+      "bodyAsk": "Soms wordt verzenden niet bevestigd. Laat ons gewoon weten of je de link hebt gedeeld.",
+    "titleFallback": "Oké. Wat nu?",
+    "bodyFallback": "Je kunt nu meteen opnieuw sturen, of overschakelen naar solo om direct te starten.",
+    "no": "Ik heb niet verstuurd",
+    "yesContinue": "Ja, doorgaan",
+    "resend": "Opnieuw sturen",
+    "switchSolo": "Naar solo"
+  },
   "day_one": "{{count}} dag",
   "day_other": "{{count}} dagen",
   "progress": "Stap {{current}} van {{total}}",

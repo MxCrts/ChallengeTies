@@ -1,5 +1,5 @@
 // components/DailyBonusModal.tsx
-import React, { useRef, useState, useEffect, useMemo } from "react";
+import React, { useRef, useState, useEffect, useMemo, useCallback } from "react";
 import {
   View,
   Text,
@@ -8,7 +8,7 @@ import {
   TouchableOpacity,
   Animated,
   Easing,
-  Dimensions, 
+  Dimensions,
   TouchableWithoutFeedback,
 } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
@@ -21,7 +21,6 @@ import { DailyRewardResult, DailyRewardType } from "../helpers/dailyBonusService
 const { width: SCREEN_WIDTH } = Dimensions.get("window");
 const BASE_WIDTH = 375;
 const SCALE = Math.min(Math.max(SCREEN_WIDTH / BASE_WIDTH, 0.8), 1.4);
-
 const normalize = (size: number) => Math.round(size * SCALE);
 
 // ---- Constantes roue / segments (responsives) ----
@@ -31,20 +30,23 @@ const ICON_SIZE = normalize(24);
 const SEGMENT_COUNT = 8;
 
 // ⚖️ POIDS à garder en phase avec dailyBonusService.pickRandomReward
-// Actuel dans le service : 40% streakPass / 60% trophies
 const STREAK_WEIGHT = 40;
 const TROPHIES_WEIGHT = 60;
 
-  type Deg = `${number}deg`;
+type Deg = `${number}deg`;
 
 type Props = {
   visible: boolean;
   onClose: () => void;
+
+  /** 1er spin */
   onClaim: () => Promise<DailyRewardResult | null>;
+
+  /** Props parent (on les garde pour compat, mais on ne dépend PLUS d'elles pour l'UI) */
   reward: DailyRewardResult | null;
   loading: boolean;
 
-  // ✅ reroll
+  /** reroll */
   canReroll?: boolean;
   onReroll?: () => Promise<DailyRewardResult | null>;
   rerollLoading?: boolean;
@@ -56,7 +58,7 @@ const DailyBonusModal: React.FC<Props> = ({
   visible,
   onClose,
   onClaim,
-  reward,
+  reward, // gardé mais on ne s’appuie plus dessus pour l’UI
   loading,
   canReroll = false,
   onReroll,
@@ -68,18 +70,29 @@ const DailyBonusModal: React.FC<Props> = ({
   const insets = useSafeAreaInsets();
 
   const spinValue = useRef(new Animated.Value(0)).current;
+  const wheelScale = useRef(new Animated.Value(1)).current;
+  const glowOpacity = useRef(new Animated.Value(0.4)).current;
+    // ✨ Premium shine (UI only)
+  const ctaSheen = useRef(new Animated.Value(0)).current;
+  const wheelSheen = useRef(new Animated.Value(0)).current;
+    // ✨ Micro celebration (UI only)
+  const centerPop = useRef(new Animated.Value(1)).current;
+  const burst = useRef(new Animated.Value(0)).current; // 0 -> 1
+
+
+
+  const rewardScale = useRef(new Animated.Value(0.8)).current;
+  const rewardOpacity = useRef(new Animated.Value(0)).current;
+
   const [isSpinning, setIsSpinning] = useState(false);
   const [hasClaimed, setHasClaimed] = useState(false);
   const [targetRotation, setTargetRotation] = useState<Deg>("0deg");
-    // Effet "breathing" de la roue + halo pendant le spin
-  const wheelScale = useRef(new Animated.Value(1)).current;
-  const glowOpacity = useRef(new Animated.Value(0.4)).current;
 
+  // ✅ IMPORTANT : récompense interne (sinon le parent te “bloque” le state)
+  const [localReward, setLocalReward] = useState<DailyRewardResult | null>(null);
 
-
-  // ⭐ Animation de la bannière de récompense
-  const rewardScale = useRef(new Animated.Value(0.8)).current;
-  const rewardOpacity = useRef(new Animated.Value(0)).current;
+  // ✅ lock interne reroll (ne dépend pas du timing du parent)
+  const [isRerollingInternal, setIsRerollingInternal] = useState(false);
 
   // ---- Construction des segments visuels en fonction des poids ----
   const segments = useMemo(() => {
@@ -87,7 +100,6 @@ const DailyBonusModal: React.FC<Props> = ({
     const rawStreak = (STREAK_WEIGHT / totalWeight) * SEGMENT_COUNT;
     let streakSlots = Math.round(rawStreak);
 
-    // on s'assure d'avoir au moins 1 segment de chaque type
     if (streakSlots < 1) streakSlots = 1;
     if (streakSlots > SEGMENT_COUNT - 1) streakSlots = SEGMENT_COUNT - 1;
 
@@ -100,18 +112,28 @@ const DailyBonusModal: React.FC<Props> = ({
     return arr;
   }, []);
 
-  // Reset à l’ouverture
+  // Reset à la fermeture
   useEffect(() => {
     if (!visible) {
       setIsSpinning(false);
       setHasClaimed(false);
+      setTargetRotation("0deg");
+      setLocalReward(null);
+      setIsRerollingInternal(false);
+
       spinValue.setValue(0);
       rewardScale.setValue(0.8);
       rewardOpacity.setValue(0);
-    }
-  }, [visible, spinValue, rewardScale, rewardOpacity]);
+      ctaSheen.setValue(0);
+      wheelSheen.setValue(0);
+            centerPop.setValue(1);
+      burst.setValue(0);
 
-    // 🔥 TOP 3 MONDE : la roue "respire" et le halo pulse pendant le spin
+    }
+    }, [visible, spinValue, rewardScale, rewardOpacity, ctaSheen, wheelSheen, centerPop, burst]);
+
+
+  // 🔥 breathing + halo pendant spin
   useEffect(() => {
     if (isSpinning) {
       const pulse = Animated.loop(
@@ -158,18 +180,46 @@ const DailyBonusModal: React.FC<Props> = ({
         glowOpacity.stopAnimation(() => glowOpacity.setValue(0.4));
       };
     } else {
-      // Quand le spin s'arrête ou que le modal se ferme : on revient à neutre
       wheelScale.stopAnimation(() => wheelScale.setValue(1));
       glowOpacity.stopAnimation(() => glowOpacity.setValue(0.4));
     }
   }, [isSpinning, wheelScale, glowOpacity]);
 
-
-  // Lance l’animation de la bannière quand la récompense est là
+  // Animation bannière quand localReward est révélée
   useEffect(() => {
-    if (hasClaimed && reward) {
+    if (hasClaimed && localReward) {
       rewardScale.setValue(0.8);
       rewardOpacity.setValue(0);
+            // ✨ Micro celebration: burst + center pop
+      centerPop.setValue(0.92);
+      burst.setValue(0);
+
+      Animated.parallel([
+        Animated.sequence([
+          Animated.spring(centerPop, {
+            toValue: 1.08,
+            friction: 5,
+            tension: 160,
+            useNativeDriver: true,
+          }),
+          Animated.spring(centerPop, {
+            toValue: 1,
+            friction: 6,
+            tension: 140,
+            useNativeDriver: true,
+          }),
+        ]),
+        Animated.timing(burst, {
+          toValue: 1,
+          duration: 420,
+          easing: Easing.out(Easing.quad),
+          useNativeDriver: true,
+        }),
+      ]).start(() => {
+        // reset burst for next time (safe)
+        burst.setValue(0);
+      });
+
       Animated.parallel([
         Animated.spring(rewardScale, {
           toValue: 1,
@@ -185,117 +235,167 @@ const DailyBonusModal: React.FC<Props> = ({
         }),
       ]).start();
     }
-  }, [hasClaimed, reward, rewardScale, rewardOpacity]);
+    }, [hasClaimed, localReward, rewardScale, rewardOpacity, centerPop, burst]);
 
-  // 🔥 Calcule la rotation finale pour que le pointeur tombe sur
-  // un segment qui correspond EXACTEMENT au type de récompense.
+
+    // ✨ Shine loop (subtil) — uniquement quand visible
+  useEffect(() => {
+    if (!visible) return;
+
+    ctaSheen.setValue(0);
+    wheelSheen.setValue(0);
+
+    const ctaLoop = Animated.loop(
+      Animated.sequence([
+        Animated.timing(ctaSheen, {
+          toValue: 1,
+          duration: 1400,
+          easing: Easing.out(Easing.quad),
+          useNativeDriver: true,
+        }),
+        Animated.delay(1400),
+      ])
+    );
+
+    const wheelLoop = Animated.loop(
+      Animated.sequence([
+        Animated.timing(wheelSheen, {
+          toValue: 1,
+          duration: 1600,
+          easing: Easing.out(Easing.quad),
+          useNativeDriver: true,
+        }),
+        Animated.delay(1200),
+      ])
+    );
+
+    ctaLoop.start();
+    wheelLoop.start();
+
+    return () => {
+      ctaLoop.stop();
+      wheelLoop.stop();
+    };
+  }, [visible, ctaSheen, wheelSheen]);
+
+
   const computeTargetRotation = (type: DailyRewardType): Deg => {
-    // Liste des index de segments qui matchent le type demandé
     const matchingIndexes = segments
       .map((segType, index) => (segType === type ? index : -1))
       .filter((i) => i >= 0);
 
-    // Sécurité : si pour une raison quelconque il n'y a pas de match,
-    // on fait juste 3 tours complets.
     const baseTurns = 3 + Math.floor(Math.random() * 2); // 3 ou 4 tours
     if (!matchingIndexes.length) {
       const fallbackDeg = baseTurns * 360;
       return `${fallbackDeg}deg` as Deg;
     }
 
-    // On choisit un des segments du bon type (aléatoire pour éviter la répétition)
     const chosenIndex =
       matchingIndexes[Math.floor(Math.random() * matchingIndexes.length)];
 
     const arc = 360 / SEGMENT_COUNT;
-
-    // On ajoute un léger jitter à l'intérieur du même segment
-    const jitter = (Math.random() - 0.5) * (arc * 0.4); // ±40% de l'arc
-
-    // 🎯 Formule :
-    // - à rotation 0, le segment index 0 est sous le pointeur
-    // - chaque arc de 360/SEGMENT_COUNT déplace le pointeur d'un segment
-    // - donc pour tomber sur l'index `chosenIndex` :
-    //   rotation ≈ baseTurns*360 - chosenIndex*arc (avec petit jitter)
+    const jitter = (Math.random() - 0.5) * (arc * 0.4);
     const finalDeg = baseTurns * 360 - chosenIndex * arc + jitter;
 
     return `${finalDeg}deg` as Deg;
   };
 
+  const doSpin = useCallback(
+    async (fetchReward: () => Promise<DailyRewardResult | null>) => {
+      if (isSpinning) return;
 
-
-  const startSpin = async () => {
-  if (isSpinning || loading || hasClaimed) return;
-
-  setIsSpinning(true);
-  setHasClaimed(false);
-  spinValue.setValue(0);
-
-  try {
-    try {
-      await Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
-    } catch {}
-
-    // 1️⃣ On récupère d'abord la récompense (le serveur décide)
-    const r = await onClaim();
-    if (!r) {
-      setIsSpinning(false);
-      return;
-    }
-
-    // 2️⃣ On calcule l'angle final cohérent avec le type de reward
-    const target = computeTargetRotation(r.type);
-    setTargetRotation(target);
-
-    // 3️⃣ On lance la rotation longue (~5s) jusqu'à cet angle précis
-    Animated.timing(spinValue, {
-      toValue: 1,
-      duration: 5000, // 🔥 plus long = plus épique
-      easing: Easing.out(Easing.cubic),
-      useNativeDriver: true,
-    }).start(async () => {
-      // 4️⃣ Fin du spin → on révèle la récompense visuelle
-      setHasClaimed(true);
+      setIsSpinning(true);
+      setHasClaimed(false);
+      setLocalReward(null); // ✅ reset UI "récompense" tout de suite
+      spinValue.setValue(0);
 
       try {
-        await Haptics.notificationAsync(
-          Haptics.NotificationFeedbackType.Success
-        );
-      } catch {}
+        try {
+          await Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
+        } catch {}
 
-      setIsSpinning(false);
-    });
-  } catch (e) {
-    // en cas d'erreur dans onClaim : on laisse l'index gérer l'Alert
-    setIsSpinning(false);
-  }
-};
+        const r = await fetchReward();
+        if (!r) {
+          setIsSpinning(false);
+          return;
+        }
 
+        const target = computeTargetRotation(r.type);
+        setTargetRotation(target);
+
+        Animated.timing(spinValue, {
+          toValue: 1,
+          duration: 5000,
+          easing: Easing.out(Easing.cubic),
+          useNativeDriver: true,
+        }).start(async () => {
+          // ✅ on “révèle” la récompense à la fin du spin
+          setLocalReward(r);
+          setHasClaimed(true);
+
+          try {
+            await Haptics.notificationAsync(
+              Haptics.NotificationFeedbackType.Success
+            );
+          } catch {}
+
+          setIsSpinning(false);
+          setIsRerollingInternal(false);
+        });
+      } catch {
+        setIsSpinning(false);
+        setIsRerollingInternal(false);
+      }
+    },
+    [computeTargetRotation, isSpinning, spinValue]
+  );
+
+  const startSpin = useCallback(() => {
+    if (loading || hasClaimed) return;
+    doSpin(onClaim);
+  }, [doSpin, onClaim, loading, hasClaimed]);
+
+  const handleRerollPress = useCallback(async () => {
+    if (!canReroll || !onReroll) return;
+    if (isSpinning || isRerollingInternal || rerollLoading) return;
+    if (!rerollAdReady) return;
+
+    setIsRerollingInternal(true);
+
+    // ✅ après la pub, on relance un spin COMPLET avec la nouvelle reward
+    await doSpin(onReroll);
+  }, [
+    canReroll,
+    onReroll,
+    isSpinning,
+    isRerollingInternal,
+    rerollLoading,
+    rerollAdReady,
+    doSpin,
+  ]);
 
   const rotation = spinValue.interpolate({
-  inputRange: [0, 1],
-  outputRange: ["0deg", targetRotation], // 🔥 cible dynamique par spin
-});
+    inputRange: [0, 1],
+    outputRange: ["0deg", targetRotation],
+  });
 
-  /** Texte final selon la récompense (pour l’accessibilité / fallback) */
+  const rewardForText = localReward ?? reward; // fallback si jamais
   let rewardText: string | null = null;
-
-  if (reward) {
-    if (reward.type === "streakPass") {
-      rewardText = t("dailyBonus.reward.streakPass", { count: reward.amount });
-    } else if (reward.type === "trophies") {
-      rewardText = t("dailyBonus.reward.trophies", { count: reward.amount });
+  if (rewardForText) {
+    if (rewardForText.type === "streakPass") {
+      rewardText = t("dailyBonus.reward.streakPass", { count: rewardForText.amount });
+    } else if (rewardForText.type === "trophies") {
+      rewardText = t("dailyBonus.reward.trophies", { count: rewardForText.amount });
     }
   }
 
   const handlePrimaryPress = () => {
     if (isSpinning) return;
-    if (hasClaimed) {
-      onClose();
-    } else {
-      startSpin();
-    }
+    if (hasClaimed) onClose();
+    else startSpin();
   };
+
+  const allowBackdropClose = !isSpinning && !rerollLoading && !isRerollingInternal;
 
   return (
     <Modal
@@ -308,8 +408,7 @@ const DailyBonusModal: React.FC<Props> = ({
     >
       <TouchableWithoutFeedback
         onPress={() => {
-          // 🔒 on ne ferme pas pendant le spin ou la relance
-          if (!isSpinning && !rerollLoading) onClose();
+          if (allowBackdropClose) onClose();
         }}
       >
         <View
@@ -318,8 +417,14 @@ const DailyBonusModal: React.FC<Props> = ({
           accessibilityViewIsModal
           accessibilityLiveRegion="polite"
         >
+          <LinearGradient
+    colors={["rgba(0,0,0,0.78)", "rgba(0,0,0,0.62)", "rgba(0,0,0,0.78)"]}
+    start={{ x: 0, y: 0 }}
+    end={{ x: 1, y: 1 }}
+    style={StyleSheet.absoluteFillObject}
+    pointerEvents="none"
+  />
           <TouchableWithoutFeedback>
-            {/* bloque la propagation */}
             <View
               style={[
                 styles.modalContainer,
@@ -329,45 +434,102 @@ const DailyBonusModal: React.FC<Props> = ({
                 },
               ]}
             >
-              <Text style={styles.title}>
-                {t("dailyBonus.title", "Bonus du jour")}
-              </Text>
+              <View style={styles.cardTopGlow} pointerEvents="none" />
+
+              <View style={styles.headerRow}>
+  <View style={{ width: 36 }} />
+  <View style={styles.headerCenter}>
+    <Text style={styles.title}>
+      {t("dailyBonus.title", "Bonus du jour")}
+    </Text>
+  </View>
+
+</View>
+
 
               <Text style={styles.subtitle}>
                 {hasClaimed
                   ? t("common.congrats", "Bravo !")
-                  : t(
-                      "dailyBonus.subtitle",
-                      "Lance la roue mystère pour révéler ta récompense 🎁"
-                    )}
+                  : t("dailyBonus.subtitle", "Lance la roue mystère pour révéler ta récompense 🎁")}
               </Text>
 
               {/* --- ROULETTE PREMIUM --- */}
               <View style={styles.wheelWrapper}>
-                {/* Halo externe */}
                 <Animated.View style={[styles.wheelGlow, { opacity: glowOpacity }]} />
-
-
-                {/* Bord doré + roue animée */}
-                <LinearGradient
-  colors={["#FFE082", "#FFC107", "#FF6F00"]} // 🌈 or bien vif
-  start={{ x: 0, y: 0 }}
-  end={{ x: 1, y: 1 }}
-  style={styles.wheelBorder}
->
-                  <Animated.View
+<View style={styles.wheelOuterSoft} pointerEvents="none" />
+<Animated.View
+  pointerEvents="none"
   style={[
-    styles.wheel,
+    styles.burstRing,
     {
-      transform: [{ rotate: rotation }, { scale: wheelScale }],
+      opacity: burst.interpolate({ inputRange: [0, 1], outputRange: [0, 1] }),
+      transform: [
+        {
+          scale: burst.interpolate({
+            inputRange: [0, 1],
+            outputRange: [0.75, 1.35],
+          }),
+        },
+      ],
     },
   ]}
->
+/>
 
-                    {/* Segments proportionnels : uniquement 🎟️ (streakPass) et 🏆 (trophies) */}
+<Animated.View
+  pointerEvents="none"
+  style={[
+    styles.burstRing2,
+    {
+      opacity: burst.interpolate({ inputRange: [0, 1], outputRange: [0, 0.7] }),
+      transform: [
+        {
+          scale: burst.interpolate({
+            inputRange: [0, 1],
+            outputRange: [0.55, 1.55],
+          }),
+        },
+      ],
+    },
+  ]}
+/>
+
+
+
+                <LinearGradient
+                  colors={["#FFF6D8", "#FFDCA8", "#FFB86B"]}
+                  start={{ x: 0, y: 0 }}
+                  end={{ x: 1, y: 1 }}
+                  style={styles.wheelBorder}
+                >
+                  <Animated.View
+  pointerEvents="none"
+  style={[
+    styles.wheelSheenBand,
+    {
+      transform: [
+        {
+          translateX: wheelSheen.interpolate({
+            inputRange: [0, 1],
+            outputRange: [-WHEEL_SIZE * 0.9, WHEEL_SIZE * 0.9],
+          }),
+        },
+      ],
+    },
+  ]}
+/>
+
+                  <Animated.View
+                    style={[
+                      styles.wheel,
+                      { transform: [{ rotate: rotation }, { scale: wheelScale }] },
+                    ]}
+                  >
+                    <View style={styles.wheelInnerGlow} pointerEvents="none" />
+<View style={styles.wheelGloss} pointerEvents="none" />
+
                     {segments.map((type, index) => {
                       const angle =
-                        (index / segments.length) * 2 * Math.PI - Math.PI / 2; // départ en haut
+                        (index / segments.length) * 2 * Math.PI - Math.PI / 2;
                       const radius = WHEEL_SIZE / 2 - 26;
 
                       const x = radius * Math.cos(angle);
@@ -380,12 +542,7 @@ const DailyBonusModal: React.FC<Props> = ({
                           key={`${type}-${index}`}
                           style={[
                             styles.sliceIcon,
-                            {
-                              transform: [
-                                { translateX: x },
-                                { translateY: y },
-                              ],
-                            },
+                            { transform: [{ translateX: x }, { translateY: y }] },
                           ]}
                         >
                           <Text style={styles.sliceEmoji}>{emoji}</Text>
@@ -393,93 +550,93 @@ const DailyBonusModal: React.FC<Props> = ({
                       );
                     })}
 
-                    {/* Centre de la roue */}
-                    <View style={styles.wheelCenter}>
+                    <Animated.View style={[styles.wheelCenter, { transform: [{ scale: centerPop }] }]}>
                       <Text style={styles.wheelCenterTop}>
                         {t("dailyBonus.centerTop", "SPIN")}
                       </Text>
                       <Text style={styles.wheelCenterBottom}>
                         {t("dailyBonus.centerBottom", "NOW")}
                       </Text>
-                    </View>
+                    </Animated.View>
                   </Animated.View>
                 </LinearGradient>
 
-                {/* Pointeur fixe */}
                 <View style={styles.pointer}>
                   <View style={styles.pointerBase} />
                   <View style={styles.pointerTriangle} />
                 </View>
               </View>
 
-              {/* --- BANNIÈRE DE RÉCOMPENSE ANIMÉE --- */}
-              {hasClaimed && reward && rewardText && (
-  <Animated.View
-    style={[
-      styles.rewardBanner,
-      {
-        opacity: rewardOpacity,
-        transform: [{ scale: rewardScale }],
-      },
-    ]}
-  >
-    <Text
-      style={styles.rewardBannerTitle}
-      numberOfLines={1}          // ✅ toujours une seule ligne
-      ellipsizeMode="tail"       // ✅ si trop long, on tronque proprement
-      adjustsFontSizeToFit       // ✅ iOS : réduit légèrement la taille si besoin
-    >
-      {reward.type === "streakPass"
-        ? `🎟️ ${t("dailyBonus.reward.streakPass", {
-            count: reward.amount,
-          })}`
-        : `🏆 ${t("dailyBonus.reward.trophies", {
-            count: reward.amount,
-          })}`}
-    </Text>
-  </Animated.View>
-)}
+              {/* --- BANNIÈRE DE RÉCOMPENSE --- */}
+              {hasClaimed && localReward && rewardText && (
+                <Animated.View
+                  style={[
+                    styles.rewardBanner,
+                    {
+                      opacity: rewardOpacity,
+                      transform: [{ scale: rewardScale }],
+                    },
+                  ]}
+                >
+                  <Text
+                    style={styles.rewardBannerTitle}
+                    numberOfLines={1}
+                    ellipsizeMode="tail"
+                    adjustsFontSizeToFit
+                  >
+                    {localReward.type === "streakPass"
+                      ? `🎟️ ${t("dailyBonus.reward.streakPass", { count: localReward.amount })}`
+                      : `🏆 ${t("dailyBonus.reward.trophies", { count: localReward.amount })}`}
+                  </Text>
+                </Animated.View>
+              )}
 
-{hasClaimed && canReroll && !!onReroll && (
-  <View style={{ alignItems: "center", marginTop: 4 }}>
-    <TouchableOpacity
-      onPress={onReroll}
-      disabled={isSpinning || !rerollAdReady || rerollLoading}
-      activeOpacity={0.9}
-      style={[
-        styles.rerollButton,
-        (!rerollAdReady || rerollLoading) && styles.rerollButtonDisabled,
-      ]}
-      accessibilityRole="button"
-      accessibilityLabel={t("dailyBonus.rerollCta", "Regarder une pub pour relancer")}
-      accessibilityHint={t("dailyBonus.rerollHint", "Autorise une seule relance par jour")}
-    >
-      <LinearGradient
-        colors={["#FFE082", "#FFC107", "#FF8F00"]}
-        start={{ x: 0, y: 0 }}
-        end={{ x: 1, y: 1 }}
-        style={styles.rerollButtonInner}
-      >
-        <Text style={styles.rerollButtonText}>
-          {rerollLoading
-            ? t("dailyBonus.rerollLoading", "Pub…")
-            : rerollAdReady
-            ? t("dailyBonus.rerollCta", "🎬 Regarder une pub pour relancer")
-            : t("dailyBonus.rerollUnavailable", "Pub en chargement…")}
-        </Text>
-      </LinearGradient>
-    </TouchableOpacity>
+              {/* --- REROLL --- */}
+              {hasClaimed && canReroll && !!onReroll && (
+                <View style={{ alignItems: "center", marginTop: 4 }}>
+                  <TouchableOpacity
+                    onPress={handleRerollPress}
+                    disabled={
+                      isSpinning ||
+                      isRerollingInternal ||
+                      !rerollAdReady ||
+                      rerollLoading
+                    }
+                    activeOpacity={0.9}
+                    style={[
+                      styles.rerollButton,
+                      (!rerollAdReady || rerollLoading || isRerollingInternal) &&
+                        styles.rerollButtonDisabled,
+                    ]}
+                    accessibilityRole="button"
+                    accessibilityLabel={t("dailyBonus.rerollCta", "Regarder une pub pour relancer")}
+                    accessibilityHint={t("dailyBonus.rerollHint", "Autorise une seule relance par jour")}
+                  >
+                    <LinearGradient
+                      colors={["#FFE082", "#FFC107", "#FF8F00"]}
+                      start={{ x: 0, y: 0 }}
+                      end={{ x: 1, y: 1 }}
+                      style={styles.rerollButtonInner}
+                    >
+                      <Text style={styles.rerollButtonText}>
+                        {rerollLoading || isRerollingInternal
+                          ? t("dailyBonus.rerollLoading", "Pub…")
+                          : rerollAdReady
+                          ? t("dailyBonus.rerollCta", "🎬 Regarder une pub pour relancer")
+                          : t("dailyBonus.rerollUnavailable", "Pub en chargement…")}
+                      </Text>
+                    </LinearGradient>
+                  </TouchableOpacity>
 
-    {!rerollAdReady && !rerollAdLoading && (
-      <Text style={styles.rerollSubText}>
-        {t("dailyBonus.rerollTryLater", "Réessaie dans quelques instants.")}
-      </Text>
-    )}
-  </View>
-)}
+                  {!rerollAdReady && !rerollAdLoading && (
+                    <Text style={styles.rerollSubText}>
+                      {t("dailyBonus.rerollTryLater", "Réessaie dans quelques instants.")}
+                    </Text>
+                  )}
+                </View>
+              )}
 
-
-              {/* --- AIDE/INFO --- */}
+              {/* --- INFO --- */}
               <View style={styles.infoBox}>
                 <Text style={styles.infoText}>
                   {hasClaimed
@@ -487,42 +644,56 @@ const DailyBonusModal: React.FC<Props> = ({
                         "dailyBonus.visualHint",
                         "Ta récompense est ajoutée à ton compte dès que tu lances la roue. Continue ta série pour débloquer encore plus de bonus ✨"
                       )
-                    : t(
-                        "dailyBonus.teaser",
-                        "Touche pour découvrir ta récompense mystère."
-                      )}
+                    : t("dailyBonus.teaser", "Touche pour découvrir ta récompense mystère.")}
                 </Text>
               </View>
 
-              {/* --- BOUTONS --- */}
+              {/* --- BOUTON UNIQUE --- */}
               <View style={styles.buttonsRow}>
                 <TouchableOpacity
-                  style={[styles.button, styles.secondaryButton]}
-                  onPress={onClose}
-                  disabled={isSpinning}
-                >
-                  <Text style={styles.secondaryButtonText}>
-                    {t("common.close", "Fermer")}
-                  </Text>
-                </TouchableOpacity>
+  style={[
+    styles.primaryCta,
+    (isSpinning || isRerollingInternal) && styles.buttonDisabled,
+  ]}
+  onPress={handlePrimaryPress}
+  disabled={isSpinning || isRerollingInternal}
+  activeOpacity={0.92}
+>
+  <LinearGradient
+    colors={hasClaimed ? ["#FFFFFF", "#F4F4F5"] : ["#FFE082", "#FFC107", "#FF8F00"]}
+    start={{ x: 0, y: 0 }}
+    end={{ x: 1, y: 1 }}
+    style={styles.primaryCtaInner}
+  >
+    <Animated.View
+  pointerEvents="none"
+  style={[
+    styles.primaryCtaSheen,
+    {
+      transform: [
+        {
+          translateX: ctaSheen.interpolate({
+            inputRange: [0, 1],
+            outputRange: [-260, 260],
+          }),
+        },
+        { skewX: "-18deg" as any },
+      ],
+      opacity: hasClaimed ? 0.12 : 0.28,
+    },
+  ]}
+/>
 
-                <TouchableOpacity
-                  style={[
-                    styles.button,
-                    styles.primaryButton,
-                    isSpinning && styles.buttonDisabled,
-                  ]}
-                  onPress={handlePrimaryPress}
-                  disabled={isSpinning}
-                >
-                  <Text style={styles.primaryButtonText}>
-                    {isSpinning
-                      ? t("dailyBonus.spinning", "Lancement…")
-                      : hasClaimed
-                      ? t("dailyBonus.ok", "Super !")
-                      : t("dailyBonus.cta", "Lancer la roue")}
-                  </Text>
-                </TouchableOpacity>
+    <Text style={[styles.primaryButtonText, hasClaimed && styles.primaryButtonTextDark]}>
+      {isSpinning
+        ? t("dailyBonus.spinning", "Lancement…")
+        : hasClaimed
+        ? t("dailyBonus.ok", "Super !")
+        : t("dailyBonus.cta", "Lancer la roue")}
+    </Text>
+  </LinearGradient>
+</TouchableOpacity>
+
               </View>
             </View>
           </TouchableWithoutFeedback>
@@ -534,240 +705,389 @@ const DailyBonusModal: React.FC<Props> = ({
 
 const styles = StyleSheet.create({
   backdrop: {
-    flex: 1,
-    backgroundColor: "rgba(0,0,0,0.65)",
-    justifyContent: "center",
+  flex: 1,
+  backgroundColor: "rgba(0,0,0,0.62)",
+  justifyContent: "center",
+  alignItems: "center",
+  paddingHorizontal: 14,
+},
+
+modalContainer: {
+  width: "100%",
+  maxWidth: 420,
+  borderRadius: 30,
+  paddingHorizontal: 18,
+  paddingTop: 14,
+  backgroundColor: "rgba(255,255,255,0.06)", // + clair / glass
+  borderWidth: 1,
+  borderColor: "rgba(255,255,255,0.16)",
+  overflow: "hidden",
+  shadowColor: "#000",
+  shadowOpacity: 0.24,
+  shadowRadius: 26,
+  shadowOffset: { width: 0, height: 18 },
+  elevation: 12,
+},
+
+  // ---- Header ----
+  headerRow: {
+    flexDirection: "row",
     alignItems: "center",
-  },
-    modalContainer: {
-    width: "90%",
-    maxWidth: 420,
-    borderRadius: 24,
-    paddingHorizontal: 20,
-    paddingTop: 20,
-    backgroundColor: "#06081A", // un peu plus bleu nuit
-    borderWidth: 1,
-    borderColor: "rgba(255,255,255,0.14)",
-  },
-  title: {
-    fontSize: normalize(22),
-    color: "#fff",
-    textAlign: "center",
+    justifyContent: "space-between",
     marginBottom: 6,
+    paddingTop: 2,
+  },
+  headerCenter: { flex: 1, alignItems: "center", justifyContent: "center" },
+title: {
+  fontSize: normalize(20),
+  color: "#fff",
+  textAlign: "center",
+  fontFamily: "Comfortaa_700Bold",
+  includeFontPadding: false,
+},
+closeBtn: {
+  width: 36,
+  height: 36,
+  borderRadius: 18,
+  alignItems: "center",
+  justifyContent: "center",
+  backgroundColor: "rgba(255,255,255,0.10)",
+  borderWidth: 1,
+  borderColor: "rgba(255,255,255,0.16)",
+},
+  burstRing: {
+    position: "absolute",
+    width: CENTER_SIZE + normalize(54),
+    height: CENTER_SIZE + normalize(54),
+    borderRadius: 999,
+    borderWidth: 1,
+    borderColor: "rgba(255,255,255,0.26)",
+    backgroundColor: "rgba(255,255,255,0.06)",
+  },
+  burstRing2: {
+    position: "absolute",
+    width: CENTER_SIZE + normalize(78),
+    height: CENTER_SIZE + normalize(78),
+    borderRadius: 999,
+    borderWidth: 1,
+    borderColor: "rgba(255,220,168,0.22)",
+    backgroundColor: "rgba(255,220,168,0.05)",
+  },
+  closeBtnDisabled: { opacity: 0.45 },
+  closeBtnText: {
+    color: "rgba(255,255,255,0.92)",
+    fontSize: 16,
     fontFamily: "Comfortaa_700Bold",
+    includeFontPadding: false,
   },
+
   subtitle: {
-    fontSize: normalize(14),
-    color: "rgba(255,255,255,0.68)",
+    fontSize: normalize(13),
+    color: "rgba(255,255,255,0.70)",
     textAlign: "center",
-    marginBottom: 18,
+    marginBottom: 14,
     fontFamily: "Comfortaa_400Regular",
+    lineHeight: normalize(18),
   },
+
+  // ---- Wheel ----
   wheelWrapper: {
     alignItems: "center",
     justifyContent: "center",
-    marginBottom: 16,
+    marginBottom: 14,
   },
-  wheelGlow: {
-    position: "absolute",
-    width: WHEEL_SIZE + 40,
-    height: WHEEL_SIZE + 40,
-    borderRadius: 999,
-    backgroundColor: "rgba(255, 210, 120, 0.24)", // ✨ halo plus intense
-  },
-   wheelBorder: {
-    width: WHEEL_SIZE,
-    height: WHEEL_SIZE,
-    borderRadius: WHEEL_SIZE / 2,
-    padding: 7, // léger boost
-    justifyContent: "center",
-    alignItems: "center",
-    shadowColor: "#FFB300",
-    shadowOffset: { width: 0, height: 4 },
-    shadowOpacity: 0.45,
-    shadowRadius: 10,
-  },
-  rerollButton: {
-  marginTop: 6,
+wheelGlow: {
+  position: "absolute",
+  width: WHEEL_SIZE + 64,
+  height: WHEEL_SIZE + 64,
   borderRadius: 999,
-  overflow: "hidden",
-  width: "88%",
-  borderWidth: 1,
-  borderColor: "rgba(255,213,79,0.95)",
-},
-rerollButtonInner: {
-  paddingVertical: 10,
-  paddingHorizontal: 14,
-  alignItems: "center",
-  justifyContent: "center",
-},
-rerollButtonText: {
-  color: "#111",
-  fontSize: normalize(13),
-  fontFamily: "Comfortaa_700Bold",
-  textAlign: "center",
-},
-rerollButtonDisabled: {
-  opacity: 0.55,
-},
-rerollSubText: {
-  marginTop: 4,
-  fontSize: normalize(11),
-  color: "rgba(255,255,255,0.6)",
-  fontFamily: "Comfortaa_400Regular",
-  textAlign: "center",
+  backgroundColor: "rgba(255, 224, 160, 0.14)",
 },
 
-    wheel: {
-    width: "100%",
-    height: "100%",
-    borderRadius: WHEEL_SIZE / 2,
-    backgroundColor: "#141329", // indigo profond
+wheelBorder: {
+  width: WHEEL_SIZE,
+  height: WHEEL_SIZE,
+  borderRadius: WHEEL_SIZE / 2,
+  padding: 9,
+  justifyContent: "center",
+  alignItems: "center",
+  shadowColor: "#FFD08A",
+  shadowOffset: { width: 0, height: 12 },
+  shadowOpacity: 0.20,
+  shadowRadius: 22,
+  elevation: 10,
+},
+
+wheel: {
+  width: "100%",
+  height: "100%",
+  borderRadius: WHEEL_SIZE / 2,
+  backgroundColor: "rgba(255,255,255,0.06)", // + clair
+  justifyContent: "center",
+  alignItems: "center",
+  overflow: "hidden",
+  borderWidth: 1,
+  borderColor: "rgba(255,255,255,0.12)",
+},
+
+  sliceIcon: {
+    position: "absolute",
+    width: ICON_SIZE + normalize(8),
+    height: ICON_SIZE + normalize(8),
     justifyContent: "center",
     alignItems: "center",
-    overflow: "hidden",
-    borderWidth: 1,
-    borderColor: "rgba(255,255,255,0.06)",
   },
+
+  sliceEmoji: {
+    fontSize: normalize(24),
+    textShadowColor: "rgba(0,0,0,0.55)",
+    textShadowOffset: { width: 0, height: 1 },
+    textShadowRadius: 4,
+  },
+
+  wheelCenterTop: {
+    fontSize: normalize(12),
+    color: "#111",
+    letterSpacing: 1.6,
+    fontFamily: "Comfortaa_700Bold",
+    includeFontPadding: false,
+  },
+  wheelCenterBottom: {
+    marginTop: 2,
+    fontSize: normalize(12),
+    color: "#111",
+    letterSpacing: 1.6,
+    fontFamily: "Comfortaa_700Bold",
+    includeFontPadding: false,
+  },
+  cardTopGlow: {
+  position: "absolute",
+  left: -40,
+  right: -40,
+  top: -80,
+  height: 160,
+  borderRadius: 999,
+  backgroundColor: "rgba(255,255,255,0.10)",
+  transform: [{ rotate: "-8deg" }],
+},
+
+wheelOuterSoft: {
+  position: "absolute",
+  width: WHEEL_SIZE + 92,
+  height: WHEEL_SIZE + 92,
+  borderRadius: 999,
+  borderWidth: 1,
+  borderColor: "rgba(255,255,255,0.10)",
+  backgroundColor: "rgba(255,255,255,0.03)",
+},
+
+wheelInnerGlow: {
+  ...StyleSheet.absoluteFillObject,
+  borderRadius: 999,
+  backgroundColor: "rgba(255,255,255,0.04)",
+},
+
+wheelGloss: {
+  position: "absolute",
+  left: -WHEEL_SIZE * 0.1,
+  top: -WHEEL_SIZE * 0.12,
+  width: WHEEL_SIZE * 1.2,
+  height: WHEEL_SIZE * 0.55,
+  borderRadius: 999,
+  backgroundColor: "rgba(255,255,255,0.10)",
+  transform: [{ rotate: "-12deg" }],
+},
+
+wheelSheenBand: {
+  position: "absolute",
+  top: -12,
+  bottom: -12,
+  width: WHEEL_SIZE * 0.42,
+  borderRadius: 999,
+  backgroundColor: "rgba(255,255,255,0.16)",
+  opacity: 0.35,
+},
+
+
+  // Center gradient (applied by nesting a gradient in JSX? no: we keep simple)
+  // We’ll fake “center glass” with background + shadow:
   wheelCenter: {
     width: CENTER_SIZE,
     height: CENTER_SIZE,
     borderRadius: CENTER_SIZE / 2,
-    backgroundColor: "#FFE97D", // + lumineux
+    backgroundColor: "#FFE97D",
     justifyContent: "center",
     alignItems: "center",
     shadowColor: "#FFCA28",
-    shadowOffset: { width: 0, height: 5 },
-    shadowOpacity: 0.55,
-    shadowRadius: 10,
+    shadowOffset: { width: 0, height: 10 },
+    shadowOpacity: 0.20,
+    shadowRadius: 18,
     borderWidth: 2,
-    borderColor: "#FFF3CD",
-  },
-  wheelCenterTop: {
-    fontSize: normalize(13),
-    color: "#3A2A00",
-    letterSpacing: 1,
-    fontFamily: "Comfortaa_700Bold", 
-  },
-  wheelCenterBottom: {
-   fontSize: normalize(13),
-    color: "#3A2A00",
-    letterSpacing: 1,
-    fontFamily: "Comfortaa_700Bold", 
+    borderColor: "rgba(255,255,255,0.55)",
   },
 
-   sliceIcon: {
-    position: "absolute",
-    width: ICON_SIZE + normalize(6),
-    height: ICON_SIZE + normalize(6),
-    justifyContent: "center",
-    alignItems: "center",
-  },
-  sliceEmoji: {
-    fontSize: normalize(26),
-    textShadowColor: "rgba(0,0,0,0.6)",
-    textShadowOffset: { width: 0, height: 1 },
-    textShadowRadius: 3,
-  },
+  // ---- Pointer ----
   pointer: {
     position: "absolute",
     top: 2,
     alignItems: "center",
     justifyContent: "center",
   },
-    pointerBase: {
-    width: normalize(24),
-    height: normalize(24),
-    borderRadius: normalize(12),
-    backgroundColor: "#050712",
-    borderWidth: 2,
-    borderColor: "#FFE082",
-    justifyContent: "center",
-    alignItems: "center",
+
+  pointerBase: {
+    width: normalize(26),
+    height: normalize(26),
+    borderRadius: normalize(13),
+    backgroundColor: "rgba(5,7,18,0.92)",
+    borderWidth: 1.5,
+    borderColor: "rgba(255,224,130,0.92)",
     shadowColor: "#000",
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.5,
-    shadowRadius: 4,
+    shadowOffset: { width: 0, height: 6 },
+    shadowOpacity: 0.25,
+    shadowRadius: 12,
+    elevation: 10,
   },
+
   pointerTriangle: {
     width: 0,
     height: 0,
-     borderLeftWidth: normalize(8),
-    borderRightWidth: normalize(8),
-    borderBottomWidth: normalize(12),
+    borderLeftWidth: normalize(9),
+    borderRightWidth: normalize(9),
+    borderBottomWidth: normalize(14),
     borderLeftColor: "transparent",
     borderRightColor: "transparent",
     borderBottomColor: "#FFC107",
     marginTop: 3,
+    transform: [{ translateY: -1 }],
   },
 
-  // ⭐ BANNIÈRE DE RÉCOMPENSE
-    rewardBanner: {
-    marginTop: 4,
+  // ---- Reward banner ----
+  rewardBanner: {
+    marginTop: 2,
     marginBottom: 10,
     alignSelf: "center",
-    paddingHorizontal: 18,
-    paddingVertical: 9,
+    paddingHorizontal: 16,
+    paddingVertical: 10,
     borderRadius: 999,
     borderWidth: 1,
-    borderColor: "rgba(255,213,79,0.95)",
-    backgroundColor: "rgba(255,213,79,0.22)", // + soutenu
-    shadowColor: "#FFCA28",
-    shadowOffset: { width: 0, height: 3 },
-    shadowOpacity: 0.45,
-    shadowRadius: 6,
-    maxWidth: "88%",
-  },
-  rewardBannerTitle: {
-    color: "#FFFFFF", 
-    fontSize: normalize(14),
-    textAlign: "center",
-    fontFamily: "Comfortaa_700Bold", 
+    borderColor: "rgba(255,255,255,0.16)",
+    backgroundColor: "rgba(255,255,255,0.06)",
+    shadowColor: "#000",
+    shadowOffset: { width: 0, height: 10 },
+    shadowOpacity: 0.18,
+    shadowRadius: 16,
+    elevation: 8,
+    maxWidth: "92%",
   },
 
-  infoBox: {
-    marginTop: 8,
-    padding: 12,
-    borderRadius: 16,
-    backgroundColor: "rgba(255,255,255,0.04)",
+  rewardBannerTitle: {
+    color: "#FFFFFF",
+    fontSize: normalize(14),
+    textAlign: "center",
+    fontFamily: "Comfortaa_700Bold",
+    includeFontPadding: false,
   },
+
+  // ---- Reroll ----
+  rerollButton: {
+    marginTop: 6,
+    borderRadius: 999,
+    overflow: "hidden",
+    width: "92%",
+    borderWidth: 1,
+    borderColor: "rgba(255,255,255,0.18)",
+  },
+
+  rerollButtonInner: {
+    paddingVertical: 11,
+    paddingHorizontal: 14,
+    alignItems: "center",
+    justifyContent: "center",
+  },
+
+  rerollButtonText: {
+    color: "#111",
+    fontSize: normalize(13),
+    fontFamily: "Comfortaa_700Bold",
+    textAlign: "center",
+    includeFontPadding: false,
+  },
+
+  rerollButtonDisabled: { opacity: 0.55 },
+
+  rerollSubText: {
+    marginTop: 6,
+    fontSize: normalize(11),
+    color: "rgba(255,255,255,0.60)",
+    fontFamily: "Comfortaa_400Regular",
+    textAlign: "center",
+    lineHeight: normalize(16),
+  },
+
+  // ---- Info box ----
+  infoBox: {
+    marginTop: 6,
+    padding: 12,
+    borderRadius: 18,
+    backgroundColor: "rgba(255,255,255,0.05)",
+    borderWidth: 1,
+    borderColor: "rgba(255,255,255,0.10)",
+  },
+
   infoText: {
-    color: "rgba(255,255,255,0.88)",
-    fontSize: 13,
+    color: "rgba(255,255,255,0.86)",
+    fontSize: normalize(12.5),
     textAlign: "center",
     fontFamily: "Comfortaa_400Regular",
+    lineHeight: normalize(18),
   },
+
+  // ---- Buttons ----
   buttonsRow: {
     flexDirection: "row",
-    justifyContent: "flex-end",
-    marginTop: 20,
-    columnGap: 10,
+    justifyContent: "center",
+    marginTop: 16,
+    marginBottom: 2,
   },
-  button: {
+
+  primaryCta: {
+    width: "100%",
     borderRadius: 999,
+    overflow: "hidden",
+    shadowColor: "#000",
+    shadowOpacity: 0.22,
+    shadowRadius: 18,
+    shadowOffset: { width: 0, height: 12 },
+    elevation: 10,
+  },
+  primaryCtaInner: {
+    paddingVertical: 12,
     paddingHorizontal: 18,
-    paddingVertical: 10,
+    alignItems: "center",
+    justifyContent: "center",
+    minHeight: 48,
   },
-  primaryButton: {
-    backgroundColor: "#FFD54F",
-  },
+primaryCtaSheen: {
+  position: "absolute",
+  left: -120,
+  top: 0,
+  bottom: 0,
+  width: 160,
+  backgroundColor: "rgba(255,255,255,0.28)",
+},
   primaryButtonText: {
-    color: "#1A1A1A",
+    color: "#111",
     fontSize: normalize(14),
-    fontFamily: "Comfortaa_700Bold", 
+    fontFamily: "Comfortaa_700Bold",
+    includeFontPadding: false,
   },
-  secondaryButton: {
-    borderWidth: 1,
-    borderColor: "rgba(255,255,255,0.24)",
-  },
-  secondaryButtonText: {
-    color: "#fff",
-    fontSize: normalize(14),
-    fontFamily: "Comfortaa_400Regular",
+  primaryButtonTextDark: {
+    color: "#111",
   },
   buttonDisabled: {
-    opacity: 0.5,
+    opacity: 0.55,
   },
 });
+
 
 export default DailyBonusModal;

@@ -14,6 +14,7 @@ import {
 import AsyncStorage from "@react-native-async-storage/async-storage";
 import { Ionicons, MaterialCommunityIcons } from "@expo/vector-icons";
 import { LinearGradient } from "expo-linear-gradient";
+import type { ColorValue } from "react-native";
 import {
   collection,
   query,
@@ -84,6 +85,39 @@ export default function LeaderboardScreen() {
   const currentTheme: Theme = isDarkMode
     ? designSystem.darkTheme
     : designSystem.lightTheme;
+      const primaryText = isDarkMode ? "#FFFFFF" : "#0B0B10";
+  const secondaryText = isDarkMode ? currentTheme.colors.textSecondary : "rgba(0,0,0,0.55)";
+
+  // Cards / rows: visible en light, glass en dark
+  const cardBg = isDarkMode ? "rgba(255,255,255,0.055)" : "rgba(255,255,255,0.78)";
+  const cardBgMe = isDarkMode ? "rgba(255,255,255,0.09)" : "rgba(255,255,255,0.88)";
+  const rowStroke = isDarkMode
+  ? "rgba(255,255,255,0.10)"
+  : "rgba(0,0,0,0.08)";
+  // Accent "moi" très visible mais premium
+const meRingGrad: readonly [ColorValue, ColorValue, ...ColorValue[]] = isDarkMode
+  ? ["rgba(255,255,255,0.34)", "rgba(255,255,255,0.08)", "rgba(255,255,255,0.22)"]
+  : ["rgba(0,0,0,0.18)", "rgba(0,0,0,0.06)", "rgba(0,0,0,0.14)"];
+
+
+const meHalo = isDarkMode ? "rgba(255,255,255,0.10)" : "rgba(0,0,0,0.06)";
+
+  // Accent très léger pour différencier la carte "moi"
+const meBg = isDarkMode ? "rgba(255,255,255,0.085)" : "rgba(255,255,255,0.92)";
+const meRing = isDarkMode ? "rgba(255,255,255,0.18)" : "rgba(0,0,0,0.12)";
+const meRingSoft = isDarkMode ? "rgba(255,255,255,0.10)" : "rgba(0,0,0,0.06)";
+
+
+const rowStrokeMe = isDarkMode
+  ? "rgba(255,255,255,0.14)"
+  : "rgba(0,0,0,0.10)";
+
+const topHighlightOpacity = isDarkMode ? 0.08 : 0.14;
+
+
+  // Podium score (fix invisible trophies in light)
+  const podiumScoreColor = isDarkMode ? "rgba(255,255,255,0.92)" : "rgba(0,0,0,0.70)";
+
 const { ref: rankShareRef, share: shareRankCard } = useShareCard();
 const [rankSharePayload, setRankSharePayload] = useState<{
   username: string;
@@ -226,6 +260,14 @@ try { await Haptics.selectionAsync(); } catch {}
 }, [selectedTab, players, currentUser]);
 
 const podium = useMemo(() => topN(filteredPlayers, 3), [filteredPlayers]);
+
+const podiumBadge = (slotIndex: number) => {
+  // slotIndex correspond à l’ordre rendu: [second, first, third]
+  if (slotIndex === 1) return "👑"; // first
+  if (slotIndex === 0) return "🥈"; // second
+  return "🥉"; // third
+};
+
   // Podium
   const renderTopThree = useCallback(() => {
        if (podium.length < 3) {
@@ -259,86 +301,106 @@ const podium = useMemo(() => topN(filteredPlayers, 3), [filteredPlayers]);
           const size = normalizeSize(isFirst ? 34 : 26);
           return (
             <Animated.View
-              key={player.id}
-              entering={ZoomIn.delay(idx * 100)}
-              style={styles.podiumItem}
-            >
-              <LinearGradient
-                colors={
-                  isFirst
-                    ? ["#FFD700", "#FFA500"]
-                    : idx === 0
-                    ? ["#C0C0C0", "#A9A9A9"]
-                    : ["#CD7F32", "#8B4513"]
-                }
-                style={
-                  isFirst
-                    ? styles.circleFirst
-                    : idx === 0
-                    ? styles.circleSecond
-                    : styles.circleThird
-                }
-              >
-                <View style={styles.glowRing} pointerEvents="none" />
-                <Image
-                  source={
-                    player.profileImage
-                      ? { uri: player.profileImage }
-                      : require("../assets/images/default-profile.webp")
-                  }
-                  style={
-                    isFirst ? styles.profileImageFirst : styles.profileImage
-                  }
-                  defaultSource={require("../assets/images/default-profile.webp")}
-                  accessibilityRole="image"
-                  accessibilityLabel={
-  (player.isPioneer ? "Pioneer · " : "") +
-  t("leaderboard.profileOf", { name: player.username })
-}
-                />
-                {player.isPioneer && (
-                  <PioneerBadge
-                    size="mini"
-                    label={t("badges.pioneer", { defaultValue: "Pioneer" })}
-                    style={{ position: "absolute", bottom: -normalizeSize(8), left: -normalizeSize(8) }}
-                  />
-                )}
-                <MaterialCommunityIcons
-                  name={Icon}
-                  size={size}
-                  color={
-                    isFirst ? "#FFD700" : idx === 0 ? "#C0C0C0" : "#CD7F32"
-                  }
-                  style={isFirst ? styles.crownIcon : styles.medalIcon}
-                />
-              </LinearGradient>
-              <Text style={[
-   styles.podiumName,
-   { color: isDarkMode ? "#FFFFFF" : "#000000" },
-   { writingDirection: I18nManager.isRTL ? "rtl" : "ltr", textAlign: "center" }
- ]}
- numberOfLines={1}
- adjustsFontSizeToFit
+  key={player.id}
+  entering={ZoomIn.delay(idx * 90)}
+  style={[styles.podiumItem, isFirst && styles.podiumItemFirst]}
 >
-                {player.username}
-              </Text>
-              <Text style={[styles.podiumTrophies, { color: "#FFFFFF" }]}
-                numberOfLines={1}
-                adjustsFontSizeToFit
-              >
-   {Number(player.trophies || 0).toLocaleString(i18n.language)} 🏆
- </Text>
-             <Text style={[
-   styles.handle,
-   { color: currentTheme.colors.textSecondary },
-   { writingDirection: "ltr", textAlign: "center" }  // handle forcé LTR
- ]}
+  <View
+  style={[
+    styles.podiumHalo,
+    { backgroundColor: isDarkMode ? "rgba(255,255,255,0.06)" : "rgba(0,0,0,0.04)" },
+  ]}
+  pointerEvents="none"
+/>
+
+<View
+  style={[
+    styles.podiumTopBadge,
+    isFirst && styles.podiumTopBadgeFirst,
+    {
+      backgroundColor: isDarkMode
+        ? "rgba(255,255,255,0.10)"
+        : "rgba(255,255,255,0.70)",
+      borderColor: isDarkMode
+        ? "rgba(255,255,255,0.18)"
+        : "rgba(0,0,0,0.08)",
+    },
+  ]}
+>
+  <Text style={[styles.podiumBadgeEmoji, isFirst && styles.podiumBadgeEmojiFirst]}>
+    {podiumBadge(idx)}
+  </Text>
+</View>
+
+
+  <View style={[styles.podiumAvatarWrap, isFirst && styles.podiumAvatarWrapFirst]}>
+    <LinearGradient
+      colors={
+  isFirst
+    ? ["rgba(255,215,0,0.95)", "rgba(255,165,0,0.45)", "rgba(255,235,160,0.35)"]
+    : idx === 0
+    ? ["rgba(235,235,245,0.85)", "rgba(160,160,175,0.28)"]
+    : ["rgba(205,127,50,0.85)", "rgba(130,75,35,0.28)"]
+}
+      start={{ x: 0, y: 0 }}
+      end={{ x: 1, y: 1 }}
+      style={styles.podiumRing}
+    />
+
+    <Image
+      source={
+        player.profileImage
+          ? { uri: player.profileImage }
+          : require("../assets/images/default-profile.webp")
+      }
+      style={[styles.podiumAvatar, isFirst && styles.podiumAvatarFirst]}
+      defaultSource={require("../assets/images/default-profile.webp")}
+      accessibilityRole="image"
+      accessibilityLabel={
+        (player.isPioneer ? "Pioneer · " : "") +
+        t("leaderboard.profileOf", { name: player.username })
+      }
+    />
+
+
+  </View>
+
+  <Text
+    style={[
+      styles.podiumName,
+      { color: isDarkMode ? "#FFFFFF" : "#0B0B10" },
+      { writingDirection: I18nManager.isRTL ? "rtl" : "ltr", textAlign: "center" },
+    ]}
+    numberOfLines={1}
+    adjustsFontSizeToFit
+  >
+    {player.username}
+  </Text>
+
+  <Text
+  style={[styles.podiumScore, { color: podiumScoreColor }]}
   numberOfLines={1}
   adjustsFontSizeToFit
- >
-   @{(player.username || "").toLocaleLowerCase("en-US")}
-              </Text>
-            </Animated.View>
+>
+  {Number(player.trophies || 0).toLocaleString(i18n.language)}{" "}
+  <Text style={styles.podiumTrophy}>🏆</Text>
+</Text>
+
+
+  <Text
+  style={[
+    styles.handle,
+    { color: secondaryText },
+    { writingDirection: "ltr", textAlign: "center" },
+  ]}
+  numberOfLines={1}
+  adjustsFontSizeToFit
+>
+  @{(player.username || "").toLocaleLowerCase("en-US")}
+</Text>
+
+</Animated.View>
+
           );
         })}
       </Animated.View>
@@ -352,92 +414,110 @@ const podium = useMemo(() => topN(filteredPlayers, 3), [filteredPlayers]);
         const rank = item.rank ?? index + 4;
         return (
           <Animated.View
-            entering={FadeInUp.delay(300 + index * 50)}
-            style={[
-              styles.playerRow,
-              {
-                backgroundColor: currentTheme.colors.cardBackground + "80",
-                borderColor: isDarkMode
-                  ? currentTheme.colors.secondary
-                  : currentTheme.colors.primary,
-                borderWidth: 2,
-              },
-              item.id === currentUser?.id && styles.highlight,
-            ]}
-          >
-            <View style={styles.leftSection}>
-              <View style={styles.avatarWrap}>
-  <Image
-    source={
-      item.profileImage
-        ? { uri: item.profileImage }
-        : require("../assets/images/default-profile.webp")
-    }
-    defaultSource={require("../assets/images/default-profile.webp")}
-    style={[
-      styles.playerImage,
-      { borderColor: currentTheme.colors.border },
-    ]}
-    accessibilityRole="image"
-    accessibilityLabel={
-      (item.isPioneer ? "Pioneer · " : "") +
-      t("leaderboard.profileOf", { name: item.username })
-    }
-  />
-  {item.isPioneer && (
-    <PioneerBadge
-      size="mini"
-      label={t("badges.pioneer", { defaultValue: "Pioneer" })}
-      style={{ position: "absolute", bottom: -normalizeSize(6), left: -normalizeSize(6) }}
-    />
-  )}
-</View>
+  entering={FadeInUp.delay(220 + index * 40)}
+  style={[
+  styles.row,
+  {
+    backgroundColor: item.id === currentUser?.id ? cardBgMe : cardBg,
+    borderColor: item.id === currentUser?.id ? rowStrokeMe : rowStroke,
+    borderWidth: StyleSheet.hairlineWidth,     // ✅ ultra fin
+    shadowOpacity: 0,                          // ✅ plus d’ombre iOS
+    elevation: 0,                               // ✅ plus d’ombre Android
+  },
+]}
 
-              <View style={styles.playerInfo}>
-                <Text
-                  style={[
-                    styles.playerName,
-                    { color: isDarkMode ? "#FFFFFF" : "#000000" },
-                    {
-                      writingDirection: I18nManager.isRTL ? "rtl" : "ltr",
-                      textAlign: I18nManager.isRTL ? "right" : "left",
-                    },
-                  ]}
-                  numberOfLines={1}
-                  adjustsFontSizeToFit
-                >
-                  {item.username}
-                </Text>
-                                <Text style={[
-   styles.handle,
-   { color: currentTheme.colors.textSecondary },
-   { writingDirection: "ltr" }
- ]}
+>
+  <View
+  pointerEvents="none"
+  style={[
+    styles.rowInnerHighlight,
+    { opacity: isDarkMode ? 0.10 : 0.18 },
+  ]}
+/>
+
+
+  <View style={styles.leftSection}>
+    <View style={styles.avatarWrap}>
+      <Image
+        source={
+          item.profileImage
+            ? { uri: item.profileImage }
+            : require("../assets/images/default-profile.webp")
+        }
+        defaultSource={require("../assets/images/default-profile.webp")}
+        style={[styles.avatar, item.id === currentUser?.id && styles.avatarMe]}
+        accessibilityRole="image"
+        accessibilityLabel={
+          (item.isPioneer ? "Pioneer · " : "") +
+          t("leaderboard.profileOf", { name: item.username })
+        }
+      />
+    </View>
+
+    <View style={styles.playerInfo}>
+      <Text
+  style={[
+    styles.name,
+    { color: primaryText },
+    {
+      writingDirection: I18nManager.isRTL ? "rtl" : "ltr",
+      textAlign: I18nManager.isRTL ? "right" : "left",
+    },
+  ]}
   numberOfLines={1}
   adjustsFontSizeToFit
 >
-   @{(item.username || "").toLocaleLowerCase("en-US")}
-                </Text>
+  {item.username}
+</Text>
 
-              </View>
-            </View>
-            <View style={styles.rightSection}>
-                            <Text style={[styles.playerTrophies, { color: "#FFFFFF" }]}
-                numberOfLines={1}
-                adjustsFontSizeToFit
-              >
-   {Number(item.trophies || 0).toLocaleString(i18n.language)} 🏆
- </Text>
 
-                            <Text style={[styles.rankText, { color: currentTheme.colors.textSecondary }]}
-                numberOfLines={1}
-                adjustsFontSizeToFit
-              >
-   #{typeof rank === "number" ? rank.toLocaleString(i18n.language) : rank}
- </Text>
+      <Text
+  style={[
+    styles.handle,
+    { color: secondaryText },
+    { writingDirection: "ltr" },
+  ]}
+  numberOfLines={1}
+  adjustsFontSizeToFit
+>
+  @{(item.username || "").toLocaleLowerCase("en-US")}
+</Text>
 
-            </View>
-          </Animated.View>
+    </View>
+  </View>
+
+  <View style={styles.rightSection}>
+  <View
+    style={[
+      styles.trophyChip,
+      {
+        backgroundColor: isDarkMode ? "rgba(255,255,255,0.10)" : "rgba(0,0,0,0.05)",
+        borderColor: isDarkMode ? "rgba(255,255,255,0.14)" : "rgba(0,0,0,0.08)",
+      },
+    ]}
+  >
+    <Text style={[styles.trophyIcon, { color: isDarkMode ? "rgba(255,255,255,0.92)" : "rgba(0,0,0,0.70)" }]}>
+      🏆
+    </Text>
+    <Text
+      style={[
+        styles.score,
+        { color: isDarkMode ? "rgba(255,255,255,0.96)" : "#0B0B10" },
+      ]}
+      numberOfLines={1}
+      adjustsFontSizeToFit
+    >
+      {Number(item.trophies || 0).toLocaleString(i18n.language)}
+    </Text>
+  </View>
+
+  <Text style={[styles.rank, { color: secondaryText }]} numberOfLines={1}>
+    #{typeof rank === "number" ? rank.toLocaleString(i18n.language) : rank}
+  </Text>
+</View>
+
+</Animated.View>
+
         );
       }),
     [currentTheme, currentUser, t, isDarkMode, i18n.language]
@@ -461,7 +541,42 @@ const podium = useMemo(() => topN(filteredPlayers, 3), [filteredPlayers]);
     const myIndex = basis.findIndex((p) => p.id === currentUser.id);
     const myRank = myIndex >= 0 ? myIndex + 1 : undefined;
     return (
-      <View style={styles.myRankCard}>
+  <View style={styles.myRankOuter}>
+    {/* ✅ Gradient ring = différenciation immédiate */}
+    <LinearGradient
+      colors={meRingGrad}
+      start={{ x: 0, y: 0 }}
+      end={{ x: 1, y: 1 }}
+      style={styles.myRankRing}
+    >
+      {/* ✅ Halo soft interne (zéro shadow, juste un glow propre) */}
+      <View pointerEvents="none" style={[styles.myRankHalo, { backgroundColor: meHalo }]} />
+
+      {/* ✅ Card content */}
+      <View
+        style={[
+          styles.myRankCard,
+          {
+            backgroundColor: isDarkMode
+              ? "rgba(255,255,255,0.09)"
+              : "rgba(255,255,255,0.95)",
+            borderWidth: 0, // important : le ring fait le job
+          },
+        ]}
+      >
+        {/* ✅ Sheen diagonal (reflet Keynote) */}
+        <LinearGradient
+          pointerEvents="none"
+          colors={[
+            "transparent",
+            isDarkMode ? "rgba(255,255,255,0.10)" : "rgba(255,255,255,0.55)",
+            "transparent",
+          ]}
+          start={{ x: 0, y: 0 }}
+          end={{ x: 1, y: 1 }}
+          style={styles.myRankSheen}
+        />
+
         <View style={styles.myRankLeft}>
           <Image
             source={
@@ -469,13 +584,22 @@ const podium = useMemo(() => topN(filteredPlayers, 3), [filteredPlayers]);
                 ? { uri: currentUser.profileImage }
                 : require("../assets/images/default-profile.webp")
             }
-            style={styles.myRankAvatar}
+            style={[
+              styles.myRankAvatar,
+              {
+                borderColor: isDarkMode
+                  ? "rgba(255,255,255,0.28)"
+                  : "rgba(0,0,0,0.14)",
+              },
+            ]}
             accessibilityRole="image"
           />
+
           <View style={{ marginLeft: 10 }}>
-                        <Text
+            <Text
               style={[
                 styles.myRankName,
+                { color: primaryText },
                 {
                   writingDirection: I18nManager.isRTL ? "rtl" : "ltr",
                   textAlign: I18nManager.isRTL ? "right" : "left",
@@ -487,36 +611,55 @@ const podium = useMemo(() => topN(filteredPlayers, 3), [filteredPlayers]);
               {currentUser.username || t("leaderboard.unknown", { defaultValue: "Unknown" })}
             </Text>
 
-                       <Text
+            <View
               style={[
-                styles.myRankSub,
+                styles.myRankSubRow,
                 {
-                  writingDirection: I18nManager.isRTL ? "rtl" : "ltr",
-                  textAlign: I18nManager.isRTL ? "right" : "left",
+                  flexDirection: I18nManager.isRTL ? "row-reverse" : "row",
+                  justifyContent: I18nManager.isRTL ? "flex-end" : "flex-start",
                 },
               ]}
-              numberOfLines={1}
-              adjustsFontSizeToFit
             >
-              {myRank ? `#${myRank.toLocaleString(i18n.language)}` : "—"} ·{" "}
-              {Number(currentUser.trophies || 0).toLocaleString(i18n.language)} 🏆
-            </Text>
+              <Text style={[styles.myRankSub, { color: secondaryText }]} numberOfLines={1} adjustsFontSizeToFit>
+                {myRank ? `#${myRank.toLocaleString(i18n.language)}` : "—"}
+              </Text>
 
+              <Text style={[styles.myRankSub, { color: secondaryText }]}> · </Text>
+              <Text style={[styles.myRankSub, { color: secondaryText }]}>🏆 </Text>
+
+              <Text style={[styles.myRankTrophyText, { color: secondaryText }]} numberOfLines={1} adjustsFontSizeToFit>
+                {Number(currentUser.trophies || 0).toLocaleString(i18n.language)}
+              </Text>
+            </View>
           </View>
         </View>
+
         <TouchableOpacity
           onPress={shareMyRankCard}
-          style={styles.myRankShareBtn}
+          style={[
+            styles.myRankShareBtn,
+            {
+              backgroundColor: isDarkMode ? "rgba(255,255,255,0.14)" : "rgba(0,0,0,0.06)",
+              borderWidth: StyleSheet.hairlineWidth,
+              borderColor: isDarkMode ? "rgba(255,255,255,0.22)" : "rgba(0,0,0,0.10)",
+            },
+          ]}
           activeOpacity={0.85}
           accessibilityRole="button"
           accessibilityLabel={t("leaderboard.share")}
           accessibilityHint={t("leaderboard.shareHint", { defaultValue: "Partage ta carte de rang" })}
         >
-          <Ionicons name="share-social-outline" size={18} color="#fff" />
-          <Text style={styles.myRankShareText}>{t("leaderboard.share")}</Text>
+          <Ionicons name="share-social-outline" size={18} color={isDarkMode ? "#fff" : "#0B0B10"} />
+          <Text style={[styles.myRankShareText, { color: isDarkMode ? "#fff" : "#0B0B10" }]}>
+            {t("leaderboard.share")}
+          </Text>
         </TouchableOpacity>
       </View>
-    );
+    </LinearGradient>
+  </View>
+);
+
+
   }, [currentUser, players, filteredPlayers, selectedTab, shareMyRankCard, t, i18n.language]);
 
 // --- Skeleton (podium x3 + rows x5) ---
@@ -553,14 +696,8 @@ const podium = useMemo(() => topN(filteredPlayers, 3), [filteredPlayers]);
               {[...Array(5)].map((_, i) => (
                 <View
                   key={i}
-                  style={[
-                    styles.playerRow,
-                    {
-                      backgroundColor: currentTheme.colors.cardBackground + "80",
-                      borderColor: currentTheme.colors.border,
-                      borderWidth: 2,
-                    },
-                  ]}
+                  style={styles.skelRow}
+
                 >
                   <View style={styles.leftSection}>
                     <View
@@ -660,15 +797,7 @@ const podium = useMemo(() => topN(filteredPlayers, 3), [filteredPlayers]);
             accessibilityHint={t(`leaderboard.filterHint.${tab}`)}
             accessibilityRole="button"
             testID={`tab-${tab}`}
-            style={[
-              styles.tab,
-              active ? styles.tabActive : styles.tabInactive,
-              {
-                borderColor: active
-                  ? currentTheme.colors.primary + "66"
-                  : "rgba(255,255,255,0.12)",
-              },
-            ]}
+            style={[styles.tab, active && styles.tabActive]}
           >
             {/* Fond dégradé derrière le label quand actif */}
             {active && (
@@ -823,359 +952,435 @@ const podium = useMemo(() => topN(filteredPlayers, 3), [filteredPlayers]);
 }
 
 const styles = StyleSheet.create({
-  safeArea: {
-    flex: 1,
-    paddingTop: 0,
+  safeArea: { flex: 1, paddingTop: 0 },
+  gradientContainer: { flex: 1 },
+
+  // --- Background orbs (keep, but calmer) ---
+  bgOrbTop: {
+    position: "absolute",
+    top: -SCREEN_WIDTH * 0.28,
+    right: -SCREEN_WIDTH * 0.22,
+    width: SCREEN_WIDTH * 0.86,
+    height: SCREEN_WIDTH * 0.86,
+    borderRadius: SCREEN_WIDTH * 0.43,
+    opacity: 0.42,
+    transform: [{ rotate: "18deg" }],
   },
-  gradientContainer: {
-    flex: 1,
+  bgOrbBottom: {
+    position: "absolute",
+    bottom: -SCREEN_WIDTH * 0.30,
+    left: -SCREEN_WIDTH * 0.25,
+    width: SCREEN_WIDTH * 0.95,
+    height: SCREEN_WIDTH * 0.95,
+    borderRadius: SCREEN_WIDTH * 0.475,
+    opacity: 0.40,
+    transform: [{ rotate: "-10deg" }],
   },
-  tabsContainer: {
-    flexDirection: "row",
-    justifyContent: "space-around",
-    alignItems: "center",
-    marginVertical: SPACING * 1.5,
-    paddingHorizontal: SPACING,
-    width: "100%",
-    maxWidth: SCREEN_WIDTH - SPACING * 2,
-    alignSelf: "center",
-  },
-  tab: {
-    minHeight: normalizeSize(40),
-    paddingVertical: normalizeSize(8),
-    paddingHorizontal: normalizeSize(14),
-    borderRadius: normalizeSize(10),
-    alignItems: "center",
-    justifyContent: "center",
-    overflow: "hidden",
-    borderWidth: 1,
-  },
-  tabText: {
-    fontSize: normalizeFont(15),
-    fontFamily: "Comfortaa_700Bold",
-    textAlign: "center",
-  },
-  myRankCard: {
-    marginHorizontal: SPACING,
-    marginTop: SPACING,
-    padding: SPACING,
-    borderRadius: normalizeSize(16),
-    backgroundColor: "rgba(0,0,0,0.35)",
-    flexDirection: "row",
-    alignItems: "center",
-    justifyContent: "space-between",
+    // --- Skeleton podium circles (placeholders only) ---
+  circleFirst: {
+    width: normalizeSize(108),
+    height: normalizeSize(108),
+    borderRadius: normalizeSize(54),
+    backgroundColor: "rgba(255,255,255,0.06)",
     borderWidth: StyleSheet.hairlineWidth,
     borderColor: "rgba(255,255,255,0.12)",
   },
-  myRankLeft: {
+  circleSecond: {
+    width: normalizeSize(96),
+    height: normalizeSize(96),
+    borderRadius: normalizeSize(48),
+    backgroundColor: "rgba(255,255,255,0.05)",
+    borderWidth: StyleSheet.hairlineWidth,
+    borderColor: "rgba(255,255,255,0.10)",
+  },
+  circleThird: {
+    width: normalizeSize(96),
+    height: normalizeSize(96),
+    borderRadius: normalizeSize(48),
+    backgroundColor: "rgba(255,255,255,0.05)",
+    borderWidth: StyleSheet.hairlineWidth,
+    borderColor: "rgba(255,255,255,0.10)",
+  },
+podiumBadgeEmoji: {
+  fontSize: normalizeFont(16),
+  includeFontPadding: false,
+},
+podiumBadgeEmojiFirst: {
+  fontSize: normalizeFont(20),
+},
+  tabsContainer: {
+    paddingHorizontal: SPACING,
+    marginTop: SPACING * 1.2,
+    marginBottom: SPACING * 0.6,
+  },
+podiumTopBadge: {
+  alignSelf: "center",
+  marginBottom: normalizeSize(8),
+  paddingHorizontal: normalizeSize(10),
+  height: normalizeSize(26),
+  borderRadius: 999,
+  alignItems: "center",
+  justifyContent: "center",
+  backgroundColor: "rgba(255,255,255,0.55)",
+  borderWidth: StyleSheet.hairlineWidth,
+  borderColor: "rgba(0,0,0,0.08)",
+},
+podiumTopBadgeFirst: {
+  height: normalizeSize(28),
+  paddingHorizontal: normalizeSize(12),
+  backgroundColor: "rgba(255,215,0,0.18)",
+  borderColor: "rgba(255,165,0,0.22)",
+},
+rowInnerHighlight: {
+  position: "absolute",
+  top: 0,
+  left: 0,
+  right: 0,
+  height: "48%",
+  borderRadius: normalizeSize(16),  // ✅ arrondi complet
+  backgroundColor: "rgba(255,255,255,1)",
+},
+  tabsBlur: {
+    flexDirection: "row",
+    borderRadius: normalizeSize(16),
+    padding: 5,
+    overflow: "hidden",
+    backgroundColor: "rgba(255,255,255,0.06)",
+  },
+  tabWrap: { flex: 1 },
+  tab: {
+    height: normalizeSize(40),
+    borderRadius: normalizeSize(13),
+    alignItems: "center",
+    justifyContent: "center",
+    overflow: "hidden",
+    backgroundColor: "transparent",
+  },
+  tabActive: {
+    backgroundColor: "rgba(255,255,255,0.10)",
+  },
+  trophyChip: {
+  flexDirection: "row",
+  alignItems: "center",
+  paddingHorizontal: normalizeSize(10),
+  paddingVertical: normalizeSize(6),
+  borderRadius: 999,
+  borderWidth: 1,
+},
+
+trophyIcon: {
+  fontSize: normalizeFont(13),
+  marginRight: 6,
+  includeFontPadding: false,
+},
+
+// MyRank inline trophies
+myRankTrophiesInline: {
+  flexDirection: "row",
+  alignItems: "center",
+},
+myRankTrophyIcon: {
+  fontSize: normalizeFont(12),
+  marginRight: 5,
+  includeFontPadding: false,
+},
+myRankTrophyText: {
+  fontFamily: "Comfortaa_700Bold",
+  fontSize: normalizeFont(12),
+  includeFontPadding: false,
+},
+myRankOuter: {
+  marginHorizontal: SPACING,
+  marginTop: SPACING * 0.8,
+  borderRadius: normalizeSize(18),
+},
+myRankRing: {
+  borderRadius: normalizeSize(18),
+  padding: normalizeSize(2), // ✅ stable iOS/Android
+  overflow: "hidden",
+},
+myRankHalo: {
+  position: "absolute",
+  top: -normalizeSize(18),
+  right: -normalizeSize(22),
+  width: normalizeSize(90),
+  height: normalizeSize(90),
+  borderRadius: 999,
+  opacity: 0.9,
+},
+myRankSheen: {
+  position: "absolute",
+  top: -normalizeSize(22),
+  left: -normalizeSize(40),
+  width: "140%",
+  height: normalizeSize(70),
+  transform: [{ rotate: "-12deg" }],
+  opacity: 0.9,
+},
+  tabGradientBg: {
+    ...StyleSheet.absoluteFillObject,
+    borderRadius: normalizeSize(13),
+    opacity: 0.55,
+  },
+  tabText: {
+    fontSize: normalizeFont(13.5),
+    fontFamily: "Comfortaa_700Bold",
+    textAlign: "center",
+    includeFontPadding: false,
+  },
+  scrollContent: { paddingBottom: normalizeSize(90) },
+  listContainer: { paddingHorizontal: SPACING, marginTop: SPACING * 1.0 },
+
+  // --- Podium (clean, no borders, no glow spam) ---
+  topThreeContainer: {
+    flexDirection: "row",
+    justifyContent: "space-evenly",
+    alignItems: "flex-end",
+    marginTop: SPACING * 1.0,
+    marginBottom: SPACING * 0.8,
+    paddingHorizontal: SPACING,
+  },
+  myRankSubRow: {
+  marginTop: 2,
+  alignItems: "center",
+  flexWrap: "nowrap",
+},
+  podiumItem: {
+    alignItems: "center",
+    flex: 1,
+    maxWidth: normalizeSize(112),
+    paddingVertical: 6,
+  },
+  podiumItemFirst: { transform: [{ translateY: -6 }] },
+  podiumHalo: {
+    position: "absolute",
+    top: 10,
+    width: "92%",
+    height: normalizeSize(88),
+    borderRadius: 999,
+    backgroundColor: "rgba(255,255,255,0.06)",
+    opacity: 0.55,
+  },
+  podiumAvatarWrap: {
+    width: normalizeSize(92),
+    height: normalizeSize(92),
+    borderRadius: normalizeSize(46),
+    alignItems: "center",
+    justifyContent: "center",
+  },
+  podiumAvatarWrapFirst: {
+    width: normalizeSize(108),
+    height: normalizeSize(108),
+    borderRadius: normalizeSize(54),
+  },
+  podiumRing: {
+    position: "absolute",
+    inset: 0,
+    borderRadius: 999,
+  },
+  podiumAvatar: {
+    width: normalizeSize(78),
+    height: normalizeSize(78),
+    borderRadius: normalizeSize(39),
+  },
+  myRankInnerRing: {
+  position: "absolute",
+  top: 1,
+  left: 1,
+  right: 1,
+  bottom: 1,
+  borderRadius: normalizeSize(15), // un poil moins que card
+  borderWidth: StyleSheet.hairlineWidth,
+},
+  podiumAvatarFirst: {
+    width: normalizeSize(92),
+    height: normalizeSize(92),
+    borderRadius: normalizeSize(46),
+  },
+  podiumIconChip: {
+    position: "absolute",
+    bottom: -6,
+    right: -6,
+    width: normalizeSize(30),
+    height: normalizeSize(30),
+    borderRadius: normalizeSize(15),
+    alignItems: "center",
+    justifyContent: "center",
+    backgroundColor: "rgba(10,10,14,0.55)",
+  },
+  podiumIconChipFirst: {
+    width: normalizeSize(34),
+    height: normalizeSize(34),
+    borderRadius: normalizeSize(17),
+    backgroundColor: "rgba(10,10,14,0.60)",
+  },
+  podiumPioneer: {
+    position: "absolute",
+    left: -normalizeSize(6),
+    bottom: -normalizeSize(6),
+  },
+  podiumScore: {
+  marginTop: 4,
+  fontSize: normalizeFont(13.5),
+  fontFamily: "Comfortaa_700Bold",
+  // color: "rgba(255,255,255,0.92)", // <-- enlève ça
+  includeFontPadding: false,
+},
+
+  podiumName: {
+    fontSize: normalizeFont(15.5),
+    fontFamily: "Comfortaa_700Bold",
+    textAlign: "center",
+    marginTop: SPACING * 0.65,
+    includeFontPadding: false,
+  },
+  podiumTrophy: { fontSize: normalizeFont(12.5) },
+
+  // --- Rows (sheet-like, no card frame) ---
+  row: {
     flexDirection: "row",
     alignItems: "center",
+    justifyContent: "space-between",
+    paddingVertical: normalizeSize(12),
+    paddingHorizontal: normalizeSize(12),
+    borderRadius: normalizeSize(16),
+    marginVertical: normalizeSize(6),
+    overflow: "hidden",
   },
-  myRankAvatar: {
-    width: normalizeSize(46),
-    height: normalizeSize(46),
-    borderRadius: normalizeSize(23),
-    borderWidth: StyleSheet.hairlineWidth,
-    borderColor: "rgba(255,255,255,0.6)",
+  rowMe: {
+    backgroundColor: "rgba(255,255,255,0.09)",
   },
-  myRankName: {
+  leftSection: { flexDirection: "row", alignItems: "center", flex: 1 },
+  rightSection: {
+  alignItems: "flex-end",
+  justifyContent: "center",
+  marginLeft: 10,
+  gap: normalizeSize(6), // ✅ petit spacing
+},
+
+
+  avatarWrap: { position: "relative" },
+  avatar: {
+    width: normalizeSize(48),
+    height: normalizeSize(48),
+    borderRadius: normalizeSize(24),
+  },
+  avatarMe: {
+    transform: [{ scale: 1.03 }],
+  },
+  pioneerMini: {
+    position: "absolute",
+    left: -normalizeSize(6),
+    bottom: -normalizeSize(6),
+  },
+
+  playerInfo: { marginLeft: normalizeSize(12), flex: 1 },
+  name: {
+    fontSize: normalizeFont(15.5),
     fontFamily: "Comfortaa_700Bold",
-    fontSize: normalizeFont(16),
-    color: "#fff",
+    includeFontPadding: false,
   },
-  myRankSub: {
-    fontFamily: "Comfortaa_400Regular",
+  handle: {
+    marginTop: 3,
     fontSize: normalizeFont(12),
-    color: "rgba(255,255,255,0.8)",
-    marginTop: 2,
+    fontFamily: "Comfortaa_400Regular",
+    includeFontPadding: false,
   },
+
+  score: {
+    fontSize: normalizeFont(16),
+    fontFamily: "Comfortaa_700Bold",
+    color: "rgba(255,255,255,0.96)",
+    includeFontPadding: false,
+  },
+  rank: {
+    marginTop: 3,
+    fontSize: normalizeFont(12),
+    fontFamily: "Comfortaa_400Regular",
+    includeFontPadding: false,
+    opacity: 0.9,
+  },
+myRankCard: {
+  width: "100%",
+  paddingVertical: normalizeSize(12),
+  paddingHorizontal: normalizeSize(12),
+  borderRadius: normalizeSize(16),
+  flexDirection: "row",
+  alignItems: "center",
+  justifyContent: "space-between",
+  overflow: "hidden",
+},
+  myRankLeft: { flexDirection: "row", alignItems: "center", flex: 1 },
+  myRankAvatar: {
+  width: normalizeSize(44),
+  height: normalizeSize(44),
+  borderRadius: normalizeSize(22),
+  borderWidth: StyleSheet.hairlineWidth,
+},
+ myRankName: {
+  fontFamily: "Comfortaa_700Bold",
+  fontSize: normalizeFont(14.5),
+  includeFontPadding: false,
+},
+myRankSub: {
+  fontFamily: "Comfortaa_400Regular",
+  fontSize: normalizeFont(12),
+  marginTop: 2,
+  includeFontPadding: false,
+},
+
   myRankShareBtn: {
     flexDirection: "row",
     alignItems: "center",
-    backgroundColor: "#111828",
-    paddingHorizontal: SPACING * 1.2,
-    paddingVertical: SPACING * 0.7,
+    paddingHorizontal: normalizeSize(12),
+    paddingVertical: normalizeSize(9),
     borderRadius: 999,
+    backgroundColor: "rgba(255,255,255,0.10)",
   },
   myRankShareText: {
     color: "#fff",
     marginLeft: 6,
     fontFamily: "Comfortaa_700Bold",
     fontSize: normalizeFont(12),
-  },
-  activeTabText: {
-    color: "#FFFFFF",
-  },
-  topThreeContainer: {
-    flexDirection: "row",
-    justifyContent: "space-evenly",
-    alignItems: "flex-end",
-    marginVertical: SPACING * 1.5,
-    paddingHorizontal: SPACING,
-  },
-  podiumItem: {
-    alignItems: "center",
-    flex: 1,
-    maxWidth: normalizeSize(110), // ✅ meilleur scaling
-  },
-  circleFirst: {
-    width: normalizeSize(120),
-    height: normalizeSize(120),
-    borderRadius: normalizeSize(60),
-    alignItems: "center",
-    justifyContent: "center",
-    marginBottom: SPACING,
-    position: "relative",
-    borderWidth: StyleSheet.hairlineWidth,
-    borderColor: "#FFD700",
-  },
-  circleSecond: {
-    width: normalizeSize(100),
-    height: normalizeSize(100),
-    borderRadius: normalizeSize(50),
-    alignItems: "center",
-    justifyContent: "center",
-    marginBottom: SPACING,
-    position: "relative",
-    borderWidth: normalizeSize(1),
-    borderColor: "#C0C0C0",
-  },
-  circleThird: {
-    width: normalizeSize(100),
-    height: normalizeSize(100),
-    borderRadius: normalizeSize(50),
-    alignItems: "center",
-    justifyContent: "center",
-    marginBottom: SPACING,
-    position: "relative",
-    borderWidth: normalizeSize(1),
-    borderColor: "#CD7F32",
-  },
-  profileImage: {
-    width: normalizeSize(70),
-    height: normalizeSize(70),
-    borderRadius: normalizeSize(35),
-    borderWidth: normalizeSize(0.5),
-    borderColor: "#FFF",
-  },
-  profileImageFirst: {
-    width: normalizeSize(90),
-    height: normalizeSize(90),
-    borderRadius: normalizeSize(45),
-    borderWidth: normalizeSize(0.5),
-    borderColor: "#FFF",
-  },
-  crownIcon: {
-    position: "absolute",
-    top: -normalizeSize(30),
-    shadowColor: "#000",
-    shadowOffset: { width: 0, height: normalizeSize(3) },
-    shadowOpacity: 0.4,
-    shadowRadius: normalizeSize(6),
-  },
-  medalIcon: {
-    position: "absolute",
-    top: -normalizeSize(25),
-    shadowColor: "#000",
-    shadowOffset: { width: 0, height: normalizeSize(3) },
-    shadowOpacity: 0.4,
-    shadowRadius: normalizeSize(6),
-  },
-  podiumName: {
-    fontSize: normalizeFont(18),
-    fontFamily: "Comfortaa_700Bold",
-    textAlign: "center",
-    marginTop: SPACING / 1.5,
-  },
-  podiumTrophies: {
-    fontSize: normalizeFont(16),
-    fontFamily: "Comfortaa_700Bold",
-    marginTop: SPACING / 1.5,
-    textAlign: "center",
-    backgroundColor: "rgba(0, 0, 0, 0.8)",
-    padding: SPACING / 1.2,
-    borderRadius: normalizeSize(8),
-    textShadowColor: "#FFF",
-    textShadowOffset: { width: 1, height: 1 },
-    textShadowRadius: 3,
-  },
-  avatarWrap: {
-  position: "relative",
-},
-  handle: {
-    fontSize: normalizeFont(12),
-    fontFamily: "Comfortaa_400Regular",
-    textAlign: "center",
-    marginTop: SPACING / 2,
-  },
-  scrollContent: {
-    paddingBottom: normalizeSize(80),
-  },
-  listContainer: {
-    paddingHorizontal: SPACING,
-    marginTop: SPACING * 1.5,
-  },
-  playerRow: {
-    flexDirection: "row",
-    alignItems: "center",
-    padding: SPACING * 1.2,
-    marginVertical: SPACING / 1.5,
-    borderRadius: normalizeSize(18),
-    justifyContent: "space-between",
-    borderWidth: 2,
-  },
-  highlight: {
-    borderWidth: 3,
-    borderColor: "#FACC15",
-    shadowColor: "#FACC15",
-    shadowOffset: { width: 0, height: normalizeSize(4) },
-    shadowOpacity: 0.5,
-    shadowRadius: normalizeSize(6),
-    elevation: 8,
-  },
-  leftSection: {
-    flexDirection: "row",
-    alignItems: "center",
-  },
-  playerImage: {
-    width: normalizeSize(60),
-    height: normalizeSize(60),
-    borderRadius: normalizeSize(30),
-    borderWidth: 2.5,
-  },
-  playerInfo: {
-    marginLeft: SPACING * 1.2,
-  },
-  playerName: {
-    fontSize: normalizeFont(18),
-    fontFamily: "Comfortaa_700Bold",
-  },
-  rightSection: {
-    alignItems: "flex-end",
-  },
-  playerTrophies: {
-    fontSize: normalizeFont(18),
-    fontFamily: "Comfortaa_700Bold",
-    backgroundColor: "rgba(0, 0, 0, 0.8)",
-    padding: SPACING / 1.2,
-    borderRadius: normalizeSize(8),
-    textShadowColor: "#FFF",
-    textShadowOffset: { width: 1, height: 1 },
-    textShadowRadius: 3,
-  },
-  rankText: {
-    fontSize: normalizeFont(14),
-    fontFamily: "Comfortaa_400Regular",
-    marginTop: SPACING / 1.5,
-  },
-    // --- BACKGROUND ORBS ---
-  bgOrbTop: {
-    position: "absolute",
-    top: -SCREEN_WIDTH * 0.25,
-    right: -SCREEN_WIDTH * 0.2,
-    width: SCREEN_WIDTH * 0.8,
-    height: SCREEN_WIDTH * 0.8,
-    borderRadius: SCREEN_WIDTH * 0.4,
-    opacity: 0.55,
-    transform: [{ rotate: "15deg" }],
-  },
-  bgOrbBottom: {
-    position: "absolute",
-    bottom: -SCREEN_WIDTH * 0.25,
-    left: -SCREEN_WIDTH * 0.2,
-    width: SCREEN_WIDTH * 0.9,
-    height: SCREEN_WIDTH * 0.9,
-    borderRadius: SCREEN_WIDTH * 0.45,
-    opacity: 0.5,
-    transform: [{ rotate: "-12deg" }],
+    includeFontPadding: false,
   },
 
-  // --- TABS (frosted glass seg control) ---
-  tabsBlur: {
+  // --- Skeleton rows (no border/frames) ---
+  skelRow: {
     flexDirection: "row",
-    justifyContent: "space-between",
     alignItems: "center",
-    borderRadius: normalizeSize(14),
-    padding: 6,
-    width: "100%",
-    maxWidth: SCREEN_WIDTH - SPACING * 2,
-    borderWidth: StyleSheet.hairlineWidth,
-    borderColor: "rgba(255,255,255,0.08)",
+    justifyContent: "space-between",
+    paddingVertical: normalizeSize(12),
+    paddingHorizontal: normalizeSize(12),
+    borderRadius: normalizeSize(16),
+    marginVertical: normalizeSize(6),
+    backgroundColor: "rgba(255,255,255,0.05)",
     overflow: "hidden",
   },
-  tabWrap: {
-    flex: 1,
-    alignItems: "center",
-    justifyContent: "center",
-  },
-  tabInactive: {
-    backgroundColor: "rgba(255,255,255,0.06)",
-  },
-  tabActive: {
-    backgroundColor: "rgba(255,255,255,0.12)",
-    shadowColor: "#000",
-    shadowOffset: { width: 0, height: normalizeSize(2) },
-    shadowOpacity: 0.18,
-    shadowRadius: normalizeSize(6),
-    elevation: 4,
-  },
-  tabGradientBg: {
-    ...StyleSheet.absoluteFillObject,
-    borderRadius: normalizeSize(10),
-    opacity: 0.9,
-  },
 
-  // --- PODIUM glow ring ---
-  glowRing: {
-    position: "absolute",
-    width: "105%",
-    height: "105%",
-    borderRadius: 999,
-    borderWidth: 1,
-    borderColor: "rgba(255,255,255,0.35)",
-    shadowColor: "#fff",
-    shadowOffset: { width: 0, height: 0 },
-    shadowOpacity: 0.35,
-    shadowRadius: normalizeSize(10),
-    opacity: 0.7,
-  },
-  loadingContainer: {
-    flex: 1,
-    justifyContent: "center",
-    alignItems: "center",
-  },
-  loadingText: {
-    fontSize: normalizeFont(18),
-    fontFamily: "Comfortaa_700Bold",
-    marginTop: SPACING,
-  },
+  // --- Empty / error ---
   noPlayersText: {
-    fontSize: normalizeFont(18),
+    fontSize: normalizeFont(16),
     fontFamily: "Comfortaa_400Regular",
     textAlign: "center",
     padding: SPACING * 1.5,
   },
-  errorContainer: {
-    alignItems: "center",
-    padding: SPACING * 2.5,
-  },
+  errorContainer: { alignItems: "center", padding: SPACING * 2.5 },
   errorText: {
     fontSize: normalizeFont(15),
     textAlign: "center",
     marginBottom: SPACING * 1.5,
   },
   settingsButton: {
-    paddingVertical: SPACING * 1.2,
-    paddingHorizontal: SPACING * 2.5,
-    borderRadius: normalizeSize(30),
-    shadowColor: "#000",
-    shadowOffset: { width: 0, height: normalizeSize(4) },
-    shadowOpacity: 0.35,
-    shadowRadius: normalizeSize(6),
-    elevation: 6,
+    paddingVertical: SPACING * 1.1,
+    paddingHorizontal: SPACING * 2.2,
+    borderRadius: normalizeSize(999),
+    backgroundColor: "rgba(255,255,255,0.12)",
+    overflow: "hidden",
   },
   settingsButtonText: {
-    fontSize: normalizeFont(15),
+    fontSize: normalizeFont(14),
     fontFamily: "Comfortaa_700Bold",
   },
 });
+

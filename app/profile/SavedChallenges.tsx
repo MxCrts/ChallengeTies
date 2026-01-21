@@ -294,8 +294,13 @@ export default function SavedChallengesScreen() {
   const renderChallengeItem = useCallback<ListRenderItem<Challenge>>(
     ({ item, index }) => {
       const borderColor = isDarkMode
-        ? currentTheme.colors.secondary
-        : "#FF8C00";
+  ? withAlpha("#FFFFFF", 0.16)
+  : withAlpha("#000000", 0.10);
+
+const ringGrad = isDarkMode
+  ? (["rgba(255,255,255,0.22)", "rgba(255,255,255,0.06)", "rgba(255,255,255,0.14)"] as const)
+  : (["rgba(0,0,0,0.14)", "rgba(0,0,0,0.05)", "rgba(0,0,0,0.10)"] as const);
+
 
       return (
         <Animated.View
@@ -304,7 +309,7 @@ export default function SavedChallengesScreen() {
           style={styles.cardWrapper}
         >
           <View
-            accessibilityLabel={`${t("challenge")} ${item.title}, ${t(
+            accessibilityLabel={`${t("challengeS")} ${item.title}, ${t(
               "swipeToDelete"
             )}`}
             testID={`challenge-swipe-${item.id}`}
@@ -341,15 +346,47 @@ export default function SavedChallengesScreen() {
                 testID={`challenge-card-${item.id}`}
               >
                 {/* Glow subtil top */}
-                <View style={styles.cardGlow} />
+                {/* ✅ Ring gradient premium */}
+<LinearGradient
+  colors={ringGrad}
+  start={{ x: 0, y: 0 }}
+  end={{ x: 1, y: 1 }}
+  style={styles.cardRing}
+>
+  {/* ✅ Halo soft */}
+  <View
+    pointerEvents="none"
+    style={[
+      styles.cardHalo,
+      {
+        backgroundColor: withAlpha(
+          currentTheme.colors.primary,
+          isDarkMode ? 0.10 : 0.06
+        ),
+      },
+    ]}
+  />
 
-                <LinearGradient
-                  colors={[
-                    withAlpha(currentTheme.colors.cardBackground, 0.98),
-                    withAlpha(currentTheme.colors.cardBackground, 0.86),
-                  ]}
-                  style={[styles.card, { borderColor }]}
-                >
+  <LinearGradient
+    colors={[
+      withAlpha(currentTheme.colors.cardBackground, isDarkMode ? 0.92 : 0.96),
+      withAlpha(currentTheme.colors.cardBackground, isDarkMode ? 0.78 : 0.90),
+    ]}
+    style={[styles.card, { borderColor }]}
+  >
+    {/* ✅ Sheen diagonal */}
+    <LinearGradient
+      pointerEvents="none"
+      colors={[
+        "transparent",
+        isDarkMode ? "rgba(255,255,255,0.10)" : "rgba(255,255,255,0.55)",
+        "transparent",
+      ]}
+      start={{ x: 0, y: 0 }}
+      end={{ x: 1, y: 1 }}
+      style={styles.cardSheen}
+    />
+
                   <ExpoImage
                     source={{
                       uri:
@@ -381,13 +418,26 @@ export default function SavedChallengesScreen() {
                           {item.category || t("miscellaneous")}
                         </Text>
                       </View>
-                      <View style={styles.savedPill}>
+                      <View
+  style={[
+    styles.savedPill,
+    {
+      backgroundColor: isDarkMode ? "rgba(255,255,255,0.10)" : "rgba(0,0,0,0.05)",
+      borderColor: isDarkMode ? "rgba(255,255,255,0.16)" : "rgba(0,0,0,0.08)",
+    },
+  ]}
+>
+
                         <Ionicons
                           name="bookmark-outline"
                           size={normalizeSize(13)}
-                          color="#0b1120"
+                          color={isDarkMode ? "#F9FAFB" : "#0B0B10"}
                         />
-                        <Text style={styles.savedPillText} numberOfLines={1}>
+                        <Text style={[
+  styles.savedPillText,
+  { color: isDarkMode ? "#F9FAFB" : "#0B0B10" },
+]}
+ numberOfLines={1}>
                           {t("savedShort", { defaultValue: "Enregistré" })}
                         </Text>
                       </View>
@@ -468,6 +518,7 @@ export default function SavedChallengesScreen() {
                     </View>
                   </View>
                 </LinearGradient>
+</LinearGradient>
               </TouchableOpacity>
             </Swipeable>
           </View>
@@ -692,6 +743,60 @@ const styles = StyleSheet.create({
     height: SCREEN_WIDTH * 0.9,
     borderRadius: SCREEN_WIDTH * 0.45,
   },
+  cardWrapper: {
+  marginBottom: SPACING * 1.2,
+  borderRadius: normalizeSize(26),
+  backgroundColor: "transparent",
+  overflow: "visible",
+},
+
+cardContainer: {
+  width: ITEM_WIDTH,
+  borderRadius: normalizeSize(26),
+  overflow: "visible",
+  alignSelf: "center",
+},
+
+cardRing: {
+  borderRadius: normalizeSize(26),
+  padding: normalizeSize(2),
+},
+
+cardHalo: {
+  position: "absolute",
+  top: -normalizeSize(18),
+  right: -normalizeSize(26),
+  width: normalizeSize(110),
+  height: normalizeSize(110),
+  borderRadius: 999,
+  opacity: 0.95,
+},
+
+card: {
+  flexDirection: "row",
+  alignItems: "center",
+  padding: normalizeSize(14),
+  borderRadius: normalizeSize(24),
+  borderWidth: StyleSheet.hairlineWidth,
+  overflow: "hidden",
+
+  shadowColor: "#000",
+  shadowOffset: { width: 0, height: 10 },
+  shadowOpacity: Platform.OS === "ios" ? 0.10 : 0,
+  shadowRadius: 18,
+  elevation: Platform.OS === "android" ? 2 : 0,
+},
+
+cardSheen: {
+  position: "absolute",
+  top: -normalizeSize(26),
+  left: -normalizeSize(50),
+  width: "150%",
+  height: normalizeSize(82),
+  transform: [{ rotate: "-12deg" }],
+  opacity: 0.85,
+},
+
   bgOrbBottom: {
     position: "absolute",
     bottom: -SCREEN_WIDTH * 0.3,
@@ -723,22 +828,6 @@ const styles = StyleSheet.create({
     paddingHorizontal: SCREEN_WIDTH * 0.025,
     paddingBottom: normalizeSize(80),
   },
-
-  cardWrapper: {
-    marginBottom: SPACING * 1.5,
-    borderRadius: normalizeSize(25),
-    shadowColor: "#000",
-    shadowOffset: { width: 0, height: normalizeSize(5) },
-    shadowOpacity: 0.35,
-    shadowRadius: normalizeSize(8),
-    elevation: 10,
-  },
-  cardContainer: {
-    width: ITEM_WIDTH,
-    borderRadius: normalizeSize(25),
-    overflow: "hidden",
-    alignSelf: "center",
-  },
   cardGlow: {
     position: "absolute",
     top: 0,
@@ -748,20 +837,15 @@ const styles = StyleSheet.create({
     opacity: 0.25,
     backgroundColor: "rgba(255,255,255,0.12)",
   },
-  card: {
-    flexDirection: "row",
-    alignItems: "center",
-    padding: normalizeSize(16),
-    borderRadius: normalizeSize(25),
-    borderWidth: 2.5,
-  },
   cardImage: {
     width: normalizeSize(66),
     aspectRatio: 1,
     borderRadius: normalizeSize(16),
     marginRight: SPACING * 0.95,
-    borderWidth: 2,
-    borderColor: "rgba(255, 255, 255, 0.6)",
+    borderWidth: StyleSheet.hairlineWidth,
+borderColor: "rgba(255,255,255,0.20)",
+backgroundColor: "rgba(255,255,255,0.06)",
+
   },
   cardContent: {
     flex: 1,
@@ -788,22 +872,24 @@ const styles = StyleSheet.create({
    textAlign: I18nManager.isRTL ? "right" : "left",
   },
   savedPill: {
-    flexDirection: "row",
-    alignItems: "center",
-    gap: 4,
-    paddingHorizontal: normalizeSize(8),
-    paddingVertical: normalizeSize(3),
-    borderRadius: 999,
-    backgroundColor: "#FDE68A",
-  },
-  savedPillText: {
-    fontSize: normalizeSize(11),
-    fontFamily: "Comfortaa_700Bold",
-    color: "#0b1120",
-    writingDirection: I18nManager.isRTL ? "rtl" : "ltr",
-   textAlign: I18nManager.isRTL ? "right" : "left",
-  },
+  flexDirection: "row",
+  alignItems: "center",
+  gap: 6,
+  paddingHorizontal: normalizeSize(10),
+  paddingVertical: normalizeSize(4),
+  borderRadius: 999,
 
+  backgroundColor: "rgba(255,255,255,0.10)",
+  borderWidth: StyleSheet.hairlineWidth,
+  borderColor: "rgba(255,255,255,0.16)",
+},
+savedPillText: {
+  fontSize: normalizeSize(11.5),
+  fontFamily: "Comfortaa_700Bold",
+  color: "#F9FAFB",
+  writingDirection: I18nManager.isRTL ? "rtl" : "ltr",
+  textAlign: I18nManager.isRTL ? "right" : "left",
+},
   challengeTitle: {
     fontSize: normalizeSize(17),
     fontFamily: "Comfortaa_700Bold",
@@ -814,36 +900,33 @@ const styles = StyleSheet.create({
     fontFamily: "Comfortaa_400Regular",
     marginBottom: normalizeSize(6),
   },
-
   footerRow: {
     marginTop: normalizeSize(2),
     alignItems: "flex-end",
   },
-
   viewButton: {
-    borderRadius: normalizeSize(18),
-    overflow: "hidden",
-    alignSelf: "flex-end",
-  },
+  borderRadius: normalizeSize(999),
+  overflow: "hidden",
+  alignSelf: "flex-end",
+},
   viewButtonGradient: {
-    paddingVertical: normalizeSize(9),
-    paddingHorizontal: SPACING * 1.2,
-    alignItems: "center",
-    justifyContent: "center",
-    borderRadius: normalizeSize(18),
-  },
+  paddingVertical: normalizeSize(8),
+  paddingHorizontal: normalizeSize(14),
+  alignItems: "center",
+  justifyContent: "center",
+  borderRadius: normalizeSize(999),
+},
+viewButtonText: {
+  fontFamily: "Comfortaa_700Bold",
+  fontSize: normalizeSize(13.5),
+  letterSpacing: 0.2,
+  writingDirection: I18nManager.isRTL ? "rtl" : "ltr",
+},
   viewButtonContent: {
     flexDirection: "row",
     alignItems: "center",
     gap: 6,
   },
-  viewButtonText: {
-    fontFamily: "Comfortaa_700Bold",
-    fontSize: normalizeSize(14.5),
-    textAlign: "center",
-    writingDirection: I18nManager.isRTL ? "rtl" : "ltr",
-  },
-
   loadingContainer: {
     flex: 1,
     justifyContent: "center",
@@ -857,7 +940,6 @@ const styles = StyleSheet.create({
     textAlign: "center",
     writingDirection: I18nManager.isRTL ? "rtl" : "ltr",
   },
-
   noChallengesContent: {
     flex: 1,
     alignItems: "center",

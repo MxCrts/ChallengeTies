@@ -737,81 +737,123 @@ try {
                 accessibilityRole="button"
                 testID="profile-image-button"
               >
-                <LinearGradient
-                  colors={
-                    isDarkMode
-                      ? [
-                          currentTheme.colors.background + "80",
-                          currentTheme.colors.cardBackground + "80",
-                        ]
-                      : [
-                          currentTheme.colors.secondary + "80",
-                          currentTheme.colors.primary + "80",
-                        ]
-                  }
-                  style={[
-                    styles.imageGradient,
-                    {
-                      borderColor: isDarkMode
-                        ? currentTheme.colors.secondary
-                        : "#FFFFFF",
-                    },
-                  ]}
-                >
-                  {profileImage ? (
-                    <Image
-                      source={{ uri: profileImage }}
-                      style={styles.profileImage}
-                      accessibilityLabel={t(
-                        "accessibility.currentProfileImage.label"
-                      )}
-                      defaultSource={require("../../assets/images/default-profile.webp")}
-                    />
-                  ) : (
-                    <Text
-                      style={[
-                        styles.addImageText,
-                        { color: currentTheme.colors.textPrimary },
-                      ]}
-                      numberOfLines={2}
-                      adjustsFontSizeToFit
-                    >
-                      {t("addProfilePhoto")}
-                    </Text>
-                  )}
-                </LinearGradient>
+                <View style={styles.avatarRing}>
+  <LinearGradient
+    colors={
+      isDarkMode
+        ? (["rgba(255,255,255,0.24)", "rgba(255,255,255,0.06)", "rgba(255,255,255,0.16)"] as const)
+        : (["rgba(0,0,0,0.14)", "rgba(0,0,0,0.05)", "rgba(0,0,0,0.10)"] as const)
+    }
+    start={{ x: 0, y: 0 }}
+    end={{ x: 1, y: 1 }}
+    style={styles.avatarRingGrad}
+  >
+    <View
+      pointerEvents="none"
+      style={[
+        styles.avatarHalo,
+        {
+          backgroundColor: withAlpha(
+            currentTheme.colors.secondary,
+            isDarkMode ? 0.16 : 0.10
+          ),
+        },
+      ]}
+    />
+
+    <LinearGradient
+      colors={[
+        withAlpha(currentTheme.colors.cardBackground, isDarkMode ? 0.86 : 0.94),
+        withAlpha(currentTheme.colors.cardBackground, isDarkMode ? 0.72 : 0.90),
+      ]}
+      style={styles.avatarGlass}
+    >
+      {profileImage ? (
+        <Image
+          source={{ uri: profileImage }}
+          style={styles.profileImage}
+          accessibilityLabel={t("accessibility.currentProfileImage.label")}
+          defaultSource={require("../../assets/images/default-profile.webp")}
+        />
+      ) : (
+        <Text
+          style={[
+            styles.addImageText,
+            { color: currentTheme.colors.textPrimary },
+          ]}
+          numberOfLines={2}
+          adjustsFontSizeToFit
+        >
+          {t("addProfilePhoto")}
+        </Text>
+      )}
+
+      {/* ✅ small edit pill */}
+      <View style={styles.avatarEditPill}>
+        <LinearGradient
+          colors={[
+            withAlpha(currentTheme.colors.secondary, 0.95),
+            withAlpha(currentTheme.colors.primary, 0.92),
+          ]}
+          start={{ x: 0, y: 0 }}
+          end={{ x: 1, y: 1 }}
+          style={StyleSheet.absoluteFillObject}
+        />
+        <Text style={styles.avatarEditText}>
+          {t("edit", { defaultValue: "Modifier" })}
+        </Text>
+      </View>
+    </LinearGradient>
+  </LinearGradient>
+</View>
+
               </TouchableOpacity>
             </Animated.View>
 
             <GlassCard
-              isDarkMode={isDarkMode}
-              overlayLightColor={withAlpha("#FFFFFF", 0.6)}
-              overlayLightColor2={withAlpha("#FFF5E6", 0.4)}
-              overlayDarkColor={withAlpha("#FFFFFF", 0.03)}
-              overlayDarkColor2={withAlpha("#FFFFFF", 0.02)}
-              style={[
-                styles.formCard,
-                {
-                  borderColor: isDarkMode
-                    ? currentTheme.colors.secondary
-                    : "#FFB800",
-                },
-              ]}
-            >
+  isDarkMode={isDarkMode}
+  overlayLightColor={withAlpha("#FFFFFF", 0.55)}
+  overlayLightColor2={withAlpha("#FFFFFF", 0.24)}
+  overlayDarkColor={withAlpha("#FFFFFF", 0.05)}
+  overlayDarkColor2={withAlpha("#FFFFFF", 0.02)}
+  style={[
+    styles.formCard,
+    {
+      borderColor: isDarkMode
+        ? withAlpha("#FFFFFF", 0.16)
+        : withAlpha("#000000", 0.08),
+    },
+  ]}
+>
+  <LinearGradient
+    pointerEvents="none"
+    colors={[
+      "transparent",
+      isDarkMode ? "rgba(255,255,255,0.10)" : "rgba(255,255,255,0.55)",
+      "transparent",
+    ]}
+    start={{ x: 0, y: 0 }}
+    end={{ x: 1, y: 1 }}
+    style={styles.cardSheen}
+  />
+
               {/* Nom */}
               <Animated.View
                 entering={FadeInUp.delay(200)}
                 style={[
-                  styles.inputWrapper,
-                  {
-                    backgroundColor: isDarkMode
-                      ? "rgba(0,0,0,0.3)"
-                      : "rgba(255,255,255,0.2)",
-                    borderColor: isDarkMode
-                      ? currentTheme.colors.secondary
-                      : "#FFB800",
-                  },
-                ]}
+  styles.inputWrapper,
+  {
+    backgroundColor: isDarkMode
+      ? "rgba(0,0,0,0.26)"
+      : "rgba(255,255,255,0.22)",
+    borderColor: isDisplayNameFocused
+      ? withAlpha(currentTheme.colors.secondary, isDarkMode ? 0.65 : 0.45)
+      : isDarkMode
+      ? withAlpha("#FFFFFF", 0.12)
+      : withAlpha("#000000", 0.08),
+  },
+]}
+
               >
                 <TextInput
                   label={t("name")}
@@ -866,16 +908,19 @@ try {
               <Animated.View
                 entering={FadeInUp.delay(300)}
                 style={[
-                  styles.inputWrapper,
-                  {
-                    backgroundColor: isDarkMode
-                      ? "rgba(0,0,0,0.3)"
-                      : "rgba(255,255,255,0.2)",
-                    borderColor: isDarkMode
-                      ? currentTheme.colors.secondary
-                      : "#FFB800",
-                  },
-                ]}
+  styles.inputWrapper,
+  {
+    backgroundColor: isDarkMode
+      ? "rgba(0,0,0,0.26)"
+      : "rgba(255,255,255,0.22)",
+   borderColor: isBioFocused
+  ? withAlpha(currentTheme.colors.secondary, isDarkMode ? 0.65 : 0.45)
+  : isDarkMode
+  ? withAlpha("#FFFFFF", 0.12)
+  : withAlpha("#000000", 0.08),
+  },
+]}
+
               >
                 <TextInput
                   label={t("bio")}
@@ -934,16 +979,20 @@ try {
               <Animated.View
                 entering={FadeInUp.delay(400)}
                 style={[
-                  styles.inputWrapper,
-                  {
-                    backgroundColor: isDarkMode
-                      ? "rgba(0,0,0,0.3)"
-                      : "rgba(255,255,255,0.2)",
-                    borderColor: isDarkMode
-                      ? currentTheme.colors.secondary
-                      : "#FFB800",
-                  },
-                ]}
+  styles.inputWrapper,
+  {
+    backgroundColor: isDarkMode
+      ? "rgba(0,0,0,0.26)"
+      : "rgba(255,255,255,0.22)",
+    borderColor: isLocationFocused
+  ? withAlpha(currentTheme.colors.secondary, isDarkMode ? 0.65 : 0.45)
+  : isDarkMode
+  ? withAlpha("#FFFFFF", 0.12)
+  : withAlpha("#000000", 0.08),
+
+  },
+]}
+
               >
                 <TextInput
                   label={t("location")}
@@ -1000,16 +1049,20 @@ try {
               <Animated.View
                 entering={FadeInUp.delay(500)}
                 style={[
-                  styles.inputWrapper,
-                  {
-                    backgroundColor: isDarkMode
-                      ? "rgba(0,0,0,0.3)"
-                      : "rgba(255,255,255,0.2)",
-                    borderColor: isDarkMode
-                      ? currentTheme.colors.secondary
-                      : "#FFB800",
-                  },
-                ]}
+  styles.inputWrapper,
+  {
+    backgroundColor: isDarkMode
+      ? "rgba(0,0,0,0.26)"
+      : "rgba(255,255,255,0.22)",
+    borderColor: isInterestsFocused
+  ? withAlpha(currentTheme.colors.secondary, isDarkMode ? 0.65 : 0.45)
+  : isDarkMode
+  ? withAlpha("#FFFFFF", 0.12)
+  : withAlpha("#000000", 0.08),
+
+  },
+]}
+
               >
                 <TextInput
                   label={t("interests")}
@@ -1084,23 +1137,22 @@ try {
               >
                 <LinearGradient
                   colors={
-                    isDarkMode
-                      ? [
-                          currentTheme.colors.secondary,
-                          currentTheme.colors.primary,
-                        ]
-                      : ["#FF8C00", "#FFA500"]
-                  }
+  !hasChanges || isLoading
+    ? isDarkMode
+      ? ["rgba(255,255,255,0.10)", "rgba(255,255,255,0.06)"]
+      : ["rgba(0,0,0,0.06)", "rgba(0,0,0,0.03)"]
+    : [currentTheme.colors.secondary, currentTheme.colors.primary]
+}
                   style={[
-                    styles.saveButton,
-                    {
-                      borderWidth: isDarkMode ? 1 : 2,
-                      borderColor: isDarkMode
-                        ? currentTheme.colors.secondary
-                        : "#FFB800",
-                      opacity: !hasChanges || isLoading ? 0.6 : 1,
-                    },
-                  ]}
+  styles.saveButton,
+  {
+    opacity: !hasChanges || isLoading ? 0.55 : 1,
+    borderColor: !hasChanges || isLoading
+      ? (isDarkMode ? "rgba(255,255,255,0.10)" : "rgba(0,0,0,0.08)")
+      : withAlpha("#FFFFFF", isDarkMode ? 0.18 : 0.0),
+  },
+]}
+
                 >
                   {isLoading ? (
                     <ActivityIndicator
@@ -1205,18 +1257,133 @@ const styles = StyleSheet.create({
     alignItems: "center",
     paddingBottom: n(40),
   },
+  formCard: {
+  width: "100%",
+  borderWidth: StyleSheet.hairlineWidth,
+  borderRadius: normalizeSize(20),
+  marginBottom: SPACING,
+  overflow: "hidden",
+},
+saveButton: {
+  paddingVertical: n(14),
+  paddingHorizontal: n(26),
+  borderRadius: 999,
+  alignItems: "center",
+  justifyContent: "center",
+  borderWidth: StyleSheet.hairlineWidth,
 
-  imageContainer: {
-    marginBottom: V_SPACING * 1.2,
-    borderRadius: n(60),
-    alignItems: "center",
-    justifyContent: "center",
-    shadowColor: "#000",
-    shadowOffset: { width: 0, height: n(4) },
-    shadowOpacity: 0.28,
-    shadowRadius: n(7),
-    elevation: 8,
-  },
+  shadowColor: "#000",
+  shadowOffset: { width: 0, height: n(10) },
+  shadowOpacity: Platform.OS === "ios" ? 0.12 : 0,
+  shadowRadius: n(18),
+  elevation: Platform.OS === "android" ? 2 : 0,
+},
+
+inputWrapper: {
+  width: "100%",
+  marginBottom: V_SPACING,
+  borderRadius: n(16),
+  borderWidth: StyleSheet.hairlineWidth,
+  overflow: "hidden",
+},
+
+input: {
+  width: "100%",
+  fontFamily: "Comfortaa_400Regular",
+  paddingHorizontal: V_SPACING,
+  paddingVertical: n(10),
+  backgroundColor: "transparent",
+  borderRadius: n(16),
+  minHeight: n(46),
+  textAlign: I18nManager.isRTL ? "right" : "left",
+},
+
+
+glassWrap: {
+  borderRadius: normalizeSize(20),
+  overflow: "hidden",
+  borderWidth: StyleSheet.hairlineWidth,
+},
+
+glassInner: {
+  paddingVertical: SPACING,
+  paddingHorizontal: SPACING,
+},
+cardSheen: {
+  position: "absolute",
+  top: -normalizeSize(28),
+  left: -normalizeSize(60),
+  width: "160%",
+  height: normalizeSize(86),
+  transform: [{ rotate: "-12deg" }],
+  opacity: 0.85,
+},
+imageContainer: {
+  marginBottom: V_SPACING * 1.2,
+  alignItems: "center",
+  justifyContent: "center",
+},
+avatarRing: {
+  borderRadius: n(72),
+  overflow: "visible",
+
+  shadowColor: "#000",
+  shadowOffset: { width: 0, height: n(10) },
+  shadowOpacity: Platform.OS === "ios" ? 0.14 : 0,
+  shadowRadius: n(18),
+  elevation: Platform.OS === "android" ? 3 : 0,
+},
+avatarRingGrad: {
+  borderRadius: n(72),
+  padding: n(2),
+},
+avatarHalo: {
+  position: "absolute",
+  top: -n(18),
+  right: -n(22),
+  width: n(110),
+  height: n(110),
+  borderRadius: 999,
+  opacity: 0.95,
+},
+
+avatarGlass: {
+  width: n(IS_COMPACT ? 120 : 136),
+  aspectRatio: 1,
+  borderRadius: n(IS_COMPACT ? 60 : 68),
+  overflow: "hidden",
+  alignItems: "center",
+  justifyContent: "center",
+  borderWidth: StyleSheet.hairlineWidth,
+  borderColor: "rgba(255,255,255,0.14)",
+},
+
+profileImage: {
+  width: "100%",
+  height: "100%",
+  borderRadius: n(IS_COMPACT ? 60 : 68),
+  resizeMode: "cover",
+},
+
+avatarEditPill: {
+  position: "absolute",
+  bottom: n(10),
+  right: n(10),
+  borderRadius: 999,
+  paddingVertical: n(6),
+  paddingHorizontal: n(10),
+  overflow: "hidden",
+  borderWidth: StyleSheet.hairlineWidth,
+  borderColor: "rgba(255,255,255,0.18)",
+},
+
+avatarEditText: {
+  fontFamily: "Comfortaa_700Bold",
+  fontSize: n(11.5),
+  color: "#0b1120",
+  letterSpacing: 0.2,
+},
+
   loadingContainer: {
     flex: 1,
     justifyContent: "center",
@@ -1229,21 +1396,6 @@ const styles = StyleSheet.create({
     textAlign: "center",
     writingDirection: I18nManager.isRTL ? "rtl" : "ltr",
   },
-  imageGradient: {
-    width: n(IS_COMPACT ? 120 : 136),
-    aspectRatio: 1,
-    borderRadius: n(IS_COMPACT ? 60 : 68),
-    overflow: "hidden",
-    justifyContent: "center",
-    alignItems: "center",
-    borderWidth: 3,
-  },
-  profileImage: {
-    width: n(IS_COMPACT ? 114 : 128),
-    aspectRatio: 1,
-    borderRadius: n(IS_COMPACT ? 57 : 64),
-    resizeMode: "cover",
-  },
   addImageText: {
     fontSize: normalizeSize(16),
     fontFamily: "Comfortaa_700Bold",
@@ -1251,43 +1403,6 @@ const styles = StyleSheet.create({
     paddingHorizontal: SPACING * 1.5,
     writingDirection: I18nManager.isRTL ? "rtl" : "ltr",
   },
-  inputWrapper: {
-    width: "100%",
-    marginBottom: V_SPACING,
-    borderRadius: n(14),
-    borderWidth: 1.5,
-    overflow: "hidden",
-  },
-
-  input: {
-    width: "100%",
-    fontFamily: "Comfortaa_400Regular",
-    paddingHorizontal: V_SPACING,
-    paddingVertical: n(10),
-    backgroundColor: "transparent",
-    borderRadius: n(14),
-    minHeight: n(44),
-    textAlign: I18nManager.isRTL ? "right" : "left",
-  },
-  formCard: {
-    width: "100%",
-    borderWidth: 1.5,
-    borderRadius: normalizeSize(18),
-    marginBottom: SPACING,
-    overflow: "hidden",
-  },
-
-  glassWrap: {
-    borderRadius: normalizeSize(18),
-    overflow: "hidden",
-    borderWidth: 1.5,
-  },
-
-  glassInner: {
-    paddingVertical: SPACING,
-    paddingHorizontal: SPACING,
-  },
-
   multilineInput: {
     minHeight: n(IS_COMPACT ? 76 : 88),
     textAlignVertical: "top",
@@ -1298,18 +1413,6 @@ const styles = StyleSheet.create({
     width: "100%",
     marginTop: V_SPACING * 1.4,
     alignItems: "center",
-  },
-
-  saveButton: {
-    paddingVertical: n(14),
-    paddingHorizontal: n(26),
-    borderRadius: n(26),
-    alignItems: "center",
-    shadowColor: "#000",
-    shadowOffset: { width: 0, height: n(4) },
-    shadowOpacity: 0.28,
-    shadowRadius: n(7),
-    elevation: 9,
   },
   saveButtonText: {
     fontSize: n(18),

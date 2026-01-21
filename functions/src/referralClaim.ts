@@ -1,9 +1,7 @@
 // functions/src/referralClaim.ts
 import { onCall, HttpsError } from "firebase-functions/v2/https";
-import { initializeApp, getApps } from "firebase-admin/app";
 import { getFirestore, FieldValue } from "firebase-admin/firestore";
 
-if (!getApps().length) initializeApp();
 const db = getFirestore();
 
 const ALLOWED = [5, 10, 25] as const;
@@ -43,18 +41,20 @@ export const claimReferralMilestone = onCall<{ milestone: number }>(
       if (activatedCount < milestone) {
         throw new HttpsError("failed-precondition", "not_reached");
       }
-      if (!pending.includes(milestone)) {
-        // pas encore unlock côté serveur
-        throw new HttpsError("failed-precondition", "not_unlocked");
-      }
+      // ✅ Idempotence UX: si déjà claim -> OK silencieux (pas d'erreur)
       if (claimed.includes(milestone)) {
-        throw new HttpsError("already-exists", "already_claimed");
+        return;
+      }
+      // ✅ Doit être pending côté serveur (sinon pas unlock)
+      if (!pending.includes(milestone)) {
+        throw new HttpsError("failed-precondition", "not_unlocked");
       }
 
       const reward = REWARDS[milestone as (typeof ALLOWED)[number]] ?? 0;
 
       tx.update(userRef, {
         trophies: FieldValue.increment(reward),
+        totalTrophies: FieldValue.increment(reward),
 
         // move pending -> claimed
         "referral.claimedMilestones": FieldValue.arrayUnion(milestone),
@@ -63,6 +63,16 @@ export const claimReferralMilestone = onCall<{ milestone: number }>(
         "referral.lastClaimed": milestone,
         "referral.updatedAt": FieldValue.serverTimestamp(),
         updatedAt: FieldValue.serverTimestamp(),
+      });
+      // ✅ (Optionnel mais top) trace appEvents
+      const appEventRef = db.collection("appEvents").doc();
+      tx.set(appEventRef, {
+        name: "ref_milestone_claimed",
+        params: { milestone, reward },
+        uid,
+        anonId: null,
+        appVersion: null,
+        createdAt: FieldValue.serverTimestamp(),
       });
     });
 

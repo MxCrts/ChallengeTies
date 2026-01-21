@@ -24,10 +24,11 @@ export const storage = getStorage(app);
 // ✅ Singleton auth (évite "already-initialized")
 export const auth = (() => {
   try {
-    return getAuth(app);
-  } catch {
     return initializeAuth(app, {
       persistence: getReactNativePersistence(AsyncStorage),
     });
+    } catch {
+    // ⚠️ Déjà initialisé (souvent en dev / fast refresh) → on récupère l’instance existante
+    return getAuth(app);
   }
 })();

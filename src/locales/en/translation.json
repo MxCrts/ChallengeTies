@@ -27,7 +27,10 @@
   "emailVerification": "Email verification",
   "verificationEmailSent": "Verification email sent.",
   "notSet": "Not set",
-  "home": "Home",
+  "homeX": "Home",
+  "home": {
+    "yourChallenge": "Your challenge"
+  },
   "profile": "Profile",
   "yourProfile": "Your Profile",
   "addBioHere": "Add a bio here",
@@ -243,67 +246,47 @@
     }
   },
   "newFeatures": {
-    "loginRequiredTitle": "Login required",
-    "shareDialogTitle": "Share this feature",
-    "votes_one": "1 vote",
-    "deadlineIso": "2025-11-30T23:59:59+01:00",
+    "deadlineIso": "2026-02-28T23:59:59+01:00",
+    "shareLabel": "Share",
+
     "monthLabelTpl": "Update • {{month}}",
     "months": {
-      "01": "January", "02": "February", "03": "March", "04": "April",
-      "05": "May", "06": "June", "07": "July", "08": "August",
-      "09": "September", "10": "October", "11": "November", "12": "December"
+      "01": "January",
+      "02": "February",
+      "03": "March",
+      "04": "April",
+      "05": "May",
+      "06": "June",
+      "07": "July",
+      "08": "August",
+      "09": "September",
+      "10": "October",
+      "11": "November",
+      "12": "December"
     },
-    "voteCloses": "Voting ends in",
+
+    "title": "What’s new",
+    "description": "Vote for the next feature or propose yours. Results at the end of February.",
+
+    "heroTitle": "Vote for the updates coming by the end of February 🚀",
+    "heroSubtitle": "Your voice matters: propose, vote, and follow feature progress.",
+
+    "voteCloses": "Voting closes in",
     "thankYouShort": "Thanks for your vote 💜",
-    "votes_other": "{{count}} votes",
-    "loginRequiredMessage": "Please log in to vote.",
-    "loading": "Loading…",
-  "heroSubtitleSep": "Your voice matters: propose, vote, and track feature progress.",
-  "featureDetails": "Details: {{title}}",
-  "monthLabel": "Update • December",
-  "heroTitleSep": "Vote for the features coming at the end of December 🚀",
-    "heroTitleNov": "Vote for the features coming at the end of November 🚀",
-    "heroSubtitleNov": "Your voice matters: propose, vote, and track feature progress.",
-    "description": "Vote for the next feature or propose your own! Ends on November 30, 2025.",
-  "featureDetailsHint": "Open the feature detail page",
-  "openExplanationHint": "Show how the voting system works",
-  "proposeIdeaHint": "Open the form to propose an idea",
-  "shareMessage": "Discover and vote for this feature:",
-  "shareFeature": "Share feature",
-  "sharE": {
-      "kicker": "Come vote!",
-  "footerWithDays": "Voting ends in {{days}} days — your voice matters ✨",
-      "footer": "Voting ends soon — your voice matters ✨"
-    },
-  "share": "Share",
-  "vote": "Vote",
-  "alreadyVotedShort": "Already voted",
-  "unknown": "Unknown",
-    "by": "by",
-  "votes": "votes",
-    "alreadyVotedTitle": "Vote already cast",
-    "alreadyVotedMessage": "You have already voted.",
-    "voteRegisteredTitle": "Vote registered",
-    "voteRegisteredMessage": "Thank you for your vote!",
-    "voteErrorTitle": "Error",
-    "voteErrorMessage": "Something went wrong.",
-    "proposalSentTitle": "Proposal sent",
-    "proposalSentMessage": "Your idea has been submitted with your vote!",
-    "proposalErrorTitle": "Error",
-    "proposalErrorMessage": "Unable to send.",
-    "title": "What's New",
-    "openExplanation": "Open voting explanation",
-    "noFeatures": "No features available at the moment.",
-    "proposeIdea": "Propose an idea",
-    "thankYouForVote": "Thank you for your vote: {{featureTitle}}",
+
     "countdown": {
       "days": "Days",
       "hours": "Hours",
       "mins": "Minutes",
       "secs": "Seconds",
-       "abbr": { "d": "d", "h": "h", "m": "min", "s": "s" }
+      "abbr": { "d": "d", "h": "h", "m": "min", "s": "s" }
     },
-    "featuresListLabel": "List of proposed features"
+
+    "share": {
+      "kicker": "Come vote!",
+      "footerWithDays": "Voting ends in {{days}} days — your voice matters ✨",
+      "footer": "Voting ends soon — your voice matters ✨"
+    }
   },
   "economy": {
     "weeklyTitle": "Weekly trophies",
@@ -422,7 +405,7 @@
   "alreadyMarkedToday": "Challenge already marked today",
   "alreadyMarked": "Already Marked",
   "loading": "Loading...",
-  "challenge": "Challenge",
+  "challengeS": "Challenge",
   "authRequiredTitle": "Enjoy everything in ChallengeTies",
     "authRequiredBody": "Sign up or log in to access this feature.",
     "authRequiredCTA": "Create an account / Log in",
@@ -463,13 +446,24 @@
     "shareError": "Share failed"
   },
   "pioneerModal": {
-    "title": "You’re a pioneer 🚀",
-    "description": "You’re part of the first <b>{{first}}</b> users of ChallengeTies. To thank you, we’re giving you <b>{{trophies}}</b> bonus trophies 🎁",
-    "cta": "Awesome, thanks!",
-    "closeA11y": "Close pioneer window"
-  },
+  "pill": "First 1,000",
+  "trophiesShort": "trophies",
+  "title": "You’re a Pioneer.",
+  "description": "You’re among the <b>{{first}}</b> first users. As a thank you, we’re giving you <b>{{trophies}}</b> trophies and an exclusive badge.",
+  "b1": "Pioneer badge visible on your profile.",
+  "b2": "Instant bonus to boost your progress.",
+  "b3": "You’re part of the very first wave.",
+  "cta": "Let’s go 🚀",
+  "closeA11y": "Close the Pioneer window",
+  "closeHintA11y": "Closes this window and returns to your profile.",
+  "ctaA11y": "Continue",
+  "ctaHintA11y": "Closes this window and continues.",
+  "foot": "Thanks for building this journey with us."
+},
   "invitationS": {
     "shareTitle": "Duo invitation",
+    "sentTitle": "Invitation sent",
+    "sentBody": "You’ll be notified as soon as they reply.",
     "sendTitle": "Invite a friend",
      "subtitle": "Share a link. Your friend joins this challenge in Duo.",
   "whyDuo": "With two people, you stick with it longer. Simple—and it works.",
@@ -539,27 +533,48 @@
 "profileS": {
     "bioLabel": "Bio",
     "locationLabel": "Location",
+    "heroSub": "Everything that makes you stronger, in one place.",
+    "sectionsListA11y": "Profile content and section list",
+    "noData": "No profile data available.",
     "interestsLabel": "Interests"
   },
+  "dailySelectedSubtitleShort": "Today’s selection.",
  "homeZ": {
+  "duoPending": {
+    "title": "Invite sent", "sub": "Pending. Once accepted: Duo.", "cta": "View", "a11y": "Duo invite pending",
+    "steps": {
+      "sent": "Invitation sent",
+      "waiting": "Waiting for acceptance",
+      "ready": "Once confirmed: Duo starts"
+    }
+  },
     "hero": {
       "brand": "ChallengeTies",
       "headline": "Today’s spark.",
       "sub": "One challenge. One tap. And if you want to stick with it: Duo.",
       "duoProof": "Duo makes it stick.",
       "ctaShort": "Start",
+      "ctaHint": "Discover available challenges.",
       "ctaA11y": "Start and pick a challenge"
     },
     "todayHub": {
       "badge": "TODAY",
       "primaryActiveShort": "Check in",
+      "primaryNewShort": "New",
+  "primaryNewA11y": "Pick a new challenge",
+  "primaryNewHint": "Open Explore to pick a new challenge.",
+  "titleAllDone": "Perfect. Everything is checked off today.",
+  "subAllDone": "Start a new challenge or help someone stay on track.",
       "primaryDuoShort": "Duo",
       "titleActive2": "Check in today. Protect your streak.",
       "titleNone2": "Pick a challenge. Start today.",
-      "subActive2": "1 tap to check in. Then: invite someone and double your chances of sticking with it.",
+      "subActive2": "1 tap to confirm.",
       "subNone2": "The hardest part is the first step. Solo, duo… or create your own.",
       "primaryActiveHint2": "Check in for today in one tap.",
       "progress": "{{done}}/{{total}} days",
+      "primaryNoneShort": "Pick",
+      "progressA11y": "Progress: {{done}} out of {{total}} days completed.",
+      "inviteSubA11y": "Invite someone to improve your chances of success.",
       "micro2": "Duo = motivation x2. Do it now.",
       "openActiveA11y": "Open active challenge",
       "openActiveHint": "Open your challenge to see progress and invite a friend.",
@@ -601,17 +616,21 @@
       "cta": "Duo",
       "ctaA11y": "Invite a friend for Duo",
       "solo": "Stay solo",
-      "soloA11y": "Stay solo"
+      "soloA11y": "Stay solo",
+      "ctaHint": "Invite a friend to take on the same challenge together.",
+      "soloHint": "Continue this challenge without a partner."
     },
     "dailyPicks": {
       "seeAll": "See all in Explore",
       "seeAllA11y": "See all challenges",
-      "seeAllHint": "Open Explore to discover all challenges."
+      "seeAllHint": "Open Explore to discover all challenges.",
+      "sectionA11y": "Daily challenge suggestions."
     },
     "discover": {
       "title": "Discover",
       "subtitle2": "The essentials. The rest below.",
       "leaderboard": "Leaderboard",
+      "sectionA11y": "Discover challenges, tips and new features.",
       "leaderboardSub2": "Social proof. Motivation.",
       "leaderboardA11y": "Open the leaderboard",
       "leaderboardHint": "Compare your progress with others.",
@@ -632,6 +651,20 @@
  "challengeDetails": {
     "noDescription": "No description available",
     "participantsLabel": "Participants",
+    "inviteCta": {
+      "title": "Invite a friend",
+      "sub": "Do it as a duo. Harder… and more powerful.",
+      "pill": "Duo Mode",
+      "a11y": "Invite a friend to the challenge",
+      "hint": "Opens the invitation for this challenge."
+    },
+    "shareCta": {
+      "title": "Share",
+      "sub": "Send this challenge to someone. One moment can change everything.",
+      "pill": "Share link",
+      "a11y": "Share this challenge",
+      "hint": "Opens sharing options."
+    },
     "fetchError": "Unable to fetch the challenge.",
     "untitled": "Challenge",
     "joinError": "Unable to join the challenge. Please try again.",
@@ -694,9 +727,28 @@
 
     "backButton": "Back",
     "backButtonHint": "Go back to the previous screen",
-
+    "quick": {
+      "chat": "Chat",
+      "stats": "Stats",
+      "saved": "Saved",
+  "savedA11y": "Challenge saved",
+      "save": "Save",
+      "chatA11y": "Open chat",
+      "chatHint": "Opens the challenge chat.",
+      "statsA11y": "Open stats",
+      "statsHint": "Opens your progress calendar and stats.",
+      "saveA11y": "Save challenge",
+      "saveHint": "Adds or removes this challenge from your saved list."
+    },
     "actions": {
       "best": "Best",
+      "sectionTitle": "Actions",
+  "inviteTitle": "Invite",
+  "shareTitle": "Share",
+  "chatTitle": "Chat",
+  "saveTitle": "Favorite",
+  "statsTitle": "Stats",
+      "shareA11y": "Share this challenge",
       "inviteA11y": "Invite a friend to go duo",
       "inviteHint": "Send an invite to turn this into a real-time duo duel.",
       "inviteHintDuo": "You’re already duo on this challenge.",
@@ -712,6 +764,10 @@
       "statsSub": "Streaks + month"
     }
   },
+  "takeChallengeA11y": "Start the challenge",
+  "takeChallengeHint": "Opens the duration picker, then confirm to start.",
+  "completeChallengeA11y": "Finish the challenge",
+  "completeChallengeHint": "Opens the completion screen to claim your trophies.",
    "explore": "Explore",
   "email": "Email address",
   "creationDate": "Creation date",
@@ -977,6 +1033,10 @@
       "title": "Reset my streak",
       "subtitle": "Start this challenge again and rebuild your discipline."
     },
+    "pill": {
+    "streakPass": "Streak Pass available",
+    "trophies": "Cost: {{count}} trophies"
+  },
 
     "streakPass": {
       "title": "Use a Streak Pass",
@@ -985,7 +1045,8 @@
 
     "ad": {
       "title": "Watch an ad to save the streak",
-      "subtitle": "Watch a short video to keep your streak without losing everything."
+      "subtitle": "Watch a short video to keep your streak without losing everything.",
+    "disabled": "Video not ready yet. Please wait a moment."
     },
 
     "useTrophies": {
@@ -1065,6 +1126,12 @@
   },
   "completedOnDate": "Completed on",
   "completion": {
+    "rewardLabel": "Reward",
+  "doubleRewardLabel": "Double",
+  "footer": "You kept your word. That’s how identity changes.",
+  "modalTitle": "Challenge completed",
+  "dismiss": "Close",
+  "adLoading": "Ad loading",
   "trophies": "trophies",
   "finalTitle": "Congratulations!",
   "adNotReadyTitle": "Ad not available",
@@ -1139,7 +1206,18 @@
     "optionLabel": "{{count}} day",
     "optionLabel_plural": "{{count}} days",
     "optionHint": "Select this duration",
-    "closeBackdrop": "Close the dialog"
+    "closeBackdrop": "Close the dialog",
+    "micro": {
+    "3": "Start",
+    "7": "Classic",
+    "15": "Habit",
+    "21": "Discipline",
+    "30": "Serious",
+    "60": "Commitment",
+    "90": "Elite",
+    "180": "Transformation",
+    "365": "Legend"
+  }
   },
   "pleaseWait": "Please wait…",
   "chat": {
@@ -1312,7 +1390,7 @@
   "origin": {
     "all": "All",
     "existing": "Official",
-    "created": "Community-created"
+    "created": "Created"
   },
   "participants_one": "participant",
   "participants_other": "participants",
@@ -1379,6 +1457,10 @@
   "dailyBonus": {
     "title": "Daily bonus",
     "subtitle": "Spin the mystery wheel to reveal your reward 🎁",
+    "rerollUnavailable": "Ad loading…",
+    "ctaShort": "Spin",
+    "spinLockedHint": "Watch an ad to spin a second time.",
+    "spinHint": "Spin the wheel to claim your reward.",
     "error": "Unable to retrieve today's bonus at the moment.",
     "tag": "Today's exclusive",
 "shortCta": "1 tap, 1 surprise",
@@ -1979,6 +2061,7 @@
   },
  "welcomeBonus": {
   "title": "Login Bonus",
+  "todayShort": "Today",
   "subtitle": "Day {{day}} of {{total}} • Keep going!",
   "ribbon": "ChallengeTies Welcome Pack",
 
@@ -4028,6 +4111,9 @@
   },
   "shareCardT": {
   "a11yTitle": "Challenge share card",
+  "heldSolo": "I held on",
+    "heldDuo": "We held on",
+    "watermark": "@ChallengeTies",
   "a11yHint": "Preview the card before sharing it with your friends.",
 
   "tagline": "Got a challenge? Get it done.",
@@ -4058,6 +4144,11 @@
   "footerLine2": "Challenges, focus, and victories every day."
 },
   "notificationsPush": {
+    "daily1": "One challenge today can change your whole day. Ready?",
+    "daily2": "Don’t break the streak. Do it now 💪",
+    "daily3": "Friendly reminder: your challenges are waiting today ✨",
+    "duoNudgeOpened": "Duo: open the challenge ✅"
+,
     "inviteAccepted": {
   "title": "Invitation accepted 🎉",
   "body": "{{username}} accepted your challenge \"{{title}}\"!"
@@ -4086,11 +4177,25 @@
   "writeSomething": "Write a quick note before sending 😉",
   "maxChars": "Max 500 characters",
   "cannotSaveReview": "Unable to save your review right now.",
+  "toClaim": "To claim",
 "duo": {
-    "title": "Duo challenge",
+  "leader": "LEADER",
+  "pending": {
+      "title": "Invitation pending",
+      "short": "Invitation pending",
+      "body": "You’ll be notified as soon as they reply. You can also cancel and invite someone else.",
+      "cancelInvite": "Cancel",
+      "cancelError": "Unable to cancel right now."
+    },
     "you": "You",
-    "modeShort": "Duo",
     "partner": "Partner",
+    "status": {
+      "leading": "You lead by {{percent}}%",
+      "behind": "You are behind by {{percent}}%",
+      "tied": "Perfect tie"
+    },
+    "title": "Duo challenge",
+    "modeShort": "Duo",
 
     "leading": "You’re leading!",
     "tied": "Tied",
@@ -4349,6 +4454,135 @@
     "title": "Welcome to this chat",
     "message": "Before joining the conversation, please follow these rules: be kind, stay respectful, avoid offensive or discriminatory content, and no spam. Let’s create a positive and inspiring space together!"
   },
+  "streak": {
+    "confirmReset": {
+      "title": "Confirm?",
+      "text": "You have a Streak Pass available. Do you really want to reset your streak?"
+    },
+    "resetDone": {
+      "title": "Streak reset",
+      "text": "Your streak has been reset. Today counts as a fresh start."
+    },
+    "resetError": "Unable to reset the streak."
+  },
+  "markToast": {
+    "completeTitle": "Mission accomplished. ✅",
+  "complete": {
+    "lines": [
+      "DONE. You’re not part of the crowd.",
+      "You finished. That’s self-respect.",
+      "What you just did: rare. And real.",
+      "You kept your word. To yourself.",
+      "You just became more dangerous.",
+      "Identity upgraded. Next level unlocked.",
+      "You didn’t try. You finished.",
+      "Excuses don’t survive this.",
+      "Chapter closed. Next mission.",
+      "You didn’t win a day. You won yourself."
+    ]
+  },
+    "alreadyMarkedTitle": "Already done.",
+  "alreadyMarkedMsg": "Today is validated. Come back tomorrow.",
+  "alreadyCompletedTitle": "Already completed.",
+  "alreadyCompletedMsg": "This challenge is finished. Start a new one.",
+  "challengeNotFound": "This challenge couldn’t be found.",
+    "dismiss": "Close",
+    "defaultTitle": "Locked in ✅",
+    "progressTpl": "Day {{d}} / {{t}}",
+    "kicker": {
+      "mark": "LOCKED",
+      "streak": "MOMENTUM",
+      "complete": "FINISHED",
+      "error": "OOPS"
+    },
+    "errorTitle": "Oops. Not locked in.",
+    "errorMsg": "Try again in a moment.",
+    "lines": {
+      "early": [
+        "Perfect. Keep moving.",
+        "One more day. No debate.",
+        "This is how you win.",
+        "Focus. Locked in."
+      ],
+      "mid": [
+        "You’re building an edge.",
+        "Momentum stays. Keep going.",
+        "You’re changing for real."
+      ],
+      "late": [
+        "Final stretch.",
+        "Don’t let go. It’s now.",
+        "You finish this. Period."
+      ],
+      "generic": [
+        "Discipline > motivation.",
+        "One action. One proof.",
+        "You’re among the few."
+      ]
+    }
+  },
+  "toast": {
+    "streakBonus": {
+      "title": "Streak bonus",
+      "text": "Nice! Your {{streak}}-day streak earns you {{bonus}} bonus trophy(ies)."
+    },
+    "microEarned": {
+      "title": "Trophies earned",
+      "text": "You earned {{count}} bonus trophy(ies) today!"
+    },
+    "marked": {
+      "title": "Progress saved",
+      "text": "Day marked successfully.",
+      "micro": "+{{count}} trophies. Clean. You’re gaining the edge."
+    },
+    "alreadyDone": {
+      "title": "Challenge completed",
+      "text": "This challenge is already completed."
+    },
+    "alreadyMarked": {
+      "title": "Already marked",
+      "text": "You already marked today for this challenge."
+    },
+    "challengeNotFound": "Challenge not found.",
+    "unableToMark": "Unable to mark this challenge.",
+    "keepGoing": "Keep going 🔥"
+  },
+  "challenge": {
+    "alreadyTaken": "Challenge already in progress.",
+    "unableToLoad": "Unable to load challenges: {{message}}",
+    "unableToAdd": "Unable to add the challenge.",
+    "unableToFinalize": "Unable to finalize this challenge.",
+    "unableToResetStreak": "Unable to reset the streak.",
+    "unableToMarkAfterVideo": "Unable to mark after the video.",
+    "videoSavedStreak": {
+      "title": "Streak saved",
+      "text": "Your streak was saved thanks to the video."
+    },
+    "notEnoughTrophies": {
+      "title": "Not enough trophies",
+      "text": "You don't have enough trophies."
+    },
+    "trophiesUsed": {
+      "title": "Trophies used",
+      "text": "You used {{cost}} trophy(ies) to save your streak."
+    },
+    "unableToMarkWithTrophies": "Unable to validate with trophies."
+  },
+  "streakPass": {
+    "used": {
+      "title": "Streak Pass used",
+      "text": "Your streak was saved using your Streak Pass."
+    },
+    "unableToUse": "Unable to use the Streak Pass."
+  },
+  "simulation": {
+    "title": "Simulation",
+    "message": "Streak simulated to {{streak}} days.",
+    "errorTitle": "Simulation error",
+    "challengeNotFound": "Challenge not found for simulation.",
+    "errorGeneric": "Unable to simulate the streak."
+  },
+  "createChallengeHint": "A good title + an image = more participants.",
   "iHaveReadRules": "I have read and accept the rules.",
   "acceptRulesButton": "I accept and understand",
   "iUnderstand": "I understand",
@@ -4358,6 +4592,7 @@
     "loading": "Loading...",
     "recommended": "Recommended",
     "networkError": "Connection issue",
+    "tip": "Tip",
     "oops": "Oops, try again.",
     "challenge": "Challenge",
     "misc": "Miscellaneous",
@@ -4366,9 +4601,29 @@
     "unexpectedError": "An unexpected error occurred. Please try again.",
     "loadError": "Unable to refresh. Pull down to retry.",
     "close": "Close",
-    "info": "Info"
+    "info": "Info",
+  "cancel": "Cancel",
+  "confirm": "Confirm",
+    "confirmDestructive": "Yes, reset",
+    "loginRequired": "Login required."
   },
   "firstPick": {
+    "invitePending": {
+    "title": "Invitation pending",
+    "body": "Your friend hasn’t responded yet. You can resend the link, or continue and it will start as soon as they accept.",
+    "resend": "Resend",
+    "continue": "Continue"
+  },
+  "postShare": {
+    "titleAsk": "Link sent?",
+      "bodyAsk": "Sometimes it doesn’t get confirmed. Just tell us whether you shared the link.",
+    "titleFallback": "Okay. What now?",
+    "bodyFallback": "You can resend right now, or switch to solo to start immediately.",
+    "no": "I didn’t send it",
+    "yesContinue": "Yes, continue",
+    "resend": "Resend",
+    "switchSolo": "Switch to solo"
+  },
   "day_one": "{{count}} day",
   "day_other": "{{count}} days",
   "progress": "Step {{current}} of {{total}}",
