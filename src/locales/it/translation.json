@@ -243,6 +243,7 @@
   },
   "newFeatures": {
     "deadlineIso": "2026-02-28T23:59:59+01:00",
+    "proposeIdea": "Proporre un’idea",
     "shareLabel": "Condividi",
 
     "monthLabelTpl": "Aggiornamento • {{month}}",
@@ -496,7 +497,9 @@
   "dailySelectedSubtitleShort": "Selezione del giorno.",
   "homeZ": {
     "duoPending": {
-      "title": "Invito inviato", "sub": "In attesa. Dopo l’accettazione: Duo.", "cta": "Vedi", "a11y": "Invito duo in attesa",
+      "cta": "Prepara Duo",
+      "hint": "Nel frattempo, prepara il Duo.",
+      "title": "Invito inviato", "sub": "In attesa. Dopo l’accettazione: Duo.","a11y": "Invito duo in attesa",
     "steps": {
       "sent": "Invito inviato",
       "waiting": "In attesa di accettazione",
@@ -515,6 +518,11 @@
     "todayHub": {
       "badge": "OGGI",
       "primaryActiveShort": "Segna",
+      "metaPending": "Invito",
+"metaNone": "Nessuna sfida attiva",
+"metaActive": "{{count}} sfida/e attiva/e",
+"create": "Crea",
+      "pendingTap":"Tocca per vedere",
       "primaryNewShort": "Nuovo",
   "primaryNewA11y": "Scegliere una nuova sfida",
   "primaryNewHint": "Apri Esplora per scegliere una nuova sfida.",
@@ -644,6 +652,7 @@
 "commonS": {
     "close": "Chiudi",
     "notLoggedIn": "Devi effettuare l’accesso.",
+    "keep": "Mantieni",
     "errorTitle": "Errore",
     "sending": "Invio…",
     "cancel": "Annulla",
@@ -664,6 +673,7 @@
   "addInterestsHere": "Aggiungi i tuoi interessi",
 "common": {
     "back": "Indietro",
+    "anonymous": "Anonimo", "delete": "Elimina",
     "retry": "Riprova",
     "tip": "Consiglio",
     "loading": "Caricamento...",
@@ -856,6 +866,23 @@
     "hintSolo": "Parti subito."
   },
   "step3": {
+    "subtitleByDays": {
+    "3": "3 giorni: mini sprint. Quanto basta per dimostrartelo.",
+    "7": "7 giorni: perfetto per iniziare.",
+    "15": "15 giorni: passi dal provare al fare.",
+    "21": "21 giorni: nasce una routine solida.",
+    "30": "30 giorni: obiettivo serio. Cambi davvero.",
+    "60": "60 giorni: disciplina reale. Costanza.",
+    "90": "90 giorni: trasformazione.",
+    "180": "180 giorni: grande impegno.",
+    "365": "365 giorni: livello élite. Sei tu."
+  },
+  "subtitleGeneric": {
+    "short": "{{count}} giorni: semplice ed efficace.",
+    "medium": "{{count}} giorni: abitudine solida.",
+    "long": "{{count}} giorni: impegno reale.",
+    "ultra": "{{count}} giorni: trasformazione profonda."
+  },
     "title": "Per quanto resisti?",
     "subtitle": "7 giorni è un ottimo inizio. Potrai modificare dopo.",
     "cta": "Vai",
@@ -924,6 +951,65 @@
   "savedShort": "Salvato"
 ,
  "challengeDetails": {
+  "cta_take": "Inizia la sfida",
+  "reviewsSubtitle": "Feedback reali per scegliere meglio e migliorare più in fretta.",
+      "noReviewsHint": "Sii il primo a lasciare una recensione utile. 10 secondi, impatto reale.",
+      "reviewPrivacy": "Sii utile, chiaro e gentile.",
+    "cta_markToday": "Segna oggi",
+    "cta_invite": "Invita un amico",
+    "cta_continueSolo": "Continua da solo",
+    "cta_cancelInvite": "Annulla invito",
+    "cta_close": "Chiudi",
+    "cta_back": "Indietro",
+
+    "state_loading": "Caricamento…",
+    "state_updating": "Aggiornamento…",
+    "state_error": "Qualcosa è andato storto",
+
+    "section_overview": "Panoramica",
+    "section_progress": "Progresso",
+
+    "label_solo": "Solo",
+    "label_duo": "Duo",
+    "label_warmup": "In attesa",
+
+    "warmup_title": "In attesa del partner",
+    "warmup_body": "Appena accetta, la modalità Duo si attiva automaticamente.",
+    "warmup_hint": "Puoi continuare in solo quando vuoi.",
+
+    "pending_title": "Invito inviato",
+    "pending_body": "Stiamo aspettando la risposta. Ti avviseremo subito.",
+    "pending_badge": "In sospeso",
+
+    "duo_active_title": "Modalità Duo attiva",
+    "duo_active_body": "Avanzate insieme. La costanza vince.",
+
+    "progress_you": "Tu",
+    "progress_partner": "Partner",
+    "progress_daysDone": "{{done}}/{{total}} giorni",
+    "progress_day": "Giorno {{day}}",
+
+    "confirm_cancelInvite_title": "Annullare l’invito?",
+    "confirm_cancelInvite_body": "Diventerà non valido e non potrà più essere accettato.",
+    "confirm_cta_yes": "Sì, annulla",
+    "confirm_cta_no": "No",
+  "startMode": {
+        "title": "Scegli la modalità",
+        "cancel": "Annulla",
+        "closeA11y": "Chiudi",
+        "closeHint": "Chiude la finestra.",
+        "offlineRequired": "Connessione a Internet richiesta",
+        "sub": "Solo per avanzare. Duo per resistere fino alla fine.",
+        "recommended": "CONSIGLIATO",
+        "duo": "Duo",
+        "duoDesc": "Invita un amico. Arriva fino in fondo.",
+        "solo": "Solo",
+        "soloDesc": "Semplice, veloce, efficace.",
+        "duoA11y": "Scegli Duo",
+        "soloA11y": "Scegli Solo",
+        "duoHint": "Poi scegli una durata e invita un amico.",
+        "soloHint": "Poi scegli una durata e inizia."
+      },
     "noDescription": "Nessuna descrizione disponibile",
     "participantsLabel": "Partecipanti",
     "quick": {
@@ -1683,6 +1769,10 @@
     "title": "Bonus quotidiano",
     "rerollUnavailable": "Annuncio in caricamento…",
     "ctaShort": "Gira",
+    "badge": "RICOMPENSA",
+"oncePerDay": "1 / giorno",
+"teaser2": "Apri ora e scopri la tua ricompensa misteriosa.",
+"micro": "Veloce. Semplice. Ricompensa.",
     "spinLockedHint": "Guarda un annuncio per girare una seconda volta.",
     "spinHint": "Gira la ruota per ottenere la tua ricompensa.",
     "subtitle": "Gira la ruota misteriosa per rivelare la tua ricompensa 🎁",
@@ -4381,14 +4471,13 @@
   "errorLoadingSavedChallenges": "Impossibile caricare le sfide salvate: {{message}}",
   "rateUs": "Valuta l’app",
   "shareCardT": {
+    "dayOf": "Giorno {{day}} su {{total}}",
+  "tagline": "Unisciti alla sfida su ChallengeTies",
   "a11yTitle": "Card di condivisione della sfida",
   "heldSolo": "Ho resistito",
     "heldDuo": "Abbiamo resistito",
     "watermark": "@ChallengeTies",
   "a11yHint": "Visualizza l’anteprima della card prima di condividerla.",
-
-  "tagline": "Hai una sfida? Portala a termine.",
-
   "duoBadge": "SFIDA IN DUE",
   "soloBadge": "FOCUS IN SOLITARIA",
   "milestoneVariants": [
@@ -4448,10 +4537,47 @@
   "maxChars": "Max 500 caratteri",
   "toClaim": "Da riscattare",
   "cannotSaveReview": "Impossibile salvare la recensione al momento.",
+  "registrationForm": "Modulo di registrazione",
+  "clear": "Cancella",
+  "createAccountHint": "Crea il tuo account",
+
+  "passwordHint": "Minimo {{min}} caratteri.",
+  "confirmPasswordHint": "Deve corrispondere alla password.",
+  "usernameHint": "Minimo 2 caratteri.",
+
+  "fillEmail": "Inserisci la tua email",
+  "fillUsername": "Scegli un nome utente",
+  "usernameTooShort": "Nome utente troppo corto",
+  "fillPassword": "Inserisci una password",
+  "passwordMinChars": "Password: minimo {{count}} caratteri",
+  "operationNotAllowed": "Operazione non consentita su questo progetto.",
+  "reviews": {
+    "title": "Cosa ne pensano",
+    "subtitle": "Feedback autentici per aiutarti a scegliere la sfida giusta.",
+    "emptyTitle": "Nessuna recensione per ora",
+    "emptySubtitle": "Sii il primo a lasciare un feedback utile. 10 secondi, impatto reale.",
+    "starsLabel": "{{count}} stelle",
+    "countLabel": "{{count}} recensioni"
+  },
 "duo": {
   "leader": "LEADER",
+   "vs": "VS",
   "pending": {
       "title": "Invito in attesa",
+      "warmup": "Riscaldamento",
+      "warmupHint": "Nel frattempo, fai il warmup di oggi.",
+      "warmupError": "Impossibile salvare il warmup.",
+      "partnerPending": "In attesa",
+      "warmupToastTitle": "Warmup completato",
+      "warmupToastBody": "In attesa del tuo partner.",
+      "warmupToastErrorTitle": "Warmup non salvato",
+      "warmupToastErrorBody": "Riprova tra poco.",
+      "warmupCta": "Warmup di oggi",
+      "warmupA11yHint": "Salva il warmup di oggi.",
+      "warmupDone": "Warmup completato",
+      "cancelInviteShort": "Annulla",
+      "cancelConfirmTitle": "Annullare l’invito?",
+    "cancelConfirmBody": "Il tuo amico non potrà più unirsi a questo duo con quel link.",
       "short": "Invito in attesa",
       "body": "Riceverai una notifica appena risponde. Puoi anche annullare e invitare qualcun altro.",
       "cancelInvite": "Annulla",

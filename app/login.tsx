@@ -49,6 +49,7 @@ const normalize = (size: number) => {
   const scale = Math.min(SCREEN_WIDTH, SCREEN_HEIGHT) / 375;
   return Math.round(PixelRatio.roundToNearestPixel(size * scale));
 };
+const GUEST_KEY = "ties.guest.enabled.v1";
 
 // Palette
 const COLORS = {
@@ -553,8 +554,8 @@ InteractionManager.runAfterInteractions(() => {
     return () => loop?.stop();
   }, [formValid, loading, isOffline, reduceMotion, ctaPulse]);
 
-  const goSignUp = () => nav.replace("/register");
-  const goForgot = () => nav.push("/forgot-password");
+ const goSignUp = () => router.replace("/register");
+ const goForgot = () => router.push("/forgot-password");
 
   const guarded =
     <T extends (...args: any[]) => any>(fn: T) =>
@@ -842,34 +843,47 @@ InteractionManager.runAfterInteractions(() => {
             <View style={styles.divider} />
           </View>
 
-          {/* Guest */}
-          <TouchableOpacity
-            style={styles.guestButton}
-            onPress={async () => {
-              await AsyncStorage.removeItem(
-                "pendingTutorial"
-              );
-              setGuest(true);
-              InteractionManager.runAfterInteractions(() => {
-                if (isMountedRef.current) router.replace("/");
-              });
-            }}
-            accessibilityRole="button"
-            accessibilityLabel={
-              t("continueAsGuest") ||
-              "Continuer en tant que visiteur"
-            }
-          >
-            <Ionicons
-              name="walk-outline"
-              size={18}
-              color={COLORS.primary}
-            />
-            <Text style={styles.guestButtonText}>
-              {t("continueAsGuest") ||
-                "Continuer en tant que visiteur"}
-            </Text>
-          </TouchableOpacity>
+         {/* Guest */}
+<TouchableOpacity
+  style={styles.guestButton}
+  onPress={async () => {
+    if (submittingRef.current) return;
+    submittingRef.current = true;
+
+    try {
+      await AsyncStorage.removeItem("pendingTutorial");
+      await AsyncStorage.setItem(GUEST_KEY, "1").catch(() => {});
+      try { await setGuest(true); } catch {}
+      router.replace("/");
+    } finally {
+      submittingRef.current = false;
+    }
+  }}
+  accessibilityRole="button"
+  accessibilityLabel={
+    t("continueAsGuest") || "Continuer en tant que visiteur"
+  }
+>
+  <View style={styles.guestBtnContent}>
+    <Ionicons
+      name="walk-outline"
+      size={18}
+      color={COLORS.primary}
+      style={styles.guestIcon}
+    />
+    <Text
+      style={styles.guestButtonText}
+      numberOfLines={1}
+      ellipsizeMode="tail"
+      adjustsFontSizeToFit
+      minimumFontScale={0.85}
+      allowFontScaling
+    >
+      {t("continueAsGuest") || "Continuer en tant que visiteur"}
+    </Text>
+  </View>
+</TouchableOpacity>
+
         </Animated.View>
 
         {/* SIGN UP LINK */}
@@ -1055,23 +1069,35 @@ const styles = StyleSheet.create({
 
   // Guest
   guestButton: {
-    width: "100%",
-    backgroundColor: "transparent",
-    paddingVertical: normalize(12),
-    borderRadius: normalize(16),
-    alignItems: "center",
-    flexDirection: "row",
-    justifyContent: "center",
-    gap: 8,
-    borderWidth: 1.5,
-    borderColor: COLORS.primary,
-  },
-  guestButtonText: {
-    color: COLORS.primary,
-    fontSize: normalize(15),
-    fontFamily: "Comfortaa_700Bold",
-  },
+  width: "100%",
+  backgroundColor: "transparent",
+  paddingVertical: normalize(12),
+  paddingHorizontal: normalize(12), // ✅ évite collision bords
+  borderRadius: normalize(16),
+  borderWidth: 1.5,
+  borderColor: COLORS.primary,
+},
 
+guestBtnContent: {
+  width: "100%",
+  flexDirection: "row",
+  alignItems: "center",
+  justifyContent: "center",
+  columnGap: 8,            // ✅ mieux supporté que gap selon versions RN
+},
+
+guestIcon: {
+  flexShrink: 0,          // ✅ l’icône ne rétrécit pas
+},
+
+guestButtonText: {
+  color: COLORS.primary,
+  fontSize: normalize(15),
+  fontFamily: "Comfortaa_700Bold",
+  flexShrink: 1,          // ✅ texte peut rétrécir
+  minWidth: 0,            // ✅ CRUCIAL: autorise ellipsis/shrink en row
+  textAlign: "center",
+},
   // Footer inline
   footerInline: {
     width: "100%",

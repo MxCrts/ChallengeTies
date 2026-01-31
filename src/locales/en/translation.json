@@ -247,6 +247,7 @@
   },
   "newFeatures": {
     "deadlineIso": "2026-02-28T23:59:59+01:00",
+    "proposeIdea": "Propose an idea",
     "shareLabel": "Share",
 
     "monthLabelTpl": "Update • {{month}}",
@@ -523,6 +524,7 @@
 "commonS": {
     "close": "Close",
     "notLoggedIn": "You must be logged in.",
+    "keep": "Keep",
     "errorTitle": "Error",
     "edit": "Edit",
     "hide": "Hide",
@@ -541,7 +543,9 @@
   "dailySelectedSubtitleShort": "Today’s selection.",
  "homeZ": {
   "duoPending": {
-    "title": "Invite sent", "sub": "Pending. Once accepted: Duo.", "cta": "View", "a11y": "Duo invite pending",
+     "cta": "Prepare Duo",
+    "hint": "While you wait, set up your Duo.",
+    "title": "Invite sent", "sub": "Pending. Once accepted: Duo.","a11y": "Duo invite pending",
     "steps": {
       "sent": "Invitation sent",
       "waiting": "Waiting for acceptance",
@@ -560,7 +564,12 @@
     "todayHub": {
       "badge": "TODAY",
       "primaryActiveShort": "Check in",
+      "metaPending": "Invite",
+    "metaNone": "No active challenges",
+    "metaActive": "{{count}} active challenge(s)",
+    "create": "Create",
       "primaryNewShort": "New",
+      "pendingTap": "Tap to view",
   "primaryNewA11y": "Pick a new challenge",
   "primaryNewHint": "Open Explore to pick a new challenge.",
   "titleAllDone": "Perfect. Everything is checked off today.",
@@ -589,8 +598,6 @@
       "soloA11y": "Keep it solo",
       "soloHint": "Pick a challenge without a partner.",
       "inviteSub2": "Invite. Stick. Win.",
-      "metaActive": "{{count}} active challenge(s)",
-      "metaNone": "No active challenges",
       "titleActive": "Check in. Keep your streak.",
       "titleNone": "Pick a challenge and start today.",
       "subActive": "1 tap to check in, 1 tap to invite a friend. Growth comes from Duo.",
@@ -598,7 +605,6 @@
       "primaryActive": "Check in today",
       "primaryNone": "Pick a challenge",
       "invite": "Invite (Duo)",
-      "create": "Create",
       "micro": "Duo = retention x2. Invite now.",
       "primaryActiveA11y": "Check in today",
       "primaryNoneA11y": "Pick a challenge",
@@ -649,6 +655,65 @@
     "savedShort": "Saved"
 ,
  "challengeDetails": {
+  "cta_take": "Start challenge",
+  "reviewsSubtitle": "Real feedback to help you choose and improve faster.",
+      "noReviewsHint": "Be the first to leave a helpful review. 10 seconds, real impact.",
+      "reviewPrivacy": "Keep it helpful, clear, and kind.",
+    "cta_markToday": "Mark today",
+    "cta_invite": "Invite a friend",
+    "cta_continueSolo": "Continue solo",
+    "cta_cancelInvite": "Cancel invite",
+    "cta_close": "Close",
+    "cta_back": "Back",
+
+    "state_loading": "Loading…",
+    "state_updating": "Updating…",
+    "state_error": "Something went wrong",
+
+    "section_overview": "Overview",
+    "section_progress": "Progress",
+
+    "label_solo": "Solo",
+    "label_duo": "Duo",
+    "label_warmup": "Pending",
+
+    "warmup_title": "Waiting for your partner",
+    "warmup_body": "As soon as they accept, Duo mode turns on automatically.",
+    "warmup_hint": "You can switch to solo anytime.",
+
+    "pending_title": "Invite sent",
+    "pending_body": "We’re waiting for their reply. You’ll be notified instantly.",
+    "pending_badge": "Pending",
+
+    "duo_active_title": "Duo mode active",
+    "duo_active_body": "Move together. Consistency wins.",
+
+    "progress_you": "You",
+    "progress_partner": "Partner",
+    "progress_daysDone": "{{done}}/{{total}} days",
+    "progress_day": "Day {{day}}",
+
+    "confirm_cancelInvite_title": "Cancel the invite?",
+    "confirm_cancelInvite_body": "It will become invalid and can’t be accepted anymore.",
+    "confirm_cta_yes": "Yes, cancel",
+    "confirm_cta_no": "No",
+  "startMode": {
+        "title": "Choose your mode",
+        "cancel": "Cancel",
+        "closeA11y": "Close",
+        "closeHint": "Closes the window.",
+        "offlineRequired": "Internet connection required",
+        "sub": "Solo to progress. Duo to stick with it until the end.",
+        "recommended": "RECOMMENDED",
+        "duo": "Duo",
+        "duoDesc": "Invite a friend. Finish strong.",
+        "solo": "Solo",
+        "soloDesc": "Simple, fast, effective.",
+        "duoA11y": "Choose Duo",
+        "soloA11y": "Choose Solo",
+        "duoHint": "Next, pick a duration and invite a friend.",
+        "soloHint": "Next, pick a duration and start."
+      },
     "noDescription": "No description available",
     "participantsLabel": "Participants",
     "inviteCta": {
@@ -1456,6 +1521,10 @@
 ,
   "dailyBonus": {
     "title": "Daily bonus",
+    "badge": "REWARD",
+"oncePerDay": "1 / day",
+"teaser2": "Open now and discover your mystery reward.",
+"micro": "Fast. Simple. Reward.",
     "subtitle": "Spin the mystery wheel to reveal your reward 🎁",
     "rerollUnavailable": "Ad loading…",
     "ctaShort": "Spin",
@@ -4111,13 +4180,12 @@
   },
   "shareCardT": {
   "a11yTitle": "Challenge share card",
+  "dayOf": "Day {{day}} of {{total}}",
+    "tagline": "Join the challenge on ChallengeTies",
   "heldSolo": "I held on",
     "heldDuo": "We held on",
     "watermark": "@ChallengeTies",
   "a11yHint": "Preview the card before sharing it with your friends.",
-
-  "tagline": "Got a challenge? Get it done.",
-
   "duoBadge": "DUO CHALLENGE",
   "soloBadge": "SOLO FOCUS",
   "milestoneVariants": [
@@ -4178,10 +4246,47 @@
   "maxChars": "Max 500 characters",
   "cannotSaveReview": "Unable to save your review right now.",
   "toClaim": "To claim",
+  "registrationForm": "Registration form",
+  "clear": "Clear",
+  "createAccountHint": "Create your account",
+
+  "passwordHint": "Minimum {{min}} characters.",
+  "confirmPasswordHint": "Must match the password.",
+  "usernameHint": "Minimum 2 characters.",
+
+  "fillEmail": "Enter your email",
+  "fillUsername": "Choose a username",
+  "usernameTooShort": "Username is too short",
+  "fillPassword": "Enter a password",
+  "passwordMinChars": "Password: at least {{count}} characters",
+  "operationNotAllowed": "This operation isn’t allowed on this project.",
+  "reviews": {
+    "title": "What people thought",
+    "subtitle": "Honest feedback to help you pick the right challenge.",
+    "emptyTitle": "No reviews yet",
+    "emptySubtitle": "Be the first to leave helpful feedback. 10 seconds, real impact.",
+    "starsLabel": "{{count}} stars",
+    "countLabel": "{{count}} reviews"
+  },
 "duo": {
   "leader": "LEADER",
+  "vs": "VS",
   "pending": {
       "title": "Invitation pending",
+      "warmup": "Warmup",
+      "warmupHint": "While waiting, do today’s warmup to be ready.",
+      "warmupError": "Unable to save warmup. Please try again.",
+      "partnerPending": "Pending",
+      "warmupCta": "Today’s warmup",
+      "warmupToastTitle": "Warmup completed",
+      "warmupToastBody": "Waiting for your partner.",
+      "warmupToastErrorTitle": "Warmup not saved",
+      "warmupToastErrorBody": "Try again in a moment.",
+      "warmupA11yHint": "Save your warmup for today.",
+      "warmupDone": "Warmup completed",
+      "cancelInviteShort": "Cancel",
+      "cancelConfirmTitle": "Cancel this invite?",
+    "cancelConfirmBody": "Your friend won’t be able to join this duo with that link.",
       "short": "Invitation pending",
       "body": "You’ll be notified as soon as they reply. You can also cancel and invite someone else.",
       "cancelInvite": "Cancel",
@@ -4588,6 +4693,7 @@
   "iUnderstand": "I understand",
 "common": {
     "back": "Back",
+    "anonymous": "Anonymous", "delete": "Delete",
     "retry": "Retry",
     "loading": "Loading...",
     "recommended": "Recommended",
@@ -4651,6 +4757,23 @@
     "hintSolo": "You start instantly."
   },
   "step3": {
+    "subtitleByDays": {
+    "3": "3 days: a mini sprint. Just enough to prove you can stick to it.",
+    "7": "7 days: perfect to start fast and build momentum.",
+    "15": "15 days: you move from “trying” to “doing.”",
+    "21": "21 days: a solid routine starts to form.",
+    "30": "30 days: serious goal. You change who you are, not just how you feel.",
+    "60": "60 days: real discipline. Consistency becomes normal.",
+    "90": "90 days: transformation. You become someone who finishes.",
+    "180": "180 days: strong commitment. You build a life standard.",
+    "365": "365 days: elite level. This is no longer a challenge. It’s you."
+  },
+  "subtitleGeneric": {
+    "short": "{{count}} days: short, clear, effective. Start now.",
+    "medium": "{{count}} days: long enough to lock the habit.",
+    "long": "{{count}} days: solid commitment. Real change ahead.",
+    "ultra": "{{count}} days: massive commitment. Deep transformation."
+  },
     "title": "How long can you last?",
     "subtitle": "7 days is a great start. You can adjust later.",
     "cta": "Go",

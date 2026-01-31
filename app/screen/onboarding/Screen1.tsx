@@ -29,6 +29,8 @@ import AsyncStorage from "@react-native-async-storage/async-storage";
 import { useNavGuard } from "@/hooks/useNavGuard";
 import { useIsFocused } from "@react-navigation/native";
 import { Asset } from "expo-asset";
+import { logEvent } from "@/src/analytics";
+
 
 const { width, height } = Dimensions.get("window");
 
@@ -208,6 +210,30 @@ export default function Screen1() {
       }
     };
   }, []);
+
+    // KPI: onboarding_start (une seule fois)
+  useEffect(() => {
+    let alive = true;
+
+    const run = async () => {
+      try {
+        // Evite double log si l'écran se re-monte (dev, back/forward, etc.)
+        const already = await AsyncStorage.getItem("kpi.onboarding_start");
+        if (!alive || already === "1") return;
+
+        await logEvent("onboarding_start");
+        await AsyncStorage.setItem("kpi.onboarding_start", "1");
+      } catch {
+        // jamais bloquer l’onboarding
+      }
+    };
+
+    run();
+    return () => {
+      alive = false;
+    };
+  }, []);
+
 
     const onPlaybackStatusUpdate = (status: AVPlaybackStatus) => {
     if (!status || !("isLoaded" in status) || !status.isLoaded) {

@@ -124,6 +124,56 @@ const normalizeLanguageCode = (
   return fallback;
 };
 
+const isPremiumActiveFromUserDoc = (data: any): boolean => {
+  // Legacy simple boolean (si tu l'as déjà utilisé)
+  if (typeof data?.isPremium === "boolean") return data.isPremium;
+
+  const p = data?.premium;
+
+  // Si premium n'existe pas
+  if (!p) return false;
+
+  // Si premium est un bool (au cas où)
+  if (typeof p === "boolean") return p;
+
+  // Si premium est un objet/map -> check champs connus
+  const explicit =
+    p?.active ??
+    p?.isActive ??
+    p?.subscriptionActive ??
+    p?.subscribed;
+
+  if (typeof explicit === "boolean" && explicit === true) return true;
+
+  const until = p?.tempPremiumUntil;
+
+  if (!until) return false;
+
+  // Firestore Timestamp
+  if (typeof until?.toDate === "function") {
+    return until.toDate().getTime() > Date.now();
+  }
+
+  // Date ISO string
+  if (typeof until === "string") {
+    const ms = Date.parse(until);
+    return Number.isFinite(ms) && ms > Date.now();
+  }
+
+  // millis number
+  if (typeof until === "number") {
+    return until > Date.now();
+  }
+
+  // { seconds, nanoseconds } (Timestamp-like)
+  if (typeof until === "object" && typeof until?.seconds === "number") {
+    return until.seconds * 1000 > Date.now();
+  }
+
+  return false;
+};
+
+
 const getDynamicStyles = (currentTheme: Theme, isDarkMode: boolean) => ({
   gradientContainer: {
     backgroundColor: currentTheme.colors.background,
@@ -367,8 +417,9 @@ export default function Settings() {
 
       setLocationEnabled(data.locationEnabled ?? true);
 
-      const premiumFlag = !!(data.premium ?? data.isPremium);
-      setIsPremium(premiumFlag);
+     const premiumFlag = isPremiumActiveFromUserDoc(data);
+setIsPremium(premiumFlag);
+
 
       if (data.language) {
         const normalized = normalizeLanguageCode(data.language);

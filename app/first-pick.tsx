@@ -39,8 +39,7 @@ import { canInvite } from "@/utils/canInvite";
 import { useToast } from "../src/ui/Toast";
 import { AppState } from "react-native";
 import { getOrCreateOpenInvitation } from "@/services/invitationService";
-
-
+import { logEvent } from "@/src/analytics";
 
 const SPACING = 16;
 const DEFAULT_DAYS = [7, 14, 21, 30, 60, 90];
@@ -110,6 +109,131 @@ const blurhash = "LEHV6nWB2yk8pyo0adR*.7kCMdnj";
 
 type Step = 1 | 2 | 3;
 
+type ChallengeCardProps = {
+  item: Challenge;
+  isSel: boolean;
+  onPress: () => void;
+  CARD_W: number;
+  CARD_H: number;
+  reduceMotion: boolean;
+  currentTheme: any;
+  t: (k: string, opts?: any) => string;
+  lang: string;
+  FALLBACK_IMG: string;
+  blurhash: string;
+};
+
+const ChallengeCard = React.memo(function ChallengeCard({
+  item,
+  isSel,
+  onPress,
+  CARD_W,
+  CARD_H,
+  reduceMotion,
+  currentTheme,
+  t,
+  lang,
+  FALLBACK_IMG,
+  blurhash,
+}: ChallengeCardProps) {
+  const [imgUri, setImgUri] = useState<string>(item.imageUrl || FALLBACK_IMG);
+
+  const translatedTitle = useMemo(() => {
+    const key = item.chatId ? `challenges.${item.chatId}.title` : "";
+    return item.chatId
+      ? (t(key, { defaultValue: item.title }) as string)
+      : (item.title || (t("common.challenge") as string));
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [item.chatId, item.title, t, lang]);
+
+  const translatedCategory = useMemo(() => {
+    const rawCat = item.rawCategory || item.category || "Miscellaneous";
+    return t(`categories.${rawCat}`, { defaultValue: rawCat }) as string;
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [item.rawCategory, item.category, t, lang]);
+
+  useEffect(() => {
+    setImgUri(item.imageUrl || FALLBACK_IMG);
+  }, [item.imageUrl, FALLBACK_IMG]);
+
+  const scale = useRef(new Animated.Value(1)).current;
+  
+
+  useEffect(() => {
+    if (reduceMotion) return;
+    Animated.spring(scale, {
+      toValue: isSel ? 1.02 : 1,
+      speed: 12,
+      bounciness: 6,
+      useNativeDriver: true,
+    }).start();
+  }, [isSel, reduceMotion, scale]);
+
+  return (
+    <Animated.View style={{ transform: [{ scale }] }}>
+      <View
+        style={[
+          styles.cardOuter,
+          {
+            width: CARD_W,
+            height: CARD_H,
+            borderColor: isSel ? currentTheme.colors.secondary : "transparent",
+          },
+        ]}
+      >
+        <TouchableOpacity
+          onPress={onPress}
+          activeOpacity={0.92}
+          style={[
+            styles.cardInner,
+            {
+              borderColor: currentTheme.colors.border,
+              backgroundColor: currentTheme.colors.cardBackground,
+            },
+          ]}
+          accessibilityRole="button"
+          accessibilityLabel={`${translatedTitle} — ${translatedCategory}`}
+          accessibilityHint={
+            (t("firstPick.cardHint", { defaultValue: "Appuie pour sélectionner." }) as string) || ""
+          }
+        >
+          <Image
+            source={{ uri: imgUri }}
+            style={styles.cardImg}
+            contentFit="cover"
+            transition={reduceMotion ? 0 : 120}
+            cachePolicy="memory-disk"
+            recyclingKey={item.id}
+            placeholder={blurhash}
+            onError={() => setImgUri(FALLBACK_IMG)}
+          />
+
+          <LinearGradient
+            colors={["rgba(0,0,0,0.0)", "rgba(0,0,0,0.55)"]}
+            style={StyleSheet.absoluteFillObject}
+          />
+
+          <View style={styles.cardLabelWrap}>
+            <Text numberOfLines={2} style={[styles.cardTitle, { color: "#fff" }]}>
+              {translatedTitle}
+            </Text>
+            <Text numberOfLines={1} style={[styles.cardCat, { color: "#ddd" }]}>
+              {translatedCategory}
+            </Text>
+          </View>
+
+          {isSel && (
+            <View style={styles.checkBadge}>
+              <Ionicons name="checkmark" size={18} color="#000" />
+            </View>
+          )}
+        </TouchableOpacity>
+      </View>
+    </Animated.View>
+  );
+});
+
+
 export default function FirstPick() {
   const { t, i18n } = useTranslation();
   const { theme } = useTheme();
@@ -159,6 +283,31 @@ const pathname = usePathname();
   const submittingRef = useRef(false);
   const mountedRef = useRef(true);
   const userClosedInviteModalRef = useRef(false);
+  const firstPickViewLoggedRef = useRef(false);
+  const stepViewLoggedRef = useRef<Record<number, boolean>>({});
+  // -----------------------
+  // Analytics helpers (safe)
+  // -----------------------
+  const track = useCallback((name: string, params?: Record<string, any>) => {
+    try {
+      logEvent(name, params).catch?.(() => {});
+    } catch {}
+  }, []);
+
+  const baseCtx = useCallback(() => {
+    const uid = auth.currentUser?.uid || null;
+    return {
+      uid,
+      pathname: typeof pathname === "string" ? pathname : null,
+      step,
+      mode,
+      days,
+      offline: !!isOffline,
+      selected_id: selected?.id || null,
+      selected_chatId: selected?.chatId || null,
+      has_pending_invite: !!pendingInvite?.inviteId,
+    };
+  }, [pathname, step, mode, days, isOffline, selected?.id, selected?.chatId, pendingInvite?.inviteId]);
 
   // Anim
   const introOpacity = useRef(new Animated.Value(0)).current;
@@ -182,12 +331,18 @@ const pathname = usePathname();
   };
 
   setGlobalInviteSnap(snap);
+  // analytics: snapshot persisted (inviteId may be undefined on pre-share fallback)
+  track("first_pick_invite_snapshot_persist", {
+    ...baseCtx(),
+    invite_id: inviteId || null,
+    has_invite_id: !!inviteId,
+  });
 
   try {
     await AsyncStorage.setItem(FIRSTPICK_INVITE_SNAPSHOT_KEY, JSON.stringify(snap));
     await setShareInProgress(true);
   } catch {}
-}, [days, selected]);
+}, [days, selected, track, baseCtx]);
 
 
   const clearInviteSnapshot = useCallback(async () => {
@@ -278,6 +433,13 @@ const consumePostShare = useCallback(async () => {
       if (shareInProgress && !userClosedInviteModalRef.current) {
         setInviteModalVisible(true);
       }
+      track("first_pick_invite_snapshot_restore", {
+        ...baseCtx(),
+        source: "global",
+        share_in_progress: !!shareInProgress,
+        invite_id: g?.inviteId || null,
+        has_invite_id: !!g?.inviteId,
+      });
 
       return true;
     }
@@ -305,15 +467,42 @@ const consumePostShare = useCallback(async () => {
       if (shareInProgress && !userClosedInviteModalRef.current) {
         setInviteModalVisible(true);
       }
+      track("first_pick_invite_snapshot_restore", {
+        ...baseCtx(),
+        source: "storage",
+        share_in_progress: !!shareInProgress,
+        invite_id: s?.inviteId ? String(s.inviteId) : null,
+        has_invite_id: !!s?.inviteId,
+      });
       return true;
     } catch {
       return false;
     }
-  }, []);
+  }, [track, baseCtx]);
 
   useEffect(() => {
   restoreInviteSnapshot().catch(() => {});
 }, [restoreInviteSnapshot]);
+
+  // KPI: first_pick_view + step views
+  useEffect(() => {
+    if (firstPickViewLoggedRef.current) return;
+    firstPickViewLoggedRef.current = true;
+
+    // On log l'entrée écran (une fois)
+    track("first_pick_view", { ...baseCtx() });
+  }, []);
+
+  useEffect(() => {
+    if (stepViewLoggedRef.current[step]) return;
+    stepViewLoggedRef.current[step] = true;
+
+    track("first_pick_step_view", {
+      ...baseCtx(),
+      has_selected: !!selected,
+    });
+  }, [step, mode, selected, days]);
+
 
   // CTA pulse
   const ctaPulse = useRef(new Animated.Value(1)).current;
@@ -492,6 +681,7 @@ useEffect(() => {
     // 1) Si on revient du ShareSheet -> on restaure (si besoin) + on affiche "envoyée ?"
     const shareInProgress = await getShareInProgress();
     if (shareInProgress) {
+      track("first_pick_return_from_share_sheet", { ...baseCtx() });
       userClosedInviteModalRef.current = false;
       await restoreInviteSnapshot().catch(() => {});
 
@@ -510,6 +700,11 @@ if (ps) {
   const hasContext = !!(ps.inviteId || pendingInvite?.inviteId || snap?.selected?.id);
 
   if (hasContext) {
+    track("first_pick_postshare_modal_open", {
+      ...baseCtx(),
+      invite_id: ps.inviteId || pendingInvite?.inviteId || null,
+      has_invite_id: !!(ps.inviteId || pendingInvite?.inviteId),
+    });
     setMode("duo");
     setStep(3);
 
@@ -533,6 +728,8 @@ if (ps) {
   pendingInvite?.inviteId,
   persistPostShare,
   consumePostShare,
+  track,
+  baseCtx,
 ]);
 
 
@@ -755,9 +952,10 @@ const handleInviteDismiss = useCallback(() => {
   // ✅ l’utilisateur ferme volontairement le modal
   userClosedInviteModalRef.current = true;
   setInviteModalVisible(false);
+  track("first_pick_invite_modal_close", { ...baseCtx(), reason: "user_dismiss" });
   // 🚫 IMPORTANT: on ne clear PAS le snapshot ici
   // sinon retour shareSheet / remount => step 1
-}, []);
+}, [track, baseCtx]);
 
 
 const handleInvitationResult = useCallback(
@@ -766,6 +964,7 @@ const handleInvitationResult = useCallback(
 
     // ✅ SOLO depuis le modal (inchangé)
     if (result === "start_solo") {
+       track("first_pick_invite_modal_action", { ...baseCtx(), action: "start_solo", invite_id: inviteId || null });
       setInviteModalVisible(false);
       await clearInviteSnapshot();
       await setShareInProgress(false);
@@ -822,6 +1021,7 @@ const handleInvitationResult = useCallback(
 
     // ✅ FLOW UNIQUE (iOS + Android)
     // Après fermeture shareSheet => on affiche TOUJOURS "Invitation envoyée ?"
+     track("first_pick_invite_share_sheet_closed", { ...baseCtx(), invite_id: inviteId || null });
     setInviteModalVisible(false);
 userClosedInviteModalRef.current = true;
 
@@ -853,6 +1053,8 @@ setPostShareVisible(true);
     softHaptic,
     t,
     takeChallenge,
+    track,
+    baseCtx,
   ]
 );
 
@@ -871,10 +1073,18 @@ setPostShareVisible(true);
     return t("firstPick.step2.hintSolo", { defaultValue: "Tu démarres immédiatement, sans invitation." }) as string;
   }, [mode, isOffline, t]);
 
-  const onSelectMode = useCallback(async (m: "duo" | "solo") => {
+    const onSelectMode = useCallback(async (m: "duo" | "solo") => {
     setMode(m);
     try { await Haptics.selectionAsync(); } catch {}
-  }, []);
+
+    logEvent("first_pick_mode_select", {
+      mode: m,
+      step,
+      has_selected: !!selected,
+      offline: !!isOffline,
+    }).catch?.(() => {});
+  }, [step, selected, isOffline]);
+
 
   const onSelectCard = useCallback(async (item: Challenge) => {
     setSelected(item);
@@ -911,12 +1121,17 @@ const onPickDays = useCallback(
   async (n: number) => {
     if (n === days) return;
     setDays(n);
-    try {
-      await Haptics.selectionAsync();
-    } catch {}
+    try { await Haptics.selectionAsync(); } catch {}
+
+    track("first_pick_duration_select", {
+      ...baseCtx(),
+      days: n,
+      has_selected: !!selected,
+    });
   },
-  [days]
+ [days, step, mode, selected, track, baseCtx]
 );
+
 
 const formatDaysChip = useCallback(
   (n: number) => {
@@ -1000,6 +1215,9 @@ if (step === 3) {
   const onConfirm = useCallback(async () => {
     if (submittingRef.current || submitting) return;
 
+      track("first_pick_confirm", { ...baseCtx() });
+
+
     if (!selected) {
       show(t("firstPick.alert.missingChoiceBody", { defaultValue: "Choisis un défi pour continuer." }), "warning");
       softHaptic("warning");
@@ -1068,6 +1286,7 @@ if (mode === "duo" && pendingInvite?.inviteId) {
  await persistInviteSnapshot(inviteId); // ✅ on stocke le vrai inviteId
  userClosedInviteModalRef.current = false;
  setInviteModalVisible(true);
+ track("first_pick_invite_modal_open", { ...baseCtx(), invite_id: inviteId, source: "confirm_duo" });
     } catch (e: any) {
       console.error("first-pick confirm error", e);
       show(e?.message || t("common.oops", { defaultValue: "Oups, réessaie." }), "error");
@@ -1082,109 +1301,28 @@ if (mode === "duo" && pendingInvite?.inviteId) {
   onConfirmRef.current = onConfirm;
 }, [onConfirm]);
 
+ const renderItem = useCallback(
+  ({ item }: { item: Challenge }) => {
+    const isSel = selected?.id === item.id;
+    return (
+      <ChallengeCard
+        item={item}
+        isSel={isSel}
+        onPress={() => onSelectCard(item)}
+        CARD_W={CARD_W}
+        CARD_H={CARD_H}
+        reduceMotion={reduceMotion}
+        currentTheme={currentTheme}
+        t={t}
+        lang={i18n.language}
+        FALLBACK_IMG={FALLBACK_IMG}
+        blurhash={blurhash}
+      />
+    );
+  },
+  [selected?.id, onSelectCard, CARD_W, CARD_H, reduceMotion, currentTheme, t, i18n.language]
+);
 
-  // ---- Card
-  const Card = useMemo(() => React.memo(
-   ({ item, isSel, onPress }: { item: Challenge; isSel: boolean; onPress: () => void }) => {
-      const [imgUri, setImgUri] = useState<string>(item.imageUrl || FALLBACK_IMG);
-
-      const translatedTitle = useMemo(() => {
-        const key = item.chatId ? `challenges.${item.chatId}.title` : "";
-        return item.chatId ? (t(key, { defaultValue: item.title }) as string) : item.title || t("common.challenge");
-      }, [item.chatId, item.title, t, i18n.language]);
-
-      const translatedCategory = useMemo(() => {
-        const rawCat = item.rawCategory || item.category || "Miscellaneous";
-        return t(`categories.${rawCat}`, { defaultValue: rawCat }) as string;
-      }, [item.rawCategory, item.category, t, i18n.language]);
-
-      useEffect(() => {
-        setImgUri(item.imageUrl || FALLBACK_IMG);
-      }, [item.imageUrl]);
-
-      const scale = useRef(new Animated.Value(1)).current;
-      useEffect(() => {
-        if (reduceMotion) return;
-        Animated.spring(scale, {
-          toValue: isSel ? 1.02 : 1,
-          speed: 12,
-          bounciness: 6,
-          useNativeDriver: true,
-        }).start();
-      }, [isSel, reduceMotion, scale]);
-
-      return (
-         <Animated.View style={{ transform: [{ scale }] }}>
-          {/* OUTER = ring premium (pas coupé) */}
-          <View
-            style={[
-              styles.cardOuter,
-              {
-                width: CARD_W,
-                height: CARD_H,
-                borderColor: isSel ? currentTheme.colors.secondary : "transparent",
-              },
-            ]}
-          >
-            {/* INNER = clipping image propre */}
-            <TouchableOpacity
-              onPress={onPress}
-              activeOpacity={0.92}
-              style={[
-                styles.cardInner,
-                {
-                  borderColor: currentTheme.colors.border,
-                  backgroundColor: currentTheme.colors.cardBackground,
-                },
-              ]}
-            accessibilityRole="button"
-            accessibilityLabel={`${translatedTitle} — ${translatedCategory}`}
-            accessibilityHint={t("firstPick.cardHint", { defaultValue: "Appuie pour sélectionner." }) as string}
-          >
-            <Image
-              source={{ uri: imgUri }}
-              style={styles.cardImg}
-              contentFit="cover"
-              transition={reduceMotion ? 0 : 120}
-              cachePolicy="memory-disk"
-              recyclingKey={item.id}
-              placeholder={blurhash}
-              onError={() => setImgUri(FALLBACK_IMG)}
-            />
-
-            <LinearGradient
-              colors={["rgba(0,0,0,0.0)", "rgba(0,0,0,0.55)"]}
-              style={StyleSheet.absoluteFillObject}
-            />
-
-            <View style={styles.cardLabelWrap}>
-              <Text numberOfLines={2} style={[styles.cardTitle, { color: "#fff" }]}>
-                {translatedTitle}
-              </Text>
-              <Text numberOfLines={1} style={[styles.cardCat, { color: "#ddd" }]}>
-                {translatedCategory}
-              </Text>
-            </View>
-
-            {isSel && (
-              <View style={styles.checkBadge}>
-                <Ionicons name="checkmark" size={18} color="#000" />
-              </View>
-            )}
-           </TouchableOpacity>
-          </View>
-        </Animated.View>
-      );
-    }
- ), [CARD_H, CARD_W, currentTheme.colors, reduceMotion, t, i18n.language]);
-
-  const renderItem = useCallback(
-    ({ item }: { item: Challenge }) => {
-      const isSel = selected?.id === item.id;
-      return <Card item={item} isSel={isSel} onPress={() => onSelectCard(item)} />;
-    },
-    [onSelectCard, selected?.id]
-  );
 
   const keyExtractor = useCallback((it: Challenge) => it.id, []);
 
@@ -1252,20 +1390,76 @@ if (mode === "duo" && pendingInvite?.inviteId) {
     return t("firstPick.step3.title", { defaultValue: "Combien de temps peux-tu tenir ?" }) as string;
   }, [step, t]);
 
-  const stepSubtitle = useMemo(() => {
-    if (step === 1)
-      return t("firstPick.step1.subtitle", {
-        defaultValue: "Choisis ton premier challenge. Pas besoin de réfléchir trop longtemps.",
-      }) as string;
-    if (step === 2)
-  return t("firstPick.step2.subtitle", {
-    defaultValue: "En duo, tu tiens plus longtemps. Et c’est plus dur d’abandonner.",
-  }) as string;
-
-    return t("firstPick.step3.subtitle", {
-      defaultValue: "7 jours est un excellent départ. Tu pourras ajuster plus tard.",
+  // Step copy (premium)
+const stepSubtitle = useMemo(() => {
+  if (step === 1)
+    return t("firstPick.step1.subtitle", {
+      defaultValue: "Choisis ton premier challenge. Pas besoin de réfléchir trop longtemps.",
     }) as string;
-  }, [step, t]);
+
+  if (step === 2)
+    return t("firstPick.step2.subtitle", {
+      defaultValue: "En duo, tu tiens plus longtemps. Et c’est plus dur d’abandonner.",
+    }) as string;
+
+  // ✅ Step 3: dynamique selon la durée choisie (3-7-15-21-30-60-90-180-365)
+  const byDays: Record<number, string> = {
+    3: t("firstPick.step3.subtitleByDays.3", {
+      defaultValue: "3 jours : mini sprint. Juste assez pour prouver que tu peux tenir.",
+    }) as string,
+    7: t("firstPick.step3.subtitleByDays.7", {
+      defaultValue: "7 jours : parfait pour démarrer vite et prendre le rythme.",
+    }) as string,
+    15: t("firstPick.step3.subtitleByDays.15", {
+      defaultValue: "15 jours : tu passes du “j’essaie” au “je le fais”.",
+    }) as string,
+    21: t("firstPick.step3.subtitleByDays.21", {
+      defaultValue: "21 jours : tu construis une vraie routine solide.",
+    }) as string,
+    30: t("firstPick.step3.subtitleByDays.30", {
+      defaultValue: "30 jours : objectif sérieux. Tu changes ton identité, pas juste ton humeur.",
+    }) as string,
+    60: t("firstPick.step3.subtitleByDays.60", {
+      defaultValue: "60 jours : discipline réelle. Tu commences à devenir constant.",
+    }) as string,
+    90: t("firstPick.step3.subtitleByDays.90", {
+      defaultValue: "90 jours : transformation. Là tu deviens quelqu’un qui finit.",
+    }) as string,
+    180: t("firstPick.step3.subtitleByDays.180", {
+      defaultValue: "180 jours : gros engagement. Tu construis un standard de vie.",
+    }) as string,
+    365: t("firstPick.step3.subtitleByDays.365", {
+      defaultValue: "365 jours : niveau élite. Tu ne fais plus un challenge, tu deviens ce challenge.",
+    }) as string,
+  };
+
+  if (byDays[days]) return byDays[days];
+
+  // ✅ fallback intelligent si un challenge a des durées custom
+  if (days <= 7)
+    return t("firstPick.step3.subtitleGeneric.short", {
+      count: days,
+      defaultValue: "{{count}} jours : court, clair, efficace. Lance-toi.",
+    }) as string;
+
+  if (days <= 30)
+    return t("firstPick.step3.subtitleGeneric.medium", {
+      count: days,
+      defaultValue: "{{count}} jours : assez long pour ancrer l’habitude.",
+    }) as string;
+
+  if (days <= 90)
+    return t("firstPick.step3.subtitleGeneric.long", {
+      count: days,
+      defaultValue: "{{count}} jours : engagement solide. Tu vas voir une vraie différence.",
+    }) as string;
+
+  return t("firstPick.step3.subtitleGeneric.ultra", {
+    count: days,
+    defaultValue: "{{count}} jours : engagement massif. C’est là que tu changes vraiment.",
+  }) as string;
+}, [step, days, t]);
+
 
   const progressText = useMemo(() => {
     return t("firstPick.progress", { current: step, total: 3, defaultValue: "Étape {{current}} sur {{total}}" }) as string;
@@ -1730,6 +1924,7 @@ if (mode === "duo" && pendingInvite?.inviteId) {
         onPress={() => {
    userClosedInviteModalRef.current = false;
    setInviteModalVisible(true);
+   track("first_pick_invite_pending_resend_tap", { ...baseCtx(), invite_id: pendingInvite.inviteId });
  }}
         style={{
           flex: 1,
@@ -1748,6 +1943,7 @@ if (mode === "duo" && pendingInvite?.inviteId) {
 
       <TouchableOpacity
          onPress={() => goHome({ pendingInviteId: pendingInvite.inviteId })}
+         onPressIn={() => track("first_pick_invite_pending_continue_tap", { ...baseCtx(), invite_id: pendingInvite.inviteId })}
         style={{
           flex: 1,
           borderRadius: 14,
@@ -1982,6 +2178,8 @@ if (mode === "duo" && pendingInvite?.inviteId) {
                   if (postShareBusy) return;
                   setPostShareBusy(true);
                   const inviteId = postShareInviteId || pendingInvite?.inviteId || null;
+                  track("first_pick_invite_send_confirm", { ...baseCtx(), answer: "no", invite_id: inviteId });
+
 
                   setPostSharePhase("fallback");
                   userClosedInviteModalRef.current = true;
@@ -2019,6 +2217,7 @@ if (mode === "duo" && pendingInvite?.inviteId) {
   setPostShareBusy(true);
 
   const inviteId = postShareInviteId || pendingInvite?.inviteId || null;
+  track("first_pick_invite_send_confirm", { ...baseCtx(), answer: "yes", invite_id: inviteId });
 
   // ✅ cleanup UI AVANT nav (anti Android remount/reopen)
   setPostShareVisible(false);
@@ -2058,6 +2257,7 @@ if (mode === "duo" && pendingInvite?.inviteId) {
               <TouchableOpacity
                 onPress={async () => {
   if (!selected) return;
+   track("first_pick_invite_resend_from_fallback", { ...baseCtx() });
 
   // ✅ reset UI
   setPostShareVisible(false);
@@ -2095,6 +2295,7 @@ if (mode === "duo" && pendingInvite?.inviteId) {
                   // Solo => on délègue à ton flow existant (start_solo)
                   setPostShareVisible(false);
                   setPostSharePhase("ask");
+                  track("first_pick_invite_switch_solo_from_fallback", { ...baseCtx() });
                   await handleInvitationResult("start_solo");
                 }}
                 style={{

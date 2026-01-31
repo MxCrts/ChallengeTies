@@ -34,10 +34,14 @@ type PushKind =
 
 function normalizePushKind(data: any): PushKind {
   const rawKind = String(data?.kind || "").toLowerCase().trim();
+
   if (rawKind === "duo_nudge") return "duo_nudge";
+  if (rawKind === "invite_status") return "invite_status"; // ✅ AJOUT
+  if (rawKind === "daily_reminder") return "daily_reminder"; // optionnel, cohérent
+  if (rawKind === "referral_milestone_unlocked") return "referral_milestone_unlocked";
+  if (rawKind === "referral_new_child") return "referral_new_child";
 
   const rawType = String(data?.type || data?.__tag || "").toLowerCase().trim();
-  // legacy mappings
   if (rawType === "daily-reminder") return "daily_reminder";
   if (rawType === "invite-status") return "invite_status";
   if (rawType === "duo-nudge") return "duo_nudge";
@@ -45,6 +49,7 @@ function normalizePushKind(data: any): PushKind {
   if (rawType === "referral_new_child") return "referral_new_child";
   return "unknown";
 }
+
 
 /* -------------------------------------------------------------------------- */
 /*                                   Storage                                  */
@@ -442,87 +447,111 @@ export const requestNotificationPermissions = async (): Promise<boolean> => {
 /* -------------------------------------------------------------------------- */
 
 export const registerForPushNotificationsAsync = async (): Promise<string | null> => {
+  const TAG = "[PUSH]";
+  const log = (...a: any[]) => console.log(TAG, ...a);
+
+  log("START", {
+    platform: Platform.OS,
+    constants_isDevice: (Constants as any)?.isDevice,
+    appOwnership: (Constants as any)?.appOwnership ?? null,
+  });
+
   try {
-    if (!Constants.isDevice) {
-      console.log("🔧 Not a real device → no push token");
+    // ✅ Le seul cas à exclure vraiment
+    if (Platform.OS === "web") {
+      log("WEB → abort");
       return null;
     }
 
+    const uid = auth.currentUser?.uid ?? null;
+    log("uid:", uid);
+    if (!uid) {
+      log("No authenticated user → abort");
+      return null;
+    }
+
+    // ✅ Permissions
     const perm = await Notifications.getPermissionsAsync();
-    let final = perm.status;
-    if (final !== "granted") {
+    let finalStatus = perm.status;
+    log("permission BEFORE:", finalStatus);
+
+    if (finalStatus !== "granted") {
       const req = await Notifications.requestPermissionsAsync();
-      final = req.status;
+      finalStatus = req.status;
+      log("permission AFTER:", finalStatus);
     }
 
-    console.log("🔔 Permission notifications (register):", final);
-    if (final !== "granted") return null;
+    if (finalStatus !== "granted") {
+      log("Permission not granted → abort");
+      return null;
+    }
 
-    const pjA = (Constants as any)?.expoConfig?.extra?.eas?.projectId;
-    const pjB = (Constants as any)?.easConfig?.projectId;
+    // ✅ ProjectId (EAS / Expo)
+    const projectId =
+      (Constants as any)?.expoConfig?.extra?.eas?.projectId ??
+      (Constants as any)?.easConfig?.projectId ??
+      null;
 
-    let expoResp: any = null;
+    log("projectId:", projectId);
+
+    // ✅ Expo Push Token
+    let expoToken: string | null = null;
     try {
-      expoResp =
-        pjA || pjB
-          ? await Notifications.getExpoPushTokenAsync({ projectId: pjA || pjB })
-          : await Notifications.getExpoPushTokenAsync();
+      const tokenResp = projectId
+        ? await Notifications.getExpoPushTokenAsync({ projectId })
+        : await Notifications.getExpoPushTokenAsync();
+
+      expoToken = tokenResp?.data ?? null;
+      log("expoToken:", expoToken ? `${expoToken.slice(0, 20)}…` : null);
     } catch (err) {
-      console.log("❌ getExpoPushTokenAsync failed:", err);
+      log("getExpoPushTokenAsync ERROR:", err);
     }
 
-    const expoToken = expoResp?.data ?? null;
+    if (!expoToken) {
+      log("No expo token returned → abort");
+      return null;
+    }
 
-    // FCM token (Android)
-    let deviceResp: any = null;
+    // ✅ Android FCM token (debug)
     let fcmToken: string | null = null;
     try {
-      deviceResp = await Notifications.getDevicePushTokenAsync();
+      const deviceResp = await Notifications.getDevicePushTokenAsync();
       fcmToken = typeof deviceResp?.data === "string" ? deviceResp.data : null;
+      log("fcmToken:", fcmToken ? `${fcmToken.slice(0, 20)}…` : null);
     } catch (err) {
-      console.log("❌ getDevicePushTokenAsync failed:", err);
+      log("getDevicePushTokenAsync failed:", err);
     }
 
-    const uid = auth.currentUser?.uid;
-    if (uid) {
-      // ✅ multi-device tokens: conserve expoPushToken legacy + expoPushTokens[] (dedupe)
-      const patch: any = {
-        expoPushToken: expoToken || null,
+    // ✅ Firestore write
+    await setDoc(
+      doc(db, "users", uid),
+      {
+        expoPushToken: expoToken,
         notificationsEnabled: true,
         expoPushUpdatedAt: new Date(),
-        debugLastPermissionStatus: final,
-        debugLastExpoProjectIdA: pjA || null,
-        debugLastExpoProjectIdB: pjB || null,
-        debugLastExpoPushRaw: expoResp || null,
-        debugLastDevicePushRaw: deviceResp || null,
-        debugLastFcmToken: fcmToken || null,
-      };
+        debugPush: {
+          permission: finalStatus,
+          projectId,
+          fcmToken: fcmToken || null,
+          platform: Platform.OS,
+          constants_isDevice: (Constants as any)?.isDevice ?? null,
+          appOwnership: (Constants as any)?.appOwnership ?? null,
+        },
+      },
+      { merge: true }
+    );
 
-      if (expoToken) {
-        // Firestore arrayUnion serait mieux, mais on n’a pas importé FieldValue ici.
-        // On fait un merge safe côté client: fetch minimal + dedupe.
-        try {
-          const snap = await getDoc(doc(db, "users", uid));
-          const existing = snap.exists() ? (snap.data() as any) : {};
-          const arr: string[] = Array.isArray(existing.expoPushTokens) ? existing.expoPushTokens : [];
-          const merged = Array.from(new Set([...arr, expoToken])).slice(-6); // limite douce
-          patch.expoPushTokens = merged;
-        } catch {}
-      }
-
-      await setDoc(
-        doc(db, "users", uid),
-        patch,
-        { merge: true }
-      );
-    }
-
+    log("Saved to Firestore OK");
     return expoToken;
   } catch (e) {
-    console.error("❌ registerForPushNotificationsAsync:", e);
+    console.error("💥 [PUSH] CRASH:", e);
     return null;
+  } finally {
+    log("END");
   }
 };
+
+
 
 /* -------------------------------------------------------------------------- */
 /*                         Helpers: cancel scheduled by tag                    */

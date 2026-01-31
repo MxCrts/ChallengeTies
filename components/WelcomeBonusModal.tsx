@@ -36,25 +36,6 @@ import type { ViewStyle } from "react-native";
 import ConfettiCannon from "react-native-confetti-cannon";
 import { BlurView } from "expo-blur";
 
-const { width: SCREEN_WIDTH, height: SCREEN_HEIGHT } = useWindowDimensions();
-
-const BASE_W = 375;
-
-// ✅ clamp: évite que ça devienne énorme sur tablette / trop petit sur mini tél
-const RAW_SCALE = Math.min(SCREEN_WIDTH, SCREEN_HEIGHT) / BASE_W;
-const SCALE = Math.min(Math.max(RAW_SCALE, 0.86), 1.18);
-
-// ✅ helpers responsive
-const IS_TINY = SCREEN_WIDTH < 350;
-const IS_TABLET = SCREEN_WIDTH >= 768;
-
-
-// ✅ worklet-safe (Reanimated peut l’appeler côté UI thread sans crash)
-const normalize = (size: number) => {
-  "worklet";
-  return Math.round(size * SCALE);
-};
-
 
 export type WelcomeRewardKind = "trophies" | "streakPass" | "premium";
 type WelcomeBonusReward = {
@@ -75,6 +56,352 @@ const WELCOME_REWARDS: WelcomeBonusReward[] = [
   { type: "trophies", amount: 20 }, // Jour 6
   { type: "premium", days: 7 }, // Jour 7
 ];
+
+const BASE_W = 375;
+
+type StylesParams = {
+  screenW: number;
+  isTiny: boolean;
+  isTablet: boolean;
+  normalizeJs: (n: number) => number;
+};
+
+const makeStyles = ({ screenW, isTiny, isTablet, normalizeJs }: StylesParams) =>
+  StyleSheet.create({
+    overlay: {
+      flex: 1,
+      alignItems: "center",
+      paddingHorizontal: normalizeJs(isTiny ? 10 : 14),
+      backgroundColor: "rgba(0,0,0,0.78)",
+    },
+    vignette: {
+      ...StyleSheet.absoluteFillObject,
+      backgroundColor: "rgba(0,0,0,0.25)",
+    },
+    centerWrap: {
+      flex: 1,
+      width: "100%",
+      justifyContent: "center",
+      alignItems: "center",
+    },
+    sheet: {
+      width: screenW * 0.94,
+      maxWidth: normalizeJs(isTablet ? 560 : 520),
+      borderRadius: normalizeJs(isTiny ? 26 : 30),
+      overflow: "hidden",
+    } as ViewStyle,
+
+    outerStrokeWrap: {
+      borderRadius: normalizeJs(isTiny ? 26 : 30),
+      overflow: "hidden",
+    },
+
+    outerStroke: {
+      borderWidth: 1,
+      borderRadius: normalizeJs(isTiny ? 26 : 30),
+      padding: normalizeJs(2),
+    },
+
+    surface: {
+      borderRadius: normalizeJs(isTiny ? 24 : 28),
+      padding: normalizeJs(isTiny ? 9 : 10),
+    },
+
+    innerGlass: {
+      borderRadius: normalizeJs(isTiny ? 18 : 22),
+      paddingHorizontal: normalizeJs(isTiny ? 12 : 16),
+      paddingTop: normalizeJs(2),
+      paddingBottom: normalizeJs(2),
+    },
+
+    radial: {
+      position: "absolute",
+      width: normalizeJs(540),
+      height: normalizeJs(540),
+      borderRadius: normalizeJs(270),
+      top: "10%",
+      alignSelf: "center",
+      transform: [{ scale: 1.05 }],
+    },
+    radial2: {
+      position: "absolute",
+      width: normalizeJs(720),
+      height: normalizeJs(720),
+      borderRadius: normalizeJs(360),
+      bottom: "-10%",
+      alignSelf: "center",
+      transform: [{ scale: 1.0 }],
+    },
+
+    ctaLoadingRow: {
+      flexDirection: "row",
+      alignItems: "center",
+      gap: normalizeJs(10),
+    },
+
+    topRow: {
+      alignItems: "center",
+      marginBottom: normalizeJs(8),
+    },
+    pill: {
+      borderRadius: normalizeJs(999),
+      paddingHorizontal: normalizeJs(12),
+      paddingVertical: normalizeJs(7),
+      flexDirection: "row",
+      alignItems: "center",
+      gap: normalizeJs(6),
+      borderWidth: 1,
+      maxWidth: "100%",
+    },
+    pillText: {
+      fontSize: normalizeJs(11),
+      fontWeight: "900",
+      letterSpacing: 0.6,
+      textTransform: "uppercase",
+    },
+
+    heroWrap: {
+      alignItems: "center",
+      justifyContent: "center",
+      marginTop: normalizeJs(2),
+      marginBottom: normalizeJs(4),
+    },
+    chestWrap: {
+      width: normalizeJs(isTiny ? 140 : isTablet ? 168 : 156),
+      height: normalizeJs(isTiny ? 140 : isTablet ? 168 : 156),
+      justifyContent: "center",
+      alignItems: "center",
+    },
+    chestLottie: {
+      width: "100%",
+      height: "100%",
+    },
+    halo: {
+      position: "absolute",
+      width: normalizeJs(isTiny ? 186 : isTablet ? 220 : 204),
+      height: normalizeJs(isTiny ? 186 : isTablet ? 220 : 204),
+      borderRadius: normalizeJs(999),
+      borderWidth: 1,
+      overflow: "hidden",
+      opacity: 0.92,
+    },
+
+    header: {
+      alignItems: "center",
+      marginBottom: normalizeJs(12),
+      paddingHorizontal: normalizeJs(10),
+    },
+    title: {
+      fontSize: normalizeJs(isTiny ? 24 : isTablet ? 30 : 27),
+      textAlign: "center",
+      marginBottom: normalizeJs(6),
+      letterSpacing: 0.2,
+    },
+    subtitle: {
+      fontSize: normalizeJs(isTiny ? 12 : 13),
+      textAlign: "center",
+      lineHeight: normalizeJs(isTiny ? 17 : 18),
+      opacity: 0.98,
+    },
+
+    timelineWrap: {
+      marginTop: normalizeJs(2),
+      marginBottom: normalizeJs(14),
+      paddingHorizontal: normalizeJs(isTiny ? 8 : 12),
+    },
+    timelineLine: {
+      height: normalizeJs(2),
+      borderRadius: normalizeJs(999),
+      position: "absolute",
+      top: normalizeJs(18),
+      left: normalizeJs(isTiny ? 4 : 6),
+      right: normalizeJs(isTiny ? 4 : 6),
+    },
+    timelineLineFill: {
+      height: normalizeJs(2),
+      borderRadius: normalizeJs(999),
+      position: "absolute",
+      top: normalizeJs(18),
+      left: normalizeJs(isTiny ? 4 : 6),
+    },
+    timelineGrid: {
+      flexDirection: "row",
+      flexWrap: "nowrap",
+      width: "100%",
+      alignItems: "flex-start",
+    },
+    timelineItem: {
+      width: `${100 / 7}%` as any,
+      alignItems: "center",
+      paddingHorizontal: normalizeJs(2),
+    },
+    timelineRow: {
+      flexDirection: "row",
+      justifyContent: "space-between",
+      alignItems: "flex-start",
+      flexWrap: "nowrap",
+      width: "100%",
+    },
+    scrollContent: {
+      flexGrow: 1,
+      justifyContent: "center",
+    },
+    timelineDot: {
+      width: normalizeJs(isTiny ? 30 : 32),
+      height: normalizeJs(isTiny ? 30 : 32),
+      borderRadius: normalizeJs(999),
+      alignItems: "center",
+      justifyContent: "center",
+      borderWidth: 1,
+      marginBottom: normalizeJs(6),
+    },
+    timelineLabel: {
+      fontSize: normalizeJs(isTiny ? 9.5 : 10),
+      fontWeight: "900",
+      letterSpacing: 0.2,
+      textAlign: "center",
+      includeFontPadding: false,
+    },
+    timelineMini: {
+      marginTop: normalizeJs(2),
+      fontSize: normalizeJs(isTiny ? 8.5 : 9),
+      fontWeight: "800",
+      letterSpacing: 0.2,
+      textAlign: "center",
+      includeFontPadding: false,
+    },
+
+    todayCardWrapper: {
+      marginTop: normalizeJs(2),
+      marginBottom: normalizeJs(12),
+    },
+    todayCard: {
+      borderRadius: normalizeJs(18),
+      paddingVertical: normalizeJs(12),
+      paddingHorizontal: normalizeJs(12),
+      flexDirection: "row",
+      alignItems: "center",
+      borderWidth: 1,
+      overflow: "hidden",
+      position: "relative",
+      shadowColor: "#000",
+      shadowOffset: { width: 0, height: normalizeJs(8) },
+      shadowOpacity: 0.28,
+      shadowRadius: 20,
+      elevation: 12,
+    },
+    todayAccentRail: {
+      position: "absolute",
+      left: 0,
+      top: 0,
+      bottom: 0,
+      width: normalizeJs(3),
+      opacity: 0.95,
+    },
+    todayGlow: {
+      ...StyleSheet.absoluteFillObject,
+    },
+    todayIconCircle: {
+      width: normalizeJs(56),
+      height: normalizeJs(56),
+      borderRadius: normalizeJs(28),
+      alignItems: "center",
+      justifyContent: "center",
+      borderWidth: 1,
+      marginRight: normalizeJs(10),
+      overflow: "hidden",
+    },
+    iconRing: {
+      ...StyleSheet.absoluteFillObject,
+      borderWidth: 2,
+      borderRadius: normalizeJs(28),
+      opacity: 0.45,
+    },
+    todayTextBlock: { flex: 1 },
+    todayTitle: {
+      fontSize: normalizeJs(12),
+      textTransform: "uppercase",
+      letterSpacing: 0.7,
+      marginBottom: normalizeJs(3),
+      fontWeight: "900",
+    },
+    todayReward: {
+      fontSize: normalizeJs(16),
+      fontWeight: "900",
+      marginBottom: normalizeJs(4),
+    },
+    todayHint: {
+      fontSize: normalizeJs(12),
+      opacity: 0.95,
+    },
+    claimedNow: {
+      fontWeight: "900",
+      fontSize: normalizeJs(12),
+    },
+    dayBadge: {
+      paddingHorizontal: normalizeJs(8),
+      paddingVertical: normalizeJs(4),
+      borderRadius: normalizeJs(999),
+      borderWidth: 1,
+      marginLeft: normalizeJs(6),
+    },
+    dayBadgeText: {
+      fontSize: normalizeJs(11),
+      fontWeight: "900",
+      letterSpacing: 0.2,
+    },
+
+    ctaWrap: {
+      marginTop: normalizeJs(10),
+      marginBottom: normalizeJs(6),
+    },
+    ctaOuter: {
+      borderRadius: normalizeJs(999),
+      borderWidth: 1,
+      overflow: "hidden",
+      shadowColor: "#000",
+      shadowOffset: { width: 0, height: 14 },
+      shadowOpacity: 0.34,
+      shadowRadius: 22,
+      elevation: 14,
+    },
+    ctaInner: {
+      borderRadius: normalizeJs(999),
+      paddingVertical: normalizeJs(isTiny ? 12 : 13),
+      paddingHorizontal: normalizeJs(isTiny ? 16 : 18),
+      minHeight: normalizeJs(isTiny ? 48 : 52),
+      flexDirection: "row",
+      alignItems: "center",
+      justifyContent: "center",
+      overflow: "hidden",
+    },
+    shimmer: {
+      position: "absolute",
+      width: normalizeJs(120),
+      height: normalizeJs(220),
+      backgroundColor: "white",
+      top: -normalizeJs(80),
+      left: "50%",
+      marginLeft: -normalizeJs(60),
+      borderRadius: normalizeJs(40),
+    },
+    ctaText: {
+      fontSize: normalizeJs(isTiny ? 14 : 15),
+      color: "rgba(5,7,11,0.95)",
+      marginRight: normalizeJs(6),
+      letterSpacing: 0.25,
+      fontWeight: "950" as any,
+    },
+    bottomHint: {
+      marginTop: normalizeJs(8),
+      fontSize: normalizeJs(isTiny ? 10.5 : 11),
+      textAlign: "center",
+      opacity: 0.95,
+      paddingHorizontal: normalizeJs(10),
+      lineHeight: normalizeJs(isTiny ? 14 : 15),
+    },
+  });
+
 
 export type WelcomeBonusModalProps = {
   visible: boolean;
@@ -104,6 +431,35 @@ const WelcomeBonusModal: React.FC<WelcomeBonusModalProps> = ({
   const { t } = useTranslation();
   const { theme } = useTheme();
   const insets = useSafeAreaInsets();
+
+    const { width: SCREEN_WIDTH, height: SCREEN_HEIGHT } = useWindowDimensions();
+
+  const SCALE = useMemo(() => {
+    const raw = Math.min(SCREEN_WIDTH, SCREEN_HEIGHT) / BASE_W;
+    return Math.min(Math.max(raw, 0.86), 1.18);
+  }, [SCREEN_WIDTH, SCREEN_HEIGHT]);
+
+  const IS_TINY = SCREEN_WIDTH < 350;
+  const IS_TABLET = SCREEN_WIDTH >= 768;
+
+  // ✅ Worklet-safe : utilisé par Reanimated (shimmerStyle) + partout ailleurs
+  const normalize = useMemo(() => {
+    return (size: number) => {
+      "worklet";
+      return Math.round(size * SCALE);
+    };
+  }, [SCALE]);
+
+  // ✅ pour StyleSheet.create (JS thread)
+  const normalizeJs = useMemo(() => {
+    return (size: number) => Math.round(size * SCALE);
+  }, [SCALE]);
+
+  const styles = useMemo(
+    () => makeStyles({ screenW: SCREEN_WIDTH, isTiny: IS_TINY, isTablet: IS_TABLET, normalizeJs }),
+    [SCREEN_WIDTH, IS_TINY, IS_TABLET, normalizeJs]
+  );
+
 
   const isDark = theme === "dark";
   const current: Theme = isDark ? designSystem.darkTheme : designSystem.lightTheme;
@@ -717,333 +1073,6 @@ const WelcomeBonusModal: React.FC<WelcomeBonusModalProps> = ({
   );
 };
 
-const styles = StyleSheet.create({
-  overlay: {
-  flex: 1,
-  alignItems: "center",
-  paddingHorizontal: normalize(IS_TINY ? 10 : 14),
-  backgroundColor: "rgba(0,0,0,0.78)",
-},
-  vignette: {
-    ...StyleSheet.absoluteFillObject,
-    backgroundColor: "rgba(0,0,0,0.25)",
-  },
-  centerWrap: {
-  flex: 1,
-  width: "100%",
-  justifyContent: "center",
-  alignItems: "center",
-},
-  sheet: {
-  width: SCREEN_WIDTH * 0.94,
-  maxWidth: normalize(IS_TABLET ? 560 : 520),
-  borderRadius: normalize(IS_TINY ? 26 : 30),
-  overflow: "hidden",
-} as ViewStyle,
 
-outerStrokeWrap: {
-  borderRadius: normalize(IS_TINY ? 26 : 30),
-  overflow: "hidden",
-},
-
-outerStroke: {
-  borderWidth: 1,
-  borderRadius: normalize(IS_TINY ? 26 : 30),
-  padding: normalize(2),
-},
-
-surface: {
-  borderRadius: normalize(IS_TINY ? 24 : 28),
-  padding: normalize(IS_TINY ? 9 : 10),
-},
-
-innerGlass: {
-  borderRadius: normalize(IS_TINY ? 18 : 22),
-  paddingHorizontal: normalize(IS_TINY ? 12 : 16),
-  paddingTop: normalize(2),
-  paddingBottom: normalize(2),
-},
-  radial: {
-    position: "absolute",
-    width: normalize(540),
-    height: normalize(540),
-    borderRadius: normalize(270),
-    top: "10%",
-    alignSelf: "center",
-    transform: [{ scale: 1.05 }],
-  },
-  radial2: {
-    position: "absolute",
-    width: normalize(720),
-    height: normalize(720),
-    borderRadius: normalize(360),
-    bottom: "-10%",
-    alignSelf: "center",
-    transform: [{ scale: 1.0 }],
-  },
-ctaLoadingRow: {
-  flexDirection: "row",
-  alignItems: "center",
-  gap: normalize(10),
-},
-  topRow: {
-    alignItems: "center",
-    marginBottom: normalize(8),
-  },
-  pill: {
-    borderRadius: normalize(999),
-    paddingHorizontal: normalize(12),
-    paddingVertical: normalize(7),
-    flexDirection: "row",
-    alignItems: "center",
-    gap: normalize(6),
-    borderWidth: 1,
-    maxWidth: "100%",
-  },
-  pillText: {
-    fontSize: normalize(11),
-    fontWeight: "900",
-    letterSpacing: 0.6,
-    textTransform: "uppercase",
-  },
-  heroWrap: {
-    alignItems: "center",
-    justifyContent: "center",
-    marginTop: normalize(2),
-    marginBottom: normalize(4),
-  },
-chestWrap: {
-  width: normalize(IS_TINY ? 140 : IS_TABLET ? 168 : 156),
-  height: normalize(IS_TINY ? 140 : IS_TABLET ? 168 : 156),
-  justifyContent: "center",
-  alignItems: "center",
-},
-  chestLottie: {
-    width: "100%",
-    height: "100%",
-  },
-  halo: {
-  position: "absolute",
-  width: normalize(IS_TINY ? 186 : IS_TABLET ? 220 : 204),
-  height: normalize(IS_TINY ? 186 : IS_TABLET ? 220 : 204),
-  borderRadius: normalize(999),
-  borderWidth: 1,
-  overflow: "hidden",
-  opacity: 0.92,
-},
-  header: {
-    alignItems: "center",
-    marginBottom: normalize(12),
-    paddingHorizontal: normalize(10),
-  },
-  title: {
-  fontSize: normalize(IS_TINY ? 24 : IS_TABLET ? 30 : 27),
-  textAlign: "center",
-  marginBottom: normalize(6),
-  letterSpacing: 0.2,
-},
-subtitle: {
-  fontSize: normalize(IS_TINY ? 12 : 13),
-  textAlign: "center",
-  lineHeight: normalize(IS_TINY ? 17 : 18),
-  opacity: 0.98,
-},
- timelineWrap: {
-  marginTop: normalize(2),
-  marginBottom: normalize(14),
-  paddingHorizontal: normalize(IS_TINY ? 8 : 12),
-},
-timelineLine: {
-  height: normalize(2),
-  borderRadius: normalize(999),
-  position: "absolute",
-  top: normalize(18),
-  left: normalize(IS_TINY ? 4 : 6),
-  right: normalize(IS_TINY ? 4 : 6),
-},
-timelineLineFill: {
-  height: normalize(2),
-  borderRadius: normalize(999),
-  position: "absolute",
-  top: normalize(18),
-  left: normalize(IS_TINY ? 4 : 6),
-},
-  timelineGrid: {
-  flexDirection: "row",
-  flexWrap: "nowrap",
-  width: "100%",
-  alignItems: "flex-start",
-},
-timelineItem: {
-  width: `${100 / 7}%` as any,
-  alignItems: "center",
-  paddingHorizontal: normalize(2),
-},
-  timelineRow: {
-  flexDirection: "row",
-  justifyContent: "space-between",
-  alignItems: "flex-start",
-  flexWrap: "nowrap",
-  width: "100%",
-},
-scrollContent: {
-  flexGrow: 1,              // ✅ le contenu peut “remplir” le scroll
-  justifyContent: "center", // ✅ centre verticalement quand ça rentre
-},
-timelineDot: {
-  width: normalize(IS_TINY ? 30 : 32),
-  height: normalize(IS_TINY ? 30 : 32),
-  borderRadius: normalize(999),
-  alignItems: "center",
-  justifyContent: "center",
-  borderWidth: 1,
-  marginBottom: normalize(6),
-},
-timelineLabel: {
-  fontSize: normalize(IS_TINY ? 9.5 : 10),
-  fontWeight: "900",
-  letterSpacing: 0.2,
-  textAlign: "center",
-  includeFontPadding: false,
-},
-timelineMini: {
-  marginTop: normalize(2),
-  fontSize: normalize(IS_TINY ? 8.5 : 9),
-  fontWeight: "800",
-  letterSpacing: 0.2,
-  textAlign: "center",
-  includeFontPadding: false,
-},
-  todayCardWrapper: {
-    marginTop: normalize(2),
-    marginBottom: normalize(12),
-  },
-  todayCard: {
-    borderRadius: normalize(18),
-    paddingVertical: normalize(12),
-    paddingHorizontal: normalize(12),
-    flexDirection: "row",
-    alignItems: "center",
-    borderWidth: 1,
-    overflow: "hidden",
-    position: "relative",
-    shadowColor: "#000",
-    shadowOffset: { width: 0, height: normalize(8) },
-    shadowOpacity: 0.28,
-    shadowRadius: 20,
-    elevation: 12,
-  },
-  todayAccentRail: {
-    position: "absolute",
-    left: 0,
-    top: 0,
-    bottom: 0,
-    width: normalize(3),
-    opacity: 0.95,
-  },
-  todayGlow: {
-    ...StyleSheet.absoluteFillObject,
-  },
-  todayIconCircle: {
-    width: normalize(56),
-    height: normalize(56),
-    borderRadius: normalize(28),
-    alignItems: "center",
-    justifyContent: "center",
-    borderWidth: 1,
-    marginRight: normalize(10),
-    overflow: "hidden",
-  },
-  iconRing: {
-    ...StyleSheet.absoluteFillObject,
-    borderWidth: 2,
-    borderRadius: normalize(28),
-    opacity: 0.45,
-  },
-  todayTextBlock: { flex: 1 },
-  todayTitle: {
-    fontSize: normalize(12),
-    textTransform: "uppercase",
-    letterSpacing: 0.7,
-    marginBottom: normalize(3),
-    fontWeight: "900",
-  },
-  todayReward: {
-    fontSize: normalize(16),
-    fontWeight: "900",
-    marginBottom: normalize(4),
-  },
-  todayHint: {
-    fontSize: normalize(12),
-    opacity: 0.95,
-  },
-  claimedNow: {
-    fontWeight: "900",
-    fontSize: normalize(12),
-  },
-  dayBadge: {
-    paddingHorizontal: normalize(8),
-    paddingVertical: normalize(4),
-    borderRadius: normalize(999),
-    borderWidth: 1,
-    marginLeft: normalize(6),
-  },
-  dayBadgeText: {
-    fontSize: normalize(11),
-    fontWeight: "900",
-    letterSpacing: 0.2,
-  },
-
-  // CTA (Keynote button)
-  ctaWrap: {
-    marginTop: normalize(10),
-    marginBottom: normalize(6),
-  },
-  ctaOuter: {
-    borderRadius: normalize(999),
-    borderWidth: 1,
-    overflow: "hidden",
-    shadowColor: "#000",
-    shadowOffset: { width: 0, height: 14 },
-    shadowOpacity: 0.34,
-    shadowRadius: 22,
-    elevation: 14,
-  },
- ctaInner: {
-  borderRadius: normalize(999),
-  paddingVertical: normalize(IS_TINY ? 12 : 13),
-  paddingHorizontal: normalize(IS_TINY ? 16 : 18),
-  minHeight: normalize(IS_TINY ? 48 : 52), // ✅ grosse hit area
-  flexDirection: "row",
-  alignItems: "center",
-  justifyContent: "center",
-  overflow: "hidden",
-},
-  shimmer: {
-    position: "absolute",
-    width: normalize(120),
-    height: normalize(220),
-    backgroundColor: "white",
-    top: -normalize(80),
-    left: "50%",
-    marginLeft: -normalize(60),
-    borderRadius: normalize(40),
-  },
- ctaText: {
-  fontSize: normalize(IS_TINY ? 14 : 15),
-  color: "rgba(5,7,11,0.95)",
-  marginRight: normalize(6),
-  letterSpacing: 0.25,
-  fontWeight: "950" as any,
-},
-bottomHint: {
-  marginTop: normalize(8),
-  fontSize: normalize(IS_TINY ? 10.5 : 11),
-  textAlign: "center",
-  opacity: 0.95,
-  paddingHorizontal: normalize(10),
-  lineHeight: normalize(IS_TINY ? 14 : 15),
-},
-});
 
 export default WelcomeBonusModal;

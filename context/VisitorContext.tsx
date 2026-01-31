@@ -14,6 +14,8 @@ type Ctx = {
   hydrated: boolean;
 };
 
+const GUEST_KEY = "ties.guest.enabled.v1";
+
 const VisitorContext = createContext<Ctx | null>(null);
 export const useVisitor = () => {
   const ctx = useContext(VisitorContext);
@@ -59,19 +61,22 @@ const [hydrated, setHydrated] = useState(false);
   useEffect(() => {
     (async () => {
       try {
-        const v = await AsyncStorage.getItem('@ct.isGuest');
+        const v = await AsyncStorage.getItem(GUEST_KEY);
         setIsGuest(v === '1');
       } finally {
         setHydrated(true); // 👈 prêt
       }
     })();
   }, []);
- const setGuest = (v: boolean, persist = true) => {
+ const setGuest = async (v: boolean, persist = true) => {
   setIsGuest(v);
   if (persist) {
-    AsyncStorage.setItem("@ct.isGuest", v ? "1" : "0").catch(() => {});
+    try {
+      await AsyncStorage.setItem(GUEST_KEY, v ? "1" : "0");
+    } catch {}
   }
 };
+
 
   // Si l’utilisateur se connecte, on sort du mode invité automatiquement
   const [isAuthenticated, setIsAuthenticated] = useState<boolean>(!!auth.currentUser?.uid);

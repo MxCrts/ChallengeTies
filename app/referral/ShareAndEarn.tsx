@@ -100,6 +100,7 @@ export default function ShareAndEarn() {
   const [claimed, setClaimed] = useState<number[]>([]);
   const [pending, setPending] = useState<number[]>([]);
   const [loading, setLoading] = useState(true);
+  
 
   // ✅ État parrain détecté côté filleul
   const [pendingReferrer, setPendingReferrer] = useState<PendingReferrerState>({
@@ -123,6 +124,9 @@ export default function ShareAndEarn() {
   const src = "settings_shareearn";
   const appLink = useMemo(() => (me ? buildAppLink(me, src) : ""), [me, src]);
   const webLink = useMemo(() => (me ? buildWebLink(me, src) : ""), [me, src]);
+
+  const [linkMode, setLinkMode] = useState<"web" | "app">("web");
+const activeLink = linkMode === "web" ? webLink : appLink;
 
   // === Toast premium ===
   const [toast, setToast] = useState<ToastState | null>(null);
@@ -833,15 +837,55 @@ export default function ShareAndEarn() {
           showsVerticalScrollIndicator={false}
           keyboardShouldPersistTaps="handled"
         >
-          <Text style={[styles.title, { color: textPrimary }]}>
-            {t("referral.share.title")}
-          </Text>
-          <Text style={[styles.subtitle, { color: textSecondary }]}>
-            {t("referral.share.subtitle")}
-          </Text>
-          <Text style={[styles.tip, { color: textSecondary }]}>
-           {t("referral.share.howTo")}
-         </Text>
+          <View style={styles.hero}>
+  <View style={styles.heroTopRow}>
+    <View style={styles.heroIcon}>
+      <Ionicons name="gift-outline" size={normalize(18)} color={palette.primary} />
+    </View>
+
+    <View style={{ flex: 1, minWidth: 0 }}>
+      <Text
+        style={[styles.heroTitle, { color: textPrimary }]}
+        numberOfLines={1}
+        ellipsizeMode="tail"
+      >
+        {t("referral.share.title")}
+      </Text>
+      <Text
+        style={[styles.heroSubtitle, { color: textSecondary }]}
+        numberOfLines={2}
+        ellipsizeMode="tail"
+      >
+        {t("referral.share.subtitle")}
+      </Text>
+    </View>
+  </View>
+
+  <View style={styles.heroStatsRow}>
+    <View style={[styles.statPill, { borderColor: cardBorder, backgroundColor: isDark ? "rgba(148,163,184,0.10)" : "rgba(15,23,42,0.04)" }]}>
+      <Text style={[styles.statLabel, { color: textSecondary }]} numberOfLines={1}>
+        {t("referral.share.activatedReferrals")}
+      </Text>
+      <Text style={[styles.statValue, { color: textPrimary }]} numberOfLines={1}>
+        {loading ? "—" : String(activatedCount)}
+      </Text>
+    </View>
+
+    <View style={[styles.statPill, { borderColor: cardBorder, backgroundColor: isDark ? "rgba(148,163,184,0.10)" : "rgba(15,23,42,0.04)" }]}>
+      <Text style={[styles.statLabel, { color: textSecondary }]} numberOfLines={1}>
+        {t("referral.share.tipNext", {
+          remaining: Math.max(0, (nextMilestone ?? 0) - activatedCount),
+          milestone: nextMilestone ?? 0,
+          defaultValue: "Prochain palier",
+        })}
+      </Text>
+      <Text style={[styles.statValue, { color: textPrimary }]} numberOfLines={1}>
+        {nextMilestone ? `${nextMilestone}` : "✓"}
+      </Text>
+    </View>
+  </View>
+</View>
+
 
           {/* ✅ Bloc filleul : parrain détecté */}
           {pendingReferrer.status !== "idle" && (
@@ -897,12 +941,7 @@ export default function ShareAndEarn() {
                         })}
                   </Text>
 
-                  <Text
-                    style={[
-                      styles.tip,
-                      { color: textSecondary, marginTop: 0 },
-                    ]}
-                  >
+                  <Text style={[styles.micro, { color: textSecondary, marginTop: 0 }]} numberOfLines={3}>
                     {pendingReferrer.status === "pending"
                       ? t("referral.invited.body", {
                           defaultValue:
@@ -917,9 +956,10 @@ export default function ShareAndEarn() {
                   {!!pendingReferrer.referrerUsername && (
                     <Text
                       style={[
-                        styles.tip,
+                        styles.micro,
                         { color: textPrimary, marginTop: 6 },
                       ]}
+                      numberOfLines={1}
                     >
                       {t("referral.invited.by", {
                         defaultValue: "Parrain :",
@@ -936,78 +976,163 @@ export default function ShareAndEarn() {
 
           {/* Liens de parrainage */}
           <View
-            style={[
-              styles.card,
-              {
-                backgroundColor: cardBg,
-                borderColor: isDark ? cardBorder : "#FFB800",
-              },
-            ]}
-          >
-            <Text style={[styles.sectionTitle, { color: textPrimary }]}>
-              {t("referral.share.linksTitle")}
-            </Text>
+  style={[
+    styles.card,
+    { backgroundColor: cardBg, borderColor: isDark ? cardBorder : "#FFB800" },
+  ]}
+>
+  <View style={styles.cardHeaderRow}>
+    <Text style={[styles.sectionTitle, { color: textPrimary }]}>
+      {t("referral.share.linksTitle")}
+    </Text>
 
-            <LinkRow
-              label={t("referral.share.linkApp")}
-              value={appLink}
-              onCopyPress={() => onCopy(appLink, "app")}
-            />
-            <LinkRow
-              label={t("referral.share.linkWeb")}
-              value={webLink}
-              onCopyPress={() => onCopy(webLink, "web")}
-            />
+     <View style={[styles.segment, { borderColor: cardBorder }]}>
+      <TouchableOpacity
+        onPress={() => setLinkMode("web")}
+        style={[
+          styles.segmentBtn,
+          linkMode === "web" && { backgroundColor: palette.primary, borderColor: palette.primary },
+        ]}
+        accessibilityRole="button"
+        accessibilityLabel="Web link"
+      >
+        <Text
+          style={[
+            styles.segmentTxt,
+            { color: linkMode === "web" ? (isDark ? "#020617" : "#111827") : textSecondary },
+          ]}
+          numberOfLines={1}
+        >
+          Web
+        </Text>
+      </TouchableOpacity>
 
+      <TouchableOpacity
+        onPress={() => setLinkMode("app")}
+        style={[
+          styles.segmentBtn,
+          styles.segmentBtnLast,
+          linkMode === "app" && { backgroundColor: palette.primary, borderColor: palette.primary },
+        ]}
+        accessibilityRole="button"
+        accessibilityLabel="App link"
+      >
+        <Text
+          style={[
+            styles.segmentTxt,
+            { color: linkMode === "app" ? (isDark ? "#020617" : "#111827") : textSecondary },
+          ]}
+          numberOfLines={1}
+        >
+          App
+        </Text>
+      </TouchableOpacity>
+    </View>
+  </View>
+
+  <View style={[styles.linkBox, { borderColor: cardBorder, backgroundColor: isDark ? "rgba(148,163,184,0.06)" : "rgba(15,23,42,0.02)" }]}>
+    <Text
+      selectable
+      numberOfLines={2}
+      ellipsizeMode="middle"
+      style={[styles.linkMono, { color: textPrimary }]}
+    >
+      {activeLink || "—"}
+    </Text>
+  </View>
+
+  <View style={styles.actionsRow}>
+    <TouchableOpacity
+      style={[
+        styles.secondaryBtn,
+        { borderColor: cardBorder, backgroundColor: isDark ? "rgba(15,23,42,0.9)" : "rgba(15,23,42,0.03)" },
+      ]}
+      onPress={() => onCopy(activeLink, linkMode === "web" ? "web" : "app")}
+      accessibilityRole="button"
+    >
+      <Ionicons name="copy-outline" size={normalize(16)} color={textPrimary} />
+      <Text style={[styles.secondaryTxt, { color: textPrimary }]} numberOfLines={1}>
+        {t("referral.share.copy")}
+      </Text>
+    </TouchableOpacity>
+
+    <TouchableOpacity
+      style={[
+        styles.primaryBtn,
+        { backgroundColor: palette.primary, borderColor: isDark ? "#020617" : "#111827" },
+      ]}
+      onPress={onNativeShare}
+      accessibilityRole="button"
+    >
+      <Ionicons
+        name="share-social-outline"
+        size={normalize(16)}
+        color={isDark ? "#020617" : "#111827"}
+      />
+      <Text
+        style={[
+          styles.primaryTxt,
+          { color: isDark ? "#020617" : "#111827" },
+        ]}
+        numberOfLines={1}
+        adjustsFontSizeToFit
+        minimumFontScale={0.9}
+      >
+        {t("referral.share.shareBtn")}
+      </Text>
+    </TouchableOpacity>
+  </View>
+</View>
+{/* Rail CTA (ShareCard + Historique) */}
+          <View style={styles.ctaRow}>
             <TouchableOpacity
+              onPress={() => router.push("/referral/ShareCard")}
               style={[
-                styles.shareBtn,
+                styles.ctaChip,
                 {
-                  backgroundColor: palette.primary,
-                  borderColor: isDark ? "#020617" : "#111827",
+                  backgroundColor: isDark ? "rgba(15,23,42,0.9)" : "#FFF1C9",
+                  borderColor: isDark ? cardBorder : "#FFB800",
                 },
               ]}
-              onPress={onNativeShare}
               accessibilityRole="button"
+              accessibilityLabel={t("referral.share.cardCta")}
+              testID="open-share-card"
             >
-              <Ionicons
-                name="share-social-outline"
-                size={normalize(16)}
-                color={isDark ? "#020617" : "#111827"}
-              />
+              <Ionicons name="image-outline" size={normalize(16)} color={textPrimary} />
               <Text
-                style={[
-                  styles.shareTxt,
-                  { color: isDark ? "#020617" : "#111827" },
-                ]}
+                style={[styles.ctaChipTxt, { color: textPrimary }]}
+                numberOfLines={1}
+                adjustsFontSizeToFit
+                minimumFontScale={0.9}
               >
-                {t("referral.share.shareBtn")}
+                {t("referral.share.cardCta")}
+              </Text>
+            </TouchableOpacity>
+
+            <TouchableOpacity
+              onPress={() => router.push("/referral/History")}
+              style={[
+                styles.ctaChip,
+                {
+                  backgroundColor: isDark ? "rgba(15,23,42,0.9)" : "#FFF1C9",
+                  borderColor: isDark ? cardBorder : "#FFB800",
+                },
+              ]}
+              accessibilityRole="button"
+              accessibilityLabel={t("referral.share.historyCta")}
+              testID="open-referral-history"
+            >
+              <Ionicons name="people-outline" size={normalize(16)} color={textPrimary} />
+              <Text
+                style={[styles.ctaChipTxt, { color: textPrimary }]}
+                numberOfLines={1}
+                adjustsFontSizeToFit
+                minimumFontScale={0.9}
+              >
+                {t("referral.share.historyCta")}
               </Text>
             </TouchableOpacity>
           </View>
-
-          <TouchableOpacity
-            onPress={() => router.push("/referral/ShareCard")}
-            style={[
-              styles.cardCta,
-              {
-                backgroundColor: isDark ? "rgba(15,23,42,0.9)" : "#FFF1C9",
-                borderColor: isDark ? cardBorder : "#FFB800",
-              },
-            ]}
-            accessibilityLabel={t("referral.share.cardCta")}
-            accessibilityRole="button"
-            testID="open-share-card"
-          >
-            <Ionicons
-              name="image-outline"
-              size={normalize(16)}
-              color={isDark ? "#E5E7EB" : "#111827"}
-            />
-            <Text style={[styles.cardCtaTxt, { color: textPrimary }]}>
-              {t("referral.share.cardCta")}
-            </Text>
-          </TouchableOpacity>
 
           {/* Stats & paliers */}
           <View
@@ -1053,11 +1178,9 @@ export default function ShareAndEarn() {
                 />
               </View>
             ) : (
-              <Text style={[styles.bigCount, { color: textPrimary }]}>
+             <Text style={[styles.micro, { color: textSecondary }]} numberOfLines={2}>
                 {t("referral.share.activatedReferrals")}:{" "}
-                <Text style={[styles.small, { color: textSecondary }]}>
-                  {activatedCount}
-                </Text>
+                <Text style={{ fontWeight: "900", color: textPrimary }}>{activatedCount}</Text>
               </Text>
 
             )}
@@ -1065,7 +1188,7 @@ export default function ShareAndEarn() {
             {!!nextMilestone && !loading && (
               <>
                 <Progress value={activatedCount} max={nextMilestone} />
-                <Text style={[styles.tip, { color: textSecondary }]}>
+                <Text style={[styles.micro, { color: textSecondary }]} numberOfLines={2}>
                   {t("referral.share.tipNext", {
                     remaining: Math.max(0, nextMilestone - activatedCount),
                     milestone: nextMilestone,
@@ -1075,7 +1198,7 @@ export default function ShareAndEarn() {
             )}
 
             {!nextMilestone && !loading && (
-              <Text style={[styles.tip, { color: textSecondary }]}>
+              <Text style={[styles.micro, { color: textSecondary }]} numberOfLines={2}>
                 {t("referral.share.tipAllReached")}
               </Text>
             )}
@@ -1143,29 +1266,6 @@ export default function ShareAndEarn() {
             </View>
           </View>
 
-          <TouchableOpacity
-            onPress={() => router.push("/referral/History")}
-            style={[
-              styles.cardCta,
-              {
-                marginTop: 8,
-                backgroundColor: isDark ? "rgba(15,23,42,0.9)" : "#FFF1C9",
-                borderColor: isDark ? cardBorder : "#FFB800",
-              },
-            ]}
-            accessibilityLabel={t("referral.share.historyCta")}
-            accessibilityRole="button"
-            testID="open-referral-history"
-          >
-            <Ionicons
-              name="people-outline"
-              size={normalize(16)}
-              color={isDark ? "#E5E7EB" : "#111827"}
-            />
-            <Text style={[styles.cardCtaTxt, { color: textPrimary }]}>
-              {t("referral.share.historyCta")}
-            </Text>
-          </TouchableOpacity>
         </ScrollView>
 
         {/* Toast premium bottom */}
@@ -1212,42 +1312,221 @@ const makeStyles = (normalize: (n: number) => number) =>
   StyleSheet.create({
     container: { flex: 1 },
     safeArea: { flex: 1 },
+    scrollContent: {
+  padding: P,
+  paddingBottom: P * 4,
+  paddingTop: P,
+  alignSelf: "center",
+  width: "100%",
+  maxWidth: 520, // ✅ iPad / grands écrans = clean
+},
+hero: {
+  borderRadius: 20,
+  padding: P,
+  marginTop: 6,
+  borderWidth: 1,
+  shadowColor: "#000",
+  shadowOffset: { width: 0, height: 8 },
+  shadowOpacity: 0.08,
+  shadowRadius: 14,
+  elevation: 5,
+},
+heroTopRow: {
+  flexDirection: "row",
+  alignItems: "center",
+  columnGap: 12,
+},
+segmentBtnLast: {
+      borderRightWidth: 0,
+    },
+heroIcon: {
+  width: 40,
+  height: 40,
+  borderRadius: 14,
+  alignItems: "center",
+  justifyContent: "center",
+  backgroundColor: "rgba(255,184,0,0.14)",
+  borderWidth: 1,
+  borderColor: "rgba(255,184,0,0.25)",
+},
+
+heroTitle: {
+  fontSize: normalize(18),
+  fontWeight: "900",
+  letterSpacing: -0.2,
+},
+
+heroSubtitle: {
+  fontSize: normalize(12),
+  fontWeight: "600",
+  marginTop: 2,
+},
+
+heroStatsRow: {
+  flexDirection: "row",
+  columnGap: 10,
+  marginTop: 12,
+},
+
+statPill: {
+  flex: 1,
+  minWidth: 0,
+  borderWidth: 1,
+  borderRadius: 16,
+  paddingVertical: 10,
+  paddingHorizontal: 12,
+},
+
+statLabel: {
+  fontSize: normalize(11),
+  fontWeight: "700",
+  marginBottom: 2,
+},
+
+statValue: {
+  fontSize: normalize(16),
+  fontWeight: "900",
+},
+
+card: {
+  borderRadius: 20,
+  padding: P,
+  borderWidth: 1,
+  shadowColor: "#000",
+  shadowOffset: { width: 0, height: 8 },
+  shadowOpacity: 0.06,
+  shadowRadius: 14,
+  elevation: 4,
+  marginTop: P,
+},
+
+sectionTitle: {
+  fontSize: normalize(14),
+  fontWeight: "900",
+  letterSpacing: -0.1,
+},
+
+micro: {
+  fontSize: normalize(12),
+  fontWeight: "600",
+  marginTop: 6,
+},
+
+cardHeaderRow: {
+  flexDirection: "row",
+  alignItems: "center",
+  justifyContent: "space-between",
+  columnGap: 10,
+},
+
+segment: {
+  flexDirection: "row",
+  borderRadius: 999,
+  borderWidth: 1,
+  overflow: "hidden",
+},
+
+segmentBtn: {
+  paddingHorizontal: 10,
+  paddingVertical: 6,
+  borderRightWidth: 1,
+},
+
+segmentTxt: {
+  fontSize: normalize(11),
+  fontWeight: "900",
+},
+
+linkBox: {
+  marginTop: 10,
+  borderRadius: 16,
+  borderWidth: 1,
+  paddingHorizontal: 12,
+  paddingVertical: 10,
+},
+
+linkMono: {
+  fontSize: normalize(12),
+  fontWeight: "700",
+},
+
+actionsRow: {
+  flexDirection: "row",
+  columnGap: 10,
+  marginTop: 12,
+},
+
+secondaryBtn: {
+  flex: 1,
+  minWidth: 0,
+  flexDirection: "row",
+  alignItems: "center",
+  justifyContent: "center",
+  columnGap: 8,
+  paddingVertical: 12,
+  borderRadius: 999,
+  borderWidth: 1,
+},
+
+secondaryTxt: {
+  fontSize: normalize(12),
+  fontWeight: "900",
+  flexShrink: 1,
+  minWidth: 0,
+},
+title: { display: "none" as any },      // (plus utilisé)
+    subtitle: { display: "none" as any },   // (plus utilisé)
+    tip: { display: "none" as any }, 
+primaryBtn: {
+  flex: 1,
+  minWidth: 0,
+  flexDirection: "row",
+  alignItems: "center",
+  justifyContent: "center",
+  columnGap: 8,
+  paddingVertical: 12,
+  borderRadius: 999,
+  borderWidth: 1.5,
+},
+
+primaryTxt: {
+  fontSize: normalize(12),
+  fontWeight: "900",
+  flexShrink: 1,
+  minWidth: 0,
+},
+
+ctaRow: {
+  flexDirection: "row",
+  flexWrap: "wrap",
+  columnGap: 10,
+  rowGap: 10,
+  marginTop: P,
+},
+
+ctaChip: {
+  flexGrow: 1,
+  flexBasis: "48%",
+  minWidth: 160,
+  flexDirection: "row",
+  alignItems: "center",
+  justifyContent: "center",
+  columnGap: 8,
+  borderRadius: 999,
+  paddingHorizontal: 14,
+  paddingVertical: 12,
+  borderWidth: 1,
+},
+
+ctaChipTxt: {
+  fontSize: normalize(12),
+  fontWeight: "900",
+  flexShrink: 1,
+  minWidth: 0,
+},
+
 
     center: { alignItems: "center", justifyContent: "center" },
-
-    scrollContent: {
-      padding: P,
-      paddingBottom: P * 4,
-      paddingTop: P,
-    },
-
-    title: {
-      fontSize: normalize(22),
-      fontWeight: "800",
-    },
-    subtitle: {
-      fontSize: normalize(13),
-      marginTop: 4,
-      fontWeight: "500",
-    },
-
-    card: {
-      borderRadius: 16,
-      padding: P,
-      borderWidth: 2,
-      shadowColor: "#000",
-      shadowOffset: { width: 0, height: 6 },
-      shadowOpacity: 0.08,
-      shadowRadius: 8,
-      elevation: 4,
-      marginTop: P,
-    },
-
-    sectionTitle: {
-      fontSize: normalize(15),
-      fontWeight: "800",
-      marginBottom: 6,
-    },
 
     row: {
       flexDirection: "row",
@@ -1306,22 +1585,6 @@ const makeStyles = (normalize: (n: number) => number) =>
       marginLeft: 8,
       fontSize: normalize(13),
     },
-
-    bigCount: {
-      fontSize: normalize(26),
-      fontWeight: "900",
-      marginTop: 4,
-    },
-    small: {
-      fontSize: normalize(13),
-      fontWeight: "700",
-    },
-    tip: {
-      fontSize: normalize(12),
-      marginTop: 6,
-      fontWeight: "600",
-    },
-
     milestones: {
       flexDirection: "row",
       flexWrap: "wrap",

@@ -33,9 +33,10 @@
   },
   "homeZ": {
      "duoPending": {
+      "cta": "Préparer le Duo",
+    "hint": "En attendant, prépare ton Duo.",
        "title": "Invitation envoyée",
     "sub": "En attente. Dès qu’il accepte : Duo.",
-    "cta": "Voir",
     "a11y": "Invitation duo en attente",
       "steps": {
         "sent": "Invitation envoyée",
@@ -55,6 +56,11 @@
 
     "todayHub": {
       "badge": "AUJOURD’HUI",
+      "metaPending": "Invitation",
+    "metaNone": "Aucun défi actif",
+    "metaActive": "{{count}} défi(s) actif(s)",
+    "create": "Créer",
+       "pendingTap":"Touchez pour voir",
       "primaryNoneShort": "Choisir",
       "progressA11y": "Progression : {{done}} jours sur {{total}} complétés.",
       "inviteSubA11y": "Invite quelqu’un pour augmenter tes chances de réussite.",
@@ -91,9 +97,6 @@
       "soloA11y": "Continuer en solo",
       "soloHint": "Choisis un défi sans partenaire.",
       "inviteSub2": "Invite. Tiens. Gagne.",
-
-      "metaActive": "{{count}} défi(s) actif(s)",
-      "metaNone": "Aucun défi actif",
       "titleActive": "Marque ton défi. Garde ta série.",
       "titleNone": "Choisis un défi et commence aujourd’hui.",
       "subActive": "1 clic pour marquer, 1 clic pour inviter un ami. La viralité vient du Duo.",
@@ -101,7 +104,6 @@
       "primaryActive": "Marquer aujourd’hui",
       "primaryNone": "Choisir un défi",
       "invite": "Inviter (Duo)",
-      "create": "Créer",
       "micro": "Duo = rétention x2. Invite maintenant.",
       "primaryActiveA11y": "Marquer aujourd’hui",
       "primaryNoneA11y": "Choisir un défi",
@@ -391,6 +393,7 @@
   },
   "newFeatures": {
     "deadlineIso": "2026-02-28T23:59:59+01:00",
+    "proposeIdea": "Proposer une idée",
     "shareLabel": "Partager",
 
     "monthLabelTpl": "Mise à jour • {{month}}",
@@ -604,6 +607,65 @@
   "streakBonusTitle": "Bonus de série",
   "streakBonusMessage": "🎯 +{{bonus}} pour {{streak}} jours d’affilée !",
   "challengeDetails": {
+    "cta_take": "Commencer le défi",
+    "reviewsSubtitle": "Des retours réels, pour choisir et progresser plus vite.",
+      "noReviewsHint": "Sois le premier à laisser un retour utile. 10 secondes, impact réel.",
+      "reviewPrivacy": "Reste utile, clair, et bienveillant.",
+    "cta_markToday": "Marquer aujourd’hui",
+    "cta_invite": "Inviter un ami",
+    "cta_continueSolo": "Continuer en solo",
+    "cta_cancelInvite": "Annuler l’invitation",
+    "cta_close": "Fermer",
+    "cta_back": "Retour",
+
+    "state_loading": "Chargement…",
+    "state_updating": "Mise à jour…",
+    "state_error": "Une erreur est survenue",
+
+    "section_overview": "Aperçu",
+    "section_progress": "Progression",
+
+    "label_solo": "Solo",
+    "label_duo": "Duo",
+    "label_warmup": "En attente",
+
+    "warmup_title": "En attente de ton partenaire",
+    "warmup_body": "Dès qu’il accepte, le mode duo s’active automatiquement.",
+    "warmup_hint": "Tu peux continuer en solo à tout moment.",
+
+    "pending_title": "Invitation envoyée",
+    "pending_body": "On attend sa réponse. Tu seras notifié dès que c’est accepté.",
+    "pending_badge": "En cours",
+
+    "duo_active_title": "Mode duo actif",
+    "duo_active_body": "Avancez ensemble. La régularité gagne.",
+
+    "progress_you": "Toi",
+    "progress_partner": "Partenaire",
+    "progress_daysDone": "{{done}}/{{total}} jours",
+    "progress_day": "Jour {{day}}",
+
+    "confirm_cancelInvite_title": "Annuler l’invitation ?",
+    "confirm_cancelInvite_body": "Elle ne sera plus valable et ton ami ne pourra plus l’accepter.",
+    "confirm_cta_yes": "Oui, annuler",
+    "confirm_cta_no": "Non",
+    "startMode": {
+        "title": "Choisis ton mode",
+        "sub": "Solo pour avancer. Duo pour tenir jusqu’au bout.",
+        "recommended": "RECOMMANDÉ",
+        "duo": "Duo",
+        "duoDesc": "Invite un ami. Tiens jusqu’au bout.",
+        "solo": "Solo",
+        "soloDesc": "Simple, rapide, efficace.",
+        "duoA11y": "Choisir Duo",
+        "soloA11y": "Choisir Solo",
+        "duoHint": "Ensuite, choisis une durée et invite un ami.",
+        "soloHint": "Ensuite, choisis une durée et démarre.",
+        "cancel": "Annuler",
+      "closeA11y": "Fermer",
+      "closeHint": "Ferme la fenêtre.",
+      "offlineRequired": "Connexion requise"
+      },
     "noDescription": "Aucune description disponible",
     "participantsLabel": "Participants",
     "quick": {
@@ -726,11 +788,48 @@
   "maxChars": "Max 500 caractères",
   "cannotSaveReview": "Impossible d’enregistrer l’avis pour le moment.",
   "toClaim": "À réclamer",
+  "registrationForm": "Formulaire d'inscription",
+  "clear": "Effacer",
+  "createAccountHint": "Crée ton compte",
+
+  "passwordHint": "Minimum {{min}} caractères.",
+  "confirmPasswordHint": "Doit être identique au mot de passe.",
+  "usernameHint": "2 caractères minimum.",
+
+  "fillEmail": "Entre ton email",
+  "fillUsername": "Choisis un nom d’utilisateur",
+  "usernameTooShort": "Nom d’utilisateur trop court",
+  "fillPassword": "Entre un mot de passe",
+  "passwordMinChars": "Mot de passe : {{count}} caractères minimum",
+  "operationNotAllowed": "Opération non autorisée sur ce projet.",
+  "reviews": {
+    "title": "Ce qu’ils ont pensé",
+    "subtitle": "Des retours authentiques pour t’aider à choisir le bon défi.",
+    "emptyTitle": "Aucun avis pour le moment",
+    "emptySubtitle": "Sois le premier à laisser un retour utile. 10 secondes, impact réel.",
+    "starsLabel": "{{count}} étoiles",
+    "countLabel": "{{count}} avis"
+  },
 "duo": {
   "leader": "LEADER",
+  "vs": "VS",
   "pending": {
       "title": "Invitation en attente",
+      "warmup": "Warmup",
+      "warmupHint": "En attendant, fais ton warmup du jour pour arriver prêt.",
+      "warmupError": "Impossible d’enregistrer le warmup. Réessaie.",
+      "partnerPending": "En attente",
+      "warmupCta": "Warmup du jour",
+      "warmupA11yHint": "Enregistre ton warmup pour aujourd’hui.",
+      "warmupDone": "Warmup déjà fait",
+      "warmupToastTitle": "Warmup réussi",
+      "warmupToastBody": "On attend ton partenaire.",
+      "warmupToastErrorTitle": "Warmup non enregistré",
+      "warmupToastErrorBody": "Réessaie dans un instant.",
+      "cancelInviteShort": "Annuler",
       "short": "Invitation en attente",
+      "cancelConfirmTitle": "Annuler l’invitation ?",
+    "cancelConfirmBody": "Ton ami ne pourra plus rejoindre ce duo avec ce lien.",
       "body": "On te prévient dès qu’il répond. Tu peux aussi annuler et inviter quelqu’un d’autre.",
       "cancelInvite": "Annuler",
       "cancelError": "Impossible d’annuler pour l’instant."
@@ -1921,19 +2020,16 @@
   },
   "shareCardT": {
   "a11yTitle": "Carte de partage du défi",
+  "dayOf": "Jour {{day}} sur {{total}}",
+    "tagline": "Rejoins le défi sur ChallengeTies",
   "a11yHint": "Prévisualise la carte avant de la partager avec tes amis.",
   "heldSolo": "J’ai tenu",
   "heldDuo": "On a tenu",
   "watermark": "@ChallengeTies",
-
-  "tagline": "Got a challenge? Get it done.",
-
   "duoBadge": "DÉFI EN DUO",
   "soloBadge": "FOCUS EN SOLO",
-
   "completedLabel": "J’ai tenu ce défi",
   "daysLabel": "{{days}} jours de focus",
-
   "leading": "Tu mènes la course !",
   "milestoneMessage": "On a tenu {{days}} jours… et ce n’est que le début.",
   "milestoneVariants": [
@@ -2420,6 +2516,7 @@
     "sending": "Envoi…",
     "edit": "Modifier",
     "hide": "Masquer",
+    "keep": "Garder",
     "cancel": "Annuler",
     "continue": "Continuer",
     "errorTitle": "Erreur"
@@ -4131,6 +4228,23 @@
   },
 
   "step3": {
+    "subtitleByDays": {
+    "3": "3 jours : mini sprint. Juste assez pour prouver que tu peux tenir.",
+    "7": "7 jours : parfait pour démarrer vite et prendre le rythme.",
+    "15": "15 jours : tu passes du « j’essaie » au « je le fais ».",
+    "21": "21 jours : tu construis une vraie routine solide.",
+    "30": "30 jours : objectif sérieux. Tu changes ton identité, pas juste ton humeur.",
+    "60": "60 jours : discipline réelle. Tu commences à devenir constant.",
+    "90": "90 jours : transformation. Tu deviens quelqu’un qui finit.",
+    "180": "180 jours : gros engagement. Tu construis un standard de vie.",
+    "365": "365 jours : niveau élite. Ce n’est plus un défi, c’est toi."
+  },
+  "subtitleGeneric": {
+    "short": "{{count}} jours : court, clair, efficace. Lance-toi.",
+    "medium": "{{count}} jours : assez long pour ancrer l’habitude.",
+    "long": "{{count}} jours : engagement solide. Tu vas voir une vraie différence.",
+    "ultra": "{{count}} jours : engagement massif. Transformation profonde."
+  },
     "title": "Combien de temps peux-tu tenir ?",
     "subtitle": "7 jours est un excellent départ. Tu pourras ajuster plus tard.",
     "cta": "Go",
@@ -4155,8 +4269,7 @@
   "alert": {
     "missingChoiceBody": "Choisis un défi pour continuer."
   }
-}
-,
+},
   "access": {
     "editProfile": {
       "label": "Modifier le profil",
@@ -4364,6 +4477,7 @@
   "common": {
     "back": "Retour",
     "retry": "Réessayer",
+    "anonymous": "Anonyme", "delete": "Supprimer",
     "tip": "Astuce",
     "loading": "Chargement...",
     "recommended": "Recommandé",

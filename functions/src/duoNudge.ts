@@ -1,6 +1,9 @@
 import * as functions from "firebase-functions";
 import * as admin from "firebase-admin";
 import { Expo } from "expo-server-sdk";
+import { initializeApp, getApps } from "firebase-admin/app";
+
+if (!getApps().length) initializeApp();
 
 const expo = new Expo();
 
@@ -171,13 +174,27 @@ function getDuoNudgeCopy(
 }
 
 // helpers
-function todayKeyUTC(): string {
-  // "YYYY-MM-DD" en UTC (aligné avec dayKeyUTC côté app)
+function todayKeyUTC_Dashed(): string {
+  // "YYYY-MM-DD" en UTC
   const now = new Date();
   const y = now.getUTCFullYear();
   const m = String(now.getUTCMonth() + 1).padStart(2, "0");
   const d = String(now.getUTCDate()).padStart(2, "0");
   return `${y}-${m}-${d}`;
+}
+
+function dayKeyCompactFromDashed(dashed: string): string {
+  // "YYYY-MM-DD" -> "YYYYMMDD"
+  return String(dashed || "").replace(/[^\d]/g, "");
+}
+
+function normalizeDayKey(anyKey: any): string {
+  // "2026-01-29" / "20260129" / etc -> "20260129"
+  return String(anyKey || "").replace(/[^\d]/g, "");
+}
+
+function todayKeyUTC_Compact(): string {
+  return dayKeyCompactFromDashed(todayKeyUTC_Dashed());
 }
 
 // ✅ RateKey canonique, indépendante de uniqueKey (anti double-nudge si uniqueKey change)
@@ -199,25 +216,28 @@ function toDayKeyUTCFromIso(iso: string): string | null {
   const y = d.getUTCFullYear();
   const m = String(d.getUTCMonth() + 1).padStart(2, "0");
   const day = String(d.getUTCDate()).padStart(2, "0");
-  return `${y}-${m}-${day}`;
+ return `${y}-${m}-${day}`; // dashed
 }
 
-function hasMarkedToday(item: any, todayKey: string): boolean {
+function hasMarkedToday(item: any, todayKeyCanonicalCompact: string): boolean {
   if (!item) return false;
   const k = typeof item.lastMarkedKey === "string" ? item.lastMarkedKey : null;
-  if (k && k === todayKey) return true;
+  if (k && normalizeDayKey(k) === todayKeyCanonicalCompact) return true;
 
   const iso = typeof item.lastMarkedDate === "string" ? item.lastMarkedDate : null;
-  const fromIso = iso ? toDayKeyUTCFromIso(iso) : null;
-  if (fromIso && fromIso === todayKey) return true;
+  const fromIsoDashed = iso ? toDayKeyUTCFromIso(iso) : null;
+  if (fromIsoDashed && dayKeyCompactFromDashed(fromIsoDashed) === todayKeyCanonicalCompact)
+    return true;
 
   const keys: string[] = Array.isArray(item.completionDateKeys) ? item.completionDateKeys : [];
-  if (keys.includes(todayKey)) return true;
+  for (const kk of keys) {
+    if (normalizeDayKey(kk) === todayKeyCanonicalCompact) return true;
+  }
 
   const dates: string[] = Array.isArray(item.completionDates) ? item.completionDates : [];
   for (let i = dates.length - 1; i >= 0; i--) {
     const dk = toDayKeyUTCFromIso(dates[i]);
-    if (dk === todayKey) return true;
+    if (dk && dayKeyCompactFromDashed(dk) === todayKeyCanonicalCompact) return true;
   }
   return false;
 }
@@ -268,7 +288,7 @@ export const sendDuoNudge = functions
     );
   }
 
-  const todayKey = todayKeyUTC();
+  const todayKey = todayKeyUTC_Compact();
 
   // Load caller
   const callerRef = getDb().collection("users").doc(uid);
@@ -373,10 +393,9 @@ export const sendDuoNudge = functions
 
   // Auto limit: 1 / jour
   if (type === "auto") {
-  if (nudgeState.autoSentKey === todayKey) {
-    return SKIP("auto_already_sent_today");
+    const prev = normalizeDayKey(nudgeState.autoSentKey);
+    if (prev && prev === todayKey) return SKIP("auto_already_sent_today");
   }
-}
 
   // Manual limit: cooldown 6h + max 2/jour
   if (type === "manual") {
@@ -387,7 +406,8 @@ export const sendDuoNudge = functions
   return SKIP("manual_cooldown");
 }
 
-    const manualCount = (nudgeState.manualCountKey === todayKey ? Number(nudgeState.manualCount || 0) : 0);
+    const prevKey = normalizeDayKey(nudgeState.manualCountKey);
+    const manualCount = (prevKey === todayKey ? Number(nudgeState.manualCount || 0) : 0);
     if (manualCount >= 2) {
   return SKIP("manual_daily_cap");
 }
@@ -477,8 +497,9 @@ export const sendDuoNudge = functions
     update[`duoNudges.${rateKey}.autoSentKey`] = todayKey;
     update[`duoNudges.${rateKey}.autoLastAt`] = admin.firestore.FieldValue.serverTimestamp();
   } else {
-    const currentCount = (nudgeState.manualCountKey === todayKey) ? Number(nudgeState.manualCount || 0) : 0;
-   update[`duoNudges.${rateKey}.manualCountKey`] = todayKey;
+    const prevKey = normalizeDayKey(nudgeState.manualCountKey);
+    const currentCount = (prevKey === todayKey) ? Number(nudgeState.manualCount || 0) : 0;
+    update[`duoNudges.${rateKey}.manualCountKey`] = todayKey;
     update[`duoNudges.${rateKey}.manualCount`] = currentCount + 1;
     update[`duoNudges.${rateKey}.lastManualAt`] = admin.firestore.FieldValue.serverTimestamp();
   }

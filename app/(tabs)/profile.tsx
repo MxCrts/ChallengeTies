@@ -47,11 +47,20 @@ const { width: SCREEN_WIDTH, height: SCREEN_HEIGHT } = Dimensions.get("window");
 const BORDER_COLOR_LIGHT = "rgba(255, 255, 255, 0.2)";
 const SHADOW_COLOR = "#000";
 
+let __win = Dimensions.get("window");
+
+// ✅ garde une width/height live (rotation, split-screen, barres, etc.)
+Dimensions.addEventListener("change", ({ window }) => {
+  __win = window;
+});
+
 const normalizeSize = (size: number) => {
   const baseWidth = 375;
-  const scale = Math.min(Math.max(SCREEN_WIDTH / baseWidth, 0.7), 1.8);
+  const W = __win?.width ?? 375;
+  const scale = Math.min(Math.max(W / baseWidth, 0.75), 1.8);
   return Math.round(size * scale);
 };
+
 
 /** Util pour ajouter une alpha sans casser les gradients */
 const withAlpha = (color: string, alpha: number) => {
@@ -728,12 +737,7 @@ const pioneerBulletTextColor = isDarkMode ? currentTheme.colors.textPrimary : "#
     <Animated.View
       key={rowIndex}
       entering={FadeInUp.delay(500 + rowIndex * 100)}
-      style={[
-        styles.rowContainer,
-        {
-          justifyContent: row.length === 1 ? "center" : "space-between",
-        },
-      ]}
+      style={styles.rowContainer}
     >
       {row.map((section, index) => (
         <Animated.View
@@ -1096,7 +1100,6 @@ const styles = StyleSheet.create({
   scrollContent: {
     paddingHorizontal: normalizeSize(16),
   paddingTop: normalizeSize(10),
-  paddingBottom: normalizeSize(140),
   },
 inline: {
   flexDirection: "row",
@@ -1550,9 +1553,10 @@ editFabText: {
     flexDirection: "row",
     marginBottom: SPACING,
     alignItems: "stretch",
+    gap: normalizeSize(12),
   },
   sectionButton: {
-    width: "48%",
+    flex: 1,
   borderRadius: normalizeSize(18),
     overflow: "hidden",
     shadowColor: "transparent",

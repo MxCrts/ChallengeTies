@@ -501,13 +501,23 @@ const handleRequestClose = () => {
   nestedScrollEnabled
 >
   {!!challengeTitle && (
-    <View style={[styles.challengePill, compact && styles.challengePillCompact]}>
-      <Ionicons name="flame" size={14} color={stylesVars.accent(th)} />
-      <Text style={styles.challengePillText} numberOfLines={1}>
-        {challengeTitle}
-      </Text>
-    </View>
-  )}
+  <View style={[styles.challengePill, compact && styles.challengePillCompact]}>
+    <Ionicons
+      name="flame"
+      size={14}
+      color={stylesVars.accent(th)}
+      style={styles.challengePillIcon}
+    />
+    <Text
+      style={styles.challengePillText}
+      numberOfLines={1}
+      ellipsizeMode="tail"
+    >
+      {challengeTitle}
+    </Text>
+  </View>
+)}
+
 
   {/* Why Duo (micro UX Apple Keynote) */}
   <View style={[styles.whyBox, compact && styles.whyBoxCompact]}>
@@ -909,6 +919,28 @@ challengePillCompact: {
   marginBottom: 6,
   paddingVertical: 6,
 },
+challengePill: {
+  alignSelf: "flex-start",
+  flexDirection: "row",
+  alignItems: "center",
+
+  // ✅ pill responsive : ne déborde jamais
+  maxWidth: "100%",
+  flexShrink: 1,
+  minWidth: 0,
+
+  paddingVertical: 8,
+  paddingHorizontal: 12,
+  borderRadius: 999,
+  marginBottom: 12,
+  backgroundColor: isDark ? withAlpha("#FFFFFF", 0.06) : withAlpha("#0B1220", 0.05),
+  borderWidth: 1,
+  borderColor: isDark ? withAlpha("#FFFFFF", 0.10) : withAlpha("#0B1220", 0.08),
+},
+challengePillIcon: {
+  marginRight: 8, // ✅ remplace gap, plus fiable
+},
+
 sectionCardCompact: {
   padding: 9,
   marginBottom: 2,
@@ -927,26 +959,17 @@ secondaryBtnCompact: {
 primaryBtnCompact: {
   paddingVertical: 12,
 },
-
-    challengePill: {
-  alignSelf: "flex-start",
-  flexDirection: "row",
-  alignItems: "center",
-  gap: 8,
-  paddingVertical: 8,
-  paddingHorizontal: 12,
-  borderRadius: 999,
-  marginBottom: 12,
-  backgroundColor: isDark ? withAlpha("#FFFFFF", 0.06) : withAlpha("#0B1220", 0.05),
-  borderWidth: 1,
-  borderColor: isDark ? withAlpha("#FFFFFF", 0.10) : withAlpha("#0B1220", 0.08),
-},
 challengePillText: {
   fontFamily: "Comfortaa_700Bold",
   fontSize: n(12.5),
   color: isDark ? withAlpha("#F8FAFC", 0.88) : withAlpha("#0B1220", 0.78),
-  maxWidth: 300,
+
+  // ✅ le vrai fix “top app” en row
+  flex: 1,
+  flexShrink: 1,
+  minWidth: 0,
 },
+
     // ✅ Compact mode (quand showDays=true) => garantit que ça rentre sans scroll
     cardCompact: {
   paddingVertical: 12,

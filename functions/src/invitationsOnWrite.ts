@@ -1,6 +1,9 @@
 // functions/src/invitationsOnWrite.ts
 import { onDocumentWritten } from "firebase-functions/v2/firestore";
 import { getFirestore, FieldValue } from "firebase-admin/firestore";
+import { initializeApp, getApps } from "firebase-admin/app";
+
+if (!getApps().length) initializeApp();
 
 const db = getFirestore();
 
@@ -160,6 +163,11 @@ export const invitationsOnWrite = onDocumentWritten(
     const before = event.data?.before?.data() as Invitation | undefined;
     const after = event.data?.after?.data() as Invitation | undefined;
     const inviteId = event.params?.inviteId as string;
+    console.log("[invite] TRIGGER", {
+  inviteId,
+  before: before?.status,
+  after: after?.status,
+});
 
     // updates only
     if (!before || !after) return;
@@ -275,6 +283,8 @@ export const invitationsOnWrite = onDocumentWritten(
     // Payload stable (inviteeId peut être null: open refused/accepted set par ton service)
     const dataPayload = {
       kind: "invite_status",
+      type: "invite-status",   // ✅ ton NotificationsBootstrap écoute ça
+      __tag: "invite-status", 
       status: after.status,
       inviteId,
       challengeId: after.challengeId || "",

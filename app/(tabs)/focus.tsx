@@ -3,7 +3,6 @@ import {
   View,
   Text,
   StyleSheet,
-  Dimensions,
   Animated as RNAnimated,
   TouchableOpacity,
   ActivityIndicator,
@@ -12,7 +11,9 @@ import {
   NativeScrollEvent,
   RefreshControl,
   AccessibilityInfo,
-  BackHandler,   
+  Dimensions,
+  BackHandler,
+  useWindowDimensions,
 } from "react-native";
 import { useFocusEffect } from "@react-navigation/native"; // 🆕
 import { useRouter } from "expo-router";
@@ -36,15 +37,16 @@ import { Modal } from "react-native";
 import { Image } from "expo-image";
 
 const SPACING = 18;
-const { width: SCREEN_WIDTH } = Dimensions.get("window");
 const IMG_BLURHASH = "LEHLk~WB2yk8pyo0adR*.7kCMdnj";
 
+const clamp = (n: number, min: number, max: number) => Math.min(Math.max(n, min), max);
+
 const normalizeSize = (size: number) => {
-  const baseWidth = 375;
-  const scale = Math.min(Math.max(SCREEN_WIDTH / baseWidth, 0.7), 1.8);
+  const { width } = Dimensions.get("window");
+  const base = 375;
+  const scale = clamp(width / base, 0.82, 1.35);
   return Math.round(size * scale);
 };
-
 // util couleur -> rgba avec alpha
 const withAlpha = (color: string, alpha: number) => {
   const clamp = (n: number, min = 0, max = 1) =>
@@ -66,17 +68,6 @@ const withAlpha = (color: string, alpha: number) => {
   }
   return `rgba(0,0,0,${a})`;
 };
-
-const TOP_ITEM_WIDTH = SCREEN_WIDTH * 0.8;
-const BOTTOM_ITEM_WIDTH = SCREEN_WIDTH * 0.6;
-const TOP_ITEM_HEIGHT = normalizeSize(280);
-const BOTTOM_ITEM_HEIGHT = normalizeSize(200);
-
-const EFFECTIVE_TOP_ITEM_WIDTH = TOP_ITEM_WIDTH + SPACING;
-const EFFECTIVE_BOTTOM_ITEM_WIDTH = BOTTOM_ITEM_WIDTH + SPACING;
-
-const SPACER_TOP = (SCREEN_WIDTH - TOP_ITEM_WIDTH) / 2;
-const SPACER_BOTTOM = (SCREEN_WIDTH - BOTTOM_ITEM_WIDTH) / 2;
 
 interface CurrentChallengeExtended {
   id: string;
@@ -137,6 +128,26 @@ export default function FocusScreen() {
   const router = useRouter();
   const { currentChallenges, markToday } = useCurrentChallenges();
   const { theme } = useTheme();
+  const { width: W, height: H } = useWindowDimensions();
+
+  const IS_TINY = W < 360;
+  const IS_TABLET = W >= 700;
+
+  // largeur “safe” des sections (Apple keynote = jamais full edge sur grand écran)
+  const CONTENT_W = useMemo(() => {
+    const side = IS_TABLET ? 28 : 18;
+    return Math.min(W - side * 2, IS_TABLET ? 620 : 520);
+  }, [W, IS_TABLET]);
+
+  const topItemW = useMemo(() => Math.round(CONTENT_W * (IS_TABLET ? 0.74 : 0.86)), [CONTENT_W, IS_TABLET]);
+  const bottomItemW = useMemo(() => Math.round(CONTENT_W * (IS_TABLET ? 0.58 : 0.68)), [CONTENT_W, IS_TABLET]);
+  const topItemH = useMemo(() => Math.round(clamp(H * 0.33, 240, IS_TABLET ? 320 : 300)), [H, IS_TABLET]);
+  const bottomItemH = useMemo(() => Math.round(clamp(H * 0.22, 170, IS_TABLET ? 230 : 210)), [H, IS_TABLET]);
+
+  const EFFECTIVE_TOP_ITEM_WIDTH = topItemW + SPACING;
+  const EFFECTIVE_BOTTOM_ITEM_WIDTH = bottomItemW + SPACING;
+  const SPACER_TOP = Math.max(0, (W - topItemW) / 2);
+  const SPACER_BOTTOM = Math.max(0, (W - bottomItemW) / 2);
 
   const isDarkMode = theme === "dark";
   const currentTheme: Theme = isDarkMode
@@ -577,7 +588,14 @@ export default function FocusScreen() {
       <RNAnimated.View style={styles.topItemWrapper}>
         <TouchableOpacity
           activeOpacity={0.8}
-          style={styles.topItemContainer}
+          style={[
+            styles.topItemContainer,
+            {
+              width: topItemW,
+              height: topItemH,
+              borderRadius: normalizeSize(IS_TABLET ? 28 : 26),
+            },
+          ]}
           onPress={() => handleNavigateToDetails(item)}
           accessibilityRole="button"
           accessibilityLabel={t("openChallengeDetails")}
@@ -591,9 +609,8 @@ export default function FocusScreen() {
             style={[
               styles.topItemGradient,
               {
-                borderColor: isDarkMode
-                  ? currentTheme.colors.secondary
-                  : "#FF8C00",
+                borderRadius: normalizeSize(IS_TABLET ? 28 : 26),
+                borderColor: withAlpha(currentTheme.colors.secondary, isDarkMode ? 0.55 : 0.45),
               },
             ]}
           >
@@ -635,7 +652,10 @@ export default function FocusScreen() {
                 withAlpha(currentTheme.colors.overlay, 0.25),
                 withAlpha("#000000", 0.85),
               ]}
-              style={styles.topItemOverlay}
+              style={[
+                styles.topItemOverlay,
+                { padding: normalizeSize(14) },
+              ]}
             >
               <Text
                 style={[
@@ -719,7 +739,14 @@ export default function FocusScreen() {
       <RNAnimated.View style={styles.bottomItemWrapper}>
         <TouchableOpacity
           activeOpacity={0.8}
-          style={styles.bottomItemContainer}
+          style={[
+            styles.bottomItemContainer,
+            {
+              width: bottomItemW,
+              height: bottomItemH,
+              borderRadius: normalizeSize(IS_TABLET ? 26 : 24),
+            },
+          ]}
           onPress={() => handleNavigateToDetails(item)}
           accessibilityRole="button"
           accessibilityLabel={t("openChallengeDetails")}
@@ -733,9 +760,8 @@ export default function FocusScreen() {
             style={[
               styles.bottomItemGradient,
               {
-                borderColor: isDarkMode
-                  ? currentTheme.colors.secondary
-                  : "#FF8C00",
+                borderRadius: normalizeSize(IS_TABLET ? 26 : 24),
+                borderColor: withAlpha(currentTheme.colors.secondary, isDarkMode ? 0.50 : 0.42),
               },
             ]}
           >
@@ -829,7 +855,7 @@ export default function FocusScreen() {
       offset: EFFECTIVE_TOP_ITEM_WIDTH * index,
       index,
     }),
-    []
+    [EFFECTIVE_TOP_ITEM_WIDTH]
   );
   const getBottomLayout = useCallback(
     (_: any, index: number) => ({
@@ -837,7 +863,7 @@ export default function FocusScreen() {
       offset: EFFECTIVE_BOTTOM_ITEM_WIDTH * index,
       index,
     }),
-    []
+    [EFFECTIVE_BOTTOM_ITEM_WIDTH]
   );
 
   const primaryBtnLabel = useMemo(() => {
@@ -905,7 +931,16 @@ export default function FocusScreen() {
             withAlpha(currentTheme.colors.primary, 0.28),
             "transparent",
           ]}
-          style={styles.bgOrbTop}
+         style={[
+            styles.bgOrbTop,
+            {
+              top: -W * 0.25,
+              left: -W * 0.18,
+              width: W * 0.92,
+              height: W * 0.92,
+              borderRadius: (W * 0.92) / 2,
+            },
+          ]}
           start={{ x: 0.2, y: 0 }}
           end={{ x: 1, y: 1 }}
         />
@@ -915,13 +950,22 @@ export default function FocusScreen() {
             withAlpha(currentTheme.colors.secondary, 0.25),
             "transparent",
           ]}
-          style={styles.bgOrbBottom}
+          style={[
+            styles.bgOrbBottom,
+            {
+              bottom: -W * 0.30,
+              right: -W * 0.22,
+              width: W * 1.08,
+              height: W * 1.08,
+              borderRadius: (W * 1.08) / 2,
+            },
+          ]}
           start={{ x: 1, y: 0 }}
           end={{ x: 0, y: 1 }}
         />
 
         {/* Hero (Apple keynote) */}
-        <View style={styles.headerWrapper}>
+         <View style={[styles.headerWrapper, { paddingHorizontal: SPACING, maxWidth: CONTENT_W + SPACING * 2, alignSelf: "center", width: "100%" }]}>
           <LinearGradient
             colors={[
               withAlpha(currentTheme.colors.cardBackground, isDarkMode ? 0.60 : 0.92),
@@ -985,7 +1029,13 @@ export default function FocusScreen() {
             {/* Title + KPI */}
             <View style={styles.heroTitleRow}>
               <View style={{ flex: 1 }}>
-                <Text style={[styles.heroTitle, { color: currentTheme.colors.textPrimary }]} numberOfLines={1}>
+                <Text
+    style={[
+      styles.heroTitle,
+      { color: isDarkMode ? currentTheme.colors.textPrimary : "#0b1120" },
+    ]}
+    numberOfLines={1}
+  >
                   {t("focus", { defaultValue: "Focus" })}
                 </Text>
                 <Text
@@ -1092,7 +1142,7 @@ export default function FocusScreen() {
         >
           {/* === Carrousel haut : défis à faire === */}
           <View style={styles.topCarouselContainer}>
-            <View style={styles.sectionHeaderRow}>
+            <View style={[styles.sectionHeaderRow, { maxWidth: CONTENT_W + SPACING * 2, alignSelf: "center", width: "100%" }]}>
               <Text style={[styles.sectionTitle, { color: isDarkMode ? currentTheme.colors.textPrimary : "#000" }]}>
                 {t("dailyChallenges")}
               </Text>
@@ -1174,13 +1224,15 @@ export default function FocusScreen() {
                   currentTheme.colors.cardBackground,
                   currentTheme.colors.cardBackground + "F0",
                 ]}
-                style={[
+               style={[
                   styles.emptyTopContainer,
                   {
-                    borderWidth: 2.5,
-                    borderColor: isDarkMode
-                      ? currentTheme.colors.secondary
-                      : "#FF8C00",
+                    height: topItemH + normalizeSize(34),
+                    borderWidth: 1.5,
+                    borderColor: withAlpha(currentTheme.colors.secondary, isDarkMode ? 0.55 : 0.45),
+                    borderRadius: normalizeSize(IS_TABLET ? 28 : 26),
+                    maxWidth: CONTENT_W,
+                    alignSelf: "center",
                   },
                 ]}
               >
@@ -1241,7 +1293,7 @@ export default function FocusScreen() {
 
           {/* === Carrousel bas : défis complétés aujourd’hui === */}
           <View style={styles.bottomCarouselContainer}>
-            <View style={styles.sectionHeaderRow}>
+            <View style={[styles.sectionHeaderRow, { maxWidth: CONTENT_W + SPACING * 2, alignSelf: "center", width: "100%" }]}>
               <Text style={[styles.sectionTitle, { color: isDarkMode ? currentTheme.colors.textPrimary : "#000" }]}>
                 {t("completedChallengesScreenTitle")} {t("today")}
               </Text>
@@ -1339,7 +1391,7 @@ export default function FocusScreen() {
               ref={confettiRef}
               autoStart={false}
               count={180}
-              origin={{ x: SCREEN_WIDTH / 2, y: 0 }}
+               origin={{ x: W / 2, y: 0 }}
               fadeOut
               explosionSpeed={820}
               fallSpeed={3200}
@@ -1360,6 +1412,7 @@ export default function FocusScreen() {
               style={[
                 styles.focusCard,
                 {
+                  width: Math.min(W * 0.92, IS_TABLET ? 520 : 440),
                   backgroundColor: withAlpha(
                     currentTheme.colors.cardBackground,
                     0.96
@@ -1571,6 +1624,9 @@ export default function FocusScreen() {
                   style={[
                     styles.focusTimerCircle,
                     {
+                      width: normalizeSize(IS_TINY ? 132 : 150),
+                      height: normalizeSize(IS_TINY ? 132 : 150),
+                      borderRadius: normalizeSize(IS_TINY ? 66 : 75),
                       borderColor: withAlpha(
                         currentTheme.colors.secondary,
                         0.45
@@ -1740,9 +1796,9 @@ const styles = StyleSheet.create({
    overflow: "hidden",
    shadowColor: "#000",
    shadowOffset: { width: 0, height: normalizeSize(10) },
-   shadowOpacity: 0.14,
-   shadowRadius: normalizeSize(18),
-   elevation: 6,
+   shadowOpacity: 0.10,
+   shadowRadius: normalizeSize(22),
+   elevation: 5,
  },
  heroTopRow: {
    flexDirection: "row",
@@ -1951,15 +2007,12 @@ const styles = StyleSheet.create({
     alignItems: "center",
   },
   topItemContainer: {
-    width: TOP_ITEM_WIDTH,
-    height: TOP_ITEM_HEIGHT,
-    borderRadius: normalizeSize(26),
     overflow: "hidden",
     shadowColor: "#000",
     shadowOffset: { width: 0, height: normalizeSize(12) },
-   shadowOpacity: 0.22,
-   shadowRadius: normalizeSize(18),
-   elevation: 12,
+  shadowOpacity: 0.16,
+   shadowRadius: normalizeSize(22),
+   elevation: 9,
   },
   topItemGradient: {
     flex: 1,
@@ -2017,19 +2070,9 @@ const styles = StyleSheet.create({
  },
   bgOrbTop: {
     position: "absolute",
-    top: -SCREEN_WIDTH * 0.25,
-    left: -SCREEN_WIDTH * 0.2,
-    width: SCREEN_WIDTH * 0.9,
-    height: SCREEN_WIDTH * 0.9,
-    borderRadius: SCREEN_WIDTH * 0.45,
   },
   bgOrbBottom: {
     position: "absolute",
-    bottom: -SCREEN_WIDTH * 0.3,
-    right: -SCREEN_WIDTH * 0.25,
-    width: SCREEN_WIDTH * 1.1,
-    height: SCREEN_WIDTH * 1.1,
-    borderRadius: SCREEN_WIDTH * 0.55,
   },
   bottomCarouselContainer: {
     marginBottom: normalizeSize(30),
@@ -2039,15 +2082,12 @@ const styles = StyleSheet.create({
     alignItems: "center",
   },
   bottomItemContainer: {
-    width: BOTTOM_ITEM_WIDTH,
-    height: BOTTOM_ITEM_HEIGHT,
-    borderRadius: normalizeSize(24),
     overflow: "hidden",
     shadowColor: "#000",
     shadowOffset: { width: 0, height: normalizeSize(10) },
-   shadowOpacity: 0.20,
-   shadowRadius: normalizeSize(16),
-   elevation: 10,
+   shadowOpacity: 0.14,
+   shadowRadius: normalizeSize(20),
+   elevation: 8,
   },
   bottomItemGradient: {
     flex: 1,
@@ -2093,7 +2133,6 @@ const styles = StyleSheet.create({
     fontFamily: "Comfortaa_400Regular",
   },
   emptyTopContainer: {
-    height: TOP_ITEM_HEIGHT + normalizeSize(30),
     justifyContent: "center",
     alignItems: "center",
     paddingHorizontal: SPACING,
@@ -2110,7 +2149,7 @@ const styles = StyleSheet.create({
     fontFamily: "Comfortaa_400Regular",
     textAlign: "center",
     marginTop: normalizeSize(6),
-    maxWidth: SCREEN_WIDTH * 0.75,
+    maxWidth: "75%",
   },
   emptyList: {
     alignSelf: "center",
@@ -2189,7 +2228,6 @@ const styles = StyleSheet.create({
     padding: SPACING,
   },
   focusCard: {
-    width: Math.min(SCREEN_WIDTH * 0.9, 420),
     borderRadius: normalizeSize(24),
     borderWidth: 1,
     padding: normalizeSize(20),
@@ -2270,7 +2308,7 @@ const styles = StyleSheet.create({
     backgroundColor: "rgba(255, 255, 255, 0.95)",
     borderRadius: normalizeSize(25),
     padding: normalizeSize(20),
-    width: SCREEN_WIDTH * 0.8,
+   width: "80%",
     alignItems: "center",
   },
   modalTitle: {

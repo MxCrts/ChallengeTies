@@ -174,6 +174,37 @@ export default function Register() {
   const [isOffline, setIsOffline] = useState(false);
   const [reduceMotion, setReduceMotion] = useState(false);
 
+  const [focusedField, setFocusedField] = useState<
+    "email" | "username" | "password" | "confirm" | null
+  >(null);
+
+  const passwordRules = React.useMemo(() => {
+    const p = password || "";
+    const minOk = p.trim().length >= 6; // 🔁 cohérent avec ton formValid actuel
+    // Si tu veux “top monde”, monte à 8 et ajoute 1 maj + 1 chiffre (je te laisse le switch)
+    return { minOk, min: 6 };
+  }, [password]);
+
+  const focusHint = React.useMemo(() => {
+    if (focusedField === "password") {
+  return t("passwordHint", {
+    min: passwordRules.min,
+    defaultValue: `Min ${passwordRules.min} caractères.`,
+  }) as string;
+}
+    if (focusedField === "confirm") {
+      return t("confirmPasswordHint", {
+        defaultValue: "Doit être identique au mot de passe.",
+      }) as string;
+    }
+    if (focusedField === "username") {
+      return t("usernameHint", {
+        defaultValue: "2 caractères minimum.",
+      }) as string;
+    }
+    return "";
+  }, [focusedField, t, passwordRules.min]);
+
   const isFocused = useIsFocused();
   const appStateRef = useRef(AppState.currentState);
   const animsRef = useRef<Animated.CompositeAnimation[]>([]);
@@ -196,6 +227,8 @@ export default function Register() {
     useRef<ReturnType<typeof setTimeout> | null>(null);
   const submittingRef = useRef(false);
 
+  
+
   // Helpers
   const isValidEmail = React.useCallback(
     (e: string) => /\S+@\S+\.\S+/.test(e),
@@ -210,6 +243,8 @@ export default function Register() {
       confirmPassword.trim() === password.trim(),
     [email, username, password, confirmPassword, isValidEmail]
   );
+
+  
 
   const triggerShake = React.useCallback(() => {
     shakeAnim.setValue(0);
@@ -275,6 +310,8 @@ export default function Register() {
     }))
   );
   const waves = wavesRef.current;
+
+  
 
   useEffect(() => {
     const buildAnims = () =>
@@ -421,6 +458,59 @@ export default function Register() {
 
   // Press feedback CTA
   const disabledCTA = loading || !formValid || isOffline;
+
+    
+
+
+  const getBlockingReason = React.useCallback(() => {
+    if (isOffline) return t("networkError") || "Connexion réseau indisponible";
+    if (!email.trim()) return t("fillEmail") || "Entre ton email";
+    if (!isValidEmail(email.trim()))
+      return t("invalidEmailFormat") || "Email invalide";
+    if (!username.trim())
+      return t("fillUsername") || "Choisis un nom d’utilisateur";
+    if (username.trim().length < 2)
+      return t("usernameTooShort") || "Nom d’utilisateur trop court";
+    if (!password) return t("fillPassword") || "Entre un mot de passe";
+    if (!passwordRules.minOk)
+      return (
+        t("passwordMinChars", { count: passwordRules.min }) ||
+        `Mot de passe: ${passwordRules.min} caractères minimum`
+      );
+    if (!confirmPassword) return t("confirmPassword") || "Confirme le mot de passe";
+    if (confirmPassword.trim() !== password.trim())
+      return t("passwordsDoNotMatch") || "Les mots de passe ne correspondent pas";
+    return "";
+  }, [
+    isOffline,
+    t,
+    email,
+    username,
+    password,
+    confirmPassword,
+    isValidEmail,
+    passwordRules.minOk,
+    passwordRules.min,
+  ]);
+
+  const disabledHint = React.useMemo(() => {
+    // On n’affiche pas un hint tant que l’utilisateur n’a rien touché
+    const touched = !!email || !!username || !!password || !!confirmPassword;
+    if (!touched) return "";
+    if (!disabledCTA) return "";
+    // Pendant loading => pas d’hint
+    if (loading) return "";
+    return getBlockingReason();
+  }, [
+    email,
+    username,
+    password,
+    confirmPassword,
+    disabledCTA,
+    loading,
+    getBlockingReason,
+  ]);
+
   const pressIn = () => {
     if (disabledCTA) return;
     if (!reduceMotion) {
@@ -645,12 +735,24 @@ try {
 
             // 🔹 Analytics non bloquant : ne JAMAIS casser le register à cause d'un event
             // 🔹 Analytics non bloquant
-      logEvent("register_success").catch((e: any) => {
-        console.log(
-          "[analytics] register_success failed:",
-          e?.code || e?.message || e
-        );
-      });
+      // 🔹 Analytics non bloquant : ne JAMAIS casser le register à cause d'un event
+logEvent("register_success").catch((e: any) => {
+  console.log(
+    "[analytics] register_success failed:",
+    e?.code || e?.message || e
+  );
+});
+
+// ✅ KPI #1 : signup_complete (standard Firebase funnel)
+logEvent("signup_complete", {
+  method: "email",
+}).catch((e: any) => {
+  console.log(
+    "[analytics] signup_complete failed:",
+    e?.code || e?.message || e
+  );
+});
+
 
       try {
         await AsyncStorage.setItem(
@@ -845,7 +947,12 @@ try {
               placeholderTextColor="rgba(50,50,50,0.5)"
               style={styles.input}
               value={email}
-              onChangeText={setEmail}
+              onChangeText={(v) => {
+  setEmail(v);
+  if (errorMessage) setErrorMessage("");
+}}
+onFocus={() => setFocusedField("email")}
+onBlur={() => setFocusedField((f) => (f === "email" ? null : f))}
               keyboardType="email-address"
               autoCapitalize="none"
               accessibilityLabel={t("email")}
@@ -895,7 +1002,12 @@ try {
               placeholderTextColor="rgba(50,50,50,0.5)"
               style={styles.input}
               value={username}
-              onChangeText={setUsername}
+              onChangeText={(v) => {
+  setUsername(v);
+  if (errorMessage) setErrorMessage("");
+}}
+onFocus={() => setFocusedField("username")}
+onBlur={() => setFocusedField((f) => (f === "username" ? null : f))}
               accessibilityLabel={t("username")}
               autoComplete="username"
               testID="username-input"
@@ -925,7 +1037,12 @@ try {
               placeholderTextColor="rgba(50,50,50,0.5)"
               style={styles.input}
               value={password}
-              onChangeText={setPassword}
+              onChangeText={(v) => {
+  setPassword(v);
+  if (errorMessage) setErrorMessage("");
+}}
+onFocus={() => setFocusedField("password")}
+onBlur={() => setFocusedField((f) => (f === "password" ? null : f))}
               secureTextEntry={!showPassword}
               accessibilityLabel={t("password")}
               autoComplete="new-password"
@@ -975,7 +1092,12 @@ try {
               placeholderTextColor="rgba(50,50,50,0.5)"
               style={styles.input}
               value={confirmPassword}
-              onChangeText={setConfirmPassword}
+              onChangeText={(v) => {
+  setConfirmPassword(v);
+  if (errorMessage) setErrorMessage("");
+}}
+onFocus={() => setFocusedField("confirm")}
+onBlur={() => setFocusedField((f) => (f === "confirm" ? null : f))}
               secureTextEntry={!showConfirmPassword}
               accessibilityLabel={t("confirmPassword")}
               autoComplete="new-password"
@@ -1011,7 +1133,36 @@ try {
               />
             </TouchableOpacity>
           </View>
+                    {!!focusHint && (
+            <View
+              style={styles.hintRow}
+              accessibilityLiveRegion="polite"
+            >
+              <Ionicons
+                name="information-circle-outline"
+                size={16}
+                color="rgba(0,0,0,0.55)"
+              />
+              <Text style={styles.hintText}>{focusHint}</Text>
+            </View>
+          )}
+
         </Animated.View>
+
+                {!!disabledHint && (
+  <View
+    style={styles.disabledHintBanner}
+    accessibilityLiveRegion="polite"
+    accessible
+  >
+    <Ionicons
+      name="alert-circle-outline"
+      size={16}
+      color="#111827"
+    />
+    <Text style={styles.disabledHintText}>{disabledHint}</Text>
+  </View>
+)}
 
         {/* CTA Register */}
         <Animated.View
@@ -1133,6 +1284,48 @@ const styles = StyleSheet.create({
     paddingVertical: 10,
     paddingHorizontal: 12,
     marginBottom: 10,
+  },
+    hintRow: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 8,
+    backgroundColor: "rgba(0,0,0,0.04)",
+    borderWidth: 1,
+    borderColor: "rgba(0,0,0,0.08)",
+    paddingVertical: 8,
+    paddingHorizontal: 10,
+    borderRadius: 12,
+    marginTop: 2,
+    marginBottom: 4,
+  },
+  hintText: {
+    flex: 1,
+    color: "rgba(17,24,39,0.78)",
+    fontSize: normalize(12),
+    fontFamily: "Comfortaa_700Bold",
+    lineHeight: normalize(16),
+  },
+  disabledHintBanner: {
+    width: Math.min(420, SCREEN_WIDTH - SPACING * 2),
+    alignSelf: "center",
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 8,
+    backgroundColor: "#FDE68A",
+    borderColor: "rgba(0,0,0,0.10)",
+    borderWidth: 1,
+    paddingVertical: 9,
+    paddingHorizontal: 12,
+    borderRadius: 12,
+    marginTop: SPACING,
+    marginBottom: 6,
+  },
+  disabledHintText: {
+    flex: 1,
+    color: "#111827",
+    fontSize: normalize(12.5),
+    fontFamily: "Comfortaa_700Bold",
+    lineHeight: normalize(16),
   },
   errorBannerText: {
     color: "#fff",

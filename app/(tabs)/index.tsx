@@ -48,6 +48,7 @@ import {
    getDoc,
    onSnapshot,
    limit,
+    updateDoc, serverTimestamp,
  } from "firebase/firestore";
 import { SafeAreaView, useSafeAreaInsets } from "react-native-safe-area-context";
 import { Ionicons } from "@expo/vector-icons";
@@ -89,7 +90,7 @@ import {
   WelcomeBonusState,
 } from "../../src/services/welcomeBonusService";
 import { useToast } from "../../src/ui/Toast";
-import TodayHub from "@/components/TodayHub/TodayHub";
+import TodayHub, { type TodayHubPrimaryMode } from "@/components/TodayHub/TodayHub";
 import { useTodayHubState } from "@/components/TodayHub/useTodayHubState";
 
 
@@ -608,6 +609,7 @@ const markAnimStyle = useAnimatedStyle(() => ({
   const activeChallenges = useMemo<CurrentChallengeItem[]>(() => {
     return currentChallenges.filter((c) => !c?.completed && !c?.archived);
   }, [currentChallenges]);
+  
 
   const activeChallenge = useMemo<CurrentChallengeItem | null>(() => {
     if (!currentChallenges.length) return null;
@@ -661,6 +663,11 @@ const markAnimStyle = useAnimatedStyle(() => ({
   }, [activeChallenge, activeChallengeId, allChallenges, dailyFive, t]);
 
 const effectiveActiveMeta = activeChallengeMetaOverride ?? activeChallengeMeta;
+// ✅ Meta "source de vérité" pour TodayHub : doit être traduite (via chatId) quand possible
+const todayHubActiveMeta = useMemo(() => {
+  return effectiveActiveMeta ?? null;
+}, [effectiveActiveMeta]);
+
 
   const activeProgress = useMemo(() => {
     const done =
@@ -824,9 +831,15 @@ await new Promise((r) => requestAnimationFrame(() => r(null)));
   allChallenges,
   dailyFive,
   t,
+   langKey: i18n.language,
 });
+const primaryActiveId = useMemo(() => {
+  // ✅ si des actifs existent : on prend celui choisi par TodayHub (non-marked prioritaire)
+  return todayHubView.focusChallengeId ?? null;
+}, [todayHubView.focusChallengeId]);
 
-const todayHubPrimaryMode = todayHubView.primaryMode;
+ const todayHubPrimaryMode = todayHubView.primaryMode as TodayHubPrimaryMode;
+
   const shouldPulsePrimary = useMemo(() => {
     // Apple-ish: pulse seulement quand il y a une action “à faire”
     // - mark: tant qu'il reste au moins 1 défi non marqué aujourd’hui
@@ -962,22 +975,11 @@ const absorbToTodayHub = useCallback(async () => {
       } catch {}
 
       // 2) pulse du CTA principal selon le mode (Keynote: “l’action”)
-      const pulse = () => {
-        if (todayHubPrimaryMode === "mark") {
-          markScale.value = withSpring(0.97, { damping: 18, stiffness: 240 });
-          setTimeout(() => {
-            markScale.value = withSpring(1, { damping: 16, stiffness: 200 });
-          }, 220);
-          return;
-        }
-
-        // petit pulse générique (new/duo/pending) via la même anim pour rester cohérent
-        markScale.value = withSpring(0.985, { damping: 18, stiffness: 240 });
-        setTimeout(() => {
-          markScale.value = withSpring(1, { damping: 16, stiffness: 200 });
-        }, 220);
-      };
-      pulse();
+      // ✅ Pulse unique, cohérent : CTA primaire (quelle que soit la variante)
+      markScale.value = withSpring(0.975, { damping: 18, stiffness: 240 });
+      setTimeout(() => {
+        markScale.value = withSpring(1, { damping: 16, stiffness: 200 });
+      }, 220);
 
       // 3) spotlight seulement si "mark"
       setTimeout(() => {
@@ -1062,30 +1064,6 @@ useEffect(() => {
   soloNudgePulse,
   soloNudgeIn,
 ]);
-useEffect(() => {
-  const isDuo =
-    todayHubPrimaryMode === "duo" &&
-    !isTutorialBlocking &&
-    !isAnyBlockingModalOpen;
-
-  if (!isDuo) {
-    duoRingPulse.value = 0;
-    return;
-  }
-
-  duoRingPulse.value = withRepeat(
-    withTiming(1, { duration: 1200, easing: Easing.inOut(Easing.ease) }),
-    -1,
-    true
-  );
-}, [
-  todayHubPrimaryMode,
-  isTutorialBlocking,
-  isAnyBlockingModalOpen,
-  duoRingPulse,
-]);
-
-
 
   // ✅ Si on passe en duoPending, on CONSUME le flag onboarding pour éviter
   // un spotlight qui pop plus tard quand ça repasse "mark".
@@ -1413,79 +1391,106 @@ useEffect(() => {
   duoRing,
   duoGlow,
 ]);
-   useEffect(() => {
-    if (!user || !userData) return;
 
-    // 1) On ne montre le modal que si le welcomeLoginBonus est terminé
-    const welcome = (userData as any).welcomeLoginBonus;
-    if (!welcome || welcome.completed !== true) return;
+// ✅ PremiumEnd: remember which expiry we are prompting for
+const premiumEndExpiresMsRef = useRef<number | null>(null);
 
-    // 2) On regarde l'état premium
-    const premium = (userData as any).premium;
-    if (!premium || typeof premium !== "object") return;
+const persistPremiumEndDismiss = useCallback(async () => {
+  if (!user?.uid) return;
 
-    // 3) Si l'utilisateur est premium "payant", on ne montre jamais ce modal
-    const isPayingPremium =
-      premium.isPremium === true ||
-      premium.premium === true ||
-      premium.isSubscribed === true ||
-      premium.isLifetime === true;
+  const expiresMs = premiumEndExpiresMsRef.current;
+  if (!expiresMs) return;
 
-    if (isPayingPremium) return;
+  // 1) Firestore = vérité (multi-device + durable)
+  try {
+    await updateDoc(doc(db, "users", user.uid), {
+      "premium.endModalDismissedUntil": expiresMs,
+      "premium.endModalDismissedAt": serverTimestamp(),
+    });
+  } catch {
+    // silence (on garde fallback local)
+  }
 
-    // 4) Parse robuste de tempPremiumUntil (string ISO, Timestamp Firestore, number ms, Date)
-    const rawUntil = premium.tempPremiumUntil;
-    if (!rawUntil) return;
+  // 2) Fallback local (au cas où)
+  try {
+    await AsyncStorage.setItem(
+      `premiumEndModalShown_v3_${user.uid}`,
+      String(expiresMs)
+    );
+  } catch {}
+}, [user?.uid]);
 
-    const toMs = (v: any): number | null => {
-      // Firestore Timestamp
-      if (v && typeof v === "object" && typeof v.toDate === "function") {
-        const d = v.toDate();
-        const ms = d?.getTime?.();
-        return Number.isFinite(ms) ? ms : null;
-      }
-      // Date
-      if (v instanceof Date) {
-        const ms = v.getTime();
-        return Number.isFinite(ms) ? ms : null;
-      }
-      // number (ms)
-      if (typeof v === "number") {
-        return Number.isFinite(v) ? v : null;
-      }
-      // string
-      if (typeof v === "string") {
-        const ms = Date.parse(v);
-        return Number.isFinite(ms) ? ms : null;
-      }
-      return null;
-    };
+useEffect(() => {
+  if (!user || !userData) return;
 
-    const expiresMs = toMs(rawUntil);
-    if (!expiresMs) {
-      console.warn("[PremiumEnd] tempPremiumUntil unreadable:", rawUntil);
-      return;
+  const welcome = (userData as any).welcomeLoginBonus;
+  if (!welcome || welcome.completed !== true) return;
+
+  const premium = (userData as any).premium;
+  if (!premium || typeof premium !== "object") return;
+
+  const isPayingPremium =
+    premium.isPremium === true ||
+    premium.premium === true ||
+    premium.isSubscribed === true ||
+    premium.isLifetime === true;
+
+  if (isPayingPremium) return;
+
+  const rawUntil = premium.tempPremiumUntil;
+  if (!rawUntil) return;
+
+  const toMs = (v: any): number | null => {
+    if (v && typeof v === "object" && typeof v.toDate === "function") {
+      const d = v.toDate();
+      const ms = d?.getTime?.();
+      return Number.isFinite(ms) ? ms : null;
     }
+    if (v instanceof Date) {
+      const ms = v.getTime();
+      return Number.isFinite(ms) ? ms : null;
+    }
+    if (typeof v === "number") return Number.isFinite(v) ? v : null;
+    if (typeof v === "string") {
+      const ms = Date.parse(v);
+      return Number.isFinite(ms) ? ms : null;
+    }
+    return null;
+  };
 
-    const now = Date.now();
-    if (now <= expiresMs) return;
+  const expiresMs = toMs(rawUntil);
+  if (!expiresMs) return;
 
-    // 5) Clé de garde pour ne pas re-afficher indéfiniment
-    // On stocke une valeur stable (ms) au lieu d'une string potentiellement variable
-    const key = `premiumEndModalShown_v2_${user.uid}`;
+  const now = Date.now();
+  if (now <= expiresMs) return;
 
-    const checkAndShow = async () => {
-      try {
-        const last = await AsyncStorage.getItem(key);
-        if (last === String(expiresMs)) return;
+  // ✅ Firestore guard (multi-device)
+  const dismissedUntil = (premium as any)?.endModalDismissedUntil;
+  const dismissedUntilMs = toMs(dismissedUntil);
+  if (dismissedUntilMs && dismissedUntilMs === expiresMs) return;
 
-        setShowPremiumEndModal(true);
-        await AsyncStorage.setItem(key, String(expiresMs));
-      } catch {}
-    };
+  // ✅ fallback local guard
+  const key = `premiumEndModalShown_v3_${user.uid}`;
 
-    checkAndShow();
-  }, [user, userData]);
+  const checkAndShow = async () => {
+    try {
+      const last = await AsyncStorage.getItem(key);
+      if (last === String(expiresMs)) return;
+    } catch {}
+
+    // keep the expiry we are prompting for
+    premiumEndExpiresMsRef.current = expiresMs;
+
+    setShowPremiumEndModal(true);
+
+    // store fallback immediately to reduce double-show even if user force closes app
+    try {
+      await AsyncStorage.setItem(key, String(expiresMs));
+    } catch {}
+  };
+
+  checkAndShow();
+}, [user, userData]);
 
 
   useFocusEffect(
@@ -1837,7 +1842,7 @@ const handleInviteFriendPress = useCallback(async () => {
   const targetId =
     pendingInvite?.challengeId ??
     todayHubView.hubChallengeId ??
-    activeChallengeId;
+    primaryActiveId;
 
   if (!targetId) {
     try { await Haptics.selectionAsync(); } catch {}
@@ -1849,8 +1854,23 @@ const handleInviteFriendPress = useCallback(async () => {
 
   // ✅ on pousse vers le détail du challenge, et tu peux y afficher un état "invitation envoyée"
   safeNavigate(`/challenge-details/${targetId}?invitePending=1`, "home-invite-friend");
-}, [pendingInvite?.challengeId, todayHubView.hubChallengeId, activeChallengeId, safeNavigate]);
+}, [pendingInvite?.challengeId, todayHubView.hubChallengeId, primaryActiveId, safeNavigate]);
 
+// ✅ WARMUP CTA (duo pending) -> renvoie vers le challenge-details du challenge concerné
+const warmupTargetId = useMemo(() => {
+  const id =
+    pendingInvite?.challengeId ??
+    todayHubView.hubChallengeId ??
+    primaryActiveId;
+  return typeof id === "string" && id.trim().length > 0 ? id.trim() : null;
+}, [pendingInvite?.challengeId, todayHubView.hubChallengeId, primaryActiveId]);
+
+const handleWarmupPress = useCallback(async () => {
+  if (!warmupTargetId) return;
+  try { await Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium); } catch {}
+  // ✅ “warmup=1” te permet (si tu veux) d’afficher un micro-rail dans challenge-details
+  safeNavigate(`/challenge-details/${warmupTargetId}?warmup=1`, "home-warmup");
+}, [warmupTargetId, safeNavigate]);
 
   const handleMarkTodayPress = useCallback(async () => {
     try {
@@ -1964,11 +1984,11 @@ const todayHubHubDescription = useMemo(() => {
 
 // ✅ actions TodayHub
 const onOpenHub = useCallback(async () => {
-  const id = todayHubView.hubChallengeId;
+  const id = todayHubView.hubChallengeId ?? primaryActiveId;
   if (!id) return;
   try { await Haptics.selectionAsync(); } catch {}
   safeNavigate(`/challenge-details/${id}`, "home-open-todayhub");
-}, [todayHubView.hubChallengeId, safeNavigate]);
+}, [todayHubView.hubChallengeId, primaryActiveId, safeNavigate]);
 
 const onPickSolo = useCallback(async () => {
   try { await Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium); } catch {}
@@ -1981,39 +2001,36 @@ const onCreate = useCallback(async () => {
 }, [safeNavigate]);
 
 const onPrimaryPress = useCallback(() => {
-  // mapping clean selon mode
   if (todayHubPrimaryMode === "mark") return handleMarkTodayPress();
-  if (todayHubPrimaryMode === "new") return handlePickChallengePress();
-  if (todayHubPrimaryMode === "duo") return handleInviteFriendPress();
-  // duoPending
-  return handleInviteFriendPress();
+  if (todayHubPrimaryMode === "pick") return handlePickChallengePress();
+ if (todayHubPrimaryMode === "new") return handlePickChallengePress(); // ou /create-challenge si tu veux pousser la création
+ // duoPending => warmup
+ return handleWarmupPress();
 }, [
   todayHubPrimaryMode,
   handleMarkTodayPress,
   handlePickChallengePress,
-  handleInviteFriendPress,
+  handleWarmupPress,
 ]);
 
 // ✅ visuels CTA principal (gradient / icon / label)
 const todayHubPrimaryGradient = useMemo(() => {
   if (todayHubPrimaryMode === "mark") return ["#F97316", "#FB923C"] as const; // orange action
   if (todayHubPrimaryMode === "duoPending") return ["#6366F1", "#A78BFA"] as const; // violet pending
-  if (todayHubPrimaryMode === "duo") return ["#22C55E", "#86EFAC"] as const; // green duo
   return ["#F97316", "#FDBA74"] as const; // new -> explore warm
 }, [todayHubPrimaryMode]);
 
 const todayHubPrimaryIcon = useMemo(() => {
   if (todayHubPrimaryMode === "mark") return "checkmark-circle-outline";
   if (todayHubPrimaryMode === "duoPending") return "hourglass-outline";
-  if (todayHubPrimaryMode === "duo") return "people-outline";
   return "compass-outline";
 }, [todayHubPrimaryMode]);
 
 const todayHubPrimaryLabel = useMemo(() => {
-  if (todayHubPrimaryMode === "mark") return t("homeZ.todayHub.ctaMark", "Marquer");
-  if (todayHubPrimaryMode === "duoPending") return t("homeZ.todayHub.ctaPending", "En attente");
-  if (todayHubPrimaryMode === "duo") return t("homeZ.todayHub.ctaDuo", "Inviter");
-  return t("homeZ.todayHub.ctaNew", "Nouveau défi");
+  if (todayHubPrimaryMode === "mark") return t("homeZ.todayHub.primaryActiveShort", "Check in");
+  if (todayHubPrimaryMode === "duoPending") return t("homeZ.duoPending.cta", "View");
+  // modes "pick" / "new" => explore
+  return t("homeZ.todayHub.primaryNewShort", "New");
 }, [t, todayHubPrimaryMode]);
 
 const handleClaimWelcomeBonus = async () => {
@@ -2433,6 +2450,7 @@ setPostWelcomeAbsorbArmed(true);
 >
   <TodayHub
   t={t}
+  langKey={i18n.language}
   isDarkMode={isDarkMode}
   primaryMode={todayHubView.primaryMode}
   hasActiveChallenges={todayHubView.hasActiveChallenges}
@@ -2452,6 +2470,8 @@ setPostWelcomeAbsorbArmed(true);
   CONTENT_MAX_W={CONTENT_MAX_W}
   staticStyles={staticStyles}
   normalize={normalize}
+  primaryCtaRef={markCtaRef}
+ primaryAnimatedStyle={markAnimStyle}
 />
 </View>
 
@@ -3311,7 +3331,10 @@ setPostWelcomeAbsorbArmed(true);
           visible={showPremiumEndModal}
           transparent
           animationType="fade"
-          onRequestClose={() => setShowPremiumEndModal(false)}
+          onRequestClose={async () => {
+  setShowPremiumEndModal(false);
+  await persistPremiumEndDismiss();
+}}
         >
           <View style={staticStyles.blurView}>
             <View style={staticStyles.modalContainer}>
@@ -3338,25 +3361,21 @@ setPostWelcomeAbsorbArmed(true);
 
               <View style={staticStyles.buttonContainer}>
                 <TouchableOpacity
-                  onPress={() => setShowPremiumEndModal(false)}
-                  style={[
-                    staticStyles.actionButton,
-                    { backgroundColor: "#E5E7EB" },
-                  ]}
-                  accessibilityLabel={t(
-                    "premiumEndModal.closeA11y",
-                    "Fermer la fenêtre"
-                  )}
-                >
-                  <Text
-                    style={[
-                      staticStyles.actionButtonText,
-                      { color: "#111827" },
-                    ]}
-                  >
-                    {t("premiumEndModal.closeCta", "Continuer gratuitement")}
-                  </Text>
-                </TouchableOpacity>
+  onPress={async () => {
+    setShowPremiumEndModal(false);
+    await persistPremiumEndDismiss();
+  }}
+  style={[
+    staticStyles.actionButton,
+    { backgroundColor: "#E5E7EB" },
+  ]}
+  accessibilityLabel={t("premiumEndModal.closeA11y", "Fermer la fenêtre")}
+>
+  <Text style={[staticStyles.actionButtonText, { color: "#111827" }]}>
+    {t("premiumEndModal.closeCta", "Continuer gratuitement")}
+  </Text>
+</TouchableOpacity>
+
 
                 <TouchableOpacity
                   onPress={() => {

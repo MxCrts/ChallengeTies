@@ -13,6 +13,8 @@ import {
   REFERRER_TS_KEY,
 } from "@/services/referralLinking";
 
+const GUEST_KEY = "ties.guest.enabled.v1";
+const EXPLICIT_LOGOUT_KEY = "ties.explicitLogout.v1";
 
 export default function ReferralCatcher() {
   const { t } = useTranslation();
@@ -43,11 +45,18 @@ export default function ReferralCatcher() {
 
         if (!cleanRef) return;
 
-        // ✅ ignore self-ref (si user déjà connecté)
         const me = auth.currentUser?.uid;
-        if (me && me === cleanRef) return;
+if (me && me === cleanRef) return;
 
-        const existing = (await AsyncStorage.getItem(REFERRER_KEY))?.trim();
+// ✅ Un referral ne doit jamais te laisser en mode visiteur
+await AsyncStorage.removeItem(GUEST_KEY).catch(() => {});
+// ✅ Et on force le flow auth au retour sur "/"
+(globalThis as any).__FORCE_AUTH_FLOW__ = true;
+
+// ✅ On peut aussi mettre explicitLogout pour que login gagne dans ton gate
+await AsyncStorage.setItem(EXPLICIT_LOGOUT_KEY, "1").catch(() => {});
+
+const existing = (await AsyncStorage.getItem(REFERRER_KEY))?.trim();
 
         // check base: si user connecté et déjà lié → on ne touche pas
         let alreadyLinkedInDb = false;
@@ -81,6 +90,8 @@ export default function ReferralCatcher() {
       } catch (e) {
         console.log("[referral] store referrer error:", e);
       } finally {
+
+        (globalThis as any).__DL_BLOCK_ROOT_REDIRECT__ = false;
         /**
          * ✅ IMPORTANT:
          * On renvoie vers la root et on laisse TON flow global

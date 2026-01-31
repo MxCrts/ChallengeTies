@@ -214,7 +214,7 @@ async function partnerHasMarkedToday(
     return hasMarkedKey(p as any, todayKey);
   } catch {
   // no-spam: en cas de doute, on n’envoie pas
-  return true;
+  return false;
 }
 
 }
@@ -228,19 +228,23 @@ const sameChallengeLoose = (a: any, b: any) => {
 
 // 🔍 Helper unique pour retrouver un challenge dans un tableau
 // → Ne dépend plus de uniqueKey, uniquement de (challengeId || id) + selectedDays
-const findChallengeIndexByIdAndDays = (
+const findChallengeIndexSmart = (
   arr: CurrentChallenge[],
-  id: string,
-  selectedDays: number
+  idOrUniqueKey: string,
+  selectedDays?: number
 ): number => {
+  // 1) match uniqueKey direct
+  const iUk = arr.findIndex((c: any) => c?.uniqueKey === idOrUniqueKey);
+  if (iUk !== -1) return iUk;
+
+  // 2) match id + days
+  const daysN = Number(selectedDays);
   return arr.findIndex((c: any) => {
     const cid = c?.challengeId ?? c?.id;
-    return (
-      cid === id &&
-      Number(c?.selectedDays ?? 0) === Number(selectedDays)
-    );
+    return cid === idOrUniqueKey && Number(c?.selectedDays ?? 0) === daysN;
   });
 };
+
 
 // --- PerfectMonth helpers ---
 const monthTokenUTC = (d: Date) => {
@@ -278,7 +282,7 @@ export interface CurrentChallenge extends Challenge {
   selectedDays: number;
   completedDays: number;
   lastMarkedDate?: string | null;
-  lastMarkedKey?: string;
+  lastMarkedKey?: string | null;
   streak?: number;
   uniqueKey?: string;
   completionDates?: string[];
@@ -1048,8 +1052,21 @@ try {
         ? data.CurrentChallenges
         : [];
 
-      const idx = findChallengeIndexByIdAndDays(curr, id, selectedDays);
-      if (idx === -1) return;
+      const idx = findChallengeIndexSmart(curr, id, selectedDays);
+if (idx === -1) {
+  __DEV__ && console.warn("[completeChallenge] not found", {
+    id,
+    selectedDays,
+    ids: curr.map((c: any) => ({
+      uniqueKey: c.uniqueKey,
+      id: c.id,
+      challengeId: c.challengeId,
+      selectedDays: c.selectedDays,
+    })),
+  });
+  throw new Error("challengeNotFound");
+}
+
 
       // 🔥 IMPORTANT : on supprime UNIQUEMENT chez moi
       const next = curr.filter((_, i) => i !== idx);
@@ -1065,7 +1082,7 @@ try {
 
 
    const isMarkedToday = (id: string, selectedDays: number): boolean => {
-    const idx = findChallengeIndexByIdAndDays(currentChallenges, id, selectedDays);
+    const idx = findChallengeIndexSmart(currentChallenges, id, selectedDays);
     if (idx === -1) return false;
     const ch = currentChallenges[idx];
     const todayKey = dayKeyUTC(getToday());
@@ -1122,7 +1139,7 @@ try {
           : [];
 
         // ✅ Utilise le helper pour trouver l'index
-        const idx = findChallengeIndexByIdAndDays(arr, id, selectedDays);
+        const idx = findChallengeIndexSmart(arr, id, selectedDays);
         if (idx === -1) throw new Error("challengeNotFound");
 
         const ch: any = { ...arr[idx] };
@@ -1391,7 +1408,7 @@ try {
   ? userData.CurrentChallenges
   : [];
 
-const challengeIndex = findChallengeIndexByIdAndDays(
+const challengeIndex = findChallengeIndexSmart(
   currentChallengesArray,
   id,
   selectedDays
@@ -1542,7 +1559,7 @@ const updatedArray = currentChallengesArray.map((ch, i) =>
       )
         ? userData.CurrentChallenges
         : [];
-      const index = findChallengeIndexByIdAndDays(arr, id, selectedDays);
+      const index = findChallengeIndexSmart(arr, id, selectedDays);
 if (index === -1) {
   console.log("Challenge non trouvé pour handleWatchAd :", uniqueKey);
   return;
@@ -1631,7 +1648,7 @@ const updated = { ...arr[index] } as any;
           ? userData.CurrentChallenges
           : [];
 
-      const challengeIndex = findChallengeIndexByIdAndDays(
+      const challengeIndex = findChallengeIndexSmart(
   currentChallengesArray,
   id,
   selectedDays
@@ -1742,7 +1759,7 @@ if (challengeIndex === -1) {
         ? userData.CurrentChallenges
         : [];
 
-      const index = findChallengeIndexByIdAndDays(arr, id, selectedDays);
+      const index = findChallengeIndexSmart(arr, id, selectedDays);
 if (index === -1) {
   __DEV__ &&
     console.log(
@@ -1895,7 +1912,7 @@ if (index === -1) {
         ? uData.CurrentChallenges
         : [];
 
-      const idx = findChallengeIndexByIdAndDays(curr, id, selectedDays);
+      const idx = findChallengeIndexSmart(curr, id, selectedDays);
       if (idx === -1) throw new Error("challengeNotFound");
 
       const toComplete = { ...curr[idx] } as any;

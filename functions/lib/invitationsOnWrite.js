@@ -4,6 +4,9 @@ exports.invitationsOnWrite = void 0;
 // functions/src/invitationsOnWrite.ts
 const firestore_1 = require("firebase-functions/v2/firestore");
 const firestore_2 = require("firebase-admin/firestore");
+const app_1 = require("firebase-admin/app");
+if (!(0, app_1.getApps)().length)
+    (0, app_1.initializeApp)();
 const db = (0, firestore_2.getFirestore)();
 const LOCK_TTL_MS = 2 * 60 * 1000; // 2 minutes
 function isLockExpired(lock) {
@@ -120,6 +123,11 @@ exports.invitationsOnWrite = (0, firestore_1.onDocumentWritten)({ region: "europ
     const before = event.data?.before?.data();
     const after = event.data?.after?.data();
     const inviteId = event.params?.inviteId;
+    console.log("[invite] TRIGGER", {
+        inviteId,
+        before: before?.status,
+        after: after?.status,
+    });
     // updates only
     if (!before || !after)
         return;
@@ -231,6 +239,8 @@ exports.invitationsOnWrite = (0, firestore_1.onDocumentWritten)({ region: "europ
     // Payload stable (inviteeId peut être null: open refused/accepted set par ton service)
     const dataPayload = {
         kind: "invite_status",
+        type: "invite-status", // ✅ ton NotificationsBootstrap écoute ça
+        __tag: "invite-status",
         status: after.status,
         inviteId,
         challengeId: after.challengeId || "",

@@ -351,6 +351,11 @@ export default function CurrentChallenges() {
     ]
   );
 
+  const chipBg = isDarkMode ? "rgba(255,255,255,0.12)" : "rgba(0,0,0,0.06)";
+const chipBorder = isDarkMode ? "rgba(255,255,255,0.18)" : "rgba(0,0,0,0.10)";
+const chipText = isDarkMode ? "rgba(255,255,255,0.92)" : "#0B0B10";
+const chipShadow = isDarkMode ? "rgba(0,0,0,0.55)" : "rgba(255,255,255,0.55)";
+
   const handleRemove = useCallback(
     (id: string, selectedDays: number, index: number, title?: string) => {
       setPendingRemoval({ id, selectedDays, index, title });
@@ -653,33 +658,42 @@ const ringGrad = isDarkMode
 </View>
 
                       <View style={styles.progressMeta}>
-                        <View style={styles.progressChip}>
-                          <Ionicons
-                            name="flame-outline"
-                            size={normalizeSize(13)}
-                            color={currentTheme.colors.secondary}
-                          />
-                          <Text
-                            style={[
-  styles.progressChip,
-  {
-    backgroundColor: isDarkMode ? "rgba(255,255,255,0.10)" : "rgba(0,0,0,0.05)",
-    borderColor: isDarkMode ? "rgba(255,255,255,0.14)" : "rgba(0,0,0,0.08)",
-  },
-]}
-                          >
-                            {percentLabel}
-                          </Text>
-                        </View>
-                        <Text
-                          style={[
-                            styles.progressText,
-                            { color: currentTheme.colors.textSecondary },
-                          ]}
-                        >
-                          {item.completedDays}/{item.selectedDays}{" "}
-                          {String(t("days"))}
-                        </Text>
+                        
+                        <View style={[styles.progressChip, { backgroundColor: chipBg, borderColor: chipBorder }]}>
+  <Ionicons
+    name="flame-outline"
+    size={normalizeSize(13)}
+    color={currentTheme.colors.secondary}
+  />
+  <Text
+    style={[
+      styles.progressChipText,
+      {
+        color: chipText,
+        // ✅ lisible même sur écrans “agressifs”
+        textShadowColor: chipShadow,
+        textShadowRadius: 6,
+        textShadowOffset: { width: 0, height: 1 },
+      },
+    ]}
+    numberOfLines={1}
+    allowFontScaling
+  >
+    {percentLabel}
+  </Text>
+</View>
+                       <Text
+  style={[
+    styles.progressText,
+    {
+      color: isDarkMode
+        ? withAlpha(currentTheme.colors.textSecondary, 0.92)
+        : withAlpha("#0B0B10", 0.62),
+    },
+  ]}
+>
+  {item.completedDays}/{item.selectedDays} {String(t("days"))}
+</Text>
                       </View>
                     </View>
 
@@ -1319,11 +1333,13 @@ duoPillText: {
   borderWidth: StyleSheet.hairlineWidth,
   borderColor: "rgba(255,255,255,0.14)",
 },
-  progressChipText: {
-    fontSize: normalizeSize(11.5),
-    fontFamily: "Comfortaa_700Bold",
-    marginLeft: 4,
-  },
+ progressChipText: {
+  fontSize: normalizeSize(11.5),
+  fontFamily: "Comfortaa_700Bold",
+  marginLeft: 6,
+  includeFontPadding: false,      // ✅ Android
+  textAlignVertical: "center",    // ✅ Android
+},
   progressText: {
     fontSize: normalizeSize(11.5),
     fontFamily: "Comfortaa_400Regular",

@@ -4,6 +4,9 @@ exports.onUserActivated = void 0;
 // functions/src/referralRewards.ts
 const firestore_1 = require("firebase-functions/v2/firestore");
 const firestore_2 = require("firebase-admin/firestore");
+const app_1 = require("firebase-admin/app");
+if (!(0, app_1.getApps)().length)
+    (0, app_1.initializeApp)();
 const db = (0, firestore_2.getFirestore)();
 const MILESTONES = [5, 10, 25];
 exports.onUserActivated = (0, firestore_1.onDocumentWritten)({

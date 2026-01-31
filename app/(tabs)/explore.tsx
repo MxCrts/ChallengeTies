@@ -739,8 +739,21 @@ export default function ExploreScreen() {
   const [adHeight, setAdHeight] = useState(0);
   const unmountedRef = useRef(false);
 
+  const [keyboardVisible, setKeyboardVisible] = useState(false);
+  useEffect(() => {
+    const showEvt = Platform.OS === "ios" ? "keyboardWillShow" : "keyboardDidShow";
+    const hideEvt = Platform.OS === "ios" ? "keyboardWillHide" : "keyboardDidHide";
+    const s1 = Keyboard.addListener(showEvt, () => setKeyboardVisible(true));
+    const s2 = Keyboard.addListener(hideEvt, () => setKeyboardVisible(false));
+    return () => {
+      s1.remove();
+      s2.remove();
+    };
+  }, []);
+
+  const shouldShowBanner = showBanners && !isTutorialActive && !keyboardVisible;
   const listBottomPadding =
-    (showBanners ? adHeight : 0) + tabBarHeight + insets.bottom + normalizeSize(20);
+    (shouldShowBanner ? adHeight : 0) + tabBarHeight + insets.bottom + normalizeSize(20);
 
   const { gate, modalVisible, closeGate } = useGateForGuest();
 
@@ -1187,7 +1200,7 @@ export default function ExploreScreen() {
         </LinearGradient>
       </KeyboardAvoidingView>
 
-      {showBanners && !isTutorialActive && (
+      {shouldShowBanner && (
         <View
           style={{
             position: "absolute",

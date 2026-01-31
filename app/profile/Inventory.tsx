@@ -99,6 +99,13 @@ const InventoryScreen: React.FC = () => {
     insets.bottom +
     normalize(40);
 
+
+    const badgeTextColor = isDark ? "rgba(255,255,255,0.92)" : "#0B0B10";
+const badgeShadow = isDark ? "rgba(0,0,0,0.55)" : "rgba(255,255,255,0.55)";
+const statNumberColor = isDark ? "rgba(255,255,255,0.95)" : "#0B0B10";
+const statNumberShadow = isDark ? "rgba(0,0,0,0.55)" : "rgba(255,255,255,0.65)";
+const chipNumColor = isDark ? "rgba(255,255,255,0.92)" : "#0B0B10";
+const chipNumShadow = isDark ? "rgba(0,0,0,0.55)" : "rgba(255,255,255,0.55)";
   // 🔥 Récupération live de l’inventaire utilisateur
   useEffect(() => {
     const uid = auth.currentUser?.uid;
@@ -331,9 +338,21 @@ const InventoryScreen: React.FC = () => {
         ]}
       >
         <Ionicons name="sparkles" size={normalize(14)} color={currentTheme.colors.secondary} />
-        <Text style={[styles.heroBadgeText, { color: currentTheme.colors.textSecondary }]}>
-          {t("inventory.totalItems", { defaultValue: "{{count}} objets", count: totalItems })}
-        </Text>
+        <Text
+  style={[
+    styles.heroBadgeText,
+    {
+      color: badgeTextColor,
+      textShadowColor: badgeShadow,
+      textShadowRadius: 6,
+      textShadowOffset: { width: 0, height: 1 },
+    },
+  ]}
+  numberOfLines={1}
+  allowFontScaling
+>
+  {t("inventory.totalItems", { defaultValue: "{{count}} objets", count: totalItems })}
+</Text>
       </View>
     )}
   </View>
@@ -361,9 +380,21 @@ const InventoryScreen: React.FC = () => {
         <View style={[styles.statIconBadge, { backgroundColor: withAlpha("#FFD54F", isDark ? 0.16 : 0.22) }]}>
           <Ionicons name="shield-checkmark" size={normalize(16)} color="#FFD54F" />
         </View>
-        <Text style={[styles.statValueText, { color: currentTheme.colors.textPrimary }]}>
-          ×{streakPassCount}
-        </Text>
+       <Text
+  style={[
+    styles.statValueText,
+    {
+      color: statNumberColor,
+      textShadowColor: statNumberShadow,
+      textShadowRadius: 7,
+      textShadowOffset: { width: 0, height: 1 },
+    },
+  ]}
+  numberOfLines={1}
+  allowFontScaling
+>
+  ×{streakPassCount}
+</Text>
       </View>
     </View>
 
@@ -385,9 +416,21 @@ const InventoryScreen: React.FC = () => {
         <View style={[styles.statIconBadge, { backgroundColor: withAlpha(currentTheme.colors.trophy, isDark ? 0.16 : 0.18) }]}>
           <Ionicons name="trophy" size={normalize(16)} color={currentTheme.colors.trophy} />
         </View>
-        <Text style={[styles.statValueText, { color: currentTheme.colors.textPrimary }]}>
-          {userData?.trophies ?? 0}
-        </Text>
+        <Text
+  style={[
+    styles.statValueText,
+    {
+      color: statNumberColor,
+      textShadowColor: statNumberShadow,
+      textShadowRadius: 7,
+      textShadowOffset: { width: 0, height: 1 },
+    },
+  ]}
+  numberOfLines={1}
+  allowFontScaling
+>
+  {userData?.trophies ?? 0}
+</Text>
       </View>
     </View>
   </View>
@@ -478,9 +521,21 @@ const InventoryScreen: React.FC = () => {
       },
     ]}
   >
-    <Text style={[styles.itemCountText, { color: currentTheme.colors.textPrimary }]}>
-      ×{streakPassCount}
-    </Text>
+    <Text
+  style={[
+    styles.itemCountText,
+    {
+      color: chipNumColor,
+      textShadowColor: chipNumShadow,
+      textShadowRadius: 6,
+      textShadowOffset: { width: 0, height: 1 },
+    },
+  ]}
+  numberOfLines={1}
+  allowFontScaling
+>
+  ×{streakPassCount}
+</Text>
   </View>
 </View>
 
@@ -678,6 +733,8 @@ const styles = StyleSheet.create({
     fontFamily: "Comfortaa_400Regular",
     writingDirection: I18nManager.isRTL ? "rtl" : "ltr",
    textAlign: "center",
+   includeFontPadding: false,
+textAlignVertical: "center",
   },
   heroStatsRow: {
     flexDirection: "row",
@@ -707,9 +764,10 @@ const styles = StyleSheet.create({
   statValueText: {
   fontSize: normalize(16),
   fontFamily: "Comfortaa_700Bold",
-  includeFontPadding: false,
   writingDirection: I18nManager.isRTL ? "rtl" : "ltr",
   textAlign: "left",
+  includeFontPadding: false,
+textAlignVertical: "center",
 },
 heroSheen: {
   position: "absolute",
@@ -816,9 +874,10 @@ itemSheen: {
  itemCountText: {
   fontSize: normalize(11),
   fontFamily: "Comfortaa_700Bold",
-  includeFontPadding: false,
   writingDirection: I18nManager.isRTL ? "rtl" : "ltr",
   textAlign: "center",
+  includeFontPadding: false,
+textAlignVertical: "center",
 },
   itemSubtitle: {
     fontSize: normalize(11),

@@ -21,7 +21,9 @@
   "dailySelectedSubtitleShort": "Auswahl des Tages.",
   "homeZ": {
     "duoPending": {
-      "title": "Einladung gesendet", "sub": "Ausstehend. Nach Annahme: Duo.", "cta": "Ansehen", "a11y": "Duo-Einladung ausstehend",
+      "cta": "Duo vorbereiten",
+    "hint": "Während du wartest, bereite dein Duo vor.",
+      "title": "Einladung gesendet", "sub": "Ausstehend. Nach Annahme: Duo.", "a11y": "Duo-Einladung ausstehend",
     "steps": {
       "sent": "Einladung gesendet",
       "waiting": "Warten auf Bestätigung",
@@ -40,6 +42,11 @@
     "todayHub": {
       "badge": "HEUTE",
       "primaryActiveShort": "Markieren",
+      "metaPending": "Einladung",
+    "metaNone": "Keine aktiven Challenges",
+    "metaActive": "{{count}} aktive Challenge(s)",
+    "create": "Erstellen",
+      "pendingTap":"Zum Anzeigen tippen",
       "primaryNewShort": "Neu",
   "primaryNewA11y": "Eine neue Challenge auswählen",
   "primaryNewHint": "Öffne Entdecken, um eine neue Challenge auszuwählen.",
@@ -69,8 +76,6 @@
       "soloA11y": "Solo bleiben",
       "soloHint": "Wähle eine Challenge ohne Partner.",
       "inviteSub2": "Einladen. Dranbleiben. Gewinnen.",
-      "metaActive": "{{count}} aktive Challenge(s)",
-      "metaNone": "Keine aktiven Challenges",
       "titleActive": "Markiere deine Challenge. Halte deine Serie.",
       "titleNone": "Wähle eine Challenge und starte heute.",
       "subActive": "1 Tap zum Markieren, 1 Tap zum Einladen. Wachstum kommt durch Duo.",
@@ -78,7 +83,6 @@
       "primaryActive": "Heute markieren",
       "primaryNone": "Challenge wählen",
       "invite": "Einladen (Duo)",
-      "create": "Erstellen",
       "micro": "Duo = Retention x2. Jetzt einladen.",
       "primaryActiveA11y": "Heute markieren",
       "primaryNoneA11y": "Challenge wählen",
@@ -350,6 +354,7 @@
   },
   "newFeatures": {
     "deadlineIso": "2026-02-28T23:59:59+01:00",
+    "proposeIdea": "Eine Idee vorschlagen",
     "shareLabel": "Teilen",
 
     "monthLabelTpl": "Update • {{month}}",
@@ -634,6 +639,7 @@
     "close": "Schließen",
     "edit": "Bearbeiten",
     "hide": "Ausblenden",
+    "keep": "Behalten",
     "notLoggedIn": "Du musst angemeldet sein.",
     "errorTitle": "Fehler",
     "sending": "Wird gesendet…",
@@ -653,6 +659,65 @@
   "addLocationHere": "Füge einen Standort hinzu",
   "addInterestsHere": "Füge deine Interessen hinzu",
   "challengeDetails": {
+    "reviewsSubtitle": "Echtes Feedback, um besser zu wählen und schneller voranzukommen.",
+      "noReviewsHint": "Sei der Erste mit einer hilfreichen Bewertung. 10 Sekunden, echte Wirkung.",
+      "reviewPrivacy": "Bleib hilfreich, klar und freundlich.",
+    "cta_take": "Challenge starten",
+    "cta_markToday": "Heute markieren",
+    "cta_invite": "Freund einladen",
+    "cta_continueSolo": "Solo fortsetzen",
+    "cta_cancelInvite": "Einladung abbrechen",
+    "cta_close": "Schließen",
+    "cta_back": "Zurück",
+
+    "state_loading": "Lädt…",
+    "state_updating": "Wird aktualisiert…",
+    "state_error": "Etwas ist schiefgelaufen",
+
+    "section_overview": "Überblick",
+    "section_progress": "Fortschritt",
+
+    "label_solo": "Solo",
+    "label_duo": "Duo",
+    "label_warmup": "Warten",
+
+    "warmup_title": "Warten auf deinen Partner",
+    "warmup_body": "Sobald er annimmt, wird der Duo-Modus automatisch aktiviert.",
+    "warmup_hint": "Du kannst jederzeit auch solo weitermachen.",
+
+    "pending_title": "Einladung gesendet",
+    "pending_body": "Wir warten auf die Antwort. Du bekommst sofort eine Benachrichtigung.",
+    "pending_badge": "Ausstehend",
+
+    "duo_active_title": "Duo-Modus aktiv",
+    "duo_active_body": "Zieht gemeinsam durch. Konstanz gewinnt.",
+
+    "progress_you": "Du",
+    "progress_partner": "Partner",
+    "progress_daysDone": "{{done}}/{{total}} Tage",
+    "progress_day": "Tag {{day}}",
+
+    "confirm_cancelInvite_title": "Einladung abbrechen?",
+    "confirm_cancelInvite_body": "Sie wird ungültig und kann nicht mehr angenommen werden.",
+    "confirm_cta_yes": "Ja, abbrechen",
+    "confirm_cta_no": "Nein",
+    "startMode": {
+        "title": "Wähle deinen Modus",
+         "cancel": "Abbrechen",
+        "closeA11y": "Schließen",
+        "closeHint": "Schließt das Fenster.",
+        "offlineRequired": "Internetverbindung erforderlich",
+        "sub": "Solo, um voranzukommen. Duo, um bis zum Ende dranzubleiben.",
+        "recommended": "EMPFOHLEN",
+        "duo": "Duo",
+        "duoDesc": "Freund einladen. Bis zum Ende dranbleiben.",
+        "solo": "Solo",
+        "soloDesc": "Einfach, schnell, effektiv.",
+        "duoA11y": "Duo auswählen",
+        "soloA11y": "Solo auswählen",
+        "duoHint": "Wähle danach eine Dauer und lade einen Freund ein.",
+        "soloHint": "Wähle danach eine Dauer und starte."
+      },
     "noDescription": "Keine Beschreibung verfügbar",
     "participantsLabel": "Teilnehmende",
     "quick": {
@@ -1303,6 +1368,10 @@
 
   "dailyBonus": {
     "title": "Tagesbonus",
+    "badge": "BELOHNUNG",
+"oncePerDay": "1 / Tag",
+"teaser2": "Jetzt öffnen und deine geheimnisvolle Belohnung entdecken.",
+"micro": "Schnell. Einfach. Belohnung.",
     "subtitle": "Dreh am geheimnisvollen Rad, um deine Belohnung zu enthüllen 🎁",
     "ctaShort": "Drehen",
     "rerollUnavailable": "Anzeige wird geladen…",
@@ -2281,13 +2350,12 @@
   },
   "shareCardT": {
   "a11yTitle": "Challenge-Share-Karte",
+  "dayOf": "Tag {{day}} von {{total}}",
+  "tagline": "Mach mit bei der Challenge auf ChallengeTies",
   "heldSolo": "Ich hab durchgehalten",
     "heldDuo": "Wir haben durchgehalten",
     "watermark": "@ChallengeTies",
   "a11yHint": "Vorschau der Karte, bevor du sie mit Freunden teilst.",
-
-  "tagline": "Hast du eine Challenge? Erledige sie.",
-
   "duoBadge": "DUO-CHALLENGE",
   "milestoneVariants": [
   "Wir haben {{days}} Tage durchgehalten… und das ist erst der Anfang.",
@@ -2355,10 +2423,33 @@
   "maxChars": "Maximal 500 Zeichen",
   "toClaim": "Zum Abholen",
   "cannotSaveReview": "Bewertung kann derzeit nicht gespeichert werden.",
+  "reviews": {
+    "title": "Was sie gedacht haben",
+    "subtitle": "Ehrliches Feedback, damit du die richtige Challenge auswählst.",
+    "emptyTitle": "Noch keine Bewertungen",
+    "emptySubtitle": "Sei der Erste und hinterlasse hilfreiches Feedback. 10 Sekunden, echter Impact.",
+    "starsLabel": "{{count}} Sterne",
+    "countLabel": "{{count}} Bewertungen"
+  },
 "duo": {
   "leader": "ANFÜHRER",
+   "vs": "VS",
   "pending": {
       "title": "Einladung ausstehend",
+      "warmup": "Warm-up",
+      "warmupHint": "Während du wartest, absolviere dein heutiges Warmup.",
+      "warmupError": "Warmup konnte nicht gespeichert werden.",
+      "partnerPending": "Ausstehend",
+      "warmupToastTitle": "Warmup geschafft",
+      "warmupToastBody": "Wir warten auf deinen Partner.",
+      "warmupToastErrorTitle": "Warmup nicht gespeichert",
+      "warmupToastErrorBody": "Versuch es gleich nochmal.",
+      "warmupCta": "Heutiges Warmup",
+      "warmupA11yHint": "Speichert dein Warmup für heute.",
+      "warmupDone": "Warmup erledigt",
+      "cancelInviteShort": "Abbrechen",
+      "cancelConfirmTitle": "Einladung abbrechen?",
+    "cancelConfirmBody": "Dein Freund kann diesem Duo über diesen Link nicht mehr beitreten.",
       "short": "Einladung ausstehend",
       "body": "Du wirst benachrichtigt, sobald eine Antwort kommt. Du kannst auch abbrechen und jemand anderen einladen.",
       "cancelInvite": "Abbrechen",
@@ -4586,6 +4677,7 @@
   "createChallengeHint": "Ein guter Titel + ein Bild = mehr Teilnehmer.",
 "common": {
     "back": "Zurück",
+    "anonymous": "Anonym", "delete": "Löschen",
     "retry": "Erneut versuchen",
     "tip": "Tipp",
     "loading": "Wird geladen...",
@@ -4649,6 +4741,23 @@
     "hintSolo": "Du startest sofort."
   },
   "step3": {
+    "subtitleByDays": {
+    "3": "3 Tage: ein Mini-Sprint. Gerade genug, um es dir zu beweisen.",
+    "7": "7 Tage: perfekt, um schnell zu starten.",
+    "15": "15 Tage: von „ich versuche“ zu „ich mache es“.",
+    "21": "21 Tage: eine echte Routine entsteht.",
+    "30": "30 Tage: ernstes Ziel. Du veränderst dich wirklich.",
+    "60": "60 Tage: echte Disziplin. Beständigkeit wird normal.",
+    "90": "90 Tage: Transformation. Du wirst jemand, der durchzieht.",
+    "180": "180 Tage: starkes Commitment. Neuer Lebensstandard.",
+    "365": "365 Tage: Elite-Level. Das bist jetzt du."
+  },
+  "subtitleGeneric": {
+    "short": "{{count}} Tage: kurz und effektiv.",
+    "medium": "{{count}} Tage: genug für eine Gewohnheit.",
+    "long": "{{count}} Tage: starkes Commitment.",
+    "ultra": "{{count}} Tage: radikale Veränderung."
+  },
     "title": "Wie lange hältst du durch?",
     "subtitle": "7 Tage sind ein super Start. Du kannst später anpassen.",
     "cta": "Los",

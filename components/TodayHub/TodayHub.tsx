@@ -1,6 +1,14 @@
 // components/TodayHub.tsx
 import React, { useEffect, useMemo } from "react";
-import { View, Text, Pressable, StyleSheet, useWindowDimensions } from "react-native";
+import {
+  View,
+  Text,
+  Pressable,
+  StyleSheet,
+  useWindowDimensions,
+  Platform,
+  PixelRatio,
+} from "react-native";
 import { LinearGradient } from "expo-linear-gradient";
 import { Ionicons } from "@expo/vector-icons";
 import Animated, {
@@ -12,9 +20,11 @@ import Animated, {
 } from "react-native-reanimated";
 import type { TFunction } from "i18next";
 import { Image as ExpoImage } from "expo-image";
+import * as Haptics from "expo-haptics";
+import type { AnimatedStyle } from "react-native-reanimated";
+import type { ViewStyle } from "react-native";
 
-
-type PrimaryMode = "mark" | "new" | "duo" | "duoPending";
+export type TodayHubPrimaryMode = "mark" | "new" | "pick" | "duo" | "duoPending";
 
 type HubMeta = {
   id?: string;
@@ -26,10 +36,13 @@ type HubMeta = {
 type Props = {
   t: TFunction;
   isDarkMode: boolean;
+  langKey: string;
 
-  primaryMode: PrimaryMode;
+  primaryMode: TodayHubPrimaryMode;
   hasActiveChallenges: boolean;
   activeCount: number;
+  primaryCtaRef?: React.RefObject<any>;
+  primaryAnimatedStyle?: AnimatedStyle<ViewStyle>;
 
   title: string;
   sub: string;
@@ -45,6 +58,7 @@ type Props = {
 
   onOpenHub: () => void;
   onPrimaryPress: () => void;
+  onPendingWarmupPress?: () => void;
   onPickSolo: () => void;
   onCreate: () => void;
 
@@ -58,15 +72,16 @@ const F = {
   bold: "Comfortaa_700Bold",
 } as const;
 
-
-
 export default function TodayHub(props: Props) {
   const {
     t,
     isDarkMode,
+    langKey,
     primaryMode,
     hasActiveChallenges,
     activeCount,
+    primaryCtaRef,
+    primaryAnimatedStyle,
     title,
     sub,
     hubMeta,
@@ -77,6 +92,7 @@ export default function TodayHub(props: Props) {
     primaryLabel,
     onOpenHub,
     onPrimaryPress,
+    onPendingWarmupPress,
     onPickSolo,
     onCreate,
     CONTENT_MAX_W,
@@ -86,6 +102,42 @@ export default function TodayHub(props: Props) {
     const { width: W } = useWindowDimensions();
   const isTiny = W < 350;
   const isLarge = W >= 430;
+  const isTablet = W >= 700;
+
+  // ✅ responsive micro-tokens (no hard UI)
+  const UI = useMemo(() => {
+    const clamp = (v: number, a: number, b: number) => Math.max(a, Math.min(b, v));
+    const pad = clamp(normalize(isTiny ? 14 : isTablet ? 18 : 16), 14, 20);
+    const shellR = clamp(normalize(isTiny ? 24 : isTablet ? 30 : 26), 22, 32);
+    const cardR = clamp(normalize(isTiny ? 16 : isTablet ? 20 : 18), 14, 22);
+    const ctaR = clamp(normalize(isTiny ? 16 : isTablet ? 22 : 18), 14, 24);
+    const iconBox = clamp(normalize(isTiny ? 58 : isTablet ? 74 : 64), 56, 78);
+    const orb = clamp(Math.round(iconBox * 0.78), 44, 62);
+    const ring = iconBox;
+    const sheen = clamp(Math.round(iconBox * 1.55), 84, 132);
+    const aura = clamp(Math.round(iconBox * 1.78), 96, 150);
+    const gap = clamp(normalize(isTiny ? 10 : isTablet ? 14 : 12), 9, 16);
+    const ctaPadY = clamp(normalize(isTiny ? 7 : isTablet ? 10 : 8), 6, 12);
+    const ctaPadX = clamp(normalize(isTiny ? 10 : isTablet ? 14 : 12), 10, 16);
+   const ctaIcon = clamp(normalize(isTiny ? 14 : isTablet ? 18 : 16), 14, 20);
+   const hourglass = clamp(normalize(isTiny ? 20 : isTablet ? 26 : 22), 18, 28);
+   return {
+      pad,
+      shellR,
+      cardR,
+      ctaR,
+      iconBox,
+      orb,
+      ring,
+      sheen,
+      aura,
+      gap,
+      ctaPadY,
+      ctaPadX,
+      ctaIcon,
+      hourglass,
+    };
+  }, [normalize, isTiny, isTablet]);
 
   const TYPO = useMemo(() => {
     // ✅ cohérent avec ton index + DailyBonus (un poil plus “dense”)
@@ -148,29 +200,29 @@ export default function TodayHub(props: Props) {
 
 
   const ringStyle = useAnimatedStyle(() => {
-    const s = 1 + ring.value * 0.06; // plus clean
-    const o = 0.16 + ring.value * 0.14; // glow discret
+   const s = 1 + ring.value * 0.045;
+   const o = 0.12 + ring.value * 0.10;
     return { transform: [{ scale: s }], opacity: o };
   });
 
   const glowStyle = useAnimatedStyle(() => {
-    const o = 0.08 + glow.value * 0.14;
+    const o = 0.06 + glow.value * 0.10;
     return { opacity: o };
   });
 
     const breathStyle = useAnimatedStyle(() => {
     const p = breath.value; // 0..1
     return {
-      opacity: 0.12 + p * 0.16,             // 0.12 -> 0.28
-      transform: [{ scale: 1 + p * 0.10 }], // 1 -> 1.10 (bien visible)
+      opacity: 0.08 + p * 0.12,
+      transform: [{ scale: 1 + p * 0.08 }],
     };
   });
 
   const auraStyle = useAnimatedStyle(() => {
     const a = aura.value;
     return {
-      opacity: 0.10 + a * 0.18, // 0.10 -> 0.28
-      transform: [{ scale: 1 + a * 0.14 }], // 1 -> 1.14 (halo large)
+      opacity: 0.07 + a * 0.13,
+     transform: [{ scale: 1 + a * 0.10 }],
     };
   });
 
@@ -182,13 +234,11 @@ export default function TodayHub(props: Props) {
     if (!hasActiveChallenges) {
       return t("homeZ.todayHub.metaNone", { defaultValue: "Aucun défi actif" });
     }
-    return t("homeZ.todayHub.metaActiveCount", {
+    return t("homeZ.todayHub.metaActive", {
       defaultValue: "{{count}} défi(s) actif(s)",
       count: activeCount,
     });
-  }, [t, primaryMode, hasActiveChallenges, activeCount]);
-
-  const showSoloLink = !hasActiveChallenges && primaryMode !== "duoPending";
+  }, [t, langKey, primaryMode, hasActiveChallenges, activeCount]);
 
     const effectivePrimaryGradient = useMemo(() => {
     // ✅ Quand aucun défi actif -> CTA “activation”, pas “succès”
@@ -198,32 +248,170 @@ export default function TodayHub(props: Props) {
     return primaryGradient;
   }, [primaryMode, hasActiveChallenges, primaryGradient]);
 
+  const TOKENS = useMemo(() => {
+    const border = isDarkMode ? "rgba(255,255,255,0.10)" : "rgba(2,6,23,0.08)";
+    const surface = isDarkMode ? "rgba(255,255,255,0.05)" : "rgba(255,255,255,0.74)";
+    const surface2 = isDarkMode ? "rgba(255,255,255,0.04)" : "rgba(255,255,255,0.86)";
+    const text = isDarkMode ? "#F8FAFC" : "#0B1120";
+    const subText = isDarkMode ? "rgba(226,232,240,0.70)" : "rgba(15,23,42,0.62)";
+    const mutedText = isDarkMode ? "rgba(226,232,240,0.65)" : "rgba(15,23,42,0.55)";
+    const track = isDarkMode ? "rgba(226,232,240,0.10)" : "rgba(2,6,23,0.08)";
+    const icon = isDarkMode ? "#E2E8F0" : "#0B1120";
+    const chevron = isDarkMode ? "rgba(226,232,240,0.85)" : "rgba(2,6,23,0.85)";
+    const pillA = isDarkMode ? "rgba(148,163,184,0.20)" : "rgba(148,163,184,0.35)";
+    const pillB = isDarkMode ? "rgba(226,232,240,0.10)" : "rgba(2,6,23,0.06)";
+    const thumbBorder = isDarkMode ? "rgba(226,232,240,0.18)" : "rgba(2,6,23,0.10)";
+    const thumbBg = isDarkMode ? "rgba(255,255,255,0.04)" : "rgba(2,6,23,0.03)";
+    const hairline = Math.max(1, Math.round(PixelRatio.get() * 0.35)) / PixelRatio.get();
+    const highlight = isDarkMode
+      ? "rgba(255,255,255,0.08)"
+      : "rgba(255,255,255,0.75)";
+    const rim = isDarkMode ? "rgba(255,255,255,0.12)" : "rgba(2,6,23,0.08)";
+
+
+    // ✅ progress qui se “marie” au CTA (pas orange random)
+    const progressFill = effectivePrimaryGradient[1];
+
+    return {
+      border,
+      surface,
+      surface2,
+      text,
+      subText,
+      mutedText,
+      track,
+      icon,
+      chevron,
+      pillA,
+      pillB,
+      thumbBorder,
+      thumbBg,
+      progressFill,
+      hairline,
+      highlight,
+      rim,
+    };
+  }, [isDarkMode, effectivePrimaryGradient]);
+
+  const hapticTap = (kind: "light" | "selection" = "light") => {
+    if (Platform.OS === "web") return;
+    try {
+      if (kind === "selection") Haptics.selectionAsync();
+      else Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
+    } catch {}
+  };
+
+  const pressFx = (pressed: boolean, baseScale = 0.995) => ({
+    opacity: pressed ? 0.96 : 1,
+    transform: [{ scale: pressed ? baseScale : 1 }],
+  });
+
+  const showSoloLink = !hasActiveChallenges && primaryMode !== "duoPending";
+
+const pendingTitle = useMemo(
+    () => t("homeZ.duoPending.title", { defaultValue: "Invite sent" }),
+   [t, langKey]
+  );
+  const pendingSub = useMemo(
+    () =>
+      t("homeZ.duoPending.sub", {
+        defaultValue: "Pending. Once accepted: Duo.",
+      }),
+    [t, langKey]
+  );
+
+  const pendingHint = useMemo(
+    () =>
+      t("homeZ.duoPending.hint", {
+        defaultValue: "While waiting, set up your Duo.",
+      }),
+    [t, langKey]
+  );
+
+  const displayTitle = isPending ? pendingTitle : title;
+  const displaySub = isPending ? pendingHint : sub;
+ 
+  const pendingA11y = useMemo(
+    () => t("homeZ.duoPending.a11y", { defaultValue: "Duo invite pending" }),
+    [t, langKey]
+  );
+
+  const stepSent = useMemo(
+    () => t("homeZ.duoPending.steps.sent", { defaultValue: "Invitation sent" }),
+    [t, langKey]
+  );
+  const stepWaiting = useMemo(
+    () => t("homeZ.duoPending.steps.waiting", { defaultValue: "Waiting for acceptance" }),
+    [t, langKey]
+  );
+  const stepReady = useMemo(
+    () => t("homeZ.duoPending.steps.ready", { defaultValue: "Once confirmed: Duo starts" }),
+   [t, langKey]
+  );
+
+  const todayBadge = useMemo(
+    () => t("homeZ.todayHub.badge", { defaultValue: "TODAY" }),
+    [t, langKey]
+  );
+
 
   return (
     <View style={{ width: "100%", alignItems: "center" }}>
       <View
-        style={[
-          s.shell,
-          {
-            maxWidth: CONTENT_MAX_W,
-            borderColor: isDarkMode ? "rgba(255,255,255,0.10)" : "rgba(2,6,23,0.08)",
-            backgroundColor: isDarkMode ? "rgba(255,255,255,0.05)" : "rgba(255,255,255,0.72)",
-          },
-        ]}
-      >
+  style={[
+    s.shell,
+    s.shadowSoft,
+    {
+      maxWidth: CONTENT_MAX_W,
+      borderColor: TOKENS.rim,
+      backgroundColor: TOKENS.surface,
+      borderRadius: UI.shellR,
+      padding: UI.pad,
+    },
+  ]}
+>
+  {/* ✅ subtle highlight to add “depth” (Android+iOS) */}
+        <View
+          pointerEvents="none"
+          style={[
+            s.shellHighlight,
+            {
+              borderColor: isDarkMode
+                ? "rgba(255,255,255,0.10)"
+                : "rgba(2,6,23,0.06)",
+              backgroundColor: isDarkMode
+                ? "rgba(255,255,255,0.06)"
+                : "rgba(255,255,255,0.55)",
+            },
+          ]}
+        />
+                <View
+          pointerEvents="none"
+          style={[
+            s.shellRim,
+            {
+              borderColor: TOKENS.rim,
+              borderWidth: TOKENS.hairline,
+            },
+          ]}
+        />
+
+
         {/* Top pills */}
-        <View style={s.pillsRow}>
+        <View style={[s.pillsRow, { marginBottom: normalize(isTiny ? 10 : 12) }]}>
           <View
             style={[
               s.pill,
               {
-                backgroundColor: isDarkMode ? "rgba(148,163,184,0.20)" : "rgba(148,163,184,0.35)",
+                backgroundColor: TOKENS.pillA,
+                borderWidth: TOKENS.hairline,
+                borderColor: TOKENS.rim,
               },
             ]}
           >
-            <Ionicons name="flash-outline" size={normalize(14)} color={isDarkMode ? "#E2E8F0" : "#0B1120"} />
-                        <Text style={[s.pillText, { color: isDarkMode ? "#E2E8F0" : "#0B1120", fontSize: TYPO.pill }]}>
-              {t("homeZ.todayHub.pillToday", { defaultValue: "AUJOURD’HUI" })}
+            <Ionicons name="flash-outline" size={normalize(14)} color={TOKENS.icon} />
+                        <Text style={[s.pillText, { color: TOKENS.icon, fontSize: TYPO.pill }]}>
+              {todayBadge}
             </Text>
           </View>
 
@@ -231,17 +419,19 @@ export default function TodayHub(props: Props) {
             style={[
               s.pill,
               {
-                backgroundColor: isDarkMode ? "rgba(226,232,240,0.10)" : "rgba(2,6,23,0.06)",
+                backgroundColor: TOKENS.pillB,
+                borderWidth: TOKENS.hairline,
+                borderColor: TOKENS.rim,
               },
             ]}
           >
             <Ionicons
               name={primaryMode === "duoPending" ? "hourglass-outline" : "flame-outline"}
               size={normalize(14)}
-              color={isDarkMode ? "#E2E8F0" : "#0B1120"}
+              color={TOKENS.icon}
             />
                         <Text
-              style={[s.pillText, { color: isDarkMode ? "#E2E8F0" : "#0B1120", fontSize: TYPO.pill }]}
+              style={[s.pillText, { color: TOKENS.icon, fontSize: TYPO.pill }]}
               numberOfLines={1}
               adjustsFontSizeToFit
               minimumFontScale={0.88}
@@ -253,56 +443,63 @@ export default function TodayHub(props: Props) {
         </View>
 
         {/* Title */}
-                <Text
-          style={[
-            s.title,
-            { color: isDarkMode ? "#F8FAFC" : "#0B1120", fontSize: TYPO.title },
-          ]}
+                <Text style={[s.title, { color: TOKENS.text, fontSize: TYPO.title }]}
           numberOfLines={2}
           adjustsFontSizeToFit
           minimumFontScale={0.88}
         >
 
-          {title}
+          {displayTitle}
         </Text>
 
         <Text
           style={[
-            s.sub,
-            {
-              color: isDarkMode ? "rgba(226,232,240,0.70)" : "rgba(15,23,42,0.62)",
-              fontSize: TYPO.sub,
-              lineHeight: Math.round(TYPO.sub * 1.35),
-            },
-          ]}
+    s.sub,
+    {
+      color: TOKENS.subText,
+      fontSize: TYPO.sub,
+      lineHeight: Math.round(TYPO.sub * 1.35),
+    },
+  ]}
           numberOfLines={2}
           adjustsFontSizeToFit
           minimumFontScale={0.92}
         >
-          {sub}
+          {displaySub}
         </Text>
 
         {/* Hub preview (tap to open) */}
         {!!hubMeta?.title && (
           <Pressable
-            onPress={onOpenHub}
-            style={({ pressed }) => [
-              s.preview,
-              {
-                borderColor: isDarkMode ? "rgba(226,232,240,0.16)" : "rgba(2,6,23,0.10)",
-                backgroundColor: isDarkMode ? "rgba(255,255,255,0.04)" : "rgba(255,255,255,0.80)",
-                opacity: pressed ? 0.96 : 1,
-                transform: [{ scale: pressed ? 0.995 : 1 }],
-              },
-            ]}
+            onPress={() => {
+    hapticTap("selection");
+    onOpenHub();
+  }}
+  style={({ pressed }) => [
+    s.preview,
+    {
+      borderColor: TOKENS.border,
+      backgroundColor: TOKENS.surface2,
+    },
+    pressFx(pressed, 0.993),
+  ]}
           >
+                        <View
+              pointerEvents="none"
+              style={[
+                s.previewRim,
+                { borderColor: TOKENS.rim, borderWidth: TOKENS.hairline },
+              ]}
+            />
+
             {hubMeta?.imageUrl ? (
   <View
     style={[
       s.previewThumbWrap,
       {
-        borderColor: isDarkMode ? "rgba(226,232,240,0.18)" : "rgba(2,6,23,0.10)",
-        backgroundColor: isDarkMode ? "rgba(255,255,255,0.04)" : "rgba(2,6,23,0.03)",
+        borderColor: TOKENS.thumbBorder,
+        backgroundColor: TOKENS.thumbBg,
+
       },
     ]}
   >
@@ -320,11 +517,20 @@ export default function TodayHub(props: Props) {
     style={[
       s.previewThumbWrap,
       {
-        borderColor: isDarkMode ? "rgba(226,232,240,0.18)" : "rgba(2,6,23,0.10)",
-        backgroundColor: isDarkMode ? "rgba(255,255,255,0.04)" : "rgba(2,6,23,0.03)",
+        borderColor: TOKENS.thumbBorder,
+        backgroundColor: TOKENS.thumbBg,
+
       },
     ]}
   >
+        <View
+      pointerEvents="none"
+      style={[
+        s.thumbRim,
+        { borderColor: TOKENS.thumbBorder, borderWidth: TOKENS.hairline },
+      ]}
+    />
+
     <Ionicons
       name="sparkles-outline"
       size={normalize(18)}
@@ -333,9 +539,9 @@ export default function TodayHub(props: Props) {
   </View>
 )}
 
-            <View style={{ flex: 1, minWidth: 0 }}>
+            <View style={{ flex: 1, minWidth: 0, marginRight: 10 }}>
               <Text
-                style={[s.previewTitle, { color: isDarkMode ? "#F8FAFC" : "#0B1120", fontSize: TYPO.previewTitle }]}
+                 style={[s.previewTitle, { color: TOKENS.text, fontSize: TYPO.previewTitle }]}
                 numberOfLines={1}
                 adjustsFontSizeToFit
                 minimumFontScale={0.90}
@@ -348,7 +554,7 @@ export default function TodayHub(props: Props) {
                   style={[
                     s.previewDesc,
                     {
-                      color: isDarkMode ? "rgba(226,232,240,0.65)" : "rgba(15,23,42,0.55)",
+                       color: TOKENS.mutedText,
                       fontSize: TYPO.previewDesc,
                       lineHeight: Math.round(TYPO.previewDesc * 1.25),
                     },
@@ -362,26 +568,33 @@ export default function TodayHub(props: Props) {
                 </Text>
               )}
 
-              <View
-                style={[
-                  s.progressTrack,
-                  { backgroundColor: isDarkMode ? "rgba(226,232,240,0.10)" : "rgba(2,6,23,0.08)" },
-                ]}
-              >
+              <View style={[s.progressTrack, { backgroundColor: TOKENS.track }]}>
+
                 <View
-                  style={[
-                    s.progressFill,
-                    { width: `${Math.round(Math.max(0, Math.min(1, progressPct)) * 100)}%` },
-                  ]}
-                />
+  style={[
+    s.progressFill,
+    {
+      width: `${Math.round(Math.max(0, Math.min(1, progressPct)) * 100)}%`,
+      backgroundColor: TOKENS.progressFill,
+    },
+  ]}
+/>
               </View>
             </View>
 
-            <Ionicons
-              name="chevron-forward"
-              size={normalize(20)}
-              color={isDarkMode ? "rgba(226,232,240,0.85)" : "rgba(2,6,23,0.85)"}
-            />
+                        <View
+              style={[
+                s.previewChevron,
+                { backgroundColor: isDarkMode ? "rgba(255,255,255,0.06)" : "rgba(2,6,23,0.04)" },
+              ]}
+            >
+              <Ionicons
+                name="chevron-forward"
+                size={normalize(18)}
+                color={TOKENS.chevron}
+              />
+            </View>
+
           </Pressable>
         )}
 
@@ -389,95 +602,145 @@ export default function TodayHub(props: Props) {
         {primaryMode === "duoPending" ? (
           <View style={s.pendingWrap}>
             <Pressable
-              onPress={onPrimaryPress}
+              ref={primaryCtaRef as any}
+              onPress={() => {
+                hapticTap("selection");
+                (onPendingWarmupPress ?? onPrimaryPress)();
+              }}
               accessibilityRole="button"
-              accessibilityLabel={t("homeZ.todayHub.pendingCtaA11y", { defaultValue: "Invitation en attente" })}
+              accessibilityLabel={pendingA11y}
+              accessibilityHint={t("homeZ.duoPending.hint", { defaultValue: "Open to prepare your Duo while waiting." })}
               style={({ pressed }) => [
-                s.pendingPress,
-                pressed && { transform: [{ scale: 0.985 }], opacity: 0.98 },
+                s.pendingCard,
+               {
+                  borderColor: TOKENS.border,
+                  backgroundColor: TOKENS.surface2,
+                  borderRadius: UI.cardR,
+                  paddingVertical: normalize(isTiny ? 12 : isTablet ? 16 : 14),
+                  paddingHorizontal: normalize(isTiny ? 12 : isTablet ? 16 : 14),
+                },
+                primaryAnimatedStyle as any,
+                pressFx(pressed, 0.992),
               ]}
             >
-              <View style={s.pendingCircleBox}>
-                                {/* ✅ Big breathing orb (respiration) */}
-                <Animated.View
-                  pointerEvents="none"
-                  style={[
-                    s.pendingAura,
-                    auraStyle,
-                    { backgroundColor: isDarkMode ? "rgba(99,102,241,0.26)" : "rgba(99,102,241,0.18)" },
-                  ]}
-                />
-                <Animated.View
-                  pointerEvents="none"
-                  style={[
-                    s.pendingBreath,
-                    breathStyle,
-                    { backgroundColor: isDarkMode ? "rgba(167,139,250,0.32)" : "rgba(167,139,250,0.22)" },
-                  ]}
-                />
-
-                <Animated.View
-                  pointerEvents="none"
-                  style={[
-                    s.pendingGlow,
-                    glowStyle,
-                    { backgroundColor: isDarkMode ? "rgba(99,102,241,0.35)" : "rgba(99,102,241,0.22)" },
-                  ]}
-                />
-                <Animated.View
-                  pointerEvents="none"
-                  style={[
-                    s.pendingRing,
-                    ringStyle,
-                    { borderColor: isDarkMode ? "rgba(167,139,250,0.55)" : "rgba(99,102,241,0.45)" },
-                  ]}
-                />
-
-                <LinearGradient
-                  colors={["#6366F1", "#A78BFA"]}
-                  start={{ x: 0, y: 0 }}
-                  end={{ x: 1, y: 1 }}
-                  style={s.pendingCircle}
-                >
-                  <Ionicons name="hourglass-outline" size={normalize(26)} color="#0B1120" />
-                </LinearGradient>
-              </View>
-
-                            <Text
-                style={[s.pendingLabel, { color: isDarkMode ? "#F8FAFC" : "#0B1120", fontSize: TYPO.pendingLabel }]}
-                numberOfLines={1}
-                adjustsFontSizeToFit
-                minimumFontScale={0.90}
-              >
-
-                {t("homeZ.todayHub.pendingShort", { defaultValue: "En attente" })}
-              </Text>
-                            <Text
+              {/* ✅ internal rim (premium) */}
+              <View
+                pointerEvents="none"
                 style={[
-                  s.pendingMicro,
-                  {
-                    color: isDarkMode ? "rgba(226,232,240,0.62)" : "rgba(15,23,42,0.55)",
-                    fontSize: TYPO.pendingMicro,
-                    lineHeight: Math.round(TYPO.pendingMicro * 1.25),
-                  },
+                  s.pendingRim,
+                  { borderRadius: UI.cardR, borderColor: TOKENS.rim, borderWidth: TOKENS.hairline },
                 ]}
-                numberOfLines={1}
-                adjustsFontSizeToFit
-                minimumFontScale={0.90}
-              >
+              />
+              <View style={s.pendingRow}>
+                <View style={[s.pendingCircleBox, { width: UI.iconBox, height: UI.iconBox }]}>
+                  {/* ✅ breathing orb (compact) */}
+                  <Animated.View
+                    pointerEvents="none"
+                    style={[
+                      s.pendingAura,
+                      auraStyle,
+                      { backgroundColor: isDarkMode ? "rgba(99,102,241,0.16)" : "rgba(99,102,241,0.10)",
+                        width: UI.aura, height: UI.aura, borderRadius: 999 },
+                    ]}
+                  />
+                  <Animated.View
+                    pointerEvents="none"
+                    style={[
+                      s.pendingBreath,
+                      breathStyle,
+                       { backgroundColor: isDarkMode ? "rgba(167,139,250,0.18)" : "rgba(167,139,250,0.12)",
+                         width: UI.sheen, height: UI.sheen, borderRadius: 999 },
+                    ]}
+                  />
+                  <Animated.View
+                    pointerEvents="none"
+                    style={[
+                      s.pendingRing,
+                      ringStyle,
+                      {
+                        borderColor: isDarkMode ? "rgba(167,139,250,0.55)" : "rgba(99,102,241,0.42)",
+                        width: UI.ring,
+                        height: UI.ring,
+                        borderRadius: 999,
+                      },
+                    ]}
+                  />
 
-                {t("homeZ.todayHub.pendingMicro", { defaultValue: "Dès la réponse, ça passe en Duo." })}
-              </Text>
+                  <LinearGradient
+                    colors={["#6366F1", "#A78BFA"]}
+                    start={{ x: 0, y: 0 }}
+                    end={{ x: 1, y: 1 }}
+                    style={[
+                      s.pendingCircle,
+                      { width: UI.orb, height: UI.orb, borderRadius: 999 },
+                    ]}
+                  >
+                    <Ionicons name="hourglass-outline" size={UI.hourglass} color="#0B1120" />
+                  </LinearGradient>
+                </View>
+
+                <View style={s.pendingCopy}>
+
+{/* ✅ Info (non action) — 1 seule fois ici */}
+                  <Text
+                    style={[
+                      s.pendingMicro,
+                      {
+                        color: TOKENS.mutedText,
+                        fontSize: TYPO.pendingMicro,
+                        lineHeight: Math.round(TYPO.pendingMicro * 1.25),
+                      },
+                    ]}
+                    numberOfLines={2}
+                    adjustsFontSizeToFit
+                    minimumFontScale={0.92}
+                  >
+                    {pendingSub}
+                  </Text>
+
+                  {/* ✅ Action row: spacer + chip */}
+                  <View style={s.pendingCtaRow}>
+                    <View style={{ flex: 1 }} />
+                    <View
+                      style={[
+                        s.pendingChip,
+                        {
+                          borderRadius: UI.ctaR,
+                          paddingVertical: UI.ctaPadY,
+                          paddingHorizontal: UI.ctaPadX,
+                        },
+                      ]}
+                    >                  
+
+                      <Text
+                        style={[s.pendingChipText, { fontSize: TYPO.pendingLabel }]}
+                        numberOfLines={1}
+                        adjustsFontSizeToFit
+                        minimumFontScale={0.88}
+                      >
+                        {t("duo.pending.warmup", { defaultValue: "Warmup" })}
+                      </Text>
+                      <Ionicons name="arrow-forward" size={UI.ctaIcon} color="#0B1120" />
+                    </View>
+                  </View>
+                </View>
+              </View>
             </Pressable>
           </View>
         ) : (
           <Pressable
-            onPress={onPrimaryPress}
+          ref={primaryCtaRef as any}
+            onPress={() => {
+    hapticTap("light");
+    onPrimaryPress();
+  }}
             accessibilityRole="button"
             style={({ pressed }) => [
-              s.primaryBtn,
-              pressed && { transform: [{ scale: 0.992 }], opacity: 0.98 },
-            ]}
+    s.primaryBtn,
+    s.shadowSoft,
+    primaryAnimatedStyle as any,
+    pressFx(pressed, 0.990),
+  ]}
           >
             <LinearGradient
              colors={[effectivePrimaryGradient[0], effectivePrimaryGradient[1]]}
@@ -502,31 +765,34 @@ export default function TodayHub(props: Props) {
         {/* Secondary actions */}
         <View style={s.secondaryRow}>
           {showSoloLink && (
-            <Pressable onPress={onPickSolo} style={({ pressed }) => [s.linkBtn, pressed && { opacity: 0.7 }]}>
-              <Text style={[s.linkText, { color: isDarkMode ? "rgba(226,232,240,0.78)" : "rgba(2,6,23,0.72)", fontSize: TYPO.link }]}>
+            <Pressable onPress={() => {
+   hapticTap("selection");
+   onPickSolo();
+ }}
+ style={({ pressed }) => [s.linkBtn, pressed && { opacity: 0.70 }]}>
+              <Text  style={[s.linkText, { color: TOKENS.mutedText, fontSize: TYPO.link }]}>
                 {t("homeZ.todayHub.continueSolo", { defaultValue: "Continuer en solo" })}
               </Text>
             </Pressable>
           )}
 
           <Pressable
-            onPress={onCreate}
-            style={({ pressed }) => [
-              s.createCard,
-              {
-                borderColor: isDarkMode ? "rgba(226,232,240,0.16)" : "rgba(2,6,23,0.10)",
-                backgroundColor: isDarkMode ? "rgba(255,255,255,0.04)" : "rgba(255,255,255,0.80)",
-                opacity: pressed ? 0.96 : 1,
-                transform: [{ scale: pressed ? 0.995 : 1 }],
-              },
-            ]}
+            onPress={() => {
+   hapticTap("selection");
+   onCreate();
+ }}
+ style={({ pressed }) => [
+   s.createCard,
+   { borderColor: TOKENS.border, backgroundColor: TOKENS.surface2 },
+   pressFx(pressed, 0.993),
+ ]}
           >
             <View
               style={[
                 s.createIcon,
                 {
-                  borderColor: isDarkMode ? "rgba(226,232,240,0.22)" : "rgba(2,6,23,0.14)",
-                  backgroundColor: isDarkMode ? "rgba(255,255,255,0.04)" : "rgba(255,255,255,0.65)",
+                  borderColor: TOKENS.thumbBorder,
+                  backgroundColor: TOKENS.thumbBg,
                 },
               ]}
             >
@@ -534,7 +800,7 @@ export default function TodayHub(props: Props) {
             </View>
 
            <Text
-  style={[s.createTitle, { color: isDarkMode ? "#F8FAFC" : "#0B1120", fontSize: TYPO.createTitle }]}
+  style={[s.createTitle, { color: TOKENS.text, fontSize: TYPO.createTitle }]}
   numberOfLines={1}
   adjustsFontSizeToFit
   minimumFontScale={0.90}
@@ -546,7 +812,7 @@ export default function TodayHub(props: Props) {
   style={[
     s.createSub,
     {
-      color: isDarkMode ? "rgba(226,232,240,0.62)" : "rgba(15,23,42,0.55)",
+      color: TOKENS.mutedText,
       fontSize: TYPO.createSub,
       lineHeight: Math.round(TYPO.createSub * 1.25),
     },
@@ -568,7 +834,8 @@ export default function TodayHub(props: Props) {
 const s = StyleSheet.create({
     shell: {
     width: "100%",
-    borderWidth: 1,
+    position: "relative",
+    borderWidth: 0,
     borderRadius: 26,
     padding: 16,
     marginBottom: 0,
@@ -576,14 +843,31 @@ const s = StyleSheet.create({
   },
     pendingAura: {
     position: "absolute",
-    width: 128,
-    height: 128,
+    width: 106,
+    height: 106,
     borderRadius: 999,
   },
+  pendingRim: {
+    ...StyleSheet.absoluteFillObject,
+  },
+  shadowSoft: {
+    
+  ...Platform.select({
+    ios: {
+      shadowColor: "#000",
+      shadowOpacity: 0.12,
+shadowRadius: 22,
+      shadowOffset: { width: 0, height: 10 },
+    },
+    android: { elevation: 12 },
+    default: {},
+    
+  }),
+},
   pendingBreath: {
     position: "absolute",
-    width: 112,
-    height: 112,
+    width: 92,
+    height: 92,
     borderRadius: 999,
   },
   pillsRow: {
@@ -597,7 +881,7 @@ const s = StyleSheet.create({
     alignItems: "center",
     gap: 8,
     paddingHorizontal: 12,
-    paddingVertical: 8,
+    paddingVertical: 7,
     borderRadius: 999,
     flexShrink: 1,
   },
@@ -619,12 +903,13 @@ const s = StyleSheet.create({
   },
   preview: {
     width: "100%",
-    borderWidth: 1,
-    borderRadius: 18,
-    padding: 14,
+    borderWidth: 0,
+borderRadius: 20,
+paddingVertical: 14,
+paddingHorizontal: 14,
+
     flexDirection: "row",
     alignItems: "center",
-    gap: 12,
     marginBottom: 14,
   },
   previewTitle: {
@@ -642,10 +927,11 @@ const s = StyleSheet.create({
   width: 46,
   height: 46,
   borderRadius: 14,
-  borderWidth: 1,
+  borderWidth: 0,
   overflow: "hidden",
   alignItems: "center",
   justifyContent: "center",
+  backgroundColor: "transparent",
 },
 previewThumb: {
   width: "100%",
@@ -657,20 +943,19 @@ previewThumb: {
     overflow: "hidden",
   },
   progressFill: {
-    height: 6,
-    borderRadius: 999,
-    backgroundColor: "#F97316",
-  },
+  height: 6,
+  borderRadius: 999,
+},
   primaryBtn: {
     width: "100%",
-    borderRadius: 18,
     overflow: "hidden",
     marginBottom: 10,
+    borderRadius: 20,
   },
   primaryGradient: {
     paddingVertical: 16,
     paddingHorizontal: 16,
-    borderRadius: 18,
+    borderRadius: 20,
     flexDirection: "row",
     alignItems: "center",
     justifyContent: "space-between",
@@ -680,56 +965,189 @@ previewThumb: {
     fontFamily: F.bold,
     letterSpacing: -0.2,
     color: "#0B1120",
+    textShadowColor: "rgba(255,255,255,0.10)",
+    textShadowOffset: { width: 0, height: 1 },
+    textShadowRadius: 6,
   },
+    shellRim: {
+    position: "absolute",
+    top: 0,
+    left: 0,
+    right: 0,
+    bottom: 0,
+    borderRadius: 26,
+  },
+
+  previewRim: {
+    position: "absolute",
+    top: 0,
+    left: 0,
+    right: 0,
+    bottom: 0,
+    borderRadius: 20,
+  },
+
+  thumbRim: {
+    position: "absolute",
+    top: 0,
+    left: 0,
+    right: 0,
+    bottom: 0,
+    borderRadius: 14,
+  },
+
   pendingWrap: {
     width: "100%",
     alignItems: "center",
     marginBottom: 10,
   },
-  pendingPress: {
-    alignItems: "center",
+  pendingCard: {
     width: "100%",
+    borderWidth: 1,
+    borderRadius: 18,
+    paddingVertical: 14,
+    paddingHorizontal: 14,
+    overflow: "hidden",
+  },
+  pendingRow: {
+    width: "100%",
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 12,
   },
   pendingCircleBox: {
-    width: 86,
-    height: 86,
+    width: 64,
+    height: 64,
     alignItems: "center",
     justifyContent: "center",
-    marginBottom: 10,
   },
   pendingCircle: {
-    width: 66,
-    height: 66,
+    width: 50,
+    height: 50,
     borderRadius: 999,
     alignItems: "center",
     justifyContent: "center",
   },
   pendingRing: {
     position: "absolute",
-    width: 86,
-    height: 86,
+    width: 64,
+    height: 64,
     borderRadius: 999,
     borderWidth: 2,
   },
   pendingGlow: {
     position: "absolute",
-    width: 96,
-    height: 96,
+    width: 82,
+    height: 82,
     borderRadius: 999,
   },
+    shellHighlight: {
+    position: "absolute",
+    top: 0,
+    left: 0,
+    right: 0,
+    height: "52%",
+    borderTopLeftRadius: 26,
+    borderTopRightRadius: 26,
+    borderWidth: 1,
+    opacity: 0.55,
+  },
+  previewChevron: {
+    width: 32,
+    height: 32,
+    borderRadius: 999,
+    alignItems: "center",
+    justifyContent: "center",
+  },
+  pendingTextBlock: {
+    width: "100%",
+    alignItems: "center",
+    paddingHorizontal: 6,
+  },
+  pendingStepsRow: {
+    marginTop: 8,
+    flexDirection: "row",
+    flexWrap: "nowrap",
+    alignItems: "center",
+    justifyContent: "center",
+    gap: 6,
+  },
+  stepDot: {
+    width: 6,
+    height: 6,
+    borderRadius: 999,
+  },
+  stepText: {
+    fontFamily: F.regular,
+    fontSize: 11,
+  },
+  stepSep: {
+    fontFamily: F.bold,
+    fontSize: 12,
+    marginHorizontal: 2,
+  },
+  pendingCtaHint: {
+    fontFamily: F.bold,
+    fontSize: 12,
+    letterSpacing: 0.2,
+  },
+pendingCopy: {
+    flex: 1,
+    minWidth: 0,
+  },
+  pendingCtaChip: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 8,
+    borderRadius: 999,
+    paddingHorizontal: 12,
+    paddingVertical: 8,
+    backgroundColor: "#A78BFA",
+  },
+  pendingCtaChipText: {
+    fontFamily: F.bold,
+    fontSize: 13,
+    color: "#0B1120",
+    letterSpacing: 0.2,
+  },
   pendingLabel: {
-    fontSize: 18,
     fontFamily: F.bold,
     letterSpacing: -0.2,
   },
   pendingMicro: {
     marginTop: 2,
-    fontSize: 13,
     fontFamily: F.regular,
   },
   secondaryRow: {
     marginTop: 4,
     alignItems: "center",
+  },
+  pendingCtaRow: {
+    marginTop: 10,
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "space-between",
+    gap: 10,
+  },
+  pendingTapText: {
+    fontFamily: F.bold,
+    fontSize: 12,
+    letterSpacing: 0.2,
+  },
+  pendingChip: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 8,
+    borderRadius: 999,
+    paddingHorizontal: 12,
+    paddingVertical: 8,
+    backgroundColor: "#A78BFA",
+  },
+  pendingChipText: {
+    fontFamily: F.bold,
+    fontSize: 13,
+    color: "#0B1120",
+    letterSpacing: 0.2,
   },
   linkBtn: {
     paddingVertical: 10,

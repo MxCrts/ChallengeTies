@@ -4,6 +4,9 @@ exports.claimReferralMilestone = void 0;
 // functions/src/referralClaim.ts
 const https_1 = require("firebase-functions/v2/https");
 const firestore_1 = require("firebase-admin/firestore");
+const app_1 = require("firebase-admin/app");
+if (!(0, app_1.getApps)().length)
+    (0, app_1.initializeApp)();
 const db = (0, firestore_1.getFirestore)();
 const ALLOWED = [5, 10, 25];
 const REWARDS = {

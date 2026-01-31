@@ -9,6 +9,7 @@ import {
   orderBy,
   getDoc,
   Timestamp,
+  serverTimestamp,
 } from "firebase/firestore";
 import { db } from "@/constants/firebase-config";
 
@@ -21,6 +22,7 @@ export interface Review {
   text: string;
   createdAt: Timestamp;
   rating: number; // ⭐️ NEW
+  updatedAt?: any;
 }
 
 export const getReviews = async (challengeId: string): Promise<Review[]> => {
@@ -57,8 +59,36 @@ export const submitReview = async (
   review: Omit<Review, "id">
 ): Promise<void> => {
   const reviewRef = doc(db, "challenges", challengeId, "reviews", review.userId);
-  await setDoc(reviewRef, review);
+
+  const basePayload = {
+    userId: review.userId,
+    username: review.username,
+    avatar: String(review.avatar ?? ""),          // rules: avatar is string
+    daysSelected: Number(review.daysSelected ?? 0),// rules: int
+    text: String(review.text ?? ""),
+    createdAt: review.createdAt,                  // rules: timestamp
+    rating: Math.max(1, Math.min(5, Number(review.rating ?? 5))), // rules: int 1..5
+  };
+
+  const snap = await getDoc(reviewRef);
+
+  if (!snap.exists()) {
+    // ✅ CREATE: strict keys only (rules create)
+    await setDoc(reviewRef, basePayload, { merge: false });
+    return;
+  }
+
+  // ✅ UPDATE: rules allow updatedAt
+  await setDoc(
+    reviewRef,
+    {
+      ...basePayload,
+      updatedAt: serverTimestamp(),
+    } as any,
+    { merge: true }
+  );
 };
+
 
 export const deleteReview = async (
   challengeId: string,

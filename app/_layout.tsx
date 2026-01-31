@@ -213,6 +213,19 @@ useEffect(() => {
   };
 }, []);
 
+// ✅ IMPORTANT: refresh guestEnabled quand on revient sur "/"
+// (clic "Continue as guest" fait router.replace("/") + setItem(GUEST_KEY,"1"))
+useEffect(() => {
+  let alive = true;
+  if (pathname !== "/") return;
+  getGuestFlag()
+    .then((v) => alive && setGuestEnabled(v))
+    .catch(() => alive && setGuestEnabled(false));
+  return () => {
+    alive = false;
+  };
+}, [pathname]);
+
 useEffect(() => {
   let alive = true;
 
@@ -274,118 +287,102 @@ useEffect(() => {
   }, []);
 
   useEffect(() => {
-  // ⛔️ tant que Auth / Fonts pas prêts → ne route pas
   if (
     loading ||
     checkingAuth ||
     explicitLogout === null ||
     firstLaunch === null ||
-  guestEnabled === null ||
+    guestEnabled === null ||
     (!fontsLoaded && !hardReady) ||
     (!hydrated && !hardReady)
   ) {
     return;
   }
 
-    // ✅ Post-Share intent : force une nav propre APRÈS fermeture ShareSheet
+  let nextRoute: string | null = null;
+
+  // 1️⃣ After share intent
   const afterSharePath = consumeAfterShareIntentIfFresh(25000);
   if (afterSharePath) {
-    // Important : on ne dépend pas de pathname === "/"
-    requestAnimationFrame(() => {
-      router.replace(afterSharePath);
-    });
+    nextRoute = afterSharePath;
+  }
+
+  // 2️⃣ Share sheet actif → retour stable
+  if (!nextRoute && consumeShareSheetFlagIfExpired(20000)) {
+    const pendingAfter = getAfterShareIntent();
+    nextRoute =
+      pendingAfter?.path ||
+      (globalThis as any).__LAST_STABLE_PATH__ ||
+      lastStablePathRef.current ||
+      "/(tabs)";
+  }
+
+  // 3️⃣ DeepLink / Notif bloque le root
+  if (
+    !nextRoute &&
+    ((globalThis as any).__DL_BLOCK_ROOT_REDIRECT__ === true ||
+      (globalThis as any).__NOTIF_BLOCK_ROOT_REDIRECT__ === true)
+  ) {
     SplashScreen.hideAsync().catch(() => {});
     return;
   }
 
-  // ✅ Guard global: retour de ShareSheet Android
-   // Tant que shareActive → on BLOQUE tout redirect root (sinon jump + hooks warning)
-   const shareActive = consumeShareSheetFlagIfExpired(20000);
-if (shareActive) {
-  // priorité au "after share intent" s'il existe encore
-  const pendingAfter = getAfterShareIntent();
-  const back =
-    pendingAfter?.path ||
-    (globalThis as any).__LAST_STABLE_PATH__ ||
-    lastStablePathRef.current ||
-    "/(tabs)";
+  // ✅ IMPORTANT (comme ton dernier push Github):
+  // On ne force une redirection "root" que si on est sur "/".
+  // Sinon on laisse register/onboarding/firstpick vivre sans être écrasés.
+  if (pathname !== "/") {
+    SplashScreen.hideAsync().catch(() => {});
+    return;
+  }
 
-  if (pathname === "/") {
+  // ✅ Referral / intent qui doit forcer le flow auth (pas de visiteur)
+// ✅ Referral / intent qui doit forcer le flow auth (pas de visiteur)
+const forceAuth = (globalThis as any).__FORCE_AUTH_FLOW__ === true;
+
+// ✅ Si forceAuth est actif et user pas connecté → login PRIORITAIRE (et on consomme)
+if (forceAuth && !user) {
+  (globalThis as any).__FORCE_AUTH_FLOW__ = false; // consume 1 fois
+  nextRoute = "/login";
+}
+
+// ✅ Décision standard UNIQUEMENT si nextRoute pas déjà décidé
+if (!nextRoute) {
+  // ✅ user connecté → nettoie le flag logout et go tabs
+  if (user) {
+    clearExplicitLogoutFlag().catch(() => {});
+    nextRoute = "/(tabs)";
+  } else if (guestEnabled) {
+    // ✅ visitor doit bypass firstLaunch / explicitLogout
+    nextRoute = "/(tabs)";
+  } else if (firstLaunch || explicitLogout) {
+    nextRoute = "/login";
+  } else {
+    nextRoute = "/login";
+  }
+}
+
+
+  if (nextRoute && pathname !== nextRoute) {
     requestAnimationFrame(() => {
-      router.replace(back);
+      router.replace(nextRoute!);
     });
   }
 
   SplashScreen.hideAsync().catch(() => {});
-  return;
-}
-
-
-// ✅ Si un deep link challenge OU une navigation notif a été détecté(e),
-// on laisse le manager/handler gérer sans que le root redirect écrase.
-if (
-  (globalThis as any).__DL_BLOCK_ROOT_REDIRECT__ === true ||
-  (globalThis as any).__NOTIF_BLOCK_ROOT_REDIRECT__ === true
-) {
-  SplashScreen.hideAsync().catch(() => {});
-  return;
-}
-
-    // Si on n'est pas sur "/" on ne force pas une redirection,
-    // mais on cache le splash quand même.
-    if (pathname !== "/") {
-      SplashScreen.hideAsync().catch(() => {});
-      return;
-    }
-
-    // ✅ user connecté → nettoie le flag logout et go tabs
-if (user) {
-  clearExplicitLogoutFlag().catch(() => {});
-  router.replace("/(tabs)");
-  SplashScreen.hideAsync().catch(() => {});
-  return;
-}
-
-// ✅ Fresh install → onboarding (prioritaire sur tout)
-if (firstLaunch) {
-  router.replace("/login");
-  SplashScreen.hideAsync().catch(() => {});
-  return;
-}
-
-// ✅ Logout explicite → login
-if (explicitLogout) {
-  router.replace("/login");
-  SplashScreen.hideAsync().catch(() => {});
-  return;
-}
-
-// ✅ Guest UNIQUEMENT si flag storage (clic explicite)
-if (guestEnabled) {
-  router.replace("/(tabs)");
-  SplashScreen.hideAsync().catch(() => {});
-  return;
-}
-
-
-// ✅ Sinon → login (par défaut)
-router.replace("/login");
-SplashScreen.hideAsync().catch(() => {});
-
-  }, [
-    user,
-    loading,
-    checkingAuth,
-    pathname,
-    router,
-    fontsLoaded,
-    hydrated,
-    hardReady,
-    explicitLogout,
-    firstLaunch,
+}, [
+  user,
+  loading,
+  checkingAuth,
+  pathname,
+  fontsLoaded,
+  hydrated,
+  hardReady,
+  explicitLogout,
+  firstLaunch,
   guestEnabled,
-  homePendingInviteId,
-  ]);
+]);
+
+
 
   // Parrainage (Pioneer / Ambassador) uniquement user connecté
   useEffect(() => {
@@ -415,8 +412,13 @@ SplashScreen.hideAsync().catch(() => {});
 // =========================
 const FlagsGate: React.FC<{ children: React.ReactNode }> = ({ children }) => {
   const { isReady } = useFlags();
+
+  // ✅ Tant que pas prêt, on ne rend RIEN (évite rerenders instables du navigator)
+  if (!isReady) return null;
+
   return <>{children}</>;
 };
+
 
 // =========================
 // ConsentGate : UMP (AdsConsent) + MobileAds (NON BLOQUANT)
@@ -547,6 +549,7 @@ const ConsentGate: React.FC<{ children: React.ReactNode }> = ({ children }) => {
 // =========================
 const DeepLinkManager: React.FC = () => {
   const router = useRouter();
+  const pathname = usePathname();
   const { flags } = useFlags();
   const { user, loading, checkingAuth } = useAuth();
 
@@ -588,25 +591,36 @@ const DeepLinkManager: React.FC = () => {
       const refUid = refFromQuery || refFromPath;
 
       if (refUid) {
-        try {
-          // 🧠 On délègue TOUT à handleReferralUrl :
-          // - parse robuste (ref / refUid / referrerId / path / query)
-          // - ignore self-ref
-          // - écrit REFERRER_KEY, REFERRER_SRC_KEY, REFERRER_TS_KEY
-          await handleReferralUrl(url);
+  try {
+    await handleReferralUrl(url);
 
-          __DEV__ &&
-            console.log("[DeepLink] referral handled via handleReferralUrl:", {
-              refUid,
-            });
-        } catch (e) {
-          console.log("❌ [DeepLink] referral handle error:", e);
-        }
+    __DEV__ &&
+      console.log("[DeepLink] referral handled via handleReferralUrl:", {
+        refUid,
+      });
+  } catch (e) {
+    console.log("❌ [DeepLink] referral handle error:", e);
+  }
 
-        // ❗️Très important : pour un lien de parrainage, on ne navigue pas.
-        // On laisse le flow normal (login/register → index) gérer.
-        return;
-      }
+  /**
+   * ✅ FIX WHITE SCREEN:
+   * Si l’URL ouvre une route non existante (ex: "ref/XYZ"),
+   * expo-router peut rester sur un écran "introuvable"/blanc.
+   * On replace donc sur "/" pour laisser AppNavigator faire le gate normal.
+   */
+  try {
+    // On ne bloque PAS le root redirect pour un referral
+    (globalThis as any).__DL_BLOCK_ROOT_REDIRECT__ = false;
+
+    // Si on n'est pas déjà sur "/", on remet une route valide
+    if (pathname !== "/") {
+      router.replace("/");
+    }
+  } catch {}
+
+  return;
+}
+
 
 
       // -------------------------
@@ -795,9 +809,9 @@ const NotificationsBootstrap: React.FC = () => {
   // Listener global (app déjà ouverte / en background)
   useEffect(() => {
     startNotificationResponseListener(
-      (path) => safeNavigate(path),
-      (text) => safeToast(text, "success")
-    );
+  (path) => safeNavigate(path),
+  () => {} // ✅ pas de toast "notification ouverte"
+);
 
     // Cold start fallback : l’app ouverte via tap alors que le listener n’était pas encore attaché
     (async () => {
@@ -823,17 +837,11 @@ const NotificationsBootstrap: React.FC = () => {
 
         const type = String(data?.type || data?.__tag || "").toLowerCase();
 
-        if (type === "duo-nudge") {
-          safeToast(tSafe("notificationsPush.duoNudgeOpened"), "success");
-        } else if (
-          type === "invite-status" ||
-          type === "daily-reminder" ||
-          type === "referral_milestone_unlocked" ||
-          type === "referral_new_child" ||
-          type.startsWith("referral")
-        ) {
-          safeToast(tSafe("notificationsPush.opened"), "info");
-        }
+        // ✅ Plus de toast "notification ouverte" (tu ne le veux jamais)
+// Si un jour tu veux un toast spécifique, on le remettra uniquement sur un cas utile.
+if (type === "duo-nudge") {
+  // safeToast(tSafe("notificationsPush.duoNudgeOpened"), "success");
+}
 
         // ✅ si ouverte via daily → replanifie la prochaine (safe 1x/jour)
         if (type === "daily-reminder") {

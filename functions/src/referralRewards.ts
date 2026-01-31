@@ -1,6 +1,9 @@
 // functions/src/referralRewards.ts
 import { onDocumentWritten } from "firebase-functions/v2/firestore";
 import { getFirestore, FieldValue } from "firebase-admin/firestore";
+import { initializeApp, getApps } from "firebase-admin/app";
+
+if (!getApps().length) initializeApp();
 
 const db = getFirestore();
 

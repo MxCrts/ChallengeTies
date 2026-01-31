@@ -100,17 +100,10 @@ import { canInvite } from "../../utils/canInvite";
 import { usePathname } from "expo-router";
 import { useAuth } from "@/context/AuthProvider"; 
 import ShareCardModal from "@/components/ShareCardModal";
+import SelectModeModal from "@/components/SelectModeModal";
 
 
 const short = (s: string, max = 16) => (s.length > max ? s.slice(0, max - 1).trim() + "…" : s);
-
-function useTabBarHeightSafe(): number {
-  try {
-    return useBottomTabBarHeight();
-  } catch (_e) {
-    return 0;
-  }
-}
 
 
 const { width: SCREEN_WIDTH, height: SCREEN_HEIGHT } = Dimensions.get("window");
@@ -321,6 +314,40 @@ export function deriveDuoInfoFromUniqueKey(
   };
 }
 
+// ---------------------------------------------------------------------------
+// DuoPending helpers (avatar premium stable)
+// ---------------------------------------------------------------------------
+const safeSeed = (v: unknown, fallback = "seed") => {
+  const s = typeof v === "string" ? v.trim() : "";
+  return s.length ? s : fallback;
+};
+
+// hash simple stable -> number (évite "random" différent à chaque render)
+const seedToInt = (seed: string) => {
+  let h = 0;
+  for (let i = 0; i < seed.length; i++) {
+    h = (h << 5) - h + seed.charCodeAt(i);
+    h |= 0;
+  }
+  return Math.abs(h);
+};
+
+// Avatar stylé stable (sans stockage, sans flicker)
+// (utilisé UNIQUEMENT en duoPending si pas de photo de profil)
+const stylishAvatarUrl = (seed: string, size = 160) => {
+  const s = safeSeed(seed, "ct");
+  const v = seedToInt(s) % 6; // petite variété "de style"
+  const style =
+    v === 0 ? "micah" :
+    v === 1 ? "thumbs" :
+    v === 2 ? "lorelei" :
+    v === 3 ? "avataaars" :
+    v === 4 ? "bottts" :
+    "notionists";
+  // DiceBear (SVG/PNG). ExpoImage gère très bien.
+  return `https://api.dicebear.com/7.x/${style}/png?seed=${encodeURIComponent(s)}&size=${size}`;
+};
+
 
 export default function ChallengeDetails() {
   const { theme } = useTheme();
@@ -336,6 +363,7 @@ export default function ChallengeDetails() {
   const titleLines = isTablet ? 2 : 3;
   const descLines = isTablet ? 4 : 6;
   const [marking, setMarking] = useState(false);
+  const [pendingOutLock, setPendingOutLock] = useState(false);
   const [outgoingPendingInvite, setOutgoingPendingInvite] = useState<{
   id: string;
   inviteeUsername?: string | null;
@@ -350,6 +378,29 @@ export default function ChallengeDetails() {
   const currentTheme: Theme = isDarkMode
     ? designSystem.darkTheme
     : designSystem.lightTheme;
+    const DUO = useMemo(() => {
+    const bgSoft = isDarkMode ? "rgba(255,255,255,0.08)" : "rgba(0,0,0,0.04)";
+    const bgCard = isDarkMode ? "rgba(255,255,255,0.06)" : "rgba(255,255,255,0.92)";
+    const stroke = isDarkMode ? "rgba(255,255,255,0.16)" : "rgba(0,0,0,0.08)";
+    const strokeSoft = isDarkMode ? "rgba(255,255,255,0.14)" : "rgba(0,0,0,0.06)";
+    const text = isDarkMode ? "rgba(255,255,255,0.94)" : "rgba(0,0,0,0.86)";
+    const textSoft = isDarkMode ? "rgba(255,255,255,0.72)" : "rgba(0,0,0,0.56)";
+    const textFaint = isDarkMode ? "rgba(255,255,255,0.56)" : "rgba(0,0,0,0.42)";
+    return {
+      bgSoft,
+      bgCard,
+      stroke,
+      strokeSoft,
+      text,
+      textSoft,
+      textFaint,
+      // tracks
+      track: isDarkMode ? "rgba(0,0,0,0.22)" : "rgba(0,0,0,0.06)",
+      trackStroke: isDarkMode ? "rgba(255,255,255,0.18)" : "rgba(0,0,0,0.10)",
+      tick: isDarkMode ? "rgba(255,255,255,0.30)" : "rgba(0,0,0,0.14)",
+      sheen: isDarkMode ? "rgba(255,255,255,0.06)" : "rgba(255,255,255,0.70)",
+    };
+  }, [isDarkMode]);
   const { t, i18n } = useTranslation();
   const { showBanners } = useAdsVisibility();
   const justJoinedRef = useRef(false);
@@ -357,13 +408,97 @@ export default function ChallengeDetails() {
   const cleanupSoloRef = useRef(false);
 const IS_COMPACT = W < 380; // ✅ basé sur la largeur actuelle (split-screen/tablette)
 const [confirmResetVisible, setConfirmResetVisible] = useState(false);
+const [warmupToast, setWarmupToast] = useState<null | "success" | "error">(null);
 const [sendInviteVisible, setSendInviteVisible] = useState(false);
 const insets = useSafeAreaInsets();
+
+
+ const IS_TINY = W < 360;
 const [adHeight, setAdHeight] = useState(0);
   // 🆕 callback stable pour éviter un re-render en boucle quand BannerSlot mesure
   const onBannerHeight = useCallback((h: number) => {
     setAdHeight((prev) => (prev === h ? prev : h));
   }, []);
+
+// --- Toast state
+
+// --- Reanimated shared values
+const warmupToastSV = useSharedValue(0); // 0 hidden, 1 shown
+const warmupToastHideTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
+
+const warmupToastStyle = useAnimatedStyle(() => {
+  // 0 -> 1 : opacity 0..1, translateY 18..0
+  const opacity = interpolate(warmupToastSV.value, [0, 1], [0, 1]);
+  const translateY = interpolate(warmupToastSV.value, [0, 1], [18, 0]);
+
+  return {
+    opacity,
+    transform: [{ translateY }],
+  };
+}, []);
+
+const hideWarmupToast = useCallback(() => {
+  // stop timer
+  if (warmupToastHideTimer.current) {
+    clearTimeout(warmupToastHideTimer.current);
+    warmupToastHideTimer.current = null;
+  }
+
+  warmupToastSV.value = withTiming(0, { duration: 180 }, (finished) => {
+    if (finished) {
+      runOnJS(setWarmupToast)(null);
+    }
+  });
+}, [warmupToastSV]);
+
+const showWarmupToast = useCallback(
+  (type: "success" | "error") => {
+    // cancel previous hide timer
+    if (warmupToastHideTimer.current) {
+      clearTimeout(warmupToastHideTimer.current);
+      warmupToastHideTimer.current = null;
+    }
+
+    setWarmupToast(type);
+
+    // animate in
+    warmupToastSV.value = 0;
+    warmupToastSV.value = withSpring(1, {
+      damping: 16,
+      stiffness: 220,
+      mass: 0.7,
+    });
+
+    // auto hide
+    const hideDelay = type === "success" ? 1200 : 1600;
+    warmupToastHideTimer.current = setTimeout(() => {
+      hideWarmupToast();
+    }, hideDelay);
+  },
+  [hideWarmupToast, warmupToastSV]
+);
+
+// cleanup on unmount
+useEffect(() => {
+  return () => {
+    if (warmupToastHideTimer.current) clearTimeout(warmupToastHideTimer.current);
+  };
+}, []);
+
+
+
+  // ✅ WARMUP (duo pending) — 1/jour/challenge (dans users/{uid})
+const [warmupLoading, setWarmupLoading] = useState(false);
+const [warmupDoneToday, setWarmupDoneToday] = useState(false);
+
+const warmupDayKeyLocal = useCallback(() => {
+  // clé locale stable : YYYY-MM-DD
+  const d = new Date();
+  const y = d.getFullYear();
+  const m = String(d.getMonth() + 1).padStart(2, "0");
+  const day = String(d.getDate()).padStart(2, "0");
+  return `${y}-${m}-${day}`;
+}, []);
 
 
   // 🆕 état réseau : interdit l’invitation hors-ligne (UX claire)
@@ -408,7 +543,7 @@ const [adHeight, setAdHeight] = useState(0);
 const startedRef = useRef(false);
 const myImgReady = useRef(false);
 const partnerImgReady = useRef(false);
-const tabBarHeight = useTabBarHeightSafe();
+const tabBarHeight = 0;
 const startTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
 const duoPendingPulseStyle = useAnimatedStyle(() => {
@@ -430,6 +565,8 @@ const duoPendingDotStyle = useAnimatedStyle(() => {
     opacity: o,
   };
 });
+
+
 
 const duoPendingGlowStyle = useAnimatedStyle(() => {
   // Halo externe (super visible mais clean)
@@ -488,10 +625,11 @@ const [deeplinkBooting, setDeeplinkBooting] = useState(
   () => !!params?.invite
 );
   
-  const [invitation, setInvitation] = useState<{ id: string } | null>(null);
+ const [invitation, setInvitation] = useState<{ id: string } | null>(null);
  const [invitationModalVisible, setInvitationModalVisible] = useState(false);
  const [inviteLoading, setInviteLoading] = useState(false);
- 
+ const [startModeVisible, setStartModeVisible] = useState(false);
+ const [startMode, setStartMode] = useState<"solo" | "duo" | null>(null);
  const processedInviteIdsRef = useRef<Set<string>>(new Set());
  const inviteOpenGuardRef = useRef(false);
  const autoSendInviteOnceRef = useRef(false);
@@ -504,6 +642,8 @@ const [deeplinkBooting, setDeeplinkBooting] = useState(
   // Nettoie l'état local si c'est la même invite
   setInvitation((prev) => (prev?.id === inviteId ? null : prev));
 }, []);
+
+
 
   
   const id = params.id || "";
@@ -543,6 +683,11 @@ const shouldEnterAnim =
      ),
    [currentChallenge, user?.uid]
  );
+
+ const enteringBack = useMemo(
+  () => (firstMountRef.current && shouldEnterAnim ? FadeInUp : undefined),
+  [shouldEnterAnim]
+);
 
   const [duoChallengeData, setDuoChallengeData] =
     useState<DuoChallengeData | null>(null);
@@ -631,6 +776,17 @@ const [shareCardVisible, setShareCardVisible] = useState(false);
     claimWithoutAdRef.current = handleClaimTrophiesWithoutAd;
     claimWithAdRef.current = handleClaimTrophiesWithAd;
   }, [handleClaimTrophiesWithoutAd, handleClaimTrophiesWithAd]);
+
+  const QUICK_TEXT = "#0B0B10";                 // lisible sur glass blanc
+const QUICK_TEXT_DISABLED = "rgba(11,11,16,0.45)";
+const QUICK_SHADOW = "rgba(255,255,255,0.65)";
+
+const QUICK_ICON = "#0B0B10";
+const QUICK_ICON_DISABLED = "rgba(11,11,16,0.35)";
+
+// ACTIVE (Save)
+const QUICK_ACTIVE = ACCENT.solid;
+const QUICK_ACTIVE_SHADOW = "rgba(0,0,0,0.20)";
 
 /* -------------------------------------------------------------------------- */
   /*                               REWARDED (PARENT)                            */
@@ -854,7 +1010,8 @@ useEffect(() => {
 
  // ✅ SOLO uniquement si aucune info duo ne ressort
  const isSoloInThisChallenge = !!currentChallenge && !isDuo;
- const isDuoPendingOut = !!outgoingPendingInvite && !isDuo;
+ const isDuoPendingOut = (!isDuo) && (pendingOutLock || !!outgoingPendingInvite?.id);
+
 
  useEffect(() => {
   if (!isDuoPendingOut) {
@@ -873,8 +1030,7 @@ useEffect(() => {
 
 
 const isDisabledMark = marking || isMarkedToday(id, finalSelectedDays);
-
-
+const warmupDisabled = warmupDoneToday || warmupLoading;
 
 // 🆕 Sync immédiate avec le contexte quand le challenge passe en DUO
 useEffect(() => {
@@ -1344,6 +1500,23 @@ useEffect(() => {
     userRef,
     (snap) => {
       let data = snap.data() as any;
+      // ✅ Warmup state (ne dépend pas de CurrentChallenges)
+// - Nouveau storage: data.warmup
+// - Rétro-compat: data.warmups (legacy)
+try {
+  const k = warmupDayKeyLocal();
+
+  const warmupNew = data?.warmup || {};
+  const warmupLegacy = data?.warmups || {};
+
+  const done =
+    !!warmupNew?.[k]?.[id] ||
+    !!warmupLegacy?.[k]?.[id];
+
+  setWarmupDoneToday(done);
+} catch {}
+
+
       const list: any[] = Array.isArray(data?.CurrentChallenges)
         ? data.CurrentChallenges
         : [];
@@ -1662,9 +1835,10 @@ useEffect(() => {
     qOut,
     (snap) => {
       if (snap.empty) {
-        setOutgoingPendingInvite(null);
-        return;
-      }
+  // ✅ si on a un lock local, on garde l’optimiste (le temps que Firestore rattrape)
+  if (!pendingOutLock) setOutgoingPendingInvite(null);
+  return;
+}
       const d = snap.docs[0];
       const data = d.data() as any;
       setOutgoingPendingInvite({
@@ -1673,8 +1847,6 @@ useEffect(() => {
       });
     },
     () => {
-      // non bloquant
-      setOutgoingPendingInvite(null);
     }
   );
 
@@ -1697,6 +1869,99 @@ const getInviteeUsername = useCallback(async (uid: string): Promise<string | nul
     return null;
   }
 }, []);
+
+const handleWarmupPress = useCallback(async () => {
+  const uid = auth.currentUser?.uid;
+  if (!uid || !id) return;
+
+  // 🔒 Pour l’instant: warmup uniquement utile si pending out
+  if (!isDuoPendingOut) return;
+
+  // ✅ lock UI
+  if (warmupLoading || warmupDoneToday) return;
+
+  setWarmupLoading(true);
+
+  try {
+    const dayKey = warmupDayKeyLocal();
+    const userRef = doc(db, "users", uid);
+
+    // ✅ Transaction idempotente + compatible rules (updatedAt)
+    const didWrite = await runTransaction(db, async (tx) => {
+      const snap = await tx.get(userRef);
+      if (!snap.exists()) return false;
+
+      const data = snap.data() as any;
+
+      // New: warmup / Legacy: warmups
+      const warmupNew = (data?.warmup ?? {}) as Record<string, any>;
+      const warmupLegacy = (data?.warmups ?? {}) as Record<string, any>;
+
+      const already =
+        !!warmupNew?.[dayKey]?.[id] ||
+        !!warmupLegacy?.[dayKey]?.[id];
+
+      if (already) return false;
+
+      const entry = {
+        challengeId: id,
+        dayKey,
+        createdAt: serverTimestamp(),
+      };
+
+      tx.update(userRef, {
+        // crée automatiquement warmup si absent
+        [`warmup.${dayKey}.${id}`]: entry,
+
+        // compteur global simple
+        warmupCount: increment(1),
+
+        // ✅ crucial pour tes rules
+        updatedAt: serverTimestamp(),
+      });
+
+      return true;
+    });
+
+    // ✅ Si déjà enregistré (idempotent), on ne spam pas l’UI.
+    if (!didWrite) {
+      setWarmupDoneToday(true);
+      return;
+    }
+
+    setWarmupDoneToday(true);
+
+    // Feedback premium
+    Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success).catch(() => {});
+    showWarmupToast("success");
+  } catch (e) {
+    console.error("❌ warmup failed:", e);
+
+    Haptics.notificationAsync(Haptics.NotificationFeedbackType.Error).catch(() => {});
+    showWarmupToast("error");
+
+    // Option: garde l’Alert seulement si tu veux un fallback explicite
+    Alert.alert(
+      t("alerts.error", { defaultValue: "Erreur" }),
+      t("duo.pending.warmupError", {
+        defaultValue: "Impossible d’enregistrer le warmup.",
+      })
+    );
+  } finally {
+    setWarmupLoading(false);
+  }
+}, [
+  id,
+  isDuoPendingOut,
+  warmupLoading,
+  warmupDoneToday,
+  warmupDayKeyLocal,
+  t,
+  showWarmupToast,
+]);
+
+
+
 
 useEffect(() => {
   const openFromParamOrUrl = async (inviteParam?: string) => {
@@ -2109,6 +2374,57 @@ const calendarDays = useMemo(() => {
 }, [id, challengeTaken, localSelectedDays, takeChallenge, t]);
 
 
+const openStartFlow = useCallback(() => {
+    if (challengeTakenOptimistic || !id) return;
+    // si une invite sortante est pending -> pas de re-start
+    if (isDuoPendingOut) return;
+    setStartMode(null);
+    setStartModeVisible(true);
+  }, [challengeTakenOptimistic, id, isDuoPendingOut]);
+
+  const chooseSoloThenDuration = useCallback(() => {
+    setStartMode("solo");
+    setStartModeVisible(false);
+    setModalVisible(true); // DurationSelectionModal
+  }, []);
+
+  const chooseDuoThenDuration = useCallback(() => {
+    setStartMode("duo");
+    setStartModeVisible(false);
+    setModalVisible(true); // DurationSelectionModal (même UI)
+  }, []);
+
+  const handleConfirmDurationByMode = useCallback(async () => {
+    // ⚠️ modalVisible = DurationSelectionModal
+    // On ferme d'abord pour éviter double overlays
+    setModalVisible(false);
+
+    if (startMode === "duo") {
+      // Duo = on ne prend PAS le challenge en solo.
+      // On enchaîne sur l'invitation (qui créera l'open invite) + state pending.
+      if (isOffline) {
+        Alert.alert(
+          t("common.networkError"),
+          t("firstPick.offlineDuo", {
+            defaultValue: "Connecte-toi à Internet pour inviter un ami en duo.",
+          })
+        );
+        return;
+      }
+
+      // Optimiste : on lock l'état pending out immédiatement (UX “instant”)
+      setPendingOutLock(true);
+      setOutgoingPendingInvite((prev) => prev ?? { id: "__optimistic__", inviteeUsername: null });
+
+      // Ouvre ton modal existant (il va envoyer l'invite)
+      setSendInviteVisible(true);
+      return;
+    }
+
+    // Solo = flow normal (inchangé)
+    await handleTakeChallenge();
+  }, [startMode, handleTakeChallenge, isOffline, t]);
+
   const saveBusyRef = useRef(false);
   const markBusyRef = useRef(false);
 
@@ -2164,8 +2480,17 @@ const handleSaveChallenge = useCallback(async () => {
 const handleShowCompleteModal = useCallback(() => {
   if (!id) return;
   if (!finalSelectedDays || finalSelectedDays <= 0) return;
-  setCompletionModalVisible(true);
+
+  // ✅ ferme les autres overlays possibles (au cas où)
+  setModalVisible(false);
+  setStartModeVisible(false);
+
+  // ✅ next frame = évite les glitches Android sur press + modal
+  requestAnimationFrame(() => {
+    setCompletionModalVisible(true);
+  });
 }, [id, finalSelectedDays]);
+
 
   const handleNavigateToChat = useCallback(() => {
     if (!challengeTaken ) {
@@ -2391,6 +2716,85 @@ const handleInviteButtonPress = useCallback(() => {
     setStatsModalVisible(true);
   }, [challengeTaken ]);
 
+  const cancelOutBusyRef = useRef(false);
+
+const resolveOutgoingPendingInviteId = useCallback(async (): Promise<string | null> => {
+  // 1) si on a déjà le vrai id -> go
+  if (outgoingPendingInvite?.id && outgoingPendingInvite.id !== "__optimistic__") {
+    return outgoingPendingInvite.id;
+  }
+
+  // 2) sinon on cherche le vrai doc pending côté Firestore
+  const uid = auth.currentUser?.uid;
+  if (!uid || !id) return null;
+
+  try {
+    const snap = await getDocs(
+      query(
+        collection(db, "invitations"),
+        where("inviterId", "==", uid),
+        where("challengeId", "==", id),
+        where("status", "==", "pending"),
+        limit(1)
+      )
+    );
+    if (snap.empty) return null;
+    return snap.docs[0].id;
+  } catch {
+    return null;
+  }
+}, [outgoingPendingInvite?.id, id]);
+
+const cancelOutgoingPendingInvite = useCallback(async () => {
+  if (cancelOutBusyRef.current) return;
+  cancelOutBusyRef.current = true;
+
+  // ✅ UI instant : on retire la card pending direct (plus besoin de quitter/revenir)
+  setPendingOutLock(false);
+  setOutgoingPendingInvite(null);
+
+  try {
+    const inviteId = await resolveOutgoingPendingInviteId();
+    if (!inviteId) {
+      // Pas encore créé / déjà supprimé : côté UX c’est clean, on s’en fout
+      return;
+    }
+
+    await updateDoc(doc(db, "invitations", inviteId), {
+      status: "refused",
+      updatedAt: serverTimestamp(),
+    });
+
+    Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success).catch(() => {});
+  } catch (e) {
+    // ✅ ZÉRO message d’erreur user ici (tu l’as demandé)
+    // Si ça a échoué, le snapshot qOut re-affichera la card si l’invite est toujours pending
+    console.warn("cancelOutgoingPendingInvite failed:", e);
+  } finally {
+    cancelOutBusyRef.current = false;
+  }
+}, [resolveOutgoingPendingInviteId]);
+
+const handleCancelPendingInvite = useCallback(() => {
+  if (!isDuoPendingOut) return;
+
+  Alert.alert(
+    t("duo.pending.cancelConfirmTitle", { defaultValue: "Annuler l’invitation ?" }),
+    t("duo.pending.cancelConfirmBody", { defaultValue: "Ton ami ne pourra plus rejoindre ce duo avec ce lien." }),
+    [
+      { text: t("commonS.keep", { defaultValue: "Garder" }), style: "cancel" },
+      {
+        text: t("duo.pending.cancelInvite", { defaultValue: "Annuler l’invitation" }),
+        style: "destructive",
+        onPress: () => cancelOutgoingPendingInvite(),
+      },
+    ],
+    { cancelable: true }
+  );
+}, [isDuoPendingOut, cancelOutgoingPendingInvite, t]);
+
+
+
   const handleMarkTodayPress = useCallback(async () => {
   if (!id || !challengeTaken) return;
   if (marking || markBusyRef.current) return;
@@ -2429,6 +2833,15 @@ try {
   }
 }, [marking, challengeTaken, id, finalSelectedDays, isMarkedToday, markToday, t]);
 
+  const pickModeThenOpenDuration = useCallback(
+    (mode: "solo" | "duo") => {
+      setStartMode(mode);
+      setStartModeVisible(false);
+      setModalVisible(true); // ton DurationSelectionModal
+    },
+    []
+  );
+
   // 🆕 styles/objets stables pour ScrollView afin d’éviter re-renders
 const scrollContentStyle = useMemo(
   () => [styles.scrollPad, { paddingBottom: bottomInset + SPACING }],
@@ -2465,7 +2878,7 @@ const DuoAvatar = ({ uri, name }: { uri?: string | null; name?: string }) => {
           end={{ x: 1, y: 1 }}
           style={styles.duoAvatarFallback}
         >
-          <Text style={styles.duoAvatarInitial}>{getInitial(name)}</Text>
+          <Text style={styles.duoAvatarInitial}>{getInitials(name)}</Text>
         </LinearGradient>
       )}
       <View style={styles.duoAvatarRing} pointerEvents="none" />
@@ -2473,6 +2886,47 @@ const DuoAvatar = ({ uri, name }: { uri?: string | null; name?: string }) => {
   );
 };
 
+const PendingPartnerAvatar = React.memo(function PendingPartnerAvatar({
+  isDarkMode,
+  duoPendingPulseStyle,
+}: {
+  isDarkMode: boolean;
+  duoPendingPulseStyle: any;
+}) {
+  return (
+    <View style={styles.duoAvatarShell}>
+      <LinearGradient
+        colors={
+          isDarkMode
+            ? ["rgba(0,255,255,0.14)", "rgba(255,215,0,0.10)"]
+            : ["rgba(55,48,163,0.14)", "rgba(0,0,0,0.06)"]
+        }
+        start={{ x: 0, y: 0 }}
+        end={{ x: 1, y: 1 }}
+        style={styles.duoAvatarFallback}
+      >
+        <Ionicons
+          name="person-outline"
+          size={26}
+          color={isDarkMode ? "rgba(255,255,255,0.92)" : "rgba(0,0,0,0.82)"}
+        />
+        <View style={styles.duoPendingMiniBadge}>
+          <Ionicons
+            name="hourglass-outline"
+            size={12}
+            color={isDarkMode ? "rgba(255,255,255,0.92)" : "rgba(0,0,0,0.82)"}
+          />
+        </View>
+      </LinearGradient>
+
+      <Animated.View
+        pointerEvents="none"
+        style={[styles.duoPendingRing, duoPendingPulseStyle]}
+      />
+      <View style={styles.duoAvatarRing} pointerEvents="none" />
+    </View>
+  );
+});
 
 
   return (
@@ -2503,7 +2957,7 @@ const DuoAvatar = ({ uri, name }: { uri?: string | null; name?: string }) => {
         fallSpeed={3000}
       />
       <Animated.View
-   entering={firstMountRef.current && shouldEnterAnim ? FadeInUp : undefined}
+   entering={enteringBack}
    style={[styles.backButtonContainer, { top: insets.top + 6 }]}
    renderToHardwareTextureAndroid
    needsOffscreenAlphaCompositing
@@ -2662,150 +3116,273 @@ const DuoAvatar = ({ uri, name }: { uri?: string | null; name?: string }) => {
   </Text>
 </View>
 </View>
-{/* ✅ DUO PENDING — Keynote card */}
+{/* ✅ DUO PENDING — Ultra minimal / ultra premium (TOP 1) */}
 {isDuoPendingOut && outgoingPendingInvite?.id && (
   <View style={styles.duoPendingShell}>
-    {/* LEFT = info cliquable */}
-    <Pressable
-      onPress={() => {
-   Alert.alert(
-     t("duo.pending.title"),
-     t("duo.pending.body"),
-     [
-       {
-         text: t("duo.pending.cancelInvite"),
-         style: "destructive",
-         onPress: async () => {
-           try {
-             if (!outgoingPendingInvite?.id) return;
-             await updateDoc(doc(db, "invitations", outgoingPendingInvite.id), {
-               status: "refused",
-               updatedAt: serverTimestamp(),
-             });
-             Haptics.notificationAsync(
-               Haptics.NotificationFeedbackType.Success
-             ).catch(() => {});
-           } catch {
-             Alert.alert(t("alerts.error"), t("duo.pending.cancelError"));
-           }
-         },
-       },
-       { text: t("commonS.ok", { defaultValue: "OK" }), style: "cancel" },
-     ]
-   );
- }}
-      style={({ pressed }) => [
-        styles.duoPendingCard,
-        pressed && { transform: [{ scale: 0.995 }], opacity: 0.97 },
-      ]}
-      accessibilityRole="button"
+    <View
+      style={styles.duoPendingCardV2}
+      accessibilityRole="summary"
       accessibilityLabel={t("duo.pending.title")}
       accessibilityHint={t("duo.pending.body")}
     >
-      {/* ✅ background premium + stroke interne (au lieu d'un border moche) */}
       <LinearGradient
         pointerEvents="none"
         colors={
           isDarkMode
-            ? ["rgba(20,20,26,0.78)", "rgba(12,12,16,0.62)"]
-            : ["rgba(255,255,255,0.96)", "rgba(255,255,255,0.90)"]
+            ? ["rgba(14,14,18,0.76)", "rgba(10,10,14,0.56)"]
+            : ["rgba(255,255,255,0.92)", "rgba(255,255,255,0.86)"]
         }
         start={{ x: 0, y: 0 }}
         end={{ x: 1, y: 1 }}
         style={StyleSheet.absoluteFill}
       />
-      <View pointerEvents="none" style={styles.duoPendingStroke} />
 
-      <View style={styles.duoPendingRow}>
-        <View style={styles.duoPendingLeft}>
-        <View style={styles.duoPendingIconWrap}>
-          <Animated.View
-            pointerEvents="none"
-            style={[styles.duoPendingHalo, duoPendingGlowStyle]}
-          />
-          <Animated.View
-            pointerEvents="none"
-            style={[styles.duoPendingRing, duoPendingPulseStyle]}
-          />
-          <Animated.View
-            pointerEvents="none"
-            style={[styles.duoPendingDot, duoPendingDotStyle]}
-          />
-          <Ionicons
-            name="hourglass-outline"
-            size={18}
-            color={isDarkMode ? "#fff" : "#111"}
-          />
+      <View pointerEvents="none" style={styles.duoPendingStrokeV2} />
+      <View pointerEvents="none" style={styles.duoPendingSheenV2} />
+
+      {/* TOP ROW */}
+      <View style={styles.duoPendingTopRowV2}>
+        <View style={styles.duoPendingDotWrapV2} pointerEvents="none">
+          <Animated.View style={[styles.duoPendingGlowV2, duoPendingGlowStyle]} />
+          <Animated.View style={[styles.duoPendingDotV2, duoPendingDotStyle]} />
+          <View style={styles.duoPendingDotCoreV2} />
         </View>
 
-        <View style={{ flex: 1, minWidth: 0 }}>
-          <Text style={[styles.duoPendingTitle, { color: isDarkMode ? "rgba(255,255,255,0.96)" : "rgba(0,0,0,0.88)" }]} numberOfLines={1} ellipsizeMode="tail">
-            {t("duo.pending.short", { defaultValue: "Invitation en attente" })}
-          </Text>
+        <Text
+          style={[
+            styles.duoPendingTopTextV2,
+            { color: isDarkMode ? "rgba(255,255,255,0.86)" : "rgba(0,0,0,0.66)" },
+          ]}
+          numberOfLines={1}
+          ellipsizeMode="tail"
+        >
+          {t("duo.pending.short")}
+        </Text>
 
-          <View style={styles.duoPendingMetaRow}>
-            <View style={styles.duoPendingChip}>
-              <Text style={[styles.duoPendingChipText, { color: isDarkMode ? "rgba(255,255,255,0.88)" : "rgba(55,48,163,0.95)" }]}>PENDING</Text>
-            </View>
-           <Text style={[styles.duoPendingSub, { color: isDarkMode ? "rgba(255,255,255,0.70)" : "rgba(0,0,0,0.52)" }]} numberOfLines={1} ellipsizeMode="tail">
-              {t("invitationS.sentBody", { defaultValue: "On te prévient dès qu’il répond." })}
-            </Text>
-          </View>
-
-          {!!outgoingPendingInvite.inviteeUsername && (
-            <Text style={styles.duoPendingTo} numberOfLines={1} ellipsizeMode="tail">
-              @{outgoingPendingInvite.inviteeUsername}
-            </Text>
-          )}
+        <View style={styles.duoPendingTopRightV2} pointerEvents="none">
+          <Ionicons
+            name="hourglass-outline"
+            size={16}
+            color={isDarkMode ? "rgba(255,255,255,0.86)" : "rgba(0,0,0,0.56)"}
+          />
         </View>
       </View>
 
-      <Ionicons
-  name="chevron-forward"
-  size={18}
-  color={isDarkMode ? "rgba(255,255,255,0.85)" : "rgba(0,0,0,0.45)"}
-  style={{ marginLeft: 10, marginRight: 2 }}
-/>
-</View>
-    </Pressable>
+      {/* CENTER */}
+      <View style={styles.duoPendingCenterV2}>
+        <View style={styles.duoPendingAvatarColV2}>
+          <SmartAvatar uri={myAvatar} name={myName || t("duo.you")} size={56} isDark={isDarkMode} />
+          <Text
+            style={[
+              styles.duoPendingNameV2,
+              { color: isDarkMode ? "rgba(255,255,255,0.92)" : "rgba(0,0,0,0.82)" },
+            ]}
+            numberOfLines={1}
+            ellipsizeMode="tail"
+          >
+            {myName || t("duo.you")}
+          </Text>
+        </View>
 
+        <View style={styles.duoPendingConnectorV2} pointerEvents="none">
+          <View style={styles.duoPendingLineV2} />
+          <Animated.View style={[styles.duoPendingRingV2, duoPendingPulseStyle]} />
+          <View style={styles.duoPendingVsPillV2} pointerEvents="none">
+  <LinearGradient
+    colors={["#FFD700", "#00FFFF"]}
+    start={{ x: 0, y: 0 }}
+    end={{ x: 1, y: 1 }}
+    style={{ ...StyleSheet.absoluteFillObject, borderRadius: 999 }}
+  />
+  <Text style={styles.duoPendingVsTextV2}>{t("duo.vs", { defaultValue: "VS" })}</Text>
+</View>
+          <View style={styles.duoPendingLineV2} />
+        </View>
+
+        <View style={styles.duoPendingAvatarColV2}>
+          <PendingPartnerAvatar isDarkMode={isDarkMode} duoPendingPulseStyle={duoPendingPulseStyle} />
+          <Text
+            style={[
+              styles.duoPendingNameV2,
+              { color: isDarkMode ? "rgba(255,255,255,0.78)" : "rgba(0,0,0,0.62)" },
+            ]}
+            numberOfLines={1}
+            ellipsizeMode="tail"
+          >
+            {outgoingPendingInvite?.inviteeUsername
+              ? `@${outgoingPendingInvite.inviteeUsername}`
+              : t("duo.pending.partnerPending")}
+          </Text>
+        </View>
+      </View>
+
+      {/* BOTTOM */}
+      <Text
+        style={[
+          styles.duoPendingHintV2,
+          { color: isDarkMode ? "rgba(255,255,255,0.66)" : "rgba(0,0,0,0.54)" },
+        ]}
+        numberOfLines={2}
+        ellipsizeMode="tail"
+      >
+        {t("duo.pending.warmupHint")}
+      </Text>
+
+      <View style={styles.duoPendingActionsV2}>
+        {/* Warmup */}
+        <Pressable
+          onPress={handleWarmupPress}
+          disabled={warmupDisabled}
+          accessibilityRole="button"
+          accessibilityLabel={t("duo.pending.warmup")}
+          accessibilityHint={t("duo.pending.warmupA11yHint")}
+          style={({ pressed }) => [
+            styles.duoPendingPrimaryBtnV2,
+            warmupDisabled && styles.duoPendingPrimaryBtnDisabledV2,
+            pressed && !warmupDisabled && { transform: [{ scale: 0.992 }], opacity: 0.96 },
+          ]}
+        >
+          <LinearGradient
+            colors={
+              warmupDisabled
+                ? (isDarkMode
+                    ? ["rgba(120,120,128,0.45)", "rgba(90,90,96,0.45)"]
+                    : ["rgba(170,170,178,0.55)", "rgba(135,135,145,0.55)"])
+                : ["#FF9F1C", "#FFD166"]
+            }
+            start={{ x: 0, y: 0 }}
+            end={{ x: 1, y: 1 }}
+            style={StyleSheet.absoluteFill}
+          />
+          <Ionicons
+            name={warmupDoneToday ? "checkmark-circle-outline" : "flash-outline"}
+            size={18}
+            color={warmupDisabled ? "rgba(255,255,255,0.92)" : "#111"}
+          />
+          <Text
+            style={[
+              styles.duoPendingPrimaryTextV2,
+              warmupDisabled && { color: "rgba(255,255,255,0.88)" },
+            ]}
+            numberOfLines={1}
+            ellipsizeMode="tail"
+          >
+            {warmupLoading
+              ? t("commonS.loading")
+              : warmupDoneToday
+                ? t("duo.pending.warmupDone")
+                : t("duo.pending.warmup")}
+          </Text>
+          <Ionicons
+            name="chevron-forward"
+            size={18}
+            color={warmupDisabled ? "rgba(255,255,255,0.78)" : "#111"}
+          />
+        </Pressable>
+
+        {/* Cancel */}
+        <Pressable
+          onPress={handleCancelPendingInvite}
+          accessibilityRole="button"
+          accessibilityLabel={t("duo.pending.cancelInvite")}
+          accessibilityHint={t("duo.pending.cancelA11yHint")}
+          style={({ pressed }) => [
+            styles.duoPendingGhostBtnV2,
+            pressed && { opacity: 0.88, transform: [{ scale: 0.992 }] },
+          ]}
+        >
+          <View style={styles.duoPendingGhostInnerV2}>
+            <Ionicons
+              name="close-outline"
+              size={18}
+              color={isDarkMode ? "rgba(255,255,255,0.86)" : "rgba(0,0,0,0.70)"}
+            />
+            <Text
+              style={[
+                styles.duoPendingGhostTextV2,
+                { color: isDarkMode ? "rgba(255,255,255,0.86)" : "rgba(0,0,0,0.70)" },
+              ]}
+              numberOfLines={1}
+            >
+              {t("duo.pending.cancelInviteShort")}
+            </Text>
+          </View>
+        </Pressable>
+      </View>
+    </View>
   </View>
 )}
 
-          {!challengeTakenOptimistic  && (
-            <TouchableOpacity
-              style={styles.takeChallengeButton}
-              onPress={() => setModalVisible(true)}
-             accessibilityLabel={t("challengeDetails.takeChallengeA11y", {
-                defaultValue: "Prendre le défi",
-              })}
-              accessibilityHint={t("challengeDetails.takeChallengeHint", {
-                defaultValue: "Ouvre la sélection de durée, puis confirme pour commencer.",
-              })}
-              testID="take-challenge-button"
-              accessibilityRole="button"
-            >
-              <LinearGradient
-                colors={[
-                  currentTheme.colors.primary,
-                  currentTheme.colors.secondary,
-                ]}
-                style={styles.takeChallengeButtonGradient}
-                start={{ x: 0, y: 0 }}
-                end={{ x: 1, y: 1 }}
-              >
-                <Text
-                  style={[
-                    styles.takeChallengeButtonText,
-                    { color: currentTheme.colors.textPrimary },
-                  ]}
-                >
 
-                  {t("challengeDetails.takeChallenge")}
-                </Text>
-              </LinearGradient>
-            </TouchableOpacity>
-          )}
+
+         {/* ✅ CTA PRINCIPAL — priorité FINI > START > PROGRESS (à l’emplacement "Take the challenge") */}
+
+{challengeTakenOptimistic && showCompleteButton && (
+  <TouchableOpacity
+    style={styles.takeChallengeButton} // ✅ même placement que "Take the challenge"
+    onPress={handleShowCompleteModal}  // ✅ ouvre ChallengeCompletionModal
+    accessibilityRole="button"
+    accessibilityLabel={t("challengeDetails.completeChallengeA11y", {
+      defaultValue: "Terminer le défi",
+    })}
+    accessibilityHint={t("challengeDetails.completeChallengeHint", {
+      defaultValue: "Ouvre l’écran de validation pour récupérer tes trophées.",
+    })}
+    testID="complete-challenge-button"
+    activeOpacity={0.9}
+  >
+    <LinearGradient
+      colors={[currentTheme.colors.primary, currentTheme.colors.secondary]}
+      style={styles.takeChallengeButtonGradient}
+      start={{ x: 0, y: 0 }}
+      end={{ x: 1, y: 1 }}
+    >
+      <Text
+        style={[
+          styles.takeChallengeButtonText,
+          { color: currentTheme.colors.textPrimary },
+        ]}
+        numberOfLines={1}
+        ellipsizeMode="tail"
+      >
+        {t("challengeDetails.completeChallenge")}
+      </Text>
+    </LinearGradient>
+  </TouchableOpacity>
+)}
+
+{!challengeTakenOptimistic && !isDuoPendingOut && !showCompleteButton && (
+  <TouchableOpacity
+    style={styles.takeChallengeButton}
+    onPress={openStartFlow}
+    accessibilityLabel={t("challengeDetails.takeChallengeA11y", {
+      defaultValue: "Prendre le défi",
+    })}
+    accessibilityHint={t("challengeDetails.takeChallengeHint", {
+      defaultValue: "Choisis Solo ou Duo, puis sélectionne une durée pour démarrer.",
+    })}
+    testID="take-challenge-button"
+    accessibilityRole="button"
+    activeOpacity={0.9}
+  >
+    <LinearGradient
+      colors={[currentTheme.colors.primary, currentTheme.colors.secondary]}
+      style={styles.takeChallengeButtonGradient}
+      start={{ x: 0, y: 0 }}
+      end={{ x: 1, y: 1 }}
+    >
+      <Text
+        style={[
+          styles.takeChallengeButtonText,
+          { color: currentTheme.colors.textPrimary },
+        ]}
+      >
+        {t("challengeDetails.takeChallenge")}
+      </Text>
+    </LinearGradient>
+  </TouchableOpacity>
+)}
+
           {challengeTakenOptimistic &&
   !(finalSelectedDays > 0 && finalCompletedDays >= finalSelectedDays) && (
   <Animated.View entering={firstMountRef.current && shouldEnterAnim ? FadeInUp.delay(200) : undefined}
@@ -2878,17 +3455,35 @@ const DuoAvatar = ({ uri, name }: { uri?: string | null; name?: string }) => {
 
         {/* Mini stats */}
         <View style={{ flexDirection: "row", justifyContent: "center", marginTop: 6 }}>
-          <Text style={[styles.progressText, { color: currentTheme.colors.secondary }]}>
-            {finalCompletedDays}/{finalSelectedDays} {t("challengeDetails.daysCompleted")}
-          </Text>
           <Text
   style={[
     styles.progressText,
-    { color: currentTheme.colors.textSecondary, marginLeft: 10 }, // 👈 ajouté
+    {
+      color: currentTheme.colors.secondary,
+      ...(Platform.OS === "android"
+        ? { includeFontPadding: false }
+        : {}),
+    },
+  ]}
+>
+  {finalCompletedDays}/{finalSelectedDays} {t("challengeDetails.daysCompleted")}
+</Text>
+
+<Text
+  style={[
+    styles.progressText,
+    {
+      color: currentTheme.colors.textSecondary,
+      marginLeft: 10,
+      ...(Platform.OS === "android"
+        ? { includeFontPadding: false }
+        : {}),
+    },
   ]}
 >
   · {Math.round(progressPercent * 100)}%
 </Text>
+
         </View>
       </View>
     )}
@@ -2914,7 +3509,7 @@ const DuoAvatar = ({ uri, name }: { uri?: string | null; name?: string }) => {
   return (
     <View style={styles.duoEliteWrap}>
       {/* === AVATARS + COURONNE (lisible) === */}
-      <View style={styles.duoEliteAvatars}>
+      <View style={[styles.duoEliteAvatars, { backgroundColor: DUO.bgSoft, borderColor: DUO.stroke }]}>
         {/* ME */}
         <View style={styles.duoEliteCol}>
           <View style={styles.duoAvatarWrap}>
@@ -2925,17 +3520,17 @@ const DuoAvatar = ({ uri, name }: { uri?: string | null; name?: string }) => {
                 </View>
               </Animated.View>
             )}
-           <SmartAvatar uri={myAvatar} name={myName || t("duo.you")} size={74} />
+           <SmartAvatar uri={myAvatar} name={myName || t("duo.you")} size={74} isDark={isDarkMode} />
 
           </View>
-          <Text style={styles.duoEliteName} numberOfLines={1} ellipsizeMode="tail">
+          <Text style={[styles.duoEliteName, { color: DUO.text }]} numberOfLines={1} ellipsizeMode="tail">
             {myName || t("duo.you")}
           </Text>
         </View>
 
-        <View style={styles.duoVsPill}>
-          <Text style={styles.duoVs}>VS</Text>
-        </View>
+        <View style={[styles.duoVsPill, { backgroundColor: DUO.bgCard, borderColor: DUO.strokeSoft }]}>
+    <Text style={[styles.duoVs, { color: DUO.textSoft, opacity: 1 }]}>VS</Text>
+  </View>
 
         {/* PARTNER */}
         <View style={styles.duoEliteCol}>
@@ -2951,10 +3546,11 @@ const DuoAvatar = ({ uri, name }: { uri?: string | null; name?: string }) => {
   uri={duoChallengeData.duoUser.avatar}
   name={duoChallengeData.duoUser.name}
   size={74}
+  isDark={isDarkMode}
 />
 
           </View>
-          <Text style={styles.duoEliteName} numberOfLines={1} ellipsizeMode="tail">
+          <Text style={[styles.duoEliteName, { color: DUO.text }]} numberOfLines={1} ellipsizeMode="tail">
             {duoChallengeData.duoUser.name}
           </Text>
         </View>
@@ -2965,17 +3561,37 @@ const DuoAvatar = ({ uri, name }: { uri?: string | null; name?: string }) => {
         {/* ME BAR */}
         <View style={styles.duoBarRow}>
           <View style={styles.duoBarLabelRow}>
-            <Text style={styles.duoBarLabel} numberOfLines={1} ellipsizeMode="tail">{t("duo.you")}</Text>
-            <Text style={styles.duoBarValue}>{meDone}/{meTotal}</Text>
+            <Text
+   style={[
+     styles.duoBarLabel,
+     { color: DUO.text },
+     Platform.OS === "android" && { includeFontPadding: false },
+   ]}
+  numberOfLines={1}
+  ellipsizeMode="tail"
+>
+  {t("duo.you")}
+</Text>
+
+<Text
+   style={[
+     styles.duoBarValue,
+     { color: DUO.textFaint },
+     Platform.OS === "android" && { includeFontPadding: false },
+   ]}
+ >
+  {meDone}/{meTotal}
+</Text>
+
           </View>
 
-          <View style={styles.duoBarTrack}>
-            <View style={styles.duoBarTrackSheen} pointerEvents="none" />
+         <View style={[styles.duoBarTrack, { backgroundColor: DUO.track, borderColor: DUO.trackStroke }]}>
+            <View style={[styles.duoBarTrackSheen, { backgroundColor: DUO.sheen }]} pointerEvents="none" />
             <View style={styles.duoBarTicks} pointerEvents="none">
-              <View style={styles.duoBarTick} />
-              <View style={styles.duoBarTick} />
-              <View style={styles.duoBarTick} />
-              <View style={styles.duoBarTick} />
+              <View style={[styles.duoBarTick, { backgroundColor: DUO.tick }]} />
+              <View style={[styles.duoBarTick, { backgroundColor: DUO.tick }]} />
+              <View style={[styles.duoBarTick, { backgroundColor: DUO.tick }]} />
+              <View style={[styles.duoBarTick, { backgroundColor: DUO.tick }]} />
             </View>
             <LinearGradient
               colors={["#FF9F1C", "#FFD166"]}
@@ -2994,20 +3610,19 @@ const DuoAvatar = ({ uri, name }: { uri?: string | null; name?: string }) => {
         {/* PARTNER BAR */}
         <View style={styles.duoBarRow}>
           <View style={styles.duoBarLabelRow}>
-            <Text style={styles.duoBarLabel} numberOfLines={1} ellipsizeMode="tail">
+            <Text style={[styles.duoBarLabel, { color: DUO.text }]} numberOfLines={1} ellipsizeMode="tail">
               {duoChallengeData.duoUser.name}
             </Text>
-            <Text style={styles.duoBarValue}>{pDone}/{pTotal}</Text>
+            <Text style={[styles.duoBarValue, { color: DUO.textFaint }]}>{pDone}/{pTotal}</Text>
           </View>
 
           <View style={styles.duoBarTrack}>
             <View style={styles.duoBarTrackSheen} pointerEvents="none" />
             <View style={styles.duoBarTicks} pointerEvents="none">
-              <View style={styles.duoBattleOutline} pointerEvents="none" />
-              <View style={styles.duoBarTick} />
-              <View style={styles.duoBarTick} />
-              <View style={styles.duoBarTick} />
-              <View style={styles.duoBarTick} />
+              <View style={[styles.duoBarTick, { backgroundColor: DUO.tick }]} />
+              <View style={[styles.duoBarTick, { backgroundColor: DUO.tick }]} />
+              <View style={[styles.duoBarTick, { backgroundColor: DUO.tick }]} />
+              <View style={[styles.duoBarTick, { backgroundColor: DUO.tick }]} />
             </View>
             <LinearGradient
               colors={["#00C2FF", "#00FFD1"]}
@@ -3025,19 +3640,27 @@ const DuoAvatar = ({ uri, name }: { uri?: string | null; name?: string }) => {
       </View>
 
       {/* === BATTLE BAR (SECONDARY, Netflix vibe) === */}
-      <View style={styles.duoBattleTitleRow}>
-  <Text style={styles.duoBattleTitle}>BATTLE BAR</Text>
-  <Text style={styles.duoBattleMini}>{meDone}/{meTotal} • {pDone}/{pTotal}</Text>
+<View style={styles.duoBattleHeaderWrap}>
+  <View style={[styles.duoBattleTitleRow, { backgroundColor: DUO.bgCard, borderColor: DUO.stroke }]}>
+    <Text style={[styles.duoBattleTitle, { color: DUO.text }]} numberOfLines={1}>
+      BATTLE BAR
+    </Text>
+
+    <Text style={[styles.duoBattleMini, { color: DUO.textSoft }]} numberOfLines={1} ellipsizeMode="tail">
+      {meDone}/{meTotal} • {pDone}/{pTotal}
+    </Text>
+  </View>
 </View>
 
-      <View style={styles.duoBattleBarWrap}>
-        <View style={styles.duoBattleBar}>
-          <View style={styles.duoBattleRail} pointerEvents="none" />
-          <View style={[styles.duoBattleLeft, { width: `${mePct * 100}%` }]} />
-          <View style={[styles.duoBattleRight, { width: `${pPct * 100}%` }]} />
-          <View style={styles.duoBattleDivider} pointerEvents="none" />
-        </View>
-      </View>
+<View style={styles.duoBattleBarWrap}>
+  <View style={[styles.duoBattleBar, { backgroundColor: DUO.track, borderColor: DUO.trackStroke }]}>
+    <View style={styles.duoBattleRail} pointerEvents="none" />
+    <View style={[styles.duoBattleLeft, { width: `${mePct * 100}%` }]} />
+    <View style={[styles.duoBattleRight, { width: `${pPct * 100}%` }]} />
+    <View style={[styles.duoBattleDivider, { backgroundColor: isDarkMode ? "rgba(255,255,255,0.55)" : "rgba(0,0,0,0.20)", opacity: 1 }]} pointerEvents="none" />
+  </View>
+</View>
+
 
       {/* === STATUT === */}
       <Text
@@ -3190,184 +3813,216 @@ const DuoAvatar = ({ uri, name }: { uri?: string | null; name?: string }) => {
           >
             {routeDescription}
           </Text>
-                    {showCompleteButton && (
-            <TouchableOpacity
-              style={styles.completeChallengeButton}
-              onPress={handleShowCompleteModal}
-              accessibilityRole="button"
-               accessibilityLabel={t("challengeDetails.completeChallengeA11y", {
-                defaultValue: "Terminer le défi",
-              })}
-              accessibilityHint={t("challengeDetails.completeChallengeHint", {
-                defaultValue: "Ouvre l’écran de validation pour récupérer tes trophées.",
-              })}
-              testID="complete-challenge-button"
-            >
-              <LinearGradient
-                colors={[
-                  currentTheme.colors.primary,
-                  currentTheme.colors.secondary,
-                ]}
-                style={styles.completeChallengeButtonGradient}
-                start={{ x: 0, y: 0 }}
-                end={{ x: 1, y: 1 }}
-              >
-                <Text
-                  style={[
-                    styles.completeChallengeButtonText,
-                    { color: currentTheme.colors.textPrimary },
-                  ]}
-                >
-                  {t("challengeDetails.completeChallenge")}
-                </Text>
-              </LinearGradient>
-            </TouchableOpacity>
-          )}
             
         {/* ACTIONS */}
 <View style={styles.actionsWrap}>
 
   {/* MAIN ACTIONS */}
   <View style={styles.primaryActions}>
-    {!isDuoPendingOut && (
-    <Pressable
-     onPress={handleInviteButtonPress}
-     accessibilityRole="button"
-     accessibilityLabel={t("challengeDetails.actions.inviteA11y", { defaultValue: "Invite a friend" })}
-     accessibilityHint={t("challengeDetails.actions.inviteHint", { defaultValue: "Opens duo invitation for this challenge." })}
-     style={({ pressed }) => [
-       styles.primaryBtn,
-       styles.primaryBtnInvite,
-       pressed && styles.btnPressed,
-     ]}
-   >
-     <View style={{ width: 26, height: 26, alignItems: "center", justifyContent: "center" }}>
-       <Ionicons name="person-add-outline" size={20} color="#fff" />
-     </View>
-
-     <Text style={styles.primaryBtnText}>
-       {t("challengeDetails.actions.inviteTitle")}
-     </Text>
-
-     <Ionicons name="chevron-forward" size={18} color="#fff" />
-   </Pressable>
- )}
-
-
-    <Pressable
-      onPress={() => setShareCardVisible(true)}
+    {/* ✅ Invite seulement si SOLO actif (pas empty start, pas duo, pas pending) */}
+   {isSoloInThisChallenge && !isDuoPendingOut && (
+     <Pressable
+       onPress={handleInviteButtonPress}
        accessibilityRole="button"
-  accessibilityLabel={t("challengeDetails.actions.shareA11y", { defaultValue: "Share" })}
-  accessibilityHint={t("challengeDetails.actions.shareHint", { defaultValue: "Opens share options for this challenge." })}
-      style={({ pressed }) => [
-        styles.primaryBtn,
-        styles.primaryBtnSecondary,
-        pressed && styles.btnPressed,
-      ]}
+       accessibilityLabel={t("challengeDetails.actions.inviteA11y", { defaultValue: "Invite a friend" })}
+       accessibilityHint={t("challengeDetails.actions.inviteHint", { defaultValue: "Opens duo invitation for this challenge." })}
+       style={({ pressed }) => [
+         styles.primaryBtn,
+         styles.primaryBtnInvite,
+         pressed && styles.btnPressed,
+       ]}
     >
-      <Ionicons name="share-outline" size={20} color="#111" />
-      <Text style={styles.primaryBtnTextSecondary}>{t("challengeDetails.actions.shareTitle")}</Text>
-      <Ionicons name="chevron-forward" size={18} color="rgba(0,0,0,0.5)" />
-    </Pressable>
+      <View style={{ width: 26, height: 26, alignItems: "center", justifyContent: "center" }}>
+         <Ionicons name="person-add-outline" size={20} color="#fff" />
+       </View>
+
+       <Text style={styles.primaryBtnText}>
+         {t("challengeDetails.actions.inviteTitle")}
+       </Text>
+
+       <Ionicons name="chevron-forward" size={18} color="#fff" />
+     </Pressable>
+   )}
+
+
+    {/* ✅ Share seulement si le challenge est pris (solo ou duo). Si aucun challenge -> pas de share */}
+{challengeTakenOptimistic && (
+  <Pressable
+    onPress={() => setShareCardVisible(true)}
+    accessibilityRole="button"
+    accessibilityLabel={t("challengeDetails.actions.shareA11y", { defaultValue: "Share" })}
+    accessibilityHint={t("challengeDetails.actions.shareHint", { defaultValue: "Opens share options for this challenge." })}
+    style={({ pressed }) => [
+      styles.primaryBtn,
+      styles.primaryBtnSecondary,
+      pressed && styles.btnPressed,
+    ]}
+  >
+    <Ionicons name="share-outline" size={20} color="#111" />
+    <Text style={styles.primaryBtnTextSecondary}>
+      {t("challengeDetails.actions.shareTitle")}
+    </Text>
+    <Ionicons name="chevron-forward" size={18} color="rgba(0,0,0,0.5)" />
+  </Pressable>
+)}
+
   </View>
 
   {/* QUICK ACTIONS */}
-  <View style={styles.quickActions}>
-    <Pressable
-      onPress={handleNavigateToChat}
-      disabled={!challengeTaken}
-      accessibilityRole="button"
-      accessibilityState={{ disabled: !challengeTaken }}
-      accessibilityLabel={t("challengeDetails.quick.chatA11y", { defaultValue: "Open chat" })}
-      accessibilityHint={t("challengeDetails.quick.chatHint", { defaultValue: "Opens the challenge chat." })}
-      style={({ pressed }) => [
-        styles.quickBtn,
-        !challengeTaken && styles.quickBtnDisabled,
-        pressed && styles.btnPressed,
-      ]}
-    >
+<View style={styles.quickActions}>
+
+  {/* CHAT */}
+  <Pressable
+    onPress={handleNavigateToChat}
+    disabled={!challengeTaken}
+    accessibilityRole="button"
+    accessibilityState={{ disabled: !challengeTaken }}
+    accessibilityLabel={t("challengeDetails.quick.chatA11y")}
+    accessibilityHint={t("challengeDetails.quick.chatHint")}
+    style={({ pressed }) => [
+      styles.quickBtn,
+      !challengeTaken && styles.quickBtnDisabled,
+      pressed && styles.btnPressed,
+    ]}
+  >
+    <View style={styles.quickBtnInner}>
       <Ionicons
         name="chatbubble-ellipses-outline"
         size={18}
-        color={!challengeTaken ? "rgba(0,0,0,0.35)" : undefined}
+        color={challengeTaken ? QUICK_ICON : QUICK_ICON_DISABLED}
       />
-      <Text
-  style={styles.quickText}
-  numberOfLines={1}
-  ellipsizeMode="tail"
-  adjustsFontSizeToFit
-  minimumFontScale={0.85}
->
-  {t("challengeDetails.quick.chat")}
-</Text>
-    </Pressable>
 
-    <Pressable
-      onPress={handleViewStats}
-      disabled={!challengeTaken}
-      accessibilityRole="button"
-      accessibilityState={{ disabled: !challengeTaken }}
-      accessibilityLabel={t("challengeDetails.quick.statsA11y", { defaultValue: "Open stats" })}
-      accessibilityHint={t("challengeDetails.quick.statsHint", { defaultValue: "Opens your progress calendar and stats." })}
-      style={({ pressed }) => [
-        styles.quickBtn,
-        !challengeTaken && styles.quickBtnDisabled,
-        pressed && styles.btnPressed,
-      ]}
-    >
+      <Text
+        style={[
+          styles.quickText,
+          {
+            color: challengeTaken ? QUICK_TEXT : QUICK_TEXT_DISABLED,
+            ...(Platform.OS === "ios"
+              ? {
+                  textShadowColor: QUICK_SHADOW,
+                  textShadowRadius: 6,
+                  textShadowOffset: { width: 0, height: 1 },
+                }
+              : {}),
+          },
+        ]}
+        numberOfLines={1}
+        adjustsFontSizeToFit
+        minimumFontScale={0.62}
+        allowFontScaling={false}
+      >
+        {t("challengeDetails.quick.chat")}
+      </Text>
+    </View>
+  </Pressable>
+
+  {/* STATS */}
+  <Pressable
+    onPress={handleViewStats}
+    disabled={!challengeTaken}
+    accessibilityRole="button"
+    accessibilityState={{ disabled: !challengeTaken }}
+    accessibilityLabel={t("challengeDetails.quick.statsA11y")}
+    accessibilityHint={t("challengeDetails.quick.statsHint")}
+    style={({ pressed }) => [
+      styles.quickBtn,
+      !challengeTaken && styles.quickBtnDisabled,
+      pressed && styles.btnPressed,
+    ]}
+  >
+    <View style={styles.quickBtnInner}>
       <Ionicons
         name="stats-chart-outline"
         size={18}
-        color={!challengeTaken ? "rgba(0,0,0,0.35)" : undefined}
+        color={challengeTaken ? QUICK_ICON : QUICK_ICON_DISABLED}
       />
+
       <Text
-  style={styles.quickText}
-  numberOfLines={1}
-  ellipsizeMode="tail"
-  adjustsFontSizeToFit
-  minimumFontScale={0.85}
->
-  {t("challengeDetails.quick.stats")}
-</Text>
-    </Pressable>
+        style={[
+          styles.quickText,
+          {
+            color: challengeTaken ? QUICK_TEXT : QUICK_TEXT_DISABLED,
+            ...(Platform.OS === "ios"
+              ? {
+                  textShadowColor: QUICK_SHADOW,
+                  textShadowRadius: 6,
+                  textShadowOffset: { width: 0, height: 1 },
+                }
+              : {}),
+          },
+        ]}
+        numberOfLines={1}
+        adjustsFontSizeToFit
+        minimumFontScale={0.62}
+        allowFontScaling={false}
+      >
+        {t("challengeDetails.quick.stats")}
+      </Text>
+    </View>
+  </Pressable>
 
-    <Pressable
-  onPress={handleSaveChallenge}
-  accessibilityRole="button"
-  accessibilityLabel={
-    savedNow
-      ? t("challengeDetails.quick.savedA11y")
-      : t("challengeDetails.quick.saveA11y")
-  }
-  accessibilityHint={t("challengeDetails.quick.saveHint")}
-  style={({ pressed }) => [
-    styles.quickBtn,
-    pressed && styles.btnPressed,
-  ]}
->
-  <Ionicons
-    name={savedNow ? "bookmark" : "bookmark-outline"}
-    size={18}
-    color={savedNow ? ACCENT.solid : undefined}
-  />
-
-  <Text
-    style={[
-      styles.quickText,
-      savedNow && styles.quickTextActive,
+  {/* SAVE / FAVORI */}
+  <Pressable
+    onPress={handleSaveChallenge}
+    accessibilityRole="button"
+    accessibilityLabel={
+      savedNow
+        ? t("challengeDetails.quick.savedA11y")
+        : t("challengeDetails.quick.saveA11y")
+    }
+    accessibilityHint={t("challengeDetails.quick.saveHint")}
+    style={({ pressed }) => [
+      styles.quickBtn,
+      pressed && styles.btnPressed,
     ]}
-    numberOfLines={1}
-    ellipsizeMode="tail"
-    adjustsFontSizeToFit
-    minimumFontScale={0.85}
   >
-    {savedNow
-      ? t("challengeDetails.quick.saved")
-      : t("challengeDetails.quick.save")}
-  </Text>
-</Pressable>
+    <View style={styles.quickBtnInner}>
+      <Ionicons
+        name={savedNow ? "bookmark" : "bookmark-outline"}
+        size={18}
+        color={savedNow ? QUICK_ACTIVE : QUICK_ICON}
+      />
 
-  </View>
+      <Text
+        style={[
+          styles.quickText,
+          savedNow && styles.quickTextActive,
+          savedNow
+            ? {
+                color: QUICK_ACTIVE,
+                ...(Platform.OS === "ios"
+                  ? {
+                      textShadowColor: QUICK_ACTIVE_SHADOW,
+                      textShadowRadius: 7,
+                      textShadowOffset: { width: 0, height: 1 },
+                    }
+                  : {}),
+              }
+            : {
+                color: QUICK_TEXT,
+                ...(Platform.OS === "ios"
+                  ? {
+                      textShadowColor: QUICK_SHADOW,
+                      textShadowRadius: 6,
+                      textShadowOffset: { width: 0, height: 1 },
+                    }
+                  : {}),
+              },
+        ]}
+        numberOfLines={1}
+        adjustsFontSizeToFit
+       minimumFontScale={0.62}
+        allowFontScaling={false}
+      >
+        {savedNow
+          ? t("challengeDetails.quick.saved")
+          : t("challengeDetails.quick.save")}
+      </Text>
+    </View>
+  </Pressable>
+
+</View>
+
 
 </View>
 
@@ -3384,37 +4039,48 @@ const DuoAvatar = ({ uri, name }: { uri?: string | null; name?: string }) => {
 )}
       </ScrollView>
 
+<SelectModeModal
+  visible={startModeVisible}
+  onClose={() => setStartModeVisible(false)}
+  onPick={(mode) => pickModeThenOpenDuration(mode)}
+  isOffline={isOffline}
+  isDark={isDarkMode}
+  primaryColor={currentTheme.colors.primary}
+  secondaryColor={currentTheme.colors.secondary}
+/>
+
       <DurationSelectionModal
         visible={modalVisible}
         daysOptions={daysOptions}
         selectedDays={localSelectedDays}
         onSelectDays={setLocalSelectedDays}
-        onConfirm={handleTakeChallenge}
-        onCancel={() => setModalVisible(false)}
+        onConfirm={handleConfirmDurationByMode}
+        onCancel={() => {
+   setModalVisible(false);
+   // retour mode selection = UX premium (pas wtf)
+   setStartModeVisible(true);
+ }}
         dayIcons={dayIcons}
       />
 
-      {completionModalVisible && (
-  <ChallengeCompletionModal
-    visible={completionModalVisible}
-    challengeId={id}
-    selectedDays={finalSelectedDays}
-    onClose={() => setCompletionModalVisible(false)}
-    onPreloadRewarded={loadRewarded}
-    onShowRewarded={async () => {
-      // showRewarded ne renvoie rien -> on convertit en boolean
-      try {
-        await showRewarded();
-        return true;
-      } catch {
-        return false;
-      }
-    }}
-    canShowRewarded={!!showBanners}
-    rewardedReady={rewardedLoaded}
-    rewardedLoading={rewardedLoading}
-  />
-)}
+      <ChallengeCompletionModal
+  visible={completionModalVisible}
+  challengeId={id}
+  selectedDays={finalSelectedDays}
+  onClose={() => setCompletionModalVisible(false)}
+  onPreloadRewarded={loadRewarded}
+  onShowRewarded={async () => {
+    try {
+      await showRewarded();
+      return true;
+    } catch {
+      return false;
+    }
+  }}
+  canShowRewarded={!!showBanners}
+  rewardedReady={rewardedLoaded}
+  rewardedLoading={rewardedLoading}
+/>
 
 
       <StatsModal
@@ -3680,6 +4346,8 @@ partnerDaysCompleted={duoChallengeData?.duoUser?.completedDays ?? 0}
   isDuo={isDuo}
   onClose={() => setSendInviteVisible(false)}
   onSent={() => {
+  setOutgoingPendingInvite((prev) => prev ?? { id: "__optimistic__", inviteeUsername: null });
+
   Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success).catch(() => {});
   Alert.alert(
     t("invitationS.sentTitle", { defaultValue: "Invitation envoyée" }),
@@ -3713,11 +4381,11 @@ partnerDaysCompleted={duoChallengeData?.duoUser?.completedDays ?? 0}
       style={StyleSheet.absoluteFill}
     />
     <LinearGradient
-      colors={["rgba(255,215,0,0.06)", "rgba(0,0,0,0)", "rgba(0,255,255,0.06)"]}
-      start={{ x: 0.1, y: 0 }}
-      end={{ x: 0.9, y: 1 }}
-      style={StyleSheet.absoluteFill}
-    />
+  colors={["rgba(255,215,0,0.06)", "rgba(0,0,0,0)", "rgba(255,159,28,0.05)"]}
+  start={{ x: 0.1, y: 0 }}
+  end={{ x: 0.9, y: 1 }}
+  style={StyleSheet.absoluteFill}
+/>
 
     {/* CONTENT */}
     {!assetsReady ? (
@@ -3766,7 +4434,12 @@ partnerDaysCompleted={duoChallengeData?.duoUser?.completedDays ?? 0}
   onError={() => { partnerImgReady.current = true; tryStart(); }} // 👈 fail-safe
 />
             {/* glow ring */}
-            <Animated.View style={[styles.vsGlowRing, { borderColor: "#00FFFF55", shadowColor: "#00FFFF" }]} />
+           <Animated.View
+  style={[
+    styles.vsGlowRing,
+    { borderColor: "rgba(255,159,28,0.35)", shadowColor: "rgba(255,159,28,0.9)" },
+  ]}
+/>
             {duoChallengeData?.duoUser?.isPioneer && (
               <PioneerBadge size="mini" style={{ position: "absolute", bottom: -6, left: -6 }} />
             )}
@@ -3780,30 +4453,118 @@ partnerDaysCompleted={duoChallengeData?.duoUser?.completedDays ?? 0}
   </Animated.View>
 </Modal>
 
+{warmupToast && (
+  <Animated.View
+    pointerEvents="none"
+    style={[
+      styles.warmupToastWrap,
+      warmupToastStyle,
+      { bottom: tabBarHeight + insets.bottom + 14 },
+    ]}
+  >
+    <BlurView
+      intensity={26}
+      tint={isDarkMode ? "dark" : "light"}
+      style={styles.warmupToastBlur}
+    >
+      <LinearGradient
+        colors={
+          isDarkMode
+            ? ["rgba(20,20,26,0.88)", "rgba(14,14,18,0.74)"]
+            : ["rgba(255,255,255,0.94)", "rgba(255,255,255,0.86)"]
+        }
+        start={{ x: 0, y: 0 }}
+        end={{ x: 1, y: 1 }}
+        style={styles.warmupToastInner}
+      >
+        <View pointerEvents="none" style={styles.warmupToastStroke} />
+
+        <View style={styles.warmupToastIconPill}>
+          <LinearGradient
+            colors={
+              warmupToast === "success"
+                ? ["rgba(255,159,28,0.85)", "rgba(255,209,102,0.85)"] // orange/gold
+                : ["rgba(239,68,68,0.85)", "rgba(244,63,94,0.85)"] // red
+            }
+            start={{ x: 0, y: 0 }}
+            end={{ x: 1, y: 1 }}
+            style={StyleSheet.absoluteFill}
+          />
+          <Ionicons
+            name={warmupToast === "success" ? "checkmark" : "alert-circle"}
+            size={16}
+            color="#111"
+          />
+        </View>
+
+        <View style={{ flex: 1, minWidth: 0 }}>
+          <Text
+            style={[
+              styles.warmupToastTitle,
+              { color: isDarkMode ? "rgba(255,255,255,0.92)" : "rgba(0,0,0,0.86)" },
+            ]}
+            numberOfLines={1}
+            ellipsizeMode="tail"
+          >
+            {warmupToast === "success"
+              ? t("duo.pending.warmupSuccessTitle", { defaultValue: "Warmup réussi" })
+              : t("duo.pending.warmupErrorTitle", { defaultValue: "Warmup impossible" })}
+          </Text>
+
+          <Text
+            style={[
+              styles.warmupToastSub,
+              { color: isDarkMode ? "rgba(255,255,255,0.70)" : "rgba(0,0,0,0.60)" },
+            ]}
+            numberOfLines={2}
+            ellipsizeMode="tail"
+          >
+            {warmupToast === "success"
+              ? t("duo.pending.warmupSuccessSub", { defaultValue: "On attend ton partenaire." })
+              : t("duo.pending.warmupError", { defaultValue: "Impossible d’enregistrer le warmup." })}
+          </Text>
+        </View>
+      </LinearGradient>
+    </BlurView>
+  </Animated.View>
+)}
+
+
       </SafeAreaView>
     </LinearGradient>
   );
 }
 
 // ===== DUO UI: Premium Avatar + Progress Row (NO weird placeholder) =====
-const getInitial = (name?: string) => {
-  const n = (name || "").trim();
-  return n ? n[0]!.toUpperCase() : "•";
+const getInitials = (name?: string) => {
+  const s = String(name || "").trim();
+  if (!s) return "CT";
+  const parts = s.split(/\s+/).filter(Boolean);
+  const a = (parts[0]?.[0] || "").toUpperCase();
+  const b = (parts[1]?.[0] || parts[0]?.[1] || "").toUpperCase();
+  return (a + b).slice(0, 2) || "CT";
 };
 
-const SmartAvatar = ({
+const SmartAvatar = React.memo(function SmartAvatar({
   uri,
   name,
   size = 74,
+  isDark,
 }: {
   uri?: string | null;
   name?: string;
   size?: number;
-}) => {
+  isDark: boolean;
+}) {
   const [failed, setFailed] = React.useState(false);
 
-  const hasUri = typeof uri === "string" && uri.trim().length > 0;
-  const showImage = hasUri && !failed;
+  const safeUri = typeof uri === "string" ? uri.trim() : "";
+  const showImage = safeUri.length > 0 && !failed;
+  // ✅ premium tokens (dark/light)
+  const ring = isDark ? "rgba(255,255,255,0.18)" : "rgba(0,0,0,0.10)";
+  const shell = isDark ? "rgba(255,255,255,0.08)" : "rgba(0,0,0,0.04)";
+  const text = isDark ? "rgba(255,255,255,0.94)" : "rgba(0,0,0,0.86)";
+  const initials = getInitials(name);
 
   return (
     <View
@@ -3813,64 +4574,98 @@ const SmartAvatar = ({
           width: size,
           height: size,
           borderRadius: size / 2,
+          backgroundColor: shell,
+          borderColor: ring,
         },
       ]}
     >
       {showImage ? (
         <Image
-          source={{ uri: uri!.trim() }}
+          source={{ uri: safeUri }}
           style={{ width: size, height: size, borderRadius: size / 2 }}
           onError={() => setFailed(true)}
           fadeDuration={120}
         />
       ) : (
         <LinearGradient
-          colors={["rgba(255,255,255,0.20)", "rgba(255,255,255,0.06)"]}
+          colors={
+            isDark
+              ? ["rgba(255,159,28,0.95)", "rgba(0,194,255,0.88)"]
+              : ["rgba(255,159,28,0.90)", "rgba(0,194,255,0.75)"]
+          }
           start={{ x: 0, y: 0 }}
           end={{ x: 1, y: 1 }}
-          style={{
-            width: size,
-            height: size,
-            borderRadius: size / 2,
-            alignItems: "center",
-            justifyContent: "center",
-          }}
+          style={[
+            StyleSheet.absoluteFillObject,
+            { borderRadius: size / 2, alignItems: "center", justifyContent: "center" },
+          ]}
         >
-          <View style={styles.avatarFallbackIconWrap}>
-            <Ionicons
-              name="person"
-              size={Math.round(size * 0.34)}
-              color="rgba(255,255,255,0.92)"
-            />
-          </View>
-
-          <Text
+          {/* sheen (Keynote reflection) */}
+          <View
+            pointerEvents="none"
             style={[
-              styles.avatarInitial,
-              { fontSize: Math.round(size * 0.22) },
+              styles.avatarSheen,
+              {
+                borderRadius: size / 2,
+                opacity: isDark ? 0.22 : 0.28,
+              },
             ]}
-          >
-            {getInitial(name)}
+          />
+
+          {/* initials */}
+          <Text
+  style={[
+    styles.avatarInitial,
+    {
+      color: text,
+      fontSize: Math.round(size * 0.30),
+      letterSpacing: 1.2,
+      lineHeight: Math.round(size * 0.34), // ✅ Android safe
+      textAlignVertical: "center",          // ✅ Android
+    },
+  ]}
+  numberOfLines={1}
+>
+            {initials}
           </Text>
         </LinearGradient>
       )}
 
-      {/* Premium ring */}
+      {/* ring clean (no “cadre chelou”) */}
       <View
-        style={[styles.avatarRing, { borderRadius: size / 2 }]}
+        style={[
+          styles.avatarRing,
+          { borderRadius: size / 2, borderColor: ring },
+        ]}
         pointerEvents="none"
       />
-
-      {/* Soft top highlight */}
+      {/* specular ultra subtil */}
       <View
-        style={[styles.avatarSpecular, { borderRadius: size / 2 }]}
+        style={[
+          styles.avatarSpecular,
+          { borderRadius: size / 2, opacity: isDark ? 0.55 : 0.40 },
+        ]}
         pointerEvents="none"
       />
     </View>
   );
-};
+});
+
 
 // ===== /DUO UI =====
+const shadowSoft = Platform.select({
+  ios: {
+    shadowColor: "#000",
+    shadowOffset: { width: 0, height: 10 },
+    shadowOpacity: 0.18,
+    shadowRadius: 22,
+  },
+  android: {
+    elevation: 6,
+  },
+  default: {},
+});
+
 
 
 // ✅ Keynote tokens (cohérence + rendu premium)
@@ -3926,7 +4721,523 @@ const styles = StyleSheet.create({
   container: {
     flex: 1,
   },
-  carouselContainer: { position: "relative", height: 0 },
+  duoPendingVsPillV2: {
+  paddingHorizontal: 10,
+  paddingVertical: 4,
+  borderRadius: 999,
+  minWidth: 44,
+  alignItems: "center",
+  justifyContent: "center",
+  zIndex: 6,
+  elevation: 6,
+  overflow: "visible",
+
+  // ✅ ajout
+  backgroundColor: "rgba(255,215,0,0.22)",
+  borderWidth: StyleSheet.hairlineWidth,
+  borderColor: "rgba(255,215,0,0.30)",
+},
+duoPendingVsTextV2: {
+  fontFamily: "Comfortaa_700Bold",
+  fontSize: 12,
+  letterSpacing: 1,
+  color: "#111",
+},
+
+  duoPendingRingV2: {
+  position: "absolute",
+  width: 56,
+  height: 56,
+  borderRadius: 56,
+  borderWidth: 1,
+  // ⛔️ avant: rgba(0,255,255,...)
+  borderColor: "rgba(255,159,28,0.30)", // ✅ orange soft
+},
+toastRoot: {
+  position: "absolute",
+  left: 0,
+  right: 0,
+  bottom: 16, // on reste au-dessus des bannières/tab bar via safeArea plus bas
+  alignItems: "center",
+  zIndex: 99999,
+},
+
+toastCard: {
+  width: "92%",
+  maxWidth: 420,
+  borderRadius: 18,
+  overflow: "hidden",
+},
+
+toastBlur: {
+  borderRadius: 18,
+  overflow: "hidden",
+},
+
+toastInner: {
+  paddingVertical: 12,
+  paddingHorizontal: 12,
+  flexDirection: "row",
+  alignItems: "center",
+  gap: 10,
+  borderWidth: StyleSheet.hairlineWidth,
+  borderColor: "rgba(255,255,255,0.14)",
+},
+
+toastIconPill: {
+  width: 30,
+  height: 30,
+  borderRadius: 999,
+  alignItems: "center",
+  justifyContent: "center",
+  overflow: "hidden",
+},
+
+toastTitle: {
+  fontFamily: "Comfortaa_700Bold",
+  fontSize: normalizeSize(13.6),
+},
+
+toastSub: {
+  marginTop: 2,
+  fontFamily: "Comfortaa_400Regular",
+  fontSize: normalizeSize(12.2),
+  lineHeight: normalizeSize(15.5),
+},
+
+duoPendingGlowV2: {
+  position: "absolute",
+  width: 18,
+  height: 18,
+  borderRadius: 18,
+  // ⛔️ avant: cyan
+  backgroundColor: "rgba(255,159,28,0.14)", // ✅ orange glow
+},
+
+duoPendingDotV2: {
+  position: "absolute",
+  width: 18,
+  height: 18,
+  borderRadius: 18,
+  borderWidth: 1,
+  // tu peux garder gold (ok)
+  borderColor: "rgba(255,215,0,0.38)",
+},
+
+duoPendingDotCoreV2: {
+  width: 7,
+  height: 7,
+  borderRadius: 7,
+  backgroundColor: "rgba(255,215,0,0.92)",
+},
+
+  duoPendingCard: {
+  borderRadius: 18,
+  padding: 14,
+  // ✅ CRITIQUE : sinon le hub se fait couper
+  overflow: "visible", // pas "hidden" ici
+},
+startModeBackdrop: {
+  flex: 1,
+  justifyContent: "center",
+  alignItems: "center",
+  // ✅ plus sombre pour lisibilité
+  backgroundColor: "rgba(0,0,0,0.68)",
+},
+
+startModeCard: {
+  width: "100%",
+  maxWidth: 560,
+  alignSelf: "center",
+  borderRadius: 26,
+  overflow: "hidden",
+  ...S.float,
+},
+
+warmupToastWrap: {
+  position: "absolute",
+  left: 14,
+  right: 14,
+  zIndex: 99999,
+  elevation: 999,
+},
+
+warmupToastBlur: {
+  borderRadius: 18,
+  overflow: "hidden",
+},
+
+warmupToastInner: {
+  borderRadius: 18,
+  paddingVertical: 12,
+  paddingHorizontal: 12,
+  flexDirection: "row",
+  alignItems: "center",
+  gap: 10,
+},
+
+warmupToastStroke: {
+  ...StyleSheet.absoluteFillObject,
+  borderRadius: 18,
+  borderWidth: StyleSheet.hairlineWidth,
+  borderColor: "rgba(255,255,255,0.16)",
+},
+
+warmupToastIconPill: {
+  width: 28,
+  height: 28,
+  borderRadius: 10,
+  overflow: "hidden",
+  alignItems: "center",
+  justifyContent: "center",
+},
+
+warmupToastTitle: {
+  fontFamily: "Comfortaa_700Bold",
+  fontSize: 13.6,
+  lineHeight: 16,
+},
+
+warmupToastSub: {
+  marginTop: 2,
+  fontFamily: "Comfortaa_400Regular",
+  fontSize: 12.2,
+  lineHeight: 15,
+},
+
+startModeCardInner: {
+  // ✅ on garde un padding mais on laisse le footer respirer
+  paddingTop: 16,
+  paddingHorizontal: 16,
+  paddingBottom: 10,
+  borderRadius: 26,
+},
+
+// ✅ ScrollView : occupe l'espace et ne "mange" plus le footer
+startModeScroll: {
+  flexGrow: 0,
+},
+startModeScrollContent: {
+  paddingBottom: 10,
+},
+
+startModeOption: {
+  width: "100%",
+  // ✅ un peu plus haut pour absorber langues longues
+  minHeight: 124,
+  borderRadius: 18,
+  padding: 12,
+  overflow: "hidden",
+  borderWidth: StyleSheet.hairlineWidth,
+  borderColor: "rgba(255,255,255,0.14)",
+  justifyContent: "space-between",
+},
+
+startModeFooter: {
+  marginTop: 12,
+  alignItems: "center",
+},
+
+startModeCancel: {
+  paddingVertical: 11,
+  paddingHorizontal: 18,
+  borderRadius: 999,
+  borderWidth: StyleSheet.hairlineWidth,
+  borderColor: "rgba(255,255,255,0.18)",
+  // ✅ petit fond pour mieux découper sur glass
+  backgroundColor: "rgba(0,0,0,0.16)",
+},
+
+startModeCancelText: {
+  color: "rgba(255,255,255,0.90)",
+  fontSize: 13,
+  fontFamily: "Comfortaa_700Bold",
+  includeFontPadding: false,
+},
+
+startModeOptionSub: {
+  marginTop: 2,
+  color: "rgba(255,255,255,0.72)",
+  fontSize: 12,
+  lineHeight: 15,
+  flexShrink: 1,
+},
+
+
+// ✅ tiny phones : micro shrink pour éviter les "..."
+startModeOptionSubTiny: {
+  fontSize: 11.2,
+  lineHeight: 14,
+},
+startModeStroke: {
+  ...StyleSheet.absoluteFillObject,
+  borderWidth: StyleSheet.hairlineWidth,
+  borderColor: "rgba(255,255,255,0.14)",
+  borderRadius: 26,
+},
+startModeHeader: {
+  flexDirection: "row",
+  alignItems: "center",
+  gap: 10,
+  marginBottom: 14,
+},
+startModeIconPill: {
+  width: 36,
+  height: 36,
+  borderRadius: 12,
+  alignItems: "center",
+  justifyContent: "center",
+  overflow: "hidden",
+},
+startModeTitle: {
+  color: "rgba(255,255,255,0.96)",
+  fontFamily: "Comfortaa_700Bold",
+  fontSize: 16,
+},
+startModeSub: {
+  marginTop: 2,
+  color: "rgba(255,255,255,0.70)",
+  fontSize: 12.5,
+  lineHeight: 16,
+},
+startModeGrid: {
+  flexDirection: "row",
+  gap: 12,
+  flexWrap: "wrap",
+},
+startModeOptionHalf: {
+   width: "48%",
+ },
+startModeOptionDuo: {
+  borderColor: "rgba(244,211,94,0.30)",
+},
+startModeTopRow: {
+  flexDirection: "row",
+  alignItems: "center",
+  justifyContent: "space-between",
+},
+startModeBadge: {
+  paddingHorizontal: 8,
+  paddingVertical: 4,
+  borderRadius: 999,
+  borderWidth: StyleSheet.hairlineWidth,
+  borderColor: "rgba(255,255,255,0.18)",
+  backgroundColor: "rgba(0,0,0,0.22)",
+},
+startModeBadgeText: {
+  color: "rgba(255,255,255,0.90)",
+  fontSize: 10,
+  letterSpacing: 0.4,
+  fontFamily: "Comfortaa_700Bold",
+},
+startModeOptionTitle: {
+  marginTop: 8,
+  color: "rgba(255,255,255,0.96)",
+  fontFamily: "Comfortaa_700Bold",
+  fontSize: 14.5,
+},
+  startModeCardBlur: {
+    borderRadius: 26,
+    overflow: "hidden",
+  },
+duoPendingWarmupDisabledStroke: {
+  position: "absolute",
+  left: 0,
+  right: 0,
+  top: 0,
+  bottom: 0,
+  borderRadius: 999,
+  borderWidth: StyleSheet.hairlineWidth,
+  borderColor: "rgba(255,255,255,0.22)",
+},
+duoPendingShell: {
+  marginTop: 14,
+  width: "100%",
+},
+duoPendingCardV2: {
+  borderRadius: 22,
+  padding: 14,
+  overflow: "hidden",
+  borderWidth: StyleSheet.hairlineWidth,
+  borderColor: "rgba(255,255,255,0.10)",
+  ...shadowSoft,
+},
+duoBattleHeaderWrap: {
+  width: "100%",
+  maxWidth: 560,
+  alignSelf: "center",
+  marginTop: 14,
+  marginBottom: 8,
+  paddingHorizontal: 6,
+},
+duoBattleTitleRow: {
+  width: "100%",
+  flexDirection: "row",
+  alignItems: "center",
+  justifyContent: "space-between",
+  gap: 10,
+  paddingVertical: 8,
+  paddingHorizontal: 12,
+  borderRadius: 14,
+  backgroundColor: Platform.select({
+    ios: "rgba(0,0,0,0.28)",
+    android: "rgba(0,0,0,0.22)",
+    default: "rgba(0,0,0,0.26)",
+  }) as any,
+  borderWidth: StyleSheet.hairlineWidth,
+  borderColor: "rgba(255,255,255,0.16)",
+  zIndex: 2,
+  elevation: 2,
+},
+duoBattleTitle: {
+  flexShrink: 1,
+  minWidth: 0,
+  fontFamily: "Comfortaa_700Bold",
+  fontSize: normalizeSize(12.6),
+  letterSpacing: 1.2,
+  color: "rgba(255,255,255,0.94)",
+  includeFontPadding: false,
+  ...(Platform.OS === "ios"
+    ? {
+        textShadowColor: "rgba(0,0,0,0.55)",
+        textShadowRadius: 6,
+        textShadowOffset: { width: 0, height: 1 },
+      }
+    : {}),
+},
+duoBattleMini: {
+  flexShrink: 0,
+  fontFamily: "Comfortaa_700Bold",
+  fontSize: normalizeSize(11.2),
+  color: "rgba(255,255,255,0.78)",
+  includeFontPadding: false,
+},
+duoBattleBarWrap: {
+  width: "100%",
+  maxWidth: 560,
+  alignSelf: "center",
+  marginTop: 0,
+  opacity: 1,
+},
+duoPendingStrokeV2: {
+  ...StyleSheet.absoluteFillObject,
+  borderRadius: 22,
+  borderWidth: StyleSheet.hairlineWidth,
+  borderColor: "rgba(255,255,255,0.14)",
+  opacity: 0.9,
+},
+duoPendingSheenV2: {
+  position: "absolute",
+  left: -40,
+  top: -60,
+  width: 160,
+  height: 160,
+  borderRadius: 160,
+  backgroundColor: "rgba(255,255,255,0.08)",
+  transform: [{ rotate: "18deg" }],
+},
+duoPendingTopRowV2: {
+  flexDirection: "row",
+  alignItems: "center",
+  marginBottom: 10,
+},
+duoPendingDotWrapV2: {
+  width: 18,
+  height: 18,
+  marginRight: 10,
+  alignItems: "center",
+  justifyContent: "center",
+},
+duoPendingTopTextV2: {
+  flex: 1,
+  minWidth: 0,
+  fontFamily: "Comfortaa_700Bold",
+  fontSize: normalizeSize(12.5),
+  letterSpacing: 0.3,
+},
+duoPendingTopRightV2: {
+  width: 22,
+  alignItems: "flex-end",
+},
+duoPendingCenterV2: {
+  flexDirection: "row",
+  alignItems: "center",
+  justifyContent: "space-between",
+  marginBottom: 10,
+},
+duoPendingAvatarColV2: {
+  width: "40%",
+  alignItems: "center",
+},
+duoPendingNameV2: {
+  marginTop: 8,
+  fontFamily: "Comfortaa_700Bold",
+  fontSize: normalizeSize(12.8),
+},
+duoPendingConnectorV2: {
+  width: "20%",
+  alignItems: "center",
+  justifyContent: "center",
+},
+duoPendingLineV2: {
+  width: 2,
+  height: 14,
+  borderRadius: 2,
+  backgroundColor: "rgba(255,255,255,0.14)",
+},
+duoPendingHintV2: {
+  textAlign: "center",
+  fontFamily: "Comfortaa_400Regular",
+  fontSize: normalizeSize(12.6),
+  lineHeight: normalizeSize(17),
+  marginBottom: 12,
+},
+duoPendingActionsV2: {
+  flexDirection: "row",
+  gap: 10,
+},
+duoPendingPrimaryBtnV2: {
+  flex: 1,
+  height: 46,
+  borderRadius: 16,
+  overflow: "hidden",
+  flexDirection: "row",
+  alignItems: "center",
+  justifyContent: "center",
+  paddingHorizontal: 12,
+},
+duoPendingPrimaryBtnDisabledV2: {
+  opacity: 0.92,
+},
+duoPendingPrimaryTextV2: {
+  flex: 1,
+  minWidth: 0,
+  marginLeft: 10,
+  fontFamily: "Comfortaa_700Bold",
+  fontSize: normalizeSize(13.2),
+  color: "#111",
+},
+duoPendingGhostBtnV2: {
+  width: 118,
+  height: 46,
+  borderRadius: 16,
+  overflow: "hidden",
+  borderWidth: StyleSheet.hairlineWidth,
+  borderColor: "rgba(255,255,255,0.14)",
+  backgroundColor: "rgba(255,255,255,0.06)",
+  alignItems: "center",
+  justifyContent: "center",
+},
+duoPendingGhostInnerV2: {
+  flexDirection: "row",
+  alignItems: "center",
+  gap: 8,
+  paddingHorizontal: 10,
+},
+duoPendingGhostTextV2: {
+  fontFamily: "Comfortaa_700Bold",
+  fontSize: normalizeSize(12.8),
+},
  imageContainer: {
     width: "100%",
     borderBottomLeftRadius: R.hero,
@@ -3941,7 +5252,6 @@ const styles = StyleSheet.create({
   paddingHorizontal: 16,
   paddingTop: 24,
 },
-
 confirmCardKeynote: {
   borderRadius: 28,
   overflow: "hidden",
@@ -3956,33 +5266,28 @@ confirmCardKeynote: {
   // elevation Android
   elevation: 22,
 },
-
 confirmCardBlur: {
   borderRadius: 28,
   overflow: "hidden",
 },
-
 confirmCardInner: {
   paddingHorizontal: 18,
   paddingTop: 18,
   paddingBottom: 14,
   borderRadius: 28,
 },
-
 confirmInnerStroke: {
   ...StyleSheet.absoluteFillObject,
   borderRadius: 28,
   borderWidth: StyleSheet.hairlineWidth,
   borderColor: "rgba(255,255,255,0.18)",
 },
-
 confirmHeaderRow: {
   flexDirection: "row",
   alignItems: "center",
   gap: 12,
   marginBottom: 14,
 },
-
 confirmIconPill: {
   width: 38,
   height: 38,
@@ -3994,14 +5299,12 @@ confirmIconPill: {
   borderColor: "rgba(255,255,255,0.22)",
   backgroundColor: "rgba(255,255,255,0.06)",
 },
-
 confirmTitleKeynote: {
   fontSize: 18,
   lineHeight: 22,
   color: "rgba(255,255,255,0.96)",
   fontFamily: "Comfortaa_700Bold",
 },
-
 confirmSubKeynote: {
   marginTop: 3,
   fontSize: 13,
@@ -4009,7 +5312,6 @@ confirmSubKeynote: {
   color: "rgba(255,255,255,0.72)",
   fontFamily: "System",
 },
-
 confirmMessageCard: {
   flexDirection: "row",
   alignItems: "flex-start",
@@ -4022,7 +5324,6 @@ confirmMessageCard: {
   borderColor: "rgba(255,255,255,0.14)",
   marginBottom: 14,
 },
-
 confirmTextKeynote: {
   flex: 1,
   minWidth: 0,
@@ -4031,13 +5332,11 @@ confirmTextKeynote: {
   color: "rgba(255,255,255,0.86)",
   fontFamily: "System",
 },
-
 confirmActions: {
   flexDirection: "row",
   gap: 10,
   paddingTop: 2,
 },
-
 confirmGhostBtn: {
   flex: 1,
   height: 48,
@@ -4048,13 +5347,11 @@ confirmGhostBtn: {
   borderWidth: StyleSheet.hairlineWidth,
   borderColor: "rgba(255,255,255,0.16)",
 },
-
 confirmGhostText: {
   color: "rgba(255,255,255,0.90)",
   fontSize: 14,
   fontFamily: "Comfortaa_700Bold",
 },
-
 confirmPrimaryBtn: {
   flex: 1.2,
   height: 48,
@@ -4067,27 +5364,22 @@ confirmPrimaryBtn: {
   borderWidth: StyleSheet.hairlineWidth,
   borderColor: "rgba(255,255,255,0.18)",
 },
-
 confirmPrimarySheen: {
   ...StyleSheet.absoluteFillObject,
   backgroundColor: "rgba(255,255,255,0.18)",
   opacity: 0.0,
 },
-
 confirmPrimaryText: {
   color: "#111",
   fontSize: 14,
   fontFamily: "Comfortaa_700Bold",
 },
-  // ===== SmartAvatar styles (fallback premium, no octogon) =====
 avatarShell: {
   position: "relative",
   alignItems: "center",
   justifyContent: "center",
   overflow: "hidden",
-  backgroundColor: "rgba(255,255,255,0.08)",
-  borderWidth: 1,
-  borderColor: "rgba(255,255,255,0.18)",
+  borderWidth: StyleSheet.hairlineWidth,
   ...S.card,
 },
 avatarRing: {
@@ -4096,8 +5388,7 @@ avatarRing: {
   right: 0,
   top: 0,
   bottom: 0,
-  borderWidth: 1,
-  borderColor: "rgba(255,255,255,0.22)",
+  borderWidth: StyleSheet.hairlineWidth,
 },
 avatarSpecular: {
   position: "absolute",
@@ -4109,24 +5400,19 @@ avatarSpecular: {
   transform: [{ skewY: "-10deg" }],
   opacity: 0.85,
 },
-avatarFallbackIconWrap: {
-  width: 30,
-  height: 30,
-  borderRadius: 999,
-  alignItems: "center",
-  justifyContent: "center",
-  backgroundColor: "rgba(0,0,0,0.18)",
-  borderWidth: 1,
-  borderColor: "rgba(255,255,255,0.18)",
-  marginBottom: 6,
-},
 avatarInitial: {
   fontFamily: "Comfortaa_700Bold",
-  color: "rgba(255,255,255,0.92)",
   includeFontPadding: false,
 },
-
-// ===== Duo bars: make them pop more =====
+avatarSheen: {
+  position: "absolute",
+  left: "10%",
+  right: "10%",
+  top: "10%",
+  height: "42%",
+  backgroundColor: "rgba(255,255,255,0.18)",
+  transform: [{ skewY: "-10deg" }],
+},
 duoBarTrack: {
   height: 16, // ⬅️ un peu plus épais
   borderRadius: 999,
@@ -4160,37 +5446,6 @@ duoBarTick: {
 duoBarFill: {
   height: "100%",
   borderRadius: 999,
-},
-
-// ===== Battle bar title =====
-duoBattleTitleRow: {
-  width: "100%",
-  maxWidth: 560,
-  marginTop: 14,
-  marginBottom: 8,
-  paddingHorizontal: 6,
-  flexDirection: "row",
-  alignItems: "baseline",
-  justifyContent: "space-between",
-},
-duoBattleTitle: {
-  fontFamily: "Comfortaa_700Bold",
-  fontSize: normalizeSize(12),
-  letterSpacing: 1.4,
-  opacity: 0.60,
-},
-duoBattleMini: {
-  fontFamily: "Comfortaa_700Bold",
-  fontSize: normalizeSize(11),
-  opacity: Platform.OS === "android" ? 0.85 : 0.40
-},
-
-// ===== Battle bar: more contrast =====
-duoBattleBarWrap: {
-  marginTop: 0, // ⬅️ le titre gère l’espace
-  width: "100%",
-  maxWidth: 560,
-  opacity: 1,
 },
 duoBattleBar: {
   width: "100%",
@@ -4333,12 +5588,6 @@ duoBattleOutline: {
   borderWidth: 1,
   borderColor: "rgba(0,0,0,0.10)",
 },
-duoPendingShell: {
-   width: "100%",
-   marginTop: 12,
-   gap: 10,
-   alignItems: "stretch",
- },
 duoEliteAvatars: {
   width: "100%",
   maxWidth: 560,
@@ -4346,68 +5595,11 @@ duoEliteAvatars: {
   alignItems: "center",
   justifyContent: "space-between",
   gap: 12,
-  backgroundColor: Platform.OS === "android"
-  ? "rgba(255,255,255,0.10)"
-  : "rgba(255,255,255,0.08)",
-},
-duoPendingCard: {
-  borderRadius: normalizeSize(18),
-  paddingVertical: 12,
+ paddingVertical: 10,
   paddingHorizontal: 12,
-  overflow: "hidden",
-  width: "100%",
-  // ✅ pas de border externe : c’est ça qui fait “gris moche”
-  backgroundColor: "transparent",
-  ...Platform.select({
-    ios: S.card,
-    android: { elevation: 6 },
-    default: {},
-  }),
-},
-duoPendingRow: {
-  flexDirection: "row",
-  alignItems: "center",
-  justifyContent: "space-between",
-},
-duoPendingStroke: {
-  position: "absolute",
-  top: 1,
-  left: 1,
-  right: 1,
-  bottom: 1,
-  borderRadius: normalizeSize(17),
+  borderRadius: 18,
   borderWidth: StyleSheet.hairlineWidth,
-  borderColor: "rgba(0,0,0,0.10)",
-  // ✅ stroke clair en dark mode
-  ...(Platform.OS === "android"
-    ? {}
-    : {}),
 },
-duoPendingLeft: {
-   flex: 1,
-   flexDirection: "row",
-   alignItems: "center",
-   minWidth: 0,
- },
-duoPendingIconWrap: {
- width: 38,
-   height: 38,
-   borderRadius: 999,
-   alignItems: "center",
-   justifyContent: "center",
-   backgroundColor: "rgba(0,0,0,0.22)",
-   borderWidth: 1,
-   borderColor: "rgba(255,255,255,0.16)",
-   overflow: "hidden",
-   marginRight: 12,
-},
-duoPendingHalo: {
-   position: "absolute",
-   width: 42,
-   height: 42,
-   borderRadius: 999,
-   backgroundColor: "rgba(139,92,246,0.22)",
- },
 duoPendingRing: {
   position: "absolute",
    width: 38,
@@ -4415,60 +5607,6 @@ duoPendingRing: {
    borderRadius: 999,
    borderWidth: 2.5,
    borderColor: "rgba(139,92,246,0.95)",
-},
-duoPendingDot: {
-  position: "absolute",
-   width: 10,
-   height: 10,
-   borderRadius: 999,
-   backgroundColor: "rgba(255,255,255,0.92)",
-   right: 6,
-   top: 6,
- borderWidth: 1,
- borderColor: "rgba(255,255,255,0.55)",
-
-},
-duoPendingTitle: {
-   fontFamily: "Comfortaa_700Bold",
-  fontSize: normalizeSize(13.5),
-   includeFontPadding: false,
-   color: "rgba(0,0,0,0.88)",
-},
-duoPendingMetaRow: {
-   flexDirection: "row",
-   alignItems: "center",
-   gap: 8,
-   marginTop: 3,
- },
-
- duoPendingChip: {
-   paddingHorizontal: 9,
-   paddingVertical: 4,
-   borderRadius: 999,
-   backgroundColor: "rgba(99,102,241,0.16)",
-  borderWidth: 1,
-  borderColor: "rgba(99,102,241,0.30)",
- },
- duoPendingChipText: {
-   fontFamily: "Comfortaa_700Bold",
-   fontSize: 10,
-   letterSpacing: 0.8,
-   color: "rgba(55,48,163,0.95)",
-   includeFontPadding: false,
- },
-duoPendingSub: {
-   flex: 1,
-   fontFamily: "Comfortaa_400Regular",
-   fontSize: 12,
-   includeFontPadding: false,
-   color: "rgba(0,0,0,0.52)",
-},
-duoPendingTo: {
-  marginTop: 4,
-   fontFamily: "Comfortaa_700Bold",
-   fontSize: 12,
-   includeFontPadding: false,
-   color: "rgba(255,255,255,0.88)",
 },
  duoPendingCancelBtn: {
    alignSelf: "flex-end",
@@ -4517,14 +5655,11 @@ duoVsPill: {
   paddingVertical: 8,
   borderRadius: 999,
   borderWidth: 1,
-  borderColor: "rgba(255,255,255,0.14)",
-  backgroundColor: "rgba(255,255,255,0.06)",
 },
 duoVs: {
   fontFamily: "Comfortaa_700Bold",
   fontSize: normalizeSize(12),
   letterSpacing: 1.6,
-  opacity: 0.55,
   includeFontPadding: false,
 },
 crownElite: {
@@ -4719,52 +5854,60 @@ duoKeynoteStatus: {
   fontSize: normalizeSize(15),
   opacity: 0.85,
 },
-
 duoLeading: {
   color: ACCENT.solid,
 },
-
 duoBehind: {
   color: "#FF6B6B",
 },
-
 crownPulse: {
   position: "absolute",
   top: -14,
   zIndex: 2,
 },
-
 quickActions: {
-  flexDirection: "row",
-  gap: 10,
   marginTop: 14,
+  flexDirection: "row",
+  flexWrap: "nowrap",          // ✅ JAMAIS 2 lignes
+  justifyContent: "space-between",
+  gap: 10,                     // ✅ spacing stable
 },
 quickBtn: {
-  flex: 1,
-  minWidth: 0, // CRUCIAL pour éviter que le Text force la largeur
-  height: 48,
+  flex: 1,                     // ✅ 3 colonnes égales
+  minWidth: 0,                 // ✅ CRUCIAL pour éviter overflow iOS
+  alignItems: "center",
+  justifyContent: "center",
+  paddingVertical: 10,
+  paddingHorizontal: 8,
   borderRadius: 14,
+  minHeight: 56,               // ✅ plus haut => texte jamais coupé
   borderWidth: 1,
   borderColor: "rgba(0,0,0,0.12)",
   backgroundColor: "rgba(255,255,255,0.86)",
-  flexDirection: "row",
+},
+quickText: {
+  width: "100%",
+  textAlign: "center",
+  flexShrink: 1,
+  minWidth: 0,                 // ✅ iOS long strings
+  fontSize: normalizeSize(12.5),
+  fontFamily: "Comfortaa_700Bold",
+  includeFontPadding: false,
+  lineHeight: normalizeSize(14),
+},
+quickBtnInner: {
+  width: "100%",
   alignItems: "center",
   justifyContent: "center",
-  paddingHorizontal: 10, // un poil moins
   gap: 6,
 },
-
-quickText: {
-  flexShrink: 1, // CRUCIAL
-  fontSize: 12.5, // stable
-  fontFamily: "Comfortaa_700Bold",
+quickIcon: {
+  marginBottom: 0,
 },
-
 btnPressed: {
   transform: [{ scale: 0.98 }],
   opacity: 0.9,
 },
-
   image: {
     width: "100%",
     backfaceVisibility: "hidden",
@@ -4962,151 +6105,72 @@ dockCardGlass: {
     android: "rgba(255,255,255,0.08)",
   }) as any,
 },
-
 dockCardDisabled: {
   opacity: 0.82,
 },
-
 dockPressed: {
   transform: [{ scale: 0.992 }],
   opacity: 0.94,
 },
-
 dockCardFill: {
   flex: 1,
   paddingHorizontal: 14,
   paddingTop: 14,
   paddingBottom: 12,
 },
-
 dockDisabledVeil: {
   ...StyleSheet.absoluteFillObject,
   backgroundColor: "rgba(0,0,0,0.20)",
 },
 
-dockCardGlassInner: {
-  flex: 1,
-  paddingHorizontal: 14,
-  paddingTop: 14,
-  paddingBottom: 12,
-},
-
-dockCardHeader: {
-  flexDirection: "row",
-  alignItems: "center",
-  justifyContent: "space-between",
-  marginBottom: 8,
-},
-
-dockRightBits: {
-  flexDirection: "row",
-  alignItems: "center",
-  gap: 8,
-},
-
-dockIconPill: {
-  width: 38,
-  height: 38,
-  borderRadius: 14,
+duoPendingCenter: {
   alignItems: "center",
   justifyContent: "center",
-  backgroundColor: "rgba(255,255,255,0.20)",
-  borderWidth: 1,
-  borderColor: "rgba(255,255,255,0.22)",
-},
-
-dockIconPillGlass: {
-  backgroundColor: "rgba(0,0,0,0.06)",
-  borderColor: "rgba(0,0,0,0.10)",
-},
-
-dockMiniPill: {
   paddingHorizontal: 10,
-  paddingVertical: 6,
-  borderRadius: 999,
-  backgroundColor: "rgba(255,255,255,0.18)",
+  minWidth: 64,
+},
+duoPendingCenterGlow: {
+  position: "absolute",
+  width: 58,
+  height: 58,
+  borderRadius: 29,
   borderWidth: 1,
-  borderColor: "rgba(255,255,255,0.22)",
+  borderColor: "rgba(255,255,255,0.10)",
 },
-
-dockMiniPillText: {
+duoPendingCenterLine: {
+  width: 2,
+  height: 18,
+  borderRadius: 1,
+  backgroundColor: "rgba(255,255,255,0.18)",
+  marginVertical: 6,
+},
+duoPendingVsPill: {
+  paddingHorizontal: 14,
+  paddingVertical: 7,
+  borderRadius: 999,
+  backgroundColor: "rgba(0,0,0,0.22)",
+  borderWidth: StyleSheet.hairlineWidth,
+  borderColor: "rgba(255,255,255,0.16)",
+},
+duoPendingVsText: {
   fontFamily: "Comfortaa_700Bold",
-  fontSize: 11,
-  color: "#fff",
-  includeFontPadding: false,
+  fontSize: 12,
+  letterSpacing: 1.2,
+  color: "rgba(255,255,255,0.92)",
 },
-
-dockMiniPillGlass: {
-  backgroundColor: "rgba(0,0,0,0.06)",
-  borderColor: "rgba(0,0,0,0.10)",
-},
-
-dockMiniPillTextGlass: {
-  color: "rgba(0,0,0,0.70)",
-},
-
-dockTitlePrimary: {
-  color: "#fff",
-  fontSize: 16,
-  lineHeight: 20,
-  fontFamily: "Comfortaa_700Bold",
-  includeFontPadding: false,
-},
-
-dockSubPrimary: {
-  marginTop: 6,
-  color: "rgba(255,255,255,0.90)",
-  fontSize: 12.5,
-  lineHeight: 16,
-  fontFamily: "Comfortaa_400Regular",
-  includeFontPadding: false,
-},
-
-dockTitleGlass: {
-  fontSize: 16,
-  lineHeight: 20,
-  fontFamily: "Comfortaa_700Bold",
-  includeFontPadding: false,
-},
-
-dockSubGlass: {
-  marginTop: 6,
-  fontSize: 12.5,
-  lineHeight: 16,
-  fontFamily: "Comfortaa_400Regular",
-  includeFontPadding: false,
-},
-
-dockQuickRow: {
-  marginTop: 12,
-  flexDirection: "row",
-  gap: 10,
-},
-
-dockQuickBtn: {
-  flex: 1,
-  minHeight: 54,
-  borderRadius: 16,
+duoPendingMiniBadge: {
+  position: "absolute",
+  right: 6,
+  bottom: 6,
+  width: 18,
+  height: 18,
+  borderRadius: 9,
   alignItems: "center",
   justifyContent: "center",
-  borderWidth: 1,
-  borderColor: GLASS.borderSoft,
-  backgroundColor: Platform.select({
-    ios: "rgba(255,255,255,0.06)",
-    android: "rgba(255,255,255,0.08)",
-    default: "rgba(255,255,255,0.06)",
-  }) as any,
+  backgroundColor: "rgba(0,0,0,0.22)",
+  borderWidth: StyleSheet.hairlineWidth,
+  borderColor: "rgba(255,255,255,0.18)",
 },
-
-dockQuickDisabled: {
-  opacity: 0.55,
-},
-
-dockQuickPressed: {
-  transform: [{ scale: 0.988 }],
-  opacity: 0.92,
-},
-
 dockQuickIcon: {
   width: 34,
   height: 34,

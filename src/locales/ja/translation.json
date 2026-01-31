@@ -280,6 +280,7 @@
 
   "newFeatures": {
     "deadlineIso": "2026-02-28T23:59:59+01:00",
+    "proposeIdea": "アイデアを提案する",
     "shareLabel": "共有",
 
     "monthLabelTpl": "アップデート • {{month}}",
@@ -500,6 +501,65 @@
   "streakBonusMessage": "🎯 {{streak}} 日連続達成で +{{bonus}} ！",
 
 "challengeDetails": {
+  "cta_take": "チャレンジ開始",
+  "reviewsSubtitle": "リアルな感想で、より良く選んで早く成長しよう。",
+      "noReviewsHint": "最初の有益なレビューを書こう。10秒で、ちゃんと効く。",
+      "reviewPrivacy": "役に立つ内容で、分かりやすく、丁寧に。",
+    "cta_markToday": "今日を記録",
+    "cta_invite": "友達を招待",
+    "cta_continueSolo": "ソロで続ける",
+    "cta_cancelInvite": "招待をキャンセル",
+    "cta_close": "閉じる",
+    "cta_back": "戻る",
+
+    "state_loading": "読み込み中…",
+    "state_updating": "更新中…",
+    "state_error": "エラーが発生しました",
+
+    "section_overview": "概要",
+    "section_progress": "進捗",
+
+    "label_solo": "ソロ",
+    "label_duo": "デュオ",
+    "label_warmup": "待機中",
+
+    "warmup_title": "相手の承認待ち",
+    "warmup_body": "承認され次第、デュオモードが自動で有効になります。",
+    "warmup_hint": "いつでもソロに切り替え可能です。",
+
+    "pending_title": "招待を送信しました",
+    "pending_body": "返信待ちです。承認されたらすぐ通知します。",
+    "pending_badge": "保留中",
+
+    "duo_active_title": "デュオモード有効",
+    "duo_active_body": "一緒に進もう。継続が勝つ。",
+
+    "progress_you": "あなた",
+    "progress_partner": "相手",
+    "progress_daysDone": "{{done}}/{{total}} 日",
+    "progress_day": "{{day}}日目",
+
+    "confirm_cancelInvite_title": "招待をキャンセルしますか？",
+    "confirm_cancelInvite_body": "招待は無効になり、相手は承認できなくなります。",
+    "confirm_cta_yes": "キャンセルする",
+    "confirm_cta_no": "しない",
+  "startMode": {
+        "title": "モードを選択",
+        "cancel": "キャンセル",
+        "closeA11y": "閉じる",
+        "closeHint": "ウィンドウを閉じます。",
+        "offlineRequired": "インターネット接続が必要です",
+        "sub": "ソロで前進。デュオで最後までやり切る。",
+        "recommended": "おすすめ",
+        "duo": "デュオ",
+        "duoDesc": "友だちを招待。最後までやり切る。",
+        "solo": "ソロ",
+        "soloDesc": "シンプル・速い・効果的。",
+        "duoA11y": "デュオを選択",
+        "soloA11y": "ソロを選択",
+        "duoHint": "次に期間を選んで友だちを招待します。",
+        "soloHint": "次に期間を選んで開始します。"
+      },
     "noDescription": "説明はありません",
     "participantsLabel": "参加者",
     "quick": {
@@ -626,12 +686,47 @@
   "maxChars": "最大 500 文字",
   "cannotSaveReview": "現在レビューを保存できません。",
   "toClaim": "受け取る",
+  "registrationForm": "登録フォーム",
+  "clear": "クリア",
+  "createAccountHint": "アカウントを作成",
+  "passwordHint": "最低 {{min}} 文字。",
+  "confirmPasswordHint": "パスワードと一致する必要があります。",
+  "usernameHint": "最低 2 文字。",
 
+  "fillEmail": "メールアドレスを入力してください",
+  "fillUsername": "ユーザー名を選んでください",
+  "usernameTooShort": "ユーザー名が短すぎます",
+  "fillPassword": "パスワードを入力してください",
+  "passwordMinChars": "パスワード：最低 {{count}} 文字",
+  "operationNotAllowed": "このプロジェクトではこの操作は許可されていません。",
+  "reviews": {
+    "title": "みんなの感想",
+    "subtitle": "リアルなレビューで、最適なチャレンジを選びやすく。",
+    "emptyTitle": "まだレビューがありません",
+    "emptySubtitle": "最初のレビューを書こう。10秒で、ちゃんと役に立つ。",
+    "starsLabel": "{{count}} つ星",
+    "countLabel": "{{count}} 件のレビュー"
+  },
   "duo": {
     "leader": "リーダー",
+    "vs": "VS",
     "pending": {
       "title": "招待待ち",
       "short": "招待待ち",
+      "warmup": "ウォームアップ",
+      "warmupHint": "待っている間に今日のウォームアップを行いましょう。",
+      "warmupError": "ウォームアップを保存できませんでした。",
+      "partnerPending": "待機中",
+      "warmupToastTitle": "ウォームアップ完了",
+      "warmupToastBody": "相手の返答待ちです。",
+      "warmupToastErrorTitle": "保存できませんでした",
+      "warmupToastErrorBody": "少ししてからもう一度。",
+      "warmupCta": "今日のウォームアップ",
+      "warmupA11yHint": "今日のウォームアップを保存します。",
+      "warmupDone": "ウォームアップ完了",
+      "cancelInviteShort": "キャンセル",
+       "cancelConfirmTitle": "招待をキャンセルしますか？",
+    "cancelConfirmBody": "このリンクから友だちはこのデュオに参加できなくなります。",
       "body": "返信があり次第、通知されます。キャンセルして他の人を招待することもできます。",
       "cancelInvite": "キャンセル",
       "cancelError": "現在キャンセルできません。"
@@ -1627,6 +1722,10 @@
   },
   "dailyBonus": {
     "title": "今日のボーナス",
+    "badge": "報酬",
+"oncePerDay": "1日1回",
+"teaser2": "今すぐ開いて、ミステリー報酬を確認しよう。",
+"micro": "速い。簡単。報酬。",
     "subtitle": "ミステリールーレットを回して報酬をゲット 🎁",
     "rerollUnavailable": "広告を読み込み中…",
     "error": "今日のボーナスを取得できませんでした。",
@@ -2182,20 +2281,17 @@
   "errorLoadingSavedChallenges": "保存されたチャレンジを読み込めませんでした：{{message}}",
   "rateUs": "アプリを評価する",
   "shareCardT": {
+     "dayOf": "{{total}}日中{{day}}日目",
+  "tagline": "ChallengeTiesでチャレンジに参加しよう",
   "a11yTitle": "チャレンジ共有カード",
   "a11yHint": "共有する前にカードをプレビューできます。",
   "heldSolo": "やり切った",
     "heldDuo": "やり切った",
     "watermark": "@ChallengeTies",
-
-  "tagline": "チャレンジがある？ やり遂げよう。",
-
   "duoBadge": "デュオチャレンジ",
   "soloBadge": "ソロフォーカス",
-
   "completedLabel": "このチャレンジを達成しました",
   "daysLabel": "{{days}}日間のフォーカス",
-
   "leading": "リードしている！",
   "milestoneVariants": [
   "{{days}}日続けてきた… ここからが本当のスタートだ。",
@@ -2280,7 +2376,9 @@
   "dailySelectedSubtitleShort": "本日のセレクション。",
   "homeZ": {
     "duoPending": {
-      "title": "招待を送信", "sub": "保留中。承認後：デュオ開始。", "cta": "見る", "a11y": "デュオ招待が保留中",
+      "cta": "デュオを準備",
+    "hint": "待っている間に、デュオの準備をしよう。",
+      "title": "招待を送信", "sub": "保留中。承認後：デュオ開始。",  "a11y": "デュオ招待が保留中",
     "steps": {
       "sent": "招待を送信しました",
       "waiting": "承認待ち",
@@ -2299,6 +2397,11 @@
     "todayHub": {
       "badge": "今日",
       "primaryActiveShort": "記録",
+      "metaPending": "招待",
+    "metaNone": "進行中のチャレンジはありません",
+    "metaActive": "進行中のチャレンジ {{count}} 件",
+    "create": "作成",
+      "pendingTap":"タップして表示",
       "primaryNoneShort": "選ぶ",
       "progressA11y": "進捗：{{total}}日のうち{{done}}日完了。",
       "primaryNewShort": "新規",
@@ -2428,6 +2531,7 @@
   "commonS": {
     "close": "閉じる",
     "notLoggedIn": "ログインが必要です。",
+     "keep": "保持する",
     "sending": "送信中…",
     "edit": "編集",
     "hide": "非表示",
@@ -4332,6 +4436,7 @@
 "common": {
     "back": "戻る",
     "retry": "再試行",
+    "anonymous": "匿名", "delete": "削除",
     "loading": "読み込み中...",
     "tip": "ヒント",
     "recommended": "おすすめ",
@@ -4526,6 +4631,23 @@
     "hintSolo": "すぐ始まります。"
   },
   "step3": {
+     "subtitleByDays": {
+    "3": "3日間：ミニスプリント。自分に証明する。",
+    "7": "7日間：最高のスタート。",
+    "15": "15日間：試すからやるへ。",
+    "21": "21日間：習慣が形になる。",
+    "30": "30日間：本気の目標。",
+    "60": "60日間：本当の規律。",
+    "90": "90日間：変化。",
+    "180": "180日間：強いコミット。",
+    "365": "365日間：エリートレベル。あなた自身。"
+  },
+  "subtitleGeneric": {
+    "short": "{{count}}日間：短く効果的。",
+    "medium": "{{count}}日間：習慣化。",
+    "long": "{{count}}日間：本当の変化。",
+    "ultra": "{{count}}日間：深い変革。"
+  },
     "title": "どれくらい続けられる？",
     "subtitle": "7日がおすすめ。あとで調整できます。",
     "cta": "開始",

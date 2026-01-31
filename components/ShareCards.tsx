@@ -11,13 +11,18 @@ import { Image as ExpoImage } from "expo-image"
 import { I18nManager } from "react-native";
 import { useTranslation } from "react-i18next";
 import { Ionicons } from "@expo/vector-icons";
+import { useWindowDimensions, PixelRatio } from "react-native";
 
 const IMG_LOGO = require("../assets/images/GreatLogo1.png");
 const IMG_DEFAULT_AVATAR = require("../assets/images/default-profile.webp");
-const { width } = Dimensions.get("window");
-// ✅ Responsive à l’écran (aperçu)
-const CARD_W = Math.min(1080, Math.round(width * 0.92));
-const CARD_H = Math.round(CARD_W * 1.24);
+const { width: SCREEN_W } = Dimensions.get("window");
+
+const clamp = (v: number, min: number, max: number) =>
+  Math.min(Math.max(v, min), max);
+
+const CARD_W = clamp(Math.round(SCREEN_W * 0.92), 320, 520);
+const CARD_H = Math.round(CARD_W * 1.25);
+
 // ✅ Taille d’export haute définition (partage)
 export const EXPORT_W = 1080;
 export const EXPORT_H = 1350;
@@ -53,12 +58,29 @@ type BrandOverrides = {
   bgB?: string;
   bgC?: string;
 };
+const scaleFont = (size: number) => {
+  const scale = PixelRatio.getFontScale();
+  return Math.round(size / scale);
+};
+
 
 // --- styles dynamiques basés sur la palette courante
 const makeStyles = (brand: Brand) =>
   StyleSheet.create({
     card: { borderRadius: 32, justifyContent: "flex-start" },
-    safePad: { flex: 1, padding: 28, justifyContent: "space-between" },
+    safePad: {
+  flex: 1,
+  padding: clamp(CARD_W * 0.06, 16, 28),
+  justifyContent: "space-between",
+},
+metaSmall: { color: "#555555", fontSize: scaleFont(13), lineHeight: scaleFont(18), marginTop: 10 },
+glass: {
+  borderRadius: 24,
+  padding: clamp(CARD_W * 0.045, 14, 22),
+  backgroundColor: "rgba(255,255,255,0.92)",
+  borderWidth: 1,
+  borderColor: "rgba(0,0,0,0.08)",
+},
     statRow: {
       flexDirection: "row",
       alignItems: "stretch",
@@ -76,7 +98,6 @@ const makeStyles = (brand: Brand) =>
       borderColor: "rgba(0,0,0,0.08)",
     },
     statTopRow: { flexDirection: "row", alignItems: "center", justifyContent: "space-between" },
-    statValue: { fontWeight: "800", fontSize: 28, lineHeight: 30, color: "#0B0B0B" },
     statLabel: { color: "#444", fontSize: 12, lineHeight: 14, marginTop: 6 },
 
     progressTrack: {
@@ -87,18 +108,21 @@ const makeStyles = (brand: Brand) =>
       height: 6, borderRadius: 999,
     },
     // Orbes
-    orb: {
-      position: "absolute",
-      width: CARD_W * 0.95,
-      height: CARD_W * 0.95,
-      borderRadius: 999,
-      opacity: 0.9,
-    },
+  orb: {
+  position: "absolute",
+  width: CARD_W * 1.1,
+  height: CARD_W * 1.1,
+  borderRadius: 999,
+  opacity: 0.75,
+},
     // Lueur diagonale
     diagGlow: { position: "absolute", top: 0, left: 0, right: 0, bottom: 0 },
     
     // Gros logo en header (à droite) — visible & net (légèrement plus grand)
-    headerRightLogo: { width: 112, height: 112, marginLeft: 12 },
+    headerRightLogo: {
+  width: clamp(CARD_W * 0.22, 64, 96),
+  height: clamp(CARD_W * 0.22, 64, 96),
+},
     // Brand tag
     tag: {
       alignSelf: "flex-start",
@@ -112,20 +136,12 @@ const makeStyles = (brand: Brand) =>
     tagLogo: { width: 26, height: 26, marginRight: 10 }, // logo plus grand et net
     tagText: { color: "#111111", fontWeight: "800", letterSpacing: 0.5 },
     headerRow: { flexDirection: "row", alignItems: "center", marginBottom: 16 },
-    // Glass container
-    glass: {
-      borderRadius: 24,
-      padding: 18,
-      backgroundColor: "rgba(255,255,255,0.92)",
-      borderWidth: 1,
-      borderColor: "rgba(0,0,0,0.08)",
-    },
     hairline: { height: StyleSheet.hairlineWidth, backgroundColor: "rgba(0,0,0,0.08)", marginBottom: 16 },
-    kicker: { color: brand.primary, fontWeight: "700", fontSize: 18, marginBottom: 6 },
-    title: { color: "#0B0B0B", fontWeight: "800", fontSize: 34, lineHeight: 38, marginTop: 2 },     // noir
-    body: { color: "#222222", fontSize: 18, lineHeight: 26, marginTop: 10 },                         // gris foncé
-    meta: { color: "#444444", fontSize: 18, marginTop: 4 },                                          // gris
-    metaSmall: { color: "#555555", fontSize: 14, marginTop: 10 },
+    kicker: { color: brand.primary, fontWeight: "700", fontSize: scaleFont(15), letterSpacing: 0.4, marginBottom: 6 },
+title: { color: "#0B0B0B", fontWeight: "800", fontSize: scaleFont(34), lineHeight: scaleFont(40), marginTop: 2 },
+body: { color: "#222222", fontSize: scaleFont(17), lineHeight: scaleFont(26), marginTop: 10 },
+meta: { color: "#444444", fontSize: scaleFont(16), marginTop: 4 },
+statValue: { fontWeight: "800", fontSize: scaleFont(26), lineHeight: scaleFont(30), color: "#0B0B0B" },
     metaTiny: { color: "#666666", fontSize: 12, marginTop: 6 },
     // Footer en pastille blanche pour rester lisible même sur fond sombre
     footer: {
@@ -143,13 +159,14 @@ const makeStyles = (brand: Brand) =>
   flexDirection: "row",
   alignItems: "center",
   gap: 8,
-  marginTop: 16,
   backgroundColor: "rgba(12,12,12,0.86)",
   paddingHorizontal: 12,
   paddingVertical: 7,
   borderRadius: 999,
   borderWidth: StyleSheet.hairlineWidth,
   borderColor: "rgba(255,255,255,0.15)",
+  marginTop: clamp(CARD_W * 0.05, 10, 18),
+  maxWidth: "90%",
 },
 footerLogo: { width: 18, height: 18, borderRadius: 4, overflow: "hidden" },
 footerText: { color: "#FFFFFF", fontSize: 13, fontWeight: "800", letterSpacing: 0.2 },
@@ -409,6 +426,22 @@ i18n?: { kicker?: string; body?: (rank: number|string)=>string };
     ...(palette || {}),
   };
   const s = makeStyles(brand);
+
+  // --------------------
+// Normalisation safe (release + ViewShot)
+// --------------------
+const safeRank =
+  typeof rank === "number"
+    ? rank
+    : typeof rank === "string"
+    ? Number(rank.replace(/[^\d]/g, "")) || null
+    : null;
+
+const safeTrophies =
+  typeof trophies === "number" && Number.isFinite(trophies)
+    ? trophies
+    : 0;
+
   // —— Font size adaptatif pour @username —— 
   const unameLen = (username || "").length;
   const usernameFontSize =
@@ -443,26 +476,51 @@ i18n?: { kicker?: string; body?: (rank: number|string)=>string };
             adjustsFontSizeToFit
             minimumFontScale={0.7}
             maxFontSizeMultiplier={1.0}
-            style={[s.title, { fontSize: usernameFontSize, lineHeight: usernameFontSize + 4 }]}
+            style={[s.title, { fontSize: scaleFont(usernameFontSize), lineHeight: scaleFont(usernameFontSize + 6) }]}
             allowFontScaling={false}
           >
             @{username}
           </Text>
-          <Text style={s.meta} numberOfLines={1}>
-            #{rank} • {trophies ?? 0}🏆
-          </Text>
+          <View style={{ flexDirection: "row", alignItems: "center", gap: 6 }}>
+  <Text style={s.meta}>
+    #{safeRank ?? "—"}
+  </Text>
+
+  <View
+    style={{
+      width: 4,
+      height: 4,
+      borderRadius: 2,
+      backgroundColor: "#999",
+      marginHorizontal: 2,
+    }}
+  />
+
+  <Text style={s.meta}>
+    {safeTrophies}
+  </Text>
+
+  <Ionicons
+    name="trophy"
+    size={16}
+    color={brand.accent}
+    style={{ marginTop: 1 }}
+  />
+</View>
+
         </View>
       </View>
 
       <Text style={s.body}>
-        {i18n?.body
-          ? i18n.body(rank)
-          : t("leaderboard.shareCard.body", {
-              rank,
-              defaultValue:
-                "I'm #{{rank}} this week on ChallengeTies. Join me and climb the leaderboard 💥",
-            })}
-      </Text>
+  {i18n?.body
+    ? i18n.body(safeRank ?? "—")
+    : t("leaderboard.shareCard.body", {
+        rank: safeRank ?? "—",
+        defaultValue:
+          "I'm #{{rank}} this week on ChallengeTies. Join me and climb the leaderboard 💥",
+      })}
+</Text>
+
     </ExportableCard>
 
   );

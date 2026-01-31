@@ -279,6 +279,7 @@
 
   "newFeatures": {
     "deadlineIso": "2026-02-28T23:59:59+01:00",
+    "proposeIdea": "Propor uma ideia" ,
     "shareLabel": "Partilhar",
 
     "monthLabelTpl": "Atualização • {{month}}",
@@ -498,6 +499,65 @@
   "streakBonusTitle": "Bónus de série",
   "streakBonusMessage": "🎯 +{{bonus}} por {{streak}} dias seguidos!",
 "challengeDetails": {
+  "cta_take": "Começar desafio",
+  "reviewsSubtitle": "Feedback real para escolher melhor e evoluir mais rápido.",
+      "noReviewsHint": "Sê o primeiro a deixar uma avaliação útil. 10 segundos, impacto real.",
+      "reviewPrivacy": "Mantém-te útil, claro e respeitoso.",
+    "cta_markToday": "Marcar hoje",
+    "cta_invite": "Convidar um amigo",
+    "cta_continueSolo": "Continuar sozinho",
+    "cta_cancelInvite": "Cancelar convite",
+    "cta_close": "Fechar",
+    "cta_back": "Voltar",
+
+    "state_loading": "Carregando…",
+    "state_updating": "Atualizando…",
+    "state_error": "Algo deu errado",
+
+    "section_overview": "Visão geral",
+    "section_progress": "Progresso",
+
+    "label_solo": "Solo",
+    "label_duo": "Duo",
+    "label_warmup": "Pendente",
+
+    "warmup_title": "Aguardando seu parceiro",
+    "warmup_body": "Assim que ele aceitar, o modo Duo ativa automaticamente.",
+    "warmup_hint": "Você pode continuar em solo a qualquer momento.",
+
+    "pending_title": "Convite enviado",
+    "pending_body": "Aguardando resposta. Você será notificado assim que aceitar.",
+    "pending_badge": "Pendente",
+
+    "duo_active_title": "Modo Duo ativo",
+    "duo_active_body": "Sigam juntos. Consistência vence.",
+
+    "progress_you": "Você",
+    "progress_partner": "Parceiro",
+    "progress_daysDone": "{{done}}/{{total}} dias",
+    "progress_day": "Dia {{day}}",
+
+    "confirm_cancelInvite_title": "Cancelar o convite?",
+    "confirm_cancelInvite_body": "Ele ficará inválido e não poderá mais ser aceito.",
+    "confirm_cta_yes": "Sim, cancelar",
+    "confirm_cta_no": "Não",
+  "startMode": {
+        "title": "Escolhe o teu modo",
+        "sub": "Solo para avançar. Duo para aguentar até ao fim.",
+        "recommended": "RECOMENDADO",
+        "cancel": "Cancelar",
+        "closeA11y": "Fechar",
+        "closeHint": "Fecha a janela.",
+        "offlineRequired": "Conexão com a internet necessária",
+        "duo": "Duo",
+        "duoDesc": "Convida um amigo. Vai até ao fim." ,
+        "solo": "Solo",
+        "soloDesc": "Simples, rápido, eficaz.",
+        "duoA11y": "Escolher Duo",
+        "soloA11y": "Escolher Solo",
+        "duoHint": "A seguir, escolhe a duração e convida um amigo.",
+        "soloHint": "A seguir, escolhe a duração e começa."
+      },
     "noDescription": "Nenhuma descrição disponível",
     "participantsLabel": "Participantes",
     "quick": {
@@ -612,6 +672,14 @@
       "statsSub": "Sequências + mês"
     }
   },
+  "reviews": {
+    "title": "O que acharam",
+    "subtitle": "Feedbacks reais para te ajudar a escolher o desafio certo.",
+    "emptyTitle": "Ainda não há avaliações",
+    "emptySubtitle": "Seja o primeiro a deixar um feedback útil. 10 segundos, impacto real.",
+    "starsLabel": "{{count}} estrelas",
+    "countLabel": "{{count}} avaliações"
+  },
   "takeChallengeA11y": "Iniciar o desafio",
     "takeChallengeHint": "Abre a seleção de duração e depois confirma para começar.",
     "completeChallengeA11y": "Concluir o desafio",
@@ -624,10 +692,39 @@
   "maxChars": "Máx. 500 caracteres",
   "cannotSaveReview": "Não foi possível guardar a avaliação de momento.",
 "toClaim": "A resgatar",
+  "registrationForm": "Formulário de registo",
+  "clear": "Limpar",
+  "createAccountHint": "Cria a tua conta",
+
+  "passwordHint": "Mínimo {{min}} caracteres.",
+  "confirmPasswordHint": "Tem de ser igual à palavra-passe.",
+  "usernameHint": "Mínimo 2 caracteres.",
+
+  "fillEmail": "Introduz o teu email",
+  "fillUsername": "Escolhe um nome de utilizador",
+  "usernameTooShort": "Nome de utilizador demasiado curto",
+  "fillPassword": "Introduz uma palavra-passe",
+  "passwordMinChars": "Palavra-passe: mínimo {{count}} caracteres",
+  "operationNotAllowed": "Esta operação não é permitida neste projeto.",
   "duo": {
     "leader": "LÍDER",
+    "vs": "VS",
     "pending": {
       "title": "Convite pendente",
+       "warmupHint": "Enquanto esperas, faz o aquecimento de hoje.",
+      "warmupError": "Não foi possível salvar o aquecimento.",
+      "partnerPending": "Pendente",
+      "warmup": "Aquecimento",
+      "warmupCta": "Aquecimento de hoje",
+      "warmupToastTitle": "Warmup concluído",
+      "warmupToastBody": "Aguardando seu parceiro.",
+      "warmupToastErrorTitle": "Warmup não salvo",
+      "warmupToastErrorBody": "Tente novamente em instantes.",
+      "warmupA11yHint": "Salva o aquecimento de hoje.",
+      "warmupDone": "Aquecimento concluído",
+      "cancelInviteShort": "Cancelar",
+      "cancelConfirmTitle": "Cancelar o convite?",
+    "cancelConfirmBody": "Seu amigo não poderá mais entrar neste duo com esse link.",
       "short": "Convite pendente",
       "body": "Você será avisado assim que houver resposta. Também é possível cancelar e convidar outra pessoa.",
       "cancelInvite": "Cancelar",
@@ -1620,6 +1717,10 @@
   },
   "dailyBonus": {
     "title": "Bônus do dia",
+    "badge": "RECOMPENSA",
+"oncePerDay": "1 / dia",
+"teaser2": "Abra agora e descubra sua recompensa misteriosa.",
+"micro": "Rápido. Simples. Recompensa.",
     "subtitle": "Gira a roda misteriosa para revelar sua recompensa 🎁",
     "rerollUnavailable": "Anúncio carregando…",
     "tag": "Exclusivo do dia",
@@ -2153,20 +2254,17 @@
   "errorLoadingSavedChallenges": "Não foi possível carregar os desafios salvos: {{message}}",
   "rateUs": "Avaliar o app",
   "shareCardT": {
+    "dayOf": "Dia {{day}} de {{total}}",
+  "tagline": "Junte-se ao desafio no ChallengeTies",
   "a11yTitle": "Cartão de compartilhamento do desafio",
   "a11yHint": "Visualize o cartão antes de compartilhá-lo com amigos.",
   "heldSolo": "Eu aguentei",
     "heldDuo": "Nós aguentámos",
     "watermark": "@ChallengeTies",
-
-  "tagline": "Tem um desafio? Conclua-o.",
-
   "duoBadge": "DESAFIO EM DUPLA",
   "soloBadge": "FOCO SOLO",
-
   "completedLabel": "Completei este desafio",
   "daysLabel": "{{days}} dias de foco",
-
   "leading": "Você está na liderança!",
   "behind": "Alcance-o!",
   "milestoneMessage": "Mantivemos o foco por {{days}} dias… e isso é só o começo.",
@@ -2249,7 +2347,9 @@
   "dailySelectedSubtitleShort": "Seleção do dia.",
 "homeZ": {
   "duoPending": {
-    "title": "Convite enviado", "sub": "Pendente. Ao aceitar: Duo.", "cta": "Ver", "a11y": "Convite duo pendente",
+    "cta": "Preparar o Duo",
+    "hint": "Enquanto espera, prepare o seu Duo.",
+    "title": "Convite enviado", "sub": "Pendente. Ao aceitar: Duo.",  "a11y": "Convite duo pendente",
     "steps": {
       "sent": "Convite enviado",
       "waiting": "Aguardando aceitação",
@@ -2268,6 +2368,11 @@
     "todayHub": {
       "badge": "HOJE",
       "primaryActiveShort": "Marcar",
+      "metaPending": "Convite",
+    "metaNone": "Nenhum desafio ativo",
+    "metaActive": "{{count}} desafio(s) ativo(s)",
+    "create": "Criar",
+      "pendingTap":"Toque para ver",
       "primaryNewShort": "Novo",
   "primaryNewA11y": "Escolher um novo desafio",
   "primaryNewHint": "Abre Explorar para escolher um novo desafio.",
@@ -2396,6 +2501,7 @@
 
   "commonS": {
     "close": "Fechar",
+    "keep": "Manter",
     "notLoggedIn": "Você precisa estar conectado.",
     "sending": "Enviando…",
     "cancel": "Cancelar",
@@ -4306,6 +4412,7 @@
 "common": {
     "back": "Voltar",
     "retry": "Tentar novamente",
+     "anonymous": "Anónimo", "delete": "Eliminar",
     "tip": "Dica",
     "loading": "Carregando...",
     "recommended": "Recomendado",
@@ -4496,6 +4603,23 @@
     "hintSolo": "Você começa na hora."
   },
   "step3": {
+    "subtitleByDays": {
+    "3": "3 dias: mini sprint. Só para provar que consegues.",
+    "7": "7 dias: perfeito para começar.",
+    "15": "15 dias: deixas de tentar e começas a fazer.",
+    "21": "21 dias: rotina sólida.",
+    "30": "30 dias: objetivo sério.",
+    "60": "60 dias: disciplina real.",
+    "90": "90 dias: transformação.",
+    "180": "180 dias: compromisso forte.",
+    "365": "365 dias: nível elite. És tu."
+  },
+  "subtitleGeneric": {
+    "short": "{{count}} dias: curto e eficaz.",
+    "medium": "{{count}} dias: cria hábito.",
+    "long": "{{count}} dias: compromisso sério.",
+    "ultra": "{{count}} dias: transformação total."
+  },
     "title": "Quanto tempo você aguenta?",
     "subtitle": "7 dias é um ótimo começo. Dá para ajustar depois.",
     "cta": "Ir",

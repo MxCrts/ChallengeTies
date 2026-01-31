@@ -35,6 +35,32 @@ import { tap, success, warning } from "@/src/utils/haptics";
 const PRODUCT_ID = "challengeties_premium_monthly";
 const SPACING = 20;
 
+const isPremiumActiveFromUserDoc = (data: any): boolean => {
+  if (typeof data?.isPremium === "boolean") return data.isPremium;
+
+  const p = data?.premium;
+  if (!p) return false;
+  if (typeof p === "boolean") return p;
+
+  const explicit =
+    p?.active ?? p?.isActive ?? p?.subscriptionActive ?? p?.subscribed;
+  if (typeof explicit === "boolean" && explicit === true) return true;
+
+  const until = p?.tempPremiumUntil;
+  if (!until) return false;
+
+  if (typeof until?.toDate === "function") return until.toDate().getTime() > Date.now();
+  if (typeof until === "string") {
+    const ms = Date.parse(until);
+    return Number.isFinite(ms) && ms > Date.now();
+  }
+  if (typeof until === "number") return until > Date.now();
+  if (typeof until === "object" && typeof until?.seconds === "number") return until.seconds * 1000 > Date.now();
+
+  return false;
+};
+
+
 export default function SettingsPremium() {
   const { t } = useTranslation();
   const { theme } = useTheme();
@@ -154,7 +180,7 @@ export default function SettingsPremium() {
         const snap = await getDoc(doc(db, "users", currentUid));
         const data = (snap.exists() ? snap.data() : {}) as any;
         if (!isMounted) return;
-        setUserPremium(!!(data.premium ?? data.isPremium));
+        setUserPremium(isPremiumActiveFromUserDoc(data));
       } catch (e) {
         console.warn("Error loading user premium flag:", e);
         if (!isMounted) return;
@@ -282,7 +308,7 @@ export default function SettingsPremium() {
       setRestoring(true);
       const snap = await getDoc(doc(db, "users", currentUid));
       const data = (snap.exists() ? snap.data() : {}) as any;
-      const isPremium = !!(data.premium ?? data.isPremium);
+      const isPremium = isPremiumActiveFromUserDoc(data);
       setUserPremium(isPremium);
 
       if (isPremium) {

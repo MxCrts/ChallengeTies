@@ -20,20 +20,12 @@ import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { useTheme } from "@/context/ThemeContext";
 import designSystem, { Theme } from "@/theme/designSystem";
 import { useTranslation } from "react-i18next";
-import { Dimensions } from "react-native";
+import { useWindowDimensions } from "react-native";
 import { Image } from "react-native";
 import { useRef } from "react";
 import { captureRef } from "react-native-view-shot";
 import * as Sharing from "expo-sharing";
 import * as FileSystem from "expo-file-system";
-
-const { width: SCREEN_W, height: SCREEN_H } = Dimensions.get("window");
-
-const normalize = (n: number) => {
-  const base = 375;
-  const scale = Math.min(Math.max(SCREEN_W / base, 0.85), 1.4);
-  return Math.round(n * scale);
-};
 
 const withAlpha = (hex: string, a: number) => {
   const clamp = (x: number, min = 0, max = 1) => Math.min(Math.max(x, min), max);
@@ -87,6 +79,14 @@ const ShareCardModal: React.FC<Props> = ({
   const th: Theme = isDark ? designSystem.darkTheme : designSystem.lightTheme;
   const { t } = useTranslation();
   const cardRef = useRef<View>(null);
+  const { width: W, height: H } = useWindowDimensions();
+
+const IS_TINY = W < 360 || H < 700;
+
+// Card target (préview) — pas de transform scale (stable, no warnings)
+const CARD_W = Math.min(W - 48, IS_TINY ? 340 : 380);
+const CARD_H = Math.round(Math.min(H * 0.62, IS_TINY ? 500 : 520));
+
 
     // ✅ Progressions sécurisées (0–100%) pour solo & duo
   const safeTotal = totalDays > 0 ? totalDays : 1;
@@ -113,10 +113,10 @@ const ShareCardModal: React.FC<Props> = ({
   const partnerCompleted = isDuo ? partnerCompletedRaw : 0;
 
 
-  const styles = useMemo(
-    () => createStyles(isDark, th, insets),
-    [isDark, th, insets]
-  );
+const styles = useMemo(
+  () => createStyles(isDark, th, insets, W, IS_TINY),
+  [isDark, th, insets, W, IS_TINY]
+);
 
   const progressLabel =
     totalDays > 0 ? `${daysCompleted}/${totalDays}` : `${daysCompleted}`;
@@ -205,7 +205,12 @@ const ShareCardModal: React.FC<Props> = ({
   style={styles.cardShadow}
 >
   {/* ✅ WRAP: la carte (capturée) */}
-  <View style={styles.cardFrame} ref={cardRef} collapsable={false}>
+  <View
+  style={[styles.cardFrame, { width: CARD_W, height: CARD_H }]}
+  ref={cardRef}
+  collapsable={false}
+>
+
     <LinearGradient
       colors={[
         withAlpha("#FFFFFF", 0.22),
@@ -270,12 +275,15 @@ const ShareCardModal: React.FC<Props> = ({
             </View>
 
             <Text
-              style={styles.challengeTitlePremium}
-              numberOfLines={1}
-              ellipsizeMode="tail"
-            >
-              {challengeTitle}
-            </Text>
+  style={[styles.challengeTitlePremium, styles.challengeTitleGap]}
+  numberOfLines={2}
+  ellipsizeMode="tail"
+  adjustsFontSizeToFit
+  minimumFontScale={0.78}
+>
+  {challengeTitle}
+</Text>
+
           </LinearGradient>
 
           {/* BODY */}
@@ -294,25 +302,46 @@ const ShareCardModal: React.FC<Props> = ({
                   {Math.round(userPct)}%
                 </Text>
 
-                <Text style={styles.progressLabelPremium} numberOfLines={1} ellipsizeMode="tail">
-                  {heldLine}{" "}
-                  {daysCompleted}/{totalDays}
-                </Text>
+                <Text
+  style={styles.progressLabelPremium}
+  numberOfLines={1}
+  adjustsFontSizeToFit
+  minimumFontScale={0.82}
+>
+  {t("shareCardT.dayOf", {
+    day: daysCompleted,
+    total: totalDays,
+    defaultValue: `Day ${daysCompleted} of ${totalDays}`,
+  })}
+</Text>
 
                 <View style={styles.progressBarPremium}>
                   <View style={[styles.progressFillPremium, { width: `${userPct}%` }]} />
                 </View>
 
-                <Text style={styles.milestonePremium} numberOfLines={2} ellipsizeMode="tail">
-                  {milestoneText}
-                </Text>
+                <Text style={styles.milestonePremium} numberOfLines={1} ellipsizeMode="tail">
+  {t("shareCardT.milestoneShort", {
+    days: daysCompleted,
+    defaultValue: `Day ${daysCompleted} 🔥`,
+  })}
+</Text>
+
               </View>
             ) : (
               <View style={styles.duoBlockPremium}>
-                <Text style={styles.duoHeadline} numberOfLines={1} ellipsizeMode="tail">
-                  {heldLine}{" "}
-                  {Math.max(daysCompleted, partnerCompleted)}/{totalDays}
-                </Text>
+                <Text
+  style={styles.duoHeadline}
+  numberOfLines={1}
+  adjustsFontSizeToFit
+  minimumFontScale={0.82}
+>
+  {t("shareCardT.dayOf", {
+    day: Math.max(daysCompleted, partnerCompleted),
+    total: totalDays,
+    defaultValue: `Day ${Math.max(daysCompleted, partnerCompleted)} of ${totalDays}`,
+  })}
+</Text>
+
 
                 <View style={styles.duoRowPremium}>
                   <View
@@ -383,9 +412,15 @@ const ShareCardModal: React.FC<Props> = ({
                   </View>
                 </View>
 
-                <Text style={styles.milestonePremium} numberOfLines={2} ellipsizeMode="tail">
-                  {milestoneText}
-                </Text>
+                <Text
+  style={styles.milestonePremium}
+  numberOfLines={IS_TINY ? 1 : 2}
+  ellipsizeMode="tail"
+  adjustsFontSizeToFit
+  minimumFontScale={0.70}
+>
+  {milestoneText}
+</Text>
               </View>
             )}
           </View>
@@ -395,17 +430,15 @@ const ShareCardModal: React.FC<Props> = ({
             <Text style={styles.footerLinePremium} numberOfLines={1} ellipsizeMode="tail">
               {t("shareCardT.footerLine1", { defaultValue: "ChallengeTies" })}
             </Text>
-            <Text style={styles.footerSmallPremium} numberOfLines={1} ellipsizeMode="tail">
-              {t("shareCardT.footerLine2", {
-                defaultValue: "Rejoins-nous. Un jour. Un défi. Une victoire.",
-              })}
-            </Text>
+           <Text style={styles.footerSmallPremium} numberOfLines={2} ellipsizeMode="tail">
+  {t("shareCardT.tagline", {
+    defaultValue: "Rejoins le défi sur ChallengeTies",
+  })}
+</Text>
+<Text style={styles.watermarkFooter} numberOfLines={1} ellipsizeMode="clip">
+    {t("shareCardT.watermark", { defaultValue: "@ChallengeTies" })}
+  </Text>
           </View>
-
-          {/* watermark (ne casse plus rien) */}
-          <Text style={styles.watermark} numberOfLines={1} ellipsizeMode="clip">
-            {t("shareCardT.watermark", { defaultValue: "@ChallengeTies" })}
-          </Text>
         </View>
       </View>
     </LinearGradient>
@@ -446,9 +479,18 @@ const ShareCardModal: React.FC<Props> = ({
 const createStyles = (
   isDark: boolean,
   th: Theme,
-  insets: { top: number; bottom: number }
-) =>
-  StyleSheet.create({
+  insets: { top: number; bottom: number },
+  W: number,
+  IS_TINY: boolean
+) => {
+
+  const normalize = (n: number) => {
+    const base = 375;
+    const scale = Math.min(Math.max(W / base, 0.85), 1.4);
+    return Math.round(n * scale);
+  };
+
+  return StyleSheet.create({
     overlay: {
       ...StyleSheet.absoluteFillObject,
       justifyContent: "center",
@@ -458,15 +500,14 @@ const createStyles = (
       ...StyleSheet.absoluteFillObject,
       backgroundColor: "rgba(0,0,0,0.7)",
     },
-    cardShadow: {
+   cardShadow: {
   width: "100%",
   paddingHorizontal: 16,
   alignItems: "center",
 },
 
 cardFrame: {
-  width: Math.min(SCREEN_W - 48, 380),
-  height: Math.round(Math.min(SCREEN_H * 0.62, 520)), // ✅ VERROU: plus de layout aléatoire
+  width: "100%",
   borderRadius: 28,
   overflow: "hidden",
 },
@@ -474,44 +515,42 @@ cardFrame: {
 cardLayout: {
   flex: 1,
 },
-
 bodyPremium: {
-  flex: 1,
+  flexGrow: 1,
+  flexShrink: 1,
   minHeight: 0,
-  paddingHorizontal: 18,
-  paddingVertical: 10,
+  paddingHorizontal: 16,
+  paddingTop: IS_TINY ? 8 : 10,
+  paddingBottom: IS_TINY ? 8 : 10,
   justifyContent: "center",
 },
-
 soloBlockPremium: {
   flex: 1,
   minHeight: 0,
   alignItems: "center",
   justifyContent: "center",
-  gap: 6,
+  gap: IS_TINY ? 4 : 6,
 },
 
 duoBlockPremium: {
   flex: 1,
   minHeight: 0,
   justifyContent: "center",
-  gap: 8,
+  gap: IS_TINY ? 6 : 8,
 },
-
 footerPremium: {
-  paddingTop: 8,
-  paddingBottom: 14,
-  paddingHorizontal: 18,
+  paddingTop: IS_TINY ? 8 : 10,
+  paddingBottom: IS_TINY ? 12 : 14,
+  paddingHorizontal: 16,
   alignItems: "center",
+  gap: 4,
+  flexShrink: 0,
 },
-
-watermark: {
-  position: "absolute",
-  right: 14,
-  bottom: 10,
+watermarkFooter: {
+  marginTop: 2,
   fontFamily: "Comfortaa_700Bold",
-  fontSize: normalize(10),
-  color: withAlpha("#FFFFFF", 0.30),
+  fontSize: normalize(IS_TINY ? 9 : 10),
+  color: withAlpha("#FFFFFF", 0.28),
   letterSpacing: 0.8,
 },
 cardContent: {
@@ -522,7 +561,6 @@ cardBorder: {
   borderRadius: 28,
   padding: 2,
 },
-
 cardPremium: {
   flex: 1,
   borderRadius: 26,
@@ -530,9 +568,7 @@ cardPremium: {
   backgroundColor: withAlpha("#04050C", 0.92),
   borderWidth: 1,
   borderColor: withAlpha("#ffffff", 0.10),
-  justifyContent: "space-between",
 },
-
 headerTopRow: {
   flexDirection: "row",
   alignItems: "center",
@@ -633,18 +669,22 @@ avatarRing: {
   justifyContent: "center",
   marginBottom: 10,
 },
-
+avatar: {
+  width: normalize(IS_TINY ? 60 : 70),
+  height: normalize(IS_TINY ? 60 : 70),
+  borderRadius: normalize(IS_TINY ? 30 : 35),
+},
 avatarRingSm: {
-  width: 76,
-  height: 76,
-  borderRadius: 38,
+  width: normalize(IS_TINY ? 66 : 76),
+  height: normalize(IS_TINY ? 66 : 76),
+  borderRadius: normalize(IS_TINY ? 33 : 38),
   padding: 2,
   borderWidth: 1,
   borderColor: withAlpha("#FFFFFF", 0.18),
   backgroundColor: withAlpha("#000", 0.18),
   alignItems: "center",
   justifyContent: "center",
-  marginBottom: 6,
+  marginBottom: IS_TINY ? 4 : 6,
 },
 
 avatarFallback: {
@@ -673,21 +713,21 @@ headerPremium: {
       opacity: 0.85,
       fontFamily: "Comfortaa_700Bold",
     },
-
-    challengeTitlePremium: {
-      marginTop: 6,
-      fontSize: normalize(20),
-      color: "#ffffff",
-      fontFamily: "Comfortaa_700Bold",
-      textAlign: "center",
-    },
+challengeTitlePremium: {
+  marginTop: 8,
+  fontSize: normalize(18),
+  color: "#ffffff",
+  fontFamily: "Comfortaa_700Bold",
+  textAlign: "center",
+  lineHeight: normalize(22),
+  paddingHorizontal: 10, // ✅ évite que ça colle aux bords
+},
     avatarXL: {
       width: 100,
       height: 100,
       borderRadius: 50,
       marginBottom: 10,
     },
-
     userNamePremium: {
       color: "#fff",
       fontSize: normalize(17),
@@ -711,13 +751,12 @@ headerPremium: {
       marginBottom: 12,
     },
 actionsRow: {
-  width: Math.min(SCREEN_W - 48, 380),
-  flexDirection: "row",
-  gap: 10,
-  marginTop: 12,
-  paddingHorizontal: 2,
-},
-
+    width: Math.min(W - 48, 380),
+    flexDirection: "row",
+    gap: 10,
+    marginTop: 12,
+    paddingHorizontal: 2,
+  },
 actionBtn: {
   flex: 1,
   paddingVertical: 12,
@@ -726,7 +765,9 @@ actionBtn: {
   alignItems: "center",
   justifyContent: "center",
 },
-
+challengeTitleGap: {
+  marginBottom: IS_TINY ? 10 : 18, // ✅ espace entre titre et "Jour X sur Y"
+},
 actionBtnText: {
   color: "#fff",
   fontFamily: "Comfortaa_700Bold",
@@ -798,12 +839,6 @@ actionBtnGhostText: {
       paddingHorizontal: 2,
     },
 
-    avatar: {
-      width: 70,
-      height: 70,
-      borderRadius: 35,
-    },
-
     duoNamePremium: {
       marginTop: 6,
       color: "#fff",
@@ -857,13 +892,17 @@ progressBarMiniPremium: {
   marginTop: 6,
 },
 milestonePremium: {
-  marginTop: 10,
+  marginTop: IS_TINY ? 6 : 10,
+  marginBottom: IS_TINY ? 6 : 10,
   color: "#fff",
-  fontSize: normalize(13),
-  opacity: 0.9,
-  fontFamily: "Comfortaa_400Regular",
+  fontSize: normalize(IS_TINY ? 10 : 12),
+  lineHeight: normalize(IS_TINY ? 13 : 16),
+  opacity: 0.88,
+  fontFamily: "Comfortaa_700Bold",
   textAlign: "center",
-  paddingHorizontal: 6,     // ✅ évite que ça touche les bords
+  paddingHorizontal: 14,
+  maxWidth: "92%",
+  flexShrink: 1,
 },
     vsText: {
       color: "#000",
@@ -875,15 +914,16 @@ milestonePremium: {
       fontSize: normalize(15),
       fontFamily: "Comfortaa_700Bold",
     },
-    footerSmallPremium: {
-  marginTop: 4,
-  color: "#ccc",
-  fontSize: normalize(12),
+ footerSmallPremium: {
+  color: withAlpha("#FFFFFF", 0.78),
+  fontSize: normalize(IS_TINY ? 10 : 11),
   fontFamily: "Comfortaa_400Regular",
   textAlign: "center",
-  opacity: 0.92,
+  lineHeight: normalize(IS_TINY ? 13 : 14),
+  maxWidth: "92%",
+  flexShrink: 1,
 },
-
   });
+  };
 
 export default ShareCardModal;

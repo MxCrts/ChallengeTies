@@ -292,6 +292,7 @@
   },
   "newFeatures": {
     "deadlineIso": "2026-02-28T23:59:59+01:00",
+    "proposeIdea": "Een idee voorstellen",
     "shareLabel": "Delen",
 
     "monthLabelTpl": "Update • {{month}}",
@@ -503,6 +504,65 @@
   "streakBonusTitle": "Reeksbonus",
   "streakBonusMessage": "🎯 +{{bonus}} voor {{streak}} dagen op rij!",
  "challengeDetails": {
+  "cta_take": "Start challenge",
+  "reviewsSubtitle": "Echte feedback om beter te kiezen en sneller te groeien.",
+      "noReviewsHint": "Wees de eerste met een nuttige review. 10 seconden, echte impact.",
+      "reviewPrivacy": "Houd het nuttig, duidelijk en vriendelijk.",
+    "cta_markToday": "Markeer vandaag",
+    "cta_invite": "Nodig een vriend uit",
+    "cta_continueSolo": "Ga solo verder",
+    "cta_cancelInvite": "Uitnodiging annuleren",
+    "cta_close": "Sluiten",
+    "cta_back": "Terug",
+
+    "state_loading": "Laden…",
+    "state_updating": "Bijwerken…",
+    "state_error": "Er ging iets mis",
+
+    "section_overview": "Overzicht",
+    "section_progress": "Voortgang",
+
+    "label_solo": "Solo",
+    "label_duo": "Duo",
+    "label_warmup": "In afwachting",
+
+    "warmup_title": "Wachten op je partner",
+    "warmup_body": "Zodra die accepteert, gaat Duo automatisch aan.",
+    "warmup_hint": "Je kunt altijd doorgaan in solo.",
+
+    "pending_title": "Uitnodiging verzonden",
+    "pending_body": "We wachten op een reactie. Je krijgt meteen een melding.",
+    "pending_badge": "In afwachting",
+
+    "duo_active_title": "Duo actief",
+    "duo_active_body": "Ga samen. Consistentie wint.",
+
+    "progress_you": "Jij",
+    "progress_partner": "Partner",
+    "progress_daysDone": "{{done}}/{{total}} dagen",
+    "progress_day": "Dag {{day}}",
+
+    "confirm_cancelInvite_title": "Uitnodiging annuleren?",
+    "confirm_cancelInvite_body": "Deze wordt ongeldig en kan niet meer worden geaccepteerd.",
+    "confirm_cta_yes": "Ja, annuleren",
+    "confirm_cta_no": "Nee",
+  "startMode": {
+        "title": "Kies je modus",
+        "cancel": "Annuleren",
+        "closeA11y": "Sluiten",
+        "closeHint": "Sluit het venster.",
+        "offlineRequired": "Internetverbinding vereist",
+        "sub": "Solo om vooruit te gaan. Duo om vol te houden tot het einde.",
+        "recommended": "AANBEVOLEN",
+        "duo": "Duo",
+        "duoDesc": "Nodig een vriend uit. Ga tot het einde.",
+        "solo": "Solo",
+        "soloDesc": "Simpel, snel, effectief.",
+        "duoA11y": "Duo kiezen",
+        "soloA11y": "Solo kiezen",
+        "duoHint": "Kies daarna een duur en nodig een vriend uit.",
+        "soloHint": "Kies daarna een duur en start."
+      },
     "noDescription": "Geen beschrijving beschikbaar",
     "participantsLabel": "Deelnemers",
     "quick": {
@@ -617,6 +677,14 @@
       "statsSub": "Reeksen + maand"
     }
   },
+  "reviews": {
+    "title": "Wat zij ervan vonden",
+    "subtitle": "Echte feedback om je te helpen de juiste uitdaging te kiezen.",
+    "emptyTitle": "Nog geen reviews",
+    "emptySubtitle": "Wees de eerste die nuttige feedback achterlaat. 10 seconden, echte impact.",
+    "starsLabel": "{{count}} sterren",
+    "countLabel": "{{count}} reviews"
+  },
   "takeChallengeA11y": "Challenge starten",
     "takeChallengeHint": "Opent de duurkeuze en bevestig daarna om te starten.",
     "completeChallengeA11y": "Challenge afronden",
@@ -630,11 +698,39 @@
   "maxChars": "Max. 500 tekens",
   "cannotSaveReview": "De review kan momenteel niet worden opgeslagen.",
   "toClaim": "Te claimen",
+  "registrationForm": "Registratieformulier",
+  "clear": "Wissen",
+  "createAccountHint": "Maak je account aan",
 
+  "passwordHint": "Minimaal {{min}} tekens.",
+  "confirmPasswordHint": "Moet gelijk zijn aan het wachtwoord.",
+  "usernameHint": "Minimaal 2 tekens.",
+
+  "fillEmail": "Vul je e-mail in",
+  "fillUsername": "Kies een gebruikersnaam",
+  "usernameTooShort": "Gebruikersnaam is te kort",
+  "fillPassword": "Vul een wachtwoord in",
+  "passwordMinChars": "Wachtwoord: minimaal {{count}} tekens",
+  "operationNotAllowed": "Deze actie is niet toegestaan in dit project.",
   "duo": {
     "leader": "LEIDER",
+    "vs": "VS",
     "pending": {
       "title": "Uitnodiging in afwachting",
+      "warmup": "Warming-up",
+      "cancelConfirmTitle": "Uitnodiging annuleren?",
+      "warmupHint": "Doe ondertussen de warm-up van vandaag.",
+      "warmupError": "Warm-up opslaan mislukt.",
+      "partnerPending": "In afwachting",
+       "warmupToastTitle": "Warm-up gelukt",
+      "warmupToastBody": "Wachten op je partner.",
+      "warmupToastErrorTitle": "Warm-up niet opgeslagen",
+      "warmupToastErrorBody": "Probeer het zo nog eens.",
+      "warmupCta": "Warm-up van vandaag",
+      "warmupA11yHint": "Sla de warm-up van vandaag op.",
+      "warmupDone": "Warm-up voltooid",
+      "cancelInviteShort": "Annuleren",
+    "cancelConfirmBody": "Je vriend kan niet meer meedoen aan dit duo via die link.",
       "short": "Uitnodiging in afwachting",
       "body": "Je krijgt een melding zodra er wordt gereageerd. Je kunt ook annuleren en iemand anders uitnodigen.",
       "cancelInvite": "Annuleren",
@@ -1659,6 +1755,10 @@
 
   "dailyBonus": {
     "title": "Dagbonus",
+    "badge": "BELONING",
+"oncePerDay": "1 / dag",
+"teaser2": "Open nu en ontdek je mysterieuze beloning.",
+"micro": "Snel. Simpel. Beloning.",
     "subtitle": "Start het mysterie-rad om je beloning te onthullen 🎁",
     "rerollUnavailable": "Advertentie wordt geladen…",
     "error": "De dagbonus kan momenteel niet worden opgehaald.",
@@ -1868,20 +1968,17 @@
   },
 
   "shareCardT": {
+    "dayOf": "Dag {{day}} van {{total}}",
+  "tagline": "Doe mee met de challenge op ChallengeTies",
     "a11yTitle": "Deelkaart van de uitdaging",
     "a11yHint": "Bekijk de kaart vooraf voordat je die met je vrienden deelt.",
     "heldSolo": "Ik hield vol",
     "heldDuo": "We hielden vol",
     "watermark": "@ChallengeTies",
-
-    "tagline": "Got a challenge? Get it done.",
-
     "duoBadge": "DUO-UITDAGING",
     "soloBadge": "SOLO FOCUS",
-
     "completedLabel": "Ik heb deze uitdaging volgehouden",
     "daysLabel": "{{days}} dagen focus",
-
     "leading": "Jij ligt op kop!",
     "milestoneMessage": "We hebben {{days}} dagen volgehouden… en dit is nog maar het begin.",
     "milestoneVariants": [
@@ -2306,7 +2403,9 @@
   "dailySelectedSubtitleShort": "Selectie van de dag.",
 "homeZ": {
   "duoPending": {
-    "title": "Uitnodiging verzonden", "sub": "In afwachting. Na acceptatie: Duo.", "cta": "Bekijken", "a11y": "Duo-uitnodiging in afwachting",
+    "cta": "Duo voorbereiden",
+    "hint": "Terwijl je wacht, bereid je Duo voor.",
+    "title": "Uitnodiging verzonden", "sub": "In afwachting. Na acceptatie: Duo.",  "a11y": "Duo-uitnodiging in afwachting",
     "steps": {
       "sent": "Uitnodiging verzonden",
       "waiting": "Wachten op acceptatie",
@@ -2325,7 +2424,12 @@
     "todayHub": {
       "badge": "VANDAAG",
       "primaryActiveShort": "Markeer",
+      "metaPending": "Uitnodiging",
+    "metaNone": "Geen actieve uitdagingen",
+    "metaActive": "{{count}} actieve uitdaging(en)",
+    "create": "Maken",
       "primaryNewShort": "Nieuw",
+       "pendingTap":"Tik om te bekijken",
   "primaryNewA11y": "Een nieuwe uitdaging kiezen",
   "primaryNewHint": "Open Verkennen om een nieuwe uitdaging te kiezen.",
   "titleAllDone": "Perfect. Vandaag is alles afgevinkt.",
@@ -2454,6 +2558,7 @@
   "commonS": {
     "close": "Sluiten",
     "notLoggedIn": "Je moet ingelogd zijn.",
+    "keep": "Behouden",
     "sending": "Bezig met verzenden…",
     "cancel": "Annuleren",
     "edit": "Bewerken",
@@ -4485,6 +4590,7 @@
   "createChallengeHint": "Een goede titel + een afbeelding = meer deelnemers.",
   "common": {
     "back": "Terug",
+    "anonymous": "Anoniem", "delete": "Verwijderen",
     "retry": "Opnieuw proberen",
     "tip": "Tip",
     "loading": "Bezig met laden...",
@@ -4676,6 +4782,23 @@
     "hintSolo": "Je start meteen."
   },
   "step3": {
+    "subtitleByDays": {
+    "3": "3 dagen: mini-sprint. Bewijs dat je het kunt.",
+    "7": "7 dagen: perfect om te starten.",
+    "15": "15 dagen: van proberen naar doen.",
+    "21": "21 dagen: een echte routine.",
+    "30": "30 dagen: serieus doel.",
+    "60": "60 dagen: echte discipline.",
+    "90": "90 dagen: transformatie.",
+    "180": "180 dagen: sterke toewijding.",
+    "365": "365 dagen: elite-niveau. Dit ben jij."
+  },
+  "subtitleGeneric": {
+    "short": "{{count}} dagen: kort en effectief.",
+    "medium": "{{count}} dagen: gewoonte opbouwen.",
+    "long": "{{count}} dagen: echte verandering.",
+    "ultra": "{{count}} dagen: diepe transformatie."
+  },
     "title": "Hoe lang houd jij vol?",
     "subtitle": "7 dagen is een sterke start. Je kunt later aanpassen.",
     "cta": "Start",

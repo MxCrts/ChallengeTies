@@ -26,6 +26,8 @@ import { useTranslation } from "react-i18next";
 import * as Haptics from "expo-haptics";
 import { useIsFocused } from "@react-navigation/native";
 import NetInfo from "@react-native-community/netinfo";
+import i18n from "@/i18n";
+
 
 const { width: SCREEN_WIDTH, height: SCREEN_HEIGHT } = Dimensions.get("window");
 const normalize = (size: number) =>
@@ -269,6 +271,7 @@ export default function ForgotPassword() {
 
     try {
       setLoading(true);
+      auth.languageCode = i18n.language;
       await sendPasswordResetEmail(auth, e);
       setMsg({ type: "success", text: t("resetLinkSent") });
       setEmail(""); // ✅ on clear le champ après succès
@@ -401,18 +404,28 @@ export default function ForgotPassword() {
         </View>
 
         {/* Messages */}
-        {msg && (
-          <Animated.Text
-            style={[
-              msg.type === "error" ? styles.errorText : styles.successText,
-              { transform: [{ translateX: shakeAnim }] },
-            ]}
-            accessibilityRole="alert"
-            accessibilityLiveRegion="polite"
-          >
-            {msg.text}
-          </Animated.Text>
-        )}
+{msg && (
+  <Animated.View
+    style={[
+      styles.msgBanner,
+      msg.type === "error" ? styles.msgBannerError : styles.msgBannerSuccess,
+      { transform: [{ translateX: msg.type === "error" ? shakeAnim : 0 }] },
+    ]}
+    accessibilityRole="alert"
+    accessibilityLiveRegion="polite"
+    accessible
+  >
+    <Ionicons
+      name={msg.type === "error" ? "alert-circle-outline" : "checkmark-circle-outline"}
+      size={16}
+      color="#111827"
+    />
+    <Text style={styles.msgBannerText} numberOfLines={3}>
+      {msg.text}
+    </Text>
+  </Animated.View>
+)}
+
 
         {/* CTA */}
 <Animated.View
@@ -513,6 +526,35 @@ const styles = StyleSheet.create({
     alignItems: "center",
     flexDirection: "row",
   },
+  msgBanner: {
+  position: "absolute",
+  top: "61%", // 👈 sous ton input (52%) + marge safe
+  left: "5%",
+  right: "5%",
+  flexDirection: "row",
+  alignItems: "center",
+  gap: 8,
+  paddingVertical: 10,
+  paddingHorizontal: 12,
+  borderRadius: 12,
+  borderWidth: 1,
+},
+msgBannerError: {
+  backgroundColor: "#FEE2E2",
+  borderColor: "rgba(220,38,38,0.25)",
+},
+msgBannerSuccess: {
+  backgroundColor: "#DCFCE7",
+  borderColor: "rgba(5,150,105,0.25)",
+},
+msgBannerText: {
+  flex: 1,
+  color: "#111827",
+  fontSize: normalize(12.5),
+  fontFamily: "Comfortaa_700Bold",
+  lineHeight: normalize(16),
+},
+
   ctaWrapper: {
   position: "absolute",
   bottom: "12%",

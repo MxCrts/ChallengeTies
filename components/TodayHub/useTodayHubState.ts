@@ -1,12 +1,13 @@
 import { useMemo } from "react";
 import type { TFunction } from "i18next";
 
-export type TodayHubPrimaryMode = "mark" | "new" | "duo" | "duoPending";
+export type TodayHubPrimaryMode = "mark" | "new" | "pick" | "duoPending";
 
 export type CurrentChallengeItem = {
   id?: string;
   challengeId?: string;
   title?: string;
+  chatId?: string;
   description?: string;
   imageUrl?: string;
   category?: string;
@@ -52,6 +53,45 @@ export type ChallengeMeta = {
   imageUrl?: string;
 };
 
+function translateMeta(
+  m: ChallengeMeta | null,
+  t: TFunction,
+  langKey: string
+): ChallengeMeta | null {
+  if (!m) return null;
+  const key =
+    (typeof (m as any)?.chatId === "string" && (m as any).chatId.trim())
+      ? (m as any).chatId.trim()
+      : (typeof m.id === "string" ? m.id.trim() : "");
+
+  // ⚠️ Aligné avec Explore : challenges.{chatId}.title/description
+  const title =
+    key
+       ? t(`challenges.${key}.title`, { defaultValue: m.title || "" })
+      : m.title || "";
+
+  const description =
+    key
+       ? t(`challenges.${key}.description`, {
+          defaultValue: m.description || "",
+        })
+      : m.description || "";
+
+  // catégories.{rawCategory}
+  const categoryRaw = m.category || "";
+  const category =
+    categoryRaw
+      ? t(`categories.${categoryRaw}`, { defaultValue: categoryRaw })
+      : "";
+
+  return {
+    ...m,
+    title,
+    description,
+    category,
+  };
+}
+
 
 type Params = {
   dayUtc: string;
@@ -64,6 +104,7 @@ type Params = {
   dailyFive: ChallengeMeta[];
 
   t: TFunction;
+  langKey: string;
 };
 
 function isActive(c: any) {
@@ -78,6 +119,7 @@ export function useTodayHubState({
   allChallenges,
   dailyFive,
   t,
+  langKey,
 }: Params) {
   const activeChallenges = useMemo(
     () => currentChallenges.filter(isActive),
@@ -147,10 +189,10 @@ export function useTodayHubState({
   }, [activeChallenges, isMarkedToday]);
 
   const primaryMode = useMemo<TodayHubPrimaryMode>(() => {
-    if (hasOutgoingPendingInvite) return "duoPending";
-    if (!hasActiveChallenges) return "duo";
-    return anyUnmarkedToday ? "mark" : "new";
-  }, [hasOutgoingPendingInvite, hasActiveChallenges, anyUnmarkedToday]);
+  if (hasOutgoingPendingInvite) return "duoPending";
+  if (!hasActiveChallenges) return "pick";
+  return anyUnmarkedToday ? "mark" : "new";
+}, [hasOutgoingPendingInvite, hasActiveChallenges, anyUnmarkedToday]);
 
   const progress = useMemo(() => {
     const done = typeof focusChallenge?.completedDays === "number" ? focusChallenge.completedDays : 0;
@@ -170,64 +212,90 @@ export function useTodayHubState({
       const localImg = typeof (focusChallenge as any)?.imageUrl === "string" ? (focusChallenge as any).imageUrl.trim() : "";
 
       if (localTitle || localDesc || localImg) {
-        return {
+         const chatId =
+          (typeof (focusChallenge as any)?.chatId === "string" && (focusChallenge as any).chatId.trim())
+            ? (focusChallenge as any).chatId.trim()
+            : undefined;
+        const meta = {
           id: focusChallengeId ?? "todayhub",
+          chatId,
           title: localTitle || t("home.yourChallenge", { defaultValue: "Ton défi" }),
           description: localDesc || "",
           category: localCat || "",
           imageUrl: localImg || undefined,
         };
+         return translateMeta(meta, t, langKey);
       }
     }
 
     // 2) fallback base
-    if (!focusChallengeId) return null;
-    const inAll = allChallenges.find((c) => c.id === focusChallengeId);
-    if (inAll) return inAll;
-    const inDaily = dailyFive.find((c) => c.id === focusChallengeId);
-    return inDaily ?? null;
-  }, [focusChallenge, focusChallengeId, allChallenges, dailyFive, t]);
+    const fallbackId = focusChallengeId;
+    const fallbackChatId =
+      (typeof (focusChallenge as any)?.chatId === "string" && (focusChallenge as any).chatId.trim())
+        ? (focusChallenge as any).chatId.trim()
+        : null;
+
+    if (!fallbackId && !fallbackChatId) return null;
+
+    const inAll =
+      (fallbackChatId ? allChallenges.find((c: any) => c.chatId === fallbackChatId) : null) ??
+      (fallbackId ? allChallenges.find((c) => c.id === fallbackId) : null);
+   if (inAll) return translateMeta(inAll, t, langKey);
+    const inDaily =
+      (fallbackChatId ? dailyFive.find((c: any) => c.chatId === fallbackChatId) : null) ??
+      (fallbackId ? dailyFive.find((c) => c.id === fallbackId) : null);
+    return translateMeta(inDaily ?? null, t, langKey);
+  }, [focusChallenge, focusChallengeId, allChallenges, dailyFive, t, langKey]);
 
   const pendingMeta = useMemo<ChallengeMeta | null>(() => {
     const id = pendingInvite?.challengeId;
     if (!id) return null;
-    return (
+    const raw =
       allChallenges.find((c) => c.id === id) ??
       dailyFive.find((c) => c.id === id) ??
-      null
-    );
-  }, [pendingInvite?.challengeId, allChallenges, dailyFive]);
+      null;
+   return translateMeta(raw, t, langKey);
+  }, [pendingInvite?.challengeId, allChallenges, dailyFive, t, langKey]);
+
+  const curatedMeta = useMemo<ChallengeMeta | null>(() => {
+    // Apple-level: jamais “vide” → on montre un défi suggéré (dailyFive > allChallenges)
+   const raw = dailyFive?.[0] ?? allChallenges?.[0] ?? null;
+    return translateMeta(raw, t, langKey);
+  }, [dailyFive, allChallenges, t, langKey]);
 
   const hubMeta = useMemo(() => {
     // si pending invite => on préfère afficher le challenge de l'invite
     if (hasOutgoingPendingInvite) return pendingMeta ?? focusMeta;
-    // si actif => focusMeta, sinon pendingMeta (au cas où)
-    return hasActiveChallenges ? focusMeta : pendingMeta;
-  }, [hasOutgoingPendingInvite, pendingMeta, hasActiveChallenges, focusMeta]);
+    // si actif => focusMeta, sinon curated (suggestion)
+  if (hasActiveChallenges) return focusMeta;
+  return pendingMeta ?? curatedMeta;
+}, [hasOutgoingPendingInvite, pendingMeta, hasActiveChallenges, focusMeta, curatedMeta]);
 
   const hubChallengeId = useMemo(() => {
     if (hasOutgoingPendingInvite) return pendingInvite?.challengeId ?? focusChallengeId ?? null;
-    return hasActiveChallenges ? focusChallengeId : null;
-  }, [hasOutgoingPendingInvite, pendingInvite?.challengeId, focusChallengeId, hasActiveChallenges]);
+   if (hasActiveChallenges) return focusChallengeId;
+  return (pendingMeta?.id ?? curatedMeta?.id ?? null) as any;
+  }, [hasOutgoingPendingInvite, pendingInvite?.challengeId, focusChallengeId, hasActiveChallenges, pendingMeta?.id, curatedMeta?.id]);
 
  const title = useMemo(() => {
-    if (primaryMode === "duoPending") return t("homeZ.todayHub.titlePending", { defaultValue: "Invitation envoyée" });
+    if (primaryMode === "duoPending") return t("homeZ.duoPending.title", { defaultValue: "Invite sent" });
     if (!hasActiveChallenges) return t("homeZ.todayHub.titleNone2", { defaultValue: "Choisis un défi" });
     return t("homeZ.todayHub.titleActive2", { defaultValue: "Aujourd’hui" });
-  }, [primaryMode, hasActiveChallenges, t]);
+  }, [primaryMode, hasActiveChallenges, t, langKey]);
 
   const subtitle = useMemo(() => {
-    if (primaryMode === "duoPending") return t("homeZ.todayHub.subPending", { defaultValue: "En attente de réponse…" });
+    if (primaryMode === "duoPending")
+      return t("homeZ.duoPending.hint", { defaultValue: "While waiting, set up your Duo." });
     if (!hasActiveChallenges) return t("homeZ.todayHub.subNone2", { defaultValue: "Solo ou à deux. Commence simple." });
     return t("homeZ.todayHub.subActive2", { defaultValue: "1 action. 1 jour. Zéro friction." });
-  }, [primaryMode, hasActiveChallenges, t]);
+  }, [primaryMode, hasActiveChallenges, t, langKey]);
 
   const primaryLabel = useMemo(() => {
-    if (primaryMode === "mark") return t("homeZ.todayHub.primaryMark", { defaultValue: "Marquer aujourd’hui" });
-    if (primaryMode === "new") return t("homeZ.todayHub.primaryNew", { defaultValue: "Nouveau défi" });
-    if (primaryMode === "duoPending") return t("homeZ.todayHub.primaryPending", { defaultValue: "Relancer" });
-    return t("homeZ.todayHub.primaryDuo", { defaultValue: "Inviter un ami" });
-  }, [primaryMode, t]);
+  if (primaryMode === "mark") return t("homeZ.todayHub.primaryMark", { defaultValue: "Marquer aujourd’hui" });
+  if (primaryMode === "duoPending") return t("homeZ.todayHub.primaryPending", { defaultValue: "Relancer" });
+  if (primaryMode === "pick") return t("homeZ.todayHub.primaryPick", { defaultValue: "Choisir un défi" });
+  return t("homeZ.todayHub.primaryNew", { defaultValue: "Nouveau défi" });
+}, [primaryMode, t, langKey]);
 
   return {
     primaryMode,

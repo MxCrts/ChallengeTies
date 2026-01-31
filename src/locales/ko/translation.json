@@ -280,6 +280,7 @@
 
   "newFeatures": {
     "deadlineIso": "2026-02-28T23:59:59+01:00",
+    "proposeIdea": "아이디어 제안하기" ,
     "shareLabel": "공유",
 
     "monthLabelTpl": "업데이트 • {{month}}",
@@ -500,6 +501,65 @@
   "streakBonusMessage": "🎯 {{streak}}일 연속 달성으로 +{{bonus}}!",
 
 "challengeDetails": {
+  "reviewsSubtitle": "진짜 후기 덕분에 더 잘 선택하고 더 빨리 성장할 수 있어요.",
+      "noReviewsHint": "유용한 후기를 처음으로 남겨보세요. 10초면 충분, 진짜 영향.",
+      "reviewPrivacy": "유용하고, 명확하고, 친절하게 작성해 주세요.",
+  "cta_take": "챌린지 시작",
+    "cta_markToday": "오늘 체크",
+    "cta_invite": "친구 초대",
+    "cta_continueSolo": "솔로로 계속",
+    "cta_cancelInvite": "초대 취소",
+    "cta_close": "닫기",
+    "cta_back": "뒤로",
+
+    "state_loading": "로딩 중…",
+    "state_updating": "업데이트 중…",
+    "state_error": "문제가 발생했어요",
+
+    "section_overview": "개요",
+    "section_progress": "진행",
+
+    "label_solo": "솔로",
+    "label_duo": "듀오",
+    "label_warmup": "대기",
+
+    "warmup_title": "파트너를 기다리는 중",
+    "warmup_body": "상대가 수락하면 듀오 모드가 자동으로 활성화돼요.",
+    "warmup_hint": "원하면 언제든 솔로로 진행할 수 있어요.",
+
+    "pending_title": "초대 전송됨",
+    "pending_body": "응답을 기다리고 있어요. 수락되면 바로 알려드릴게요.",
+    "pending_badge": "대기 중",
+
+    "duo_active_title": "듀오 모드 활성",
+    "duo_active_body": "함께 가자. 꾸준함이 이긴다.",
+
+    "progress_you": "나",
+    "progress_partner": "파트너",
+    "progress_daysDone": "{{done}}/{{total}}일",
+    "progress_day": "{{day}}일차",
+
+    "confirm_cancelInvite_title": "초대를 취소할까요?",
+    "confirm_cancelInvite_body": "초대가 무효가 되어 더 이상 수락할 수 없어요.",
+    "confirm_cta_yes": "네, 취소",
+    "confirm_cta_no": "아니요",
+  "startMode": {
+        "title": "모드를 선택하세요",
+        "cancel": "취소",
+        "closeA11y": "닫기",
+        "closeHint": "창을 닫습니다.",
+        "offlineRequired": "인터넷 연결이 필요합니다",
+        "sub": "솔로로 전진. 듀오로 끝까지 버티기.",
+        "recommended": "추천",
+        "duo": "듀오",
+        "duoDesc": "친구 초대. 끝까지 해내기.",
+        "solo": "솔로",
+        "soloDesc": "간단하고 빠르며 효과적.",
+        "duoA11y": "듀오 선택",
+        "soloA11y": "솔로 선택",
+        "duoHint": "다음으로 기간을 선택하고 친구를 초대하세요.",
+        "soloHint": "다음으로 기간을 선택하고 시작하세요."
+      },
     "noDescription": "설명이 없습니다",
     "participantsLabel": "참가자",
     "quick": {
@@ -628,14 +688,49 @@
   "maxChars": "최대 500자",
   "cannotSaveReview": "현재 리뷰를 저장할 수 없습니다.",
   "toClaim": "수령하기",
+  "registrationForm": "회원가입 양식",
+  "clear": "지우기",
+  "createAccountHint": "계정을 생성합니다",
+  "passwordHint": "최소 {{min}}자.",
+  "confirmPasswordHint": "비밀번호와 같아야 합니다.",
+  "usernameHint": "최소 2자.",
 
+  "fillEmail": "이메일을 입력하세요",
+  "fillUsername": "사용자 이름을 선택하세요",
+  "usernameTooShort": "사용자 이름이 너무 짧습니다",
+  "fillPassword": "비밀번호를 입력하세요",
+  "passwordMinChars": "비밀번호: 최소 {{count}}자",
+  "operationNotAllowed": "이 프로젝트에서는 허용되지 않는 작업입니다.",
+  "reviews": {
+    "title": "사람들이 남긴 후기",
+    "subtitle": "진짜 후기로, 나에게 맞는 챌린지를 더 쉽게 선택하세요.",
+    "emptyTitle": "아직 후기가 없어요",
+    "emptySubtitle": "첫 번째로 유용한 후기를 남겨보세요. 10초면 충분해요.",
+    "starsLabel": "{{count}}점",
+    "countLabel": "후기 {{count}}개"
+  },
   "duo": {
     "leader": "리더",
+    "vs": "VS",
     "pending": {
       "title": "초대 대기 중",
+      "warmupHint": "기다리는 동안 오늘의 워밍업을 완료하세요.",
+      "warmupError": "워밍업을 저장할 수 없습니다.",
+      "partnerPending": "대기 중",
+      "warmup": "워밍업",
+      "warmupCta": "오늘의 워밍업",
+      "warmupA11yHint": "오늘의 워밍업을 저장합니다.",
+      "warmupDone": "워밍업 완료",
+      "warmupToastTitle": "워밍업 완료",
+      "warmupToastBody": "파트너를 기다리는 중이에요.",
+      "warmupToastErrorTitle": "저장되지 않았어요",
+      "warmupToastErrorBody": "잠시 후 다시 시도해 주세요.",
+      "cancelInviteShort": "취소",
       "short": "초대 대기 중",
       "body": "상대가 응답하면 바로 알려드립니다. 취소하고 다른 사람을 초대할 수도 있습니다.",
       "cancelInvite": "취소",
+      "cancelConfirmTitle": "초대를 취소할까요?",
+    "cancelConfirmBody": "친구는 해당 링크로 이 듀오에 더 이상 참여할 수 없습니다.",
       "cancelError": "지금은 취소할 수 없습니다."
     },
     "you": "나",
@@ -1615,6 +1710,10 @@
   },
   "dailyBonus": {
     "title": "오늘의 보너스",
+    "badge": "보상",
+"oncePerDay": "하루 1회",
+"teaser2": "지금 열고 미스터리 보상을 확인하세요.",
+"micro": "빠르게. 간단하게. 보상.",
     "subtitle": "미스터리 룰렛을 돌려 보상을 확인하세요 🎁",
      "rerollUnavailable": "광고 로딩 중…",
      "ctaShort": "돌리기",
@@ -2162,20 +2261,17 @@
   "errorLoadingSavedChallenges": "저장된 도전을 불러올 수 없습니다: {{message}}",
   "rateUs": "앱 평가하기",
   "shareCardT": {
+    "dayOf": "{{total}}일 중 {{day}}일째",
+  "tagline": "ChallengeTies에서 도전에 참여하세요",
   "a11yTitle": "챌린지 공유 카드",
   "a11yHint": "카드를 친구에게 공유하기 전에 미리보기하세요.",
   "heldSolo": "끝까지 했다",
     "heldDuo": "끝까지 해냈다",
     "watermark": "@ChallengeTies",
-
-  "tagline": "챌린지가 있다면? 끝내라.",
-
   "duoBadge": "듀오 챌린지",
   "soloBadge": "솔로 포커스",
-
   "completedLabel": "이 챌린지를 완료했습니다",
   "daysLabel": "{{days}}일의 집중",
-
   "leading": "당신이 앞서가고 있어요!",
   "milestoneVariants": [
   "{{days}}일 동안 이어왔다… 이제부터가 진짜 시작이다.",
@@ -2258,7 +2354,9 @@
   "dailySelectedSubtitleShort": "오늘의 선택.",
 "homeZ": {
   "duoPending": {
-    "title": "초대 전송", "sub": "대기 중. 수락하면: 듀오 시작.", "cta": "보기", "a11y": "듀오 초대 대기 중",
+     "cta": "듀오 준비하기",
+    "hint": "기다리는 동안 듀오를 준비해요.",
+    "title": "초대 전송", "sub": "대기 중. 수락하면: 듀오 시작.", "a11y": "듀오 초대 대기 중",
     "steps": {
       "sent": "초대를 보냈어요",
       "waiting": "수락 대기 중",
@@ -2277,6 +2375,11 @@
     "todayHub": {
       "badge": "오늘",
       "primaryActiveShort": "기록",
+       "metaPending": "초대",
+    "metaNone": "활성화된 챌린지가 없습니다",
+    "metaActive": "활성 챌린지 {{count}}개",
+    "create": "만들기",
+      "pendingTap":"탭하여 보기",
       "primaryNewShort": "새로",
   "primaryNewA11y": "새 챌린지 선택",
   "primaryNewHint": "새 챌린지를 고르려면 탐색을 여세요.",
@@ -2406,6 +2509,7 @@
   "commonS": {
     "close": "닫기",
     "notLoggedIn": "로그인이 필요합니다.",
+    "keep": "유지" ,
     "sending": "전송 중…",
     "cancel": "취소",
     "edit": "편집",
@@ -4335,6 +4439,7 @@
 "common": {
     "back": "뒤로",
     "retry": "다시 시도",
+    "anonymous": "익명", "delete": "삭제",
      "tip": "팁",
     "loading": "로딩 중...",
     "recommended": "추천",
@@ -4528,6 +4633,23 @@
     "hintSolo": "바로 시작해요."
   },
   "step3": {
+    "subtitleByDays": {
+    "3": "3일: 미니 스프린트. 가능하다는 걸 증명.",
+    "7": "7일: 완벽한 시작.",
+    "15": "15일: 시도에서 실행으로.",
+    "21": "21일: 습관이 만들어진다.",
+    "30": "30일: 진지한 목표.",
+    "60": "60일: 진짜 규율.",
+    "90": "90일: 변화.",
+    "180": "180일: 강한 약속.",
+    "365": "365일: 엘리트 레벨. 이것이 너다."
+  },
+  "subtitleGeneric": {
+    "short": "{{count}}일: 짧고 효과적.",
+    "medium": "{{count}}일: 습관 형성.",
+    "long": "{{count}}일: 진짜 변화.",
+    "ultra": "{{count}}일: 깊은 변화."
+  },
     "title": "얼마나 버틸 수 있나요?",
     "subtitle": "7일은 좋은 시작이에요. 나중에 조정할 수 있어요.",
     "cta": "시작",

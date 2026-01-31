@@ -3,7 +3,7 @@ var __importDefault = (this && this.__importDefault) || function (mod) {
     return (mod && mod.__esModule) ? mod : { "default": mod };
 };
 Object.defineProperty(exports, "__esModule", { value: true });
-exports.sendDuoNudge = exports.onUserActivated = exports.claimReferralMilestone = exports.invitationsOnWrite = exports.dl = void 0;
+exports.onNotificationCreatedSendPush = exports.sendDuoNudge = exports.onUserActivated = exports.claimReferralMilestone = exports.invitationsOnWrite = exports.dl = void 0;
 const express_1 = __importDefault(require("express"));
 const https_1 = require("firebase-functions/v2/https");
 const app_1 = require("firebase-admin/app");
@@ -280,3 +280,5 @@ var referralRewards_1 = require("./referralRewards");
 Object.defineProperty(exports, "onUserActivated", { enumerable: true, get: function () { return referralRewards_1.onUserActivated; } });
 var duoNudge_1 = require("./duoNudge");
 Object.defineProperty(exports, "sendDuoNudge", { enumerable: true, get: function () { return duoNudge_1.sendDuoNudge; } });
+var notificationsPush_1 = require("./notificationsPush");
+Object.defineProperty(exports, "onNotificationCreatedSendPush", { enumerable: true, get: function () { return notificationsPush_1.onNotificationCreatedSendPush; } });
