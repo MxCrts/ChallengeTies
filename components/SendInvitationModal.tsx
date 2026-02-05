@@ -710,6 +710,7 @@ const createStyles = (
 ) =>
   StyleSheet.create({
     overlay: {
+      flex: 1,   
       ...StyleSheet.absoluteFillObject,
       justifyContent: "center",
       alignItems: "center",
@@ -719,7 +720,7 @@ const createStyles = (
       backgroundColor: isDark ? "rgba(0,0,0,0.78)" : "rgba(0,0,0,0.60)",
     },
     kav: {
-  flexGrow: 1,
+  flex: 1,              // ✅ CRITIQUE (pas flexGrow)
   width: "100%",
   alignItems: "center",
   justifyContent: "center",
@@ -727,17 +728,14 @@ const createStyles = (
   paddingTop: Math.max(insets.top, 12),
   paddingBottom: Math.max(insets.bottom, 12),
 },
-
-    cardShadow: {
+cardShadow: {
   width: "100%",
   maxWidth: 420,
   borderRadius: 26,
   overflow: "hidden",
-
- maxHeight: screenH - (insets.top + insets.bottom) - n(28),
+  maxHeight: screenH - (insets.top + insets.bottom) - n(28),
   minHeight: n(320),
-
-  alignSelf: "stretch",
+  alignSelf: "center",   // ✅ au lieu de stretch
 },
 titleCol: {
   flex: 1,

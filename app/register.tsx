@@ -1,4 +1,10 @@
-import React, { useState, useEffect, useRef } from "react";
+import React, {
+  useState,
+  useEffect,
+  useRef,
+  useMemo,
+  useCallback,
+} from "react";
 import {
   View,
   Text,
@@ -41,66 +47,47 @@ import { useIsFocused } from "@react-navigation/native";
 import NetInfo from "@react-native-community/netinfo";
 import { Easing as RNEasing } from "react-native";
 import { useRouter } from "expo-router";
-import {
- checkAndGrantPioneerIfEligible,
- checkAndGrantAmbassadorRewards,
-  checkAndGrantAmbassadorMilestones,
-} from "@/src/referral/pioneerChecker";
-// en haut du fichier register.tsx
 import * as Notifications from "expo-notifications";
 
-async function fastActivateReferrer(userId: string) {
-  try {
-    const entries = await AsyncStorage.multiGet([
-      "ties_referrer_id",
-      "ties_referrer_src",
-      "ties_referrer_ts",
-      "referrer_id",
-      "referrer_src",
-      "referrer_ts",
-    ]);
+async function readPendingReferral() {
+  const entries = await AsyncStorage.multiGet([
+    "ties_referrer_id",
+    "ties_referrer_src",
+    "ties_referrer_ts",
+    "referrer_id",
+    "referrer_src",
+    "referrer_ts",
+  ]);
 
-    const map = Object.fromEntries(entries);
-    const cleanRef = (map["ties_referrer_id"] ?? map["referrer_id"] ?? "").toString().trim();
-    const cleanSrc = (map["ties_referrer_src"] ?? map["referrer_src"] ?? "share").toString();
+  const map = Object.fromEntries(entries);
 
-    if (!cleanRef || cleanRef === userId) {
-      return; // rien à activer
-    }
+  const referrerId = String(
+    (map["ties_referrer_id"] ?? map["referrer_id"] ?? "") || ""
+  ).trim();
 
-    const userRef = doc(db, "users", userId);
+  const src = String(
+    (map["ties_referrer_src"] ?? map["referrer_src"] ?? "share") || "share"
+  ).trim();
 
-    await updateDoc(userRef, {
-      referrerId: cleanRef,
-      activated: true,
-      referral: {
-        referrerId: cleanRef,
-        src: cleanSrc,
-        activatedAt: new Date(),
-        activatedCount: 0,
-        claimedMilestones: [],
-        pendingMilestones: [],
-      },
-      updatedAt: new Date(),
-    });
+  const tsRaw = String(
+    (map["ties_referrer_ts"] ?? map["referrer_ts"] ?? "") || ""
+  ).trim();
 
-    // Nettoyage des clés
-    await AsyncStorage.multiRemove([
-      "ties_referrer_id",
-      "ties_referrer_src",
-      "ties_referrer_ts",
-      "referrer_id",
-      "referrer_src",
-      "referrer_ts",
-    ]);
+  const ts = tsRaw ? Number(tsRaw) : null;
 
-    console.log("[register] fastActivateReferrer -> SUCCESS", cleanRef);
-
-  } catch (e) {
-    console.log("[register] fastActivateReferrer ERROR", e);
-  }
+  return { referrerId, src, ts };
 }
 
+async function consumePendingReferral() {
+  await AsyncStorage.multiRemove([
+    "ties_referrer_id",
+    "ties_referrer_src",
+    "ties_referrer_ts",
+    "referrer_id",
+    "referrer_src",
+    "referrer_ts",
+  ]);
+}
 
 const { width: SCREEN_WIDTH, height: SCREEN_HEIGHT } =
   Dimensions.get("window");
@@ -162,6 +149,15 @@ export default function Register() {
   const { t } = useTranslation();
   const router = useRouter();
   const nav = useNavGuard(router);
+  // ✅ Purge de sécurité : évite qu’un vieux referrer traîne
+ useEffect(() => {
+  (async () => {
+    try {
+      const { referrerId } = await readPendingReferral();
+      if (!referrerId) await consumePendingReferral();
+    } catch {}
+  })();
+}, []);
 
   const [email, setEmail] = useState("");
   const [username, setUsername] = useState("");
@@ -178,20 +174,20 @@ export default function Register() {
     "email" | "username" | "password" | "confirm" | null
   >(null);
 
-  const passwordRules = React.useMemo(() => {
+ const passwordRules = useMemo(() => {
     const p = password || "";
     const minOk = p.trim().length >= 6; // 🔁 cohérent avec ton formValid actuel
     // Si tu veux “top monde”, monte à 8 et ajoute 1 maj + 1 chiffre (je te laisse le switch)
     return { minOk, min: 6 };
   }, [password]);
 
-  const focusHint = React.useMemo(() => {
+  const focusHint = useMemo(() => {
     if (focusedField === "password") {
-  return t("passwordHint", {
-    min: passwordRules.min,
-    defaultValue: `Min ${passwordRules.min} caractères.`,
-  }) as string;
-}
+ return t("passwordHint", {
+        min: passwordRules.min,
+        defaultValue: `Min ${passwordRules.min} caractères.`,
+      }) as string;
+    }
     if (focusedField === "confirm") {
       return t("confirmPasswordHint", {
         defaultValue: "Doit être identique au mot de passe.",
@@ -230,12 +226,12 @@ export default function Register() {
   
 
   // Helpers
-  const isValidEmail = React.useCallback(
+  const isValidEmail = useCallback(
     (e: string) => /\S+@\S+\.\S+/.test(e),
     []
   );
 
-  const formValid = React.useMemo(
+  const formValid = useMemo(
     () =>
       isValidEmail(email.trim()) &&
       username.trim().length >= 2 &&
@@ -246,7 +242,7 @@ export default function Register() {
 
   
 
-  const triggerShake = React.useCallback(() => {
+  const triggerShake = useCallback(() => {
     shakeAnim.setValue(0);
     Animated.sequence([
       Animated.timing(shakeAnim, {
@@ -272,7 +268,7 @@ export default function Register() {
     ]).start();
   }, [shakeAnim]);
 
-  const showError = React.useCallback(
+ const showError = useCallback(
     (msg: string) => {
       if (clearErrorTimeoutRef.current) {
         clearTimeout(clearErrorTimeoutRef.current);
@@ -292,7 +288,7 @@ export default function Register() {
     [triggerShake]
   );
 
-  const safeHapticsError = React.useCallback(async () => {
+  const safeHapticsError = useCallback(async () => {
     if (reduceMotion) return;
     try {
       await HapticsModule.notificationAsync(
@@ -462,7 +458,7 @@ export default function Register() {
     
 
 
-  const getBlockingReason = React.useCallback(() => {
+  const getBlockingReason = useCallback(() => {
     if (isOffline) return t("networkError") || "Connexion réseau indisponible";
     if (!email.trim()) return t("fillEmail") || "Entre ton email";
     if (!isValidEmail(email.trim()))
@@ -493,7 +489,7 @@ export default function Register() {
     passwordRules.min,
   ]);
 
-  const disabledHint = React.useMemo(() => {
+ const disabledHint = useMemo(() => {
     // On n’affiche pas un hint tant que l’utilisateur n’a rien touché
     const touched = !!email || !!username || !!password || !!confirmPassword;
     if (!touched) return "";
@@ -622,13 +618,6 @@ export default function Register() {
         console.log("[register] getDoc users error:", e);
       }
 
-      // ✅ REFERRAL FAST-TRACK : validation immédiate après inscription
-      // (pioneerChecker lit ties_referrer_id ou referrerId, attribue B,
-      //  récompense B, récompense A + notif + Share&Earn)
-      try {
-        
-      } catch {}
-
       if (!existingSnap || !existingSnap.exists()) {
         // 👉 Doc n'existe pas encore : on peut faire un create complet (rules: allow create)
         await setDoc(userRef, {
@@ -661,18 +650,12 @@ export default function Register() {
           pioneerRewardGranted: false,
           activated: false,
 referral: {
-  activatedCount: 0,
-  claimedMilestones: [],
-  pendingMilestones: [],
-},
+            activatedCount: 0,
+            claimedMilestones: [],
+            pendingMilestones: [],
+          },
         });
 
-        // 🔥 Activation immédiate du parrain (cas où le doc vient d'être créé)
-try {
-  await fastActivateReferrer(userId);
-} catch (e) {
-  console.log("[register] fastActivateReferrer (create) failed:", e);
-}
       } else {
         try {
           const data = existingSnap.data() || {};
@@ -721,12 +704,6 @@ try {
           }
 
           await updateDoc(userRef, patch);
-          // 🔥 Activation immédiate du parrainage (fiable en Internal Sharing)
-try {
-  await fastActivateReferrer(userId);
-} catch (e) {
-  console.log("[register] fastActivateReferrer failed:", e);
-}
 
         } catch (e) {
           console.log("[register] safePatch update error:", e);

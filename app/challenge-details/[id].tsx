@@ -87,6 +87,7 @@ import Animated, {
   FadeInUp,
   FadeIn,
  } from "react-native-reanimated";
+ import { DeviceEventEmitter } from "react-native";
  import { BlurView } from "expo-blur";
 import * as Linking from "expo-linking";
 import SendInvitationModal from "@/components/SendInvitationModal";
@@ -101,7 +102,10 @@ import { usePathname } from "expo-router";
 import { useAuth } from "@/context/AuthProvider"; 
 import ShareCardModal from "@/components/ShareCardModal";
 import SelectModeModal from "@/components/SelectModeModal";
-
+import ConfirmationDuoModal from "@/components/ConfirmationDuoModal";
+import DuoMomentModal from "@/components/DuoMomentModal";
+import SoloMomentModal from "@/components/SoloMomentModal";
+import { MISSED_FLOW_EVENT, MARK_RESOLVED_EVENT } from "@/context/CurrentChallengesContext";
 
 const short = (s: string, max = 16) => (s.length > max ? s.slice(0, max - 1).trim() + "…" : s);
 
@@ -114,6 +118,7 @@ const normalizeSize = (size: number) => {
   return Math.round(size * scale);
 };
 const HERO_H = Math.max(240, Math.round(SCREEN_HEIGHT * 0.35));
+
 
 const pct = (num = 0, den = 0) =>
   den > 0 ? Math.min(100, Math.max(0, Math.round((num / den) * 100))) : 0;
@@ -332,21 +337,89 @@ const seedToInt = (seed: string) => {
   return Math.abs(h);
 };
 
-// Avatar stylé stable (sans stockage, sans flicker)
-// (utilisé UNIQUEMENT en duoPending si pas de photo de profil)
-const stylishAvatarUrl = (seed: string, size = 160) => {
-  const s = safeSeed(seed, "ct");
-  const v = seedToInt(s) % 6; // petite variété "de style"
-  const style =
-    v === 0 ? "micah" :
-    v === 1 ? "thumbs" :
-    v === 2 ? "lorelei" :
-    v === 3 ? "avataaars" :
-    v === 4 ? "bottts" :
-    "notionists";
-  // DiceBear (SVG/PNG). ExpoImage gère très bien.
-  return `https://api.dicebear.com/7.x/${style}/png?seed=${encodeURIComponent(s)}&size=${size}`;
+// ✅ outside ChallengeDetails (top-level in file)
+type DuoAvatarProps = { uri?: string | null; name?: string; isDarkMode: boolean; styles: any };
+
+export const DuoAvatar = React.memo(function DuoAvatar({
+  uri,
+  name,
+  isDarkMode,
+  styles,
+}: DuoAvatarProps) {
+  const hasUri = typeof uri === "string" && uri.trim().length > 0;
+
+  return (
+    <View style={styles.duoAvatarShell}>
+      {hasUri ? (
+        <ExpoImage
+          source={{ uri: uri as string }}
+          style={styles.duoEliteAvatar}
+          contentFit="cover"
+          transition={120}
+          cachePolicy="memory-disk"
+          recyclingKey={uri as string}
+        />
+      ) : (
+        <LinearGradient
+          colors={["rgba(255,255,255,0.14)", "rgba(255,255,255,0.06)"]}
+          start={{ x: 0, y: 0 }}
+          end={{ x: 1, y: 1 }}
+          style={styles.duoAvatarFallback}
+        >
+          <Text style={styles.duoAvatarInitial}>{getInitials(name)}</Text>
+        </LinearGradient>
+      )}
+      <View style={styles.duoAvatarRing} pointerEvents="none" />
+    </View>
+  );
+});
+
+type PendingPartnerAvatarProps = {
+  isDarkMode: boolean;
+  duoPendingPulseStyle: any;
+  styles: any;
 };
+
+export const PendingPartnerAvatar = React.memo(function PendingPartnerAvatar({
+  isDarkMode,
+  duoPendingPulseStyle,
+  styles,
+}: PendingPartnerAvatarProps) {
+  return (
+    <View style={styles.duoAvatarShell}>
+      <LinearGradient
+        colors={
+          isDarkMode
+            ? ["rgba(0,255,255,0.14)", "rgba(255,215,0,0.10)"]
+            : ["rgba(55,48,163,0.14)", "rgba(0,0,0,0.06)"]
+        }
+        start={{ x: 0, y: 0 }}
+        end={{ x: 1, y: 1 }}
+        style={styles.duoAvatarFallback}
+      >
+        <Ionicons
+          name="person-outline"
+          size={26}
+          color={isDarkMode ? "rgba(255,255,255,0.92)" : "rgba(0,0,0,0.82)"}
+        />
+        <View style={styles.duoPendingMiniBadge}>
+          <Ionicons
+            name="hourglass-outline"
+            size={12}
+            color={isDarkMode ? "rgba(255,255,255,0.92)" : "rgba(0,0,0,0.82)"}
+          />
+        </View>
+      </LinearGradient>
+
+      <Animated.View
+        pointerEvents="none"
+        style={[styles.duoPendingRing, duoPendingPulseStyle]}
+      />
+      <View style={styles.duoAvatarRing} pointerEvents="none" />
+    </View>
+  );
+});
+
 
 
 export default function ChallengeDetails() {
@@ -364,6 +437,10 @@ export default function ChallengeDetails() {
   const descLines = isTablet ? 4 : 6;
   const [marking, setMarking] = useState(false);
   const [pendingOutLock, setPendingOutLock] = useState(false);
+  const [duoMomentPayload, setDuoMomentPayload] = useState<any>(null);
+  const [missedChallengeVisible, setMissedChallengeVisible] = useState(false);
+  const [soloBarWidth, setSoloBarWidth] = useState(0);
+  const [activeEntry, setActiveEntry] = useState<any>(null);
   const [outgoingPendingInvite, setOutgoingPendingInvite] = useState<{
   id: string;
   inviteeUsername?: string | null;
@@ -374,6 +451,12 @@ export default function ChallengeDetails() {
   selectedDays?: number;
   uniqueKey?: string | null;   // 👈 ajoute null
 } | null>(null);
+const [duoMomentVisible, setDuoMomentVisible] = useState(false);
+const [soloMomentVisible, setSoloMomentVisible] = useState(false);
+const [soloMomentDayIndex, setSoloMomentDayIndex] = useState(0);
+const [soloMomentTotalDays, setSoloMomentTotalDays] = useState(0);
+const [soloMomentStreak, setSoloMomentStreak] = useState<number | undefined>(undefined);
+const [soloMomentVariant, setSoloMomentVariant] = useState<"daily" | "milestone">("daily");
   const isDarkMode = theme === "dark";
   const currentTheme: Theme = isDarkMode
     ? designSystem.darkTheme
@@ -406,6 +489,7 @@ export default function ChallengeDetails() {
   const justJoinedRef = useRef(false);
   // 🧹 Anti-doublon solo+duo : évite boucle de nettoyage
   const cleanupSoloRef = useRef(false);
+  
 const IS_COMPACT = W < 380; // ✅ basé sur la largeur actuelle (split-screen/tablette)
 const [confirmResetVisible, setConfirmResetVisible] = useState(false);
 const [warmupToast, setWarmupToast] = useState<null | "success" | "error">(null);
@@ -420,6 +504,7 @@ const [adHeight, setAdHeight] = useState(0);
     setAdHeight((prev) => (prev === h ? prev : h));
   }, []);
 
+  
 // --- Toast state
 
 // --- Reanimated shared values
@@ -436,6 +521,8 @@ const warmupToastStyle = useAnimatedStyle(() => {
     transform: [{ translateY }],
   };
 }, []);
+
+
 
 const hideWarmupToast = useCallback(() => {
   // stop timer
@@ -663,6 +750,20 @@ const shouldEnterAnim =
     completeChallenge,
   } = useCurrentChallenges();
   const lastIntroKeyRef = useRef<string | null>(null);
+
+  // ---------------------------------------------------------------------------
+  // Refs pour éviter les closures stale (events -> ouverture MomentModal)
+  // ---------------------------------------------------------------------------
+  const activeEntryRef = useRef<any>(null);
+  const finalSelectedDaysRef = useRef<number>(0);
+  const isDuoRef = useRef<boolean>(false);
+  const duoChallengeDataRef = useRef<any>(null);
+  const myNameRef = useRef<string>("");
+
+  useEffect(() => {
+    activeEntryRef.current = activeEntry;
+  }, [activeEntry]);
+
 
 // ✅ Résout UNE seule entrée "courante" avec priorité DUO (si présente)
  const currentChallenge = useMemo(() => {
@@ -1028,6 +1129,96 @@ useEffect(() => {
   );
 }, [isDuoPendingOut, duoPendingPulse]);
 
+useEffect(() => {
+  const sub = DeviceEventEmitter.addListener(MISSED_FLOW_EVENT, (payload: any) => {
+    // payload typique: { challengeId, visible: true/false } ou juste { challengeId }
+    if (!payload) return;
+    if (payload.challengeId && payload.challengeId !== id) return;
+
+    // si tu envoies explicitement visible:
+    if (typeof payload.visible === "boolean") {
+      setMissedChallengeVisible(payload.visible);
+      return;
+    }
+
+    // fallback: l’event signifie "missed flow démarre"
+    setMissedChallengeVisible(true);
+  });
+
+  return () => sub?.remove?.();
+}, [id]);
+
+// ✅ Après résolution du MissedChallengeModal (streak pass / trophées / etc),
+// on ouvre le MomentModal (solo/duo) une fois que la donnée "marquée" est bien sync.
+useEffect(() => {
+  const sub = DeviceEventEmitter.addListener(MARK_RESOLVED_EVENT, (p: any) => {
+    if (!p) return;
+    if (p.id && p.id !== id) return;
+
+    const selectedDays = Number(p.selectedDays || finalSelectedDaysRef.current || 0);
+    if (!selectedDays) return;
+
+    // tentative "safe" : on attend que le missed flow soit bien fermé + que isMarkedToday devienne true
+    const tryOpen = (attempt = 0) => {
+      // 1) si missed flow encore visible, on attend
+      if ((globalThis as any).__MISSED_VISIBLE__ === true || missedChallengeVisible) {
+        if (attempt < 18) setTimeout(() => tryOpen(attempt + 1), 60);
+        return;
+      }
+
+      // 2) si pas encore marqué côté UI (snapshot pas encore arrivé), on attend un peu
+      if (!isMarkedToday(id, selectedDays)) {
+        if (attempt < 18) setTimeout(() => tryOpen(attempt + 1), 60);
+        return;
+      }
+
+      // 3) lire la meilleure source (ref) pour récupérer dayIndex/streak
+      const entry = activeEntryRef.current;
+      const totalDays = Number(selectedDays || entry?.selectedDays || 0) || 0;
+      const dayIndex =
+        Number(entry?.completedDays) ||
+        Number(finalCompletedDays) ||
+        0;
+      const streak = typeof entry?.streak === "number" ? entry.streak : undefined;
+
+      // 4) ouvrir le bon modal
+      if (isDuoRef.current) {
+  const partner = duoChallengeDataRef.current?.duoUser;
+
+  setDuoMomentPayload(
+    buildDuoMomentPayload({
+      action: p.action,
+      streak,
+      myDone: dayIndex,
+      myTotal: totalDays,
+      partnerName: partner?.name,
+      partnerAvatar: partner?.avatar,
+      partnerDone: partner?.completedDays,
+      partnerTotal: partner?.selectedDays,
+    })
+  );
+  setDuoMomentVisible(true);
+  return;
+}
+      setSoloMomentDayIndex(dayIndex);
+      setSoloMomentTotalDays(totalDays);
+      setSoloMomentStreak(streak);
+      setSoloMomentVariant("daily");
+      setSoloMomentVisible(true);
+    };
+
+    // on laisse 1 tick pour que l’UI ferme le modal missed + que le snapshot arrive
+    setTimeout(() => tryOpen(0), 0);
+  });
+
+  return () => sub?.remove?.();
+}, [
+  id,
+  missedChallengeVisible,
+  isMarkedToday,
+  finalCompletedDays,
+  setDuoMomentPayload,
+]);
 
 const isDisabledMark = marking || isMarkedToday(id, finalSelectedDays);
 const warmupDisabled = warmupDoneToday || warmupLoading;
@@ -1153,6 +1344,27 @@ const resetSoloProgressIfNeeded = useCallback(async () => {
   }
 }, [id]);
 
+const confirmSwitchToDuo = useCallback(async () => {
+  try {
+    setConfirmResetVisible(false);
+
+
+    // puis ouvre le flow d'invite
+    setSendInviteVisible(true);
+  } catch (e) {
+    console.warn("confirmSwitchToDuo failed:", e);
+    Alert.alert(
+      t("alerts.error"),
+      t("invitationS.errors.unknown", { defaultValue: "Erreur inconnue." })
+    );
+  }
+}, [t]);
+
+const cancelSwitchToDuo = useCallback(() => {
+  setConfirmResetVisible(false);
+}, []);
+
+
 
 const lang = useMemo(
   () => String(i18n?.language || "fr").split("-")[0].toLowerCase(),
@@ -1206,6 +1418,21 @@ useEffect(() => {
   duoChallengeData?.duoUser?.id,
 ]);
 
+useEffect(() => {
+    finalSelectedDaysRef.current = finalSelectedDays;
+  }, [finalSelectedDays]);
+
+  useEffect(() => {
+    isDuoRef.current = !!isDuo;
+  }, [isDuo]);
+
+  useEffect(() => {
+    duoChallengeDataRef.current = duoChallengeData;
+  }, [duoChallengeData]);
+
+  useEffect(() => {
+    myNameRef.current = myName || "";
+  }, [myName]);
 
 const startVsIntro = useCallback(() => {
   // Respect accessibilité : pas d'anim agressive
@@ -1527,8 +1754,38 @@ try {
         return cid === id;
       });
 
-      // ✅ S'il y a un duo, il gagne la priorité
-      const entry = matches.find((m) => !!m.duo) || matches[0];
+      // ✅ Résolution déterministe de l'entrée "active"
+      // 1) Priorité au uniqueKey si on en a un (évite de tomber sur une vieille entrée solo)
+      // 2) Sinon: duo > solo (même logique)
+      // 3) En solo: on prend la durée courante (selectedDays) si possible
+      const preferredUniqueKey =
+        (currentChallenge as any)?.uniqueKey ||
+        (duoState as any)?.uniqueKey ||
+        null;
+
+      const preferredDaysRaw =
+        (currentChallenge as any)?.selectedDays ??
+        finalSelectedDays ??
+        localSelectedDays ??
+        0;
+      const preferredDays = Number(preferredDaysRaw) || 0;
+
+      const byKey =
+        preferredUniqueKey
+          ? matches.find((m) => !!m?.uniqueKey && m.uniqueKey === preferredUniqueKey)
+          : undefined;
+
+      const duoEntry = matches.find((m) => !!m.duo);
+      const soloByDays =
+        preferredDays > 0
+          ? matches.find((m) => !m.duo && Number(m?.selectedDays || 0) === preferredDays)
+          : undefined;
+      const firstSolo = matches.find((m) => !m.duo);
+
+      // ✅ si duo existe -> duo, sinon la meilleure solo
+      const entry = byKey || duoEntry || soloByDays || firstSolo || matches[0];
+      setActiveEntry(entry);
+
 
       if (!entry) {
         setDuoState((prev) => (prev?.enabled ? { enabled: false } : prev));
@@ -1565,18 +1822,27 @@ try {
           });
       }
 
-     // Toujours garder ces deux-là sync depuis Firestore
-setFinalSelectedDays(entry.selectedDays || 0);
+// Toujours garder ces deux-là sync depuis Firestore (cast SAFE)
+const sel = Number(entry?.selectedDays ?? 0);
+setFinalSelectedDays(Number.isFinite(sel) && sel > 0 ? sel : 0);
 
-// ✅ completedDays robuste : chiffre direct OU length de completionDates
+// ✅ completedDays robuste (cast SAFE)
 let computedCompleted = 0;
-if (typeof entry.completedDays === "number") {
-  computedCompleted = entry.completedDays;
-} else if (Array.isArray(entry.completionDates)) {
+const rawCompleted = entry?.completedDays;
+
+if (typeof rawCompleted === "number") {
+  computedCompleted = rawCompleted;
+} else if (typeof rawCompleted === "string") {
+  const n = Number(rawCompleted);
+  computedCompleted = Number.isFinite(n) ? n : 0;
+} else if (Array.isArray(entry?.completionDates)) {
   computedCompleted = entry.completionDates.length;
 }
 
-setFinalCompletedDays(computedCompleted);
+setFinalCompletedDays(
+  Number.isFinite(computedCompleted) && computedCompleted >= 0 ? computedCompleted : 0
+);
+
 
 
       // 🧠 on recalcule le duo à partir du uniqueKey + uid courant
@@ -2165,6 +2431,25 @@ useEffect(() => {
   };
 }, [id, params?.invite, pathname, router, getInviteeUsername, markInviteAsHandled]);
 
+const activeSelectedDays = useMemo(() => {
+  const n = Number(activeEntry?.selectedDays ?? finalSelectedDays ?? 0);
+  return Number.isFinite(n) && n > 0 ? n : 0;
+}, [activeEntry?.selectedDays, finalSelectedDays]);
+
+const activeCompletedDays = useMemo(() => {
+  const raw = activeEntry?.completedDays;
+  if (typeof raw === "number") return raw;
+  if (typeof raw === "string") {
+    const n = Number(raw);
+    return Number.isFinite(n) ? n : 0;
+  }
+  if (Array.isArray(activeEntry?.completionDates)) return activeEntry.completionDates.length;
+  return finalCompletedDays ?? 0;
+}, [activeEntry?.completedDays, activeEntry?.completionDates, finalCompletedDays]);
+
+const progressRatio = useMemo(() => {
+  return activeSelectedDays > 0 ? Math.min(1, activeCompletedDays / activeSelectedDays) : 0;
+}, [activeCompletedDays, activeSelectedDays]);
 
 
   const isSavedChallenge = useCallback((challengeId: string) => savedIds.has(challengeId), [savedIds]);
@@ -2427,6 +2712,7 @@ const openStartFlow = useCallback(() => {
 
   const saveBusyRef = useRef(false);
   const markBusyRef = useRef(false);
+  const openMomentAfterMissedRef = useRef<null | (() => void)>(null);
 
 const handleSaveChallenge = useCallback(async () => {
   if (!id || saveBusyRef.current) return;
@@ -2504,6 +2790,118 @@ const handleShowCompleteModal = useCallback(() => {
   `/challenge-chat/${id}?title=${encodeURIComponent(routeTitle)}&duo=${isDuo ? "1" : "0"}`
 );
   }, [id, challengeTaken , routeTitle, router]);
+
+  const buildDuoMomentPayload = useCallback(
+  (input: {
+    myDone: number;
+    myTotal: number;
+    partnerName?: string;
+    partnerAvatar?: string;
+    partnerDone?: number;
+    partnerTotal?: number;
+    action?: any;
+    streak?: number;
+  }) => {
+    const myTotal = Math.max(1, Number(input.myTotal || 0) || 1);
+    const myDone = Math.max(0, Math.min(myTotal, Number(input.myDone || 0) || 0));
+
+    const pDoneRaw =
+      typeof input.partnerDone === "number"
+        ? input.partnerDone
+        : Number(duoChallengeDataRef.current?.duoUser?.completedDays || 0) || 0;
+
+    const pTotalRaw =
+      typeof input.partnerTotal === "number"
+        ? input.partnerTotal
+        : Number(duoChallengeDataRef.current?.duoUser?.selectedDays || 0) || 0;
+
+    const partnerTotal = Math.max(1, pTotalRaw || myTotal);
+    const partnerDone = Math.max(0, Math.min(partnerTotal, pDoneRaw));
+
+    const partner =
+      duoChallengeDataRef.current?.duoUser || {};
+
+    return {
+      action: input.action,
+      streak: input.streak,
+
+      // ✅ champs attendus par le modal (plus de 0/0/0/0)
+      myDone,
+      myTotal,
+      partnerDone,
+      partnerTotal,
+
+      // ✅ infos UI
+      myName: myNameRef.current,
+      partnerName: input.partnerName || partner?.name,
+      partnerAvatar: input.partnerAvatar || partner?.avatar,
+
+      // optionnel
+      dayIndex: myDone,
+      totalDays: myTotal,
+
+      // si tu en as besoin dans le modal
+      partnerAlreadyMarkedToday: partnerDone >= partnerTotal,
+    };
+  },
+  []
+);
+
+
+  // ✅ Un seul point d'entrée pour ouvrir le bon modal (DUO vs SOLO)
+  const openMomentModal = useCallback(
+    (opts: {
+      isDuo: boolean;
+      myDoneAfter: number;
+      myTotal: number;
+      partnerName?: string;
+      partnerDone?: number;
+      partnerTotal?: number;
+    }) => {
+      if (opts.isDuo) {
+  setDuoMomentPayload(
+    buildDuoMomentPayload({
+      myDone: opts.myDoneAfter,
+      myTotal: opts.myTotal,
+      partnerName: opts.partnerName,
+      partnerDone: opts.partnerDone,
+      partnerTotal: opts.partnerTotal,
+    })
+  );
+  setDuoMomentVisible(true);
+  return;
+}
+
+      setSoloMomentDayIndex(opts.myDoneAfter);
+      setSoloMomentTotalDays(opts.myTotal);
+      const isMilestone =
+        opts.myDoneAfter === 1 ||
+        opts.myDoneAfter === 7 ||
+        opts.myDoneAfter === 30 ||
+        opts.myDoneAfter === opts.myTotal;
+      setSoloMomentVariant(isMilestone ? "milestone" : "daily");
+      setSoloMomentVisible(true);
+    },
+    []
+  );
+
+  // ✅ Hook “Missed avant Moment” : si un Missed modal est ouvert, on diffère.
+  const tryOpenMomentOrDefer = useCallback((openMoment: () => void) => {
+  if (missedChallengeVisible) {
+    openMomentAfterMissedRef.current = openMoment; // defer
+    return;
+  }
+  openMoment();
+}, [missedChallengeVisible]);
+
+const onCloseMissed = useCallback(() => {
+  setMissedChallengeVisible(false);
+
+  // flush deferred moment
+  const fn = openMomentAfterMissedRef.current;
+  openMomentAfterMissedRef.current = null;
+  fn?.();
+}, []);
 
 // Langue sûre pour le partage (jamais de split sur undefined)
 const getShareLang = (i18nLang?: string) => {
@@ -2793,9 +3191,7 @@ const handleCancelPendingInvite = useCallback(() => {
   );
 }, [isDuoPendingOut, cancelOutgoingPendingInvite, t]);
 
-
-
-  const handleMarkTodayPress = useCallback(async () => {
+const handleMarkTodayPress = useCallback(async () => {
   if (!id || !challengeTaken) return;
   if (marking || markBusyRef.current) return;
   if (isMarkedToday(id, finalSelectedDays)) return;
@@ -2803,24 +3199,56 @@ const handleCancelPendingInvite = useCallback(() => {
   try {
     markBusyRef.current = true;
     setMarking(true);
-    // ⚠️ on laisse le contexte faire ses vérifications (rupture, modal, etc.)
-    await markToday(id, finalSelectedDays);
-    await Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
-try {
-  await bumpCounterAndMaybeReview(`markToday:${id}:${finalSelectedDays}`, 7);
-} catch {}
-// 🔢 Metrics : streak "au moins 1 validation / jour" + succès
-try {
-  const uid = auth.currentUser?.uid;
-  if (uid) {
-    await recordDailyGlobalMark(uid, new Date());
-    await checkForAchievements(uid);
-  }
-} catch (e) {
-  console.warn("recordDailyGlobalMark failed (non-bloquant):", e);
-}
 
+    const duoSnap =
+      isDuo
+        ? {
+            partnerDone: duoChallengeData?.duoUser?.completedDays ?? 0,
+            partnerTotal: duoChallengeData?.duoUser?.selectedDays || finalSelectedDays,
+            partnerName: duoChallengeData?.duoUser?.name || "Partner",
+          }
+        : null;
 
+    // ✅ IMPORTANT: on capture un "next" cohérent immédiatement
+    const before = Number(finalCompletedDays ?? 0) || 0;
+    const cap = Number(finalSelectedDays) || 0;
+    const optimisticNext = cap > 0 ? Math.min(before + 1, cap) : before + 1;
+
+    // ✅ markToday DOIT renvoyer un objet (success/missedDays)
+    const res = await markToday(id, finalSelectedDays);
+
+    // ✅ si markToday a déclenché un missed-flow, on ne fait RIEN ici
+    if (!res?.success) return;
+    if (res?.missedDays >= 2) return; // MissedChallengeModal doit passer avant
+
+    // ✅ OPTIMISTIC UI (barre solo instant)
+    setFinalCompletedDays(optimisticNext);
+
+    const momentFn = () =>
+      openMomentModal({
+        isDuo: !!isDuo,
+        myDoneAfter: optimisticNext,
+        myTotal: finalSelectedDays,
+        partnerName: duoSnap?.partnerName,
+        partnerDone: duoSnap?.partnerDone,
+        partnerTotal: duoSnap?.partnerTotal,
+      });
+
+    // ✅ si missed visible à cet instant, on diffère
+    tryOpenMomentOrDefer(momentFn);
+
+    await Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success).catch(() => {});
+    try { await bumpCounterAndMaybeReview(`markToday:${id}:${finalSelectedDays}`, 7); } catch {}
+
+    try {
+      const uid = auth.currentUser?.uid;
+      if (uid) {
+        await recordDailyGlobalMark(uid, new Date());
+        await checkForAchievements(uid);
+      }
+    } catch (e) {
+      console.warn("recordDailyGlobalMark failed (non-bloquant):", e);
+    }
   } catch (e) {
     console.error("markToday failed", e);
     Alert.alert(
@@ -2831,7 +3259,21 @@ try {
     setMarking(false);
     markBusyRef.current = false;
   }
-}, [marking, challengeTaken, id, finalSelectedDays, isMarkedToday, markToday, t]);
+}, [
+  id,
+  challengeTaken,
+  marking,
+  finalSelectedDays,
+  finalCompletedDays,
+  isMarkedToday,
+  markToday,
+  t,
+  isDuo,
+  duoChallengeData?.duoUser,
+  openMomentModal,
+  tryOpenMomentOrDefer,
+]);
+
 
   const pickModeThenOpenDuration = useCallback(
     (mode: "solo" | "duo") => {
@@ -2855,79 +3297,6 @@ const scrollContentStyle = useMemo(
     : t("challengeDetails.loading", {
         defaultValue: "Chargement du défi…",
       });
-
-const DuoAvatar = ({ uri, name }: { uri?: string | null; name?: string }) => {
-  const hasUri = typeof uri === "string" && uri.trim().length > 0;
-
-  return (
-    <View style={styles.duoAvatarShell}>
-      {hasUri ? (
-        <ExpoImage
-  source={{ uri: uri as string }}
-  style={styles.duoEliteAvatar}
-  contentFit="cover"
-  transition={120}
-  cachePolicy="memory-disk"
-  recyclingKey={uri as string}
-/>
-
-      ) : (
-        <LinearGradient
-          colors={["rgba(255,255,255,0.14)", "rgba(255,255,255,0.06)"]}
-          start={{ x: 0, y: 0 }}
-          end={{ x: 1, y: 1 }}
-          style={styles.duoAvatarFallback}
-        >
-          <Text style={styles.duoAvatarInitial}>{getInitials(name)}</Text>
-        </LinearGradient>
-      )}
-      <View style={styles.duoAvatarRing} pointerEvents="none" />
-    </View>
-  );
-};
-
-const PendingPartnerAvatar = React.memo(function PendingPartnerAvatar({
-  isDarkMode,
-  duoPendingPulseStyle,
-}: {
-  isDarkMode: boolean;
-  duoPendingPulseStyle: any;
-}) {
-  return (
-    <View style={styles.duoAvatarShell}>
-      <LinearGradient
-        colors={
-          isDarkMode
-            ? ["rgba(0,255,255,0.14)", "rgba(255,215,0,0.10)"]
-            : ["rgba(55,48,163,0.14)", "rgba(0,0,0,0.06)"]
-        }
-        start={{ x: 0, y: 0 }}
-        end={{ x: 1, y: 1 }}
-        style={styles.duoAvatarFallback}
-      >
-        <Ionicons
-          name="person-outline"
-          size={26}
-          color={isDarkMode ? "rgba(255,255,255,0.92)" : "rgba(0,0,0,0.82)"}
-        />
-        <View style={styles.duoPendingMiniBadge}>
-          <Ionicons
-            name="hourglass-outline"
-            size={12}
-            color={isDarkMode ? "rgba(255,255,255,0.92)" : "rgba(0,0,0,0.82)"}
-          />
-        </View>
-      </LinearGradient>
-
-      <Animated.View
-        pointerEvents="none"
-        style={[styles.duoPendingRing, duoPendingPulseStyle]}
-      />
-      <View style={styles.duoAvatarRing} pointerEvents="none" />
-    </View>
-  );
-});
-
 
   return (
     <LinearGradient
@@ -3200,7 +3569,11 @@ const PendingPartnerAvatar = React.memo(function PendingPartnerAvatar({
         </View>
 
         <View style={styles.duoPendingAvatarColV2}>
-          <PendingPartnerAvatar isDarkMode={isDarkMode} duoPendingPulseStyle={duoPendingPulseStyle} />
+          <PendingPartnerAvatar
+  isDarkMode={isDarkMode}
+  duoPendingPulseStyle={duoPendingPulseStyle}
+  styles={styles}
+/>
           <Text
             style={[
               styles.duoPendingNameV2,
@@ -3402,20 +3775,20 @@ const PendingPartnerAvatar = React.memo(function PendingPartnerAvatar({
       <View style={{ marginTop: SPACING }}>
         {/* Header: avatar + label */}
         <View style={{ flexDirection: "row", alignItems: "center", justifyContent: "center" }}>
-          {!!myAvatar && (
-    <View style={styles.avatarWrap}>
-      <Image
-        source={{ uri: myAvatar }}
-        style={{ width: normalizeSize(36), height: normalizeSize(36), borderRadius: normalizeSize(18), borderWidth: 2, borderColor: "#FFD700" }}
-      />
-      {myIsPioneer && (
-        <PioneerBadge
-    size="mini"
-    style={{ position: "absolute", bottom: -6, left: -6 }}
-  />
-      )}
-    </View>
-  )}
+          <View style={styles.avatarWrap}>
+            <SmartAvatar
+              uri={myAvatar}
+              name={myName || t("duo.you")}
+              size={normalizeSize(36)}
+              isDark={isDarkMode}
+            />
+            {myIsPioneer && (
+              <PioneerBadge
+                size="mini"
+                style={{ position: "absolute", bottom: -6, left: -6 }}
+              />
+            )}
+          </View>
   <Text
   style={[
     styles.inProgressText,
@@ -3428,30 +3801,35 @@ const PendingPartnerAvatar = React.memo(function PendingPartnerAvatar({
 
         {/* Barre perso */}
         <View
+  onLayout={(e) => setSoloBarWidth(e.nativeEvent.layout.width)}
   accessibilityRole="progressbar"
   accessibilityLiveRegion="polite"
   accessibilityValue={{
     min: 0,
-    max: finalSelectedDays || 0,
-    now: finalCompletedDays || 0,
-    text: `${finalCompletedDays}/${finalSelectedDays}`
+    max: activeSelectedDays || 0,
+    now: activeCompletedDays || 0,
   }}
-  style={[styles.progressBarBackground, { backgroundColor: currentTheme.colors.border }]}
+  style={[
+    styles.progressBarBackground,
+    { backgroundColor: currentTheme.colors.border },
+  ]}
 >
-          <LinearGradient
-            colors={
-              isDarkMode
-                ? ["#FFD700", "#FFD700"]
-                : [currentTheme.colors.primary, currentTheme.colors.secondary]
-            }
-            style={[
-              styles.progressBarFill,
-              { width: `${progressPercent * 100}%` },
-            ]}
-            start={{ x: 0, y: 0 }}
-            end={{ x: 1, y: 1 }}
-          />
-        </View>
+  <LinearGradient
+    colors={
+      isDarkMode
+        ? ["#FFD700", "#FFD700"]
+        : [currentTheme.colors.primary, currentTheme.colors.secondary]
+    }
+    style={[
+      styles.progressBarFill,
+      {
+        width: soloBarWidth * progressRatio,
+      },
+    ]}
+  />
+</View>
+
+
 
         {/* Mini stats */}
         <View style={{ flexDirection: "row", justifyContent: "center", marginTop: 6 }}>
@@ -3466,7 +3844,7 @@ const PendingPartnerAvatar = React.memo(function PendingPartnerAvatar({
     },
   ]}
 >
-  {finalCompletedDays}/{finalSelectedDays} {t("challengeDetails.daysCompleted")}
+  {activeCompletedDays}/{activeSelectedDays} {t("challengeDetails.daysCompleted")}
 </Text>
 
 <Text
@@ -3481,7 +3859,7 @@ const PendingPartnerAvatar = React.memo(function PendingPartnerAvatar({
     },
   ]}
 >
-  · {Math.round(progressPercent * 100)}%
+  · {Math.round(progressRatio * 100)}%
 </Text>
 
         </View>
@@ -4197,128 +4575,38 @@ const PendingPartnerAvatar = React.memo(function PendingPartnerAvatar({
 )}
 
 
-{/* ⚠️ Confirmation : passer en Duo réinitialise ta progression solo */}
-<Modal
+<ConfirmationDuoModal
   visible={confirmResetVisible}
-  transparent
-  animationType="fade"
-  statusBarTranslucent
-  onRequestClose={() => setConfirmResetVisible(false)}
->
-  <View style={styles.confirmBackdrop}>
-    {/* Backdrop premium (blur + vignette) */}
-    <BlurView intensity={44} tint="dark" style={StyleSheet.absoluteFill} />
-    <LinearGradient
-      pointerEvents="none"
-      colors={["rgba(0,0,0,0.35)", "rgba(0,0,0,0.62)"]}
-      start={{ x: 0.5, y: 0 }}
-      end={{ x: 0.5, y: 1 }}
-      style={StyleSheet.absoluteFill}
-    />
+  onClose={() => setConfirmResetVisible(false)}
+  onConfirm={async () => {
+    // ✅ garde TA logique actuelle (reset + switch duo)
+    // Exemple :
+    // setConfirmResetVisible(false);
+    // await confirmSwitchToDuo();  // <- ton handler existant
+    // (si tu as un state "marking"/"pendingOutLock", passe-le en loading ci-dessous)
+    await confirmSwitchToDuo();
+  }}
+  loading={marking || pendingOutLock} // adapte avec TON state réel
+  title={t("duo.confirmTitle", { defaultValue: "Passer en duo ?" })}
+  subtitle={t("duo.confirmSubtitle", {
+    defaultValue:
+      "Tu vas inviter un partenaire. Pour rester fair, on repart sur une progression propre.",
+  })}
+  warningLine={t("duo.confirmWarning", {
+    defaultValue: "⚠️ Passer en duo réinitialise ta progression solo sur ce défi.",
+  })}
+  cancelLabel={t("commonS.cancel", { defaultValue: "Annuler" })}
+  confirmLabel={t("duo.confirmCta", { defaultValue: "Oui, passer en duo" })}
+  a11yCloseLabel={t("commonS.close", { defaultValue: "Fermer" })}
+  a11yCancelHint={t("duo.cancelHint", {
+    defaultValue: "Ferme la fenêtre sans changer ton défi.",
+  })}
+  a11yConfirmHint={t("duo.confirmHint", {
+    defaultValue: "Confirme le passage en duo et réinitialise la progression solo.",
+  })}
+/>
 
-    <Animated.View
-      entering={FadeInUp.duration(240)}
-      style={[
-        styles.confirmCardKeynote,
-        { marginBottom: insets.bottom + 12 },
-      ]}
-    >
-      {/* Glass card */}
-      <BlurView
-        intensity={Platform.OS === "ios" ? 28 : 18}
-        tint="dark"
-        style={styles.confirmCardBlur}
-      >
-        <LinearGradient
-          colors={["rgba(255,255,255,0.10)", "rgba(255,255,255,0.06)"]}
-          start={{ x: 0, y: 0 }}
-          end={{ x: 1, y: 1 }}
-          style={styles.confirmCardInner}
-        >
-          {/* Stroke interne (au lieu d’un border moche) */}
-          <View pointerEvents="none" style={styles.confirmInnerStroke} />
 
-          {/* Header: icon + title */}
-          <View style={styles.confirmHeaderRow}>
-            <View style={styles.confirmIconPill}>
-              <LinearGradient
-                colors={["rgba(255,215,0,0.22)", "rgba(0,255,255,0.16)"]}
-                start={{ x: 0, y: 0 }}
-                end={{ x: 1, y: 1 }}
-                style={StyleSheet.absoluteFill}
-              />
-              <Ionicons name="people-outline" size={18} color="#FFFFFF" />
-            </View>
-
-            <View style={{ flex: 1, minWidth: 0 }}>
-              <Text style={styles.confirmTitleKeynote} numberOfLines={1} ellipsizeMode="tail">
-                {t("invitationS.confirmReset.title", { defaultValue: "Passer en duo" })}
-              </Text>
-              <Text style={styles.confirmSubKeynote} numberOfLines={2} ellipsizeMode="tail">
-                {t("invitationS.confirmReset.sub", {
-                  defaultValue: "Tu redémarres le défi pour avancer ensemble, à égalité.",
-                })}
-              </Text>
-            </View>
-          </View>
-
-          {/* Message card (compact, lisible) */}
-          <View style={styles.confirmMessageCard}>
-            <Ionicons name="refresh-outline" size={16} color="rgba(255,255,255,0.92)" />
-            <Text style={styles.confirmTextKeynote}>
-              {t("invitationS.confirmReset.message", {
-                defaultValue:
-                  "Ta progression solo sera remise à zéro sur ce défi. Ton ami commencera au même niveau.",
-              })}
-            </Text>
-          </View>
-
-          {/* Actions */}
-          <View style={styles.confirmActions}>
-            <Pressable
-              onPress={() => setConfirmResetVisible(false)}
-              style={({ pressed }) => [
-                styles.confirmGhostBtn,
-                pressed && { opacity: 0.85, transform: [{ scale: 0.99 }] },
-              ]}
-              accessibilityRole="button"
-              accessibilityLabel={t("commonS.cancel", { defaultValue: "Annuler" })}
-            >
-              <Text style={styles.confirmGhostText}>
-                {t("commonS.cancel", { defaultValue: "Annuler" })}
-              </Text>
-            </Pressable>
-
-            <Pressable
-              onPress={() => {
-                setConfirmResetVisible(false);
-                setSendInviteVisible(true);
-              }}
-              style={({ pressed }) => [
-                styles.confirmPrimaryBtn,
-                pressed && { transform: [{ scale: 0.985 }] },
-              ]}
-              accessibilityRole="button"
-              accessibilityLabel={t("commonS.continue", { defaultValue: "Continuer" })}
-            >
-              <LinearGradient
-                colors={["#FFD700", "#00FFFF"]}
-                start={{ x: 0, y: 0 }}
-                end={{ x: 1, y: 1 }}
-                style={StyleSheet.absoluteFill}
-              />
-              <View pointerEvents="none" style={styles.confirmPrimarySheen} />
-              <Text style={styles.confirmPrimaryText}>
-                {t("commonS.continue", { defaultValue: "Continuer" })}
-              </Text>
-              <Ionicons name="chevron-forward" size={18} color="#111" />
-            </Pressable>
-          </View>
-        </LinearGradient>
-      </BlurView>
-    </Animated.View>
-  </View>
-</Modal>
 
 
 
@@ -4336,6 +4624,24 @@ partnerAvatar={duoChallengeData?.duoUser?.avatar}
 partnerDaysCompleted={duoChallengeData?.duoUser?.completedDays ?? 0}
 
 />
+
+{duoMomentVisible && (
+  <DuoMomentModal
+    visible
+    onClose={() => setDuoMomentVisible(false)}
+    {...(duoMomentPayload ?? {})}
+  />
+)}
+
+<SoloMomentModal
+  visible={soloMomentVisible}
+  onClose={() => setSoloMomentVisible(false)}
+  dayIndex={soloMomentDayIndex}
+  totalDays={soloMomentTotalDays}
+  streak={soloMomentStreak}
+  variant={soloMomentVariant}
+/>
+
 
 
 <SendInvitationModal
@@ -5247,24 +5553,18 @@ duoPendingGhostTextV2: {
     ...S.float,
   },
   confirmBackdrop: {
-  flex: 1,
-  justifyContent: "flex-end",
+  flex: 1,                 // ✅ CRITIQUE
+  justifyContent: "center",
+  alignItems: "center",
   paddingHorizontal: 16,
-  paddingTop: 24,
 },
 confirmCardKeynote: {
-  borderRadius: 28,
-  overflow: "hidden",
-  maxWidth: 520,
-  width: "100%",
+  width: "100%",           // ✅ évite le crop
+  maxWidth: 420,
   alignSelf: "center",
-  // shadow iOS
-  shadowColor: "#000",
-  shadowOffset: { width: 0, height: 18 },
-  shadowOpacity: 0.35,
-  shadowRadius: 28,
-  // elevation Android
-  elevation: 22,
+  borderRadius: 26,
+  overflow: "hidden",
+  maxHeight: "85%",        // ✅ jamais coupé
 },
 confirmCardBlur: {
   borderRadius: 28,
@@ -6736,6 +7036,7 @@ progressSection: {
     fontFamily: "Comfortaa_400Regular",
   },
   progressBarBackground: {
+  position: "relative",
     width: "100%",        // prend la largeur dispo
     maxWidth: 480,        // borne haute élégante
     minWidth: 220,

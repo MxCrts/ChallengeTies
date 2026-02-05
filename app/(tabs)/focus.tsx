@@ -573,7 +573,14 @@ export default function FocusScreen() {
     }
   };
 
-  const renderTopItem = ({ item }: { item: CurrentChallengeExtended }) => {
+  const renderTopItem = ({
+  item,
+  index,
+}: {
+  item: CurrentChallengeExtended;
+  index: number;
+}) => {
+
     const key = item.uniqueKey || `${item.id}_${item.selectedDays}`;
     const marked =
       isMarkedToday(item.lastMarkedDate) || locallyMarkedKeys.has(key);
@@ -585,7 +592,26 @@ export default function FocusScreen() {
         : undefined;
 
     return (
-      <RNAnimated.View style={styles.topItemWrapper}>
+      <RNAnimated.View
+  style={[
+    styles.topItemWrapper,
+    !reduceMotion && {
+      transform: [
+        {
+          scale: scrollXTop.interpolate({
+            inputRange: [
+              (index - 1) * EFFECTIVE_TOP_ITEM_WIDTH,
+              index * EFFECTIVE_TOP_ITEM_WIDTH,
+              (index + 1) * EFFECTIVE_TOP_ITEM_WIDTH,
+            ],
+            outputRange: [0.96, 1, 0.96],
+            extrapolate: "clamp",
+          }),
+        },
+      ],
+    },
+  ]}
+>
         <TouchableOpacity
           activeOpacity={0.8}
           style={[
@@ -1062,6 +1088,8 @@ export default function FocusScreen() {
               </View>
             </View>
 
+            <View style={{ height: normalizeSize(6) }} />
+
             {/* Progress */}
             <View
               style={[
@@ -1081,6 +1109,8 @@ export default function FocusScreen() {
             <Text style={[styles.progressLabel, { color: withAlpha(currentTheme.colors.textSecondary, 0.85) }]}>
               {pctLabel}
             </Text>
+
+            <View style={{ height: normalizeSize(6) }} />
 
             {/* Quick actions (integrées dans le Hero) */}
             <View style={styles.quickActions}>
@@ -1174,7 +1204,10 @@ export default function FocusScreen() {
                   bounces={false}
                   snapToInterval={EFFECTIVE_TOP_ITEM_WIDTH}
                   snapToAlignment="center"
-                  contentContainerStyle={{ paddingHorizontal: SPACER_TOP }}
+                  contentContainerStyle={{
+  paddingHorizontal: SPACER_TOP,
+  paddingBottom: normalizeSize(8),
+}}
                   onScroll={RNAnimated.event(
                     [
                       {
@@ -1326,8 +1359,9 @@ export default function FocusScreen() {
                   snapToInterval={EFFECTIVE_BOTTOM_ITEM_WIDTH}
                   snapToAlignment="center"
                   contentContainerStyle={{
-                    paddingHorizontal: SPACER_BOTTOM,
-                  }}
+  paddingHorizontal: SPACER_TOP,
+ paddingBottom: normalizeSize(6),
+}}
                   onScroll={RNAnimated.event(
                     [
                       {
@@ -1789,6 +1823,8 @@ const styles = StyleSheet.create({
     alignItems: "center",
   },
   heroCard: {
+    paddingVertical: normalizeSize(18), // au lieu de ~14 implicite
+  paddingHorizontal: normalizeSize(16),
    width: "100%",
    borderRadius: normalizeSize(22),
    borderWidth: 1,
@@ -1845,23 +1881,23 @@ const styles = StyleSheet.create({
    lineHeight: normalizeSize(16),
  },
  heroPctPill: {
-   minWidth: normalizeSize(70),
-   paddingHorizontal: normalizeSize(10),
-   paddingVertical: normalizeSize(8),
-   borderRadius: normalizeSize(16),
+  minWidth: normalizeSize(64),
+  paddingVertical: normalizeSize(6),
+  paddingHorizontal: normalizeSize(10),
+  borderRadius: 999,
+  alignItems: "center",
    borderWidth: 1,
-   alignItems: "center",
    justifyContent: "center",
    backgroundColor: "rgba(255,255,255,0.06)",
  },
  heroPctText: {
    fontFamily: "Comfortaa_700Bold",
-   fontSize: normalizeSize(16),
+   fontSize: normalizeSize(18),
  },
  heroPctSub: {
-   marginTop: normalizeSize(2),
    fontFamily: "Comfortaa_400Regular",
    fontSize: normalizeSize(11),
+  marginTop: -2,
  },
   scrollContainer: {
     flex: 1,
@@ -1872,6 +1908,8 @@ const styles = StyleSheet.create({
   },
   sectionTitle: {
     fontSize: normalizeSize(18),
+ fontFamily: "Comfortaa_700Bold",
+  letterSpacing: 0.2,
    textAlign: "left",
    marginVertical: 0,
   },
@@ -2181,16 +2219,17 @@ const styles = StyleSheet.create({
 },
   actionBtn: {
     flexDirection: "row",
-    alignItems: "center",
-    gap: 8,
-    borderRadius: normalizeSize(999),
-    paddingVertical: normalizeSize(8),
+  alignItems: "center",
+  justifyContent: "center",
+  gap: normalizeSize(6),
+  paddingVertical: normalizeSize(12),
+  borderRadius: normalizeSize(16),
+  shadowColor: "#000",
+  shadowOpacity: 0.18,
+  shadowRadius: 12,
+  shadowOffset: { width: 0, height: 6 },
+  elevation: 6,
     paddingHorizontal: normalizeSize(14),
-     shadowColor: "#000",
-   shadowOffset: { width: 0, height: 8 },
-   shadowOpacity: 0.18,
-   shadowRadius: 12,
-   elevation: 8,
   },
   actionBtnText: {
     fontFamily: "Comfortaa_700Bold",

@@ -51,7 +51,6 @@ import {
   markNotifHandledOnColdStart,
   rescheduleNextDailyIfNeeded,
 } from "@/services/notificationService";
-import { handleReferralUrl } from "@/services/referralLinking";
 import {
   getTrackingPermissionsAsync,
   requestTrackingPermissionsAsync,
@@ -592,32 +591,24 @@ const DeepLinkManager: React.FC = () => {
 
       if (refUid) {
   try {
-    await handleReferralUrl(url);
-
-    __DEV__ &&
-      console.log("[DeepLink] referral handled via handleReferralUrl:", {
-        refUid,
-      });
-  } catch (e) {
-    console.log("❌ [DeepLink] referral handle error:", e);
-  }
-
-  /**
-   * ✅ FIX WHITE SCREEN:
-   * Si l’URL ouvre une route non existante (ex: "ref/XYZ"),
-   * expo-router peut rester sur un écran "introuvable"/blanc.
-   * On replace donc sur "/" pour laisser AppNavigator faire le gate normal.
-   */
-  try {
-    // On ne bloque PAS le root redirect pour un referral
+    // ✅ Referral = 1 seule source de vérité : /ref/[refUid]
+    // On ne bloque pas le root redirect (ce screen va gérer la sortie vers login/tabs)
     (globalThis as any).__DL_BLOCK_ROOT_REDIRECT__ = false;
+    // Le referral doit forcer un flow auth (pas de visiteur)
+    (globalThis as any).__FORCE_AUTH_FLOW__ = true;
 
-    // Si on n'est pas déjà sur "/", on remet une route valide
-    if (pathname !== "/") {
-      router.replace("/");
+    const cleanRef = String(refUid).trim();
+    const cleanSrc =
+      typeof qp.src === "string" ? String(qp.src).trim() : "share";
+
+    if (!cleanRef) return;
+
+    const target = `/ref/${cleanRef}?src=${encodeURIComponent(cleanSrc)}`;
+    // ✅ replace (pas push) pour éviter une pile chelou + back vers un état invalide
+    if (pathname !== target) {
+      router.replace(target);
     }
   } catch {}
-
   return;
 }
 
@@ -917,8 +908,8 @@ export default function RootLayout() {
         <FeatureFlagsProvider>
           <FlagsGate>
             <AuthProvider>
-              <LanguageProvider>
-                <I18nextProvider i18n={i18n}>
+              <I18nextProvider i18n={i18n}>
+                 <LanguageProvider>
                   <ThemeProvider>
                     <PaperProvider>
                       <ProfileUpdateProvider>
@@ -926,7 +917,7 @@ export default function RootLayout() {
                           <SavedChallengesProvider>
                             <CurrentChallengesProvider>
                               <ChatProvider>
-                                <TutorialProvider isFirstLaunch={false}>
+                                <TutorialProvider>
                                   <VisitorProvider>
                                     <ConsentGate>
                                       <PremiumProvider>
@@ -965,8 +956,8 @@ export default function RootLayout() {
                       </ProfileUpdateProvider>
                     </PaperProvider>
                   </ThemeProvider>
-                </I18nextProvider>
               </LanguageProvider>
+              </I18nextProvider>
             </AuthProvider>
           </FlagsGate>
         </FeatureFlagsProvider>

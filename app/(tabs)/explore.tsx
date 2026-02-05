@@ -365,13 +365,15 @@ const ExploreHeader = React.memo(
               color={"#000000"}
               style={styles.filterIcon}
             />
-            <Text style={[styles.filterText, dynamicStyles.filterText]}>
-              {categoryFilter === "All"
-                ? t("category")
-                : t(`categories.${categoryFilter}`, {
-                    defaultValue: capitalize(categoryFilter),
-                  })}
-            </Text>
+            <Text
+  style={[styles.filterText, dynamicStyles.filterText]}
+  numberOfLines={1}
+  ellipsizeMode="tail"
+>
+  {categoryFilter === "All"
+    ? t("category")
+    : t(`categories.${categoryFilter}`, { defaultValue: capitalize(categoryFilter) })}
+</Text>
             <View style={[styles.chipDot, { backgroundColor: currentTheme.colors.secondary }]} />
           </TouchableOpacity>
         </View>
@@ -610,6 +612,7 @@ const ChallengeCard = React.memo(function ChallengeCard({
                       },
                     ]}
                     numberOfLines={1}
+                    ellipsizeMode="tail"
                   >
                     {primaryBadge.label}
                   </Text>
@@ -667,6 +670,7 @@ const ChallengeCard = React.memo(function ChallengeCard({
       { color: isDark ? withAlpha("#FFFFFF", 0.92) : withAlpha("#0B1220", 0.92), },
     ]}
     numberOfLines={1}
+    ellipsizeMode="tail"
   >
     {item.category}
   </Text>
@@ -681,9 +685,16 @@ const ChallengeCard = React.memo(function ChallengeCard({
     </View>
   </View>
 
-  <Text style={[styles.cardTitle, dynamicStyles.cardTitle]} numberOfLines={2}>
+  <View style={styles.cardTitleContainer}>
+  <Text
+    style={[styles.cardTitle, dynamicStyles.cardTitle]}
+    numberOfLines={2}
+    ellipsizeMode="tail"
+  >
     {item.title}
   </Text>
+</View>
+
           </LinearGradient>
           <TouchableOpacity
             onPress={onPressBookmark}
@@ -1313,29 +1324,32 @@ const styles = StyleSheet.create({
   },
   filterIcon: {
     marginRight: normalizeSize(6),
+  flexShrink: 0,
   },
   filterText: {
     fontSize: normalizeSize(13),
-    fontFamily: "Comfortaa_700Bold",
-    flexShrink: 1,
-    minWidth: 0,
+  fontFamily: "Comfortaa_700Bold",
+  flexShrink: 1,
+  minWidth: 0,
   },
   chipDot: {
    width: normalizeSize(6),
+   flexShrink: 0,
    height: normalizeSize(6),
    borderRadius: normalizeSize(999),
    marginLeft: "auto",
    opacity: 0.9,
  },
  badgesStack: {
-    position: "absolute",
-    top: normalizeSize(12),
-    left: normalizeSize(12),
-    zIndex: 20,
-    alignItems: "flex-start",
-    gap: normalizeSize(8),
-    maxWidth: "72%",
-  },
+  position: "absolute",
+  top: normalizeSize(12),
+  left: normalizeSize(12),
+  zIndex: 20,
+  alignItems: "flex-start",
+  gap: normalizeSize(8),
+  maxWidth: "60%",
+  pointerEvents: "none",
+},
   resetButton: {
     alignSelf: "center",
     marginTop: normalizeSize(10),
@@ -1381,6 +1395,8 @@ const styles = StyleSheet.create({
  },
  miniBadge: {
     position: "relative",
+    alignSelf: "flex-start",
+    maxWidth: "100%",
     flexDirection: "row",
     alignItems: "center",
     gap: normalizeSize(6),
@@ -1397,8 +1413,9 @@ const styles = StyleSheet.create({
   },
   miniBadgeText: {
     fontFamily: "Comfortaa_700Bold",
-    fontSize: normalizeSize(11.5),
-    letterSpacing: 0.6,
+  fontSize: normalizeSize(11.5),
+  letterSpacing: 0.6,
+  flexShrink: 1, 
   },
   progressBadge: {
     position: "relative",
@@ -1436,6 +1453,10 @@ const styles = StyleSheet.create({
     height: SCREEN_WIDTH * 0.9,
     borderRadius: SCREEN_WIDTH * 0.45,
   },
+  cardTitleContainer: {
+  minHeight: normalizeSize(48),// calibré pour 2 lignes Comfortaa
+  justifyContent: "center",
+},
   bgOrbBottom: {
     position: "absolute",
     bottom: -SCREEN_WIDTH * 0.3,
@@ -1476,17 +1497,20 @@ const styles = StyleSheet.create({
     borderRadius: normalizeSize(20),
   },
   cardMetaRow: {
-   flexDirection: "row",
-   alignItems: "center",
-   justifyContent: "space-between",
-   marginBottom: normalizeSize(8),
- },
+  flexDirection: "row",
+  alignItems: "center",
+  justifyContent: "space-between",
+  marginBottom: normalizeSize(8),
+  gap: normalizeSize(10),
+},
  categoryPill: {
-   maxWidth: "72%",
-   paddingHorizontal: normalizeSize(10),
-   paddingVertical: normalizeSize(6),
-   borderRadius: normalizeSize(999),
-   borderWidth: 1.25,
+  flexShrink: 1,         // ✅ essentiel
+  minWidth: 0,           // ✅ essentiel
+  maxWidth: "78%",       // un poil plus permissif, mais shrink ok
+  paddingHorizontal: normalizeSize(10),
+  paddingVertical: normalizeSize(6),
+  borderRadius: normalizeSize(999),
+  borderWidth: 1.25,
    shadowColor: "#000",
  shadowOffset: { width: 0, height: 8 },
  shadowOpacity: 0.10,
@@ -1494,12 +1518,14 @@ const styles = StyleSheet.create({
  elevation: 3,
  },
  categoryPillText: {
-   fontFamily: "Comfortaa_700Bold",
-   fontSize: normalizeSize(12),
-   letterSpacing: 0.2,
- },
+  fontFamily: "Comfortaa_700Bold",
+  fontSize: normalizeSize(12),
+  letterSpacing: 0.2,
+  flexShrink: 1,         // ✅ shrink text
+},
  participantsPill: {
    flexDirection: "row",
+   flexShrink: 0,
    alignItems: "center",
    gap: normalizeSize(6),
    paddingHorizontal: normalizeSize(10),
@@ -1514,19 +1540,24 @@ const styles = StyleSheet.create({
  },
   cardImage: {
     width: "100%",
-    height: normalizeSize(180),
+    height: normalizeSize(200),
     resizeMode: "cover",
   },
   cardOverlay: {
-    position: "absolute",
-    bottom: 0,
-    width: "100%",
-    padding: normalizeSize(12),
-  },
+  position: "absolute",
+  bottom: 0,
+  width: "100%",
+  padding: normalizeSize(12),
+  paddingTop: normalizeSize(24)
+},
   cardTitle: {
-    fontSize: normalizeSize(18),
     fontFamily: "Comfortaa_700Bold",
+  fontSize: normalizeSize(18),
+  lineHeight: normalizeSize(22), // 🔥 clé absolue
+  color: "#FFFFFF",
+  marginTop: normalizeSize(6),
     marginBottom: 0,
+    includeFontPadding: false,
   },
   cardCategory: {
     fontSize: normalizeSize(16),

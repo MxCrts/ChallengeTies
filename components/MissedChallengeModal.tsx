@@ -62,11 +62,18 @@ const MissedChallengeModal: React.FC<MissedChallengeModalProps> = ({
 
   const canUseStreakPass = !!hasStreakPass && !!onUseStreakPass;
 
-  const { height: H } = useWindowDimensions();
+ const { height: H, width: W } = useWindowDimensions();
+ const IS_TINY = W < 360;
+  const IS_SHORT = H < 700;
+  const contentPad = IS_TINY ? normalizeSize(14) : normalizeSize(20);
+  const titleFs = IS_TINY ? normalizeSize(20) : normalizeSize(24);
+  const subtitleFs = IS_TINY ? normalizeSize(13) : normalizeSize(15);
+  const headerIconSize = IS_TINY ? normalizeSize(38) : normalizeSize(44);
+  const headerIconWrap = IS_TINY ? normalizeSize(58) : normalizeSize(66);
 
   // ✅ responsive heights
-  const modalMaxH = Math.min(H * 0.92, 860);
-  const modalMinH = Math.min(H * 0.72, 660);
+  const modalMaxH = Math.min(H * (IS_SHORT ? 0.98 : 0.96), 920);
+  const modalMinH = Math.min(H * (IS_SHORT ? 0.82 : 0.78), 760);
 
   const [reduceMotion, setReduceMotion] = useState(false);
   const [confirmVisible, setConfirmVisible] = useState(false);
@@ -201,14 +208,18 @@ const MissedChallengeModal: React.FC<MissedChallengeModalProps> = ({
         size={normalizeSize(14)}
         color={isDark ? "rgba(255,255,255,0.9)" : "rgba(20,20,20,0.78)"}
       />
-      <Text style={[styles.pillText, { color: pillTextColor, fontFamily: current.typography.body.fontFamily }]}>
+      <Text
+   style={[
+     styles.pillText,
+     { color: pillTextColor, fontFamily: current.typography.body.fontFamily },
+   ]}
+   numberOfLines={1}
+   ellipsizeMode="tail"
+ >
         {label}
       </Text>
     </View>
   );
-
-  // ✅ Recommended: streak pass si dispo, sinon trophées (logique simple)
-  const recommended = canUseStreakPass ? "streakPass" : "trophies";
 
   return (
     <Modal
@@ -233,11 +244,16 @@ const MissedChallengeModal: React.FC<MissedChallengeModalProps> = ({
           exiting={reduceMotion ? undefined : FadeOut.duration(180)}
           style={[
             styles.modalContainer,
-            { maxHeight: modalMaxH, minHeight: modalMinH, alignSelf: "center" },
+            {
+   width: Math.min(W * 0.94, normalizeSize(460)),
+   maxHeight: modalMaxH,
+   minHeight: canUseStreakPass ? modalMinH : Math.min(H * (IS_SHORT ? 0.78 : 0.74), 720),
+   alignSelf: "center",
+ },
           ]}
         >
           <LinearGradient colors={gradBorder} style={[styles.borderWrap, { flex: 1 }]}>
-            <LinearGradient colors={gradBg} style={[styles.modalContent, { flex: 1 }]}>
+           <LinearGradient colors={gradBg} style={[styles.modalContent, { flex: 1, padding: contentPad }]}>
               {/* CLOSE */}
               <TouchableOpacity
                 style={[
@@ -258,7 +274,8 @@ const MissedChallengeModal: React.FC<MissedChallengeModalProps> = ({
               <View style={styles.header}>
                 <View
                   style={[
-                    styles.headerIconWrap,
+   styles.headerIconWrap,
+   { width: headerIconWrap, height: headerIconWrap, borderRadius: headerIconWrap / 2 },
                     {
                       backgroundColor: isDark ? "rgba(255,255,255,0.07)" : "rgba(255,255,255,0.78)",
                       borderColor: isDark ? "rgba(255,255,255,0.10)" : "rgba(0,0,0,0.06)",
@@ -267,7 +284,7 @@ const MissedChallengeModal: React.FC<MissedChallengeModalProps> = ({
                 >
                   <Ionicons
                     name="sunny-outline"
-                    size={normalizeSize(44)}
+                     size={headerIconSize}
                     color={isDark ? "#FBBF24" : "#F59E0B"}
                   />
                 </View>
@@ -275,7 +292,7 @@ const MissedChallengeModal: React.FC<MissedChallengeModalProps> = ({
                 <Text
                   style={[
                     styles.title,
-                    { color: titleColor, fontFamily: current.typography.title.fontFamily },
+                    { color: titleColor, fontFamily: current.typography.title.fontFamily, fontSize: titleFs },
                   ]}
                   accessibilityRole="header"
                 >
@@ -285,7 +302,7 @@ const MissedChallengeModal: React.FC<MissedChallengeModalProps> = ({
                 <Text
                   style={[
                     styles.subtitle,
-                    { color: subColor, fontFamily: current.typography.body.fontFamily },
+                    { color: subColor, fontFamily: current.typography.body.fontFamily, fontSize: subtitleFs },
                   ]}
                 >
                   {t("missedChallenge.subtitle", {
@@ -329,7 +346,7 @@ const MissedChallengeModal: React.FC<MissedChallengeModalProps> = ({
                   style={styles.scroll}
                   contentContainerStyle={styles.scrollContent}
                   showsVerticalScrollIndicator={false}
-                  bounces={Platform.OS === "ios"}
+                  bounces={Platform.OS === "ios" && canUseStreakPass}
                   overScrollMode="never"
                   keyboardShouldPersistTaps="handled"
                 >
@@ -400,28 +417,34 @@ const MissedChallengeModal: React.FC<MissedChallengeModalProps> = ({
                           <Ionicons name="trophy-outline" size={normalizeSize(24)} color="#FFF" />
                         </View>
                         <View style={styles.optionTextContainer}>
-                          <Text style={[styles.optionText, { fontFamily: current.typography.title.fontFamily }]}>
+                          <Text
+                            style={[styles.optionText, { fontFamily: current.typography.title.fontFamily }]}
+                            numberOfLines={2}
+                            ellipsizeMode="tail"
+                          >
                             {t("missedChallenge.useTrophies.title", {
                               count: trophyCost,
-                              defaultValue: "Use {{count}} trophies to save your streak",
+                              // FR: concis, calqué sur les autres options
+                              defaultValue: "Sauver la série — {{count}} trophées",
                             })}
                           </Text>
-                          <Text style={[styles.optionSubtext, { fontFamily: current.typography.body.fontFamily }]}>
+                          <Text
+                            style={[styles.optionSubtext, { fontFamily: current.typography.body.fontFamily }]}
+                            numberOfLines={2}
+                            ellipsizeMode="tail"
+                          >
                             {t("missedChallenge.useTrophies.subtitle", {
-                              defaultValue: "Spend trophies to ignore the missed day.",
+                              defaultValue: "Échange des trophées pour protéger ta progression.",
                             })}
                           </Text>
                         </View>
 
-                        {recommended === "trophies" && (
-                          <View style={styles.recoPill}>
-                            <Text style={[styles.recoPillText, { fontFamily: current.typography.body.fontFamily }]}>
-                              {t("common.recommended", { defaultValue: "Recommended" })}
-                            </Text>
-                          </View>
-                        )}
-
-                        <Ionicons name="chevron-forward" size={normalizeSize(18)} color="rgba(255,255,255,0.92)" />
+                        <Ionicons
+                          style={styles.chevron}
+                          name="chevron-forward"
+                          size={normalizeSize(18)}
+                          color="rgba(255,255,255,0.92)"
+                        />
                       </LinearGradient>
                     </TouchableOpacity>
 
@@ -457,12 +480,17 @@ const MissedChallengeModal: React.FC<MissedChallengeModalProps> = ({
                             })}
                           </Text>
                         </View>
-                        <Ionicons name="chevron-forward" size={normalizeSize(18)} color="rgba(255,255,255,0.92)" />
+                        <Ionicons
+                          style={styles.chevron}
+                          name="chevron-forward"
+                          size={normalizeSize(18)}
+                          color="rgba(255,255,255,0.92)"
+                        />
                       </LinearGradient>
                     </TouchableOpacity>
                   </View>
 
-                  <View style={{ height: normalizeSize(28) }} />
+                  <View style={{ height: normalizeSize(14) }} />
                 </ScrollView>
 
                 {/* Fade bas */}
@@ -577,26 +605,20 @@ const styles = StyleSheet.create({
     flex: 1,
     justifyContent: "center",
     alignItems: "center",
-    paddingVertical: normalizeSize(18),
-    paddingHorizontal: normalizeSize(12),
+    paddingVertical: normalizeSize(12),
+  paddingHorizontal: normalizeSize(10),
   },
-
-  modalContainer: {
-    width: SCREEN_WIDTH * 0.92,
-    maxWidth: normalizeSize(460),
-    borderRadius: normalizeSize(30),
-    overflow: "hidden",
-  },
-
+modalContainer: {
+   borderRadius: normalizeSize(30),
+   overflow: "hidden",
+ },
   borderWrap: {
     padding: 1.2,
     borderRadius: normalizeSize(30),
     flex: 1,
   },
-
   modalContent: {
     width: "100%",
-    padding: normalizeSize(20),
     borderRadius: normalizeSize(29),
     shadowColor: "#000",
     shadowOffset: { width: 0, height: normalizeSize(18) },
@@ -618,11 +640,14 @@ const styles = StyleSheet.create({
     zIndex: 10,
     borderWidth: 1,
   },
-
+chevron: {
+    marginLeft: normalizeSize(10),
+    flexShrink: 0,
+  },
   header: {
     alignItems: "center",
-    marginBottom: normalizeSize(14),
-    paddingTop: normalizeSize(8),
+    marginBottom: normalizeSize(8),
+    paddingTop: normalizeSize(4),
   },
   headerIconWrap: {
     width: normalizeSize(66),
@@ -664,13 +689,15 @@ const styles = StyleSheet.create({
     paddingVertical: normalizeSize(6),
     borderRadius: normalizeSize(999),
     borderWidth: 1,
+     maxWidth: "100%",
   },
   pillText: {
     fontSize: normalizeSize(12),
+    flexShrink: 1,
   },
 
   body: {
-    flex: 1,
+    flexGrow: 1,
     position: "relative",
     marginTop: normalizeSize(6),
   },
@@ -678,11 +705,13 @@ const styles = StyleSheet.create({
     flex: 1,
   },
   scrollContent: {
-    paddingBottom: normalizeSize(14),
+    paddingBottom: normalizeSize(24),
+    flexGrow: 1,
   },
 
   optionsContainer: {
     gap: normalizeSize(12),
+    paddingBottom: normalizeSize(6),
   },
   optionButton: {
     borderRadius: normalizeSize(18),
@@ -700,8 +729,8 @@ const styles = StyleSheet.create({
   optionGradient: {
     flexDirection: "row",
     alignItems: "center",
-    paddingVertical: normalizeSize(14),
-    paddingHorizontal: normalizeSize(14),
+    paddingVertical: normalizeSize(12),
+    paddingHorizontal: normalizeSize(12),
     borderRadius: normalizeSize(18),
     minHeight: normalizeSize(70),
   },
@@ -718,17 +747,20 @@ const styles = StyleSheet.create({
 
   optionTextContainer: {
     flex: 1,
+    minWidth: 0,
   },
   optionText: {
     fontSize: normalizeSize(17),
     color: "#FFF",
     lineHeight: normalizeSize(21),
+    flexShrink: 1,
   },
   optionSubtext: {
     fontSize: normalizeSize(13),
     color: "rgba(255,255,255,0.90)",
     lineHeight: normalizeSize(18),
     marginTop: 2,
+    flexShrink: 1,
   },
 
   bottomFade: {
@@ -736,7 +768,7 @@ const styles = StyleSheet.create({
     left: 0,
     right: 0,
     bottom: 0,
-    height: normalizeSize(40),
+    height: normalizeSize(18),
     borderBottomLeftRadius: normalizeSize(22),
     borderBottomRightRadius: normalizeSize(22),
   },
@@ -750,27 +782,11 @@ const styles = StyleSheet.create({
     marginBottom: normalizeSize(6),
   },
   scrollHint: {
-    position: "absolute",
     alignSelf: "center",
-    top: normalizeSize(214),
-    opacity: 0.95,
+ marginTop: normalizeSize(4),
+ marginBottom: normalizeSize(2),
+ opacity: 0.9,
   },
-
-  recoPill: {
-    paddingHorizontal: normalizeSize(10),
-    paddingVertical: normalizeSize(5),
-    borderRadius: normalizeSize(999),
-    backgroundColor: "rgba(255,255,255,0.18)",
-    borderWidth: 1,
-    borderColor: "rgba(255,255,255,0.22)",
-    marginRight: normalizeSize(8),
-  },
-  recoPillText: {
-    color: "rgba(255,255,255,0.94)",
-    fontSize: normalizeSize(12),
-    letterSpacing: 0.2,
-  },
-
   confirmOverlay: {
     ...StyleSheet.absoluteFillObject,
     justifyContent: "center",

@@ -1192,62 +1192,6 @@ setIsPremium(premiumFlag);
               </TouchableOpacity>
             </Animated.View>
 
-            <Animated.View entering={FadeInUp.delay(540)}>
-              <TouchableOpacity
-                style={styles.accountButton}
-                onPress={() => router.push("/referral/ShareAndEarn")}
-                accessibilityLabel={t("referral.menu")}
-                testID="share-earn-button"
-              >
-                <LinearGradient
-                  colors={dynamicStyles.buttonGradient.colors}
-                  style={styles.buttonGradient}
-                  start={{ x: 1, y: 1 }}
-                  end={{ x: 0, y: 0 }}
-                >
-                  <Ionicons
-                    name="gift-outline"
-                    size={normalizeSize(20)}
-                    color={currentTheme.colors.textPrimary}
-                  />
-                  <Text
-                    style={[
-                      styles.accountButtonText,
-                      dynamicStyles.accountButtonText,
-                    ]}
-                  >
-                    {t("referral.menu")}
-                  </Text>
-
-                  {claimable.length > 0 && (
-                    <View
-                      style={{
-                        marginLeft: normalizeSize(8),
-                        paddingHorizontal: normalizeSize(10),
-                        paddingVertical: normalizeSize(6),
-                        borderRadius: 999,
-                        borderWidth: 1.2,
-                        borderColor: "#111",
-                        backgroundColor: "#FFB800",
-                      }}
-                    >
-                      <Text
-                        style={{
-                          fontWeight: "900",
-                          color: "#111",
-                          fontSize: normalizeSize(12),
-                        }}
-                      >
-                        {t("referral.badge", {
-                          defaultValue: "+ Récompense",
-                        })}
-                      </Text>
-                    </View>
-                  )}
-                </LinearGradient>
-              </TouchableOpacity>
-            </Animated.View>
-
             <Animated.View entering={FadeInUp.delay(800)}>
               <TouchableOpacity
                 style={styles.accountButton}

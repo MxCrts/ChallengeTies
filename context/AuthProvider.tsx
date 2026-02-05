@@ -4,9 +4,9 @@ import { auth } from "@/constants/firebase-config";
 import AsyncStorage from "@react-native-async-storage/async-storage";
 import { fetchAndSaveUserLocation } from "../services/locationService";
 import { db } from "@/constants/firebase-config";
-import { collection, query, where, onSnapshot, doc, runTransaction, getDoc, } from "firebase/firestore";
+import { collection, query, where, onSnapshot, doc, runTransaction, getDoc, serverTimestamp  } from "firebase/firestore";
 import { increment } from "firebase/firestore";
-import { setDoc, updateDoc, arrayUnion } from "firebase/firestore";
+import { updateDoc, arrayUnion } from "firebase/firestore";
 import { AppState, Platform  } from "react-native";
 import {
   ensureAndroidChannelAsync,
@@ -32,7 +32,7 @@ import {
 
 
 const REFERRAL_JUST_ACTIVATED_KEY = "ties_referral_just_activated";
-const REFERRAL_TROPHY_BONUS = 10;
+
 const LEGACY_REFERRER_KEY = "ties_referrer_id";
 const LEGACY_REFERRER_SRC_KEY = "ties_referrer_src";
 const LEGACY_REFERRER_TS_KEY = "ties_referrer_ts";
@@ -168,8 +168,10 @@ const authFailsafe = setTimeout(() => {
         cleanSrc,
       });
 
-      if (!cleanRef) return; // pas de ref pending
- // pas de ref pending
+      if (!cleanRef) {
+  await clearPendingReferrer();
+  return;
+}
 
           // ignore self-ref
           if (cleanRef === uid) {
@@ -199,17 +201,22 @@ const authFailsafe = setTimeout(() => {
             tx.set(
               userRef,
               {
-                referrerId: cleanRef,
-                activated: true,  
+                activated: true,
                 referral: {
                   ...(data?.referral || {}),
                   referrerId: cleanRef,
                   src: cleanSrc,
+                  activatedAt: serverTimestamp(),
+                  updatedAt: serverTimestamp(),
+                  activatedCount: 0,
+                  claimedMilestones: [],
+                  pendingMilestones: [],
                 },
-                updatedAt: new Date(),
+                updatedAt: serverTimestamp(),
               },
               { merge: true }
             );
+
 
             return true;
           });

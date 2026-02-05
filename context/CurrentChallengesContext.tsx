@@ -67,6 +67,8 @@ import * as Haptics from "expo-haptics";
 import { LinearGradient } from "expo-linear-gradient";
 import { sendDuoNudge } from "@/services/notificationService";
 export const MARK_TOAST_EVENT = "challengeties.toast.mark" as const;
+export const MISSED_FLOW_EVENT = "challengeties.missed.flow" as const;
+export const MARK_RESOLVED_EVENT = "challengeties.mark.resolved" as const;
 
 type MarkToastPayload = {
   kind: "success" | "info" | "warning" | "error";
@@ -77,7 +79,16 @@ type MarkToastPayload = {
   progress?: { dayIndex?: number; totalDays?: number };
 };
 
+type MarkResolvedPayload = {
+  id: string;
+  selectedDays: number;
+  at: number;
+  action: "reset" | "rewarded" | "trophies" | "streakPass";
+};
 
+type MissedResolution =
+  | { resolved: true; action: "reset" | "rewarded" | "trophies" | "streakPass" }
+  | { resolved: false };
 
 interface Challenge {
   id: string;
@@ -367,6 +378,34 @@ export const CurrentChallengesProvider: React.FC<{
 
   const graceShownRef = useRef<Record<string, boolean>>({});
 
+  // ✅ "Blocking" missed flow: markToday() peut attendre la résolution du modal
+  const missedFlowRef = useRef<{
+    key: string;
+    resolve: (v: MissedResolution) => void;
+  } | null>(null);
+
+ const setMissedVisible = (visible: boolean, key?: string, challengeId?: string) => {
+  try {
+    (globalThis as any).__MISSED_VISIBLE__ = visible;
+  } catch {}
+
+  try {
+    DeviceEventEmitter.emit(MISSED_FLOW_EVENT, {
+      visible,
+      key: key ?? null,
+      challengeId: challengeId ?? null,
+      at: Date.now(),
+    });
+  } catch {}
+};
+
+
+  const resolveMissedFlow = (v: MissedResolution) => {
+    try {
+      missedFlowRef.current?.resolve(v);
+    } catch {}
+    missedFlowRef.current = null;
+  };
 
   // ✅ Heartbeat pour downgrade DUO → SOLO même si mon doc ne bouge pas
 useEffect(() => {
@@ -419,7 +458,10 @@ useEffect(() => {
   };
 }, []);
 
-
+useEffect(() => {
+  setMissedVisible(false, undefined, undefined);
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+}, []);
 
   const [modalVisible, setModalVisible] = useState(false);
   const [adLoaded, setAdLoaded] = useState(false);
@@ -518,6 +560,12 @@ useEffect(() => {
     } catch {}
   };
 
+  const emitMarkResolved = (payload: MarkResolvedPayload) => {
+  try {
+    DeviceEventEmitter.emit(MARK_RESOLVED_EVENT, payload);
+  } catch {}
+};
+
   const scheduleAchievementsCheck = (uid?: string | null, delay = 350) => {
     if (!uid) return;
     achUserRef.current = uid;
@@ -549,14 +597,25 @@ useEffect(() => {
     await AsyncStorage.setItem("lastInterstitialTime", Date.now().toString());
   };
 
-  const closeMissedModal = () => {
-    setModalVisible(false);
-    if (selectedChallenge) {
-      const k = makeLockKey(selectedChallenge.id, selectedChallenge.selectedDays);
-      graceShownRef.current[k] = false;
-    }
-    setSelectedChallenge(null);
-  };
+const closeMissedModal = () => {
+  // ✅ ferme “réellement” l’état global
+  const k = selectedChallenge
+    ? makeLockKey(selectedChallenge.id, selectedChallenge.selectedDays)
+    : undefined;
+
+  setMissedVisible(false, k, selectedChallenge?.id);
+
+  setModalVisible(false);
+  if (selectedChallenge) {
+    const lk = makeLockKey(selectedChallenge.id, selectedChallenge.selectedDays);
+    graceShownRef.current[lk] = false;
+  }
+  setSelectedChallenge(null);
+
+  // fermeture sans résolution -> markToday() => success:false
+  resolveMissedFlow({ resolved: false });
+};
+
 
   // Interstitial backoff & timers
   const interRetryRef = useRef(0);
@@ -1245,10 +1304,25 @@ try {
 
       if (missedDays >= 2) {
        const uKey = makeLockKey(id, selectedDays);
+
+        // ✅ ouvrir une seule fois + "await" la résolution
         if (!graceShownRef.current[uKey]) {
-          showMissedChallengeModal(id, selectedDays);
           graceShownRef.current[uKey] = true;
+          // on prépare la promesse AVANT d'ouvrir le modal
+          const res = await new Promise<MissedResolution>((resolve) => {
+            missedFlowRef.current = { key: uKey, resolve };
+            showMissedChallengeModal(id, selectedDays);
+          });
+
+          // si l'utilisateur a résolu (reset / trophées / etc) -> success:true
+          if (res.resolved) {
+            return { success: true, missedDays };
+          }
+          // sinon (fermeture) -> success:false
+          return { success: false, missedDays };
         }
+
+        // fallback (déjà affiché) -> on ne relance pas
         return { success: false, missedDays };
       }
 
@@ -1443,6 +1517,10 @@ const updatedArray = currentChallengesArray.map((ch, i) =>
         setModalVisible(false);
         scheduleAchievementsCheck(userId);
         graceShownRef.current[makeLockKey(id, selectedDays)] = false;
+        // ✅ Résolution OK -> markToday() pourra retourner success:true
+        setMissedVisible(false, makeLockKey(id, selectedDays), id);
+        resolveMissedFlow({ resolved: true, action: "reset" });
+        emitMarkResolved({ id, selectedDays, at: Date.now(), action: "reset" });
       } catch (error: any) {
         console.error(
           "❌ Erreur lors du reset :",
@@ -1587,6 +1665,10 @@ const updated = { ...arr[index] } as any;
       setModalVisible(false);
       scheduleAchievementsCheck(userId);
       graceShownRef.current[makeLockKey(id, selectedDays)] = false;
+      // ✅ Résolution OK
+      setMissedVisible(false, makeLockKey(id, selectedDays), id);
+      resolveMissedFlow({ resolved: true, action: "rewarded" });
+      emitMarkResolved({ id, selectedDays, at: Date.now(), action: "rewarded" });
 
       try {
         await recordDailyGlobalMark(userId, today);
@@ -1696,6 +1778,10 @@ if (challengeIndex === -1) {
       );
       setModalVisible(false);
       scheduleAchievementsCheck(userId);
+      // ✅ Résolution OK
+     setMissedVisible(false, makeLockKey(id, selectedDays), id);
+      resolveMissedFlow({ resolved: true, action: "trophies" });
+      emitMarkResolved({ id, selectedDays, at: Date.now(), action: "trophies" });
 
       try {
         await recordDailyGlobalMark(userId, today);
@@ -1792,6 +1878,10 @@ if (index === -1) {
       );
       setModalVisible(false);
       graceShownRef.current[makeLockKey(id, selectedDays)] = false;
+      // ✅ Résolution OK
+      setMissedVisible(false, makeLockKey(id, selectedDays), id);
+      resolveMissedFlow({ resolved: true, action: "streakPass" });
+      emitMarkResolved({ id, selectedDays, at: Date.now(), action: "streakPass" });
 
       try {
         await recordDailyGlobalMark(userId, today);
@@ -1836,46 +1926,46 @@ if (index === -1) {
     }
   };
 
-  const showMissedChallengeModal = (
-    id: string,
-    selectedDays: number
-  ) => {
-    console.log("Affichage modal pour :", id, selectedDays);
-    setSelectedChallenge({ id, selectedDays });
-    setModalVisible(true);
+ const showMissedChallengeModal = (id: string, selectedDays: number) => {
+  console.log("Affichage modal pour :", id, selectedDays);
 
-    (async () => {
-      try {
-        const userId = auth.currentUser?.uid;
-        if (!userId) {
-          setHasStreakPass(false);
-          return;
-        }
+  const k = makeLockKey(id, selectedDays);
 
-        const userRef = doc(db, "users", userId);
-        const snap = await getDoc(userRef);
-        if (!snap.exists()) {
-          setHasStreakPass(false);
-          return;
-        }
+  setSelectedChallenge({ id, selectedDays });
+  setModalVisible(true);
 
-        const data = snap.data() as any;
-        const count =
-          typeof data?.inventory?.streakPass === "number"
-            ? data.inventory.streakPass
-            : 0;
+  // ✅ SOURCE OF TRUTH pour challenge-details (et debug)
+  setMissedVisible(true, k, id);
 
-        setHasStreakPass(count > 0);
-      } catch (e: any) {
-        __DEV__ &&
-          console.warn(
-            "[MissedModal] streakPass read error:",
-            e?.message ?? e
-          );
+  (async () => {
+    try {
+      const userId = auth.currentUser?.uid;
+      if (!userId) {
         setHasStreakPass(false);
+        return;
       }
-    })();
-  };
+
+      const userRef = doc(db, "users", userId);
+      const snap = await getDoc(userRef);
+      if (!snap.exists()) {
+        setHasStreakPass(false);
+        return;
+      }
+
+      const data = snap.data() as any;
+      const count =
+        typeof data?.inventory?.streakPass === "number"
+          ? data.inventory.streakPass
+          : 0;
+
+      setHasStreakPass(count > 0);
+    } catch (e: any) {
+      __DEV__ && console.warn("[MissedModal] streakPass read error:", e?.message ?? e);
+      setHasStreakPass(false);
+    }
+  })();
+};
+
 
  const completeChallenge = async (
   id: string,

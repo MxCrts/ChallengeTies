@@ -19,6 +19,33 @@
     "yourChallenge": "Tu desafío"
   },
   "dailySelectedSubtitleShort": "Selección del día.",
+ "soloMoment": {
+    "kicker": "MOMENTO SOLO",
+    "badge": "Hecho",
+    "title": "Día {{day}} asegurado",
+    "titleMilestone": "Hito alcanzado — Día {{day}}",
+    "subtitle": "Avanzas. En silencio. De verdad.",
+    "subtitleMilestone": "Esto es serio. Sigue.",
+    "pool": [
+      "Otro 1%. Así cambia todo.",
+      "Construye el ritmo. Protégelo.",
+      "No perfecto. Constante.",
+      "Hoy le ganaste a tu yo de ayer.",
+      "Cada día cuenta. Este también.",
+      "Te estás volviendo alguien que cumple.",
+      "Pequeño hoy. Enorme mañana.",
+      "Una acción. Una identidad."
+    ],
+    "fallback": "Bien. Sigue.",
+    "progress": "{{day}} / {{total}} días",
+    "streak": "Racha {{streak}}",
+    "cta": "Continuar",
+    "a11y": {
+      "closeBackdrop": "Cerrar",
+      "closeButton": "Cerrar",
+      "cta": "Continuar"
+    }
+  },
   "homeZ": {
     "duoPending": {
       "cta": "Preparar el Dúo",
@@ -40,6 +67,17 @@
       "ctaA11y": "Empezar y elegir un reto"
     },
     "todayHub": {
+      "primaryMark": "Marcar hoy",
+      "primaryPending": "Ver",
+      "primaryPick": "Elegir un reto",
+      "primaryNew": "Nuevo reto",
+      "whyReturn": {
+        "warning": "Aún te queda un check-in hoy. Mantén el ritmo.",
+        "duo": "Tu dúo sigue pendiente.",
+        "trophy": "Hoy te espera un bonus. Pequeña victoria, gran impulso.",
+        "streak": "Estás construyendo una racha. Un pequeño paso al día.",
+        "default": "Vuelve cuando quieras: 1 minuto basta para avanzar."
+      },
       "badge": "HOY",
       "pendingTap":"Toca para ver",
       "metaPending": "Invitación",
@@ -1432,36 +1470,31 @@
     "submitButton": "Enviar propuesta"
   },
   "missedChallenge": {
-    "adNotReady": "El anuncio aún no está listo. Vuelve a intentarlo en unos instantes.",
+    "adNotReady": "El anuncio aún no está listo. Inténtalo en un momento.",
     "confirmResetTitle": "¿Confirmar?",
-"confirmResetText": "Tienes un Streak Pass disponible. ¿Seguro que quieres reiniciar tu racha?"
-,
-    "title": "Has perdido un desafío",
-    "subtitle": "Tranquilo, todavía puedes salvar tu racha y seguir en el juego 💪",
-
+    "confirmResetText": "Tienes un Streak Pass disponible. ¿Seguro que quieres reiniciar tu racha?",
+    "title": "Reto perdido",
+    "subtitle": "Sin drama: aún puedes salvar tu racha 💪",
     "reset": {
-      "title": "Reiniciar mi racha",
-      "subtitle": "Vuelve a empezar desde el día 1. Esta acción no se puede deshacer."
+      "title": "Reiniciar racha",
+      "subtitle": "Empieza de cero en este reto. No se puede deshacer."
     },
-    "pill": {
-   "streakPass": "Streak Pass disponible",
-   "trophies": "Costo: {{count}} trofeos"
- },
-
     "streakPass": {
       "title": "Usar un Streak Pass",
-      "subtitle": "Mantén tu racha intacta gracias a tu Streak Pass."
+      "subtitle": "Anula el día perdido y mantén tu racha."
     },
-
+    "pill": {
+      "streakPass": "Streak Pass disponible",
+      "trophies": "Coste: {{count}} trofeos"
+    },
     "ad": {
-      "title": "Ver un anuncio para salvar la racha",
-      "subtitle": "Mira un vídeo corto para conservar tu racha sin perderlo todo.",
-   "disabled": "El vídeo aún no está listo. Espera un momento."
+      "title": "Ver un anuncio",
+      "subtitle": "Un vídeo corto salvará tu racha.",
+      "disabled": "El vídeo no está listo. Espera un momento."
     },
-
     "useTrophies": {
-      "title": "Gastar {{count}} trofeos para salvar la racha",
-      "subtitle": "Intercambia algunos trofeos para proteger tu progreso."
+      "title": "Salvar racha — {{count}} trofeos",
+      "subtitle": "Gasta trofeos para proteger tu racha."
     }
   },
   "privacyPolicy": {
@@ -4534,9 +4567,56 @@
   "footerLine1": "Únete a mí en ChallengeTies",
   "footerLine2": "Desafíos, enfoque y victorias cada día."
 },
+"duoMoment": {
+  "leader": "Líder",
+  "badgeSync": "SYNC",
+  "badgeTurn": "LE TOCA",
+  "stateSync": "En sync",
+  "stateTurn": "Le toca",
+  "subtitleSync": "Vais alineados. Seguid en sync.",
+  "subtitleTurn": "Tú ya marcaste. Ahora le toca a tu compañero.",
+  "fallbackSync": "Perfecto — vais en sync.",
+  "fallbackTurn": "Check enviado a {{name}}. Ahora le toca a él/ella.",
+  "a11y": {
+    "closeBackdrop": "Cerrar ventana",
+    "closeButton": "Cerrar"
+  },
+  "kicker": "MOMENTO DÚO",
+  "you": "Tú",
+  "pressureMessages": [
+    "⚡ {{name}} está en cuenta atrás.",
+    "🔥 Listo tu check — {{name}}, responde ya.",
+    "🎯 Punto para ti. {{name}} debe igualar.",
+    "🚀 Tomaste ventaja. {{name}} tiene que seguir.",
+    "💥 Tú marcas el ritmo — {{name}} acompaña.",
+    "🏁 Sprint dúo: {{name}} va ahora.",
+    "📈 Progreso confirmado — {{name}} debe sincronizarse.",
+    "🧨 Buen golpe — turno de {{name}}.",
+    "⚔️ Duelo activo — {{name}}, a ti.",
+    "🔔 A {{name}} le va a llegar."
+  ],
+  "syncMessages": [
+    "🤝 Perfecto — vais en sync.",
+    "💎 Dúo sólido hoy.",
+    "🏆 Día validado por los dos.",
+    "⚖️ Equilibrio perfecto.",
+    "🔥 Ritmo mantenido juntos.",
+    "🎯 Sincronización impecable.",
+    "🚀 El dúo va con tracción.",
+    "🧱 Disciplina compartida — respeto.",
+    "✨ Coordinación perfecta.",
+    "🔒 Racha protegida juntos."
+  ]
+},
   "notificationsPush": {
     "daily1": "Un reto hoy puede cambiar tu día. ¿Listo?",
+    "streakTitle": "Mantén tu racha",
+"streakBody": "Te queda un reto hoy. Complétalo ahora.",
+"duoPartnerMarkedYouDidnt": "{{from}} completó «{{title}}». Te toca — sigan en sincronía.",
     "daily2": "No rompas la racha. Hazlo ahora 💪",
+    "late1": "Tu reto de hoy te espera. ¿Lo haces ya? 🔥",
+"late2": "Última llamada — protege tu racha 💪",
+"late3": "Aún puedes completarlo hoy ✨",
     "duoNudgeOpened": "Dúo: abre el reto ✅"
 ,
     "daily3": "Recordatorio: tus retos te esperan hoy ✨",

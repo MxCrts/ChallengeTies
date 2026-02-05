@@ -1017,35 +1017,31 @@
   },
 
   "missedChallenge": {
-    "adNotReady": "広告の準備がまだできていません。少し待ってから試してください。",
-    "confirmResetTitle": "確認",
-    "confirmResetText": "ストリークパスがあります。本当にシリーズをリセットしますか？",
-    "title": "チャレンジを逃したようです",
-    "subtitle": "心配しないで。まだストリークを守る方法があります 💪",
-
+    "adNotReady": "広告の準備ができていません。少し待ってから再試行してください。",
+    "confirmResetTitle": "確認？",
+    "confirmResetText": "Streak Pass があります。本当に連続記録をリセットしますか？",
+    "title": "チャレンジを逃しました",
+    "subtitle": "大丈夫。連続記録はまだ守れます 💪",
     "reset": {
-      "title": "シリーズをリセット",
-      "subtitle": "1日目からやり直します。この操作は元に戻せません。"
+      "title": "連続記録をリセット",
+      "subtitle": "このチャレンジを最初からやり直します。取り消せません。"
+    },
+    "streakPass": {
+      "title": "Streak Pass を使う",
+      "subtitle": "逃した日を無効にして連続記録を維持します。"
     },
     "pill": {
-   "streakPass": "ストリークパス利用可能",
-   "trophies": "コスト：{{count}} トロフィー"
- },
-
-    "streakPass": {
-      "title": "ストリークパスを使う",
-      "subtitle": "ストリークパスを使って記録を維持します。"
+      "streakPass": "Streak Pass あり",
+      "trophies": "消費：{{count}} トロフィー"
     },
-
     "ad": {
-      "title": "広告を見てシリーズを守る",
-       "subtitle": "短い動画を見ることでストリークを維持できます。",
-   "disabled": "動画はまだ利用できません。しばらくお待ちください。"
+      "title": "広告を見る",
+      "subtitle": "短い動画で連続記録を守れます。",
+      "disabled": "動画の準備中です。少し待ってください。"
     },
-
     "useTrophies": {
-      "title": "{{count}} トロフィーでシリーズを守る",
-       "subtitle": "トロフィーを使って進捗を保護します。"
+      "title": "連続記録を守る — {{count}} トロフィー",
+      "subtitle": "トロフィーで連続記録を守ろう。"
     }
   },
   "privacyPolicy": {
@@ -2311,9 +2307,55 @@
   "footerLine1": "ChallengeTiesで一緒に始めよう",
   "footerLine2": "チャレンジ、集中、毎日の勝利。"
 },
-
+"duoMoment": {
+  "leader": "リーダー",
+  "badgeSync": "SYNC",
+  "badgeTurn": "相手の番",
+  "stateSync": "同期",
+  "stateTurn": "相手の番",
+  "subtitleSync": "歩幅が揃ってる。同期をキープ。",
+  "subtitleTurn": "あなたはチェック済み。次は相手の番。",
+  "fallbackSync": "完璧——同期できてる。",
+  "fallbackTurn": "{{name}}に送信済み。次は相手の番。",
+  "a11y": {
+    "closeBackdrop": "ウィンドウを閉じる",
+    "closeButton": "閉じる"
+  },
+  "kicker": "デュオ・モーメント",
+  "you": "あなた",
+  "pressureMessages": [
+    "⚡ 次は{{name}}。",
+    "🔥 チェック完了——{{name}}、今だ。",
+    "🎯 先手はあなた。{{name}}が追う番。",
+    "🚀 リードした。{{name}}は合わせて。",
+    "💥 ペースはあなた。{{name}}が続く。",
+    "🏁 デュオスプリント：{{name}}が次。",
+    "📈 進捗確定——{{name}}は同期を。",
+    "🧨 ナイス。{{name}}の番。",
+    "⚔️ デュエル開始——{{name}}、行け。",
+    "🔔 {{name}}に通知が飛ぶ。"
+  ],
+  "syncMessages": [
+    "🤝 完璧——同期してる。",
+    "💎 今日は強いデュオ。",
+    "🏆 両方チェック完了。",
+    "⚖️ バランス完璧。",
+    "🔥 一緒にリズム維持。",
+    "🎯 同期が美しい。",
+    "🚀 デュオが乗ってきた。",
+    "🧱 共有の自律——尊敬。",
+    "✨ 連携が完璧。",
+    "🔒 連続記録を守った。"
+  ]
+},
   "notificationsPush": {
     "daily1": "今日の1チャレンジが、1日を変える。やる？",
+    "streakTitle": "連続記録を守る",
+"streakBody": "今日はあと1つ。今終わらせよう。",
+"duoPartnerMarkedYouDidnt": "{{from}} が「{{title}}」を達成。次はあなた—同期しよう。",
+   "late1": "今日のチャレンジが待ってる。今やる？🔥",
+"late2": "ラストチャンス — 連続記録を守ろう 💪",
+"late3": "今日はまだ間に合うよ ✨",
     "duoNudgeOpened": "デュオ：チャレンジを開こう ✅",
     "daily2": "連続記録を切らないで。今やろう 💪",
     "daily3": "リマインド：今日もチャレンジが待ってるよ ✨",
@@ -2374,6 +2416,33 @@
     "notForYouMessage": "この招待はこのアカウント向けではありません。"
   },
   "dailySelectedSubtitleShort": "本日のセレクション。",
+ "soloMoment": {
+    "kicker": "ソロ・モーメント",
+    "badge": "完了",
+    "title": "{{day}}日目をロック",
+    "titleMilestone": "マイルストーン達成 — {{day}}日目",
+    "subtitle": "静かに進む。でも確実に。",
+    "subtitleMilestone": "これは本気。続けよう。",
+    "pool": [
+      "あと1%。それが変化になる。",
+      "リズムを作る。守る。",
+      "完璧じゃなくていい。継続。",
+      "今日は自分に勝った。",
+      "毎日が大事。今日も。",
+      "やり切る人になってる。",
+      "小さくても、後で大きい。",
+      "一つの行動。一つのアイデンティティ。"
+    ],
+    "fallback": "いいね。続けよう。",
+    "progress": "{{day}} / {{total}} 日",
+    "streak": "連続 {{streak}}",
+    "cta": "続ける",
+    "a11y": {
+      "closeBackdrop": "閉じる",
+      "closeButton": "閉じる",
+      "cta": "続ける"
+    }
+  },
   "homeZ": {
     "duoPending": {
       "cta": "デュオを準備",
@@ -2395,6 +2464,17 @@
        "ctaHint": "利用可能なチャレンジを確認します。"
     },
     "todayHub": {
+      "primaryMark": "今日チェックイン",
+      "primaryPending": "見る",
+      "primaryPick": "チャレンジを選ぶ",
+      "primaryNew": "新しいチャレンジ",
+      "whyReturn": {
+        "warning": "今日はまだチェックインが残ってる。リズムを保とう。",
+        "duo": "Duo はまだ保留中。",
+        "trophy": "今日はボーナスが待ってる。小さな勝ちが大きな勢いに。",
+        "streak": "ストリークを積み上げ中。毎日小さく一歩。",
+        "default": "いつでも戻ってきて：1分あれば前に進める。"
+      },
       "badge": "今日",
       "primaryActiveShort": "記録",
       "metaPending": "招待",

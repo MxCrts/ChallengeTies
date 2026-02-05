@@ -1021,37 +1021,32 @@
     "placeholderDescription": "Beschrijving (optioneel)",
     "submitButton": "Voorstel verzenden"
   },
-  "missedChallenge": {
-    "adNotReady": "De advertentie is nog niet klaar. Probeer het over een paar ogenblikken opnieuw.",
+ "missedChallenge": {
+    "adNotReady": "De advertentie is nog niet klaar. Probeer het zo nog eens.",
     "confirmResetTitle": "Bevestigen?",
-    "confirmResetText": "Je hebt een Streak Pass beschikbaar. Weet je zeker dat je je reeks op nul wilt zetten?",
-    "title": "Je hebt een uitdaging gemist",
-    "subtitle": "Geen paniek, je kunt je reeks nog redden en in de game blijven 💪",
-
+    "confirmResetText": "Je hebt een Streak Pass. Wil je je streak echt resetten?",
+    "title": "Challenge gemist",
+    "subtitle": "Geen stress — je kunt je streak nog redden 💪",
     "reset": {
-      "title": "Mijn reeks resetten",
-      "subtitle": "Begin opnieuw vanaf dag 1. Deze actie kan niet ongedaan worden gemaakt."
+      "title": "Streak resetten",
+      "subtitle": "Begin opnieuw met deze challenge. Dit kun je niet ongedaan maken."
+    },
+    "streakPass": {
+      "title": "Streak Pass gebruiken",
+      "subtitle": "Annuleer de gemiste dag en behoud je streak."
     },
     "pill": {
-   "streakPass": "Streak Pass beschikbaar",
-   "trophies": "Kosten: {{count}} trofeeën"
- },
-
-    "streakPass": {
-      "title": "Een Streak Pass gebruiken",
-      "subtitle": "Bewaar je reeks intact dankzij je Streak Pass."
+      "streakPass": "Streak Pass beschikbaar",
+      "trophies": "Kosten: {{count}} trofeeën"
     },
-
     "ad": {
-      "title": "Een advertentie kijken om je reeks te redden",
-      "subtitle": "Bekijk een korte video om je reeks te behouden zonder alles te verliezen.",
-   "disabled": "De video is nog niet beschikbaar. Wacht even."
-
+      "title": "Advertentie kijken",
+      "subtitle": "Een korte video redt je streak.",
+      "disabled": "Video nog niet klaar. Even geduld."
     },
-
     "useTrophies": {
-      "title": "{{count}} trofeeën uitgeven om de reeks te redden",
-      "subtitle": "Ruil een paar trofeeën in om je vooruitgang te beschermen."
+      "title": "Streak redden — {{count}} trofeeën",
+      "subtitle": "Gebruik trofeeën om je streak te beschermen."
     }
   },
 
@@ -2341,9 +2336,55 @@
   "unableToMarkWithTrophies": "Kan niet markeren met trofeeën.",
   "errorLoadingSavedChallenges": "Opgeslagen challenges kunnen niet worden geladen: {{message}}",
   "rateUs": "Beoordeel de app",
-
+"duoMoment": {
+  "leader": "Leader",
+  "badgeSync": "SYNC",
+  "badgeTurn": "ZIJN BEURT",
+  "stateSync": "Synchroon",
+  "stateTurn": "Zijn beurt",
+  "subtitleSync": "Jullie lopen gelijk. Blijf synchroon.",
+  "subtitleTurn": "Jij hebt afgevinkt. Nu is je partner aan de beurt.",
+  "fallbackSync": "Perfect — jullie zijn synchroon.",
+  "fallbackTurn": "Check verstuurd naar {{name}}. Nu is hij/zij aan de beurt.",
+  "a11y": {
+    "closeBackdrop": "Venster sluiten",
+    "closeButton": "Sluiten"
+  },
+  "kicker": "DUO-MOMENT",
+  "you": "Jij",
+  "pressureMessages": [
+    "⚡ {{name}} is nu aan zet.",
+    "🔥 Jij hebt gecheckt — {{name}}, nu jij.",
+    "🎯 Punt gemaakt. {{name}} moet volgen.",
+    "🚀 Voorsprong gepakt. {{name}} moet bijblijven.",
+    "💥 Jij bepaalt het tempo — {{name}} volgt.",
+    "🏁 Duo-sprint: {{name}} is next.",
+    "📈 Voortgang bevestigd — {{name}} moet syncen.",
+    "🧨 Goede move — {{name}} is aan de beurt.",
+    "⚔️ Duel aan — {{name}}, jouw zet.",
+    "🔔 {{name}} krijgt het signaal."
+  ],
+  "syncMessages": [
+    "🤝 Perfect — jullie zijn synchroon.",
+    "💎 Sterke duo-dag.",
+    "🏆 Allebei gecheckt.",
+    "⚖️ Perfecte balans.",
+    "🔥 Ritme samen vastgehouden.",
+    "🎯 Strakke synchronisatie.",
+    "🚀 Duo met momentum.",
+    "🧱 Gedeelde discipline — respect.",
+    "✨ Perfecte afstemming.",
+    "🔒 Streak samen beschermd."
+  ]
+},
   "notificationsPush": {
      "daily1": "Eén challenge vandaag kan je dag veranderen. Klaar?",
+     "streakTitle": "Houd je streak",
+"streakBody": "Je hebt vandaag nog één challenge. Rond ’m nu af.",
+"duoPartnerMarkedYouDidnt": "{{from}} heeft «{{title}}» afgevinkt. Jij bent aan de beurt — blijf synchroon.",
+"late1": "Je challenge van vandaag wacht. Nu doen? 🔥",
+"late2": "Laatste kans — bescherm je streak 💪",
+"late3": "Je hebt nog even tijd vandaag ✨",
      "duoNudgeOpened": "Duo: open de challenge ✅",
     "daily2": "Breek je streak niet. Doe het nu 💪",
     "daily3": "Vriendelijke reminder: je challenges wachten vandaag ✨",
@@ -2401,6 +2442,33 @@
     "notForYouMessage": "Deze uitnodiging is niet bedoeld voor dit account."
   },
   "dailySelectedSubtitleShort": "Selectie van de dag.",
+  "soloMoment": {
+    "kicker": "SOLO MOMENT",
+    "badge": "Gedaan",
+    "title": "Dag {{day}} vastgezet",
+    "titleMilestone": "Mijlpaal gehaald — Dag {{day}}",
+    "subtitle": "Stille progressie. Echte progressie.",
+    "subtitleMilestone": "Dit is serieus. Ga door.",
+    "pool": [
+      "Nog 1%. Zo verandert het.",
+      "Bouw het ritme. Bewaak het.",
+      "Niet perfect. Wel consistent.",
+      "Vandaag won je van gisteren.",
+      "Elke dag telt. Deze ook.",
+      "Je wordt iemand die het afmaakt.",
+      "Klein nu. Groot straks.",
+      "Eén actie. Eén identiteit."
+    ],
+    "fallback": "Sterk. Ga door.",
+    "progress": "{{day}} / {{total}} dagen",
+    "streak": "Streak {{streak}}",
+    "cta": "Doorgaan",
+    "a11y": {
+      "closeBackdrop": "Sluiten",
+      "closeButton": "Sluiten",
+      "cta": "Doorgaan"
+    }
+  },
 "homeZ": {
   "duoPending": {
     "cta": "Duo voorbereiden",
@@ -2422,6 +2490,17 @@
       "ctaHint": "Ontdek beschikbare uitdagingen."
     },
     "todayHub": {
+      "primaryMark": "Vandaag afvinken",
+      "primaryPending": "Bekijken",
+      "primaryPick": "Kies een challenge",
+      "primaryNew": "Nieuwe challenge",
+      "whyReturn": {
+        "warning": "Je hebt vandaag nog een check-in. Blijf in je ritme.",
+        "duo": "Je duo staat nog in de wacht.",
+        "trophy": "Er wacht vandaag een bonus. Kleine winst, groot momentum.",
+        "streak": "Je bouwt een streak op. Elke dag een kleine stap.",
+        "default": "Kom terug wanneer je wilt: 1 minuut is genoeg om vooruit te gaan."
+      },
       "badge": "VANDAAG",
       "primaryActiveShort": "Markeer",
       "metaPending": "Uitnodiging",

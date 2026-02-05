@@ -562,6 +562,17 @@
       "ctaA11y": "Start and pick a challenge"
     },
     "todayHub": {
+      "primaryMark": "Check in today",
+      "primaryPending": "View",
+      "primaryPick": "Pick a challenge",
+      "primaryNew": "New challenge",
+      "whyReturn": {
+        "warning": "You’ve still got a check-in today. Keep your rhythm.",
+        "duo": "Your Duo is still pending.",
+        "trophy": "A bonus is waiting today. Small win, big momentum.",
+        "streak": "You’re building a streak. One small step a day.",
+        "default": "Come back anytime: one minute is enough to move forward."
+      },
       "badge": "TODAY",
       "primaryActiveShort": "Check in",
       "metaPending": "Invite",
@@ -648,6 +659,33 @@
       "newFeaturesSub": "Discover. Vote. Shape the app.",
       "newFeaturesA11y": "What’s new",
       "newFeaturesHint": "Discover new features and vote for what’s next."
+    }
+  },
+  "soloMoment": {
+    "kicker": "SOLO MOMENT",
+    "badge": "Locked",
+    "title": "Day {{day}} locked",
+    "titleMilestone": "Milestone reached — Day {{day}}",
+    "subtitle": "Quiet progress. Real progress.",
+    "subtitleMilestone": "That’s serious. Keep going.",
+    "pool": [
+      "Another 1%. That’s how it shifts.",
+      "Build the rhythm. Protect it.",
+      "Not perfect. Consistent.",
+      "Today, you beat yesterday.",
+      "Every day counts. This one too.",
+      "You’re becoming someone who shows up.",
+      "Small now. Massive later.",
+      "One action. One identity."
+    ],
+    "fallback": "Nice. Keep going.",
+    "progress": "{{day}} / {{total}} days",
+    "streak": "Streak {{streak}}",
+    "cta": "Continue",
+    "a11y": {
+      "closeBackdrop": "Close",
+      "closeButton": "Close",
+      "cta": "Continue"
     }
   },
   "addLocationHere": "Add a location",
@@ -1087,36 +1125,31 @@
     "submitButton": "Submit proposal"
   },
   "missedChallenge": {
-    "adNotReady": "The advertisement is not ready yet. Please try again in a few moments.",
+    "adNotReady": "The ad isn’t ready yet. Try again in a moment.",
     "confirmResetTitle": "Confirm?",
-"confirmResetText": "You have a Streak Pass available. Do you really want to reset your streak?"
-,
-    "title": "You missed a challenge",
-    "subtitle": "No worries, you can still save your streak and stay in the game 💪",
-
+    "confirmResetText": "You have a Streak Pass available. Do you really want to reset your streak?",
+    "title": "Challenge missed",
+    "subtitle": "No stress — you can still save your streak 💪",
     "reset": {
-      "title": "Reset my streak",
-      "subtitle": "Start this challenge again and rebuild your discipline."
+      "title": "Reset streak",
+      "subtitle": "Start over on this challenge. This can’t be undone."
     },
-    "pill": {
-    "streakPass": "Streak Pass available",
-    "trophies": "Cost: {{count}} trophies"
-  },
-
     "streakPass": {
       "title": "Use a Streak Pass",
-      "subtitle": "Keep your streak intact thanks to your Streak Pass."
+      "subtitle": "Cancel the missed day and keep your streak."
     },
-
+    "pill": {
+      "streakPass": "Streak Pass available",
+      "trophies": "Cost: {{count}} trophies"
+    },
     "ad": {
-      "title": "Watch an ad to save the streak",
-      "subtitle": "Watch a short video to keep your streak without losing everything.",
-    "disabled": "Video not ready yet. Please wait a moment."
+      "title": "Watch an ad",
+      "subtitle": "A short video will save your streak.",
+      "disabled": "Video not ready yet. Please wait."
     },
-
     "useTrophies": {
-      "title": "Spend {{count}} trophies to save the streak",
-      "subtitle": "Trade some trophies to protect your progress."
+      "title": "Save streak — {{count}} trophies",
+      "subtitle": "Spend trophies to protect your streak."
     }
   },
   "dailySelectedSubtitle": "5 challenges handpicked for you today.",
@@ -4211,9 +4244,56 @@
   "footerLine1": "Join me on ChallengeTies",
   "footerLine2": "Challenges, focus, and victories every day."
 },
+"duoMoment": {
+  "leader": "Leader",
+  "badgeSync": "SYNC",
+  "badgeTurn": "THEIR TURN",
+  "stateSync": "In sync",
+  "stateTurn": "Their turn",
+  "subtitleSync": "You’re aligned. Stay in sync.",
+  "subtitleTurn": "You checked in. Your partner is next.",
+  "fallbackSync": "Perfect — you’re in sync.",
+  "fallbackTurn": "Check sent to {{name}}. Their turn now.",
+  "a11y": {
+    "closeBackdrop": "Close window",
+    "closeButton": "Close"
+  },
+  "kicker": "DUO MOMENT",
+  "you": "You",
+  "pressureMessages": [
+    "⚡ {{name}} is on the clock.",
+    "🔥 Your move is in — {{name}}, respond now.",
+    "🎯 Point scored. {{name}} needs to match it.",
+    "🚀 Lead taken. {{name}} has to follow.",
+    "💥 You set the pace — {{name}} keeps up.",
+    "🏁 Duo sprint: {{name}} is up next.",
+    "📈 Progress confirmed — {{name}} must sync.",
+    "🧨 Nice hit — {{name}}’s turn.",
+    "⚔️ Duel mode: {{name}}, your move.",
+    "🔔 {{name}} is about to feel it."
+  ],
+  "syncMessages": [
+    "🤝 Perfect — you’re in sync.",
+    "💎 Strong duo today.",
+    "🏆 Both sides checked in.",
+    "⚖️ Balanced and steady.",
+    "🔥 Rhythm held together.",
+    "🎯 Clean synchronization.",
+    "🚀 Duo is gaining traction.",
+    "🧱 Shared discipline — respect.",
+    "✨ Coordination on point.",
+    "🔒 Streak protected together."
+  ]
+},
   "notificationsPush": {
     "daily1": "One challenge today can change your whole day. Ready?",
+    "streakTitle": "Keep your streak",
+"streakBody": "You still have one challenge today. Finish it now.",
+"duoPartnerMarkedYouDidnt": "{{from}} checked off “{{title}}”. Your turn — stay in sync.",
     "daily2": "Don’t break the streak. Do it now 💪",
+    "late1": "Your daily challenge is waiting. Do it now? 🔥",
+"late2": "Last call — protect your streak 💪",
+"late3": "Still a few minutes to complete today ✨",
     "daily3": "Friendly reminder: your challenges are waiting today ✨",
     "duoNudgeOpened": "Duo: open the challenge ✅"
 ,

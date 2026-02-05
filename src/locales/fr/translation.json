@@ -55,6 +55,17 @@
     },
 
     "todayHub": {
+      "primaryMark": "Marquer aujourd’hui",
+      "primaryPending": "Voir",
+      "primaryPick": "Choisir un défi",
+      "primaryNew": "Nouveau défi",
+      "whyReturn": {
+        "warning": "Il te reste un check-in aujourd’hui. Garde ton rythme.",
+        "duo": "Ton duo est en attente.",
+        "trophy": "Un bonus t’attend aujourd’hui. Petit gain, gros momentum.",
+        "streak": "Tu construis une série. Un petit pas par jour.",
+        "default": "Reviens quand tu veux : 1 minute suffit pour avancer."
+      },
       "badge": "AUJOURD’HUI",
       "metaPending": "Invitation",
     "metaNone": "Aucun défi actif",
@@ -150,6 +161,33 @@
       "newFeaturesSub": "Découvre. Vote. Influence l’app.",
       "newFeaturesA11y": "Nouveautés",
       "newFeaturesHint": "Découvre les nouveautés et vote pour la suite."
+    }
+  },
+  "soloMoment": {
+    "kicker": "SOLO MOMENT",
+    "badge": "Validé",
+    "title": "Jour {{day}} verrouillé",
+    "titleMilestone": "Palier atteint — Jour {{day}}",
+    "subtitle": "Tu avances. Sans bruit. Mais pour de vrai.",
+    "subtitleMilestone": "Ça, c’est du sérieux. Continue.",
+    "pool": [
+      "Encore 1%. C’est comme ça que ça change.",
+      "Tu construis un rythme. Garde-le.",
+      "Pas parfait. Régulier.",
+      "Aujourd’hui, tu as gagné contre toi-même.",
+      "Chaque jour compte. Celui-ci aussi.",
+      "Tu deviens la personne qui tient.",
+      "C’est léger… jusqu’au jour où ça devient énorme.",
+      "Une action. Une identité."
+    ],
+    "fallback": "Bien joué. Continue.",
+    "progress": "{{day}} / {{total}} jours",
+    "streak": "Streak {{streak}}",
+    "cta": "Continuer",
+    "a11y": {
+      "closeBackdrop": "Fermer la fenêtre",
+      "closeButton": "Fermer",
+      "cta": "Continuer"
     }
   },
   "profile": "Profil",
@@ -1109,35 +1147,31 @@
     "submitButton": "Envoyer la proposition"
   },
   "missedChallenge": {
-    "adNotReady": "La publicité n'est pas encore prête. Réessayez dans quelques instants.",
+    "adNotReady": "La publicité n’est pas encore prête. Réessaie dans un instant.",
     "confirmResetTitle": "Confirmer ?",
-  "confirmResetText": "Tu as un Streak Pass disponible. Veux-tu vraiment remettre ta série à zéro ?",
-    "title": "Tu as manqué un défi",
-    "subtitle": "Pas de panique, tu peux encore sauver ta série et rester dans le game 💪",
-
+    "confirmResetText": "Tu as un Streak Pass disponible. Veux-tu vraiment réinitialiser ta série ?",
+    "title": "Défi manqué",
+    "subtitle": "Pas de panique — tu peux encore sauver ta série 💪",
     "reset": {
-      "title": "Réinitialiser ma série",
-      "subtitle": "Repars de zéro sur ce défi. Cette action est irréversible."
+      "title": "Réinitialiser la série",
+      "subtitle": "Repars de zéro sur ce défi. Action irréversible."
     },
-
     "streakPass": {
       "title": "Utiliser un Streak Pass",
-      "subtitle": "Garde ta série intacte grâce à ton Streak Pass."
+      "subtitle": "Annule le jour manqué et garde ta série."
     },
     "pill": {
-    "streakPass": "Streak Pass disponible",
-    "trophies": "Coût : {{count}} trophées"
-  },
-
-    "ad": {
-      "title": "Regarder une pub pour sauver la série",
-      "subtitle": "Regarde une courte vidéo pour continuer ta série sans tout perdre.",
-    "disabled": "La vidéo n’est pas encore prête. Patiente un instant."
+      "streakPass": "Streak Pass dispo",
+      "trophies": "Coût : {{count}} trophées"
     },
-
+    "ad": {
+      "title": "Regarder une pub",
+      "subtitle": "Une courte vidéo et ta série est sauvée.",
+      "disabled": "Vidéo pas prête. Patiente un instant."
+    },
     "useTrophies": {
-      "title": "Dépenser {{count}} trophées pour sauver la série",
-      "subtitle": "Échange quelques trophées pour protéger ta progression."
+      "title": "Sauver la série — {{count}} trophées",
+      "subtitle": "Utilise des trophées pour protéger ta série."
     }
   },
   
@@ -2390,14 +2424,58 @@
   "unableToMarkWithTrophies": "Impossible de marquer avec trophées.",
   "errorLoadingSavedChallenges": "Impossible de charger les défis sauvegardés : {{message}}",
   "rateUs": "Noter l’app",
+  "duoMoment": {
+  "leader": "Leader",
+  "badgeSync": "SYNC",
+  "badgeTurn": "À LUI",
+  "stateSync": "Synchro",
+  "stateTurn": "À lui",
+  "subtitleSync": "Vous êtes alignés. Restez synchro.",
+  "subtitleTurn": "Tu as marqué. Ton partenaire est le prochain.",
+  "fallbackSync": "Parfait — vous êtes synchro.",
+  "fallbackTurn": "Check envoyé à {{name}}. C’est à lui de jouer.",
+  "a11y": {
+    "closeBackdrop": "Fermer la fenêtre",
+    "closeButton": "Fermer"
+  },
+  "kicker": "MOMENT DUO",
+  "you": "Toi",
+  "pressureMessages": [
+    "⚡ {{name}} est sous pression.",
+    "🔥 À {{name}} de répondre maintenant.",
+    "🎯 Point marqué — {{name}} doit suivre.",
+    "🚀 Tu viens de prendre l’avantage. À {{name}}.",
+    "💥 Tempo lancé — {{name}} enchaîne.",
+    "🏁 Sprint duo : {{name}} est attendu.",
+    "📈 Avance confirmée — {{name}} doit s’aligner.",
+    "🧨 Coup joué — {{name}} est au tour.",
+    "⚔️ Duel engagé — {{name}}, à toi.",
+    "🔔 {{name}} va recevoir le signal."
+  ],
+  "syncMessages": [
+    "🤝 Parfait — vous êtes synchro.",
+    "💎 Duo solide aujourd’hui.",
+    "🏆 Journée validée des deux côtés.",
+    "⚖️ Équilibre parfait dans le duo.",
+    "🔥 Rythme tenu ensemble.",
+    "🎯 Synchronisation impeccable.",
+    "🚀 Duo en pleine traction.",
+    "🧱 Discipline partagée — respect.",
+    "✨ Coordination parfaite.",
+    "🔒 Série protégée ensemble."
+  ]
+},
   "notificationsPush": {
     "daily1": "Un défi aujourd’hui peut changer ta journée. Go ?",
+    "streakTitle": "Garde ta série",
+"streakBody": "Il te reste un défi aujourd’hui. Valide-le maintenant.",
+"duoPartnerMarkedYouDidnt": "{{from}} a validé « {{title}} ». À toi de jouer pour rester synchro.",
+    "late1": "Ton défi du jour t’attend. On le valide ? 🔥",
+"late2": "Dernier rappel — protège ta série 💪",
+"late3": "Encore quelques minutes pour valider aujourd’hui ✨",
     "daily2": "Ne casse pas ta série. Fais-le maintenant 💪",
     "daily3": "Petit rappel : tes défis t’attendent aujourd’hui ✨",
     "duoNudgeOpened": "Duo : ouvre le défi ✅",
-    "streakTitle": "Garde ta série",
-  "streakBody": "Il te reste un défi aujourd’hui. Termine-le maintenant.",
-  "duoPartnerMarkedYouDidnt": "{{from}} a validé « {{title}} ». Termine le tien pour rester synchro.",
     "inviteAccepted": {
   "title": "Invitation acceptée 🎉",
   "body": "{{username}} a accepté ton défi « {{title}} » !"

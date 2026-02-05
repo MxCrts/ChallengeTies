@@ -26,6 +26,13 @@ import type { ViewStyle } from "react-native";
 
 export type TodayHubPrimaryMode = "mark" | "new" | "pick" | "duo" | "duoPending";
 
+export type TodayHubWhyReturnVariant = "duo" | "streak" | "trophy" | "warning";
+export type TodayHubWhyReturn = {
+  text: string;
+  variant?: TodayHubWhyReturnVariant;
+  icon?: string; // Ionicons name
+};
+
 type HubMeta = {
   id?: string;
   title?: string;
@@ -46,6 +53,8 @@ type Props = {
 
   title: string;
   sub: string;
+
+  whyReturn?: TodayHubWhyReturn | null;
 
   hubMeta?: HubMeta | null;
   hubDescription?: string;
@@ -84,6 +93,7 @@ export default function TodayHub(props: Props) {
     primaryAnimatedStyle,
     title,
     sub,
+    whyReturn,
     hubMeta,
     hubDescription,
     progressPct,
@@ -106,38 +116,79 @@ export default function TodayHub(props: Props) {
 
   // ✅ responsive micro-tokens (no hard UI)
   const UI = useMemo(() => {
-    const clamp = (v: number, a: number, b: number) => Math.max(a, Math.min(b, v));
-    const pad = clamp(normalize(isTiny ? 14 : isTablet ? 18 : 16), 14, 20);
-    const shellR = clamp(normalize(isTiny ? 24 : isTablet ? 30 : 26), 22, 32);
-    const cardR = clamp(normalize(isTiny ? 16 : isTablet ? 20 : 18), 14, 22);
-    const ctaR = clamp(normalize(isTiny ? 16 : isTablet ? 22 : 18), 14, 24);
-    const iconBox = clamp(normalize(isTiny ? 58 : isTablet ? 74 : 64), 56, 78);
-    const orb = clamp(Math.round(iconBox * 0.78), 44, 62);
-    const ring = iconBox;
-    const sheen = clamp(Math.round(iconBox * 1.55), 84, 132);
-    const aura = clamp(Math.round(iconBox * 1.78), 96, 150);
-    const gap = clamp(normalize(isTiny ? 10 : isTablet ? 14 : 12), 9, 16);
-    const ctaPadY = clamp(normalize(isTiny ? 7 : isTablet ? 10 : 8), 6, 12);
-    const ctaPadX = clamp(normalize(isTiny ? 10 : isTablet ? 14 : 12), 10, 16);
-   const ctaIcon = clamp(normalize(isTiny ? 14 : isTablet ? 18 : 16), 14, 20);
-   const hourglass = clamp(normalize(isTiny ? 20 : isTablet ? 26 : 22), 18, 28);
-   return {
-      pad,
-      shellR,
-      cardR,
-      ctaR,
-      iconBox,
-      orb,
-      ring,
-      sheen,
-      aura,
-      gap,
-      ctaPadY,
-      ctaPadX,
-      ctaIcon,
-      hourglass,
-    };
-  }, [normalize, isTiny, isTablet]);
+  const clamp = (v: number, a: number, b: number) => Math.max(a, Math.min(b, v));
+
+  const pad = clamp(normalize(isTiny ? 14 : isTablet ? 18 : 16), 14, 20);
+  const shellR = clamp(normalize(isTiny ? 24 : isTablet ? 30 : 26), 22, 32);
+  const cardR = clamp(normalize(isTiny ? 16 : isTablet ? 20 : 18), 14, 22);
+  const ctaR = clamp(normalize(isTiny ? 16 : isTablet ? 22 : 18), 14, 24);
+
+  const iconBox = clamp(normalize(isTiny ? 58 : isTablet ? 74 : 64), 56, 78);
+  const orb = clamp(Math.round(iconBox * 0.78), 44, 62);
+  const ring = iconBox;
+  const sheen = clamp(Math.round(iconBox * 1.55), 84, 132);
+  const aura = clamp(Math.round(iconBox * 1.78), 96, 150);
+
+  const gap = clamp(normalize(isTiny ? 10 : isTablet ? 14 : 12), 9, 16);
+
+  const ctaPadY = clamp(normalize(isTiny ? 7 : isTablet ? 10 : 8), 6, 12);
+  const ctaPadX = clamp(normalize(isTiny ? 10 : isTablet ? 14 : 12), 10, 16);
+  const ctaIcon = clamp(normalize(isTiny ? 14 : isTablet ? 18 : 16), 14, 20);
+  const hourglass = clamp(normalize(isTiny ? 20 : isTablet ? 26 : 22), 18, 28);
+
+  // ✅ manquants pour le “100%”
+  const previewR = clamp(normalize(isTiny ? 16 : isTablet ? 22 : 20), 14, 24);
+  const previewPadY = clamp(normalize(isTiny ? 12 : isTablet ? 16 : 14), 10, 18);
+  const previewPadX = clamp(normalize(isTiny ? 12 : isTablet ? 16 : 14), 10, 18);
+  const thumb = clamp(normalize(isTiny ? 44 : isTablet ? 56 : 46), 40, 60);
+  const thumbR = clamp(normalize(isTiny ? 12 : isTablet ? 16 : 14), 10, 18);
+  const chevronBox = clamp(normalize(isTiny ? 30 : isTablet ? 38 : 32), 28, 42);
+  const trackH = clamp(normalize(isTiny ? 5 : isTablet ? 7 : 6), 4, 8);
+
+  const primaryR = clamp(normalize(isTiny ? 16 : isTablet ? 22 : 20), 14, 24);
+  const primaryPadY = clamp(normalize(isTiny ? 14 : isTablet ? 18 : 16), 12, 20);
+  const primaryPadX = clamp(normalize(isTiny ? 14 : isTablet ? 18 : 16), 12, 20);
+
+  const createR = clamp(normalize(isTiny ? 16 : isTablet ? 22 : 18), 14, 24);
+  const createPadY = clamp(normalize(isTiny ? 14 : isTablet ? 18 : 16), 12, 20);
+  const createPadX = clamp(normalize(isTiny ? 12 : isTablet ? 16 : 14), 10, 18);
+  const createIcon = clamp(normalize(isTiny ? 32 : isTablet ? 40 : 34), 30, 44);
+
+  return {
+    pad,
+    shellR,
+    cardR,
+    ctaR,
+    iconBox,
+    orb,
+    ring,
+    sheen,
+    aura,
+    gap,
+    ctaPadY,
+    ctaPadX,
+    ctaIcon,
+    hourglass,
+
+    previewR,
+    previewPadY,
+    previewPadX,
+    thumb,
+    thumbR,
+    chevronBox,
+    trackH,
+
+    primaryR,
+    primaryPadY,
+    primaryPadX,
+
+    createR,
+    createPadY,
+    createPadX,
+    createIcon,
+  };
+}, [normalize, isTiny, isTablet]);
+
 
   const TYPO = useMemo(() => {
     // ✅ cohérent avec ton index + DailyBonus (un poil plus “dense”)
@@ -155,6 +206,12 @@ export default function TodayHub(props: Props) {
       createSub: normalize(isTiny ? 12 : isLarge ? 13 : 12.5),   // ↓ avant 14
     };
   }, [normalize, isTiny, isLarge]);
+
+  // ✅ “Why return” micro-pulse (subtil, pas TikTok cheap)
+  const whyPulse = useSharedValue(0);
+  useEffect(() => {
+    whyPulse.value = withRepeat(withTiming(1, { duration: 1600, easing: Easing.inOut(Easing.ease) }), -1, true);
+  }, [whyPulse]);
 
   // ✅ DuoPending breathing (gros cercle qui respire)
   const ring = useSharedValue(0);
@@ -226,6 +283,25 @@ export default function TodayHub(props: Props) {
     };
   });
 
+  const whyReturnStyle = useAnimatedStyle(() => {
+    // léger “alive” uniquement quand on affiche le bloc
+    const p = whyPulse.value;
+    return {
+      transform: [{ scale: 1 + p * 0.006 }],
+      opacity: 0.92 + p * 0.08,
+    };
+  });
+
+  const whyReturnIcon = useMemo(() => {
+    if (whyReturn?.icon) return whyReturn.icon;
+    switch (whyReturn?.variant) {
+      case "duo": return "people-outline";
+      case "streak": return "flame-outline";
+      case "trophy": return "trophy-outline";
+      case "warning": return "alert-circle-outline";
+      default: return "sparkles-outline";
+    }
+  }, [whyReturn?.icon, whyReturn?.variant]);
 
   const rightPill = useMemo(() => {
     if (primaryMode === "duoPending") {
@@ -268,6 +344,16 @@ export default function TodayHub(props: Props) {
       : "rgba(255,255,255,0.75)";
     const rim = isDarkMode ? "rgba(255,255,255,0.12)" : "rgba(2,6,23,0.08)";
 
+    // ✅ whyReturn
+    const whyBg = isDarkMode ? "rgba(255,255,255,0.06)" : "rgba(2,6,23,0.035)";
+    const whyBorder = isDarkMode ? "rgba(255,255,255,0.12)" : "rgba(2,6,23,0.08)";
+    const whyText = isDarkMode ? "rgba(248,250,252,0.92)" : "rgba(2,6,23,0.86)";
+    const whySub = isDarkMode ? "rgba(226,232,240,0.70)" : "rgba(15,23,42,0.62)";
+    const whyIcon = isDarkMode ? "rgba(226,232,240,0.92)" : "rgba(2,6,23,0.86)";
+
+    const whyGlowA = isDarkMode ? "rgba(255,215,0,0.14)" : "rgba(255,215,0,0.10)";
+    const whyGlowB = isDarkMode ? "rgba(0,255,255,0.12)" : "rgba(0,255,255,0.08)";
+
 
     // ✅ progress qui se “marie” au CTA (pas orange random)
     const progressFill = effectivePrimaryGradient[1];
@@ -290,6 +376,13 @@ export default function TodayHub(props: Props) {
       hairline,
       highlight,
       rim,
+      whyBg,
+      whyBorder,
+      whyText,
+      whySub,
+      whyIcon,
+      whyGlowA,
+      whyGlowB,
     };
   }, [isDarkMode, effectivePrimaryGradient]);
 
@@ -392,6 +485,7 @@ const pendingTitle = useMemo(
             {
               borderColor: TOKENS.rim,
               borderWidth: TOKENS.hairline,
+              borderRadius: UI.shellR,
             },
           ]}
         />
@@ -468,6 +562,47 @@ const pendingTitle = useMemo(
           {displaySub}
         </Text>
 
+        {/* ✅ WHY RETURN (bonus) — “perte évitée” / “partner t’attend” / “trophée proche” */}
+        {!!whyReturn?.text && (
+          <Animated.View
+            style={[
+              s.whyWrap,
+              whyReturnStyle,
+              {
+                borderColor: TOKENS.whyBorder,
+                backgroundColor: TOKENS.whyBg,
+                borderRadius: normalize(isTiny ? 16 : isTablet ? 20 : 18),
+              },
+            ]}
+          >
+            {/* glow ultra subtil */}
+            <LinearGradient
+              pointerEvents="none"
+              colors={[TOKENS.whyGlowA, "rgba(0,0,0,0)", TOKENS.whyGlowB]}
+              start={{ x: 0, y: 0 }}
+              end={{ x: 1, y: 1 }}
+              style={StyleSheet.absoluteFill}
+            />
+
+            <View style={s.whyRow}>
+              <View style={s.whyIconPill}>
+                <Ionicons name={whyReturnIcon as any} size={normalize(isTiny ? 16 : 18)} color={TOKENS.whyIcon} />
+              </View>
+              <Text
+                style={[
+                  s.whyText,
+                  { color: TOKENS.whyText, fontSize: normalize(isTiny ? 12.5 : isTablet ? 13.5 : 13) },
+                ]}
+                numberOfLines={2}
+                adjustsFontSizeToFit
+                minimumFontScale={0.90}
+              >
+                {whyReturn.text}
+              </Text>
+            </View>
+          </Animated.View>
+        )}
+
         {/* Hub preview (tap to open) */}
         {!!hubMeta?.title && (
           <Pressable
@@ -480,6 +615,9 @@ const pendingTitle = useMemo(
     {
       borderColor: TOKENS.border,
       backgroundColor: TOKENS.surface2,
+      borderRadius: UI.previewR,
+                paddingVertical: UI.previewPadY,
+                paddingHorizontal: UI.previewPadX,
     },
     pressFx(pressed, 0.993),
   ]}
@@ -488,7 +626,11 @@ const pendingTitle = useMemo(
               pointerEvents="none"
               style={[
                 s.previewRim,
-                { borderColor: TOKENS.rim, borderWidth: TOKENS.hairline },
+                {
+                  borderColor: TOKENS.rim,
+                  borderWidth: TOKENS.hairline,
+                  borderRadius: UI.previewR,
+                },
               ]}
             />
 
@@ -499,13 +641,16 @@ const pendingTitle = useMemo(
       {
         borderColor: TOKENS.thumbBorder,
         backgroundColor: TOKENS.thumbBg,
+        width: UI.thumb,
+                    height: UI.thumb,
+                    borderRadius: UI.thumbR,
 
       },
     ]}
   >
         <ExpoImage
       source={{ uri: hubMeta.imageUrl }}
-      style={s.previewThumb}
+      style={{ width: "100%", height: "100%" }}
       contentFit="cover"
       transition={120}
       cachePolicy="memory-disk"
@@ -519,6 +664,9 @@ const pendingTitle = useMemo(
       {
         borderColor: TOKENS.thumbBorder,
         backgroundColor: TOKENS.thumbBg,
+        width: UI.thumb,
+                    height: UI.thumb,
+                    borderRadius: UI.thumbR,
 
       },
     ]}
@@ -527,19 +675,23 @@ const pendingTitle = useMemo(
       pointerEvents="none"
       style={[
         s.thumbRim,
-        { borderColor: TOKENS.thumbBorder, borderWidth: TOKENS.hairline },
+         {
+                      borderColor: TOKENS.thumbBorder,
+                      borderWidth: TOKENS.hairline,
+                      borderRadius: UI.thumbR,
+                    },
       ]}
     />
 
     <Ionicons
       name="sparkles-outline"
-      size={normalize(18)}
+      size={normalize(Math.max(16, Math.round(UI.thumb * 0.42)))}
       color={isDarkMode ? "rgba(226,232,240,0.85)" : "rgba(2,6,23,0.75)"}
     />
   </View>
 )}
 
-            <View style={{ flex: 1, minWidth: 0, marginRight: 10 }}>
+            <View style={{ flex: 1, minWidth: 0, marginRight: normalize(10) }}>
               <Text
                  style={[s.previewTitle, { color: TOKENS.text, fontSize: TYPO.previewTitle }]}
                 numberOfLines={1}
@@ -568,7 +720,7 @@ const pendingTitle = useMemo(
                 </Text>
               )}
 
-              <View style={[s.progressTrack, { backgroundColor: TOKENS.track }]}>
+               <View style={[s.progressTrack, { backgroundColor: TOKENS.track, height: UI.trackH }]}>
 
                 <View
   style={[
@@ -576,6 +728,7 @@ const pendingTitle = useMemo(
     {
       width: `${Math.round(Math.max(0, Math.min(1, progressPct)) * 100)}%`,
       backgroundColor: TOKENS.progressFill,
+      height: UI.trackH,
     },
   ]}
 />
@@ -585,12 +738,17 @@ const pendingTitle = useMemo(
                         <View
               style={[
                 s.previewChevron,
-                { backgroundColor: isDarkMode ? "rgba(255,255,255,0.06)" : "rgba(2,6,23,0.04)" },
+                {
+                  backgroundColor: isDarkMode ? "rgba(255,255,255,0.06)" : "rgba(2,6,23,0.04)",
+                  width: UI.chevronBox,
+                  height: UI.chevronBox,
+                  borderRadius: 999,
+                },
               ]}
             >
               <Ionicons
                 name="chevron-forward"
-                size={normalize(18)}
+                size={normalize(Math.max(16, Math.round(UI.chevronBox * 0.56)))}
                 color={TOKENS.chevron}
               />
             </View>
@@ -739,6 +897,10 @@ const pendingTitle = useMemo(
     s.primaryBtn,
     s.shadowSoft,
     primaryAnimatedStyle as any,
+    {
+                borderRadius: UI.primaryR,
+                marginBottom: normalize(10),
+              },
     pressFx(pressed, 0.990),
   ]}
           >
@@ -746,7 +908,14 @@ const pendingTitle = useMemo(
              colors={[effectivePrimaryGradient[0], effectivePrimaryGradient[1]]}
               start={{ x: 0, y: 0 }}
               end={{ x: 1, y: 1 }}
-              style={s.primaryGradient}
+              style={[
+                s.primaryGradient,
+                {
+                  borderRadius: UI.primaryR,
+                  paddingVertical: UI.primaryPadY,
+                  paddingHorizontal: UI.primaryPadX,
+                },
+              ]}
             >
                             <Text
                 style={[s.primaryText, { fontSize: TYPO.primary }]}
@@ -757,7 +926,7 @@ const pendingTitle = useMemo(
 
                 {primaryLabel}
               </Text>
-              <Ionicons name={primaryIcon as any} size={normalize(20)} color="#0B1120" />
+              <Ionicons name={primaryIcon as any} size={normalize(isTiny ? 18 : 20)} color="#0B1120" />
             </LinearGradient>
           </Pressable>
         )}
@@ -783,7 +952,13 @@ const pendingTitle = useMemo(
  }}
  style={({ pressed }) => [
    s.createCard,
-   { borderColor: TOKENS.border, backgroundColor: TOKENS.surface2 },
+   {
+                borderColor: TOKENS.border,
+                backgroundColor: TOKENS.surface2,
+                borderRadius: UI.createR,
+                paddingVertical: UI.createPadY,
+                paddingHorizontal: UI.createPadX,
+              },
    pressFx(pressed, 0.993),
  ]}
           >
@@ -793,10 +968,13 @@ const pendingTitle = useMemo(
                 {
                   borderColor: TOKENS.thumbBorder,
                   backgroundColor: TOKENS.thumbBg,
+                  width: UI.createIcon,
+                  height: UI.createIcon,
+                  borderRadius: 999,
                 },
               ]}
             >
-              <Ionicons name="add" size={normalize(18)} color={isDarkMode ? "#F8FAFC" : "#0B1120"} />
+               <Ionicons name="add" size={normalize(isTiny ? 16 : 18)} color={isDarkMode ? "#F8FAFC" : "#0B1120"} />
             </View>
 
            <Text
@@ -901,17 +1079,40 @@ shadowRadius: 22,
     fontFamily: F.regular,
     marginBottom: 14,
   },
-  preview: {
+  whyWrap: {
     width: "100%",
-    borderWidth: 0,
-borderRadius: 20,
-paddingVertical: 14,
-paddingHorizontal: 14,
-
+    borderWidth: 1,
+    overflow: "hidden",
+    marginBottom: 12,
+    paddingVertical: 10,
+    paddingHorizontal: 12,
+  },
+  whyRow: {
     flexDirection: "row",
     alignItems: "center",
-    marginBottom: 14,
+    gap: 10,
   },
+  whyIconPill: {
+    width: 30,
+    height: 30,
+    borderRadius: 999,
+    alignItems: "center",
+    justifyContent: "center",
+    backgroundColor: "rgba(255,255,255,0.04)",
+  },
+  whyText: {
+    flex: 1,
+    minWidth: 0,
+    fontFamily: F.bold,
+    letterSpacing: -0.2,
+  },
+  preview: {
+     width: "100%",
+     borderWidth: 0,
+     flexDirection: "row",
+     alignItems: "center",
+     marginBottom: 14,
+   },
   previewTitle: {
     fontSize: 18,
     fontFamily: F.bold,
@@ -924,9 +1125,6 @@ paddingHorizontal: 14,
     marginBottom: 10,
   },
   previewThumbWrap: {
-  width: 46,
-  height: 46,
-  borderRadius: 14,
   borderWidth: 0,
   overflow: "hidden",
   alignItems: "center",
@@ -938,24 +1136,17 @@ previewThumb: {
   height: "100%",
 },
   progressTrack: {
-    height: 6,
     borderRadius: 999,
     overflow: "hidden",
   },
   progressFill: {
-  height: 6,
   borderRadius: 999,
 },
   primaryBtn: {
     width: "100%",
     overflow: "hidden",
-    marginBottom: 10,
-    borderRadius: 20,
   },
   primaryGradient: {
-    paddingVertical: 16,
-    paddingHorizontal: 16,
-    borderRadius: 20,
     flexDirection: "row",
     alignItems: "center",
     justifyContent: "space-between",
@@ -984,7 +1175,6 @@ previewThumb: {
     left: 0,
     right: 0,
     bottom: 0,
-    borderRadius: 20,
   },
 
   thumbRim: {
@@ -993,7 +1183,6 @@ previewThumb: {
     left: 0,
     right: 0,
     bottom: 0,
-    borderRadius: 14,
   },
 
   pendingWrap: {
@@ -1053,8 +1242,6 @@ previewThumb: {
     opacity: 0.55,
   },
   previewChevron: {
-    width: 32,
-    height: 32,
     borderRadius: 999,
     alignItems: "center",
     justifyContent: "center",
@@ -1160,15 +1347,10 @@ pendingCopy: {
   createCard: {
     width: "100%",
     borderWidth: 1,
-    borderRadius: 18,
-    paddingVertical: 16,
-    paddingHorizontal: 14,
     alignItems: "center",
     marginTop: 10,
   },
   createIcon: {
-    width: 34,
-    height: 34,
     borderRadius: 999,
     alignItems: "center",
     justifyContent: "center",

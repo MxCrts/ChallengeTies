@@ -92,7 +92,7 @@ import {
 import { useToast } from "../../src/ui/Toast";
 import TodayHub, { type TodayHubPrimaryMode } from "@/components/TodayHub/TodayHub";
 import { useTodayHubState } from "@/components/TodayHub/useTodayHubState";
-
+import type { TodayHubWhyReturn } from "../../components/TodayHub/TodayHub";
 
 const getScreen = () => Dimensions.get("window");
 const { width: SCREEN_WIDTH, height: SCREEN_HEIGHT } = getScreen();
@@ -1876,9 +1876,20 @@ const handleWarmupPress = useCallback(async () => {
     try {
       await Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
     } catch {}
-    // On centralise l'action “Marquer” dans Focus (déjà ton hub)
-    safeNavigate("/focus", "home-mark-today");
-  }, [safeNavigate]);
+    // ✅ “Marquer” doit ouvrir le challenge-details du défi concerné (pas Focus)
+  const targetId =
+    primaryActiveId ??
+    todayHubView.hubChallengeId ??
+    activeChallengeId;
+
+  if (!targetId) {
+    // fallback safe : si on n’a aucun id, on envoie vers Explore
+    safeNavigate("/explore", "home-mark-no-target");
+    return;
+  }
+
+  safeNavigate(`/challenge-details/${targetId}`, "home-mark-today");
+}, [primaryActiveId, todayHubView.hubChallengeId, activeChallengeId, safeNavigate]);
 
   const handleSpotlightMark = useCallback(async () => {
     await dismissSpotlight();
@@ -1982,6 +1993,86 @@ const todayHubHubDescription = useMemo(() => {
   return clean ? clean.replace(/\s+/g, " ") : "";
 }, [todayHubView.hubMeta?.description]);
 
+const whyReturn = useMemo<TodayHubWhyReturn | null>(() => {
+  const hasActive = !!todayHubView?.hasActiveChallenges;
+
+  // 1) DUO pending prioritaire (si tu veux l'effet "viral loop")
+  if (todayHubPrimaryMode === "duoPending" || hasOutgoingPendingInvite) {
+    const uname = pendingInvite?.inviteeUsername?.trim?.();
+    return {
+      variant: "duo",
+      text: t("homeZ.todayHub.whyReturn.duo", {
+        defaultValue: "Ton duo est en attente.",
+        who: uname ? `@${uname}` : "",
+      }),
+    };
+  }
+
+  // 2) WARNING uniquement si on a un signal fiable
+  const anyUnmarked =
+    typeof (todayHubView as any)?.anyUnmarkedToday === "boolean"
+      ? (todayHubView as any).anyUnmarkedToday
+      : false;
+
+  if (hasActive && anyUnmarked) {
+    return {
+      variant: "warning",
+      text: t("homeZ.todayHub.whyReturn.warning", {
+        defaultValue: "Il te reste un check-in aujourd’hui. Garde ton rythme.",
+      }),
+    };
+  }
+
+  // 3) BONUS
+  if (canClaimDailyBonus) {
+    return {
+      variant: "trophy",
+      text: t("homeZ.todayHub.whyReturn.trophy", {
+        defaultValue: "Un bonus t’attend aujourd’hui. Petit gain, gros momentum.",
+      }),
+    };
+  }
+
+  // 4) STREAK
+  const streak =
+    (userData as any)?.streak ??
+    (userData as any)?.streakDays ??
+    (userData as any)?.currentStreak ??
+    null;
+  const streakNum =
+    typeof streak === "number"
+      ? streak
+      : typeof streak?.current === "number"
+      ? streak.current
+      : typeof streak?.count === "number"
+      ? streak.count
+      : null;
+
+  if (typeof streakNum === "number" && streakNum > 0) {
+    return {
+      variant: "streak",
+      text: t(
+        "homeZ.todayHub.whyReturn.streak",
+        "Tu construis une série. Un petit pas par jour."
+      ),
+    };
+  }
+
+  // 5) DEFAULT
+   return {
+    text: t("homeZ.todayHub.whyReturn.default", {
+      defaultValue: "Reviens quand tu veux : 1 minute suffit pour avancer.",
+    }),
+  };
+}, [
+  t,
+  userData,
+  canClaimDailyBonus,
+  todayHubView,
+  todayHubPrimaryMode,
+  hasOutgoingPendingInvite,
+  pendingInvite?.inviteeUsername,
+]);
 // ✅ actions TodayHub
 const onOpenHub = useCallback(async () => {
   const id = todayHubView.hubChallengeId ?? primaryActiveId;
@@ -2457,6 +2548,7 @@ setPostWelcomeAbsorbArmed(true);
   activeCount={todayHubView.activeCount}
   title={todayHubTitle}
   sub={todayHubSub}
+  whyReturn={whyReturn}
   hubMeta={todayHubView.hubMeta}
   hubDescription={todayHubHubDescription}
   progressPct={todayHubView.progress.pct}

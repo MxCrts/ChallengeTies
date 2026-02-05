@@ -465,6 +465,33 @@
   "foot": "感谢你与我们一起打造这段旅程。"
 },
 "dailySelectedSubtitleShort": "今日精选。",
+"soloMoment": {
+    "kicker": "个人时刻",
+    "badge": "完成",
+    "title": "第 {{day}} 天已锁定",
+    "titleMilestone": "里程碑达成 — 第 {{day}} 天",
+    "subtitle": "安静地前进，但是真的在变强。",
+    "subtitleMilestone": "这很硬核。继续。",
+    "pool": [
+      "再多 1%。改变就是这么发生的。",
+      "建立节奏。守住它。",
+      "不必完美，只要稳定。",
+      "今天你赢过了自己。",
+      "每一天都算数。今天也一样。",
+      "你正在成为说到做到的人。",
+      "现在很小，之后会很大。",
+      "一次行动。一种身份。"
+    ],
+    "fallback": "做得好。继续。",
+    "progress": "{{day}} / {{total}} 天",
+    "streak": "连胜 {{streak}}",
+    "cta": "继续",
+    "a11y": {
+      "closeBackdrop": "关闭",
+      "closeButton": "关闭",
+      "cta": "继续"
+    }
+  },
 "homeZ": {
   "duoPending": {
     "cta": "准备双人模式",
@@ -486,6 +513,17 @@
       "ctaHint": "探索可用的挑战。"
     },
     "todayHub": {
+      "primaryMark": "今天打卡",
+      "primaryPending": "查看",
+      "primaryPick": "选择挑战",
+      "primaryNew": "新挑战",
+      "whyReturn": {
+        "warning": "你今天还差一次打卡。保持节奏。",
+        "duo": "你的双人挑战仍在等待中。",
+        "trophy": "今天有奖励等你。小胜利，大动能。",
+        "streak": "你在建立连胜。每天一小步。",
+        "default": "随时回来：1 分钟也能向前一步。"
+      },
       "badge": "今天",
       "primaryActiveShort": "打卡",
       "metaPending": "邀请",
@@ -1359,36 +1397,31 @@
     "submitButton": "提交提案"
   },
   "missedChallenge": {
-    "adNotReady": "广告尚未准备好。请稍后再试。",
+    "adNotReady": "广告还没准备好，请稍后再试。",
     "confirmResetTitle": "确认？",
-"confirmResetText": "你有可用的连续通行证。确定要重置你的连续记录吗？"
-,
-    "title": "你错过了一个挑战",
-    "subtitle": "别担心，你仍然可以挽救你的连续记录 💪",
-
+    "confirmResetText": "你有可用的 Streak Pass。确定要重置连胜吗？",
+    "title": "你错过了挑战",
+    "subtitle": "别慌——你仍然可以保住连胜 💪",
     "reset": {
-      "title": "重置我的连续记录",
-      "subtitle": "从第 1 天重新开始，此操作无法撤销。"
+      "title": "重置连胜",
+      "subtitle": "该挑战从第 1 天重新开始，无法撤销。"
+    },
+    "streakPass": {
+      "title": "使用 Streak Pass",
+      "subtitle": "取消漏打的一天，连胜继续。"
     },
     "pill": {
-   "streakPass": "可用的连续保护卡",
-   "trophies": "消耗：{{count}} 奖杯"
- },
-
-    "streakPass": {
-      "title": "使用连续保护卡",
-      "subtitle": "使用连续保护卡保持你的连续记录不受影响。"
+      "streakPass": "Streak Pass 可用",
+      "trophies": "消耗：{{count}} 奖杯"
     },
-
     "ad": {
-      "title": "观看广告以拯救连续记录",
-      "subtitle": "观看一段短视频即可保持连续记录，不会失去进度。",
-     "disabled": "视频暂时不可用，请稍后再试。"
+      "title": "观看广告",
+      "subtitle": "看个短视频，连胜就能保住。",
+      "disabled": "视频还没准备好，请稍等。"
     },
-
     "useTrophies": {
-      "title": "花费 {{count}} 奖杯来拯救连续记录",
-      "subtitle": "使用一些奖杯来保护你的进度。"
+      "title": "保住连胜 — {{count}} 奖杯",
+      "subtitle": "消耗奖杯，保住连胜。"
     }
   },
   "privacyPolicy": {
@@ -4506,8 +4539,55 @@
   "footerLine1": "加入我，在 ChallengeTies",
   "footerLine2": "挑战、专注、每日胜利。"
 },
+"duoMoment": {
+  "leader": "领先",
+  "badgeSync": "同步",
+  "badgeTurn": "轮到TA",
+  "stateSync": "已同步",
+  "stateTurn": "TA的回合",
+  "subtitleSync": "你们步调一致。保持同步。",
+  "subtitleTurn": "你已打卡。接下来轮到你的伙伴。",
+  "fallbackSync": "完美——你们已同步。",
+  "fallbackTurn": "已发送给 {{name}}。现在轮到TA。",
+  "a11y": {
+    "closeBackdrop": "关闭窗口",
+    "closeButton": "关闭"
+  },
+  "kicker": "双人时刻",
+  "you": "你",
+  "pressureMessages": [
+    "⚡ 轮到 {{name}} 了。",
+    "🔥 你已打卡——{{name}}，该你了。",
+    "🎯 你先下一城。{{name}} 需要跟上。",
+    "🚀 你已领先。{{name}} 必须追上。",
+    "💥 你定节奏——{{name}} 跟上。",
+    "🏁 双人冲刺：{{name}} 下一位。",
+    "📈 进度已确认——{{name}} 需要同步。",
+    "🧨 漂亮——轮到 {{name}}。",
+    "⚔️ 对决开启——{{name}}，到你。",
+    "🔔 {{name}} 马上会看到。"
+  ],
+  "syncMessages": [
+    "🤝 完美——你们已同步。",
+    "💎 今天的组合很稳。",
+    "🏆 双方都已完成打卡。",
+    "⚖️ 节奏刚刚好。",
+    "🔥 一起把节奏守住了。",
+    "🎯 同步得很漂亮。",
+    "🚀 组合状态正起飞。",
+    "🧱 共同自律——respect。",
+    "✨ 配合到位。",
+    "🔒 连续记录一起守住。"
+  ]
+},
   "notificationsPush": {
     "daily1": "今天完成一个挑战，就能改变这一天。准备好了吗？",
+    "streakTitle": "守住连胜",
+"streakBody": "你今天还有一个挑战。现在就完成。",
+"duoPartnerMarkedYouDidnt": "{{from}} 已完成「{{title}}」。轮到你了，保持同步。",
+    "late1": "今天的挑战还在等你。现在完成？🔥",
+"late2": "最后提醒——守住你的连胜 💪",
+"late3": "今天还来得及完成 ✨",
     "duoNudgeOpened": "双人：打开挑战 ✅",
     "daily2": "别断连胜。现在就做 💪",
     "daily3": "温柔提醒：你的挑战今天在等你 ✨",

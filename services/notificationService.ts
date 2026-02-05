@@ -802,6 +802,7 @@ export const sendReferralMilestoneLocalNudge = async (
     username?: string; // 🆕 pour afficher "parrain de username"
   }
 ) => {
+  return;
   try {
     // 1) Déterminer le palier réellement atteint (le plus haut <= activatedCount)
     const reached = payload.milestones
@@ -923,9 +924,9 @@ export function getPathFromNotificationData(data: any): string {
     return challengeId ? `/challenge-details/${challengeId}` : "/current-challenges";
   }
 
-   if (kind === "referral_milestone_unlocked" || kind === "referral_new_child") {
-    return "/referral/ShareAndEarn";
-  }
+ //  if (kind === "referral_milestone_unlocked" || kind === "referral_new_child") {
+ //   return "/referral/ShareAndEarn";
+ // }
 
   if (challengeId) return `/challenge-details/${challengeId}`;
 
@@ -992,23 +993,23 @@ export const startNotificationResponseListener = (
         return;
       }
 
-      if (kind === "referral_new_child") {
-        const username: string = String(data?.username || "");
-        onToast(tSafeLocal("referral.notif.newChild.toast", { username }));
-        return;
-      }
+  //    if (kind === "referral_new_child") {
+  //    const username: string = String(data?.username || "");
+  //      onToast(tSafeLocal("referral.notif.newChild.toast", { username }));
+  //      return;
+  //    }
 
-      if (kind === "referral_milestone_unlocked") {
-        const titleKey = data?.titleKey || "referral.nudge.title";
-        const bodyKey = data?.bodyKey || "referral.nudge.body";
-        const params = data?.params || {};
-        const toastText =
-          tSafeLocal(titleKey, params) ||
-          tSafeLocal(bodyKey, params) ||
-          tSafeLocal("notificationsPush.opened");
-        onToast(toastText);
-        return;
-      }
+  //    if (kind === "referral_milestone_unlocked") {
+  //      const titleKey = data?.titleKey || "referral.nudge.title";
+  //      const bodyKey = data?.bodyKey || "referral.nudge.body";
+  //      const params = data?.params || {};
+  //      const toastText =
+  //        tSafeLocal(titleKey, params) ||
+  //        tSafeLocal(bodyKey, params) ||
+  //        tSafeLocal("notificationsPush.opened");
+  //     onToast(toastText);
+  //      return;
+  //    }
 
       // daily + fallback
       onToast(tSafeLocal("notificationsPush.opened"));

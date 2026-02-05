@@ -1007,37 +1007,32 @@
     "placeholderDescription": "설명 (선택사항)",
     "submitButton": "제안 제출"
   },
-
-  "missedChallenge": {
-    "adNotReady": "광고가 아직 준비되지 않았습니다. 잠시 후 다시 시도해주세요.",
-    "confirmResetTitle": "확인",
-    "confirmResetText": "스트릭 패스가 있습니다. 정말로 시리즈를 초기화하시겠습니까？",
-    "title": "챌린지를 놓친 것 같아요",
-    "subtitle": "걱정 마세요. 아직 스트릭을 지킬 수 있어요 💪",
-
+ "missedChallenge": {
+    "adNotReady": "광고가 아직 준비되지 않았어요. 잠시 후 다시 시도해 주세요.",
+    "confirmResetTitle": "확인할까요?",
+    "confirmResetText": "Streak Pass가 있어요. 정말 스트릭을 초기화할까요?",
+    "title": "챌린지를 놓쳤어요",
+    "subtitle": "괜찮아요 — 아직 스트릭을 지킬 수 있어요 💪",
     "reset": {
-      "title": "시리즈 초기화",
-      "subtitle": "1일차부터 다시 시작합니다. 이 작업은 되돌릴 수 없습니다."
+      "title": "스트릭 초기화",
+      "subtitle": "이 챌린지를 1일차부터 다시 시작해요. 되돌릴 수 없어요."
+    },
+    "streakPass": {
+      "title": "Streak Pass 사용",
+      "subtitle": "놓친 하루를 무효로 하고 스트릭을 유지해요."
     },
     "pill": {
-   "streakPass": "스트릭 패스 사용 가능",
-   "trophies": "비용: {{count}} 트로피"
- },
-
-    "streakPass": {
-      "title": "스트릭 패스 사용",
-       "subtitle": "스트릭 패스를 사용해 기록을 유지하세요."
+      "streakPass": "Streak Pass 사용 가능",
+      "trophies": "비용: 트로피 {{count}}개"
     },
-
     "ad": {
-      "title": "광고 시청으로 스트릭 유지",
-       "subtitle": "짧은 영상을 시청하면 스트릭을 유지할 수 있어요.",
-       "disabled": "영상이 아직 준비되지 않았습니다. 잠시만 기다려 주세요."
+      "title": "광고 보기",
+      "subtitle": "짧은 영상으로 스트릭을 지킬 수 있어요.",
+      "disabled": "영상이 아직 준비되지 않았어요. 잠시만요."
     },
-
     "useTrophies": {
-      "title": "{{count}} 트로피 사용하여 스트릭 유지",
-      "subtitle": "트로피를 사용해 진행 상황을 보호하세요."
+      "title": "스트릭 저장 — 트로피 {{count}}개",
+      "subtitle": "트로피로 연속 기록을 지켜요."
     }
   },
   "privacyPolicy": {
@@ -2291,9 +2286,55 @@
   "footerLine1": "ChallengeTies에 함께하세요",
   "footerLine2": "챌린지, 집중, 그리고 매일의 승리."
 },
-
+"duoMoment": {
+  "leader": "리더",
+  "badgeSync": "SYNC",
+  "badgeTurn": "상대 차례",
+  "stateSync": "동기화",
+  "stateTurn": "상대 차례",
+  "subtitleSync": "호흡이 맞아. 이대로 동기화 유지.",
+  "subtitleTurn": "너는 체크 완료. 이제 상대 차례야.",
+  "fallbackSync": "완벽해 — 동기화 성공.",
+  "fallbackTurn": "{{name}}에게 보냈어. 이제 상대 차례.",
+  "a11y": {
+    "closeBackdrop": "창 닫기",
+    "closeButton": "닫기"
+  },
+  "kicker": "듀오 모먼트",
+  "you": "너",
+  "pressureMessages": [
+    "⚡ 이제 {{name}} 차례.",
+    "🔥 체크 완료 — {{name}}, 지금이야.",
+    "🎯 한 수 앞섰다. {{name}}가 따라와야 해.",
+    "🚀 리드 잡았다. {{name}}가 맞춰.",
+    "💥 네가 템포를 만든다 — {{name}}가 따라.",
+    "🏁 듀오 스프린트: {{name}}가 다음.",
+    "📈 진행 확인 — {{name}}는 동기화 필요.",
+    "🧨 좋은 한 방 — {{name}} 차례.",
+    "⚔️ 듀얼 시작 — {{name}}, 네 차례.",
+    "🔔 {{name}}에게 신호가 간다."
+  ],
+  "syncMessages": [
+    "🤝 완벽해 — 동기화됐어.",
+    "💎 오늘 듀오 단단하다.",
+    "🏆 둘 다 체크 완료.",
+    "⚖️ 균형이 완벽해.",
+    "🔥 리듬을 함께 지켰다.",
+    "🎯 동기화가 깔끔해.",
+    "🚀 듀오가 탄력 받는다.",
+    "🧱 함께하는 규율 — 리스펙.",
+    "✨ 호흡이 딱 맞아.",
+    "🔒 스트릭을 같이 지켰다."
+  ]
+},
   "notificationsPush": {
     "daily1": "오늘 한 번의 챌린지가 하루를 바꿔. 준비됐어?",
+    "streakTitle": "연속 기록 유지",
+"streakBody": "오늘 챌린지 하나 남았어. 지금 끝내자.",
+"duoPartnerMarkedYouDidnt": "{{from}}님이 \"{{title}}\"을 완료했어. 이제 너 차례—같이 맞춰가자.",
+    "late1": "오늘 챌린지가 기다려. 지금 할래? 🔥",
+"late2": "마지막 기회 — 연속 기록 지켜 💪",
+"late3": "아직 오늘 안 늦었어 ✨",
     "duoNudgeOpened": "듀오: 챌린지를 열어줘 ✅",
     "daily2": "연속 기록 끊지 마. 지금 하자 💪",
     "daily3": "가벼운 알림: 오늘도 챌린지가 기다려 ✨",
@@ -2352,6 +2393,33 @@
     "notForYouMessage": "이 초대는 현재 계정의 것이 아닙니다."
   },
   "dailySelectedSubtitleShort": "오늘의 선택.",
+ "soloMoment": {
+    "kicker": "솔로 모먼트",
+    "badge": "완료",
+    "title": "{{day}}일차 잠금",
+    "titleMilestone": "마일스톤 달성 — {{day}}일차",
+    "subtitle": "조용히 전진. 그런데 진짜야.",
+    "subtitleMilestone": "이건 진짜다. 계속 가.",
+    "pool": [
+      "또 1%. 변화는 이렇게 온다.",
+      "리듬을 만들어. 지켜.",
+      "완벽 말고. 꾸준함.",
+      "오늘, 너는 너를 이겼다.",
+      "매일이 중요해. 오늘도.",
+      "너는 해내는 사람이 되고 있어.",
+      "지금은 작아도, 나중엔 크게.",
+      "한 번의 행동. 하나의 정체성."
+    ],
+    "fallback": "좋아. 계속 가.",
+    "progress": "{{day}} / {{total}}일",
+    "streak": "연속 {{streak}}",
+    "cta": "계속하기",
+    "a11y": {
+      "closeBackdrop": "닫기",
+      "closeButton": "닫기",
+      "cta": "계속하기"
+    }
+  },
 "homeZ": {
   "duoPending": {
      "cta": "듀오 준비하기",
@@ -2373,6 +2441,17 @@
       "ctaA11y": "시작하고 도전 선택"
     },
     "todayHub": {
+      "primaryMark": "오늘 체크인",
+      "primaryPending": "보기",
+      "primaryPick": "챌린지 선택",
+      "primaryNew": "새 챌린지",
+      "whyReturn": {
+        "warning": "오늘 아직 체크인이 남았어. 리듬을 유지하자.",
+        "duo": "듀오가 아직 대기 중이야.",
+        "trophy": "오늘 보너스가 기다려. 작은 승리, 큰 모멘텀.",
+        "streak": "스트릭을 쌓는 중이야. 매일 작은 한 걸음.",
+        "default": "언제든 돌아와: 1분이면 충분히 앞으로 갈 수 있어."
+      },
       "badge": "오늘",
       "primaryActiveShort": "기록",
        "metaPending": "초대",

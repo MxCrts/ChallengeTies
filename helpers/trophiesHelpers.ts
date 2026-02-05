@@ -466,24 +466,36 @@ export async function addAchievement(userId: string) {
 }
 
 /** Déduit des trophées (paiement / achat premium / etc.) */
-export async function deductTrophies(
-  userId: string,
-  amount: number
-): Promise<boolean> {
+export async function deductTrophies(userId: string, amount: number): Promise<boolean> {
   if (!userId) return false;
+
   const userRef = doc(db, "users", userId);
+
+  const cost = Number(amount);
+  if (!Number.isFinite(cost) || cost <= 0) return false;
+
   try {
-    const snap = await getDoc(userRef);
-    if (!snap.exists()) throw new Error("User doc not found.");
-    const current = num(snap.data()?.trophies, 0);
-    if (current < amount) return false;
-    await updateDoc(userRef, { trophies: increment(-amount) });
-    return true;
+    return await runTransaction(db, async (tx) => {
+      const snap = await tx.get(userRef);
+      if (!snap.exists()) return false;
+
+      const raw = (snap.data() as any)?.trophies;
+
+      // ✅ accepte number OU string "400"
+      const current = Number(raw);
+      if (!Number.isFinite(current)) return false;
+
+      if (current < cost) return false;
+
+      tx.update(userRef, { trophies: increment(-cost) });
+      return true;
+    });
   } catch (e) {
     console.error("Error deducting trophies:", e);
     return false;
   }
 }
+
 
 /**
  * Réclame un succès et crédite les trophées — ATOMIQUE (transaction),
