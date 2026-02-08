@@ -31,6 +31,7 @@ import useGateForGuest from "@/hooks/useGateForGuest";
 import RequireAuthModal from "@/components/RequireAuthModal";
 import { useReferralStatus } from "@/src/referral/useReferralStatus";
 import { useVisitor } from "@/context/VisitorContext";
+import { useAuth } from "../../context/AuthProvider";
 
 /* ----------------- Responsive helpers ----------------- */
 const clamp = (v: number, min: number, max: number) =>
@@ -194,6 +195,7 @@ const FocusTabIcon = ({
 const TabsLayout = () => {
   const { t } = useTranslation();
   const insets = useSafeAreaInsets();
+  const { user } = useAuth();
   const {
     theme,
     reduceMotion = false,
@@ -206,6 +208,7 @@ const TabsLayout = () => {
   const [hasUnclaimed, setHasUnclaimed] = useState(false);
   const { isTutorialActive } = useTutorial();
   const { gate, modalVisible, closeGate } = useGateForGuest();
+  const { isGuest } = useVisitor();
   const { claimable } = useReferralStatus();
 
   const iconSize = isTablet ? n(26) : n(22);
@@ -213,8 +216,15 @@ const TabsLayout = () => {
   const showLabels = width >= 360;
 
   useEffect(() => {
-    const uid = auth.currentUser?.uid;
-    if (!uid) return;
+    if (isGuest) {
+    setHasUnclaimed(false);
+    return;
+  }
+  const uid = user?.uid;
+    if (!uid) {
+      setHasUnclaimed(false);
+      return;
+    }
     const unsub = onSnapshot(doc(db, "users", uid), (snap) => {
       if (!snap.exists()) {
         setHasUnclaimed(false);
@@ -227,7 +237,7 @@ const TabsLayout = () => {
       setHasUnclaimed(pending.length > 0);
     });
     return () => unsub();
-  }, []);
+  }, [user?.uid, isGuest]);
 
   const tabBarBackground = useMemo(
     () => (

@@ -853,8 +853,15 @@ InteractionManager.runAfterInteractions(() => {
     try {
       await AsyncStorage.removeItem("pendingTutorial");
       await AsyncStorage.setItem(GUEST_KEY, "1").catch(() => {});
+      // ✅ one-shot: permet à AppNavigator de sortir de /login même si VisitorContext hydrate lentement
+      (globalThis as any).__GUEST_JUST_ENABLED__ = Date.now();
+      // ✅ sécurité: si un intent avait forcé le flow auth (ref/deeplink), on ne veut pas qu'il écrase le mode visiteur
+      (globalThis as any).__FORCE_AUTH_FLOW__ = false;
+      (globalThis as any).__DL_BLOCK_ROOT_REDIRECT__ = false;
+      (globalThis as any).__NOTIF_BLOCK_ROOT_REDIRECT__ = false;
       try { await setGuest(true); } catch {}
-      router.replace("/");
+      // ✅ go direct tabs (évite re-passer par "/login" si un guard externe est agressif)
+      router.replace("/(tabs)");
     } finally {
       submittingRef.current = false;
     }

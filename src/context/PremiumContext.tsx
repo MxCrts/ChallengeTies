@@ -100,8 +100,11 @@ export const PremiumProvider: React.FC<{ children: React.ReactNode }> = ({
 
     const premiumField: PremiumField = data.premium;
 
-console.log("[PremiumContext] premiumField =", premiumField);
-console.log("[PremiumContext] isPremium =", data.isPremium, "premium=", data.premium);
+// ⚠️ logs uniquement dev (sinon ça te flingue le boot en prod)
+          if (__DEV__) {
+             console.log("[PremiumContext] premiumField =", premiumField);
+             console.log("[PremiumContext] isPremium =", data.isPremium, "premium=", data.premium);
+          }
 
 
     // ✅ premium object safe
@@ -127,56 +130,8 @@ console.log("[PremiumContext] isPremium =", data.isPremium, "premium=", data.pre
 
           const expireMs = expireMsFromObj ?? expireMsFromRoot;
           const hasTempPremium = typeof expireMs === "number" ? expireMs > Date.now() : false;
-          const isTempExpired = typeof expireMs === "number" ? expireMs <= Date.now() : false;
 
     const nextIsPremium = hasLegacyFlag || hasPremiumObjectFlag || hasTempPremium;
-
-          // ✅ Optionnel mais recommandé : auto-clean si expiré (évite “fantôme” côté data)
-          // -> On ne supprime PAS le champ, on le met à null pour rester compatible et éviter les boucles.
-          if (isTempExpired) {
-            try {
-              if (premiumObj?.tempPremiumUntil) {
-                updateDoc(userRef, {
-                  "premium.tempPremiumUntil": null,
-                }).catch(() => {});
-              } else if (data.tempPremiumUntil) {
-                updateDoc(userRef, { tempPremiumUntil: null }).catch(() => {});
-              } else if (data.premiumUntil) {
-                updateDoc(userRef, { premiumUntil: null }).catch(() => {});
-              }
-            } catch {}
-          }
-
-    // 🔥 LOGS DIAGNOSTIC (à garder 1 run)
-    try {
-      const raw =
-        premiumObj?.tempPremiumUntil ?? data.tempPremiumUntil ?? data.premiumUntil ?? null;
-
-      const parsed =
-        typeof raw === "string"
-          ? Date.parse(raw)
-          : raw instanceof Timestamp
-          ? raw.toMillis()
-          : raw instanceof Date
-          ? raw.getTime()
-          : null;
-
-      console.log("🧾 [Premium] debug", {
-        uid: snap.id,
-        isPremiumField: data.isPremium,
-        premiumRootType: typeof data.premium,
-        premiumFieldValue: data.premium,
-        tempPremiumUntilRaw: raw,
-        parsedExpireMs: parsed,
-        nowMs: Date.now(),
-        hasLegacyFlag,
-        hasPremiumObjectFlag,
-        hasTempPremium,
-        nextIsPremium,
-      });
-    } catch (e) {
-      console.log("🧾 [Premium] debug error", e);
-    }
 
     setIsPremiumUser(nextIsPremium);
     setLoading(false);

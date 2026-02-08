@@ -1040,8 +1040,12 @@
       "trophies": "Kosten: {{count}} trofeeën"
     },
     "ad": {
-      "title": "Advertentie kijken",
-      "subtitle": "Een korte video redt je streak.",
+      "title": "Streak redden — Advertentie",
+  "subtitle": "Kijk een advertentie en behoud je streak.",
+  "loading": "Advertentie wordt geopend…",
+  "notReady": "Advertentie nog niet klaar. Probeer het over een paar seconden opnieuw.",
+  "notEarned": "Beloning niet bevestigd. Je kunt het opnieuw proberen.",
+  "error": "Advertentie kon niet worden geladen. Probeer het zo meteen opnieuw.",
       "disabled": "Video nog niet klaar. Even geduld."
     },
     "useTrophies": {
@@ -2469,6 +2473,13 @@
       "cta": "Doorgaan"
     }
   },
+  "deeplink": {
+      "inviteHandoff": {
+        "title": "Duo verbinden…",
+        "sub": "Je uitnodiging wordt klaargezet. Eén moment.",
+        "a11y": "Uitnodiging laden…"
+      }
+    },
 "homeZ": {
   "duoPending": {
     "cta": "Duo voorbereiden",
@@ -4818,6 +4829,7 @@
     "errorGeneric": "Kan de reeks niet simuleren."
   },
   "firstPick": {
+    "progressShort": "{{current}}/{{total}}",
     "invitePending": {
     "title": "Uitnodiging in afwachting",
     "body": "Je vriend heeft nog niet gereageerd. Je kunt de link opnieuw sturen, of doorgaan en het start zodra hij accepteert.",

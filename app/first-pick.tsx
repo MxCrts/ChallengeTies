@@ -1461,8 +1461,13 @@ const stepSubtitle = useMemo(() => {
 }, [step, days, t]);
 
 
-  const progressText = useMemo(() => {
-    return t("firstPick.progress", { current: step, total: 3, defaultValue: "Étape {{current}} sur {{total}}" }) as string;
+ const progressText = useMemo(() => {
+    // ✅ ultra court, jamais coupé, 100% responsive
+    return t("firstPick.progressShort", {
+      current: step,
+      total: 3,
+      defaultValue: "{{current}}/{{total}}",
+    }) as string;
   }, [step, t]);
 
   // CTA label depends on step

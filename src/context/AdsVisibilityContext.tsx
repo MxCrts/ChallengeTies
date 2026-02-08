@@ -86,6 +86,7 @@ const isPremium = isPremiumUser === true;
 
     const value = useMemo<AdsVisibility>(() => {
     const hideAll = isAdmin || (!premiumLoading && isPremium);
+    const adsAllowed = canRequestAds && !isAuthRoute;
 
     // 🔓 MODE TEST : on ignore adsReady / canRequestAds,
     // mais on respecte TOUJOURS admin / premium.
@@ -99,25 +100,18 @@ const isPremium = isPremiumUser === true;
       };
     }
 
-    // 🔐 MODE NORMAL : en dev on respecte adsReady, en release on ne bloque pas dessus
-    const adsUnlocked =
-      (__DEV__ ? adsReady : true) && canRequestAds && !isAuthRoute;
-
-    if (!adsUnlocked) {
-      return {
-        showBanners: false,
-        showInterstitials: false,
-        showRewarded: false,
-        isAdmin,
-        isPremium,
-      };
-    }
+    // ✅ IMPORTANT:
+    // - banners: on peut garder un gate "ready" en dev pour éviter les blancs
+    // - rewarded/interstitials: NE DOIVENT PAS être bloquées par adsReady, sinon elles ne se chargent jamais
+    const bannersUnlocked = (__DEV__ ? adsReady : true) && adsAllowed;
+    const rewardedUnlocked = adsAllowed;      // se charge en arrière-plan, show() seulement quand prêt
+    const interUnlocked = adsAllowed;  
 
     // admin ou premium → pas de pubs
     return {
-      showBanners: !hideAll,
-      showInterstitials: !hideAll,
-      showRewarded: !hideAll,
+      showBanners: bannersUnlocked && !hideAll,
+      showInterstitials: interUnlocked && !hideAll,
+      showRewarded: rewardedUnlocked && !hideAll,
       isAdmin,
       isPremium,
     };
@@ -127,7 +121,6 @@ const isPremium = isPremiumUser === true;
     isAuthRoute,
     isAdmin,
     isPremium,
-    pathname,
     premiumLoading,
   ]);
 

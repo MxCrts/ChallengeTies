@@ -1,4 +1,4 @@
-import React, {createContext, useContext, useEffect, useMemo, useState} from 'react';
+import React, {createContext, useCallback, useContext, useEffect, useMemo, useState} from 'react';
 import { Modal, View, Text, TouchableOpacity } from 'react-native';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { useRouter } from 'expo-router';
@@ -6,7 +6,7 @@ import { auth } from '@/constants/firebase-config';
 
 type Ctx = {
   isGuest: boolean;                 // l’utilisateur a choisi "visiteur"
-  setGuest: (v: boolean) => void;
+  setGuest: (v: boolean, persist?: boolean) => Promise<void>;
   isAuthenticated: boolean;         // connecté Firebase
   isLoggedInOrGuest: boolean;       // utile si besoin
   // Ouvre le modal d’auth, retourne true si modal ouvert (donc navigation bloquée)
@@ -68,14 +68,13 @@ const [hydrated, setHydrated] = useState(false);
       }
     })();
   }, []);
- const setGuest = async (v: boolean, persist = true) => {
-  setIsGuest(v);
-  if (persist) {
+ const setGuest = useCallback(async (v: boolean, persist = true) => {
+    setIsGuest(v);
+    if (!persist) return;
     try {
       await AsyncStorage.setItem(GUEST_KEY, v ? "1" : "0");
     } catch {}
-  }
-};
+  }, []);
 
 
   // Si l’utilisateur se connecte, on sort du mode invité automatiquement
@@ -86,7 +85,7 @@ const [hydrated, setHydrated] = useState(false);
      if (u?.uid) setGuest(false, false);
     });
     return unsub;
-  }, []);
+  }, [setGuest]);
 
   const askToSignIn = (redirectTo?: string, reason?: string) => {
     if (isAuthenticated) return false; // rien à bloquer
@@ -110,7 +109,7 @@ const [hydrated, setHydrated] = useState(false);
     isLoggedInOrGuest: isAuthenticated || isGuest,
     askToSignIn,
   hydrated,
-  }), [isGuest, isAuthenticated, hydrated]);
+  }), [isGuest, isAuthenticated, hydrated, askToSignIn, setGuest]);
 
   return (
     <VisitorContext.Provider value={value}>

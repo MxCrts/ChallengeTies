@@ -648,12 +648,6 @@ export default function Register() {
           updatedAt: serverTimestamp(),
           isPioneer: false,
           pioneerRewardGranted: false,
-          activated: false,
-referral: {
-            activatedCount: 0,
-            claimedMilestones: [],
-            pendingMilestones: [],
-          },
         });
 
       } else {

@@ -1165,8 +1165,12 @@
       "trophies": "Coût : {{count}} trophées"
     },
     "ad": {
-      "title": "Regarder une pub",
-      "subtitle": "Une courte vidéo et ta série est sauvée.",
+       "title": "Sauver la série — Pub",
+      "subtitle": "Regarde une pub et garde ta série intacte.",
+      "loading": "Ouverture de la pub…",
+      "notReady": "Pub pas encore prête. Réessaie dans quelques secondes.",
+      "notEarned": "Récompense non validée. Tu peux réessayer.",
+      "error": "Impossible de charger la pub. Réessaie dans un instant.",
       "disabled": "Vidéo pas prête. Patiente un instant."
     },
     "useTrophies": {
@@ -1562,6 +1566,13 @@
   "badges": {
     "pioneer": "Pionnier"
   },
+  "deeplink": {
+      "inviteHandoff": {
+        "title": "Connexion au Duo…",
+        "sub": "On prépare ton invitation. 1 seconde.",
+        "a11y": "Chargement de l’invitation…"
+      }
+    },
   "leaderboard": {
     "errorFetch": "Erreur lors de la récupération du classement",
     "shareDialogTitle": "Partager ma RankCard",
@@ -4259,6 +4270,7 @@
   "receivedOn": "Reçue le {{date}}",
   "locale": "fr-FR",
   "firstPick": {
+    "progressShort": "{{current}}/{{total}}",
     "invitePending": {
   "title": "Invitation en attente",
   "body": "Ton ami n’a pas encore répondu. Tu peux renvoyer le lien, ou continuer et ça démarrera dès qu’il accepte.",

@@ -117,6 +117,10 @@ const normalize = (size: number) => {
 const SPACING = normalize(15);
 const CONTENT_W = Math.min(SCREEN_WIDTH - SPACING * 2, normalize(420));
 const IS_SMALL = SCREEN_WIDTH < 360;
+const DAILY_CARD_W = Math.round(CONTENT_W * 0.78);
+const DAILY_GAP = normalize(10);
+const DAILY_SNAP = DAILY_CARD_W + DAILY_GAP;
+
 
 // --- Premium system tokens (minimal diff)
 const R = {
@@ -145,15 +149,13 @@ const shadowSoft = Platform.select({
   default: {},
 });
 
-
-
-
 interface Challenge {
   id: string;
   title: string;
   description: string;
   category: string;
   imageUrl?: string;
+  imageThumbUrl?: string;
   day?: number;
   approved?: boolean;
 }
@@ -199,6 +201,67 @@ const todayKeyLocal = () => {
 
 // ✅ UTC day -> DOIT matcher dailyBonusService (anti désync)
 const todayKeyUTC = () => new Date().toISOString().slice(0, 10);
+const toMs = (v: any): number | null => {
+  if (v && typeof v === "object" && typeof v.toDate === "function") {
+    const d = v.toDate();
+    const ms = d?.getTime?.();
+    return Number.isFinite(ms) ? ms : null;
+  }
+  if (v instanceof Date) {
+    const ms = v.getTime();
+    return Number.isFinite(ms) ? ms : null;
+  }
+  if (typeof v === "number") return Number.isFinite(v) ? v : null;
+  if (typeof v === "string") {
+    const ms = Date.parse(v);
+    return Number.isFinite(ms) ? ms : null;
+  }
+  return null;
+};
+const getThumbUrl200 = (url?: string) => {
+  const u = typeof url === "string" ? url.trim() : "";
+  if (!u) return "";
+
+  // ✅ append _200x200 avant extension (jpg/png/webp/etc)
+  const addSuffix = (s: string) => {
+    const out = s.replace(/(\.[a-zA-Z0-9]+)$/i, "_200x200$1");
+    return out === s ? "" : out;
+  };
+
+  try {
+    const isFirebase =
+      u.includes("firebasestorage.googleapis.com") && u.includes("/o/");
+
+    // non-firebase => simple
+    if (!isFirebase) {
+      const [base, query] = u.split("?");
+      const withThumb = addSuffix(base);
+      if (!withThumb) return "";
+      return query ? `${withThumb}?${query}` : withThumb;
+    }
+
+    // ✅ firebase: on ne touche qu’au segment "name" encodé après /o/
+    // format: https://firebasestorage.googleapis.com/v0/b/<bucket>/o/<ENCODED_PATH>?alt=media&token=...
+    const [pathPart, queryPart] = u.split("?");
+    const idx = pathPart.indexOf("/o/");
+    if (idx === -1) return "";
+
+    const prefix = pathPart.slice(0, idx + 3); // inclut "/o/"
+    const encoded = pathPart.slice(idx + 3);  // uniquement le path encodé
+    if (!encoded) return "";
+
+    const decoded = decodeURIComponent(encoded);
+    const thumbDecoded = addSuffix(decoded);
+    if (!thumbDecoded) return "";
+
+    // re-encode strict du path uniquement
+    const reEncoded = encodeURIComponent(thumbDecoded);
+    return `${prefix}${reEncoded}${queryPart ? `?${queryPart}` : ""}`;
+  } catch {
+    return "";
+  }
+};
+
 
 const hashStringToInt = (str: string) => {
   let h = 2166136261 >>> 0;
@@ -354,7 +417,6 @@ export default function HomeScreen() {
   const [rerollLoading, setRerollLoading] = useState(false);
   const { theme } = useTheme();
   const { modalVisible, gate, closeGate, hydrated } = useGateForGuest();
-  const [layoutKey, setLayoutKey] = useState(0);
   const { setLanguage } = useLanguage();
   const insets = useSafeAreaInsets();
   const tabBarHeight = useBottomTabBarHeight();
@@ -364,11 +426,53 @@ export default function HomeScreen() {
   const [allChallenges, setAllChallenges] = useState<Challenge[]>([]);
   const [dailyFive, setDailyFive] = useState<Challenge[]>([]);
   const [brokenImages, setBrokenImages] = useState<Record<string, true>>({});
+  const [imgLoaded, setImgLoaded] = useState<Record<string, true>>({});
   const [activeChallengeMetaOverride, setActiveChallengeMetaOverride] = useState<Challenge | null>(null);
   const [showPremiumEndModal, setShowPremiumEndModal] = useState(false);
   const { show: showToast } = useToast();
   const [duoNudgeDismissed, setDuoNudgeDismissed] = useState(false);
  
+const IMG_MAX_RETRIES = 2;                 // ok
+const IMG_BROKEN_TTL_MS = 10 * 60_000;     // ✅ 10 min (stable + évite boucle)
+const IMG_RETRY_BASE_MS = 450;  
+
+const [imgReloadKey, setImgReloadKey] = useState<Record<string, number>>({});
+const imgRetryRef = useRef<Record<string, number>>({}); // pas de re-render
+const imgRetryTimerRef = useRef<Record<string, any>>({});
+
+useEffect(() => {
+  return () => {
+    // cleanup timers
+    Object.values(imgRetryTimerRef.current).forEach((t) => clearTimeout(t));
+    imgRetryTimerRef.current = {};
+  };
+}, []);
+
+const scheduleImageRetry = useCallback((id: string) => {
+  const tries = (imgRetryRef.current[id] ?? 0) + 1;
+  imgRetryRef.current[id] = tries;
+
+  // remount pour forcer expo-image à retenter
+  if (tries <= IMG_MAX_RETRIES) {
+    const delay = IMG_RETRY_BASE_MS * tries;
+
+    clearTimeout(imgRetryTimerRef.current[id]);
+    imgRetryTimerRef.current[id] = setTimeout(() => {
+  setImgLoaded((prev) => {
+    if (!prev[id]) return prev;
+    const copy = { ...prev };
+    delete copy[id];
+    return copy;
+  });
+
+  setImgReloadKey((prev) => ({ ...prev, [id]: (prev[id] ?? 0) + 1 }));
+}, delay);
+
+    return true; // retry scheduled
+  }
+
+  return false; // no more retries
+}, []);
 
 
   // ---------------------------
@@ -384,6 +488,36 @@ const POST_WELCOME_ABSORB_KEY = useMemo(
   () => `home.postWelcomeAbsorb.v1.${user?.uid ?? "guest"}`,
   [user?.uid]
 );
+
+// ✅ Premium entitlement (payant OU trial actif)
+  const premiumEntitlement = useMemo(() => {
+    const premium = (userData as any)?.premium;
+    if (!premium || typeof premium !== "object") {
+      return {
+        isPaying: false,
+        trialUntilMs: null as number | null,
+        isTrialActive: false,
+        isEntitled: false,
+      };
+    }
+
+    const isPaying =
+      premium.isPremium === true ||
+      premium.premium === true ||
+      premium.isSubscribed === true ||
+      premium.isLifetime === true;
+
+    const trialUntilMs = toMs(premium.tempPremiumUntil);
+    const isTrialActive =
+      !!trialUntilMs && Date.now() < trialUntilMs;
+
+    return {
+      isPaying,
+      trialUntilMs,
+      isTrialActive,
+      isEntitled: isPaying || isTrialActive,
+    };
+  }, [userData]);
 
 // ✅ duoPending "first login" pulse (1x)
 const DUO_PENDING_FIRST_KEY = useMemo(
@@ -554,21 +688,95 @@ useEffect(() => {
     skipTutorial?.();
   }, [isTutorialActive, tutorialGate, setTutorialStep, skipTutorial]);
 
-  const markImageBroken = useCallback((id?: string) => {
-    if (!id) return;
-    setBrokenImages((prev) => (prev[id] ? prev : { ...prev, [id]: true }));
-  }, []);
+ const markImageBroken = useCallback((c?: Challenge) => {
+  const id = c?.id;
+  if (!id) return;
 
-  const getChallengeImageSource = useCallback(
-    (c?: Challenge) => {
-      const url = typeof c?.imageUrl === "string" ? c.imageUrl.trim() : "";
-      const isBroken = !!(c?.id && brokenImages[c.id]);
-      if (isBroken) return FALLBACK_CHALLENGE_IMG;
-      if (url.startsWith("http")) return { uri: url };
-      return FALLBACK_CHALLENGE_IMG;
-    },
-    [brokenImages]
-  );
+  // ✅ d’abord on retente 1-2 fois (transient réseau)
+  const didScheduleRetry = scheduleImageRetry(id);
+  if (didScheduleRetry) return;
+
+  // ❌ seulement après retries → fallback “broken”
+  setBrokenImages((prev) => ({ ...prev, [id]: true }));
+
+  setTimeout(() => {
+    setBrokenImages((prev) => {
+      const copy = { ...prev };
+      delete copy[id];
+      return copy;
+    });
+
+    setImgLoaded((prev) => {
+      if (!prev[id]) return prev;
+      const copy = { ...prev };
+      delete copy[id];
+      return copy;
+    });
+    
+    // reset retry counter après TTL
+    delete imgRetryRef.current[id];
+  }, IMG_BROKEN_TTL_MS);
+}, [scheduleImageRetry]);
+
+const markImageOk = useCallback((c?: Challenge) => {
+  const id = c?.id;
+  if (!id) return;
+
+  setBrokenImages((prev) => {
+    if (!prev[id]) return prev;
+    const copy = { ...prev };
+    delete copy[id];
+    return copy;
+  });
+
+  delete imgRetryRef.current[id];
+  clearTimeout(imgRetryTimerRef.current[id]);
+  delete imgRetryTimerRef.current[id];
+}, []);
+
+const markImageLoaded = useCallback((c?: Challenge) => {
+  const id = c?.id;
+  if (!id) return;
+
+  setImgLoaded((prev) => (prev[id] ? prev : { ...prev, [id]: true }));
+  markImageOk(c); // garde ton cleanup broken/retry
+}, [markImageOk]);
+
+const getChallengeImageUri = useCallback(
+  (c?: any, variant: "thumb" | "full" = "full") => {
+    const rawFull = typeof c?.imageUrl === "string" ? c.imageUrl.trim() : "";
+    const rawThumb = typeof c?.imageThumbUrl === "string" ? c.imageThumbUrl.trim() : "";
+    const id = c?.id;
+
+// ✅ on bloque seulement le "full" (hero), jamais le thumb.
+// les thumbs peuvent fail transitoirement (cache/seed/list).
+if (variant === "full" && id && brokenImages[id]) return "";
+
+    if (variant === "thumb") {
+      // ✅ 1) thumb explicite (si Firestore le fournit un jour)
+      if (rawThumb.startsWith("http")) return rawThumb;
+
+      // ✅ 2) sinon on dérive automatiquement le _200x200 depuis imageUrl (Firebase Storage)
+      const derived = getThumbUrl200(rawFull);
+      if (derived.startsWith("http")) return derived;
+
+      // ✅ 3) dernier recours : full
+      return rawFull.startsWith("http") ? rawFull : "";
+    }
+
+    return rawFull.startsWith("http") ? rawFull : "";
+  },
+  [brokenImages, getThumbUrl200]
+);
+
+
+const getChallengeImageSource = useCallback(
+  (c?: Challenge, variant: "thumb" | "full" = "full") => {
+    const uri = getChallengeImageUri(c, variant);
+    return uri ? { uri } : FALLBACK_CHALLENGE_IMG;
+  },
+  [getChallengeImageUri]
+);
 
 const exploreScale = useSharedValue(1);
 const markScale = useSharedValue(1);
@@ -722,7 +930,7 @@ const todayHubActiveMeta = useMemo(() => {
     insets.bottom +
     SPACING * 2;
 
-   const shouldShowBanner = showBanners && !isTutorialBlocking;
+   const shouldShowBanner = showBanners && !isTutorialBlocking && !premiumEntitlement.isEntitled;
    // ✅ Remount BannerSlot quand l’affichage change (fix “banner sometimes not appearing”)
   useEffect(() => {
     if (!shouldShowBanner) return;
@@ -1423,46 +1631,21 @@ const persistPremiumEndDismiss = useCallback(async () => {
 useEffect(() => {
   if (!user || !userData) return;
 
-  const welcome = (userData as any).welcomeLoginBonus;
-  if (!welcome || welcome.completed !== true) return;
 
   const premium = (userData as any).premium;
   if (!premium || typeof premium !== "object") return;
 
-  const isPayingPremium =
-    premium.isPremium === true ||
-    premium.premium === true ||
-    premium.isSubscribed === true ||
-    premium.isLifetime === true;
-
-  if (isPayingPremium) return;
-
   const rawUntil = premium.tempPremiumUntil;
   if (!rawUntil) return;
-
-  const toMs = (v: any): number | null => {
-    if (v && typeof v === "object" && typeof v.toDate === "function") {
-      const d = v.toDate();
-      const ms = d?.getTime?.();
-      return Number.isFinite(ms) ? ms : null;
-    }
-    if (v instanceof Date) {
-      const ms = v.getTime();
-      return Number.isFinite(ms) ? ms : null;
-    }
-    if (typeof v === "number") return Number.isFinite(v) ? v : null;
-    if (typeof v === "string") {
-      const ms = Date.parse(v);
-      return Number.isFinite(ms) ? ms : null;
-    }
-    return null;
-  };
 
   const expiresMs = toMs(rawUntil);
   if (!expiresMs) return;
 
   const now = Date.now();
   if (now <= expiresMs) return;
+
+  // ✅ si premium payant, pas de modal
+  if (premiumEntitlement.isPaying) return;
 
   // ✅ Firestore guard (multi-device)
   const dismissedUntil = (premium as any)?.endModalDismissedUntil;
@@ -1490,7 +1673,7 @@ useEffect(() => {
   };
 
   checkAndShow();
-}, [user, userData]);
+}, [user, userData, premiumEntitlement.isPaying]);
 
 
   useFocusEffect(
@@ -1663,22 +1846,27 @@ const bonusPulseStyle = useAnimatedStyle(() => {
   }, []);
 
   useEffect(() => {
-    setIsMounted(true);
-    setLayoutKey((prev) => prev + 1);
-  }, []);
+  setIsMounted(true);
+}, []);
 
   useEffect(() => {
     const list = dailyFive.length ? dailyFive : allChallenges;
     if (!list?.length) return;
     list.forEach((c) => {
       if (c?.id && brokenImages[c.id]) return;
-      if (c.imageUrl?.startsWith("http")) {
-        try {
-          (Image as any)?.prefetch?.(c.imageUrl);
-        } catch {}
-      }
+      const full = getChallengeImageUri(c, "full");
+    const thumb = getChallengeImageUri(c, "thumb");
+
+    // ✅ hero: préfetch full, minis: préfetch thumb
+    const targets = new Set<string>();
+    if (full?.startsWith("http")) targets.add(full);
+    if (thumb?.startsWith("http")) targets.add(thumb);
+
+    targets.forEach((u) => {
+      try { (Image as any)?.prefetch?.(u); } catch {}
     });
-}, [dailyFive, allChallenges, brokenImages]);
+    });
+}, [dailyFive, allChallenges, brokenImages, getChallengeImageUri]);
 
    const fetchChallenges = useCallback(async () => {
     let hydratedFromCache = false;
@@ -1734,6 +1922,26 @@ const bonusPulseStyle = useAnimatedStyle(() => {
 
       const fetched: Challenge[] = querySnapshot.docs.map((snap) => {
         const data = snap.data() as any;
+        const imageUrl =
+    typeof data?.imageUrl === "string" && data.imageUrl.trim().length > 0
+      ? data.imageUrl.trim()
+      : undefined;
+
+ const imageThumbUrl =
+    typeof data?.imageThumbUrl === "string" && data.imageThumbUrl.trim().length > 0
+      ? data.imageThumbUrl.trim()
+      : (imageUrl ? getThumbUrl200(imageUrl) : undefined);
+
+  // ✅ DEBUG DEV — détecte http:// (Android peut foirer parfois)
+  if (__DEV__ && imageUrl?.startsWith("http://")) {
+    console.warn(
+      "[HomeScreen] HTTP imageUrl (risk on Android):",
+      imageUrl,
+      "challengeId:",
+      snap.id
+    );
+  }
+
         return {
           id: snap.id,
           title: data?.chatId
@@ -1745,11 +1953,8 @@ const bonusPulseStyle = useAnimatedStyle(() => {
           category: data?.category
             ? t(`categories.${data.category}`)
             : t("miscellaneous"),
-          imageUrl:
-            typeof data?.imageUrl === "string" && data.imageUrl.trim().length > 0
-              ? data.imageUrl
-              : undefined,
-
+          imageUrl,
+          imageThumbUrl,
           day: data?.day,
           approved: data?.approved,
         };
@@ -2314,7 +2519,6 @@ setPostWelcomeAbsorbArmed(true);
       >
         <ScrollView
           ref={scrollRef}
-          key={layoutKey}
           pointerEvents={isTutorialBlocking ? "none" : "auto"}
           scrollEnabled={!isTutorialBlocking}
           contentContainerStyle={[
@@ -2409,7 +2613,7 @@ setPostWelcomeAbsorbArmed(true);
             {/* Brand row : petit logo + label, très Apple */}
             <View style={staticStyles.heroBrandRow}>
               <Image
-                source={require("../../assets/images/GreatLogo1.png")}
+                source={require("../../assets/images/icon2.png")}
                 style={staticStyles.logoKeynote}
                 resizeMode="contain"
                 accessibilityLabel={t("logoChallengeTies")}
@@ -2436,7 +2640,7 @@ setPostWelcomeAbsorbArmed(true);
             <Text
               style={[staticStyles.heroSubtitleKeynote, dynamicStyles.heroSubtitle]}
               numberOfLines={2}
-              adjustsFontSizeToFit
+              
               minimumFontScale={IS_TINY ? 0.86 : 0.90}
             >
               {t("homeZ.hero.sub", "Un défi simple. Chaque jour. En solo ou à deux.")}
@@ -2807,263 +3011,319 @@ setPostWelcomeAbsorbArmed(true);
 
 <View style={{ height: normalize(14) }} />
 
-          {/* DAILY FIVE */}
-          <View style={staticStyles.section}>
-            <View style={stylesDaily.titleRow}>
-              <Text
-                style={[staticStyles.sectionTitle, dynamicStyles.sectionTitle]}
-                numberOfLines={1}
-                adjustsFontSizeToFit
-              >
-                {t("dailyChallenges", { defaultValue: "Défis du jour" })}
-              </Text>
-              <Text
-                style={[
-                  stylesDaily.subtitle,
-                  {
-                    color: isDarkMode
-                      ? "rgba(255,255,255,0.70)"
-                      : "rgba(15,23,42,0.65)",
-                  },
-                ]}
-                numberOfLines={1}
-              >
-                {t("dailySelectedSubtitleShort", { defaultValue: "Sélection du jour." })}
-              </Text>
-            </View>
+         {/* DAILY FIVE */}
+<View style={staticStyles.section}>
+  <View style={stylesDaily.titleRow}>
+    <Text
+      style={[staticStyles.sectionTitle, dynamicStyles.sectionTitle]}
+      numberOfLines={1}
+      ellipsizeMode="tail"
+    >
+      {t("dailyChallenges")}
+    </Text>
 
-            {loading ? (
-              <ActivityIndicator
-                size="large"
-                color={currentTheme.colors.secondary}
-              />
-            ) : dailyFive.length > 0 ? (
-              <View style={stylesDaily.wrap}>
-                {/* Hero card */}
-                <Animated.View
-                  entering={FadeInUp}
-                  style={stylesDaily.heroCard}
-                  renderToHardwareTextureAndroid
-                >
-                  <TouchableOpacity
-                    activeOpacity={0.95}
-                    accessibilityRole="button"
-                    onPress={async () => {
-                      try {
-                        await Haptics.selectionAsync();
-                      } catch {}
-                      safeNavigate(
-                        `/challenge-details/${dailyFive[0].id}?title=${encodeURIComponent(
-                          dailyFive[0].title
-                        )}&category=${encodeURIComponent(
-                          dailyFive[0].category
-                        )}&description=${encodeURIComponent(
-                          dailyFive[0].description
-                        )}`
-                      );
-                    }}
-                  >
-                    <Image
-   source={getChallengeImageSource(dailyFive[0])}
-  style={stylesDaily.heroImage}
-  contentFit="cover"
-  transition={180}
-  cachePolicy="memory-disk"
-  priority="high"
-  placeholder={BLURHASH}
-  placeholderContentFit="cover"
-  allowDownscaling
-  onError={() => markImageBroken(dailyFive[0]?.id)}
-/>
+    <Text
+      style={[
+        stylesDaily.subtitle,
+        {
+          color: isDarkMode
+            ? "rgba(255,255,255,0.70)"
+            : "rgba(15,23,42,0.65)",
+        },
+      ]}
+      numberOfLines={1}
+    >
+      {t("dailySelectedSubtitleShort", { defaultValue: "Sélection du jour." })}
+    </Text>
+  </View>
 
+  {loading ? (
+    <ActivityIndicator size="large" color={currentTheme.colors.secondary} />
+  ) : dailyFive.length > 0 ? (
+    <View style={stylesDaily.wrap}>
+      {/* HERO (spotlight) */}
+      <Animated.View
+        entering={FadeInUp}
+        style={stylesDaily.heroCard}
+        renderToHardwareTextureAndroid
+      >
+        <TouchableOpacity
+          activeOpacity={0.95}
+          accessibilityRole="button"
+          onPress={async () => {
+            try {
+              await Haptics.selectionAsync();
+            } catch {}
+            const c = dailyFive[0];
+            safeNavigate(
+              `/challenge-details/${c.id}?title=${encodeURIComponent(
+                c.title
+              )}&category=${encodeURIComponent(
+                c.category
+              )}&description=${encodeURIComponent(c.description)}`
+            );
+          }}
+        >
+          {(() => {
+            const c = dailyFive[0];
+            const uri = getChallengeImageUri(c, "full");
+            const k = `${c.id}:${imgReloadKey[c.id] ?? 0}`;
+            const showRemote = !!uri && !brokenImages[c.id];
 
-                    <LinearGradient
-                      colors={["rgba(0,0,0,0.05)", "rgba(0,0,0,0.55)", "rgba(0,0,0,0.92)"]}
-                       locations={[0, 0.55, 1]}
-                      style={stylesDaily.heroOverlay}
-                      pointerEvents="none"
-                    />
-                    <View style={stylesDaily.badge}>
-                      <Ionicons
-                        name="flame-outline"
-                        size={normalize(14)}
-                        color="#fff"
-                      />
-                      <Text style={stylesDaily.badgeText}>
-                        {t("spotlight", { defaultValue: "À la une" })}
-                      </Text>
-                    </View>
-                    <View style={stylesDaily.heroTextZone}>
-                      <Text
-                        style={stylesDaily.heroTitle}
-                        numberOfLines={2}
-                        adjustsFontSizeToFit
-                        minimumFontScale={0.90}
-                      >
-                        {dailyFive[0].title}
-                      </Text>
-                      <View style={stylesDaily.heroCatPill}>
-                        <Text style={stylesDaily.heroCatPillText} numberOfLines={1}>
-                          {dailyFive[0].category}
-                        </Text>
-                      </View>
-                    </View>
-                  </TouchableOpacity>
-                </Animated.View>
+            return (
+              <View style={stylesDaily.heroImageWrap}>
+                {/* fallback always visible */}
+                <Image
+                  source={FALLBACK_CHALLENGE_IMG}
+                  style={stylesDaily.heroImage}
+                  contentFit="cover"
+                  transition={0}
+                  cachePolicy="memory-disk"
+                />
 
-                {/* Grid 2x2 pour les 4 autres */}
-                <View style={stylesDaily.grid}>
-                  {dailyFive.slice(1).map((item, idx) => (
-                    <Animated.View
-                      key={item.id}
-                      entering={FadeInUp.delay(80 * (idx + 1))}
-                      style={stylesDaily.miniCard}
-                      renderToHardwareTextureAndroid
-                    >
-                      <TouchableOpacity
-                        activeOpacity={0.95}
-                        accessibilityRole="button"
-                        onPress={async () => {
-                          try {
-                            await Haptics.selectionAsync();
-                          } catch {}
-                          safeNavigate(
-                            `/challenge-details/${item.id}?title=${encodeURIComponent(
-                              item.title
-                            )}&category=${encodeURIComponent(
-                              item.category
-                            )}&description=${encodeURIComponent(
-                              item.description
-                            )}`
-                          );
-                        }}
-                      >
-                       <Image
-  source={getChallengeImageSource(item)}
-  style={stylesDaily.miniImage}
-  contentFit="cover"
-  transition={140}
-  cachePolicy="memory-disk"
-  priority="high"
-  placeholder={BLURHASH}
-  placeholderContentFit="cover"
- onError={() => markImageBroken(item?.id)}
-/>
-
-
-                        <LinearGradient
-                          colors={[
-                            "rgba(0,0,0,0.02)",
-                            "rgba(0,0,0,0.55)",
-                            "rgba(0,0,0,0.88)",
-                          ]}
-                          locations={[0, 0.55, 1]}
-                          style={stylesDaily.miniOverlay}
-                          pointerEvents="none"
-                        />
-                        <Text
-                          style={stylesDaily.miniTitle}
-                          numberOfLines={2}
-                          adjustsFontSizeToFit
-                          minimumFontScale={0.90}
-                        >
-                          {item.title}
-                        </Text>
-                        <Text
-                          style={stylesDaily.miniCat}
-                          numberOfLines={1}
-                          adjustsFontSizeToFit
-                          minimumFontScale={0.92}
-                        >
-                          {item.category}
-                        </Text>
-                      </TouchableOpacity>
-                    </Animated.View>
-                  ))}
-                </View>
-
-                <Text
-                  style={[
-                    stylesDaily.footHint,
-                    {
-                      color: isDarkMode
-                        ? "rgba(255,255,255,0.6)"
-                        : "rgba(15,23,42,0.6)",
-                    },
-                  ]}
-                >
-                  {t("refreshDaily", {
-                    defaultValue: "Nouveaux défis dès demain ✨",
-                  })}
-                </Text>
-                <TouchableOpacity
-                  onPress={handlePickChallengePress}
-                  activeOpacity={0.92}
-                  accessibilityRole="button"
-                  accessibilityLabel={t("homeZ.dailyPicks.seeAllA11y", "Voir tous les défis")}
-                  accessibilityHint={t(
-                    "homeZ.dailyPicks.seeAllHint",
-                    "Ouvre Explore pour découvrir tous les défis."
-                  )}
-                  style={staticStyles.seeAllWrap}
-                >
-                  <View
+                {showRemote && (
+                  <Image
+                    key={k}
+                    source={{ uri }}
                     style={[
-                      staticStyles.seeAllBtn,
+                      stylesDaily.heroImage,
                       {
-                        borderColor: isDarkMode
-                          ? "rgba(226,232,240,0.20)"
-                          : "rgba(15,23,42,0.14)",
+                        position: "absolute",
+                        inset: 0,
+                        opacity: imgLoaded[c.id] ? 1 : 0,
                       },
                     ]}
-                  >
-                    <Text
-                      style={[
-                        staticStyles.seeAllText,
-                        { color: isDarkMode ? "#E2E8F0" : "#0B1120" },
-                      ]}
-                      numberOfLines={1}
-                      adjustsFontSizeToFit
-                    >
-                      {t("homeZ.dailyPicks.seeAll", "Tout voir dans Explore")}
-                    </Text>
-                    <Ionicons
-                      name="chevron-forward"
-                      size={normalize(18)}
-                      color={isDarkMode ? "#E2E8F0" : "#0B1120"}
-                    />
-                  </View>
-                </TouchableOpacity>
+                    contentFit="cover"
+                    transition={220}
+                    cachePolicy="memory-disk"
+                    priority="high"
+                    placeholder={BLURHASH}
+                    placeholderContentFit="cover"
+                    allowDownscaling
+                    onLoad={() => markImageLoaded(c)}
+                    onError={() => markImageBroken(c)}
+                  />
+                )}
               </View>
-            ) : (
-              <Animated.View
-                entering={FadeInUp}
-                style={staticStyles.noChallengesContainer}
-              >
-                <Ionicons
-                  name="sad-outline"
-                  size={normalize(40)}
-                  color={currentTheme.colors.textSecondary}
-                />
-                <Text
-                  style={[
-                    staticStyles.noChallengesText,
-                    dynamicStyles.noChallengesText,
-                  ]}
-                >
-                  {t("noChallengesAvailable")}
-                </Text>
-                <Text
-                  style={[
-                    staticStyles.noChallengesSubtext,
-                    dynamicStyles.noChallengesSubtext,
-                  ]}
-                >
-                  {t("challengesComingSoon")}
-                </Text>
-              </Animated.View>
-            )}
+            );
+          })()}
+
+          <LinearGradient
+            colors={[
+              "rgba(0,0,0,0.05)",
+              "rgba(0,0,0,0.55)",
+              "rgba(0,0,0,0.92)",
+            ]}
+            locations={[0, 0.55, 1]}
+            style={stylesDaily.heroOverlay}
+            pointerEvents="none"
+          />
+
+          <View style={stylesDaily.badge}>
+            <Ionicons name="flame-outline" size={normalize(14)} color="#fff" />
+            <Text style={stylesDaily.badgeText}>
+              {t("spotlight", { defaultValue: "À la une" })}
+            </Text>
           </View>
+
+          <View style={stylesDaily.heroTextZone}>
+            <Text
+              style={stylesDaily.heroTitle}
+              numberOfLines={2}
+              adjustsFontSizeToFit
+              minimumFontScale={0.90}
+            >
+              {dailyFive[0].title}
+            </Text>
+            <View style={stylesDaily.heroCatPill}>
+              <Text style={stylesDaily.heroCatPillText} numberOfLines={1}>
+                {dailyFive[0].category}
+              </Text>
+            </View>
+          </View>
+        </TouchableOpacity>
+      </Animated.View>
+
+      {/* CAROUSEL (4 autres) */}
+      <View style={stylesDaily.carouselOuter}>
+        <Animated.FlatList
+          horizontal
+          data={dailyFive.slice(1)}
+          keyExtractor={(it) => it.id}
+          showsHorizontalScrollIndicator={false}
+          contentContainerStyle={stylesDaily.carouselContent}
+          decelerationRate="fast"
+          snapToAlignment="start"
+          snapToInterval={DAILY_SNAP}
+          disableIntervalMomentum
+          renderItem={({ item, index }) => {
+            const k = `${item.id}:${imgReloadKey[item.id] ?? 0}`;
+            const thumbUri = getChallengeImageUri(item, "thumb");
+            const fullUri = getChallengeImageUri(item, "full"); // fallback
+            const uri = thumbUri || fullUri;
+            const showRemote = !!uri; // plus de check broken ici
+
+            return (
+              <Animated.View
+                entering={FadeInUp.delay(80 * (index + 1))}
+                style={stylesDaily.carouselCard}
+                renderToHardwareTextureAndroid
+              >
+                <TouchableOpacity
+                  activeOpacity={0.95}
+                  accessibilityRole="button"
+                  onPress={async () => {
+                    try {
+                      await Haptics.selectionAsync();
+                    } catch {}
+                    safeNavigate(
+                      `/challenge-details/${item.id}?title=${encodeURIComponent(
+                        item.title
+                      )}&category=${encodeURIComponent(
+                        item.category
+                      )}&description=${encodeURIComponent(item.description)}`
+                    );
+                  }}
+                >
+                  <View style={stylesDaily.miniImageWrap}>
+                    <Image
+                      source={FALLBACK_CHALLENGE_IMG}
+                      style={stylesDaily.miniImage}
+                      contentFit="cover"
+                      transition={0}
+                      cachePolicy="memory-disk"
+                    />
+
+                    {showRemote && (
+                      <Image
+                        key={k}
+                        source={{ uri }}
+                        style={[
+                          stylesDaily.miniImage,
+                          {
+                            position: "absolute",
+                            inset: 0,
+                            opacity: imgLoaded[item.id] ? 1 : 0,
+                          },
+                        ]}
+                        contentFit="cover"
+                        transition={180}
+                        cachePolicy="memory-disk"
+                        priority="normal"
+                        placeholder={BLURHASH}
+                        placeholderContentFit="cover"
+                        allowDownscaling
+                        onLoad={() => markImageLoaded(item)}
+                        onError={() => {
+                        // ✅ retry seulement, et si ça fail encore => on laisse le fallback visible
+                        scheduleImageRetry(item.id);
+                      }}
+                      />
+                    )}
+                  </View>
+
+                  <LinearGradient
+                    colors={[
+                      "rgba(0,0,0,0.02)",
+                      "rgba(0,0,0,0.55)",
+                      "rgba(0,0,0,0.88)",
+                    ]}
+                    locations={[0, 0.55, 1]}
+                    style={stylesDaily.miniOverlay}
+                    pointerEvents="none"
+                  />
+
+                  <Text
+                    style={stylesDaily.carouselTitle}
+                    numberOfLines={2}
+                    minimumFontScale={0.90}
+                  >
+                    {item.title}
+                  </Text>
+                  <Text
+                    style={stylesDaily.carouselCat}
+                    numberOfLines={1}
+                    adjustsFontSizeToFit
+                    minimumFontScale={0.92}
+                  >
+                    {item.category}
+                  </Text>
+                </TouchableOpacity>
+              </Animated.View>
+            );
+          }}
+        />
+      </View>
+
+      <Text
+        style={[
+          stylesDaily.footHint,
+          {
+            color: isDarkMode
+              ? "rgba(255,255,255,0.6)"
+              : "rgba(15,23,42,0.6)",
+          },
+        ]}
+      >
+        {t("refreshDaily", { defaultValue: "Nouveaux défis dès demain ✨" })}
+      </Text>
+
+      <TouchableOpacity
+        onPress={handlePickChallengePress}
+        activeOpacity={0.92}
+        accessibilityRole="button"
+        accessibilityLabel={t("homeZ.dailyPicks.seeAllA11y", "Voir tous les défis")}
+        accessibilityHint={t(
+          "homeZ.dailyPicks.seeAllHint",
+          "Ouvre Explore pour découvrir tous les défis."
+        )}
+        style={staticStyles.seeAllWrap}
+      >
+        <View
+          style={[
+            staticStyles.seeAllBtn,
+            {
+              borderColor: isDarkMode
+                ? "rgba(226,232,240,0.20)"
+                : "rgba(15,23,42,0.14)",
+            },
+          ]}
+        >
+          <Text
+            style={[
+              staticStyles.seeAllText,
+              { color: isDarkMode ? "#E2E8F0" : "#0B1120" },
+            ]}
+            numberOfLines={1}
+            adjustsFontSizeToFit
+          >
+            {t("homeZ.dailyPicks.seeAll", "Tout voir dans Explore")}
+          </Text>
+          <Ionicons
+            name="chevron-forward"
+            size={normalize(18)}
+            color={isDarkMode ? "#E2E8F0" : "#0B1120"}
+          />
+        </View>
+      </TouchableOpacity>
+    </View>
+  ) : (
+    <Animated.View entering={FadeInUp} style={staticStyles.noChallengesContainer}>
+      <Ionicons
+        name="sad-outline"
+        size={normalize(40)}
+        color={currentTheme.colors.textSecondary}
+      />
+      <Text style={[staticStyles.noChallengesText, dynamicStyles.noChallengesText]}>
+        {t("noChallengesAvailable")}
+      </Text>
+      <Text style={[staticStyles.noChallengesSubtext, dynamicStyles.noChallengesSubtext]}>
+        {t("challengesComingSoon")}
+      </Text>
+    </Animated.View>
+  )}
+</View>
+
 
           {/* DISCOVER — seulement 3 raccourcis : NewFeatures / Leaderboard / Tips */}
 {/* DISCOVER — Keynote : 2 cartes (Leaderboards + Tips) + “Voir plus” */}
@@ -3091,7 +3351,6 @@ setPostWelcomeAbsorbArmed(true);
                     { color: isDarkMode ? "#F8FAFC" : "#0B1120" },
                   ]}
                   numberOfLines={1}
-                  adjustsFontSizeToFit
                 >
                   {t("homeZ.discover.title", "Découvrir")}
                 </Text>
@@ -3149,7 +3408,7 @@ setPostWelcomeAbsorbArmed(true);
                       { color: isDarkMode ? "#F8FAFC" : "#0B1120" },
                     ]}
                     numberOfLines={1}
-                    adjustsFontSizeToFit
+                    
                   >
                     {t("homeZ.discover.leaderboard", "Classement")}
                   </Text>
@@ -3217,7 +3476,7 @@ setPostWelcomeAbsorbArmed(true);
                       { color: isDarkMode ? "#F8FAFC" : "#0B1120" },
                     ]}
                     numberOfLines={1}
-                    adjustsFontSizeToFit
+                    
                   >
                     {t("homeZ.discover.tips", "Tips")}
                   </Text>
@@ -3621,7 +3880,6 @@ duoPendingTitle: {
   minWidth: 0,
   includeFontPadding: false,
 },
-
 duoPendingSub: {
   fontSize: normalize(12.0),
   lineHeight: normalize(16),
@@ -4633,6 +4891,14 @@ const stylesDaily = StyleSheet.create({
     position: "relative",
     zIndex: 1,
   },
+
+  titleRow: {
+    position: "relative",
+    alignItems: "center",
+    width: "100%",
+    marginBottom: SPACING,
+  },
+
   subtitle: {
     marginTop: normalize(2),
     fontSize: normalize(12),
@@ -4640,14 +4906,16 @@ const stylesDaily = StyleSheet.create({
     opacity: 0.9,
     textAlign: "center",
   },
+
+  // --- HERO ---
   heroCard: {
     width: "100%",
-maxWidth: CONTENT_W,
-alignSelf: "center",
-     aspectRatio: 1.75,
+    maxWidth: CONTENT_W,
+    alignSelf: "center",
+    aspectRatio: 1.75,
     borderRadius: normalize(18),
     overflow: "hidden",
-    marginBottom: SPACING,
+    marginBottom: normalize(12), // légèrement + tight (premium)
     shadowColor: "#000",
     shadowOffset: { width: 0, height: normalize(6) },
     shadowOpacity: 0.25,
@@ -4655,55 +4923,24 @@ alignSelf: "center",
     zIndex: 1,
     elevation: 3,
   },
+  heroImageWrap: {
+    width: "100%",
+    height: "100%",
+    borderRadius: normalize(22),
+    overflow: "hidden",
+    backgroundColor: "transparent",
+  },
   heroImage: {
     width: "100%",
     height: "100%",
   },
-  titleRow: {
-    position: "relative",
-    alignItems: "center",
-    width: "100%",
-    marginBottom: SPACING, // spacing propre avant la hero card
-  },
   heroOverlay: {
-   position: "absolute",
-   left: 0,
-   right: 0,
-   bottom: 0,
-   height: "55%",
- },
-  heroTextZone: {
     position: "absolute",
-    bottom: SPACING,
-    left: SPACING,
-    right: SPACING,
-    alignItems: "flex-start",
+    left: 0,
+    right: 0,
+    bottom: 0,
+    height: "55%",
   },
-  heroTitle: {
-    fontSize: normalize(19.5),
-  lineHeight: normalize(24),
-    fontFamily: "Comfortaa_700Bold",
-    color: "#fff",
-    marginBottom: 6,
-    textShadowColor: "rgba(0,0,0,0.35)",
-    textShadowOffset: { width: 0, height: 1 },
-     includeFontPadding: false,
-    textShadowRadius: 3,
-  },
-  heroCatPill: {
-  paddingHorizontal: normalize(10),
-  paddingVertical: normalize(6),
-  borderRadius: normalize(999),
-  backgroundColor: "rgba(255,255,255,0.14)",
-  borderWidth: StyleSheet.hairlineWidth,
-  borderColor: "rgba(255,255,255,0.22)",
-},
-heroCatPillText: {
-  fontSize: normalize(11.8),
-  fontFamily: "Comfortaa_700Bold",
-  color: "rgba(255,255,255,0.92)",
-  includeFontPadding: false,
-},
   badge: {
     position: "absolute",
     top: SPACING * 0.8,
@@ -4721,35 +4958,87 @@ heroCatPillText: {
     fontSize: normalize(12),
     fontFamily: "Comfortaa_700Bold",
   },
-  grid: {
+  heroTextZone: {
+    position: "absolute",
+    bottom: SPACING,
+    left: SPACING,
+    right: SPACING,
+    alignItems: "flex-start",
+  },
+  heroTitle: {
+    fontSize: normalize(19.5),
+    lineHeight: normalize(24),
+    fontFamily: "Comfortaa_700Bold",
+    color: "#fff",
+    marginBottom: 6,
+    textShadowColor: "rgba(0,0,0,0.35)",
+    textShadowOffset: { width: 0, height: 1 },
+    includeFontPadding: false,
+    textShadowRadius: 3,
+  },
+  heroCatPill: {
+    paddingHorizontal: normalize(10),
+    paddingVertical: normalize(6),
+    borderRadius: normalize(999),
+    backgroundColor: "rgba(255,255,255,0.14)",
+    borderWidth: StyleSheet.hairlineWidth,
+    borderColor: "rgba(255,255,255,0.22)",
+  },
+  heroCatPillText: {
+    fontSize: normalize(11.8),
+    fontFamily: "Comfortaa_700Bold",
+    color: "rgba(255,255,255,0.92)",
+    includeFontPadding: false,
+  },
+  carouselOuter: {
+  width: "100%",
+  maxWidth: CONTENT_W,
+  alignSelf: "center",
+},
+carouselContent: {
+  paddingHorizontal: normalize(2),
+  paddingRight: normalize(6),
+},
+
+carouselCard: {
+  width: DAILY_CARD_W,
+  aspectRatio: 1.6,
+  borderRadius: normalize(16),
+  overflow: "hidden",
+  marginRight: DAILY_GAP,
+  shadowColor: "#000",
+  shadowOffset: { width: 0, height: normalize(4) },
+  shadowOpacity: 0.20,
+  shadowRadius: normalize(6),
+  elevation: 3,
+},
+
+  miniImageWrap: {
     width: "100%",
-maxWidth: CONTENT_W,
-alignSelf: "center",
-    flexDirection: "row",
-    flexWrap: "wrap",
-    justifyContent: "space-between",
-    gap: normalize(10),
-  },
-  miniCard: {
-    width: (CONTENT_W - SPACING) / 2,
-    aspectRatio: 1.6,
-    borderRadius: normalize(16),
+    height: "100%",
+    borderRadius: normalize(18),
     overflow: "hidden",
-    marginBottom: SPACING,
-    shadowColor: "#000",
-    shadowOffset: { width: 0, height: normalize(4) },
-    shadowOpacity: 0.2,
-    shadowRadius: normalize(6),
-    zIndex: 1,
-    elevation: 3,
+    backgroundColor: "transparent",
   },
-  miniTitle: {
+  miniImage: {
+    width: "100%",
+    height: "100%",
+  },
+  miniOverlay: {
+    position: "absolute",
+    left: 0,
+    right: 0,
+    bottom: 0,
+    height: "60%",
+  },
+
+  carouselTitle: {
     position: "absolute",
     left: SPACING * 0.8,
     right: SPACING * 0.8,
     bottom: IS_SMALL ? SPACING * 1.8 : SPACING * 1.6,
     color: "#fff",
-    fontSize: normalize(13.4),
+    fontSize: normalize(13.6),
     lineHeight: normalize(17),
     fontFamily: "Comfortaa_700Bold",
     textShadowColor: "rgba(0,0,0,0.35)",
@@ -4757,7 +5046,7 @@ alignSelf: "center",
     textShadowRadius: 3,
     includeFontPadding: false,
   },
-  miniCat: {
+  carouselCat: {
     position: "absolute",
     left: SPACING * 0.8,
     right: SPACING * 0.8,
@@ -4768,20 +5057,11 @@ alignSelf: "center",
     fontFamily: "Comfortaa_400Regular",
     includeFontPadding: false,
   },
-  miniImage: {
-    width: "100%",
-    height: "100%",
-  },
-  miniOverlay: {
-   position: "absolute",
-   left: 0,
-   right: 0,
-   bottom: 0,
-   height: "60%",
- },
+
   footHint: {
-    marginTop: 2,
+    marginTop: normalize(10),
     fontSize: normalize(12),
     fontFamily: "Comfortaa_400Regular",
   },
 });
+

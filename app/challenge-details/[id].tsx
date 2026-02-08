@@ -432,9 +432,7 @@ export default function ChallengeDetails() {
     [H]
   );
   // 4 colonnes = cheap. Tablet = 3 colonnes, phone = 2 colonnes.
-  const actionIconWidth = isTablet ? "33.333%" : "50%";
   const titleLines = isTablet ? 2 : 3;
-  const descLines = isTablet ? 4 : 6;
   const [marking, setMarking] = useState(false);
   const [pendingOutLock, setPendingOutLock] = useState(false);
   const [duoMomentPayload, setDuoMomentPayload] = useState<any>(null);
@@ -715,6 +713,7 @@ const [deeplinkBooting, setDeeplinkBooting] = useState(
  const [invitation, setInvitation] = useState<{ id: string } | null>(null);
  const [invitationModalVisible, setInvitationModalVisible] = useState(false);
  const [inviteLoading, setInviteLoading] = useState(false);
+ const [inviteModalReady, setInviteModalReady] = useState(false);
  const [startModeVisible, setStartModeVisible] = useState(false);
  const [startMode, setStartMode] = useState<"solo" | "duo" | null>(null);
  const processedInviteIdsRef = useRef<Set<string>>(new Set());
@@ -1649,6 +1648,7 @@ useEffect(() => {
 
         processedInviteIdsRef.current.add(docId);
         setInvitation({ id: docId });
+        setInviteModalReady(false);
         setInvitationModalVisible(true);
       });
     },
@@ -1676,6 +1676,7 @@ useEffect(() => {
 
           processedInviteIdsRef.current.add(docId);
           setInvitation({ id: docId });
+          setInviteModalReady(false);
           setInvitationModalVisible(true);
         });
       });
@@ -1704,6 +1705,7 @@ useEffect(() => {
 
         processedInviteIdsRef.current.add(docId);
         setInvitation({ id: docId });
+        setInviteModalReady(false);
         setInvitationModalVisible(true);
       });
     } catch (e) {
@@ -1990,12 +1992,10 @@ useEffect(() => {
       );
 
       setLoading(false);
-      setDeeplinkBooting(false); 
     },
     (error) => {
       console.error("❌ Erreur récupération défi :", error);
       setLoading(false);
-      setDeeplinkBooting(false); 
     }
   );
 
@@ -2372,6 +2372,7 @@ useEffect(() => {
       // ✅ OK : on ouvre le modal une seule fois
       processedInviteIdsRef.current.add(idStr);
       setInvitation({ id: idStr });
+      setInviteModalReady(false);
       setInvitationModalVisible(true);
       willShowModal = true; // ✅ on va laisser l’overlay vivre jusqu’à onLoaded()
 
@@ -3016,6 +3017,9 @@ const handleShareChallenge = useCallback(async () => {
   }
 }, [id, routeTitle, t, i18n?.language]);
 
+const showBootOverlay =
+   isHydrating || inviteLoading || (deeplinkBooting && !inviteModalReady);
+
 const handleInviteFriend = useCallback(async () => {
   hapticTap();
   try {
@@ -3290,7 +3294,7 @@ const scrollContentStyle = useMemo(
   [bottomInset]
 );
 
-  const loadingLabel = inviteLoading
+  const loadingLabel = inviteLoading || (deeplinkBooting && !inviteModalReady)
     ? t("challengeDetails.loadingInvite", {
         defaultValue: "Ouverture de l’invitation…",
       })
@@ -4497,22 +4501,27 @@ const scrollContentStyle = useMemo(
   onClose={() => {
     markInviteAsHandled(invitation?.id);
     setInvitationModalVisible(false);
+    setInviteModalReady(false);
   }}
   clearInvitation={() => {
     markInviteAsHandled(invitation?.id);
   }}
   // 🆕 Quand le modal a fini de charger -> on coupe l’overlay deeplink/invite
   onLoaded={() => {
-    setInviteLoading(false);
-    setDeeplinkBooting(false);
+    // ✅ coupe l’overlay pile après que le modal soit prêt (zéro trou visuel)
+   requestAnimationFrame(() => {
+     setInviteModalReady(true);
+     setInviteLoading(false);
+     setDeeplinkBooting(false);
+   });
   }}
 />
 
-{isHydrating && (
+ {showBootOverlay && (
   <Animated.View
     // ⚠️ plus d'entering/exiting, pour éviter les soucis de hitbox fantôme
     style={styles.loadingOverlay}
-    pointerEvents="none" // ✅ ne bloque PLUS JAMAIS les interactions
+    pointerEvents="auto"
   >
     <BlurView
       intensity={40}

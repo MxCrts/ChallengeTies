@@ -1,13 +1,25 @@
-// src/helpers/premium.ts
+import { Timestamp } from "firebase/firestore";
+
+const getExpireMs = (raw: any): number | null => {
+  if (!raw) return null;
+  if (raw instanceof Date) return raw.getTime();
+  if (raw instanceof Timestamp) return raw.toMillis();
+  if (typeof raw === "string") {
+    const parsed = Date.parse(raw);
+    return Number.isNaN(parsed) ? null : parsed;
+  }
+  return null;
+};
+
 export const hasActiveTempPremium = (userData: any | null | undefined): boolean => {
-  if (!userData?.premium?.tempPremiumUntil) return false;
-  const exp = new Date(userData.premium.tempPremiumUntil);
-  const now = new Date();
-  return exp.getTime() > now.getTime();
+  const raw = userData?.premium?.tempPremiumUntil ?? userData?.tempPremiumUntil ?? userData?.premiumUntil;
+  const expMs = getExpireMs(raw);
+  return typeof expMs === "number" ? expMs > Date.now() : false;
 };
 
 export const getTempPremiumExpiryKey = (userData: any | null | undefined): string | null => {
-  if (!userData?.premium?.tempPremiumUntil) return null;
-  const exp = new Date(userData.premium.tempPremiumUntil);
-  return exp.toISOString().slice(0, 10); // "YYYY-MM-DD"
+  const raw = userData?.premium?.tempPremiumUntil ?? userData?.tempPremiumUntil ?? userData?.premiumUntil;
+  const expMs = getExpireMs(raw);
+  if (!expMs) return null;
+  return new Date(expMs).toISOString().slice(0, 10);
 };

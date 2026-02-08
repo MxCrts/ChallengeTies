@@ -7,6 +7,7 @@ import {
   increment,
   arrayUnion,
   arrayRemove,
+  serverTimestamp,
 } from "firebase/firestore";
 import { db } from "@/constants/firebase-config";
 import { achievementsList } from "./achievementsConfig";
@@ -470,7 +471,6 @@ export async function deductTrophies(userId: string, amount: number): Promise<bo
   if (!userId) return false;
 
   const userRef = doc(db, "users", userId);
-
   const cost = Number(amount);
   if (!Number.isFinite(cost) || cost <= 0) return false;
 
@@ -480,14 +480,17 @@ export async function deductTrophies(userId: string, amount: number): Promise<bo
       if (!snap.exists()) return false;
 
       const raw = (snap.data() as any)?.trophies;
-
-      // ✅ accepte number OU string "400"
       const current = Number(raw);
       if (!Number.isFinite(current)) return false;
-
       if (current < cost) return false;
 
-      tx.update(userRef, { trophies: increment(-cost) });
+      const next = Math.floor(current - cost);
+
+      tx.update(userRef, {
+        trophies: next,              // ✅ valeur finale (pas increment)
+        updatedAt: serverTimestamp() // ✅ pour hasValidUpdatedAt()
+      });
+
       return true;
     });
   } catch (e) {
@@ -495,6 +498,7 @@ export async function deductTrophies(userId: string, amount: number): Promise<bo
     return false;
   }
 }
+
 
 
 /**

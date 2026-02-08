@@ -46,6 +46,13 @@
       "cta": "Continuar"
     }
   },
+  "deeplink": {
+      "inviteHandoff": {
+        "title": "Conectando al Dúo…",
+        "sub": "Preparando tu invitación. Un segundo.",
+        "a11y": "Cargando invitación…"
+      }
+    },
   "homeZ": {
     "duoPending": {
       "cta": "Preparar el Dúo",
@@ -938,6 +945,7 @@
     "loginRequired": "Se requiere iniciar sesión."
   },
   "firstPick": {
+    "progressShort": "{{current}}/{{total}}",
     "invitePending": {
     "title": "Invitación pendiente",
     "body": "Tu amigo aún no ha respondido. Puedes reenviar el enlace o continuar y empezará en cuanto lo acepte.",
@@ -1488,8 +1496,12 @@
       "trophies": "Coste: {{count}} trofeos"
     },
     "ad": {
-      "title": "Ver un anuncio",
-      "subtitle": "Un vídeo corto salvará tu racha.",
+      "title": "Salvar racha — Anuncio",
+  "subtitle": "Mira un anuncio y mantén tu racha intacta.",
+  "loading": "Abriendo el anuncio…",
+  "notReady": "El anuncio aún no está listo. Intenta de nuevo en unos segundos.",
+  "notEarned": "Recompensa no confirmada. Puedes intentarlo otra vez.",
+  "error": "No se pudo cargar el anuncio. Inténtalo de nuevo en un momento.",
       "disabled": "El vídeo no está listo. Espera un momento."
     },
     "useTrophies": {

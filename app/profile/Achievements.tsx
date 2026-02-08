@@ -167,6 +167,201 @@ const sectionOrder = [
   "divers",
 ];
 
+const AchievementCard = React.memo(function AchievementCard({
+  item,
+  index,
+  disableAnimations,
+  isDarkMode,
+  currentTheme,
+  cardBg,
+  borderSoft,
+  textPrimary,
+  textSecondary,
+  t,
+  onPressAchievement,
+}: {
+  item: Achievement;
+  index: number;
+  disableAnimations: boolean;
+  isDarkMode: boolean;
+  currentTheme: Theme;
+  cardBg: string;
+  borderSoft: string;
+  textPrimary: string;
+  textSecondary: string;
+  t: (k: string, o?: any) => string;
+  onPressAchievement: (a: Achievement) => void;
+}) {
+  const isActivated = item.isCompleted;
+  const isClaimable = item.isClaimable;
+
+  const trophyColor = isActivated
+    ? currentTheme.colors.secondary
+    : isClaimable
+    ? currentTheme.colors.primary
+    : textSecondary;
+
+  const titleColor = isActivated ? textSecondary : textPrimary;
+
+  const glowSV = useSharedValue(0);
+
+  useEffect(() => {
+    if (!isClaimable || isActivated) return;
+    glowSV.value = withRepeat(
+      withSequence(withTiming(1, { duration: 900 }), withTiming(0, { duration: 900 })),
+      -1,
+      true
+    );
+  }, [isClaimable, isActivated, glowSV]);
+
+  const glowStyle = useAnimatedStyle(() => {
+    const o = 0.06 + glowSV.value * 0.16;
+    const s = 1 + glowSV.value * 0.015;
+    return { opacity: o, transform: [{ scale: s }] };
+  });
+
+  return (
+    <Animated.View
+      entering={!disableAnimations && index < 18 ? ZoomIn.delay(index * 45) : undefined}
+      style={styles.cardWrapper}
+    >
+      <TouchableOpacity
+        activeOpacity={0.92}
+        onPress={() => onPressAchievement(item)}
+        accessibilityRole="button"
+        accessibilityLabel={String(t(item.identifier))}
+        accessibilityHint={
+          isClaimable ? String(t("claim")) : isActivated ? String(t("unlocked")) : String(t("inProgress"))
+        }
+      >
+        <View
+          style={[
+            styles.card,
+            {
+              backgroundColor: cardBg,
+              borderColor: isActivated
+                ? withAlpha("#22C55E", 0.75)
+                : isClaimable
+                ? withAlpha(currentTheme.colors.primary, 0.85)
+                : borderSoft,
+            },
+          ]}
+        >
+          <LinearGradient
+            pointerEvents="none"
+            colors={[
+              "transparent",
+              isDarkMode ? "rgba(255,255,255,0.08)" : "rgba(255,255,255,0.55)",
+              "transparent",
+            ]}
+            start={{ x: 0, y: 0 }}
+            end={{ x: 1, y: 1 }}
+            style={styles.cardSheen}
+          />
+
+          {isClaimable && !isActivated && (
+            <Animated.View
+              pointerEvents="none"
+              style={[
+                styles.glowLayer,
+                glowStyle,
+                { backgroundColor: withAlpha(currentTheme.colors.primary, 1) },
+              ]}
+            />
+          )}
+
+          <View style={styles.leftCol}>
+            <View
+              style={[
+                styles.trophyBadge,
+                {
+                  backgroundColor: isDarkMode ? "rgba(255,255,255,0.06)" : "rgba(0,0,0,0.04)",
+                  borderColor: isDarkMode ? withAlpha("#FFFFFF", 0.12) : withAlpha("#000000", 0.08),
+                },
+              ]}
+            >
+              <Ionicons
+                name={isActivated ? "trophy" : "trophy-outline"}
+                size={normalizeSize(30)}
+                color={trophyColor}
+              />
+            </View>
+
+            <View
+              style={[
+                styles.pointsPill,
+                {
+                  borderColor: isDarkMode ? withAlpha("#FFFFFF", 0.12) : withAlpha("#000000", 0.08),
+                  backgroundColor: isDarkMode ? "rgba(255,255,255,0.06)" : "rgba(0,0,0,0.04)",
+                },
+              ]}
+            >
+              <Ionicons name="sparkles" size={normalizeSize(12)} color={trophyColor} />
+              <Text style={[styles.pointsText, { color: trophyColor }]} numberOfLines={1}>
+                {item.trophies}
+              </Text>
+            </View>
+
+            {!!item.isNew && !isActivated && (
+              <View style={styles.newDot} accessibilityLabel={String(t("new"))} />
+            )}
+          </View>
+
+          <View style={styles.details}>
+            <Text
+              style={[
+                styles.cardTitle,
+                { color: titleColor },
+                isActivated && styles.completedTitle,
+                isClaimable && styles.claimableTitle,
+              ]}
+              numberOfLines={2}
+              adjustsFontSizeToFit
+              minimumFontScale={0.92}
+            >
+              {String(t(item.identifier, { defaultValue: item.identifier }))}
+            </Text>
+
+            <Text style={[styles.cardDescription, { color: textSecondary }]} numberOfLines={3}>
+              {String(
+                t(`descriptions.${item.identifier}`, {
+                  defaultValue: String(t(item.identifier)),
+                })
+              )}
+            </Text>
+          </View>
+
+          <View style={styles.action}>
+            {isClaimable ? (
+              <LinearGradient colors={[currentTheme.colors.primary, currentTheme.colors.secondary]} style={styles.chip}>
+                <Ionicons name="gift-outline" size={normalizeSize(14)} color="#FFFFFF" />
+                <Text style={styles.chipText} numberOfLines={1} adjustsFontSizeToFit minimumFontScale={0.85}>
+                  {String(t("claim"))}
+                </Text>
+              </LinearGradient>
+            ) : isActivated ? (
+              <View style={[styles.chip, styles.chipOk]}>
+                <Ionicons name="checkmark-circle" size={normalizeSize(14)} color="#14532D" />
+                <Text style={[styles.chipText, styles.chipOkText]} numberOfLines={1} adjustsFontSizeToFit minimumFontScale={0.85}>
+                  {String(t("unlocked"))}
+                </Text>
+              </View>
+            ) : (
+              <View style={[styles.chip, styles.chipPending]}>
+                <Ionicons name="lock-closed-outline" size={normalizeSize(14)} color={textSecondary} />
+                <Text style={[styles.chipText, { color: textSecondary }]} numberOfLines={1} adjustsFontSizeToFit minimumFontScale={0.85}>
+                  {String(t("inProgress"))}
+                </Text>
+              </View>
+            )}
+          </View>
+        </View>
+      </TouchableOpacity>
+    </Animated.View>
+  );
+});
+
+
 export default function AchievementsScreen() {
   const { t } = useTranslation();
   const [sections, setSections] = useState<AchievementSection[]>([]);
@@ -456,213 +651,35 @@ export default function AchievementsScreen() {
     [setTrophyData]
   );
 
-  /** Card component (UI only) */
-  const AchievementCard = useCallback(
-    ({ item, index }: { item: Achievement; index: number }) => {
-      const isActivated = item.isCompleted;
-      const isClaimable = item.isClaimable;
-
-      const trophyColor = isActivated
-        ? currentTheme.colors.secondary
-        : isClaimable
-        ? currentTheme.colors.primary
-        : textSecondary;
-
-      const titleColor = isActivated ? textSecondary : textPrimary;
-
-      // claimable glow (existing behaviour, more keynote)
-      const glowSV = useSharedValue(0);
-      useEffect(() => {
-        if (!isClaimable || isActivated) return;
-        glowSV.value = withRepeat(
-          withSequence(withTiming(1, { duration: 900 }), withTiming(0, { duration: 900 })),
-          -1,
-          true
-        );
-      }, [isClaimable, isActivated]);
-
-      const glowStyle = useAnimatedStyle(() => {
-        const o = 0.06 + glowSV.value * 0.16;
-        const s = 1 + glowSV.value * 0.015;
-        return { opacity: o, transform: [{ scale: s }] };
-      });
-
-      return (
-        <Animated.View
-          entering={!disableAnimations && index < 18 ? ZoomIn.delay(index * 45) : undefined}
-          style={styles.cardWrapper}
-        >
-          <TouchableOpacity
-            activeOpacity={0.92}
-            onPress={() => onPressAchievement(item)}
-            accessibilityRole="button"
-            accessibilityLabel={String(t(item.identifier))}
-            accessibilityHint={
-              isClaimable ? String(t("claim")) : isActivated ? String(t("unlocked")) : String(t("inProgress"))
-            }
-          >
-            <View
-              style={[
-                styles.card,
-                {
-                  backgroundColor: cardBg,
-                  borderColor: isActivated
-                    ? withAlpha("#22C55E", 0.75)
-                    : isClaimable
-                    ? withAlpha(currentTheme.colors.primary, 0.85)
-                    : borderSoft,
-                },
-              ]}
-            >
-              {/* glass sheen */}
-              <LinearGradient
-                pointerEvents="none"
-                colors={[
-                  "transparent",
-                  isDarkMode ? "rgba(255,255,255,0.08)" : "rgba(255,255,255,0.55)",
-                  "transparent",
-                ]}
-                start={{ x: 0, y: 0 }}
-                end={{ x: 1, y: 1 }}
-                style={styles.cardSheen}
-              />
-
-              {/* glow layer */}
-              {isClaimable && !isActivated && (
-                <Animated.View
-                  pointerEvents="none"
-                  style={[
-                    styles.glowLayer,
-                    glowStyle,
-                    { backgroundColor: withAlpha(currentTheme.colors.primary, 1) },
-                  ]}
-                />
-              )}
-
-              {/* left badge */}
-              <View style={styles.leftCol}>
-                <View
-                  style={[
-                    styles.trophyBadge,
-                    {
-                      backgroundColor: isDarkMode ? "rgba(255,255,255,0.06)" : "rgba(0,0,0,0.04)",
-                      borderColor: isDarkMode ? withAlpha("#FFFFFF", 0.12) : withAlpha("#000000", 0.08),
-                    },
-                  ]}
-                >
-                  <Ionicons
-                    name={isActivated ? "trophy" : "trophy-outline"}
-                    size={normalizeSize(30)}
-                    color={trophyColor}
-                  />
-                </View>
-
-                {/* points explained visually (no long labels) */}
-                <View
-                  style={[
-                    styles.pointsPill,
-                    {
-                      borderColor: isDarkMode ? withAlpha("#FFFFFF", 0.12) : withAlpha("#000000", 0.08),
-                      backgroundColor: isDarkMode ? "rgba(255,255,255,0.06)" : "rgba(0,0,0,0.04)",
-                    },
-                  ]}
-                >
-                  <Ionicons name="sparkles" size={normalizeSize(12)} color={trophyColor} />
-                  <Text style={[styles.pointsText, { color: trophyColor }]} numberOfLines={1}>
-                    {item.trophies}
-                  </Text>
-                </View>
-
-                {!!item.isNew && !isActivated && (
-                  <View style={styles.newDot} accessibilityLabel={String(t("new"))} />
-                )}
-              </View>
-
-              {/* content */}
-              <View style={styles.details}>
-                <Text
-                  style={[
-                    styles.cardTitle,
-                    { color: titleColor },
-                    isActivated && styles.completedTitle,
-                    isClaimable && styles.claimableTitle,
-                  ]}
-                  numberOfLines={2}
-                  adjustsFontSizeToFit
-                  minimumFontScale={0.92}
-                >
-                  {String(t(item.identifier, { defaultValue: item.identifier }))}
-                </Text>
-
-                <Text
-                  style={[styles.cardDescription, { color: textSecondary }]}
-                  numberOfLines={3}
-                >
-                  {String(
-                    t(`descriptions.${item.identifier}`, {
-                      defaultValue: String(t(item.identifier)),
-                    })
-                  )}
-                </Text>
-              </View>
-
-              {/* right status chip (shrinks, never overflows) */}
-              <View style={styles.action}>
-                {isClaimable ? (
-                  <LinearGradient
-                    colors={[currentTheme.colors.primary, currentTheme.colors.secondary]}
-                    style={styles.chip}
-                  >
-                    <Ionicons name="gift-outline" size={normalizeSize(14)} color="#FFFFFF" />
-                    <Text
-                      style={styles.chipText}
-                      numberOfLines={1}
-                      adjustsFontSizeToFit
-                      minimumFontScale={0.85}
-                    >
-                      {String(t("claim"))}
-                    </Text>
-                  </LinearGradient>
-                ) : isActivated ? (
-                  <View style={[styles.chip, styles.chipOk]}>
-                    <Ionicons name="checkmark-circle" size={normalizeSize(14)} color="#14532D" />
-                    <Text
-                      style={[styles.chipText, styles.chipOkText]}
-                      numberOfLines={1}
-                      adjustsFontSizeToFit
-                      minimumFontScale={0.85}
-                    >
-                      {String(t("unlocked"))}
-                    </Text>
-                  </View>
-                ) : (
-                  <View style={[styles.chip, styles.chipPending]}>
-                    <Ionicons name="lock-closed-outline" size={normalizeSize(14)} color={textSecondary} />
-                    <Text
-                      style={[styles.chipText, { color: textSecondary }]}
-                      numberOfLines={1}
-                      adjustsFontSizeToFit
-                      minimumFontScale={0.85}
-                    >
-                      {String(t("inProgress"))}
-                    </Text>
-                  </View>
-                )}
-              </View>
-            </View>
-          </TouchableOpacity>
-        </Animated.View>
-      );
-    },
-    [cardBg, borderSoft, currentTheme, onPressAchievement, t, textPrimary, textSecondary, disableAnimations, isDarkMode]
-  );
-
   const renderItem = useCallback(
-    ({ item, index }: SectionListRenderItemInfo<Achievement, AchievementSection>) => (
-      <AchievementCard item={item} index={index} />
-    ),
-    [AchievementCard]
-  );
+  ({ item, index }: SectionListRenderItemInfo<Achievement, AchievementSection>) => (
+    <AchievementCard
+      item={item}
+      index={index}
+      disableAnimations={disableAnimations}
+      isDarkMode={isDarkMode}
+      currentTheme={currentTheme}
+      cardBg={cardBg}
+      borderSoft={borderSoft}
+      textPrimary={textPrimary}
+      textSecondary={textSecondary}
+      t={t as any}
+      onPressAchievement={onPressAchievement}
+    />
+  ),
+  [
+    disableAnimations,
+    isDarkMode,
+    currentTheme,
+    cardBg,
+    borderSoft,
+    textPrimary,
+    textSecondary,
+    t,
+    onPressAchievement,
+  ]
+);
+
 
   const onRefresh = useCallback(() => {
     setRefreshing(true);

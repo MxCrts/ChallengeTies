@@ -215,7 +215,7 @@ const InvitationModal: React.FC<InvitationModalProps> = ({
 
   // 🧮 Dimensions carte dynamiques (avec safe areas)
   const CARD_MAX_W = Math.min(width - normalize(32), 420);
-  const rawMaxH = height - (insets.top + insets.bottom + normalize(80));
+  const rawMaxH = height - (insets.top + insets.bottom + normalize(48));
   const CARD_MAX_H = Math.max(normalize(260), Math.min(rawMaxH, 620));
 
   // ===== Chargement de l’invitation + inviter + challenge =====
@@ -715,15 +715,11 @@ const InvitationModal: React.FC<InvitationModalProps> = ({
     () =>
       StyleSheet.create({
         centeredView: {
-  flex: 1,
+   flex: 1,
   justifyContent: "center",
   alignItems: "center",
-  backgroundColor: isDarkMode
-    ? "rgba(0,0,0,0.78)"
-    : "rgba(0,0,0,0.65)",
+  backgroundColor: isDarkMode ? "rgba(0,0,0,0.78)" : "rgba(0,0,0,0.62)",
   paddingHorizontal: normalize(16),
-  paddingTop: insets.top + normalize(12),
-  paddingBottom: insets.bottom + normalize(24),
 },
         // Backdrop plein écran tappable
         backdrop: {
@@ -735,6 +731,9 @@ const InvitationModal: React.FC<InvitationModalProps> = ({
   maxWidth: 420,
   alignSelf: "center",
   flexShrink: 0,
+  // ✅ centre vraiment la carte dans la "safe zone"
+  marginTop: insets.top + normalize(10),
+  marginBottom: insets.bottom + normalize(14),
 },
         // Véritable carte : fond, arrondis, overflow hidden
         modalView: {
@@ -749,6 +748,8 @@ const InvitationModal: React.FC<InvitationModalProps> = ({
           shadowRadius: normalize(12),
           elevation: 10,
           overflow: "hidden",
+          borderWidth: StyleSheet.hairlineWidth,
+          borderColor: isDarkMode ? "rgba(255,255,255,0.08)" : "rgba(0,0,0,0.06)",
         },
         cardScroll: {
           width: "100%",
@@ -758,6 +759,7 @@ const InvitationModal: React.FC<InvitationModalProps> = ({
   paddingVertical: normalize(22),
   alignItems: "center",
   minHeight: normalize(160),
+  justifyContent: "center",
 },
         modalTitle: {
           fontSize: normalize(19),
@@ -1147,6 +1149,7 @@ const InvitationModal: React.FC<InvitationModalProps> = ({
               contentContainerStyle={styles.cardContent}
               bounces={false}
               showsVerticalScrollIndicator={false}
+              keyboardShouldPersistTaps="handled"
             >
               {showRestartConfirm ? renderRestartConfirmBody() : renderBody()}
             </ScrollView>

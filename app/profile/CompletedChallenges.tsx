@@ -117,12 +117,8 @@ export default function CompletedChallenges() {
   const insets = useSafeAreaInsets();
 
   // Hook appelé une seule fois, niveau racine (OK avec rules of hooks)
-  let tabBarHeight = 0;
-  try {
-    tabBarHeight = useBottomTabBarHeight();
-  } catch {
-    tabBarHeight = 0;
-  }
+  const tabBarHeight = useBottomTabBarHeight?.() ?? 0;
+
 
   const [adHeight, setAdHeight] = useState(0);
   const bottomPadding = useMemo(

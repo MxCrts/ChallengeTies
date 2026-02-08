@@ -1034,8 +1034,12 @@
       "trophies": "Custo: {{count}} troféus"
     },
     "ad": {
-      "title": "Ver um anúncio",
-      "subtitle": "Um vídeo curto salva a tua série.",
+      "title": "Salvar sequência — Anúncio",
+  "subtitle": "Assiste a um anúncio e mantém a tua sequência intacta.",
+  "loading": "A abrir o anúncio…",
+  "notReady": "O anúncio ainda não está pronto. Tenta novamente em alguns segundos.",
+  "notEarned": "Recompensa não confirmada. Podes tentar novamente.",
+  "error": "Não foi possível carregar o anúncio. Tenta de novo daqui a pouco.",
       "disabled": "Vídeo ainda não pronto. Espera um pouco."
     },
     "useTrophies": {
@@ -2414,6 +2418,13 @@
       "cta": "Continuar"
     }
   },
+  "deeplink": {
+      "inviteHandoff": {
+        "title": "Conectando ao Duo…",
+        "sub": "Preparando seu convite. Um segundo.",
+        "a11y": "Carregando convite…"
+      }
+    },
 "homeZ": {
   "duoPending": {
     "cta": "Preparar o Duo",
@@ -4640,6 +4651,7 @@
     "errorGeneric": "Não foi possível simular a sequência."
   },
   "firstPick": {
+    "progressShort": "{{current}}/{{total}}",
     "invitePending": {
     "title": "Convite pendente",
     "body": "O teu amigo ainda não respondeu. Podes reenviar o link ou continuar, e começa assim que ele aceitar.",

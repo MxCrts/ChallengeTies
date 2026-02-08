@@ -33,6 +33,12 @@ export type TodayHubWhyReturn = {
   icon?: string; // Ionicons name
 };
 
+const getThumbUrl200 = (url?: string) => {
+  const u = typeof url === "string" ? url.trim() : "";
+  if (!u) return "";
+  return u.replace(/(\.[a-zA-Z0-9]+)(\?|$)/, "_200x200$1$2");
+};
+
 type HubMeta = {
   id?: string;
   title?: string;
@@ -648,13 +654,13 @@ const pendingTitle = useMemo(
       },
     ]}
   >
-        <ExpoImage
-      source={{ uri: hubMeta.imageUrl }}
-      style={{ width: "100%", height: "100%" }}
-      contentFit="cover"
-      transition={120}
-      cachePolicy="memory-disk"
-    />
+       <ExpoImage
+  source={{ uri: getThumbUrl200(hubMeta.imageUrl) || hubMeta.imageUrl }}
+  style={{ width: "100%", height: "100%" }}
+  contentFit="cover"
+  transition={120}
+  cachePolicy="memory-disk"
+/>
 
   </View>
 ) : (

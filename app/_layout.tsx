@@ -1,8 +1,10 @@
 // app/_layout.tsx
 import React, { useEffect } from "react";
+import { useTranslation } from "react-i18next";
+import Animated, { FadeIn, FadeOut } from "react-native-reanimated";
 import { GestureHandlerRootView } from "react-native-gesture-handler";
 import { Stack, useRouter, usePathname } from "expo-router";
-import { StyleSheet, Platform, AppState, View} from "react-native";
+import { StyleSheet, Platform, AppState, View, Text, ActivityIndicator} from "react-native";
 import { Provider as PaperProvider } from "react-native-paper";
 import { ProfileUpdateProvider } from "../context/ProfileUpdateContext";
 import { TrophyProvider } from "../context/TrophyContext";
@@ -196,6 +198,23 @@ const AppNavigator: React.FC = () => {
 const [guestEnabled, setGuestEnabled] = React.useState<boolean | null>(null);
 const [homePendingInviteId, setHomePendingInviteId] = React.useState<string | null>(null);
 
+const guestNavLockRef = React.useRef(0);
+
+const consumeGuestJustEnabled = () => {
+  const ts = (globalThis as any).__GUEST_JUST_ENABLED__ as number | undefined;
+  if (!ts) return false;
+  // fenêtre courte : 2.5s
+  if (Date.now() - ts <= 2500) {
+    delete (globalThis as any).__GUEST_JUST_ENABLED__;
+    return true;
+  }
+  delete (globalThis as any).__GUEST_JUST_ENABLED__;
+  return false;
+};
+
+// ✅ Vérité unique: state visiteur immédiat OU flag persistant AsyncStorage
+  const effectiveGuest = !!isGuest || !!guestEnabled;
+
 useEffect(() => {
   let mounted = true;
   isFirstLaunch()
@@ -216,7 +235,6 @@ useEffect(() => {
 // (clic "Continue as guest" fait router.replace("/") + setItem(GUEST_KEY,"1"))
 useEffect(() => {
   let alive = true;
-  if (pathname !== "/") return;
   getGuestFlag()
     .then((v) => alive && setGuestEnabled(v))
     .catch(() => alive && setGuestEnabled(false));
@@ -287,18 +305,20 @@ useEffect(() => {
 
   useEffect(() => {
   if (
-    loading ||
-    checkingAuth ||
-    explicitLogout === null ||
-    firstLaunch === null ||
-    guestEnabled === null ||
-    (!fontsLoaded && !hardReady) ||
-    (!hydrated && !hardReady)
-  ) {
-    return;
-  }
+  loading || // ✅ garde dur
+  checkingAuth ||
+  explicitLogout === null ||
+  firstLaunch === null ||
+  guestEnabled === null ||
+  (!fontsLoaded && !hardReady) ||
+  (!hydrated && !hardReady)
+) {
+  return;
+}
+
 
   let nextRoute: string | null = null;
+
 
   // 1️⃣ After share intent
   const afterSharePath = consumeAfterShareIntentIfFresh(25000);
@@ -317,18 +337,53 @@ useEffect(() => {
   }
 
   // 3️⃣ DeepLink / Notif bloque le root
-  if (
-    !nextRoute &&
-    ((globalThis as any).__DL_BLOCK_ROOT_REDIRECT__ === true ||
-      (globalThis as any).__NOTIF_BLOCK_ROOT_REDIRECT__ === true)
-  ) {
-    SplashScreen.hideAsync().catch(() => {});
-    return;
+  const dlBlock = (globalThis as any).__DL_BLOCK_ROOT_REDIRECT__ === true;
+const notifBlock = (globalThis as any).__NOTIF_BLOCK_ROOT_REDIRECT__ === true;
+
+// ✅ On ne bloque JAMAIS le root redirect si pas connecté.
+// Sinon "/" peut rester coincé.
+if (!nextRoute && (dlBlock || notifBlock) && user) {
+  SplashScreen.hideAsync().catch(() => {});
+  return;
+}
+
+  // ✅ Exception critique : si user vient de se connecter sur /login ou /register,
+// on doit le sortir de là immédiatement.
+if (user && (pathname === "/login" || pathname === "/register")) {
+  clearExplicitLogoutFlag().catch(() => {});
+
+  // ✅ IMPORTANT: register doit aller vers l'onboarding, pas vers tabs.
+  const target =
+    pathname === "/register"
+      ? "/screen/onboarding/Screen1"
+      : "/(tabs)";
+
+  requestAnimationFrame(() => router.replace(target));
+  SplashScreen.hideAsync().catch(() => {});
+  return;
+}
+
+
+  // ✅ VISITEUR : si on vient juste d'activer "visiteur" depuis /login/register,
+  // on sort UNE FOIS vers tabs (sinon tu restes bloqué sur login).
+  // Anti-loop: one-shot + lock 600ms.
+  if (!user && (pathname === "/login" || pathname === "/register")) {
+    const justEnabled = consumeGuestJustEnabled();
+    // ✅ IMPORTANT: on ne force PAS le redirect si l'utilisateur est déjà guest
+    // et qu'il ouvre /login volontairement pour se connecter.
+    if (justEnabled) {
+      const now = Date.now();
+      if (now - guestNavLockRef.current > 600) {
+        guestNavLockRef.current = now;
+        requestAnimationFrame(() => router.replace("/(tabs)"));
+      }
+      SplashScreen.hideAsync().catch(() => {});
+      return;
+    }
   }
 
-  // ✅ IMPORTANT (comme ton dernier push Github):
-  // On ne force une redirection "root" que si on est sur "/".
-  // Sinon on laisse register/onboarding/firstpick vivre sans être écrasés.
+  // ✅ Protection : on ne force une redirection "root" que si on est sur "/"
+  // (sinon on laisse les autres screens vivre sans être écrasés)
   if (pathname !== "/") {
     SplashScreen.hideAsync().catch(() => {});
     return;
@@ -349,8 +404,10 @@ if (!nextRoute) {
   // ✅ user connecté → nettoie le flag logout et go tabs
   if (user) {
     clearExplicitLogoutFlag().catch(() => {});
+    AsyncStorage.removeItem(GUEST_KEY).catch(() => {});
+    setGuestEnabled(false);
     nextRoute = "/(tabs)";
-  } else if (guestEnabled) {
+  } else if (effectiveGuest) {
     // ✅ visitor doit bypass firstLaunch / explicitLogout
     nextRoute = "/(tabs)";
   } else if (firstLaunch || explicitLogout) {
@@ -379,6 +436,7 @@ if (!nextRoute) {
   explicitLogout,
   firstLaunch,
   guestEnabled,
+  isGuest,
 ]);
 
 
@@ -395,29 +453,39 @@ if (!nextRoute) {
   }, [user, loading, checkingAuth, fontsLoaded, hydrated, hardReady]);
 
   // On ne rend rien : seulement redirection + splash
-  if (
-    loading ||
-    checkingAuth ||
-    explicitLogout === null ||
-    (!fontsLoaded && !hardReady) ||
-    (!hydrated && !hardReady)
-  )
-    return null;
+ if (
+  loading ||
+  explicitLogout === null ||
+  (!fontsLoaded && !hardReady) ||
+  (!hydrated && !hardReady)
+)
+  return null;
+
   return null;
 };
 
 // =========================
 // FlagsGate : bloque le rendu tant que les flags ne sont pas prêts
 // =========================
+const FLAGS_FAILSAFE_MS = 1800;
+
 const FlagsGate: React.FC<{ children: React.ReactNode }> = ({ children }) => {
   const { isReady } = useFlags();
+  const [forceOpen, setForceOpen] = React.useState(false);
 
-  // ✅ Tant que pas prêt, on ne rend RIEN (évite rerenders instables du navigator)
-  if (!isReady) return null;
+  useEffect(() => {
+    if (isReady) return;
+    const t = setTimeout(() => {
+      setForceOpen(true);
+      console.log("⚠️ [FlagsGate] failsafe open (isReady=false)");
+    }, FLAGS_FAILSAFE_MS);
+    return () => clearTimeout(t);
+  }, [isReady]);
+
+  if (!isReady && !forceOpen) return null;
 
   return <>{children}</>;
 };
-
 
 // =========================
 // ConsentGate : UMP (AdsConsent) + MobileAds (NON BLOQUANT)
@@ -542,6 +610,100 @@ const ConsentGate: React.FC<{ children: React.ReactNode }> = ({ children }) => {
   return <>{children}</>;
 };
 
+// =========================
+// InviteHandoff (global overlay)
+// =========================
+type InviteHandoffState = { visible: boolean; kind: "invite" | null };
+
+const InviteHandoffContext = React.createContext<{
+  state: InviteHandoffState;
+  showInvite: () => void;
+  hide: () => void;
+} | null>(null);
+
+const useInviteHandoff = () => {
+  const ctx = React.useContext(InviteHandoffContext);
+  if (!ctx) throw new Error("useInviteHandoff must be used within InviteHandoffProvider");
+  return ctx;
+};
+
+const InviteHandoffProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
+  const [state, setState] = React.useState<InviteHandoffState>({ visible: false, kind: null });
+
+  const api = React.useMemo(
+    () => ({
+      state,
+      showInvite: () => setState({ visible: true, kind: "invite" }),
+      hide: () => setState({ visible: false, kind: null }),
+    }),
+    [state]
+  );
+
+  // ✅ pont global : le screen challenge-details pourra cacher l'overlay
+  useEffect(() => {
+    (globalThis as any).__HIDE_INVITE_HANDOFF__ = api.hide;
+    return () => {
+      if ((globalThis as any).__HIDE_INVITE_HANDOFF__ === api.hide) {
+        delete (globalThis as any).__HIDE_INVITE_HANDOFF__;
+      }
+    };
+  }, [api.hide]);
+
+  return <InviteHandoffContext.Provider value={api}>{children}</InviteHandoffContext.Provider>;
+};
+
+const InviteHandoffOverlay: React.FC = () => {
+  const { state } = useInviteHandoff();
+  const { t } = useTranslation();
+
+  if (!state.visible) return null;
+
+  return (
+    <Animated.View
+      entering={FadeIn.duration(160)}
+      exiting={FadeOut.duration(160)}
+      style={{
+        ...StyleSheet.absoluteFillObject,
+        zIndex: 9999,
+        elevation: 9999,
+        backgroundColor: "rgba(0,0,0,0.86)",
+        alignItems: "center",
+        justifyContent: "center",
+        paddingHorizontal: 24,
+      }}
+      pointerEvents="auto"
+      accessibilityRole="progressbar"
+      accessibilityLabel={t("deeplink.inviteHandoff.a11y", { defaultValue: "Chargement de l’invitation…" })}
+    >
+      <View style={{ alignItems: "center" }}>
+        <ActivityIndicator size="large" color="#fff" />
+        <Text
+          style={{
+            marginTop: 14,
+            fontSize: 16,
+            color: "#fff",
+            textAlign: "center",
+            fontFamily: "Comfortaa_700Bold",
+          }}
+        >
+          {t("deeplink.inviteHandoff.title", { defaultValue: "Connexion au Duo…" })}
+        </Text>
+        <Text
+          style={{
+            marginTop: 8,
+            fontSize: 13,
+            color: "rgba(255,255,255,0.78)",
+            textAlign: "center",
+            fontFamily: "Comfortaa_400Regular",
+          }}
+        >
+          {t("deeplink.inviteHandoff.sub", { defaultValue: "On prépare ton invitation. 1 seconde." })}
+        </Text>
+      </View>
+    </Animated.View>
+  );
+};
+
 
 // =========================
 // DeepLinkManager : SAFE, idempotent, auth-aware
@@ -551,6 +713,7 @@ const DeepLinkManager: React.FC = () => {
   const pathname = usePathname();
   const { flags } = useFlags();
   const { user, loading, checkingAuth } = useAuth();
+  const handoff = useInviteHandoff();
 
   // Dédup local + global (si remount)
   const lastUrlRef = React.useRef<string | null>(null);
@@ -675,10 +838,17 @@ const DeepLinkManager: React.FC = () => {
               inviteId,
             });
         } catch {}
+         // ✅ clé du fix
+  (globalThis as any).__DL_BLOCK_ROOT_REDIRECT__ = false;
+  (globalThis as any).__FORCE_AUTH_FLOW__ = true;
         return;
       }
 
       // ✅ User ready → navigation propre
+      if (inviteId) {
+        // 1 seul loading premium au lieu de 3 spinners/écrans
+        handoff.showInvite();
+      }
       router.push({
         pathname: `/challenge-details/${challengeId}`,
         params: inviteId
@@ -689,7 +859,7 @@ const DeepLinkManager: React.FC = () => {
           : {},
       });
     },
-    [router, user, loading, checkingAuth]
+    [router, user, loading, checkingAuth, handoff]
   );
 
   useEffect(() => {
@@ -728,6 +898,10 @@ const DeepLinkManager: React.FC = () => {
 
         await AsyncStorage.removeItem("ties_pending_link");
         (globalThis as any).__DL_BLOCK_ROOT_REDIRECT__ = true;
+
+         if (inviteId) {
+          handoff.showInvite();
+        }
 
         router.push({
           pathname: `/challenge-details/${String(challengeId)}`,
@@ -922,8 +1096,10 @@ export default function RootLayout() {
                                     <ConsentGate>
                                       <PremiumProvider>
                                       <AdsVisibilityProvider>
+                                        <InviteHandoffProvider>
                                         <DeepLinkManager />
                                         <NotificationsBootstrap />
+                                        <InviteHandoffOverlay />
 
                                         <Stack
                                           screenOptions={{
@@ -940,6 +1116,7 @@ export default function RootLayout() {
                                           <Stack.Screen name="register" />
                                           <Stack.Screen name="forgot-password" />
                                         </Stack>
+                                        </InviteHandoffProvider>
 
                                         <AppNavigator />
                                         <TrophyModal />

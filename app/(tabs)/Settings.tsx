@@ -609,8 +609,18 @@ setIsPremium(premiumFlag);
             try {
               tap();
               isActiveRef.current = false;
+              // ✅ HARD LOGOUT: purge totale pour éviter les états/caches cross-user
               await AsyncStorage.setItem(EXPLICIT_LOGOUT_KEY, "1");
+
+              // 1) On purge TOUT (sinon écran "préparation" au switch account)
+              //    On conserve juste le flag explicit logout.
+              await AsyncStorage.clear();
+              await AsyncStorage.setItem(EXPLICIT_LOGOUT_KEY, "1");
+
+              // 2) Déco Firebase
               await auth.signOut();
+
+              // 3) Redirect login (replace => pas de back)
               router.replace("/login");
               showToast(
                 t("loggedOut", { defaultValue: "Déconnecté." }),

@@ -541,6 +541,13 @@
     "interestsLabel": "Interests"
   },
   "dailySelectedSubtitleShort": "Today’s selection.",
+  "deeplink": {
+      "inviteHandoff": {
+        "title": "Joining Duo…",
+        "sub": "Preparing your invite. One second.",
+        "a11y": "Loading invitation…"
+      }
+    },
  "homeZ": {
   "duoPending": {
      "cta": "Prepare Duo",
@@ -1143,8 +1150,12 @@
       "trophies": "Cost: {{count}} trophies"
     },
     "ad": {
-      "title": "Watch an ad",
-      "subtitle": "A short video will save your streak.",
+       "title": "Save streak — Ad",
+  "subtitle": "Watch an ad and keep your streak intact.",
+  "loading": "Opening the ad…",
+  "notReady": "Ad not ready yet. Try again in a few seconds.",
+  "notEarned": "Reward not confirmed. You can try again.",
+  "error": "Unable to load the ad. Try again in a moment.",
       "disabled": "Video not ready yet. Please wait."
     },
     "useTrophies": {
@@ -4794,6 +4805,7 @@
     "loginRequired": "Login required."
   },
   "firstPick": {
+    "progressShort": "{{current}}/{{total}}",
     "invitePending": {
     "title": "Invitation pending",
     "body": "Your friend hasn’t responded yet. You can resend the link, or continue and it will start as soon as they accept.",

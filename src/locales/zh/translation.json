@@ -492,6 +492,13 @@
       "cta": "继续"
     }
   },
+  "deeplink": {
+      "inviteHandoff": {
+        "title": "正在加入双人模式…",
+        "sub": "正在准备你的邀请。稍等一下。",
+        "a11y": "正在加载邀请…"
+      }
+    },
 "homeZ": {
   "duoPending": {
     "cta": "准备双人模式",
@@ -914,6 +921,7 @@
     "errorGeneric": "无法模拟连胜。"
   },
  "firstPick": {
+  "progressShort": "{{current}}/{{total}}",
   "invitePending": {
     "title": "邀请等待中",
     "body": "你的好友还没有回应。你可以重新发送链接，或继续，等他接受后就会开始。",
@@ -1415,8 +1423,12 @@
       "trophies": "消耗：{{count}} 奖杯"
     },
     "ad": {
-      "title": "观看广告",
-      "subtitle": "看个短视频，连胜就能保住。",
+      "title": "保住连续 — 广告",
+  "subtitle": "观看一段广告，保持你的连续记录不变。",
+  "loading": "正在打开广告…",
+  "notReady": "广告还没准备好。请几秒后再试。",
+  "notEarned": "奖励未确认。你可以再试一次。",
+  "error": "无法加载广告。请稍后再试。",
       "disabled": "视频还没准备好，请稍等。"
     },
     "useTrophies": {

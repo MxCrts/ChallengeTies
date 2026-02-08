@@ -522,6 +522,13 @@
       "cta": "Continua"
     }
   },
+  "deeplink": {
+      "inviteHandoff": {
+        "title": "Connessione al Duo…",
+        "sub": "Sto preparando l’invito. Un secondo.",
+        "a11y": "Caricamento invito…"
+      }
+    },
   "homeZ": {
     "duoPending": {
       "cta": "Prepara Duo",
@@ -860,6 +867,7 @@
     "errorGeneric": "Impossibile simulare la serie."
   },
   "firstPick": {
+    "progressShort": "{{current}}/{{total}}",
     "invitePending": {
     "title": "Invito in attesa",
     "body": "Il tuo amico non ha ancora risposto. Puoi rinviare il link oppure continuare: partirà appena accetta.",
@@ -1405,8 +1413,12 @@
       "trophies": "Costo: {{count}} trofei"
     },
     "ad": {
-      "title": "Guarda una pub",
-      "subtitle": "Un breve video salverà la tua serie.",
+      "title": "Salva la serie — Pubblicità",
+  "subtitle": "Guarda una pubblicità e mantieni intatta la tua serie.",
+  "loading": "Apertura della pubblicità…",
+  "notReady": "Pubblicità non ancora pronta. Riprova tra pochi secondi.",
+  "notEarned": "Ricompensa non confermata. Puoi riprovare.",
+  "error": "Impossibile caricare la pubblicità. Riprova tra un attimo.",
       "disabled": "Video non pronto. Attendi un attimo."
     },
     "useTrophies": {

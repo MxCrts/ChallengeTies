@@ -46,6 +46,13 @@
       "cta": "Weiter"
     }
   },
+  "deeplink": {
+      "inviteHandoff": {
+        "title": "Duo wird verbunden…",
+        "sub": "Einladung wird vorbereitet. Einen Moment.",
+        "a11y": "Einladung wird geladen…"
+      }
+    },
   "homeZ": {
     "duoPending": {
       "cta": "Duo vorbereiten",
@@ -1148,8 +1155,12 @@
       "trophies": "Kosten: {{count}} Trophäen"
     },
     "ad": {
-      "title": "Werbung ansehen",
-      "subtitle": "Ein kurzes Video rettet deine Serie.",
+       "title": "Streak retten — Werbung",
+  "subtitle": "Sieh dir eine Werbung an und behalte deinen Streak.",
+  "loading": "Werbung wird geöffnet…",
+  "notReady": "Werbung noch nicht bereit. Versuch es in ein paar Sekunden erneut.",
+  "notEarned": "Belohnung nicht bestätigt. Du kannst es erneut versuchen.",
+  "error": "Werbung konnte nicht geladen werden. Bitte gleich nochmal versuchen.",
       "disabled": "Video noch nicht bereit. Bitte kurz warten."
     },
     "useTrophies": {
@@ -4778,6 +4789,7 @@
     "loginRequired": "Anmeldung erforderlich."
   },
  "firstPick": {
+  "progressShort": "{{current}}/{{total}}",
   "invitePending": {
     "title": "Einladung ausstehend",
     "body": "Dein Freund hat noch nicht geantwortet. Du kannst den Link erneut senden oder fortfahren, dann startet es sobald er annimmt.",

@@ -4,7 +4,7 @@ import { auth } from "@/constants/firebase-config";
 import AsyncStorage from "@react-native-async-storage/async-storage";
 import { fetchAndSaveUserLocation } from "../services/locationService";
 import { db } from "@/constants/firebase-config";
-import { collection, query, where, onSnapshot, doc, runTransaction, getDoc, serverTimestamp  } from "firebase/firestore";
+import { collection, query, where, onSnapshot, doc, runTransaction, getDoc, serverTimestamp, setDoc  } from "firebase/firestore";
 import { increment } from "firebase/firestore";
 import { updateDoc, arrayUnion } from "firebase/firestore";
 import { AppState, Platform  } from "react-native";
@@ -17,25 +17,9 @@ import {
   rescheduleLateIfNeeded,
   rescheduleNextDailyIfNeeded,
 } from "@/services/notificationService";
-import {
-  REFERRER_KEY,
-  REFERRER_SRC_KEY,
-  REFERRER_TS_KEY,
-} from "@/services/referralLinking";
 import { logEvent } from "@/src/analytics";
 import { getDisplayUsername } from "@/services/invitationService";
-import {
-  checkAndGrantAmbassadorRewards,
-  checkAndGrantAmbassadorMilestones,
-  checkAndNotifyReferralMilestones,
-} from "../src/referral/pioneerChecker";
 
-
-const REFERRAL_JUST_ACTIVATED_KEY = "ties_referral_just_activated";
-
-const LEGACY_REFERRER_KEY = "ties_referrer_id";
-const LEGACY_REFERRER_SRC_KEY = "ties_referrer_src";
-const LEGACY_REFERRER_TS_KEY = "ties_referrer_ts";
 
 // ✅ helpers (TOP LEVEL) : empêche la création d'un doc user "partiel"
 const sleep = (ms: number) => new Promise((r) => setTimeout(r, ms));
@@ -52,63 +36,13 @@ async function waitForUserDoc(uid: string, tries = 30, delayMs = 200) {
   return false;
 }
 
-
-async function consumePendingReferrer(uid: string) {
-  // On lit à la fois les nouvelles clés ET les anciennes pour être 100% compatible
-  const entries = await AsyncStorage.multiGet([
-    REFERRER_KEY,
-    REFERRER_SRC_KEY,
-    REFERRER_TS_KEY,
-    LEGACY_REFERRER_KEY,
-    LEGACY_REFERRER_SRC_KEY,
-    LEGACY_REFERRER_TS_KEY,
-  ]);
-
-
-  const map = Object.fromEntries(entries);
-
-  // 🔑 On prend en priorité les nouvelles clés, sinon les legacy
-  const referrerId =
-    (map[REFERRER_KEY] ?? map[LEGACY_REFERRER_KEY] ?? "").toString().trim();
-  const srcRaw =
-    (map[REFERRER_SRC_KEY] ?? map[LEGACY_REFERRER_SRC_KEY] ?? "").toString();
-  const tsRaw =
-    (map[REFERRER_TS_KEY] ?? map[LEGACY_REFERRER_TS_KEY] ?? "0").toString();
-
-  const cleanRef = referrerId;
-  const cleanSrc = srcRaw.trim() || "share";
-  const cleanTs = Number(tsRaw || 0);
-
-  console.log("[referral] consumePendingReferrer merged keys ->", {
-    cleanRef,
-    cleanSrc,
-    cleanTs,
-  });
-
-  return { cleanRef, cleanSrc, cleanTs };
-}
-
-async function clearPendingReferrer() {
-  // On nettoie toutes les variantes possibles de clés
-  await AsyncStorage.multiRemove([
-    REFERRER_KEY,
-    REFERRER_SRC_KEY,
-    REFERRER_TS_KEY,
-    LEGACY_REFERRER_KEY,
-    LEGACY_REFERRER_SRC_KEY,
-    LEGACY_REFERRER_TS_KEY,
-  ]);
-
-  console.log("[referral] clearPendingReferrer -> all keys removed");
-}
-
-
 interface AuthContextType {
   user: User | null;
   setUser: (user: User | null) => void;
   loading: boolean;
   checkingAuth: boolean;
   logout: () => Promise<void>;
+  userDocReady: boolean;
 }
 
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
@@ -119,6 +53,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({
   const [user, setUser] = useState<User | null>(null);
   const [loading, setLoading] = useState(true);
   const [checkingAuth, setCheckingAuth] = useState(true);
+  const [userDocReady, setUserDocReady] = useState(false);
   // ✅ Dedupe refs (must be top-level hooks)
   const treatedAcceptedInvitesRef = useRef<Set<string>>(new Set());
   const treatedRefusedInvitesRef = useRef<Set<string>>(new Set());
@@ -138,199 +73,83 @@ const authFailsafe = setTimeout(() => {
   const uid = firebaseUser.uid;
   const userRef = doc(db, "users", uid);
 
-  // ✅ On attend que Register ait créé le doc COMPLET
-  let snap = await getDoc(userRef);
-
-  if (!snap.exists()) {
-    console.log("⏳ AuthProvider: userDoc absent → wait (register create)...");
-    const ok = await waitForUserDoc(uid);
-    if (!ok) {
-      console.log("⛔ AuthProvider: userDoc toujours absent → on stoppe, pas d'écriture");
-      setLoading(false);
-      setCheckingAuth(false);
-      return;
-    }
-    snap = await getDoc(userRef);
-  }
-
-  // ✅ Maintenant seulement, on expose l'user → les useEffect([user?.uid]) peuvent tourner
+  // ✅ IMPORTANT : on expose l'user tout de suite (évite freeze routing)
   setUser(firebaseUser);
+  setUserDocReady(false);
 
-  console.log("👍 AuthProvider: userDoc détecté → on peut appliquer les features.");
-
-  // ✅ Referral activation post-login (force l’écriture sur le doc user)
+  // ✅ On vérifie le doc en arrière-plan
   (async () => {
     try {
-      const uid = firebaseUser.uid;
-      const { cleanRef, cleanSrc } = await consumePendingReferrer(uid);
-      console.log("[referral][login] consumePendingReferrer ->", {
-        cleanRef,
-        cleanSrc,
-      });
+      let snap = await getDoc(userRef);
 
-      if (!cleanRef) {
-  await clearPendingReferrer();
-  return;
+      if (!snap.exists()) {
+        console.log("⏳ AuthProvider: userDoc absent → wait (register create)...");
+        const ok = await waitForUserDoc(uid);
+        if (!ok) {
+          console.log("⛔ AuthProvider: userDoc toujours absent → logout (évite app bloquée)");
+          try {
+            await signOut(auth);
+          } catch {}
+          if (!alive) return;
+          setUser(null);
+          setUserDocReady(false);
+          return;
+        }
+        snap = await getDoc(userRef);
+      }
+
+      if (!alive) return;
+
+// ✅ MIGRATION HARD-SAFE : doc existe mais uid manquant → on le répare.
+const data = (snap.data?.() ?? {}) as any;
+if (!data?.uid) {
+  try {
+    await updateDoc(userRef, {
+      uid,
+      updatedAt: serverTimestamp(),
+    });
+    console.log("✅ AuthProvider: patched missing uid in userDoc.");
+  } catch (e) {
+    // fallback ultra safe (merge) si update refusé
+    try {
+      await setDoc(
+        userRef,
+        { uid, updatedAt: serverTimestamp() },
+        { merge: true }
+      );
+      console.log("✅ AuthProvider: patched missing uid via setDoc merge.");
+    } catch (e2) {
+      console.log("⚠️ AuthProvider: failed to patch missing uid:", e2);
+    }
+  }
 }
 
-          // ignore self-ref
-          if (cleanRef === uid) {
-            await clearPendingReferrer();
-            return;
-          }
-
-                    const userRef = doc(db, "users", uid);
-
-          const activated = await runTransaction(db, async (tx) => {
-            const uSnap = await tx.get(userRef);
-            const data = uSnap.exists() ? (uSnap.data() as any) : {};
-
-            const alreadyHasReferrer =
-              !!data?.referrerId || !!data?.referral?.referrerId;
-
-            const alreadyActivated = data?.activated === true;
+console.log("👍 AuthProvider: userDoc détecté → OK.");
+setUserDocReady(true);
 
 
-            // Si le user a déjà un parrain ou est déjà activé → on ne fait rien
-            if (alreadyHasReferrer || alreadyActivated) {
-              return false;
-            }
+      // ✅ À partir de là seulement : features “écriture” / heavy stuff
+      // (referral / pioneer / location) en fond, sans bloquer UI
+      setTimeout(() => {
+        if (!alive) return;
 
-            // 1️⃣ On marque UNIQUEMENT le FILLEUL comme activé
-            //    (le PARRAIN sera mis à jour côté serveur par la Cloud Function onUserActivated)
-            tx.set(
-              userRef,
-              {
-                activated: true,
-                referral: {
-                  ...(data?.referral || {}),
-                  referrerId: cleanRef,
-                  src: cleanSrc,
-                  activatedAt: serverTimestamp(),
-                  updatedAt: serverTimestamp(),
-                  activatedCount: 0,
-                  claimedMilestones: [],
-                  pendingMilestones: [],
-                },
-                updatedAt: serverTimestamp(),
-              },
-              { merge: true }
-            );
-
-
-            return true;
-          });
-
-
-          // 👉 Quoi qu’il arrive, on nettoie le referrer local
-          await clearPendingReferrer();
-
-          if (activated) {
-            // Flag local + analytics
-            await AsyncStorage.setItem(REFERRAL_JUST_ACTIVATED_KEY, "1");
-            await logEvent("referral_activated", { referrerId: cleanRef, src: cleanSrc });
-
-          } else {
-            console.log(
-              "[referral] rien activé (déjà parrainé ou déjà activé) → referrer nettoyé"
-            );
-          }
-        } catch (e) {
-          console.log("[referral] activation post-login error:", e);
-        }
-      })();
-
-
-
-
-// 🔥 Lancer tous les checks referral en tâche de fond
-  (async () => {
-    try {
-      await Promise.all([
-        checkAndGrantAmbassadorRewards(),
-        checkAndGrantAmbassadorMilestones(),
-        checkAndNotifyReferralMilestones(), // 🆕 nudge palier basé sur claimedMilestones
-      ]);
+        // --- Location (background)
+        fetchAndSaveUserLocation().catch(() => {});
+      }, 0);
     } catch (e) {
-      console.log("[referral] global checks error:", e);
+      console.log("⚠️ AuthProvider userDoc check error:", e);
+      if (!alive) return;
+      setUserDocReady(false);
+      // on ne bloque pas l'app
     }
   })();
+} else {
+  console.log("🔴 Aucun utilisateur connecté. Redirection vers login...");
+  setUser(null);
+  setUserDocReady(false);
 
-
-      (async () => {
-  try {
-    const userRef = doc(db, "users", firebaseUser.uid);
-    const counterRef = doc(db, "meta", "pioneerStats"); // ⚠️ lowercase 'pioneerStats'
-    let pioneerJustGranted = false;
-
-    await runTransaction(db, async (tx) => {
-      const [cSnap, uSnap] = await Promise.all([tx.get(counterRef), tx.get(userRef)]);
-      const already = uSnap.exists() && uSnap.data()?.pioneerRewardGranted === true;
-      if (already) return;
-
-      // IMPORTANT : ne JAMAIS faire "create puis update" dans la même transaction
-      if (!cSnap.exists()) {
-        // On initialise juste à 0 et on sort. Le prochain utilisateur déclenchera l'incrément.
-        tx.set(counterRef, { count: 0 });
-        return;
-      }
-
-      const current = cSnap.data()?.count ?? 0;
-      const isPioneer = current < 2000;
-
-      // Écritures utilisateur — doivent se faire en UNE seule écriture (conforme à tes rules)
-      tx.set(
-  userRef,
-  {
-    isPioneer: isPioneer,
-    pioneerRewardGranted: isPioneer,
-    trophies: isPioneer ? increment(50) : increment(0),
-    updatedAt: new Date(),
-  },
-  { merge: true }
-);
-
-      if (isPioneer) {
-        tx.update(counterRef, { count: current + 1 });
-        pioneerJustGranted = true;
-      }
-    });
-
-    if (pioneerJustGranted) {
-      await AsyncStorage.setItem("pioneerJustGranted", "1");
-    }
-  } catch (err) {
-    console.error("⚠️ Erreur attribution pionnier:", err);
-  }
-})();
-
-
-
-     // ⚡️ LANCE EN FOND ➜ on ne bloque pas le Splash ! (version sérialisée)
-AsyncStorage.setItem(
-  "user",
-  JSON.stringify({
-    uid: firebaseUser.uid,
-    email: firebaseUser.email ?? null,
-    displayName: firebaseUser.displayName ?? null,
-  })
-).catch((error) => {
-  console.error("⚠️ Erreur sauvegarde AsyncStorage:", error);
-});
-
-
-      fetchAndSaveUserLocation().catch((error) => {
-        console.error("⚠️ Erreur localisation:", error);
-      });
-    } else {
-      console.log("🔴 Aucun utilisateur connecté. Redirection vers login...");
-      setUser(null);
-
-      AsyncStorage.removeItem("user").catch((error) => {
-        console.error("⚠️ Erreur retrait AsyncStorage:", error);
-      });
-    }
-
+  AsyncStorage.removeItem("user").catch(() => {});
+}
     // ✅ On passe loading à false TOUT DE SUITE !
     setLoading(false);
     setCheckingAuth(false);
@@ -350,7 +169,7 @@ const pushSetupUidRef = useRef<string | null>(null);
 useEffect(() => {
   const uid = user?.uid;
   if (!uid) return;
-
+  if (!userDocReady) return;
   if (Platform.OS === "web") {
     console.log("🌐 Web environment → skip push setup");
     return;
@@ -420,7 +239,7 @@ useEffect(() => {
     } catch {}
     if (pushSetupUidRef.current === uid) pushSetupUidRef.current = null;
   };
-}, [user?.uid]);
+}, [user?.uid, userDocReady]);
 
 
 useEffect(() => {
@@ -500,48 +319,6 @@ useEffect(() => {
 
   return () => unsubscribe();
 }, [user?.uid]);
-
-useEffect(() => {
-   if (!user) return;
-   const uid = user.uid;
-   const userRef = doc(db, "users", uid);
-
-   let prevCount = 0;
-   let initialized = false;
-
-   const unsubscribe = onSnapshot(userRef, (snap) => {
-     if (!snap.exists()) return;
-     const data = snap.data() as any;
-
-     const currentCount = Number(data?.referral?.activatedCount ?? 0);
-
-     // Premier snapshot → on initialise seulement
-     if (!initialized) {
-       prevCount = currentCount;
-       initialized = true;
-       return;
-     }
-
-     // NOUVEAU FILLEUL ACTIVÉ → on donne +10 trophées par filleul ajouté
-     if (currentCount > prevCount) {
-  const bonus = (currentCount - prevCount) * 10;
-
-  updateDoc(userRef, {
-    trophies: increment(bonus),
-  }).catch((e) => {
-    console.warn("[referral] Échec +10 trophées parrain (mais pas grave):", e);
-  });
-
-  console.log(
-    `[referral] +${bonus} trophées pour ${currentCount} filleuls activés ! (no local notif)`
-  );
-}
-
-     prevCount = currentCount;
-   });
-
-   return () => unsubscribe();
- }, [user?.uid]);
 
 // Remplace/insère l’entrée locale de l’invitateur par une entrée DUO propre et idempotente.
 // - Si une entrée SOLO existe pour ce challenge => elle est remplacée
@@ -679,7 +456,7 @@ if (!Number.isFinite(days) || !Number.isInteger(days) || days <= 0) return;
 
 
   return (
-  <AuthContext.Provider value={{ user, setUser, loading, checkingAuth, logout }}>
+  <AuthContext.Provider value={{ user, setUser, loading, checkingAuth, logout, userDocReady }}>
     {children}
   </AuthContext.Provider>
 );

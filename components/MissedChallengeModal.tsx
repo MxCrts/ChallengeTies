@@ -20,6 +20,7 @@ import designSystem from "../theme/designSystem";
 import { useTranslation } from "react-i18next";
 import { useTheme } from "../context/ThemeContext";
 import * as Haptics from "expo-haptics";
+import { rewardedAdsService } from "../services/rewardedAdsService";
 
 const { width: SCREEN_WIDTH, height: SCREEN_HEIGHT } = Dimensions.get("window");
 
@@ -34,9 +35,15 @@ interface MissedChallengeModalProps {
   onReset: () => void;
 
   // (gardés pour compat parent, mais non utilisés dans cette version)
-  onWatchAd: () => void;
+  onWatchAd: () => void | Promise<void>;
   preloadRewarded?: () => void;
   rewardedReady?: boolean;
+
+  /**
+   * ✅ Nouveau (recommandé) : si fourni, le modal gère la rewarded en autonome (singleton service).
+   * Sinon -> fallback : on appelle onWatchAd() et le parent peut gérer la pub comme avant.
+   */
+  rewardedAdUnitId?: string;
 
   onUseTrophies: () => void;
   trophyCost: number;
@@ -50,6 +57,10 @@ const MissedChallengeModal: React.FC<MissedChallengeModalProps> = ({
   visible,
   onClose,
   onReset,
+  onWatchAd,
+  preloadRewarded,
+  rewardedReady,
+  rewardedAdUnitId,
   onUseTrophies,
   trophyCost,
   hasStreakPass,
@@ -77,6 +88,9 @@ const MissedChallengeModal: React.FC<MissedChallengeModalProps> = ({
 
   const [reduceMotion, setReduceMotion] = useState(false);
   const [confirmVisible, setConfirmVisible] = useState(false);
+  const [adLoading, setAdLoading] = useState(false);
+  const [adError, setAdError] = useState<string | null>(null);
+  const [adReadyLocal, setAdReadyLocal] = useState(false);
 
   // Précharge annonce accessibilité
   useEffect(() => {
@@ -92,6 +106,42 @@ const MissedChallengeModal: React.FC<MissedChallengeModalProps> = ({
 
     return () => clearTimeout(timer);
   }, [visible, t, i18n.language]);
+
+   // ✅ Préload rewarded (autonome si rewardedAdUnitId fourni, sinon via prop preloadRewarded)
+  useEffect(() => {
+    if (!visible) return;
+    setAdError(null);
+
+    let mounted = true;
+
+    const run = async () => {
+      try {
+        if (rewardedAdUnitId) {
+          await rewardedAdsService.preload(rewardedAdUnitId);
+          if (!mounted) return;
+          setAdReadyLocal(rewardedAdsService.isReady(rewardedAdUnitId));
+        } else {
+          preloadRewarded?.();
+          // en mode fallback, on se fie à rewardedReady (prop)
+          setAdReadyLocal(!!rewardedReady);
+        }
+      } catch {
+        if (!mounted) return;
+        setAdReadyLocal(false);
+      }
+    };
+
+    run();
+    return () => {
+      mounted = false;
+    };
+  }, [visible, rewardedAdUnitId, preloadRewarded, rewardedReady]);
+
+  // ✅ garde sync ready prop -> local (fallback)
+  useEffect(() => {
+    if (rewardedAdUnitId) return;
+    setAdReadyLocal(!!rewardedReady);
+  }, [rewardedAdUnitId, rewardedReady]);
 
   // Respect Reduce Motion
   useEffect(() => {
@@ -178,6 +228,59 @@ const MissedChallengeModal: React.FC<MissedChallengeModalProps> = ({
       }),
     [onUseTrophies, onClose]
   );
+
+  const handleWatchAd = useCallback(() => {
+    return withLock(async () => {
+      if (adLoading) return;
+      setAdError(null);
+      setAdLoading(true);
+      try {
+        // ✅ Mode autonome (recommandé)
+        if (rewardedAdUnitId) {
+          // si pas prête, on tente un preload rapide
+          if (!rewardedAdsService.isReady(rewardedAdUnitId)) {
+            await rewardedAdsService.preload(rewardedAdUnitId);
+          }
+          setAdReadyLocal(rewardedAdsService.isReady(rewardedAdUnitId));
+
+          const res = await rewardedAdsService.show(rewardedAdUnitId);
+          if (res === "earned") {
+            await onWatchAd?.();
+            onClose();
+            return;
+          }
+          if (res === "closed") {
+            // user a fermé avant récompense -> on reste dans le modal
+            setAdError(
+              t("missedChallenge.ad.notEarned", {
+                defaultValue: "Récompense non validée. Tu peux réessayer.",
+              }) as string
+            );
+            return;
+          }
+
+          setAdError(
+            t("missedChallenge.ad.error", {
+              defaultValue: "Impossible de charger la pub. Réessaie dans un instant.",
+            }) as string
+          );
+          return;
+        }
+
+        // ✅ Fallback compat : le parent gère la rewarded (comme tes 2 autres modaux)
+        await onWatchAd?.();
+        onClose();
+      } catch {
+        setAdError(
+          t("missedChallenge.ad.error", {
+            defaultValue: "Impossible de charger la pub. Réessaie dans un instant.",
+          }) as string
+        );
+      } finally {
+        setAdLoading(false);
+      }
+    });
+  }, [withLock, adLoading, rewardedAdUnitId, onWatchAd, onClose, t]);
 
   const handleUseStreakPass = useCallback(() => {
     if (!canUseStreakPass || !onUseStreakPass) return;
@@ -351,6 +454,76 @@ const MissedChallengeModal: React.FC<MissedChallengeModalProps> = ({
                   keyboardShouldPersistTaps="handled"
                 >
                   <View style={styles.optionsContainer}>
+                    {/* Watch ad (rewarded) */}
+                    <TouchableOpacity
+                      style={[
+                        styles.optionButton,
+                        !isDark && {
+                          backgroundColor: "rgba(255,255,255,0.82)",
+                          borderColor: "rgba(0,0,0,0.06)",
+                        },
+                        (adLoading || (!adReadyLocal && !!rewardedAdUnitId)) && { opacity: 0.72 },
+                      ]}
+                      onPress={handleWatchAd}
+                      disabled={adLoading || (!!rewardedAdUnitId && !adReadyLocal)}
+                      activeOpacity={0.92}
+                      accessibilityRole="button"
+                      accessibilityLabel={t("missedChallenge.ad.title", {
+                        defaultValue: "Sauver la série — Pub",
+                      })}
+                      accessibilityHint={t("missedChallenge.ad.subtitle", {
+                        defaultValue: "Regarde une pub et garde ta série intacte.",
+                      })}
+                      testID="missed-modal-watch-ad"
+                    >
+                      <LinearGradient
+                        colors={isDark ? ["#10B981", "#059669"] : ["#34D399", "#10B981"]}
+                        style={styles.optionGradient}
+                      >
+                        <View style={styles.optionIconWrap}>
+                          <Ionicons name="play-circle-outline" size={normalizeSize(24)} color="#FFF" />
+                        </View>
+                        <View style={styles.optionTextContainer}>
+                          <Text style={[styles.optionText, { fontFamily: current.typography.title.fontFamily }]}>
+                            {t("missedChallenge.ad.title", { defaultValue: "Sauver la série — Pub" })}
+                          </Text>
+                          <Text style={[styles.optionSubtext, { fontFamily: current.typography.body.fontFamily }]}>
+                            {adLoading
+                              ? (t("missedChallenge.ad.loading", {
+                                  defaultValue: "Ouverture de la pub…",
+                                }) as string)
+                              : !!rewardedAdUnitId && !adReadyLocal
+                              ? (t("missedChallenge.ad.notReady", {
+                                  defaultValue: "Pub pas encore prête. Réessaie dans quelques secondes.",
+                                }) as string)
+                              : (t("missedChallenge.ad.subtitle", {
+                                  defaultValue: "Regarde une pub et garde ta série intacte.",
+                                }) as string)}
+                          </Text>
+                          {!!adError && (
+                            <Text
+                              style={[
+                                styles.optionSubtext,
+                                {
+                                  marginTop: 6,
+                                  opacity: 0.95,
+                                  fontFamily: current.typography.body.fontFamily,
+                                },
+                              ]}
+                              numberOfLines={2}
+                            >
+                              {adError}
+                            </Text>
+                          )}
+                        </View>
+                        <Ionicons
+                          style={styles.chevron}
+                          name="chevron-forward"
+                          size={normalizeSize(18)}
+                          color="rgba(255,255,255,0.92)"
+                        />
+                      </LinearGradient>
+                    </TouchableOpacity>
                     {/* Streak Pass */}
                     {canUseStreakPass && (
                       <TouchableOpacity

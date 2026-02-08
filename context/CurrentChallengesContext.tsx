@@ -12,6 +12,7 @@ import {
   getDoc,
   onSnapshot,
   arrayUnion,
+  serverTimestamp,
   runTransaction,
   increment,
 } from "firebase/firestore";
@@ -169,6 +170,18 @@ const makeLockKey = (id: string, days: number) => `${id}_${days}`;
 
 const clamp = (v: number, max: number) => Math.min(Math.max(v, 0), max);
 const uniq = <T,>(arr: T[]) => Array.from(new Set(arr));
+
+// ✅ Exécute une tâche hors chemin critique UI
+const defer = (fn: () => Promise<any> | void) => {
+  setTimeout(() => {
+    try {
+      const r = fn();
+      if (r && typeof (r as any).catch === "function") {
+        (r as Promise<any>).catch(() => {});
+      }
+    } catch {}
+  }, 0);
+};
 
 // Mélange lisible côté historique (ISO) + clé UTC (logic)
 const pushCompletion = (obj: any, when: Date) => {
@@ -695,7 +708,7 @@ const closeMissedModal = () => {
   const rewardTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
    useEffect(() => {
-    if (isAuthRoute || !showRewarded) {
+    if (isAuthRoute) {
       rewardedRef.current = null;
       setRewardLoaded(false);
       if (rewardTimerRef.current) {
@@ -1251,10 +1264,6 @@ if (idx === -1) {
         const next = arr.map((x, i) => (i === idx ? ch : x));
         tx.update(userRef, { CurrentChallenges: next });
 
-        const prevMax = Number(data?.stats?.streak?.max ?? 0);
-        if (newStreak > prevMax) {
-          tx.update(userRef, { "stats.streak.max": newStreak });
-        }
       });
 
       // ✅ DUO nudge (après transaction uniquement, ne doit jamais casser le flow)
@@ -1326,16 +1335,18 @@ try {
         return { success: false, missedDays };
       }
 
-      try {
-        await recordDailyGlobalMark(userId, now);
-        await finalizePerfectMonthIfNeeded(now, userId);
+defer(async () => {
+  try {
+    await recordDailyGlobalMark(userId, now);
+    await finalizePerfectMonthIfNeeded(now, userId);
 
-        const FOCUS_ID = "focus";
-        const isFocus = id === FOCUS_ID;
-        if (isFocus) {
-          await recordFocusMark(userId, now);
-        }
-      } catch {}
+    const FOCUS_ID = "focus";
+    const isFocus = id === FOCUS_ID;
+    if (isFocus) {
+      await recordFocusMark(userId, now);
+    }
+  } catch {}
+});
 
       try {
         const bank = await getMicroWeek();
@@ -1416,7 +1427,7 @@ try {
         });
       }
 
-      scheduleAchievementsCheck(userId);
+      defer(() => scheduleAchievementsCheck(userId));
       return { success: true };
     } catch (error: any) {
       const msg = String(error?.message || error);
@@ -1627,6 +1638,27 @@ const updatedArray = currentChallengesArray.map((ch, i) =>
     const today = getToday();
 
     try {
+      // 0) Gate: rewarded ready ?
+      if (!rewardedRef.current || !rewardLoaded) {
+        notify(
+          "info",
+          t("missedChallenge.ad.title", { defaultValue: "Sauver la série — Pub" }),
+          t("missedChallenge.ad.notReady", { defaultValue: "Pub pas encore prête. Réessaie dans quelques secondes." })
+        );
+        return;
+      }
+
+      // 1) Show rewarded and REQUIRE earned reward
+      try {
+        await showRewardedAndWait();
+      } catch {
+        notify(
+          "warning",
+          t("missedChallenge.ad.title", { defaultValue: "Sauver la série — Pub" }),
+          t("missedChallenge.ad.notEarned", { defaultValue: "Récompense non validée. Tu peux réessayer." })
+        );
+        return;
+      }
       const userRef = doc(db, "users", userId);
       const userSnap = await getDoc(userRef);
       if (!userSnap.exists()) return;
@@ -1659,8 +1691,8 @@ const updated = { ...arr[index] } as any;
       setCurrentChallenges(next);
       notify(
         "success",
-        t("challenge.videoSavedStreak.title"),
-        t("challenge.videoSavedStreak.text")
+        t("missedChallenge.ad.title", { defaultValue: "Sauver la série — Pub" }),
+        t("missedChallenge.ad.subtitle", { defaultValue: "Regarde une pub et garde ta série intacte." })
       );
       setModalVisible(false);
       scheduleAchievementsCheck(userId);
@@ -1703,8 +1735,8 @@ const updated = { ...arr[index] } as any;
       );
       notify(
         "error",
-        t("common.error"),
-        t("challenge.unableToMarkAfterVideo")
+        t("missedChallenge.ad.title", { defaultValue: "Sauver la série — Pub" }),
+        t("missedChallenge.ad.error", { defaultValue: "Impossible de charger la pub. Réessaie dans un instant." })
       );
     }
   };
@@ -2158,21 +2190,25 @@ if (index === -1) {
     });
 
     // 8️⃣ Stats supplémentaires / achievements hors transaction
-    try {
-      if (toCompleteSnapshot) {
-        const completedCategory =
-          (toCompleteSnapshot as any)?.category ??
-          (toCompleteSnapshot as any)?.categoryId;
-        await addCompletedCategory(userId, completedCategory);
+    defer(async () => {
+  try {
+    if (toCompleteSnapshot) {
+      const completedCategory =
+        (toCompleteSnapshot as any)?.category ??
+        (toCompleteSnapshot as any)?.categoryId;
 
-        const isSeasonal = (toCompleteSnapshot as any)?.seasonal === true;
-        if (isSeasonal) await recordSeasonalCompleted(userId);
+      await addCompletedCategory(userId, completedCategory);
 
-        if (toCompleteSnapshot.duo) {
-          await recordDuoFinish(userId);
-        }
+      const isSeasonal = (toCompleteSnapshot as any)?.seasonal === true;
+      if (isSeasonal) await recordSeasonalCompleted(userId);
+
+      if (toCompleteSnapshot.duo) {
+        await recordDuoFinish(userId);
       }
-    } catch {}
+    }
+  } catch {}
+});
+
 
     try {
       const keys =
@@ -2206,7 +2242,7 @@ if (index === -1) {
       vibe: "complete",
       progress: { dayIndex: Number(selectedDays || 1), totalDays: Number(selectedDays || 1) },
     });
-    scheduleAchievementsCheck(userId);
+    defer(() => scheduleAchievementsCheck(userId));
   } catch (error: any) {
     console.error("❌ Erreur completeChallenge :", error.message);
     notify(

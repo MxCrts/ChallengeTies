@@ -5,7 +5,7 @@ import { db } from "@/constants/firebase-config";
 export type WelcomeBonusReward =
   | { type: "trophies"; amount: number }
   | { type: "streakPass"; amount: number }
-  | { type: "premium"; days: number };
+  | { type: "premium"; amount: number };
 
 export type WelcomeBonusState = {
   currentDay: number;       // 0 à 6 (index dans le tableau de récompenses)
@@ -21,17 +21,23 @@ const WELCOME_REWARDS: WelcomeBonusReward[] = [
   { type: "trophies", amount: 15 },  // Jour 4
   { type: "streakPass", amount: 1 }, // Jour 5
   { type: "trophies", amount: 20 },  // Jour 6
-  { type: "premium", days: 7 },      // Jour 7
+  { type: "premium", amount: 7 },      // Jour 7
 ];
 
-const todayKeyUTC = () => new Date().toISOString().slice(0, 10);
+const todayKeyLocal = () => {
+  const d = new Date();
+  const y = d.getFullYear();
+  const m = String(d.getMonth() + 1).padStart(2, "0");
+  const day = String(d.getDate()).padStart(2, "0");
+  return `${y}-${m}-${day}`;
+};
 
 /**
  * Calcule l’état du bonus de connexion à partir des données actuelles du user.
  * userData peut être ton snapshot Firestore (data()).
  */
 export function computeWelcomeBonusState(userData: any | null | undefined): WelcomeBonusState {
-  const today = todayKeyUTC();
+  const today = todayKeyLocal();
 
   const wb = (userData as any)?.welcomeLoginBonus || {};
   let currentDay = typeof wb.currentDay === "number" ? wb.currentDay : 0;
@@ -79,7 +85,7 @@ export async function claimWelcomeBonus(
   userId: string
 ): Promise<{ reward: WelcomeBonusReward; state: WelcomeBonusState }> {
   const userRef = doc(db, "users", userId);
-  const today = todayKeyUTC();
+  const today = todayKeyLocal();
 
   return runTransaction(db, async (tx) => {
     const snap = await tx.get(userRef);
@@ -114,49 +120,42 @@ export async function claimWelcomeBonus(
     const reward = WELCOME_REWARDS[currentDay];
 
     // Copie mutable pour modifications
-    const nextData: any = { ...data };
+    const updates: Record<string, any> = {};
 
     // --- Appliquer la récompense ---
     switch (reward.type) {
       case "trophies": {
         const gain = reward.amount;
         const trophies =
-          typeof nextData.trophies === "number" ? nextData.trophies : 0;
+          typeof (data as any).trophies === "number" ? (data as any).trophies : 0;
         const total =
-          typeof nextData.totalTrophies === "number"
-            ? nextData.totalTrophies
+          typeof (data as any).totalTrophies === "number"
+            ? (data as any).totalTrophies
             : trophies;
-        nextData.trophies = trophies + gain;
-        nextData.totalTrophies = total + gain;
+        updates.trophies = trophies + gain;
+        updates.totalTrophies = total + gain;
         break;
       }
 
       case "streakPass": {
-        const inv = nextData.inventory || {};
+        const inv = (data as any).inventory || {};
         const current =
           typeof inv.streakPass === "number" ? inv.streakPass : 0;
-        nextData.inventory = {
-          ...inv,
-          streakPass: current + reward.amount,
-        };
+        updates["inventory.streakPass"] = current + reward.amount;
         break;
       }
 
       case "premium": {
-        const days = reward.days;
+        const days = reward.amount;
         const now = new Date();
-        const baseDate = new Date(
-          (nextData.premium?.tempPremiumUntil as string) || now.toISOString()
-        );
+        const prevUntil = (data as any)?.premium?.tempPremiumUntil as string | undefined;
+        const baseDate = new Date(prevUntil || now.toISOString());
         const start =
           baseDate > now ? baseDate : now; // si déjà un essai, on empile après
         const expires = new Date(start);
         expires.setDate(expires.getDate() + days);
 
-        nextData.premium = {
-          ...(nextData.premium || {}),
-          tempPremiumUntil: expires.toISOString(),
-        };
+        updates["premium.tempPremiumUntil"] = expires.toISOString();
         break;
       }
     }
@@ -165,13 +164,11 @@ export async function claimWelcomeBonus(
     const nextDay = currentDay + 1;
     const isCompleted = nextDay >= WELCOME_REWARDS.length;
 
-    nextData.welcomeLoginBonus = {
-      currentDay: nextDay,          // pour l’UI : index du prochain jour
-      lastClaimDate: today,
-      completed: isCompleted,
-    };
+    updates["welcomeLoginBonus.currentDay"] = nextDay; // index du prochain jour
+    updates["welcomeLoginBonus.lastClaimDate"] = today;
+    updates["welcomeLoginBonus.completed"] = isCompleted;
 
-    tx.set(userRef, nextData, { merge: true });
+    tx.set(userRef, updates, { merge: true });
 
     const finalState: WelcomeBonusState = {
       currentDay: nextDay,
