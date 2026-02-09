@@ -52,6 +52,7 @@ import {
 import { tap, success, warning } from "@/src/utils/haptics";
 import * as Device from "expo-device";
 import { useToast } from "@/src/ui/Toast";
+import { usePremium } from "@/src/context/PremiumContext";
 
 const SPACING = 18;
 const { width: SCREEN_WIDTH, height: SCREEN_HEIGHT } = Dimensions.get("window");
@@ -145,31 +146,16 @@ const isPremiumActiveFromUserDoc = (data: any): boolean => {
 
   if (typeof explicit === "boolean" && explicit === true) return true;
 
-  const until = p?.tempPremiumUntil;
-
+    const until = p?.tempPremiumUntil ?? data?.["premium.tempPremiumUntil"];
   if (!until) return false;
 
-  // Firestore Timestamp
-  if (typeof until?.toDate === "function") {
-    return until.toDate().getTime() > Date.now();
-  }
-
-  // Date ISO string
+  if (typeof until?.toDate === "function") return until.toDate().getTime() > Date.now();
   if (typeof until === "string") {
     const ms = Date.parse(until);
     return Number.isFinite(ms) && ms > Date.now();
   }
-
-  // millis number
-  if (typeof until === "number") {
-    return until > Date.now();
-  }
-
-  // { seconds, nanoseconds } (Timestamp-like)
-  if (typeof until === "object" && typeof until?.seconds === "number") {
-    return until.seconds * 1000 > Date.now();
-  }
-
+  if (typeof until === "number") return until > Date.now();
+  if (typeof until === "object" && typeof until?.seconds === "number") return until.seconds * 1000 > Date.now();
   return false;
 };
 
@@ -243,7 +229,8 @@ export default function Settings() {
   const router = useRouter();
   const isActiveRef = useRef(true);
   const [deviceName, setDeviceName] = useState<string>("Unknown");
-  const [isPremium, setIsPremium] = useState(false);
+  const { isPremiumUser, loading: premiumLoading } = usePremium();
+  const isPremium = !premiumLoading && isPremiumUser;
   const scrollRef = useRef<ScrollView>(null);
   const [notificationsEnabled, setNotificationsEnabled] = useState(true);
   const [locationEnabled, setLocationEnabled] = useState(true);
@@ -269,6 +256,8 @@ export default function Settings() {
       : "";
     return `${v}${b}`;
   }, []);
+
+  
 
   // Styles dynamiques mémorisés
   const dynamicStyles = useMemo(
@@ -416,10 +405,6 @@ export default function Settings() {
       }
 
       setLocationEnabled(data.locationEnabled ?? true);
-
-     const premiumFlag = isPremiumActiveFromUserDoc(data);
-setIsPremium(premiumFlag);
-
 
       if (data.language) {
         const normalized = normalizeLanguageCode(data.language);

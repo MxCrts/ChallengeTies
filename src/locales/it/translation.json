@@ -559,7 +559,8 @@
         "duo": "Il tuo Duo è ancora in attesa.",
         "trophy": "Oggi ti aspetta un bonus. Piccola vittoria, grande slancio.",
         "streak": "Stai costruendo una serie. Un piccolo passo al giorno.",
-        "default": "Torna quando vuoi: basta 1 minuto per andare avanti."
+        "default": "Torna quando vuoi: basta 1 minuto per andare avanti.",
+        "duoSecondary": "Duo in attesa{{who}}."
       },
       "badge": "OGGI",
       "primaryActiveShort": "Segna",

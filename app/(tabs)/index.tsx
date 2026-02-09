@@ -406,8 +406,7 @@ export default function HomeScreen() {
   const [welcomeLoading, setWelcomeLoading] = useState(false);
   const [pendingWelcomeAfterTutorial, setPendingWelcomeAfterTutorial] =
   useState(false);
-  const [welcomeGuardDay, setWelcomeGuardDay] = useState<number | null>(null);
-
+  const [welcomeGuardKey, setWelcomeGuardKey] = useState<string | null>(null);
   const [dailyBonusVisible, setDailyBonusVisible] = useState(false);
   const [hasClaimedDailyBonus, setHasClaimedDailyBonus] = useState(false);
   const [dailyBonusLoading, setDailyBonusLoading] = useState(false);
@@ -439,6 +438,7 @@ const IMG_RETRY_BASE_MS = 450;
 const [imgReloadKey, setImgReloadKey] = useState<Record<string, number>>({});
 const imgRetryRef = useRef<Record<string, number>>({}); // pas de re-render
 const imgRetryTimerRef = useRef<Record<string, any>>({});
+const welcomeHandledRef = useRef<string | null>(null);
 
 useEffect(() => {
   return () => {
@@ -914,6 +914,32 @@ const todayHubActiveMeta = useMemo(() => {
     setAdHeight(h);
   }, []);
 
+  const WELCOME_SHOWN_KEY = useMemo(
+  () => `home.welcomeShown.v1.${DAY_UTC}.${user?.uid ?? "guest"}`,
+  [DAY_UTC, user?.uid]
+);
+
+// ✅ Welcome handled (persistant) : claim OU close => ne jamais rouvrir aujourd'hui
+const WELCOME_HANDLED_KEY = useMemo(
+  () => `home.welcomeHandled.v1.${DAY_UTC}.${user?.uid ?? "guest"}`,
+  [DAY_UTC, user?.uid]
+);
+
+const markWelcomeHandled = useCallback(async () => {
+  // ✅ verrouille en mémoire
+  welcomeHandledRef.current = DAY_UTC;
+
+  // ✅ verrouille en state (anti-rebond)
+  setWelcomeGuardKey(DAY_UTC);
+  setPendingWelcomeAfterTutorial(false);
+  setWelcomeVisible(false);
+
+  // ✅ verrouille persistant (anti-remount / anti-refresh)
+  try {
+    await AsyncStorage.setItem(WELCOME_HANDLED_KEY, "1");
+  } catch {}
+}, [DAY_UTC, WELCOME_HANDLED_KEY]);
+
 
   const HERO_BASE_HEIGHT = useMemo(() => {
     // ✅ évite un hero trop grand sur petits écrans (et trop petit sur grands)
@@ -1119,13 +1145,10 @@ const primaryActiveId = useMemo(() => {
   );
 
 const spotlightAllowed = useMemo(() => {
-   // ✅ simple & robuste : le spotlight ne doit exister QUE si on peut "marquer aujourd’hui"
-   return (
-     hasActiveChallenges &&
-     todayHubView.anyUnmarkedToday &&
-     !hasOutgoingPendingInvite
-   );
- }, [hasActiveChallenges, todayHubView.anyUnmarkedToday, hasOutgoingPendingInvite]);
+  // ✅ spotlight uniquement si on peut "marquer aujourd’hui"
+  return hasActiveChallenges && todayHubView.anyUnmarkedToday;
+}, [hasActiveChallenges, todayHubView.anyUnmarkedToday]);
+
 
 const markHaloStyle = useAnimatedStyle(() => {
   const t = markPulse.value; // 0..1
@@ -1452,6 +1475,30 @@ useEffect(() => {
   }, [showBanners, isTutorialActive, adHeight]);
 
 useEffect(() => {
+  let cancelled = false;
+
+  const load = async () => {
+    try {
+      const v = await AsyncStorage.getItem(WELCOME_HANDLED_KEY);
+      if (cancelled) return;
+
+      if (v === "1") {
+        welcomeHandledRef.current = DAY_UTC;
+        setWelcomeGuardKey(DAY_UTC);
+        setWelcomeVisible(false);
+        setPendingWelcomeAfterTutorial(false);
+      }
+    } catch {}
+  };
+
+  load();
+  return () => {
+    cancelled = true;
+  };
+}, [WELCOME_HANDLED_KEY, DAY_UTC]);
+
+
+useEffect(() => {
   if (!user?.uid) {
     setUserData(null);
     return;
@@ -1467,57 +1514,106 @@ useEffect(() => {
       setDailyReward(null);
     }
   }, [userData?.dailyBonus?.lastClaimDate]);
+useEffect(() => {
+  let cancelled = false;
 
-  useEffect(() => {
-  if (!userData) {
-    setWelcomeState(null);
-    setWelcomeVisible(false);
-    setPendingWelcomeAfterTutorial(false);
-    setWelcomeGuardDay(null);
-    return;
-  }
-
-  try {
-    const state = computeWelcomeBonusState(userData);
-    setWelcomeState(state);
-
-    // NE JAMAIS faire setWelcomeVisible(false) ici
-    // On ne touche à visible que quand on sait exactement ce qu’on veut
-
-    if (!state.canClaimToday || state.completed) {
+  const run = async () => {
+    // 0) userData transitoire => on ferme juste l'UI, sans reset des guards
+    if (!userData) {
+      setWelcomeState(null);
       setWelcomeVisible(false);
       return;
     }
 
-    // Protection anti-rebond
-    if (welcomeGuardDay === state.currentDay) {
-      return;
-    }
+    try {
+      // 1) Compute state
+      const state = computeWelcomeBonusState(userData);
+      if (cancelled) return;
 
-    if (isTutorialActive) {
-      setPendingWelcomeAfterTutorial(true);
-    } else {
-      setWelcomeVisible(true); // ← on ouvre seulement ici
-    }
+      setWelcomeState(state);
 
-    setWelcomeGuardDay(state.currentDay);
-  } catch (e) {
-    console.warn("[HomeScreen] computeWelcomeBonusState error:", e);
-  }
-}, [userData, isTutorialActive, welcomeGuardDay]); // welcomeGuardDay toujours dans les deps
+      // 2) HARD STOP mémoire : déjà géré aujourd’hui => jamais réouvrir
+      if (welcomeHandledRef.current === DAY_UTC) {
+        setWelcomeVisible(false);
+        return;
+      }
 
-    useEffect(() => {
-    if (
-      !isTutorialActive &&
-      pendingWelcomeAfterTutorial &&
-      welcomeState &&
-      welcomeState.canClaimToday &&
-      !welcomeState.completed
-    ) {
+      // 3) HARD STOP persistant : si handled en storage => jamais réouvrir
+      //    (anti-remount / anti-refresh / userData null -> data)
+      try {
+        const handled = await AsyncStorage.getItem(WELCOME_HANDLED_KEY);
+        if (cancelled) return;
+
+        if (handled === "1") {
+          welcomeHandledRef.current = DAY_UTC;
+          setWelcomeGuardKey(DAY_UTC);
+          setPendingWelcomeAfterTutorial(false);
+          setWelcomeVisible(false);
+          return;
+        }
+      } catch {
+        // ignore storage errors
+      }
+
+      // 4) Si pas claimable ou terminé => on ferme
+      if (!state.canClaimToday || state.completed) {
+        setWelcomeVisible(false);
+        return;
+      }
+
+      // 5) Anti-rebond (state) : déjà ouvert/armé aujourd'hui => ne rien faire
+      if (welcomeGuardKey === DAY_UTC) return;
+
+      // 6) Si tuto actif => on arme post-tuto, sans ouvrir
+      if (isTutorialActive) {
+        setPendingWelcomeAfterTutorial(true);
+        setWelcomeGuardKey(DAY_UTC); // marque "traité" pour éviter re-open loop
+        setWelcomeVisible(false);
+        return;
+      }
+
+      // 7) Sinon => on ouvre maintenant (1 seule fois / jour)
       setWelcomeVisible(true);
-      setPendingWelcomeAfterTutorial(false);
+      setWelcomeGuardKey(DAY_UTC);
+    } catch (e) {
+      console.warn("[HomeScreen] computeWelcomeBonusState error:", e);
     }
-  }, [isTutorialActive, pendingWelcomeAfterTutorial, welcomeState]);
+  };
+
+  run();
+  return () => {
+    cancelled = true;
+  };
+}, [
+  userData,
+  DAY_UTC,
+  WELCOME_HANDLED_KEY,
+  welcomeGuardKey,
+  isTutorialActive,
+]);
+
+useEffect(() => {
+  if (isTutorialActive) return;
+  if (!pendingWelcomeAfterTutorial) return;
+  if (!welcomeState || !welcomeState.canClaimToday || welcomeState.completed) return;
+
+  // ✅ pas de ré-ouverture si déjà traité ce jour-là
+  if (welcomeHandledRef.current === DAY_UTC) {
+    setPendingWelcomeAfterTutorial(false);
+    return;
+  }
+
+  
+  if (welcomeGuardKey === DAY_UTC) {
+    setPendingWelcomeAfterTutorial(false);
+    return;
+  }
+
+  setWelcomeVisible(true);
+  setWelcomeGuardKey(DAY_UTC);
+  setPendingWelcomeAfterTutorial(false);
+}, [isTutorialActive, pendingWelcomeAfterTutorial, welcomeState, DAY_UTC, welcomeGuardKey]);
+
 
 useEffect(() => {
     let cancelled = false;
@@ -1570,35 +1666,27 @@ useEffect(() => {
   
 
   useEffect(() => {
-  const isDuo = todayHubPrimaryMode === "duo";
   const isPending = todayHubPrimaryMode === "duoPending";
 
-  if ((!isDuo && !isPending) || isTutorialBlocking || isAnyBlockingModalOpen) {
+  if (!isPending || isTutorialBlocking || isAnyBlockingModalOpen) {
     duoRing.value = 0;
     duoGlow.value = 0;
     return;
   }
 
-  // Duo: pulse doux mais évident
   duoRing.value = withRepeat(
-    withTiming(1, { duration: isPending ? 1400 : 1100, easing: Easing.inOut(Easing.ease) }),
+    withTiming(1, { duration: 1400, easing: Easing.inOut(Easing.ease) }),
     -1,
     true
   );
 
-  // Glow plus lent (Apple-ish)
   duoGlow.value = withRepeat(
     withTiming(1, { duration: 1600, easing: Easing.inOut(Easing.ease) }),
     -1,
     true
   );
-}, [
-  todayHubPrimaryMode,
-  isTutorialBlocking,
-  isAnyBlockingModalOpen,
-  duoRing,
-  duoGlow,
-]);
+}, [todayHubPrimaryMode, isTutorialBlocking, isAnyBlockingModalOpen, duoRing, duoGlow]);
+
 
 // ✅ PremiumEnd: remember which expiry we are prompting for
 const premiumEndExpiresMsRef = useRef<number | null>(null);
@@ -2201,34 +2289,54 @@ const todayHubHubDescription = useMemo(() => {
 const whyReturn = useMemo<TodayHubWhyReturn | null>(() => {
   const hasActive = !!todayHubView?.hasActiveChallenges;
 
-  // 1) DUO pending prioritaire (si tu veux l'effet "viral loop")
-  if (todayHubPrimaryMode === "duoPending" || hasOutgoingPendingInvite) {
-    const uname = pendingInvite?.inviteeUsername?.trim?.();
-    return {
-      variant: "duo",
-      text: t("homeZ.todayHub.whyReturn.duo", {
-        defaultValue: "Ton duo est en attente.",
-        who: uname ? `@${uname}` : "",
-      }),
-    };
-  }
-
-  // 2) WARNING uniquement si on a un signal fiable
   const anyUnmarked =
     typeof (todayHubView as any)?.anyUnmarkedToday === "boolean"
       ? (todayHubView as any).anyUnmarkedToday
       : false;
 
-  if (hasActive && anyUnmarked) {
+  const uname = pendingInvite?.inviteeUsername?.trim?.();
+  const duoNote = hasOutgoingPendingInvite
+    ? t("homeZ.todayHub.whyReturn.duoSecondary", {
+        defaultValue: "Duo en attente{{who}}.",
+        who: uname ? ` (@${uname})` : "",
+      })
+    : "";
+
+  // 1) Si primary = duoPending => on assume que c'est LE focus du moment
+  if (todayHubPrimaryMode === "duoPending") {
     return {
-      variant: "warning",
-      text: t("homeZ.todayHub.whyReturn.warning", {
-        defaultValue: "Il te reste un check-in aujourd’hui. Garde ton rythme.",
+      variant: "duo",
+      text: t("homeZ.todayHub.whyReturn.duo", {
+        defaultValue: "Ton duo est en attente{{who}}.",
+        who: uname ? ` (@${uname})` : "",
       }),
     };
   }
 
-  // 3) BONUS
+  // 2) Si on a un check-in à faire aujourd’hui => priorité à l’action, et on ajoute le duo en note
+  if (hasActive && anyUnmarked) {
+    const base = t("homeZ.todayHub.whyReturn.warning", {
+      defaultValue: "Il te reste un check-in aujourd’hui. Garde ton rythme.",
+    });
+
+    return {
+      variant: "warning",
+      text: duoNote ? `${base}  •  ${duoNote}` : base,
+    };
+  }
+
+  // 3) Sinon, si invite pending existe encore => on peut la remonter (mais secondaire)
+  if (hasOutgoingPendingInvite) {
+    return {
+      variant: "duo",
+      text: t("homeZ.todayHub.whyReturn.duo", {
+        defaultValue: "Ton duo est en attente{{who}}.",
+        who: uname ? ` (@${uname})` : "",
+      }),
+    };
+  }
+
+  // 4) BONUS
   if (canClaimDailyBonus) {
     return {
       variant: "trophy",
@@ -2238,12 +2346,13 @@ const whyReturn = useMemo<TodayHubWhyReturn | null>(() => {
     };
   }
 
-  // 4) STREAK
+  // 5) STREAK
   const streak =
     (userData as any)?.streak ??
     (userData as any)?.streakDays ??
     (userData as any)?.currentStreak ??
     null;
+
   const streakNum =
     typeof streak === "number"
       ? streak
@@ -2263,8 +2372,8 @@ const whyReturn = useMemo<TodayHubWhyReturn | null>(() => {
     };
   }
 
-  // 5) DEFAULT
-   return {
+  // 6) DEFAULT
+  return {
     text: t("homeZ.todayHub.whyReturn.default", {
       defaultValue: "Reviens quand tu veux : 1 minute suffit pour avancer.",
     }),
@@ -2278,6 +2387,7 @@ const whyReturn = useMemo<TodayHubWhyReturn | null>(() => {
   hasOutgoingPendingInvite,
   pendingInvite?.inviteeUsername,
 ]);
+
 // ✅ actions TodayHub
 const onOpenHub = useCallback(async () => {
   const id = todayHubView.hubChallengeId ?? primaryActiveId;
@@ -2349,9 +2459,8 @@ const handleClaimWelcomeBonus = async () => {
 
     const { state } = await claimWelcomeBonus(user.uid);
 
-    // 💎 Anti-flicker : on FERME le modal tout de suite,
-    // dans le même render où on met à jour le state
-   setWelcomeVisible(false);
+     // ✅ verrouille immédiatement : plus aucune ré-ouverture aujourd’hui
+    await markWelcomeHandled();
 
 // ✅ on arme l’absorption de façon robuste (storage + state)
 try {
@@ -3644,9 +3753,10 @@ setPostWelcomeAbsorbArmed(true);
           <WelcomeBonusModal
             visible={welcomeVisible}
             onClose={async () => {
-  setWelcomeVisible(false);
+  // ✅ empêche TOUT re-open aujourd'hui (close = handled)
+  await markWelcomeHandled();
 
-  // ✅ même si l'user ferme sans claim, on veut le spotlight "mark today"
+  // ✅ garde ton rail d’absorb
   try {
     await AsyncStorage.setItem(POST_WELCOME_ABSORB_KEY, "1");
   } catch {}

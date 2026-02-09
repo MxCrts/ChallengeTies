@@ -578,7 +578,8 @@
         "duo": "Your Duo is still pending.",
         "trophy": "A bonus is waiting today. Small win, big momentum.",
         "streak": "You’re building a streak. One small step a day.",
-        "default": "Come back anytime: one minute is enough to move forward."
+        "default": "Come back anytime: one minute is enough to move forward.",
+        "duoSecondary": "Duo pending{{who}}."
       },
       "badge": "TODAY",
       "primaryActiveShort": "Check in",

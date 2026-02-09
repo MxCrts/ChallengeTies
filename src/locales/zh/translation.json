@@ -529,7 +529,8 @@
         "duo": "你的双人挑战仍在等待中。",
         "trophy": "今天有奖励等你。小胜利，大动能。",
         "streak": "你在建立连胜。每天一小步。",
-        "default": "随时回来：1 分钟也能向前一步。"
+        "default": "随时回来：1 分钟也能向前一步。",
+        "duoSecondary": "双人挑战待处理{{who}}。"
       },
       "badge": "今天",
       "primaryActiveShort": "打卡",

@@ -13,6 +13,7 @@ import {
   TouchableOpacity,
   ActivityIndicator,
   Platform,
+  useWindowDimensions,
   StatusBar,
   ScrollView,
   InteractionManager,
@@ -25,7 +26,7 @@ import { useTheme } from "../../context/ThemeContext";
 import designSystem from "../../theme/designSystem";
 import CustomHeader from "@/components/CustomHeader";
 import { auth, db } from "@/constants/firebase-config";
-import { doc, getDoc, updateDoc, serverTimestamp } from "firebase/firestore";
+import { doc, getDoc, updateDoc, Timestamp } from "firebase/firestore";
 import { useAdsVisibility } from "../../src/context/AdsVisibilityContext";
 import { useRouter } from "expo-router";
 import { useIAP } from "expo-iap";
@@ -35,37 +36,73 @@ import { tap, success, warning } from "@/src/utils/haptics";
 const PRODUCT_ID = "challengeties_premium_monthly";
 const SPACING = 20;
 
-const isPremiumActiveFromUserDoc = (data: any): boolean => {
-  if (typeof data?.isPremium === "boolean") return data.isPremium;
+// ✅ Android subs: Play Billing demande souvent un offerToken (subscription offer)
+const getAndroidOfferToken = (sub: any): string | null => {
+  try {
+    // ✅ expo-iap renvoie souvent les offres ici
+    const normalized = sub?.subscriptionOffers;
+    if (Array.isArray(normalized) && normalized.length > 0) {
+      const tok =
+        normalized.find(
+          (o: any) =>
+            typeof o?.offerTokenAndroid === "string" && o.offerTokenAndroid.length > 0
+        )?.offerTokenAndroid ?? null;
+      if (typeof tok === "string" && tok.length > 0) return tok;
+    }
 
-  const p = data?.premium;
-  if (!p) return false;
-  if (typeof p === "boolean") return p;
-
-  const explicit =
-    p?.active ?? p?.isActive ?? p?.subscriptionActive ?? p?.subscribed;
-  if (typeof explicit === "boolean" && explicit === true) return true;
-
-  const until = p?.tempPremiumUntil;
-  if (!until) return false;
-
-  if (typeof until?.toDate === "function") return until.toDate().getTime() > Date.now();
-  if (typeof until === "string") {
-    const ms = Date.parse(until);
-    return Number.isFinite(ms) && ms > Date.now();
+    // fallback vieux shapes
+    const raw =
+      sub?.subscriptionOfferDetailsAndroid ??
+      sub?.subscriptionOfferDetails ??
+      sub?.offers ??
+      null;
+    if (!Array.isArray(raw) || raw.length === 0) return null;
+    const token =
+      raw[0]?.offerTokenAndroid ?? raw[0]?.offerToken ?? raw[0]?.token ?? null;
+    return typeof token === "string" && token.length > 0 ? token : null;
+  } catch {
+    return null;
   }
-  if (typeof until === "number") return until > Date.now();
-  if (typeof until === "object" && typeof until?.seconds === "number") return until.seconds * 1000 > Date.now();
-
-  return false;
 };
 
+const isPremiumActiveFromUserDoc = (data: any): boolean => {
+   // ✅ Minimal launch: on ne fait PAS confiance aux booléens (sinon premium à vie)
+   // La source de vérité = tempPremiumUntil (trial ou “1 mois”)
+
+   const p = data?.premium;
+   const until =
+     (p && typeof p === "object" ? p?.tempPremiumUntil : null) ??
+     data?.tempPremiumUntil ??
+     data?.premiumUntil ??
+     data?.["premium.tempPremiumUntil"];
+
+   if (!until) return false;
+
+   if (typeof until?.toDate === "function") return until.toDate().getTime() > Date.now();
+   if (until instanceof Date) return until.getTime() > Date.now();
+   if (typeof until === "string") {
+     const ms = Date.parse(until);
+     return Number.isFinite(ms) && ms > Date.now();
+   }
+   if (typeof until === "number") return until > Date.now();
+   if (typeof until === "object" && typeof until?.seconds === "number")
+     return until.seconds * 1000 > Date.now();
+
+   return false;
+ };
 
 export default function SettingsPremium() {
   const { t } = useTranslation();
   const { theme } = useTheme();
   const isDark = theme === "dark";
   const current = isDark ? designSystem.darkTheme : designSystem.lightTheme;
+  const { width: W } = useWindowDimensions();
+  const CONTENT_MAX_W = Math.min(W - SPACING * 2, 520);
+
+  // ✅ Couleurs sûres en light (évite blanc sur blanc même si tokens mal réglés)
+  const safeTextPrimary = isDark ? current.colors.textPrimary : "#0B1220";
+  const safeTextSecondary = isDark ? current.colors.textSecondary : "rgba(11,18,32,0.72)";
+  const safeTitleAccent = current.colors.secondary; // orange / accent
   const { showBanners, showInterstitials, isAdmin } = useAdsVisibility();
   const router = useRouter();
   const { show: showToast } = useToast();
@@ -81,7 +118,7 @@ export default function SettingsPremium() {
   // ---- IAP hook ----
   const {
     connected,
-    products,
+    subscriptions,
     fetchProducts,
     requestPurchase,
     finishTransaction,
@@ -102,16 +139,23 @@ export default function SettingsPremium() {
           return;
         }
 
-        await updateDoc(doc(db, "users", currentUid), {
-          premium: true,
-          isPremium: true,
-          premiumSince: serverTimestamp(),
-          premiumPlatform: Platform.OS,
-          premiumProductId:
-            (purchase as any)?.productId ??
-            (purchase as any)?.id ??
-            PRODUCT_ID,
-        });
+        const now = Date.now();
+ const ONE_MONTH_MS = 31 * 24 * 60 * 60 * 1000;
+ const expiresAt = Timestamp.fromMillis(now + ONE_MONTH_MS);
+
+ await updateDoc(doc(db, "users", currentUid), {
+   premium: {
+     // ✅ info only (ne doit pas activer premium)
+     isSubscribed: true,
+     tempPremiumUntil: expiresAt,
+     platform: Platform.OS,
+     productId:
+       (purchase as any)?.productId ??
+       (purchase as any)?.id ??
+       PRODUCT_ID,
+     updatedAt: Timestamp.fromMillis(now),
+   },
+ });
 
         setUserPremium(true);
 
@@ -157,10 +201,12 @@ export default function SettingsPremium() {
     },
   });
 
-  // 🔐 Sécurise products pour éviter tout crash silencieux
-  const safeProducts = products ?? [];
+  // 🔐 Les abonnements arrivent dans subscriptions (type: "subs")
+  const safeSubs = subscriptions ?? [];
   const debugInfo = __DEV__
-    ? `IAP connected=${connected ? "yes" : "no"} | products=${safeProducts.length}`
+    ? `IAP connected=${connected ? "yes" : "no"} | subs=${safeSubs.length} | ids=${safeSubs
+        .map((x) => x.id)
+        .join(",")}`
     : "";
 
   const connecting = !connected;
@@ -210,7 +256,7 @@ export default function SettingsPremium() {
           type: "subs",
         });
       } catch (e) {
-        console.warn("IAP fetchProducts error:", e);
+        console.warn("IAP fetchProducts(subs) error:", e);
       }
     });
 
@@ -263,22 +309,99 @@ export default function SettingsPremium() {
         return;
       }
 
+       // ✅ on le garde en scope pour le catch (TS/logic)
+      const isAndroid = Platform.OS === "android";
+      let offerToken: string | null = null;
+
       try {
         setPurchasing(true);
-        await requestPurchase({
-          request: {
-            ios: { sku: productId },
-            android: { skus: [productId] },
-          },
-          type: "subs",
-        });
+
+        // ✅ Safety: si on n’a pas les subs chargés → pas d’achat
+        if (!safeSubs || safeSubs.length === 0) {
+          setPurchasing(false);
+          warning();
+          showToast(
+            t("noProducts", {
+              defaultValue:
+                "Produits indisponibles pour l’instant. Réessaie plus tard.",
+            }),
+            "error"
+          );
+          return;
+        }
+
+        // ✅ ANDROID: injecter offerToken si dispo (souvent obligatoire en Internal Testing)
+        const sub = safeSubs.find((x: any) => x?.id === productId) ?? safeSubs[0];
+        offerToken = isAndroid ? getAndroidOfferToken(sub) : null;
+
+        if (__DEV__) {
+          console.log("[IAP] platform =", Platform.OS);
+          console.log("[IAP] sku =", productId);
+          if (isAndroid) console.log("[IAP] offerToken =", offerToken);
+        }
+
+        // ✅ IMPORTANT: expo-iap (dans ton projet) attend souvent `skus` AU TOP-LEVEL sur Android
+        // On tente plusieurs "shapes" pour être compatible quelle que soit la version.
+        const tryPurchase = async () => {
+          if (isAndroid) {
+            // 1) ✅ Shape principale (corrige TON erreur: "skus required")
+            try {
+              await requestPurchase({
+                skus: [productId],
+                ...(offerToken
+                  ? { subscriptionOffers: [{ sku: productId, offerToken }] }
+                  : {}),
+                type: "subs",
+              } as any);
+              return;
+            } catch (e1: any) {
+              // si user cancel -> remonter direct
+              if (e1?.code === "E_USER_CANCELLED") throw e1;
+              if (__DEV__) console.log("[IAP] android primary shape failed:", e1);
+            }
+
+            // 2) Fallback vieux shape "request.android"
+            await requestPurchase({
+              request: {
+                android: {
+                  skus: [productId],
+                  ...(offerToken
+                    ? { subscriptionOffers: [{ sku: productId, offerToken }] }
+                    : {}),
+                },
+              },
+              type: "subs",
+            } as any);
+            return;
+          }
+
+          // iOS
+          // 1) shape simple
+          try {
+            await requestPurchase({ sku: productId, type: "subs" } as any);
+            return;
+          } catch (e1: any) {
+            if (e1?.code === "E_USER_CANCELLED") throw e1;
+            if (__DEV__) console.log("[IAP] ios primary shape failed:", e1);
+          }
+
+          // 2) fallback "request.ios"
+          await requestPurchase({ request: { ios: { sku: productId } }, type: "subs" } as any);
+        };
+
+        await tryPurchase();
       } catch (e: any) {
+
+
         console.error("IAP requestPurchase error:", e);
         if (e?.code !== "E_USER_CANCELLED") {
           warning();
           showToast(
             t("purchaseFailed", {
-              defaultValue: "Achat interrompu.",
+              defaultValue:
+                 isAndroid && !offerToken
+                  ? "Achat interrompu (Android: offre/base plan non résolu)."
+                  : "Achat interrompu.",
             }),
             "error"
           );
@@ -286,7 +409,7 @@ export default function SettingsPremium() {
         setPurchasing(false);
       }
     },
-    [isAdmin, isLoggedIn, connected, requestPurchase, router, t, showToast]
+   [isAdmin, isLoggedIn, connected, requestPurchase, router, t, showToast, safeSubs]
   );
 
   // ---- Restore = resynchroniser Firestore pour ce compte ----
@@ -306,6 +429,16 @@ export default function SettingsPremium() {
 
     try {
       setRestoring(true);
+      // ✅ 1) Re-fetch store products (utile pour debug + resync UI)
+      if (connected) {
+        try {
+          await fetchProducts({ skus: [PRODUCT_ID], type: "subs" });
+        } catch (e) {
+          console.warn("IAP restore(fetchProducts) error:", e);
+        }
+      }
+
+      // ✅ 2) Puis recheck Firestore (ton système actuel)
       const snap = await getDoc(doc(db, "users", currentUid));
       const data = (snap.exists() ? snap.data() : {}) as any;
       const isPremium = isPremiumActiveFromUserDoc(data);
@@ -341,7 +474,7 @@ export default function SettingsPremium() {
     } finally {
       setRestoring(false);
     }
-  }, [t, showToast]);
+ }, [t, showToast, connected, fetchProducts]);
 
   // ---- Perks mémoïsés ----
   const perks = useMemo(
@@ -398,10 +531,10 @@ export default function SettingsPremium() {
 
         {/* Debug IAP en DEV uniquement */}
         {__DEV__ && (
-          <View style={{ paddingHorizontal: SPACING, paddingBottom: 4 }}>
+          <View style={{ paddingHorizontal: SPACING, paddingBottom: 4, maxWidth: CONTENT_MAX_W, alignSelf: "center", width: "100%" }}>
             <Text
               style={{
-                color: current.colors.textSecondary,
+                color: safeTextSecondary,
                 fontSize: 12,
                 fontFamily: "Comfortaa_400Regular",
               }}
@@ -428,6 +561,9 @@ export default function SettingsPremium() {
             contentContainerStyle={{
               padding: SPACING,
               paddingBottom: SPACING * 2.2,
+              maxWidth: CONTENT_MAX_W,
+              alignSelf: "center",
+              width: "100%",
             }}
             showsVerticalScrollIndicator={false}
           >
@@ -447,7 +583,7 @@ export default function SettingsPremium() {
                   style={{ marginRight: 8 }}
                 />
                 <Text
-                  style={[styles.title, { color: current.colors.textPrimary }]}
+                  style={[styles.title, { color: safeTextPrimary }]}
                 >
                   {isEffectivelyPremium
                     ? t("youArePremium", {
@@ -461,7 +597,7 @@ export default function SettingsPremium() {
               <Text
                 style={[
                   styles.subtitle,
-                  { color: current.colors.textSecondary },
+                  { color: safeTextSecondary },
                 ]}
               >
                 {t("premiumExplainer", {
@@ -580,11 +716,11 @@ export default function SettingsPremium() {
                       </LinearGradient>
                     </TouchableOpacity>
                   </View>
-                ) : safeProducts.length === 0 ? (
+                ) : safeSubs.length === 0 ? (
                   <Text
                     style={[
                       styles.subtitle,
-                      { color: current.colors.textSecondary },
+                     { color: safeTextSecondary },
                     ]}
                   >
                     {t("noProducts", {
@@ -593,13 +729,13 @@ export default function SettingsPremium() {
                     })}
                   </Text>
                 ) : (
-                  safeProducts.map((p) => (
+                  safeSubs.map((p) => (
                     <View key={p.id} style={styles.productRow}>
                       <View style={{ flex: 1 }}>
                         <Text
                           style={[
                             styles.productTitle,
-                            { color: current.colors.textPrimary },
+                            { color: safeTextPrimary },
                           ]}
                           numberOfLines={1}
                         >
@@ -609,7 +745,7 @@ export default function SettingsPremium() {
                         <Text
                           style={[
                             styles.productDesc,
-                            { color: current.colors.textSecondary },
+                            { color: safeTextSecondary },
                           ]}
                         >
                           {p.description ||
@@ -650,7 +786,7 @@ export default function SettingsPremium() {
                               <Text
                                 style={[
                                   styles.buyText,
-                                  { color: current.colors.textPrimary },
+                                  { color: isDark ? current.colors.textPrimary : "#FFFFFF" },
                                 ]}
                               >
                                 {p.displayPrice ??
@@ -686,7 +822,7 @@ export default function SettingsPremium() {
                       <Text
                         style={[
                           styles.restoreText,
-                          { color: current.colors.secondary },
+                          { color: safeTitleAccent },
                         ]}
                       >
                         {t("restorePurchases", {
@@ -711,7 +847,7 @@ export default function SettingsPremium() {
                 <Text
                   style={[
                     styles.subtitle,
-                    { color: current.colors.textSecondary },
+                   { color: safeTextSecondary },
                   ]}
                 >
                   {t("premiumActive", {

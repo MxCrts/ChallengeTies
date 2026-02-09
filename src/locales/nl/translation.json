@@ -2510,7 +2510,8 @@
         "duo": "Je duo staat nog in de wacht.",
         "trophy": "Er wacht vandaag een bonus. Kleine winst, groot momentum.",
         "streak": "Je bouwt een streak op. Elke dag een kleine stap.",
-        "default": "Kom terug wanneer je wilt: 1 minuut is genoeg om vooruit te gaan."
+        "default": "Kom terug wanneer je wilt: 1 minuut is genoeg om vooruit te gaan.",
+        "duoSecondary": "Duo in afwachting{{who}}."
       },
       "badge": "VANDAAG",
       "primaryActiveShort": "Markeer",

@@ -189,10 +189,16 @@ export function useTodayHubState({
   }, [activeChallenges, isMarkedToday]);
 
   const primaryMode = useMemo<TodayHubPrimaryMode>(() => {
-  if (hasOutgoingPendingInvite) return "duoPending";
-  if (!hasActiveChallenges) return "pick";
-  return anyUnmarkedToday ? "mark" : "new";
-}, [hasOutgoingPendingInvite, hasActiveChallenges, anyUnmarkedToday]);
+  // 1) Si aucun défi actif : si invite pending -> on garde duoPending, sinon pick
+  if (!hasActiveChallenges) return hasOutgoingPendingInvite ? "duoPending" : "pick";
+
+  // 2) S’il reste au moins 1 défi à marquer aujourd’hui => priorité ABSOLUE
+  if (anyUnmarkedToday) return "mark";
+
+  // 3) Si tout est fait aujourd’hui => “new” (et pending devient secondaire)
+  return "new";
+}, [hasActiveChallenges, hasOutgoingPendingInvite, anyUnmarkedToday]);
+
 
   const progress = useMemo(() => {
     const done = typeof focusChallenge?.completedDays === "number" ? focusChallenge.completedDays : 0;
@@ -264,18 +270,22 @@ export function useTodayHubState({
   }, [dailyFive, allChallenges, t, langKey]);
 
   const hubMeta = useMemo(() => {
-    // si pending invite => on préfère afficher le challenge de l'invite
-    if (hasOutgoingPendingInvite) return pendingMeta ?? focusMeta;
-    // si actif => focusMeta, sinon curated (suggestion)
-  if (hasActiveChallenges) return focusMeta;
-  return pendingMeta ?? curatedMeta;
-}, [hasOutgoingPendingInvite, pendingMeta, hasActiveChallenges, focusMeta, curatedMeta]);
+  // Si le primary est duoPending => on montre le challenge de l’invite
+  if (primaryMode === "duoPending") return pendingMeta ?? focusMeta;
 
-  const hubChallengeId = useMemo(() => {
-    if (hasOutgoingPendingInvite) return pendingInvite?.challengeId ?? focusChallengeId ?? null;
-   if (hasActiveChallenges) return focusChallengeId;
+  // Sinon si actif => focusMeta (défi à faire)
+  if (hasActiveChallenges) return focusMeta;
+
+  // Sinon suggestion
+  return pendingMeta ?? curatedMeta;
+}, [primaryMode, pendingMeta, focusMeta, hasActiveChallenges, curatedMeta]);
+
+const hubChallengeId = useMemo(() => {
+  if (primaryMode === "duoPending") return pendingInvite?.challengeId ?? focusChallengeId ?? null;
+  if (hasActiveChallenges) return focusChallengeId;
   return (pendingMeta?.id ?? curatedMeta?.id ?? null) as any;
-  }, [hasOutgoingPendingInvite, pendingInvite?.challengeId, focusChallengeId, hasActiveChallenges, pendingMeta?.id, curatedMeta?.id]);
+}, [primaryMode, pendingInvite?.challengeId, focusChallengeId, hasActiveChallenges, pendingMeta?.id, curatedMeta?.id]);
+
 
  const title = useMemo(() => {
     if (primaryMode === "duoPending") return t("homeZ.duoPending.title", { defaultValue: "Invite sent" });

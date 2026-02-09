@@ -48,6 +48,7 @@ import NetInfo from "@react-native-community/netinfo";
 import { Easing as RNEasing } from "react-native";
 import { useRouter } from "expo-router";
 import * as Notifications from "expo-notifications";
+import * as Localization from "expo-localization";
 
 async function readPendingReferral() {
   const entries = await AsyncStorage.multiGet([
@@ -87,6 +88,28 @@ async function consumePendingReferral() {
     "referrer_src",
     "referrer_ts",
   ]);
+}
+
+const SUPPORTED_LANGS = new Set([
+  "fr","en","es","de","it","pt","zh","ja","ko","ar","hi","ru","nl",
+]);
+
+function resolveDeviceLanguage(): string {
+ // expo-localization (API actuelle) : on se base sur getLocales()
+  // languageTag peut être "fr-FR", "en-US", etc.
+  const locales =
+    (typeof Localization.getLocales === "function"
+      ? Localization.getLocales()
+      : []) as Array<{ languageTag?: string; languageCode?: string }>;
+
+  const first = locales?.[0];
+  const rawTag = String(first?.languageTag || "").trim();
+  const rawCode = String(first?.languageCode || "").trim();
+
+  const base =
+    (rawTag ? rawTag.split("-")[0] : rawCode)?.toLowerCase() || "";
+
+  return SUPPORTED_LANGS.has(base) ? base : "en";
 }
 
 const { width: SCREEN_WIDTH, height: SCREEN_HEIGHT } =
@@ -569,6 +592,7 @@ export default function Register() {
 
     setLoading(true);
     try {
+      const resolvedLang = resolveDeviceLanguage();
       const userCredential =
         await createUserWithEmailAndPassword(
           auth,
@@ -639,7 +663,7 @@ export default function Register() {
           longestStreak: 0,
           shareChallenge: 0,
           voteFeature: 0,
-          language: i18n.language,
+          language: resolvedLang,
           locationEnabled: true,
           notificationsEnabled: notificationsGranted,
           country: "Unknown",
@@ -681,6 +705,7 @@ export default function Register() {
           if (data.longestStreak === undefined) patch.longestStreak = 0;
           if (data.shareChallenge === undefined) patch.shareChallenge = 0;
           if (data.voteFeature === undefined) patch.voteFeature = 0;
+          if (!data.language) patch.language = resolvedLang;
 
           // Localisation & permissions
           if (!data.country) patch.country = "Unknown";

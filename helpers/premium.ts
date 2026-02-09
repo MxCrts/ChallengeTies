@@ -12,7 +12,12 @@ const getExpireMs = (raw: any): number | null => {
 };
 
 export const hasActiveTempPremium = (userData: any | null | undefined): boolean => {
-  const raw = userData?.premium?.tempPremiumUntil ?? userData?.tempPremiumUntil ?? userData?.premiumUntil;
+  const raw =
+    userData?.premium?.tempPremiumUntil ??
+    userData?.tempPremiumUntil ??
+    userData?.premiumUntil ??
+    userData?.["premium.tempPremiumUntil"]; // ✅ TON CAS
+
   const expMs = getExpireMs(raw);
   return typeof expMs === "number" ? expMs > Date.now() : false;
 };

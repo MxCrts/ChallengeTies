@@ -83,7 +83,8 @@
         "duo": "Tu dúo sigue pendiente.",
         "trophy": "Hoy te espera un bonus. Pequeña victoria, gran impulso.",
         "streak": "Estás construyendo una racha. Un pequeño paso al día.",
-        "default": "Vuelve cuando quieras: 1 minuto basta para avanzar."
+        "default": "Vuelve cuando quieras: 1 minuto basta para avanzar.",
+        "duoSecondary": "Dúo pendiente{{who}}."
       },
       "badge": "HOY",
       "pendingTap":"Toca para ver",

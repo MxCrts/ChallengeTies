@@ -334,9 +334,9 @@ interface CurrentChallengesContextType {
   ) => Promise<void>;
   removeChallenge: (id: string, selectedDays: number) => Promise<void>;
   markToday: (
-    id: string,
-    selectedDays: number
-  ) => Promise<{ success: boolean; missedDays?: number }>;
+  id: string,
+  selectedDays: number
+) => Promise<{ success: boolean; missedDays?: number; completed?: boolean }>;
   isMarkedToday: (id: string, selectedDays: number) => boolean;
   completeChallenge: (
     id: string,
@@ -1413,22 +1413,36 @@ defer(async () => {
       }
 
 
-      if (needsComplete) {
-        await completeChallenge(id, selectedDays, false);
-      } else {
-        // ✅ Un seul toast, le listener génère title + message (premium)
-        emitPremiumToast({
-          kind: "success",
-          vibe: streakBonus ? "streak" : "mark",
-          progress:
-            toastD > 0 && toastT > 0
-              ? { dayIndex: toastD, totalDays: toastT }
-              : undefined,
-        });
-      }
+     if (needsComplete) {
+  // ✅ dernier jour : ON NE FINALISE PAS ICI
+  // -> l’UI doit afficher le bouton "Terminer le défi"
+  // -> et c’est le ChallengeCompletionModal qui fera completeChallenge()
+  emitPremiumToast({
+    kind: "success",
+    vibe: "complete",
+    progress: {
+      dayIndex: Number(selectedDays || 1),
+      totalDays: Number(selectedDays || 1),
+    },
+  });
 
-      defer(() => scheduleAchievementsCheck(userId));
-      return { success: true };
+  defer(() => scheduleAchievementsCheck(userId));
+  return { success: true, completed: true };
+} else {
+  emitPremiumToast({
+    kind: "success",
+    vibe: streakBonus ? "streak" : "mark",
+    progress:
+      toastD > 0 && toastT > 0
+        ? { dayIndex: toastD, totalDays: toastT }
+        : undefined,
+  });
+
+  defer(() => scheduleAchievementsCheck(userId));
+  return { success: true, completed: false };
+}
+
+
     } catch (error: any) {
       const msg = String(error?.message || error);
       if (msg === "alreadyCompleted") {
@@ -2035,7 +2049,22 @@ if (index === -1) {
         : [];
 
       const idx = findChallengeIndexSmart(curr, id, selectedDays);
-      if (idx === -1) throw new Error("challengeNotFound");
+
+if (idx === -1) {
+  // ✅ Idempotence: si déjà complété, on sort sans erreur.
+  const done: any[] = Array.isArray((uData as any).CompletedChallenges)
+    ? (uData as any).CompletedChallenges
+    : [];
+
+  const alreadyDone = done.some((e: any) => {
+    const cid = e?.challengeId ?? e?.id;
+    return String(cid) === String(id) && Number(e?.selectedDays) === Number(selectedDays);
+  });
+
+  if (alreadyDone) return; // <- important : no-op = succès silencieux
+  throw new Error("challengeNotFound");
+}
+
 
       const toComplete = { ...curr[idx] } as any;
       toCompleteSnapshot = toComplete;
@@ -2129,7 +2158,10 @@ if (index === -1) {
         ? uData.CompletedChallenges
         : [];
 
-      const prevIdx = done.findIndex((e) => e.id === id);
+      const prevIdx = done.findIndex((e: any) => {
+  const cid = e?.challengeId ?? e?.id;
+  return String(cid) === String(id) && Number(e?.selectedDays) === Number(selectedDays);
+});
 
       const newDone = {
         ...toComplete,

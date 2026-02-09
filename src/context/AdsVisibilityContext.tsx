@@ -85,44 +85,53 @@ const isPremium = isPremiumUser === true;
     pathname === "/forgot-password";
 
     const value = useMemo<AdsVisibility>(() => {
-    const hideAll = isAdmin || (!premiumLoading && isPremium);
-    const adsAllowed = canRequestAds && !isAuthRoute;
+  const adsAllowed = canRequestAds && !isAuthRoute;
 
-    // 🔓 MODE TEST : on ignore adsReady / canRequestAds,
-    // mais on respecte TOUJOURS admin / premium.
-    if (FORCE_SHOW_ADS_FOR_TESTING) {
-      return {
-        showBanners: !isAuthRoute && !hideAll,
-        showInterstitials: !isAuthRoute && !hideAll,
-        showRewarded: !isAuthRoute && !hideAll,
-        isAdmin,
-        isPremium,
-      };
-    }
-
-    // ✅ IMPORTANT:
-    // - banners: on peut garder un gate "ready" en dev pour éviter les blancs
-    // - rewarded/interstitials: NE DOIVENT PAS être bloquées par adsReady, sinon elles ne se chargent jamais
-    const bannersUnlocked = (__DEV__ ? adsReady : true) && adsAllowed;
-    const rewardedUnlocked = adsAllowed;      // se charge en arrière-plan, show() seulement quand prêt
-    const interUnlocked = adsAllowed;  
-
-    // admin ou premium → pas de pubs
+  // ✅ FAIL-SAFE: tant qu’on ne sait pas encore, on n’affiche pas bannières/interstitiels
+  // (sinon un premium voit des pubs, ce qui est inacceptable)
+  if (premiumLoading) {
     return {
-      showBanners: bannersUnlocked && !hideAll,
-      showInterstitials: interUnlocked && !hideAll,
-      showRewarded: rewardedUnlocked && !hideAll,
+      showBanners: false,
+      showInterstitials: false,
+      showRewarded: adsAllowed, // rewarded OK si tu veux, sinon false aussi
+      isAdmin,
+      isPremium: false, // inconnu pour l’instant, mais on protège l’UX
+    };
+  }
+
+  const isPremium = isPremiumUser === true;
+  const hideAds = isAdmin || isPremium;
+
+  if (FORCE_SHOW_ADS_FOR_TESTING) {
+    return {
+      showBanners: !isAuthRoute && !hideAds,
+      showInterstitials: !isAuthRoute && !hideAds,
+      showRewarded: !isAuthRoute,
       isAdmin,
       isPremium,
     };
-  }, [
-    adsReady,
-    canRequestAds,
-    isAuthRoute,
+  }
+
+  const bannersUnlocked = (__DEV__ ? adsReady : true) && adsAllowed;
+  const rewardedUnlocked = adsAllowed;
+  const interUnlocked = adsAllowed;
+
+  return {
+    showBanners: bannersUnlocked && !hideAds,
+    showInterstitials: interUnlocked && !hideAds,
+    showRewarded: rewardedUnlocked,
     isAdmin,
     isPremium,
-    premiumLoading,
-  ]);
+  };
+}, [
+  adsReady,
+  canRequestAds,
+  isAuthRoute,
+  isAdmin,
+  isPremiumUser,
+  premiumLoading,
+]);
+
 
 
   return (

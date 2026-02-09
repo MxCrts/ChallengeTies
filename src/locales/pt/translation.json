@@ -2455,7 +2455,8 @@
         "duo": "O teu Duo ainda está pendente.",
         "trophy": "Hoje há um bónus à tua espera. Pequena vitória, grande impulso.",
         "streak": "Estás a construir uma sequência. Um pequeno passo por dia.",
-        "default": "Volta quando quiseres: 1 minuto chega para avançar."
+        "default": "Volta quando quiseres: 1 minuto chega para avançar.",
+        "duoSecondary": "Dupla pendente{{who}}."
       },
       "badge": "HOJE",
       "primaryActiveShort": "Marcar",

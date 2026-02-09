@@ -73,10 +73,14 @@ export function computeChallengeTrophies(params: {
   } = params;
 
   const n = Math.max(1, selectedDays);
-  const basePerDay = 3;
-  const lengthBonus = Math.round(2 * Math.sqrt(n));
+ // ✅ Economie plus "lisible" : 1 jour ≈ 1 trophée
+const basePerDay = 1;
 
-  let total = n * basePerDay + lengthBonus;
+// ✅ Bonus de longueur uniquement à partir de 7 jours (sinon ça explose les petits challenges)
+const lengthBonus = n >= 7 ? Math.round(1.5 * Math.sqrt(n)) : 0;
+
+let total = n * basePerDay + lengthBonus;
+
 
   const flawless = completionKeys.length === n && isConsecutive(completionKeys);
   if (flawless) total *= 1.15;
@@ -91,7 +95,7 @@ export function computeChallengeTrophies(params: {
 
   if (isDoubleReward) total *= 2;
 
-  const hardCap = n * 12;
+  const hardCap = n * 6;
   total = Math.round(clampNum(total, 1, hardCap));
 
   return { total, flawless };

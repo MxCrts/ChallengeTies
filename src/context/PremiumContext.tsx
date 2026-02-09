@@ -8,6 +8,7 @@ import React, {
 import { onAuthStateChanged } from "firebase/auth";
 import { doc, onSnapshot, Timestamp, updateDoc } from "firebase/firestore";
 import { auth, db } from "@/constants/firebase-config"; 
+import { hasActiveTempPremium } from "@/helpers/premium";
 
 type PremiumCtx = {
   /** true si l'utilisateur est premium (admin, abo, ou premium temporaire actif) */
@@ -38,27 +39,10 @@ type PremiumField =
       isSubscribed?: boolean;
       isLifetime?: boolean;
       tempPremiumUntil?: string | Date | Timestamp | null;
+      platform?: string;
+      productId?: string;
+      updatedAt?: Timestamp | string | Date | null;
     };
-
-const getExpireMs = (raw: any): number | null => {
-  if (!raw) return null;
-  if (raw instanceof Date) return raw.getTime();
-  if (raw instanceof Timestamp) return raw.toMillis();
-  if (typeof raw === "string") {
-    const parsed = Date.parse(raw);
-    return Number.isNaN(parsed) ? null : parsed;
-  }
-  return null;
-};
-
-const hasTempPremiumActive = (premiumObj: any): boolean => {
-  if (!premiumObj || typeof premiumObj !== "object") return false;
-
-  const expireMs = getExpireMs(premiumObj.tempPremiumUntil);
-
-  if (!expireMs) return false;
-  return expireMs > Date.now();
-};
 
 export const PremiumProvider: React.FC<{ children: React.ReactNode }> = ({
   children,
@@ -97,6 +81,7 @@ export const PremiumProvider: React.FC<{ children: React.ReactNode }> = ({
   userRef,
   (snap) => {
     const data = snap.exists() ? (snap.data() as any) : {};
+    
 
     const premiumField: PremiumField = data.premium;
 
@@ -114,24 +99,23 @@ export const PremiumProvider: React.FC<{ children: React.ReactNode }> = ({
           // 1) Flags "simples" / historiques (bool ONLY)
           const hasLegacyFlag =
             data.isPremium === true ||
-            premiumField === true ||
-            data.premium === true;
+            premiumField === true;
 
           // 1bis) Flags dans premium object (comme ailleurs dans ton app)
           const hasPremiumObjectFlag =
             premiumObj?.isPremium === true ||
             premiumObj?.premium === true ||
-            premiumObj?.isSubscribed === true ||
             premiumObj?.isLifetime === true;
 
-    // 2) Premium temporaire (support aussi anciens schémas)
-          const expireMsFromObj = premiumObj ? getExpireMs(premiumObj.tempPremiumUntil) : null;
-          const expireMsFromRoot = getExpireMs(data.tempPremiumUntil) ?? getExpireMs(data.premiumUntil);
-
-          const expireMs = expireMsFromObj ?? expireMsFromRoot;
-          const hasTempPremium = typeof expireMs === "number" ? expireMs > Date.now() : false;
+         // 2) Premium temporaire (trial) — support string ISO / Timestamp / legacy roots
+         const hasTempPremium = hasActiveTempPremium(data);
 
     const nextIsPremium = hasLegacyFlag || hasPremiumObjectFlag || hasTempPremium;
+    if (__DEV__) {
+  console.log("[PremiumContext] tempPremiumUntil =", data?.premium?.tempPremiumUntil);
+  console.log("[PremiumContext] hasTempPremium =", hasActiveTempPremium(data));
+  console.log("[PremiumContext] nextIsPremium =", nextIsPremium);
+}
 
     setIsPremiumUser(nextIsPremium);
     setLoading(false);

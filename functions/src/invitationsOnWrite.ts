@@ -35,10 +35,15 @@ function isLockExpired(lock: any): boolean {
 
 /** Normalise une langue vers nos locales supportées */
 function normalizeLang(lang: string | undefined) {
-  const base = String(lang || "en").toLowerCase().split(/[-_]/)[0];
-  const supported = ["fr", "en", "es", "de", "it", "pt", "zh", "ja", "ko", "ar", "hi", "ru", "nl"];
+  const base = String(lang || "en")
+    .trim()                 // ✅ LE FIX
+    .toLowerCase()
+    .split(/[-_]/)[0];
+
+  const supported = ["fr","en","es","de","it","pt","zh","ja","ko","ar","hi","ru","nl"];
   return supported.includes(base) ? base : "en";
 }
+
 
 function titleFor(_lang: string | undefined) {
   return "ChallengeTies";
@@ -275,6 +280,9 @@ export const invitationsOnWrite = onDocumentWritten(
       const chSnap = await db.doc(`challenges/${after.challengeId}`).get().catch(() => null);
       challengeTitle = (chSnap?.get("title") as string) || null;
     }
+
+    console.log("[invite] inviter.language RAW =", inviter?.language);
+    console.log("[invite] inviter.language JSON =", JSON.stringify(inviter?.language), "len=", String(inviter?.language || "").length);
 
     const lang = inviter?.language || "en";
     const title = titleFor(lang);

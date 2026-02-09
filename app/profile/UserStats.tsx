@@ -89,6 +89,7 @@ interface UserDoc {
   longestStreak?: number;
   trophies?: number;
   achievements?: string[];
+  CompletedChallenges?: any[];
 }
 
 interface Challenge {
@@ -178,9 +179,10 @@ const tabBarHeight = useTabBarHeightSafe();
     );
     const totalSaved = savedChallenges.length;
     const totalOngoing = uniqueOngoing.size;
-    const totalCompleted = currentChallenges.filter(
-      (ch: any) => ch.completedDays === ch.selectedDays
-    ).length;
+   const totalCompleted = Array.isArray(userDoc.CompletedChallenges)
+  ? userDoc.CompletedChallenges.length
+  : 0;
+
     const successRatePct = totalOngoing + totalCompleted > 0
       ? Math.round((totalCompleted / (totalOngoing + totalCompleted)) * 100)
       : 0;

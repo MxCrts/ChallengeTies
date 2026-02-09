@@ -8,139 +8,168 @@ export type WelcomeBonusReward =
   | { type: "premium"; amount: number };
 
 export type WelcomeBonusState = {
-  currentDay: number;       // 0 à 6 (index dans le tableau de récompenses)
-  completed: boolean;       // true si les 7 jours ont été pris
-  canClaimToday: boolean;   // true si la récompense du jour est réclamable
-  lastClaimDate: string | null; // "YYYY-MM-DD" ou null
+  currentDay: number; // 0..6 (index récompense du jour)
+  completed: boolean;
+  canClaimToday: boolean;
+  lastClaimDate: string | null; // "YYYY-MM-DD"
 };
 
 const WELCOME_REWARDS: WelcomeBonusReward[] = [
-  { type: "trophies", amount: 8 },   // Jour 1
-  { type: "trophies", amount: 12 },  // Jour 2
-  { type: "streakPass", amount: 1 }, // Jour 3
-  { type: "trophies", amount: 15 },  // Jour 4
-  { type: "streakPass", amount: 1 }, // Jour 5
-  { type: "trophies", amount: 20 },  // Jour 6
-  { type: "premium", amount: 7 },      // Jour 7
+  { type: "trophies", amount: 8 },  // Day 1
+  { type: "trophies", amount: 12 }, // Day 2
+  { type: "streakPass", amount: 1 },// Day 3
+  { type: "trophies", amount: 15 }, // Day 4
+  { type: "streakPass", amount: 1 },// Day 5
+  { type: "trophies", amount: 20 }, // Day 6
+  { type: "premium", amount: 7 },   // Day 7
 ];
 
-const todayKeyLocal = () => {
+// ✅ UTC day key (aligné avec DAY_UTC / "YYYY-MM-DD")
+export const todayKeyUTC = () => {
   const d = new Date();
-  const y = d.getFullYear();
-  const m = String(d.getMonth() + 1).padStart(2, "0");
-  const day = String(d.getDate()).padStart(2, "0");
+  const y = d.getUTCFullYear();
+  const m = String(d.getUTCMonth() + 1).padStart(2, "0");
+  const day = String(d.getUTCDate()).padStart(2, "0");
   return `${y}-${m}-${day}`;
 };
 
-/**
- * Calcule l’état du bonus de connexion à partir des données actuelles du user.
- * userData peut être ton snapshot Firestore (data()).
- */
-export function computeWelcomeBonusState(userData: any | null | undefined): WelcomeBonusState {
-  const today = todayKeyLocal();
+const clampDayIndex = (n: any) => {
+  const v = typeof n === "number" && Number.isFinite(n) ? n : 0;
+  if (v < 0) return 0;
+  if (v >= WELCOME_REWARDS.length) return WELCOME_REWARDS.length - 1;
+  return v;
+};
 
-  const wb = (userData as any)?.welcomeLoginBonus || {};
-  let currentDay = typeof wb.currentDay === "number" ? wb.currentDay : 0;
+const looksOneBasedDay = (raw: any) => {
+  return (
+    typeof raw === "number" &&
+    Number.isFinite(raw) &&
+    raw >= 1 &&
+    raw <= WELCOME_REWARDS.length
+  );
+};
+
+const normalizeDayIndex = (raw: any) => {
+  // On accepte :
+  // - 0..6 (nouveau)
+  // - 1..7 (ancien) -> convertit en 0..6
+  const n = typeof raw === "number" && Number.isFinite(raw) ? raw : 0;
+  if (looksOneBasedDay(n)) return clampDayIndex(n - 1);
+  return clampDayIndex(n);
+};
+
+/**
+ * ✅ Calcule l’état du welcome bonus à partir du snapshot userData
+ * IMPORTANT: on compare en UTC (sinon modal qui re-pop)
+ */
+export function computeWelcomeBonusState(
+  userData: any | null | undefined
+): WelcomeBonusState {
+  const today = todayKeyUTC();
+
+  const u = (userData as any) || {};
+  // ✅ Supporte 3 formats :
+  // 1) ✅ nouveau: welcomeLoginBonus (map)
+  // 2) legacy: WelcomeLoginBonus (map)
+  // 3) ❌ cassé: champs plats "welcomeLoginBonus.currentDay" etc.
+  const wbObj =
+    (u.welcomeLoginBonus && typeof u.welcomeLoginBonus === "object"
+      ? u.welcomeLoginBonus
+      : null) ||
+    (u.WelcomeLoginBonus && typeof u.WelcomeLoginBonus === "object"
+      ? u.WelcomeLoginBonus
+      : null);
+
+  const wbFlat = {
+    currentDay: u["welcomeLoginBonus.currentDay"],
+    lastClaimDate: u["welcomeLoginBonus.lastClaimDate"],
+    completed: u["welcomeLoginBonus.completed"],
+  };
+
+  const wb = wbObj || wbFlat || {};
+
   const completed = wb.completed === true;
-  const lastClaimDate: string | null =
+  const currentDay = normalizeDayIndex(wb.currentDay);
+  const lastClaimDate =
     typeof wb.lastClaimDate === "string" ? wb.lastClaimDate : null;
 
   if (completed) {
-    return {
-      currentDay: Math.min(currentDay, WELCOME_REWARDS.length - 1),
-      completed: true,
-      canClaimToday: false,
-      lastClaimDate,
-    };
+    return { currentDay, completed: true, canClaimToday: false, lastClaimDate };
   }
 
-  // Si jamais currentDay sort des bornes, on le clamp.
-  if (currentDay < 0) currentDay = 0;
-  if (currentDay >= WELCOME_REWARDS.length) {
-    currentDay = WELCOME_REWARDS.length - 1;
-  }
-
-  // 🔑 Logique simple : pas besoin que les jours soient consécutifs,
-  // on avance juste si on n'a pas encore réclamé "aujourd'hui".
   const canClaimToday = lastClaimDate !== today;
 
-  return {
-    currentDay,
-    completed: false,
-    canClaimToday,
-    lastClaimDate,
-  };
+  return { currentDay, completed: false, canClaimToday, lastClaimDate };
 }
 
 /**
- * Applique la récompense du jour en transaction Firestore.
- * - Incrémente trophies / totalTrophies si besoin
- * - Incrémente inventory.streakPass si besoin
- * - Active un premium temporaire si besoin
- * - Met à jour welcomeLoginBonus.{currentDay,lastClaimDate,completed}
- *
- * Retourne la récompense réellement appliquée + l’état après coup.
+ * ⚠️ Version complète (récompenses + welcome state)
  */
 export async function claimWelcomeBonus(
   userId: string
 ): Promise<{ reward: WelcomeBonusReward; state: WelcomeBonusState }> {
   const userRef = doc(db, "users", userId);
-  const today = todayKeyLocal();
+  const today = todayKeyUTC();
 
   return runTransaction(db, async (tx) => {
     const snap = await tx.get(userRef);
-    if (!snap.exists()) {
-      throw new Error("User not found");
-    }
+    if (!snap.exists()) throw new Error("User not found");
 
     const data = snap.data() || {};
-    const wb = (data as any).welcomeLoginBonus || {};
+    const d = data as any;
+    // ✅ même logique que compute: on lit map sinon fallback champs plats
+    const wbObj =
+      (d.welcomeLoginBonus && typeof d.welcomeLoginBonus === "object"
+        ? d.welcomeLoginBonus
+        : null) ||
+      (d.WelcomeLoginBonus && typeof d.WelcomeLoginBonus === "object"
+        ? d.WelcomeLoginBonus
+        : null);
 
-    let currentDay: number =
-      typeof wb.currentDay === "number" ? wb.currentDay : 0;
-    let completed: boolean = wb.completed === true;
-    const lastClaimDate: string | null =
+    const wbFlat = {
+      currentDay: d["welcomeLoginBonus.currentDay"],
+      lastClaimDate: d["welcomeLoginBonus.lastClaimDate"],
+      completed: d["welcomeLoginBonus.completed"],
+    };
+
+    const wb = wbObj || wbFlat || {};
+
+    const updates: Record<string, any> = {};
+
+    // migrate legacy once
+    if (d.WelcomeLoginBonus && !d.welcomeLoginBonus) {
+      updates["welcomeLoginBonus"] = d.WelcomeLoginBonus;
+    }
+
+    const rawDay = wb.currentDay;
+    const oneBased = looksOneBasedDay(rawDay);
+    const currentDay = normalizeDayIndex(rawDay);
+
+    const completed = wb.completed === true;
+    const lastClaimDate =
       typeof wb.lastClaimDate === "string" ? wb.lastClaimDate : null;
 
-    if (completed) {
-      throw new Error("Welcome bonus already completed");
-    }
-
-    if (lastClaimDate === today) {
-      // Déjà récupéré aujourd'hui
-      throw new Error("Already claimed today");
-    }
-
-    // S'il dépasse la taille du tableau pour une raison X → clamp
-    if (currentDay < 0) currentDay = 0;
-    if (currentDay >= WELCOME_REWARDS.length) {
-      currentDay = WELCOME_REWARDS.length - 1;
-    }
+    if (completed) throw new Error("Welcome bonus already completed");
+    if (lastClaimDate === today) throw new Error("Already claimed today");
 
     const reward = WELCOME_REWARDS[currentDay];
 
-    // Copie mutable pour modifications
-    const updates: Record<string, any> = {};
-
-    // --- Appliquer la récompense ---
+    // --- Apply reward (⚠️ rules peuvent bloquer ces champs) ---
     switch (reward.type) {
       case "trophies": {
         const gain = reward.amount;
-        const trophies =
-          typeof (data as any).trophies === "number" ? (data as any).trophies : 0;
+        const trophies = typeof d.trophies === "number" ? d.trophies : 0;
         const total =
-          typeof (data as any).totalTrophies === "number"
-            ? (data as any).totalTrophies
-            : trophies;
+          typeof d.totalTrophies === "number" ? d.totalTrophies : trophies;
+
         updates.trophies = trophies + gain;
         updates.totalTrophies = total + gain;
         break;
       }
 
       case "streakPass": {
-        const inv = (data as any).inventory || {};
-        const current =
-          typeof inv.streakPass === "number" ? inv.streakPass : 0;
+        const inv = d.inventory || {};
+        const current = typeof inv.streakPass === "number" ? inv.streakPass : 0;
         updates["inventory.streakPass"] = current + reward.amount;
         break;
       }
@@ -148,35 +177,55 @@ export async function claimWelcomeBonus(
       case "premium": {
         const days = reward.amount;
         const now = new Date();
-        const prevUntil = (data as any)?.premium?.tempPremiumUntil as string | undefined;
-        const baseDate = new Date(prevUntil || now.toISOString());
-        const start =
-          baseDate > now ? baseDate : now; // si déjà un essai, on empile après
+        const prevUntil = d?.premium?.tempPremiumUntil as string | undefined;
+
+        const prevDate = prevUntil ? new Date(prevUntil) : null;
+        const start = prevDate && prevDate > now ? prevDate : now;
+
         const expires = new Date(start);
-        expires.setDate(expires.getDate() + days);
+        expires.setUTCDate(expires.getUTCDate() + days);
 
         updates["premium.tempPremiumUntil"] = expires.toISOString();
         break;
       }
     }
 
-    // --- Avancer l’état du welcome ---
+    // --- Advance welcome state (0-based) ---
     const nextDay = currentDay + 1;
     const isCompleted = nextDay >= WELCOME_REWARDS.length;
 
-    updates["welcomeLoginBonus.currentDay"] = nextDay; // index du prochain jour
-    updates["welcomeLoginBonus.lastClaimDate"] = today;
-    updates["welcomeLoginBonus.completed"] = isCompleted;
+    // ✅ FIX DEFINITIF :
+    // On écrit TOUJOURS le MAP complet "welcomeLoginBonus" (et jamais des clés avec des points).
+    // Ça évite le bug des champs plats "welcomeLoginBonus.currentDay".
+    //
+    // Note: oneBased n’a plus besoin d’écrire un champ intermédiaire,
+    // car le MAP ci-dessous normalise la base automatiquement.
+    const prevMap =
+      (d.welcomeLoginBonus && typeof d.welcomeLoginBonus === "object"
+        ? d.welcomeLoginBonus
+        : null) ||
+      (d.WelcomeLoginBonus && typeof d.WelcomeLoginBonus === "object"
+        ? d.WelcomeLoginBonus
+        : null) ||
+      {};
+
+    updates.welcomeLoginBonus = {
+      ...prevMap,
+      currentDay: nextDay,       // 0-based
+      lastClaimDate: today,      // UTC "YYYY-MM-DD"
+      completed: isCompleted,
+    };
 
     tx.set(userRef, updates, { merge: true });
 
-    const finalState: WelcomeBonusState = {
-      currentDay: nextDay,
-      completed: isCompleted,
-      canClaimToday: false,
-      lastClaimDate: today,
+    return {
+      reward,
+      state: {
+        currentDay: nextDay,
+        completed: isCompleted,
+        canClaimToday: false,
+        lastClaimDate: today,
+      },
     };
-
-    return { reward, state: finalState };
   });
 }

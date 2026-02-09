@@ -64,7 +64,8 @@
         "duo": "Ton duo est en attente.",
         "trophy": "Un bonus t’attend aujourd’hui. Petit gain, gros momentum.",
         "streak": "Tu construis une série. Un petit pas par jour.",
-        "default": "Reviens quand tu veux : 1 minute suffit pour avancer."
+        "default": "Reviens quand tu veux : 1 minute suffit pour avancer.",
+        "duoSecondary": "Duo en attente{{who}}."
       },
       "badge": "AUJOURD’HUI",
       "metaPending": "Invitation",

@@ -1180,6 +1180,16 @@ useEffect(() => {
         0;
       const streak = typeof entry?.streak === "number" ? entry.streak : undefined;
 
+      // ✅ LAST DAY => Completion only (jamais Moment)
+      if (totalDays > 0 && dayIndex >= totalDays) {
+        setSoloMomentVisible(false);
+        setDuoMomentVisible(false);
+        requestAnimationFrame(() => {
+          setCompletionModalVisible(true);
+        });
+        return;
+      }
+
       // 4) ouvrir le bon modal
       if (isDuoRef.current) {
   const partner = duoChallengeDataRef.current?.duoUser;
@@ -2555,9 +2565,9 @@ const calendarDays = useMemo(() => {
   const currentYearNum = currentMonth.getFullYear();
 
   const showCompleteButton =
-    challengeTaken &&
-    finalSelectedDays > 0 &&
-    finalCompletedDays >= finalSelectedDays;
+  challengeTakenOptimistic &&
+  finalSelectedDays > 0 &&
+  finalCompletedDays >= finalSelectedDays;
   const progressPercent =
     finalSelectedDays > 0
       ? Math.min(1, finalCompletedDays / finalSelectedDays)
@@ -2859,6 +2869,10 @@ const handleShowCompleteModal = useCallback(() => {
       partnerDone?: number;
       partnerTotal?: number;
     }) => {
+      // ✅ Last day => PAS de Moment, c’est Completion only
+    if (opts.myTotal > 0 && opts.myDoneAfter >= opts.myTotal) {
+      return;
+    }
       if (opts.isDuo) {
   setDuoMomentPayload(
     buildDuoMomentPayload({
@@ -3227,6 +3241,34 @@ const handleMarkTodayPress = useCallback(async () => {
 
     // ✅ OPTIMISTIC UI (barre solo instant)
     setFinalCompletedDays(optimisticNext);
+
+    // ✅ LAST DAY (source de vérité = res.completed)
+if (res?.completed || (cap > 0 && optimisticNext >= cap)) {
+  // ferme proprement d’éventuels moments (au cas où)
+  setSoloMomentVisible(false);
+  setDuoMomentVisible(false);
+
+  // ✅ force l’UI à 100% pour afficher le CTA "Terminer le défi"
+  if (cap > 0) setFinalCompletedDays(cap);
+
+  // ✅ IMPORTANT: ne PAS ouvrir ChallengeCompletionModal ici.
+  // Le bouton "Terminer le défi" (showCompleteButton) doit être le seul point d’entrée.
+  await Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success).catch(() => {});
+  try { await bumpCounterAndMaybeReview(`markToday:${id}:${finalSelectedDays}`, 7); } catch {}
+
+  try {
+    const uid = auth.currentUser?.uid;
+    if (uid) {
+      await recordDailyGlobalMark(uid, new Date());
+      await checkForAchievements(uid);
+    }
+  } catch (e) {
+    console.warn("recordDailyGlobalMark failed (non-bloquant):", e);
+  }
+
+  return;
+}
+
 
     const momentFn = () =>
       openMomentModal({
@@ -4451,6 +4493,7 @@ const scrollContentStyle = useMemo(
   selectedDays={finalSelectedDays}
   onClose={() => setCompletionModalVisible(false)}
   onPreloadRewarded={loadRewarded}
+  rewardedAdUnitId={REWARDED_UNIT_ID}
   onShowRewarded={async () => {
     try {
       await showRewarded();
@@ -4459,7 +4502,7 @@ const scrollContentStyle = useMemo(
       return false;
     }
   }}
-  canShowRewarded={!!showBanners}
+  canShowRewarded={true}
   rewardedReady={rewardedLoaded}
   rewardedLoading={rewardedLoading}
 />

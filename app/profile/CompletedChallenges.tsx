@@ -116,8 +116,14 @@ export default function CompletedChallenges() {
   const { showBanners } = useAdsVisibility();
   const insets = useSafeAreaInsets();
 
-  // Hook appelé une seule fois, niveau racine (OK avec rules of hooks)
-  const tabBarHeight = useBottomTabBarHeight?.() ?? 0;
+  // ✅ Safe: certains écrans sont rendus hors Tabs (Stack push, deeplink, etc.)
+  const tabBarHeight = (() => {
+    try {
+      return useBottomTabBarHeight();
+    } catch {
+      return 0;
+    }
+  })();
 
 
   const [adHeight, setAdHeight] = useState(0);
@@ -425,78 +431,63 @@ export default function CompletedChallenges() {
                   </View>
                 </View>
 
-                {/* Boutons en bas : historique (si dispo) + voir détails */}
+               {/* Footer responsive : bouton principal + action compacte */}
                 <View style={styles.footerRow}>
-                  {item.history && item.history.length > 0 && (
+                  {/* Action compacte "Historique" (si dispo) */}
+                  {item.history && item.history.length > 0 ? (
                     <TouchableOpacity
-                      style={styles.historyButton}
+                      style={[
+                        styles.historyIconButton,
+                        {
+                          borderColor: isDarkMode
+                            ? withAlpha("#FFFFFF", 0.14)
+                            : withAlpha("#000000", 0.10),
+                          backgroundColor: isDarkMode
+                            ? withAlpha("#FFFFFF", 0.06)
+                            : withAlpha("#000000", 0.04),
+                        },
+                      ]}
                       onPress={() => openHistoryModal(item)}
                       accessibilityLabel={String(t("history"))}
                       accessibilityHint={String(t("viewHistoryHint"))}
                       accessibilityRole="button"
                       testID={`history-button-${item.id}`}
+                      hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
                     >
-                      <LinearGradient
-                        colors={[
-                          currentTheme.colors.secondary,
-                          currentTheme.colors.primary,
-                        ]}
-                        style={styles.historyButtonGradient}
-                      >
-                        <Ionicons
-                          name="time-outline"
-                          size={normalizeSize(14)}
-                          color={currentTheme.colors.textPrimary}
-                        />
-                        <Text
-                          style={[
-                            styles.historyButtonText,
-                            { color: currentTheme.colors.textPrimary },
-                          ]}
-                          numberOfLines={1}
-                        >
-                          {t("historyOf")}
-                        </Text>
-                      </LinearGradient>
+                      <Ionicons
+                        name="time-outline"
+                        size={normalizeSize(16)}
+                        color={currentTheme.colors.secondary}
+                      />
                     </TouchableOpacity>
+                  ) : (
+                    <View style={styles.historyIconPlaceholder} />
                   )}
 
-                  <View style={styles.footerRight}>
-                    <TouchableOpacity
-                      style={styles.viewButton}
-                      onPress={() => navigateToChallengeDetails(item)}
-                      accessibilityLabel={String(
-                        t("viewChallengeDetails", { title: item.title })
-                      )}
-                      accessibilityHint={String(t("viewDetails"))}
-                      accessibilityRole="button"
-                      testID={`view-details-${item.id}`}
+                  {/* Bouton principal : Voir détails (toujours) */}
+                  <TouchableOpacity
+                    style={styles.viewButton}
+                    onPress={() => navigateToChallengeDetails(item)}
+                    accessibilityLabel={String(
+                      t("viewChallengeDetails", { title: item.title })
+                    )}
+                    accessibilityHint={String(t("viewDetails"))}
+                    accessibilityRole="button"
+                    testID={`view-details-${item.id}`}
+                    activeOpacity={0.9}
+                  >
+                    <LinearGradient
+                      colors={[currentTheme.colors.secondary, currentTheme.colors.primary]}
+                      style={styles.viewButtonGradient}
                     >
-                      <LinearGradient
-                        colors={[
-                          currentTheme.colors.secondary,
-                          currentTheme.colors.primary,
-                        ]}
-                        style={styles.viewButtonGradient}
-                      >
-                        <View style={styles.viewButtonContent}>
-                          <Text
-                            style={[
-                              styles.viewButtonText,
-                              { color: "#0b1120" },
-                            ]}
-                          >
-                            {t("viewDetails")}
-                          </Text>
-                          <Ionicons
-                            name="chevron-forward"
-                            size={normalizeSize(14)}
-                            color="#0b1120"
-                          />
-                        </View>
-                      </LinearGradient>
-                    </TouchableOpacity>
-                  </View>
+                      <View style={styles.viewButtonContent}>
+                        <Text style={[styles.viewButtonText, { color: "#0b1120" }]} numberOfLines={1}>
+                          {t("viewDetails")}
+                        </Text>
+                        <Ionicons name="chevron-forward" size={normalizeSize(14)} color="#0b1120" />
+                      </View>
+                    </LinearGradient>
+                  </TouchableOpacity>
                 </View>
               </View>
             </LinearGradient>
@@ -1031,28 +1022,10 @@ progressChipText: {
  footerRow: {
   flexDirection: "row",
   alignItems: "center",
-  justifyContent: "space-between",
   gap: normalizeSize(10),
-  marginTop: normalizeSize(6),
+  marginTop: normalizeSize(8),
 },
-footerRight: {
-  flexShrink: 0,
-  alignItems: "flex-end",
-},
-historyButton: {
-  borderRadius: normalizeSize(18),
-  overflow: "hidden",
-  flex: 1,
-},
-  historyButtonGradient: {
-    paddingVertical: normalizeSize(10),
-    paddingHorizontal: normalizeSize(14),
-    borderRadius: normalizeSize(18),
-    flexDirection: "row",
-    alignItems: "center",
-    justifyContent: "flex-start",
-    gap: normalizeSize(8),
-  },
+
   historyButtonText: {
     fontFamily: "Comfortaa_700Bold",
     fontSize: normalizeSize(13),
@@ -1063,8 +1036,22 @@ historyButton: {
   viewButton: {
   borderRadius: normalizeSize(18),
   overflow: "hidden",
+  flex: 1,
+  minWidth: normalizeSize(140),
+},
+historyIconButton: {
+  width: normalizeSize(40),
+  height: normalizeSize(40),
+  borderRadius: 999,
+  alignItems: "center",
+  justifyContent: "center",
+  borderWidth: StyleSheet.hairlineWidth,
   flexShrink: 0,
-  minWidth: normalizeSize(132),
+},
+historyIconPlaceholder: {
+  width: normalizeSize(40),
+  height: normalizeSize(40),
+  flexShrink: 0,
 },
   viewButtonGradient: {
     paddingVertical: normalizeSize(9),

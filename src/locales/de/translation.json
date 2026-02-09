@@ -83,7 +83,8 @@
         "duo": "Dein Duo ist noch ausstehend.",
         "trophy": "Heute wartet ein Bonus auf dich. Kleiner Gewinn, großer Schwung.",
         "streak": "Du baust eine Serie auf. Ein kleiner Schritt pro Tag.",
-        "default": "Komm zurück, wann du willst: 1 Minute reicht, um voranzukommen."
+        "default": "Komm zurück, wann du willst: 1 Minute reicht, um voranzukommen.",
+        "duoSecondary": "Duo ausstehend{{who}}."
       },
       "badge": "HEUTE",
       "primaryActiveShort": "Markieren",

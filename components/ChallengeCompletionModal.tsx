@@ -16,7 +16,7 @@ import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { Ionicons } from "@expo/vector-icons";
 import { LinearGradient } from "expo-linear-gradient";
 import { Video, ResizeMode } from "expo-av";
-import { doc, onSnapshot } from "firebase/firestore";
+import { doc, onSnapshot, getDoc  } from "firebase/firestore";
 import { auth, db } from "@/constants/firebase-config";
 import { useCurrentChallenges } from "../context/CurrentChallengesContext";
 import { useTranslation } from "react-i18next";
@@ -24,6 +24,12 @@ import { useTheme } from "../context/ThemeContext";
 import designSystem, { Theme } from "../theme/designSystem";
 import { useRouter } from "expo-router";
 import * as Haptics from "expo-haptics";
+import {
+  useTrophiesEconomy,
+  coerceToDayKey,
+  dayKeyUTC,
+} from "../hooks/useTrophiesEconomy";
+import { rewardedAdsService } from "../services/rewardedAdsService";
 
 /* -------------------------------------------------------------------------- */
 /*                                   Utils                                    */
@@ -58,6 +64,11 @@ type Props = {
   rewardedLoading?: boolean;        // ad is loading
   onPreloadRewarded?: () => void;   // parent loads
   onShowRewarded?: () => Promise<boolean>;
+  /**
+   * ✅ Recommandé : si fourni, le modal gère la rewarded en autonome (singleton).
+   * Sinon -> fallback sur rewardedReady/onShowRewarded (comme avant).
+   */
+  rewardedAdUnitId?: string;
 };
 
 const VIDEO_ZOOM = Platform.OS === "android" ? 1.05 : 1.14;
@@ -80,6 +91,7 @@ export default function ChallengeCompletionModal({
   rewardedLoading = false,
   onPreloadRewarded,
   onShowRewarded,
+  rewardedAdUnitId,
 }: Props) {
   const { t } = useTranslation();
   const router = useRouter();
@@ -92,7 +104,8 @@ export default function ChallengeCompletionModal({
   const isDark = theme === "dark";
   const currentTheme: Theme = isDark ? designSystem.darkTheme : designSystem.lightTheme;
 
-  const { completeChallenge } = useCurrentChallenges();
+  const { completeChallenge, currentChallenges } = useCurrentChallenges();
+  const { computeChallengeTrophies } = useTrophiesEconomy();
 
   // Mounted guard (avoid setState after unmount)
   const mountedRef = useRef(false);
@@ -110,11 +123,6 @@ export default function ChallengeCompletionModal({
     return clamp01(lerp(0.92, 1.18, clamp01((s - 0.9) / 0.6)));
   }, [W]);
 
-  const R = useMemo(() => {
-    const r = Math.round((baseReward * Math.max(1, selectedDays)) / 7);
-    return Math.max(1, r);
-  }, [selectedDays]);
-
   const phraseKey = useMemo(() => pick(motivationalPhrases), [visible]); // refresh per open
 
   // Reduce motion
@@ -122,6 +130,10 @@ export default function ChallengeCompletionModal({
 
   // User trophies listener (header info)
   const [userTrophies, setUserTrophies] = useState(0);
+  const [longestStreak, setLongestStreak] = useState(0);
+
+  // Duo: partner finish key (for exact compute)
+  const [partnerFinishKey, setPartnerFinishKey] = useState<string | null>(null);
 
   // Video fallback
   const videoRef = useRef<Video>(null);
@@ -137,6 +149,10 @@ export default function ChallengeCompletionModal({
   // Navigation guard
   const didNavRef = useRef(false);
   const crownLoopRef = useRef<Animated.CompositeAnimation | null>(null);
+  // ✅ Rewarded local state (autonome)
+  const [adReadyLocal, setAdReadyLocal] = useState(false);
+  const [adLoadingLocal, setAdLoadingLocal] = useState(false);
+  const [adError, setAdError] = useState<string | null>(null);
 
   /* ------------------------------ Anim values ----------------------------- */
 
@@ -212,10 +228,107 @@ export default function ChallengeCompletionModal({
     if (!uid) return;
     const userRef = doc(db, "users", uid);
     const unsub = onSnapshot(userRef, (snap) => {
-      if (snap.exists()) setUserTrophies(snap.data().trophies || 0);
+      if (!snap.exists()) return;
+      const d = snap.data() as any;
+      setUserTrophies(d.trophies || 0);
+      setLongestStreak(Number(d.longestStreak || 0));
     });
     return () => unsub();
   }, []);
+
+  // When modal opens: resolve partnerFinishKey if this completion is DUO
+  useEffect(() => {
+    if (!visible) return;
+
+    const ch = currentChallenges.find((x: any) => {
+      const cid = x?.challengeId ?? x?.id;
+      return String(cid) === String(challengeId) && Number(x?.selectedDays) === Number(selectedDays);
+    });
+
+    const partnerId = (ch as any)?.duoPartnerId as string | undefined;
+    const canonicalKey = (ch as any)?.uniqueKey as string | undefined;
+
+    if (!partnerId || !canonicalKey) {
+      setPartnerFinishKey(null);
+      return;
+    }
+
+    let cancelled = false;
+    (async () => {
+      try {
+        const pRef = doc(db, "users", partnerId);
+        const pSnap = await getDoc(pRef);
+        if (cancelled) return;
+        if (!pSnap.exists()) {
+          setPartnerFinishKey(null);
+          return;
+        }
+        const pData = pSnap.data() as any;
+        const list = Array.isArray(pData.CurrentChallenges) ? pData.CurrentChallenges : [];
+        const p = list.find((c: any) => c?.uniqueKey === canonicalKey);
+        const pKeys: string[] =
+          (p as any)?.completionDateKeys ??
+          (p?.completionDates || []).map(coerceToDayKey).filter(Boolean);
+        setPartnerFinishKey(pKeys?.length ? pKeys[pKeys.length - 1] : null);
+      } catch {
+        if (!cancelled) setPartnerFinishKey(null);
+      }
+    })();
+
+    return () => {
+      cancelled = true;
+    };
+  }, [visible, currentChallenges, challengeId, selectedDays]);
+
+  // ✅ True reward totals (must match completeChallenge() computeChallengeTrophies)
+  const rewardTotals = useMemo(() => {
+    const ch = currentChallenges.find((x: any) => {
+      const cid = x?.challengeId ?? x?.id;
+      return String(cid) === String(challengeId) && Number(x?.selectedDays) === Number(selectedDays);
+    });
+
+    const myKeys: string[] =
+      (ch as any)?.completionDateKeys ??
+      ((ch as any)?.completionDates || []).map(coerceToDayKey).filter(Boolean);
+
+    const keysSorted = Array.from(new Set(myKeys)).sort();
+    const myFinishKey =
+      keysSorted.length ? keysSorted[keysSorted.length - 1] : dayKeyUTC(new Date());
+
+    const isDuo = !!(ch as any)?.duo && !!partnerFinishKey;
+
+    const base = computeChallengeTrophies({
+      selectedDays,
+      completionKeys: keysSorted,
+      myFinishKey,
+      partnerFinishKey,
+      isDuo,
+      isDoubleReward: false,
+      longestStreak,
+    }).total;
+
+    const dbl = computeChallengeTrophies({
+      selectedDays,
+      completionKeys: keysSorted,
+      myFinishKey,
+      partnerFinishKey,
+      isDuo,
+      isDoubleReward: true,
+      longestStreak,
+    }).total;
+
+    return {
+      base: Number.isFinite(base) ? Math.max(0, Math.round(base)) : 0,
+      dbl: Number.isFinite(dbl) ? Math.max(0, Math.round(dbl)) : 0,
+    };
+  }, [
+    currentChallenges,
+    challengeId,
+    selectedDays,
+    partnerFinishKey,
+    longestStreak,
+    computeChallengeTrophies,
+  ]);
 
   /* ------------------------------ On open/close ---------------------------- */
 
@@ -227,9 +340,30 @@ export default function ChallengeCompletionModal({
     didNavRef.current = false;
     setVideoOk(true);
 
-    // Preload rewarded (best effort)
+     // Preload rewarded (best effort)
     try {
-      onPreloadRewarded?.();
+      setAdError(null);
+      setAdLoadingLocal(false);
+
+      if (rewardedAdUnitId) {
+        // snapshot immédiat (si déjà prête)
+        setAdReadyLocal(rewardedAdsService.isReady(rewardedAdUnitId));
+
+        // preload en arrière-plan (mais on garde l'UI utilisable)
+        setAdLoadingLocal(true);
+        (async () => {
+          try {
+            await rewardedAdsService.preload(rewardedAdUnitId);
+          } catch {}
+          if (!mountedRef.current) return;
+          setAdReadyLocal(rewardedAdsService.isReady(rewardedAdUnitId));
+          setAdLoadingLocal(false);
+        })();
+      } else {
+        // fallback : parent
+        onPreloadRewarded?.();
+        setAdReadyLocal(!!rewardedReady);
+      }
     } catch {}
 
     resetAnim();
@@ -403,6 +537,12 @@ export default function ChallengeCompletionModal({
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [visible]);
 
+  // ✅ Sync fallback ready -> local
+  useEffect(() => {
+    if (rewardedAdUnitId) return;
+    setAdReadyLocal(!!rewardedReady);
+  }, [rewardedAdUnitId, rewardedReady]);
+
   useEffect(() => {
     if (visible) return;
 
@@ -476,7 +616,7 @@ export default function ChallengeCompletionModal({
     [challengeId, onClose, router]
   );
 
-  const handleComplete = useCallback(
+const handleComplete = useCallback(
     async (doubleReward: boolean) => {
       if (busyRef.current) return;
       if (mountedRef.current) setBusy(true);
@@ -487,30 +627,105 @@ export default function ChallengeCompletionModal({
       } catch {}
 
       if (doubleReward) {
-        if (!canShowRewarded || rewardedLoading || !rewardedReady) {
-          if (mountedRef.current) setBusy(false);
-          try {
-            await Haptics.notificationAsync(Haptics.NotificationFeedbackType.Warning);
-          } catch {}
-          return;
-        }
-
         try {
-          const earned = await onShowRewarded?.();
-           if (!earned) {
-            if (mountedRef.current) setBusy(false);
-            try {
-              await Haptics.notificationAsync(Haptics.NotificationFeedbackType.Warning);
-            } catch {}
-            return;
+          // ✅ 1) Mode autonome (recommandé)
+          if (rewardedAdUnitId) {
+            if (!canShowRewarded) {
+              if (mountedRef.current) setBusy(false);
+              return;
+            }
+
+            if (adLoadingLocal) {
+              if (mountedRef.current) setBusy(false);
+              return;
+            }
+
+            setAdError(null);
+            setAdLoadingLocal(true);
+
+            // Si pas prête, tentative preload rapide
+            if (!rewardedAdsService.isReady(rewardedAdUnitId)) {
+              try {
+                await rewardedAdsService.preload(rewardedAdUnitId);
+              } catch {}
+            }
+
+            const readyNow = rewardedAdsService.isReady(rewardedAdUnitId);
+            if (mountedRef.current) setAdReadyLocal(readyNow);
+
+            if (!readyNow) {
+              if (mountedRef.current) {
+                setBusy(false);
+                setAdLoadingLocal(false);
+                setAdError(
+                  t("completion.adNotReady", {
+                    defaultValue: "Pub pas prête. Réessaie dans quelques secondes.",
+                  }) as string
+                );
+              }
+              try {
+                await Haptics.notificationAsync(Haptics.NotificationFeedbackType.Warning);
+              } catch {}
+              return;
+            }
+
+            const res = await rewardedAdsService.show(rewardedAdUnitId);
+            if (res !== "earned") {
+              if (mountedRef.current) {
+                setBusy(false);
+                setAdLoadingLocal(false);
+                setAdError(
+                  res === "closed"
+                    ? (t("completion.adNotEarned", {
+                        defaultValue: "Récompense non validée. Tu peux réessayer.",
+                      }) as string)
+                    : (t("completion.adError", {
+                        defaultValue: "Impossible de charger la pub. Réessaie dans un instant.",
+                      }) as string)
+                );
+              }
+              try {
+                await Haptics.notificationAsync(Haptics.NotificationFeedbackType.Warning);
+              } catch {}
+              return;
+            }
+
+            // earned ✅
+            if (mountedRef.current) setAdLoadingLocal(false);
+          } else {
+            // ✅ 2) Fallback compat : parent gère la rewarded
+            if (!canShowRewarded || rewardedLoading || !rewardedReady) {
+              if (mountedRef.current) setBusy(false);
+              try {
+                await Haptics.notificationAsync(Haptics.NotificationFeedbackType.Warning);
+              } catch {}
+              return;
+            }
+
+            const earned = await onShowRewarded?.();
+            if (!earned) {
+              if (mountedRef.current) setBusy(false);
+              try {
+                await Haptics.notificationAsync(Haptics.NotificationFeedbackType.Warning);
+              } catch {}
+              return;
+            }
           }
 
           await completeChallenge(challengeId, selectedDays, true);
-          await successAndNavigate(R * 2);
+          await successAndNavigate(rewardTotals.dbl);
           return;
         } catch (e) {
           console.error("completion error (rewarded)", e);
-         if (mountedRef.current) setBusy(false);
+          if (mountedRef.current) setBusy(false);
+          if (mountedRef.current) setAdLoadingLocal(false);
+          if (mountedRef.current) {
+            setAdError(
+              t("completion.adError", {
+                defaultValue: "Impossible de charger la pub. Réessaie dans un instant.",
+              }) as string
+            );
+          }
           try {
             await Haptics.notificationAsync(Haptics.NotificationFeedbackType.Error);
           } catch {}
@@ -521,7 +736,7 @@ export default function ChallengeCompletionModal({
       // No ad path
       try {
         await completeChallenge(challengeId, selectedDays, false);
-        await successAndNavigate(R);
+        await successAndNavigate(rewardTotals.base);
       } catch (e) {
         console.error("completion error", e);
         if (mountedRef.current) setBusy(false);
@@ -530,7 +745,21 @@ export default function ChallengeCompletionModal({
         } catch {}
       }
     },
-    [R, canShowRewarded, rewardedLoading, rewardedReady, onShowRewarded, challengeId, completeChallenge, selectedDays, successAndNavigate]
+    [
+      rewardTotals.base,
+      rewardTotals.dbl,
+      canShowRewarded,
+      rewardedLoading,
+      rewardedReady,
+      onShowRewarded,
+      rewardedAdUnitId,
+      adLoadingLocal,
+      t,
+      challengeId,
+      completeChallenge,
+      selectedDays,
+      successAndNavigate,
+    ]
   );
 
   /* ------------------------------ Layout sizing ---------------------------- */
@@ -575,14 +804,19 @@ export default function ChallengeCompletionModal({
   const crownFloat = crown.interpolate({ inputRange: [0, 1], outputRange: [0, -6] });
   const crownGlow = crown.interpolate({ inputRange: [0, 1], outputRange: [0.72, 1] });
 
-  const rewardText = t("completion.reward", { count: R });
-  const rewardText2 = t("completion.reward", { count: R * 2 });
+  const rewardText = t("completion.reward", { count: rewardTotals.base });
+  const rewardText2 = t("completion.reward", { count: rewardTotals.dbl });
 
   const headerKicker = t("completion.modalTitle", { defaultValue: "Challenge terminé" });
   const headline = t("completion.wellDone", { defaultValue: "Bravo." });
   const line = t(phraseKey);
 
   const canPress = !busy;
+  
+  const isRewardedDisabled =
+    !canShowRewarded ||
+    !canPress ||
+    (rewardedAdUnitId ? adLoadingLocal : rewardedLoading);
 
   return (
     <Modal
@@ -862,7 +1096,7 @@ export default function ChallengeCompletionModal({
                     {t("completion.rewardLabel", { defaultValue: "Récompense" })}
                   </Text>
                   <Text style={[styles.rewardValue, { color: palette.textStrong }]} numberOfLines={1}>
-                    +{R}
+                    +{rewardTotals.base}
                   </Text>
                   <Text style={[styles.rewardCaption, { color: palette.textSoft }]} numberOfLines={2}>
                     {rewardText}
@@ -874,7 +1108,7 @@ export default function ChallengeCompletionModal({
                     {t("completion.doubleRewardLabel", { defaultValue: "Double" })}
                   </Text>
                   <Text style={[styles.rewardValue, { color: palette.textStrong }]} numberOfLines={1}>
-                    +{R * 2}
+                    +{rewardTotals.dbl}
                   </Text>
                   <Text style={[styles.rewardCaption, { color: palette.textSoft }]} numberOfLines={2}>
                     {rewardText2}
@@ -925,7 +1159,7 @@ export default function ChallengeCompletionModal({
                 </Pressable>
 
                 <Pressable
-                  disabled={!canShowRewarded || !canPress || rewardedLoading || !rewardedReady}
+                  disabled={isRewardedDisabled}
                   onPress={() => handleComplete(true)}
                   accessibilityRole="button"
                   accessibilityLabel={t("completion.doubleTrophies", { defaultValue: "Doubler la récompense" })}
@@ -934,7 +1168,7 @@ export default function ChallengeCompletionModal({
                   style={({ pressed }) => [
                     styles.secondaryBtn,
                     {
-                      opacity: !canShowRewarded || !canPress ? 0.55 : pressed ? 0.85 : 1,
+                      opacity: isRewardedDisabled ? 0.55 : pressed ? 0.85 : 1,
                       borderColor: "rgba(255,255,255,0.12)",
                     },
                   ]}
@@ -945,9 +1179,15 @@ export default function ChallengeCompletionModal({
                       {t("completion.doubleTrophies", { defaultValue: "Doubler" })}
                     </Text>
                   </View>
-                  {(!canShowRewarded || rewardedLoading || !rewardedReady) && (
+                  {(isRewardedDisabled || !!adError) && (
                     <Text style={[styles.badgeHint, { color: palette.textDim }]} numberOfLines={1}>
-                      {rewardedLoading
+                     {adError
+                        ? adError
+                        : rewardedAdUnitId
+                        ? adLoadingLocal
+                          ? t("completion.adLoading", { defaultValue: "Pub en chargement" })
+                          : t("completion.adNotReady", { defaultValue: "Pub pas prête" })
+                        : rewardedLoading
                         ? t("completion.adLoading", { defaultValue: "Pub en chargement" })
                         : t("completion.adNotReady", { defaultValue: "Pub pas prête" })}
                     </Text>
