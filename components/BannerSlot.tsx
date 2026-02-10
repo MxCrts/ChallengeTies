@@ -6,6 +6,7 @@ import {
   Animated,
   LayoutChangeEvent,
   Keyboard,
+  Platform,
 } from "react-native";
 import { BannerAd, BannerAdSize } from "react-native-google-mobile-ads";
 import { adUnitIds } from "@/constants/admob";
@@ -113,7 +114,7 @@ const BannerSlot: React.FC<Props> = ({ onHeight, docked = false }) => {
       >
         <BannerAd
           unitId={unitId}
-          size={BannerAdSize.ANCHORED_ADAPTIVE_BANNER}
+          size={Platform.OS === "ios" ? BannerAdSize.BANNER : BannerAdSize.ANCHORED_ADAPTIVE_BANNER}
           requestOptions={{
             requestNonPersonalizedAdsOnly: npa ? true : false,
             networkExtras: npa ? { npa: "1" } : undefined,

@@ -108,6 +108,7 @@ type InvitationModalProps = {
   onClose: () => void;
   clearInvitation?: () => void;
   onLoaded?: () => void;
+  externalLoading?: boolean;
 };
 
 const InvitationModal: React.FC<InvitationModalProps> = ({
@@ -117,6 +118,7 @@ const InvitationModal: React.FC<InvitationModalProps> = ({
   onClose,
   clearInvitation,
   onLoaded,
+  externalLoading = false,
 }) => {
   const { t, i18n } = useTranslation();
   const { theme } = useTheme();
@@ -136,6 +138,7 @@ const InvitationModal: React.FC<InvitationModalProps> = ({
 
   const mountedRef = useRef(true);
   const lastLoadKeyRef = useRef<string>("");
+
 
   useEffect(() => {
     mountedRef.current = true;
@@ -168,6 +171,15 @@ const InvitationModal: React.FC<InvitationModalProps> = ({
       clearInvitation?.();
     }
   }, [onClose, clearInvitation]);
+
+  // ✅ Safe close helper: ferme proprement, même si un callback parent fait n'importe quoi
+  const safeCloseAll = useCallback(() => {
+    try {
+      closeAll();
+    } catch {
+      // no-op : closeAll a déjà try/finally
+    }
+  }, [closeAll]);
 
   const handleCloseRequest = useCallback(async () => {
     try {
@@ -400,8 +412,7 @@ const InvitationModal: React.FC<InvitationModalProps> = ({
       setErrorMsg(
         t("invitation.errors.expired", { defaultValue: "Invitation expirée." })
       );
-      onClose();
-      clearInvitation?.();
+      safeCloseAll();
       return;
     }
 
@@ -468,8 +479,7 @@ const InvitationModal: React.FC<InvitationModalProps> = ({
         );
       }
 
-      onClose();
-      clearInvitation?.();
+     safeCloseAll();
     } catch (e: any) {
       console.error("❌ Invitation accept error:", e);
       const msg = String(e?.message || "").toLowerCase();
@@ -482,16 +492,13 @@ const InvitationModal: React.FC<InvitationModalProps> = ({
         );
       } else if (msg.includes("expired") || msg.includes("expir")) {
         setErrorMsg(t("invitation.errors.expired", { defaultValue: "Invitation expirée." }));
-        onClose();
-        clearInvitation?.();
+        safeCloseAll();
       } else if (msg.includes("non_autorise") || msg.includes("non autoris") || msg.includes("permission")) {
         setErrorMsg(t("invitation.errors.permission", { defaultValue: "Action non autorisée." }));
-        onClose();
-        clearInvitation?.();
+        safeCloseAll();
       } else if (msg.includes("invitation_deja_traitee") || (msg.includes("déjà") && msg.includes("trait"))) {
         setErrorMsg(t("invitation.errors.processed", { defaultValue: "Invitation déjà traitée." }));
-        onClose();
-        clearInvitation?.();
+        safeCloseAll();
       } else if (msg.includes("invitee_already_in_duo")) {
         setErrorMsg(
           t("invitation.errors.alreadyInDuoForChallenge", {
@@ -514,8 +521,7 @@ const InvitationModal: React.FC<InvitationModalProps> = ({
         );
       } else if (msg.includes("challenge_introuvable")) {
         setErrorMsg(t("invitation.errors.challengeMissing", { defaultValue: "Défi introuvable." }));
-        onClose();
-        clearInvitation?.();
+        safeCloseAll();
       } else {
         setErrorMsg(t("invitation.errors.unknown", { defaultValue: "Erreur." }));
       }
@@ -564,8 +570,7 @@ const InvitationModal: React.FC<InvitationModalProps> = ({
       }).catch?.(() => {});
 
       setShowRestartConfirm(false);
-      onClose();
-      clearInvitation?.();
+      safeCloseAll();
     } catch (e) {
       console.error("❌ Invitation restart+accept error:", e);
       setErrorMsg(t("invitation.errors.unknown", { defaultValue: "Erreur." }));
@@ -603,8 +608,7 @@ const InvitationModal: React.FC<InvitationModalProps> = ({
         Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light).catch(() => {});
       }
 
-      onClose();
-      clearInvitation?.();
+      safeCloseAll();
     } catch (e) {
       console.error("❌ Invitation refuse error:", e);
       const msg = String((e as any)?.message || "").toLowerCase();
@@ -823,6 +827,21 @@ const InvitationModal: React.FC<InvitationModalProps> = ({
   // ===== UI =====
   const renderBody = () => {
     if (fetching) {
+      // ✅ Si le parent gère déjà l’overlay de chargement, on évite un 2e loader dans le modal
+      if (externalLoading) {
+        return (
+          <>
+            <Text style={styles.modalTitle}>
+              {t("invitation.loading", { defaultValue: "Chargement..." })}
+            </Text>
+            <Text style={styles.modalText}>
+              {t("invitation.loadingSub", {
+                defaultValue: "Préparation de l’invitation…",
+              })}
+            </Text>
+          </>
+        );
+      }
       return (
         <>
           <Text style={styles.modalTitle}>

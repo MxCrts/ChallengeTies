@@ -716,8 +716,34 @@ const [deeplinkBooting, setDeeplinkBooting] = useState(
  const [inviteModalReady, setInviteModalReady] = useState(false);
  const [startModeVisible, setStartModeVisible] = useState(false);
  const [startMode, setStartMode] = useState<"solo" | "duo" | null>(null);
+ // ✅ Root overlay handoff control (single loader)
+ const hideRootInviteHandoff = useCallback(() => {
+   try {
+     (globalThis as any).__HIDE_INVITE_HANDOFF__?.();
+   } catch {}
+ }, []);
+
+
+ // ✅ Dès que le modal d'invitation est prêt/affiché => on coupe l’overlay global
+ useEffect(() => {
+   if (!invitationModalVisible) return;
+   if (!inviteModalReady) return;
+   hideRootInviteHandoff();
+   setInviteLoading(false);
+   setDeeplinkBooting(false);
+ }, [invitationModalVisible, inviteModalReady, hideRootInviteHandoff]);
  const processedInviteIdsRef = useRef<Set<string>>(new Set());
  const inviteOpenGuardRef = useRef(false);
+ const suppressInboxInvitesRef = useRef(false);
+
+useEffect(() => {
+  if (!params?.invite) return;
+  suppressInboxInvitesRef.current = true;
+  const t = setTimeout(() => {
+    suppressInboxInvitesRef.current = false;
+  }, 4000);
+  return () => clearTimeout(t);
+}, [params?.invite]);
  const autoSendInviteOnceRef = useRef(false);
  const markInviteAsHandled = useCallback((inviteId?: string | null) => {
   if (!inviteId) return;
@@ -728,7 +754,6 @@ const [deeplinkBooting, setDeeplinkBooting] = useState(
   // Nettoie l'état local si c'est la même invite
   setInvitation((prev) => (prev?.id === inviteId ? null : prev));
 }, []);
-
 
 
   
@@ -749,6 +774,39 @@ const shouldEnterAnim =
     completeChallenge,
   } = useCurrentChallenges();
   const lastIntroKeyRef = useRef<string | null>(null);
+
+  // ✅ Nettoyage param invite sans casser la stack (si possible)
+const clearInviteParam = useCallback(() => {
+  try {
+    // expo-router récent : setParams existe
+    // @ts-ignore
+    router.setParams?.({ invite: undefined });
+    return;
+  } catch {}
+  // fallback (moins idéal) : replace "propre"
+  try {
+    if (id) router.replace(`/challenge-details/${id}` as any);
+  } catch {}
+}, [router, id]);
+
+// ✅ Close atomique : ferme modal + coupe tous les overlays deeplink + marque l'invite
+const closeInviteFlow = useCallback((handledId?: string | null) => {
+  const toHandle = handledId ?? invitation?.id ?? params?.invite ?? null;
+  try { markInviteAsHandled(toHandle); } catch {}
+  setInvitationModalVisible(false);
+  setInvitation(null);
+  setInviteModalReady(false);
+  setInviteLoading(false);
+  setDeeplinkBooting(false);
+  try { hideRootInviteHandoff(); } catch {}
+  try { clearInviteParam(); } catch {}
+}, [
+  invitation?.id,
+  params?.invite,
+  markInviteAsHandled,
+  hideRootInviteHandoff,
+  clearInviteParam,
+]);
 
   // ---------------------------------------------------------------------------
   // Refs pour éviter les closures stale (events -> ouverture MomentModal)
@@ -845,6 +903,7 @@ const shakeMy = useSharedValue(0);
 const shakePartner = useSharedValue(0);
 const [shareCardVisible, setShareCardVisible] = useState(false);
 
+  
  /* -------------------------------------------------------------------------- */
   /*                           CLAIM (stable refs)                               */
   /* -------------------------------------------------------------------------- */
@@ -876,6 +935,33 @@ const [shareCardVisible, setShareCardVisible] = useState(false);
     claimWithoutAdRef.current = handleClaimTrophiesWithoutAd;
     claimWithAdRef.current = handleClaimTrophiesWithAd;
   }, [handleClaimTrophiesWithoutAd, handleClaimTrophiesWithAd]);
+
+  // ✅ Quand le modal devient visible => on repart "not ready" (sinon états incohérents)
+  useEffect(() => {
+    if (!invitationModalVisible) return;
+    setInviteModalReady(false);
+  }, [invitationModalVisible]);
+
+  // ✅ Fail-safe : si pour une raison quelconque onLoaded ne remonte pas,
+// on ne laisse JAMAIS un overlay bloquer l'écran.
+useEffect(() => {
+  if (!invitationModalVisible) return;
+  const t = setTimeout(() => {
+    hideRootInviteHandoff();
+    setInviteLoading(false);
+    setDeeplinkBooting(false);
+  }, 1000);
+  return () => clearTimeout(t);
+}, [invitationModalVisible, hideRootInviteHandoff]);
+
+  // ✅ Dès que le modal est visible ET prêt => on coupe l’overlay global + états deeplink
+  useEffect(() => {
+    if (!invitationModalVisible) return;
+    if (!inviteModalReady) return;
+    hideRootInviteHandoff();
+    setInviteLoading(false);
+    setDeeplinkBooting(false);
+  }, [invitationModalVisible, inviteModalReady, hideRootInviteHandoff]);
 
   const QUICK_TEXT = "#0B0B10";                 // lisible sur glass blanc
 const QUICK_TEXT_DISABLED = "rgba(11,11,16,0.45)";
@@ -1081,6 +1167,7 @@ const isHydrating = useMemo(
 
 useEffect(() => {
   if (!isHydrating) return;
+  if (deeplinkBooting) return;
 
   const timeout = setTimeout(() => {
     // Hard fail-safe : on coupe le chargement si Firestore traîne
@@ -1088,7 +1175,7 @@ useEffect(() => {
   }, 2500);
 
   return () => clearTimeout(timeout);
-}, [isHydrating]);
+}, [isHydrating, deeplinkBooting]);
 
 
  const challengeTaken = !!currentChallenge;
@@ -1648,6 +1735,10 @@ useEffect(() => {
 
         // ✅ On ne traite que les "added" (pas les removed/modified)
         if (change.type !== "added") return;
+
+         // ✅ Si on est en train de traiter un deeplink (?invite=),
+       // on laisse openFromParamOrUrl gérer pour éviter double-open.
+       if (suppressInboxInvitesRef.current) return;
 
         // ✅ Si déjà traité par un deeplink ou un précédent affichage, on ignore
         if (alreadyProcessed.has(docId)) return;
@@ -3030,9 +3121,13 @@ const handleShareChallenge = useCallback(async () => {
   }
 }, [id, routeTitle, t, i18n?.language]);
 
+// ✅ Single-loader rule:
+// - deeplinkBooting => root overlay only (donc on n’affiche PAS l’overlay local)
+// - overlay local uniquement hors deeplink
 const showBootOverlay =
   !invitationModalVisible &&
-  (isHydrating || inviteLoading || (deeplinkBooting && !inviteModalReady));
+  !deeplinkBooting &&
+  (isHydrating || inviteLoading);
 
 const handleInviteFriend = useCallback(async () => {
   hapticTap();
@@ -3100,17 +3195,17 @@ useEffect(() => {
     handleInviteFriend(); // garde toutes tes protections (offline, duo, pending, confirm reset)
   });
 
-  // 5) Nettoyage URL pour éviter ré-ouverture si re-render / retour écran
+ // 5) Nettoyage param SANS casser la stack
   try {
-    if (id) router.replace(`/challenge-details/${id}` as any);
+    // @ts-ignore
+    router.setParams?.({ openSendInvite: undefined });
   } catch {}
 
   return () => {
     // @ts-ignore
     task?.cancel?.();
   };
-}, [params?.openSendInvite, params?.invite, pathname, id, router, handleInviteFriend]);
-
+}, [params?.openSendInvite, params?.invite, router, handleInviteFriend]);
 
 const handleInviteButtonPress = useCallback(() => {
   if (isDuo) {
@@ -4537,29 +4632,20 @@ const scrollContentStyle = useMemo(
 
       <InvitationModal
   key={invitation?.id || "no-invite"}
-  visible={invitationModalVisible}
-  inviteId={invitation?.id || null}
-  challengeId={id}
-  onClose={() => {
-    markInviteAsHandled(invitation?.id);
-    setInvitationModalVisible(false);
-   setInviteLoading(false);
-   setDeeplinkBooting(false);
-   setInviteModalReady(true);
-  }}
-  clearInvitation={() => {
-    markInviteAsHandled(invitation?.id);
-  }}
-  // 🆕 Quand le modal a fini de charger -> on coupe l’overlay deeplink/invite
-  onLoaded={() => {
-    // ✅ coupe l’overlay pile après que le modal soit prêt (zéro trou visuel)
-   requestAnimationFrame(() => {
-     setInviteModalReady(true);
-     setInviteLoading(false);
-     setDeeplinkBooting(false);
-   });
-  }}
-/>
+    visible={invitationModalVisible}
+    inviteId={invitation?.id || null}
+    challengeId={id}
+    onClose={() => closeInviteFlow(invitation?.id)}
+    clearInvitation={() => closeInviteFlow(invitation?.id)}
+    onLoaded={() => {
+      requestAnimationFrame(() => {
+        setInviteModalReady(true);
+        setInviteLoading(false);
+        setDeeplinkBooting(false);
+        try { hideRootInviteHandoff(); } catch {}
+      });
+    }}
+  />
 
  {showBootOverlay && (
   <Animated.View

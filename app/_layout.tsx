@@ -987,10 +987,6 @@ const DeepLinkManager: React.FC = () => {
     if (pathname.startsWith("/challenge-details/")) {
       const t = setTimeout(() => {
         try {
-          (globalThis as any).__HIDE_INVITE_HANDOFF__?.();
-        } catch {}
-        // ✅ sécurité : on relâche toujours le block ici aussi
-        try {
           setDLBlock(false);
         } catch {}
       }, 400);
