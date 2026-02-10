@@ -2388,8 +2388,7 @@ useEffect(() => {
 
       // Nettoie l’URL en enlevant ?invite (évite re-open au re-render)
       try {
-        const cleanUrl = pathname || `/challenge-details/${id}`;
-        router.replace(cleanUrl as any);
+        if (id) router.replace(`/challenge-details/${id}` as any);
       } catch (e) {
         console.warn("[invite] cleanUrl failed:", e);
       }
@@ -3032,7 +3031,8 @@ const handleShareChallenge = useCallback(async () => {
 }, [id, routeTitle, t, i18n?.language]);
 
 const showBootOverlay =
-   isHydrating || inviteLoading || (deeplinkBooting && !inviteModalReady);
+  !invitationModalVisible &&
+  (isHydrating || inviteLoading || (deeplinkBooting && !inviteModalReady));
 
 const handleInviteFriend = useCallback(async () => {
   hapticTap();
@@ -3102,8 +3102,7 @@ useEffect(() => {
 
   // 5) Nettoyage URL pour éviter ré-ouverture si re-render / retour écran
   try {
-    const clean = pathname || `/challenge-details/${id}`;
-    router.replace(clean as any);
+    if (id) router.replace(`/challenge-details/${id}` as any);
   } catch {}
 
   return () => {
@@ -4502,7 +4501,7 @@ const scrollContentStyle = useMemo(
       return false;
     }
   }}
-  canShowRewarded={true}
+  canShowRewarded={!!showBanners}
   rewardedReady={rewardedLoaded}
   rewardedLoading={rewardedLoading}
 />
@@ -4544,7 +4543,9 @@ const scrollContentStyle = useMemo(
   onClose={() => {
     markInviteAsHandled(invitation?.id);
     setInvitationModalVisible(false);
-    setInviteModalReady(false);
+   setInviteLoading(false);
+   setDeeplinkBooting(false);
+   setInviteModalReady(true);
   }}
   clearInvitation={() => {
     markInviteAsHandled(invitation?.id);

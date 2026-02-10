@@ -725,6 +725,20 @@ const DeepLinkManager: React.FC = () => {
     (globalThis as any).__DL_LAST_URL__ = u;
   };
 
+  const setDLBlock = (on: boolean) => {
+    (globalThis as any).__DL_BLOCK_ROOT_REDIRECT__ = on;
+    (globalThis as any).__DL_BLOCK_TS__ = on ? Date.now() : 0;
+  };
+
+  const clearDLBlockIfStale = (ttlMs = 4500) => {
+    const ts = Number((globalThis as any).__DL_BLOCK_TS__ || 0);
+    if (!ts) return;
+    if (Date.now() - ts > ttlMs) {
+      (globalThis as any).__DL_BLOCK_ROOT_REDIRECT__ = false;
+      (globalThis as any).__DL_BLOCK_TS__ = 0;
+    }
+  };
+
   const handleDeepLink = React.useCallback(
     async (url: string) => {
       if (!url) return;
@@ -756,7 +770,7 @@ const DeepLinkManager: React.FC = () => {
   try {
     // ✅ Referral = 1 seule source de vérité : /ref/[refUid]
     // On ne bloque pas le root redirect (ce screen va gérer la sortie vers login/tabs)
-    (globalThis as any).__DL_BLOCK_ROOT_REDIRECT__ = false;
+    setDLBlock(false);
     // Le referral doit forcer un flow auth (pas de visiteur)
     (globalThis as any).__FORCE_AUTH_FLOW__ = true;
 
@@ -793,7 +807,12 @@ const DeepLinkManager: React.FC = () => {
           : undefined;
 
       if (idFromQuery) {
-        challengeId = idFromQuery;
+        // ✅ query params peuvent être encodés → on normalise
+        try {
+          challengeId = decodeURIComponent(idFromQuery);
+        } catch {
+          challengeId = idFromQuery;
+        }
         inviteId = inviteFromQuery;
         if (Number.isFinite(daysFromQuery) && (daysFromQuery as number) > 0) {
           selectedDays = daysFromQuery as number;
@@ -803,14 +822,32 @@ const DeepLinkManager: React.FC = () => {
       // ✅ 2.2 Legacy paths
       if (!challengeId) {
         if (path.startsWith("challenge/")) {
-          challengeId = path.split("challenge/")[1]?.split("/")[0];
+          const raw = path.split("challenge/")[1]?.split("/")[0];
+          if (raw) {
+            try {
+              challengeId = decodeURIComponent(raw);
+            } catch {
+              challengeId = raw;
+            }
+          }
           inviteId = inviteFromQuery;
         } else if (path.startsWith("challenge-details/")) {
-          challengeId = path.split("challenge-details/")[1]?.split("/")[0];
+          const raw = path.split("challenge-details/")[1]?.split("/")[0];
+          if (raw) {
+            try {
+              challengeId = decodeURIComponent(raw);
+            } catch {
+              challengeId = raw;
+            }
+          }
           inviteId = inviteFromQuery;
         } else if (path === "i" && idFromQuery) {
           // sécurité si Expo parse path "i"
-          challengeId = idFromQuery;
+          try {
+            challengeId = decodeURIComponent(idFromQuery);
+          } catch {
+            challengeId = idFromQuery;
+          }
           inviteId = inviteFromQuery;
         }
       }
@@ -818,7 +855,7 @@ const DeepLinkManager: React.FC = () => {
       if (!challengeId) return;
 
       // ✅ on bloque le redirect root (AppNavigator) dès qu'on a un DL challenge
-      (globalThis as any).__DL_BLOCK_ROOT_REDIRECT__ = true;
+      setDLBlock(true);
 
       // ✅ Si pas connecté OU auth pas prête → on stocke, on laisse AppNavigator aller login
       if (!user || loading || checkingAuth) {
@@ -839,8 +876,9 @@ const DeepLinkManager: React.FC = () => {
             });
         } catch {}
          // ✅ clé du fix
-  (globalThis as any).__DL_BLOCK_ROOT_REDIRECT__ = false;
-  (globalThis as any).__FORCE_AUTH_FLOW__ = true;
+   // ✅ clé du fix (ne jamais laisser "/" coincé)
+        setDLBlock(false);
+        (globalThis as any).__FORCE_AUTH_FLOW__ = true;
         return;
       }
 
@@ -849,8 +887,20 @@ const DeepLinkManager: React.FC = () => {
         // 1 seul loading premium au lieu de 3 spinners/écrans
         handoff.showInvite();
       }
+      // ✅ iOS-safe: encode le segment dynamique (accents, espaces, tirets spéciaux…)
+      const safeSegment = encodeURIComponent(String(challengeId));
+
+      // ✅ failsafe anti "handoff infini" (si route ne match pas / modal ne s’affiche pas)
+      if (inviteId) {
+        setTimeout(() => {
+          try {
+            (globalThis as any).__HIDE_INVITE_HANDOFF__?.();
+          } catch {}
+        }, 12000);
+      }
+
       router.push({
-        pathname: `/challenge-details/${challengeId}`,
+        pathname: `/challenge-details/${safeSegment}`,
         params: inviteId
           ? {
               invite: inviteId,
@@ -858,8 +908,14 @@ const DeepLinkManager: React.FC = () => {
             }
           : {},
       });
+      // ✅ anti blocage infini sur "/"
+      setTimeout(() => {
+        try {
+          setDLBlock(false);
+        } catch {}
+      }, 1800);
     },
-    [router, user, loading, checkingAuth, handoff]
+    [router, user, loading, checkingAuth, handoff, pathname]
   );
 
   useEffect(() => {
@@ -897,14 +953,15 @@ const DeepLinkManager: React.FC = () => {
         if (!challengeId) return;
 
         await AsyncStorage.removeItem("ties_pending_link");
-        (globalThis as any).__DL_BLOCK_ROOT_REDIRECT__ = true;
+        setDLBlock(true);
 
          if (inviteId) {
           handoff.showInvite();
         }
 
+        const safeSegment = encodeURIComponent(String(challengeId));
         router.push({
-          pathname: `/challenge-details/${String(challengeId)}`,
+          pathname: `/challenge-details/${safeSegment}`,
           params: inviteId
             ? {
                 invite: String(inviteId),
@@ -912,9 +969,34 @@ const DeepLinkManager: React.FC = () => {
               }
             : {},
         });
+         setTimeout(() => {
+          try {
+            setDLBlock(false);
+          } catch {}
+        }, 1800);
       } catch {}
     })();
-  }, [flags.enableDeepLinks, user, loading, checkingAuth, router]);
+  }, [flags.enableDeepLinks, user, loading, checkingAuth, router, handoff]);
+
+  // ✅ Dès qu’on est réellement sur challenge-details, on peut couper l’overlay root
+  useEffect(() => {
+    if (!pathname) return;
+
+    // ✅ purge auto si un block traîne (anti écran blanc "/")
+    clearDLBlockIfStale(4500);
+    if (pathname.startsWith("/challenge-details/")) {
+      const t = setTimeout(() => {
+        try {
+          (globalThis as any).__HIDE_INVITE_HANDOFF__?.();
+        } catch {}
+        // ✅ sécurité : on relâche toujours le block ici aussi
+        try {
+          setDLBlock(false);
+        } catch {}
+      }, 400);
+      return () => clearTimeout(t);
+    }
+  }, [pathname]);
 
   return null;
 };

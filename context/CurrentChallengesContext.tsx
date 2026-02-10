@@ -786,6 +786,14 @@ async function reconcileDuoLinks(
   const myDuo = myChallenges.filter((c) => c.duo && c.duoPartnerId);
   if (!myDuo.length) return;
 
+  // ✅ Grace period anti-race: après accept/injection, le partenaire peut être en retard.
+  // On ne downgrade jamais un DUO "tout frais".
+  const isRecent = (iso?: string | null, maxMs = 2 * 60 * 1000) => {
+    if (!iso) return false;
+    const ms = Date.parse(iso);
+    return Number.isFinite(ms) ? Date.now() - ms < maxMs : false;
+  };
+
   const shouldDowngradeKeys = new Set<string>();
 
   for (const ch of myDuo) {
@@ -800,7 +808,10 @@ async function reconcileDuoLinks(
 
       // si partner doc n'existe pas → je repasse solo
       if (!snap.exists()) {
-        if (ch.uniqueKey) shouldDowngradeKeys.add(ch.uniqueKey);
+        // ✅ Pas de downgrade si duo tout juste créé (race / latence)
+        if (!isRecent((ch as any)?.startedAt ?? null) && ch.uniqueKey) {
+          shouldDowngradeKeys.add(ch.uniqueKey);
+        }
         continue;
       }
 
@@ -809,15 +820,21 @@ async function reconcileDuoLinks(
         ? partnerData.CurrentChallenges
         : [];
 
-      const partnerHasSame = list.some((p: any) => {
+      // ✅ On valide uniquement la présence du DUO pair (pas "un challenge similaire").
+      const partnerHasDuoPair = list.some((p: any) => {
         if (p?.uniqueKey === duoKey) return true;
         const cid = p?.challengeId ?? p?.id;
-        return cid === baseId && Number(p?.selectedDays) === days;
+        if (cid !== baseId || Number(p?.selectedDays) !== days) return false;
+        // doit être DUO et pointer vers moi
+        return !!p?.duo && String(p?.duoPartnerId ?? "") === String(myUserId);
       });
 
       // 🔥 partner n'a plus le challenge (ou plus le duo) → je repasse solo
-      if (!partnerHasSame) {
-        if (ch.uniqueKey) shouldDowngradeKeys.add(ch.uniqueKey);
+      if (!partnerHasDuoPair) {
+        // ✅ encore une fois: pas de downgrade pendant la fenêtre de création
+        if (!isRecent((ch as any)?.startedAt ?? null) && ch.uniqueKey) {
+          shouldDowngradeKeys.add(ch.uniqueKey);
+        }
       }
     } catch (e) {
       __DEV__ && console.warn("[reconcileDuoLinks] read partner error:", e);

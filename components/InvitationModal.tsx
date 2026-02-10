@@ -1,4 +1,5 @@
 // components/InvitationModal.tsx
+// ✅ UI/UX refonte "top monde" (responsive + centré parfait) — LOGIQUE INCHANGÉE
 import React, {
   useEffect,
   useMemo,
@@ -23,7 +24,7 @@ import {
 } from "react-native";
 import Animated, { FadeInUp } from "react-native-reanimated";
 import { useTranslation } from "react-i18next";
-import { doc, getDoc, updateDoc  } from "firebase/firestore";
+import { doc, getDoc, updateDoc } from "firebase/firestore";
 import { db, auth } from "@/constants/firebase-config";
 import {
   acceptInvitation,
@@ -52,8 +53,6 @@ const normalize = (size: number) => {
 };
 
 // ✅ SAFETY FIX: après acceptInvitation, on force une cohérence minimale
-// Objectif: si une autre écriture a remis une entrée solo (duo:false),
-// on réapplique l'entrée duo à partir de l'invitation acceptée.
 async function acceptInvitationSafetyFix(opts: { inviteId: string; challengeId: string }) {
   const me = auth.currentUser?.uid;
   if (!me) return;
@@ -75,7 +74,6 @@ async function acceptInvitationSafetyFix(opts: { inviteId: string; challengeId: 
 
   const list: any[] = Array.isArray(u?.CurrentChallenges) ? u.CurrentChallenges : [];
 
-  // PairKey identique inviter/invitee
   const pairKey = [inviterId, inviteeId].sort().join("-");
   const uniqueKey = `${inv.challengeId}_${inv.selectedDays}_${pairKey}`;
 
@@ -86,7 +84,6 @@ async function acceptInvitationSafetyFix(opts: { inviteId: string; challengeId: 
   if (idx < 0) return;
 
   const entry = list[idx];
-  // ✅ si déjà duo:true + bon partnerId → OK
   if (entry?.duo === true && entry?.duoPartnerId === inviterId) return;
 
   const next = [...list];
@@ -94,7 +91,6 @@ async function acceptInvitationSafetyFix(opts: { inviteId: string; challengeId: 
     ...entry,
     duo: true,
     duoPartnerId: inviterId,
-    // on garde le username si déjà présent, sinon on prend celui de l'invitation si dispo
     duoPartnerUsername: entry?.duoPartnerUsername ?? null,
     selectedDays: inv.selectedDays ?? entry?.selectedDays,
     challengeId: inv.challengeId ?? entry?.challengeId,
@@ -111,7 +107,7 @@ type InvitationModalProps = {
   challengeId: string;
   onClose: () => void;
   clearInvitation?: () => void;
-  onLoaded?: () => void; // 👈 NEW
+  onLoaded?: () => void;
 };
 
 const InvitationModal: React.FC<InvitationModalProps> = ({
@@ -120,9 +116,8 @@ const InvitationModal: React.FC<InvitationModalProps> = ({
   challengeId,
   onClose,
   clearInvitation,
-  onLoaded, // 👈 NEW
+  onLoaded,
 }) => {
-
   const { t, i18n } = useTranslation();
   const { theme } = useTheme();
   const { width, height } = useWindowDimensions();
@@ -149,7 +144,7 @@ const InvitationModal: React.FC<InvitationModalProps> = ({
     };
   }, []);
 
-  // ✅ Respect Reduce Motion (animations + haptics)
+  // ✅ Respect Reduce Motion
   useEffect(() => {
     let mounted = true;
     AccessibilityInfo.isReduceMotionEnabled()
@@ -188,11 +183,8 @@ const InvitationModal: React.FC<InvitationModalProps> = ({
 
   const showInfo = (msg: string) => {
     if (!msg) return;
-    if (Platform.OS === "android") {
-      ToastAndroid.show(msg, ToastAndroid.LONG);
-    } else {
-      Alert.alert("", msg);
-    }
+    if (Platform.OS === "android") ToastAndroid.show(msg, ToastAndroid.LONG);
+    else Alert.alert("", msg);
   };
 
   const isDarkMode = theme === "dark";
@@ -208,18 +200,25 @@ const InvitationModal: React.FC<InvitationModalProps> = ({
     return inv.inviteeId === you;
   }, [inv, you]);
 
-  const expired = useMemo(
-    () => (inv ? isInvitationExpired(inv) : false),
-    [inv]
-  );
+  const expired = useMemo(() => (inv ? isInvitationExpired(inv) : false), [inv]);
 
-  // 🧮 Dimensions carte dynamiques (avec safe areas)
-  const CARD_MAX_W = Math.min(width - normalize(32), 420);
-  const rawMaxH = height - (insets.top + insets.bottom + normalize(48));
-  const CARD_MAX_H = Math.max(normalize(260), Math.min(rawMaxH, 620));
+  // ✅ Responsive measurements (centrage + tailles)
+  const layout = useMemo(() => {
+    const isTiny = width < 360;
+    const sidePad = normalize(isTiny ? 14 : 18);
+    const maxW = Math.min(width - sidePad * 2, normalize(460));
+    const safeTop = insets.top + normalize(14);
+    const safeBot = insets.bottom + normalize(18);
+    const maxH = Math.max(
+      normalize(280),
+      Math.min(height - safeTop - safeBot, normalize(680))
+    );
 
-  // ===== Chargement de l’invitation + inviter + challenge =====
-    useEffect(() => {
+    return { isTiny, sidePad, maxW, maxH, safeTop, safeBot };
+  }, [width, height, insets.top, insets.bottom]);
+
+  // ===== Chargement =====
+  useEffect(() => {
     const load = async () => {
       if (!visible || !inviteId) return;
 
@@ -229,7 +228,7 @@ const InvitationModal: React.FC<InvitationModalProps> = ({
             defaultValue: "Tu dois être connecté.",
           })
         );
-        onLoaded?.(); // 👈 signale au parent que le chargement est fini
+        onLoaded?.();
         closeAll();
         return;
       }
@@ -249,12 +248,10 @@ const InvitationModal: React.FC<InvitationModalProps> = ({
         const data = await getInvitation(inviteId);
         if (!mountedRef.current || lastLoadKeyRef.current !== loadKey) return;
 
-
         if (!data) {
           showInfo(
             t("invitation.invalidMessage", {
-              defaultValue:
-                "Cette invitation est introuvable ou a été supprimée.",
+              defaultValue: "Cette invitation est introuvable ou a été supprimée.",
             })
           );
           closeAll();
@@ -273,10 +270,9 @@ const InvitationModal: React.FC<InvitationModalProps> = ({
         }
 
         setInv(data);
-
         const chId = data.challengeId || challengeId;
 
-        // 2) Récupérer l’inviteur (username)
+        // 2) Inviter username
         try {
           const inviterSnap = await getDoc(doc(db, "users", data.inviterId));
           if (!mountedRef.current || lastLoadKeyRef.current !== loadKey) return;
@@ -286,21 +282,15 @@ const InvitationModal: React.FC<InvitationModalProps> = ({
             const username =
               u?.username ||
               u?.displayName ||
-              (typeof u?.email === "string"
-                ? u.email.split("@")[0]
-                : "") ||
+              (typeof u?.email === "string" ? u.email.split("@")[0] : "") ||
               "";
             setInviterUsername(username);
-          } else {
-            setInviterUsername("");
-          }
+          } else setInviterUsername("");
         } catch {
-          if (mountedRef.current && lastLoadKeyRef.current === loadKey) {
-            setInviterUsername("");
-          }
+          if (mountedRef.current && lastLoadKeyRef.current === loadKey) setInviterUsername("");
         }
 
-        // 3) Récupérer le défi (chatId + titre localisé)
+        // 3) Challenge (chatId + title i18n)
         try {
           const chSnap = await getDoc(doc(db, "challenges", chId));
           if (!mountedRef.current || lastLoadKeyRef.current !== loadKey) return;
@@ -316,17 +306,13 @@ const InvitationModal: React.FC<InvitationModalProps> = ({
             setChallengeTitle(i18nTitle || ch?.title || "");
           } else {
             setChallengeChatId(chId);
-            const i18nTitle = t(`challenges.${chId}.title`, {
-              defaultValue: "",
-            });
+            const i18nTitle = t(`challenges.${chId}.title`, { defaultValue: "" });
             setChallengeTitle(i18nTitle || "");
           }
         } catch {
           if (mountedRef.current && lastLoadKeyRef.current === loadKey) {
             setChallengeChatId(chId);
-            const i18nTitle = t(`challenges.${chId}.title`, {
-              defaultValue: "",
-            });
+            const i18nTitle = t(`challenges.${chId}.title`, { defaultValue: "" });
             setChallengeTitle(i18nTitle || "");
           }
         }
@@ -338,19 +324,17 @@ const InvitationModal: React.FC<InvitationModalProps> = ({
             kind: data.kind,
           });
         } catch {}
-            } catch (e) {
+      } catch (e) {
         console.error("❌ InvitationModal load error:", e);
-        if (mountedRef.current && lastLoadKeyRef.current === loadKey) {
-          setErrorMsg(
-            t("invitation.errors.unknown", {
-              defaultValue: "Erreur inconnue.",
-            })
-          );
-        }
+        if (mountedRef.current && lastLoadKeyRef.current !== loadKey) return;
+        setErrorMsg(
+          t("invitation.errors.unknown", {
+            defaultValue: "Erreur inconnue.",
+          })
+        );
       } finally {
         if (mountedRef.current && lastLoadKeyRef.current === loadKey) {
           setFetching(false);
-          // 👇 On prévient le parent que le chargement deeplink est terminé
           try {
             onLoaded?.();
           } catch {}
@@ -360,7 +344,6 @@ const InvitationModal: React.FC<InvitationModalProps> = ({
 
     load();
   }, [visible, inviteId, challengeId, t, i18n.language, closeAll, onLoaded]);
-
 
   // ✅ Retraduction locale si la langue change
   useEffect(() => {
@@ -392,7 +375,7 @@ const InvitationModal: React.FC<InvitationModalProps> = ({
     setShowRestartConfirm(false);
   }, [inviteId]);
 
-  // ===== Actions =====
+  // ===== Actions (LOGIQUE INCHANGÉE) =====
   const handleAccept = useCallback(async () => {
     if (loading || fetching) return;
 
@@ -400,11 +383,7 @@ const InvitationModal: React.FC<InvitationModalProps> = ({
     if (!inviteId || !meId) return;
 
     if (!inv || !isForMe) {
-      setErrorMsg(
-        t("invitation.errors.unknown", {
-          defaultValue: "Erreur.",
-        })
-      );
+      setErrorMsg(t("invitation.errors.unknown", { defaultValue: "Erreur." }));
       return;
     }
 
@@ -419,9 +398,7 @@ const InvitationModal: React.FC<InvitationModalProps> = ({
 
     if (expired) {
       setErrorMsg(
-        t("invitation.errors.expired", {
-          defaultValue: "Invitation expirée.",
-        })
+        t("invitation.errors.expired", { defaultValue: "Invitation expirée." })
       );
       onClose();
       clearInvitation?.();
@@ -475,8 +452,6 @@ const InvitationModal: React.FC<InvitationModalProps> = ({
 
       await acceptInvitation(inviteId);
 
-       // ✅ SAFETY (fix "duo:false" overwrite) : on relit le doc user et on vérifie que l'entrée
-      // du challenge est bien en duo (dans certains cas, une autre écriture ré-applique une version solo).
       try {
         await new Promise((r) => setTimeout(r, 350));
         await acceptInvitationSafetyFix({ inviteId, challengeId: targetId });
@@ -486,10 +461,11 @@ const InvitationModal: React.FC<InvitationModalProps> = ({
         inviteId,
         challengeId: inv.challengeId || challengeId,
       }).catch?.(() => {});
+
       if (!reduceMotion) {
-        Haptics.notificationAsync(
-          Haptics.NotificationFeedbackType.Success
-        ).catch(() => {});
+        Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success).catch(
+          () => {}
+        );
       }
 
       onClose();
@@ -505,34 +481,15 @@ const InvitationModal: React.FC<InvitationModalProps> = ({
           })
         );
       } else if (msg.includes("expired") || msg.includes("expir")) {
-        setErrorMsg(
-          t("invitation.errors.expired", {
-            defaultValue: "Invitation expirée.",
-          })
-        );
+        setErrorMsg(t("invitation.errors.expired", { defaultValue: "Invitation expirée." }));
         onClose();
         clearInvitation?.();
-      } else if (
-        msg.includes("non_autorise") ||
-        msg.includes("non autoris") ||
-        msg.includes("permission")
-      ) {
-        setErrorMsg(
-          t("invitation.errors.permission", {
-            defaultValue: "Action non autorisée.",
-          })
-        );
+      } else if (msg.includes("non_autorise") || msg.includes("non autoris") || msg.includes("permission")) {
+        setErrorMsg(t("invitation.errors.permission", { defaultValue: "Action non autorisée." }));
         onClose();
         clearInvitation?.();
-      } else if (
-        msg.includes("invitation_deja_traitee") ||
-        (msg.includes("déjà") && msg.includes("trait"))
-      ) {
-        setErrorMsg(
-          t("invitation.errors.processed", {
-            defaultValue: "Invitation déjà traitée.",
-          })
-        );
+      } else if (msg.includes("invitation_deja_traitee") || (msg.includes("déjà") && msg.includes("trait"))) {
+        setErrorMsg(t("invitation.errors.processed", { defaultValue: "Invitation déjà traitée." }));
         onClose();
         clearInvitation?.();
       } else if (msg.includes("invitee_already_in_duo")) {
@@ -549,31 +506,18 @@ const InvitationModal: React.FC<InvitationModalProps> = ({
               "Ton ami est déjà en duo sur ce défi. Demande-lui d’abord de quitter son duo avant d’utiliser ce lien.",
           })
         );
-      } else if (
-        msg.includes("already_in_duo") ||
-        msg.includes("alreadyinduo") ||
-        msg.includes("duo")
-      ) {
+      } else if (msg.includes("already_in_duo") || msg.includes("alreadyinduo") || msg.includes("duo")) {
         setErrorMsg(
           t("invitation.errors.alreadyInDuoGeneric", {
-            defaultValue:
-              "Un des deux comptes est déjà en duo pour ce défi.",
+            defaultValue: "Un des deux comptes est déjà en duo pour ce défi.",
           })
         );
       } else if (msg.includes("challenge_introuvable")) {
-        setErrorMsg(
-          t("invitation.errors.challengeMissing", {
-            defaultValue: "Défi introuvable.",
-          })
-        );
+        setErrorMsg(t("invitation.errors.challengeMissing", { defaultValue: "Défi introuvable." }));
         onClose();
         clearInvitation?.();
       } else {
-        setErrorMsg(
-          t("invitation.errors.unknown", {
-            defaultValue: "Erreur.",
-          })
-        );
+        setErrorMsg(t("invitation.errors.unknown", { defaultValue: "Erreur." }));
       }
     } finally {
       setLoading(false);
@@ -601,17 +545,17 @@ const InvitationModal: React.FC<InvitationModalProps> = ({
 
     try {
       if (!reduceMotion) {
-        Haptics.notificationAsync(
-          Haptics.NotificationFeedbackType.Success
-        ).catch(() => {});
+        Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success).catch(() => {});
       }
 
       await acceptInvitation(inviteId);
 
-// ✅ SAFETY (fix "duo:false" overwrite) idem si restart
       try {
         await new Promise((r) => setTimeout(r, 350));
-        await acceptInvitationSafetyFix({ inviteId, challengeId: inv.challengeId || challengeId });
+        await acceptInvitationSafetyFix({
+          inviteId,
+          challengeId: inv.challengeId || challengeId,
+        });
       } catch {}
 
       logEvent("invite_accept_restart", {
@@ -624,11 +568,7 @@ const InvitationModal: React.FC<InvitationModalProps> = ({
       clearInvitation?.();
     } catch (e) {
       console.error("❌ Invitation restart+accept error:", e);
-      setErrorMsg(
-        t("invitation.errors.unknown", {
-          defaultValue: "Erreur.",
-        })
-      );
+      setErrorMsg(t("invitation.errors.unknown", { defaultValue: "Erreur." }));
     } finally {
       setLoading(false);
     }
@@ -651,11 +591,8 @@ const InvitationModal: React.FC<InvitationModalProps> = ({
     setErrorMsg("");
 
     try {
-      if (inv.kind === "direct") {
-        await refuseInvitationDirect(inviteId);
-      } else {
-        await refuseOpenInvitation(inviteId);
-      }
+      if (inv.kind === "direct") await refuseInvitationDirect(inviteId);
+      else await refuseOpenInvitation(inviteId);
 
       logEvent("invite_refuse", {
         inviteId,
@@ -663,10 +600,9 @@ const InvitationModal: React.FC<InvitationModalProps> = ({
       }).catch?.(() => {});
 
       if (!reduceMotion) {
-        Haptics.impactAsync(
-          Haptics.ImpactFeedbackStyle.Light
-        ).catch(() => {});
+        Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light).catch(() => {});
       }
+
       onClose();
       clearInvitation?.();
     } catch (e) {
@@ -674,26 +610,11 @@ const InvitationModal: React.FC<InvitationModalProps> = ({
       const msg = String((e as any)?.message || "").toLowerCase();
 
       if (msg.includes("invitation_deja_traitee")) {
-        setErrorMsg(
-          t("invitation.errors.processed", {
-            defaultValue: "Invitation déjà traitée.",
-          })
-        );
-      } else if (
-        msg.includes("non_autorise") ||
-        msg.includes("permission")
-      ) {
-        setErrorMsg(
-          t("invitation.errors.permission", {
-            defaultValue: "Action non autorisée.",
-          })
-        );
+        setErrorMsg(t("invitation.errors.processed", { defaultValue: "Invitation déjà traitée." }));
+      } else if (msg.includes("non_autorise") || msg.includes("permission")) {
+        setErrorMsg(t("invitation.errors.permission", { defaultValue: "Action non autorisée." }));
       } else {
-        setErrorMsg(
-          t("invitation.errors.unknown", {
-            defaultValue: "Erreur.",
-          })
-        );
+        setErrorMsg(t("invitation.errors.unknown", { defaultValue: "Erreur." }));
       }
     } finally {
       setLoading(false);
@@ -710,59 +631,101 @@ const InvitationModal: React.FC<InvitationModalProps> = ({
     reduceMotion,
   ]);
 
-  // ===== Styles =====
+  // ===== Styles (TOP MONDE) =====
   const styles = useMemo(
     () =>
       StyleSheet.create({
-        centeredView: {
-   flex: 1,
-  justifyContent: "center",
-  alignItems: "center",
-  backgroundColor: isDarkMode ? "rgba(0,0,0,0.78)" : "rgba(0,0,0,0.62)",
-  paddingHorizontal: normalize(16),
-},
-        // Backdrop plein écran tappable
+        root: {
+          flex: 1,
+          backgroundColor: isDarkMode ? "rgba(0,0,0,0.78)" : "rgba(0,0,0,0.62)",
+          paddingTop: layout.safeTop,
+          paddingBottom: layout.safeBot,
+          paddingHorizontal: layout.sidePad,
+          justifyContent: "center",
+          alignItems: "center",
+        },
+
         backdrop: {
           ...StyleSheet.absoluteFillObject,
         },
-        // Conteneur animé (largeur de la carte)
-        animatedCard: {
-  width: "100%",
-  maxWidth: 420,
-  alignSelf: "center",
-  flexShrink: 0,
-  // ✅ centre vraiment la carte dans la "safe zone"
-  marginTop: insets.top + normalize(10),
-  marginBottom: insets.bottom + normalize(14),
-},
-        // Véritable carte : fond, arrondis, overflow hidden
-        modalView: {
+
+        // Wrapper de carte (centrage parfait, jamais collé au top)
+        cardWrap: {
+          width: "100%",
+          maxWidth: layout.maxW,
+          maxHeight: layout.maxH,
+          alignSelf: "center",
+        },
+
+        card: {
           backgroundColor: currentTheme.colors.cardBackground,
           borderRadius: normalize(22),
-          paddingHorizontal: 0,
-          paddingVertical: 0,
-          alignItems: "stretch",
-          shadowColor: "#000",
-          shadowOffset: { width: 0, height: normalize(8) },
-          shadowOpacity: 0.35,
-          shadowRadius: normalize(12),
-          elevation: 10,
           overflow: "hidden",
           borderWidth: StyleSheet.hairlineWidth,
           borderColor: isDarkMode ? "rgba(255,255,255,0.08)" : "rgba(0,0,0,0.06)",
+
+          shadowColor: "#000",
+          shadowOffset: { width: 0, height: normalize(10) },
+          shadowOpacity: 0.32,
+          shadowRadius: normalize(14),
+          elevation: 10,
         },
-        cardScroll: {
+
+        // Header slim (close button)
+        header: {
+          width: "100%",
+          paddingHorizontal: normalize(16),
+          paddingTop: normalize(12),
+          paddingBottom: normalize(10),
+          flexDirection: "row",
+          alignItems: "center",
+          justifyContent: "space-between",
+          borderBottomWidth: StyleSheet.hairlineWidth,
+          borderBottomColor: isDarkMode ? "rgba(255,255,255,0.07)" : "rgba(0,0,0,0.06)",
+        },
+        headerTitle: {
+          flex: 1,
+          fontSize: normalize(13),
+          fontFamily: "Comfortaa_700Bold",
+          color: currentTheme.colors.textSecondary,
+          textAlign: "center",
+          opacity: 0.9,
+        },
+        headerSide: {
+          width: normalize(36),
+          height: normalize(36),
+          alignItems: "center",
+          justifyContent: "center",
+        },
+        closeBtn: {
+          width: normalize(36),
+          height: normalize(36),
+          borderRadius: normalize(12),
+          alignItems: "center",
+          justifyContent: "center",
+          backgroundColor: isDarkMode ? "rgba(255,255,255,0.06)" : "rgba(0,0,0,0.06)",
+        },
+        closeX: {
+          fontSize: normalize(18),
+          lineHeight: normalize(18),
+          fontFamily: "Comfortaa_700Bold",
+          color: currentTheme.colors.textPrimary,
+          opacity: 0.9,
+          ...(Platform.OS === "android" ? { includeFontPadding: false } : {}),
+        },
+
+        scroll: {
           width: "100%",
         },
-        cardContent: {
-  paddingHorizontal: normalize(20),
-  paddingVertical: normalize(22),
-  alignItems: "center",
-  minHeight: normalize(160),
-  justifyContent: "center",
-},
+        content: {
+          paddingHorizontal: normalize(20),
+          paddingTop: normalize(18),
+          paddingBottom: normalize(22),
+          alignItems: "center",
+        },
+
         modalTitle: {
-          fontSize: normalize(19),
+          fontSize: normalize(layout.isTiny ? 18 : 19),
           fontFamily: "Comfortaa_700Bold",
           marginBottom: normalize(10),
           color: currentTheme.colors.secondary,
@@ -776,13 +739,21 @@ const InvitationModal: React.FC<InvitationModalProps> = ({
           textAlign: "center",
           color: currentTheme.colors.textSecondary,
         },
+
         tag: {
           alignSelf: "center",
           paddingHorizontal: normalize(14),
-          paddingVertical: normalize(6),
+          paddingVertical: normalize(7),
           borderRadius: 999,
           backgroundColor: currentTheme.colors.border,
           marginBottom: normalize(12),
+          maxWidth: "100%",
+        },
+        tagText: {
+          fontSize: normalize(13),
+          fontFamily: "Comfortaa_500Medium",
+          color: currentTheme.colors.textPrimary,
+          textAlign: "center",
         },
         durationText: {
           fontSize: normalize(13),
@@ -791,34 +762,36 @@ const InvitationModal: React.FC<InvitationModalProps> = ({
           textAlign: "center",
           color: currentTheme.colors.textPrimary,
         },
-        tagText: {
-          fontSize: normalize(13),
-          fontFamily: "Comfortaa_400Regular",
-          color: currentTheme.colors.textPrimary,
-        },
+
         errorText: {
           color: currentTheme.colors.error,
           fontSize: normalize(13),
+          marginTop: normalize(2),
           marginBottom: normalize(10),
           textAlign: "center",
         },
+
         buttonRow: {
-          flexDirection: "row",
-          justifyContent: "space-between",
+          flexDirection: layout.isTiny ? "column" : "row",
           width: "100%",
           gap: normalize(10),
-          marginTop: normalize(6),
+          marginTop: normalize(8),
         },
+
         btn: {
           flex: 1,
           borderRadius: normalize(14),
-          paddingVertical: normalize(11),
+          paddingVertical: normalize(12),
+          paddingHorizontal: normalize(12),
           alignItems: "center",
+          justifyContent: "center",
+          minHeight: normalize(44),
+
           shadowColor: "#000",
           shadowOffset: { width: 0, height: normalize(4) },
-          shadowOpacity: 0.2,
+          shadowOpacity: 0.18,
           shadowRadius: normalize(6),
-          elevation: 5,
+          elevation: 4,
         },
         accept: {
           backgroundColor: currentTheme.colors.primary,
@@ -829,19 +802,22 @@ const InvitationModal: React.FC<InvitationModalProps> = ({
         neutral: {
           backgroundColor: currentTheme.colors.border,
         },
+
         btnText: {
           color: "#fff",
           fontSize: normalize(15),
           fontFamily: "Comfortaa_700Bold",
+          ...(Platform.OS === "android" ? { includeFontPadding: false } : {}),
         },
         neutralText: {
           color: currentTheme.colors.textPrimary,
         },
+
         spinnerWrap: {
           marginVertical: normalize(12),
         },
       }),
-    [isDarkMode, currentTheme, insets]
+    [isDarkMode, currentTheme, layout]
   );
 
   // ===== UI =====
@@ -853,10 +829,7 @@ const InvitationModal: React.FC<InvitationModalProps> = ({
             {t("invitation.loading", { defaultValue: "Chargement..." })}
           </Text>
           <View style={styles.spinnerWrap}>
-            <ActivityIndicator
-              size="large"
-              color={currentTheme.colors.secondary}
-            />
+            <ActivityIndicator size="large" color={currentTheme.colors.secondary} />
           </View>
         </>
       );
@@ -866,14 +839,11 @@ const InvitationModal: React.FC<InvitationModalProps> = ({
       return (
         <>
           <Text style={styles.modalTitle}>
-            {t("invitation.invalidTitle", {
-              defaultValue: "Invitation indisponible",
-            })}
+            {t("invitation.invalidTitle", { defaultValue: "Invitation indisponible" })}
           </Text>
           <Text style={styles.modalText}>
             {t("invitation.invalidMessage", {
-              defaultValue:
-                "Cette invitation est introuvable ou a été supprimée.",
+              defaultValue: "Cette invitation est introuvable ou a été supprimée.",
             })}
           </Text>
           <View style={styles.buttonRow}>
@@ -881,10 +851,9 @@ const InvitationModal: React.FC<InvitationModalProps> = ({
               style={[styles.btn, styles.neutral]}
               onPress={closeAll}
               accessibilityRole="button"
-              accessibilityLabel={t("commonS.close", {
-                defaultValue: "Fermer",
-              })}
+              accessibilityLabel={t("commonS.close", { defaultValue: "Fermer" })}
               testID="invite-close"
+              activeOpacity={0.9}
             >
               <Text style={[styles.btnText, styles.neutralText]}>
                 {t("commonS.close", { defaultValue: "Fermer" })}
@@ -903,8 +872,7 @@ const InvitationModal: React.FC<InvitationModalProps> = ({
           </Text>
           <Text style={styles.modalText}>
             {t("invitation.notForYouMessage", {
-              defaultValue:
-                "Cette invitation n'est pas destinée à ce compte.",
+              defaultValue: "Cette invitation n'est pas destinée à ce compte.",
             })}
           </Text>
           <View style={styles.buttonRow}>
@@ -912,9 +880,8 @@ const InvitationModal: React.FC<InvitationModalProps> = ({
               style={[styles.btn, styles.neutral]}
               onPress={closeAll}
               accessibilityRole="button"
-              accessibilityLabel={t("commonS.close", {
-                defaultValue: "Fermer",
-              })}
+              accessibilityLabel={t("commonS.close", { defaultValue: "Fermer" })}
+              activeOpacity={0.9}
             >
               <Text style={[styles.btnText, styles.neutralText]}>
                 {t("commonS.close", { defaultValue: "Fermer" })}
@@ -929,9 +896,7 @@ const InvitationModal: React.FC<InvitationModalProps> = ({
       return (
         <>
           <Text style={styles.modalTitle}>
-            {t("invitation.expiredTitle", {
-              defaultValue: "Invitation expirée",
-            })}
+            {t("invitation.expiredTitle", { defaultValue: "Invitation expirée" })}
           </Text>
           <Text style={styles.modalText}>
             {t("invitation.expiredMessage", {
@@ -944,9 +909,8 @@ const InvitationModal: React.FC<InvitationModalProps> = ({
               style={[styles.btn, styles.neutral]}
               onPress={closeAll}
               accessibilityRole="button"
-              accessibilityLabel={t("commonS.close", {
-                defaultValue: "Fermer",
-              })}
+              accessibilityLabel={t("commonS.close", { defaultValue: "Fermer" })}
+              activeOpacity={0.9}
             >
               <Text style={[styles.btnText, styles.neutralText]}>
                 {t("commonS.close", { defaultValue: "Fermer" })}
@@ -958,13 +922,10 @@ const InvitationModal: React.FC<InvitationModalProps> = ({
     }
 
     const daysCount =
-      typeof inv?.selectedDays === "number" && inv.selectedDays > 0
-        ? inv.selectedDays
-        : undefined;
+      typeof inv?.selectedDays === "number" && inv.selectedDays > 0 ? inv.selectedDays : undefined;
 
     const usernameForTitle =
-      inviterUsername ||
-      t("invitation.someone", { defaultValue: "Quelqu'un" });
+      inviterUsername || t("invitation.someone", { defaultValue: "Quelqu'un" });
 
     return (
       <>
@@ -975,20 +936,17 @@ const InvitationModal: React.FC<InvitationModalProps> = ({
           })}
         </Text>
 
-        {/* Tag avec le titre du défi */}
         {!!challengeTitle && (
           <View style={styles.tag}>
-            <Text style={styles.tagText}>{challengeTitle}</Text>
+            <Text style={styles.tagText} numberOfLines={2} ellipsizeMode="tail">
+              {challengeTitle}
+            </Text>
           </View>
         )}
 
-        {/* 🔥 Durée du défi (toujours affichée si présente dans l’invitation) */}
         {typeof daysCount === "number" && (
           <Text style={styles.durationText}>
-            {t("invitation.duration", {
-              count: daysCount,
-              defaultValue: "{{count}} jours de défi",
-            })}
+            {t("invitation.duration", { count: daysCount, defaultValue: "{{count}} jours de défi" })}
           </Text>
         )}
 
@@ -1001,11 +959,7 @@ const InvitationModal: React.FC<InvitationModalProps> = ({
         </Text>
 
         {!!errorMsg && (
-          <Text
-            style={styles.errorText}
-            accessibilityRole="alert"
-            accessibilityLiveRegion="polite"
-          >
+          <Text style={styles.errorText} accessibilityRole="alert" accessibilityLiveRegion="polite">
             {errorMsg}
           </Text>
         )}
@@ -1017,9 +971,7 @@ const InvitationModal: React.FC<InvitationModalProps> = ({
             disabled={loading || fetching}
             activeOpacity={0.85}
             accessibilityRole="button"
-            accessibilityLabel={t("invitation.accept", {
-              defaultValue: "Accepter",
-            })}
+            accessibilityLabel={t("invitation.accept", { defaultValue: "Accepter" })}
             accessibilityHint={t("invitation.acceptHint", {
               defaultValue: "Accepter l’invitation et démarrer en Duo.",
             })}
@@ -1028,9 +980,7 @@ const InvitationModal: React.FC<InvitationModalProps> = ({
             {loading ? (
               <ActivityIndicator color="#fff" />
             ) : (
-              <Text style={styles.btnText}>
-                {t("invitation.accept", { defaultValue: "Accepter" })}
-              </Text>
+              <Text style={styles.btnText}>{t("invitation.accept", { defaultValue: "Accepter" })}</Text>
             )}
           </TouchableOpacity>
 
@@ -1040,9 +990,7 @@ const InvitationModal: React.FC<InvitationModalProps> = ({
             disabled={loading || fetching}
             activeOpacity={0.85}
             accessibilityRole="button"
-            accessibilityLabel={t("invitation.refuse", {
-              defaultValue: "Refuser",
-            })}
+            accessibilityLabel={t("invitation.refuse", { defaultValue: "Refuser" })}
             accessibilityHint={t("invitation.refuseHint", {
               defaultValue: "Refuser l’invitation et fermer.",
             })}
@@ -1051,9 +999,7 @@ const InvitationModal: React.FC<InvitationModalProps> = ({
             {loading ? (
               <ActivityIndicator color="#fff" />
             ) : (
-              <Text style={styles.btnText}>
-                {t("invitation.refuse", { defaultValue: "Refuser" })}
-              </Text>
+              <Text style={styles.btnText}>{t("invitation.refuse", { defaultValue: "Refuser" })}</Text>
             )}
           </TouchableOpacity>
         </View>
@@ -1064,9 +1010,7 @@ const InvitationModal: React.FC<InvitationModalProps> = ({
   const renderRestartConfirmBody = () => (
     <>
       <Text style={styles.modalTitle}>
-        {t("invitation.restartTitle", {
-          defaultValue: "Recommencer le défi en Duo ?",
-        })}
+        {t("invitation.restartTitle", { defaultValue: "Recommencer le défi en Duo ?" })}
       </Text>
       <Text style={styles.modalText}>
         {t("invitation.restartMessage", {
@@ -1080,32 +1024,27 @@ const InvitationModal: React.FC<InvitationModalProps> = ({
           onPress={() => setShowRestartConfirm(false)}
           activeOpacity={0.85}
           accessibilityRole="button"
-          accessibilityLabel={t("invitation.cancel", {
-            defaultValue: "Annuler",
-          })}
+          accessibilityLabel={t("invitation.cancel", { defaultValue: "Annuler" })}
           testID="invite-restart-cancel"
         >
           <Text style={[styles.btnText, styles.neutralText]}>
             {t("invitation.cancel", { defaultValue: "Annuler" })}
           </Text>
         </TouchableOpacity>
+
         <TouchableOpacity
           style={[styles.btn, styles.accept]}
           onPress={handleConfirmRestart}
           disabled={loading || fetching}
           activeOpacity={0.85}
           accessibilityRole="button"
-          accessibilityLabel={t("invitation.continue", {
-            defaultValue: "Continuer",
-          })}
+          accessibilityLabel={t("invitation.continue", { defaultValue: "Continuer" })}
           testID="invite-restart-continue"
         >
           {loading ? (
             <ActivityIndicator color="#fff" />
           ) : (
-            <Text style={styles.btnText}>
-              {t("invitation.continue", { defaultValue: "Continuer" })}
-            </Text>
+            <Text style={styles.btnText}>{t("invitation.continue", { defaultValue: "Continuer" })}</Text>
           )}
         </TouchableOpacity>
       </View>
@@ -1122,7 +1061,7 @@ const InvitationModal: React.FC<InvitationModalProps> = ({
       onRequestClose={handleCloseRequest}
     >
       <View
-        style={styles.centeredView}
+        style={styles.root}
         accessible
         accessibilityViewIsModal
         accessibilityLiveRegion="polite"
@@ -1134,19 +1073,43 @@ const InvitationModal: React.FC<InvitationModalProps> = ({
             if (!loading && !fetching) handleCloseRequest();
           }}
           accessibilityRole="button"
-          accessibilityLabel={t("commonS.close", {
-            defaultValue: "Fermer",
-          })}
+          accessibilityLabel={t("commonS.close", { defaultValue: "Fermer" })}
         />
 
         <Animated.View
-          entering={reduceMotion ? undefined : FadeInUp.duration(250)}
-          style={[styles.animatedCard, { width: CARD_MAX_W }]}
+          entering={reduceMotion ? undefined : FadeInUp.duration(240)}
+          style={styles.cardWrap}
+          pointerEvents="auto"
         >
-          <View style={[styles.modalView, { maxHeight: CARD_MAX_H }]}>
+          <View style={styles.card}>
+            {/* Header premium (X) */}
+            <View style={styles.header}>
+              <View style={styles.headerSide} />
+              <Text style={styles.headerTitle} numberOfLines={1} ellipsizeMode="tail">
+                {t("invitation.header", { defaultValue: "Invitation Duo" })}
+              </Text>
+              <View style={styles.headerSide}>
+                <Pressable
+                  onPress={() => {
+                    if (!loading && !fetching) handleCloseRequest();
+                  }}
+                  hitSlop={10}
+                  style={({ pressed }) => [
+                    styles.closeBtn,
+                    pressed && { transform: [{ scale: 0.98 }], opacity: 0.92 },
+                  ]}
+                  accessibilityRole="button"
+                  accessibilityLabel={t("commonS.close", { defaultValue: "Fermer" })}
+                  testID="invite-close-x"
+                >
+                  <Text style={styles.closeX}>×</Text>
+                </Pressable>
+              </View>
+            </View>
+
             <ScrollView
-              style={styles.cardScroll}
-              contentContainerStyle={styles.cardContent}
+              style={styles.scroll}
+              contentContainerStyle={styles.content}
               bounces={false}
               showsVerticalScrollIndicator={false}
               keyboardShouldPersistTaps="handled"
