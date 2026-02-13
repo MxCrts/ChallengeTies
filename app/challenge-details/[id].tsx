@@ -601,15 +601,21 @@ const warmupDayKeyLocal = useCallback(() => {
 
     // ✅ Safe back pour deeplink (si pas de stack -> home)
   const handleSafeBack = useCallback(() => {
-    // expo-router peut exposer canGoBack selon version
-    // @ts-ignore
-    if (router.canGoBack?.()) {
-      router.back();
-      return true;
-    }
+  if (cameFromDeeplinkRef.current) {
     router.replace("/");
     return true;
-  }, [router]);
+  }
+
+  // @ts-ignore
+  if (router.canGoBack?.()) {
+    router.back();
+    return true;
+  }
+
+  router.replace("/");
+  return true;
+}, [router]);
+
 
   // ✅ Hardware back Android
   useFocusEffect(
@@ -792,13 +798,21 @@ const clearInviteParam = useCallback(() => {
 // ✅ Close atomique : ferme modal + coupe tous les overlays deeplink + marque l'invite
 const closeInviteFlow = useCallback((handledId?: string | null) => {
   const toHandle = handledId ?? invitation?.id ?? params?.invite ?? null;
-  try { markInviteAsHandled(toHandle); } catch {}
-  setInvitationModalVisible(false);
-  setInvitation(null);
-  setInviteModalReady(false);
+
+  // 1) stop blocking states FIRST
   setInviteLoading(false);
   setDeeplinkBooting(false);
   try { hideRootInviteHandoff(); } catch {}
+
+  // 2) mark handled to prevent re-open
+  try { markInviteAsHandled(toHandle); } catch {}
+
+  // 3) close + cleanup
+  setInvitationModalVisible(false);
+  setInvitation(null);
+  setInviteModalReady(false);
+
+  // 4) remove param / clean URL
   try { clearInviteParam(); } catch {}
 }, [
   invitation?.id,
@@ -808,6 +822,7 @@ const closeInviteFlow = useCallback((handledId?: string | null) => {
   clearInviteParam,
 ]);
 
+
   // ---------------------------------------------------------------------------
   // Refs pour éviter les closures stale (events -> ouverture MomentModal)
   // ---------------------------------------------------------------------------
@@ -815,12 +830,21 @@ const closeInviteFlow = useCallback((handledId?: string | null) => {
   const finalSelectedDaysRef = useRef<number>(0);
   const isDuoRef = useRef<boolean>(false);
   const duoChallengeDataRef = useRef<any>(null);
+  const cameFromDeeplinkRef = useRef(false);
   const myNameRef = useRef<string>("");
 
   useEffect(() => {
     activeEntryRef.current = activeEntry;
   }, [activeEntry]);
 
+  useEffect(() => {
+  if (invitationModalVisible) return;
+
+  // 🔥 Hard stop : après fermeture du modal, rien ne doit bloquer l'écran
+  setInviteLoading(false);
+  setDeeplinkBooting(false);
+  try { hideRootInviteHandoff(); } catch {}
+}, [invitationModalVisible, hideRootInviteHandoff]);
 
 // ✅ Résout UNE seule entrée "courante" avec priorité DUO (si présente)
  const currentChallenge = useMemo(() => {
@@ -2335,7 +2359,8 @@ useEffect(() => {
     const idStr = String(inviteParam || "").trim();
     if (!idStr) return;
     if (processedInviteIdsRef.current.has(idStr)) return;
-    if (inviteOpenGuardRef.current) return; // anti double open
+    if (inviteOpenGuardRef.current) return; 
+    cameFromDeeplinkRef.current = true;
 
     // 🆕 On annonce qu'on boot via deeplink d'invit
     setDeeplinkBooting(true);
@@ -3127,7 +3152,10 @@ const handleShareChallenge = useCallback(async () => {
 const showBootOverlay =
   !invitationModalVisible &&
   !deeplinkBooting &&
-  (isHydrating || inviteLoading);
+  (isHydrating || inviteLoading) &&
+  // ✅ si on a une invitation en cours de cleanup, jamais d'overlay
+  !inviteOpenGuardRef.current;
+
 
 const handleInviteFriend = useCallback(async () => {
   hapticTap();

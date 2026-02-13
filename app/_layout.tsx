@@ -275,7 +275,7 @@ useEffect(() => {
   }, []);
 
     // ✅ garde la dernière route "stable" (≠ "/") pour revenir après ShareSheet
-  const lastStablePathRef = React.useRef<string>("/(tabs)");
+  const lastStablePathRef = React.useRef<string>("/");
 
   useEffect(() => {
     if (pathname && pathname !== "/") {
@@ -333,7 +333,7 @@ useEffect(() => {
       pendingAfter?.path ||
       (globalThis as any).__LAST_STABLE_PATH__ ||
       lastStablePathRef.current ||
-      "/(tabs)";
+      "/";
   }
 
   // 3️⃣ DeepLink / Notif bloque le root
@@ -342,7 +342,7 @@ const notifBlock = (globalThis as any).__NOTIF_BLOCK_ROOT_REDIRECT__ === true;
 
 // ✅ On ne bloque JAMAIS le root redirect si pas connecté.
 // Sinon "/" peut rester coincé.
-if (!nextRoute && (dlBlock || notifBlock) && user) {
+if (!nextRoute && (dlBlock || notifBlock) && user && pathname !== "/") {
   SplashScreen.hideAsync().catch(() => {});
   return;
 }
@@ -899,7 +899,7 @@ const DeepLinkManager: React.FC = () => {
         }, 12000);
       }
 
-      router.push({
+      router.replace({
         pathname: `/challenge-details/${safeSegment}`,
         params: inviteId
           ? {
@@ -960,7 +960,7 @@ const DeepLinkManager: React.FC = () => {
         }
 
         const safeSegment = encodeURIComponent(String(challengeId));
-        router.push({
+        router.replace({
           pathname: `/challenge-details/${safeSegment}`,
           params: inviteId
             ? {

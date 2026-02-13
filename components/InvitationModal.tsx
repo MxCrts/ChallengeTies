@@ -19,6 +19,7 @@ import {
   AccessibilityInfo,
   Alert,
   Pressable,
+  InteractionManager,
   useWindowDimensions,
   ScrollView,
 } from "react-native";
@@ -138,7 +139,7 @@ const InvitationModal: React.FC<InvitationModalProps> = ({
 
   const mountedRef = useRef(true);
   const lastLoadKeyRef = useRef<string>("");
-
+const isShown = !!visible && !!inviteId;
 
   useEffect(() => {
     mountedRef.current = true;
@@ -172,14 +173,30 @@ const InvitationModal: React.FC<InvitationModalProps> = ({
     }
   }, [onClose, clearInvitation]);
 
+  const hideInviteHandoffOverlay = useCallback(() => {
+    try {
+      (globalThis as any).__HIDE_INVITE_HANDOFF__?.();
+    } catch {}
+  }, []);
+
   // ✅ Safe close helper: ferme proprement, même si un callback parent fait n'importe quoi
   const safeCloseAll = useCallback(() => {
+    // ✅ On close après les interactions pour éviter les états "ghost overlay"
+    // (surtout sur Android et lors de gros re-renders après accept).
     try {
-      closeAll();
+      InteractionManager.runAfterInteractions(() => {
+        try {
+          hideInviteHandoffOverlay();
+          closeAll();
+        } catch {}
+      });
     } catch {
-      // no-op : closeAll a déjà try/finally
+      try {
+        hideInviteHandoffOverlay();
+        closeAll();
+      } catch {}
     }
-  }, [closeAll]);
+  }, [closeAll, hideInviteHandoffOverlay]);
 
   const handleCloseRequest = useCallback(async () => {
     try {
@@ -189,9 +206,9 @@ const InvitationModal: React.FC<InvitationModalProps> = ({
     } catch {
       // no-op
     } finally {
-      closeAll();
+      safeCloseAll();
     }
-  }, [inv, inviteId, closeAll]);
+  }, [inv, inviteId, safeCloseAll]);
 
   const showInfo = (msg: string) => {
     if (!msg) return;
@@ -232,7 +249,7 @@ const InvitationModal: React.FC<InvitationModalProps> = ({
   // ===== Chargement =====
   useEffect(() => {
     const load = async () => {
-      if (!visible || !inviteId) return;
+      if (!isShown || !inviteId) return;
 
       if (!auth.currentUser?.uid) {
         showInfo(
@@ -338,7 +355,7 @@ const InvitationModal: React.FC<InvitationModalProps> = ({
         } catch {}
       } catch (e) {
         console.error("❌ InvitationModal load error:", e);
-        if (mountedRef.current && lastLoadKeyRef.current !== loadKey) return;
+        if (!mountedRef.current || lastLoadKeyRef.current !== loadKey) return;
         setErrorMsg(
           t("invitation.errors.unknown", {
             defaultValue: "Erreur inconnue.",
@@ -355,22 +372,22 @@ const InvitationModal: React.FC<InvitationModalProps> = ({
     };
 
     load();
-  }, [visible, inviteId, challengeId, t, i18n.language, closeAll, onLoaded]);
+ }, [isShown, inviteId, challengeId, t, i18n.language, closeAll, onLoaded]);
 
   // ✅ Retraduction locale si la langue change
   useEffect(() => {
-    if (!visible || !challengeChatId) return;
+    if (!isShown || !challengeChatId) return;
     setChallengeTitle((prev) => {
       const i18nTitle = t(`challenges.${challengeChatId}.title`, {
         defaultValue: prev || "",
       });
       return i18nTitle || prev;
     });
-  }, [i18n.language, visible, challengeChatId, t]);
+ }, [i18n.language, isShown, challengeChatId, t]);
 
   // Reset propres quand on ferme / change d’invite
   useEffect(() => {
-    if (!visible) {
+    if (!isShown) {
       setInv(null);
       setErrorMsg("");
       setShowRestartConfirm(false);
@@ -380,7 +397,7 @@ const InvitationModal: React.FC<InvitationModalProps> = ({
       setChallengeTitle("");
       setInviterUsername("");
     }
-  }, [visible]);
+  }, [isShown]);
 
   useEffect(() => {
     setErrorMsg("");
@@ -755,13 +772,13 @@ const InvitationModal: React.FC<InvitationModalProps> = ({
         },
         tagText: {
           fontSize: normalize(13),
-          fontFamily: "Comfortaa_500Medium",
+          fontFamily: "Comfortaa_400Regular",
           color: currentTheme.colors.textPrimary,
           textAlign: "center",
         },
         durationText: {
           fontSize: normalize(13),
-          fontFamily: "Comfortaa_500Medium",
+          fontFamily: "Comfortaa_400Regular",
           marginBottom: normalize(10),
           textAlign: "center",
           color: currentTheme.colors.textPrimary,
@@ -868,7 +885,7 @@ const InvitationModal: React.FC<InvitationModalProps> = ({
           <View style={styles.buttonRow}>
             <TouchableOpacity
               style={[styles.btn, styles.neutral]}
-              onPress={closeAll}
+              onPress={handleCloseRequest}
               accessibilityRole="button"
               accessibilityLabel={t("commonS.close", { defaultValue: "Fermer" })}
               testID="invite-close"
@@ -897,7 +914,7 @@ const InvitationModal: React.FC<InvitationModalProps> = ({
           <View style={styles.buttonRow}>
             <TouchableOpacity
               style={[styles.btn, styles.neutral]}
-              onPress={closeAll}
+              onPress={handleCloseRequest}
               accessibilityRole="button"
               accessibilityLabel={t("commonS.close", { defaultValue: "Fermer" })}
               activeOpacity={0.9}
@@ -926,7 +943,7 @@ const InvitationModal: React.FC<InvitationModalProps> = ({
           <View style={styles.buttonRow}>
             <TouchableOpacity
               style={[styles.btn, styles.neutral]}
-              onPress={closeAll}
+              onPress={handleCloseRequest}
               accessibilityRole="button"
               accessibilityLabel={t("commonS.close", { defaultValue: "Fermer" })}
               activeOpacity={0.9}
@@ -1072,15 +1089,20 @@ const InvitationModal: React.FC<InvitationModalProps> = ({
 
   return (
     <Modal
-      visible={visible}
+      visible={isShown}
       transparent
       animationType="fade"
       statusBarTranslucent
       presentationStyle="overFullScreen"
       onRequestClose={handleCloseRequest}
+      onDismiss={() => {
+       try { (globalThis as any).__HIDE_INVITE_HANDOFF__?.(); } catch {}
+        try { clearInvitation?.(); } catch {}
+      }}
     >
       <View
         style={styles.root}
+        pointerEvents={isShown ? "auto" : "none"}
         accessible
         accessibilityViewIsModal
         accessibilityLiveRegion="polite"
@@ -1088,6 +1110,7 @@ const InvitationModal: React.FC<InvitationModalProps> = ({
         {/* Backdrop tappable */}
         <Pressable
           style={styles.backdrop}
+          pointerEvents={isShown ? "auto" : "none"} 
           onPress={() => {
             if (!loading && !fetching) handleCloseRequest();
           }}
