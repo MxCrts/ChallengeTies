@@ -19,7 +19,6 @@ import {
   AccessibilityInfo,
   Alert,
   Pressable,
-  InteractionManager,
   useWindowDimensions,
   ScrollView,
 } from "react-native";
@@ -139,7 +138,8 @@ const InvitationModal: React.FC<InvitationModalProps> = ({
 
   const mountedRef = useRef(true);
   const lastLoadKeyRef = useRef<string>("");
-const isShown = !!visible && !!inviteId;
+  const isShown = !!visible && !!inviteId;
+  const modalVisible = isShown && (!externalLoading || !fetching);
 
   useEffect(() => {
     mountedRef.current = true;
@@ -165,6 +165,18 @@ const isShown = !!visible && !!inviteId;
     };
   }, []);
 
+  useEffect(() => {
+  if (isShown) return;
+  try { (globalThis as any).__HIDE_INVITE_HANDOFF__?.(); } catch {}
+}, [isShown]);
+
+// ✅ Extra safety: if the modal is hidden (even while isShown is true),
+// force-hide any deep link handoff overlay that could still be mounted.
+useEffect(() => {
+  if (modalVisible) return;
+  try { (globalThis as any).__HIDE_INVITE_HANDOFF__?.(); } catch {}
+}, [modalVisible]);
+
   const closeAll = useCallback(() => {
     try {
       onClose();
@@ -179,24 +191,17 @@ const isShown = !!visible && !!inviteId;
     } catch {}
   }, []);
 
-  // ✅ Safe close helper: ferme proprement, même si un callback parent fait n'importe quoi
-  const safeCloseAll = useCallback(() => {
-    // ✅ On close après les interactions pour éviter les états "ghost overlay"
-    // (surtout sur Android et lors de gros re-renders après accept).
-    try {
-      InteractionManager.runAfterInteractions(() => {
-        try {
-          hideInviteHandoffOverlay();
-          closeAll();
-        } catch {}
-      });
-    } catch {
-      try {
-        hideInviteHandoffOverlay();
-        closeAll();
-      } catch {}
-    }
-  }, [closeAll, hideInviteHandoffOverlay]);
+ const safeCloseAll = useCallback(() => {
+  // ✅ Always release any global overlay FIRST (this is the usual freeze culprit)
+  try { hideInviteHandoffOverlay(); } catch {}
+
+  // reset local states to avoid parent guards reading stale "busy"
+  try { setLoading(false); } catch {}
+  try { setFetching(false); } catch {}
+
+  // ✅ Close synchronously (setTimeout can leave one frame where an overlay blocks touches)
+  try { closeAll(); } catch {}
+}, [closeAll, hideInviteHandoffOverlay]);
 
   const handleCloseRequest = useCallback(async () => {
     try {
@@ -1089,16 +1094,15 @@ const isShown = !!visible && !!inviteId;
 
   return (
     <Modal
-      visible={isShown}
+      visible={modalVisible}
       transparent
-      animationType="fade"
+      animationType={Platform.OS === "android" ? "none" : "fade"}
       statusBarTranslucent
       presentationStyle="overFullScreen"
       onRequestClose={handleCloseRequest}
       onDismiss={() => {
-       try { (globalThis as any).__HIDE_INVITE_HANDOFF__?.(); } catch {}
-        try { clearInvitation?.(); } catch {}
-      }}
+      try { (globalThis as any).__HIDE_INVITE_HANDOFF__?.(); } catch {}
+    }}
     >
       <View
         style={styles.root}

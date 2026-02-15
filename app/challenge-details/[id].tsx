@@ -1776,6 +1776,8 @@ const { showBootOverlay, loadingLabel, loadingSubLabel } = useBootOverlay({
   t,
 });
 
+const showBootOverlaySafe = showBootOverlay && invitationModalVisible;
+
 const handleInviteFriend = useCallback(async () => {
   hapticTap();
   try {
@@ -1826,8 +1828,8 @@ const handleInviteFriend = useCallback(async () => {
 }, [id, isDuo, isSoloInThisChallenge, isOffline, t]);
 
 useEffect(() => {
-  dlog("BOOT_OVERLAY", { showBootOverlay, invitationModalVisible, inviteLoading, deeplinkBooting, inviteModalReady });
-}, [showBootOverlay, invitationModalVisible, inviteLoading, deeplinkBooting, inviteModalReady]);
+  dlog("BOOT_OVERLAY", { showBootOverlaySafe, invitationModalVisible, inviteLoading, deeplinkBooting, inviteModalReady });
+}, [showBootOverlaySafe, invitationModalVisible, inviteLoading, deeplinkBooting, inviteModalReady]);
 
 
 useEffect(() => {
@@ -3201,7 +3203,7 @@ const scrollContentStyle = useMemo(
   onLoaded={() => setInviteModalReady(true)}
 />
 
- {showBootOverlay && (
+ {showBootOverlaySafe && (
   <Animated.View
     // ⚠️ plus d'entering/exiting, pour éviter les soucis de hitbox fantôme
     style={styles.loadingOverlay}
@@ -3509,7 +3511,7 @@ partnerDaysCompleted={duoChallengeData?.duoUser?.completedDays ?? 0}
 )}
 <DebugHUD
   data={{
-    showBootOverlay,
+    showBootOverlaySafe,
     invitationModalVisible,
     inviteLoading,
     deeplinkBooting,
