@@ -17,14 +17,11 @@ import {
   Image,
   ScrollView,
   useWindowDimensions,
-  Dimensions,
   StatusBar,
   InteractionManager,
   Platform,
   AccessibilityInfo,
   Modal,
-  Share,
-  BackHandler,
 } from "react-native";
 import { Image as ExpoImage } from "expo-image";
 import { SafeAreaView, useSafeAreaInsets } from "react-native-safe-area-context";
@@ -37,19 +34,9 @@ import {
   getDoc,
   updateDoc,
   increment,
-  getDocs,
-  query,
-  collection,
   serverTimestamp,
-  where,
-  limit,
 } from "firebase/firestore";
-import mobileAds, {
-  RewardedAd,
-  RewardedAdEventType,
-  AdEventType,
-  TestIds,
-} from "react-native-google-mobile-ads";
+import { useRewardedDetailsAd } from "./_feature/hooks/useRewardedDetailsAd";
 import { db, auth } from "@/constants/firebase-config";
 import ConfettiCannon from "react-native-confetti-cannon";
 import { LinearGradient } from "expo-linear-gradient";
@@ -66,12 +53,10 @@ import { useTranslation } from "react-i18next";
 import InvitationModal from "../../components/InvitationModal";
 import ChallengeReviews from "../../components/ChallengeReviews";
 import { storage } from "../../constants/firebase-config";
-import { getDownloadURL, ref } from "firebase/storage";
 import { useAdsVisibility } from "../../src/context/AdsVisibilityContext";
 import type { ViewStyle } from "react-native";
 import PioneerBadge from "@/components/PioneerBadge";
 import BannerSlot from "@/components/BannerSlot";
-import { useBottomTabBarHeight } from "@react-navigation/bottom-tabs";
 import { useFocusEffect } from "@react-navigation/native";
 import Animated, {
   useSharedValue,
@@ -83,141 +68,55 @@ import Animated, {
    Easing,
    runOnJS,
    withSpring,
-   FadeOut,
   FadeInUp,
   FadeIn,
  } from "react-native-reanimated";
- import { DeviceEventEmitter } from "react-native";
  import { BlurView } from "expo-blur";
-import * as Linking from "expo-linking";
 import SendInvitationModal from "@/components/SendInvitationModal";
-import * as Localization from "expo-localization";
-import type { ModalProps } from "react-native";
 import * as Haptics from "expo-haptics";
 import { bumpCounterAndMaybeReview } from "../../src/services/reviewService"
 import { recordSelectDays, recordDailyGlobalMark, incStat } from "../../src/services/metricsService";
 import NetInfo from "@react-native-community/netinfo";
 import { canInvite } from "../../utils/canInvite";
-import { usePathname } from "expo-router";
 import { useAuth } from "@/context/AuthProvider"; 
 import ShareCardModal from "@/components/ShareCardModal";
 import SelectModeModal from "@/components/SelectModeModal";
 import ConfirmationDuoModal from "@/components/ConfirmationDuoModal";
 import DuoMomentModal from "@/components/DuoMomentModal";
 import SoloMomentModal from "@/components/SoloMomentModal";
-import { MISSED_FLOW_EVENT, MARK_RESOLVED_EVENT } from "@/context/CurrentChallengesContext";
-
-const short = (s: string, max = 16) => (s.length > max ? s.slice(0, max - 1).trim() + "…" : s);
-
-
-const { width: SCREEN_WIDTH, height: SCREEN_HEIGHT } = Dimensions.get("window");
-const IS_SMALL = SCREEN_WIDTH < 360;
-const SPACING = 15;
-const normalizeSize = (size: number) => {
-  const scale = SCREEN_WIDTH / 375;
-  return Math.round(size * scale);
-};
-const HERO_H = Math.max(240, Math.round(SCREEN_HEIGHT * 0.35));
-
-
-const pct = (num = 0, den = 0) =>
-  den > 0 ? Math.min(100, Math.max(0, Math.round((num / den) * 100))) : 0;
-
-const isIOS = Platform.OS === "ios";
+import OrbBackground from "./_feature/components/OrbBackground";
+import SmartAvatar from "./_feature/components/SmartAvatar";
+import { styles } from "./_feature/challengeDetails.styles";
+import {
+  IS_SMALL,
+  SPACING,
+  normalizeSize,
+  introModalProps,
+  dayIcons,
+  ACCENT,
+} from "./_feature/challengeDetails.tokens";
+import {
+  deriveDuoInfoFromUniqueKey,
+  type RawChallengeEntry,
+} from "./_feature/utils/deriveDuoInfoFromUniqueKey";
+export { deriveDuoInfoFromUniqueKey } from "./_feature/utils/deriveDuoInfoFromUniqueKey";
+import { useSafeBack } from "./_feature/hooks/useSafeBack";
+import { useActiveChallengeEntry } from "./_feature/hooks/useActiveChallengeEntry";
+import { usePartnerDuoSnapshot } from "./_feature/hooks/usePartnerDuoSnapshot";
+import { resolveAvatarUrl as resolveAvatarUrlUtil } from "./_feature/utils/resolveAvatarUrl";
+import { useInvitesInbox } from "./_feature/hooks/useInvitesInbox";
+import { useOutgoingInvite } from "./_feature/hooks/useOutgoingInvite";
+import { useInviteAcceptSync } from "./_feature/hooks/useInviteAcceptSync";
+import { useInviteHandoff } from "./_feature/hooks/useInviteHandoff";
+import { useStartFlow } from "./_feature/hooks/useStartFlow";
+import { useBootOverlay } from "./_feature/hooks/useBootOverlay";
+import { useMomentGate } from "./_feature/hooks/useMomentGate";
+import DebugHUD from "@/components/DebugHUD";
+import { dlog } from "@/src/utils/debugLog";
 
 const hapticTap = () => {
   Haptics.selectionAsync().catch(() => {});
 };
-
-
-
-const introModalProps: Partial<ModalProps> = Platform.select<Partial<ModalProps>>({
-  ios: {
-    presentationStyle: "overFullScreen",
-    transparent: true,
-    statusBarTranslucent: true,
-    animationType: "fade",
-  } as const,
-  android: {
-    transparent: true,
-    statusBarTranslucent: true,
-    animationType: "fade",
-    hardwareAccelerated: true,
-  } as const,
-  default: {
-    animationType: "fade",
-  } as const,
-})!;
-
-/** Fond orbe premium, non interactif */
-const OrbBackground = ({ theme }: { theme: Theme }) => (
-  <View style={StyleSheet.absoluteFill} pointerEvents="none">
-    {/* Orbe haut-gauche */}
-    <LinearGradient
-      colors={[theme.colors.secondary + "55", theme.colors.primary + "11"]}
-      start={{ x: 0.1, y: 0.1 }}
-      end={{ x: 0.9, y: 0.9 }}
-      style={[
-        styles.orb,
-        {
-          width: SCREEN_WIDTH * 0.95,
-          height: SCREEN_WIDTH * 0.95,
-          borderRadius: (SCREEN_WIDTH * 0.95) / 2,
-          top: -SCREEN_WIDTH * 0.45,
-          left: -SCREEN_WIDTH * 0.28,
-        },
-      ]}
-    />
-
-    {/* Orbe bas-droite */}
-    <LinearGradient
-      colors={[theme.colors.primary + "55", theme.colors.secondary + "11"]}
-      start={{ x: 0.2, y: 0.2 }}
-      end={{ x: 0.8, y: 0.8 }}
-      style={[
-        styles.orb,
-        {
-          width: SCREEN_WIDTH * 1.1,
-          height: SCREEN_WIDTH * 1.1,
-          borderRadius: (SCREEN_WIDTH * 1.1) / 2,
-          bottom: -SCREEN_WIDTH * 0.55,
-          right: -SCREEN_WIDTH * 0.35,
-        },
-      ]}
-    />
-
-    {/* Voile très léger pour fondre les orbes */}
-    <LinearGradient
-      colors={[theme.colors.background + "00", theme.colors.background + "66"]}
-      style={StyleSheet.absoluteFill}
-    />
-  </View>
-);
-
-
-
-
-const dayIcons: Record<
-  number,
-  | "sunny-outline"
-  | "flash-outline"
-  | "timer-outline"
-  | "calendar-outline"
-  | "speedometer-outline"
-  | "trending-up-outline"
-  | "barbell-outline"
-  | "rocket-outline"
-> = {
-  7: "sunny-outline",
-  14: "flash-outline",
-  21: "timer-outline",
-  30: "calendar-outline",
-  60: "speedometer-outline",
-  90: "trending-up-outline",
-  180: "barbell-outline",
-  365: "rocket-outline",
-};
-
  interface DuoUser {
    id: string;
    name: string;
@@ -231,112 +130,6 @@ const dayIcons: Record<
    duo: boolean;
    duoUser: DuoUser;
  }
-
- type RawChallengeEntry = {
-   challengeId?: string;
-   id?: string;
-   uniqueKey?: string;
-   duo?: boolean;
-   duoPartnerId?: string | null;
-   duoPartnerUsername?: string | null;
-   selectedDays?: number;
- };
-
-export function deriveDuoInfoFromUniqueKey(
-  entry: RawChallengeEntry,
-  currentUserId: string | undefined | null
-) {
-  // 🛑 Si le doc indique explicitement SOLO → on respecte ça
-  const explicitSolo =
-    entry &&
-    entry.duo === false &&
-    !entry.duoPartnerId &&
-    !entry.duoPartnerUsername;
-
-  if (explicitSolo) {
-    return {
-      isDuo: false,
-      duoPartnerId: null,
-      duoPartnerUsername: null,
-    };
-  }
-
-  if (!entry || !currentUserId) {
-    return {
-      isDuo: !!entry?.duo,
-      duoPartnerId: entry?.duoPartnerId ?? null,
-      duoPartnerUsername: entry?.duoPartnerUsername ?? null,
-    };
-  }
-
-  const rawKey = entry.uniqueKey;
-  if (!rawKey || typeof rawKey !== "string") {
-    return {
-      isDuo: !!entry?.duo,
-      duoPartnerId: entry?.duoPartnerId ?? null,
-      duoPartnerUsername: entry?.duoPartnerUsername ?? null,
-    };
-  }
-
-  const parts = rawKey.split("_");
-  if (parts.length < 3) {
-    return {
-      isDuo: !!entry?.duo,
-      duoPartnerId: entry?.duoPartnerId ?? null,
-      duoPartnerUsername: entry?.duoPartnerUsername ?? null,
-    };
-  }
-
-  const pairSegment = parts[parts.length - 1]; // "uidA-uidB"
-  if (!pairSegment.includes("-")) {
-    return {
-      isDuo: !!entry?.duo,
-      duoPartnerId: entry?.duoPartnerId ?? null,
-      duoPartnerUsername: entry?.duoPartnerUsername ?? null,
-    };
-  }
-
-  const [uidA, uidB] = pairSegment.split("-");
-  if (!uidA || !uidB) {
-    return {
-      isDuo: !!entry?.duo,
-      duoPartnerId: entry?.duoPartnerId ?? null,
-      duoPartnerUsername: entry?.duoPartnerUsername ?? null,
-    };
-  }
-
-  let partnerId: string | null = null;
-  if (uidA === currentUserId) partnerId = uidB;
-  else if (uidB === currentUserId) partnerId = uidA;
-  else partnerId = null;
-
-  const isDuo = partnerId !== null;
-
-  return {
-    isDuo,
-    duoPartnerId: partnerId,
-    duoPartnerUsername: entry?.duoPartnerUsername ?? null,
-  };
-}
-
-// ---------------------------------------------------------------------------
-// DuoPending helpers (avatar premium stable)
-// ---------------------------------------------------------------------------
-const safeSeed = (v: unknown, fallback = "seed") => {
-  const s = typeof v === "string" ? v.trim() : "";
-  return s.length ? s : fallback;
-};
-
-// hash simple stable -> number (évite "random" différent à chaque render)
-const seedToInt = (seed: string) => {
-  let h = 0;
-  for (let i = 0; i < seed.length; i++) {
-    h = (h << 5) - h + seed.charCodeAt(i);
-    h |= 0;
-  }
-  return Math.abs(h);
-};
-
 // ✅ outside ChallengeDetails (top-level in file)
 type DuoAvatarProps = { uri?: string | null; name?: string; isDarkMode: boolean; styles: any };
 
@@ -420,8 +213,6 @@ export const PendingPartnerAvatar = React.memo(function PendingPartnerAvatar({
   );
 });
 
-
-
 export default function ChallengeDetails() {
   const { theme } = useTheme();
   const { user } = useAuth();
@@ -431,7 +222,6 @@ export default function ChallengeDetails() {
     () => Math.max(240, Math.round(H * 0.35)),
     [H]
   );
-  // 4 colonnes = cheap. Tablet = 3 colonnes, phone = 2 colonnes.
   const titleLines = isTablet ? 2 : 3;
   const [marking, setMarking] = useState(false);
   const [pendingOutLock, setPendingOutLock] = useState(false);
@@ -475,35 +265,26 @@ const [soloMomentVariant, setSoloMomentVariant] = useState<"daily" | "milestone"
       text,
       textSoft,
       textFaint,
-      // tracks
       track: isDarkMode ? "rgba(0,0,0,0.22)" : "rgba(0,0,0,0.06)",
       trackStroke: isDarkMode ? "rgba(255,255,255,0.18)" : "rgba(0,0,0,0.10)",
       tick: isDarkMode ? "rgba(255,255,255,0.30)" : "rgba(0,0,0,0.14)",
       sheen: isDarkMode ? "rgba(255,255,255,0.06)" : "rgba(255,255,255,0.70)",
     };
   }, [isDarkMode]);
+
   const { t, i18n } = useTranslation();
   const { showBanners } = useAdsVisibility();
   const justJoinedRef = useRef(false);
-  // 🧹 Anti-doublon solo+duo : évite boucle de nettoyage
   const cleanupSoloRef = useRef(false);
-  
-const IS_COMPACT = W < 380; // ✅ basé sur la largeur actuelle (split-screen/tablette)
-const [confirmResetVisible, setConfirmResetVisible] = useState(false);
-const [warmupToast, setWarmupToast] = useState<null | "success" | "error">(null);
-const [sendInviteVisible, setSendInviteVisible] = useState(false);
-const insets = useSafeAreaInsets();
-
-
- const IS_TINY = W < 360;
-const [adHeight, setAdHeight] = useState(0);
+  const [confirmResetVisible, setConfirmResetVisible] = useState(false);
+  const [warmupToast, setWarmupToast] = useState<null | "success" | "error">(null);
+  const [sendInviteVisible, setSendInviteVisible] = useState(false);
+  const insets = useSafeAreaInsets();
+  const [adHeight, setAdHeight] = useState(0);
   // 🆕 callback stable pour éviter un re-render en boucle quand BannerSlot mesure
   const onBannerHeight = useCallback((h: number) => {
     setAdHeight((prev) => (prev === h ? prev : h));
   }, []);
-
-  
-// --- Toast state
 
 // --- Reanimated shared values
 const warmupToastSV = useSharedValue(0); // 0 hidden, 1 shown
@@ -519,9 +300,6 @@ const warmupToastStyle = useAnimatedStyle(() => {
     transform: [{ translateY }],
   };
 }, []);
-
-
-
 const hideWarmupToast = useCallback(() => {
   // stop timer
   if (warmupToastHideTimer.current) {
@@ -563,14 +341,11 @@ const showWarmupToast = useCallback(
   [hideWarmupToast, warmupToastSV]
 );
 
-// cleanup on unmount
 useEffect(() => {
   return () => {
     if (warmupToastHideTimer.current) clearTimeout(warmupToastHideTimer.current);
   };
 }, []);
-
-
 
   // ✅ WARMUP (duo pending) — 1/jour/challenge (dans users/{uid})
 const [warmupLoading, setWarmupLoading] = useState(false);
@@ -585,8 +360,6 @@ const warmupDayKeyLocal = useCallback(() => {
   return `${y}-${m}-${day}`;
 }, []);
 
-
-  // 🆕 état réseau : interdit l’invitation hors-ligne (UX claire)
   const [isOffline, setIsOffline] = useState(false);
   useEffect(() => {
     const sub = NetInfo.addEventListener((s) => {
@@ -596,37 +369,13 @@ const warmupDayKeyLocal = useCallback(() => {
     return () => sub();
   }, []);
 
-
   const router = useRouter();
 
-    // ✅ Safe back pour deeplink (si pas de stack -> home)
-  const handleSafeBack = useCallback(() => {
-  if (cameFromDeeplinkRef.current) {
-    router.replace("/");
-    return true;
-  }
-
-  // @ts-ignore
-  if (router.canGoBack?.()) {
-    router.back();
-    return true;
-  }
-
-  router.replace("/");
-  return true;
-}, [router]);
-
-
-  // ✅ Hardware back Android
-  useFocusEffect(
-    useCallback(() => {
-      const sub = BackHandler.addEventListener(
-        "hardwareBackPress",
-        handleSafeBack
-      );
-      return () => sub.remove();
-    }, [handleSafeBack])
-  );
+  const { handleSafeBack } = useSafeBack({
+  router,
+  isDeeplink: () => !!cameFromDeeplinkRef.current,
+  fallbackRoute: "/",
+});
 
   // pulse subtil autour de l'avatar du leader
   const leaderPulse = useSharedValue(0);
@@ -656,8 +405,6 @@ const duoPendingDotStyle = useAnimatedStyle(() => {
     opacity: o,
   };
 });
-
-
 
 const duoPendingGlowStyle = useAnimatedStyle(() => {
   // Halo externe (super visible mais clean)
@@ -711,58 +458,7 @@ useFocusEffect(
     completedDays?: string;
   }>();
 
-  // 🆕 si on arrive avec ?invite=... → overlay actif dès le 1er render
-const [deeplinkBooting, setDeeplinkBooting] = useState(
-  () => !!params?.invite
-);
-  
- const [invitation, setInvitation] = useState<{ id: string } | null>(null);
- const [invitationModalVisible, setInvitationModalVisible] = useState(false);
- const [inviteLoading, setInviteLoading] = useState(false);
- const [inviteModalReady, setInviteModalReady] = useState(false);
- const [startModeVisible, setStartModeVisible] = useState(false);
- const [startMode, setStartMode] = useState<"solo" | "duo" | null>(null);
- // ✅ Root overlay handoff control (single loader)
- const hideRootInviteHandoff = useCallback(() => {
-   try {
-     (globalThis as any).__HIDE_INVITE_HANDOFF__?.();
-   } catch {}
- }, []);
-
-
- // ✅ Dès que le modal d'invitation est prêt/affiché => on coupe l’overlay global
- useEffect(() => {
-   if (!invitationModalVisible) return;
-   if (!inviteModalReady) return;
-   hideRootInviteHandoff();
-   setInviteLoading(false);
-   setDeeplinkBooting(false);
- }, [invitationModalVisible, inviteModalReady, hideRootInviteHandoff]);
- const processedInviteIdsRef = useRef<Set<string>>(new Set());
- const inviteOpenGuardRef = useRef(false);
- const suppressInboxInvitesRef = useRef(false);
-
-useEffect(() => {
-  if (!params?.invite) return;
-  suppressInboxInvitesRef.current = true;
-  const t = setTimeout(() => {
-    suppressInboxInvitesRef.current = false;
-  }, 4000);
-  return () => clearTimeout(t);
-}, [params?.invite]);
  const autoSendInviteOnceRef = useRef(false);
- const markInviteAsHandled = useCallback((inviteId?: string | null) => {
-  if (!inviteId) return;
-
-  // Marque l'ID comme traitée pour ne jamais ré-ouvrir le modal
-  processedInviteIdsRef.current.add(inviteId);
-
-  // Nettoie l'état local si c'est la même invite
-  setInvitation((prev) => (prev?.id === inviteId ? null : prev));
-}, []);
-
-
-  
   const id = params.id || "";
 const isReload = !!(params as any)?.reload;
 const shouldEnterAnim =
@@ -781,49 +477,6 @@ const shouldEnterAnim =
   } = useCurrentChallenges();
   const lastIntroKeyRef = useRef<string | null>(null);
 
-  // ✅ Nettoyage param invite sans casser la stack (si possible)
-const clearInviteParam = useCallback(() => {
-  try {
-    // expo-router récent : setParams existe
-    // @ts-ignore
-    router.setParams?.({ invite: undefined });
-    return;
-  } catch {}
-  // fallback (moins idéal) : replace "propre"
-  try {
-    if (id) router.replace(`/challenge-details/${id}` as any);
-  } catch {}
-}, [router, id]);
-
-// ✅ Close atomique : ferme modal + coupe tous les overlays deeplink + marque l'invite
-const closeInviteFlow = useCallback((handledId?: string | null) => {
-  const toHandle = handledId ?? invitation?.id ?? params?.invite ?? null;
-
-  // 1) stop blocking states FIRST
-  setInviteLoading(false);
-  setDeeplinkBooting(false);
-  try { hideRootInviteHandoff(); } catch {}
-
-  // 2) mark handled to prevent re-open
-  try { markInviteAsHandled(toHandle); } catch {}
-
-  // 3) close + cleanup
-  setInvitationModalVisible(false);
-  setInvitation(null);
-  setInviteModalReady(false);
-
-  // 4) remove param / clean URL
-  try { clearInviteParam(); } catch {}
-}, [
-  invitation?.id,
-  params?.invite,
-  markInviteAsHandled,
-  hideRootInviteHandoff,
-  clearInviteParam,
-]);
-
-
-  // ---------------------------------------------------------------------------
   // Refs pour éviter les closures stale (events -> ouverture MomentModal)
   // ---------------------------------------------------------------------------
   const activeEntryRef = useRef<any>(null);
@@ -836,15 +489,6 @@ const closeInviteFlow = useCallback((handledId?: string | null) => {
   useEffect(() => {
     activeEntryRef.current = activeEntry;
   }, [activeEntry]);
-
-  useEffect(() => {
-  if (invitationModalVisible) return;
-
-  // 🔥 Hard stop : après fermeture du modal, rien ne doit bloquer l'écran
-  setInviteLoading(false);
-  setDeeplinkBooting(false);
-  try { hideRootInviteHandoff(); } catch {}
-}, [invitationModalVisible, hideRootInviteHandoff]);
 
 // ✅ Résout UNE seule entrée "courante" avec priorité DUO (si présente)
  const currentChallenge = useMemo(() => {
@@ -873,13 +517,11 @@ const closeInviteFlow = useCallback((handledId?: string | null) => {
 
   const [duoChallengeData, setDuoChallengeData] =
     useState<DuoChallengeData | null>(null);
-
   const [showReviews, setShowReviews] = useState(false);
   const [challengeImage, setChallengeImage] = useState<string | null>(null);
   const [daysOptions, setDaysOptions] = useState<number[]>([
     7, 14, 21, 30, 60, 90, 180, 365,
   ]);
-  
 
   const [routeTitle, setRouteTitle] = useState(
     params.title || t("challengeDetails.untitled")
@@ -892,8 +534,6 @@ const closeInviteFlow = useCallback((handledId?: string | null) => {
     params.description || t("challengeDetails.noDescription")
   );
     const [loading, setLoading] = useState(true);
-
-  
   const [myAvatar, setMyAvatar] = useState<string>("");
   const [myName, setMyName] = useState<string>("");
   const [myIsPioneer, setMyIsPioneer] = useState(false);
@@ -908,7 +548,6 @@ const assetsReady =
   const [finalSelectedDays, setFinalSelectedDays] = useState<number>(0);
   const [finalCompletedDays, setFinalCompletedDays] = useState<number>(0);
   const [userCount, setUserCount] = useState(0);
-  const [modalVisible, setModalVisible] = useState(false);
   const [completionModalVisible, setCompletionModalVisible] = useState(false);
   const [statsModalVisible, setStatsModalVisible] = useState(false);
   const [pendingFavorite, setPendingFavorite] = useState<boolean | null>(null);
@@ -921,16 +560,11 @@ const hasHelper = useMemo(
   () => !!(challenge && challenge.chatId && challenge.approved === true),
   [challenge]
 );
-const [introBlocking, setIntroBlocking] = useState(false); // blocks UI & hides StatusBar while true
-const fadeOpacity = useSharedValue(1); // pour fade-out
+const [introBlocking, setIntroBlocking] = useState(false);
+const fadeOpacity = useSharedValue(1); 
 const shakeMy = useSharedValue(0);
 const shakePartner = useSharedValue(0);
 const [shareCardVisible, setShareCardVisible] = useState(false);
-
-  
- /* -------------------------------------------------------------------------- */
-  /*                           CLAIM (stable refs)                               */
-  /* -------------------------------------------------------------------------- */
   const claimWithoutAdRef = useRef<(() => Promise<void>) | null>(null);
   const claimWithAdRef = useRef<(() => Promise<void>) | null>(null);
 
@@ -960,208 +594,30 @@ const [shareCardVisible, setShareCardVisible] = useState(false);
     claimWithAdRef.current = handleClaimTrophiesWithAd;
   }, [handleClaimTrophiesWithoutAd, handleClaimTrophiesWithAd]);
 
-  // ✅ Quand le modal devient visible => on repart "not ready" (sinon états incohérents)
-  useEffect(() => {
-    if (!invitationModalVisible) return;
-    setInviteModalReady(false);
-  }, [invitationModalVisible]);
-
-  // ✅ Fail-safe : si pour une raison quelconque onLoaded ne remonte pas,
-// on ne laisse JAMAIS un overlay bloquer l'écran.
-useEffect(() => {
-  if (!invitationModalVisible) return;
-  const t = setTimeout(() => {
-    hideRootInviteHandoff();
-    setInviteLoading(false);
-    setDeeplinkBooting(false);
-  }, 1000);
-  return () => clearTimeout(t);
-}, [invitationModalVisible, hideRootInviteHandoff]);
-
-  // ✅ Dès que le modal est visible ET prêt => on coupe l’overlay global + états deeplink
-  useEffect(() => {
-    if (!invitationModalVisible) return;
-    if (!inviteModalReady) return;
-    hideRootInviteHandoff();
-    setInviteLoading(false);
-    setDeeplinkBooting(false);
-  }, [invitationModalVisible, inviteModalReady, hideRootInviteHandoff]);
-
   const QUICK_TEXT = "#0B0B10";                 // lisible sur glass blanc
 const QUICK_TEXT_DISABLED = "rgba(11,11,16,0.45)";
 const QUICK_SHADOW = "rgba(255,255,255,0.65)";
-
 const QUICK_ICON = "#0B0B10";
 const QUICK_ICON_DISABLED = "rgba(11,11,16,0.35)";
-
-// ACTIVE (Save)
 const QUICK_ACTIVE = ACCENT.solid;
 const QUICK_ACTIVE_SHADOW = "rgba(0,0,0,0.20)";
 
-/* -------------------------------------------------------------------------- */
-  /*                               REWARDED (PARENT)                            */
-  /* -------------------------------------------------------------------------- */
-  const rewardedRef = useRef<RewardedAd | null>(null);
-  const rewardedEarnedRef = useRef(false);
-  const [rewardedLoaded, setRewardedLoaded] = useState(false);
-  const [rewardedLoading, setRewardedLoading] = useState(false);
-  const [rewardedShowing, setRewardedShowing] = useState(false);
-
- // ✅ AdUnit stable + PROD ready (évite "TestIds en prod" + évite runtime crash si missing)
-  // ⚠️ Branche EXACTEMENT comme ton index (même source). Ici: EXPO_PUBLIC_ADMOB_REWARDED_DETAILS
-  const REWARDED_UNIT_ID = useMemo(() => {
-    const prod =
-      (process.env.EXPO_PUBLIC_ADMOB_REWARDED_DETAILS as string | undefined) ||
-      (process.env.EXPO_PUBLIC_ADMOB_REWARDED as string | undefined) ||
-      "";
-    return __DEV__ ? TestIds.REWARDED : (prod || TestIds.REWARDED);
-  }, []);
-
-  const ensureRewardedInstance = useCallback(() => {
-    if (rewardedRef.current) return rewardedRef.current;
-    const ad = RewardedAd.createForAdRequest(REWARDED_UNIT_ID, {
-      requestNonPersonalizedAdsOnly: true,
-    });
-    rewardedRef.current = ad;
-    return ad;
-  }, [REWARDED_UNIT_ID]);
-
- const loadRewarded = useCallback(() => {
-    if (!showBanners) return;
-    if (rewardedLoaded || rewardedLoading) return;
-    const ad = ensureRewardedInstance();
-    rewardedEarnedRef.current = false;
-    setRewardedLoading(true);
-    try { ad.load(); } catch { setRewardedLoading(false); }
-  }, [ensureRewardedInstance, rewardedLoaded, rewardedLoading, showBanners]);
-
-  // ✅ cleanup hard (évite instance/listerners fantômes sur nav back/forward)
-  useEffect(() => {
-    return () => {
-      rewardedRef.current = null;
-      rewardedEarnedRef.current = false;
-    };
-  }, []);
-
-  useEffect(() => {
-    if (!showBanners) {
-      // ✅ reset clean si ads off
-      setRewardedLoaded(false);
-      setRewardedLoading(false);
-      setRewardedShowing(false);
-      rewardedEarnedRef.current = false;
-      return;
-    }
-
-    const ad = ensureRewardedInstance();
-
-    const unsubLoaded = ad.addAdEventListener(RewardedAdEventType.LOADED, () => {
-      setRewardedLoaded(true);
-      setRewardedLoading(false);
-    });
-
-    const unsubEarned = ad.addAdEventListener(
-      RewardedAdEventType.EARNED_REWARD,
-      () => {
-        rewardedEarnedRef.current = true;
-      }
-    );
-
-    const unsubClosed = ad.addAdEventListener(AdEventType.CLOSED, () => {
-      setRewardedShowing(false);
-      setRewardedLoaded(false);
-      setRewardedLoading(false);
-
-      // ✅ on déclenche le claim UNIQUEMENT si reward a été gagné
-      if (rewardedEarnedRef.current) {
-        rewardedEarnedRef.current = false;
-        // IMPORTANT : on fait le claim ici (comme l’exemple index)
-        claimWithAdRef.current?.().catch(() => {});
-      }
-
-      // preload next
-      requestAnimationFrame(() => { try { ad.load(); } catch {} });
-    });
-
-    const unsubErr = ad.addAdEventListener(AdEventType.ERROR, () => {
-      setRewardedShowing(false);
-      setRewardedLoaded(false);
-      setRewardedLoading(false);
-      rewardedEarnedRef.current = false;
-      // retry soft
-      setTimeout(() => {
-        try {
-          ad.load();
-        } catch {}
-      }, 900);
-    });
-
-    // preload initial
-    try {
-      ad.load();
-    } catch {}
-
-    return () => {
-      unsubLoaded();
-      unsubEarned();
-      unsubClosed();
-      unsubErr();
-    };
-  }, [ensureRewardedInstance, showBanners]);
-
-  // quand le modal s'ouvre => on s'assure que c'est preload
-  useEffect(() => {
-    if (!completionModalVisible) return;
-    loadRewarded();
-  }, [completionModalVisible, loadRewarded]);
-
-  const showRewarded = useCallback(async () => {
-    if (!showBanners) {
-      // Ads off -> fallback direct
-     await claimWithAdRef.current?.();
-      return;
-    }
-
-    const ad = ensureRewardedInstance();
-    rewardedEarnedRef.current = false;
-
-    // pas prêt ? on tente un load + message UX
-    if (!rewardedLoaded) {
-      loadRewarded();
-      Alert.alert(
-        t("commonS.loading", { defaultValue: "Chargement…" }),
-        t("commonS.tryAgainInSeconds", {
-          defaultValue: "La vidéo se prépare. Réessaie dans quelques secondes.",
-        })
-      );
-      return;
-    }
-
-    try {
-      setRewardedShowing(true);
-      await ad.show();
-    } catch (e) {
-      setRewardedShowing(false);
-      setRewardedLoaded(false);
-      setRewardedLoading(false);
-      rewardedEarnedRef.current = false;
-      loadRewarded();
-      Alert.alert(
-        t("alerts.error"),
-        t("adsS.rewardedFailed", { defaultValue: "La vidéo n’a pas pu se lancer." })
-      );
-    }
-  }, [
-    ensureRewardedInstance,
-    rewardedLoaded,
-    loadRewarded,
-    showBanners,
-    t,
-  ]);
+const {
+  rewardedLoaded,
+  rewardedLoading,
+  rewardedShowing,
+  loadRewarded,
+  showRewarded,
+  rewardedAdUnitId,
+} = useRewardedDetailsAd({
+  showBanners,
+  completionModalVisible,
+  t,
+  onClaim: () => claimWithAdRef.current?.().catch(() => {}),
+});
 
 const popMy = useSharedValue(0);
 const popPartner = useSharedValue(0);
-
 const [reduceMotion, setReduceMotion] = useState(false);
 useEffect(() => {
   let sub: any;
@@ -1189,19 +645,6 @@ const isHydrating = useMemo(
   [challenge, loading]
 );
 
-useEffect(() => {
-  if (!isHydrating) return;
-  if (deeplinkBooting) return;
-
-  const timeout = setTimeout(() => {
-    // Hard fail-safe : on coupe le chargement si Firestore traîne
-    setLoading(false);
-  }, 2500);
-
-  return () => clearTimeout(timeout);
-}, [isHydrating, deeplinkBooting]);
-
-
  const challengeTaken = !!currentChallenge;
  const challengeTakenOptimistic = challengeTaken || justJoinedRef.current;
 
@@ -1223,6 +666,15 @@ useEffect(() => {
  const isSoloInThisChallenge = !!currentChallenge && !isDuo;
  const isDuoPendingOut = (!isDuo) && (pendingOutLock || !!outgoingPendingInvite?.id);
 
+ const { handleCancelPendingInvite } = useOutgoingInvite({
+  id,
+  pendingOutLock,
+  setPendingOutLock,
+  outgoingPendingInvite,
+  setOutgoingPendingInvite,
+  isDuoPendingOut,
+  t,
+});
 
  useEffect(() => {
   if (!isDuoPendingOut) {
@@ -1238,107 +690,6 @@ useEffect(() => {
    false
   );
 }, [isDuoPendingOut, duoPendingPulse]);
-
-useEffect(() => {
-  const sub = DeviceEventEmitter.addListener(MISSED_FLOW_EVENT, (payload: any) => {
-    // payload typique: { challengeId, visible: true/false } ou juste { challengeId }
-    if (!payload) return;
-    if (payload.challengeId && payload.challengeId !== id) return;
-
-    // si tu envoies explicitement visible:
-    if (typeof payload.visible === "boolean") {
-      setMissedChallengeVisible(payload.visible);
-      return;
-    }
-
-    // fallback: l’event signifie "missed flow démarre"
-    setMissedChallengeVisible(true);
-  });
-
-  return () => sub?.remove?.();
-}, [id]);
-
-// ✅ Après résolution du MissedChallengeModal (streak pass / trophées / etc),
-// on ouvre le MomentModal (solo/duo) une fois que la donnée "marquée" est bien sync.
-useEffect(() => {
-  const sub = DeviceEventEmitter.addListener(MARK_RESOLVED_EVENT, (p: any) => {
-    if (!p) return;
-    if (p.id && p.id !== id) return;
-
-    const selectedDays = Number(p.selectedDays || finalSelectedDaysRef.current || 0);
-    if (!selectedDays) return;
-
-    // tentative "safe" : on attend que le missed flow soit bien fermé + que isMarkedToday devienne true
-    const tryOpen = (attempt = 0) => {
-      // 1) si missed flow encore visible, on attend
-      if ((globalThis as any).__MISSED_VISIBLE__ === true || missedChallengeVisible) {
-        if (attempt < 18) setTimeout(() => tryOpen(attempt + 1), 60);
-        return;
-      }
-
-      // 2) si pas encore marqué côté UI (snapshot pas encore arrivé), on attend un peu
-      if (!isMarkedToday(id, selectedDays)) {
-        if (attempt < 18) setTimeout(() => tryOpen(attempt + 1), 60);
-        return;
-      }
-
-      // 3) lire la meilleure source (ref) pour récupérer dayIndex/streak
-      const entry = activeEntryRef.current;
-      const totalDays = Number(selectedDays || entry?.selectedDays || 0) || 0;
-      const dayIndex =
-        Number(entry?.completedDays) ||
-        Number(finalCompletedDays) ||
-        0;
-      const streak = typeof entry?.streak === "number" ? entry.streak : undefined;
-
-      // ✅ LAST DAY => Completion only (jamais Moment)
-      if (totalDays > 0 && dayIndex >= totalDays) {
-        setSoloMomentVisible(false);
-        setDuoMomentVisible(false);
-        requestAnimationFrame(() => {
-          setCompletionModalVisible(true);
-        });
-        return;
-      }
-
-      // 4) ouvrir le bon modal
-      if (isDuoRef.current) {
-  const partner = duoChallengeDataRef.current?.duoUser;
-
-  setDuoMomentPayload(
-    buildDuoMomentPayload({
-      action: p.action,
-      streak,
-      myDone: dayIndex,
-      myTotal: totalDays,
-      partnerName: partner?.name,
-      partnerAvatar: partner?.avatar,
-      partnerDone: partner?.completedDays,
-      partnerTotal: partner?.selectedDays,
-    })
-  );
-  setDuoMomentVisible(true);
-  return;
-}
-      setSoloMomentDayIndex(dayIndex);
-      setSoloMomentTotalDays(totalDays);
-      setSoloMomentStreak(streak);
-      setSoloMomentVariant("daily");
-      setSoloMomentVisible(true);
-    };
-
-    // on laisse 1 tick pour que l’UI ferme le modal missed + que le snapshot arrive
-    setTimeout(() => tryOpen(0), 0);
-  });
-
-  return () => sub?.remove?.();
-}, [
-  id,
-  missedChallengeVisible,
-  isMarkedToday,
-  finalCompletedDays,
-  setDuoMomentPayload,
-]);
 
 const isDisabledMark = marking || isMarkedToday(id, finalSelectedDays);
 const warmupDisabled = warmupDoneToday || warmupLoading;
@@ -1404,7 +755,6 @@ useEffect(() => {
   finalCompletedDays,
 ]);
 
-
   // ⚙️ Pré-sélection depuis le deep link ?days=XX (si valide)
 useEffect(() => {
   const raw = params.days ? String(params.days) : "";
@@ -1425,7 +775,6 @@ useEffect(() => {
     setLocalSelectedDays(n);
   }
 }, [params.days, daysOptions]);
-
 
 const resetSoloProgressIfNeeded = useCallback(async () => {
   try {
@@ -1480,17 +829,6 @@ const confirmSwitchToDuo = useCallback(async () => {
   }
 }, [t]);
 
-const cancelSwitchToDuo = useCallback(() => {
-  setConfirmResetVisible(false);
-}, []);
-
-
-
-const lang = useMemo(
-  () => String(i18n?.language || "fr").split("-")[0].toLowerCase(),
-  [i18n?.language]
-);
-
 const fadeStyle = useAnimatedStyle<ViewStyle>(() => ({
   opacity: fadeOpacity.value,
 }));
@@ -1513,7 +851,6 @@ const pulseStyle = useAnimatedStyle<ViewStyle>(() => ({
   transform: [{ scale: interpolate(leaderPulse.value, [0, 1], [1, 1.08]) }],
   opacity: 1, // ✅ NE JAMAIS baisser la couronne
 }));
-
 
 useEffect(() => {
   if (!isDuo) return;
@@ -1566,7 +903,6 @@ const startVsIntro = useCallback(() => {
     });
     return;
   }
-
   // petit "impact" haptique premium
   Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium).catch(() => {});
 
@@ -1642,7 +978,6 @@ useEffect(() => {
   Image.prefetch(pa);
 }, [introVisible, myAvatar, partnerAvatar, myName, duoChallengeData?.duoUser?.name]);
 
-
 useEffect(() => {
   if (!introVisible) return;
 
@@ -1695,393 +1030,106 @@ useEffect(() => {
   };
 }, [introVisible, assetsReady, startVsIntro]);
 
-
-// Résout une URL d'avatar quelle que soit la forme : http(s) (Firebase ou non), gs://, ou path Storage
-const resolveAvatarUrl = useCallback(async (raw?: string): Promise<string> => {
-  if (!raw) return "";
-  const url = raw.trim();
-
-  // Déjà http(s)
-  if (url.startsWith("http")) {
-    try {
-      const u = new URL(url);
-      const isFirebase =
-        u.hostname.includes("firebasestorage.googleapis.com") &&
-        u.pathname.includes("/o/");
-      if (!isFirebase) {
-        // Pas une URL Firebase Storage signée -> garder telle quelle
-        return url;
-      }
-      // Regénérer un lien frais (token) depuis le path encodé après /o/
-      const idx = u.pathname.indexOf("/o/");
-      if (idx === -1) return url;
-      const encodedPath = u.pathname.substring(idx + 3);
-      const objectPath = decodeURIComponent(encodedPath.replace(/^\//, ""));
-      const r = ref(storage, objectPath);
-      return await getDownloadURL(r);
-    } catch {
-      return url;
-    }
-  }
-
-  // gs://... ou chemin Storage
-  try {
-    const r = ref(storage, url);
-    return await getDownloadURL(r);
-  } catch {
-    return "";
-  }
-}, []);
-
-useEffect(() => {
-  const uid = auth.currentUser?.uid;
-  if (!uid || !id) return;
-
-  // On garde ici ce qui a déjà été traité (deeplink + modal déjà ouvert)
-  const alreadyProcessed = processedInviteIdsRef.current;
-
-  // 🧩 On essaie d'abord la requête "propre" avec status == pending + challengeId
-  const baseQuery = query(
-    collection(db, "invitations"),
-    where("inviteeId", "==", uid),
-    where("status", "==", "pending"),
-    where("challengeId", "==", id)
-  );
-
-  let fallbackUnsub: (() => void) | undefined;
-
-  const unsubMain = onSnapshot(
-    baseQuery,
-    (snap) => {
-      snap.docChanges().forEach((change) => {
-        const docId = change.doc.id;
-        const data = change.doc.data() as any;
-
-        // ✅ On ne traite que les "added" (pas les removed/modified)
-        if (change.type !== "added") return;
-
-         // ✅ Si on est en train de traiter un deeplink (?invite=),
-       // on laisse openFromParamOrUrl gérer pour éviter double-open.
-       if (suppressInboxInvitesRef.current) return;
-
-        // ✅ Si déjà traité par un deeplink ou un précédent affichage, on ignore
-        if (alreadyProcessed.has(docId)) return;
-
-        // Juste au cas où : status & challengeId
-        if (data.status !== "pending") return;
-        if (data.challengeId !== id) return;
-
-        processedInviteIdsRef.current.add(docId);
-        setInvitation({ id: docId });
-        setInviteModalReady(false);
-        setInvitationModalVisible(true);
-      });
-    },
-    (err) => {
-      console.warn(
-        "⚠️ Snapshot invitations (query complète) a échoué, fallback sans index :",
-        err?.message || err
-      );
-
-      // 🔁 Fallback : on écoute juste inviteeId et on filtre en JS
-      const qFallback = query(
-        collection(db, "invitations"),
-        where("inviteeId", "==", uid)
-      );
-
-      fallbackUnsub = onSnapshot(qFallback, (snap2) => {
-        snap2.docChanges().forEach((change) => {
-          const docId = change.doc.id;
-          const data = change.doc.data() as any;
-
-          if (alreadyProcessed.has(docId)) return;
-          if (data.status !== "pending") return;
-          if (data.challengeId !== id) return;
-          if (change.type !== "added" && change.type !== "modified") return;
-
-          processedInviteIdsRef.current.add(docId);
-          setInvitation({ id: docId });
-          setInviteModalReady(false);
-          setInvitationModalVisible(true);
-        });
-      });
-    }
-  );
-
-  // 🔍 Vérif immédiate au montage (sans attendre un changement)
-  (async () => {
-    try {
-      const snap = await getDocs(
-        query(
-          collection(db, "invitations"),
-          where("inviteeId", "==", uid),
-          where("status", "==", "pending"),
-          where("challengeId", "==", id)
-        )
-      );
-
-      snap.forEach((d) => {
-        const docId = d.id;
-        const data = d.data() as any;
-
-        if (alreadyProcessed.has(docId)) return;
-        if (data.status !== "pending") return;
-        if (data.challengeId !== id) return;
-
-        processedInviteIdsRef.current.add(docId);
-        setInvitation({ id: docId });
-        setInviteModalReady(false);
-        setInvitationModalVisible(true);
-      });
-    } catch (e) {
-      console.error("❌ Vérif immédiate invitations échouée:", e);
-    }
-  })();
-
-  return () => {
-    unsubMain();
-    fallbackUnsub?.();
-  };
-}, [id]);
-
-useEffect(() => {
-  const uid = auth.currentUser?.uid;
-  if (!uid || !id) return;
-
-  const userRef = doc(db, "users", uid);
-
-  const unsub = onSnapshot(
-    userRef,
-    (snap) => {
-      let data = snap.data() as any;
-      // ✅ Warmup state (ne dépend pas de CurrentChallenges)
-// - Nouveau storage: data.warmup
-// - Rétro-compat: data.warmups (legacy)
-try {
-  const k = warmupDayKeyLocal();
-
-  const warmupNew = data?.warmup || {};
-  const warmupLegacy = data?.warmups || {};
-
-  const done =
-    !!warmupNew?.[k]?.[id] ||
-    !!warmupLegacy?.[k]?.[id];
-
-  setWarmupDoneToday(done);
-} catch {}
-
-
-      const list: any[] = Array.isArray(data?.CurrentChallenges)
-        ? data.CurrentChallenges
-        : [];
-
-      // ✅ Match toutes les entrées liées à ce challenge
-      const matches = list.filter((c) => {
-        const cid = c?.challengeId ?? c?.id;
-        return cid === id;
-      });
-
-      // ✅ Résolution déterministe de l'entrée "active"
-      // 1) Priorité au uniqueKey si on en a un (évite de tomber sur une vieille entrée solo)
-      // 2) Sinon: duo > solo (même logique)
-      // 3) En solo: on prend la durée courante (selectedDays) si possible
-      const preferredUniqueKey =
-        (currentChallenge as any)?.uniqueKey ||
-        (duoState as any)?.uniqueKey ||
-        null;
-
-      const preferredDaysRaw =
-        (currentChallenge as any)?.selectedDays ??
-        finalSelectedDays ??
-        localSelectedDays ??
-        0;
-      const preferredDays = Number(preferredDaysRaw) || 0;
-
-      const byKey =
-        preferredUniqueKey
-          ? matches.find((m) => !!m?.uniqueKey && m.uniqueKey === preferredUniqueKey)
-          : undefined;
-
-      const duoEntry = matches.find((m) => !!m.duo);
-      const soloByDays =
-        preferredDays > 0
-          ? matches.find((m) => !m.duo && Number(m?.selectedDays || 0) === preferredDays)
-          : undefined;
-      const firstSolo = matches.find((m) => !m.duo);
-
-      // ✅ si duo existe -> duo, sinon la meilleure solo
-      const entry = byKey || duoEntry || soloByDays || firstSolo || matches[0];
-      setActiveEntry(entry);
-
-
-      if (!entry) {
-        setDuoState((prev) => (prev?.enabled ? { enabled: false } : prev));
-        return;
-      }
-
-      // 🧹 Auto-cleanup : si duo + solo coexistent, on supprime solo
-      if (
-        matches.length > 1 &&
-        matches.some((m) => !!m.duo) &&
-        matches.some((m) => !m.duo) &&
-        !cleanupSoloRef.current
-      ) {
-        cleanupSoloRef.current = true;
-
-        runTransaction(db, async (tx) => {
-          const snap2 = await tx.get(userRef);
-          if (!snap2.exists()) return;
-          const data2 = snap2.data() as any;
-          const list2: any[] = Array.isArray(data2?.CurrentChallenges)
-            ? data2.CurrentChallenges
-            : [];
-          const cleaned = list2.filter((c) => {
-            const cid = c?.challengeId ?? c?.id;
-            // garde tout sauf SOLO de ce challenge quand DUO existe
-            if (cid === id && !c?.duo) return false;
-            return true;
-          });
-          tx.update(userRef, { CurrentChallenges: cleaned });
-        })
-          .catch((e) => console.warn("cleanup solo failed (non bloquant):", e))
-          .finally(() => {
-            cleanupSoloRef.current = false;
-          });
-      }
-
-// Toujours garder ces deux-là sync depuis Firestore (cast SAFE)
-const sel = Number(entry?.selectedDays ?? 0);
-setFinalSelectedDays(Number.isFinite(sel) && sel > 0 ? sel : 0);
-
-// ✅ completedDays robuste (cast SAFE)
-let computedCompleted = 0;
-const rawCompleted = entry?.completedDays;
-
-if (typeof rawCompleted === "number") {
-  computedCompleted = rawCompleted;
-} else if (typeof rawCompleted === "string") {
-  const n = Number(rawCompleted);
-  computedCompleted = Number.isFinite(n) ? n : 0;
-} else if (Array.isArray(entry?.completionDates)) {
-  computedCompleted = entry.completionDates.length;
-}
-
-setFinalCompletedDays(
-  Number.isFinite(computedCompleted) && computedCompleted >= 0 ? computedCompleted : 0
+const resolveAvatarUrl = useCallback(
+  async (raw?: string) => resolveAvatarUrlUtil(storage, raw),
+  [storage]
 );
 
+const {
+  deeplinkBooting,
+  inviteLoading,
+  inviteModalReady,
+  invitationModalVisible,
+  invitation,
 
+  setDeeplinkBooting,
+  setInviteLoading,
+  setInviteModalReady,
+  setInvitationModalVisible,
+  setInvitation,
 
-      // 🧠 on recalcule le duo à partir du uniqueKey + uid courant
-      const { isDuo, duoPartnerId } = deriveDuoInfoFromUniqueKey(
-        {
-          challengeId: entry.challengeId ?? entry.id,
-          id: entry.id,
-          uniqueKey: entry.uniqueKey,
-          duo: entry.duo,
-          duoPartnerId: entry.duoPartnerId,
-          duoPartnerUsername: entry.duoPartnerUsername,
-          selectedDays: entry.selectedDays,
-        },
-        uid
-      );
+  processedInviteIdsRef,
+  suppressInboxInvitesRef,
 
-      if (isDuo && duoPartnerId) {
-        setDuoState({
-          enabled: true,
-          partnerId: duoPartnerId,
-          selectedDays: entry.selectedDays,
-          uniqueKey:
-            entry.uniqueKey ||
-            `${entry.challengeId ?? entry.id}_${entry.selectedDays}`,
-        });
-      } else {
-        setDuoState((prev) => (prev?.enabled ? { enabled: false } : prev));
-      }
-    },
-    (error) => {
-      console.error("❌ user CurrentChallenges snapshot error:", error);
-    }
-  );
+  closeInviteFlow,
+  hideRootInviteHandoff,
+} = useInviteHandoff({
+  id,
+  paramsInvite: params?.invite,
+  paramsId: params?.id,
+  router,
+  cameFromDeeplinkRef,
+});
 
-  return () => unsub();
-}, [id]);
+const forceCloseInviteUI = useCallback((inviteId?: string | null) => {
+  dlog("forceCloseInviteUI()", { inviteId, invitationModalVisible, inviteLoading, deeplinkBooting, inviteModalReady });
+
+  // 1) ferme le flow côté hook
+  try { closeInviteFlow(inviteId ?? undefined); } catch {}
+
+  // 2) hard reset local : si un state reste coincé dans le hook, on le tue ici
+  try { setInvitationModalVisible(false); } catch {}
+  try { setInvitation(null as any); } catch {}
+
+  try { setInviteLoading(false); } catch {}
+  try { setDeeplinkBooting(false); } catch {}
+  try { setInviteModalReady(false); } catch {}
+  try { hideRootInviteHandoff(); } catch {}
+}, [
+  closeInviteFlow,
+  hideRootInviteHandoff,
+  setDeeplinkBooting,
+  setInviteLoading,
+  setInviteModalReady,
+  setInvitation,
+  setInvitationModalVisible,
+]);
 
 
 useEffect(() => {
-   if (!duoState?.enabled || !duoState?.partnerId) {
-     setDuoChallengeData(null);
-     return;
-   }
-   const partnerRef = doc(db, "users", duoState.partnerId);
-   const unsub = onSnapshot(partnerRef, async (partnerSnap) => {
-     if (!partnerSnap.exists()) {
-       setDuoChallengeData(null);
-       return;
-     }
-     const partnerData = partnerSnap.data() as any;
-     const partnerName =
-       partnerData.username ||
-       partnerData.displayName ||
-       (typeof partnerData.email === "string" ? partnerData.email.split("@")[0] : "") ||
-       t("duo.partner");
-     const rawAvatar =
-       partnerData.profileImage ||
-       partnerData.avatar ||
-       partnerData.avatarUrl ||
-       partnerData.photoURL ||
-       partnerData.photoUrl ||
-       partnerData.imageUrl ||
-       "";
-     let resolvedPartnerAvatar = "";
-     try { resolvedPartnerAvatar = (await resolveAvatarUrl(rawAvatar)) || rawAvatar; } catch {}
-     if (!resolvedPartnerAvatar) {
-       resolvedPartnerAvatar = `https://ui-avatars.com/api/?name=${encodeURIComponent(partnerName || "P")}`;
-     }
+  if (!isHydrating) return;
+  if (deeplinkBooting) return;
 
-     // entrée miroir côté partenaire
-     const partnerList: any[] = Array.isArray(partnerData.CurrentChallenges)
-       ? partnerData.CurrentChallenges
-       : [];
-     const mirror = partnerList.find((c: any) => {
-  if (duoState.uniqueKey && c?.uniqueKey) return c.uniqueKey === duoState.uniqueKey;
-  const cid = c?.challengeId ?? c?.id;
-  return cid === id && c?.selectedDays === (duoState.selectedDays || 0);
+  const timeout = setTimeout(() => {
+    // Hard fail-safe : on coupe le chargement si Firestore traîne
+    setLoading(false);
+  }, 2500);
+
+  return () => clearTimeout(timeout);
+}, [isHydrating, deeplinkBooting]);
+
+useInvitesInbox({
+  id,
+  processedInviteIdsRef,
+  suppressInboxInvitesRef,
+  setInvitation,
+  setInviteModalReady,
+  setInvitationModalVisible,
 });
 
-// ✅ jours sélectionnés : miroir > duoState > 0
-const partnerSelectedDays =
-  (typeof mirror?.selectedDays === "number" && mirror.selectedDays > 0)
-    ? mirror.selectedDays
-    : (duoState.selectedDays || 0);
-
-// ✅ completedDays robuste : chiffre direct OU length de completionDates
-let partnerCompleted = 0;
-if (mirror) {
-  if (typeof mirror.completedDays === "number") {
-    partnerCompleted = mirror.completedDays;
-  } else if (Array.isArray(mirror.completionDates)) {
-    partnerCompleted = mirror.completionDates.length;
-  }
-}
-
-setPartnerAvatar(resolvedPartnerAvatar);
-setDuoChallengeData({
-  duo: true,
-  duoUser: {
-    id: duoState.partnerId,
-    name: partnerName,
-    avatar: resolvedPartnerAvatar,
-    completedDays: partnerCompleted,
-    selectedDays: partnerSelectedDays,
-    isPioneer: !!partnerData.isPioneer,
-  },
+useActiveChallengeEntry({
+  id,
+  currentChallenge,
+  duoState,
+  finalSelectedDays,
+  localSelectedDays,
+  setWarmupDoneToday,
+  setActiveEntry,
+  setDuoState,
+  setFinalSelectedDays,
+  setFinalCompletedDays,
+  cleanupSoloRef,
+  warmupDayKeyLocal,
 });
 
-   }, (e) => console.error("❌ partner onSnapshot error:", e));
-
-   return () => unsub();
- }, [duoState?.enabled, duoState?.partnerId, duoState?.selectedDays, duoState?.uniqueKey, id, t]);
+usePartnerDuoSnapshot({
+  id,
+  duoState,
+  t,
+  resolveAvatarUrl,
+  setPartnerAvatar,
+  setDuoChallengeData,
+});
 
 useEffect(() => {
   if (!id) return;
@@ -2127,8 +1175,6 @@ useEffect(() => {
   return () => unsubscribe();
 }, [id, t]);
 
-
-// Avatar du user courant
 // Avatar + Nom du user courant
 useEffect(() => {
   const run = async () => {
@@ -2180,86 +1226,7 @@ useEffect(() => {
   run();
 }, []);
 
-useEffect(() => {
-  if (!auth.currentUser?.uid || !id) return;
-
-  const q = query(
-    collection(db, "invitations"),
-    where("inviterId", "==", auth.currentUser.uid),
-    where("challengeId", "==", id)
-  );
-
-  const unsubscribe = onSnapshot(q, (snapshot) => {
-    snapshot.docChanges().forEach((change) => {
-      if (change.type !== "modified") return;
-      const data = change.doc.data();
-
-      if (data.status === "accepted") {
-  // La notif à l'inviteur est envoyée par la Cloud Function.
-  // Ici, on ne fait que le reset solo local, idempotent et sûr.
-  resetSoloProgressIfNeeded();
-}
-
-    });
-  });
-
-  return () => unsubscribe();
-}, [id, t, resetSoloProgressIfNeeded]);
-
-
-const pathname = usePathname();
-const currentUid = auth.currentUser?.uid || null;
-useEffect(() => {
-  const uid = auth.currentUser?.uid;
-  if (!uid || !id) return;
-
-  // ✅ On écoute si MOI (inviter) j’ai une invitation pending sur ce challenge
-  const qOut = query(
-    collection(db, "invitations"),
-    where("inviterId", "==", uid),
-    where("challengeId", "==", id),
-    where("status", "==", "pending"),
-    limit(1)
-  );
-
-  const unsub = onSnapshot(
-    qOut,
-    (snap) => {
-      if (snap.empty) {
-  // ✅ si on a un lock local, on garde l’optimiste (le temps que Firestore rattrape)
-  if (!pendingOutLock) setOutgoingPendingInvite(null);
-  return;
-}
-      const d = snap.docs[0];
-      const data = d.data() as any;
-      setOutgoingPendingInvite({
-        id: d.id,
-        inviteeUsername: data?.inviteeUsername ?? null,
-      });
-    },
-    () => {
-    }
-  );
-
-  return () => unsub();
-}, [id]);
-
-
-// 🆕 Helper : récupère un username propre pour stocker dans inviteeUsername
-const getInviteeUsername = useCallback(async (uid: string): Promise<string | null> => {
-  try {
-    const snap = await getDoc(doc(db, "users", uid));
-    if (!snap.exists()) return null;
-    const u = snap.data() as any;
-    return (
-      u.username ||
-      u.displayName ||
-      (typeof u.email === "string" ? u.email.split("@")[0] : null)
-    );
-  } catch {
-    return null;
-  }
-}, []);
+useInviteAcceptSync({ id, resetSoloProgressIfNeeded });
 
 const handleWarmupPress = useCallback(async () => {
   const uid = auth.currentUser?.uid;
@@ -2351,212 +1318,6 @@ const handleWarmupPress = useCallback(async () => {
   showWarmupToast,
 ]);
 
-
-
-
-useEffect(() => {
-  const openFromParamOrUrl = async (inviteParam?: string) => {
-    const idStr = String(inviteParam || "").trim();
-    if (!idStr) return;
-    if (processedInviteIdsRef.current.has(idStr)) return;
-    if (inviteOpenGuardRef.current) return; 
-    cameFromDeeplinkRef.current = true;
-
-    // 🆕 On annonce qu'on boot via deeplink d'invit
-    setDeeplinkBooting(true);
-    setInviteLoading(true);
-    inviteOpenGuardRef.current = true;
-
-    // 🆕 Flag pour savoir si on va VRAIMENT afficher le modal
-    let willShowModal = false;
-
-    // 🔐 Re-snapshot live de l'utilisateur au moment T
-    const liveUid = auth.currentUser?.uid || null;
-
-    // Pas connecté → on garde le flow login + redirect + invite
-    if (!liveUid) {
-      try {
-        const redirectTarget = `/challenge-details/${params.id || id}`;
-        const redirect = encodeURIComponent(redirectTarget);
-        router.replace(
-          `/login?redirect=${redirect}&invite=${encodeURIComponent(idStr)}` as any
-        );
-      } catch (e) {
-        console.warn("[invite] redirect to login failed:", e);
-      } finally {
-        // ❌ Pas de modal → on coupe l’overlay
-        inviteOpenGuardRef.current = false;
-        setInviteLoading(false);
-        setDeeplinkBooting(false);
-      }
-      return;
-    }
-
-    try {
-      // 🧾 Vérifie que l’invitation existe
-      const snap = await getDoc(doc(db, "invitations", idStr));
-      if (!snap.exists()) {
-        console.warn("[invite] invitation doc inexistant pour id =", idStr);
-        return;
-      }
-
-      let data = snap.data() as any;
-
-      // Invitation plus valable
-      if (data.status !== "pending") {
-        console.warn("[invite] invitation non pending, statut =", data.status);
-        return;
-      }
-
-      // 🚫 L'inviteur ne peut pas "accepter" sa propre open-invite
-      if (data.inviterId === liveUid) {
-        console.warn("[invite] user est l'inviteur, ignore le lien");
-        return;
-      }
-
-      // === CAS 1 : invitation classique (directe, avec inviteeId fixé) ===
-      if (data.kind !== "open") {
-        if (data.inviteeId !== liveUid) {
-          console.warn("[invite] doc ne concerne pas ce user (direct invite)");
-          return;
-        }
-      } else {
-        // === CAS 2 : OPEN INVITE ===
-        if (data.inviteeId && data.inviteeId !== liveUid) {
-          console.warn("[invite] open invite déjà prise par un autre user");
-          return;
-        }
-
-        if (!data.inviteeId) {
-          console.log(
-            "[invite] open invite sans inviteeId → tentative de claim pour",
-            liveUid
-          );
-
-          const inviteeUsername = liveUid
-            ? await getInviteeUsername(liveUid)
-            : null;
-
-          try {
-            await runTransaction(db, async (tx) => {
-              const ref = doc(db, "invitations", idStr);
-              const snap2 = await tx.get(ref);
-              if (!snap2.exists()) throw new Error("invite_not_found");
-
-              const d2 = snap2.data() as any;
-              if (d2.status !== "pending") throw new Error("not_pending");
-
-              // si quelqu'un l'a prise entre-temps, on stoppe
-              if (d2.inviteeId && d2.inviteeId !== liveUid) {
-                throw new Error("already_taken");
-              }
-
-              tx.update(ref, {
-                inviteeId: liveUid,
-                inviteeUsername: inviteeUsername || null,
-                updatedAt: serverTimestamp(),
-              });
-            });
-
-            console.log("[invite] open invite CLAIMED par", liveUid);
-
-            // 🔁 On recharge la version à jour (inviteeId / inviteeUsername remplis)
-            try {
-              const freshSnap = await getDoc(doc(db, "invitations", idStr));
-              if (freshSnap.exists()) {
-                data = freshSnap.data() as any;
-              }
-            } catch (e) {
-              console.warn("[invite] refresh invitation after claim failed:", e);
-            }
-          } catch (e) {
-            console.warn("[invite] claim open invite failed:", e);
-            return; // on ne montre pas de modal si on ne peut pas revendiquer
-          }
-        }
-      }
-
-      // Si le lien pointe vers un autre challenge, on redirige dessus
-      if (data.challengeId && data.challengeId !== id) {
-        try {
-          router.replace(
-            `/challenge-details/${data.challengeId}?invite=${encodeURIComponent(
-              idStr
-            )}` as any
-          );
-        } catch (e) {
-          console.warn("[invite] redirect vers bon challenge échoué:", e);
-        } finally {
-          // ❌ on ne montre pas de modal ici, ce sera géré dans l'autre screen
-          inviteOpenGuardRef.current = false;
-          setInviteLoading(false);
-          setDeeplinkBooting(false);
-        }
-        return;
-      }
-
-      // ✅ OK : on ouvre le modal une seule fois
-      processedInviteIdsRef.current.add(idStr);
-      setInvitation({ id: idStr });
-      setInviteModalReady(false);
-      setInvitationModalVisible(true);
-      willShowModal = true; // ✅ on va laisser l’overlay vivre jusqu’à onLoaded()
-
-      // Nettoie l’URL en enlevant ?invite (évite re-open au re-render)
-      try {
-        if (id) router.replace(`/challenge-details/${id}` as any);
-      } catch (e) {
-        console.warn("[invite] cleanUrl failed:", e);
-      }
-    } catch (e) {
-      console.error("❌ openFromParamOrUrl failed:", e);
-    } finally {
-      inviteOpenGuardRef.current = false;
-      if (!willShowModal) {
-        // ❌ pas de modal → on coupe l’overlay ici
-        setInviteLoading(false);
-        setDeeplinkBooting(false);
-      }
-      // ✅ si willShowModal = true → on laisse l’overlay,
-      // il sera coupé par InvitationModal.onLoaded
-    }
-  };
-
-   let urlSub: { remove?: () => void } | undefined;
-
-  // 1) Param route déjà mappé par expo-router
-  if (params?.invite) {
-    openFromParamOrUrl(String(params.invite));
-  }
-
-  // 2) Initial URL (app tuée puis ouverte via lien)
-  Linking.getInitialURL()
-    .then((initialUrl) => {
-      if (!initialUrl) return;
-      const parsed = Linking.parse(initialUrl);
-      const invite = String(parsed?.queryParams?.invite || "");
-      if (invite) openFromParamOrUrl(invite);
-    })
-    .catch((e) => console.warn("⚠️ getInitialURL error:", e));
-
-  // 3) URLs runtime (app déjà ouverte, clic depuis WhatsApp, SMS, etc.)
-  const onUrl = ({ url }: { url: string }) => {
-    try {
-      const parsed = Linking.parse(url);
-      const invite = String(parsed?.queryParams?.invite || "");
-      if (invite) openFromParamOrUrl(invite);
-    } catch (e) {
-      console.warn("⚠️ Linking url handler error:", e);
-    }
-  };
-  // ✅ évite les API divergentes (Expo/RN) + cleanup fiable
-  urlSub = (Linking as any).addEventListener?.("url", onUrl);
-
-  return () => {
-    urlSub?.remove?.();
-  };
-}, [id, params?.invite, pathname, router, getInviteeUsername, markInviteAsHandled]);
-
 const activeSelectedDays = useMemo(() => {
   const n = Number(activeEntry?.selectedDays ?? finalSelectedDays ?? 0);
   return Number.isFinite(n) && n > 0 ? n : 0;
@@ -2577,7 +1338,6 @@ const progressRatio = useMemo(() => {
   return activeSelectedDays > 0 ? Math.min(1, activeCompletedDays / activeSelectedDays) : 0;
 }, [activeCompletedDays, activeSelectedDays]);
 
-
   const isSavedChallenge = useCallback((challengeId: string) => savedIds.has(challengeId), [savedIds]);
 
   const savedNow =
@@ -2590,7 +1350,6 @@ const completions = useMemo(
   [currentChallenge?.completionDates]
 );
 
-// 🆕 Set normalisé en "YYYY-MM-DD" (supporte string & Timestamp)
 const completionSet = useMemo(() => {
   if (!Array.isArray(completions)) return new Set<string>();
 
@@ -2655,7 +1414,6 @@ const calendarDays = useMemo(() => {
   return calendar;
 }, [currentMonth, completionSet]);
 
-
  const goToPrevMonth = useCallback(() => {
     const newMonth = new Date(
       currentMonth.getFullYear(),
@@ -2683,10 +1441,6 @@ const calendarDays = useMemo(() => {
   challengeTakenOptimistic &&
   finalSelectedDays > 0 &&
   finalCompletedDays >= finalSelectedDays;
-  const progressPercent =
-    finalSelectedDays > 0
-      ? Math.min(1, finalCompletedDays / finalSelectedDays)
-      : 0;
 
       // Map la durée sélectionnée vers nos paliers d'achievements (7/30/90/180/365)
  const bucketizeDays = (n: number): 7 | 30 | 90 | 180 | 365 => {
@@ -2700,11 +1454,9 @@ const calendarDays = useMemo(() => {
   const handleTakeChallenge = useCallback(async () => {
   if (challengeTaken || !id) return;
 
-  setModalVisible(false);
+  setDurationModalVisible(false);
 
   try {
-    // 👇 spinner global c'est optionnel, mais on va surtout faire de l’optimiste
-    // setLoading(true);
 
     // 1) On récupère le challenge une fois (rapide)
     const challengeRef = doc(db, "challenges", id);
@@ -2784,57 +1536,26 @@ const calendarDays = useMemo(() => {
   }
 }, [id, challengeTaken, localSelectedDays, takeChallenge, t]);
 
-
-const openStartFlow = useCallback(() => {
-    if (challengeTakenOptimistic || !id) return;
-    // si une invite sortante est pending -> pas de re-start
-    if (isDuoPendingOut) return;
-    setStartMode(null);
-    setStartModeVisible(true);
-  }, [challengeTakenOptimistic, id, isDuoPendingOut]);
-
-  const chooseSoloThenDuration = useCallback(() => {
-    setStartMode("solo");
-    setStartModeVisible(false);
-    setModalVisible(true); // DurationSelectionModal
-  }, []);
-
-  const chooseDuoThenDuration = useCallback(() => {
-    setStartMode("duo");
-    setStartModeVisible(false);
-    setModalVisible(true); // DurationSelectionModal (même UI)
-  }, []);
-
-  const handleConfirmDurationByMode = useCallback(async () => {
-    // ⚠️ modalVisible = DurationSelectionModal
-    // On ferme d'abord pour éviter double overlays
-    setModalVisible(false);
-
-    if (startMode === "duo") {
-      // Duo = on ne prend PAS le challenge en solo.
-      // On enchaîne sur l'invitation (qui créera l'open invite) + state pending.
-      if (isOffline) {
-        Alert.alert(
-          t("common.networkError"),
-          t("firstPick.offlineDuo", {
-            defaultValue: "Connecte-toi à Internet pour inviter un ami en duo.",
-          })
-        );
-        return;
-      }
-
-      // Optimiste : on lock l'état pending out immédiatement (UX “instant”)
-      setPendingOutLock(true);
-      setOutgoingPendingInvite((prev) => prev ?? { id: "__optimistic__", inviteeUsername: null });
-
-      // Ouvre ton modal existant (il va envoyer l'invite)
-      setSendInviteVisible(true);
-      return;
-    }
-
-    // Solo = flow normal (inchangé)
-    await handleTakeChallenge();
-  }, [startMode, handleTakeChallenge, isOffline, t]);
+const {
+  startModeVisible,
+  durationModalVisible,
+  setStartModeVisible,
+  setDurationModalVisible,
+  openStartFlow,
+  pickModeThenOpenDuration,
+  handleConfirmDurationByMode,
+  cancelDuration,
+} = useStartFlow({
+  id,
+  challengeTakenOptimistic,
+  isDuoPendingOut,
+  isOffline,
+  t,
+  setPendingOutLock,
+  setOutgoingPendingInvite,
+  setSendInviteVisible,
+  handleTakeChallenge,
+});
 
   const saveBusyRef = useRef(false);
   const markBusyRef = useRef(false);
@@ -2894,7 +1615,7 @@ const handleShowCompleteModal = useCallback(() => {
   if (!finalSelectedDays || finalSelectedDays <= 0) return;
 
   // ✅ ferme les autres overlays possibles (au cas où)
-  setModalVisible(false);
+  setDurationModalVisible(false);
   setStartModeVisible(false);
 
   // ✅ next frame = évite les glitches Android sur press + modal
@@ -2902,7 +1623,6 @@ const handleShowCompleteModal = useCallback(() => {
     setCompletionModalVisible(true);
   });
 }, [id, finalSelectedDays]);
-
 
   const handleNavigateToChat = useCallback(() => {
     if (!challengeTaken ) {
@@ -2973,6 +1693,26 @@ const handleShowCompleteModal = useCallback(() => {
   []
 );
 
+useMomentGate({
+  id,
+  missedChallengeVisible,
+  setMissedChallengeVisible,
+  finalSelectedDaysRef,
+  activeEntryRef,
+  isDuoRef,
+  duoChallengeDataRef,
+  isMarkedToday,
+  finalCompletedDays,
+  setSoloMomentVisible,
+  setDuoMomentVisible,
+  setSoloMomentDayIndex,
+  setSoloMomentTotalDays,
+  setSoloMomentStreak,
+  setSoloMomentVariant,
+  setDuoMomentPayload,
+  buildDuoMomentPayload,
+  setCompletionModalVisible,
+});
 
   // ✅ Un seul point d'entrée pour ouvrir le bon modal (DUO vs SOLO)
   const openMomentModal = useCallback(
@@ -3024,138 +1764,17 @@ const handleShowCompleteModal = useCallback(() => {
   openMoment();
 }, [missedChallengeVisible]);
 
-const onCloseMissed = useCallback(() => {
-  setMissedChallengeVisible(false);
-
-  // flush deferred moment
-  const fn = openMomentAfterMissedRef.current;
-  openMomentAfterMissedRef.current = null;
-  fn?.();
-}, []);
-
-// Langue sûre pour le partage (jamais de split sur undefined)
-const getShareLang = (i18nLang?: string) => {
-  // 1) i18n si dispo
-  if (typeof i18nLang === "string" && i18nLang.length > 0) {
-    const l = i18nLang.split(/[-_]/)[0]?.toLowerCase();
-    if (l) return l;
-  }
-  // 2) Expo Localization (SDK récents)
-  try {
-    const locs = (Localization as any)?.getLocales?.();
-    if (Array.isArray(locs) && locs[0]?.languageTag) {
-      const l = String(locs[0].languageTag)
-        .split(/[-_]/)[0]
-        ?.toLowerCase();
-      if (l) return l;
-    }
-  } catch {}
-  // 3) Expo Localization (SDK anciens)
-  try {
-    const tag = (Localization as any)?.locale;
-    if (typeof tag === "string" && tag.length > 0) {
-      const l = tag.split(/[-_]/)[0]?.toLowerCase();
-      if (l) return l;
-    }
-  } catch {}
-  // 4) Web fallback éventuel (web only)
-  const navLang = (globalThis as any)?.navigator?.language;
-  if (typeof navLang === "string" && navLang.length > 0) {
-    const l = navLang.split(/[-_]/)[0]?.toLowerCase();
-    if (l) return l;
-  }
-  // 5) Défaut
-  return "en";
-};
-
-// 🔗 Construction du lien de partage 100 % safe RN/Hermes (pas de URLSearchParams)
-const buildShareUrl = (challengeId: string, title: string, lang: string) => {
-  const entries: [string, string][] = [
-    ["id", challengeId],
-    ["title", title],
-    ["lang", lang],
-    // petit cache-busting pour les aperçus (WhatsApp / iMessage)
-    ["v", String(Date.now())],
-  ];
-
-  const qs = entries
-    .filter(([, value]) => typeof value === "string" && value.length > 0)
-    .map(
-      ([k, v]) =>
-        `${encodeURIComponent(k)}=${encodeURIComponent(v)}`
-    )
-    .join("&");
-
-  return `https://links.challengeties.app/i?${qs}`;
-};
-
-const handleShareChallenge = useCallback(async () => {
-  if (!id) return;
-
-  try {
-    const shareLang = getShareLang(i18n?.language as string | undefined);
-    const safeTitle =
-      routeTitle && routeTitle.trim().length > 0
-        ? routeTitle.trim()
-        : t("challengeDetails.untitled");
-
-    const appLink = buildShareUrl(id, safeTitle, shareLang);
-    const message = `${t("challengeDetails.shareMessage", {
-      title: safeTitle,
-    })}\n${appLink}`;
-
-    // Payload compatible Android / iOS
-    const payload: any = {
-      title: t("challengeDetails.share"),
-      message,
-    };
-
-    // Sur iOS seulement, on ajoute url (Android n'en a pas besoin,
-    // et certains bridges cassent quand l'url est mal gérée)
-    if (Platform.OS === "ios") {
-      payload.url = appLink;
-    }
-
-    const result = await Share.share(payload, {
-      dialogTitle: t("challengeDetails.share"),
-    });
-
-    if (result.action === Share.sharedAction) {
-      const uid = auth.currentUser?.uid;
-      if (uid) {
-        await incStat(uid, "shareChallenge.total", 1);
-        await checkForAchievements(uid);
-      }
-    } else {
-      // Annulé → on copie le lien en fallback discret
-      try {
-        const { setStringAsync } = await import("expo-clipboard");
-        await setStringAsync(appLink);
-        Alert.alert(
-          t("challengeDetails.share"),
-          t("challengeDetails.linkCopied")
-        );
-      } catch {}
-    }
-  } catch (error: any) {
-    console.error("❌ handleShareChallenge error:", error);
-    Alert.alert(
-      t("alerts.shareError"),
-      error?.message || String(error)
-    );
-  }
-}, [id, routeTitle, t, i18n?.language]);
-
-// ✅ Single-loader rule:
-// - deeplinkBooting => root overlay only (donc on n’affiche PAS l’overlay local)
-// - overlay local uniquement hors deeplink
-const showBootOverlay =
-  !invitationModalVisible &&
-  !deeplinkBooting &&
-  (isHydrating || inviteLoading) &&
-  // ✅ si on a une invitation en cours de cleanup, jamais d'overlay
-  !inviteOpenGuardRef.current;
-
+const { showBootOverlay, loadingLabel, loadingSubLabel } = useBootOverlay({
+  invitationModalVisible,
+  inviteLoading,
+  deeplinkBooting,
+  inviteModalReady,
+  setInviteLoading,
+  setDeeplinkBooting,
+  setInviteModalReady,
+  hideRootInviteHandoff,
+  t,
+});
 
 const handleInviteFriend = useCallback(async () => {
   hapticTap();
@@ -3207,6 +1826,11 @@ const handleInviteFriend = useCallback(async () => {
 }, [id, isDuo, isSoloInThisChallenge, isOffline, t]);
 
 useEffect(() => {
+  dlog("BOOT_OVERLAY", { showBootOverlay, invitationModalVisible, inviteLoading, deeplinkBooting, inviteModalReady });
+}, [showBootOverlay, invitationModalVisible, inviteLoading, deeplinkBooting, inviteModalReady]);
+
+
+useEffect(() => {
   // 1) Pas de signal -> rien
   if (!params?.openSendInvite) return;
 
@@ -3235,6 +1859,25 @@ useEffect(() => {
   };
 }, [params?.openSendInvite, params?.invite, router, handleInviteFriend]);
 
+useEffect(() => {
+  if (invitationModalVisible) return;
+
+  // si le modal n'est plus là, on ne doit JAMAIS garder un boot overlay actif
+  setInviteModalReady(false);
+  setInviteLoading(false);
+  setDeeplinkBooting(false);
+
+  try { setInvitation(null as any); } catch {}
+  try { hideRootInviteHandoff(); } catch {}
+}, [
+  invitationModalVisible,
+  hideRootInviteHandoff,
+  setInviteModalReady,
+  setInviteLoading,
+  setDeeplinkBooting,
+  setInvitation,
+]);
+
 const handleInviteButtonPress = useCallback(() => {
   if (isDuo) {
     Alert.alert(
@@ -3248,88 +1891,10 @@ const handleInviteButtonPress = useCallback(() => {
   handleInviteFriend();
 }, [isDuo, handleInviteFriend, t]);
 
-
   const handleViewStats = useCallback(() => {
     if (!challengeTaken ) return;
     setStatsModalVisible(true);
   }, [challengeTaken ]);
-
-  const cancelOutBusyRef = useRef(false);
-
-const resolveOutgoingPendingInviteId = useCallback(async (): Promise<string | null> => {
-  // 1) si on a déjà le vrai id -> go
-  if (outgoingPendingInvite?.id && outgoingPendingInvite.id !== "__optimistic__") {
-    return outgoingPendingInvite.id;
-  }
-
-  // 2) sinon on cherche le vrai doc pending côté Firestore
-  const uid = auth.currentUser?.uid;
-  if (!uid || !id) return null;
-
-  try {
-    const snap = await getDocs(
-      query(
-        collection(db, "invitations"),
-        where("inviterId", "==", uid),
-        where("challengeId", "==", id),
-        where("status", "==", "pending"),
-        limit(1)
-      )
-    );
-    if (snap.empty) return null;
-    return snap.docs[0].id;
-  } catch {
-    return null;
-  }
-}, [outgoingPendingInvite?.id, id]);
-
-const cancelOutgoingPendingInvite = useCallback(async () => {
-  if (cancelOutBusyRef.current) return;
-  cancelOutBusyRef.current = true;
-
-  // ✅ UI instant : on retire la card pending direct (plus besoin de quitter/revenir)
-  setPendingOutLock(false);
-  setOutgoingPendingInvite(null);
-
-  try {
-    const inviteId = await resolveOutgoingPendingInviteId();
-    if (!inviteId) {
-      // Pas encore créé / déjà supprimé : côté UX c’est clean, on s’en fout
-      return;
-    }
-
-    await updateDoc(doc(db, "invitations", inviteId), {
-      status: "refused",
-      updatedAt: serverTimestamp(),
-    });
-
-    Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success).catch(() => {});
-  } catch (e) {
-    // ✅ ZÉRO message d’erreur user ici (tu l’as demandé)
-    // Si ça a échoué, le snapshot qOut re-affichera la card si l’invite est toujours pending
-    console.warn("cancelOutgoingPendingInvite failed:", e);
-  } finally {
-    cancelOutBusyRef.current = false;
-  }
-}, [resolveOutgoingPendingInviteId]);
-
-const handleCancelPendingInvite = useCallback(() => {
-  if (!isDuoPendingOut) return;
-
-  Alert.alert(
-    t("duo.pending.cancelConfirmTitle", { defaultValue: "Annuler l’invitation ?" }),
-    t("duo.pending.cancelConfirmBody", { defaultValue: "Ton ami ne pourra plus rejoindre ce duo avec ce lien." }),
-    [
-      { text: t("commonS.keep", { defaultValue: "Garder" }), style: "cancel" },
-      {
-        text: t("duo.pending.cancelInvite", { defaultValue: "Annuler l’invitation" }),
-        style: "destructive",
-        onPress: () => cancelOutgoingPendingInvite(),
-      },
-    ],
-    { cancelable: true }
-  );
-}, [isDuoPendingOut, cancelOutgoingPendingInvite, t]);
 
 const handleMarkTodayPress = useCallback(async () => {
   if (!id || !challengeTaken) return;
@@ -3442,29 +2007,11 @@ if (res?.completed || (cap > 0 && optimisticNext >= cap)) {
   tryOpenMomentOrDefer,
 ]);
 
-
-  const pickModeThenOpenDuration = useCallback(
-    (mode: "solo" | "duo") => {
-      setStartMode(mode);
-      setStartModeVisible(false);
-      setModalVisible(true); // ton DurationSelectionModal
-    },
-    []
-  );
-
   // 🆕 styles/objets stables pour ScrollView afin d’éviter re-renders
 const scrollContentStyle = useMemo(
   () => [styles.scrollPad, { paddingBottom: bottomInset + SPACING }],
   [bottomInset]
 );
-
-  const loadingLabel = inviteLoading || (deeplinkBooting && !inviteModalReady)
-    ? t("challengeDetails.loadingInvite", {
-        defaultValue: "Ouverture de l’invitation…",
-      })
-    : t("challengeDetails.loading", {
-        defaultValue: "Chargement du défi…",
-      });
 
   return (
     <LinearGradient
@@ -3996,9 +2543,6 @@ const scrollContentStyle = useMemo(
     ]}
   />
 </View>
-
-
-
         {/* Mini stats */}
         <View style={{ flexDirection: "row", justifyContent: "center", marginTop: 6 }}>
           <Text
@@ -4229,10 +2773,6 @@ const scrollContentStyle = useMemo(
     </View>
   );
 })()}
-
-
-
-
     {/* Bouton marquer aujourd'hui (commun) */}
         <TouchableOpacity
       style={styles.markTodayButton}
@@ -4290,7 +2830,6 @@ const scrollContentStyle = useMemo(
 
   </Animated.View>
 )}
-
 
            {hasHelper && (
   <Animated.View
@@ -4571,8 +3110,6 @@ const scrollContentStyle = useMemo(
 
 
 </View>
-
-
         </LinearGradient>
           </BlurView>
         </Animated.View>
@@ -4595,19 +3132,15 @@ const scrollContentStyle = useMemo(
   secondaryColor={currentTheme.colors.secondary}
 />
 
-      <DurationSelectionModal
-        visible={modalVisible}
-        daysOptions={daysOptions}
-        selectedDays={localSelectedDays}
-        onSelectDays={setLocalSelectedDays}
-        onConfirm={handleConfirmDurationByMode}
-        onCancel={() => {
-   setModalVisible(false);
-   // retour mode selection = UX premium (pas wtf)
-   setStartModeVisible(true);
- }}
-        dayIcons={dayIcons}
-      />
+<DurationSelectionModal
+  visible={durationModalVisible}
+  daysOptions={daysOptions}
+  selectedDays={localSelectedDays}
+  onSelectDays={setLocalSelectedDays}
+  onConfirm={handleConfirmDurationByMode}
+  onCancel={cancelDuration}
+  dayIcons={dayIcons}
+/>
 
       <ChallengeCompletionModal
   visible={completionModalVisible}
@@ -4615,7 +3148,7 @@ const scrollContentStyle = useMemo(
   selectedDays={finalSelectedDays}
   onClose={() => setCompletionModalVisible(false)}
   onPreloadRewarded={loadRewarded}
-  rewardedAdUnitId={REWARDED_UNIT_ID}
+  rewardedAdUnitId={rewardedAdUnitId}
   onShowRewarded={async () => {
     try {
       await showRewarded();
@@ -4628,8 +3161,6 @@ const scrollContentStyle = useMemo(
   rewardedReady={rewardedLoaded}
   rewardedLoading={rewardedLoading}
 />
-
-
       <StatsModal
         visible={statsModalVisible}
         onClose={() => setStatsModalVisible(false)}
@@ -4657,23 +3188,18 @@ const scrollContentStyle = useMemo(
   </View>
 )}
 
-
       <InvitationModal
   key={invitation?.id || "no-invite"}
-    visible={invitationModalVisible}
-    inviteId={invitation?.id || null}
-    challengeId={id}
-    onClose={() => closeInviteFlow(invitation?.id)}
-    clearInvitation={() => closeInviteFlow(invitation?.id)}
-    onLoaded={() => {
-      requestAnimationFrame(() => {
-        setInviteModalReady(true);
-        setInviteLoading(false);
-        setDeeplinkBooting(false);
-        try { hideRootInviteHandoff(); } catch {}
-      });
-    }}
-  />
+  visible={invitationModalVisible}
+  inviteId={invitation?.id || null}
+  challengeId={id}
+  onClose={() => {
+  dlog("InvitationModal onClose", invitation?.id);
+  forceCloseInviteUI(invitation?.id);
+}}
+  clearInvitation={() => forceCloseInviteUI(invitation?.id)}
+  onLoaded={() => setInviteModalReady(true)}
+/>
 
  {showBootOverlay && (
   <Animated.View
@@ -4722,25 +3248,13 @@ const scrollContentStyle = useMemo(
           {loadingLabel}
         </Text>
 
-        <Text
-          style={[
-            styles.loadingSubText,
-            { color: currentTheme.colors.textSecondary },
-          ]}
-        >
-          {inviteLoading
-            ? t("challengeDetails.loadingInviteHint", {
-                defaultValue: "On prépare ton duo et la page du défi…",
-              })
-            : t("challengeDetails.loadingHint", {
-                defaultValue: "Synchronisation de tes données et du défi…",
-              })}
-        </Text>
+        <Text style={[styles.loadingSubText, { color: currentTheme.colors.textSecondary }]}>
+  {loadingSubLabel}
+</Text>
       </View>
     </View>
   </Animated.View>
 )}
-
 
 <ConfirmationDuoModal
   visible={confirmResetVisible}
@@ -4773,10 +3287,6 @@ const scrollContentStyle = useMemo(
   })}
 />
 
-
-
-
-
 <ShareCardModal
   visible={shareCardVisible}
   onClose={() => setShareCardVisible(false)}
@@ -4789,7 +3299,6 @@ const scrollContentStyle = useMemo(
   userAvatar={myAvatar}
 partnerAvatar={duoChallengeData?.duoUser?.avatar}
 partnerDaysCompleted={duoChallengeData?.duoUser?.completedDays ?? 0}
-
 />
 
 {duoMomentVisible && (
@@ -4809,8 +3318,6 @@ partnerDaysCompleted={duoChallengeData?.duoUser?.completedDays ?? 0}
   variant={soloMomentVariant}
 />
 
-
-
 <SendInvitationModal
   visible={sendInviteVisible}
   challengeId={id}
@@ -4829,7 +3336,6 @@ partnerDaysCompleted={duoChallengeData?.duoUser?.completedDays ?? 0}
   setSendInviteVisible(false);
 }}
 />
-
 
 {/* === DUO INTRO — FULLSCREEN MODAL === */}
 {introVisible && (
@@ -5001,8 +3507,18 @@ partnerDaysCompleted={duoChallengeData?.duoUser?.completedDays ?? 0}
     </BlurView>
   </Animated.View>
 )}
-
-
+<DebugHUD
+  data={{
+    showBootOverlay,
+    invitationModalVisible,
+    inviteLoading,
+    deeplinkBooting,
+    inviteModalReady,
+    introVisible,
+    introBlocking,
+    inviteId: invitation?.id ?? "—",
+  }}
+/>
       </SafeAreaView>
     </LinearGradient>
   );
@@ -5017,2255 +3533,3 @@ const getInitials = (name?: string) => {
   const b = (parts[1]?.[0] || parts[0]?.[1] || "").toUpperCase();
   return (a + b).slice(0, 2) || "CT";
 };
-
-const SmartAvatar = React.memo(function SmartAvatar({
-  uri,
-  name,
-  size = 74,
-  isDark,
-}: {
-  uri?: string | null;
-  name?: string;
-  size?: number;
-  isDark: boolean;
-}) {
-  const [failed, setFailed] = React.useState(false);
-
-  const safeUri = typeof uri === "string" ? uri.trim() : "";
-  const showImage = safeUri.length > 0 && !failed;
-  // ✅ premium tokens (dark/light)
-  const ring = isDark ? "rgba(255,255,255,0.18)" : "rgba(0,0,0,0.10)";
-  const shell = isDark ? "rgba(255,255,255,0.08)" : "rgba(0,0,0,0.04)";
-  const text = isDark ? "rgba(255,255,255,0.94)" : "rgba(0,0,0,0.86)";
-  const initials = getInitials(name);
-
-  return (
-    <View
-      style={[
-        styles.avatarShell,
-        {
-          width: size,
-          height: size,
-          borderRadius: size / 2,
-          backgroundColor: shell,
-          borderColor: ring,
-        },
-      ]}
-    >
-      {showImage ? (
-        <Image
-          source={{ uri: safeUri }}
-          style={{ width: size, height: size, borderRadius: size / 2 }}
-          onError={() => setFailed(true)}
-          fadeDuration={120}
-        />
-      ) : (
-        <LinearGradient
-          colors={
-            isDark
-              ? ["rgba(255,159,28,0.95)", "rgba(0,194,255,0.88)"]
-              : ["rgba(255,159,28,0.90)", "rgba(0,194,255,0.75)"]
-          }
-          start={{ x: 0, y: 0 }}
-          end={{ x: 1, y: 1 }}
-          style={[
-            StyleSheet.absoluteFillObject,
-            { borderRadius: size / 2, alignItems: "center", justifyContent: "center" },
-          ]}
-        >
-          {/* sheen (Keynote reflection) */}
-          <View
-            pointerEvents="none"
-            style={[
-              styles.avatarSheen,
-              {
-                borderRadius: size / 2,
-                opacity: isDark ? 0.22 : 0.28,
-              },
-            ]}
-          />
-
-          {/* initials */}
-          <Text
-  style={[
-    styles.avatarInitial,
-    {
-      color: text,
-      fontSize: Math.round(size * 0.30),
-      letterSpacing: 1.2,
-      lineHeight: Math.round(size * 0.34), // ✅ Android safe
-      textAlignVertical: "center",          // ✅ Android
-    },
-  ]}
-  numberOfLines={1}
->
-            {initials}
-          </Text>
-        </LinearGradient>
-      )}
-
-      {/* ring clean (no “cadre chelou”) */}
-      <View
-        style={[
-          styles.avatarRing,
-          { borderRadius: size / 2, borderColor: ring },
-        ]}
-        pointerEvents="none"
-      />
-      {/* specular ultra subtil */}
-      <View
-        style={[
-          styles.avatarSpecular,
-          { borderRadius: size / 2, opacity: isDark ? 0.55 : 0.40 },
-        ]}
-        pointerEvents="none"
-      />
-    </View>
-  );
-});
-
-
-// ===== /DUO UI =====
-const shadowSoft = Platform.select({
-  ios: {
-    shadowColor: "#000",
-    shadowOffset: { width: 0, height: 10 },
-    shadowOpacity: 0.18,
-    shadowRadius: 22,
-  },
-  android: {
-    elevation: 6,
-  },
-  default: {},
-});
-
-
-
-// ✅ Keynote tokens (cohérence + rendu premium)
-const R = {
-  hero: normalizeSize(30),
-  card: 26,
-  pill: 999,
-  btn: normalizeSize(22),
-};
-
-const GLASS = {
-  // plus "Apple glass", moins "gaming"
-  border: "rgba(255,255,255,0.14)",
-  borderSoft: "rgba(255,255,255,0.10)",
-  bg: "rgba(255,255,255,0.08)",
-  bgSoft: "rgba(255,255,255,0.06)",
-  bgDark: "rgba(10, 10, 15, 0.88)",
-};
-
-const ACCENT = {
-  // or plus subtil (moins “#FFD700” brut)
-  solid: "#F4D35E",
-  softBorder: "rgba(244, 211, 94, 0.35)",
-  softFill: "rgba(244, 211, 94, 0.16)",
-  glow: "rgba(244, 211, 94, 0.55)",
-};
-
-const S = {
-  // shadows plus clean (iOS) + elevation modérée (Android)
-  card: Platform.select({
-    ios: {
-      shadowColor: "#000",
-      shadowOpacity: 0.16,
-      shadowRadius: 18,
-      shadowOffset: { width: 0, height: 12 },
-    },
-    android: { elevation: 8 },
-    default: {},
-  }),
-  float: Platform.select({
-    ios: {
-      shadowColor: "#000",
-      shadowOpacity: 0.22,
-      shadowRadius: 20,
-      shadowOffset: { width: 0, height: 14 },
-    },
-    android: { elevation: 10 },
-    default: {},
-  }),
-};
-
-const styles = StyleSheet.create({
-  container: {
-    flex: 1,
-  },
-  duoPendingVsPillV2: {
-  paddingHorizontal: 10,
-  paddingVertical: 4,
-  borderRadius: 999,
-  minWidth: 44,
-  alignItems: "center",
-  justifyContent: "center",
-  zIndex: 6,
-  elevation: 6,
-  overflow: "visible",
-
-  // ✅ ajout
-  backgroundColor: "rgba(255,215,0,0.22)",
-  borderWidth: StyleSheet.hairlineWidth,
-  borderColor: "rgba(255,215,0,0.30)",
-},
-duoPendingVsTextV2: {
-  fontFamily: "Comfortaa_700Bold",
-  fontSize: 12,
-  letterSpacing: 1,
-  color: "#111",
-},
-
-  duoPendingRingV2: {
-  position: "absolute",
-  width: 56,
-  height: 56,
-  borderRadius: 56,
-  borderWidth: 1,
-  // ⛔️ avant: rgba(0,255,255,...)
-  borderColor: "rgba(255,159,28,0.30)", // ✅ orange soft
-},
-toastRoot: {
-  position: "absolute",
-  left: 0,
-  right: 0,
-  bottom: 16, // on reste au-dessus des bannières/tab bar via safeArea plus bas
-  alignItems: "center",
-  zIndex: 99999,
-},
-
-toastCard: {
-  width: "92%",
-  maxWidth: 420,
-  borderRadius: 18,
-  overflow: "hidden",
-},
-
-toastBlur: {
-  borderRadius: 18,
-  overflow: "hidden",
-},
-
-toastInner: {
-  paddingVertical: 12,
-  paddingHorizontal: 12,
-  flexDirection: "row",
-  alignItems: "center",
-  gap: 10,
-  borderWidth: StyleSheet.hairlineWidth,
-  borderColor: "rgba(255,255,255,0.14)",
-},
-
-toastIconPill: {
-  width: 30,
-  height: 30,
-  borderRadius: 999,
-  alignItems: "center",
-  justifyContent: "center",
-  overflow: "hidden",
-},
-
-toastTitle: {
-  fontFamily: "Comfortaa_700Bold",
-  fontSize: normalizeSize(13.6),
-},
-
-toastSub: {
-  marginTop: 2,
-  fontFamily: "Comfortaa_400Regular",
-  fontSize: normalizeSize(12.2),
-  lineHeight: normalizeSize(15.5),
-},
-
-duoPendingGlowV2: {
-  position: "absolute",
-  width: 18,
-  height: 18,
-  borderRadius: 18,
-  // ⛔️ avant: cyan
-  backgroundColor: "rgba(255,159,28,0.14)", // ✅ orange glow
-},
-
-duoPendingDotV2: {
-  position: "absolute",
-  width: 18,
-  height: 18,
-  borderRadius: 18,
-  borderWidth: 1,
-  // tu peux garder gold (ok)
-  borderColor: "rgba(255,215,0,0.38)",
-},
-
-duoPendingDotCoreV2: {
-  width: 7,
-  height: 7,
-  borderRadius: 7,
-  backgroundColor: "rgba(255,215,0,0.92)",
-},
-
-  duoPendingCard: {
-  borderRadius: 18,
-  padding: 14,
-  // ✅ CRITIQUE : sinon le hub se fait couper
-  overflow: "visible", // pas "hidden" ici
-},
-startModeBackdrop: {
-  flex: 1,
-  justifyContent: "center",
-  alignItems: "center",
-  // ✅ plus sombre pour lisibilité
-  backgroundColor: "rgba(0,0,0,0.68)",
-},
-
-startModeCard: {
-  width: "100%",
-  maxWidth: 560,
-  alignSelf: "center",
-  borderRadius: 26,
-  overflow: "hidden",
-  ...S.float,
-},
-
-warmupToastWrap: {
-  position: "absolute",
-  left: 14,
-  right: 14,
-  zIndex: 99999,
-  elevation: 999,
-},
-
-warmupToastBlur: {
-  borderRadius: 18,
-  overflow: "hidden",
-},
-
-warmupToastInner: {
-  borderRadius: 18,
-  paddingVertical: 12,
-  paddingHorizontal: 12,
-  flexDirection: "row",
-  alignItems: "center",
-  gap: 10,
-},
-
-warmupToastStroke: {
-  ...StyleSheet.absoluteFillObject,
-  borderRadius: 18,
-  borderWidth: StyleSheet.hairlineWidth,
-  borderColor: "rgba(255,255,255,0.16)",
-},
-
-warmupToastIconPill: {
-  width: 28,
-  height: 28,
-  borderRadius: 10,
-  overflow: "hidden",
-  alignItems: "center",
-  justifyContent: "center",
-},
-
-warmupToastTitle: {
-  fontFamily: "Comfortaa_700Bold",
-  fontSize: 13.6,
-  lineHeight: 16,
-},
-
-warmupToastSub: {
-  marginTop: 2,
-  fontFamily: "Comfortaa_400Regular",
-  fontSize: 12.2,
-  lineHeight: 15,
-},
-
-startModeCardInner: {
-  // ✅ on garde un padding mais on laisse le footer respirer
-  paddingTop: 16,
-  paddingHorizontal: 16,
-  paddingBottom: 10,
-  borderRadius: 26,
-},
-
-// ✅ ScrollView : occupe l'espace et ne "mange" plus le footer
-startModeScroll: {
-  flexGrow: 0,
-},
-startModeScrollContent: {
-  paddingBottom: 10,
-},
-
-startModeOption: {
-  width: "100%",
-  // ✅ un peu plus haut pour absorber langues longues
-  minHeight: 124,
-  borderRadius: 18,
-  padding: 12,
-  overflow: "hidden",
-  borderWidth: StyleSheet.hairlineWidth,
-  borderColor: "rgba(255,255,255,0.14)",
-  justifyContent: "space-between",
-},
-
-startModeFooter: {
-  marginTop: 12,
-  alignItems: "center",
-},
-
-startModeCancel: {
-  paddingVertical: 11,
-  paddingHorizontal: 18,
-  borderRadius: 999,
-  borderWidth: StyleSheet.hairlineWidth,
-  borderColor: "rgba(255,255,255,0.18)",
-  // ✅ petit fond pour mieux découper sur glass
-  backgroundColor: "rgba(0,0,0,0.16)",
-},
-
-startModeCancelText: {
-  color: "rgba(255,255,255,0.90)",
-  fontSize: 13,
-  fontFamily: "Comfortaa_700Bold",
-  includeFontPadding: false,
-},
-
-startModeOptionSub: {
-  marginTop: 2,
-  color: "rgba(255,255,255,0.72)",
-  fontSize: 12,
-  lineHeight: 15,
-  flexShrink: 1,
-},
-
-
-// ✅ tiny phones : micro shrink pour éviter les "..."
-startModeOptionSubTiny: {
-  fontSize: 11.2,
-  lineHeight: 14,
-},
-startModeStroke: {
-  ...StyleSheet.absoluteFillObject,
-  borderWidth: StyleSheet.hairlineWidth,
-  borderColor: "rgba(255,255,255,0.14)",
-  borderRadius: 26,
-},
-startModeHeader: {
-  flexDirection: "row",
-  alignItems: "center",
-  gap: 10,
-  marginBottom: 14,
-},
-startModeIconPill: {
-  width: 36,
-  height: 36,
-  borderRadius: 12,
-  alignItems: "center",
-  justifyContent: "center",
-  overflow: "hidden",
-},
-startModeTitle: {
-  color: "rgba(255,255,255,0.96)",
-  fontFamily: "Comfortaa_700Bold",
-  fontSize: 16,
-},
-startModeSub: {
-  marginTop: 2,
-  color: "rgba(255,255,255,0.70)",
-  fontSize: 12.5,
-  lineHeight: 16,
-},
-startModeGrid: {
-  flexDirection: "row",
-  gap: 12,
-  flexWrap: "wrap",
-},
-startModeOptionHalf: {
-   width: "48%",
- },
-startModeOptionDuo: {
-  borderColor: "rgba(244,211,94,0.30)",
-},
-startModeTopRow: {
-  flexDirection: "row",
-  alignItems: "center",
-  justifyContent: "space-between",
-},
-startModeBadge: {
-  paddingHorizontal: 8,
-  paddingVertical: 4,
-  borderRadius: 999,
-  borderWidth: StyleSheet.hairlineWidth,
-  borderColor: "rgba(255,255,255,0.18)",
-  backgroundColor: "rgba(0,0,0,0.22)",
-},
-startModeBadgeText: {
-  color: "rgba(255,255,255,0.90)",
-  fontSize: 10,
-  letterSpacing: 0.4,
-  fontFamily: "Comfortaa_700Bold",
-},
-startModeOptionTitle: {
-  marginTop: 8,
-  color: "rgba(255,255,255,0.96)",
-  fontFamily: "Comfortaa_700Bold",
-  fontSize: 14.5,
-},
-  startModeCardBlur: {
-    borderRadius: 26,
-    overflow: "hidden",
-  },
-duoPendingWarmupDisabledStroke: {
-  position: "absolute",
-  left: 0,
-  right: 0,
-  top: 0,
-  bottom: 0,
-  borderRadius: 999,
-  borderWidth: StyleSheet.hairlineWidth,
-  borderColor: "rgba(255,255,255,0.22)",
-},
-duoPendingShell: {
-  marginTop: 14,
-  width: "100%",
-},
-duoPendingCardV2: {
-  borderRadius: 22,
-  padding: 14,
-  overflow: "hidden",
-  borderWidth: StyleSheet.hairlineWidth,
-  borderColor: "rgba(255,255,255,0.10)",
-  ...shadowSoft,
-},
-duoBattleHeaderWrap: {
-  width: "100%",
-  maxWidth: 560,
-  alignSelf: "center",
-  marginTop: 14,
-  marginBottom: 8,
-  paddingHorizontal: 6,
-},
-duoBattleTitleRow: {
-  width: "100%",
-  flexDirection: "row",
-  alignItems: "center",
-  justifyContent: "space-between",
-  gap: 10,
-  paddingVertical: 8,
-  paddingHorizontal: 12,
-  borderRadius: 14,
-  backgroundColor: Platform.select({
-    ios: "rgba(0,0,0,0.28)",
-    android: "rgba(0,0,0,0.22)",
-    default: "rgba(0,0,0,0.26)",
-  }) as any,
-  borderWidth: StyleSheet.hairlineWidth,
-  borderColor: "rgba(255,255,255,0.16)",
-  zIndex: 2,
-  elevation: 2,
-},
-duoBattleTitle: {
-  flexShrink: 1,
-  minWidth: 0,
-  fontFamily: "Comfortaa_700Bold",
-  fontSize: normalizeSize(12.6),
-  letterSpacing: 1.2,
-  color: "rgba(255,255,255,0.94)",
-  includeFontPadding: false,
-  ...(Platform.OS === "ios"
-    ? {
-        textShadowColor: "rgba(0,0,0,0.55)",
-        textShadowRadius: 6,
-        textShadowOffset: { width: 0, height: 1 },
-      }
-    : {}),
-},
-duoBattleMini: {
-  flexShrink: 0,
-  fontFamily: "Comfortaa_700Bold",
-  fontSize: normalizeSize(11.2),
-  color: "rgba(255,255,255,0.78)",
-  includeFontPadding: false,
-},
-duoBattleBarWrap: {
-  width: "100%",
-  maxWidth: 560,
-  alignSelf: "center",
-  marginTop: 0,
-  opacity: 1,
-},
-duoPendingStrokeV2: {
-  ...StyleSheet.absoluteFillObject,
-  borderRadius: 22,
-  borderWidth: StyleSheet.hairlineWidth,
-  borderColor: "rgba(255,255,255,0.14)",
-  opacity: 0.9,
-},
-duoPendingSheenV2: {
-  position: "absolute",
-  left: -40,
-  top: -60,
-  width: 160,
-  height: 160,
-  borderRadius: 160,
-  backgroundColor: "rgba(255,255,255,0.08)",
-  transform: [{ rotate: "18deg" }],
-},
-duoPendingTopRowV2: {
-  flexDirection: "row",
-  alignItems: "center",
-  marginBottom: 10,
-},
-duoPendingDotWrapV2: {
-  width: 18,
-  height: 18,
-  marginRight: 10,
-  alignItems: "center",
-  justifyContent: "center",
-},
-duoPendingTopTextV2: {
-  flex: 1,
-  minWidth: 0,
-  fontFamily: "Comfortaa_700Bold",
-  fontSize: normalizeSize(12.5),
-  letterSpacing: 0.3,
-},
-duoPendingTopRightV2: {
-  width: 22,
-  alignItems: "flex-end",
-},
-duoPendingCenterV2: {
-  flexDirection: "row",
-  alignItems: "center",
-  justifyContent: "space-between",
-  marginBottom: 10,
-},
-duoPendingAvatarColV2: {
-  width: "40%",
-  alignItems: "center",
-},
-duoPendingNameV2: {
-  marginTop: 8,
-  fontFamily: "Comfortaa_700Bold",
-  fontSize: normalizeSize(12.8),
-},
-duoPendingConnectorV2: {
-  width: "20%",
-  alignItems: "center",
-  justifyContent: "center",
-},
-duoPendingLineV2: {
-  width: 2,
-  height: 14,
-  borderRadius: 2,
-  backgroundColor: "rgba(255,255,255,0.14)",
-},
-duoPendingHintV2: {
-  textAlign: "center",
-  fontFamily: "Comfortaa_400Regular",
-  fontSize: normalizeSize(12.6),
-  lineHeight: normalizeSize(17),
-  marginBottom: 12,
-},
-duoPendingActionsV2: {
-  flexDirection: "row",
-  gap: 10,
-},
-duoPendingPrimaryBtnV2: {
-  flex: 1,
-  height: 46,
-  borderRadius: 16,
-  overflow: "hidden",
-  flexDirection: "row",
-  alignItems: "center",
-  justifyContent: "center",
-  paddingHorizontal: 12,
-},
-duoPendingPrimaryBtnDisabledV2: {
-  opacity: 0.92,
-},
-duoPendingPrimaryTextV2: {
-  flex: 1,
-  minWidth: 0,
-  marginLeft: 10,
-  fontFamily: "Comfortaa_700Bold",
-  fontSize: normalizeSize(13.2),
-  color: "#111",
-},
-duoPendingGhostBtnV2: {
-  width: 118,
-  height: 46,
-  borderRadius: 16,
-  overflow: "hidden",
-  borderWidth: StyleSheet.hairlineWidth,
-  borderColor: "rgba(255,255,255,0.14)",
-  backgroundColor: "rgba(255,255,255,0.06)",
-  alignItems: "center",
-  justifyContent: "center",
-},
-duoPendingGhostInnerV2: {
-  flexDirection: "row",
-  alignItems: "center",
-  gap: 8,
-  paddingHorizontal: 10,
-},
-duoPendingGhostTextV2: {
-  fontFamily: "Comfortaa_700Bold",
-  fontSize: normalizeSize(12.8),
-},
- imageContainer: {
-    width: "100%",
-    borderBottomLeftRadius: R.hero,
-    borderBottomRightRadius: R.hero,
-    overflow: "hidden",
-    marginBottom: SPACING,
-    ...S.float,
-  },
-  confirmBackdrop: {
-  flex: 1,                 // ✅ CRITIQUE
-  justifyContent: "center",
-  alignItems: "center",
-  paddingHorizontal: 16,
-},
-confirmCardKeynote: {
-  width: "100%",           // ✅ évite le crop
-  maxWidth: 420,
-  alignSelf: "center",
-  borderRadius: 26,
-  overflow: "hidden",
-  maxHeight: "85%",        // ✅ jamais coupé
-},
-confirmCardBlur: {
-  borderRadius: 28,
-  overflow: "hidden",
-},
-confirmCardInner: {
-  paddingHorizontal: 18,
-  paddingTop: 18,
-  paddingBottom: 14,
-  borderRadius: 28,
-},
-confirmInnerStroke: {
-  ...StyleSheet.absoluteFillObject,
-  borderRadius: 28,
-  borderWidth: StyleSheet.hairlineWidth,
-  borderColor: "rgba(255,255,255,0.18)",
-},
-confirmHeaderRow: {
-  flexDirection: "row",
-  alignItems: "center",
-  gap: 12,
-  marginBottom: 14,
-},
-confirmIconPill: {
-  width: 38,
-  height: 38,
-  borderRadius: 19,
-  alignItems: "center",
-  justifyContent: "center",
-  overflow: "hidden",
-  borderWidth: StyleSheet.hairlineWidth,
-  borderColor: "rgba(255,255,255,0.22)",
-  backgroundColor: "rgba(255,255,255,0.06)",
-},
-confirmTitleKeynote: {
-  fontSize: 18,
-  lineHeight: 22,
-  color: "rgba(255,255,255,0.96)",
-  fontFamily: "Comfortaa_700Bold",
-},
-confirmSubKeynote: {
-  marginTop: 3,
-  fontSize: 13,
-  lineHeight: 17,
-  color: "rgba(255,255,255,0.72)",
-  fontFamily: "System",
-},
-confirmMessageCard: {
-  flexDirection: "row",
-  alignItems: "flex-start",
-  gap: 10,
-  paddingVertical: 12,
-  paddingHorizontal: 12,
-  borderRadius: 18,
-  backgroundColor: "rgba(255,255,255,0.06)",
-  borderWidth: StyleSheet.hairlineWidth,
-  borderColor: "rgba(255,255,255,0.14)",
-  marginBottom: 14,
-},
-confirmTextKeynote: {
-  flex: 1,
-  minWidth: 0,
-  fontSize: 13.5,
-  lineHeight: 18,
-  color: "rgba(255,255,255,0.86)",
-  fontFamily: "System",
-},
-confirmActions: {
-  flexDirection: "row",
-  gap: 10,
-  paddingTop: 2,
-},
-confirmGhostBtn: {
-  flex: 1,
-  height: 48,
-  borderRadius: 16,
-  alignItems: "center",
-  justifyContent: "center",
-  backgroundColor: "rgba(255,255,255,0.06)",
-  borderWidth: StyleSheet.hairlineWidth,
-  borderColor: "rgba(255,255,255,0.16)",
-},
-confirmGhostText: {
-  color: "rgba(255,255,255,0.90)",
-  fontSize: 14,
-  fontFamily: "Comfortaa_700Bold",
-},
-confirmPrimaryBtn: {
-  flex: 1.2,
-  height: 48,
-  borderRadius: 16,
-  overflow: "hidden",
-  flexDirection: "row",
-  alignItems: "center",
-  justifyContent: "center",
-  gap: 8,
-  borderWidth: StyleSheet.hairlineWidth,
-  borderColor: "rgba(255,255,255,0.18)",
-},
-confirmPrimarySheen: {
-  ...StyleSheet.absoluteFillObject,
-  backgroundColor: "rgba(255,255,255,0.18)",
-  opacity: 0.0,
-},
-confirmPrimaryText: {
-  color: "#111",
-  fontSize: 14,
-  fontFamily: "Comfortaa_700Bold",
-},
-avatarShell: {
-  position: "relative",
-  alignItems: "center",
-  justifyContent: "center",
-  overflow: "hidden",
-  borderWidth: StyleSheet.hairlineWidth,
-  ...S.card,
-},
-avatarRing: {
-  position: "absolute",
-  left: 0,
-  right: 0,
-  top: 0,
-  bottom: 0,
-  borderWidth: StyleSheet.hairlineWidth,
-},
-avatarSpecular: {
-  position: "absolute",
-  left: "10%",
-  right: "10%",
-  top: "8%",
-  height: "42%",
-  backgroundColor: "rgba(255,255,255,0.10)",
-  transform: [{ skewY: "-10deg" }],
-  opacity: 0.85,
-},
-avatarInitial: {
-  fontFamily: "Comfortaa_700Bold",
-  includeFontPadding: false,
-},
-avatarSheen: {
-  position: "absolute",
-  left: "10%",
-  right: "10%",
-  top: "10%",
-  height: "42%",
-  backgroundColor: "rgba(255,255,255,0.18)",
-  transform: [{ skewY: "-10deg" }],
-},
-duoBarTrack: {
-  height: 16, // ⬅️ un peu plus épais
-  borderRadius: 999,
-  backgroundColor: Platform.OS === "android"
-   ? "rgba(0,0,0,0.18)"
-   : "rgba(255,255,255,0.10)",
-  overflow: "hidden",
-  borderWidth: 1,
-  borderColor: "rgba(255,255,255,0.20)",
-  position: "relative",
-},
-duoBarTrackSheen: {
-  ...StyleSheet.absoluteFillObject,
-  backgroundColor: "rgba(255,255,255,0.05)",
-},
-duoBarTicks: {
-  ...StyleSheet.absoluteFillObject,
-  flexDirection: "row",
-  justifyContent: "space-evenly",
-  alignItems: "center",
-  opacity: 0.42, // ⬅️ plus visible
-},
-duoBarTick: {
-  width: 1,
-  height: "65%",
-  borderRadius: 1,
-  backgroundColor: Platform.OS === "android"
-   ? "rgba(255,255,255,0.55)"
-   : "rgba(255,255,255,0.30)",
-},
-duoBarFill: {
-  height: "100%",
-  borderRadius: 999,
-},
-duoBattleBar: {
-  width: "100%",
-  height: 18,
-  borderRadius: 999,
-  overflow: "hidden",
-  borderWidth: 1,
-  borderColor: "rgba(255,255,255,0.22)",
-  backgroundColor: Platform.OS === "android"
-   ? "rgba(0,0,0,0.12)"
-   : "rgba(255,255,255,0.10)",
-  position: "relative",
-},
-duoBattleRail: {
-  ...StyleSheet.absoluteFillObject,
-  opacity: 0.65,
-  backgroundColor: Platform.OS === "android"
-   ? "rgba(255,255,255,0.08)"
-   : "rgba(255,255,255,0.04)",
-},
-duoBattleDivider: {
-  position: "absolute",
-  left: "50%",
-  top: 1,
-  bottom: 1,
-  width: 3,
-  borderRadius: 2,
-  backgroundColor: "rgba(255,255,255,0.55)",
-  shadowColor: "#000",
-  shadowOpacity: 0.22,
-  shadowRadius: 8,
-  shadowOffset: { width: 0, height: 2 },
-  elevation: 7,
-  opacity: Platform.OS === "android" ? 0.9 : 0.55,
-},
-
-  actionGrid: {
-  marginTop: SPACING * 1.6,
-  flexDirection: "row",
-  paddingHorizontal: 12,
-  flexWrap: "wrap",
-  justifyContent: "center",
-  rowGap: 14,
-},
-duoEliteWrap: {
-  marginTop: SPACING * 1.6,
-  alignItems: "center",
-  width: "100%",
-  paddingHorizontal: 12,
-},
-duoCrownMini: {
-  position: "absolute",
-  top: -10,
-  right: -10,
-  zIndex: 30,
-},
-duoCrownPill: {
-  width: normalizeSize(26),
-  height: normalizeSize(26),
-  borderRadius: normalizeSize(13),
-  alignItems: "center",
-  justifyContent: "center",
-  backgroundColor: "rgba(0,0,0,0.55)",
-  borderWidth: 1,
-  borderColor: "rgba(244, 211, 94, 0.38)",
-  shadowColor: ACCENT.glow,
-  shadowOpacity: 0.35,
-  shadowRadius: 10,
-  shadowOffset: { width: 0, height: 6 },
-  elevation: 8,
-},
-duoCrownMiniEmoji: {
-  fontSize: normalizeSize(14),
-  includeFontPadding: false,
-},
-duoProgressStack: {
-  width: "100%",
-  maxWidth: 560,
-  marginTop: 16,
-  gap: 12,
-},
-
-duoBarRow: {
-  width: "100%",
-},
-
-duoBarLabelRow: {
-  flexDirection: "row",
-  alignItems: "center",
-  justifyContent: "space-between",
-  marginBottom: 6,
-  gap: 10,
-},
-
-duoBarLabel: {
-  fontFamily: "Comfortaa_700Bold",
-  fontSize: normalizeSize(12),
-  opacity: 0.9,
-  flex: 1,
-  minWidth: 0,
-},
-
-duoBarValue: {
-  fontFamily: "Comfortaa_700Bold",
-  fontSize: normalizeSize(12),
-  opacity: 0.55,
-  flexShrink: 0,
-},
-duoBarFillMe: {
-  shadowColor: "#FF9F1C",
-  shadowOpacity: 0.25,
-  shadowRadius: 10,
-  shadowOffset: { width: 0, height: 6 },
-},
-duoBarFillPartner: {
-  shadowColor: "#00C2FF",
-  shadowOpacity: 0.22,
-  shadowRadius: 10,
-  shadowOffset: { width: 0, height: 6 },
-},
-duoBattleLeft: {
-  position: "absolute",
-  left: 0,
-  top: 0,
-  bottom: 0,
-  backgroundColor: "#FF9F1C",
-  opacity: 0.85,
-},
-duoBattleRight: {
-  position: "absolute",
-  right: 0,
-  top: 0,
-  bottom: 0,
-  backgroundColor: "#00C2FF",
-  opacity: 0.85,
-},
-duoBattleOutline: {
-  ...StyleSheet.absoluteFillObject,
-  borderRadius: 999,
-  borderWidth: 1,
-  borderColor: "rgba(0,0,0,0.10)",
-},
-duoEliteAvatars: {
-  width: "100%",
-  maxWidth: 560,
-  flexDirection: "row",
-  alignItems: "center",
-  justifyContent: "space-between",
-  gap: 12,
- paddingVertical: 10,
-  paddingHorizontal: 12,
-  borderRadius: 18,
-  borderWidth: StyleSheet.hairlineWidth,
-},
-duoPendingRing: {
-  position: "absolute",
-   width: 38,
-   height: 38,
-   borderRadius: 999,
-   borderWidth: 2.5,
-   borderColor: "rgba(139,92,246,0.95)",
-},
- duoPendingCancelBtn: {
-   alignSelf: "flex-end",
-   borderRadius: 14,
-   paddingHorizontal: 14,
-   paddingVertical: 10,
-   borderWidth: 1,
-   backgroundColor: "rgba(255,255,255,0.10)",
-   borderColor: "rgba(255,255,255,0.16)",
- },
- duoPendingCancelText: {
-   fontFamily: "Comfortaa_700Bold",
-   fontSize: normalizeSize(11.5),
-   includeFontPadding: false,
-   color: "rgba(255,255,255,0.92)",
- },
-duoEliteCol: {
-  alignItems: "center",
-   flex: 1,
-  minWidth: 0,
-},
-duoAvatarWrap: {
-  position: "relative",
-  alignItems: "center",
-  justifyContent: "center",
-},
-duoEliteAvatar: {
-  width: "100%",
-  height: "100%",
-  borderRadius: normalizeSize(37),
-  borderWidth: 1.5,
-  borderColor: "rgba(255,255,255,0.22)",
-  backgroundColor: "rgba(255,255,255,0.08)",
-  ...S.card,
-},
-
-duoEliteName: {
-  marginTop: 8,
-  fontFamily: "Comfortaa_700Bold",
-  fontSize: normalizeSize(13),
-  opacity: 0.92,
-  maxWidth: "100%",
-},
-duoVsPill: {
-  paddingHorizontal: 12,
-  paddingVertical: 8,
-  borderRadius: 999,
-  borderWidth: 1,
-},
-duoVs: {
-  fontFamily: "Comfortaa_700Bold",
-  fontSize: normalizeSize(12),
-  letterSpacing: 1.6,
-  includeFontPadding: false,
-},
-crownElite: {
-  position: "absolute",
-  top: -18,
-  zIndex: 10,
-},
-duoAvatarShell: {
-  position: "relative",
-  width: normalizeSize(74),
-  height: normalizeSize(74),
-  borderRadius: normalizeSize(37),
-  alignItems: "center",
-  justifyContent: "center",
-  backgroundColor: Platform.OS === "android"
-  ? "rgba(255,255,255,0.10)"
-  : "rgba(255,255,255,0.08)",
-},
-duoEliteBar: {
-  marginTop: 16,
-  width: "100%",
-  maxWidth: 360,
-  height: 10,
-  borderRadius: 999,
-  backgroundColor: "rgba(255,255,255,0.14)",
-  overflow: "hidden",
-},
-duoCrownGlow: {
-  shadowColor: "#FF9F1C",
-  shadowOpacity: 0.9,
-  shadowRadius: 18,
-  shadowOffset: { width: 0, height: 0 },
-},
-
-duoEliteFill: {
-  height: "100%",
-  borderRadius: 999,
-},
-
-duoEliteStatus: {
-  marginTop: 12,
-  fontFamily: "Comfortaa_700Bold",
-  fontSize: normalizeSize(18),
-  opacity: 0.9,
-  textAlign: "center",
-  paddingHorizontal: 10,
-},
-duoEliteSubStatus: {
-  marginTop: 4,
-  fontFamily: "Comfortaa_400Regular",
-  fontSize: normalizeSize(12),
-  color: "rgba(255,255,255,0.72)",
-  textAlign: "center",
-  paddingHorizontal: 10,
-},
-actionsWrap: {
-  marginTop: 24,
-  paddingHorizontal: 16,
-},
-
-
-primaryActions: {
-  gap: 12,
-},
-
-primaryBtn: {
-  flexDirection: "row",
-  alignItems: "center",
-  justifyContent: "space-between",
-  paddingHorizontal: 18,
-  height: 56,
-  borderRadius: 18,
-},
-
-primaryBtnInvite: {
-  backgroundColor: "#6366F1",
- borderWidth: 1,
- borderColor: "rgba(255,255,255,0.22)",
-},
-
-primaryBtnSecondary: {
-  backgroundColor: "#fff",
-  borderWidth: 1,
-  borderColor: "rgba(0,0,0,0.12)",
-},
-
-primaryBtnText: {
-  flex: 1,
-  marginLeft: 12,
-  fontSize: 16,
-  fontFamily: "Comfortaa_700Bold",
-  color: "#fff",
-},
-quickTextActive: {
-  color: ACCENT.solid,
-},
-confirmIconWrap: {
-  width: 64,
-  height: 64,
-  borderRadius: 32,
-  backgroundColor: ACCENT.solid,
-  alignItems: "center",
-  justifyContent: "center",
-  marginBottom: 14,
-},
-duoStatusBig: {
-  marginTop: 14,
-  fontFamily: "Comfortaa_700Bold",
-  fontSize: normalizeSize(18),
-},
-primaryBtnTextSecondary: {
-  flex: 1,
-  marginLeft: 12,
-  fontSize: 16,
-  fontFamily: "Comfortaa_700Bold",
-  color: "#111",
-},
-duoKeynoteWrap: {
-  marginTop: SPACING * 1.4,
-  alignItems: "center",
-},
-duoAvatarFallback: {
-  width: "100%",
-  height: "100%",
-  borderRadius: normalizeSize(37),
-  alignItems: "center",
-  justifyContent: "center",
-  backgroundColor: Platform.OS === "android"
-   ? "#FFFFFF"
-   : "rgba(255,255,255,0.08)",
-},
-
-duoAvatarInitial: {
-  fontFamily: "Comfortaa_700Bold",
-  fontSize: normalizeSize(22),
-  color: "rgba(255,255,255,0.92)",
-  includeFontPadding: false,
-},
-
-duoAvatarRing: {
-  position: "absolute",
-  left: 0,
-  top: 0,
-  right: 0,
-  bottom: 0,
-  borderRadius: normalizeSize(37),
-  borderWidth: 1,
-  borderColor: "rgba(255,255,255,0.18)",
-},
-duoKeynoteAvatars: {
-  flexDirection: "row",
-  gap: 48,
-  marginBottom: 16,
-},
-
-duoKeynoteAvatarCol: {
-  alignItems: "center",
-},
-
-duoKeynoteAvatar: {
-  width: normalizeSize(64),
-  height: normalizeSize(64),
-  borderRadius: normalizeSize(32),
-},
-
-duoKeynoteName: {
-  marginTop: 8,
-  fontFamily: "Comfortaa_700Bold",
-  fontSize: normalizeSize(13),
-  opacity: 0.85,
-},
-
-duoKeynoteTrack: {
-  width: "100%",
-  maxWidth: 360,
-  height: 8,
-  borderRadius: 999,
-  backgroundColor: "rgba(255,255,255,0.12)",
-  overflow: "hidden",
-  marginTop: 6,
-},
-
-duoKeynoteFill: {
-  height: "100%",
-  borderRadius: 999,
-  backgroundColor: ACCENT.solid,
-},
-
-duoKeynoteStatus: {
-  marginTop: 12,
-  fontFamily: "Comfortaa_700Bold",
-  fontSize: normalizeSize(15),
-  opacity: 0.85,
-},
-duoLeading: {
-  color: ACCENT.solid,
-},
-duoBehind: {
-  color: "#FF6B6B",
-},
-crownPulse: {
-  position: "absolute",
-  top: -14,
-  zIndex: 2,
-},
-quickActions: {
-  marginTop: 14,
-  flexDirection: "row",
-  flexWrap: "nowrap",          // ✅ JAMAIS 2 lignes
-  justifyContent: "space-between",
-  gap: 10,                     // ✅ spacing stable
-},
-quickBtn: {
-  flex: 1,                     // ✅ 3 colonnes égales
-  minWidth: 0,                 // ✅ CRUCIAL pour éviter overflow iOS
-  alignItems: "center",
-  justifyContent: "center",
-  paddingVertical: 10,
-  paddingHorizontal: 8,
-  borderRadius: 14,
-  minHeight: 56,               // ✅ plus haut => texte jamais coupé
-  borderWidth: 1,
-  borderColor: "rgba(0,0,0,0.12)",
-  backgroundColor: "rgba(255,255,255,0.86)",
-},
-quickText: {
-  width: "100%",
-  textAlign: "center",
-  flexShrink: 1,
-  minWidth: 0,                 // ✅ iOS long strings
-  fontSize: normalizeSize(12.5),
-  fontFamily: "Comfortaa_700Bold",
-  includeFontPadding: false,
-  lineHeight: normalizeSize(14),
-},
-quickBtnInner: {
-  width: "100%",
-  alignItems: "center",
-  justifyContent: "center",
-  gap: 6,
-},
-quickIcon: {
-  marginBottom: 0,
-},
-btnPressed: {
-  transform: [{ scale: 0.98 }],
-  opacity: 0.9,
-},
-  image: {
-    width: "100%",
-    backfaceVisibility: "hidden",
-    borderBottomLeftRadius: R.hero,
-    borderBottomRightRadius: R.hero,
-  },
-  loadingOverlay: {
-    position: "absolute",
-    left: 0,
-    right: 0,
-    top: 0,
-    bottom: 0,
-    justifyContent: "center",
-    alignItems: "center",
-    zIndex: 9999,
-    elevation: 9999,
-    // on laisse le fond transparent, c’est le BlurView qui gère le rendu
-    backgroundColor: "transparent",
-    paddingHorizontal: 24,
-  },
-ctaRow: {
-  flexDirection: "row",
-  gap: 12,
-  paddingHorizontal: 16,
-  marginTop: 10,
-  marginBottom: 6,
-},
-
-ctaCard: {
-  flex: 1,
-  borderRadius: 22,
-  overflow: "hidden",
-  minHeight: 118,               // <<< le “poids” Keynote
-  shadowColor: "#000",
-  shadowOpacity: 0.12,
-  shadowRadius: 18,
-  shadowOffset: { width: 0, height: 10 },
-  elevation: 6,
-},
-
-pressed: { opacity: 0.92, transform: [{ scale: 0.99 }] },
-
-ctaGradient: {
-  flex: 1,
-  paddingHorizontal: 14,
-  paddingTop: 14,
-  paddingBottom: 12,
-},
-quickBtnDisabled: {
-    opacity: 0.55,
-  },
-
-ctaPlain: {
-  flex: 1,
-  backgroundColor: "#fff",
-  paddingHorizontal: 14,
-  paddingTop: 14,
-  paddingBottom: 12,
-  borderWidth: 1,
-  borderColor: "rgba(0,0,0,0.07)",
-},
-
-ctaTop: {
-  flexDirection: "row",
-  alignItems: "center",
-  justifyContent: "space-between",
-  marginBottom: 10,
-},
-
-ctaIconWrap: {
-  width: 38,
-  height: 38,
-  borderRadius: 14,
-  alignItems: "center",
-  justifyContent: "center",
-  backgroundColor: "rgba(255,255,255,0.22)",
-},
-
-ctaIconWrapPlain: {
-  backgroundColor: "rgba(0,0,0,0.06)",
-},
-dockCardShareOutline: {
-  borderWidth: 1.5,
-  borderColor: Platform.select({
-    ios: "rgba(255,255,255,0.22)",
-    android: "rgba(255,255,255,0.24)",
-    default: "rgba(255,255,255,0.22)",
-  }) as any,
-},
-
-
-dockHeaderCenteredRow: {
-  flexDirection: "row",
-  alignItems: "center",
-  marginBottom: 8,
-},
-
-dockHeaderSideSlot: {
-  width: 44, // ⬅️ clé du centrage parfait
-  alignItems: "center",
-  justifyContent: "center",
-},
-
-dockHeaderRightSlot: {
-  alignItems: "flex-end",
-},
-
-dockHeaderCenterSlot: {
-  flex: 1,
-  alignItems: "center",
-  justifyContent: "center",
-},
-
-
-
-ctaTitle: {
-  color: "#fff",
-  fontSize: 16,
-  lineHeight: 20,
-  fontFamily: "Comfortaa_700Bold",
-},
-
-ctaSub: {
-  marginTop: 6,
-  color: "rgba(255,255,255,0.92)",
-  fontSize: 12.5,
-  lineHeight: 16,
-  fontFamily: "Comfortaa_400Regular",
-},
-
-ctaTitlePlain: { color: "#111" },
-ctaSubPlain: { color: "rgba(0,0,0,0.62)" },
-
-ctaFooter: {
-  marginTop: "auto",
-  paddingTop: 10,
-},
-// === DOCK (Apple Keynote) ===
-dockWrap: {
-  marginTop: SPACING * 1.6,
-  alignSelf: "center",
-  width: "100%",
-  maxWidth: 760,
-  paddingHorizontal: 12,
-},
-
-dockBlur: {
-  borderRadius: 26,
-  overflow: "hidden",
-  borderWidth: 1,
-  borderColor: GLASS.border,
-  ...S.float,
-},
-
-dockInner: {
-  padding: 12,
-  borderRadius: 26,
-},
-
-dockTopRow: {
-  flexDirection: "row",
-  gap: 12,
-},
-
-dockTopRowCompact: {
-  flexDirection: "column",
-},
-
-dockCard: {
-  flex: 1,
-  borderRadius: 22,
-  overflow: "hidden",
-  alignItems: "center",
-  minHeight: 116,
-},
-
-dockCardPrimary: {
-  ...Platform.select({
-    ios: {
-      shadowColor: "#000",
-      shadowOpacity: 0.16,
-      shadowRadius: 18,
-      shadowOffset: { width: 0, height: 12 },
-    },
-    android: { elevation: 8 },
-    default: {},
-  }),
-},
-
-dockCardGlass: {
-  borderWidth: 1,
-  borderColor: GLASS.borderSoft,
-  backgroundColor: Platform.select({
-    ios: "rgba(255,255,255,0.06)",
-    android: "rgba(255,255,255,0.08)",
-  }) as any,
-},
-dockCardDisabled: {
-  opacity: 0.82,
-},
-dockPressed: {
-  transform: [{ scale: 0.992 }],
-  opacity: 0.94,
-},
-dockCardFill: {
-  flex: 1,
-  paddingHorizontal: 14,
-  paddingTop: 14,
-  paddingBottom: 12,
-},
-dockDisabledVeil: {
-  ...StyleSheet.absoluteFillObject,
-  backgroundColor: "rgba(0,0,0,0.20)",
-},
-
-duoPendingCenter: {
-  alignItems: "center",
-  justifyContent: "center",
-  paddingHorizontal: 10,
-  minWidth: 64,
-},
-duoPendingCenterGlow: {
-  position: "absolute",
-  width: 58,
-  height: 58,
-  borderRadius: 29,
-  borderWidth: 1,
-  borderColor: "rgba(255,255,255,0.10)",
-},
-duoPendingCenterLine: {
-  width: 2,
-  height: 18,
-  borderRadius: 1,
-  backgroundColor: "rgba(255,255,255,0.18)",
-  marginVertical: 6,
-},
-duoPendingVsPill: {
-  paddingHorizontal: 14,
-  paddingVertical: 7,
-  borderRadius: 999,
-  backgroundColor: "rgba(0,0,0,0.22)",
-  borderWidth: StyleSheet.hairlineWidth,
-  borderColor: "rgba(255,255,255,0.16)",
-},
-duoPendingVsText: {
-  fontFamily: "Comfortaa_700Bold",
-  fontSize: 12,
-  letterSpacing: 1.2,
-  color: "rgba(255,255,255,0.92)",
-},
-duoPendingMiniBadge: {
-  position: "absolute",
-  right: 6,
-  bottom: 6,
-  width: 18,
-  height: 18,
-  borderRadius: 9,
-  alignItems: "center",
-  justifyContent: "center",
-  backgroundColor: "rgba(0,0,0,0.22)",
-  borderWidth: StyleSheet.hairlineWidth,
-  borderColor: "rgba(255,255,255,0.18)",
-},
-dockQuickIcon: {
-  width: 34,
-  height: 34,
-  borderRadius: 17,
-  alignItems: "center",
-  justifyContent: "center",
-  backgroundColor: "rgba(0,0,0,0.06)",
-  borderWidth: 1,
-  borderColor: "rgba(0,0,0,0.10)",
-  marginBottom: 6,
-},
-
-dockQuickText: {
-  fontFamily: "Comfortaa_700Bold",
-  fontSize: normalizeSize(11),
-  includeFontPadding: false,
-},
-
-ctaPill: {
-  alignSelf: "flex-start",
-  paddingHorizontal: 10,
-  paddingVertical: 6,
-  borderRadius: 999,
-  backgroundColor: "rgba(255,255,255,0.22)",
-},
-
-ctaPillText: {
-  color: "#fff",
-  fontSize: 11,
-  fontFamily: "Comfortaa_700Bold",
-},
-
-ctaPillPlain: { backgroundColor: "rgba(0,0,0,0.06)" },
-ctaPillTextPlain: { color: "rgba(0,0,0,0.72)" },
-
-  loadingCard: {
-    minWidth: 260,
-    maxWidth: 320,
-    borderRadius: R.card,
-    paddingVertical: 18,
-    paddingHorizontal: 18,
-    alignItems: "center",
-    justifyContent: "center",
-    backgroundColor: GLASS.bgDark,
-    borderWidth: 1,
-    borderColor: "rgba(255,255,255,0.10)",
-    ...S.float,
-    overflow: "hidden",
-  },
-
-  loadingIconRing: {
-    width: 56,
-    height: 56,
-    borderRadius: 28,
-    alignItems: "center",
-    justifyContent: "center",
-    marginBottom: 14,
-  },
-
-  loadingIconInner: {
-    width: 40,
-    height: 40,
-    borderRadius: 20,
-    backgroundColor: "rgba(0,0,0,0.55)",
-    alignItems: "center",
-    justifyContent: "center",
-  },
-
-  loadingTextBlock: {
-    alignItems: "center",
-  },
-heroVignette: {
-    position: "absolute",
-    left: 0,
-    right: 0,
-    top: 0,
-    bottom: 0,
-  },
-  loadingText: {
-    fontSize: 16,
-    fontWeight: "600",
-    textAlign: "center",
-  },
-
-  loadingSubText: {
-    marginTop: 4,
-    fontSize: 13,
-    lineHeight: 18,
-    textAlign: "center",
-  },
-backButtonContainer: {
-    position: "absolute",
-    // la valeur sera surchargée à l’usage avec insets.top
-    top: 0,
-    left: SPACING,
-    zIndex: 50,        // plus haut que tout le reste
-    elevation: 50,
-    pointerEvents: "box-none",
-  },
-  orb: {
-  position: "absolute",
-  opacity: 0.9,     // tu peux baisser si tu veux encore plus subtil
-},
-
-  crownWrap: {
-  position: "absolute",
-  right: -6,
-  top: -6,
-  width: normalizeSize(22),
-  height: normalizeSize(22),
-  borderRadius: normalizeSize(11),
-  alignItems: "center",
-  justifyContent: "center",
-  shadowColor: "#000",
-  shadowOpacity: 0.25,
-  shadowOffset: { width: 0, height: 2 },
-  shadowRadius: 3,
-  elevation: 3,
-},
-backButtonBlur: {
-    width: 44,
-    height: 44,
-    borderRadius: 22,
-    overflow: "hidden",
-    borderWidth: 1,
-    borderColor: GLASS.border,
-    backgroundColor: "rgba(0,0,0,0.16)",
-    ...S.card,
-  },
-  backButtonPress: {
-    flex: 1,
-    alignItems: "center",
-    justifyContent: "center",
-  },
-  imagePlaceholder: {
-    flex: 1,
-    justifyContent: "center",
-    alignItems: "center",
-  },
-confirmCard: {
-  width: "100%",
-  maxWidth: 380,
-  borderRadius: 18,
-  padding: 18,
-  backgroundColor: GLASS.bgDark,
-  borderWidth: 1,
-  borderColor: GLASS.border,
-  ...S.float,
-
-},
-confirmTitle: {
-  fontSize: 18,
-  fontWeight: "700",
-  color: "#fff",
-  marginBottom: 8,
-  textAlign: "center",
-},
-confirmText: {
-  fontSize: 14,
-  color: "#ddd",
-  lineHeight: 20,
-  textAlign: "center",
-},
-confirmRow: {
-  flexDirection: "row",
-  justifyContent: "space-between",
-  marginTop: 16,
-},
-confirmBtn: {
-  flex: 1,
-  paddingVertical: 12,
- borderRadius: 14,
-  alignItems: "center",
-},
-confirmBtnCancel: {
- backgroundColor: "rgba(255,255,255,0.10)",
-  borderWidth: 1,
-  borderColor: "rgba(255,255,255,0.14)",
-  marginRight: 8,
-},
-confirmBtnOk: {
-  backgroundColor: ACCENT.solid,
-  marginLeft: 8,
-},
-confirmBtnCancelText: {
-  color: "#fff",
-  fontWeight: "600",
-},
-confirmBtnOkText: {
-  color: "#000",
-  fontWeight: "700",
-},
-scrollPad: { paddingBottom: SPACING },
-  chipRow: {
-  flexDirection: "row",
-  flexWrap: "wrap",
-  justifyContent: "center",
-  marginTop: 6,
-},
-vsOverlay: {
-  position: "absolute",
-  top: 0,
-  left: 0,
-  right: 0,
-  bottom: 0,
-  backgroundColor: "rgba(0,0,0,0.94)",
-  justifyContent: "center",
-  alignItems: "center",
-  zIndex: 9999,
-},
-
-vsRow: {
-  flexDirection: "row",
-  alignItems: "center",
-},
-// ⚠️ Ceci est le "vsSide" NOUVEAU — différent de l’ancien supprimé
-vsSide: {
-  alignItems: "center",
-  marginHorizontal: 24,
-},
-vsAvatarXL: {
-  width: normalizeSize(120),
-  height: normalizeSize(120),
-  borderRadius: normalizeSize(60),
-  borderWidth: 3,
-  borderColor: ACCENT.solid,
-  shadowColor: ACCENT.glow,
-  shadowOpacity: 0.22,
-  shadowRadius: 14,
-  shadowOffset: { width: 0, height: 4 },
-  elevation: 7,
-},
-vsModalRoot: {
-  ...StyleSheet.absoluteFillObject,
-  backgroundColor: "#000", // hard black base, then gradients on top
-  justifyContent: "center",
-  alignItems: "center",
-  zIndex: 99999,
-},
-
-vsStage: {
-  width: "100%",
-  maxWidth: 820,
-  flexDirection: "row",
-  alignItems: "center",
-  justifyContent: "center",
-},
-
-vsAvatarWrap: {
-  position: "relative",
-  alignItems: "center",
-  justifyContent: "center",
-},
-
-vsGlowRing: {
-  position: "absolute",
-  width: normalizeSize(138),
-  height: normalizeSize(138),
-  borderRadius: normalizeSize(69),
-  borderWidth: 2,
-  borderColor: ACCENT.softBorder,
-  shadowColor: ACCENT.glow,
-  shadowOpacity: 0.26,
-  shadowRadius: 18,
-  shadowOffset: { width: 0, height: 6 },
-  opacity: 0.85,
-},
-
-vsBadgeBig: {
-  paddingVertical: 10,
-  paddingHorizontal: 20,
-  borderRadius: 999,
-  shadowColor: "#000",
-  shadowOpacity: 0.35,
-  shadowRadius: 10,
-  shadowOffset: { width: 0, height: 6 },
-},
-
-vsBadgeText: {
-  color: "#000",
-  fontFamily: "Comfortaa_700Bold",
-  fontSize: normalizeSize(18),
-  letterSpacing: 2,
-},
-
-vsNameXL: {
-  color: "#fff",
-  marginTop: 10,
-  fontSize: normalizeSize(18),
-  fontFamily: "Comfortaa_700Bold",
-  textAlign: "center",
-},
-// Nouveau "vsCenter" (juste un espace horizontal, pas en absolute)
-vsCenter: {
-  marginHorizontal: 24,
-},
-// Nouveau "vsTextBig" (jaune)
-vsTextBig: {
-  fontSize: normalizeSize(42),
-  fontFamily: "Comfortaa_700Bold",
-  color: ACCENT.solid,
-  letterSpacing: 2,
-  textShadowColor: "rgba(0,0,0,0.6)",
-  textShadowOffset: { width: 0, height: 2 },
-  textShadowRadius: 6,
-},
-chip: {
-  flexDirection: "row",
-  alignItems: "center",
-  paddingVertical: 6,
-  paddingHorizontal: 10,
-  borderRadius: 999,
-  borderWidth: 1,
-  margin: 4, // remplace le gap du parent
-},
-chipDark: {
-    backgroundColor: "rgba(255,255,255,0.10)",
-    borderColor: "rgba(255,255,255,0.16)",
-  },
-  chipLight: {
-    backgroundColor: "rgba(0,0,0,0.06)",
-    borderColor: "rgba(0,0,0,0.08)",
-  },
-chipText: {
-  fontFamily: "Comfortaa_700Bold",
-  fontSize: normalizeSize(12),
-  marginLeft: 6, // remplace le gap interne
-  includeFontPadding: false,
-},
-duoCard: {
-  marginTop: SPACING * 1.4,
-  paddingVertical: SPACING * 1.2,
-  paddingHorizontal: SPACING,
-  borderRadius: normalizeSize(24),
-},
-  duoTitle: {
-    fontFamily: "Comfortaa_700Bold",
-    fontSize: normalizeSize(16),
-  },
-  duoLeadBanner: {
-  alignSelf: "center",
-  paddingHorizontal: 14,
-  paddingVertical: 6,
-  borderRadius: 999,
-},
-  duoLeadText: {
-    fontFamily: "Comfortaa_700Bold",
-    fontSize: normalizeSize(12),
-    letterSpacing: 0.3,
-  },
-  duoHeader: {
-  flexDirection: "row",
-  alignItems: "center",
-  justifyContent: "center",
-  marginBottom: SPACING,
-},
-duoRow: {
-  flexDirection: "row",
-  alignItems: "center",
-  justifyContent: "space-between",
-  gap: SPACING * 1.4,
-},
-duoRowCompact: {
-  flexDirection: "column",
-  alignItems: "stretch",
-  gap: SPACING,
-},
-
-duoSide: {
-  flex: 1,
-  alignItems: "center",
-  // ✅ NEW: sur très petit écran, on force la pleine largeur pour les barres
-  width: "100%",
-},
-  heroOverlay: {
-  position: "absolute",
-  left: 0,
-  right: 0,
-  bottom: 0,
-  top: 0,
-},
-  avatarWrap: {
-    width: normalizeSize(68),
-    height: normalizeSize(68),
-    borderRadius: normalizeSize(34),
-    alignItems: "center",
-    justifyContent: "center",
-    overflow: "visible",
-    marginBottom: 6,
-  },
-  duoAvatarBig: {
-  width: normalizeSize(64),
-  height: normalizeSize(64),
-  borderRadius: normalizeSize(32),
-  borderWidth: 0, // ⛔️ stop bordures
-},
-duoName: {
-  fontFamily: "Comfortaa_700Bold",
-  fontSize: normalizeSize(14),
-  maxWidth: normalizeSize(160), // ✅ un peu plus large
-  textAlign: "center",
-},
-  pulseCircle: {
-    position: "absolute",
-    width: normalizeSize(68),
-    height: normalizeSize(68),
-    borderRadius: normalizeSize(34),
-    borderWidth: 2,
-    opacity: 0.18,
-  },
-  miniBarBg: {
-  width: "90%",
-  height: 6,
-  borderRadius: 3,
-},
-  crownEmoji: {
-  fontSize: normalizeSize(12),
-  transform: [{ translateY: Platform.OS === "android" ? -1 : 0 }],
-},
-
-  miniBarFill: {
-    height: "100%",
-    borderRadius: normalizeSize(4),
-  },
-  duoPct: {
-    fontFamily: "Comfortaa_400Regular",
-    fontSize: normalizeSize(12),
-    marginTop: 6,
-  },
-  vsWrap: {
-  width: normalizeSize(56),
-  alignItems: "center",
-  justifyContent: "center",
-},
-
-// ✅ NEW: en compact, on ne “vole” pas de largeur ; on met VS avec marge verticale
-vsWrapCompact: {
-  width: "100%",
-  paddingVertical: 6,
-},
-vsBadge: {
-  paddingVertical: 4,
-  paddingHorizontal: 10,
-  opacity: 0.35,
-},
-// ✅ NEW: badge plus visible en compact
-vsBadgeCompact: {
-  alignSelf: "center",
-  paddingVertical: 8,
-  paddingHorizontal: 16,
-},
-vsText: {
-  fontSize: normalizeSize(11),
-  letterSpacing: 1,
-},
-// ✅ NEW: texte un poil plus grand sur compact pour compenser la verticalité
-vsTextCompact: {
-  fontSize: normalizeSize(14),
-},
-  noImageText: {
-    marginTop: SPACING,
-    fontFamily: "Comfortaa_400Regular",
-    fontSize: normalizeSize(16),
-  },
-  heroCardWrap: {
-    width: "100%",
-    paddingHorizontal: SPACING * 1.2,
-    marginTop: -normalizeSize(26), // chevauche le hero (Keynote)
-  },
-  heroCardBlur: {
-    borderRadius: R.card,
-    overflow: "hidden",
-    borderWidth: 1,
-    borderColor: GLASS.border,
-    ...S.float,
-  },
-  heroCardInner: {
-    borderRadius: R.card,
-    paddingHorizontal: SPACING * 1.2,
-    paddingTop: SPACING * 1.1,
-    paddingBottom: SPACING * 1.25,
-  },
-  infoRecipeName: {
-    fontSize: normalizeSize(28),
-    marginTop: SPACING * 0.2,
-    marginBottom: SPACING,
-    textAlign: "center",
-    fontFamily: "Comfortaa_700Bold",
-  },
-  category: {
-    fontSize: normalizeSize(14),
-    marginVertical: SPACING / 2,
-    textAlign: "center",
-    fontFamily: "Comfortaa_700Bold",
-  },
-  infoContainer: {
-    flexDirection: "row",
-    alignItems: "center",
-    justifyContent: "center",
-    marginVertical: SPACING / 2,
-  },
-  infoRecipe: {
-    fontSize: normalizeSize(14),
-    marginLeft: SPACING / 2,
-    fontFamily: "Comfortaa_400Regular",
-  },
-  actionIconsRowCentered: {
-  flexDirection: "row",
-  justifyContent: "center",
-  marginTop: 12,
-},
-progressSection: {
-    alignItems: "center",       // on centre le contenu de la section, pas tout l’écran
-    paddingHorizontal: SPACING,
-    paddingTop: SPACING,
-    width: "100%",              // ✅ garantit la pleine largeur (évite les chevaucher)
-   maxWidth: 560,
-   alignSelf: "center",
-  },
-  takeChallengeButton: {
-    borderRadius: R.btn,
-    overflow: "hidden",
-    marginTop: SPACING,
-    ...S.card,
-  },
-  takeChallengeButtonGradient: {
-    paddingVertical: SPACING,
-    paddingHorizontal: SPACING * 2,
-  },
-  takeChallengeButtonText: {
-    fontSize: normalizeSize(16),
-    fontFamily: "Comfortaa_700Bold",
-    textAlign: "center",
-  },
-  inProgressText: {
-    fontSize: normalizeSize(16),
-    marginTop: SPACING,
-    fontFamily: "Comfortaa_700Bold",
-    includeFontPadding: false,
-  },
-  markTodayButton: {
-    borderRadius: R.btn,
-    overflow: "hidden",
-    marginTop: SPACING,
-    ...S.card,
-  },
-  markTodayButtonGradient: {
-    paddingVertical: SPACING,
-    paddingHorizontal: SPACING * 2,
-    alignItems: "center",
-    justifyContent: "center",
-    borderRadius: R.btn,
-  },
-  markTodayButtonText: {
-    fontSize: normalizeSize(16),
-    fontFamily: "Comfortaa_700Bold",
-  },
-  progressText: {
-    fontSize: normalizeSize(14),
-    marginBottom: SPACING,
-    textAlign: "center",
-    marginTop: SPACING / 2,
-    fontFamily: "Comfortaa_400Regular",
-  },
-  progressBarBackground: {
-  position: "relative",
-    width: "100%",        // prend la largeur dispo
-    maxWidth: 480,        // borne haute élégante
-    minWidth: 220,
-    alignSelf: "center",
-    zIndex: 0,
-    height: normalizeSize(10),
-    borderRadius: normalizeSize(5),
-    overflow: "hidden",
-    marginTop: SPACING,
-    backgroundColor: "rgba(255,255,255,0.10)",
-    borderWidth: 1,
-    borderColor: "rgba(255,255,255,0.10)",
-
-  },
-  progressBarFill: {
-    height: "100%",
-  },
-  completeChallengeButton: {
-    borderRadius: normalizeSize(25),
-    overflow: "hidden",
-    marginTop: SPACING,
-    shadowColor: "#000",
-    shadowOffset: { width: 0, height: normalizeSize(4) },
-    shadowOpacity: 0.3,
-    shadowRadius: normalizeSize(6),
-    elevation: 5,
-  },
-  completeChallengeButtonGradient: {
-    paddingVertical: SPACING,
-    paddingHorizontal: SPACING * 2,
-  },
-  completeChallengeButtonText: {
-    fontSize: normalizeSize(16),
-    fontFamily: "Comfortaa_700Bold",
-    textAlign: "center",
-  },
-  infoDescriptionRecipe: {
-    textAlign: "center",
-    fontSize: normalizeSize(16),
-    includeFontPadding: false,
-    marginTop: SPACING * 2,
-    marginHorizontal: SPACING,
-    lineHeight: normalizeSize(22),
-    fontFamily: "Comfortaa_400Regular",
-  },
-  loadingContainer: {
-    flex: 1,
-    justifyContent: "center",
-    alignItems: "center",
-  },
- 
-  duoProgressWrapper: {
-    flexDirection: "row",
-    alignItems: "center",
-    marginTop: SPACING,
-  },
-  duoAvatar: {
-    width: normalizeSize(36),
-    height: normalizeSize(36),
-    borderRadius: normalizeSize(18),
-    borderWidth: 2,
-   borderColor: ACCENT.solid,
-  },
-});
-

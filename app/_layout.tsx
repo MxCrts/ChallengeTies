@@ -627,6 +627,7 @@ const useInviteHandoff = () => {
   return ctx;
 };
 
+
 const InviteHandoffProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
   const [state, setState] = React.useState<InviteHandoffState>({ visible: false, kind: null });
 
@@ -638,6 +639,19 @@ const InviteHandoffProvider: React.FC<{ children: React.ReactNode }> = ({ childr
     }),
     [state]
   );
+
+  // ✅ FAILSAFE: ne jamais laisser un overlay global bloquer l'UI trop longtemps
+  React.useEffect(() => {
+    if (!state.visible) return;
+    const startedAt = Date.now();
+    const t = setTimeout(() => {
+      // si encore visible après 15s -> on force hide
+      if ((Date.now() - startedAt) >= 15000) {
+        try { api.hide(); } catch {}
+      }
+    }, 15000);
+    return () => clearTimeout(t);
+  }, [state.visible, api]);
 
   // ✅ pont global : le screen challenge-details pourra cacher l'overlay
   useEffect(() => {
@@ -738,6 +752,16 @@ const DeepLinkManager: React.FC = () => {
       (globalThis as any).__DL_BLOCK_TS__ = 0;
     }
   };
+
+  // ✅ Le root NE DOIT PAS cacher l'overlay trop tôt.
+  // C’est challenge-details qui doit l’éteindre quand InvitationModal est réellement prêt.
+  const markInviteHandoffExpected = React.useCallback((payload: any) => {
+    (globalThis as any).__INVITE_HANDOFF_EXPECTED__ = { ...payload, ts: Date.now() };
+  }, []);
+
+  const clearInviteHandoffExpected = React.useCallback(() => {
+    delete (globalThis as any).__INVITE_HANDOFF_EXPECTED__;
+  }, []);
 
   const handleDeepLink = React.useCallback(
     async (url: string) => {
@@ -884,11 +908,10 @@ const DeepLinkManager: React.FC = () => {
 
       // ✅ User ready → navigation propre
       if (inviteId) {
-        // 1 seul loading premium au lieu de 3 spinners/écrans
+        // ✅ 1 seul loading global : ON, jusqu'à ce que challenge-details dise "modal prêt"
         handoff.showInvite();
+        markInviteHandoffExpected({ kind: "invite", challengeId: String(challengeId), inviteId: String(inviteId) });
       }
-      // ✅ iOS-safe: encode le segment dynamique (accents, espaces, tirets spéciaux…)
-      const safeSegment = encodeURIComponent(String(challengeId));
 
       // ✅ failsafe anti "handoff infini" (si route ne match pas / modal ne s’affiche pas)
       if (inviteId) {
@@ -900,14 +923,18 @@ const DeepLinkManager: React.FC = () => {
       }
 
       router.replace({
-        pathname: `/challenge-details/${safeSegment}`,
-        params: inviteId
-          ? {
-              invite: inviteId,
-              days: selectedDays ? String(selectedDays) : undefined,
-            }
-          : {},
-      });
+  pathname: "/challenge-details/[id]",
+  params: inviteId
+    ? {
+        id: String(challengeId), // 👈 IMPORTANT : l’id ici, PAS encodé à la main
+        invite: String(inviteId),
+        days: selectedDays ? String(selectedDays) : undefined,
+      }
+    : {
+        id: String(challengeId),
+      },
+});
+
       // ✅ anti blocage infini sur "/"
       setTimeout(() => {
         try {
@@ -915,7 +942,7 @@ const DeepLinkManager: React.FC = () => {
         } catch {}
       }, 1800);
     },
-    [router, user, loading, checkingAuth, handoff, pathname]
+    [router, user, loading, checkingAuth, handoff, pathname, markInviteHandoffExpected]
   );
 
   useEffect(() => {
@@ -955,20 +982,21 @@ const DeepLinkManager: React.FC = () => {
         await AsyncStorage.removeItem("ties_pending_link");
         setDLBlock(true);
 
-         if (inviteId) {
+        if (inviteId) {
           handoff.showInvite();
+          markInviteHandoffExpected({ kind: "invite", challengeId: String(challengeId), inviteId: String(inviteId) });
         }
 
-        const safeSegment = encodeURIComponent(String(challengeId));
         router.replace({
-          pathname: `/challenge-details/${safeSegment}`,
-          params: inviteId
-            ? {
-                invite: String(inviteId),
-                days: selectedDays ? String(selectedDays) : undefined,
-              }
-            : {},
-        });
+  pathname: "/challenge-details/[id]",
+  params: inviteId
+    ? {
+        id: String(challengeId),
+        invite: String(inviteId),
+        days: selectedDays ? String(selectedDays) : undefined,
+      }
+    : { id: String(challengeId) },
+});
          setTimeout(() => {
           try {
             setDLBlock(false);
@@ -976,7 +1004,7 @@ const DeepLinkManager: React.FC = () => {
         }, 1800);
       } catch {}
     })();
-  }, [flags.enableDeepLinks, user, loading, checkingAuth, router, handoff]);
+ }, [flags.enableDeepLinks, user, loading, checkingAuth, router, handoff, markInviteHandoffExpected]);
 
   // ✅ Dès qu’on est réellement sur challenge-details, on peut couper l’overlay root
   useEffect(() => {
@@ -985,6 +1013,14 @@ const DeepLinkManager: React.FC = () => {
     // ✅ purge auto si un block traîne (anti écran blanc "/")
     clearDLBlockIfStale(4500);
     if (pathname.startsWith("/challenge-details/")) {
+      // ✅ IMPORTANT: on ne cache pas l’overlay juste parce qu’on est sur la route.
+      // On laisse challenge-details le cacher quand InvitationModal est prêt.
+      // Mais on met un failsafe si l’expected traîne trop.
+      const exp = (globalThis as any).__INVITE_HANDOFF_EXPECTED__;
+      if (exp?.ts && Date.now() - Number(exp.ts) > 15000) {
+        try { (globalThis as any).__HIDE_INVITE_HANDOFF__?.(); } catch {}
+        clearInviteHandoffExpected();
+      }
       const t = setTimeout(() => {
         try {
           setDLBlock(false);
@@ -1175,9 +1211,9 @@ export default function RootLayout() {
                                       <PremiumProvider>
                                       <AdsVisibilityProvider>
                                         <InviteHandoffProvider>
-                                        <DeepLinkManager />
-                                        <NotificationsBootstrap />
-                                        <InviteHandoffOverlay />
+                                          <DeepLinkManager />
+                                          <NotificationsBootstrap />
+                                          <InviteHandoffOverlay />
 
                                         <Stack
                                           screenOptions={{
@@ -1194,10 +1230,9 @@ export default function RootLayout() {
                                           <Stack.Screen name="register" />
                                           <Stack.Screen name="forgot-password" />
                                         </Stack>
+                                          <AppNavigator />
+                                          <TrophyModal />
                                         </InviteHandoffProvider>
-
-                                        <AppNavigator />
-                                        <TrophyModal />
 
                                       </AdsVisibilityProvider>
                                       </PremiumProvider>
