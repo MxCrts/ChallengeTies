@@ -610,113 +610,6 @@ const ConsentGate: React.FC<{ children: React.ReactNode }> = ({ children }) => {
   return <>{children}</>;
 };
 
-// =========================
-// InviteHandoff (global overlay)
-// =========================
-type InviteHandoffState = { visible: boolean; kind: "invite" | null };
-
-const InviteHandoffContext = React.createContext<{
-  state: InviteHandoffState;
-  showInvite: () => void;
-  hide: () => void;
-} | null>(null);
-
-const useInviteHandoff = () => {
-  const ctx = React.useContext(InviteHandoffContext);
-  if (!ctx) throw new Error("useInviteHandoff must be used within InviteHandoffProvider");
-  return ctx;
-};
-
-
-const InviteHandoffProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
-  const [state, setState] = React.useState<InviteHandoffState>({ visible: false, kind: null });
-
-  const api = React.useMemo(
-    () => ({
-      state,
-      showInvite: () => setState({ visible: true, kind: "invite" }),
-      hide: () => setState({ visible: false, kind: null }),
-    }),
-    [state]
-  );
-
-  // ✅ FAILSAFE: ne jamais laisser un overlay global bloquer l'UI trop longtemps
-  React.useEffect(() => {
-    if (!state.visible) return;
-    const startedAt = Date.now();
-    const t = setTimeout(() => {
-      // si encore visible après 15s -> on force hide
-      if ((Date.now() - startedAt) >= 15000) {
-        try { api.hide(); } catch {}
-      }
-    }, 15000);
-    return () => clearTimeout(t);
-  }, [state.visible, api]);
-
-  // ✅ pont global : le screen challenge-details pourra cacher l'overlay
-  useEffect(() => {
-    (globalThis as any).__HIDE_INVITE_HANDOFF__ = api.hide;
-    return () => {
-      if ((globalThis as any).__HIDE_INVITE_HANDOFF__ === api.hide) {
-        delete (globalThis as any).__HIDE_INVITE_HANDOFF__;
-      }
-    };
-  }, [api.hide]);
-
-  return <InviteHandoffContext.Provider value={api}>{children}</InviteHandoffContext.Provider>;
-};
-
-const InviteHandoffOverlay: React.FC = () => {
-  const { state } = useInviteHandoff();
-  const { t } = useTranslation();
-
-  if (!state.visible) return null;
-
-  return (
-    <Animated.View
-      entering={FadeIn.duration(160)}
-      exiting={FadeOut.duration(160)}
-      style={{
-        ...StyleSheet.absoluteFillObject,
-        zIndex: 9999,
-        elevation: 9999,
-        backgroundColor: "rgba(0,0,0,0.86)",
-        alignItems: "center",
-        justifyContent: "center",
-        paddingHorizontal: 24,
-      }}
-      pointerEvents="auto"
-      accessibilityRole="progressbar"
-      accessibilityLabel={t("deeplink.inviteHandoff.a11y", { defaultValue: "Chargement de l’invitation…" })}
-    >
-      <View style={{ alignItems: "center" }}>
-        <ActivityIndicator size="large" color="#fff" />
-        <Text
-          style={{
-            marginTop: 14,
-            fontSize: 16,
-            color: "#fff",
-            textAlign: "center",
-            fontFamily: "Comfortaa_700Bold",
-          }}
-        >
-          {t("deeplink.inviteHandoff.title", { defaultValue: "Connexion au Duo…" })}
-        </Text>
-        <Text
-          style={{
-            marginTop: 8,
-            fontSize: 13,
-            color: "rgba(255,255,255,0.78)",
-            textAlign: "center",
-            fontFamily: "Comfortaa_400Regular",
-          }}
-        >
-          {t("deeplink.inviteHandoff.sub", { defaultValue: "On prépare ton invitation. 1 seconde." })}
-        </Text>
-      </View>
-    </Animated.View>
-  );
-};
 
 
 // =========================
@@ -727,7 +620,6 @@ const DeepLinkManager: React.FC = () => {
   const pathname = usePathname();
   const { flags } = useFlags();
   const { user, loading, checkingAuth } = useAuth();
-  const handoff = useInviteHandoff();
 
   // Dédup local + global (si remount)
   const lastUrlRef = React.useRef<string | null>(null);
@@ -752,16 +644,6 @@ const DeepLinkManager: React.FC = () => {
       (globalThis as any).__DL_BLOCK_TS__ = 0;
     }
   };
-
-  // ✅ Le root NE DOIT PAS cacher l'overlay trop tôt.
-  // C’est challenge-details qui doit l’éteindre quand InvitationModal est réellement prêt.
-  const markInviteHandoffExpected = React.useCallback((payload: any) => {
-    (globalThis as any).__INVITE_HANDOFF_EXPECTED__ = { ...payload, ts: Date.now() };
-  }, []);
-
-  const clearInviteHandoffExpected = React.useCallback(() => {
-    delete (globalThis as any).__INVITE_HANDOFF_EXPECTED__;
-  }, []);
 
   const handleDeepLink = React.useCallback(
     async (url: string) => {
@@ -907,20 +789,6 @@ const DeepLinkManager: React.FC = () => {
       }
 
       // ✅ User ready → navigation propre
-      if (inviteId) {
-        // ✅ 1 seul loading global : ON, jusqu'à ce que challenge-details dise "modal prêt"
-        handoff.showInvite();
-        markInviteHandoffExpected({ kind: "invite", challengeId: String(challengeId), inviteId: String(inviteId) });
-      }
-
-      // ✅ failsafe anti "handoff infini" (si route ne match pas / modal ne s’affiche pas)
-      if (inviteId) {
-        setTimeout(() => {
-          try {
-            (globalThis as any).__HIDE_INVITE_HANDOFF__?.();
-          } catch {}
-        }, 12000);
-      }
 
       router.replace({
   pathname: "/challenge-details/[id]",
@@ -942,7 +810,7 @@ const DeepLinkManager: React.FC = () => {
         } catch {}
       }, 1800);
     },
-    [router, user, loading, checkingAuth, handoff, pathname, markInviteHandoffExpected]
+    [router, user, loading, checkingAuth, pathname]
   );
 
   useEffect(() => {
@@ -982,11 +850,6 @@ const DeepLinkManager: React.FC = () => {
         await AsyncStorage.removeItem("ties_pending_link");
         setDLBlock(true);
 
-        if (inviteId) {
-          handoff.showInvite();
-          markInviteHandoffExpected({ kind: "invite", challengeId: String(challengeId), inviteId: String(inviteId) });
-        }
-
         router.replace({
   pathname: "/challenge-details/[id]",
   params: inviteId
@@ -1004,7 +867,7 @@ const DeepLinkManager: React.FC = () => {
         }, 1800);
       } catch {}
     })();
- }, [flags.enableDeepLinks, user, loading, checkingAuth, router, handoff, markInviteHandoffExpected]);
+ }, [flags.enableDeepLinks, user, loading, checkingAuth, router]);
 
   // ✅ Dès qu’on est réellement sur challenge-details, on peut couper l’overlay root
   useEffect(() => {
@@ -1013,14 +876,6 @@ const DeepLinkManager: React.FC = () => {
     // ✅ purge auto si un block traîne (anti écran blanc "/")
     clearDLBlockIfStale(4500);
     if (pathname.startsWith("/challenge-details/")) {
-      // ✅ IMPORTANT: on ne cache pas l’overlay juste parce qu’on est sur la route.
-      // On laisse challenge-details le cacher quand InvitationModal est prêt.
-      // Mais on met un failsafe si l’expected traîne trop.
-      const exp = (globalThis as any).__INVITE_HANDOFF_EXPECTED__;
-      if (exp?.ts && Date.now() - Number(exp.ts) > 15000) {
-        try { (globalThis as any).__HIDE_INVITE_HANDOFF__?.(); } catch {}
-        clearInviteHandoffExpected();
-      }
       const t = setTimeout(() => {
         try {
           setDLBlock(false);
@@ -1210,10 +1065,8 @@ export default function RootLayout() {
                                     <ConsentGate>
                                       <PremiumProvider>
                                       <AdsVisibilityProvider>
-                                        <InviteHandoffProvider>
                                           <DeepLinkManager />
                                           <NotificationsBootstrap />
-                                          <InviteHandoffOverlay />
 
                                         <Stack
                                           screenOptions={{
@@ -1232,7 +1085,6 @@ export default function RootLayout() {
                                         </Stack>
                                           <AppNavigator />
                                           <TrophyModal />
-                                        </InviteHandoffProvider>
 
                                       </AdsVisibilityProvider>
                                       </PremiumProvider>

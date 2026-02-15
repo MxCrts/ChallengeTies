@@ -3207,7 +3207,7 @@ const scrollContentStyle = useMemo(
   <Animated.View
     // ⚠️ plus d'entering/exiting, pour éviter les soucis de hitbox fantôme
     style={styles.loadingOverlay}
-    pointerEvents="auto"
+    pointerEvents="none"
   >
     <BlurView
       intensity={40}
