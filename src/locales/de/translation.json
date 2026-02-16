@@ -175,6 +175,14 @@
     }
   }
 ,
+"overlay": {
+    "opening": "Öffnen…",
+    "loginRequired": "Anmeldung erforderlich…",
+    "loading": "Wird geladen…",
+    "pleaseWait": "Übergang wird gesichert…",
+    "activatingDuo": "Duo wird aktiviert…",
+    "updating": "Wird aktualisiert…"
+  },
   "profile": "Profil",
   "yourProfile": "Dein Profil",
   "addBioHere": "Biografie hier hinzufügen",

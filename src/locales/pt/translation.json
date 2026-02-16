@@ -2531,6 +2531,14 @@
     }
   }
 ,
+"overlay": {
+    "opening": "Abrindo…",
+    "loginRequired": "Login necessário…",
+    "loading": "Carregando…",
+    "pleaseWait": "A garantir a transição…",
+    "activatingDuo": "A ativar o duo…",
+    "updating": "A atualizar…"
+  },
   "invitationS": {
     "shareTitle": "Convite Duo",
     "sentTitle": "Convite enviado",

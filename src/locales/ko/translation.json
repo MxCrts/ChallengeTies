@@ -2431,6 +2431,14 @@
         "a11y": "초대 불러오는 중…"
       }
     },
+    "overlay": {
+    "opening": "여는 중…",
+    "loginRequired": "로그인이 필요해요…",
+    "loading": "로딩 중…",
+    "pleaseWait": "전환을 안전하게 처리 중…",
+    "activatingDuo": "듀오 활성화 중…",
+    "updating": "업데이트 중…"
+  },
 "homeZ": {
   "duoPending": {
      "cta": "듀오 준비하기",

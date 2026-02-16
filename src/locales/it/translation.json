@@ -633,8 +633,15 @@
       "newFeaturesHint": "Scopri le novità e vota cosa viene dopo.",
       "sectionA11y": "Scopri sfide, consigli e nuove funzionalità."
     }
-  }
-,
+  },
+  "overlay": {
+    "opening": "Apertura…",
+    "loginRequired": "Accesso richiesto…",
+    "loading": "Caricamento…",
+    "pleaseWait": "Stiamo rendendo sicura la transizione…",
+    "activatingDuo": "Attivazione del duo…",
+    "updating": "Aggiornamento…"
+  },
   "invitationS": {
     "shareTitle": "Invito in coppia",
     "sentTitle": "Invito inviato",

@@ -59,7 +59,7 @@ import {
 } from "expo-tracking-transparency";
 import { ToastProvider, useToast } from "../src/ui/Toast";
 import MarkToastListener from "@/src/ui/MarkToastListener";
-
+import GlobalLoadingOverlay from "@/src/ui/GlobalLoadingOverlay";
 
 const FORCE_ADS_DEBUG = true;
 
@@ -621,6 +621,48 @@ const DeepLinkManager: React.FC = () => {
   const { flags } = useFlags();
   const { user, loading, checkingAuth } = useAuth();
 
+   // =========================
+  // Global overlay helpers (visual only)
+  // =========================
+  const showGlobalOverlay = React.useCallback((label: string) => {
+    (globalThis as any).__GLOBAL_OVERLAY__ = {
+      on: true,
+      label,
+      ts: Date.now(),
+    };
+  }, []);
+
+  const hideGlobalOverlaySoon = React.useCallback((delayMs = 900) => {
+    const tsAtSchedule = Date.now();
+    setTimeout(() => {
+      const cur = (globalThis as any).__GLOBAL_OVERLAY__;
+      // coupe seulement si c’est "notre" overlay récent (anti race)
+      if (cur?.ts && typeof cur.ts === "number") {
+        const age = Date.now() - cur.ts;
+        // si un autre overlay a été posé après, on ne touche pas
+        if (cur.ts > tsAtSchedule) return;
+        if (age >= 0 && age < 15000) {
+          (globalThis as any).__GLOBAL_OVERLAY__ = { on: false };
+        }
+      } else {
+        // fallback safe
+        (globalThis as any).__GLOBAL_OVERLAY__ = { on: false };
+      }
+    }, Math.max(0, delayMs));
+  }, []);
+
+  // ✅ failsafe anti overlay zombie (au cas où)
+  useEffect(() => {
+    const id = setInterval(() => {
+      const cur = (globalThis as any).__GLOBAL_OVERLAY__;
+      const ts = typeof cur?.ts === "number" ? cur.ts : 0;
+      if (cur?.on && ts && Date.now() - ts > 20000) {
+        (globalThis as any).__GLOBAL_OVERLAY__ = { on: false };
+      }
+    }, 1200);
+    return () => clearInterval(id);
+  }, []);
+
   // Dédup local + global (si remount)
   const lastUrlRef = React.useRef<string | null>(null);
   const handledInitialRef = React.useRef(false);
@@ -649,13 +691,22 @@ const DeepLinkManager: React.FC = () => {
     async (url: string) => {
       if (!url) return;
 
+      showGlobalOverlay("overlay.opening");
+
       // ✅ dedupe global
       const globalLast = getGlobalLast();
-      if (globalLast === url) return;
+      if (globalLast === url) {
+        // rien à faire → on évite de laisser un overlay allumé
+        hideGlobalOverlaySoon(220);
+        return;
+      }
       setGlobalLast(url);
 
       // ✅ dedupe local
-      if (lastUrlRef.current === url) return;
+      if (lastUrlRef.current === url) {
+        hideGlobalOverlaySoon(220);
+        return;
+      }
       lastUrlRef.current = url;
 
       // ✅ parsing robuste Expo
@@ -692,6 +743,7 @@ const DeepLinkManager: React.FC = () => {
       router.replace(target);
     }
   } catch {}
+  hideGlobalOverlaySoon(750);
   return;
 }
 
@@ -785,6 +837,8 @@ const DeepLinkManager: React.FC = () => {
    // ✅ clé du fix (ne jamais laisser "/" coincé)
         setDLBlock(false);
         (globalThis as any).__FORCE_AUTH_FLOW__ = true;
+        showGlobalOverlay("overlay.loginRequired");
+        hideGlobalOverlaySoon(900);
         return;
       }
 
@@ -809,8 +863,9 @@ const DeepLinkManager: React.FC = () => {
           setDLBlock(false);
         } catch {}
       }, 1800);
+       hideGlobalOverlaySoon(900);
     },
-    [router, user, loading, checkingAuth, pathname]
+    [router, user, loading, checkingAuth, pathname, showGlobalOverlay, hideGlobalOverlaySoon]
   );
 
   useEffect(() => {
@@ -841,6 +896,7 @@ const DeepLinkManager: React.FC = () => {
       try {
         const raw = await AsyncStorage.getItem("ties_pending_link");
         if (!raw) return;
+        showGlobalOverlay("overlay.opening");
         const parsed = JSON.parse(raw || "{}");
         const challengeId = parsed?.challengeId;
         const inviteId = parsed?.inviteId;
@@ -865,9 +921,10 @@ const DeepLinkManager: React.FC = () => {
             setDLBlock(false);
           } catch {}
         }, 1800);
+        hideGlobalOverlaySoon(900);
       } catch {}
     })();
- }, [flags.enableDeepLinks, user, loading, checkingAuth, router]);
+ }, [flags.enableDeepLinks, user, loading, checkingAuth, router, showGlobalOverlay, hideGlobalOverlaySoon]);
 
   // ✅ Dès qu’on est réellement sur challenge-details, on peut couper l’overlay root
   useEffect(() => {
@@ -1067,24 +1124,24 @@ export default function RootLayout() {
                                       <AdsVisibilityProvider>
                                           <DeepLinkManager />
                                           <NotificationsBootstrap />
-
-                                        <Stack
-                                          screenOptions={{
-                                            headerShown: false,
-                                            animation: "fade",
-                                            animationDuration: 400,
-                                          }}
-                                        >
-                                          <Stack.Screen
-                                            name="(tabs)"
-                                            options={{ headerShown: false }}
-                                          />
-                                          <Stack.Screen name="login" />
-                                          <Stack.Screen name="register" />
-                                          <Stack.Screen name="forgot-password" />
-                                        </Stack>
-                                          <AppNavigator />
-                                          <TrophyModal />
+                                          <GlobalLoadingOverlay />
+                                          <Stack
+                                            screenOptions={{
+                                              headerShown: false,
+                                              animation: "fade",
+                                              animationDuration: 400,
+                                            }}
+                                          >
+                                            <Stack.Screen
+                                              name="(tabs)"
+                                              options={{ headerShown: false }}
+                                            />
+                                            <Stack.Screen name="login" />
+                                            <Stack.Screen name="register" />
+                                            <Stack.Screen name="forgot-password" />
+                                          </Stack>
+                                            <AppNavigator />
+                                            <TrophyModal />
 
                                       </AdsVisibilityProvider>
                                       </PremiumProvider>

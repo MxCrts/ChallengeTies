@@ -499,6 +499,14 @@
         "a11y": "正在加载邀请…"
       }
     },
+    "overlay": {
+    "opening": "正在打开…",
+    "loginRequired": "需要登录…",
+    "loading": "加载中…",
+    "pleaseWait": "正在确保顺畅切换…",
+    "activatingDuo": "正在启用双人模式…",
+    "updating": "正在更新…"
+  },
 "homeZ": {
   "duoPending": {
     "cta": "准备双人模式",

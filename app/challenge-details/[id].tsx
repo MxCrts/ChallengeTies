@@ -1776,7 +1776,9 @@ const { showBootOverlay, loadingLabel, loadingSubLabel } = useBootOverlay({
   t,
 });
 
-const showBootOverlaySafe = showBootOverlay && invitationModalVisible;
+const showBootOverlaySafe =
+  showBootOverlay &&
+  (deeplinkBooting || inviteLoading || invitationModalVisible || !inviteModalReady);
 
 const handleInviteFriend = useCallback(async () => {
   hapticTap();
@@ -3207,8 +3209,9 @@ const scrollContentStyle = useMemo(
   <Animated.View
     // ⚠️ plus d'entering/exiting, pour éviter les soucis de hitbox fantôme
     style={styles.loadingOverlay}
-    pointerEvents="none"
+    pointerEvents="auto"
   >
+    <Pressable style={StyleSheet.absoluteFill} onPress={() => {}} />
     <BlurView
       intensity={40}
       tint={isDarkMode ? "dark" : "light"}

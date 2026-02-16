@@ -191,6 +191,14 @@
       "cta": "Continuer"
     }
   },
+  "overlay": {
+    "opening": "Ouverture…",
+    "loginRequired": "Connexion requise…",
+    "loading": "Chargement…",
+    "pleaseWait": "On sécurise la transition…",
+    "activatingDuo": "Activation du duo…",
+    "updating": "Mise à jour…"
+  },
   "profile": "Profil",
   "yourProfile": "Votre profil",
   "addBioHere": "Ajoutez une bio ici",

@@ -669,6 +669,14 @@
       "newFeaturesHint": "Discover new features and vote for what’s next."
     }
   },
+  "overlay": {
+    "opening": "Opening…",
+    "loginRequired": "Login required…",
+    "loading": "Loading…",
+    "pleaseWait": "Securing the transition…",
+    "activatingDuo": "Activating duo…",
+    "updating": "Updating…"
+  },
   "soloMoment": {
     "kicker": "SOLO MOMENT",
     "badge": "Locked",

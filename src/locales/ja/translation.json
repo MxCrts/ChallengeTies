@@ -2454,6 +2454,14 @@
         "a11y": "招待を読み込み中…"
       }
     },
+    "overlay": {
+    "opening": "開いています…",
+    "loginRequired": "ログインが必要です…",
+    "loading": "読み込み中…",
+    "pleaseWait": "遷移を安全に処理中…",
+    "activatingDuo": "デュオを有効化中…",
+    "updating": "更新中…"
+  },
   "homeZ": {
     "duoPending": {
       "cta": "デュオを準備",
