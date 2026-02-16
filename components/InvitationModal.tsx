@@ -141,33 +141,7 @@ const InvitationModal: React.FC<InvitationModalProps> = ({
   const isShown = !!visible && !!inviteId;
   const modalVisible = isShown;
 
-  // =========================
-  // Global overlay helpers (visual only)
-  // Forme attendue: { on: boolean, label?: string, ts?: number }
-  // label peut être une clé i18n ("overlay.activatingDuo")
-  // =========================
-  const showGlobalOverlay = useCallback((labelKeyOrText: string) => {
-    (globalThis as any).__GLOBAL_OVERLAY__ = {
-      on: true,
-      label: String(labelKeyOrText || "").trim(),
-      ts: Date.now(),
-    };
-  }, []);
-
-  const hideGlobalOverlaySoon = useCallback((delayMs = 650) => {
-    const tsAtSchedule = Date.now();
-    setTimeout(() => {
-      const cur = (globalThis as any).__GLOBAL_OVERLAY__;
-      if (cur?.ts && typeof cur.ts === "number") {
-        // si un autre overlay a été posé après, on ne touche pas
-        if (cur.ts > tsAtSchedule) return;
-        const age = Date.now() - cur.ts;
-        if (age >= 0 && age < 15000) (globalThis as any).__GLOBAL_OVERLAY__ = { on: false };
-      } else {
-        (globalThis as any).__GLOBAL_OVERLAY__ = { on: false };
-      }
-    }, Math.max(0, delayMs));
-  }, []);
+  
 
   useEffect(() => {
     mountedRef.current = true;
@@ -205,11 +179,6 @@ useEffect(() => {
   try { (globalThis as any).__HIDE_INVITE_HANDOFF__?.(); } catch {}
 }, [modalVisible]);
 
-// ✅ si le modal se ferme / se démonte, on ne laisse jamais un overlay global actif
-  useEffect(() => {
-    if (!modalVisible) hideGlobalOverlaySoon(0);
-  }, [modalVisible, hideGlobalOverlaySoon]);
-
   const closeAll = useCallback(() => {
     try {
       onClose();
@@ -231,8 +200,6 @@ useEffect(() => {
   // reset local states to avoid parent guards reading stale "busy"
   try { setLoading(false); } catch {}
   try { setFetching(false); } catch {}
-
-  try { hideGlobalOverlaySoon(0); } catch {}
 
   // ✅ Close synchronously (setTimeout can leave one frame where an overlay blocks touches)
   try {onClose();
@@ -476,7 +443,6 @@ useEffect(() => {
 
     setLoading(true);
     setErrorMsg("");
-    showGlobalOverlay("overlay.activatingDuo");
     if (!reduceMotion) {
       Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium).catch(() => {});
     }
@@ -506,7 +472,6 @@ useEffect(() => {
               "Tu es déjà en duo pour ce défi. Tu peux quitter l’ancien duo dans tes défis en cours avant d’en accepter un nouveau.",
           })
         );
-        hideGlobalOverlaySoon(0);
         return;
       }
 
@@ -518,7 +483,6 @@ useEffect(() => {
       if (hasSolo) {
         setLoading(false);
         setShowRestartConfirm(true);
-        hideGlobalOverlaySoon(0);
         return;
       }
 
@@ -588,7 +552,6 @@ useEffect(() => {
       }
     } finally {
       setLoading(false);
-      hideGlobalOverlaySoon(650);
     }
   }, [
     loading,
@@ -602,8 +565,6 @@ useEffect(() => {
     onClose,
     clearInvitation,
     reduceMotion,
-    showGlobalOverlay,
-    hideGlobalOverlaySoon,
   ]);
 
   const handleConfirmRestart = useCallback(async () => {
@@ -612,7 +573,6 @@ useEffect(() => {
 
     setLoading(true);
     setErrorMsg("");
-    showGlobalOverlay("overlay.activatingDuo");
 
     try {
       if (!reduceMotion) {
@@ -643,7 +603,6 @@ useEffect(() => {
       setErrorMsg(t("invitation.errors.unknown", { defaultValue: "Erreur." }));
     } finally {
       setLoading(false);
-      hideGlobalOverlaySoon(650);
     }
   }, [
     inviteId,
@@ -655,8 +614,6 @@ useEffect(() => {
     t,
     onClose,
     clearInvitation,
-    showGlobalOverlay,
-    hideGlobalOverlaySoon,
   ]);
 
   const handleRefuse = useCallback(async () => {
@@ -664,7 +621,6 @@ useEffect(() => {
 
     setLoading(true);
     setErrorMsg("");
-    showGlobalOverlay("overlay.updating");
 
     try {
       if (inv.kind === "direct") await refuseInvitationDirect(inviteId);
@@ -693,7 +649,6 @@ useEffect(() => {
       }
     } finally {
       setLoading(false);
-      hideGlobalOverlaySoon(650);
     }
   }, [
     inviteId,
@@ -705,8 +660,6 @@ useEffect(() => {
     onClose,
     clearInvitation,
     reduceMotion,
-    showGlobalOverlay,
-    hideGlobalOverlaySoon,
   ]);
 
   // ===== Styles (TOP MONDE) =====
