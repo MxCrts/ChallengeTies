@@ -292,6 +292,8 @@
   },
   "newFeatures": {
     "deadlineIso": "2026-02-28T23:59:59+01:00",
+    "byTpl": "door {{username}}",
+    "unknown": "Anoniem",
     "proposeIdea": "Een idee voorstellen",
     "shareLabel": "Delen",
 

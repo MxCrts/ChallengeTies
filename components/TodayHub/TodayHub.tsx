@@ -453,6 +453,9 @@ const pendingTitle = useMemo(
     [t, langKey]
   );
 
+  const pillPadX = isTiny ? 9 : 12;
+const pillPadY = isTiny ? 6 : 7;
+const pillIcon = normalize(isTiny ? 13 : 14);
 
   return (
     <View style={{ width: "100%", alignItems: "center" }}>
@@ -497,50 +500,76 @@ const pendingTitle = useMemo(
         />
 
 
-        {/* Top pills */}
-        <View style={[s.pillsRow, { marginBottom: normalize(isTiny ? 10 : 12) }]}>
-          <View
-            style={[
-              s.pill,
-              {
-                backgroundColor: TOKENS.pillA,
-                borderWidth: TOKENS.hairline,
-                borderColor: TOKENS.rim,
-              },
-            ]}
-          >
-            <Ionicons name="flash-outline" size={normalize(14)} color={TOKENS.icon} />
-                        <Text style={[s.pillText, { color: TOKENS.icon, fontSize: TYPO.pill }]}>
-              {todayBadge}
-            </Text>
-          </View>
+       {/* Top pills */}
+<View
+  style={[
+    s.pillsRow,
+    { marginBottom: normalize(isTiny ? 10 : 12) },
+  ]}
+>
+  {/* LEFT: TODAY */}
+  <View
+  style={[
+    s.pill,
+    s.pillLeft,
+    {
+      backgroundColor: TOKENS.pillA,
+      borderWidth: TOKENS.hairline,
+      borderColor: TOKENS.rim,
+      paddingHorizontal: pillPadX,
+      paddingVertical: pillPadY,
+    },
+  ]}
+>
+  <Ionicons name="flash-outline" size={pillIcon} color={TOKENS.icon} />
+  <Text
+    style={[s.pillText, { color: TOKENS.icon, fontSize: TYPO.pill }]}
+    numberOfLines={1}
+    adjustsFontSizeToFit
+    minimumFontScale={0.88}
+    ellipsizeMode="clip"
+  >
+    {todayBadge}
+  </Text>
+</View>
 
-          <View
-            style={[
-              s.pill,
-              {
-                backgroundColor: TOKENS.pillB,
-                borderWidth: TOKENS.hairline,
-                borderColor: TOKENS.rim,
-              },
-            ]}
-          >
-            <Ionicons
-              name={primaryMode === "duoPending" ? "hourglass-outline" : "flame-outline"}
-              size={normalize(14)}
-              color={TOKENS.icon}
-            />
-                        <Text
-              style={[s.pillText, { color: TOKENS.icon, fontSize: TYPO.pill }]}
-              numberOfLines={1}
-              adjustsFontSizeToFit
-              minimumFontScale={0.88}
-            >
 
-              {rightPill}
-            </Text>
-          </View>
-        </View>
+  {/* RIGHT: ACTIVE / NONE / PENDING */}
+  <View
+  style={[
+    s.pill,
+    s.pillRight,
+    {
+      backgroundColor: TOKENS.pillB,
+      borderWidth: TOKENS.hairline,
+      borderColor: TOKENS.rim,
+      paddingHorizontal: pillPadX,
+      paddingVertical: pillPadY,
+    },
+  ]}
+>
+  <Ionicons
+    name={primaryMode === "duoPending" ? "hourglass-outline" : "flame-outline"}
+    size={pillIcon}
+    color={TOKENS.icon}
+    style={{ marginRight: isTiny ? 6 : 8 }}
+  />
+
+  <View style={s.pillTextWrap}>
+    <Text
+      style={[s.pillText, { color: TOKENS.icon, fontSize: TYPO.pill }]}
+      numberOfLines={1}
+      adjustsFontSizeToFit
+      minimumFontScale={0.72}   // ✅ plus bas = 1 ligne garantie
+      ellipsizeMode="tail"      // ✅ si même le fit ne suffit pas
+    >
+      {rightPill}
+    </Text>
+  </View>
+</View>
+
+</View>
+
 
         {/* Title */}
                 <Text style={[s.title, { color: TOKENS.text, fontSize: TYPO.title }]}
@@ -1055,20 +1084,36 @@ shadowRadius: 22,
     borderRadius: 999,
   },
   pillsRow: {
-    flexDirection: "row",
-    justifyContent: "space-between",
-    gap: 10,
-    marginBottom: 12,
-  },
-  pill: {
-    flexDirection: "row",
-    alignItems: "center",
-    gap: 8,
-    paddingHorizontal: 12,
-    paddingVertical: 7,
-    borderRadius: 999,
-    flexShrink: 1,
-  },
+  flexDirection: "row",
+  alignItems: "center",
+  flexWrap: "nowrap",     // ✅ JAMAIS de 2e ligne
+  marginBottom: 12,
+  marginLeft: 10, 
+},
+pill: {
+  flexDirection: "row",
+  alignItems: "center",
+  borderRadius: 999,
+  paddingVertical: 7,
+  paddingHorizontal: 12,
+  minHeight: 32,
+
+  flexShrink: 1,   // ✅ la pill peut shrink
+  minWidth: 0,     // ✅ CRITIQUE Android
+},
+pillLeft: {
+  flexShrink: 0,         // ✅ garde sa forme
+  maxWidth: "45%",       // ✅ limite stricte (sinon elle bouffe tout)
+},
+pillRight: {
+  flexGrow: 1,           // ✅ prend le reste
+  flexShrink: 1,
+  minWidth: 0,           // ✅ CRITIQUE
+},
+pillTextWrap: {
+  flex: 1,
+  minWidth: 0,           // ✅ CRITIQUE
+},
   pillText: {
     fontSize: 13,
     fontFamily: F.bold,

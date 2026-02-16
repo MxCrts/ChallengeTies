@@ -254,6 +254,9 @@
   },
   "newFeatures": {
     "deadlineIso": "2026-02-28T23:59:59+01:00",
+    "byTpl": "{{username}} द्वारा",
+    "unknown": "गुमनाम"
+,
     "proposeIdea": "एक आइडिया सुझाएँ",
     "shareLabel": "शेयर",
 

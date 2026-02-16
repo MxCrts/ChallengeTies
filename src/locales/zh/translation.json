@@ -251,6 +251,8 @@
   },
   "newFeatures": {
     "deadlineIso": "2026-02-28T23:59:59+01:00",
+    "byTpl": "由 {{username}}",
+    "unknown": "匿名",
     "proposeIdea": "提出一个想法",
     "shareLabel": "分享",
 

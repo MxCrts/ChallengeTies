@@ -22,6 +22,7 @@ import { useRouter } from "expo-router";
 import { collection, onSnapshot, query, where, orderBy } from "firebase/firestore";
 import { db } from "@/constants/firebase-config";
 import { LinearGradient } from "expo-linear-gradient";
+import { useFocusEffect } from "@react-navigation/native"; 
 import Animated, {
   FadeInUp,
   useSharedValue,
@@ -738,7 +739,7 @@ export default function ExploreScreen() {
   const [optimisticSaved, setOptimisticSaved] = useState<Set<string>>(new Set());
 
   const router = useRouter();
-  const { isSaved, addChallenge, removeChallenge } = useSavedChallenges();
+  const { isSaved, addChallenge, removeChallenge, savedChallenges } = useSavedChallenges();
   const { theme } = useTheme();
   const { tutorialStep, setTutorialStep, skipTutorial, isTutorialActive } = useTutorial();
   const isDarkMode = theme === "dark";
@@ -774,6 +775,27 @@ export default function ExploreScreen() {
   const dynamicStyles = useMemo(
     () => getDynamicStyles(currentTheme, isDarkMode),
     [currentTheme, isDarkMode]
+  );
+
+  // ✅ Si un favori est supprimé ailleurs (challenge-details, SavedChallenges),
+  // on purge l'override local pour éviter l'icône "bloquée"
+  useEffect(() => {
+    const actual = new Set((savedChallenges || []).map((c) => String(c.id)));
+    setOptimisticSaved((prev) => {
+      if (!prev || prev.size === 0) return prev;
+      const next = new Set<string>();
+      prev.forEach((id) => {
+        if (actual.has(String(id))) next.add(String(id));
+      });
+      return next;
+    });
+  }, [savedChallenges]);
+
+  useFocusEffect(
+    useCallback(() => {
+      // évite toute "cicatrice" d'optimisme quand on revient sur l'écran
+      setOptimisticSaved(new Set());
+    }, [])
   );
 
   const currentChallengeIds = useMemo(() => {

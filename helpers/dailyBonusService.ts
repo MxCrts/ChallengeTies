@@ -88,13 +88,13 @@ export async function claimDailyBonus(): Promise<DailyRewardResult> {
     chosenReward = reward;
 
     const updates: any = {
-      "dailyBonus.lastClaimDate": today,
-      "dailyBonus.claimedAt": serverTimestamp(),
-      "dailyBonus.lastType": reward.type,
-      // ✅ Stats daily bonus globales
-      "stats.dailyBonus.total": increment(1),
-      [`stats.dailyBonus.byType.${reward.type}`]: increment(1),
-    };
+  updatedAt: serverTimestamp(), // ✅ AJOUTE ÇA
+  "dailyBonus.lastClaimDate": today,
+  "dailyBonus.claimedAt": serverTimestamp(),
+  "dailyBonus.lastType": reward.type,
+  "stats.dailyBonus.total": increment(1),
+  [`stats.dailyBonus.byType.${reward.type}`]: increment(1),
+};
 
     // Application de la récompense
     switch (reward.type) {
@@ -144,10 +144,11 @@ export async function consumeStreakPass(): Promise<void> {
       throw new Error("Aucun Streak Pass disponible");
     }
 
-    tx.update(userRef, {
-      "inventory.streakPass": increment(-1),
-      "stats.streakPass.used": increment(1),
-    });
+   tx.update(userRef, {
+  updatedAt: serverTimestamp(), // ✅
+  "inventory.streakPass": increment(-1),
+  "stats.streakPass.used": increment(1),
+});
   });
 }
 

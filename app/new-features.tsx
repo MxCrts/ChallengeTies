@@ -61,9 +61,6 @@ const normalizeSize = (size: number) => {
   return Math.round(size * scale);
 };
 
-const { width } = useWindowDimensions();
-const isTablet = width >= 700;
-const pagePad = Math.max(12, Math.min(20, Math.round(width * 0.04)));
 
 
 const withAlpha = (color: string, alpha: number) => {
@@ -123,6 +120,9 @@ export default function NewFeatures() {
     mins: 0,
     secs: 0,
   });
+  const { width } = useWindowDimensions();
+const isTablet = width >= 700;
+const pagePad = Math.max(12, Math.min(20, Math.round(width * 0.04)));
 
 // Pull-to-Refresh (le flux est realtime via onSnapshot, ici on gère juste l'UI)
   const onRefresh = useCallback(() => {
@@ -495,7 +495,9 @@ useEffect(() => {
           t("newFeatures.votes", { count: feature.votes ?? 0 }),
         ];
         if (feature.username) {
-          metaParts.push(`${t("newFeatures.by")} ${feature.username}`);
+         metaParts.push(
+  t("newFeatures.byTpl", { username: feature.username, defaultValue: "par {{username}}" })
+);
         }
         const metaLine = metaParts.join(" • ");
         setFeatureSharePayload({
@@ -606,7 +608,7 @@ useEffect(() => {
     numberOfLines={1}
     adjustsFontSizeToFit
   >
-    {t("newFeatures.by")} {item.username}
+    {t("newFeatures.byTpl", { username: item.username, defaultValue: "par {{username}}" })}
   </Text>
               )}
 

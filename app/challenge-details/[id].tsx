@@ -3512,18 +3512,6 @@ partnerDaysCompleted={duoChallengeData?.duoUser?.completedDays ?? 0}
     </BlurView>
   </Animated.View>
 )}
-<DebugHUD
-  data={{
-    showBootOverlaySafe,
-    invitationModalVisible,
-    inviteLoading,
-    deeplinkBooting,
-    inviteModalReady,
-    introVisible,
-    introBlocking,
-    inviteId: invitation?.id ?? "—",
-  }}
-/>
       </SafeAreaView>
     </LinearGradient>
   );

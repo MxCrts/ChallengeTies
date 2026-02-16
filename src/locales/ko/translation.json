@@ -280,6 +280,8 @@
 
   "newFeatures": {
     "deadlineIso": "2026-02-28T23:59:59+01:00",
+    "byTpl": "{{username}} 작성",
+    "unknown": "익명",
     "proposeIdea": "아이디어 제안하기" ,
     "shareLabel": "공유",
 

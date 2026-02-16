@@ -243,6 +243,8 @@
   },
   "newFeatures": {
     "deadlineIso": "2026-02-28T23:59:59+01:00",
+    "byTpl": "di {{username}}",
+    "unknown": "Anonimo",
     "proposeIdea": "Proporre un’idea",
     "shareLabel": "Condividi",
 

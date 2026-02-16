@@ -280,6 +280,8 @@
 
   "newFeatures": {
     "deadlineIso": "2026-02-28T23:59:59+01:00",
+    "byTpl": "{{username}} による",
+    "unknown": "匿名",
     "proposeIdea": "アイデアを提案する",
     "shareLabel": "共有",
 

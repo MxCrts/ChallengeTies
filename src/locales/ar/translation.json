@@ -251,6 +251,8 @@
   },
   "newFeatures": {
     "deadlineIso": "2026-02-28T23:59:59+01:00",
+    "byTpl": "بواسطة {{username}}",
+    "unknown": "مجهول",
     "proposeIdea": "اقترح فكرة",
     "shareLabel": "مشاركة",
 

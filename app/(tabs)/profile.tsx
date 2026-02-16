@@ -542,29 +542,81 @@ const pioneerBulletTextColor = isDarkMode ? currentTheme.colors.textPrimary : "#
                     />
                   )}
                   <Animated.View
-                    entering={ZoomIn.delay(300)}
-                    style={[
-                      styles.trophyBadge,
-                      {
-                        backgroundColor: withAlpha(currentTheme.colors.background, isDarkMode ? 0.55 : 0.75),
-                        borderColor: withAlpha(currentTheme.colors.trophy, 0.35),
-                      },
-                    ]}
-                  >
-                    <Ionicons
-                      name="trophy"
-                      size={normalizeSize(20)}
-                      color={currentTheme.colors.trophy}
-                    />
-                    <Text
-                      style={[
-                        styles.trophyBadgeText,
-                        { color: currentTheme.colors.trophy },
-                      ]}
-                    >
-                      {userData?.trophies ?? 0}
-                    </Text>
-                  </Animated.View>
+  entering={ZoomIn.delay(260)}
+  style={[styles.trophyChipWrap, { top: normalizeSize(10), right: normalizeSize(10) }]}
+  pointerEvents="none"
+  accessibilityElementsHidden
+  importantForAccessibility="no-hide-descendants"
+>
+  <LinearGradient
+    colors={
+  isDarkMode
+    ? [
+        withAlpha(currentTheme.colors.background, 0.62),
+        withAlpha(currentTheme.colors.cardBackground, 0.52),
+      ]
+    : [
+        "rgba(255,255,255,0.96)",   // ✅ plus opaque = lisible
+        "rgba(255,244,230,0.92)",   // ✅ léger warm premium
+      ]
+}
+    start={{ x: 0, y: 0 }}
+    end={{ x: 1, y: 1 }}
+    style={[
+      styles.trophyChip,
+      {
+        borderColor: withAlpha(currentTheme.colors.trophy, isDarkMode ? 0.28 : 0.38),
+      },
+    ]}
+  >
+    {/* iOS: petit blur propre */}
+    {Platform.OS === "ios" && (
+      <BlurView
+        intensity={28}
+        tint={isDarkMode ? "dark" : "light"}
+        style={StyleSheet.absoluteFill}
+      />
+    )}
+
+    {/* halo léger */}
+    <LinearGradient
+      pointerEvents="none"
+      colors={[
+  withAlpha(currentTheme.colors.trophy, isDarkMode ? 0.22 : 0.32),
+  "transparent",
+]}
+      start={{ x: 0.2, y: 0 }}
+      end={{ x: 1, y: 1 }}
+      style={styles.trophyHalo}
+    />
+
+    <View style={styles.trophyRow}>
+      <View
+        style={[
+          styles.trophyIconBubble,
+          {
+            backgroundColor: withAlpha(currentTheme.colors.trophy, isDarkMode ? 0.16 : 0.18),
+borderColor: withAlpha(currentTheme.colors.trophy, isDarkMode ? 0.22 : 0.28),
+          },
+        ]}
+      >
+        <Ionicons name="trophy" size={normalizeSize(14)} color={currentTheme.colors.trophy} />
+      </View>
+
+      <Text
+        style={[
+          styles.trophyChipText,
+          { color: isDarkMode ? "#FFD36A" : "#8A4B00" },
+        ]}
+        numberOfLines={1}
+        adjustsFontSizeToFit
+      >
+        {userData?.trophies ?? 0}
+      </Text>
+    </View>
+  </LinearGradient>
+</Animated.View>
+
                 </View>
 
                 {/* Username (manquait) */}
@@ -1193,6 +1245,65 @@ pioneerWrap: {
   justifyContent: "center",
   flex: 1,
 },
+trophyChipWrap: {
+  position: "absolute",
+  zIndex: 5,
+},
+
+trophyChip: {
+  borderWidth: 1,
+  borderRadius: normalizeSize(999),
+  overflow: "hidden",
+  paddingVertical: normalizeSize(6),
+  paddingHorizontal: normalizeSize(8),
+  minHeight: normalizeSize(28),
+  minWidth: normalizeSize(56),
+  justifyContent: "center",
+
+  // shadow iOS + elevation Android
+  shadowColor: "#000",
+  shadowOffset: { width: 0, height: 8 },
+  shadowRadius: 14,
+  shadowOpacity: Platform.OS === "ios" ? 0.18 : 0,
+elevation: Platform.OS === "android" ? 12 : 0,
+},
+
+trophyHalo: {
+  position: "absolute",
+  top: -normalizeSize(22),
+  left: -normalizeSize(18),
+  width: normalizeSize(80),
+  height: normalizeSize(80),
+  borderRadius: normalizeSize(40),
+},
+
+trophyRow: {
+  flexDirection: "row",
+  alignItems: "center",
+  gap: normalizeSize(6),
+},
+
+trophyIconBubble: {
+  width: normalizeSize(20),
+  height: normalizeSize(20),
+  borderRadius: normalizeSize(10),
+  alignItems: "center",
+  justifyContent: "center",
+  borderWidth: 1,
+},
+
+trophyChipText: {
+  fontFamily: "Comfortaa_700Bold",
+  fontSize: normalizeSize(13),
+  letterSpacing: -0.2,
+
+  // ✅ chiffres alignés (iOS)
+  fontVariant: ["tabular-nums"],
+
+  // ✅ Android vertical centering clean
+  includeFontPadding: false,
+  textAlignVertical: "center",
+},
 
 pioneerCard: {
   width: "100%",
@@ -1453,42 +1564,21 @@ editFabText: {
   shadowRadius: normalizeSize(26),
   elevation: 2,
   },
-
   avatarContainer: {
     alignItems: "center",
     position: "relative",
   },
-
   avatar: {
     width: normalizeSize(100),
     height: normalizeSize(100),
     borderRadius: normalizeSize(50),
     borderWidth: 4,
   },
-
-  trophyBadge: {
-    position: "absolute",
-    bottom: -normalizeSize(10),
-    right: normalizeSize(10),
-    borderRadius: normalizeSize(20),
-    padding: normalizeSize(6),
-    flexDirection: "row",
-    alignItems: "center",
-    borderWidth: 2,
-  },
-
-  trophyBadgeText: {
-    fontSize: normalizeSize(14),
-    fontFamily: "Comfortaa_700Bold",
-    marginLeft: normalizeSize(4),
-  },
-
   userInfo: {
     marginTop: normalizeSize(15),
     alignItems: "center",
     width: "100%",
   },
-
   username: {
     fontSize: normalizeSize(26),
     fontFamily: "Comfortaa_700Bold",
@@ -1496,12 +1586,10 @@ editFabText: {
     writingDirection: I18nManager.isRTL ? "rtl" : "ltr",
     textAlign: I18nManager.isRTL ? "right" : "center",
   },
-
   detailsContainer: {
     marginTop: normalizeSize(15),
     alignItems: "center",
   },
-
   infoRow: {
     flexDirection: "row",
     alignItems: "center",
