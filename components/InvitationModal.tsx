@@ -139,9 +139,7 @@ const InvitationModal: React.FC<InvitationModalProps> = ({
   const mountedRef = useRef(true);
   const lastLoadKeyRef = useRef<string>("");
   const isShown = !!visible && !!inviteId;
-  const modalVisible = isShown;
-
-  
+  const modalVisible = isShown && (!externalLoading || !fetching);
 
   useEffect(() => {
     mountedRef.current = true;
@@ -202,9 +200,8 @@ useEffect(() => {
   try { setFetching(false); } catch {}
 
   // ✅ Close synchronously (setTimeout can leave one frame where an overlay blocks touches)
-  try {onClose();
-  clearInvitation?.(); } catch {}
-}, [onClose, clearInvitation, hideInviteHandoffOverlay]);
+  try { closeAll(); } catch {}
+}, [closeAll, hideInviteHandoffOverlay]);
 
   const handleCloseRequest = useCallback(async () => {
     try {
@@ -487,7 +484,6 @@ useEffect(() => {
       }
 
       await acceptInvitation(inviteId);
-      safeCloseAll();
 
       try {
         await new Promise((r) => setTimeout(r, 350));
@@ -505,6 +501,7 @@ useEffect(() => {
         );
       }
 
+     safeCloseAll();
     } catch (e: any) {
       console.error("❌ Invitation accept error:", e);
       const msg = String(e?.message || "").toLowerCase();
@@ -580,8 +577,6 @@ useEffect(() => {
       }
 
       await acceptInvitation(inviteId);
-
-       safeCloseAll();
 
       try {
         await new Promise((r) => setTimeout(r, 350));
@@ -1111,7 +1106,7 @@ useEffect(() => {
     >
       <View
         style={styles.root}
-        pointerEvents={modalVisible ? "auto" : "none"}
+        pointerEvents={isShown ? "auto" : "none"}
         accessible
         accessibilityViewIsModal
         accessibilityLiveRegion="polite"
@@ -1119,7 +1114,7 @@ useEffect(() => {
         {/* Backdrop tappable */}
         <Pressable
           style={styles.backdrop}
-          pointerEvents={modalVisible ? "auto" : "none"}
+          pointerEvents={isShown ? "auto" : "none"} 
           onPress={() => {
             if (!loading && !fetching) handleCloseRequest();
           }}
