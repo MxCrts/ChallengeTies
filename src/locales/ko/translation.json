@@ -277,7 +277,20 @@
       "logoAlt": "{{brand}} 로고"
     }
   },
-
+"boot": {
+    "title": "ChallengeTies",
+    "a11y": {
+      "loading": "로딩 중",
+      "spinner": "로딩 표시기"
+    },
+    "states": {
+      "loading": "로딩 중…",
+      "connecting": "로그인 중…",
+      "openingLink": "링크 여는 중…",
+      "opening": "여는 중…",
+      "preparing": "준비 중…"
+    }
+  },
   "newFeatures": {
     "deadlineIso": "2026-02-28T23:59:59+01:00",
     "byTpl": "{{username}} 작성",

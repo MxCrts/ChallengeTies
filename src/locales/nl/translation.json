@@ -290,6 +290,20 @@
       "logoAlt": "Logo {{brand}}"
     }
   },
+  "boot": {
+    "title": "ChallengeTies",
+    "a11y": {
+      "loading": "Bezig met laden",
+      "spinner": "Laadindicator"
+    },
+    "states": {
+      "loading": "Bezig met laden…",
+      "connecting": "Bezig met aanmelden…",
+      "openingLink": "Link wordt geopend…",
+      "opening": "Wordt geopend…",
+      "preparing": "Bezig met voorbereiden…"
+    }
+  },
   "newFeatures": {
     "deadlineIso": "2026-02-28T23:59:59+01:00",
     "byTpl": "door {{username}}",

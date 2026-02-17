@@ -1,7 +1,15 @@
 // app/_layout.tsx
 import React, { useEffect } from "react";
 import { useTranslation } from "react-i18next";
-import Animated, { FadeIn, FadeOut } from "react-native-reanimated";
+import Animated, {
+  FadeIn,
+  FadeOut,
+  Easing,
+  useAnimatedStyle,
+  useSharedValue,
+  withRepeat,
+  withTiming,
+} from "react-native-reanimated";
 import { GestureHandlerRootView } from "react-native-gesture-handler";
 import { Stack, useRouter, usePathname } from "expo-router";
 import { StyleSheet, Platform, AppState, View, Text, ActivityIndicator} from "react-native";
@@ -1003,6 +1011,169 @@ if (type === "duo-nudge") {
   return null;
 };
 
+const INVITE_BOOT_FAILSAFE_MS = 12000;
+
+const InviteBootOverlay = () => {
+  const { t } = useTranslation();
+  const [on, setOn] = React.useState(false);
+  const pulse = useSharedValue(0);
+
+  // Poll léger du flag global
+  useEffect(() => {
+    const id = setInterval(() => {
+      setOn((globalThis as any).__INVITE_BOOT__ === true);
+    }, 80);
+    return () => clearInterval(id);
+  }, []);
+
+  // Animation pulse (démarre uniquement si on)
+  useEffect(() => {
+    if (!on) return;
+    pulse.value = 0;
+    pulse.value = withRepeat(
+      withTiming(1, {
+        duration: 1150,
+        easing: Easing.out(Easing.quad),
+      }),
+      -1,
+      false
+    );
+  }, [on, pulse]);
+
+  // Failsafe anti overlay zombie
+  useEffect(() => {
+    if (!on) return;
+    const startedAt = Date.now();
+    const tId = setTimeout(() => {
+      // coupe uniquement si toujours actif
+      if ((globalThis as any).__INVITE_BOOT__ === true) {
+        (globalThis as any).__INVITE_BOOT__ = false;
+      }
+    }, INVITE_BOOT_FAILSAFE_MS);
+
+    return () => {
+      clearTimeout(tId);
+      // si l'overlay se ferme "normalement", rien d'autre à faire
+      void startedAt;
+    };
+  }, [on]);
+
+  const ringStyle = useAnimatedStyle(() => {
+    const s = 1 + pulse.value * 0.65;
+    return {
+      transform: [{ scale: s }],
+      opacity: 0.22 * (1 - pulse.value),
+    };
+  });
+
+  const coreStyle = useAnimatedStyle(() => {
+    const s = 1 + pulse.value * 0.06;
+    return { transform: [{ scale: s }] };
+  });
+
+  if (!on) return null;
+
+  const title = "ChallengeTies";
+  const subtitle =
+    t("deeplink.inviteHandoff.sub", { defaultValue: "Ouverture de l’invitation…" });
+
+  return (
+    <Animated.View
+      entering={FadeIn.duration(140)}
+      exiting={FadeOut.duration(120)}
+      pointerEvents="auto"
+      style={[
+        StyleSheet.absoluteFillObject,
+        stylesInvite.overlay,
+      ]}
+    >
+      <View style={stylesInvite.card}>
+        {/* Pulse */}
+        <View style={stylesInvite.pulseWrap}>
+          <Animated.View style={[stylesInvite.pulseRing, ringStyle]} />
+          <Animated.View style={[stylesInvite.pulseCore, coreStyle]}>
+            {/* Logo fallback (CT) */}
+            <Text style={stylesInvite.logoText}>CT</Text>
+          </Animated.View>
+        </View>
+
+        <Text style={stylesInvite.title}>{title}</Text>
+        <Text style={stylesInvite.subtitle}>{subtitle}</Text>
+
+        <ActivityIndicator style={{ marginTop: 14 }} size="small" color="#fff" />
+      </View>
+    </Animated.View>
+  );
+};
+
+const stylesInvite = StyleSheet.create({
+  overlay: {
+    backgroundColor: "rgba(7,10,18,0.92)",
+    justifyContent: "center",
+    alignItems: "center",
+    paddingHorizontal: 18,
+  },
+  card: {
+    width: "100%",
+    maxWidth: 360,
+    borderRadius: 24,
+    paddingVertical: 22,
+    paddingHorizontal: 18,
+    alignItems: "center",
+    backgroundColor: "rgba(255,255,255,0.06)",
+    borderWidth: StyleSheet.hairlineWidth,
+    borderColor: "rgba(255,255,255,0.12)",
+  },
+  pulseWrap: {
+    width: 92,
+    height: 92,
+    justifyContent: "center",
+    alignItems: "center",
+    marginBottom: 14,
+  },
+  pulseRing: {
+    position: "absolute",
+    width: 92,
+    height: 92,
+    borderRadius: 92,
+    borderWidth: 2,
+    borderColor: "rgba(255,255,255,0.35)",
+  },
+  pulseCore: {
+    width: 62,
+    height: 62,
+    borderRadius: 62,
+    backgroundColor: "rgba(255,255,255,0.10)",
+    borderWidth: StyleSheet.hairlineWidth,
+    borderColor: "rgba(255,255,255,0.16)",
+    justifyContent: "center",
+    alignItems: "center",
+  },
+  logoText: {
+    color: "#fff",
+    fontFamily: "Comfortaa_700Bold",
+    fontSize: 18,
+    letterSpacing: 0.6,
+    opacity: 0.96,
+  },
+  title: {
+    color: "#fff",
+    fontFamily: "Comfortaa_700Bold",
+    fontSize: 16,
+    opacity: 0.96,
+  },
+  subtitle: {
+    marginTop: 10,
+    color: "rgba(255,255,255,0.78)",
+    fontSize: 13,
+    textAlign: "center",
+    fontFamily: "Comfortaa_400Regular",
+    lineHeight: 18,
+    paddingHorizontal: 8,
+  },
+});
+
+
 // =========================
 // RootLayout (UNIQUE export)
 // =========================
@@ -1067,6 +1238,7 @@ export default function RootLayout() {
                                       <AdsVisibilityProvider>
                                           <DeepLinkManager />
                                           <NotificationsBootstrap />
+                                          <InviteBootOverlay />
 
                                         <Stack
                                           screenOptions={{

@@ -249,6 +249,20 @@
       "logoAlt": "{{brand}} 标志"
     }
   },
+  "boot": {
+    "title": "ChallengeTies",
+    "a11y": {
+      "loading": "正在加载",
+      "spinner": "加载指示器"
+    },
+    "states": {
+      "loading": "正在加载…",
+      "connecting": "正在登录…",
+      "openingLink": "正在打开链接…",
+      "opening": "正在打开…",
+      "preparing": "正在准备…"
+    }
+  },
   "newFeatures": {
     "deadlineIso": "2026-02-28T23:59:59+01:00",
     "byTpl": "由 {{username}}",

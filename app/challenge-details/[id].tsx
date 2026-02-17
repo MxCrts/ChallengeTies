@@ -36,7 +36,7 @@ import {
   increment,
   serverTimestamp,
 } from "firebase/firestore";
-import { useRewardedDetailsAd } from "./_feature/hooks/useRewardedDetailsAd";
+import { useRewardedDetailsAd } from "../../src/challenge-details/_feature/hooks/useRewardedDetailsAd";
 import { db, auth } from "@/constants/firebase-config";
 import ConfettiCannon from "react-native-confetti-cannon";
 import { LinearGradient } from "expo-linear-gradient";
@@ -84,9 +84,9 @@ import SelectModeModal from "@/components/SelectModeModal";
 import ConfirmationDuoModal from "@/components/ConfirmationDuoModal";
 import DuoMomentModal from "@/components/DuoMomentModal";
 import SoloMomentModal from "@/components/SoloMomentModal";
-import OrbBackground from "./_feature/components/OrbBackground";
-import SmartAvatar from "./_feature/components/SmartAvatar";
-import { styles } from "./_feature/challengeDetails.styles";
+import OrbBackground from "../../src/challenge-details/_feature/components/OrbBackground";
+import SmartAvatar from "../../src/challenge-details/_feature/components/SmartAvatar";
+import { styles } from "../../src/challenge-details/_feature/challengeDetails.styles";
 import {
   IS_SMALL,
   SPACING,
@@ -94,24 +94,22 @@ import {
   introModalProps,
   dayIcons,
   ACCENT,
-} from "./_feature/challengeDetails.tokens";
+} from "../../src/challenge-details/_feature/challengeDetails.tokens";
 import {
   deriveDuoInfoFromUniqueKey,
   type RawChallengeEntry,
-} from "./_feature/utils/deriveDuoInfoFromUniqueKey";
-export { deriveDuoInfoFromUniqueKey } from "./_feature/utils/deriveDuoInfoFromUniqueKey";
-import { useSafeBack } from "./_feature/hooks/useSafeBack";
-import { useActiveChallengeEntry } from "./_feature/hooks/useActiveChallengeEntry";
-import { usePartnerDuoSnapshot } from "./_feature/hooks/usePartnerDuoSnapshot";
-import { resolveAvatarUrl as resolveAvatarUrlUtil } from "./_feature/utils/resolveAvatarUrl";
-import { useInvitesInbox } from "./_feature/hooks/useInvitesInbox";
-import { useOutgoingInvite } from "./_feature/hooks/useOutgoingInvite";
-import { useInviteAcceptSync } from "./_feature/hooks/useInviteAcceptSync";
-import { useInviteHandoff } from "./_feature/hooks/useInviteHandoff";
-import { useStartFlow } from "./_feature/hooks/useStartFlow";
-import { useBootOverlay } from "./_feature/hooks/useBootOverlay";
-import { useMomentGate } from "./_feature/hooks/useMomentGate";
-import DebugHUD from "@/components/DebugHUD";
+} from "../../src/challenge-details/_feature/utils/deriveDuoInfoFromUniqueKey";
+export { deriveDuoInfoFromUniqueKey } from "../../src/challenge-details/_feature/utils/deriveDuoInfoFromUniqueKey";
+import { useSafeBack } from "../../src/challenge-details/_feature/hooks/useSafeBack";
+import { useActiveChallengeEntry } from "../../src/challenge-details/_feature/hooks/useActiveChallengeEntry";
+import { usePartnerDuoSnapshot } from "../../src/challenge-details/_feature/hooks/usePartnerDuoSnapshot";
+import { resolveAvatarUrl as resolveAvatarUrlUtil } from "../../src/challenge-details/_feature/utils/resolveAvatarUrl";
+import { useInvitesInbox } from "../../src/challenge-details/_feature/hooks/useInvitesInbox";
+import { useOutgoingInvite } from "../../src/challenge-details/_feature/hooks/useOutgoingInvite";
+import { useInviteAcceptSync } from "../../src/challenge-details/_feature/hooks/useInviteAcceptSync";
+import { useInviteHandoff } from "../../src/challenge-details/_feature/hooks/useInviteHandoff";
+import { useStartFlow } from "../../src/challenge-details/_feature/hooks/useStartFlow";
+import { useMomentGate } from "../../src/challenge-details/_feature/hooks/useMomentGate";
 import { dlog } from "@/src/utils/debugLog";
 
 const hapticTap = () => {
@@ -125,6 +123,15 @@ const hapticTap = () => {
    selectedDays: number;
    isPioneer?: boolean;
  }
+
+ // ✅ Global root overlay switch (source = challenge-details)
+const setInviteBoot = (on: boolean) => {
+  try {
+    const g: any = globalThis as any;
+    if (g.__INVITE_BOOT__ === on) return;
+    g.__INVITE_BOOT__ = on;
+  } catch {}
+};
 
  interface DuoChallengeData {
    duo: boolean;
@@ -1061,8 +1068,31 @@ const {
   cameFromDeeplinkRef,
 });
 
+// ✅ invite param stable
+const inviteParam = typeof params?.invite === "string" ? params.invite : null;
+
+// ✅ règle root overlay : ON pendant handoff deeplink -> modal prête, OFF sinon
+const shouldShowGlobalInviteBoot = useMemo(() => {
+  if (!inviteParam) return false;
+
+  // ✅ masque TOUT tant que boot/load OU tant que modal pas "ready"
+  if (deeplinkBooting || inviteLoading || !inviteModalReady) return true;
+
+  // (optionnel) micro-lag cover après ouverture modal
+  // if (invitationModalVisible && (deeplinkBooting || inviteLoading)) return true;
+
+  return false;
+}, [inviteParam, deeplinkBooting, inviteLoading, inviteModalReady /*, invitationModalVisible */]);
+
+useEffect(() => {
+  setInviteBoot(shouldShowGlobalInviteBoot);
+  return () => setInviteBoot(false); // ✅ anti-zombie unmount
+}, [shouldShowGlobalInviteBoot]);
+
 const forceCloseInviteUI = useCallback((inviteId?: string | null) => {
   dlog("forceCloseInviteUI()", { inviteId, invitationModalVisible, inviteLoading, deeplinkBooting, inviteModalReady });
+
+  setInviteBoot(false);
 
   // 1) ferme le flow côté hook
   try { closeInviteFlow(inviteId ?? undefined); } catch {}
@@ -1764,22 +1794,6 @@ useMomentGate({
   openMoment();
 }, [missedChallengeVisible]);
 
-const { showBootOverlay, loadingLabel, loadingSubLabel } = useBootOverlay({
-  invitationModalVisible,
-  inviteLoading,
-  deeplinkBooting,
-  inviteModalReady,
-  setInviteLoading,
-  setDeeplinkBooting,
-  setInviteModalReady,
-  hideRootInviteHandoff,
-  t,
-});
-
-const showBootOverlaySafe =
-  showBootOverlay &&
-  (deeplinkBooting || inviteLoading || invitationModalVisible || !inviteModalReady);
-
 const handleInviteFriend = useCallback(async () => {
   hapticTap();
   try {
@@ -1830,11 +1844,6 @@ const handleInviteFriend = useCallback(async () => {
 }, [id, isDuo, isSoloInThisChallenge, isOffline, t]);
 
 useEffect(() => {
-  dlog("BOOT_OVERLAY", { showBootOverlaySafe, invitationModalVisible, inviteLoading, deeplinkBooting, inviteModalReady });
-}, [showBootOverlaySafe, invitationModalVisible, inviteLoading, deeplinkBooting, inviteModalReady]);
-
-
-useEffect(() => {
   // 1) Pas de signal -> rien
   if (!params?.openSendInvite) return;
 
@@ -1862,25 +1871,6 @@ useEffect(() => {
     task?.cancel?.();
   };
 }, [params?.openSendInvite, params?.invite, router, handleInviteFriend]);
-
-useEffect(() => {
-  if (invitationModalVisible) return;
-
-  // si le modal n'est plus là, on ne doit JAMAIS garder un boot overlay actif
-  setInviteModalReady(false);
-  setInviteLoading(false);
-  setDeeplinkBooting(false);
-
-  try { setInvitation(null as any); } catch {}
-  try { hideRootInviteHandoff(); } catch {}
-}, [
-  invitationModalVisible,
-  hideRootInviteHandoff,
-  setInviteModalReady,
-  setInviteLoading,
-  setDeeplinkBooting,
-  setInvitation,
-]);
 
 const handleInviteButtonPress = useCallback(() => {
   if (isDuo) {
@@ -3204,62 +3194,6 @@ const scrollContentStyle = useMemo(
   clearInvitation={() => forceCloseInviteUI(invitation?.id)}
   onLoaded={() => setInviteModalReady(true)}
 />
-
- {showBootOverlaySafe && (
-  <Animated.View
-    // ⚠️ plus d'entering/exiting, pour éviter les soucis de hitbox fantôme
-    style={styles.loadingOverlay}
-    pointerEvents="auto"
-  >
-    <Pressable style={StyleSheet.absoluteFill} onPress={() => {}} />
-    <BlurView
-      intensity={40}
-      tint={isDarkMode ? "dark" : "light"}
-      style={StyleSheet.absoluteFill}
-    />
-
-    <View style={styles.loadingCard}>
-      <LinearGradient
-        colors={[
-          currentTheme.colors.primary,
-          currentTheme.colors.secondary,
-        ]}
-        start={{ x: 0, y: 0 }}
-        end={{ x: 1, y: 1 }}
-        style={styles.loadingIconRing}
-      >
-        <View style={styles.loadingIconInner}>
-          <Ionicons
-            name={inviteLoading ? "people-circle-outline" : "aperture-outline"}
-            size={normalizeSize(26)}
-            color="#fff"
-          />
-        </View>
-      </LinearGradient>
-
-      <View style={styles.loadingTextBlock}>
-        <ActivityIndicator
-          size="small"
-          color={currentTheme.colors.secondary}
-          style={{ marginBottom: 8 }}
-        />
-
-        <Text
-          style={[
-            styles.loadingText,
-            { color: currentTheme.colors.textPrimary },
-          ]}
-        >
-          {loadingLabel}
-        </Text>
-
-        <Text style={[styles.loadingSubText, { color: currentTheme.colors.textSecondary }]}>
-  {loadingSubLabel}
-</Text>
-      </View>
-    </View>
-  </Animated.View>
-)}
 
 <ConfirmationDuoModal
   visible={confirmResetVisible}

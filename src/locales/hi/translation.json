@@ -252,6 +252,20 @@
       "logoAlt": "{{brand}} का लोगो"
     }
   },
+  "boot": {
+    "title": "ChallengeTies",
+    "a11y": {
+      "loading": "लोड हो रहा है",
+      "spinner": "लोडिंग संकेतक"
+    },
+    "states": {
+      "loading": "लोड हो रहा है…",
+      "connecting": "साइन इन हो रहा है…",
+      "openingLink": "लिंक खोला जा रहा है…",
+      "opening": "खोला जा रहा है…",
+      "preparing": "तैयार किया जा रहा है…"
+    }
+  },
   "newFeatures": {
     "deadlineIso": "2026-02-28T23:59:59+01:00",
     "byTpl": "{{username}} द्वारा",

@@ -277,7 +277,20 @@
       "logoAlt": "{{brand}} のロゴ"
     }
   },
-
+"boot": {
+    "title": "ChallengeTies",
+    "a11y": {
+      "loading": "読み込み中",
+      "spinner": "読み込みインジケーター"
+    },
+    "states": {
+      "loading": "読み込み中…",
+      "connecting": "サインイン中…",
+      "openingLink": "リンクを開いています…",
+      "opening": "開いています…",
+      "preparing": "準備中…"
+    }
+  },
   "newFeatures": {
     "deadlineIso": "2026-02-28T23:59:59+01:00",
     "byTpl": "{{username}} による",

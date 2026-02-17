@@ -249,6 +249,20 @@
       "logoAlt": "شعار {{brand}}"
     }
   },
+  "boot": {
+    "title": "ChallengeTies",
+    "a11y": {
+      "loading": "جارٍ التحميل",
+      "spinner": "مؤشر التحميل"
+    },
+    "states": {
+      "loading": "جارٍ التحميل…",
+      "connecting": "جارٍ تسجيل الدخول…",
+      "openingLink": "جارٍ فتح الرابط…",
+      "opening": "جارٍ الفتح…",
+      "preparing": "جارٍ التحضير…"
+    }
+  },
   "newFeatures": {
     "deadlineIso": "2026-02-28T23:59:59+01:00",
     "byTpl": "بواسطة {{username}}",

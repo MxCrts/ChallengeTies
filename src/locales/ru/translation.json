@@ -245,6 +245,20 @@
       "logoAlt": "Логотип {{brand}}"
     }
   },
+  "boot": {
+    "title": "ChallengeTies",
+    "a11y": {
+      "loading": "Загрузка",
+      "spinner": "Индикатор загрузки"
+    },
+    "states": {
+      "loading": "Загрузка…",
+      "connecting": "Вход…",
+      "openingLink": "Открытие ссылки…",
+      "opening": "Открытие…",
+      "preparing": "Подготовка…"
+    }
+  },
   "newFeatures": {
     "deadlineIso": "2026-02-28T23:59:59+01:00",
     "byTpl": "от {{username}}",
