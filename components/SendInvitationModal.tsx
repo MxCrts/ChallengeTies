@@ -56,7 +56,7 @@ type Props = {
   isDuo?: boolean;
   onClose: () => void;
   onSent?: (result: "shared" | "dismiss" | "start_solo", meta?: { inviteId?: string }) => void;
-
+  showStartSolo?: boolean;
 };
 
 /** Normalise vers l’une des 12 locales supportées: ar, de, en, es, fr, hi, it, ru, zh, pt, ja, ko, nl */
@@ -131,6 +131,7 @@ const SendInvitationModal: React.FC<Props> = ({
   isDuo,
   onClose,
   onSent,
+   showStartSolo = true,
 }) => {
   const { t, i18n } = useTranslation();
   const { theme } = useTheme();
@@ -618,47 +619,47 @@ const handleRequestClose = () => {
 
   {/* Buttons */}
   <View style={[styles.buttonsRow, compact && styles.buttonsRowCompact]}>
+  {showStartSolo ? (
     <TouchableOpacity
-  style={[
-    styles.btn,
-    styles.secondaryBtn,
-    compact && styles.btnCompact,
-    compact && styles.secondaryBtnCompact,
-  ]}
-  onPress={handleLater}
-  disabled={shareLocked}
-  activeOpacity={0.9}
-  accessibilityRole="button"
-  accessibilityLabel={t("invitationS.startSolo", { defaultValue: "Commencer en solo" })}
-  testID="send-invite-start-solo"
->
-  <View style={styles.secondaryInner}>
-    <Ionicons
-      name="person"
-      size={16}
-      color={stylesVars.iconColor(isDark)}
-      style={styles.secondaryIcon}
-    />
-    <Text
-  style={styles.secondaryText}
-  numberOfLines={1}
-  ellipsizeMode="tail"
->
-  {soloBtnLabel}
-</Text>
-  </View>
-</TouchableOpacity>
-
-
-    <TouchableOpacity
-      onPress={handleShare}
+      style={[
+        styles.btn,
+        styles.secondaryBtn,
+        compact && styles.btnCompact,
+        compact && styles.secondaryBtnCompact,
+      ]}
+      onPress={handleLater}
       disabled={shareLocked}
-      activeOpacity={0.92}
+      activeOpacity={0.9}
       accessibilityRole="button"
-      accessibilityLabel={t("invitationS.ctaInvite", { defaultValue: "Inviter" })}
-      testID="send-invite-share"
-      style={styles.primaryBtnWrap}
+      accessibilityLabel={t("invitationS.startSolo", { defaultValue: "Commencer en solo" })}
+      testID="send-invite-start-solo"
     >
+      <View style={styles.secondaryInner}>
+        <Ionicons
+          name="person"
+          size={16}
+          color={stylesVars.iconColor(isDark)}
+          style={styles.secondaryIcon}
+        />
+        <Text style={styles.secondaryText} numberOfLines={1} ellipsizeMode="tail">
+          {soloBtnLabel}
+        </Text>
+      </View>
+    </TouchableOpacity>
+  ) : (
+    // ✅ optionnel: pour garder le layout 2 colonnes nickel quand on cache Solo
+    <View style={{ flex: 1 }} />
+  )}
+
+  <TouchableOpacity
+    onPress={handleShare}
+    disabled={shareLocked}
+    activeOpacity={0.92}
+    accessibilityRole="button"
+    accessibilityLabel={t("invitationS.ctaInvite", { defaultValue: "Inviter" })}
+    testID="send-invite-share"
+    style={styles.primaryBtnWrap}
+  >
       <LinearGradient
         colors={[
           withAlpha(th.colors.secondary, isDark ? 0.95 : 0.98),

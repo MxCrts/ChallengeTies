@@ -140,6 +140,7 @@ const InvitationModal: React.FC<InvitationModalProps> = ({
   const lastLoadKeyRef = useRef<string>("");
   const isShown = !!visible && !!inviteId;
   const modalVisible = isShown && (!externalLoading || !fetching);
+  
 
   useEffect(() => {
     mountedRef.current = true;

@@ -1088,6 +1088,8 @@ const {
 // ✅ invite param stable
 const inviteParam = typeof params?.invite === "string" ? params.invite : null;
 
+
+
 const clearInviteParamSafe = useCallback(() => {
   try {
     // expo-router: undefined = retire le param
@@ -1100,15 +1102,20 @@ const shouldShowGlobalInviteBoot = useMemo(() => {
   // ✅ règle: si la modal n'est pas visible => JAMAIS de root-block
   if (!invitationModalVisible) return false;
   if (!inviteParam) return false;
-  return !!(deeplinkBooting || inviteLoading);
-}, [invitationModalVisible, inviteParam, deeplinkBooting, inviteLoading]);
 
+  // ✅ overlay ON tant que:
+  // - deeplink booting
+  // - OU invite loading
+  // - OU modal pas encore "ready"
+  return !!(deeplinkBooting || inviteLoading || !inviteModalReady);
+}, [
+  invitationModalVisible,
+  inviteParam,
+  deeplinkBooting,
+  inviteLoading,
+  inviteModalReady,
+]);
 
-// ✅ 1) Dès qu'on voit ?invite= -> ON immédiat (handoff start)
-useEffect(() => {
-  if (!inviteParam) return;
-  inviteBootOn(inviteParam);
-}, [inviteParam]);
 
 // ✅ 2) Ensuite: on colle strictement à l'état (modal visible + loading flags)
 useEffect(() => {
@@ -1116,10 +1123,10 @@ useEffect(() => {
   else inviteBootOff();
 
   return () => {
-    // ✅ anti-zombie unmount
     inviteBootOff();
   };
 }, [shouldShowGlobalInviteBoot, inviteParam]);
+
 
 const forceCloseInviteUI = useCallback((inviteId?: string | null) => {
   dlog("forceCloseInviteUI()", { inviteId, invitationModalVisible, inviteLoading, deeplinkBooting, inviteModalReady });
@@ -1135,6 +1142,7 @@ const forceCloseInviteUI = useCallback((inviteId?: string | null) => {
 
   // 2) hard reset local : si un state reste coincé dans le hook, on le tue ici
   try { setInvitationModalVisible(false); } catch {}
+  try { setInviteModalReady(false); } catch {}
   try { setInvitation(null as any); } catch {}
 
   try { setInviteLoading(false); } catch {}
@@ -1155,6 +1163,18 @@ const forceCloseInviteUI = useCallback((inviteId?: string | null) => {
   deeplinkBooting,
   inviteModalReady,
 ]);
+
+useEffect(() => {
+  if (!shouldShowGlobalInviteBoot) return;
+
+  const t = setTimeout(() => {
+    // Si après 8s on est toujours en boot => on tue tout.
+    // (pas de freeze possible)
+    forceCloseInviteUI(inviteParam);
+  }, 8000);
+
+  return () => clearTimeout(t);
+}, [shouldShowGlobalInviteBoot, forceCloseInviteUI, inviteParam]);
 
 useEffect(() => {
   if (!isHydrating) return;
@@ -3231,7 +3251,12 @@ const scrollContentStyle = useMemo(
   challengeId={id}
   onClose={() => forceCloseInviteUI(closingInviteIdRef.current)}
 clearInvitation={() => forceCloseInviteUI(closingInviteIdRef.current)}
-  onLoaded={() => setInviteModalReady(true)}
+ onLoaded={() => {
+  setInviteModalReady(true);
+  // ✅ important : on coupe les flags résiduels
+  setInviteLoading(false);
+  setDeeplinkBooting(false);
+}}
 />
 
 <ConfirmationDuoModal
@@ -3299,6 +3324,7 @@ partnerDaysCompleted={duoChallengeData?.duoUser?.completedDays ?? 0}
 <SendInvitationModal
   visible={sendInviteVisible}
   challengeId={id}
+  showStartSolo={false}
   selectedDays={localSelectedDays}
   challengeTitle={routeTitle}
   isDuo={isDuo}
@@ -3312,6 +3338,7 @@ partnerDaysCompleted={duoChallengeData?.duoUser?.completedDays ?? 0}
     t("invitationS.sentBody", { defaultValue: "On te prévient dès qu’il répond." })
   );
   setSendInviteVisible(false);
+  
 }}
 />
 

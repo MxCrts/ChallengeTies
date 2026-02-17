@@ -772,45 +772,43 @@ const DeepLinkManager: React.FC = () => {
       setDLBlock(true);
 
       // ✅ Si pas connecté OU auth pas prête → on stocke, on laisse AppNavigator aller login
-      if (!user || loading || checkingAuth) {
-        try {
-          await AsyncStorage.setItem(
-            "ties_pending_link",
-            JSON.stringify({
-              challengeId,
-              inviteId: inviteId || null,
-              selectedDays: selectedDays || null,
-              t: Date.now(),
-            })
-          );
-          __DEV__ &&
-            console.log("🕓 [DeepLink] pending stored:", {
-              challengeId,
-              inviteId,
-            });
-        } catch {}
-         // ✅ clé du fix
-   // ✅ clé du fix (ne jamais laisser "/" coincé)
-        setDLBlock(false);
-        (globalThis as any).__FORCE_AUTH_FLOW__ = true;
-        return;
-      }
+      // ✅ Si pas connecté OU auth pas prête → on stocke, on laisse AppNavigator aller login
+if (!user || loading || checkingAuth) {
+  try {
+    await AsyncStorage.setItem(
+      "ties_pending_link",
+      JSON.stringify({
+        challengeId,
+        inviteId: inviteId || null,
+        selectedDays: selectedDays || null,
+        t: Date.now(),
+      })
+    );
+  } catch {}
+
+  // ✅ ne jamais laisser "/" coincé
+  setDLBlock(false);
+  (globalThis as any).__FORCE_AUTH_FLOW__ = true;
+
+  // ✅ IMPORTANT: aucun overlay sur login
+  return;
+}
+
 
       // ✅ User ready → navigation propre
+if (inviteId) inviteBootOn(String(inviteId));
 
-      router.replace({
+router.replace({
   pathname: "/challenge-details/[id]",
   params: inviteId
     ? {
-        id: String(challengeId), // 👈 IMPORTANT : l’id ici, PAS encodé à la main
+        id: String(challengeId),
         invite: String(inviteId),
         days: selectedDays ? String(selectedDays) : undefined,
       }
-    : {
-        id: String(challengeId),
-      },
+    : { id: String(challengeId) },
 });
-
+setTimeout(() => inviteBootOff(), 6500);
       // ✅ anti blocage infini sur "/"
       setTimeout(() => {
         try {
@@ -857,6 +855,7 @@ const DeepLinkManager: React.FC = () => {
 
         await AsyncStorage.removeItem("ties_pending_link");
         setDLBlock(true);
+        if (inviteId) inviteBootOn(String(inviteId));
 
         router.replace({
   pathname: "/challenge-details/[id]",
@@ -868,6 +867,7 @@ const DeepLinkManager: React.FC = () => {
       }
     : { id: String(challengeId) },
 });
+setTimeout(() => inviteBootOff(), 6500);
          setTimeout(() => {
           try {
             setDLBlock(false);
@@ -1048,8 +1048,23 @@ const ensureInviteBootAPI = () => {
   }
 };
 
+const inviteBootOn = (token?: string) => {
+  try {
+    ensureInviteBootAPI();
+    (globalThis as any).__INVITE_BOOT_ON__?.(token);
+  } catch {}
+};
+
+const inviteBootOff = () => {
+  try {
+    ensureInviteBootAPI();
+    (globalThis as any).__INVITE_BOOT_OFF__?.();
+  } catch {}
+};
+
 const RootInviteBootOverlay = () => {
   const { t } = useTranslation();
+  const pathname = usePathname();
 
   const [boot, setBoot] = React.useState<InviteBootState>(() => {
     ensureInviteBootAPI();
@@ -1061,6 +1076,19 @@ const RootInviteBootOverlay = () => {
   });
 
   const pulse = useSharedValue(0);
+
+  useEffect(() => {
+  if (!boot.on) return;
+
+  const allowed =
+    typeof pathname === "string" &&
+    pathname.startsWith("/challenge-details/");
+
+  // ✅ si on est ailleurs (tabs/login/etc), on coupe
+  if (!allowed) {
+    inviteBootOff();
+  }
+}, [boot.on, pathname]);
 
   // ✅ Poll léger : on ne dépend d’aucun state React Navigation / Firestore / Modal
   useEffect(() => {
