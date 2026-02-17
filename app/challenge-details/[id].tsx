@@ -124,14 +124,31 @@ const hapticTap = () => {
    isPioneer?: boolean;
  }
 
- // ✅ Global root overlay switch (source = challenge-details)
-const setInviteBoot = (on: boolean) => {
+// ✅ Root overlay controller (event-based)
+const inviteBootOn = (inviteId?: string | null) => {
   try {
     const g: any = globalThis as any;
-    if (g.__INVITE_BOOT__ === on) return;
-    g.__INVITE_BOOT__ = on;
+    if (typeof g.__INVITE_BOOT_ON__ === "function") {
+      g.__INVITE_BOOT_ON__(inviteId ?? null);
+      return;
+    }
+    // fallback legacy
+    g.__INVITE_BOOT__ = true;
   } catch {}
 };
+
+const inviteBootOff = () => {
+  try {
+    const g: any = globalThis as any;
+    if (typeof g.__INVITE_BOOT_OFF__ === "function") {
+      g.__INVITE_BOOT_OFF__();
+      return;
+    }
+    // fallback legacy
+    g.__INVITE_BOOT__ = false;
+  } catch {}
+};
+
 
  interface DuoChallengeData {
    duo: boolean;
@@ -1071,24 +1088,50 @@ const {
 // ✅ invite param stable
 const inviteParam = typeof params?.invite === "string" ? params.invite : null;
 
+const clearInviteParamSafe = useCallback(() => {
+  try {
+    // expo-router: undefined = retire le param
+    // @ts-ignore
+    router.setParams?.({ invite: undefined });
+  } catch {}
+}, [router]);
+
 const shouldShowGlobalInviteBoot = useMemo(() => {
+  // ✅ règle: si la modal n'est pas visible => JAMAIS de root-block
+  if (!invitationModalVisible) return false;
   if (!inviteParam) return false;
   return !!(deeplinkBooting || inviteLoading);
-}, [inviteParam, deeplinkBooting, inviteLoading]);
+}, [invitationModalVisible, inviteParam, deeplinkBooting, inviteLoading]);
 
 
+// ✅ 1) Dès qu'on voit ?invite= -> ON immédiat (handoff start)
 useEffect(() => {
-  setInviteBoot(shouldShowGlobalInviteBoot);
-  return () => setInviteBoot(false); // ✅ anti-zombie unmount
-}, [shouldShowGlobalInviteBoot]);
+  if (!inviteParam) return;
+  inviteBootOn(inviteParam);
+}, [inviteParam]);
+
+// ✅ 2) Ensuite: on colle strictement à l'état (modal visible + loading flags)
+useEffect(() => {
+  if (shouldShowGlobalInviteBoot) inviteBootOn(inviteParam);
+  else inviteBootOff();
+
+  return () => {
+    // ✅ anti-zombie unmount
+    inviteBootOff();
+  };
+}, [shouldShowGlobalInviteBoot, inviteParam]);
 
 const forceCloseInviteUI = useCallback((inviteId?: string | null) => {
   dlog("forceCloseInviteUI()", { inviteId, invitationModalVisible, inviteLoading, deeplinkBooting, inviteModalReady });
 
-  setInviteBoot(false);
+  // ✅ killswitch #2 : force OFF immédiatement
+  inviteBootOff();
 
   // 1) ferme le flow côté hook
   try { closeInviteFlow(inviteId ?? undefined); } catch {}
+
+  // ✅ killswitch #1 : retire le param ?invite=
+  clearInviteParamSafe();
 
   // 2) hard reset local : si un state reste coincé dans le hook, on le tue ici
   try { setInvitationModalVisible(false); } catch {}
@@ -1096,17 +1139,22 @@ const forceCloseInviteUI = useCallback((inviteId?: string | null) => {
 
   try { setInviteLoading(false); } catch {}
   try { setDeeplinkBooting(false); } catch {}
+
+  // ✅ root watchdog/handoff cleanup (ton existing)
   try { hideRootInviteHandoff(); } catch {}
 }, [
   closeInviteFlow,
+  clearInviteParamSafe,
   hideRootInviteHandoff,
   setDeeplinkBooting,
   setInviteLoading,
-  setInviteModalReady,
   setInvitation,
   setInvitationModalVisible,
+  invitationModalVisible,
+  inviteLoading,
+  deeplinkBooting,
+  inviteModalReady,
 ]);
-
 
 useEffect(() => {
   if (!isHydrating) return;

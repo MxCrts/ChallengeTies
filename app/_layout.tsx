@@ -1011,50 +1011,80 @@ if (type === "duo-nudge") {
   return null;
 };
 
-const INVITE_BOOT_FAILSAFE_MS = 12000;
+// =========================
+// RootInviteBoot (root overlay 100% déterministe)
+// =========================
 
-const InviteBootOverlay = () => {
+type InviteBootState = {
+  on: boolean;
+  token: string | null;
+  ts: number; // Date.now()
+};
+
+const INVITE_BOOT_WATCHDOG_MS = 6500;
+
+const ensureInviteBootAPI = () => {
+  const g = globalThis as any;
+
+  if (!g.__INVITE_BOOT__) {
+    g.__INVITE_BOOT__ = { on: false, token: null, ts: 0 } as InviteBootState;
+  }
+
+  // ✅ API globale : une seule source de vérité
+  if (typeof g.__INVITE_BOOT_ON__ !== "function") {
+    g.__INVITE_BOOT_ON__ = (token?: string) => {
+      const safeToken =
+        typeof token === "string" && token.trim().length > 0
+          ? token.trim()
+          : "boot";
+      g.__INVITE_BOOT__ = { on: true, token: safeToken, ts: Date.now() } as InviteBootState;
+    };
+  }
+
+  if (typeof g.__INVITE_BOOT_OFF__ !== "function") {
+    g.__INVITE_BOOT_OFF__ = () => {
+      g.__INVITE_BOOT__ = { on: false, token: null, ts: 0 } as InviteBootState;
+    };
+  }
+};
+
+const RootInviteBootOverlay = () => {
   const { t } = useTranslation();
 
-  const [state, setState] = React.useState(() => ({
-    visible: false,
-    inviteLoading: false,
-    deeplinkBooting: false,
-    since: 0,
-  }));
+  const [boot, setBoot] = React.useState<InviteBootState>(() => {
+    ensureInviteBootAPI();
+    return ((globalThis as any).__INVITE_BOOT__ || {
+      on: false,
+      token: null,
+      ts: 0,
+    }) as InviteBootState;
+  });
 
   const pulse = useSharedValue(0);
 
-  // ✅ Poll léger + update uniquement si changement
+  // ✅ Poll léger : on ne dépend d’aucun state React Navigation / Firestore / Modal
   useEffect(() => {
+    ensureInviteBootAPI();
     let mounted = true;
 
     const read = () => {
-      const visible = (globalThis as any).__INVITE_MODAL_VISIBLE__ === true;
-      const inviteLoading = (globalThis as any).__INVITE_LOADING__ === true;
-      const deeplinkBooting = (globalThis as any).__DEEPLINK_BOOTING__ === true;
+      const cur = (globalThis as any).__INVITE_BOOT__ as InviteBootState | undefined;
+      const next = cur || { on: false, token: null, ts: 0 };
 
-      const on = visible && (inviteLoading || deeplinkBooting);
-
-      setState((prev) => {
-        const prevOn = prev.visible && (prev.inviteLoading || prev.deeplinkBooting);
-        if (prevOn === on &&
-            prev.visible === visible &&
-            prev.inviteLoading === inviteLoading &&
-            prev.deeplinkBooting === deeplinkBooting) {
+      setBoot((prev) => {
+        if (
+          prev.on === next.on &&
+          prev.token === next.token &&
+          prev.ts === next.ts
+        ) {
           return prev;
         }
-        return {
-          visible,
-          inviteLoading,
-          deeplinkBooting,
-          since: on ? (prevOn ? prev.since : Date.now()) : 0,
-        };
+        return next;
       });
     };
 
     read();
-    const id = setInterval(() => mounted && read(), 120); // 120ms ok
+    const id = setInterval(() => mounted && read(), 120);
 
     return () => {
       mounted = false;
@@ -1062,55 +1092,78 @@ const InviteBootOverlay = () => {
     };
   }, []);
 
-  const on = state.visible && (state.inviteLoading || state.deeplinkBooting);
-
-  // ✅ Animation pulse uniquement si on
+  // ✅ Pulse only when on
   useEffect(() => {
-    if (!on) return;
+    if (!boot.on) return;
     pulse.value = 0;
     pulse.value = withRepeat(
-      withTiming(1, { duration: 1150, easing: Easing.out(Easing.quad) }),
+      withTiming(1, { duration: 1100, easing: Easing.out(Easing.quad) }),
       -1,
       false
     );
-  }, [on, pulse]);
+  }, [boot.on, pulse]);
 
-  // ✅ Failsafe anti zombie (si ça dépasse 12s, on coupe les 2 flags de boot)
+  // ✅ Watchdog : impossible de rester bloqué
   useEffect(() => {
-    if (!on) return;
-    const tId = setTimeout(() => {
-      const visible = (globalThis as any).__INVITE_MODAL_VISIBLE__ === true;
-      const inviteLoading = (globalThis as any).__INVITE_LOADING__ === true;
-      const deeplinkBooting = (globalThis as any).__DEEPLINK_BOOTING__ === true;
-      const stillOn = visible && (inviteLoading || deeplinkBooting);
+    if (!boot.on) return;
 
-      if (stillOn) {
-        (globalThis as any).__INVITE_LOADING__ = false;
-        (globalThis as any).__DEEPLINK_BOOTING__ = false;
+    const id = setTimeout(() => {
+      const g = globalThis as any;
+      const cur = (g.__INVITE_BOOT__ || { on: false, token: null, ts: 0 }) as InviteBootState;
+
+      // Si toujours ON et vieux => OFF.
+      if (cur.on && typeof cur.ts === "number" && Date.now() - cur.ts >= INVITE_BOOT_WATCHDOG_MS) {
+        g.__INVITE_BOOT_OFF__?.();
       }
-    }, INVITE_BOOT_FAILSAFE_MS);
+    }, INVITE_BOOT_WATCHDOG_MS + 50);
 
-    return () => clearTimeout(tId);
-  }, [on]);
+    return () => clearTimeout(id);
+  }, [boot.on, boot.ts]);
 
-  if (!on) return null;
+  const ringStyle = useAnimatedStyle(() => {
+    const s = 1 + pulse.value * 0.25;
+    return {
+      transform: [{ scale: s }],
+      opacity: 0.25 + (1 - pulse.value) * 0.35,
+    };
+  });
 
-  // ⚠️ IMPORTANT : overlay DOIT bloquer quand il est ON
-  // (sinon tu peux cliquer derrière pendant le handoff)
+  if (!boot.on) return null;
+
   return (
     <Animated.View
       entering={FadeIn.duration(140)}
       exiting={FadeOut.duration(120)}
       pointerEvents="auto"
-      style={[StyleSheet.absoluteFillObject, stylesInvite.overlay]}
+      style={[StyleSheet.absoluteFillObject, stylesBoot.overlay]}
     >
-      {/* ... ton UI inchangée ... */}
+      <View style={stylesBoot.card}>
+        <View style={stylesBoot.pulseWrap}>
+          <Animated.View style={[stylesBoot.pulseRing, ringStyle]} />
+          <View style={stylesBoot.pulseCore}>
+            <Text style={stylesBoot.logoText}>TIES</Text>
+          </View>
+        </View>
+
+        <Text style={stylesBoot.title}>
+          {t("invite.bootTitle", { defaultValue: "Connexion…" })}
+        </Text>
+
+        <View style={{ height: 12 }} />
+
+        <ActivityIndicator size="small" color="#fff" />
+
+        <Text style={stylesBoot.subtitle}>
+          {t("invite.bootSubtitle", {
+            defaultValue: "On prépare ton défi. Ne ferme pas l’app.",
+          })}
+        </Text>
+      </View>
     </Animated.View>
   );
 };
 
-
-const stylesInvite = StyleSheet.create({
+const stylesBoot = StyleSheet.create({
   overlay: {
     backgroundColor: "rgba(7,10,18,0.92)",
     justifyContent: "center",
@@ -1165,9 +1218,10 @@ const stylesInvite = StyleSheet.create({
     fontFamily: "Comfortaa_700Bold",
     fontSize: 16,
     opacity: 0.96,
+    textAlign: "center",
   },
   subtitle: {
-    marginTop: 10,
+    marginTop: 12,
     color: "rgba(255,255,255,0.78)",
     fontSize: 13,
     textAlign: "center",
@@ -1184,6 +1238,7 @@ const stylesInvite = StyleSheet.create({
 export default function RootLayout() {
   useEffect(() => {
     SplashScreen.preventAutoHideAsync().catch(() => {});
+    ensureInviteBootAPI();
 
     // ✅ ATT: request at the VERY START of app lifecycle (before any SDK/analytics).
     // Apple review on iPadOS must see the system prompt on first launch when status is "undetermined".
@@ -1261,7 +1316,7 @@ export default function RootLayout() {
                                         </Stack>
                                           <AppNavigator />
                                           <TrophyModal />
-                                          <InviteBootOverlay />
+                                          <RootInviteBootOverlay />
                                       </AdsVisibilityProvider>
                                       </PremiumProvider>
                                     </ConsentGate>
