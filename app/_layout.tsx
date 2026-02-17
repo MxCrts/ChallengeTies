@@ -1162,7 +1162,8 @@ const RootInviteBootOverlay = () => {
     <Animated.View
       entering={FadeIn.duration(140)}
       exiting={FadeOut.duration(120)}
-      pointerEvents="auto"
+      pointerEvents="none"
+      accessibilityViewIsModal={false}
       style={[StyleSheet.absoluteFillObject, stylesBoot.overlay]}
     >
       <View style={stylesBoot.card}>

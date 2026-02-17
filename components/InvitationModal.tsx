@@ -192,17 +192,27 @@ useEffect(() => {
     } catch {}
   }, []);
 
- const safeCloseAll = useCallback(() => {
-  // ✅ Always release any global overlay FIRST (this is the usual freeze culprit)
-  try { hideInviteHandoffOverlay(); } catch {}
+  const forceReleaseRootBootOverlay = useCallback(() => {
+  try { (globalThis as any).__INVITE_BOOT_OFF__?.(); } catch {}
+}, []);
 
-  // reset local states to avoid parent guards reading stale "busy"
+ const safeCloseAll = useCallback(() => {
+  // ✅ Release ABSOLU en premier (handoff + root boot)
+  try { hideInviteHandoffOverlay(); } catch {}
+  try { forceReleaseRootBootOverlay(); } catch {}
+
+  // reset local states
   try { setLoading(false); } catch {}
   try { setFetching(false); } catch {}
 
-  // ✅ Close synchronously (setTimeout can leave one frame where an overlay blocks touches)
-  try { closeAll(); } catch {}
-}, [closeAll, hideInviteHandoffOverlay]);
+  // close
+  try {
+    onClose();
+  } finally {
+    clearInvitation?.();
+  }
+}, [hideInviteHandoffOverlay, forceReleaseRootBootOverlay, onClose, clearInvitation]);
+
 
   const handleCloseRequest = useCallback(async () => {
     try {
@@ -549,7 +559,9 @@ useEffect(() => {
         setErrorMsg(t("invitation.errors.unknown", { defaultValue: "Erreur." }));
       }
     } finally {
-      setLoading(false);
+      try { (globalThis as any).__INVITE_BOOT_OFF__?.(); } catch {}
+  try { (globalThis as any).__HIDE_INVITE_HANDOFF__?.(); } catch {}
+  setLoading(false);
     }
   }, [
     loading,
@@ -644,6 +656,8 @@ useEffect(() => {
         setErrorMsg(t("invitation.errors.unknown", { defaultValue: "Erreur." }));
       }
     } finally {
+      try { (globalThis as any).__INVITE_BOOT_OFF__?.(); } catch {}
+  try { (globalThis as any).__HIDE_INVITE_HANDOFF__?.(); } catch {}
       setLoading(false);
     }
   }, [

@@ -30,6 +30,7 @@ import {
   buildUniversalLink,
   getOrCreateOpenInvitation,
 } from "@/services/invitationService";
+import { usePathname } from "expo-router";
 import * as Localization from "expo-localization";
 import * as Haptics from "expo-haptics";
 import { logEvent } from "@/src/analytics";
@@ -148,6 +149,9 @@ const SendInvitationModal: React.FC<Props> = ({
 
   const [localDays, setLocalDays] = useState(selectedDays);
   const [showDays, setShowDays] = useState(false);
+  const pathname = usePathname();
+const isOnChallengeDetails = pathname?.startsWith("/challenge-details/");
+const canShowStartSolo = !!showStartSolo && !isOnChallengeDetails;
 
 useEffect(() => {
   if (visible) setLocalDays(selectedDays);
@@ -619,7 +623,7 @@ const handleRequestClose = () => {
 
   {/* Buttons */}
   <View style={[styles.buttonsRow, compact && styles.buttonsRowCompact]}>
-  {showStartSolo ? (
+  {canShowStartSolo ? (
     <TouchableOpacity
       style={[
         styles.btn,

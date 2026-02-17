@@ -23,6 +23,7 @@ import {
   AccessibilityInfo,
   Modal,
 } from "react-native";
+
 import { Image as ExpoImage } from "expo-image";
 import { SafeAreaView, useSafeAreaInsets } from "react-native-safe-area-context";
 import { Ionicons } from "@expo/vector-icons";
@@ -1099,22 +1100,16 @@ const clearInviteParamSafe = useCallback(() => {
 }, [router]);
 
 const shouldShowGlobalInviteBoot = useMemo(() => {
-  // ✅ règle: si la modal n'est pas visible => JAMAIS de root-block
-  if (!invitationModalVisible) return false;
   if (!inviteParam) return false;
 
-  // ✅ overlay ON tant que:
-  // - deeplink booting
-  // - OU invite loading
-  // - OU modal pas encore "ready"
-  return !!(deeplinkBooting || inviteLoading || !inviteModalReady);
-}, [
-  invitationModalVisible,
-  inviteParam,
-  deeplinkBooting,
-  inviteLoading,
-  inviteModalReady,
-]);
+  // ✅ Deeplink: on veut cacher dès que ça bosse (même si la modal n’est pas encore visible)
+  if (deeplinkBooting || inviteLoading) return true;
+
+  // ✅ Une fois la modal affichée: on garde tant qu’elle n’est pas “ready”
+  if (invitationModalVisible && !inviteModalReady) return true;
+
+  return false;
+}, [inviteParam, deeplinkBooting, inviteLoading, invitationModalVisible, inviteModalReady]);
 
 
 // ✅ 2) Ensuite: on colle strictement à l'état (modal visible + loading flags)
