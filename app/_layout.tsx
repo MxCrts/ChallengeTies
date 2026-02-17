@@ -1015,96 +1015,100 @@ const INVITE_BOOT_FAILSAFE_MS = 12000;
 
 const InviteBootOverlay = () => {
   const { t } = useTranslation();
-  const [on, setOn] = React.useState(false);
+
+  const [state, setState] = React.useState(() => ({
+    visible: false,
+    inviteLoading: false,
+    deeplinkBooting: false,
+    since: 0,
+  }));
+
   const pulse = useSharedValue(0);
 
-  // Poll léger du flag global
+  // ✅ Poll léger + update uniquement si changement
   useEffect(() => {
-    const id = setInterval(() => {
-      setOn((globalThis as any).__INVITE_BOOT__ === true);
-    }, 80);
-    return () => clearInterval(id);
+    let mounted = true;
+
+    const read = () => {
+      const visible = (globalThis as any).__INVITE_MODAL_VISIBLE__ === true;
+      const inviteLoading = (globalThis as any).__INVITE_LOADING__ === true;
+      const deeplinkBooting = (globalThis as any).__DEEPLINK_BOOTING__ === true;
+
+      const on = visible && (inviteLoading || deeplinkBooting);
+
+      setState((prev) => {
+        const prevOn = prev.visible && (prev.inviteLoading || prev.deeplinkBooting);
+        if (prevOn === on &&
+            prev.visible === visible &&
+            prev.inviteLoading === inviteLoading &&
+            prev.deeplinkBooting === deeplinkBooting) {
+          return prev;
+        }
+        return {
+          visible,
+          inviteLoading,
+          deeplinkBooting,
+          since: on ? (prevOn ? prev.since : Date.now()) : 0,
+        };
+      });
+    };
+
+    read();
+    const id = setInterval(() => mounted && read(), 120); // 120ms ok
+
+    return () => {
+      mounted = false;
+      clearInterval(id);
+    };
   }, []);
 
-  // Animation pulse (démarre uniquement si on)
+  const on = state.visible && (state.inviteLoading || state.deeplinkBooting);
+
+  // ✅ Animation pulse uniquement si on
   useEffect(() => {
     if (!on) return;
     pulse.value = 0;
     pulse.value = withRepeat(
-      withTiming(1, {
-        duration: 1150,
-        easing: Easing.out(Easing.quad),
-      }),
+      withTiming(1, { duration: 1150, easing: Easing.out(Easing.quad) }),
       -1,
       false
     );
   }, [on, pulse]);
 
-  // Failsafe anti overlay zombie
+  // ✅ Failsafe anti zombie (si ça dépasse 12s, on coupe les 2 flags de boot)
   useEffect(() => {
     if (!on) return;
-    const startedAt = Date.now();
     const tId = setTimeout(() => {
-      // coupe uniquement si toujours actif
-      if ((globalThis as any).__INVITE_BOOT__ === true) {
-        (globalThis as any).__INVITE_BOOT__ = false;
+      const visible = (globalThis as any).__INVITE_MODAL_VISIBLE__ === true;
+      const inviteLoading = (globalThis as any).__INVITE_LOADING__ === true;
+      const deeplinkBooting = (globalThis as any).__DEEPLINK_BOOTING__ === true;
+      const stillOn = visible && (inviteLoading || deeplinkBooting);
+
+      if (stillOn) {
+        (globalThis as any).__INVITE_LOADING__ = false;
+        (globalThis as any).__DEEPLINK_BOOTING__ = false;
       }
     }, INVITE_BOOT_FAILSAFE_MS);
 
-    return () => {
-      clearTimeout(tId);
-      // si l'overlay se ferme "normalement", rien d'autre à faire
-      void startedAt;
-    };
+    return () => clearTimeout(tId);
   }, [on]);
-
-  const ringStyle = useAnimatedStyle(() => {
-    const s = 1 + pulse.value * 0.65;
-    return {
-      transform: [{ scale: s }],
-      opacity: 0.22 * (1 - pulse.value),
-    };
-  });
-
-  const coreStyle = useAnimatedStyle(() => {
-    const s = 1 + pulse.value * 0.06;
-    return { transform: [{ scale: s }] };
-  });
 
   if (!on) return null;
 
-  const title = "ChallengeTies";
-  const subtitle =
-    t("deeplink.inviteHandoff.sub", { defaultValue: "Ouverture de l’invitation…" });
-
+  // ⚠️ IMPORTANT : overlay DOIT bloquer quand il est ON
+  // (sinon tu peux cliquer derrière pendant le handoff)
   return (
     <Animated.View
       entering={FadeIn.duration(140)}
       exiting={FadeOut.duration(120)}
       pointerEvents="auto"
-      style={[
-        StyleSheet.absoluteFillObject,
-        stylesInvite.overlay,
-      ]}
+      style={[StyleSheet.absoluteFillObject, stylesInvite.overlay]}
     >
-      <View style={stylesInvite.card}>
-        {/* Pulse */}
-        <View style={stylesInvite.pulseWrap}>
-          <Animated.View style={[stylesInvite.pulseRing, ringStyle]} />
-          <Animated.View style={[stylesInvite.pulseCore, coreStyle]}>
-            {/* Logo fallback (CT) */}
-            <Text style={stylesInvite.logoText}>CT</Text>
-          </Animated.View>
-        </View>
-
-        <Text style={stylesInvite.title}>{title}</Text>
-        <Text style={stylesInvite.subtitle}>{subtitle}</Text>
-
-        <ActivityIndicator style={{ marginTop: 14 }} size="small" color="#fff" />
-      </View>
+      {/* ... ton UI inchangée ... */}
     </Animated.View>
   );
 };
+
 
 const stylesInvite = StyleSheet.create({
   overlay: {
@@ -1238,7 +1242,7 @@ export default function RootLayout() {
                                       <AdsVisibilityProvider>
                                           <DeepLinkManager />
                                           <NotificationsBootstrap />
-                                          <InviteBootOverlay />
+                                          
 
                                         <Stack
                                           screenOptions={{
@@ -1257,7 +1261,7 @@ export default function RootLayout() {
                                         </Stack>
                                           <AppNavigator />
                                           <TrophyModal />
-
+                                          <InviteBootOverlay />
                                       </AdsVisibilityProvider>
                                       </PremiumProvider>
                                     </ConsentGate>

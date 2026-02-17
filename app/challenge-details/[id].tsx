@@ -1071,18 +1071,11 @@ const {
 // ✅ invite param stable
 const inviteParam = typeof params?.invite === "string" ? params.invite : null;
 
-// ✅ règle root overlay : ON pendant handoff deeplink -> modal prête, OFF sinon
 const shouldShowGlobalInviteBoot = useMemo(() => {
   if (!inviteParam) return false;
+  return !!(deeplinkBooting || inviteLoading);
+}, [inviteParam, deeplinkBooting, inviteLoading]);
 
-  // ✅ masque TOUT tant que boot/load OU tant que modal pas "ready"
-  if (deeplinkBooting || inviteLoading || !inviteModalReady) return true;
-
-  // (optionnel) micro-lag cover après ouverture modal
-  // if (invitationModalVisible && (deeplinkBooting || inviteLoading)) return true;
-
-  return false;
-}, [inviteParam, deeplinkBooting, inviteLoading, inviteModalReady /*, invitationModalVisible */]);
 
 useEffect(() => {
   setInviteBoot(shouldShowGlobalInviteBoot);
@@ -1103,7 +1096,6 @@ const forceCloseInviteUI = useCallback((inviteId?: string | null) => {
 
   try { setInviteLoading(false); } catch {}
   try { setDeeplinkBooting(false); } catch {}
-  try { setInviteModalReady(false); } catch {}
   try { hideRootInviteHandoff(); } catch {}
 }, [
   closeInviteFlow,
@@ -1590,6 +1582,8 @@ const {
   const saveBusyRef = useRef(false);
   const markBusyRef = useRef(false);
   const openMomentAfterMissedRef = useRef<null | (() => void)>(null);
+  const closingInviteIdRef = useRef<string | null>(null);
+useEffect(() => { closingInviteIdRef.current = invitation?.id ?? null; }, [invitation?.id]);
 
 const handleSaveChallenge = useCallback(async () => {
   if (!id || saveBusyRef.current) return;
@@ -3187,11 +3181,8 @@ const scrollContentStyle = useMemo(
   visible={invitationModalVisible}
   inviteId={invitation?.id || null}
   challengeId={id}
-  onClose={() => {
-  dlog("InvitationModal onClose", invitation?.id);
-  forceCloseInviteUI(invitation?.id);
-}}
-  clearInvitation={() => forceCloseInviteUI(invitation?.id)}
+  onClose={() => forceCloseInviteUI(closingInviteIdRef.current)}
+clearInvitation={() => forceCloseInviteUI(closingInviteIdRef.current)}
   onLoaded={() => setInviteModalReady(true)}
 />
 
