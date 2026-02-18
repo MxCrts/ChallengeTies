@@ -726,8 +726,7 @@ useEffect(() => {
       safeArea: {
         flex: 1,
         backgroundColor: "transparent",
-        paddingTop:
-          Platform.OS === "ios" ? insets.top : StatusBar.currentHeight ?? 0,
+        paddingTop: 0,
       },
       gradientContainer: {
         flex: 1,
@@ -1187,8 +1186,7 @@ thankYouPillText: {
                 initialNumToRender={8}
                 maxToRenderPerBatch={8}
                 windowSize={9}
-
-                contentInset={{ top: SPACING, bottom: normalizeSize(40) }}
+                contentInset={{ top: 0, bottom: 0 }}
                 accessibilityRole="list"
                 accessibilityLabel={t("newFeatures.featuresListLabel")}
                 refreshControl={

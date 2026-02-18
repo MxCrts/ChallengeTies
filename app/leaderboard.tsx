@@ -826,22 +826,22 @@ const podiumBadge = (slotIndex: number) => {
 </Animated.View>
 
         <ScrollView
-          contentContainerStyle={styles.scrollContent}
-          showsVerticalScrollIndicator={false}
-          contentInset={{ top: SPACING, bottom: normalizeSize(80) }}
-          keyboardDismissMode="on-drag"
-          keyboardShouldPersistTaps="handled"
-          scrollEventThrottle={16}
-          refreshControl={
-            <RefreshControl
-              refreshing={refreshing}
-              onRefresh={onRefresh}
-              tintColor={currentTheme.colors.secondary}
-              colors={[currentTheme.colors.secondary]}
-              progressViewOffset={SPACING}
-            />
-          }
-        >
+  contentContainerStyle={styles.scrollContent}
+  showsVerticalScrollIndicator={false}
+  contentInset={{ top: 0, bottom: 0 }} // ✅ iOS: plus de top gap
+  keyboardDismissMode="on-drag"
+  keyboardShouldPersistTaps="handled"
+  scrollEventThrottle={16}
+  refreshControl={
+    <RefreshControl
+      refreshing={refreshing}
+      onRefresh={onRefresh}
+      tintColor={currentTheme.colors.secondary}
+      colors={[currentTheme.colors.secondary]}
+      progressViewOffset={0} // ✅ iOS: évite offset bizarre
+    />
+  }
+>
           {filteredPlayers.length > 0 ? (
             <>
               {renderTopThree()}
@@ -1128,7 +1128,7 @@ myRankSheen: {
     textAlign: "center",
     includeFontPadding: false,
   },
-  scrollContent: { paddingBottom: normalizeSize(90) },
+  scrollContent: { paddingBottom: normalizeSize(90) + SPACING },
   listContainer: { paddingHorizontal: SPACING, marginTop: SPACING * 1.0 },
 
   // --- Podium (clean, no borders, no glow spam) ---

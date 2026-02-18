@@ -280,7 +280,7 @@ export default function Conseils() {
             { paddingBottom: bottomPadding },
           ]}
           showsVerticalScrollIndicator={false}
-          contentInset={{ top: SPACING, bottom: 0 }}
+          contentInset={{ top: 0, bottom: 0 }}
           accessibilityRole="list"
           accessibilityLabel={t("tips.listAccessibility")}
           keyboardShouldPersistTaps="handled"
@@ -710,10 +710,7 @@ export default function Conseils() {
 const styles = StyleSheet.create({
   safeArea: {
     flex: 1,
-    paddingTop:
-      Platform.OS === "android"
-        ? StatusBar.currentHeight ?? SPACING
-        : SPACING,
+    paddingTop: Platform.OS === "android" ? 0 : 0,
   },
 
   scrollContent: {
