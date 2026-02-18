@@ -1,9 +1,7 @@
+// GlobalLayout.tsx
 import React from "react";
 import { StyleSheet } from "react-native";
-import {
-  SafeAreaView,
-  useSafeAreaInsets,
-} from "react-native-safe-area-context";
+import { SafeAreaView, useSafeAreaInsets } from "react-native-safe-area-context";
 import { StatusBar } from "expo-status-bar";
 import { useTheme } from "../context/ThemeContext";
 import { lightTheme, darkTheme } from "../theme/designSystem";
@@ -19,6 +17,8 @@ export default function GlobalLayout({ children }: GlobalLayoutProps) {
 
   return (
     <SafeAreaView
+      // ✅ IMPORTANT: on enlève le TOP ici, car le header le gère déjà via insets.top
+      edges={["left", "right", "bottom"]}
       style={[
         styles.container,
         {
@@ -40,6 +40,5 @@ export default function GlobalLayout({ children }: GlobalLayoutProps) {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    // Le padding horizontal et vertical pourra être ajouté dans le design system ou au niveau des composants.
   },
 });

@@ -1060,6 +1060,13 @@ const resolveAvatarUrl = useCallback(
   [storage]
 );
 
+// ✅ invite param robuste iOS (string | string[])
+const inviteParam = useMemo(() => {
+  const v: any = params?.invite;
+  if (Array.isArray(v)) return typeof v[0] === "string" ? v[0] : null;
+  return typeof v === "string" ? v : null;
+}, [params?.invite]);
+
 const {
   deeplinkBooting,
   inviteLoading,
@@ -1080,16 +1087,15 @@ const {
   hideRootInviteHandoff,
 } = useInviteHandoff({
   id,
-  paramsInvite: params?.invite,
+  paramsInvite: inviteParam, // ✅
   paramsId: params?.id,
   router,
   cameFromDeeplinkRef,
 });
 
-// ✅ invite param stable
-const inviteParam = typeof params?.invite === "string" ? params.invite : null;
 
-
+const effectiveInviteId = invitation?.id || inviteParam || null;
+const effectiveInviteVisible = invitationModalVisible || !!inviteParam; 
 
 const clearInviteParamSafe = useCallback(() => {
   try {
@@ -1131,6 +1137,8 @@ const forceCloseInviteUI = useCallback((inviteId?: string | null) => {
 
   // 1) ferme le flow côté hook
   try { closeInviteFlow(inviteId ?? undefined); } catch {}
+  try { setIntroVisible(false); } catch {}
+try { setIntroBlocking(false); } catch {}
 
   // ✅ killswitch #1 : retire le param ?invite=
   clearInviteParamSafe();
@@ -3239,19 +3247,19 @@ const scrollContentStyle = useMemo(
   </View>
 )}
 
-      <InvitationModal
-  key={invitation?.id || "no-invite"}
-  visible={invitationModalVisible}
-  inviteId={invitation?.id || null}
+     <InvitationModal
+  key={effectiveInviteId || "no-invite"}
+  visible={effectiveInviteVisible}
+  inviteId={effectiveInviteId}
   challengeId={id}
-  onClose={() => forceCloseInviteUI(closingInviteIdRef.current)}
-clearInvitation={() => forceCloseInviteUI(closingInviteIdRef.current)}
- onLoaded={() => {
-  setInviteModalReady(true);
-  // ✅ important : on coupe les flags résiduels
-  setInviteLoading(false);
-  setDeeplinkBooting(false);
-}}
+  onClose={() => forceCloseInviteUI(closingInviteIdRef.current ?? inviteParam)}
+  clearInvitation={() => forceCloseInviteUI(closingInviteIdRef.current ?? inviteParam)}
+  onLoaded={() => {
+    setInviteModalReady(true);
+    setInviteLoading(false);
+    setDeeplinkBooting(false);
+    setInvitationModalVisible(true); // ✅ au cas où
+  }}
 />
 
 <ConfirmationDuoModal
