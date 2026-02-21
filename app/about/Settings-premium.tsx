@@ -33,7 +33,10 @@ import { useIAP } from "expo-iap";
 import { useToast } from "@/src/ui/Toast";
 import { tap, success, warning } from "@/src/utils/haptics";
 
-const PRODUCT_ID = "challengeties_premium_monthly";
+const PRODUCT_ID =
+  Platform.OS === "ios"
+    ? "challengeties_premium_monthly_ios_v2" // <- TON NOUVEL ID iOS (choisis le tien exact)
+    : "challengeties_premium_monthly"; 
 const SPACING = 20;
 
 // ✅ Android subs: Play Billing demande souvent un offerToken (subscription offer)

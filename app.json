@@ -80,16 +80,6 @@
             },
             {
               "scheme": "https",
-              "host": "www.challengeties.app",
-              "pathPrefix": "/challenge-details"
-            },
-            {
-              "scheme": "https",
-              "host": "www.challengeties.app",
-              "pathPrefix": "/challenge"
-            },
-            {
-              "scheme": "https",
               "host": "links.challengeties.app",
               "pathPrefix": "/i"
             }

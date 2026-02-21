@@ -254,7 +254,7 @@ const pathname = usePathname();
   const [postShareBusy, setPostShareBusy] = useState(false);
 
   // ✅ Base saine : mode SIMPLE (pas de "none")
-  const [mode, setMode] = useState<"solo" | "duo">("duo");
+  const [mode, setMode] = useState<"solo" | "duo">("solo");
   
 
 
@@ -1162,7 +1162,7 @@ const selectedTitle = useMemo(() => {
    ? (t("firstPick.step2.duoTitle", { defaultValue: "Duo" }) as string)
    : (t("firstPick.step2.soloTitle", { defaultValue: "Solo" }) as string),
       days,
-      title: selected.title,
+      title: selectedTitle,
       defaultValue: "Continuer avec les options sélectionnées.",
     }) as string}`;
   }, [step, mode, selectedTitle, days, t]);

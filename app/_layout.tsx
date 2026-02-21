@@ -44,7 +44,7 @@ import mobileAds, {
   AdsConsentStatus,
 } from "react-native-google-mobile-ads";
 import { VisitorProvider, useVisitor } from "@/context/VisitorContext";
-import { logEvent } from "../src/analytics";
+import { logEvent, logEventDaily } from "../src/analytics";
 import AsyncStorage from "@react-native-async-storage/async-storage";
 import {
   checkAndGrantPioneerIfEligible,
@@ -69,7 +69,7 @@ import { ToastProvider, useToast } from "../src/ui/Toast";
 import MarkToastListener from "@/src/ui/MarkToastListener";
 
 
-const FORCE_ADS_DEBUG = true;
+const FORCE_ADS_DEBUG = false;
 
 const getShareSheetTs = () => {
   const v = (globalThis as any).__FROM_SHARE_SHEET__;
@@ -305,11 +305,19 @@ useEffect(() => {
     return () => clearTimeout(t);
   }, []);
 
-  // Analytics + review gentle ping
-  useEffect(() => {
-    logEvent("app_open" as any).catch(() => {});
-    bumpCounterAndMaybeReview("app_open", 7).catch(() => {});
-  }, []);
+useEffect(() => {
+  logEvent("app_open" as any).catch(() => {});
+  logEventDaily("dau", "daily_active").catch(() => {});
+  bumpCounterAndMaybeReview("app_open", 7).catch(() => {});
+
+  const sub = AppState.addEventListener("change", (st) => {
+    if (st === "active") {
+      logEventDaily("dau", "daily_active").catch(() => {});
+    }
+  });
+
+  return () => sub.remove();
+}, []);
 
   useEffect(() => {
   if (
@@ -560,6 +568,20 @@ const ConsentGate: React.FC<{ children: React.ReactNode }> = ({ children }) => {
           tagForUnderAgeOfConsent: false,
           maxAdContentRating: MaxAdContentRating.PG,
         };
+
+        // ✅ WAIT FOR ATT BEFORE INITIALIZING ADS (Apple compliance)
+const waitForATT = async (maxMs = 2500) => {
+  if (Platform.OS !== "ios") return;
+  const start = Date.now();
+  while (
+    !(globalThis as any).__ATT_DONE__ &&
+    Date.now() - start < maxMs
+  ) {
+    await new Promise((r) => setTimeout(r, 50));
+  }
+};
+
+await waitForATT(2500);
 
         await mobileAds().setRequestConfiguration(requestConfig);
         await mobileAds().initialize();
@@ -1270,27 +1292,31 @@ export default function RootLayout() {
     ensureInviteBootAPI();
 
     // ✅ ATT: request at the VERY START of app lifecycle (before any SDK/analytics).
-    // Apple review on iPadOS must see the system prompt on first launch when status is "undetermined".
-    if (Platform.OS === "ios") {
-      (async () => {
-        try {
-          const cur = await getTrackingPermissionsAsync();
-          const status = cur?.status as string | undefined;
+(globalThis as any).__ATT_DONE__ = false;
 
-          if (status === "undetermined") {
-            const req = await requestTrackingPermissionsAsync();
-            (globalThis as any).__ATT_STATUS__ =
-              (req?.status as string | undefined) ?? status ?? "unknown";
-          } else {
-            (globalThis as any).__ATT_STATUS__ = status || "unknown";
-          }
-        } catch (e) {
-          (globalThis as any).__ATT_STATUS__ = "error";
-        }
-      })();
-    } else {
-      (globalThis as any).__ATT_STATUS__ = "not-ios";
+if (Platform.OS === "ios") {
+  (async () => {
+    try {
+      const cur = await getTrackingPermissionsAsync();
+      const status = cur?.status as string | undefined;
+
+      if (status === "undetermined") {
+        const req = await requestTrackingPermissionsAsync();
+        (globalThis as any).__ATT_STATUS__ =
+          (req?.status as string | undefined) ?? status ?? "unknown";
+      } else {
+        (globalThis as any).__ATT_STATUS__ = status || "unknown";
+      }
+    } catch (e) {
+      (globalThis as any).__ATT_STATUS__ = "error";
+    } finally {
+      (globalThis as any).__ATT_DONE__ = true; // ✅ CRITIQUE
     }
+  })();
+} else {
+  (globalThis as any).__ATT_STATUS__ = "not-ios";
+  (globalThis as any).__ATT_DONE__ = true; // ✅ IMPORTANT
+}
     
 
     // ✅ failsafe global : quoi qu’il arrive, on sort du splash

@@ -6,6 +6,7 @@ import React, {
   useRef,
   useMemo,
 } from "react";
+
 import {
   View,
   Text,
@@ -28,6 +29,7 @@ import {
 import { useIsFocused } from "@react-navigation/native";
 import { useSafeAreaInsets, SafeAreaView } from "react-native-safe-area-context";
 import { useRouter } from "expo-router";
+import { logEvent } from "@/src/analytics";
 import { signInWithEmailAndPassword } from "firebase/auth";
 import { auth } from "@/constants/firebase-config";
 import { Ionicons } from "@expo/vector-icons";
@@ -422,6 +424,7 @@ export default function Login() {
     try {
       if (isMountedRef.current) setLoading(true);
       await signInWithEmailAndPassword(auth, e, p);
+      logEvent("login_success").catch(() => {});
 if (!reduceMotion) {
         Haptics.notificationAsync(
           Haptics.NotificationFeedbackType.Success
