@@ -1,5 +1,5 @@
 // app/_layout.tsx
-import React, { useEffect } from "react";
+import React, { useEffect, useRef } from "react";
 import { useTranslation } from "react-i18next";
 import Animated, {
   FadeIn,
@@ -304,8 +304,29 @@ useEffect(() => {
     const t = setTimeout(() => setHardReady(true), 3500);
     return () => clearTimeout(t);
   }, []);
+  // ✅ iOS ATT tick: permet de relancer l'effet analytics quand __ATT_DONE__ devient true
+  const [attTick, setAttTick] = React.useState(0);
+
+// ✅ iOS: attendre ATT puis déclencher l'analytics (sinon l'effet [] peut rater)
+useEffect(() => {
+  if (Platform.OS !== "ios") return;
+
+  const id = setInterval(() => {
+    if ((globalThis as any).__ATT_DONE__ === true) {
+      clearInterval(id);
+      setAttTick((x) => x + 1);
+    }
+  }, 120);
+
+  return () => clearInterval(id);
+}, []);
 
 useEffect(() => {
+  const canLog =
+    Platform.OS !== "ios" || (globalThis as any).__ATT_DONE__ === true;
+
+  if (!canLog) return;
+
   logEvent("app_open" as any).catch(() => {});
   logEventDaily("dau", "daily_active").catch(() => {});
   bumpCounterAndMaybeReview("app_open", 7).catch(() => {});
@@ -317,7 +338,7 @@ useEffect(() => {
   });
 
   return () => sub.remove();
-}, []);
+}, [attTick]);
 
   useEffect(() => {
   if (
@@ -570,7 +591,7 @@ const ConsentGate: React.FC<{ children: React.ReactNode }> = ({ children }) => {
         };
 
         // ✅ WAIT FOR ATT BEFORE INITIALIZING ADS (Apple compliance)
-const waitForATT = async (maxMs = 2500) => {
+const waitForATT = async (maxMs = 6000) => {
   if (Platform.OS !== "ios") return;
   const start = Date.now();
   while (
@@ -581,7 +602,7 @@ const waitForATT = async (maxMs = 2500) => {
   }
 };
 
-await waitForATT(2500);
+await waitForATT(6000);
 
         await mobileAds().setRequestConfiguration(requestConfig);
         await mobileAds().initialize();
@@ -1287,44 +1308,82 @@ const stylesBoot = StyleSheet.create({
 // RootLayout (UNIQUE export)
 // =========================
 export default function RootLayout() {
+  const attStartedRef = useRef(false);
+
   useEffect(() => {
     SplashScreen.preventAutoHideAsync().catch(() => {});
     ensureInviteBootAPI();
 
-    // ✅ ATT: request at the VERY START of app lifecycle (before any SDK/analytics).
-(globalThis as any).__ATT_DONE__ = false;
+    // ✅ ATT globals
+    (globalThis as any).__ATT_DONE__ = false;
+    (globalThis as any).__ATT_STATUS__ = "unknown";
 
-if (Platform.OS === "ios") {
-  (async () => {
-    try {
-      const cur = await getTrackingPermissionsAsync();
-      const status = cur?.status as string | undefined;
+    let cancelled = false;
 
-      if (status === "undetermined") {
-        const req = await requestTrackingPermissionsAsync();
-        (globalThis as any).__ATT_STATUS__ =
-          (req?.status as string | undefined) ?? status ?? "unknown";
-      } else {
-        (globalThis as any).__ATT_STATUS__ = status || "unknown";
+    const sleep = (ms: number) => new Promise((r) => setTimeout(r, ms));
+
+    const waitAppActive = async () => {
+      if (AppState.currentState === "active") return;
+      await new Promise<void>((resolve) => {
+        const sub = AppState.addEventListener("change", (s) => {
+          if (s === "active") {
+            sub.remove();
+            resolve();
+          }
+        });
+      });
+    };
+
+    const run = async () => {
+      try {
+        // 1) Laisse l'app afficher (évite le "silent fail" d'ATT sous splash)
+        await sleep(350);
+        await SplashScreen.hideAsync().catch(() => {});
+
+        // 2) ATT uniquement quand l'app est réellement active + visible
+        if (Platform.OS === "ios") {
+          await waitAppActive();
+          await sleep(500);
+
+          const cur = await getTrackingPermissionsAsync();
+          const status = cur?.status as string | undefined;
+
+          if (status === "undetermined") {
+            // ✅ important: on déclenche UNE SEULE FOIS
+            if (!attStartedRef.current) {
+              attStartedRef.current = true;
+              const req = await requestTrackingPermissionsAsync();
+              (globalThis as any).__ATT_STATUS__ =
+                (req?.status as string | undefined) ?? "unknown";
+            } else {
+              (globalThis as any).__ATT_STATUS__ = "undetermined";
+            }
+          } else {
+            (globalThis as any).__ATT_STATUS__ = status || "unknown";
+          }
+        } else {
+          (globalThis as any).__ATT_STATUS__ = "not-ios";
+        }
+      } catch {
+        (globalThis as any).__ATT_STATUS__ = "error";
+      } finally {
+        if (!cancelled) (globalThis as any).__ATT_DONE__ = true;
       }
-    } catch (e) {
-      (globalThis as any).__ATT_STATUS__ = "error";
-    } finally {
-      (globalThis as any).__ATT_DONE__ = true; // ✅ CRITIQUE
-    }
-  })();
-} else {
-  (globalThis as any).__ATT_STATUS__ = "not-ios";
-  (globalThis as any).__ATT_DONE__ = true; // ✅ IMPORTANT
-}
-    
+    };
 
-    // ✅ failsafe global : quoi qu’il arrive, on sort du splash
+    run();
+
+    // ✅ failsafe: si hideAsync rate, on tente quand même
     const t = setTimeout(() => {
       SplashScreen.hideAsync().catch(() => {});
-    }, 5000);
+      // on n'oublie pas de libérer l'init ads au bout d'un moment
+      (globalThis as any).__ATT_DONE__ = true;
+    }, 6000);
 
-    return () => clearTimeout(t);
+    return () => {
+      cancelled = true;
+      clearTimeout(t);
+    };
   }, []);
 
 
