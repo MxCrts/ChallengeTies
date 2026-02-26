@@ -12,7 +12,7 @@ import Animated, {
 } from "react-native-reanimated";
 import { GestureHandlerRootView } from "react-native-gesture-handler";
 import { Stack, useRouter, usePathname } from "expo-router";
-import { StyleSheet, Platform, AppState, View, Text, ActivityIndicator} from "react-native";
+import { StyleSheet, Platform, AppState, View, Text, ActivityIndicator, InteractionManager } from "react-native";
 import { Provider as PaperProvider } from "react-native-paper";
 import { ProfileUpdateProvider } from "../context/ProfileUpdateContext";
 import { TrophyProvider } from "../context/TrophyContext";
@@ -591,7 +591,7 @@ const ConsentGate: React.FC<{ children: React.ReactNode }> = ({ children }) => {
         };
 
         // ✅ WAIT FOR ATT BEFORE INITIALIZING ADS (Apple compliance)
-const waitForATT = async (maxMs = 6000) => {
+const waitForATT = async (maxMs = 12000) => {
   if (Platform.OS !== "ios") return;
   const start = Date.now();
   while (
@@ -661,7 +661,100 @@ await waitForATT(6000);
   return <>{children}</>;
 };
 
+// =========================
+// ATTBootstrap : demande ATT sur écran stable (login/register/tabs)
+// =========================
+const ATTBootstrap: React.FC = () => {
+  const pathname = usePathname();
 
+  const startedRef = React.useRef(false);
+  const doneRef = React.useRef(false);
+
+  useEffect(() => {
+    // init globals si absents
+    (globalThis as any).__ATT_DONE__ = (globalThis as any).__ATT_DONE__ ?? false;
+    (globalThis as any).__ATT_STATUS__ = (globalThis as any).__ATT_STATUS__ ?? "unknown";
+  }, []);
+
+  useEffect(() => {
+    if (Platform.OS !== "ios") {
+      (globalThis as any).__ATT_STATUS__ = "not-ios";
+      (globalThis as any).__ATT_DONE__ = true;
+      doneRef.current = true;
+      return;
+    }
+
+    // ✅ Écrans où on accepte de pop ATT (stables et visibles)
+    const isStable =
+      pathname === "/login" ||
+      pathname === "/register" ||
+      pathname === "/(tabs)" ||
+      (typeof pathname === "string" && pathname.startsWith("/(tabs)/"));
+
+    if (!isStable) return;
+    if (startedRef.current) return;
+    startedRef.current = true;
+
+    let cancelled = false;
+
+    const run = async () => {
+      try {
+        // 1) on attend app active
+        if (AppState.currentState !== "active") {
+          await new Promise<void>((resolve) => {
+            const sub = AppState.addEventListener("change", (s) => {
+              if (s === "active") {
+                sub.remove();
+                resolve();
+              }
+            });
+          });
+        }
+
+        // 2) on attend fin du rendu/animations
+        await new Promise<void>((resolve) =>
+          InteractionManager.runAfterInteractions(() => resolve())
+        );
+
+        // 3) petit délai iPad-safe (review devices sont parfois lents)
+        await new Promise((r) => setTimeout(r, 900));
+
+        const cur = await getTrackingPermissionsAsync();
+        if (cancelled) return;
+
+        const status = cur?.status as string | undefined;
+
+        if (status === "undetermined") {
+          const req = await requestTrackingPermissionsAsync();
+          (globalThis as any).__ATT_STATUS__ = (req?.status as any) ?? "unknown";
+        } else {
+          (globalThis as any).__ATT_STATUS__ = status ?? "unknown";
+        }
+      } catch {
+        (globalThis as any).__ATT_STATUS__ = "error";
+      } finally {
+        if (!cancelled) {
+          (globalThis as any).__ATT_DONE__ = true;
+          doneRef.current = true;
+        }
+      }
+    };
+
+    run();
+
+    // failsafe hard (bloque jamais l’app, mais laisse du temps au prompt)
+    const t = setTimeout(() => {
+      if (!doneRef.current) (globalThis as any).__ATT_DONE__ = true;
+    }, 12000);
+
+    return () => {
+      cancelled = true;
+      clearTimeout(t);
+    };
+  }, [pathname]);
+
+  return null;
+};
 
 // =========================
 // DeepLinkManager : SAFE, idempotent, auth-aware
@@ -1308,146 +1401,86 @@ const stylesBoot = StyleSheet.create({
 // RootLayout (UNIQUE export)
 // =========================
 export default function RootLayout() {
-  const attStartedRef = useRef(false);
-
   useEffect(() => {
     SplashScreen.preventAutoHideAsync().catch(() => {});
     ensureInviteBootAPI();
 
-    // ✅ ATT globals
+    // ✅ ATT globals (la demande est faite par ATTBootstrap sur /login)
     (globalThis as any).__ATT_DONE__ = false;
     (globalThis as any).__ATT_STATUS__ = "unknown";
 
-    let cancelled = false;
-
-    const sleep = (ms: number) => new Promise((r) => setTimeout(r, ms));
-
-    const waitAppActive = async () => {
-      if (AppState.currentState === "active") return;
-      await new Promise<void>((resolve) => {
-        const sub = AppState.addEventListener("change", (s) => {
-          if (s === "active") {
-            sub.remove();
-            resolve();
-          }
-        });
-      });
-    };
-
-    const run = async () => {
-      try {
-        // 1) Laisse l'app afficher (évite le "silent fail" d'ATT sous splash)
-        await sleep(350);
-        await SplashScreen.hideAsync().catch(() => {});
-
-        // 2) ATT uniquement quand l'app est réellement active + visible
-        if (Platform.OS === "ios") {
-          await waitAppActive();
-          await sleep(500);
-
-          const cur = await getTrackingPermissionsAsync();
-          const status = cur?.status as string | undefined;
-
-          if (status === "undetermined") {
-            // ✅ important: on déclenche UNE SEULE FOIS
-            if (!attStartedRef.current) {
-              attStartedRef.current = true;
-              const req = await requestTrackingPermissionsAsync();
-              (globalThis as any).__ATT_STATUS__ =
-                (req?.status as string | undefined) ?? "unknown";
-            } else {
-              (globalThis as any).__ATT_STATUS__ = "undetermined";
-            }
-          } else {
-            (globalThis as any).__ATT_STATUS__ = status || "unknown";
-          }
-        } else {
-          (globalThis as any).__ATT_STATUS__ = "not-ios";
-        }
-      } catch {
-        (globalThis as any).__ATT_STATUS__ = "error";
-      } finally {
-        if (!cancelled) (globalThis as any).__ATT_DONE__ = true;
-      }
-    };
-
-    run();
-
-    // ✅ failsafe: si hideAsync rate, on tente quand même
+    // ✅ failsafe: au cas où un truc bloque, on ne veut JAMAIS bloquer les ads indéfiniment
     const t = setTimeout(() => {
-      SplashScreen.hideAsync().catch(() => {});
-      // on n'oublie pas de libérer l'init ads au bout d'un moment
       (globalThis as any).__ATT_DONE__ = true;
-    }, 6000);
+    }, 15000);
 
-    return () => {
-      cancelled = true;
-      clearTimeout(t);
-    };
+    return () => clearTimeout(t);
   }, []);
-
 
   return (
     <GestureHandlerRootView style={{ flex: 1 }}>
       <ToastProvider>
         <View style={{ flex: 1 }}>
-        <MarkToastListener />
-        <FeatureFlagsProvider>
-          <FlagsGate>
-            <AuthProvider>
-              <I18nextProvider i18n={i18n}>
-                 <LanguageProvider>
-                  <ThemeProvider>
-                    <PaperProvider>
-                      <ProfileUpdateProvider>
-                        <TrophyProvider>
-                          <SavedChallengesProvider>
-                            <CurrentChallengesProvider>
-                              <ChatProvider>
-                                <TutorialProvider>
-                                  <VisitorProvider>
-                                    <ConsentGate>
-                                      <PremiumProvider>
-                                      <AdsVisibilityProvider>
-                                          <DeepLinkManager />
-                                          <NotificationsBootstrap />
-                                          
+          <MarkToastListener />
+          <FeatureFlagsProvider>
+            <FlagsGate>
+              <AuthProvider>
+                <I18nextProvider i18n={i18n}>
+                  <LanguageProvider>
+                    <ThemeProvider>
+                      <PaperProvider>
+                        <ProfileUpdateProvider>
+                          <TrophyProvider>
+                            <SavedChallengesProvider>
+                              <CurrentChallengesProvider>
+                                <ChatProvider>
+                                  <TutorialProvider>
+                                    <VisitorProvider>
+                                      {/* ✅ ATT pop sur écran stable (login/register/tabs) */}
+                                      <ATTBootstrap />
 
-                                        <Stack
-                                          screenOptions={{
-                                            headerShown: false,
-                                            animation: "fade",
-                                            animationDuration: 400,
-                                          }}
-                                        >
-                                          <Stack.Screen
-                                            name="(tabs)"
-                                            options={{ headerShown: false }}
-                                          />
-                                          <Stack.Screen name="login" />
-                                          <Stack.Screen name="register" />
-                                          <Stack.Screen name="forgot-password" />
-                                        </Stack>
-                                          <AppNavigator />
-                                          <TrophyModal />
-                                          <RootInviteBootOverlay />
-                                      </AdsVisibilityProvider>
-                                      </PremiumProvider>
-                                    </ConsentGate>
-                                  </VisitorProvider>
-                                </TutorialProvider>
-                              </ChatProvider>
-                            </CurrentChallengesProvider>
-                          </SavedChallengesProvider>
-                        </TrophyProvider>
-                      </ProfileUpdateProvider>
-                    </PaperProvider>
-                  </ThemeProvider>
-              </LanguageProvider>
-              </I18nextProvider>
-            </AuthProvider>
-          </FlagsGate>
-        </FeatureFlagsProvider>
+                                      <ConsentGate>
+                                        <PremiumProvider>
+                                          <AdsVisibilityProvider>
+                                            <DeepLinkManager />
+                                            <NotificationsBootstrap />
+
+                                            <Stack
+                                              screenOptions={{
+                                                headerShown: false,
+                                                animation: "fade",
+                                                animationDuration: 400,
+                                              }}
+                                            >
+                                              <Stack.Screen
+                                                name="(tabs)"
+                                                options={{ headerShown: false }}
+                                              />
+                                              <Stack.Screen name="login" />
+                                              <Stack.Screen name="register" />
+                                              <Stack.Screen name="forgot-password" />
+                                            </Stack>
+
+                                            <AppNavigator />
+                                            <TrophyModal />
+                                            <RootInviteBootOverlay />
+                                          </AdsVisibilityProvider>
+                                        </PremiumProvider>
+                                      </ConsentGate>
+                                    </VisitorProvider>
+                                  </TutorialProvider>
+                                </ChatProvider>
+                              </CurrentChallengesProvider>
+                            </SavedChallengesProvider>
+                          </TrophyProvider>
+                        </ProfileUpdateProvider>
+                      </PaperProvider>
+                    </ThemeProvider>
+                  </LanguageProvider>
+                </I18nextProvider>
+              </AuthProvider>
+            </FlagsGate>
+          </FeatureFlagsProvider>
         </View>
       </ToastProvider>
     </GestureHandlerRootView>
