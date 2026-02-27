@@ -4786,19 +4786,18 @@
   }
 }
 ,
-  "inventory": {
+"inventory": {
     "title": "インベントリ",
-    "subtitle": "ここで特別ボーナスとストリーク保護アイテムを管理できます。",
-    "sectionSubtitle": "すべてのボーナスとストリーク保護アイテムを一目で確認。",
-    "totalItems": "合計 {{count}} 個のアイテム",
-    "itemHint": "このアイテムの詳細情報を見る。",
+    "subtitle": "ボーナスと連続記録の保護を、ここでまとめて管理。",
+    "totalItems": "{{count}} 個",
+    "sectionSubtitle": "所持アイテムと、使いどころを確認できます。",
     "emptyTitle": "まだボーナスはありません",
-    "emptyText": "チャレンジを達成して、デイリールーレットを回してインベントリを増やそう。",
-    "streakHint": "Streak Pass は、チャレンジを取りこぼしたときに、シリーズを守るため自動的に使用されます。",
+    "emptyText": "チャレンジを達成して、デイリールーレットでアイテムを獲得しよう。",
     "items": {
       "streakPass": {
         "title": "Streak Pass",
-        "subtitle": "チャレンジを1回失敗しても、連続記録を一度だけ保護してくれる。"
+        "subtitle": "1日逃しても、連続記録を1回だけ守れます。",
+        "howToUse": "1日逃した場合、「Missed challenge」画面で Streak Pass を使うことを選択して、連続記録を維持できます。"
       }
     }
   }

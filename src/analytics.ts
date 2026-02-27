@@ -4,6 +4,7 @@ import Constants from "expo-constants";
 import { addDoc, collection, serverTimestamp } from "firebase/firestore";
 import { Platform } from "react-native";
 import { auth, db } from "@/constants/firebase-config";
+import { faLogEvent } from "@/src/firebaseAnalytics";
 
 /** Active/désactive le log si besoin (garde sur true en prod) */
 const ENABLE_ANALYTICS = true;
@@ -132,6 +133,12 @@ export async function logEvent(
       buildNumber,
       createdAt: serverTimestamp(),
     });
+    await faLogEvent(name, {
+  ...params,
+  platform: Platform.OS,
+  appVersion,
+  buildNumber,
+});
   } catch (e) {
     console.log("[analytics] logEvent error:", e);
   }

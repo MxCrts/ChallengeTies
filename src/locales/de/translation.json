@@ -1466,22 +1466,21 @@
       "default": "Belohnung freigeschaltet 🎁"
     }
   },
-  "inventory": {
-  "title": "Inventar",
-  "subtitle": "Verwalte hier deine Spezialboni und Serien-Schutz.",
-  "sectionSubtitle": "Verschaffe dir einen Überblick über alle deine Spezialboni und Serien-Schutz.",
-  "totalItems": "{{count}} Objekte",
-  "itemHint": "Weitere Informationen zu diesem Objekt anzeigen.",
-  "emptyTitle": "Noch keine Boni",
-  "emptyText": "Schließe Challenges ab und drehe das Tagesrad, um dein Inventar zu füllen.",
-  "streakHint": "Streak Pässe werden im Bildschirm „verpasste Challenge“ automatisch eingesetzt, um deine Serie zu retten.",
-  "items": {
-    "streakPass": {
-      "title": "Streak Pass",
-      "subtitle": "Schützt deine Serie einmal, wenn du eine Challenge verpasst."
+"inventory": {
+    "title": "Inventar",
+    "subtitle": "Deine Boni und Serien-Schutz, alles an einem Ort.",
+    "totalItems": "{{count}} Gegenstände",
+    "sectionSubtitle": "Sieh dir an, was du besitzt und wie du es im richtigen Moment nutzt.",
+    "emptyTitle": "Noch keine Boni",
+    "emptyText": "Schließe Challenges ab und drehe das Tagesrad, um Items zu bekommen.",
+    "items": {
+      "streakPass": {
+        "title": "Streak Pass",
+        "subtitle": "Schützt deine Serie einmal, wenn du einen Tag verpasst.",
+        "howToUse": "Wenn du einen Tag verpasst, kannst du im Bildschirm „Challenge verpasst“ einen Streak Pass verwenden, um deine Serie zu behalten."
+      }
     }
   }
-}
 
 ,
   "dailyMini": {

@@ -6,9 +6,9 @@ import {
   StyleSheet,
   ScrollView,
   ActivityIndicator,
-  Dimensions,
   StatusBar,
   I18nManager,
+  useWindowDimensions,
 } from "react-native";
 import { Ionicons } from "@expo/vector-icons";
 import { doc, onSnapshot } from "firebase/firestore";
@@ -24,14 +24,6 @@ import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { useBottomTabBarHeight } from "@react-navigation/bottom-tabs";
 import { useAdsVisibility } from "../../src/context/AdsVisibilityContext";
 import BannerSlot from "@/components/BannerSlot";
-
-const { width: SCREEN_WIDTH } = Dimensions.get("window");
-
-const normalize = (size: number) => {
-  const baseWidth = 375;
-  const scale = Math.min(Math.max(SCREEN_WIDTH / baseWidth, 0.7), 1.8);
-  return Math.round(size * scale);
-};
 
 const withAlpha = (hexOrColor: string, alpha: number) => {
   const clamp = (n: number, min = 0, max = 1) => Math.min(Math.max(n, min), max);
@@ -68,12 +60,28 @@ interface UserData {
 }
 
 const InventoryScreen: React.FC = () => {
+  const { width: screenW } = useWindowDimensions();
+
+  const normalize = useMemo(() => {
+    const baseWidth = 375;
+    // clamp: évite les UI trop petites / trop énormes sur tablette
+    const scale = Math.min(Math.max(screenW / baseWidth, 0.85), 1.35);
+    return (size: number) => Math.round(size * scale);
+  }, [screenW]);
   const { theme } = useTheme();
   const { t } = useTranslation();
   const isDark = theme === "dark";
   const currentTheme: TTheme = isDark
     ? designSystem.darkTheme
     : designSystem.lightTheme;
+
+ const titleColor = isDark ? currentTheme.colors.textPrimary : "#0B0B10";
+  const subtitleColor = isDark
+    ? currentTheme.colors.textSecondary
+    : "rgba(11,11,16,0.72)";
+  const labelColor = isDark
+    ? currentTheme.colors.textSecondary
+    : "rgba(11,11,16,0.70)";
 
   const [userData, setUserData] = useState<UserData | null>(null);
   const [loading, setLoading] = useState(true);
@@ -92,6 +100,11 @@ const InventoryScreen: React.FC = () => {
   const { showBanners } = useAdsVisibility();
   const [adHeight, setAdHeight] = useState(0);
 
+  // Layout guard pour tablettes / desktop web
+  const contentMaxWidth = useMemo(() => {
+    // 560–720 selon device : garde le “Apple Keynote look” au centre
+    return Math.min(720, Math.max(560, Math.round(screenW * 0.92)));
+  }, [screenW]);
 
   const bottomPadding =
     (showBanners ? adHeight : 0) +
@@ -99,13 +112,12 @@ const InventoryScreen: React.FC = () => {
     insets.bottom +
     normalize(40);
 
-
-    const badgeTextColor = isDark ? "rgba(255,255,255,0.92)" : "#0B0B10";
-const badgeShadow = isDark ? "rgba(0,0,0,0.55)" : "rgba(255,255,255,0.55)";
-const statNumberColor = isDark ? "rgba(255,255,255,0.95)" : "#0B0B10";
-const statNumberShadow = isDark ? "rgba(0,0,0,0.55)" : "rgba(255,255,255,0.65)";
-const chipNumColor = isDark ? "rgba(255,255,255,0.92)" : "#0B0B10";
-const chipNumShadow = isDark ? "rgba(0,0,0,0.55)" : "rgba(255,255,255,0.55)";
+const badgeTextColor = isDark ? "rgba(255,255,255,0.92)" : "#0B0B10";
+  const badgeShadow = isDark ? "rgba(0,0,0,0.55)" : "rgba(255,255,255,0.55)";
+  const statNumberColor = isDark ? "rgba(255,255,255,0.95)" : "#0B0B10";
+  const statNumberShadow = isDark ? "rgba(0,0,0,0.55)" : "rgba(255,255,255,0.65)";
+  const chipNumColor = isDark ? "rgba(255,255,255,0.92)" : "#0B0B10";
+  const chipNumShadow = isDark ? "rgba(0,0,0,0.55)" : "rgba(255,255,255,0.55)";
   // 🔥 Récupération live de l’inventaire utilisateur
   useEffect(() => {
     const uid = auth.currentUser?.uid;
@@ -185,7 +197,7 @@ const chipNumShadow = isDark ? "rgba(0,0,0,0.55)" : "rgba(255,255,255,0.55)";
               { color: currentTheme.colors.textSecondary },
             ]}
           >
-            {t("common.loading", "Chargement...")}
+           {t("common.loading", { defaultValue: "Loading..." })}
           </Text>
         </LinearGradient>
       </GlobalLayout>
@@ -243,14 +255,33 @@ const chipNumShadow = isDark ? "rgba(0,0,0,0.55)" : "rgba(255,255,255,0.55)";
         <LinearGradient
           pointerEvents="none"
           colors={[currentTheme.colors.primary + "33", "transparent"]}
-          style={styles.bgOrbTop}
+          style={[
+            styles.bgOrbBase,
+            {
+              top: -screenW * 0.25,
+              left: -screenW * 0.2,
+              width: screenW * 0.9,
+              height: screenW * 0.9,
+              borderRadius: (screenW * 0.9) / 2,
+            },
+          ]}
           start={{ x: 0.1, y: 0 }}
           end={{ x: 1, y: 1 }}
         />
         <LinearGradient
           pointerEvents="none"
           colors={[currentTheme.colors.secondary + "33", "transparent"]}
-          style={styles.bgOrbBottom}
+          style={[
+            styles.bgOrbBase,
+            {
+              bottom: -screenW * 0.3,
+              right: -screenW * 0.25,
+              width: screenW * 1.1,
+              height: screenW * 1.1,
+              borderRadius: (screenW * 1.1) / 2,
+            },
+          ]}
+
           start={{ x: 1, y: 0 }}
           end={{ x: 0, y: 1 }}
         />
@@ -262,7 +293,7 @@ const chipNumShadow = isDark ? "rgba(0,0,0,0.55)" : "rgba(255,255,255,0.55)";
         />
 
         <CustomHeader
-          title={t("inventory.title", "Inventaire")}
+          title={t("inventory.title", { defaultValue: "Inventory" })}
           backgroundColor="transparent"
           useBlur={false}
           showHairline={false}
@@ -273,8 +304,11 @@ const chipNumShadow = isDark ? "rgba(0,0,0,0.55)" : "rgba(255,255,255,0.55)";
             styles.scrollContent,
             { paddingBottom: bottomPadding },
           ]}
+          contentInsetAdjustmentBehavior="never"
+          keyboardShouldPersistTaps="handled"
           showsVerticalScrollIndicator={false}
         >
+          <View style={{ width: "100%", maxWidth: contentMaxWidth, alignSelf: "center" }}>
           {/* Hero / résumé */}
           <View
   style={[
@@ -322,8 +356,8 @@ const chipNumShadow = isDark ? "rgba(0,0,0,0.55)" : "rgba(255,255,255,0.55)";
         <Ionicons name="briefcase-outline" size={normalize(18)} color={currentTheme.colors.secondary} />
       </View>
 
-      <Text style={[styles.heroTitle, { color: currentTheme.colors.textPrimary }]}>
-        {t("inventory.title", "Inventaire")}
+       <Text style={[styles.heroTitle, { color: titleColor }]}>
+       {t("inventory.title", { defaultValue: "Inventory" })}
       </Text>
     </View>
 
@@ -351,14 +385,14 @@ const chipNumShadow = isDark ? "rgba(0,0,0,0.55)" : "rgba(255,255,255,0.55)";
   numberOfLines={1}
   allowFontScaling
 >
-  {t("inventory.totalItems", { defaultValue: "{{count}} objets", count: totalItems })}
+  {t("inventory.totalItems", { count: totalItems, defaultValue: "{{count}} items" })}
 </Text>
       </View>
     )}
   </View>
 
-  <Text style={[styles.heroSubtitle, { color: currentTheme.colors.textSecondary }]}>
-    {t("inventory.subtitle", "Gère ici tes bonus spéciaux et protections de série.")}
+  <Text style={[styles.heroSubtitle, { color: subtitleColor }]}>
+    {t("inventory.subtitle", { defaultValue: "Your special bonuses & streak protections, in one place." })}
   </Text>
 
   <View style={styles.heroStatsRow}>
@@ -372,8 +406,8 @@ const chipNumShadow = isDark ? "rgba(0,0,0,0.55)" : "rgba(255,255,255,0.55)";
         },
       ]}
     >
-      <Text style={[styles.statLabel, { color: currentTheme.colors.textSecondary }]}>
-        {t("inventory.items.streakPass.title", "Streak Pass")}
+      <Text style={[styles.statLabel, { color: labelColor }]}>
+        {t("inventory.items.streakPass.title", { defaultValue: "Streak Pass" })}
       </Text>
 
       <View style={styles.statValueRow}>
@@ -408,8 +442,8 @@ const chipNumShadow = isDark ? "rgba(0,0,0,0.55)" : "rgba(255,255,255,0.55)";
         },
       ]}
     >
-      <Text style={[styles.statLabel, { color: currentTheme.colors.textSecondary }]}>
-        {t("trophiesLabel", "Trophées")}
+      <Text style={[styles.statLabel, { color: labelColor }]}>
+       {t("trophiesLabel", { defaultValue: "Trophées" })}
       </Text>
 
       <View style={styles.statValueRow}>
@@ -442,22 +476,16 @@ const chipNumShadow = isDark ? "rgba(0,0,0,0.55)" : "rgba(255,255,255,0.55)";
             <Text
               style={[
                 styles.sectionTitle,
-                { color: currentTheme.colors.textPrimary },
+                { color: titleColor },
               ]}
             >
-              {t("inventory.title", "Inventaire")}
+             {t("inventory.title", { defaultValue: "Inventory" })}
             </Text>
-           <Text
-  style={[
-    styles.sectionSubtitle,
-    { color: currentTheme.colors.textSecondary },
-  ]}
->
-  {t(
-    "inventory.sectionSubtitle",
-    "Aperçois tous tes bonus spéciaux et protections de série."
-  )}
-</Text>
+            <Text style={[styles.sectionSubtitle, { color: subtitleColor }]}>
+              {t("inventory.sectionSubtitle", {
+                defaultValue: "See what you own and how to use it when you need it.",
+              })}
+            </Text>
 
             {hasItems ? (
               <View style={styles.itemsList}>
@@ -501,59 +529,75 @@ const chipNumShadow = isDark ? "rgba(0,0,0,0.55)" : "rgba(255,255,255,0.55)";
                       />
                     </View>
 
-                    <View style={styles.itemTextZone}>
+                   <View style={styles.itemTextZone}>
                       <View style={styles.itemTitleRow}>
-  <Text
-    style={[
-      styles.itemTitle,
-      { color: currentTheme.colors.textPrimary },
-    ]}
-  >
-    {t("inventory.items.streakPass.title", "Streak Pass")}
-  </Text>
+                        <Text style={[styles.itemTitle, { color: titleColor }]}>
+                          {t("inventory.items.streakPass.title", { defaultValue: "Streak Pass" })}
+                        </Text>
 
-  <View
-    style={[
-      styles.itemCountBadge,
-      {
-        backgroundColor: isDark ? "rgba(255,255,255,0.06)" : "rgba(0,0,0,0.05)",
-        borderColor: isDark ? withAlpha("#FFFFFF", 0.12) : withAlpha("#000000", 0.08),
-      },
-    ]}
-  >
-    <Text
-  style={[
-    styles.itemCountText,
-    {
-      color: chipNumColor,
-      textShadowColor: chipNumShadow,
-      textShadowRadius: 6,
-      textShadowOffset: { width: 0, height: 1 },
-    },
-  ]}
-  numberOfLines={1}
-  allowFontScaling
->
-  ×{streakPassCount}
-</Text>
-  </View>
-</View>
-
+                        <View
+                          style={[
+                            styles.itemCountBadge,
+                            {
+                              backgroundColor: isDark ? "rgba(255,255,255,0.06)" : "rgba(0,0,0,0.05)",
+                              borderColor: isDark ? withAlpha("#FFFFFF", 0.12) : withAlpha("#000000", 0.08),
+                            },
+                          ]}
+                        >
+                          <Text
+                            style={[
+                              styles.itemCountText,
+                              {
+                                color: chipNumColor,
+                                textShadowColor: chipNumShadow,
+                                textShadowRadius: 6,
+                                textShadowOffset: { width: 0, height: 1 },
+                              },
+                            ]}
+                            numberOfLines={1}
+                            allowFontScaling
+                          >
+                            ×{streakPassCount}
+                          </Text>
+                        </View>
                       </View>
 
                       <Text
-                        style={[
-                          styles.itemSubtitle,
-                          { color: currentTheme.colors.textSecondary },
-                        ]}
-                        numberOfLines={3}
+                        style={[styles.itemSubtitle, { color: subtitleColor }]}
+                        // ✅ “mode nucléaire” anti-troncage Android
+                        // (évite les cas où la mesure de ligne part en vrille avec certaines polices)
+                        ellipsizeMode="clip"
+                        textBreakStrategy="highQuality"
                       >
-                        {t(
-                          "inventory.items.streakPass.subtitle",
-                          "Protège ta série une fois en cas de défi manqué."
-                        )}
+                        {t("inventory.items.streakPass.subtitle", {
+                          defaultValue: "Protects your streak once if you miss a day.",
+                        })}
                       </Text>
+
+                      <View
+                        style={[
+                          styles.explainBox,
+                          {
+                            backgroundColor: isDark ? "rgba(255,255,255,0.04)" : "rgba(0,0,0,0.025)",
+                            borderColor: isDark ? withAlpha("#FFFFFF", 0.10) : withAlpha("#000000", 0.06),
+                          },
+                        ]}
+                      >
+                        <Ionicons
+                          name="information-circle-outline"
+                          size={normalize(16)}
+                          color={currentTheme.colors.secondary}
+                          style={{ marginTop: normalize(1) }}
+                        />
+                        <Text style={[styles.explainText, { color: subtitleColor }]}>
+                          {t("inventory.items.streakPass.howToUse", {
+                            defaultValue:
+                              "If you miss a day, you can choose to use a Streak Pass on the “Missed challenge” screen to keep your streak.",
+                          })}
+                        </Text>
+                      </View>
                     </View>
+                  </View>
                 )}
 
                 {/* ⚠️ Futurs items
@@ -571,50 +615,24 @@ const chipNumShadow = isDark ? "rgba(0,0,0,0.55)" : "rgba(255,255,255,0.55)";
                 <Text
                   style={[
                     styles.emptyTitle,
-                    { color: currentTheme.colors.textPrimary },
+                   { color: titleColor },
                   ]}
                 >
-                  {t("inventory.emptyTitle", "Aucun bonus pour l’instant")}
+                  {t("inventory.emptyTitle", { defaultValue: "No bonuses yet" })}
                 </Text>
                 <Text
                   style={[
                     styles.emptyText,
-                    { color: currentTheme.colors.textSecondary },
+                    { color: subtitleColor },
                   ]}
                 >
-                  {t(
-                    "inventory.emptyText",
-                    "Complète des défis et tourne la roue du jour pour remplir ton inventaire."
-                  )}
+                  {t("inventory.emptyText", {
+                    defaultValue: "Complete challenges and spin the daily wheel to earn items.",
+                  })}
                 </Text>
               </View>
             )}
           </View>
-
-          {/* Hint sur le comportement des Streak Pass */}
-          <View
-            style={[
-              styles.helperBox,
-              {
-                backgroundColor: isDark
-                  ? "rgba(255,255,255,0.04)"
-                  : "rgba(0,0,0,0.02)",
-                borderColor: isDark
-                  ? "rgba(255,255,255,0.12)"
-                  : "rgba(0,0,0,0.06)",
-              },
-            ]}
-          >
-            <Ionicons
-              name="information-circle-outline"
-              size={normalize(20)}
-              color={currentTheme.colors.secondary}
-              style={{ marginRight: normalize(8) }}
-            />
-            <Text style={[styles.helperText, { color: currentTheme.colors.textSecondary }]}>
-  {t("inventory.streakHint")}
-</Text>
-
           </View>
         </ScrollView>
 
@@ -646,24 +664,11 @@ const styles = StyleSheet.create({
     flex: 1,
   },
   scrollContent: {
-    paddingHorizontal: normalize(16),
-    paddingTop: normalize(12),
+    paddingHorizontal: 16,
+    paddingTop: 12,
   },
-  bgOrbTop: {
-    position: "absolute",
-    top: -SCREEN_WIDTH * 0.25,
-    left: -SCREEN_WIDTH * 0.2,
-    width: SCREEN_WIDTH * 0.9,
-    height: SCREEN_WIDTH * 0.9,
-    borderRadius: SCREEN_WIDTH * 0.45,
-  },
-  bgOrbBottom: {
-    position: "absolute",
-    bottom: -SCREEN_WIDTH * 0.3,
-    right: -SCREEN_WIDTH * 0.25,
-    width: SCREEN_WIDTH * 1.1,
-    height: SCREEN_WIDTH * 1.1,
-    borderRadius: SCREEN_WIDTH * 0.55,
+  bgOrbBase: {
+     position: "absolute",
   },
   loadingContainer: {
     flex: 1,
@@ -671,51 +676,51 @@ const styles = StyleSheet.create({
     alignItems: "center",
   },
   loadingText: {
-    marginTop: normalize(8),
-    fontSize: normalize(14),
+    marginTop: 8,
+    fontSize: 14,
     fontFamily: "Comfortaa_400Regular",
     textAlign: "center",
    writingDirection: I18nManager.isRTL ? "rtl" : "ltr",
   },
   errorBox: {
     alignItems: "center",
-    paddingHorizontal: normalize(24),
+     paddingHorizontal: 24,
   },
   errorText: {
-    marginTop: normalize(8),
-    fontSize: normalize(14),
+   marginTop: 8,
+    fontSize: 14,
     fontFamily: "Comfortaa_400Regular",
     textAlign: "center",
     writingDirection: I18nManager.isRTL ? "rtl" : "ltr",
   },
   heroCard: {
-    borderRadius: normalize(22),
-    paddingHorizontal: normalize(16),
-    paddingVertical: normalize(14),
-    marginBottom: normalize(14),
+    borderRadius: 22,
+    paddingHorizontal: 16,
+    paddingVertical: 14,
+    marginBottom: 14,
     borderWidth: 1,
   },
   heroHeaderRow: {
     flexDirection: "row",
     alignItems: "center",
     justifyContent: "space-between",
-    marginBottom: normalize(6),
+    marginBottom: 6,
   },
   heroTitleRow: {
     flexDirection: "row",
     alignItems: "center",
-    columnGap: normalize(8),
+    columnGap: 8,
   },
   heroTitle: {
-    fontSize: normalize(18),
+    fontSize: 18,
     fontFamily: "Comfortaa_700Bold",
      writingDirection: I18nManager.isRTL ? "rtl" : "ltr",
    textAlign: I18nManager.isRTL ? "right" : "left",
   },
   heroSubtitle: {
-    fontSize: normalize(12),
+    fontSize: 12,
     fontFamily: "Comfortaa_400Regular",
-    marginBottom: normalize(10),
+    marginBottom:10,
      writingDirection: I18nManager.isRTL ? "rtl" : "ltr",
    textAlign: I18nManager.isRTL ? "right" : "left",
   },
@@ -723,13 +728,31 @@ const styles = StyleSheet.create({
   flexDirection: "row",
   alignItems: "center",
   borderRadius: 999,
-  paddingHorizontal: normalize(10),
-  paddingVertical: normalize(4),
-  columnGap: normalize(6),
+ paddingHorizontal: 10,
+  paddingVertical: 4,
+  columnGap: 6,
   borderWidth: StyleSheet.hairlineWidth,
 },
+explainBox: {
+    marginTop: 8,
+    paddingHorizontal: 10,
+    paddingVertical: 8,
+    borderRadius: 12,
+    borderWidth: StyleSheet.hairlineWidth,
+    flexDirection: "row",
+    alignItems: "flex-start",
+    columnGap: 8,
+  },
+  explainText: {
+    flex: 1,
+     fontSize: 11,
+    fontFamily: "Comfortaa_400Regular",
+    lineHeight: 15,
+    writingDirection: I18nManager.isRTL ? "rtl" : "ltr",
+    textAlign: I18nManager.isRTL ? "right" : "left",
+  },
   heroBadgeText: {
-    fontSize: normalize(11),
+    fontSize: 11,
     fontFamily: "Comfortaa_400Regular",
     writingDirection: I18nManager.isRTL ? "rtl" : "ltr",
    textAlign: "center",
@@ -738,31 +761,31 @@ textAlignVertical: "center",
   },
   heroStatsRow: {
     flexDirection: "row",
-    columnGap: normalize(10),
+   columnGap: 10,
   },
   heroStatCard: {
   flex: 1,
-  borderRadius: normalize(16),
-  paddingHorizontal: normalize(12),
-  paddingVertical: normalize(10),
+ borderRadius: 16,
+  paddingHorizontal: 12,
+  paddingVertical: 10,
   borderWidth: StyleSheet.hairlineWidth,
   overflow: "hidden",
 },
   statLabel: {
-    fontSize: normalize(11),
+    fontSize: 11,
     fontFamily: "Comfortaa_400Regular",
     opacity: 0.85,
-    marginBottom: normalize(2),
+   marginBottom: 2,
     writingDirection: I18nManager.isRTL ? "rtl" : "ltr",
    textAlign: I18nManager.isRTL ? "right" : "left",
   },
   statValueRow: {
     flexDirection: "row",
     alignItems: "center",
-    columnGap: normalize(6),
+    columnGap: 6,
   },
   statValueText: {
-  fontSize: normalize(16),
+  fontSize: 16,
   fontFamily: "Comfortaa_700Bold",
   writingDirection: I18nManager.isRTL ? "rtl" : "ltr",
   textAlign: "left",
@@ -771,108 +794,112 @@ textAlignVertical: "center",
 },
 heroSheen: {
   position: "absolute",
-  top: -normalize(30),
-  left: -normalize(70),
+  top: -30,
+  left: -70,
   width: "175%",
-  height: normalize(96),
+  height: 96,
   transform: [{ rotate: "-12deg" }],
   opacity: 0.85,
 },
 heroGlow: {
   position: "absolute",
-  top: -normalize(18),
-  right: -normalize(18),
-  width: normalize(120),
-  height: normalize(120),
+  top: -18,
+  right: -18,
+  width: 120,
+  height: 120,
   borderRadius: 999,
 },
 heroIconPill: {
-  width: normalize(34),
-  height: normalize(34),
+ width: 34,
+  height: 34,
   borderRadius: 999,
   alignItems: "center",
   justifyContent: "center",
   borderWidth: StyleSheet.hairlineWidth,
 },
 statIconBadge: {
-  width: normalize(28),
-  height: normalize(28),
+  width: 28,
+  height: 28,
   borderRadius: 999,
   alignItems: "center",
   justifyContent: "center",
 },
 itemSheen: {
   position: "absolute",
-  top: -normalize(26),
-  left: -normalize(70),
+  top: -26,
+  left: -70,
   width: "175%",
-  height: normalize(84),
+  height: 84,
   transform: [{ rotate: "-12deg" }],
   opacity: 0.75,
 },
   section: {
-    marginTop: normalize(8),
-    marginBottom: normalize(8),
+    marginTop: 8,
+    marginBottom: 8,
   },
   sectionTitle: {
-    fontSize: normalize(16),
+    fontSize: 16,
     fontFamily: "Comfortaa_700Bold",
-    marginBottom: normalize(4),
+    marginBottom: 4,
     writingDirection: I18nManager.isRTL ? "rtl" : "ltr",
    textAlign: I18nManager.isRTL ? "right" : "left",
   },
   sectionSubtitle: {
-    fontSize: normalize(12),
+    fontSize: 12,
     fontFamily: "Comfortaa_400Regular",
     opacity: 0.9,
-    marginBottom: normalize(8),
+    marginBottom: 8,
     writingDirection: I18nManager.isRTL ? "rtl" : "ltr",
    textAlign: I18nManager.isRTL ? "right" : "left",
   },
   itemsList: {
-    marginTop: normalize(2),
+    marginTop: 2,
   },
   itemCard: {
   flexDirection: "row",
-  alignItems: "center",
-  paddingHorizontal: normalize(12),
-  paddingVertical: normalize(10),
-  borderRadius: normalize(16),
+  alignItems: "flex-start",
+  paddingHorizontal: 12,
+  paddingVertical: 10,
+  borderRadius: 16,
   borderWidth: 1,
-  marginBottom: normalize(8),
+  marginBottom: 8,
   overflow: "hidden",
 },
   itemIconCircle: {
-    width: normalize(34),
-    height: normalize(34),
-    borderRadius: normalize(17),
+    width: 34,
+    height: 34,
+    borderRadius: 17,
     alignItems: "center",
     justifyContent: "center",
-    marginRight: normalize(10),
+    marginRight: 10,
   },
   itemTextZone: {
     flex: 1,
+    minWidth: 0,
   },
   itemTitleRow: {
     flexDirection: "row",
     alignItems: "center",
-    marginBottom: normalize(2),
+    marginBottom: 2,
+    columnGap: 8,
   },
   itemTitle: {
     flex: 1,
-    fontSize: normalize(14),
+    minWidth: 0,
+    fontSize: 14,
     fontFamily: "Comfortaa_700Bold",
     writingDirection: I18nManager.isRTL ? "rtl" : "ltr",
    textAlign: I18nManager.isRTL ? "right" : "left",
   },
   itemCountBadge: {
   borderRadius: 999,
-  paddingHorizontal: normalize(8),
-  paddingVertical: normalize(3),
+  paddingHorizontal: 8,
+  flexShrink: 0,
+  paddingVertical: 3,
   borderWidth: StyleSheet.hairlineWidth,
 },
  itemCountText: {
-  fontSize: normalize(11),
+  fontSize: 11,
   fontFamily: "Comfortaa_700Bold",
   writingDirection: I18nManager.isRTL ? "rtl" : "ltr",
   textAlign: "center",
@@ -880,44 +907,33 @@ itemSheen: {
 textAlignVertical: "center",
 },
   itemSubtitle: {
-    fontSize: normalize(11),
+    fontSize: 11,
+    minWidth: 0,
+   width: "100%",
     fontFamily: "Comfortaa_400Regular",
     writingDirection: I18nManager.isRTL ? "rtl" : "ltr",
    textAlign: I18nManager.isRTL ? "right" : "left",
+   lineHeight: 15,
+   marginTop: 2,
+   flexShrink: 1,
   },
   emptyState: {
     alignItems: "center",
-    paddingVertical: normalize(18),
+    paddingVertical: 18,
   },
   emptyTitle: {
-    fontSize: normalize(14),
+    fontSize: 14,
     fontFamily: "Comfortaa_700Bold",
-    marginTop: normalize(6),
+    marginTop: 6,
     writingDirection: I18nManager.isRTL ? "rtl" : "ltr",
    textAlign: "center",
   },
   emptyText: {
-    fontSize: normalize(12),
+    fontSize: 12,
     fontFamily: "Comfortaa_400Regular",
-    marginTop: normalize(4),
+    marginTop: 4,
     writingDirection: I18nManager.isRTL ? "rtl" : "ltr",
    textAlign: "center",
-  },
-  helperBox: {
-    flexDirection: "row",
-    alignItems: "center",
-    paddingHorizontal: normalize(12),
-    paddingVertical: normalize(10),
-    borderRadius: normalize(16),
-    marginTop: normalize(10),
-    borderWidth: 1,
-  },
-  helperText: {
-    flex: 1,
-    fontSize: normalize(12),
-    fontFamily: "Comfortaa_400Regular",
-    writingDirection: I18nManager.isRTL ? "rtl" : "ltr",
-   textAlign: I18nManager.isRTL ? "right" : "left",
   },
 });
 

@@ -1866,21 +1866,20 @@
     }
   },
   "inventory": {
-  "title": "Inventario",
-  "subtitle": "Gestisci qui i tuoi bonus speciali e le protezioni della streak.",
-  "sectionSubtitle": "Dai un’occhiata a tutti i tuoi bonus speciali e alle protezioni della streak.",
-  "totalItems": "{{count}} oggetti",
-  "itemHint": "Vedi più informazioni su questo oggetto.",
-  "emptyTitle": "Ancora nessun bonus",
-  "emptyText": "Completa le sfide e gira la ruota del giorno per riempire il tuo inventario.",
-  "streakHint": "Gli Streak Pass vengono usati automaticamente nella schermata di sfida mancata per salvare la tua streak.",
-  "items": {
-    "streakPass": {
-      "title": "Streak Pass",
-      "subtitle": "Protegge la tua streak una volta quando salti una sfida."
+    "title": "Inventario",
+    "subtitle": "I tuoi bonus e le protezioni della serie, in un unico posto.",
+    "totalItems": "{{count}} oggetti",
+    "sectionSubtitle": "Guarda cosa possiedi e come usarlo quando serve.",
+    "emptyTitle": "Nessun bonus per ora",
+    "emptyText": "Completa le sfide e gira la ruota giornaliera per ottenere oggetti.",
+    "items": {
+      "streakPass": {
+        "title": "Streak Pass",
+        "subtitle": "Protegge la tua serie una volta se salti un giorno.",
+        "howToUse": "Se salti un giorno, puoi scegliere di usare uno Streak Pass nella schermata «Sfida mancata» per mantenere la tua serie."
+      }
     }
   }
-}
 ,
   "dailyMini": {
     "cta": "L'ho fatto",

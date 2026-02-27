@@ -1572,21 +1572,20 @@
     "pioneer": "Pioneer"
   },
  "inventory": {
-  "title": "Inventory",
-  "subtitle": "Manage your special bonuses and streak protections here.",
-  "sectionSubtitle": "Get an overview of all your special bonuses and streak protections.",
-  "totalItems": "{{count}} items",
-  "itemHint": "See more information about this item.",
-  "emptyTitle": "No bonuses yet",
-  "emptyText": "Complete challenges and spin the daily wheel to fill your inventory.",
-  "streakHint": "Streak Passes are used automatically on the missed-challenge screen to save your streak.",
-  "items": {
-    "streakPass": {
-      "title": "Streak Pass",
-      "subtitle": "Protects your streak once when you miss a challenge."
+    "title": "Inventory",
+    "subtitle": "Your bonuses and streak protections, all in one place.",
+    "totalItems": "{{count}} items",
+    "sectionSubtitle": "See what you own and how to use it when you need it.",
+    "emptyTitle": "No bonuses yet",
+    "emptyText": "Complete challenges and spin the daily wheel to earn items.",
+    "items": {
+      "streakPass": {
+        "title": "Streak Pass",
+        "subtitle": "Protects your streak once if you miss a day.",
+        "howToUse": "If you miss a day, you can choose to use a Streak Pass on the “Missed challenge” screen to keep your streak."
+      }
     }
   }
-}
 ,
   "dailyBonus": {
     "title": "Daily bonus",

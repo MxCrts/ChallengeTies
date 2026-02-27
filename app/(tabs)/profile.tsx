@@ -28,10 +28,7 @@ import Animated, { FadeInUp, ZoomIn } from "react-native-reanimated";
 import GlobalLayout from "../../components/GlobalLayout";
 import designSystem from "../../theme/designSystem";
 import { useTranslation, Trans  } from "react-i18next";
-// ✅ à ajouter
 import BannerSlot from "@/components/BannerSlot";
-// 🆕 Inventaire (résumé)
-import InventorySection from "@/components/InventorySection";
 import { useFocusEffect } from "@react-navigation/native";
 import AsyncStorage from "@react-native-async-storage/async-storage";
 import { BlurView } from "expo-blur";
@@ -135,6 +132,8 @@ export default function ProfileScreen() {
 const tabBarHeight = useBottomTabBarHeight();
 const [adHeight, setAdHeight] = useState(0);
 const [showPioneerModal, setShowPioneerModal] = useState(false);
+const PROFILE_FIRST_SEEN_KEY = "profile.firstSeen.v1";
+const firstProfileGateRef = React.useRef(false);
 
 const EXTRA_SCROLL_SPACE = normalizeSize(24); // ✅ petit buffer, pas 90
 const bottomContentPadding =
@@ -202,31 +201,36 @@ useFocusEffect(
   useCallback(() => {
     let cancelled = false;
 
-    const checkPioneerFlag = async () => {
+    const run = async () => {
       try {
-        const flag = await AsyncStorage.getItem("pioneerJustGranted");
+        // ✅ évite double run si React remount / fast refresh / nav glitch
+        if (firstProfileGateRef.current) return;
+        firstProfileGateRef.current = true;
+
+        const seen = await AsyncStorage.getItem(PROFILE_FIRST_SEEN_KEY);
         if (cancelled) return;
 
-        if (flag === "1") {
-          setShowPioneerModal(true);
-
-          // ✅ évite tout rebond / re-open même si la nav bug
-          await AsyncStorage.multiRemove([
-            "pioneerJustGranted",
-          ]);
+        if (seen !== "1") {
+          setShowPioneerModal(true); // ou setShowYourModal(true)
+          await AsyncStorage.setItem(PROFILE_FIRST_SEEN_KEY, "1");
         }
-      } catch {}
+      } catch {
+        // si AsyncStorage fail, on ne bloque pas l'écran
+      }
     };
 
-    // only if user loaded (sinon inutile)
-    if (auth.currentUser?.uid) {
-      checkPioneerFlag();
+    // ✅ On attend que le profil soit vraiment prêt (sinon premier focus = loading)
+    if (!isLoading && !!userData) {
+      run();
+    } else {
+      // fallback: retente dès que ça devient prêt
+      // (pas de timer infini)
     }
 
     return () => {
       cancelled = true;
     };
-  }, [])
+  }, [isLoading, userData])
 );
 
 
@@ -776,12 +780,6 @@ borderColor: withAlpha(currentTheme.colors.trophy, isDarkMode ? 0.22 : 0.28),
 
               </LinearGradient>
             </Animated.View>
-
-            {/* Inventaire (résumé rapide) */}
-            <InventorySection
-              userData={userData}
-              onPressItem={() => router.push("profile/Inventory")}
-            />
 
             {/* Sections / Boutons */}
             <View key={i18n.language} style={styles.sectionsContainer}>

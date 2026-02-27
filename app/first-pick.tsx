@@ -214,9 +214,25 @@ const ChallengeCard = React.memo(function ChallengeCard({
           />
 
           <View style={styles.cardLabelWrap}>
-            <Text numberOfLines={2} style={[styles.cardTitle, { color: "#fff" }]}>
-              {translatedTitle}
-            </Text>
+            <Text
+  // ✅ jamais de "..." -> on donne plus de lignes
+  numberOfLines={3}
+  // ✅ shrink automatique si titre trop long
+  adjustsFontSizeToFit
+  minimumFontScale={0.72}
+  // ✅ évite qu’un très gros font system casse tout
+  maxFontSizeMultiplier={1.25}
+  // ✅ wrap propre
+  ellipsizeMode="clip"
+  style={[
+    styles.cardTitle,
+    { color: "#fff" },
+    // ✅ micro-responsive: si les cards sont étroites, on baisse un peu
+    CARD_W < 170 ? { fontSize: 13, lineHeight: 16 } : null,
+  ]}
+>
+  {translatedTitle}
+</Text>
             <Text numberOfLines={1} style={[styles.cardCat, { color: "#ddd" }]}>
               {translatedCategory}
             </Text>
@@ -2480,6 +2496,7 @@ paddingHorizontal: 0,  },
     left: 10,
     right: 10,
     bottom: 10,
+    minWidth: 0,
   },
   chipsRow: {
   width: "100%",
@@ -2524,8 +2541,11 @@ dayChipCheck: {
   borderColor: "rgba(0,0,0,0.10)",
 },
   cardTitle: {
-    fontSize: 14,
     fontFamily: "Comfortaa_700Bold",
+  fontSize: 14,
+  lineHeight: 17,
+  flexShrink: 1,
+  minWidth: 0,
   },
   cardCat: {
     fontSize: 12,

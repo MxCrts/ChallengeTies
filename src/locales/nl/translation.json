@@ -4937,19 +4937,18 @@
   }
 }
 ,
-  "inventory": {
+"inventory": {
     "title": "Inventaris",
-    "subtitle": "Beheer hier je speciale bonussen en streak-beschermingen.",
-    "sectionSubtitle": "Bekijk al je speciale bonussen en streak-beschermingen.",
-    "totalItems": "{{count}} objecten",
-    "itemHint": "Bekijk meer informatie over dit object.",
-    "emptyTitle": "Nog geen bonus",
-    "emptyText": "Maak challenges af en draai aan het dagrad om je inventaris te vullen.",
-    "streakHint": "Streak Passes worden automatisch gebruikt op het scherm van een gemiste challenge om je reeks te redden.",
+    "subtitle": "Je bonussen en streak-bescherming op één plek.",
+    "totalItems": "{{count}} items",
+    "sectionSubtitle": "Bekijk wat je hebt en hoe je het gebruikt wanneer nodig.",
+    "emptyTitle": "Nog geen bonussen",
+    "emptyText": "Voltooi challenges en draai aan het dagwiel om items te verdienen.",
     "items": {
       "streakPass": {
         "title": "Streak Pass",
-        "subtitle": "Beschermt je reeks één keer wanneer je een challenge mist."
+        "subtitle": "Beschermt je streak één keer als je een dag mist.",
+        "howToUse": "Als je een dag mist, kun je op het scherm «Challenge gemist» kiezen om een Streak Pass te gebruiken om je streak te behouden."
       }
     }
   }

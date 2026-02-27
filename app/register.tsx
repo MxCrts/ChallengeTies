@@ -32,8 +32,10 @@ import {
   doc,
   setDoc,
   updateDoc,
-  getDoc,  
+  getDoc,
   serverTimestamp,
+  runTransaction,
+  increment,
 } from "firebase/firestore";
 import { Ionicons } from "@expo/vector-icons";
 import { useTranslation } from "react-i18next";
@@ -166,6 +168,57 @@ const Wave = React.memo(
     />
   )
 );
+
+const PIONEER_LIMIT = 1000;
+
+async function grantPioneerIfAvailable() {
+  const statsRef = doc(db, "meta", "pioneerStats");
+
+  return await runTransaction(db, async (tx) => {
+    const snap = await tx.get(statsRef);
+
+    // ✅ create interdit (admin only) => fail soft
+    if (!snap.exists()) {
+      return {
+        granted: false,
+        pioneerNumber: null as number | null,
+        limit: PIONEER_LIMIT,
+        reason: "pioneerStats_missing",
+      };
+    }
+
+    const data = snap.data() as any;
+    const count = Number(data?.count ?? 0);
+
+    if (!Number.isFinite(count) || count < 0) {
+      return {
+        granted: false,
+        pioneerNumber: null as number | null,
+        limit: PIONEER_LIMIT,
+        reason: "pioneerStats_corrupt",
+      };
+    }
+
+    if (count >= PIONEER_LIMIT) {
+      return {
+        granted: false,
+        pioneerNumber: null as number | null,
+        limit: PIONEER_LIMIT,
+        reason: "cap_reached",
+      };
+    }
+
+    const pioneerNumber = count + 1;
+
+    // ✅ doc final doit contenir SEULEMENT: count + updatedAt
+    tx.update(statsRef, {
+      count: pioneerNumber,
+      updatedAt: serverTimestamp(),
+    });
+
+    return { granted: true, pioneerNumber, limit: PIONEER_LIMIT };
+  });
+}
 
 export default function Register() {
   const { t } = useTranslation();
@@ -641,36 +694,65 @@ export default function Register() {
         console.log("[register] getDoc users error:", e);
       }
 
+      const existingData = existingSnap?.exists()
+        ? (existingSnap.data() as any)
+        : null;
+
+      // ✅ Si un autre endroit (AuthProvider) a déjà créé le doc, on veut quand même appliquer pioneer
+      const alreadyDecided =
+        existingData?.pioneerRewardGranted === true ||
+        existingData?.isPioneer === true;
+
+      // ✅ Pioneer check (atomique) — doit fonctionner même si le doc user existe déjà
+      let pioneer = { granted: false, pioneerNumber: null as number | null, limit: 1000 };
+      if (!alreadyDecided) {
+        try {
+          pioneer = await grantPioneerIfAvailable();
+        } catch (e: any) {
+          console.log(
+            "[register] pioneer transaction failed:",
+            e?.code || e?.message || e
+          );
+          // si ça fail, on continue sans pioneer (ne bloque jamais l'inscription)
+        }
+      }
+      const isPioneerGrantedNow = pioneer.granted === true;
+
       if (!existingSnap || !existingSnap.exists()) {
-        // 👉 Doc n'existe pas encore : on peut faire un create complet (rules: allow create)
-        await setDoc(userRef, {
-          uid: userId,
-          email: email.trim(),
-          username: username.trim(),
-          bio: "",
-          location: "",
-          profileImage: "",
-          interests: [],
-          achievements: [],
-          newAchievements: ["first_connection"],
-          trophies: 0,
-          completedChallengesCount: 0,
-          CompletedChallenges: [],
-          SavedChallenges: [],
-          customChallenges: [],
-          CurrentChallenges: [],
-          longestStreak: 0,
-          shareChallenge: 0,
-          voteFeature: 0,
-          language: resolvedLang,
-          locationEnabled: true,
-          notificationsEnabled: notificationsGranted,
-          country: "Unknown",
-          region: "Unknown",
-          createdAt: serverTimestamp(),
-          updatedAt: serverTimestamp(),
-          isPioneer: false,
-          pioneerRewardGranted: false,
+  
+  await setDoc(userRef, {
+    uid: userId,
+    email: email.trim(),
+    username: username.trim(),
+    bio: "",
+    location: "",
+    profileImage: "",
+    interests: [],
+    achievements: [],
+    newAchievements: ["first_connection"],
+    trophies: isPioneerGrantedNow ? 50 : 0,
+totalTrophies: isPioneerGrantedNow ? 50 : 0, // si tu veux cohérence (recommandé)
+    completedChallengesCount: 0,
+    CompletedChallenges: [],
+    SavedChallenges: [],
+    customChallenges: [],
+    CurrentChallenges: [],
+    longestStreak: 0,
+    shareChallenge: 0,
+    voteFeature: 0,
+    language: resolvedLang,
+    locationEnabled: true,
+    notificationsEnabled: notificationsGranted,
+    country: "Unknown",
+    region: "Unknown",
+    createdAt: serverTimestamp(),
+    updatedAt: serverTimestamp(),
+
+   // ✅ PIONEER
+          isPioneer: isPioneerGrantedNow,
+          pioneerRewardGranted: isPioneerGrantedNow,
+          pioneerNumber: pioneer.pioneerNumber ?? null,
+          pioneerGrantedAt: isPioneerGrantedNow ? serverTimestamp() : null,
         });
 
       } else {
@@ -720,6 +802,23 @@ export default function Register() {
               pendingMilestones: [],
             };
           }
+
+          // ✅ PIONEER (si accordé maintenant, même si doc déjà créé par AuthProvider)
+          if (isPioneerGrantedNow) {
+  const currentTrophies = Number(data?.trophies ?? 0);
+  const currentTotal = Number(data?.totalTrophies ?? currentTrophies);
+
+  patch.isPioneer = true;
+  patch.pioneerRewardGranted = true;
+  patch.pioneerNumber = pioneer.pioneerNumber ?? null;
+  patch.pioneerGrantedAt = serverTimestamp();
+
+  // ✅ OBLIGATOIRE pour passer pioneerOneShotOk()
+  patch.trophies = Math.max(0, Math.floor(currentTrophies)) + 50;
+
+  // ✅ Recommandé pour cohérence globale
+  patch.totalTrophies = Math.max(0, Math.floor(currentTotal)) + 50;
+}
 
           await updateDoc(userRef, patch);
 

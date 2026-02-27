@@ -361,22 +361,21 @@
       "default": "Recompensa desbloqueada 🎁"
     }
   },
-  "inventory": {
-  "title": "Inventario",
-  "subtitle": "Gestiona aquí tus bonus especiales y protecciones de racha.",
-  "sectionSubtitle": "Echa un vistazo a todos tus bonus especiales y protecciones de racha.",
-  "totalItems": "{{count}} objetos",
-  "itemHint": "Ver más información sobre este objeto.",
-  "emptyTitle": "Aún no hay bonus",
-  "emptyText": "Completa desafíos y gira la rueda diaria para llenar tu inventario.",
-  "streakHint": "Los Streak Pass se usan automáticamente en la pantalla de desafío fallado para salvar tu racha.",
-  "items": {
-    "streakPass": {
-      "title": "Streak Pass",
-      "subtitle": "Protege tu racha una vez cuando fallas un desafío."
+ "inventory": {
+    "title": "Inventario",
+    "subtitle": "Tus bonificaciones y protecciones de racha, en un solo lugar.",
+    "totalItems": "{{count}} objetos",
+    "sectionSubtitle": "Mira lo que tienes y cómo usarlo cuando lo necesites.",
+    "emptyTitle": "Aún no tienes bonificaciones",
+    "emptyText": "Completa desafíos y gira la ruleta diaria para conseguir objetos.",
+    "items": {
+      "streakPass": {
+        "title": "Streak Pass",
+        "subtitle": "Protege tu racha una vez si pierdes un día.",
+        "howToUse": "Si pierdes un día, puedes elegir usar un Streak Pass en la pantalla «Desafío perdido» para mantener tu racha."
+      }
     }
   }
-}
 ,
   "dailyMini": {
     "cta": "Lo he hecho",

@@ -4743,21 +4743,20 @@
     },
     "unableToMarkWithTrophies": "Impossible de valider avec des trophées."
   },
-  "inventory": {
-  "title": "Inventaire",
-  "subtitle": "Gère ici tes bonus spéciaux et protections de série.",
-  "sectionSubtitle": "Aperçois tous tes bonus spéciaux et protections de série.",
-  "totalItems": "{{count}} objets",
-  "itemHint": "Voir plus d'informations sur cet objet.",
-  "emptyTitle": "Aucun bonus pour l’instant",
-  "emptyText": "Complète des défis et tourne la roue du jour pour remplir ton inventaire.",
-  "streakHint": "Les Streak Pass sont utilisés automatiquement dans l'écran d'un défi manqué pour sauver ta série.",
-  "items": {
-    "streakPass": {
-      "title": "Streak Pass",
-      "subtitle": "Protège ta série une fois en cas de défi manqué."
+"inventory": {
+    "title": "Inventaire",
+    "subtitle": "Tous tes bonus et protections de série, au même endroit.",
+    "totalItems": "{{count}} objets",
+    "sectionSubtitle": "Découvre ce que tu possèdes et comment l’utiliser au bon moment.",
+    "emptyTitle": "Aucun bonus pour l’instant",
+    "emptyText": "Complète des défis et tourne la roue du jour pour gagner des objets.",
+    "items": {
+      "streakPass": {
+        "title": "Streak Pass",
+        "subtitle": "Protège ta série une fois si tu manques une journée.",
+        "howToUse": "Si tu loupes un jour, tu peux choisir d’utiliser un Streak Pass sur l’écran « Défi manqué » pour conserver ta série."
+      }
     }
   }
-}
 
 }

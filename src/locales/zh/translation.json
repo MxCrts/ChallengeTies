@@ -1877,21 +1877,20 @@
     }
   },
   "inventory": {
-  "title": "物品栏",
-  "subtitle": "在这里管理你的特殊奖励和连击保护。",
-  "sectionSubtitle": "一眼掌握所有特殊奖励和连击保护。",
-  "totalItems": "{{count}} 个道具",
-  "itemHint": "查看此道具的更多信息。",
-  "emptyTitle": "暂时还没有奖励",
-  "emptyText": "完成挑战并转动每日转盘，来填满你的物品栏。",
-  "streakHint": "当你错过某个挑战时，Streak Pass 会在对应界面自动使用，帮你保住连击。",
-  "items": {
-    "streakPass": {
-      "title": "Streak Pass",
-      "subtitle": "当你错过一次挑战时，保护你的连击。"
+    "title": "道具库",
+    "subtitle": "你的奖励与连续记录保护，都在这里。",
+    "totalItems": "{{count}} 个道具",
+    "sectionSubtitle": "查看你拥有的道具，并了解何时使用。",
+    "emptyTitle": "暂时没有道具",
+    "emptyText": "完成挑战并转动每日转盘来获得道具。",
+    "items": {
+      "streakPass": {
+        "title": "Streak Pass",
+        "subtitle": "如果你错过一天，可保护你的连续记录一次。",
+        "howToUse": "如果你漏掉一天，可以在「Missed challenge」页面选择使用 Streak Pass 来保留你的连续记录。"
+      }
     }
   }
-}
 ,
   "dailyMini": {
     "cta": "我已完成",

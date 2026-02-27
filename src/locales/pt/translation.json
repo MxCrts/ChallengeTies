@@ -4758,19 +4758,18 @@
   }
 }
 ,
-  "inventory": {
+"inventory": {
     "title": "Inventário",
-    "subtitle": "Gerencie aqui seus bônus especiais e proteções de série.",
-    "sectionSubtitle": "Veja de relance todos os seus bônus especiais e proteções de série.",
+    "subtitle": "Os teus bónus e proteções de sequência, num só lugar.",
     "totalItems": "{{count}} itens",
-    "itemHint": "Ver mais informações sobre este item.",
-    "emptyTitle": "Nenhum bônus por enquanto",
-    "emptyText": "Conclua desafios e gire a roda do dia para encher seu inventário.",
-    "streakHint": "Os Streak Pass são usados automaticamente na tela de desafio perdido para salvar sua série.",
+    "sectionSubtitle": "Vê o que tens e como usar quando precisares.",
+    "emptyTitle": "Ainda não tens bónus",
+    "emptyText": "Completa desafios e gira a roda diária para ganhar itens.",
     "items": {
       "streakPass": {
         "title": "Streak Pass",
-        "subtitle": "Protege sua série uma vez em caso de desafio perdido."
+        "subtitle": "Protege a tua sequência uma vez se falhares um dia.",
+        "howToUse": "Se falhares um dia, podes escolher usar um Streak Pass no ecrã «Desafio falhado» para manter a tua sequência."
       }
     }
   }

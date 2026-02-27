@@ -67,7 +67,7 @@ import {
 } from "expo-tracking-transparency";
 import { ToastProvider, useToast } from "../src/ui/Toast";
 import MarkToastListener from "@/src/ui/MarkToastListener";
-
+import { faLogEvent } from "@/src/firebaseAnalytics";
 
 const FORCE_ADS_DEBUG = false;
 
@@ -327,6 +327,7 @@ useEffect(() => {
 
   if (!canLog) return;
 
+  faLogEvent("app_open", { from: "boot" }).catch(() => {});
   logEvent("app_open" as any).catch(() => {});
   logEventDaily("dau", "daily_active").catch(() => {});
   bumpCounterAndMaybeReview("app_open", 7).catch(() => {});
