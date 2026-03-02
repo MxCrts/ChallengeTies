@@ -1067,6 +1067,19 @@ const inviteParam = useMemo(() => {
   return typeof v === "string" ? v : null;
 }, [params?.invite]);
 
+const consumedInviteParamRef = useRef<string | null>(null);
+
+// Si on reçoit un *nouveau* param invite, on reset le consumed
+useEffect(() => {
+  if (!inviteParam) return;
+  if (consumedInviteParamRef.current && consumedInviteParamRef.current !== inviteParam) {
+    consumedInviteParamRef.current = null;
+  }
+  if (!consumedInviteParamRef.current) {
+    // rien
+  }
+}, [inviteParam]);
+
 const {
   deeplinkBooting,
   inviteLoading,
@@ -1093,9 +1106,13 @@ const {
   cameFromDeeplinkRef,
 });
 
-
 const effectiveInviteId = invitation?.id || inviteParam || null;
-const effectiveInviteVisible = invitationModalVisible || !!inviteParam; 
+
+const inviteParamActive =
+  !!inviteParam && consumedInviteParamRef.current !== inviteParam;
+
+const effectiveInviteVisible =
+  invitationModalVisible || inviteParamActive;
 
 const clearInviteParamSafe = useCallback(() => {
   try {
@@ -1106,7 +1123,7 @@ const clearInviteParamSafe = useCallback(() => {
 }, [router]);
 
 const shouldShowGlobalInviteBoot = useMemo(() => {
-  if (!inviteParam) return false;
+  if (!inviteParamActive) return false;
 
   // ✅ Deeplink: on veut cacher dès que ça bosse (même si la modal n’est pas encore visible)
   if (deeplinkBooting || inviteLoading) return true;
@@ -1115,7 +1132,7 @@ const shouldShowGlobalInviteBoot = useMemo(() => {
   if (invitationModalVisible && !inviteModalReady) return true;
 
   return false;
-}, [inviteParam, deeplinkBooting, inviteLoading, invitationModalVisible, inviteModalReady]);
+}, [inviteParamActive, deeplinkBooting, inviteLoading, invitationModalVisible, inviteModalReady]);
 
 
 // ✅ 2) Ensuite: on colle strictement à l'état (modal visible + loading flags)
@@ -1142,6 +1159,11 @@ try { setIntroBlocking(false); } catch {}
 
   // ✅ killswitch #1 : retire le param ?invite=
   clearInviteParamSafe();
+
+  try {
+  const toConsume = (inviteId ?? inviteParam) || null;
+  consumedInviteParamRef.current = toConsume;
+} catch {}
 
   // 2) hard reset local : si un state reste coincé dans le hook, on le tue ici
   try { setInvitationModalVisible(false); } catch {}
