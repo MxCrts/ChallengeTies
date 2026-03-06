@@ -247,12 +247,18 @@ const AppNavigator: React.FC = () => {
     }
   }, [pathname]);
 
-  const [fontsLoaded] = useFonts({ Comfortaa_400Regular, Comfortaa_700Bold });
-  const [hardReady, setHardReady] = React.useState(false);
-  useEffect(() => {
-    const t = setTimeout(() => setHardReady(true), 3500);
-    return () => clearTimeout(t);
-  }, []);
+  const [fontsLoaded, fontError] = useFonts({ Comfortaa_400Regular, Comfortaa_700Bold });
+const [hardReady, setHardReady] = React.useState(false);
+useEffect(() => {
+  // ✅ Si les fonts chargent (succès ou erreur), on débloque immédiatement
+  // Le failsafe 3500ms reste pour les cas où useFonts ne répond jamais
+  if (fontsLoaded || fontError) {
+    setHardReady(true);
+    return;
+  }
+  const t = setTimeout(() => setHardReady(true), 3500);
+  return () => clearTimeout(t);
+}, [fontsLoaded, fontError]);
 
   const [attTick, setAttTick] = React.useState(0);
   useEffect(() => {
@@ -349,14 +355,14 @@ const AppNavigator: React.FC = () => {
   }, [user, loading, checkingAuth, pathname, fontsLoaded, hydrated, hardReady, explicitLogout, firstLaunch, guestEnabled, isGuest]);
 
   useEffect(() => {
-    if (loading || checkingAuth || !fontsLoaded || (!hydrated && !hardReady)) return;
+   if (loading || checkingAuth || (!fontsLoaded && !fontError) || (!hydrated && !hardReady)) return;
     if (!user) return;
     checkAndGrantPioneerIfEligible().catch(() => {});
     checkAndGrantAmbassadorRewards().catch(() => {});
     checkAndGrantAmbassadorMilestones().catch(() => {});
   }, [user, loading, checkingAuth, fontsLoaded, hydrated, hardReady]);
 
-  if (loading || explicitLogout === null || (!fontsLoaded && !hardReady) || (!hydrated && !hardReady)) return null;
+  if (loading || explicitLogout === null || (!fontsLoaded && !fontError && !hardReady) || (!hydrated && !hardReady)) return null;
   return null;
 };
 

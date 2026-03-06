@@ -265,11 +265,22 @@ export function useInviteHandoff({
         }
 
         // open modal once
-        processedInviteIdsRef.current.add(idStr);
-        setInvitation({ id: idStr });
-        setInviteModalReady(false);
-        setInvitationModalVisible(true);
-        willShowModal = true;
+// ✅ Délai minimum pour que les phases 1→2→3 de l'overlay soient visibles
+// même quand Firestore répond depuis le cache (< 100ms)
+const BOOT_OVERLAY_MIN_MS = 1200;
+const elapsed = Date.now() - (
+  // on récupère le ts du boot depuis le global state
+  (globalThis as any).__INVITE_BOOT__?.ts || Date.now()
+);
+if (elapsed < BOOT_OVERLAY_MIN_MS) {
+  await new Promise<void>((r) => setTimeout(r, BOOT_OVERLAY_MIN_MS - elapsed));
+}
+
+processedInviteIdsRef.current.add(idStr);
+setInvitation({ id: idStr });
+setInviteModalReady(false);
+setInvitationModalVisible(true);
+willShowModal = true;
 
         // clean URL
         try {
