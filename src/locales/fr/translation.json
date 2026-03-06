@@ -478,7 +478,7 @@
     "title": "Quoi de neuf",
     "description": "Vote pour la prochaine fonctionnalité ou propose la tienne. Résultats fin février.",
 
-    "heroTitle": "Vote les nouveautés qui arrivent fin février 🚀",
+    "heroTitle": "Vote pour les mises à jour qui arrivent fin mars 🚀",
     "heroSubtitle": "Ta voix compte : propose, vote et suis l’évolution des features.",
 
     "voteCloses": "Fin du vote dans",
@@ -498,6 +498,16 @@
       "footer": "Fin du vote bientôt — ta voix compte ✨"
     }
   },
+  "invite": {
+      "bootTitle": "Préparation de ton invitation…",
+      "bootSubtitle": "Ne ferme pas l'app, on prépare ton défi.",
+      "bootStep1": "Vérification de l'invitation",
+      "bootStep2": "Chargement du défi",
+      "bootStep3": "Prêt à démarrer",
+      "bootStep1Done": "Invitation vérifiée",
+      "bootStep2Done": "Défi chargé",
+      "bootStep3Done": "C'est parti !"
+    },
   "permissionDenied": "Permission refusée",
   "mustAllowNotifications": "Vous devez autoriser les notifications pour recevoir des alertes.",
   "error": "Erreur",
@@ -539,7 +549,8 @@
   "login": "Connexion",
   "noAccount": "Pas de compte ?",
   "signupHere": "Inscrivez-vous ici",
-  "appTagline": "La meilleure façon de prédire votre avenir est de le créer",
+  "appTagline": "On abandonne jamais seul.",
+  "or": "ou",
   "enterYourEmail": "Veuillez saisir votre adresse email.",
   "resetLinkSent": "Un lien de réinitialisation a été envoyé à votre email.",
   "resetLinkFailed": "Échec de l’envoi du lien. Vérifiez votre email.",
@@ -570,7 +581,7 @@
   "emailAlreadyInUse": "Cet email est déjà utilisé.",
   "weakPassword": "Mot de passe trop faible. Veuillez en choisir un plus robuste.",
   "anErrorOccurred": "Une erreur est survenue. Veuillez réessayer.",
-  "joinUsAndChallenge": "Rejoignez-nous et relevez des défis !",
+  "joinUsAndChallenge": "On abandonne jamais seul.",
   "yourEmail": "Votre email",
   "username": "Nom d’utilisateur",
   "password": "Mot de passe",
@@ -4336,7 +4347,7 @@
     "duoTitle": "Duo",
     "duoOfflineLine": "Connexion requise pour inviter.",
     "soloTitle": "Solo",
-    "soloDesc": "Démarrage immédiat, sans invitation.",
+    "soloDesc": "Commence maintenant. Tu peux inviter un ami plus tard.",
     "hintDuo": "Invite un ami juste après.",
     "hintDuoOffline": "Internet requis.",
     "hintSolo": "Tu démarres immédiatement."

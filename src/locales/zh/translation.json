@@ -289,7 +289,7 @@
     "title": "最新动态",
     "description": "为下一个功能投票或提出你的想法。结果将在二月底公布。",
 
-    "heroTitle": "投票决定二月底上线的新功能 🚀",
+    "heroTitle": "为三月底即将推出的更新投票 🚀",
     "heroSubtitle": "你的声音很重要：提出、投票并追踪功能进展。",
 
     "voteCloses": "投票结束倒计时",
@@ -309,6 +309,16 @@
       "footer": "投票即将结束 — 你的声音很重要 ✨"
     }
   },
+  "invite": {
+      "bootTitle": "正在准备邀请…",
+      "bootSubtitle": "请不要关闭应用，我们正在设置挑战。",
+      "bootStep1": "验证邀请",
+      "bootStep2": "加载挑战",
+      "bootStep3": "准备就绪",
+      "bootStep1Done": "已验证",
+      "bootStep2Done": "已加载",
+      "bootStep3Done": "出发吧！"
+    },
   "economy": {
     "weeklyTitle": "每周奖杯",
     "weeklySubtitle": "每次打卡 +1（每周上限）。",
@@ -370,7 +380,8 @@
   "login": "登录",
   "noAccount": "没有账户？",
   "signupHere": "在此注册",
-  "appTagline": "预测未来最好的方法是创造它",
+  "appTagline": "永不独自放弃。",
+  "or": "或",
   "enterYourEmail": "请输入您的邮箱地址。",
   "resetLinkSent": "重置链接已发送至您的邮箱。",
   "resetLinkFailed": "发送重置链接失败。请检查您的邮箱。",
@@ -386,7 +397,7 @@
   "emailAlreadyInUse": "该邮箱已被使用。",
   "weakPassword": "密码过于简单。请选择更强的密码。",
   "anErrorOccurred": "发生错误。请重试。",
-  "joinUsAndChallenge": "加入我们，迎接挑战！",
+  "joinUsAndChallenge": "永不独自放弃。",
   "yourEmail": "您的邮箱",
   "username": "用户名",
   "password": "密码",
@@ -984,7 +995,7 @@
     "duoTitle": "双人",
     "duoOfflineLine": "邀请需要网络连接。",
     "soloTitle": "单人",
-    "soloDesc": "立即开始，无需邀请。",
+    "soloDesc": "现在开始。你可以稍后邀请朋友。",
     "hintDuo": "接着就邀请朋友。",
     "hintDuoOffline": "需要网络。",
     "hintSolo": "你会立即开始。"

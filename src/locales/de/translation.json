@@ -446,7 +446,7 @@
     "title": "Neuigkeiten",
     "description": "Stimme für die nächste Funktion ab oder schlage deine vor. Ergebnisse Ende Februar.",
 
-    "heroTitle": "Vote für die Neuerungen, die Ende Februar kommen 🚀",
+    "heroTitle": "Stimme für die Updates ab, die bis Ende März kommen 🚀",
     "heroSubtitle": "Deine Stimme zählt: vorschlagen, abstimmen und die Entwicklung der Features verfolgen.",
 
     "voteCloses": "Abstimmung endet in",
@@ -479,6 +479,16 @@
     "bonus": "+{{bonus}}",
     "pb": "Dein bester Streak: {{days}} Tage"
   },
+  "invite": {
+      "bootTitle": "Einladung wird geladen…",
+      "bootSubtitle": "Bitte App nicht schließen, wir bereiten die Challenge vor.",
+      "bootStep1": "Einladung prüfen",
+      "bootStep2": "Challenge laden",
+      "bootStep3": "Bereit zum Start",
+      "bootStep1Done": "Geprüft",
+      "bootStep2Done": "Geladen",
+      "bootStep3Done": "Los geht's!"
+    },
   "microEarnedTitle": "Trophäe erhalten",
   "microEarnedMessage": "+{{count}} heute ✨",
   "microCapTitle": "Limit erreicht",
@@ -527,7 +537,8 @@
   "login": "Anmelden",
   "noAccount": "Noch kein Konto?",
   "signupHere": "Hier registrieren",
-  "appTagline": "Der beste Weg, deine Zukunft vorherzusagen, ist, sie zu gestalten",
+  "appTagline": "Gib niemals allein auf.",
+  "or": "oder",
   "enterYourEmail": "Bitte gib deine E-Mail-Adresse ein.",
   "resetLinkSent": "Ein Link zum Zurücksetzen wurde an deine E-Mail gesendet.",
   "resetLinkFailed": "Fehler beim Senden des Zurücksetzungslinks. Bitte überprüfe deine E-Mail.",
@@ -543,7 +554,7 @@
   "emailAlreadyInUse": "Diese E-Mail wird bereits verwendet.",
   "weakPassword": "Passwort zu schwach. Wähle ein stärkeres Passwort.",
   "anErrorOccurred": "Ein Fehler ist aufgetreten. Bitte versuche es erneut.",
-  "joinUsAndChallenge": "Schließe dich uns an und stelle dich Herausforderungen!",
+  "joinUsAndChallenge": "Starte. Wir helfen dir durchzuhalten.",
   "yourEmail": "Deine E-Mail",
   "username": "Benutzername",
   "password": "Passwort",
@@ -4851,7 +4862,7 @@
     "duoTitle": "Duo",
     "duoOfflineLine": "Verbindung nötig, um einzuladen.",
     "soloTitle": "Solo",
-    "soloDesc": "Sofort starten, ohne Einladung.",
+    "soloDesc": "Starte jetzt. Du kannst später einen Freund einladen.",
     "hintDuo": "Lade direkt danach einen Freund ein.",
     "hintDuoOffline": "Internet erforderlich.",
     "hintSolo": "Du startest sofort."

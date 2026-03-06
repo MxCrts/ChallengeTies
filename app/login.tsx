@@ -841,7 +841,7 @@ InteractionManager.runAfterInteractions(() => {
           <View style={styles.dividerRow}>
             <View style={styles.divider} />
             <Text style={styles.dividerText}>
-              {t("or") || "ou"}
+              {t("or")}
             </Text>
             <View style={styles.divider} />
           </View>
@@ -852,46 +852,25 @@ InteractionManager.runAfterInteractions(() => {
   onPress={async () => {
     if (submittingRef.current) return;
     submittingRef.current = true;
-
     try {
       await AsyncStorage.removeItem("pendingTutorial");
       await AsyncStorage.setItem(GUEST_KEY, "1").catch(() => {});
-      // ✅ one-shot: permet à AppNavigator de sortir de /login même si VisitorContext hydrate lentement
       (globalThis as any).__GUEST_JUST_ENABLED__ = Date.now();
-      // ✅ sécurité: si un intent avait forcé le flow auth (ref/deeplink), on ne veut pas qu'il écrase le mode visiteur
       (globalThis as any).__FORCE_AUTH_FLOW__ = false;
       (globalThis as any).__DL_BLOCK_ROOT_REDIRECT__ = false;
       (globalThis as any).__NOTIF_BLOCK_ROOT_REDIRECT__ = false;
       try { await setGuest(true); } catch {}
-      // ✅ go direct tabs (évite re-passer par "/login" si un guard externe est agressif)
       router.replace("/(tabs)");
     } finally {
       submittingRef.current = false;
     }
   }}
   accessibilityRole="button"
-  accessibilityLabel={
-    t("continueAsGuest") || "Continuer en tant que visiteur"
-  }
+  accessibilityLabel={t("continueAsGuest")}
 >
-  <View style={styles.guestBtnContent}>
-    <Ionicons
-      name="walk-outline"
-      size={18}
-      color={COLORS.primary}
-      style={styles.guestIcon}
-    />
-    <Text
-      style={styles.guestButtonText}
-      numberOfLines={1}
-      ellipsizeMode="tail"
-      adjustsFontSizeToFit
-      minimumFontScale={0.85}
-      allowFontScaling
-    >
-      {t("continueAsGuest") || "Continuer en tant que visiteur"}
-    </Text>
-  </View>
+  <Text style={styles.guestButtonText}>
+    {t("continueAsGuest")}
+  </Text>
 </TouchableOpacity>
 
         </Animated.View>
@@ -1080,35 +1059,16 @@ const styles = StyleSheet.create({
   // Guest
   guestButton: {
   width: "100%",
-  backgroundColor: "transparent",
-  paddingVertical: normalize(12),
-  paddingHorizontal: normalize(12), // ✅ évite collision bords
-  borderRadius: normalize(16),
-  borderWidth: 1.5,
-  borderColor: COLORS.primary,
-},
-
-guestBtnContent: {
-  width: "100%",
-  flexDirection: "row",
+  paddingVertical: normalize(10),
   alignItems: "center",
   justifyContent: "center",
-  columnGap: 8,            // ✅ mieux supporté que gap selon versions RN
 },
-
-guestIcon: {
-  flexShrink: 0,          // ✅ l’icône ne rétrécit pas
-},
-
 guestButtonText: {
-  color: COLORS.primary,
-  fontSize: normalize(15),
-  fontFamily: "Comfortaa_700Bold",
-  flexShrink: 1,          // ✅ texte peut rétrécir
-  minWidth: 0,            // ✅ CRUCIAL: autorise ellipsis/shrink en row
-  textAlign: "center",
+  color: COLORS.textMuted,
+  fontSize: normalize(13),
+  fontFamily: "Comfortaa_400Regular",
+  textDecorationLine: "underline",
 },
-  // Footer inline
   footerInline: {
     width: "100%",
     alignItems: "center",

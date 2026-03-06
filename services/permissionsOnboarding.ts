@@ -3,7 +3,7 @@ import * as Notifications from "expo-notifications";
 import * as Location from "expo-location";
 import { Linking, Platform } from "react-native";
 import AsyncStorage from "@react-native-async-storage/async-storage";
-import { doc, setDoc } from "firebase/firestore";
+import { doc, setDoc, getDoc, updateDoc } from "firebase/firestore";
 import { db, auth } from "@/constants/firebase-config";
 import {
   rescheduleNextDailyIfNeeded,
@@ -43,15 +43,26 @@ export async function askPermissionsOnceAfterSignup() {
   const locGranted = locStatus === "granted";
 
   // 3) Préférences utilisateur mirroir
-  await setDoc(
-    doc(db, "users", uid),
-    {
-      notificationsEnabled: notifGranted,
-      locationEnabled: locGranted,
-      expoPushUpdatedAt: new Date(),
-    },
-    { merge: true }
-  );
+  // ✅ On importe getDoc pour vérifier que le doc principal existe déjà
+  // avant d'écrire — évite de créer un doc partiel si appelé trop tôt
+  const userRef = doc(db, "users", uid);
+  try {
+    const snap = await getDoc(userRef);
+    if (snap.exists()) {
+      await updateDoc(userRef, {
+        notificationsEnabled: notifGranted,
+        locationEnabled: locGranted,
+        expoPushUpdatedAt: new Date(),
+      });
+    } else {
+      // Doc pas encore créé → on skip, register va s'en occuper
+      console.log("[permissionsOnboarding] userDoc absent → skip write");
+      await AsyncStorage.setItem(ASKED_KEY, "1");
+      return;
+    }
+  } catch (e) {
+    console.log("[permissionsOnboarding] write error:", e);
+  }
 
   // 4) Planification silencieuse si granted
   if (notifGranted) {

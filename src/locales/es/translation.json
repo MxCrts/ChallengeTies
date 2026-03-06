@@ -507,7 +507,7 @@
     "title": "Novedades",
     "description": "Vota la próxima función o propone la tuya. Resultados a finales de febrero.",
 
-    "heroTitle": "Vota las novedades que llegan a finales de febrero 🚀",
+    "heroTitle": "Vota por las actualizaciones que llegarán a finales de marzo 🚀",
     "heroSubtitle": "Tu voz cuenta: propone, vota y sigue la evolución de las funciones.",
 
     "voteCloses": "La votación termina en",
@@ -540,6 +540,16 @@
     "bonus": "+{{bonus}}",
     "pb": "Tu mejor racha: {{days}} días"
   },
+  "invite": {
+      "bootTitle": "Preparando tu invitación…",
+      "bootSubtitle": "No cierres la app, estamos configurando el reto.",
+      "bootStep1": "Verificando invitación",
+      "bootStep2": "Cargando reto",
+      "bootStep3": "Listo para empezar",
+      "bootStep1Done": "Verificado",
+      "bootStep2Done": "Cargado",
+      "bootStep3Done": "¡Vamos!"
+    },
   "microEarnedTitle": "Trofeo obtenido",
   "microEarnedMessage": "+{{count}} hoy ✨",
   "microCapTitle": "Límite alcanzado",
@@ -588,7 +598,8 @@
   "login": "Iniciar sesión",
   "noAccount": "¿No tienes una cuenta?",
   "signupHere": "Regístrate aquí",
-  "appTagline": "La mejor manera de predecir tu futuro es crearlo",
+  "appTagline": "Nunca lo dejes solo.",
+  "or": "o",
   "enterYourEmail": "Por favor ingresa tu correo electrónico.",
   "resetLinkSent": "Se ha enviado un enlace de restablecimiento a tu correo.",
   "resetLinkFailed": "Error al enviar el enlace de restablecimiento. Por favor revisa tu correo.",
@@ -604,7 +615,7 @@
   "emailAlreadyInUse": "Este correo ya está en uso.",
   "weakPassword": "Contraseña demasiado débil. Por favor elige una más fuerte.",
   "anErrorOccurred": "Ocurrió un error. Por favor inténtalo de nuevo.",
-  "joinUsAndChallenge": "¡Únete y acepta desafíos!",
+  "joinUsAndChallenge": "Nunca lo dejes solo.",
   "yourEmail": "Tu correo",
   "username": "Nombre de usuario",
   "password": "Contraseña",
@@ -1007,7 +1018,7 @@
     "duoTitle": "Dúo",
     "duoOfflineLine": "Se requiere conexión para invitar.",
     "soloTitle": "Solo",
-    "soloDesc": "Empiezas al instante, sin invitación.",
+    "soloDesc": "Empieza ahora. Puedes invitar a un amigo después.",
     "hintDuo": "Invita a un amigo justo después.",
     "hintDuoOffline": "Se requiere internet.",
     "hintSolo": "Empiezas al instante."

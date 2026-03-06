@@ -285,7 +285,7 @@
     "title": "What’s new",
     "description": "Vote for the next feature or propose yours. Results at the end of February.",
 
-    "heroTitle": "Vote for the updates coming by the end of February 🚀",
+    "heroTitle": "Vote for the updates coming by the end of March 🚀",
     "heroSubtitle": "Your voice matters: propose, vote, and follow feature progress.",
 
     "voteCloses": "Voting closes in",
@@ -318,6 +318,16 @@
     "bonus": "+{{bonus}}",
     "pb": "Your best streak: {{days}} days"
   },
+  "invite": {
+      "bootTitle": "Preparing your invite…",
+      "bootSubtitle": "Don't close the app, we're setting up the challenge.",
+      "bootStep1": "Verifying invitation",
+      "bootStep2": "Loading challenge",
+      "bootStep3": "Ready to go",
+      "bootStep1Done": "Verified",
+      "bootStep2Done": "Loaded",
+      "bootStep3Done": "Let's go!"
+    },
   "microEarnedTitle": "Trophy earned",
   "microEarnedMessage": "+{{count}} today ✨",
   "microCapTitle": "Cap reached",
@@ -367,7 +377,8 @@
   "login": "Login",
   "noAccount": "Don't have an account?",
   "signupHere": "Sign up here",
-  "appTagline": "The best way to predict your future is to create it",
+  "appTagline": "Never quit alone.",
+  "or": "or",
   "enterYourEmail": "Please enter your email address.",
   "resetLinkSent": "A reset link has been sent to your email.",
   "resetLinkFailed": "Failed to send the reset link. Please check your email.",
@@ -383,7 +394,7 @@
   "emailAlreadyInUse": "This email is already in use.",
   "weakPassword": "Password too weak. Please choose a stronger one.",
   "anErrorOccurred": "An error occurred. Please try again.",
-  "joinUsAndChallenge": "Join us and take on challenges!",
+  "joinUsAndChallenge": "Never quit alone.",
   "yourEmail": "Your email",
   "username": "Username",
   "password": "Password",
@@ -4867,7 +4878,7 @@
     "duoTitle": "Duo",
     "duoOfflineLine": "Connection required to invite.",
     "soloTitle": "Solo",
-    "soloDesc": "Start instantly, no invite.",
+    "soloDesc": "Start now. You can invite a friend later.",
     "hintDuo": "Invite a friend right after.",
     "hintDuoOffline": "Internet required.",
     "hintSolo": "You start instantly."

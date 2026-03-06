@@ -330,7 +330,7 @@
     "title": "Wat is er nieuw",
     "description": "Stem op de volgende functie of stel de jouwe voor. Resultaten eind februari.",
 
-    "heroTitle": "Stem op de nieuwtjes die eind februari komen 🚀",
+    "heroTitle": "Stem op de updates die eind maart komen 🚀",
     "heroSubtitle": "Jouw stem telt: stel voor, stem en volg de ontwikkeling van features.",
 
     "voteCloses": "Stemmen sluit over",
@@ -350,6 +350,16 @@
       "footer": "Stemmen sluit binnenkort — jouw stem telt ✨"
     }
   },
+  "invite": {
+      "bootTitle": "Uitnodiging voorbereiden…",
+      "bootSubtitle": "Sluit de app niet, we stellen de uitdaging in.",
+      "bootStep1": "Uitnodiging verifiëren",
+      "bootStep2": "Uitdaging laden",
+      "bootStep3": "Klaar om te starten",
+      "bootStep1Done": "Geverifieerd",
+      "bootStep2Done": "Geladen",
+      "bootStep3Done": "Aan de slag!"
+    },
   "permissionDenied": "Toestemming geweigerd",
   "mustAllowNotifications": "Je moet meldingen toestaan om waarschuwingen te ontvangen.",
   "error": "Fout",
@@ -391,7 +401,8 @@
   "login": "Inloggen",
   "noAccount": "Nog geen account?",
   "signupHere": "Meld je hier aan",
-  "appTagline": "De beste manier om je toekomst te voorspellen, is haar zelf te creëren",
+  "appTagline": "Geef nooit alleen op.",
+  "or": "of",
   "enterYourEmail": "Vul je e-mailadres in.",
   "resetLinkSent": "Er is een resetlink naar je e-mail gestuurd.",
   "resetLinkFailed": "Verzenden van de link is mislukt. Controleer je e-mail.",
@@ -424,7 +435,7 @@
   "emailAlreadyInUse": "Dit e-mailadres wordt al gebruikt.",
   "weakPassword": "Wachtwoord te zwak. Kies een sterker wachtwoord.",
   "anErrorOccurred": "Er is een fout opgetreden. Probeer het opnieuw.",
-  "joinUsAndChallenge": "Doe met ons mee en ga uitdagingen aan!",
+  "joinUsAndChallenge": "Geef nooit alleen op.",
   "yourEmail": "Je e-mailadres",
   "username": "Gebruikersnaam",
   "password": "Wachtwoord",
@@ -4892,7 +4903,7 @@
     "duoTitle": "Duo",
     "duoOfflineLine": "Verbinding nodig om uit te nodigen.",
     "soloTitle": "Solo",
-    "soloDesc": "Direct starten, geen uitnodiging.",
+    "soloDesc": "Begin nu. Je kunt later een vriend uitnodigen.",
     "hintDuo": "Nodig daarna meteen een vriend uit.",
     "hintDuoOffline": "Internet nodig.",
     "hintSolo": "Je start meteen."

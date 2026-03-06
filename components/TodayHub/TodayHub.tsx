@@ -1,4 +1,4 @@
-// components/TodayHub.tsx
+// components/TodayHub/TodayHub.tsx
 import React, { useEffect, useMemo } from "react";
 import {
   View,
@@ -17,12 +17,14 @@ import Animated, {
   useSharedValue,
   withRepeat,
   withTiming,
+  withSpring,
 } from "react-native-reanimated";
 import type { TFunction } from "i18next";
 import { Image as ExpoImage } from "expo-image";
 import * as Haptics from "expo-haptics";
 import type { AnimatedStyle } from "react-native-reanimated";
 import type { ViewStyle } from "react-native";
+import { BlurView } from "expo-blur";
 
 export type TodayHubPrimaryMode = "mark" | "new" | "pick" | "duo" | "duoPending";
 
@@ -30,7 +32,7 @@ export type TodayHubWhyReturnVariant = "duo" | "streak" | "trophy" | "warning";
 export type TodayHubWhyReturn = {
   text: string;
   variant?: TodayHubWhyReturnVariant;
-  icon?: string; // Ionicons name
+  icon?: string;
 };
 
 const getThumbUrl200 = (url?: string) => {
@@ -87,6 +89,50 @@ const F = {
   bold: "Comfortaa_700Bold",
 } as const;
 
+// ─── WHY RETURN color tokens per variant ─────────────────────────────────────
+const WHY_VARIANT_COLORS = {
+  warning: {
+    iconColor: "#F59E0B",
+    iconBg: "rgba(245,158,11,0.14)",
+    iconBorder: "rgba(245,158,11,0.30)",
+    glowA: "rgba(245,158,11,0.16)",
+    glowB: "rgba(251,191,36,0.10)",
+    leftBar: "#F59E0B",
+  },
+  streak: {
+    iconColor: "#F97316",
+    iconBg: "rgba(249,115,22,0.14)",
+    iconBorder: "rgba(249,115,22,0.30)",
+    glowA: "rgba(249,115,22,0.14)",
+    glowB: "rgba(251,146,60,0.08)",
+    leftBar: "#F97316",
+  },
+  trophy: {
+    iconColor: "#FBBF24",
+    iconBg: "rgba(251,191,36,0.14)",
+    iconBorder: "rgba(251,191,36,0.30)",
+    glowA: "rgba(251,191,36,0.14)",
+    glowB: "rgba(253,230,138,0.08)",
+    leftBar: "#FBBF24",
+  },
+  duo: {
+    iconColor: "#818CF8",
+    iconBg: "rgba(99,102,241,0.14)",
+    iconBorder: "rgba(99,102,241,0.30)",
+    glowA: "rgba(99,102,241,0.14)",
+    glowB: "rgba(167,139,250,0.08)",
+    leftBar: "#818CF8",
+  },
+  default: {
+    iconColor: "#94A3B8",
+    iconBg: "rgba(148,163,184,0.10)",
+    iconBorder: "rgba(148,163,184,0.22)",
+    glowA: "rgba(148,163,184,0.10)",
+    glowB: "rgba(148,163,184,0.06)",
+    leftBar: "rgba(148,163,184,0.50)",
+  },
+} as const;
+
 export default function TodayHub(props: Props) {
   const {
     t,
@@ -115,117 +161,100 @@ export default function TodayHub(props: Props) {
     normalize,
   } = props;
 
-    const { width: W } = useWindowDimensions();
+  const { width: W } = useWindowDimensions();
   const isTiny = W < 350;
   const isLarge = W >= 430;
   const isTablet = W >= 700;
 
-  // ✅ responsive micro-tokens (no hard UI)
   const UI = useMemo(() => {
-  const clamp = (v: number, a: number, b: number) => Math.max(a, Math.min(b, v));
+    const clamp = (v: number, a: number, b: number) => Math.max(a, Math.min(b, v));
 
-  const pad = clamp(normalize(isTiny ? 14 : isTablet ? 18 : 16), 14, 20);
-  const shellR = clamp(normalize(isTiny ? 24 : isTablet ? 30 : 26), 22, 32);
-  const cardR = clamp(normalize(isTiny ? 16 : isTablet ? 20 : 18), 14, 22);
-  const ctaR = clamp(normalize(isTiny ? 16 : isTablet ? 22 : 18), 14, 24);
+    const pad = clamp(normalize(isTiny ? 14 : isTablet ? 18 : 16), 14, 20);
+    const shellR = clamp(normalize(isTiny ? 24 : isTablet ? 30 : 26), 22, 32);
+    const cardR = clamp(normalize(isTiny ? 16 : isTablet ? 20 : 18), 14, 22);
+    const ctaR = clamp(normalize(isTiny ? 16 : isTablet ? 22 : 18), 14, 24);
 
-  const iconBox = clamp(normalize(isTiny ? 58 : isTablet ? 74 : 64), 56, 78);
-  const orb = clamp(Math.round(iconBox * 0.78), 44, 62);
-  const ring = iconBox;
-  const sheen = clamp(Math.round(iconBox * 1.55), 84, 132);
-  const aura = clamp(Math.round(iconBox * 1.78), 96, 150);
+    const iconBox = clamp(normalize(isTiny ? 58 : isTablet ? 74 : 64), 56, 78);
+    const orb = clamp(Math.round(iconBox * 0.78), 44, 62);
+    const ring = iconBox;
+    const sheen = clamp(Math.round(iconBox * 1.55), 84, 132);
+    const aura = clamp(Math.round(iconBox * 1.78), 96, 150);
 
-  const gap = clamp(normalize(isTiny ? 10 : isTablet ? 14 : 12), 9, 16);
+    const gap = clamp(normalize(isTiny ? 10 : isTablet ? 14 : 12), 9, 16);
 
-  const ctaPadY = clamp(normalize(isTiny ? 7 : isTablet ? 10 : 8), 6, 12);
-  const ctaPadX = clamp(normalize(isTiny ? 10 : isTablet ? 14 : 12), 10, 16);
-  const ctaIcon = clamp(normalize(isTiny ? 14 : isTablet ? 18 : 16), 14, 20);
-  const hourglass = clamp(normalize(isTiny ? 20 : isTablet ? 26 : 22), 18, 28);
+    const ctaPadY = clamp(normalize(isTiny ? 7 : isTablet ? 10 : 8), 6, 12);
+    const ctaPadX = clamp(normalize(isTiny ? 10 : isTablet ? 14 : 12), 10, 16);
+    const ctaIcon = clamp(normalize(isTiny ? 14 : isTablet ? 18 : 16), 14, 20);
+    const hourglass = clamp(normalize(isTiny ? 20 : isTablet ? 26 : 22), 18, 28);
 
-  // ✅ manquants pour le “100%”
-  const previewR = clamp(normalize(isTiny ? 16 : isTablet ? 22 : 20), 14, 24);
-  const previewPadY = clamp(normalize(isTiny ? 12 : isTablet ? 16 : 14), 10, 18);
-  const previewPadX = clamp(normalize(isTiny ? 12 : isTablet ? 16 : 14), 10, 18);
-  const thumb = clamp(normalize(isTiny ? 44 : isTablet ? 56 : 46), 40, 60);
-  const thumbR = clamp(normalize(isTiny ? 12 : isTablet ? 16 : 14), 10, 18);
-  const chevronBox = clamp(normalize(isTiny ? 30 : isTablet ? 38 : 32), 28, 42);
-  const trackH = clamp(normalize(isTiny ? 5 : isTablet ? 7 : 6), 4, 8);
+    const previewR = clamp(normalize(isTiny ? 16 : isTablet ? 22 : 20), 14, 24);
+    const previewPadY = clamp(normalize(isTiny ? 12 : isTablet ? 16 : 14), 10, 18);
+    const previewPadX = clamp(normalize(isTiny ? 12 : isTablet ? 16 : 14), 10, 18);
+    const thumb = clamp(normalize(isTiny ? 44 : isTablet ? 56 : 46), 40, 60);
+    const thumbR = clamp(normalize(isTiny ? 12 : isTablet ? 16 : 14), 10, 18);
+    const chevronBox = clamp(normalize(isTiny ? 30 : isTablet ? 38 : 32), 28, 42);
+    const trackH = clamp(normalize(isTiny ? 5 : isTablet ? 7 : 6), 4, 8);
 
-  const primaryR = clamp(normalize(isTiny ? 16 : isTablet ? 22 : 20), 14, 24);
-  const primaryPadY = clamp(normalize(isTiny ? 14 : isTablet ? 18 : 16), 12, 20);
-  const primaryPadX = clamp(normalize(isTiny ? 14 : isTablet ? 18 : 16), 12, 20);
+    const primaryR = clamp(normalize(isTiny ? 16 : isTablet ? 22 : 20), 14, 24);
+    const primaryPadY = clamp(normalize(isTiny ? 14 : isTablet ? 18 : 16), 12, 20);
+    const primaryPadX = clamp(normalize(isTiny ? 14 : isTablet ? 18 : 16), 12, 20);
 
-  const createR = clamp(normalize(isTiny ? 16 : isTablet ? 22 : 18), 14, 24);
-  const createPadY = clamp(normalize(isTiny ? 14 : isTablet ? 18 : 16), 12, 20);
-  const createPadX = clamp(normalize(isTiny ? 12 : isTablet ? 16 : 14), 10, 18);
-  const createIcon = clamp(normalize(isTiny ? 32 : isTablet ? 40 : 34), 30, 44);
+    const createR = clamp(normalize(isTiny ? 16 : isTablet ? 22 : 18), 14, 24);
+    const createPadY = clamp(normalize(isTiny ? 14 : isTablet ? 18 : 16), 12, 20);
+    const createPadX = clamp(normalize(isTiny ? 12 : isTablet ? 16 : 14), 10, 18);
+    const createIcon = clamp(normalize(isTiny ? 32 : isTablet ? 40 : 34), 30, 44);
 
-  return {
-    pad,
-    shellR,
-    cardR,
-    ctaR,
-    iconBox,
-    orb,
-    ring,
-    sheen,
-    aura,
-    gap,
-    ctaPadY,
-    ctaPadX,
-    ctaIcon,
-    hourglass,
-
-    previewR,
-    previewPadY,
-    previewPadX,
-    thumb,
-    thumbR,
-    chevronBox,
-    trackH,
-
-    primaryR,
-    primaryPadY,
-    primaryPadX,
-
-    createR,
-    createPadY,
-    createPadX,
-    createIcon,
-  };
-}, [normalize, isTiny, isTablet]);
-
-
-  const TYPO = useMemo(() => {
-    // ✅ cohérent avec ton index + DailyBonus (un poil plus “dense”)
     return {
-      pill: normalize(isTiny ? 11 : isLarge ? 12 : 11.5),
-      title: normalize(isTiny ? 20 : isLarge ? 22 : 21),        // ↓ avant 26
-      sub: normalize(isTiny ? 13 : isLarge ? 14 : 13.5),         // ↓ avant 16
-      previewTitle: normalize(isTiny ? 14 : isLarge ? 15 : 14.5),// ↓ avant 18
-      previewDesc: normalize(isTiny ? 12 : isLarge ? 13 : 12.5), // ↓ avant 14
-      primary: normalize(isTiny ? 15 : isLarge ? 16 : 15.5),     // ↓ avant 20
-      pendingLabel: normalize(isTiny ? 15 : isLarge ? 16 : 15.5),// ↓ avant 18
-      pendingMicro: normalize(isTiny ? 11 : isLarge ? 12 : 11.5),// ↓ avant 13
-      link: normalize(isTiny ? 13 : isLarge ? 14 : 13.5),        // ↓ avant 15
-      createTitle: normalize(isTiny ? 17 : isLarge ? 18 : 17.5), // ↓ avant 22
-      createSub: normalize(isTiny ? 12 : isLarge ? 13 : 12.5),   // ↓ avant 14
+      pad, shellR, cardR, ctaR,
+      iconBox, orb, ring, sheen, aura,
+      gap, ctaPadY, ctaPadX, ctaIcon, hourglass,
+      previewR, previewPadY, previewPadX,
+      thumb, thumbR, chevronBox, trackH,
+      primaryR, primaryPadY, primaryPadX,
+      createR, createPadY, createPadX, createIcon,
     };
-  }, [normalize, isTiny, isLarge]);
+  }, [normalize, isTiny, isTablet]);
 
-  // ✅ “Why return” micro-pulse (subtil, pas TikTok cheap)
+  const TYPO = useMemo(() => ({
+    pill: normalize(isTiny ? 11 : isLarge ? 12 : 11.5),
+    title: normalize(isTiny ? 20 : isLarge ? 22 : 21),
+    sub: normalize(isTiny ? 13 : isLarge ? 14 : 13.5),
+    previewTitle: normalize(isTiny ? 14 : isLarge ? 15 : 14.5),
+    previewDesc: normalize(isTiny ? 12 : isLarge ? 13 : 12.5),
+    primary: normalize(isTiny ? 15 : isLarge ? 16 : 15.5),
+    pendingLabel: normalize(isTiny ? 15 : isLarge ? 16 : 15.5),
+    pendingMicro: normalize(isTiny ? 11 : isLarge ? 12 : 11.5),
+    link: normalize(isTiny ? 13 : isLarge ? 14 : 13.5),
+    createTitle: normalize(isTiny ? 17 : isLarge ? 18 : 17.5),
+    createSub: normalize(isTiny ? 12 : isLarge ? 13 : 12.5),
+  }), [normalize, isTiny, isLarge]);
+
+  // ─── Animations ──────────────────────────────────────────────────────────
   const whyPulse = useSharedValue(0);
   useEffect(() => {
-    whyPulse.value = withRepeat(withTiming(1, { duration: 1600, easing: Easing.inOut(Easing.ease) }), -1, true);
+    whyPulse.value = withRepeat(
+      withTiming(1, { duration: 1600, easing: Easing.inOut(Easing.ease) }),
+      -1,
+      true
+    );
   }, [whyPulse]);
 
-  // ✅ DuoPending breathing (gros cercle qui respire)
   const ring = useSharedValue(0);
   const glow = useSharedValue(0);
   const breath = useSharedValue(0);
   const aura = useSharedValue(0);
 
+  // ✨ NEW: progress fill glow
+  const progressGlow = useSharedValue(0);
+
+  // ✨ NEW: shell gradient shift (mark=warm, duoPending=cool)
+  const shellTint = useSharedValue(0);
+
+  // ✨ NEW: primary CTA shine sweep
+  const ctaShine = useSharedValue(-1);
+
   const isPending = primaryMode === "duoPending";
+  const isMark = primaryMode === "mark";
 
   useEffect(() => {
     if (!isPending) {
@@ -236,7 +265,6 @@ export default function TodayHub(props: Props) {
       return;
     }
 
-    // ring + glow (tu l’avais déjà, un poil retuné)
     ring.value = withRepeat(
       withTiming(1, { duration: 1400, easing: Easing.inOut(Easing.ease) }),
       -1,
@@ -247,8 +275,6 @@ export default function TodayHub(props: Props) {
       -1,
       true
     );
-
-    // ✅ breathing: plus ample + plus “organique”
     breath.value = withRepeat(
       withTiming(1, { duration: 1700, easing: Easing.inOut(Easing.ease) }),
       -1,
@@ -261,10 +287,40 @@ export default function TodayHub(props: Props) {
     );
   }, [isPending, ring, glow, breath, aura]);
 
+  // ✨ NEW: progress glow pulse
+  useEffect(() => {
+    if (progressPct <= 0 || progressPct >= 1) {
+      progressGlow.value = 0;
+      return;
+    }
+    progressGlow.value = withRepeat(
+      withTiming(1, { duration: 1800, easing: Easing.inOut(Easing.ease) }),
+      -1,
+      true
+    );
+  }, [progressPct, progressGlow]);
+
+  // ✨ NEW: shell tint transition (warm orange for mark, cool indigo for pending)
+  useEffect(() => {
+    shellTint.value = withTiming(isPending ? 1 : 0, { duration: 500, easing: Easing.out(Easing.ease) });
+  }, [isPending, shellTint]);
+
+  // ✨ NEW: CTA shine sweep on mark mode
+  useEffect(() => {
+    if (!isMark) {
+      ctaShine.value = -1;
+      return;
+    }
+    ctaShine.value = withRepeat(
+      withTiming(1, { duration: 2400, easing: Easing.inOut(Easing.ease) }),
+      -1,
+      false
+    );
+  }, [isMark, ctaShine]);
 
   const ringStyle = useAnimatedStyle(() => {
-   const s = 1 + ring.value * 0.045;
-   const o = 0.12 + ring.value * 0.10;
+    const s = 1 + ring.value * 0.045;
+    const o = 0.12 + ring.value * 0.10;
     return { transform: [{ scale: s }], opacity: o };
   });
 
@@ -273,8 +329,8 @@ export default function TodayHub(props: Props) {
     return { opacity: o };
   });
 
-    const breathStyle = useAnimatedStyle(() => {
-    const p = breath.value; // 0..1
+  const breathStyle = useAnimatedStyle(() => {
+    const p = breath.value;
     return {
       opacity: 0.08 + p * 0.12,
       transform: [{ scale: 1 + p * 0.08 }],
@@ -285,19 +341,34 @@ export default function TodayHub(props: Props) {
     const a = aura.value;
     return {
       opacity: 0.07 + a * 0.13,
-     transform: [{ scale: 1 + a * 0.10 }],
+      transform: [{ scale: 1 + a * 0.10 }],
     };
   });
+
+  // ✨ NEW: progress tip glow
+  const progressGlowStyle = useAnimatedStyle(() => {
+    const p = progressGlow.value;
+    return {
+      opacity: 0.55 + p * 0.45,
+      transform: [{ scale: 1 + p * 0.04 }],
+    };
+  });
+
+  // ✨ NEW: CTA shine style
+  const ctaShineStyle = useAnimatedStyle(() => ({
+    transform: [{ translateX: ctaShine.value * (CONTENT_MAX_W + 60) }],
+    opacity: 0.18,
+  }));
 
   const whyReturnStyle = useAnimatedStyle(() => {
-    // léger “alive” uniquement quand on affiche le bloc
     const p = whyPulse.value;
     return {
-      transform: [{ scale: 1 + p * 0.006 }],
-      opacity: 0.92 + p * 0.08,
+      transform: [{ scale: 1 + p * 0.004 }],
+      opacity: 0.94 + p * 0.06,
     };
   });
 
+  // ─── Derived ─────────────────────────────────────────────────────────────
   const whyReturnIcon = useMemo(() => {
     if (whyReturn?.icon) return whyReturn.icon;
     switch (whyReturn?.variant) {
@@ -308,6 +379,12 @@ export default function TodayHub(props: Props) {
       default: return "sparkles-outline";
     }
   }, [whyReturn?.icon, whyReturn?.variant]);
+
+  // ✨ NEW: per-variant whyReturn color tokens
+  const whyColors = useMemo(() => {
+    const v = whyReturn?.variant;
+    return WHY_VARIANT_COLORS[v ?? "default"] ?? WHY_VARIANT_COLORS.default;
+  }, [whyReturn?.variant]);
 
   const rightPill = useMemo(() => {
     if (primaryMode === "duoPending") {
@@ -322,13 +399,27 @@ export default function TodayHub(props: Props) {
     });
   }, [t, langKey, primaryMode, hasActiveChallenges, activeCount]);
 
-    const effectivePrimaryGradient = useMemo(() => {
-    // ✅ Quand aucun défi actif -> CTA “activation”, pas “succès”
+  const effectivePrimaryGradient = useMemo(() => {
     if (primaryMode === "duo" && !hasActiveChallenges) {
-      return ["#6366F1", "#A78BFA"] as const; // indigo -> violet (premium)
+      return ["#6366F1", "#A78BFA"] as const;
     }
     return primaryGradient;
   }, [primaryMode, hasActiveChallenges, primaryGradient]);
+
+  // ✨ NEW: shell background gradient changes per mode
+  const shellBgGradient = useMemo(() => {
+    if (isPending) {
+      return isDarkMode
+        ? ["rgba(99,102,241,0.10)", "rgba(2,6,23,0.00)"] as const
+        : ["rgba(99,102,241,0.06)", "rgba(255,255,255,0.00)"] as const;
+    }
+    if (isMark) {
+      return isDarkMode
+        ? ["rgba(249,115,22,0.10)", "rgba(2,6,23,0.00)"] as const
+        : ["rgba(249,115,22,0.07)", "rgba(255,255,255,0.00)"] as const;
+    }
+    return ["rgba(0,0,0,0.00)", "rgba(0,0,0,0.00)"] as const;
+  }, [isPending, isMark, isDarkMode]);
 
   const TOKENS = useMemo(() => {
     const border = isDarkMode ? "rgba(255,255,255,0.10)" : "rgba(2,6,23,0.08)";
@@ -345,50 +436,32 @@ export default function TodayHub(props: Props) {
     const thumbBorder = isDarkMode ? "rgba(226,232,240,0.18)" : "rgba(2,6,23,0.10)";
     const thumbBg = isDarkMode ? "rgba(255,255,255,0.04)" : "rgba(2,6,23,0.03)";
     const hairline = Math.max(1, Math.round(PixelRatio.get() * 0.35)) / PixelRatio.get();
-    const highlight = isDarkMode
-      ? "rgba(255,255,255,0.08)"
-      : "rgba(255,255,255,0.75)";
+    const highlight = isDarkMode ? "rgba(255,255,255,0.08)" : "rgba(255,255,255,0.75)";
     const rim = isDarkMode ? "rgba(255,255,255,0.12)" : "rgba(2,6,23,0.08)";
 
-    // ✅ whyReturn
-    const whyBg = isDarkMode ? "rgba(255,255,255,0.06)" : "rgba(2,6,23,0.035)";
-    const whyBorder = isDarkMode ? "rgba(255,255,255,0.12)" : "rgba(2,6,23,0.08)";
+    const whyBg = isDarkMode ? "rgba(255,255,255,0.05)" : "rgba(2,6,23,0.030)";
+    const whyBorder = isDarkMode ? "rgba(255,255,255,0.10)" : "rgba(2,6,23,0.07)";
     const whyText = isDarkMode ? "rgba(248,250,252,0.92)" : "rgba(2,6,23,0.86)";
     const whySub = isDarkMode ? "rgba(226,232,240,0.70)" : "rgba(15,23,42,0.62)";
     const whyIcon = isDarkMode ? "rgba(226,232,240,0.92)" : "rgba(2,6,23,0.86)";
 
-    const whyGlowA = isDarkMode ? "rgba(255,215,0,0.14)" : "rgba(255,215,0,0.10)";
-    const whyGlowB = isDarkMode ? "rgba(0,255,255,0.12)" : "rgba(0,255,255,0.08)";
+    // ✨ progress fill matches primary CTA
+    const progressFill = effectivePrimaryGradient[0];
+    const progressFillEnd = effectivePrimaryGradient[1];
 
-
-    // ✅ progress qui se “marie” au CTA (pas orange random)
-    const progressFill = effectivePrimaryGradient[1];
+    // ✨ progress glow color
+    const progressGlowColor = isDarkMode
+      ? `${effectivePrimaryGradient[0]}88`
+      : `${effectivePrimaryGradient[0]}55`;
 
     return {
-      border,
-      surface,
-      surface2,
-      text,
-      subText,
-      mutedText,
-      track,
-      icon,
-      chevron,
-      pillA,
-      pillB,
-      thumbBorder,
-      thumbBg,
-      progressFill,
-      hairline,
-      highlight,
-      rim,
-      whyBg,
-      whyBorder,
-      whyText,
-      whySub,
-      whyIcon,
-      whyGlowA,
-      whyGlowB,
+      border, surface, surface2,
+      text, subText, mutedText,
+      track, icon, chevron,
+      pillA, pillB, thumbBorder, thumbBg,
+      progressFill, progressFillEnd, progressGlowColor,
+      hairline, highlight, rim,
+      whyBg, whyBorder, whyText, whySub, whyIcon,
     };
   }, [isDarkMode, effectivePrimaryGradient]);
 
@@ -407,45 +480,25 @@ export default function TodayHub(props: Props) {
 
   const showSoloLink = !hasActiveChallenges && primaryMode !== "duoPending";
 
-const pendingTitle = useMemo(
+  const pendingTitle = useMemo(
     () => t("homeZ.duoPending.title", { defaultValue: "Invite sent" }),
-   [t, langKey]
-  );
-  const pendingSub = useMemo(
-    () =>
-      t("homeZ.duoPending.sub", {
-        defaultValue: "Pending. Once accepted: Duo.",
-      }),
     [t, langKey]
   );
-
+  const pendingSub = useMemo(
+    () => t("homeZ.duoPending.sub", { defaultValue: "Pending. Once accepted: Duo." }),
+    [t, langKey]
+  );
   const pendingHint = useMemo(
-    () =>
-      t("homeZ.duoPending.hint", {
-        defaultValue: "While waiting, set up your Duo.",
-      }),
+    () => t("homeZ.duoPending.hint", { defaultValue: "While waiting, set up your Duo." }),
     [t, langKey]
   );
 
   const displayTitle = isPending ? pendingTitle : title;
   const displaySub = isPending ? pendingHint : sub;
- 
+
   const pendingA11y = useMemo(
     () => t("homeZ.duoPending.a11y", { defaultValue: "Duo invite pending" }),
     [t, langKey]
-  );
-
-  const stepSent = useMemo(
-    () => t("homeZ.duoPending.steps.sent", { defaultValue: "Invitation sent" }),
-    [t, langKey]
-  );
-  const stepWaiting = useMemo(
-    () => t("homeZ.duoPending.steps.waiting", { defaultValue: "Waiting for acceptance" }),
-    [t, langKey]
-  );
-  const stepReady = useMemo(
-    () => t("homeZ.duoPending.steps.ready", { defaultValue: "Once confirmed: Duo starts" }),
-   [t, langKey]
   );
 
   const todayBadge = useMemo(
@@ -454,25 +507,40 @@ const pendingTitle = useMemo(
   );
 
   const pillPadX = isTiny ? 9 : 12;
-const pillPadY = isTiny ? 6 : 7;
-const pillIcon = normalize(isTiny ? 13 : 14);
+  const pillPadY = isTiny ? 6 : 7;
+  const pillIcon = normalize(isTiny ? 13 : 14);
+
+  // ✨ NEW: progress percentage label
+  const progressLabel = useMemo(() => {
+    const pct = Math.round(Math.max(0, Math.min(1, progressPct)) * 100);
+    return `${pct}%`;
+  }, [progressPct]);
 
   return (
-    <View style={{ width: "100%", alignItems: "center" }}>
+    <View style={[s.outerWrapper, { paddingHorizontal: normalize(15) }]}>
       <View
-  style={[
-    s.shell,
-    s.shadowSoft,
-    {
-      maxWidth: CONTENT_MAX_W,
-      borderColor: TOKENS.rim,
-      backgroundColor: TOKENS.surface,
-      borderRadius: UI.shellR,
-      padding: UI.pad,
-    },
-  ]}
->
-  {/* ✅ subtle highlight to add “depth” (Android+iOS) */}
+        style={[
+          s.shell,
+          s.shadowSoft,
+          {
+            maxWidth: CONTENT_MAX_W,
+            borderColor: TOKENS.rim,
+            backgroundColor: TOKENS.surface,
+            borderRadius: UI.shellR,
+            padding: UI.pad,
+          },
+        ]}
+      >
+        {/* ✨ NEW: mode-aware directional gradient backdrop */}
+        <LinearGradient
+          colors={shellBgGradient}
+          start={{ x: 0, y: 0 }}
+          end={{ x: 1, y: 1 }}
+          style={[StyleSheet.absoluteFill, { borderRadius: UI.shellR }]}
+          pointerEvents="none"
+        />
+
+        {/* Shell highlight (depth) */}
         <View
           pointerEvents="none"
           style={[
@@ -484,10 +552,12 @@ const pillIcon = normalize(isTiny ? 13 : 14);
               backgroundColor: isDarkMode
                 ? "rgba(255,255,255,0.06)"
                 : "rgba(255,255,255,0.55)",
+              borderTopLeftRadius: UI.shellR,
+              borderTopRightRadius: UI.shellR,
             },
           ]}
         />
-                <View
+        <View
           pointerEvents="none"
           style={[
             s.shellRim,
@@ -499,97 +569,93 @@ const pillIcon = normalize(isTiny ? 13 : 14);
           ]}
         />
 
+        {/* ─── Top pills ───────────────────────────────────────────────── */}
+        <View style={[s.pillsRow, { marginBottom: normalize(isTiny ? 10 : 12) }]}>
+          {/* LEFT: TODAY */}
+          <View
+            style={[
+              s.pill,
+              s.pillLeft,
+              {
+                backgroundColor: TOKENS.pillA,
+                borderWidth: TOKENS.hairline,
+                borderColor: TOKENS.rim,
+                paddingHorizontal: pillPadX,
+                paddingVertical: pillPadY,
+              },
+            ]}
+          >
+            <Ionicons name="flash-outline" size={pillIcon} color={TOKENS.icon} />
+            <Text
+              style={[s.pillText, { color: TOKENS.icon, fontSize: TYPO.pill }]}
+              numberOfLines={1}
+              adjustsFontSizeToFit
+              minimumFontScale={0.88}
+              ellipsizeMode="clip"
+            >
+              {todayBadge}
+            </Text>
+          </View>
 
-       {/* Top pills */}
-<View
-  style={[
-    s.pillsRow,
-    { marginBottom: normalize(isTiny ? 10 : 12) },
-  ]}
->
-  {/* LEFT: TODAY */}
-  <View
-  style={[
-    s.pill,
-    s.pillLeft,
-    {
-      backgroundColor: TOKENS.pillA,
-      borderWidth: TOKENS.hairline,
-      borderColor: TOKENS.rim,
-      paddingHorizontal: pillPadX,
-      paddingVertical: pillPadY,
-    },
-  ]}
->
-  <Ionicons name="flash-outline" size={pillIcon} color={TOKENS.icon} />
-  <Text
-    style={[s.pillText, { color: TOKENS.icon, fontSize: TYPO.pill }]}
-    numberOfLines={1}
-    adjustsFontSizeToFit
-    minimumFontScale={0.88}
-    ellipsizeMode="clip"
-  >
-    {todayBadge}
-  </Text>
-</View>
+          {/* RIGHT: ACTIVE / NONE / PENDING */}
+          <View
+            style={[
+              s.pill,
+              s.pillRight,
+              {
+                backgroundColor: TOKENS.pillB,
+                borderWidth: TOKENS.hairline,
+                borderColor: TOKENS.rim,
+                paddingHorizontal: pillPadX,
+                paddingVertical: pillPadY,
+              },
+            ]}
+          >
+            <Ionicons
+              name={primaryMode === "duoPending" ? "hourglass-outline" : "flame-outline"}
+              size={pillIcon}
+              color={
+                primaryMode === "duoPending"
+                  ? "#818CF8"   // ✨ violet tint when pending
+                  : primaryMode === "mark"
+                    ? "#F97316" // ✨ orange tint when mark
+                    : TOKENS.icon
+              }
+              style={{ marginRight: isTiny ? 6 : 8 }}
+            />
+            <View style={s.pillTextWrap}>
+              <Text
+                style={[s.pillText, { color: TOKENS.icon, fontSize: TYPO.pill }]}
+                numberOfLines={1}
+                adjustsFontSizeToFit
+                minimumFontScale={0.72}
+                ellipsizeMode="tail"
+              >
+                {rightPill}
+              </Text>
+            </View>
+          </View>
+        </View>
 
-
-  {/* RIGHT: ACTIVE / NONE / PENDING */}
-  <View
-  style={[
-    s.pill,
-    s.pillRight,
-    {
-      backgroundColor: TOKENS.pillB,
-      borderWidth: TOKENS.hairline,
-      borderColor: TOKENS.rim,
-      paddingHorizontal: pillPadX,
-      paddingVertical: pillPadY,
-    },
-  ]}
->
-  <Ionicons
-    name={primaryMode === "duoPending" ? "hourglass-outline" : "flame-outline"}
-    size={pillIcon}
-    color={TOKENS.icon}
-    style={{ marginRight: isTiny ? 6 : 8 }}
-  />
-
-  <View style={s.pillTextWrap}>
-    <Text
-      style={[s.pillText, { color: TOKENS.icon, fontSize: TYPO.pill }]}
-      numberOfLines={1}
-      adjustsFontSizeToFit
-      minimumFontScale={0.72}   // ✅ plus bas = 1 ligne garantie
-      ellipsizeMode="tail"      // ✅ si même le fit ne suffit pas
-    >
-      {rightPill}
-    </Text>
-  </View>
-</View>
-
-</View>
-
-
-        {/* Title */}
-                <Text style={[s.title, { color: TOKENS.text, fontSize: TYPO.title }]}
+        {/* ─── Title ───────────────────────────────────────────────────── */}
+        <Text
+          style={[s.title, { color: TOKENS.text, fontSize: TYPO.title }]}
           numberOfLines={2}
           adjustsFontSizeToFit
           minimumFontScale={0.88}
         >
-
           {displayTitle}
         </Text>
 
         <Text
           style={[
-    s.sub,
-    {
-      color: TOKENS.subText,
-      fontSize: TYPO.sub,
-      lineHeight: Math.round(TYPO.sub * 1.35),
-    },
-  ]}
+            s.sub,
+            {
+              color: TOKENS.subText,
+              fontSize: TYPO.sub,
+              lineHeight: Math.round(TYPO.sub * 1.35),
+            },
+          ]}
           numberOfLines={2}
           adjustsFontSizeToFit
           minimumFontScale={0.92}
@@ -597,36 +663,67 @@ const pillIcon = normalize(isTiny ? 13 : 14);
           {displaySub}
         </Text>
 
-        {/* ✅ WHY RETURN (bonus) — “perte évitée” / “partner t’attend” / “trophée proche” */}
+        {/* ─── WHY RETURN — variant-colored ────────────────────────────── */}
         {!!whyReturn?.text && (
           <Animated.View
             style={[
               s.whyWrap,
               whyReturnStyle,
               {
-                borderColor: TOKENS.whyBorder,
+                borderColor: isDarkMode
+                  ? "rgba(255,255,255,0.10)"
+                  : "rgba(2,6,23,0.07)",
                 backgroundColor: TOKENS.whyBg,
                 borderRadius: normalize(isTiny ? 16 : isTablet ? 20 : 18),
               },
             ]}
           >
-            {/* glow ultra subtil */}
+            {/* ✨ IMPROVED: variant-aware glow */}
             <LinearGradient
               pointerEvents="none"
-              colors={[TOKENS.whyGlowA, "rgba(0,0,0,0)", TOKENS.whyGlowB]}
+              colors={[whyColors.glowA, "rgba(0,0,0,0)", whyColors.glowB]}
               start={{ x: 0, y: 0 }}
               end={{ x: 1, y: 1 }}
               style={StyleSheet.absoluteFill}
             />
 
-            <View style={s.whyRow}>
-              <View style={s.whyIconPill}>
-                <Ionicons name={whyReturnIcon as any} size={normalize(isTiny ? 16 : 18)} color={TOKENS.whyIcon} />
+            {/* ✨ NEW: left accent bar per variant */}
+            <View
+              pointerEvents="none"
+              style={[
+                s.whyLeftBar,
+                {
+                  backgroundColor: whyColors.leftBar,
+                  borderRadius: normalize(2),
+                },
+              ]}
+            />
+
+            <View style={[s.whyRow, { paddingLeft: normalize(10) }]}>
+              {/* ✨ IMPROVED: colored icon pill per variant */}
+              <View
+                style={[
+                  s.whyIconPill,
+                  {
+                    backgroundColor: whyColors.iconBg,
+                    borderWidth: TOKENS.hairline,
+                    borderColor: whyColors.iconBorder,
+                  },
+                ]}
+              >
+                <Ionicons
+                  name={whyReturnIcon as any}
+                  size={normalize(isTiny ? 16 : 18)}
+                  color={whyColors.iconColor}
+                />
               </View>
               <Text
                 style={[
                   s.whyText,
-                  { color: TOKENS.whyText, fontSize: normalize(isTiny ? 12.5 : isTablet ? 13.5 : 13) },
+                  {
+                    color: TOKENS.whyText,
+                    fontSize: normalize(isTiny ? 12.5 : isTablet ? 13.5 : 13),
+                  },
                 ]}
                 numberOfLines={2}
                 adjustsFontSizeToFit
@@ -638,26 +735,26 @@ const pillIcon = normalize(isTiny ? 13 : 14);
           </Animated.View>
         )}
 
-        {/* Hub preview (tap to open) */}
+        {/* ─── Hub preview (tap to open) ───────────────────────────────── */}
         {!!hubMeta?.title && (
           <Pressable
             onPress={() => {
-    hapticTap("selection");
-    onOpenHub();
-  }}
-  style={({ pressed }) => [
-    s.preview,
-    {
-      borderColor: TOKENS.border,
-      backgroundColor: TOKENS.surface2,
-      borderRadius: UI.previewR,
+              hapticTap("selection");
+              onOpenHub();
+            }}
+            style={({ pressed }) => [
+              s.preview,
+              {
+                borderColor: TOKENS.border,
+                backgroundColor: TOKENS.surface2,
+                borderRadius: UI.previewR,
                 paddingVertical: UI.previewPadY,
                 paddingHorizontal: UI.previewPadX,
-    },
-    pressFx(pressed, 0.993),
-  ]}
+              },
+              pressFx(pressed, 0.993),
+            ]}
           >
-                        <View
+            <View
               pointerEvents="none"
               style={[
                 s.previewRim,
@@ -670,107 +767,144 @@ const pillIcon = normalize(isTiny ? 13 : 14);
             />
 
             {hubMeta?.imageUrl ? (
-  <View
-    style={[
-      s.previewThumbWrap,
-      {
-        borderColor: TOKENS.thumbBorder,
-        backgroundColor: TOKENS.thumbBg,
-        width: UI.thumb,
+              <View
+                style={[
+                  s.previewThumbWrap,
+                  {
+                    borderColor: TOKENS.thumbBorder,
+                    backgroundColor: TOKENS.thumbBg,
+                    width: UI.thumb,
                     height: UI.thumb,
                     borderRadius: UI.thumbR,
-
-      },
-    ]}
-  >
-       <ExpoImage
-  source={{ uri: getThumbUrl200(hubMeta.imageUrl) || hubMeta.imageUrl }}
-  style={{ width: "100%", height: "100%" }}
-  contentFit="cover"
-  transition={120}
-  cachePolicy="memory-disk"
-/>
-
-  </View>
-) : (
-  <View
-    style={[
-      s.previewThumbWrap,
-      {
-        borderColor: TOKENS.thumbBorder,
-        backgroundColor: TOKENS.thumbBg,
-        width: UI.thumb,
+                  },
+                ]}
+              >
+                <ExpoImage
+                  source={{ uri: getThumbUrl200(hubMeta.imageUrl) || hubMeta.imageUrl }}
+                  style={{ width: "100%", height: "100%" }}
+                  contentFit="cover"
+                  transition={120}
+                  cachePolicy="memory-disk"
+                />
+              </View>
+            ) : (
+              <View
+                style={[
+                  s.previewThumbWrap,
+                  {
+                    borderColor: TOKENS.thumbBorder,
+                    backgroundColor: TOKENS.thumbBg,
+                    width: UI.thumb,
                     height: UI.thumb,
                     borderRadius: UI.thumbR,
-
-      },
-    ]}
-  >
-        <View
-      pointerEvents="none"
-      style={[
-        s.thumbRim,
-         {
+                  },
+                ]}
+              >
+                <View
+                  pointerEvents="none"
+                  style={[
+                    s.thumbRim,
+                    {
                       borderColor: TOKENS.thumbBorder,
                       borderWidth: TOKENS.hairline,
                       borderRadius: UI.thumbR,
                     },
-      ]}
-    />
-
-    <Ionicons
-      name="sparkles-outline"
-      size={normalize(Math.max(16, Math.round(UI.thumb * 0.42)))}
-      color={isDarkMode ? "rgba(226,232,240,0.85)" : "rgba(2,6,23,0.75)"}
-    />
-  </View>
-)}
+                  ]}
+                />
+                <Ionicons
+                  name="sparkles-outline"
+                  size={normalize(Math.max(16, Math.round(UI.thumb * 0.42)))}
+                  color={isDarkMode ? "rgba(226,232,240,0.85)" : "rgba(2,6,23,0.75)"}
+                />
+              </View>
+            )}
 
             <View style={{ flex: 1, minWidth: 0, marginRight: normalize(10) }}>
               <Text
-                 style={[s.previewTitle, { color: TOKENS.text, fontSize: TYPO.previewTitle }]}
-                numberOfLines={1}
+                style={[s.previewTitle, { color: TOKENS.text, fontSize: TYPO.previewTitle }]}
+                numberOfLines={2}
                 adjustsFontSizeToFit
-                minimumFontScale={0.90}
+                minimumFontScale={0.88}
               >
                 {hubMeta.title}
               </Text>
 
               {!!hubDescription && (
-                                <Text
+                <Text
                   style={[
                     s.previewDesc,
                     {
-                       color: TOKENS.mutedText,
+                      color: TOKENS.mutedText,
                       fontSize: TYPO.previewDesc,
-                      lineHeight: Math.round(TYPO.previewDesc * 1.25),
+                      lineHeight: Math.round(TYPO.previewDesc * 1.35),
                     },
                   ]}
-                  numberOfLines={1}
+                  numberOfLines={2}
                   adjustsFontSizeToFit
-                  minimumFontScale={0.92}
+                  minimumFontScale={0.90}
                 >
-
                   {hubDescription}
                 </Text>
               )}
 
-               <View style={[s.progressTrack, { backgroundColor: TOKENS.track, height: UI.trackH }]}>
-
-                <View
-  style={[
-    s.progressFill,
-    {
-      width: `${Math.round(Math.max(0, Math.min(1, progressPct)) * 100)}%`,
-      backgroundColor: TOKENS.progressFill,
-      height: UI.trackH,
-    },
-  ]}
-/>
+              {/* ✨ IMPROVED: progress bar with gradient fill + animated tip glow */}
+              <View style={[s.progressTrack, { backgroundColor: TOKENS.track, height: UI.trackH }]}>
+                <LinearGradient
+                  colors={[TOKENS.progressFill, TOKENS.progressFillEnd]}
+                  start={{ x: 0, y: 0 }}
+                  end={{ x: 1, y: 0 }}
+                  style={[
+                    s.progressFillGrad,
+                    {
+                      width: `${Math.round(Math.max(0, Math.min(1, progressPct)) * 100)}%`,
+                      height: UI.trackH,
+                    },
+                  ]}
+                />
+                {/* ✨ NEW: glowing tip on progress bar */}
+                {progressPct > 0.04 && progressPct < 0.98 && (
+                  <Animated.View
+                    pointerEvents="none"
+                    style={[
+                      s.progressTip,
+                      progressGlowStyle,
+                      {
+                        left: `${Math.round(Math.max(0, Math.min(1, progressPct)) * 100)}%`,
+                        backgroundColor: TOKENS.progressFillEnd,
+                        width: normalize(isTiny ? 8 : 10),
+                        height: normalize(isTiny ? 8 : 10),
+                        borderRadius: normalize(999),
+                        marginLeft: -normalize(isTiny ? 4 : 5),
+                        top: -(normalize(isTiny ? 8 : 10) - UI.trackH) / 2,
+                        shadowColor: TOKENS.progressFillEnd,
+                        shadowOpacity: 0.80,
+                        shadowRadius: normalize(6),
+                        shadowOffset: { width: 0, height: 0 },
+                        elevation: 4,
+                      },
+                    ]}
+                  />
+                )}
               </View>
+
+              {/* ✨ NEW: progress % label */}
+              {progressPct > 0 && (
+                <Text
+                  style={[
+                    s.progressLabel,
+                    {
+                      color: TOKENS.mutedText,
+                      fontSize: normalize(isTiny ? 10 : 11),
+                      marginTop: normalize(4),
+                    },
+                  ]}
+                >
+                  {progressLabel}
+                </Text>
+              )}
             </View>
 
-                        <View
+            <View
               style={[
                 s.previewChevron,
                 {
@@ -787,11 +921,10 @@ const pillIcon = normalize(isTiny ? 13 : 14);
                 color={TOKENS.chevron}
               />
             </View>
-
           </Pressable>
         )}
 
-        {/* ✅ PRIMARY ACTION */}
+        {/* ─── PRIMARY ACTION ──────────────────────────────────────────── */}
         {primaryMode === "duoPending" ? (
           <View style={s.pendingWrap}>
             <Pressable
@@ -802,10 +935,9 @@ const pillIcon = normalize(isTiny ? 13 : 14);
               }}
               accessibilityRole="button"
               accessibilityLabel={pendingA11y}
-              accessibilityHint={t("homeZ.duoPending.hint", { defaultValue: "Open to prepare your Duo while waiting." })}
               style={({ pressed }) => [
                 s.pendingCard,
-               {
+                {
                   borderColor: TOKENS.border,
                   backgroundColor: TOKENS.surface2,
                   borderRadius: UI.cardR,
@@ -816,7 +948,6 @@ const pillIcon = normalize(isTiny ? 13 : 14);
                 pressFx(pressed, 0.992),
               ]}
             >
-              {/* ✅ internal rim (premium) */}
               <View
                 pointerEvents="none"
                 style={[
@@ -826,14 +957,15 @@ const pillIcon = normalize(isTiny ? 13 : 14);
               />
               <View style={s.pendingRow}>
                 <View style={[s.pendingCircleBox, { width: UI.iconBox, height: UI.iconBox }]}>
-                  {/* ✅ breathing orb (compact) */}
                   <Animated.View
                     pointerEvents="none"
                     style={[
                       s.pendingAura,
                       auraStyle,
-                      { backgroundColor: isDarkMode ? "rgba(99,102,241,0.16)" : "rgba(99,102,241,0.10)",
-                        width: UI.aura, height: UI.aura, borderRadius: 999 },
+                      {
+                        backgroundColor: isDarkMode ? "rgba(99,102,241,0.16)" : "rgba(99,102,241,0.10)",
+                        width: UI.aura, height: UI.aura, borderRadius: 999,
+                      },
                     ]}
                   />
                   <Animated.View
@@ -841,8 +973,10 @@ const pillIcon = normalize(isTiny ? 13 : 14);
                     style={[
                       s.pendingBreath,
                       breathStyle,
-                       { backgroundColor: isDarkMode ? "rgba(167,139,250,0.18)" : "rgba(167,139,250,0.12)",
-                         width: UI.sheen, height: UI.sheen, borderRadius: 999 },
+                      {
+                        backgroundColor: isDarkMode ? "rgba(167,139,250,0.18)" : "rgba(167,139,250,0.12)",
+                        width: UI.sheen, height: UI.sheen, borderRadius: 999,
+                      },
                     ]}
                   />
                   <Animated.View
@@ -852,9 +986,7 @@ const pillIcon = normalize(isTiny ? 13 : 14);
                       ringStyle,
                       {
                         borderColor: isDarkMode ? "rgba(167,139,250,0.55)" : "rgba(99,102,241,0.42)",
-                        width: UI.ring,
-                        height: UI.ring,
-                        borderRadius: 999,
+                        width: UI.ring, height: UI.ring, borderRadius: 999,
                       },
                     ]}
                   />
@@ -863,18 +995,13 @@ const pillIcon = normalize(isTiny ? 13 : 14);
                     colors={["#6366F1", "#A78BFA"]}
                     start={{ x: 0, y: 0 }}
                     end={{ x: 1, y: 1 }}
-                    style={[
-                      s.pendingCircle,
-                      { width: UI.orb, height: UI.orb, borderRadius: 999 },
-                    ]}
+                    style={[s.pendingCircle, { width: UI.orb, height: UI.orb, borderRadius: 999 }]}
                   >
                     <Ionicons name="hourglass-outline" size={UI.hourglass} color="#0B1120" />
                   </LinearGradient>
                 </View>
 
                 <View style={s.pendingCopy}>
-
-{/* ✅ Info (non action) — 1 seule fois ici */}
                   <Text
                     style={[
                       s.pendingMicro,
@@ -891,7 +1018,6 @@ const pillIcon = normalize(isTiny ? 13 : 14);
                     {pendingSub}
                   </Text>
 
-                  {/* ✅ Action row: spacer + chip */}
                   <View style={s.pendingCtaRow}>
                     <View style={{ flex: 1 }} />
                     <View
@@ -903,8 +1029,7 @@ const pillIcon = normalize(isTiny ? 13 : 14);
                           paddingHorizontal: UI.ctaPadX,
                         },
                       ]}
-                    >                  
-
+                    >
                       <Text
                         style={[s.pendingChipText, { fontSize: TYPO.pendingLabel }]}
                         numberOfLines={1}
@@ -921,26 +1046,31 @@ const pillIcon = normalize(isTiny ? 13 : 14);
             </Pressable>
           </View>
         ) : (
+          /* ✨ IMPROVED: primary CTA with shine sweep + stronger shadow */
           <Pressable
-          ref={primaryCtaRef as any}
+            ref={primaryCtaRef as any}
             onPress={() => {
-    hapticTap("light");
-    onPrimaryPress();
-  }}
+              hapticTap("light");
+              onPrimaryPress();
+            }}
             accessibilityRole="button"
             style={({ pressed }) => [
-    s.primaryBtn,
-    s.shadowSoft,
-    primaryAnimatedStyle as any,
-    {
+              s.primaryBtn,
+              s.shadowSoft,
+              primaryAnimatedStyle as any,
+              {
                 borderRadius: UI.primaryR,
                 marginBottom: normalize(10),
+                shadowColor: effectivePrimaryGradient[0],
+                shadowOpacity: 0.45,
+                shadowRadius: normalize(18),
+                shadowOffset: { width: 0, height: normalize(6) },
               },
-    pressFx(pressed, 0.990),
-  ]}
+              pressFx(pressed, 0.990),
+            ]}
           >
             <LinearGradient
-             colors={[effectivePrimaryGradient[0], effectivePrimaryGradient[1]]}
+              colors={[effectivePrimaryGradient[0], effectivePrimaryGradient[1]]}
               start={{ x: 0, y: 0 }}
               end={{ x: 1, y: 1 }}
               style={[
@@ -952,89 +1082,132 @@ const pillIcon = normalize(isTiny ? 13 : 14);
                 },
               ]}
             >
-                            <Text
+              {/* ✨ NEW: top shine (static) */}
+              <LinearGradient
+                colors={["rgba(255,255,255,0.20)", "rgba(255,255,255,0.00)"]}
+                start={{ x: 0, y: 0 }}
+                end={{ x: 0, y: 1 }}
+                style={[StyleSheet.absoluteFill, { borderRadius: UI.primaryR }]}
+                pointerEvents="none"
+              />
+
+              {/* ✨ NEW: shine sweep (animated) on mark mode */}
+              {isMark && (
+                <Animated.View
+                  pointerEvents="none"
+                  style={[
+                    s.ctaShineSweep,
+                    ctaShineStyle,
+                    { borderRadius: UI.primaryR },
+                  ]}
+                />
+              )}
+
+              <Text
                 style={[s.primaryText, { fontSize: TYPO.primary }]}
                 numberOfLines={1}
                 adjustsFontSizeToFit
                 minimumFontScale={0.90}
               >
-
                 {primaryLabel}
               </Text>
-              <Ionicons name={primaryIcon as any} size={normalize(isTiny ? 18 : 20)} color="#0B1120" />
+              <Ionicons
+                name={primaryIcon as any}
+                size={normalize(isTiny ? 18 : 20)}
+                color="#0B1120"
+              />
             </LinearGradient>
           </Pressable>
         )}
 
-        {/* Secondary actions */}
+        {/* ─── Secondary actions ───────────────────────────────────────── */}
         <View style={s.secondaryRow}>
           {showSoloLink && (
-            <Pressable onPress={() => {
-   hapticTap("selection");
-   onPickSolo();
- }}
- style={({ pressed }) => [s.linkBtn, pressed && { opacity: 0.70 }]}>
-              <Text  style={[s.linkText, { color: TOKENS.mutedText, fontSize: TYPO.link }]}>
+            <Pressable
+              onPress={() => {
+                hapticTap("selection");
+                onPickSolo();
+              }}
+              style={({ pressed }) => [s.linkBtn, pressed && { opacity: 0.70 }]}
+            >
+              <Text style={[s.linkText, { color: TOKENS.mutedText, fontSize: TYPO.link }]}>
                 {t("homeZ.todayHub.continueSolo", { defaultValue: "Continuer en solo" })}
               </Text>
             </Pressable>
           )}
 
+          {/* ✨ IMPROVED: create card with subtle gradient */}
           <Pressable
             onPress={() => {
-   hapticTap("selection");
-   onCreate();
- }}
- style={({ pressed }) => [
-   s.createCard,
-   {
+              hapticTap("selection");
+              onCreate();
+            }}
+            style={({ pressed }) => [
+              s.createCard,
+              {
                 borderColor: TOKENS.border,
                 backgroundColor: TOKENS.surface2,
                 borderRadius: UI.createR,
                 paddingVertical: UI.createPadY,
                 paddingHorizontal: UI.createPadX,
               },
-   pressFx(pressed, 0.993),
- ]}
+              pressFx(pressed, 0.993),
+            ]}
           >
+            {/* ✨ NEW: subtle top gradient tint on create card */}
+            <LinearGradient
+              colors={
+                isDarkMode
+                  ? ["rgba(249,115,22,0.06)", "rgba(0,0,0,0.00)"]
+                  : ["rgba(249,115,22,0.04)", "rgba(255,255,255,0.00)"]
+              }
+              start={{ x: 0.5, y: 0 }}
+              end={{ x: 0.5, y: 1 }}
+              style={[StyleSheet.absoluteFill, { borderRadius: UI.createR }]}
+              pointerEvents="none"
+            />
+
             <View
               style={[
                 s.createIcon,
                 {
-                  borderColor: TOKENS.thumbBorder,
-                  backgroundColor: TOKENS.thumbBg,
+                  borderColor: "rgba(249,115,22,0.30)",
+                  backgroundColor: "rgba(249,115,22,0.10)",
                   width: UI.createIcon,
                   height: UI.createIcon,
                   borderRadius: 999,
+                  borderWidth: 1.5,
                 },
               ]}
             >
-               <Ionicons name="add" size={normalize(isTiny ? 16 : 18)} color={isDarkMode ? "#F8FAFC" : "#0B1120"} />
+              <Ionicons
+                name="add"
+                size={normalize(isTiny ? 16 : 18)}
+                color={isDarkMode ? "#F8FAFC" : "#0B1120"}
+              />
             </View>
 
-           <Text
-  style={[s.createTitle, { color: TOKENS.text, fontSize: TYPO.createTitle }]}
-  numberOfLines={1}
-  adjustsFontSizeToFit
-  minimumFontScale={0.90}
->
-
+            <Text
+              style={[s.createTitle, { color: TOKENS.text, fontSize: TYPO.createTitle }]}
+              numberOfLines={1}
+              adjustsFontSizeToFit
+              minimumFontScale={0.90}
+            >
               {t("homeZ.todayHub.create", { defaultValue: "Créer" })}
             </Text>
             <Text
-  style={[
-    s.createSub,
-    {
-      color: TOKENS.mutedText,
-      fontSize: TYPO.createSub,
-      lineHeight: Math.round(TYPO.createSub * 1.25),
-    },
-  ]}
-  numberOfLines={1}
-  adjustsFontSizeToFit
-  minimumFontScale={0.90}
->
-
+              style={[
+                s.createSub,
+                {
+                  color: TOKENS.mutedText,
+                  fontSize: TYPO.createSub,
+                  lineHeight: Math.round(TYPO.createSub * 1.25),
+                },
+              ]}
+              numberOfLines={1}
+              adjustsFontSizeToFit
+              minimumFontScale={0.90}
+            >
               {t("homeZ.todayHub.createSub", { defaultValue: "Ton défi, tes règles." })}
             </Text>
           </Pressable>
@@ -1045,16 +1218,22 @@ const pillIcon = normalize(isTiny ? 13 : 14);
 }
 
 const s = StyleSheet.create({
-    shell: {
+  outerWrapper: {
+    width: "100%",
+    alignItems: "center",
+    paddingTop: 14,
+    paddingBottom: 4,
+  },
+  shell: {
     width: "100%",
     position: "relative",
     borderWidth: 0,
     borderRadius: 26,
     padding: 16,
     marginBottom: 0,
-    overflow: "visible", // ✅ autorise le breathing halo
+    overflow: "visible",
   },
-    pendingAura: {
+  pendingAura: {
     position: "absolute",
     width: 106,
     height: 106,
@@ -1064,19 +1243,17 @@ const s = StyleSheet.create({
     ...StyleSheet.absoluteFillObject,
   },
   shadowSoft: {
-    
-  ...Platform.select({
-    ios: {
-      shadowColor: "#000",
-      shadowOpacity: 0.12,
-shadowRadius: 22,
-      shadowOffset: { width: 0, height: 10 },
-    },
-    android: { elevation: 12 },
-    default: {},
-    
-  }),
-},
+    ...Platform.select({
+      ios: {
+        shadowColor: "#000",
+        shadowOpacity: 0.14,
+        shadowRadius: 24,
+        shadowOffset: { width: 0, height: 12 },
+      },
+      android: { elevation: 14 },
+      default: {},
+    }),
+  },
   pendingBreath: {
     position: "absolute",
     width: 92,
@@ -1084,36 +1261,35 @@ shadowRadius: 22,
     borderRadius: 999,
   },
   pillsRow: {
-  flexDirection: "row",
-  alignItems: "center",
-  flexWrap: "nowrap",     // ✅ JAMAIS de 2e ligne
-  marginBottom: 12,
-  marginLeft: 10, 
-},
-pill: {
-  flexDirection: "row",
-  alignItems: "center",
-  borderRadius: 999,
-  paddingVertical: 7,
-  paddingHorizontal: 12,
-  minHeight: 32,
-
-  flexShrink: 1,   // ✅ la pill peut shrink
-  minWidth: 0,     // ✅ CRITIQUE Android
-},
-pillLeft: {
-  flexShrink: 0,         // ✅ garde sa forme
-  maxWidth: "45%",       // ✅ limite stricte (sinon elle bouffe tout)
-},
-pillRight: {
-  flexGrow: 1,           // ✅ prend le reste
-  flexShrink: 1,
-  minWidth: 0,           // ✅ CRITIQUE
-},
-pillTextWrap: {
-  flex: 1,
-  minWidth: 0,           // ✅ CRITIQUE
-},
+    flexDirection: "row",
+    alignItems: "center",
+    flexWrap: "nowrap",
+    marginBottom: 12,
+    marginLeft: 10,
+  },
+  pill: {
+    flexDirection: "row",
+    alignItems: "center",
+    borderRadius: 999,
+    paddingVertical: 7,
+    paddingHorizontal: 12,
+    minHeight: 32,
+    flexShrink: 1,
+    minWidth: 0,
+  },
+  pillLeft: {
+    flexShrink: 0,
+    maxWidth: "45%",
+  },
+  pillRight: {
+    flexGrow: 1,
+    flexShrink: 1,
+    minWidth: 0,
+  },
+  pillTextWrap: {
+    flex: 1,
+    minWidth: 0,
+  },
   pillText: {
     fontSize: 13,
     fontFamily: F.bold,
@@ -1130,26 +1306,37 @@ pillTextWrap: {
     fontFamily: F.regular,
     marginBottom: 14,
   },
+  // ✨ IMPROVED: whyWrap with left bar
   whyWrap: {
     width: "100%",
     borderWidth: 1,
     overflow: "hidden",
     marginBottom: 12,
     paddingVertical: 10,
-    paddingHorizontal: 12,
+    paddingRight: 12,
+    paddingLeft: 0,         // left bar handles the left edge
+    flexDirection: "row",
+    alignItems: "stretch",
+  },
+  // ✨ NEW: left accent bar
+  whyLeftBar: {
+    width: 3,
+    alignSelf: "stretch",
+    marginRight: 0,
+    borderRadius: 2,
   },
   whyRow: {
+    flex: 1,
     flexDirection: "row",
     alignItems: "center",
     gap: 10,
   },
   whyIconPill: {
-    width: 30,
-    height: 30,
+    width: 32,
+    height: 32,
     borderRadius: 999,
     alignItems: "center",
     justifyContent: "center",
-    backgroundColor: "rgba(255,255,255,0.04)",
   },
   whyText: {
     flex: 1,
@@ -1158,17 +1345,19 @@ pillTextWrap: {
     letterSpacing: -0.2,
   },
   preview: {
-     width: "100%",
-     borderWidth: 0,
-     flexDirection: "row",
-     alignItems: "center",
-     marginBottom: 14,
-   },
+    width: "100%",
+    borderWidth: 0,
+    flexDirection: "row",
+    alignItems: "flex-start",   // top-align so chevron stays at top with multi-line title
+    marginBottom: 14,
+    overflow: "hidden",
+  },
   previewTitle: {
     fontSize: 18,
     fontFamily: F.bold,
     letterSpacing: -0.2,
     marginBottom: 4,
+    lineHeight: 22,
   },
   previewDesc: {
     fontSize: 14,
@@ -1176,23 +1365,37 @@ pillTextWrap: {
     marginBottom: 10,
   },
   previewThumbWrap: {
-  borderWidth: 0,
-  overflow: "hidden",
-  alignItems: "center",
-  justifyContent: "center",
-  backgroundColor: "transparent",
-},
-previewThumb: {
-  width: "100%",
-  height: "100%",
-},
+    borderWidth: 0,
+    overflow: "hidden",
+    alignItems: "center",
+    justifyContent: "center",
+    backgroundColor: "transparent",
+    marginRight: 12,
+    alignSelf: "flex-start",   // top-align with multi-line title
+    flexShrink: 0,
+  },
+  previewThumb: {
+    width: "100%",
+    height: "100%",
+  },
+  // ✨ IMPROVED: progress track with gradient fill
   progressTrack: {
     borderRadius: 999,
-    overflow: "hidden",
+    overflow: "visible",        // visible so tip glow can bleed out
+    position: "relative",
   },
-  progressFill: {
-  borderRadius: 999,
-},
+  progressFillGrad: {
+    borderRadius: 999,
+  },
+  // ✨ NEW: glowing tip at progress head
+  progressTip: {
+    position: "absolute",
+  },
+  // ✨ NEW: progress label
+  progressLabel: {
+    fontFamily: F.bold,
+    letterSpacing: 0.2,
+  },
   primaryBtn: {
     width: "100%",
     overflow: "hidden",
@@ -1201,6 +1404,7 @@ previewThumb: {
     flexDirection: "row",
     alignItems: "center",
     justifyContent: "space-between",
+    overflow: "hidden",
   },
   primaryText: {
     fontSize: 20,
@@ -1211,7 +1415,16 @@ previewThumb: {
     textShadowOffset: { width: 0, height: 1 },
     textShadowRadius: 6,
   },
-    shellRim: {
+  // ✨ NEW: CTA shine sweep
+  ctaShineSweep: {
+    position: "absolute",
+    top: 0,
+    bottom: 0,
+    width: 60,
+    backgroundColor: "rgba(255,255,255,0.22)",
+    transform: [{ skewX: "-18deg" }],
+  },
+  shellRim: {
     position: "absolute",
     top: 0,
     left: 0,
@@ -1219,7 +1432,6 @@ previewThumb: {
     bottom: 0,
     borderRadius: 26,
   },
-
   previewRim: {
     position: "absolute",
     top: 0,
@@ -1227,7 +1439,6 @@ previewThumb: {
     right: 0,
     bottom: 0,
   },
-
   thumbRim: {
     position: "absolute",
     top: 0,
@@ -1235,7 +1446,6 @@ previewThumb: {
     right: 0,
     bottom: 0,
   },
-
   pendingWrap: {
     width: "100%",
     alignItems: "center",
@@ -1281,14 +1491,12 @@ previewThumb: {
     height: 82,
     borderRadius: 999,
   },
-    shellHighlight: {
+  shellHighlight: {
     position: "absolute",
     top: 0,
     left: 0,
     right: 0,
     height: "52%",
-    borderTopLeftRadius: 26,
-    borderTopRightRadius: 26,
     borderWidth: 1,
     opacity: 0.55,
   },
@@ -1296,69 +1504,12 @@ previewThumb: {
     borderRadius: 999,
     alignItems: "center",
     justifyContent: "center",
+    alignSelf: "center",   // stay centered vertically regardless of title line count
+    flexShrink: 0,
   },
-  pendingTextBlock: {
-    width: "100%",
-    alignItems: "center",
-    paddingHorizontal: 6,
-  },
-  pendingStepsRow: {
-    marginTop: 8,
-    flexDirection: "row",
-    flexWrap: "nowrap",
-    alignItems: "center",
-    justifyContent: "center",
-    gap: 6,
-  },
-  stepDot: {
-    width: 6,
-    height: 6,
-    borderRadius: 999,
-  },
-  stepText: {
-    fontFamily: F.regular,
-    fontSize: 11,
-  },
-  stepSep: {
-    fontFamily: F.bold,
-    fontSize: 12,
-    marginHorizontal: 2,
-  },
-  pendingCtaHint: {
-    fontFamily: F.bold,
-    fontSize: 12,
-    letterSpacing: 0.2,
-  },
-pendingCopy: {
+  pendingCopy: {
     flex: 1,
     minWidth: 0,
-  },
-  pendingCtaChip: {
-    flexDirection: "row",
-    alignItems: "center",
-    gap: 8,
-    borderRadius: 999,
-    paddingHorizontal: 12,
-    paddingVertical: 8,
-    backgroundColor: "#A78BFA",
-  },
-  pendingCtaChipText: {
-    fontFamily: F.bold,
-    fontSize: 13,
-    color: "#0B1120",
-    letterSpacing: 0.2,
-  },
-  pendingLabel: {
-    fontFamily: F.bold,
-    letterSpacing: -0.2,
-  },
-  pendingMicro: {
-    marginTop: 2,
-    fontFamily: F.regular,
-  },
-  secondaryRow: {
-    marginTop: 4,
-    alignItems: "center",
   },
   pendingCtaRow: {
     marginTop: 10,
@@ -1366,11 +1517,6 @@ pendingCopy: {
     alignItems: "center",
     justifyContent: "space-between",
     gap: 10,
-  },
-  pendingTapText: {
-    fontFamily: F.bold,
-    fontSize: 12,
-    letterSpacing: 0.2,
   },
   pendingChip: {
     flexDirection: "row",
@@ -1387,6 +1533,18 @@ pendingCopy: {
     color: "#0B1120",
     letterSpacing: 0.2,
   },
+  pendingMicro: {
+    marginTop: 2,
+    fontFamily: F.regular,
+  },
+  pendingLabel: {
+    fontFamily: F.bold,
+    letterSpacing: -0.2,
+  },
+  secondaryRow: {
+    marginTop: 4,
+    alignItems: "center",
+  },
   linkBtn: {
     paddingVertical: 10,
   },
@@ -1400,13 +1558,13 @@ pendingCopy: {
     borderWidth: 1,
     alignItems: "center",
     marginTop: 10,
+    overflow: "hidden",
   },
   createIcon: {
     borderRadius: 999,
     alignItems: "center",
     justifyContent: "center",
     marginBottom: 6,
-    borderWidth: 1.5,
   },
   createTitle: {
     fontSize: 22,

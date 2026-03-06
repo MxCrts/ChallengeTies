@@ -317,7 +317,7 @@
     "title": "새 소식",
     "description": "다음 기능에 투표하거나 너의 아이디어를 제안해봐. 결과는 2월 말 공개!",
 
-    "heroTitle": "2월 말에 추가될 새 기능에 투표해줘 🚀",
+    "heroTitle": "3월 말에 출시될 업데이트에 투표하세요 🚀",
     "heroSubtitle": "네 목소리가 중요해: 제안하고, 투표하고, 진행 상황을 확인해.",
 
     "voteCloses": "투표 종료까지",
@@ -337,6 +337,16 @@
       "footer": "곧 투표가 끝나요 — 네 목소리가 중요해 ✨"
     }
   },
+  "invite": {
+      "bootTitle": "초대장을 준비 중…",
+      "bootSubtitle": "앱을 닫지 마세요, 챌린지를 설정하고 있습니다.",
+      "bootStep1": "초대장 확인 중",
+      "bootStep2": "챌린지 불러오는 중",
+      "bootStep3": "시작할 준비 완료",
+      "bootStep1Done": "확인됨",
+      "bootStep2Done": "불러옴",
+      "bootStep3Done": "시작하자!"
+    },
 
   "permissionDenied": "권한이 거부되었습니다",
   "mustAllowNotifications": "알림을 받으려면 알림 권한을 허용해야 합니다.",
@@ -379,7 +389,8 @@
   "login": "로그인",
   "noAccount": "계정이 없으신가요?",
   "signupHere": "여기서 가입하기",
-  "appTagline": "미래를 예측하는 가장 좋은 방법은 스스로 만드는 것이다",
+  "appTagline": "혼자 포기하지 마.",
+  "or": "또는",
   "enterYourEmail": "이메일을 입력하세요.",
   "resetLinkSent": "비밀번호 재설정 링크가 이메일로 전송되었습니다.",
   "resetLinkFailed": "링크 전송 실패. 이메일을 확인하세요.",
@@ -413,7 +424,7 @@
   "emailAlreadyInUse": "이미 사용 중인 이메일입니다.",
   "weakPassword": "비밀번호가 너무 약합니다. 더 강력한 비밀번호를 사용하세요.",
   "anErrorOccurred": "오류가 발생했습니다. 다시 시도하세요.",
-  "joinUsAndChallenge": "함께 도전해요!",
+  "joinUsAndChallenge": "혼자 포기하지 마.",
   "yourEmail": "이메일",
   "username": "사용자 이름",
   "password": "비밀번호",
@@ -4742,7 +4753,7 @@
     "duoTitle": "듀오",
     "duoOfflineLine": "초대하려면 연결이 필요해요.",
     "soloTitle": "솔로",
-    "soloDesc": "즉시 시작, 초대 없음.",
+    "soloDesc": "지금 시작해. 나중에 친구를 초대할 수 있어.",
     "hintDuo": "바로 친구를 초대하세요.",
     "hintDuoOffline": "인터넷 필요.",
     "hintSolo": "바로 시작해요."

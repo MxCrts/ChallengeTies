@@ -5,7 +5,6 @@ import {
   View,
   Text,
   StyleSheet,
-  Dimensions,
   Platform,
   ScrollView,
   Pressable,
@@ -15,6 +14,7 @@ import {
 import { Ionicons } from "@expo/vector-icons";
 import Animated, {
   FadeInUp,
+  FadeInDown,
   FadeOut,
   ZoomIn,
   ZoomOut,
@@ -24,7 +24,10 @@ import Animated, {
   withSequence,
   withTiming,
   withSpring,
+  withDelay,
   Easing,
+  interpolate,
+  interpolateColor,
 } from "react-native-reanimated";
 import { useTranslation } from "react-i18next";
 import { useTheme } from "../context/ThemeContext";
@@ -35,7 +38,7 @@ import LottieView from "lottie-react-native";
 import type { ViewStyle } from "react-native";
 import ConfettiCannon from "react-native-confetti-cannon";
 import { BlurView } from "expo-blur";
-
+import { LinearGradient } from "expo-linear-gradient";
 
 export type WelcomeRewardKind = "trophies" | "streakPass" | "premium";
 type WelcomeBonusReward = {
@@ -44,380 +47,490 @@ type WelcomeBonusReward = {
   days?: number;
 };
 
-/**
- * Mapping fixe des 7 jours
- */
 const WELCOME_REWARDS: WelcomeBonusReward[] = [
-  { type: "trophies", amount: 8 }, // Jour 1
-  { type: "trophies", amount: 12 }, // Jour 2
-  { type: "streakPass", amount: 1 }, // Jour 3
-  { type: "trophies", amount: 15 }, // Jour 4
-  { type: "streakPass", amount: 1 }, // Jour 5
-  { type: "trophies", amount: 20 }, // Jour 6
-  { type: "premium", days: 7 }, // Jour 7
+  { type: "trophies", amount: 8 },
+  { type: "trophies", amount: 12 },
+  { type: "streakPass", amount: 1 },
+  { type: "trophies", amount: 15 },
+  { type: "streakPass", amount: 1 },
+  { type: "trophies", amount: 20 },
+  { type: "premium", days: 7 },
 ];
 
 const BASE_W = 375;
 
+// ─── Palette ────────────────────────────────────────────────────────────────
+const AMBER       = "#FFB300";
+const AMBER_LIGHT = "#FFD060";
+const AMBER_DIM   = "#C87800";
+const GOLD        = "#FFE066";
+const BG_DEEP     = "#06080E";
+const BG_CARD     = "#0D1018";
+const STROKE      = "rgba(255,183,0,0.22)";
+const STROKE_SOFT = "rgba(255,255,255,0.09)";
+const TEXT        = "rgba(248,250,252,0.97)";
+const TEXT_DIM    = "rgba(248,250,252,0.70)";
+const TEXT_FAINT  = "rgba(248,250,252,0.40)";
+const GLASS       = "rgba(255,255,255,0.055)";
+const GLASS_AMBER = "rgba(255,179,0,0.10)";
+
+// ─── Types ───────────────────────────────────────────────────────────────────
 type StylesParams = {
   screenW: number;
   isTiny: boolean;
   isTablet: boolean;
-  normalizeJs: (n: number) => number;
+  n: (v: number) => number;
 };
 
-const makeStyles = ({ screenW, isTiny, isTablet, normalizeJs }: StylesParams) =>
+const makeStyles = ({ screenW, isTiny, isTablet, n }: StylesParams) =>
   StyleSheet.create({
     overlay: {
       flex: 1,
       alignItems: "center",
-      paddingHorizontal: normalizeJs(isTiny ? 10 : 14),
-      backgroundColor: "rgba(0,0,0,0.78)",
-    },
-    vignette: {
-      ...StyleSheet.absoluteFillObject,
-      backgroundColor: "rgba(0,0,0,0.25)",
-    },
-    centerWrap: {
-      flex: 1,
-      width: "100%",
       justifyContent: "center",
-      alignItems: "center",
+      paddingHorizontal: n(isTiny ? 10 : 14),
     },
+
+    centerWrap: {
+      width: "100%",
+      alignItems: "center",
+      justifyContent: "center",
+    },
+
+    // ── Sheet ──────────────────────────────────────────────────────────────
     sheet: {
-      width: screenW * 0.94,
-      maxWidth: normalizeJs(isTablet ? 560 : 520),
-      borderRadius: normalizeJs(isTiny ? 26 : 30),
+      width: Math.min(screenW * 0.94, n(isTablet ? 560 : 500)),
+      borderRadius: n(32),
       overflow: "hidden",
+      borderWidth: 1,
+      borderColor: STROKE,
     } as ViewStyle,
 
-    outerStrokeWrap: {
-      borderRadius: normalizeJs(isTiny ? 26 : 30),
+    sheetInner: {
+      borderRadius: n(32),
       overflow: "hidden",
+      backgroundColor: BG_DEEP,
     },
 
-    outerStroke: {
-      borderWidth: 1,
-      borderRadius: normalizeJs(isTiny ? 26 : 30),
-      padding: normalizeJs(2),
+    scrollContent: {
+      paddingBottom: n(20),
+      paddingTop: n(6),
     },
 
-    surface: {
-      borderRadius: normalizeJs(isTiny ? 24 : 28),
-      padding: normalizeJs(isTiny ? 9 : 10),
-    },
-
-    innerGlass: {
-      borderRadius: normalizeJs(isTiny ? 18 : 22),
-      paddingHorizontal: normalizeJs(isTiny ? 12 : 16),
-      paddingTop: normalizeJs(2),
-      paddingBottom: normalizeJs(2),
-    },
-
-    radial: {
+    // ── Mesh background layers ─────────────────────────────────────────────
+    meshLayer1: {
       position: "absolute",
-      width: normalizeJs(540),
-      height: normalizeJs(540),
-      borderRadius: normalizeJs(270),
-      top: "10%",
+      width: n(600),
+      height: n(600),
+      borderRadius: n(300),
+      top: -n(180),
       alignSelf: "center",
-      transform: [{ scale: 1.05 }],
+      opacity: 0.13,
     },
-    radial2: {
+    meshLayer2: {
       position: "absolute",
-      width: normalizeJs(720),
-      height: normalizeJs(720),
-      borderRadius: normalizeJs(360),
-      bottom: "-10%",
-      alignSelf: "center",
-      transform: [{ scale: 1.0 }],
+      width: n(400),
+      height: n(400),
+      borderRadius: n(200),
+      bottom: -n(80),
+      right: -n(80),
+      opacity: 0.09,
+    },
+    meshLayer3: {
+      position: "absolute",
+      width: n(280),
+      height: n(280),
+      borderRadius: n(140),
+      bottom: n(60),
+      left: -n(60),
+      opacity: 0.07,
     },
 
-    ctaLoadingRow: {
+    // ── Top ribbon ──────────────────────────────────────────────────────────
+    ribbonWrap: {
+      alignItems: "center",
+      paddingTop: n(isTiny ? 16 : 20),
+      paddingBottom: n(6),
+    },
+    ribbon: {
       flexDirection: "row",
       alignItems: "center",
-      gap: normalizeJs(10),
-    },
-
-    topRow: {
-      alignItems: "center",
-      marginBottom: normalizeJs(8),
-    },
-    pill: {
-      borderRadius: normalizeJs(999),
-      paddingHorizontal: normalizeJs(12),
-      paddingVertical: normalizeJs(7),
-      flexDirection: "row",
-      alignItems: "center",
-      gap: normalizeJs(6),
+      gap: n(6),
+      backgroundColor: GLASS_AMBER,
       borderWidth: 1,
-      maxWidth: "100%",
+      borderColor: "rgba(255,183,0,0.28)",
+      borderRadius: n(999),
+      paddingHorizontal: n(14),
+      paddingVertical: n(6),
     },
-    pillText: {
-      fontSize: normalizeJs(11),
-      fontWeight: "900",
-      letterSpacing: 0.6,
+    ribbonText: {
+      fontSize: n(10.5),
+      fontWeight: "800",
+      letterSpacing: 1.2,
       textTransform: "uppercase",
+      color: AMBER_LIGHT,
     },
 
-    heroWrap: {
+    // ── Hero zone ──────────────────────────────────────────────────────────
+    heroZone: {
       alignItems: "center",
       justifyContent: "center",
-      marginTop: normalizeJs(2),
-      marginBottom: normalizeJs(4),
+      paddingTop: n(4),
+      paddingBottom: n(0),
+      position: "relative",
     },
+
+    // Rings concentriques derrière le coffre
+    ringOuter: {
+      position: "absolute",
+      width: n(isTiny ? 190 : isTablet ? 240 : 210),
+      height: n(isTiny ? 190 : isTablet ? 240 : 210),
+      borderRadius: n(999),
+      borderWidth: 1,
+      borderColor: "rgba(255,183,0,0.14)",
+    },
+    ringMiddle: {
+      position: "absolute",
+      width: n(isTiny ? 154 : isTablet ? 196 : 172),
+      height: n(isTiny ? 154 : isTablet ? 196 : 172),
+      borderRadius: n(999),
+      borderWidth: 1,
+      borderColor: "rgba(255,183,0,0.20)",
+    },
+    ringInner: {
+      position: "absolute",
+      width: n(isTiny ? 118 : isTablet ? 152 : 134),
+      height: n(isTiny ? 118 : isTablet ? 152 : 134),
+      borderRadius: n(999),
+      borderWidth: 1,
+      borderColor: "rgba(255,183,0,0.30)",
+      backgroundColor: "rgba(255,183,0,0.045)",
+    },
+
     chestWrap: {
-      width: normalizeJs(isTiny ? 140 : isTablet ? 168 : 156),
-      height: normalizeJs(isTiny ? 140 : isTablet ? 168 : 156),
-      justifyContent: "center",
-      alignItems: "center",
+      width: n(isTiny ? 130 : isTablet ? 164 : 148),
+      height: n(isTiny ? 130 : isTablet ? 164 : 148),
+      zIndex: 2,
     },
     chestLottie: {
       width: "100%",
       height: "100%",
     },
-    halo: {
-      position: "absolute",
-      width: normalizeJs(isTiny ? 186 : isTablet ? 220 : 204),
-      height: normalizeJs(isTiny ? 186 : isTablet ? 220 : 204),
-      borderRadius: normalizeJs(999),
-      borderWidth: 1,
-      overflow: "hidden",
-      opacity: 0.92,
-    },
 
+    // ── Header ──────────────────────────────────────────────────────────────
     header: {
       alignItems: "center",
-      marginBottom: normalizeJs(12),
-      paddingHorizontal: normalizeJs(10),
+      paddingHorizontal: n(20),
+      paddingTop: n(4),
+      paddingBottom: n(16),
+    },
+    titleRow: {
+      flexDirection: "row",
+      alignItems: "center",
+      gap: n(8),
+      marginBottom: n(6),
     },
     title: {
-      fontSize: normalizeJs(isTiny ? 24 : isTablet ? 30 : 27),
+      fontSize: n(isTiny ? 26 : isTablet ? 34 : 30),
+      fontWeight: "900",
       textAlign: "center",
-      marginBottom: normalizeJs(6),
-      letterSpacing: 0.2,
+      letterSpacing: -0.5,
+      color: TEXT,
     },
     subtitle: {
-      fontSize: normalizeJs(isTiny ? 12 : 13),
+      fontSize: n(isTiny ? 12 : 13),
       textAlign: "center",
-      lineHeight: normalizeJs(isTiny ? 17 : 18),
-      opacity: 0.98,
+      lineHeight: n(19),
+      color: TEXT_DIM,
     },
 
+    // Day counter — grand comme un score
+    dayCounterWrap: {
+      flexDirection: "row",
+      alignItems: "baseline",
+      gap: n(4),
+      marginBottom: n(4),
+    },
+    dayCounterBig: {
+      fontSize: n(isTiny ? 42 : 52),
+      fontWeight: "900",
+      letterSpacing: -2,
+      color: AMBER,
+    },
+    dayCounterSlash: {
+      fontSize: n(isTiny ? 22 : 28),
+      fontWeight: "700",
+      color: TEXT_FAINT,
+    },
+    dayCounterTotal: {
+      fontSize: n(isTiny ? 22 : 28),
+      fontWeight: "700",
+      color: TEXT_FAINT,
+    },
+    dayCounterLabel: {
+      fontSize: n(11),
+      fontWeight: "700",
+      letterSpacing: 1.0,
+      textTransform: "uppercase",
+      color: TEXT_FAINT,
+      marginTop: n(2),
+    },
+
+    // ── Timeline ──────────────────────────────────────────────────────────
     timelineWrap: {
-      marginTop: normalizeJs(2),
-      marginBottom: normalizeJs(14),
-      paddingHorizontal: normalizeJs(isTiny ? 8 : 12),
+      paddingHorizontal: n(isTiny ? 10 : 16),
+      marginBottom: n(16),
     },
-    timelineLine: {
-      height: normalizeJs(2),
-      borderRadius: normalizeJs(999),
+    timelineTrack: {
+      height: n(3),
+      borderRadius: n(999),
+      backgroundColor: "rgba(255,255,255,0.08)",
       position: "absolute",
-      top: normalizeJs(18),
-      left: normalizeJs(isTiny ? 4 : 6),
-      right: normalizeJs(isTiny ? 4 : 6),
+      top: n(14),
+      left: n(isTiny ? 10 + 14 : 16 + 14),
+      right: n(isTiny ? 10 + 14 : 16 + 14),
     },
-    timelineLineFill: {
-      height: normalizeJs(2),
-      borderRadius: normalizeJs(999),
+    timelineTrackFill: {
+      height: n(3),
+      borderRadius: n(999),
       position: "absolute",
-      top: normalizeJs(18),
-      left: normalizeJs(isTiny ? 4 : 6),
+      top: n(14),
+      left: n(isTiny ? 10 + 14 : 16 + 14),
     },
     timelineGrid: {
       flexDirection: "row",
-      flexWrap: "nowrap",
-      width: "100%",
-      alignItems: "flex-start",
-    },
-    timelineItem: {
-      width: `${100 / 7}%` as any,
-      alignItems: "center",
-      paddingHorizontal: normalizeJs(2),
-    },
-    timelineRow: {
-      flexDirection: "row",
-      justifyContent: "space-between",
-      alignItems: "flex-start",
-      flexWrap: "nowrap",
       width: "100%",
     },
-    scrollContent: {
-      flexGrow: 1,
-      justifyContent: "center",
+    timelineCol: {
+      flex: 1,
+      alignItems: "center",
     },
-    timelineDot: {
-      width: normalizeJs(isTiny ? 30 : 32),
-      height: normalizeJs(isTiny ? 30 : 32),
-      borderRadius: normalizeJs(999),
+    // Dot normal
+    dot: {
+      width: n(isTiny ? 28 : 30),
+      height: n(isTiny ? 28 : 30),
+      borderRadius: n(999),
       alignItems: "center",
       justifyContent: "center",
+      marginBottom: n(6),
       borderWidth: 1,
-      marginBottom: normalizeJs(6),
     },
-    timelineLabel: {
-      fontSize: normalizeJs(isTiny ? 9.5 : 10),
-      fontWeight: "900",
-      letterSpacing: 0.2,
-      textAlign: "center",
-      includeFontPadding: false,
+    // Ring externe pulsant (today only)
+    dotRingActive: {
+      position: "absolute",
+      width: n(isTiny ? 40 : 44),
+      height: n(isTiny ? 40 : 44),
+      borderRadius: n(999),
+      borderWidth: 1.5,
+      borderColor: AMBER,
     },
-    timelineMini: {
-      marginTop: normalizeJs(2),
-      fontSize: normalizeJs(isTiny ? 8.5 : 9),
+    dotLabel: {
+      fontSize: n(isTiny ? 9 : 9.5),
       fontWeight: "800",
-      letterSpacing: 0.2,
+      letterSpacing: 0.1,
       textAlign: "center",
-      includeFontPadding: false,
+    },
+    dotSub: {
+      fontSize: n(isTiny ? 7.5 : 8),
+      fontWeight: "700",
+      letterSpacing: 0.1,
+      textAlign: "center",
+      marginTop: n(1),
     },
 
-    todayCardWrapper: {
-      marginTop: normalizeJs(2),
-      marginBottom: normalizeJs(12),
+    // ── Today Reward Card ─────────────────────────────────────────────────
+    rewardCardWrap: {
+      paddingHorizontal: n(isTiny ? 12 : 16),
+      marginBottom: n(14),
     },
-    todayCard: {
-      borderRadius: normalizeJs(18),
-      paddingVertical: normalizeJs(12),
-      paddingHorizontal: normalizeJs(12),
+    rewardCard: {
+      borderRadius: n(24),
+      overflow: "hidden",
+      borderWidth: 1,
+      borderColor: STROKE,
+    },
+    rewardCardGradient: {
+      padding: n(isTiny ? 14 : 18),
+    },
+    rewardCardTop: {
       flexDirection: "row",
       alignItems: "center",
-      borderWidth: 1,
-      overflow: "hidden",
-      position: "relative",
-      shadowColor: "#000",
-      shadowOffset: { width: 0, height: normalizeJs(8) },
-      shadowOpacity: 0.28,
-      shadowRadius: 20,
-      elevation: 12,
+      gap: n(14),
     },
-    todayAccentRail: {
-      position: "absolute",
-      left: 0,
-      top: 0,
-      bottom: 0,
-      width: normalizeJs(3),
-      opacity: 0.95,
-    },
-    todayGlow: {
-      ...StyleSheet.absoluteFillObject,
-    },
-    todayIconCircle: {
-      width: normalizeJs(56),
-      height: normalizeJs(56),
-      borderRadius: normalizeJs(28),
+    rewardIconCircle: {
+      width: n(64),
+      height: n(64),
+      borderRadius: n(20),
       alignItems: "center",
       justifyContent: "center",
+      backgroundColor: "rgba(255,183,0,0.14)",
       borderWidth: 1,
-      marginRight: normalizeJs(10),
-      overflow: "hidden",
+      borderColor: "rgba(255,183,0,0.30)",
+      flexShrink: 0,
     },
-    iconRing: {
-      ...StyleSheet.absoluteFillObject,
-      borderWidth: 2,
-      borderRadius: normalizeJs(28),
-      opacity: 0.45,
+    rewardTextBlock: {
+      flex: 1,
+      minWidth: 0,
     },
-    todayTextBlock: { flex: 1 },
-    todayTitle: {
-      fontSize: normalizeJs(12),
+    rewardCardEyebrow: {
+      fontSize: n(10),
+      fontWeight: "800",
+      letterSpacing: 1.2,
       textTransform: "uppercase",
-      letterSpacing: 0.7,
-      marginBottom: normalizeJs(3),
+      color: AMBER,
+      marginBottom: n(4),
+    },
+    rewardCardAmount: {
+      fontSize: n(isTiny ? 18 : 22),
       fontWeight: "900",
+      color: TEXT,
+      letterSpacing: -0.3,
+      marginBottom: n(3),
     },
-    todayReward: {
-      fontSize: normalizeJs(16),
-      fontWeight: "900",
-      marginBottom: normalizeJs(4),
+    rewardCardHint: {
+      fontSize: n(11.5),
+      color: TEXT_DIM,
+      lineHeight: n(16),
     },
-    todayHint: {
-      fontSize: normalizeJs(12),
-      opacity: 0.95,
+    rewardCardSeparator: {
+      height: 1,
+      backgroundColor: "rgba(255,183,0,0.14)",
+      marginTop: n(14),
+      marginBottom: n(12),
     },
-    claimedNow: {
-      fontWeight: "900",
-      fontSize: normalizeJs(12),
+    rewardCardFooter: {
+      flexDirection: "row",
+      alignItems: "center",
+      justifyContent: "space-between",
     },
-    dayBadge: {
-      paddingHorizontal: normalizeJs(8),
-      paddingVertical: normalizeJs(4),
-      borderRadius: normalizeJs(999),
+    rewardCardFooterText: {
+      fontSize: n(11),
+      color: TEXT_DIM,
+      flex: 1,
+    },
+    claimedBadge: {
+      flexDirection: "row",
+      alignItems: "center",
+      gap: n(5),
+      backgroundColor: "rgba(100,220,100,0.15)",
       borderWidth: 1,
-      marginLeft: normalizeJs(6),
+      borderColor: "rgba(100,220,100,0.30)",
+      borderRadius: n(999),
+      paddingHorizontal: n(10),
+      paddingVertical: n(4),
     },
-    dayBadgeText: {
-      fontSize: normalizeJs(11),
-      fontWeight: "900",
-      letterSpacing: 0.2,
+    claimedBadgeText: {
+      fontSize: n(11),
+      fontWeight: "800",
+      color: "#6DDC7A",
     },
 
+    // ── CTA ───────────────────────────────────────────────────────────────
     ctaWrap: {
-      marginTop: normalizeJs(10),
-      marginBottom: normalizeJs(6),
+      paddingHorizontal: n(isTiny ? 12 : 16),
+      marginBottom: n(4),
     },
-    ctaOuter: {
-      borderRadius: normalizeJs(999),
-      borderWidth: 1,
+    ctaBtn: {
+      borderRadius: n(18),
       overflow: "hidden",
-      shadowColor: "#000",
-      shadowOffset: { width: 0, height: 14 },
-      shadowOpacity: 0.34,
-      shadowRadius: 22,
-      elevation: 14,
+      borderWidth: 1,
+      borderColor: "rgba(255,183,0,0.35)",
+      shadowColor: AMBER,
+      shadowOffset: { width: 0, height: n(8) },
+      shadowOpacity: 0.40,
+      shadowRadius: n(20),
+      elevation: 16,
     },
-    ctaInner: {
-      borderRadius: normalizeJs(999),
-      paddingVertical: normalizeJs(isTiny ? 12 : 13),
-      paddingHorizontal: normalizeJs(isTiny ? 16 : 18),
-      minHeight: normalizeJs(isTiny ? 48 : 52),
+    ctaGradient: {
+      minHeight: n(isTiny ? 52 : 58),
       flexDirection: "row",
       alignItems: "center",
       justifyContent: "center",
-      overflow: "hidden",
+      gap: n(10),
+      paddingHorizontal: n(24),
     },
-    shimmer: {
+    ctaShimmer: {
       position: "absolute",
-      width: normalizeJs(120),
-      height: normalizeJs(220),
-      backgroundColor: "white",
-      top: -normalizeJs(80),
-      left: "50%",
-      marginLeft: -normalizeJs(60),
-      borderRadius: normalizeJs(40),
+      width: n(100),
+      height: n(200),
+      backgroundColor: "rgba(255,255,255,0.22)",
+      borderRadius: n(50),
+      top: -n(80),
     },
     ctaText: {
-      fontSize: normalizeJs(isTiny ? 14 : 15),
-      color: "rgba(5,7,11,0.95)",
-      marginRight: normalizeJs(6),
-      letterSpacing: 0.25,
-      fontWeight: "950" as any,
+      fontSize: n(isTiny ? 15 : 16),
+      fontWeight: "900",
+      letterSpacing: 0.2,
+      color: "#05070B",
     },
+    ctaLoadingRow: {
+      flexDirection: "row",
+      alignItems: "center",
+      gap: n(10),
+    },
+
+    // ── Bottom hint ────────────────────────────────────────────────────────
     bottomHint: {
-      marginTop: normalizeJs(8),
-      fontSize: normalizeJs(isTiny ? 10.5 : 11),
+      fontSize: n(isTiny ? 10.5 : 11),
       textAlign: "center",
-      opacity: 0.95,
-      paddingHorizontal: normalizeJs(10),
-      lineHeight: normalizeJs(isTiny ? 14 : 15),
+      color: TEXT_FAINT,
+      paddingHorizontal: n(20),
+      lineHeight: n(15),
+      paddingBottom: n(4),
     },
   });
 
-
+// ─── Props ────────────────────────────────────────────────────────────────────
 export type WelcomeBonusModalProps = {
   visible: boolean;
   onClose: () => void;
   onClaim: () => Promise<void> | void;
-  /** index du jour actuel (0–6) */
   currentDay: number;
-  /** nombre total de jours dans la série (ex: 7) */
   totalDays: number;
-  /** type de récompense du jour (pour le texte / icône) */
   rewardType: WelcomeRewardKind;
-  /** quantité (trophées ou streakPass / jours premium) */
   rewardAmount: number;
   loading?: boolean;
 };
 
+// ─── Animated dot ring (today) ────────────────────────────────────────────────
+const PulsingRing: React.FC<{ size: number }> = ({ size }) => {
+  const scale = useSharedValue(1);
+  const opacity = useSharedValue(0.9);
+
+  useEffect(() => {
+    scale.value = withRepeat(
+      withSequence(
+        withTiming(1.45, { duration: 1000, easing: Easing.out(Easing.quad) }),
+        withTiming(1, { duration: 0 })
+      ),
+      -1,
+      false
+    );
+    opacity.value = withRepeat(
+      withSequence(
+        withTiming(0, { duration: 1000, easing: Easing.out(Easing.quad) }),
+        withTiming(0.9, { duration: 0 })
+      ),
+      -1,
+      false
+    );
+  }, []);
+
+  const style = useAnimatedStyle(() => ({
+    position: "absolute",
+    width: size,
+    height: size,
+    borderRadius: size / 2,
+    borderWidth: 1.5,
+    borderColor: AMBER,
+    transform: [{ scale: scale.value }],
+    opacity: opacity.value,
+  }));
+
+  return <Animated.View style={style} pointerEvents="none" />;
+};
+
+// ─── Main Component ────────────────────────────────────────────────────────────
 const WelcomeBonusModal: React.FC<WelcomeBonusModalProps> = ({
   visible,
   onClose,
@@ -431,648 +544,639 @@ const WelcomeBonusModal: React.FC<WelcomeBonusModalProps> = ({
   const { t } = useTranslation();
   const { theme } = useTheme();
   const insets = useSafeAreaInsets();
+  const { width: SW, height: SH } = useWindowDimensions();
 
-    const { width: SCREEN_WIDTH, height: SCREEN_HEIGHT } = useWindowDimensions();
+  const SCALE = useMemo(() => Math.min(Math.max(Math.min(SW, SH) / BASE_W, 0.86), 1.18), [SW, SH]);
+  const IS_TINY   = SW < 350;
+  const IS_TABLET = SW >= 768;
 
-  const SCALE = useMemo(() => {
-    const raw = Math.min(SCREEN_WIDTH, SCREEN_HEIGHT) / BASE_W;
-    return Math.min(Math.max(raw, 0.86), 1.18);
-  }, [SCREEN_WIDTH, SCREEN_HEIGHT]);
-
-  const IS_TINY = SCREEN_WIDTH < 350;
-  const IS_TABLET = SCREEN_WIDTH >= 768;
-
-  // ✅ Worklet-safe : utilisé par Reanimated (shimmerStyle) + partout ailleurs
   const normalize = useMemo(() => {
-    return (size: number) => {
+    const fn = (size: number) => {
       "worklet";
       return Math.round(size * SCALE);
     };
+    return fn;
   }, [SCALE]);
 
-  // ✅ pour StyleSheet.create (JS thread)
-  const normalizeJs = useMemo(() => {
-    return (size: number) => Math.round(size * SCALE);
-  }, [SCALE]);
+  const n = useMemo(() => (v: number) => Math.round(v * SCALE), [SCALE]);
 
   const styles = useMemo(
-    () => makeStyles({ screenW: SCREEN_WIDTH, isTiny: IS_TINY, isTablet: IS_TABLET, normalizeJs }),
-    [SCREEN_WIDTH, IS_TINY, IS_TABLET, normalizeJs]
+    () => makeStyles({ screenW: SW, isTiny: IS_TINY, isTablet: IS_TABLET, n }),
+    [SW, IS_TINY, IS_TABLET, n]
   );
-
 
   const isDark = theme === "dark";
   const current: Theme = isDark ? designSystem.darkTheme : designSystem.lightTheme;
 
   const clampedTotal = Math.max(1, totalDays || 1);
-  const dayIndex = Math.min(Math.max(currentDay, 0), clampedTotal - 1);
-  const displayDay = dayIndex + 1;
+  const dayIndex    = Math.min(Math.max(currentDay, 0), clampedTotal - 1);
+  const displayDay  = dayIndex + 1;
+  const progressRatio = clampedTotal <= 1 ? 1 : (displayDay - 1) / (clampedTotal - 1);
 
-  // Apple Keynote palette (monochrome + 1 accent)
-  const ACCENT = current.colors.primary;
-  const BG = isDark ? "#05070B" : "#070A10";
-  const GLASS = "rgba(255,255,255,0.06)";
-  const GLASS_STRONG = "rgba(255,255,255,0.10)";
-  const STROKE = "rgba(255,255,255,0.14)";
-  const STROKE_SOFT = "rgba(255,255,255,0.09)";
-  const TEXT = "rgba(248,250,252,0.97)";
-  const TEXT_DIM = "rgba(248,250,252,0.76)";
-  const TEXT_FAINT = "rgba(248,250,252,0.54)";
-
-  // 🔥 ANIMATIONS — Carte / coffre / halo
-  const cardScale = useSharedValue(0.94);
+  // ── Shared values ──────────────────────────────────────────────────────────
+  const cardScale   = useSharedValue(0.92);
   const cardOpacity = useSharedValue(0);
-  const chestBob = useSharedValue(0);
-  const chestScale = useSharedValue(1);
-  const todayPulse = useSharedValue(0);
-  const globalGlow = useSharedValue(0);
-
-  // ✨ Shimmer CTA
-  const shimmer = useSharedValue(-1);
+  const chestBob    = useSharedValue(0);
+  const chestScale  = useSharedValue(1);
+  const meshRotate  = useSharedValue(0);
+  const shimmer     = useSharedValue(-1);
+  const glowPulse   = useSharedValue(0);
 
   const [showConfetti, setShowConfetti] = useState(false);
-  const [claimSuccess, setClaimSuccess] = useState(false);
+  const [claimSuccess, setClaimSuccess]  = useState(false);
 
   useEffect(() => {
     if (!visible) return;
-
     setClaimSuccess(false);
     setShowConfetti(false);
 
-    // entrée “cinema”
-    cardScale.value = 0.94;
+    // Entrée cinématographique
+    cardScale.value = 0.92;
     cardOpacity.value = 0;
-    cardOpacity.value = withTiming(1, { duration: 220, easing: Easing.out(Easing.quad) });
-    cardScale.value = withSpring(1, { damping: 18, stiffness: 220 });
+    cardOpacity.value = withTiming(1, { duration: 280, easing: Easing.out(Easing.cubic) });
+    cardScale.value   = withSpring(1, { damping: 16, stiffness: 200 });
 
-    // bob + breathing
-    chestBob.value = 0;
+    // Coffre : bob flottant
     chestBob.value = withRepeat(
       withSequence(
-        withTiming(-6, { duration: 650, easing: Easing.inOut(Easing.quad) }),
-        withTiming(0, { duration: 650, easing: Easing.inOut(Easing.quad) })
+        withTiming(-7, { duration: 700, easing: Easing.inOut(Easing.quad) }),
+        withTiming(0,  { duration: 700, easing: Easing.inOut(Easing.quad) })
       ),
-      -1,
-      true
+      -1, true
     );
-
     chestScale.value = withRepeat(
-      withSequence(withTiming(1.05, { duration: 900 }), withTiming(1, { duration: 900 })),
-      -1,
-      true
+      withSequence(
+        withTiming(1.04, { duration: 1100 }),
+        withTiming(1,    { duration: 1100 })
+      ),
+      -1, true
     );
 
-    todayPulse.value = withRepeat(
-      withSequence(withTiming(1, { duration: 1400 }), withTiming(0, { duration: 1400 })),
-      -1,
-      true
+    // Mesh lente rotation (ambient)
+    meshRotate.value = withRepeat(
+      withTiming(360, { duration: 18000, easing: Easing.linear }),
+      -1, false
     );
 
-    globalGlow.value = 0.25;
-    globalGlow.value = withRepeat(
-      withSequence(withTiming(1, { duration: 2200 }), withTiming(0.28, { duration: 2200 })),
-      -1,
-      true
-    );
-
+    // Shimmer CTA
     shimmer.value = -1;
     shimmer.value = withRepeat(
       withSequence(
-        withTiming(1, { duration: 1800, easing: Easing.inOut(Easing.quad) }),
+        withTiming(1, { duration: 2000, easing: Easing.inOut(Easing.quad) }),
         withTiming(-1, { duration: 0 })
       ),
-      -1,
-      false
+      -1, false
     );
 
-    try {
-      Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
-    } catch {}
-  }, [visible, cardScale, cardOpacity, chestBob, chestScale, todayPulse, globalGlow, shimmer]);
+    // Glow ambient pulsant
+    glowPulse.value = withRepeat(
+      withSequence(
+        withTiming(1, { duration: 2400 }),
+        withTiming(0.3, { duration: 2400 })
+      ),
+      -1, true
+    );
 
-  const cardAnimatedStyle = useAnimatedStyle<ViewStyle>(() => {
-    const lift = (1 - cardScale.value) * 20;
-    return {
-      opacity: cardOpacity.value,
-      transform: [{ scale: cardScale.value }, { translateY: lift }] as any,
-    };
-  });
+    Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success).catch(() => {});
+  }, [visible]);
 
-  const chestAnimatedStyle = useAnimatedStyle(() => ({
-    transform: [{ translateY: chestBob.value }, { scale: chestScale.value }] as any,
+  // ── Animated styles ────────────────────────────────────────────────────────
+  const cardStyle = useAnimatedStyle<ViewStyle>(() => ({
+    opacity: cardOpacity.value,
+    transform: [
+      { scale: cardScale.value },
+      { translateY: (1 - cardScale.value) * 24 },
+    ] as any,
   }));
 
-  const todayGlowStyle = useAnimatedStyle(() => {
-    const scale = 1 + todayPulse.value * 0.07;
-    const opacity = 0.14 + todayPulse.value * 0.18;
-    return { transform: [{ scale }] as any, opacity };
-  });
-
-  const globalGlowStyle = useAnimatedStyle(() => ({
-    opacity: globalGlow.value * 0.14,
+  const chestStyle = useAnimatedStyle(() => ({
+    transform: [
+      { translateY: chestBob.value },
+      { scale: chestScale.value },
+    ] as any,
   }));
 
-  const shimmerStyle = useAnimatedStyle(() => {
-    const x = shimmer.value; // -1..1
-    const translateX = x * normalize(180);
-    return {
-      opacity: 0.18,
-      transform: [{ translateX }, { rotateZ: "-18deg" }] as any,
-    };
-  });
+  const meshStyle = useAnimatedStyle(() => ({
+    transform: [{ rotate: `${meshRotate.value}deg` }] as any,
+  }));
 
-  const title = useMemo(
-    () => t("welcomeBonus.title", { defaultValue: "Pack de bienvenue" }),
-    [t]
-  );
+  const shimmerStyle = useAnimatedStyle(() => ({
+    opacity: 0.22,
+    transform: [
+      { translateX: shimmer.value * normalize(160) },
+      { rotateZ: "-20deg" },
+    ] as any,
+  }));
 
-  const subtitle = useMemo(
-    () =>
-      t("welcomeBonus.subtitle", {
-        day: displayDay,
-        total: clampedTotal,
-        defaultValue: "Jour {{day}} sur {{total}} • Chaque jour compte.",
-      }),
-    [t, displayDay, clampedTotal]
-  );
+  const glowStyle = useAnimatedStyle(() => ({
+    opacity: glowPulse.value * 0.18,
+  }));
 
-  const bottomHint = useMemo(
-    () =>
-      t("welcomeBonus.bottomHint", {
-        defaultValue: "Connecte-toi chaque jour pour débloquer 100 % du pack.",
-      }),
-    [t]
-  );
+  // ── Icon helpers ───────────────────────────────────────────────────────────
+  const getIcon = (kind: WelcomeRewardKind): keyof typeof Ionicons.glyphMap => {
+    switch (kind) {
+      case "premium":    return "diamond";
+      case "streakPass": return "ticket";
+      default:           return "trophy";
+    }
+  };
 
+  // ── Labels ─────────────────────────────────────────────────────────────────
   const rewardLabel = useMemo(() => {
     switch (rewardType) {
       case "trophies":
-        return t("welcomeBonus.reward.trophies", {
-          count: rewardAmount,
-          defaultValue: "{{count}} trophées bonus",
-        });
+        return t("welcomeBonus.reward.trophies", { count: rewardAmount, defaultValue: "{{count}} trophées bonus" });
       case "streakPass":
-        return t("welcomeBonus.reward.streakPass", {
-          count: rewardAmount,
-          defaultValue: "{{count}} Streak Pass pour protéger ta série",
-        });
+        return t("welcomeBonus.reward.streakPass", { count: rewardAmount, defaultValue: "{{count}} Streak Pass" });
       case "premium":
-        return t("welcomeBonus.reward.premium", {
-          count: rewardAmount,
-          defaultValue: "{{count}} jours de ChallengeTies Premium",
-        });
-      default:
-        return "";
+        return t("welcomeBonus.reward.premium", { count: rewardAmount, defaultValue: "{{count}} jours Premium" });
+      default: return "";
     }
   }, [rewardType, rewardAmount, t]);
+
+  const rewardHint = useMemo(() => {
+    switch (rewardType) {
+      case "premium":
+        return t("welcomeBonus.premiumHint", { defaultValue: "Sans pub + toute l'expérience en illimité." });
+      case "streakPass":
+        return t("welcomeBonus.streakPassHint", { defaultValue: "Protège ta série si tu rates un jour." });
+      default:
+        return t("welcomeBonus.trophiesHint", { defaultValue: "S'accumulent dans ton profil." });
+    }
+  }, [rewardType, t]);
 
   const ctaLabel = useMemo(
     () => t("welcomeBonus.cta", { defaultValue: "Récupérer ma récompense" }),
     [t]
   );
 
-  const getIconForKind = (kind: WelcomeRewardKind): keyof typeof Ionicons.glyphMap => {
-    switch (kind) {
-      case "premium":
-        return "diamond-outline";
-      case "streakPass":
-        return "ticket-outline";
-      case "trophies":
-      default:
-        return "trophy-outline";
-    }
-  };
-
-  const baseRewardIcon = getIconForKind(rewardType);
-
-  if (!visible) return null;
-
-  const handleClaimPress = async () => {
+  // ── Claim handler ──────────────────────────────────────────────────────────
+  const handleClaim = async () => {
     if (loading) return;
-
-    try {
-      await Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Heavy).catch(() => {});
-    } catch {}
+    Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Heavy).catch(() => {});
 
     chestScale.value = withSequence(
-      withTiming(1.12, { duration: 120 }),
-      withSpring(1, { damping: 12, stiffness: 220 })
+      withTiming(1.18, { duration: 110 }),
+      withSpring(1, { damping: 10, stiffness: 240 })
     );
 
     try {
       await onClaim();
-
       setClaimSuccess(true);
       setShowConfetti(true);
-
-      try {
-        await Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success).catch(() => {});
-      } catch {}
-
+      Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success).catch(() => {});
       setTimeout(() => {
         setShowConfetti(false);
         setClaimSuccess(false);
         onClose();
-      }, 700);
+      }, 900);
     } catch (e) {
       console.error("WelcomeBonus onClaim error:", e);
-      try {
-        await Haptics.notificationAsync(Haptics.NotificationFeedbackType.Error).catch(() => {});
-      } catch {}
+      Haptics.notificationAsync(Haptics.NotificationFeedbackType.Error).catch(() => {});
     }
   };
 
-  const progressRatio = clampedTotal <= 1 ? 1 : (displayDay - 1) / (clampedTotal - 1);
+  // ── Timeline ───────────────────────────────────────────────────────────────
+  const renderTimeline = () => (
+    <View style={styles.timelineWrap}>
+      {/* Track */}
+      <View style={styles.timelineTrack} />
+      <LinearGradient
+        colors={[AMBER_DIM, AMBER, AMBER_LIGHT]}
+        start={{ x: 0, y: 0 }} end={{ x: 1, y: 0 }}
+        style={[styles.timelineTrackFill, { width: `${progressRatio * 100}%` }]}
+      />
 
-  const renderTimeline = () => {
-    // ✅ 7 jours FIXES → flex:1 (plus jamais de “J7 coupé”)
-    return (
-      <View style={styles.timelineWrap}>
-        <View style={[styles.timelineLine, { backgroundColor: "rgba(255,255,255,0.10)" }]} />
-        <View
-          style={[
-            styles.timelineLineFill,
-            { width: `${progressRatio * 100}%`, backgroundColor: ACCENT },
-          ]}
-        />
+      <View style={styles.timelineGrid}>
+        {Array.from({ length: clampedTotal }).map((_, idx) => {
+          const isPast   = idx < dayIndex;
+          const isToday  = idx === dayIndex;
+          const isFuture = idx > dayIndex;
+          const kind     = WELCOME_REWARDS[idx]?.type ?? "trophies";
 
-        <View style={styles.timelineGrid}>
-          {Array.from({ length: clampedTotal }).map((_, idx) => {
-            const isPast = idx < dayIndex;
-            const isToday = idx === dayIndex;
-            const isFuture = idx > dayIndex;
-
-            const config = WELCOME_REWARDS[idx];
-            const kind: WelcomeRewardKind = config?.type ?? "trophies";
-            const icon = getIconForKind(kind);
-
-            const dotBg = isToday
-              ? ACCENT
-              : isPast
-              ? "rgba(255,255,255,0.20)"
-              : "rgba(255,255,255,0.08)";
-
-            const dotStroke = isToday ? "rgba(0,0,0,0.18)" : STROKE_SOFT;
-
-            const iconColor = isToday
-              ? "rgba(5,7,11,0.92)"
-              : isPast
-              ? "rgba(248,250,252,0.90)"
-              : "rgba(248,250,252,0.58)";
-
-            return (
-              <View key={`tl-${idx}`} style={styles.timelineItem}>
+          return (
+            <View key={`tl-${idx}`} style={styles.timelineCol}>
+              <View style={{ alignItems: "center", justifyContent: "center" }}>
+                {isToday && <PulsingRing size={n(IS_TINY ? 40 : 44)} />}
                 <View
                   style={[
-                    styles.timelineDot,
-                    { backgroundColor: dotBg, borderColor: dotStroke },
+                    styles.dot,
+                    {
+                      backgroundColor: isToday
+                        ? AMBER
+                        : isPast
+                        ? "rgba(255,183,0,0.25)"
+                        : "rgba(255,255,255,0.06)",
+                      borderColor: isToday
+                        ? "rgba(255,220,100,0.50)"
+                        : isPast
+                        ? "rgba(255,183,0,0.30)"
+                        : STROKE_SOFT,
+                    },
                   ]}
                 >
-                  <Ionicons name={icon} size={normalize(16)} color={iconColor} />
+                  {isPast ? (
+                    <Ionicons name="checkmark" size={n(14)} color={AMBER} />
+                  ) : (
+                    <Ionicons
+                      name={getIcon(kind)}
+                      size={n(14)}
+                      color={
+                        isToday
+                          ? "#05070B"
+                          : isFuture
+                          ? "rgba(255,255,255,0.35)"
+                          : TEXT
+                      }
+                    />
+                  )}
                 </View>
-
-                <Text
-                  style={[styles.timelineLabel, { color: isToday ? TEXT : TEXT_FAINT }]}
-                  numberOfLines={1}
-                >
-                  {t("welcomeBonus.dayShort", {
-                    day: idx + 1,
-                    defaultValue: `J${idx + 1}`,
-                  })}
-                </Text>
-
-                {isPast && (
-                  <Text style={[styles.timelineMini, { color: TEXT_FAINT }]} numberOfLines={1}>
-                    {t("welcomeBonus.claimedShort", { defaultValue: "OK" })}
-                  </Text>
-                )}
-                {isFuture && (
-                  <Text style={[styles.timelineMini, { color: TEXT_FAINT }]} numberOfLines={1}>
-                    {t("welcomeBonus.lockedShort", { defaultValue: "—" })}
-                  </Text>
-                )}
-                {isToday && (
-                  <Text style={[styles.timelineMini, { color: TEXT_DIM }]} numberOfLines={1}>
-                    {t("welcomeBonus.todayShort", { defaultValue: "Aujourd’hui" })}
-                  </Text>
-                )}
               </View>
-            );
-          })}
-        </View>
-      </View>
-    );
-  };
 
- const maxCardHeight = Math.min(
-  SCREEN_HEIGHT - (insets.top + insets.bottom) - normalize(IS_TINY ? 28 : 44),
-  normalize(IS_TABLET ? 760 : 720)
-);
+              <Text
+                style={[styles.dotLabel, { color: isToday ? AMBER_LIGHT : TEXT_FAINT }]}
+                numberOfLines={1}
+              >
+                {t("welcomeBonus.dayShort", { day: idx + 1, defaultValue: `J${idx + 1}` })}
+              </Text>
+
+              <Text style={[styles.dotSub, { color: TEXT_FAINT }]} numberOfLines={1}>
+                {isPast
+                  ? "✓"
+                  : isToday
+                  ? t("welcomeBonus.todayShort", { defaultValue: "Auj." })
+                  : "—"}
+              </Text>
+            </View>
+          );
+        })}
+      </View>
+    </View>
+  );
+
+  // ── Reward Card ────────────────────────────────────────────────────────────
+  const renderRewardCard = () => (
+    <Animated.View
+      entering={ZoomIn.springify().damping(18).mass(0.8)}
+      exiting={ZoomOut.duration(140)}
+      style={styles.rewardCardWrap}
+    >
+      <View style={styles.rewardCard}>
+        <LinearGradient
+          colors={["rgba(255,183,0,0.12)", "rgba(255,140,0,0.06)", "rgba(8,10,16,0)"]}
+          start={{ x: 0, y: 0 }} end={{ x: 1, y: 1 }}
+          style={styles.rewardCardGradient}
+        >
+          {/* Shimmer sur la card */}
+          <Animated.View
+            pointerEvents="none"
+            style={[
+              StyleSheet.absoluteFillObject,
+              {
+                overflow: "hidden",
+                borderRadius: n(24),
+              },
+            ]}
+          >
+            <Animated.View
+              style={[
+                {
+                  position: "absolute",
+                  width: n(80),
+                  height: n(300),
+                  backgroundColor: "rgba(255,220,100,0.09)",
+                  borderRadius: n(40),
+                  top: -n(100),
+                },
+                shimmerStyle,
+              ]}
+            />
+          </Animated.View>
+
+          <View style={styles.rewardCardTop}>
+            <View style={styles.rewardIconCircle}>
+              <Ionicons name={getIcon(rewardType)} size={n(32)} color={AMBER} />
+            </View>
+
+            <View style={styles.rewardTextBlock}>
+              <Text style={styles.rewardCardEyebrow} numberOfLines={1}>
+                {t("welcomeBonus.todayRewardTitle", { defaultValue: "Récompense du jour" })}
+              </Text>
+              <Text
+                style={styles.rewardCardAmount}
+                numberOfLines={2}
+                adjustsFontSizeToFit
+              >
+                {rewardLabel}
+              </Text>
+              <Text style={styles.rewardCardHint} numberOfLines={2}>
+                {rewardHint}
+              </Text>
+            </View>
+          </View>
+
+          <View style={styles.rewardCardSeparator} />
+
+          <View style={styles.rewardCardFooter}>
+            <Text style={styles.rewardCardFooterText} numberOfLines={1}>
+              {t("welcomeBonus.dayBadge", { day: displayDay, defaultValue: "Jour {{day}}" })}
+              {" · "}
+              {t("welcomeBonus.totalDays", { total: clampedTotal, defaultValue: "{{total}} jours au total" })}
+            </Text>
+
+            {claimSuccess && (
+              <Animated.View entering={ZoomIn.springify()} style={styles.claimedBadge}>
+                <Ionicons name="checkmark-circle" size={n(13)} color="#6DDC7A" />
+                <Text style={styles.claimedBadgeText}>
+                  {t("welcomeBonus.claimSuccess", { defaultValue: "Ajouté !" })}
+                </Text>
+              </Animated.View>
+            )}
+          </View>
+        </LinearGradient>
+      </View>
+    </Animated.View>
+  );
+
+  const maxH = Math.min(
+    SH - (insets.top + insets.bottom) - n(IS_TINY ? 24 : 40),
+    n(IS_TABLET ? 780 : 740)
+  );
+
+  if (!visible) return null;
 
   return (
     <Modal
       visible={visible}
       transparent
       animationType="fade"
-      // ✅ tu veux “obliger” → pas de fermeture via back/outside
       onRequestClose={() => {}}
       statusBarTranslucent
       {...(Platform.OS === "ios" ? { presentationStyle: "overFullScreen" as const } : {})}
     >
       <View style={styles.overlay}>
-        {/* Backdrop premium */}
+        {/* Backdrop */}
         {Platform.OS === "ios" ? (
-          <BlurView intensity={64} tint="dark" style={StyleSheet.absoluteFillObject} />
+          <BlurView intensity={72} tint="dark" style={StyleSheet.absoluteFillObject} />
         ) : (
-          <View style={[StyleSheet.absoluteFillObject, { backgroundColor: "rgba(0,0,0,0.70)" }]} />
+          <View style={[StyleSheet.absoluteFillObject, { backgroundColor: "rgba(4,5,10,0.88)" }]} />
         )}
 
-        {/* Radial glow layers (Keynote vibe) */}
-        <View pointerEvents="none" style={styles.vignette} />
-        <View pointerEvents="none" style={[styles.radial, { opacity: 0.18, backgroundColor: ACCENT }]} />
-        <View pointerEvents="none" style={[styles.radial2, { opacity: 0.10, backgroundColor: ACCENT }]} />
-
-        {/* Confetti au claim */}
-        {showConfetti && (
-          <ConfettiCannon
-            count={110}
-            origin={{ x: SCREEN_WIDTH / 2, y: 0 }}
-            fadeOut
-            fallSpeed={2700}
-            explosionSpeed={560}
-          />
-        )}
-
-        {/* Ambient glow */}
+        {/* Ambient orbs */}
         <Animated.View
+          pointerEvents="none"
+          style={[
+            styles.meshLayer1,
+            meshStyle,
+            { backgroundColor: AMBER },
+          ]}
+        />
+        <View pointerEvents="none" style={[styles.meshLayer2, { backgroundColor: AMBER_DIM }]} />
+        <View pointerEvents="none" style={[styles.meshLayer3, { backgroundColor: "#FF6B00" }]} />
+
+        {/* Ambient glow pulsant */}
+        <Animated.View
+          pointerEvents="none"
           style={[
             StyleSheet.absoluteFillObject,
-            globalGlowStyle,
+            glowStyle,
             {
-              backgroundColor: ACCENT,
-              borderRadius: normalize(64),
-              marginHorizontal: normalize(10),
-              marginTop: normalize(24),
-              marginBottom: normalize(24),
+              backgroundColor: AMBER,
+              borderRadius: n(80),
+              margin: n(20),
             },
           ]}
-          pointerEvents="none"
         />
-<View
-  style={[
-    styles.centerWrap,
-    {
-      paddingTop: Math.max(insets.top, normalize(10)),
-      paddingBottom: Math.max(insets.bottom, normalize(10)),
-    },
-  ]}
->
-        <Animated.View
-          entering={FadeInUp.duration(260)}
-          exiting={FadeOut.duration(180)}
+
+        {/* Confetti */}
+        {showConfetti && (
+          <ConfettiCannon
+            count={140}
+            origin={{ x: SW / 2, y: 0 }}
+            fadeOut
+            fallSpeed={2400}
+            explosionSpeed={620}
+            colors={[AMBER, GOLD, "#FF8C00", "#FFF3B0", "#FFFFFF", "#FFD060"]}
+          />
+        )}
+
+        {/* Card */}
+        <View
           style={[
-  styles.sheet,
-  cardAnimatedStyle,
-  {
-    maxHeight: maxCardHeight,
-    // ✅ vrai centrage vertical
-    marginTop: 0,
-    marginBottom: 0,
-  },
-]}
-
+            styles.centerWrap,
+            {
+              paddingTop: Math.max(insets.top, n(12)),
+              paddingBottom: Math.max(insets.bottom, n(12)),
+            },
+          ]}
         >
-          <View style={styles.outerStrokeWrap}>
-            <View style={[styles.outerStroke, { borderColor: STROKE }]}>
-              <View style={[styles.surface, { backgroundColor: BG }]}>
-                <View style={[styles.innerGlass, { backgroundColor: "rgba(255,255,255,0.035)" }]}>
-                  <ScrollView
-                    showsVerticalScrollIndicator={false}
-                    contentContainerStyle={[
-  styles.scrollContent,
-  {
-    paddingBottom: normalize(IS_TINY ? 12 : 14),
-    paddingTop: normalize(IS_TINY ? 10 : 12),
-  },
-]}
+          <Animated.View
+            entering={FadeInUp.duration(300).springify()}
+            exiting={FadeOut.duration(200)}
+            style={[styles.sheet, cardStyle, { maxHeight: maxH }]}
+          >
+            <View style={styles.sheetInner}>
+              {/* Mesh interne */}
+              <View
+                pointerEvents="none"
+                style={[
+                  StyleSheet.absoluteFillObject,
+                  { borderRadius: n(32) },
+                  { overflow: "hidden" },
+                ]}
+              >
+                <View
+                  style={{
+                    position: "absolute",
+                    width: n(500),
+                    height: n(500),
+                    borderRadius: n(250),
+                    top: -n(220),
+                    alignSelf: "center",
+                    backgroundColor: AMBER,
+                    opacity: 0.06,
+                  }}
+                />
+                <View
+                  style={{
+                    position: "absolute",
+                    width: n(320),
+                    height: n(320),
+                    borderRadius: n(160),
+                    bottom: -n(80),
+                    right: -n(60),
+                    backgroundColor: AMBER_DIM,
+                    opacity: 0.05,
+                  }}
+                />
+              </View>
 
-                    bounces={false}
+              <ScrollView
+                showsVerticalScrollIndicator={false}
+                contentContainerStyle={styles.scrollContent}
+                bounces={false}
+              >
+                {/* Ribbon */}
+                <Animated.View
+                  entering={FadeInDown.delay(60).duration(300)}
+                  style={styles.ribbonWrap}
+                >
+                  <View style={styles.ribbon}>
+                    <Ionicons name="sparkles" size={n(11)} color={AMBER_LIGHT} />
+                    <Text style={styles.ribbonText} numberOfLines={1}>
+                      {t("welcomeBonus.ribbon", { defaultValue: "Pack de bienvenue ChallengeTies" })}
+                    </Text>
+                  </View>
+                </Animated.View>
+
+                {/* Hero — coffre + rings */}
+                <Animated.View
+                  entering={FadeInUp.delay(80).duration(340)}
+                  style={styles.heroZone}
+                >
+                  <View pointerEvents="none" style={styles.ringOuter} />
+                  <View pointerEvents="none" style={styles.ringMiddle} />
+                  <View pointerEvents="none" style={styles.ringInner} />
+
+                  <Animated.View style={[styles.chestWrap, chestStyle]}>
+                    <LottieView
+                      source={require("../assets/lotties/welcomeChest.json")}
+                      autoPlay
+                      loop={false}
+                      style={styles.chestLottie}
+                      resizeMode="contain"
+                    />
+                  </Animated.View>
+                </Animated.View>
+
+                {/* Header — score day counter + titre */}
+                <Animated.View
+                  entering={FadeInUp.delay(140).duration(320)}
+                  style={styles.header}
+                >
+                  {/* Grand compteur jour "42 / 7" style scoreboard */}
+                  <View style={styles.dayCounterWrap}>
+                    <Text style={styles.dayCounterBig}>{displayDay}</Text>
+                    <Text style={styles.dayCounterSlash}>/</Text>
+                    <Text style={styles.dayCounterTotal}>{clampedTotal}</Text>
+                  </View>
+                  <Text style={styles.dayCounterLabel}>
+                    {t("welcomeBonus.dayCounterLabel", { defaultValue: "jours consécutifs" })}
+                  </Text>
+
+                  <View style={{ height: n(10) }} />
+
+                  <Text
+                    style={[styles.title, { fontFamily: current.typography.title.fontFamily }]}
+                    numberOfLines={2}
+                    adjustsFontSizeToFit
                   >
-                    {/* Ribbon */}
-                    <View style={styles.topRow}>
-                      <View style={[styles.pill, { borderColor: STROKE_SOFT, backgroundColor: GLASS }]}>
-                        <Ionicons name="sparkles-outline" size={normalize(14)} color={TEXT_DIM} />
-                        <Text style={[styles.pillText, { color: TEXT_DIM }]} numberOfLines={1}>
-                          {t("welcomeBonus.ribbon", { defaultValue: "Pack de bienvenue ChallengeTies" })}
-                        </Text>
-                      </View>
-                    </View>
+                    {t("welcomeBonus.title", { defaultValue: "Pack de bienvenue" })}
+                  </Text>
 
-                    {/* Hero */}
-                    <View style={styles.heroWrap}>
-                      <Animated.View style={[styles.chestWrap, chestAnimatedStyle]}>
-                        <LottieView
-                          source={require("../assets/lotties/welcomeChest.json")}
-                          autoPlay
-                          loop={false}
-                          style={styles.chestLottie}
-                          resizeMode="contain"
-                        />
-                      </Animated.View>
+                  <View style={{ height: n(6) }} />
 
-                      <View pointerEvents="none" style={[styles.halo, { borderColor: STROKE_SOFT }]}>
-                        <View
-                          style={[
-                            StyleSheet.absoluteFillObject,
-                            { backgroundColor: ACCENT, opacity: 0.10 },
-                          ]}
-                        />
-                      </View>
-                    </View>
+                  <Text style={[styles.subtitle, { fontFamily: current.typography.body.fontFamily }]}>
+                    {t("welcomeBonus.subtitle", {
+                      day: displayDay,
+                      total: clampedTotal,
+                      defaultValue: "Chaque connexion débloque une récompense.",
+                    })}
+                  </Text>
+                </Animated.View>
 
-                    {/* Header */}
-                    <View style={styles.header}>
-                      <Text
-                        style={[
-                          styles.title,
-                          { color: TEXT, fontFamily: current.typography.title.fontFamily },
-                        ]}
-                        numberOfLines={2}
-                        adjustsFontSizeToFit
-                      >
-                        {title}
-                      </Text>
+                {/* Timeline */}
+                <Animated.View entering={FadeInUp.delay(180).duration(320)}>
+                  {renderTimeline()}
+                </Animated.View>
 
-                      <Text
-                        style={[
-                          styles.subtitle,
-                          { color: TEXT_DIM, fontFamily: current.typography.body.fontFamily },
-                        ]}
-                      >
-                        {subtitle}
-                      </Text>
-                    </View>
+                {/* Reward card */}
+                {renderRewardCard()}
 
-                    {/* Timeline */}
-                    {renderTimeline()}
-
-                    {/* Today reward */}
-                    <Animated.View
-                      entering={ZoomIn.springify().damping(20)}
-                      exiting={ZoomOut.duration(140)}
-                      style={styles.todayCardWrapper}
+                {/* CTA */}
+                <Animated.View
+                  entering={FadeInUp.delay(240).duration(320)}
+                  style={styles.ctaWrap}
+                >
+                  <Pressable
+                    onPress={handleClaim}
+                    disabled={!!loading}
+                    accessibilityRole="button"
+                    accessibilityState={{ disabled: !!loading, busy: !!loading }}
+                    accessibilityLabel={ctaLabel}
+                    style={({ pressed }) => [
+                      styles.ctaBtn,
+                      pressed && !loading && { transform: [{ scale: 0.985 }], opacity: 0.92 },
+                      loading && { opacity: 0.80 },
+                    ]}
+                  >
+                    <LinearGradient
+                      colors={[AMBER_LIGHT, AMBER, AMBER_DIM]}
+                      start={{ x: 0, y: 0 }}
+                      end={{ x: 1, y: 1 }}
+                      style={styles.ctaGradient}
                     >
-                      <View style={[styles.todayCard, { backgroundColor: GLASS_STRONG, borderColor: STROKE }]}>
-                        {/* Accent rail */}
-                        <View style={[styles.todayAccentRail, { backgroundColor: ACCENT }]} />
+                      {/* Shimmer */}
+                      {!loading && (
+                        <Animated.View
+                          pointerEvents="none"
+                          style={[styles.ctaShimmer, shimmerStyle]}
+                        />
+                      )}
+                      {/* Top highlight */}
+                      <View
+                        pointerEvents="none"
+                        style={[
+                          StyleSheet.absoluteFillObject,
+                          {
+                            opacity: 0.18,
+                            backgroundColor: "white",
+                            transform: [{ translateY: -n(22) }],
+                          },
+                        ]}
+                      />
 
-                        <Animated.View style={[styles.todayGlow, todayGlowStyle]} pointerEvents="none">
-                          <View style={[StyleSheet.absoluteFillObject, { backgroundColor: ACCENT, opacity: 0.10 }]} />
-                        </Animated.View>
-
-                        <View
-                          style={[
-                            styles.todayIconCircle,
-                            {
-                              borderColor: "rgba(255,255,255,0.14)",
-                              backgroundColor: `${ACCENT}22`,
-                            },
-                          ]}
-                        >
-                          {/* tiny accent ring */}
-                          <View pointerEvents="none" style={[styles.iconRing, { borderColor: ACCENT }]} />
-                          <Ionicons name={baseRewardIcon} size={normalize(30)} color={ACCENT} />
-                        </View>
-
-                        <View style={styles.todayTextBlock}>
-                          <Text style={[styles.todayTitle, { color: ACCENT }]} numberOfLines={1}>
-                            {t("welcomeBonus.todayRewardTitle", { defaultValue: "Récompense du jour" })}
-                          </Text>
-
+                      {loading ? (
+                        <View style={styles.ctaLoadingRow}>
+                          <ActivityIndicator color="#05070B" />
                           <Text
-                            style={[styles.todayReward, { color: TEXT }]}
-                            numberOfLines={2}
+                            style={[styles.ctaText, { fontFamily: current.typography.title.fontFamily }]}
+                            numberOfLines={1}
+                          >
+                            {t("welcomeBonus.ctaLoading", { defaultValue: "Un instant…" })}
+                          </Text>
+                        </View>
+                      ) : (
+                        <>
+                          <Text
+                            style={[styles.ctaText, { fontFamily: current.typography.title.fontFamily }]}
+                            numberOfLines={1}
                             adjustsFontSizeToFit
                           >
-                            {rewardLabel}
+                            {ctaLabel}
                           </Text>
+                          <Ionicons name="arrow-forward" size={n(18)} color="#05070B" />
+                        </>
+                      )}
+                    </LinearGradient>
+                  </Pressable>
+                </Animated.View>
 
-                          {claimSuccess && (
-                            <Animated.View entering={FadeInUp.duration(220)} style={{ marginTop: normalize(6) }}>
-                              <Text style={[styles.claimedNow, { color: TEXT_DIM }]} numberOfLines={1}>
-                                {t("welcomeBonus.claimSuccess", { defaultValue: "Ajouté ✅" })}
-                              </Text>
-                            </Animated.View>
-                          )}
+                {/* Bottom hint */}
+                <Animated.View entering={FadeInUp.delay(280).duration(300)}>
+                  <Text style={styles.bottomHint}>
+                    {t("welcomeBonus.bottomHint", { defaultValue: "Connecte-toi chaque jour pour tout débloquer." })}
+                  </Text>
+                </Animated.View>
 
-                          {rewardType === "premium" && (
-                            <Text style={[styles.todayHint, { color: TEXT_FAINT }]} numberOfLines={2}>
-                              {t("welcomeBonus.premiumHint", {
-                                defaultValue: "Aucune publicité + toute l’expérience ChallengeTies en illimité.",
-                              })}
-                            </Text>
-                          )}
-                        </View>
-
-                        <View style={[styles.dayBadge, { borderColor: "rgba(255,255,255,0.14)", backgroundColor: `${ACCENT}14` }]}>
-                          <Text style={[styles.dayBadgeText, { color: TEXT }]} numberOfLines={1}>
-                            {t("welcomeBonus.dayBadge", { day: displayDay, defaultValue: "Jour {{day}}" })}
-                          </Text>
-                        </View>
-                      </View>
-                    </Animated.View>
-
-                    {/* CTA */}
-<Animated.View style={styles.ctaWrap} entering={FadeInUp.duration(220)}>
-  <Pressable
-    onPress={handleClaimPress}
-    disabled={!!loading}
-    accessibilityRole="button"
-    accessibilityState={{ disabled: !!loading, busy: !!loading }}
-    accessibilityLabel={ctaLabel}
-    accessibilityHint={t("welcomeBonus.ctaHint", {
-      defaultValue: "Récupère la récompense du jour.",
-    })}
-    style={({ pressed }) => [
-      styles.ctaOuter,
-      { borderColor: "rgba(255,255,255,0.16)" },
-      pressed && !loading && { transform: [{ scale: 0.992 }] },
-      loading && { opacity: 0.85 },
-    ]}
-  >
-    <View style={[styles.ctaInner, { backgroundColor: ACCENT }]}>
-      {/* shimmer */}
-      {!loading && (
-        <Animated.View pointerEvents="none" style={[styles.shimmer, shimmerStyle]} />
-      )}
-
-      {/* top highlight */}
-      <View
-        pointerEvents="none"
-        style={[
-          StyleSheet.absoluteFillObject,
-          {
-            opacity: 0.16,
-            backgroundColor: "white",
-            transform: [{ translateY: -normalize(16) }],
-          },
-        ]}
-      />
-
-      {loading ? (
-        <View style={styles.ctaLoadingRow}>
-          <ActivityIndicator />
-          <Text
-            style={[
-              styles.ctaText,
-              { fontFamily: current.typography.title.fontFamily },
-            ]}
-            numberOfLines={1}
-          >
-            {t("welcomeBonus.ctaLoading", { defaultValue: "Un instant…" })}
-          </Text>
-        </View>
-      ) : (
-        <>
-          <Text
-            style={[
-              styles.ctaText,
-              { fontFamily: current.typography.title.fontFamily },
-            ]}
-            numberOfLines={1}
-            adjustsFontSizeToFit
-          >
-            {ctaLabel}
-          </Text>
-
-          <Ionicons
-            name="arrow-forward"
-            size={normalize(18)}
-            color="rgba(5,7,11,0.92)"
-          />
-        </>
-      )}
-    </View>
-  </Pressable>
-</Animated.View>
-
-
-                    {/* Bottom hint */}
-                    <Text style={[styles.bottomHint, { color: TEXT_FAINT }]}>{bottomHint}</Text>
-
-                    <View style={{ height: normalize(6) }} />
-                  </ScrollView>
-                </View>
-              </View>
+                <View style={{ height: n(8) }} />
+              </ScrollView>
             </View>
-          </View>
-        </Animated.View>
+          </Animated.View>
         </View>
       </View>
     </Modal>
   );
 };
-
-
 
 export default WelcomeBonusModal;

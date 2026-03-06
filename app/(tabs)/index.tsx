@@ -106,7 +106,6 @@ const ANDROID_HAIRLINE =
 
 
 const normalize = (size: number) => {
-  // ✅ responsive réel (rotation / tablet / split-screen)
   const w = getScreen().width;
   const baseWidth = 375;
   const scale = Math.min(Math.max(w / baseWidth, 0.78), 1.9);
@@ -121,8 +120,7 @@ const DAILY_CARD_W = Math.round(CONTENT_W * 0.78);
 const DAILY_GAP = normalize(10);
 const DAILY_SNAP = DAILY_CARD_W + DAILY_GAP;
 
-
-// --- Premium system tokens (minimal diff)
+// --- Premium system tokens
 const R = {
   outer: 24,
   card: 22,
@@ -137,7 +135,6 @@ const GLASS_BG = "rgba(255,255,255,0.06)";
 const GLASS_BG_SOFT = "rgba(255,255,255,0.045)";
 const DARK_BG = "rgba(15,23,42,0.35)";
 
-// Un seul style d’ombre cohérent (évite shadow+elevation partout)
 const shadowSoft = Platform.select({
   ios: {
     shadowColor: "#000",
@@ -146,6 +143,18 @@ const shadowSoft = Platform.select({
     shadowOffset: { width: 0, height: 10 },
   },
   android: { elevation: 0 },
+  default: {},
+});
+
+// ✨ NEW: stronger shadow for hero elements
+const shadowHero = Platform.select({
+  ios: {
+    shadowColor: "#F97316",
+    shadowOpacity: 0.28,
+    shadowRadius: 20,
+    shadowOffset: { width: 0, height: 8 },
+  },
+  android: { elevation: 8 },
   default: {},
 });
 
@@ -161,8 +170,8 @@ interface Challenge {
 }
 
 type CurrentChallengeItem = {
-  challengeId?: string; // legacy
-  id?: string; // ✅ ce que tu as réellement dans CurrentChallenges
+  challengeId?: string;
+  id?: string;
   title?: string;
   description?: string;
   imageUrl?: string;
@@ -182,15 +191,9 @@ type PendingInvite = {
   createdAt?: any;
 };
 
-// --- Daily picks helpers ---
 const DAILY_PICKS_KEY = "daily_picks_v1";
-// 🔑 Nouveau: versionner le cache pour éviter les vieux objets cassés
 const CHALLENGES_CACHE_KEY = "challenges_cache_v2";
 
-
-
-
-// ✅ Local day (midnight device) -> pour les 5 défis du jour
 const todayKeyLocal = () => {
   const d = new Date();
   const yyyy = d.getFullYear();
@@ -199,7 +202,6 @@ const todayKeyLocal = () => {
   return `${yyyy}-${mm}-${dd}`;
 };
 
-// ✅ UTC day -> DOIT matcher dailyBonusService (anti désync)
 const todayKeyUTC = () => new Date().toISOString().slice(0, 10);
 const toMs = (v: any): number | null => {
   if (v && typeof v === "object" && typeof v.toDate === "function") {
@@ -222,7 +224,6 @@ const getThumbUrl200 = (url?: string) => {
   const u = typeof url === "string" ? url.trim() : "";
   if (!u) return "";
 
-  // ✅ append _200x200 avant extension (jpg/png/webp/etc)
   const addSuffix = (s: string) => {
     const out = s.replace(/(\.[a-zA-Z0-9]+)$/i, "_200x200$1");
     return out === s ? "" : out;
@@ -232,7 +233,6 @@ const getThumbUrl200 = (url?: string) => {
     const isFirebase =
       u.includes("firebasestorage.googleapis.com") && u.includes("/o/");
 
-    // non-firebase => simple
     if (!isFirebase) {
       const [base, query] = u.split("?");
       const withThumb = addSuffix(base);
@@ -240,21 +240,18 @@ const getThumbUrl200 = (url?: string) => {
       return query ? `${withThumb}?${query}` : withThumb;
     }
 
-    // ✅ firebase: on ne touche qu’au segment "name" encodé après /o/
-    // format: https://firebasestorage.googleapis.com/v0/b/<bucket>/o/<ENCODED_PATH>?alt=media&token=...
     const [pathPart, queryPart] = u.split("?");
     const idx = pathPart.indexOf("/o/");
     if (idx === -1) return "";
 
-    const prefix = pathPart.slice(0, idx + 3); // inclut "/o/"
-    const encoded = pathPart.slice(idx + 3);  // uniquement le path encodé
+    const prefix = pathPart.slice(0, idx + 3);
+    const encoded = pathPart.slice(idx + 3);
     if (!encoded) return "";
 
     const decoded = decodeURIComponent(encoded);
     const thumbDecoded = addSuffix(decoded);
     if (!thumbDecoded) return "";
 
-    // re-encode strict du path uniquement
     const reEncoded = encodeURIComponent(thumbDecoded);
     return `${prefix}${reEncoded}${queryPart ? `?${queryPart}` : ""}`;
   } catch {
@@ -300,7 +297,6 @@ function useUtcDayKeyStable() {
 
     const scheduleNextTick = () => {
       const now = new Date();
-      // +2s de marge pour éviter les edge-cases
       const nextUtcMidnight = new Date(
         Date.UTC(now.getUTCFullYear(), now.getUTCMonth(), now.getUTCDate() + 1, 0, 0, 2)
       );
@@ -332,7 +328,6 @@ function buildDailyPicksFromBase(
 
   let picks: Challenge[] = [];
 
-  // 1) Si on a un cache DAILY_PICKS pour aujourd'hui, on le respecte au max
   if (cachedDailyRaw) {
     try {
       const parsed = JSON.parse(cachedDailyRaw);
@@ -346,7 +341,6 @@ function buildDailyPicksFromBase(
     }
   }
 
-  // 2) Si moins de 5, on complète avec d'autres défis aléatoires
   if (picks.length < 5) {
     const alreadyIds = new Set(picks.map((p) => p.id));
     const remaining = base.filter((c) => !alreadyIds.has(c.id));
@@ -360,7 +354,6 @@ function buildDailyPicksFromBase(
     }
   }
 
-  // 3) Si toujours vide (ou trop peu) → on shuffle tout
   if (!picks.length) {
     const seed = hashStringToInt(`${today}#${userId ?? "global"}`);
     picks = seededShuffle(base, seed).slice(0, 5);
@@ -369,15 +362,14 @@ function buildDailyPicksFromBase(
   return picks;
 }
 
-// --- Welcome Login Bonus UI mirror (doit matcher welcomeBonusService) ---
 const WELCOME_REWARDS_UI: { type: WelcomeRewardKind; amount: number }[] = [
-  { type: "trophies", amount: 8 },   // Jour 1
-  { type: "trophies", amount: 12 },  // Jour 2
-  { type: "streakPass", amount: 1 }, // Jour 3
-  { type: "trophies", amount: 15 },  // Jour 4
-  { type: "streakPass", amount: 1 }, // Jour 5
-  { type: "trophies", amount: 20 },  // Jour 6
-  { type: "premium", amount: 7 },    // Jour 7 (jours premium)
+  { type: "trophies", amount: 8 },
+  { type: "trophies", amount: 12 },
+  { type: "streakPass", amount: 1 },
+  { type: "trophies", amount: 15 },
+  { type: "streakPass", amount: 1 },
+  { type: "trophies", amount: 20 },
+  { type: "premium", amount: 7 },
 ];
 
 const WELCOME_TOTAL_DAYS = WELCOME_REWARDS_UI.length;
@@ -387,7 +379,6 @@ export default function HomeScreen() {
   const DAY_UTC = useUtcDayKeyStable();
   const router = useRouter();
   const params = useLocalSearchParams();
-  // ✅ micro-tuning responsive sans refactor (petits écrans / tablettes)
   const { width: W, height: H } = useWindowDimensions();
   const IS_TINY = W < 350;
   const CONTENT_MAX_W = useMemo(() => {
@@ -431,18 +422,17 @@ export default function HomeScreen() {
   const { show: showToast } = useToast();
   const [duoNudgeDismissed, setDuoNudgeDismissed] = useState(false);
  
-const IMG_MAX_RETRIES = 2;                 // ok
-const IMG_BROKEN_TTL_MS = 10 * 60_000;     // ✅ 10 min (stable + évite boucle)
+const IMG_MAX_RETRIES = 2;
+const IMG_BROKEN_TTL_MS = 10 * 60_000;
 const IMG_RETRY_BASE_MS = 450;  
 
 const [imgReloadKey, setImgReloadKey] = useState<Record<string, number>>({});
-const imgRetryRef = useRef<Record<string, number>>({}); // pas de re-render
+const imgRetryRef = useRef<Record<string, number>>({});
 const imgRetryTimerRef = useRef<Record<string, any>>({});
 const welcomeHandledRef = useRef<string | null>(null);
 
 useEffect(() => {
   return () => {
-    // cleanup timers
     Object.values(imgRetryTimerRef.current).forEach((t) => clearTimeout(t));
     imgRetryTimerRef.current = {};
   };
@@ -452,7 +442,6 @@ const scheduleImageRetry = useCallback((id: string) => {
   const tries = (imgRetryRef.current[id] ?? 0) + 1;
   imgRetryRef.current[id] = tries;
 
-  // remount pour forcer expo-image à retenter
   if (tries <= IMG_MAX_RETRIES) {
     const delay = IMG_RETRY_BASE_MS * tries;
 
@@ -468,28 +457,22 @@ const scheduleImageRetry = useCallback((id: string) => {
   setImgReloadKey((prev) => ({ ...prev, [id]: (prev[id] ?? 0) + 1 }));
 }, delay);
 
-    return true; // retry scheduled
+    return true;
   }
 
-  return false; // no more retries
+  return false;
 }, []);
 
-
-  // ---------------------------
-  // Onboarding Spotlight (1x)
-  // ---------------------------
   const SPOTLIGHT_SHOWN_KEY = useMemo(
     () => `home.onboardingSpotlightShown.v1.${user?.uid ?? "guest"}`,
     [user?.uid]
   );
   const ONBOARDING_JUST_FINISHED_KEY = "onboarding.justFinished.v1";
-  // ✅ post-welcome absorption trigger (1x)
-const POST_WELCOME_ABSORB_KEY = useMemo(
+  const POST_WELCOME_ABSORB_KEY = useMemo(
   () => `home.postWelcomeAbsorb.v1.${user?.uid ?? "guest"}`,
   [user?.uid]
 );
 
-// ✅ Premium entitlement (payant OU trial actif)
   const premiumEntitlement = useMemo(() => {
     const premium = (userData as any)?.premium;
     if (!premium || typeof premium !== "object") {
@@ -519,7 +502,6 @@ const POST_WELCOME_ABSORB_KEY = useMemo(
     };
   }, [userData]);
 
-// ✅ duoPending "first login" pulse (1x)
 const DUO_PENDING_FIRST_KEY = useMemo(
   () => `home.duoPendingFirst.v1.${user?.uid ?? "guest"}`,
   [user?.uid]
@@ -528,8 +510,7 @@ const ABSORB_MARK_KEY = useMemo(
   () => `home.absorbMark.v1.${DAY_UTC}.${user?.uid ?? "guest"}`,
   [DAY_UTC, user?.uid]
 );
- // ✅ first solo absorption (1x)
-const FIRST_SOLO_ABSORB_KEY = useMemo(
+ const FIRST_SOLO_ABSORB_KEY = useMemo(
   () => `home.firstSoloAbsorb.v1.${user?.uid ?? "guest"}`,
   [user?.uid]
 );
@@ -564,8 +545,6 @@ const changingLangRef = useRef(false);
     return { opacity: o, transform: [{ scale: s }] };
   });
 
-  
-
   const {
     tutorialStep,
     isTutorialActive,
@@ -578,14 +557,9 @@ const changingLangRef = useRef(false);
   const isTutorialBlocking = isTutorialActive && tutorialGate;
   const todayHubYRef = useRef(0);
 
-
-    // ---------------------------
-  // Spotlight: anti-race / cancelable open
-  // ---------------------------
   const spotlightOpenTokenRef = useRef(0);
 
   const isSpotlightBlocked = useCallback(() => {
-    // ⚠️ IMPORTANT: on EXCLUT spotlightVisible ici (sinon on s’auto-bloque)
     return (
       isTutorialBlocking ||
       welcomeVisible ||
@@ -596,7 +570,6 @@ const changingLangRef = useRef(false);
   }, [isTutorialBlocking, welcomeVisible, dailyBonusVisible, showPremiumEndModal, modalVisible]);
 
   const forceHideSpotlight = useCallback(() => {
-    // ne consomme pas le flag "shown" (contrairement à dismissSpotlight)
     setSpotlightArmed(false);
     setSpotlightVisible(false);
     setSpotRect(null);
@@ -608,9 +581,6 @@ const changingLangRef = useRef(false);
     useEffect(() => {
     if (!spotlightVisible) return;
     if (!isSpotlightBlocked()) return;
-
-    // Un modal (WelcomeBonus / Daily / Premium / Gate / Tuto) vient d’apparaître :
-    // on coupe le spotlight IMMEDIATEMENT pour éviter l’effet “derrière”.
     forceHideSpotlight();
   }, [spotlightVisible, isSpotlightBlocked, forceHideSpotlight]);
 
@@ -651,7 +621,6 @@ const userLanguage = (data as any)?.language;
         });
     }
 
-    // Localisation : pareil, simple
     if ((data as any)?.locationEnabled) {
       fetchAndSaveUserLocation().catch(() => {});
     }
@@ -660,30 +629,20 @@ const userLanguage = (data as any)?.language;
   }
 }, [user?.uid, i18n]);
 
- 
-
-
   const openTutorial = useCallback(async () => {
     try {
       await Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
     } catch {}
 
-    // ✅ Autorise le rendu du tuto UNIQUEMENT après clic user
     setTutorialGate(true);
-
-    // Reset propre
     setTutorialStep(0);
-
-    // Si le context est déjà actif (bug), on le laisse tourner mais maintenant on a la gate = UI ok
-    // Sinon on le démarre normalement
     startTutorial?.();
   }, [startTutorial, setTutorialStep]);
 
 useEffect(() => {
     if (!isTutorialActive) return;
-    if (tutorialGate) return; // ✅ clic user => autorisé
+    if (tutorialGate) return;
 
-    // ❌ Activation auto détectée -> on coupe sans jamais afficher
     setTutorialStep(0);
     skipTutorial?.();
   }, [isTutorialActive, tutorialGate, setTutorialStep, skipTutorial]);
@@ -692,11 +651,9 @@ useEffect(() => {
   const id = c?.id;
   if (!id) return;
 
-  // ✅ d’abord on retente 1-2 fois (transient réseau)
   const didScheduleRetry = scheduleImageRetry(id);
   if (didScheduleRetry) return;
 
-  // ❌ seulement après retries → fallback “broken”
   setBrokenImages((prev) => ({ ...prev, [id]: true }));
 
   setTimeout(() => {
@@ -713,7 +670,6 @@ useEffect(() => {
       return copy;
     });
     
-    // reset retry counter après TTL
     delete imgRetryRef.current[id];
   }, IMG_BROKEN_TTL_MS);
 }, [scheduleImageRetry]);
@@ -739,7 +695,7 @@ const markImageLoaded = useCallback((c?: Challenge) => {
   if (!id) return;
 
   setImgLoaded((prev) => (prev[id] ? prev : { ...prev, [id]: true }));
-  markImageOk(c); // garde ton cleanup broken/retry
+  markImageOk(c);
 }, [markImageOk]);
 
 const getChallengeImageUri = useCallback(
@@ -748,19 +704,14 @@ const getChallengeImageUri = useCallback(
     const rawThumb = typeof c?.imageThumbUrl === "string" ? c.imageThumbUrl.trim() : "";
     const id = c?.id;
 
-// ✅ on bloque seulement le "full" (hero), jamais le thumb.
-// les thumbs peuvent fail transitoirement (cache/seed/list).
 if (variant === "full" && id && brokenImages[id]) return "";
 
     if (variant === "thumb") {
-      // ✅ 1) thumb explicite (si Firestore le fournit un jour)
       if (rawThumb.startsWith("http")) return rawThumb;
 
-      // ✅ 2) sinon on dérive automatiquement le _200x200 depuis imageUrl (Firebase Storage)
       const derived = getThumbUrl200(rawFull);
       if (derived.startsWith("http")) return derived;
 
-      // ✅ 3) dernier recours : full
       return rawFull.startsWith("http") ? rawFull : "";
     }
 
@@ -783,13 +734,12 @@ const markScale = useSharedValue(1);
 
 const markPulse = useSharedValue(0);
 const markShine = useSharedValue(-1);
-// ✅ Solo "MARK" extra punch
 const soloNudgePulse = useSharedValue(0);
-const soloNudgeIn = useSharedValue(0); // 0..1 (fade/slide)
-
-// ✅ Duo ring pulse (quand mode == "duo")
+const soloNudgeIn = useSharedValue(0);
 const duoRingPulse = useSharedValue(0);
 
+// ✨ NEW: ambient glow for hero CTA
+const heroCtaGlow = useSharedValue(0);
 
 const exploreAnimStyle = useAnimatedStyle(() => ({
   transform: [{ scale: exploreScale.value }],
@@ -799,13 +749,18 @@ const markAnimStyle = useAnimatedStyle(() => ({
   transform: [{ scale: markScale.value }],
 }));
 
+// ✨ NEW: hero CTA ambient glow animation style
+const heroCtaGlowStyle = useAnimatedStyle(() => ({
+  opacity: 0.25 + heroCtaGlow.value * 0.20,
+  transform: [{ scale: 1 + heroCtaGlow.value * 0.06 }],
+}));
+
   const [isScreenFocused, setIsScreenFocused] = useState(true);
   const [videoReady, setVideoReady] = useState(false);
 
   const hasActiveChallenges = useMemo(() => {
     const list = (userData as any)?.CurrentChallenges;
     if (!Array.isArray(list)) return false;
-    // Si au moins un challenge non terminé, on considère qu'une "série" est en cours
     return list.some((c) => !c?.completed && !c?.archived);
   }, [userData]);
 
@@ -827,24 +782,19 @@ const markAnimStyle = useAnimatedStyle(() => ({
   }, [currentChallenges]);
 
   const activeChallengeId = useMemo(() => {
-    // ✅ supporte ta structure réelle : id dans l'objet user
     const id = (activeChallenge?.challengeId ?? activeChallenge?.id) as any;
     return typeof id === "string" && id.trim().length > 0 ? id.trim() : null;
   }, [activeChallenge]);
 
   useEffect(() => {
-    // si pas de défi actif, ou si le défi devient duo => on réactive le nudge
     if (!hasActiveChallenges || !activeChallengeId || activeChallenge?.duo === true) {
       setDuoNudgeDismissed(false);
       return;
     }
-    // si l’utilisateur change de défi actif => on réactive le nudge pour ce nouveau défi
     setDuoNudgeDismissed(false);
   }, [hasActiveChallenges, activeChallengeId, activeChallenge?.duo]);
 
   const activeChallengeMeta = useMemo<Challenge | null>(() => {
-    // ✅ 1) si on a le doc complet dans CurrentChallenges, on l'utilise direct
-    // (ça règle instantanément ton "Ton défi" vide)
     if (activeChallenge) {
       const localTitle = typeof activeChallenge.title === "string" ? activeChallenge.title.trim() : "";
       const localDesc = typeof activeChallenge.description === "string" ? activeChallenge.description.trim() : "";
@@ -862,7 +812,6 @@ const markAnimStyle = useAnimatedStyle(() => ({
       }
     }
 
-    // ✅ 2) sinon on tente via la base fetchée
     if (!activeChallengeId) return null;
     const inAll = allChallenges.find((c) => c.id === activeChallengeId);
     if (inAll) return inAll;
@@ -871,7 +820,6 @@ const markAnimStyle = useAnimatedStyle(() => ({
   }, [activeChallenge, activeChallengeId, allChallenges, dailyFive, t]);
 
 const effectiveActiveMeta = activeChallengeMetaOverride ?? activeChallengeMeta;
-// ✅ Meta "source de vérité" pour TodayHub : doit être traduite (via chatId) quand possible
 const todayHubActiveMeta = useMemo(() => {
   return effectiveActiveMeta ?? null;
 }, [effectiveActiveMeta]);
@@ -908,7 +856,6 @@ const todayHubActiveMeta = useMemo(() => {
     [isScreenFocused, isTutorialBlocking, videoReady]
   );
 
-// ✅ Banner height callback (logs uniquement en DEV)
   const handleAdHeight = useCallback((h: number) => {
     if (__DEV__) console.log("[ADS][HomeScreen] Banner height:", h);
     setAdHeight(h);
@@ -919,22 +866,17 @@ const todayHubActiveMeta = useMemo(() => {
   [DAY_UTC, user?.uid]
 );
 
-// ✅ Welcome handled (persistant) : claim OU close => ne jamais rouvrir aujourd'hui
 const WELCOME_HANDLED_KEY = useMemo(
   () => `home.welcomeHandled.v1.${DAY_UTC}.${user?.uid ?? "guest"}`,
   [DAY_UTC, user?.uid]
 );
 
 const markWelcomeHandled = useCallback(async () => {
-  // ✅ verrouille en mémoire
   welcomeHandledRef.current = DAY_UTC;
-
-  // ✅ verrouille en state (anti-rebond)
   setWelcomeGuardKey(DAY_UTC);
   setPendingWelcomeAfterTutorial(false);
   setWelcomeVisible(false);
 
-  // ✅ verrouille persistant (anti-remount / anti-refresh)
   try {
     await AsyncStorage.setItem(WELCOME_HANDLED_KEY, "1");
   } catch {}
@@ -942,7 +884,6 @@ const markWelcomeHandled = useCallback(async () => {
 
 
   const HERO_BASE_HEIGHT = useMemo(() => {
-    // ✅ évite un hero trop grand sur petits écrans (et trop petit sur grands)
     const base = normalize(360);
     const capMin = Math.round(H * 0.44);
     const capMax = Math.round(H * 0.56);
@@ -957,11 +898,9 @@ const markWelcomeHandled = useCallback(async () => {
     SPACING * 2;
 
    const shouldShowBanner = showBanners && !isTutorialBlocking && !premiumEntitlement.isEntitled;
-   // ✅ Remount BannerSlot quand l’affichage change (fix “banner sometimes not appearing”)
   useEffect(() => {
     if (!shouldShowBanner) return;
     setBannerKey((k) => k + 1);
-    // reset hauteur pour recalcul padding proprement
     setAdHeight(0);
   }, [shouldShowBanner]);
 
@@ -1009,11 +948,7 @@ const markWelcomeHandled = useCallback(async () => {
     } catch {}
   }, [SPOTLIGHT_SHOWN_KEY, spotlightOpacity, spotlightRing]);
 
-  
-
-
   const openSpotlight = useCallback(async () => {
-    // measure CTA position for perfect overlay
     const measure = () =>
       new Promise<{ x: number; y: number; w: number; h: number } | null>(
         (resolve) => {
@@ -1046,8 +981,6 @@ await new Promise((r) => requestAnimationFrame(() => r(null)));
   }, [spotlightOpacity, spotlightCardScale, spotlightRing]);
 
     const hasOutgoingPendingInvite = useMemo(() => {
-  // pendingInvite existe seulement pour les invites sortantes (inviterId == user.uid) dans ton query
-  // donc on check juste l’essentiel + le bool guard
   return (
     !!user?.uid &&
     duoInvitePending === true &&
@@ -1068,16 +1001,12 @@ await new Promise((r) => requestAnimationFrame(() => r(null)));
    langKey: i18n.language,
 });
 const primaryActiveId = useMemo(() => {
-  // ✅ si des actifs existent : on prend celui choisi par TodayHub (non-marked prioritaire)
   return todayHubView.focusChallengeId ?? null;
 }, [todayHubView.focusChallengeId]);
 
  const todayHubPrimaryMode = todayHubView.primaryMode as TodayHubPrimaryMode;
 
   const shouldPulsePrimary = useMemo(() => {
-    // Apple-ish: pulse seulement quand il y a une action “à faire”
-    // - mark: tant qu'il reste au moins 1 défi non marqué aujourd’hui
-    // - duoPending: pour rappeler qu’une action est en attente
     if (todayHubView.primaryMode === "mark") return todayHubView.anyUnmarkedToday;
     if (todayHubView.primaryMode === "duoPending") return true;
     return false;
@@ -1086,13 +1015,9 @@ const primaryActiveId = useMemo(() => {
   const tryOpenSpotlightWithRetry = useCallback(
     async (token: number) => {
       for (let i = 0; i < 6; i++) {
-        // ✅ cancel si un autre open est déclenché entre-temps
         if (token !== spotlightOpenTokenRef.current) return;
-
-        // ✅ si un modal arrive (welcome/daily/premium/gate/tuto), on stop
         if (isSpotlightBlocked()) return;
 
-        // laisse le layout respirer (scroll, fonts, tabbar, etc.)
         await new Promise((r) => setTimeout(r, i === 0 ? 160 : 220));
 
         if (token !== spotlightOpenTokenRef.current) return;
@@ -1112,7 +1037,6 @@ const primaryActiveId = useMemo(() => {
 
         if (!rect) continue;
 
-        // ✅ dernière vérif avant d’afficher
         if (token !== spotlightOpenTokenRef.current) return;
         if (isSpotlightBlocked()) return;
 
@@ -1133,7 +1057,6 @@ const primaryActiveId = useMemo(() => {
         return;
       }
 
-      // si on n'a jamais réussi à mesurer, on désarme pour éviter loop mentale
       setSpotlightArmed(false);
     },
     [
@@ -1145,13 +1068,12 @@ const primaryActiveId = useMemo(() => {
   );
 
 const spotlightAllowed = useMemo(() => {
-  // ✅ spotlight uniquement si on peut "marquer aujourd’hui"
   return hasActiveChallenges && todayHubView.anyUnmarkedToday;
 }, [hasActiveChallenges, todayHubView.anyUnmarkedToday]);
 
 
 const markHaloStyle = useAnimatedStyle(() => {
-  const t = markPulse.value; // 0..1
+  const t = markPulse.value;
   return {
     opacity: 0.12 + t * 0.18,
     transform: [{ scale: 1 + t * 0.02 }],
@@ -1166,13 +1088,13 @@ const markGlowStyle = useAnimatedStyle(() => {
 });
 
 const markShineStyle = useAnimatedStyle(() => ({
-  transform: [{ translateX: markShine.value * 260 }], // ajustable
+  transform: [{ translateX: markShine.value * 260 }],
   opacity: 0.16,
 }));
 
 const soloNudgeStyle = useAnimatedStyle(() => {
-  const p = soloNudgePulse.value; // 0..1
-  const a = soloNudgeIn.value; // 0..1
+  const p = soloNudgePulse.value;
+  const a = soloNudgeIn.value;
 
   return {
     opacity: 0.6 * a + 0.4 * a * (0.65 + p * 0.35),
@@ -1186,18 +1108,15 @@ const soloNudgeStyle = useAnimatedStyle(() => {
 
 
 const absorbToTodayHub = useCallback(async () => {
-    // ✅ autorisé seulement quand l’écran est prêt
     if (!scrollRef.current) return;
     if (isAnyBlockingModalOpen && !postWelcomeAbsorbArmed) return;
 
-    // ✅ 1x / jour / user
     try {
       const already = await AsyncStorage.getItem(ABSORB_MARK_KEY);
       if (already === "1") return;
     } catch {}
 
     InteractionManager.runAfterInteractions(() => {
-      // 1) scroll vers TodayHub
       try {
         scrollRef.current?.scrollTo({
           y: Math.max(0, todayHubYRef.current - normalize(10)),
@@ -1205,14 +1124,11 @@ const absorbToTodayHub = useCallback(async () => {
         });
       } catch {}
 
-      // 2) pulse du CTA principal selon le mode (Keynote: “l’action”)
-      // ✅ Pulse unique, cohérent : CTA primaire (quelle que soit la variante)
       markScale.value = withSpring(0.975, { damping: 18, stiffness: 240 });
       setTimeout(() => {
         markScale.value = withSpring(1, { damping: 16, stiffness: 200 });
       }, 220);
 
-      // 3) spotlight seulement si "mark"
       setTimeout(() => {
         if (todayHubPrimaryMode !== "mark") return;
         if (!spotlightAllowed) return;
@@ -1243,14 +1159,12 @@ const absorbToTodayHub = useCallback(async () => {
     return;
   }
 
-  // ✅ pulse commun (mark + duoPending)
   markPulse.value = withRepeat(
     withTiming(1, { duration: 1400, easing: Easing.inOut(Easing.ease) }),
     -1,
     true
   );
 
-  // ✅ shine seulement sur "mark" (sinon ça fait trop “mark” sur pending)
   if (todayHubPrimaryMode === "mark") {
     markShine.value = withRepeat(
       withTiming(1, { duration: 1800, easing: Easing.inOut(Easing.ease) }),
@@ -1296,8 +1210,6 @@ useEffect(() => {
   soloNudgeIn,
 ]);
 
-  // ✅ Si on passe en duoPending, on CONSUME le flag onboarding pour éviter
-  // un spotlight qui pop plus tard quand ça repasse "mark".
   useEffect(() => {
     if (todayHubPrimaryMode !== "duoPending") return;
     (async () => {
@@ -1309,6 +1221,15 @@ useEffect(() => {
       spotlightOpacity.value = withTiming(0, { duration: 120 });
     })();
   }, [todayHubPrimaryMode, spotlightOpacity]);
+
+// ✨ NEW: hero CTA glow pulse on mount
+useEffect(() => {
+  heroCtaGlow.value = withRepeat(
+    withTiming(1, { duration: 2200, easing: Easing.inOut(Easing.ease) }),
+    -1,
+    true
+  );
+}, [heroCtaGlow]);
 
 useEffect(() => {
   let cancelled = false;
@@ -1344,19 +1265,13 @@ useEffect(() => {
   useEffect(() => {
     if (!spotlightArmed) return;
     if (!spotlightAllowed) return;
-
-    // ✅ ne jamais lancer si un modal est visible
     if (isSpotlightBlocked()) return;
-
-    // déjà affiché / déjà mesuré
     if (spotlightVisible || spotRect) return;
 
-    // ✅ token: si un modal arrive après la planif, on annule
     const token = ++spotlightOpenTokenRef.current;
 
     const task = InteractionManager.runAfterInteractions(() => {
       setTimeout(() => {
-        // re-check au moment exact de l’open
         if (token !== spotlightOpenTokenRef.current) return;
         if (isSpotlightBlocked()) return;
 
@@ -1365,7 +1280,6 @@ useEffect(() => {
     });
 
     return () => {
-      // ✅ annule implicitement l’open prévu
       spotlightOpenTokenRef.current++;
       task?.cancel?.();
     };
@@ -1385,7 +1299,6 @@ useEffect(() => {
     if (!user?.uid) return;
     if (!userData) return;
 
-    // ✅ pas de magie si un modal est visible
     if (
       isTutorialBlocking ||
       welcomeVisible ||
@@ -1396,9 +1309,6 @@ useEffect(() => {
       return;
     }
 
-    // ✅ absorb déclenchable dans 2 cas:
-    // A) post-welcome armé
-    // B) première fois solo (rail d’activation)
     let shouldAbsorb = false;
     try {
       const armed =
@@ -1416,13 +1326,11 @@ useEffect(() => {
 
     if (!shouldAbsorb) return;
 
-    // ✅ petite latence “Keynote” pour laisser mesurer todayHubY + CTA
     await new Promise((r) => setTimeout(r, 160));
     if (cancelled) return;
 
     await absorbToTodayHub();
 
-    // consume flags
     try {
       await AsyncStorage.removeItem(POST_WELCOME_ABSORB_KEY);
       await AsyncStorage.removeItem(ONBOARDING_JUST_FINISHED_KEY);
@@ -1458,7 +1366,6 @@ useEffect(() => {
       ? WELCOME_REWARDS_UI[welcomeState.currentDay]
       : null;
 
-      // ✅ Logs ADS (DEV only)
   useEffect(() => {
     if (!__DEV__) return;
     const adsReady = (globalThis as any).__ADS_READY__;
@@ -1518,7 +1425,6 @@ useEffect(() => {
   let cancelled = false;
 
   const run = async () => {
-    // 0) userData transitoire => on ferme juste l'UI, sans reset des guards
     if (!userData) {
       setWelcomeState(null);
       setWelcomeVisible(false);
@@ -1526,20 +1432,16 @@ useEffect(() => {
     }
 
     try {
-      // 1) Compute state
       const state = computeWelcomeBonusState(userData);
       if (cancelled) return;
 
       setWelcomeState(state);
 
-      // 2) HARD STOP mémoire : déjà géré aujourd’hui => jamais réouvrir
       if (welcomeHandledRef.current === DAY_UTC) {
         setWelcomeVisible(false);
         return;
       }
 
-      // 3) HARD STOP persistant : si handled en storage => jamais réouvrir
-      //    (anti-remount / anti-refresh / userData null -> data)
       try {
         const handled = await AsyncStorage.getItem(WELCOME_HANDLED_KEY);
         if (cancelled) return;
@@ -1555,24 +1457,20 @@ useEffect(() => {
         // ignore storage errors
       }
 
-      // 4) Si pas claimable ou terminé => on ferme
       if (!state.canClaimToday || state.completed) {
         setWelcomeVisible(false);
         return;
       }
 
-      // 5) Anti-rebond (state) : déjà ouvert/armé aujourd'hui => ne rien faire
       if (welcomeGuardKey === DAY_UTC) return;
 
-      // 6) Si tuto actif => on arme post-tuto, sans ouvrir
       if (isTutorialActive) {
         setPendingWelcomeAfterTutorial(true);
-        setWelcomeGuardKey(DAY_UTC); // marque "traité" pour éviter re-open loop
+        setWelcomeGuardKey(DAY_UTC);
         setWelcomeVisible(false);
         return;
       }
 
-      // 7) Sinon => on ouvre maintenant (1 seule fois / jour)
       setWelcomeVisible(true);
       setWelcomeGuardKey(DAY_UTC);
     } catch (e) {
@@ -1597,7 +1495,6 @@ useEffect(() => {
   if (!pendingWelcomeAfterTutorial) return;
   if (!welcomeState || !welcomeState.canClaimToday || welcomeState.completed) return;
 
-  // ✅ pas de ré-ouverture si déjà traité ce jour-là
   if (welcomeHandledRef.current === DAY_UTC) {
     setPendingWelcomeAfterTutorial(false);
     return;
@@ -1623,7 +1520,6 @@ useEffect(() => {
         return;
       }
 
-      // si on a déjà une meta solide (title/img/desc), inutile
       const hasSolid =
         !!activeChallengeMeta?.title ||
         !!activeChallengeMeta?.description ||
@@ -1688,7 +1584,6 @@ useEffect(() => {
 }, [todayHubPrimaryMode, isTutorialBlocking, isAnyBlockingModalOpen, duoRing, duoGlow]);
 
 
-// ✅ PremiumEnd: remember which expiry we are prompting for
 const premiumEndExpiresMsRef = useRef<number | null>(null);
 
 const persistPremiumEndDismiss = useCallback(async () => {
@@ -1697,17 +1592,15 @@ const persistPremiumEndDismiss = useCallback(async () => {
   const expiresMs = premiumEndExpiresMsRef.current;
   if (!expiresMs) return;
 
-  // 1) Firestore = vérité (multi-device + durable)
   try {
     await updateDoc(doc(db, "users", user.uid), {
       "premium.endModalDismissedUntil": expiresMs,
       "premium.endModalDismissedAt": serverTimestamp(),
     });
   } catch {
-    // silence (on garde fallback local)
+    // silence
   }
 
-  // 2) Fallback local (au cas où)
   try {
     await AsyncStorage.setItem(
       `premiumEndModalShown_v3_${user.uid}`,
@@ -1718,7 +1611,6 @@ const persistPremiumEndDismiss = useCallback(async () => {
 
 useEffect(() => {
   if (!user || !userData) return;
-
 
   const premium = (userData as any).premium;
   if (!premium || typeof premium !== "object") return;
@@ -1732,15 +1624,12 @@ useEffect(() => {
   const now = Date.now();
   if (now <= expiresMs) return;
 
-  // ✅ si premium payant, pas de modal
   if (premiumEntitlement.isPaying) return;
 
-  // ✅ Firestore guard (multi-device)
   const dismissedUntil = (premium as any)?.endModalDismissedUntil;
   const dismissedUntilMs = toMs(dismissedUntil);
   if (dismissedUntilMs && dismissedUntilMs === expiresMs) return;
 
-  // ✅ fallback local guard
   const key = `premiumEndModalShown_v3_${user.uid}`;
 
   const checkAndShow = async () => {
@@ -1749,12 +1638,9 @@ useEffect(() => {
       if (last === String(expiresMs)) return;
     } catch {}
 
-    // keep the expiry we are prompting for
     premiumEndExpiresMsRef.current = expiresMs;
-
     setShowPremiumEndModal(true);
 
-    // store fallback immediately to reduce double-show even if user force closes app
     try {
       await AsyncStorage.setItem(key, String(expiresMs));
     } catch {}
@@ -1773,7 +1659,6 @@ useEffect(() => {
 
 useFocusEffect(
   useCallback(() => {
-    // ✅ refresh instant quand tu reviens de Explore / Challenge-details
     refreshUserData();
   }, [refreshUserData])
 );
@@ -1811,8 +1696,6 @@ useEffect(() => {
     return;
   }
 
-  // ✅ invitation pending la plus récente envoyée par l'utilisateur
-  // (si tu as createdAt dans Firestore, ajoute orderBy("createdAt","desc"))
   const qInv = query(
     collection(db, "invitations"),
     where("inviterId", "==", user.uid),
@@ -1874,8 +1757,7 @@ useEffect(() => {
 }, [duoInvitePending, isTutorialBlocking, duoPendingPulse]);
 
 const bonusPulseStyle = useAnimatedStyle(() => {
-  // glow discret (pas kitsch)
-  const o = 0.10 + bonusPulse.value * 0.10; // 0.10 -> 0.20
+  const o = 0.10 + bonusPulse.value * 0.10;
   return { opacity: o };
 });
 
@@ -1883,7 +1765,6 @@ const bonusPulseStyle = useAnimatedStyle(() => {
     fadeAnim.value = withTiming(1, { duration: 1500 });
   }, [fadeAnim]);
 
-  // ✅ Rewarded ad (reroll daily bonus)
   const rerollAd = useMemo(
     () =>
       RewardedAd.createForAdRequest(adUnitIds.rewarded, {
@@ -1945,7 +1826,6 @@ const bonusPulseStyle = useAnimatedStyle(() => {
       const full = getChallengeImageUri(c, "full");
     const thumb = getChallengeImageUri(c, "thumb");
 
-    // ✅ hero: préfetch full, minis: préfetch thumb
     const targets = new Set<string>();
     if (full?.startsWith("http")) targets.add(full);
     if (thumb?.startsWith("http")) targets.add(thumb);
@@ -1961,7 +1841,6 @@ const bonusPulseStyle = useAnimatedStyle(() => {
 
     try {
 
-      // 1) Lire cache challenges + DAILY_PICKS en parallèle
       const [cachedChallenges, cachedDaily] = await Promise.all([
         AsyncStorage.getItem(CHALLENGES_CACHE_KEY),
         AsyncStorage.getItem(DAILY_PICKS_KEY),
@@ -1988,7 +1867,6 @@ const bonusPulseStyle = useAnimatedStyle(() => {
   }
 }
 
-      // 2) Si on a déjà une base locale → on hydrate tout de suite l'écran
       if (base.length) {
         const picks = buildDailyPicksFromBase(
           base,
@@ -2001,7 +1879,6 @@ const bonusPulseStyle = useAnimatedStyle(() => {
         hydratedFromCache = true;
       }
 
-      // 3) Requête Firestore pour rafraîchir les données (en arrière-plan si cache déjà affiché)
       const challengesQuery = query(
         collection(db, "challenges"),
         where("approved", "==", true)
@@ -2020,7 +1897,6 @@ const bonusPulseStyle = useAnimatedStyle(() => {
       ? data.imageThumbUrl.trim()
       : (imageUrl ? getThumbUrl200(imageUrl) : undefined);
 
-  // ✅ DEBUG DEV — détecte http:// (Android peut foirer parfois)
   if (__DEV__ && imageUrl?.startsWith("http://")) {
     console.warn(
       "[HomeScreen] HTTP imageUrl (risk on Android):",
@@ -2058,11 +1934,9 @@ const bonusPulseStyle = useAnimatedStyle(() => {
       const shuffled = seededShuffle(sorted, seed);
       const picksFresh = shuffled.slice(0, 5);
 
-      // 4) Mettre à jour l’état avec les données fraîches
       setAllChallenges(fetched);
       setDailyFive(picksFresh);
 
-      // 5) Mettre à jour les caches (base + DAILY_PICKS)
       Promise.allSettled([
         AsyncStorage.setItem(CHALLENGES_CACHE_KEY, JSON.stringify(fetched)),
         AsyncStorage.setItem(
@@ -2076,7 +1950,6 @@ const bonusPulseStyle = useAnimatedStyle(() => {
     } catch (error) {
       console.warn("[HomeScreen] fetchChallenges error:", (error as any)?.message ?? error);
 
-      // 6) Si le cache n'a PAS pu hydrater l’UI, on tente un fallback propre
       if (!hydratedFromCache) {
         try {
           const cachedChallenges = await AsyncStorage.getItem(CHALLENGES_CACHE_KEY);
@@ -2145,11 +2018,9 @@ const handleInviteFriendPress = useCallback(async () => {
 
   try { await Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium); } catch {}
 
-  // ✅ on pousse vers le détail du challenge, et tu peux y afficher un état "invitation envoyée"
   safeNavigate(`/challenge-details/${targetId}?invitePending=1`, "home-invite-friend");
 }, [pendingInvite?.challengeId, todayHubView.hubChallengeId, primaryActiveId, safeNavigate]);
 
-// ✅ WARMUP CTA (duo pending) -> renvoie vers le challenge-details du challenge concerné
 const warmupTargetId = useMemo(() => {
   const id =
     pendingInvite?.challengeId ??
@@ -2161,7 +2032,6 @@ const warmupTargetId = useMemo(() => {
 const handleWarmupPress = useCallback(async () => {
   if (!warmupTargetId) return;
   try { await Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium); } catch {}
-  // ✅ “warmup=1” te permet (si tu veux) d’afficher un micro-rail dans challenge-details
   safeNavigate(`/challenge-details/${warmupTargetId}?warmup=1`, "home-warmup");
 }, [warmupTargetId, safeNavigate]);
 
@@ -2169,14 +2039,12 @@ const handleWarmupPress = useCallback(async () => {
     try {
       await Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
     } catch {}
-    // ✅ “Marquer” doit ouvrir le challenge-details du défi concerné (pas Focus)
   const targetId =
     primaryActiveId ??
     todayHubView.hubChallengeId ??
     activeChallengeId;
 
   if (!targetId) {
-    // fallback safe : si on n’a aucun id, on envoie vers Explore
     safeNavigate("/explore", "home-mark-no-target");
     return;
   }
@@ -2186,7 +2054,6 @@ const handleWarmupPress = useCallback(async () => {
 
   const handleSpotlightMark = useCallback(async () => {
     await dismissSpotlight();
-    // slight micro-delay to avoid "double modal" feel
     setTimeout(() => {
       handleMarkTodayPress();
     }, 80);
@@ -2200,7 +2067,6 @@ const handleWarmupPress = useCallback(async () => {
     safeNavigate(`/challenge-details/${activeChallengeId}`, "home-open-active");
   }, [activeChallengeId, safeNavigate]);
 
-  // ✅ CTA ultra-courts (jamais coupés) : on garde le sens via sous-texte + a11y/hints
   const heroCtaLabel = useMemo(
     () => t("homeZ.hero.ctaShort", "Explorer"),
     [t]
@@ -2279,7 +2145,6 @@ const handleWarmupPress = useCallback(async () => {
 
 const todayHubTitle = todayHubView.title;
 const todayHubSub = todayHubView.subtitle;
-// ✅ description safe (affichage preview)
 const todayHubHubDescription = useMemo(() => {
   const raw = (todayHubView.hubMeta?.description ?? "") as any;
   const clean = String(raw ?? "").trim();
@@ -2302,7 +2167,6 @@ const whyReturn = useMemo<TodayHubWhyReturn | null>(() => {
       })
     : "";
 
-  // 1) Si primary = duoPending => on assume que c'est LE focus du moment
   if (todayHubPrimaryMode === "duoPending") {
     return {
       variant: "duo",
@@ -2313,10 +2177,9 @@ const whyReturn = useMemo<TodayHubWhyReturn | null>(() => {
     };
   }
 
-  // 2) Si on a un check-in à faire aujourd’hui => priorité à l’action, et on ajoute le duo en note
   if (hasActive && anyUnmarked) {
     const base = t("homeZ.todayHub.whyReturn.warning", {
-      defaultValue: "Il te reste un check-in aujourd’hui. Garde ton rythme.",
+      defaultValue: "Il te reste un check-in aujourd'hui. Garde ton rythme.",
     });
 
     return {
@@ -2325,7 +2188,6 @@ const whyReturn = useMemo<TodayHubWhyReturn | null>(() => {
     };
   }
 
-  // 3) Sinon, si invite pending existe encore => on peut la remonter (mais secondaire)
   if (hasOutgoingPendingInvite) {
     return {
       variant: "duo",
@@ -2336,17 +2198,15 @@ const whyReturn = useMemo<TodayHubWhyReturn | null>(() => {
     };
   }
 
-  // 4) BONUS
   if (canClaimDailyBonus) {
     return {
       variant: "trophy",
       text: t("homeZ.todayHub.whyReturn.trophy", {
-        defaultValue: "Un bonus t’attend aujourd’hui. Petit gain, gros momentum.",
+        defaultValue: "Un bonus t'attend aujourd'hui. Petit gain, gros momentum.",
       }),
     };
   }
 
-  // 5) STREAK
   const streak =
     (userData as any)?.streak ??
     (userData as any)?.streakDays ??
@@ -2372,7 +2232,6 @@ const whyReturn = useMemo<TodayHubWhyReturn | null>(() => {
     };
   }
 
-  // 6) DEFAULT
   return {
     text: t("homeZ.todayHub.whyReturn.default", {
       defaultValue: "Reviens quand tu veux : 1 minute suffit pour avancer.",
@@ -2388,7 +2247,6 @@ const whyReturn = useMemo<TodayHubWhyReturn | null>(() => {
   pendingInvite?.inviteeUsername,
 ]);
 
-// ✅ actions TodayHub
 const onOpenHub = useCallback(async () => {
   const id = todayHubView.hubChallengeId ?? primaryActiveId;
   if (!id) return;
@@ -2409,8 +2267,7 @@ const onCreate = useCallback(async () => {
 const onPrimaryPress = useCallback(() => {
   if (todayHubPrimaryMode === "mark") return handleMarkTodayPress();
   if (todayHubPrimaryMode === "pick") return handlePickChallengePress();
- if (todayHubPrimaryMode === "new") return handlePickChallengePress(); // ou /create-challenge si tu veux pousser la création
- // duoPending => warmup
+ if (todayHubPrimaryMode === "new") return handlePickChallengePress();
  return handleWarmupPress();
 }, [
   todayHubPrimaryMode,
@@ -2419,11 +2276,10 @@ const onPrimaryPress = useCallback(() => {
   handleWarmupPress,
 ]);
 
-// ✅ visuels CTA principal (gradient / icon / label)
 const todayHubPrimaryGradient = useMemo(() => {
-  if (todayHubPrimaryMode === "mark") return ["#F97316", "#FB923C"] as const; // orange action
-  if (todayHubPrimaryMode === "duoPending") return ["#6366F1", "#A78BFA"] as const; // violet pending
-  return ["#F97316", "#FDBA74"] as const; // new -> explore warm
+  if (todayHubPrimaryMode === "mark") return ["#F97316", "#FB923C"] as const;
+  if (todayHubPrimaryMode === "duoPending") return ["#6366F1", "#A78BFA"] as const;
+  return ["#F97316", "#FDBA74"] as const;
 }, [todayHubPrimaryMode]);
 
 const todayHubPrimaryIcon = useMemo(() => {
@@ -2435,14 +2291,12 @@ const todayHubPrimaryIcon = useMemo(() => {
 const todayHubPrimaryLabel = useMemo(() => {
   if (todayHubPrimaryMode === "mark") return t("homeZ.todayHub.primaryActiveShort", "Check in");
   if (todayHubPrimaryMode === "duoPending") return t("homeZ.duoPending.cta", "View");
-  // modes "pick" / "new" => explore
   return t("homeZ.todayHub.primaryNewShort", "New");
 }, [t, todayHubPrimaryMode]);
 
 const handleClaimWelcomeBonus = async () => {
   if (!user || welcomeLoading || !welcomeState) return;
 
-  // On fige le "jour" au moment du clic pour savoir si c'est un jour premium
   const clickedDay = welcomeState.currentDay;
 
   const isPremiumDay =
@@ -2459,27 +2313,21 @@ const handleClaimWelcomeBonus = async () => {
 
     const { state } = await claimWelcomeBonus(user.uid);
 
-     // ✅ verrouille immédiatement : plus aucune ré-ouverture aujourd’hui
     await markWelcomeHandled();
 
-// ✅ on arme l’absorption de façon robuste (storage + state)
 try {
   await AsyncStorage.setItem(POST_WELCOME_ABSORB_KEY, "1");
 } catch {}
 setPostWelcomeAbsorbArmed(true);
 
-
-    // 🔁 mise à jour locale du welcomeState
     setWelcomeState(state);
 
-    // Refresh userData Firestore...
     const userRef = doc(db, "users", user.uid);
     const snap = await getDoc(userRef);
     if (snap.exists()) {
       setUserData(snap.data());
     }
 
-    // 🥂 Toast premium si c'était un jour premium AU MOMENT DU CLIC
     if (isPremiumDay) {
       const title = t(
         "premiumTrialActivated.title",
@@ -2610,9 +2458,34 @@ setPostWelcomeAbsorbArmed(true);
     setDailyBonusVisible(false);
   };
 
-  return (
+  // ─── SKELETON LOADER COMPONENT ────────────────────────────────────────────
+  const SkeletonPulse = useSharedValue(0);
+  useEffect(() => {
+    SkeletonPulse.value = withRepeat(
+      withTiming(1, { duration: 900, easing: Easing.inOut(Easing.ease) }),
+      -1,
+      true
+    );
+  }, [SkeletonPulse]);
 
-    
+  const skeletonAnimStyle = useAnimatedStyle(() => ({
+    opacity: 0.35 + SkeletonPulse.value * 0.35,
+  }));
+
+  const SkeletonCard = () => (
+    <Animated.View style={[stylesDaily.heroCard, skeletonAnimStyle, {
+      backgroundColor: isDarkMode ? "rgba(255,255,255,0.08)" : "rgba(2,6,23,0.08)",
+    }]} />
+  );
+
+  const SkeletonMini = () => (
+    <Animated.View style={[stylesDaily.carouselCard, skeletonAnimStyle, {
+      backgroundColor: isDarkMode ? "rgba(255,255,255,0.08)" : "rgba(2,6,23,0.08)",
+    }]} />
+  );
+  // ──────────────────────────────────────────────────────────────────────────
+
+  return (
     <SafeAreaView style={{ flex: 1 }} edges={["bottom"]}>
       <StatusBar
         barStyle={isDarkMode ? "light-content" : "dark-content"}
@@ -2637,1028 +2510,971 @@ setPostWelcomeAbsorbArmed(true);
           bounces={false}
           overScrollMode="never"
           accessibilityElementsHidden={isTutorialBlocking}
-  importantForAccessibility={isTutorialBlocking ? "no-hide-descendants" : "auto"}
-
+          importantForAccessibility={isTutorialBlocking ? "no-hide-descendants" : "auto"}
           showsVerticalScrollIndicator={false}
           contentInset={{ top: 0, bottom: SPACING }}
           keyboardShouldPersistTaps="handled"
           keyboardDismissMode="on-drag"
           scrollEventThrottle={16}
         >
-                  {/* SECTION HERO */}
-        <Animated.View
-          collapsable={false}
-          renderToHardwareTextureAndroid
-          needsOffscreenAlphaCompositing
-          style={[
-            staticStyles.heroSection,
-            { height: HERO_TOTAL_HEIGHT },
-            fadeStyle,
-          ]}
-        >
-          <Video
-            ref={heroVideoRef}
-            style={[
-              staticStyles.backgroundVideo,
-              {
-                top: -insets.top,
-                height: HERO_TOTAL_HEIGHT,
-              },
-            ]}
-            resizeMode={ResizeMode.COVER}
-            source={require("../../assets/videos/Hero-Bgopti.mp4")}
-            onReadyForDisplay={() => setVideoReady(true)}
-            shouldPlay={heroShouldPlay}
-            isLooping
-            isMuted
-            progressUpdateIntervalMillis={250}
-            onError={() => {
-              setVideoReady(false);
-            }}
-            onPlaybackStatusUpdate={(status: any) => {
-              if (!heroShouldPlay) return;
-              if (!status?.isLoaded) return;
-              if (status.isPlaying) return;
-              if (heroPlayGuardRef.current) return;
 
-              heroPlayGuardRef.current = true;
-              heroVideoRef.current
-                ?.playAsync?.()
-                .catch(() => {})
-                .finally(() => {
-                  heroPlayGuardRef.current = false;
-                });
-            }}
-          />
-
-          {/* Overlay Keynote : moins “ciné”, plus “product stage” */}
-          <LinearGradient
-            colors={[
-              "rgba(0,0,0,0.05)",
-              "rgba(0,0,0,0.18)",
-              "rgba(0,0,0,0.42)",
-              "rgba(0,0,0,0.62)",
-            ]}
-            locations={[0, 0.35, 0.70, 1]}
+          {/* ════════════════════════════════════════════════════════
+              HERO SECTION — cinematic, alive, premium
+          ════════════════════════════════════════════════════════ */}
+          <Animated.View
+            collapsable={false}
+            renderToHardwareTextureAndroid
+            needsOffscreenAlphaCompositing
             style={[
-              staticStyles.heroOverlay,
-              {
-                top: -insets.top,
-                height: HERO_TOTAL_HEIGHT,
-              },
-            ]}
-            pointerEvents="none"
-          />
-
-          <View
-            style={[
-              staticStyles.heroContent,
-              {
-                paddingTop: insets.top + normalize(IS_TINY ? 8 : 12),
-                paddingHorizontal: normalize(15),
-              },
+              staticStyles.heroSection,
+              { height: HERO_TOTAL_HEIGHT },
+              fadeStyle,
             ]}
           >
-            {/* Brand row : petit logo + label, très Apple */}
-            <View style={staticStyles.heroBrandRow}>
-              <Image
-                source={require("../../assets/images/icon2.png")}
-                style={staticStyles.logoKeynote}
-                resizeMode="contain"
-                accessibilityLabel={t("logoChallengeTies")}
-                transition={180}
-              />
-              <View style={staticStyles.heroBrandPill}>
-                <Text style={staticStyles.heroBrandPillText} numberOfLines={1}>
-                  {t("homeZ.hero.brand", "CHALLENGETIES")}
-                </Text>
-              </View>
-            </View>
+            <Video
+              ref={heroVideoRef}
+              style={[
+                staticStyles.backgroundVideo,
+                {
+                  top: -insets.top,
+                  height: HERO_TOTAL_HEIGHT,
+                },
+              ]}
+              resizeMode={ResizeMode.COVER}
+              source={require("../../assets/videos/Hero-Bgopti.mp4")}
+              onReadyForDisplay={() => setVideoReady(true)}
+              shouldPlay={heroShouldPlay}
+              isLooping
+              isMuted
+              progressUpdateIntervalMillis={250}
+              onError={() => { setVideoReady(false); }}
+              onPlaybackStatusUpdate={(status: any) => {
+                if (!heroShouldPlay) return;
+                if (!status?.isLoaded) return;
+                if (status.isPlaying) return;
+                if (heroPlayGuardRef.current) return;
 
-            {/* Punchline : 1 vérité */}
-            <Text
-              style={[staticStyles.heroTitleKeynote, dynamicStyles.heroTitle]}
-              numberOfLines={2}
-              adjustsFontSizeToFit
-              minimumFontScale={IS_TINY ? 0.84 : 0.88}
-            >
-              {t("homeZ.hero.headline", "Reste régulier.")}
-            </Text>
-
-            {/* Proof line : courte, concrète */}
-            <Text
-              style={[staticStyles.heroSubtitleKeynote, dynamicStyles.heroSubtitle]}
-              numberOfLines={2}
-              
-              minimumFontScale={IS_TINY ? 0.86 : 0.90}
-            >
-              {t("homeZ.hero.sub", "Un défi simple. Chaque jour. En solo ou à deux.")}
-            </Text>
-           
-          {/* Tutoriel (icône only) — top-right, ultra discret */}
-          <Pressable
-            onPress={() => {
-              if (!isAnyBlockingModalOpen) openTutorial();
-            }}
-            disabled={isAnyBlockingModalOpen}
-            accessibilityRole="button"
-            accessibilityLabel={t("tutorial.open", "Ouvrir le tutoriel")}
-            accessibilityHint={t(
-              "tutorial.openHint",
-              "Découvre comment utiliser ChallengeTies en 30 secondes"
-            )}
-            hitSlop={12}
-            style={({ pressed }) => [
-              staticStyles.tutorialFab,
-              isAnyBlockingModalOpen && { opacity: 0.35 },
-              pressed && { transform: [{ scale: 0.98 }] },
-            ]}
-          >
-            <BlurView
-              intensity={isDarkMode ? 22 : 18}
-              tint={isDarkMode ? "dark" : "light"}
-              style={staticStyles.tutorialFabBlur}
-            >
-              <View
-                style={[
-                  staticStyles.tutorialFabGlass,
-                  {
-                    backgroundColor: isDarkMode
-                      ? "rgba(2,6,23,0.30)"
-                      : "rgba(255,255,255,0.26)",
-                  },
-                ]}
-              >
-                <Ionicons
-   name="sparkles"
-   size={normalize(18)}
-   color={isDarkMode ? "rgba(248,250,252,0.92)" : "rgba(2,6,23,0.92)"}
- />
-              </View>
-            </BlurView>
-          </Pressable>
-
-
-            <TouchableOpacity
-              onPress={handlePickChallengePress}
-              accessibilityRole="button"
-             accessibilityLabel={t("homeZ.hero.ctaA11y", "Choisir un défi")}
-              accessibilityHint={t("discover", {
-                defaultValue: "Découvrir les défis",
-              })}
-              testID="cta-button"
-              hitSlop={{ top: 8, bottom: 8, left: 12, right: 12 }}
-              onPressIn={() => {
-                exploreScale.value = withSpring(0.96, {
-                  damping: 18,
-                  stiffness: 220,
-                });
+                heroPlayGuardRef.current = true;
+                heroVideoRef.current
+                  ?.playAsync?.()
+                  .catch(() => {})
+                  .finally(() => { heroPlayGuardRef.current = false; });
               }}
-              onPressOut={() => {
-                exploreScale.value = withSpring(1, {
-                  damping: 16,
-                  stiffness: 180,
-                });
-              }}
+            />
+
+            {/* ✨ IMPROVED: deeper, more directional cinematic gradient */}
+            <LinearGradient
+              colors={[
+                "rgba(0,0,0,0.00)",
+                "rgba(0,0,0,0.10)",
+                "rgba(0,0,0,0.38)",
+                "rgba(0,0,0,0.72)",
+                "rgba(0,0,0,0.88)",
+              ]}
+              locations={[0, 0.25, 0.52, 0.80, 1]}
+              style={[
+                staticStyles.heroOverlay,
+                { top: -insets.top, height: HERO_TOTAL_HEIGHT },
+              ]}
+              pointerEvents="none"
+            />
+
+            {/* ✨ NEW: orange ambient glow at bottom of hero (above gradient) */}
+            <LinearGradient
+              colors={["rgba(249,115,22,0.00)", "rgba(249,115,22,0.14)"]}
+              start={{ x: 0.5, y: 0 }}
+              end={{ x: 0.5, y: 1 }}
+              style={[
+                staticStyles.heroOrangeAmbient,
+                { top: -insets.top, height: HERO_TOTAL_HEIGHT },
+              ]}
+              pointerEvents="none"
+            />
+
+            <View
+              style={[
+                staticStyles.heroContent,
+                {
+                  paddingTop: insets.top + normalize(IS_TINY ? 8 : 12),
+                  paddingHorizontal: normalize(15),
+                },
+              ]}
             >
-              <Animated.View style={exploreAnimStyle}>
-                <LinearGradient
-                  colors={["#F97316", "#FB923C"]}
-                  start={{ x: 0, y: 0 }}
-                  end={{ x: 1, y: 1 }}
-                  style={staticStyles.ctaButtonKeynote}
+              {/* Brand row */}
+              <View style={staticStyles.heroBrandRow}>
+                <Image
+                  source={require("../../assets/images/icon2.png")}
+                  style={staticStyles.logoKeynote}
+                  resizeMode="contain"
+                  accessibilityLabel={t("logoChallengeTies")}
+                  transition={180}
+                />
+                {/* ✨ IMPROVED: frosted glass brand pill */}
+                <BlurView
+                  intensity={isDarkMode ? 28 : 20}
+                  tint="dark"
+                  style={staticStyles.heroBrandPillBlur}
                 >
-                  <View style={staticStyles.heroCtaInner}>
-                    <View style={staticStyles.heroCtaIcon}>
-                      <Ionicons name="compass-outline" size={normalize(18)} color="#0B1120" />
-                    </View>
-                    <Text
-                      style={staticStyles.ctaTextKeynote}
-                      numberOfLines={1}
-                      adjustsFontSizeToFit
-                      minimumFontScale={0.90}
-                    >
-                      {heroCtaLabel}
+                  <View style={staticStyles.heroBrandPillInner}>
+                    <Text style={staticStyles.heroBrandPillText} numberOfLines={1}>
+                      {t("homeZ.hero.brand", "CHALLENGETIES")}
                     </Text>
                   </View>
-                </LinearGradient>
-              </Animated.View>
-            </TouchableOpacity>
-          </View>
-        </Animated.View>
-        
- <View
-  onLayout={(e) => {
-    todayHubYRef.current = e.nativeEvent.layout.y;
-  }}
->
-  <TodayHub
-  t={t}
-  langKey={i18n.language}
-  isDarkMode={isDarkMode}
-  primaryMode={todayHubView.primaryMode}
-  hasActiveChallenges={todayHubView.hasActiveChallenges}
-  activeCount={todayHubView.activeCount}
-  title={todayHubTitle}
-  sub={todayHubSub}
-  whyReturn={whyReturn}
-  hubMeta={todayHubView.hubMeta}
-  hubDescription={todayHubHubDescription}
-  progressPct={todayHubView.progress.pct}
-  primaryGradient={todayHubPrimaryGradient}
-  primaryIcon={todayHubPrimaryIcon}
-  primaryLabel={todayHubPrimaryLabel}
-  onOpenHub={onOpenHub}
-  onPrimaryPress={onPrimaryPress}
-  onPickSolo={onPickSolo}
-  onCreate={onCreate}
-  CONTENT_MAX_W={CONTENT_MAX_W}
-  staticStyles={staticStyles}
-  normalize={normalize}
-  primaryCtaRef={markCtaRef}
- primaryAnimatedStyle={markAnimStyle}
-/>
-</View>
-
-<View style={{ height: normalize(18) }} />
-
-        {/* BONUS DU JOUR — Keynote Reward Card */}
-{canClaimDailyBonus && (
-  <View
-    style={staticStyles.dailyBonusWrapper}
-    accessibilityElementsHidden={isTutorialBlocking}
-    importantForAccessibility={isTutorialBlocking ? "no-hide-descendants" : "auto"}
-  >
-    <Pressable
-      onPress={async () => {
-        if (!canClaimDailyBonus || dailyBonusLoading) return;
-        try {
-          await Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
-        } catch {}
-        setDailyBonusVisible(true);
-      }}
-      disabled={dailyBonusLoading}
-      accessibilityRole="button"
-      accessibilityLabel={t("dailyBonus.title", "Bonus du jour")}
-      accessibilityHint={t("dailyBonus.hint", "Ouvre une récompense pour gagner un bonus.")}
-      style={({ pressed }) => [
-        { width: "100%", maxWidth: CONTENT_W, alignSelf: "center" },
-        pressed && { transform: [{ scale: 0.995 }], opacity: 0.98 },
-        dailyBonusLoading && { opacity: 0.70 },
-      ]}
-    >
-      <View style={staticStyles.dailyBonusShell}>
-        {/* subtle keynote backdrop to break "too white" */}
-        <LinearGradient
-          colors={
-            isDarkMode
-              ? ["rgba(249,115,22,0.10)", "rgba(99,102,241,0.06)", "rgba(2,6,23,0.00)"]
-              : ["rgba(249,115,22,0.10)", "rgba(99,102,241,0.06)", "rgba(255,255,255,0.00)"]
-          }
-          start={{ x: 0, y: 0 }}
-          end={{ x: 1, y: 1 }}
-          style={staticStyles.dailyBonusBackdrop}
-          pointerEvents="none"
-        />
-        {/* Stroke + glass */}
-        <LinearGradient
-          colors={
-            isDarkMode
-              ? ["rgba(255,255,255,0.18)", "rgba(255,255,255,0.06)"]
-              : ["rgba(15,23,42,0.14)", "rgba(15,23,42,0.06)"]
-          }
-          start={{ x: 0, y: 0 }}
-          end={{ x: 1, y: 1 }}
-          style={staticStyles.dailyBonusStroke}
-        >
-          <LinearGradient
-            colors={
-              isDarkMode
-                ? ["rgba(2,6,23,0.82)", "rgba(2,6,23,0.62)"]
-                : ["rgba(255,255,255,0.90)", "rgba(255,248,235,0.78)"]
-            }
-            start={{ x: 0, y: 0 }}
-            end={{ x: 1, y: 1 }}
-            style={staticStyles.dailyBonusCard}
-          >
-            <BlurView
-              intensity={isDarkMode ? 38 : 22}
-              tint={isDarkMode ? "dark" : "light"}
-              style={staticStyles.dailyBonusBlurKeynote}
-            >
-              {/* Glow pulse (discret) */}
-              <Animated.View
-                pointerEvents="none"
-                style={[
-                  staticStyles.dailyBonusGlow,
-                  bonusPulseStyle,
-                  {
-                    backgroundColor: isDarkMode
-                      ? "rgba(249,115,22,0.35)"
-                      : "rgba(249,115,22,0.22)",
-                  },
-                ]}
-              />
-
-              {/* Header row */}
-              <View style={staticStyles.dailyBonusHeaderRow}>
-                <View
-                  style={[
-                    staticStyles.dailyBonusBadge,
-                    {
-                      borderColor: isDarkMode
-                        ? "rgba(249,115,22,0.30)"
-                        : "rgba(249,115,22,0.22)",
-                      backgroundColor: isDarkMode
-                        ? "rgba(249,115,22,0.14)"
-                        : "rgba(249,115,22,0.10)",
-                    },
-                  ]}
-                >
-                  <Ionicons name="sparkles" size={normalize(14)} color="#F97316" />
-                  <Text
-                    style={[
-                      staticStyles.dailyBonusBadgeText,
-                      { color: isDarkMode ? "#F8FAFC" : "#0B1120" },
-                    ]}
-                    numberOfLines={1}
-                  >
-                    {t("dailyBonus.badge", "RÉCOMPENSE")}
-                  </Text>
-                </View>
-
-                <View
-                  style={[
-                    staticStyles.dailyBonusMiniPill,
-                    {
-                      borderColor: isDarkMode
-                        ? "rgba(226,232,240,0.18)"
-                        : "rgba(2,6,23,0.10)",
-                      backgroundColor: isDarkMode
-                        ? "rgba(255,255,255,0.06)"
-                        : "rgba(255,255,255,0.70)",
-                    },
-                  ]}
-                >
-                  <Ionicons
-                    name="time-outline"
-                    size={normalize(14)}
-                    color={isDarkMode ? "rgba(226,232,240,0.90)" : "rgba(2,6,23,0.90)"}
-                  />
-                  <Text
-                    style={[
-                      staticStyles.dailyBonusMiniPillText,
-                      { color: isDarkMode ? "rgba(226,232,240,0.92)" : "rgba(2,6,23,0.92)" },
-                    ]}
-                    numberOfLines={1}
-                  >
-                    {t("dailyBonus.oncePerDay", "1 / jour")}
-                  </Text>
-                </View>
+                </BlurView>
               </View>
 
-              {/* Main content */}
-              <View style={staticStyles.dailyBonusMainRow}>
-                <View style={{ flex: 1, minWidth: 0 }}>
-                  <Text
-                    style={[
-                      staticStyles.dailyBonusTitleKeynote,
-                      { color: isDarkMode ? "#F8FAFC" : "#0B1120" },
-                    ]}
-                    numberOfLines={1}
-                    adjustsFontSizeToFit
-                    minimumFontScale={0.88}
-                  >
-                    {t("dailyBonus.title", "Bonus du jour")}
-                  </Text>
+              {/* Punchline */}
+              <Text
+                style={[staticStyles.heroTitleKeynote, dynamicStyles.heroTitle]}
+                numberOfLines={2}
+                adjustsFontSizeToFit
+                minimumFontScale={IS_TINY ? 0.84 : 0.88}
+              >
+                {t("homeZ.hero.headline", "Reste régulier.")}
+              </Text>
 
-                  <Text
+              {/* Proof line */}
+              <Text
+                style={[staticStyles.heroSubtitleKeynote, dynamicStyles.heroSubtitle]}
+                numberOfLines={2}
+                minimumFontScale={IS_TINY ? 0.86 : 0.90}
+              >
+                {t("homeZ.hero.sub", "Un défi simple. Chaque jour. En solo ou à deux.")}
+              </Text>
+
+              {/* Tutorial FAB — positioned absolutely relative to heroSection */}
+              <Pressable
+                onPress={() => { if (!isAnyBlockingModalOpen) openTutorial(); }}
+                disabled={isAnyBlockingModalOpen}
+                accessibilityRole="button"
+                accessibilityLabel={t("tutorial.open", "Ouvrir le tutoriel")}
+                hitSlop={12}
+                style={({ pressed }) => [
+                  staticStyles.tutorialFab,
+                  { top: insets.top + normalize(10) },
+                  isAnyBlockingModalOpen && { opacity: 0.35 },
+                  pressed && { transform: [{ scale: 0.98 }] },
+                ]}
+              >
+                <BlurView
+                  intensity={isDarkMode ? 22 : 18}
+                  tint={isDarkMode ? "dark" : "light"}
+                  style={staticStyles.tutorialFabBlur}
+                >
+                  <View
                     style={[
-                      staticStyles.dailyBonusSubKeynote,
+                      staticStyles.tutorialFabGlass,
                       {
-                        color: isDarkMode
-                          ? "rgba(226,232,240,0.70)"
-                          : "rgba(15,23,42,0.62)",
+                        backgroundColor: isDarkMode
+                          ? "rgba(2,6,23,0.30)"
+                          : "rgba(255,255,255,0.26)",
                       },
                     ]}
-                    numberOfLines={2}
-                    adjustsFontSizeToFit
-                    minimumFontScale={0.92}
                   >
-                    {dailyBonusLoading
-                      ? t("dailyBonus.loading", "Ouverture…")
-                      : t("dailyBonus.teaser2", "Ouvre et découvre ta récompense mystère.")}
-                  </Text>
+                    <Ionicons
+                      name="sparkles"
+                      size={normalize(18)}
+                      color={isDarkMode ? "rgba(248,250,252,0.92)" : "rgba(2,6,23,0.92)"}
+                    />
+                  </View>
+                </BlurView>
+              </Pressable>
 
-                  {/* CTA pill */}
-                  <View style={staticStyles.dailyBonusCtaRow}>
+              {/* ✨ IMPROVED: Hero CTA with ambient glow effect */}
+              <TouchableOpacity
+                onPress={handlePickChallengePress}
+                accessibilityRole="button"
+                accessibilityLabel={t("homeZ.hero.ctaA11y", "Choisir un défi")}
+                testID="cta-button"
+                hitSlop={{ top: 8, bottom: 8, left: 12, right: 12 }}
+                onPressIn={() => {
+                  exploreScale.value = withSpring(0.96, { damping: 18, stiffness: 220 });
+                }}
+                onPressOut={() => {
+                  exploreScale.value = withSpring(1, { damping: 16, stiffness: 180 });
+                }}
+              >
+                <View style={staticStyles.heroCTAWrapper}>
+                  {/* ✨ NEW: ambient glow behind CTA button */}
+                  <Animated.View
+                    pointerEvents="none"
+                    style={[staticStyles.heroCTAGlow, heroCtaGlowStyle]}
+                  />
+                  <Animated.View style={exploreAnimStyle}>
                     <LinearGradient
                       colors={["#F97316", "#FB923C"]}
                       start={{ x: 0, y: 0 }}
                       end={{ x: 1, y: 1 }}
-                      style={staticStyles.dailyBonusCtaPill}
+                      style={staticStyles.ctaButtonKeynote}
                     >
-                      <Text style={staticStyles.dailyBonusCtaText} numberOfLines={1}>
-                        {t("dailyBonus.cta", "Ouvrir")}
-                      </Text>
-                      <Ionicons name="chevron-forward" size={normalize(18)} color="#0B1120" />
+                      {/* ✨ NEW: subtle shine overlay on CTA */}
+                      <LinearGradient
+                        colors={["rgba(255,255,255,0.22)", "rgba(255,255,255,0.00)"]}
+                        start={{ x: 0, y: 0 }}
+                        end={{ x: 0, y: 1 }}
+                        style={staticStyles.ctaShineOverlay}
+                        pointerEvents="none"
+                      />
+                      <View style={staticStyles.heroCtaInner}>
+                        <View style={staticStyles.heroCtaIcon}>
+                          <Ionicons name="compass-outline" size={normalize(18)} color="#0B1120" />
+                        </View>
+                        <Text
+                          style={staticStyles.ctaTextKeynote}
+                          numberOfLines={1}
+                          adjustsFontSizeToFit
+                          minimumFontScale={0.90}
+                        >
+                          {heroCtaLabel}
+                        </Text>
+                      </View>
                     </LinearGradient>
-
-                    <Text
-                      style={[
-                        staticStyles.dailyBonusMicro,
-                        { color: isDarkMode ? "rgba(226,232,240,0.55)" : "rgba(15,23,42,0.55)" },
-                      ]}
-                      numberOfLines={1}
-                    >
-                      {t("dailyBonus.micro", "Rapide. Simple. Reward.")} 
-                    </Text>
-                  </View>
+                  </Animated.View>
                 </View>
+              </TouchableOpacity>
 
-                {/* Icon */}
-                <View style={staticStyles.dailyBonusIconWrap}>
+              {/* ✨ NEW: social proof stat bar */}
+              <View style={staticStyles.heroStatBar}>
+                <View style={staticStyles.heroStatItem}>
+                  <Ionicons name="flame" size={normalize(13)} color="#F97316" />
+                  <Text style={staticStyles.heroStatText}>
+                    {t("homeZ.hero.stat1", "Daily streak")}
+                  </Text>
+                </View>
+                <View style={staticStyles.heroStatDot} />
+                <View style={staticStyles.heroStatItem}>
+                  <Ionicons name="people" size={normalize(13)} color="rgba(255,255,255,0.80)" />
+                  <Text style={staticStyles.heroStatText}>
+                    {t("homeZ.hero.stat2", "Solo & Duo")}
+                  </Text>
+                </View>
+                <View style={staticStyles.heroStatDot} />
+                <View style={staticStyles.heroStatItem}>
+                  <Ionicons name="trophy" size={normalize(13)} color="rgba(255,255,255,0.80)" />
+                  <Text style={staticStyles.heroStatText}>
+                    {t("homeZ.hero.stat3", "Trophées")}
+                  </Text>
+                </View>
+              </View>
+
+            </View>
+          </Animated.View>
+
+          {/* TodayHub */}
+          <View
+            onLayout={(e) => {
+              todayHubYRef.current = e.nativeEvent.layout.y;
+            }}
+          >
+            <TodayHub
+              t={t}
+              langKey={i18n.language}
+              isDarkMode={isDarkMode}
+              primaryMode={todayHubView.primaryMode}
+              hasActiveChallenges={todayHubView.hasActiveChallenges}
+              activeCount={todayHubView.activeCount}
+              title={todayHubTitle}
+              sub={todayHubSub}
+              whyReturn={whyReturn}
+              hubMeta={todayHubView.hubMeta}
+              hubDescription={todayHubHubDescription}
+              progressPct={todayHubView.progress.pct}
+              primaryGradient={todayHubPrimaryGradient}
+              primaryIcon={todayHubPrimaryIcon}
+              primaryLabel={todayHubPrimaryLabel}
+              onOpenHub={onOpenHub}
+              onPrimaryPress={onPrimaryPress}
+              onPickSolo={onPickSolo}
+              onCreate={onCreate}
+              CONTENT_MAX_W={CONTENT_MAX_W}
+              staticStyles={staticStyles}
+              normalize={normalize}
+              primaryCtaRef={markCtaRef}
+              primaryAnimatedStyle={markAnimStyle}
+            />
+          </View>
+
+          <View style={{ height: normalize(18) }} />
+
+          {/* ════════════════════════════════════════════════════════
+              BONUS DU JOUR — feels like a reward, not a card
+          ════════════════════════════════════════════════════════ */}
+          {canClaimDailyBonus && (
+            <View
+              style={[staticStyles.dailyBonusWrapper, { zIndex: 2, elevation: 2 }]}
+              accessibilityElementsHidden={isTutorialBlocking}
+              importantForAccessibility={isTutorialBlocking ? "no-hide-descendants" : "auto"}
+            >
+              <Pressable
+                onPress={async () => {
+                  if (!canClaimDailyBonus || dailyBonusLoading) return;
+                  try { await Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium); } catch {}
+                  setDailyBonusVisible(true);
+                }}
+                disabled={dailyBonusLoading}
+                accessibilityRole="button"
+                accessibilityLabel={t("dailyBonus.title", "Bonus du jour")}
+                style={({ pressed }) => [
+                  { width: "100%", maxWidth: CONTENT_W, alignSelf: "center" },
+                  pressed && { transform: [{ scale: 0.993 }], opacity: 0.97 },
+                  dailyBonusLoading && { opacity: 0.70 },
+                ]}
+              >
+                <View style={staticStyles.dailyBonusShell}>
+                  {/* ✨ IMPROVED: wider, warmer ambient glow */}
                   <LinearGradient
                     colors={
                       isDarkMode
-                        ? ["rgba(249,115,22,0.28)", "rgba(249,115,22,0.14)"]
-                        : ["rgba(249,115,22,0.18)", "rgba(249,115,22,0.10)"]
+                        ? ["rgba(249,115,22,0.18)", "rgba(251,146,60,0.10)", "rgba(2,6,23,0.00)"]
+                        : ["rgba(249,115,22,0.14)", "rgba(251,146,60,0.08)", "rgba(255,255,255,0.00)"]
                     }
                     start={{ x: 0, y: 0 }}
                     end={{ x: 1, y: 1 }}
-                    style={staticStyles.dailyBonusIconCircleKeynote}
-                  >
-                    <View
-                      style={[
-                        staticStyles.dailyBonusIconInnerKeynote,
-                        {
-                          borderColor: isDarkMode
-                            ? "rgba(255,255,255,0.18)"
-                            : "rgba(2,6,23,0.10)",
-                          backgroundColor: isDarkMode
-                            ? "rgba(255,255,255,0.06)"
-                            : "rgba(255,255,255,0.75)",
-                        },
-                      ]}
-                    >
-                      <Ionicons
-                        name="gift-outline"
-                        size={normalize(26)}
-                        color={isDarkMode ? "#F8FAFC" : "#0B1120"}
-                      />
-                    </View>
-                  </LinearGradient>
-                </View>
-              </View>
-            </BlurView>
-          </LinearGradient>
-        </LinearGradient>
-      </View>
-    </Pressable>
-  </View>
-)}
-
-<View style={{ height: normalize(14) }} />
-
-         {/* DAILY FIVE */}
-<View style={staticStyles.section}>
-  <View style={stylesDaily.titleRow}>
-    <Text
-      style={[staticStyles.sectionTitle, dynamicStyles.sectionTitle]}
-      numberOfLines={1}
-      ellipsizeMode="tail"
-    >
-      {t("dailyChallenges")}
-    </Text>
-
-    <Text
-      style={[
-        stylesDaily.subtitle,
-        {
-          color: isDarkMode
-            ? "rgba(255,255,255,0.70)"
-            : "rgba(15,23,42,0.65)",
-        },
-      ]}
-      numberOfLines={1}
-    >
-      {t("dailySelectedSubtitleShort", { defaultValue: "Sélection du jour." })}
-    </Text>
-  </View>
-
-  {loading ? (
-    <ActivityIndicator size="large" color={currentTheme.colors.secondary} />
-  ) : dailyFive.length > 0 ? (
-    <View style={stylesDaily.wrap}>
-      {/* HERO (spotlight) */}
-      <Animated.View
-        entering={FadeInUp}
-        style={stylesDaily.heroCard}
-        renderToHardwareTextureAndroid
-      >
-        <TouchableOpacity
-          activeOpacity={0.95}
-          accessibilityRole="button"
-          onPress={async () => {
-            try {
-              await Haptics.selectionAsync();
-            } catch {}
-            const c = dailyFive[0];
-            safeNavigate(
-              `/challenge-details/${c.id}?title=${encodeURIComponent(
-                c.title
-              )}&category=${encodeURIComponent(
-                c.category
-              )}&description=${encodeURIComponent(c.description)}`
-            );
-          }}
-        >
-          {(() => {
-            const c = dailyFive[0];
-            const uri = getChallengeImageUri(c, "full");
-            const k = `${c.id}:${imgReloadKey[c.id] ?? 0}`;
-            const showRemote = !!uri && !brokenImages[c.id];
-
-            return (
-              <View style={stylesDaily.heroImageWrap}>
-                {/* fallback always visible */}
-                <Image
-                  source={FALLBACK_CHALLENGE_IMG}
-                  style={stylesDaily.heroImage}
-                  contentFit="cover"
-                  transition={0}
-                  cachePolicy="memory-disk"
-                />
-
-                {showRemote && (
-                  <Image
-                    key={k}
-                    source={{ uri }}
-                    style={[
-                      stylesDaily.heroImage,
-                      {
-                        position: "absolute",
-                        inset: 0,
-                        opacity: imgLoaded[c.id] ? 1 : 0,
-                      },
-                    ]}
-                    contentFit="cover"
-                    transition={220}
-                    cachePolicy="memory-disk"
-                    priority="high"
-                    placeholder={BLURHASH}
-                    placeholderContentFit="cover"
-                    allowDownscaling
-                    onLoad={() => markImageLoaded(c)}
-                    onError={() => markImageBroken(c)}
-                  />
-                )}
-              </View>
-            );
-          })()}
-
-          <LinearGradient
-            colors={[
-              "rgba(0,0,0,0.05)",
-              "rgba(0,0,0,0.55)",
-              "rgba(0,0,0,0.92)",
-            ]}
-            locations={[0, 0.55, 1]}
-            style={stylesDaily.heroOverlay}
-            pointerEvents="none"
-          />
-
-          <View style={stylesDaily.badge}>
-            <Ionicons name="flame-outline" size={normalize(14)} color="#fff" />
-            <Text style={stylesDaily.badgeText}>
-              {t("spotlight", { defaultValue: "À la une" })}
-            </Text>
-          </View>
-
-          <View style={stylesDaily.heroTextZone}>
-            <Text
-              style={stylesDaily.heroTitle}
-              numberOfLines={2}
-              adjustsFontSizeToFit
-              minimumFontScale={0.90}
-            >
-              {dailyFive[0].title}
-            </Text>
-            <View style={stylesDaily.heroCatPill}>
-              <Text style={stylesDaily.heroCatPillText} numberOfLines={1}>
-                {dailyFive[0].category}
-              </Text>
-            </View>
-          </View>
-        </TouchableOpacity>
-      </Animated.View>
-
-      {/* CAROUSEL (4 autres) */}
-      <View style={stylesDaily.carouselOuter}>
-        <Animated.FlatList
-          horizontal
-          data={dailyFive.slice(1)}
-          keyExtractor={(it) => it.id}
-          showsHorizontalScrollIndicator={false}
-          contentContainerStyle={stylesDaily.carouselContent}
-          decelerationRate="fast"
-          snapToAlignment="start"
-          snapToInterval={DAILY_SNAP}
-          disableIntervalMomentum
-          renderItem={({ item, index }) => {
-            const k = `${item.id}:${imgReloadKey[item.id] ?? 0}`;
-            const thumbUri = getChallengeImageUri(item, "thumb");
-            const fullUri = getChallengeImageUri(item, "full"); // fallback
-            const uri = thumbUri || fullUri;
-            const showRemote = !!uri; // plus de check broken ici
-
-            return (
-              <Animated.View
-                entering={FadeInUp.delay(80 * (index + 1))}
-                style={stylesDaily.carouselCard}
-                renderToHardwareTextureAndroid
-              >
-                <TouchableOpacity
-                  activeOpacity={0.95}
-                  accessibilityRole="button"
-                  onPress={async () => {
-                    try {
-                      await Haptics.selectionAsync();
-                    } catch {}
-                    safeNavigate(
-                      `/challenge-details/${item.id}?title=${encodeURIComponent(
-                        item.title
-                      )}&category=${encodeURIComponent(
-                        item.category
-                      )}&description=${encodeURIComponent(item.description)}`
-                    );
-                  }}
-                >
-                  <View style={stylesDaily.miniImageWrap}>
-                    <Image
-                      source={FALLBACK_CHALLENGE_IMG}
-                      style={stylesDaily.miniImage}
-                      contentFit="cover"
-                      transition={0}
-                      cachePolicy="memory-disk"
-                    />
-
-                    {showRemote && (
-                      <Image
-                        key={k}
-                        source={{ uri }}
-                        style={[
-                          stylesDaily.miniImage,
-                          {
-                            position: "absolute",
-                            inset: 0,
-                            opacity: imgLoaded[item.id] ? 1 : 0,
-                          },
-                        ]}
-                        contentFit="cover"
-                        transition={180}
-                        cachePolicy="memory-disk"
-                        priority="normal"
-                        placeholder={BLURHASH}
-                        placeholderContentFit="cover"
-                        allowDownscaling
-                        onLoad={() => markImageLoaded(item)}
-                        onError={() => {
-                        // ✅ retry seulement, et si ça fail encore => on laisse le fallback visible
-                        scheduleImageRetry(item.id);
-                      }}
-                      />
-                    )}
-                  </View>
-
-                  <LinearGradient
-                    colors={[
-                      "rgba(0,0,0,0.02)",
-                      "rgba(0,0,0,0.55)",
-                      "rgba(0,0,0,0.88)",
-                    ]}
-                    locations={[0, 0.55, 1]}
-                    style={stylesDaily.miniOverlay}
+                    style={staticStyles.dailyBonusBackdrop}
                     pointerEvents="none"
                   />
 
-                  <Text
-                    style={stylesDaily.carouselTitle}
-                    numberOfLines={2}
-                    minimumFontScale={0.90}
+                  <LinearGradient
+                    colors={
+                      isDarkMode
+                        ? ["rgba(255,255,255,0.18)", "rgba(255,255,255,0.06)"]
+                        : ["rgba(15,23,42,0.14)", "rgba(15,23,42,0.06)"]
+                    }
+                    start={{ x: 0, y: 0 }}
+                    end={{ x: 1, y: 1 }}
+                    style={staticStyles.dailyBonusStroke}
                   >
-                    {item.title}
-                  </Text>
-                  <Text
-                    style={stylesDaily.carouselCat}
-                    numberOfLines={1}
-                    adjustsFontSizeToFit
-                    minimumFontScale={0.92}
-                  >
-                    {item.category}
-                  </Text>
-                </TouchableOpacity>
-              </Animated.View>
-            );
-          }}
-        />
-      </View>
+                    <LinearGradient
+                      colors={
+                        isDarkMode
+                          ? ["rgba(2,6,23,0.82)", "rgba(2,6,23,0.62)"]
+                          : ["rgba(255,255,255,0.95)", "rgba(255,248,235,0.85)"]
+                      }
+                      start={{ x: 0, y: 0 }}
+                      end={{ x: 1, y: 1 }}
+                      style={staticStyles.dailyBonusCard}
+                    >
+                      <BlurView
+                        intensity={isDarkMode ? 38 : 22}
+                        tint={isDarkMode ? "dark" : "light"}
+                        style={staticStyles.dailyBonusBlurKeynote}
+                      >
+                        {/* Glow pulse */}
+                        <Animated.View
+                          pointerEvents="none"
+                          style={[
+                            staticStyles.dailyBonusGlow,
+                            bonusPulseStyle,
+                            {
+                              backgroundColor: isDarkMode
+                                ? "rgba(249,115,22,0.35)"
+                                : "rgba(249,115,22,0.22)",
+                            },
+                          ]}
+                        />
 
-      <Text
-        style={[
-          stylesDaily.footHint,
-          {
-            color: isDarkMode
-              ? "rgba(255,255,255,0.6)"
-              : "rgba(15,23,42,0.6)",
-          },
-        ]}
-      >
-        {t("refreshDaily", { defaultValue: "Nouveaux défis dès demain ✨" })}
-      </Text>
+                        {/* ✨ NEW: particle dots (static decorative) */}
+                        <View pointerEvents="none" style={staticStyles.bonusParticles}>
+                          {[
+                            { top: 10, right: 80, size: 4, color: "rgba(249,115,22,0.55)" },
+                            { top: 24, right: 110, size: 3, color: "rgba(251,146,60,0.40)" },
+                            { top: 6, right: 55, size: 2.5, color: "rgba(253,186,116,0.50)" },
+                            { top: 34, right: 72, size: 2, color: "rgba(249,115,22,0.35)" },
+                          ].map((p, i) => (
+                            <View
+                              key={i}
+                              style={{
+                                position: "absolute",
+                                top: p.top,
+                                right: p.right,
+                                width: p.size,
+                                height: p.size,
+                                borderRadius: 999,
+                                backgroundColor: p.color,
+                              }}
+                            />
+                          ))}
+                        </View>
 
-      <TouchableOpacity
-        onPress={handlePickChallengePress}
-        activeOpacity={0.92}
-        accessibilityRole="button"
-        accessibilityLabel={t("homeZ.dailyPicks.seeAllA11y", "Voir tous les défis")}
-        accessibilityHint={t(
-          "homeZ.dailyPicks.seeAllHint",
-          "Ouvre Explore pour découvrir tous les défis."
-        )}
-        style={staticStyles.seeAllWrap}
-      >
-        <View
-          style={[
-            staticStyles.seeAllBtn,
-            {
-              borderColor: isDarkMode
-                ? "rgba(226,232,240,0.20)"
-                : "rgba(15,23,42,0.14)",
-            },
-          ]}
-        >
-          <Text
-            style={[
-              staticStyles.seeAllText,
-              { color: isDarkMode ? "#E2E8F0" : "#0B1120" },
-            ]}
-            numberOfLines={1}
-            adjustsFontSizeToFit
-          >
-            {t("homeZ.dailyPicks.seeAll", "Tout voir dans Explore")}
-          </Text>
-          <Ionicons
-            name="chevron-forward"
-            size={normalize(18)}
-            color={isDarkMode ? "#E2E8F0" : "#0B1120"}
-          />
-        </View>
-      </TouchableOpacity>
-    </View>
-  ) : (
-    <Animated.View entering={FadeInUp} style={staticStyles.noChallengesContainer}>
-      <Ionicons
-        name="sad-outline"
-        size={normalize(40)}
-        color={currentTheme.colors.textSecondary}
-      />
-      <Text style={[staticStyles.noChallengesText, dynamicStyles.noChallengesText]}>
-        {t("noChallengesAvailable")}
-      </Text>
-      <Text style={[staticStyles.noChallengesSubtext, dynamicStyles.noChallengesSubtext]}>
-        {t("challengesComingSoon")}
-      </Text>
-    </Animated.View>
-  )}
-</View>
+                        {/* Header row */}
+                        <View style={staticStyles.dailyBonusHeaderRow}>
+                          <View
+                            style={[
+                              staticStyles.dailyBonusBadge,
+                              {
+                                borderColor: isDarkMode
+                                  ? "rgba(249,115,22,0.30)"
+                                  : "rgba(249,115,22,0.22)",
+                                backgroundColor: isDarkMode
+                                  ? "rgba(249,115,22,0.14)"
+                                  : "rgba(249,115,22,0.10)",
+                              },
+                            ]}
+                          >
+                            <Ionicons name="sparkles" size={normalize(14)} color="#F97316" />
+                            <Text
+                              style={[
+                                staticStyles.dailyBonusBadgeText,
+                                { color: isDarkMode ? "#F8FAFC" : "#0B1120" },
+                              ]}
+                              numberOfLines={1}
+                            >
+                              {t("dailyBonus.badge", "RÉCOMPENSE")}
+                            </Text>
+                          </View>
 
+                          <View
+                            style={[
+                              staticStyles.dailyBonusMiniPill,
+                              {
+                                borderColor: isDarkMode
+                                  ? "rgba(226,232,240,0.18)"
+                                  : "rgba(2,6,23,0.10)",
+                                backgroundColor: isDarkMode
+                                  ? "rgba(255,255,255,0.06)"
+                                  : "rgba(255,255,255,0.70)",
+                              },
+                            ]}
+                          >
+                            <Ionicons
+                              name="time-outline"
+                              size={normalize(14)}
+                              color={isDarkMode ? "rgba(226,232,240,0.90)" : "rgba(2,6,23,0.90)"}
+                            />
+                            <Text
+                              style={[
+                                staticStyles.dailyBonusMiniPillText,
+                                { color: isDarkMode ? "rgba(226,232,240,0.92)" : "rgba(2,6,23,0.92)" },
+                              ]}
+                              numberOfLines={1}
+                            >
+                              {t("dailyBonus.oncePerDay", "1 / jour")}
+                            </Text>
+                          </View>
+                        </View>
 
-          {/* DISCOVER — seulement 3 raccourcis : NewFeatures / Leaderboard / Tips */}
-{/* DISCOVER — Keynote : 2 cartes (Leaderboards + Tips) + “Voir plus” */}
-          <View
-            style={staticStyles.discoverWrapper}
-            accessibilityElementsHidden={isTutorialBlocking}
-            importantForAccessibility={
-              isTutorialBlocking ? "no-hide-descendants" : "auto"
-            }
-          >
-            <View
-  style={[
-    staticStyles.discoverCardOuter,
-    {
-      borderColor: isDarkMode ? "rgba(255,255,255,0.10)" : "rgba(2,6,23,0.08)",
-      backgroundColor: isDarkMode ? "rgba(255,255,255,0.05)" : "rgba(2,6,23,0.03)",
-    },
-  ]}
->
-  <View style={staticStyles.discoverCardInner}>
-              <View style={staticStyles.discoverHeader}>
+                        {/* Main content */}
+                        <View style={staticStyles.dailyBonusMainRow}>
+                          <View style={{ flex: 1, minWidth: 0 }}>
+                            <Text
+                              style={[
+                                staticStyles.dailyBonusTitleKeynote,
+                                { color: isDarkMode ? "#F8FAFC" : "#0B1120" },
+                              ]}
+                              numberOfLines={1}
+                              adjustsFontSizeToFit
+                              minimumFontScale={0.88}
+                            >
+                              {t("dailyBonus.title", "Bonus du jour")}
+                            </Text>
+
+                            <Text
+                              style={[
+                                staticStyles.dailyBonusSubKeynote,
+                                {
+                                  color: isDarkMode
+                                    ? "rgba(226,232,240,0.70)"
+                                    : "rgba(15,23,42,0.62)",
+                                },
+                              ]}
+                              numberOfLines={2}
+                              adjustsFontSizeToFit
+                              minimumFontScale={0.92}
+                            >
+                              {dailyBonusLoading
+                                ? t("dailyBonus.loading", "Ouverture…")
+                                : t("dailyBonus.teaser2", "Ouvre et découvre ta récompense mystère.")}
+                            </Text>
+
+                            {/* CTA pill */}
+                            <View style={staticStyles.dailyBonusCtaRow}>
+                              <LinearGradient
+                                colors={["#F97316", "#FB923C"]}
+                                start={{ x: 0, y: 0 }}
+                                end={{ x: 1, y: 1 }}
+                                style={staticStyles.dailyBonusCtaPill}
+                              >
+                                {/* ✨ NEW: shine on CTA pill */}
+                                <LinearGradient
+                                  colors={["rgba(255,255,255,0.20)", "rgba(255,255,255,0.00)"]}
+                                  start={{ x: 0, y: 0 }}
+                                  end={{ x: 0, y: 1 }}
+                                  style={StyleSheet.absoluteFill}
+                                  pointerEvents="none"
+                                />
+                                <Text style={staticStyles.dailyBonusCtaText} numberOfLines={1}>
+                                  {t("dailyBonus.cta", "Ouvrir")}
+                                </Text>
+                                <Ionicons name="chevron-forward" size={normalize(18)} color="#0B1120" />
+                              </LinearGradient>
+
+                              <Text
+                                style={[
+                                  staticStyles.dailyBonusMicro,
+                                  { color: isDarkMode ? "rgba(226,232,240,0.55)" : "rgba(15,23,42,0.55)" },
+                                ]}
+                                numberOfLines={1}
+                              >
+                                {t("dailyBonus.micro", "Rapide. Simple. Reward.")}
+                              </Text>
+                            </View>
+                          </View>
+
+                          {/* ✨ IMPROVED: icon with slow rotation hint animation */}
+                          <View style={staticStyles.dailyBonusIconWrap}>
+                            <LinearGradient
+                              colors={
+                                isDarkMode
+                                  ? ["rgba(249,115,22,0.28)", "rgba(249,115,22,0.14)"]
+                                  : ["rgba(249,115,22,0.18)", "rgba(249,115,22,0.10)"]
+                              }
+                              start={{ x: 0, y: 0 }}
+                              end={{ x: 1, y: 1 }}
+                              style={staticStyles.dailyBonusIconCircleKeynote}
+                            >
+                              <View
+                                style={[
+                                  staticStyles.dailyBonusIconInnerKeynote,
+                                  {
+                                    borderColor: isDarkMode
+                                      ? "rgba(255,255,255,0.18)"
+                                      : "rgba(2,6,23,0.10)",
+                                    backgroundColor: isDarkMode
+                                      ? "rgba(255,255,255,0.06)"
+                                      : "rgba(255,255,255,0.75)",
+                                  },
+                                ]}
+                              >
+                                <Ionicons
+                                  name="gift-outline"
+                                  size={normalize(26)}
+                                  color={isDarkMode ? "#F8FAFC" : "#0B1120"}
+                                />
+                              </View>
+                            </LinearGradient>
+                          </View>
+                        </View>
+                      </BlurView>
+                    </LinearGradient>
+                  </LinearGradient>
+                </View>
+              </Pressable>
+            </View>
+          )}
+
+          <View style={{ height: normalize(14) }} />
+
+          {/* ════════════════════════════════════════════════════════
+              DAILY FIVE — editorial treatment
+          ════════════════════════════════════════════════════════ */}
+          {/* zIndex+elevation wrapper isolates this section from Discover's FadeInUp Android layer */}
+          <View style={{ zIndex: 2, elevation: 2 }}>
+          <View style={staticStyles.section}>
+            <View style={stylesDaily.titleRow}>
+              {/* ✨ IMPROVED: left-aligned title with orange accent dot */}
+              <View style={stylesDaily.titleAccentRow}>
+                <View style={stylesDaily.titleAccentDot} />
                 <Text
-                  style={[
-                    staticStyles.discoverTitle,
-                    { color: isDarkMode ? "#F8FAFC" : "#0B1120" },
-                  ]}
+                  style={[staticStyles.sectionTitle, dynamicStyles.sectionTitle, { textAlign: "left", marginBottom: 0 }]}
                   numberOfLines={1}
+                  ellipsizeMode="tail"
                 >
-                  {t("homeZ.discover.title", "Découvrir")}
+                  {t("dailyChallenges")}
                 </Text>
-
               </View>
 
-              <View style={staticStyles.discoverRow2}>
-                {/* Leaderboard */}
-                <Pressable
-                  onPress={() => safeNavigate("/leaderboard")}
-                  accessibilityRole="button"
-                  accessibilityLabel={t(
-                    "homeZ.discover.leaderboardA11y",
-                    "Classement"
-                  )}
-                  accessibilityHint={t(
-                    "homeZ.discover.leaderboardHint",
-                    "Consulte le classement et tes trophées."
-                  )}
-                  style={({ pressed }) => [
-                    staticStyles.discoverBigCard,
-                    {
-                      borderColor: isDarkMode
-                        ? "rgba(226,232,240,0.18)"
-                        : "rgba(15,23,42,0.10)",
-                      backgroundColor: isDarkMode
-                        ? "rgba(255,255,255,0.06)"
-                        : "rgba(255,255,255,0.75)",
-                      opacity: pressed ? 0.96 : 1,
-                      transform: [{ scale: pressed ? 0.992 : 1 }],
-                    },
-                  ]}
-                  hitSlop={10}
-                >
-                  <View
-                    style={[
-                      staticStyles.discoverBigIcon,
-                      {
-                        borderColor: isDarkMode
-                          ? "rgba(249,115,22,0.34)"
-                          : "rgba(249,115,22,0.28)",
-                        backgroundColor: "rgba(249,115,22,0.12)",
-                      },
-                    ]}
-                  >
-                    <Ionicons
-                      name="trophy-outline"
-                      size={normalize(18)}
-                      color="#F97316"
-                    />
-                  </View>
-                  <Text
-                    style={[
-                      staticStyles.discoverBigTitle,
-                      { color: isDarkMode ? "#F8FAFC" : "#0B1120" },
-                    ]}
-                    numberOfLines={1}
-                    
-                  >
-                    {t("homeZ.discover.leaderboard", "Classement")}
-                  </Text>
-                  <Text
-                    style={[
-                      staticStyles.discoverBigSub,
-                      {
-                        color: isDarkMode
-                          ? "rgba(226,232,240,0.70)"
-                          : "rgba(15,23,42,0.62)",
-                      },
-                    ]}
-                    numberOfLines={2}
-                    adjustsFontSizeToFit
-                    minimumFontScale={0.92}
-                  >
-                    {t("homeZ.discover.leaderboardSub2", "Social proof. Motivation.")}
-                  </Text>
-                </Pressable>
-
-                {/* Tips */}
-                <Pressable
-                  onPress={() => safeNavigate("/tips")}
-                  accessibilityRole="button"
-                  accessibilityLabel={t("homeZ.discover.tipsA11y", "Tips")}
-                  accessibilityHint={t(
-                    "homeZ.discover.tipsHint",
-                    "Découvre des astuces courtes et actionnables."
-                  )}
-                  style={({ pressed }) => [
-                    staticStyles.discoverBigCard,
-                    {
-                      borderColor: isDarkMode
-                        ? "rgba(226,232,240,0.18)"
-                        : "rgba(15,23,42,0.10)",
-                      backgroundColor: isDarkMode
-                        ? "rgba(255,255,255,0.06)"
-                        : "rgba(255,255,255,0.75)",
-                      opacity: pressed ? 0.96 : 1,
-                      transform: [{ scale: pressed ? 0.992 : 1 }],
-                    },
-                  ]}
-                  hitSlop={10}
-                >
-                  <View
-                    style={[
-                      staticStyles.discoverBigIcon,
-                      {
-                        borderColor: isDarkMode
-                          ? "rgba(249,115,22,0.34)"
-                          : "rgba(249,115,22,0.28)",
-                        backgroundColor: "rgba(249,115,22,0.12)",
-                      },
-                    ]}
-                  >
-                    <Ionicons
-                      name="bulb-outline"
-                      size={normalize(18)}
-                      color="#F97316"
-                    />
-                  </View>
-                  <Text
-                    style={[
-                      staticStyles.discoverBigTitle,
-                      { color: isDarkMode ? "#F8FAFC" : "#0B1120" },
-                    ]}
-                    numberOfLines={1}
-                    
-                  >
-                    {t("homeZ.discover.tips", "Tips")}
-                  </Text>
-                  <Text
-                    style={[
-                      staticStyles.discoverBigSub,
-                      {
-                        color: isDarkMode
-                          ? "rgba(226,232,240,0.70)"
-                          : "rgba(15,23,42,0.62)",
-                      },
-                    ]}
-                    
-                    numberOfLines={2}
-                    adjustsFontSizeToFit
-                    minimumFontScale={0.92}
-                  >
-                    {t("homeZ.discover.tipsSub2", "1 minute. Action immédiate.")}
-                  </Text>
-                </Pressable>
-              </View>
-
-              {/* NewFeatures — 3e chemin Keynote (carte large) */}
-              <Pressable
-                onPress={() => safeNavigate("/new-features")}
-                accessibilityRole="button"
-                accessibilityLabel={t("homeZ.discover.newFeaturesA11y", "Nouveautés")}
-                accessibilityHint={t("homeZ.discover.newFeaturesHint", "Découvre les nouveautés et vote pour la suite.")}
-                hitSlop={10}
-                style={({ pressed }) => [
-                  staticStyles.discoverWideCard,
+              <Text
+                style={[
+                  stylesDaily.subtitle,
                   {
-                    borderColor: isDarkMode
-                      ? "rgba(226,232,240,0.18)"
-                      : "rgba(15,23,42,0.10)",
-                    backgroundColor: isDarkMode
-                      ? "rgba(255,255,255,0.06)"
-                      : "rgba(255,255,255,0.75)",
-                    opacity: pressed ? 0.96 : 1,
-                    transform: [{ scale: pressed ? 0.992 : 1 }],
+                    color: isDarkMode
+                      ? "rgba(255,255,255,0.70)"
+                      : "rgba(15,23,42,0.65)",
                   },
                 ]}
+                numberOfLines={1}
               >
-                <View style={staticStyles.discoverWideLeft}>
+                {t("dailySelectedSubtitleShort", { defaultValue: "Sélection du jour." })}
+              </Text>
+            </View>
+
+            {/* ✨ IMPROVED: skeleton loader instead of bare spinner */}
+            {loading ? (
+              <View style={stylesDaily.wrap}>
+                <SkeletonCard />
+                <View style={{ flexDirection: "row", gap: DAILY_GAP, marginTop: normalize(12) }}>
+                  <SkeletonMini />
+                  <SkeletonMini />
+                </View>
+              </View>
+            ) : dailyFive.length > 0 ? (
+              <View style={stylesDaily.wrap}>
+                {/* HERO card */}
+                <Animated.View
+                  entering={FadeInUp.springify().damping(20)}
+                  style={stylesDaily.heroCard}
+                  renderToHardwareTextureAndroid
+                >
+                  <TouchableOpacity
+                    activeOpacity={0.95}
+                    accessibilityRole="button"
+                    onPress={async () => {
+                      try { await Haptics.selectionAsync(); } catch {}
+                      const c = dailyFive[0];
+                      safeNavigate(
+                        `/challenge-details/${c.id}?title=${encodeURIComponent(c.title)}&category=${encodeURIComponent(c.category)}&description=${encodeURIComponent(c.description)}`
+                      );
+                    }}
+                  >
+                    {(() => {
+                      const c = dailyFive[0];
+                      const uri = getChallengeImageUri(c, "full");
+                      const k = `${c.id}:${imgReloadKey[c.id] ?? 0}`;
+                      const showRemote = !!uri && !brokenImages[c.id];
+
+                      return (
+                        <View style={stylesDaily.heroImageWrap}>
+                          <Image
+                            source={FALLBACK_CHALLENGE_IMG}
+                            style={stylesDaily.heroImage}
+                            contentFit="cover"
+                            transition={0}
+                            cachePolicy="memory-disk"
+                          />
+
+                          {showRemote && (
+                            <Image
+                              key={k}
+                              source={{ uri }}
+                              style={[
+                                stylesDaily.heroImage,
+                                {
+                                  position: "absolute",
+                                  inset: 0,
+                                  opacity: imgLoaded[c.id] ? 1 : 0,
+                                },
+                              ]}
+                              contentFit="cover"
+                              transition={220}
+                              cachePolicy="memory-disk"
+                              priority="high"
+                              placeholder={BLURHASH}
+                              placeholderContentFit="cover"
+                              allowDownscaling
+                              onLoad={() => markImageLoaded(c)}
+                              onError={() => markImageBroken(c)}
+                            />
+                          )}
+                        </View>
+                      );
+                    })()}
+
+                    {/* ✨ IMPROVED: richer gradient, more contrast at bottom */}
+                    <LinearGradient
+                      colors={[
+                        "rgba(0,0,0,0.00)",
+                        "rgba(0,0,0,0.40)",
+                        "rgba(0,0,0,0.82)",
+                        "rgba(0,0,0,0.96)",
+                      ]}
+                      locations={[0, 0.42, 0.75, 1]}
+                      style={stylesDaily.heroOverlay}
+                      pointerEvents="none"
+                    />
+
+                    {/* ✨ IMPROVED: glassmorphism badge */}
+                    <BlurView
+                      intensity={18}
+                      tint="dark"
+                      style={stylesDaily.badgeBlur}
+                    >
+                      <View style={stylesDaily.badgeInner}>
+                        <Ionicons name="flame" size={normalize(13)} color="#F97316" />
+                        <Text style={stylesDaily.badgeText}>
+                          {t("spotlight", { defaultValue: "À la une" })}
+                        </Text>
+                      </View>
+                    </BlurView>
+
+                    <View style={stylesDaily.heroTextZone}>
+                      <Text
+                        style={stylesDaily.heroTitle}
+                        numberOfLines={2}
+                        adjustsFontSizeToFit
+                        minimumFontScale={0.90}
+                      >
+                        {dailyFive[0].title}
+                      </Text>
+                      {/* ✨ IMPROVED: frosted category pill */}
+                      <BlurView intensity={14} tint="dark" style={stylesDaily.heroCatBlur}>
+                        <View style={stylesDaily.heroCatPillInner}>
+                          <Text style={stylesDaily.heroCatPillText} numberOfLines={1}>
+                            {dailyFive[0].category}
+                          </Text>
+                        </View>
+                      </BlurView>
+                    </View>
+                  </TouchableOpacity>
+                </Animated.View>
+
+                {/* CAROUSEL */}
+                <View style={stylesDaily.carouselOuter}>
+                  <Animated.FlatList
+                    horizontal
+                    data={dailyFive.slice(1)}
+                    keyExtractor={(it) => it.id}
+                    showsHorizontalScrollIndicator={false}
+                    contentContainerStyle={stylesDaily.carouselContent}
+                    decelerationRate="fast"
+                    snapToAlignment="start"
+                    snapToInterval={DAILY_SNAP}
+                    disableIntervalMomentum
+                    renderItem={({ item, index }) => {
+                      const k = `${item.id}:${imgReloadKey[item.id] ?? 0}`;
+                      const thumbUri = getChallengeImageUri(item, "thumb");
+                      const fullUri = getChallengeImageUri(item, "full");
+                      const uri = thumbUri || fullUri;
+                      const showRemote = !!uri;
+
+                      return (
+                        <Animated.View
+                          entering={FadeInUp.delay(80 * (index + 1)).springify().damping(20)}
+                          style={stylesDaily.carouselCard}
+                          renderToHardwareTextureAndroid
+                        >
+                          <TouchableOpacity
+                            activeOpacity={0.95}
+                            accessibilityRole="button"
+                            onPress={async () => {
+                              try { await Haptics.selectionAsync(); } catch {}
+                              safeNavigate(
+                                `/challenge-details/${item.id}?title=${encodeURIComponent(item.title)}&category=${encodeURIComponent(item.category)}&description=${encodeURIComponent(item.description)}`
+                              );
+                            }}
+                          >
+                            <View style={stylesDaily.miniImageWrap}>
+                              <Image
+                                source={FALLBACK_CHALLENGE_IMG}
+                                style={stylesDaily.miniImage}
+                                contentFit="cover"
+                                transition={0}
+                                cachePolicy="memory-disk"
+                              />
+
+                              {showRemote && (
+                                <Image
+                                  key={k}
+                                  source={{ uri }}
+                                  style={[
+                                    stylesDaily.miniImage,
+                                    {
+                                      position: "absolute",
+                                      inset: 0,
+                                      opacity: imgLoaded[item.id] ? 1 : 0,
+                                    },
+                                  ]}
+                                  contentFit="cover"
+                                  transition={180}
+                                  cachePolicy="memory-disk"
+                                  priority="normal"
+                                  placeholder={BLURHASH}
+                                  placeholderContentFit="cover"
+                                  allowDownscaling
+                                  onLoad={() => markImageLoaded(item)}
+                                  onError={() => { scheduleImageRetry(item.id); }}
+                                />
+                              )}
+                            </View>
+
+                            {/* ✨ IMPROVED: richer gradient on mini cards */}
+                            <LinearGradient
+                              colors={[
+                                "rgba(0,0,0,0.00)",
+                                "rgba(0,0,0,0.50)",
+                                "rgba(0,0,0,0.92)",
+                              ]}
+                              locations={[0, 0.50, 1]}
+                              style={stylesDaily.miniOverlay}
+                              pointerEvents="none"
+                            />
+
+                            {/* ✨ NEW: subtle inner glow on text area for legibility */}
+                            <LinearGradient
+                              colors={["rgba(0,0,0,0.00)", "rgba(249,115,22,0.08)"]}
+                              start={{ x: 0.5, y: 0 }}
+                              end={{ x: 0.5, y: 1 }}
+                              style={[StyleSheet.absoluteFill, { borderRadius: normalize(16) }]}
+                              pointerEvents="none"
+                            />
+
+                            <Text
+                              style={stylesDaily.carouselTitle}
+                              numberOfLines={2}
+                              minimumFontScale={0.90}
+                            >
+                              {item.title}
+                            </Text>
+                            <Text
+                              style={stylesDaily.carouselCat}
+                              numberOfLines={1}
+                              adjustsFontSizeToFit
+                              minimumFontScale={0.92}
+                            >
+                              {item.category}
+                            </Text>
+                          </TouchableOpacity>
+                        </Animated.View>
+                      );
+                    }}
+                  />
+                </View>
+
+                <Text
+                  style={[
+                    stylesDaily.footHint,
+                    {
+                      color: isDarkMode
+                        ? "rgba(255,255,255,0.6)"
+                        : "rgba(15,23,42,0.6)",
+                    },
+                  ]}
+                >
+                  {t("refreshDaily", { defaultValue: "Nouveaux défis dès demain ✨" })}
+                </Text>
+
+                <TouchableOpacity
+                  onPress={handlePickChallengePress}
+                  activeOpacity={0.92}
+                  accessibilityRole="button"
+                  style={staticStyles.seeAllWrap}
+                >
                   <View
                     style={[
-                      staticStyles.discoverBigIcon,
+                      staticStyles.seeAllBtn,
                       {
                         borderColor: isDarkMode
-                          ? "rgba(249,115,22,0.34)"
-                          : "rgba(249,115,22,0.28)",
-                        backgroundColor: "rgba(249,115,22,0.12)",
-                        marginBottom: 0,
+                          ? "rgba(226,232,240,0.20)"
+                          : "rgba(15,23,42,0.14)",
                       },
                     ]}
                   >
-                    <Ionicons name="sparkles-outline" size={normalize(18)} color="#F97316" />
-                  </View>
-
-                  <View style={{ flex: 1, minWidth: 0 }}>
                     <Text
                       style={[
-                        staticStyles.discoverWideTitle,
-                        { color: isDarkMode ? "#F8FAFC" : "#0B1120" },
+                        staticStyles.seeAllText,
+                        { color: isDarkMode ? "#E2E8F0" : "#0B1120" },
                       ]}
                       numberOfLines={1}
                       adjustsFontSizeToFit
                     >
-                      {t("homeZ.discover.newFeatures", "Nouveautés")}
+                      {t("homeZ.dailyPicks.seeAll", "Tout voir dans Explore")}
+                    </Text>
+                    <Ionicons
+                      name="chevron-forward"
+                      size={normalize(18)}
+                      color={isDarkMode ? "#E2E8F0" : "#0B1120"}
+                    />
+                  </View>
+                </TouchableOpacity>
+              </View>
+            ) : (
+              <Animated.View entering={FadeInUp} style={staticStyles.noChallengesContainer}>
+                <Ionicons
+                  name="sad-outline"
+                  size={normalize(40)}
+                  color={currentTheme.colors.textSecondary}
+                />
+                <Text style={[staticStyles.noChallengesText, dynamicStyles.noChallengesText]}>
+                  {t("noChallengesAvailable")}
+                </Text>
+                <Text style={[staticStyles.noChallengesSubtext, dynamicStyles.noChallengesSubtext]}>
+                  {t("challengesComingSoon")}
+                </Text>
+              </Animated.View>
+            )}
+          </View>
+          </View>{/* end daily isolation wrapper */}
+
+          {/* ════════════════════════════════════════════════════════
+              DISCOVER — left-aligned, differentiated cards
+          ════════════════════════════════════════════════════════ */}
+          {/* NOTE: removed FadeInUp entering — on Android, Reanimated entering animations
+              create hardware layers that render above sibling sections regardless of DOM order.
+              Use a plain View with zIndex:0 to stay below the daily section. */}
+          <View
+            style={[staticStyles.discoverWrapper, { zIndex: 0, elevation: 0 }]}
+            accessibilityElementsHidden={isTutorialBlocking}
+            importantForAccessibility={isTutorialBlocking ? "no-hide-descendants" : "auto"}
+          >
+            <View
+              style={[
+                staticStyles.discoverCardOuter,
+                {
+                  borderColor: isDarkMode ? "rgba(255,255,255,0.10)" : "rgba(2,6,23,0.08)",
+                  backgroundColor: isDarkMode ? "rgba(255,255,255,0.05)" : "rgba(2,6,23,0.03)",
+                },
+              ]}
+            >
+              <View style={staticStyles.discoverCardInner}>
+                {/* ✨ IMPROVED: left-aligned title with orange accent line */}
+                <View style={staticStyles.discoverHeader}>
+                  <View style={staticStyles.discoverTitleRow}>
+                    <View style={staticStyles.discoverAccentBar} />
+                    <Text
+                      style={[
+                        staticStyles.discoverTitle,
+                        { color: isDarkMode ? "#F8FAFC" : "#0B1120", textAlign: "left" },
+                      ]}
+                      numberOfLines={1}
+                    >
+                      {t("homeZ.discover.title", "Découvrir")}
+                    </Text>
+                  </View>
+                </View>
+
+                <View style={staticStyles.discoverRow2}>
+                  {/* ✨ IMPROVED: Leaderboard with gold tint */}
+                  <Pressable
+                    onPress={() => safeNavigate("/leaderboard")}
+                    accessibilityRole="button"
+                    style={({ pressed }) => [
+                      staticStyles.discoverBigCard,
+                      staticStyles.discoverCardLeaderboard,
+                      {
+                        borderColor: isDarkMode
+                          ? "rgba(253,186,116,0.25)"
+                          : "rgba(253,186,116,0.35)",
+                        backgroundColor: isDarkMode
+                          ? "rgba(253,186,116,0.06)"
+                          : "rgba(255,249,235,0.90)",
+                        opacity: pressed ? 0.95 : 1,
+                        transform: [{ scale: pressed ? 0.990 : 1 }],
+                      },
+                    ]}
+                    hitSlop={10}
+                  >
+                    <View
+                      style={[
+                        staticStyles.discoverBigIcon,
+                        {
+                          borderColor: "rgba(249,115,22,0.38)",
+                          backgroundColor: "rgba(249,115,22,0.14)",
+                        },
+                      ]}
+                    >
+                      <Ionicons name="trophy-outline" size={normalize(18)} color="#F97316" />
+                    </View>
+                    <Text
+                      style={[
+                        staticStyles.discoverBigTitle,
+                        { color: isDarkMode ? "#F8FAFC" : "#0B1120" },
+                      ]}
+                      numberOfLines={1}
+                    >
+                      {t("homeZ.discover.leaderboard", "Classement")}
                     </Text>
                     <Text
                       style={[
-                        staticStyles.discoverWideSub,
+                        staticStyles.discoverBigSub,
                         {
                           color: isDarkMode
                             ? "rgba(226,232,240,0.70)"
@@ -3669,24 +3485,151 @@ setPostWelcomeAbsorbArmed(true);
                       adjustsFontSizeToFit
                       minimumFontScale={0.92}
                     >
-                      {t("homeZ.discover.newFeaturesSub", "Découvre. Vote. Influence l’app.")}
+                      {t("homeZ.discover.leaderboardSub2", "Social proof. Motivation.")}
                     </Text>
-                  </View>
+                  </Pressable>
+
+                  {/* ✨ IMPROVED: Tips with blue tint */}
+                  <Pressable
+                    onPress={() => safeNavigate("/tips")}
+                    accessibilityRole="button"
+                    style={({ pressed }) => [
+                      staticStyles.discoverBigCard,
+                      staticStyles.discoverCardTips,
+                      {
+                        borderColor: isDarkMode
+                          ? "rgba(99,102,241,0.25)"
+                          : "rgba(99,102,241,0.20)",
+                        backgroundColor: isDarkMode
+                          ? "rgba(99,102,241,0.07)"
+                          : "rgba(238,240,255,0.90)",
+                        opacity: pressed ? 0.95 : 1,
+                        transform: [{ scale: pressed ? 0.990 : 1 }],
+                      },
+                    ]}
+                    hitSlop={10}
+                  >
+                    <View
+                      style={[
+                        staticStyles.discoverBigIcon,
+                        {
+                          borderColor: "rgba(99,102,241,0.38)",
+                          backgroundColor: "rgba(99,102,241,0.14)",
+                        },
+                      ]}
+                    >
+                      <Ionicons name="bulb-outline" size={normalize(18)} color="#6366F1" />
+                    </View>
+                    <Text
+                      style={[
+                        staticStyles.discoverBigTitle,
+                        { color: isDarkMode ? "#F8FAFC" : "#0B1120" },
+                      ]}
+                      numberOfLines={1}
+                    >
+                      {t("homeZ.discover.tips", "Tips")}
+                    </Text>
+                    <Text
+                      style={[
+                        staticStyles.discoverBigSub,
+                        {
+                          color: isDarkMode
+                            ? "rgba(226,232,240,0.70)"
+                            : "rgba(15,23,42,0.62)",
+                        },
+                      ]}
+                      numberOfLines={2}
+                      adjustsFontSizeToFit
+                      minimumFontScale={0.92}
+                    >
+                      {t("homeZ.discover.tipsSub2", "1 minute. Action immédiate.")}
+                    </Text>
+                  </Pressable>
                 </View>
 
-                <Ionicons
-                  name="chevron-forward"
-                  size={normalize(18)}
-                  color={isDarkMode ? "rgba(226,232,240,0.85)" : "rgba(2,6,23,0.85)"}
-                />
-              </Pressable>
+                {/* ✨ IMPROVED: NewFeatures with "NEW" badge */}
+                <Pressable
+                  onPress={() => safeNavigate("/new-features")}
+                  accessibilityRole="button"
+                  hitSlop={10}
+                  style={({ pressed }) => [
+                    staticStyles.discoverWideCard,
+                    {
+                      borderColor: isDarkMode
+                        ? "rgba(226,232,240,0.18)"
+                        : "rgba(15,23,42,0.10)",
+                      backgroundColor: isDarkMode
+                        ? "rgba(255,255,255,0.06)"
+                        : "rgba(255,255,255,0.75)",
+                      opacity: pressed ? 0.96 : 1,
+                      transform: [{ scale: pressed ? 0.992 : 1 }],
+                    },
+                  ]}
+                >
+                  <View style={staticStyles.discoverWideLeft}>
+                    <View
+                      style={[
+                        staticStyles.discoverBigIcon,
+                        {
+                          borderColor: isDarkMode
+                            ? "rgba(249,115,22,0.34)"
+                            : "rgba(249,115,22,0.28)",
+                          backgroundColor: "rgba(249,115,22,0.12)",
+                          marginBottom: 0,
+                        },
+                      ]}
+                    >
+                      <Ionicons name="sparkles-outline" size={normalize(18)} color="#F97316" />
+                    </View>
+
+                    <View style={{ flex: 1, minWidth: 0 }}>
+                      <View style={{ flexDirection: "row", alignItems: "center", gap: normalize(8), marginBottom: normalize(4) }}>
+                        <Text
+                          style={[
+                            staticStyles.discoverWideTitle,
+                            { color: isDarkMode ? "#F8FAFC" : "#0B1120" },
+                          ]}
+                          numberOfLines={1}
+                          adjustsFontSizeToFit
+                        >
+                          {t("homeZ.discover.newFeatures", "Nouveautés")}
+                        </Text>
+                        {/* ✨ NEW: "NEW" badge */}
+                        <View style={staticStyles.newBadge}>
+                          <Text style={staticStyles.newBadgeText}>NEW</Text>
+                        </View>
+                      </View>
+                      <Text
+                        style={[
+                          staticStyles.discoverWideSub,
+                          {
+                            color: isDarkMode
+                              ? "rgba(226,232,240,0.70)"
+                              : "rgba(15,23,42,0.62)",
+                          },
+                        ]}
+                        numberOfLines={2}
+                        adjustsFontSizeToFit
+                        minimumFontScale={0.92}
+                      >
+                        {t("homeZ.discover.newFeaturesSub", "Découvre. Vote. Influence l'app.")}
+                      </Text>
+                    </View>
+                  </View>
+
+                  <Ionicons
+                    name="chevron-forward"
+                    size={normalize(18)}
+                    color={isDarkMode ? "rgba(226,232,240,0.85)" : "rgba(2,6,23,0.85)"}
+                  />
+                </Pressable>
+              </View>
             </View>
-            </View>
-          </View>
+          </View>{/* end discoverWrapper */}
 
         </ScrollView>
 
-                {/* Hairline au-dessus de la bannière */}
+        {/* Banner hairline */}
         {shouldShowBanner && adHeight > 0 && (
           <View
             pointerEvents="none"
@@ -3704,28 +3647,24 @@ setPostWelcomeAbsorbArmed(true);
           />
         )}
 
-        {/* Bannière dockée au-dessus de la TabBar */}
         {shouldShowBanner && (
-          <>
-            <View
+          <View
             key={`banner-${bannerKey}`}
-              style={{
-                position: "absolute",
-                left: 0,
-                right: 0,
-                bottom: tabBarHeight + insets.bottom,
-                alignItems: "center",
-                zIndex: 9999,
-                backgroundColor: "transparent",
-                paddingBottom: 6,
-              }}
-              pointerEvents="box-none"
-            >
-              <BannerSlot onHeight={handleAdHeight} docked />
-            </View>
-          </>
+            style={{
+              position: "absolute",
+              left: 0,
+              right: 0,
+              bottom: tabBarHeight + insets.bottom,
+              alignItems: "center",
+              zIndex: 9999,
+              backgroundColor: "transparent",
+              paddingBottom: 6,
+            }}
+            pointerEvents="box-none"
+          >
+            <BannerSlot onHeight={handleAdHeight} docked />
+          </View>
         )}
-
 
         {isTutorialActive && (
           <>
@@ -3733,10 +3672,7 @@ setPostWelcomeAbsorbArmed(true);
             <TutorialModal
               step={tutorialStep}
               onNext={() => {
-                const next = Math.min(
-                  tutorialStep + 1,
-                  TUTORIAL_STEPS.length - 1
-                );
+                const next = Math.min(tutorialStep + 1, TUTORIAL_STEPS.length - 1);
                 setTutorialStep(next);
               }}
               onStart={() => {
@@ -3749,20 +3685,14 @@ setPostWelcomeAbsorbArmed(true);
           </>
         )}
 
-         {effectiveWelcomeReward && welcomeState && (
+        {effectiveWelcomeReward && welcomeState && (
           <WelcomeBonusModal
             visible={welcomeVisible}
             onClose={async () => {
-  // ✅ empêche TOUT re-open aujourd'hui (close = handled)
-  await markWelcomeHandled();
-
-  // ✅ garde ton rail d’absorb
-  try {
-    await AsyncStorage.setItem(POST_WELCOME_ABSORB_KEY, "1");
-  } catch {}
-  setPostWelcomeAbsorbArmed(true);
-}}
-
+              await markWelcomeHandled();
+              try { await AsyncStorage.setItem(POST_WELCOME_ABSORB_KEY, "1"); } catch {}
+              setPostWelcomeAbsorbArmed(true);
+            }}
             onClaim={handleClaimWelcomeBonus}
             currentDay={welcomeState.currentDay}
             totalDays={WELCOME_TOTAL_DAYS}
@@ -3787,23 +3717,18 @@ setPostWelcomeAbsorbArmed(true);
 
         <RequireAuthModal visible={modalVisible} onClose={closeGate} />
 
-        {/* 💎 Modal fin de Premium ChallengeTies */}
         <Modal
           visible={showPremiumEndModal}
           transparent
           animationType="fade"
           onRequestClose={async () => {
-  setShowPremiumEndModal(false);
-  await persistPremiumEndDismiss();
-}}
+            setShowPremiumEndModal(false);
+            await persistPremiumEndDismiss();
+          }}
         >
           <View style={staticStyles.blurView}>
             <View style={staticStyles.modalContainer}>
-              <Ionicons
-                name="diamond-outline"
-                size={normalize(36)}
-                color="#6366F1"
-              />
+              <Ionicons name="diamond-outline" size={normalize(36)} color="#6366F1" />
 
               <Text
                 style={staticStyles.modalTitle}
@@ -3822,39 +3747,26 @@ setPostWelcomeAbsorbArmed(true);
 
               <View style={staticStyles.buttonContainer}>
                 <TouchableOpacity
-  onPress={async () => {
-    setShowPremiumEndModal(false);
-    await persistPremiumEndDismiss();
-  }}
-  style={[
-    staticStyles.actionButton,
-    { backgroundColor: "#E5E7EB" },
-  ]}
-  accessibilityLabel={t("premiumEndModal.closeA11y", "Fermer la fenêtre")}
->
-  <Text style={[staticStyles.actionButtonText, { color: "#111827" }]}>
-    {t("premiumEndModal.closeCta", "Continuer gratuitement")}
-  </Text>
-</TouchableOpacity>
-
+                  onPress={async () => {
+                    setShowPremiumEndModal(false);
+                    await persistPremiumEndDismiss();
+                  }}
+                  style={[staticStyles.actionButton, { backgroundColor: "#E5E7EB" }]}
+                >
+                  <Text style={[staticStyles.actionButtonText, { color: "#111827" }]}>
+                    {t("premiumEndModal.closeCta", "Continuer gratuitement")}
+                  </Text>
+                </TouchableOpacity>
 
                 <TouchableOpacity
                   onPress={() => {
                     setShowPremiumEndModal(false);
-                    // 🔁 À ajuster quand tu auras un vrai écran Premium
                     safeNavigate("/settings", "premium-end-modal");
                   }}
                   style={[staticStyles.actionButton]}
-                  accessibilityLabel={t(
-                    "premiumEndModal.joinA11y",
-                    "Rejoindre le mouvement Premium"
-                  )}
                 >
                   <Text style={staticStyles.actionButtonText}>
-                    {t(
-                      "premiumEndModal.joinCta",
-                      "Rejoindre le mouvement Premium"
-                    )}
+                    {t("premiumEndModal.joinCta", "Rejoindre le mouvement Premium")}
                   </Text>
                 </TouchableOpacity>
               </View>
@@ -3866,140 +3778,156 @@ setPostWelcomeAbsorbArmed(true);
   );
 }
 
+// ─── STATIC STYLES ─────────────────────────────────────────────────────────────
 const staticStyles = StyleSheet.create({
   container: {
     flex: 1,
     backgroundColor: "transparent",
   },
   todayHubSoloLink: {
-   fontSize: normalize(12.6),
-   fontFamily: "Comfortaa_700Bold",
-   textDecorationLine: "underline",
-   textDecorationStyle: "solid",
- },
+    fontSize: normalize(12.6),
+    fontFamily: "Comfortaa_700Bold",
+    textDecorationLine: "underline",
+    textDecorationStyle: "solid",
+  },
   keynoteCardShell: {
     borderWidth: StyleSheet.hairlineWidth,
     overflow: "hidden",
   },
-discoverCardOuter: {
-  width: "100%",
-  maxWidth: CONTENT_W,
-  alignSelf: "center",
-  borderRadius: normalize(24),
-
-  // ✅ shadow ici (pas d'overflow ici)
-  ...shadowSoft,
-
-  borderWidth: ANDROID_HAIRLINE,
-  borderStyle: "solid",
-},
-
-discoverCardInner: {
-  borderRadius: normalize(24),
-  overflow: "hidden",
-  padding: normalize(16),
-},
-
-discoverHeader: {
-  alignItems: "center",
-  marginBottom: normalize(12),
-},
-discoverTitle: {
-  fontSize: normalize(18),
-  lineHeight: normalize(22),
-  fontFamily: "Comfortaa_700Bold",
-  textAlign: "center",
-},
-discoverSub: {
-  marginTop: normalize(6),
-  fontSize: normalize(12.8),
-  lineHeight: normalize(17),
-  fontFamily: "Comfortaa_400Regular",
-  textAlign: "center",
-  includeFontPadding: false,
-},
-discoverRow2: {
+  discoverCardOuter: {
+    width: "100%",
+    maxWidth: CONTENT_W,
+    alignSelf: "center",
+    borderRadius: normalize(24),
+    ...shadowSoft,
+    borderWidth: ANDROID_HAIRLINE,
+    borderStyle: "solid",
+  },
+  discoverCardInner: {
+    borderRadius: normalize(24),
+    overflow: "hidden",
+    padding: normalize(16),
+  },
+  discoverHeader: {
+    alignItems: "flex-start",         // ✨ left-aligned
+    marginBottom: normalize(12),
+  },
+  // ✨ NEW: title row with accent bar
+  discoverTitleRow: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: normalize(10),
+  },
+  discoverAccentBar: {
+    width: normalize(4),
+    height: normalize(22),
+    borderRadius: normalize(2),
+    backgroundColor: "#F97316",
+  },
+  discoverTitle: {
+    fontSize: normalize(18),
+    lineHeight: normalize(22),
+    fontFamily: "Comfortaa_700Bold",
+  },
+  discoverSub: {
+    marginTop: normalize(6),
+    fontSize: normalize(12.8),
+    lineHeight: normalize(17),
+    fontFamily: "Comfortaa_400Regular",
+    textAlign: "center",
+    includeFontPadding: false,
+  },
+  discoverRow2: {
     width: "100%",
     flexDirection: "row",
     justifyContent: "space-between",
     gap: normalize(10),
   },
   discoverWideCard: {
-  width: "100%",
-  marginTop: normalize(10),
-  borderRadius: normalize(18),
-  padding: normalize(14),
-  borderWidth: ANDROID_HAIRLINE,
-  flexDirection: "row",
-  alignItems: "center",
-  justifyContent: "space-between",
-  minHeight: normalize(84),
-},
-discoverWideLeft: {
-  flexDirection: "row",
-  alignItems: "center",
-  gap: normalize(12),
-  flex: 1,
-  minWidth: 0,
-},
-duoCtaGlow: {
-  backgroundColor: "rgba(255,255,255,0.28)",
-},
-
-duoCtaRingWrap: {
-  position: "absolute",
-  right: normalize(14),
-  top: "50%",
-  width: normalize(44),
-  height: normalize(44),
-  marginTop: -normalize(22),
-  alignItems: "center",
-  justifyContent: "center",
-},
-
-duoCtaRing: {
-  width: "100%",
-  height: "100%",
-  borderRadius: normalize(22),
-  borderWidth: 1,
-  borderColor: "rgba(11,17,32,0.20)",
-  overflow: "hidden",
-},
-
-spotRoot: {
-  position: "absolute",
-  left: 0,
-  right: 0,
-  top: 0,
-  bottom: 0,
-  zIndex: 999999,
-},
-duoPendingTitleRow: {
-  flexDirection: "row",
-  alignItems: "center",
-  justifyContent: "space-between",
-  gap: normalize(10),
-  marginBottom: normalize(4),
-},
-
-duoPendingTitle: {
-  fontSize: normalize(13.2),
-  lineHeight: normalize(17),
-  fontFamily: "Comfortaa_700Bold",
-  flex: 1,
-  minWidth: 0,
-  includeFontPadding: false,
-},
-duoPendingSub: {
-  fontSize: normalize(12.0),
-  lineHeight: normalize(16),
-  fontFamily: "Comfortaa_400Regular",
-  includeFontPadding: false,
-},
+    width: "100%",
+    marginTop: normalize(10),
+    borderRadius: normalize(18),
+    padding: normalize(14),
+    borderWidth: ANDROID_HAIRLINE,
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "space-between",
+    minHeight: normalize(84),
+  },
+  discoverWideLeft: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: normalize(12),
+    flex: 1,
+    minWidth: 0,
+  },
+  // ✨ NEW: "NEW" badge
+  newBadge: {
+    paddingHorizontal: normalize(7),
+    paddingVertical: normalize(3),
+    borderRadius: normalize(6),
+    backgroundColor: "#F97316",
+  },
+  newBadgeText: {
+    fontSize: normalize(10),
+    fontFamily: "Comfortaa_700Bold",
+    color: "#0B1120",
+    letterSpacing: 0.5,
+  },
+  duoCtaGlow: {
+    backgroundColor: "rgba(255,255,255,0.28)",
+  },
+  duoCtaRingWrap: {
+    position: "absolute",
+    right: normalize(14),
+    top: "50%",
+    width: normalize(44),
+    height: normalize(44),
+    marginTop: -normalize(22),
+    alignItems: "center",
+    justifyContent: "center",
+  },
+  duoCtaRing: {
+    width: "100%",
+    height: "100%",
+    borderRadius: normalize(22),
+    borderWidth: 1,
+    borderColor: "rgba(11,17,32,0.20)",
+    overflow: "hidden",
+  },
+  spotRoot: {
+    position: "absolute",
+    left: 0,
+    right: 0,
+    top: 0,
+    bottom: 0,
+    zIndex: 999999,
+  },
+  duoPendingTitleRow: {
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "space-between",
+    gap: normalize(10),
+    marginBottom: normalize(4),
+  },
+  duoPendingTitle: {
+    fontSize: normalize(13.2),
+    lineHeight: normalize(17),
+    fontFamily: "Comfortaa_700Bold",
+    flex: 1,
+    minWidth: 0,
+    includeFontPadding: false,
+  },
+  duoPendingSub: {
+    fontSize: normalize(12.0),
+    lineHeight: normalize(16),
+    fontFamily: "Comfortaa_400Regular",
+    includeFontPadding: false,
+  },
   spotDim: {
-  ...StyleSheet.absoluteFillObject,
-  backgroundColor: "rgba(0,0,0,0.72)", // au lieu de 0.52
-},
+    ...StyleSheet.absoluteFillObject,
+    backgroundColor: "rgba(0,0,0,0.72)",
+  },
   spotBlur: {
     ...StyleSheet.absoluteFillObject,
   },
@@ -4020,29 +3948,29 @@ duoPendingSub: {
     elevation: 10,
   },
   duoPendingStepsWrap: {
-  marginTop: normalize(8),
-  gap: normalize(6),
-},
-duoPendingStepRow: {
-  flexDirection: "row",
-  alignItems: "center",
-  gap: normalize(8),
-},
-duoPendingStepDot: {
-  width: normalize(6),
-  height: normalize(6),
-  borderRadius: normalize(999),
-  backgroundColor: "#6366F1",
-  marginTop: normalize(1),
-},
-duoPendingStepText: {
-  flex: 1,
-  minWidth: 0,
-  fontSize: normalize(11.6),
-  lineHeight: normalize(15),
-  fontFamily: "Comfortaa_400Regular",
-  includeFontPadding: false,
-},
+    marginTop: normalize(8),
+    gap: normalize(6),
+  },
+  duoPendingStepRow: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: normalize(8),
+  },
+  duoPendingStepDot: {
+    width: normalize(6),
+    height: normalize(6),
+    borderRadius: normalize(999),
+    backgroundColor: "#6366F1",
+    marginTop: normalize(1),
+  },
+  duoPendingStepText: {
+    flex: 1,
+    minWidth: 0,
+    fontSize: normalize(11.6),
+    lineHeight: normalize(15),
+    fontFamily: "Comfortaa_400Regular",
+    includeFontPadding: false,
+  },
   spotCtaGrad: {
     flex: 1,
     borderRadius: normalize(18),
@@ -4083,32 +4011,37 @@ duoPendingStepText: {
     fontFamily: "Comfortaa_400Regular",
     includeFontPadding: false,
   },
-discoverWideTitle: {
-  fontSize: normalize(13.8),
-  fontFamily: "Comfortaa_700Bold",
-  marginBottom: normalize(4),
-},
-discoverWideSub: {
-  fontSize: normalize(12.2),
-  lineHeight: normalize(16),
-  fontFamily: "Comfortaa_400Regular",
-  includeFontPadding: false,
-},
-markHalo: {
-  borderRadius: normalize(18),
-  backgroundColor: "rgba(255,255,255,0.30)",
-},
-markGlow: {
-  borderRadius: normalize(18),
-  backgroundColor: "rgba(249,115,22,0.28)",
-},
-
+  discoverWideTitle: {
+    fontSize: normalize(13.8),
+    fontFamily: "Comfortaa_700Bold",
+  },
+  discoverWideSub: {
+    fontSize: normalize(12.2),
+    lineHeight: normalize(16),
+    fontFamily: "Comfortaa_400Regular",
+    includeFontPadding: false,
+  },
+  markHalo: {
+    borderRadius: normalize(18),
+    backgroundColor: "rgba(255,255,255,0.30)",
+  },
+  markGlow: {
+    borderRadius: normalize(18),
+    backgroundColor: "rgba(249,115,22,0.28)",
+  },
   discoverBigCard: {
     flex: 1,
     minHeight: normalize(104),
     borderRadius: normalize(18),
     padding: normalize(14),
     borderWidth: ANDROID_HAIRLINE,
+  },
+  // ✨ NEW: tinted card variants
+  discoverCardLeaderboard: {
+    // gold tint applied inline
+  },
+  discoverCardTips: {
+    // blue tint applied inline
   },
   discoverBigIcon: {
     width: normalize(34),
@@ -4131,14 +4064,13 @@ markGlow: {
     includeFontPadding: false,
     opacity: 0.85,
   },
-todayHubHeaderRow: {
+  todayHubHeaderRow: {
     flexDirection: "row",
     alignItems: "center",
     justifyContent: "space-between",
     marginBottom: normalize(10),
     gap: normalize(10),
   },
-
   todayHubActiveCard: {
     width: "100%",
     borderRadius: normalize(18),
@@ -4156,16 +4088,16 @@ todayHubHeaderRow: {
     overflow: "hidden",
   },
   heroDuoProof: {
-   width: "100%",
-   maxWidth: CONTENT_W,
-   fontSize: normalize(12.8),
-   lineHeight: normalize(16),
-   fontFamily: "Comfortaa_700Bold",
-   textAlign: "center",
-   marginBottom: normalize(10),
-   opacity: 0.92,
- },
-   duoPendingWrap: {
+    width: "100%",
+    maxWidth: CONTENT_W,
+    fontSize: normalize(12.8),
+    lineHeight: normalize(16),
+    fontFamily: "Comfortaa_700Bold",
+    textAlign: "center",
+    marginBottom: normalize(10),
+    opacity: 0.92,
+  },
+  duoPendingWrap: {
     width: "100%",
     borderRadius: normalize(18),
     borderWidth: StyleSheet.hairlineWidth,
@@ -4235,7 +4167,6 @@ todayHubHeaderRow: {
     fontFamily: "Comfortaa_700Bold",
     color: "#0B1120",
   },
-
   todayHubActiveImg: {
     width: "100%",
     height: "100%",
@@ -4260,252 +4191,292 @@ todayHubHeaderRow: {
     marginBottom: normalize(8),
   },
   duoNudgeWrap: {
-  width: "100%",
-  borderRadius: normalize(18),
-  borderWidth: StyleSheet.hairlineWidth,
-  padding: normalize(12),
-  marginBottom: normalize(12),
-  backgroundColor: "rgba(249,115,22,0.08)",
-},
-duoNudgeRow: {
-  flexDirection: "row",
-  alignItems: "flex-start",
-  gap: normalize(10),
-  marginBottom: normalize(10),
-},
-duoNudgeIcon: {
-  width: normalize(34),
-  height: normalize(34),
-  borderRadius: normalize(17),
-  alignItems: "center",
-  justifyContent: "center",
-  backgroundColor: "rgba(249,115,22,0.12)",
-  borderWidth: StyleSheet.hairlineWidth,
-  borderColor: "rgba(249,115,22,0.22)",
-},
-todayHubActionRowSingle: {
-  marginTop: normalize(10),
-  alignItems: "center",
-  width: "100%",
-},
-todayHubActionIconCentered: {
-  marginBottom: normalize(8),
-},
-
-todayHubActionCardSingle: {
-  width: "100%",
-  borderRadius: normalize(18),
-  padding: normalize(12),
-  maxWidth: CONTENT_W,
-  borderWidth: StyleSheet.hairlineWidth,
-  minHeight: normalize(84),
-   alignSelf: "center",
-   alignItems: "center",
-  justifyContent: "center",
-},
-
-duoNudgeTitle: {
-  fontSize: normalize(13.2),
-  lineHeight: normalize(17),
-  fontFamily: "Comfortaa_700Bold",
-  marginBottom: normalize(4),
-},
-duoNudgeSub: {
-  fontSize: normalize(12.0),
-  lineHeight: normalize(16),
-  fontFamily: "Comfortaa_400Regular",
-},
-duoNudgeActions: {
-  flexDirection: "row",
-  alignItems: "center",
-  justifyContent: "space-between",
-  gap: normalize(10),
-},
-dailyBonusShell: {
-  width: "100%",
-  maxWidth: CONTENT_W,
-  alignSelf: "center",
-  borderRadius: normalize(24),
-  position: "relative",
-},
-dailyBonusBackdrop: {
-  position: "absolute",
-  left: normalize(-14),
-  right: normalize(-14),
-  top: normalize(-12),
-  bottom: normalize(-12),
-  borderRadius: normalize(28),
-  opacity: 0.9,
-},
-
-dailyBonusStroke: {
-  borderRadius: normalize(24),
-  padding: normalize(1),
-  borderWidth: StyleSheet.hairlineWidth,
- ...shadowSoft,
-},
-
-dailyBonusCard: {
-  borderRadius: normalize(23),
-  overflow: "hidden",
-},
-
-dailyBonusBlurKeynote: {
-  borderRadius: normalize(23),
-  overflow: "hidden",
-  padding: normalize(14),
-},
-
-dailyBonusGlow: {
-  position: "absolute",
-  left: normalize(-40),
-  right: normalize(-40),
-  top: normalize(-40),
-  height: normalize(120),
-  borderRadius: normalize(999),
-  transform: [{ rotate: "-10deg" }],
-},
-
-dailyBonusHeaderRow: {
-  flexDirection: "row",
-  alignItems: "center",
-  justifyContent: "space-between",
-  marginBottom: normalize(10),
-  gap: normalize(10),
-},
-
-dailyBonusBadge: {
-  flexDirection: "row",
-  alignItems: "center",
-  gap: normalize(6),
-  paddingHorizontal: normalize(10),
-  paddingVertical: normalize(6),
-  borderRadius: normalize(999),
-  borderWidth: StyleSheet.hairlineWidth,
-  maxWidth: "65%",
-},
-
-dailyBonusBadgeText: {
-  fontSize: normalize(11),
-  fontFamily: "Comfortaa_700Bold",
-  letterSpacing: 0.4,
-},
-
-dailyBonusMiniPill: {
-  flexDirection: "row",
-  alignItems: "center",
-  gap: normalize(6),
-  paddingHorizontal: normalize(10),
-  paddingVertical: normalize(6),
-  borderRadius: normalize(999),
-  borderWidth: StyleSheet.hairlineWidth,
-},
-
-dailyBonusMiniPillText: {
-  fontSize: normalize(11.2),
-  fontFamily: "Comfortaa_700Bold",
-},
-
-dailyBonusMainRow: {
-  flexDirection: "row",
-  alignItems: "center",
-  justifyContent: "space-between",
-  gap: normalize(12),
-},
-dailyBonusTitleKeynote: {
-  lineHeight: normalize(21),
-  fontFamily: "Comfortaa_700Bold",
-  marginBottom: normalize(6),
-  includeFontPadding: false,
-  fontSize: normalize(14.6),
-},
-dailyBonusSubKeynote: {
-  fontSize: normalize(13.0),
-  lineHeight: normalize(18),
-  fontFamily: "Comfortaa_400Regular",
-  includeFontPadding: false,
-},
-dailyBonusCtaRow: {
-  marginTop: normalize(12),
-  gap: normalize(8),
-},
-
-dailyBonusCtaPill: {
-  alignSelf: "flex-start",
-  borderRadius: normalize(16),
-  paddingVertical: normalize(10),
-  paddingHorizontal: normalize(12),
-  flexDirection: "row",
-  alignItems: "center",
-  gap: normalize(8),
-  shadowColor: "#000",
-  shadowOffset: { width: 0, height: normalize(6) },
-  shadowOpacity: 0.22,
-  shadowRadius: normalize(14),
-  elevation: 6,
-},
-
-dailyBonusCtaText: {
-  fontSize: normalize(13.2),
-  fontFamily: "Comfortaa_700Bold",
-  color: "#0B1120",
-},
-
-dailyBonusMicro: {
-  fontSize: normalize(11.6),
-  fontFamily: "Comfortaa_400Regular",
-},
-
-dailyBonusIconWrap: {
-  width: normalize(68),
-  alignItems: "flex-end",
-},
-
-dailyBonusIconCircleKeynote: {
-  width: normalize(56),
- height: normalize(56),
-  borderRadius: normalize(32),
-  alignItems: "center",
-  justifyContent: "center",
-},
-
-dailyBonusIconInnerKeynote: {
-  width: normalize(54),
-  height: normalize(54),
-  borderRadius: normalize(27),
-  alignItems: "center",
-  justifyContent: "center",
-  borderWidth: StyleSheet.hairlineWidth,
-},
-
-duoNudgeCta: {
-  flex: 1,
-  borderRadius: normalize(16),
-  overflow: "hidden",
-},
-duoNudgeCtaGrad: {
-  borderRadius: normalize(16),
-  paddingVertical: normalize(10),
-  paddingHorizontal: normalize(12),
-  flexDirection: "row",
-  alignItems: "center",
-  justifyContent: "space-between",
-},
-duoNudgeCtaText: {
-  fontSize: normalize(13.2),
-  fontFamily: "Comfortaa_700Bold",
-  color: "#0B1120",
-},
-duoNudgeSolo: {
-  paddingVertical: normalize(10),
-  paddingHorizontal: normalize(6),
-},
-duoNudgeSoloText: {
-  fontSize: normalize(12.2),
-  fontFamily: "Comfortaa_700Bold",
-  textDecorationLine: "underline",
-},
-
+    width: "100%",
+    borderRadius: normalize(18),
+    borderWidth: StyleSheet.hairlineWidth,
+    padding: normalize(12),
+    marginBottom: normalize(12),
+    backgroundColor: "rgba(249,115,22,0.08)",
+  },
+  duoNudgeRow: {
+    flexDirection: "row",
+    alignItems: "flex-start",
+    gap: normalize(10),
+    marginBottom: normalize(10),
+  },
+  duoNudgeIcon: {
+    width: normalize(34),
+    height: normalize(34),
+    borderRadius: normalize(17),
+    alignItems: "center",
+    justifyContent: "center",
+    backgroundColor: "rgba(249,115,22,0.12)",
+    borderWidth: StyleSheet.hairlineWidth,
+    borderColor: "rgba(249,115,22,0.22)",
+  },
+  todayHubActionRowSingle: {
+    marginTop: normalize(10),
+    alignItems: "center",
+    width: "100%",
+  },
+  todayHubActionIconCentered: {
+    marginBottom: normalize(8),
+  },
+  todayHubActionCardSingle: {
+    width: "100%",
+    borderRadius: normalize(18),
+    padding: normalize(12),
+    maxWidth: CONTENT_W,
+    borderWidth: StyleSheet.hairlineWidth,
+    minHeight: normalize(84),
+    alignSelf: "center",
+    alignItems: "center",
+    justifyContent: "center",
+  },
+  duoNudgeTitle: {
+    fontSize: normalize(13.2),
+    lineHeight: normalize(17),
+    fontFamily: "Comfortaa_700Bold",
+    marginBottom: normalize(4),
+  },
+  duoNudgeSub: {
+    fontSize: normalize(12.0),
+    lineHeight: normalize(16),
+    fontFamily: "Comfortaa_400Regular",
+  },
+  duoNudgeActions: {
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "space-between",
+    gap: normalize(10),
+  },
+  // ✨ NEW: hero CTA glow & wrapper
+  heroCTAWrapper: {
+    position: "relative",
+    alignItems: "center",
+    justifyContent: "center",
+  },
+  heroCTAGlow: {
+    position: "absolute",
+    width: Math.min(CONTENT_W, normalize(360)) + normalize(40),
+    height: normalize(60),
+    borderRadius: normalize(30),
+    backgroundColor: "#F97316",
+    top: "50%",
+    marginTop: -normalize(30),
+  },
+  // ✨ NEW: shine overlay on CTA
+  ctaShineOverlay: {
+    ...StyleSheet.absoluteFillObject,
+    borderRadius: normalize(16),
+  },
+  // ✨ NEW: orange ambient at hero bottom
+  heroOrangeAmbient: {
+    position: "absolute",
+    left: 0,
+    right: 0,
+  },
+  // ✨ NEW: hero stat bar
+  heroStatBar: {
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "center",
+    marginTop: normalize(10),
+    gap: normalize(8),
+  },
+  heroStatItem: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: normalize(5),
+  },
+  heroStatText: {
+    fontSize: normalize(11.8),
+    fontFamily: "Comfortaa_700Bold",
+    color: "rgba(255,255,255,0.82)",
+  },
+  heroStatDot: {
+    width: normalize(3),
+    height: normalize(3),
+    borderRadius: normalize(999),
+    backgroundColor: "rgba(255,255,255,0.40)",
+  },
+  // ✨ NEW: bonus particles container
+  bonusParticles: {
+    position: "absolute",
+    top: 0,
+    right: 0,
+    left: 0,
+    bottom: 0,
+    pointerEvents: "none",
+  },
+  dailyBonusShell: {
+    width: "100%",
+    maxWidth: CONTENT_W,
+    alignSelf: "center",
+    borderRadius: normalize(24),
+    position: "relative",
+  },
+  dailyBonusBackdrop: {
+    position: "absolute",
+    left: normalize(-14),
+    right: normalize(-14),
+    top: normalize(-12),
+    bottom: normalize(-12),
+    borderRadius: normalize(28),
+    opacity: 0.9,
+  },
+  dailyBonusStroke: {
+    borderRadius: normalize(24),
+    padding: normalize(1),
+    borderWidth: StyleSheet.hairlineWidth,
+    ...shadowSoft,
+  },
+  dailyBonusCard: {
+    borderRadius: normalize(23),
+    overflow: "hidden",
+  },
+  dailyBonusBlurKeynote: {
+    borderRadius: normalize(23),
+    overflow: "hidden",
+    padding: normalize(14),
+  },
+  dailyBonusGlow: {
+    position: "absolute",
+    left: normalize(-40),
+    right: normalize(-40),
+    top: normalize(-40),
+    height: normalize(120),
+    borderRadius: normalize(999),
+    transform: [{ rotate: "-10deg" }],
+  },
+  dailyBonusHeaderRow: {
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "space-between",
+    marginBottom: normalize(10),
+    gap: normalize(10),
+  },
+  dailyBonusBadge: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: normalize(6),
+    paddingHorizontal: normalize(10),
+    paddingVertical: normalize(6),
+    borderRadius: normalize(999),
+    borderWidth: StyleSheet.hairlineWidth,
+    maxWidth: "65%",
+  },
+  dailyBonusBadgeText: {
+    fontSize: normalize(11),
+    fontFamily: "Comfortaa_700Bold",
+    letterSpacing: 0.4,
+  },
+  dailyBonusMiniPill: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: normalize(6),
+    paddingHorizontal: normalize(10),
+    paddingVertical: normalize(6),
+    borderRadius: normalize(999),
+    borderWidth: StyleSheet.hairlineWidth,
+  },
+  dailyBonusMiniPillText: {
+    fontSize: normalize(11.2),
+    fontFamily: "Comfortaa_700Bold",
+  },
+  dailyBonusMainRow: {
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "space-between",
+    gap: normalize(12),
+  },
+  dailyBonusTitleKeynote: {
+    lineHeight: normalize(21),
+    fontFamily: "Comfortaa_700Bold",
+    marginBottom: normalize(6),
+    includeFontPadding: false,
+    fontSize: normalize(14.6),
+  },
+  dailyBonusSubKeynote: {
+    fontSize: normalize(13.0),
+    lineHeight: normalize(18),
+    fontFamily: "Comfortaa_400Regular",
+    includeFontPadding: false,
+  },
+  dailyBonusCtaRow: {
+    marginTop: normalize(12),
+    gap: normalize(8),
+  },
+  dailyBonusCtaPill: {
+    alignSelf: "flex-start",
+    borderRadius: normalize(16),
+    paddingVertical: normalize(10),
+    paddingHorizontal: normalize(12),
+    flexDirection: "row",
+    alignItems: "center",
+    gap: normalize(8),
+    shadowColor: "#F97316",
+    shadowOffset: { width: 0, height: normalize(4) },
+    shadowOpacity: 0.35,
+    shadowRadius: normalize(10),
+    elevation: 6,
+    overflow: "hidden",
+  },
+  dailyBonusCtaText: {
+    fontSize: normalize(13.2),
+    fontFamily: "Comfortaa_700Bold",
+    color: "#0B1120",
+  },
+  dailyBonusMicro: {
+    fontSize: normalize(11.6),
+    fontFamily: "Comfortaa_400Regular",
+  },
+  dailyBonusIconWrap: {
+    width: normalize(68),
+    alignItems: "flex-end",
+  },
+  dailyBonusIconCircleKeynote: {
+    width: normalize(56),
+    height: normalize(56),
+    borderRadius: normalize(32),
+    alignItems: "center",
+    justifyContent: "center",
+  },
+  dailyBonusIconInnerKeynote: {
+    width: normalize(54),
+    height: normalize(54),
+    borderRadius: normalize(27),
+    alignItems: "center",
+    justifyContent: "center",
+    borderWidth: StyleSheet.hairlineWidth,
+  },
+  duoNudgeCta: {
+    flex: 1,
+    borderRadius: normalize(16),
+    overflow: "hidden",
+  },
+  duoNudgeCtaGrad: {
+    borderRadius: normalize(16),
+    paddingVertical: normalize(10),
+    paddingHorizontal: normalize(12),
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "space-between",
+  },
+  duoNudgeCtaText: {
+    fontSize: normalize(13.2),
+    fontFamily: "Comfortaa_700Bold",
+    color: "#0B1120",
+  },
+  duoNudgeSolo: {
+    paddingVertical: normalize(10),
+    paddingHorizontal: normalize(6),
+  },
+  duoNudgeSoloText: {
+    fontSize: normalize(12.2),
+    fontFamily: "Comfortaa_700Bold",
+    textDecorationLine: "underline",
+  },
   todayHubProgressRow: {
     flexDirection: "row",
     alignItems: "center",
@@ -4527,7 +4498,6 @@ duoNudgeSoloText: {
     fontSize: normalize(11.2),
     fontFamily: "Comfortaa_700Bold",
   },
-
   todayHubActionRow: {
     marginTop: normalize(10),
     flexDirection: "row",
@@ -4586,177 +4556,176 @@ duoNudgeSoloText: {
     fontSize: normalize(12.8),
     fontFamily: "Comfortaa_700Bold",
   },
-seeAllWrap: {
-width: "100%",
-maxWidth: CONTENT_W,
-alignSelf: "center",
-  marginTop: normalize(2),
-  marginBottom: normalize(6),
-},
-seeAllBtn: {
-  width: "100%",
-  borderRadius: normalize(16),
-  paddingVertical: normalize(12),
-  paddingHorizontal: normalize(12),
-  borderWidth: StyleSheet.hairlineWidth,
-  backgroundColor: "rgba(255,255,255,0.06)",
-  flexDirection: "row",
-  alignItems: "center",
-  justifyContent: "space-between",
-},
-seeAllText: {
-  flex: 1,
-  minWidth: 0,
-  marginRight: normalize(10),
-  fontSize: normalize(12.8),
-  fontFamily: "Comfortaa_700Bold",
-},
-
+  seeAllWrap: {
+    width: "100%",
+    maxWidth: CONTENT_W,
+    alignSelf: "center",
+    marginTop: normalize(2),
+    marginBottom: normalize(6),
+  },
+  seeAllBtn: {
+    width: "100%",
+    borderRadius: normalize(16),
+    paddingVertical: normalize(12),
+    paddingHorizontal: normalize(12),
+    borderWidth: StyleSheet.hairlineWidth,
+    backgroundColor: "rgba(255,255,255,0.06)",
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "space-between",
+  },
+  seeAllText: {
+    flex: 1,
+    minWidth: 0,
+    marginRight: normalize(10),
+    fontSize: normalize(12.8),
+    fontFamily: "Comfortaa_700Bold",
+  },
   tutorialFab: {
-  position: "absolute",
-  top: normalize(10),
-  right: normalize(14),
-  zIndex: 50,
-},
-todayHubWrap: {
-  paddingHorizontal: SPACING,
-  marginTop: normalize(14), // au lieu de 6
-  marginBottom: normalize(22),
-  width: "100%",
-  alignItems: "center",
-},
-todayHubOuter: {
-  width: "100%",
-  maxWidth: CONTENT_W,
-},
-todayHubStroke: {
-  borderRadius: normalize(24),
-  padding: normalize(1),
- borderWidth: StyleSheet.hairlineWidth,
-  ...shadowSoft,
-},
-todayHubCard: {
-  borderRadius: normalize(23),
-  overflow: "hidden",
-},
-todayHubBlur: {
-  borderRadius: normalize(23),
-  overflow: "hidden",
-  padding: normalize(16),
-  borderWidth: StyleSheet.hairlineWidth,
-  borderColor: "rgba(255,255,255,0.10)",
-},
-todayHubBadge: {
-  flexDirection: "row",
-  alignItems: "center",
-  gap: normalize(6),
-  paddingHorizontal: normalize(10),
-  paddingVertical: normalize(6),
-  borderRadius: normalize(999),
- backgroundColor: "rgba(15,23,42,0.42)",
-  borderWidth: StyleSheet.hairlineWidth,
-  borderColor: "rgba(255,255,255,0.14)",
-},
-todayHubBadgeText: {
-  fontSize: normalize(11),
-  fontFamily: "Comfortaa_700Bold",
-  color: "#E2E8F0",
-  letterSpacing: 0.3,
-},
-todayHubMetaPill: {
-  flexDirection: "row",
-  alignItems: "center",
-  gap: normalize(6),
-  paddingHorizontal: normalize(10),
-  paddingVertical: normalize(6),
-  borderRadius: normalize(999),
-  backgroundColor: "rgba(255,255,255,0.06)",
-  borderWidth: StyleSheet.hairlineWidth,
-  borderColor: "rgba(255,255,255,0.10)",
-  maxWidth: "55%",
-},
-todayHubMetaText: {
-  fontSize: normalize(11.2),
-  fontFamily: "Comfortaa_700Bold",
-},
-todayHubTitle: {
-  fontSize: normalize(18.5),
-  lineHeight: normalize(23),
-  fontFamily: "Comfortaa_700Bold",
-  marginBottom: normalize(6),
-  includeFontPadding: false,
-},
-todayHubSub: {
-  fontSize: normalize(13),
-  lineHeight: normalize(18),
-  fontFamily: "Comfortaa_400Regular",
-  marginBottom: normalize(12),
-  includeFontPadding: false,
-},
-todayHubPrimaryBtnWrap: {
-  width: "100%",
-  borderRadius: normalize(18),
-  overflow: "hidden",
-},
-todayHubPrimaryBtn: {
-  borderRadius: normalize(18),
-  paddingHorizontal: normalize(14),
-  flexDirection: "row",
-  alignItems: "center",
-  justifyContent: "space-between",
-  ...shadowSoft,
-  paddingVertical: normalize(14),
-},
-todayHubPrimaryText: {
-  fontSize: normalize(14.2),
-  fontFamily: "Comfortaa_700Bold",
-  color: "#0B1120",
-  marginRight: normalize(10),
-  flex: 1,
- minWidth: 0,
- textAlign: "center",
- includeFontPadding: false,
-},
-todayHubMicro: {
-  marginTop: normalize(10),
-  fontSize: normalize(11.8),
-  fontFamily: "Comfortaa_400Regular",
-  includeFontPadding: false,
-},
-tutorialFabBlur: {
-  borderRadius: normalize(999),
-  overflow: "hidden",
-},
-tutorialFabGlass: {
-  width: normalize(44),
-  height: normalize(44),
-  borderRadius: normalize(999),
-  alignItems: "center",
-  justifyContent: "center",
-  borderWidth: StyleSheet.hairlineWidth,
-  borderColor: "rgba(255,255,255,0.25)",
-  ...shadowSoft,
-},
+    position: "absolute",
+    top: normalize(10),
+    right: normalize(14),
+    zIndex: 50,
+    // NOTE: this is absolutely positioned inside heroContent (no position:relative),
+    // so it anchors to heroSection. insets compensation is done at render time.
+  },
+  todayHubWrap: {
+    paddingHorizontal: SPACING,
+    marginTop: normalize(14),
+    marginBottom: normalize(22),
+    width: "100%",
+    alignItems: "center",
+  },
+  todayHubOuter: {
+    width: "100%",
+    maxWidth: CONTENT_W,
+  },
+  todayHubStroke: {
+    borderRadius: normalize(24),
+    padding: normalize(1),
+    borderWidth: StyleSheet.hairlineWidth,
+    ...shadowSoft,
+  },
+  todayHubCard: {
+    borderRadius: normalize(23),
+    overflow: "hidden",
+  },
+  todayHubBlur: {
+    borderRadius: normalize(23),
+    overflow: "hidden",
+    padding: normalize(16),
+    borderWidth: StyleSheet.hairlineWidth,
+    borderColor: "rgba(255,255,255,0.10)",
+  },
+  todayHubBadge: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: normalize(6),
+    paddingHorizontal: normalize(10),
+    paddingVertical: normalize(6),
+    borderRadius: normalize(999),
+    backgroundColor: "rgba(15,23,42,0.42)",
+    borderWidth: StyleSheet.hairlineWidth,
+    borderColor: "rgba(255,255,255,0.14)",
+  },
+  todayHubBadgeText: {
+    fontSize: normalize(11),
+    fontFamily: "Comfortaa_700Bold",
+    color: "#E2E8F0",
+    letterSpacing: 0.3,
+  },
+  todayHubMetaPill: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: normalize(6),
+    paddingHorizontal: normalize(10),
+    paddingVertical: normalize(6),
+    borderRadius: normalize(999),
+    backgroundColor: "rgba(255,255,255,0.06)",
+    borderWidth: StyleSheet.hairlineWidth,
+    borderColor: "rgba(255,255,255,0.10)",
+    maxWidth: "55%",
+  },
+  todayHubMetaText: {
+    fontSize: normalize(11.2),
+    fontFamily: "Comfortaa_700Bold",
+  },
+  todayHubTitle: {
+    fontSize: normalize(18.5),
+    lineHeight: normalize(23),
+    fontFamily: "Comfortaa_700Bold",
+    marginBottom: normalize(6),
+    includeFontPadding: false,
+  },
+  todayHubSub: {
+    fontSize: normalize(13),
+    lineHeight: normalize(18),
+    fontFamily: "Comfortaa_400Regular",
+    marginBottom: normalize(12),
+    includeFontPadding: false,
+  },
+  todayHubPrimaryBtnWrap: {
+    width: "100%",
+    borderRadius: normalize(18),
+    overflow: "hidden",
+  },
+  todayHubPrimaryBtn: {
+    borderRadius: normalize(18),
+    paddingHorizontal: normalize(14),
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "space-between",
+    ...shadowSoft,
+    paddingVertical: normalize(14),
+  },
+  todayHubPrimaryText: {
+    fontSize: normalize(14.2),
+    fontFamily: "Comfortaa_700Bold",
+    color: "#0B1120",
+    marginRight: normalize(10),
+    flex: 1,
+    minWidth: 0,
+    textAlign: "center",
+    includeFontPadding: false,
+  },
+  todayHubMicro: {
+    marginTop: normalize(10),
+    fontSize: normalize(11.8),
+    fontFamily: "Comfortaa_400Regular",
+    includeFontPadding: false,
+  },
+  tutorialFabBlur: {
+    borderRadius: normalize(999),
+    overflow: "hidden",
+  },
+  tutorialFabGlass: {
+    width: normalize(44),
+    height: normalize(44),
+    borderRadius: normalize(999),
+    alignItems: "center",
+    justifyContent: "center",
+    borderWidth: StyleSheet.hairlineWidth,
+    borderColor: "rgba(255,255,255,0.25)",
+    ...shadowSoft,
+  },
   gradientContainer: {
     flex: 1,
     paddingBottom: normalize(10),
   },
-    scrollContent: {
+  scrollContent: {
     flexGrow: 1,
-    paddingBottom: SPACING * 5, // rythme global homogène
+    paddingBottom: SPACING * 5,
   },
   heroSection: {
-  width: "100%",
-  justifyContent: "center",
-  alignItems: "center",
-  overflow: "hidden",
-  position: "relative",
-},
-
-backgroundVideo: {
-  ...StyleSheet.absoluteFillObject,
-}
-,
+    width: "100%",
+    justifyContent: "center",
+    alignItems: "center",
+    overflow: "hidden",
+    position: "relative",
+  },
+  backgroundVideo: {
+    ...StyleSheet.absoluteFillObject,
+  },
   heroOverlay: {
     position: "absolute",
     left: 0,
@@ -4778,24 +4747,29 @@ backgroundVideo: {
     marginBottom: normalize(12),
   },
   logoKeynote: {
-  width: normalize(82), 
-  height: normalize(82),
-},
-heroBrandPillText: {
-  fontSize: normalize(15.2),
-  fontFamily: "Comfortaa_700Bold",
-  color: "#FFFFFF",          // ✅ BLANC NET
-  letterSpacing: 1.6,
-},
-  heroBrandPill: {
-  paddingHorizontal: normalize(18),
-  paddingVertical: normalize(9),
-  borderRadius: normalize(999),
-  borderWidth: StyleSheet.hairlineWidth,
-  borderColor: "rgba(255,255,255,0.35)",
-  backgroundColor: "rgba(0,0,0,0.28)", // un poil plus dense
-},
- heroTitleKeynote: {
+    width: normalize(82),
+    height: normalize(82),
+  },
+  // ✨ IMPROVED: frosted glass brand pill
+  heroBrandPillBlur: {
+    borderRadius: normalize(999),
+    overflow: "hidden",
+  },
+  heroBrandPillInner: {
+    paddingHorizontal: normalize(18),
+    paddingVertical: normalize(9),
+    borderRadius: normalize(999),
+    borderWidth: StyleSheet.hairlineWidth,
+    borderColor: "rgba(255,255,255,0.28)",
+    backgroundColor: "rgba(0,0,0,0.18)",
+  },
+  heroBrandPillText: {
+    fontSize: normalize(15.2),
+    fontFamily: "Comfortaa_700Bold",
+    color: "#FFFFFF",
+    letterSpacing: 1.6,
+  },
+  heroTitleKeynote: {
     width: "100%",
     maxWidth: CONTENT_W,
     fontSize: normalize(32.5),
@@ -4824,28 +4798,30 @@ heroBrandPillText: {
     paddingVertical: normalize(12),
     paddingHorizontal: normalize(16),
     borderRadius: normalize(16),
-   shadowOffset: { width: 0, height: normalize(7) },
- shadowOpacity: 0.18,
- shadowRadius: normalize(14),
- elevation: 5,
+    shadowColor: "#F97316",
+    shadowOffset: { width: 0, height: normalize(7) },
+    shadowOpacity: 0.40,           // ✨ stronger orange shadow
+    shadowRadius: normalize(18),
+    elevation: 5,
+    overflow: "hidden",
   },
   heroCtaInner: {
-  flexDirection: "row",
-  alignItems: "center",
-  justifyContent: "center",
-  gap: normalize(10),
-  width: "100%",
-},
-heroCtaIcon: {
-  width: normalize(28),
-  height: normalize(28),
-  borderRadius: normalize(999),
-  alignItems: "center",
-  justifyContent: "center",
-  backgroundColor: "rgba(255,255,255,0.35)",
-  borderWidth: StyleSheet.hairlineWidth,
-  borderColor: "rgba(2,6,23,0.14)",
-},
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "center",
+    gap: normalize(10),
+    width: "100%",
+  },
+  heroCtaIcon: {
+    width: normalize(28),
+    height: normalize(28),
+    borderRadius: normalize(999),
+    alignItems: "center",
+    justifyContent: "center",
+    backgroundColor: "rgba(255,255,255,0.35)",
+    borderWidth: StyleSheet.hairlineWidth,
+    borderColor: "rgba(2,6,23,0.14)",
+  },
   ctaTextKeynote: {
     fontSize: normalize(14.8),
     fontFamily: "Comfortaa_700Bold",
@@ -4855,13 +4831,15 @@ heroCtaIcon: {
     minWidth: 0,
     marginHorizontal: normalize(2),
   },
-    section: {
+  section: {
     paddingTop: SPACING * 1.1,
     paddingBottom: SPACING * 1.1,
     paddingHorizontal: SPACING,
-    // léger espace sous le bloc, mais pas un cratère
     marginBottom: SPACING * 1.1,
-    overflow: "visible",
+    // overflow must NOT be "visible" on Android — causes elevation bleed into sibling sections
+    overflow: Platform.OS === "android" ? "hidden" : "visible",
+    // isolate stacking context so heroCard elevation doesn't bleed into Discover
+    zIndex: 0,
   },
   sectionTitle: {
     fontSize: normalize(24),
@@ -4871,10 +4849,10 @@ heroCtaIcon: {
     lineHeight: normalize(28),
     includeFontPadding: false,
   },
-    dailyBonusWrapper: {
+  dailyBonusWrapper: {
     paddingHorizontal: SPACING,
     marginTop: SPACING * 0.2,
-  marginBottom: SPACING * 1.2,
+    marginBottom: SPACING * 1.2,
   },
   challengeImage: {
     width: "100%",
@@ -4904,11 +4882,13 @@ heroCtaIcon: {
     fontFamily: "Comfortaa_400Regular",
     marginTop: SPACING / 2,
   },
-    discoverWrapper: {
+  discoverWrapper: {
     width: "100%",
     alignItems: "center",
     marginBottom: SPACING * 1.6,
-    marginTop: SPACING * 0.5,
+    marginTop: 0,
+    paddingHorizontal: SPACING,
+    zIndex: 0,
   },
   blurView: {
     position: "absolute",
@@ -4948,21 +4928,22 @@ heroCtaIcon: {
     marginBottom: SPACING * 1.5,
   },
   buttonContainer: {
-  width: "100%",
-  gap: normalize(12),
-},
-actionButton: {
-  width: "100%",
-  paddingVertical: normalize(12),
-  paddingHorizontal: normalize(16),
-  borderRadius: normalize(16),
-  alignItems: "center",
-  justifyContent: "center",
-},
+    width: "100%",
+    gap: normalize(12),
+  },
+  actionButton: {
+    width: "100%",
+    paddingVertical: normalize(12),
+    paddingHorizontal: normalize(16),
+    borderRadius: normalize(16),
+    alignItems: "center",
+    justifyContent: "center",
+    backgroundColor: "#F97316",
+  },
   actionButtonText: {
     fontSize: normalize(16),
     fontFamily: "Comfortaa_700Bold",
-    color: "#000",
+    color: "#0B1120",
   },
 });
 
@@ -4999,44 +4980,52 @@ const stylesDaily = StyleSheet.create({
     width: "100%",
     alignItems: "center",
     position: "relative",
-    zIndex: 1,
   },
-
   titleRow: {
     position: "relative",
-    alignItems: "center",
+    alignItems: "flex-start",      // ✨ left-aligned
     width: "100%",
     marginBottom: SPACING,
   },
-
+  // ✨ NEW: accent dot + title row
+  titleAccentRow: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: normalize(10),
+  },
+  titleAccentDot: {
+    width: normalize(8),
+    height: normalize(8),
+    borderRadius: normalize(999),
+    backgroundColor: "#F97316",
+  },
   subtitle: {
-    marginTop: normalize(2),
+    marginTop: normalize(4),
     fontSize: normalize(12),
     fontFamily: "Comfortaa_400Regular",
     opacity: 0.9,
-    textAlign: "center",
+    textAlign: "left",              // ✨ left-aligned
   },
-
   // --- HERO ---
   heroCard: {
     width: "100%",
     maxWidth: CONTENT_W,
     alignSelf: "center",
     aspectRatio: 1.75,
-    borderRadius: normalize(18),
+    borderRadius: normalize(20),
     overflow: "hidden",
-    marginBottom: normalize(12), // légèrement + tight (premium)
+    marginBottom: normalize(12),
     shadowColor: "#000",
     shadowOffset: { width: 0, height: normalize(6) },
-    shadowOpacity: 0.25,
-    shadowRadius: normalize(8),
-    zIndex: 1,
-    elevation: 3,
+    shadowOpacity: 0.22,
+    shadowRadius: normalize(12),
+    // no zIndex here — let the natural stacking order handle it
+    elevation: 4,
   },
   heroImageWrap: {
     width: "100%",
     height: "100%",
-    borderRadius: normalize(22),
+    borderRadius: normalize(20),
     overflow: "hidden",
     backgroundColor: "transparent",
   },
@@ -5049,19 +5038,25 @@ const stylesDaily = StyleSheet.create({
     left: 0,
     right: 0,
     bottom: 0,
-    height: "55%",
+    height: "70%",                  // ✨ taller gradient for more depth
   },
-  badge: {
+  // ✨ IMPROVED: glassmorphism badge
+  badgeBlur: {
     position: "absolute",
     top: SPACING * 0.8,
     left: SPACING * 0.8,
-    backgroundColor: "rgba(255, 111, 0, 0.9)",
-    paddingHorizontal: normalize(10),
-    paddingVertical: normalize(6),
     borderRadius: normalize(999),
+    overflow: "hidden",
+  },
+  badgeInner: {
+    paddingHorizontal: normalize(12),
+    paddingVertical: normalize(7),
     flexDirection: "row",
     alignItems: "center",
-    gap: 6,
+    gap: normalize(6),
+    backgroundColor: "rgba(0,0,0,0.35)",
+    borderWidth: StyleSheet.hairlineWidth,
+    borderColor: "rgba(255,255,255,0.22)",
   },
   badgeText: {
     color: "#fff",
@@ -5081,48 +5076,51 @@ const stylesDaily = StyleSheet.create({
     fontFamily: "Comfortaa_700Bold",
     color: "#fff",
     marginBottom: 6,
-    textShadowColor: "rgba(0,0,0,0.35)",
+    textShadowColor: "rgba(0,0,0,0.50)",
     textShadowOffset: { width: 0, height: 1 },
     includeFontPadding: false,
-    textShadowRadius: 3,
+    textShadowRadius: 4,
   },
-  heroCatPill: {
-    paddingHorizontal: normalize(10),
-    paddingVertical: normalize(6),
+  // ✨ IMPROVED: frosted category pill
+  heroCatBlur: {
     borderRadius: normalize(999),
-    backgroundColor: "rgba(255,255,255,0.14)",
+    overflow: "hidden",
+  },
+  heroCatPillInner: {
+    paddingHorizontal: normalize(12),
+    paddingVertical: normalize(7),
+    borderRadius: normalize(999),
+    backgroundColor: "rgba(255,255,255,0.12)",
     borderWidth: StyleSheet.hairlineWidth,
-    borderColor: "rgba(255,255,255,0.22)",
+    borderColor: "rgba(255,255,255,0.24)",
   },
   heroCatPillText: {
     fontSize: normalize(11.8),
     fontFamily: "Comfortaa_700Bold",
-    color: "rgba(255,255,255,0.92)",
+    color: "rgba(255,255,255,0.95)",
     includeFontPadding: false,
   },
   carouselOuter: {
-  width: "100%",
-  maxWidth: CONTENT_W,
-  alignSelf: "center",
-},
-carouselContent: {
-  paddingHorizontal: normalize(2),
-  paddingRight: normalize(6),
-},
-
-carouselCard: {
-  width: DAILY_CARD_W,
-  aspectRatio: 1.6,
-  borderRadius: normalize(16),
-  overflow: "hidden",
-  marginRight: DAILY_GAP,
-  shadowColor: "#000",
-  shadowOffset: { width: 0, height: normalize(4) },
-  shadowOpacity: 0.20,
-  shadowRadius: normalize(6),
-  elevation: 3,
-},
-
+    width: "100%",
+    maxWidth: CONTENT_W,
+    alignSelf: "center",
+  },
+  carouselContent: {
+    paddingHorizontal: normalize(2),
+    paddingRight: normalize(6),
+  },
+  carouselCard: {
+    width: DAILY_CARD_W,
+    aspectRatio: 1.6,
+    borderRadius: normalize(16),
+    overflow: "hidden",
+    marginRight: DAILY_GAP,
+    shadowColor: "#000",
+    shadowOffset: { width: 0, height: normalize(4) },
+    shadowOpacity: 0.22,
+    shadowRadius: normalize(8),
+    elevation: 4,
+  },
   miniImageWrap: {
     width: "100%",
     height: "100%",
@@ -5139,9 +5137,8 @@ carouselCard: {
     left: 0,
     right: 0,
     bottom: 0,
-    height: "60%",
+    height: "65%",
   },
-
   carouselTitle: {
     position: "absolute",
     left: SPACING * 0.8,
@@ -5151,9 +5148,9 @@ carouselCard: {
     fontSize: normalize(13.6),
     lineHeight: normalize(17),
     fontFamily: "Comfortaa_700Bold",
-    textShadowColor: "rgba(0,0,0,0.35)",
+    textShadowColor: "rgba(0,0,0,0.50)",
     textShadowOffset: { width: 0, height: 1 },
-    textShadowRadius: 3,
+    textShadowRadius: 4,
     includeFontPadding: false,
   },
   carouselCat: {
@@ -5167,11 +5164,9 @@ carouselCard: {
     fontFamily: "Comfortaa_400Regular",
     includeFontPadding: false,
   },
-
   footHint: {
     marginTop: normalize(10),
     fontSize: normalize(12),
     fontFamily: "Comfortaa_400Regular",
   },
 });
-

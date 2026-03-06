@@ -24,7 +24,7 @@ import { getDisplayUsername } from "@/services/invitationService";
 // ✅ helpers (TOP LEVEL) : empêche la création d'un doc user "partiel"
 const sleep = (ms: number) => new Promise((r) => setTimeout(r, ms));
 
-async function waitForUserDoc(uid: string, tries = 30, delayMs = 200) {
+async function waitForUserDoc(uid: string, tries = 60, delayMs = 300) {
   const ref = doc(db, "users", uid);
   for (let i = 0; i < tries; i++) {
     try {
@@ -85,16 +85,51 @@ const authFailsafe = setTimeout(() => {
       if (!snap.exists()) {
         console.log("⏳ AuthProvider: userDoc absent → wait (register create)...");
         const ok = await waitForUserDoc(uid);
+
         if (!ok) {
-          console.log("⛔ AuthProvider: userDoc toujours absent → logout (évite app bloquée)");
+          // ✅ FALLBACK : doc absent après timeout → on le crée plutôt que déconnecter
+          console.log("⚠️ AuthProvider: doc absent après timeout → création fallback");
           try {
-            await signOut(auth);
-          } catch {}
-          if (!alive) return;
-          setUser(null);
-          setUserDocReady(false);
-          return;
+            await setDoc(doc(db, "users", uid), {
+              uid,
+              email: firebaseUser.email ?? "",
+              username: firebaseUser.displayName ?? "user",
+              bio: "",
+              location: "",
+              profileImage: "",
+              interests: [],
+              achievements: [],
+              newAchievements: ["first_connection"],
+              trophies: 0,
+              totalTrophies: 0,
+              completedChallengesCount: 0,
+              CompletedChallenges: [],
+              SavedChallenges: [],
+              customChallenges: [],
+              CurrentChallenges: [],
+              longestStreak: 0,
+              language: "fr",
+              locationEnabled: true,
+              notificationsEnabled: false,
+              country: "Unknown",
+              region: "Unknown",
+              createdAt: serverTimestamp(),
+              updatedAt: serverTimestamp(),
+              isPioneer: false,
+              pioneerRewardGranted: false,
+            });
+            console.log("✅ AuthProvider: doc fallback créé avec succès");
+          } catch (fallbackErr) {
+            // ✅ Si même le fallback échoue → là seulement on déconnecte
+            console.log("❌ AuthProvider: fallback setDoc failed → logout:", fallbackErr);
+            try { await signOut(auth); } catch {}
+            if (!alive) return;
+            setUser(null);
+            setUserDocReady(false);
+            return;
+          }
         }
+
         snap = await getDoc(userRef);
       }
 

@@ -619,42 +619,10 @@ const handleRequestClose = () => {
   </View>
 </ScrollView>
 
+  {/* Buttons — Inviter à gauche dominant, Solo à droite texte link */}
+<View style={[styles.buttonsRow, compact && styles.buttonsRowCompact]}>
 
-
-  {/* Buttons */}
-  <View style={[styles.buttonsRow, compact && styles.buttonsRowCompact]}>
-  {canShowStartSolo ? (
-    <TouchableOpacity
-      style={[
-        styles.btn,
-        styles.secondaryBtn,
-        compact && styles.btnCompact,
-        compact && styles.secondaryBtnCompact,
-      ]}
-      onPress={handleLater}
-      disabled={shareLocked}
-      activeOpacity={0.9}
-      accessibilityRole="button"
-      accessibilityLabel={t("invitationS.startSolo", { defaultValue: "Commencer en solo" })}
-      testID="send-invite-start-solo"
-    >
-      <View style={styles.secondaryInner}>
-        <Ionicons
-          name="person"
-          size={16}
-          color={stylesVars.iconColor(isDark)}
-          style={styles.secondaryIcon}
-        />
-        <Text style={styles.secondaryText} numberOfLines={1} ellipsizeMode="tail">
-          {soloBtnLabel}
-        </Text>
-      </View>
-    </TouchableOpacity>
-  ) : (
-    // ✅ optionnel: pour garder le layout 2 colonnes nickel quand on cache Solo
-    <View style={{ flex: 1 }} />
-  )}
-
+  {/* PRIMARY : Inviter — pleine largeur à gauche */}
   <TouchableOpacity
     onPress={handleShare}
     disabled={shareLocked}
@@ -664,28 +632,46 @@ const handleRequestClose = () => {
     testID="send-invite-share"
     style={styles.primaryBtnWrap}
   >
-      <LinearGradient
-        colors={[
-          withAlpha(th.colors.secondary, isDark ? 0.95 : 0.98),
-          withAlpha(th.colors.primary, isDark ? 0.92 : 0.98),
-        ]}
-        start={{ x: 0, y: 0 }}
-        end={{ x: 1, y: 1 }}
-        style={[styles.primaryBtn, compact && styles.primaryBtnCompact]}
-      >
-        {busy ? (
-          <ActivityIndicator color="#000" />
-        ) : (
-          <>
-            <Ionicons name="send" size={16} color="#000" />
- <Text style={styles.primaryText}>
-   {t("invitationS.ctaInvite", { defaultValue: "Inviter" })}
- </Text>
-          </>
-        )}
-      </LinearGradient>
+    <LinearGradient
+      colors={[
+        withAlpha(th.colors.secondary, isDark ? 0.95 : 0.98),
+        withAlpha(th.colors.primary, isDark ? 0.92 : 0.98),
+      ]}
+      start={{ x: 0, y: 0 }}
+      end={{ x: 1, y: 1 }}
+      style={[styles.primaryBtn, compact && styles.primaryBtnCompact]}
+    >
+      {busy ? (
+        <ActivityIndicator color="#000" />
+      ) : (
+        <>
+          <Ionicons name="send" size={16} color="#000" />
+          <Text style={styles.primaryText}>
+            {t("invitationS.ctaInvite", { defaultValue: "Inviter" })}
+          </Text>
+        </>
+      )}
+    </LinearGradient>
+  </TouchableOpacity>
+
+  {/* SECONDARY : Solo — texte link, pas de vrai bouton */}
+  {canShowStartSolo && (
+    <TouchableOpacity
+      onPress={handleLater}
+      disabled={shareLocked}
+      activeOpacity={0.7}
+      accessibilityRole="button"
+      accessibilityLabel={t("invitationS.startSolo", { defaultValue: "Commencer en solo" })}
+      testID="send-invite-start-solo"
+      style={styles.soloTextLink}
+    >
+      <Text style={[styles.soloTextLinkText, shareLocked && { opacity: 0.4 }]} numberOfLines={1}>
+        {soloBtnLabel}
+      </Text>
     </TouchableOpacity>
-  </View>
+  )}
+
+</View>
 </View>
 
             </LinearGradient>
@@ -806,6 +792,20 @@ dayChipScrollable: {
     },
     android: { elevation: 10 },
   }),
+},
+soloTextLink: {
+  paddingVertical: 13,
+  paddingHorizontal: 10,
+  alignItems: "center",
+  justifyContent: "center",
+  minWidth: n(52),
+},
+soloTextLinkText: {
+  fontFamily: "Comfortaa_400Regular",
+  fontSize: n(12.5),
+  color: isDark ? withAlpha("#F8FAFC", 0.50) : withAlpha("#0B1220", 0.42),
+  textDecorationLine: "underline",
+  textAlign: "center",
 },
 bodyScroll: {
   // ✅ le “slot” scrollable entre header et boutons

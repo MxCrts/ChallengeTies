@@ -317,7 +317,7 @@
     "title": "新着情報",
     "description": "次の機能に投票するか、あなたの案を提案しよう。結果は2月末。",
 
-    "heroTitle": "2月末に追加される新機能に投票しよう 🚀",
+    "heroTitle": "3月末に来るアップデートに投票しよう 🚀",
     "heroSubtitle": "あなたの声が大事：提案して、投票して、進捗を追おう。",
 
     "voteCloses": "投票終了まで",
@@ -337,6 +337,16 @@
       "footer": "投票はまもなく終了 — あなたの声が大事 ✨"
     }
   },
+  "invite": {
+      "bootTitle": "招待を準備中…",
+      "bootSubtitle": "アプリを閉じないでください。チャレンジを設定しています。",
+      "bootStep1": "招待を確認中",
+      "bootStep2": "チャレンジを読み込み中",
+      "bootStep3": "スタートの準備完了",
+      "bootStep1Done": "確認済み",
+      "bootStep2Done": "読み込み完了",
+      "bootStep3Done": "さあ、始めよう！"
+    },
 
   "permissionDenied": "許可が拒否されました",
   "mustAllowNotifications": "通知を受け取るには通知を許可してください。",
@@ -379,7 +389,8 @@
   "login": "ログイン",
   "noAccount": "アカウントがありませんか？",
   "signupHere": "こちらで登録",
-  "appTagline": "未来を創る一番の方法は、今それを作り始めることだ",
+  "appTagline": "一人で諦めるな。",
+  "or": "または",
   "enterYourEmail": "メールアドレスを入力してください。",
   "resetLinkSent": "リセットリンクをメールに送信しました。",
   "resetLinkFailed": "リンクの送信に失敗しました。メールをご確認ください。",
@@ -413,7 +424,7 @@
   "emailAlreadyInUse": "このメールアドレスはすでに使用されています。",
   "weakPassword": "パスワードが弱すぎます。より強力なものを選んでください。",
   "anErrorOccurred": "エラーが発生しました。もう一度お試しください。",
-  "joinUsAndChallenge": "私たちと一緒にチャレンジしよう！",
+  "joinUsAndChallenge": "一人で諦めるな。",
   "yourEmail": "あなたのメール",
   "username": "ユーザー名",
   "password": "パスワード",
@@ -4741,7 +4752,7 @@
     "duoTitle": "デュオ",
     "duoOfflineLine": "招待には接続が必要です。",
     "soloTitle": "ソロ",
-    "soloDesc": "すぐ開始。招待なし。",
+    "soloDesc": "今すぐ始めよう。後で友達を招待できる。",
     "hintDuo": "次に友だちを招待してね。",
     "hintDuoOffline": "ネットが必要です。",
     "hintSolo": "すぐ始まります。"

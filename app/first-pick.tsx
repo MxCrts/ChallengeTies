@@ -956,13 +956,12 @@ if (isOnFirstPick) {
 
   setGlobalInviteSnap(null);
 
-// ✅ hard-done anti-bounce (empêche retour Step1 après navigation)
-await AsyncStorage.setItem(FIRSTPICK_DONE_HARD_KEY, String(Date.now())).catch(() => {});
+  // ✅ hard-done anti-bounce
+  await AsyncStorage.setItem(FIRSTPICK_DONE_HARD_KEY, String(Date.now())).catch(() => {});
 
-safeReplace({ pathname: "/(tabs)" });
-
+  // ✅ Vidéo intro APRÈS first-pick (pas avant)
+  safeReplace({ pathname: "/screen/onboarding/Screen1" });
 }, [safeReplace]);
-
 
 const handleInviteDismiss = useCallback(() => {
   // ✅ l’utilisateur ferme volontairement le modal
@@ -2074,9 +2073,7 @@ const stepSubtitle = useMemo(() => {
   </View>
 </View>
 
-<Text style={[styles.durationNote, { color: currentTheme.colors.textSecondary }]}>
-  {t("firstPick.step3.durationNote", { defaultValue: "Tu pourras toujours ajuster plus tard." }) as string}
-</Text>
+{null}
 
       </View>
    </View>

@@ -139,7 +139,7 @@ const InvitationModal: React.FC<InvitationModalProps> = ({
   const mountedRef = useRef(true);
   const lastLoadKeyRef = useRef<string>("");
   const isShown = !!visible && !!inviteId;
-  const modalVisible = isShown && (!externalLoading || !fetching);
+  const modalVisible = isShown && !fetching && (!externalLoading);
   
 
   useEffect(() => {
@@ -379,11 +379,27 @@ useEffect(() => {
         );
       } finally {
         if (mountedRef.current && lastLoadKeyRef.current === loadKey) {
-          setFetching(false);
-          try {
-            onLoaded?.();
-          } catch {}
-        }
+  setFetching(false);
+
+  // ✅ Signal phase 3 à l'overlay root : "tout est prêt, la modal va apparaître"
+  // On le fait AVANT onLoaded pour que la transition soit synchrone
+  try {
+    const g = globalThis as any;
+    if (typeof g.__INVITE_BOOT_SET_PHASE__ === "function") {
+      g.__INVITE_BOOT_SET_PHASE__(3);
+    }
+  } catch {}
+
+  // Petit délai pour laisser la phase 3 s'afficher une fraction de seconde
+  // avant que l'overlay disparaisse (transition cinématique propre)
+  try {
+    await new Promise((r) => setTimeout(r, 120));
+  } catch {}
+
+  try {
+    onLoaded?.();
+  } catch {}
+}
       }
     };
 

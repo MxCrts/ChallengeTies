@@ -286,7 +286,7 @@ export default function Screen1() {
         await AsyncStorage.removeItem("hasCompletedTutorialAfterSignup");
         setIsTutorialActive?.(false);
         setTutorialStep?.(0);
-        nav.replace("/first-pick");
+        nav.replace("/(tabs)");
       } catch {
         setIsNavigating(false);
       }
@@ -302,7 +302,7 @@ export default function Screen1() {
         await AsyncStorage.removeItem("hasCompletedTutorialAfterSignup");
         setIsTutorialActive?.(false);
         setTutorialStep?.(0);
-        nav.replace("/first-pick");
+        nav.replace("/(tabs)");
       } catch {
         setIsNavigating(false);
       }

@@ -281,7 +281,7 @@
     "title": "Novità",
     "description": "Vota la prossima funzionalità o proponi la tua. Risultati a fine febbraio.",
 
-    "heroTitle": "Vota le novità in arrivo a fine febbraio 🚀",
+    "heroTitle": "Vota per gli aggiornamenti in arrivo entro fine marzo 🚀",
     "heroSubtitle": "La tua voce conta: proponi, vota e segui l’evoluzione delle funzionalità.",
 
     "voteCloses": "La votazione termina tra",
@@ -301,6 +301,16 @@
       "footer": "La votazione termina presto — la tua voce conta ✨"
     }
   },
+  "invite": {
+      "bootTitle": "Preparazione del tuo invito…",
+      "bootSubtitle": "Non chiudere l'app, stiamo preparando la sfida.",
+      "bootStep1": "Verifica dell'invito",
+      "bootStep2": "Caricamento della sfida",
+      "bootStep3": "Pronto per iniziare",
+      "bootStep1Done": "Verificato",
+      "bootStep2Done": "Caricato",
+      "bootStep3Done": "Andiamo!"
+    },
   "economy": {
     "weeklyTitle": "Trofei settimanali",
     "weeklySubtitle": "+1 per ogni check-in (con limite settimanale).",
@@ -362,7 +372,8 @@
   "login": "Accedi",
   "noAccount": "Non hai un account?",
   "signupHere": "Registrati qui",
-  "appTagline": "Il modo migliore per prevedere il futuro è crearlo",
+  "appTagline": "Non mollare mai da solo.",
+  "or": "oppure",
   "enterYourEmail": "Inserisci il tuo indirizzo email.",
   "resetLinkSent": "Un link per il reset è stato inviato alla tua email.",
   "resetLinkFailed": "Impossibile inviare il link di reset. Controlla la tua email.",
@@ -378,7 +389,7 @@
   "emailAlreadyInUse": "Questa email è già in uso.",
   "weakPassword": "Password troppo debole. Scegline una più sicura.",
   "anErrorOccurred": "Si è verificato un errore. Riprova.",
-  "joinUsAndChallenge": "Unisciti a noi e affronta sfide!",
+  "joinUsAndChallenge": "Non mollare mai da solo.",
   "yourEmail": "La tua email",
   "username": "Nome utente",
   "password": "Password",
@@ -930,7 +941,7 @@
     "duoTitle": "Duo",
     "duoOfflineLine": "Connessione necessaria per invitare.",
     "soloTitle": "Solo",
-    "soloDesc": "Parti subito, senza invito.",
+    "soloDesc": "Inizia ora. Puoi invitare un amico dopo.",
     "hintDuo": "Invita un amico subito dopo.",
     "hintDuoOffline": "Internet necessario.",
     "hintSolo": "Parti subito."
