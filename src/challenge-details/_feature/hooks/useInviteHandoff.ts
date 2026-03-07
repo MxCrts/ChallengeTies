@@ -41,6 +41,7 @@ export function useInviteHandoff({
   const processedInviteIdsRef = useRef<Set<string>>(new Set());
   const inviteOpenGuardRef = useRef(false);
   const suppressInboxInvitesRef = useRef(false);
+  const willShowModalRef = useRef(false);
 
   // ✅ Root overlay handoff control (single loader)
   const hideRootInviteHandoff = useCallback(() => {
@@ -58,18 +59,16 @@ export function useInviteHandoff({
     }
   }, [inviteLoading, deeplinkBooting]);
 
-  // ✅ Dès que le modal d'invitation est prêt/affiché => on coupe l’overlay global
-  useEffect(() => {
-    if (!invitationModalVisible) return;
-    if (!inviteModalReady) return;
-    hideRootInviteHandoff();
-    setInviteLoading(false);
-    setDeeplinkBooting(false);
-  }, [invitationModalVisible, inviteModalReady, hideRootInviteHandoff]);
-
   // ✅ Hard stop : après fermeture du modal, rien ne doit bloquer l'écran
-  useEffect(() => {
-    if (invitationModalVisible) return;
+useEffect(() => {
+    if (invitationModalVisible) {
+      // modal ouvert → reset le ref (il a fait son travail)
+      willShowModalRef.current = false;
+      return;
+    }
+    // ✅ FIX A: si on vient juste de setter invitationModalVisible(true),
+    // le ref est armé → on ne coupe PAS les états prématurément
+    if (willShowModalRef.current) return;
     setInviteLoading(false);
     setDeeplinkBooting(false);
     try {
@@ -265,22 +264,24 @@ export function useInviteHandoff({
         }
 
         // open modal once
-// ✅ Délai minimum pour que les phases 1→2→3 de l'overlay soient visibles
-// même quand Firestore répond depuis le cache (< 100ms)
-const BOOT_OVERLAY_MIN_MS = 1200;
-const elapsed = Date.now() - (
-  // on récupère le ts du boot depuis le global state
-  (globalThis as any).__INVITE_BOOT__?.ts || Date.now()
-);
-if (elapsed < BOOT_OVERLAY_MIN_MS) {
-  await new Promise<void>((r) => setTimeout(r, BOOT_OVERLAY_MIN_MS - elapsed));
-}
+        // ✅ Délai minimum pour que les phases 1→2→3 de l'overlay soient visibles
+        // même quand Firestore répond depuis le cache (< 100ms)
+        const BOOT_OVERLAY_MIN_MS = 1200;
+        const elapsed = Date.now() - (
+          // on récupère le ts du boot depuis le global state
+          (globalThis as any).__INVITE_BOOT__?.ts || Date.now()
+        );
+        if (elapsed < BOOT_OVERLAY_MIN_MS) {
+          await new Promise<void>((r) => setTimeout(r, BOOT_OVERLAY_MIN_MS - elapsed));
+        }
 
-processedInviteIdsRef.current.add(idStr);
-setInvitation({ id: idStr });
-setInviteModalReady(false);
-setInvitationModalVisible(true);
-willShowModal = true;
+        processedInviteIdsRef.current.add(idStr);
+       setInvitation({ id: idStr });
+       setInviteModalReady(false);
+       // ✅ FIX A: arme le ref AVANT le setState pour bloquer le useEffect
+       willShowModalRef.current = true;
+       setInvitationModalVisible(true);
+       willShowModal = true;
 
         // clean URL
         try {

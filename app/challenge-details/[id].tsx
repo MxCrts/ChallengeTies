@@ -414,6 +414,11 @@ const warmupDayKeyLocal = useCallback(() => {
   // pulse subtil autour de l'avatar du leader
   const leaderPulse = useSharedValue(0);
   const duoPendingPulse = useSharedValue(0);
+  const progressBarWidth = useSharedValue(0);
+const duoBarMeWidth = useSharedValue(0);
+const duoBarPartnerWidth = useSharedValue(0);
+const markBtnGlow = useSharedValue(0);
+const [descExpanded, setDescExpanded] = useState(false);
 const startedRef = useRef(false);
 const myImgReady = useRef(false);
 const partnerImgReady = useRef(false);
@@ -886,6 +891,25 @@ const pulseStyle = useAnimatedStyle<ViewStyle>(() => ({
   opacity: 1, // ✅ NE JAMAIS baisser la couronne
 }));
 
+const progressBarAnimStyle = useAnimatedStyle(() => ({
+  width: `${progressBarWidth.value * 100}%` as any,
+}));
+
+const duoBarMeAnimStyle = useAnimatedStyle(() => ({
+  width: `${duoBarMeWidth.value * 100}%` as any,
+}));
+
+const duoBarPartnerAnimStyle = useAnimatedStyle(() => ({
+  width: `${duoBarPartnerWidth.value * 100}%` as any,
+}));
+
+const markBtnGlowStyle = useAnimatedStyle(() => ({
+  shadowOpacity: interpolate(markBtnGlow.value, [0, 1], [0.1, 0.55]),
+  shadowRadius: interpolate(markBtnGlow.value, [0, 1], [4, 18]),
+  transform: [{ scale: interpolate(markBtnGlow.value, [0, 1], [1, 1.008]) }],
+}));
+
+
 useEffect(() => {
   if (!isDuo) return;
   if (!duoChallengeData?.duoUser) return; // ⬅️ on attend que le partenaire soit chargé
@@ -1146,36 +1170,19 @@ const shouldShowGlobalInviteBoot = useMemo(() => {
 
 // ✅ Pilote l'overlay ET ses phases depuis les états du hook
 useEffect(() => {
-  if (shouldShowGlobalInviteBoot) {
-    inviteBootOn(inviteParam);
-
-    // Phase 1 — vérification invitation (deeplink boot initial)
-    if (deeplinkBooting) {
-      inviteBootSetPhase(1);
-    }
-    // Phase 2 — chargement défi (invitation trouvée, on fetche le challenge)
-    else if (inviteLoading && !deeplinkBooting) {
-      inviteBootSetPhase(2);
-    }
-    // Phase 3 — tout est prêt, la modal va apparaître
-    else if (invitationModalVisible && !inviteModalReady) {
-      inviteBootSetPhase(3);
-    }
-  } else {
-    inviteBootOff();
+  if (!shouldShowGlobalInviteBoot) return;
+  inviteBootOn(inviteParam);
+  // ✅ FIX B: phases rebassées sur la vraie sémantique
+  // Phase 1 = fetch initial (deeplinkBooting ou inviteLoading avant que le modal soit visible)
+  // Phase 2 = InvitationModal monté et charge ses données en interne
+  // Phase 3 = signalé par InvitationModal.finally via __INVITE_BOOT_SET_PHASE__(3)
+  if (!invitationModalVisible) {
+    inviteBootSetPhase(1);
+  } else if (invitationModalVisible && !inviteModalReady) {
+    inviteBootSetPhase(2);
   }
-
-  return () => {
-    inviteBootOff();
-  };
-}, [
-  shouldShowGlobalInviteBoot,
-  inviteParam,
-  deeplinkBooting,
-  inviteLoading,
-  invitationModalVisible,
-  inviteModalReady,
-]);
+  // phase 3 est toujours déclenchée depuis InvitationModal directement
+}, [shouldShowGlobalInviteBoot, inviteParam, invitationModalVisible, inviteModalReady]);
 
 const forceCloseInviteUI = useCallback((inviteId?: string | null) => {
   dlog("forceCloseInviteUI()", { inviteId, invitationModalVisible, inviteLoading, deeplinkBooting, inviteModalReady });
@@ -1482,6 +1489,59 @@ const activeCompletedDays = useMemo(() => {
 const progressRatio = useMemo(() => {
   return activeSelectedDays > 0 ? Math.min(1, activeCompletedDays / activeSelectedDays) : 0;
 }, [activeCompletedDays, activeSelectedDays]);
+
+const shimmerBarSV = useSharedValue(-60);
+useEffect(() => {
+  if (progressRatio <= 0) return;
+  shimmerBarSV.value = -60;
+  shimmerBarSV.value = withRepeat(
+    withTiming(soloBarWidth + 60, { duration: 2200, easing: Easing.inOut(Easing.quad) }),
+    -1, false
+  );
+}, [progressRatio, soloBarWidth]);
+
+const shimmerBarStyle = useAnimatedStyle<ViewStyle>(() => ({
+  transform: [{ translateX: shimmerBarSV.value }],
+}));
+
+// ✅ UPGRADE: anime la barre solo à chaque changement de progression
+useEffect(() => {
+  progressBarWidth.value = withTiming(progressRatio, {
+    duration: 700,
+    easing: Easing.out(Easing.cubic),
+  });
+}, [progressRatio]);
+
+// ✅ UPGRADE: anime les barres duo
+useEffect(() => {
+  if (!isDuo) return;
+  const meDone = finalCompletedDays || 0;
+  const meTotal = finalSelectedDays || 1;
+  const pDone = duoChallengeData?.duoUser?.completedDays || 0;
+  const pTotal = duoChallengeData?.duoUser?.selectedDays || 1;
+  duoBarMeWidth.value = withTiming(Math.max(0.02, Math.min(1, meDone / meTotal)), {
+    duration: 800, easing: Easing.out(Easing.cubic),
+  });
+  duoBarPartnerWidth.value = withTiming(Math.max(0.02, Math.min(1, pDone / pTotal)), {
+    duration: 900, easing: Easing.out(Easing.cubic),
+  });
+}, [isDuo, finalCompletedDays, finalSelectedDays,
+    duoChallengeData?.duoUser?.completedDays, duoChallengeData?.duoUser?.selectedDays]);
+
+// ✅ UPGRADE: glow pulsant sur le bouton Mark Today quand disponible
+useEffect(() => {
+  if (isDisabledMark) {
+    markBtnGlow.value = withTiming(0, { duration: 300 });
+    return;
+  }
+  markBtnGlow.value = withRepeat(
+    withSequence(
+      withTiming(1, { duration: 1600, easing: Easing.out(Easing.quad) }),
+      withTiming(0.3, { duration: 1600, easing: Easing.in(Easing.quad) })
+    ),
+    -1, false
+  );
+}, [isDisabledMark]);
 
   const isSavedChallenge = useCallback((challengeId: string) => savedIds.has(challengeId), [savedIds]);
 
@@ -2276,40 +2336,63 @@ const scrollContentStyle = useMemo(
           >
             {routeCategory.toUpperCase()}
           </Text>
-          {/* Chips context */}
+          {/* ✅ UPGRADE: Chips + badge jours restants */}
 <View style={styles.chipRow}>
-  {/* Jours sélectionnés (si challenge pris) */}
   {finalSelectedDays > 0 && (
-    <View
-      style={[
-        styles.chip,
-        isDarkMode ? styles.chipDark : styles.chipLight,
-      ]}
+    <Animated.View
+      entering={FadeIn.delay(80).duration(320)}
+      style={[styles.chip, isDarkMode ? styles.chipDark : styles.chipLight]}
     >
-      <Ionicons name="calendar-outline" size={14} color={isDarkMode ? "#fff" : "#111"} />
-      <Text style={[styles.chipText, { color: isDarkMode ? "#fff" : "#111" }]}>
+      <Ionicons name="calendar-outline" size={13} color={isDarkMode ? "#FFD700" : "#111"} />
+      <Text style={[styles.chipText, { color: isDarkMode ? "#FFD700" : "#111" }]}>
         {finalSelectedDays} {t("challengeDetails.days")}
       </Text>
-    </View>
+    </Animated.View>
   )}
-
-  {/* Duo actif ? */}
+  {/* ✅ Badge "X jours restants" — visible seulement si en cours */}
+  {finalSelectedDays > 0 && finalCompletedDays > 0 && finalCompletedDays < finalSelectedDays && (
+    <Animated.View
+      entering={FadeIn.delay(140).duration(320)}
+      style={[
+        styles.chip,
+        {
+          backgroundColor: isDarkMode ? "rgba(255,215,0,0.14)" : "rgba(255,159,28,0.12)",
+          borderWidth: 0.5,
+          borderColor: isDarkMode ? "rgba(255,215,0,0.35)" : "rgba(255,159,28,0.4)",
+        },
+      ]}
+    >
+      <Ionicons name="time-outline" size={13} color={isDarkMode ? "#FFD700" : "#FF9F1C"} />
+      <Text style={[styles.chipText, { color: isDarkMode ? "#FFD700" : "#FF9F1C", fontFamily: "Comfortaa_700Bold" }]}>
+        {finalSelectedDays - finalCompletedDays}j restants
+      </Text>
+    </Animated.View>
+  )}
   {isDuo && (
-    <View style={[styles.chip, isDarkMode ? styles.chipDark : styles.chipLight]}>
-      <Ionicons name="people-outline" size={14} color={isDarkMode ? "#fff" : "#111"} />
-      <Text style={[styles.chipText, { color: isDarkMode ? "#fff" : "#111" }]}>{t("duo.title")}</Text>
-    </View>
+    <Animated.View
+      entering={FadeIn.delay(200).duration(320)}
+      style={[
+        styles.chip,
+        {
+          backgroundColor: isDarkMode ? "rgba(0,255,255,0.10)" : "rgba(55,48,163,0.08)",
+          borderWidth: 0.5,
+          borderColor: isDarkMode ? "rgba(0,255,255,0.28)" : "rgba(55,48,163,0.20)",
+        },
+      ]}
+    >
+      <Ionicons name="people-outline" size={13} color={isDarkMode ? "#00FFFF" : "#3730A3"} />
+      <Text style={[styles.chipText, { color: isDarkMode ? "#00FFFF" : "#3730A3" }]}>{t("duo.title")}</Text>
+    </Animated.View>
   )}
-
-  {/* Participants */}
-  <View style={[styles.chip, isDarkMode ? styles.chipDark : styles.chipLight]}>
-  <Ionicons name="person-outline" size={14} color={isDarkMode ? "#fff" : "#111"} />
-  <Text style={[styles.chipText, { color: isDarkMode ? "#fff" : "#111" }]}>
-    {t("challengeDetails.participantsLabel", {
-      defaultValue: "Participants",
-    })}{": "}{userCount}
-  </Text>
-</View>
+  <Animated.View
+    entering={FadeIn.delay(260).duration(320)}
+    style={[styles.chip, isDarkMode ? styles.chipDark : styles.chipLight]}
+  >
+    <Ionicons name="person-outline" size={13} color={isDarkMode ? "#fff" : "#111"} />
+    <Text style={[styles.chipText, { color: isDarkMode ? "#fff" : "#111" }]}>
+      {userCount.toLocaleString()}
+    </Text>
+  </Animated.View>
 </View>
 {/* ✅ DUO PENDING — Ultra minimal / ultra premium (TOP 1) */}
 {isDuoPendingOut && outgoingPendingInvite?.id && (
@@ -2625,35 +2708,42 @@ const scrollContentStyle = useMemo(
 </Text>
         </View>
 
-        {/* Barre perso */}
+        {/* ✅ UPGRADE: Barre animée avec shine */}
         <View
-  onLayout={(e) => setSoloBarWidth(e.nativeEvent.layout.width)}
-  accessibilityRole="progressbar"
-  accessibilityLiveRegion="polite"
-  accessibilityValue={{
-    min: 0,
-    max: activeSelectedDays || 0,
-    now: activeCompletedDays || 0,
-  }}
-  style={[
-    styles.progressBarBackground,
-    { backgroundColor: currentTheme.colors.border },
-  ]}
->
-  <LinearGradient
-    colors={
-      isDarkMode
-        ? ["#FFD700", "#FFD700"]
-        : [currentTheme.colors.primary, currentTheme.colors.secondary]
-    }
-    style={[
-      styles.progressBarFill,
-      {
-        width: soloBarWidth * progressRatio,
-      },
-    ]}
-  />
-</View>
+          onLayout={(e) => setSoloBarWidth(e.nativeEvent.layout.width)}
+          accessibilityRole="progressbar"
+          accessibilityLiveRegion="polite"
+          accessibilityValue={{ min: 0, max: activeSelectedDays || 0, now: activeCompletedDays || 0 }}
+          style={[
+            styles.progressBarBackground,
+            {
+              backgroundColor: currentTheme.colors.border,
+              overflow: "hidden",
+              position: "relative",
+            },
+          ]}
+        >
+          <Animated.View style={[{ height: "100%", borderRadius: 999, overflow: "hidden" }, progressBarAnimStyle]}>
+            <LinearGradient
+              colors={isDarkMode ? ["#FF9F1C", "#FFD700"] : [currentTheme.colors.primary, currentTheme.colors.secondary]}
+              start={{ x: 0, y: 0 }}
+              end={{ x: 1, y: 0 }}
+              style={StyleSheet.absoluteFill}
+            />
+            {/* Shine beam animé */}
+            <Animated.View
+              style={[
+                {
+                  position: "absolute",
+                  top: 0, bottom: 0, width: 40,
+                  backgroundColor: "rgba(255,255,255,0.22)",
+                  transform: [{ skewX: "-20deg" }],
+                },
+                shimmerBarStyle,
+              ]}
+            />
+          </Animated.View>
+        </View>
         {/* Mini stats */}
         <View style={{ flexDirection: "row", justifyContent: "center", marginTop: 6 }}>
           <Text
@@ -2794,17 +2884,14 @@ const scrollContentStyle = useMemo(
               <View style={[styles.duoBarTick, { backgroundColor: DUO.tick }]} />
               <View style={[styles.duoBarTick, { backgroundColor: DUO.tick }]} />
             </View>
-            <LinearGradient
-              colors={["#FF9F1C", "#FFD166"]}
-              start={{ x: 0, y: 0 }}
-              end={{ x: 1, y: 0 }}
-              style={[
-  styles.duoBarFill,
-  styles.duoBarFillMe,
-  { width: `${Math.max(2, mePct * 100)}%`, opacity: mePct === 0 ? 0.35 : 1 },
-]}
-
-            />
+            <Animated.View style={[styles.duoBarFill, styles.duoBarFillMe,
+              { opacity: mePct === 0 ? 0.35 : 1, overflow: "hidden" },
+              duoBarMeAnimStyle,
+            ]}>
+              <LinearGradient colors={["#FF9F1C", "#FFD166"]}
+                start={{ x: 0, y: 0 }} end={{ x: 1, y: 0 }}
+                style={StyleSheet.absoluteFill} />
+            </Animated.View>
           </View>
         </View>
 
@@ -2825,17 +2912,14 @@ const scrollContentStyle = useMemo(
               <View style={[styles.duoBarTick, { backgroundColor: DUO.tick }]} />
               <View style={[styles.duoBarTick, { backgroundColor: DUO.tick }]} />
             </View>
-            <LinearGradient
-              colors={["#00C2FF", "#00FFD1"]}
-              start={{ x: 0, y: 0 }}
-              end={{ x: 1, y: 0 }}
-              style={[
-  styles.duoBarFill,
-  styles.duoBarFillPartner,
-  { width: `${Math.max(2, pPct * 100)}%`, opacity: pPct === 0 ? 0.35 : 1 },
-]}
-
-            />
+            <Animated.View style={[styles.duoBarFill, styles.duoBarFillPartner,
+              { opacity: pPct === 0 ? 0.35 : 1, overflow: "hidden" },
+              duoBarPartnerAnimStyle,
+            ]}>
+              <LinearGradient colors={["#00C2FF", "#00FFD1"]}
+                start={{ x: 0, y: 0 }} end={{ x: 1, y: 0 }}
+                style={StyleSheet.absoluteFill} />
+            </Animated.View>
           </View>
         </View>
       </View>
@@ -2864,29 +2948,66 @@ const scrollContentStyle = useMemo(
 
 
       {/* === STATUT === */}
-      <Text
-        style={[
-          styles.duoEliteStatus,
-          status === "leading" && styles.duoLeading,
-          status === "behind" && styles.duoBehind,
-        ]}
-      >
-        {status === "leading" && `▲ +${Math.abs(dayLead)}`}
-  {status === "behind" && `▼ -${Math.abs(dayLead)}`}
-  {status === "tied" && "—"}
-      </Text>
-      {status !== "tied" && (
-  <Text style={styles.duoEliteSubStatus}>
-    {status === "leading" && t("duo.status.leading", { percent: Math.round(diff * 100) })}
-    {status === "behind" && t("duo.status.behind", { percent: Math.round(diff * 100) })}
-  </Text>
-)}
+      {/* ✅ UPGRADE: status pill premium */}
+      <View style={{
+        alignSelf: "center",
+        marginTop: 10,
+        paddingHorizontal: 14,
+       paddingVertical: 6,
+       borderRadius: 999,
+        backgroundColor: status === "leading"
+          ? "rgba(255,215,0,0.13)"
+          : status === "behind"
+          ? "rgba(239,68,68,0.12)"
+          : "rgba(255,255,255,0.07)",
+        borderWidth: 0.5,
+        borderColor: status === "leading"
+          ? "rgba(255,215,0,0.40)"
+          : status === "behind"
+          ? "rgba(239,68,68,0.35)"
+          : "rgba(255,255,255,0.14)",
+        flexDirection: "row",
+        alignItems: "center",
+        gap: 6,
+      }}>
+        <Text style={{
+          fontFamily: "Comfortaa_700Bold",
+          fontSize: 13,
+          color: status === "leading" ? "#FFD700"
+               : status === "behind" ? "#EF4444"
+               : isDarkMode ? "rgba(255,255,255,0.5)" : "rgba(0,0,0,0.4)",
+        }}>
+          {status === "leading" && `▲ +${Math.abs(dayLead)} j`}
+          {status === "behind" && `▼ -${Math.abs(dayLead)} j`}
+          {status === "tied" && "Égalité parfaite"}
+        </Text>
+        {status !== "tied" && (
+          <Text style={{
+            fontFamily: "Comfortaa_400Regular",
+            fontSize: 11,
+            color: isDarkMode ? "rgba(255,255,255,0.45)" : "rgba(0,0,0,0.38)",
+          }}>
+            {status === "leading"
+              ? t("duo.status.leading", { percent: Math.round(diff * 100) })
+              : t("duo.status.behind", { percent: Math.round(diff * 100) })}
+          </Text>
+        )}
+      </View>
     </View>
   );
 })()}
-    {/* Bouton marquer aujourd'hui (commun) */}
+    <Animated.View style={[
+          styles.markTodayButton,
+          !isDisabledMark && markBtnGlowStyle,
+          {
+            borderRadius: 16,
+            shadowColor: isDarkMode ? "#FFD700" : currentTheme.colors.primary,
+            shadowOffset: { width: 0, height: 0 },
+            elevation: isDisabledMark ? 0 : 6,
+          }
+        ]}>
         <TouchableOpacity
-      style={styles.markTodayButton}
+      style={{ width: "100%" }}
       accessibilityHint={t("challengeDetails.markTodayHint")}
       accessibilityRole="button"
       onPress={handleMarkTodayPress}
@@ -2899,12 +3020,15 @@ const scrollContentStyle = useMemo(
       testID="mark-today-button"
     >
       {isMarkedToday(id, finalSelectedDays) ? (
-        <View
-          style={[
-            styles.markTodayButtonGradient,
-            { backgroundColor: "#808080" },
-          ]}
-        >
+        <View style={[
+          styles.markTodayButtonGradient,
+          { backgroundColor: isDarkMode ? "rgba(255,215,0,0.13)" : "rgba(0,0,0,0.06)",
+            borderWidth: 0.5,
+            borderColor: isDarkMode ? "rgba(255,215,0,0.30)" : "rgba(0,0,0,0.08)" }
+        ]}>
+          <Ionicons name="checkmark-circle" size={18}
+            color={isDarkMode ? "#FFD700" : currentTheme.colors.primary}
+            style={{ marginRight: 6 }} />
           <Text
             style={[
               styles.markTodayButtonText,
@@ -2938,6 +3062,7 @@ const scrollContentStyle = useMemo(
         </LinearGradient>
       )}
     </TouchableOpacity>
+    </Animated.View>
 
   </Animated.View>
 )}
@@ -3001,14 +3126,43 @@ const scrollContentStyle = useMemo(
   </Animated.View>
 )}
 
-          <Text
-            style={[
-              styles.infoDescriptionRecipe,
-              { color: currentTheme.colors.textSecondary },
-            ]}
-          >
-            {routeDescription}
-          </Text>
+          {/* ✅ UPGRADE: Description collapsible premium */}
+          <View style={{ position: "relative", marginTop: SPACING }}>
+            <Text
+              style={[styles.infoDescriptionRecipe, { color: currentTheme.colors.textSecondary }]}
+              numberOfLines={descExpanded ? undefined : 3}
+            >
+              {routeDescription}
+            </Text>
+            {!descExpanded && (
+              <LinearGradient
+                pointerEvents="none"
+                colors={[
+                  "transparent",
+                  isDarkMode ? "rgba(14,14,18,0.85)" : "rgba(255,255,255,0.85)",
+                ]}
+                style={{
+                  position: "absolute", bottom: 0, left: 0, right: 0, height: 36,
+                }}
+              />
+            )}
+            <Pressable
+              onPress={() => setDescExpanded((v) => !v)}
+              style={{ marginTop: descExpanded ? 6 : 2, alignSelf: "flex-start" }}
+              hitSlop={8}
+            >
+              <Text style={{
+                fontFamily: "Comfortaa_700Bold",
+                fontSize: 12,
+                color: currentTheme.colors.secondary,
+                opacity: 0.85,
+              }}>
+                {descExpanded
+                  ? t("challengeDetails.readLess", { defaultValue: "Réduire ↑" })
+                  : t("challengeDetails.readMore", { defaultValue: "Lire la suite ↓" })}
+              </Text>
+            </Pressable>
+          </View>
             
         {/* ACTIONS */}
 <View style={styles.actionsWrap}>
@@ -3299,18 +3453,17 @@ const scrollContentStyle = useMemo(
   </View>
 )}
 
-     <InvitationModal
+  <InvitationModal
   key={effectiveInviteId || "no-invite"}
   visible={effectiveInviteVisible}
   inviteId={effectiveInviteId}
   challengeId={id}
   onClose={() => forceCloseInviteUI(closingInviteIdRef.current ?? inviteParam)}
   clearInvitation={() => forceCloseInviteUI(closingInviteIdRef.current ?? inviteParam)}
+  externalLoading={shouldShowGlobalInviteBoot}
   onLoaded={() => {
     setInviteModalReady(true);
-    setInviteLoading(false);
-    setDeeplinkBooting(false);
-    setInvitationModalVisible(true); // ✅ au cas où
+    inviteBootOff();
   }}
 />
 
