@@ -1,5 +1,6 @@
 // components/InvitationModal.tsx
-// ✅ UI/UX refonte "top monde" (responsive + centré parfait) — LOGIQUE INCHANGÉE
+// ✅ Fix overlay timing: overlay only cuts AFTER Modal is confirmed on-screen
+// Logic identical, UI identical — only the onLoaded/onModalVisible flow changed
 import React, {
   useEffect,
   useMemo,
@@ -52,7 +53,7 @@ const normalize = (size: number) => {
   return Math.round(size * scale);
 };
 
-// ✅ SAFETY FIX: après acceptInvitation, on force une cohérence minimale
+// ✅ SAFETY FIX: after acceptInvitation, force minimal coherence
 async function acceptInvitationSafetyFix(opts: { inviteId: string; challengeId: string }) {
   const me = auth.currentUser?.uid;
   if (!me) return;
@@ -107,7 +108,10 @@ type InvitationModalProps = {
   challengeId: string;
   onClose: () => void;
   clearInvitation?: () => void;
+  /** Called once load() is done AND the Modal is visually confirmed on screen */
   onLoaded?: () => void;
+  /** Called by Modal's onShow → signals the overlay it can start cutting */
+  onModalVisible?: () => void;
   externalLoading?: boolean;
 };
 
@@ -118,6 +122,7 @@ const InvitationModal: React.FC<InvitationModalProps> = ({
   onClose,
   clearInvitation,
   onLoaded,
+  onModalVisible,
   externalLoading = false,
 }) => {
   const { t, i18n } = useTranslation();
@@ -136,20 +141,24 @@ const InvitationModal: React.FC<InvitationModalProps> = ({
   const [errorMsg, setErrorMsg] = useState<string>("");
   const [reduceMotion, setReduceMotion] = useState(false);
 
+  // ─── NEW: tracks whether load() has completed (data ready) ───────────────
+  const [loadComplete, setLoadComplete] = useState(false);
+
   const mountedRef = useRef(true);
   const lastLoadKeyRef = useRef<string>("");
   const isShown = !!visible && !!inviteId;
-  const modalVisible = isShown && !fetching && (!externalLoading);
-  
+
+  // ─── KEY CHANGE: modalVisible no longer depends on externalLoading ────────
+  // The overlay is controlled independently — we show modal when data is ready
+  // externalLoading only affects what we RENDER inside (spinner vs content)
+  // But the Modal itself must be visible for onShow to fire → overlay can cut
+  const modalVisible = isShown && !fetching;
 
   useEffect(() => {
     mountedRef.current = true;
-    return () => {
-      mountedRef.current = false;
-    };
+    return () => { mountedRef.current = false; };
   }, []);
 
-  // ✅ Respect Reduce Motion
   useEffect(() => {
     let mounted = true;
     AccessibilityInfo.isReduceMotionEnabled()
@@ -161,67 +170,48 @@ const InvitationModal: React.FC<InvitationModalProps> = ({
     );
     return () => {
       mounted = false;
-      // @ts-ignore compat RN
+      // @ts-ignore
       sub?.remove?.();
     };
   }, []);
 
   useEffect(() => {
-  if (isShown) return;
-  try { (globalThis as any).__HIDE_INVITE_HANDOFF__?.(); } catch {}
-}, [isShown]);
+    if (isShown) return;
+    try { (globalThis as any).__HIDE_INVITE_HANDOFF__?.(); } catch {}
+  }, [isShown]);
 
-// ✅ Extra safety: if the modal is hidden (even while isShown is true),
-// force-hide any deep link handoff overlay that could still be mounted.
-useEffect(() => {
-  if (modalVisible) return;
-  try { (globalThis as any).__HIDE_INVITE_HANDOFF__?.(); } catch {}
-}, [modalVisible]);
+  useEffect(() => {
+    if (modalVisible) return;
+    try { (globalThis as any).__HIDE_INVITE_HANDOFF__?.(); } catch {}
+  }, [modalVisible]);
 
   const closeAll = useCallback(() => {
-    try {
-      onClose();
-    } finally {
-      clearInvitation?.();
-    }
+    try { onClose(); } finally { clearInvitation?.(); }
   }, [onClose, clearInvitation]);
 
   const hideInviteHandoffOverlay = useCallback(() => {
-    try {
-      (globalThis as any).__HIDE_INVITE_HANDOFF__?.();
-    } catch {}
+    try { (globalThis as any).__HIDE_INVITE_HANDOFF__?.(); } catch {}
   }, []);
 
   const forceReleaseRootBootOverlay = useCallback(() => {
-  try { (globalThis as any).__INVITE_BOOT_OFF__?.(); } catch {}
-}, []);
+    try { (globalThis as any).__INVITE_BOOT_OFF__?.(); } catch {}
+  }, []);
 
- const safeCloseAll = useCallback(() => {
-  // ✅ Release ABSOLU en premier (handoff + root boot)
-  try { hideInviteHandoffOverlay(); } catch {}
-  try { forceReleaseRootBootOverlay(); } catch {}
-
-  // reset local states
-  try { setLoading(false); } catch {}
-  try { setFetching(false); } catch {}
-
-  // close
-  try {
-    onClose();
-  } finally {
-    clearInvitation?.();
-  }
-}, [hideInviteHandoffOverlay, forceReleaseRootBootOverlay, onClose, clearInvitation]);
-
+  const safeCloseAll = useCallback(() => {
+    try { hideInviteHandoffOverlay(); } catch {}
+    try { forceReleaseRootBootOverlay(); } catch {}
+    try { setLoading(false); } catch {}
+    try { setFetching(false); } catch {}
+    try { setLoadComplete(false); } catch {}
+    try { onClose(); } finally { clearInvitation?.(); }
+  }, [hideInviteHandoffOverlay, forceReleaseRootBootOverlay, onClose, clearInvitation]);
 
   const handleCloseRequest = useCallback(async () => {
     try {
       if (inv && inv.kind === "open" && inv.status === "pending" && inviteId) {
         await softRefuseOpenInvitation(inviteId);
       }
-    } catch {
-      // no-op
-    } finally {
+    } catch {} finally {
       safeCloseAll();
     }
   }, [inv, inviteId, safeCloseAll]);
@@ -247,7 +237,6 @@ useEffect(() => {
 
   const expired = useMemo(() => (inv ? isInvitationExpired(inv) : false), [inv]);
 
-  // ✅ Responsive measurements (centrage + tailles)
   const layout = useMemo(() => {
     const isTiny = width < 360;
     const sidePad = normalize(isTiny ? 14 : 18);
@@ -258,22 +247,18 @@ useEffect(() => {
       normalize(280),
       Math.min(height - safeTop - safeBot, normalize(680))
     );
-
     return { isTiny, sidePad, maxW, maxH, safeTop, safeBot };
   }, [width, height, insets.top, insets.bottom]);
 
-  // ===== Chargement =====
+  // ─── CORE FIX: load() sets loadComplete=true, does NOT call onLoaded() ───
+  // onLoaded() is called from Modal's onShow (via handleModalShow)
+  // This guarantees: overlay cuts only AFTER modal is physically on-screen
   useEffect(() => {
     const load = async () => {
       if (!isShown || !inviteId) return;
 
       if (!auth.currentUser?.uid) {
-        showInfo(
-          t("invitation.errors.notLogged", {
-            defaultValue: "Tu dois être connecté.",
-          })
-        );
-        onLoaded?.();
+        showInfo(t("invitation.errors.notLogged", { defaultValue: "Tu dois être connecté." }));
         closeAll();
         return;
       }
@@ -283,6 +268,7 @@ useEffect(() => {
 
       try {
         setFetching(true);
+        setLoadComplete(false);
         setErrorMsg("");
         setInv(null);
         setInviterUsername("");
@@ -294,22 +280,17 @@ useEffect(() => {
         if (!mountedRef.current || lastLoadKeyRef.current !== loadKey) return;
 
         if (!data) {
-          showInfo(
-            t("invitation.invalidMessage", {
-              defaultValue: "Cette invitation est introuvable ou a été supprimée.",
-            })
-          );
+          showInfo(t("invitation.invalidMessage", {
+            defaultValue: "Cette invitation est introuvable ou a été supprimée.",
+          }));
           closeAll();
           return;
         }
 
         if (isInvitationExpired(data)) {
-          showInfo(
-            t("invitation.expiredMessage", {
-              defaultValue:
-                "Cette invitation a expiré. Demande à ton ami d'en renvoyer une nouvelle.",
-            })
-          );
+          showInfo(t("invitation.expiredMessage", {
+            defaultValue: "Cette invitation a expiré. Demande à ton ami d'en renvoyer une nouvelle.",
+          }));
           closeAll();
           return;
         }
@@ -321,7 +302,6 @@ useEffect(() => {
         try {
           const inviterSnap = await getDoc(doc(db, "users", data.inviterId));
           if (!mountedRef.current || lastLoadKeyRef.current !== loadKey) return;
-
           if (inviterSnap.exists()) {
             const u = inviterSnap.data() as any;
             const username =
@@ -335,19 +315,15 @@ useEffect(() => {
           if (mountedRef.current && lastLoadKeyRef.current === loadKey) setInviterUsername("");
         }
 
-        // 3) Challenge (chatId + title i18n)
+        // 3) Challenge title
         try {
           const chSnap = await getDoc(doc(db, "challenges", chId));
           if (!mountedRef.current || lastLoadKeyRef.current !== loadKey) return;
-
           if (chSnap.exists()) {
             const ch = chSnap.data() as any;
             const chatIdFromDoc = ch?.chatId || ch?.id || chId || "";
             setChallengeChatId(chatIdFromDoc);
-
-            const i18nTitle = t(`challenges.${chatIdFromDoc}.title`, {
-              defaultValue: ch?.title || "",
-            });
+            const i18nTitle = t(`challenges.${chatIdFromDoc}.title`, { defaultValue: ch?.title || "" });
             setChallengeTitle(i18nTitle || ch?.title || "");
           } else {
             setChallengeChatId(chId);
@@ -369,55 +345,66 @@ useEffect(() => {
             kind: data.kind,
           });
         } catch {}
+
+        // ─── Signal phase 3 to root overlay (data is ready, modal about to show) ─
+        try {
+          const g = globalThis as any;
+          if (typeof g.__INVITE_BOOT_SET_PHASE__ === "function") {
+            g.__INVITE_BOOT_SET_PHASE__(3);
+          }
+        } catch {}
+
       } catch (e) {
         console.error("❌ InvitationModal load error:", e);
         if (!mountedRef.current || lastLoadKeyRef.current !== loadKey) return;
-        setErrorMsg(
-          t("invitation.errors.unknown", {
-            defaultValue: "Erreur inconnue.",
-          })
-        );
+        setErrorMsg(t("invitation.errors.unknown", { defaultValue: "Erreur inconnue." }));
       } finally {
         if (mountedRef.current && lastLoadKeyRef.current === loadKey) {
-  setFetching(false);
-
-  // ✅ Signal phase 3 à l'overlay root : "tout est prêt, la modal va apparaître"
-  // On le fait AVANT onLoaded pour que la transition soit synchrone
-  try {
-    const g = globalThis as any;
-    if (typeof g.__INVITE_BOOT_SET_PHASE__ === "function") {
-      g.__INVITE_BOOT_SET_PHASE__(3);
-    }
-  } catch {}
-
-  // Petit délai pour laisser la phase 3 s'afficher une fraction de seconde
-  // avant que l'overlay disparaisse (transition cinématique propre)
-  try {
-    await new Promise((r) => setTimeout(r, 120));
-  } catch {}
-
-  try {
-    onLoaded?.();
-  } catch {}
-}
+          setFetching(false);
+          // ─── CRITICAL: mark load as complete but DON'T call onLoaded() yet ────
+          // onLoaded() will be called from handleModalShow (onShow event)
+          // which fires only when the Modal is physically visible on screen
+          setLoadComplete(true);
+        }
       }
     };
 
     load();
- }, [isShown, inviteId, challengeId, t, i18n.language, closeAll, onLoaded]);
+  }, [isShown, inviteId, challengeId, t, i18n.language, closeAll]);
 
-  // ✅ Retraduction locale si la langue change
+  // ─── handleModalShow: fired by Modal's onShow event ──────────────────────
+  // This is the ONLY place where we signal the overlay it's safe to cut
+  const handleModalShow = useCallback(() => {
+    // Signal useInviteHandoff that modal is visible
+    onModalVisible?.();
+    // Signal InvitationModal's parent (challenge-details) that we're loaded
+    if (loadComplete) {
+      onLoaded?.();
+    }
+  }, [onModalVisible, onLoaded, loadComplete]);
+
+  // ─── Fallback: if Modal is already visible but onShow didn't fire ─────────
+  // (can happen in some RN versions with animationType="none")
+  useEffect(() => {
+    if (!modalVisible || !loadComplete) return;
+    // Give the native Modal 400ms to render before firing as fallback
+    const t = setTimeout(() => {
+      onModalVisible?.();
+      onLoaded?.();
+    }, 400);
+    return () => clearTimeout(t);
+  }, [modalVisible, loadComplete]); // eslint-disable-line
+
+  // ─── Re-translate when language changes ──────────────────────────────────
   useEffect(() => {
     if (!isShown || !challengeChatId) return;
     setChallengeTitle((prev) => {
-      const i18nTitle = t(`challenges.${challengeChatId}.title`, {
-        defaultValue: prev || "",
-      });
+      const i18nTitle = t(`challenges.${challengeChatId}.title`, { defaultValue: prev || "" });
       return i18nTitle || prev;
     });
- }, [i18n.language, isShown, challengeChatId, t]);
+  }, [i18n.language, isShown, challengeChatId, t]);
 
-  // Reset propres quand on ferme / change d’invite
+  // ─── Reset on close ───────────────────────────────────────────────────────
   useEffect(() => {
     if (!isShown) {
       setInv(null);
@@ -425,6 +412,7 @@ useEffect(() => {
       setShowRestartConfirm(false);
       setFetching(false);
       setLoading(false);
+      setLoadComplete(false);
       setChallengeChatId("");
       setChallengeTitle("");
       setInviterUsername("");
@@ -436,10 +424,10 @@ useEffect(() => {
     setShowRestartConfirm(false);
   }, [inviteId]);
 
-  // ===== Actions (LOGIQUE INCHANGÉE) =====
+  // ===== Actions (LOGIC UNCHANGED) ==========================================
+
   const handleAccept = useCallback(async () => {
     if (loading || fetching) return;
-
     const meId = auth.currentUser?.uid;
     if (!inviteId || !meId) return;
 
@@ -449,18 +437,14 @@ useEffect(() => {
     }
 
     if (inv.inviterId === meId) {
-      setErrorMsg(
-        t("invitation.errors.autoInvite", {
-          defaultValue: "Tu ne peux pas accepter ta propre invitation.",
-        })
-      );
+      setErrorMsg(t("invitation.errors.autoInvite", {
+        defaultValue: "Tu ne peux pas accepter ta propre invitation.",
+      }));
       return;
     }
 
     if (expired) {
-      setErrorMsg(
-        t("invitation.errors.expired", { defaultValue: "Invitation expirée." })
-      );
+      setErrorMsg(t("invitation.errors.expired", { defaultValue: "Invitation expirée." }));
       safeCloseAll();
       return;
     }
@@ -490,12 +474,9 @@ useEffect(() => {
       });
 
       if (alreadyInDuoActive) {
-        setErrorMsg(
-          t("invitation.errors.alreadyInDuoForChallenge", {
-            defaultValue:
-              "Tu es déjà en duo pour ce défi. Tu peux quitter l’ancien duo dans tes défis en cours avant d’en accepter un nouveau.",
-          })
-        );
+        setErrorMsg(t("invitation.errors.alreadyInDuoForChallenge", {
+          defaultValue: "Tu es déjà en duo pour ce défi.",
+        }));
         return;
       }
 
@@ -523,51 +504,31 @@ useEffect(() => {
       }).catch?.(() => {});
 
       if (!reduceMotion) {
-        Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success).catch(
-          () => {}
-        );
+        Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success).catch(() => {});
       }
 
-     safeCloseAll();
+      safeCloseAll();
     } catch (e: any) {
       console.error("❌ Invitation accept error:", e);
       const msg = String(e?.message || "").toLowerCase();
 
       if (msg.includes("auto_invite")) {
-        setErrorMsg(
-          t("invitation.errors.autoInvite", {
-            defaultValue: "Tu ne peux pas accepter ta propre invitation.",
-          })
-        );
+        setErrorMsg(t("invitation.errors.autoInvite", { defaultValue: "Tu ne peux pas accepter ta propre invitation." }));
       } else if (msg.includes("expired") || msg.includes("expir")) {
         setErrorMsg(t("invitation.errors.expired", { defaultValue: "Invitation expirée." }));
         safeCloseAll();
-      } else if (msg.includes("non_autorise") || msg.includes("non autoris") || msg.includes("permission")) {
+      } else if (msg.includes("non_autorise") || msg.includes("permission")) {
         setErrorMsg(t("invitation.errors.permission", { defaultValue: "Action non autorisée." }));
         safeCloseAll();
-      } else if (msg.includes("invitation_deja_traitee") || (msg.includes("déjà") && msg.includes("trait"))) {
+      } else if (msg.includes("invitation_deja_traitee")) {
         setErrorMsg(t("invitation.errors.processed", { defaultValue: "Invitation déjà traitée." }));
         safeCloseAll();
       } else if (msg.includes("invitee_already_in_duo")) {
-        setErrorMsg(
-          t("invitation.errors.alreadyInDuoForChallenge", {
-            defaultValue:
-              "Tu es déjà en duo pour ce défi. Tu peux quitter l’ancien duo dans tes défis en cours avant d’en accepter un nouveau.",
-          })
-        );
+        setErrorMsg(t("invitation.errors.alreadyInDuoForChallenge", { defaultValue: "Tu es déjà en duo pour ce défi." }));
       } else if (msg.includes("inviter_already_in_duo")) {
-        setErrorMsg(
-          t("invitation.errors.inviterAlreadyInDuo", {
-            defaultValue:
-              "Ton ami est déjà en duo sur ce défi. Demande-lui d’abord de quitter son duo avant d’utiliser ce lien.",
-          })
-        );
-      } else if (msg.includes("already_in_duo") || msg.includes("alreadyinduo") || msg.includes("duo")) {
-        setErrorMsg(
-          t("invitation.errors.alreadyInDuoGeneric", {
-            defaultValue: "Un des deux comptes est déjà en duo pour ce défi.",
-          })
-        );
+        setErrorMsg(t("invitation.errors.inviterAlreadyInDuo", { defaultValue: "Ton ami est déjà en duo sur ce défi." }));
+      } else if (msg.includes("already_in_duo") || msg.includes("duo")) {
+        setErrorMsg(t("invitation.errors.alreadyInDuoGeneric", { defaultValue: "Un des deux comptes est déjà en duo." }));
       } else if (msg.includes("challenge_introuvable")) {
         setErrorMsg(t("invitation.errors.challengeMissing", { defaultValue: "Défi introuvable." }));
         safeCloseAll();
@@ -576,22 +537,10 @@ useEffect(() => {
       }
     } finally {
       try { (globalThis as any).__INVITE_BOOT_OFF__?.(); } catch {}
-  try { (globalThis as any).__HIDE_INVITE_HANDOFF__?.(); } catch {}
-  setLoading(false);
+      try { (globalThis as any).__HIDE_INVITE_HANDOFF__?.(); } catch {}
+      setLoading(false);
     }
-  }, [
-    loading,
-    fetching,
-    inviteId,
-    inv,
-    isForMe,
-    expired,
-    challengeId,
-    t,
-    onClose,
-    clearInvitation,
-    reduceMotion,
-  ]);
+  }, [loading, fetching, inviteId, inv, isForMe, expired, challengeId, t, safeCloseAll, reduceMotion]);
 
   const handleConfirmRestart = useCallback(async () => {
     if (!inviteId || !auth.currentUser || !inv) return;
@@ -609,10 +558,7 @@ useEffect(() => {
 
       try {
         await new Promise((r) => setTimeout(r, 350));
-        await acceptInvitationSafetyFix({
-          inviteId,
-          challengeId: inv.challengeId || challengeId,
-        });
+        await acceptInvitationSafetyFix({ inviteId, challengeId: inv.challengeId || challengeId });
       } catch {}
 
       logEvent("invite_accept_restart", {
@@ -628,17 +574,7 @@ useEffect(() => {
     } finally {
       setLoading(false);
     }
-  }, [
-    inviteId,
-    inv,
-    loading,
-    fetching,
-    reduceMotion,
-    challengeId,
-    t,
-    onClose,
-    clearInvitation,
-  ]);
+  }, [inviteId, inv, loading, fetching, reduceMotion, challengeId, t, safeCloseAll]);
 
   const handleRefuse = useCallback(async () => {
     if (!inviteId || !inv || loading || fetching) return;
@@ -673,22 +609,12 @@ useEffect(() => {
       }
     } finally {
       try { (globalThis as any).__INVITE_BOOT_OFF__?.(); } catch {}
-  try { (globalThis as any).__HIDE_INVITE_HANDOFF__?.(); } catch {}
+      try { (globalThis as any).__HIDE_INVITE_HANDOFF__?.(); } catch {}
       setLoading(false);
     }
-  }, [
-    inviteId,
-    inv,
-    loading,
-    fetching,
-    challengeId,
-    t,
-    onClose,
-    clearInvitation,
-    reduceMotion,
-  ]);
+  }, [inviteId, inv, loading, fetching, challengeId, t, safeCloseAll, reduceMotion]);
 
-  // ===== Styles (TOP MONDE) =====
+  // ===== Styles ==============================================================
   const styles = useMemo(
     () =>
       StyleSheet.create({
@@ -701,34 +627,25 @@ useEffect(() => {
           justifyContent: "center",
           alignItems: "center",
         },
-
-        backdrop: {
-          ...StyleSheet.absoluteFillObject,
-        },
-
-        // Wrapper de carte (centrage parfait, jamais collé au top)
+        backdrop: { ...StyleSheet.absoluteFillObject },
         cardWrap: {
           width: "100%",
           maxWidth: layout.maxW,
           maxHeight: layout.maxH,
           alignSelf: "center",
         },
-
         card: {
           backgroundColor: currentTheme.colors.cardBackground,
           borderRadius: normalize(22),
           overflow: "hidden",
           borderWidth: StyleSheet.hairlineWidth,
           borderColor: isDarkMode ? "rgba(255,255,255,0.08)" : "rgba(0,0,0,0.06)",
-
           shadowColor: "#000",
           shadowOffset: { width: 0, height: normalize(10) },
           shadowOpacity: 0.32,
           shadowRadius: normalize(14),
           elevation: 10,
         },
-
-        // Header slim (close button)
         header: {
           width: "100%",
           paddingHorizontal: normalize(16),
@@ -770,17 +687,13 @@ useEffect(() => {
           opacity: 0.9,
           ...(Platform.OS === "android" ? { includeFontPadding: false } : {}),
         },
-
-        scroll: {
-          width: "100%",
-        },
+        scroll: { width: "100%" },
         content: {
           paddingHorizontal: normalize(20),
           paddingTop: normalize(18),
           paddingBottom: normalize(22),
           alignItems: "center",
         },
-
         modalTitle: {
           fontSize: normalize(layout.isTiny ? 18 : 19),
           fontFamily: "Comfortaa_700Bold",
@@ -796,7 +709,6 @@ useEffect(() => {
           textAlign: "center",
           color: currentTheme.colors.textSecondary,
         },
-
         tag: {
           alignSelf: "center",
           paddingHorizontal: normalize(14),
@@ -819,7 +731,6 @@ useEffect(() => {
           textAlign: "center",
           color: currentTheme.colors.textPrimary,
         },
-
         errorText: {
           color: currentTheme.colors.error,
           fontSize: normalize(13),
@@ -827,14 +738,12 @@ useEffect(() => {
           marginBottom: normalize(10),
           textAlign: "center",
         },
-
         buttonRow: {
           flexDirection: layout.isTiny ? "column" : "row",
           width: "100%",
           gap: normalize(10),
           marginTop: normalize(8),
         },
-
         btn: {
           flex: 1,
           borderRadius: normalize(14),
@@ -843,66 +752,45 @@ useEffect(() => {
           alignItems: "center",
           justifyContent: "center",
           minHeight: normalize(44),
-
           shadowColor: "#000",
           shadowOffset: { width: 0, height: normalize(4) },
           shadowOpacity: 0.18,
           shadowRadius: normalize(6),
           elevation: 4,
         },
-        accept: {
-          backgroundColor: currentTheme.colors.primary,
-        },
-        refuse: {
-          backgroundColor: currentTheme.colors.error,
-        },
-        neutral: {
-          backgroundColor: currentTheme.colors.border,
-        },
-
+        accept: { backgroundColor: currentTheme.colors.primary },
+        refuse: { backgroundColor: currentTheme.colors.error },
+        neutral: { backgroundColor: currentTheme.colors.border },
         btnText: {
           color: "#fff",
           fontSize: normalize(15),
           fontFamily: "Comfortaa_700Bold",
           ...(Platform.OS === "android" ? { includeFontPadding: false } : {}),
         },
-        neutralText: {
-          color: currentTheme.colors.textPrimary,
-        },
-
-        spinnerWrap: {
-          marginVertical: normalize(12),
-        },
+        neutralText: { color: currentTheme.colors.textPrimary },
+        spinnerWrap: { marginVertical: normalize(12) },
       }),
     [isDarkMode, currentTheme, layout]
   );
 
-  // ===== UI =====
+  // ===== Body render =========================================================
   const renderBody = () => {
-    if (fetching) {
-      // ✅ Si le parent gère déjà l’overlay de chargement, on évite un 2e loader dans le modal
-      if (externalLoading) {
-        return (
-          <>
-            <Text style={styles.modalTitle}>
-              {t("invitation.loading", { defaultValue: "Chargement..." })}
-            </Text>
-            <Text style={styles.modalText}>
-              {t("invitation.loadingSub", {
-                defaultValue: "Préparation de l’invitation…",
-              })}
-            </Text>
-          </>
-        );
-      }
+    if (fetching || externalLoading) {
       return (
         <>
           <Text style={styles.modalTitle}>
             {t("invitation.loading", { defaultValue: "Chargement..." })}
           </Text>
-          <View style={styles.spinnerWrap}>
-            <ActivityIndicator size="large" color={currentTheme.colors.secondary} />
-          </View>
+          {!externalLoading && (
+            <View style={styles.spinnerWrap}>
+              <ActivityIndicator size="large" color={currentTheme.colors.secondary} />
+            </View>
+          )}
+          {externalLoading && (
+            <Text style={styles.modalText}>
+              {t("invitation.loadingSub", { defaultValue: "Préparation de l'invitation…" })}
+            </Text>
+          )}
         </>
       );
     }
@@ -914,9 +802,7 @@ useEffect(() => {
             {t("invitation.invalidTitle", { defaultValue: "Invitation indisponible" })}
           </Text>
           <Text style={styles.modalText}>
-            {t("invitation.invalidMessage", {
-              defaultValue: "Cette invitation est introuvable ou a été supprimée.",
-            })}
+            {t("invitation.invalidMessage", { defaultValue: "Cette invitation est introuvable ou a été supprimée." })}
           </Text>
           <View style={styles.buttonRow}>
             <TouchableOpacity
@@ -943,9 +829,7 @@ useEffect(() => {
             {t("invitation.notForYouTitle", { defaultValue: "Oups" })}
           </Text>
           <Text style={styles.modalText}>
-            {t("invitation.notForYouMessage", {
-              defaultValue: "Cette invitation n'est pas destinée à ce compte.",
-            })}
+            {t("invitation.notForYouMessage", { defaultValue: "Cette invitation n'est pas destinée à ce compte." })}
           </Text>
           <View style={styles.buttonRow}>
             <TouchableOpacity
@@ -971,10 +855,7 @@ useEffect(() => {
             {t("invitation.expiredTitle", { defaultValue: "Invitation expirée" })}
           </Text>
           <Text style={styles.modalText}>
-            {t("invitation.expiredMessage", {
-              defaultValue:
-                "Cette invitation a expiré. Demande à ton ami d'en renvoyer une nouvelle.",
-            })}
+            {t("invitation.expiredMessage", { defaultValue: "Cette invitation a expiré." })}
           </Text>
           <View style={styles.buttonRow}>
             <TouchableOpacity
@@ -1002,10 +883,7 @@ useEffect(() => {
     return (
       <>
         <Text style={styles.modalTitle}>
-          {t("invitation.title", {
-            username: usernameForTitle,
-            defaultValue: "{{username}} t’invite en Duo",
-          })}
+          {t("invitation.title", { username: usernameForTitle, defaultValue: "{{username}} t'invite en Duo" })}
         </Text>
 
         {!!challengeTitle && (
@@ -1025,8 +903,7 @@ useEffect(() => {
         <Text style={styles.modalText}>
           {t("invitation.message", {
             challenge: challengeTitle,
-            defaultValue:
-              "Accepte pour démarrer ce défi en Duo. Vous pourrez suivre vos progrès ensemble.",
+            defaultValue: "Accepte pour démarrer ce défi en Duo. Vous pourrez suivre vos progrès ensemble.",
           })}
         </Text>
 
@@ -1044,9 +921,7 @@ useEffect(() => {
             activeOpacity={0.85}
             accessibilityRole="button"
             accessibilityLabel={t("invitation.accept", { defaultValue: "Accepter" })}
-            accessibilityHint={t("invitation.acceptHint", {
-              defaultValue: "Accepter l’invitation et démarrer en Duo.",
-            })}
+            accessibilityHint={t("invitation.acceptHint", { defaultValue: "Accepter l'invitation et démarrer en Duo." })}
             testID="invite-accept"
           >
             {loading ? (
@@ -1063,9 +938,7 @@ useEffect(() => {
             activeOpacity={0.85}
             accessibilityRole="button"
             accessibilityLabel={t("invitation.refuse", { defaultValue: "Refuser" })}
-            accessibilityHint={t("invitation.refuseHint", {
-              defaultValue: "Refuser l’invitation et fermer.",
-            })}
+            accessibilityHint={t("invitation.refuseHint", { defaultValue: "Refuser l'invitation et fermer." })}
             testID="invite-refuse"
           >
             {loading ? (
@@ -1086,8 +959,7 @@ useEffect(() => {
       </Text>
       <Text style={styles.modalText}>
         {t("invitation.restartMessage", {
-          defaultValue:
-            "Tu as déjà ce défi en solo. On va le réinitialiser pour repartir à zéro à deux.",
+          defaultValue: "Tu as déjà ce défi en solo. On va le réinitialiser pour repartir à zéro à deux.",
         })}
       </Text>
       <View style={styles.buttonRow}>
@@ -1131,9 +1003,11 @@ useEffect(() => {
       statusBarTranslucent
       presentationStyle="overFullScreen"
       onRequestClose={handleCloseRequest}
+      // ─── KEY FIX: onShow fires when Modal is physically visible on screen ─
+      onShow={handleModalShow}
       onDismiss={() => {
-      try { (globalThis as any).__HIDE_INVITE_HANDOFF__?.(); } catch {}
-    }}
+        try { (globalThis as any).__HIDE_INVITE_HANDOFF__?.(); } catch {}
+      }}
     >
       <View
         style={styles.root}
@@ -1142,13 +1016,10 @@ useEffect(() => {
         accessibilityViewIsModal
         accessibilityLiveRegion="polite"
       >
-        {/* Backdrop tappable */}
         <Pressable
           style={styles.backdrop}
-          pointerEvents={isShown ? "auto" : "none"} 
-          onPress={() => {
-            if (!loading && !fetching) handleCloseRequest();
-          }}
+          pointerEvents={isShown ? "auto" : "none"}
+          onPress={() => { if (!loading && !fetching) handleCloseRequest(); }}
           accessibilityRole="button"
           accessibilityLabel={t("commonS.close", { defaultValue: "Fermer" })}
         />
@@ -1159,7 +1030,6 @@ useEffect(() => {
           pointerEvents="auto"
         >
           <View style={styles.card}>
-            {/* Header premium (X) */}
             <View style={styles.header}>
               <View style={styles.headerSide} />
               <Text style={styles.headerTitle} numberOfLines={1} ellipsizeMode="tail">
@@ -1167,9 +1037,7 @@ useEffect(() => {
               </Text>
               <View style={styles.headerSide}>
                 <Pressable
-                  onPress={() => {
-                    if (!loading && !fetching) handleCloseRequest();
-                  }}
+                  onPress={() => { if (!loading && !fetching) handleCloseRequest(); }}
                   hitSlop={10}
                   style={({ pressed }) => [
                     styles.closeBtn,

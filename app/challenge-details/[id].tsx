@@ -891,23 +891,31 @@ const pulseStyle = useAnimatedStyle<ViewStyle>(() => ({
   opacity: 1, // ✅ NE JAMAIS baisser la couronne
 }));
 
-const progressBarAnimStyle = useAnimatedStyle(() => ({
-  width: `${progressBarWidth.value * 100}%` as any,
-}));
+// soloBarWidth est déjà déclaré via onLayout sur la barre solo
+ // Pour les barres duo on ajoute duoBarWidth:
+ const [duoBarWidth, setDuoBarWidth] = useState(0);
 
-const duoBarMeAnimStyle = useAnimatedStyle(() => ({
-  width: `${duoBarMeWidth.value * 100}%` as any,
-}));
+ const progressBarAnimStyle = useAnimatedStyle<ViewStyle>(() => ({
+   width: soloBarWidth > 0 ? progressBarWidth.value * soloBarWidth : `${progressBarWidth.value * 100}%` as any,
+ }));
 
-const duoBarPartnerAnimStyle = useAnimatedStyle(() => ({
-  width: `${duoBarPartnerWidth.value * 100}%` as any,
-}));
+ const duoBarMeAnimStyle = useAnimatedStyle<ViewStyle>(() => ({
+   width: duoBarWidth > 0 ? duoBarMeWidth.value * duoBarWidth : `${duoBarMeWidth.value * 100}%` as any,
+ }));
 
-const markBtnGlowStyle = useAnimatedStyle(() => ({
-  shadowOpacity: interpolate(markBtnGlow.value, [0, 1], [0.1, 0.55]),
-  shadowRadius: interpolate(markBtnGlow.value, [0, 1], [4, 18]),
-  transform: [{ scale: interpolate(markBtnGlow.value, [0, 1], [1, 1.008]) }],
-}));
+ const duoBarPartnerAnimStyle = useAnimatedStyle<ViewStyle>(() => ({
+   width: duoBarWidth > 0 ? duoBarPartnerWidth.value * duoBarWidth : `${duoBarPartnerWidth.value * 100}%` as any,
+ }));
+
+const markBtnGlowStyle = useAnimatedStyle<ViewStyle>(() => ({
+   ...(Platform.OS === "ios"
+     ? {
+         shadowOpacity: interpolate(markBtnGlow.value, [0, 1], [0.1, 0.55]),
+         shadowRadius: interpolate(markBtnGlow.value, [0, 1], [4, 18]),
+       }
+     : {}),
+   transform: [{ scale: interpolate(markBtnGlow.value, [0, 1], [1, 1.008]) }],
+ }));
 
 
 useEffect(() => {
@@ -1131,6 +1139,7 @@ const {
 
   closeInviteFlow,
   hideRootInviteHandoff,
+  signalModalVisible,
 } = useInviteHandoff({
   id,
   paramsInvite: inviteParam, // ✅
@@ -2340,7 +2349,7 @@ const scrollContentStyle = useMemo(
 <View style={styles.chipRow}>
   {finalSelectedDays > 0 && (
     <Animated.View
-      entering={FadeIn.delay(80).duration(320)}
+      entering={firstMountRef.current ? FadeIn.delay(80).duration(320) : undefined}
       style={[styles.chip, isDarkMode ? styles.chipDark : styles.chipLight]}
     >
       <Ionicons name="calendar-outline" size={13} color={isDarkMode ? "#FFD700" : "#111"} />
@@ -2723,26 +2732,27 @@ const scrollContentStyle = useMemo(
             },
           ]}
         >
-          <Animated.View style={[{ height: "100%", borderRadius: 999, overflow: "hidden" }, progressBarAnimStyle]}>
+          <Animated.View style={[{ height: "100%", borderRadius: 999, overflow: "hidden", minWidth: 0 }, progressBarAnimStyle]}>
             <LinearGradient
               colors={isDarkMode ? ["#FF9F1C", "#FFD700"] : [currentTheme.colors.primary, currentTheme.colors.secondary]}
               start={{ x: 0, y: 0 }}
               end={{ x: 1, y: 0 }}
               style={StyleSheet.absoluteFill}
             />
-            {/* Shine beam animé */}
+            {/* Shine beam : translateX animé sur le parent, skewX statique sur l'enfant */}
             <Animated.View
               style={[
-                {
-                  position: "absolute",
-                  top: 0, bottom: 0, width: 40,
-                  backgroundColor: "rgba(255,255,255,0.22)",
-                  transform: [{ skewX: "-20deg" }],
-                },
+                { position: "absolute", top: 0, bottom: 0, width: 50 },
                 shimmerBarStyle,
               ]}
-            />
-          </Animated.View>
+            >
+              <View style={{
+                position: "absolute",
+                top: 0, bottom: 0, left: 0, right: 0,
+                backgroundColor: "rgba(255,255,255,0.20)",
+                transform: [{ skewX: "-18deg" }],
+              }} />
+            </Animated.View>
         </View>
         {/* Mini stats */}
         <View style={{ flexDirection: "row", justifyContent: "center", marginTop: 6 }}>
@@ -2876,7 +2886,10 @@ const scrollContentStyle = useMemo(
 
           </View>
 
-         <View style={[styles.duoBarTrack, { backgroundColor: DUO.track, borderColor: DUO.trackStroke }]}>
+         <View
+           onLayout={(e) => setDuoBarWidth(e.nativeEvent.layout.width)}
+           style={[styles.duoBarTrack, { backgroundColor: DUO.track, borderColor: DUO.trackStroke }]}
+         >
             <View style={[styles.duoBarTrackSheen, { backgroundColor: DUO.sheen }]} pointerEvents="none" />
             <View style={styles.duoBarTicks} pointerEvents="none">
               <View style={[styles.duoBarTick, { backgroundColor: DUO.tick }]} />
@@ -2885,7 +2898,7 @@ const scrollContentStyle = useMemo(
               <View style={[styles.duoBarTick, { backgroundColor: DUO.tick }]} />
             </View>
             <Animated.View style={[styles.duoBarFill, styles.duoBarFillMe,
-              { opacity: mePct === 0 ? 0.35 : 1, overflow: "hidden" },
+              { opacity: mePct === 0 ? 0.35 : 1, overflow: "hidden", minWidth: 0 },
               duoBarMeAnimStyle,
             ]}>
               <LinearGradient colors={["#FF9F1C", "#FFD166"]}
@@ -2996,18 +3009,22 @@ const scrollContentStyle = useMemo(
     </View>
   );
 })()}
+    {/* Animated.View UNIQUEMENT pour le glow/ombre — pas de styles de layout */}
     <Animated.View style={[
-          styles.markTodayButton,
           !isDisabledMark && markBtnGlowStyle,
           {
-            borderRadius: 16,
-            shadowColor: isDarkMode ? "#FFD700" : currentTheme.colors.primary,
-            shadowOffset: { width: 0, height: 0 },
-            elevation: isDisabledMark ? 0 : 6,
+            // Shadow iOS uniquement (markBtnGlowStyle gère shadowOpacity/Radius)
+            ...(Platform.OS === "ios" && !isDisabledMark ? {
+              shadowColor: isDarkMode ? "#FFD700" : currentTheme.colors.primary,
+              shadowOffset: { width: 0, height: 0 },
+            } : {}),
           }
         ]}>
         <TouchableOpacity
-      style={{ width: "100%" }}
+      style={[styles.markTodayButton, {
+        // elevation Android ici, pas sur Animated.View
+        elevation: Platform.OS === "android" && !isDisabledMark ? 6 : 0,
+      }]}
       accessibilityHint={t("challengeDetails.markTodayHint")}
       accessibilityRole="button"
       onPress={handleMarkTodayPress}
@@ -3465,6 +3482,7 @@ const scrollContentStyle = useMemo(
     setInviteModalReady(true);
     inviteBootOff();
   }}
+  onModalVisible={signalModalVisible}
 />
 
 <ConfirmationDuoModal

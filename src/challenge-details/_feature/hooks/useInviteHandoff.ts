@@ -1,5 +1,4 @@
 import { useCallback, useEffect, useRef, useState } from "react";
-import { Platform } from "react-native";
 import { auth, db } from "@/constants/firebase-config";
 import {
   doc,
@@ -22,6 +21,10 @@ type Args = {
   cameFromDeeplinkRef: React.MutableRefObject<boolean>;
 };
 
+// ─── Minimum display time for boot overlay (all 3 phases must be visible) ───
+// This guarantees the user sees the cinematic sequence even on fast connections
+const BOOT_OVERLAY_MIN_MS = 1800;
+
 export function useInviteHandoff({
   id,
   paramsInvite,
@@ -29,7 +32,7 @@ export function useInviteHandoff({
   router,
   cameFromDeeplinkRef,
 }: Args) {
-  // 🆕 si on arrive avec ?invite=... → overlay actif dès le 1er render
+  // If we arrive with ?invite=... → overlay is active from first render
   const [deeplinkBooting, setDeeplinkBooting] = useState(() => !!paramsInvite);
 
   const [invitation, setInvitation] = useState<{ id: string } | null>(null);
@@ -37,46 +40,71 @@ export function useInviteHandoff({
   const [inviteLoading, setInviteLoading] = useState(false);
   const [inviteModalReady, setInviteModalReady] = useState(false);
 
+  // ─── NEW: tracks whether the Modal has been confirmed visible on-screen ───
+  // Set to true by InvitationModal via onModalVisible() callback
+  // Only THEN do we allow inviteBootOff()
+  const [modalConfirmedVisible, setModalConfirmedVisible] = useState(false);
+
   // refs
   const processedInviteIdsRef = useRef<Set<string>>(new Set());
   const inviteOpenGuardRef = useRef(false);
   const suppressInboxInvitesRef = useRef(false);
   const willShowModalRef = useRef(false);
 
-  // ✅ Root overlay handoff control (single loader)
+  // ─── Tracks the boot start timestamp (for min display enforcement) ───────
+  const bootStartTsRef = useRef<number>(0);
+
+  // ─── Root overlay handoff control ────────────────────────────────────────
   const hideRootInviteHandoff = useCallback(() => {
     try {
       (globalThis as any).__HIDE_INVITE_HANDOFF__?.();
     } catch {}
   }, []);
 
-  // ✅ Kill-switch: si on n'est plus en boot deeplink, l'overlay root ne doit JAMAIS bloquer l'UI
+  // ─── Kill-switch: if no longer booting, release overlay ──────────────────
   useEffect(() => {
     if (!inviteLoading && !deeplinkBooting) {
-      try {
-        (globalThis as any).__HIDE_INVITE_HANDOFF__?.();
-      } catch {}
+      try { (globalThis as any).__HIDE_INVITE_HANDOFF__?.(); } catch {}
     }
   }, [inviteLoading, deeplinkBooting]);
 
-  // ✅ Hard stop : après fermeture du modal, rien ne doit bloquer l'écran
-useEffect(() => {
+  // ─── FIX: only cut overlay AFTER Modal is confirmed visible on screen ────
+  // This is the core fix for the "overlay cuts too early" race condition.
+  // Previously: inviteBootOff() was called in load() finally → before React re-render
+  // Now: we wait for modalConfirmedVisible = true (set by InvitationModal.onModalVisible)
+  useEffect(() => {
+    if (!modalConfirmedVisible) return;
+
+    // Modal IS visible on screen → safe to cut overlay now
+    const elapsed = Date.now() - bootStartTsRef.current;
+    const remaining = Math.max(0, BOOT_OVERLAY_MIN_MS - elapsed);
+
+    const t = setTimeout(() => {
+      try { (globalThis as any).__INVITE_BOOT_OFF__?.(); } catch {}
+      try { hideRootInviteHandoff(); } catch {}
+      setInviteLoading(false);
+      setDeeplinkBooting(false);
+      // reset for next use
+      setModalConfirmedVisible(false);
+    }, remaining);
+
+    return () => clearTimeout(t);
+  }, [modalConfirmedVisible, hideRootInviteHandoff]);
+
+  // ─── Hard stop: after modal closes, nothing should block screen ──────────
+  useEffect(() => {
     if (invitationModalVisible) {
-      // modal ouvert → reset le ref (il a fait son travail)
       willShowModalRef.current = false;
       return;
     }
-    // ✅ FIX A: si on vient juste de setter invitationModalVisible(true),
-    // le ref est armé → on ne coupe PAS les états prématurément
     if (willShowModalRef.current) return;
     setInviteLoading(false);
     setDeeplinkBooting(false);
-    try {
-      hideRootInviteHandoff();
-    } catch {}
+    setModalConfirmedVisible(false);
+    try { hideRootInviteHandoff(); } catch {}
   }, [invitationModalVisible, hideRootInviteHandoff]);
 
-  // ✅ Anti double-open inbox quand on arrive via ?invite=
+  // ─── Suppress inbox invites when arriving via ?invite= ───────────────────
   useEffect(() => {
     if (!paramsInvite) return;
     suppressInboxInvitesRef.current = true;
@@ -92,45 +120,35 @@ useEffect(() => {
     setInvitation((prev) => (prev?.id === inviteId ? null : prev));
   }, []);
 
-  // ✅ Nettoyage param invite sans casser la stack (si possible)
+  // ─── Clean invite param without breaking the stack ───────────────────────
   const clearInviteParam = useCallback(() => {
     try {
-      // @ts-ignore expo-router récent
       router.setParams?.({ invite: undefined });
       return;
     } catch {}
-
     try {
       if (id) router.replace(`/challenge-details/${id}` as any);
     } catch {}
   }, [router, id]);
 
-  // ✅ Close atomique : ferme modal + coupe tous les overlays deeplink + marque l'invite
+  // ─── Atomic close: close modal + cut all deeplink overlays ───────────────
   const closeInviteFlow = useCallback(
     (handledId?: string | null) => {
       const toHandle = handledId ?? invitation?.id ?? paramsInvite ?? null;
 
-      // 1) stop blocking states FIRST
       setInviteLoading(false);
       setDeeplinkBooting(false);
-      try {
-        hideRootInviteHandoff();
-      } catch {}
+      setModalConfirmedVisible(false);
+      try { hideRootInviteHandoff(); } catch {}
+      try { (globalThis as any).__INVITE_BOOT_OFF__?.(); } catch {}
 
-      // 2) mark handled to prevent re-open
-      try {
-        markInviteAsHandled(toHandle);
-      } catch {}
+      try { markInviteAsHandled(toHandle); } catch {}
 
-      // 3) close + cleanup
       setInvitationModalVisible(false);
       setInvitation(null);
       setInviteModalReady(true);
 
-      // 4) remove param / clean URL
-      try {
-        clearInviteParam();
-      } catch {}
+      try { clearInviteParam(); } catch {}
     },
     [
       invitation?.id,
@@ -141,6 +159,13 @@ useEffect(() => {
     ]
   );
 
+  // ─── Callback for InvitationModal to signal it is on-screen ─────────────
+  // InvitationModal calls this when its Modal component fires onShow
+  const signalModalVisible = useCallback(() => {
+    setModalConfirmedVisible(true);
+  }, []);
+
+  // ─── Main flow: open from deeplink param ─────────────────────────────────
   const openFromParamOrUrl = useCallback(
     async (inviteParam?: string) => {
       const idStr = String(inviteParam || "").trim();
@@ -150,17 +175,17 @@ useEffect(() => {
 
       cameFromDeeplinkRef.current = true;
 
-      // 🆕 On annonce qu'on boot via deeplink d'invit
+      // Record boot start time (for min display enforcement)
+      bootStartTsRef.current = Date.now();
+
       setDeeplinkBooting(true);
       setInviteLoading(true);
       inviteOpenGuardRef.current = true;
 
-      // 🆕 Flag pour savoir si on va VRAIMENT afficher le modal
       let willShowModal = false;
 
       const liveUid = auth.currentUser?.uid || null;
 
-      // Pas connecté → login + redirect + invite
       if (!liveUid) {
         try {
           const redirectTarget = `/challenge-details/${paramsId || id}`;
@@ -179,6 +204,8 @@ useEffect(() => {
       }
 
       try {
+        // ─── Phase 1: Fetch invitation doc ───────────────────────────────
+        // Phase is already at 1 from inviteBootOn() in DeepLinkManager
         const snap = await getDoc(doc(db, "invitations", idStr));
         if (!snap.exists()) {
           console.warn("[invite] invitation doc inexistant pour id =", idStr);
@@ -197,14 +224,14 @@ useEffect(() => {
           return;
         }
 
-        // direct invite
+        // Direct invite check
         if (data.kind !== "open") {
           if (data.inviteeId !== liveUid) {
             console.warn("[invite] doc ne concerne pas ce user (direct invite)");
             return;
           }
         } else {
-          // open invite
+          // Open invite
           if (data.inviteeId && data.inviteeId !== liveUid) {
             console.warn("[invite] open invite déjà prise par un autre user");
             return;
@@ -233,7 +260,7 @@ useEffect(() => {
                 });
               });
 
-              // refresh after claim
+              // Refresh after claim
               try {
                 const freshSnap = await getDoc(doc(db, "invitations", idStr));
                 if (freshSnap.exists()) data = freshSnap.data() as any;
@@ -247,7 +274,15 @@ useEffect(() => {
           }
         }
 
-        // redirect other challenge
+        // ─── Phase 2: challenge redirect if needed ────────────────────────
+        // Signal phase 2 (challenge loading)
+        try {
+          const g = globalThis as any;
+          if (typeof g.__INVITE_BOOT_SET_PHASE__ === "function") {
+            g.__INVITE_BOOT_SET_PHASE__(2);
+          }
+        } catch {}
+
         if (data.challengeId && data.challengeId !== id) {
           try {
             router.replace(
@@ -263,27 +298,16 @@ useEffect(() => {
           return;
         }
 
-        // open modal once
-        // ✅ Délai minimum pour que les phases 1→2→3 de l'overlay soient visibles
-        // même quand Firestore répond depuis le cache (< 100ms)
-        const BOOT_OVERLAY_MIN_MS = 1200;
-        const elapsed = Date.now() - (
-          // on récupère le ts du boot depuis le global state
-          (globalThis as any).__INVITE_BOOT__?.ts || Date.now()
-        );
-        if (elapsed < BOOT_OVERLAY_MIN_MS) {
-          await new Promise<void>((r) => setTimeout(r, BOOT_OVERLAY_MIN_MS - elapsed));
-        }
-
+        // ─── All checks passed → open modal ──────────────────────────────
         processedInviteIdsRef.current.add(idStr);
-       setInvitation({ id: idStr });
-       setInviteModalReady(false);
-       // ✅ FIX A: arme le ref AVANT le setState pour bloquer le useEffect
-       willShowModalRef.current = true;
-       setInvitationModalVisible(true);
-       willShowModal = true;
+        setInvitation({ id: idStr });
+        setInviteModalReady(false);
+        // Arm ref BEFORE setState to block the useEffect prematurely
+        willShowModalRef.current = true;
+        setInvitationModalVisible(true);
+        willShowModal = true;
 
-        // clean URL
+        // Clean URL
         try {
           if (id) router.replace(`/challenge-details/${id}` as any);
         } catch (e) {
@@ -294,21 +318,23 @@ useEffect(() => {
       } finally {
         inviteOpenGuardRef.current = false;
         if (!willShowModal) {
+          // No modal to show → safe to cut overlay
           setInviteLoading(false);
           setDeeplinkBooting(false);
+          try { (globalThis as any).__INVITE_BOOT_OFF__?.(); } catch {}
         }
+        // If willShowModal=true, overlay stays up until signalModalVisible() is called
       }
     },
     [id, paramsId, router, cameFromDeeplinkRef]
   );
 
-  // ✅ Réagit UNIQUEMENT au param expo-router (?invite=...)
+  // ─── React to expo-router ?invite= param ─────────────────────────────────
   useEffect(() => {
     if (!paramsInvite) return;
     openFromParamOrUrl(String(paramsInvite));
   }, [paramsInvite, openFromParamOrUrl]);
 
-  // petit helper exposé (tu l’utilises déjà ailleurs)
   const isHandoffBlocking = inviteLoading || deeplinkBooting;
 
   return {
@@ -319,7 +345,7 @@ useEffect(() => {
     invitationModalVisible,
     invitation,
 
-    // setters (pour garder ton code JSX inchangé)
+    // setters
     setDeeplinkBooting,
     setInviteLoading,
     setInviteModalReady,
@@ -336,5 +362,8 @@ useEffect(() => {
     clearInviteParam,
     markInviteAsHandled,
     isHandoffBlocking,
+
+    // ─── NEW: signal that Modal is visually on-screen ───────────────────
+    signalModalVisible,
   };
 }
