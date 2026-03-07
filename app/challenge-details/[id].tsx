@@ -2719,41 +2719,36 @@ const scrollContentStyle = useMemo(
 
         {/* ✅ UPGRADE: Barre animée avec shine */}
         <View
-          onLayout={(e) => setSoloBarWidth(e.nativeEvent.layout.width)}
-          accessibilityRole="progressbar"
-          accessibilityLiveRegion="polite"
-          accessibilityValue={{ min: 0, max: activeSelectedDays || 0, now: activeCompletedDays || 0 }}
-          style={[
-            styles.progressBarBackground,
-            {
-              backgroundColor: currentTheme.colors.border,
-              overflow: "hidden",
-              position: "relative",
-            },
-          ]}
-        >
-          <Animated.View style={[{ height: "100%", borderRadius: 999, overflow: "hidden", minWidth: 0 }, progressBarAnimStyle]}>
-            <LinearGradient
-              colors={isDarkMode ? ["#FF9F1C", "#FFD700"] : [currentTheme.colors.primary, currentTheme.colors.secondary]}
-              start={{ x: 0, y: 0 }}
-              end={{ x: 1, y: 0 }}
-              style={StyleSheet.absoluteFill}
-            />
-            {/* Shine beam : translateX animé sur le parent, skewX statique sur l'enfant */}
-            <Animated.View
-              style={[
-                { position: "absolute", top: 0, bottom: 0, width: 50 },
-                shimmerBarStyle,
-              ]}
-            >
-              <View style={{
-                position: "absolute",
-                top: 0, bottom: 0, left: 0, right: 0,
-                backgroundColor: "rgba(255,255,255,0.20)",
-                transform: [{ skewX: "-18deg" }],
-              }} />
-            </Animated.View>
-        </View>
+  onLayout={(e) => setSoloBarWidth(e.nativeEvent.layout.width)}
+  accessibilityRole="progressbar"
+  accessibilityLiveRegion="polite"
+  accessibilityValue={{ min: 0, max: activeSelectedDays || 0, now: activeCompletedDays || 0 }}
+  style={[
+    styles.progressBarBackground,
+    {
+      backgroundColor: currentTheme.colors.border,
+      overflow: "hidden",
+      position: "relative",
+    },
+  ]}
+>
+  <Animated.View style={[{ height: "100%", borderRadius: 999, overflow: "hidden", minWidth: 0 }, progressBarAnimStyle]}>
+    <LinearGradient
+      colors={isDarkMode ? ["#FF9F1C", "#FFD700"] : [currentTheme.colors.primary, currentTheme.colors.secondary]}
+      start={{ x: 0, y: 0 }}
+      end={{ x: 1, y: 0 }}
+      style={StyleSheet.absoluteFill}
+    />
+    <Animated.View style={[{ position: "absolute", top: 0, bottom: 0, width: 50 }, shimmerBarStyle]}>
+      <View style={{
+        position: "absolute",
+        top: 0, bottom: 0, left: 0, right: 0,
+        backgroundColor: "rgba(255,255,255,0.20)",
+        transform: [{ skewX: "-18deg" }],
+      }} />
+    </Animated.View>
+  </Animated.View>
+</View>
         {/* Mini stats */}
         <View style={{ flexDirection: "row", justifyContent: "center", marginTop: 6 }}>
           <Text
