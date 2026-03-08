@@ -93,7 +93,7 @@ const authFailsafe = setTimeout(() => {
             await setDoc(doc(db, "users", uid), {
               uid,
               email: firebaseUser.email ?? "",
-              username: firebaseUser.displayName ?? "user",
+              username: firebaseUser.displayName ?? firebaseUser.email?.split("@")[0] ?? "user",
               bio: "",
               location: "",
               profileImage: "",

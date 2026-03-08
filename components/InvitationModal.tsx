@@ -152,7 +152,7 @@ const InvitationModal: React.FC<InvitationModalProps> = ({
   // The overlay is controlled independently — we show modal when data is ready
   // externalLoading only affects what we RENDER inside (spinner vs content)
   // But the Modal itself must be visible for onShow to fire → overlay can cut
-  const modalVisible = isShown && !fetching;
+  const modalVisible = isShown;
 
   useEffect(() => {
     mountedRef.current = true;
@@ -372,28 +372,32 @@ const InvitationModal: React.FC<InvitationModalProps> = ({
     load();
   }, [isShown, inviteId, challengeId, t, i18n.language, closeAll]);
 
-  // ─── handleModalShow: fired by Modal's onShow event ──────────────────────
-  // This is the ONLY place where we signal the overlay it's safe to cut
-  const handleModalShow = useCallback(() => {
-    // Signal useInviteHandoff that modal is visible
-    onModalVisible?.();
-    // Signal InvitationModal's parent (challenge-details) that we're loaded
-    if (loadComplete) {
-      onLoaded?.();
-    }
-  }, [onModalVisible, onLoaded, loadComplete]);
+  const onShowFiredRef = useRef(false);
 
-  // ─── Fallback: if Modal is already visible but onShow didn't fire ─────────
-  // (can happen in some RN versions with animationType="none")
-  useEffect(() => {
-    if (!modalVisible || !loadComplete) return;
-    // Give the native Modal 400ms to render before firing as fallback
-    const t = setTimeout(() => {
-      onModalVisible?.();
-      onLoaded?.();
-    }, 400);
-    return () => clearTimeout(t);
-  }, [modalVisible, loadComplete]); // eslint-disable-line
+const handleModalShow = useCallback(() => {
+  if (onShowFiredRef.current) return;  // ← anti double-fire
+  onShowFiredRef.current = true;
+  onModalVisible?.();
+  if (loadComplete) onLoaded?.();
+}, [onModalVisible, onLoaded, loadComplete]);
+
+useEffect(() => {
+  if (!modalVisible || !loadComplete) return;
+  const t = setTimeout(() => {
+    if (onShowFiredRef.current) return;  // ← déjà géré par onShow
+    onShowFiredRef.current = true;
+    onModalVisible?.();
+    onLoaded?.();
+  }, 400);
+  return () => clearTimeout(t);
+}, [modalVisible, loadComplete]);
+
+// Reset du ref à chaque nouvelle invitation
+useEffect(() => {
+  if (!isShown) {
+    onShowFiredRef.current = false;
+  }
+}, [isShown]);
 
   // ─── Re-translate when language changes ──────────────────────────────────
   useEffect(() => {

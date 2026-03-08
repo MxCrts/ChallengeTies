@@ -93,16 +93,15 @@ export function useInviteHandoff({
 
   // ─── Hard stop: after modal closes, nothing should block screen ──────────
   useEffect(() => {
-    if (invitationModalVisible) {
-      willShowModalRef.current = false;
-      return;
-    }
-    if (willShowModalRef.current) return;
-    setInviteLoading(false);
-    setDeeplinkBooting(false);
-    setModalConfirmedVisible(false);
-    try { hideRootInviteHandoff(); } catch {}
-  }, [invitationModalVisible, hideRootInviteHandoff]);
+  if (invitationModalVisible) {
+    return; // ← juste return, on ne touche PLUS au ref
+  }
+  if (willShowModalRef.current) return;
+  setInviteLoading(false);
+  setDeeplinkBooting(false);
+  setModalConfirmedVisible(false);
+  try { hideRootInviteHandoff(); } catch {}
+}, [invitationModalVisible, hideRootInviteHandoff]);
 
   // ─── Suppress inbox invites when arriving via ?invite= ───────────────────
   useEffect(() => {
