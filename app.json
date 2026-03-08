@@ -99,6 +99,14 @@
     "plugins": [
       "expo-router",
       [
+    "expo-build-properties",
+    {
+      "ios": {
+        "useModularHeaders": true
+      }
+    }
+  ],
+      [
         "expo-splash-screen",
         {
           "image": "./assets/images/splash.png",

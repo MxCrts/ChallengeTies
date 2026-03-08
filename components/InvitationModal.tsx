@@ -1,6 +1,7 @@
 // components/InvitationModal.tsx
 // ✅ Fix overlay timing: overlay only cuts AFTER Modal is confirmed on-screen
-// Logic identical, UI identical — only the onLoaded/onModalVisible flow changed
+// ✅ Fix flicker on ColorOS/Oppo: onShowFiredRef resets on inviteId change
+// ✅ Fix fallback delay: 600ms on Android (ColorOS sometimes silent on onShow)
 import React, {
   useEffect,
   useMemo,
@@ -141,17 +142,11 @@ const InvitationModal: React.FC<InvitationModalProps> = ({
   const [errorMsg, setErrorMsg] = useState<string>("");
   const [reduceMotion, setReduceMotion] = useState(false);
 
-  // ─── NEW: tracks whether load() has completed (data ready) ───────────────
   const [loadComplete, setLoadComplete] = useState(false);
 
   const mountedRef = useRef(true);
   const lastLoadKeyRef = useRef<string>("");
   const isShown = !!visible && !!inviteId;
-
-  // ─── KEY CHANGE: modalVisible no longer depends on externalLoading ────────
-  // The overlay is controlled independently — we show modal when data is ready
-  // externalLoading only affects what we RENDER inside (spinner vs content)
-  // But the Modal itself must be visible for onShow to fire → overlay can cut
   const modalVisible = isShown;
 
   useEffect(() => {
@@ -250,9 +245,6 @@ const InvitationModal: React.FC<InvitationModalProps> = ({
     return { isTiny, sidePad, maxW, maxH, safeTop, safeBot };
   }, [width, height, insets.top, insets.bottom]);
 
-  // ─── CORE FIX: load() sets loadComplete=true, does NOT call onLoaded() ───
-  // onLoaded() is called from Modal's onShow (via handleModalShow)
-  // This guarantees: overlay cuts only AFTER modal is physically on-screen
   useEffect(() => {
     const load = async () => {
       if (!isShown || !inviteId) return;
@@ -346,7 +338,7 @@ const InvitationModal: React.FC<InvitationModalProps> = ({
           });
         } catch {}
 
-        // ─── Signal phase 3 to root overlay (data is ready, modal about to show) ─
+        // Signal phase 3 to root overlay
         try {
           const g = globalThis as any;
           if (typeof g.__INVITE_BOOT_SET_PHASE__ === "function") {
@@ -361,9 +353,6 @@ const InvitationModal: React.FC<InvitationModalProps> = ({
       } finally {
         if (mountedRef.current && lastLoadKeyRef.current === loadKey) {
           setFetching(false);
-          // ─── CRITICAL: mark load as complete but DON'T call onLoaded() yet ────
-          // onLoaded() will be called from handleModalShow (onShow event)
-          // which fires only when the Modal is physically visible on screen
           setLoadComplete(true);
         }
       }
@@ -372,34 +361,37 @@ const InvitationModal: React.FC<InvitationModalProps> = ({
     load();
   }, [isShown, inviteId, challengeId, t, i18n.language, closeAll]);
 
+  // ─── onShow handler ───────────────────────────────────────────────────────
   const onShowFiredRef = useRef(false);
 
-const handleModalShow = useCallback(() => {
-  if (onShowFiredRef.current) return;  // ← anti double-fire
-  onShowFiredRef.current = true;
-  onModalVisible?.();
-  if (loadComplete) onLoaded?.();
-}, [onModalVisible, onLoaded, loadComplete]);
-
-useEffect(() => {
-  if (!modalVisible || !loadComplete) return;
-  const t = setTimeout(() => {
-    if (onShowFiredRef.current) return;  // ← déjà géré par onShow
+  const handleModalShow = useCallback(() => {
+    if (onShowFiredRef.current) return;
     onShowFiredRef.current = true;
     onModalVisible?.();
-    onLoaded?.();
-  }, 400);
-  return () => clearTimeout(t);
-}, [modalVisible, loadComplete]);
+    if (loadComplete) onLoaded?.();
+  }, [onModalVisible, onLoaded, loadComplete]);
 
-// Reset du ref à chaque nouvelle invitation
-useEffect(() => {
-  if (!isShown) {
+  // ✅ FIX COLOROS: fallback plus long sur Android (onShow parfois silencieux)
+  useEffect(() => {
+    if (!modalVisible || !loadComplete) return;
+    // 600ms sur Android pour laisser le Modal se rendre physiquement
+    const delay = Platform.OS === "android" ? 600 : 400;
+    const timer = setTimeout(() => {
+      if (onShowFiredRef.current) return;
+      onShowFiredRef.current = true;
+      onModalVisible?.();
+      onLoaded?.();
+    }, delay);
+    return () => clearTimeout(timer);
+  }, [modalVisible, loadComplete]);
+
+  // ✅ FIX PRINCIPAL FLICKER: reset sur inviteId, pas sur isShown
+  // Sur Oppo/ColorOS, isShown peut osciller brièvement → ref pas resetée → onLoaded jamais appelé
+  useEffect(() => {
     onShowFiredRef.current = false;
-  }
-}, [isShown]);
+  }, [inviteId]);
 
-  // ─── Re-translate when language changes ──────────────────────────────────
+  // Re-translate when language changes
   useEffect(() => {
     if (!isShown || !challengeChatId) return;
     setChallengeTitle((prev) => {
@@ -420,6 +412,8 @@ useEffect(() => {
       setChallengeChatId("");
       setChallengeTitle("");
       setInviterUsername("");
+      // ✅ FIX: reset aussi le ref ici pour garantir le reset à la fermeture
+      onShowFiredRef.current = false;
     }
   }, [isShown]);
 
@@ -428,7 +422,7 @@ useEffect(() => {
     setShowRestartConfirm(false);
   }, [inviteId]);
 
-  // ===== Actions (LOGIC UNCHANGED) ==========================================
+  // ===== Actions =============================================================
 
   const handleAccept = useCallback(async () => {
     if (loading || fetching) return;
@@ -1007,7 +1001,6 @@ useEffect(() => {
       statusBarTranslucent
       presentationStyle="overFullScreen"
       onRequestClose={handleCloseRequest}
-      // ─── KEY FIX: onShow fires when Modal is physically visible on screen ─
       onShow={handleModalShow}
       onDismiss={() => {
         try { (globalThis as any).__HIDE_INVITE_HANDOFF__?.(); } catch {}

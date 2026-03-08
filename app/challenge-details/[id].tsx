@@ -996,8 +996,10 @@ const effectiveInviteId = invitation?.id || inviteParam || null;
 const inviteParamActive =
   !!inviteParam && consumedInviteParamRef.current !== inviteParam;
 
-const effectiveInviteVisible =
-  invitationModalVisible || inviteParamActive;
+const effectiveInviteVisible = useMemo(
+  () => invitationModalVisible || inviteParamActive,
+  [invitationModalVisible, inviteParamActive]
+);
 
 const clearInviteParamSafe = useCallback(() => {
   try {
