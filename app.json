@@ -2,7 +2,7 @@
   "expo": {
     "name": "ChallengeTies",
     "slug": "ChallengeMe",
-    "version": "1.0.7",
+    "version": "1.0.8",
     "orientation": "portrait",
     "icon": "./assets/images/icon.png",
     "splash": {
@@ -99,13 +99,19 @@
     "plugins": [
       "expo-router",
       [
-    "expo-build-properties",
-    {
-      "ios": {
-        "useModularHeaders": true
-      }
+  "expo-build-properties",
+  {
+    "ios": {
+      "useModularHeaders": true,
+      "extraPods": [
+        {
+          "name": "GoogleUtilities",
+          "modular_headers": true
+        }
+      ]
     }
-  ],
+  }
+],
       [
         "expo-splash-screen",
         {
