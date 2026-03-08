@@ -2734,7 +2734,7 @@ setPostWelcomeAbsorbArmed(true);
               </TouchableOpacity>
 
               {/* ✨ NEW: social proof stat bar */}
-              <View style={staticStyles.heroStatBar}>
+              <View style={[staticStyles.heroStatBar, staticStyles.heroStatBarSafe]}>
                 <View style={staticStyles.heroStatItem}>
                   <Ionicons name="flame" size={normalize(13)} color="#F97316" />
                   <Text style={staticStyles.heroStatText}>
@@ -3784,6 +3784,12 @@ const staticStyles = StyleSheet.create({
     flex: 1,
     backgroundColor: "transparent",
   },
+  heroStatBarSafe: {
+  backgroundColor: "rgba(0,0,0,0.28)",
+  borderRadius: normalize(999),
+  paddingHorizontal: normalize(14),
+  paddingVertical: normalize(6),
+},
   todayHubSoloLink: {
     fontSize: normalize(12.6),
     fontFamily: "Comfortaa_700Bold",
@@ -4627,6 +4633,8 @@ const staticStyles = StyleSheet.create({
     backgroundColor: "rgba(15,23,42,0.42)",
     borderWidth: StyleSheet.hairlineWidth,
     borderColor: "rgba(255,255,255,0.14)",
+    flexShrink: 1, 
+    maxWidth: "60%",
   },
   todayHubBadgeText: {
     fontSize: normalize(11),
@@ -4645,6 +4653,7 @@ const staticStyles = StyleSheet.create({
     borderWidth: StyleSheet.hairlineWidth,
     borderColor: "rgba(255,255,255,0.10)",
     maxWidth: "55%",
+    flexShrink: 1, 
   },
   todayHubMetaText: {
     fontSize: normalize(11.2),
@@ -4732,11 +4741,13 @@ const staticStyles = StyleSheet.create({
     right: 0,
   },
   heroContent: {
-    alignItems: "center",
-    paddingHorizontal: SPACING,
-    width: "100%",
-    paddingBottom: normalize(20),
-  },
+  alignItems: "center",
+  paddingHorizontal: SPACING,
+  width: "100%",
+  paddingBottom: normalize(20),
+  justifyContent: "flex-end",
+  flex: 1,
+},
   heroBrandRow: {
     width: "100%",
     maxWidth: CONTENT_W,

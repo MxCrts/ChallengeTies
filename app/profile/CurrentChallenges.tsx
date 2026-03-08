@@ -17,7 +17,7 @@ import {
   StatusBar,
   Platform,
   AccessibilityInfo,
-   I18nManager,
+  I18nManager,
 } from "react-native";
 import { LinearGradient } from "expo-linear-gradient";
 import { useCurrentChallenges } from "../../context/CurrentChallengesContext";
@@ -26,8 +26,7 @@ import { useRouter } from "expo-router";
 import { Ionicons } from "@expo/vector-icons";
 import ConfettiCannon from "react-native-confetti-cannon";
 import * as Progress from "react-native-progress";
-import Animated,
-{
+import Animated, {
   FadeInUp,
   FadeOutRight,
   ZoomIn,
@@ -52,8 +51,8 @@ import { Image as ExpoImage } from "expo-image";
 
 const SPACING = 18;
 const { width: SCREEN_WIDTH, height: SCREEN_HEIGHT } = Dimensions.get("window");
-const ITEM_WIDTH = SCREEN_WIDTH * 0.9;
-const ITEM_HEIGHT = SCREEN_WIDTH * 0.42;
+const ITEM_WIDTH = SCREEN_WIDTH * 0.92;
+const ITEM_HEIGHT = SCREEN_WIDTH * 0.44;
 const ROW_HEIGHT = ITEM_HEIGHT + SPACING * 1.5;
 
 const normalizeSize = (size: number) => {
@@ -72,7 +71,6 @@ const getItemLayoutConst = (_: any, index: number) => ({
 const withAlpha = (color: string, alpha: number) => {
   const clamp = (n: number, min = 0, max = 1) => Math.min(Math.max(n, min), max);
   const a = clamp(alpha);
-
   if (/^rgba?\(/i.test(color)) {
     const nums = color.match(/[\d.]+/g) || [];
     const [r = "0", g = "0", b = "0"] = nums;
@@ -109,8 +107,6 @@ interface Challenge {
   selectedDays: number;
   completedDays: number;
   lastMarkedDate?: string | null;
-
-  // champs duo optionnels, si présents dans CurrentChallenges
   duo?: boolean;
   duoPartnerId?: string;
   duoPartnerUsername?: string;
@@ -136,6 +132,12 @@ export default function CurrentChallenges() {
   const tabBarHeight = useTabBarHeightSafe();
   const [adHeight, setAdHeight] = useState(0);
 
+  // ✅ FIX iOS — swipe → tap non intentionnel
+  // Quand le Swipeable s'ouvre/ferme, on bloque onPress pendant 350ms
+  // pour éviter que le relâchement du doigt soit capturé comme un tap.
+  const swipingRef = useRef(false);
+  const swipeTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+
   const bottomPadding = useMemo(
     () =>
       normalizeSize(90) +
@@ -152,13 +154,11 @@ export default function CurrentChallenges() {
     [isDarkMode]
   );
 
-  // 🔊 Son de gain (optionnel)
+  // 🔊 Sons de gain
   const gainWhooshRef = useRef<Audio.Sound | null>(null);
   const gainDingRef = useRef<Audio.Sound | null>(null);
   const gainSparkleRef = useRef<Audio.Sound | null>(null);
   const isPlayingFxRef = useRef(false);
-
-  
 
   useEffect(() => {
     let mounted = true;
@@ -207,7 +207,7 @@ export default function CurrentChallenges() {
     };
   }, []);
 
-  // ✅ Respect Reduce Motion (haptics)
+  // ✅ Respect Reduce Motion
   useEffect(() => {
     let mounted = true;
     AccessibilityInfo.isReduceMotionEnabled()
@@ -224,7 +224,14 @@ export default function CurrentChallenges() {
     };
   }, []);
 
-  // 🎵 Stack audio premium (whoosh -> ding -> sparkle) + haptic
+  // Nettoyage timeout swipe au démontage
+  useEffect(() => {
+    return () => {
+      if (swipeTimeoutRef.current) clearTimeout(swipeTimeoutRef.current);
+    };
+  }, []);
+
+  // 🎵 Stack audio premium (whoosh → ding → sparkle)
   const playSuccessFx = useCallback(async () => {
     if (isPlayingFxRef.current) return;
     try {
@@ -253,9 +260,7 @@ export default function CurrentChallenges() {
     if (!currentChallenges || !Array.isArray(currentChallenges)) {
       return [];
     }
-
     const validChallenges = currentChallenges.filter((item: any) => item.id);
-
     const uniqueChallenges = Array.from(
       new Map(
         validChallenges.map((item: any) => [
@@ -264,7 +269,6 @@ export default function CurrentChallenges() {
         ])
       ).values()
     ) as Challenge[];
-
     return uniqueChallenges.map((item) => ({
       ...item,
       title: item.chatId
@@ -289,13 +293,12 @@ export default function CurrentChallenges() {
   // 🎯 Animation Reanimated pour le "+1🏆"
   const gainOpacity = useSharedValue(0);
   const gainY = useSharedValue(0);
-
   const gainStyle = useAnimatedStyle(() => ({
     opacity: gainOpacity.value,
     transform: [{ translateY: gainY.value }],
   }));
 
-  // 💣 Confirmation abandon challenge (remplace Alert)
+  // 💣 Confirmation abandon challenge
   const [pendingRemoval, setPendingRemoval] = useState<{
     id: string;
     selectedDays: number;
@@ -313,7 +316,6 @@ export default function CurrentChallenges() {
         if (result?.success) {
           setConfettiActive(true);
           await playSuccessFx();
-          // 💫 effet mini-gain
           setGainKey(key);
           gainOpacity.value = withSequence(
             withTiming(1, { duration: 200, easing: Easing.out(Easing.ease) }),
@@ -327,7 +329,6 @@ export default function CurrentChallenges() {
             withTiming(0, { duration: 600, easing: Easing.in(Easing.quad) })
           );
           setTimeout(() => setGainKey(null), 900);
-        } else {
         }
       } catch (err) {
         console.error("Erreur markToday:", err);
@@ -340,21 +341,13 @@ export default function CurrentChallenges() {
         setMarkingId(null);
       }
     },
-    [
-      markToday,
-      t,
-      markingId,
-      playSuccessFx,
-      gainOpacity,
-      gainY,
-      reduceMotion,
-    ]
+    [markToday, t, markingId, playSuccessFx, gainOpacity, gainY, reduceMotion]
   );
 
+  // Tokens design adaptatifs dark/light
   const chipBg = isDarkMode ? "rgba(255,255,255,0.12)" : "rgba(0,0,0,0.06)";
-const chipBorder = isDarkMode ? "rgba(255,255,255,0.18)" : "rgba(0,0,0,0.10)";
-const chipText = isDarkMode ? "rgba(255,255,255,0.92)" : "#0B0B10";
-const chipShadow = isDarkMode ? "rgba(0,0,0,0.55)" : "rgba(255,255,255,0.55)";
+  const chipBorder = isDarkMode ? "rgba(255,255,255,0.18)" : "rgba(0,0,0,0.10)";
+  const chipText = isDarkMode ? "rgba(255,255,255,0.92)" : "#0B0B10";
 
   const handleRemove = useCallback(
     (id: string, selectedDays: number, index: number, title?: string) => {
@@ -368,21 +361,20 @@ const chipShadow = isDarkMode ? "rgba(0,0,0,0.55)" : "rgba(255,255,255,0.55)";
 
   const confirmRemove = useCallback(async () => {
     if (!pendingRemoval) return;
-    const { id, selectedDays, index, title } = pendingRemoval;
+    const { id, selectedDays, index } = pendingRemoval;
     try {
       setLocalChallenges((prev) =>
         prev.filter((c) => !(c.id === id && c.selectedDays === selectedDays))
       );
       await removeChallenge(id, selectedDays);
       swipeableRefs.current[index]?.close();
-
     } catch (err) {
       console.error("Erreur removeChallenge:", err);
       swipeableRefs.current[index]?.close();
     } finally {
       setPendingRemoval(null);
     }
-  }, [pendingRemoval, removeChallenge, t]);
+  }, [pendingRemoval, removeChallenge]);
 
   const cancelRemove = useCallback(() => {
     if (pendingRemoval) {
@@ -398,7 +390,9 @@ const chipShadow = isDarkMode ? "rgba(0,0,0,0.55)" : "rgba(255,255,255,0.55)";
         <TouchableOpacity
           activeOpacity={0.9}
           style={styles.trashButton}
-          onPress={() => handleRemove(item.id, item.selectedDays, index, item.title)}
+          onPress={() =>
+            handleRemove(item.id, item.selectedDays, index, item.title)
+          }
           accessible
           accessibilityRole="button"
           accessibilityLabel={String(t("deleteChallenge"))}
@@ -411,11 +405,7 @@ const chipShadow = isDarkMode ? "rgba(0,0,0,0.55)" : "rgba(255,255,255,0.55)";
             end={{ x: 1, y: 1 }}
             style={StyleSheet.absoluteFillObject}
           />
-          <Ionicons
-            name="trash-outline"
-            size={normalizeSize(26)}
-            color="#fff"
-          />
+          <Ionicons name="trash-outline" size={normalizeSize(26)} color="#fff" />
           <Text style={styles.trashLabel}>{t("delete")}</Text>
         </TouchableOpacity>
       </View>
@@ -425,6 +415,10 @@ const chipShadow = isDarkMode ? "rgba(0,0,0,0.55)" : "rgba(255,255,255,0.55)";
 
   const navigateToDetail = useCallback(
     (item: Challenge) => {
+      // ✅ FIX iOS swipe → tap : on bloque la navigation si un swipe
+      // vient de se terminer (flag actif 350ms après la fin du gesture)
+      if (swipingRef.current) return;
+
       const titleParam = encodeURIComponent(item.title);
       const catParam = encodeURIComponent(item.category || "");
       const descParam = encodeURIComponent(item.description || "");
@@ -452,23 +446,22 @@ const chipShadow = isDarkMode ? "rgba(0,0,0,0.55)" : "rgba(255,255,255,0.55)";
           (item.completedDays || 0) / Math.max(1, item.selectedDays || 1)
         )
       );
-      const borderColor = isDarkMode
-  ? withAlpha("#FFFFFF", 0.16)
-  : withAlpha("#000000", 0.10);
-
-const ringGrad = isDarkMode
-  ? (["rgba(255,255,255,0.22)", "rgba(255,255,255,0.06)", "rgba(255,255,255,0.14)"] as const)
-  : (["rgba(0,0,0,0.14)", "rgba(0,0,0,0.05)", "rgba(0,0,0,0.10)"] as const);
-
       const percentLabel = `${Math.round(progress * 100)}%`;
+      const isDuo = !!item.duo;
+      const partnerName = item.duoPartnerUsername;
+
+      const borderColor = isDarkMode
+        ? withAlpha("#FFFFFF", 0.14)
+        : withAlpha("#000000", 0.08);
+
+      const ringGrad = isDarkMode
+        ? (["rgba(255,255,255,0.20)", "rgba(255,255,255,0.04)", "rgba(255,255,255,0.12)"] as const)
+        : (["rgba(0,0,0,0.12)", "rgba(0,0,0,0.03)", "rgba(0,0,0,0.08)"] as const);
 
       const animatedStyle = {
         transform: [{ scale: marked ? 0.98 : 1 }],
         opacity: marked ? 0.9 : 1,
       };
-
-      const isDuo = !!item.duo;
-      const partnerName = item.duoPartnerUsername;
 
       return (
         <Animated.View
@@ -488,18 +481,39 @@ const ringGrad = isDarkMode
               }}
               renderRightActions={() => renderRightActions(item, index)}
               overshootRight={false}
+              // ✅ FIX iOS : on lève le flag dès que le gesture commence
+              // à ouvrir ou fermer — et on le maintient 350ms après
+              // la fin pour absorber le tap fantôme du relâchement.
+              onSwipeableWillOpen={() => {
+                swipingRef.current = true;
+                if (swipeTimeoutRef.current)
+                  clearTimeout(swipeTimeoutRef.current);
+              }}
               onSwipeableOpen={() => {
                 if (!reduceMotion) {
                   Haptics.impactAsync(
                     Haptics.ImpactFeedbackStyle.Light
                   ).catch(() => {});
                 }
+                swipeTimeoutRef.current = setTimeout(() => {
+                  swipingRef.current = false;
+                }, 350);
+              }}
+              onSwipeableWillClose={() => {
+                swipingRef.current = true;
+                if (swipeTimeoutRef.current)
+                  clearTimeout(swipeTimeoutRef.current);
+              }}
+              onSwipeableClose={() => {
+                swipeTimeoutRef.current = setTimeout(() => {
+                  swipingRef.current = false;
+                }, 350);
               }}
             >
               <TouchableOpacity
                 style={styles.cardContainer}
                 onPress={() => navigateToDetail(item)}
-                activeOpacity={0.9}
+                activeOpacity={0.92}
                 accessibilityLabel={String(
                   t("viewChallengeDetails", { title: item.title })
                 )}
@@ -507,312 +521,387 @@ const ringGrad = isDarkMode
                 accessibilityRole="button"
                 testID={`challenge-card-${key}`}
               >
-                {/* Glow subtil derrière la card */}
-                {/* ✅ Ring gradient premium */}
-<LinearGradient
-  colors={ringGrad}
-  start={{ x: 0, y: 0 }}
-  end={{ x: 1, y: 1 }}
-  style={styles.cardRing}
->
-  {/* ✅ Halo soft (pas de shadow) */}
-  <View pointerEvents="none" style={[styles.cardHalo, { backgroundColor: withAlpha(currentTheme.colors.primary, isDarkMode ? 0.10 : 0.06) }]} />
-
-  {/* ✅ Card */}
-  <LinearGradient
-    colors={[
-      withAlpha(currentTheme.colors.cardBackground, isDarkMode ? 0.92 : 0.96),
-      withAlpha(currentTheme.colors.cardBackground, isDarkMode ? 0.78 : 0.90),
-    ]}
-    style={[styles.card, { borderColor }]}
-  >
-    {/* ✅ Sheen diagonal (Keynote reflection) */}
-    <LinearGradient
-      pointerEvents="none"
-      colors={[
-        "transparent",
-        isDarkMode ? "rgba(255,255,255,0.10)" : "rgba(255,255,255,0.55)",
-        "transparent",
-      ]}
-      start={{ x: 0, y: 0 }}
-      end={{ x: 1, y: 1 }}
-      style={styles.cardSheen}
-    />
-
-                  <ExpoImage
-                    source={{
-                      uri:
-                        item.imageUrl ||
-                        "https://via.placeholder.com/70?text=Challenge",
-                    }}
-                    style={styles.cardImage}
-                    contentFit="cover"
-                    transition={200}
-                    placeholder={{
-                      blurhash: "LKO2?U%2Tw=w]~RBVZRi};RPxuwH",
-                    }}
-                    accessibilityLabel={String(
-                      t("challengeImage", { title: item.title })
-                    )}
+                {/* ── Ring gradient (bordure subtile premium) ── */}
+                <LinearGradient
+                  colors={ringGrad}
+                  start={{ x: 0, y: 0 }}
+                  end={{ x: 1, y: 1 }}
+                  style={styles.cardRing}
+                >
+                  {/* Halo coloré positionné coin haut-droit */}
+                  <View
+                    pointerEvents="none"
+                    style={[
+                      styles.cardHalo,
+                      {
+                        backgroundColor: withAlpha(
+                          currentTheme.colors.primary,
+                          isDarkMode ? 0.10 : 0.06
+                        ),
+                      },
+                    ]}
                   />
 
-                  <View style={styles.cardContent}>
-                    {/* Ligne haute : catégorie + tag duo */}
-                    <View style={styles.cardTopRow}>
-                      <View style={styles.categoryPill}>
-                        <Text
-                          style={[
-                            styles.categoryText,
-                            { color: currentTheme.colors.textSecondary },
-                          ]}
-                          numberOfLines={1}
-                        >
-                          {item.category}
-                        </Text>
-                      </View>
-                      {isDuo && (
-                        <View style={styles.duoPill}>
-                          <Ionicons
-                            name="people-outline"
-                            size={normalizeSize(14)}
-                            color="#0b1120"
-                          />
-                          <Text style={styles.duoPillText} numberOfLines={1}>
-                            {t("duoModeShort", { defaultValue: "Duo" })}
-                          </Text>
-                        </View>
-                      )}
-                    </View>
+                  {/* ── Card principale ── */}
+                  <LinearGradient
+                    colors={[
+                      withAlpha(
+                        currentTheme.colors.cardBackground,
+                        isDarkMode ? 0.93 : 0.97
+                      ),
+                      withAlpha(
+                        currentTheme.colors.cardBackground,
+                        isDarkMode ? 0.78 : 0.90
+                      ),
+                    ]}
+                    style={[styles.card, { borderColor }]}
+                  >
+                    {/* Sheen diagonal façon Keynote */}
+                    <LinearGradient
+                      pointerEvents="none"
+                      colors={[
+                        "transparent",
+                        isDarkMode
+                          ? "rgba(255,255,255,0.09)"
+                          : "rgba(255,255,255,0.55)",
+                        "transparent",
+                      ]}
+                      start={{ x: 0, y: 0 }}
+                      end={{ x: 1, y: 1 }}
+                      style={styles.cardSheen}
+                    />
 
-                    {/* Titre + méta jour / partenaire */}
-                    <View style={styles.cardTitleBlock}>
-                      <Text
+                    {/* ── Image + badge % ── */}
+                    <View style={styles.imageWrapper}>
+                      <ExpoImage
+                        source={{
+                          uri:
+                            item.imageUrl ||
+                            "https://via.placeholder.com/70?text=Challenge",
+                        }}
+                        style={styles.cardImage}
+                        contentFit="cover"
+                        transition={200}
+                        placeholder={{
+                          blurhash: "LKO2?U%2Tw=w]~RBVZRi};RPxuwH",
+                        }}
+                        accessibilityLabel={String(
+                          t("challengeImage", { title: item.title })
+                        )}
+                      />
+                      {/* Badge % progression superposé */}
+                      <View
                         style={[
-                          styles.challengeTitle,
+                          styles.imageBadge,
                           {
-                            color: isDarkMode
-                              ? currentTheme.colors.textPrimary
-                              : "#000000",
-                            writingDirection: I18nManager.isRTL ? "rtl" : "ltr",
-                            textAlign: I18nManager.isRTL ? "right" : "left",
+                            backgroundColor:
+                              isDarkMode
+                                ? "rgba(0,0,0,0.75)"
+                                : "rgba(0,0,0,0.58)",
                           },
                         ]}
-                        numberOfLines={1}
-                        ellipsizeMode="tail"
-                        adjustsFontSizeToFit
                       >
-                        {item.title}
-                      </Text>
+                        <Text style={styles.imageBadgeText}>
+                          {percentLabel}
+                        </Text>
+                      </View>
+                    </View>
 
-
-                      <View style={styles.metaRow}>
-                        {item.day !== undefined && (
+                    {/* ── Contenu droite ── */}
+                    <View style={styles.cardContent}>
+                      {/* Ligne haute : catégorie + tag duo */}
+                      <View style={styles.cardTopRow}>
+                        <View
+                          style={[
+                            styles.categoryPill,
+                            {
+                              backgroundColor: isDarkMode
+                                ? "rgba(255,255,255,0.09)"
+                                : "rgba(0,0,0,0.06)",
+                              borderColor: isDarkMode
+                                ? "rgba(255,255,255,0.12)"
+                                : "rgba(0,0,0,0.07)",
+                            },
+                          ]}
+                        >
                           <Text
                             style={[
-                              styles.challengeDay,
+                              styles.categoryText,
                               { color: currentTheme.colors.textSecondary },
                             ]}
                             numberOfLines={1}
                           >
-                            {String(t("day"))} {item.day}
-                          </Text>
-                        )}
-                        {isDuo && partnerName && (
-                          <Text
-                            style={[
-                              styles.partnerLabel,
-                              { color: currentTheme.colors.textSecondary },
-                            ]}
-                            numberOfLines={1}
-                          >
-                            {t("withUser", {
-                              defaultValue: "avec {{username}}",
-                              username: partnerName,
-                            })}
-                          </Text>
-                        )}
-                      </View>
-                    </View>
-
-                    {/* Progress + stats */}
-                    <View style={styles.progressRow}>
-                      <View style={styles.progressContainer}>
-  <View
-    pointerEvents="none"
-    style={[
-      styles.progressTrack,
-      { borderColor: isDarkMode ? "rgba(255,255,255,0.14)" : "rgba(0,0,0,0.08)" },
-    ]}
-  />
-  <Progress.Bar
-    progress={progress}
-    width={null}
-    height={normalizeSize(6)}
-    borderRadius={normalizeSize(999)}
-    color={currentTheme.colors.secondary}
-    unfilledColor="transparent"
-    borderWidth={0}
-    animationType="spring"
-    style={styles.progressBar}
-  />
-</View>
-
-                      <View style={styles.progressMeta}>
-                        
-                        <View style={[styles.progressChip, { backgroundColor: chipBg, borderColor: chipBorder }]}>
-  <Ionicons
-    name="flame-outline"
-    size={normalizeSize(13)}
-    color={currentTheme.colors.secondary}
-  />
-  <Text
-    style={[
-      styles.progressChipText,
-      {
-        color: chipText,
-        // ✅ lisible même sur écrans “agressifs”
-        textShadowColor: chipShadow,
-        textShadowRadius: 6,
-        textShadowOffset: { width: 0, height: 1 },
-      },
-    ]}
-    numberOfLines={1}
-    allowFontScaling
-  >
-    {percentLabel}
-  </Text>
-</View>
-                       <Text
-  style={[
-    styles.progressText,
-    {
-      color: isDarkMode
-        ? withAlpha(currentTheme.colors.textSecondary, 0.92)
-        : withAlpha("#0B0B10", 0.62),
-    },
-  ]}
->
-  {item.completedDays}/{item.selectedDays} {String(t("days"))}
-</Text>
-                      </View>
-                    </View>
-
-                    {/* Bouton marquer aujourd'hui */}
-                    <TouchableOpacity
-                      style={[
-                        styles.markTodayButton,
-                        (marked || markingId === key) &&
-                          styles.disabledMarkButton,
-                      ]}
-                      onPress={() => handleMarkToday(item.id, item.selectedDays)}
-                      disabled={marked || markingId === key}
-                      accessibilityLabel={
-                        marked
-                          ? t("alreadyMarkedToday", { title: item.title })
-                          : t("markToday", { title: item.title })
-                      }
-                      accessibilityHint={
-                        marked
-                          ? String(t("alreadyMarked"))
-                          : String(t("markTodayButton"))
-                      }
-                      accessibilityRole="button"
-                      testID={`mark-today-${key}`}
-                    >
-                      <LinearGradient
-                        colors={
-                          marked || markingId === key
-                            ? isDarkMode
-                              ? ["#4B5563", "#1F2937"]
-                              : ["#E5E7EB", "#D1D5DB"]
-                            : [
-                                currentTheme.colors.secondary,
-                                currentTheme.colors.primary,
-                              ]
-                        }
-                        style={styles.markTodayGradient}
-                      >
-                        <View style={styles.markTodayContent}>
-                          <Ionicons
-                            name={
-                              marked || markingId === key
-                                ? "checkmark-done-outline"
-                                : "sparkles-outline"
-                            }
-                            size={normalizeSize(16)}
-                            color={
-                              marked || markingId === key
-                                ? isDarkMode
-                                  ? "#F9FAFB"
-                                  : "#111827"
-                                : "#0b1120"
-                            }
-                          />
-                          <Text
-                            style={[
-                              styles.markTodayText,
-                              {
-                                color:
-                                  marked || markingId === key
-                                    ? isDarkMode
-                                      ? "#F9FAFB"
-                                      : "#111827"
-                                    : "#0b1120",
-                              },
-                            ]}
-                          >
-                            {marked
-                              ? t("alreadyMarked")
-                              : markingId === key
-                              ? t("markingInProgress", {
-                                  defaultValue: "Enregistrement…",
-                                })
-                              : t("markTodayButton")}
+                            {item.category}
                           </Text>
                         </View>
+                        {isDuo && (
+                          <View style={styles.duoPill}>
+                            <Ionicons
+                              name="people-outline"
+                              size={normalizeSize(13)}
+                              color="#0b1120"
+                            />
+                            <Text style={styles.duoPillText} numberOfLines={1}>
+                              {t("duoModeShort", { defaultValue: "Duo" })}
+                            </Text>
+                          </View>
+                        )}
+                      </View>
 
-                        {/* Petit point lumineux quand non marqué */}
-                        {!marked && markingId !== key && (
-                          <Animated.View
-                            entering={FadeInUp.delay(200)}
+                      {/* Titre + méta jour / partenaire */}
+                      <View style={styles.cardTitleBlock}>
+                        <Text
+                          style={[
+                            styles.challengeTitle,
+                            {
+                              color: isDarkMode
+                                ? currentTheme.colors.textPrimary
+                                : "#000000",
+                              writingDirection: I18nManager.isRTL
+                                ? "rtl"
+                                : "ltr",
+                              textAlign: I18nManager.isRTL ? "right" : "left",
+                            },
+                          ]}
+                          numberOfLines={1}
+                          ellipsizeMode="tail"
+                          adjustsFontSizeToFit
+                        >
+                          {item.title}
+                        </Text>
+                        <View style={styles.metaRow}>
+                          {item.day !== undefined && (
+                            <Text
+                              style={[
+                                styles.challengeDay,
+                                { color: currentTheme.colors.textSecondary },
+                              ]}
+                              numberOfLines={1}
+                            >
+                              {String(t("day"))} {item.day}
+                            </Text>
+                          )}
+                          {isDuo && partnerName && (
+                            <Text
+                              style={[
+                                styles.partnerLabel,
+                                { color: currentTheme.colors.textSecondary },
+                              ]}
+                              numberOfLines={1}
+                            >
+                              {t("withUser", {
+                                defaultValue: "avec {{username}}",
+                                username: partnerName,
+                              })}
+                            </Text>
+                          )}
+                        </View>
+                      </View>
+
+                      {/* ── Barre de progression ── */}
+                      <View style={styles.progressRow}>
+                        <View style={styles.progressContainer}>
+                          <View
+                            pointerEvents="none"
                             style={[
-                              styles.markTodayDot,
+                              styles.progressTrack,
                               {
-                                backgroundColor: withAlpha(
-                                  currentTheme.colors.secondary,
-                                  0.35
-                                ),
+                                borderColor: isDarkMode
+                                  ? "rgba(255,255,255,0.14)"
+                                  : "rgba(0,0,0,0.08)",
                               },
                             ]}
                           />
-                        )}
-
-                        {/* +1🏆 animé quand marqué */}
-                        {gainKey === key && (
-                          <Animated.View
-                            style={[gainStyle, styles.gainTrophyContainer]}
+                          <Progress.Bar
+                            progress={progress}
+                            width={null}
+                            height={normalizeSize(6)}
+                            borderRadius={normalizeSize(999)}
+                            color={currentTheme.colors.secondary}
+                            unfilledColor="transparent"
+                            borderWidth={0}
+                            animationType="spring"
+                            style={styles.progressBar}
+                          />
+                        </View>
+                        <View style={styles.progressMeta}>
+                          <View
+                            style={[
+                              styles.progressChip,
+                              {
+                                backgroundColor: chipBg,
+                                borderColor: chipBorder,
+                              },
+                            ]}
                           >
+                            <Ionicons
+                              name="flame-outline"
+                              size={normalizeSize(13)}
+                              color={currentTheme.colors.secondary}
+                            />
                             <Text
-                              style={{
-                                color: currentTheme.colors.secondary,
-                                fontSize: normalizeSize(13),
-                                fontWeight: "700",
-                                textShadowColor: withAlpha(
-                                  currentTheme.colors.primary,
-                                  0.3
-                                ),
-                                textShadowRadius: 6,
-                                includeFontPadding: false,
-                              }}
+                              style={[
+                                styles.progressChipText,
+                                { color: chipText },
+                              ]}
+                              numberOfLines={1}
+                              allowFontScaling
                             >
-                              +1🏆
+                              {percentLabel}
                             </Text>
-                          </Animated.View>
-                        )}
-                      </LinearGradient>
-                    </TouchableOpacity>
-                  </View>
-                </LinearGradient>
+                          </View>
+                          <Text
+                            style={[
+                              styles.progressText,
+                              {
+                                color: isDarkMode
+                                  ? withAlpha(
+                                      currentTheme.colors.textSecondary,
+                                      0.92
+                                    )
+                                  : withAlpha("#0B0B10", 0.62),
+                              },
+                            ]}
+                          >
+                            {item.completedDays}/{item.selectedDays}{" "}
+                            {String(t("days"))}
+                          </Text>
+                        </View>
+                      </View>
+
+                      {/* ── Bouton Marquer aujourd'hui ── */}
+                      <TouchableOpacity
+                        style={[
+                          styles.markTodayButton,
+                          (marked || markingId === key) &&
+                            styles.disabledMarkButton,
+                        ]}
+                        onPress={() =>
+                          handleMarkToday(item.id, item.selectedDays)
+                        }
+                        disabled={marked || markingId === key}
+                        accessibilityLabel={
+                          marked
+                            ? t("alreadyMarkedToday", { title: item.title })
+                            : t("markToday", { title: item.title })
+                        }
+                        accessibilityHint={
+                          marked
+                            ? String(t("alreadyMarked"))
+                            : String(t("markTodayButton"))
+                        }
+                        accessibilityRole="button"
+                        testID={`mark-today-${key}`}
+                      >
+                        <LinearGradient
+                          colors={
+                            marked || markingId === key
+                              ? isDarkMode
+                                ? ["#4B5563", "#1F2937"]
+                                : ["#E5E7EB", "#D1D5DB"]
+                              : [
+                                  currentTheme.colors.secondary,
+                                  currentTheme.colors.primary,
+                                ]
+                          }
+                          start={{ x: 0, y: 0 }}
+                          end={{ x: 1, y: 0 }}
+                          style={styles.markTodayGradient}
+                        >
+                          {/* Shine top quand actif */}
+                          {!marked && markingId !== key && (
+                            <LinearGradient
+                              pointerEvents="none"
+                              colors={[
+                                "rgba(255,255,255,0.22)",
+                                "transparent",
+                              ]}
+                              start={{ x: 0, y: 0 }}
+                              end={{ x: 0, y: 1 }}
+                              style={StyleSheet.absoluteFillObject}
+                            />
+                          )}
+                          <View style={styles.markTodayContent}>
+                            <Ionicons
+                              name={
+                                marked || markingId === key
+                                  ? "checkmark-done-outline"
+                                  : "sparkles-outline"
+                              }
+                              size={normalizeSize(16)}
+                              color={
+                                marked || markingId === key
+                                  ? isDarkMode
+                                    ? "#F9FAFB"
+                                    : "#111827"
+                                  : "#0b1120"
+                              }
+                            />
+                            <Text
+                              style={[
+                                styles.markTodayText,
+                                {
+                                  color:
+                                    marked || markingId === key
+                                      ? isDarkMode
+                                        ? "#F9FAFB"
+                                        : "#111827"
+                                      : "#0b1120",
+                                },
+                              ]}
+                            >
+                              {marked
+                                ? t("alreadyMarked")
+                                : markingId === key
+                                ? t("markingInProgress", {
+                                    defaultValue: "Enregistrement…",
+                                  })
+                                : t("markTodayButton")}
+                            </Text>
+                          </View>
+
+                          {/* Petit point lumineux quand non marqué */}
+                          {!marked && markingId !== key && (
+                            <Animated.View
+                              entering={FadeInUp.delay(200)}
+                              style={[
+                                styles.markTodayDot,
+                                {
+                                  backgroundColor: withAlpha(
+                                    currentTheme.colors.secondary,
+                                    0.35
+                                  ),
+                                },
+                              ]}
+                            />
+                          )}
+
+                          {/* +1🏆 animé après validation */}
+                          {gainKey === key && (
+                            <Animated.View
+                              style={[gainStyle, styles.gainTrophyContainer]}
+                            >
+                              <Text
+                                style={{
+                                  color: currentTheme.colors.secondary,
+                                  fontSize: normalizeSize(13),
+                                  fontWeight: "700",
+                                  textShadowColor: withAlpha(
+                                    currentTheme.colors.primary,
+                                    0.3
+                                  ),
+                                  textShadowRadius: 6,
+                                  includeFontPadding: false,
+                                }}
+                              >
+                                +1🏆
+                              </Text>
+                            </Animated.View>
+                          )}
+                        </LinearGradient>
+                      </TouchableOpacity>
+                    </View>
+                  </LinearGradient>
                 </LinearGradient>
               </TouchableOpacity>
             </Swipeable>
@@ -831,6 +920,9 @@ const ringGrad = isDarkMode
       markingId,
       gainKey,
       reduceMotion,
+      chipBg,
+      chipBorder,
+      chipText,
     ]
   );
 
@@ -930,7 +1022,7 @@ const ringGrad = isDarkMode
         {/* Orbes premium en arrière-plan */}
         <LinearGradient
           pointerEvents="none"
-          colors={[withAlpha(currentTheme.colors.primary, 0.28), "transparent"]}
+          colors={[withAlpha(currentTheme.colors.primary, 0.26), "transparent"]}
           style={styles.bgOrbTop}
           start={{ x: 0.2, y: 0 }}
           end={{ x: 1, y: 1 }}
@@ -938,7 +1030,7 @@ const ringGrad = isDarkMode
         <LinearGradient
           pointerEvents="none"
           colors={[
-            withAlpha(currentTheme.colors.secondary, 0.25),
+            withAlpha(currentTheme.colors.secondary, 0.22),
             "transparent",
           ]}
           style={styles.bgOrbBottom}
@@ -961,8 +1053,7 @@ const ringGrad = isDarkMode
               data={localChallenges}
               renderItem={renderItem}
               keyExtractor={(item) =>
-                item.uniqueKey ||
-                `current-${item.id}_${item.selectedDays}`
+                item.uniqueKey || `current-${item.id}_${item.selectedDays}`
               }
               contentContainerStyle={[
                 styles.listContent,
@@ -992,7 +1083,7 @@ const ringGrad = isDarkMode
           )}
         </View>
 
-        {/* ✅ Modal de confirmation d'abandon (remplace Alert) */}
+        {/* ✅ Modal de confirmation d'abandon */}
         {pendingRemoval && (
           <View style={styles.confirmOverlay} pointerEvents="auto">
             <Animated.View
@@ -1030,7 +1121,6 @@ const ringGrad = isDarkMode
                 >
                   {String(t("abandonChallenge"))}
                 </Text>
-                
 
                 <View style={styles.confirmButtonsRow}>
                   <TouchableOpacity
@@ -1040,13 +1130,17 @@ const ringGrad = isDarkMode
                     accessibilityLabel={String(t("cancel"))}
                   >
                     <Text
-                    style={[
-                      styles.confirmSecondaryText,
-                      { color: isDarkMode ? currentTheme.colors.textPrimary : "#0B0B10" },
-                    ]}
-                  >
-                    {String(t("cancel"))}
-                  </Text>
+                      style={[
+                        styles.confirmSecondaryText,
+                        {
+                          color: isDarkMode
+                            ? currentTheme.colors.textPrimary
+                            : "#0B0B10",
+                        },
+                      ]}
+                    >
+                      {String(t("cancel"))}
+                    </Text>
                   </TouchableOpacity>
 
                   <TouchableOpacity
@@ -1094,6 +1188,9 @@ const ringGrad = isDarkMode
   );
 }
 
+// ─────────────────────────────────────────────────────────────────────────────
+// STYLES
+// ─────────────────────────────────────────────────────────────────────────────
 const styles = StyleSheet.create({
   safeArea: {
     flex: 1,
@@ -1102,72 +1199,8 @@ const styles = StyleSheet.create({
   gradientContainer: {
     flex: 1,
   },
-  cardWrapper: {
-  marginBottom: SPACING * 1.2,
-  borderRadius: normalizeSize(26),
-  backgroundColor: "transparent",
-  overflow: "visible",
-},
 
-cardContainer: {
-  width: ITEM_WIDTH,
-  borderRadius: normalizeSize(26),
-  overflow: "visible",
-  alignSelf: "center",
-},
-
-cardRing: {
-  borderRadius: normalizeSize(26),
-  padding: normalizeSize(2), // ✅ ring stable
-},
-
-cardHalo: {
-  position: "absolute",
-  top: -normalizeSize(18),
-  right: -normalizeSize(26),
-  width: normalizeSize(110),
-  height: normalizeSize(110),
-  borderRadius: 999,
-  opacity: 0.95,
-},
-card: {
-  flexDirection: "row",
-  alignItems: "center",
-  padding: normalizeSize(14),
-  borderRadius: normalizeSize(24),
-  borderWidth: StyleSheet.hairlineWidth, // ✅ plus fin
-  overflow: "hidden",
-  shadowColor: "#000",
-  shadowOffset: { width: 0, height: 10 },
-  shadowOpacity: Platform.OS === "ios" ? 0.10 : 0,
-  shadowRadius: 18,
-  elevation: Platform.OS === "android" ? 2 : 0,
-},
-progressContainer: {
-  flex: 1,
-  marginRight: normalizeSize(10),
-  justifyContent: "center",
-  position: "relative",
-},
-progressTrack: {
-  position: "absolute",
-  left: 0,
-  right: 0,
-  height: normalizeSize(6),
-  borderRadius: normalizeSize(999),
-  borderWidth: StyleSheet.hairlineWidth,
-  backgroundColor: "transparent",
-},
-cardSheen: {
-  position: "absolute",
-  top: -normalizeSize(26),
-  left: -normalizeSize(50),
-  width: "150%",
-  height: normalizeSize(82),
-  transform: [{ rotate: "-12deg" }],
-  opacity: 0.85,
-},
-
+  // ── Orbes background ──────────────────────────────────────────────────────
   bgOrbTop: {
     position: "absolute",
     top: -SCREEN_WIDTH * 0.25,
@@ -1189,9 +1222,254 @@ cardSheen: {
 
   listContent: {
     paddingVertical: SPACING * 1.5,
-    paddingHorizontal: SCREEN_WIDTH * 0.025,
+    paddingHorizontal: SCREEN_WIDTH * 0.04,
   },
 
+  // ── Card ──────────────────────────────────────────────────────────────────
+  cardWrapper: {
+    marginBottom: SPACING * 1.2,
+    borderRadius: normalizeSize(26),
+    backgroundColor: "transparent",
+    overflow: "visible",
+  },
+  cardContainer: {
+    width: ITEM_WIDTH,
+    borderRadius: normalizeSize(26),
+    overflow: "visible",
+    alignSelf: "center",
+  },
+  cardRing: {
+    borderRadius: normalizeSize(26),
+    padding: normalizeSize(1.5),
+  },
+  cardHalo: {
+    position: "absolute",
+    top: -normalizeSize(18),
+    right: -normalizeSize(26),
+    width: normalizeSize(110),
+    height: normalizeSize(110),
+    borderRadius: 999,
+    opacity: 0.95,
+  },
+  card: {
+    flexDirection: "row",
+    alignItems: "center",
+    padding: normalizeSize(14),
+    borderRadius: normalizeSize(24),
+    borderWidth: StyleSheet.hairlineWidth,
+    overflow: "hidden",
+    shadowColor: "#000",
+    shadowOffset: { width: 0, height: 10 },
+    shadowOpacity: Platform.OS === "ios" ? 0.10 : 0,
+    shadowRadius: 18,
+    elevation: Platform.OS === "android" ? 2 : 0,
+  },
+  cardSheen: {
+    position: "absolute",
+    top: -normalizeSize(26),
+    left: -normalizeSize(50),
+    width: "150%",
+    height: normalizeSize(82),
+    transform: [{ rotate: "-12deg" }],
+    opacity: 0.85,
+  },
+
+  // ── Image + badge ─────────────────────────────────────────────────────────
+  imageWrapper: {
+    position: "relative",
+    marginRight: SPACING * 0.9,
+  },
+  cardImage: {
+    width: normalizeSize(62),
+    aspectRatio: 1,
+    borderRadius: normalizeSize(16),
+    borderWidth: StyleSheet.hairlineWidth,
+    borderColor: "rgba(255,255,255,0.20)",
+  },
+  imageBadge: {
+    position: "absolute",
+    bottom: -normalizeSize(6),
+    right: -normalizeSize(6),
+    paddingHorizontal: normalizeSize(5),
+    paddingVertical: normalizeSize(2),
+    borderRadius: normalizeSize(8),
+    minWidth: normalizeSize(28),
+    alignItems: "center",
+  },
+  imageBadgeText: {
+    color: "#FFFFFF",
+    fontSize: normalizeSize(9.5),
+    fontFamily: "Comfortaa_700Bold",
+    includeFontPadding: false,
+  },
+
+  // ── Content ───────────────────────────────────────────────────────────────
+  cardContent: {
+    flex: 1,
+    justifyContent: "space-between",
+  },
+  cardTopRow: {
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "space-between",
+    marginBottom: normalizeSize(4),
+    gap: normalizeSize(6),
+  },
+  categoryPill: {
+    paddingHorizontal: normalizeSize(8),
+    paddingVertical: normalizeSize(3),
+    borderRadius: 999,
+    borderWidth: StyleSheet.hairlineWidth,
+    maxWidth: "68%",
+    flexShrink: 1,
+  },
+  categoryText: {
+    fontSize: normalizeSize(11.5),
+    fontFamily: "Comfortaa_400Regular",
+    writingDirection: I18nManager.isRTL ? "rtl" : "ltr",
+    textAlign: I18nManager.isRTL ? "right" : "left",
+  },
+  duoPill: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: normalizeSize(5),
+    paddingHorizontal: normalizeSize(9),
+    paddingVertical: normalizeSize(4),
+    borderRadius: 999,
+    backgroundColor: "rgba(255,255,255,0.72)",
+    borderWidth: StyleSheet.hairlineWidth,
+    borderColor: "rgba(0,0,0,0.08)",
+    flexShrink: 0,
+  },
+  duoPillText: {
+    fontSize: normalizeSize(11.5),
+    fontFamily: "Comfortaa_700Bold",
+    color: "#0B0B10",
+  },
+  cardTitleBlock: {
+    marginBottom: normalizeSize(5),
+  },
+  challengeTitle: {
+    fontSize: normalizeSize(16),
+    fontFamily: "Comfortaa_700Bold",
+    marginBottom: normalizeSize(2),
+    includeFontPadding: false,
+  },
+  metaRow: {
+    flexDirection: "row",
+    alignItems: "center",
+    flexWrap: "wrap",
+    gap: normalizeSize(7),
+  },
+  challengeDay: {
+    fontSize: normalizeSize(13),
+    fontFamily: "Comfortaa_400Regular",
+    writingDirection: I18nManager.isRTL ? "rtl" : "ltr",
+    textAlign: I18nManager.isRTL ? "right" : "left",
+  },
+  partnerLabel: {
+    fontSize: normalizeSize(12.5),
+    fontFamily: "Comfortaa_400Regular",
+    writingDirection: I18nManager.isRTL ? "rtl" : "ltr",
+    textAlign: I18nManager.isRTL ? "right" : "left",
+  },
+
+  // ── Progress ──────────────────────────────────────────────────────────────
+  progressRow: {
+    flexDirection: "row",
+    alignItems: "center",
+    marginVertical: normalizeSize(4),
+  },
+  progressContainer: {
+    flex: 1,
+    marginRight: normalizeSize(10),
+    justifyContent: "center",
+    position: "relative",
+  },
+  progressTrack: {
+    position: "absolute",
+    left: 0,
+    right: 0,
+    height: normalizeSize(6),
+    borderRadius: normalizeSize(999),
+    borderWidth: StyleSheet.hairlineWidth,
+    backgroundColor: "transparent",
+  },
+  progressBar: {
+    width: "100%",
+    alignSelf: "stretch",
+  },
+  progressMeta: {
+    alignItems: "flex-end",
+    justifyContent: "center",
+    gap: 2,
+  },
+  progressChip: {
+    flexDirection: "row",
+    alignItems: "center",
+    paddingHorizontal: normalizeSize(8),
+    paddingVertical: normalizeSize(3),
+    borderRadius: 999,
+    borderWidth: StyleSheet.hairlineWidth,
+    gap: normalizeSize(4),
+  },
+  progressChipText: {
+    fontSize: normalizeSize(11.5),
+    fontFamily: "Comfortaa_700Bold",
+    includeFontPadding: false,
+    textAlignVertical: "center",
+  },
+  progressText: {
+    fontSize: normalizeSize(11.5),
+    fontFamily: "Comfortaa_400Regular",
+    writingDirection: I18nManager.isRTL ? "rtl" : "ltr",
+    textAlign: I18nManager.isRTL ? "right" : "left",
+  },
+
+  // ── Mark Today ────────────────────────────────────────────────────────────
+  markTodayButton: {
+    borderRadius: normalizeSize(18),
+    overflow: "hidden",
+    marginTop: normalizeSize(10),
+  },
+  disabledMarkButton: {
+    opacity: 0.9,
+  },
+  markTodayGradient: {
+    paddingVertical: normalizeSize(9),
+    paddingHorizontal: SPACING * 1.2,
+    alignItems: "center",
+    justifyContent: "center",
+    borderRadius: normalizeSize(18),
+  },
+  markTodayContent: {
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "center",
+    gap: normalizeSize(8),
+  },
+  markTodayText: {
+    fontFamily: "Comfortaa_700Bold",
+    fontSize: normalizeSize(14.5),
+    writingDirection: I18nManager.isRTL ? "rtl" : "ltr",
+    includeFontPadding: false,
+  },
+  markTodayDot: {
+    position: "absolute",
+    top: -normalizeSize(8),
+    right: normalizeSize(10),
+    borderRadius: 999,
+    width: normalizeSize(7),
+    height: normalizeSize(7),
+  },
+  gainTrophyContainer: {
+    position: "absolute",
+    top: -normalizeSize(28),
+    right: normalizeSize(18),
+    backgroundColor: "transparent",
+  },
+
+  // ── Empty state ───────────────────────────────────────────────────────────
   noChallengesContent: {
     flex: 1,
     alignItems: "center",
@@ -1226,167 +1504,8 @@ cardSheen: {
     maxWidth: SCREEN_WIDTH * 0.75,
     writingDirection: I18nManager.isRTL ? "rtl" : "ltr",
   },
-  cardGlow: {
-    position: "absolute",
-    top: 0,
-    left: 0,
-    right: 0,
-    height: normalizeSize(26),
-    opacity: 0.25,
-    backgroundColor: "rgba(255,255,255,0.12)",
-  },
-  cardImage: {
-    width: normalizeSize(62),
-    aspectRatio: 1,
-    borderRadius: normalizeSize(16),
-    marginRight: SPACING * 0.9,
-    borderWidth: StyleSheet.hairlineWidth,
-    borderColor: "rgba(255,255,255,0.20)",
-  },
-  cardContent: {
-    flex: 1,
-    justifyContent: "space-between",
-  },
-  cardTopRow: {
-    flexDirection: "row",
-    alignItems: "center",
-    justifyContent: "space-between",
-    marginBottom: normalizeSize(4),
-  },
-  categoryPill: {
-    paddingHorizontal: normalizeSize(8),
-    paddingVertical: normalizeSize(3),
-    borderRadius: 999,
-    backgroundColor: "rgba(148, 163, 184, 0.18)",
-    maxWidth: "70%",
-  },
-  categoryText: {
-    fontSize: normalizeSize(11.5),
-    fontFamily: "Comfortaa_400Regular",
-    writingDirection: I18nManager.isRTL ? "rtl" : "ltr",
-   textAlign: I18nManager.isRTL ? "right" : "left",
-  },
-  duoPill: {
-  flexDirection: "row",
-  alignItems: "center",
-  gap: 6,
-  paddingHorizontal: normalizeSize(10),
-  paddingVertical: normalizeSize(4),
-  borderRadius: 999,
 
-  backgroundColor: "rgba(255,255,255,0.72)", // light-friendly
-  borderWidth: StyleSheet.hairlineWidth,
-  borderColor: "rgba(0,0,0,0.08)",
-},
-duoPillText: {
-  fontSize: normalizeSize(11.5),
-  fontFamily: "Comfortaa_700Bold",
-  color: "#0B0B10",
-},
-  cardTitleBlock: {
-    marginBottom: normalizeSize(6),
-  },
-  challengeTitle: {
-    fontSize: normalizeSize(16),
-    fontFamily: "Comfortaa_700Bold",
-    marginBottom: normalizeSize(2),
-  },
-  metaRow: {
-    flexDirection: "row",
-    alignItems: "center",
-    flexWrap: "wrap",
-    gap: 8,
-  },
-  challengeDay: {
-    fontSize: normalizeSize(13),
-    fontFamily: "Comfortaa_400Regular",
-    writingDirection: I18nManager.isRTL ? "rtl" : "ltr",
-   textAlign: I18nManager.isRTL ? "right" : "left",
-  },
-  partnerLabel: {
-    fontSize: normalizeSize(12.5),
-    fontFamily: "Comfortaa_400Regular",
-    writingDirection: I18nManager.isRTL ? "rtl" : "ltr",
-   textAlign: I18nManager.isRTL ? "right" : "left",
-  },
-  progressRow: {
-    flexDirection: "row",
-    alignItems: "center",
-    marginVertical: normalizeSize(4),
-  },
-  progressBar: {
-    width: "100%",
-    alignSelf: "stretch",
-  },
-  progressMeta: {
-    alignItems: "flex-end",
-    justifyContent: "center",
-    gap: 2,
-  },
-  progressChip: {
-  flexDirection: "row",
-  alignItems: "center",
-  paddingHorizontal: normalizeSize(8),
-  paddingVertical: normalizeSize(3),
-  borderRadius: 999,
-  backgroundColor: "rgba(255,255,255,0.10)",
-  borderWidth: StyleSheet.hairlineWidth,
-  borderColor: "rgba(255,255,255,0.14)",
-},
- progressChipText: {
-  fontSize: normalizeSize(11.5),
-  fontFamily: "Comfortaa_700Bold",
-  marginLeft: 6,
-  includeFontPadding: false,      // ✅ Android
-  textAlignVertical: "center",    // ✅ Android
-},
-  progressText: {
-    fontSize: normalizeSize(11.5),
-    fontFamily: "Comfortaa_400Regular",
-    writingDirection: I18nManager.isRTL ? "rtl" : "ltr",
-   textAlign: I18nManager.isRTL ? "right" : "left",
-  },
-  markTodayButton: {
-    borderRadius: normalizeSize(18),
-    overflow: "hidden",
-    marginTop: normalizeSize(10),
-  },
-  disabledMarkButton: {
-    opacity: 0.9,
-  },
-  markTodayGradient: {
-    paddingVertical: normalizeSize(9),
-    paddingHorizontal: SPACING * 1.2,
-    alignItems: "center",
-    justifyContent: "center",
-    borderRadius: normalizeSize(18),
-  },
-  markTodayContent: {
-    flexDirection: "row",
-    alignItems: "center",
-    justifyContent: "center",
-    gap: 8,
-  },
-  markTodayText: {
-    fontFamily: "Comfortaa_700Bold",
-    fontSize: normalizeSize(14.5),
-    writingDirection: I18nManager.isRTL ? "rtl" : "ltr",
-  },
-  markTodayDot: {
-    position: "absolute",
-    top: -8,
-    right: 10,
-    borderRadius: 999,
-    width: 7,
-    height: 7,
-  },
-  gainTrophyContainer: {
-    position: "absolute",
-    top: -28,
-    right: 18,
-    backgroundColor: "transparent",
-  },
-
+  // ── Loading ───────────────────────────────────────────────────────────────
   loadingContainer: {
     flex: 1,
     justifyContent: "center",
@@ -1401,7 +1520,7 @@ duoPillText: {
     writingDirection: I18nManager.isRTL ? "rtl" : "ltr",
   },
 
-  // --- Swipe delete premium
+  // ── Swipe delete ──────────────────────────────────────────────────────────
   swipeActionsContainer: {
     height: "100%",
     justifyContent: "center",
@@ -1431,7 +1550,8 @@ duoPillText: {
     fontSize: normalizeSize(12),
     letterSpacing: 0.3,
   },
-  // Confirm overlay
+
+  // ── Confirm modal ─────────────────────────────────────────────────────────
   confirmOverlay: {
     ...StyleSheet.absoluteFillObject,
     backgroundColor: "rgba(15,23,42,0.6)",
@@ -1452,6 +1572,8 @@ duoPillText: {
     shadowOpacity: 0.3,
     shadowRadius: 16,
     elevation: 12,
+    borderWidth: StyleSheet.hairlineWidth,
+    borderColor: "rgba(255,255,255,0.10)",
   },
   confirmIconWrapper: {
     alignItems: "center",
@@ -1469,14 +1591,14 @@ duoPillText: {
     fontFamily: "Comfortaa_700Bold",
     textAlign: "center",
     marginBottom: normalizeSize(14),
-     writingDirection: I18nManager.isRTL ? "rtl" : "ltr",
+    writingDirection: I18nManager.isRTL ? "rtl" : "ltr",
   },
   confirmSubtitle: {
     fontSize: normalizeSize(14.5),
     fontFamily: "Comfortaa_400Regular",
     textAlign: "center",
     marginBottom: SPACING,
-     writingDirection: I18nManager.isRTL ? "rtl" : "ltr",
+    writingDirection: I18nManager.isRTL ? "rtl" : "ltr",
   },
   confirmButtonsRow: {
     flexDirection: "row",

@@ -1,7 +1,8 @@
 // components/InvitationModal.tsx
-// ✅ Fix overlay timing: overlay only cuts AFTER Modal is confirmed on-screen
-// ✅ Fix flicker on ColorOS/Oppo: onShowFiredRef resets on inviteId change
-// ✅ Fix fallback delay: 600ms on Android (ColorOS sometimes silent on onShow)
+// ✅ Fix iOS deeplink: overlay only cuts AFTER Modal is visually confirmed on-screen
+// ✅ Fix iOS onShow race: triple-redundant signal (onShow + fallback timer + loadComplete watcher)
+// ✅ Fix ColorOS/Oppo flicker: onShowFiredRef resets on inviteId change, not isShown
+// ✅ Fix overlay cuts early: min display time respected via signalModalVisible
 import React, {
   useEffect,
   useMemo,
@@ -43,7 +44,13 @@ import * as Haptics from "expo-haptics";
 import { logEvent } from "@/src/analytics";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 
-// ---------- Utils ----------
+// ─── How long we wait before forcing signalModalVisible on iOS ────────────────
+// iOS can silently delay onShow up to ~800ms on cold-start
+const IOS_ON_SHOW_FALLBACK_MS = 500;
+// Android: some ColorOS/Oppo devices delay onShow too
+const ANDROID_ON_SHOW_FALLBACK_MS = 600;
+
+// ─── Utils ────────────────────────────────────────────────────────────────────
 const normalize = (size: number) => {
   const baseWidth = 375;
   const width = Math.max(
@@ -55,7 +62,10 @@ const normalize = (size: number) => {
 };
 
 // ✅ SAFETY FIX: after acceptInvitation, force minimal coherence
-async function acceptInvitationSafetyFix(opts: { inviteId: string; challengeId: string }) {
+async function acceptInvitationSafetyFix(opts: {
+  inviteId: string;
+  challengeId: string;
+}) {
   const me = auth.currentUser?.uid;
   if (!me) return;
 
@@ -74,14 +84,18 @@ async function acceptInvitationSafetyFix(opts: { inviteId: string; challengeId: 
   if (!uSnap.exists()) return;
   const u = uSnap.data() as any;
 
-  const list: any[] = Array.isArray(u?.CurrentChallenges) ? u.CurrentChallenges : [];
+  const list: any[] = Array.isArray(u?.CurrentChallenges)
+    ? u.CurrentChallenges
+    : [];
 
   const pairKey = [inviterId, inviteeId].sort().join("-");
   const uniqueKey = `${inv.challengeId}_${inv.selectedDays}_${pairKey}`;
 
   const idx = list.findIndex((c: any) => {
     const cid = c?.challengeId ?? c?.id;
-    return (c?.uniqueKey && c.uniqueKey === uniqueKey) || cid === inv.challengeId;
+    return (
+      (c?.uniqueKey && c.uniqueKey === uniqueKey) || cid === inv.challengeId
+    );
   });
   if (idx < 0) return;
 
@@ -103,6 +117,7 @@ async function acceptInvitationSafetyFix(opts: { inviteId: string; challengeId: 
   await updateDoc(userRef, { CurrentChallenges: next });
 }
 
+// ─── Props ────────────────────────────────────────────────────────────────────
 type InvitationModalProps = {
   visible: boolean;
   inviteId: string | null;
@@ -141,7 +156,6 @@ const InvitationModal: React.FC<InvitationModalProps> = ({
   const [challengeChatId, setChallengeChatId] = useState<string>("");
   const [errorMsg, setErrorMsg] = useState<string>("");
   const [reduceMotion, setReduceMotion] = useState(false);
-
   const [loadComplete, setLoadComplete] = useState(false);
 
   const mountedRef = useRef(true);
@@ -151,7 +165,9 @@ const InvitationModal: React.FC<InvitationModalProps> = ({
 
   useEffect(() => {
     mountedRef.current = true;
-    return () => { mountedRef.current = false; };
+    return () => {
+      mountedRef.current = false;
+    };
   }, []);
 
   useEffect(() => {
@@ -172,24 +188,36 @@ const InvitationModal: React.FC<InvitationModalProps> = ({
 
   useEffect(() => {
     if (isShown) return;
-    try { (globalThis as any).__HIDE_INVITE_HANDOFF__?.(); } catch {}
+    try {
+      (globalThis as any).__HIDE_INVITE_HANDOFF__?.();
+    } catch {}
   }, [isShown]);
 
   useEffect(() => {
     if (modalVisible) return;
-    try { (globalThis as any).__HIDE_INVITE_HANDOFF__?.(); } catch {}
+    try {
+      (globalThis as any).__HIDE_INVITE_HANDOFF__?.();
+    } catch {}
   }, [modalVisible]);
 
   const closeAll = useCallback(() => {
-    try { onClose(); } finally { clearInvitation?.(); }
+    try {
+      onClose();
+    } finally {
+      clearInvitation?.();
+    }
   }, [onClose, clearInvitation]);
 
   const hideInviteHandoffOverlay = useCallback(() => {
-    try { (globalThis as any).__HIDE_INVITE_HANDOFF__?.(); } catch {}
+    try {
+      (globalThis as any).__HIDE_INVITE_HANDOFF__?.();
+    } catch {}
   }, []);
 
   const forceReleaseRootBootOverlay = useCallback(() => {
-    try { (globalThis as any).__INVITE_BOOT_OFF__?.(); } catch {}
+    try {
+      (globalThis as any).__INVITE_BOOT_OFF__?.();
+    } catch {}
   }, []);
 
   const safeCloseAll = useCallback(() => {
@@ -199,7 +227,12 @@ const InvitationModal: React.FC<InvitationModalProps> = ({
     try { setFetching(false); } catch {}
     try { setLoadComplete(false); } catch {}
     try { onClose(); } finally { clearInvitation?.(); }
-  }, [hideInviteHandoffOverlay, forceReleaseRootBootOverlay, onClose, clearInvitation]);
+  }, [
+    hideInviteHandoffOverlay,
+    forceReleaseRootBootOverlay,
+    onClose,
+    clearInvitation,
+  ]);
 
   const handleCloseRequest = useCallback(async () => {
     try {
@@ -230,7 +263,10 @@ const InvitationModal: React.FC<InvitationModalProps> = ({
     return inv.inviteeId === you;
   }, [inv, you]);
 
-  const expired = useMemo(() => (inv ? isInvitationExpired(inv) : false), [inv]);
+  const expired = useMemo(
+    () => (inv ? isInvitationExpired(inv) : false),
+    [inv]
+  );
 
   const layout = useMemo(() => {
     const isTiny = width < 360;
@@ -245,12 +281,17 @@ const InvitationModal: React.FC<InvitationModalProps> = ({
     return { isTiny, sidePad, maxW, maxH, safeTop, safeBot };
   }, [width, height, insets.top, insets.bottom]);
 
+  // ─── Load invitation data ─────────────────────────────────────────────────
   useEffect(() => {
     const load = async () => {
       if (!isShown || !inviteId) return;
 
       if (!auth.currentUser?.uid) {
-        showInfo(t("invitation.errors.notLogged", { defaultValue: "Tu dois être connecté." }));
+        showInfo(
+          t("invitation.errors.notLogged", {
+            defaultValue: "Tu dois être connecté.",
+          })
+        );
         closeAll();
         return;
       }
@@ -272,17 +313,23 @@ const InvitationModal: React.FC<InvitationModalProps> = ({
         if (!mountedRef.current || lastLoadKeyRef.current !== loadKey) return;
 
         if (!data) {
-          showInfo(t("invitation.invalidMessage", {
-            defaultValue: "Cette invitation est introuvable ou a été supprimée.",
-          }));
+          showInfo(
+            t("invitation.invalidMessage", {
+              defaultValue:
+                "Cette invitation est introuvable ou a été supprimée.",
+            })
+          );
           closeAll();
           return;
         }
 
         if (isInvitationExpired(data)) {
-          showInfo(t("invitation.expiredMessage", {
-            defaultValue: "Cette invitation a expiré. Demande à ton ami d'en renvoyer une nouvelle.",
-          }));
+          showInfo(
+            t("invitation.expiredMessage", {
+              defaultValue:
+                "Cette invitation a expiré. Demande à ton ami d'en renvoyer une nouvelle.",
+            })
+          );
           closeAll();
           return;
         }
@@ -304,7 +351,8 @@ const InvitationModal: React.FC<InvitationModalProps> = ({
             setInviterUsername(username);
           } else setInviterUsername("");
         } catch {
-          if (mountedRef.current && lastLoadKeyRef.current === loadKey) setInviterUsername("");
+          if (mountedRef.current && lastLoadKeyRef.current === loadKey)
+            setInviterUsername("");
         }
 
         // 3) Challenge title
@@ -315,17 +363,23 @@ const InvitationModal: React.FC<InvitationModalProps> = ({
             const ch = chSnap.data() as any;
             const chatIdFromDoc = ch?.chatId || ch?.id || chId || "";
             setChallengeChatId(chatIdFromDoc);
-            const i18nTitle = t(`challenges.${chatIdFromDoc}.title`, { defaultValue: ch?.title || "" });
+            const i18nTitle = t(`challenges.${chatIdFromDoc}.title`, {
+              defaultValue: ch?.title || "",
+            });
             setChallengeTitle(i18nTitle || ch?.title || "");
           } else {
             setChallengeChatId(chId);
-            const i18nTitle = t(`challenges.${chId}.title`, { defaultValue: "" });
+            const i18nTitle = t(`challenges.${chId}.title`, {
+              defaultValue: "",
+            });
             setChallengeTitle(i18nTitle || "");
           }
         } catch {
           if (mountedRef.current && lastLoadKeyRef.current === loadKey) {
             setChallengeChatId(chId);
-            const i18nTitle = t(`challenges.${chId}.title`, { defaultValue: "" });
+            const i18nTitle = t(`challenges.${chId}.title`, {
+              defaultValue: "",
+            });
             setChallengeTitle(i18nTitle || "");
           }
         }
@@ -345,11 +399,12 @@ const InvitationModal: React.FC<InvitationModalProps> = ({
             g.__INVITE_BOOT_SET_PHASE__(3);
           }
         } catch {}
-
       } catch (e) {
         console.error("❌ InvitationModal load error:", e);
         if (!mountedRef.current || lastLoadKeyRef.current !== loadKey) return;
-        setErrorMsg(t("invitation.errors.unknown", { defaultValue: "Erreur inconnue." }));
+        setErrorMsg(
+          t("invitation.errors.unknown", { defaultValue: "Erreur inconnue." })
+        );
       } finally {
         if (mountedRef.current && lastLoadKeyRef.current === loadKey) {
           setFetching(false);
@@ -361,32 +416,55 @@ const InvitationModal: React.FC<InvitationModalProps> = ({
     load();
   }, [isShown, inviteId, challengeId, t, i18n.language, closeAll]);
 
-  // ─── onShow handler ───────────────────────────────────────────────────────
+  // ─── onShow signal — TRIPLE REDUNDANCY ────────────────────────────────────
+  // iOS can be silent on onShow for up to ~800ms on cold-start.
+  // We use 3 mechanisms to ensure onModalVisible() always fires:
+  //   1. Modal.onShow callback (instant when it works)
+  //   2. Fallback timer after modal becomes visible + data is ready
+  //   3. loadComplete watcher (fires when data loads after modal was already shown)
   const onShowFiredRef = useRef(false);
 
-  const handleModalShow = useCallback(() => {
+  // Helper: fire signal exactly once
+  const fireOnModalVisible = useCallback(() => {
     if (onShowFiredRef.current) return;
     onShowFiredRef.current = true;
     onModalVisible?.();
     if (loadComplete) onLoaded?.();
   }, [onModalVisible, onLoaded, loadComplete]);
 
-  // ✅ FIX COLOROS: fallback plus long sur Android (onShow parfois silencieux)
+  // Mechanism 1: Modal.onShow callback
+  const handleModalShow = useCallback(() => {
+    fireOnModalVisible();
+  }, [fireOnModalVisible]);
+
+  // Mechanism 2: Fallback timer after modalVisible + loadComplete
+  // This handles iOS cold-start where onShow fires late or silently
   useEffect(() => {
     if (!modalVisible || !loadComplete) return;
-    // 600ms sur Android pour laisser le Modal se rendre physiquement
-    const delay = Platform.OS === "android" ? 600 : 400;
-    const timer = setTimeout(() => {
-      if (onShowFiredRef.current) return;
-      onShowFiredRef.current = true;
-      onModalVisible?.();
-      onLoaded?.();
-    }, delay);
-    return () => clearTimeout(timer);
-  }, [modalVisible, loadComplete]);
+    if (onShowFiredRef.current) return;
 
-  // ✅ FIX PRINCIPAL FLICKER: reset sur inviteId, pas sur isShown
-  // Sur Oppo/ColorOS, isShown peut osciller brièvement → ref pas resetée → onLoaded jamais appelé
+    const delay =
+      Platform.OS === "android"
+        ? ANDROID_ON_SHOW_FALLBACK_MS
+        : IOS_ON_SHOW_FALLBACK_MS;
+
+    const timer = setTimeout(() => {
+      fireOnModalVisible();
+    }, delay);
+
+    return () => clearTimeout(timer);
+  }, [modalVisible, loadComplete, fireOnModalVisible]);
+
+  // Mechanism 3: loadComplete watcher (data finishes after onShow already fired)
+  // This handles the case where onShow fires before data is ready
+  useEffect(() => {
+    if (!loadComplete) return;
+    if (!onShowFiredRef.current) return;
+    // onShow already fired, data just became ready → signal onLoaded
+    onLoaded?.();
+  }, [loadComplete, onLoaded]);
+
+  // ✅ Reset ref on inviteId change (not on isShown — avoids ColorOS flicker)
   useEffect(() => {
     onShowFiredRef.current = false;
   }, [inviteId]);
@@ -395,7 +473,9 @@ const InvitationModal: React.FC<InvitationModalProps> = ({
   useEffect(() => {
     if (!isShown || !challengeChatId) return;
     setChallengeTitle((prev) => {
-      const i18nTitle = t(`challenges.${challengeChatId}.title`, { defaultValue: prev || "" });
+      const i18nTitle = t(`challenges.${challengeChatId}.title`, {
+        defaultValue: prev || "",
+      });
       return i18nTitle || prev;
     });
   }, [i18n.language, isShown, challengeChatId, t]);
@@ -412,7 +492,6 @@ const InvitationModal: React.FC<InvitationModalProps> = ({
       setChallengeChatId("");
       setChallengeTitle("");
       setInviterUsername("");
-      // ✅ FIX: reset aussi le ref ici pour garantir le reset à la fermeture
       onShowFiredRef.current = false;
     }
   }, [isShown]);
@@ -422,7 +501,7 @@ const InvitationModal: React.FC<InvitationModalProps> = ({
     setShowRestartConfirm(false);
   }, [inviteId]);
 
-  // ===== Actions =============================================================
+  // ─── Actions ──────────────────────────────────────────────────────────────
 
   const handleAccept = useCallback(async () => {
     if (loading || fetching) return;
@@ -430,19 +509,25 @@ const InvitationModal: React.FC<InvitationModalProps> = ({
     if (!inviteId || !meId) return;
 
     if (!inv || !isForMe) {
-      setErrorMsg(t("invitation.errors.unknown", { defaultValue: "Erreur." }));
+      setErrorMsg(
+        t("invitation.errors.unknown", { defaultValue: "Erreur." })
+      );
       return;
     }
 
     if (inv.inviterId === meId) {
-      setErrorMsg(t("invitation.errors.autoInvite", {
-        defaultValue: "Tu ne peux pas accepter ta propre invitation.",
-      }));
+      setErrorMsg(
+        t("invitation.errors.autoInvite", {
+          defaultValue: "Tu ne peux pas accepter ta propre invitation.",
+        })
+      );
       return;
     }
 
     if (expired) {
-      setErrorMsg(t("invitation.errors.expired", { defaultValue: "Invitation expirée." }));
+      setErrorMsg(
+        t("invitation.errors.expired", { defaultValue: "Invitation expirée." })
+      );
       safeCloseAll();
       return;
     }
@@ -472,9 +557,11 @@ const InvitationModal: React.FC<InvitationModalProps> = ({
       });
 
       if (alreadyInDuoActive) {
-        setErrorMsg(t("invitation.errors.alreadyInDuoForChallenge", {
-          defaultValue: "Tu es déjà en duo pour ce défi.",
-        }));
+        setErrorMsg(
+          t("invitation.errors.alreadyInDuoForChallenge", {
+            defaultValue: "Tu es déjà en duo pour ce défi.",
+          })
+        );
         return;
       }
 
@@ -502,7 +589,9 @@ const InvitationModal: React.FC<InvitationModalProps> = ({
       }).catch?.(() => {});
 
       if (!reduceMotion) {
-        Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success).catch(() => {});
+        Haptics.notificationAsync(
+          Haptics.NotificationFeedbackType.Success
+        ).catch(() => {});
       }
 
       safeCloseAll();
@@ -511,34 +600,85 @@ const InvitationModal: React.FC<InvitationModalProps> = ({
       const msg = String(e?.message || "").toLowerCase();
 
       if (msg.includes("auto_invite")) {
-        setErrorMsg(t("invitation.errors.autoInvite", { defaultValue: "Tu ne peux pas accepter ta propre invitation." }));
+        setErrorMsg(
+          t("invitation.errors.autoInvite", {
+            defaultValue: "Tu ne peux pas accepter ta propre invitation.",
+          })
+        );
       } else if (msg.includes("expired") || msg.includes("expir")) {
-        setErrorMsg(t("invitation.errors.expired", { defaultValue: "Invitation expirée." }));
+        setErrorMsg(
+          t("invitation.errors.expired", {
+            defaultValue: "Invitation expirée.",
+          })
+        );
         safeCloseAll();
-      } else if (msg.includes("non_autorise") || msg.includes("permission")) {
-        setErrorMsg(t("invitation.errors.permission", { defaultValue: "Action non autorisée." }));
+      } else if (
+        msg.includes("non_autorise") ||
+        msg.includes("permission")
+      ) {
+        setErrorMsg(
+          t("invitation.errors.permission", {
+            defaultValue: "Action non autorisée.",
+          })
+        );
         safeCloseAll();
       } else if (msg.includes("invitation_deja_traitee")) {
-        setErrorMsg(t("invitation.errors.processed", { defaultValue: "Invitation déjà traitée." }));
+        setErrorMsg(
+          t("invitation.errors.processed", {
+            defaultValue: "Invitation déjà traitée.",
+          })
+        );
         safeCloseAll();
       } else if (msg.includes("invitee_already_in_duo")) {
-        setErrorMsg(t("invitation.errors.alreadyInDuoForChallenge", { defaultValue: "Tu es déjà en duo pour ce défi." }));
+        setErrorMsg(
+          t("invitation.errors.alreadyInDuoForChallenge", {
+            defaultValue: "Tu es déjà en duo pour ce défi.",
+          })
+        );
       } else if (msg.includes("inviter_already_in_duo")) {
-        setErrorMsg(t("invitation.errors.inviterAlreadyInDuo", { defaultValue: "Ton ami est déjà en duo sur ce défi." }));
-      } else if (msg.includes("already_in_duo") || msg.includes("duo")) {
-        setErrorMsg(t("invitation.errors.alreadyInDuoGeneric", { defaultValue: "Un des deux comptes est déjà en duo." }));
+        setErrorMsg(
+          t("invitation.errors.inviterAlreadyInDuo", {
+            defaultValue: "Ton ami est déjà en duo sur ce défi.",
+          })
+        );
+      } else if (
+        msg.includes("already_in_duo") ||
+        msg.includes("duo")
+      ) {
+        setErrorMsg(
+          t("invitation.errors.alreadyInDuoGeneric", {
+            defaultValue: "Un des deux comptes est déjà en duo.",
+          })
+        );
       } else if (msg.includes("challenge_introuvable")) {
-        setErrorMsg(t("invitation.errors.challengeMissing", { defaultValue: "Défi introuvable." }));
+        setErrorMsg(
+          t("invitation.errors.challengeMissing", {
+            defaultValue: "Défi introuvable.",
+          })
+        );
         safeCloseAll();
       } else {
-        setErrorMsg(t("invitation.errors.unknown", { defaultValue: "Erreur." }));
+        setErrorMsg(
+          t("invitation.errors.unknown", { defaultValue: "Erreur." })
+        );
       }
     } finally {
       try { (globalThis as any).__INVITE_BOOT_OFF__?.(); } catch {}
       try { (globalThis as any).__HIDE_INVITE_HANDOFF__?.(); } catch {}
       setLoading(false);
     }
-  }, [loading, fetching, inviteId, inv, isForMe, expired, challengeId, t, safeCloseAll, reduceMotion]);
+  }, [
+    loading,
+    fetching,
+    inviteId,
+    inv,
+    isForMe,
+    expired,
+    challengeId,
+    t,
+    safeCloseAll,
+    reduceMotion,
+  ]);
 
   const handleConfirmRestart = useCallback(async () => {
     if (!inviteId || !auth.currentUser || !inv) return;
@@ -549,14 +689,19 @@ const InvitationModal: React.FC<InvitationModalProps> = ({
 
     try {
       if (!reduceMotion) {
-        Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success).catch(() => {});
+        Haptics.notificationAsync(
+          Haptics.NotificationFeedbackType.Success
+        ).catch(() => {});
       }
 
       await acceptInvitation(inviteId);
 
       try {
         await new Promise((r) => setTimeout(r, 350));
-        await acceptInvitationSafetyFix({ inviteId, challengeId: inv.challengeId || challengeId });
+        await acceptInvitationSafetyFix({
+          inviteId,
+          challengeId: inv.challengeId || challengeId,
+        });
       } catch {}
 
       logEvent("invite_accept_restart", {
@@ -568,11 +713,22 @@ const InvitationModal: React.FC<InvitationModalProps> = ({
       safeCloseAll();
     } catch (e) {
       console.error("❌ Invitation restart+accept error:", e);
-      setErrorMsg(t("invitation.errors.unknown", { defaultValue: "Erreur." }));
+      setErrorMsg(
+        t("invitation.errors.unknown", { defaultValue: "Erreur." })
+      );
     } finally {
       setLoading(false);
     }
-  }, [inviteId, inv, loading, fetching, reduceMotion, challengeId, t, safeCloseAll]);
+  }, [
+    inviteId,
+    inv,
+    loading,
+    fetching,
+    reduceMotion,
+    challengeId,
+    t,
+    safeCloseAll,
+  ]);
 
   const handleRefuse = useCallback(async () => {
     if (!inviteId || !inv || loading || fetching) return;
@@ -599,26 +755,50 @@ const InvitationModal: React.FC<InvitationModalProps> = ({
       const msg = String((e as any)?.message || "").toLowerCase();
 
       if (msg.includes("invitation_deja_traitee")) {
-        setErrorMsg(t("invitation.errors.processed", { defaultValue: "Invitation déjà traitée." }));
-      } else if (msg.includes("non_autorise") || msg.includes("permission")) {
-        setErrorMsg(t("invitation.errors.permission", { defaultValue: "Action non autorisée." }));
+        setErrorMsg(
+          t("invitation.errors.processed", {
+            defaultValue: "Invitation déjà traitée.",
+          })
+        );
+      } else if (
+        msg.includes("non_autorise") ||
+        msg.includes("permission")
+      ) {
+        setErrorMsg(
+          t("invitation.errors.permission", {
+            defaultValue: "Action non autorisée.",
+          })
+        );
       } else {
-        setErrorMsg(t("invitation.errors.unknown", { defaultValue: "Erreur." }));
+        setErrorMsg(
+          t("invitation.errors.unknown", { defaultValue: "Erreur." })
+        );
       }
     } finally {
       try { (globalThis as any).__INVITE_BOOT_OFF__?.(); } catch {}
       try { (globalThis as any).__HIDE_INVITE_HANDOFF__?.(); } catch {}
       setLoading(false);
     }
-  }, [inviteId, inv, loading, fetching, challengeId, t, safeCloseAll, reduceMotion]);
+  }, [
+    inviteId,
+    inv,
+    loading,
+    fetching,
+    challengeId,
+    t,
+    safeCloseAll,
+    reduceMotion,
+  ]);
 
-  // ===== Styles ==============================================================
+  // ─── Styles ───────────────────────────────────────────────────────────────
   const styles = useMemo(
     () =>
       StyleSheet.create({
         root: {
           flex: 1,
-          backgroundColor: isDarkMode ? "rgba(0,0,0,0.78)" : "rgba(0,0,0,0.62)",
+          backgroundColor: isDarkMode
+            ? "rgba(0,0,0,0.78)"
+            : "rgba(0,0,0,0.62)",
           paddingTop: layout.safeTop,
           paddingBottom: layout.safeBot,
           paddingHorizontal: layout.sidePad,
@@ -637,7 +817,9 @@ const InvitationModal: React.FC<InvitationModalProps> = ({
           borderRadius: normalize(22),
           overflow: "hidden",
           borderWidth: StyleSheet.hairlineWidth,
-          borderColor: isDarkMode ? "rgba(255,255,255,0.08)" : "rgba(0,0,0,0.06)",
+          borderColor: isDarkMode
+            ? "rgba(255,255,255,0.08)"
+            : "rgba(0,0,0,0.06)",
           shadowColor: "#000",
           shadowOffset: { width: 0, height: normalize(10) },
           shadowOpacity: 0.32,
@@ -653,7 +835,9 @@ const InvitationModal: React.FC<InvitationModalProps> = ({
           alignItems: "center",
           justifyContent: "space-between",
           borderBottomWidth: StyleSheet.hairlineWidth,
-          borderBottomColor: isDarkMode ? "rgba(255,255,255,0.07)" : "rgba(0,0,0,0.06)",
+          borderBottomColor: isDarkMode
+            ? "rgba(255,255,255,0.07)"
+            : "rgba(0,0,0,0.06)",
         },
         headerTitle: {
           flex: 1,
@@ -675,7 +859,9 @@ const InvitationModal: React.FC<InvitationModalProps> = ({
           borderRadius: normalize(12),
           alignItems: "center",
           justifyContent: "center",
-          backgroundColor: isDarkMode ? "rgba(255,255,255,0.06)" : "rgba(0,0,0,0.06)",
+          backgroundColor: isDarkMode
+            ? "rgba(255,255,255,0.06)"
+            : "rgba(0,0,0,0.06)",
         },
         closeX: {
           fontSize: normalize(18),
@@ -771,7 +957,8 @@ const InvitationModal: React.FC<InvitationModalProps> = ({
     [isDarkMode, currentTheme, layout]
   );
 
-  // ===== Body render =========================================================
+  // ─── Render body ──────────────────────────────────────────────────────────
+
   const renderBody = () => {
     if (fetching || externalLoading) {
       return (
@@ -781,12 +968,17 @@ const InvitationModal: React.FC<InvitationModalProps> = ({
           </Text>
           {!externalLoading && (
             <View style={styles.spinnerWrap}>
-              <ActivityIndicator size="large" color={currentTheme.colors.secondary} />
+              <ActivityIndicator
+                size="large"
+                color={currentTheme.colors.secondary}
+              />
             </View>
           )}
           {externalLoading && (
             <Text style={styles.modalText}>
-              {t("invitation.loadingSub", { defaultValue: "Préparation de l'invitation…" })}
+              {t("invitation.loadingSub", {
+                defaultValue: "Préparation de l'invitation…",
+              })}
             </Text>
           )}
         </>
@@ -797,17 +989,24 @@ const InvitationModal: React.FC<InvitationModalProps> = ({
       return (
         <>
           <Text style={styles.modalTitle}>
-            {t("invitation.invalidTitle", { defaultValue: "Invitation indisponible" })}
+            {t("invitation.invalidTitle", {
+              defaultValue: "Invitation indisponible",
+            })}
           </Text>
           <Text style={styles.modalText}>
-            {t("invitation.invalidMessage", { defaultValue: "Cette invitation est introuvable ou a été supprimée." })}
+            {t("invitation.invalidMessage", {
+              defaultValue:
+                "Cette invitation est introuvable ou a été supprimée.",
+            })}
           </Text>
           <View style={styles.buttonRow}>
             <TouchableOpacity
               style={[styles.btn, styles.neutral]}
               onPress={handleCloseRequest}
               accessibilityRole="button"
-              accessibilityLabel={t("commonS.close", { defaultValue: "Fermer" })}
+              accessibilityLabel={t("commonS.close", {
+                defaultValue: "Fermer",
+              })}
               testID="invite-close"
               activeOpacity={0.9}
             >
@@ -827,14 +1026,19 @@ const InvitationModal: React.FC<InvitationModalProps> = ({
             {t("invitation.notForYouTitle", { defaultValue: "Oups" })}
           </Text>
           <Text style={styles.modalText}>
-            {t("invitation.notForYouMessage", { defaultValue: "Cette invitation n'est pas destinée à ce compte." })}
+            {t("invitation.notForYouMessage", {
+              defaultValue:
+                "Cette invitation n'est pas destinée à ce compte.",
+            })}
           </Text>
           <View style={styles.buttonRow}>
             <TouchableOpacity
               style={[styles.btn, styles.neutral]}
               onPress={handleCloseRequest}
               accessibilityRole="button"
-              accessibilityLabel={t("commonS.close", { defaultValue: "Fermer" })}
+              accessibilityLabel={t("commonS.close", {
+                defaultValue: "Fermer",
+              })}
               activeOpacity={0.9}
             >
               <Text style={[styles.btnText, styles.neutralText]}>
@@ -850,17 +1054,23 @@ const InvitationModal: React.FC<InvitationModalProps> = ({
       return (
         <>
           <Text style={styles.modalTitle}>
-            {t("invitation.expiredTitle", { defaultValue: "Invitation expirée" })}
+            {t("invitation.expiredTitle", {
+              defaultValue: "Invitation expirée",
+            })}
           </Text>
           <Text style={styles.modalText}>
-            {t("invitation.expiredMessage", { defaultValue: "Cette invitation a expiré." })}
+            {t("invitation.expiredMessage", {
+              defaultValue: "Cette invitation a expiré.",
+            })}
           </Text>
           <View style={styles.buttonRow}>
             <TouchableOpacity
               style={[styles.btn, styles.neutral]}
               onPress={handleCloseRequest}
               accessibilityRole="button"
-              accessibilityLabel={t("commonS.close", { defaultValue: "Fermer" })}
+              accessibilityLabel={t("commonS.close", {
+                defaultValue: "Fermer",
+              })}
               activeOpacity={0.9}
             >
               <Text style={[styles.btnText, styles.neutralText]}>
@@ -873,20 +1083,30 @@ const InvitationModal: React.FC<InvitationModalProps> = ({
     }
 
     const daysCount =
-      typeof inv?.selectedDays === "number" && inv.selectedDays > 0 ? inv.selectedDays : undefined;
+      typeof inv?.selectedDays === "number" && inv.selectedDays > 0
+        ? inv.selectedDays
+        : undefined;
 
     const usernameForTitle =
-      inviterUsername || t("invitation.someone", { defaultValue: "Quelqu'un" });
+      inviterUsername ||
+      t("invitation.someone", { defaultValue: "Quelqu'un" });
 
     return (
       <>
         <Text style={styles.modalTitle}>
-          {t("invitation.title", { username: usernameForTitle, defaultValue: "{{username}} t'invite en Duo" })}
+          {t("invitation.title", {
+            username: usernameForTitle,
+            defaultValue: "{{username}} t'invite en Duo",
+          })}
         </Text>
 
         {!!challengeTitle && (
           <View style={styles.tag}>
-            <Text style={styles.tagText} numberOfLines={2} ellipsizeMode="tail">
+            <Text
+              style={styles.tagText}
+              numberOfLines={2}
+              ellipsizeMode="tail"
+            >
               {challengeTitle}
             </Text>
           </View>
@@ -894,19 +1114,27 @@ const InvitationModal: React.FC<InvitationModalProps> = ({
 
         {typeof daysCount === "number" && (
           <Text style={styles.durationText}>
-            {t("invitation.duration", { count: daysCount, defaultValue: "{{count}} jours de défi" })}
+            {t("invitation.duration", {
+              count: daysCount,
+              defaultValue: "{{count}} jours de défi",
+            })}
           </Text>
         )}
 
         <Text style={styles.modalText}>
           {t("invitation.message", {
             challenge: challengeTitle,
-            defaultValue: "Accepte pour démarrer ce défi en Duo. Vous pourrez suivre vos progrès ensemble.",
+            defaultValue:
+              "Accepte pour démarrer ce défi en Duo. Vous pourrez suivre vos progrès ensemble.",
           })}
         </Text>
 
         {!!errorMsg && (
-          <Text style={styles.errorText} accessibilityRole="alert" accessibilityLiveRegion="polite">
+          <Text
+            style={styles.errorText}
+            accessibilityRole="alert"
+            accessibilityLiveRegion="polite"
+          >
             {errorMsg}
           </Text>
         )}
@@ -918,14 +1146,20 @@ const InvitationModal: React.FC<InvitationModalProps> = ({
             disabled={loading || fetching}
             activeOpacity={0.85}
             accessibilityRole="button"
-            accessibilityLabel={t("invitation.accept", { defaultValue: "Accepter" })}
-            accessibilityHint={t("invitation.acceptHint", { defaultValue: "Accepter l'invitation et démarrer en Duo." })}
+            accessibilityLabel={t("invitation.accept", {
+              defaultValue: "Accepter",
+            })}
+            accessibilityHint={t("invitation.acceptHint", {
+              defaultValue: "Accepter l'invitation et démarrer en Duo.",
+            })}
             testID="invite-accept"
           >
             {loading ? (
               <ActivityIndicator color="#fff" />
             ) : (
-              <Text style={styles.btnText}>{t("invitation.accept", { defaultValue: "Accepter" })}</Text>
+              <Text style={styles.btnText}>
+                {t("invitation.accept", { defaultValue: "Accepter" })}
+              </Text>
             )}
           </TouchableOpacity>
 
@@ -935,14 +1169,20 @@ const InvitationModal: React.FC<InvitationModalProps> = ({
             disabled={loading || fetching}
             activeOpacity={0.85}
             accessibilityRole="button"
-            accessibilityLabel={t("invitation.refuse", { defaultValue: "Refuser" })}
-            accessibilityHint={t("invitation.refuseHint", { defaultValue: "Refuser l'invitation et fermer." })}
+            accessibilityLabel={t("invitation.refuse", {
+              defaultValue: "Refuser",
+            })}
+            accessibilityHint={t("invitation.refuseHint", {
+              defaultValue: "Refuser l'invitation et fermer.",
+            })}
             testID="invite-refuse"
           >
             {loading ? (
               <ActivityIndicator color="#fff" />
             ) : (
-              <Text style={styles.btnText}>{t("invitation.refuse", { defaultValue: "Refuser" })}</Text>
+              <Text style={styles.btnText}>
+                {t("invitation.refuse", { defaultValue: "Refuser" })}
+              </Text>
             )}
           </TouchableOpacity>
         </View>
@@ -953,11 +1193,14 @@ const InvitationModal: React.FC<InvitationModalProps> = ({
   const renderRestartConfirmBody = () => (
     <>
       <Text style={styles.modalTitle}>
-        {t("invitation.restartTitle", { defaultValue: "Recommencer le défi en Duo ?" })}
+        {t("invitation.restartTitle", {
+          defaultValue: "Recommencer le défi en Duo ?",
+        })}
       </Text>
       <Text style={styles.modalText}>
         {t("invitation.restartMessage", {
-          defaultValue: "Tu as déjà ce défi en solo. On va le réinitialiser pour repartir à zéro à deux.",
+          defaultValue:
+            "Tu as déjà ce défi en solo. On va le réinitialiser pour repartir à zéro à deux.",
         })}
       </Text>
       <View style={styles.buttonRow}>
@@ -966,7 +1209,9 @@ const InvitationModal: React.FC<InvitationModalProps> = ({
           onPress={() => setShowRestartConfirm(false)}
           activeOpacity={0.85}
           accessibilityRole="button"
-          accessibilityLabel={t("invitation.cancel", { defaultValue: "Annuler" })}
+          accessibilityLabel={t("invitation.cancel", {
+            defaultValue: "Annuler",
+          })}
           testID="invite-restart-cancel"
         >
           <Text style={[styles.btnText, styles.neutralText]}>
@@ -980,13 +1225,17 @@ const InvitationModal: React.FC<InvitationModalProps> = ({
           disabled={loading || fetching}
           activeOpacity={0.85}
           accessibilityRole="button"
-          accessibilityLabel={t("invitation.continue", { defaultValue: "Continuer" })}
+          accessibilityLabel={t("invitation.continue", {
+            defaultValue: "Continuer",
+          })}
           testID="invite-restart-continue"
         >
           {loading ? (
             <ActivityIndicator color="#fff" />
           ) : (
-            <Text style={styles.btnText}>{t("invitation.continue", { defaultValue: "Continuer" })}</Text>
+            <Text style={styles.btnText}>
+              {t("invitation.continue", { defaultValue: "Continuer" })}
+            </Text>
           )}
         </TouchableOpacity>
       </View>
@@ -997,13 +1246,17 @@ const InvitationModal: React.FC<InvitationModalProps> = ({
     <Modal
       visible={modalVisible}
       transparent
-      animationType={Platform.OS === "android" ? "none" : "fade"}
+      // ✅ iOS fix: "slide" triggers onShow more reliably than "fade" on cold-start
+      // "none" on Android avoids the double-render flicker on ColorOS
+      animationType={Platform.OS === "android" ? "none" : "slide"}
       statusBarTranslucent
       presentationStyle="overFullScreen"
       onRequestClose={handleCloseRequest}
       onShow={handleModalShow}
       onDismiss={() => {
-        try { (globalThis as any).__HIDE_INVITE_HANDOFF__?.(); } catch {}
+        try {
+          (globalThis as any).__HIDE_INVITE_HANDOFF__?.();
+        } catch {}
       }}
     >
       <View
@@ -1016,7 +1269,9 @@ const InvitationModal: React.FC<InvitationModalProps> = ({
         <Pressable
           style={styles.backdrop}
           pointerEvents={isShown ? "auto" : "none"}
-          onPress={() => { if (!loading && !fetching) handleCloseRequest(); }}
+          onPress={() => {
+            if (!loading && !fetching) handleCloseRequest();
+          }}
           accessibilityRole="button"
           accessibilityLabel={t("commonS.close", { defaultValue: "Fermer" })}
         />
@@ -1029,19 +1284,30 @@ const InvitationModal: React.FC<InvitationModalProps> = ({
           <View style={styles.card}>
             <View style={styles.header}>
               <View style={styles.headerSide} />
-              <Text style={styles.headerTitle} numberOfLines={1} ellipsizeMode="tail">
+              <Text
+                style={styles.headerTitle}
+                numberOfLines={1}
+                ellipsizeMode="tail"
+              >
                 {t("invitation.header", { defaultValue: "Invitation Duo" })}
               </Text>
               <View style={styles.headerSide}>
                 <Pressable
-                  onPress={() => { if (!loading && !fetching) handleCloseRequest(); }}
+                  onPress={() => {
+                    if (!loading && !fetching) handleCloseRequest();
+                  }}
                   hitSlop={10}
                   style={({ pressed }) => [
                     styles.closeBtn,
-                    pressed && { transform: [{ scale: 0.98 }], opacity: 0.92 },
+                    pressed && {
+                      transform: [{ scale: 0.98 }],
+                      opacity: 0.92,
+                    },
                   ]}
                   accessibilityRole="button"
-                  accessibilityLabel={t("commonS.close", { defaultValue: "Fermer" })}
+                  accessibilityLabel={t("commonS.close", {
+                    defaultValue: "Fermer",
+                  })}
                   testID="invite-close-x"
                 >
                   <Text style={styles.closeX}>×</Text>
