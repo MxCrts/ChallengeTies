@@ -13,7 +13,6 @@ import {
   StyleSheet,
   TouchableOpacity,
   Alert,
-  ActivityIndicator,
   Image,
   ScrollView,
   useWindowDimensions,
@@ -21,9 +20,8 @@ import {
   InteractionManager,
   Platform,
   AccessibilityInfo,
-  Modal,
 } from "react-native";
-
+import VsIntroModal from "../../src/challenge-details/_feature/components/VsIntroModal";
 import { Image as ExpoImage } from "expo-image";
 import { SafeAreaView, useSafeAreaInsets } from "react-native-safe-area-context";
 import { Ionicons } from "@expo/vector-icons";
@@ -92,7 +90,6 @@ import {
   IS_SMALL,
   SPACING,
   normalizeSize,
-  introModalProps,
   dayIcons,
   ACCENT,
 } from "../../src/challenge-details/_feature/challengeDetails.tokens";
@@ -419,11 +416,7 @@ const duoBarMeWidth = useSharedValue(0);
 const duoBarPartnerWidth = useSharedValue(0);
 const markBtnGlow = useSharedValue(0);
 const [descExpanded, setDescExpanded] = useState(false);
-const startedRef = useRef(false);
-const myImgReady = useRef(false);
-const partnerImgReady = useRef(false);
 const tabBarHeight = 0;
-const startTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
 const duoPendingPulseStyle = useAnimatedStyle(() => {
   // Ring très visible + léger "glow"
@@ -516,6 +509,7 @@ const shouldEnterAnim =
   } = useCurrentChallenges();
   const lastIntroKeyRef = useRef<string | null>(null);
 
+
   // Refs pour éviter les closures stale (events -> ouverture MomentModal)
   // ---------------------------------------------------------------------------
   const activeEntryRef = useRef<any>(null);
@@ -572,17 +566,14 @@ const shouldEnterAnim =
   const [routeDescription, setRouteDescription] = useState(
     params.description || t("challengeDetails.noDescription")
   );
+
+  const DESC_TRUNCATE_THRESHOLD = 120;
+const descNeedsTruncation = routeDescription.length > DESC_TRUNCATE_THRESHOLD;
     const [loading, setLoading] = useState(true);
   const [myAvatar, setMyAvatar] = useState<string>("");
   const [myName, setMyName] = useState<string>("");
   const [myIsPioneer, setMyIsPioneer] = useState(false);
 const [partnerAvatar, setPartnerAvatar] = useState<string>("");
-const assetsReady =
-  !!myAvatar &&
-  !!myName &&
-  !!(partnerAvatar || duoChallengeData?.duoUser?.avatar) &&
-  !!(duoChallengeData?.duoUser?.name || "");
-
   const [localSelectedDays, setLocalSelectedDays] = useState<number>(10);
   const [finalSelectedDays, setFinalSelectedDays] = useState<number>(0);
   const [finalCompletedDays, setFinalCompletedDays] = useState<number>(0);
@@ -600,9 +591,6 @@ const hasHelper = useMemo(
   [challenge]
 );
 const [introBlocking, setIntroBlocking] = useState(false);
-const fadeOpacity = useSharedValue(1); 
-const shakeMy = useSharedValue(0);
-const shakePartner = useSharedValue(0);
 const [shareCardVisible, setShareCardVisible] = useState(false);
   const claimWithoutAdRef = useRef<(() => Promise<void>) | null>(null);
   const claimWithAdRef = useRef<(() => Promise<void>) | null>(null);
@@ -655,8 +643,6 @@ const {
   onClaim: () => claimWithAdRef.current?.().catch(() => {}),
 });
 
-const popMy = useSharedValue(0);
-const popPartner = useSharedValue(0);
 const [reduceMotion, setReduceMotion] = useState(false);
 useEffect(() => {
   let sub: any;
@@ -868,24 +854,6 @@ const confirmSwitchToDuo = useCallback(async () => {
   }
 }, [t]);
 
-const fadeStyle = useAnimatedStyle<ViewStyle>(() => ({
-  opacity: fadeOpacity.value,
-}));
-
-const shakeStyleMy = useAnimatedStyle<ViewStyle>(() => ({
-  transform: [
-    { translateX: shakeMy.value * 3 }, // micro-shake premium
-    { scale: interpolate(popMy.value, [0, 1], [1, 1.12]) },
-  ] as ViewStyle["transform"],
-}));
-
-const shakeStylePartner = useAnimatedStyle<ViewStyle>(() => ({
-  transform: [
-    { translateX: shakePartner.value * 3 },
-    { scale: interpolate(popPartner.value, [0, 1], [1, 1.12]) },
-  ] as ViewStyle["transform"],
-}));
-
 const pulseStyle = useAnimatedStyle<ViewStyle>(() => ({
   transform: [{ scale: interpolate(leaderPulse.value, [0, 1], [1, 1.08]) }],
   opacity: 1, // ✅ NE JAMAIS baisser la couronne
@@ -917,28 +885,30 @@ const markBtnGlowStyle = useAnimatedStyle<ViewStyle>(() => ({
    transform: [{ scale: interpolate(markBtnGlow.value, [0, 1], [1, 1.008]) }],
  }));
 
-
+// ✅ REMPLACER PAR :
 useEffect(() => {
   if (!isDuo) return;
-  if (!duoChallengeData?.duoUser) return; // ⬅️ on attend que le partenaire soit chargé
 
   const introKey =
     duoState?.uniqueKey ||
-    `${id}_${duoState?.selectedDays || 0}_${
-      duoState?.partnerId || duoChallengeData.duoUser.id
-    }`;
+    `${id}_${duoState?.selectedDays || 0}_${duoState?.partnerId || "pending"}`;
 
-  if (!introKey || lastIntroKeyRef.current === introKey) return;
+  if (!introKey) return;
+  if (lastIntroKeyRef.current === introKey) return;
 
   lastIntroKeyRef.current = introKey;
-  setIntroVisible(true);
+
+  const t = setTimeout(() => {
+    setIntroVisible(true);
+  }, 100);
+
+  return () => clearTimeout(t);
 }, [
   isDuo,
   id,
   duoState?.uniqueKey,
   duoState?.selectedDays,
   duoState?.partnerId,
-  duoChallengeData?.duoUser?.id,
 ]);
 
 useEffect(() => {
@@ -957,81 +927,6 @@ useEffect(() => {
     myNameRef.current = myName || "";
   }, [myName]);
 
-const startVsIntro = useCallback(() => {
-  // Respect accessibilité : pas d'anim agressive
-  if (reduceMotion) {
-    fadeOpacity.value = withTiming(0, { duration: 450 }, () => {
-      runOnJS(setIntroVisible)(false);
-      runOnJS(setIntroBlocking)(false);
-      startedRef.current = false;
-      myImgReady.current = false;
-      partnerImgReady.current = false;
-    });
-    return;
-  }
-  // petit "impact" haptique premium
-  Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium).catch(() => {});
-
-  // Pop scale synchro (court et cinématique)
-  popMy.value = 0;
-  popPartner.value = 0;
-  popMy.value = withSequence(
-    withTiming(1, { duration: 220, easing: Easing.out(Easing.cubic) }),
-    withTiming(0, { duration: 260, easing: Easing.inOut(Easing.quad) })
-  );
-  popPartner.value = withSequence(
-    withTiming(1, { duration: 220, easing: Easing.out(Easing.cubic) }),
-    withTiming(0, { duration: 260, easing: Easing.inOut(Easing.quad) })
-  );
-
-  // Micro-shake x2 (plus rapide, moins "jeu mobile")
-  shakeMy.value = withSequence(
-    withRepeat(
-      withSequence(
-        withTiming(-1, { duration: 55, easing: Easing.out(Easing.quad) }),
-        withTiming( 1, { duration: 55, easing: Easing.out(Easing.quad) }),
-        withTiming( 0, { duration: 55 })
-      ),
-      2,
-      true
-    ),
-    withTiming(0, { duration: 40 })
-  );
-
-  shakePartner.value = withSequence(
-    withRepeat(
-      withSequence(
-        withTiming( 1, { duration: 55 }),
-        withTiming(-1, { duration: 55 }),
-        withTiming( 0, { duration: 55 })
-      ),
-      2,
-      true
-    ),
-    withTiming(0, { duration: 40 }, () => {
-      fadeOpacity.value = withTiming(
-        0,
-        { duration: 420, easing: Easing.inOut(Easing.quad) },
-        () => {
-          runOnJS(setIntroVisible)(false);
-          runOnJS(setIntroBlocking)(false);
-          startedRef.current = false;
-          myImgReady.current = false;
-          partnerImgReady.current = false;
-        }
-      );
-    })
-  );
-}, [reduceMotion, fadeOpacity, popMy, popPartner, shakeMy, shakePartner]);
-
-const tryStart = useCallback(() => {
-  if (startedRef.current) return;
-  if (myImgReady.current && partnerImgReady.current) {
-    startedRef.current = true;
-    startVsIntro();
-  }
-}, [startVsIntro]);
-
 useEffect(() => {
   if (!introVisible) return;
 
@@ -1043,58 +938,6 @@ useEffect(() => {
   Image.prefetch(ua);
   Image.prefetch(pa);
 }, [introVisible, myAvatar, partnerAvatar, myName, duoChallengeData?.duoUser?.name]);
-
-useEffect(() => {
-  if (!introVisible) return;
-
-  // reset à chaque ouverture
-  startedRef.current = false;
-  myImgReady.current = false;
-  partnerImgReady.current = false;
-
-  setIntroBlocking(true);
-  fadeOpacity.value = 0;
-  fadeOpacity.value = withTiming(1, { duration: 220, easing: Easing.out(Easing.quad) });
-
-  // pas de timer ici
-  return () => {
-    if (startTimerRef.current) {
-      clearTimeout(startTimerRef.current);
-      startTimerRef.current = null;
-    }
-  };
-}, [introVisible]);
-
-useEffect(() => {
-  if (!introVisible) return;
-
-  // Si les assets sont prêts, on fait le démarrage "propre"
-  if (assetsReady) {
-    if (startTimerRef.current) clearTimeout(startTimerRef.current);
-    startTimerRef.current = setTimeout(() => {
-      if (!startedRef.current && myImgReady.current && partnerImgReady.current) {
-        startedRef.current = true;
-        startVsIntro();
-      }
-    }, 400);
-  }
-
-  // Dans TOUS les cas : hard-fallback pour ne JAMAIS rester bloqué sur le spinner
-  const hard = setTimeout(() => {
-    if (!startedRef.current) {
-      startedRef.current = true;
-      startVsIntro();
-    }
-  }, assetsReady ? 2500 : 2200);
-
-  return () => {
-    if (startTimerRef.current) {
-      clearTimeout(startTimerRef.current);
-      startTimerRef.current = null;
-    }
-    clearTimeout(hard);
-  };
-}, [introVisible, assetsReady, startVsIntro]);
 
 const resolveAvatarUrl = useCallback(
   async (raw?: string) => resolveAvatarUrlUtil(storage, raw),
@@ -2348,20 +2191,15 @@ const scrollContentStyle = useMemo(
           {/* ✅ UPGRADE: Chips + badge jours restants */}
 <View style={styles.chipRow}>
   {finalSelectedDays > 0 && (
-    <Animated.View
-      entering={firstMountRef.current ? FadeIn.delay(80).duration(320) : undefined}
-      style={[styles.chip, isDarkMode ? styles.chipDark : styles.chipLight]}
-    >
+    <View style={[styles.chip, isDarkMode ? styles.chipDark : styles.chipLight]}>
       <Ionicons name="calendar-outline" size={13} color={isDarkMode ? "#FFD700" : "#111"} />
       <Text style={[styles.chipText, { color: isDarkMode ? "#FFD700" : "#111" }]}>
         {finalSelectedDays} {t("challengeDetails.days")}
       </Text>
-    </Animated.View>
+    </View>
   )}
-  {/* ✅ Badge "X jours restants" — visible seulement si en cours */}
   {finalSelectedDays > 0 && finalCompletedDays > 0 && finalCompletedDays < finalSelectedDays && (
-    <Animated.View
-      entering={FadeIn.delay(140).duration(320)}
+    <View
       style={[
         styles.chip,
         {
@@ -2375,11 +2213,10 @@ const scrollContentStyle = useMemo(
       <Text style={[styles.chipText, { color: isDarkMode ? "#FFD700" : "#FF9F1C", fontFamily: "Comfortaa_700Bold" }]}>
         {finalSelectedDays - finalCompletedDays}j restants
       </Text>
-    </Animated.View>
+    </View>
   )}
   {isDuo && (
-    <Animated.View
-      entering={FadeIn.delay(200).duration(320)}
+    <View
       style={[
         styles.chip,
         {
@@ -2391,17 +2228,14 @@ const scrollContentStyle = useMemo(
     >
       <Ionicons name="people-outline" size={13} color={isDarkMode ? "#00FFFF" : "#3730A3"} />
       <Text style={[styles.chipText, { color: isDarkMode ? "#00FFFF" : "#3730A3" }]}>{t("duo.title")}</Text>
-    </Animated.View>
+    </View>
   )}
-  <Animated.View
-    entering={FadeIn.delay(260).duration(320)}
-    style={[styles.chip, isDarkMode ? styles.chipDark : styles.chipLight]}
-  >
+  <View style={[styles.chip, isDarkMode ? styles.chipDark : styles.chipLight]}>
     <Ionicons name="person-outline" size={13} color={isDarkMode ? "#fff" : "#111"} />
     <Text style={[styles.chipText, { color: isDarkMode ? "#fff" : "#111" }]}>
       {userCount.toLocaleString()}
     </Text>
-  </Animated.View>
+  </View>
 </View>
 {/* ✅ DUO PENDING — Ultra minimal / ultra premium (TOP 1) */}
 {isDuoPendingOut && outgoingPendingInvite?.id && (
@@ -3140,41 +2974,43 @@ const scrollContentStyle = useMemo(
 
           {/* ✅ UPGRADE: Description collapsible premium */}
           <View style={{ position: "relative", marginTop: SPACING }}>
-            <Text
-              style={[styles.infoDescriptionRecipe, { color: currentTheme.colors.textSecondary }]}
-              numberOfLines={descExpanded ? undefined : 3}
-            >
-              {routeDescription}
-            </Text>
-            {!descExpanded && (
-              <LinearGradient
-                pointerEvents="none"
-                colors={[
-                  "transparent",
-                  isDarkMode ? "rgba(14,14,18,0.85)" : "rgba(255,255,255,0.85)",
-                ]}
-                style={{
-                  position: "absolute", bottom: 0, left: 0, right: 0, height: 36,
-                }}
-              />
-            )}
-            <Pressable
-              onPress={() => setDescExpanded((v) => !v)}
-              style={{ marginTop: descExpanded ? 6 : 2, alignSelf: "flex-start" }}
-              hitSlop={8}
-            >
-              <Text style={{
-                fontFamily: "Comfortaa_700Bold",
-                fontSize: 12,
-                color: currentTheme.colors.secondary,
-                opacity: 0.85,
-              }}>
-                {descExpanded
-                  ? t("challengeDetails.readLess", { defaultValue: "Réduire ↑" })
-                  : t("challengeDetails.readMore", { defaultValue: "Lire la suite ↓" })}
-              </Text>
-            </Pressable>
-          </View>
+  <Text
+    style={[styles.infoDescriptionRecipe, { color: currentTheme.colors.textSecondary }]}
+    numberOfLines={descExpanded || !descNeedsTruncation ? undefined : 3}
+  >
+    {routeDescription}
+  </Text>
+  {descNeedsTruncation && !descExpanded && (
+    <LinearGradient
+      pointerEvents="none"
+      colors={[
+        "transparent",
+        isDarkMode ? "rgba(14,14,18,0.85)" : "rgba(255,255,255,0.85)",
+      ]}
+      style={{
+        position: "absolute", bottom: 0, left: 0, right: 0, height: 36,
+      }}
+    />
+  )}
+  {descNeedsTruncation && (
+    <Pressable
+      onPress={() => setDescExpanded((v) => !v)}
+      style={{ marginTop: descExpanded ? 6 : 2, alignSelf: "flex-start" }}
+      hitSlop={8}
+    >
+      <Text style={{
+        fontFamily: "Comfortaa_700Bold",
+        fontSize: 12,
+        color: currentTheme.colors.secondary,
+        opacity: 0.85,
+      }}>
+        {descExpanded
+          ? t("challengeDetails.readLess", { defaultValue: "Réduire ↑" })
+          : t("challengeDetails.readMore", { defaultValue: "Lire la suite ↓" })}
+      </Text>
+    </Pressable>
+  )}
+</View>
             
         {/* ACTIONS */}
 <View style={styles.actionsWrap}>
@@ -3474,9 +3310,8 @@ const scrollContentStyle = useMemo(
   clearInvitation={() => forceCloseInviteUI(closingInviteIdRef.current ?? inviteParam)}
   externalLoading={shouldShowGlobalInviteBoot}
   onLoaded={() => {
-    setInviteModalReady(true);
-    inviteBootOff();
-  }}
+  setInviteModalReady(true);
+}}
   onModalVisible={signalModalVisible}
 />
 
@@ -3564,99 +3399,25 @@ partnerDaysCompleted={duoChallengeData?.duoUser?.completedDays ?? 0}
 />
 
 {/* === DUO INTRO — FULLSCREEN MODAL === */}
-{introVisible && (
-  <View pointerEvents="none" /> /* keep tree stable while Modal mounts */
-)}
-<Modal
+{/* === DUO INTRO — CINÉMATIQUE TOP MONDE === */}
+<VsIntroModal
   visible={introVisible}
-  onRequestClose={() => setIntroVisible(false)}
+  myAvatar={myAvatar || `https://ui-avatars.com/api/?name=${encodeURIComponent(myName || "You")}`}
+  myName={myName || t("duo.you")}
+  myIsPioneer={myIsPioneer}
+  partnerAvatar={
+    partnerAvatar ||
+    `https://ui-avatars.com/api/?name=${encodeURIComponent(duoChallengeData?.duoUser?.name || "P")}`
+  }
+  partnerName={duoChallengeData?.duoUser?.name || t("duo.partner")}
+  partnerIsPioneer={duoChallengeData?.duoUser?.isPioneer}
+  reduceMotion={reduceMotion}
   onShow={() => setIntroBlocking(true)}
-  onDismiss={() => setIntroBlocking(false)}
-  {...introModalProps}
->
-  <Animated.View
-    style={[styles.vsModalRoot, fadeStyle]}
-    pointerEvents="auto"  // capture touches while showing
-  >
-    {/* BACKDROP: deep black with subtle gradient beams */}
-    <LinearGradient
-      colors={["#000000", "#050505", "#000000"]}
-      start={{ x: 0, y: 0 }}
-      end={{ x: 1, y: 1 }}
-      style={StyleSheet.absoluteFill}
-    />
-    <LinearGradient
-  colors={["rgba(255,215,0,0.06)", "rgba(0,0,0,0)", "rgba(255,159,28,0.05)"]}
-  start={{ x: 0.1, y: 0 }}
-  end={{ x: 0.9, y: 1 }}
-  style={StyleSheet.absoluteFill}
+  onDone={() => {
+    setIntroVisible(false);
+    setIntroBlocking(false);
+  }}
 />
-
-    {/* CONTENT */}
-    {!assetsReady ? (
-      <ActivityIndicator size="large" color="#FFD700" />
-    ) : (
-      <View style={[styles.vsStage, { paddingHorizontal: GAP }]}>
-        {/* Me */}
-        <Animated.View entering={FadeInUp.duration(220)} style={[shakeStyleMy, styles.vsSide, { marginHorizontal: GAP }]}>
-          <View style={styles.vsAvatarWrap}>
-           <Image
-  source={{ uri: myAvatar || `https://ui-avatars.com/api/?name=${encodeURIComponent(myName || "You")}` }}
-  style={[styles.vsAvatarXL, { width: AVA, height: AVA, borderRadius: AVA/2 }]}
-  onLoad={() => { myImgReady.current = true; tryStart(); }}
-  onError={() => { myImgReady.current = true; tryStart(); }}  // 👈 fail-safe
-/>
-            {/* glow ring */}
-            <Animated.View style={[styles.vsGlowRing]} />
-            {myIsPioneer && (
-              <PioneerBadge size="mini" style={{ position: "absolute", bottom: -6, left: -6 }} />
-            )}
-          </View>
-          <Text style={[styles.vsNameXL, { fontSize: IS_SMALL ? normalizeSize(16) : normalizeSize(18) }]}>
-            {myName || t("duo.you")}
-          </Text>
-        </Animated.View>
-
-        {/* VS badge */}
-        <Animated.View entering={FadeInUp.delay(120).duration(320)} style={[styles.vsCenter, { marginHorizontal: GAP }]}>
-          <LinearGradient
-            colors={["#FFD700", "#00FFFF"]}
-            start={{ x: 0, y: 0 }}
-            end={{ x: 1, y: 1 }}
-            style={styles.vsBadgeBig}
-          >
-            <Text style={styles.vsBadgeText}>VS</Text>
-          </LinearGradient>
-        </Animated.View>
-
-        {/* Partner */}
-        <Animated.View entering={FadeInUp.duration(220)} style={[shakeStylePartner, styles.vsSide, { marginHorizontal: GAP }]}>
-          <View style={styles.vsAvatarWrap}>
-            <Image
-  source={{ uri: partnerAvatar || `https://ui-avatars.com/api/?name=${encodeURIComponent(duoChallengeData?.duoUser?.name || "P")}` }}
-  style={[styles.vsAvatarXL, { width: AVA, height: AVA, borderRadius: AVA/2 }]}
-  onLoad={() => { partnerImgReady.current = true; tryStart(); }}
-  onError={() => { partnerImgReady.current = true; tryStart(); }} // 👈 fail-safe
-/>
-            {/* glow ring */}
-           <Animated.View
-  style={[
-    styles.vsGlowRing,
-    { borderColor: "rgba(255,159,28,0.35)", shadowColor: "rgba(255,159,28,0.9)" },
-  ]}
-/>
-            {duoChallengeData?.duoUser?.isPioneer && (
-              <PioneerBadge size="mini" style={{ position: "absolute", bottom: -6, left: -6 }} />
-            )}
-          </View>
-          <Text style={[styles.vsNameXL, { fontSize: IS_SMALL ? normalizeSize(16) : normalizeSize(18) }]}>
-            {duoChallengeData?.duoUser?.name || t("duo.partner")}
-          </Text>
-        </Animated.View>
-      </View>
-    )}
-  </Animated.View>
-</Modal>
 
 {warmupToast && (
   <Animated.View
