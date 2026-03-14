@@ -34,7 +34,7 @@
   "homeZ": {
      "duoPending": {
       "cta": "Préparer le Duo",
-    "hint": "En attendant, prépare ton Duo.",
+    "hint": "En attendant, configure ton Duo.",
        "title": "Invitation envoyée",
     "sub": "En attente. Dès qu’il accepte : Duo.",
     "a11y": "Invitation duo en attente",
@@ -51,7 +51,13 @@
       "duoProof": "Le Duo transforme l’essai.",
       "ctaHint": "Découvrir les défis disponibles.",
       "ctaShort": "Commencer",
-      "ctaA11y": "Commencer et choisir un défi"
+      "ctaActive":"Continuer",
+      "ctaA11y": "Commencer et choisir un défi",
+      "statActive":"{{n}} actifs",
+      "stat1": "Série du jour",
+      "stat2": "Solo & Duo",
+      "statStreak": "{{n}} j de série",
+      "statTrophies": "{{n}} 🏆"
     },
 
     "todayHub": {
@@ -70,7 +76,7 @@
       "badge": "AUJOURD’HUI",
       "metaPending": "Invitation",
     "metaNone": "Aucun défi actif",
-    "metaActive": "{{count}} défi(s) actif(s)",
+    "metaActive": "{{count}} actifs",
     "create": "Créer",
        "pendingTap":"Touchez pour voir",
       "primaryNoneShort": "Choisir",
@@ -151,15 +157,15 @@
       "subtitle2": "L’essentiel. Le reste en bas.",
       "leaderboard": "Classement",
       "sectionA11y": "Découvrir des défis, des conseils et les nouveautés.",
-      "leaderboardSub2": "Social proof. Motivation.",
+      "leaderboardSub2": "Vois où tu te situes.",
       "leaderboardA11y": "Ouvrir le classement",
       "leaderboardHint": "Compare ta progression avec les autres.",
       "tips": "Tips",
-      "tipsSub2": "1 minute. Action immédiate.",
+      "tipsSub2": "Petits hacks, grands résultats.",
       "tipsA11y": "Ouvrir les conseils",
       "tipsHint": "Découvre des conseils rapides pour tenir ton défi.",
       "newFeatures": "Nouveautés",
-      "newFeaturesSub": "Découvre. Vote. Influence l’app.",
+      "newFeaturesSub": "Tu shapes l'app. Vraiment.",
       "newFeaturesA11y": "Nouveautés",
       "newFeaturesHint": "Découvre les nouveautés et vote pour la suite."
     }
@@ -549,7 +555,7 @@
   "login": "Connexion",
   "noAccount": "Pas de compte ?",
   "signupHere": "Inscrivez-vous ici",
-  "appTagline": "On abandonne jamais seul.",
+  "appTagline": "Et si cette fois tu tenais ?",
   "or": "ou",
   "enterYourEmail": "Veuillez saisir votre adresse email.",
   "resetLinkSent": "Un lien de réinitialisation a été envoyé à votre email.",
@@ -1900,9 +1906,9 @@
     "tag": "Exclu du Jour",
     "badge": "RÉCOMPENSE",
     "oncePerDay": "1 / jour",
-    "teaser2": "Ouvre maintenant et découvre ta récompense mystère.",
+    "teaser2": "Qu'est-ce que tu vas décrocher aujourd'hui ?",
     "cta": "Ouvrir",
-    "micro": "Rapide. Simple. Reward.",
+    "micro": "Mystère · 1 fois par jour",
 "shortCta": "1 clique, 1 surprise",
     "hint": "Ouvre une roue mystère pour gagner une récompense.",
     "loading": "Ouverture du coffre mystère...",

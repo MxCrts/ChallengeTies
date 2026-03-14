@@ -377,7 +377,7 @@
   "login": "Login",
   "noAccount": "Don't have an account?",
   "signupHere": "Sign up here",
-  "appTagline": "Never quit alone.",
+  "appTagline": "What if this time you made it?",
   "or": "or",
   "enterYourEmail": "Please enter your email address.",
   "resetLinkSent": "A reset link has been sent to your email.",
@@ -578,7 +578,7 @@
  "homeZ": {
   "duoPending": {
      "cta": "Prepare Duo",
-    "hint": "While you wait, set up your Duo.",
+    "hint": "While waiting, set up your Duo.",
     "title": "Invite sent", "sub": "Pending. Once accepted: Duo.","a11y": "Duo invite pending",
     "steps": {
       "sent": "Invitation sent",
@@ -589,11 +589,17 @@
     "hero": {
       "brand": "ChallengeTies",
       "headline": "Today’s spark.",
-      "sub": "One challenge. One tap. And if you want to stick with it: Duo.",
+      "sub": "One challenge. One tap. Stay with it — go Duo.",
       "duoProof": "Duo makes it stick.",
-      "ctaShort": "Start",
+      "ctaShort": "Get started",
+      "ctaActive":"Keep going",
       "ctaHint": "Discover available challenges.",
-      "ctaA11y": "Start and pick a challenge"
+      "ctaA11y": "Start and pick a challenge",
+      "statActive":"{{n}} active",
+      "stat1": "Daily streak",
+      "stat2": "Solo & Duo",
+      "statStreak": "{{n}}d streak",
+      "statTrophies": "{{n}} 🏆"
     },
     "todayHub": {
       "primaryMark": "Check in today",
@@ -612,7 +618,7 @@
       "primaryActiveShort": "Check in",
       "metaPending": "Invite",
     "metaNone": "No active challenges",
-    "metaActive": "{{count}} active challenge(s)",
+    "metaActive": "{{count}} active",
     "create": "Create",
       "primaryNewShort": "New",
       "pendingTap": "Tap to view",
@@ -683,15 +689,15 @@
       "subtitle2": "The essentials. The rest below.",
       "leaderboard": "Leaderboard",
       "sectionA11y": "Discover challenges, tips and new features.",
-      "leaderboardSub2": "Social proof. Motivation.",
+      "leaderboardSub2": "See where you stand.",
       "leaderboardA11y": "Open the leaderboard",
       "leaderboardHint": "Compare your progress with others.",
       "tips": "Tips",
-      "tipsSub2": "1 minute. Instant action.",
+      "tipsSub2": "Small hacks, big results.",
       "tipsA11y": "Open tips",
       "tipsHint": "Get quick tips to stick with your challenge.",
       "newFeatures": "What’s new",
-      "newFeaturesSub": "Discover. Vote. Shape the app.",
+      "newFeaturesSub": "You shape the app. For real.",
       "newFeaturesA11y": "What’s new",
       "newFeaturesHint": "Discover new features and vote for what’s next."
     }
@@ -1602,8 +1608,8 @@
     "title": "Daily bonus",
     "badge": "REWARD",
 "oncePerDay": "1 / day",
-"teaser2": "Open now and discover your mystery reward.",
-"micro": "Fast. Simple. Reward.",
+"teaser2": "What will you unlock today?",
+"micro": "Mystery · Once a day",
     "subtitle": "Spin the mystery wheel to reveal your reward 🎁",
     "rerollUnavailable": "Ad loading…",
     "ctaShort": "Spin",

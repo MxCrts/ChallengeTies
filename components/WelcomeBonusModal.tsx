@@ -188,10 +188,12 @@ const WelcomeBonusModal: React.FC<WelcomeBonusModalProps> = ({
     ] as any,
   }));
 
-  const shimmerStyle = useAnimatedStyle(() => ({
-    transform: [{ translateX: shimmer.value * n(140) }, { rotateZ: "-20deg" }] as any,
-    opacity: 0.20,
-  }));
+  const SHIMMER_TRANSLATE = n(140);
+
+const shimmerStyle = useAnimatedStyle(() => ({
+  transform: [{ translateX: shimmer.value * SHIMMER_TRANSLATE }, { rotateZ: "-20deg" }] as any,
+  opacity: 0.20,
+}));
 
   const glowStyle = useAnimatedStyle(() => ({
     opacity: glowPulse.value * 0.16,

@@ -56,7 +56,7 @@
   "homeZ": {
     "duoPending": {
       "cta": "Preparar el Dúo",
-    "hint": "Mientras esperas, prepara tu Dúo.",
+    "hint": "Mientras tanto, configura tu Duo.",
       "title": "Invitación enviada", "sub": "Pendiente. Al aceptar: Dúo.","a11y": "Invitación dúo pendiente",
     "steps": {
       "sent": "Invitación enviada",
@@ -67,11 +67,17 @@
     "hero": {
       "brand": "ChallengeTies",
       "headline": "El impulso de hoy.",
-      "sub": "Un reto. Un toque. Y si quieres mantenerte: Dúo.",
+      "sub": "Un reto. Un clic. Y si quieres aguantar: Dúo.",
       "ctaHint": "Descubre los desafíos disponibles.",
       "duoProof": "El Dúo lo hace durar.",
       "ctaShort": "Empezar",
-      "ctaA11y": "Empezar y elegir un reto"
+      "ctaActive":"Continuar",
+      "ctaA11y": "Empezar y elegir un reto",
+      "statActive":"{{n}} activos",
+      "stat1": "Racha diaria",
+      "stat2": "Solo & Duo",
+      "statStreak": "{{n}} días de racha",
+      "statTrophies": "{{n}} 🏆"
     },
     "todayHub": {
       "primaryMark": "Marcar hoy",
@@ -90,7 +96,7 @@
       "pendingTap":"Toca para ver",
       "metaPending": "Invitación",
     "metaNone": "No hay desafíos activos",
-    "metaActive": "{{count}} desafío(s) activo(s)",
+    "metaActive": "{{count}} activos",
     "create": "Crear",
       "primaryActiveShort": "Marcar",
       "primaryNewShort": "Nuevo",
@@ -160,16 +166,16 @@
       "title": "Descubrir",
       "subtitle2": "Lo esencial. El resto abajo.",
       "leaderboard": "Clasificación",
-      "leaderboardSub2": "Prueba social. Motivación.",
+      "leaderboardSub2": "Mira dónde estás.",
       "leaderboardA11y": "Abrir la clasificación",
       "sectionA11y": "Descubre desafíos, consejos y nuevas funciones.",
       "leaderboardHint": "Compara tu progreso con los demás.",
       "tips": "Tips",
-      "tipsSub2": "1 minuto. Acción inmediata.",
+      "tipsSub2": "Pequeños trucos, grandes resultados.",
       "tipsA11y": "Abrir consejos",
       "tipsHint": "Descubre consejos rápidos para mantener tu reto.",
       "newFeatures": "Novedades",
-      "newFeaturesSub": "Descubre. Vota. Influye en la app.",
+      "newFeaturesSub": "Tú das forma a la app. De verdad.",
       "newFeaturesA11y": "Novedades",
       "newFeaturesHint": "Descubre novedades y vota lo que viene."
     }
@@ -333,8 +339,8 @@
     "title": "Bono diario",
     "badge": "RECOMPENSA",
 "oncePerDay": "1 / día",
-"teaser2": "Abre ahora y descubre tu recompensa misteriosa.",
-"micro": "Rápido. Simple. Recompensa.",
+"teaser2": "¿Qué vas a conseguir hoy?",
+"micro": "Misterio · 1 vez al día",
     "subtitle": "Gira la rueda misteriosa para revelar tu recompensa 🎁",
     "congrats": "¡Bravo!",
     "rerollUnavailable": "Anuncio cargando…",
@@ -598,7 +604,7 @@
   "login": "Iniciar sesión",
   "noAccount": "¿No tienes una cuenta?",
   "signupHere": "Regístrate aquí",
-  "appTagline": "Nunca lo dejes solo.",
+  "appTagline": "¿Y si esta vez lo logras?",
   "or": "o",
   "enterYourEmail": "Por favor ingresa tu correo electrónico.",
   "resetLinkSent": "Se ha enviado un enlace de restablecimiento a tu correo.",

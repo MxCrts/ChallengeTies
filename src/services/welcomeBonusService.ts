@@ -40,16 +40,9 @@ const clampDayIndex = (n: any) => {
   return v;
 };
 
-const looksOneBasedDay = (raw: any) =>
-  typeof raw === "number" &&
-  Number.isFinite(raw) &&
-  raw >= 1 &&
-  raw <= WELCOME_REWARDS.length;
-
 const normalizeDayIndex = (raw: any) => {
   const n = typeof raw === "number" && Number.isFinite(raw) ? raw : 0;
-  if (looksOneBasedDay(n)) return clampDayIndex(n - 1);
-  return clampDayIndex(n);
+  return clampDayIndex(n); // ← supprime la logique one-based, le service stocke déjà en 0-based
 };
 
 // ─────────────────────────────────────────────────────────────────────────────

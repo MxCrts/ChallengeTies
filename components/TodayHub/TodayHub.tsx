@@ -190,14 +190,14 @@ export default function TodayHub(props: Props) {
     const previewR = clamp(normalize(isTiny ? 16 : isTablet ? 22 : 20), 14, 24);
     const previewPadY = clamp(normalize(isTiny ? 12 : isTablet ? 16 : 14), 10, 18);
     const previewPadX = clamp(normalize(isTiny ? 12 : isTablet ? 16 : 14), 10, 18);
-    const thumb = clamp(normalize(isTiny ? 44 : isTablet ? 56 : 46), 40, 60);
-    const thumbR = clamp(normalize(isTiny ? 12 : isTablet ? 16 : 14), 10, 18);
+    const thumb = clamp(normalize(isTiny ? 52 : isTablet ? 64 : 56), 48, 70);
+    const thumbR = clamp(normalize(isTiny ? 14 : isTablet ? 18 : 16), 12, 20);
     const chevronBox = clamp(normalize(isTiny ? 30 : isTablet ? 38 : 32), 28, 42);
     const trackH = clamp(normalize(isTiny ? 5 : isTablet ? 7 : 6), 4, 8);
 
     const primaryR = clamp(normalize(isTiny ? 16 : isTablet ? 22 : 20), 14, 24);
-    const primaryPadY = clamp(normalize(isTiny ? 14 : isTablet ? 18 : 16), 12, 20);
-    const primaryPadX = clamp(normalize(isTiny ? 14 : isTablet ? 18 : 16), 12, 20);
+    const primaryPadY = clamp(normalize(isTiny ? 16 : isTablet ? 20 : 18), 14, 22);
+    const primaryPadX = clamp(normalize(isTiny ? 16 : isTablet ? 20 : 18), 14, 22);
 
     const createR = clamp(normalize(isTiny ? 16 : isTablet ? 22 : 18), 14, 24);
     const createPadY = clamp(normalize(isTiny ? 14 : isTablet ? 18 : 16), 12, 20);
@@ -217,11 +217,11 @@ export default function TodayHub(props: Props) {
 
   const TYPO = useMemo(() => ({
     pill: normalize(isTiny ? 11 : isLarge ? 12 : 11.5),
-    title: normalize(isTiny ? 20 : isLarge ? 22 : 21),
-    sub: normalize(isTiny ? 13 : isLarge ? 14 : 13.5),
-    previewTitle: normalize(isTiny ? 14 : isLarge ? 15 : 14.5),
-    previewDesc: normalize(isTiny ? 12 : isLarge ? 13 : 12.5),
-    primary: normalize(isTiny ? 15 : isLarge ? 16 : 15.5),
+    title: normalize(isTiny ? 21 : isLarge ? 23 : 22),
+    sub: normalize(isTiny ? 14 : isLarge ? 15 : 14.5),
+    previewTitle: normalize(isTiny ? 15 : isLarge ? 16 : 15.5),
+    previewDesc: normalize(isTiny ? 12.5 : isLarge ? 13.5 : 13),
+    primary: normalize(isTiny ? 17 : isLarge ? 18 : 17.5),
     pendingLabel: normalize(isTiny ? 15 : isLarge ? 16 : 15.5),
     pendingMicro: normalize(isTiny ? 11 : isLarge ? 12 : 11.5),
     link: normalize(isTiny ? 13 : isLarge ? 14 : 13.5),
@@ -394,7 +394,7 @@ export default function TodayHub(props: Props) {
       return t("homeZ.todayHub.metaNone", { defaultValue: "Aucun défi actif" });
     }
     return t("homeZ.todayHub.metaActive", {
-      defaultValue: "{{count}} défi(s) actif(s)",
+      defaultValue: "{{count}} actifs",
       count: activeCount,
     });
   }, [t, langKey, primaryMode, hasActiveChallenges, activeCount]);
@@ -745,13 +745,14 @@ export default function TodayHub(props: Props) {
             style={({ pressed }) => [
               s.preview,
               {
-                borderColor: TOKENS.border,
-                backgroundColor: TOKENS.surface2,
+                borderColor: isDarkMode ? "rgba(255,255,255,0.14)" : "rgba(2,6,23,0.10)",
+                borderWidth: TOKENS.hairline * 2,
+                backgroundColor: isDarkMode ? "rgba(255,255,255,0.07)" : "rgba(255,255,255,0.92)",
                 borderRadius: UI.previewR,
                 paddingVertical: UI.previewPadY,
                 paddingHorizontal: UI.previewPadX,
               },
-              pressFx(pressed, 0.993),
+              pressFx(pressed, 0.991),
             ]}
           >
             <View
@@ -1103,17 +1104,32 @@ export default function TodayHub(props: Props) {
                 />
               )}
 
-              <Text
-                style={[s.primaryText, { fontSize: TYPO.primary }]}
-                numberOfLines={1}
-                adjustsFontSizeToFit
-                minimumFontScale={0.90}
-              >
-                {primaryLabel}
-              </Text>
+              <View style={{ flex: 1, minWidth: 0 }}>
+                <Text
+                  style={[s.primaryText, { fontSize: TYPO.primary }]}
+                  numberOfLines={1}
+                  adjustsFontSizeToFit
+                  minimumFontScale={0.90}
+                >
+                  {primaryLabel}
+                </Text>
+                {isMark && progressPct > 0 && (
+                  <Text
+                    style={{
+                      fontSize: normalize(isTiny ? 10 : 11),
+                      fontFamily: F.regular,
+                      color: "rgba(11,17,32,0.60)",
+                      marginTop: 1,
+                    }}
+                    numberOfLines={1}
+                  >
+                    {`${Math.round(progressPct * 100)}% complété`}
+                  </Text>
+                )}
+              </View>
               <Ionicons
                 name={primaryIcon as any}
-                size={normalize(isTiny ? 18 : 20)}
+                size={normalize(isTiny ? 20 : 22)}
                 color="#0B1120"
               />
             </LinearGradient>
@@ -1145,71 +1161,82 @@ export default function TodayHub(props: Props) {
             style={({ pressed }) => [
               s.createCard,
               {
-                borderColor: TOKENS.border,
-                backgroundColor: TOKENS.surface2,
+                borderColor: isDarkMode ? "rgba(249,115,22,0.22)" : "rgba(249,115,22,0.18)",
+                backgroundColor: isDarkMode ? "rgba(249,115,22,0.06)" : "rgba(249,115,22,0.04)",
                 borderRadius: UI.createR,
                 paddingVertical: UI.createPadY,
                 paddingHorizontal: UI.createPadX,
               },
-              pressFx(pressed, 0.993),
+              pressFx(pressed, 0.991),
             ]}
           >
-            {/* ✨ NEW: subtle top gradient tint on create card */}
             <LinearGradient
               colors={
                 isDarkMode
-                  ? ["rgba(249,115,22,0.06)", "rgba(0,0,0,0.00)"]
-                  : ["rgba(249,115,22,0.04)", "rgba(255,255,255,0.00)"]
+                  ? ["rgba(249,115,22,0.10)", "rgba(0,0,0,0.00)"]
+                  : ["rgba(249,115,22,0.07)", "rgba(255,255,255,0.00)"]
               }
-              start={{ x: 0.5, y: 0 }}
-              end={{ x: 0.5, y: 1 }}
+              start={{ x: 0, y: 0 }}
+              end={{ x: 1, y: 1 }}
               style={[StyleSheet.absoluteFill, { borderRadius: UI.createR }]}
               pointerEvents="none"
             />
 
-            <View
-              style={[
-                s.createIcon,
-                {
-                  borderColor: "rgba(249,115,22,0.30)",
-                  backgroundColor: "rgba(249,115,22,0.10)",
-                  width: UI.createIcon,
-                  height: UI.createIcon,
-                  borderRadius: 999,
-                  borderWidth: 1.5,
-                },
-              ]}
-            >
+            <View style={{ flexDirection: "row", alignItems: "center", width: "100%", gap: normalize(12) }}>
+              <View
+                style={[
+                  s.createIcon,
+                  {
+                    borderColor: "rgba(249,115,22,0.40)",
+                    backgroundColor: "rgba(249,115,22,0.14)",
+                    width: normalize(isTiny ? 38 : 44),
+                    height: normalize(isTiny ? 38 : 44),
+                    borderRadius: 999,
+                    borderWidth: 1.5,
+                    marginBottom: 0,
+                  },
+                ]}
+              >
+                <Ionicons
+                  name="add"
+                  size={normalize(isTiny ? 20 : 22)}
+                  color="#F97316"
+                />
+              </View>
+
+              <View style={{ flex: 1, minWidth: 0 }}>
+                <Text
+                  style={[s.createTitle, { color: TOKENS.text, fontSize: TYPO.createTitle }]}
+                  numberOfLines={1}
+                  adjustsFontSizeToFit
+                  minimumFontScale={0.90}
+                >
+                  {t("homeZ.todayHub.create", { defaultValue: "Créer" })}
+                </Text>
+                <Text
+                  style={[
+                    s.createSub,
+                    {
+                      color: TOKENS.mutedText,
+                      fontSize: TYPO.createSub,
+                      lineHeight: Math.round(TYPO.createSub * 1.25),
+                      marginTop: 2,
+                    },
+                  ]}
+                  numberOfLines={1}
+                  adjustsFontSizeToFit
+                  minimumFontScale={0.90}
+                >
+                  {t("homeZ.todayHub.createSub", { defaultValue: "Ton défi, tes règles." })}
+                </Text>
+              </View>
+
               <Ionicons
-                name="add"
-                size={normalize(isTiny ? 16 : 18)}
-                color={isDarkMode ? "#F8FAFC" : "#0B1120"}
+                name="chevron-forward"
+                size={normalize(16)}
+                color="rgba(249,115,22,0.60)"
               />
             </View>
-
-            <Text
-              style={[s.createTitle, { color: TOKENS.text, fontSize: TYPO.createTitle }]}
-              numberOfLines={1}
-              adjustsFontSizeToFit
-              minimumFontScale={0.90}
-            >
-              {t("homeZ.todayHub.create", { defaultValue: "Créer" })}
-            </Text>
-            <Text
-              style={[
-                s.createSub,
-                {
-                  color: TOKENS.mutedText,
-                  fontSize: TYPO.createSub,
-                  lineHeight: Math.round(TYPO.createSub * 1.25),
-                },
-              ]}
-              numberOfLines={1}
-              adjustsFontSizeToFit
-              minimumFontScale={0.90}
-            >
-              {t("homeZ.todayHub.createSub", { defaultValue: "Ton défi, tes règles." })}
-            </Text>
           </Pressable>
         </View>
       </View>
@@ -1225,14 +1252,14 @@ const s = StyleSheet.create({
     paddingBottom: 4,
   },
   shell: {
-    width: "100%",
-    position: "relative",
-    borderWidth: 0,
-    borderRadius: 26,
-    padding: 16,
-    marginBottom: 0,
-    overflow: "visible",
-  },
+  width: "100%",
+  position: "relative",
+  borderWidth: 0,
+  borderRadius: 26,
+  padding: 16,
+  marginBottom: 0,
+  overflow: "hidden",
+},
   pendingAura: {
     position: "absolute",
     width: 106,
@@ -1261,12 +1288,22 @@ const s = StyleSheet.create({
     borderRadius: 999,
   },
   pillsRow: {
-    flexDirection: "row",
-    alignItems: "center",
-    flexWrap: "nowrap",
-    marginBottom: 12,
-    marginLeft: 10,
-  },
+  flexDirection: "row",
+  alignItems: "center",
+  justifyContent: "flex-start",
+  flexWrap: "nowrap",
+  marginBottom: 12,
+  gap: 8,
+},
+pillLeft: {
+  flexShrink: 1,
+  maxWidth: "48%",
+},
+pillRight: {
+  flexShrink: 1,
+  maxWidth: "48%",
+
+},
   pill: {
     flexDirection: "row",
     alignItems: "center",
@@ -1274,15 +1311,6 @@ const s = StyleSheet.create({
     paddingVertical: 7,
     paddingHorizontal: 12,
     minHeight: 32,
-    flexShrink: 1,
-    minWidth: 0,
-  },
-  pillLeft: {
-    flexShrink: 0,
-    maxWidth: "45%",
-  },
-  pillRight: {
-    flexGrow: 1,
     flexShrink: 1,
     minWidth: 0,
   },
@@ -1553,10 +1581,10 @@ const s = StyleSheet.create({
     fontFamily: F.regular,
     textDecorationLine: "underline",
   },
-  createCard: {
+   createCard: {
     width: "100%",
     borderWidth: 1,
-    alignItems: "center",
+    alignItems: "stretch",
     marginTop: 10,
     overflow: "hidden",
   },

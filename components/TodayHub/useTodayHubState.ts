@@ -286,26 +286,25 @@ const hubChallengeId = useMemo(() => {
   return (pendingMeta?.id ?? curatedMeta?.id ?? null) as any;
 }, [primaryMode, pendingInvite?.challengeId, focusChallengeId, hasActiveChallenges, pendingMeta?.id, curatedMeta?.id]);
 
-
- const title = useMemo(() => {
-    if (primaryMode === "duoPending") return t("homeZ.duoPending.title", { defaultValue: "Invite sent" });
+const title = useMemo(() => {
+    if (primaryMode === "duoPending") return t("homeZ.duoPending.title", { defaultValue: "Invitation envoyée" });
     if (!hasActiveChallenges) return t("homeZ.todayHub.titleNone2", { defaultValue: "Choisis un défi" });
-    return t("homeZ.todayHub.titleActive2", { defaultValue: "Aujourd’hui" });
+    return t("homeZ.todayHub.titleActive2", { defaultValue: "Aujourd'hui" });
   }, [primaryMode, hasActiveChallenges, t, langKey]);
 
   const subtitle = useMemo(() => {
     if (primaryMode === "duoPending")
-      return t("homeZ.duoPending.hint", { defaultValue: "While waiting, set up your Duo." });
+      return t("homeZ.duoPending.hint", { defaultValue: "En attendant, configure ton Duo." });
     if (!hasActiveChallenges) return t("homeZ.todayHub.subNone2", { defaultValue: "Solo ou à deux. Commence simple." });
     return t("homeZ.todayHub.subActive2", { defaultValue: "1 action. 1 jour. Zéro friction." });
   }, [primaryMode, hasActiveChallenges, t, langKey]);
 
   const primaryLabel = useMemo(() => {
-  if (primaryMode === "mark") return t("homeZ.todayHub.primaryMark", { defaultValue: "Marquer aujourd’hui" });
-  if (primaryMode === "duoPending") return t("homeZ.todayHub.primaryPending", { defaultValue: "Relancer" });
-  if (primaryMode === "pick") return t("homeZ.todayHub.primaryPick", { defaultValue: "Choisir un défi" });
-  return t("homeZ.todayHub.primaryNew", { defaultValue: "Nouveau défi" });
-}, [primaryMode, t, langKey]);
+    if (primaryMode === "mark") return t("homeZ.todayHub.primaryMark", { defaultValue: "Marquer aujourd'hui" });
+    if (primaryMode === "duoPending") return t("homeZ.todayHub.primaryPending", { defaultValue: "Relancer" });
+    if (primaryMode === "pick") return t("homeZ.todayHub.primaryPick", { defaultValue: "Choisir un défi" });
+    return t("homeZ.todayHub.primaryNew", { defaultValue: "Nouveau défi" });
+  }, [primaryMode, t, langKey]);
 
   return {
     primaryMode,

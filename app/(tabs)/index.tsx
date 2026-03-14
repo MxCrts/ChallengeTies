@@ -740,11 +740,12 @@ const duoRingPulse = useSharedValue(0);
 
 // ✨ NEW: ambient glow for hero CTA
 const heroCtaGlow = useSharedValue(0);
+const EXPLORE_BTN_WIDTH = normalize(220);
 
 const exploreAnimStyle = useAnimatedStyle(() => ({
   transform: [{ scale: exploreScale.value }],
+  width: EXPLORE_BTN_WIDTH,
 }));
-
 const markAnimStyle = useAnimatedStyle(() => ({
   transform: [{ scale: markScale.value }],
 }));
@@ -883,12 +884,13 @@ const markWelcomeHandled = useCallback(async () => {
 }, [DAY_UTC, WELCOME_HANDLED_KEY]);
 
 
-  const HERO_BASE_HEIGHT = useMemo(() => {
-    const base = normalize(360);
-    const capMin = Math.round(H * 0.44);
-    const capMax = Math.round(H * 0.56);
+    const HERO_BASE_HEIGHT = useMemo(() => {
+    const base = normalize(380);
+    const capMin = Math.round(H * 0.48);
+    const capMax = Math.round(H * 0.58);
     return Math.max(Math.min(base, capMax), capMin);
   }, [H]);
+  
   const HERO_TOTAL_HEIGHT = HERO_BASE_HEIGHT + insets.top;
 
   const bottomContentPadding =
@@ -2068,8 +2070,10 @@ const handleWarmupPress = useCallback(async () => {
   }, [activeChallengeId, safeNavigate]);
 
   const heroCtaLabel = useMemo(
-    () => t("homeZ.hero.ctaShort", "Explorer"),
-    [t]
+    () => hasActiveChallenges
+      ? t("homeZ.hero.ctaActive", "Continuer")
+      : t("homeZ.hero.ctaShort", "Commencer"),
+    [t, hasActiveChallenges]
   );
 
   const dynamicStyles = useMemo(
@@ -2566,12 +2570,12 @@ setPostWelcomeAbsorbArmed(true);
             <LinearGradient
               colors={[
                 "rgba(0,0,0,0.00)",
-                "rgba(0,0,0,0.10)",
-                "rgba(0,0,0,0.38)",
-                "rgba(0,0,0,0.72)",
-                "rgba(0,0,0,0.88)",
+                "rgba(0,0,0,0.05)",
+                "rgba(0,0,0,0.42)",
+                "rgba(0,0,0,0.78)",
+                "rgba(0,0,0,0.95)",
               ]}
-              locations={[0, 0.25, 0.52, 0.80, 1]}
+              locations={[0, 0.20, 0.55, 0.82, 1]}
               style={[
                 staticStyles.heroOverlay,
                 { top: -insets.top, height: HERO_TOTAL_HEIGHT },
@@ -2597,6 +2601,7 @@ setPostWelcomeAbsorbArmed(true);
                 {
                   paddingTop: insets.top + normalize(IS_TINY ? 8 : 12),
                   paddingHorizontal: normalize(15),
+                  gap: normalize(IS_TINY ? 6 : 8),
                 },
               ]}
             >
@@ -2630,7 +2635,7 @@ setPostWelcomeAbsorbArmed(true);
                 adjustsFontSizeToFit
                 minimumFontScale={IS_TINY ? 0.84 : 0.88}
               >
-                {t("homeZ.hero.headline", "Reste régulier.")}
+                {t("homeZ.hero.headline", "Le déclic du jour.")}
               </Text>
 
               {/* Proof line */}
@@ -2639,7 +2644,7 @@ setPostWelcomeAbsorbArmed(true);
                 numberOfLines={2}
                 minimumFontScale={IS_TINY ? 0.86 : 0.90}
               >
-                {t("homeZ.hero.sub", "Un défi simple. Chaque jour. En solo ou à deux.")}
+               {t("homeZ.hero.sub", "Un défi. Un clic. Et si tu veux tenir : Duo.")}
               </Text>
 
               {/* Tutorial FAB — positioned absolutely relative to heroSection */}
@@ -2681,12 +2686,13 @@ setPostWelcomeAbsorbArmed(true);
               </Pressable>
 
               {/* ✨ IMPROVED: Hero CTA with ambient glow effect */}
-              <TouchableOpacity
-                onPress={handlePickChallengePress}
+             <TouchableOpacity
+                onPress={hasActiveChallenges ? handleMarkTodayPress : handlePickChallengePress}
                 accessibilityRole="button"
                 accessibilityLabel={t("homeZ.hero.ctaA11y", "Choisir un défi")}
                 testID="cta-button"
                 hitSlop={{ top: 8, bottom: 8, left: 12, right: 12 }}
+                style={{ alignSelf: "center" }}
                 onPressIn={() => {
                   exploreScale.value = withSpring(0.96, { damping: 18, stiffness: 220 });
                 }}
@@ -2696,11 +2702,7 @@ setPostWelcomeAbsorbArmed(true);
               >
                 <View style={staticStyles.heroCTAWrapper}>
                   {/* ✨ NEW: ambient glow behind CTA button */}
-                  <Animated.View
-                    pointerEvents="none"
-                    style={[staticStyles.heroCTAGlow, heroCtaGlowStyle]}
-                  />
-                  <Animated.View style={exploreAnimStyle}>
+                  <Animated.View style={[exploreAnimStyle, { alignSelf: "center" }]}>
                     <LinearGradient
                       colors={["#F97316", "#FB923C"]}
                       start={{ x: 0, y: 0 }}
@@ -2733,29 +2735,57 @@ setPostWelcomeAbsorbArmed(true);
                 </View>
               </TouchableOpacity>
 
-              {/* ✨ NEW: social proof stat bar */}
-              <View style={[staticStyles.heroStatBar, staticStyles.heroStatBarSafe]}>
-                <View style={staticStyles.heroStatItem}>
-                  <Ionicons name="flame" size={normalize(13)} color="#F97316" />
-                  <Text style={staticStyles.heroStatText}>
-                    {t("homeZ.hero.stat1", "Daily streak")}
-                  </Text>
-                </View>
-                <View style={staticStyles.heroStatDot} />
-                <View style={staticStyles.heroStatItem}>
-                  <Ionicons name="people" size={normalize(13)} color="rgba(255,255,255,0.80)" />
-                  <Text style={staticStyles.heroStatText}>
-                    {t("homeZ.hero.stat2", "Solo & Duo")}
-                  </Text>
-                </View>
-                <View style={staticStyles.heroStatDot} />
-                <View style={staticStyles.heroStatItem}>
-                  <Ionicons name="trophy" size={normalize(13)} color="rgba(255,255,255,0.80)" />
-                  <Text style={staticStyles.heroStatText}>
-                    {t("homeZ.hero.stat3", "Trophées")}
-                  </Text>
-                </View>
-              </View>
+              {/* Stat bar — données utilisateur réelles si dispo */}
+{(() => {
+  const list = (userData as any)?.CurrentChallenges;
+  const streakNum: number | null = (() => {
+    if (!Array.isArray(list)) return null;
+    const active = list.filter((c: any) => !c?.completed && !c?.archived);
+    if (!active.length) return null;
+    const max = Math.max(...active.map((c: any) =>
+      typeof c?.streak === "number" ? c.streak : 0
+    ));
+    return max > 0 ? max : null;
+  })();
+                const trophyCount =
+                  typeof (userData as any)?.trophies === "number"
+                    ? (userData as any).trophies
+                    : null;
+                const activeCnt = activeChallenges.length;
+
+                return (
+                  <View style={[staticStyles.heroStatBar, staticStyles.heroStatBarSafe, { marginBottom: normalize(IS_TINY ? 6 : 10) }]}>
+                    <View style={staticStyles.heroStatItem}>
+                      <Ionicons name="flame" size={normalize(13)} color="#F97316" />
+                      <Text style={staticStyles.heroStatText}>
+                        {streakNum !== null && streakNum > 0
+                          ? t("homeZ.hero.statStreak", "{{n}} j de série", { n: streakNum })
+                          : t("homeZ.hero.stat1", "Daily streak")}
+                      </Text>
+                    </View>
+                    <View style={staticStyles.heroStatDot} />
+                    <View style={staticStyles.heroStatItem}>
+                      <Ionicons name="flash" size={normalize(13)} color="rgba(255,255,255,0.80)" />
+                      <Text style={staticStyles.heroStatText}>
+                        {activeCnt > 0
+                           ? t("homeZ.hero.statActive", "{{n}} actifs", { n: activeCnt })
+                          : t("homeZ.hero.stat2", "Solo & Duo")}
+                      </Text>
+                    </View>
+                    {trophyCount !== null && (
+                      <>
+                        <View style={staticStyles.heroStatDot} />
+                        <View style={staticStyles.heroStatItem}>
+                          <Ionicons name="trophy" size={normalize(13)} color="rgba(255,255,255,0.80)" />
+                          <Text style={staticStyles.heroStatText}>
+                            {t("homeZ.hero.statTrophies", "{{n}} 🏆", { n: trophyCount })}
+                          </Text>
+                        </View>
+                      </>
+                    )}
+                  </View>
+                );
+              })()}
 
             </View>
           </Animated.View>
@@ -2794,7 +2824,7 @@ setPostWelcomeAbsorbArmed(true);
             />
           </View>
 
-          <View style={{ height: normalize(18) }} />
+          <View style={{ height: normalize(6) }} />
 
           {/* ════════════════════════════════════════════════════════
               BONUS DU JOUR — feels like a reward, not a card
@@ -2825,8 +2855,8 @@ setPostWelcomeAbsorbArmed(true);
                   <LinearGradient
                     colors={
                       isDarkMode
-                        ? ["rgba(249,115,22,0.18)", "rgba(251,146,60,0.10)", "rgba(2,6,23,0.00)"]
-                        : ["rgba(249,115,22,0.14)", "rgba(251,146,60,0.08)", "rgba(255,255,255,0.00)"]
+                        ? ["rgba(249,115,22,0.22)", "rgba(251,146,60,0.12)", "rgba(2,6,23,0.00)"]
+                        : ["rgba(249,115,22,0.20)", "rgba(251,146,60,0.12)", "rgba(255,255,255,0.00)"]
                     }
                     start={{ x: 0, y: 0 }}
                     end={{ x: 1, y: 1 }}
@@ -2983,7 +3013,7 @@ setPostWelcomeAbsorbArmed(true);
                             >
                               {dailyBonusLoading
                                 ? t("dailyBonus.loading", "Ouverture…")
-                                : t("dailyBonus.teaser2", "Ouvre et découvre ta récompense mystère.")}
+                                : t("dailyBonus.teaser2", "Qu'est-ce que tu vas décrocher aujourd'hui ?")}
                             </Text>
 
                             {/* CTA pill */}
@@ -3015,7 +3045,7 @@ setPostWelcomeAbsorbArmed(true);
                                 ]}
                                 numberOfLines={1}
                               >
-                                {t("dailyBonus.micro", "Rapide. Simple. Reward.")}
+                                 {t("dailyBonus.micro", "Mystère · 1 fois par jour")}
                               </Text>
                             </View>
                           </View>
@@ -3062,7 +3092,7 @@ setPostWelcomeAbsorbArmed(true);
             </View>
           )}
 
-          <View style={{ height: normalize(14) }} />
+          <View style={{ height: normalize(6) }} />
 
           {/* ════════════════════════════════════════════════════════
               DAILY FIVE — editorial treatment
@@ -3348,13 +3378,20 @@ setPostWelcomeAbsorbArmed(true);
                   accessibilityRole="button"
                   style={staticStyles.seeAllWrap}
                 >
-                  <View
+                  <LinearGradient
+                    colors={
+                      isDarkMode
+                        ? ["rgba(249,115,22,0.10)", "rgba(249,115,22,0.04)"]
+                        : ["rgba(249,115,22,0.08)", "rgba(249,115,22,0.03)"]
+                    }
+                    start={{ x: 0, y: 0 }}
+                    end={{ x: 1, y: 0 }}
                     style={[
                       staticStyles.seeAllBtn,
                       {
                         borderColor: isDarkMode
-                          ? "rgba(226,232,240,0.20)"
-                          : "rgba(15,23,42,0.14)",
+                          ? "rgba(249,115,22,0.30)"
+                          : "rgba(249,115,22,0.22)",
                       },
                     ]}
                   >
@@ -3371,9 +3408,9 @@ setPostWelcomeAbsorbArmed(true);
                     <Ionicons
                       name="chevron-forward"
                       size={normalize(18)}
-                      color={isDarkMode ? "#E2E8F0" : "#0B1120"}
+                      color="#F97316"
                     />
-                  </View>
+                  </LinearGradient>
                 </TouchableOpacity>
               </View>
             ) : (
@@ -3485,7 +3522,7 @@ setPostWelcomeAbsorbArmed(true);
                       adjustsFontSizeToFit
                       minimumFontScale={0.92}
                     >
-                      {t("homeZ.discover.leaderboardSub2", "Social proof. Motivation.")}
+                       {t("homeZ.discover.leaderboardSub2", "Vois où tu te situes.")}
                     </Text>
                   </Pressable>
 
@@ -3542,7 +3579,7 @@ setPostWelcomeAbsorbArmed(true);
                       adjustsFontSizeToFit
                       minimumFontScale={0.92}
                     >
-                      {t("homeZ.discover.tipsSub2", "1 minute. Action immédiate.")}
+                      {t("homeZ.discover.tipsSub2", "Petits hacks, grands résultats.")}
                     </Text>
                   </Pressable>
                 </View>
@@ -3612,7 +3649,7 @@ setPostWelcomeAbsorbArmed(true);
                         adjustsFontSizeToFit
                         minimumFontScale={0.92}
                       >
-                        {t("homeZ.discover.newFeaturesSub", "Découvre. Vote. Influence l'app.")}
+                        {t("homeZ.discover.newFeaturesSub", "Tu shapes l'app. Vraiment.")}
                       </Text>
                     </View>
                   </View>
@@ -3785,10 +3822,12 @@ const staticStyles = StyleSheet.create({
     backgroundColor: "transparent",
   },
   heroStatBarSafe: {
-  backgroundColor: "rgba(0,0,0,0.28)",
+  backgroundColor: "rgba(0,0,0,0.35)",
   borderRadius: normalize(999),
   paddingHorizontal: normalize(14),
-  paddingVertical: normalize(6),
+  paddingVertical: normalize(7),
+  borderWidth: StyleSheet.hairlineWidth,
+  borderColor: "rgba(255,255,255,0.12)",
 },
   todayHubSoloLink: {
     fontSize: normalize(12.6),
@@ -4256,33 +4295,30 @@ const staticStyles = StyleSheet.create({
     justifyContent: "space-between",
     gap: normalize(10),
   },
-  // ✨ NEW: hero CTA glow & wrapper
   heroCTAWrapper: {
     position: "relative",
     alignItems: "center",
     justifyContent: "center",
   },
   heroCTAGlow: {
-    position: "absolute",
-    width: Math.min(CONTENT_W, normalize(360)) + normalize(40),
-    height: normalize(60),
-    borderRadius: normalize(30),
-    backgroundColor: "#F97316",
-    top: "50%",
-    marginTop: -normalize(30),
-  },
-  // ✨ NEW: shine overlay on CTA
+  position: "absolute",
+  width: normalize(180),
+  height: normalize(36),
+  borderRadius: normalize(18),
+  backgroundColor: "#F97316",
+  top: "50%",
+  marginTop: -normalize(18),
+  opacity: 0.6,
+},
   ctaShineOverlay: {
     ...StyleSheet.absoluteFillObject,
     borderRadius: normalize(16),
   },
-  // ✨ NEW: orange ambient at hero bottom
   heroOrangeAmbient: {
     position: "absolute",
     left: 0,
     right: 0,
   },
-  // ✨ NEW: hero stat bar
   heroStatBar: {
     flexDirection: "row",
     alignItems: "center",
@@ -4748,20 +4784,19 @@ const staticStyles = StyleSheet.create({
   justifyContent: "flex-end",
   flex: 1,
 },
-  heroBrandRow: {
+ heroBrandRow: {
     width: "100%",
     maxWidth: CONTENT_W,
     flexDirection: "row",
     alignItems: "center",
     justifyContent: "center",
-    gap: normalize(12),
-    marginBottom: normalize(12),
+    gap: normalize(10),
+    marginBottom: normalize(16),
   },
-  logoKeynote: {
-    width: normalize(82),
-    height: normalize(82),
+   logoKeynote: {
+    width: normalize(54),
+    height: normalize(54),
   },
-  // ✨ IMPROVED: frosted glass brand pill
   heroBrandPillBlur: {
     borderRadius: normalize(999),
     overflow: "hidden",
@@ -4775,19 +4810,19 @@ const staticStyles = StyleSheet.create({
     backgroundColor: "rgba(0,0,0,0.18)",
   },
   heroBrandPillText: {
-    fontSize: normalize(15.2),
+    fontSize: normalize(13),
     fontFamily: "Comfortaa_700Bold",
     color: "#FFFFFF",
-    letterSpacing: 1.6,
+    letterSpacing: 1.8,
   },
   heroTitleKeynote: {
     width: "100%",
     maxWidth: CONTENT_W,
-    fontSize: normalize(32.5),
-    lineHeight: normalize(36.5),
+    fontSize: normalize(34),
+    lineHeight: normalize(38),
     fontFamily: "Comfortaa_700Bold",
     textAlign: "center",
-    marginBottom: normalize(10),
+    marginBottom: normalize(8),
     includeFontPadding: false,
   },
   heroSubtitleKeynote: {
@@ -4802,26 +4837,26 @@ const staticStyles = StyleSheet.create({
     includeFontPadding: false,
   },
   ctaButtonKeynote: {
-    flexDirection: "row",
-    alignItems: "center",
-    justifyContent: "center",
-    width: Math.min(CONTENT_W, normalize(360)),
-    paddingVertical: normalize(12),
-    paddingHorizontal: normalize(16),
-    borderRadius: normalize(16),
-    shadowColor: "#F97316",
-    shadowOffset: { width: 0, height: normalize(7) },
-    shadowOpacity: 0.40,           // ✨ stronger orange shadow
-    shadowRadius: normalize(18),
-    elevation: 5,
-    overflow: "hidden",
-  },
+  flexDirection: "row",
+  alignItems: "center",
+  justifyContent: "center",
+  width: normalize(220),
+  paddingVertical: normalize(14),
+  paddingHorizontal: normalize(24),
+  borderRadius: normalize(999),
+  shadowColor: "#F97316",
+  shadowOffset: { width: 0, height: normalize(8) },
+  shadowOpacity: 0.55,        // ← augmenté
+  shadowRadius: normalize(24), // ← augmenté
+  elevation: 10,               // ← augmenté Android
+  overflow: "hidden",
+  alignSelf: "center",
+},
   heroCtaInner: {
     flexDirection: "row",
     alignItems: "center",
     justifyContent: "center",
-    gap: normalize(10),
-    width: "100%",
+    gap: normalize(8),
   },
   heroCtaIcon: {
     width: normalize(28),
@@ -4834,30 +4869,26 @@ const staticStyles = StyleSheet.create({
     borderColor: "rgba(2,6,23,0.14)",
   },
   ctaTextKeynote: {
-    fontSize: normalize(14.8),
+    fontSize: normalize(15.5),
     fontFamily: "Comfortaa_700Bold",
     color: "#0B1120",
     textAlign: "center",
-    flex: 1,
-    minWidth: 0,
-    marginHorizontal: normalize(2),
+    includeFontPadding: false,
   },
   section: {
     paddingTop: SPACING * 1.1,
     paddingBottom: SPACING * 1.1,
     paddingHorizontal: SPACING,
     marginBottom: SPACING * 1.1,
-    // overflow must NOT be "visible" on Android — causes elevation bleed into sibling sections
     overflow: Platform.OS === "android" ? "hidden" : "visible",
-    // isolate stacking context so heroCard elevation doesn't bleed into Discover
     zIndex: 0,
   },
   sectionTitle: {
-    fontSize: normalize(24),
+    fontSize: normalize(20),
     fontFamily: "Comfortaa_700Bold",
     marginBottom: SPACING,
     textAlign: "center",
-    lineHeight: normalize(28),
+    lineHeight: normalize(24),
     includeFontPadding: false,
   },
   dailyBonusWrapper: {
