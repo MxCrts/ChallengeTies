@@ -24,7 +24,6 @@ import {
   AppState,
   View,
   Text,
-  ActivityIndicator,
   InteractionManager,
 } from "react-native";
 import { Provider as PaperProvider } from "react-native-paper";
@@ -84,6 +83,7 @@ import MarkToastListener from "@/src/ui/MarkToastListener";
 import { faLogEvent } from "@/src/firebaseAnalytics";
 import { LinearGradient } from "expo-linear-gradient";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
+import TiktokBusiness from 'react-native-tiktok-business';
 
 const FORCE_ADS_DEBUG = false;
 
@@ -133,8 +133,6 @@ const FIRST_LAUNCH_KEY = "ties.firstLaunch.v1";
 const GUEST_KEY = "ties.guest.enabled.v1";
 const EXPLICIT_LOGOUT_KEY = "ties.explicitLogout.v1";
 const HOME_PENDING_INVITE_KEY = "ties_home_pending_invite_v1";
-const FIRSTPICK_DONE_HARD_KEY = "ties_firstpick_done_hard_v1";
-const FIRSTPICK_DONE_HARD_TTL_MS = 5 * 60 * 1000;
 
 async function getHomePendingInviteId() {
   try {
@@ -1300,6 +1298,15 @@ export default function RootLayout() {
     (globalThis as any).__ATT_DONE__ = false;
     (globalThis as any).__ATT_STATUS__ = "unknown";
     const t = setTimeout(() => { (globalThis as any).__ATT_DONE__ = true; }, 15000);
+
+    // ✅ TikTok SDK init
+    TiktokBusiness.identify(
+      undefined,
+      undefined,
+      undefined,
+      undefined
+    );
+
     return () => clearTimeout(t);
   }, []);
 
@@ -1366,18 +1373,3 @@ export default function RootLayout() {
     </GestureHandlerRootView>
   );
 }
-
-const styles = StyleSheet.create({
-  loadingContainer: {
-    flex: 1,
-    justifyContent: "center",
-    alignItems: "center",
-    backgroundColor: "#0F172A",
-  },
-  loadingText: {
-    marginTop: 10,
-    fontSize: 16,
-    color: "#FFF",
-    textAlign: "center",
-  },
-});

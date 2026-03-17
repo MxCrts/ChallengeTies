@@ -130,6 +130,19 @@
         }
       ],
       [
+  "react-native-tiktok-business",
+  {
+    "ios": {
+      "appId": "6751504640",
+      "tiktokAppId": "7616409431592665095"
+    },
+    "android": {
+      "appId": "6751504640",
+      "tiktokAppId": "7589210915967402000"
+    }
+  }
+],
+      [
         "expo-notifications",
         {
           "icon": "./assets/notification-icon.png",

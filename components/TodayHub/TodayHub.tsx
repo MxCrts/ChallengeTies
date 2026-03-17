@@ -1302,7 +1302,6 @@ pillLeft: {
 pillRight: {
   flexShrink: 1,
   maxWidth: "48%",
-
 },
   pill: {
     flexDirection: "row",
