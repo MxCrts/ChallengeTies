@@ -9,10 +9,11 @@ import {
   ScrollView,
   Platform,
   Dimensions,
-  useWindowDimensions,
-  PixelRatio,
+  Switch,
+  Pressable,
   StatusBar,
   I18nManager,
+  Alert,
   Modal,
 } from "react-native";
 import { useRouter } from "expo-router";
@@ -33,11 +34,13 @@ import { useFocusEffect } from "@react-navigation/native";
 import AsyncStorage from "@react-native-async-storage/async-storage";
 import { BlurView } from "expo-blur";
 import { useTutorial } from "../../context/TutorialContext";
-import TutorialModal from "../../components/TutorialModal";
 import { useAdsVisibility } from "../../src/context/AdsVisibilityContext";
 import { useBottomTabBarHeight } from "@react-navigation/bottom-tabs";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import PioneerBadge from "@/components/PioneerBadge";
+import { setDuoAvailable } from "@/services/matchingService";
+import { useMatchingInbox } from "@/hooks/useMatchingInbox";
+import MatchingInboxModal from "@/components/MatchingInboxModal";
 
 const SPACING = 15;
 const { width: SCREEN_WIDTH, height: SCREEN_HEIGHT } = Dimensions.get("window");
@@ -106,6 +109,7 @@ interface UserData {
     streakPass?: number;
     [key: string]: any;
   };
+  duoAvailable?: boolean;
 }
 
 interface ProfileSection {
@@ -131,7 +135,10 @@ export default function ProfileScreen() {
  const insets = useSafeAreaInsets();
 const tabBarHeight = useBottomTabBarHeight();
 const [adHeight, setAdHeight] = useState(0);
+const [duoToggleBusy, setDuoToggleBusy] = useState(false);
 const [showPioneerModal, setShowPioneerModal] = useState(false);
+const [matchingInboxVisible, setMatchingInboxVisible] = useState(false);
+const { items: matchingItems, count: matchingCount } = useMatchingInbox();
 const PROFILE_FIRST_SEEN_KEY = "profile.firstSeen.v1";
 const firstProfileGateRef = React.useRef(false);
 
@@ -232,6 +239,23 @@ useFocusEffect(
     };
   }, [isLoading, userData])
 );
+
+const handleDuoToggle = useCallback(async (value: boolean) => {
+  const uid = auth.currentUser?.uid;
+  if (!uid || duoToggleBusy) return;
+  setDuoToggleBusy(true);
+  try {
+    await setDuoAvailable(uid, value);
+    // L'onSnapshot mettra userData à jour automatiquement
+  } catch {
+    Alert.alert(
+      t("alerts.error"),
+      t("matching.toggleError", { defaultValue: "Impossible de mettre à jour." })
+    );
+  } finally {
+    setDuoToggleBusy(false);
+  }
+}, [duoToggleBusy, t]);
 
 
     // Sections
@@ -775,6 +799,167 @@ borderColor: withAlpha(currentTheme.colors.trophy, isDarkMode ? 0.22 : 0.28),
       </TouchableOpacity>
     )}
   </View>
+
+  <View style={styles.softDivider} />
+
+{/* DUO TOGGLE */}
+<View style={[styles.infoBlock, { marginBottom: 4 }]}>
+  <View style={{
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "space-between",
+    paddingVertical: normalizeSize(6),
+    paddingHorizontal: normalizeSize(12),
+    borderRadius: normalizeSize(14),
+    backgroundColor: isDarkMode
+      ? "rgba(0,200,255,0.07)"
+      : "rgba(0,160,200,0.06)",
+    borderWidth: 1,
+    borderColor: isDarkMode
+      ? "rgba(0,200,255,0.18)"
+      : "rgba(0,160,200,0.14)",
+  }}>
+    {/* Left: icon + texts */}
+    <View style={{ flexDirection: "row", alignItems: "center", gap: normalizeSize(10), flex: 1, minWidth: 0 }}>
+      <View style={{
+        width: normalizeSize(36),
+        height: normalizeSize(36),
+        borderRadius: normalizeSize(11),
+        alignItems: "center",
+        justifyContent: "center",
+        backgroundColor: isDarkMode
+          ? "rgba(0,200,255,0.16)"
+          : "rgba(0,160,200,0.12)",
+      }}>
+        <Ionicons
+          name="people-outline"
+          size={normalizeSize(18)}
+          color={isDarkMode ? "#00C8FF" : "#0095C2"}
+        />
+      </View>
+
+      <View style={{ flex: 1, minWidth: 0 }}>
+        <Text style={[
+          styles.fieldLabel,
+          { color: isDarkMode ? "#F8FAFC" : "#0B1220", marginBottom: 0 }
+        ]} numberOfLines={1}>
+          {t("matching.duoAvailableLabel", { defaultValue: "Disponible pour un duo" })}
+        </Text>
+        <Text style={{
+          fontFamily: "Comfortaa_400Regular",
+          fontSize: normalizeSize(11),
+          color: isDarkMode ? "rgba(255,255,255,0.48)" : "rgba(0,0,0,0.42)",
+          marginTop: 2,
+        }} numberOfLines={1}>
+          {userData?.duoAvailable
+            ? t("matching.duoAvailableOn", { defaultValue: "Tu apparais dans les matchs" })
+            : t("matching.duoAvailableOff", { defaultValue: "Tu n'apparais pas dans les matchs" })}
+        </Text>
+      </View>
+    </View>
+
+    {/* Right: Switch */}
+    <Switch
+      value={!!userData?.duoAvailable}
+      onValueChange={handleDuoToggle}
+      disabled={duoToggleBusy}
+      trackColor={{
+        false: isDarkMode ? "rgba(255,255,255,0.12)" : "rgba(0,0,0,0.10)",
+        true: "#00C8FF",
+      }}
+      thumbColor={
+        userData?.duoAvailable
+          ? (isDarkMode ? "#fff" : "#fff")
+          : (isDarkMode ? "rgba(255,255,255,0.7)" : "rgba(0,0,0,0.35)")
+      }
+      ios_backgroundColor={isDarkMode ? "rgba(255,255,255,0.12)" : "rgba(0,0,0,0.10)"}
+      style={{ marginLeft: normalizeSize(10) }}
+    />
+  </View>
+</View>
+
+{matchingCount > 0 && (
+  <>
+    <View style={styles.softDivider} />
+    <View style={[styles.infoBlock, { marginBottom: 4 }]}>
+      <Pressable
+        onPress={() => setMatchingInboxVisible(true)}
+        style={({ pressed }) => [{
+          flexDirection: "row",
+          alignItems: "center",
+          justifyContent: "space-between",
+          paddingVertical: normalizeSize(10),
+          paddingHorizontal: normalizeSize(12),
+          borderRadius: normalizeSize(14),
+          backgroundColor: isDarkMode
+            ? "rgba(255,159,28,0.10)"
+            : "rgba(255,159,28,0.08)",
+          borderWidth: 1,
+          borderColor: isDarkMode
+            ? "rgba(255,159,28,0.28)"
+            : "rgba(255,159,28,0.22)",
+          opacity: pressed ? 0.85 : 1,
+        }]}
+      >
+        <View style={{ flexDirection: "row", alignItems: "center", gap: normalizeSize(10), flex: 1 }}>
+          <View style={{
+            width: normalizeSize(36),
+            height: normalizeSize(36),
+            borderRadius: normalizeSize(11),
+            alignItems: "center",
+            justifyContent: "center",
+            backgroundColor: isDarkMode ? "rgba(255,159,28,0.20)" : "rgba(255,159,28,0.16)",
+          }}>
+            <Ionicons name="mail-outline" size={normalizeSize(18)} color="#FF9F1C" />
+          </View>
+          <View style={{ flex: 1, minWidth: 0 }}>
+            <Text style={[styles.fieldLabel, { color: isDarkMode ? "#F8FAFC" : "#0B1220", marginBottom: 0 }]} numberOfLines={1}>
+              {t("matching.inboxBtnLabel", { defaultValue: "Invitations de binôme" })}
+            </Text>
+            <Text style={{
+              fontFamily: "Comfortaa_400Regular",
+              fontSize: normalizeSize(11),
+              color: isDarkMode ? "rgba(255,255,255,0.48)" : "rgba(0,0,0,0.42)",
+              marginTop: 2,
+            }} numberOfLines={1}>
+              {t("matching.inboxBtnSub", {
+                count: matchingCount,
+                defaultValue: `${matchingCount} en attente`,
+              })}
+            </Text>
+          </View>
+        </View>
+
+        {/* Badge count */}
+        <View style={{
+          minWidth: normalizeSize(22),
+          height: normalizeSize(22),
+          borderRadius: 999,
+          backgroundColor: "#FF9F1C",
+          alignItems: "center",
+          justifyContent: "center",
+          paddingHorizontal: normalizeSize(6),
+          marginLeft: normalizeSize(8),
+        }}>
+          <Text style={{
+            fontFamily: "Comfortaa_700Bold",
+            fontSize: normalizeSize(11),
+            color: "#000",
+          }}>
+            {matchingCount > 9 ? "9+" : matchingCount}
+          </Text>
+        </View>
+
+        <Ionicons
+          name="chevron-forward"
+          size={normalizeSize(16)}
+          color={isDarkMode ? "rgba(255,255,255,0.5)" : "rgba(0,0,0,0.4)"}
+          style={{ marginLeft: normalizeSize(6) }}
+        />
+      </Pressable>
+    </View>
+  </>
+)}
 </Animated.View>
 
 
@@ -1137,6 +1322,18 @@ borderColor: withAlpha(currentTheme.colors.trophy, isDarkMode ? 0.22 : 0.28),
     </Animated.View>
   </View>
 </Modal>
+
+{/* ✅ Matching Inbox Modal */}
+<MatchingInboxModal
+  visible={matchingInboxVisible}
+  onClose={() => setMatchingInboxVisible(false)}
+  items={matchingItems}
+  onAccepted={(item) => {
+    setMatchingInboxVisible(false);
+    // Naviguer vers le challenge-details du duo accepté
+    router.push(`/challenge-details/${item.challengeId}`);
+  }}
+/>
 
 
       </LinearGradient>

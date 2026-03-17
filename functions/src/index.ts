@@ -314,6 +314,8 @@ export { invitationsOnWrite } from "./invitationsOnWrite";
 export { claimReferralMilestone } from "./referralClaim";
 export { onUserActivated } from "./referralRewards";
 export { sendDuoNudge } from "./duoNudge";
+export { sendMatchingPush} from "./sendMatchingPush_CloudFunction";
+export { acceptMatchingInvitation } from "./acceptMatchingInvitation_CloudFunction";
 
 
 

@@ -12,6 +12,7 @@ import {
   Dimensions,
   Text,
   StatusBar,
+  Pressable,
   StyleProp,
   Keyboard,
   I18nManager,
@@ -54,6 +55,7 @@ import { useBottomTabBarHeight } from "@react-navigation/bottom-tabs";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { useAdsVisibility } from "../../src/context/AdsVisibilityContext";
 import * as Haptics from "expo-haptics";
+import { updateMatchingPool } from "@/services/matchingService";
 
 const SPACING = 15;
 const { width: SCREEN_WIDTH, height: SCREEN_HEIGHT } = Dimensions.get("window");
@@ -192,6 +194,7 @@ interface User {
   // ➕ pour ne pas réécrire inutilement profileCompletedAt
   profileCompleted?: boolean | null;
   profileCompletedAt?: any;
+  challengeCategories?: string[];
 }
 
 type ToastType = "success" | "error" | "info";
@@ -249,31 +252,59 @@ export default function UserInfo() {
   const toastOpacity = useSharedValue(0);
   const toastTranslateY = useSharedValue(-10);
   const [reduceMotion, setReduceMotion] = useState(false);
+  const CHALLENGE_CATEGORIES = [
+  "Fitness",
+  "Santé",
+  "Productivité",
+  "Éducation",
+  "Bien-être",
+  "Sport",
+  "Méditation",
+  "Nutrition",
+  "Créativité",
+  "Social",
+];
+
+const [selectedCategories, setSelectedCategories] = useState<string[]>([]);
+
+// Toggle une catégorie
+const toggleCategory = useCallback((cat: string) => {
+  setSelectedCategories((prev) =>
+    prev.includes(cat) ? prev.filter((c) => c !== cat) : [...prev, cat]
+  );
+}, []);
 
   // ✅ Y a-t-il au moins une vraie modification par rapport aux valeurs en base ?
   const hasChanges = useMemo(() => {
-    if (!user) return false;
+  if (!user) return false;
 
-    const baseDisplay = safeTrim(user.displayName);
-    const baseBio = safeTrim(user.bio);
-    const baseLocation = safeTrim(user.location);
-    const baseInterests = safeTrim(user.interests);
-    const baseProfileImage = user.profileImage || null;
+  const baseDisplay = safeTrim(user.displayName);
+  const baseBio = safeTrim(user.bio);
+  const baseLocation = safeTrim(user.location);
+  const baseInterests = safeTrim(user.interests);
+  const baseProfileImage = user.profileImage || null;
+  const baseCats = JSON.stringify(
+    Array.isArray(user.challengeCategories)
+      ? [...user.challengeCategories].sort()
+      : []
+  );
 
-    const cleanDisplay = safeTrim(displayName);
-    const cleanBio = safeTrim(bio);
-    const cleanLocation = safeTrim(location);
-    const cleanInterests = safeTrim(interests);
-    const nextProfileImage = profileImage || null;
+  const cleanDisplay = safeTrim(displayName);
+  const cleanBio = safeTrim(bio);
+  const cleanLocation = safeTrim(location);
+  const cleanInterests = safeTrim(interests);
+  const nextProfileImage = profileImage || null;
+  const nextCats = JSON.stringify([...selectedCategories].sort());
 
-    return (
-      (cleanDisplay && cleanDisplay !== baseDisplay) ||
-      (cleanBio && cleanBio !== baseBio) ||
-      (nextProfileImage !== baseProfileImage) ||
-      (cleanLocation && cleanLocation !== baseLocation) ||
-      (cleanInterests && cleanInterests !== baseInterests)
-    );
-  }, [user, displayName, bio, profileImage, location, interests]);
+  return (
+    (cleanDisplay && cleanDisplay !== baseDisplay) ||
+    (cleanBio && cleanBio !== baseBio) ||
+    (nextProfileImage !== baseProfileImage) ||
+    (cleanLocation && cleanLocation !== baseLocation) ||
+    (cleanInterests && cleanInterests !== baseInterests) ||
+    nextCats !== baseCats // ✅ NOUVEAU
+  );
+}, [user, displayName, bio, profileImage, location, interests, selectedCategories]);
 
   // Reduce motion
   useEffect(() => {
@@ -350,6 +381,9 @@ export default function UserInfo() {
           setProfileImage(userData.profileImage || null);
           setLocation(userData.location || "");
           setInterests(toDisplayString(userData.interests));
+          setSelectedCategories(
+  Array.isArray(userData.challengeCategories) ? userData.challengeCategories : []
+);
         } else {
           throw new Error(String(t("profileNotFound")));
         }
@@ -511,6 +545,16 @@ export default function UserInfo() {
       (updateData as any)["stats.profile.completed"] = true;
     }
 
+    if (
+  JSON.stringify(selectedCategories.sort()) !==
+  JSON.stringify((Array.isArray((user as any).challengeCategories)
+    ? (user as any).challengeCategories
+    : []
+  ).sort())
+) {
+  (updateData as any).challengeCategories = selectedCategories;
+}
+
     // On met toujours à jour updatedAt
     (updateData as any).updatedAt = serverTimestamp();
 
@@ -524,6 +568,9 @@ export default function UserInfo() {
     try {
       const userRef = doc(db, "users", user.uid);
 await updateDoc(userRef, updateData);
+
+// Mettre à jour le matching pool (non-bloquant)
+updateMatchingPool(user.uid).catch(() => {});
 
 // 🔁 Relecture Firestore + garde "profile_completed" ultra robuste
 try {
@@ -1115,6 +1162,60 @@ try {
                   testID="input-interests"
                 />
               </Animated.View>
+              {/* Catégories pour le matching */}
+<Animated.View entering={FadeInUp.delay(550)} style={{ width: "100%", marginBottom: V_SPACING }}>
+  <Text style={[{
+    fontFamily: "Comfortaa_700Bold",
+    fontSize: n(13),
+    marginBottom: n(10),
+    color: isDarkMode ? currentTheme.colors.textSecondary : "#333",
+  }]}>
+    {t("matching.categoriesLabel", { defaultValue: "Défis qui t'intéressent" })}
+  </Text>
+  <Text style={{
+    fontFamily: "Comfortaa_400Regular",
+    fontSize: n(11),
+    color: isDarkMode ? "rgba(255,255,255,0.45)" : "rgba(0,0,0,0.40)",
+    marginBottom: n(10),
+    lineHeight: n(16),
+  }}>
+    {t("matching.categoriesHint", { defaultValue: "Sélectionne pour améliorer tes matchs de binôme." })}
+  </Text>
+  <View style={{ flexDirection: "row", flexWrap: "wrap", gap: n(8) }}>
+    {CHALLENGE_CATEGORIES.map((cat) => {
+      const selected = selectedCategories.includes(cat);
+      return (
+        <Pressable
+          key={cat}
+          onPress={() => toggleCategory(cat)}
+          style={({pressed}) => [{
+            paddingVertical: n(7),
+            paddingHorizontal: n(12),
+            borderRadius: 999,
+            borderWidth: 1,
+            backgroundColor: selected
+              ? isDarkMode ? "rgba(0,200,255,0.20)" : "rgba(0,160,200,0.15)"
+              : isDarkMode ? "rgba(255,255,255,0.06)" : "rgba(0,0,0,0.04)",
+            borderColor: selected
+              ? isDarkMode ? "rgba(0,200,255,0.55)" : "rgba(0,160,200,0.45)"
+              : isDarkMode ? "rgba(255,255,255,0.12)" : "rgba(0,0,0,0.10)",
+            opacity: pressed ? 0.8 : 1,
+          }]}
+        >
+          <Text style={{
+            fontFamily: selected ? "Comfortaa_700Bold" : "Comfortaa_400Regular",
+            fontSize: n(12),
+            color: selected
+              ? isDarkMode ? "#00C8FF" : "#0095C2"
+              : isDarkMode ? "rgba(255,255,255,0.65)" : "rgba(0,0,0,0.55)",
+          }}>
+            {cat}
+          </Text>
+        </Pressable>
+      );
+    })}
+  </View>
+</Animated.View>
             </GlassCard>
 
             {/* Bouton Sauvegarder */}

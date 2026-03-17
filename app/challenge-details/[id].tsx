@@ -109,6 +109,8 @@ import { useInviteHandoff } from "../../src/challenge-details/_feature/hooks/use
 import { useStartFlow } from "../../src/challenge-details/_feature/hooks/useStartFlow";
 import { useMomentGate } from "../../src/challenge-details/_feature/hooks/useMomentGate";
 import { dlog } from "@/src/utils/debugLog";
+import ChoixDuoModal from "@/components/ChoixDuoModal";
+import MatchingModal from "@/components/MatchingModal";
 
 const hapticTap = () => {
   Haptics.selectionAsync().catch(() => {});
@@ -1604,6 +1606,14 @@ const {
   pickModeThenOpenDuration,
   handleConfirmDurationByMode,
   cancelDuration,
+  // ✅ NOUVEAU
+  choixDuoVisible,
+  matchingVisible,
+  setChoixDuoVisible,
+  setMatchingVisible,
+  handleChoixInviteFriend,
+  handleChoixFindPartner,
+  handleMatchingInviteSent,
 } = useStartFlow({
   id,
   challengeTakenOptimistic,
@@ -3496,6 +3506,25 @@ partnerDaysCompleted={duoChallengeData?.duoUser?.completedDays ?? 0}
     </BlurView>
   </Animated.View>
 )}
+
+<ChoixDuoModal
+  visible={choixDuoVisible}
+  onClose={() => setChoixDuoVisible(false)}
+  onInviteFriend={handleChoixInviteFriend}
+  onFindPartner={handleChoixFindPartner}
+  challengeTitle={routeTitle}
+/>
+
+{/* ✅ MatchingModal — liste des candidats */}
+<MatchingModal
+  visible={matchingVisible}
+  onClose={() => setMatchingVisible(false)}
+  onInviteSent={handleMatchingInviteSent}
+  challengeId={id}
+  challengeTitle={routeTitle}
+  challengeCategory={routeCategory || null}
+  selectedDays={localSelectedDays}
+/>
       </SafeAreaView>
     </LinearGradient>
   );
