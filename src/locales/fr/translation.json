@@ -31,6 +31,14 @@
   "home": {
     "yourChallenge": "Ton défi"
   },
+  "choixDuo": {
+  "title": "Trouver un partenaire",
+  "inviteFriend": "Inviter un ami",
+  "inviteFriendDesc": "Envoie un lien à quelqu'un que tu connais",
+  "findPartner": "Trouver un binôme",
+  "findPartnerDesc": "Matche avec un user qui fait le même défi",
+  "hint": "À deux, on tient beaucoup plus longtemps. 💪"
+},
   "homeZ": {
      "duoPending": {
       "cta": "Préparer le Duo",
@@ -205,6 +213,36 @@
     "activatingDuo": "Activation du duo…",
     "updating": "Mise à jour…"
   },
+  "onboarding": {
+  "banner": {
+    "title": "Lance-toi 🔥",
+    "subtitle": "Gagne {{trophies}} trophées pour démarrer",
+    "subtitleProgress": "{{done}}/{{total}} · +{{left}} trophées restants",
+    "progress": "{{done}} / {{total}} complétées"
+  },
+  "quest": {
+    "markFirstDay": {
+      "title": "Marque ton premier jour",
+      "desc": "Ouvre ton défi et coche le jour 1"
+    },
+    "completeProfile": {
+      "title": "Complète ton profil",
+      "desc": "Ajoute une photo et tes catégories"
+    },
+    "exploreCommunity": {
+      "title": "Explore la communauté",
+      "desc": "Ouvre la page Exploits"
+    },
+    "joinSoloChallenge": {
+      "title": "Lance un défi solo",
+      "desc": "En attendant ton duo, démarre maintenant"
+    },
+    "viewChallenge": {
+      "title": "Voir ton défi",
+      "desc": "Consulte ton défi en cours"
+    }
+  }
+},
   "profile": "Profil",
   "yourProfile": "Votre profil",
   "addBioHere": "Ajoutez une bio ici",
@@ -896,6 +934,12 @@
   },
 "duo": {
   "leader": "LEADER",
+   "confirmTitle": "Passer en duo ?",
+  "confirmSubtitle": "Tu vas inviter un partenaire. Pour rester fair, on repart sur une progression propre.",
+  "confirmWarning": "⚠️ Passer en duo réinitialise ta progression solo sur ce défi.",
+  "confirmCta": "Oui, passer en duo",
+  "cancelHint": "Ferme la fenêtre sans changer ton défi.",
+  "confirmHint": "Confirme le passage en duo et réinitialise la progression solo.",
   "vs": "VS",
   "pending": {
       "title": "Invitation en attente",
@@ -1551,7 +1595,6 @@
     }
   },
   "addLocationHere": "Ajoutez une localisation",
-  "addInterestsHere": "Ajoutez vos centres d’intérêt",
   "close": "Fermer",
   "uncategorized": "Non catégorisé",
   "imageNotAvailable": "Image non disponible",
@@ -2522,8 +2565,107 @@
     "🔒 Série protégée ensemble."
   ]
 },
+"userInfo": {
+  "categoriesLabel": "Tes domaines de prédilection",
+  "categoriesHint": "Sélectionne les domaines qui te correspondent pour trouver les meilleurs binômes.",
+  "category": {
+    "fitness": "Fitness",
+    "health": "Santé",
+    "productivity": "Productivité",
+    "education": "Éducation",
+    "wellbeing": "Bien-être",
+    "sport": "Sport",
+    "meditation": "Méditation",
+    "nutrition": "Nutrition",
+    "creativity": "Créativité",
+    "social": "Social"
+  }
+},
+"addInterestsHere": "Choisir mes catégories",
+"matching": {
+  "sectionTitle": "Binôme & invitations",
+  "duoAvailableLabel": "Disponible pour un duo",
+  "duoAvailableOn": "Tu apparais dans les matchs",
+  "duoAvailableOff": "Tu n'apparais pas dans les matchs",
+  "inboxBtnLabel": "Invitations de binôme",
+  "inboxBtnSub": "{{count}} invitation(s) en attente",
+  "toggleError": "Impossible de mettre à jour.",
+  "inboxTitle": "Invitations reçues",
+  "inboxCount": "invitation(s) en attente",
+  "inboxEmpty": "Aucune invitation en attente.",
+  "inboxHint": "Les invitations expirent après 72h.",
+  "inviteExpired": "Cette invitation a expiré.",
+  "inviteAlreadyTreated": "Invitation déjà traitée.",
+  "acceptError": "Erreur lors de l'acceptation.",
+  "days": "jours",
+  "title": "Trouver un binôme",
+  "searching": "Recherche de binômes…",
+  "loadError": "Impossible de charger les profils.",
+  "emptyTitle": "Aucun binôme trouvé",
+  "emptyDesc": "Active \"Disponible pour un duo\" dans ton profil pour apparaître ici.",
+  "legendPerfect": "Fait ce défi",
+  "legendGood": "Même catégorie",
+  "rateLimitTitle": "Limite atteinte",
+  "rateLimitBody": "Tu peux envoyer 5 invitations matching par jour.",
+  "sendError": "Erreur lors de l'envoi.",
+  "footerHint": "L'invitation expire dans 72h · Max 5/jour",
+  "sameChallengeLabel": "Fait ce défi en solo",
+  "sameCategoryLabel": "Catégorie : {{category}}",
+  "availableLabel": "Disponible pour un duo"
+},
+"exploits": {
+"title": "EXPLOITS",
+  "subtitle": "Les hauts faits de la communauté",
+  "loading": "Consultation des annales…",
+  "loadError": "Impossible de charger les exploits.",
+  "retry": "Réessayer",
+  "emptyTitle": "Forum Vacuum",
+  "emptySub": "Aucun exploit n'est encore gravé ici.\nMarque un défi pour entrer dans les annales !",
+  "endOfFeed": "Finis tabula",
+  "you": "toi",
+  "day": "jour",
+  "days": "jours",
+  "justNow": "À l'instant",
+  "minutesAgo": "{{count}}min",
+  "hoursAgo": "{{count}}h",
+  "daysAgo": "{{count}}j",
+  "type": {
+    "completion": "Terminé",
+  "completionSub": "Défi accompli",
+  "milestone": "Jalon",
+  "milestoneSub": "Étape franchie",
+  "dailyMark": "Marqué",
+  "dailyMarkSub": "Rigueur quotidienne"
+},
+"label": {
+  "completion": "a accompli « {{challenge}} » en {{days}} {{unit}}",
+  "milestone7": "7 jours de constance — « {{challenge}} »",
+  "milestone30": "30 jours accomplis — « {{challenge}} »",
+  "milestone100": "100 jours de maîtrise — « {{challenge}} »",
+  "milestone50": "Mi-parcours atteint — « {{challenge}} »",
+  "milestoneGeneric": "Jalon conquis — « {{challenge}} »",
+  "dailyMark": "« {{challenge}} » — {{streak}} {{unit}} de rigueur"
+}
+  
+},
   "notificationsPush": {
     "daily1": "Un défi aujourd’hui peut changer ta journée. Go ?",
+    "streakDangerTitle": "🚨 Streak en danger !",
+"streakDanger1": "⚠️ Ta série est en danger. Marque ton défi avant minuit.",
+"streakDanger2": "🔥 Ne laisse pas tomber maintenant. Quelques heures restantes.",
+"streakDanger3": "⏰ Ton streak t'attend. Dernière chance avant minuit !",
+"streakDangerOpened": "Ne laisse pas tomber ton streak !",
+"milestoneLastDayTitle": "🏆 Défi terminé !",
+"milestoneLastDayBody": "Tu viens de terminer {{days}} jours. Incroyable !",
+"milestone50Title": "⚡ Mi-parcours !",
+"milestone50Body": "{{completed}}/{{total}} jours. Continue comme ça !",
+"milestone7Title": "🔥 7 jours de suite !",
+"milestone7Body": "Une semaine complète. Tu crées une vraie habitude.",
+"milestone30Title": "💪 30 jours !",
+"milestone30Body": "Un mois de constance. C'est exceptionnel.",
+"milestone100Title": "🌟 100 jours !",
+"milestone100Body": "100 jours. Tu fais partie des 1% qui tiennent aussi longtemps.",
+"milestoneOpened": "Félicitations pour ce milestone !",
     "streakTitle": "Garde ta série",
 "streakBody": "Il te reste un défi aujourd’hui. Valide-le maintenant.",
 "duoPartnerMarkedYouDidnt": "{{from}} a validé « {{title}} ». À toi de jouer pour rester synchro.",
@@ -4182,6 +4324,7 @@
       }
     ]
   },
+  
   "talkToStranger": {
     "miniCours": "Rencontrer de nouvelles personnes chaque jour permet non seulement d’élargir ses perspectives, mais aussi de développer ses compétences sociales 👥. Commence petit : un sourire, un bonjour, une question simple peuvent ouvrir la porte à des échanges riches 🚀. Chaque rencontre est une opportunité d’évolution 🌱.",
     "exemples": [
@@ -4405,6 +4548,12 @@
   "alert": {
     "missingChoiceBody": "Choisis un défi pour continuer."
   }
+},
+"feed": {
+  "shareOnFeed": "Partager mes exploits",
+  "shareOnFeedSub": "Visible par toute la communauté",
+  "shareEnabled": "Exploits partagés ✅",
+  "shareDisabled": "Exploits masqués."
 },
   "access": {
     "editProfile": {

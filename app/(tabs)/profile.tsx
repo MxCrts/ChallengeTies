@@ -129,6 +129,19 @@ export default function ProfileScreen() {
   const bottomContentPadding = (showBanners ? adHeight : 0) + tabBarHeight + insets.bottom + n(24);
   const handleAdHeight = useCallback((h: number) => setAdHeight(h), []);
 
+  const CATEGORY_SLUG_MAP: Record<string, string> = {
+  "Fitness": "fitness",
+  "Santé": "health",
+  "Productivité": "productivity",
+  "Éducation": "education",
+  "Bien-être": "wellbeing",
+  "Sport": "sport",
+  "Méditation": "meditation",
+  "Nutrition": "nutrition",
+  "Créativité": "creativity",
+  "Social": "social",
+};
+
   const currentTheme: Theme = isDarkMode ? designSystem.darkTheme : designSystem.lightTheme;
 
   const totalInventoryItems = useMemo(() => {
@@ -301,7 +314,9 @@ export default function ProfileScreen() {
         backgroundColor: withAlpha(primaryColor, isDarkMode ? 0.10 : 0.07),
       }]}>
         <Text style={[s.interestPillText, { color: isDarkMode ? primaryColor : "#C86A00" }]} numberOfLines={1}>
-          {String(cat).trim()}
+        {t(`userInfo.category.${CATEGORY_SLUG_MAP[String(cat).trim()] ?? String(cat).trim()}`, { defaultValue: String(cat).trim() })}
+
+
         </Text>
       </View>
     ))}

@@ -738,6 +738,12 @@
   },
   "duo": {
     "leader": "리더",
+    "confirmTitle": "듀오로 전환하시겠습니까?",
+  "confirmSubtitle": "파트너를 초대하려 합니다. 공정하게 하기 위해 진행 상황이 초기화됩니다.",
+  "confirmWarning": "⚠️ 듀오로 전환하면 이 챌린지의 솔로 진행 상황이 초기화됩니다.",
+  "confirmCta": "네, 듀오로 전환",
+  "cancelHint": "변경 없이 닫기.",
+  "confirmHint": "듀오 전환을 확인하고 솔로 진행 상황을 초기화합니다.",
     "vs": "VS",
     "pending": {
       "title": "초대 대기 중",
@@ -1386,9 +1392,84 @@
       }
     }
   },
+  "onboarding": {
+  "banner": {
+    "title": "지금 시작하자 🔥",
+    "subtitle": "트로피 {{trophies}}개를 획득하여 시작",
+    "subtitleProgress": "{{done}}/{{total}} · +{{left}} 트로피 남음",
+    "progress": "{{done}} / {{total}} 완료"
+  },
+  "quest": {
+    "markFirstDay": {
+      "title": "첫 번째 날 표시하기",
+      "desc": "챌린지를 열고 1일차를 체크"
+    },
+    "completeProfile": {
+      "title": "프로필 완성하기",
+      "desc": "사진과 카테고리 추가"
+    },
+    "exploreCommunity": {
+      "title": "커뮤니티 탐색",
+      "desc": "위업 페이지 열기"
+    },
+    "joinSoloChallenge": {
+      "title": "솔로 챌린지 시작",
+      "desc": "듀오를 기다리면서 지금 시작"
+    },
+    "viewChallenge": {
+      "title": "챌린지 보기",
+      "desc": "현재 챌린지 확인"
+    }
+  }
+},
 
   "addLocationHere": "위치를 추가하세요",
-  "addInterestsHere": "관심사를 추가하세요",
+  "addInterestsHere": "내 카테고리 선택",
+"matching": {
+  "sectionTitle": "듀오 & 초대",
+  "duoAvailableLabel": "듀오 참여 가능",
+  "duoAvailableOn": "매칭에 표시됩니다",
+  "duoAvailableOff": "매칭에 표시되지 않습니다",
+  "inboxBtnLabel": "듀오 초대",
+  "inboxBtnSub": "{{count}}개의 초대 대기 중",
+  "toggleError": "업데이트할 수 없습니다.",
+  "inboxTitle": "받은 초대",
+  "inboxCount": "개의 초대 대기 중",
+  "inboxEmpty": "대기 중인 초대가 없습니다.",
+  "inboxHint": "초대는 72시간 후 만료됩니다.",
+  "inviteExpired": "이 초대는 만료되었습니다.",
+  "inviteAlreadyTreated": "이미 처리된 초대입니다.",
+  "acceptError": "수락 중 오류가 발생했습니다.",
+  "days": "일",
+  "title": "듀오 파트너 찾기",
+  "searching": "파트너 검색 중…",
+  "loadError": "프로필을 불러올 수 없습니다.",
+  "emptyTitle": "파트너를 찾을 수 없습니다",
+  "emptyDesc": "프로필에서 \"듀오 참여 가능\"을 활성화하면 여기에 표시됩니다.",
+  "legendPerfect": "이 챌린지 진행 중",
+  "legendGood": "같은 카테고리",
+  "rateLimitTitle": "한도 도달",
+  "rateLimitBody": "하루에 매칭 초대를 5개까지 보낼 수 있습니다.",
+  "sendError": "전송 중 오류가 발생했습니다.",
+  "footerHint": "초대는 72시간 후 만료 · 최대 5개/일",
+  "sameChallengeLabel": "이 챌린지를 솔로로 진행 중",
+  "sameCategoryLabel": "카테고리: {{category}}",
+  "availableLabel": "듀오 참여 가능"
+},
+"feed": {
+  "shareOnFeed": "내 활약 공유하기",
+  "shareOnFeedSub": "전체 커뮤니티에 표시됩니다",
+  "shareEnabled": "활약이 공유되었습니다 ✅",
+  "shareDisabled": "활약이 숨겨졌습니다."
+},
+"choixDuo": {
+  "title": "파트너 찾기",
+  "inviteFriend": "친구 초대하기",
+  "inviteFriendDesc": "아는 사람에게 링크 보내기",
+  "findPartner": "듀오 파트너 찾기",
+  "findPartnerDesc": "같은 챌린지를 하는 유저와 매칭하기",
+  "hint": "둘이 함께하면 훨씬 오래 지속됩니다. 💪"
+},
   "close": "닫기",
   "uncategorized": "분류 없음",
   "imageNotAvailable": "이미지를 불러올 수 없음",
@@ -2362,8 +2443,74 @@
     "🔒 스트릭을 같이 지켰다."
   ]
 },
+"exploits": {
+  "title": "위업",
+  "subtitle": "커뮤니티의 위대한 업적",
+  "loading": "연대기를 열람하는 중…",
+  "loadError": "위업을 불러올 수 없습니다.",
+  "retry": "다시 시도",
+  "emptyTitle": "Forum Vacuum",
+  "emptySub": "아직 여기에 새겨진 위업이 없습니다.\n도전을 기록하여 연대기에 이름을 남기세요!",
+  "endOfFeed": "Finis tabula",
+  "you": "나",
+  "day": "일",
+  "days": "일",
+  "justNow": "방금",
+  "minutesAgo": "{{count}}분 전",
+  "hoursAgo": "{{count}}시간 전",
+  "daysAgo": "{{count}}일 전",
+  "type": {
+    "completion": "완료",
+    "completionSub": "도전 달성",
+    "milestone": "이정표",
+    "milestoneSub": "단계 정복",
+    "dailyMark": "기록됨",
+    "dailyMarkSub": "일일 규율"
+  },
+  "label": {
+    "completion": "「{{challenge}}」을(를) {{days}}{{unit}} 만에 완료",
+    "milestone7": "7일 지속 — 「{{challenge}}」",
+    "milestone30": "30일 달성 — 「{{challenge}}」",
+    "milestone100": "100일 숙달 — 「{{challenge}}」",
+    "milestone50": "반환점 도달 — 「{{challenge}}」",
+    "milestoneGeneric": "이정표 정복 — 「{{challenge}}」",
+    "dailyMark": "「{{challenge}}」— {{streak}}{{unit}} 연속"
+  }
+},
+"userInfo": {
+  "categoriesLabel": "관심 분야",
+  "categoriesHint": "나에게 맞는 분야를 선택하여 최고의 듀오 파트너를 찾아보세요.",
+  "category": {
+    "fitness": "피트니스",
+    "health": "건강",
+    "productivity": "생산성",
+    "education": "교육",
+    "wellbeing": "웰빙",
+    "sport": "스포츠",
+    "meditation": "명상",
+    "nutrition": "영양",
+    "creativity": "창의성",
+    "social": "소셜"
+  }
+},
   "notificationsPush": {
     "daily1": "오늘 한 번의 챌린지가 하루를 바꿔. 준비됐어?",
+    "streakDangerTitle": "🚨 스트릭 위기!",
+"streakDanger1": "⚠️ 스트릭이 위험합니다. 자정 전에 챌린지를 기록하세요.",
+"streakDanger2": "🔥 지금 포기하지 마세요. 몇 시간밖에 안 남았어요.",
+"streakDanger3": "⏰ 스트릭이 기다리고 있어요. 자정 전 마지막 기회!",
+"streakDangerOpened": "스트릭을 끊지 마세요!",
+"milestoneLastDayTitle": "🏆 챌린지 완료!",
+"milestoneLastDayBody": "방금 {{days}}일을 완료했어요. 믿을 수 없어요!",
+"milestone50Title": "⚡ 절반 왔어요!",
+"milestone50Body": "{{completed}}/{{total}}일 완료. 계속 해나가요!",
+"milestone7Title": "🔥 7일 연속!",
+"milestone7Body": "꼬박 일주일. 진짜 습관을 만들고 있어요.",
+"milestone30Title": "💪 30일!",
+"milestone30Body": "한 달의 꾸준함. 정말 대단해요.",
+"milestone100Title": "🌟 100일!",
+"milestone100Body": "100일. 이렇게 오래 유지하는 1%에 속해요.",
+"milestoneOpened": "이 마일스톤 축하해요!",
     "streakTitle": "연속 기록 유지",
 "streakBody": "오늘 챌린지 하나 남았어. 지금 끝내자.",
 "duoPartnerMarkedYouDidnt": "{{from}}님이 \"{{title}}\"을 완료했어. 이제 너 차례—같이 맞춰가자.",

@@ -745,6 +745,12 @@
   "operationNotAllowed": "Deze actie is niet toegestaan in dit project.",
   "duo": {
     "leader": "LEIDER",
+    "confirmTitle": "Overschakelen naar duo?",
+  "confirmSubtitle": "Je staat op het punt een partner uit te nodigen. Om eerlijk te zijn, begint de voortgang opnieuw.",
+  "confirmWarning": "⚠️ Overschakelen naar duo reset je solo-voortgang op deze uitdaging.",
+  "confirmCta": "Ja, overschakelen naar duo",
+  "cancelHint": "Sluiten zonder je uitdaging te wijzigen.",
+  "confirmHint": "Bevestig de overstap naar duo en reset de solo-voortgang.",
     "vs": "VS",
     "pending": {
       "title": "Uitnodiging in afwachting",
@@ -1438,9 +1444,83 @@
       }
     }
   },
-
+"onboarding": {
+  "banner": {
+    "title": "Begin nu 🔥",
+    "subtitle": "Verdien {{trophies}} trofeeën om te starten",
+    "subtitleProgress": "{{done}}/{{total}} · +{{left}} trofeeën over",
+    "progress": "{{done}} / {{total}} voltooid"
+  },
+  "quest": {
+    "markFirstDay": {
+      "title": "Markeer je eerste dag",
+      "desc": "Open je uitdaging en vink dag 1 aan"
+    },
+    "completeProfile": {
+      "title": "Voltooi je profiel",
+      "desc": "Voeg foto en categorieën toe"
+    },
+    "exploreCommunity": {
+      "title": "Verken de community",
+      "desc": "Open de Heldendaden-pagina"
+    },
+    "joinSoloChallenge": {
+      "title": "Start een solo-uitdaging",
+      "desc": "Wacht niet op je duo, begin nu"
+    },
+    "viewChallenge": {
+      "title": "Bekijk je uitdaging",
+      "desc": "Controleer je huidige uitdaging"
+    }
+  }
+},
   "addLocationHere": "Voeg een locatie toe",
-  "addInterestsHere": "Voeg je interesses toe",
+  "addInterestsHere": "Mijn categorieën kiezen",
+"matching": {
+  "sectionTitle": "Duo & uitnodigingen",
+  "duoAvailableLabel": "Beschikbaar voor een duo",
+  "duoAvailableOn": "Je verschijnt in matches",
+  "duoAvailableOff": "Je verschijnt niet in matches",
+  "inboxBtnLabel": "Duo-uitnodigingen",
+  "inboxBtnSub": "{{count}} uitnodiging(en) in behandeling",
+  "toggleError": "Kan niet bijwerken.",
+  "inboxTitle": "Ontvangen uitnodigingen",
+  "inboxCount": "uitnodiging(en) in behandeling",
+  "inboxEmpty": "Geen openstaande uitnodigingen.",
+  "inboxHint": "Uitnodigingen verlopen na 72u.",
+  "inviteExpired": "Deze uitnodiging is verlopen.",
+  "inviteAlreadyTreated": "Uitnodiging al verwerkt.",
+  "acceptError": "Fout bij accepteren.",
+  "days": "dagen",
+  "title": "Een duo-partner vinden",
+  "searching": "Partners zoeken…",
+  "loadError": "Profielen konden niet worden geladen.",
+  "emptyTitle": "Geen partner gevonden",
+  "emptyDesc": "Schakel \"Beschikbaar voor een duo\" in je profiel in om hier te verschijnen.",
+  "legendPerfect": "Doet deze uitdaging",
+  "legendGood": "Zelfde categorie",
+  "rateLimitTitle": "Limiet bereikt",
+  "rateLimitBody": "Je kunt 5 matching-uitnodigingen per dag sturen.",
+  "sendError": "Fout bij verzenden.",
+  "footerHint": "Uitnodiging verloopt in 72u · Max 5/dag",
+  "sameChallengeLabel": "Doet deze uitdaging solo",
+  "sameCategoryLabel": "Categorie: {{category}}",
+  "availableLabel": "Beschikbaar voor een duo"
+},
+"feed": {
+  "shareOnFeed": "Mijn prestaties delen",
+  "shareOnFeedSub": "Zichtbaar voor de hele community",
+  "shareEnabled": "Prestaties gedeeld ✅",
+  "shareDisabled": "Prestaties verborgen."
+},
+"choixDuo": {
+  "title": "Een partner vinden",
+  "inviteFriend": "Een vriend uitnodigen",
+  "inviteFriendDesc": "Stuur een link naar iemand die je kent",
+  "findPartner": "Een duo-partner vinden",
+  "findPartnerDesc": "Match met een gebruiker die dezelfde uitdaging doet",
+  "hint": "Samen houd je het veel langer vol. 💪"
+},
   "close": "Sluiten",
   "uncategorized": "Niet gecategoriseerd",
   "imageNotAvailable": "Afbeelding niet beschikbaar",
@@ -2412,8 +2492,74 @@
     "🔒 Streak samen beschermd."
   ]
 },
+"exploits": {
+  "title": "HELDENDADEN",
+  "subtitle": "De grote daden van de gemeenschap",
+  "loading": "De annalen worden geraadpleegd…",
+  "loadError": "Heldendaden konden niet worden geladen.",
+  "retry": "Opnieuw proberen",
+  "emptyTitle": "Forum Vacuum",
+  "emptySub": "Er zijn nog geen heldendaden hier gegraveerd.\nMarkeer een uitdaging om de annalen in te gaan!",
+  "endOfFeed": "Finis tabula",
+  "you": "jij",
+  "day": "dag",
+  "days": "dagen",
+  "justNow": "Zojuist",
+  "minutesAgo": "{{count}}min",
+  "hoursAgo": "{{count}}u",
+  "daysAgo": "{{count}}d",
+  "type": {
+    "completion": "Voltooid",
+    "completionSub": "Uitdaging volbracht",
+    "milestone": "Mijlpaal",
+    "milestoneSub": "Etappe veroverd",
+    "dailyMark": "Gemarkeerd",
+    "dailyMarkSub": "Dagelijkse discipline"
+  },
+  "label": {
+    "completion": "voltooide « {{challenge}} » in {{days}} {{unit}}",
+    "milestone7": "7 dagen consistentie — « {{challenge}} »",
+    "milestone30": "30 dagen volbracht — « {{challenge}} »",
+    "milestone100": "100 dagen meesterschap — « {{challenge}} »",
+    "milestone50": "Halverwege — « {{challenge}} »",
+    "milestoneGeneric": "Mijlpaal veroverd — « {{challenge}} »",
+    "dailyMark": "« {{challenge}} » — {{streak}} {{unit}} discipline"
+  }
+},
+"userInfo": {
+  "categoriesLabel": "Jouw interessegebieden",
+  "categoriesHint": "Selecteer de domeinen die bij jou passen om de beste duo-partners te vinden.",
+  "category": {
+    "fitness": "Fitness",
+    "health": "Gezondheid",
+    "productivity": "Productiviteit",
+    "education": "Onderwijs",
+    "wellbeing": "Welzijn",
+    "sport": "Sport",
+    "meditation": "Meditatie",
+    "nutrition": "Voeding",
+    "creativity": "Creativiteit",
+    "social": "Sociaal"
+  }
+},
   "notificationsPush": {
      "daily1": "Eén challenge vandaag kan je dag veranderen. Klaar?",
+     "streakDangerTitle": "🚨 Streak in gevaar!",
+"streakDanger1": "⚠️ Je reeks staat op het spel. Vink je uitdaging af vóór middernacht.",
+"streakDanger2": "🔥 Geef nu niet op. Nog maar een paar uur over.",
+"streakDanger3": "⏰ Je streak wacht op je. Laatste kans voor middernacht!",
+"streakDangerOpened": "Verbreek je streak niet!",
+"milestoneLastDayTitle": "🏆 Uitdaging voltooid!",
+"milestoneLastDayBody": "Je hebt zojuist {{days}} dagen afgerond. Ongelooflijk!",
+"milestone50Title": "⚡ Halverwege!",
+"milestone50Body": "{{completed}}/{{total}} dagen gedaan. Ga zo door!",
+"milestone7Title": "🔥 7 dagen op rij!",
+"milestone7Body": "Een volle week. Je bouwt een echte gewoonte op.",
+"milestone30Title": "💪 30 dagen!",
+"milestone30Body": "Een maand consistentie. Dat is uitzonderlijk.",
+"milestone100Title": "🌟 100 dagen!",
+"milestone100Body": "100 dagen. Je behoort tot de 1% die zo lang volhoudt.",
+"milestoneOpened": "Gefeliciteerd met deze mijlpaal!",
      "streakTitle": "Houd je streak",
 "streakBody": "Je hebt vandaag nog één challenge. Rond ’m nu af.",
 "duoPartnerMarkedYouDidnt": "{{from}} heeft «{{title}}» afgevinkt. Jij bent aan de beurt — blijf synchroon.",

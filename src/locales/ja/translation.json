@@ -739,6 +739,12 @@
   },
   "duo": {
     "leader": "リーダー",
+    "confirmTitle": "デュオに切り替えますか？",
+  "confirmSubtitle": "パートナーを招待しようとしています。公平にするため、進捗はゼロからになります。",
+  "confirmWarning": "⚠️ デュオに切り替えると、このチャレンジのソロ進捗がリセットされます。",
+  "confirmCta": "はい、デュオに切り替える",
+  "cancelHint": "変更せずに閉じる。",
+  "confirmHint": "デュオへの切り替えを確認し、ソロ進捗をリセットする。",
     "vs": "VS",
     "pending": {
       "title": "招待待ち",
@@ -1398,9 +1404,84 @@
       }
     }
   },
+  "onboarding": {
+  "banner": {
+    "title": "さあ始めよう 🔥",
+    "subtitle": "{{trophies}} 個のトロフィーを獲得してスタート",
+    "subtitleProgress": "{{done}}/{{total}} · あと +{{left}} トロフィー",
+    "progress": "{{done}} / {{total}} 完了"
+  },
+  "quest": {
+    "markFirstDay": {
+      "title": "最初の日をマークする",
+      "desc": "チャレンジを開いてday 1をチェック"
+    },
+    "completeProfile": {
+      "title": "プロフィールを完成させる",
+      "desc": "写真とカテゴリを追加"
+    },
+    "exploreCommunity": {
+      "title": "コミュニティを探索",
+      "desc": "偉業ページを開く"
+    },
+    "joinSoloChallenge": {
+      "title": "ソロチャレンジを始める",
+      "desc": "デュオを待ちながら今すぐスタート"
+    },
+    "viewChallenge": {
+      "title": "チャレンジを見る",
+      "desc": "現在のチャレンジを確認"
+    }
+  }
+},
 
   "addLocationHere": "ロケーションを追加",
-  "addInterestsHere": "興味を追加",
+  "addInterestsHere": "カテゴリを選ぶ",
+"matching": {
+  "sectionTitle": "デュオと招待",
+  "duoAvailableLabel": "デュオに参加可能",
+  "duoAvailableOn": "マッチングに表示される",
+  "duoAvailableOff": "マッチングに表示されない",
+  "inboxBtnLabel": "デュオの招待",
+  "inboxBtnSub": "{{count}} 件の招待が保留中",
+  "toggleError": "更新できませんでした。",
+  "inboxTitle": "受信した招待",
+  "inboxCount": "件の招待が保留中",
+  "inboxEmpty": "保留中の招待はありません。",
+  "inboxHint": "招待は72時間後に期限切れになります。",
+  "inviteExpired": "この招待は期限切れです。",
+  "inviteAlreadyTreated": "招待はすでに処理されました。",
+  "acceptError": "承認中にエラーが発生しました。",
+  "days": "日",
+  "title": "デュオパートナーを探す",
+  "searching": "パートナーを検索中…",
+  "loadError": "プロフィールを読み込めませんでした。",
+  "emptyTitle": "パートナーが見つかりません",
+  "emptyDesc": "プロフィールで「デュオに参加可能」を有効にするとここに表示されます。",
+  "legendPerfect": "このチャレンジをしている",
+  "legendGood": "同じカテゴリ",
+  "rateLimitTitle": "上限に達しました",
+  "rateLimitBody": "1日に5件のマッチング招待を送信できます。",
+  "sendError": "送信中にエラーが発生しました。",
+  "footerHint": "招待は72時間後に期限切れ · 最大5件/日",
+  "sameChallengeLabel": "このチャレンジをソロでしている",
+  "sameCategoryLabel": "カテゴリ：{{category}}",
+  "availableLabel": "デュオに参加可能"
+},
+"feed": {
+  "shareOnFeed": "実績を共有する",
+  "shareOnFeedSub": "コミュニティ全体に表示されます",
+  "shareEnabled": "実績が共有されました ✅",
+  "shareDisabled": "実績が非表示になりました。"
+},
+"choixDuo": {
+  "title": "パートナーを探す",
+  "inviteFriend": "友達を招待する",
+  "inviteFriendDesc": "知り合いにリンクを送る",
+  "findPartner": "デュオパートナーを探す",
+  "findPartnerDesc": "同じチャレンジをしているユーザーとマッチング",
+  "hint": "二人でやれば、ずっと長く続けられる。 💪"
+},
   "close": "閉じる",
   "uncategorized": "未分類",
   "imageNotAvailable": "画像を利用できません",
@@ -2383,8 +2464,74 @@
     "🔒 連続記録を守った。"
   ]
 },
+"exploits": {
+  "title": "偉業",
+  "subtitle": "コミュニティの偉大な功績",
+  "loading": "年代記を調べています…",
+  "loadError": "偉業を読み込めませんでした。",
+  "retry": "再試行",
+  "emptyTitle": "Forum Vacuum",
+  "emptySub": "まだここに刻まれた偉業はありません。\nチャレンジを記録して年代記に名を刻もう！",
+  "endOfFeed": "Finis tabula",
+  "you": "あなた",
+  "day": "日",
+  "days": "日",
+  "justNow": "今",
+  "minutesAgo": "{{count}}分前",
+  "hoursAgo": "{{count}}時間前",
+  "daysAgo": "{{count}}日前",
+  "type": {
+    "completion": "完了",
+    "completionSub": "チャレンジ達成",
+    "milestone": "マイルストーン",
+    "milestoneSub": "節目を征服",
+    "dailyMark": "記録済み",
+    "dailyMarkSub": "日々の鍛錬"
+  },
+  "label": {
+    "completion": "「{{challenge}}」を{{days}}{{unit}}で達成",
+    "milestone7": "7日間の継続 — 「{{challenge}}」",
+    "milestone30": "30日間達成 — 「{{challenge}}」",
+    "milestone100": "100日間の熟達 — 「{{challenge}}」",
+    "milestone50": "折り返し地点 — 「{{challenge}}」",
+    "milestoneGeneric": "節目を達成 — 「{{challenge}}」",
+    "dailyMark": "「{{challenge}}」— {{streak}}{{unit}}連続"
+  }
+},
+"userInfo": {
+  "categoriesLabel": "あなたの興味分野",
+  "categoriesHint": "自分に合った分野を選んで、最高のデュオパートナーを見つけよう。",
+  "category": {
+    "fitness": "フィットネス",
+    "health": "健康",
+    "productivity": "生産性",
+    "education": "教育",
+    "wellbeing": "ウェルビーイング",
+    "sport": "スポーツ",
+    "meditation": "瞑想",
+    "nutrition": "栄養",
+    "creativity": "クリエイティビティ",
+    "social": "ソーシャル"
+  }
+},
   "notificationsPush": {
     "daily1": "今日の1チャレンジが、1日を変える。やる？",
+    "streakDangerTitle": "🚨 ストリーク危機！",
+"streakDanger1": "⚠️ ストリークが危ない。真夜中までにチャレンジをマークして。",
+"streakDanger2": "🔥 今あきらめないで。あと数時間しかない。",
+"streakDanger3": "⏰ ストリークが待ってる。真夜中前のラストチャンス！",
+"streakDangerOpened": "ストリークを途切れさせないで！",
+"milestoneLastDayTitle": "🏆 チャレンジ達成！",
+"milestoneLastDayBody": "{{days}}日間を達成しました。すごい！",
+"milestone50Title": "⚡ 折り返し地点！",
+"milestone50Body": "{{completed}}/{{total}}日完了。この調子で！",
+"milestone7Title": "🔥 7日連続！",
+"milestone7Body": "まるまる1週間。本物の習慣を作っている。",
+"milestone30Title": "💪 30日！",
+"milestone30Body": "1ヶ月の継続。それは素晴らしい。",
+"milestone100Title": "🌟 100日！",
+"milestone100Body": "100日。これほど長く続けられる1%に入っている。",
+"milestoneOpened": "このマイルストーンおめでとう！",
     "streakTitle": "連続記録を守る",
 "streakBody": "今日はあと1つ。今終わらせよう。",
 "duoPartnerMarkedYouDidnt": "{{from}} が「{{title}}」を達成。次はあなた—同期しよう。",

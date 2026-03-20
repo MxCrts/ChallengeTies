@@ -738,6 +738,12 @@
   "operationNotAllowed": "Esta operação não é permitida neste projeto.",
   "duo": {
     "leader": "LÍDER",
+    "confirmTitle": "Mudar para duo?",
+  "confirmSubtitle": "Vais convidar um parceiro. Para ser justo, o progresso recomeça do zero.",
+  "confirmWarning": "⚠️ Mudar para duo reinicia o teu progresso a solo neste desafio.",
+  "confirmCta": "Sim, mudar para duo",
+  "cancelHint": "Fechar sem alterar o teu desafio.",
+  "confirmHint": "Confirmar a mudança para duo e reiniciar o progresso a solo.",
     "vs": "VS",
     "pending": {
       "title": "Convite pendente",
@@ -1396,9 +1402,84 @@
       }
     }
   },
+  "onboarding": {
+  "banner": {
+    "title": "Começa agora 🔥",
+    "subtitle": "Ganha {{trophies}} troféus para arrancar",
+    "subtitleProgress": "{{done}}/{{total}} · +{{left}} troféus restantes",
+    "progress": "{{done}} / {{total}} concluídas"
+  },
+  "quest": {
+    "markFirstDay": {
+      "title": "Marca o teu primeiro dia",
+      "desc": "Abre o teu desafio e marca o dia 1"
+    },
+    "completeProfile": {
+      "title": "Completa o teu perfil",
+      "desc": "Adiciona foto e categorias"
+    },
+    "exploreCommunity": {
+      "title": "Explora a comunidade",
+      "desc": "Abre a página de Façanhas"
+    },
+    "joinSoloChallenge": {
+      "title": "Inicia um desafio solo",
+      "desc": "Enquanto esperas o teu duo, começa já"
+    },
+    "viewChallenge": {
+      "title": "Ver o teu desafio",
+      "desc": "Consulta o teu desafio atual"
+    }
+  }
+},
 
   "addLocationHere": "Adicione uma localização",
-  "addInterestsHere": "Adicione seus interesses",
+  "addInterestsHere": "Escolher as minhas categorias",
+"matching": {
+  "sectionTitle": "Duo & convites",
+  "duoAvailableLabel": "Disponível para um duo",
+  "duoAvailableOn": "Apareces nos matchs",
+  "duoAvailableOff": "Não apareces nos matchs",
+  "inboxBtnLabel": "Convites de duo",
+  "inboxBtnSub": "{{count}} convite(s) pendente(s)",
+  "toggleError": "Impossível atualizar.",
+  "inboxTitle": "Convites recebidos",
+  "inboxCount": "convite(s) pendente(s)",
+  "inboxEmpty": "Nenhum convite pendente.",
+  "inboxHint": "Os convites expiram após 72h.",
+  "inviteExpired": "Este convite expirou.",
+  "inviteAlreadyTreated": "Convite já processado.",
+  "acceptError": "Erro ao aceitar.",
+  "days": "dias",
+  "title": "Encontrar um parceiro",
+  "searching": "A procurar parceiros…",
+  "loadError": "Não foi possível carregar os perfis.",
+  "emptyTitle": "Nenhum parceiro encontrado",
+  "emptyDesc": "Ativa \"Disponível para um duo\" no teu perfil para aparecer aqui.",
+  "legendPerfect": "Faz este desafio",
+  "legendGood": "Mesma categoria",
+  "rateLimitTitle": "Limite atingido",
+  "rateLimitBody": "Podes enviar 5 convites de matching por dia.",
+  "sendError": "Erro ao enviar.",
+  "footerHint": "O convite expira em 72h · Máx 5/dia",
+  "sameChallengeLabel": "Faz este desafio a solo",
+  "sameCategoryLabel": "Categoria: {{category}}",
+  "availableLabel": "Disponível para um duo"
+},
+"feed": {
+  "shareOnFeed": "Partilhar os meus feitos",
+  "shareOnFeedSub": "Visível para toda a comunidade",
+  "shareEnabled": "Feitos partilhados ✅",
+  "shareDisabled": "Feitos ocultados."
+},
+"choixDuo": {
+  "title": "Encontrar um parceiro",
+  "inviteFriend": "Convidar um amigo",
+  "inviteFriendDesc": "Envia um link a alguém que conheces",
+  "findPartner": "Encontrar um duo",
+  "findPartnerDesc": "Faz match com um utilizador que faz o mesmo desafio",
+  "hint": "Juntos, aguentam muito mais tempo. 💪"
+},
   "close": "Fechar",
   "uncategorized": "Sem categoria",
   "imageNotAvailable": "Imagem indisponível",
@@ -2356,8 +2437,74 @@
     "🔒 Sequência protegida juntos."
   ]
 },
+"exploits": {
+  "title": "FAÇANHAS",
+  "subtitle": "Os grandes feitos da comunidade",
+  "loading": "Consultando os anais…",
+  "loadError": "Não foi possível carregar as façanhas.",
+  "retry": "Tentar novamente",
+  "emptyTitle": "Forum Vacuum",
+  "emptySub": "Nenhuma façanha foi gravada aqui ainda.\nMarque um desafio para entrar nos anais!",
+  "endOfFeed": "Finis tabula",
+  "you": "você",
+  "day": "dia",
+  "days": "dias",
+  "justNow": "Agora mesmo",
+  "minutesAgo": "{{count}}min",
+  "hoursAgo": "{{count}}h",
+  "daysAgo": "{{count}}d",
+  "type": {
+    "completion": "Concluído",
+    "completionSub": "Desafio cumprido",
+    "milestone": "Marco",
+    "milestoneSub": "Etapa conquistada",
+    "dailyMark": "Marcado",
+    "dailyMarkSub": "Disciplina diária"
+  },
+  "label": {
+    "completion": "concluiu « {{challenge}} » em {{days}} {{unit}}",
+    "milestone7": "7 dias de constância — « {{challenge}} »",
+    "milestone30": "30 dias cumpridos — « {{challenge}} »",
+    "milestone100": "100 dias de maestria — « {{challenge}} »",
+    "milestone50": "Metade do percurso — « {{challenge}} »",
+    "milestoneGeneric": "Marco conquistado — « {{challenge}} »",
+    "dailyMark": "« {{challenge}} » — {{streak}} {{unit}} de disciplina"
+  }
+},
+"userInfo": {
+  "categoriesLabel": "Tuas áreas de interesse",
+  "categoriesHint": "Seleciona os domínios que te correspondem para encontrar os melhores parceiros.",
+  "category": {
+    "fitness": "Fitness",
+    "health": "Saúde",
+    "productivity": "Produtividade",
+    "education": "Educação",
+    "wellbeing": "Bem-estar",
+    "sport": "Desporto",
+    "meditation": "Meditação",
+    "nutrition": "Nutrição",
+    "creativity": "Criatividade",
+    "social": "Social"
+  }
+},
   "notificationsPush": {
      "daily1": "Um desafio hoje pode mudar o seu dia. Bora?",
+     "streakDangerTitle": "🚨 Sequência em risco!",
+"streakDanger1": "⚠️ A tua sequência está em perigo. Marca o teu desafio antes da meia-noite.",
+"streakDanger2": "🔥 Não desistas agora. Restam apenas algumas horas.",
+"streakDanger3": "⏰ A tua sequência está à espera. Última chance antes da meia-noite!",
+"streakDangerOpened": "Não quebres a tua sequência!",
+"milestoneLastDayTitle": "🏆 Desafio concluído!",
+"milestoneLastDayBody": "Acabaste de completar {{days}} dias. Incrível!",
+"milestone50Title": "⚡ A meio caminho!",
+"milestone50Body": "{{completed}}/{{total}} dias. Continua assim!",
+"milestone7Title": "🔥 7 dias seguidos!",
+"milestone7Body": "Uma semana completa. Estás a criar um hábito real.",
+"milestone30Title": "💪 30 dias!",
+"milestone30Body": "Um mês de constância. É excecional.",
+"milestone100Title": "🌟 100 dias!",
+"milestone100Body": "100 dias. Fazes parte dos 1% que aguentam tanto tempo.",
+"milestoneOpened": "Parabéns por este marco!",
      "streakTitle": "Mantém a sequência",
 "streakBody": "Ainda falta um desafio hoje. Faz agora.",
 "duoPartnerMarkedYouDidnt": "{{from}} marcou «{{title}}». A tua vez — mantenham-se em sintonia.",

@@ -751,8 +751,8 @@ const isHydrating = useMemo(
  const challengeTakenOptimistic = challengeTaken || justJoinedRef.current;
 
  const chatEnabled = useMemo(
-  () => challengeTaken && !!challenge && !challenge.creatorId,
-  [challengeTaken, challenge]
+  () => !!challenge && !challenge.creatorId && !!challenge.chatId,
+  [challenge]
 );
 
  // 🧠 partenaire effectif calculé à partir du uniqueKey OU du state
@@ -1780,8 +1780,9 @@ const handleShowCompleteModal = useCallback(() => {
   });
 }, [id, finalSelectedDays]);
 
-  const handleNavigateToChat = useCallback(() => {
-    if (!chatEnabled) {
+const handleNavigateToChat = useCallback(() => {
+    if (!chatEnabled) return;
+    if (!challengeTaken) {
       Alert.alert(
         t("alerts.accessDenied"),
         t("challengeDetails.chatAccessDenied")
@@ -1791,7 +1792,7 @@ const handleShowCompleteModal = useCallback(() => {
     router.push(
   `/challenge-chat/${id}?title=${encodeURIComponent(routeTitle)}&duo=${isDuo ? "1" : "0"}`
 );
-  }, [id, challengeTaken , routeTitle, router]);
+  }, [id, challengeTaken, chatEnabled, routeTitle, router, t, isDuo]);
 
   const buildDuoMomentPayload = useCallback(
   (input: {

@@ -50,7 +50,7 @@ const useResponsive = () => {
   return { width, height, isTablet, n, scale };
 };
 
-type IconName = "home" | "person" | "flame" | "compass" | "settings";
+type IconName = "home" | "person" | "scroll" | "compass" | "settings";
 
 /* ─── Icône animée standard ──────────────────────────── */
 const AnimatedTabIcon = ({
@@ -200,7 +200,7 @@ const FlameButton = ({
           pointerEvents="none"
         />
         <Ionicons
-          name="flame"
+          name="journal"
           size={iconSize}
           color={focused ? "#FFFFFF" : isDarkMode ? "#94A3B8" : "#F97316"}
         />
@@ -388,7 +388,7 @@ const TabsLayout = () => {
           options={{
             tabBarLabel: "",
             tabBarTestID: "tab-focus",
-            tabBarAccessibilityLabel: t("focus"),
+            tabBarAccessibilityLabel: t("exploits", { defaultValue: "Exploits" }),
             tabBarIcon: ({ focused }) => (
               <FlameButton
                 focused={focused}

@@ -53,6 +53,7 @@ import { tap, success, warning } from "@/src/utils/haptics";
 import * as Device from "expo-device";
 import { useToast } from "@/src/ui/Toast";
 import { usePremium } from "@/src/context/PremiumContext";
+import { isFeedEnabled, enableFeed, disableFeed } from "@/src/services/globalFeedService";
 
 const SPACING = 18;
 const { width: SCREEN_WIDTH, height: SCREEN_HEIGHT } = Dimensions.get("window");
@@ -234,6 +235,7 @@ export default function Settings() {
   const scrollRef = useRef<ScrollView>(null);
   const [notificationsEnabled, setNotificationsEnabled] = useState(true);
   const [locationEnabled, setLocationEnabled] = useState(true);
+  const [feedEnabled, setFeedEnabled] = useState(true);
   const isDarkMode = theme === "dark";
   const currentTheme = isDarkMode
     ? designSystem.darkTheme
@@ -325,6 +327,27 @@ export default function Settings() {
       setNotifPermissionGranted(null);
     }
   }, []);
+
+  useEffect(() => {
+    isFeedEnabled().then(setFeedEnabled).catch(() => {});
+  }, []);
+
+  const handleFeedToggle = async (value: boolean) => {
+    tap();
+    setFeedEnabled(value);
+    try {
+      if (value) await enableFeed();
+      else await disableFeed();
+      showToast(
+        value
+          ? t("feed.shareEnabled",  { defaultValue: "Exploits partagés ✅" })
+          : t("feed.shareDisabled", { defaultValue: "Exploits masqués." }),
+        value ? "success" : "info"
+      );
+    } catch {
+      setFeedEnabled(!value);
+    }
+  };
 
     // Permissions notifs (état système) — source de vérité OS
   useEffect(() => {
@@ -557,12 +580,11 @@ export default function Settings() {
           style: "destructive",
           onPress: async () => {
             try {
-              await AsyncStorage.clear();
               const explicit = await AsyncStorage.getItem(EXPLICIT_LOGOUT_KEY);
+              const pioneerSeen = await AsyncStorage.getItem("profile.firstSeen.v1");
               await AsyncStorage.clear();
-              if (explicit) {
-                await AsyncStorage.setItem(EXPLICIT_LOGOUT_KEY, explicit);
-              }
+              if (explicit) await AsyncStorage.setItem(EXPLICIT_LOGOUT_KEY, explicit);
+              if (pioneerSeen) await AsyncStorage.setItem("profile.firstSeen.v1", pioneerSeen);
               success();
               showToast(
                 t("cacheCleared", {
@@ -597,10 +619,10 @@ export default function Settings() {
               // ✅ HARD LOGOUT: purge totale pour éviter les états/caches cross-user
               await AsyncStorage.setItem(EXPLICIT_LOGOUT_KEY, "1");
 
-              // 1) On purge TOUT (sinon écran "préparation" au switch account)
-              //    On conserve juste le flag explicit logout.
+              const pioneerSeen = await AsyncStorage.getItem("profile.firstSeen.v1");
               await AsyncStorage.clear();
               await AsyncStorage.setItem(EXPLICIT_LOGOUT_KEY, "1");
+              if (pioneerSeen) await AsyncStorage.setItem("profile.firstSeen.v1", pioneerSeen);
 
               // 2) Déco Firebase
               await auth.signOut();
@@ -830,6 +852,35 @@ export default function Settings() {
                   thumbColor={dynamicStyles.switch.thumbColor}
                   style={styles.switch}
                   accessibilityLabel={t("handleDarkMode")}
+                />
+              </View>
+            </Animated.View>
+
+            {/* Feed communautaire */}
+            <Animated.View
+              entering={FadeInUp.delay(310)}
+              style={[styles.card, dynamicStyles.card]}
+            >
+              <View style={styles.settingItem}>
+                <View style={{ flex: 1, paddingRight: 12 }}>
+                  <Text style={[styles.settingLabel, dynamicStyles.settingLabel]}>
+                    {t("feed.shareOnFeed", { defaultValue: "Partager mes exploits" })}
+                  </Text>
+                  <Text style={{
+                    fontFamily: "Comfortaa_400Regular",
+                    fontSize: normalizeSize(12),
+                    color: currentTheme.colors.textSecondary,
+                    marginTop: 3,
+                  }}>
+                    {t("feed.shareOnFeedSub", { defaultValue: "Visible par toute la communauté" })}
+                  </Text>
+                </View>
+                <Switch
+                  value={feedEnabled}
+                  onValueChange={handleFeedToggle}
+                  trackColor={dynamicStyles.switch.trackColor}
+                  thumbColor={dynamicStyles.switch.thumbColor}
+                  style={styles.switch}
                 />
               </View>
             </Animated.View>

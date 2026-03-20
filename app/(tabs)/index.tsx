@@ -93,6 +93,9 @@ import { useToast } from "../../src/ui/Toast";
 import TodayHub, { type TodayHubPrimaryMode } from "@/components/TodayHub/TodayHub";
 import { useTodayHubState } from "@/components/TodayHub/useTodayHubState";
 import type { TodayHubWhyReturn } from "../../components/TodayHub/TodayHub";
+import OnboardingQuestBanner from "@/components/OnboardingQuestBanner";
+import { useOnboardingQuests } from "@/src/hooks/useOnboardingQuests";
+import type { QuestId } from "@/src/services/onboardingQuestService";
 
 const getScreen = () => Dimensions.get("window");
 const { width: SCREEN_WIDTH, height: SCREEN_HEIGHT } = getScreen();
@@ -423,6 +426,7 @@ export default function HomeScreen() {
   const { show: showToast } = useToast();
   const [duoNudgeDismissed, setDuoNudgeDismissed] = useState(false);
   const [isUserDataReady, setIsUserDataReady] = useState(false);
+  
  
 const IMG_MAX_RETRIES = 2;
 const IMG_BROKEN_TTL_MS = 10 * 60_000;
@@ -1076,6 +1080,7 @@ const primaryActiveId = useMemo(() => {
 const spotlightAllowed = useMemo(() => {
   return hasActiveChallenges && todayHubView.anyUnmarkedToday;
 }, [hasActiveChallenges, todayHubView.anyUnmarkedToday]);
+
 
 
 const markHaloStyle = useAnimatedStyle(() => {
@@ -2004,6 +2009,30 @@ const bonusPulseStyle = useAnimatedStyle(() => {
     [gate, router, isMounted, hydrated]
   );
 
+   const { complete: completeQuest } = useOnboardingQuests();
+
+  const handleQuestPress = useCallback((questId: QuestId) => {
+    switch (questId) {
+      case "mark_first_day":
+      case "view_challenge": {
+        const id = primaryActiveId ?? activeChallengeId;
+        if (id) safeNavigate(`/challenge-details/${id}`, "onboarding-quest");
+        else safeNavigate("/explore", "onboarding-quest-no-challenge");
+        break;
+      }
+      case "join_solo_challenge":
+        safeNavigate("/explore", "onboarding-quest-join");
+        break;
+      case "complete_profile":
+        safeNavigate("/profile/UserInfo", "onboarding-quest-profile");
+        break;
+      case "explore_community":
+        completeQuest("explore_community");
+        router.push("/(tabs)/focus" as any);
+        break;
+    }
+  }, [primaryActiveId, activeChallengeId, safeNavigate, completeQuest, router]);
+
   const handlePickChallengePress = useCallback(async () => {
   try {
     await Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
@@ -2655,44 +2684,6 @@ setPostWelcomeAbsorbArmed(true);
                {t("homeZ.hero.sub", "Un défi. Un clic. Et si tu veux tenir : Duo.")}
               </Text>
 
-              {/* Tutorial FAB — positioned absolutely relative to heroSection */}
-              <Pressable
-                onPress={() => { if (!isAnyBlockingModalOpen) openTutorial(); }}
-                disabled={isAnyBlockingModalOpen}
-                accessibilityRole="button"
-                accessibilityLabel={t("tutorial.open", "Ouvrir le tutoriel")}
-                hitSlop={12}
-                style={({ pressed }) => [
-                  staticStyles.tutorialFab,
-                  { top: insets.top + normalize(10) },
-                  isAnyBlockingModalOpen && { opacity: 0.35 },
-                  pressed && { transform: [{ scale: 0.98 }] },
-                ]}
-              >
-                <BlurView
-                  intensity={isDarkMode ? 22 : 18}
-                  tint={isDarkMode ? "dark" : "light"}
-                  style={staticStyles.tutorialFabBlur}
-                >
-                  <View
-                    style={[
-                      staticStyles.tutorialFabGlass,
-                      {
-                        backgroundColor: isDarkMode
-                          ? "rgba(2,6,23,0.30)"
-                          : "rgba(255,255,255,0.26)",
-                      },
-                    ]}
-                  >
-                    <Ionicons
-                      name="sparkles"
-                      size={normalize(18)}
-                      color={isDarkMode ? "rgba(248,250,252,0.92)" : "rgba(2,6,23,0.92)"}
-                    />
-                  </View>
-                </BlurView>
-              </Pressable>
-
               {/* ✨ IMPROVED: Hero CTA with ambient glow effect */}
              <TouchableOpacity
                 onPress={hasActiveChallenges ? handleMarkTodayPress : handlePickChallengePress}
@@ -2851,6 +2842,9 @@ setPostWelcomeAbsorbArmed(true);
     />
   )}
           </View>
+
+        {/* ════ ONBOARDING QUEST BANNER ════ */}
+        <OnboardingQuestBanner onQuestPress={handleQuestPress} />
 
         {/* ════ QUICK ACTIONS ════ */}
 <View style={{

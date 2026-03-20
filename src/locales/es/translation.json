@@ -961,9 +961,84 @@
     "challengeNotFound": "Desafío no encontrado para la simulación.",
     "errorGeneric": "No se pudo simular la racha."
   },
+  "onboarding": {
+  "banner": {
+    "title": "¡Empieza ya! 🔥",
+    "subtitle": "Gana {{trophies}} trofeos para comenzar",
+    "subtitleProgress": "{{done}}/{{total}} · +{{left}} trofeos restantes",
+    "progress": "{{done}} / {{total}} completadas"
+  },
+  "quest": {
+    "markFirstDay": {
+      "title": "Marca tu primer día",
+      "desc": "Abre tu reto y marca el día 1"
+    },
+    "completeProfile": {
+      "title": "Completa tu perfil",
+      "desc": "Añade una foto y tus categorías"
+    },
+    "exploreCommunity": {
+      "title": "Explora la comunidad",
+      "desc": "Abre la página de Hazañas"
+    },
+    "joinSoloChallenge": {
+      "title": "Empieza un reto solo",
+      "desc": "Mientras esperas tu dúo, empieza ahora"
+    },
+    "viewChallenge": {
+      "title": "Ver tu reto",
+      "desc": "Consulta tu reto actual"
+    }
+  }
+},
   "createChallengeHint": "Un buen título + una imagen = más participantes.",
   "addLocationHere": "Agrega una ubicación",
-  "addInterestsHere": "Agrega tus intereses",
+  "addInterestsHere": "Elegir mis categorías",
+"matching": {
+  "sectionTitle": "Dúo e invitaciones",
+  "duoAvailableLabel": "Disponible para un dúo",
+  "duoAvailableOn": "Apareces en los matchs",
+  "duoAvailableOff": "No apareces en los matchs",
+  "inboxBtnLabel": "Invitaciones de dúo",
+  "inboxBtnSub": "{{count}} invitación(es) pendiente(s)",
+  "toggleError": "No se puede actualizar.",
+  "inboxTitle": "Invitaciones recibidas",
+  "inboxCount": "invitación/es pendiente(s)",
+  "inboxEmpty": "No hay invitaciones pendientes.",
+  "inboxHint": "Las invitaciones caducan a las 72h.",
+  "inviteExpired": "Esta invitación ha caducado.",
+  "inviteAlreadyTreated": "Invitación ya procesada.",
+  "acceptError": "Error al aceptar.",
+  "days": "días",
+  "title": "Encontrar un compañero",
+  "searching": "Buscando compañeros…",
+  "loadError": "No se pudieron cargar los perfiles.",
+  "emptyTitle": "Sin compañero encontrado",
+  "emptyDesc": "Activa \"Disponible para un dúo\" en tu perfil para aparecer aquí.",
+  "legendPerfect": "Hace este reto",
+  "legendGood": "Misma categoría",
+  "rateLimitTitle": "Límite alcanzado",
+  "rateLimitBody": "Puedes enviar 5 invitaciones de matching por día.",
+  "sendError": "Error al enviar.",
+  "footerHint": "La invitación expira en 72h · Máx 5/día",
+  "sameChallengeLabel": "Hace este reto en solitario",
+  "sameCategoryLabel": "Categoría: {{category}}",
+  "availableLabel": "Disponible para un dúo"
+},
+"feed": {
+  "shareOnFeed": "Compartir mis logros",
+  "shareOnFeedSub": "Visible para toda la comunidad",
+  "shareEnabled": "Logros compartidos ✅",
+  "shareDisabled": "Logros ocultados."
+},
+"choixDuo": {
+  "title": "Encontrar un compañero",
+  "inviteFriend": "Invitar a un amigo",
+  "inviteFriendDesc": "Envía un enlace a alguien que conozcas",
+  "findPartner": "Encontrar un dúo",
+  "findPartnerDesc": "Emparéjate con alguien que haga el mismo reto",
+  "hint": "Juntos, aguantáis mucho más. 💪"
+},
  "common": {
     "back": "Atrás",
     "anonymous": "Anónimo", "delete": "Eliminar",
@@ -4666,8 +4741,74 @@
     "🔒 Racha protegida juntos."
   ]
 },
+"exploits": {
+  "title": "HAZAÑAS",
+  "subtitle": "Las grandes gestas de la comunidad",
+  "loading": "Consultando los anales…",
+  "loadError": "No se pueden cargar las hazañas.",
+  "retry": "Reintentar",
+  "emptyTitle": "Forum Vacuum",
+  "emptySub": "Aún no hay hazañas aquí.\n¡Marca un reto para entrar en los anales!",
+  "endOfFeed": "Finis tabula",
+  "you": "tú",
+  "day": "día",
+  "days": "días",
+  "justNow": "Ahora mismo",
+  "minutesAgo": "{{count}}min",
+  "hoursAgo": "{{count}}h",
+  "daysAgo": "{{count}}d",
+  "type": {
+    "completion": "Completado",
+    "completionSub": "Reto cumplido",
+    "milestone": "Hito",
+    "milestoneSub": "Etapa conquistada",
+    "dailyMark": "Marcado",
+    "dailyMarkSub": "Disciplina diaria"
+  },
+  "label": {
+    "completion": "cumplió « {{challenge}} » en {{days}} {{unit}}",
+    "milestone7": "7 días de constancia — « {{challenge}} »",
+    "milestone30": "30 días cumplidos — « {{challenge}} »",
+    "milestone100": "100 días de maestría — « {{challenge}} »",
+    "milestone50": "Mitad del camino — « {{challenge}} »",
+    "milestoneGeneric": "Hito conquistado — « {{challenge}} »",
+    "dailyMark": "« {{challenge}} » — {{streak}} {{unit}} de disciplina"
+  }
+},
+"userInfo": {
+  "categoriesLabel": "Tus áreas de interés",
+  "categoriesHint": "Selecciona los dominios que te corresponden para encontrar los mejores compañeros.",
+  "category": {
+    "fitness": "Fitness",
+    "health": "Salud",
+    "productivity": "Productividad",
+    "education": "Educación",
+    "wellbeing": "Bienestar",
+    "sport": "Deporte",
+    "meditation": "Meditación",
+    "nutrition": "Nutrición",
+    "creativity": "Creatividad",
+    "social": "Social"
+  }
+},
   "notificationsPush": {
     "daily1": "Un reto hoy puede cambiar tu día. ¿Listo?",
+    "streakDangerTitle": "🚨 ¡Racha en peligro!",
+"streakDanger1": "⚠️ Tu racha está en peligro. Marca tu reto antes de medianoche.",
+"streakDanger2": "🔥 No te rindas ahora. Solo quedan unas pocas horas.",
+"streakDanger3": "⏰ Tu racha te espera. ¡Última oportunidad antes de medianoche!",
+"streakDangerOpened": "¡No rompas tu racha!",
+"milestoneLastDayTitle": "🏆 ¡Reto completado!",
+"milestoneLastDayBody": "Acabas de terminar {{days}} días. ¡Increíble!",
+"milestone50Title": "⚡ ¡A mitad de camino!",
+"milestone50Body": "{{completed}}/{{total}} días completados. ¡Sigue así!",
+"milestone7Title": "🔥 ¡7 días seguidos!",
+"milestone7Body": "Una semana completa. Estás creando un hábito real.",
+"milestone30Title": "💪 ¡30 días!",
+"milestone30Body": "Un mes de constancia. Es excepcional.",
+"milestone100Title": "🌟 ¡100 días!",
+"milestone100Body": "100 días. Eres del 1% que aguanta tanto tiempo.",
+"milestoneOpened": "¡Felicidades por este hito!",
     "streakTitle": "Mantén tu racha",
 "streakBody": "Te queda un reto hoy. Complétalo ahora.",
 "duoPartnerMarkedYouDidnt": "{{from}} completó «{{title}}». Te toca — sigan en sincronía.",
@@ -4731,6 +4872,12 @@
   },
 "duo": {
   "leader": "LÍDER",
+  "confirmTitle": "¿Cambiar a dúo?",
+  "confirmSubtitle": "Vas a invitar a un compañero. Para ser justo, el progreso se reinicia desde cero.",
+  "confirmWarning": "⚠️ Cambiar a dúo reinicia tu progreso en solitario en este reto.",
+  "confirmCta": "Sí, cambiar a dúo",
+  "cancelHint": "Cerrar sin cambiar tu reto.",
+  "confirmHint": "Confirmar el cambio a dúo y reiniciar el progreso en solitario.",
   "vs": "VS",
   "pending": {
       "title": "Invitación pendiente",

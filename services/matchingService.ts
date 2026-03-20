@@ -55,6 +55,7 @@ export interface MatchCandidate {
 export interface MatchingInvitation {
   challengeId: string;
   challengeTitle: string;
+  chatId?: string | null;
   selectedDays: number;
   inviterId: string;
   inviterUsername: string;
@@ -281,6 +282,7 @@ export async function sendMatchingInvitation(opts: {
   inviteeId: string;
   challengeId: string;
   challengeTitle: string;
+  chatId?: string | null;
   selectedDays: number;
 }): Promise<{ id: string }> {
   try {
@@ -320,6 +322,7 @@ export async function sendMatchingInvitation(opts: {
     const ref = await addDoc(collection(db, "matching_invitations"), {
       challengeId: opts.challengeId,
       challengeTitle: opts.challengeTitle,
+      chatId: opts.chatId ?? null,
       selectedDays: opts.selectedDays,
       inviterId: me,
       inviterUsername,

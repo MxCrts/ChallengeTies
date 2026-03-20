@@ -744,10 +744,85 @@
   "vsIntro": {
     "challengeAccepted":"Herausforderung angenommen"
   },
+  "onboarding": {
+  "banner": {
+    "title": "Leg los 🔥",
+    "subtitle": "Verdiene {{trophies}} Trophäen zum Start",
+    "subtitleProgress": "{{done}}/{{total}} · +{{left}} Trophäen übrig",
+    "progress": "{{done}} / {{total}} abgeschlossen"
+  },
+  "quest": {
+    "markFirstDay": {
+      "title": "Markiere deinen ersten Tag",
+      "desc": "Öffne deine Challenge und hake Tag 1 ab"
+    },
+    "completeProfile": {
+      "title": "Vervollständige dein Profil",
+      "desc": "Füge ein Foto und Kategorien hinzu"
+    },
+    "exploreCommunity": {
+      "title": "Erkunde die Community",
+      "desc": "Öffne die Heldentaten-Seite"
+    },
+    "joinSoloChallenge": {
+      "title": "Starte eine Solo-Challenge",
+      "desc": "Warte nicht auf dein Duo, starte jetzt"
+    },
+    "viewChallenge": {
+      "title": "Challenge ansehen",
+      "desc": "Schau dir deine aktuelle Challenge an"
+    }
+  }
+},
   "savedShort": "Gespeichert"
 ,
   "addLocationHere": "Füge einen Standort hinzu",
-  "addInterestsHere": "Füge deine Interessen hinzu",
+  "addInterestsHere": "Meine Kategorien wählen",
+"matching": {
+  "sectionTitle": "Duo & Einladungen",
+  "duoAvailableLabel": "Für ein Duo verfügbar",
+  "duoAvailableOn": "Du erscheinst in Matches",
+  "duoAvailableOff": "Du erscheinst nicht in Matches",
+  "inboxBtnLabel": "Duo-Einladungen",
+  "inboxBtnSub": "{{count}} ausstehende Einladung(en)",
+  "toggleError": "Aktualisierung nicht möglich.",
+  "inboxTitle": "Erhaltene Einladungen",
+  "inboxCount": "ausstehende Einladung(en)",
+  "inboxEmpty": "Keine ausstehenden Einladungen.",
+  "inboxHint": "Einladungen verfallen nach 72 Std.",
+  "inviteExpired": "Diese Einladung ist abgelaufen.",
+  "inviteAlreadyTreated": "Einladung bereits bearbeitet.",
+  "acceptError": "Fehler beim Annehmen.",
+  "days": "Tage",
+  "title": "Duo-Partner finden",
+  "searching": "Suche nach Partnern…",
+  "loadError": "Profile konnten nicht geladen werden.",
+  "emptyTitle": "Kein Partner gefunden",
+  "emptyDesc": "Aktiviere \"Für ein Duo verfügbar\" in deinem Profil, um hier zu erscheinen.",
+  "legendPerfect": "Macht diese Challenge",
+  "legendGood": "Gleiche Kategorie",
+  "rateLimitTitle": "Limit erreicht",
+  "rateLimitBody": "Du kannst 5 Matching-Einladungen pro Tag senden.",
+  "sendError": "Fehler beim Senden.",
+  "footerHint": "Einladung läuft in 72h ab · Max 5/Tag",
+  "sameChallengeLabel": "Macht diese Challenge solo",
+  "sameCategoryLabel": "Kategorie: {{category}}",
+  "availableLabel": "Für ein Duo verfügbar"
+},
+"feed": {
+  "shareOnFeed": "Meine Leistungen teilen",
+  "shareOnFeedSub": "Für die gesamte Community sichtbar",
+  "shareEnabled": "Leistungen geteilt ✅",
+  "shareDisabled": "Leistungen ausgeblendet."
+},
+"choixDuo": {
+  "title": "Partner finden",
+  "inviteFriend": "Freund einladen",
+  "inviteFriendDesc": "Sende einen Link an jemanden, den du kennst",
+  "findPartner": "Duo-Partner finden",
+  "findPartnerDesc": "Matche mit einem User, der dieselbe Challenge macht",
+  "hint": "Zu zweit hält man viel länger durch. 💪"
+},
   "challengeDetails": {
     "reviewsSubtitle": "Echtes Feedback, um besser zu wählen und schneller voranzukommen.",
       "noReviewsHint": "Sei der Erste mit einer hilfreichen Bewertung. 10 Sekunden, echte Wirkung.",
@@ -2511,8 +2586,74 @@
     "🔒 Serie gemeinsam geschützt."
   ]
 },
+"exploits": {
+  "title": "HELDENTATEN",
+  "subtitle": "Die Großtaten der Gemeinschaft",
+  "loading": "Die Annalen werden konsultiert…",
+  "loadError": "Heldentaten konnten nicht geladen werden.",
+  "retry": "Erneut versuchen",
+  "emptyTitle": "Forum Vacuum",
+  "emptySub": "Noch keine Heldentaten hier.\nMarkiere eine Herausforderung, um in die Annalen einzugehen!",
+  "endOfFeed": "Finis tabula",
+  "you": "du",
+  "day": "Tag",
+  "days": "Tage",
+  "justNow": "Gerade eben",
+  "minutesAgo": "{{count}}min",
+  "hoursAgo": "{{count}}h",
+  "daysAgo": "{{count}}T",
+  "type": {
+    "completion": "Abgeschlossen",
+    "completionSub": "Herausforderung erfüllt",
+    "milestone": "Meilenstein",
+    "milestoneSub": "Etappe erreicht",
+    "dailyMark": "Markiert",
+    "dailyMarkSub": "Tägliche Disziplin"
+  },
+  "label": {
+    "completion": "vollendete « {{challenge}} » in {{days}} {{unit}}",
+    "milestone7": "7 Tage Konsequenz — « {{challenge}} »",
+    "milestone30": "30 Tage vollbracht — « {{challenge}} »",
+    "milestone100": "100 Tage Meisterschaft — « {{challenge}} »",
+    "milestone50": "Halbzeit erreicht — « {{challenge}} »",
+    "milestoneGeneric": "Meilenstein erreicht — « {{challenge}} »",
+    "dailyMark": "« {{challenge}} » — {{streak}} {{unit}} Disziplin"
+  }
+},
+"userInfo": {
+  "categoriesLabel": "Deine Interessensgebiete",
+  "categoriesHint": "Wähle die Bereiche aus, die zu dir passen, um die besten Duo-Partner zu finden.",
+  "category": {
+    "fitness": "Fitness",
+    "health": "Gesundheit",
+    "productivity": "Produktivität",
+    "education": "Bildung",
+    "wellbeing": "Wohlbefinden",
+    "sport": "Sport",
+    "meditation": "Meditation",
+    "nutrition": "Ernährung",
+    "creativity": "Kreativität",
+    "social": "Soziales"
+  }
+},
   "notificationsPush": {
     "daily1": "Eine Challenge heute reicht, um deinen Tag zu drehen. Los?",
+    "streakDangerTitle": "🚨 Streak in Gefahr!",
+"streakDanger1": "⚠️ Deine Serie ist in Gefahr. Hake deine Challenge vor Mitternacht ab.",
+"streakDanger2": "🔥 Gib jetzt nicht auf. Nur noch wenige Stunden übrig.",
+"streakDanger3": "⏰ Dein Streak wartet. Letzte Chance vor Mitternacht!",
+"streakDangerOpened": "Brich deinen Streak nicht!",
+"milestoneLastDayTitle": "🏆 Challenge abgeschlossen!",
+"milestoneLastDayBody": "Du hast gerade {{days}} Tage beendet. Unglaublich!",
+"milestone50Title": "⚡ Halbzeit!",
+"milestone50Body": "{{completed}}/{{total}} Tage geschafft. Weiter so!",
+"milestone7Title": "🔥 7 Tage am Stück!",
+"milestone7Body": "Eine volle Woche. Du baust eine echte Gewohnheit auf.",
+"milestone30Title": "💪 30 Tage!",
+"milestone30Body": "Ein Monat Beständigkeit. Das ist außergewöhnlich.",
+"milestone100Title": "🌟 100 Tage!",
+"milestone100Body": "100 Tage. Du gehörst zu den 1%, die so lange durchhalten.",
+"milestoneOpened": "Glückwunsch zu diesem Meilenstein!",
     "streakTitle": "Serie halten",
 "streakBody": "Heute ist noch eine Challenge offen. Jetzt abschließen.",
 "duoPartnerMarkedYouDidnt": "{{from}} hat „{{title}}“ erledigt. Du bist dran — bleibt synchron.",
@@ -2569,6 +2710,12 @@
   },
 "duo": {
   "leader": "ANFÜHRER",
+  "confirmTitle": "Zum Duo wechseln?",
+  "confirmSubtitle": "Du lädst gleich einen Partner ein. Um fair zu bleiben, wird der Fortschritt zurückgesetzt.",
+  "confirmWarning": "⚠️ Der Wechsel zum Duo setzt deinen Solo-Fortschritt zurück.",
+  "confirmCta": "Ja, zum Duo wechseln",
+  "cancelHint": "Fenster schließen ohne Änderung.",
+  "confirmHint": "Wechsel zum Duo bestätigen und Solo-Fortschritt zurücksetzen.",
    "vs": "VS",
   "pending": {
       "title": "Einladung ausstehend",

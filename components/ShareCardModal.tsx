@@ -268,8 +268,12 @@ const ShareCardModal: React.FC<Props> = ({
                           })}
                         </Text>
 
-                        <View style={styles.progressTrack}>
-                          <View style={[styles.progressFill, { width: `${userPct}%` }]} />
+                       <View style={styles.progressTrack}>
+                          <LinearGradient
+                            colors={[th.colors.primary, th.colors.secondary]}
+                            start={{ x: 0, y: 0 }} end={{ x: 1, y: 0 }}
+                            style={[styles.progressFill, { width: `${userPct}%` }]}
+                          />
                         </View>
 
                         <Text style={styles.milestone} numberOfLines={1} ellipsizeMode="tail">
@@ -339,11 +343,10 @@ const ShareCardModal: React.FC<Props> = ({
                             )}
 
                             <View style={styles.miniTrack}>
-                              <View
-                                style={[
-                                  styles.miniFill,
-                                  { width: `${partnerPct}%`, backgroundColor: th.colors.secondary },
-                                ]}
+                              <LinearGradient
+                                colors={["#00C2FF", "#00FFD1"]}
+                                start={{ x: 0, y: 0 }} end={{ x: 1, y: 0 }}
+                                style={[styles.miniFill, { width: `${partnerPct}%` }]}
                               />
                             </View>
 
@@ -486,7 +489,7 @@ function createStyles(th: Theme, s: (n: number) => number, IS_TINY: boolean) {
       flexShrink: 0,
       paddingHorizontal: s(16),
       paddingTop: s(14),
-      paddingBottom: s(12),
+      paddingBottom: s(16),
       alignItems: "center",
     },
     headerRow: {
@@ -625,17 +628,17 @@ function createStyles(th: Theme, s: (n: number) => number, IS_TINY: boolean) {
     },
     duoSideHi: {
       borderWidth: 1.5,
-      borderColor: withAlpha("#FFFFFF", 0.22),
-      backgroundColor: withAlpha("#000", 0.10),
+      borderColor: withAlpha(th.colors.primary, 0.45),
+      backgroundColor: withAlpha(th.colors.primary, 0.08),
     },
-    avatarRingSm: {
+   avatarRingSm: {
       width: s(70),
       height: s(70),
       borderRadius: s(35),
       padding: 2,
-      borderWidth: 1,
-      borderColor: withAlpha("#FFFFFF", 0.18),
-      backgroundColor: withAlpha("#000", 0.18),
+      borderWidth: 2,
+      borderColor: withAlpha(th.colors.primary, 0.55),
+      backgroundColor: withAlpha(th.colors.primary, 0.10),
       alignItems: "center",
       justifyContent: "center",
       marginBottom: s(6),
@@ -704,13 +707,14 @@ function createStyles(th: Theme, s: (n: number) => number, IS_TINY: boolean) {
       paddingHorizontal: s(12),
       includeFontPadding: false,
     },
-
-    footer: {
+footer: {
       flexShrink: 0,
       paddingHorizontal: s(16),
       paddingTop: s(10),
       paddingBottom: s(12),
       alignItems: "center",
+      borderTopWidth: 1,
+      borderTopColor: withAlpha("#FFFFFF", 0.07),
     },
     footerTitle: {
       color: "#fff",

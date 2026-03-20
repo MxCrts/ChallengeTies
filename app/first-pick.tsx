@@ -40,6 +40,7 @@ import { useToast } from "../src/ui/Toast";
 import { AppState } from "react-native";
 import { getOrCreateOpenInvitation } from "@/services/invitationService";
 import { logEvent } from "@/src/analytics";
+import { initOnboardingQuests } from "@/src/services/onboardingQuestService";
 
 const SPACING = 16;
 const DEFAULT_DAYS = [7, 14, 21, 30, 60, 90];
@@ -944,6 +945,7 @@ if (isOnFirstPick) {
 
   const goHome = useCallback(async (opts?: { pendingInviteId?: string }) => {
   await AsyncStorage.setItem("firstPickDone", "1");
+  await initOnboardingQuests(opts?.pendingInviteId ? "duo" : mode).catch(() => {});
 
   // ✅ hard reset invite flow flags (anti remount/Android weirdness)
   await AsyncStorage.removeItem(FIRSTPICK_INVITE_SNAPSHOT_KEY).catch(() => {});

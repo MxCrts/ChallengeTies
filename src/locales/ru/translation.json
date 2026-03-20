@@ -734,8 +734,83 @@
   },
   "savedShort": "Сохранено"
 ,
+"onboarding": {
+  "banner": {
+    "title": "Начни прямо сейчас 🔥",
+    "subtitle": "Заработай {{trophies}} трофеев для старта",
+    "subtitleProgress": "{{done}}/{{total}} · ещё +{{left}} трофеев",
+    "progress": "{{done}} / {{total}} выполнено"
+  },
+  "quest": {
+    "markFirstDay": {
+      "title": "Отметь первый день",
+      "desc": "Открой вызов и отметь день 1"
+    },
+    "completeProfile": {
+      "title": "Заполни профиль",
+      "desc": "Добавь фото и категории"
+    },
+    "exploreCommunity": {
+      "title": "Изучи сообщество",
+      "desc": "Открой страницу Подвигов"
+    },
+    "joinSoloChallenge": {
+      "title": "Начни соло-вызов",
+      "desc": "Пока ждёшь дуэт — стартуй сейчас"
+    },
+    "viewChallenge": {
+      "title": "Посмотреть вызов",
+      "desc": "Открой свой текущий вызов"
+    }
+  }
+},
   "addLocationHere": "Добавьте местоположение",
-  "addInterestsHere": "Добавьте ваши интересы",
+  "addInterestsHere": "Выбрать категории",
+"matching": {
+  "sectionTitle": "Дуэт и приглашения",
+  "duoAvailableLabel": "Доступен для дуэта",
+  "duoAvailableOn": "Ты появляешься в матчах",
+  "duoAvailableOff": "Ты не появляешься в матчах",
+  "inboxBtnLabel": "Приглашения в дуэт",
+  "inboxBtnSub": "{{count}} ожидающих приглашений",
+  "toggleError": "Не удалось обновить.",
+  "inboxTitle": "Полученные приглашения",
+  "inboxCount": "приглашение(й) ожидает",
+  "inboxEmpty": "Нет ожидающих приглашений.",
+  "inboxHint": "Приглашения истекают через 72ч.",
+  "inviteExpired": "Это приглашение истекло.",
+  "inviteAlreadyTreated": "Приглашение уже обработано.",
+  "acceptError": "Ошибка при принятии.",
+  "days": "дней",
+  "title": "Найти партнёра для дуэта",
+  "searching": "Поиск партнёров…",
+  "loadError": "Не удалось загрузить профили.",
+  "emptyTitle": "Партнёр не найден",
+  "emptyDesc": "Включи \"Доступен для дуэта\" в профиле, чтобы появиться здесь.",
+  "legendPerfect": "Делает этот вызов",
+  "legendGood": "Та же категория",
+  "rateLimitTitle": "Лимит достигнут",
+  "rateLimitBody": "Можно отправить 5 приглашений в день.",
+  "sendError": "Ошибка при отправке.",
+  "footerHint": "Приглашение истекает через 72ч · Макс 5/день",
+  "sameChallengeLabel": "Делает этот вызов соло",
+  "sameCategoryLabel": "Категория: {{category}}",
+  "availableLabel": "Доступен для дуэта"
+},
+"feed": {
+  "shareOnFeed": "Делиться моими подвигами",
+  "shareOnFeedSub": "Видно всему сообществу",
+  "shareEnabled": "Подвиги опубликованы ✅",
+  "shareDisabled": "Подвиги скрыты."
+},
+"choixDuo": {
+  "title": "Найти партнёра",
+  "inviteFriend": "Пригласить друга",
+  "inviteFriendDesc": "Отправь ссылку кому-то, кого знаешь",
+  "findPartner": "Найти пару для дуэта",
+  "findPartnerDesc": "Найди пользователя, делающего тот же вызов",
+  "hint": "Вдвоём держаться гораздо легче. 💪"
+},
   "challengeDetails": {
     "cta_take": "Начать челлендж",
     "cta_markToday": "Отметить сегодня",
@@ -4631,11 +4706,77 @@
     "🔒 Серия защищена вместе."
   ]
 },
+"exploits": {
+  "title": "ПОДВИГИ",
+  "subtitle": "Великие деяния сообщества",
+  "loading": "Обращение к летописям…",
+  "loadError": "Не удалось загрузить подвиги.",
+  "retry": "Повторить",
+  "emptyTitle": "Forum Vacuum",
+  "emptySub": "Здесь ещё не записано ни одного подвига.\nОтметь испытание, чтобы войти в летописи!",
+  "endOfFeed": "Finis tabula",
+  "you": "ты",
+  "day": "день",
+  "days": "дней",
+  "justNow": "Только что",
+  "minutesAgo": "{{count}}мин",
+  "hoursAgo": "{{count}}ч",
+  "daysAgo": "{{count}}д",
+  "type": {
+    "completion": "Завершено",
+    "completionSub": "Испытание пройдено",
+    "milestone": "Веха",
+    "milestoneSub": "Этап покорён",
+    "dailyMark": "Отмечено",
+    "dailyMarkSub": "Ежедневная дисциплина"
+  },
+  "label": {
+    "completion": "завершил « {{challenge}} » за {{days}} {{unit}}",
+    "milestone7": "7 дней постоянства — « {{challenge}} »",
+    "milestone30": "30 дней пройдено — « {{challenge}} »",
+    "milestone100": "100 дней мастерства — « {{challenge}} »",
+    "milestone50": "Половина пути — « {{challenge}} »",
+    "milestoneGeneric": "Веха покорена — « {{challenge}} »",
+    "dailyMark": "« {{challenge}} » — {{streak}} {{unit}} дисциплины"
+  }
+},
+"userInfo": {
+  "categoriesLabel": "Твои области интересов",
+  "categoriesHint": "Выбери сферы, которые тебе подходят, чтобы найти лучших партнёров для дуэта.",
+  "category": {
+    "fitness": "Фитнес",
+    "health": "Здоровье",
+    "productivity": "Продуктивность",
+    "education": "Образование",
+    "wellbeing": "Благополучие",
+    "sport": "Спорт",
+    "meditation": "Медитация",
+    "nutrition": "Питание",
+    "creativity": "Творчество",
+    "social": "Общение"
+  }
+},
   "notificationsPush": {
     "daily1": "Один челлендж сегодня может изменить твой день. Готов?",
     "streakTitle": "Сохрани серию",
 "streakBody": "Сегодня остался один челлендж. Закрой его сейчас.",
 "duoPartnerMarkedYouDidnt": "{{from}} отметил(а) «{{title}}». Твоя очередь — оставайтесь в синхроне.",
+"streakDangerTitle": "🚨 Серия под угрозой!",
+"streakDanger1": "⚠️ Твоя серия в опасности. Отметь задание до полуночи.",
+"streakDanger2": "🔥 Не сдавайся сейчас. Остались считанные часы.",
+"streakDanger3": "⏰ Твоя серия ждёт. Последний шанс до полуночи!",
+"streakDangerOpened": "Не прерывай свою серию!",
+"milestoneLastDayTitle": "🏆 Вызов завершён!",
+"milestoneLastDayBody": "Ты только что завершил(а) {{days}} дней. Невероятно!",
+"milestone50Title": "⚡ Половина пути!",
+"milestone50Body": "{{completed}}/{{total}} дней. Так держать!",
+"milestone7Title": "🔥 7 дней подряд!",
+"milestone7Body": "Целая неделя. Ты формируешь настоящую привычку.",
+"milestone30Title": "💪 30 дней!",
+"milestone30Body": "Месяц постоянства. Это исключительно.",
+"milestone100Title": "🌟 100 дней!",
+"milestone100Body": "100 дней. Ты в топ 1%, кто держится так долго.",
+"milestoneOpened": "Поздравляем с этой вехой!",
 "late1": "Твой челлендж на сегодня ждёт. Сделаешь сейчас? 🔥",
 "late2": "Последний шанс — сохрани серию 💪",
 "late3": "Ещё есть немного времени сегодня ✨",
@@ -4703,6 +4844,12 @@
   },
 "duo": {
   "leader": "ЛИДЕР",
+  "confirmTitle": "Перейти в дуэт?",
+  "confirmSubtitle": "Ты собираешься пригласить партнёра. Для честной игры прогресс сбросится до нуля.",
+  "confirmWarning": "⚠️ Переход в дуэт сбрасывает твой одиночный прогресс в этом вызове.",
+  "confirmCta": "Да, перейти в дуэт",
+  "cancelHint": "Закрыть без изменений.",
+  "confirmHint": "Подтвердить переход в дуэт и сбросить одиночный прогресс.",
   "vs": "VS",
   "pending": {
       "title": "Приглашение ожидается",

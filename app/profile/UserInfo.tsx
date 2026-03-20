@@ -20,6 +20,7 @@ import {
 } from "react-native";
 import { useRouter } from "expo-router";
 import { useFocusEffect } from "@react-navigation/native"; 
+import { completeQuest as completeOnboardingQuest } from "@/src/services/onboardingQuestService";
 import {
   doc,
   updateDoc,
@@ -141,6 +142,19 @@ function useTabBarHeightSafe(): number {
   }
 }
 
+const CATEGORY_SLUG_MAP: Record<string, string> = {
+  "Fitness": "fitness",
+  "Santé": "health",
+  "Productivité": "productivity",
+  "Éducation": "education",
+  "Bien-être": "wellbeing",
+  "Sport": "sport",
+  "Méditation": "meditation",
+  "Nutrition": "nutrition",
+  "Créativité": "creativity",
+  "Social": "social",
+};
+
 // ==== GlassCard (défini au module scope) ====
 type GlassCardProps = {
   isDarkMode: boolean;
@@ -229,16 +243,16 @@ export default function UserInfo() {
   const toastTranslateY = useSharedValue(-10);
   const [reduceMotion, setReduceMotion] = useState(false);
   const CHALLENGE_CATEGORIES = [
-  "Fitness",
-  "Santé",
-  "Productivité",
-  "Éducation",
-  "Bien-être",
-  "Sport",
-  "Méditation",
-  "Nutrition",
-  "Créativité",
-  "Social",
+  "fitness",
+  "health",
+  "productivity",
+  "education",
+  "wellbeing",
+  "sport",
+  "meditation",
+  "nutrition",
+  "creativity",
+  "social",
 ];
 
 const [selectedCategories, setSelectedCategories] = useState<string[]>([]);
@@ -443,6 +457,7 @@ const toggleCategory = useCallback((cat: string) => {
     navigatedRef.current = true;
     setIsLoading(false);
     showToast("success", String(t("profileUpdatedSuccess")));
+    completeOnboardingQuest("complete_profile").catch(() => {});
     setTimeout(() => { router.back(); }, 450);
   } catch (error: any) {
     showToast("error", `${t("profileUpdateFailed")}: ${error?.message ?? ""}`);
@@ -664,13 +679,13 @@ const toggleCategory = useCallback((cat: string) => {
   />
               {/* Catégories pour le matching */}
 <Animated.View entering={FadeInUp.delay(550)} style={{ width: "100%", marginBottom: V_SPACING }}>
-  <Text style={[{
+ <Text style={[{
     fontFamily: "Comfortaa_700Bold",
     fontSize: n(13),
     marginBottom: n(10),
     color: isDarkMode ? currentTheme.colors.textSecondary : "#333",
   }]}>
-    {t("matching.categoriesLabel", { defaultValue: "Défis qui t'intéressent" })}
+    {t("userInfo.categoriesLabel")}
   </Text>
   <Text style={{
     fontFamily: "Comfortaa_400Regular",
@@ -679,7 +694,7 @@ const toggleCategory = useCallback((cat: string) => {
     marginBottom: n(10),
     lineHeight: n(16),
   }}>
-    {t("matching.categoriesHint", { defaultValue: "Sélectionne pour améliorer tes matchs de binôme." })}
+    {t("userInfo.categoriesHint")}
   </Text>
   <View style={{ flexDirection: "row", flexWrap: "wrap", gap: n(8) }}>
     {CHALLENGE_CATEGORIES.map((cat) => {
@@ -702,15 +717,17 @@ const toggleCategory = useCallback((cat: string) => {
             opacity: pressed ? 0.8 : 1,
           }]}
         >
-          <Text style={{
+                    <Text style={{
             fontFamily: selected ? "Comfortaa_700Bold" : "Comfortaa_400Regular",
             fontSize: n(12),
             color: selected
               ? isDarkMode ? "#00C8FF" : "#0095C2"
               : isDarkMode ? "rgba(255,255,255,0.65)" : "rgba(0,0,0,0.55)",
           }}>
-            {cat}
+                       {t(`userInfo.category.${CATEGORY_SLUG_MAP[cat] ?? cat}`, { defaultValue: cat })}
+
           </Text>
+
         </Pressable>
       );
     })}

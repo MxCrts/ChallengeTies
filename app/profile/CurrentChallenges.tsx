@@ -314,7 +314,7 @@ export default function CurrentChallenges() {
 const removingKeysRef = useRef<Set<string>>(new Set());
 
   const handleMarkToday = useCallback(
-    async (id: string, selectedDays: number) => {
+    async (id: string, selectedDays: number, title?: string) => {
       const key = `${id}_${selectedDays}`;
       if (markingId) return;
       try {
@@ -323,6 +323,18 @@ const removingKeysRef = useRef<Set<string>>(new Set());
         if (result?.success) {
           setConfettiActive(true);
           await playSuccessFx();
+          if (result.completed) {
+            router.push({
+              pathname: "/challenge-details/[id]",
+              params: {
+                id,
+                title: title ?? "",
+                selectedDays: String(selectedDays),
+                completedDays: String(selectedDays),
+                autoComplete: "1",
+              },
+            });
+          }
           setGainKey(key);
           gainOpacity.value = withSequence(
             withTiming(1, { duration: 200, easing: Easing.out(Easing.ease) }),
@@ -348,7 +360,8 @@ const removingKeysRef = useRef<Set<string>>(new Set());
         setMarkingId(null);
       }
     },
-    [markToday, t, markingId, playSuccessFx, gainOpacity, gainY, reduceMotion]
+        [markToday, t, markingId, playSuccessFx, gainOpacity, gainY, reduceMotion, router]
+
   );
 
   // Tokens design adaptatifs dark/light
@@ -803,7 +816,7 @@ const cancelRemove = useCallback(() => {
                             styles.disabledMarkButton,
                         ]}
                         onPress={() =>
-                          handleMarkToday(item.id, item.selectedDays)
+                          handleMarkToday(item.id, item.selectedDays, item.title)
                         }
                         disabled={marked || markingId === key}
                         accessibilityLabel={

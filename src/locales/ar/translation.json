@@ -4641,8 +4641,74 @@
     "🔒 السلسلة محمية معًا."
   ]
 },
+"exploits": {
+  "title": "البطولات",
+  "subtitle": "أعظم إنجازات المجتمع",
+  "loading": "جارٍ مراجعة السجلات…",
+  "loadError": "تعذّر تحميل البطولات.",
+  "retry": "إعادة المحاولة",
+  "emptyTitle": "Forum Vacuum",
+  "emptySub": "لم يُنقش هنا أي إنجاز بعد.\nسجّل تحدياً لتخلّد اسمك في السجلات!",
+  "endOfFeed": "Finis tabula",
+  "you": "أنت",
+  "day": "يوم",
+  "days": "أيام",
+  "justNow": "الآن",
+  "minutesAgo": "{{count}} دقيقة",
+  "hoursAgo": "{{count}} ساعة",
+  "daysAgo": "{{count}} يوم",
+  "type": {
+    "completion": "مكتمل",
+    "completionSub": "تحدٍّ محقَّق",
+    "milestone": "مرحلة",
+    "milestoneSub": "مرحلة مُنجَزة",
+    "dailyMark": "مسجَّل",
+    "dailyMarkSub": "انضباط يومي"
+  },
+  "label": {
+    "completion": "أنجز «{{challenge}}» في {{days}} {{unit}}",
+    "milestone7": "٧ أيام من المثابرة — «{{challenge}}»",
+    "milestone30": "٣٠ يوماً مُنجَزة — «{{challenge}}»",
+    "milestone100": "١٠٠ يوم من الإتقان — «{{challenge}}»",
+    "milestone50": "منتصف المسار — «{{challenge}}»",
+    "milestoneGeneric": "مرحلة مُحقَّقة — «{{challenge}}»",
+    "dailyMark": "«{{challenge}}» — {{streak}} {{unit}} من الانضباط"
+  }
+},
+"userInfo": {
+  "categoriesLabel": "مجالات اهتمامك",
+  "categoriesHint": "اختر المجالات التي تناسبك للعثور على أفضل شركاء الثنائي.",
+  "category": {
+    "fitness": "لياقة بدنية",
+    "health": "صحة",
+    "productivity": "إنتاجية",
+    "education": "تعليم",
+    "wellbeing": "رفاهية",
+    "sport": "رياضة",
+    "meditation": "تأمل",
+    "nutrition": "تغذية",
+    "creativity": "إبداع",
+    "social": "اجتماعي"
+  }
+},
   "notificationsPush": {
     "daily1": "تحدٍّ واحد اليوم يكفي لتغيير يومك. جاهز؟",
+    "streakDangerTitle": "🚨 السلسلة في خطر!",
+"streakDanger1": "⚠️ سلسلتك في خطر. سجّل تحديك قبل منتصف الليل.",
+"streakDanger2": "🔥 لا تستسلم الآن. لم تتبق سوى ساعات قليلة.",
+"streakDanger3": "⏰ سلسلتك تنتظرك. آخر فرصة قبل منتصف الليل!",
+"streakDangerOpened": "لا تكسر سلسلتك!",
+"milestoneLastDayTitle": "🏆 اكتمل التحدي!",
+"milestoneLastDayBody": "لقد أنهيت للتو {{days}} يومًا. لا يصدق!",
+"milestone50Title": "⚡ منتصف الطريق!",
+"milestone50Body": "{{completed}}/{{total}} أيام. استمر هكذا!",
+"milestone7Title": "🔥 7 أيام متتالية!",
+"milestone7Body": "أسبوع كامل. أنت تبني عادة حقيقية.",
+"milestone30Title": "💪 30 يومًا!",
+"milestone30Body": "شهر من الثبات. هذا استثنائي.",
+"milestone100Title": "🌟 100 يوم!",
+"milestone100Body": "100 يوم. أنت من بين 1% الذين يصمدون طويلًا.",
+"milestoneOpened": "تهانينا على هذه المرحلة!",
     "streakTitle": "حافظ على السلسلة",
 "streakBody": "لديك تحدٍ متبقٍ اليوم. أنجزه الآن.",
 "duoPartnerMarkedYouDidnt": "{{from}} أنهى «{{title}}». دورك الآن — ابقيا متزامنين.",
@@ -4712,6 +4778,12 @@
   },
 "duo": {
   "leader": "القائد",
+  "confirmTitle": "التبديل إلى ثنائي؟",
+  "confirmSubtitle": "أنت على وشك دعوة شريك. لتكون عادلاً، سيتم إعادة التقدم إلى الصفر.",
+  "confirmWarning": "⚠️ التبديل إلى ثنائي يعيد تعيين تقدمك الفردي في هذا التحدي.",
+  "confirmCta": "نعم، التبديل إلى ثنائي",
+  "cancelHint": "إغلاق دون تغيير التحدي.",
+  "confirmHint": "تأكيد التبديل إلى ثنائي وإعادة تعيين التقدم الفردي.",
    "vs": "ضد",
   "pending": {
       "title": "الدعوة قيد الانتظار",
@@ -4771,7 +4843,82 @@
     "interestsLabel": "الاهتمامات"
   },
   "addLocationHere": "أضف موقعًا",
-  "addInterestsHere": "أضف اهتماماتك",
+  "addInterestsHere": "اختيار الفئات",
+"matching": {
+  "sectionTitle": "الثنائي والدعوات",
+  "duoAvailableLabel": "متاح للعب الثنائي",
+  "duoAvailableOn": "تظهر في المطابقات",
+  "duoAvailableOff": "لا تظهر في المطابقات",
+  "inboxBtnLabel": "دعوات الثنائي",
+  "inboxBtnSub": "{{count}} دعوة معلّقة",
+  "toggleError": "تعذّر التحديث.",
+  "inboxTitle": "الدعوات المستلمة",
+  "inboxCount": "دعوة(دعوات) معلقة",
+  "inboxEmpty": "لا توجد دعوات معلقة.",
+  "inboxHint": "تنتهي صلاحية الدعوات بعد 72 ساعة.",
+  "inviteExpired": "انتهت صلاحية هذه الدعوة.",
+  "inviteAlreadyTreated": "تمت معالجة الدعوة بالفعل.",
+  "acceptError": "خطأ أثناء القبول.",
+  "days": "أيام",
+  "title": "إيجاد شريك ثنائي",
+  "searching": "جارٍ البحث عن شركاء…",
+  "loadError": "تعذّر تحميل الملفات الشخصية.",
+  "emptyTitle": "لم يُعثر على شريك",
+  "emptyDesc": "فعّل \"متاح لثنائي\" في ملفك الشخصي للظهور هنا.",
+  "legendPerfect": "يؤدي هذا التحدي",
+  "legendGood": "نفس الفئة",
+  "rateLimitTitle": "تم الوصول إلى الحد",
+  "rateLimitBody": "يمكنك إرسال 5 دعوات مطابقة يومياً.",
+  "sendError": "خطأ أثناء الإرسال.",
+  "footerHint": "تنتهي الدعوة خلال 72 ساعة · الحد 5/يوم",
+  "sameChallengeLabel": "يؤدي هذا التحدي منفرداً",
+  "sameCategoryLabel": "الفئة: {{category}}",
+  "availableLabel": "متاح لثنائي"
+},
+"feed": {
+  "shareOnFeed": "مشاركة إنجازاتي",
+  "shareOnFeedSub": "مرئي للمجتمع بأكمله",
+  "shareEnabled": "تمت مشاركة الإنجازات ✅",
+  "shareDisabled": "الإنجازات مخفية."
+},
+"choixDuo": {
+  "title": "إيجاد شريك",
+  "inviteFriend": "دعوة صديق",
+  "inviteFriendDesc": "أرسل رابطاً لشخص تعرفه",
+  "findPartner": "إيجاد شريك ثنائي",
+  "findPartnerDesc": "تطابق مع مستخدم يؤدي نفس التحدي",
+  "hint": "معاً، تستمران لفترة أطول بكثير. 💪"
+},
+"onboarding": {
+  "banner": {
+    "title": "ابدأ الآن 🔥",
+    "subtitle": "اكسب {{trophies}} كأس للانطلاق",
+    "subtitleProgress": "{{done}}/{{total}} · +{{left}} كأس متبقية",
+    "progress": "{{done}} / {{total}} مكتملة"
+  },
+  "quest": {
+    "markFirstDay": {
+      "title": "سجّل يومك الأول",
+      "desc": "افتح تحديك وضع علامة على اليوم 1"
+    },
+    "completeProfile": {
+      "title": "أكمل ملفك الشخصي",
+      "desc": "أضف صورة وفئاتك"
+    },
+    "exploreCommunity": {
+      "title": "استكشف المجتمع",
+      "desc": "افتح صفحة البطولات"
+    },
+    "joinSoloChallenge": {
+      "title": "ابدأ تحدياً فردياً",
+      "desc": "في انتظار ثنائيك، ابدأ الآن"
+    },
+    "viewChallenge": {
+      "title": "عرض تحديك",
+      "desc": "تحقق من تحديك الحالي"
+    }
+  }
+},
   "invitation": {
     "subtitle": "لقد تمت دعوتك للانضمام إلى التحدي {challengeId}!",
     "accepting": "جارٍ القبول...",

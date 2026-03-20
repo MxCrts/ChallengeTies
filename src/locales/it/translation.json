@@ -756,7 +756,82 @@
   },
   "createChallengeHint": "Un buon titolo + un’immagine = più partecipanti.",
   "addLocationHere": "Aggiungi una località",
-  "addInterestsHere": "Aggiungi i tuoi interessi",
+  "addInterestsHere": "Scegli le mie categorie",
+"matching": {
+  "sectionTitle": "Duo & inviti",
+  "duoAvailableLabel": "Disponibile per un duo",
+  "duoAvailableOn": "Appari nei match",
+  "duoAvailableOff": "Non appari nei match",
+  "inboxBtnLabel": "Inviti duo",
+  "inboxBtnSub": "{{count}} invito/i in attesa",
+  "toggleError": "Impossibile aggiornare.",
+  "inboxTitle": "Inviti ricevuti",
+  "inboxCount": "invito/i in attesa",
+  "inboxEmpty": "Nessun invito in attesa.",
+  "inboxHint": "Gli inviti scadono dopo 72h.",
+  "inviteExpired": "Questo invito è scaduto.",
+  "inviteAlreadyTreated": "Invito già gestito.",
+  "acceptError": "Errore durante l'accettazione.",
+  "days": "giorni",
+  "title": "Trovare un compagno",
+  "searching": "Ricerca di compagni…",
+  "loadError": "Impossibile caricare i profili.",
+  "emptyTitle": "Nessun compagno trovato",
+  "emptyDesc": "Attiva \"Disponibile per un duo\" nel tuo profilo per apparire qui.",
+  "legendPerfect": "Fa questa sfida",
+  "legendGood": "Stessa categoria",
+  "rateLimitTitle": "Limite raggiunto",
+  "rateLimitBody": "Puoi inviare 5 inviti di matching al giorno.",
+  "sendError": "Errore durante l'invio.",
+  "footerHint": "L'invito scade in 72h · Max 5/giorno",
+  "sameChallengeLabel": "Fa questa sfida da solo",
+  "sameCategoryLabel": "Categoria: {{category}}",
+  "availableLabel": "Disponibile per un duo"
+},
+"feed": {
+  "shareOnFeed": "Condividi i miei exploit",
+  "shareOnFeedSub": "Visibile a tutta la community",
+  "shareEnabled": "Exploit condivisi ✅",
+  "shareDisabled": "Exploit nascosti."
+},
+"choixDuo": {
+  "title": "Trova un partner",
+  "inviteFriend": "Invita un amico",
+  "inviteFriendDesc": "Invia un link a qualcuno che conosci",
+  "findPartner": "Trova un duo",
+  "findPartnerDesc": "Abbinati a un utente che fa la stessa sfida",
+  "hint": "Insieme si dura molto di più. 💪"
+},
+"onboarding": {
+  "banner": {
+    "title": "Inizia ora 🔥",
+    "subtitle": "Guadagna {{trophies}} trofei per partire",
+    "subtitleProgress": "{{done}}/{{total}} · +{{left}} trofei rimasti",
+    "progress": "{{done}} / {{total}} completate"
+  },
+  "quest": {
+    "markFirstDay": {
+      "title": "Segna il tuo primo giorno",
+      "desc": "Apri la tua sfida e spunta il giorno 1"
+    },
+    "completeProfile": {
+      "title": "Completa il tuo profilo",
+      "desc": "Aggiungi foto e categorie"
+    },
+    "exploreCommunity": {
+      "title": "Esplora la community",
+      "desc": "Apri la pagina Imprese"
+    },
+    "joinSoloChallenge": {
+      "title": "Inizia una sfida solo",
+      "desc": "Nell'attesa del duo, inizia subito"
+    },
+    "viewChallenge": {
+      "title": "Vedi la tua sfida",
+      "desc": "Consulta la tua sfida in corso"
+    }
+  }
+},
 "common": {
     "back": "Indietro",
     "anonymous": "Anonimo", "delete": "Elimina",
@@ -4633,8 +4708,74 @@
     "🔒 Serie protetta insieme."
   ]
 },
+"exploits": {
+  "title": "IMPRESE",
+  "subtitle": "Le grandi gesta della comunità",
+  "loading": "Consultazione degli annali…",
+  "loadError": "Impossibile caricare le imprese.",
+  "retry": "Riprova",
+  "emptyTitle": "Forum Vacuum",
+  "emptySub": "Nessuna impresa è stata ancora incisa qui.\nSegna una sfida per entrare negli annali!",
+  "endOfFeed": "Finis tabula",
+  "you": "tu",
+  "day": "giorno",
+  "days": "giorni",
+  "justNow": "Proprio ora",
+  "minutesAgo": "{{count}}min",
+  "hoursAgo": "{{count}}h",
+  "daysAgo": "{{count}}g",
+  "type": {
+    "completion": "Completato",
+    "completionSub": "Sfida compiuta",
+    "milestone": "Traguardo",
+    "milestoneSub": "Tappa conquistata",
+    "dailyMark": "Segnato",
+    "dailyMarkSub": "Disciplina quotidiana"
+  },
+  "label": {
+    "completion": "ha compiuto « {{challenge}} » in {{days}} {{unit}}",
+    "milestone7": "7 giorni di costanza — « {{challenge}} »",
+    "milestone30": "30 giorni compiuti — « {{challenge}} »",
+    "milestone100": "100 giorni di maestria — « {{challenge}} »",
+    "milestone50": "Metà percorso — « {{challenge}} »",
+    "milestoneGeneric": "Traguardo conquistato — « {{challenge}} »",
+    "dailyMark": "« {{challenge}} » — {{streak}} {{unit}} di disciplina"
+  }
+},
+"userInfo": {
+  "categoriesLabel": "Le tue aree di interesse",
+  "categoriesHint": "Seleziona i domini che ti corrispondono per trovare i migliori compagni duo.",
+  "category": {
+    "fitness": "Fitness",
+    "health": "Salute",
+    "productivity": "Produttività",
+    "education": "Istruzione",
+    "wellbeing": "Benessere",
+    "sport": "Sport",
+    "meditation": "Meditazione",
+    "nutrition": "Nutrizione",
+    "creativity": "Creatività",
+    "social": "Sociale"
+  }
+},
   "notificationsPush": {
     "daily1": "Una sfida oggi può cambiarti la giornata. Pronto?",
+    "streakDangerTitle": "🚨 Streak a rischio!",
+"streakDanger1": "⚠️ La tua serie è in pericolo. Segna la tua sfida prima di mezzanotte.",
+"streakDanger2": "🔥 Non mollare ora. Restano solo poche ore.",
+"streakDanger3": "⏰ Il tuo streak ti aspetta. Ultima chance prima di mezzanotte!",
+"streakDangerOpened": "Non spezzare il tuo streak!",
+"milestoneLastDayTitle": "🏆 Sfida completata!",
+"milestoneLastDayBody": "Hai appena finito {{days}} giorni. Incredibile!",
+"milestone50Title": "⚡ A metà strada!",
+"milestone50Body": "{{completed}}/{{total}} giorni completati. Continua così!",
+"milestone7Title": "🔥 7 giorni di fila!",
+"milestone7Body": "Una settimana intera. Stai costruendo una vera abitudine.",
+"milestone30Title": "💪 30 giorni!",
+"milestone30Body": "Un mese di costanza. È eccezionale.",
+"milestone100Title": "🌟 100 giorni!",
+"milestone100Body": "100 giorni. Fai parte dell'1% che resiste così a lungo.",
+"milestoneOpened": "Congratulazioni per questo traguardo!",
     "streakTitle": "Salva la serie",
 "streakBody": "Ti resta una sfida oggi. Chiudila adesso.",
 "duoPartnerMarkedYouDidnt": "{{from}} ha completato «{{title}}». Tocca a te: restate sincronizzati.",
@@ -4697,6 +4838,12 @@
   },
 "duo": {
   "leader": "LEADER",
+  "confirmTitle": "Passare al duo?",
+  "confirmSubtitle": "Stai per invitare un partner. Per essere equi, il progresso riparte da zero.",
+  "confirmWarning": "⚠️ Passare al duo azzera il tuo progresso da solista su questa sfida.",
+  "confirmCta": "Sì, passa al duo",
+  "cancelHint": "Chiudi senza modificare la tua sfida.",
+  "confirmHint": "Conferma il passaggio al duo e azzera il progresso da solista.",
    "vs": "VS",
   "pending": {
       "title": "Invito in attesa",

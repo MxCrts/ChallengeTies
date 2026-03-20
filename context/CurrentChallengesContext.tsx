@@ -26,7 +26,6 @@ import {
   Easing,
   AppState,
 } from "react-native";
-import { Ionicons } from "@expo/vector-icons";
 import {
   checkForAchievements,
   deductTrophies,
@@ -52,6 +51,7 @@ import {
   getSkipTrophyCost,
   computeChallengeTrophies,
 } from "../hooks/useTrophiesEconomy";
+import { completeQuest as completeOnboardingQuest } from "@/src/services/onboardingQuestService";
 import { DeviceEventEmitter } from "react-native";
 import { MICRO_WEEK_UPDATED_EVENT } from "../hooks/useTrophiesEconomy";
 import {
@@ -67,7 +67,13 @@ import { incStat, setBool } from "@/src/services/metricsService";
 import { updateMatchingPool } from "@/services/matchingService";
 import * as Haptics from "expo-haptics";
 import { LinearGradient } from "expo-linear-gradient";
-import { sendDuoNudge } from "@/services/notificationService";
+import {
+   sendDuoNudge,
+   cancelStreakDangerNotification,
+   scheduleStreakDangerIfNeeded,
+   sendMilestoneNotificationIfNeeded,
+ } from "@/services/notificationService";
+ import { publishToGlobalFeed, isFeedEnabled } from "@/src/services/globalFeedService";
 export const MARK_TOAST_EVENT = "challengeties.toast.mark" as const;
 export const MISSED_FLOW_EVENT = "challengeties.missed.flow" as const;
 export const MARK_RESOLVED_EVENT = "challengeties.mark.resolved" as const;
@@ -453,7 +459,10 @@ useEffect(() => {
   // 2) Run when app returns foreground
   const sub = AppState.addEventListener("change", (state) => {
     if (!mounted) return;
-    if (state === "active") void run();
+   if (state === "active") {
+     void run();
+     scheduleStreakDangerIfNeeded().catch(() => {}); // 🆕
+   }
   });
 
   // 3) Small interval (safe & light)
@@ -1116,6 +1125,10 @@ try {
       defer(() => updateMatchingPool(userId));
 
       scheduleAchievementsCheck(userId);
+
+      // ✅ Onboarding quêtes — non bloquant
+      completeOnboardingQuest("join_solo_challenge").catch(() => {});
+      completeOnboardingQuest("view_challenge").catch(() => {});
     } catch (error: any) {
       console.error("Erreur lors de l'ajout du défi :", error.message);
       notify(
@@ -1213,6 +1226,11 @@ try {
          }
        | null = null;
 
+ let capturedUniqueKey = "";
+     let capturedChallengeId = "";
+     let capturedCompletedDays = 0;
+     let capturedSelectedDays = 0;
+
             await runTransaction(db, async (tx) => {
         const snap = await tx.get(userRef);
         if (!snap.exists()) throw new Error("user doc not found");
@@ -1273,6 +1291,10 @@ try {
         toastT = Number(ch.selectedDays || toastT || 1);
         newStreak = Number(ch.streak || 0);
         needsComplete = ch.completedDays >= ch.selectedDays;
+        capturedUniqueKey     = String(ch.uniqueKey || "");
+       capturedChallengeId   = String((ch as any)?.challengeId ?? ch.id ?? "");
+       capturedCompletedDays = Number(ch.completedDays || 0);
+       capturedSelectedDays  = Number(ch.selectedDays || 0);
 
         const next = arr.map((x, i) => (i === idx ? ch : x));
         tx.update(userRef, { CurrentChallenges: next });
@@ -1360,6 +1382,46 @@ defer(async () => {
     }
   } catch {}
 });
+
+     // 🆕 Streak danger annulé car l'user vient de marquer
+     defer(() => cancelStreakDangerNotification());
+
+    // 🆕 Milestone si on est sur un jalon
+    if (capturedUniqueKey && capturedCompletedDays > 0) {
+       defer(() =>
+         sendMilestoneNotificationIfNeeded(
+           capturedChallengeId,
+           capturedUniqueKey,
+           capturedCompletedDays,
+           capturedSelectedDays,
+         )
+       );
+     }
+     if (capturedUniqueKey && capturedCompletedDays > 0 && !needsComplete) {
+       defer(async () => {
+         try {
+           const uid = auth.currentUser?.uid;
+           if (!uid) return;
+           const snap = await getDoc(doc(db, "users", uid));
+           if (!snap.exists()) return;
+           const d = snap.data() as any;
+           const username = String(d.username || d.displayName || "");
+           if (!username) return;
+           await publishToGlobalFeed({
+             type: "daily_mark",
+             challengeId: capturedChallengeId,
+             challengeTitle: "",
+             payload: {
+               streak: newStreak,
+               completedDays: capturedCompletedDays,
+               selectedDays: capturedSelectedDays,
+             },
+             username,
+             avatarUrl: d.profileImage || d.avatar || null,
+           });
+         } catch {}
+       });
+     }
 
       try {
         const bank = await getMicroWeek();
@@ -1450,6 +1512,9 @@ defer(async () => {
         ? { dayIndex: toastD, totalDays: toastT }
         : undefined,
   });
+
+  // ✅ Onboarding quête — premier jour marqué
+    completeOnboardingQuest("mark_first_day").catch(() => {});
 
   defer(() => scheduleAchievementsCheck(userId));
   return { success: true, completed: false };
@@ -1559,6 +1624,26 @@ const updatedArray = currentChallengesArray.map((ch, i) =>
         setMissedVisible(false, makeLockKey(id, selectedDays), id);
         resolveMissedFlow({ resolved: true, action: "reset" });
         emitMarkResolved({ id, selectedDays, at: Date.now(), action: "reset" });
+        // 🆕 Global feed — rattrapage reset
+        defer(async () => {
+          try {
+            const uid = auth.currentUser?.uid;
+            if (!uid) return;
+            const snap = await getDoc(doc(db, "users", uid));
+            if (!snap.exists()) return;
+            const d = snap.data() as any;
+            const username = String(d.username || d.displayName || "");
+            if (!username) return;
+            await publishToGlobalFeed({
+              type: "daily_mark",
+              challengeId: id,
+              challengeTitle: "",
+              payload: { streak: 1, completedDays: 1, selectedDays },
+              username,
+              avatarUrl: d.profileImage || d.avatar || null,
+            });
+          } catch {}
+        });
       } catch (error: any) {
         console.error(
           "❌ Erreur lors du reset :",
@@ -1728,6 +1813,30 @@ const updated = { ...arr[index] } as any;
       setMissedVisible(false, makeLockKey(id, selectedDays), id);
       resolveMissedFlow({ resolved: true, action: "rewarded" });
       emitMarkResolved({ id, selectedDays, at: Date.now(), action: "rewarded" });
+      // 🆕 Global feed — rattrapage pub
+      defer(async () => {
+        try {
+          const uid = auth.currentUser?.uid;
+          if (!uid) return;
+          const snap = await getDoc(doc(db, "users", uid));
+          if (!snap.exists()) return;
+          const d = snap.data() as any;
+          const username = String(d.username || d.displayName || "");
+          if (!username) return;
+          await publishToGlobalFeed({
+            type: "daily_mark",
+            challengeId: id,
+            challengeTitle: "",
+            payload: {
+              streak: Number(updated.streak || 1),
+              completedDays: Number(updated.completedDays || 1),
+              selectedDays,
+            },
+            username,
+            avatarUrl: d.profileImage || d.avatar || null,
+          });
+        } catch {}
+      });
 
       try {
         await recordDailyGlobalMark(userId, today);
@@ -1841,6 +1950,30 @@ if (challengeIndex === -1) {
      setMissedVisible(false, makeLockKey(id, selectedDays), id);
       resolveMissedFlow({ resolved: true, action: "trophies" });
       emitMarkResolved({ id, selectedDays, at: Date.now(), action: "trophies" });
+      // 🆕 Global feed — rattrapage trophées
+      defer(async () => {
+        try {
+          const uid = auth.currentUser?.uid;
+          if (!uid) return;
+          const snap = await getDoc(doc(db, "users", uid));
+          if (!snap.exists()) return;
+          const d = snap.data() as any;
+          const username = String(d.username || d.displayName || "");
+          if (!username) return;
+          await publishToGlobalFeed({
+            type: "daily_mark",
+            challengeId: id,
+            challengeTitle: "",
+            payload: {
+              streak: Number(updated.streak || 1),
+              completedDays: Number(updated.completedDays || 1),
+              selectedDays,
+            },
+            username,
+            avatarUrl: d.profileImage || d.avatar || null,
+          });
+        } catch {}
+      });
 
       try {
         await recordDailyGlobalMark(userId, today);
@@ -1941,6 +2074,30 @@ if (index === -1) {
       setMissedVisible(false, makeLockKey(id, selectedDays), id);
       resolveMissedFlow({ resolved: true, action: "streakPass" });
       emitMarkResolved({ id, selectedDays, at: Date.now(), action: "streakPass" });
+      // 🆕 Global feed — rattrapage streak pass
+      defer(async () => {
+        try {
+          const uid = auth.currentUser?.uid;
+          if (!uid) return;
+          const snap = await getDoc(doc(db, "users", uid));
+          if (!snap.exists()) return;
+          const d = snap.data() as any;
+          const username = String(d.username || d.displayName || "");
+          if (!username) return;
+          await publishToGlobalFeed({
+            type: "daily_mark",
+            challengeId: id,
+            challengeTitle: "",
+            payload: {
+              streak: Number(updated.streak || 1),
+              completedDays: Number(updated.completedDays || 1),
+              selectedDays,
+            },
+            username,
+            avatarUrl: d.profileImage || d.avatar || null,
+          });
+        } catch {}
+      });
 
       try {
         await recordDailyGlobalMark(userId, today);
@@ -2257,6 +2414,28 @@ if (idx === -1) {
   // (challenge terminé → peut revenir dans le pool)
   try {
     await updateMatchingPool(userId);
+    // 🆕 Global feed — completion
+        const uid2 = auth.currentUser?.uid;
+        if (uid2 && toCompleteSnapshot) {
+          const usnap = await getDoc(doc(db, "users", uid2));
+          if (usnap.exists()) {
+            const ud = usnap.data() as any;
+            const uname = String(ud.username || ud.displayName || "");
+            if (uname) {
+              await publishToGlobalFeed({
+                type: "completion",
+                challengeId: String((toCompleteSnapshot as any)?.challengeId ?? toCompleteSnapshot.id),
+                challengeTitle: String(toCompleteSnapshot.title || ""),
+                payload: {
+                 totalDays: Number(selectedDays),
+                 isDuo: !!toCompleteSnapshot.duo,
+                },
+                username: uname,
+                avatarUrl: ud.profileImage || ud.avatar || null,
+              });
+            }
+          }
+        }
   } catch {}
 });
 

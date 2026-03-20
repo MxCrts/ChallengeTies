@@ -740,8 +740,83 @@
       "cta": "Continue"
     }
   },
+  "onboarding": {
+  "banner": {
+    "title": "Get started 🔥",
+    "subtitle": "Earn {{trophies}} trophies to kick off",
+    "subtitleProgress": "{{done}}/{{total}} · +{{left}} trophies left",
+    "progress": "{{done}} / {{total}} completed"
+  },
+  "quest": {
+    "markFirstDay": {
+      "title": "Mark your first day",
+      "desc": "Open your challenge and check day 1"
+    },
+    "completeProfile": {
+      "title": "Complete your profile",
+      "desc": "Add a photo and your categories"
+    },
+    "exploreCommunity": {
+      "title": "Explore the community",
+      "desc": "Open the Exploits page"
+    },
+    "joinSoloChallenge": {
+      "title": "Start a solo challenge",
+      "desc": "While waiting for your duo, start now"
+    },
+    "viewChallenge": {
+      "title": "View your challenge",
+      "desc": "Check your current challenge"
+    }
+  }
+},
   "addLocationHere": "Add a location",
-  "addInterestsHere": "Add your interests",
+  "addInterestsHere": "Choose my categories",
+"matching": {
+  "sectionTitle": "Duo & invitations",
+  "duoAvailableLabel": "Available for a duo",
+  "duoAvailableOn": "You appear in matches",
+  "duoAvailableOff": "You don't appear in matches",
+  "inboxBtnLabel": "Duo invitations",
+  "inboxBtnSub": "{{count}} invitation(s) pending",
+  "toggleError": "Unable to update.",
+  "inboxTitle": "Received invitations",
+  "inboxCount": "invitation(s) pending",
+  "inboxEmpty": "No pending invitations.",
+  "inboxHint": "Invitations expire after 72h.",
+  "inviteExpired": "This invitation has expired.",
+  "inviteAlreadyTreated": "Invitation already handled.",
+  "acceptError": "Error while accepting.",
+  "title": "Find a duo partner",
+  "searching": "Searching for partners…",
+  "loadError": "Unable to load profiles.",
+  "emptyTitle": "No partner found",
+  "emptyDesc": "Enable \"Available for a duo\" in your profile to appear here.",
+  "legendPerfect": "Does this challenge",
+  "legendGood": "Same category",
+  "rateLimitTitle": "Limit reached",
+  "rateLimitBody": "You can send 5 matching invitations per day.",
+  "sendError": "Error while sending.",
+  "footerHint": "Invitation expires in 72h · Max 5/day",
+  "sameChallengeLabel": "Does this challenge solo",
+  "sameCategoryLabel": "Category: {{category}}",
+  "availableLabel": "Available for a duo",
+  "days": "days"
+},
+"feed": {
+  "shareOnFeed": "Share my exploits",
+  "shareOnFeedSub": "Visible to the entire community",
+  "shareEnabled": "Exploits shared ✅",
+  "shareDisabled": "Exploits hidden."
+},
+"choixDuo": {
+  "title": "Find a partner",
+  "inviteFriend": "Invite a friend",
+  "inviteFriendDesc": "Send a link to someone you know",
+  "findPartner": "Find a duo partner",
+  "findPartnerDesc": "Match with a user doing the same challenge",
+  "hint": "Together, you'll last much longer. 💪"
+},
     "savedShort": "Saved"
 ,
  "challengeDetails": {
@@ -4341,8 +4416,74 @@
     "🔒 Streak protected together."
   ]
 },
+"exploits": {
+  "title": "EXPLOITS",
+  "subtitle": "The community's great feats",
+  "loading": "Consulting the annals…",
+  "loadError": "Unable to load exploits.",
+  "retry": "Retry",
+  "emptyTitle": "Forum Vacuum",
+  "emptySub": "No exploits have been carved here yet.\nMark a challenge to enter the annals!",
+  "endOfFeed": "Finis tabula",
+  "you": "you",
+  "day": "day",
+  "days": "days",
+  "justNow": "Just now",
+  "minutesAgo": "{{count}}min",
+  "hoursAgo": "{{count}}h",
+  "daysAgo": "{{count}}d",
+  "type": {
+    "completion": "Completed",
+    "completionSub": "Challenge accomplished",
+    "milestone": "Milestone",
+    "milestoneSub": "Stage conquered",
+    "dailyMark": "Marked",
+    "dailyMarkSub": "Daily discipline"
+  },
+  "label": {
+    "completion": "accomplished « {{challenge}} » in {{days}} {{unit}}",
+    "milestone7": "7 days of consistency — « {{challenge}} »",
+    "milestone30": "30 days accomplished — « {{challenge}} »",
+    "milestone100": "100 days of mastery — « {{challenge}} »",
+    "milestone50": "Halfway reached — « {{challenge}} »",
+    "milestoneGeneric": "Milestone conquered — « {{challenge}} »",
+    "dailyMark": "« {{challenge}} » — {{streak}} {{unit}} of discipline"
+  }
+},
+"userInfo": {
+  "categoriesLabel": "Your areas of interest",
+  "categoriesHint": "Select the domains that suit you to find the best duo partners.",
+  "category": {
+    "fitness": "Fitness",
+    "health": "Health",
+    "productivity": "Productivity",
+    "education": "Education",
+    "wellbeing": "Well-being",
+    "sport": "Sport",
+    "meditation": "Meditation",
+    "nutrition": "Nutrition",
+    "creativity": "Creativity",
+    "social": "Social"
+  }
+},
   "notificationsPush": {
     "daily1": "One challenge today can change your whole day. Ready?",
+    "streakDangerTitle": "🚨 Streak at risk!",
+"streakDanger1": "⚠️ Your streak is in danger. Mark your challenge before midnight.",
+"streakDanger2": "🔥 Don't give up now. Only a few hours left.",
+"streakDanger3": "⏰ Your streak is waiting. Last chance before midnight!",
+"streakDangerOpened": "Don't break your streak!",
+"milestoneLastDayTitle": "🏆 Challenge complete!",
+"milestoneLastDayBody": "You just finished {{days}} days. Incredible!",
+"milestone50Title": "⚡ Halfway there!",
+"milestone50Body": "{{completed}}/{{total}} days done. Keep it up!",
+"milestone7Title": "🔥 7 days in a row!",
+"milestone7Body": "A full week. You're building a real habit.",
+"milestone30Title": "💪 30 days!",
+"milestone30Body": "One month of consistency. That's exceptional.",
+"milestone100Title": "🌟 100 days!",
+"milestone100Body": "100 days. You're in the top 1% who last this long.",
+"milestoneOpened": "Congrats on this milestone!",
     "streakTitle": "Keep your streak",
 "streakBody": "You still have one challenge today. Finish it now.",
 "duoPartnerMarkedYouDidnt": "{{from}} checked off “{{title}}”. Your turn — stay in sync.",
@@ -4406,6 +4547,12 @@
   },
 "duo": {
   "leader": "LEADER",
+  "confirmTitle": "Switch to duo?",
+  "confirmSubtitle": "You're about to invite a partner. To keep things fair, progress resets to zero.",
+  "confirmWarning": "⚠️ Switching to duo resets your solo progress on this challenge.",
+  "confirmCta": "Yes, switch to duo",
+  "cancelHint": "Close without changing your challenge.",
+  "confirmHint": "Confirm switching to duo and reset solo progress.",
   "vs": "VS",
   "pending": {
       "title": "Invitation pending",

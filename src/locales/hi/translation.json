@@ -770,8 +770,83 @@
   },
   "savedShort": "सहेजा गया"
 ,
+"onboarding": {
+  "banner": {
+    "title": "अभी शुरू करो 🔥",
+    "subtitle": "शुरुआत के लिए {{trophies}} ट्रॉफी जीतो",
+    "subtitleProgress": "{{done}}/{{total}} · +{{left}} ट्रॉफी बाकी",
+    "progress": "{{done}} / {{total}} पूर्ण"
+  },
+  "quest": {
+    "markFirstDay": {
+      "title": "पहला दिन मार्क करो",
+      "desc": "चैलेंज खोलो और दिन 1 चेक करो"
+    },
+    "completeProfile": {
+      "title": "प्रोफाइल पूरा करो",
+      "desc": "फोटो और श्रेणियाँ जोड़ो"
+    },
+    "exploreCommunity": {
+      "title": "कम्युनिटी एक्सप्लोर करो",
+      "desc": "पराक्रम पेज खोलो"
+    },
+    "joinSoloChallenge": {
+      "title": "सोलो चैलेंज शुरू करो",
+      "desc": "जोड़ी का इंतज़ार करते हुए अभी शुरू करो"
+    },
+    "viewChallenge": {
+      "title": "चैलेंज देखो",
+      "desc": "अपना मौजूदा चैलेंज देखो"
+    }
+  }
+},
   "addLocationHere": "स्थान जोड़ें",
-  "addInterestsHere": "अपनी रुचियाँ जोड़ें",
+  "addInterestsHere": "मेरी श्रेणियाँ चुनें",
+"matching": {
+  "sectionTitle": "जोड़ी और निमंत्रण",
+  "duoAvailableLabel": "जोड़ी के लिए उपलब्ध",
+  "duoAvailableOn": "तुम मैच में दिखते हो",
+  "duoAvailableOff": "तुम मैच में नहीं दिखते",
+  "inboxBtnLabel": "जोड़ी के निमंत्रण",
+  "inboxBtnSub": "{{count}} निमंत्रण प्रतीक्षारत",
+  "toggleError": "अपडेट नहीं हो सका।",
+  "inboxTitle": "प्राप्त आमंत्रण",
+  "inboxCount": "आमंत्रण लंबित",
+  "inboxEmpty": "कोई लंबित आमंत्रण नहीं।",
+  "inboxHint": "आमंत्रण 72 घंटे बाद समाप्त हो जाते हैं।",
+  "inviteExpired": "यह आमंत्रण समाप्त हो गया है।",
+  "inviteAlreadyTreated": "आमंत्रण पहले ही संसाधित हो चुका है।",
+  "acceptError": "स्वीकार करने में त्रुटि।",
+  "days": "दिन",
+  "title": "डुओ पार्टनर खोजें",
+  "searching": "पार्टनर खोजे जा रहे हैं…",
+  "loadError": "प्रोफ़ाइल लोड करने में विफल।",
+  "emptyTitle": "कोई पार्टनर नहीं मिला",
+  "emptyDesc": "यहाँ दिखने के लिए अपनी प्रोफ़ाइल में \"डुओ के लिए उपलब्ध\" सक्षम करें।",
+  "legendPerfect": "यह चैलेंज करता है",
+  "legendGood": "समान श्रेणी",
+  "rateLimitTitle": "सीमा पहुँच गई",
+  "rateLimitBody": "आप प्रति दिन 5 मिलान आमंत्रण भेज सकते हैं।",
+  "sendError": "भेजने में त्रुटि।",
+  "footerHint": "आमंत्रण 72 घंटे में समाप्त · अधिकतम 5/दिन",
+  "sameChallengeLabel": "यह चैलेंज सोलो करता है",
+  "sameCategoryLabel": "श्रेणी: {{category}}",
+  "availableLabel": "डुओ के लिए उपलब्ध"
+},
+"choixDuo": {
+  "title": "पार्टनर खोजें",
+  "inviteFriend": "दोस्त को आमंत्रित करें",
+  "inviteFriendDesc": "किसी जानकार को लिंक भेजें",
+  "findPartner": "डुओ पार्टनर खोजें",
+  "findPartnerDesc": "उस यूजर से मिलान करें जो वही चैलेंज कर रहा है",
+  "hint": "साथ में, आप बहुत लंबे समय तक टिके रहते हैं। 💪"
+},
+"feed": {
+  "shareOnFeed": "मेरी उपलब्धियाँ साझा करें",
+  "shareOnFeedSub": "पूरे समुदाय को दिखाई देता है",
+  "shareEnabled": "उपलब्धियाँ साझा की गईं ✅",
+  "shareDisabled": "उपलब्धियाँ छुपाई गईं।"
+},
 "challengeDetails": {
   "cta_take": "चैलेंज शुरू करें",
   "reviewsSubtitle": "असल फीडबैक ताकि तुम बेहतर चुनो और तेज़ी से आगे बढ़ो।",
@@ -4641,9 +4716,75 @@
     "🔒 स्ट्रीक साथ बची।"
   ]
 },
+"exploits": {
+  "title": "पराक्रम",
+  "subtitle": "समुदाय के महान कार्य",
+  "loading": "इतिहास-ग्रंथ खोल रहे हैं…",
+  "loadError": "पराक्रम लोड नहीं हो सके।",
+  "retry": "पुनः प्रयास",
+  "emptyTitle": "Forum Vacuum",
+  "emptySub": "यहाँ अभी तक कोई पराक्रम दर्ज नहीं हुआ।\nइतिहास में नाम दर्ज करने के लिए एक चुनौती पूरी करें!",
+  "endOfFeed": "Finis tabula",
+  "you": "आप",
+  "day": "दिन",
+  "days": "दिन",
+  "justNow": "अभी",
+  "minutesAgo": "{{count}}मिनट पहले",
+  "hoursAgo": "{{count}}घंटे पहले",
+  "daysAgo": "{{count}}दिन पहले",
+  "type": {
+    "completion": "पूर्ण",
+    "completionSub": "चुनौती पूरी की",
+    "milestone": "पड़ाव",
+    "milestoneSub": "चरण जीता",
+    "dailyMark": "चिह्नित",
+    "dailyMarkSub": "दैनिक अनुशासन"
+  },
+  "label": {
+    "completion": "ने «{{challenge}}» को {{days}} {{unit}} में पूरा किया",
+    "milestone7": "7 दिनों की दृढ़ता — «{{challenge}}»",
+    "milestone30": "30 दिन पूर्ण — «{{challenge}}»",
+    "milestone100": "100 दिनों की महारत — «{{challenge}}»",
+    "milestone50": "आधा रास्ता — «{{challenge}}»",
+    "milestoneGeneric": "पड़ाव जीता — «{{challenge}}»",
+    "dailyMark": "«{{challenge}}» — {{streak}} {{unit}} का अनुशासन"
+  }
+},
+"userInfo": {
+  "categoriesLabel": "तुम्हारे रुचि के क्षेत्र",
+  "categoriesHint": "अपने लिए सही क्षेत्र चुनो और सबसे अच्छे जोड़ीदार खोजो।",
+  "category": {
+    "fitness": "फिटनेस",
+    "health": "स्वास्थ्य",
+    "productivity": "उत्पादकता",
+    "education": "शिक्षा",
+    "wellbeing": "खुशहाली",
+    "sport": "खेल",
+    "meditation": "ध्यान",
+    "nutrition": "पोषण",
+    "creativity": "रचनात्मकता",
+    "social": "सामाजिक"
+  }
+},
   "notificationsPush": {
     "streakTitle": "स्ट्रीक बचाओ",
 "streakBody": "आज एक चैलेंज बाकी है। अभी पूरा करो।",
+"streakDangerTitle": "🚨 स्ट्रीक खतरे में!",
+"streakDanger1": "⚠️ तुम्हारी स्ट्रीक खतरे में है। आधी रात से पहले अपना चैलेंज मार्क करो।",
+"streakDanger2": "🔥 अभी हार मत मानो। बस कुछ ही घंटे बचे हैं।",
+"streakDanger3": "⏰ तुम्हारी स्ट्रीक इंतजार कर रही है। आधी रात से पहले आखिरी मौका!",
+"streakDangerOpened": "अपनी स्ट्रीक मत तोड़ो!",
+"milestoneLastDayTitle": "🏆 चैलेंज पूरा!",
+"milestoneLastDayBody": "तुमने अभी {{days}} दिन पूरे किए। अविश्वसनीय!",
+"milestone50Title": "⚡ आधा रास्ता!",
+"milestone50Body": "{{completed}}/{{total}} दिन हो गए। ऐसे ही चलते रहो!",
+"milestone7Title": "🔥 लगातार 7 दिन!",
+"milestone7Body": "पूरा एक हफ्ता। तुम एक असली आदत बना रहे हो।",
+"milestone30Title": "💪 30 दिन!",
+"milestone30Body": "एक महीने की निरंतरता। यह असाधारण है।",
+"milestone100Title": "🌟 100 दिन!",
+"milestone100Body": "100 दिन। तुम उन 1% लोगों में हो जो इतने लंबे समय तक टिकते हैं।",
+"milestoneOpened": "इस मील के पत्थर पर बधाई!",
 "duoPartnerMarkedYouDidnt": "{{from}} ने «{{title}}» पूरा कर लिया। सिंक रहने के लिए अब तुम्हारी बारी।",
     "daily1": "आज एक चैलेंज तुम्हारा दिन बदल सकता है। तैयार?",
     "late1": "आज का चैलेंज तुम्हारा इंतज़ार कर रहा है। अभी करोगे? 🔥",
@@ -4713,6 +4854,12 @@
   },
 "duo": {
   "leader": "लीडर",
+  "confirmTitle": "डुओ में स्विच करें?",
+  "confirmSubtitle": "आप एक पार्टनर को आमंत्रित करने वाले हैं। निष्पक्ष रहने के लिए प्रगति शून्य से शुरू होगी।",
+  "confirmWarning": "⚠️ डुओ में स्विच करने से इस चैलेंज में आपकी सोलो प्रगति रीसेट हो जाएगी।",
+  "confirmCta": "हाँ, डुओ में स्विच करें",
+  "cancelHint": "बिना बदलाव के बंद करें।",
+  "confirmHint": "डुओ में स्विच की पुष्टि करें और सोलो प्रगति रीसेट करें।",
   "vs": "VS",
    "pending": {
       "title": "निमंत्रण लंबित है",

@@ -763,8 +763,83 @@
       "cancelled": "已取消"
     }
   },
+  "onboarding": {
+  "banner": {
+    "title": "开始行动 🔥",
+    "subtitle": "赢得 {{trophies}} 个奖杯开启旅程",
+    "subtitleProgress": "{{done}}/{{total}} · 还剩 +{{left}} 奖杯",
+    "progress": "{{done}} / {{total}} 已完成"
+  },
+  "quest": {
+    "markFirstDay": {
+      "title": "打卡第一天",
+      "desc": "打开挑战并勾选第1天"
+    },
+    "completeProfile": {
+      "title": "完善个人资料",
+      "desc": "添加头像和分类"
+    },
+    "exploreCommunity": {
+      "title": "探索社区",
+      "desc": "打开壮举页面"
+    },
+    "joinSoloChallenge": {
+      "title": "开始单人挑战",
+      "desc": "等待双人组的同时，现在就开始"
+    },
+    "viewChallenge": {
+      "title": "查看挑战",
+      "desc": "查看当前挑战"
+    }
+  }
+},
   "addLocationHere": "添加位置",
-  "addInterestsHere": "添加你的兴趣",
+  "addInterestsHere": "选择我的分类",
+"matching": {
+  "sectionTitle": "双人组与邀请",
+  "duoAvailableLabel": "可加入双人组",
+  "duoAvailableOn": "你出现在匹配中",
+  "duoAvailableOff": "你不出现在匹配中",
+  "inboxBtnLabel": "双人组邀请",
+  "inboxBtnSub": "{{count}} 个待处理邀请",
+  "toggleError": "无法更新。",
+  "inboxTitle": "收到的邀请",
+  "inboxCount": "条邀请待处理",
+  "inboxEmpty": "暂无待处理邀请。",
+  "inboxHint": "邀请将在72小时后过期。",
+  "inviteExpired": "此邀请已过期。",
+  "inviteAlreadyTreated": "邀请已处理。",
+  "acceptError": "接受时出错。",
+  "days": "天",
+   "title": "寻找双人伙伴",
+  "searching": "正在搜索伙伴…",
+  "loadError": "无法加载个人资料。",
+  "emptyTitle": "未找到伙伴",
+  "emptyDesc": "在您的个人资料中启用\"可参与双人模式\"以出现在此处。",
+  "legendPerfect": "正在做此挑战",
+  "legendGood": "相同类别",
+  "rateLimitTitle": "已达上限",
+  "rateLimitBody": "每天最多可发送5个匹配邀请。",
+  "sendError": "发送时出错。",
+  "footerHint": "邀请72小时后过期 · 每天最多5个",
+  "sameChallengeLabel": "单独完成此挑战",
+  "sameCategoryLabel": "类别：{{category}}",
+  "availableLabel": "可参与双人模式"
+},
+"feed": {
+  "shareOnFeed": "分享我的成就",
+  "shareOnFeedSub": "对整个社区可见",
+  "shareEnabled": "成就已分享 ✅",
+  "shareDisabled": "成就已隐藏。"
+},
+"choixDuo": {
+  "title": "寻找伙伴",
+  "inviteFriend": "邀请朋友",
+  "inviteFriendDesc": "向你认识的人发送链接",
+  "findPartner": "寻找双人伙伴",
+  "findPartnerDesc": "与做同一挑战的用户配对",
+  "hint": "两人在一起，坚持得更久。 💪"
+},
 "questions": {
      "title": "常见问题",
     "searchPlaceholder": "🔍 搜索问题…",
@@ -4637,8 +4712,74 @@
     "🔒 连续记录一起守住。"
   ]
 },
+"exploits": {
+  "title": "壮举",
+  "subtitle": "社区的伟大成就",
+  "loading": "查阅史册中…",
+  "loadError": "无法加载壮举。",
+  "retry": "重试",
+  "emptyTitle": "Forum Vacuum",
+  "emptySub": "这里还没有记录任何壮举。\n完成一个挑战，留名史册！",
+  "endOfFeed": "Finis tabula",
+  "you": "你",
+  "day": "天",
+  "days": "天",
+  "justNow": "刚刚",
+  "minutesAgo": "{{count}}分钟前",
+  "hoursAgo": "{{count}}小时前",
+  "daysAgo": "{{count}}天前",
+  "type": {
+    "completion": "已完成",
+    "completionSub": "挑战完成",
+    "milestone": "里程碑",
+    "milestoneSub": "阶段达成",
+    "dailyMark": "已标记",
+    "dailyMarkSub": "每日坚持"
+  },
+  "label": {
+    "completion": "在 {{days}} {{unit}}内完成了「{{challenge}}」",
+    "milestone7": "坚持7天 — 「{{challenge}}」",
+    "milestone30": "完成30天 — 「{{challenge}}」",
+    "milestone100": "百日精通 — 「{{challenge}}」",
+    "milestone50": "完成一半 — 「{{challenge}}」",
+    "milestoneGeneric": "里程碑达成 — 「{{challenge}}」",
+    "dailyMark": "「{{challenge}}」— 连续{{streak}}{{unit}}"
+  }
+},
+"userInfo": {
+  "categoriesLabel": "你的兴趣领域",
+  "categoriesHint": "选择适合你的领域，找到最佳搭档。",
+  "category": {
+    "fitness": "健身",
+    "health": "健康",
+    "productivity": "效率",
+    "education": "教育",
+    "wellbeing": "身心健康",
+    "sport": "运动",
+    "meditation": "冥想",
+    "nutrition": "营养",
+    "creativity": "创意",
+    "social": "社交"
+  }
+},
   "notificationsPush": {
     "daily1": "今天完成一个挑战，就能改变这一天。准备好了吗？",
+    "streakDangerTitle": "🚨 连击岌岌可危！",
+"streakDanger1": "⚠️ 你的连击面临危险。在午夜前标记你的挑战。",
+"streakDanger2": "🔥 现在别放弃。只剩几个小时了。",
+"streakDanger3": "⏰ 你的连击在等你。午夜前的最后机会！",
+"streakDangerOpened": "不要中断你的连击！",
+"milestoneLastDayTitle": "🏆 挑战完成！",
+"milestoneLastDayBody": "你刚刚完成了 {{days}} 天。太厉害了！",
+"milestone50Title": "⚡ 完成一半！",
+"milestone50Body": "{{completed}}/{{total}} 天完成。继续加油！",
+"milestone7Title": "🔥 连续7天！",
+"milestone7Body": "整整一周。你正在养成真正的习惯。",
+"milestone30Title": "💪 30天！",
+"milestone30Body": "一个月的坚持。这非常了不起。",
+"milestone100Title": "🌟 100天！",
+"milestone100Body": "100天。你是坚持这么久的1%之一。",
+"milestoneOpened": "恭喜达成这个里程碑！",
     "streakTitle": "守住连胜",
 "streakBody": "你今天还有一个挑战。现在就完成。",
 "duoPartnerMarkedYouDidnt": "{{from}} 已完成「{{title}}」。轮到你了，保持同步。",
@@ -4708,6 +4849,12 @@
   },
 "duo": {
   "leader": "领先",
+  "confirmTitle": "切换到双人模式？",
+  "confirmSubtitle": "你即将邀请一位伙伴。为了公平起见，进度将从零开始。",
+  "confirmWarning": "⚠️ 切换到双人模式将重置你在此挑战中的单人进度。",
+  "confirmCta": "是的，切换到双人",
+  "cancelHint": "关闭而不更改挑战。",
+  "confirmHint": "确认切换到双人模式并重置单人进度。",
   "vs": "VS",
   "pending": {
       "title": "邀请等待中",
