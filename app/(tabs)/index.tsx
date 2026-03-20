@@ -389,6 +389,7 @@ export default function HomeScreen() {
   const [user, setUser] = useState<User | null>(null);
   const [isMounted, setIsMounted] = useState(false);
   const [pendingInvite, setPendingInvite] = useState<PendingInvite | null>(null);
+  const [discoverExpanded, setDiscoverExpanded] = useState(false);
   const [userData, setUserData] = useState<any | null>(null);
   const [duoInvitePending, setDuoInvitePending] = useState(false);
   const [duoInvitePendingFor, setDuoInvitePendingFor] = useState<string | null>(null);
@@ -421,6 +422,7 @@ export default function HomeScreen() {
   const [showPremiumEndModal, setShowPremiumEndModal] = useState(false);
   const { show: showToast } = useToast();
   const [duoNudgeDismissed, setDuoNudgeDismissed] = useState(false);
+  const [isUserDataReady, setIsUserDataReady] = useState(false);
  
 const IMG_MAX_RETRIES = 2;
 const IMG_BROKEN_TTL_MS = 10 * 60_000;
@@ -430,6 +432,7 @@ const [imgReloadKey, setImgReloadKey] = useState<Record<string, number>>({});
 const imgRetryRef = useRef<Record<string, number>>({});
 const imgRetryTimerRef = useRef<Record<string, any>>({});
 const welcomeHandledRef = useRef<string | null>(null);
+const discoverYRef = useRef(0);
 
 useEffect(() => {
   return () => {
@@ -605,6 +608,7 @@ const SPOT_RADIUS = normalize(24);
 
     const data = snap.data();
     setUserData(data);
+    setIsUserDataReady(true);
 
 const userLanguage = (data as any)?.language;
     if (
@@ -624,8 +628,8 @@ const userLanguage = (data as any)?.language;
     if ((data as any)?.locationEnabled) {
       fetchAndSaveUserLocation().catch(() => {});
     }
-  } catch {
-    // silence
+ } catch {
+    setIsUserDataReady(true);
   }
 }, [user?.uid, i18n]);
 
@@ -1406,15 +1410,15 @@ useEffect(() => {
   };
 }, [WELCOME_HANDLED_KEY, DAY_UTC]);
 
-
 useEffect(() => {
+  setIsUserDataReady(false);
   if (!user?.uid) {
     setUserData(null);
+    setIsUserDataReady(true);
     return;
   }
   refreshUserData();
 }, [user?.uid, refreshUserData]);
-
 
   useEffect(() => {
     const last = userData?.dailyBonus?.lastClaimDate as string | undefined;
@@ -1812,6 +1816,7 @@ const bonusPulseStyle = useAnimatedStyle(() => {
   useEffect(() => {
     const unsubscribe = onAuthStateChanged(auth, (firebaseUser) => {
       setUser(firebaseUser);
+      setIsUserDataReady(false);
     });
     return () => unsubscribe();
   }, []);
@@ -2492,10 +2497,10 @@ setPostWelcomeAbsorbArmed(true);
   return (
     <SafeAreaView style={{ flex: 1 }} edges={["bottom"]}>
       <StatusBar
-        barStyle={isDarkMode ? "light-content" : "dark-content"}
-        backgroundColor="transparent"
-        translucent
-      />
+  barStyle="light-content"
+  backgroundColor="transparent"
+  translucent
+/>
       <LinearGradient
         colors={[
           currentTheme.colors.background,
@@ -2535,36 +2540,32 @@ setPostWelcomeAbsorbArmed(true);
               fadeStyle,
             ]}
           >
-            <Video
-              ref={heroVideoRef}
-              style={[
-                staticStyles.backgroundVideo,
-                {
-                  top: -insets.top,
-                  height: HERO_TOTAL_HEIGHT,
-                },
-              ]}
-              resizeMode={ResizeMode.COVER}
-              source={require("../../assets/videos/Hero-Bgopti.mp4")}
-              onReadyForDisplay={() => setVideoReady(true)}
-              shouldPlay={heroShouldPlay}
-              isLooping
-              isMuted
-              progressUpdateIntervalMillis={250}
-              onError={() => { setVideoReady(false); }}
-              onPlaybackStatusUpdate={(status: any) => {
-                if (!heroShouldPlay) return;
-                if (!status?.isLoaded) return;
-                if (status.isPlaying) return;
-                if (heroPlayGuardRef.current) return;
-
-                heroPlayGuardRef.current = true;
-                heroVideoRef.current
-                  ?.playAsync?.()
-                  .catch(() => {})
-                  .finally(() => { heroPlayGuardRef.current = false; });
-              }}
-            />
+           <Video
+  ref={heroVideoRef}
+  style={[staticStyles.backgroundVideo, { top: -insets.top, height: HERO_TOTAL_HEIGHT }]}
+  resizeMode={ResizeMode.COVER}
+  source={require("../../assets/videos/Hero-Bgopti.mp4")}
+  onReadyForDisplay={() => setVideoReady(true)}
+  shouldPlay={heroShouldPlay}
+  isLooping={false}
+  isMuted
+  progressUpdateIntervalMillis={250}
+  onError={() => setVideoReady(false)}
+  onPlaybackStatusUpdate={(status: any) => {
+    if (!status?.isLoaded) return;
+    if (status.didJustFinish) {
+      heroVideoRef.current?.pauseAsync?.().catch(() => {});
+      return;
+    }
+    if (!heroShouldPlay) return;
+    if (status.isPlaying) return;
+    if (heroPlayGuardRef.current) return;
+    heroPlayGuardRef.current = true;
+    heroVideoRef.current?.playAsync?.().catch(() => {}).finally(() => {
+      heroPlayGuardRef.current = false;
+    });
+  }}
+/>
 
             {/* ✨ IMPROVED: deeper, more directional cinematic gradient */}
             <LinearGradient
@@ -2582,6 +2583,13 @@ setPostWelcomeAbsorbArmed(true);
               ]}
               pointerEvents="none"
             />
+            {/* Gradient haut — protège la status bar */}
+<LinearGradient
+  colors={["rgba(0,0,0,0.85)", "rgba(0,0,0,0.45)", "rgba(0,0,0,0.00)"]}
+  locations={[0, 0.25, 0.55]}
+  style={[staticStyles.heroOverlay, { top: -insets.top, height: HERO_TOTAL_HEIGHT }]}
+  pointerEvents="none"
+/>
 
             {/* ✨ NEW: orange ambient glow at bottom of hero (above gradient) */}
             <LinearGradient
@@ -2747,350 +2755,254 @@ setPostWelcomeAbsorbArmed(true);
     ));
     return max > 0 ? max : null;
   })();
-                const trophyCount =
-                  typeof (userData as any)?.trophies === "number"
-                    ? (userData as any).trophies
-                    : null;
-                const activeCnt = activeChallenges.length;
 
-                return (
-                  <View style={[staticStyles.heroStatBar, staticStyles.heroStatBarSafe, { marginBottom: normalize(IS_TINY ? 6 : 10) }]}>
-                    <View style={staticStyles.heroStatItem}>
-                      <Ionicons name="flame" size={normalize(13)} color="#F97316" />
-                      <Text style={staticStyles.heroStatText}>
-                        {streakNum !== null && streakNum > 0
-                          ? t("homeZ.hero.statStreak", "{{n}} j de série", { n: streakNum })
-                          : t("homeZ.hero.stat1", "Daily streak")}
-                      </Text>
-                    </View>
-                    <View style={staticStyles.heroStatDot} />
-                    <View style={staticStyles.heroStatItem}>
-                      <Ionicons name="flash" size={normalize(13)} color="rgba(255,255,255,0.80)" />
-                      <Text style={staticStyles.heroStatText}>
-                        {activeCnt > 0
-                           ? t("homeZ.hero.statActive", "{{n}} actifs", { n: activeCnt })
-                          : t("homeZ.hero.stat2", "Solo & Duo")}
-                      </Text>
-                    </View>
-                    {trophyCount !== null && (
-                      <>
-                        <View style={staticStyles.heroStatDot} />
-                        <View style={staticStyles.heroStatItem}>
-                          <Ionicons name="trophy" size={normalize(13)} color="rgba(255,255,255,0.80)" />
-                          <Text style={staticStyles.heroStatText}>
-                            {t("homeZ.hero.statTrophies", "{{n}} 🏆", { n: trophyCount })}
-                          </Text>
-                        </View>
-                      </>
-                    )}
-                  </View>
-                );
-              })()}
+  if (!streakNum) return null; // ← rien à afficher si pas de série
+
+  return (
+    <View style={[staticStyles.heroStatBar, staticStyles.heroStatBarSafe, { marginBottom: normalize(IS_TINY ? 6 : 10) }]}>
+      <View style={staticStyles.heroStatItem}>
+        <Ionicons name="flame" size={normalize(13)} color="#F97316" />
+        <Text style={staticStyles.heroStatText}>
+          {t("homeZ.hero.statStreak", "{{n}} j de série", { n: streakNum })}
+        </Text>
+      </View>
+    </View>
+  );
+})()}
 
             </View>
           </Animated.View>
 
           {/* TodayHub */}
-          <View
-            onLayout={(e) => {
-              todayHubYRef.current = e.nativeEvent.layout.y;
-            }}
-          >
-            <TodayHub
-              t={t}
-              langKey={i18n.language}
-              isDarkMode={isDarkMode}
-              primaryMode={todayHubView.primaryMode}
-              hasActiveChallenges={todayHubView.hasActiveChallenges}
-              activeCount={todayHubView.activeCount}
-              title={todayHubTitle}
-              sub={todayHubSub}
-              whyReturn={whyReturn}
-              hubMeta={todayHubView.hubMeta}
-              hubDescription={todayHubHubDescription}
-              progressPct={todayHubView.progress.pct}
-              primaryGradient={todayHubPrimaryGradient}
-              primaryIcon={todayHubPrimaryIcon}
-              primaryLabel={todayHubPrimaryLabel}
-              onOpenHub={onOpenHub}
-              onPrimaryPress={onPrimaryPress}
-              onPickSolo={onPickSolo}
-              onCreate={onCreate}
-              CONTENT_MAX_W={CONTENT_MAX_W}
-              staticStyles={staticStyles}
-              normalize={normalize}
-              primaryCtaRef={markCtaRef}
-              primaryAnimatedStyle={markAnimStyle}
-            />
+          {/* TodayHub */}
+<View
+  onLayout={(e) => {
+    todayHubYRef.current = e.nativeEvent.layout.y;
+  }}
+>
+  {!isUserDataReady ? (
+    <View style={{
+      marginHorizontal: normalize(15),
+      marginTop: normalize(14),
+      marginBottom: normalize(4),
+      borderRadius: normalize(28),
+      overflow: "hidden",
+      height: normalize(220),
+      backgroundColor: isDarkMode ? "rgba(255,255,255,0.05)" : "rgba(2,6,23,0.05)",
+    }}>
+      <Animated.View style={[
+        StyleSheet.absoluteFill,
+        skeletonAnimStyle,
+        { backgroundColor: isDarkMode ? "rgba(255,255,255,0.04)" : "rgba(2,6,23,0.04)" }
+      ]} />
+      {/* Lignes skeleton */}
+      <View style={{ padding: normalize(20) }}>
+        <Animated.View style={[skeletonAnimStyle, {
+          width: normalize(120), height: normalize(10),
+          borderRadius: normalize(6),
+          backgroundColor: isDarkMode ? "rgba(255,255,255,0.10)" : "rgba(2,6,23,0.10)",
+          marginBottom: normalize(16),
+        }]} />
+        <Animated.View style={[skeletonAnimStyle, {
+          width: "85%", height: normalize(28),
+          borderRadius: normalize(8),
+          backgroundColor: isDarkMode ? "rgba(255,255,255,0.10)" : "rgba(2,6,23,0.10)",
+          marginBottom: normalize(8),
+        }]} />
+        <Animated.View style={[skeletonAnimStyle, {
+          width: "55%", height: normalize(16),
+          borderRadius: normalize(6),
+          backgroundColor: isDarkMode ? "rgba(255,255,255,0.07)" : "rgba(2,6,23,0.07)",
+          marginBottom: normalize(24),
+        }]} />
+        <Animated.View style={[skeletonAnimStyle, {
+          width: "100%", height: normalize(56),
+          borderRadius: normalize(18),
+          backgroundColor: isDarkMode ? "rgba(249,115,22,0.15)" : "rgba(249,115,22,0.12)",
+        }]} />
+      </View>
+    </View>
+  ) : (
+    <TodayHub
+      t={t}
+      langKey={i18n.language}
+      isDarkMode={isDarkMode}
+      primaryMode={todayHubView.primaryMode}
+      hasActiveChallenges={todayHubView.hasActiveChallenges}
+      activeCount={todayHubView.activeCount}
+      title={todayHubTitle}
+      sub={todayHubSub}
+      whyReturn={whyReturn}
+      hubMeta={todayHubView.hubMeta}
+      hubDescription={todayHubHubDescription}
+      progressPct={todayHubView.progress.pct}
+      primaryGradient={todayHubPrimaryGradient}
+      primaryIcon={todayHubPrimaryIcon}
+      primaryLabel={todayHubPrimaryLabel}
+      onOpenHub={onOpenHub}
+      onPrimaryPress={onPrimaryPress}
+      onPickSolo={onPickSolo}
+      onCreate={onCreate}
+      CONTENT_MAX_W={CONTENT_MAX_W}
+      staticStyles={staticStyles}
+      normalize={normalize}
+      primaryCtaRef={markCtaRef}
+      primaryAnimatedStyle={markAnimStyle}
+    />
+  )}
           </View>
 
-          <View style={{ height: normalize(6) }} />
+        {/* ════ QUICK ACTIONS ════ */}
+<View style={{
+  paddingHorizontal: normalize(15),
+  marginTop: normalize(2),
+  marginBottom: normalize(16),
+  width: "100%",
+  maxWidth: CONTENT_MAX_W,
+  alignSelf: "center",
+}}>
+  <View style={{ flexDirection: "row", gap: normalize(8) }}>
 
-          {/* ════════════════════════════════════════════════════════
-              BONUS DU JOUR — feels like a reward, not a card
-          ════════════════════════════════════════════════════════ */}
-          {canClaimDailyBonus && (
-            <View
-              style={[staticStyles.dailyBonusWrapper, { zIndex: 2, elevation: 2 }]}
-              accessibilityElementsHidden={isTutorialBlocking}
-              importantForAccessibility={isTutorialBlocking ? "no-hide-descendants" : "auto"}
-            >
-              <Pressable
-                onPress={async () => {
-                  if (!canClaimDailyBonus || dailyBonusLoading) return;
-                  try { await Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium); } catch {}
-                  setDailyBonusVisible(true);
-                }}
-                disabled={dailyBonusLoading}
-                accessibilityRole="button"
-                accessibilityLabel={t("dailyBonus.title", "Bonus du jour")}
-                style={({ pressed }) => [
-                  { width: "100%", maxWidth: CONTENT_W, alignSelf: "center" },
-                  pressed && { transform: [{ scale: 0.993 }], opacity: 0.97 },
-                  dailyBonusLoading && { opacity: 0.70 },
-                ]}
-              >
-                <View style={staticStyles.dailyBonusShell}>
-                  {/* ✨ IMPROVED: wider, warmer ambient glow */}
-                  <LinearGradient
-                    colors={
-                      isDarkMode
-                        ? ["rgba(249,115,22,0.22)", "rgba(251,146,60,0.12)", "rgba(2,6,23,0.00)"]
-                        : ["rgba(249,115,22,0.20)", "rgba(251,146,60,0.12)", "rgba(255,255,255,0.00)"]
-                    }
-                    start={{ x: 0, y: 0 }}
-                    end={{ x: 1, y: 1 }}
-                    style={staticStyles.dailyBonusBackdrop}
-                    pointerEvents="none"
-                  />
+    {/* Explorer */}
+    <Pressable
+      onPress={async () => {
+        try { await Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium); } catch {}
+        safeNavigate("/explore", "quick-action-explore");
+      }}
+      style={({ pressed }) => ({
+        flex: 1, minWidth: 0,
+        borderRadius: normalize(18),
+        overflow: "hidden",
+        opacity: pressed ? 0.72 : 1,
+        transform: [{ scale: pressed ? 0.94 : 1 }],
+      })}
+    >
+      <View style={{
+        borderRadius: normalize(18),
+        paddingVertical: normalize(15),
+        paddingHorizontal: normalize(8),
+        alignItems: "center",
+        gap: normalize(8),
+        borderWidth: 1,
+        borderColor: isDarkMode ? "rgba(255,255,255,0.10)" : "rgba(2,6,23,0.09)",
+        backgroundColor: isDarkMode ? "rgba(30,41,59,0.90)" : "#FFFFFF",
+      }}>
+        <View style={{
+          width: normalize(44), height: normalize(44),
+          borderRadius: normalize(22),
+          alignItems: "center", justifyContent: "center",
+          backgroundColor: isDarkMode ? "rgba(255,255,255,0.07)" : "rgba(2,6,23,0.05)",
+        }}>
+          <Ionicons name="compass-outline" size={normalize(22)} color={isDarkMode ? "#E2E8F0" : "#334155"} />
+        </View>
+        <Text style={{
+          fontFamily: "Comfortaa_700Bold",
+          fontSize: normalize(11.5),
+          color: isDarkMode ? "rgba(226,232,240,0.85)" : "rgba(30,41,59,0.85)",
+          textAlign: "center", width: "100%",
+        }} numberOfLines={1} adjustsFontSizeToFit minimumFontScale={0.8}>
+          {t("homeZ.quickAction.explore", "Explorer")}
+        </Text>
+      </View>
+    </Pressable>
 
-                  <LinearGradient
-                    colors={
-                      isDarkMode
-                        ? ["rgba(255,255,255,0.18)", "rgba(255,255,255,0.06)"]
-                        : ["rgba(15,23,42,0.14)", "rgba(15,23,42,0.06)"]
-                    }
-                    start={{ x: 0, y: 0 }}
-                    end={{ x: 1, y: 1 }}
-                    style={staticStyles.dailyBonusStroke}
-                  >
-                    <LinearGradient
-                      colors={
-                        isDarkMode
-                          ? ["rgba(2,6,23,0.82)", "rgba(2,6,23,0.62)"]
-                          : ["rgba(255,255,255,0.95)", "rgba(255,248,235,0.85)"]
-                      }
-                      start={{ x: 0, y: 0 }}
-                      end={{ x: 1, y: 1 }}
-                      style={staticStyles.dailyBonusCard}
-                    >
-                      <BlurView
-                        intensity={isDarkMode ? 38 : 22}
-                        tint={isDarkMode ? "dark" : "light"}
-                        style={staticStyles.dailyBonusBlurKeynote}
-                      >
-                        {/* Glow pulse */}
-                        <Animated.View
-                          pointerEvents="none"
-                          style={[
-                            staticStyles.dailyBonusGlow,
-                            bonusPulseStyle,
-                            {
-                              backgroundColor: isDarkMode
-                                ? "rgba(249,115,22,0.35)"
-                                : "rgba(249,115,22,0.22)",
-                            },
-                          ]}
-                        />
+    {/* Créer — seul bouton orange, CTA dominant */}
+    <Pressable
+      onPress={async () => {
+        try { await Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium); } catch {}
+        safeNavigate("/create-challenge", "quick-action-create");
+      }}
+      style={({ pressed }) => ({
+        flex: 1, minWidth: 0,
+        borderRadius: normalize(18),
+        overflow: "hidden",
+        opacity: pressed ? 0.72 : 1,
+        transform: [{ scale: pressed ? 0.94 : 1 }],
+      })}
+    >
+      <LinearGradient
+        colors={["#F97316", "#EA6C0A"]}
+        start={{ x: 0, y: 0 }} end={{ x: 1, y: 1 }}
+        style={{
+          borderRadius: normalize(18),
+          paddingVertical: normalize(15),
+          paddingHorizontal: normalize(8),
+          alignItems: "center",
+          gap: normalize(8),
+        }}
+      >
+        <LinearGradient
+          colors={["rgba(255,255,255,0.18)", "rgba(255,255,255,0.00)"]}
+          start={{ x: 0, y: 0 }} end={{ x: 0, y: 1 }}
+          style={[StyleSheet.absoluteFill, { borderRadius: normalize(18) }]}
+          pointerEvents="none"
+        />
+        <View style={{
+          width: normalize(44), height: normalize(44),
+          borderRadius: normalize(22),
+          alignItems: "center", justifyContent: "center",
+          backgroundColor: "rgba(255,255,255,0.18)",
+        }}>
+          <Ionicons name="add" size={normalize(26)} color="#FFFFFF" />
+        </View>
+        <Text style={{
+          fontFamily: "Comfortaa_700Bold",
+          fontSize: normalize(11.5),
+          color: "#FFFFFF",
+          textAlign: "center", width: "100%",
+        }} numberOfLines={1} adjustsFontSizeToFit minimumFontScale={0.8}>
+          {t("homeZ.todayHub.create", "Créer")}
+        </Text>
+      </LinearGradient>
+    </Pressable>
 
-                        {/* ✨ NEW: particle dots (static decorative) */}
-                        <View pointerEvents="none" style={staticStyles.bonusParticles}>
-                          {[
-                            { top: 10, right: 80, size: 4, color: "rgba(249,115,22,0.55)" },
-                            { top: 24, right: 110, size: 3, color: "rgba(251,146,60,0.40)" },
-                            { top: 6, right: 55, size: 2.5, color: "rgba(253,186,116,0.50)" },
-                            { top: 34, right: 72, size: 2, color: "rgba(249,115,22,0.35)" },
-                          ].map((p, i) => (
-                            <View
-                              key={i}
-                              style={{
-                                position: "absolute",
-                                top: p.top,
-                                right: p.right,
-                                width: p.size,
-                                height: p.size,
-                                borderRadius: 999,
-                                backgroundColor: p.color,
-                              }}
-                            />
-                          ))}
-                        </View>
-
-                        {/* Header row */}
-                        <View style={staticStyles.dailyBonusHeaderRow}>
-                          <View
-                            style={[
-                              staticStyles.dailyBonusBadge,
-                              {
-                                borderColor: isDarkMode
-                                  ? "rgba(249,115,22,0.30)"
-                                  : "rgba(249,115,22,0.22)",
-                                backgroundColor: isDarkMode
-                                  ? "rgba(249,115,22,0.14)"
-                                  : "rgba(249,115,22,0.10)",
-                              },
-                            ]}
-                          >
-                            <Ionicons name="sparkles" size={normalize(14)} color="#F97316" />
-                            <Text
-                              style={[
-                                staticStyles.dailyBonusBadgeText,
-                                { color: isDarkMode ? "#F8FAFC" : "#0B1120" },
-                              ]}
-                              numberOfLines={1}
-                            >
-                              {t("dailyBonus.badge", "RÉCOMPENSE")}
-                            </Text>
-                          </View>
-
-                          <View
-                            style={[
-                              staticStyles.dailyBonusMiniPill,
-                              {
-                                borderColor: isDarkMode
-                                  ? "rgba(226,232,240,0.18)"
-                                  : "rgba(2,6,23,0.10)",
-                                backgroundColor: isDarkMode
-                                  ? "rgba(255,255,255,0.06)"
-                                  : "rgba(255,255,255,0.70)",
-                              },
-                            ]}
-                          >
-                            <Ionicons
-                              name="time-outline"
-                              size={normalize(14)}
-                              color={isDarkMode ? "rgba(226,232,240,0.90)" : "rgba(2,6,23,0.90)"}
-                            />
-                            <Text
-                              style={[
-                                staticStyles.dailyBonusMiniPillText,
-                                { color: isDarkMode ? "rgba(226,232,240,0.92)" : "rgba(2,6,23,0.92)" },
-                              ]}
-                              numberOfLines={1}
-                            >
-                              {t("dailyBonus.oncePerDay", "1 / jour")}
-                            </Text>
-                          </View>
-                        </View>
-
-                        {/* Main content */}
-                        <View style={staticStyles.dailyBonusMainRow}>
-                          <View style={{ flex: 1, minWidth: 0 }}>
-                            <Text
-                              style={[
-                                staticStyles.dailyBonusTitleKeynote,
-                                { color: isDarkMode ? "#F8FAFC" : "#0B1120" },
-                              ]}
-                              numberOfLines={1}
-                              adjustsFontSizeToFit
-                              minimumFontScale={0.88}
-                            >
-                              {t("dailyBonus.title", "Bonus du jour")}
-                            </Text>
-
-                            <Text
-                              style={[
-                                staticStyles.dailyBonusSubKeynote,
-                                {
-                                  color: isDarkMode
-                                    ? "rgba(226,232,240,0.70)"
-                                    : "rgba(15,23,42,0.62)",
-                                },
-                              ]}
-                              numberOfLines={2}
-                              adjustsFontSizeToFit
-                              minimumFontScale={0.92}
-                            >
-                              {dailyBonusLoading
-                                ? t("dailyBonus.loading", "Ouverture…")
-                                : t("dailyBonus.teaser2", "Qu'est-ce que tu vas décrocher aujourd'hui ?")}
-                            </Text>
-
-                            {/* CTA pill */}
-                            <View style={staticStyles.dailyBonusCtaRow}>
-                              <LinearGradient
-                                colors={["#F97316", "#FB923C"]}
-                                start={{ x: 0, y: 0 }}
-                                end={{ x: 1, y: 1 }}
-                                style={staticStyles.dailyBonusCtaPill}
-                              >
-                                {/* ✨ NEW: shine on CTA pill */}
-                                <LinearGradient
-                                  colors={["rgba(255,255,255,0.20)", "rgba(255,255,255,0.00)"]}
-                                  start={{ x: 0, y: 0 }}
-                                  end={{ x: 0, y: 1 }}
-                                  style={StyleSheet.absoluteFill}
-                                  pointerEvents="none"
-                                />
-                                <Text style={staticStyles.dailyBonusCtaText} numberOfLines={1}>
-                                  {t("dailyBonus.cta", "Ouvrir")}
-                                </Text>
-                                <Ionicons name="chevron-forward" size={normalize(18)} color="#0B1120" />
-                              </LinearGradient>
-
-                              <Text
-                                style={[
-                                  staticStyles.dailyBonusMicro,
-                                  { color: isDarkMode ? "rgba(226,232,240,0.55)" : "rgba(15,23,42,0.55)" },
-                                ]}
-                                numberOfLines={1}
-                              >
-                                 {t("dailyBonus.micro", "Mystère · 1 fois par jour")}
-                              </Text>
-                            </View>
-                          </View>
-
-                          {/* ✨ IMPROVED: icon with slow rotation hint animation */}
-                          <View style={staticStyles.dailyBonusIconWrap}>
-                            <LinearGradient
-                              colors={
-                                isDarkMode
-                                  ? ["rgba(249,115,22,0.28)", "rgba(249,115,22,0.14)"]
-                                  : ["rgba(249,115,22,0.18)", "rgba(249,115,22,0.10)"]
-                              }
-                              start={{ x: 0, y: 0 }}
-                              end={{ x: 1, y: 1 }}
-                              style={staticStyles.dailyBonusIconCircleKeynote}
-                            >
-                              <View
-                                style={[
-                                  staticStyles.dailyBonusIconInnerKeynote,
-                                  {
-                                    borderColor: isDarkMode
-                                      ? "rgba(255,255,255,0.18)"
-                                      : "rgba(2,6,23,0.10)",
-                                    backgroundColor: isDarkMode
-                                      ? "rgba(255,255,255,0.06)"
-                                      : "rgba(255,255,255,0.75)",
-                                  },
-                                ]}
-                              >
-                                <Ionicons
-                                  name="gift-outline"
-                                  size={normalize(26)}
-                                  color={isDarkMode ? "#F8FAFC" : "#0B1120"}
-                                />
-                              </View>
-                            </LinearGradient>
-                          </View>
-                        </View>
-                      </BlurView>
-                    </LinearGradient>
-                  </LinearGradient>
-                </View>
-              </Pressable>
-            </View>
-          )}
+    {/* Bonus — même style que Explorer */}
+    {canClaimDailyBonus && (
+      <Pressable
+        onPress={async () => {
+          if (dailyBonusLoading) return;
+          try { await Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium); } catch {}
+          setDailyBonusVisible(true);
+        }}
+        style={({ pressed }) => ({
+          flex: 1, minWidth: 0,
+          borderRadius: normalize(18),
+          overflow: "hidden",
+          opacity: pressed ? 0.72 : 1,
+          transform: [{ scale: pressed ? 0.94 : 1 }],
+        })}
+      >
+        <View style={{
+          borderRadius: normalize(18),
+          paddingVertical: normalize(15),
+          paddingHorizontal: normalize(8),
+          alignItems: "center",
+          gap: normalize(8),
+          borderWidth: 1,
+          borderColor: isDarkMode ? "rgba(255,255,255,0.10)" : "rgba(2,6,23,0.09)",
+          backgroundColor: isDarkMode ? "rgba(30,41,59,0.90)" : "#FFFFFF",
+        }}>
+          <View style={{
+            width: normalize(44), height: normalize(44),
+            borderRadius: normalize(22),
+            alignItems: "center", justifyContent: "center",
+            backgroundColor: isDarkMode ? "rgba(249,115,22,0.12)" : "rgba(249,115,22,0.08)",
+          }}>
+            <Ionicons name="gift-outline" size={normalize(22)} color="#F97316" />
+          </View>
+          <Text style={{
+            fontFamily: "Comfortaa_700Bold",
+            fontSize: normalize(11.5),
+            color: isDarkMode ? "rgba(226,232,240,0.85)" : "rgba(30,41,59,0.85)",
+            textAlign: "center", width: "100%",
+          }} numberOfLines={1} adjustsFontSizeToFit minimumFontScale={0.8}>
+            {t("dailyBonus.short", "Bonus")}
+          </Text>
+        </View>
+      </Pressable>
+    )}
+  </View>
+</View>
 
           <View style={{ height: normalize(6) }} />
 
@@ -3100,33 +3012,35 @@ setPostWelcomeAbsorbArmed(true);
           {/* zIndex+elevation wrapper isolates this section from Discover's FadeInUp Android layer */}
           <View style={{ zIndex: 2, elevation: 2 }}>
           <View style={staticStyles.section}>
-            <View style={stylesDaily.titleRow}>
-              {/* ✨ IMPROVED: left-aligned title with orange accent dot */}
-              <View style={stylesDaily.titleAccentRow}>
-                <View style={stylesDaily.titleAccentDot} />
-                <Text
-                  style={[staticStyles.sectionTitle, dynamicStyles.sectionTitle, { textAlign: "left", marginBottom: 0 }]}
-                  numberOfLines={1}
-                  ellipsizeMode="tail"
-                >
-                  {t("dailyChallenges")}
-                </Text>
-              </View>
-
-              <Text
-                style={[
-                  stylesDaily.subtitle,
-                  {
-                    color: isDarkMode
-                      ? "rgba(255,255,255,0.70)"
-                      : "rgba(15,23,42,0.65)",
-                  },
-                ]}
-                numberOfLines={1}
-              >
-                {t("dailySelectedSubtitleShort", { defaultValue: "Sélection du jour." })}
-              </Text>
-            </View>
+            <View style={{ width: "100%", marginBottom: normalize(14) }}>
+  <View style={{ flexDirection: "row", alignItems: "center", justifyContent: "space-between" }}>
+    <View style={{ flexDirection: "row", alignItems: "center", gap: normalize(10) }}>
+      <View style={{ width: normalize(4), height: normalize(22), borderRadius: 2, backgroundColor: "#F97316" }} />
+      <Text style={{
+        fontFamily: "Comfortaa_700Bold",
+        fontSize: normalize(20),
+        color: isDarkMode ? "#F8FAFC" : "#0B1120",
+        letterSpacing: -0.3,
+      }}>
+        {t("dailyChallenges", "Défis du jour")}
+      </Text>
+    </View>
+    <Pressable onPress={handlePickChallengePress} style={({ pressed }) => ({ opacity: pressed ? 0.7 : 1 })}>
+      <Text style={{ fontFamily: "Comfortaa_700Bold", fontSize: normalize(12.5), color: "#F97316" }}>
+        {t("seeAll", "Tout voir")} →
+      </Text>
+    </Pressable>
+  </View>
+  <Text style={{
+    fontFamily: "Comfortaa_400Regular",
+    fontSize: normalize(12.5),
+    color: isDarkMode ? "rgba(255,255,255,0.55)" : "rgba(15,23,42,0.55)",
+    marginTop: normalize(4),
+    marginLeft: normalize(14),
+  }}>
+    {t("dailySelectedSubtitleShort", "Sélection du jour · Renouvelé demain")}
+  </Text>
+</View>
 
             {/* ✨ IMPROVED: skeleton loader instead of bare spinner */}
             {loading ? (
@@ -3211,7 +3125,6 @@ setPostWelcomeAbsorbArmed(true);
                       style={stylesDaily.heroOverlay}
                       pointerEvents="none"
                     />
-
                     {/* ✨ IMPROVED: glassmorphism badge */}
                     <BlurView
                       intensity={18}
@@ -3371,47 +3284,6 @@ setPostWelcomeAbsorbArmed(true);
                 >
                   {t("refreshDaily", { defaultValue: "Nouveaux défis dès demain ✨" })}
                 </Text>
-
-                <TouchableOpacity
-                  onPress={handlePickChallengePress}
-                  activeOpacity={0.92}
-                  accessibilityRole="button"
-                  style={staticStyles.seeAllWrap}
-                >
-                  <LinearGradient
-                    colors={
-                      isDarkMode
-                        ? ["rgba(249,115,22,0.10)", "rgba(249,115,22,0.04)"]
-                        : ["rgba(249,115,22,0.08)", "rgba(249,115,22,0.03)"]
-                    }
-                    start={{ x: 0, y: 0 }}
-                    end={{ x: 1, y: 0 }}
-                    style={[
-                      staticStyles.seeAllBtn,
-                      {
-                        borderColor: isDarkMode
-                          ? "rgba(249,115,22,0.30)"
-                          : "rgba(249,115,22,0.22)",
-                      },
-                    ]}
-                  >
-                    <Text
-                      style={[
-                        staticStyles.seeAllText,
-                        { color: isDarkMode ? "#E2E8F0" : "#0B1120" },
-                      ]}
-                      numberOfLines={1}
-                      adjustsFontSizeToFit
-                    >
-                      {t("homeZ.dailyPicks.seeAll", "Tout voir dans Explore")}
-                    </Text>
-                    <Ionicons
-                      name="chevron-forward"
-                      size={normalize(18)}
-                      color="#F97316"
-                    />
-                  </LinearGradient>
-                </TouchableOpacity>
               </View>
             ) : (
               <Animated.View entering={FadeInUp} style={staticStyles.noChallengesContainer}>
@@ -3431,238 +3303,283 @@ setPostWelcomeAbsorbArmed(true);
           </View>
           </View>{/* end daily isolation wrapper */}
 
-          {/* ════════════════════════════════════════════════════════
-              DISCOVER — left-aligned, differentiated cards
-          ════════════════════════════════════════════════════════ */}
-          {/* NOTE: removed FadeInUp entering — on Android, Reanimated entering animations
-              create hardware layers that render above sibling sections regardless of DOM order.
-              Use a plain View with zIndex:0 to stay below the daily section. */}
-          <View
-            style={[staticStyles.discoverWrapper, { zIndex: 0, elevation: 0 }]}
-            accessibilityElementsHidden={isTutorialBlocking}
-            importantForAccessibility={isTutorialBlocking ? "no-hide-descendants" : "auto"}
-          >
-            <View
-              style={[
-                staticStyles.discoverCardOuter,
-                {
-                  borderColor: isDarkMode ? "rgba(255,255,255,0.10)" : "rgba(2,6,23,0.08)",
-                  backgroundColor: isDarkMode ? "rgba(255,255,255,0.05)" : "rgba(2,6,23,0.03)",
-                },
-              ]}
-            >
-              <View style={staticStyles.discoverCardInner}>
-                {/* ✨ IMPROVED: left-aligned title with orange accent line */}
-                <View style={staticStyles.discoverHeader}>
-                  <View style={staticStyles.discoverTitleRow}>
-                    <View style={staticStyles.discoverAccentBar} />
-                    <Text
-                      style={[
-                        staticStyles.discoverTitle,
-                        { color: isDarkMode ? "#F8FAFC" : "#0B1120", textAlign: "left" },
-                      ]}
-                      numberOfLines={1}
-                    >
-                      {t("homeZ.discover.title", "Découvrir")}
-                    </Text>
-                  </View>
-                </View>
+         <View
+  style={[staticStyles.discoverWrapper, { zIndex: 0, elevation: 0 }]}
+  onLayout={(e) => { discoverYRef.current = e.nativeEvent.layout.y; }}
+>
+  {/* Toggle button */}
+  <Pressable
+    onPress={() => {
+  const opening = !discoverExpanded;
+  setDiscoverExpanded(opening);
+  if (opening) {
+    requestAnimationFrame(() => {
+      setTimeout(() => {
+        scrollRef.current?.scrollTo({
+          y: discoverYRef.current - normalize(16),
+          animated: true,
+        });
+      }, 160);
+    });
+  }
+}}
+    style={({ pressed }) => ({
+      width: "100%",
+      maxWidth: CONTENT_MAX_W,
+      alignSelf: "center",
+      borderRadius: normalize(16),
+      overflow: "hidden",
+      opacity: pressed ? 0.88 : 1,
+      marginBottom: discoverExpanded ? normalize(10) : 0,
+    })}
+  >
+    <LinearGradient
+      colors={
+        isDarkMode
+          ? ["rgba(255,255,255,0.06)", "rgba(255,255,255,0.03)"]
+          : ["rgba(2,6,23,0.04)", "rgba(2,6,23,0.02)"]
+      }
+      style={{
+        borderRadius: normalize(16),
+        paddingVertical: normalize(14),
+        paddingHorizontal: normalize(16),
+        flexDirection: "row",
+        alignItems: "center",
+        justifyContent: "space-between",
+        borderWidth: StyleSheet.hairlineWidth,
+        borderColor: isDarkMode ? "rgba(255,255,255,0.08)" : "rgba(2,6,23,0.06)",
+      }}
+    >
+      <View style={{ flexDirection: "row", alignItems: "center", gap: normalize(10) }}>
+        <View style={{
+          width: normalize(4),
+          height: normalize(20),
+          borderRadius: normalize(2),
+          backgroundColor: "#F97316",
+        }} />
+        <Text style={{
+          fontFamily: "Comfortaa_700Bold",
+          fontSize: normalize(16),
+          color: isDarkMode ? "#F8FAFC" : "#0B1120",
+        }}>
+          {t("homeZ.discover.title", "Découvrir")}
+        </Text>
+      </View>
+      <Ionicons
+        name={discoverExpanded ? "chevron-up" : "chevron-down"}
+        size={normalize(18)}
+        color={isDarkMode ? "rgba(226,232,240,0.70)" : "rgba(2,6,23,0.55)"}
+      />
+    </LinearGradient>
+  </Pressable>
 
-                <View style={staticStyles.discoverRow2}>
-                  {/* ✨ IMPROVED: Leaderboard with gold tint */}
-                  <Pressable
-                    onPress={() => safeNavigate("/leaderboard")}
-                    accessibilityRole="button"
-                    style={({ pressed }) => [
-                      staticStyles.discoverBigCard,
-                      staticStyles.discoverCardLeaderboard,
-                      {
-                        borderColor: isDarkMode
-                          ? "rgba(253,186,116,0.25)"
-                          : "rgba(253,186,116,0.35)",
-                        backgroundColor: isDarkMode
-                          ? "rgba(253,186,116,0.06)"
-                          : "rgba(255,249,235,0.90)",
-                        opacity: pressed ? 0.95 : 1,
-                        transform: [{ scale: pressed ? 0.990 : 1 }],
-                      },
-                    ]}
-                    hitSlop={10}
-                  >
-                    <View
-                      style={[
-                        staticStyles.discoverBigIcon,
-                        {
-                          borderColor: "rgba(249,115,22,0.38)",
-                          backgroundColor: "rgba(249,115,22,0.14)",
-                        },
-                      ]}
-                    >
-                      <Ionicons name="trophy-outline" size={normalize(18)} color="#F97316" />
-                    </View>
-                    <Text
-                      style={[
-                        staticStyles.discoverBigTitle,
-                        { color: isDarkMode ? "#F8FAFC" : "#0B1120" },
-                      ]}
-                      numberOfLines={1}
-                    >
-                      {t("homeZ.discover.leaderboard", "Classement")}
-                    </Text>
-                    <Text
-                      style={[
-                        staticStyles.discoverBigSub,
-                        {
-                          color: isDarkMode
-                            ? "rgba(226,232,240,0.70)"
-                            : "rgba(15,23,42,0.62)",
-                        },
-                      ]}
-                      numberOfLines={2}
-                      adjustsFontSizeToFit
-                      minimumFontScale={0.92}
-                    >
-                       {t("homeZ.discover.leaderboardSub2", "Vois où tu te situes.")}
-                    </Text>
-                  </Pressable>
+  {/* Contenu collapsable */}
+  {discoverExpanded && (
+  <View style={{
+    width: "100%",
+    maxWidth: CONTENT_MAX_W,
+    alignSelf: "center",
+    marginTop: normalize(10),
+    gap: normalize(8),
+  }}>
+    <View style={{ flexDirection: "row", gap: normalize(8) }}>
 
-                  {/* ✨ IMPROVED: Tips with blue tint */}
-                  <Pressable
-                    onPress={() => safeNavigate("/tips")}
-                    accessibilityRole="button"
-                    style={({ pressed }) => [
-                      staticStyles.discoverBigCard,
-                      staticStyles.discoverCardTips,
-                      {
-                        borderColor: isDarkMode
-                          ? "rgba(99,102,241,0.25)"
-                          : "rgba(99,102,241,0.20)",
-                        backgroundColor: isDarkMode
-                          ? "rgba(99,102,241,0.07)"
-                          : "rgba(238,240,255,0.90)",
-                        opacity: pressed ? 0.95 : 1,
-                        transform: [{ scale: pressed ? 0.990 : 1 }],
-                      },
-                    ]}
-                    hitSlop={10}
-                  >
-                    <View
-                      style={[
-                        staticStyles.discoverBigIcon,
-                        {
-                          borderColor: "rgba(99,102,241,0.38)",
-                          backgroundColor: "rgba(99,102,241,0.14)",
-                        },
-                      ]}
-                    >
-                      <Ionicons name="bulb-outline" size={normalize(18)} color="#6366F1" />
-                    </View>
-                    <Text
-                      style={[
-                        staticStyles.discoverBigTitle,
-                        { color: isDarkMode ? "#F8FAFC" : "#0B1120" },
-                      ]}
-                      numberOfLines={1}
-                    >
-                      {t("homeZ.discover.tips", "Tips")}
-                    </Text>
-                    <Text
-                      style={[
-                        staticStyles.discoverBigSub,
-                        {
-                          color: isDarkMode
-                            ? "rgba(226,232,240,0.70)"
-                            : "rgba(15,23,42,0.62)",
-                        },
-                      ]}
-                      numberOfLines={2}
-                      adjustsFontSizeToFit
-                      minimumFontScale={0.92}
-                    >
-                      {t("homeZ.discover.tipsSub2", "Petits hacks, grands résultats.")}
-                    </Text>
-                  </Pressable>
-                </View>
+      {/* Classement */}
+      <Pressable
+        onPress={() => safeNavigate("/leaderboard")}
+        style={({ pressed }) => ({
+          flex: 1,
+          borderRadius: normalize(20),
+          overflow: "hidden",
+          opacity: pressed ? 0.78 : 1,
+          transform: [{ scale: pressed ? 0.96 : 1 }],
+        })}
+      >
+        <View style={{
+          borderRadius: normalize(20),
+          padding: normalize(16),
+          borderWidth: 1.5,
+          borderColor: isDarkMode ? "rgba(249,115,22,0.25)" : "rgba(249,115,22,0.18)",
+          backgroundColor: isDarkMode ? "rgba(15,23,42,0.88)" : "#FFFFFF",
+          minHeight: normalize(148),
+          justifyContent: "space-between",
+          elevation: 6,
+          ...(Platform.OS === "ios" ? {
+            shadowColor: "#F97316",
+            shadowOpacity: isDarkMode ? 0.18 : 0.08,
+            shadowRadius: normalize(14),
+            shadowOffset: { width: 0, height: normalize(6) },
+          } : {}),
+        }}>
+          <View style={{
+            width: normalize(50), height: normalize(50),
+            borderRadius: normalize(25),
+            alignItems: "center", justifyContent: "center",
+            backgroundColor: isDarkMode ? "rgba(249,115,22,0.18)" : "rgba(249,115,22,0.10)",
+            borderWidth: 1.5,
+            borderColor: isDarkMode ? "rgba(249,115,22,0.38)" : "rgba(249,115,22,0.22)",
+          }}>
+            <Ionicons name="trophy" size={normalize(22)} color="#F97316" />
+          </View>
+          <View style={{ marginTop: normalize(14) }}>
+            <Text style={{
+              fontFamily: "Comfortaa_700Bold",
+              fontSize: normalize(14.5),
+              color: isDarkMode ? "#F8FAFC" : "#0B1120",
+              marginBottom: normalize(5),
+              letterSpacing: -0.3,
+            }} numberOfLines={1}>
+              {t("homeZ.discover.leaderboard", "Classement")}
+            </Text>
+            <Text style={{
+              fontFamily: "Comfortaa_400Regular",
+              fontSize: normalize(12),
+              color: isDarkMode ? "rgba(226,232,240,0.60)" : "rgba(15,23,42,0.55)",
+              lineHeight: normalize(16),
+            }} numberOfLines={2}>
+              {t("homeZ.discover.leaderboardSub2", "Vois où tu te situes.")}
+            </Text>
+          </View>
+        </View>
+      </Pressable>
 
-                {/* ✨ IMPROVED: NewFeatures with "NEW" badge */}
-                <Pressable
-                  onPress={() => safeNavigate("/new-features")}
-                  accessibilityRole="button"
-                  hitSlop={10}
-                  style={({ pressed }) => [
-                    staticStyles.discoverWideCard,
-                    {
-                      borderColor: isDarkMode
-                        ? "rgba(226,232,240,0.18)"
-                        : "rgba(15,23,42,0.10)",
-                      backgroundColor: isDarkMode
-                        ? "rgba(255,255,255,0.06)"
-                        : "rgba(255,255,255,0.75)",
-                      opacity: pressed ? 0.96 : 1,
-                      transform: [{ scale: pressed ? 0.992 : 1 }],
-                    },
-                  ]}
-                >
-                  <View style={staticStyles.discoverWideLeft}>
-                    <View
-                      style={[
-                        staticStyles.discoverBigIcon,
-                        {
-                          borderColor: isDarkMode
-                            ? "rgba(249,115,22,0.34)"
-                            : "rgba(249,115,22,0.28)",
-                          backgroundColor: "rgba(249,115,22,0.12)",
-                          marginBottom: 0,
-                        },
-                      ]}
-                    >
-                      <Ionicons name="sparkles-outline" size={normalize(18)} color="#F97316" />
-                    </View>
+      {/* Tips */}
+      <Pressable
+        onPress={() => safeNavigate("/tips")}
+        style={({ pressed }) => ({
+          flex: 1,
+          borderRadius: normalize(20),
+          overflow: "hidden",
+          opacity: pressed ? 0.78 : 1,
+          transform: [{ scale: pressed ? 0.96 : 1 }],
+        })}
+      >
+        <View style={{
+          borderRadius: normalize(20),
+          padding: normalize(16),
+          borderWidth: 1.5,
+          borderColor: isDarkMode ? "rgba(249,115,22,0.25)" : "rgba(249,115,22,0.18)",
+          backgroundColor: isDarkMode ? "rgba(15,23,42,0.88)" : "#FFFFFF",
+          minHeight: normalize(148),
+          justifyContent: "space-between",
+          elevation: 6,
+          ...(Platform.OS === "ios" ? {
+            shadowColor: "#F97316",
+            shadowOpacity: isDarkMode ? 0.18 : 0.08,
+            shadowRadius: normalize(14),
+            shadowOffset: { width: 0, height: normalize(6) },
+          } : {}),
+        }}>
+          <View style={{
+            width: normalize(50), height: normalize(50),
+            borderRadius: normalize(25),
+            alignItems: "center", justifyContent: "center",
+            backgroundColor: isDarkMode ? "rgba(249,115,22,0.18)" : "rgba(249,115,22,0.10)",
+            borderWidth: 1.5,
+            borderColor: isDarkMode ? "rgba(249,115,22,0.38)" : "rgba(249,115,22,0.22)",
+          }}>
+            <Ionicons name="bulb" size={normalize(22)} color="#F97316" />
+          </View>
+          <View style={{ marginTop: normalize(14) }}>
+            <Text style={{
+              fontFamily: "Comfortaa_700Bold",
+              fontSize: normalize(14.5),
+              color: isDarkMode ? "#F8FAFC" : "#0B1120",
+              marginBottom: normalize(5),
+              letterSpacing: -0.3,
+            }} numberOfLines={1}>
+              {t("homeZ.discover.tips", "Tips")}
+            </Text>
+            <Text style={{
+              fontFamily: "Comfortaa_400Regular",
+              fontSize: normalize(12),
+              color: isDarkMode ? "rgba(226,232,240,0.60)" : "rgba(15,23,42,0.55)",
+              lineHeight: normalize(16),
+            }} numberOfLines={2}>
+              {t("homeZ.discover.tipsSub2", "Petits hacks, grands résultats.")}
+            </Text>
+          </View>
+        </View>
+      </Pressable>
+    </View>
 
-                    <View style={{ flex: 1, minWidth: 0 }}>
-                      <View style={{ flexDirection: "row", alignItems: "center", gap: normalize(8), marginBottom: normalize(4) }}>
-                        <Text
-                          style={[
-                            staticStyles.discoverWideTitle,
-                            { color: isDarkMode ? "#F8FAFC" : "#0B1120" },
-                          ]}
-                          numberOfLines={1}
-                          adjustsFontSizeToFit
-                        >
-                          {t("homeZ.discover.newFeatures", "Nouveautés")}
-                        </Text>
-                        {/* ✨ NEW: "NEW" badge */}
-                        <View style={staticStyles.newBadge}>
-                          <Text style={staticStyles.newBadgeText}>NEW</Text>
-                        </View>
-                      </View>
-                      <Text
-                        style={[
-                          staticStyles.discoverWideSub,
-                          {
-                            color: isDarkMode
-                              ? "rgba(226,232,240,0.70)"
-                              : "rgba(15,23,42,0.62)",
-                          },
-                        ]}
-                        numberOfLines={2}
-                        adjustsFontSizeToFit
-                        minimumFontScale={0.92}
-                      >
-                        {t("homeZ.discover.newFeaturesSub", "Tu shapes l'app. Vraiment.")}
-                      </Text>
-                    </View>
-                  </View>
-
-                  <Ionicons
-                    name="chevron-forward"
-                    size={normalize(18)}
-                    color={isDarkMode ? "rgba(226,232,240,0.85)" : "rgba(2,6,23,0.85)"}
-                  />
-                </Pressable>
-              </View>
+    {/* Nouveautés */}
+    <Pressable
+      onPress={() => safeNavigate("/new-features")}
+      style={({ pressed }) => ({
+        width: "100%",
+        borderRadius: normalize(20),
+        overflow: "hidden",
+        opacity: pressed ? 0.78 : 1,
+        transform: [{ scale: pressed ? 0.992 : 1 }],
+      })}
+    >
+      <View style={{
+        borderRadius: normalize(20),
+        padding: normalize(16),
+        borderWidth: 1.5,
+        borderColor: isDarkMode ? "rgba(249,115,22,0.25)" : "rgba(249,115,22,0.18)",
+        backgroundColor: isDarkMode ? "rgba(15,23,42,0.88)" : "#FFFFFF",
+        flexDirection: "row",
+        alignItems: "center",
+        gap: normalize(14),
+        elevation: 6,
+        ...(Platform.OS === "ios" ? {
+          shadowColor: "#F97316",
+          shadowOpacity: isDarkMode ? 0.18 : 0.08,
+          shadowRadius: normalize(14),
+          shadowOffset: { width: 0, height: normalize(6) },
+        } : {}),
+      }}>
+        <View style={{
+          width: normalize(54), height: normalize(54),
+          borderRadius: normalize(27),
+          alignItems: "center", justifyContent: "center",
+          backgroundColor: isDarkMode ? "rgba(249,115,22,0.18)" : "rgba(249,115,22,0.10)",
+          borderWidth: 1.5,
+          borderColor: isDarkMode ? "rgba(249,115,22,0.38)" : "rgba(249,115,22,0.22)",
+          flexShrink: 0,
+        }}>
+          <Ionicons name="sparkles" size={normalize(24)} color="#F97316" />
+        </View>
+        <View style={{ flex: 1, minWidth: 0 }}>
+          <View style={{ flexDirection: "row", alignItems: "center", gap: normalize(8), marginBottom: normalize(4) }}>
+            <Text style={{
+              fontFamily: "Comfortaa_700Bold",
+              fontSize: normalize(15),
+              color: isDarkMode ? "#F8FAFC" : "#0B1120",
+              letterSpacing: -0.2,
+            }} numberOfLines={1}>
+              {t("homeZ.discover.newFeatures", "Nouveautés")}
+            </Text>
+            <View style={{
+              paddingHorizontal: normalize(7), paddingVertical: normalize(3),
+              borderRadius: normalize(6),
+              backgroundColor: "#F97316",
+            }}>
+              <Text style={{
+                fontSize: normalize(9.5), fontFamily: "Comfortaa_700Bold",
+                color: "#FFFFFF", letterSpacing: 0.5,
+              }}>NEW</Text>
             </View>
-          </View>{/* end discoverWrapper */}
+          </View>
+          <Text style={{
+            fontFamily: "Comfortaa_400Regular",
+            fontSize: normalize(12),
+            color: isDarkMode ? "rgba(226,232,240,0.60)" : "rgba(15,23,42,0.55)",
+            lineHeight: normalize(16),
+          }} numberOfLines={2}>
+            {t("homeZ.discover.newFeaturesSub", "Tu shapes l'app. Vraiment.")}
+          </Text>
+        </View>
+        <Ionicons name="chevron-forward" size={normalize(18)}
+          color={isDarkMode ? "rgba(249,115,22,0.70)" : "rgba(249,115,22,0.60)"}
+        />
+      </View>
+    </Pressable>
+  </View>
+)}
+</View>
 
         </ScrollView>
 

@@ -31,6 +31,9 @@
   "home": {
     "yourChallenge": "Your challenge"
   },
+  "vsIntro": {
+    "challengeAccepted":"Challenge accepted"
+  },
   "profile": "Profile",
   "yourProfile": "Your Profile",
   "addBioHere": "Add a bio here",
@@ -1604,8 +1607,10 @@
     }
   }
 ,
+"profileUpdatedSuccess": "Profile updated ✓",
   "dailyBonus": {
-    "title": "Daily bonus",
+    "title": "Bonus",
+"cta": "Spin the wheel 🎯",
     "badge": "REWARD",
 "oncePerDay": "1 / day",
 "teaser2": "What will you unlock today?",
@@ -1624,7 +1629,6 @@
     "teaser": "Tap to discover your mystery reward.",
     "visualHint": "Your reward is added to your account as soon as you spin the wheel. Keep your streak to unlock even more bonuses ✨",
     "spinning": "Spinning...",
-    "cta": "Spin the wheel",
     "again": "Watch the wheel again",
     "reward": {
       "streakPass": "You earned {{count}} Streak Pass 🎫",

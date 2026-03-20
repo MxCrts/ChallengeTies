@@ -522,6 +522,9 @@
     "bonus": "+{{bonus}}",
     "pb": "Je beste streak: {{days}} dagen"
   },
+  "vsIntro": {
+    "challengeAccepted":"Uitdaging aanvaard"
+  },
   "savedShort": "Opgeslagen",
 
   "microEarnedTitle": "Trofee verdiend",
@@ -596,6 +599,7 @@
     "chat": "Chat",
     "stats": "Stats",
     "save": "Favorieten",
+    "saved": "Opgeslagen",
     "chatA11y": "Chat openen",
     "chatHint": "Opent de chat van de uitdaging.",
     "statsA11y": "Statistieken bekijken",
@@ -1778,9 +1782,10 @@
 
     "error": "De welkomstbonus kan momenteel niet worden opgehaald."
   },
-
+"profileUpdatedSuccess": "Profiel bijgewerkt ✓",
   "dailyBonus": {
-    "title": "Dagbonus",
+    "title": "Bonus",
+"cta": "Draai het wiel 🎯",
     "badge": "BELONING",
 "oncePerDay": "1 / dag",
 "teaser2": "Wat ga je vandaag vrijspelen?",
@@ -1799,7 +1804,6 @@
     "teaser": "Tik om je mysterieuze beloning te ontdekken.",
     "visualHint": "Je beloning wordt toegevoegd aan je account zodra je het rad start. Houd je reeks vol om nog meer bonussen te ontgrendelen ✨",
     "spinning": "Bezig met draaien...",
-    "cta": "Rad starten",
     "again": "Rad opnieuw bekijken",
 
     "reward": {

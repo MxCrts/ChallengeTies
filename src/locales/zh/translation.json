@@ -1046,6 +1046,9 @@
   }
 }
 ,
+"vsIntro": {
+    "challengeAccepted":"挑战已接受"
+  },
 "savedShort": "已保存"
 ,
 "challengeDetails": {
@@ -1114,6 +1117,7 @@
     "chat": "聊天",
     "stats": "统计",
     "save": "收藏",
+    "saved": "已收藏",
     "chatA11y": "打开聊天",
     "chatHint": "打开挑战聊天。",
     "statsA11y": "查看统计",
@@ -1861,9 +1865,10 @@
   "refreshDaily": "明天将提供新的挑战 ✨",
   "noChallengesAvailable": "目前暂无可用挑战。",
   "challengesComingSoon": "全新挑战即将上线，敬请期待！",
-
+"profileUpdatedSuccess": "个人资料已更新 ✓",
   "dailyBonus": {
-    "title": "每日奖励",
+    "title": "奖励",
+"cta": "转动转盘 🎯",
     "badge": "奖励",
 "oncePerDay": "每日 1 次",
 "teaser2": "今天你会解锁什么？",
@@ -1882,7 +1887,6 @@
     "visualHint": "当你转动转盘时，奖励会立即发放到你的账户。坚持连续签到，可以解锁更多奖励 ✨",
     "spinning": "正在转动…",
     "congrats": "太棒了！",
-    "cta": "转动转盘",
     "again": "再次观看转盘",
     "reward": {
       "streakPass": "你获得了 {{count}} 张 Streak Pass 🎫",

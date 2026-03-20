@@ -216,11 +216,11 @@ const ChallengeReviews: React.FC<Props> = ({ challengeId, selectedDays }) => {
       chipBG: isDarkMode ? "rgba(244,211,94,0.16)" : "rgba(0,0,0,0.06)",
       chipFG: isDarkMode ? "#F4D35E" : "#222",
       borderGradient: isDarkMode
-        ? (["rgba(255,255,255,0.12)", "rgba(244,211,94,0.20)"] as const)
-        : (["rgba(0,0,0,0.05)", "rgba(0,0,0,0.10)"] as const),
+  ? (["rgba(249,115,22,0.25)", "rgba(249,115,22,0.10)"] as const)
+  : (["rgba(249,115,22,0.20)", "rgba(249,115,22,0.08)"] as const),
       headerGradient: isDarkMode
-        ? (["rgba(255,255,255,0.06)", "rgba(244,211,94,0.12)"] as const)
-        : (["rgba(0,0,0,0.035)", "rgba(0,0,0,0.06)"] as const),
+  ? (["rgba(20,12,4,0.92)", "rgba(30,15,5,0.85)"] as const)
+  : (["rgba(255,245,235,0.98)", "rgba(255,235,215,0.92)"] as const),
     }),
     [isDarkMode]
   );
@@ -626,7 +626,13 @@ const ChallengeReviews: React.FC<Props> = ({ challengeId, selectedDays }) => {
             end={{ x: 1, y: 1 }}
             style={{ borderRadius: R.card, padding: 1.2 }}
           >
-            <View style={[styles.card, { borderRadius: R.card, padding: R.pad }]}>
+            <View style={[styles.card, {
+            borderRadius: R.card,
+            padding: R.pad,
+            backgroundColor: isDarkMode
+              ? "rgba(20,10,4,0.90)"
+              : "rgba(255,255,255,0.95)",
+          }]}>
               <View style={[styles.row, { marginBottom: 10 }]}>
                 <View style={{ marginRight: 12 }}>
                   <ReviewAvatar uri={candidate} size={avatarSize} />
@@ -817,10 +823,22 @@ const ChallengeReviews: React.FC<Props> = ({ challengeId, selectedDays }) => {
         ) : null}
 
         {showInfoLocked ? (
-          <Text style={[styles.centerInfo, { color: currentTheme.colors.textSecondary }]}>
-            {t("challengeDetails.reviewAfterComplete")}
-          </Text>
-        ) : null}
+  <View style={{
+    flexDirection: "row", alignItems: "center",
+    backgroundColor: isDarkMode ? "rgba(249,115,22,0.10)" : "rgba(249,115,22,0.08)",
+    borderRadius: 14, paddingVertical: 10, paddingHorizontal: 14,
+    borderWidth: 1, borderColor: "rgba(249,115,22,0.22)",
+    marginBottom: 14, gap: 10,
+  }}>
+    <Ionicons name="lock-closed-outline" size={16} color="#F97316" />
+    <Text style={[styles.centerInfo, {
+      color: isDarkMode ? "rgba(255,255,255,0.75)" : "rgba(0,0,0,0.65)",
+      marginBottom: 0, textAlign: "left", flex: 1,
+    }]}>
+      {t("challengeDetails.reviewAfterComplete")}
+    </Text>
+  </View>
+) : null}
 
         {showInfoDone ? (
           <Text style={[styles.centerInfo, { color: currentTheme.colors.textSecondary }]}>
@@ -830,14 +848,19 @@ const ChallengeReviews: React.FC<Props> = ({ challengeId, selectedDays }) => {
 
         {/* Premium header card */}
         <LinearGradient
-          colors={ACCENT.headerGradient}
-          start={{ x: 0, y: 0 }}
-          end={{ x: 1, y: 1 }}
-          style={[
-            styles.headerWrap,
-            {
-              borderRadius: R.soft,
-              borderColor: GLASS.strokeSoft,
+  colors={ACCENT.headerGradient}
+  start={{ x: 0, y: 0 }}
+  end={{ x: 1, y: 1 }}
+  style={[
+    styles.headerWrap,
+    {
+      borderRadius: R.soft,
+      borderColor: isDarkMode ? "rgba(249,115,22,0.20)" : "rgba(249,115,22,0.25)",
+      ...Platform.select({
+        android: {
+          backgroundColor: isDarkMode ? "rgba(20,10,4,0.95)" : "#FFF8F0",
+        },
+      }),
               paddingVertical: small ? 12 : 14,
               paddingHorizontal: small ? 12 : 14,
             },
@@ -851,16 +874,16 @@ const ChallengeReviews: React.FC<Props> = ({ challengeId, selectedDays }) => {
 
               <View style={{ flex: 1, minWidth: 0 }}>
                 <Text
-                  numberOfLines={1}
-                  style={{
-                    fontSize: small ? 16 : 18,
-                    fontFamily: FONT.bold,
-                    letterSpacing: 0.2,
-                    color: currentTheme.colors.textPrimary,
-                  }}
-                >
-                  {title}
-                </Text>
+                numberOfLines={1}
+                style={{
+                  fontSize: small ? 16 : 18,
+                  fontFamily: FONT.bold,
+                  letterSpacing: 0.2,
+                  color: isDarkMode ? currentTheme.colors.textPrimary : "#1A0800",
+                }}
+              >
+                {title}
+              </Text>
 
                 <Text
                   numberOfLines={2}
@@ -958,15 +981,24 @@ const ChallengeReviews: React.FC<Props> = ({ challengeId, selectedDays }) => {
           start={{ x: 0, y: 0 }}
           end={{ x: 1, y: 1 }}
           style={[
-            styles.emptyCard,
-            { borderRadius: R.soft, borderColor: GLASS.strokeSoft, padding: R.pad },
-          ]}
+  styles.emptyCard,
+  {
+    borderRadius: R.soft,
+    borderColor: GLASS.strokeSoft,
+    padding: R.pad,
+    ...Platform.select({
+      android: {
+        backgroundColor: isDarkMode ? "rgba(20,10,4,0.95)" : "#FFF8F0",
+      },
+    }),
+  },
+]}
         >
           <View style={[styles.row, { marginBottom: 8 }]}>
             <View style={[styles.badgeIcon, { backgroundColor: GLASS.bg, borderColor: GLASS.strokeSoft }]}>
               <Ionicons name="sparkles-outline" size={16} color={currentTheme.colors.secondary} />
             </View>
-            <Text style={{ fontFamily: FONT.bold, color: currentTheme.colors.textPrimary, flex: 1 }}>
+            <Text style={{ fontFamily: FONT.bold, color: isDarkMode ? currentTheme.colors.textPrimary : "#1A0800", flex: 1 }}>
               {t("challengeDetails.noReviewsYet")}
             </Text>
           </View>
@@ -1050,7 +1082,13 @@ const ChallengeReviews: React.FC<Props> = ({ challengeId, selectedDays }) => {
               >
                 {/* We reuse the exact card UI by calling the same markup as ReviewCard would render */}
                 {/* But without nesting any VirtualizedList */}
-                <View style={[styles.card, { borderRadius: R.card, padding: R.pad }]}>
+                <View style={[styles.card, {
+                borderRadius: R.card,
+                padding: R.pad,
+                backgroundColor: isDarkMode
+                  ? "rgba(20,10,4,0.90)"
+                  : "rgba(255,255,255,0.95)",
+              }]}>
                   <View style={[styles.row, { marginBottom: 10 }]}>
                     <View style={{ marginRight: 12 }}>
                       <ReviewAvatar
@@ -1466,7 +1504,6 @@ const styles = StyleSheet.create<Styles>({
     fontSize: 12,
     marginLeft: 8,
   },
-
   emptyCard: { borderWidth: StyleSheet.hairlineWidth },
   miniCta: {
     paddingVertical: 10,
@@ -1474,18 +1511,15 @@ const styles = StyleSheet.create<Styles>({
     flexDirection: "row",
     alignItems: "center",
   },
-
-  card: {
-    backgroundColor: "transparent",
-  },
-
+card: {
+  backgroundColor: "transparent",
+},
   avatarRing: {
     position: "absolute",
     left: -4,
     top: -4,
     borderWidth: StyleSheet.hairlineWidth,
   },
-
   iconBtn: {
     width: 34,
     height: 34,
@@ -1493,11 +1527,9 @@ const styles = StyleSheet.create<Styles>({
     alignItems: "center",
     justifyContent: "center",
   },
-
   backdrop: {
     ...StyleSheet.absoluteFillObject,
   },
-
   modalWrap: {
     flex: 1,
     alignItems: "center",

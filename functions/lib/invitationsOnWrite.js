@@ -22,7 +22,10 @@ function isLockExpired(lock) {
 }
 /** Normalise une langue vers nos locales supportées */
 function normalizeLang(lang) {
-    const base = String(lang || "en").toLowerCase().split(/[-_]/)[0];
+    const base = String(lang || "en")
+        .trim() // ✅ LE FIX
+        .toLowerCase()
+        .split(/[-_]/)[0];
     const supported = ["fr", "en", "es", "de", "it", "pt", "zh", "ja", "ko", "ar", "hi", "ru", "nl"];
     return supported.includes(base) ? base : "en";
 }
@@ -233,6 +236,8 @@ exports.invitationsOnWrite = (0, firestore_1.onDocumentWritten)({ region: "europ
         const chSnap = await db.doc(`challenges/${after.challengeId}`).get().catch(() => null);
         challengeTitle = chSnap?.get("title") || null;
     }
+    console.log("[invite] inviter.language RAW =", inviter?.language);
+    console.log("[invite] inviter.language JSON =", JSON.stringify(inviter?.language), "len=", String(inviter?.language || "").length);
     const lang = inviter?.language || "en";
     const title = titleFor(lang);
     const body = bodyFor(after.status, lang, inviteeUsername, challengeTitle);

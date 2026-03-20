@@ -223,47 +223,45 @@ export async function findMatches(opts: {
   const candidates: MatchCandidate[] = [];
 
   for (const poolDoc of poolSnap.docs) {
-    const pool = poolDoc.data() as MatchingPoolEntry;
-    if (pool.uid === me) continue;
+      const pool = poolDoc.data() as MatchingPoolEntry;
+  if (pool.uid === me) continue;
 
-    let score = 0;
-    let sharedCategory: string | null = null;
-    let hasSameChallenge = false;
+  let score = 1; // ✅ TOUT LE MONDE est candidat par défaut
+  let sharedCategory: string | null = null;
+  let hasSameChallenge = false;
 
-    if (pool.currentChallengeIds.includes(opts.challengeId)) {
-      score = 3;
-      hasSameChallenge = true;
-      sharedCategory = opts.challengeCategory;
-    } else if (
-      opts.challengeCategory &&
-      pool.currentChallengeCategories.includes(opts.challengeCategory)
-    ) {
-      score = 2;
-      sharedCategory = opts.challengeCategory;
-    } else if (
-      opts.challengeCategory &&
-      pool.challengeCategories.includes(opts.challengeCategory)
-    ) {
-      score = 1;
-      sharedCategory = opts.challengeCategory;
-    } else if (myCats.some((c) => pool.challengeCategories.includes(c))) {
-      score = 1;
-      sharedCategory = myCats.find((c) => pool.challengeCategories.includes(c)) || null;
-    }
-
-    if (score === 0) continue;
-
-    candidates.push({
-      uid: pool.uid,
-      username: pool.username,
-      profileImage: pool.profileImage,
-      region: pool.region,
-      completedChallengesCount: pool.completedChallengesCount,
-      matchScore: score,
-      sharedCategory,
-      hasSameChallenge,
-    });
+  if (pool.currentChallengeIds.includes(opts.challengeId)) {
+    score = 3;
+    hasSameChallenge = true;
+    sharedCategory = opts.challengeCategory;
+  } else if (
+    opts.challengeCategory &&
+    pool.currentChallengeCategories.includes(opts.challengeCategory)
+  ) {
+    score = 2;
+    sharedCategory = opts.challengeCategory;
+  } else if (
+    opts.challengeCategory &&
+    pool.challengeCategories.includes(opts.challengeCategory)
+  ) {
+    score = 1;
+    sharedCategory = opts.challengeCategory;
+  } else if (myCats.some((c) => pool.challengeCategories.includes(c))) {
+    score = 1;
+    sharedCategory = myCats.find((c) => pool.challengeCategories.includes(c)) || null;
   }
+
+ candidates.push({
+    uid: pool.uid,
+    username: pool.username,
+    profileImage: pool.profileImage,
+    region: pool.region,
+    completedChallengesCount: pool.completedChallengesCount,
+    matchScore: score,
+    sharedCategory,
+    hasSameChallenge,
+  });
+}
 
   candidates.sort((a, b) =>
     b.matchScore !== a.matchScore
@@ -285,79 +283,81 @@ export async function sendMatchingInvitation(opts: {
   challengeTitle: string;
   selectedDays: number;
 }): Promise<{ id: string }> {
-  const me = auth.currentUser?.uid;
-  if (!me) throw new Error("utilisateur non connecté");
-  if (opts.inviteeId === me) throw new Error("auto_invite");
-
-  // Rate limit : 5 invitations matching par jour
-  const todayStart = Timestamp.fromDate(new Date(new Date().setHours(0, 0, 0, 0)));
-  const rateLimitSnap = await getDocs(
-    query(
-      collection(db, "matching_invitations"),
-      where("inviterId", "==", me),
-      where("createdAt", ">=", todayStart)
-    )
-  );
-  if (rateLimitSnap.size >= 5) throw new Error("rate_limit_exceeded");
-
-  // Idempotence : réutilise une invitation pending existante
-  const existingSnap = await getDocs(
-    query(
-      collection(db, "matching_invitations"),
-      where("inviterId", "==", me),
-      where("inviteeId", "==", opts.inviteeId),
-      where("challengeId", "==", opts.challengeId),
-      where("status", "==", "pending")
-    )
-  );
-  for (const d of existingSnap.docs) {
-    const inv = d.data() as MatchingInvitation;
-    if (!isInvitationExpired({ expiresAt: inv.expiresAt })) return { id: d.id };
-  }
-
-  // Récupérer les infos de l'inviteur
-  const mySnap = await getDoc(doc(db, "users", me));
-  const myData = mySnap.exists() ? (mySnap.data() as any) : {};
-  const inviterUsername = myData?.username || myData?.displayName || "User";
-  const inviterProfileImage = myData?.profileImage || null;
-
-  // Créer l'invitation
-  const ref = await addDoc(collection(db, "matching_invitations"), {
-    challengeId: opts.challengeId,
-    challengeTitle: opts.challengeTitle,
-    selectedDays: opts.selectedDays,
-    inviterId: me,
-    inviterUsername,
-    inviterProfileImage,
-    inviteeId: opts.inviteeId,
-    status: "pending",
-    kind: "matching",
-    createdAt: serverTimestamp(),
-    updatedAt: serverTimestamp(),
-    expiresAt: concreteExpiry(72),
-  });
-
-  // Push vers l'invité (non-bloquant)
-  sendMatchingPush({
-    type: "matching_invite_received",
-    inviteeId: opts.inviteeId,
-    inviterId: me,
-    inviterUsername,
-    challengeTitle: opts.challengeTitle,
-    challengeId: opts.challengeId,
-    selectedDays: opts.selectedDays,
-    inviteId: ref.id,
-  }).catch(() => {});
-
   try {
-    await logEvent("matching_invite_sent", {
-      inviteId: ref.id,
-      challengeId: opts.challengeId,
-      inviteeId: opts.inviteeId,
-    });
-  } catch {}
+    const me = auth.currentUser?.uid;
+    if (!me) throw new Error("utilisateur non connecté");
+    if (opts.inviteeId === me) throw new Error("auto_invite");
 
-  return { id: ref.id };
+    const todayStart = Timestamp.fromDate(new Date(new Date().setHours(0, 0, 0, 0)));
+    const rateLimitSnap = await getDocs(
+      query(
+        collection(db, "matching_invitations"),
+        where("inviterId", "==", me),
+        where("createdAt", ">=", todayStart)
+      )
+    );
+    if (rateLimitSnap.size >= 5) throw new Error("rate_limit_exceeded");
+
+    const existingSnap = await getDocs(
+      query(
+        collection(db, "matching_invitations"),
+        where("inviterId", "==", me),
+        where("inviteeId", "==", opts.inviteeId),
+        where("challengeId", "==", opts.challengeId),
+        where("status", "==", "pending")
+      )
+    );
+    for (const d of existingSnap.docs) {
+      const inv = d.data() as MatchingInvitation;
+      if (!isInvitationExpired({ expiresAt: inv.expiresAt })) return { id: d.id };
+    }
+
+    const mySnap = await getDoc(doc(db, "users", me));
+    const myData = mySnap.exists() ? (mySnap.data() as any) : {};
+    const inviterUsername = myData?.username || myData?.displayName || "User";
+    const inviterProfileImage = myData?.profileImage || null;
+
+    const ref = await addDoc(collection(db, "matching_invitations"), {
+      challengeId: opts.challengeId,
+      challengeTitle: opts.challengeTitle,
+      selectedDays: opts.selectedDays,
+      inviterId: me,
+      inviterUsername,
+      inviterProfileImage,
+      inviteeId: opts.inviteeId,
+      status: "pending",
+      kind: "matching",
+      createdAt: serverTimestamp(),
+      updatedAt: serverTimestamp(),
+      expiresAt: concreteExpiry(72),
+    });
+
+    sendMatchingPush({
+      type: "matching_invite_received",
+      inviteeId: opts.inviteeId,
+      inviterId: me,
+      inviterUsername,
+      challengeTitle: opts.challengeTitle,
+      challengeId: opts.challengeId,
+      selectedDays: opts.selectedDays,
+      inviteId: ref.id,
+    }).catch(() => {});
+
+    try {
+      await logEvent("matching_invite_sent", {
+        inviteId: ref.id,
+        challengeId: opts.challengeId,
+        inviteeId: opts.inviteeId,
+      });
+    } catch {}
+
+    return { id: ref.id };
+
+  } catch (e: any) {
+    // ✅ LOG ICI — le vrai catch
+    console.log("MATCHING SEND ERROR:", e?.message, e?.code, JSON.stringify(e));
+    throw e;
+  }
 }
 
 /* =========================

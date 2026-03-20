@@ -9,7 +9,6 @@ import {
   ScrollView,
   Platform,
   Dimensions,
-  Switch,
   Pressable,
   StatusBar,
   I18nManager,
@@ -28,7 +27,7 @@ import CustomHeader from "@/components/CustomHeader";
 import Animated, { FadeInUp, ZoomIn } from "react-native-reanimated";
 import GlobalLayout from "../../components/GlobalLayout";
 import designSystem from "../../theme/designSystem";
-import { useTranslation, Trans  } from "react-i18next";
+import { useTranslation, Trans } from "react-i18next";
 import BannerSlot from "@/components/BannerSlot";
 import { useFocusEffect } from "@react-navigation/native";
 import AsyncStorage from "@react-native-async-storage/async-storage";
@@ -42,57 +41,35 @@ import { setDuoAvailable } from "@/services/matchingService";
 import { useMatchingInbox } from "@/hooks/useMatchingInbox";
 import MatchingInboxModal from "@/components/MatchingInboxModal";
 
-const SPACING = 15;
-const { width: SCREEN_WIDTH, height: SCREEN_HEIGHT } = Dimensions.get("window");
-const BORDER_COLOR_LIGHT = "rgba(255, 255, 255, 0.2)";
-const SHADOW_COLOR = "#000";
-
+// ── Responsive ────────────────────────────────────────────────────────────────
+const { width: SCREEN_WIDTH } = Dimensions.get("window");
 let __win = Dimensions.get("window");
-
-// ✅ garde une width/height live (rotation, split-screen, barres, etc.)
-Dimensions.addEventListener("change", ({ window }) => {
-  __win = window;
-});
-
-const normalizeSize = (size: number) => {
-  const baseWidth = 375;
+Dimensions.addEventListener("change", ({ window }) => { __win = window; });
+const n = (size: number) => {
   const W = __win?.width ?? 375;
-  const scale = Math.min(Math.max(W / baseWidth, 0.75), 1.8);
+  const scale = Math.min(Math.max(W / 375, 0.75), 1.8);
   return Math.round(size * scale);
 };
 
-
-/** Util pour ajouter une alpha sans casser les gradients */
 const withAlpha = (color: string, alpha: number) => {
-  const clamp = (n: number, min = 0, max = 1) => Math.min(Math.max(n, min), max);
-  const a = clamp(alpha);
-
+  const a = Math.min(Math.max(alpha, 0), 1);
   if (/^rgba?\(/i.test(color)) {
     const nums = color.match(/[\d.]+/g) || [];
     const [r = "0", g = "0", b = "0"] = nums;
-    return `rgba(${r}, ${g}, ${b}, ${a})`;
+    return `rgba(${r},${g},${b},${a})`;
   }
   let hex = color.replace("#", "");
-  if (hex.length === 3) hex = hex.split("").map((c) => c + c).join("");
+  if (hex.length === 3) hex = hex.split("").map(c => c + c).join("");
   if (hex.length >= 6) {
     const r = parseInt(hex.slice(0, 2), 16);
     const g = parseInt(hex.slice(2, 4), 16);
     const b = parseInt(hex.slice(4, 6), 16);
-    return `rgba(${r}, ${g}, ${b}, ${a})`;
+    return `rgba(${r},${g},${b},${a})`;
   }
   return `rgba(0,0,0,${a})`;
 };
 
-// helpers d’affichage
-const takeInterests = (raw?: string[] | string) => {
-  if (!raw) return [];
-  if (Array.isArray(raw)) return raw.filter(Boolean).map((s) => String(s).trim());
-  return String(raw)
-    .split(",")
-    .map((s) => s.trim())
-    .filter(Boolean);
-};
-
+// ── Types ─────────────────────────────────────────────────────────────────────
 interface UserData {
   username?: string;
   bio?: string;
@@ -103,13 +80,9 @@ interface UserData {
   newAchievements?: string[];
   isPioneer?: boolean;
   unreadNotifications?: number;
-
-  // 🆕 inventaire (streak pass & futurs items)
-  inventory?: {
-    streakPass?: number;
-    [key: string]: any;
-  };
+  inventory?: { streakPass?: number; [key: string]: any };
   duoAvailable?: boolean;
+  challengeCategories?: string[];
 }
 
 interface ProfileSection {
@@ -119,9 +92,19 @@ interface ProfileSection {
   testID: string;
   accessibilityLabel: string;
   accessibilityHint: string;
-  unclaimedCount?: number; // badge optionnel (notifs, rewards, inventaire…)
+  unclaimedCount?: number;
 }
 
+// ── Composant Toggle custom ───────────────────────────────────────────────────
+const CustomToggle = ({ value, isDarkMode }: { value: boolean; isDarkMode: boolean }) => (
+  <View style={[s.toggleTrack, {
+    backgroundColor: value ? "#F97316" : isDarkMode ? "rgba(255,255,255,0.15)" : "rgba(0,0,0,0.12)",
+  }]}>
+    <View style={[s.toggleThumb, { alignSelf: value ? "flex-end" : "flex-start" }]} />
+  </View>
+);
+
+// ── Composant principal ───────────────────────────────────────────────────────
 export default function ProfileScreen() {
   const router = useRouter();
   const [userData, setUserData] = useState<UserData | null>(null);
@@ -132,254 +115,101 @@ export default function ProfileScreen() {
   const isDarkMode = theme === "dark";
   const { t, i18n } = useTranslation();
   const { showBanners } = useAdsVisibility();
- const insets = useSafeAreaInsets();
-const tabBarHeight = useBottomTabBarHeight();
-const [adHeight, setAdHeight] = useState(0);
-const [duoToggleBusy, setDuoToggleBusy] = useState(false);
-const [showPioneerModal, setShowPioneerModal] = useState(false);
-const [matchingInboxVisible, setMatchingInboxVisible] = useState(false);
-const { items: matchingItems, count: matchingCount } = useMatchingInbox();
-const PROFILE_FIRST_SEEN_KEY = "profile.firstSeen.v1";
-const firstProfileGateRef = React.useRef(false);
+  const insets = useSafeAreaInsets();
+  const tabBarHeight = useBottomTabBarHeight();
+  const [adHeight, setAdHeight] = useState(0);
+  const [duoToggleBusy, setDuoToggleBusy] = useState(false);
+  const [showPioneerModal, setShowPioneerModal] = useState(false);
+  const [matchingInboxVisible, setMatchingInboxVisible] = useState(false);
+  const { items: matchingItems, count: matchingCount } = useMatchingInbox();
+  const PROFILE_FIRST_SEEN_KEY = "profile.firstSeen.v1";
+  const firstProfileGateRef = React.useRef(false);
+  const { isTutorialActive } = useTutorial();
 
-const EXTRA_SCROLL_SPACE = normalizeSize(24); // ✅ petit buffer, pas 90
-const bottomContentPadding =
-  (showBanners ? adHeight : 0) + tabBarHeight + insets.bottom + EXTRA_SCROLL_SPACE;
+  const bottomContentPadding = (showBanners ? adHeight : 0) + tabBarHeight + insets.bottom + n(24);
+  const handleAdHeight = useCallback((h: number) => setAdHeight(h), []);
 
+  const currentTheme: Theme = isDarkMode ? designSystem.darkTheme : designSystem.lightTheme;
 
-// 🆕 total d’objets dans l’inventaire (streakPass + futurs items numériques)
-const totalInventoryItems = useMemo(() => {
-  const inv = userData?.inventory;
-  if (!inv || typeof inv !== "object") return 0;
+  const totalInventoryItems = useMemo(() => {
+    const inv = userData?.inventory;
+    if (!inv || typeof inv !== "object") return 0;
+    return Object.values(inv).reduce((sum, val) => {
+      if (typeof val === "number" && isFinite(val)) return sum + val;
+      return sum;
+    }, 0);
+  }, [userData]);
 
-  return Object.values(inv).reduce((sum, val) => {
-    if (typeof val === "number" && isFinite(val)) {
-      return sum + val;
-    }
-    return sum;
-  }, 0);
-}, [userData]);
-const handleAdHeight = useCallback((h:number)=>setAdHeight(h),[]);
-
-
-   const {
-    tutorialStep,
-    isTutorialActive,
-    skipTutorial,
-    setTutorialStep,
-  } = useTutorial();
-
-
-  const currentTheme: Theme = isDarkMode
-    ? designSystem.darkTheme
-    : designSystem.lightTheme;
-
-  // Chargement des données
+  // Firestore
   useEffect(() => {
     const uid = auth.currentUser?.uid;
-    if (!uid) {
-      setError(t("noUserConnected"));
+    if (!uid) { setError(t("noUserConnected")); setIsLoading(false); return; }
+    const unsub = onSnapshot(doc(db, "users", uid), (snap) => {
+      if (snap.exists()) { setUserData(snap.data() as UserData); setError(null); }
+      else setError(t("profileNotFound"));
       setIsLoading(false);
-      return;
-    }
-
-    const unsubscribe = onSnapshot(
-      doc(db, "users", uid),
-      (snap) => {
-        if (snap.exists()) {
-          setUserData(snap.data() as UserData);
-          setError(null);
-        } else {
-          setError(t("profileNotFound"));
-        }
-        setIsLoading(false);
-      },
-      (err) => {
-        console.error("Erreur onSnapshot:", err);
-        setError(t("profileLoadError"));
-        setIsLoading(false);
-      }
-    );
-
-    return () => unsubscribe();
+    }, (err) => { setError(t("profileLoadError")); setIsLoading(false); });
+    return () => unsub();
   }, [profileUpdated, t]);
 
-useFocusEffect(
-  useCallback(() => {
+  // Pioneer modal au premier focus
+  useFocusEffect(useCallback(() => {
     let cancelled = false;
-
     const run = async () => {
       try {
-        // ✅ évite double run si React remount / fast refresh / nav glitch
         if (firstProfileGateRef.current) return;
         firstProfileGateRef.current = true;
-
         const seen = await AsyncStorage.getItem(PROFILE_FIRST_SEEN_KEY);
         if (cancelled) return;
-
         if (seen !== "1") {
-          setShowPioneerModal(true); // ou setShowYourModal(true)
+          setShowPioneerModal(true);
           await AsyncStorage.setItem(PROFILE_FIRST_SEEN_KEY, "1");
         }
-      } catch {
-        // si AsyncStorage fail, on ne bloque pas l'écran
-      }
+      } catch {}
     };
+    if (!isLoading && !!userData) run();
+    return () => { cancelled = true; };
+  }, [isLoading, userData]));
 
-    // ✅ On attend que le profil soit vraiment prêt (sinon premier focus = loading)
-    if (!isLoading && !!userData) {
-      run();
-    } else {
-      // fallback: retente dès que ça devient prêt
-      // (pas de timer infini)
+  const handleDuoToggle = useCallback(async () => {
+    const uid = auth.currentUser?.uid;
+    if (!uid || duoToggleBusy) return;
+    setDuoToggleBusy(true);
+    try {
+      await setDuoAvailable(uid, !userData?.duoAvailable);
+    } catch {
+      Alert.alert(t("alerts.error"), t("matching.toggleError", { defaultValue: "Impossible de mettre à jour." }));
+    } finally {
+      setDuoToggleBusy(false);
     }
+  }, [duoToggleBusy, userData?.duoAvailable, t]);
 
-    return () => {
-      cancelled = true;
-    };
-  }, [isLoading, userData])
-);
+  // Sections grille
+  const sections = useMemo<ProfileSection[]>(() => [
+    { name: t("editProfile"), icon: "person-circle-outline", navigateTo: "profile/UserInfo", testID: "edit-profile-button", accessibilityLabel: t("access.editProfile.label"), accessibilityHint: t("access.editProfile.hint") },
+    { name: t("ongoingChallenges"), icon: "flag-outline", navigateTo: "profile/CurrentChallenges", testID: "current-challenges-button", accessibilityLabel: t("access.ongoingChallenges.label"), accessibilityHint: t("access.ongoingChallenges.hint") },
+    { name: t("completedChallenges"), icon: "checkmark-done-outline", navigateTo: "profile/CompletedChallenges", testID: "completed-challenges-button", accessibilityLabel: t("access.completedChallenges.label"), accessibilityHint: t("access.completedChallenges.hint") },
+    { name: t("statistics"), icon: "stats-chart-outline", navigateTo: "profile/UserStats", testID: "stats-button", accessibilityLabel: t("access.statistics.label"), accessibilityHint: t("access.statistics.hint") },
+    { name: t("favorites"), icon: "bookmark-outline", navigateTo: "profile/SavedChallenges", testID: "favorites-button", accessibilityLabel: t("access.favorites.label"), accessibilityHint: t("access.favorites.hint") },
+    { name: t("rewards"), icon: "medal-outline", navigateTo: "profile/Achievements", testID: "achievements-button", unclaimedCount: userData?.newAchievements?.length ?? 0, accessibilityLabel: t("access.rewards.label"), accessibilityHint: t("access.rewards.hint") },
+    { name: t("inventory.title"), icon: "briefcase-outline", navigateTo: "profile/Inventory", testID: "inventory-button", unclaimedCount: totalInventoryItems, accessibilityLabel: t("access.inventory.label", { defaultValue: "Ouvrir ton inventaire" }), accessibilityHint: t("access.inventory.hint", { defaultValue: "Voir et gérer tes bonus." }) },
+    { name: t("myChallenges"), icon: "create-outline", navigateTo: "profile/MyChallenges", testID: "my-challenges-button", accessibilityLabel: t("access.myChallenges.label"), accessibilityHint: t("access.myChallenges.hint") },
+  ], [t, i18n.language, userData, totalInventoryItems]);
 
-const handleDuoToggle = useCallback(async (value: boolean) => {
-  const uid = auth.currentUser?.uid;
-  if (!uid || duoToggleBusy) return;
-  setDuoToggleBusy(true);
-  try {
-    await setDuoAvailable(uid, value);
-    // L'onSnapshot mettra userData à jour automatiquement
-  } catch {
-    Alert.alert(
-      t("alerts.error"),
-      t("matching.toggleError", { defaultValue: "Impossible de mettre à jour." })
-    );
-  } finally {
-    setDuoToggleBusy(false);
-  }
-}, [duoToggleBusy, t]);
-
-
-    // Sections
-  const sections = useMemo<ProfileSection[]>(
-  () => [
-    {
-      name: t("editProfile"),
-      icon: "person-circle-outline",
-      navigateTo: "profile/UserInfo",
-      testID: "edit-profile-button",
-      accessibilityLabel: t("access.editProfile.label"),
-      accessibilityHint: t("access.editProfile.hint"),
-    },
-    {
-      name: t("ongoingChallenges"),
-      icon: "flag-outline",
-      navigateTo: "profile/CurrentChallenges",
-      testID: "current-challenges-button",
-      accessibilityLabel: t("access.ongoingChallenges.label"),
-      accessibilityHint: t("access.ongoingChallenges.hint"),
-    },
-    {
-      name: t("completedChallenges"),
-      icon: "checkmark-done-outline",
-      navigateTo: "profile/CompletedChallenges",
-      testID: "completed-challenges-button",
-      accessibilityLabel: t("access.completedChallenges.label"),
-      accessibilityHint: t("access.completedChallenges.hint"),
-    },
-    {
-      name: t("statistics"),
-      icon: "stats-chart-outline",
-      navigateTo: "profile/UserStats",
-      testID: "stats-button",
-      accessibilityLabel: t("access.statistics.label"),
-      accessibilityHint: t("access.statistics.hint"),
-    },
-    {
-      name: t("favorites"),
-      icon: "bookmark-outline",
-      navigateTo: "profile/SavedChallenges",
-      testID: "favorites-button",
-      accessibilityLabel: t("access.favorites.label"),
-      accessibilityHint: t("access.favorites.hint"),
-    },
-    {
-      name: t("rewards"),
-      icon: "medal-outline",
-      navigateTo: "profile/Achievements",
-      testID: "achievements-button",
-      unclaimedCount: userData?.newAchievements?.length ?? 0,
-      accessibilityLabel: t("access.rewards.label"),
-      accessibilityHint: t("access.rewards.hint"),
-    },
-    {
-      name: t("inventory.title"),
-      icon: "briefcase-outline",
-      navigateTo: "profile/Inventory",
-      testID: "inventory-button",
-      unclaimedCount: totalInventoryItems,
-      accessibilityLabel: t("access.inventory.label", {
-        defaultValue: "Ouvrir ton inventaire",
-      }),
-      accessibilityHint: t("access.inventory.hint", {
-        defaultValue: "Voir et gérer tes bonus et protections de série.",
-      }),
-    },
-    {
-      name: t("myChallenges"),
-      icon: "create-outline",
-      navigateTo: "profile/MyChallenges",
-      testID: "my-challenges-button",
-      accessibilityLabel: t("access.myChallenges.label"),
-      accessibilityHint: t("access.myChallenges.hint"),
-    },
-  ],
-  // 🔑 on force le recalcul quand la langue change
-  [t, i18n.language, userData, totalInventoryItems]
-);
-
-
-
-  // Grille des sections (2 par ligne)
   const rows = useMemo<ProfileSection[][]>(() => {
-  const split: ProfileSection[][] = [];
-  for (let i = 0; i < sections.length; i += 2) {
-    split.push(sections.slice(i, i + 2));
-  }
-  return split;
-}, [sections, i18n.language]);
+    const split: ProfileSection[][] = [];
+    for (let i = 0; i < sections.length; i += 2) split.push(sections.slice(i, i + 2));
+    return split;
+  }, [sections, i18n.language]);
 
-const pioneerTextPrimary = isDarkMode ? currentTheme.colors.textPrimary : "#111";
-const pioneerTextSecondary = isDarkMode ? currentTheme.colors.textSecondary : "#2B2B2B";
-const pioneerBulletTextColor = isDarkMode ? currentTheme.colors.textPrimary : "#111";
-
-
-
+  // ── États de chargement ────────────────────────────────────────────────────
   if (isLoading) {
     return (
       <GlobalLayout>
-        <StatusBar
-          translucent
-          backgroundColor="transparent"
-          barStyle={isDarkMode ? "light-content" : "dark-content"}
-        />
-        <LinearGradient
-          colors={[
-  withAlpha(currentTheme.colors.background, 1),
-  withAlpha(currentTheme.colors.cardBackground, 1),
-  withAlpha(currentTheme.colors.primary, 0.13),
-]}
-          style={styles.loadingContainer}
-        >
+        <StatusBar translucent backgroundColor="transparent" barStyle={isDarkMode ? "light-content" : "dark-content"} />
+        <LinearGradient colors={[withAlpha(currentTheme.colors.background, 1), withAlpha(currentTheme.colors.cardBackground, 1), withAlpha(currentTheme.colors.primary, 0.13)]} style={s.centered}>
           <ActivityIndicator size="large" color={currentTheme.colors.primary} />
-          <Text
-            style={[
-              styles.loadingText,
-              { color: currentTheme.colors.textSecondary },
-            ]}
-            numberOfLines={2}
-            adjustsFontSizeToFit
-          >
-            {t("loadingProfile")}
-          </Text>
+          <Text style={[s.loadingText, { color: currentTheme.colors.textSecondary }]}>{t("loadingProfile")}</Text>
         </LinearGradient>
       </GlobalLayout>
     );
@@ -388,1660 +218,512 @@ const pioneerBulletTextColor = isDarkMode ? currentTheme.colors.textPrimary : "#
   if (error || !userData) {
     return (
       <GlobalLayout>
-        <StatusBar
-          translucent
-          backgroundColor="transparent"
-          barStyle={isDarkMode ? "light-content" : "dark-content"}
-        />
-        <LinearGradient
-          colors={[
-  withAlpha(currentTheme.colors.background, 1),
-  withAlpha(currentTheme.colors.cardBackground, 1),
-  withAlpha(currentTheme.colors.primary, 0.13),
-]}
-          style={styles.loadingContainer}
-        >
-          <View style={styles.errorContainer}>
-            <Ionicons
-              name="alert-circle-outline"
-              size={normalizeSize(40)}
-              color={currentTheme.colors.textSecondary}
-            />
-            <Text
-              style={[
-                styles.loadingText,
-                { color: currentTheme.colors.textSecondary },
-              ]}
-              numberOfLines={3}
-              adjustsFontSizeToFit
-            >
-              {error || t("profileS.noData")}
-            </Text>
-          </View>
+        <StatusBar translucent backgroundColor="transparent" barStyle={isDarkMode ? "light-content" : "dark-content"} />
+        <LinearGradient colors={[withAlpha(currentTheme.colors.background, 1), withAlpha(currentTheme.colors.cardBackground, 1), withAlpha(currentTheme.colors.primary, 0.13)]} style={s.centered}>
+          <Ionicons name="alert-circle-outline" size={n(40)} color={currentTheme.colors.textSecondary} />
+          <Text style={[s.loadingText, { color: currentTheme.colors.textSecondary }]}>{error || t("profileS.noData")}</Text>
         </LinearGradient>
       </GlobalLayout>
     );
   }
 
+  // Couleurs thème
+  const cardBg = isDarkMode
+    ? [currentTheme.colors.background, currentTheme.colors.cardBackground]
+    : ["#FFFFFF", "#FFF7EE"];
+  const primaryColor = "#F97316";
+  const textPrimary = isDarkMode ? currentTheme.colors.textPrimary : "#111827";
+  const textSecondary = isDarkMode ? currentTheme.colors.textSecondary : "#6B7280";
+
   return (
     <GlobalLayout>
-      
       <LinearGradient
-  colors={[
-    withAlpha(currentTheme.colors.background, 1),
-    withAlpha(currentTheme.colors.cardBackground, 1),
-    withAlpha(currentTheme.colors.primary, 0.13),
-  ]}
-  style={styles.gradientContainer}
-  start={{ x: 0, y: 0 }}
-  end={{ x: 1, y: 1 }}
->
-  {/* Orbes décoratives en arrière-plan */}
-  <LinearGradient
-    pointerEvents="none"
-    colors={[withAlpha(currentTheme.colors.primary, 0.28), "transparent"]}
-    style={styles.bgOrbTop}
-    start={{ x: 0.2, y: 0 }}
-    end={{ x: 1, y: 1 }}
-  />
-  <LinearGradient
-    pointerEvents="none"
-    colors={[withAlpha(currentTheme.colors.secondary, 0.25), "transparent"]}
-    style={styles.bgOrbBottom}
-    start={{ x: 1, y: 0 }}
-    end={{ x: 0, y: 1 }}
-  />
+        colors={[withAlpha(currentTheme.colors.background, 1), withAlpha(currentTheme.colors.cardBackground, 1), withAlpha(currentTheme.colors.primary, 0.10)]}
+        style={s.flex} start={{ x: 0, y: 0 }} end={{ x: 1, y: 1 }}
+      >
+        {/* Orbes */}
+        <LinearGradient pointerEvents="none" colors={[withAlpha(primaryColor, 0.20), "transparent"]} style={s.orbTop} start={{ x: 0.2, y: 0 }} end={{ x: 1, y: 1 }} />
+        <LinearGradient pointerEvents="none" colors={[withAlpha(currentTheme.colors.secondary, 0.18), "transparent"]} style={s.orbBottom} start={{ x: 1, y: 0 }} end={{ x: 0, y: 1 }} />
 
-  <StatusBar
-    translucent
-    backgroundColor="transparent"
-    barStyle={isDarkMode ? "light-content" : "dark-content"}
-  />
+        <StatusBar translucent backgroundColor="transparent" barStyle={isDarkMode ? "light-content" : "dark-content"} />
+        <CustomHeader title={t("yourProfile", { defaultValue: "Ton profil" })} backgroundColor="transparent" useBlur={false} showHairline={false} />
 
-  <CustomHeader
-    title={t("yourProfile", { defaultValue: "Ton profil" })}
-    backgroundColor="transparent"
-    useBlur={false}
-    showHairline={false}
-  />
-  <View style={styles.heroHeader}>
+        <ScrollView
+          contentContainerStyle={[s.scroll, { paddingBottom: bottomContentPadding }]}
+          showsVerticalScrollIndicator={false}
+          contentInset={Platform.OS === "ios" ? { top: 4, bottom: 0 } : undefined}
+          keyboardShouldPersistTaps="handled"
+        >
 
-    <Text
-      style={[
-        styles.heroSubtitle,
-        { color: withAlpha(currentTheme.colors.textSecondary, isDarkMode ? 0.85 : 0.75) },
-      ]}
-      numberOfLines={2}
-      adjustsFontSizeToFit
-    >
-      {t("profileS.heroSub", { defaultValue: "Tout ce qui te rend plus fort, au même endroit." })}
-    </Text>
-  </View>
+          {/* ── CARTE PROFIL ─────────────────────────────────────────────── */}
+          <Animated.View entering={FadeInUp.delay(80)} style={s.cardWrap}>
+            <LinearGradient colors={cardBg as any} style={[s.card, { borderColor: withAlpha(primaryColor, isDarkMode ? 0.18 : 0.12) }]} start={{ x: 0, y: 0 }} end={{ x: 1, y: 1 }}>
+              {/* Halo top */}
+              <LinearGradient pointerEvents="none" colors={[withAlpha(primaryColor, isDarkMode ? 0.16 : 0.10), "transparent"]} style={s.cardHaloTop} start={{ x: 0.2, y: 0 }} end={{ x: 1, y: 1 }} />
 
-  <ScrollView
-  contentContainerStyle={[
-    styles.scrollContent,
-    { paddingBottom: bottomContentPadding },
-  ]}
-  showsVerticalScrollIndicator={false}
-  // ✅ iOS only, sinon double padding + glitches en release Android
-  contentInset={
-    Platform.OS === "ios"
-      ? { top: SPACING, bottom: 0 }
-      : undefined
-  }
-  scrollIndicatorInsets={{
-    bottom: bottomContentPadding,
-  }}
-  keyboardShouldPersistTaps="handled"
->
-
-<View style={styles.pageInner}>
-            {/* Carte Profil */}
-            <Animated.View
-              entering={FadeInUp.delay(100)}
-              style={styles.profileCardWrapper}
-            >
-              <LinearGradient
-                colors={
-                  isDarkMode
-                    ? [
-                        currentTheme.colors.background,
-                        currentTheme.colors.cardBackground,
-                      ]
-                    : ["#FFFFFF", "#FFE4B5"]
-                            }
-                            style={[
-                  styles.profileCard,
-                  {
-                    borderWidth: 1,
-                    borderColor: withAlpha(currentTheme.colors.secondary, isDarkMode ? 0.18 : 0.14),
-                  },
-                ]}
-
-                start={{ x: 0, y: 0 }}
-                end={{ x: 1, y: 1 }}
-              >
-                <LinearGradient
-      pointerEvents="none"
-      colors={[
-        withAlpha(currentTheme.colors.primary, isDarkMode ? 0.18 : 0.12),
-        "transparent",
-      ]}
-      style={styles.cardHaloTop}
-      start={{ x: 0.2, y: 0 }}
-      end={{ x: 1, y: 1 }}
-    />
-    <LinearGradient
-      pointerEvents="none"
-      colors={[
-        withAlpha(currentTheme.colors.secondary, isDarkMode ? 0.14 : 0.10),
-        "transparent",
-      ]}
-      style={styles.cardHaloBottom}
-      start={{ x: 1, y: 0 }}
-      end={{ x: 0, y: 1 }}
-    />
-                <View style={styles.avatarContainer}>
+              {/* Avatar + trophées */}
+              <View style={s.avatarRow}>
+                <View style={s.avatarWrap}>
                   <Image
-                    source={
-                      userData?.profileImage
-                        ? { uri: userData.profileImage }
-                        : require("../../assets/images/default-profile.webp")
-                    }
+                    source={userData?.profileImage ? { uri: userData.profileImage } : require("../../assets/images/default-profile.webp")}
                     defaultSource={require("../../assets/images/default-profile.webp")}
-                    style={[
-                      styles.avatar,
-                      {
-                        borderColor: withAlpha(currentTheme.colors.secondary, isDarkMode ? 0.25 : 0.18),
-                      },
-                    ]}
-                    accessibilityRole="image"
-                    accessibilityLabel={
-  (userData?.isPioneer ? "Pioneer · " : "") +
-  t("profile.avatar", { username: userData?.username ?? "Utilisateur" })
-}
+                    style={[s.avatar, { borderColor: withAlpha(primaryColor, isDarkMode ? 0.30 : 0.22) }]}
                   />
-                  {userData?.isPioneer === true && (
-                    <PioneerBadge
-                      size="mini"
-                      label={t("badges.pioneer", { defaultValue: "Pioneer" })}
-                      style={{ position: "absolute", bottom: -normalizeSize(10), left: normalizeSize(10) }}
-                    />
+                  {userData?.isPioneer && (
+                    <PioneerBadge size="mini" label={t("badges.pioneer", { defaultValue: "Pioneer" })} style={s.pioneerBadge} />
                   )}
-                  <Animated.View
-  entering={ZoomIn.delay(260)}
-  style={[styles.trophyChipWrap, { top: normalizeSize(10), right: normalizeSize(10) }]}
-  pointerEvents="none"
-  accessibilityElementsHidden
-  importantForAccessibility="no-hide-descendants"
->
-  <LinearGradient
-    colors={
-  isDarkMode
-    ? [
-        withAlpha(currentTheme.colors.background, 0.62),
-        withAlpha(currentTheme.colors.cardBackground, 0.52),
-      ]
-    : [
-        "rgba(255,255,255,0.96)",   // ✅ plus opaque = lisible
-        "rgba(255,244,230,0.92)",   // ✅ léger warm premium
-      ]
-}
-    start={{ x: 0, y: 0 }}
-    end={{ x: 1, y: 1 }}
-    style={[
-      styles.trophyChip,
-      {
-        borderColor: withAlpha(currentTheme.colors.trophy, isDarkMode ? 0.28 : 0.38),
-      },
-    ]}
-  >
-    {/* iOS: petit blur propre */}
-    {Platform.OS === "ios" && (
-      <BlurView
-        intensity={28}
-        tint={isDarkMode ? "dark" : "light"}
-        style={StyleSheet.absoluteFill}
-      />
-    )}
-
-    {/* halo léger */}
-    <LinearGradient
-      pointerEvents="none"
-      colors={[
-  withAlpha(currentTheme.colors.trophy, isDarkMode ? 0.22 : 0.32),
-  "transparent",
-]}
-      start={{ x: 0.2, y: 0 }}
-      end={{ x: 1, y: 1 }}
-      style={styles.trophyHalo}
-    />
-
-    <View style={styles.trophyRow}>
-      <View
-        style={[
-          styles.trophyIconBubble,
-          {
-            backgroundColor: withAlpha(currentTheme.colors.trophy, isDarkMode ? 0.16 : 0.18),
-borderColor: withAlpha(currentTheme.colors.trophy, isDarkMode ? 0.22 : 0.28),
-          },
-        ]}
-      >
-        <Ionicons name="trophy" size={normalizeSize(14)} color={currentTheme.colors.trophy} />
-      </View>
-
-      <Text
-        style={[
-          styles.trophyChipText,
-          { color: isDarkMode ? "#FFD36A" : "#8A4B00" },
-        ]}
-        numberOfLines={1}
-        adjustsFontSizeToFit
-      >
-        {userData?.trophies ?? 0}
-      </Text>
-    </View>
-  </LinearGradient>
-</Animated.View>
-
                 </View>
 
-                {/* Username (manquait) */}
-                <View style={styles.userInfo}>
-                  <Text
-                    style={[
-                      styles.username,
-                      { color: isDarkMode ? currentTheme.colors.textPrimary : "#111" },
-                    ]}
-                    numberOfLines={2}
-                    adjustsFontSizeToFit
+                {/* Chip trophées */}
+                <Animated.View entering={ZoomIn.delay(200)} style={s.trophyChip}>
+                  <LinearGradient
+                    colors={isDarkMode ? [withAlpha(currentTheme.colors.background, 0.80), withAlpha(currentTheme.colors.cardBackground, 0.70)] : ["rgba(255,255,255,0.96)", "rgba(255,244,225,0.92)"]}
+                    start={{ x: 0, y: 0 }} end={{ x: 1, y: 1 }}
+                    style={[s.trophyChipInner, { borderColor: withAlpha(currentTheme.colors.trophy, isDarkMode ? 0.30 : 0.40) }]}
                   >
-                    {userData?.username || t("yourProfile")}
+                    <Ionicons name="trophy" size={n(14)} color={currentTheme.colors.trophy} />
+                    <Text style={[s.trophyText, { color: isDarkMode ? "#FFD36A" : "#8A4B00" }]}>{userData?.trophies ?? 0}</Text>
+                  </LinearGradient>
+                </Animated.View>
+              </View>
+
+              {/* Nom */}
+              <Text style={[s.username, { color: textPrimary }]} numberOfLines={1} adjustsFontSizeToFit>
+                {userData?.username || t("yourProfile")}
+              </Text>
+
+              {/* Sous-titre discret */}
+              {userData?.challengeCategories && userData.challengeCategories.filter(Boolean).length > 0 ? (
+  <View style={s.interestsRow}>
+    {userData.challengeCategories.filter(Boolean).slice(0, 4).map((cat, i) => (
+      <View key={i} style={[s.interestPill, {
+        borderColor: withAlpha(primaryColor, isDarkMode ? 0.35 : 0.25),
+        backgroundColor: withAlpha(primaryColor, isDarkMode ? 0.10 : 0.07),
+      }]}>
+        <Text style={[s.interestPillText, { color: isDarkMode ? primaryColor : "#C86A00" }]} numberOfLines={1}>
+          {String(cat).trim()}
+        </Text>
+      </View>
+    ))}
+    {userData.challengeCategories.filter(Boolean).length > 4 && (
+      <View style={[s.interestPill, {
+        borderColor: withAlpha(primaryColor, 0.20),
+        backgroundColor: withAlpha(primaryColor, 0.06),
+      }]}>
+        <Text style={[s.interestPillText, { color: textSecondary }]}>
+          +{userData.challengeCategories.filter(Boolean).length - 4}
+        </Text>
+      </View>
+    )}
+  </View>
+) : (
+  <TouchableOpacity
+    onPress={() => router.push("profile/UserInfo")}
+    activeOpacity={0.80}
+    style={[s.interestPlaceholder, {
+      borderColor: withAlpha(primaryColor, isDarkMode ? 0.25 : 0.18),
+      backgroundColor: withAlpha(primaryColor, isDarkMode ? 0.07 : 0.05),
+    }]}
+  >
+    <Ionicons name="add-circle-outline" size={n(13)} color={primaryColor} />
+    <Text style={[s.interestPlaceholderText, { color: primaryColor }]}>
+      {t("addInterestsHere", { defaultValue: "Choisir mes catégories" })}
+    </Text>
+  </TouchableOpacity>
+)}
+            </LinearGradient>
+          </Animated.View>
+
+          {/* ── SECTION BINÔME ───────────────────────────────────────────── */}
+          <Animated.View entering={FadeInUp.delay(160)} style={s.sectionBlock}>
+            {/* Header section */}
+            <View style={s.sectionHeader}>
+              <View style={[s.sectionHeaderDot, { backgroundColor: primaryColor }]} />
+              <Text style={[s.sectionHeaderText, { color: textSecondary }]}>
+                {t("matching.sectionTitle", { defaultValue: "Binôme & invitations" })}
+              </Text>
+            </View>
+
+            <LinearGradient
+              colors={isDarkMode ? [withAlpha(currentTheme.colors.cardBackground, 0.90), withAlpha(currentTheme.colors.background, 0.80)] : ["#FFFFFF", "#FFF7EE"]}
+              style={[s.binomeCard, { borderColor: withAlpha(primaryColor, isDarkMode ? 0.16 : 0.10) }]}
+              start={{ x: 0, y: 0 }} end={{ x: 1, y: 1 }}
+            >
+              {/* Toggle duo */}
+              <Pressable
+                onPress={() => !duoToggleBusy && handleDuoToggle()}
+                disabled={duoToggleBusy}
+                style={({ pressed }) => [s.binomeRow, {
+                  backgroundColor: userData?.duoAvailable
+                    ? isDarkMode ? "rgba(249,115,22,0.10)" : "rgba(249,115,22,0.07)"
+                    : "transparent",
+                  opacity: pressed ? 0.78 : 1,
+                }]}
+              >
+                {/* Icône */}
+                <View style={[s.binomeIcon, {
+                  backgroundColor: userData?.duoAvailable
+                    ? "rgba(249,115,22,0.16)"
+                    : isDarkMode ? "rgba(255,255,255,0.08)" : "rgba(0,0,0,0.05)",
+                }]}>
+                  <Ionicons name="people-outline" size={n(20)} color={userData?.duoAvailable ? primaryColor : textSecondary} />
+                </View>
+
+                {/* Textes — flex:1 pour éviter toute coupure */}
+                <View style={s.binomeTexts}>
+                  <Text style={[s.binomeTitle, { color: textPrimary }]} numberOfLines={2}>
+                    {t("matching.duoAvailableLabel", { defaultValue: "Disponible pour un duo" })}
+                  </Text>
+                  <Text style={[s.binomeSub, { color: userData?.duoAvailable ? primaryColor : textSecondary }]} numberOfLines={2}>
+                    {userData?.duoAvailable
+                      ? t("matching.duoAvailableOn", { defaultValue: "Tu apparais dans les matchs" })
+                      : t("matching.duoAvailableOff", { defaultValue: "Tu n'apparais pas dans les matchs" })}
                   </Text>
                 </View>
 
-                {/* Détails */}
-<Animated.View
-  entering={FadeInUp.delay(400)}
-  style={[styles.detailsContainer, { alignItems: "stretch", width: "100%" }]}
->
-  {/* BIO */}
-  <View style={styles.infoBlock}>
-    <Text
-      style={[
-        styles.fieldLabel,
-        { color: isDarkMode ? currentTheme.colors.textSecondary : "#333" },
-      ]}
-      numberOfLines={1}
-      adjustsFontSizeToFit
-    >
-      {t("profileS.bioLabel", { defaultValue: "Bio" })}
-    </Text>
+                {/* Toggle custom */}
+                <CustomToggle value={!!userData?.duoAvailable} isDarkMode={isDarkMode} />
+              </Pressable>
 
-    {userData?.bio?.trim() ? (
-      <Text
-        style={[
-          styles.fieldValue,
-          { color: isDarkMode ? currentTheme.colors.textPrimary : "#111" },
-        ]}
-        numberOfLines={3}
-        adjustsFontSizeToFit
-      >
-        {userData.bio.trim()}
-      </Text>
-    ) : (
-      <TouchableOpacity
-        onPress={() => router.push("profile/UserInfo")}
-        activeOpacity={0.85}
-        style={styles.placeholderChip}
-      >
-        <Ionicons name="add-circle-outline" size={normalizeSize(14)} color={currentTheme.colors.secondary} />
-        <Text style={[styles.placeholderChipText, { color: currentTheme.colors.secondary }]}>
-          {t("addBioHere")}
-        </Text>
-      </TouchableOpacity>
-    )}
-  </View>
+              {/* Séparateur */}
+              <View style={[s.binomeDivider, { backgroundColor: isDarkMode ? "rgba(255,255,255,0.06)" : "rgba(0,0,0,0.06)" }]} />
 
-  <View style={styles.softDivider} />
+              {/* Invitations */}
+              <Pressable
+                onPress={() => setMatchingInboxVisible(true)}
+                style={({ pressed }) => [s.binomeRow, {
+                  backgroundColor: matchingCount > 0
+                    ? isDarkMode ? "rgba(249,115,22,0.10)" : "rgba(249,115,22,0.07)"
+                    : "transparent",
+                  opacity: pressed ? 0.78 : 1,
+                }]}
+              >
+                {/* Icône + badge */}
+                <View style={s.binomeIconWrap}>
+                  <View style={[s.binomeIcon, {
+                    backgroundColor: matchingCount > 0
+                      ? "rgba(249,115,22,0.16)"
+                      : isDarkMode ? "rgba(255,255,255,0.08)" : "rgba(0,0,0,0.05)",
+                  }]}>
+                    <Ionicons name="mail-outline" size={n(20)} color={matchingCount > 0 ? primaryColor : textSecondary} />
+                  </View>
+                  {matchingCount > 0 && (
+                    <View style={s.inboxBadge}>
+                      <Text style={s.inboxBadgeText}>{matchingCount > 9 ? "9+" : matchingCount}</Text>
+                    </View>
+                  )}
+                </View>
 
-  {/* LOCATION */}
-  <View style={styles.infoBlock}>
-    <Text
-      style={[
-        styles.fieldLabel,
-        { color: isDarkMode ? currentTheme.colors.textSecondary : "#333" },
-      ]}
-       numberOfLines={1}
-      adjustsFontSizeToFit
-    >
-      {t("profileS.locationLabel", { defaultValue: "Location" })}
-    </Text>
+                {/* Textes */}
+                <View style={s.binomeTexts}>
+                  <Text style={[s.binomeTitle, { color: textPrimary }]} numberOfLines={2}>
+                    {t("matching.inboxBtnLabel", { defaultValue: "Invitations de binôme" })}
+                  </Text>
+                  <Text style={[s.binomeSub, { color: matchingCount > 0 ? primaryColor : textSecondary }]} numberOfLines={2}>
+                    {matchingCount > 0
+                      ? t("matching.inboxBtnSub", { count: matchingCount, defaultValue: `${matchingCount} invitation(s) en attente` })
+                      : t("matching.inboxEmpty", { defaultValue: "Aucune invitation pour l'instant" })}
+                  </Text>
+                </View>
 
-    {userData?.location?.trim() ? (
-      <View style={styles.inline}>
-        <Ionicons name="location-outline" size={normalizeSize(16)} color={currentTheme.colors.secondary} />
-        <Text
-          style={[
-            styles.fieldValue,
-            { marginLeft: 6, color: isDarkMode ? currentTheme.colors.textPrimary : "#111" },
-          ]}
-          numberOfLines={1}
-          adjustsFontSizeToFit
-        >
-          {userData.location.trim()}
-        </Text>
-      </View>
-    ) : (
-      <TouchableOpacity
-        onPress={() => router.push("profile/UserInfo")}
-        activeOpacity={0.85}
-        style={styles.placeholderChip}
-      >
-        <Ionicons name="add-circle-outline" size={normalizeSize(14)} color={currentTheme.colors.secondary} />
-        <Text style={[styles.placeholderChipText, { color: currentTheme.colors.secondary }]}>
-          {t("addLocationHere")}
-        </Text>
-      </TouchableOpacity>
-    )}
-  </View>
+                <Ionicons name="chevron-forward" size={n(16)} color={withAlpha(textSecondary, 0.50)} />
+              </Pressable>
+            </LinearGradient>
+          </Animated.View>
 
-  <View style={styles.softDivider} />
+          {/* ── GRILLE SECTIONS ──────────────────────────────────────────── */}
+          <Animated.View entering={FadeInUp.delay(240)}>
+            <View style={s.sectionHeader}>
+              <View style={[s.sectionHeaderDot, { backgroundColor: primaryColor }]} />
+              <Text style={[s.sectionHeaderText, { color: textSecondary }]}>
+                {t("profileS.mySpace", { defaultValue: "Mon espace" })}
+              </Text>
+            </View>
+          </Animated.View>
 
-  {/* INTERESTS */}
-  <View style={styles.infoBlock}>
-    <Text
-      style={[
-        styles.fieldLabel,
-        { color: isDarkMode ? currentTheme.colors.textSecondary : "#333" },
-      ]}
-      numberOfLines={1}
-      adjustsFontSizeToFit
-    >
-      {t("profileS.interestsLabel", { defaultValue: "Interests" })}
-    </Text>
+          <View key={i18n.language} style={s.grid}>
+            {rows.map((row, rowIndex) => (
+              <Animated.View key={rowIndex} entering={FadeInUp.delay(280 + rowIndex * 80)} style={s.gridRow}>
+                {row.map((section, index) => (
+                  <Animated.View key={index} entering={ZoomIn.delay(160 + index * 40)} style={s.gridCell}>
+                    <TouchableOpacity
+                      onPress={() => router.push(section.navigateTo)}
+                      accessibilityLabel={section.accessibilityLabel}
+                      accessibilityHint={section.accessibilityHint}
+                      accessibilityRole="button"
+                      testID={section.testID}
+                      activeOpacity={0.72}
+                      style={s.gridCellTouch}
+                    >
+                      <LinearGradient
+                        colors={[withAlpha(currentTheme.colors.secondary, isDarkMode ? 0.20 : 0.14), withAlpha(primaryColor, isDarkMode ? 0.14 : 0.10), withAlpha("#FFFFFF", isDarkMode ? 0.08 : 0.16)]}
+                        start={{ x: 0, y: 0 }} end={{ x: 1, y: 1 }}
+                        style={s.gridCellGradient}
+                      >
+                        <View style={[s.gridCellInner, { backgroundColor: withAlpha(isDarkMode ? currentTheme.colors.cardBackground : "#FFFFFF", isDarkMode ? 0.55 : 0.92) }]}>
+                          {/* Highlight top */}
+                          <LinearGradient pointerEvents="none" colors={[withAlpha("#FFFFFF", isDarkMode ? 0.14 : 0.28), "transparent"]} start={{ x: 0, y: 0 }} end={{ x: 0, y: 1 }} style={s.cellHighlight} />
 
-    {takeInterests(userData?.interests).length ? (
-      <View style={styles.interestsRow}>
-        {takeInterests(userData?.interests).slice(0, 6).map((tag, i) => (
-          <View key={`${tag}-${i}`} style={[styles.interestPill, { borderColor: currentTheme.colors.secondary }]}>
-            <Text
-              style={[
-                styles.interestPillText,
-                { color: isDarkMode ? currentTheme.colors.textPrimary : "#111" },
-              ]}
-              numberOfLines={1}
-              adjustsFontSizeToFit
-            >
-              {tag}
-            </Text>
+                          <View style={s.cellTopRow}>
+                            <View style={[s.cellIconBubble, { backgroundColor: withAlpha(currentTheme.colors.background, isDarkMode ? 0.20 : 0.28), borderColor: withAlpha(currentTheme.colors.secondary, isDarkMode ? 0.16 : 0.12) }]}>
+                              <Ionicons name={section.icon} size={n(20)} color={currentTheme.colors.secondary} />
+                              {(section.unclaimedCount ?? 0) > 0 && (
+                                <Animated.View entering={ZoomIn} style={s.cellBadge}>
+                                  {(section.unclaimedCount ?? 0) > 1 && (
+                                    <Text style={s.cellBadgeText}>{section.unclaimedCount! > 99 ? "99+" : section.unclaimedCount}</Text>
+                                  )}
+                                </Animated.View>
+                              )}
+                            </View>
+                            <Ionicons name={I18nManager.isRTL ? "chevron-back" : "chevron-forward"} size={n(15)} color={withAlpha(textSecondary, 0.60)} />
+                          </View>
+
+                          <Text style={[s.cellText, { color: textPrimary }]} numberOfLines={2} adjustsFontSizeToFit>
+                            {section.name}
+                          </Text>
+                        </View>
+                      </LinearGradient>
+                    </TouchableOpacity>
+                  </Animated.View>
+                ))}
+              </Animated.View>
+            ))}
           </View>
-        ))}
-        {takeInterests(userData?.interests).length > 6 && (
-          <View style={[styles.interestPill, { borderColor: currentTheme.colors.secondary }]}>
-            <Text style={[styles.interestPillText, { color: currentTheme.colors.secondary }]}>
-              +{takeInterests(userData?.interests).length - 6}
-            </Text>
+
+          <View style={{ height: n(8) }} />
+        </ScrollView>
+
+        {/* Bannière pub */}
+        {showBanners && (
+          <View style={[s.bannerWrap, { bottom: tabBarHeight + insets.bottom }]} pointerEvents="box-none">
+            <BannerSlot onHeight={handleAdHeight} />
           </View>
         )}
-      </View>
-    ) : (
-      <TouchableOpacity
-        onPress={() => router.push("profile/UserInfo")}
-        activeOpacity={0.85}
-        style={[styles.placeholderChip, { alignSelf: "flex-start" }]}
-      >
-        <Ionicons name="add-circle-outline" size={normalizeSize(14)} color={currentTheme.colors.secondary} />
-        <Text style={[styles.placeholderChipText, { color: currentTheme.colors.secondary }]}>
-          {t("addInterestsHere")}
-        </Text>
-      </TouchableOpacity>
-    )}
-  </View>
 
-  <View style={styles.softDivider} />
-
-{/* DUO TOGGLE */}
-<View style={[styles.infoBlock, { marginBottom: 4 }]}>
-  <View style={{
-    flexDirection: "row",
-    alignItems: "center",
-    justifyContent: "space-between",
-    paddingVertical: normalizeSize(6),
-    paddingHorizontal: normalizeSize(12),
-    borderRadius: normalizeSize(14),
-    backgroundColor: isDarkMode
-      ? "rgba(0,200,255,0.07)"
-      : "rgba(0,160,200,0.06)",
-    borderWidth: 1,
-    borderColor: isDarkMode
-      ? "rgba(0,200,255,0.18)"
-      : "rgba(0,160,200,0.14)",
-  }}>
-    {/* Left: icon + texts */}
-    <View style={{ flexDirection: "row", alignItems: "center", gap: normalizeSize(10), flex: 1, minWidth: 0 }}>
-      <View style={{
-        width: normalizeSize(36),
-        height: normalizeSize(36),
-        borderRadius: normalizeSize(11),
-        alignItems: "center",
-        justifyContent: "center",
-        backgroundColor: isDarkMode
-          ? "rgba(0,200,255,0.16)"
-          : "rgba(0,160,200,0.12)",
-      }}>
-        <Ionicons
-          name="people-outline"
-          size={normalizeSize(18)}
-          color={isDarkMode ? "#00C8FF" : "#0095C2"}
-        />
-      </View>
-
-      <View style={{ flex: 1, minWidth: 0 }}>
-        <Text style={[
-          styles.fieldLabel,
-          { color: isDarkMode ? "#F8FAFC" : "#0B1220", marginBottom: 0 }
-        ]} numberOfLines={1}>
-          {t("matching.duoAvailableLabel", { defaultValue: "Disponible pour un duo" })}
-        </Text>
-        <Text style={{
-          fontFamily: "Comfortaa_400Regular",
-          fontSize: normalizeSize(11),
-          color: isDarkMode ? "rgba(255,255,255,0.48)" : "rgba(0,0,0,0.42)",
-          marginTop: 2,
-        }} numberOfLines={1}>
-          {userData?.duoAvailable
-            ? t("matching.duoAvailableOn", { defaultValue: "Tu apparais dans les matchs" })
-            : t("matching.duoAvailableOff", { defaultValue: "Tu n'apparais pas dans les matchs" })}
-        </Text>
-      </View>
-    </View>
-
-    {/* Right: Switch */}
-    <Switch
-      value={!!userData?.duoAvailable}
-      onValueChange={handleDuoToggle}
-      disabled={duoToggleBusy}
-      trackColor={{
-        false: isDarkMode ? "rgba(255,255,255,0.12)" : "rgba(0,0,0,0.10)",
-        true: "#00C8FF",
-      }}
-      thumbColor={
-        userData?.duoAvailable
-          ? (isDarkMode ? "#fff" : "#fff")
-          : (isDarkMode ? "rgba(255,255,255,0.7)" : "rgba(0,0,0,0.35)")
-      }
-      ios_backgroundColor={isDarkMode ? "rgba(255,255,255,0.12)" : "rgba(0,0,0,0.10)"}
-      style={{ marginLeft: normalizeSize(10) }}
-    />
-  </View>
-</View>
-
-{matchingCount > 0 && (
-  <>
-    <View style={styles.softDivider} />
-    <View style={[styles.infoBlock, { marginBottom: 4 }]}>
-      <Pressable
-        onPress={() => setMatchingInboxVisible(true)}
-        style={({ pressed }) => [{
-          flexDirection: "row",
-          alignItems: "center",
-          justifyContent: "space-between",
-          paddingVertical: normalizeSize(10),
-          paddingHorizontal: normalizeSize(12),
-          borderRadius: normalizeSize(14),
-          backgroundColor: isDarkMode
-            ? "rgba(255,159,28,0.10)"
-            : "rgba(255,159,28,0.08)",
-          borderWidth: 1,
-          borderColor: isDarkMode
-            ? "rgba(255,159,28,0.28)"
-            : "rgba(255,159,28,0.22)",
-          opacity: pressed ? 0.85 : 1,
-        }]}
-      >
-        <View style={{ flexDirection: "row", alignItems: "center", gap: normalizeSize(10), flex: 1 }}>
-          <View style={{
-            width: normalizeSize(36),
-            height: normalizeSize(36),
-            borderRadius: normalizeSize(11),
-            alignItems: "center",
-            justifyContent: "center",
-            backgroundColor: isDarkMode ? "rgba(255,159,28,0.20)" : "rgba(255,159,28,0.16)",
-          }}>
-            <Ionicons name="mail-outline" size={normalizeSize(18)} color="#FF9F1C" />
-          </View>
-          <View style={{ flex: 1, minWidth: 0 }}>
-            <Text style={[styles.fieldLabel, { color: isDarkMode ? "#F8FAFC" : "#0B1220", marginBottom: 0 }]} numberOfLines={1}>
-              {t("matching.inboxBtnLabel", { defaultValue: "Invitations de binôme" })}
-            </Text>
-            <Text style={{
-              fontFamily: "Comfortaa_400Regular",
-              fontSize: normalizeSize(11),
-              color: isDarkMode ? "rgba(255,255,255,0.48)" : "rgba(0,0,0,0.42)",
-              marginTop: 2,
-            }} numberOfLines={1}>
-              {t("matching.inboxBtnSub", {
-                count: matchingCount,
-                defaultValue: `${matchingCount} en attente`,
-              })}
-            </Text>
-          </View>
-        </View>
-
-        {/* Badge count */}
-        <View style={{
-          minWidth: normalizeSize(22),
-          height: normalizeSize(22),
-          borderRadius: 999,
-          backgroundColor: "#FF9F1C",
-          alignItems: "center",
-          justifyContent: "center",
-          paddingHorizontal: normalizeSize(6),
-          marginLeft: normalizeSize(8),
-        }}>
-          <Text style={{
-            fontFamily: "Comfortaa_700Bold",
-            fontSize: normalizeSize(11),
-            color: "#000",
-          }}>
-            {matchingCount > 9 ? "9+" : matchingCount}
-          </Text>
-        </View>
-
-        <Ionicons
-          name="chevron-forward"
-          size={normalizeSize(16)}
-          color={isDarkMode ? "rgba(255,255,255,0.5)" : "rgba(0,0,0,0.4)"}
-          style={{ marginLeft: normalizeSize(6) }}
-        />
-      </Pressable>
-    </View>
-  </>
-)}
-</Animated.View>
-
-
+        {/* ── MODAL PIONEER ────────────────────────────────────────────── */}
+        <Modal visible={showPioneerModal} transparent animationType="fade" statusBarTranslucent onRequestClose={() => setShowPioneerModal(false)} presentationStyle="overFullScreen" hardwareAccelerated>
+          <View style={s.pioneerOverlay} pointerEvents="auto">
+            <BlurView intensity={55} tint={isDarkMode ? "dark" : "light"} style={StyleSheet.absoluteFill} />
+            <View style={[StyleSheet.absoluteFill, { backgroundColor: isDarkMode ? "rgba(0,0,0,0.45)" : "rgba(0,0,0,0.25)" }]} />
+            <Animated.View entering={ZoomIn.duration(260)} style={[s.pioneerWrap, { paddingTop: 0, paddingBottom: 0 }]}>
+              <LinearGradient
+                colors={isDarkMode ? [withAlpha(currentTheme.colors.cardBackground, 0.92), withAlpha(currentTheme.colors.background, 0.78)] : ["rgba(255,255,255,0.92)", "rgba(255,245,230,0.92)"]}
+                start={{ x: 0, y: 0 }} end={{ x: 1, y: 1 }}
+                style={[s.pioneerCard, { borderColor: withAlpha(currentTheme.colors.secondary, isDarkMode ? 0.35 : 0.45), marginTop: insets.top + n(10), marginBottom: insets.bottom + n(10) }]}
+              >
+                <LinearGradient pointerEvents="none" colors={[withAlpha(currentTheme.colors.primary, isDarkMode ? 0.35 : 0.25), "transparent"]} style={s.pioneerHaloTop} start={{ x: 0.2, y: 0 }} end={{ x: 1, y: 1 }} />
+                <LinearGradient pointerEvents="none" colors={[withAlpha(currentTheme.colors.secondary, isDarkMode ? 0.28 : 0.22), "transparent"]} style={s.pioneerHaloBottom} start={{ x: 1, y: 0 }} end={{ x: 0, y: 1 }} />
+                <ScrollView style={{ width: "100%" }} contentContainerStyle={s.pioneerContent} showsVerticalScrollIndicator={false} bounces={false}>
+                  <View style={s.pioneerHero}>
+                    <LinearGradient colors={[withAlpha(currentTheme.colors.secondary, 0.95), withAlpha(currentTheme.colors.primary, 0.85)]} start={{ x: 0, y: 0 }} end={{ x: 1, y: 1 }} style={s.pioneerIconRing}>
+                      <View style={[s.pioneerIconInner, { backgroundColor: withAlpha(currentTheme.colors.background, isDarkMode ? 0.55 : 0.35) }]}>
+                        <Ionicons name="sparkles" size={n(28)} color={isDarkMode ? "#FFD36A" : "#FFB800"} />
+                      </View>
+                    </LinearGradient>
+                    <View style={s.pioneerPillRow}>
+                      <View style={[s.pioneerPill, { backgroundColor: withAlpha(currentTheme.colors.secondary, isDarkMode ? 0.16 : 0.12), borderColor: withAlpha(currentTheme.colors.secondary, 0.25) }]}>
+                        <Text style={[s.pioneerPillText, { color: isDarkMode ? currentTheme.colors.secondary : "#C86A00" }]}>{t("pioneerModal.pill", { defaultValue: "1000 premiers" })}</Text>
+                      </View>
+                      <View style={[s.pioneerPill, { backgroundColor: withAlpha(currentTheme.colors.trophy, isDarkMode ? 0.14 : 0.10), borderColor: withAlpha(currentTheme.colors.trophy, 0.22) }]}>
+                        <Ionicons name="trophy" size={n(14)} color={currentTheme.colors.trophy} />
+                        <Text style={[s.pioneerPillText, { color: currentTheme.colors.trophy, marginLeft: 6 }]}>+50 {t("pioneerModal.trophiesShort", { defaultValue: "trophées" })}</Text>
+                      </View>
+                    </View>
+                  </View>
+                  <Text style={[s.pioneerTitle, { color: isDarkMode ? currentTheme.colors.textPrimary : "#111" }]} numberOfLines={3} adjustsFontSizeToFit>{t("pioneerModal.title", { defaultValue: "Tu fais partie des Pioneers." })}</Text>
+                  <Text style={[s.pioneerDesc, { color: isDarkMode ? currentTheme.colors.textSecondary : "#2B2B2B" }]}>
+                    <Trans i18nKey="pioneerModal.description" values={{ first: 1000, trophies: 50 }} components={{ b: <Text style={[s.pioneerBold, { color: isDarkMode ? currentTheme.colors.textPrimary : "#FF8A00" }]} /> }} />
+                  </Text>
+                  <View style={s.pioneerBullets}>
+                    {[{ icon: "shield-checkmark-outline", key: "pioneerModal.b1", def: "Badge Pioneer visible sur ton profil." }, { icon: "flash-outline", key: "pioneerModal.b2", def: "Bonus immédiat pour accélérer ta progression." }, { icon: "people-outline", key: "pioneerModal.b3", def: "Tu fais partie de la toute première vague." }].map((b, i) => (
+                      <View key={i} style={[s.pioneerBulletRow, i === 2 && { marginBottom: 0 }]}>
+                        <Ionicons name={b.icon as any} size={n(18)} color={currentTheme.colors.secondary} />
+                        <Text style={[s.pioneerBulletText, { color: isDarkMode ? currentTheme.colors.textPrimary : "#111" }]}>{t(b.key, { defaultValue: b.def })}</Text>
+                      </View>
+                    ))}
+                  </View>
+                  <TouchableOpacity onPress={() => setShowPioneerModal(false)} activeOpacity={0.85} style={s.pioneerCtaWrap}>
+                    <LinearGradient colors={[currentTheme.colors.secondary, currentTheme.colors.primary]} start={{ x: 0, y: 0 }} end={{ x: 1, y: 1 }} style={s.pioneerCta}>
+                      <Text style={s.pioneerCtaText}>{t("pioneerModal.cta", { defaultValue: "Let's go 🚀" })}</Text>
+                      <Ionicons name="arrow-forward" size={n(16)} color="#FFF" />
+                    </LinearGradient>
+                  </TouchableOpacity>
+                  <Text style={[s.pioneerFoot, { color: withAlpha(currentTheme.colors.textSecondary, 0.85) }]}>{t("pioneerModal.foot", { defaultValue: "Merci de construire l'aventure avec nous." })}</Text>
+                </ScrollView>
               </LinearGradient>
             </Animated.View>
-
-            {/* Sections / Boutons */}
-            <View key={i18n.language} style={styles.sectionsContainer}>
-  {rows.map((row, rowIndex) => (
-    <Animated.View
-      key={rowIndex}
-      entering={FadeInUp.delay(500 + rowIndex * 100)}
-      style={styles.rowContainer}
-    >
-      {row.map((section, index) => (
-        <Animated.View
-          key={index}
-          entering={ZoomIn.delay(200 + index * 50)}
-          style={styles.sectionButton}
-        >
-          <TouchableOpacity
-            onPress={() => router.push(section.navigateTo)}
-            accessibilityLabel={section.accessibilityLabel}
-            accessibilityHint={section.accessibilityHint}
-            accessibilityRole="button"
-            testID={section.testID}
-            activeOpacity={0.7}
-            style={styles.sectionTouchable}     
-          >
-            <LinearGradient
-  colors={[
-    withAlpha(currentTheme.colors.secondary, isDarkMode ? 0.22 : 0.16),
-    withAlpha(currentTheme.colors.primary, isDarkMode ? 0.16 : 0.12),
-    withAlpha("#FFFFFF", isDarkMode ? 0.10 : 0.18),
-  ]}
-  start={{ x: 0, y: 0 }}
-  end={{ x: 1, y: 1 }}
-  style={styles.sectionCardOuter}
->
-  <View
-    style={[
-      styles.sectionCardInner,
-      {
-        backgroundColor: withAlpha(
-          isDarkMode ? currentTheme.colors.cardBackground : "#FFFFFF",
-          isDarkMode ? 0.54 : 0.90
-        ),
-      },
-    ]}
-  >
-    {/* top highlight (premium) */}
-    <LinearGradient
-      pointerEvents="none"
-      colors={[
-        withAlpha("#FFFFFF", isDarkMode ? 0.16 : 0.30),
-        "transparent",
-      ]}
-      start={{ x: 0, y: 0 }}
-      end={{ x: 0, y: 1 }}
-      style={styles.sectionTopHighlight}
-    />
-
-    {/* halo */}
-    <LinearGradient
-      pointerEvents="none"
-      colors={[
-        withAlpha(currentTheme.colors.primary, isDarkMode ? 0.14 : 0.10),
-        "transparent",
-      ]}
-      style={styles.sectionHalo}
-      start={{ x: 0.2, y: 0 }}
-      end={{ x: 1, y: 1 }}
-    />
-
-    <View style={styles.sectionTopRow}>
-      <View
-        style={[
-          styles.sectionIconBubble,
-          {
-            backgroundColor: withAlpha(
-              currentTheme.colors.background,
-              isDarkMode ? 0.18 : 0.30
-            ),
-            borderColor: withAlpha(
-              currentTheme.colors.secondary,
-              isDarkMode ? 0.16 : 0.12
-            ),
-          },
-        ]}
-      >
-        <Ionicons
-          name={section.icon as keyof typeof Ionicons.glyphMap}
-          size={normalizeSize(20)}
-          color={currentTheme.colors.secondary}
-        />
-
-        {(section.unclaimedCount ?? 0) > 0 && (
-          <Animated.View entering={ZoomIn} style={styles.badgeDot}>
-            {(section.unclaimedCount ?? 0) > 1 && (
-              <Text style={styles.badgeText}>
-   {section.unclaimedCount > 99 ? "99+" : section.unclaimedCount}
- </Text>
-            )}
-          </Animated.View>
-        )}
-      </View>
-
-      <Ionicons
-        name={I18nManager.isRTL ? "chevron-back" : "chevron-forward"}
-        size={normalizeSize(16)}
-        color={withAlpha(currentTheme.colors.textSecondary, 0.75)}
-      />
-    </View>
-
-    <Text
-      style={[
-        styles.sectionText,
-        { color: isDarkMode ? currentTheme.colors.textPrimary : "#111" },
-      ]}
-      numberOfLines={2}
-      adjustsFontSizeToFit
-    >
-      {section.name}
-    </Text>
-  </View>
-</LinearGradient>
-
-          </TouchableOpacity>
-        </Animated.View>
-      ))}
-    </Animated.View>
-  ))}
-</View>
-
-         <View style={{ height: normalizeSize(10) }} />
           </View>
-        </ScrollView>
-        {/* Bannière pub */}
-        {/* Bannière dockée au-dessus de la TabBar (iOS + Android) */}
-{showBanners && (
-  <View
-  style={{
-    position: "absolute",
-    left: 0,
-    right: 0,
-    bottom: tabBarHeight + insets.bottom,
-    alignItems: "center",
-    zIndex: 50, // ✅ suffisant
-    elevation: 50, // ✅ Android
-    backgroundColor: "transparent",
-    paddingBottom: 6,
-  }}
-  pointerEvents="box-none"
->
+        </Modal>
 
-    <BannerSlot onHeight={handleAdHeight} />
-  </View>
-)}
-
-        {/* 🌟 Modal Pioneer — Apple Keynote glass */}
-<Modal
-  visible={showPioneerModal}
-  transparent
-  animationType="fade"
-  statusBarTranslucent
-  onRequestClose={() => setShowPioneerModal(false)}
-  presentationStyle="overFullScreen"
- hardwareAccelerated
->
-  <View style={styles.pioneerOverlay} pointerEvents="auto">
-    {/* Backdrop blur */}
-    <BlurView intensity={55} tint={isDarkMode ? "dark" : "light"} style={StyleSheet.absoluteFill} />
-
-    {/* Soft dim */}
-    <View
-      style={[
-        StyleSheet.absoluteFill,
-        { backgroundColor: isDarkMode ? "rgba(0,0,0,0.45)" : "rgba(0,0,0,0.25)" },
-      ]}
-    />
-
-    <Animated.View
-   entering={ZoomIn.duration(260)}
-   style={[
-     styles.pioneerWrap,
-     {
-       paddingTop: 0,
-       paddingBottom: 0,
-     },
-   ]}
- >
-      {/* Card */}
-      <LinearGradient
-        colors={
-          isDarkMode
-            ? [
-                withAlpha(currentTheme.colors.cardBackground, 0.92),
-                withAlpha(currentTheme.colors.background, 0.78),
-              ]
-            : ["rgba(255,255,255,0.92)", "rgba(255,245,230,0.92)"]
-        }
-        start={{ x: 0, y: 0 }}
-        end={{ x: 1, y: 1 }}
-        style={[
-          styles.pioneerCard,
-          {
-            borderColor: withAlpha(currentTheme.colors.secondary, isDarkMode ? 0.35 : 0.45),
-            marginTop: insets.top + normalizeSize(10),
-            marginBottom: insets.bottom + normalizeSize(10),
-          },
-        ]}
-      >
-        {/* Decorative halo */}
-        <LinearGradient
-          pointerEvents="none"
-          colors={[
-            withAlpha(currentTheme.colors.primary, isDarkMode ? 0.35 : 0.25),
-            "transparent",
-          ]}
-          style={styles.pioneerHaloTop}
-          start={{ x: 0.2, y: 0 }}
-          end={{ x: 1, y: 1 }}
+        {/* Matching Inbox */}
+        <MatchingInboxModal
+          visible={matchingInboxVisible}
+          onClose={() => setMatchingInboxVisible(false)}
+          items={matchingItems}
+          onAccepted={(item) => { setMatchingInboxVisible(false); router.push(`/challenge-details/${item.challengeId}`); }}
         />
-        <LinearGradient
-          pointerEvents="none"
-          colors={[
-            withAlpha(currentTheme.colors.secondary, isDarkMode ? 0.28 : 0.22),
-            "transparent",
-          ]}
-          style={styles.pioneerHaloBottom}
-          start={{ x: 1, y: 0 }}
-          end={{ x: 0, y: 1 }}
-        />
-
-        {/* Content (scrollable si petit écran) */}
-        <ScrollView
-          style={{ width: "100%" }}
-          contentContainerStyle={styles.pioneerContent}
-          showsVerticalScrollIndicator={false}
-          bounces={false}
-        >
-          {/* Icon ring */}
-          <View style={styles.pioneerHero}>
-            <LinearGradient
-              colors={[
-                withAlpha(currentTheme.colors.secondary, 0.95),
-                withAlpha(currentTheme.colors.primary, 0.85),
-              ]}
-              start={{ x: 0, y: 0 }}
-              end={{ x: 1, y: 1 }}
-              style={styles.pioneerIconRing}
-            >
-              <View
-                style={[
-                  styles.pioneerIconInner,
-                  { backgroundColor: withAlpha(currentTheme.colors.background, isDarkMode ? 0.55 : 0.35) },
-                ]}
-              >
-                <Ionicons name="sparkles" size={normalizeSize(28)} color={isDarkMode ? "#FFD36A" : "#FFB800"} />
-              </View>
-            </LinearGradient>
-
-            <View style={styles.pioneerPillRow}>
-              <View
-                style={[
-                  styles.pioneerPill,
-                  { backgroundColor: withAlpha(currentTheme.colors.secondary, isDarkMode ? 0.16 : 0.12), borderColor: withAlpha(currentTheme.colors.secondary, 0.25) },
-                ]}
-              >
-                <Text style={[styles.pioneerPillText, { color: isDarkMode ? currentTheme.colors.secondary : "#C86A00" }]}>
-                  {t("pioneerModal.pill", { defaultValue: "1000 premiers" })}
-                </Text>
-              </View>
-
-              <View
-                style={[
-                  styles.pioneerPill,
-                  { backgroundColor: withAlpha(currentTheme.colors.trophy, isDarkMode ? 0.14 : 0.10), borderColor: withAlpha(currentTheme.colors.trophy, 0.22) },
-                ]}
-              >
-                <Ionicons name="trophy" size={normalizeSize(14)} color={currentTheme.colors.trophy} />
-                <Text style={[styles.pioneerPillText, { color: currentTheme.colors.trophy, marginLeft: 6 }]}>
-                  +{50} {t("pioneerModal.trophiesShort", { defaultValue: "trophées" })}
-                </Text>
-              </View>
-            </View>
-          </View>
-
-          <Text
-            style={[
-              styles.pioneerTitle,
-              { color: pioneerTextPrimary },
-            ]}
-            numberOfLines={3}
-            adjustsFontSizeToFit
-          >
-            {t("pioneerModal.title", { defaultValue: "Tu fais partie des Pioneers." })}
-          </Text>
-
-          <Text style={[styles.pioneerDesc, { color: pioneerTextSecondary }]}>
-            <Trans
-              i18nKey="pioneerModal.description"
-              values={{ first: 1000, trophies: 50 }}
-              components={{ b: <Text style={[styles.pioneerBold, { color: isDarkMode ? pioneerTextPrimary : "#FF8A00" }]} />,
-              }}
-            />
-          </Text>
-
-          {/* Micro value props */}
-          <View style={styles.pioneerBullets}>
-            <View style={styles.pioneerBulletRow}>
-              <Ionicons name="shield-checkmark-outline" size={normalizeSize(18)} color={currentTheme.colors.secondary} />
-              <Text style={[styles.pioneerBulletText, { color: pioneerBulletTextColor }]}>
-                {t("pioneerModal.b1", { defaultValue: "Badge Pioneer visible sur ton profil." })}
-              </Text>
-            </View>
-
-            <View style={styles.pioneerBulletRow}>
-              <Ionicons name="flash-outline" size={normalizeSize(18)} color={currentTheme.colors.secondary} />
-              <Text style={[styles.pioneerBulletText, { color: pioneerBulletTextColor }]}>
-                {t("pioneerModal.b2", { defaultValue: "Bonus immédiat pour accélérer ta progression." })}
-              </Text>
-            </View>
-
-            <View style={styles.pioneerBulletRow}>
-              <Ionicons name="people-outline" size={normalizeSize(18)} color={currentTheme.colors.secondary} />
-              <Text style={[styles.pioneerBulletText, { color: pioneerBulletTextColor }]}>
-                {t("pioneerModal.b3", { defaultValue: "Tu fais partie de la toute première vague." })}
-              </Text>
-            </View>
-          </View>
-
-          {/* CTA */}
-          <TouchableOpacity
-            onPress={() => setShowPioneerModal(false)}
-            activeOpacity={0.85}
-            style={styles.pioneerCtaWrap}
-            accessibilityRole="button"
-            accessibilityLabel={t("pioneerModal.ctaA11y", { defaultValue: "Continuer" })}
-            accessibilityHint={t("pioneerModal.ctaHintA11y", { defaultValue: "Ferme cette fenêtre et continue." })}
-          >
-            <LinearGradient
-              colors={[currentTheme.colors.secondary, currentTheme.colors.primary]}
-              start={{ x: 0, y: 0 }}
-              end={{ x: 1, y: 1 }}
-              style={styles.pioneerCta}
-            >
-              <Text style={styles.pioneerCtaText}>
-                {t("pioneerModal.cta", { defaultValue: "Let’s go 🚀" })}
-              </Text>
-              <Ionicons name="arrow-forward" size={normalizeSize(16)} color="#FFF" />
-            </LinearGradient>
-          </TouchableOpacity>
-
-          <Text style={[styles.pioneerFoot, { color: withAlpha(currentTheme.colors.textSecondary, 0.85) }]}>
-            {t("pioneerModal.foot", { defaultValue: "Merci de construire l’aventure avec nous." })}
-          </Text>
-        </ScrollView>
-      </LinearGradient>
-    </Animated.View>
-  </View>
-</Modal>
-
-{/* ✅ Matching Inbox Modal */}
-<MatchingInboxModal
-  visible={matchingInboxVisible}
-  onClose={() => setMatchingInboxVisible(false)}
-  items={matchingItems}
-  onAccepted={(item) => {
-    setMatchingInboxVisible(false);
-    // Naviguer vers le challenge-details du duo accepté
-    router.push(`/challenge-details/${item.challengeId}`);
-  }}
-/>
-
-
       </LinearGradient>
     </GlobalLayout>
   );
 }
 
-const styles = StyleSheet.create({
-  container: { flex: 1 },
+// ── Styles ────────────────────────────────────────────────────────────────────
+const s = StyleSheet.create({
+  flex: { flex: 1 },
+  centered: { flex: 1, justifyContent: "center", alignItems: "center" },
+  loadingText: { marginTop: n(10), fontSize: n(15), fontFamily: "Comfortaa_400Regular", textAlign: "center" },
 
-  scrollContent: {
-    paddingHorizontal: normalizeSize(16),
-  paddingTop: normalizeSize(10),
+  scroll: { paddingHorizontal: n(16), paddingTop: n(8) },
+
+  orbTop: { position: "absolute", top: -SCREEN_WIDTH * 0.25, left: -SCREEN_WIDTH * 0.2, width: SCREEN_WIDTH * 0.9, height: SCREEN_WIDTH * 0.9, borderRadius: SCREEN_WIDTH * 0.45 },
+  orbBottom: { position: "absolute", bottom: -SCREEN_WIDTH * 0.3, right: -SCREEN_WIDTH * 0.25, width: SCREEN_WIDTH * 1.1, height: SCREEN_WIDTH * 1.1, borderRadius: SCREEN_WIDTH * 0.55 },
+
+  // ── Carte profil ──────────────────────────────────────────────────────────
+  cardWrap: { marginBottom: n(14) },
+  card: {
+    borderRadius: n(24), padding: n(20), borderWidth: 1, overflow: "hidden",
+    shadowColor: "#000", shadowOffset: { width: 0, height: n(8) }, shadowOpacity: 0.08, shadowRadius: n(20), elevation: 2,
   },
-inline: {
-  flexDirection: "row",
-  alignItems: "center",
-},
- pageInner: {
-   width: "100%",
-   borderRadius: normalizeSize(24),
-   padding: normalizeSize(14),
-   backgroundColor: "rgba(255,255,255,0.02)",
- },
+  cardHaloTop: { position: "absolute", top: -SCREEN_WIDTH * 0.2, left: -SCREEN_WIDTH * 0.15, width: SCREEN_WIDTH * 0.65, height: SCREEN_WIDTH * 0.65, borderRadius: SCREEN_WIDTH * 0.325 },
 
-infoBlock: {               // AVANT: marginBottom: normalizeSize(12)
-  marginBottom: normalizeSize(6),
-},
-fieldLabel: {
-  fontFamily: "Comfortaa_700Bold",
-  fontSize: normalizeSize(13),
-  opacity: 0.9,
-  marginBottom: normalizeSize(6),
-  writingDirection: I18nManager.isRTL ? "rtl" : "ltr",
- textAlign: I18nManager.isRTL ? "right" : "left",
-},
+  avatarRow: { flexDirection: "row", alignItems: "flex-start", justifyContent: "center" },
+  avatarWrap: { position: "relative", alignItems: "center" },
+  avatar: { width: n(96), height: n(96), borderRadius: n(48), borderWidth: 3 },
+  pioneerBadge: { position: "absolute", bottom: -n(10), left: n(8) },
 
-fieldValue: {
-  fontFamily: "Comfortaa_400Regular",
-  fontSize: normalizeSize(14),
-  lineHeight: normalizeSize(18),
-  writingDirection: I18nManager.isRTL ? "rtl" : "ltr",
- textAlign: I18nManager.isRTL ? "right" : "left",
-},
-softDivider: {             // AVANT: marginVertical: normalizeSize(8)
-  height: 1,
-  backgroundColor: "rgba(255,255,255,0.08)",
-  marginVertical: normalizeSize(1),
-},
-interestsRow: {            // AVANT: gap: normalizeSize(8)
-  flexDirection: "row",
-  flexWrap: "wrap",
-  gap: normalizeSize(3),
-},
-heroHeader: {
-  paddingHorizontal: normalizeSize(18),
-  paddingTop: normalizeSize(6),
-  paddingBottom: normalizeSize(8),
-},
-heroTitle: {
-  fontFamily: "Comfortaa_700Bold",
-  fontSize: normalizeSize(22),
-  letterSpacing: -0.2,
-},
-heroSubtitle: {
-  marginTop: normalizeSize(4),
-  fontFamily: "Comfortaa_400Regular",
-  fontSize: normalizeSize(13),
-  lineHeight: normalizeSize(18),
-},
+  trophyChip: { position: "absolute", right: 0, top: 0 },
+  trophyChipInner: {
+    flexDirection: "row", alignItems: "center", gap: n(5),
+    paddingVertical: n(5), paddingHorizontal: n(10),
+    borderRadius: n(999), borderWidth: 1, overflow: "hidden",
+  },
+  trophyText: { fontFamily: "Comfortaa_700Bold", fontSize: n(13), includeFontPadding: false },
 
-cardHaloTop: {
-  position: "absolute",
-  top: -SCREEN_WIDTH * 0.22,
-  left: -SCREEN_WIDTH * 0.18,
-  width: SCREEN_WIDTH * 0.70,
-  height: SCREEN_WIDTH * 0.70,
-  borderRadius: SCREEN_WIDTH * 0.35,
-},
-cardHaloBottom: {
-  position: "absolute",
-  bottom: -SCREEN_WIDTH * 0.25,
-  right: -SCREEN_WIDTH * 0.20,
-  width: SCREEN_WIDTH * 0.80,
-  height: SCREEN_WIDTH * 0.80,
-  borderRadius: SCREEN_WIDTH * 0.40,
-},
+  username: { fontFamily: "Comfortaa_700Bold", fontSize: n(24), letterSpacing: -0.3, textAlign: "center", marginTop: n(14) },
+  userSub: { fontFamily: "Comfortaa_400Regular", fontSize: n(12), textAlign: "center", marginTop: n(4) },
 
-pioneerOverlay: {
-  position: "absolute",
-  top: 0,
-  left: 0,
-  right: 0,
-  bottom: 0,
-  justifyContent: "center",
-  alignItems: "center",
-  paddingHorizontal: 0,
-},
+  // ── Section headers ───────────────────────────────────────────────────────
+  sectionHeader: { flexDirection: "row", alignItems: "center", gap: n(8), marginBottom: n(10), marginTop: n(4) },
+  sectionHeaderDot: { width: n(6), height: n(6), borderRadius: n(3) },
+  sectionHeaderText: { fontFamily: "Comfortaa_700Bold", fontSize: n(11), letterSpacing: 0.5, textTransform: "uppercase" },
 
-pioneerWrap: {
-  width: "100%",
-  paddingHorizontal: normalizeSize(16),
-  alignItems: "center",
-  justifyContent: "center",
-  flex: 1,
-},
-trophyChipWrap: {
-  position: "absolute",
-  zIndex: 5,
-},
-
-trophyChip: {
-  borderWidth: 1,
-  borderRadius: normalizeSize(999),
-  overflow: "hidden",
-  paddingVertical: normalizeSize(6),
-  paddingHorizontal: normalizeSize(8),
-  minHeight: normalizeSize(28),
-  minWidth: normalizeSize(56),
-  justifyContent: "center",
-
-  // shadow iOS + elevation Android
-  shadowColor: "#000",
-  shadowOffset: { width: 0, height: 8 },
-  shadowRadius: 14,
-  shadowOpacity: Platform.OS === "ios" ? 0.18 : 0,
-elevation: Platform.OS === "android" ? 12 : 0,
-},
-
-trophyHalo: {
-  position: "absolute",
-  top: -normalizeSize(22),
-  left: -normalizeSize(18),
-  width: normalizeSize(80),
-  height: normalizeSize(80),
-  borderRadius: normalizeSize(40),
-},
-
-trophyRow: {
-  flexDirection: "row",
-  alignItems: "center",
-  gap: normalizeSize(6),
-},
-
-trophyIconBubble: {
-  width: normalizeSize(20),
-  height: normalizeSize(20),
-  borderRadius: normalizeSize(10),
-  alignItems: "center",
-  justifyContent: "center",
-  borderWidth: 1,
-},
-
-trophyChipText: {
-  fontFamily: "Comfortaa_700Bold",
-  fontSize: normalizeSize(13),
-  letterSpacing: -0.2,
-
-  // ✅ chiffres alignés (iOS)
-  fontVariant: ["tabular-nums"],
-
-  // ✅ Android vertical centering clean
-  includeFontPadding: false,
-  textAlignVertical: "center",
-},
-
-pioneerCard: {
-  width: "100%",
-  maxWidth: 520,
-  borderRadius: normalizeSize(24),
-  borderWidth: 1,
-  overflow: "hidden",
-  shadowColor: "#000",
-  shadowOffset: { width: 0, height: 10 },
-  shadowOpacity: 0.22,
-  shadowRadius: 18,
-  elevation: 12,
-},
-
-pioneerHaloTop: {
-  position: "absolute",
-  top: -SCREEN_WIDTH * 0.2,
-  left: -SCREEN_WIDTH * 0.15,
-  width: SCREEN_WIDTH * 0.7,
-  height: SCREEN_WIDTH * 0.7,
-  borderRadius: SCREEN_WIDTH * 0.35,
-},
-
-pioneerHaloBottom: {
-  position: "absolute",
-  bottom: -SCREEN_WIDTH * 0.25,
-  right: -SCREEN_WIDTH * 0.2,
-  width: SCREEN_WIDTH * 0.85,
-  height: SCREEN_WIDTH * 0.85,
-  borderRadius: SCREEN_WIDTH * 0.425,
-},
-
-pioneerClose: {
-  position: "absolute",
-  top: normalizeSize(12),
-  right: normalizeSize(12),
-  width: normalizeSize(36),
-  height: normalizeSize(36),
-  borderRadius: normalizeSize(18),
-  alignItems: "center",
-  justifyContent: "center",
-  zIndex: 5,
-  borderWidth: 1,
-  borderColor: "rgba(255,255,255,0.18)",
-},
-
-pioneerContent: {
-  paddingTop: normalizeSize(28),
-  paddingHorizontal: normalizeSize(18),
-  paddingBottom: normalizeSize(18),
-  alignItems: "center",
-},
-
-pioneerHero: {
-  alignItems: "center",
-  marginBottom: normalizeSize(10),
-},
-
-pioneerIconRing: {
-  width: normalizeSize(72),
-  height: normalizeSize(72),
-  borderRadius: normalizeSize(36),
-  alignItems: "center",
-  justifyContent: "center",
-},
-
-pioneerIconInner: {
-  width: normalizeSize(56),
-  height: normalizeSize(56),
-  borderRadius: normalizeSize(28),
-  alignItems: "center",
-  justifyContent: "center",
-  borderWidth: 1,
-  borderColor: "rgba(255,255,255,0.18)",
-},
-
-pioneerPillRow: {
-  flexDirection: "row",
-  flexWrap: "wrap",
-  justifyContent: "center",
-  marginTop: normalizeSize(12),
-  gap: normalizeSize(8),
-},
-
-pioneerPill: {
-  flexDirection: "row",
-  alignItems: "center",
-  paddingHorizontal: normalizeSize(10),
-  paddingVertical: normalizeSize(6),
-  borderRadius: normalizeSize(999),
-  borderWidth: 1,
-},
-
-pioneerPillText: {
-  fontFamily: "Comfortaa_700Bold",
-  fontSize: normalizeSize(12),
-},
-
-pioneerTitle: {
-  fontFamily: "Comfortaa_700Bold",
-  fontSize: normalizeSize(22),
-  textAlign: "center",
-  marginTop: normalizeSize(6),
-},
-
-pioneerDesc: {
-  fontFamily: "Comfortaa_400Regular",
-  fontSize: normalizeSize(14),
-  lineHeight: normalizeSize(20),
-  textAlign: "center",
-  marginTop: normalizeSize(10),
-},
-
-pioneerBold: {
-  fontFamily: "Comfortaa_700Bold",
-},
-
-pioneerBullets: {
-  width: "100%",
-  marginTop: normalizeSize(14),
-  padding: normalizeSize(12),
-  borderRadius: normalizeSize(16),
-  backgroundColor: "rgba(255,255,255,0.06)",
-  borderWidth: 1,
-  borderColor: "rgba(255,255,255,0.12)",
-},
-
-pioneerBulletRow: {
-  flexDirection: "row",
-  alignItems: "flex-start",
-  gap: normalizeSize(10),
-  marginBottom: normalizeSize(10),
-},
-
-pioneerBulletText: {
-  flex: 1,
-  fontFamily: "Comfortaa_400Regular",
-  fontSize: normalizeSize(13),
-  lineHeight: normalizeSize(18),
-},
-
-pioneerCtaWrap: {
-  width: "100%",
-  marginTop: normalizeSize(14),
-},
-
-pioneerCta: {
-  width: "100%",
-  borderRadius: normalizeSize(16),
-  paddingVertical: normalizeSize(12),
-  paddingHorizontal: normalizeSize(14),
-  flexDirection: "row",
-  alignItems: "center",
-  justifyContent: "center",
-  gap: normalizeSize(10),
-  shadowColor: "#000",
-  shadowOffset: { width: 0, height: 8 },
-  shadowOpacity: 0.22,
-  shadowRadius: 12,
-  elevation: 10,
-},
-
-pioneerCtaText: {
-  color: "#fff",
-  fontFamily: "Comfortaa_700Bold",
-  fontSize: normalizeSize(14),
-},
-
-pioneerFoot: {
-  marginTop: normalizeSize(12),
-  fontFamily: "Comfortaa_400Regular",
-  fontSize: normalizeSize(12),
-  textAlign: "center",
-},
-
-placeholderChip: {
-  flexDirection: "row",
-  alignItems: "center",
-  alignSelf: "flex-start",
-  borderWidth: 1,
-  borderStyle: "solid",
-  borderColor: "rgba(255,255,255,0.16)",
-  paddingVertical: normalizeSize(6),
-  paddingHorizontal: normalizeSize(10),
-  borderRadius: normalizeSize(10),
-  backgroundColor: "rgba(255,255,255,0.04)",
-},
-
-placeholderChipText: {
-  marginLeft: normalizeSize(6),
-  fontFamily: "Comfortaa_700Bold",
-  fontSize: normalizeSize(12),
-},
-
-interestPill: {
-  borderWidth: 1,
-  paddingVertical: normalizeSize(6),
-  paddingHorizontal: normalizeSize(10),
-  borderRadius: normalizeSize(12),
-  marginRight: normalizeSize(6),
-  marginBottom: normalizeSize(6),
-  backgroundColor: "rgba(255,255,255,0.06)",
-},
-
-interestPillText: {
-  fontFamily: "Comfortaa_700Bold",
-  fontSize: normalizeSize(12),
-},
-
-editFab: {
-  position: "absolute",
-  top: normalizeSize(-8),
-  right: normalizeSize(-8),
-  borderRadius: normalizeSize(16),
-  overflow: "hidden",
-  elevation: 6,
-  shadowColor: "#000",
-  shadowOffset: { width: 0, height: 3 },
-  shadowOpacity: 0.25,
-  shadowRadius: 6,
-},
-modalBold: {
-  fontFamily: "Comfortaa_700Bold",
-},
-editFabInner: {
-  flexDirection: "row",
-  alignItems: "center",
-  paddingVertical: normalizeSize(8),
-  paddingHorizontal: normalizeSize(12),
-},
-
-editFabText: {
-  color: "#fff",
-  marginLeft: normalizeSize(6),
-  fontFamily: "Comfortaa_700Bold",
-  fontSize: normalizeSize(12),
-},
-
-  headerWrapper: {
+  // ── Section binôme ────────────────────────────────────────────────────────
+  sectionBlock: { marginBottom: n(16) },
+  binomeCard: {
+    borderRadius: n(20), borderWidth: 1, overflow: "hidden",
+    shadowColor: "#000", shadowOffset: { width: 0, height: n(4) }, shadowOpacity: 0.06, shadowRadius: n(12), elevation: 2,
+  },
+  binomeRow: {
     flexDirection: "row",
-    justifyContent: "center",
     alignItems: "center",
-    marginBottom: SPACING,
-    paddingHorizontal: SPACING,
+    paddingVertical: n(14),
+    paddingHorizontal: n(16),
+    gap: n(12),
+    borderRadius: n(16),
+    minHeight: n(64),
   },
-
-  profileCardWrapper: {
-    marginBottom: SPACING,
+  binomeDivider: { height: 1, marginHorizontal: n(16) },
+  binomeIconWrap: { position: "relative" },
+  binomeIcon: {
+    width: n(42), height: n(42), borderRadius: n(13),
+    alignItems: "center", justifyContent: "center",
   },
-
-  profileCard: {
-    borderRadius: normalizeSize(25),
-    padding: normalizeSize(20),
-    overflow: "hidden",
-    shadowColor: SHADOW_COLOR,
-    shadowOffset: { width: 0, height: normalizeSize(12) },
-  shadowOpacity: 0.10,
-  shadowRadius: normalizeSize(26),
-  elevation: 2,
+  binomeTexts: {
+    flex: 1,
+    minWidth: 0,
+    paddingRight: n(4),
   },
-  avatarContainer: {
-    alignItems: "center",
-    position: "relative",
-  },
-  avatar: {
-    width: normalizeSize(100),
-    height: normalizeSize(100),
-    borderRadius: normalizeSize(50),
-    borderWidth: 4,
-  },
-  userInfo: {
-    marginTop: normalizeSize(15),
-    alignItems: "center",
-    width: "100%",
-  },
-  username: {
-    fontSize: normalizeSize(26),
+  binomeTitle: {
     fontFamily: "Comfortaa_700Bold",
-    letterSpacing: -0.3,
-    writingDirection: I18nManager.isRTL ? "rtl" : "ltr",
-    textAlign: I18nManager.isRTL ? "right" : "center",
-  },
-  detailsContainer: {
-    marginTop: normalizeSize(15),
-    alignItems: "center",
-  },
-  infoRow: {
-    flexDirection: "row",
-    alignItems: "center",
-    justifyContent: "center",
-    marginVertical: normalizeSize(4),
-    maxWidth: SCREEN_WIDTH * 0.8,
-  },
-
-  location: {
-    fontSize: normalizeSize(14),
-    fontFamily: "Comfortaa_400Regular",
-    marginLeft: normalizeSize(6),
-  },
-
-  interestsContainer: {
-    flexDirection: "row",
+    fontSize: n(13),
+    lineHeight: n(18),
     flexWrap: "wrap",
-    justifyContent: "center",
-    marginTop: normalizeSize(10),
-    padding: normalizeSize(8),
-    borderRadius: normalizeSize(15),
   },
-
-  interestText: {
-    fontSize: normalizeSize(12),
+  binomeSub: {
     fontFamily: "Comfortaa_400Regular",
-    paddingVertical: normalizeSize(4),
-    paddingHorizontal: normalizeSize(10),
-    borderRadius: normalizeSize(12),
-    margin: normalizeSize(4),
-    backgroundColor: BORDER_COLOR_LIGHT,
+    fontSize: n(11),
+    lineHeight: n(16),
+    marginTop: n(2),
+    flexWrap: "wrap",
   },
-  moreInterests: {
-    fontSize: normalizeSize(12),
-    fontFamily: "Comfortaa_400Regular",
-    paddingVertical: normalizeSize(4),
-    paddingHorizontal: normalizeSize(10),
-    borderRadius: normalizeSize(12),
-    margin: normalizeSize(4),
-    backgroundColor: BORDER_COLOR_LIGHT,
+
+  // Toggle custom
+  toggleTrack: {
+    width: n(46), height: n(26), borderRadius: n(13),
+    justifyContent: "center", paddingHorizontal: n(3),
+    flexShrink: 0,
   },
-  sectionsContainer: {
-    marginTop: SPACING,
+  toggleThumb: {
+    width: n(20), height: n(20), borderRadius: n(10),
+    backgroundColor: "#FFFFFF",
+    shadowColor: "#000", shadowOffset: { width: 0, height: 2 }, shadowOpacity: 0.20, shadowRadius: 4, elevation: 3,
   },
-  sectionTouchable: {
-  flex: 1,                  // 👉 le touchable remplit toute la carte
+
+  // Badge inbox
+  inboxBadge: {
+    position: "absolute", top: -n(4), right: -n(4),
+    minWidth: n(18), height: n(18), borderRadius: n(9),
+    backgroundColor: "#F97316", alignItems: "center", justifyContent: "center",
+    paddingHorizontal: n(4), borderWidth: 1.5, borderColor: "#FFFFFF",
+  },
+  inboxBadgeText: { fontFamily: "Comfortaa_700Bold", fontSize: n(9), color: "#FFFFFF", includeFontPadding: false },
+  interestsRow: {
+  flexDirection: "row", flexWrap: "wrap",
+  justifyContent: "center", gap: n(6), marginTop: n(10),
 },
-  rowContainer: {
-    flexDirection: "row",
-    marginBottom: SPACING,
-    alignItems: "stretch",
-    gap: normalizeSize(12),
-  },
-  sectionButton: {
-    flex: 1,
-  borderRadius: normalizeSize(18),
-    overflow: "hidden",
-    shadowColor: "transparent",
-  shadowOpacity: 0,
-  shadowRadius: 0,
-  elevation: 0,
-    minHeight: normalizeSize(112),
-  },
- sectionCardOuter: {
-   flex: 1,
-   borderRadius: normalizeSize(18),
-   padding: 1.2,              // stroke fin = premium
- overflow: "hidden",
- shadowColor: "transparent",
- shadowOpacity: 0,
- shadowRadius: 0,
- elevation: 0,
- },
- sectionCardInner: {
-   flex: 1,
-   borderRadius: normalizeSize(17),
-   paddingHorizontal: normalizeSize(12),
-   paddingVertical: normalizeSize(12),
-   justifyContent: "space-between",
-   overflow: "hidden",
-   shadowColor: "transparent",
- shadowOpacity: 0,
- shadowRadius: 0,
- elevation: 0,
- },
- sectionTopHighlight: {
-  position: "absolute",
-  top: 0,
-  left: 0,
-  right: 0,
-  height: normalizeSize(22),
+interestPill: {
+  paddingVertical: n(5), paddingHorizontal: n(10),
+  borderRadius: n(999), borderWidth: 1,
+},
+interestPillText: {
+  fontFamily: "Comfortaa_700Bold", fontSize: n(11), includeFontPadding: false,
+},
+interestPlaceholder: {
+  flexDirection: "row", alignItems: "center", alignSelf: "center",
+  gap: n(5), marginTop: n(10), paddingVertical: n(7), paddingHorizontal: n(14),
+  borderRadius: n(999), borderWidth: 1,
+},
+interestPlaceholderText: {
+  fontFamily: "Comfortaa_700Bold", fontSize: n(12), includeFontPadding: false,
 },
 
-  sectionHalo: {
-    position: "absolute",
-    top: -normalizeSize(34),
-    left: -normalizeSize(26),
-    width: normalizeSize(110),
-    height: normalizeSize(110),
-    borderRadius: normalizeSize(55),
-  },
-  sectionTopRow: {
-    flexDirection: "row",
-    alignItems: "center",
-    justifyContent: "space-between",
-  },
-  sectionIconBubble: {
-    width: normalizeSize(42),
-    height: normalizeSize(42),
-    borderRadius: normalizeSize(21),
-    alignItems: "center",
-    justifyContent: "center",
-    borderWidth: 1,
-  },
-gradientContainer: { flex: 1 },
+  // ── Grille sections ───────────────────────────────────────────────────────
+  grid: { gap: n(12) },
+  gridRow: { flexDirection: "row", gap: n(12) },
+  gridCell: { flex: 1, minHeight: n(108), borderRadius: n(18), overflow: "hidden", elevation: 0 },
+  gridCellTouch: { flex: 1 },
+  gridCellGradient: { flex: 1, borderRadius: n(18), padding: 1.2, overflow: "hidden" },
+  gridCellInner: { flex: 1, borderRadius: n(17), paddingHorizontal: n(12), paddingVertical: n(12), justifyContent: "space-between", overflow: "hidden" },
+  cellHighlight: { position: "absolute", top: 0, left: 0, right: 0, height: n(20) },
+  cellTopRow: { flexDirection: "row", alignItems: "center", justifyContent: "space-between" },
+  cellIconBubble: { width: n(40), height: n(40), borderRadius: n(20), alignItems: "center", justifyContent: "center", borderWidth: 1 },
+  cellBadge: { position: "absolute", top: -n(4), right: -n(4), minWidth: n(16), height: n(16), borderRadius: n(8), backgroundColor: "#EF4444", alignItems: "center", justifyContent: "center", paddingHorizontal: n(4), borderWidth: 1, borderColor: "#FFFFFF", overflow: "hidden" },
+  cellBadgeText: { color: "#FFF", fontSize: n(9), fontFamily: "Comfortaa_700Bold", includeFontPadding: false },
+  cellText: { fontFamily: "Comfortaa_700Bold", fontSize: n(12.5), marginTop: n(8), lineHeight: n(17) },
+  // Bannière
+  bannerWrap: { position: "absolute", left: 0, right: 0, alignItems: "center", zIndex: 50, elevation: 50, backgroundColor: "transparent", paddingBottom: 6 },
 
-bgOrbTop: {
-  position: "absolute",
-  top: -SCREEN_WIDTH * 0.25,
-  left: -SCREEN_WIDTH * 0.2,
-  width: SCREEN_WIDTH * 0.9,
-  height: SCREEN_WIDTH * 0.9,
-  borderRadius: SCREEN_WIDTH * 0.45,
-},
-
-bgOrbBottom: {
-  position: "absolute",
-  bottom: -SCREEN_WIDTH * 0.3,
-  right: -SCREEN_WIDTH * 0.25,
-  width: SCREEN_WIDTH * 1.1,
-  height: SCREEN_WIDTH * 1.1,
-  borderRadius: SCREEN_WIDTH * 0.55,
-},
-
-  sectionGradient: {
-    flex: 1,
-  width: "100%",
-  minHeight: normalizeSize(110),          // même base que sectionButton
-  paddingVertical: normalizeSize(14),
-  paddingHorizontal: normalizeSize(10),
-  alignItems: "center",
-  justifyContent: "space-between",        // icon + texte bien respirent
-  borderRadius: normalizeSize(15),
-  },
-
-  iconContainer: {
-    position: "relative",
-  },
-
-  sectionText: {
-    fontSize: normalizeSize(13),
-    fontFamily: "Comfortaa_700Bold",
-    marginTop: normalizeSize(8),
-    textAlign: I18nManager.isRTL ? "right" : "left",
-    maxWidth: "100%",
-    flexShrink: 1,
-    writingDirection: I18nManager.isRTL ? "rtl" : "ltr",
-  },
-
-  loadingContainer: {
-    flex: 1,
-    justifyContent: "center",
-    alignItems: "center",
-  },
-
-  errorContainer: {
-    justifyContent: "center",
-    alignItems: "center",
-  },
-
-  loadingText: {
-    marginTop: normalizeSize(10),
-    fontSize: normalizeSize(16),
-    fontFamily: "Comfortaa_400Regular",
-    writingDirection: I18nManager.isRTL ? "rtl" : "ltr",
-    textAlign: "center",
-  },
-bannerContainer: {
-  width: "100%",
-  alignItems: "center",
-  backgroundColor: "transparent",
-},
-  blurView: {
-    position: "absolute",
-    top: 0,
-    left: 0,
-    right: 0,
-    bottom: 0,
-    justifyContent: "center",
-    alignItems: "center",
-  },
-
-  modalContainer: {
-    backgroundColor: "rgba(255, 255, 255, 0.95)",
-    borderRadius: normalizeSize(20),
-    padding: normalizeSize(20),
-    width: "80%",
-    alignItems: "center",
-    shadowColor: SHADOW_COLOR,
-    shadowOffset: { width: 0, height: normalizeSize(4) },
-    shadowOpacity: 0.3,
-    shadowRadius: normalizeSize(6),
-  },
-
-  modalTitle: {
-    fontSize: normalizeSize(24),
-    fontFamily: "Comfortaa_700Bold",
-    marginBottom: normalizeSize(10),
-    textAlign: "center",
-  },
-
-  modalDescription: {
-    fontSize: normalizeSize(16),
-    fontFamily: "Comfortaa_400Regular",
-    textAlign: "center",
-    marginBottom: normalizeSize(20),
-  },
-
-  nextButton: {
-    flexDirection: "row",
-    alignItems: "center",
-    paddingVertical: normalizeSize(8),
-    paddingHorizontal: normalizeSize(12),
-    borderRadius: normalizeSize(20),
-    backgroundColor: "#FFB800",
-  },
-
-  nextButtonText: {
-    fontSize: normalizeSize(14),
-    fontFamily: "Comfortaa_700Bold",
-    color: "#FFF",
-    marginRight: normalizeSize(5),
-  },
-
-  badgeDot: {
-    position: "absolute",
-    top: normalizeSize(-4),
-    right: normalizeSize(-4),
-    minWidth: normalizeSize(18),
-   height: normalizeSize(18),
-   borderRadius: normalizeSize(999),
-    backgroundColor: "#FF4D4F",
-    alignItems: "center",
-   justifyContent: "center",
-   paddingHorizontal: normalizeSize(5),
-    borderWidth: 1,
-    borderColor: "#FFF",
-     overflow: "hidden",
-  },
-
-  badgeText: {
-    color: "#FFF",
-    fontSize: normalizeSize(10),
-    fontFamily: "Comfortaa_700Bold",
-    lineHeight: normalizeSize(12),         // ✅ centrage vertical stable
-   textAlign: "center",
-   includeFontPadding: false,             // ✅ Android: vire le padding fantôme
-   textAlignVertical: "center",
-  },
+  // ── Pioneer modal ─────────────────────────────────────────────────────────
+  pioneerOverlay: { position: "absolute", top: 0, left: 0, right: 0, bottom: 0, justifyContent: "center", alignItems: "center" },
+  pioneerWrap: { width: "100%", paddingHorizontal: n(16), alignItems: "center", justifyContent: "center", flex: 1 },
+  pioneerCard: { width: "100%", maxWidth: 520, borderRadius: n(24), borderWidth: 1, overflow: "hidden", shadowColor: "#000", shadowOffset: { width: 0, height: 10 }, shadowOpacity: 0.22, shadowRadius: 18, elevation: 12 },
+  pioneerHaloTop: { position: "absolute", top: -SCREEN_WIDTH * 0.2, left: -SCREEN_WIDTH * 0.15, width: SCREEN_WIDTH * 0.7, height: SCREEN_WIDTH * 0.7, borderRadius: SCREEN_WIDTH * 0.35 },
+  pioneerHaloBottom: { position: "absolute", bottom: -SCREEN_WIDTH * 0.25, right: -SCREEN_WIDTH * 0.2, width: SCREEN_WIDTH * 0.85, height: SCREEN_WIDTH * 0.85, borderRadius: SCREEN_WIDTH * 0.425 },
+  pioneerContent: { paddingTop: n(28), paddingHorizontal: n(18), paddingBottom: n(18), alignItems: "center" },
+  pioneerHero: { alignItems: "center", marginBottom: n(10) },
+  pioneerIconRing: { width: n(72), height: n(72), borderRadius: n(36), alignItems: "center", justifyContent: "center" },
+  pioneerIconInner: { width: n(56), height: n(56), borderRadius: n(28), alignItems: "center", justifyContent: "center", borderWidth: 1, borderColor: "rgba(255,255,255,0.18)" },
+  pioneerPillRow: { flexDirection: "row", flexWrap: "wrap", justifyContent: "center", marginTop: n(12), gap: n(8) },
+  pioneerPill: { flexDirection: "row", alignItems: "center", paddingHorizontal: n(10), paddingVertical: n(6), borderRadius: n(999), borderWidth: 1 },
+  pioneerPillText: { fontFamily: "Comfortaa_700Bold", fontSize: n(12) },
+  pioneerTitle: { fontFamily: "Comfortaa_700Bold", fontSize: n(22), textAlign: "center", marginTop: n(6) },
+  pioneerDesc: { fontFamily: "Comfortaa_400Regular", fontSize: n(14), lineHeight: n(20), textAlign: "center", marginTop: n(10) },
+  pioneerBold: { fontFamily: "Comfortaa_700Bold" },
+  pioneerBullets: { width: "100%", marginTop: n(14), padding: n(12), borderRadius: n(16), backgroundColor: "rgba(255,255,255,0.06)", borderWidth: 1, borderColor: "rgba(255,255,255,0.12)" },
+  pioneerBulletRow: { flexDirection: "row", alignItems: "flex-start", gap: n(10), marginBottom: n(10) },
+  pioneerBulletText: { flex: 1, fontFamily: "Comfortaa_400Regular", fontSize: n(13), lineHeight: n(18) },
+  pioneerCtaWrap: { width: "100%", marginTop: n(14) },
+  pioneerCta: { width: "100%", borderRadius: n(16), paddingVertical: n(12), paddingHorizontal: n(14), flexDirection: "row", alignItems: "center", justifyContent: "center", gap: n(10), shadowColor: "#000", shadowOffset: { width: 0, height: 8 }, shadowOpacity: 0.22, shadowRadius: 12, elevation: 10 },
+  pioneerCtaText: { color: "#fff", fontFamily: "Comfortaa_700Bold", fontSize: n(14) },
+  pioneerFoot: { marginTop: n(12), fontFamily: "Comfortaa_400Regular", fontSize: n(12), textAlign: "center" },
 });

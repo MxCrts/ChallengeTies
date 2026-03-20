@@ -515,6 +515,9 @@
     "bonus": "+{{bonus}}",
     "pb": "O teu melhor streak: {{days}} dias"
   },
+  "vsIntro": {
+    "challengeAccepted":"Desafio aceite"
+  },
   "savedShort": "Salvo"
 ,
 
@@ -590,6 +593,7 @@
     "chat": "Chat",
     "stats": "Stats",
     "save": "Favoritos",
+    "saved": "Salvo",
     "chatA11y": "Abrir chat",
     "chatHint": "Abre o chat do desafio.",
     "statsA11y": "Ver estatísticas",
@@ -1741,8 +1745,10 @@
     "joinA11y": "Entrar para o movimento Premium",
     "joinCta": "Entrar para o movimento Premium"
   },
+  "profileUpdatedSuccess": "Perfil atualizado ✓",
   "dailyBonus": {
-    "title": "Bônus do dia",
+    "title": "Bonus",
+"cta": "Girar a roda 🎯",
     "badge": "RECOMPENSA",
 "oncePerDay": "1 / dia",
 "teaser2": "O que vais desbloquear hoje?",
@@ -1761,7 +1767,6 @@
     "teaser": "Toque para descobrir sua recompensa surpresa.",
     "visualHint": "Sua recompensa é adicionada à sua conta assim que você gira a roda. Continue sua sequência para desbloquear ainda mais bônus ✨",
     "spinning": "Girando...",
-    "cta": "Girar a roda",
     "again": "Ver a roda novamente",
     "reward": {
       "streakPass": "Você ganhou {{count}} Streak Pass 🎫",

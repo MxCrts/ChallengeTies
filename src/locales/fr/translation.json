@@ -750,6 +750,7 @@
     "participantsLabel": "Participants",
     "quick": {
     "chat": "Chat",
+    "saved": "Sauvegardé",
     "stats": "Stats",
     "save": "Favoris",
     "chatA11y": "Ouvrir le chat",
@@ -889,6 +890,9 @@
     "emptySubtitle": "Sois le premier à laisser un retour utile. 10 secondes, impact réel.",
     "starsLabel": "{{count}} étoiles",
     "countLabel": "{{count}} avis"
+  },
+  "vsIntro": {
+    "challengeAccepted":"Défi accepté"
   },
 "duo": {
   "leader": "LEADER",
@@ -1894,9 +1898,10 @@
   "error": "Impossible de récupérer le bonus de bienvenue pour le moment."
 }
 ,
-
+"profileUpdatedSuccess": "Profil mis à jour ✓",
   "dailyBonus": {
-    "title": "Bonus du jour",
+    "title": "Bonus",
+    "cta": "Lancer la roue 🎯",
     "rerollUnavailable": "Pub en chargement…",
     "subtitle": "Lance la roue mystère pour révéler ta récompense 🎁",
     "ctaShort": "Lancer",
@@ -1907,7 +1912,6 @@
     "badge": "RÉCOMPENSE",
     "oncePerDay": "1 / jour",
     "teaser2": "Qu'est-ce que tu vas décrocher aujourd'hui ?",
-    "cta": "Ouvrir",
     "micro": "Mystère · 1 fois par jour",
 "shortCta": "1 clique, 1 surprise",
     "hint": "Ouvre une roue mystère pour gagner une récompense.",

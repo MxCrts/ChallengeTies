@@ -335,8 +335,10 @@
     "title": "¡Bienvenid@ al chat del desafío!",
     "message": "Estamos aquí para animarnos, resolver dudas y avanzar juntos. Para mantener una vibra positiva, sigue estas reglas:\n\n1. **Respeto**: Nada de insultos, acoso o amenazas.\n2. **Tolerancia**: Prohibido el odio o la discriminación (racismo, sexismo, homofobia, transfobia, etc.).\n3. **Contenido**: No desnudez/pornografía, contenido violento o ilegal.\n4. **Pertinencia**: Mantente en el tema (motivación, preguntas, apoyo).\n5. **Seguridad**: No compartas datos personales sensibles (dirección, teléfono, documentos de identidad).\n6. **Limpieza**: Sin spam, publicidad, estafas ni suplantación de identidad.\n\nAl unirte a este chat, aceptas estas reglas. ¡Gracias! 💛"
   },
+  "profileUpdatedSuccess": "Perfil actualizado ✓",
   "dailyBonus": {
-    "title": "Bono diario",
+    "title": "Bonus",
+"cta": "Girar la rueda 🎯",
     "badge": "RECOMPENSA",
 "oncePerDay": "1 / día",
 "teaser2": "¿Qué vas a conseguir hoy?",
@@ -356,7 +358,6 @@
     "teaser": "Toca para descubrir tu recompensa misteriosa.",
     "visualHint": "Tu recompensa se añade a tu cuenta en cuanto giras la rueda. Mantén tu racha para desbloquear aún más bonus ✨",
     "spinning": "Girando...",
-    "cta": "Girar la rueda",
     "again": "Ver la rueda otra vez",
     "reward": {
       "streakPass": "Has ganado {{count}} Streak Pass 🎫",
@@ -1120,6 +1121,9 @@
   },
   "savedShort": "Guardado"
 ,
+"vsIntro": {
+    "challengeAccepted":"Desafío aceptado"
+  },
  "challengeDetails": {
   "cta_take": "Empezar reto",
   "reviewsSubtitle": "Opiniones reales para elegir mejor y avanzar más rápido.",
@@ -1185,6 +1189,7 @@
     "chat": "Chat",
     "stats": "Stats",
     "save": "Favoritos",
+    "saved": "Guardado",
     "chatA11y": "Abrir chat",
     "chatHint": "Abre el chat del desafío.",
     "statsA11y": "Ver estadísticas",

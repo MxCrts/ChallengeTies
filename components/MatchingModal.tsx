@@ -448,18 +448,17 @@ const createStyles = (
       backgroundColor: isDark ? "rgba(0,0,0,0.80)" : "rgba(0,0,0,0.60)",
     },
     cardWrap: {
-      width: "100%",
-      maxWidth: 400,
-      marginHorizontal: 20,
-      maxHeight: 560,
-      borderRadius: 26,
-      overflow: "hidden",
-    },
-    borderGlow: {
-      padding: 1.5,
-      borderRadius: 26,
-      flex: 1,
-    },
+  width: "88%",
+  alignSelf: "center",
+  height: 520,          // ← hauteur FIXE au lieu de maxHeight
+  borderRadius: 26,
+  overflow: "hidden",
+},
+borderGlow: {
+  padding: 1.5,
+  borderRadius: 26,
+  height: "100%",       // ← AJOUTE height 100%
+},
     card: {
       borderRadius: 24,
       padding: 18,

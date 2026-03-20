@@ -19,17 +19,16 @@ import {
   AccessibilityInfo,
 } from "react-native";
 import { useRouter } from "expo-router";
+import { useFocusEffect } from "@react-navigation/native"; 
 import {
   doc,
   updateDoc,
   getDoc,
   serverTimestamp,
-  arrayUnion,
   type FieldValue,
 } from "firebase/firestore";
 import { auth, db, storage } from "@/constants/firebase-config";
 import * as ImagePicker from "expo-image-picker";
-import { TextInput } from "react-native-paper";
 import { LinearGradient } from "expo-linear-gradient";
 import { ref, uploadBytesResumable, getDownloadURL } from "firebase/storage";
 import { checkForAchievements } from "../../helpers/trophiesHelpers";
@@ -185,13 +184,7 @@ const GlassCard: React.FC<GlassCardProps> = ({
 
 interface User {
   uid: string;
-  displayName?: string | null;
-  bio?: string | null;
   profileImage?: string | null;
-  location?: string | null;
-  interests?: string | string[] | null;
-
-  // ➕ pour ne pas réécrire inutilement profileCompletedAt
   profileCompleted?: boolean | null;
   profileCompletedAt?: any;
   challengeCategories?: string[];
@@ -210,18 +203,8 @@ export default function UserInfo() {
   const { t } = useTranslation();
   const router = useRouter();
 
-  // 🔒 Limites & règles UX
-  const MAX_NAME = 32;
-  const MAX_BIO = 240;
-  const MAX_LOCATION = 60;
-  const MAX_INTERESTS = 160;
-
   const [user, setUser] = useState<User | null>(null);
-  const [displayName, setDisplayName] = useState("");
-  const [bio, setBio] = useState("");
   const [profileImage, setProfileImage] = useState<string | null>(null);
-  const [location, setLocation] = useState("");
-  const [interests, setInterests] = useState("");
   const [isFetching, setIsFetching] = useState(true); // chargement initial du profil
   const [isLoading, setIsLoading] = useState(false);
   const { theme } = useTheme();
@@ -240,13 +223,6 @@ export default function UserInfo() {
     () => n(40) + (showBanners ? adHeight : 0) + tabBarHeight + insets.bottom,
     [adHeight, insets.bottom, showBanners, tabBarHeight]
   );
-
-  // États de focus pour chaque champ
-  const [isDisplayNameFocused, setIsDisplayNameFocused] = useState(false);
-  const [isBioFocused, setIsBioFocused] = useState(false);
-  const [isLocationFocused, setIsLocationFocused] = useState(false);
-  const [isInterestsFocused, setIsInterestsFocused] = useState(false);
-
   // Toast state
   const [toast, setToast] = useState<ToastState | null>(null);
   const toastOpacity = useSharedValue(0);
@@ -274,37 +250,16 @@ const toggleCategory = useCallback((cat: string) => {
   );
 }, []);
 
-  // ✅ Y a-t-il au moins une vraie modification par rapport aux valeurs en base ?
-  const hasChanges = useMemo(() => {
+ const hasChanges = useMemo(() => {
   if (!user) return false;
-
-  const baseDisplay = safeTrim(user.displayName);
-  const baseBio = safeTrim(user.bio);
-  const baseLocation = safeTrim(user.location);
-  const baseInterests = safeTrim(user.interests);
-  const baseProfileImage = user.profileImage || null;
   const baseCats = JSON.stringify(
     Array.isArray(user.challengeCategories)
       ? [...user.challengeCategories].sort()
       : []
   );
-
-  const cleanDisplay = safeTrim(displayName);
-  const cleanBio = safeTrim(bio);
-  const cleanLocation = safeTrim(location);
-  const cleanInterests = safeTrim(interests);
-  const nextProfileImage = profileImage || null;
   const nextCats = JSON.stringify([...selectedCategories].sort());
-
-  return (
-    (cleanDisplay && cleanDisplay !== baseDisplay) ||
-    (cleanBio && cleanBio !== baseBio) ||
-    (nextProfileImage !== baseProfileImage) ||
-    (cleanLocation && cleanLocation !== baseLocation) ||
-    (cleanInterests && cleanInterests !== baseInterests) ||
-    nextCats !== baseCats // ✅ NOUVEAU
-  );
-}, [user, displayName, bio, profileImage, location, interests, selectedCategories]);
+  return nextCats !== baseCats;
+}, [user, selectedCategories]);
 
   // Reduce motion
   useEffect(() => {
@@ -365,10 +320,11 @@ const toggleCategory = useCallback((cat: string) => {
   );
 
   // Chargement des données utilisateur
-  useEffect(() => {
-    const fetchUserData = async () => {
-      try {
-        const currentUser = auth.currentUser;
+  useFocusEffect(useCallback(() => {
+  let cancelled = false;
+  const fetchUserData = async () => {
+    try {
+      const currentUser = auth.currentUser;
         if (!currentUser) throw new Error(String(t("userNotAuthenticated")));
         const userId = currentUser.uid;
         const userRef = doc(db, "users", userId);
@@ -376,11 +332,7 @@ const toggleCategory = useCallback((cat: string) => {
         if (userSnap.exists()) {
           const userData = userSnap.data() as Omit<User, "uid">;
           setUser({ uid: userId, ...userData });
-          setDisplayName(userData.displayName || "");
-          setBio(userData.bio || "");
           setProfileImage(userData.profileImage || null);
-          setLocation(userData.location || "");
-          setInterests(toDisplayString(userData.interests));
           setSelectedCategories(
   Array.isArray(userData.challengeCategories) ? userData.challengeCategories : []
 );
@@ -398,7 +350,8 @@ const toggleCategory = useCallback((cat: string) => {
       }
     };
     fetchUserData();
-  }, [t, showToast]);
+    return () => { cancelled = true; };
+  }, [t, showToast]));
 
   // Sélection de l'image
   const pickImage = useCallback(async () => {
@@ -469,208 +422,34 @@ const toggleCategory = useCallback((cat: string) => {
   }, [t, showToast]);
 
   // Sauvegarde des modifications
-  const handleSave = useCallback(async () => {
-    // 🔍 Validations front rapides avant write
-    const tooLong =
-      displayName.trim().length > MAX_NAME ||
-      bio.trim().length > MAX_BIO ||
-      location.trim().length > MAX_LOCATION ||
-      interests.trim().length > MAX_INTERESTS;
-    if (tooLong) {
-      showToast(
-        "error",
-        t("profileFieldTooLong", {
-          defaultValue:
-            "Certains champs dépassent la longueur autorisée. Réduis un peu le texte et réessaie.",
-        }) as string
-      );
-      return;
-    }
-    if (!user?.uid) {
-      showToast("error", String(t("userNotFound")));
-      return;
-    }
-
-    // ✅ On construit dynamiquement ce qui change VRAIMENT (et non vide)
-    const updateData: Partial<
-      User & {
-        profileCompleted?: boolean;
-        profileCompletedAt?: FieldValue | Date;
-        "stats.profile.completed"?: boolean;
-      }
-    > = {};
-
-    const cleanDisplay = safeTrim(displayName);
-    const cleanBio = safeTrim(bio);
-    const cleanLocation = safeTrim(location);
-    // Normalise les intérêts
-    const interestsArray = parseInterests(interests);
-    const cleanInterests = interestsArray.join(", ");
-
-    if (cleanDisplay && cleanDisplay !== safeTrim(user.displayName)) {
-      updateData.displayName = cleanDisplay;
-    }
-    if (cleanBio && cleanBio !== safeTrim(user.bio)) {
-      updateData.bio = cleanBio;
-    }
-    if ((profileImage || null) !== (user.profileImage || null)) {
-      updateData.profileImage = profileImage || null;
-    }
-
-    if (cleanLocation && cleanLocation !== safeTrim(user.location)) {
-      updateData.location = cleanLocation;
-    }
-    if (
-      interestsArray.length > 0 &&
-      cleanInterests !== safeTrim(user.interests)
-    ) {
-      updateData.interests = interestsArray as any;
-    }
-
-    // ✅ prospective complet (on mélange next + base)
-    const prospective = {
-      displayName: cleanDisplay || user.displayName,
-      bio: cleanBio || user.bio,
-      location: cleanLocation || user.location,
-      profileImage: (profileImage || user.profileImage) ?? "",
-      interests: interestsArray.length > 0 ? interestsArray : user.interests,
-    };
-
-    const willBeComplete = isProfileCompleteLocal(prospective);
-    const wasComplete = !!(user as any)?.profileCompleted;
-    // ✅ On ne "stamp" la complétion qu'une seule fois
-    if (willBeComplete && !wasComplete) {
-      (updateData as any).profileCompleted = true;
-      (updateData as any).profileCompletedAt = serverTimestamp();
-      (updateData as any)["stats.profile.completed"] = true;
-    }
-
-    if (
-  JSON.stringify(selectedCategories.sort()) !==
-  JSON.stringify((Array.isArray((user as any).challengeCategories)
-    ? (user as any).challengeCategories
-    : []
-  ).sort())
-) {
-  (updateData as any).challengeCategories = selectedCategories;
-}
-
-    // On met toujours à jour updatedAt
-    (updateData as any).updatedAt = serverTimestamp();
-
-    // Rien de pertinent à mettre à jour → on informe et on sort
-    if (Object.keys(updateData).length === 0) {
-      showToast("info", String(t("noChangesDetected")));
-      return;
-    }
-
-    setIsLoading(true);
-    try {
-      const userRef = doc(db, "users", user.uid);
-await updateDoc(userRef, updateData);
-
-// Mettre à jour le matching pool (non-bloquant)
-updateMatchingPool(user.uid).catch(() => {});
-
-// 🔁 Relecture Firestore + garde "profile_completed" ultra robuste
-try {
-  const snap = await getDoc(userRef);
-  if (snap.exists()) {
-    const fresh = snap.data() as any;
-
-    const parseInterestsServer = (v: any): string[] =>
-      Array.isArray(v)
-        ? v.map((s) => String(s).trim()).filter(Boolean)
-        : String(v || "")
-            .split(",")
-            .map((s) => s.trim())
-            .filter(Boolean);
-
-    const nameOk = String(fresh?.displayName || "").trim().length >= 2;
-    const bioOk = String(fresh?.bio || "").trim().length >= 10;
-    const locOk = String(fresh?.location || "").trim().length >= 2;
-    const picOk = !!String(fresh?.profileImage || "").trim();
-    const ints = parseInterestsServer(fresh?.interests);
-    const interestsOk = ints.length > 0;
-
-    const canMarkProfileCompleted =
-      nameOk && bioOk && locOk && picOk && interestsOk;
-
-    const achievements: string[] = Array.isArray(fresh.achievements)
-      ? fresh.achievements
-      : [];
-    const pending: string[] = Array.isArray(fresh.newAchievements)
-      ? fresh.newAchievements
-      : [];
-
-    const alreadyProfileCompleted =
-      achievements.includes("profile_completed") ||
-      pending.includes("profile_completed") ||
-      fresh?.profileCompleted === true ||
-      fresh?.stats?.profile?.completed === true;
-
-    if (canMarkProfileCompleted && !alreadyProfileCompleted) {
-      await updateDoc(userRef, {
-        newAchievements: arrayUnion("profile_completed"),
-        profileCompleted: true,
-        "stats.profile.completed": true,
-        profileCompletedAt:
-          fresh.profileCompletedAt || serverTimestamp(),
-      } as any);
-
-      __DEV__ &&
-        console.log("🔥 profile_completed forcé après édition du profil");
-    }
+ const handleSave = useCallback(async () => {
+  if (!user?.uid) {
+    showToast("error", String(t("userNotFound")));
+    return;
   }
-} catch (e: any) {
-  __DEV__ &&
-    console.warn(
-      "[UserInfo] post-save profile_completed guard error:",
-      e?.message ?? e
-    );
-}
 
-// ✅ Achievements généraux (au cas où d'autres succès se débloquent)
-try {
-  await checkForAchievements(user.uid);
-} catch (e) {
-  __DEV__ &&
-    console.warn(
-      "[achievements] check profile save:",
-      (e as any)?.message ?? e
-    );
-}
+  const updateData: any = {
+    challengeCategories: selectedCategories,
+    updatedAt: serverTimestamp(),
+  };
 
-
-      Keyboard.dismiss();
-      navigatedRef.current = true;
-      setIsLoading(false);
-      showToast("success", String(t("profileUpdatedSuccess")));
-      // petit délai pour laisser le toast s'afficher
-      setTimeout(() => {
-        router.back();
-      }, 450);
-      return;
-    } catch (error: any) {
-      console.error("profile update error:", error);
-      showToast(
-        "error",
-        `${t("profileUpdateFailed")}: ${error?.message ?? ""}`
-      );
-    } finally {
-      if (!navigatedRef.current) setIsLoading(false);
-    }
-  }, [
-    user,
-    displayName,
-    bio,
-    profileImage,
-    location,
-    interests,
-    router,
-    t,
-    showToast,
-  ]);
+  setIsLoading(true);
+  try {
+    const userRef = doc(db, "users", user.uid);
+    await updateDoc(userRef, updateData);
+    updateMatchingPool(user.uid).catch(() => {});
+    try { await checkForAchievements(user.uid); } catch {}
+    Keyboard.dismiss();
+    navigatedRef.current = true;
+    setIsLoading(false);
+    showToast("success", String(t("profileUpdatedSuccess")));
+    setTimeout(() => { router.back(); }, 450);
+  } catch (error: any) {
+    showToast("error", `${t("profileUpdateFailed")}: ${error?.message ?? ""}`);
+  } finally {
+    if (!navigatedRef.current) setIsLoading(false);
+  }
+}, [user, selectedCategories, router, t, showToast]);
 
   if (isFetching) {
     return (
@@ -883,285 +662,6 @@ try {
     end={{ x: 1, y: 1 }}
     style={styles.cardSheen}
   />
-
-              {/* Nom */}
-              <Animated.View
-                entering={FadeInUp.delay(200)}
-                style={[
-  styles.inputWrapper,
-  {
-    backgroundColor: isDarkMode
-      ? "rgba(0,0,0,0.26)"
-      : "rgba(255,255,255,0.22)",
-    borderColor: isDisplayNameFocused
-      ? withAlpha(currentTheme.colors.secondary, isDarkMode ? 0.65 : 0.45)
-      : isDarkMode
-      ? withAlpha("#FFFFFF", 0.12)
-      : withAlpha("#000000", 0.08),
-  },
-]}
-
-              >
-                <TextInput
-                  label={t("name")}
-                  mode="flat"
-                  style={[styles.input, { fontSize: normalizeSize(14) }]}
-                  value={displayName}
-                  onChangeText={(v) => setDisplayName(v.slice(0, MAX_NAME))}
-                  onFocus={() => setIsDisplayNameFocused(true)}
-                  onBlur={() => setIsDisplayNameFocused(false)}
-                  textColor={
-                    isDarkMode ? currentTheme.colors.textPrimary : "#000"
-                  }
-                  underlineColor="transparent"
-                  activeUnderlineColor={currentTheme.colors.secondary}
-                  placeholderTextColor={
-                    isDarkMode
-                      ? "#FFD700"
-                      : currentTheme.colors.textSecondary
-                  }
-                  theme={{
-                    colors: {
-                      background: "transparent",
-                      text: isDarkMode
-                        ? currentTheme.colors.textPrimary
-                        : "#000",
-                      primary: isDarkMode
-                        ? "#FFEC8B"
-                        : currentTheme.colors.secondary,
-                      placeholder: isDarkMode
-                        ? "#FFD700"
-                        : currentTheme.colors.textSecondary,
-                      onSurface: isDarkMode
-                        ? !isDisplayNameFocused
-                          ? "#FFD700"
-                          : currentTheme.colors.textPrimary
-                        : currentTheme.colors.textSecondary,
-                    },
-                    fonts: {
-                      regular: { fontFamily: "Comfortaa_400Regular" },
-                    },
-                  }}
-                  dense
-                  accessibilityLabel={t(
-                    "accessibility.usernameField.label"
-                  )}
-                  accessibilityHint={t("accessibility.usernameField.hint")}
-                  testID="input-displayName"
-                />
-              </Animated.View>
-
-              {/* Bio */}
-              <Animated.View
-                entering={FadeInUp.delay(300)}
-                style={[
-  styles.inputWrapper,
-  {
-    backgroundColor: isDarkMode
-      ? "rgba(0,0,0,0.26)"
-      : "rgba(255,255,255,0.22)",
-   borderColor: isBioFocused
-  ? withAlpha(currentTheme.colors.secondary, isDarkMode ? 0.65 : 0.45)
-  : isDarkMode
-  ? withAlpha("#FFFFFF", 0.12)
-  : withAlpha("#000000", 0.08),
-  },
-]}
-
-              >
-                <TextInput
-                  label={t("bio")}
-                  mode="flat"
-                  style={[
-                    styles.input,
-                    styles.multilineInput,
-                    { fontSize: normalizeSize(14) },
-                  ]}
-                  value={bio}
-                  onChangeText={(v) => setBio(v.slice(0, MAX_BIO))}
-                  onFocus={() => setIsBioFocused(true)}
-                  onBlur={() => setIsBioFocused(false)}
-                  multiline
-                  numberOfLines={3}
-                  textColor={
-                    isDarkMode ? currentTheme.colors.textPrimary : "#000"
-                  }
-                  underlineColor="transparent"
-                  activeUnderlineColor={currentTheme.colors.secondary}
-                  placeholderTextColor={
-                    isDarkMode
-                      ? "#FFD700"
-                      : currentTheme.colors.textSecondary
-                  }
-                  theme={{
-                    colors: {
-                      background: "transparent",
-                      text: isDarkMode
-                        ? currentTheme.colors.textPrimary
-                        : "#000",
-                      primary: isDarkMode
-                        ? "#FFEC8B"
-                        : currentTheme.colors.secondary,
-                      placeholder: isDarkMode
-                        ? "#FFD700"
-                        : currentTheme.colors.textSecondary,
-                      onSurface: isDarkMode
-                        ? !isBioFocused
-                          ? "#FFD700"
-                          : currentTheme.colors.textPrimary
-                        : currentTheme.colors.textSecondary,
-                    },
-                    fonts: {
-                      regular: { fontFamily: "Comfortaa_400Regular" },
-                    },
-                  }}
-                  dense
-                  accessibilityLabel={t("accessibility.bioField.label")}
-                  accessibilityHint={t("accessibility.bioField.hint")}
-                  testID="input-bio"
-                />
-              </Animated.View>
-
-              {/* Localisation */}
-              <Animated.View
-                entering={FadeInUp.delay(400)}
-                style={[
-  styles.inputWrapper,
-  {
-    backgroundColor: isDarkMode
-      ? "rgba(0,0,0,0.26)"
-      : "rgba(255,255,255,0.22)",
-    borderColor: isLocationFocused
-  ? withAlpha(currentTheme.colors.secondary, isDarkMode ? 0.65 : 0.45)
-  : isDarkMode
-  ? withAlpha("#FFFFFF", 0.12)
-  : withAlpha("#000000", 0.08),
-
-  },
-]}
-
-              >
-                <TextInput
-                  label={t("location")}
-                  mode="flat"
-                  style={[styles.input, { fontSize: normalizeSize(14) }]}
-                  value={location}
-                  onChangeText={(v) => setLocation(v.slice(0, MAX_LOCATION))}
-                  onFocus={() => setIsLocationFocused(true)}
-                  onBlur={() => setIsLocationFocused(false)}
-                  textColor={
-                    isDarkMode ? currentTheme.colors.textPrimary : "#000"
-                  }
-                  underlineColor="transparent"
-                  activeUnderlineColor={currentTheme.colors.secondary}
-                  placeholderTextColor={
-                    isDarkMode
-                      ? "#FFD700"
-                      : currentTheme.colors.textSecondary
-                  }
-                  theme={{
-                    colors: {
-                      background: "transparent",
-                      text: isDarkMode
-                        ? currentTheme.colors.textPrimary
-                        : "#000",
-                      primary: isDarkMode
-                        ? "#FFEC8B"
-                        : currentTheme.colors.secondary,
-                      placeholder: isDarkMode
-                        ? "#FFD700"
-                        : currentTheme.colors.textSecondary,
-                      onSurface: isDarkMode
-                        ? !isLocationFocused
-                          ? "#FFD700"
-                          : currentTheme.colors.textPrimary
-                        : currentTheme.colors.textSecondary,
-                    },
-                    fonts: {
-                      regular: { fontFamily: "Comfortaa_400Regular" },
-                    },
-                  }}
-                  dense
-                  accessibilityLabel={t(
-                    "accessibility.locationField.label"
-                  )}
-                  accessibilityHint={t(
-                    "accessibility.locationField.hint"
-                  )}
-                  testID="input-location"
-                />
-              </Animated.View>
-
-              {/* Intérêts */}
-              <Animated.View
-                entering={FadeInUp.delay(500)}
-                style={[
-  styles.inputWrapper,
-  {
-    backgroundColor: isDarkMode
-      ? "rgba(0,0,0,0.26)"
-      : "rgba(255,255,255,0.22)",
-    borderColor: isInterestsFocused
-  ? withAlpha(currentTheme.colors.secondary, isDarkMode ? 0.65 : 0.45)
-  : isDarkMode
-  ? withAlpha("#FFFFFF", 0.12)
-  : withAlpha("#000000", 0.08),
-
-  },
-]}
-
-              >
-                <TextInput
-                  label={t("interests")}
-                  mode="flat"
-                  style={[styles.input, { fontSize: normalizeSize(14) }]}
-                  value={interests}
-                  onChangeText={(v) => setInterests(v.slice(0, MAX_INTERESTS))}
-                  onFocus={() => setIsInterestsFocused(true)}
-                  onBlur={() => setIsInterestsFocused(false)}
-                  textColor={
-                    isDarkMode ? currentTheme.colors.textPrimary : "#000"
-                  }
-                  underlineColor="transparent"
-                  activeUnderlineColor={currentTheme.colors.secondary}
-                  placeholder={t("interestsPlaceholder")}
-                  placeholderTextColor={
-                    isDarkMode
-                      ? "#FFD700"
-                      : currentTheme.colors.textSecondary
-                  }
-                  theme={{
-                    colors: {
-                      background: "transparent",
-                      text: isDarkMode
-                        ? currentTheme.colors.textPrimary
-                        : "#000",
-                      primary: isDarkMode
-                        ? "#FFEC8B"
-                        : currentTheme.colors.secondary,
-                      placeholder: isDarkMode
-                        ? "#FFD700"
-                        : currentTheme.colors.textSecondary,
-                      onSurface: isDarkMode
-                        ? !isInterestsFocused
-                          ? "#FFD700"
-                          : currentTheme.colors.textPrimary
-                        : currentTheme.colors.textSecondary,
-                    },
-                    fonts: {
-                      regular: { fontFamily: "Comfortaa_400Regular" },
-                    },
-                  }}
-                  dense
-                  accessibilityLabel={t(
-                    "accessibility.interestsField.label"
-                  )}
-                  accessibilityHint={t(
-                    "accessibility.interestsField.hint"
-                  )}
-                  testID="input-interests"
-                />
-              </Animated.View>
               {/* Catégories pour le matching */}
 <Animated.View entering={FadeInUp.delay(550)} style={{ width: "100%", marginBottom: V_SPACING }}>
   <Text style={[{

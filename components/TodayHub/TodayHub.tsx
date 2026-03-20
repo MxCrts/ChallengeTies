@@ -24,7 +24,6 @@ import { Image as ExpoImage } from "expo-image";
 import * as Haptics from "expo-haptics";
 import type { AnimatedStyle } from "react-native-reanimated";
 import type { ViewStyle } from "react-native";
-import { BlurView } from "expo-blur";
 
 export type TodayHubPrimaryMode = "mark" | "new" | "pick" | "duo" | "duoPending";
 
@@ -52,33 +51,25 @@ type Props = {
   t: TFunction;
   isDarkMode: boolean;
   langKey: string;
-
   primaryMode: TodayHubPrimaryMode;
   hasActiveChallenges: boolean;
   activeCount: number;
   primaryCtaRef?: React.RefObject<any>;
   primaryAnimatedStyle?: AnimatedStyle<ViewStyle>;
-
   title: string;
   sub: string;
-
   whyReturn?: TodayHubWhyReturn | null;
-
   hubMeta?: HubMeta | null;
   hubDescription?: string;
-
   progressPct: number;
-
   primaryGradient: readonly [string, string];
   primaryIcon: string;
   primaryLabel: string;
-
   onOpenHub: () => void;
   onPrimaryPress: () => void;
   onPendingWarmupPress?: () => void;
   onPickSolo: () => void;
   onCreate: () => void;
-
   CONTENT_MAX_W: number;
   staticStyles: any;
   normalize: (n: number) => number;
@@ -87,50 +78,6 @@ type Props = {
 const F = {
   regular: "Comfortaa_400Regular",
   bold: "Comfortaa_700Bold",
-} as const;
-
-// ─── WHY RETURN color tokens per variant ─────────────────────────────────────
-const WHY_VARIANT_COLORS = {
-  warning: {
-    iconColor: "#F59E0B",
-    iconBg: "rgba(245,158,11,0.14)",
-    iconBorder: "rgba(245,158,11,0.30)",
-    glowA: "rgba(245,158,11,0.16)",
-    glowB: "rgba(251,191,36,0.10)",
-    leftBar: "#F59E0B",
-  },
-  streak: {
-    iconColor: "#F97316",
-    iconBg: "rgba(249,115,22,0.14)",
-    iconBorder: "rgba(249,115,22,0.30)",
-    glowA: "rgba(249,115,22,0.14)",
-    glowB: "rgba(251,146,60,0.08)",
-    leftBar: "#F97316",
-  },
-  trophy: {
-    iconColor: "#FBBF24",
-    iconBg: "rgba(251,191,36,0.14)",
-    iconBorder: "rgba(251,191,36,0.30)",
-    glowA: "rgba(251,191,36,0.14)",
-    glowB: "rgba(253,230,138,0.08)",
-    leftBar: "#FBBF24",
-  },
-  duo: {
-    iconColor: "#818CF8",
-    iconBg: "rgba(99,102,241,0.14)",
-    iconBorder: "rgba(99,102,241,0.30)",
-    glowA: "rgba(99,102,241,0.14)",
-    glowB: "rgba(167,139,250,0.08)",
-    leftBar: "#818CF8",
-  },
-  default: {
-    iconColor: "#94A3B8",
-    iconBg: "rgba(148,163,184,0.10)",
-    iconBorder: "rgba(148,163,184,0.22)",
-    glowA: "rgba(148,163,184,0.10)",
-    glowB: "rgba(148,163,184,0.06)",
-    leftBar: "rgba(148,163,184,0.50)",
-  },
 } as const;
 
 export default function TodayHub(props: Props) {
@@ -145,9 +92,7 @@ export default function TodayHub(props: Props) {
     primaryAnimatedStyle,
     title,
     sub,
-    whyReturn,
     hubMeta,
-    hubDescription,
     progressPct,
     primaryGradient,
     primaryIcon,
@@ -156,7 +101,6 @@ export default function TodayHub(props: Props) {
     onPrimaryPress,
     onPendingWarmupPress,
     onPickSolo,
-    onCreate,
     CONTENT_MAX_W,
     normalize,
   } = props;
@@ -166,302 +110,122 @@ export default function TodayHub(props: Props) {
   const isLarge = W >= 430;
   const isTablet = W >= 700;
 
+  const isPending = primaryMode === "duoPending";
+  const isMark = primaryMode === "mark";
+
+  // ─── Responsive sizes ──────────────────────────────────────────────────
   const UI = useMemo(() => {
     const clamp = (v: number, a: number, b: number) => Math.max(a, Math.min(b, v));
-
-    const pad = clamp(normalize(isTiny ? 14 : isTablet ? 18 : 16), 14, 20);
-    const shellR = clamp(normalize(isTiny ? 24 : isTablet ? 30 : 26), 22, 32);
+    const shellR = clamp(normalize(isTiny ? 24 : isTablet ? 30 : 28), 22, 32);
+    const pad = clamp(normalize(isTiny ? 14 : isTablet ? 20 : 16), 14, 22);
     const cardR = clamp(normalize(isTiny ? 16 : isTablet ? 20 : 18), 14, 22);
-    const ctaR = clamp(normalize(isTiny ? 16 : isTablet ? 22 : 18), 14, 24);
-
+    const ctaR = clamp(normalize(isTiny ? 18 : isTablet ? 22 : 20), 16, 24);
+    const thumb = clamp(normalize(isTiny ? 52 : isTablet ? 64 : 56), 48, 70);
+    const thumbR = clamp(normalize(isTiny ? 12 : isTablet ? 16 : 14), 10, 18);
+    const chevronBox = clamp(normalize(isTiny ? 28 : isTablet ? 36 : 30), 26, 40);
+    const trackH = clamp(normalize(isTiny ? 4 : isTablet ? 6 : 5), 3, 7);
+    const primaryPadY = clamp(normalize(isTiny ? 14 : isTablet ? 18 : 16), 12, 20);
+    const primaryPadX = clamp(normalize(isTiny ? 16 : isTablet ? 22 : 18), 14, 24);
     const iconBox = clamp(normalize(isTiny ? 58 : isTablet ? 74 : 64), 56, 78);
     const orb = clamp(Math.round(iconBox * 0.78), 44, 62);
     const ring = iconBox;
     const sheen = clamp(Math.round(iconBox * 1.55), 84, 132);
     const aura = clamp(Math.round(iconBox * 1.78), 96, 150);
-
-    const gap = clamp(normalize(isTiny ? 10 : isTablet ? 14 : 12), 9, 16);
-
     const ctaPadY = clamp(normalize(isTiny ? 7 : isTablet ? 10 : 8), 6, 12);
     const ctaPadX = clamp(normalize(isTiny ? 10 : isTablet ? 14 : 12), 10, 16);
     const ctaIcon = clamp(normalize(isTiny ? 14 : isTablet ? 18 : 16), 14, 20);
     const hourglass = clamp(normalize(isTiny ? 20 : isTablet ? 26 : 22), 18, 28);
-
-    const previewR = clamp(normalize(isTiny ? 16 : isTablet ? 22 : 20), 14, 24);
-    const previewPadY = clamp(normalize(isTiny ? 12 : isTablet ? 16 : 14), 10, 18);
-    const previewPadX = clamp(normalize(isTiny ? 12 : isTablet ? 16 : 14), 10, 18);
-    const thumb = clamp(normalize(isTiny ? 52 : isTablet ? 64 : 56), 48, 70);
-    const thumbR = clamp(normalize(isTiny ? 14 : isTablet ? 18 : 16), 12, 20);
-    const chevronBox = clamp(normalize(isTiny ? 30 : isTablet ? 38 : 32), 28, 42);
-    const trackH = clamp(normalize(isTiny ? 5 : isTablet ? 7 : 6), 4, 8);
-
-    const primaryR = clamp(normalize(isTiny ? 16 : isTablet ? 22 : 20), 14, 24);
-    const primaryPadY = clamp(normalize(isTiny ? 16 : isTablet ? 20 : 18), 14, 22);
-    const primaryPadX = clamp(normalize(isTiny ? 16 : isTablet ? 20 : 18), 14, 22);
-
-    const createR = clamp(normalize(isTiny ? 16 : isTablet ? 22 : 18), 14, 24);
-    const createPadY = clamp(normalize(isTiny ? 14 : isTablet ? 18 : 16), 12, 20);
-    const createPadX = clamp(normalize(isTiny ? 12 : isTablet ? 16 : 14), 10, 18);
-    const createIcon = clamp(normalize(isTiny ? 32 : isTablet ? 40 : 34), 30, 44);
-
     return {
-      pad, shellR, cardR, ctaR,
-      iconBox, orb, ring, sheen, aura,
-      gap, ctaPadY, ctaPadX, ctaIcon, hourglass,
-      previewR, previewPadY, previewPadX,
-      thumb, thumbR, chevronBox, trackH,
-      primaryR, primaryPadY, primaryPadX,
-      createR, createPadY, createPadX, createIcon,
+      shellR, pad, cardR, ctaR, thumb, thumbR, chevronBox, trackH,
+      primaryPadY, primaryPadX, iconBox, orb, ring, sheen, aura,
+      ctaPadY, ctaPadX, ctaIcon, hourglass,
     };
   }, [normalize, isTiny, isTablet]);
 
   const TYPO = useMemo(() => ({
-    pill: normalize(isTiny ? 11 : isLarge ? 12 : 11.5),
-    title: normalize(isTiny ? 21 : isLarge ? 23 : 22),
-    sub: normalize(isTiny ? 14 : isLarge ? 15 : 14.5),
-    previewTitle: normalize(isTiny ? 15 : isLarge ? 16 : 15.5),
-    previewDesc: normalize(isTiny ? 12.5 : isLarge ? 13.5 : 13),
-    primary: normalize(isTiny ? 17 : isLarge ? 18 : 17.5),
+    title: normalize(isTiny ? 22 : isLarge ? 25 : 23),
+    sub: normalize(isTiny ? 13 : isLarge ? 14.5 : 14),
+    badge: normalize(isTiny ? 10 : 10.5),
+    previewTitle: normalize(isTiny ? 13.5 : isLarge ? 15 : 14),
+    primary: normalize(isTiny ? 19 : isTablet ? 22 : 20),
+    link: normalize(isTiny ? 12 : isLarge ? 13 : 12.5),
     pendingLabel: normalize(isTiny ? 15 : isLarge ? 16 : 15.5),
     pendingMicro: normalize(isTiny ? 11 : isLarge ? 12 : 11.5),
-    link: normalize(isTiny ? 13 : isLarge ? 14 : 13.5),
-    createTitle: normalize(isTiny ? 17 : isLarge ? 18 : 17.5),
-    createSub: normalize(isTiny ? 12 : isLarge ? 13 : 12.5),
-  }), [normalize, isTiny, isLarge]);
+  }), [normalize, isTiny, isLarge, isTablet]);
 
-  // ─── Animations ──────────────────────────────────────────────────────────
-  const whyPulse = useSharedValue(0);
-  useEffect(() => {
-    whyPulse.value = withRepeat(
-      withTiming(1, { duration: 1600, easing: Easing.inOut(Easing.ease) }),
-      -1,
-      true
-    );
-  }, [whyPulse]);
-
+  // ─── Animations ────────────────────────────────────────────────────────
   const ring = useSharedValue(0);
   const glow = useSharedValue(0);
   const breath = useSharedValue(0);
   const aura = useSharedValue(0);
-
-  // ✨ NEW: progress fill glow
-  const progressGlow = useSharedValue(0);
-
-  // ✨ NEW: shell gradient shift (mark=warm, duoPending=cool)
-  const shellTint = useSharedValue(0);
-
-  // ✨ NEW: primary CTA shine sweep
   const ctaShine = useSharedValue(-1);
-
-  const isPending = primaryMode === "duoPending";
-  const isMark = primaryMode === "mark";
 
   useEffect(() => {
     if (!isPending) {
-      ring.value = 0;
-      glow.value = 0;
-      breath.value = 0;
-      aura.value = 0;
+      ring.value = 0; glow.value = 0; breath.value = 0; aura.value = 0;
       return;
     }
+    ring.value = withRepeat(withTiming(1, { duration: 1400, easing: Easing.inOut(Easing.ease) }), -1, true);
+    glow.value = withRepeat(withTiming(1, { duration: 1900, easing: Easing.inOut(Easing.ease) }), -1, true);
+    breath.value = withRepeat(withTiming(1, { duration: 1700, easing: Easing.inOut(Easing.ease) }), -1, true);
+    aura.value = withRepeat(withTiming(1, { duration: 2300, easing: Easing.inOut(Easing.ease) }), -1, true);
+  }, [isPending]);
 
-    ring.value = withRepeat(
-      withTiming(1, { duration: 1400, easing: Easing.inOut(Easing.ease) }),
-      -1,
-      true
-    );
-    glow.value = withRepeat(
-      withTiming(1, { duration: 1900, easing: Easing.inOut(Easing.ease) }),
-      -1,
-      true
-    );
-    breath.value = withRepeat(
-      withTiming(1, { duration: 1700, easing: Easing.inOut(Easing.ease) }),
-      -1,
-      true
-    );
-    aura.value = withRepeat(
-      withTiming(1, { duration: 2300, easing: Easing.inOut(Easing.ease) }),
-      -1,
-      true
-    );
-  }, [isPending, ring, glow, breath, aura]);
-
-  // ✨ NEW: progress glow pulse
   useEffect(() => {
-    if (progressPct <= 0 || progressPct >= 1) {
-      progressGlow.value = 0;
-      return;
-    }
-    progressGlow.value = withRepeat(
-      withTiming(1, { duration: 1800, easing: Easing.inOut(Easing.ease) }),
-      -1,
-      true
-    );
-  }, [progressPct, progressGlow]);
+    if (!isMark) { ctaShine.value = -1; return; }
+    ctaShine.value = withRepeat(withTiming(1, { duration: 2400, easing: Easing.inOut(Easing.ease) }), -1, false);
+  }, [isMark]);
 
-  // ✨ NEW: shell tint transition (warm orange for mark, cool indigo for pending)
-  useEffect(() => {
-    shellTint.value = withTiming(isPending ? 1 : 0, { duration: 500, easing: Easing.out(Easing.ease) });
-  }, [isPending, shellTint]);
-
-  // ✨ NEW: CTA shine sweep on mark mode
-  useEffect(() => {
-    if (!isMark) {
-      ctaShine.value = -1;
-      return;
-    }
-    ctaShine.value = withRepeat(
-      withTiming(1, { duration: 2400, easing: Easing.inOut(Easing.ease) }),
-      -1,
-      false
-    );
-  }, [isMark, ctaShine]);
-
-  const ringStyle = useAnimatedStyle(() => {
-    const s = 1 + ring.value * 0.045;
-    const o = 0.12 + ring.value * 0.10;
-    return { transform: [{ scale: s }], opacity: o };
-  });
-
-  const glowStyle = useAnimatedStyle(() => {
-    const o = 0.06 + glow.value * 0.10;
-    return { opacity: o };
-  });
-
-  const breathStyle = useAnimatedStyle(() => {
-    const p = breath.value;
-    return {
-      opacity: 0.08 + p * 0.12,
-      transform: [{ scale: 1 + p * 0.08 }],
-    };
-  });
-
-  const auraStyle = useAnimatedStyle(() => {
-    const a = aura.value;
-    return {
-      opacity: 0.07 + a * 0.13,
-      transform: [{ scale: 1 + a * 0.10 }],
-    };
-  });
-
-  // ✨ NEW: progress tip glow
-  const progressGlowStyle = useAnimatedStyle(() => {
-    const p = progressGlow.value;
-    return {
-      opacity: 0.55 + p * 0.45,
-      transform: [{ scale: 1 + p * 0.04 }],
-    };
-  });
-
-  // ✨ NEW: CTA shine style
+  const ringStyle = useAnimatedStyle(() => ({
+    transform: [{ scale: 1 + ring.value * 0.045 }],
+    opacity: 0.12 + ring.value * 0.10,
+  }));
+  const breathStyle = useAnimatedStyle(() => ({
+    opacity: 0.08 + breath.value * 0.12,
+    transform: [{ scale: 1 + breath.value * 0.08 }],
+  }));
+  const auraStyle = useAnimatedStyle(() => ({
+    opacity: 0.07 + aura.value * 0.13,
+    transform: [{ scale: 1 + aura.value * 0.10 }],
+  }));
   const ctaShineStyle = useAnimatedStyle(() => ({
     transform: [{ translateX: ctaShine.value * (CONTENT_MAX_W + 60) }],
     opacity: 0.18,
   }));
 
-  const whyReturnStyle = useAnimatedStyle(() => {
-    const p = whyPulse.value;
-    return {
-      transform: [{ scale: 1 + p * 0.004 }],
-      opacity: 0.94 + p * 0.06,
-    };
-  });
-
-  // ─── Derived ─────────────────────────────────────────────────────────────
-  const whyReturnIcon = useMemo(() => {
-    if (whyReturn?.icon) return whyReturn.icon;
-    switch (whyReturn?.variant) {
-      case "duo": return "people-outline";
-      case "streak": return "flame-outline";
-      case "trophy": return "trophy-outline";
-      case "warning": return "alert-circle-outline";
-      default: return "sparkles-outline";
-    }
-  }, [whyReturn?.icon, whyReturn?.variant]);
-
-  // ✨ NEW: per-variant whyReturn color tokens
-  const whyColors = useMemo(() => {
-    const v = whyReturn?.variant;
-    return WHY_VARIANT_COLORS[v ?? "default"] ?? WHY_VARIANT_COLORS.default;
-  }, [whyReturn?.variant]);
-
-  const rightPill = useMemo(() => {
-    if (primaryMode === "duoPending") {
-      return t("homeZ.todayHub.metaPending", { defaultValue: "Invitation" });
-    }
-    if (!hasActiveChallenges) {
-      return t("homeZ.todayHub.metaNone", { defaultValue: "Aucun défi actif" });
-    }
-    return t("homeZ.todayHub.metaActive", {
-      defaultValue: "{{count}} actifs",
-      count: activeCount,
-    });
-  }, [t, langKey, primaryMode, hasActiveChallenges, activeCount]);
-
+  // ─── Derived ───────────────────────────────────────────────────────────
   const effectivePrimaryGradient = useMemo(() => {
-    if (primaryMode === "duo" && !hasActiveChallenges) {
-      return ["#6366F1", "#A78BFA"] as const;
-    }
+    if (primaryMode === "duo" && !hasActiveChallenges) return ["#6366F1", "#A78BFA"] as const;
     return primaryGradient;
   }, [primaryMode, hasActiveChallenges, primaryGradient]);
 
-  // ✨ NEW: shell background gradient changes per mode
   const shellBgGradient = useMemo(() => {
-    if (isPending) {
-      return isDarkMode
-        ? ["rgba(99,102,241,0.10)", "rgba(2,6,23,0.00)"] as const
-        : ["rgba(99,102,241,0.06)", "rgba(255,255,255,0.00)"] as const;
-    }
-    if (isMark) {
-      return isDarkMode
-        ? ["rgba(249,115,22,0.10)", "rgba(2,6,23,0.00)"] as const
-        : ["rgba(249,115,22,0.07)", "rgba(255,255,255,0.00)"] as const;
-    }
+    if (isPending) return isDarkMode
+      ? ["rgba(99,102,241,0.12)", "rgba(2,6,23,0.00)"] as const
+      : ["rgba(99,102,241,0.07)", "rgba(255,255,255,0.00)"] as const;
+    if (isMark) return isDarkMode
+      ? ["rgba(249,115,22,0.12)", "rgba(2,6,23,0.00)"] as const
+      : ["rgba(249,115,22,0.08)", "rgba(255,255,255,0.00)"] as const;
     return ["rgba(0,0,0,0.00)", "rgba(0,0,0,0.00)"] as const;
   }, [isPending, isMark, isDarkMode]);
 
   const TOKENS = useMemo(() => {
-    const border = isDarkMode ? "rgba(255,255,255,0.10)" : "rgba(2,6,23,0.08)";
-    const surface = isDarkMode ? "rgba(255,255,255,0.05)" : "rgba(255,255,255,0.74)";
-    const surface2 = isDarkMode ? "rgba(255,255,255,0.04)" : "rgba(255,255,255,0.86)";
-    const text = isDarkMode ? "#F8FAFC" : "#0B1120";
-    const subText = isDarkMode ? "rgba(226,232,240,0.70)" : "rgba(15,23,42,0.62)";
-    const mutedText = isDarkMode ? "rgba(226,232,240,0.65)" : "rgba(15,23,42,0.55)";
-    const track = isDarkMode ? "rgba(226,232,240,0.10)" : "rgba(2,6,23,0.08)";
-    const icon = isDarkMode ? "#E2E8F0" : "#0B1120";
-    const chevron = isDarkMode ? "rgba(226,232,240,0.85)" : "rgba(2,6,23,0.85)";
-    const pillA = isDarkMode ? "rgba(148,163,184,0.20)" : "rgba(148,163,184,0.35)";
-    const pillB = isDarkMode ? "rgba(226,232,240,0.10)" : "rgba(2,6,23,0.06)";
-    const thumbBorder = isDarkMode ? "rgba(226,232,240,0.18)" : "rgba(2,6,23,0.10)";
-    const thumbBg = isDarkMode ? "rgba(255,255,255,0.04)" : "rgba(2,6,23,0.03)";
     const hairline = Math.max(1, Math.round(PixelRatio.get() * 0.35)) / PixelRatio.get();
-    const highlight = isDarkMode ? "rgba(255,255,255,0.08)" : "rgba(255,255,255,0.75)";
-    const rim = isDarkMode ? "rgba(255,255,255,0.12)" : "rgba(2,6,23,0.08)";
-
-    const whyBg = isDarkMode ? "rgba(255,255,255,0.05)" : "rgba(2,6,23,0.030)";
-    const whyBorder = isDarkMode ? "rgba(255,255,255,0.10)" : "rgba(2,6,23,0.07)";
-    const whyText = isDarkMode ? "rgba(248,250,252,0.92)" : "rgba(2,6,23,0.86)";
-    const whySub = isDarkMode ? "rgba(226,232,240,0.70)" : "rgba(15,23,42,0.62)";
-    const whyIcon = isDarkMode ? "rgba(226,232,240,0.92)" : "rgba(2,6,23,0.86)";
-
-    // ✨ progress fill matches primary CTA
-    const progressFill = effectivePrimaryGradient[0];
-    const progressFillEnd = effectivePrimaryGradient[1];
-
-    // ✨ progress glow color
-    const progressGlowColor = isDarkMode
-      ? `${effectivePrimaryGradient[0]}88`
-      : `${effectivePrimaryGradient[0]}55`;
-
     return {
-      border, surface, surface2,
-      text, subText, mutedText,
-      track, icon, chevron,
-      pillA, pillB, thumbBorder, thumbBg,
-      progressFill, progressFillEnd, progressGlowColor,
-      hairline, highlight, rim,
-      whyBg, whyBorder, whyText, whySub, whyIcon,
+      text: isDarkMode ? "#F8FAFC" : "#0B1120",
+      subText: isDarkMode ? "rgba(226,232,240,0.70)" : "rgba(15,23,42,0.62)",
+      mutedText: isDarkMode ? "rgba(226,232,240,0.55)" : "rgba(15,23,42,0.50)",
+      surface: isDarkMode ? "rgba(15,23,42,0.88)" : "rgba(255,255,255,0.97)",
+      surface2: isDarkMode ? "rgba(255,255,255,0.04)" : "rgba(255,255,255,0.86)",
+      border: isDarkMode ? "rgba(255,255,255,0.10)" : "rgba(2,6,23,0.08)",
+      rim: isDarkMode ? "rgba(255,255,255,0.12)" : "rgba(2,6,23,0.08)",
+      track: isDarkMode ? "rgba(226,232,240,0.10)" : "rgba(2,6,23,0.08)",
+      chevron: isDarkMode ? "rgba(226,232,240,0.85)" : "rgba(2,6,23,0.85)",
+      thumbBorder: isDarkMode ? "rgba(226,232,240,0.18)" : "rgba(2,6,23,0.10)",
+      thumbBg: isDarkMode ? "rgba(255,255,255,0.04)" : "rgba(2,6,23,0.03)",
+      progressFill: effectivePrimaryGradient[0],
+      progressFillEnd: effectivePrimaryGradient[1],
+      hairline,
     };
   }, [isDarkMode, effectivePrimaryGradient]);
 
@@ -473,573 +237,316 @@ export default function TodayHub(props: Props) {
     } catch {}
   };
 
-  const pressFx = (pressed: boolean, baseScale = 0.995) => ({
-    opacity: pressed ? 0.96 : 1,
-    transform: [{ scale: pressed ? baseScale : 1 }],
-  });
-
   const showSoloLink = !hasActiveChallenges && primaryMode !== "duoPending";
 
-  const pendingTitle = useMemo(
-    () => t("homeZ.duoPending.title", { defaultValue: "Invite sent" }),
-    [t, langKey]
-  );
-  const pendingSub = useMemo(
-    () => t("homeZ.duoPending.sub", { defaultValue: "Pending. Once accepted: Duo." }),
-    [t, langKey]
-  );
-  const pendingHint = useMemo(
-    () => t("homeZ.duoPending.hint", { defaultValue: "While waiting, set up your Duo." }),
-    [t, langKey]
-  );
+  const pendingSub = useMemo(() => t("homeZ.duoPending.sub", { defaultValue: "Pending. Once accepted: Duo." }), [t, langKey]);
+  const pendingHint = useMemo(() => t("homeZ.duoPending.hint", { defaultValue: "While waiting, set up your Duo." }), [t, langKey]);
+  const pendingA11y = useMemo(() => t("homeZ.duoPending.a11y", { defaultValue: "Duo invite pending" }), [t, langKey]);
 
-  const displayTitle = isPending ? pendingTitle : title;
+  const displayTitle = isPending ? t("homeZ.duoPending.title", { defaultValue: "Invitation envoyée" }) : title;
   const displaySub = isPending ? pendingHint : sub;
 
-  const pendingA11y = useMemo(
-    () => t("homeZ.duoPending.a11y", { defaultValue: "Duo invite pending" }),
-    [t, langKey]
-  );
+  // Badge label contextuel
+  const badgeLabel = isMark
+    ? t("homeZ.todayHub.badgeMark", "Action requise")
+    : isPending
+      ? t("homeZ.todayHub.badgePending", "En attente")
+      : t("homeZ.todayHub.badgeExplore", "Prêt à démarrer");
 
-  const todayBadge = useMemo(
-    () => t("homeZ.todayHub.badge", { defaultValue: "TODAY" }),
-    [t, langKey]
-  );
+  const badgeColor = isMark ? "#F97316" : isPending ? "#818CF8" : (isDarkMode ? "rgba(148,163,184,0.55)" : "rgba(100,116,139,0.55)");
 
-  const pillPadX = isTiny ? 9 : 12;
-  const pillPadY = isTiny ? 6 : 7;
-  const pillIcon = normalize(isTiny ? 13 : 14);
-
-  // ✨ NEW: progress percentage label
-  const progressLabel = useMemo(() => {
-    const pct = Math.round(Math.max(0, Math.min(1, progressPct)) * 100);
-    return `${pct}%`;
-  }, [progressPct]);
-
+  // ─── RENDER ────────────────────────────────────────────────────────────
   return (
     <View style={[s.outerWrapper, { paddingHorizontal: normalize(15) }]}>
       <View
         style={[
           s.shell,
-          s.shadowSoft,
           {
             maxWidth: CONTENT_MAX_W,
-            borderColor: TOKENS.rim,
+            borderColor: isMark
+              ? (isDarkMode ? "rgba(249,115,22,0.35)" : "rgba(249,115,22,0.22)")
+              : isPending
+                ? (isDarkMode ? "rgba(99,102,241,0.30)" : "rgba(99,102,241,0.18)")
+                : (isDarkMode ? "rgba(255,255,255,0.10)" : "rgba(2,6,23,0.08)"),
+            borderWidth: (isMark || isPending) ? 1.5 : TOKENS.hairline,
             backgroundColor: TOKENS.surface,
-            borderRadius: UI.shellR,
-            padding: UI.pad,
+            borderRadius: normalize(UI.shellR),
+            ...(Platform.OS === "ios" ? {
+              shadowColor: isMark ? "#F97316" : isPending ? "#6366F1" : "#000",
+              shadowOpacity: isMark ? 0.22 : isPending ? 0.18 : 0.10,
+              shadowRadius: normalize(28),
+              shadowOffset: { width: 0, height: normalize(10) },
+            } : {
+              elevation: isMark ? 16 : isPending ? 14 : 8,
+            }),
           },
         ]}
       >
-        {/* ✨ NEW: mode-aware directional gradient backdrop */}
+        {/* Backdrop gradient mode-aware */}
         <LinearGradient
           colors={shellBgGradient}
-          start={{ x: 0, y: 0 }}
-          end={{ x: 1, y: 1 }}
-          style={[StyleSheet.absoluteFill, { borderRadius: UI.shellR }]}
+          start={{ x: 0, y: 0 }} end={{ x: 1, y: 1 }}
+          style={[StyleSheet.absoluteFill, { borderRadius: normalize(UI.shellR) }]}
           pointerEvents="none"
         />
 
-        {/* Shell highlight (depth) */}
-        <View
-          pointerEvents="none"
-          style={[
-            s.shellHighlight,
-            {
-              borderColor: isDarkMode
-                ? "rgba(255,255,255,0.10)"
-                : "rgba(2,6,23,0.06)",
-              backgroundColor: isDarkMode
-                ? "rgba(255,255,255,0.06)"
-                : "rgba(255,255,255,0.55)",
-              borderTopLeftRadius: UI.shellR,
-              borderTopRightRadius: UI.shellR,
-            },
-          ]}
-        />
-        <View
-          pointerEvents="none"
-          style={[
-            s.shellRim,
-            {
-              borderColor: TOKENS.rim,
-              borderWidth: TOKENS.hairline,
-              borderRadius: UI.shellR,
-            },
-          ]}
-        />
+        {/* Shell highlight top */}
+        <View pointerEvents="none" style={[s.shellHighlight, {
+          borderColor: isDarkMode ? "rgba(255,255,255,0.08)" : "rgba(2,6,23,0.04)",
+          backgroundColor: isDarkMode ? "rgba(255,255,255,0.04)" : "rgba(255,255,255,0.60)",
+          borderTopLeftRadius: normalize(UI.shellR),
+          borderTopRightRadius: normalize(UI.shellR),
+        }]} />
 
-        {/* ─── Top pills ───────────────────────────────────────────────── */}
-        <View style={[s.pillsRow, { marginBottom: normalize(isTiny ? 10 : 12) }]}>
-          {/* LEFT: TODAY */}
-          <View
-            style={[
-              s.pill,
-              s.pillLeft,
-              {
-                backgroundColor: TOKENS.pillA,
-                borderWidth: TOKENS.hairline,
-                borderColor: TOKENS.rim,
-                paddingHorizontal: pillPadX,
-                paddingVertical: pillPadY,
-              },
-            ]}
-          >
-            <Ionicons name="flash-outline" size={pillIcon} color={TOKENS.icon} />
-            <Text
-              style={[s.pillText, { color: TOKENS.icon, fontSize: TYPO.pill }]}
-              numberOfLines={1}
-              adjustsFontSizeToFit
-              minimumFontScale={0.88}
-              ellipsizeMode="clip"
-            >
-              {todayBadge}
+        {/* ── ZONE HEADER ── */}
+        <View style={{ paddingHorizontal: UI.pad, paddingTop: UI.pad, paddingBottom: 0 }}>
+
+          {/* Badge contextuel */}
+          <View style={{ flexDirection: "row", alignItems: "center", gap: normalize(6), marginBottom: normalize(10) }}>
+            <View style={{
+              width: normalize(6), height: normalize(6),
+              borderRadius: normalize(3),
+              backgroundColor: badgeColor,
+            }} />
+            <Text style={{
+              fontFamily: F.bold,
+              fontSize: TYPO.badge,
+              letterSpacing: 1.1,
+              color: badgeColor,
+              textTransform: "uppercase",
+            }}>
+              {badgeLabel}
             </Text>
           </View>
 
-          {/* RIGHT: ACTIVE / NONE / PENDING */}
-          <View
-            style={[
-              s.pill,
-              s.pillRight,
-              {
-                backgroundColor: TOKENS.pillB,
-                borderWidth: TOKENS.hairline,
-                borderColor: TOKENS.rim,
-                paddingHorizontal: pillPadX,
-                paddingVertical: pillPadY,
-              },
-            ]}
+          {/* Titre fort */}
+          <Text style={[s.title, {
+            color: TOKENS.text,
+            fontSize: TYPO.title,
+            lineHeight: Math.round(TYPO.title * 1.22),
+          }]}
+            numberOfLines={2}
+            adjustsFontSizeToFit
+            minimumFontScale={0.85}
           >
-            <Ionicons
-              name={primaryMode === "duoPending" ? "hourglass-outline" : "flame-outline"}
-              size={pillIcon}
-              color={
-                primaryMode === "duoPending"
-                  ? "#818CF8"   // ✨ violet tint when pending
-                  : primaryMode === "mark"
-                    ? "#F97316" // ✨ orange tint when mark
-                    : TOKENS.icon
-              }
-              style={{ marginRight: isTiny ? 6 : 8 }}
-            />
-            <View style={s.pillTextWrap}>
-              <Text
-                style={[s.pillText, { color: TOKENS.icon, fontSize: TYPO.pill }]}
-                numberOfLines={1}
-                adjustsFontSizeToFit
-                minimumFontScale={0.72}
-                ellipsizeMode="tail"
-              >
-                {rightPill}
-              </Text>
-            </View>
-          </View>
+            {displayTitle}
+          </Text>
+
+          {/* Sous-titre discret */}
+          <Text style={[s.sub, {
+            color: TOKENS.subText,
+            fontSize: TYPO.sub,
+            lineHeight: Math.round(TYPO.sub * 1.38),
+          }]}
+            numberOfLines={1}
+            adjustsFontSizeToFit
+            minimumFontScale={0.92}
+          >
+            {displaySub}
+          </Text>
         </View>
 
-        {/* ─── Title ───────────────────────────────────────────────────── */}
-        <Text
-          style={[s.title, { color: TOKENS.text, fontSize: TYPO.title }]}
-          numberOfLines={2}
-          adjustsFontSizeToFit
-          minimumFontScale={0.88}
-        >
-          {displayTitle}
-        </Text>
+        {/* Séparateur */}
+        <View style={{
+          height: TOKENS.hairline,
+          backgroundColor: isDarkMode ? "rgba(255,255,255,0.07)" : "rgba(2,6,23,0.06)",
+          marginHorizontal: UI.pad,
+          marginVertical: normalize(12),
+        }} />
 
-        <Text
-          style={[
-            s.sub,
-            {
-              color: TOKENS.subText,
-              fontSize: TYPO.sub,
-              lineHeight: Math.round(TYPO.sub * 1.35),
-            },
-          ]}
-          numberOfLines={2}
-          adjustsFontSizeToFit
-          minimumFontScale={0.92}
-        >
-          {displaySub}
-        </Text>
-
-        {/* ─── WHY RETURN — variant-colored ────────────────────────────── */}
-        {!!whyReturn?.text && (
-          <Animated.View
-            style={[
-              s.whyWrap,
-              whyReturnStyle,
-              {
-                borderColor: isDarkMode
-                  ? "rgba(255,255,255,0.10)"
-                  : "rgba(2,6,23,0.07)",
-                backgroundColor: TOKENS.whyBg,
-                borderRadius: normalize(isTiny ? 16 : isTablet ? 20 : 18),
-              },
-            ]}
-          >
-            {/* ✨ IMPROVED: variant-aware glow */}
-            <LinearGradient
-              pointerEvents="none"
-              colors={[whyColors.glowA, "rgba(0,0,0,0)", whyColors.glowB]}
-              start={{ x: 0, y: 0 }}
-              end={{ x: 1, y: 1 }}
-              style={StyleSheet.absoluteFill}
-            />
-
-            {/* ✨ NEW: left accent bar per variant */}
-            <View
-              pointerEvents="none"
-              style={[
-                s.whyLeftBar,
-                {
-                  backgroundColor: whyColors.leftBar,
-                  borderRadius: normalize(2),
-                },
-              ]}
-            />
-
-            <View style={[s.whyRow, { paddingLeft: normalize(10) }]}>
-              {/* ✨ IMPROVED: colored icon pill per variant */}
-              <View
-                style={[
-                  s.whyIconPill,
-                  {
-                    backgroundColor: whyColors.iconBg,
-                    borderWidth: TOKENS.hairline,
-                    borderColor: whyColors.iconBorder,
-                  },
-                ]}
-              >
-                <Ionicons
-                  name={whyReturnIcon as any}
-                  size={normalize(isTiny ? 16 : 18)}
-                  color={whyColors.iconColor}
-                />
-              </View>
-              <Text
-                style={[
-                  s.whyText,
-                  {
-                    color: TOKENS.whyText,
-                    fontSize: normalize(isTiny ? 12.5 : isTablet ? 13.5 : 13),
-                  },
-                ]}
-                numberOfLines={2}
-                adjustsFontSizeToFit
-                minimumFontScale={0.90}
-              >
-                {whyReturn.text}
-              </Text>
-            </View>
-          </Animated.View>
-        )}
-
-        {/* ─── Hub preview (tap to open) ───────────────────────────────── */}
+        {/* ── CHALLENGE PREVIEW ── */}
         {!!hubMeta?.title && (
-          <Pressable
-            onPress={() => {
-              hapticTap("selection");
-              onOpenHub();
-            }}
-            style={({ pressed }) => [
-              s.preview,
-              {
-                borderColor: isDarkMode ? "rgba(255,255,255,0.14)" : "rgba(2,6,23,0.10)",
-                borderWidth: TOKENS.hairline * 2,
-                backgroundColor: isDarkMode ? "rgba(255,255,255,0.07)" : "rgba(255,255,255,0.92)",
-                borderRadius: UI.previewR,
-                paddingVertical: UI.previewPadY,
-                paddingHorizontal: UI.previewPadX,
-              },
-              pressFx(pressed, 0.991),
-            ]}
-          >
-            <View
-              pointerEvents="none"
-              style={[
-                s.previewRim,
-                {
-                  borderColor: TOKENS.rim,
-                  borderWidth: TOKENS.hairline,
-                  borderRadius: UI.previewR,
-                },
-              ]}
-            />
-
-            {hubMeta?.imageUrl ? (
-              <View
-                style={[
-                  s.previewThumbWrap,
-                  {
-                    borderColor: TOKENS.thumbBorder,
-                    backgroundColor: TOKENS.thumbBg,
-                    width: UI.thumb,
-                    height: UI.thumb,
-                    borderRadius: UI.thumbR,
-                  },
-                ]}
-              >
-                <ExpoImage
-                  source={{ uri: getThumbUrl200(hubMeta.imageUrl) || hubMeta.imageUrl }}
-                  style={{ width: "100%", height: "100%" }}
-                  contentFit="cover"
-                  transition={120}
-                  cachePolicy="memory-disk"
-                />
-              </View>
-            ) : (
-              <View
-                style={[
-                  s.previewThumbWrap,
-                  {
-                    borderColor: TOKENS.thumbBorder,
-                    backgroundColor: TOKENS.thumbBg,
-                    width: UI.thumb,
-                    height: UI.thumb,
-                    borderRadius: UI.thumbR,
-                  },
-                ]}
-              >
-                <View
-                  pointerEvents="none"
-                  style={[
-                    s.thumbRim,
-                    {
-                      borderColor: TOKENS.thumbBorder,
-                      borderWidth: TOKENS.hairline,
-                      borderRadius: UI.thumbR,
-                    },
-                  ]}
-                />
-                <Ionicons
-                  name="sparkles-outline"
-                  size={normalize(Math.max(16, Math.round(UI.thumb * 0.42)))}
-                  color={isDarkMode ? "rgba(226,232,240,0.85)" : "rgba(2,6,23,0.75)"}
-                />
-              </View>
-            )}
-
-            <View style={{ flex: 1, minWidth: 0, marginRight: normalize(10) }}>
-              <Text
-                style={[s.previewTitle, { color: TOKENS.text, fontSize: TYPO.previewTitle }]}
-                numberOfLines={2}
-                adjustsFontSizeToFit
-                minimumFontScale={0.88}
-              >
-                {hubMeta.title}
-              </Text>
-
-              {!!hubDescription && (
-                <Text
-                  style={[
-                    s.previewDesc,
-                    {
-                      color: TOKENS.mutedText,
-                      fontSize: TYPO.previewDesc,
-                      lineHeight: Math.round(TYPO.previewDesc * 1.35),
-                    },
-                  ]}
-                  numberOfLines={2}
-                  adjustsFontSizeToFit
-                  minimumFontScale={0.90}
-                >
-                  {hubDescription}
-                </Text>
-              )}
-
-              {/* ✨ IMPROVED: progress bar with gradient fill + animated tip glow */}
-              <View style={[s.progressTrack, { backgroundColor: TOKENS.track, height: UI.trackH }]}>
-                <LinearGradient
-                  colors={[TOKENS.progressFill, TOKENS.progressFillEnd]}
-                  start={{ x: 0, y: 0 }}
-                  end={{ x: 1, y: 0 }}
-                  style={[
-                    s.progressFillGrad,
-                    {
-                      width: `${Math.round(Math.max(0, Math.min(1, progressPct)) * 100)}%`,
-                      height: UI.trackH,
-                    },
-                  ]}
-                />
-                {/* ✨ NEW: glowing tip on progress bar */}
-                {progressPct > 0.04 && progressPct < 0.98 && (
-                  <Animated.View
-                    pointerEvents="none"
-                    style={[
-                      s.progressTip,
-                      progressGlowStyle,
-                      {
-                        left: `${Math.round(Math.max(0, Math.min(1, progressPct)) * 100)}%`,
-                        backgroundColor: TOKENS.progressFillEnd,
-                        width: normalize(isTiny ? 8 : 10),
-                        height: normalize(isTiny ? 8 : 10),
-                        borderRadius: normalize(999),
-                        marginLeft: -normalize(isTiny ? 4 : 5),
-                        top: -(normalize(isTiny ? 8 : 10) - UI.trackH) / 2,
-                        shadowColor: TOKENS.progressFillEnd,
-                        shadowOpacity: 0.80,
-                        shadowRadius: normalize(6),
-                        shadowOffset: { width: 0, height: 0 },
-                        elevation: 4,
-                      },
-                    ]}
-                  />
-                )}
-              </View>
-
-              {/* ✨ NEW: progress % label */}
-              {progressPct > 0 && (
-                <Text
-                  style={[
-                    s.progressLabel,
-                    {
-                      color: TOKENS.mutedText,
-                      fontSize: normalize(isTiny ? 10 : 11),
-                      marginTop: normalize(4),
-                    },
-                  ]}
-                >
-                  {progressLabel}
-                </Text>
-              )}
-            </View>
-
-            <View
-              style={[
-                s.previewChevron,
-                {
-                  backgroundColor: isDarkMode ? "rgba(255,255,255,0.06)" : "rgba(2,6,23,0.04)",
-                  width: UI.chevronBox,
-                  height: UI.chevronBox,
-                  borderRadius: 999,
-                },
-              ]}
+          <View style={{ paddingHorizontal: UI.pad, paddingBottom: normalize(12) }}>
+            <Pressable
+              onPress={() => { hapticTap("selection"); onOpenHub(); }}
+              style={({ pressed }) => ({
+                borderRadius: normalize(16),
+                overflow: "hidden",
+                opacity: pressed ? 0.94 : 1,
+                transform: [{ scale: pressed ? 0.993 : 1 }],
+              })}
             >
-              <Ionicons
-                name="chevron-forward"
-                size={normalize(Math.max(16, Math.round(UI.chevronBox * 0.56)))}
-                color={TOKENS.chevron}
-              />
-            </View>
-          </Pressable>
+              <LinearGradient
+                colors={isDarkMode
+                  ? ["rgba(255,255,255,0.07)", "rgba(255,255,255,0.03)"]
+                  : ["rgba(255,255,255,0.98)", "rgba(248,250,252,0.92)"]}
+                style={{
+                  borderRadius: normalize(16),
+                  flexDirection: "row",
+                  alignItems: "center",
+                  padding: normalize(12),
+                  gap: normalize(12),
+                  borderWidth: TOKENS.hairline,
+                  borderColor: isDarkMode ? "rgba(255,255,255,0.10)" : "rgba(2,6,23,0.08)",
+                }}
+              >
+                {/* Thumb */}
+                {hubMeta.imageUrl ? (
+                  <View style={{
+                    width: normalize(UI.thumb), height: normalize(UI.thumb),
+                    borderRadius: normalize(UI.thumbR), overflow: "hidden",
+                    flexShrink: 0,
+                    borderWidth: TOKENS.hairline,
+                    borderColor: TOKENS.thumbBorder,
+                  }}>
+                    <ExpoImage
+                      source={{ uri: getThumbUrl200(hubMeta.imageUrl) || hubMeta.imageUrl }}
+                      style={{ width: "100%", height: "100%" }}
+                      contentFit="cover" transition={120} cachePolicy="memory-disk"
+                    />
+                  </View>
+                ) : (
+                  <View style={{
+                    width: normalize(UI.thumb), height: normalize(UI.thumb),
+                    borderRadius: normalize(UI.thumbR), overflow: "hidden",
+                    flexShrink: 0,
+                    backgroundColor: "rgba(249,115,22,0.10)",
+                    borderWidth: TOKENS.hairline,
+                    borderColor: "rgba(249,115,22,0.22)",
+                    alignItems: "center", justifyContent: "center",
+                  }}>
+                    <Ionicons name="trophy-outline" size={normalize(20)} color="#F97316" />
+                  </View>
+                )}
+
+                {/* Info */}
+                <View style={{ flex: 1, minWidth: 0 }}>
+                  <Text style={{
+                    fontFamily: F.bold,
+                    fontSize: TYPO.previewTitle,
+                    color: TOKENS.text,
+                    marginBottom: normalize(isMark ? 6 : 2),
+                    letterSpacing: -0.2,
+                  }} numberOfLines={1} adjustsFontSizeToFit minimumFontScale={0.88}>
+                    {hubMeta.title}
+                  </Text>
+
+                  {isMark ? (
+                    <View>
+                      <View style={{
+                        height: normalize(UI.trackH),
+                        backgroundColor: TOKENS.track,
+                        borderRadius: normalize(999),
+                        overflow: "hidden",
+                      }}>
+                        <LinearGradient
+                          colors={[TOKENS.progressFill, TOKENS.progressFillEnd]}
+                          start={{ x: 0, y: 0 }} end={{ x: 1, y: 0 }}
+                          style={{
+                            width: `${Math.round(Math.max(0, Math.min(1, progressPct)) * 100)}%`,
+                            height: "100%",
+                            borderRadius: normalize(999),
+                          }}
+                        />
+                      </View>
+                      <Text style={{
+                        fontFamily: F.regular,
+                        fontSize: normalize(10.5),
+                        color: TOKENS.mutedText,
+                        marginTop: normalize(3),
+                      }}>
+                        {`${Math.round(progressPct * 100)}% accompli`}
+                      </Text>
+                    </View>
+                  ) : (
+                    <Text style={{
+                      fontFamily: F.regular,
+                      fontSize: normalize(11.5),
+                      color: TOKENS.mutedText,
+                    }} numberOfLines={1}>
+                      {t("homeZ.todayHub.tapToOpen", "Voir le défi →")}
+                    </Text>
+                  )}
+                </View>
+
+                {/* Chevron */}
+                <View style={{
+                  width: normalize(UI.chevronBox), height: normalize(UI.chevronBox),
+                  borderRadius: normalize(999),
+                  backgroundColor: isDarkMode ? "rgba(255,255,255,0.07)" : "rgba(2,6,23,0.05)",
+                  alignItems: "center", justifyContent: "center",
+                  flexShrink: 0,
+                }}>
+                  <Ionicons name="chevron-forward" size={normalize(14)} color={TOKENS.chevron} />
+                </View>
+              </LinearGradient>
+            </Pressable>
+          </View>
         )}
 
-        {/* ─── PRIMARY ACTION ──────────────────────────────────────────── */}
-        {primaryMode === "duoPending" ? (
-          <View style={s.pendingWrap}>
+        {/* ── PRIMARY ACTION ── */}
+        {isPending ? (
+          // Mode duoPending
+          <View style={{ paddingHorizontal: UI.pad, paddingBottom: UI.pad }}>
             <Pressable
               ref={primaryCtaRef as any}
-              onPress={() => {
-                hapticTap("selection");
-                (onPendingWarmupPress ?? onPrimaryPress)();
-              }}
+              onPress={() => { hapticTap("selection"); (onPendingWarmupPress ?? onPrimaryPress)(); }}
               accessibilityRole="button"
               accessibilityLabel={pendingA11y}
               style={({ pressed }) => [
-                s.pendingCard,
                 {
+                  width: "100%",
+                  borderRadius: normalize(UI.cardR),
+                  borderWidth: TOKENS.hairline,
                   borderColor: TOKENS.border,
                   backgroundColor: TOKENS.surface2,
-                  borderRadius: UI.cardR,
                   paddingVertical: normalize(isTiny ? 12 : isTablet ? 16 : 14),
                   paddingHorizontal: normalize(isTiny ? 12 : isTablet ? 16 : 14),
+                  overflow: "hidden",
+                  opacity: pressed ? 0.96 : 1,
+                  transform: [{ scale: pressed ? 0.992 : 1 }],
                 },
                 primaryAnimatedStyle as any,
-                pressFx(pressed, 0.992),
               ]}
             >
-              <View
-                pointerEvents="none"
-                style={[
-                  s.pendingRim,
-                  { borderRadius: UI.cardR, borderColor: TOKENS.rim, borderWidth: TOKENS.hairline },
-                ]}
-              />
-              <View style={s.pendingRow}>
-                <View style={[s.pendingCircleBox, { width: UI.iconBox, height: UI.iconBox }]}>
-                  <Animated.View
-                    pointerEvents="none"
-                    style={[
-                      s.pendingAura,
-                      auraStyle,
-                      {
-                        backgroundColor: isDarkMode ? "rgba(99,102,241,0.16)" : "rgba(99,102,241,0.10)",
-                        width: UI.aura, height: UI.aura, borderRadius: 999,
-                      },
-                    ]}
-                  />
-                  <Animated.View
-                    pointerEvents="none"
-                    style={[
-                      s.pendingBreath,
-                      breathStyle,
-                      {
-                        backgroundColor: isDarkMode ? "rgba(167,139,250,0.18)" : "rgba(167,139,250,0.12)",
-                        width: UI.sheen, height: UI.sheen, borderRadius: 999,
-                      },
-                    ]}
-                  />
-                  <Animated.View
-                    pointerEvents="none"
-                    style={[
-                      s.pendingRing,
-                      ringStyle,
-                      {
-                        borderColor: isDarkMode ? "rgba(167,139,250,0.55)" : "rgba(99,102,241,0.42)",
-                        width: UI.ring, height: UI.ring, borderRadius: 999,
-                      },
-                    ]}
-                  />
-
-                  <LinearGradient
-                    colors={["#6366F1", "#A78BFA"]}
-                    start={{ x: 0, y: 0 }}
-                    end={{ x: 1, y: 1 }}
-                    style={[s.pendingCircle, { width: UI.orb, height: UI.orb, borderRadius: 999 }]}
-                  >
-                    <Ionicons name="hourglass-outline" size={UI.hourglass} color="#0B1120" />
+              <View style={{ flexDirection: "row", alignItems: "center", gap: normalize(12) }}>
+                {/* Orb animé */}
+                <View style={{ width: normalize(UI.iconBox), height: normalize(UI.iconBox), alignItems: "center", justifyContent: "center" }}>
+                  <Animated.View pointerEvents="none" style={[{
+                    position: "absolute",
+                    width: normalize(UI.aura), height: normalize(UI.aura), borderRadius: 999,
+                    backgroundColor: isDarkMode ? "rgba(99,102,241,0.16)" : "rgba(99,102,241,0.10)",
+                  }, auraStyle]} />
+                  <Animated.View pointerEvents="none" style={[{
+                    position: "absolute",
+                    width: normalize(UI.sheen), height: normalize(UI.sheen), borderRadius: 999,
+                    backgroundColor: isDarkMode ? "rgba(167,139,250,0.18)" : "rgba(167,139,250,0.12)",
+                  }, breathStyle]} />
+                  <Animated.View pointerEvents="none" style={[{
+                    position: "absolute",
+                    width: normalize(UI.ring), height: normalize(UI.ring), borderRadius: 999,
+                    borderWidth: 2,
+                    borderColor: isDarkMode ? "rgba(167,139,250,0.55)" : "rgba(99,102,241,0.42)",
+                  }, ringStyle]} />
+                  <LinearGradient colors={["#6366F1", "#A78BFA"]} start={{ x: 0, y: 0 }} end={{ x: 1, y: 1 }}
+                    style={{ width: normalize(UI.orb), height: normalize(UI.orb), borderRadius: 999, alignItems: "center", justifyContent: "center" }}>
+                    <Ionicons name="hourglass-outline" size={normalize(UI.hourglass)} color="#0B1120" />
                   </LinearGradient>
                 </View>
 
-                <View style={s.pendingCopy}>
-                  <Text
-                    style={[
-                      s.pendingMicro,
-                      {
-                        color: TOKENS.mutedText,
-                        fontSize: TYPO.pendingMicro,
-                        lineHeight: Math.round(TYPO.pendingMicro * 1.25),
-                      },
-                    ]}
-                    numberOfLines={2}
-                    adjustsFontSizeToFit
-                    minimumFontScale={0.92}
-                  >
+                {/* Copy */}
+                <View style={{ flex: 1, minWidth: 0 }}>
+                  <Text style={{
+                    fontFamily: F.regular,
+                    fontSize: TYPO.pendingMicro,
+                    color: TOKENS.mutedText,
+                    lineHeight: Math.round(TYPO.pendingMicro * 1.3),
+                  }} numberOfLines={2} adjustsFontSizeToFit minimumFontScale={0.92}>
                     {pendingSub}
                   </Text>
-
-                  <View style={s.pendingCtaRow}>
-                    <View style={{ flex: 1 }} />
-                    <View
-                      style={[
-                        s.pendingChip,
-                        {
-                          borderRadius: UI.ctaR,
-                          paddingVertical: UI.ctaPadY,
-                          paddingHorizontal: UI.ctaPadX,
-                        },
-                      ]}
-                    >
-                      <Text
-                        style={[s.pendingChipText, { fontSize: TYPO.pendingLabel }]}
-                        numberOfLines={1}
-                        adjustsFontSizeToFit
-                        minimumFontScale={0.88}
-                      >
+                  <View style={{ marginTop: normalize(10), flexDirection: "row", alignItems: "center", justifyContent: "flex-end" }}>
+                    <View style={{
+                      flexDirection: "row", alignItems: "center", gap: normalize(8),
+                      borderRadius: normalize(999),
+                      paddingHorizontal: normalize(UI.ctaPadX),
+                      paddingVertical: normalize(UI.ctaPadY),
+                      backgroundColor: "#A78BFA",
+                    }}>
+                      <Text style={{ fontFamily: F.bold, fontSize: TYPO.pendingLabel, color: "#0B1120", letterSpacing: 0.2 }}
+                        numberOfLines={1} adjustsFontSizeToFit minimumFontScale={0.88}>
                         {t("duo.pending.warmup", { defaultValue: "Warmup" })}
                       </Text>
-                      <Ionicons name="arrow-forward" size={UI.ctaIcon} color="#0B1120" />
+                      <Ionicons name="arrow-forward" size={normalize(UI.ctaIcon)} color="#0B1120" />
                     </View>
                   </View>
                 </View>
@@ -1047,198 +554,123 @@ export default function TodayHub(props: Props) {
             </Pressable>
           </View>
         ) : (
-          /* ✨ IMPROVED: primary CTA with shine sweep + stronger shadow */
-          <Pressable
-            ref={primaryCtaRef as any}
-            onPress={() => {
-              hapticTap("light");
-              onPrimaryPress();
-            }}
-            accessibilityRole="button"
-            style={({ pressed }) => [
-              s.primaryBtn,
-              s.shadowSoft,
-              primaryAnimatedStyle as any,
-              {
-                borderRadius: UI.primaryR,
-                marginBottom: normalize(10),
-                shadowColor: effectivePrimaryGradient[0],
-                shadowOpacity: 0.45,
-                shadowRadius: normalize(18),
-                shadowOffset: { width: 0, height: normalize(6) },
-              },
-              pressFx(pressed, 0.990),
-            ]}
-          >
-            <LinearGradient
-              colors={[effectivePrimaryGradient[0], effectivePrimaryGradient[1]]}
-              start={{ x: 0, y: 0 }}
-              end={{ x: 1, y: 1 }}
-              style={[
-                s.primaryGradient,
+          // Mode normal — CTA énorme
+          <View style={{ paddingHorizontal: UI.pad, paddingBottom: UI.pad }}>
+            <Pressable
+              ref={primaryCtaRef as any}
+              onPress={() => { hapticTap("light"); onPrimaryPress(); }}
+              accessibilityRole="button"
+              style={({ pressed }) => [
+                primaryAnimatedStyle as any,
                 {
-                  borderRadius: UI.primaryR,
-                  paddingVertical: UI.primaryPadY,
-                  paddingHorizontal: UI.primaryPadX,
+                  borderRadius: normalize(UI.ctaR),
+                  overflow: "hidden",
+                  opacity: pressed ? 0.95 : 1,
+                  transform: [{ scale: pressed ? 0.987 : 1 }],
+                  ...(Platform.OS === "ios" ? {
+                    shadowColor: effectivePrimaryGradient[0],
+                    shadowOpacity: 0.55,
+                    shadowRadius: normalize(22),
+                    shadowOffset: { width: 0, height: normalize(10) },
+                  } : { elevation: 18 }),
                 },
               ]}
             >
-              {/* ✨ NEW: top shine (static) */}
               <LinearGradient
-                colors={["rgba(255,255,255,0.20)", "rgba(255,255,255,0.00)"]}
-                start={{ x: 0, y: 0 }}
-                end={{ x: 0, y: 1 }}
-                style={[StyleSheet.absoluteFill, { borderRadius: UI.primaryR }]}
-                pointerEvents="none"
-              />
-
-              {/* ✨ NEW: shine sweep (animated) on mark mode */}
-              {isMark && (
-                <Animated.View
-                  pointerEvents="none"
-                  style={[
-                    s.ctaShineSweep,
-                    ctaShineStyle,
-                    { borderRadius: UI.primaryR },
-                  ]}
-                />
-              )}
-
-              <View style={{ flex: 1, minWidth: 0 }}>
-                <Text
-                  style={[s.primaryText, { fontSize: TYPO.primary }]}
-                  numberOfLines={1}
-                  adjustsFontSizeToFit
-                  minimumFontScale={0.90}
-                >
-                  {primaryLabel}
-                </Text>
-                {isMark && progressPct > 0 && (
-                  <Text
-                    style={{
-                      fontSize: normalize(isTiny ? 10 : 11),
-                      fontFamily: F.regular,
-                      color: "rgba(11,17,32,0.60)",
-                      marginTop: 1,
-                    }}
-                    numberOfLines={1}
-                  >
-                    {`${Math.round(progressPct * 100)}% complété`}
-                  </Text>
-                )}
-              </View>
-              <Ionicons
-                name={primaryIcon as any}
-                size={normalize(isTiny ? 20 : 22)}
-                color="#0B1120"
-              />
-            </LinearGradient>
-          </Pressable>
-        )}
-
-        {/* ─── Secondary actions ───────────────────────────────────────── */}
-        <View style={s.secondaryRow}>
-          {showSoloLink && (
-            <Pressable
-              onPress={() => {
-                hapticTap("selection");
-                onPickSolo();
-              }}
-              style={({ pressed }) => [s.linkBtn, pressed && { opacity: 0.70 }]}
-            >
-              <Text style={[s.linkText, { color: TOKENS.mutedText, fontSize: TYPO.link }]}>
-                {t("homeZ.todayHub.continueSolo", { defaultValue: "Continuer en solo" })}
-              </Text>
-            </Pressable>
-          )}
-
-          {/* ✨ IMPROVED: create card with subtle gradient */}
-          <Pressable
-            onPress={() => {
-              hapticTap("selection");
-              onCreate();
-            }}
-            style={({ pressed }) => [
-              s.createCard,
-              {
-                borderColor: isDarkMode ? "rgba(249,115,22,0.22)" : "rgba(249,115,22,0.18)",
-                backgroundColor: isDarkMode ? "rgba(249,115,22,0.06)" : "rgba(249,115,22,0.04)",
-                borderRadius: UI.createR,
-                paddingVertical: UI.createPadY,
-                paddingHorizontal: UI.createPadX,
-              },
-              pressFx(pressed, 0.991),
-            ]}
-          >
-            <LinearGradient
-              colors={
-                isDarkMode
-                  ? ["rgba(249,115,22,0.10)", "rgba(0,0,0,0.00)"]
-                  : ["rgba(249,115,22,0.07)", "rgba(255,255,255,0.00)"]
-              }
-              start={{ x: 0, y: 0 }}
-              end={{ x: 1, y: 1 }}
-              style={[StyleSheet.absoluteFill, { borderRadius: UI.createR }]}
-              pointerEvents="none"
-            />
-
-            <View style={{ flexDirection: "row", alignItems: "center", width: "100%", gap: normalize(12) }}>
-              <View
-                style={[
-                  s.createIcon,
-                  {
-                    borderColor: "rgba(249,115,22,0.40)",
-                    backgroundColor: "rgba(249,115,22,0.14)",
-                    width: normalize(isTiny ? 38 : 44),
-                    height: normalize(isTiny ? 38 : 44),
-                    borderRadius: 999,
-                    borderWidth: 1.5,
-                    marginBottom: 0,
-                  },
-                ]}
+                colors={[effectivePrimaryGradient[0], effectivePrimaryGradient[1]]}
+                start={{ x: 0, y: 0 }} end={{ x: 1, y: 1 }}
+                style={{
+                  borderRadius: normalize(UI.ctaR),
+                  paddingVertical: normalize(UI.primaryPadY),
+                  paddingHorizontal: normalize(UI.primaryPadX),
+                  flexDirection: "row",
+                  alignItems: "center",
+                  justifyContent: "space-between",
+                }}
               >
-                <Ionicons
-                  name="add"
-                  size={normalize(isTiny ? 20 : 22)}
-                  color="#F97316"
+                {/* Shine top statique */}
+                <LinearGradient
+                  colors={["rgba(255,255,255,0.25)", "rgba(255,255,255,0.00)"]}
+                  start={{ x: 0, y: 0 }} end={{ x: 0, y: 1 }}
+                  style={[StyleSheet.absoluteFill, { borderRadius: normalize(UI.ctaR) }]}
+                  pointerEvents="none"
                 />
-              </View>
 
-              <View style={{ flex: 1, minWidth: 0 }}>
-                <Text
-                  style={[s.createTitle, { color: TOKENS.text, fontSize: TYPO.createTitle }]}
-                  numberOfLines={1}
-                  adjustsFontSizeToFit
-                  minimumFontScale={0.90}
-                >
-                  {t("homeZ.todayHub.create", { defaultValue: "Créer" })}
-                </Text>
-                <Text
-                  style={[
-                    s.createSub,
-                    {
-                      color: TOKENS.mutedText,
-                      fontSize: TYPO.createSub,
-                      lineHeight: Math.round(TYPO.createSub * 1.25),
-                      marginTop: 2,
-                    },
-                  ]}
-                  numberOfLines={1}
-                  adjustsFontSizeToFit
-                  minimumFontScale={0.90}
-                >
-                  {t("homeZ.todayHub.createSub", { defaultValue: "Ton défi, tes règles." })}
-                </Text>
-              </View>
+                {/* Shine sweep animé */}
+                {isMark && (
+                  <Animated.View pointerEvents="none" style={[{
+                    position: "absolute",
+                    top: 0, bottom: 0,
+                    width: normalize(60),
+                    backgroundColor: "rgba(255,255,255,0.22)",
+                    transform: [{ skewX: "-18deg" }],
+                    borderRadius: normalize(UI.ctaR),
+                  }, ctaShineStyle]} />
+                )}
 
-              <Ionicons
-                name="chevron-forward"
-                size={normalize(16)}
-                color="rgba(249,115,22,0.60)"
-              />
-            </View>
-          </Pressable>
-        </View>
+                {/* Label + sous-texte */}
+                <View style={{ flex: 1, minWidth: 0 }}>
+                  <Text style={{
+                    fontFamily: F.bold,
+                    fontSize: TYPO.primary,
+                    letterSpacing: -0.4,
+                    color: "#0B1120",
+                    includeFontPadding: false,
+                  }}
+                    numberOfLines={1}
+                    adjustsFontSizeToFit
+                    minimumFontScale={0.88}
+                  >
+                    {primaryLabel}
+                  </Text>
+                  {isMark && (
+                    <Text style={{
+                      fontFamily: F.regular,
+                      fontSize: normalize(isTiny ? 10 : 11),
+                      color: "rgba(11,17,32,0.58)",
+                      marginTop: normalize(2),
+                    }}>
+                      {t("homeZ.todayHub.ctaSub", "1 tap pour valider ta journée")}
+                    </Text>
+                  )}
+                </View>
+
+                {/* Icône dans cercle */}
+                <View style={{
+                  width: normalize(isTiny ? 38 : 42),
+                  height: normalize(isTiny ? 38 : 42),
+                  borderRadius: normalize(999),
+                  backgroundColor: "rgba(11,17,32,0.16)",
+                  borderWidth: 1,
+                  borderColor: "rgba(11,17,32,0.10)",
+                  alignItems: "center", justifyContent: "center",
+                  flexShrink: 0,
+                }}>
+                  <Ionicons name={primaryIcon as any} size={normalize(isTiny ? 18 : 21)} color="#0B1120" />
+                </View>
+              </LinearGradient>
+            </Pressable>
+
+            {/* Solo link discret */}
+            {showSoloLink && (
+              <View style={{ alignItems: "center", marginTop: normalize(10) }}>
+                <Pressable
+                  onPress={() => { hapticTap("selection"); onPickSolo(); }}
+                  style={({ pressed }) => ({ opacity: pressed ? 0.55 : 0.70 })}
+                >
+                  <Text style={{
+                    fontSize: TYPO.link,
+                    fontFamily: F.regular,
+                    color: TOKENS.mutedText,
+                    textDecorationLine: "underline",
+                  }}>
+                    {t("homeZ.todayHub.continueSolo", "Continuer en solo")}
+                  </Text>
+                </Pressable>
+              </View>
+            )}
+          </View>
+        )}
       </View>
     </View>
   );
@@ -1252,355 +684,33 @@ const s = StyleSheet.create({
     paddingBottom: 4,
   },
   shell: {
-  width: "100%",
-  position: "relative",
-  borderWidth: 0,
-  borderRadius: 26,
-  padding: 16,
-  marginBottom: 0,
-  overflow: "hidden",
-},
-  pendingAura: {
-    position: "absolute",
-    width: 106,
-    height: 106,
-    borderRadius: 999,
-  },
-  pendingRim: {
-    ...StyleSheet.absoluteFillObject,
-  },
-  shadowSoft: {
-    ...Platform.select({
-      ios: {
-        shadowColor: "#000",
-        shadowOpacity: 0.14,
-        shadowRadius: 24,
-        shadowOffset: { width: 0, height: 12 },
-      },
-      android: { elevation: 14 },
-      default: {},
-    }),
-  },
-  pendingBreath: {
-    position: "absolute",
-    width: 92,
-    height: 92,
-    borderRadius: 999,
-  },
-  pillsRow: {
-  flexDirection: "row",
-  alignItems: "center",
-  justifyContent: "flex-start",
-  flexWrap: "nowrap",
-  marginBottom: 12,
-  gap: 8,
-},
-pillLeft: {
-  flexShrink: 1,
-  maxWidth: "48%",
-},
-pillRight: {
-  flexShrink: 1,
-  maxWidth: "48%",
-},
-  pill: {
-    flexDirection: "row",
-    alignItems: "center",
-    borderRadius: 999,
-    paddingVertical: 7,
-    paddingHorizontal: 12,
-    minHeight: 32,
-    flexShrink: 1,
-    minWidth: 0,
-  },
-  pillTextWrap: {
-    flex: 1,
-    minWidth: 0,
-  },
-  pillText: {
-    fontSize: 13,
-    fontFamily: F.bold,
-    letterSpacing: 0.4,
-  },
-  title: {
-    fontFamily: F.bold,
-    letterSpacing: -0.4,
-    marginBottom: 6,
-  },
-  sub: {
-    fontSize: 16,
-    lineHeight: 22,
-    fontFamily: F.regular,
-    marginBottom: 14,
-  },
-  // ✨ IMPROVED: whyWrap with left bar
-  whyWrap: {
     width: "100%",
-    borderWidth: 1,
-    overflow: "hidden",
-    marginBottom: 12,
-    paddingVertical: 10,
-    paddingRight: 12,
-    paddingLeft: 0,         // left bar handles the left edge
-    flexDirection: "row",
-    alignItems: "stretch",
-  },
-  // ✨ NEW: left accent bar
-  whyLeftBar: {
-    width: 3,
-    alignSelf: "stretch",
-    marginRight: 0,
-    borderRadius: 2,
-  },
-  whyRow: {
-    flex: 1,
-    flexDirection: "row",
-    alignItems: "center",
-    gap: 10,
-  },
-  whyIconPill: {
-    width: 32,
-    height: 32,
-    borderRadius: 999,
-    alignItems: "center",
-    justifyContent: "center",
-  },
-  whyText: {
-    flex: 1,
-    minWidth: 0,
-    fontFamily: F.bold,
-    letterSpacing: -0.2,
-  },
-  preview: {
-    width: "100%",
-    borderWidth: 0,
-    flexDirection: "row",
-    alignItems: "flex-start",   // top-align so chevron stays at top with multi-line title
-    marginBottom: 14,
-    overflow: "hidden",
-  },
-  previewTitle: {
-    fontSize: 18,
-    fontFamily: F.bold,
-    letterSpacing: -0.2,
-    marginBottom: 4,
-    lineHeight: 22,
-  },
-  previewDesc: {
-    fontSize: 14,
-    fontFamily: F.regular,
-    marginBottom: 10,
-  },
-  previewThumbWrap: {
-    borderWidth: 0,
-    overflow: "hidden",
-    alignItems: "center",
-    justifyContent: "center",
-    backgroundColor: "transparent",
-    marginRight: 12,
-    alignSelf: "flex-start",   // top-align with multi-line title
-    flexShrink: 0,
-  },
-  previewThumb: {
-    width: "100%",
-    height: "100%",
-  },
-  // ✨ IMPROVED: progress track with gradient fill
-  progressTrack: {
-    borderRadius: 999,
-    overflow: "visible",        // visible so tip glow can bleed out
     position: "relative",
-  },
-  progressFillGrad: {
-    borderRadius: 999,
-  },
-  // ✨ NEW: glowing tip at progress head
-  progressTip: {
-    position: "absolute",
-  },
-  // ✨ NEW: progress label
-  progressLabel: {
-    fontFamily: F.bold,
-    letterSpacing: 0.2,
-  },
-  primaryBtn: {
-    width: "100%",
     overflow: "hidden",
-  },
-  primaryGradient: {
-    flexDirection: "row",
-    alignItems: "center",
-    justifyContent: "space-between",
-    overflow: "hidden",
-  },
-  primaryText: {
-    fontSize: 20,
-    fontFamily: F.bold,
-    letterSpacing: -0.2,
-    color: "#0B1120",
-    textShadowColor: "rgba(255,255,255,0.10)",
-    textShadowOffset: { width: 0, height: 1 },
-    textShadowRadius: 6,
-  },
-  // ✨ NEW: CTA shine sweep
-  ctaShineSweep: {
-    position: "absolute",
-    top: 0,
-    bottom: 0,
-    width: 60,
-    backgroundColor: "rgba(255,255,255,0.22)",
-    transform: [{ skewX: "-18deg" }],
-  },
-  shellRim: {
-    position: "absolute",
-    top: 0,
-    left: 0,
-    right: 0,
-    bottom: 0,
-    borderRadius: 26,
-  },
-  previewRim: {
-    position: "absolute",
-    top: 0,
-    left: 0,
-    right: 0,
-    bottom: 0,
-  },
-  thumbRim: {
-    position: "absolute",
-    top: 0,
-    left: 0,
-    right: 0,
-    bottom: 0,
-  },
-  pendingWrap: {
-    width: "100%",
-    alignItems: "center",
-    marginBottom: 10,
-  },
-  pendingCard: {
-    width: "100%",
-    borderWidth: 1,
-    borderRadius: 18,
-    paddingVertical: 14,
-    paddingHorizontal: 14,
-    overflow: "hidden",
-  },
-  pendingRow: {
-    width: "100%",
-    flexDirection: "row",
-    alignItems: "center",
-    gap: 12,
-  },
-  pendingCircleBox: {
-    width: 64,
-    height: 64,
-    alignItems: "center",
-    justifyContent: "center",
-  },
-  pendingCircle: {
-    width: 50,
-    height: 50,
-    borderRadius: 999,
-    alignItems: "center",
-    justifyContent: "center",
-  },
-  pendingRing: {
-    position: "absolute",
-    width: 64,
-    height: 64,
-    borderRadius: 999,
-    borderWidth: 2,
-  },
-  pendingGlow: {
-    position: "absolute",
-    width: 82,
-    height: 82,
-    borderRadius: 999,
   },
   shellHighlight: {
     position: "absolute",
     top: 0,
     left: 0,
     right: 0,
-    height: "52%",
+    height: "45%",
     borderWidth: 1,
-    opacity: 0.55,
+    opacity: 0.50,
   },
-  previewChevron: {
+  title: {
+    fontFamily: "Comfortaa_700Bold",
+    letterSpacing: -0.5,
+    marginBottom: 4,
+  },
+  sub: {
+    fontFamily: "Comfortaa_400Regular",
+    marginBottom: 0,
+  },
+  progressTrack: {
     borderRadius: 999,
-    alignItems: "center",
-    justifyContent: "center",
-    alignSelf: "center",   // stay centered vertically regardless of title line count
-    flexShrink: 0,
-  },
-  pendingCopy: {
-    flex: 1,
-    minWidth: 0,
-  },
-  pendingCtaRow: {
-    marginTop: 10,
-    flexDirection: "row",
-    alignItems: "center",
-    justifyContent: "space-between",
-    gap: 10,
-  },
-  pendingChip: {
-    flexDirection: "row",
-    alignItems: "center",
-    gap: 8,
-    borderRadius: 999,
-    paddingHorizontal: 12,
-    paddingVertical: 8,
-    backgroundColor: "#A78BFA",
-  },
-  pendingChipText: {
-    fontFamily: F.bold,
-    fontSize: 13,
-    color: "#0B1120",
-    letterSpacing: 0.2,
-  },
-  pendingMicro: {
-    marginTop: 2,
-    fontFamily: F.regular,
-  },
-  pendingLabel: {
-    fontFamily: F.bold,
-    letterSpacing: -0.2,
-  },
-  secondaryRow: {
-    marginTop: 4,
-    alignItems: "center",
-  },
-  linkBtn: {
-    paddingVertical: 10,
-  },
-  linkText: {
-    fontSize: 15,
-    fontFamily: F.regular,
-    textDecorationLine: "underline",
-  },
-   createCard: {
-    width: "100%",
-    borderWidth: 1,
-    alignItems: "stretch",
-    marginTop: 10,
     overflow: "hidden",
   },
-  createIcon: {
+  progressFillGrad: {
     borderRadius: 999,
-    alignItems: "center",
-    justifyContent: "center",
-    marginBottom: 6,
-  },
-  createTitle: {
-    fontSize: 22,
-    fontFamily: F.bold,
-    letterSpacing: -0.2,
-  },
-  createSub: {
-    marginTop: 4,
-    fontSize: 14,
-    fontFamily: F.regular,
   },
 });

@@ -1035,6 +1035,9 @@
       "contact": "Il nostro team è qui per te. Scrivici direttamente dall’app tramite 'Contatta il supporto' o sul nostro sito 🌍."
     }
   },
+   "vsIntro": {
+    "challengeAccepted":"Sfida accettata"
+  },
   "savedShort": "Salvato"
 ,
  "challengeDetails": {
@@ -1102,6 +1105,7 @@
     "quick": {
     "chat": "Chat",
     "stats": "Stats",
+    "saved": "Salvato",
     "save": "Preferiti",
     "chatA11y": "Apri chat",
     "chatHint": "Apre la chat della sfida.",
@@ -1850,9 +1854,10 @@
   "refreshDaily": "Nuove sfide da domani ✨",
   "noChallengesAvailable": "Nessuna sfida disponibile al momento.",
   "challengesComingSoon": "Presto arriveranno nuove sfide, resta connesso!",
-
+"profileUpdatedSuccess": "Profilo aggiornato ✓",
   "dailyBonus": {
-    "title": "Bonus quotidiano",
+    "title": "Bonus",
+"cta": "Gira la ruota 🎯",
     "rerollUnavailable": "Annuncio in caricamento…",
     "ctaShort": "Gira",
     "badge": "RICOMPENSA",
@@ -1871,7 +1876,6 @@
     "teaser": "Tocca per scoprire la tua ricompensa misteriosa.",
     "visualHint": "La tua ricompensa viene aggiunta al tuo account non appena giri la ruota. Mantieni la serie per sbloccare ancora più bonus ✨",
     "spinning": "Rotazione in corso...",
-    "cta": "Gira la ruota",
     "again": "Rivedi la ruota",
     "reward": {
       "streakPass": "Hai ottenuto {{count}} Streak Pass 🎫",

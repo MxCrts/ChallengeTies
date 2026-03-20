@@ -741,6 +741,9 @@
     "sectionsListA11y": "Profilinhalt und Abschnittsliste",
     "noData": "Keine Profildaten verfügbar."
   },
+  "vsIntro": {
+    "challengeAccepted":"Herausforderung angenommen"
+  },
   "savedShort": "Gespeichert"
 ,
   "addLocationHere": "Füge einen Standort hinzu",
@@ -810,6 +813,7 @@
     "quick": {
     "chat": "Chat",
     "stats": "Stats",
+    "saved": "Gespeichert",
     "save": "Favoriten",
     "chatA11y": "Chat öffnen",
     "chatHint": "Öffnet den Chat der Herausforderung.",
@@ -1451,9 +1455,10 @@
   "refreshDaily": "Neue Challenges ab morgen ✨",
   "noChallengesAvailable": "Derzeit sind keine Challenges verfügbar.",
   "challengesComingSoon": "Neue Challenges kommen sehr bald, bleib dran!",
-
+"profileUpdatedSuccess": "Profil aktualisiert ✓",
   "dailyBonus": {
-    "title": "Tagesbonus",
+    "title": "Bonus",
+"cta": "Rad drehen 🎯",
     "badge": "BELOHNUNG",
 "oncePerDay": "1 / Tag",
 "teaser2": "Was wirst du heute freischalten?",
@@ -1472,7 +1477,6 @@
     "teaser": "Tippe, um deine geheimnisvolle Belohnung zu entdecken.",
     "visualHint": "Deine Belohnung wird deinem Konto hinzugefügt, sobald du am Rad drehst. Halte deine Serie, um noch mehr Boni freizuschalten ✨",
     "spinning": "Dreht...",
-    "cta": "Rad drehen",
     "again": "Rad noch einmal ansehen",
     "reward": {
       "streakPass": "Du hast {{count}} Streak Pass erhalten 🎫",

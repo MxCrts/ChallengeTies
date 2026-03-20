@@ -61,12 +61,6 @@ const normalizeSize = (size: number) => {
   return Math.round(size * scale);
 };
 
-const getItemLayoutConst = (_: any, index: number) => ({
-  length: normalizeSize(ROW_HEIGHT),
-  offset: normalizeSize(ROW_HEIGHT) * index,
-  index,
-});
-
 /** Util pour ajouter une alpha sans casser les gradients */
 const withAlpha = (color: string, alpha: number) => {
   const clamp = (n: number, min = 0, max = 1) => Math.min(Math.max(n, min), max);
@@ -123,7 +117,7 @@ export default function CurrentChallenges() {
   const [confettiActive, setConfettiActive] = useState(false);
   const [localChallenges, setLocalChallenges] = useState<Challenge[]>([]);
   const confettiRef = useRef<ConfettiCannon>(null);
-  const swipeableRefs = useRef<(Swipeable | null)[]>([]);
+  const swipeableRefs = useRef<Map<string, Swipeable | null>>(new Map());
   const { showBanners } = useAdsVisibility();
   const insets = useSafeAreaInsets();
   const [markingId, setMarkingId] = useState<string | null>(null);
@@ -136,6 +130,7 @@ export default function CurrentChallenges() {
   // Quand le Swipeable s'ouvre/ferme, on bloque onPress pendant 350ms
   // pour éviter que le relâchement du doigt soit capturé comme un tap.
   const swipingRef = useRef(false);
+  const deletingKeysRef = useRef<Set<string>>(new Set());
   const swipeTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
   const bottomPadding = useMemo(
@@ -286,9 +281,20 @@ export default function CurrentChallenges() {
   }, [currentChallenges, i18n.language, t]);
 
   useEffect(() => {
-    setLocalChallenges(translatedChallenges);
-    setIsLoading(false);
-  }, [translatedChallenges]);
+  setLocalChallenges((prev) => {
+    // ✅ Si aucune suppression en cours, sync normale
+    if (deletingKeysRef.current.size === 0) {
+      return translatedChallenges;
+    }
+    // ✅ Sinon, filtre les items qui sont en cours de suppression
+    // pour éviter qu'ils reviennent depuis le context async
+    return translatedChallenges.filter((item) => {
+      const k = item.uniqueKey || `${item.id}_${item.selectedDays}`;
+      return !deletingKeysRef.current.has(k);
+    });
+  });
+  setIsLoading(false);
+}, [translatedChallenges]);
 
   // 🎯 Animation Reanimated pour le "+1🏆"
   const gainOpacity = useSharedValue(0);
@@ -298,13 +304,14 @@ export default function CurrentChallenges() {
     transform: [{ translateY: gainY.value }],
   }));
 
-  // 💣 Confirmation abandon challenge
-  const [pendingRemoval, setPendingRemoval] = useState<{
-    id: string;
-    selectedDays: number;
-    index: number;
-    title?: string;
-  } | null>(null);
+ const [pendingRemoval, setPendingRemoval] = useState<{
+  id: string;
+  selectedDays: number;
+  index: number;
+  title?: string;
+  uniqueKey: string; // ✅ clé complète (duo ou solo)
+} | null>(null);
+const removingKeysRef = useRef<Set<string>>(new Set());
 
   const handleMarkToday = useCallback(
     async (id: string, selectedDays: number) => {
@@ -346,72 +353,60 @@ export default function CurrentChallenges() {
 
   // Tokens design adaptatifs dark/light
   const chipBg = isDarkMode ? "rgba(255,255,255,0.12)" : "rgba(0,0,0,0.06)";
-  const chipBorder = isDarkMode ? "rgba(255,255,255,0.18)" : "rgba(0,0,0,0.10)";
+  const chipBorder = isDarkMode ? "rgba(255,255,255,0.18)" : "rgba(249,115,22,0.30)";
   const chipText = isDarkMode ? "rgba(255,255,255,0.92)" : "#0B0B10";
 
   const handleRemove = useCallback(
-    (id: string, selectedDays: number, index: number, title?: string) => {
-      setPendingRemoval({ id, selectedDays, index, title });
-      if (!reduceMotion) {
-        Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium).catch(() => {});
-      }
-    },
-    [reduceMotion]
+  (id: string, selectedDays: number, index: number, title?: string, uniqueKey?: string) => {
+    console.log("🔴 handleRemove called", { id, selectedDays, uniqueKey }); // ← ajoute ça
+    setPendingRemoval({ id, selectedDays, index, title, uniqueKey: uniqueKey || `${id}_${selectedDays}` });
+    if (!reduceMotion) {
+      Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium).catch(() => {});
+    }
+  },
+  [reduceMotion]
+);
+
+const confirmRemove = useCallback(async () => {
+  if (!pendingRemoval) return;
+  const { id, selectedDays, uniqueKey } = pendingRemoval;
+  // ✅ On utilise TOUJOURS la uniqueKey complète (duo ou solo)
+  const key = uniqueKey || `${id}_${selectedDays}`;
+   if (removingKeysRef.current.has(key)) return;
+  removingKeysRef.current.add(key);
+
+  deletingKeysRef.current.add(key);
+
+  // ✅ La ref swipeable est indexée par uniqueKey → ça matche maintenant
+  swipeableRefs.current.get(key)?.close();
+  setPendingRemoval(null);
+
+  // ✅ Filtre par uniqueKey complète
+  setLocalChallenges((prev) =>
+    prev.filter((c) => {
+      const k = c.uniqueKey || `${c.id}_${c.selectedDays}`;
+      return k !== key;
+    })
   );
 
-  const confirmRemove = useCallback(async () => {
-    if (!pendingRemoval) return;
-    const { id, selectedDays, index } = pendingRemoval;
-    try {
-      setLocalChallenges((prev) =>
-        prev.filter((c) => !(c.id === id && c.selectedDays === selectedDays))
-      );
-      await removeChallenge(id, selectedDays);
-      swipeableRefs.current[index]?.close();
-    } catch (err) {
-      console.error("Erreur removeChallenge:", err);
-      swipeableRefs.current[index]?.close();
-    } finally {
-      setPendingRemoval(null);
-    }
-  }, [pendingRemoval, removeChallenge]);
+  try {
+    await removeChallenge(id, selectedDays);
+  } catch (err) {
+    console.error("Erreur removeChallenge:", err);
+   } finally {
+    deletingKeysRef.current.delete(key);
+    removingKeysRef.current.delete(key);
+  }
+}, [pendingRemoval, removeChallenge]);
 
-  const cancelRemove = useCallback(() => {
-    if (pendingRemoval) {
-      const { index } = pendingRemoval;
-      swipeableRefs.current[index]?.close();
-    }
-    setPendingRemoval(null);
-  }, [pendingRemoval]);
-
-  const renderRightActions = useCallback(
-    (item: Challenge, index: number) => (
-      <View style={styles.swipeActionsContainer} pointerEvents="box-none">
-        <TouchableOpacity
-          activeOpacity={0.9}
-          style={styles.trashButton}
-          onPress={() =>
-            handleRemove(item.id, item.selectedDays, index, item.title)
-          }
-          accessible
-          accessibilityRole="button"
-          accessibilityLabel={String(t("deleteChallenge"))}
-          accessibilityHint={String(t("confirmDeletionHint"))}
-          hitSlop={{ top: 14, bottom: 14, left: 14, right: 14 }}
-        >
-          <LinearGradient
-            colors={["#F43F5E", "#DC2626"]}
-            start={{ x: 0, y: 0 }}
-            end={{ x: 1, y: 1 }}
-            style={StyleSheet.absoluteFillObject}
-          />
-          <Ionicons name="trash-outline" size={normalizeSize(26)} color="#fff" />
-          <Text style={styles.trashLabel}>{t("delete")}</Text>
-        </TouchableOpacity>
-      </View>
-    ),
-    [handleRemove, t]
-  );
+const cancelRemove = useCallback(() => {
+  if (pendingRemoval) {
+    const { id, selectedDays, uniqueKey } = pendingRemoval;
+    const key = uniqueKey || `${id}_${selectedDays}`;
+    swipeableRefs.current.get(key)?.close();
+  }
+  setPendingRemoval(null);
+}, [pendingRemoval]);
 
   const navigateToDetail = useCallback(
     (item: Challenge) => {
@@ -451,12 +446,12 @@ export default function CurrentChallenges() {
       const partnerName = item.duoPartnerUsername;
 
       const borderColor = isDarkMode
-        ? withAlpha("#FFFFFF", 0.14)
-        : withAlpha("#000000", 0.08);
+  ? withAlpha("#FFFFFF", 0.14)
+  : withAlpha("#F97316", 0.22);
 
-      const ringGrad = isDarkMode
-        ? (["rgba(255,255,255,0.20)", "rgba(255,255,255,0.04)", "rgba(255,255,255,0.12)"] as const)
-        : (["rgba(0,0,0,0.12)", "rgba(0,0,0,0.03)", "rgba(0,0,0,0.08)"] as const);
+     const ringGrad = isDarkMode
+  ? (["rgba(255,255,255,0.20)", "rgba(255,255,255,0.04)", "rgba(255,255,255,0.12)"] as const)
+  : (["rgba(249,115,22,0.18)", "rgba(249,115,22,0.04)", "rgba(249,115,22,0.12)"] as const);
 
       const animatedStyle = {
         transform: [{ scale: marked ? 0.98 : 1 }],
@@ -466,7 +461,6 @@ export default function CurrentChallenges() {
       return (
         <Animated.View
           entering={ZoomIn.delay(index * 40).easing(Easing.out(Easing.exp))}
-          exiting={FadeOutRight.duration(250)}
           style={[styles.cardWrapper, animatedStyle]}
         >
           <View
@@ -477,9 +471,41 @@ export default function CurrentChallenges() {
           >
             <Swipeable
               ref={(ref: any) => {
-                swipeableRefs.current[index] = ref;
-              }}
-              renderRightActions={() => renderRightActions(item, index)}
+  if (ref) {
+    swipeableRefs.current.set(key, ref);
+  } else {
+    // ✅ Quand le composant se démonte (item supprimé), on nettoie
+    swipeableRefs.current.delete(key);
+  }
+}}
+              renderRightActions={() => (
+  <View 
+  style={styles.swipeActionsContainer}
+  onTouchStart={() => console.log("🔵 TOUCH ON CONTAINER", item.id)} // ← ici
+>
+    <TouchableOpacity
+      activeOpacity={0.9}
+      style={styles.trashButton}
+      onPress={() => {
+        console.log("🟥 TRASH BUTTON PRESSED", item.id); // ← ici
+        handleRemove(item.id, item.selectedDays, 0, item.title, item.uniqueKey);
+      }}
+      accessibilityRole="button"
+      accessibilityLabel={String(t("deleteChallenge"))}
+      accessibilityHint={String(t("confirmDeletionHint"))}
+      hitSlop={{ top: 14, bottom: 14, left: 14, right: 14 }}
+    >
+      <LinearGradient
+        colors={["#F43F5E", "#DC2626"]}
+        start={{ x: 0, y: 0 }}
+        end={{ x: 1, y: 1 }}
+        style={StyleSheet.absoluteFillObject}
+      />
+      <Ionicons name="trash-outline" size={normalizeSize(26)} color="#fff" />
+      <Text style={styles.trashLabel}>{t("delete")}</Text>
+    </TouchableOpacity>
+  </View>
+)}
               overshootRight={false}
               // ✅ FIX iOS : on lève le flag dès que le gesture commence
               // à ouvrir ou fermer — et on le maintient 350ms après
@@ -717,7 +743,7 @@ export default function CurrentChallenges() {
                             width={null}
                             height={normalizeSize(6)}
                             borderRadius={normalizeSize(999)}
-                            color={currentTheme.colors.secondary}
+                            color={isDarkMode ? currentTheme.colors.secondary : "#F97316"}
                             unfilledColor="transparent"
                             borderWidth={0}
                             animationType="spring"
@@ -1064,7 +1090,6 @@ export default function CurrentChallenges() {
               initialNumToRender={6}
               maxToRenderPerBatch={6}
               windowSize={7}
-              getItemLayout={getItemLayoutConst}
               contentInset={{ top: SPACING, bottom: 0 }}
               accessibilityRole="list"
               accessibilityLabel={String(t("listOfOngoingChallenges"))}
@@ -1425,7 +1450,13 @@ const styles = StyleSheet.create({
     writingDirection: I18nManager.isRTL ? "rtl" : "ltr",
     textAlign: I18nManager.isRTL ? "right" : "left",
   },
-
+swipeActionsContainer: {
+  height: "100%",
+  justifyContent: "center",
+  alignItems: "flex-end",
+  paddingRight: normalizeSize(10),
+  backgroundColor: "transparent", // ← ajoute ça
+},
   // ── Mark Today ────────────────────────────────────────────────────────────
   markTodayButton: {
     borderRadius: normalizeSize(18),
@@ -1521,12 +1552,6 @@ const styles = StyleSheet.create({
   },
 
   // ── Swipe delete ──────────────────────────────────────────────────────────
-  swipeActionsContainer: {
-    height: "100%",
-    justifyContent: "center",
-    alignItems: "flex-end",
-    paddingRight: normalizeSize(10),
-  },
   trashButton: {
     width: Math.min(ITEM_WIDTH * 0.26, 120),
     height: Math.max(normalizeSize(ROW_HEIGHT * 0.72), 64),

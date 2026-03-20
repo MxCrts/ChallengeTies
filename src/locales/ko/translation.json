@@ -591,6 +591,7 @@
     "quick": {
     "chat": "채팅",
     "stats": "통계",
+    "saved": "저장됨",
     "save": "즐겨찾기",
     "chatA11y": "채팅 열기",
     "chatHint": "챌린지 채팅을 엽니다.",
@@ -1733,8 +1734,13 @@
     "joinA11y": "프리미엄 무브먼트에 참여하기",
     "joinCta": "프리미엄 무브먼트에 참여하기"
   },
+  "vsIntro": {
+    "challengeAccepted":"도전 수락됨"
+  },
+  "profileUpdatedSuccess": "프로필이 업데이트되었습니다 ✓",
   "dailyBonus": {
-    "title": "오늘의 보너스",
+    "title": "보너스",
+"cta": "휠 돌리기 🎯",
     "badge": "보상",
 "oncePerDay": "하루 1회",
 "teaser2": "오늘은 무엇을 얻게 될까요?",
@@ -1753,7 +1759,6 @@
     "teaser": "보상을 확인하려면 터치하세요.",
     "visualHint": "룰렛을 돌리면 보상이 즉시 계정에 추가돼요. 연속 기록을 유지하면 더 많은 보너스를 얻을 수 있어요 ✨",
     "spinning": "돌리는 중...",
-    "cta": "룰렛 돌리기",
     "again": "룰렛 다시 보기",
 
     "reward": {

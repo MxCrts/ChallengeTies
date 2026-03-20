@@ -92,6 +92,7 @@ import {
   normalizeSize,
   dayIcons,
   ACCENT,
+  R, 
 } from "../../src/challenge-details/_feature/challengeDetails.tokens";
 import {
   deriveDuoInfoFromUniqueKey,
@@ -205,6 +206,69 @@ type PendingPartnerAvatarProps = {
   duoPendingPulseStyle: any;
   styles: any;
 };
+
+const SkeletonChallengeDetails = React.memo(function SkeletonChallengeDetails({
+  isDarkMode, heroH, currentTheme,
+}: { isDarkMode: boolean; heroH: number; currentTheme: Theme }) {
+  const shimmer = useSharedValue(0);
+
+  useEffect(() => {
+    shimmer.value = withRepeat(
+      withTiming(1, { duration: 1200, easing: Easing.inOut(Easing.ease) }),
+      -1, true
+    );
+  }, []);
+
+  const shimStyle = useAnimatedStyle(() => ({
+    opacity: interpolate(shimmer.value, [0, 1], [0.5, 1]),
+  }));
+
+  const bg = isDarkMode ? "rgba(255,255,255,0.08)" : "rgba(0,0,0,0.06)";
+  const bg2 = isDarkMode ? "rgba(255,255,255,0.05)" : "rgba(0,0,0,0.04)";
+
+  return (
+    <View style={{ flex: 1, backgroundColor: isDarkMode ? currentTheme.colors.background : "#F8F8F8" }}>
+      {/* Hero */}
+      <Animated.View style={[{
+        width: "100%", height: heroH,
+        backgroundColor: bg,
+        borderBottomLeftRadius: R.hero,
+        borderBottomRightRadius: R.hero,
+      }, shimStyle]} />
+
+      {/* Card */}
+      <View style={{
+        marginHorizontal: SPACING * 1.2,
+        marginTop: -normalizeSize(26),
+        borderRadius: R.card,
+        padding: SPACING * 1.2,
+        backgroundColor: isDarkMode ? "rgba(20,20,26,0.90)" : "rgba(255,255,255,0.95)",
+        gap: normalizeSize(14),
+      }}>
+        {/* Title */}
+        <Animated.View style={[{ height: normalizeSize(28), borderRadius: 8, backgroundColor: bg, alignSelf: "center", width: "70%" }, shimStyle]} />
+        {/* Category */}
+        <Animated.View style={[{ height: normalizeSize(14), borderRadius: 6, backgroundColor: bg2, alignSelf: "center", width: "35%" }, shimStyle]} />
+        {/* Chips */}
+        <View style={{ flexDirection: "row", justifyContent: "center", gap: 8 }}>
+          {[60, 80, 55].map((w, i) => (
+            <Animated.View key={i} style={[{ height: normalizeSize(28), borderRadius: 999, backgroundColor: bg, width: normalizeSize(w) }, shimStyle]} />
+          ))}
+        </View>
+        {/* CTA */}
+        <Animated.View style={[{ height: normalizeSize(52), borderRadius: R.btn, backgroundColor: bg, marginTop: normalizeSize(4) }, shimStyle]} />
+        {/* Progress */}
+        <Animated.View style={[{ height: normalizeSize(10), borderRadius: 999, backgroundColor: bg2, marginTop: normalizeSize(8) }, shimStyle]} />
+        {/* Description */}
+        <View style={{ gap: 8, marginTop: normalizeSize(8) }}>
+          {[100, 90, 75].map((w, i) => (
+            <Animated.View key={i} style={[{ height: normalizeSize(12), borderRadius: 6, backgroundColor: bg2, width: `${w}%` }, shimStyle]} />
+          ))}
+        </View>
+      </View>
+    </View>
+  );
+});
 
 export const PendingPartnerAvatar = React.memo(function PendingPartnerAvatar({
   isDarkMode,
@@ -322,6 +386,8 @@ const [soloMomentVariant, setSoloMomentVariant] = useState<"daily" | "milestone"
 // --- Reanimated shared values
 const warmupToastSV = useSharedValue(0); // 0 hidden, 1 shown
 const warmupToastHideTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
+const duoBattleLeftWidth  = useSharedValue(0);
+const duoBattleRightWidth = useSharedValue(0);
 
 const warmupToastStyle = useAnimatedStyle(() => {
   // 0 -> 1 : opacity 0..1, translateY 18..0
@@ -346,6 +412,14 @@ const hideWarmupToast = useCallback(() => {
     }
   });
 }, [warmupToastSV]);
+
+const duoBattleLeftAnimStyle = useAnimatedStyle<ViewStyle>(() => ({
+  width: `${duoBattleLeftWidth.value * 100}%` as any,
+}));
+
+const duoBattleRightAnimStyle = useAnimatedStyle<ViewStyle>(() => ({
+  width: `${duoBattleRightWidth.value * 100}%` as any,
+}));
 
 const showWarmupToast = useCallback(
   (type: "success" | "error") => {
@@ -587,6 +661,7 @@ const [partnerAvatar, setPartnerAvatar] = useState<string>("");
   const [currentMonth, setCurrentMonth] = useState(new Date());
   const [challenge, setChallenge] = useState<any>(null);
 const [introVisible, setIntroVisible] = useState(false);
+
 // ✅ Un challenge a une page d'aide SEULEMENT s'il est approuvé + possède un chatId
 const hasHelper = useMemo(
   () => !!(challenge && challenge.chatId && challenge.approved === true),
@@ -623,13 +698,13 @@ const [shareCardVisible, setShareCardVisible] = useState(false);
     claimWithAdRef.current = handleClaimTrophiesWithAd;
   }, [handleClaimTrophiesWithoutAd, handleClaimTrophiesWithAd]);
 
-  const QUICK_TEXT = "#0B0B10";                 // lisible sur glass blanc
-const QUICK_TEXT_DISABLED = "rgba(11,11,16,0.45)";
-const QUICK_SHADOW = "rgba(255,255,255,0.65)";
-const QUICK_ICON = "#0B0B10";
-const QUICK_ICON_DISABLED = "rgba(11,11,16,0.35)";
-const QUICK_ACTIVE = ACCENT.solid;
-const QUICK_ACTIVE_SHADOW = "rgba(0,0,0,0.20)";
+const QUICK_TEXT          = isDarkMode ? "rgba(255,255,255,0.92)" : "#1A0800";
+const QUICK_TEXT_DISABLED = isDarkMode ? "rgba(255,255,255,0.22)" : "rgba(26,8,0,0.30)";
+const QUICK_ICON          = "#F97316";
+const QUICK_ICON_DISABLED = isDarkMode ? "rgba(255,255,255,0.20)" : "rgba(249,115,22,0.35)";
+const QUICK_SHADOW        = isDarkMode ? "rgba(0,0,0,0.40)" : "rgba(249,115,22,0.20)";
+const QUICK_ACTIVE        = "#F97316";
+const QUICK_ACTIVE_SHADOW = "rgba(249,115,22,0.35)";
 
 const {
   rewardedLoaded,
@@ -674,6 +749,11 @@ const isHydrating = useMemo(
 
  const challengeTaken = !!currentChallenge;
  const challengeTakenOptimistic = challengeTaken || justJoinedRef.current;
+
+ const chatEnabled = useMemo(
+  () => challengeTaken && !!challenge && !challenge.creatorId,
+  [challengeTaken, challenge]
+);
 
  // 🧠 partenaire effectif calculé à partir du uniqueKey OU du state
  const effectiveDuoPartnerId =
@@ -843,10 +923,8 @@ const resetSoloProgressIfNeeded = useCallback(async () => {
 const confirmSwitchToDuo = useCallback(async () => {
   try {
     setConfirmResetVisible(false);
-
-
-    // puis ouvre le flow d'invite
-    setSendInviteVisible(true);
+    // ✅ passe par ChoixDuoModal — invite ami OU trouve partenaire
+    setChoixDuoVisible(true);
   } catch (e) {
     console.warn("confirmSwitchToDuo failed:", e);
     Alert.alert(
@@ -1381,6 +1459,13 @@ useEffect(() => {
   duoBarPartnerWidth.value = withTiming(Math.max(0.02, Math.min(1, pDone / pTotal)), {
     duration: 900, easing: Easing.out(Easing.cubic),
   });
+  // ✅ Battle bar animée
+  duoBattleLeftWidth.value = withTiming(Math.min(1, meDone / meTotal) * 0.5, {
+    duration: 1000, easing: Easing.out(Easing.cubic),
+  });
+  duoBattleRightWidth.value = withTiming(Math.min(1, pDone / pTotal) * 0.5, {
+    duration: 1100, easing: Easing.out(Easing.cubic),
+  });
 }, [isDuo, finalCompletedDays, finalSelectedDays,
     duoChallengeData?.duoUser?.completedDays, duoChallengeData?.duoUser?.selectedDays]);
 
@@ -1696,7 +1781,7 @@ const handleShowCompleteModal = useCallback(() => {
 }, [id, finalSelectedDays]);
 
   const handleNavigateToChat = useCallback(() => {
-    if (!challengeTaken ) {
+    if (!chatEnabled) {
       Alert.alert(
         t("alerts.accessDenied"),
         t("challengeDetails.chatAccessDenied")
@@ -1917,14 +2002,18 @@ const handleInviteButtonPress = useCallback(() => {
   if (isDuo) {
     Alert.alert(
       t("alerts.info", { defaultValue: "Info" }),
-      t("invitationS.errors.duoAlready", {
-        defaultValue: "Tu es déjà en duo sur ce défi.",
-      })
+      t("invitationS.errors.duoAlready", { defaultValue: "Tu es déjà en duo sur ce défi." })
     );
     return;
   }
-  handleInviteFriend();
-}, [isDuo, handleInviteFriend, t]);
+  // ✅ Solo actif → passe par ChoixDuoModal (même flow que "Prendre en duo")
+  if (isSoloInThisChallenge) {
+    setConfirmResetVisible(true);
+    return;
+  }
+  // ✅ Pas encore pris → ChoixDuoModal direct
+  setChoixDuoVisible(true);
+}, [isDuo, isSoloInThisChallenge, t]);
 
   const handleViewStats = useCallback(() => {
     if (!challengeTaken ) return;
@@ -2107,9 +2196,20 @@ const scrollContentStyle = useMemo(
           </Pressable>
         </BlurView>
       </Animated.View>
+      {/* ── SKELETON hors ScrollView ── */}
+      {isHydrating && (
+        <View style={[StyleSheet.absoluteFill, { zIndex: 10 }]} pointerEvents="none">
+          <SkeletonChallengeDetails
+            isDarkMode={isDarkMode}
+            heroH={heroH}
+            currentTheme={currentTheme}
+          />
+        </View>
+      )}
+
       <ScrollView
         style={{ flex: 1 }}
-        removeClippedSubviews={false}          
+        removeClippedSubviews={false}         
         keyboardShouldPersistTaps="handled"
         showsVerticalScrollIndicator={false}
         contentContainerStyle={scrollContentStyle}
@@ -2168,15 +2268,17 @@ const scrollContentStyle = useMemo(
           style={styles.heroCardWrap}
         >
           <BlurView
-            intensity={Platform.OS === "ios" ? 26 : 18}
+            intensity={Platform.OS === "ios" ? 26 : 0}
             tint={isDarkMode ? "dark" : "light"}
-            style={styles.heroCardBlur}
+            style={[styles.heroCardBlur, Platform.OS === "android" && {
+              backgroundColor: isDarkMode ? "rgba(18,10,4,0.97)" : "#FFFFFF",
+            }]}
           >
             <LinearGradient
               colors={
                 isDarkMode
-                  ? ["rgba(20,20,26,0.86)", "rgba(14,14,18,0.74)"]
-                  : ["rgba(255,255,255,0.92)", "rgba(255,255,255,0.82)"]
+                  ? ["rgba(18,10,4,0.97)", "rgba(12,6,2,0.97)"]
+                  : ["#FFFFFF", "#FFFFFF"]
               }
               start={{ x: 0, y: 0 }}
               end={{ x: 1, y: 1 }}
@@ -2539,20 +2641,16 @@ const scrollContentStyle = useMemo(
       <View style={{ marginTop: SPACING }}>
         {/* Header: avatar + label */}
         <View style={{ flexDirection: "row", alignItems: "center", justifyContent: "center" }}>
-          <View style={styles.avatarWrap}>
-            <SmartAvatar
-              uri={myAvatar}
-              name={myName || t("duo.you")}
-              size={normalizeSize(36)}
-              isDark={isDarkMode}
-            />
-            {myIsPioneer && (
-              <PioneerBadge
-                size="mini"
-                style={{ position: "absolute", bottom: -6, left: -6 }}
-              />
-            )}
-          </View>
+          <View style={{ position: "relative" }}>
+  <View style={styles.avatarWrap}>
+    <SmartAvatar
+      uri={myAvatar}
+      name={myName || t("duo.you")}
+      size={normalizeSize(48)}
+      isDark={isDarkMode}
+    />
+  </View>
+</View>
   <Text
   style={[
     styles.inProgressText,
@@ -2780,22 +2878,31 @@ const scrollContentStyle = useMemo(
 
       {/* === BATTLE BAR (SECONDARY, Netflix vibe) === */}
 <View style={styles.duoBattleHeaderWrap}>
-  <View style={[styles.duoBattleTitleRow, { backgroundColor: DUO.bgCard, borderColor: DUO.stroke }]}>
-    <Text style={[styles.duoBattleTitle, { color: DUO.text }]} numberOfLines={1}>
-      BATTLE BAR
-    </Text>
-
-    <Text style={[styles.duoBattleMini, { color: DUO.textSoft }]} numberOfLines={1} ellipsizeMode="tail">
+  <View style={[styles.duoBattleTitleRow, {
+  backgroundColor: isDarkMode ? "rgba(249,115,22,0.14)" : "#F97316",
+  borderColor: isDarkMode ? "rgba(249,115,22,0.28)" : "#F97316",
+}]}>
+  <Text style={[styles.duoBattleTitle, {
+  color: isDarkMode ? "rgba(255,255,255,0.94)" : "#FFFFFF",
+}]}>
+    BATTLE BAR
+  </Text>
+  <Text style={[styles.duoBattleMini, {
+  color: isDarkMode ? "rgba(255,255,255,0.62)" : "rgba(255,255,255,0.85)",
+}]}>
       {meDone}/{meTotal} • {pDone}/{pTotal}
     </Text>
   </View>
 </View>
 
 <View style={styles.duoBattleBarWrap}>
-  <View style={[styles.duoBattleBar, { backgroundColor: DUO.track, borderColor: DUO.trackStroke }]}>
+  <View style={[styles.duoBattleBar, {
+  backgroundColor: isDarkMode ? DUO.track : "rgba(249,115,22,0.12)",
+  borderColor: isDarkMode ? DUO.trackStroke : "rgba(249,115,22,0.25)",
+}]}>
     <View style={styles.duoBattleRail} pointerEvents="none" />
-    <View style={[styles.duoBattleLeft, { width: `${mePct * 100}%` }]} />
-    <View style={[styles.duoBattleRight, { width: `${pPct * 100}%` }]} />
+    <Animated.View style={[styles.duoBattleLeft, duoBattleLeftAnimStyle]} />
+<Animated.View style={[styles.duoBattleRight, duoBattleRightAnimStyle]} />
     <View style={[styles.duoBattleDivider, { backgroundColor: isDarkMode ? "rgba(255,255,255,0.55)" : "rgba(0,0,0,0.20)", opacity: 1 }]} pointerEvents="none" />
   </View>
 </View>
@@ -2880,19 +2987,19 @@ const scrollContentStyle = useMemo(
       {isMarkedToday(id, finalSelectedDays) ? (
         <View style={[
           styles.markTodayButtonGradient,
-          { backgroundColor: isDarkMode ? "rgba(255,215,0,0.13)" : "rgba(0,0,0,0.06)",
-            borderWidth: 0.5,
-            borderColor: isDarkMode ? "rgba(255,215,0,0.30)" : "rgba(0,0,0,0.08)" }
+          { backgroundColor: isDarkMode ? "rgba(255,215,0,0.13)" : "rgba(249,115,22,0.08)",
+  borderWidth: 0.5,
+  borderColor: isDarkMode ? "rgba(255,215,0,0.30)" : "rgba(249,115,22,0.25)" }
         ]}>
           <Ionicons name="checkmark-circle" size={18}
             color={isDarkMode ? "#FFD700" : currentTheme.colors.primary}
             style={{ marginRight: 6 }} />
           <Text
-            style={[
-              styles.markTodayButtonText,
-              { color: currentTheme.colors.textPrimary },
-            ]}
-          >
+  style={[
+    styles.markTodayButtonText,
+    { color: isDarkMode ? currentTheme.colors.textPrimary : "#1A0800" },
+  ]}
+>
             {t("challengeDetails.alreadyMarked")}
           </Text>
         </View>
@@ -3063,16 +3170,20 @@ const scrollContentStyle = useMemo(
     accessibilityLabel={t("challengeDetails.actions.shareA11y", { defaultValue: "Share" })}
     accessibilityHint={t("challengeDetails.actions.shareHint", { defaultValue: "Opens share options for this challenge." })}
     style={({ pressed }) => [
-      styles.primaryBtn,
-      styles.primaryBtnSecondary,
-      pressed && styles.btnPressed,
-    ]}
+  styles.primaryBtn,
+  {
+    backgroundColor: isDarkMode ? "rgba(255,255,255,0.08)" : "rgba(249,115,22,0.08)",
+    borderWidth: 1,
+    borderColor: isDarkMode ? "rgba(255,255,255,0.14)" : "rgba(249,115,22,0.30)",
+  },
+  pressed && styles.btnPressed,
+]}
   >
-    <Ionicons name="share-outline" size={20} color="#111" />
-    <Text style={styles.primaryBtnTextSecondary}>
+    <Ionicons name="share-outline" size={20} color={isDarkMode ? "rgba(255,255,255,0.85)" : "#F97316"} />
+   <Text style={[styles.primaryBtnTextSecondary, { color: isDarkMode ? "rgba(255,255,255,0.90)" : "#F97316" }]}>
       {t("challengeDetails.actions.shareTitle")}
     </Text>
-    <Ionicons name="chevron-forward" size={18} color="rgba(0,0,0,0.5)" />
+    <Ionicons name="chevron-forward" size={18} color={isDarkMode ? "rgba(255,255,255,0.40)" : "rgba(249,115,22,0.55)"} />
   </Pressable>
 )}
 
@@ -3084,29 +3195,29 @@ const scrollContentStyle = useMemo(
   {/* CHAT */}
   <Pressable
     onPress={handleNavigateToChat}
-    disabled={!challengeTaken}
+    disabled={!chatEnabled}
     accessibilityRole="button"
     accessibilityState={{ disabled: !challengeTaken }}
     accessibilityLabel={t("challengeDetails.quick.chatA11y")}
     accessibilityHint={t("challengeDetails.quick.chatHint")}
     style={({ pressed }) => [
-      styles.quickBtn,
-      !challengeTaken && styles.quickBtnDisabled,
-      pressed && styles.btnPressed,
-    ]}
+  styles.quickBtn,
+  isDarkMode && {
+  backgroundColor: "rgba(249,115,22,0.10)",
+  borderColor: "rgba(249,115,22,0.28)",
+},
+  !chatEnabled && styles.quickBtnDisabled,
+  pressed && styles.btnPressed,
+]}
   >
     <View style={styles.quickBtnInner}>
-      <Ionicons
-        name="chatbubble-ellipses-outline"
-        size={18}
-        color={challengeTaken ? QUICK_ICON : QUICK_ICON_DISABLED}
-      />
-
-      <Text
-        style={[
-          styles.quickText,
-          {
-            color: challengeTaken ? QUICK_TEXT : QUICK_TEXT_DISABLED,
+    <Ionicons
+      name="chatbubble-ellipses-outline"
+      size={18}
+      color={chatEnabled ? QUICK_ICON : QUICK_ICON_DISABLED}
+    />
+    <Text style={[styles.quickText, {
+      color: chatEnabled ? QUICK_TEXT : QUICK_TEXT_DISABLED,
             ...(Platform.OS === "ios"
               ? {
                   textShadowColor: QUICK_SHADOW,
@@ -3135,7 +3246,11 @@ const scrollContentStyle = useMemo(
     accessibilityLabel={t("challengeDetails.quick.statsA11y")}
     accessibilityHint={t("challengeDetails.quick.statsHint")}
     style={({ pressed }) => [
-      styles.quickBtn,
+  styles.quickBtn,
+  isDarkMode && {
+  backgroundColor: "rgba(249,115,22,0.10)",
+  borderColor: "rgba(249,115,22,0.28)",
+},
       !challengeTaken && styles.quickBtnDisabled,
       pressed && styles.btnPressed,
     ]}
@@ -3182,7 +3297,11 @@ const scrollContentStyle = useMemo(
     }
     accessibilityHint={t("challengeDetails.quick.saveHint")}
     style={({ pressed }) => [
-      styles.quickBtn,
+  styles.quickBtn,
+  isDarkMode && {
+  backgroundColor: "rgba(249,115,22,0.10)",
+  borderColor: "rgba(249,115,22,0.28)",
+},
       pressed && styles.btnPressed,
     ]}
   >

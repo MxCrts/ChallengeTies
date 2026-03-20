@@ -1,9 +1,4 @@
-// functions/src/acceptMatchingInvitation.ts
-// ✅ Cloud Function — Acceptation d'invitation matching
-// Admin SDK = bypass rules = batch write cross-user possible
-// Même pattern que sendDuoNudge
-
-import * as functions from "firebase-functions";
+import { onCall, HttpsError } from "firebase-functions/v2/https";
 import * as admin from "firebase-admin";
 
 // admin.initializeApp() est appelé dans index.ts
@@ -24,19 +19,16 @@ function dayKeyUTC(d: Date): string {
   return `${y}-${m}-${day}`;
 }
 
-export const acceptMatchingInvitation = functions
-  .region("europe-west1")
-  .https.onCall(async (data: AcceptMatchingParams, context) => {
-    // ── Auth check ────────────────────────────────────────────────
-    if (!context.auth) {
-      throw new functions.https.HttpsError("unauthenticated", "Non authentifié.");
+export const acceptMatchingInvitation = onCall(
+  { region: "europe-west1" },
+  async (request) => {
+    if (!request.auth) {
+      throw new HttpsError("unauthenticated", "Non authentifié.");
     }
-
-    const me = context.auth.uid;
-    const { inviteId } = data;
-
+    const me = request.auth.uid;
+    const { inviteId } = request.data as AcceptMatchingParams;
     if (!inviteId || typeof inviteId !== "string") {
-      throw new functions.https.HttpsError("invalid-argument", "inviteId manquant.");
+      throw new HttpsError("invalid-argument", "inviteId manquant.");
     }
 
     const db = admin.firestore();
@@ -47,23 +39,23 @@ export const acceptMatchingInvitation = functions
       const invSnap = await invRef.get();
 
       if (!invSnap.exists) {
-        throw new functions.https.HttpsError("not-found", "invitation_introuvable");
+        throw new HttpsError("not-found", "invitation_introuvable");
       }
 
       const inv = invSnap.data() as any;
 
       // Checks métier
       if (inv.inviteeId !== me) {
-        throw new functions.https.HttpsError("permission-denied", "non_autorise");
+        throw new HttpsError("permission-denied", "non_autorise");
       }
       if (inv.status !== "pending") {
-        throw new functions.https.HttpsError("failed-precondition", "invitation_deja_traitee");
+        throw new HttpsError("failed-precondition", "invitation_deja_traitee");
       }
 
       // Check expiration
       const expiresAt = inv.expiresAt as admin.firestore.Timestamp | null;
       if (expiresAt && expiresAt.toMillis() < Date.now()) {
-        throw new functions.https.HttpsError("deadline-exceeded", "expired");
+        throw new HttpsError("deadline-exceeded", "expired");
       }
 
       // ── 2) Lire les données nécessaires en parallèle ─────────
@@ -74,10 +66,10 @@ export const acceptMatchingInvitation = functions
       ]);
 
       if (!inviterSnap.exists || !inviteeSnap.exists) {
-        throw new functions.https.HttpsError("not-found", "utilisateur_introuvable");
+        throw new HttpsError("not-found", "utilisateur_introuvable");
       }
       if (!chSnap.exists) {
-        throw new functions.https.HttpsError("not-found", "challenge_introuvable");
+        throw new HttpsError("not-found", "challenge_introuvable");
       }
 
       const inviterData = inviterSnap.data() as any;
@@ -273,11 +265,9 @@ export const acceptMatchingInvitation = functions
       return { ok: true };
 
     } catch (e: any) {
-      // Re-throw les HttpsError
-      if (e instanceof functions.https.HttpsError) throw e;
-
+      if (e instanceof HttpsError) throw e;
       console.error("acceptMatchingInvitation error:", e?.message || e);
-      throw new functions.https.HttpsError("internal", "Erreur interne.");
+      throw new HttpsError("internal", "Erreur interne.");
     }
   });
 

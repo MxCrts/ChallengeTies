@@ -1,9 +1,4 @@
-// functions/src/sendMatchingPush.ts
-// ✅ Cloud Function — Push notification pour le matching
-// Même pattern que sendDuoNudge
-// À déployer avec : firebase deploy --only functions:sendMatchingPush
-
-import * as functions from "firebase-functions";
+import { onCall, HttpsError } from "firebase-functions/v2/https";
 import * as admin from "firebase-admin";
 
 // admin.initializeApp() doit être appelé dans index.ts, pas ici
@@ -102,26 +97,16 @@ function interpolate(template: string, vars: Record<string, string>): string {
   return template.replace(/{{(\w+)}}/g, (_, key) => vars[key] || "");
 }
 
-export const sendMatchingPush = functions
-  .region("europe-west1")
-  .https.onCall(async (data: MatchingPushParams, context) => {
-    // Auth check
-    if (!context.auth) {
-      throw new functions.https.HttpsError("unauthenticated", "Non authentifié.");
+export const sendMatchingPush = onCall(
+  { region: "europe-west1" },
+  async (request) => {
+    if (!request.auth) {
+      throw new HttpsError("unauthenticated", "Non authentifié.");
     }
-
-    const {
-      type,
-      inviteeId,
-      inviterUsername,
-      challengeTitle,
-      challengeId,
-      selectedDays,
-      inviteId,
-    } = data;
+    const { type, inviteeId, inviterUsername, challengeTitle, challengeId, selectedDays, inviteId } = request.data as MatchingPushParams;
 
     if (!inviteeId || !type) {
-      throw new functions.https.HttpsError("invalid-argument", "Paramètres manquants.");
+      throw new HttpsError("invalid-argument", "Paramètres manquants.");
     }
 
     try {

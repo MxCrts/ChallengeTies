@@ -83,7 +83,6 @@ import MarkToastListener from "@/src/ui/MarkToastListener";
 import { faLogEvent } from "@/src/firebaseAnalytics";
 import { LinearGradient } from "expo-linear-gradient";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
-import TiktokBusiness from 'react-native-tiktok-business';
 
 const FORCE_ADS_DEBUG = false;
 
@@ -1298,14 +1297,6 @@ export default function RootLayout() {
     (globalThis as any).__ATT_DONE__ = false;
     (globalThis as any).__ATT_STATUS__ = "unknown";
     const t = setTimeout(() => { (globalThis as any).__ATT_DONE__ = true; }, 15000);
-
-    // ✅ TikTok SDK init
-    TiktokBusiness.identify(
-      undefined,
-      undefined,
-      undefined,
-      undefined
-    );
 
     return () => clearTimeout(t);
   }, []);

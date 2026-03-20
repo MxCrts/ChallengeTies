@@ -192,6 +192,7 @@ const MatchingInboxModal: React.FC<Props> = ({
         // Si plus d'invitations → ferme
         if (localItems.length <= 1) onClose();
       } catch (e: any) {
+        console.log("ACCEPT ERROR:", e?.message, e?.code, JSON.stringify(e));
         const msg = String(e?.message || "");
         Alert.alert(
           t("alerts.error"),
@@ -359,23 +360,23 @@ const createStyles = (
       backgroundColor: isDark ? "rgba(0,0,0,0.80)" : "rgba(0,0,0,0.60)",
     },
     cardWrap: {
-      width: "100%",
-      maxWidth: 400,
-      maxHeight: 520,
-      marginHorizontal: 20,
-      borderRadius: 26,
-      overflow: "hidden",
-    },
-    borderGlow: {
-      padding: 1.5,
-      borderRadius: 26,
-      flex: 1,
-    },
+  width: "88%",
+  maxWidth: 400,
+  height: 480,        // ← hauteur FIXE au lieu de maxHeight
+  alignSelf: "center",
+  borderRadius: 26,
+  overflow: "hidden",
+},
+borderGlow: {
+  padding: 1.5,
+  borderRadius: 26,
+  height: "100%",     // ← REMPLACE flex: 1
+},
     modalCard: {
       borderRadius: 24,
       padding: 18,
       backgroundColor: isDark ? "rgba(11,18,32,0.97)" : "rgba(255,255,255,0.99)",
-      flex: 1,
+      height: "100%", 
       minHeight: 0,
     },
 
@@ -441,15 +442,10 @@ const createStyles = (
 
     // Card
     card: {
-      flexDirection: "row",
-      alignItems: "center",
-      gap: 12,
-      padding: 12,
-      borderRadius: 16,
-      backgroundColor: isDark ? "rgba(255,255,255,0.05)" : "rgba(0,0,0,0.03)",
-      borderWidth: 1,
-      borderColor: isDark ? "rgba(255,255,255,0.08)" : "rgba(0,0,0,0.06)",
-    },
+  borderRadius: 24,
+  padding: 18,
+  backgroundColor: isDark ? "rgba(11,18,32,0.97)" : "rgba(255,255,255,0.99)",
+},
 
     // Avatar
     avatarWrap: { width: 44, height: 44 },

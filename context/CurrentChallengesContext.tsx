@@ -64,6 +64,7 @@ import {
   tryFinalizePerfectMonth,
 } from "@/src/services/metricsService";
 import { incStat, setBool } from "@/src/services/metricsService";
+import { updateMatchingPool } from "@/services/matchingService";
 import * as Haptics from "expo-haptics";
 import { LinearGradient } from "expo-linear-gradient";
 import { sendDuoNudge } from "@/services/notificationService";
@@ -1110,6 +1111,10 @@ try {
         );
       }
 
+      // ✅ Mettre à jour le matching pool (challenge pris → retirer du pool)
+      // Non-bloquant — ne doit jamais casser le flow takeChallenge
+      defer(() => updateMatchingPool(userId));
+
       scheduleAchievementsCheck(userId);
     } catch (error: any) {
       console.error("Erreur lors de l'ajout du défi :", error.message);
@@ -1142,24 +1147,17 @@ try {
         : [];
 
       const idx = findChallengeIndexSmart(curr, id, selectedDays);
-if (idx === -1) {
-  __DEV__ && console.warn("[completeChallenge] not found", {
-    id,
-    selectedDays,
-    ids: curr.map((c: any) => ({
-      uniqueKey: c.uniqueKey,
-      id: c.id,
-      challengeId: c.challengeId,
-      selectedDays: c.selectedDays,
-    })),
-  });
-  throw new Error("challengeNotFound");
-}
+      if (idx === -1) {
+        // ✅ Idempotent : déjà supprimé, pas une erreur
+        __DEV__ && console.log("[removeChallenge] already gone:", id, selectedDays);
+        return; // ← return au lieu de throw
+      }
 
-
-      // 🔥 IMPORTANT : on supprime UNIQUEMENT chez moi
       const next = curr.filter((_, i) => i !== idx);
-      tx.update(userRef, { CurrentChallenges: next });
+      tx.update(userRef, {
+        CurrentChallenges: next,
+        updatedAt: serverTimestamp(),
+      });
     });
 
   } catch (e: any) {
@@ -1168,8 +1166,6 @@ if (idx === -1) {
     inFlightRemovals.current.delete(key);
   }
 };
-
-
    const isMarkedToday = (id: string, selectedDays: number): boolean => {
     const idx = findChallengeIndexSmart(currentChallenges, id, selectedDays);
     if (idx === -1) return false;
@@ -2255,6 +2251,12 @@ if (idx === -1) {
         await recordDuoFinish(userId);
       }
     }
+  } catch {}
+
+  // ✅ NOUVEAU — Mettre à jour le matching pool après completion
+  // (challenge terminé → peut revenir dans le pool)
+  try {
+    await updateMatchingPool(userId);
   } catch {}
 });
 
