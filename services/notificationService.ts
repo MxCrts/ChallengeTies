@@ -518,7 +518,7 @@ export const scheduleStreakDangerIfNeeded = async (): Promise<void> => {
     // ✅ Idempotence : 1 seule notif streak danger par jour
     const today    = dayKeyLocal();
     const lastDay  = await AsyncStorage.getItem(STORAGE_KEYS.streakDangerDay);
-    if (lastDay === today && STREAK_SCHEDULED_IN_SESSION) return;
+    if (lastDay === today) return; // ← AsyncStorage seul suffit, pas besoin de STREAK_SCHEDULED_IN_SESSION
 
     // Heure cible : 21h00 aujourd'hui
     const now     = new Date();
