@@ -83,7 +83,10 @@ function timeAgo(date: Date, t: (k: string, o?: any) => string): string {
 }
 
 function buildLabel(event: FeedEvent, t: (k: string, o?: any) => string): string {
-  const ch = event.challengeTitle;
+  const translatedTitle = event.challengeId
+    ? t(`challenges.${event.challengeId}.title`, { defaultValue: "" })
+    : "";
+  const ch = translatedTitle || event.challengeTitle;
   switch (event.type) {
     case "completion":
       return t("exploits.label.completion", {
@@ -320,7 +323,7 @@ const ExploitStele = React.memo(function ExploitStele({
   const steleBase = isDark
     ? event.type === "completion" ? "#1E1508"
       : event.type === "milestone" ? "#1C0A0A"
-      : "#08160E"
+      : "#0C2016"
     : event.type === "completion" ? "#FAF3DE"
       : event.type === "milestone" ? "#FAE8E8"
       : "#E8F8F0";

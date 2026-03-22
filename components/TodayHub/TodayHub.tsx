@@ -248,10 +248,10 @@ export default function TodayHub(props: Props) {
 
   // Badge label contextuel
   const badgeLabel = isMark
-    ? t("homeZ.todayHub.badgeMark", "Action requise")
+    ? t("homeZ.todayHub.badgeMark", { defaultValue: "Action requise" })
     : isPending
-      ? t("homeZ.todayHub.badgePending", "En attente")
-      : t("homeZ.todayHub.badgeExplore", "Prêt à démarrer");
+      ? t("homeZ.todayHub.badgePending", { defaultValue: "En attente" })
+      : t("homeZ.todayHub.badgeExplore", { defaultValue: "Prêt à démarrer" });
 
   const badgeColor = isMark ? "#F97316" : isPending ? "#818CF8" : (isDarkMode ? "rgba(148,163,184,0.55)" : "rgba(100,116,139,0.55)");
 
@@ -445,7 +445,7 @@ export default function TodayHub(props: Props) {
                         color: TOKENS.mutedText,
                         marginTop: normalize(3),
                       }}>
-                        {`${Math.round(progressPct * 100)}% accompli`}
+                        {t("homeZ.todayHub.progressLabel", { percent: Math.round(progressPct * 100), defaultValue: `${Math.round(progressPct * 100)}% accompli` })}
                       </Text>
                     </View>
                   ) : (

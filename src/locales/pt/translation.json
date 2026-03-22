@@ -1787,6 +1787,9 @@
   "title": "Bónus de login",
   "todayShort": "Hoje",
   "subtitle": "Dia {{day}} de {{total}} • Continua assim!",
+  "streakPassHint": "Protege a tua série se falhares um dia.",
+"claimSuccess": "Adicionado!",
+"dayShort": "D{{day}}",
   "ribbon": "Pacote de boas-vindas ChallengeTies",
 
   "todayRewardTitle": "Recompensa do dia",
@@ -1827,8 +1830,10 @@
     "joinCta": "Entrar para o movimento Premium"
   },
   "profileUpdatedSuccess": "Perfil atualizado ✓",
+  "seeAll":"Ver tudo",
   "dailyBonus": {
     "title": "Bonus",
+    "short":"Bônus",
 "cta": "Girar a roda 🎯",
     "badge": "RECOMPENSA",
 "oncePerDay": "1 / dia",
@@ -2629,8 +2634,16 @@
       "statStreak": "{{n}} dias de sequência",
       "statTrophies": "{{n}} 🏆"
     },
+     "quickAction": {
+      "explore": "Explorar"
+    },
     "todayHub": {
       "primaryMark": "Marcar hoje",
+      "ctaSub": "1 toque para validar o teu dia",
+"progressLabel": "{{percent}}% concluído",
+      "badgeMark":"Ação necessária",
+      "badgePending":"Pendente",
+      "badgeExplore":"Pronto para começar",
       "primaryPending": "Ver",
       "primaryPick": "Escolher um desafio",
       "primaryNew": "Novo desafio",
@@ -4693,8 +4706,21 @@
     }
   },
    "createChallengeHint": "Um bom título + uma imagem = mais participantes.",
+   "usernameChecking": "A verificar…",
+"usernameAvailable": "Disponível!",
+"usernameTaken": "Já utilizado",
+"usernameSuggestionsLabel": "Sugestões disponíveis:",
+"register": {
+  "step1": { "label": "A tua conta" },
+  "step2": {
+    "label": "A tua identidade",
+    "intro": "Como queres que te chamem?",
+    "socialProof": "Junta-te a centenas de pessoas que cumprem os seus desafios."
+  }
+},
 "common": {
     "back": "Voltar",
+    "continue": "Continuar",
     "retry": "Tentar novamente",
      "anonymous": "Anónimo", "delete": "Eliminar",
     "tip": "Dica",

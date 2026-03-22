@@ -2850,7 +2850,7 @@ setPostWelcomeAbsorbArmed(true);
           </View>
 
         {/* ════ ONBOARDING QUEST BANNER ════ */}
-        <View style={{ zIndex: 1, elevation: 1 }}>
+       <View style={{ zIndex: 1, elevation: 1 }} pointerEvents="box-none">
           <OnboardingQuestBanner onQuestPress={handleQuestPress} />
         </View>
 
@@ -2903,7 +2903,7 @@ setPostWelcomeAbsorbArmed(true);
           color: isDarkMode ? "rgba(226,232,240,0.85)" : "rgba(30,41,59,0.85)",
           textAlign: "center", width: "100%",
         }} numberOfLines={1} adjustsFontSizeToFit minimumFontScale={0.8}>
-          {t("homeZ.quickAction.explore", "Explorer")}
+          {t("homeZ.quickAction.explore", { defaultValue: "Explorer" })}
         </Text>
       </View>
     </Pressable>
@@ -2998,7 +2998,7 @@ setPostWelcomeAbsorbArmed(true);
             color: isDarkMode ? "rgba(226,232,240,0.85)" : "rgba(30,41,59,0.85)",
             textAlign: "center", width: "100%",
           }} numberOfLines={1} adjustsFontSizeToFit minimumFontScale={0.8}>
-            {t("dailyBonus.short", "Bonus")}
+            {t("dailyBonus.short", { defaultValue: "Bonus" })}
           </Text>
         </View>
       </Pressable>
@@ -3029,7 +3029,7 @@ setPostWelcomeAbsorbArmed(true);
     </View>
     <Pressable onPress={handlePickChallengePress} style={({ pressed }) => ({ opacity: pressed ? 0.7 : 1 })}>
       <Text style={{ fontFamily: "Comfortaa_700Bold", fontSize: normalize(12.5), color: "#F97316" }}>
-        {t("seeAll", "Tout voir")} →
+        {t("seeAll", { defaultValue: "Tout voir" })} →
       </Text>
     </Pressable>
   </View>

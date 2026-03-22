@@ -582,8 +582,16 @@
       "statStreak": "{{n}} giorni di serie",
       "statTrophies": "{{n}} 🏆"
     },
+    "quickAction": {
+      "explore":"Esplora"
+    },
     "todayHub": {
       "primaryMark": "Segna oggi",
+      "badgeMark":"Azione richiesta",
+      "ctaSub": "1 tap per validare la tua giornata",
+"progressLabel": "{{percent}}% completato",
+      "badgePending":"In attesa",
+      "badgeExplore":"Pronto a iniziare",
       "primaryPending": "Vedi",
       "primaryPick": "Scegli una sfida",
       "primaryNew": "Nuova sfida",
@@ -834,6 +842,7 @@
 },
 "common": {
     "back": "Indietro",
+    "continue": "Continua",
     "anonymous": "Anonimo", "delete": "Elimina",
     "retry": "Riprova",
     "tip": "Consiglio",
@@ -1930,8 +1939,22 @@
   "noChallengesAvailable": "Nessuna sfida disponibile al momento.",
   "challengesComingSoon": "Presto arriveranno nuove sfide, resta connesso!",
 "profileUpdatedSuccess": "Profilo aggiornato ✓",
+"seeAll":"Vedi tutto",
+"usernameChecking": "Verifica in corso…",
+"usernameAvailable": "Disponibile!",
+"usernameTaken": "Già preso",
+"usernameSuggestionsLabel": "Suggerimenti disponibili:",
+"register": {
+  "step1": { "label": "Il tuo account" },
+  "step2": {
+    "label": "La tua identità",
+    "intro": "Come vuoi che ti chiamino?",
+    "socialProof": "Unisciti a centinaia di persone che portano avanti le loro sfide."
+  }
+},
   "dailyBonus": {
     "title": "Bonus",
+    "short":"Bonus",
 "cta": "Gira la ruota 🎯",
     "rerollUnavailable": "Annuncio in caricamento…",
     "ctaShort": "Gira",
@@ -2238,6 +2261,9 @@
 },
 "welcomeBonus": {
   "title": "Bonus di accesso",
+  "streakPassHint": "Protegge la tua serie se salti un giorno.",
+"claimSuccess": "Aggiunto!",
+"dayShort": "G{{day}}",
   "todayShort": "Oggi",
   "subtitle": "Giorno {{day}} di {{total}} • Continua così!",
   "ribbon": "Pacchetto di benvenuto ChallengeTies",

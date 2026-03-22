@@ -79,8 +79,16 @@
       "statStreak": "{{n}} días de racha",
       "statTrophies": "{{n}} 🏆"
     },
+    "quickAction": {
+      "explore":"Explorar"
+    },
     "todayHub": {
       "primaryMark": "Marcar hoy",
+      "ctaSub": "1 toque para validar tu día",
+"progressLabel": "{{percent}}% completado",
+      "badgeMark":"Acción requerida",
+      "badgePending":"Pendiente",
+      "badgeExplore":"Listo para empezar",
       "primaryPending": "Ver",
       "primaryPick": "Elegir un reto",
       "primaryNew": "Nuevo reto",
@@ -335,9 +343,15 @@
     "title": "¡Bienvenid@ al chat del desafío!",
     "message": "Estamos aquí para animarnos, resolver dudas y avanzar juntos. Para mantener una vibra positiva, sigue estas reglas:\n\n1. **Respeto**: Nada de insultos, acoso o amenazas.\n2. **Tolerancia**: Prohibido el odio o la discriminación (racismo, sexismo, homofobia, transfobia, etc.).\n3. **Contenido**: No desnudez/pornografía, contenido violento o ilegal.\n4. **Pertinencia**: Mantente en el tema (motivación, preguntas, apoyo).\n5. **Seguridad**: No compartas datos personales sensibles (dirección, teléfono, documentos de identidad).\n6. **Limpieza**: Sin spam, publicidad, estafas ni suplantación de identidad.\n\nAl unirte a este chat, aceptas estas reglas. ¡Gracias! 💛"
   },
+  "usernameChecking":"Verificando…",
+  "usernameAvailable":"¡Disponible!",
+  "usernameTaken":"Ya está en uso",
+  "usernameSuggestionsLabel":"Sugerencias disponibles:",
+  "seeAll":"Ver todo",
   "profileUpdatedSuccess": "Perfil actualizado ✓",
   "dailyBonus": {
     "title": "Bonus",
+    "short":"Bono",
 "cta": "Girar la rueda 🎯",
     "badge": "RECOMPENSA",
 "oncePerDay": "1 / día",
@@ -1039,8 +1053,19 @@
   "findPartnerDesc": "Emparéjate con alguien que haga el mismo reto",
   "hint": "Juntos, aguantáis mucho más. 💪"
 },
+"register": {
+    "step1": {
+      "label":"Tu cuenta"
+    },
+    "step2": {
+      "label":"Tu identidad",
+      "intro":"¿Cómo quieres que te llamen?",
+      "socialProof": "Únete a cientos de personas que cumplen sus retos."
+    }
+  },
  "common": {
     "back": "Atrás",
+    "continue":"Continuar",
     "anonymous": "Anónimo", "delete": "Eliminar",
     "retry": "Reintentar",
     "loading": "Cargando...",
@@ -2269,6 +2294,9 @@
 },
 "welcomeBonus": {
   "title": "Bono de conexión",
+  "streakPassHint": "Protege tu racha si te saltas un día.",
+"claimSuccess": "¡Añadido!",
+"dayShort": "D{{day}}",
   "todayShort": "Hoy" ,
   "subtitle": "Día {{day}} de {{total}} • ¡Sigue así!",
   "ribbon": "Pack de bienvenida ChallengeTies",

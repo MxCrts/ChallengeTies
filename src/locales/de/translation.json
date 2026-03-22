@@ -79,8 +79,16 @@
        "statStreak": "{{n}} Tage Serie",
        "statTrophies": "{{n}} 🏆"
     },
+    "quickAction": {
+      "explore":"Erkunden"
+    },
     "todayHub": {
       "primaryMark": "Heute abhaken",
+      "ctaSub": "1 Tap um deinen Tag zu bestätigen",
+"progressLabel": "{{percent}}% abgeschlossen",
+      "badgeMark":"Aktion erforderlich",
+      "badgePending":"Ausstehend",
+      "badgeExplore":"Bereit zu starten",
       "primaryPending": "Ansehen",
       "primaryPick": "Challenge wählen",
       "primaryNew": "Neue Challenge",
@@ -1531,8 +1539,10 @@
   "noChallengesAvailable": "Derzeit sind keine Challenges verfügbar.",
   "challengesComingSoon": "Neue Challenges kommen sehr bald, bleib dran!",
 "profileUpdatedSuccess": "Profil aktualisiert ✓",
+"seeAll":"Alle anzeigen",
   "dailyBonus": {
     "title": "Bonus",
+    "short":"Bonus",
 "cta": "Rad drehen 🎯",
     "badge": "BELOHNUNG",
 "oncePerDay": "1 / Tag",
@@ -1924,6 +1934,9 @@
 },
 "welcomeBonus": {
   "title": "Login-Bonus",
+  "streakPassHint": "Schützt deine Serie, wenn du einen Tag verpasst.",
+"claimSuccess": "Hinzugefügt!",
+"dayShort": "T{{day}}",
   "todayShort": "Heute",
   "subtitle": "Tag {{day}} von {{total}} • Weiter so!",
   "ribbon": "ChallengeTies Willkommenspaket",
@@ -4958,8 +4971,23 @@
     "errorGeneric": "Serie konnte nicht simuliert werden."
   },
   "createChallengeHint": "Ein guter Titel + ein Bild = mehr Teilnehmer.",
+  "register": {
+    "step1": {
+      "label":"Dein Konto"
+    },
+    "step2": {
+      "label": "Deine Identität",
+      "intro":"Wie sollen andere dich nennen?",
+      "socialProof":"Schließe dich Hunderten an, die ihre Herausforderungen meistern."
+    }
+  },
+  "usernameChecking":"Wird geprüft…",
+  "usernameAvailable":"Verfügbar!",
+  "usernameTaken":"Bereits vergeben",
+  "usernameSuggestionsLabel":"Verfügbare Vorschläge:",
 "common": {
     "back": "Zurück",
+    "continue":"Weiter",
     "anonymous": "Anonym", "delete": "Löschen",
     "retry": "Erneut versuchen",
     "tip": "Tipp",

@@ -192,6 +192,7 @@ export default function OnboardingQuestBanner({ onQuestPress }: Props) {
       entering={FadeInDown.duration(400).springify().damping(16)}
       exiting={FadeOutUp.duration(300)}
       style={[bS.wrap, { backgroundColor: bgCard }]}
+      pointerEvents="box-none"
     >
       {/* Border gradient top */}
       <LinearGradient

@@ -1792,6 +1792,9 @@
   "title": "ログインボーナス",
   "todayShort": "今日" ,
   "subtitle": "{{total}}日中 {{day}}日目 • 続けよう！",
+  "streakPassHint": "1日休んでもストリークを守ります。",
+"claimSuccess": "追加しました！",
+"dayShort": "{{day}}日目",
   "ribbon": "ChallengeTies ウェルカムパック",
 
   "todayRewardTitle": "本日の報酬",
@@ -1831,9 +1834,23 @@
     "joinA11y": "プレミアムのムーブメントに参加する",
     "joinCta": "プレミアムのムーブメントに参加する"
   },
+  "usernameChecking": "確認中…",
+"usernameAvailable": "使用可能！",
+"usernameTaken": "すでに使われています",
+"usernameSuggestionsLabel": "利用可能な候補：",
+"register": {
+  "step1": { "label": "あなたのアカウント" },
+  "step2": {
+    "label": "あなたの個性",
+    "intro": "なんて呼ばれたいですか？",
+    "socialProof": "チャレンジを続ける何百人もの仲間に参加しよう。"
+  }
+},
+  "seeAll":"すべて見る",
   "profileUpdatedSuccess": "プロフィールを更新しました ✓",
   "dailyBonus": {
     "title": "ボーナス",
+    "short":"ボーナス",
 "cta": "ホイールを回す 🎯",
     "badge": "報酬",
 "oncePerDay": "1日1回",
@@ -2666,8 +2683,16 @@
        "statStreak": "{{n}}日連続",
        "statTrophies": "{{n}} 🏆"
     },
+    "quickAction": {
+      "explore":"探索"
+    },
     "todayHub": {
       "primaryMark": "今日チェックイン",
+      "ctaSub": "1タップで今日を記録",
+"progressLabel": "{{percent}}% 達成",
+      "badgeMark":"アクションが必要",
+      "badgePending":"保留中",
+      "badgeExplore":"スタート準備完了",
       "primaryPending": "見る",
       "primaryPick": "チャレンジを選ぶ",
       "primaryNew": "新しいチャレンジ",
@@ -4719,6 +4744,7 @@
   "createChallengeHint": "良いタイトル＋画像＝参加者が増える。",
 "common": {
     "back": "戻る",
+    "continue": "続ける",
     "retry": "再試行",
     "anonymous": "匿名", "delete": "削除",
     "loading": "読み込み中...",

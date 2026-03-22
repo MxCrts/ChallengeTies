@@ -560,8 +560,16 @@
       "statStreak": "连续{{n}}天",
       "statTrophies": "{{n}} 🏆"
     },
+    "quickAction": {
+      "explore": "探索"
+    },
     "todayHub": {
       "primaryMark": "今天打卡",
+      "ctaSub": "1次点击完成今日打卡",
+"progressLabel": "{{percent}}% 已完成",
+      "badgeMark":"需要操作",
+      "badgePending":"待处理",
+      "badgeExplore":"准备开始",
       "primaryPending": "查看",
       "primaryPick": "选择挑战",
       "primaryNew": "新挑战",
@@ -884,8 +892,21 @@
   "leaderboardTitle": "排行榜",
   "whatsNew": "最新动态",
   "faqShort": "常见问题",
+  "usernameChecking": "检查中…",
+"usernameAvailable": "可用！",
+"usernameTaken": "已被使用",
+"usernameSuggestionsLabel": "可用建议：",
+"register": {
+  "step1": { "label": "你的账户" },
+  "step2": {
+    "label": "你的身份",
+    "intro": "你想让大家怎么称呼你？",
+    "socialProof": "加入数百名坚持挑战的人们。"
+  }
+},
 "common": {
     "back": "返回",
+    "continue": "继续",
     "anonymous": "匿名", "delete": "删除",
     "tip": "小贴士",
     "retry": "重试",
@@ -1941,8 +1962,10 @@
   "noChallengesAvailable": "目前暂无可用挑战。",
   "challengesComingSoon": "全新挑战即将上线，敬请期待！",
 "profileUpdatedSuccess": "个人资料已更新 ✓",
+"seeAll":"查看全部",
   "dailyBonus": {
     "title": "奖励",
+    "short":"奖励",
 "cta": "转动转盘 🎯",
     "badge": "奖励",
 "oncePerDay": "每日 1 次",
@@ -2249,6 +2272,9 @@
   "title": "登录奖励",
   "todayShort": "今日",
   "subtitle": "第 {{day}} 天 / 共 {{total}} 天 • 继续坚持！",
+  "streakPassHint": "如果你错过一天，可保护你的连续记录。",
+"claimSuccess": "已添加！",
+"dayShort": "天{{day}}",
   "ribbon": "ChallengeTies 新手礼包",
 
   "todayRewardTitle": "今日奖励",

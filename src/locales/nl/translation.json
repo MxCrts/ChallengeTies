@@ -1835,6 +1835,9 @@
   "welcomeBonus": {
     "title": "Inlogbonus",
      "todayShort": "Vandaag",
+     "streakPassHint": "Beschermt je reeks als je een dag mist.",
+"claimSuccess": "Toegevoegd!",
+"dayShort": "D{{day}}",
     "subtitle": "Dag {{day}} van {{total}} • Blijf in je flow!",
 
     "ribbon": "ChallengeTies welkomstpakket",
@@ -1862,9 +1865,11 @@
 
     "error": "De welkomstbonus kan momenteel niet worden opgehaald."
   },
+  "seeAll":"Alles zien",
 "profileUpdatedSuccess": "Profiel bijgewerkt ✓",
   "dailyBonus": {
     "title": "Bonus",
+    "short":"Bonus",
 "cta": "Draai het wiel 🎯",
     "badge": "BELONING",
 "oncePerDay": "1 / dag",
@@ -2683,8 +2688,16 @@
       "statStreak": "{{n}} dagen reeks",
       "statTrophies": "{{n}} 🏆"
     },
+     "quickAction": {
+      "explore": "Verkennen"
+    },
     "todayHub": {
       "primaryMark": "Vandaag afvinken",
+      "ctaSub": "1 tik om je dag te valideren",
+"progressLabel": "{{percent}}% voltooid",
+      "badgeMark":"Actie vereist",
+      "badgePending":"In behandeling",
+      "badgeExplore":"Klaar om te starten",
       "primaryPending": "Bekijken",
       "primaryPick": "Kies een challenge",
       "primaryNew": "Nieuwe challenge",
@@ -4870,8 +4883,21 @@
     }
   },
   "createChallengeHint": "Een goede titel + een afbeelding = meer deelnemers.",
+  "usernameChecking": "Controleren…",
+"usernameAvailable": "Beschikbaar!",
+"usernameTaken": "Al in gebruik",
+"usernameSuggestionsLabel": "Beschikbare suggesties:",
+"register": {
+  "step1": { "label": "Jouw account" },
+  "step2": {
+    "label": "Jouw identiteit",
+    "intro": "Hoe wil je dat mensen je noemen?",
+    "socialProof": "Sluit je aan bij honderden mensen die hun uitdagingen volhouden."
+  }
+},
   "common": {
     "back": "Terug",
+    "continue": "Doorgaan",
     "anonymous": "Anoniem", "delete": "Verwijderen",
     "retry": "Opnieuw proberen",
     "tip": "Tip",

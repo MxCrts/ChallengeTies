@@ -536,8 +536,16 @@
       "statStreak": "{{n}} يوم متتالي",
       "statTrophies": "{{n}} 🏆"
     },
+    "quickAction": {
+      "explore":"استكشاف"
+    },
     "todayHub": {
        "primaryMark": "علِّم اليوم",
+       "ctaSub": "نقرة واحدة للتحقق من يومك",
+"progressLabel": "{{percent}}% مكتمل",
+       "badgeMark":"إجراء مطلوب",
+      "badgePending":"في انتظار",
+      "badgeExplore":"جاهز للبدء",
       "primaryPending": "عرض",
       "primaryPick": "اختر تحدّياً",
       "primaryNew": "تحدٍّ جديد",
@@ -1613,9 +1621,21 @@
     }
   }
 ,
+"register": {
+  "step1": {
+    "label":"حسابك"
+  },
+  "step2": {
+    "label": "هويتك",
+    "intro":"كيف تريد أن يناديك الآخرون؟",
+    "social¨Proof": "انضم إلى مئات الأشخاص الذين يحققون تحدياتهم."
+  }
+},
+"seeAll":"عرض الكل",
 "profileUpdatedSuccess": "تم تحديث الملف الشخصي ✓",
   "dailyBonus": {
     "title": "مكافأة",
+    "short":"مكافأة",
 "cta": "أدر العجلة 🎯",
     "badge": "مكافأة",
 "oncePerDay": "مرة واحدة يوميًا",
@@ -2014,8 +2034,13 @@
     "errorGeneric": "تعذر محاكاة السلسلة."
   },
   "createChallengeHint": "عنوان قوي + صورة = مشاركون أكثر.",
+  "usernameChecking":"جارٍ التحقق…",
+  "usernameAvailable":"متاح !",
+  "usernameTaken":"مأخوذ بالفعل",
+  "usernameSuggestionsLabel":"اقتراحات متاحة:",
 "common": {
     "back": "رجوع",
+    "continue":"متابعة",
     "retry": "أعد المحاولة",
     "anonymous": "مجهول", "delete": "حذف",
     "tip": "نصيحة",
@@ -2104,12 +2129,19 @@
   "divers": "متفرقات"
 },
 "welcomeBonus": {
+  "ribbon": "حزمة الترحيب",
+  "streakPassHint": "يحمي سلسلتك إذا فاتك يوم.",
+"claimSuccess": "تمت الإضافة!",
+"dayShort": "ي{{day}}",
+"dayCounterLabel": "أيام متتالية",
+"todayRewardTitle": "مكافأة اليوم",
+"trophiesHint": "تتراكم في ملفك الشخصي.",
+"cta": "استلام مكافأتي",
+"bottomHint": "سجّل الدخول كل يوم لفتح كل شيء.",
   "title": "مكافأة تسجيل الدخول",
   "todayShort": "اليوم",
   "subtitle": "اليوم {{day}} من {{total}} • استمر!",
-  "ribbon": "حزمة الترحيب من ChallengeTies",
 
-  "todayRewardTitle": "مكافأة اليوم",
 
   "reward": {
     "trophies": "{{count}} كؤوس إضافية",
@@ -2125,9 +2157,7 @@
   "claimed": "تم الحصول عليها",
   "today": "اليوم",
 
-  "bottomHint": "سجّل دخولك يوميًا لفتح 100٪ من الحزمة.",
 
-  "cta": "احصل على مكافأتي",
   "ctaLoading": "لحظة واحدة…",
 
   "error": "تعذر الحصول على مكافأة الترحيب حاليًا."

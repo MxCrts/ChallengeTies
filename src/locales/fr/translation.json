@@ -70,6 +70,11 @@
 
     "todayHub": {
       "primaryMark": "Marquer aujourd’hui",
+      "ctaSub": "1 tap pour valider ta journée",
+"progressLabel": "{{percent}}% accompli",
+      "badgeMark":"Action requise",
+      "badgePending":"En attente",
+      "badgeExplore":"Prêt à démarrer",
       "primaryPending": "Voir",
       "primaryPick": "Choisir un défi",
       "primaryNew": "Nouveau défi",
@@ -140,7 +145,9 @@
       "createA11y": "Créer un défi",
       "createHint": "Ouvre ton espace pour créer un défi et le partager."
     },
-
+    "quickAction": {
+      "explore":"Explorer"
+    },
     "duoNudge": {
       "a11y": "Recommandation Duo",
       "title": "Le Duo te fait tenir.",
@@ -897,6 +904,16 @@
       "saveSub": "Retrouve-le en 1 tap",
       "statsHint": "Voir ton calendrier & progression.",
       "statsSub": "Streaks + mois"
+    }
+  },
+  "register": {
+    "step1": {
+      "label":"Ton compte"
+    },
+    "step2": {
+      "label":"Ton identité",
+      "intro":"Comment veux-tu qu'on t'appelle ?",
+      "socialProof":"Rejoins des centaines de personnes qui tiennent leurs défis."
     }
   },
  "editYourReview": "Modifier ton avis",
@@ -1912,6 +1929,9 @@
   },
 "welcomeBonus": {
   "title": "Bonus de connexion",
+  "streakPassHint": "Protège ta série si tu rates un jour.",
+"claimSuccess": "Ajouté !",
+"dayShort": "J{{day}}",
   "todayShort": "Auj.",
   "subtitle": "Jour {{day}} sur {{total}} • Continue ta lancée !",
 
@@ -1942,6 +1962,7 @@
 }
 ,
 "profileUpdatedSuccess": "Profil mis à jour ✓",
+"seeAll":"Tout voir",
   "dailyBonus": {
     "title": "Bonus",
     "cta": "Lancer la roue 🎯",
@@ -1952,6 +1973,7 @@
     "spinHint": "Lance la roue pour obtenir ta récompense.",
     "error": "Impossible de récupérer le bonus du jour pour le moment.",
     "tag": "Exclu du Jour",
+    "short":"Bonus",
     "badge": "RÉCOMPENSE",
     "oncePerDay": "1 / jour",
     "teaser2": "Qu'est-ce que tu vas décrocher aujourd'hui ?",
@@ -4758,9 +4780,14 @@
       "contact": "Notre équipe est là pour toi. Tu peux nous écrire directement depuis l’app via le bouton 'Contacter le support', ou depuis la page Contact sur notre site 🌍."
     }
   },
+  "usernameChecking":"Vérification…",
+  "usernameAvailable":"Disponible !",
+  "usernameTaken":"Déjà pris",
+  "usernameSuggestionsLabel":"Suggestions disponibles :",
   "createChallengeHint": "Un bon titre + une image = plus de participants.",
   "common": {
     "back": "Retour",
+    "continue":"Continuer",
     "retry": "Réessayer",
     "anonymous": "Anonyme", "delete": "Supprimer",
     "tip": "Astuce",

@@ -604,8 +604,16 @@
       "statStreak": "{{n}}d streak",
       "statTrophies": "{{n}} 🏆"
     },
+    "quickAction": {
+      "explore":"Explore"
+    },
     "todayHub": {
       "primaryMark": "Check in today",
+      "ctaSub": "1 tap to validate your day",
+"progressLabel": "{{percent}}% completed",
+      "badgeMark":"Action required",
+      "badgePending":"Pending",
+      "badgeExplore":"Ready to start",
       "primaryPending": "View",
       "primaryPick": "Pick a challenge",
       "primaryNew": "New challenge",
@@ -1682,9 +1690,11 @@
     }
   }
 ,
+"seeAll":"See all",
 "profileUpdatedSuccess": "Profile updated ✓",
   "dailyBonus": {
     "title": "Bonus",
+    "short":"Bonus",
 "cta": "Spin the wheel 🎯",
     "badge": "REWARD",
 "oncePerDay": "1 / day",
@@ -2294,6 +2304,9 @@
   },
  "welcomeBonus": {
   "title": "Login Bonus",
+  "streakPassHint": "Protects your streak if you miss a day.",
+"claimSuccess": "Added!",
+"dayShort": "D{{day}}",
   "todayShort": "Today",
   "subtitle": "Day {{day}} of {{total}} • Keep going!",
   "ribbon": "ChallengeTies Welcome Pack",
@@ -4974,8 +4987,23 @@
   "iHaveReadRules": "I have read and accept the rules.",
   "acceptRulesButton": "I accept and understand",
   "iUnderstand": "I understand",
+  "register": {
+    "step1": {
+      "label":"Your account"
+    },
+    "step2": {
+      "label":"Your identity",
+      "intro":"What do you want people to call you?",
+      "socialProof":"Join hundreds of people who are sticking to their challenges."
+    }
+  },
+  "usernameChecking":"Checking…",
+  "usernameAvailable":"Available!",
+  "usernameTaken":"Already taken",
+  "usernameSuggestionsLabel":"Available suggestions:",
 "common": {
     "back": "Back",
+    "continue":"Continue",
     "anonymous": "Anonymous", "delete": "Delete",
     "retry": "Retry",
     "loading": "Loading...",

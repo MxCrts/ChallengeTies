@@ -602,8 +602,16 @@
       "statStreak": "{{n}} दिन की स्ट्रीक",
       "statTrophies": "{{n}} 🏆"
     },
+    "quickAction": {
+      "explore":"अन्वेषण करें"
+    },
     "todayHub": {
       "primaryMark": "आज मार्क करें",
+      "ctaSub": "अपना दिन सत्यापित करने के लिए 1 टैप",
+"progressLabel": "{{percent}}% पूर्ण",
+      "badgeMark":"कार्रवाई आवश्यक",
+      "badgePending":"प्रतीक्षारत",
+      "badgeExplore":"शुरू करने के लिए तैयार",
       "primaryPending": "देखें",
       "primaryPick": "चैलेंज चुनें",
       "primaryNew": "नया चैलेंज",
@@ -628,7 +636,7 @@
   "titleAllDone": "परफ़ेक्ट। आज सब कुछ पूरा हो गया।",
   "subAllDone": "नया चैलेंज शुरू करें या किसी को टिके रहने में मदद करें।",
       "primaryDuoShort": "डुओ",
-      "titleActive2": "आज मार्क करें। reinforces अपनी स्ट्रीक।",
+      "titleActive2": "आज मार्क करें। अपनी स्ट्रीक मजबूत करें।",
       "titleNone2": "एक चुनौती चुनें। आज शुरू करें।",
       "subActive2": "पुष्टि करने के लिए 1 टैप।",
       "subNone2": "सबसे कठिन पहला कदम है। सोलो, डुओ… या खुद बनाएं।",
@@ -1695,8 +1703,20 @@
 "vsIntro": {
     "challengeAccepted":"चुनौती स्वीकार की"
   },
+  "register": {
+    "step1": {
+      "label":"तुम्हारा खाता"
+    },
+    "step2": {
+      "label":"तुम्हारी पहचान",
+      "intro":"तुम्हें क्या कहलाना पसंद है?",
+      "socialProof": "सैकड़ों लोगों से जुड़ो जो अपनी चुनौतियाँ पूरी कर रहे हैं।"
+    }
+  },
+  "seeAll":"सभी देखें",
   "dailyBonus": {
     "title": "बोनस",
+    "short":"बोनस",
 "cta": "पहि",
     "badge": "इनाम",
 "oncePerDay": "दिन में 1 बार",
@@ -1919,8 +1939,13 @@
   "leaderboardTitle": "लीडरबोर्ड",
   "whatsNew": "क्या नया है",
   "faqShort": "FAQ",
+  "usernameChecking":"जाँच हो रही है…",
+  "usernameAvailable":"उपलब्ध है!",
+  "usernameTaken":"पहले से लिया गया",
+  "usernameSuggestionsLabel":"उपलब्ध सुझाव:",
 "common": {
     "back": "वापस",
+    "continue":"जारी रखें",
     "anonymous": "गुमनाम", "delete": "हटाएँ",
     "retry": "फिर से कोशिश करें",
     "tip": "टिप",
@@ -2293,6 +2318,9 @@
 },
 "welcomeBonus": {
   "title": "लॉग-इन बोनस",
+  "streakPassHint": "एक दिन चूकने पर तुम्हारी स्ट्रीक बचाता है।",
+"claimSuccess": "जोड़ा गया!",
+"dayShort": "दि{{day}}",
   "todayShort": "आज",
   "subtitle": "कुल {{total}} में से दिन {{day}} • इसी तरह जारी रखें!",
   "ribbon": "ChallengeTies स्वागत पैक",

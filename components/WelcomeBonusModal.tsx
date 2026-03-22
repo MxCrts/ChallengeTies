@@ -349,7 +349,13 @@ const shimmerStyle = useAnimatedStyle(() => ({
       statusBarTranslucent
       {...(Platform.OS === "ios" ? { presentationStyle: "overFullScreen" as const } : {})}
     >
-      <View style={{ flex: 1, alignItems: "center", justifyContent: "center" }}>
+      <View style={{
+        flex: 1,
+        alignItems: "center",
+        justifyContent: "center",
+        paddingTop: Platform.OS === "android" ? insets.top : 0,
+        paddingBottom: Platform.OS === "android" ? insets.bottom : 0,
+      }}>
 
         {/* Backdrop */}
         {Platform.OS === "ios" ? (
@@ -400,11 +406,12 @@ const shimmerStyle = useAnimatedStyle(() => ({
         )}
 
         {/* ── CARD principale ──────────────────────────────────────────────── */}
-        <Animated.View
+       <Animated.View
           entering={FadeIn.duration(260)}
           exiting={FadeOut.duration(180)}
           style={[{
             width:        CARD_W,
+            maxHeight:    SH - insets.top - insets.bottom - n(32),
             borderRadius: n(30),
             overflow:     "hidden",
             borderWidth:  1,

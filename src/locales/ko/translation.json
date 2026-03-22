@@ -1776,6 +1776,9 @@
   "title": "로그인 보너스",
   "todayShort": "오늘",
   "subtitle": "{{total}}일 중 {{day}}일째 • 계속해서 나아가세요!",
+  "streakPassHint": "하루 빠져도 연속 기록을 보호합니다.",
+"claimSuccess": "추가됐습니다!",
+"dayShort": "{{day}}일",
   "ribbon": "ChallengeTies 웰컴 패키지",
 
   "todayRewardTitle": "오늘의 보상",
@@ -1818,9 +1821,11 @@
   "vsIntro": {
     "challengeAccepted":"도전 수락됨"
   },
+  "seeAll":"모두 보기",
   "profileUpdatedSuccess": "프로필이 업데이트되었습니다 ✓",
   "dailyBonus": {
     "title": "보너스",
+    "short":"보너스",
 "cta": "휠 돌리기 🎯",
     "badge": "보상",
 "oncePerDay": "하루 1회",
@@ -2643,8 +2648,16 @@
       "statStreak": "{{n}}일 연속",
       "statTrophies": "{{n}} 🏆"
     },
+    "quickAction": {
+      "explore": "탐색"
+    },
     "todayHub": {
       "primaryMark": "오늘 체크인",
+      "ctaSub": "오늘 하루를 1탭으로 확인",
+"progressLabel": "{{percent}}% 완료",
+      "badgeMark":"조치 필요",
+      "badgePending": "대기 중",
+      "badgeExplore":"시작할 준비 완료",
       "primaryPending": "보기",
       "primaryPick": "챌린지 선택",
       "primaryNew": "새 챌린지",
@@ -4719,8 +4732,21 @@
     }
   },
   "createChallengeHint": "좋은 제목 + 이미지 = 더 많은 참여자.",
+  "usernameChecking": "확인 중…",
+"usernameAvailable": "사용 가능!",
+"usernameTaken": "이미 사용 중",
+"usernameSuggestionsLabel": "사용 가능한 제안:",
+"register": {
+  "step1": { "label": "내 계정" },
+  "step2": {
+    "label": "내 정체성",
+    "intro": "어떻게 불리고 싶나요?",
+    "socialProof": "도전을 이어가는 수백 명과 함께하세요."
+  }
+},
 "common": {
     "back": "뒤로",
+    "continue": "계속",
     "retry": "다시 시도",
     "anonymous": "익명", "delete": "삭제",
      "tip": "팁",

@@ -885,7 +885,8 @@ async function reconcileDuoLinks(
         );
       });
     if (!changed) return;
-    await updateDoc(meRef, { CurrentChallenges: newMine });
+    const { setDoc } = require("firebase/firestore");
+    await setDoc(meRef, { CurrentChallenges: newMine }, { merge: true });
     setCurrent(newMine);
   } catch (e: any) {
     console.warn("[reconcileDuoLinks] update self error:", e?.message ?? e);

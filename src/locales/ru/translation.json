@@ -564,8 +564,16 @@
       "statStreak": "{{n}} дней серии",
       "statTrophies": "{{n}} 🏆"
     },
+    "quickAction": {
+      "explore": "Исследовать"
+    },
     "todayHub": {
       "primaryMark": "Отметить сегодня",
+      "ctaSub": "1 нажатие, чтобы подтвердить день",
+"progressLabel": "{{percent}}% выполнено",
+      "badgeMark":"Требуется действие",
+      "badgePending":"Ожидание",
+      "badgeExplore":"Готов к старту",
       "primaryPending": "Посмотреть",
       "primaryPick": "Выбрать челлендж",
       "primaryNew": "Новый челлендж",
@@ -1656,8 +1664,10 @@
   "noChallengesAvailable": "Сейчас челленджей нет.",
   "challengesComingSoon": "Совсем скоро появятся новые челленджи. Следите за обновлениями!",
 "profileUpdatedSuccess": "Профиль обновлён ✓",
+"seeAll":"Смотреть все",
   "dailyBonus": {
     "title": "Бонус",
+    "short":"Бонус",
 "cta": "Крутить колесо 🎯",
     "badge": "НАГРАДА",
 "oncePerDay": "1 / день",
@@ -1869,8 +1879,21 @@
     }
   },
   "createChallengeHint": "Хорошее название + картинка = больше участников.",
+  "usernameChecking": "Проверка…",
+"usernameAvailable": "Доступен!",
+"usernameTaken": "Уже занят",
+"usernameSuggestionsLabel": "Доступные варианты:",
+"register": {
+  "step1": { "label": "Твой аккаунт" },
+  "step2": {
+    "label": "Твоя личность",
+    "intro": "Как тебя называть?",
+    "socialProof": "Присоединяйся к сотням людей, которые выполняют свои челленджи."
+  }
+},
 "common": {
     "back": "Назад",
+    "continue": "Продолжить",
     "anonymous": "Аноним", "delete": "Удалить",
     "retry": "Повторить",
     "loading": "Загрузка...",
@@ -2210,6 +2233,9 @@
 },
 "welcomeBonus": {
   "title": "Бонус за вход",
+  "streakPassHint": "Защищает серию, если пропустишь день.",
+"claimSuccess": "Добавлено!",
+"dayShort": "Д{{day}}",
   "todayShort": "Сегодня",
   "subtitle": "День {{day}} из {{total}} • Продолжай в том же духе!",
   "ribbon": "Приветственный пакет ChallengeTies",
