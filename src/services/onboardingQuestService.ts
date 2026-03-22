@@ -3,6 +3,8 @@
 // Gère la logique des quêtes d'onboarding adaptatives solo/duo
 
 import AsyncStorage from "@react-native-async-storage/async-storage";
+import { doc, runTransaction, serverTimestamp, increment } from "firebase/firestore";
+import { db, auth } from "@/constants/firebase-config";
 
 /* ─── Clés AsyncStorage ─────────────────────────────────────── */
 const KEYS = {
@@ -160,9 +162,29 @@ export async function completeQuest(questId: QuestId): Promise<OnboardingState |
     if (!stateRaw) return null;
 
     const quests = JSON.parse(stateRaw) as Quest[];
+    const quest = quests.find(q => q.id === questId);
+
+    // Déjà complétée → pas de double reward
+    if (!quest || quest.completed) return loadOnboardingState();
+
     const updated = quests.map(q =>
       q.id === questId ? { ...q, completed: true } : q
     );
+
+    // ✅ Donne les trophées dans Firestore
+    const uid = auth.currentUser?.uid;
+    if (uid && quest.trophies > 0) {
+      const userRef = doc(db, "users", uid);
+      await runTransaction(db, async (tx) => {
+        const snap = await tx.get(userRef);
+        if (!snap.exists()) return;
+        tx.update(userRef, {
+          trophies: increment(quest.trophies),
+          totalTrophies: increment(quest.trophies),
+          updatedAt: serverTimestamp(),
+        });
+      });
+    }
 
     await AsyncStorage.setItem(KEYS.QUEST_STATE, JSON.stringify(updated));
     return loadOnboardingState();

@@ -177,6 +177,11 @@ export default function ProfileScreen() {
         if (seen !== "1") {
           setShowPioneerModal(true);
           await AsyncStorage.setItem(PROFILE_FIRST_SEEN_KEY, "1");
+          // ✅ Active le duo par défaut à la première visite
+          const uid = auth.currentUser?.uid;
+          if (uid && !userData?.duoAvailable) {
+            setDuoAvailable(uid, true).catch(() => {});
+          }
         }
       } catch {}
     };

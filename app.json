@@ -118,7 +118,7 @@
 ],
       ["expo-splash-screen", {
   "image": "./assets/images/splash.png",
-  "resizeMode": "contain",
+  "resizeMode": "cover",
   "backgroundColor": "#0B1120"
 }],
       "expo-font",

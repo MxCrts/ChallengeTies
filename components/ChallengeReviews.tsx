@@ -218,9 +218,9 @@ const ChallengeReviews: React.FC<Props> = ({ challengeId, selectedDays }) => {
       borderGradient: isDarkMode
   ? (["rgba(249,115,22,0.25)", "rgba(249,115,22,0.10)"] as const)
   : (["rgba(249,115,22,0.20)", "rgba(249,115,22,0.08)"] as const),
-      headerGradient: isDarkMode
+     headerGradient: isDarkMode
   ? (["rgba(20,12,4,0.92)", "rgba(30,15,5,0.85)"] as const)
-  : (["rgba(255,245,235,0.98)", "rgba(255,235,215,0.92)"] as const),
+  : (["rgba(255,243,230,1.0)", "rgba(255,232,210,1.0)"] as const),
     }),
     [isDarkMode]
   );
@@ -630,8 +630,8 @@ const ChallengeReviews: React.FC<Props> = ({ challengeId, selectedDays }) => {
             borderRadius: R.card,
             padding: R.pad,
             backgroundColor: isDarkMode
-              ? "rgba(20,10,4,0.90)"
-              : "rgba(255,255,255,0.95)",
+                  ? "rgba(20,10,4,0.90)"
+                  : "rgba(255,248,240,0.98)",
           }]}>
               <View style={[styles.row, { marginBottom: 10 }]}>
                 <View style={{ marginRight: 12 }}>
@@ -830,11 +830,13 @@ const ChallengeReviews: React.FC<Props> = ({ challengeId, selectedDays }) => {
     borderWidth: 1, borderColor: "rgba(249,115,22,0.22)",
     marginBottom: 14, gap: 10,
   }}>
-    <Ionicons name="lock-closed-outline" size={16} color="#F97316" />
+   <Ionicons name="lock-closed-outline" size={16} color="#F97316" />
     <Text style={[styles.centerInfo, {
       color: isDarkMode ? "rgba(255,255,255,0.75)" : "rgba(0,0,0,0.65)",
       marginBottom: 0, textAlign: "left", flex: 1,
-    }]}>
+    }]}
+      numberOfLines={3}
+    >
       {t("challengeDetails.reviewAfterComplete")}
     </Text>
   </View>
@@ -874,12 +876,12 @@ const ChallengeReviews: React.FC<Props> = ({ challengeId, selectedDays }) => {
 
               <View style={{ flex: 1, minWidth: 0 }}>
                 <Text
-                numberOfLines={1}
                 style={{
                   fontSize: small ? 16 : 18,
                   fontFamily: FONT.bold,
                   letterSpacing: 0.2,
                   color: isDarkMode ? currentTheme.colors.textPrimary : "#1A0800",
+                  flexShrink: 1,
                 }}
               >
                 {title}
@@ -1087,7 +1089,7 @@ const ChallengeReviews: React.FC<Props> = ({ challengeId, selectedDays }) => {
                 padding: R.pad,
                 backgroundColor: isDarkMode
                   ? "rgba(20,10,4,0.90)"
-                  : "rgba(255,255,255,0.95)",
+                  : "rgba(255,248,240,0.98)",
               }]}>
                   <View style={[styles.row, { marginBottom: 10 }]}>
                     <View style={{ marginRight: 12 }}>
