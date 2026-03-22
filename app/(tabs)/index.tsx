@@ -2569,9 +2569,15 @@ setPostWelcomeAbsorbArmed(true);
               fadeStyle,
             ]}
           >
+           <Image
+  source={FALLBACK_CHALLENGE_IMG}
+  style={[staticStyles.backgroundVideo, { top: -insets.top, height: HERO_TOTAL_HEIGHT }]}
+  contentFit="cover"
+  cachePolicy="memory-disk"
+/>
            <Video
   ref={heroVideoRef}
-  style={[staticStyles.backgroundVideo, { top: -insets.top, height: HERO_TOTAL_HEIGHT }]}
+  style={[staticStyles.backgroundVideo, { top: -insets.top, height: HERO_TOTAL_HEIGHT, opacity: videoReady ? 1 : 0 }]}
   resizeMode={ResizeMode.COVER}
   source={require("../../assets/videos/Hero-Bgopti.mp4")}
   onReadyForDisplay={() => setVideoReady(true)}
@@ -2844,7 +2850,9 @@ setPostWelcomeAbsorbArmed(true);
           </View>
 
         {/* ════ ONBOARDING QUEST BANNER ════ */}
-        <OnboardingQuestBanner onQuestPress={handleQuestPress} />
+        <View style={{ zIndex: 1, elevation: 1 }}>
+          <OnboardingQuestBanner onQuestPress={handleQuestPress} />
+        </View>
 
         {/* ════ QUICK ACTIONS ════ */}
 <View style={{

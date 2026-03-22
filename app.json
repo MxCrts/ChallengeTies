@@ -7,7 +7,7 @@
     "icon": "./assets/images/icon.png",
     "splash": {
   "image": "./assets/images/splash.png",
-  "resizeMode": "contain",
+  "resizeMode": "cover",
   "backgroundColor": "#0B1120"
 },
     "scheme": "myapp",
@@ -55,13 +55,17 @@
       "softwareKeyboardLayoutMode": "resize",
       "package": "com.mxcrts.ChallengeTies",
       "permissions": [
-        "RECEIVE_BOOT_COMPLETED",
-        "VIBRATE",
-        "com.google.android.c2dm.permission.RECEIVE",
-        "com.google.android.gms.permission.AD_ID",
-        "android.permission.POST_NOTIFICATIONS",
-        "com.android.vending.BILLING"
-      ],
+  "RECEIVE_BOOT_COMPLETED",
+  "VIBRATE",
+  "com.google.android.c2dm.permission.RECEIVE",
+  "com.google.android.gms.permission.AD_ID",
+  "android.permission.POST_NOTIFICATIONS",
+  "com.android.vending.BILLING",
+  "android.permission.READ_MEDIA_IMAGES",
+  "android.permission.READ_EXTERNAL_STORAGE",
+  "android.permission.WRITE_EXTERNAL_STORAGE",
+  "android.permission.CAMERA"
+],
       "googleServicesFile": "./google-services.json",
       "intentFilters": [
         {

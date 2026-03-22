@@ -130,7 +130,7 @@ const qS = StyleSheet.create({
     paddingVertical: ns(10), paddingRight: ns(12), gap: ns(10),
     ...Platform.select({
       ios: { shadowColor: "#000", shadowOpacity: 0.05, shadowRadius: 6, shadowOffset: { width: 0, height: 2 } },
-      android: { elevation: 1 },
+      android: {},
     }),
   },
   accentBar:  { width: ns(3), alignSelf: "stretch" },
@@ -267,11 +267,12 @@ export default function OnboardingQuestBanner({ onQuestPress }: Props) {
 const bS = StyleSheet.create({
   wrap: {
     marginHorizontal: ns(12), marginBottom: ns(12),
+    marginTop: ns(4),
     borderRadius: ns(22), overflow: "hidden",
     borderWidth: 1, borderColor: ORANGE + "35",
     ...Platform.select({
       ios: { shadowColor: ORANGE, shadowOpacity: 0.12, shadowRadius: 16, shadowOffset: { width: 0, height: 4 } },
-      android: { elevation: 4 },
+      android: {},
     }),
   },
   topLine:      { height: 1, marginBottom: ns(12) },

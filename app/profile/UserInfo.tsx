@@ -272,8 +272,9 @@ const toggleCategory = useCallback((cat: string) => {
       : []
   );
   const nextCats = JSON.stringify([...selectedCategories].sort());
-  return nextCats !== baseCats;
-}, [user, selectedCategories]);
+  const imageChanged = profileImage !== (user.profileImage ?? null);
+  return nextCats !== baseCats || imageChanged;
+}, [user, selectedCategories, profileImage]);
 
   // Reduce motion
   useEffect(() => {
@@ -346,10 +347,24 @@ const toggleCategory = useCallback((cat: string) => {
         if (userSnap.exists()) {
           const userData = userSnap.data() as Omit<User, "uid">;
           setUser({ uid: userId, ...userData });
-          setProfileImage(userData.profileImage || null);
-          setSelectedCategories(
-  Array.isArray(userData.challengeCategories) ? userData.challengeCategories : []
-);
+          // ✅ Ne pas écraser une image fraîchement uploadée
+          setProfileImage(prev => {
+            const fromDb = userData.profileImage || null;
+            // Si l'image locale est une URL Firebase Storage plus récente, on la garde
+            if (prev && prev.startsWith("https://firebasestorage") && prev !== fromDb) {
+              return prev;
+            }
+            return fromDb;
+          });
+          const rawCats = Array.isArray(userData.challengeCategories)
+            ? userData.challengeCategories
+            : [];
+          const slugs = Object.values(CATEGORY_SLUG_MAP);
+          const normalized = rawCats.map((c: string) => {
+            const slug = CATEGORY_SLUG_MAP[c];
+            return slug ?? (slugs.includes(c) ? c : null);
+          }).filter(Boolean) as string[];
+          setSelectedCategories(normalized);
         } else {
           throw new Error(String(t("profileNotFound")));
         }
@@ -377,11 +392,22 @@ const toggleCategory = useCallback((cat: string) => {
         return;
       }
       const result = await ImagePicker.launchImageLibraryAsync({
-        mediaTypes: ImagePicker.MediaTypeOptions.Images,
-        allowsEditing: true,
-        aspect: [1, 1],
+        mediaTypes: ["images"] as any,
+        allowsEditing: false,
         quality: 0.5,
+        allowsMultipleSelection: false,
+        exif: false,
       });
+      console.log("🖼️ picker result:", JSON.stringify({
+        canceled: result.canceled,
+        assetsCount: result.assets?.length,
+        firstUri: result.assets?.[0]?.uri?.substring(0, 80),
+      }));
+      console.log("🖼️ picker result:", JSON.stringify({
+        canceled: result.canceled,
+        assetsCount: result.assets?.length,
+        firstUri: result.assets?.[0]?.uri?.substring(0, 80),
+      }));
       if (!result.canceled && result.assets?.[0]?.uri) {
         const uri = result.assets[0].uri;
         const currentUser = auth.currentUser;
@@ -400,10 +426,14 @@ const toggleCategory = useCallback((cat: string) => {
 
         uploadTask.on(
           "state_changed",
-          null,
+          (snapshot) => {
+            console.log("📤 Upload progress:", snapshot.bytesTransferred, "/", snapshot.totalBytes, "state:", snapshot.state);
+          },
           (error) => {
             setIsLoading(false);
-            console.error("Upload error:", error);
+            console.error("❌ Upload error code:", error.code);
+            console.error("❌ Upload error message:", error.message);
+            console.error("❌ Upload error full:", JSON.stringify(error));
             showToast(
               "error",
               `${t("uploadFailed")}: ${error?.message ?? ""}`
@@ -415,6 +445,37 @@ const toggleCategory = useCallback((cat: string) => {
                 uploadTask.snapshot.ref
               );
               setProfileImage(downloadURL);
+              // ✅ Save avec retry anti-precondition
+              const uid = auth.currentUser?.uid;
+              if (uid) {
+                const userRef = doc(db, "users", uid);
+                let saved = false;
+                for (let attempt = 0; attempt < 5; attempt++) {
+                  try {
+                    const { setDoc } = await import("firebase/firestore");
+                    await setDoc(userRef, {
+                      profileImage: downloadURL,
+                      updatedAt: serverTimestamp(),
+                    }, { merge: true });
+                    console.log("✅ profileImage saved with setDoc merge");
+                    saved = true;
+                    console.log("✅ profileImage saved attempt", attempt + 1);
+                    break;
+                  } catch (e: any) {
+                    console.warn(`⚠️ attempt ${attempt + 1} failed:`, e?.code);
+                    if (e?.code === "failed-precondition") {
+                      await new Promise(r => setTimeout(r, 200 + attempt * 300));
+                    } else {
+                      break;
+                    }
+                  }
+                }
+                if (saved) {
+                  setUser(prev => prev ? { ...prev, profileImage: downloadURL } : prev);
+                } else {
+                  console.error("❌ profileImage save failed after 5 attempts");
+                }
+              }
               setIsLoading(false);
               showToast("success", String(t("profileImageUpdated")));
             } catch (urlError: any) {
@@ -442,15 +503,33 @@ const toggleCategory = useCallback((cat: string) => {
     return;
   }
 
-  const updateData: any = {
+  const updateData: Record<string, any> = {
     challengeCategories: selectedCategories,
     updatedAt: serverTimestamp(),
   };
+    if (profileImage !== null && profileImage !== undefined) {
+    updateData.profileImage = profileImage;
+  }
 
   setIsLoading(true);
   try {
     const userRef = doc(db, "users", user.uid);
-    await updateDoc(userRef, updateData);
+    // Retry simple en cas de conflit concurrent
+    let attempts = 0;
+    while (attempts < 3) {
+      try {
+        const { setDoc } = await import("firebase/firestore");
+    await setDoc(userRef, updateData, { merge: true });
+        break;
+      } catch (e: any) {
+        if (e?.code === "failed-precondition" && attempts < 2) {
+          attempts++;
+          await new Promise(r => setTimeout(r, 300 * attempts));
+        } else {
+          throw e;
+        }
+      }
+    }
     updateMatchingPool(user.uid).catch(() => {});
     try { await checkForAchievements(user.uid); } catch {}
     Keyboard.dismiss();

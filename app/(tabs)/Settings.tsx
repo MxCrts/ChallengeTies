@@ -582,9 +582,15 @@ export default function Settings() {
             try {
               const explicit = await AsyncStorage.getItem(EXPLICIT_LOGOUT_KEY);
               const pioneerSeen = await AsyncStorage.getItem("profile.firstSeen.v1");
+              const questState  = await AsyncStorage.getItem("onboarding.quests.state.v1");
+              const questPath   = await AsyncStorage.getItem("onboarding.user.path.v1");
+              const questInit   = await AsyncStorage.getItem("onboarding.initialized.v1");
               await AsyncStorage.clear();
-              if (explicit) await AsyncStorage.setItem(EXPLICIT_LOGOUT_KEY, explicit);
+              await AsyncStorage.setItem(EXPLICIT_LOGOUT_KEY, "1");
               if (pioneerSeen) await AsyncStorage.setItem("profile.firstSeen.v1", pioneerSeen);
+              if (questInit)   await AsyncStorage.setItem("onboarding.initialized.v1", questInit);
+              if (questState)  await AsyncStorage.setItem("onboarding.quests.state.v1", questState);
+              if (questPath)   await AsyncStorage.setItem("onboarding.user.path.v1", questPath);
               success();
               showToast(
                 t("cacheCleared", {
@@ -620,9 +626,15 @@ export default function Settings() {
               await AsyncStorage.setItem(EXPLICIT_LOGOUT_KEY, "1");
 
               const pioneerSeen = await AsyncStorage.getItem("profile.firstSeen.v1");
+              const questState  = await AsyncStorage.getItem("onboarding.quests.state.v1");
+              const questPath   = await AsyncStorage.getItem("onboarding.user.path.v1");
+              const questInit   = await AsyncStorage.getItem("onboarding.initialized.v1");
               await AsyncStorage.clear();
               await AsyncStorage.setItem(EXPLICIT_LOGOUT_KEY, "1");
               if (pioneerSeen) await AsyncStorage.setItem("profile.firstSeen.v1", pioneerSeen);
+              if (questInit)   await AsyncStorage.setItem("onboarding.initialized.v1", questInit);
+              if (questState)  await AsyncStorage.setItem("onboarding.quests.state.v1", questState);
+              if (questPath)   await AsyncStorage.setItem("onboarding.user.path.v1", questPath);
 
               // 2) Déco Firebase
               await auth.signOut();
