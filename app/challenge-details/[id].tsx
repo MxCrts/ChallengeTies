@@ -112,6 +112,7 @@ import { useMomentGate } from "../../src/challenge-details/_feature/hooks/useMom
 import { dlog } from "@/src/utils/debugLog";
 import ChoixDuoModal from "@/components/ChoixDuoModal";
 import MatchingModal from "@/components/MatchingModal";
+import useGateForGuest from "@/hooks/useGateForGuest";
 
 const hapticTap = () => {
   Haptics.selectionAsync().catch(() => {});
@@ -388,6 +389,7 @@ const warmupToastSV = useSharedValue(0); // 0 hidden, 1 shown
 const warmupToastHideTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
 const duoBattleLeftWidth  = useSharedValue(0);
 const duoBattleRightWidth = useSharedValue(0);
+const { gate } = useGateForGuest();
 
 const warmupToastStyle = useAnimatedStyle(() => {
   // 0 -> 1 : opacity 0..1, translateY 18..0
@@ -2594,7 +2596,10 @@ const scrollContentStyle = useMemo(
 {!challengeTakenOptimistic && !isDuoPendingOut && !showCompleteButton && (
   <TouchableOpacity
     style={styles.takeChallengeButton}
-    onPress={openStartFlow}
+    onPress={() => {
+      if (!gate(`/challenge-details/${id}`, "take-challenge")) return;
+      openStartFlow();
+    }}
     accessibilityLabel={t("challengeDetails.takeChallengeA11y", {
       defaultValue: "Prendre le défi",
     })}

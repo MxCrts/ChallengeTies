@@ -18,7 +18,13 @@ export default function useGateForGuest() {
 
   // ✅ routes autorisées pour guest
   const guestAllowed = useMemo(
-    () => new Set(["/(tabs)/index", "/(tabs)/explore", "/tips", "/", "/explore"]),
+    () => new Set([
+      // ✅ existant
+      "/(tabs)/index", "/(tabs)/explore", "/tips", "/", "/explore",
+      // ✅ nouveau — lecture seule, pas de sauvegarde possible sans compte
+      "/(tabs)/focus",          // Exploits/Feed — preuve sociale
+      "/leaderboard",           // Classement — en lecture
+    ]),
     []
   );
 
