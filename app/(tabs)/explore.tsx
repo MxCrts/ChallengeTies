@@ -809,12 +809,8 @@ export default function ExploreScreen() {
   }, [currentChallenges]);
 
   const safeNavigate = (path: string) => {
-    if (path.startsWith("/challenge-details")) {
-      if (gate()) router.push(path);
-      return;
-    }
-    router.push(path);
-  };
+  router.push(path as any);
+};
 
   // Firestore fetch
   useEffect(() => {
