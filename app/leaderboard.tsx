@@ -155,57 +155,53 @@ export default function LeaderboardScreen() {
 
   // ─── Fetch ────────────────────────────────────────────────────────────────
   const fetchLeaderboard = useCallback(async () => {
-  try {
-    !refreshing && setLoading(true);
-    const cached = await getCachedLeaderboard();
-    if (cached) setPlayers(cached);
+    try {
+      !refreshing && setLoading(true);
+      const cached = await getCachedLeaderboard();
+      if (cached) setPlayers(cached);
 
-    // ✅ Query leaderboard public au lieu de users
-    const q = query(
-      collection(db, "leaderboard"),
-      orderBy("trophies", "desc"),
-      limit(20)
-    );
-    const snapshot = await getDocs(q);
-    const fetched: Player[] = snapshot.docs.map((d) => ({
-      id: d.id,
-      username:     d.data().username?.toString?.() || t("leaderboard.unknown", { defaultValue: "Unknown" }),
-      trophies:     d.data().trophies || 0,
-      profileImage: d.data().profileImage?.toString?.() || null,
-      country:      d.data().country?.toString?.() || "",
-      region:       d.data().region?.toString?.() || "",
-      isPioneer:    !!d.data().isPioneer,
-    }));
-    setPlayers(fetched);
-    cacheLeaderboard(fetched);
+      const q = query(collection(db, "users"), orderBy("trophies", "desc"), limit(20));
+      const snapshot = await getDocs(q);
+      const fetched: Player[] = snapshot.docs.map((d) => ({
+        id: d.id,
+        username:     d.data().username?.toString?.()     || t("leaderboard.unknown", { defaultValue: "Unknown" }),
+        trophies:     d.data().trophies || 0,
+        profileImage: d.data().profileImage?.toString?.() || null,
+        country:      d.data().country?.toString?.()      || t("leaderboard.unknown", { defaultValue: "Unknown" }),
+        region:       d.data().region?.toString?.()       || t("leaderboard.unknown", { defaultValue: "Unknown" }),
+        isPioneer:    !!d.data().isPioneer,
+      }));
+      setPlayers(fetched);
+      cacheLeaderboard(fetched);
 
-    // ✅ currentUser seulement si connecté
-    const uid = auth.currentUser?.uid;
-    if (uid) {
-      const userSnap = await getDoc(doc(db, "users", uid));
-      if (userSnap.exists()) {
-        const data = userSnap.data();
-        const found = fetched.find((p) => p.id === uid) || {
-          id: uid,
-          username:     data.username?.toString?.() || t("leaderboard.unknown", { defaultValue: "Unknown" }),
-          trophies:     data.trophies || 0,
-          profileImage: data.profileImage?.toString?.() || null,
-          country:      data.country?.toString?.() || "",
-          region:       data.region?.toString?.() || "",
-          isPioneer:    !!data.isPioneer,
-        };
-        setCurrentUser(found);
-        setLocationDisabledMessage(data.locationEnabled ? null : t("leaderboard.locationDisabled"));
+      const uid = auth.currentUser?.uid;
+      if (uid) {
+        const userSnap = await getDoc(doc(db, "users", uid));
+        if (userSnap.exists()) {
+          const data = userSnap.data();
+          const found = fetched.find((p) => p.id === uid) || {
+            id: uid,
+            username:     data.username?.toString?.()     || t("leaderboard.unknown", { defaultValue: "Unknown" }),
+            trophies:     data.trophies || 0,
+            profileImage: data.profileImage?.toString?.() || null,
+            country:      data.country?.toString?.()      || t("leaderboard.unknown", { defaultValue: "Unknown" }),
+            region:       data.region?.toString?.()       || t("leaderboard.unknown", { defaultValue: "Unknown" }),
+            isPioneer:    !!data.isPioneer,
+          };
+          setCurrentUser(found);
+          setLocationDisabledMessage(data.locationEnabled ? null : t("leaderboard.locationDisabled"));
+        } else {
+          setCurrentUser(null);
+          setLocationDisabledMessage(t("leaderboard.userNotFound"));
+        }
       }
+    } catch {
+      setLocationDisabledMessage(t("leaderboard.errorFetch"));
+    } finally {
+      setLoading(false);
+      setRefreshing(false);
     }
-    // ✅ guest → pas de currentUser, pas de message d'erreur
-  } catch {
-    setLocationDisabledMessage(t("leaderboard.errorFetch"));
-  } finally {
-    setLoading(false);
-    setRefreshing(false);
-  }
-}, [t, cacheLeaderboard, getCachedLeaderboard, refreshing]);
+  }, [t, cacheLeaderboard, getCachedLeaderboard, refreshing]);
 
   useEffect(() => { fetchLeaderboard(); }, [fetchLeaderboard]);
 
@@ -226,11 +222,7 @@ export default function LeaderboardScreen() {
 
   // ─── Filtrage ─────────────────────────────────────────────────────────────
   useEffect(() => {
-    if (!currentUser) {
-      // ✅ Guest → affiche le global directement
-      setFilteredPlayers(players.slice().sort((a, b) => b.trophies - a.trophies).slice(0, 20));
-      return;
-    }
+    if (!currentUser) { setFilteredPlayers([]); return; }
     const hasText = (v?: string) => typeof v === "string" && v.trim().length > 0;
     let base = players;
     if (selectedTab === "region") {

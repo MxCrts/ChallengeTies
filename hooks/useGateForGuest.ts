@@ -21,18 +21,11 @@ export default function useGateForGuest() {
     () => new Set([
       // ✅ existant
       "/(tabs)/index", "/(tabs)/explore", "/tips", "/", "/explore",
-      // ✅ nouveau — lecture seule, pas de sauvegarde possible sans compte
-      "/(tabs)/focus",          // Exploits/Feed — preuve sociale
-      "/leaderboard",           // Classement — en lecture
+      "/(tabs)/focus",           
     ]),
     []
   );
 
-  /**
-   * gate(to?, reason?)
-   * - return true => navigation autorisée
-   * - return false => bloquée + modal
-   */
   const gate = (to?: string, why?: string) => {
     if (!hydrated) return false; // évite tout flicker avant hydration
 
@@ -41,8 +34,7 @@ export default function useGateForGuest() {
     // guest => autorisé seulement sur allowlist + challenge-details en lecture
     if (isGuest && to) {
       if (guestAllowed.has(to)) return true;
-      if (to.startsWith("/challenge-details/")) return true;
-      if (to.startsWith("/challenge-helper/")) return true;
+     if (to.startsWith("/challenge-details/") && why !== "take-challenge") return true;
     }
 
     // sinon => bloque

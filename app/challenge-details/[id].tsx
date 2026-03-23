@@ -26,6 +26,7 @@ import { Image as ExpoImage } from "expo-image";
 import { SafeAreaView, useSafeAreaInsets } from "react-native-safe-area-context";
 import { Ionicons } from "@expo/vector-icons";
 import { useRouter, useLocalSearchParams } from "expo-router";
+import RequireAuthModal from "@/components/RequireAuthModal";
 import {
   doc,
   onSnapshot,
@@ -389,7 +390,7 @@ const warmupToastSV = useSharedValue(0); // 0 hidden, 1 shown
 const warmupToastHideTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
 const duoBattleLeftWidth  = useSharedValue(0);
 const duoBattleRightWidth = useSharedValue(0);
-const { gate } = useGateForGuest();
+const { gate, modalVisible, closeGate } = useGateForGuest();
 
 const warmupToastStyle = useAnimatedStyle(() => {
   // 0 -> 1 : opacity 0..1, translateY 18..0
@@ -1720,6 +1721,7 @@ const {
 useEffect(() => { closingInviteIdRef.current = invitation?.id ?? null; }, [invitation?.id]);
 
 const handleSaveChallenge = useCallback(async () => {
+  if (!gate(undefined, "save")) return; 
   if (!id || saveBusyRef.current) return;
   saveBusyRef.current = true;
 
@@ -1783,6 +1785,7 @@ const handleShowCompleteModal = useCallback(() => {
 }, [id, finalSelectedDays]);
 
 const handleNavigateToChat = useCallback(() => {
+  if (!gate(undefined, "chat")) return;
     if (!chatEnabled) return;
     if (!challengeTaken) {
       Alert.alert(
@@ -2019,6 +2022,7 @@ const handleInviteButtonPress = useCallback(() => {
 }, [isDuo, isSoloInThisChallenge, t]);
 
   const handleViewStats = useCallback(() => {
+    if (!gate(undefined, "stats")) return;
     if (!challengeTaken ) return;
     setStatsModalVisible(true);
   }, [challengeTaken ]);
@@ -3045,9 +3049,9 @@ const scrollContentStyle = useMemo(
   >
     <Pressable
       onPress={() => {
-        // Ici, on est garanti d'avoir un chatId valide
-        router.push(`/challenge-helper/${challenge!.chatId}`);
-      }}
+  if (!gate(`/challenge-helper/${challenge!.chatId}`, "helper")) return;
+  router.push(`/challenge-helper/${challenge!.chatId}`);
+}}
       android_ripple={{ color: "#fff", borderless: false }}
       accessibilityRole="button"
       accessibilityLabel={t("challengeDetails.needHelp")}
@@ -3650,6 +3654,8 @@ partnerDaysCompleted={duoChallengeData?.duoUser?.completedDays ?? 0}
   challengeCategory={routeCategory || null}
   selectedDays={localSelectedDays}
 />
+<RequireAuthModal visible={modalVisible} onClose={closeGate} />
+
       </SafeAreaView>
     </LinearGradient>
   );

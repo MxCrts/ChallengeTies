@@ -313,7 +313,7 @@ export default function ChallengeHelperScreen() {
 
 
 
-  if (loading || !title || missingMiniCours || !helperData) {
+ if (loading || !helperData) {
     return (
       <View
         style={[
