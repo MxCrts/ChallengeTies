@@ -2027,7 +2027,6 @@ const bonusPulseStyle = useAnimatedStyle(() => {
         safeNavigate("/profile/UserInfo", "onboarding-quest-profile");
         break;
       case "explore_community":
-        completeQuest("explore_community");
         router.push("/(tabs)/focus" as any);
         break;
     }

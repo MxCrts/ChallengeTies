@@ -733,7 +733,7 @@
   "streakBonusMessage": "🎯 +{{bonus}} pour {{streak}} jours d’affilée !",
   "challengeDetails": {
     "cta_take": "Commencer le défi",
-    "reviewsSubtitle": "Des retours réels, pour choisir et progresser plus vite.",
+    "reviewsSubtitle": "Retours réels pour mieux choisir.",
       "noReviewsHint": "Sois le premier à laisser un retour utile. 10 secondes, impact réel.",
       "reviewPrivacy": "Reste utile, clair, et bienveillant.",
     "cta_markToday": "Marquer aujourd’hui",

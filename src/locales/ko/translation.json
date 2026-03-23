@@ -527,7 +527,7 @@
   "streakBonusMessage": "🎯 {{streak}}일 연속 달성으로 +{{bonus}}!",
 
 "challengeDetails": {
-  "reviewsSubtitle": "진짜 후기 덕분에 더 잘 선택하고 더 빨리 성장할 수 있어요.",
+  "reviewsSubtitle": "더 나은 선택을 위한 실제 리뷰.",
       "noReviewsHint": "유용한 후기를 처음으로 남겨보세요. 10초면 충분, 진짜 영향.",
       "reviewPrivacy": "유용하고, 명확하고, 친절하게 작성해 주세요.",
   "cta_take": "챌린지 시작",

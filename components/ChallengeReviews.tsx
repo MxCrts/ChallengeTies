@@ -655,7 +655,7 @@ const ChallengeReviews: React.FC<Props> = ({ challengeId, selectedDays }) => {
                     style={{
                       fontFamily: FONT.bold,
                       letterSpacing: 0.2,
-                      color: currentTheme.colors.textPrimary,
+                      color: isDarkMode ? currentTheme.colors.textPrimary : "#1A0800",
                       fontSize: IS_TINY ? 14 : 15,
                     }}
                   >
@@ -693,7 +693,7 @@ const ChallengeReviews: React.FC<Props> = ({ challengeId, selectedDays }) => {
 
               <Text
                 style={{
-                  color: currentTheme.colors.textPrimary,
+                  color: isDarkMode ? currentTheme.colors.textPrimary : "#1A0800",
                   lineHeight: 20,
                   opacity: isDarkMode ? 0.95 : 0.92,
                   fontFamily: FONT.regular,
@@ -894,10 +894,11 @@ const ChallengeReviews: React.FC<Props> = ({ challengeId, selectedDays }) => {
                     fontSize: 12,
                     color: currentTheme.colors.textSecondary,
                     fontFamily: FONT.regular,
+                    flexShrink: 1,
                   }}
                 >
                   {t("challengeDetails.reviewsSubtitle", {
-                    defaultValue: "Des retours réels, pour choisir et progresser plus vite.",
+                    defaultValue: "Retours réels pour mieux choisir.",
                   })}
                 </Text>
               </View>
@@ -913,7 +914,7 @@ const ChallengeReviews: React.FC<Props> = ({ challengeId, selectedDays }) => {
                       style={{
                         fontSize: small ? 18 : 20,
                         fontFamily: FONT.bold,
-                        color: currentTheme.colors.textPrimary,
+                        color: isDarkMode ? currentTheme.colors.textPrimary : "#1A0800",
                         marginRight: 8,
                       }}
                     >
@@ -1119,7 +1120,7 @@ const ChallengeReviews: React.FC<Props> = ({ challengeId, selectedDays }) => {
                         style={{
                           fontFamily: FONT.bold,
                           letterSpacing: 0.2,
-                          color: currentTheme.colors.textPrimary,
+                          color: isDarkMode ? currentTheme.colors.textPrimary : "#1A0800",
                           fontSize: IS_TINY ? 14 : 15,
                         }}
                       >
@@ -1157,7 +1158,7 @@ const ChallengeReviews: React.FC<Props> = ({ challengeId, selectedDays }) => {
 
                   <Text
                     style={{
-                      color: currentTheme.colors.textPrimary,
+                      color: isDarkMode ? currentTheme.colors.textPrimary : "#1A0800",
                       lineHeight: 20,
                       opacity: isDarkMode ? 0.95 : 0.92,
                       fontFamily: FONT.regular,
@@ -1290,7 +1291,7 @@ const ChallengeReviews: React.FC<Props> = ({ challengeId, selectedDays }) => {
                   style={{
                     fontFamily: FONT.bold,
                     fontSize: 16,
-                    color: currentTheme.colors.textPrimary,
+                    color: isDarkMode ? currentTheme.colors.textPrimary : "#1A0800",
                     flex: 1,
                   }}
                 >
@@ -1514,7 +1515,7 @@ const styles = StyleSheet.create<Styles>({
     alignItems: "center",
   },
 card: {
-  backgroundColor: "transparent",
+  backgroundColor: undefined,
 },
   avatarRing: {
     position: "absolute",

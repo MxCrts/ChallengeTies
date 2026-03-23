@@ -158,7 +158,15 @@ export default function ProfileScreen() {
     const uid = auth.currentUser?.uid;
     if (!uid) { setError(t("noUserConnected")); setIsLoading(false); return; }
     const unsub = onSnapshot(doc(db, "users", uid), (snap) => {
-      if (snap.exists()) { setUserData(snap.data() as UserData); setError(null); }
+      if (snap.exists()) {
+        const data = snap.data() as UserData;
+        setUserData(data);
+        setError(null);
+        // ✅ Active duo par défaut si jamais défini
+        if (data.duoAvailable === undefined || data.duoAvailable === null) {
+          setDuoAvailable(uid, true).catch(() => {});
+        }
+      }
       else setError(t("profileNotFound"));
       setIsLoading(false);
     }, (err) => { setError(t("profileLoadError")); setIsLoading(false); });

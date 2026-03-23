@@ -105,8 +105,13 @@ function buildQuests(path: UserPath): Quest[] {
  */
 export async function initOnboardingQuests(path: UserPath): Promise<void> {
   try {
-    const already = await AsyncStorage.getItem(KEYS.INITIALIZED);
-    if (already === "1") return;
+    const [alreadyRaw, pathRaw] = await Promise.all([
+      AsyncStorage.getItem(KEYS.INITIALIZED),
+      AsyncStorage.getItem(KEYS.USER_PATH),
+    ]);
+    // ✅ Si déjà initialisé avec le bon path → skip
+    // ✅ Si initialisé avec un mauvais path (ex: solo au lieu de duo) → réinitialise
+    if (alreadyRaw === "1" && pathRaw === path) return;
 
     const quests = buildQuests(path);
     await AsyncStorage.multiSet([
