@@ -38,9 +38,11 @@ export default function useGateForGuest() {
 
     if (canProceed) return true;
 
-    // guest => autorisé seulement sur allowlist
-    if (isGuest && to && guestAllowed.has(to)) {
-      return true;
+    // guest => autorisé seulement sur allowlist + challenge-details en lecture
+    if (isGuest && to) {
+      if (guestAllowed.has(to)) return true;
+      if (to.startsWith("/challenge-details/")) return true;
+      if (to.startsWith("/challenge-helper/")) return true;
     }
 
     // sinon => bloque

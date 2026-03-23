@@ -410,7 +410,7 @@ export default function HomeScreen() {
   const [rerollAdLoading, setRerollAdLoading] = useState(false);
   const [rerollLoading, setRerollLoading] = useState(false);
   const { theme } = useTheme();
-  const { modalVisible, gate, closeGate, hydrated } = useGateForGuest();
+  const { modalVisible, gate, closeGate, hydrated, isGuest  } = useGateForGuest();
   const { setLanguage } = useLanguage();
   const insets = useSafeAreaInsets();
   const tabBarHeight = useBottomTabBarHeight();
@@ -2776,7 +2776,7 @@ setPostWelcomeAbsorbArmed(true);
     todayHubYRef.current = e.nativeEvent.layout.y;
   }}
 >
-  {!isUserDataReady ? (
+  {!isUserDataReady && !isGuest ? (
     <View style={{
       marginHorizontal: normalize(15),
       marginTop: normalize(14),
@@ -2817,6 +2817,79 @@ setPostWelcomeAbsorbArmed(true);
           backgroundColor: isDarkMode ? "rgba(249,115,22,0.15)" : "rgba(249,115,22,0.12)",
         }]} />
       </View>
+    </View>
+  ) : !isUserDataReady && isGuest ? (
+    <View style={{
+      marginHorizontal: normalize(15),
+      marginTop: normalize(14),
+      marginBottom: normalize(4),
+      borderRadius: normalize(28),
+      overflow: "hidden",
+      padding: normalize(24),
+      backgroundColor: isDarkMode ? "rgba(249,115,22,0.08)" : "rgba(249,115,22,0.06)",
+      borderWidth: 1,
+      borderColor: isDarkMode ? "rgba(249,115,22,0.22)" : "rgba(249,115,22,0.18)",
+      alignItems: "center",
+      gap: normalize(16),
+    }}>
+      <View style={{
+        width: normalize(56), height: normalize(56),
+        borderRadius: normalize(28),
+        backgroundColor: isDarkMode ? "rgba(249,115,22,0.18)" : "rgba(249,115,22,0.12)",
+        alignItems: "center", justifyContent: "center",
+      }}>
+        <Ionicons name="people" size={normalize(26)} color="#F97316" />
+      </View>
+      <Text style={{
+        fontFamily: "Comfortaa_700Bold",
+        fontSize: normalize(18),
+        color: isDarkMode ? "#F8FAFC" : "#0B1120",
+        textAlign: "center",
+      }}>
+        {t("guest.todayHub.title", { defaultValue: "Rejoins la communauté" })}
+      </Text>
+      <Text style={{
+        fontFamily: "Comfortaa_400Regular",
+        fontSize: normalize(13),
+        color: isDarkMode ? "rgba(255,255,255,0.62)" : "rgba(15,23,42,0.62)",
+        textAlign: "center",
+        lineHeight: normalize(19),
+      }}>
+        {t("guest.todayHub.sub", { defaultValue: "Crée un compte pour suivre tes défis, tenir ta streak et défier un ami en duo." })}
+      </Text>
+      <TouchableOpacity
+        onPress={() => router.push("/register" as any)}
+        activeOpacity={0.88}
+        style={{ width: "100%" }}
+      >
+        <LinearGradient
+          colors={["#F97316", "#FB923C"]}
+          start={{ x: 0, y: 0 }} end={{ x: 1, y: 1 }}
+          style={{
+            borderRadius: normalize(18),
+            paddingVertical: normalize(14),
+            alignItems: "center",
+          }}
+        >
+          <Text style={{
+            fontFamily: "Comfortaa_700Bold",
+            fontSize: normalize(15),
+            color: "#0B1120",
+          }}>
+            {t("guest.todayHub.cta", { defaultValue: "Créer un compte — gratuit" })}
+          </Text>
+        </LinearGradient>
+      </TouchableOpacity>
+      <TouchableOpacity onPress={() => router.push("/login" as any)} hitSlop={8}>
+        <Text style={{
+          fontFamily: "Comfortaa_400Regular",
+          fontSize: normalize(12),
+          color: isDarkMode ? "rgba(255,255,255,0.45)" : "rgba(15,23,42,0.45)",
+          textDecorationLine: "underline",
+        }}>
+          {t("guest.todayHub.login", { defaultValue: "J'ai déjà un compte" })}
+        </Text>
+      </TouchableOpacity>
     </View>
   ) : (
     <TodayHub
