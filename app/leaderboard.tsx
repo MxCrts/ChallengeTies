@@ -226,10 +226,18 @@ export default function LeaderboardScreen() {
     const hasText = (v?: string) => typeof v === "string" && v.trim().length > 0;
     let base = players;
     if (selectedTab === "region") {
-      base = players.filter((p) => hasText(p.region) && hasText(currentUser.region) && p.region === currentUser.region);
-    } else if (selectedTab === "national") {
-      base = players.filter((p) => hasText(p.country) && hasText(currentUser.country) && p.country === currentUser.country);
-    }
+  base = players.filter((p) => 
+    hasText(p.region) && 
+    hasText(currentUser.region) && 
+    p.region.toLowerCase().trim() === currentUser.region.toLowerCase().trim()
+  );
+} else if (selectedTab === "national") {
+  base = players.filter((p) => 
+    hasText(p.country) && 
+    hasText(currentUser.country) && 
+    p.country.toLowerCase().trim() === currentUser.country.toLowerCase().trim()
+  );
+}
     setFilteredPlayers(base.slice().sort((a, b) => b.trophies - a.trophies).slice(0, 20));
   }, [selectedTab, players, currentUser]);
 
@@ -257,8 +265,9 @@ export default function LeaderboardScreen() {
 
     return (
       <Animated.View
-        entering={FadeInUp.delay(80).duration(360)}
-        style={styles.podiumScene}
+  key={podium.map(p => p.id).join("-")}  // ✅ force re-render complet quand podium change
+  entering={FadeInUp.delay(80).duration(360)}
+  style={styles.podiumScene}
       >
         {/* Sol */}
         <View
@@ -279,7 +288,7 @@ export default function LeaderboardScreen() {
 
           return (
             <Animated.View
-              key={player.id}
+              key={`${rank}-${player.id}`}
               entering={ZoomIn.delay(delay).duration(400)}
               style={[styles.podiumSlot, { zIndex: isFirst ? 3 : rank === 2 ? 2 : 1 }]}
             >

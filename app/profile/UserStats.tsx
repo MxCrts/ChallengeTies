@@ -1,13 +1,12 @@
-import React, { useEffect, useState, useMemo, useCallback, useRef, memo   } from "react";
+import React, { useEffect, useState, useMemo, useCallback, useRef, memo } from "react";
 import {
   View,
   Text,
-  FlatList,
+  ScrollView,
   StyleSheet,
   ActivityIndicator,
   Dimensions,
   SafeAreaView,
-  I18nManager,
   StatusBar,
   Platform,
 } from "react-native";
@@ -17,13 +16,17 @@ import { db, auth } from "@/constants/firebase-config";
 import { useSavedChallenges } from "../../context/SavedChallengesContext";
 import { useCurrentChallenges } from "../../context/CurrentChallengesContext";
 import { LinearGradient } from "expo-linear-gradient";
-import Animated, { FadeInUp, ZoomIn } from "react-native-reanimated";
+import Animated, {
+  FadeInDown, FadeInUp,
+  useSharedValue, useAnimatedProps, useAnimatedStyle,
+  withDelay, withTiming, withSpring, Easing,
+} from "react-native-reanimated";
+import Svg, { Circle, Path } from "react-native-svg";
 import { useTheme } from "../../context/ThemeContext";
 import { Theme } from "../../theme/designSystem";
 import designSystem from "../../theme/designSystem";
 import CustomHeader from "@/components/CustomHeader";
 import { useTranslation } from "react-i18next";
-import { useRouter } from "expo-router";
 import BannerSlot from "@/components/BannerSlot";
 import { useBottomTabBarHeight } from "@react-navigation/bottom-tabs";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
@@ -33,710 +36,395 @@ import { useShareCard } from "@/hooks/useShareCard";
 import WeeklyTrophiesCard from "@/components/WeeklyTrophiesCard";
 import { StatsShareCard } from "@/components/ShareCards";
 
-const SPACING = 15;
-const { width: SCREEN_WIDTH } = Dimensions.get("window");
-const { height: SCREEN_HEIGHT } = Dimensions.get("window");
-const IS_COMPACT = SCREEN_HEIGHT < 720;
-const V_SPACING = IS_COMPACT ? 12 : 15;
+const { width: W, height: H } = Dimensions.get("window");
+const SPACING = 14;
+const IS_COMPACT = H < 720;
+// Grille strictement égale — chaque card = exactement la moitié moins gaps
+const CARD_W = (W - SPACING * 3) / 2;
+const ORANGE = "#F97316";
+const ORANGE_D = "#D4620C";
 
+const ns = (n: number) => Math.round(n * Math.min(Math.max(W / 375, 0.78), 1.55));
 
-const normalizeSize = (size: number) => {
-  const baseWidth = 375;
-  const scale = Math.min(Math.max(SCREEN_WIDTH / baseWidth, 0.7), 1.8);
-  return Math.round(size * scale);
+const wa = (c: string, a: number): string => {
+  const cl = Math.min(Math.max(a, 0), 1);
+  if (/^rgba?\(/i.test(c)) {
+    const m = c.match(/[\d.]+/g) || [];
+    return `rgba(${m[0]||0},${m[1]||0},${m[2]||0},${cl})`;
+  }
+  const h = c.replace("#","").padEnd(6,"0");
+  return `rgba(${parseInt(h.slice(0,2),16)},${parseInt(h.slice(2,4),16)},${parseInt(h.slice(4,6),16)},${cl})`;
 };
 
-/** Util pour ajouter une alpha sans casser les gradients */
-const withAlpha = (color: string, alpha: number) => {
-  const clamp = (n: number, min = 0, max = 1) => Math.min(Math.max(n, min), max);
-  const a = clamp(alpha);
-  
-
-  if (/^rgba?\(/i.test(color)) {
-    const nums = color.match(/[\d.]+/g) || [];
-    const [r = "0", g = "0", b = "0"] = nums;
-    return `rgba(${r}, ${g}, ${b}, ${a})`;
-  }
-  let hex = color.replace("#", "");
-  if (hex.length === 3) hex = hex.split("").map((c) => c + c).join("");
-  if (hex.length >= 6) {
-    const r = parseInt(hex.slice(0, 2), 16);
-    const g = parseInt(hex.slice(2, 4), 16);
-    const b = parseInt(hex.slice(4, 6), 16);
-    return `rgba(${r}, ${g}, ${b}, ${a})`;
-  }
-  return `rgba(0,0,0,${a})`;
-};
-
-// ====== Safe TabBar Height (aucun crash hors Bottom Tabs) ======
-function useTabBarHeightSafe(): number {
-  try {
-    return useBottomTabBarHeight();
-  } catch {
-    return 0;
-  }
+function useTabBarH(): number {
+  try { return useBottomTabBarHeight(); } catch { return 0; }
 }
 
-interface Stat {
-  name: string;
-  value: string | number;
+// ── Animated ring ──────────────────────────────────────────────────────────
+const AnimCircle = Animated.createAnimatedComponent(Circle);
+
+function Ring({ pct, size, sw, isDark }: { pct: number; size: number; sw: number; isDark: boolean }) {
+  const r = (size - sw) / 2;
+  const circ = 2 * Math.PI * r;
+  const prog = useSharedValue(0);
+  useEffect(() => {
+    prog.value = withDelay(350, withTiming(Math.min(pct / 100, 1), { duration: 1300, easing: Easing.out(Easing.cubic) }));
+  }, [pct]);
+  const ap = useAnimatedProps(() => ({ strokeDashoffset: circ * (1 - prog.value) }));
+  return (
+    <Svg width={size} height={size}>
+      <Circle cx={size/2} cy={size/2} r={r} stroke={isDark ? "rgba(255,255,255,0.08)" : wa(ORANGE,0.12)} strokeWidth={sw} fill="none" />
+      <AnimCircle cx={size/2} cy={size/2} r={r} stroke={ORANGE} strokeWidth={sw} fill="none"
+        strokeDasharray={circ} animatedProps={ap} strokeLinecap="round"
+        transform={`rotate(-90 ${size/2} ${size/2})`} />
+    </Svg>
+  );
+}
+
+// ── Sparkline bezier ───────────────────────────────────────────────────────
+function Spark({ vals, w, h }: { vals: number[]; w: number; h: number }) {
+  if (!vals || vals.length < 2) return null;
+  const mx = Math.max(...vals), mn = Math.min(...vals), rng = mx - mn || 1;
+  const p = 3;
+  const pts = vals.map((v, i) => ({
+    x: p + (i / (vals.length - 1)) * (w - p * 2),
+    y: p + (1 - (v - mn) / rng) * (h - p * 2),
+  }));
+  let line = `M ${pts[0].x} ${pts[0].y}`;
+  for (let i = 1; i < pts.length; i++) {
+    const cx = (pts[i-1].x + pts[i].x) / 2;
+    line += ` C ${cx} ${pts[i-1].y} ${cx} ${pts[i].y} ${pts[i].x} ${pts[i].y}`;
+  }
+  const fill = `${line} L ${pts[pts.length-1].x} ${h} L ${pts[0].x} ${h} Z`;
+  return (
+    <Svg width={w} height={h}>
+      <Path d={fill} fill="rgba(255,255,255,0.15)" />
+      <Path d={line} stroke="rgba(255,255,255,0.94)" strokeWidth={2} fill="none" strokeLinecap="round" strokeLinejoin="round" />
+    </Svg>
+  );
+}
+
+// ── Mini stat card — hauteur FIXE uniforme ─────────────────────────────────
+const CARD_H = ns(IS_COMPACT ? 130 : 148); // hauteur identique pour toutes
+
+const MiniCard = memo(({ icon, label, value, delay, isDark, theme }: {
   icon: keyof typeof Ionicons.glyphMap;
-  accessibilityLabel: string;
-  accessibilityHint: string;
-}
+  label: string; value: string; delay: number; isDark: boolean; theme: Theme;
+}) => {
+  const scale = useSharedValue(0.90);
+  const opacity = useSharedValue(0);
+  useEffect(() => {
+    scale.value = withDelay(delay, withSpring(1, { damping: 15, stiffness: 190 }));
+    opacity.value = withDelay(delay, withTiming(1, { duration: 260 }));
+  }, []);
+  const anim = useAnimatedStyle(() => ({ transform: [{ scale: scale.value }], opacity: opacity.value }));
+
+  return (
+    <Animated.View style={[{ width: CARD_W, height: CARD_H, marginBottom: SPACING }, anim]}>
+      <LinearGradient
+        colors={isDark
+          ? [wa(theme.colors.cardBackground, 0.92), wa(theme.colors.cardBackground, 0.70)]
+          : ["rgba(255,255,255,0.98)", "rgba(255,249,244,0.94)"]}
+        style={[styles.miniCard, {
+          borderColor: isDark ? "rgba(255,255,255,0.08)" : wa(ORANGE, 0.11),
+          height: CARD_H,
+        }]}
+      >
+        <LinearGradient pointerEvents="none"
+          colors={["transparent", isDark ? "rgba(255,255,255,0.04)" : "rgba(255,255,255,0.65)", "transparent"]}
+          start={{ x: 0, y: 0 }} end={{ x: 1, y: 1 }} style={StyleSheet.absoluteFill}
+        />
+        {/* Dot accent */}
+        <View style={[styles.dot, { backgroundColor: wa(ORANGE, isDark ? 0.45 : 0.28) }]} />
+
+        {/* Icon */}
+        <View style={[styles.iconBox, {
+          backgroundColor: wa(ORANGE, isDark ? 0.20 : 0.10),
+          borderColor: wa(ORANGE, isDark ? 0.30 : 0.16),
+        }]}>
+          <Ionicons name={icon} size={ns(18)} color={ORANGE} />
+        </View>
+
+        {/* Value — taille adaptative */}
+        <Text
+          style={[styles.miniVal, { color: isDark ? "#FFFFFF" : "#1A0800" }]}
+          numberOfLines={1}
+          adjustsFontSizeToFit
+          minimumFontScale={0.65}
+        >
+          {value}
+        </Text>
+
+        {/* Label — 2 lignes max, taille adaptative */}
+        <Text
+          style={[styles.miniLbl, { color: isDark ? "rgba(255,255,255,0.48)" : "rgba(0,0,0,0.44)" }]}
+          numberOfLines={2}
+          adjustsFontSizeToFit
+          minimumFontScale={0.75}
+        >
+          {label}
+        </Text>
+      </LinearGradient>
+    </Animated.View>
+  );
+});
 
 interface UserDoc {
-  longestStreak?: number;
-  trophies?: number;
-  achievements?: string[];
-  CompletedChallenges?: any[];
-}
-
-interface Challenge {
-  id: string;
-  selectedDays: number;
-  completedDays?: number;
+  longestStreak?: number; trophies?: number; achievements?: string[];
+  CompletedChallenges?: any[]; displayName?: string; profileImage?: string; weeklyTrophies?: number[];
 }
 
 export default function UserStats() {
   const { t, i18n } = useTranslation();
-  const router = useRouter();
   const { savedChallenges } = useSavedChallenges();
   const { currentChallenges } = useCurrentChallenges();
-  const [isLoading, setIsLoading] = useState<boolean>(true);
+  const [isLoading, setIsLoading] = useState(true);
   const [userDoc, setUserDoc] = useState<UserDoc | null>(null);
   const { theme } = useTheme();
-  const isDarkMode = theme === "dark";
-  const currentTheme: Theme = useMemo(
-    () => (isDarkMode ? designSystem.darkTheme : designSystem.lightTheme),
-    [isDarkMode]
-  );
-const insets = useSafeAreaInsets();
-const tabBarHeight = useTabBarHeightSafe();
- const [adHeight, setAdHeight] = useState(0);
+  const isDark = theme === "dark";
+  const CT: Theme = useMemo(() => isDark ? designSystem.darkTheme : designSystem.lightTheme, [isDark]);
+  const insets = useSafeAreaInsets();
+  const tabH = useTabBarH();
+  const [adH, setAdH] = useState(0);
   const { showBanners } = useAdsVisibility();
-  const bottomPadding = useMemo(
-    () => normalizeSize(80) + (showBanners ? adHeight : 0) + tabBarHeight + insets.bottom,
-    [adHeight, insets.bottom, showBanners, tabBarHeight]
-  );
-
-  // —— share card (hidden) ——
+  const bottomPad = useMemo(() => ns(80) + (showBanners ? adH : 0) + tabH + insets.bottom, [adH, insets.bottom, showBanners, tabH]);
   const { ref: shareRef, share } = useShareCard();
-  const [sharePayload, setSharePayload] = useState<null | {
-    username?: string | null;
-    avatarUri?: string | null;
-    stats: {
-      saved: number;
-      ongoing: number;
-      completed: number;
-      successRatePct: number;
-      longestStreak: number;
-      trophies: number;
-      achievements: number;
-    };
-  }>(null);
-
-  // évite setState après unmount
-  const mountedRef = useRef(true);
-  useEffect(() => () => { mountedRef.current = false; }, []);
+  const [sharePayload, setSharePayload] = useState<null | { username?: string | null; avatarUri?: string | null; stats: any }>(null);
+  const mounted = useRef(true);
+  useEffect(() => () => { mounted.current = false; }, []);
 
   useEffect(() => {
-    const userId = auth.currentUser?.uid;
-    if (!userId) {
+    const uid = auth.currentUser?.uid;
+    if (!uid) { setIsLoading(false); return; }
+    const unsub = onSnapshot(doc(db, "users", uid), (snap) => {
+      if (!mounted.current) return;
+      setUserDoc(snap.exists() ? snap.data() as UserDoc : null);
       setIsLoading(false);
-      return;
-    }
-    const unsubscribe = onSnapshot(
-      doc(db, "users", userId),
-      (snapshot) => {
-        if (!mountedRef.current) return;
-        setUserDoc(snapshot.exists() ? (snapshot.data() as UserDoc) : null);
-        setIsLoading(false);
-      },
-      (error) => {
-        console.error("Erreur onSnapshot:", error);
-        if (mountedRef.current) setIsLoading(false);
-      }
-    );
-    return () => unsubscribe();
+    }, () => { if (mounted.current) setIsLoading(false); });
+    return () => unsub();
   }, []);
 
-  // —— Données numériques (pour la carte) sans dépendre des libellés traduits
-  const numericStats = useMemo(() => {
-    if (!userDoc) {
-      return {
-        saved: 0,
-        ongoing: 0,
-        completed: 0,
-        successRatePct: 0,
-        longestStreak: 0,
-        trophies: 0,
-        achievements: 0,
-      };
-    }
-    const uniqueOngoing = new Map(
-      currentChallenges.map((ch: any) => [`${ch.id}_${ch.selectedDays}`, ch])
-    );
-    const totalSaved = savedChallenges.length;
-    const totalOngoing = uniqueOngoing.size;
-   const totalCompleted = Array.isArray(userDoc.CompletedChallenges)
-  ? userDoc.CompletedChallenges.length
-  : 0;
-
-    const successRatePct = totalOngoing + totalCompleted > 0
-      ? Math.round((totalCompleted / (totalOngoing + totalCompleted)) * 100)
-      : 0;
+  const stats = useMemo(() => {
+    if (!userDoc) return { saved:0,ongoing:0,completed:0,successRatePct:0,longestStreak:0,trophies:0,achievements:0 };
+    const ongoing = new Map(currentChallenges.map((c: any) => [`${c.id}_${c.selectedDays}`,c])).size;
+    const completed = Array.isArray(userDoc.CompletedChallenges) ? userDoc.CompletedChallenges.length : 0;
     return {
-      saved: totalSaved,
-      ongoing: totalOngoing,
-      completed: totalCompleted,
-      successRatePct,
-      longestStreak: userDoc.longestStreak || 0,
-      trophies: userDoc.trophies || 0,
-      achievements: userDoc.achievements?.length || 0,
+      saved: savedChallenges.length, ongoing, completed,
+      successRatePct: ongoing+completed > 0 ? Math.round(completed/(ongoing+completed)*100) : 0,
+      longestStreak: userDoc.longestStreak||0, trophies: userDoc.trophies||0,
+      achievements: userDoc.achievements?.length||0,
     };
   }, [savedChallenges, currentChallenges, userDoc]);
 
-  // Calcul des stats (cartes UI) basé sur numericStats → une seule source de vérité
-  const computedStats: Stat[] = useMemo(() => {
-    if (!userDoc) return [];
+  const spark = useMemo(() => {
+    const base = userDoc?.weeklyTrophies;
+    if (Array.isArray(base) && base.length >= 2) return base.slice(-7);
+    const t = Math.max(stats.trophies, 10);
+    return [.54,.61,.69,.76,.83,.92,1].map(f => Math.round(t*f));
+  }, [userDoc, stats.trophies]);
 
-    const { saved, ongoing, completed, successRatePct, longestStreak, trophies, achievements } =
-      numericStats;
+  const nf = useCallback((n: number) => Number(n||0).toLocaleString(i18n.language), [i18n.language]);
 
-    // Helpers de formatage localisé
-    const nf = (n: number) => Number(n || 0).toLocaleString(i18n.language);
-    const daysLabel = t("days"); // ex: "jours"
-
-    return [
-      {
-        name: t("savedChallenges"),
-        value: nf(saved),
-        icon: "bookmark-outline",
-        accessibilityLabel: t("savedChallenges"),
-        accessibilityHint: t("statDescription.savedChallenges"),
-      },
-      {
-        name: t("ongoingChallenges"),
-        value: nf(ongoing),
-        icon: "hourglass-outline",
-        accessibilityLabel: t("ongoingChallenges"),
-        accessibilityHint: t("statDescription.ongoingChallenges"),
-      },
-      {
-        name: t("completedChallenges"),
-        value: nf(completed),
-        icon: "trophy-outline",
-        accessibilityLabel: t("completedChallenges"),
-        accessibilityHint: t("statDescription.completedChallenges"),
-      },
-      {
-        name: t("successRate"),
-        value: `${nf(successRatePct)}%`,
-        icon: "stats-chart-outline",
-        accessibilityLabel: t("successRate"),
-        accessibilityHint: t("statDescription.successRate"),
-      },
-      {
-        name: t("trophies"),
-        value: nf(trophies),
-        icon: "medal-outline",
-        accessibilityLabel: t("trophies"),
-        accessibilityHint: t("statDescription.trophies"),
-      },
-      {
-        name: t("unlockedAchievements"),
-        value: nf(achievements),
-        icon: "ribbon-outline",
-        accessibilityLabel: t("unlockedAchievements"),
-        accessibilityHint: t("statDescription.unlockedAchievements"),
-      },
-      {
-        name: t("longestStreak"),
-        value: `${nf(longestStreak)} ${daysLabel}`,
-        icon: "flame-outline",
-        accessibilityLabel: t("longestStreak"),
-        accessibilityHint: t("statDescription.longestStreak"),
-      },
-    ];
-  }, [numericStats, t, i18n.language, userDoc]);
-  
-// ==== Carte stat ultra-perf (memo) ====
-  const StatCard = memo(({ item, index }: { item: Stat; index: number }) => (
-  <Animated.View
-    entering={ZoomIn.delay(index * 40)}
-    style={styles.statCardWrapper}
-    accessibilityRole="summary"
-  >
-    <LinearGradient
-  colors={[
-    withAlpha(currentTheme.colors.cardBackground, isDarkMode ? 0.74 : 0.92),
-    withAlpha(currentTheme.colors.cardBackground, isDarkMode ? 0.58 : 0.82),
-  ]}
-  style={[
-    styles.statCard,
-    {
-      borderColor: isDarkMode
-        ? withAlpha("#FFFFFF", 0.14)
-        : withAlpha("#000000", 0.08),
-    },
-  ]}
->
-  {/* sheen diagonal */}
-  <LinearGradient
-    pointerEvents="none"
-    colors={[
-      "transparent",
-      isDarkMode ? "rgba(255,255,255,0.10)" : "rgba(255,255,255,0.55)",
-      "transparent",
-    ]}
-    start={{ x: 0, y: 0 }}
-    end={{ x: 1, y: 1 }}
-    style={styles.cardSheen}
-  />
-
-  <View
-    style={[
-      styles.iconContainer,
-      {
-        backgroundColor: isDarkMode
-          ? "rgba(255,255,255,0.06)"
-          : "rgba(0,0,0,0.04)",
-        borderColor: isDarkMode
-          ? withAlpha("#FFFFFF", 0.14)
-          : withAlpha("#000000", 0.08),
-      },
-    ]}
-  >
-    <Ionicons
-      name={(item.icon as any) || "stats-chart-outline"}
-      size={normalizeSize(28)}
-      color={currentTheme.colors.secondary}
-      accessibilityLabel={item.accessibilityLabel}
-      accessibilityHint={item.accessibilityHint}
-    />
-  </View>
-
-  <View style={styles.statContent}>
-        <Text
-          style={[
-            styles.statName,
-            {
-              color: isDarkMode
-                ? currentTheme.colors.textPrimary
-                : "#000000",
-              writingDirection: I18nManager.isRTL ? "rtl" : "ltr",
-              textAlign: I18nManager.isRTL ? "right" : "left",
-            },
-          ]}
-          accessibilityLabel={item.accessibilityLabel}
-          accessibilityHint={item.accessibilityHint}
-          numberOfLines={2}
-          adjustsFontSizeToFit
-        >
-          {item.name}
-        </Text>
-        <Text
-          style={[
-            styles.statValue,
-            {
-              color: currentTheme.colors.secondary,
-              writingDirection: I18nManager.isRTL ? "rtl" : "ltr",
-              textAlign: I18nManager.isRTL ? "right" : "left",
-            },
-          ]}
-          accessibilityLabel={`${item.accessibilityLabel} value`}
-          accessibilityHint={item.accessibilityHint}
-          numberOfLines={1}
-          adjustsFontSizeToFit
-        >
-          {item.value}
-        </Text>
-      </View>
-    </LinearGradient>
-  </Animated.View>
-));
-
-
-  // (Optionnel) afficher un displayName utile en debug
-  (StatCard as any).displayName = "StatCard";
-
-  // Partage des stats
-  const handleShareStats = useCallback(async () => {
+  const handleShare = useCallback(async () => {
     try {
       try { await Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium); } catch {}
-
-      // Récupère username et avatar si présents dans le doc user
-      const username = (userDoc as any)?.displayName ?? null;
-      const avatarUri = (userDoc as any)?.profileImage ?? null;
-
-      setSharePayload({ username, avatarUri, stats: numericStats });
-      // Laisse le temps au composant caché de se monter
-      await new Promise<void>((resolve) => requestAnimationFrame(() => resolve()));
-      await share(
-        `ct-stats-${auth.currentUser?.uid ?? "anon"}-${Date.now()}.png`,
-        t("shareStatsMessage")
-      );
+      setSharePayload({ username: userDoc?.displayName??null, avatarUri: userDoc?.profileImage??null, stats });
+      await new Promise<void>(r => requestAnimationFrame(()=>r()));
+      await share(`ct-stats-${auth.currentUser?.uid}-${Date.now()}.png`, t("shareStatsMessage"));
       setSharePayload(null);
-    } catch (error) {
-      console.error("Erreur lors du partage :", error);
-    }
-  }, [t, numericStats, userDoc, share]);
+    } catch {}
+  }, [t, stats, userDoc, share]);
 
-  if (isLoading) {
-    return (
-      <SafeAreaView style={styles.safeArea}>
-        <StatusBar
-          translucent
-          backgroundColor="transparent"
-          barStyle={isDarkMode ? "light-content" : "dark-content"}
-        />
-        <LinearGradient
-          colors={[
-            currentTheme.colors.background,
-            currentTheme.colors.cardBackground,
-          ]}
-          style={styles.loadingContainer}
-        >
-          <ActivityIndicator
-            size="large"
-            color={currentTheme.colors.secondary}
-          />
-          <Text
-            style={[
-              styles.loadingText,
-              { color: currentTheme.colors.textPrimary },
-            ]}
-          >
-            {t("loadingProfile")}
-          </Text>
-        </LinearGradient>
-      </SafeAreaView>
-    );
-  }
+  if (isLoading) return (
+    <SafeAreaView style={{ flex:1, backgroundColor: CT.colors.background }}>
+      <LinearGradient colors={[CT.colors.background, CT.colors.cardBackground]} style={{ flex:1, justifyContent:"center", alignItems:"center" }}>
+        <ActivityIndicator size="large" color={ORANGE} />
+      </LinearGradient>
+    </SafeAreaView>
+  );
 
-  if (!userDoc) {
-    return (
-      <SafeAreaView style={styles.safeArea}>
-        <StatusBar
-          translucent
-          backgroundColor="transparent"
-          barStyle={isDarkMode ? "light-content" : "dark-content"}
-        />
-        <LinearGradient
-          colors={[
-            currentTheme.colors.background,
-            currentTheme.colors.cardBackground,
-          ]}
-          style={styles.emptyContainer}
-        >
-          <Animated.View entering={FadeInUp.delay(100)}>
-            <Ionicons
-              name="alert-circle-outline"
-              size={normalizeSize(40)}
-              color={currentTheme.colors.textSecondary}
-            />
-            <Text
-              style={[
-                styles.emptyText,
-                { color: currentTheme.colors.textPrimary },
-              ]}
-            >
-              {t("profileLoadError")}
-            </Text>
-            <Text
-              style={[
-                styles.emptySubtext,
-                { color: currentTheme.colors.textSecondary },
-              ]}
-            >
-              {t("tryAgain")}
-            </Text>
-          </Animated.View>
-        </LinearGradient>
-      </SafeAreaView>
-    );
-  }
+  if (!userDoc) return (
+    <SafeAreaView style={{ flex:1, backgroundColor: CT.colors.background }}>
+      <LinearGradient colors={[CT.colors.background, CT.colors.cardBackground]} style={{ flex:1, justifyContent:"center", alignItems:"center", padding:SPACING*2 }}>
+        <Ionicons name="alert-circle-outline" size={40} color={CT.colors.textSecondary} />
+        <Text style={{ color:CT.colors.textPrimary, fontFamily:"Comfortaa_700Bold", fontSize:18, marginTop:12, textAlign:"center" }}>{t("profileLoadError")}</Text>
+      </LinearGradient>
+    </SafeAreaView>
+  );
+
+  const RING = ns(IS_COMPACT ? 104 : 114);
+  const SW = ns(9);
+
+  // ── Grid items — 6 stats, sans doublons par rapport aux badges de la trophy card
+  const gridItems = [
+    { icon:"bookmark-outline" as const, lbl: t("savedChallenges"), val: nf(stats.saved), d:280 },
+    { icon:"hourglass-outline" as const, lbl: t("ongoingChallenges"), val: nf(stats.ongoing), d:330 },
+    { icon:"trophy-outline" as const, lbl: t("completedChallenges"), val: nf(stats.completed), d:380 },
+    { icon:"flame-outline" as const, lbl: t("longestStreak"), val: `${nf(stats.longestStreak)}j`, d:430 },
+    { icon:"stats-chart-outline" as const, lbl: t("successRate"), val: `${stats.successRatePct}%`, d:480 },
+    { icon:"ribbon-outline" as const, lbl: t("unlockedAchievements"), val: nf(stats.achievements), d:530 },
+  ];
 
   return (
-    <SafeAreaView style={styles.safeArea}>
-  <StatusBar
-    translucent
-    backgroundColor="transparent"
-    barStyle={isDarkMode ? "light-content" : "dark-content"}
-  />
-<LinearGradient
-  colors={[
-    withAlpha(currentTheme.colors.background, 1),
-    withAlpha(currentTheme.colors.cardBackground, 1),
-    withAlpha(currentTheme.colors.primary, 0.13),
-  ]}
-  style={styles.gradientContainer}
-  start={{ x: 0, y: 0 }}
-  end={{ x: 1, y: 1 }}
->
-  {/* Orbes premium en arrière-plan */}
-  <LinearGradient
-    pointerEvents="none"
-    colors={[withAlpha(currentTheme.colors.primary, 0.28), "transparent"]}
-    style={styles.bgOrbTop}
-    start={{ x: 0.2, y: 0 }}
-    end={{ x: 1, y: 1 }}
-  />
-  <LinearGradient
-    pointerEvents="none"
-    colors={[withAlpha(currentTheme.colors.secondary, 0.25), "transparent"]}
-    style={styles.bgOrbBottom}
-    start={{ x: 1, y: 0 }}
-    end={{ x: 0, y: 1 }}
-  />
-    <CustomHeader
-      title={t("statistics")}
-      backgroundColor="transparent"
-      useBlur={false}
-      showHairline={false}
-      rightIcon={
-    <Ionicons
-      name="share-outline"
-      size={normalizeSize(22)}
-      color={currentTheme.colors.secondary}
-      accessibilityLabel={t("share")}
-    />
-  }
-  onRightPress={handleShareStats}
-/>
+    <SafeAreaView style={{ flex:1, backgroundColor:"transparent" }}>
+      <StatusBar translucent backgroundColor="transparent" barStyle={isDark ? "light-content" : "dark-content"} />
 
-    <FlatList
-      ListHeaderComponent={
-  <View style={styles.headerStack} accessibilityRole="summary">
-    {/* ===== HERO (NO REDUNDANT LABELS) ===== */}
-<Animated.View entering={FadeInUp.delay(60)} style={styles.heroWrap}>
-  <LinearGradient
-    colors={[
-      withAlpha(currentTheme.colors.cardBackground, isDarkMode ? 0.78 : 0.94),
-      withAlpha(currentTheme.colors.cardBackground, isDarkMode ? 0.60 : 0.86),
-    ]}
-    style={[
-      styles.heroCard,
-      {
-        borderColor: isDarkMode
-          ? withAlpha("#FFFFFF", 0.14)
-          : withAlpha("#000000", 0.08),
-      },
-    ]}
-  >
-    <LinearGradient
-      pointerEvents="none"
-      colors={[
-        "transparent",
-        isDarkMode ? "rgba(255,255,255,0.10)" : "rgba(255,255,255,0.55)",
-        "transparent",
-      ]}
-      start={{ x: 0, y: 0 }}
-      end={{ x: 1, y: 1 }}
-      style={styles.heroSheen}
-    />
-    <View
-      pointerEvents="none"
-      style={[
-        styles.heroGlow,
-        {
-          backgroundColor: withAlpha(
-            currentTheme.colors.secondary,
-            isDarkMode ? 0.16 : 0.10
-          ),
-        },
-      ]}
-    />
-
-    {/* Title row */}
-    <View style={styles.heroTopRow}>
-      <View style={styles.heroIdentity}>
-        <Text
-          style={[styles.heroKicker, { color: currentTheme.colors.textSecondary }]}
-          numberOfLines={1}
-        >
-          {t("myCTStats", { defaultValue: "Mes stats ChallengeTies" })}
-        </Text>
-
-        <Text
-          style={[
-            styles.heroTitle,
-            { color: isDarkMode ? currentTheme.colors.textPrimary : "#000000" },
-          ]}
-          numberOfLines={1}
-          adjustsFontSizeToFit
-        >
-          {(userDoc as any)?.displayName ||
-            t("statistics", { defaultValue: "Statistiques" })}
-        </Text>
-      </View>
-
-      <View
-        style={[
-          styles.heroAvatarPill,
-          {
-            borderColor: isDarkMode
-              ? withAlpha("#FFFFFF", 0.14)
-              : withAlpha("#000000", 0.08),
-            backgroundColor: isDarkMode
-              ? "rgba(255,255,255,0.06)"
-              : "rgba(0,0,0,0.04)",
-          },
-        ]}
+      <LinearGradient
+        colors={isDark ? [CT.colors.background, CT.colors.cardBackground, wa(ORANGE,0.06)] : ["#FFF9F5","#FFF2E8",wa(ORANGE,0.04)]}
+        style={{ flex:1 }} start={{x:0,y:0}} end={{x:1,y:1}}
       >
-        <Ionicons
-          name="share-outline"
-          size={normalizeSize(16)}
-          color={currentTheme.colors.secondary}
-          accessibilityLabel={t("share")}
-        />
-      </View>
-    </View>
+        {/* Orbes ambiance */}
+        <View pointerEvents="none" style={{ position:"absolute", top:-W*.3, right:-W*.2, width:W*.88, height:W*.88, borderRadius:W*.44, backgroundColor: wa(ORANGE, isDark?.07:.09) }} />
+        <View pointerEvents="none" style={{ position:"absolute", bottom:-W*.36, left:-W*.26, width:W*1.02, height:W*1.02, borderRadius:W*.51, backgroundColor: wa(ORANGE, isDark?.04:.06) }} />
 
-    {/* Pills row: ICON + VALUE only (no translated labels => no cuts) */}
-    <View style={styles.heroPillsRow}>
-      <View style={styles.heroPill}>
-        <Ionicons
-          name="trophy-outline"
-          size={normalizeSize(14)}
-          color={currentTheme.colors.secondary}
+        <CustomHeader title={t("statistics")} backgroundColor="transparent" useBlur={false} showHairline={false}
+          rightIcon={<Ionicons name="share-outline" size={ns(22)} color={ORANGE} />}
+          onRightPress={handleShare}
         />
-        <Text
-          style={[
-            styles.heroPillValue,
-            { color: isDarkMode ? currentTheme.colors.textPrimary : "#000000" },
-          ]}
-          numberOfLines={1}
-          adjustsFontSizeToFit
+
+        <ScrollView
+          contentContainerStyle={{ paddingBottom: bottomPad, paddingHorizontal: SPACING, paddingTop: SPACING*.6 }}
+          showsVerticalScrollIndicator={false}
         >
-          {String(numericStats.completed)}
-        </Text>
-      </View>
 
-      <View style={styles.heroPill}>
-        <Ionicons
-          name="stats-chart-outline"
-          size={normalizeSize(14)}
-          color={currentTheme.colors.secondary}
-        />
-        <Text
-          style={[
-            styles.heroPillValue,
-            { color: isDarkMode ? currentTheme.colors.textPrimary : "#000000" },
-          ]}
-          numberOfLines={1}
-          adjustsFontSizeToFit
-        >
-          {String(numericStats.successRatePct)}%
-        </Text>
-      </View>
+          {/* ═══ HERO CARD ════════════════════════════════════════════════ */}
+          <Animated.View entering={FadeInDown.delay(60).duration(440)} style={{ marginBottom: SPACING }}>
+            <LinearGradient
+              colors={isDark ? ["rgba(26,11,2,0.97)","rgba(16,7,1,0.94)"] : ["rgba(255,255,255,0.99)","rgba(255,246,238,0.96)"]}
+              style={[styles.heroCard, { borderColor: isDark ? wa(ORANGE,.22) : wa(ORANGE,.15) }]}
+            >
+              <LinearGradient pointerEvents="none"
+                colors={["transparent", isDark ? wa(ORANGE,.05) : "rgba(255,255,255,0.70)", "transparent"]}
+                start={{x:0,y:0}} end={{x:1,y:1}} style={StyleSheet.absoluteFill}
+              />
+              {/* Glow coin */}
+              <View pointerEvents="none" style={{ position:"absolute", top:-ns(26), right:-ns(26), width:ns(100), height:ns(100), borderRadius:ns(50), backgroundColor: wa(ORANGE, isDark?.14:.09) }} />
 
-      <View style={styles.heroPill}>
-        <Ionicons
-          name="flame-outline"
-          size={normalizeSize(14)}
-          color={currentTheme.colors.secondary}
-        />
-        <Text
-          style={[
-            styles.heroPillValue,
-            { color: isDarkMode ? currentTheme.colors.textPrimary : "#000000" },
-          ]}
-          numberOfLines={1}
-          adjustsFontSizeToFit
-        >
-          {String(numericStats.longestStreak)}
-          <Text style={[styles.heroPillUnit, { color: currentTheme.colors.textSecondary }]}>
-            {" "}
-            {t("daysShort", { defaultValue: "j" })}
-          </Text>
-        </Text>
-      </View>
+              <View style={styles.heroBody}>
 
-      <View style={styles.heroPill}>
-        <Ionicons
-          name="medal-outline"
-          size={normalizeSize(14)}
-          color={currentTheme.colors.secondary}
-        />
-        <Text
-          style={[
-            styles.heroPillValue,
-            { color: isDarkMode ? currentTheme.colors.textPrimary : "#000000" },
-          ]}
-          numberOfLines={1}
-          adjustsFontSizeToFit
-        >
-          {String(numericStats.trophies)}
-        </Text>
-      </View>
-    </View>
-  </LinearGradient>
-</Animated.View>
+                {/* Ring + pourcentage centré */}
+                <View style={{ width:RING, height:RING, alignItems:"center", justifyContent:"center" }}>
+                  <Ring pct={stats.successRatePct} size={RING} sw={SW} isDark={isDark} />
+                  <View style={[StyleSheet.absoluteFill, { alignItems:"center", justifyContent:"center" }]}>
+                    <Text style={{ fontFamily:"Comfortaa_700Bold", fontSize:ns(19), color:ORANGE, includeFontPadding:false }}>
+                      {stats.successRatePct}%
+                    </Text>
+                    <Text style={{ fontFamily:"Comfortaa_400Regular", fontSize:ns(9.5), color: isDark?"rgba(255,255,255,0.40)":"rgba(0,0,0,0.36)", textAlign:"center", marginTop:2, paddingHorizontal:4 }} numberOfLines={2}>
+                      {t("successRate")}
+                    </Text>
+                  </View>
+                </View>
 
+                {/* Stats droite — flex:1 pour ne JAMAIS déborder */}
+                <View style={{ flex:1, gap:ns(IS_COMPACT?5:7), paddingLeft:ns(4) }}>
+                  <Text
+                    style={{ fontFamily:"Comfortaa_700Bold", fontSize:ns(IS_COMPACT?15:17), color: isDark?"#FFFFFF":"#1A0800", includeFontPadding:false, marginBottom:ns(2) }}
+                    numberOfLines={1}
+                    adjustsFontSizeToFit
+                    minimumFontScale={0.7}
+                  >
+                    {userDoc?.displayName || t("statistics")}
+                  </Text>
 
-    {/* ===== Weekly Card (existing) ===== */}
-    <View style={styles.headerCardWrap} accessibilityRole="summary">
-      <WeeklyTrophiesCard />
-    </View>
-  </View>
-}
+                  {([
+                    { icon:"medal-outline" as const, val: nf(stats.trophies), lbl: t("trophies") },
+                    { icon:"trophy-outline" as const, val: nf(stats.completed), lbl: t("completedChallenges") },
+                    { icon:"flame-outline" as const, val: `${nf(stats.longestStreak)}j`, lbl: t("longestStreak") },
+                    { icon:"ribbon-outline" as const, val: nf(stats.achievements), lbl: t("unlockedAchievements") },
+                  ]).map(({ icon, val, lbl }, i) => (
+                    <View key={i} style={{ flexDirection:"row", alignItems:"center", gap:ns(6) }}>
+                      <View style={{ width:ns(20), height:ns(20), borderRadius:ns(6), backgroundColor: wa(ORANGE, isDark?.18:.10), alignItems:"center", justifyContent:"center", flexShrink:0 }}>
+                        <Ionicons name={icon} size={ns(11)} color={ORANGE} />
+                      </View>
+                      <Text style={{ fontFamily:"Comfortaa_700Bold", fontSize:ns(13), color: isDark?"#FFFFFF":"#1A0800", includeFontPadding:false, flexShrink:0 }}
+                        numberOfLines={1} adjustsFontSizeToFit minimumFontScale={0.7}>
+                        {val}
+                      </Text>
+                      <Text style={{ fontFamily:"Comfortaa_400Regular", fontSize:ns(10.5), color: isDark?"rgba(255,255,255,0.42)":"rgba(0,0,0,0.40)", includeFontPadding:false, flex:1 }}
+                        numberOfLines={1} adjustsFontSizeToFit minimumFontScale={0.7}>
+                        {lbl}
+                      </Text>
+                    </View>
+                  ))}
+                </View>
+              </View>
+            </LinearGradient>
+          </Animated.View>
 
-      data={computedStats}
-      renderItem={({ item, index }) => <StatCard item={item} index={index} />}
-      keyExtractor={(item, index) => `${item.name}-${index}`}
-      contentContainerStyle={[
-  styles.listContainer,
-  { flexGrow: 1, paddingBottom: bottomPadding },
-]}
-      showsVerticalScrollIndicator={false}
-     removeClippedSubviews={Platform.OS === "android"}
-      initialNumToRender={6}
-      maxToRenderPerBatch={6}
-      windowSize={7}
-      getItemLayout={(_, index) => {
-        const H = normalizeSize(100) + SPACING * 1.5; // carte + marge verticale
-        return { length: H, offset: H * index, index };
-      }}
-      contentInset={{ top: SPACING, bottom: 0 }}
-    />
-    {showBanners && (
-   <View
-     style={{
-       position: "absolute",
-       left: 0,
-       right: 0,
-       bottom: tabBarHeight + insets.bottom,
-       alignItems: "center",
-       backgroundColor: "transparent",
-       paddingBottom: 6,
-       zIndex: 9999,
-     }}
-     pointerEvents="box-none"
-   >
-     <BannerSlot onHeight={(h) => setAdHeight(h)} />
-   </View>
- )}
-  </LinearGradient>
-{/* —— Carte de partage invisible (capture) —— */}
+          {/* ═══ TROPHY CARD ══════════════════════════════════════════════ */}
+          <Animated.View entering={FadeInUp.delay(140).duration(420)} style={{ marginBottom: SPACING }}>
+            <LinearGradient
+              colors={[ORANGE, ORANGE_D]}
+              start={{x:0,y:0}} end={{x:1,y:1}}
+              style={styles.trophyCard}
+            >
+              <LinearGradient pointerEvents="none"
+                colors={["rgba(255,255,255,0.13)","transparent","rgba(0,0,0,0.09)"]}
+                start={{x:0,y:0}} end={{x:1,y:1}} style={StyleSheet.absoluteFill}
+              />
+              <View style={{ flexDirection:"row", justifyContent:"space-between", alignItems:"flex-end", marginBottom:ns(14) }}>
+                <View>
+                  <Text style={{ fontFamily:"Comfortaa_400Regular", fontSize:ns(13), color:"rgba(255,255,255,0.78)", marginBottom:ns(4) }}>
+                    🏆 {t("trophies")}
+                  </Text>
+                  <Text style={{ fontFamily:"Comfortaa_700Bold", fontSize:ns(IS_COMPACT?34:42), color:"#FFFFFF", includeFontPadding:false }}>
+                    {nf(stats.trophies)}
+                  </Text>
+                </View>
+                <View style={{ alignItems:"flex-end", justifyContent:"flex-end" }}>
+                  <Spark vals={spark} w={ns(106)} h={ns(44)} />
+                  <Text style={{ fontFamily:"Comfortaa_400Regular", fontSize:ns(10), color:"rgba(255,255,255,0.52)", marginTop:ns(3) }}>
+                    7 {t("days")}
+                  </Text>
+                </View>
+              </View>
+              {/* Badges — UNE SEULE fois ici, pas dans la grid */}
+              <View style={{ flexDirection:"row", gap:ns(8), flexWrap:"wrap" }}>
+                <View style={styles.badge}>
+                  <Ionicons name="ribbon-outline" size={ns(11)} color="rgba(255,255,255,0.90)" />
+                  <Text style={styles.badgeTxt}>{stats.achievements} {t("unlockedAchievements")}</Text>
+                </View>
+                <View style={styles.badge}>
+                  <Ionicons name="trophy-outline" size={ns(11)} color="rgba(255,255,255,0.90)" />
+                  <Text style={styles.badgeTxt}>{stats.completed} {t("completedChallenges")}</Text>
+                </View>
+              </View>
+            </LinearGradient>
+          </Animated.View>
+
+          {/* ═══ WEEKLY ═══════════════════════════════════════════════════ */}
+          <Animated.View entering={FadeInUp.delay(210).duration(400)} style={{ marginBottom: SPACING }}>
+            <WeeklyTrophiesCard />
+          </Animated.View>
+
+          {/* ═══ GRID 2×2 — hauteur UNIFORME ════════════════════════════ */}
+          <View style={{ flexDirection:"row", flexWrap:"wrap", justifyContent:"space-between" }}>
+            {gridItems.map((item, i) => (
+              <MiniCard key={i} icon={item.icon} label={item.lbl} value={item.val}
+                delay={item.d} isDark={isDark} theme={CT} />
+            ))}
+          </View>
+
+        </ScrollView>
+
+        {showBanners && (
+          <View style={{ position:"absolute", left:0, right:0, bottom: tabH+insets.bottom, alignItems:"center", zIndex:9999, paddingBottom:6 }} pointerEvents="box-none">
+            <BannerSlot onHeight={(h) => setAdH(h)} />
+          </View>
+        )}
+      </LinearGradient>
+
       {sharePayload && (
-        <View style={{ position: "absolute", opacity: 0, pointerEvents: "none" }}>
-          <StatsShareCard
-            ref={shareRef}
-            username={sharePayload.username ?? null}
-            avatarUri={sharePayload.avatarUri ?? null}
-            // On passe directement les libellés traduits ➜ plus de coupe
+        <View style={{ position:"absolute", opacity:0, pointerEvents:"none" }}>
+          <StatsShareCard ref={shareRef}
+            username={sharePayload.username??null} avatarUri={sharePayload.avatarUri??null}
             items={[
               { label: t("completedChallenges"), value: String(sharePayload.stats.completed) },
               { label: t("successRate"), value: `${sharePayload.stats.successRatePct}%` },
-              { label: t("longestStreak"), value: `${sharePayload.stats.longestStreak} ${t("daysShort", { defaultValue: "j" })}` },
+              { label: t("longestStreak"), value: `${sharePayload.stats.longestStreak}j` },
               { label: t("trophies"), value: String(sharePayload.stats.trophies) },
             ]}
-            i18n={{
-              kickerWhenNoUser: t("myStats", { defaultValue: "Mes stats" }),
-              subtitleWhenUser: t("myCTStats", { defaultValue: "Mes stats ChallengeTies" }),
-            }}
+            i18n={{ kickerWhenNoUser: t("myStats",{defaultValue:"Mes stats"}), subtitleWhenUser: t("myCTStats",{defaultValue:"Mes stats ChallengeTies"}) }}
           />
         </View>
       )}
@@ -745,291 +433,47 @@ const tabBarHeight = useTabBarHeightSafe();
 }
 
 const styles = StyleSheet.create({
-  safeArea: {
-  flex: 1,
-  paddingTop: 0,
-  backgroundColor: "transparent",
-},
-  container: {
-    flex: 1,
-    paddingHorizontal: SPACING,
-    paddingTop: SPACING / 2,
+  heroCard: {
+    borderRadius: ns(22), borderWidth: 1, overflow:"hidden",
+    padding: ns(IS_COMPACT ? 13 : 15),
+    shadowColor: ORANGE, shadowOffset:{width:0,height:8}, shadowOpacity:0.13, shadowRadius:18, elevation:5,
   },
-  headerWrapper: {
-    paddingHorizontal: SPACING,
-    paddingVertical: SPACING,
-    position: "relative",
+  heroBody: { flexDirection:"row", alignItems:"center", gap:ns(12) },
+
+  trophyCard: {
+    borderRadius: ns(22), overflow:"hidden",
+    padding: ns(IS_COMPACT ? 15 : 18),
+    shadowColor: ORANGE, shadowOffset:{width:0,height:10}, shadowOpacity:0.36, shadowRadius:20, elevation:8,
   },
-  backButton: {
-    position: "absolute",
-    top:
-      Platform.OS === "android" ? StatusBar.currentHeight ?? SPACING : SPACING,
-    left: SPACING,
-    zIndex: 10,
-    padding: SPACING / 2,
-    backgroundColor: "rgba(0, 0, 0, 0.5)", // Overlay premium
-    borderRadius: normalizeSize(20),
+  badge: {
+    flexDirection:"row", alignItems:"center", gap:ns(5),
+    backgroundColor:"rgba(255,255,255,0.18)", borderRadius:999,
+    paddingHorizontal:ns(10), paddingVertical:ns(5),
   },
-  shareButton: {
-    position: "absolute",
-    top:
-      Platform.OS === "android" ? StatusBar.currentHeight ?? SPACING : SPACING,
-    right: SPACING,
-    padding: SPACING / 2,
+  badgeTxt: { fontFamily:"Comfortaa_700Bold", fontSize:ns(11), color:"#FFFFFF" },
+
+  // Mini card — dimensions fixes pour uniformité parfaite
+  miniCard: {
+    borderRadius: ns(18), borderWidth: 1, overflow:"hidden",
+    padding: ns(IS_COMPACT ? 12 : 14),
+    justifyContent:"space-between",
+    shadowColor:"#000", shadowOffset:{width:0,height:4}, shadowOpacity:0.06, shadowRadius:10, elevation:2,
   },
-  listContainer: {
-  paddingTop: V_SPACING,
-  paddingHorizontal: SPACING,
-  paddingBottom: normalizeSize(40),
-},
-headerCardWrap: {
-  paddingHorizontal: SPACING,
-  marginTop: V_SPACING,
-  marginBottom: V_SPACING * 1.1,
-},
-statCardWrapper: {
-  marginBottom: V_SPACING,
-  borderRadius: normalizeSize(22),
-  shadowColor: "#000",
-  shadowOffset: { width: 0, height: normalizeSize(10) },
-  shadowOpacity: Platform.OS === "ios" ? 0.14 : 0,
-  shadowRadius: normalizeSize(18),
-  elevation: Platform.OS === "android" ? 3 : 0,
-},
-statCard: {
-  flexDirection: "row",
-  alignItems: "center",
-  paddingVertical: normalizeSize(IS_COMPACT ? 14 : 16),
-  paddingHorizontal: normalizeSize(16),
-  borderRadius: normalizeSize(22),
-  overflow: "hidden",
-  borderWidth: StyleSheet.hairlineWidth,
-},
-iconContainer: {
-  width: normalizeSize(IS_COMPACT ? 50 : 54),
-  height: normalizeSize(IS_COMPACT ? 50 : 54),
-  borderRadius: 999,
-  justifyContent: "center",
-  alignItems: "center",
-  marginRight: normalizeSize(12),
-  borderWidth: StyleSheet.hairlineWidth,
-},
-  statContent: {
-    flex: 1,
+  dot: { position:"absolute", top:ns(11), right:ns(11), width:ns(5), height:ns(5), borderRadius:ns(3) },
+  iconBox: {
+    width:ns(34), height:ns(34), borderRadius:ns(10), borderWidth:1,
+    alignItems:"center", justifyContent:"center", marginBottom:ns(IS_COMPACT?6:8),
   },
-  statName: {
-  fontSize: normalizeSize(14.5),
-  fontFamily: "Comfortaa_400Regular",
-  marginBottom: normalizeSize(4),
-  opacity: 0.9,
-  writingDirection: I18nManager.isRTL ? "rtl" : "ltr",
-  textAlign: I18nManager.isRTL ? "right" : "left",
-},
-headerStack: {
-  paddingTop: V_SPACING,
-},
-
-heroWrap: {
-  paddingHorizontal: SPACING,
-  marginBottom: V_SPACING,
-},
-
-heroCard: {
-  borderRadius: normalizeSize(22),
-  paddingVertical: normalizeSize(IS_COMPACT ? 14 : 16),
-  paddingHorizontal: normalizeSize(16),
-  borderWidth: StyleSheet.hairlineWidth,
-  overflow: "hidden",
-},
-
-heroSheen: {
-  position: "absolute",
-  top: -normalizeSize(28),
-  left: -normalizeSize(70),
-  width: "170%",
-  height: normalizeSize(92),
-  transform: [{ rotate: "-12deg" }],
-  opacity: 0.85,
-},
-
-heroGlow: {
-  position: "absolute",
-  top: -normalizeSize(18),
-  right: -normalizeSize(18),
-  width: normalizeSize(120),
-  height: normalizeSize(120),
-  borderRadius: 999,
-  opacity: 1,
-},
-heroPillsRow: {
-  flexDirection: "row",
-  flexWrap: "wrap",
-  gap: normalizeSize(10),
-},
-
-heroPill: {
-  flexGrow: 1,
-  minWidth: "47%",
-  borderRadius: normalizeSize(16),
-  paddingVertical: normalizeSize(10),
-  paddingHorizontal: normalizeSize(12),
-  borderWidth: StyleSheet.hairlineWidth,
-  flexDirection: "row",
-  alignItems: "center",
-  gap: normalizeSize(8),
-  backgroundColor: IS_COMPACT ? "rgba(255,255,255,0.04)" : "transparent",
-  borderColor: withAlpha("#000000", 0.06),
-},
-
-heroPillValue: {
-  fontSize: normalizeSize(16),
-  fontFamily: "Comfortaa_700Bold",
-  includeFontPadding: false,
-  writingDirection: I18nManager.isRTL ? "rtl" : "ltr",
-  textAlign: I18nManager.isRTL ? "right" : "left",
-  flexShrink: 1,
-},
-
-heroPillUnit: {
-  fontSize: normalizeSize(12.5),
-  fontFamily: "Comfortaa_400Regular",
-  includeFontPadding: false,
-},
-heroTopRow: {
-  flexDirection: "row",
-  alignItems: "center",
-  justifyContent: "space-between",
-  marginBottom: normalizeSize(12),
-},
-
-heroIdentity: {
-  flex: 1,
-  paddingRight: normalizeSize(10),
-},
-
-heroKicker: {
-  fontSize: normalizeSize(12.5),
-  fontFamily: "Comfortaa_400Regular",
-  opacity: 0.9,
-  marginBottom: normalizeSize(4),
-  writingDirection: I18nManager.isRTL ? "rtl" : "ltr",
-  textAlign: I18nManager.isRTL ? "right" : "left",
-},
-
-heroTitle: {
-  fontSize: normalizeSize(18),
-  fontFamily: "Comfortaa_700Bold",
-  includeFontPadding: false,
-  writingDirection: I18nManager.isRTL ? "rtl" : "ltr",
-  textAlign: I18nManager.isRTL ? "right" : "left",
-},
-
-heroAvatarPill: {
-  width: normalizeSize(38),
-  height: normalizeSize(38),
-  borderRadius: 999,
-  alignItems: "center",
-  justifyContent: "center",
-  borderWidth: StyleSheet.hairlineWidth,
-},
-
-heroChipsRow: {
-  flexDirection: "row",
-  flexWrap: "wrap",
-  gap: normalizeSize(10),
-},
-
-heroChip: {
-  flexGrow: 1,
-  minWidth: "47%",
-  borderRadius: normalizeSize(16),
-  paddingVertical: normalizeSize(10),
-  paddingHorizontal: normalizeSize(12),
-  borderWidth: StyleSheet.hairlineWidth,
-  flexDirection: "row",
-  alignItems: "center",
-  gap: normalizeSize(8),
-},
-
-heroChipValue: {
-  fontSize: normalizeSize(16),
-  fontFamily: "Comfortaa_700Bold",
-  includeFontPadding: false,
-},
-
-heroChipLabel: {
-  flex: 1,
-  fontSize: normalizeSize(12.5),
-  fontFamily: "Comfortaa_400Regular",
-  opacity: 0.9,
-},
-statValue: {
-  fontSize: normalizeSize(22),
-  fontFamily: "Comfortaa_700Bold",
-  includeFontPadding: false,
-  writingDirection: I18nManager.isRTL ? "rtl" : "ltr",
-  textAlign: I18nManager.isRTL ? "right" : "left",
-},
-  loadingContainer: {
-    flex: 1,
-    justifyContent: "center",
-    alignItems: "center",
-    paddingHorizontal: SPACING,
+  miniVal: {
+    fontFamily:"Comfortaa_700Bold",
+    fontSize:ns(IS_COMPACT ? 20 : 23),
+    includeFontPadding:false,
+    marginBottom:ns(3),
   },
-  loadingText: {
-    marginTop: normalizeSize(20),
-    fontSize: normalizeSize(18),
-    fontFamily: "Comfortaa_400Regular",
-    textAlign: "center",
-    writingDirection: I18nManager.isRTL ? "rtl" : "ltr",
+  miniLbl: {
+    fontFamily:"Comfortaa_400Regular",
+    fontSize:ns(IS_COMPACT ? 10.5 : 11.5),
+    lineHeight:ns(IS_COMPACT ? 14 : 16),
+    includeFontPadding:false,
   },
-  emptyContainer: {
-    flex: 1,
-    justifyContent: "center",
-    alignItems: "center",
-    paddingHorizontal: SPACING * 2,
-  },
-  emptyText: {
-    fontSize: normalizeSize(22),
-    fontFamily: "Comfortaa_700Bold",
-    textAlign: "center",
-    marginBottom: SPACING,
-    writingDirection: I18nManager.isRTL ? "rtl" : "ltr",
-  },
-  emptySubtext: {
-    fontSize: normalizeSize(18),
-    fontFamily: "Comfortaa_400Regular",
-    textAlign: "center",
-    opacity: 0.8,
-    writingDirection: I18nManager.isRTL ? "rtl" : "ltr",
-  },
-  gradientContainer: {
-  flex: 1,
-  // pas de padding ici; garde ton padding dans styles.container
-},
-bgOrbTop: {
-  position: "absolute",
-  top: -SCREEN_WIDTH * (IS_COMPACT ? 0.28 : 0.25),
-  left: -SCREEN_WIDTH * (IS_COMPACT ? 0.22 : 0.2),
-  width: SCREEN_WIDTH * (IS_COMPACT ? 0.85 : 0.9),
-  height: SCREEN_WIDTH * (IS_COMPACT ? 0.85 : 0.9),
-  borderRadius: SCREEN_WIDTH * 0.45,
-},
-cardSheen: {
-  position: "absolute",
-  top: -normalizeSize(28),
-  left: -normalizeSize(60),
-  width: "160%",
-  height: normalizeSize(86),
-  transform: [{ rotate: "-12deg" }],
-  opacity: 0.85,
-},
-bgOrbBottom: {
-  position: "absolute",
-  bottom: -SCREEN_WIDTH * (IS_COMPACT ? 0.32 : 0.3),
-  right: -SCREEN_WIDTH * (IS_COMPACT ? 0.27 : 0.25),
-  width: SCREEN_WIDTH * (IS_COMPACT ? 1.05 : 1.1),
-  height: SCREEN_WIDTH * (IS_COMPACT ? 1.05 : 1.1),
-  borderRadius: SCREEN_WIDTH * 0.55,
-},
 });
