@@ -1,6 +1,6 @@
 // app/_layout.tsx
 // ✅ RootInviteBootOverlay refonte "top monde" — 3 phases animées + i18n complet
-import React, { useEffect, useRef } from "react";
+import React, { useEffect, useMemo, useState, useRef, useCallback } from "react";
 import { useTranslation } from "react-i18next";
 import Animated, {
   FadeIn,
@@ -73,6 +73,9 @@ import {
   getPathFromNotificationData,
   markNotifHandledOnColdStart,
   rescheduleNextDailyIfNeeded,
+  rescheduleLateIfNeeded,
+  scheduleStreakDangerIfNeeded,
+  cancelAllOrphanNotifications, 
 } from "@/services/notificationService";
 import {
   getTrackingPermissionsAsync,
@@ -303,12 +306,18 @@ useEffect(() => {
     }
 
     if (user && (pathname === "/login" || pathname === "/register")) {
-      clearExplicitLogoutFlag().catch(() => {});
-      const target = pathname === "/register" ? "/first-pick" : "/(tabs)";
-      requestAnimationFrame(() => router.replace(target));
-      SplashScreen.hideAsync().catch(() => {});
-      return;
-    }
+  clearExplicitLogoutFlag().catch(() => {});
+  // ✅ Si social register en cours → on ne redirige pas, register.tsx gère lui-même
+  const { socialRegisterPending } = require("../context/AuthProvider");
+  if (pathname === "/register" && socialRegisterPending.current) {
+    SplashScreen.hideAsync().catch(() => {});
+    return;
+  }
+  const target = pathname === "/register" ? "/first-pick" : "/(tabs)";
+  requestAnimationFrame(() => router.replace(target));
+  SplashScreen.hideAsync().catch(() => {});
+  return;
+}
 
     if (!user && (pathname === "/login" || pathname === "/register")) {
       const justEnabled = consumeGuestJustEnabled();
@@ -686,25 +695,63 @@ const NotificationsBootstrap: React.FC = () => {
     startNotificationResponseListener((path) => safeNavigate(path), () => {});
     (async () => {
       try {
+        // ✅ Purge les notifs orphelines (anciennes versions sans __tag)
+        await cancelAllOrphanNotifications();
+
         const last = await Notifications.getLastNotificationResponseAsync();
         const data: any = last?.notification?.request?.content?.data || null;
+        rescheduleNextDailyIfNeeded().catch(() => {});
+        rescheduleLateIfNeeded().catch(() => {});
+        scheduleStreakDangerIfNeeded().catch(() => {});
         if (!data) return;
         markNotifHandledOnColdStart();
         const path = getPathFromNotificationData(data);
         safeNavigate(path);
-        const type = String(data?.type || data?.__tag || "").toLowerCase();
-        if (type === "daily-reminder") rescheduleNextDailyIfNeeded().catch(() => {});
       } catch {}
     })().catch(() => {});
     return () => stopNotificationResponseListener();
   }, [safeNavigate, safeToast]);
 
   useEffect(() => {
+    startNotificationResponseListener((path) => safeNavigate(path), () => {});
+    (async () => {
+      try {
+        const last = await Notifications.getLastNotificationResponseAsync();
+        const data: any = last?.notification?.request?.content?.data || null;
+        // Reschedule systématique au cold start, indépendamment de la notif
+        rescheduleNextDailyIfNeeded().catch(() => {});
+        rescheduleLateIfNeeded().catch(() => {});
+        scheduleStreakDangerIfNeeded().catch(() => {});
+        if (!data) return;
+        markNotifHandledOnColdStart();
+        const path = getPathFromNotificationData(data);
+        safeNavigate(path);
+      } catch {}
+    })().catch(() => {});
+    return () => stopNotificationResponseListener();
+  }, [safeNavigate, safeToast]);
+
+   useEffect(() => {
     const sub = Notifications.addNotificationReceivedListener((notif) => {
       const data: any = notif?.request?.content?.data || {};
-      if (data?.type === "daily-reminder") rescheduleNextDailyIfNeeded().catch(() => {});
+      if (data?.type === "daily-reminder") {
+        rescheduleNextDailyIfNeeded().catch(() => {});
+        rescheduleLateIfNeeded().catch(() => {});
+        scheduleStreakDangerIfNeeded().catch(() => {});
+      }
     });
-    return () => sub.remove();
+    // AppState active → reschedule tout (cas où l'user rouvre l'app en cours de journée)
+    const appSub = AppState.addEventListener("change", (state) => {
+      if (state === "active") {
+        rescheduleNextDailyIfNeeded().catch(() => {});
+        rescheduleLateIfNeeded().catch(() => {});
+        scheduleStreakDangerIfNeeded().catch(() => {});
+      }
+    });
+    return () => {
+      sub.remove();
+      appSub.remove();
+    };
   }, []);
 
   return null;
@@ -1287,6 +1334,7 @@ const stylesOverlay = StyleSheet.create({
   },
 });
 
+
 // =========================
 // RootLayout
 // =========================
@@ -1302,24 +1350,25 @@ export default function RootLayout() {
   }, []);
 
   return (
-    <GestureHandlerRootView style={{ flex: 1 }}>
-      <ToastProvider>
-        <View style={{ flex: 1 }}>
-          <MarkToastListener />
-          <FeatureFlagsProvider>
-            <FlagsGate>
-              <AuthProvider>
-                <I18nextProvider i18n={i18n}>
-                  <LanguageProvider>
-                    <ThemeProvider>
-                      <PaperProvider>
-                        <ProfileUpdateProvider>
-                          <TrophyProvider>
-                            <SavedChallengesProvider>
-                              <CurrentChallengesProvider>
-                                <ChatProvider>
-                                  <TutorialProvider>
-                                    <VisitorProvider>
+  <GestureHandlerRootView style={{ flex: 1 }}>
+    <ToastProvider>
+      <View style={{ flex: 1 }}>
+        <MarkToastListener />
+        <FeatureFlagsProvider>
+          <FlagsGate>
+            <AuthProvider>
+              <I18nextProvider i18n={i18n}>
+                <LanguageProvider>
+                  <ThemeProvider>
+                    <PaperProvider>
+                      <ProfileUpdateProvider>
+                        <TrophyProvider>
+                          <SavedChallengesProvider>
+                            <CurrentChallengesProvider>
+                              <ChatProvider>
+                                <TutorialProvider>
+                                  <VisitorProvider>
+                                    {/* ✅ CoachmarkProvider au root — overlay sera au-dessus de tout */}
                                       <ATTBootstrap />
                                       <ConsentGate>
                                         <PremiumProvider>
@@ -1340,27 +1389,27 @@ export default function RootLayout() {
                                             </Stack>
                                             <AppNavigator />
                                             <TrophyModal />
-                                            {/* ✅ Overlay invite boot — top-level absolu */}
                                             <RootInviteBootOverlay />
+                                            {/* ✅ Overlay guided tour — AU-DESSUS de la tab bar */}
                                           </AdsVisibilityProvider>
                                         </PremiumProvider>
                                       </ConsentGate>
-                                    </VisitorProvider>
-                                  </TutorialProvider>
-                                </ChatProvider>
-                              </CurrentChallengesProvider>
-                            </SavedChallengesProvider>
-                          </TrophyProvider>
-                        </ProfileUpdateProvider>
-                      </PaperProvider>
-                    </ThemeProvider>
-                  </LanguageProvider>
-                </I18nextProvider>
-              </AuthProvider>
-            </FlagsGate>
-          </FeatureFlagsProvider>
-        </View>
-      </ToastProvider>
-    </GestureHandlerRootView>
+                                  </VisitorProvider>
+                                </TutorialProvider>
+                              </ChatProvider>
+                            </CurrentChallengesProvider>
+                          </SavedChallengesProvider>
+                        </TrophyProvider>
+                      </ProfileUpdateProvider>
+                    </PaperProvider>
+                  </ThemeProvider>
+                </LanguageProvider>
+              </I18nextProvider>
+            </AuthProvider>
+          </FlagsGate>
+        </FeatureFlagsProvider>
+      </View>
+    </ToastProvider>
+  </GestureHandlerRootView>
   );
 }

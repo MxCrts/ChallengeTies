@@ -54,8 +54,8 @@
     },
     "hero": {
       "brand": "ChallengeTies",
-      "headline": "Le déclic du jour.",
-      "sub": "Un défi. Un clic. Et si tu veux tenir : Duo.",
+      "headline": "Et si cette fois tu tenais ?",
+        "sub": "Seul on commence. Ensemble on tient.",
       "duoProof": "Le Duo transforme l’essai.",
       "ctaHint": "Découvrir les défis disponibles.",
       "ctaShort": "Commencer",
@@ -70,6 +70,9 @@
 
     "todayHub": {
       "primaryMark": "Marquer aujourd’hui",
+      "duoNudge": "Ton partenaire te verra demain →",
+        "markHint": "Appuie ici pour cocher ton défi du jour",
+        "tapToOpen": "Voir le défi →",
       "ctaSub": "1 tap pour valider ta journée",
 "progressLabel": "{{percent}}% accompli",
       "badgeMark":"Action requise",
@@ -186,31 +189,51 @@
     }
   },
   "soloMoment": {
-    "kicker": "SOLO MOMENT",
-    "badge": "Validé",
+    "badge": "CHECK ✓",
+      "kicker": "MOMENT SOLO",
+      "fallback": "Tu avances. Jour après jour.",
+      "cta": "Continuer",
+      "progress": "Jour {{day}}/{{total}}",
+      "progressLabel": "{{day}} / {{total}} jours",
+      "complete": "accompli",
+      "streak": "{{streak}} 🔥",
+      "subtitle": "Un check-in de plus. Tu construis quelque chose.",
+      "subtitleMilestone": "Un jalon franchi. Tu n'es plus le même qu'au départ.",
+      "identity": {
+        "day1": "Premier jour. Tu viens de prouver que tu commences vraiment.",
+        "day2": "Deux jours. La plupart abandonnent au premier.",
+        "day3": "Jour 3. Tu dépasses déjà 80% des gens qui ont commencé.",
+        "day7": "7 jours. Tu as une habitude. Protège-la.",
+        "day14": "14 jours. La mi-chemin. Tu deviens quelqu'un de différent.",
+        "day21": "21 jours. Les neurosciences disent que c'est là que ça s'installe.",
+        "last": "C'est le dernier jour. Tu as tenu. Jusqu'au bout.",
+        "early": "Tu deviens quelqu'un qui commence et qui continue.",
+        "mid": "Tu es à mi-chemin. C'est là que beaucoup lâchent. Pas toi.",
+        "late": "Tu es proche de la ligne d'arrivée. Ce que tu bâtis est réel.",
+        "final": "Tu tiens ta promesse. À toi-même. C'est rare.",
+        "default": "Tu deviens quelqu'un de constant."
+      },
+      "pool": [
+        "Jour {{day}}. Tu tiens ta promesse.",
+        "Check-in validé. La discipline, c'est ça.",
+        "Tu avances. Même les petits jours comptent.",
+        "{{streak}} jours d'affilée. Quelque chose se construit.",
+        "Coché. Tu as prouvé quelque chose aujourd'hui.",
+        "C'est fait. Ton futur toi te remercie.",
+        "Jour {{day}} sur {{total}}. Tu n'abandonnes pas.",
+        "Un autre jour de gagné. C'est tout ce qu'il faut."
+      ],
+      "duoNudge": {
+        "title": "Avec un partenaire, tu tiens 2x plus.",
+        "sub": "Invite quelqu'un maintenant →"
+      },
+      "a11y": {
+        "closeBackdrop": "Fermer",
+        "closeButton": "Fermer",
+        "cta": "Continuer"
+      },
     "title": "Jour {{day}} verrouillé",
-    "titleMilestone": "Palier atteint — Jour {{day}}",
-    "subtitle": "Tu avances. Sans bruit. Mais pour de vrai.",
-    "subtitleMilestone": "Ça, c’est du sérieux. Continue.",
-    "pool": [
-      "Encore 1%. C’est comme ça que ça change.",
-      "Tu construis un rythme. Garde-le.",
-      "Pas parfait. Régulier.",
-      "Aujourd’hui, tu as gagné contre toi-même.",
-      "Chaque jour compte. Celui-ci aussi.",
-      "Tu deviens la personne qui tient.",
-      "C’est léger… jusqu’au jour où ça devient énorme.",
-      "Une action. Une identité."
-    ],
-    "fallback": "Bien joué. Continue.",
-    "progress": "{{day}} / {{total}} jours",
-    "streak": "Streak {{streak}}",
-    "cta": "Continuer",
-    "a11y": {
-      "closeBackdrop": "Fermer la fenêtre",
-      "closeButton": "Fermer",
-      "cta": "Continuer"
-    }
+    "titleMilestone": "Palier atteint — Jour {{day}}"
   },
   "overlay": {
     "opening": "Ouverture…",
@@ -223,32 +246,51 @@
   "onboarding": {
   "banner": {
     "title": "Lance-toi 🔥",
-    "subtitle": "Gagne {{trophies}} trophées pour démarrer",
-    "subtitleProgress": "{{done}}/{{total}} · +{{left}} trophées restants",
-    "progress": "{{done}} / {{total}} complétées"
+        "titleDone": "Onboarding complété 🎉",
+        "subtitleNew": "Gagne {{trophies}} trophées",
+        "subtitleProgress": "{{done}}/{{total}} · +{{left}} trophées restants",
+        "subtitleDone": "+{{trophies}} trophées gagnés ✓",
+        "progress": "{{done}} / {{total}} complétées",
+    "subtitle": "Gagne {{trophies}} trophées pour démarrer"
   },
+  "modal": {
+        "title": "Tes premières victoires 🔥",
+        "subtitle": "+{{trophies}} trophées à gagner",
+        "subtitleDone": "Toutes complétées 🎉",
+        "cta": "C'est parti ! 🚀",
+        "ctaDone": "Parfait, on continue ! 🚀",
+        "hint": "Ces missions restent accessibles depuis la home."
+      },
+      "completion": {
+        "title": "Départ parfait ! 🔥",
+        "sub": "Tu as gagné {{trophies}} trophées. La suite, c'est toi qui l'écris."
+      },
   "quest": {
-    "markFirstDay": {
-      "title": "Marque ton premier jour",
-      "desc": "Ouvre ton défi et coche le jour 1"
-    },
-    "completeProfile": {
-      "title": "Complète ton profil",
-      "desc": "Ajoute une photo et tes catégories"
-    },
-    "exploreCommunity": {
-      "title": "Explore la communauté",
-      "desc": "Ouvre la page Exploits"
-    },
-    "joinSoloChallenge": {
-      "title": "Lance un défi solo",
-      "desc": "En attendant ton duo, démarre maintenant"
-    },
-    "viewChallenge": {
-      "title": "Voir ton défi",
-      "desc": "Consulte ton défi en cours"
-    }
-  }
+        "markFirstDay": {
+          "title": "Marquer ton 1er jour",
+          "desc": "Coche ton défi du jour"
+        },
+        "inviteDuo": {
+          "title": "Inviter un ami en Duo",
+          "desc": "Défie quelqu'un qui compte"
+        },
+        "claimDailyBonus": {
+          "title": "Récupérer ton bonus",
+          "desc": "Ouvre ta récompense quotidienne"
+        },
+        "exploreChallenges": {
+          "title": "Explorer des défis",
+          "desc": "{{count}}/3 explorés"
+        },
+        "completeProfile": {
+          "title": "Compléter ton profil",
+          "desc": "Ajoute une photo et tes catégories"
+        },
+        "maintain3DayStreak": {
+          "title": "Tenir 3 jours de suite",
+          "desc": "Ta streak grandit chaque jour"
+        }
+      }
 },
   "profile": "Profil",
   "yourProfile": "Votre profil",
@@ -504,8 +546,29 @@
     }
   },
   "newFeatures": {
+    "loading": "Chargement...",
+"noFeatures": "Aucune proposition pour le moment.",
+"featuresTitle": "Propositions",
+"vote": "Voter",
+"voted": "Voté ✓",
+"alreadyVotedShort": "Déjà voté",
+"alreadyVotedMessage": "Tu as déjà voté ce mois-ci.",
+"loginRequiredMessage": "Connecte-toi pour voter.",
+"voteRegisteredMessage": "Ton vote a été enregistré 🎉",
+"voteErrorMessage": "Erreur lors du vote. Réessaie.",
+"proposalSentMessage": "Ta proposition a été envoyée 🎉",
+"proposalErrorMessage": "Erreur lors de l'envoi. Réessaie.",
+"noVotesYet": "Aucun vote pour l'instant.",
+"openExplanation": "Comment ça marche ?",
+"shareDialogTitle": "Partager cette nouveauté",
+"countdownTitleMars": "Vote ouvert jusqu'au 31 mars",
+"countdownTitleAvril": "Vote ouvert jusqu'au 30 avril",
+"heroTitle": "Vote pour les prochaines fonctionnalités",
+"heroSubtitle": "Ta voix façonne l'app. Un vote par mois, une vraie influence.",
+"footerMicro": "Les meilleures idées sont intégrées chaque mois.",
+"byTpl": "par {{username}}",
+"thankYouShort": "Merci pour ton vote 💜",
     "deadlineIso": "2026-02-28T23:59:59+01:00",
-    "byTpl": "par {{username}}",
     "unknown": "Anonyme",
     "proposeIdea": "Proposer une idée",
     "shareLabel": "Partager",
@@ -529,11 +592,8 @@
     "title": "Quoi de neuf",
     "description": "Vote pour la prochaine fonctionnalité ou propose la tienne. Résultats fin février.",
 
-    "heroTitle": "Vote pour les mises à jour qui arrivent fin mars 🚀",
-    "heroSubtitle": "Ta voix compte : propose, vote et suis l’évolution des features.",
 
     "voteCloses": "Fin du vote dans",
-    "thankYouShort": "Merci pour ton vote 💜",
 
     "countdown": {
       "days": "Jours",
@@ -592,7 +652,7 @@
   "invalidEmailFormat": "Format d’email invalide.",
   "tooManyRequests": "Trop de tentatives. Veuillez réessayer plus tard.",
   "unknownError": "Une erreur inconnue est survenue.",
-  "emailPlaceholder": "tony.stark@example.com",
+  "emailPlaceholder": "Adresse e-mail",
   "passwordPlaceholder": "Mot de passe",
   "hidePassword": "Masquer le mot de passe",
   "showPassword": "Afficher le mot de passe",
@@ -625,14 +685,55 @@
     "inviteNow": "Inviter un ami",
     "button": "Compris"
   },
+  "firstMark": {
+  "title": "Tu l'as fait. Jour 1 coché.",
+  "subtitle": "C'est là que la plupart abandonnent. Pas toi.",
+  "badge": "Jour 1 ✓",
+  "bodyLine1": "Reviens demain pour maintenir ta série. L'habitude se construit jour après jour.",
+  "bodyLine2": "Avec quelqu'un à tes côtés, tu as 65% plus de chances de tenir.",
+  "cta": {
+    "invite": "Inviter quelqu'un",
+    "tomorrow": "À demain !",
+    "skip": "Fermer"
+  }
+},
+"coachmark": {
+  "skip": "Passer",
+  "finish": "C'est parti ! 🔥",
+  "create": {
+    "title": "Crée ton propre défi ✍️",
+    "body": "Un défi 100% personnalisé — ta règle, ta durée, ton rythme.",
+    "cta": "Super, je vais créer"
+  },
+  "explore": {
+    "title": "100+ défis t'attendent 🧭",
+    "body": "Fitness, mindset, productivité… Explore toute la bibliothèque.",
+    "cta": "J'explore !"
+  },
+  "exploits": {
+    "title": "Tes exploits t'attendent 🏆",
+    "body": "Défis accomplis, séries tenues — tout est ici.",
+    "cta": "Voir mes exploits"
+  },
+  "profile": {
+    "title": "Ton profil, tes stats 📊",
+    "body": "Trophées, séries, classement… Tout ce qui compte est dans ton profil.",
+    "cta": "Vu, merci !"
+  },
+  "bonus": {
+    "title": "Bonus quotidien 🎁",
+    "body": "Chaque jour un bonus gratuit — trophées ou Streak Pass.",
+    "cta": "Trop bien !"
+  }
+},
   "charsRemaining_one": "{{count}} caractère restant",
 "charsRemaining_other": "{{count}} caractères restants",
   "fillAllFields": "Veuillez remplir tous les champs.",
   "passwordsDoNotMatch": "Les mots de passe ne correspondent pas.",
-  "emailAlreadyInUse": "Cet email est déjà utilisé.",
+  "emailAlreadyInUse": "Un compte existe déjà avec cette adresse. Veuillez vous connecter.",
   "weakPassword": "Mot de passe trop faible. Veuillez en choisir un plus robuste.",
   "anErrorOccurred": "Une erreur est survenue. Veuillez réessayer.",
-  "joinUsAndChallenge": "On abandonne jamais seul.",
+  "joinUsAndChallenge": "Et si cette fois tu tenais ?",
   "yourEmail": "Votre email",
   "username": "Nom d’utilisateur",
   "password": "Mot de passe",
@@ -1716,7 +1817,8 @@
     "tab": {
       "region": "Régional",
       "national": "National",
-      "global": "Global"
+      "global": "Global",
+      "weekly": "Cette semaine"
     },
     "listLabel": "Liste des joueurs classés",
     "noPlayers": "Aucun joueur disponible pour ce classement."
@@ -2547,45 +2649,37 @@
   "errorLoadingSavedChallenges": "Impossible de charger les défis sauvegardés : {{message}}",
   "rateUs": "Noter l’app",
   "duoMoment": {
-  "leader": "Leader",
-  "badgeSync": "SYNC",
-  "badgeTurn": "À LUI",
-  "stateSync": "Synchro",
-  "stateTurn": "À lui",
-  "subtitleSync": "Vous êtes alignés. Restez synchro.",
-  "subtitleTurn": "Tu as marqué. Ton partenaire est le prochain.",
-  "fallbackSync": "Parfait — vous êtes synchro.",
-  "fallbackTurn": "Check envoyé à {{name}}. C’est à lui de jouer.",
-  "a11y": {
-    "closeBackdrop": "Fermer la fenêtre",
-    "closeButton": "Fermer"
-  },
-  "kicker": "MOMENT DUO",
-  "you": "Toi",
-  "pressureMessages": [
-    "⚡ {{name}} est sous pression.",
-    "🔥 À {{name}} de répondre maintenant.",
-    "🎯 Point marqué — {{name}} doit suivre.",
-    "🚀 Tu viens de prendre l’avantage. À {{name}}.",
-    "💥 Tempo lancé — {{name}} enchaîne.",
-    "🏁 Sprint duo : {{name}} est attendu.",
-    "📈 Avance confirmée — {{name}} doit s’aligner.",
-    "🧨 Coup joué — {{name}} est au tour.",
-    "⚔️ Duel engagé — {{name}}, à toi.",
-    "🔔 {{name}} va recevoir le signal."
-  ],
-  "syncMessages": [
-    "🤝 Parfait — vous êtes synchro.",
-    "💎 Duo solide aujourd’hui.",
-    "🏆 Journée validée des deux côtés.",
-    "⚖️ Équilibre parfait dans le duo.",
-    "🔥 Rythme tenu ensemble.",
-    "🎯 Synchronisation impeccable.",
-    "🚀 Duo en pleine traction.",
-    "🧱 Discipline partagée — respect.",
-    "✨ Coordination parfaite.",
-    "🔒 Série protégée ensemble."
-  ]
+    "kicker": "MOMENT DUO",
+      "badgeSync": "SYNC",
+      "badgeTurn": "À LUI",
+      "stateSync": "Synchro",
+      "stateTurn": "À lui",
+      "you": "Toi",
+      "leader": "Leader",
+      "fallbackSync": "Parfait — vous êtes synchro.",
+      "fallbackTurn": "Check envoyé à {{name}}. C'est à lui de jouer.",
+      "subtitleSync": "Vous êtes alignés. Restez synchro.",
+      "subtitleTurn": "Tu as marqué. Ton partenaire est le prochain.",
+      "syncMessages": [
+        "Vous êtes synchro. C'est pour ça que le Duo marche.",
+        "Même jour. Même rythme. Vous tenez ensemble.",
+        "Les deux ont coché. Aucun des deux ne lâche.",
+        "Synchro parfaite. C'est plus fort que la motivation solo.",
+        "Vous avancez au même rythme. Continuez.",
+        "Duo actif. Duo solide. C'est tout ce qu'il faut."
+      ],
+      "pressureMessages": [
+        "{{name}} te voit. Ne lâche pas maintenant.",
+        "Check envoyé. C'est au tour de {{name}}.",
+        "Tu as tenu. {{name}} voit que tu es sérieux.",
+        "Marqué. Maintenant {{name}} sait que tu tiens.",
+        "Tu avances. {{name}} doit faire pareil.",
+        "Coché. Ton duo va recevoir une notification. 👀"
+      ],
+      "a11y": {
+        "closeBackdrop": "Fermer la fenêtre",
+        "closeButton": "Fermer"
+      }
 },
 "userInfo": {
   "categoriesLabel": "Tes domaines de prédilection",
@@ -4481,6 +4575,26 @@
   "receivedOn": "Reçue le {{date}}",
   "locale": "fr-FR",
   "firstPick": {
+    "step0": {
+    "title": "Qu'est-ce que tu veux changer ?",
+    "subtitle": "Choisis ce qui compte vraiment pour toi maintenant.",
+    "cta": "Choisis au moins une catégorie",
+    "missingCategory": "Choisis au moins une catégorie pour continuer."
+  },
+  "category": {
+    "Fitness": "Fitness",
+    "Santé": "Santé",
+    "Motivation": "Motivation",
+    "Mindset": "Mindset",
+    "Productivité": "Productivité",
+    "Education": "Éducation",
+    "Bien-être": "Bien-être",
+    "Sport": "Sport",
+    "Méditation": "Méditation",
+    "Nutrition": "Nutrition",
+    "Créativité": "Créativité",
+    "Social": "Social"
+  },
     "progressShort": "{{current}}/{{total}}",
     "invitePending": {
   "title": "Invitation en attente",
@@ -4514,7 +4628,7 @@
   },
 
   "step2": {
-    "title": "Solo ou Duo ?",
+    "title": "Sur combien de jours tu t'engages ?",
     "subtitle": "En duo, tu tiens plus longtemps. Et c’est plus dur d’abandonner.",
     "duoDesc": "En duo, tu restes constant. Invite un ami juste après.",
     "cta": "Suite",
@@ -4691,6 +4805,74 @@
   "start": "Démarrer",
   "focusHint": "Astuce : verrouille ton écran pour éviter les distractions.",
 "remainingToday": "À faire aujourd’hui",
+"heatmap": {
+  "title": "Activité",
+  "subtitle": "16 dernières semaines",
+  "activeDays": "jours actifs",
+  "totalMarks": "marquages",
+  "currentStreak": "jours de suite",
+  "less": "Moins",
+  "more": "Plus",
+  "marked": "{{count}} défi(s) marqué(s)",
+  "noMark": "Aucun défi ce jour"
+},
+"weeklyReport": {
+  "sectionTitle": "Bilan hebdomadaire",
+  "btnTitle": "Mon bilan de la semaine",
+  "btnSubAvailable": "Rapport disponible — voir mon momentum",
+  "btnSubEmpty": "Disponible chaque lundi après une semaine active",
+  "newBadge": "VOIR",
+  "noReportTitle": "Pas encore de bilan",
+  "noReportDesc": "Ton premier bilan sera disponible le lundi prochain après une semaine d'activité.",
+  "kicker": "Bilan semaine",
+  "title": "Ton momentum",
+  "activeDays": "jours actifs",
+  "trophies": "trophées",
+  "momentum": "momentum",
+  "daysOfWeek": "Cette semaine",
+  "diagTitle": "Ce que je vois",
+  "goalTitle": "Objectif cette semaine",
+  "goalAccept": "Je relève le défi 💪",
+  "close": "Fermer"
+},
+"forge": {
+  "title": "La Forge",
+   "intentionLabel": "Ton intention",
+  "titleDone": "Forge complétée 🔥",
+  "subtitle": "Prouve que t'es prêt — 3 jours, 3 engagements",
+  "subtitleDone": "Récompense en attente d'acceptation",
+  "step1": {
+    "label": "Pose l'intention",
+    "desc": "Pourquoi tu veux tenir ce défi ?",
+    "labelShort": "Intention",
+    "modal": {
+      "title": "Pose ton intention",
+      "subtitle": "Pourquoi tu veux tenir ce défi ?",
+      "placeholder": "Ex: Pour me prouver que je peux tenir 30 jours...",
+      "cta": "Valider"
+    }
+  },
+  "step2": {
+    "label": "Marque ton défi",
+    "desc": "Check-in du jour effectué ?",
+    "labelShort": "Check-in"
+  },
+  "step3": {
+    "label": "Relance ton partenaire",
+    "desc": "Un rappel à ton futur duo.",
+    "labelShort": "Relance"
+  },
+  "stepDone": "Complété ✓",
+  "stepLocked": "Disponible J{{n}}",
+  "go": "Go",
+  "rewardFull": "10 trophées + badge \"Forgé\" en attente d'acceptation",
+  "rewardPartial": "{{trophies}} trophées en attente",
+  "rewardTitle": "Récompense Forge !",
+  "rewardBadgeTitle": "Badge \"Forgé\" débloqué ! 🔥",
+  "rewardMsg": "+{{trophies}} trophées",
+  "reminderSentTitle": "Rappel envoyé 👊",
+  "reminderSentBody": "Ton futur partenaire a reçu un rappel."
+},
   "categories": {
     "Santé": "Santé",
     "Fitness": "Fitness",

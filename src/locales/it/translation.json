@@ -256,51 +256,51 @@
     }
   },
   "newFeatures": {
-    "deadlineIso": "2026-02-28T23:59:59+01:00",
-    "byTpl": "di {{username}}",
-    "unknown": "Anonimo",
-    "proposeIdea": "Proporre un’idea",
-    "shareLabel": "Condividi",
-
-    "monthLabelTpl": "Aggiornamento • {{month}}",
-    "months": {
-      "01": "Gennaio",
-      "02": "Febbraio",
-      "03": "Marzo",
-      "04": "Aprile",
-      "05": "Maggio",
-      "06": "Giugno",
-      "07": "Luglio",
-      "08": "Agosto",
-      "09": "Settembre",
-      "10": "Ottobre",
-      "11": "Novembre",
-      "12": "Dicembre"
-    },
-
-    "title": "Novità",
-    "description": "Vota la prossima funzionalità o proponi la tua. Risultati a fine febbraio.",
-
-    "heroTitle": "Vota per gli aggiornamenti in arrivo entro fine marzo 🚀",
-    "heroSubtitle": "La tua voce conta: proponi, vota e segui l’evoluzione delle funzionalità.",
-
-    "voteCloses": "La votazione termina tra",
-    "thankYouShort": "Grazie per il tuo voto 💜",
-
-    "countdown": {
-      "days": "Giorni",
-      "hours": "Ore",
-      "mins": "Minuti",
-      "secs": "Secondi",
-      "abbr": { "d": "g", "h": "h", "m": "min", "s": "s" }
-    },
-
-    "share": {
-      "kicker": "Vieni a votare!",
-      "footerWithDays": "La votazione termina tra {{days}} giorni — la tua voce conta ✨",
-      "footer": "La votazione termina presto — la tua voce conta ✨"
-    }
+  "deadlineIso": "2026-04-30T23:59:59+02:00",
+  "byTpl": "di {{username}}",
+  "unknown": "Anonimo",
+  "proposeIdea": "Proponi un'idea",
+  "shareLabel": "Condividi",
+  "monthLabelTpl": "Aggiornamento • {{month}}",
+  "months": {
+    "01": "Gennaio", "02": "Febbraio", "03": "Marzo", "04": "Aprile",
+    "05": "Maggio", "06": "Giugno", "07": "Luglio", "08": "Agosto",
+    "09": "Settembre", "10": "Ottobre", "11": "Novembre", "12": "Dicembre"
   },
+  "title": "Novità",
+  "description": "Vota per la prossima funzione o proponi la tua. Risultati fine aprile.",
+  "heroTitle": "Vota per le prossime funzioni",
+  "heroSubtitle": "La tua voce dà forma all'app. Un voto al mese, vera influenza.",
+  "voteCloses": "Il voto chiude tra",
+  "thankYouShort": "Grazie per il tuo voto 💜",
+  "countdown": {
+    "days": "GIORNI", "hours": "ORE", "mins": "MINUTI", "secs": "SECONDI",
+    "abbr": { "d": "g", "h": "h", "m": "min", "s": "s" }
+  },
+  "share": {
+    "kicker": "Vieni a votare!",
+    "footerWithDays": "Il voto chiude tra {{days}} giorni — la tua voce conta ✨",
+    "footer": "Il voto chiude presto — la tua voce conta ✨"
+  },
+  "loading": "Caricamento...",
+  "noFeatures": "Nessuna proposta per ora.",
+  "featuresTitle": "Proposte",
+  "vote": "Vota",
+  "voted": "Votato ✓",
+  "alreadyVotedShort": "Già votato",
+  "alreadyVotedMessage": "Hai già votato questo mese.",
+  "loginRequiredMessage": "Accedi per votare.",
+  "voteRegisteredMessage": "Il tuo voto è stato registrato 🎉",
+  "voteErrorMessage": "Errore durante il voto. Riprova.",
+  "proposalSentMessage": "La tua proposta è stata inviata 🎉",
+  "proposalErrorMessage": "Errore durante l'invio. Riprova.",
+  "noVotesYet": "Ancora nessun voto.",
+  "openExplanation": "Come funziona?",
+  "shareDialogTitle": "Condividi questa funzione",
+  "countdownTitleMars": "Votazione aperta fino al 31 marzo",
+  "countdownTitleAvril": "Votazione aperta fino al 30 aprile",
+  "footerMicro": "Le migliori idee vengono integrate ogni mese."
+},
   "invite": {
       "bootTitle": "Preparazione del tuo invito…",
       "bootSubtitle": "Non chiudere l'app, stiamo preparando la sfida.",
@@ -364,7 +364,7 @@
   "invalidEmailFormat": "Formato email non valido.",
   "tooManyRequests": "Troppe richieste. Riprova più tardi.",
   "unknownError": "Si è verificato un errore sconosciuto.",
-  "emailPlaceholder": "tony.stark@example.com",
+  "emailPlaceholder": "Email",
   "passwordPlaceholder": "Password",
   "hidePassword": "Nascondi password",
   "showPassword": "Mostra password",
@@ -386,10 +386,10 @@
   "sendLink": "Invia link",
   "fillAllFields": "Compila tutti i campi.",
   "passwordsDoNotMatch": "Le password non corrispondono.",
-  "emailAlreadyInUse": "Questa email è già in uso.",
+  "emailAlreadyInUse": "Esiste già un account con questa email. Effettua l'accesso.",
   "weakPassword": "Password troppo debole. Scegline una più sicura.",
   "anErrorOccurred": "Si è verificato un errore. Riprova.",
-  "joinUsAndChallenge": "Non mollare mai da solo.",
+  "joinUsAndChallenge": "E se questa volta ce la facessi davvero?",
   "yourEmail": "La tua email",
   "username": "Nome utente",
   "password": "Password",
@@ -523,31 +523,24 @@
   },
   "dailySelectedSubtitleShort": "Selezione del giorno.",
    "soloMoment": {
-    "kicker": "MOMENTO SOLO",
-    "badge": "Fatto",
+    "badge": "CHECK ✓", "kicker": "MOMENTO SOLO", "fallback": "Stai avanzando. Giorno dopo giorno.",
+      "cta": "Continua", "progress": "Giorno {{day}}/{{total}}", "progressLabel": "{{day}} / {{total}} giorni",
+      "complete": "completato", "streak": "{{streak}} 🔥",
+      "subtitle": "Un altro check-in. Stai costruendo qualcosa.",
+      "subtitleMilestone": "Un traguardo raggiunto. Non sei più lo stesso di quando hai iniziato.",
+      "identity": {
+        "day1": "Primo giorno. Hai appena dimostrato che inizi davvero.", "day2": "Due giorni. La maggior parte si arrende al primo.",
+        "day3": "Giorno 3. Hai già superato l'80% di chi ha iniziato.", "day7": "7 giorni. Hai un'abitudine. Proteggila.",
+        "day14": "A metà strada. Stai diventando qualcuno di diverso.", "day21": "21 giorni. La neurosciienza dice che qui si consolida.",
+        "last": "Ultimo giorno. Hai tenuto. Fino alla fine.", "early": "Stai diventando qualcuno che inizia e continua.",
+        "mid": "Sei a metà. È qui che la maggior parte si arrende. Tu no.", "late": "Sei vicino al traguardo. Quello che costruisci è reale.",
+        "final": "Mantieni la tua promessa. A te stesso. È raro.", "default": "Stai diventando costante."
+      },
+      "pool": ["Giorno {{day}}. Mantieni la tua promessa.", "Check-in fatto. Così è la disciplina.", "Stai avanzando. Anche i giorni piccoli contano.", "{{streak}} giorni di fila. Qualcosa si sta costruendo.", "Spuntato. Oggi hai dimostrato qualcosa.", "Fatto. Il tuo io futuro ti ringrazia.", "Giorno {{day}} di {{total}}. Non molli.", "Un altro giorno vinto. È tutto ciò che serve."],
+      "duoNudge": { "title": "Con un partner, resisti il doppio.", "sub": "Invita qualcuno ora →" },
+      "a11y": { "closeBackdrop": "Chiudi", "closeButton": "Chiudi", "cta": "Continua" },
     "title": "Giorno {{day}} bloccato",
-    "titleMilestone": "Traguardo raggiunto — Giorno {{day}}",
-    "subtitle": "Avanzi. In silenzio. Davvero.",
-    "subtitleMilestone": "Questo è serio. Continua.",
-    "pool": [
-      "Un altro 1%. È così che cambia tutto.",
-      "Costruisci il ritmo. Proteggilo.",
-      "Non perfetto. Costante.",
-      "Oggi hai battuto te stesso.",
-      "Ogni giorno conta. Anche questo.",
-      "Stai diventando uno che mantiene.",
-      "Piccolo oggi. Enorme domani.",
-      "Un’azione. Un’identità."
-    ],
-    "fallback": "Grande. Continua.",
-    "progress": "{{day}} / {{total}} giorni",
-    "streak": "Serie {{streak}}",
-    "cta": "Continua",
-    "a11y": {
-      "closeBackdrop": "Chiudi",
-      "closeButton": "Chiudi",
-      "cta": "Continua"
-    }
+    "titleMilestone": "Traguardo raggiunto — Giorno {{day}}"
   },
   "deeplink": {
       "inviteHandoff": {
@@ -569,9 +562,9 @@
   },
     "hero": {
       "brand": "ChallengeTies",
-      "headline": "La spinta di oggi.",
+      "headline": "E se questa volta ce la facessi?",
+        "sub": "Da soli si inizia. Insieme si resiste.",
       "ctaHint": "Scopri le sfide disponibili.",
-      "sub": "Una sfida. Un clic. E se vuoi tener duro: Duo.",
       "duoProof": "Il Duo ti fa resistere.",
       "ctaShort": "Inizia",
       "ctaActive":"Continua",
@@ -587,6 +580,9 @@
     },
     "todayHub": {
       "primaryMark": "Segna oggi",
+      "duoNudge": "Il tuo partner ti vedrà domani →", 
+      "markHint": "Premi qui per spuntare la tua sfida", 
+      "tapToOpen": "Vedi la sfida →",
       "badgeMark":"Azione richiesta",
       "ctaSub": "1 tap per validare la tua giornata",
 "progressLabel": "{{percent}}% completato",
@@ -675,6 +671,35 @@
       "sectionA11y": "Scopri sfide, consigli e nuove funzionalità."
     }
   },
+ "coachmark": {
+  "skip": "Salta",
+  "finish": "Andiamo! 🔥",
+  "create": {
+    "title": "Crea la tua sfida ✍️",
+    "body": "100% personalizzata — la tua regola, la tua durata, il tuo ritmo.",
+    "cta": "Creiamola!"
+  },
+  "explore": {
+    "title": "100+ sfide ti aspettano 🧭",
+    "body": "Fitness, mentalità, produttività… Esplora tutta la libreria.",
+    "cta": "Esploriamo!"
+  },
+  "exploits": {
+    "title": "Le tue imprese ti aspettano 🏆",
+    "body": "Sfide completate, serie — tutto qui.",
+    "cta": "Vedi le mie imprese"
+  },
+  "profile": {
+    "title": "Il tuo profilo e le stats 📊",
+    "body": "Trofei, serie, classifica… Tutto nel tuo profilo.",
+    "cta": "Capito!"
+  },
+  "bonus": {
+    "title": "Bonus quotidiano 🎁",
+    "body": "Ogni giorno un premio gratuito — trofei o Streak Pass.",
+    "cta": "Fantastico!"
+  }
+},
   "overlay": {
     "opening": "Apertura…",
     "loginRequired": "Accesso richiesto…",
@@ -813,32 +838,51 @@
 "onboarding": {
   "banner": {
     "title": "Inizia ora 🔥",
-    "subtitle": "Guadagna {{trophies}} trofei per partire",
-    "subtitleProgress": "{{done}}/{{total}} · +{{left}} trofei rimasti",
-    "progress": "{{done}} / {{total}} completate"
+        "titleDone": "Onboarding completato 🎉",
+        "subtitleNew": "Guadagna {{trophies}} trofei",
+        "subtitleProgress": "{{done}}/{{total}} · +{{left}} trofei rimanenti",
+        "subtitleDone": "+{{trophies}} trofei guadagnati ✓",
+        "progress": "{{done}} / {{total}} completate",
+    "subtitle": "Guadagna {{trophies}} trofei per partire"
   },
-  "quest": {
-    "markFirstDay": {
-      "title": "Segna il tuo primo giorno",
-      "desc": "Apri la tua sfida e spunta il giorno 1"
-    },
-    "completeProfile": {
-      "title": "Completa il tuo profilo",
-      "desc": "Aggiungi foto e categorie"
-    },
-    "exploreCommunity": {
-      "title": "Esplora la community",
-      "desc": "Apri la pagina Imprese"
-    },
-    "joinSoloChallenge": {
-      "title": "Inizia una sfida solo",
-      "desc": "Nell'attesa del duo, inizia subito"
-    },
-    "viewChallenge": {
-      "title": "Vedi la tua sfida",
-      "desc": "Consulta la tua sfida in corso"
-    }
-  }
+  "modal": {
+        "title": "Le tue prime vittorie 🔥",
+        "subtitle": "+{{trophies}} trofei da guadagnare",
+        "subtitleDone": "Tutte completate 🎉",
+        "cta": "Andiamo! 🚀",
+        "ctaDone": "Perfetto, continuiamo! 🚀",
+        "hint": "Queste missioni restano accessibili dalla home."
+      },
+      "completion": {
+        "title": "Partenza perfetta! 🔥",
+        "sub": "Hai guadagnato {{trophies}} trofei. Il resto lo scrivi tu."
+      },
+      "quest": {
+        "markFirstDay": {
+          "title": "Segna il tuo 1° giorno",
+          "desc": "Spunta la tua sfida oggi"
+        },
+        "inviteDuo": {
+          "title": "Invita un amico in Duo",
+          "desc": "Sfida qualcuno che conta"
+        },
+        "claimDailyBonus": {
+          "title": "Riscuoti il tuo bonus",
+          "desc": "Apri la tua ricompensa giornaliera"
+        },
+        "exploreChallenges": {
+          "title": "Esplora le sfide",
+          "desc": "{{count}}/3 esplorate"
+        },
+        "completeProfile": {
+          "title": "Completa il tuo profilo",
+          "desc": "Aggiungi una foto e le tue categorie"
+        },
+        "maintain3DayStreak": {
+          "title": "3 giorni di fila",
+          "desc": "La tua serie cresce ogni giorno"
+        }
+      }
 },
 "common": {
     "back": "Indietro",
@@ -991,7 +1035,39 @@
     "challengeNotFound": "Sfida non trovata per la simulazione.",
     "errorGeneric": "Impossibile simulare la serie."
   },
+  "firstMark": {
+    "title": "Ce l'hai fatta. Giorno 1 spuntato.",
+    "subtitle": "È qui che la maggior parte molla. Tu no.",
+    "badge": "Giorno 1 ✓",
+    "bodyLine1": "Torna domani per mantenere la tua serie. Le abitudini si costruiscono giorno dopo giorno.",
+    "bodyLine2": "Con qualcuno al tuo fianco, hai il 65 % in più di possibilità di resistere.",
+    "cta": {
+      "invite": "Invita qualcuno",
+      "tomorrow": "A domani!",
+      "skip": "Chiudi"
+    }
+  },
   "firstPick": {
+    "step0": {
+      "title": "Cosa vuoi cambiare?",
+      "subtitle": "Scegli ciò che conta davvero per te adesso.",
+     "cta": "Scegli almeno una categoria",
+    "missingCategory": "Scegli almeno una categoria per continuare."
+    },
+    "category": {
+      "Fitness": "Fitness",
+      "Motivation": "Motivazione",
+    "Mindset": "Mentalità",
+      "Santé": "Salute",
+      "Productivité": "Produttività",
+      "Education": "Educazione",
+      "Bien-être": "Benessere",
+      "Sport": "Sport",
+      "Méditation": "Meditazione",
+      "Nutrition": "Nutrizione",
+      "Créativité": "Creatività",
+      "Social": "Sociale"
+    },
     "progressShort": "{{current}}/{{total}}",
     "invitePending": {
     "title": "Invito in attesa",
@@ -1023,7 +1099,7 @@
     "shuffleA11y": "Mostra altre sfide"
   },
   "step2": {
-    "title": "Solo o Duo?",
+    "title": "Per quanti giorni ti impegni?",
     "subtitle": "In Duo resisti di più. E mollare è più difficile.",
     "duoDesc": "In Duo resti costante. Invita un amico subito dopo.",
     "cta": "Avanti",
@@ -1074,8 +1150,75 @@
   "alert": {
     "missingChoiceBody": "Scegli una sfida per continuare."
   }
-}
-,
+},
+"heatmap": {
+  "title": "Attività",
+  "subtitle": "Ultime 16 settimane",
+  "activeDays": "giorni attivi",
+  "totalMarks": "marcature",
+  "currentStreak": "giorni di fila",
+  "less": "Meno",
+  "more": "Più",
+  "marked": "{{count}} sfida/e segnata/e",
+  "noMark": "Nessuna sfida questo giorno"
+},
+"weeklyReport": {
+  "sectionTitle": "Report settimanale",
+  "btnTitle": "Il mio report della settimana",
+  "btnSubAvailable": "Report disponibile — vedi il mio momentum",
+  "btnSubEmpty": "Disponibile ogni lunedì dopo una settimana attiva",
+  "newBadge": "VEDI",
+  "noReportTitle": "Nessun report ancora",
+  "noReportDesc": "Il tuo primo report sarà disponibile il prossimo lunedì dopo una settimana di attività.",
+  "kicker": "Report settimanale",
+  "title": "Il tuo momentum",
+  "activeDays": "giorni attivi",
+  "trophies": "trofei",
+  "momentum": "momentum",
+  "daysOfWeek": "Questa settimana",
+  "diagTitle": "Quello che vedo",
+  "goalTitle": "Obiettivo questa settimana",
+  "goalAccept": "Accetto la sfida 💪",
+  "close": "Chiudi"
+},
+"forge": {
+  "title": "La Fucina",
+  "intentionLabel": "La tua intenzione",
+  "titleDone": "Fucina completata 🔥",
+  "subtitle": "Dimostra di essere pronto — 3 giorni, 3 impegni",
+  "subtitleDone": "Ricompensa in attesa di accettazione",
+  "step1": {
+    "label": "Fissa l'intenzione",
+    "labelShort": "Intenzione",
+    "desc": "Perché vuoi portare avanti questa sfida?",
+    "modal": {
+      "title": "Fissa la tua intenzione",
+      "subtitle": "Perché vuoi portare avanti questa sfida?",
+      "placeholder": "Es.: Per dimostrarmi che posso resistere 30 giorni...",
+      "cta": "Conferma"
+    }
+  },
+  "step2": {
+    "label": "Segna la tua sfida",
+    "labelShort": "Check-in",
+    "desc": "Check-in di oggi fatto?"
+  },
+  "step3": {
+    "label": "Sollecita il tuo partner",
+    "labelShort": "Ricorda",
+    "desc": "Un promemoria al tuo futuro duo."
+  },
+  "stepDone": "Completato ✓",
+  "stepLocked": "Disponibile al giorno {{n}}",
+  "go": "Vai",
+  "rewardFull": "10 trofei + badge \"Forgiato\" in attesa di accettazione",
+  "rewardPartial": "{{trophies}} trofei in attesa",
+  "rewardTitle": "Ricompensa della Fucina!",
+  "rewardBadgeTitle": "Badge \"Forgiato\" sbloccato! 🔥",
+  "rewardMsg": "+{{trophies}} trofei",
+  "reminderSentTitle": "Promemoria inviato 👊",
+  "reminderSentBody": "Il tuo futuro partner ha ricevuto un promemoria."
+},
 "getInspired": "Lasciati ispirare",
   "tipsAndTricks": "Suggerimenti & trucchi",
   "leaderboardTitle": "Classifica",
@@ -2042,7 +2185,8 @@
     "tab": {
       "region": "Regionale",
       "national": "Nazionale",
-      "global": "Globale"
+      "global": "Globale",
+      "weekly": "Questa settimana"
     },
     "listLabel": "Elenco dei giocatori classificati",
     "noPlayers": "Nessun giocatore disponibile per questa classifica."
@@ -4694,45 +4838,13 @@
   "footerLine2": "Sfide, focus e vittorie quotidiane."
 },
 "duoMoment": {
-  "leader": "Leader",
-  "badgeSync": "SYNC",
-  "badgeTurn": "TOCCA A LUI",
-  "stateSync": "In sync",
-  "stateTurn": "Tocca a lui",
-  "subtitleSync": "Siete allineati. Restate in sync.",
-  "subtitleTurn": "Hai segnato. Ora tocca al tuo partner.",
-  "fallbackSync": "Perfetto — siete in sync.",
-  "fallbackTurn": "Check inviato a {{name}}. Ora tocca a lui.",
-  "a11y": {
-    "closeBackdrop": "Chiudi finestra",
-    "closeButton": "Chiudi"
-  },
-  "kicker": "MOMENTO DUO",
-  "you": "Tu",
-  "pressureMessages": [
-    "⚡ Ora tocca a {{name}}.",
-    "🔥 Check fatto — {{name}}, rispondi adesso.",
-    "🎯 Punto tuo. {{name}} deve seguire.",
-    "🚀 Hai preso vantaggio. {{name}} deve tenere il passo.",
-    "💥 Tu dai il ritmo — {{name}} si allinea.",
-    "🏁 Sprint duo: {{name}} è il prossimo.",
-    "📈 Progresso confermato — {{name}} deve sincronizzarsi.",
-    "🧨 Bel colpo — turno di {{name}}.",
-    "⚔️ Duello acceso — {{name}}, a te.",
-    "🔔 A {{name}} arriva la notifica."
-  ],
-  "syncMessages": [
-    "🤝 Perfetto — siete in sync.",
-    "💎 Duo solido oggi.",
-    "🏆 Giornata validata da entrambi.",
-    "⚖️ Equilibrio perfetto.",
-    "🔥 Ritmo tenuto insieme.",
-    "🎯 Sincronizzazione impeccabile.",
-    "🚀 Duo in piena trazione.",
-    "🧱 Disciplina condivisa — rispetto.",
-    "✨ Coordinazione perfetta.",
-    "🔒 Serie protetta insieme."
-  ]
+  "kicker": "MOMENTO DUO", "badgeSync": "SYNC", "badgeTurn": "A LUI",
+      "stateSync": "Sincro", "stateTurn": "A lui", "you": "Tu", "leader": "Leader",
+      "fallbackSync": "Perfetto — siete sincronizzati.", "fallbackTurn": "Check inviato a {{name}}. Ora tocca a lui.",
+      "subtitleSync": "Siete allineati. Rimanete sincronizzati.", "subtitleTurn": "Hai fatto il check-in. Il tuo partner è il prossimo.",
+      "syncMessages": ["Siete sincronizzati. Ecco perché il Duo funziona.", "Stesso giorno. Stesso ritmo. Tenete insieme.", "Entrambi hanno fatto il check-in. Nessuno molla.", "Sincronizzazione perfetta. Più forte della motivazione solo.", "Allo stesso ritmo. Continuate così.", "Duo attivo. Duo solido. È tutto ciò che serve."],
+      "pressureMessages": ["{{name}} ti vede. Non mollare ora.", "Check inviato. Tocca a {{name}}.", "Hai tenuto. {{name}} vede che sei serio.", "Spuntato. {{name}} sa che lo intendi.", "Stai avanzando. {{name}} deve fare lo stesso.", "Spuntato. Il tuo duo riceverà una notifica. 👀"],
+      "a11y": { "closeBackdrop": "Chiudi finestra", "closeButton": "Chiudi" }
 },
 "exploits": {
   "title": "IMPRESE",

@@ -264,51 +264,51 @@
     }
   },
   "newFeatures": {
-    "deadlineIso": "2026-02-28T23:59:59+01:00",
-    "byTpl": "由 {{username}}",
-    "unknown": "匿名",
-    "proposeIdea": "提出一个想法",
-    "shareLabel": "分享",
-
-    "monthLabelTpl": "更新 • {{month}}",
-    "months": {
-      "01": "一月",
-      "02": "二月",
-      "03": "三月",
-      "04": "四月",
-      "05": "五月",
-      "06": "六月",
-      "07": "七月",
-      "08": "八月",
-      "09": "九月",
-      "10": "十月",
-      "11": "十一月",
-      "12": "十二月"
-    },
-
-    "title": "最新动态",
-    "description": "为下一个功能投票或提出你的想法。结果将在二月底公布。",
-
-    "heroTitle": "为三月底即将推出的更新投票 🚀",
-    "heroSubtitle": "你的声音很重要：提出、投票并追踪功能进展。",
-
-    "voteCloses": "投票结束倒计时",
-    "thankYouShort": "感谢你的投票 💜",
-
-    "countdown": {
-      "days": "天",
-      "hours": "小时",
-      "mins": "分钟",
-      "secs": "秒",
-      "abbr": { "d": "天", "h": "时", "m": "分", "s": "秒" }
-    },
-
-    "share": {
-      "kicker": "快来投票！",
-      "footerWithDays": "投票将于 {{days}} 天后结束 — 你的声音很重要 ✨",
-      "footer": "投票即将结束 — 你的声音很重要 ✨"
-    }
+  "deadlineIso": "2026-04-30T23:59:59+02:00",
+  "byTpl": "由 {{username}}",
+  "unknown": "匿名",
+  "proposeIdea": "提出建议",
+  "shareLabel": "分享",
+  "monthLabelTpl": "更新 • {{month}}",
+  "months": {
+    "01": "一月", "02": "二月", "03": "三月", "04": "四月",
+    "05": "五月", "06": "六月", "07": "七月", "08": "八月",
+    "09": "九月", "10": "十月", "11": "十一月", "12": "十二月"
   },
+  "title": "新功能",
+  "description": "为下一个功能投票或提出你的建议。结果在四月底公布。",
+  "heroTitle": "为即将推出的功能投票",
+  "heroSubtitle": "你的声音塑造应用。每月一票，真实影响力。",
+  "voteCloses": "投票结束于",
+  "thankYouShort": "感谢你的投票 💜",
+  "countdown": {
+    "days": "天", "hours": "小时", "mins": "分钟", "secs": "秒",
+    "abbr": { "d": "天", "h": "时", "m": "分", "s": "秒" }
+  },
+  "share": {
+    "kicker": "来投票吧！",
+    "footerWithDays": "投票将在 {{days}} 天后结束 — 你的声音很重要 ✨",
+    "footer": "投票即将结束 — 你的声音很重要 ✨"
+  },
+  "loading": "加载中...",
+  "noFeatures": "暂无提案。",
+  "featuresTitle": "提案",
+  "vote": "投票",
+  "voted": "已投票 ✓",
+  "alreadyVotedShort": "已投票",
+  "alreadyVotedMessage": "你本月已投票。",
+  "loginRequiredMessage": "登录后投票。",
+  "voteRegisteredMessage": "你的投票已记录 🎉",
+  "voteErrorMessage": "投票出错，请重试。",
+  "proposalSentMessage": "你的提案已发送 🎉",
+  "proposalErrorMessage": "发送出错，请重试。",
+  "noVotesYet": "暂无投票。",
+  "openExplanation": "如何运作？",
+  "shareDialogTitle": "分享此功能",
+  "countdownTitleMars": "投票开放至3月31日",
+  "countdownTitleAvril": "投票开放至4月30日",
+  "footerMicro": "最佳创意每月集成。"
+},
   "invite": {
       "bootTitle": "正在准备邀请…",
       "bootSubtitle": "请不要关闭应用，我们正在设置挑战。",
@@ -372,7 +372,7 @@
   "invalidEmailFormat": "邮箱格式无效。",
   "tooManyRequests": "尝试次数过多。请稍后再试。",
   "unknownError": "发生未知错误。",
-  "emailPlaceholder": "tony.stark@example.com",
+  "emailPlaceholder": "电子邮件",
   "passwordPlaceholder": "密码",
   "hidePassword": "隐藏密码",
   "showPassword": "显示密码",
@@ -394,10 +394,10 @@
   "sendLink": "发送链接",
   "fillAllFields": "请填写所有字段。",
   "passwordsDoNotMatch": "两次输入的密码不匹配。",
-  "emailAlreadyInUse": "该邮箱已被使用。",
+  "emailAlreadyInUse":"该邮箱已注册账户，请直接登录。",
   "weakPassword": "密码过于简单。请选择更强的密码。",
   "anErrorOccurred": "发生错误。请重试。",
-  "joinUsAndChallenge": "永不独自放弃。",
+  "joinUsAndChallenge": "这次，你能不能坚持到底？",
   "yourEmail": "您的邮箱",
   "username": "用户名",
   "password": "密码",
@@ -493,31 +493,23 @@
 },
 "dailySelectedSubtitleShort": "今日精选。",
 "soloMoment": {
-    "kicker": "个人时刻",
-    "badge": "完成",
+  "badge": "CHECK ✓", "kicker": "独行时刻", "fallback": "你在前进。一天一天。",
+      "cta": "继续", "progress": "第{{day}}天/共{{total}}天", "progressLabel": "{{day}} / {{total}} 天",
+      "complete": "完成", "streak": "{{streak}} 🔥",
+      "subtitle": "又一次打卡。你在建立某样东西。", "subtitleMilestone": "里程碑达成。你已不再是开始时的那个你。",
+      "identity": {
+        "day1": "第一天。你刚刚证明了你真的开始了。", "day2": "两天。大多数人在第一天就放弃了。",
+        "day3": "第3天。你已经超越了80%的开始者。", "day7": "7天。你有了一个习惯。保护它。",
+        "day14": "到了一半。你正在成为不同的人。", "day21": "21天。神经科学说这里是巩固的时刻。",
+        "last": "最后一天。你坚持到了最后。", "early": "你正在成为一个开始并继续的人。",
+        "mid": "你到了一半。大多数人在这里放弃。你不会。", "late": "你快到终点了。你在建立的是真实的。",
+        "final": "你在履行承诺。对自己的承诺。这很难得。", "default": "你正在成为一个持续的人。"
+      },
+      "pool": ["第{{day}}天。你在履行承诺。", "打卡完成。这就是自律。", "在前进。即使小的一天也很重要。", "连续{{streak}}天。有什么在建立着。", "已打卡。今天你证明了什么。", "完成了。未来的你谢谢你。", "第{{day}}天/共{{total}}天。你没有放弃。", "又赢得了一天。这就够了。"],
+      "duoNudge": { "title": "有了伙伴，坚持时间是原来的2倍。", "sub": "现在邀请某人 →" },
+      "a11y": { "closeBackdrop": "关闭", "closeButton": "关闭", "cta": "继续" },
     "title": "第 {{day}} 天已锁定",
-    "titleMilestone": "里程碑达成 — 第 {{day}} 天",
-    "subtitle": "安静地前进，但是真的在变强。",
-    "subtitleMilestone": "这很硬核。继续。",
-    "pool": [
-      "再多 1%。改变就是这么发生的。",
-      "建立节奏。守住它。",
-      "不必完美，只要稳定。",
-      "今天你赢过了自己。",
-      "每一天都算数。今天也一样。",
-      "你正在成为说到做到的人。",
-      "现在很小，之后会很大。",
-      "一次行动。一种身份。"
-    ],
-    "fallback": "做得好。继续。",
-    "progress": "{{day}} / {{total}} 天",
-    "streak": "连胜 {{streak}}",
-    "cta": "继续",
-    "a11y": {
-      "closeBackdrop": "关闭",
-      "closeButton": "关闭",
-      "cta": "继续"
-    }
+    "titleMilestone": "里程碑达成 — 第 {{day}} 天"
   },
   "deeplink": {
       "inviteHandoff": {
@@ -547,8 +539,8 @@
   },
     "hero": {
       "brand": "ChallengeTies",
-      "headline": "今日的触发点。",
-      "sub": "一个挑战。一次点击。想坚持下去：选Duo。",
+      "headline": "这一次，你真的能坚持吗？",
+        "sub": "一个人开始，一起坚持。",
       "duoProof": "Duo 让你坚持下去。",
       "ctaShort": "开始",
       "ctaActive":"继续",
@@ -565,6 +557,9 @@
     },
     "todayHub": {
       "primaryMark": "今天打卡",
+      "duoNudge": "你的伙伴明天会看到你 →",
+       "markHint": "点击这里打卡你的挑战", 
+       "tapToOpen": "查看挑战 →",
       "ctaSub": "1次点击完成今日打卡",
 "progressLabel": "{{percent}}% 已完成",
       "badgeMark":"需要操作",
@@ -773,33 +768,52 @@
   },
   "onboarding": {
   "banner": {
-    "title": "开始行动 🔥",
-    "subtitle": "赢得 {{trophies}} 个奖杯开启旅程",
-    "subtitleProgress": "{{done}}/{{total}} · 还剩 +{{left}} 奖杯",
-    "progress": "{{done}} / {{total}} 已完成"
+    "title": "开始吧 🔥",
+        "titleDone": "新手引导完成 🎉",
+        "subtitleNew": "获得 {{trophies}} 奖杯",
+        "subtitleProgress": "{{done}}/{{total}} · 还剩 +{{left}} 奖杯",
+        "subtitleDone": "+{{trophies}} 奖杯已获得 ✓",
+        "progress": "{{done}} / {{total}} 已完成",
+    "subtitle": "赢得 {{trophies}} 个奖杯开启旅程"
   },
-  "quest": {
-    "markFirstDay": {
-      "title": "打卡第一天",
-      "desc": "打开挑战并勾选第1天"
-    },
-    "completeProfile": {
-      "title": "完善个人资料",
-      "desc": "添加头像和分类"
-    },
-    "exploreCommunity": {
-      "title": "探索社区",
-      "desc": "打开壮举页面"
-    },
-    "joinSoloChallenge": {
-      "title": "开始单人挑战",
-      "desc": "等待双人组的同时，现在就开始"
-    },
-    "viewChallenge": {
-      "title": "查看挑战",
-      "desc": "查看当前挑战"
-    }
-  }
+  "modal": {
+        "title": "你的第一批胜利 🔥",
+        "subtitle": "+{{trophies}} 奖杯待获取",
+        "subtitleDone": "全部完成 🎉",
+        "cta": "出发！ 🚀",
+        "ctaDone": "完美，继续！ 🚀",
+        "hint": "这些任务随时可从主页访问。"
+      },
+      "completion": {
+        "title": "完美开局！ 🔥",
+        "sub": "你获得了 {{trophies}} 个奖杯。接下来由你书写。"
+      },
+      "quest": {
+        "markFirstDay": {
+          "title": "标记第一天",
+          "desc": "完成今天的挑战打卡"
+        },
+        "inviteDuo": {
+          "title": "邀请朋友组队",
+          "desc": "挑战一个重要的人"
+        },
+        "claimDailyBonus": {
+          "title": "领取每日奖励",
+          "desc": "打开你的每日奖励"
+        },
+        "exploreChallenges": {
+          "title": "探索挑战",
+          "desc": "已探索 {{count}}/3"
+        },
+        "completeProfile": {
+          "title": "完善个人资料",
+          "desc": "添加头像和你的分类"
+        },
+        "maintain3DayStreak": {
+          "title": "连续3天",
+          "desc": "你的连击每天都在增长"
+        }
+      }
 },
   "addLocationHere": "添加位置",
   "addInterestsHere": "选择我的分类",
@@ -902,6 +916,35 @@
     "label": "你的身份",
     "intro": "你想让大家怎么称呼你？",
     "socialProof": "加入数百名坚持挑战的人们。"
+  }
+},
+"coachmark": {
+  "skip": "跳过",
+  "finish": "出发！ 🔥",
+  "create": {
+    "title": "创建你的挑战 ✍️",
+    "body": "100%个性化 — 你的规则，你的时长，你的节奏。",
+    "cta": "去创建！"
+  },
+  "explore": {
+    "title": "100+个挑战等你来 🧭",
+    "body": "健身、心态、效率… 探索全部挑战库。",
+    "cta": "去探索！"
+  },
+  "exploits": {
+    "title": "你的成就在等你 🏆",
+    "body": "完成的挑战、连续记录 — 全在这里。",
+    "cta": "查看成就"
+  },
+  "profile": {
+    "title": "你的档案和统计 📊",
+    "body": "奖杯、连续、排名… 一切重要信息都在你的档案里。",
+    "cta": "明白了！"
+  },
+  "bonus": {
+    "title": "每日奖励 🎁",
+    "body": "每天一个免费奖励 — 奖杯或Streak Pass。",
+    "cta": "太棒了！"
   }
 },
 "common": {
@@ -1058,7 +1101,39 @@
     "challengeNotFound": "未找到用于模拟的挑战。",
     "errorGeneric": "无法模拟连胜。"
   },
+  "firstMark": {
+    "title": "你做到了。第1天打卡完成。",
+    "subtitle": "大多数人在这里放弃了。但不是你。",
+    "badge": "第1天 ✓",
+    "bodyLine1": "明天再来，保持你的连续记录。习惯是一天一天建立起来的。",
+    "bodyLine2": "有人陪伴时，你坚持下去的可能性会提高65%%。",
+    "cta": {
+      "invite": "邀请他人",
+      "tomorrow": "明天见！",
+      "skip": "关闭"
+    }
+  },
  "firstPick": {
+  "step0": {
+      "title": "你想改变什么？",
+      "subtitle": "选择现在对你真正重要的事情。",
+      "cta": "至少选择一个类别",
+    "missingCategory": "请至少选择一个类别以继续。"
+    },
+    "category": {
+      "Fitness": "健身",
+      "Santé": "健康",
+       "Motivation": "动力",
+    "Mindset": "心态",
+      "Productivité": "效率",
+      "Education": "教育",
+      "Bien-être": "幸福感",
+      "Sport": "运动",
+      "Méditation": "冥想",
+      "Nutrition": "营养",
+      "Créativité": "创意",
+      "Social": "社交"
+    },
   "progressShort": "{{current}}/{{total}}",
   "invitePending": {
     "title": "邀请等待中",
@@ -1089,7 +1164,7 @@
     "shuffleA11y": "显示其他挑战"
   },
   "step2": {
-    "title": "单人还是双人？",
+    "title": "你要承诺坚持多少天？",
     "subtitle": "双人更容易坚持，也更难放弃。",
     "duoDesc": "双人更稳定。接着就邀请朋友。",
     "cta": "继续",
@@ -1140,8 +1215,75 @@
   "alert": {
     "missingChoiceBody": "选择一个挑战以继续。"
   }
-}
-,
+},
+"heatmap": {
+  "title": "活动记录",
+  "subtitle": "最近16周",
+  "activeDays": "活跃天数",
+  "totalMarks": "打卡次数",
+  "currentStreak": "连续天数",
+  "less": "少",
+  "more": "多",
+  "marked": "{{count}} 个挑战已打卡",
+  "noMark": "今天无挑战"
+},
+"weeklyReport": {
+  "sectionTitle": "每周报告",
+  "btnTitle": "本周报告",
+  "btnSubAvailable": "报告已就绪 — 查看我的进展",
+  "btnSubEmpty": "每周一活跃一周后可用",
+  "newBadge": "查看",
+  "noReportTitle": "暂无报告",
+  "noReportDesc": "经过一周的活动后，您的首份报告将于下周一提供。",
+  "kicker": "每周报告",
+  "title": "你的动力",
+  "activeDays": "活跃天数",
+  "trophies": "奖杯",
+  "momentum": "动力",
+  "daysOfWeek": "本周",
+  "diagTitle": "我看到的",
+  "goalTitle": "本周目标",
+  "goalAccept": "接受挑战 💪",
+  "close": "关闭"
+},
+"forge": {
+  "title": "熔炉",
+  "intentionLabel": "你的意图",
+  "titleDone": "熔炉完成 🔥",
+  "subtitle": "证明你已准备好 — 3天，3个承诺",
+  "subtitleDone": "奖励等待对方接受",
+  "step1": {
+    "label": "设定你的意图",
+    "labelShort": "意图",
+    "desc": "你为什么要坚持这个挑战？",
+    "modal": {
+      "title": "设定你的意图",
+      "subtitle": "你为什么要坚持这个挑战？",
+      "placeholder": "例如：为了证明我能坚持30天...",
+      "cta": "确认"
+    }
+  },
+  "step2": {
+    "label": "标记你的挑战",
+    "labelShort": "打卡",
+    "desc": "今天的签到完成了吗？"
+  },
+  "step3": {
+    "label": "提醒你的伙伴",
+    "labelShort": "提醒",
+    "desc": "给你未来搭档的一个提醒。"
+  },
+  "stepDone": "已完成 ✓",
+  "stepLocked": "第{{n}}天可用",
+  "go": "开始",
+  "rewardFull": "10个奖杯 + \"锻造\"徽章等待接受",
+  "rewardPartial": "{{trophies}}个奖杯待领取",
+  "rewardTitle": "熔炉奖励！",
+  "rewardBadgeTitle": "\"锻造\"徽章已解锁！🔥",
+  "rewardMsg": "+{{trophies}}个奖杯",
+  "reminderSentTitle": "提醒已发送 👊",
+  "reminderSentBody": "你未来的搭档收到了提醒。"
+},
 "vsIntro": {
     "challengeAccepted":"挑战已接受"
   },
@@ -2053,7 +2195,8 @@
     "tab": {
       "region": "地区",
       "national": "全国",
-      "global": "全球"
+      "global": "全球",
+      "weekly": "本周"
     },
     "listLabel": "排名玩家列表",
     "noPlayers": "此排行榜暂无玩家。"
@@ -4698,45 +4841,13 @@
   "footerLine2": "挑战、专注、每日胜利。"
 },
 "duoMoment": {
-  "leader": "领先",
-  "badgeSync": "同步",
-  "badgeTurn": "轮到TA",
-  "stateSync": "已同步",
-  "stateTurn": "TA的回合",
-  "subtitleSync": "你们步调一致。保持同步。",
-  "subtitleTurn": "你已打卡。接下来轮到你的伙伴。",
-  "fallbackSync": "完美——你们已同步。",
-  "fallbackTurn": "已发送给 {{name}}。现在轮到TA。",
-  "a11y": {
-    "closeBackdrop": "关闭窗口",
-    "closeButton": "关闭"
-  },
-  "kicker": "双人时刻",
-  "you": "你",
-  "pressureMessages": [
-    "⚡ 轮到 {{name}} 了。",
-    "🔥 你已打卡——{{name}}，该你了。",
-    "🎯 你先下一城。{{name}} 需要跟上。",
-    "🚀 你已领先。{{name}} 必须追上。",
-    "💥 你定节奏——{{name}} 跟上。",
-    "🏁 双人冲刺：{{name}} 下一位。",
-    "📈 进度已确认——{{name}} 需要同步。",
-    "🧨 漂亮——轮到 {{name}}。",
-    "⚔️ 对决开启——{{name}}，到你。",
-    "🔔 {{name}} 马上会看到。"
-  ],
-  "syncMessages": [
-    "🤝 完美——你们已同步。",
-    "💎 今天的组合很稳。",
-    "🏆 双方都已完成打卡。",
-    "⚖️ 节奏刚刚好。",
-    "🔥 一起把节奏守住了。",
-    "🎯 同步得很漂亮。",
-    "🚀 组合状态正起飞。",
-    "🧱 共同自律——respect。",
-    "✨ 配合到位。",
-    "🔒 连续记录一起守住。"
-  ]
+  "kicker": "双人时刻", "badgeSync": "同步", "badgeTurn": "轮到他了",
+      "stateSync": "同步", "stateTurn": "轮到他了", "you": "你", "leader": "领先",
+      "fallbackSync": "完美 — 你们同步了。", "fallbackTurn": "已发送打卡给{{name}}。现在轮到他了。",
+      "subtitleSync": "你们对齐了。保持同步。", "subtitleTurn": "你已打卡。你的伙伴是下一个。",
+      "syncMessages": ["你们同步了。这就是Duo有效的原因。", "同一天。同一节奏。你们一起坚持。", "两人都打卡了。没有人放弃。", "完美同步。比单人动力更强。", "同样的节奏。继续。", "Duo活跃。Duo稳固。这就够了。"],
+      "pressureMessages": ["{{name}}看到你了。现在别放弃。", "已发送打卡。轮到{{name}}了。", "你坚持了。{{name}}看到你是认真的。", "已打卡。{{name}}知道你是认真的。", "你在前进。{{name}}也必须这样做。", "已打卡。你的Duo将收到通知。👀"],
+      "a11y": { "closeBackdrop": "关闭窗口", "closeButton": "关闭" }
 },
 "exploits": {
   "title": "壮举",

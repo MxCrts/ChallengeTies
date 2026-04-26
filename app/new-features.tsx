@@ -63,6 +63,7 @@ import { FeatureShareCard } from "@/components/ShareCards";
 import { checkForAchievements } from "../helpers/trophiesHelpers";
 import { incStat } from "@/src/services/metricsService";
 import { useToast } from "@/src/ui/Toast";
+import { translateFeature } from "../services/translationService";
 
 // ─── Constants ───────────────────────────────────────────────────────────────
 const { width: SW } = Dimensions.get("window");
@@ -454,11 +455,37 @@ export default function NewFeatures() {
     }, () => setLoading(false));
   }, [user?.uid]);
 
+  // ── Traduit les features ──────────────────────────────────────────────────
+  const translatingFeaturesRef = React.useRef<Set<string>>(new Set());
+  const [featureTranslations, setFeatureTranslations] = React.useState<Record<string, { title?: string; description?: string }>>({});
+
+  useEffect(() => {
+    if (!features.length) return;
+    const lang = i18n.language;
+
+    features.forEach(async (f) => {
+      const key = `${f.id}:${lang}`;
+      if (translatingFeaturesRef.current.has(key)) return;
+      translatingFeaturesRef.current.add(key);
+
+      const result = await translateFeature(f.id, lang);
+      if (!result) {
+        translatingFeaturesRef.current.delete(key);
+        return;
+      }
+
+      setFeatureTranslations(prev => ({
+        ...prev,
+        [key]: { title: result.title, description: result.description },
+      }));
+    });
+  }, [features, i18n.language]);
+
   // ── Countdown — deadline 31 mars 2026 ──
   // ⚠️ On hardcode la date directement pour éviter que les clés i18n
   //    (qui contiennent encore l'ancienne valeur février) remettent le compteur à zéro.
   useEffect(() => {
-    const DEADLINE = new Date("2026-03-31T23:59:59+02:00");
+    const DEADLINE = new Date("2026-04-30T23:59:59+02:00");
     const tick = () => {
       const diff = DEADLINE.getTime() - Date.now();
       if (diff <= 0) { setCountdown({ days: 0, hours: 0, mins: 0, secs: 0 }); return; }
@@ -478,7 +505,7 @@ export default function NewFeatures() {
   // ⚠️ Construit directement sans passer par deadlineIso i18n
   //    pour éviter que les vieilles clés de traduction affichent encore "Février".
   const monthLabel = useMemo(() => {
-    const name = t("newFeatures.months.03", { defaultValue: "Mars" });
+    const name = t("newFeatures.months.04", { defaultValue: "Avril" });
     return t("newFeatures.monthLabelTpl", { month: name, defaultValue: `Mise à jour • ${name}` });
   }, [t, i18n.language]);
 
@@ -556,15 +583,23 @@ export default function NewFeatures() {
   }, [t, shareFeatureCard]);
 
   // ── Render item ──
-  const renderItem = useCallback(({ item, index }: { item: Feature; index: number }) => (
+  const renderItem = useCallback(({ item, index }: { item: Feature; index: number }) => {
+    const lang = i18n.language;
+    const translated = featureTranslations[`${item.id}:${lang}`];
+    const displayItem = translated
+      ? { ...item, title: translated.title || item.title, description: translated.description || item.description }
+      : item;
+
+    return (
     <FeatureCard
-      item={item} index={index} isDark={isDark} userVote={userVote}
+      item={displayItem} index={index} isDark={isDark} userVote={userVote}
       t={t} currentTheme={currentTheme}
       onPress={() => { setSelectedFeature(item); setShowFeatureDetailModal(true); }}
       onVote={() => { if (!userVote) handleVote(item.id); }}
       onShare={() => handleShareFeature(item)}
     />
-  ), [isDark, userVote, t, currentTheme, handleVote, handleShareFeature]);
+    );
+  }, [isDark, userVote, t, currentTheme, handleVote, handleShareFeature, featureTranslations, i18n.language]);
 
   // ── Loading screen ──
   if (loading) {
@@ -696,7 +731,7 @@ export default function NewFeatures() {
                   {/* ⚠️ On bypass la clé i18n countdownTitle qui contient encore "fin février"
                       et on affiche directement la string à jour "31 mars" */}
                   <Text style={[s.countdownLabel, { color: isDark ? "rgba(226,232,240,0.75)" : "rgba(15,23,42,0.65)" }]} numberOfLines={1}>
-                    {t("newFeatures.countdownTitleMars", { defaultValue: "Vote ouvert jusqu'au 31 mars" })}
+                    {t("newFeatures.countdownTitleAvril", { defaultValue: "Vote ouvert jusqu'au 30 avril" })}
                   </Text>
                 </View>
                 <View style={s.countdownRow}>

@@ -305,51 +305,51 @@
     }
   },
   "newFeatures": {
-    "deadlineIso": "2026-02-28T23:59:59+01:00",
-    "byTpl": "door {{username}}",
-    "unknown": "Anoniem",
-    "proposeIdea": "Een idee voorstellen",
-    "shareLabel": "Delen",
-
-    "monthLabelTpl": "Update • {{month}}",
-    "months": {
-      "01": "Januari",
-      "02": "Februari",
-      "03": "Maart",
-      "04": "April",
-      "05": "Mei",
-      "06": "Juni",
-      "07": "Juli",
-      "08": "Augustus",
-      "09": "September",
-      "10": "Oktober",
-      "11": "November",
-      "12": "December"
-    },
-
-    "title": "Wat is er nieuw",
-    "description": "Stem op de volgende functie of stel de jouwe voor. Resultaten eind februari.",
-
-    "heroTitle": "Stem op de updates die eind maart komen 🚀",
-    "heroSubtitle": "Jouw stem telt: stel voor, stem en volg de ontwikkeling van features.",
-
-    "voteCloses": "Stemmen sluit over",
-    "thankYouShort": "Bedankt voor je stem 💜",
-
-    "countdown": {
-      "days": "Dagen",
-      "hours": "Uren",
-      "mins": "Minuten",
-      "secs": "Seconden",
-      "abbr": { "d": "d", "h": "u", "m": "min", "s": "s" }
-    },
-
-    "share": {
-      "kicker": "Kom stemmen!",
-      "footerWithDays": "Stemmen sluit over {{days}} dagen — jouw stem telt ✨",
-      "footer": "Stemmen sluit binnenkort — jouw stem telt ✨"
-    }
+  "deadlineIso": "2026-04-30T23:59:59+02:00",
+  "byTpl": "door {{username}}",
+  "unknown": "Anoniem",
+  "proposeIdea": "Een idee voorstellen",
+  "shareLabel": "Delen",
+  "monthLabelTpl": "Update • {{month}}",
+  "months": {
+    "01": "Januari", "02": "Februari", "03": "Maart", "04": "April",
+    "05": "Mei", "06": "Juni", "07": "Juli", "08": "Augustus",
+    "09": "September", "10": "Oktober", "11": "November", "12": "December"
   },
+  "title": "Wat is er nieuw",
+  "description": "Stem op de volgende functie of stel je eigen voor. Resultaten eind april.",
+  "heroTitle": "Stem op komende functies",
+  "heroSubtitle": "Jouw stem vormt de app. Één stem per maand, echte invloed.",
+  "voteCloses": "Stemming sluit over",
+  "thankYouShort": "Bedankt voor je stem 💜",
+  "countdown": {
+    "days": "DAGEN", "hours": "UREN", "mins": "MINUTEN", "secs": "SECONDEN",
+    "abbr": { "d": "d", "h": "u", "m": "min", "s": "s" }
+  },
+  "share": {
+    "kicker": "Kom stemmen!",
+    "footerWithDays": "Stemming sluit over {{days}} dagen — jouw stem telt ✨",
+    "footer": "Stemming sluit binnenkort — jouw stem telt ✨"
+  },
+  "loading": "Laden...",
+  "noFeatures": "Nog geen voorstellen.",
+  "featuresTitle": "Voorstellen",
+  "vote": "Stemmen",
+  "voted": "Gestemd ✓",
+  "alreadyVotedShort": "Al gestemd",
+  "alreadyVotedMessage": "Je hebt al gestemd deze maand.",
+  "loginRequiredMessage": "Log in om te stemmen.",
+  "voteRegisteredMessage": "Je stem is geregistreerd 🎉",
+  "voteErrorMessage": "Fout bij stemmen. Probeer opnieuw.",
+  "proposalSentMessage": "Je voorstel is verzonden 🎉",
+  "proposalErrorMessage": "Fout bij verzenden. Probeer opnieuw.",
+  "noVotesYet": "Nog geen stemmen.",
+  "openExplanation": "Hoe werkt het?",
+  "shareDialogTitle": "Deze functie delen",
+  "countdownTitleMars": "Stemming open tot 31 maart",
+  "countdownTitleAvril": "Stemming open tot 30 april",
+  "footerMicro": "De beste ideeën worden elke maand geïntegreerd."
+},
   "invite": {
       "bootTitle": "Uitnodiging voorbereiden…",
       "bootSubtitle": "Sluit de app niet, we stellen de uitdaging in.",
@@ -393,7 +393,7 @@
   "invalidEmailFormat": "Ongeldig e-mailformaat.",
   "tooManyRequests": "Te veel pogingen. Probeer het later opnieuw.",
   "unknownError": "Er is een onbekende fout opgetreden.",
-  "emailPlaceholder": "tony.stark@example.com",
+  "emailPlaceholder": "E-mailadres",
   "passwordPlaceholder": "Wachtwoord",
   "hidePassword": "Wachtwoord verbergen",
   "showPassword": "Wachtwoord tonen",
@@ -427,15 +427,43 @@
     "inviteNow": "Vriend uitnodigen",
     "button": "Begrepen"
   },
-
+"coachmark": {
+  "skip": "Overslaan",
+  "finish": "We gaan! 🔥",
+  "create": {
+    "title": "Maak je eigen uitdaging ✍️",
+    "body": "100% op maat — jouw regel, jouw duur, jouw tempo.",
+    "cta": "Aanmaken!"
+  },
+  "explore": {
+    "title": "100+ uitdagingen wachten 🧭",
+    "body": "Fitness, mindset, productiviteit… Verken de hele bibliotheek.",
+    "cta": "Verkennen!"
+  },
+  "exploits": {
+    "title": "Jouw prestaties wachten 🏆",
+    "body": "Voltooide uitdagingen, reeksen — alles hier.",
+    "cta": "Mijn prestaties"
+  },
+  "profile": {
+    "title": "Jouw profiel & stats 📊",
+    "body": "Trofeeën, reeksen, ranglijst… Alles in jouw profiel.",
+    "cta": "Begrepen!"
+  },
+  "bonus": {
+    "title": "Dagelijkse bonus 🎁",
+    "body": "Elke dag een gratis beloning — trofeeën of Streak Pass.",
+    "cta": "Top!"
+  }
+},
   "charsRemaining_one": "{{count}} teken resterend",
   "charsRemaining_other": "{{count}} tekens resterend",
   "fillAllFields": "Vul alle velden in.",
   "passwordsDoNotMatch": "Wachtwoorden komen niet overeen.",
-  "emailAlreadyInUse": "Dit e-mailadres wordt al gebruikt.",
+  "emailAlreadyInUse": "Er bestaat al een account met dit e-mailadres. Log in.",
   "weakPassword": "Wachtwoord te zwak. Kies een sterker wachtwoord.",
   "anErrorOccurred": "Er is een fout opgetreden. Probeer het opnieuw.",
-  "joinUsAndChallenge": "Geef nooit alleen op.",
+  "joinUsAndChallenge": "Wat als je het dit keer écht volhoudt?",
   "yourEmail": "Je e-mailadres",
   "username": "Gebruikersnaam",
   "password": "Wachtwoord",
@@ -1447,32 +1475,51 @@
 "onboarding": {
   "banner": {
     "title": "Begin nu 🔥",
-    "subtitle": "Verdien {{trophies}} trofeeën om te starten",
-    "subtitleProgress": "{{done}}/{{total}} · +{{left}} trofeeën over",
-    "progress": "{{done}} / {{total}} voltooid"
+        "titleDone": "Onboarding voltooid 🎉",
+        "subtitleNew": "Verdien {{trophies}} trofeeën",
+        "subtitleProgress": "{{done}}/{{total}} · +{{left}} trofeeën over",
+        "subtitleDone": "+{{trophies}} trofeeën verdiend ✓",
+        "progress": "{{done}} / {{total}} voltooid",
+    "subtitle": "Verdien {{trophies}} trofeeën om te starten"
   },
-  "quest": {
-    "markFirstDay": {
-      "title": "Markeer je eerste dag",
-      "desc": "Open je uitdaging en vink dag 1 aan"
-    },
-    "completeProfile": {
-      "title": "Voltooi je profiel",
-      "desc": "Voeg foto en categorieën toe"
-    },
-    "exploreCommunity": {
-      "title": "Verken de community",
-      "desc": "Open de Heldendaden-pagina"
-    },
-    "joinSoloChallenge": {
-      "title": "Start een solo-uitdaging",
-      "desc": "Wacht niet op je duo, begin nu"
-    },
-    "viewChallenge": {
-      "title": "Bekijk je uitdaging",
-      "desc": "Controleer je huidige uitdaging"
-    }
-  }
+  "modal": {
+        "title": "Jouw eerste overwinningen 🔥",
+        "subtitle": "+{{trophies}} trofeeën te verdienen",
+        "subtitleDone": "Allemaal voltooid 🎉",
+        "cta": "We gaan! 🚀",
+        "ctaDone": "Perfect, verder! 🚀",
+        "hint": "Deze missies blijven toegankelijk vanuit home."
+      },
+      "completion": {
+        "title": "Perfecte start! 🔥",
+        "sub": "Je hebt {{trophies}} trofeeën verdiend. De rest schrijf jij."
+      },
+      "quest": {
+        "markFirstDay": {
+          "title": "Eerste dag markeren",
+          "desc": "Vink je uitdaging van vandaag af"
+        },
+        "inviteDuo": {
+          "title": "Vriend uitnodigen in Duo",
+          "desc": "Daag iemand uit die telt"
+        },
+        "claimDailyBonus": {
+          "title": "Bonus ophalen",
+          "desc": "Open je dagelijkse beloning"
+        },
+        "exploreChallenges": {
+          "title": "Uitdagingen verkennen",
+          "desc": "{{count}}/3 verkend"
+        },
+        "completeProfile": {
+          "title": "Profiel aanvullen",
+          "desc": "Voeg een foto en je categorieën toe"
+        },
+        "maintain3DayStreak": {
+          "title": "3 dagen op rij",
+          "desc": "Je streak groeit elke dag"
+        }
+      }
 },
   "addLocationHere": "Voeg een locatie toe",
   "addInterestsHere": "Mijn categorieën kiezen",
@@ -1622,7 +1669,8 @@
     "tab": {
       "region": "Regionaal",
       "national": "Nationaal",
-      "global": "Globaal"
+      "global": "Globaal",
+      "weekly": "Deze week"
     },
     "listLabel": "Lijst van gerangschikte spelers",
     "noPlayers": "Geen spelers beschikbaar voor dit klassement."
@@ -2457,45 +2505,13 @@
   "errorLoadingSavedChallenges": "Opgeslagen challenges kunnen niet worden geladen: {{message}}",
   "rateUs": "Beoordeel de app",
 "duoMoment": {
-  "leader": "Leader",
-  "badgeSync": "SYNC",
-  "badgeTurn": "ZIJN BEURT",
-  "stateSync": "Synchroon",
-  "stateTurn": "Zijn beurt",
-  "subtitleSync": "Jullie lopen gelijk. Blijf synchroon.",
-  "subtitleTurn": "Jij hebt afgevinkt. Nu is je partner aan de beurt.",
-  "fallbackSync": "Perfect — jullie zijn synchroon.",
-  "fallbackTurn": "Check verstuurd naar {{name}}. Nu is hij/zij aan de beurt.",
-  "a11y": {
-    "closeBackdrop": "Venster sluiten",
-    "closeButton": "Sluiten"
-  },
-  "kicker": "DUO-MOMENT",
-  "you": "Jij",
-  "pressureMessages": [
-    "⚡ {{name}} is nu aan zet.",
-    "🔥 Jij hebt gecheckt — {{name}}, nu jij.",
-    "🎯 Punt gemaakt. {{name}} moet volgen.",
-    "🚀 Voorsprong gepakt. {{name}} moet bijblijven.",
-    "💥 Jij bepaalt het tempo — {{name}} volgt.",
-    "🏁 Duo-sprint: {{name}} is next.",
-    "📈 Voortgang bevestigd — {{name}} moet syncen.",
-    "🧨 Goede move — {{name}} is aan de beurt.",
-    "⚔️ Duel aan — {{name}}, jouw zet.",
-    "🔔 {{name}} krijgt het signaal."
-  ],
-  "syncMessages": [
-    "🤝 Perfect — jullie zijn synchroon.",
-    "💎 Sterke duo-dag.",
-    "🏆 Allebei gecheckt.",
-    "⚖️ Perfecte balans.",
-    "🔥 Ritme samen vastgehouden.",
-    "🎯 Strakke synchronisatie.",
-    "🚀 Duo met momentum.",
-    "🧱 Gedeelde discipline — respect.",
-    "✨ Perfecte afstemming.",
-    "🔒 Streak samen beschermd."
-  ]
+  "kicker": "DUO MOMENT", "badgeSync": "SYNC", "badgeTurn": "ZIJN BEURT",
+      "stateSync": "Synchroon", "stateTurn": "Zijn beurt", "you": "Jij", "leader": "Leider",
+      "fallbackSync": "Perfect — jullie zijn synchroon.", "fallbackTurn": "Check gestuurd naar {{name}}. Nu is hij aan de beurt.",
+      "subtitleSync": "Jullie zijn op één lijn. Blijf synchroon.", "subtitleTurn": "Je hebt ingecheckt. Je partner is de volgende.",
+      "syncMessages": ["Jullie zijn synchroon. Daarom werkt Duo.", "Zelfde dag. Zelfde ritme. Jullie houden samen vol.", "Beiden ingecheckt. Niemand geeft op.", "Perfecte sync. Sterker dan solo-motivatie.", "Hetzelfde tempo. Ga zo door.", "Duo actief. Duo solide. Dat is alles."],
+      "pressureMessages": ["{{name}} ziet je. Geef nu niet op.", "Check gestuurd. {{name}} is aan de beurt.", "Je hebt volgehouden. {{name}} ziet dat je serieus bent.", "Afgevinkt. {{name}} weet dat je het meent.", "Je maakt vooruitgang. {{name}} moet hetzelfde doen.", "Afgevinkt. Jouw duo krijgt een melding. 👀"],
+      "a11y": { "closeBackdrop": "Venster sluiten", "closeButton": "Sluiten" }
 },
 "exploits": {
   "title": "HELDENDADEN",
@@ -2629,31 +2645,24 @@
   },
   "dailySelectedSubtitleShort": "Selectie van de dag.",
   "soloMoment": {
-    "kicker": "SOLO MOMENT",
-    "badge": "Gedaan",
+    "badge": "CHECK ✓", "kicker": "SOLO MOMENT", "fallback": "Je maakt vooruitgang. Dag na dag.",
+      "cta": "Doorgaan", "progress": "Dag {{day}}/{{total}}", "progressLabel": "{{day}} / {{total}} dagen",
+      "complete": "voltooid", "streak": "{{streak}} 🔥",
+      "subtitle": "Nog een check-in. Je bouwt iets op.",
+      "subtitleMilestone": "Een mijlpaal bereikt. Je bent niet meer dezelfde als aan het begin.",
+      "identity": {
+        "day1": "Eerste dag. Je hebt bewezen dat je echt begint.", "day2": "Twee dagen. De meeste mensen stoppen bij de eerste.",
+        "day3": "Dag 3. Je hebt al 80% van de starters ingehaald.", "day7": "7 dagen. Je hebt een gewoonte. Bescherm die.",
+        "day14": "Halverwege. Je wordt iemand anders.", "day21": "21 dagen. De neurowetenschappen zeggen dat het hier beklijft.",
+        "last": "Laatste dag. Je hebt volgehouden. Tot het einde.", "early": "Je wordt iemand die begint en doorgaat.",
+        "mid": "Je bent halverwege. Hier geven de meesten het op. Jij niet.", "late": "Je bent bijna bij de finish. Wat je opbouwt is echt.",
+        "final": "Je houdt je belofte. Aan jezelf. Dat is zeldzaam.", "default": "Je wordt consistent."
+      },
+      "pool": ["Dag {{day}}. Je houdt je belofte.", "Check-in gedaan. Zo ziet discipline eruit.", "Je maakt vooruitgang. Ook kleine dagen tellen.", "{{streak}} dagen op rij. Er wordt iets gebouwd.", "Afgevinkt. Je hebt vandaag iets bewezen.", "Klaar. Je toekomstige zelf bedankt je.", "Dag {{day}} van {{total}}. Je geeft niet op.", "Nog een dag gewonnen. Dat is alles wat nodig is."],
+      "duoNudge": { "title": "Met een partner houd je het 2x langer vol.", "sub": "Nodig nu iemand uit →" },
+      "a11y": { "closeBackdrop": "Sluiten", "closeButton": "Sluiten", "cta": "Doorgaan" },
     "title": "Dag {{day}} vastgezet",
-    "titleMilestone": "Mijlpaal gehaald — Dag {{day}}",
-    "subtitle": "Stille progressie. Echte progressie.",
-    "subtitleMilestone": "Dit is serieus. Ga door.",
-    "pool": [
-      "Nog 1%. Zo verandert het.",
-      "Bouw het ritme. Bewaak het.",
-      "Niet perfect. Wel consistent.",
-      "Vandaag won je van gisteren.",
-      "Elke dag telt. Deze ook.",
-      "Je wordt iemand die het afmaakt.",
-      "Klein nu. Groot straks.",
-      "Eén actie. Eén identiteit."
-    ],
-    "fallback": "Sterk. Ga door.",
-    "progress": "{{day}} / {{total}} dagen",
-    "streak": "Streak {{streak}}",
-    "cta": "Doorgaan",
-    "a11y": {
-      "closeBackdrop": "Sluiten",
-      "closeButton": "Sluiten",
-      "cta": "Doorgaan"
-    }
+    "titleMilestone": "Mijlpaal gehaald — Dag {{day}}"
   },
   "deeplink": {
       "inviteHandoff": {
@@ -2675,8 +2684,8 @@
   },
     "hero": {
       "brand": "ChallengeTies",
-      "headline": "De vonk van vandaag.",
-      "sub": "Eén uitdaging. Eén tik. Wil je volhouden: ga Duo.",
+      "headline": "En als je het deze keer wel volhoudt?",
+        "sub": "Alleen begin je. Samen houd je vol.",
       "duoProof": "Duo helpt je vol te houden.",
       "ctaShort": "Beginnen",
       "ctaActive":"Doorgaan",
@@ -2693,6 +2702,9 @@
     },
     "todayHub": {
       "primaryMark": "Vandaag afvinken",
+      "duoNudge": "Je partner ziet je morgen →", 
+      "markHint": "Tik hier om je uitdaging af te vinken", 
+      "tapToOpen": "Uitdaging bekijken →",
       "ctaSub": "1 tik om je dag te valideren",
 "progressLabel": "{{percent}}% voltooid",
       "badgeMark":"Actie vereist",
@@ -5046,7 +5058,39 @@
     "challengeNotFound": "Uitdaging niet gevonden voor simulatie.",
     "errorGeneric": "Kan de reeks niet simuleren."
   },
+  "firstMark": {
+    "title": "Je hebt het gedaan. Dag 1 afgevinkt.",
+    "subtitle": "Hier haken de meesten af. Jij niet.",
+    "badge": "Dag 1 ✓",
+    "bodyLine1": "Kom morgen terug om je reeks levend te houden. Gewoontes bouw je dag voor dag.",
+    "bodyLine2": "Met iemand naast je heb je 65 % meer kans om vol te houden.",
+    "cta": {
+      "invite": "Iemand uitnodigen",
+      "tomorrow": "Tot morgen!",
+      "skip": "Sluiten"
+    }
+  },
   "firstPick": {
+    "step0": {
+      "title": "Wat wil je veranderen?",
+      "subtitle": "Kies wat er nu echt toe doet voor jou.",
+      "cta": "Kies minstens één categorie",
+    "missingCategory": "Kies minstens één categorie om verder te gaan."
+    },
+    "category": {
+      "Fitness": "Fitness",
+      "Santé": "Gezondheid",
+      "Productivité": "Productiviteit",
+      "Motivation": "Motivatie",
+    "Mindset": "Mindset",
+      "Education": "Onderwijs",
+      "Bien-être": "Welzijn",
+      "Sport": "Sport",
+      "Méditation": "Meditatie",
+      "Nutrition": "Voeding",
+      "Créativité": "Creativiteit",
+      "Social": "Sociaal"
+    },
     "progressShort": "{{current}}/{{total}}",
     "invitePending": {
     "title": "Uitnodiging in afwachting",
@@ -5077,7 +5121,7 @@
     "shuffleA11y": "Andere challenges tonen"
   },
   "step2": {
-    "title": "Solo of Duo?",
+    "title": "Voor hoeveel dagen zet jij je in?",
     "subtitle": "In Duo hou je het langer vol. Stoppen is moeilijker.",
     "duoDesc": "In Duo blijf je consistent. Nodig daarna meteen een vriend uit.",
     "cta": "Volg.",
@@ -5128,8 +5172,75 @@
   "alert": {
     "missingChoiceBody": "Kies een challenge om door te gaan."
   }
-}
-,
+},
+"heatmap": {
+  "title": "Activiteit",
+  "subtitle": "Laatste 16 weken",
+  "activeDays": "actieve dagen",
+  "totalMarks": "markeringen",
+  "currentStreak": "dagen op rij",
+  "less": "Minder",
+  "more": "Meer",
+  "marked": "{{count}} uitdaging(en) gemarkeerd",
+  "noMark": "Geen uitdaging deze dag"
+},
+"weeklyReport": {
+  "sectionTitle": "Weekrapport",
+  "btnTitle": "Mijn weekrapport",
+  "btnSubAvailable": "Rapport beschikbaar — bekijk mijn momentum",
+  "btnSubEmpty": "Elke maandag beschikbaar na een actieve week",
+  "newBadge": "ZIEN",
+  "noReportTitle": "Nog geen rapport",
+  "noReportDesc": "Je eerste rapport is volgende maandag beschikbaar na een week activiteit.",
+  "kicker": "Weekrapport",
+  "title": "Jouw momentum",
+  "activeDays": "actieve dagen",
+  "trophies": "trofeeën",
+  "momentum": "momentum",
+  "daysOfWeek": "Deze week",
+  "diagTitle": "Wat ik zie",
+  "goalTitle": "Doel deze week",
+  "goalAccept": "Ik ga voor de uitdaging 💪",
+  "close": "Sluiten"
+},
+"forge": {
+  "title": "De Smidse",
+  "titleDone": "Smidse voltooid 🔥",
+  "intentionLabel": "Jouw intentie",
+  "subtitle": "Bewijs dat je klaar bent — 3 dagen, 3 verplichtingen",
+  "subtitleDone": "Beloning wacht op acceptatie",
+  "step1": {
+    "label": "Stel je intentie in",
+    "labelShort": "Intentie",
+    "desc": "Waarom wil je deze uitdaging volhouden?",
+    "modal": {
+      "title": "Stel je intentie in",
+      "subtitle": "Waarom wil je deze uitdaging volhouden?",
+      "placeholder": "Bijv.: Om te bewijzen dat ik 30 dagen vol kan houden...",
+      "cta": "Bevestigen"
+    }
+  },
+  "step2": {
+    "label": "Markeer je uitdaging",
+    "labelShort": "Check-in",
+    "desc": "Check-in van vandaag gedaan?"
+  },
+  "step3": {
+    "label": "Herinner je partner",
+    "labelShort": "Herinneren",
+    "desc": "Een herinnering aan je toekomstige duo."
+  },
+  "stepDone": "Voltooid ✓",
+  "stepLocked": "Beschikbaar op dag {{n}}",
+  "go": "Go",
+  "rewardFull": "10 trofeeën + \"Gesmeed\"-badge in afwachting van acceptatie",
+  "rewardPartial": "{{trophies}} trofeeën in afwachting",
+  "rewardTitle": "Smidse-beloning!",
+  "rewardBadgeTitle": "\"Gesmeed\"-badge ontgrendeld! 🔥",
+  "rewardMsg": "+{{trophies}} trofeeën",
+  "reminderSentTitle": "Herinnering verzonden 👊",
+  "reminderSentBody": "Je toekomstige partner heeft een herinnering ontvangen."
+},
 "inventory": {
     "title": "Inventaris",
     "subtitle": "Je bonussen en streak-bescherming op één plek.",

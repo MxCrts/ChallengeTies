@@ -548,6 +548,19 @@ export async function claimAchievement(
         newAchievements: arrayRemove(achievementId),
       });
 
+      // ── Mise à jour leaderboard_weekly ────────────────────────────────────
+      const weeklyRef = doc(db, "leaderboard_weekly", userId);
+      tx.set(weeklyRef, {
+        uid: userId,
+        username: u.username || "Anonymous",
+        trophies: increment(award),
+        profileImage: u.profileImage || null,
+        country: u.country || "",
+        region: u.region || "",
+        isPioneer: !!u.isPioneer,
+        updatedAt: new Date().toISOString(),
+      }, { merge: true });
+
       return award;
     });
 

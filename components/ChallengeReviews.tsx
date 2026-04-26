@@ -33,6 +33,7 @@ import designSystem from "../theme/designSystem";
 import { LinearGradient } from "expo-linear-gradient";
 import { Ionicons } from "@expo/vector-icons";
 import { Image } from "react-native";
+import { translateReview } from "../services/translationService";
 import {
   hasReviewed,
   submitReview,
@@ -176,7 +177,7 @@ const Stars = ({
 
 /* --------------------------------- Component -------------------------------- */
 const ChallengeReviews: React.FC<Props> = ({ challengeId, selectedDays }) => {
-  const { t } = useTranslation();
+  const { t, i18n } = useTranslation();
   const { theme } = useTheme();
   const { width: W } = useWindowDimensions();
 
@@ -246,7 +247,7 @@ const ChallengeReviews: React.FC<Props> = ({ challengeId, selectedDays }) => {
 
   const [reviews, setReviews] = useState<Review[]>([]);
   const [loading, setLoading] = useState(true);
-
+const [reviewTranslations, setReviewTranslations] = useState<Record<string, string>>({});
   const [showModal, setShowModal] = useState(false);
   const [text, setText] = useState("");
   const [rating, setRating] = useState(5);
@@ -311,6 +312,28 @@ const ChallengeReviews: React.FC<Props> = ({ challengeId, selectedDays }) => {
     );
     return () => unsub();
   }, [normId, anonymousLabel]);
+
+  // ── Traduit les reviews à la lecture ─────────────────────────────────────────
+const translatingReviewsRef = useRef<Set<string>>(new Set());
+
+  useEffect(() => {
+    if (!reviews.length) return;
+    const lang = i18n.language;
+
+    reviews.forEach(async (r) => {
+      const key = `${r.id}:${lang}`;
+      if (translatingReviewsRef.current.has(key)) return;
+      translatingReviewsRef.current.add(key);
+
+      const result = await translateReview(normId, r.id, lang);
+      if (!result?.text) {
+        translatingReviewsRef.current.delete(key);
+        return;
+      }
+
+      setReviewTranslations(prev => ({ ...prev, [key]: result.text! }));
+    });
+  }, [reviews, i18n.language, normId]);
 
   /* -------------------------- Eligibility / already ------------------------- */
   useEffect(() => {
@@ -692,15 +715,15 @@ const ChallengeReviews: React.FC<Props> = ({ challengeId, selectedDays }) => {
               </View>
 
               <Text
-                style={{
-                  color: isDarkMode ? currentTheme.colors.textPrimary : "#1A0800",
-                  lineHeight: 20,
-                  opacity: isDarkMode ? 0.95 : 0.92,
-                  fontFamily: FONT.regular,
-                }}
-              >
-                {r.text}
-              </Text>
+                    style={{
+                      color: isDarkMode ? currentTheme.colors.textPrimary : "#1A0800",
+                      lineHeight: 20,
+                      opacity: isDarkMode ? 0.95 : 0.92,
+                      fontFamily: FONT.regular,
+                    }}
+                  >
+                    {reviewTranslations[`${r.id}:${i18n.language}`] || r.text}
+                  </Text>
 
               {canEditOrDelete ? (
                 <View style={[styles.row, { justifyContent: "flex-end", marginTop: 10 }]}>
@@ -1164,7 +1187,7 @@ const ChallengeReviews: React.FC<Props> = ({ challengeId, selectedDays }) => {
                       fontFamily: FONT.regular,
                     }}
                   >
-                    {r.text}
+                    {reviewTranslations[`${r.id}:${i18n.language}`] || r.text}
                   </Text>
 
                   {/* Actions */}

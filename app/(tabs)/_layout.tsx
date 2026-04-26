@@ -1,4 +1,4 @@
-import React, { useEffect, useMemo, useState } from "react";
+import React, { useEffect, useMemo, useState, useRef, useCallback } from "react";
 import { Tabs } from "expo-router";
 import { Ionicons } from "@expo/vector-icons";
 import {
@@ -224,7 +224,6 @@ const TabsLayout = () => {
   const { gate, modalVisible, closeGate } = useGateForGuest();
   const { isGuest }  = useVisitor();
   const { claimable } = useReferralStatus();
-
   const iconSize = isTablet ? n(28) : n(26);
   const flameDiameter = isTablet ? n(66) : n(60);
 
@@ -363,15 +362,19 @@ const TabsLayout = () => {
             tabBarLabel: t("profile"),
             tabBarAccessibilityLabel: t("profile"),
             tabBarIcon: ({ focused }) => (
-              <View style={styles.badgeWrap}>
-                <PillIcon
-                  name="person" focused={focused}
-                  activeColor={activeColor} inactiveColor={inactiveColor}
-                  size={iconSize} reduceMotion={!!reduceMotion} isDarkMode={isDarkMode}
-                />
-                {hasUnclaimed && <View style={styles.badgeDot} />}
-              </View>
-            ),
+  <View style={styles.badgeWrap}>
+    <PillIcon
+      name="person"
+      focused={focused}
+      activeColor={activeColor}
+      inactiveColor={inactiveColor}
+      size={iconSize}
+      reduceMotion={!!reduceMotion}
+      isDarkMode={isDarkMode}
+    />
+    {hasUnclaimed && <View style={styles.badgeDot} />}
+  </View>
+),
             tabBarButton: (props) => (
               <Pressable
                 {...props}
@@ -390,14 +393,14 @@ const TabsLayout = () => {
             tabBarTestID: "tab-focus",
             tabBarAccessibilityLabel: t("exploits", { defaultValue: "Exploits" }),
             tabBarIcon: ({ focused }) => (
-              <FlameButton
-                focused={focused}
-                theme={currentTheme}
-                isDarkMode={isDarkMode}
-                diameter={flameDiameter}
-                reduceMotion={!!reduceMotion}
-              />
-            ),
+  <FlameButton
+    focused={focused}
+    theme={currentTheme}
+    isDarkMode={isDarkMode}
+    diameter={flameDiameter}
+    reduceMotion={!!reduceMotion}
+  />
+),
             tabBarButton: (props) => (
               <Pressable
                 {...props}

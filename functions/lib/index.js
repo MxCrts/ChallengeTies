@@ -3,7 +3,7 @@ var __importDefault = (this && this.__importDefault) || function (mod) {
     return (mod && mod.__esModule) ? mod : { "default": mod };
 };
 Object.defineProperty(exports, "__esModule", { value: true });
-exports.acceptMatchingInvitation = exports.sendMatchingPush = exports.sendDuoNudge = exports.onUserActivated = exports.claimReferralMilestone = exports.invitationsOnWrite = exports.dl = void 0;
+exports.resetWeeklyLeaderboard = exports.translateContent = exports.sendWeeklyReport = exports.checkExpiredInvitations = exports.acceptMatchingInvitation = exports.sendMatchingPush = exports.sendDuoNudge = exports.onUserActivated = exports.claimReferralMilestone = exports.invitationsOnWrite = exports.dl = void 0;
 const express_1 = __importDefault(require("express"));
 const https_1 = require("firebase-functions/v2/https");
 const app_1 = require("firebase-admin/app");
@@ -284,3 +284,11 @@ var sendMatchingPush_CloudFunction_1 = require("./sendMatchingPush_CloudFunction
 Object.defineProperty(exports, "sendMatchingPush", { enumerable: true, get: function () { return sendMatchingPush_CloudFunction_1.sendMatchingPush; } });
 var acceptMatchingInvitation_CloudFunction_1 = require("./acceptMatchingInvitation_CloudFunction");
 Object.defineProperty(exports, "acceptMatchingInvitation", { enumerable: true, get: function () { return acceptMatchingInvitation_CloudFunction_1.acceptMatchingInvitation; } });
+var checkExpiredInvitations_1 = require("./checkExpiredInvitations");
+Object.defineProperty(exports, "checkExpiredInvitations", { enumerable: true, get: function () { return checkExpiredInvitations_1.checkExpiredInvitations; } });
+var sendWeeklyReport_1 = require("./sendWeeklyReport");
+Object.defineProperty(exports, "sendWeeklyReport", { enumerable: true, get: function () { return sendWeeklyReport_1.sendWeeklyReport; } });
+var translateContent_1 = require("./translateContent");
+Object.defineProperty(exports, "translateContent", { enumerable: true, get: function () { return translateContent_1.translateContent; } });
+var resetWeeklyLeaderboard_1 = require("./resetWeeklyLeaderboard");
+Object.defineProperty(exports, "resetWeeklyLeaderboard", { enumerable: true, get: function () { return resetWeeklyLeaderboard_1.resetWeeklyLeaderboard; } });

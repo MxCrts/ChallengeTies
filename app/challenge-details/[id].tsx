@@ -114,6 +114,19 @@ import { dlog } from "@/src/utils/debugLog";
 import ChoixDuoModal from "@/components/ChoixDuoModal";
 import MatchingModal from "@/components/MatchingModal";
 import useGateForGuest from "@/hooks/useGateForGuest";
+import {
+  loadForgeState,
+  initForge,
+  completeForgeStep,
+  getAvailableStep,
+  computeForgeExpired,
+  type ForgeState,
+  type ForgeStep,
+} from "../../services/ForgeService";
+import ForgeIntentionModal from "../../components/ForgeIntentionModal";
+import { translateChallenge } from "../../services/translationService";
+import { DeviceEventEmitter } from "react-native";
+import { QUEST_CHALLENGE_EXPLORED } from "@/src/hooks/useOnboardingQuests";
 
 const hapticTap = () => {
   Haptics.selectionAsync().catch(() => {});
@@ -460,6 +473,10 @@ useEffect(() => {
   // ✅ WARMUP (duo pending) — 1/jour/challenge (dans users/{uid})
 const [warmupLoading, setWarmupLoading] = useState(false);
 const [warmupDoneToday, setWarmupDoneToday] = useState(false);
+const [forgeState, setForgeState] = useState<ForgeState | null>(null);
+const [forgeAvailableStep, setForgeAvailableStep] = useState<ForgeStep | null>(null);
+const [forgeLoading, setForgeLoading] = useState(false);
+const [forgeIntentionVisible, setForgeIntentionVisible] = useState(false);
 
 const warmupDayKeyLocal = useCallback(() => {
   // clé locale stable : YYYY-MM-DD
@@ -555,19 +572,37 @@ useFocusEffect(
     );
     return () => { leaderPulse.value = 0; };
   }, [leaderPulse])
+  
+);
+
+useFocusEffect(
+  useCallback(() => {
+    DeviceEventEmitter.emit(QUEST_CHALLENGE_EXPLORED);
+  }, [])
 );
   
   const params = useLocalSearchParams<{
-    id?: string;
-    invite?: string;      // id du document d’invitation
+  id?: string;
+  invite?: string;
   days?: string;
-    title?: string;
-    category?: string;
-    openSendInvite?: string;
-    description?: string;
-    selectedDays?: string;
-    completedDays?: string;
-  }>();
+  title?: string;
+  category?: string;
+  openSendInvite?: string;
+  openChoixDuo?: string;
+  fromFirstMark?: string;
+  description?: string;
+  selectedDays?: string;
+  completedDays?: string;
+}>();
+
+useEffect(() => {
+  console.log("🧭 PARAMS challenge-details:", params);
+}, [params]);
+
+useEffect(() => {
+  console.log("🧭 openChoixDuo:", params?.openChoixDuo);
+  console.log("🧭 fromFirstMark:", params?.fromFirstMark);
+}, [params?.openChoixDuo, params?.fromFirstMark]);
 
  const autoSendInviteOnceRef = useRef(false);
   const id = params.id || "";
@@ -800,6 +835,31 @@ const isHydrating = useMemo(
    false
   );
 }, [isDuoPendingOut, duoPendingPulse]);
+
+// ─── Init Forge quand pendingOut actif ────────────────────────
+useEffect(() => {
+  if (!isDuoPendingOut || !outgoingPendingInvite?.id) {
+    setForgeState(null);
+    setForgeAvailableStep(null);
+    return;
+  }
+
+  let cancelled = false;
+  const run = async () => {
+    const state = await initForge(outgoingPendingInvite.id);
+    if (cancelled) return;
+
+    const expired = computeForgeExpired(state);
+    const updated = expired && !state.expired
+      ? { ...state, expired: true }
+      : state;
+
+    setForgeState(updated);
+    setForgeAvailableStep(getAvailableStep(updated));
+  };
+  run();
+  return () => { cancelled = true; };
+}, [isDuoPendingOut, outgoingPendingInvite?.id]);
 
 const isDisabledMark = marking || isMarkedToday(id, finalSelectedDays);
 const warmupDisabled = warmupDoneToday || warmupLoading;
@@ -1253,6 +1313,15 @@ useEffect(() => {
         })
       );
 
+      // ── Traduction lazy pour les challenges créés par users ──────────────
+      if (data.creatorId) {
+        translateChallenge(docSnap.id, i18n.language).then((result) => {
+          if (!result) return;
+          if (result.title) setRouteTitle(result.title);
+          if (result.description) setRouteDescription(result.description);
+        }).catch(() => {});
+      }
+
       setLoading(false);
     },
     (error) => {
@@ -1406,6 +1475,81 @@ const handleWarmupPress = useCallback(async () => {
   t,
   showWarmupToast,
 ]);
+
+const handleForgeStepPress = useCallback(async () => {
+  if (!forgeState || !forgeAvailableStep || !outgoingPendingInvite?.id) return;
+
+  if (forgeAvailableStep === 1) {
+    try { await Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium); } catch {}
+    setForgeIntentionVisible(true);
+    return;
+  }
+
+  if (forgeAvailableStep === 2) {
+    if (!id) return;
+    const alreadyMarked = isMarkedToday(id, finalSelectedDays);
+    if (!alreadyMarked && finalSelectedDays > 0) {
+      setForgeLoading(true);
+      try {
+        await Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
+      } catch {}
+      const res = await markToday(id, finalSelectedDays);
+      setForgeLoading(false);
+      if (!res?.success) return;
+    }
+
+    const next = await completeForgeStep(forgeState, 2);
+    setForgeState(next);
+    setForgeAvailableStep(getAvailableStep(next));
+    try { await Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success); } catch {}
+    return;
+  }
+
+  if (forgeAvailableStep === 3) {
+    setForgeLoading(true);
+    try {
+      const { scheduleNotificationAsync } = await import("expo-notifications");
+      await scheduleNotificationAsync({
+        content: {
+          title: t("forge.reminderSentTitle", { defaultValue: "Rappel envoyé 👊" }),
+          body: t("forge.reminderSentBody", {
+            defaultValue: "Ton futur partenaire a reçu un rappel.",
+          }),
+          sound: "default",
+        },
+        trigger: null,
+      });
+    } catch {}
+
+    const next = await completeForgeStep(forgeState, 3);
+    setForgeState(next);
+    setForgeAvailableStep(getAvailableStep(next));
+    setForgeLoading(false);
+    try { await Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success); } catch {}
+  }
+}, [
+  forgeState,
+  forgeAvailableStep,
+  outgoingPendingInvite?.id,
+  id,
+  finalSelectedDays,
+  isMarkedToday,
+  markToday,
+  t,
+]);
+
+const handleForgeIntentionSubmit = useCallback(async (text: string) => {
+  if (!outgoingPendingInvite?.id) return;
+  setForgeIntentionVisible(false);
+  let state = forgeState;
+  if (!state) {
+    state = await initForge(outgoingPendingInvite.id);
+  }
+  const next = await completeForgeStep(state, 1, { intentionText: text });
+  setForgeState(next);
+  setForgeAvailableStep(getAvailableStep(next));
+  try { await Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success); } catch {}
+}, [forgeState, outgoingPendingInvite?.id]);
 
 const activeSelectedDays = useMemo(() => {
   const n = Number(activeEntry?.selectedDays ?? finalSelectedDays ?? 0);
@@ -1714,6 +1858,10 @@ const {
   handleTakeChallenge,
 });
 
+useEffect(() => {
+  console.log("📦 choixDuoVisible =", choixDuoVisible);
+}, [choixDuoVisible]);
+
   const saveBusyRef = useRef(false);
   const markBusyRef = useRef(false);
   const openMomentAfterMissedRef = useRef<null | (() => void)>(null);
@@ -2003,6 +2151,88 @@ useEffect(() => {
     task?.cancel?.();
   };
 }, [params?.openSendInvite, params?.invite, router, handleInviteFriend]);
+
+const autoChoixDuoOnceRef = useRef(false);
+
+// Après le useEffect de openSendInvite :
+useEffect(() => {
+  const rawOpenChoix = (params as any)?.openChoixDuo;
+  const rawFromFirstMark = (params as any)?.fromFirstMark;
+
+  const openChoix = Array.isArray(rawOpenChoix) ? rawOpenChoix[0] : rawOpenChoix;
+  const fromFirstMark = Array.isArray(rawFromFirstMark)
+    ? rawFromFirstMark[0]
+    : rawFromFirstMark;
+
+  console.log("🔥 openChoixDuo effect fired");
+  console.log("🔥 rawOpenChoix =", rawOpenChoix);
+  console.log("🔥 openChoix =", openChoix);
+  console.log("🔥 rawFromFirstMark =", rawFromFirstMark);
+  console.log("🔥 fromFirstMark =", fromFirstMark);
+  console.log("🔥 params.invite =", params?.invite);
+  console.log("🔥 isSoloInThisChallenge =", isSoloInThisChallenge);
+  console.log("🔥 isDuo =", isDuo);
+  console.log("🔥 autoChoixDuoOnceRef.current =", autoChoixDuoOnceRef.current);
+
+  if (String(openChoix) !== "1") {
+    console.log("⛔ openChoix !== 1 -> stop");
+    return;
+  }
+
+  if (params?.invite) {
+    console.log("⛔ params.invite present -> stop");
+    return;
+  }
+
+  if (autoChoixDuoOnceRef.current) {
+    console.log("⛔ already opened once -> stop");
+    return;
+  }
+
+  autoChoixDuoOnceRef.current = true;
+  console.log("✅ autoChoixDuoOnceRef set to true");
+
+  const timeout = setTimeout(() => {
+    console.log("⏱️ timeout triggered");
+    console.log("⏱️ fromFirstMark inside timeout =", fromFirstMark);
+    console.log("⏱️ isSoloInThisChallenge inside timeout =", isSoloInThisChallenge);
+    console.log("⏱️ isDuo inside timeout =", isDuo);
+
+    if (String(fromFirstMark) === "1") {
+      console.log("✅ OPEN modal from FirstMark");
+      setConfirmResetVisible(false);
+      setChoixDuoVisible(true);
+    } else if (isSoloInThisChallenge) {
+      console.log("✅ OPEN confirm reset");
+      setConfirmResetVisible(true);
+    } else if (!isDuo) {
+      console.log("✅ OPEN ChoixDuo normal");
+      setChoixDuoVisible(true);
+    } else {
+      console.log("⛔ nothing opened");
+    }
+
+    try {
+      // @ts-ignore
+      router.setParams?.({
+        openChoixDuo: undefined,
+        fromFirstMark: undefined,
+      });
+      console.log("🧹 params cleaned AFTER open");
+    } catch (e) {
+      console.log("❌ router.setParams error", e);
+    }
+  }, 350);
+
+  return () => clearTimeout(timeout);
+}, [
+  (params as any)?.openChoixDuo,
+  (params as any)?.fromFirstMark,
+  params?.invite,
+  isSoloInThisChallenge,
+  isDuo,
+  router,
+]);
 
 const handleInviteButtonPress = useCallback(() => {
   if (isDuo) {
@@ -2474,87 +2704,313 @@ const scrollContentStyle = useMemo(
         {t("duo.pending.warmupHint")}
       </Text>
 
-      <View style={styles.duoPendingActionsV2}>
-        {/* Warmup */}
-        <Pressable
-          onPress={handleWarmupPress}
-          disabled={warmupDisabled}
-          accessibilityRole="button"
-          accessibilityLabel={t("duo.pending.warmup")}
-          accessibilityHint={t("duo.pending.warmupA11yHint")}
-          style={({ pressed }) => [
-            styles.duoPendingPrimaryBtnV2,
-            warmupDisabled && styles.duoPendingPrimaryBtnDisabledV2,
-            pressed && !warmupDisabled && { transform: [{ scale: 0.992 }], opacity: 0.96 },
-          ]}
-        >
-          <LinearGradient
-            colors={
-              warmupDisabled
-                ? (isDarkMode
-                    ? ["rgba(120,120,128,0.45)", "rgba(90,90,96,0.45)"]
-                    : ["rgba(170,170,178,0.55)", "rgba(135,135,145,0.55)"])
-                : ["#FF9F1C", "#FFD166"]
-            }
-            start={{ x: 0, y: 0 }}
-            end={{ x: 1, y: 1 }}
-            style={StyleSheet.absoluteFill}
-          />
-          <Ionicons
-            name={warmupDoneToday ? "checkmark-circle-outline" : "flash-outline"}
-            size={18}
-            color={warmupDisabled ? "rgba(255,255,255,0.92)" : "#111"}
-          />
-          <Text
-            style={[
-              styles.duoPendingPrimaryTextV2,
-              warmupDisabled && { color: "rgba(255,255,255,0.88)" },
-            ]}
-            numberOfLines={1}
-            ellipsizeMode="tail"
-          >
-            {warmupLoading
-              ? t("commonS.loading")
-              : warmupDoneToday
-                ? t("duo.pending.warmupDone")
-                : t("duo.pending.warmup")}
+      <View style={{
+  width: "100%",
+  flexDirection: "column",
+  gap: normalizeSize(6),
+  marginTop: normalizeSize(8),
+}}>
+  {forgeState ? (
+    <View style={{ width: "100%", gap: normalizeSize(6) }}>
+      {/* ── Intention sauvegardée ── */}
+      {forgeState?.intentionText ? (
+        <View style={{
+          paddingHorizontal: normalizeSize(12),
+          paddingVertical: normalizeSize(8),
+          borderRadius: normalizeSize(10),
+          backgroundColor: isDarkMode ? "rgba(249,115,22,0.07)" : "rgba(249,115,22,0.05)",
+          borderWidth: StyleSheet.hairlineWidth,
+          borderColor: "rgba(249,115,22,0.18)",
+          marginBottom: normalizeSize(4),
+        }}>
+          <Text style={{
+            fontFamily: "Comfortaa_400Regular",
+            fontSize: normalizeSize(10.5),
+            color: isDarkMode ? "rgba(255,255,255,0.50)" : "rgba(0,0,0,0.40)",
+            marginBottom: normalizeSize(2),
+            letterSpacing: 0.3,
+            textTransform: "uppercase",
+            includeFontPadding: false,
+          }}>
+            {t("forge.intentionLabel", { defaultValue: "Ton intention" })}
           </Text>
-          <Ionicons
-            name="chevron-forward"
-            size={18}
-            color={warmupDisabled ? "rgba(255,255,255,0.78)" : "#111"}
-          />
-        </Pressable>
+          <Text style={{
+            fontFamily: "Comfortaa_700Bold",
+            fontSize: normalizeSize(12),
+            color: isDarkMode ? "rgba(255,255,255,0.78)" : "rgba(0,0,0,0.70)",
+            lineHeight: normalizeSize(17),
+            includeFontPadding: false,
+          }} numberOfLines={3}>
+            "{forgeState.intentionText}"
+          </Text>
+        </View>
+      ) : null}
 
-        {/* Cancel */}
-        <Pressable
-          onPress={handleCancelPendingInvite}
-          accessibilityRole="button"
-          accessibilityLabel={t("duo.pending.cancelInvite")}
-          accessibilityHint={t("duo.pending.cancelA11yHint")}
-          style={({ pressed }) => [
-            styles.duoPendingGhostBtnV2,
-            pressed && { opacity: 0.88, transform: [{ scale: 0.992 }] },
-          ]}
-        >
-          <View style={styles.duoPendingGhostInnerV2}>
-            <Ionicons
-              name="close-outline"
-              size={18}
-              color={isDarkMode ? "rgba(255,255,255,0.86)" : "rgba(0,0,0,0.70)"}
-            />
-            <Text
-              style={[
-                styles.duoPendingGhostTextV2,
-                { color: isDarkMode ? "rgba(255,255,255,0.86)" : "rgba(0,0,0,0.70)" },
-              ]}
-              numberOfLines={1}
-            >
-              {t("duo.pending.cancelInviteShort")}
-            </Text>
-          </View>
-        </Pressable>
-      </View>
+      {([
+        {
+          n: 1 as const,
+          icon: "create-outline",
+          label: t("forge.step1.label", { defaultValue: "Pose l'intention" }),
+          desc: t("forge.step1.desc", { defaultValue: "Depuis l'accueil" }),
+        },
+        {
+          n: 2 as const,
+          icon: "checkmark-circle-outline",
+          label: t("forge.step2.label", { defaultValue: "Marque ton défi" }),
+          desc: t("forge.step2.desc", { defaultValue: "Check-in du jour" }),
+        },
+        {
+          n: 3 as const,
+          icon: "send-outline",
+          label: t("forge.step3.label", { defaultValue: "Relance ton partenaire" }),
+          desc: t("forge.step3.desc", { defaultValue: "Rappel à ton duo." }),
+        },
+      ] as const).map(step => {
+        const done = forgeState.completedSteps.includes(step.n);
+        const isNext = forgeAvailableStep === step.n && !done;
+        const locked = !done && !isNext;
+
+        return (
+          <Pressable
+            key={step.n}
+            onPress={() => {
+              if (!isNext) return;
+              hapticTap();
+              handleForgeStepPress();
+            }}
+            disabled={!isNext || forgeLoading}
+            style={({ pressed }) => ({
+              flexDirection: "row",
+              alignItems: "center",
+              gap: normalizeSize(10),
+              paddingVertical: normalizeSize(10),
+              paddingHorizontal: normalizeSize(12),
+              borderRadius: normalizeSize(14),
+              borderWidth: isNext ? 1.5 : StyleSheet.hairlineWidth,
+              borderColor: isNext
+                ? "rgba(249,115,22,0.55)"
+                : done
+                  ? "rgba(249,115,22,0.20)"
+                  : isDarkMode
+                    ? "rgba(255,255,255,0.08)"
+                    : "rgba(0,0,0,0.08)",
+              backgroundColor: done
+                ? isDarkMode ? "rgba(249,115,22,0.08)" : "rgba(249,115,22,0.05)"
+                : isNext
+                  ? isDarkMode ? "rgba(249,115,22,0.10)" : "rgba(249,115,22,0.06)"
+                  : "transparent",
+              opacity: pressed && isNext ? 0.88 : locked ? 0.38 : 1,
+              transform: [{ scale: pressed && isNext ? 0.993 : 1 }],
+            })}
+          >
+            {/* Icône */}
+            <View style={{
+              width: normalizeSize(34),
+              height: normalizeSize(34),
+              borderRadius: normalizeSize(9),
+              alignItems: "center",
+              justifyContent: "center",
+              flexShrink: 0,
+              backgroundColor: done
+                ? "rgba(249,115,22,0.18)"
+                : isNext
+                  ? "rgba(249,115,22,0.12)"
+                  : isDarkMode
+                    ? "rgba(255,255,255,0.06)"
+                    : "rgba(0,0,0,0.04)",
+            }}>
+              <Ionicons
+                name={done ? "checkmark" : step.icon as any}
+                size={normalizeSize(16)}
+                color={done || isNext ? "#F97316" : isDarkMode ? "rgba(255,255,255,0.30)" : "rgba(0,0,0,0.25)"}
+              />
+            </View>
+
+            {/* Texte */}
+            <View style={{ flex: 1, minWidth: 0 }}>
+              <Text
+                style={{
+                  fontFamily: "Comfortaa_700Bold",
+                  fontSize: normalizeSize(12.5),
+                  color: done || isNext
+                    ? isDarkMode ? "rgba(255,255,255,0.92)" : "rgba(0,0,0,0.86)"
+                    : isDarkMode ? "rgba(255,255,255,0.35)" : "rgba(0,0,0,0.30)",
+                  includeFontPadding: false,
+                }}
+                numberOfLines={2}
+                adjustsFontSizeToFit
+                minimumFontScale={0.80}
+                lineBreakMode="tail"
+              >
+                {step.label}
+              </Text>
+              <Text
+                style={{
+                  fontFamily: "Comfortaa_400Regular",
+                  fontSize: normalizeSize(11),
+                  color: isDarkMode ? "rgba(255,255,255,0.42)" : "rgba(0,0,0,0.40)",
+                  marginTop: normalizeSize(2),
+                  includeFontPadding: false,
+                }}
+                numberOfLines={1}
+                adjustsFontSizeToFit
+                minimumFontScale={0.82}
+              >
+                {done
+                  ? t("forge.stepDone", { defaultValue: "Complété ✓" })
+                  : locked
+                    ? t("forge.stepLocked", { n: step.n - 1, defaultValue: `Disponible J${step.n - 1}` })
+                    : step.desc}
+              </Text>
+            </View>
+
+            {/* CTA Go ou check */}
+            {isNext && !done && (
+              <View style={{
+  minWidth: normalizeSize(36),
+  paddingHorizontal: normalizeSize(8),
+  paddingVertical: normalizeSize(5),
+  borderRadius: normalizeSize(999),
+  backgroundColor: "#F97316",
+  flexShrink: 0,
+  alignItems: "center",
+}}>
+                <Text style={{
+                  fontFamily: "Comfortaa_700Bold",
+                  fontSize: normalizeSize(11),
+                  color: "#0B1120",
+                  includeFontPadding: false,
+                }}>
+                  {t("forge.go", { defaultValue: "Go" })}
+                </Text>
+              </View>
+            )}
+            {done && (
+              <Ionicons
+                name="checkmark-circle"
+                size={normalizeSize(18)}
+                color="#F97316"
+                style={{ flexShrink: 0 }}
+              />
+            )}
+          </Pressable>
+        );
+      })}
+
+      {/* Récompense mini */}
+      {(forgeState.completedSteps.length > 0) && (
+        <View style={{
+          flexDirection: "row",
+          alignItems: "center",
+          gap: normalizeSize(8),
+          paddingVertical: normalizeSize(8),
+          paddingHorizontal: normalizeSize(10),
+          borderRadius: normalizeSize(10),
+          backgroundColor: isDarkMode ? "rgba(249,115,22,0.07)" : "rgba(249,115,22,0.05)",
+          borderWidth: StyleSheet.hairlineWidth,
+          borderColor: "rgba(249,115,22,0.20)",
+          marginTop: normalizeSize(2),
+        }}>
+          <Text style={{ fontSize: normalizeSize(14) }}>🏆</Text>
+          <Text style={{
+            fontFamily: "Comfortaa_400Regular",
+            fontSize: normalizeSize(11),
+            color: isDarkMode ? "rgba(255,255,255,0.60)" : "rgba(0,0,0,0.55)",
+            flex: 1,
+            includeFontPadding: false,
+          }} numberOfLines={2}>
+            {forgeState.completedSteps.length >= 3
+              ? t("forge.rewardFull", { defaultValue: "10 trophées + badge \"Forgé\" en attente" })
+              : t("forge.rewardPartial", {
+                  trophies: forgeState.completedSteps.length === 1 ? 4 : 7,
+                  defaultValue: `${forgeState.completedSteps.length === 1 ? 4 : 7} trophées en attente`,
+                })}
+          </Text>
+        </View>
+      )}
+    </View>
+  ) : (
+    /* Fallback Warmup legacy */
+    <Pressable
+      onPress={handleWarmupPress}
+      disabled={warmupDisabled}
+      accessibilityRole="button"
+      accessibilityLabel={t("duo.pending.warmup")}
+      accessibilityHint={t("duo.pending.warmupA11yHint")}
+      style={({ pressed }) => [
+        styles.duoPendingPrimaryBtnV2,
+        warmupDisabled && styles.duoPendingPrimaryBtnDisabledV2,
+        pressed && !warmupDisabled && { transform: [{ scale: 0.992 }], opacity: 0.96 },
+      ]}
+    >
+      <LinearGradient
+        colors={
+          warmupDisabled
+            ? isDarkMode
+              ? ["rgba(120,120,128,0.45)", "rgba(90,90,96,0.45)"]
+              : ["rgba(170,170,178,0.55)", "rgba(135,135,145,0.55)"]
+            : ["#FF9F1C", "#FFD166"]
+        }
+        start={{ x: 0, y: 0 }}
+        end={{ x: 1, y: 1 }}
+        style={StyleSheet.absoluteFill}
+      />
+      <Ionicons
+        name={warmupDoneToday ? "checkmark-circle-outline" : "flash-outline"}
+        size={18}
+        color={warmupDisabled ? "rgba(255,255,255,0.92)" : "#111"}
+      />
+      <Text
+        style={[
+          styles.duoPendingPrimaryTextV2,
+          warmupDisabled && { color: "rgba(255,255,255,0.88)" },
+        ]}
+        numberOfLines={1}
+        ellipsizeMode="tail"
+      >
+        {warmupLoading
+          ? t("commonS.loading")
+          : warmupDoneToday
+            ? t("duo.pending.warmupDone")
+            : t("duo.pending.warmup")}
+      </Text>
+      <Ionicons
+        name="chevron-forward"
+        size={18}
+        color={warmupDisabled ? "rgba(255,255,255,0.78)" : "#111"}
+      />
+    </Pressable>
+  )}
+
+  {/* Cancel — toujours présent */}
+  <Pressable
+    onPress={handleCancelPendingInvite}
+    accessibilityRole="button"
+    accessibilityLabel={t("duo.pending.cancelInvite")}
+    accessibilityHint={t("duo.pending.cancelA11yHint")}
+    style={({ pressed }) => [
+      styles.duoPendingGhostBtnV2,
+      pressed && { opacity: 0.88, transform: [{ scale: 0.992 }] },
+    ]}
+  >
+    <View style={styles.duoPendingGhostInnerV2}>
+      <Ionicons
+        name="close-outline"
+        size={18}
+        color={isDarkMode ? "rgba(255,255,255,0.86)" : "rgba(0,0,0,0.70)"}
+      />
+      <Text
+        style={[
+          styles.duoPendingGhostTextV2,
+          { color: isDarkMode ? "rgba(255,255,255,0.86)" : "rgba(0,0,0,0.70)" },
+        ]}
+        numberOfLines={1}
+      >
+        {t("duo.pending.cancelInviteShort")}
+      </Text>
+    </View>
+  </Pressable>
+</View>
     </View>
   </View>
 )}
@@ -3635,6 +4091,12 @@ partnerDaysCompleted={duoChallengeData?.duoUser?.completedDays ?? 0}
     </BlurView>
   </Animated.View>
 )}
+
+<ForgeIntentionModal
+  visible={forgeIntentionVisible}
+  onDismiss={() => setForgeIntentionVisible(false)}
+  onSubmit={handleForgeIntentionSubmit}
+/>
 
 <ChoixDuoModal
   visible={choixDuoVisible}

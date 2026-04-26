@@ -316,6 +316,10 @@ export { onUserActivated } from "./referralRewards";
 export { sendDuoNudge } from "./duoNudge";
 export { sendMatchingPush} from "./sendMatchingPush_CloudFunction";
 export { acceptMatchingInvitation } from "./acceptMatchingInvitation_CloudFunction";
+export { checkExpiredInvitations } from "./checkExpiredInvitations";
+export { sendWeeklyReport } from "./sendWeeklyReport";
+export { translateContent } from "./translateContent";
+export { resetWeeklyLeaderboard } from "./resetWeeklyLeaderboard";
 
 
 

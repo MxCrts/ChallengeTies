@@ -143,16 +143,40 @@ function useTabBarHeightSafe(): number {
 }
 
 const CATEGORY_SLUG_MAP: Record<string, string> = {
-  "Fitness": "fitness",
   "Santé": "health",
-  "Productivité": "productivity",
-  "Éducation": "education",
-  "Bien-être": "wellbeing",
-  "Sport": "sport",
-  "Méditation": "meditation",
-  "Nutrition": "nutrition",
   "Créativité": "creativity",
+  "Éducation": "education",
+  "Motivation": "motivation",
+  "Carrière": "career",
+  "Productivité": "productivity",
+  "État d'esprit": "mindset",
+  "Etat d'esprit": "mindset",
+  "Discipline": "discipline",
+  "Développement personnel": "personal_growth",
+  "Developpement personnel": "personal_growth",
+  "Fitness": "fitness",
+  "Mode de vie": "lifestyle",
+  "Écologie": "ecology",
+  "Ecologie": "ecology",
   "Social": "social",
+  "Finance": "finance",
+};
+
+const SLUG_TO_CATEGORY_LABEL: Record<string, string> = {
+  health: "Santé",
+  creativity: "Créativité",
+  education: "Éducation",
+  motivation: "Motivation",
+  career: "Carrière",
+  productivity: "Productivité",
+  mindset: "État d'esprit",
+  discipline: "Discipline",
+  personal_growth: "Développement Personnel",
+  fitness: "Fitness",
+  lifestyle: "Mode de Vie",
+  ecology: "Écologie",
+  social: "Social",
+  finance: "Finance",
 };
 
 // ==== GlassCard (défini au module scope) ====
@@ -243,16 +267,20 @@ export default function UserInfo() {
   const toastTranslateY = useSharedValue(-10);
   const [reduceMotion, setReduceMotion] = useState(false);
   const CHALLENGE_CATEGORIES = [
-  "fitness",
   "health",
-  "productivity",
-  "education",
-  "wellbeing",
-  "sport",
-  "meditation",
-  "nutrition",
   "creativity",
+  "education",
+  "motivation",
+  "career",
+  "productivity",
+  "mindset",
+  "discipline",
+  "personal_growth",
+  "fitness",
+  "lifestyle",
+  "ecology",
   "social",
+  "finance",
 ];
 
 const [selectedCategories, setSelectedCategories] = useState<string[]>([]);
@@ -357,14 +385,27 @@ const toggleCategory = useCallback((cat: string) => {
             return fromDb;
           });
           const rawCats = Array.isArray(userData.challengeCategories)
-            ? userData.challengeCategories
-            : [];
-          const slugs = Object.values(CATEGORY_SLUG_MAP);
-          const normalized = rawCats.map((c: string) => {
-            const slug = CATEGORY_SLUG_MAP[c];
-            return slug ?? (slugs.includes(c) ? c : null);
-          }).filter(Boolean) as string[];
-          setSelectedCategories(normalized);
+  ? userData.challengeCategories
+  : [];
+
+const allowedSlugs = new Set(CHALLENGE_CATEGORIES);
+
+const normalized = rawCats
+  .map((c: string) => {
+    if (!c) return null;
+
+    // si déjà slug
+    if (allowedSlugs.has(c)) return c;
+
+    // si ancien label Firestore
+    const mapped = CATEGORY_SLUG_MAP[c];
+    if (mapped && allowedSlugs.has(mapped)) return mapped;
+
+    return null;
+  })
+  .filter(Boolean) as string[];
+
+setSelectedCategories(normalized);
         } else {
           throw new Error(String(t("profileNotFound")));
         }
@@ -803,7 +844,9 @@ const toggleCategory = useCallback((cat: string) => {
               ? isDarkMode ? "#00C8FF" : "#0095C2"
               : isDarkMode ? "rgba(255,255,255,0.65)" : "rgba(0,0,0,0.55)",
           }}>
-                       {t(`userInfo.category.${CATEGORY_SLUG_MAP[cat] ?? cat}`, { defaultValue: cat })}
+                       {t(`categories.${SLUG_TO_CATEGORY_LABEL[cat] ?? cat}`, {
+    defaultValue: SLUG_TO_CATEGORY_LABEL[cat] ?? cat,
+  })}
 
           </Text>
 

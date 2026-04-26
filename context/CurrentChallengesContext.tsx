@@ -68,11 +68,12 @@ import { updateMatchingPool } from "@/services/matchingService";
 import * as Haptics from "expo-haptics";
 import { LinearGradient } from "expo-linear-gradient";
 import {
-   sendDuoNudge,
-   cancelStreakDangerNotification,
-   scheduleStreakDangerIfNeeded,
-   sendMilestoneNotificationIfNeeded,
- } from "@/services/notificationService";
+  sendDuoNudge,
+  cancelStreakDangerNotification,
+  cancelLateNotifications,
+  scheduleStreakDangerIfNeeded,
+  sendMilestoneNotificationIfNeeded,
+} from "@/services/notificationService";
  import { publishToGlobalFeed, isFeedEnabled } from "@/src/services/globalFeedService";
 export const MARK_TOAST_EVENT = "challengeties.toast.mark" as const;
 export const MISSED_FLOW_EVENT = "challengeties.missed.flow" as const;
@@ -1384,8 +1385,11 @@ defer(async () => {
   } catch {}
 });
 
-     // 🆕 Streak danger annulé car l'user vient de marquer
-     defer(() => cancelStreakDangerNotification());
+     // Cancel streak danger + late reminder car l'user vient de marquer
+     defer(() => {
+       cancelStreakDangerNotification();
+       cancelLateNotifications();
+     });
 
     // 🆕 Milestone si on est sur un jalon
     if (capturedUniqueKey && capturedCompletedDays > 0) {
@@ -1516,6 +1520,16 @@ defer(async () => {
 
   // ✅ Onboarding quête — premier jour marqué
     completeOnboardingQuest("mark_first_day").catch(() => {});
+    // ✅ Trigger premier marquage (une seule fois)
+defer(async () => {
+  try {
+    const already = await AsyncStorage.getItem("first_mark_done");
+    if (!already) {
+      await AsyncStorage.setItem("first_mark_done", "1");
+      DeviceEventEmitter.emit("challengeties.first.mark", { at: Date.now() });
+    }
+  } catch {}
+});
 
   defer(() => scheduleAchievementsCheck(userId));
   return { success: true, completed: false };
@@ -2652,6 +2666,8 @@ const styles = StyleSheet.create({
     position: "relative",
   },
 });
+
+export const FIRST_MARK_EVENT = "challengeties.first.mark" as const;
 
 export const useCurrentChallenges = () => {
   const context = useContext(CurrentChallengesContext);

@@ -26,6 +26,9 @@ import { StatusBar as ExpoStatusBar } from "expo-status-bar";
 import {
   createUserWithEmailAndPassword,
   updateProfile,
+  GoogleAuthProvider,
+  OAuthProvider,
+  signInWithCredential,
 } from "firebase/auth";
 import { auth, db } from "@/constants/firebase-config";
 import {
@@ -56,8 +59,14 @@ import {
   validateUsernameFormat,
   normalizeUsername,
 } from "../services/usernameService";
+import {
+  GoogleSignin,
+  statusCodes,
+} from "@react-native-google-signin/google-signin";
+import * as AppleAuthentication from "expo-apple-authentication";
+import { socialRegisterPending } from "../context/AuthProvider";
 
-// ─── Referral helpers ────────────────────────────────────────────────────────
+// ─── Referral helpers ─────────────────────────────────────────────────────────
 
 async function readPendingReferral() {
   const entries = await AsyncStorage.multiGet([
@@ -118,7 +127,6 @@ async function grantPioneerIfAvailable() {
 // ─── Constants ───────────────────────────────────────────────────────────────
 
 const { width: SCREEN_WIDTH, height: SCREEN_HEIGHT } = Dimensions.get("window");
-
 const normalize = (size: number) => {
   const scale = Math.min(SCREEN_WIDTH, SCREEN_HEIGHT) / 375;
   return Math.round(PixelRatio.roundToNearestPixel(size * scale));
@@ -133,16 +141,14 @@ const circleTop = SCREEN_HEIGHT * 0.35;
 const waveCount = 4;
 const SPACING = normalize(15);
 
-// ─── Username availability status ────────────────────────────────────────────
+GoogleSignin.configure({
+  webClientId: "344780684076-7maiv9tu5o6pk0b4seuirgvfhlgtlpio.apps.googleusercontent.com",
+  offlineAccess: true,
+});
 
-type UsernameStatus =
-  | "idle"        // champ vide ou pas encore tapé
-  | "checking"    // debounce en cours / requête Firestore
-  | "available"   // ✅ dispo
-  | "taken"       // ❌ pris
-  | "invalid";    // format invalide
+type UsernameStatus = "idle" | "checking" | "available" | "taken" | "invalid";
 
-// ─── Wave background ──────────────────────────────────────────────────────────
+// ─── Wave ─────────────────────────────────────────────────────────────────────
 
 const Wave = React.memo(({
   opacity, scale, borderWidth, size, top,
@@ -177,7 +183,6 @@ export default function Register() {
   const router = useRouter();
   const nav = useNavGuard(router);
 
-  // ── Referral purge ──
   useEffect(() => {
     (async () => {
       try {
@@ -187,59 +192,51 @@ export default function Register() {
     })();
   }, []);
 
-  // ── Step state ──
   const [step, setStep] = useState<RegisterStep>(1);
-
-  // ── Form state ──
-  const [email, setEmail]                   = useState("");
-  const [password, setPassword]             = useState("");
+  const [email, setEmail] = useState("");
+  const [password, setPassword] = useState("");
   const [confirmPassword, setConfirmPassword] = useState("");
-  const [username, setUsername]             = useState("");
+  const [username, setUsername] = useState("");
 
-  // ── Username availability ──
-  const [usernameStatus, setUsernameStatus]       = useState<UsernameStatus>("idle");
+  const [usernameStatus, setUsernameStatus] = useState<UsernameStatus>("idle");
   const [usernameSuggestions, setUsernameSuggestions] = useState<string[]>([]);
   const usernameDebounceRef = useRef<ReturnType<typeof setTimeout> | null>(null);
-  const lastCheckedRef      = useRef<string>("");        // évite les re-checks inutiles
+  const lastCheckedRef = useRef<string>("");
 
-  // ── UI state ──
-  const [loading, setLoading]                     = useState(false);
-  const [errorMessage, setErrorMessage]           = useState("");
-  const [showPassword, setShowPassword]           = useState(false);
+  const [loading, setLoading] = useState(false);
+  const [socialLoading, setSocialLoading] = useState<"google" | "apple" | null>(null);
+  const [socialAuthUid, setSocialAuthUid] = useState<string | null>(null);
+const [socialAuthEmail, setSocialAuthEmail] = useState<string | null>(null);
+const [socialAuthPhoto, setSocialAuthPhoto] = useState<string | null>(null);
+  const [errorMessage, setErrorMessage] = useState("");
+  const [errorIsEmailExists, setErrorIsEmailExists] = useState(false);
+  const [showPassword, setShowPassword] = useState(false);
   const [showConfirmPassword, setShowConfirmPassword] = useState(false);
-  const [isOffline, setIsOffline]                 = useState(false);
-  const [reduceMotion, setReduceMotion]           = useState(false);
-  const [focusedField, setFocusedField]           = useState<"email" | "password" | "confirm" | "username" | null>(null);
+  const [isOffline, setIsOffline] = useState(false);
+  const [reduceMotion, setReduceMotion] = useState(false);
+  const [focusedField, setFocusedField] = useState<"email" | "password" | "confirm" | "username" | null>(null);
 
-  // ── Refs ──
-  const emailRef       = useRef<TextInput | null>(null);
-  const passwordRef    = useRef<TextInput | null>(null);
-  const confirmRef     = useRef<TextInput | null>(null);
-  const usernameRef    = useRef<TextInput | null>(null);
-  const isMountedRef   = useRef(true);
-  const submittingRef  = useRef(false);
+  const emailRef = useRef<TextInput | null>(null);
+  const passwordRef = useRef<TextInput | null>(null);
+  const confirmRef = useRef<TextInput | null>(null);
+  const usernameRef = useRef<TextInput | null>(null);
+  const isMountedRef = useRef(true);
+  const submittingRef = useRef(false);
   const clearErrorTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
-  const appStateRef    = useRef(AppState.currentState);
-  const animsRef       = useRef<Animated.CompositeAnimation[]>([]);
+  const appStateRef = useRef(AppState.currentState);
+  const animsRef = useRef<Animated.CompositeAnimation[]>([]);
 
-  // ── Animated values ──
-  const formOpacity    = useRef(new Animated.Value(0)).current;
-  const formTranslate  = useRef(new Animated.Value(12)).current;
-  const ctaScale       = useRef(new Animated.Value(1)).current;
-  const ctaPulse       = useRef(new Animated.Value(1)).current;
-  const shakeAnim      = useRef(new Animated.Value(0)).current;
-  const stepOpacity    = useRef(new Animated.Value(1)).current;
-  const stepTranslate  = useRef(new Animated.Value(0)).current;
+  const formOpacity = useRef(new Animated.Value(0)).current;
+  const formTranslate = useRef(new Animated.Value(12)).current;
+  const ctaScale = useRef(new Animated.Value(1)).current;
+  const ctaPulse = useRef(new Animated.Value(1)).current;
+  const shakeAnim = useRef(new Animated.Value(0)).current;
+  const stepOpacity = useRef(new Animated.Value(1)).current;
+  const stepTranslate = useRef(new Animated.Value(0)).current;
 
   const isFocused = useIsFocused();
 
-  // ── Password rules ──
-  const passwordRules = useMemo(() => {
-    const minOk = password.trim().length >= 6;
-    return { minOk, min: 6 };
-  }, [password]);
-
-  // ── Validation ──
+  const passwordRules = useMemo(() => ({ minOk: password.trim().length >= 6, min: 6 }), [password]);
   const isValidEmail = useCallback((e: string) => /\S+@\S+\.\S+/.test(e), []);
 
   const step1Valid = useMemo(() =>
@@ -249,7 +246,6 @@ export default function Register() {
     [email, password, confirmPassword, isValidEmail]
   );
 
-  // Step 2 valid : format ok + statut dispo (ou idle si pas encore vérifié)
   const step2Valid = useMemo(() =>
     username.trim().length >= 2 &&
     validateUsernameFormat(username) === null &&
@@ -257,7 +253,6 @@ export default function Register() {
     [username, usernameStatus]
   );
 
-  // ── Focus hint ──
   const focusHint = useMemo(() => {
     if (focusedField === "password")
       return t("passwordHint", { min: passwordRules.min, defaultValue: `Min ${passwordRules.min} caractères.` }) as string;
@@ -265,36 +260,32 @@ export default function Register() {
       return t("confirmPasswordHint", { defaultValue: "Doit être identique au mot de passe." }) as string;
     if (focusedField === "username") {
       const fmt = validateUsernameFormat(username);
-      if (fmt === "invalid_chars")
-        return t("usernameInvalidChars", { defaultValue: "Lettres, chiffres, _, - et . uniquement." }) as string;
-      if (fmt === "too_long")
-        return t("usernameTooLong", { defaultValue: "30 caractères maximum." }) as string;
+      if (fmt === "invalid_chars") return t("usernameInvalidChars", { defaultValue: "Lettres, chiffres, _, - et . uniquement." }) as string;
+      if (fmt === "too_long") return t("usernameTooLong", { defaultValue: "30 caractères maximum." }) as string;
       return t("usernameHint", { defaultValue: "2 à 30 caractères. Visible par les autres." }) as string;
     }
     return "";
   }, [focusedField, t, passwordRules.min, username]);
 
-  // ── Waves ──
   const wavesRef = useRef(
-    Array.from({ length: waveCount }, (_, index) => ({
-      opacity: new Animated.Value(0.3 - index * 0.05),
+    Array.from({ length: waveCount }, (_, i) => ({
+      opacity: new Animated.Value(0.3 - i * 0.05),
       scale: new Animated.Value(1),
-      borderWidth: index === 0 ? normalize(5) : normalize(2),
+      borderWidth: i === 0 ? normalize(5) : normalize(2),
     }))
   );
   const waves = wavesRef.current;
 
-  // ── Wave animation ──
   useEffect(() => {
-    const buildAnims = () => waves.map((wave, index) =>
+    const buildAnims = () => waves.map((wave, i) =>
       Animated.loop(Animated.parallel([
         Animated.sequence([
-          Animated.timing(wave.opacity, { toValue: 0.1, duration: 2000 + index * 200, useNativeDriver: true }),
-          Animated.timing(wave.opacity, { toValue: 0.3 - index * 0.05, duration: 2000 + index * 200, useNativeDriver: true }),
+          Animated.timing(wave.opacity, { toValue: 0.1, duration: 2000 + i * 200, useNativeDriver: true }),
+          Animated.timing(wave.opacity, { toValue: 0.3 - i * 0.05, duration: 2000 + i * 200, useNativeDriver: true }),
         ]),
         Animated.sequence([
-          Animated.timing(wave.scale, { toValue: 1.2 + index * 0.2, duration: 2200 + index * 250, useNativeDriver: true }),
-          Animated.timing(wave.scale, { toValue: 1, duration: 2200 + index * 250, useNativeDriver: true }),
+          Animated.timing(wave.scale, { toValue: 1.2 + i * 0.2, duration: 2200 + i * 250, useNativeDriver: true }),
+          Animated.timing(wave.scale, { toValue: 1, duration: 2200 + i * 250, useNativeDriver: true }),
         ]),
       ]))
     );
@@ -312,7 +303,6 @@ export default function Register() {
     return () => { sub.remove(); stop(); };
   }, [isFocused, waves, reduceMotion]);
 
-  // ── Network ──
   useEffect(() => {
     const sub = NetInfo.addEventListener((s) => {
       setIsOffline(s.isConnected === false || s.isInternetReachable === false);
@@ -320,7 +310,6 @@ export default function Register() {
     return () => sub && sub();
   }, []);
 
-  // ── CTA pulse ──
   useEffect(() => {
     const valid = step === 1 ? step1Valid : step2Valid;
     let loop: Animated.CompositeAnimation | null = null;
@@ -334,15 +323,13 @@ export default function Register() {
     return () => loop?.stop();
   }, [step1Valid, step2Valid, step, loading, isOffline, reduceMotion, ctaPulse]);
 
-  // ── Accessibility ──
   useEffect(() => {
     let mounted = true;
     AccessibilityInfo.isReduceMotionEnabled().then((v) => { if (mounted) setReduceMotion(!!v); });
-    const sub = AccessibilityInfo.addEventListener("reduceMotionChanged", (v) => { setReduceMotion(!!v); });
-    return () => { mounted = false; sub?.remove?.(); };
+    const sub = AccessibilityInfo.addEventListener("reduceMotionChanged", (v) => setReduceMotion(!!v));
+    return () => { mounted = false; (sub as any)?.remove?.(); };
   }, []);
 
-  // ── Unmount cleanup ──
   useEffect(() => {
     return () => {
       isMountedRef.current = false;
@@ -351,7 +338,6 @@ export default function Register() {
     };
   }, []);
 
-  // ── Form entrance anim ──
   useEffect(() => {
     const task = InteractionManager.runAfterInteractions(() => {
       Animated.parallel([
@@ -362,78 +348,42 @@ export default function Register() {
     return () => task.cancel();
   }, []);
 
-  // ─── Username availability check (debounced, temps réel) ──────────────────
   const checkUsernameAvailability = useCallback(async (value: string) => {
     const trimmed = value.trim();
-
-    // Reset si vide
-    if (trimmed.length < 2) {
-      setUsernameStatus("idle");
-      setUsernameSuggestions([]);
-      return;
-    }
-
-    // Validation format d'abord (local, instantané)
+    if (trimmed.length < 2) { setUsernameStatus("idle"); setUsernameSuggestions([]); return; }
     const formatError = validateUsernameFormat(trimmed);
-    if (formatError) {
-      setUsernameStatus("invalid");
-      setUsernameSuggestions([]);
-      return;
-    }
-
-    // Évite une requête inutile si même valeur déjà vérifiée
+    if (formatError) { setUsernameStatus("invalid"); setUsernameSuggestions([]); return; }
     const key = normalizeUsername(trimmed);
     if (key === lastCheckedRef.current && usernameStatus !== "idle") return;
-
     setUsernameStatus("checking");
     setUsernameSuggestions([]);
-
     try {
       const available = await isUsernameAvailable(trimmed);
       if (!isMountedRef.current) return;
-
       lastCheckedRef.current = key;
-
       if (available) {
         setUsernameStatus("available");
         setUsernameSuggestions([]);
       } else {
         setUsernameStatus("taken");
-        // Génère des suggestions en background
-        getUsernameSuggestions(trimmed, 3)
-          .then((suggestions) => {
-            if (isMountedRef.current) setUsernameSuggestions(suggestions);
-          })
-          .catch(() => {});
+        getUsernameSuggestions(trimmed, 3).then((s) => { if (isMountedRef.current) setUsernameSuggestions(s); }).catch(() => {});
       }
-    } catch {
-      if (isMountedRef.current) setUsernameStatus("idle");
-    }
+    } catch { if (isMountedRef.current) setUsernameStatus("idle"); }
   }, [usernameStatus]);
 
-  // Handler onChange username avec debounce 600ms
   const handleUsernameChange = useCallback((value: string) => {
     setUsername(value);
     if (errorMessage) setErrorMessage("");
-
-    // Reset statut immédiatement pour feedback
     if (value.trim().length < 2) {
-      setUsernameStatus("idle");
-      setUsernameSuggestions([]);
-      lastCheckedRef.current = "";
+      setUsernameStatus("idle"); setUsernameSuggestions([]); lastCheckedRef.current = "";
       if (usernameDebounceRef.current) clearTimeout(usernameDebounceRef.current);
       return;
     }
-
     setUsernameStatus("checking");
-
     if (usernameDebounceRef.current) clearTimeout(usernameDebounceRef.current);
-    usernameDebounceRef.current = setTimeout(() => {
-      checkUsernameAvailability(value);
-    }, 600);
+    usernameDebounceRef.current = setTimeout(() => { checkUsernameAvailability(value); }, 600);
   }, [errorMessage, checkUsernameAvailability]);
 
-  // Tap sur une suggestion → remplit le champ + vérifie dispo
   const handleSuggestionTap = useCallback((suggestion: string) => {
     setUsername(suggestion);
     setUsernameSuggestions([]);
@@ -442,7 +392,6 @@ export default function Register() {
     HapticsModule.impactAsync(HapticsModule.ImpactFeedbackStyle.Light).catch(() => {});
   }, [checkUsernameAvailability]);
 
-  // ── Helpers ──
   const triggerShake = useCallback(() => {
     shakeAnim.setValue(0);
     Animated.sequence([
@@ -453,13 +402,13 @@ export default function Register() {
     ]).start();
   }, [shakeAnim]);
 
-  const showError = useCallback((msg: string) => {
+  const showError = useCallback((msg: string, isEmailExists = false) => {
     if (clearErrorTimeoutRef.current) { clearTimeout(clearErrorTimeoutRef.current); clearErrorTimeoutRef.current = null; }
-    if (isMountedRef.current) { setErrorMessage(msg); triggerShake(); }
+    if (isMountedRef.current) { setErrorMessage(msg); setErrorIsEmailExists(isEmailExists); triggerShake(); }
     clearErrorTimeoutRef.current = setTimeout(() => {
-      if (isMountedRef.current) setErrorMessage("");
+      if (isMountedRef.current) { setErrorMessage(""); setErrorIsEmailExists(false); }
       clearErrorTimeoutRef.current = null;
-    }, 5000);
+    }, 6000);
   }, [triggerShake]);
 
   const safeHapticsError = useCallback(async () => {
@@ -467,7 +416,6 @@ export default function Register() {
     try { await HapticsModule.notificationAsync(HapticsModule.NotificationFeedbackType.Error); } catch {}
   }, [reduceMotion]);
 
-  // ── Step transition ──
   const animateStepTransition = useCallback((direction: "next" | "prev") => {
     if (reduceMotion) return;
     stepOpacity.setValue(0);
@@ -478,8 +426,8 @@ export default function Register() {
     ]).start();
   }, [reduceMotion, stepOpacity, stepTranslate]);
 
-  // ── Press feedback ──
   const disabledCTA = loading || (step === 1 ? !step1Valid : !step2Valid) || isOffline;
+  const anySocialLoading = socialLoading !== null;
 
   const pressIn = () => {
     if (disabledCTA) return;
@@ -489,10 +437,85 @@ export default function Register() {
   const pressOut = () =>
     Animated.timing(ctaScale, { toValue: 1, duration: 120, easing: RNEasing.out(RNEasing.quad), useNativeDriver: true }).start();
 
-  // ── Step 1 → Step 2 ──
-  const handleStep1Continue = useCallback(() => {
-    if (submittingRef.current || loading) return;
+  // ── Post-auth social → first-pick ────────────────────────────────────────
+  const afterSocialAuth = useCallback((uid: string, emailVal: string, photoUrl: string) => {
+  setSocialAuthUid(uid);
+  setSocialAuthEmail(emailVal);
+  setSocialAuthPhoto(photoUrl);
+  if (!reduceMotion) HapticsModule.notificationAsync(HapticsModule.NotificationFeedbackType.Success).catch(() => {});
+  setStep(2);
+  animateStepTransition("next");
+  setTimeout(() => { usernameRef.current?.focus(); }, 280);
+}, [reduceMotion, animateStepTransition]);
 
+  // ── Google Sign In ────────────────────────────────────────────────────────
+  const handleGoogleSignIn = useCallback(async () => {
+  if (submittingRef.current) return;
+  submittingRef.current = true;
+  setSocialLoading("google");
+  try {
+    await GoogleSignin.hasPlayServices();
+    try { await GoogleSignin.signOut(); } catch {}
+    try { await GoogleSignin.revokeAccess(); } catch {}
+    await GoogleSignin.signIn();
+    const { accessToken, idToken } = await GoogleSignin.getTokens();
+    const credential = GoogleAuthProvider.credential(idToken, accessToken);
+    socialRegisterPending.current = true;
+const result = await signInWithCredential(auth, credential);
+    const user = result.user;
+    logEvent("register_google").catch(() => {});
+    afterSocialAuth(user.uid, user.email ?? "", user.photoURL ?? "");
+  } catch (error: any) {
+  socialRegisterPending.current = false; // ← ajoute
+  if (error.code === statusCodes.SIGN_IN_CANCELLED || error.code === statusCodes.IN_PROGRESS) {
+      // silencieux
+    } else {
+      if (isMountedRef.current) showError(t("unknownError") || "Une erreur est survenue.");
+    }
+  } finally {
+    submittingRef.current = false;
+    if (isMountedRef.current) setSocialLoading(null);
+  }
+}, [afterSocialAuth, showError, t]);
+
+  // ── Apple Sign In ─────────────────────────────────────────────────────────
+  const handleAppleSignIn = useCallback(async () => {
+  if (submittingRef.current) return;
+  submittingRef.current = true;
+  setSocialLoading("apple");
+  try {
+    const appleCredential = await AppleAuthentication.signInAsync({
+      requestedScopes: [
+        AppleAuthentication.AppleAuthenticationScope.FULL_NAME,
+        AppleAuthentication.AppleAuthenticationScope.EMAIL,
+      ],
+    });
+    const provider = new OAuthProvider("apple.com");
+    const oauthCredential = provider.credential({
+      idToken: appleCredential.identityToken!,
+      rawNonce: appleCredential.authorizationCode!,
+    });
+    socialRegisterPending.current = true;
+const result = await signInWithCredential(auth, oauthCredential);
+    const user = result.user;
+    logEvent("register_apple").catch(() => {});
+    afterSocialAuth(user.uid, user.email ?? "", user.photoURL ?? "");
+  } catch (error: any) {
+  socialRegisterPending.current = false; // ← ajoute
+  if (error.code === "ERR_REQUEST_CANCELED") {
+      // silencieux
+    } else {
+      if (isMountedRef.current) showError(t("unknownError") || "Une erreur est survenue.");
+    }
+  } finally {
+    submittingRef.current = false;
+    if (isMountedRef.current) setSocialLoading(null);
+  }
+}, [afterSocialAuth, showError, t]);
+
+  // ── Step 1 → Step 2 ──────────────────────────────────────────────────────
+  const handleStep1Continue = useCallback(async () => {
+    if (submittingRef.current || loading) return;
     if (isOffline) { showError(t("networkError") || "Problème réseau. Réessaie."); safeHapticsError(); return; }
     if (!email.trim()) { showError(t("fillEmail") || "Entre ton email"); safeHapticsError(); return; }
     if (!isValidEmail(email.trim())) { showError(t("invalidEmailFormat") || "Email invalide"); safeHapticsError(); return; }
@@ -500,233 +523,187 @@ export default function Register() {
     if (!passwordRules.minOk) { showError(t("weakPassword") || "Mot de passe trop faible."); safeHapticsError(); return; }
     if (password !== confirmPassword) { showError(t("passwordsDoNotMatch") || "Les mots de passe ne correspondent pas."); safeHapticsError(); return; }
 
+    // ── Vérification email déjà utilisé AVANT step 2 ──────────────────────
+    submittingRef.current = true;
+    setLoading(true);
+    try {
+      const { fetchSignInMethodsForEmail } = await import("firebase/auth");
+      const methods = await fetchSignInMethodsForEmail(auth, email.trim());
+      if (methods && methods.length > 0) {
+        showError(
+          t("emailAlreadyInUse") || "Un compte existe déjà avec cet email. Connecte-toi.",
+          true
+        );
+        safeHapticsError();
+        return;
+      }
+    } catch {
+      // Si la vérification échoue (réseau etc.) on laisse passer — Firebase catchera au step 2
+    } finally {
+      submittingRef.current = false;
+      setLoading(false);
+    }
+
     if (isMountedRef.current) setErrorMessage("");
     setStep(2);
     animateStepTransition("next");
     setTimeout(() => { usernameRef.current?.focus(); }, 280);
   }, [loading, isOffline, email, password, confirmPassword, passwordRules.minOk, isValidEmail, showError, safeHapticsError, animateStepTransition, t]);
 
-  // ── Step 2 → Firebase ──
+  // ── Step 2 → Firebase ────────────────────────────────────────────────────
   const handleRegister = useCallback(async () => {
-    if (submittingRef.current || loading) return;
-    submittingRef.current = true;
-    if (isMountedRef.current) setErrorMessage("");
+  if (submittingRef.current || loading) return;
+  submittingRef.current = true;
+  if (isMountedRef.current) setErrorMessage("");
+  const trimmedUsername = username.trim();
+  const formatError = validateUsernameFormat(trimmedUsername);
+  if (formatError === "too_short") { showError(t("usernameTooShort") || "Nom d'utilisateur trop court."); safeHapticsError(); submittingRef.current = false; return; }
+  if (formatError === "too_long") { showError(t("usernameTooLong") || "Nom d'utilisateur trop long (30 max)."); safeHapticsError(); submittingRef.current = false; return; }
+  if (formatError === "invalid_chars") { showError(t("usernameInvalidChars") || "Caractères invalides."); safeHapticsError(); submittingRef.current = false; return; }
+  if (usernameStatus === "taken") { showError(t("usernameTaken") || "Ce nom d'utilisateur est déjà pris."); safeHapticsError(); submittingRef.current = false; return; }
+  if (usernameStatus === "checking") { showError(t("usernameStillChecking") || "Vérification en cours, réessaie."); safeHapticsError(); submittingRef.current = false; return; }
 
-    const trimmedUsername = username.trim();
+  setLoading(true);
+  try {
+    const resolvedLang = resolveDeviceLanguage();
 
-    // Validation format
-    const formatError = validateUsernameFormat(trimmedUsername);
-    if (formatError === "too_short") {
-      showError(t("usernameTooShort") || "Nom d'utilisateur trop court.");
-      safeHapticsError(); submittingRef.current = false; return;
-    }
-    if (formatError === "too_long") {
-      showError(t("usernameTooLong") || "Nom d'utilisateur trop long (30 max).");
-      safeHapticsError(); submittingRef.current = false; return;
-    }
-    if (formatError === "invalid_chars") {
-      showError(t("usernameInvalidChars") || "Caractères invalides dans le nom d'utilisateur.");
-      safeHapticsError(); submittingRef.current = false; return;
-    }
+    // ── Récupère l'uid : social ou email ──────────────────────────────
+    let userId: string;
+    let userEmail: string;
+    let userPhoto: string;
 
-    // Bloque si "taken" déjà connu côté client
-    if (usernameStatus === "taken") {
-      showError(t("usernameTaken") || "Ce nom d'utilisateur est déjà pris.");
-      safeHapticsError(); submittingRef.current = false; return;
-    }
-
-    // Bloque si encore en train de vérifier
-    if (usernameStatus === "checking") {
-      showError(t("usernameStillChecking") || "Vérification en cours, réessaie dans un instant.");
-      safeHapticsError(); submittingRef.current = false; return;
-    }
-
-    setLoading(true);
-    try {
-      const resolvedLang = resolveDeviceLanguage();
+    if (socialAuthUid) {
+      // Flow social : Firebase auth déjà fait, on a juste besoin de créer le doc
+      userId = socialAuthUid;
+      userEmail = socialAuthEmail ?? "";
+      userPhoto = socialAuthPhoto ?? "";
+      try { await updateProfile(auth.currentUser!, { displayName: trimmedUsername }); } catch {}
+    } else {
+      // Flow email : on crée le compte Firebase
       const userCredential = await createUserWithEmailAndPassword(auth, email.trim(), password.trim());
-
-      try {
-        if (!reduceMotion) await HapticsModule.notificationAsync(HapticsModule.NotificationFeedbackType.Success);
-      } catch {}
-
-      const user   = userCredential.user;
-      const userId = user.uid;
-
-      try { await updateProfile(user, { displayName: trimmedUsername }); } catch {}
-
-      // Permissions
-      let notificationsGranted = false;
-      try {
-        const { status } = await Notifications.getPermissionsAsync();
-        if (status === "undetermined") {
-          const { status: asked } = await Notifications.requestPermissionsAsync();
-          notificationsGranted = asked === "granted";
-        } else {
-          notificationsGranted = status === "granted";
-        }
-      } catch { notificationsGranted = false; }
-
-      // Pioneer check
-      const userRef = doc(db, "users", userId);
-      let existingSnap;
-      try { existingSnap = await getDoc(userRef); } catch (e) { console.log("[register] getDoc error:", e); }
-
-      const existingData = existingSnap?.exists() ? (existingSnap.data() as any) : null;
-      const alreadyDecided = existingData?.pioneerRewardGranted === true || existingData?.isPioneer === true;
-
-      let pioneer = { granted: false, pioneerNumber: null as number | null, limit: 1000 };
-      if (!alreadyDecided) {
-        try { pioneer = await grantPioneerIfAvailable(); } catch (e: any) {
-          console.log("[register] pioneer transaction failed:", e?.code || e?.message || e);
-        }
-      }
-      const isPioneerGrantedNow = pioneer.granted === true;
-
-      // ── Réservation atomique username + écriture users/ ─────────────────
-      //
-      // On passe une fonction callback qui reçoit la transaction Firestore.
-      // reserveUsernameAtomic s'occupe de :
-      //   1. Vérifier usernames/{key} n'existe pas
-      //   2. Créer usernames/{key}
-      //   3. Appeler notre callback pour écrire users/{uid}
-      //
-      const result = await reserveUsernameAtomic(
-        userId,
-        trimmedUsername,
-        (tx) => {
-          if (!existingSnap || !existingSnap.exists()) {
-            tx.set(userRef, {
-              uid: userId,
-              email: email.trim(),
-              username: trimmedUsername,
-              bio: "", location: "", profileImage: "",
-              interests: [], achievements: [],
-              newAchievements: ["first_connection"],
-              trophies: isPioneerGrantedNow ? 50 : 0,
-              totalTrophies: isPioneerGrantedNow ? 50 : 0,
-              completedChallengesCount: 0,
-              CompletedChallenges: [], SavedChallenges: [],
-              customChallenges: [], CurrentChallenges: [],
-              longestStreak: 0, shareChallenge: 0, voteFeature: 0,
-              language: resolvedLang,
-              locationEnabled: true,
-              notificationsEnabled: notificationsGranted,
-              country: "Unknown", region: "Unknown",
-              createdAt: serverTimestamp(), updatedAt: serverTimestamp(),
-              isPioneer: isPioneerGrantedNow,
-              pioneerRewardGranted: isPioneerGrantedNow,
-              pioneerNumber: pioneer.pioneerNumber ?? null,
-              pioneerGrantedAt: isPioneerGrantedNow ? serverTimestamp() : null,
-            });
-          } else {
-            const data = existingData || {};
-            const patch: any = { updatedAt: serverTimestamp(), username: trimmedUsername };
-            if (!data.email) patch.email = email.trim();
-            if (!data.bio) patch.bio = "";
-            if (!data.location) patch.location = "";
-            if (!data.profileImage) patch.profileImage = "";
-            if (!data.interests) patch.interests = [];
-            if (!data.achievements) patch.achievements = [];
-            if (!data.newAchievements) patch.newAchievements = ["first_connection"];
-            if (data.trophies === undefined) patch.trophies = 0;
-            if (!data.CompletedChallenges) patch.CompletedChallenges = [];
-            if (!data.SavedChallenges) patch.SavedChallenges = [];
-            if (!data.customChallenges) patch.customChallenges = [];
-            if (!data.CurrentChallenges) patch.CurrentChallenges = [];
-            if (data.longestStreak === undefined) patch.longestStreak = 0;
-            if (data.shareChallenge === undefined) patch.shareChallenge = 0;
-            if (data.voteFeature === undefined) patch.voteFeature = 0;
-            if (!data.language) patch.language = resolvedLang;
-            if (!data.country) patch.country = "Unknown";
-            if (!data.region) patch.region = "Unknown";
-            patch.locationEnabled = data.locationEnabled ?? true;
-            patch.notificationsEnabled = notificationsGranted;
-            if (!data.referral) patch.referral = { activatedCount: 0, claimedMilestones: [], pendingMilestones: [] };
-            if (isPioneerGrantedNow) {
-              const currentTrophies = Number(data?.trophies ?? 0);
-              const currentTotal = Number(data?.totalTrophies ?? currentTrophies);
-              patch.isPioneer = true;
-              patch.pioneerRewardGranted = true;
-              patch.pioneerNumber = pioneer.pioneerNumber ?? null;
-              patch.pioneerGrantedAt = serverTimestamp();
-              patch.trophies = Math.max(0, Math.floor(currentTrophies)) + 50;
-              patch.totalTrophies = Math.max(0, Math.floor(currentTotal)) + 50;
-            }
-            tx.update(userRef, patch);
-          }
-        }
-      );
-
-      // ── Username pris au moment du submit (race condition) ──────────────
-      if (!result.success) {
-        const failResult = result as Extract<typeof result, { success: false }>;
-        if (failResult.reason === "taken") {
-          setUsernameStatus("taken");
-          // Suggestions
-          getUsernameSuggestions(trimmedUsername, 3)
-            .then((s) => { if (isMountedRef.current) setUsernameSuggestions(s); })
-            .catch(() => {});
-
-          showError(
-            t("usernameTakenRace") ||
-            "Ce nom vient d'être pris par quelqu'un d'autre. Choisis-en un autre."
-          );
-          safeHapticsError();
-          // Retour step 2 (on y est déjà) pour re-saisie
-          submittingRef.current = false;
-          setLoading(false);
-          return;
-        }
-        throw new Error(failResult.message || "reserve_failed");
-      }
-
-      // ✅ Permissions post-signup
-      try { await askPermissionsOnceAfterSignup(); } catch {}
-
-      // Analytics
-      logEvent("register_success").catch(() => {});
-      logEvent("signup_complete", { method: "email" }).catch(() => {});
-
-      try { await AsyncStorage.setItem("login.lastEmail", email.trim()); } catch {}
-
-      InteractionManager.runAfterInteractions(() => {
-        if (isMountedRef.current) nav.replace("/first-pick");
-      });
-
-    } catch (error: any) {
-      const code = error?.code ?? "unknown";
-      console.log("🔥 register error:", code, error?.message);
-      const errorMessages: Record<string, string> = {
-        "auth/email-already-in-use": t("emailAlreadyInUse") || "Cet email est déjà utilisé.",
-        "auth/invalid-email": t("invalidEmailFormat") || "Format d'email invalide.",
-        "auth/weak-password": t("weakPassword") || "Mot de passe trop faible.",
-        "auth/network-request-failed": t("networkError") || "Problème réseau. Réessaie.",
-        "auth/too-many-requests": t("tooManyRequests") || "Trop de tentatives, réessaie plus tard.",
-        "permission-denied": t("permissionDenied") || "Accès refusé, vérifie ta connexion ou réessaie.",
-        "auth/operation-not-allowed": t("operationNotAllowed") || "Cette opération n'est pas autorisée sur ce projet.",
-      };
-      const baseMessage = errorMessages[code] || t("unknownError") || "Une erreur inconnue est survenue.";
-      const finalMessage = __DEV__ && code !== "unknown" ? `${baseMessage} (${code})` : baseMessage;
-
-      if (code.startsWith("auth/")) {
-        setStep(1);
-        animateStepTransition("prev");
-        setTimeout(() => emailRef.current?.focus(), 280);
-      }
-
-      showError(finalMessage);
-      safeHapticsError();
-    } finally {
-      submittingRef.current = false;
-      if (isMountedRef.current) setLoading(false);
+      try { if (!reduceMotion) await HapticsModule.notificationAsync(HapticsModule.NotificationFeedbackType.Success); } catch {}
+      userId = userCredential.user.uid;
+      userEmail = email.trim();
+      userPhoto = "";
+      try { await updateProfile(userCredential.user, { displayName: trimmedUsername }); } catch {}
     }
-  }, [
-    loading, username, email, password, reduceMotion, usernameStatus,
-    showError, safeHapticsError, t, nav, animateStepTransition,
-  ]);
 
-  // ── Back to step 1 ──
+    let notificationsGranted = false;
+    try {
+      const { status } = await Notifications.getPermissionsAsync();
+      if (status === "undetermined") {
+        const { status: asked } = await Notifications.requestPermissionsAsync();
+        notificationsGranted = asked === "granted";
+      } else { notificationsGranted = status === "granted"; }
+    } catch { notificationsGranted = false; }
+
+    const userRef = doc(db, "users", userId);
+    let existingSnap;
+    try { existingSnap = await getDoc(userRef); } catch {}
+    const existingData = existingSnap?.exists() ? (existingSnap.data() as any) : null;
+    const alreadyDecided = existingData?.pioneerRewardGranted === true || existingData?.isPioneer === true;
+    let pioneer = { granted: false, pioneerNumber: null as number | null, limit: 1000 };
+    if (!alreadyDecided) { try { pioneer = await grantPioneerIfAvailable(); } catch {} }
+    const isPioneerGrantedNow = pioneer.granted === true;
+
+    const result = await reserveUsernameAtomic(userId, trimmedUsername, (tx) => {
+      if (!existingSnap || !existingSnap.exists()) {
+        tx.set(userRef, {
+          uid: userId, email: userEmail, username: trimmedUsername,
+          bio: "", location: "", profileImage: userPhoto,
+          interests: [], achievements: [], newAchievements: ["first_connection"],
+          trophies: isPioneerGrantedNow ? 50 : 0, totalTrophies: isPioneerGrantedNow ? 50 : 0,
+          completedChallengesCount: 0,
+          CompletedChallenges: [], SavedChallenges: [], customChallenges: [], CurrentChallenges: [],
+          longestStreak: 0, shareChallenge: 0, voteFeature: 0,
+          language: resolvedLang, locationEnabled: true, notificationsEnabled: notificationsGranted,
+          country: "Unknown", region: "Unknown",
+          createdAt: serverTimestamp(), updatedAt: serverTimestamp(),
+          isPioneer: isPioneerGrantedNow, pioneerRewardGranted: isPioneerGrantedNow,
+          pioneerNumber: pioneer.pioneerNumber ?? null,
+          pioneerGrantedAt: isPioneerGrantedNow ? serverTimestamp() : null,
+        });
+      } else {
+        const data = existingData || {};
+        const patch: any = { updatedAt: serverTimestamp(), username: trimmedUsername };
+        if (!data.email) patch.email = userEmail;
+        if (!data.profileImage && userPhoto) patch.profileImage = userPhoto;
+        if (!data.bio) patch.bio = "";
+        if (!data.location) patch.location = "";
+        if (!data.interests) patch.interests = [];
+        if (!data.achievements) patch.achievements = [];
+        if (!data.newAchievements) patch.newAchievements = ["first_connection"];
+        if (data.trophies === undefined) patch.trophies = 0;
+        if (!data.CompletedChallenges) patch.CompletedChallenges = [];
+        if (!data.SavedChallenges) patch.SavedChallenges = [];
+        if (!data.customChallenges) patch.customChallenges = [];
+        if (!data.CurrentChallenges) patch.CurrentChallenges = [];
+        if (data.longestStreak === undefined) patch.longestStreak = 0;
+        if (data.shareChallenge === undefined) patch.shareChallenge = 0;
+        if (data.voteFeature === undefined) patch.voteFeature = 0;
+        if (!data.language) patch.language = resolvedLang;
+        if (!data.country) patch.country = "Unknown";
+        if (!data.region) patch.region = "Unknown";
+        patch.locationEnabled = data.locationEnabled ?? true;
+        patch.notificationsEnabled = notificationsGranted;
+        if (!data.referral) patch.referral = { activatedCount: 0, claimedMilestones: [], pendingMilestones: [] };
+        if (isPioneerGrantedNow) {
+          const currentTrophies = Number(data?.trophies ?? 0);
+          const currentTotal = Number(data?.totalTrophies ?? currentTrophies);
+          patch.isPioneer = true; patch.pioneerRewardGranted = true;
+          patch.pioneerNumber = pioneer.pioneerNumber ?? null;
+          patch.pioneerGrantedAt = serverTimestamp();
+          patch.trophies = Math.max(0, Math.floor(currentTrophies)) + 50;
+          patch.totalTrophies = Math.max(0, Math.floor(currentTotal)) + 50;
+        }
+        tx.update(userRef, patch);
+      }
+    });
+
+    if (!result.success) {
+      const failResult = result as Extract<typeof result, { success: false }>;
+      if (failResult.reason === "taken") {
+        setUsernameStatus("taken");
+        getUsernameSuggestions(trimmedUsername, 3).then((s) => { if (isMountedRef.current) setUsernameSuggestions(s); }).catch(() => {});
+        showError(t("usernameTakenRace") || "Ce nom vient d'être pris. Choisis-en un autre.");
+        safeHapticsError();
+        submittingRef.current = false;
+        setLoading(false);
+        return;
+      }
+      throw new Error(failResult.message || "reserve_failed");
+    }
+
+    try { await askPermissionsOnceAfterSignup(); } catch {}
+    logEvent("register_success").catch(() => {});
+    logEvent("signup_complete", { method: socialAuthUid ? "social" : "email" }).catch(() => {});
+    if (!socialAuthUid) { try { await AsyncStorage.setItem("login.lastEmail", email.trim()); } catch {} }
+    socialRegisterPending.current = false;
+InteractionManager.runAfterInteractions(() => { if (isMountedRef.current) nav.replace("/first-pick"); });
+
+  } catch (error: any) {
+  socialRegisterPending.current = false;  // ← ajoute cette ligne
+  const code = error?.code ?? "unknown";
+    const errorMessages: Record<string, string> = {
+      "auth/email-already-in-use": t("emailAlreadyInUse") || "Cet email est déjà utilisé.",
+      "auth/invalid-email": t("invalidEmailFormat") || "Format d'email invalide.",
+      "auth/weak-password": t("weakPassword") || "Mot de passe trop faible.",
+      "auth/network-request-failed": t("networkError") || "Problème réseau. Réessaie.",
+      "auth/too-many-requests": t("tooManyRequests") || "Trop de tentatives, réessaie plus tard.",
+      "permission-denied": t("permissionDenied") || "Accès refusé.",
+      "auth/operation-not-allowed": t("operationNotAllowed") || "Opération non autorisée.",
+    };
+    const baseMessage = errorMessages[code] || t("unknownError") || "Une erreur inconnue est survenue.";
+    const finalMessage = __DEV__ && code !== "unknown" ? `${baseMessage} (${code})` : baseMessage;
+    if (code.startsWith("auth/") && !socialAuthUid) { setStep(1); animateStepTransition("prev"); setTimeout(() => emailRef.current?.focus(), 280); }
+    showError(finalMessage);
+    safeHapticsError();
+  } finally {
+    submittingRef.current = false;
+    if (isMountedRef.current) setLoading(false);
+  }
+}, [loading, username, email, password, reduceMotion, usernameStatus, socialAuthUid, socialAuthEmail, socialAuthPhoto, showError, safeHapticsError, t, nav, animateStepTransition]);
+
   const goBackToStep1 = useCallback(() => {
     if (loading) return;
     setStep(1);
@@ -734,45 +711,37 @@ export default function Register() {
     setTimeout(() => emailRef.current?.focus(), 280);
   }, [loading, animateStepTransition]);
 
-  // ── Navigation ──
   const guarded = <T extends (...args: any[]) => any>(fn: T) =>
     (...args: Parameters<T>) => { if (loading || submittingRef.current) return; return fn(...args); };
   const goLogin = guarded(() => nav.replace("/login"));
-
-  // ── Progress indicator ──
   const progressText = step === 1 ? "1/2" : "2/2";
 
-  // ── Username status UI ────────────────────────────────────────────────────
   const usernameStatusIcon = useMemo((): { name: keyof typeof Ionicons.glyphMap; color: string } | null => {
     switch (usernameStatus) {
       case "available": return { name: "checkmark-circle", color: "#22C55E" };
-      case "taken":     return { name: "close-circle",     color: "#EF4444" };
-      case "invalid":   return { name: "warning",          color: "#F59E0B" };
-      case "checking":  return null; // ActivityIndicator à la place
-      default:          return null;
+      case "taken": return { name: "close-circle", color: "#EF4444" };
+      case "invalid": return { name: "warning", color: "#F59E0B" };
+      default: return null;
     }
   }, [usernameStatus]);
 
   const usernameStatusText = useMemo(() => {
     switch (usernameStatus) {
       case "available": return t("usernameAvailable", { defaultValue: "Disponible !" });
-      case "taken":     return t("usernameTaken",     { defaultValue: "Déjà pris" });
-      case "invalid":   return "";   // géré par focusHint
-      case "checking":  return t("usernameChecking", { defaultValue: "Vérification…" });
-      default:          return "";
+      case "taken": return t("usernameTaken", { defaultValue: "Déjà pris" });
+      case "checking": return t("usernameChecking", { defaultValue: "Vérification…" });
+      default: return "";
     }
   }, [usernameStatus, t]);
 
   const usernameStatusColor = useMemo(() => {
     switch (usernameStatus) {
       case "available": return "#22C55E";
-      case "taken":     return "#EF4444";
-      case "checking":  return "rgba(0,0,0,0.45)";
-      default:          return "transparent";
+      case "taken": return "#EF4444";
+      case "checking": return "rgba(0,0,0,0.45)";
+      default: return "transparent";
     }
   }, [usernameStatus]);
-
-  // ─── RENDER ───────────────────────────────────────────────────────────────
 
   return (
     <KeyboardAvoidingView
@@ -782,9 +751,8 @@ export default function Register() {
     >
       <ExpoStatusBar style="dark" backgroundColor={BACKGROUND_COLOR} />
 
-      {/* Waves */}
-      {waves.map((wave, index) => (
-        <Wave key={index} opacity={wave.opacity} scale={wave.scale} borderWidth={wave.borderWidth} size={circleSize} top={circleTop} />
+      {waves.map((wave, i) => (
+        <Wave key={i} opacity={wave.opacity} scale={wave.scale} borderWidth={wave.borderWidth} size={circleSize} top={circleTop} />
       ))}
 
       <ScrollView
@@ -798,42 +766,24 @@ export default function Register() {
         <View style={styles.headerContainer}>
           <View style={styles.topBar}>
             {step === 2 ? (
-              <TouchableOpacity
-                onPress={goBackToStep1}
-                style={styles.backBtn}
-                accessibilityRole="button"
-                accessibilityLabel={t("common.back", { defaultValue: "Retour" }) as string}
-                hitSlop={10}
-              >
+              <TouchableOpacity onPress={goBackToStep1} style={styles.backBtn} accessibilityRole="button" accessibilityLabel={t("common.back", { defaultValue: "Retour" }) as string} hitSlop={10}>
                 <Ionicons name="chevron-back" size={18} color={PRIMARY_COLOR} />
                 <Text style={styles.backText}>{t("common.back", { defaultValue: "Retour" })}</Text>
               </TouchableOpacity>
             ) : (
               <View style={{ width: 70 }} />
             )}
-
             <View style={styles.progressPill}>
               <Text style={styles.progressText}>{progressText}</Text>
             </View>
-
             <View style={{ width: 70 }} />
           </View>
-
-          <Text
-            style={styles.brandTitle}
-            numberOfLines={1}
-            adjustsFontSizeToFit
-            ellipsizeMode="tail"
-            accessibilityLabel={t("appTitle")}
-            accessibilityRole="header"
-          >
-            <Text style={styles.highlight}>C</Text>hallenge
-            <Text style={styles.highlight}>T</Text>ies
+          <Text style={styles.brandTitle} numberOfLines={1} adjustsFontSizeToFit ellipsizeMode="tail" accessibilityLabel={t("appTitle")} accessibilityRole="header">
+            <Text style={styles.highlight}>C</Text>hallenge<Text style={styles.highlight}>T</Text>ies
           </Text>
           <Text style={styles.tagline}>{t("joinUsAndChallenge")}</Text>
         </View>
 
-        {/* Offline banner */}
         {isOffline && (
           <View style={styles.offlineBanner} accessibilityRole="alert">
             <Ionicons name="cloud-offline-outline" size={16} color="#111827" />
@@ -841,32 +791,64 @@ export default function Register() {
           </View>
         )}
 
-        {/* Step animated card */}
-        <Animated.View
-          style={[
-            styles.card,
-            { opacity: formOpacity, transform: [{ translateY: formTranslate }] },
-          ]}
-          accessibilityLabel={t("registrationForm")}
-          accessible
-        >
+        {/* Card */}
+        <Animated.View style={[styles.card, { opacity: formOpacity, transform: [{ translateY: formTranslate }] }]} accessibilityLabel={t("registrationForm")} accessible>
           <Animated.View style={{ opacity: stepOpacity, transform: [{ translateY: stepTranslate }] }}>
 
-            {/* Error banner */}
             {!!errorMessage && (
-              <Animated.View
-                accessibilityRole="alert"
-                accessibilityLiveRegion="polite"
-                style={[styles.errorBanner, { transform: [{ translateX: shakeAnim }] }]}
-              >
+              <Animated.View accessibilityRole="alert" accessibilityLiveRegion="polite" style={[styles.errorBanner, { transform: [{ translateX: shakeAnim }] }]}>
                 <Ionicons name="alert-circle" size={18} color="#fff" />
-                <Text style={styles.errorBannerText}>{errorMessage}</Text>
+                <Text style={[styles.errorBannerText, { flex: 1 }]}>{errorMessage}</Text>
+                {errorIsEmailExists && (
+                  <TouchableOpacity
+                    onPress={() => nav.replace("/login")}
+                    style={{ marginLeft: 8, paddingHorizontal: 10, paddingVertical: 4, backgroundColor: "rgba(255,255,255,0.25)", borderRadius: 8 }}
+                  >
+                    <Text style={{ color: "#fff", fontSize: 12, fontFamily: "Comfortaa_700Bold" }}>
+                      {t("loginHere") || "Se connecter"}
+                    </Text>
+                  </TouchableOpacity>
+                )}
               </Animated.View>
             )}
 
-            {/* ── STEP 1 : Email + Password ── */}
+            {/* ── STEP 1 ── */}
             {step === 1 && (
               <>
+                {/* Social Sign In — uniquement sur step 1 */}
+                <TouchableOpacity
+                  style={[styles.socialButton, anySocialLoading && styles.disabledButton]}
+                  onPress={handleGoogleSignIn}
+                  disabled={anySocialLoading}
+                  accessibilityRole="button"
+                  accessibilityLabel="Continuer avec Google"
+                >
+                  {socialLoading === "google" ? (
+                    <ActivityIndicator color={TEXT_COLOR} size="small" />
+                  ) : (
+                    <>
+                      <Ionicons name="logo-google" size={18} color={TEXT_COLOR} />
+                      <Text style={styles.socialButtonText}>Continuer avec Google</Text>
+                    </>
+                  )}
+                </TouchableOpacity>
+
+                {Platform.OS === "ios" && (
+                  <AppleAuthentication.AppleAuthenticationButton
+                    buttonType={AppleAuthentication.AppleAuthenticationButtonType.SIGN_UP}
+                    buttonStyle={AppleAuthentication.AppleAuthenticationButtonStyle.BLACK}
+                    cornerRadius={normalize(16)}
+                    style={[styles.appleButton, anySocialLoading && styles.disabledButton]}
+                    onPress={handleAppleSignIn}
+                  />
+                )}
+
+                <View style={styles.dividerRow}>
+                  <View style={styles.divider} />
+                  <Text style={styles.dividerText}>{t("or")}</Text>
+                  <View style={styles.divider} />
+                </View>
+
                 <Text style={styles.stepLabel}>{t("register.step1.label", { defaultValue: "Ton compte" })}</Text>
 
                 {/* Email */}
@@ -874,7 +856,6 @@ export default function Register() {
                   <Ionicons name="mail-outline" size={18} color={PRIMARY_COLOR} style={styles.leadingIcon} />
                   <TextInput
                     ref={emailRef}
-                    autoFocus
                     placeholder={t("emailPlaceholder")}
                     placeholderTextColor="rgba(50,50,50,0.5)"
                     style={styles.input}
@@ -893,6 +874,7 @@ export default function Register() {
                     returnKeyType="next"
                     onSubmitEditing={() => passwordRef.current?.focus()}
                     blurOnSubmit={false}
+                    // ✅ pas d'autoFocus
                   />
                   {!!email && (
                     <TouchableOpacity onPress={() => setEmail("")} style={styles.trailingBtn} hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}>
@@ -958,19 +940,9 @@ export default function Register() {
             {step === 2 && (
               <>
                 <Text style={styles.stepLabel}>{t("register.step2.label", { defaultValue: "Ton identité" })}</Text>
+                <Text style={styles.step2Intro}>{t("register.step2.intro", { defaultValue: "Comment veux-tu qu'on t'appelle ?" })}</Text>
 
-                <Text style={styles.step2Intro}>
-                  {t("register.step2.intro", { defaultValue: "Comment veux-tu qu'on t'appelle ?" })}
-                </Text>
-
-                {/* Username input */}
-                <View
-                  style={[
-                    styles.inputWrap,
-                    usernameStatus === "available" && styles.inputWrapSuccess,
-                    usernameStatus === "taken"     && styles.inputWrapError,
-                  ]}
-                >
+                <View style={[styles.inputWrap, usernameStatus === "available" && styles.inputWrapSuccess, usernameStatus === "taken" && styles.inputWrapError]}>
                   <Ionicons name="person-outline" size={18} color={PRIMARY_COLOR} style={styles.leadingIcon} />
                   <TextInput
                     ref={usernameRef}
@@ -991,46 +963,23 @@ export default function Register() {
                     returnKeyType="done"
                     onSubmitEditing={step2Valid ? handleRegister : undefined}
                   />
-
-                  {/* Trailing : spinner ou icône statut */}
                   {usernameStatus === "checking" ? (
-                    <ActivityIndicator
-                      size="small"
-                      color={PRIMARY_COLOR}
-                      style={styles.trailingBtn}
-                    />
+                    <ActivityIndicator size="small" color={PRIMARY_COLOR} style={styles.trailingBtn} />
                   ) : usernameStatusIcon ? (
-                    <Ionicons
-                      name={usernameStatusIcon.name}
-                      size={20}
-                      color={usernameStatusIcon.color}
-                      style={styles.trailingBtn}
-                    />
+                    <Ionicons name={usernameStatusIcon.name} size={20} color={usernameStatusIcon.color} style={styles.trailingBtn} />
                   ) : null}
                 </View>
 
-                {/* Status label (Disponible / Déjà pris / Vérification…) */}
                 {!!usernameStatusText && (
-                  <Text style={[styles.usernameStatusText, { color: usernameStatusColor }]}>
-                    {usernameStatusText}
-                  </Text>
+                  <Text style={[styles.usernameStatusText, { color: usernameStatusColor }]}>{usernameStatusText}</Text>
                 )}
 
-                {/* Suggestions si pris */}
                 {usernameStatus === "taken" && usernameSuggestions.length > 0 && (
                   <View style={styles.suggestionsWrap}>
-                    <Text style={styles.suggestionsLabel}>
-                      {t("usernameSuggestionsLabel", { defaultValue: "Suggestions disponibles :" })}
-                    </Text>
+                    <Text style={styles.suggestionsLabel}>{t("usernameSuggestionsLabel", { defaultValue: "Suggestions disponibles :" })}</Text>
                     <View style={styles.suggestionsRow}>
                       {usernameSuggestions.map((s) => (
-                        <TouchableOpacity
-                          key={s}
-                          style={styles.suggestionPill}
-                          onPress={() => handleSuggestionTap(s)}
-                          accessibilityRole="button"
-                          accessibilityLabel={t("usernameSuggestionTap", { name: s, defaultValue: `Utiliser ${s}` })}
-                        >
+                        <TouchableOpacity key={s} style={styles.suggestionPill} onPress={() => handleSuggestionTap(s)} accessibilityRole="button">
                           <Text style={styles.suggestionPillText}>{s}</Text>
                         </TouchableOpacity>
                       ))}
@@ -1038,17 +987,13 @@ export default function Register() {
                   </View>
                 )}
 
-                {/* Social proof micro-copy */}
                 <View style={styles.socialProofRow}>
                   <Ionicons name="people-outline" size={14} color="rgba(0,0,0,0.45)" />
-                  <Text style={styles.socialProofText}>
-                    {t("register.step2.socialProof", { defaultValue: "Rejoins des centaines de personnes qui tiennent leurs défis." })}
-                  </Text>
+                  <Text style={styles.socialProofText}>{t("register.step2.socialProof", { defaultValue: "Rejoins des centaines de personnes qui tiennent leurs défis." })}</Text>
                 </View>
               </>
             )}
 
-            {/* Focus hint */}
             {!!focusHint && (
               <View style={styles.hintRow} accessibilityLiveRegion="polite">
                 <Ionicons name="information-circle-outline" size={16} color="rgba(0,0,0,0.55)" />
@@ -1076,265 +1021,71 @@ export default function Register() {
             ) : (
               <View style={styles.ctaInner}>
                 <Text style={styles.registerButtonText}>
-                  {step === 1
-                    ? t("common.continue", { defaultValue: "Continuer" })
-                    : t("signup")}
+                  {step === 1 ? t("common.continue", { defaultValue: "Continuer" }) : t("signup")}
                 </Text>
-                <Ionicons
-                  name={step === 1 ? "arrow-forward" : "checkmark"}
-                  size={18}
-                  color={TEXT_COLOR}
-                />
+                <Ionicons name={step === 1 ? "arrow-forward" : "checkmark"} size={18} color={TEXT_COLOR} />
               </View>
             )}
           </TouchableOpacity>
         </Animated.View>
 
-        {/* Login link */}
         <Text style={styles.loginText} accessibilityLabel={t("login")}>
           {t("alreadyHaveAccount")}{" "}
-          <Text style={styles.loginLink} onPress={goLogin} accessibilityRole="link">
-            {t("loginHere")}
-          </Text>
+          <Text style={styles.loginLink} onPress={goLogin} accessibilityRole="link">{t("loginHere")}</Text>
         </Text>
       </ScrollView>
     </KeyboardAvoidingView>
   );
 }
 
-// ─── Styles ───────────────────────────────────────────────────────────────────
-
 const styles = StyleSheet.create({
   flexContainer: { flex: 1 },
-  container: {
-    flexGrow: 1,
-    backgroundColor: "transparent",
-    alignItems: "center",
-    justifyContent: "space-between",
-    paddingVertical: SPACING * 2,
-    paddingHorizontal: SPACING,
-  },
-  headerContainer: {
-    width: "90%",
-    maxWidth: 600,
-    alignItems: "center",
-    marginTop: SCREEN_HEIGHT * 0.06,
-  },
+  container: { flexGrow: 1, backgroundColor: "transparent", alignItems: "center", justifyContent: "space-between", paddingVertical: SPACING * 2, paddingHorizontal: SPACING },
+  headerContainer: { width: "90%", maxWidth: 600, alignItems: "center", marginTop: SCREEN_HEIGHT * 0.06 },
+  topBar: { width: "100%", flexDirection: "row", alignItems: "center", justifyContent: "space-between", marginBottom: normalize(12) },
+  backBtn: { flexDirection: "row", alignItems: "center", gap: 4, paddingVertical: 6, paddingHorizontal: 8, borderRadius: 999 },
+  backText: { fontSize: normalize(13), color: PRIMARY_COLOR, fontFamily: "Comfortaa_700Bold" },
+  progressPill: { paddingHorizontal: 14, paddingVertical: 6, borderRadius: 999, backgroundColor: "rgba(255,184,0,0.12)", borderWidth: 1, borderColor: "rgba(255,184,0,0.30)" },
+  progressText: { fontSize: normalize(12), fontFamily: "Comfortaa_700Bold", color: PRIMARY_COLOR },
+  brandTitle: { fontSize: normalize(34), color: TEXT_COLOR, textAlign: "center", fontFamily: "Comfortaa_700Bold", maxWidth: "100%" },
+  highlight: { color: PRIMARY_COLOR, fontSize: normalize(50) },
+  tagline: { fontSize: normalize(15), color: TEXT_COLOR, textAlign: "center", marginTop: SPACING / 2, fontFamily: "Comfortaa_400Regular", maxWidth: "90%" },
+  card: { width: Math.min(420, SCREEN_WIDTH - SPACING * 2), backgroundColor: "rgba(255,255,255,0.75)", borderRadius: normalize(22), padding: SPACING, shadowColor: PRIMARY_COLOR, shadowOpacity: 0.18, shadowRadius: 12, shadowOffset: { width: 0, height: 6 }, elevation: 6, borderWidth: 1, borderColor: "rgba(0,0,0,0.08)" },
+  stepLabel: { fontSize: normalize(11), fontFamily: "Comfortaa_700Bold", color: PRIMARY_COLOR, textTransform: "uppercase", letterSpacing: 0.8, marginBottom: normalize(10) },
+  step2Intro: { fontSize: normalize(20), fontFamily: "Comfortaa_700Bold", color: TEXT_COLOR, marginBottom: normalize(16), lineHeight: normalize(26) },
 
-  // Top bar
-  topBar: {
-    width: "100%",
-    flexDirection: "row",
-    alignItems: "center",
-    justifyContent: "space-between",
-    marginBottom: normalize(12),
-  },
-  backBtn: {
-    flexDirection: "row",
-    alignItems: "center",
-    gap: 4,
-    paddingVertical: 6,
-    paddingHorizontal: 8,
-    borderRadius: 999,
-  },
-  backText: {
-    fontSize: normalize(13),
-    color: PRIMARY_COLOR,
-    fontFamily: "Comfortaa_700Bold",
-  },
-  progressPill: {
-    paddingHorizontal: 14,
-    paddingVertical: 6,
-    borderRadius: 999,
-    backgroundColor: "rgba(255,184,0,0.12)",
-    borderWidth: 1,
-    borderColor: "rgba(255,184,0,0.30)",
-  },
-  progressText: {
-    fontSize: normalize(12),
-    fontFamily: "Comfortaa_700Bold",
-    color: PRIMARY_COLOR,
-  },
+  // Social
+  socialButton: { width: "100%", flexDirection: "row", alignItems: "center", justifyContent: "center", gap: 10, backgroundColor: "#fff", borderWidth: 1.5, borderColor: "rgba(0,0,0,0.08)", borderRadius: normalize(16), paddingVertical: normalize(13), marginBottom: normalize(10), shadowColor: "#000", shadowOpacity: 0.06, shadowRadius: 4, shadowOffset: { width: 0, height: 2 }, elevation: 2 },
+  socialButtonText: { fontSize: normalize(15), fontFamily: "Comfortaa_700Bold", color: TEXT_COLOR },
+  appleButton: { width: "100%", height: normalize(50), marginBottom: normalize(10) },
+  dividerRow: { flexDirection: "row", alignItems: "center", marginVertical: 12, gap: 10 },
+  divider: { flex: 1, height: 1, backgroundColor: "rgba(0,0,0,0.08)" },
+  dividerText: { fontFamily: "Comfortaa_400Regular", color: "rgba(0,0,0,0.6)", fontSize: normalize(12) },
 
-  // Brand
-  brandTitle: {
-    fontSize: normalize(34),
-    color: TEXT_COLOR,
-    textAlign: "center",
-    fontFamily: "Comfortaa_700Bold",
-    maxWidth: "100%",
-  },
-  highlight: {
-    color: PRIMARY_COLOR,
-    fontSize: normalize(50),
-  },
-  tagline: {
-    fontSize: normalize(15),
-    color: TEXT_COLOR,
-    textAlign: "center",
-    marginTop: SPACING / 2,
-    fontFamily: "Comfortaa_400Regular",
-    maxWidth: "90%",
-  },
-
-  // Card
-  card: {
-    width: Math.min(420, SCREEN_WIDTH - SPACING * 2),
-    backgroundColor: "rgba(255,255,255,0.75)",
-    borderRadius: normalize(22),
-    padding: SPACING,
-    shadowColor: PRIMARY_COLOR,
-    shadowOpacity: 0.18,
-    shadowRadius: 12,
-    shadowOffset: { width: 0, height: 6 },
-    elevation: 6,
-    borderWidth: 1,
-    borderColor: "rgba(0,0,0,0.08)",
-  },
-
-  // Step label
-  stepLabel: {
-    fontSize: normalize(11),
-    fontFamily: "Comfortaa_700Bold",
-    color: PRIMARY_COLOR,
-    textTransform: "uppercase",
-    letterSpacing: 0.8,
-    marginBottom: normalize(10),
-  },
-
-  // Step 2 intro
-  step2Intro: {
-    fontSize: normalize(20),
-    fontFamily: "Comfortaa_700Bold",
-    color: TEXT_COLOR,
-    marginBottom: normalize(16),
-    lineHeight: normalize(26),
-  },
-
-  // Inputs
-  inputWrap: {
-    width: "100%", flexDirection: "row", alignItems: "center",
-    backgroundColor: "#fff", borderRadius: normalize(16),
-    borderWidth: 1, borderColor: "rgba(0,0,0,0.08)",
-    paddingHorizontal: 12, marginBottom: 12,
-  },
-  inputWrapSuccess: {
-    borderColor: "#22C55E",
-    backgroundColor: "rgba(34,197,94,0.04)",
-  },
-  inputWrapError: {
-    borderColor: "#EF4444",
-    backgroundColor: "rgba(239,68,68,0.04)",
-  },
+  inputWrap: { width: "100%", flexDirection: "row", alignItems: "center", backgroundColor: "#fff", borderRadius: normalize(16), borderWidth: 1, borderColor: "rgba(0,0,0,0.08)", paddingHorizontal: 12, marginBottom: 12 },
+  inputWrapSuccess: { borderColor: "#22C55E", backgroundColor: "rgba(34,197,94,0.04)" },
+  inputWrapError: { borderColor: "#EF4444", backgroundColor: "rgba(239,68,68,0.04)" },
   leadingIcon: { marginRight: 8, opacity: 0.9 },
   trailingBtn: { marginLeft: 8, padding: 4 },
-  input: {
-    flex: 1, height: normalize(52), color: "#111",
-    fontSize: normalize(15), fontFamily: "Comfortaa_400Regular",
-  },
-
-  // Username status
-  usernameStatusText: {
-    fontSize: normalize(12),
-    fontFamily: "Comfortaa_700Bold",
-    marginTop: -normalize(6),
-    marginBottom: normalize(8),
-    marginLeft: normalize(4),
-  },
-
-  // Suggestions
-  suggestionsWrap: {
-    marginBottom: normalize(12),
-  },
-  suggestionsLabel: {
-    fontSize: normalize(11),
-    fontFamily: "Comfortaa_700Bold",
-    color: "rgba(0,0,0,0.50)",
-    marginBottom: normalize(8),
-  },
-  suggestionsRow: {
-    flexDirection: "row",
-    flexWrap: "wrap",
-    gap: normalize(8),
-  },
-  suggestionPill: {
-    backgroundColor: "rgba(255,184,0,0.12)",
-    borderWidth: 1,
-    borderColor: "rgba(255,184,0,0.35)",
-    borderRadius: normalize(999),
-    paddingHorizontal: normalize(14),
-    paddingVertical: normalize(7),
-  },
-  suggestionPillText: {
-    fontSize: normalize(13),
-    fontFamily: "Comfortaa_700Bold",
-    color: PRIMARY_COLOR,
-  },
-
-  // Social proof
-  socialProofRow: {
-    flexDirection: "row", alignItems: "center",
-    gap: 6, marginTop: 4, marginBottom: 4, paddingHorizontal: 2,
-  },
-  socialProofText: {
-    flex: 1, fontSize: normalize(12),
-    fontFamily: "Comfortaa_400Regular",
-    color: "rgba(0,0,0,0.50)", lineHeight: normalize(16),
-  },
-
-  // Banners
-  offlineBanner: {
-    flexDirection: "row", alignItems: "center", gap: 8,
-    backgroundColor: "#FDE68A", borderColor: "rgba(0,0,0,0.08)", borderWidth: 1,
-    paddingVertical: 8, paddingHorizontal: 12, borderRadius: 12, marginBottom: 10,
-  },
+  input: { flex: 1, height: normalize(52), color: "#111", fontSize: normalize(15), fontFamily: "Comfortaa_400Regular" },
+  usernameStatusText: { fontSize: normalize(12), fontFamily: "Comfortaa_700Bold", marginTop: -normalize(6), marginBottom: normalize(8), marginLeft: normalize(4) },
+  suggestionsWrap: { marginBottom: normalize(12) },
+  suggestionsLabel: { fontSize: normalize(11), fontFamily: "Comfortaa_700Bold", color: "rgba(0,0,0,0.50)", marginBottom: normalize(8) },
+  suggestionsRow: { flexDirection: "row", flexWrap: "wrap", gap: normalize(8) },
+  suggestionPill: { backgroundColor: "rgba(255,184,0,0.12)", borderWidth: 1, borderColor: "rgba(255,184,0,0.35)", borderRadius: normalize(999), paddingHorizontal: normalize(14), paddingVertical: normalize(7) },
+  suggestionPillText: { fontSize: normalize(13), fontFamily: "Comfortaa_700Bold", color: PRIMARY_COLOR },
+  socialProofRow: { flexDirection: "row", alignItems: "center", gap: 6, marginTop: 4, marginBottom: 4, paddingHorizontal: 2 },
+  socialProofText: { flex: 1, fontSize: normalize(12), fontFamily: "Comfortaa_400Regular", color: "rgba(0,0,0,0.50)", lineHeight: normalize(16) },
+  offlineBanner: { flexDirection: "row", alignItems: "center", gap: 8, backgroundColor: "#FDE68A", borderColor: "rgba(0,0,0,0.08)", borderWidth: 1, paddingVertical: 8, paddingHorizontal: 12, borderRadius: 12, marginBottom: 10 },
   offlineText: { color: "#111827", fontSize: normalize(12), fontFamily: "Comfortaa_700Bold" },
-  errorBanner: {
-    flexDirection: "row", alignItems: "center", gap: 8,
-    backgroundColor: "#E11D48", borderRadius: 12,
-    paddingVertical: 10, paddingHorizontal: 12, marginBottom: 10,
-  },
+  errorBanner: { flexDirection: "row", alignItems: "center", gap: 8, backgroundColor: "#E11D48", borderRadius: 12, paddingVertical: 10, paddingHorizontal: 12, marginBottom: 10 },
   errorBannerText: { color: "#fff", fontSize: normalize(13), fontFamily: "Comfortaa_700Bold", flexShrink: 1 },
-
-  // Hint
-  hintRow: {
-    flexDirection: "row", alignItems: "center", gap: 8,
-    backgroundColor: "rgba(0,0,0,0.04)", borderWidth: 1, borderColor: "rgba(0,0,0,0.08)",
-    paddingVertical: 8, paddingHorizontal: 10, borderRadius: 12, marginTop: 2, marginBottom: 4,
-  },
-  hintText: {
-    flex: 1, color: "rgba(17,24,39,0.78)", fontSize: normalize(12),
-    fontFamily: "Comfortaa_700Bold", lineHeight: normalize(16),
-  },
-
-  // CTA
+  hintRow: { flexDirection: "row", alignItems: "center", gap: 8, backgroundColor: "rgba(0,0,0,0.04)", borderWidth: 1, borderColor: "rgba(0,0,0,0.08)", paddingVertical: 8, paddingHorizontal: 10, borderRadius: 12, marginTop: 2, marginBottom: 4 },
+  hintText: { flex: 1, color: "rgba(17,24,39,0.78)", fontSize: normalize(12), fontFamily: "Comfortaa_700Bold", lineHeight: normalize(16) },
   ctaInner: { flexDirection: "row", alignItems: "center", gap: 10 },
-  registerButton: {
-    width: Math.min(420, SCREEN_WIDTH - SPACING * 2),
-    backgroundColor: BUTTON_COLOR,
-    minHeight: normalize(52),
-    paddingVertical: normalize(12),
-    borderRadius: normalize(16),
-    alignItems: "center",
-    justifyContent: "center",
-    alignSelf: "center",
-    marginTop: SPACING,
-    borderWidth: 1.5,
-    borderColor: PRIMARY_COLOR,
-    shadowColor: PRIMARY_COLOR,
-    shadowOffset: { width: 0, height: normalize(3) },
-    shadowOpacity: 0.3,
-    shadowRadius: normalize(5),
-  },
+  registerButton: { width: Math.min(420, SCREEN_WIDTH - SPACING * 2), backgroundColor: BUTTON_COLOR, minHeight: normalize(52), paddingVertical: normalize(12), borderRadius: normalize(16), alignItems: "center", justifyContent: "center", alignSelf: "center", marginTop: SPACING, borderWidth: 1.5, borderColor: PRIMARY_COLOR, shadowColor: PRIMARY_COLOR, shadowOffset: { width: 0, height: normalize(3) }, shadowOpacity: 0.3, shadowRadius: normalize(5) },
   disabledButton: { opacity: 0.5 },
-  registerButtonText: {
-    color: TEXT_COLOR, fontSize: normalize(16), fontFamily: "Comfortaa_700Bold",
-  },
-
-  // Login link
-  loginText: {
-    color: TEXT_COLOR, textAlign: "center", fontSize: normalize(14),
-    fontFamily: "Comfortaa_400Regular", marginTop: SPACING, marginBottom: SPACING * 2,
-  },
+  registerButtonText: { color: TEXT_COLOR, fontSize: normalize(16), fontFamily: "Comfortaa_700Bold" },
+  loginText: { color: TEXT_COLOR, textAlign: "center", fontSize: normalize(14), fontFamily: "Comfortaa_400Regular", marginTop: SPACING, marginBottom: SPACING * 2 },
   loginLink: { color: PRIMARY_COLOR, fontFamily: "Comfortaa_400Regular" },
 });

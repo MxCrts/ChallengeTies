@@ -34,6 +34,7 @@ import { useAdsVisibility } from "../../src/context/AdsVisibilityContext";
 import * as Haptics from "expo-haptics";
 import { useShareCard } from "@/hooks/useShareCard";
 import WeeklyTrophiesCard from "@/components/WeeklyTrophiesCard";
+import ActivityHeatmap, { type HeatmapDay } from "@/components/ActivityHeatmap";
 import { StatsShareCard } from "@/components/ShareCards";
 
 const { width: W, height: H } = Dimensions.get("window");
@@ -68,6 +69,7 @@ function Ring({ pct, size, sw, isDark }: { pct: number; size: number; sw: number
   const circ = 2 * Math.PI * r;
   const prog = useSharedValue(0);
   useEffect(() => {
+    prog.value = 0; // reset avant chaque animation
     prog.value = withDelay(350, withTiming(Math.min(pct / 100, 1), { duration: 1300, easing: Easing.out(Easing.cubic) }));
   }, [pct]);
   const ap = useAnimatedProps(() => ({ strokeDashoffset: circ * (1 - prog.value) }));
@@ -222,6 +224,34 @@ export default function UserStats() {
     const t = Math.max(stats.trophies, 10);
     return [.54,.61,.69,.76,.83,.92,1].map(f => Math.round(t*f));
   }, [userDoc, stats.trophies]);
+
+  const heatmapDays = useMemo((): HeatmapDay[] => {
+    const result: Record<string, number> = {};
+
+    // Parcourt tous les challenges actifs (completionDates)
+    const allChallenges = [
+      ...(Array.isArray(userDoc?.CompletedChallenges) ? userDoc!.CompletedChallenges : []),
+      ...currentChallenges,
+    ];
+
+    allChallenges.forEach((ch: any) => {
+      const dates: any[] = Array.isArray(ch?.completionDates) ? ch.completionDates : [];
+      dates.forEach((raw) => {
+        let key = "";
+        if (raw && typeof raw === "object" && typeof raw.seconds === "number") {
+          const d = new Date(raw.seconds * 1000);
+          key = [d.getFullYear(), String(d.getMonth()+1).padStart(2,"0"), String(d.getDate()).padStart(2,"0")].join("-");
+        } else if (typeof raw === "string") {
+          key = raw.slice(0, 10);
+        }
+        if (/^\d{4}-\d{2}-\d{2}$/.test(key)) {
+          result[key] = (result[key] || 0) + 1;
+        }
+      });
+    });
+
+    return Object.entries(result).map(([date, count]) => ({ date, count }));
+  }, [userDoc, currentChallenges]);
 
   const nf = useCallback((n: number) => Number(n||0).toLocaleString(i18n.language), [i18n.language]);
 
@@ -391,6 +421,14 @@ export default function UserStats() {
               </View>
             </LinearGradient>
           </Animated.View>
+
+          {/* ═══ HEATMAP ══════════════════════════════════════════════════ */}
+          <ActivityHeatmap
+            days={heatmapDays}
+            isDark={isDark}
+            t={t}
+            weeks={16}
+          />
 
           {/* ═══ WEEKLY ═══════════════════════════════════════════════════ */}
           <Animated.View entering={FadeInUp.delay(210).duration(400)} style={{ marginBottom: SPACING }}>

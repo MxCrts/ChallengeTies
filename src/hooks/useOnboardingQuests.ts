@@ -1,37 +1,108 @@
 // src/hooks/useOnboardingQuests.ts
-// ✅ Hook onboarding "First Win" — top 1 mondial
+// TOP 1 MONDIAL — triggers auto sur tous les events, polling intelligent
 
 import { useCallback, useEffect, useRef, useState } from "react";
 import {
   loadOnboardingState,
   completeQuest,
   dismissOnboarding,
+  incrementExploreCount,
+  isProfileComplete,
   type OnboardingState,
   type QuestId,
 } from "../services/onboardingQuestService";
-import { AppState, type AppStateStatus } from "react-native";
+import { AppState, type AppStateStatus, DeviceEventEmitter } from "react-native";
+import { FIRST_MARK_EVENT } from "@/context/CurrentChallengesContext";
 
-const POLL_MS = 1500; // re-check quand l'app revient au premier plan
+// Events internes pour déclencher les quêtes depuis n'importe où dans l'app
+export const QUEST_DAILY_BONUS_CLAIMED = "quest.dailyBonusClaimed";
+export const QUEST_INVITATION_SENT = "quest.invitationSent";
+export const QUEST_CHALLENGE_EXPLORED = "quest.challengeExplored";
 
 export function useOnboardingQuests() {
   const [state, setState] = useState<OnboardingState | null>(null);
   const [loading, setLoading] = useState(true);
   const mountedRef = useRef(true);
+  // Garde contre double-trigger
+  const completingRef = useRef<Set<QuestId>>(new Set());
+
+  // ─── Load ────────────────────────────────────────────────────────────────
 
   const load = useCallback(async () => {
     try {
       const s = await loadOnboardingState();
       if (mountedRef.current) setState(s);
     } catch {}
-    finally { if (mountedRef.current) setLoading(false); }
+    finally {
+      if (mountedRef.current) setLoading(false);
+    }
   }, []);
+
+  // ─── Complete (avec guard anti-double) ───────────────────────────────────
+
+  const complete = useCallback(async (questId: QuestId) => {
+    if (completingRef.current.has(questId)) return;
+    completingRef.current.add(questId);
+    try {
+      const next = await completeQuest(questId);
+      if (mountedRef.current) setState(next);
+      return next;
+    } finally {
+      completingRef.current.delete(questId);
+    }
+  }, []);
+
+  // ─── Check auto profile ──────────────────────────────────────────────────
+
+  const checkProfileQuest = useCallback(
+    async (userData: any) => {
+      if (!state) return;
+      const already = state.quests.find((q) => q.id === "complete_profile")?.completed;
+      if (already) return;
+      if (isProfileComplete(userData)) {
+        await complete("complete_profile");
+      }
+    },
+    [state, complete]
+  );
+
+  // ─── Check auto streak ───────────────────────────────────────────────────
+
+  const checkStreakQuest = useCallback(
+    async (userData: any) => {
+      if (!state) return;
+      const already = state.quests.find((q) => q.id === "maintain_3day_streak")?.completed;
+      if (already) return;
+
+      const streak =
+        userData?.streak ??
+        userData?.streakDays ??
+        userData?.currentStreak?.current ??
+        userData?.currentStreak?.count ??
+        null;
+
+      const streakNum = typeof streak === "number" ? streak : 0;
+      if (streakNum >= 3) {
+        await complete("maintain_3day_streak");
+      }
+    },
+    [state, complete]
+  );
+
+  // ─── Dismiss ─────────────────────────────────────────────────────────────
+
+  const dismiss = useCallback(async () => {
+    await dismissOnboarding();
+    if (mountedRef.current)
+      setState((prev) => (prev ? { ...prev, dismissed: true } : prev));
+  }, []);
+
+  // ─── Mount + AppState polling ─────────────────────────────────────────────
 
   useEffect(() => {
     mountedRef.current = true;
     load();
 
-    // Re-check quand l'app revient au premier plan
-    // (ex: user est allé marquer un défi dans une autre tab)
     const sub = AppState.addEventListener("change", (status: AppStateStatus) => {
       if (status === "active") load();
     });
@@ -42,26 +113,53 @@ export function useOnboardingQuests() {
     };
   }, [load]);
 
-  const complete = useCallback(async (questId: QuestId) => {
-    const next = await completeQuest(questId);
-    if (mountedRef.current) setState(next);
-    return next;
-  }, []);
+  // ─── Trigger : FIRST_MARK_EVENT → mark_first_day ─────────────────────────
 
-  const dismiss = useCallback(async () => {
-    await dismissOnboarding();
-    if (mountedRef.current) setState(prev => prev ? { ...prev, dismissed: true } : prev);
-  }, []);
+  useEffect(() => {
+    const sub = DeviceEventEmitter.addListener(FIRST_MARK_EVENT, () => {
+      complete("mark_first_day");
+    });
+    return () => sub.remove();
+  }, [complete]);
 
-  // Visible si : initialisé + pas dismissed + pas tout complété
+  // ─── Trigger : QUEST_DAILY_BONUS_CLAIMED → claim_daily_bonus ─────────────
+
+  useEffect(() => {
+    const sub = DeviceEventEmitter.addListener(QUEST_DAILY_BONUS_CLAIMED, () => {
+      complete("claim_daily_bonus");
+    });
+    return () => sub.remove();
+  }, [complete]);
+
+  // ─── Trigger : QUEST_INVITATION_SENT → invite_duo ────────────────────────
+
+  useEffect(() => {
+    const sub = DeviceEventEmitter.addListener(QUEST_INVITATION_SENT, () => {
+      complete("invite_duo");
+    });
+    return () => sub.remove();
+  }, [complete]);
+
+  // ─── Trigger : QUEST_CHALLENGE_EXPLORED → explore_challenges ─────────────
+
+  useEffect(() => {
+    const sub = DeviceEventEmitter.addListener(QUEST_CHALLENGE_EXPLORED, async () => {
+      await incrementExploreCount();
+      load(); // refresh pour avoir le nouveau count
+    });
+    return () => sub.remove();
+  }, [load]);
+
+  // ─── Dérivés ──────────────────────────────────────────────────────────────
+
   const visible =
     !loading &&
     !!state &&
     !state.dismissed &&
     !state.allCompleted;
 
-  const completedCount = state?.quests.filter(q => q.completed).length ?? 0;
-  const totalCount = state?.quests.length ?? 3;
+  const completedCount = state?.quests.filter((q) => q.completed).length ?? 0;
+  const totalCount = state?.quests.length ?? 6;
   const progressPct = totalCount > 0 ? completedCount / totalCount : 0;
 
   return {
@@ -74,5 +172,8 @@ export function useOnboardingQuests() {
     complete,
     dismiss,
     reload: load,
+    // Helpers pour triggers externes
+    checkProfileQuest,
+    checkStreakQuest,
   };
 }

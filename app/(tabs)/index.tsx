@@ -69,12 +69,15 @@ import RequireAuthModal from "@/components/RequireAuthModal";
 import { TUTORIAL_STEPS } from "../../components/TutorialSteps";
 import * as Haptics from "expo-haptics";
 import DailyBonusModal from "../../components/DailyBonusModal";
+import { DeviceEventEmitter } from "react-native";
+import { FIRST_MARK_EVENT, MARK_TOAST_EVENT } from "../../context/CurrentChallengesContext";
 import {
   canClaimDailyBonusFromUserData,
   claimDailyBonus,
   DailyRewardResult,
   claimDailyBonusReroll,
 } from "../../helpers/dailyBonusService";
+import FirstMarkModal from "../../components/FirstMarkModal";
 import {
   RewardedAd,
   RewardedAdEventType,
@@ -95,7 +98,23 @@ import { useTodayHubState } from "@/components/TodayHub/useTodayHubState";
 import type { TodayHubWhyReturn } from "../../components/TodayHub/TodayHub";
 import OnboardingQuestBanner from "@/components/OnboardingQuestBanner";
 import { useOnboardingQuests } from "@/src/hooks/useOnboardingQuests";
+import { useCurrentChallenges } from "../../context/CurrentChallengesContext";
 import type { QuestId } from "@/src/services/onboardingQuestService";
+import {
+  initForge,
+  loadForgeState,
+  completeForgeStep,
+  claimForgeReward,
+  clearForge,
+  getAvailableStep,
+  computeForgeExpired,
+  type ForgeState,
+  type ForgeStep,
+} from "../../services/ForgeService";
+import ForgeIntentionModal from "../../components/ForgeIntentionModal";
+import WeeklyReportModal, { type WeeklyReportData } from "../../components/WeeklyReportModal";
+import ChoixDuoModal from "../../components/ChoixDuoModal";
+import { QUEST_DAILY_BONUS_CLAIMED, QUEST_INVITATION_SENT, QUEST_CHALLENGE_EXPLORED } from "@/src/hooks/useOnboardingQuests";
 
 const getScreen = () => Dimensions.get("window");
 const { width: SCREEN_WIDTH, height: SCREEN_HEIGHT } = getScreen();
@@ -398,7 +417,10 @@ export default function HomeScreen() {
   const [duoInvitePendingFor, setDuoInvitePendingFor] = useState<string | null>(null);
   const [welcomeState, setWelcomeState] = useState<WelcomeBonusState | null>(null);
   const [welcomeVisible, setWelcomeVisible] = useState(false);
+  const welcomeVisibleRef = useRef(false);
+useEffect(() => { welcomeVisibleRef.current = welcomeVisible; }, [welcomeVisible]);
   const [welcomeLoading, setWelcomeLoading] = useState(false);
+
   const [pendingWelcomeAfterTutorial, setPendingWelcomeAfterTutorial] =
   useState(false);
   const [welcomeGuardKey, setWelcomeGuardKey] = useState<string | null>(null);
@@ -426,7 +448,12 @@ export default function HomeScreen() {
   const { show: showToast } = useToast();
   const [duoNudgeDismissed, setDuoNudgeDismissed] = useState(false);
   const [isUserDataReady, setIsUserDataReady] = useState(false);
-  
+  const [forgeState, setForgeState] = useState<ForgeState | null>(null);
+const [forgeAvailableStep, setForgeAvailableStep] = useState<ForgeStep | null>(null);
+const [forgeIntentionVisible, setForgeIntentionVisible] = useState(false);
+const [forgeLoading, setForgeLoading] = useState(false);
+const [weeklyReport, setWeeklyReport] = useState<WeeklyReportData | null>(null);
+const [weeklyReportVisible, setWeeklyReportVisible] = useState(false);
  
 const IMG_MAX_RETRIES = 2;
 const IMG_BROKEN_TTL_MS = 10 * 60_000;
@@ -437,6 +464,9 @@ const imgRetryRef = useRef<Record<string, number>>({});
 const imgRetryTimerRef = useRef<Record<string, any>>({});
 const welcomeHandledRef = useRef<string | null>(null);
 const discoverYRef = useRef(0);
+// --- Guided tour ---
+const [firstMarkModalVisible, setFirstMarkModalVisible] = useState(false);
+const [choixDuoModalVisible, setChoixDuoModalVisible] = useState(false);
 
 useEffect(() => {
   return () => {
@@ -444,6 +474,7 @@ useEffect(() => {
     imgRetryTimerRef.current = {};
   };
 }, []);
+
 
 const scheduleImageRetry = useCallback((id: string) => {
   const tries = (imgRetryRef.current[id] ?? 0) + 1;
@@ -479,6 +510,20 @@ const scheduleImageRetry = useCallback((id: string) => {
   () => `home.postWelcomeAbsorb.v1.${user?.uid ?? "guest"}`,
   [user?.uid]
 );
+
+useEffect(() => {
+  const sub = DeviceEventEmitter.addListener(FIRST_MARK_EVENT, () => {
+    // S'ouvre seulement après que l'user ait physiquement marqué
+    setTimeout(() => {
+      setFirstMarkModalVisible(true);
+    }, 600);
+  });
+  return () => sub.remove();
+}, []);
+
+useEffect(() => {
+  setIsMounted(true);
+}, []);
 
   const premiumEntitlement = useMemo(() => {
     const premium = (userData as any)?.premium;
@@ -567,15 +612,22 @@ const changingLangRef = useRef(false);
   const spotlightOpenTokenRef = useRef(0);
 
   const isSpotlightBlocked = useCallback(() => {
-    return (
-      isTutorialBlocking ||
-      welcomeVisible ||
-      dailyBonusVisible ||
-      showPremiumEndModal ||
-      modalVisible
-    );
-  }, [isTutorialBlocking, welcomeVisible, dailyBonusVisible, showPremiumEndModal, modalVisible]);
-
+  return (
+    isTutorialBlocking ||
+    welcomeVisible ||
+    dailyBonusVisible ||
+    showPremiumEndModal ||
+    modalVisible ||
+    firstMarkModalVisible
+  );
+}, [
+  isTutorialBlocking,
+  welcomeVisible,
+  dailyBonusVisible,
+  showPremiumEndModal,
+  modalVisible,
+  firstMarkModalVisible,
+]);
   const forceHideSpotlight = useCallback(() => {
     setSpotlightArmed(false);
     setSpotlightVisible(false);
@@ -772,6 +824,17 @@ const heroCtaGlowStyle = useAnimatedStyle(() => ({
     if (!Array.isArray(list)) return false;
     return list.some((c) => !c?.completed && !c?.archived);
   }, [userData]);
+
+  const streakCurrent = useMemo(() => {
+  const list = (userData as any)?.CurrentChallenges;
+  if (!Array.isArray(list)) return 0;
+  const active = list.filter((c: any) => !c?.completed && !c?.archived);
+  if (!active.length) return 0;
+  const vals = active.map((c: any) =>
+    typeof c?.streak === "number" ? c.streak : 0
+  );
+  return Math.max(0, ...vals);
+}, [userData]);
 
   const currentChallenges = useMemo<CurrentChallengeItem[]>(() => {
     const list = (userData as any)?.CurrentChallenges;
@@ -1141,12 +1204,13 @@ const absorbToTodayHub = useCallback(async () => {
       }, 220);
 
       setTimeout(() => {
-        if (todayHubPrimaryMode !== "mark") return;
-        if (!spotlightAllowed) return;
-        if (isSpotlightBlocked()) return;
-        const token = ++spotlightOpenTokenRef.current;
-        tryOpenSpotlightWithRetry(token);
-      }, 260);
+  if (todayHubPrimaryMode !== "mark") return;
+  if (!spotlightAllowed) return;
+  if (isSpotlightBlocked()) return;
+  // ✅ Ne pas ouvrir le spotlight si le guided tour va démarrer
+  const token = ++spotlightOpenTokenRef.current;
+  tryOpenSpotlightWithRetry(token);
+}, 260);
     });
 
     try {
@@ -1221,6 +1285,8 @@ useEffect(() => {
   soloNudgeIn,
 ]);
 
+const { complete: completeQuest, checkProfileQuest, checkStreakQuest } = useOnboardingQuests();
+
   useEffect(() => {
     if (todayHubPrimaryMode !== "duoPending") return;
     (async () => {
@@ -1241,67 +1307,6 @@ useEffect(() => {
     true
   );
 }, [heroCtaGlow]);
-
-useEffect(() => {
-  let cancelled = false;
-
-  const arm = async () => {
-    const fromParam =
-      String((params as any)?.fromOnboarding ?? "") === "1" ||
-      String((params as any)?.onboarding ?? "") === "1";
-
-    let fromStorage = false;
-    try {
-      const v = await AsyncStorage.getItem(ONBOARDING_JUST_FINISHED_KEY);
-      fromStorage = v === "1";
-    } catch {}
-
-    if (!fromParam && !fromStorage) return;
-
-    try {
-      const shown = await AsyncStorage.getItem(SPOTLIGHT_SHOWN_KEY);
-      if (shown === "1") return;
-    } catch {}
-
-    if (!cancelled) setSpotlightArmed(true);
-  };
-
-  arm();
-  return () => {
-    cancelled = true;
-  };
-}, [params, SPOTLIGHT_SHOWN_KEY]);
-
-
-  useEffect(() => {
-    if (!spotlightArmed) return;
-    if (!spotlightAllowed) return;
-    if (isSpotlightBlocked()) return;
-    if (spotlightVisible || spotRect) return;
-
-    const token = ++spotlightOpenTokenRef.current;
-
-    const task = InteractionManager.runAfterInteractions(() => {
-      setTimeout(() => {
-        if (token !== spotlightOpenTokenRef.current) return;
-        if (isSpotlightBlocked()) return;
-
-        tryOpenSpotlightWithRetry(token);
-      }, 120);
-    });
-
-    return () => {
-      spotlightOpenTokenRef.current++;
-      task?.cancel?.();
-    };
-  }, [
-    spotlightArmed,
-    spotlightAllowed,
-    isSpotlightBlocked,
-    spotlightVisible,
-    spotRect,
-    tryOpenSpotlightWithRetry,
-  ]);
 
 useEffect(() => {
   let cancelled = false;
@@ -1424,6 +1429,12 @@ useEffect(() => {
   }
   refreshUserData();
 }, [user?.uid, refreshUserData]);
+
+useEffect(() => {
+  if (!userData) return;
+  checkProfileQuest(userData);
+  checkStreakQuest(userData);
+}, [userData, checkProfileQuest, checkStreakQuest]);
 
   useEffect(() => {
     const last = userData?.dailyBonus?.lastClaimDate as string | undefined;
@@ -1674,6 +1685,45 @@ useFocusEffect(
   }, [refreshUserData])
 );
 
+// ─── Weekly Report — affiche le lundi si pas encore vu ────────────────────
+useFocusEffect(
+  useCallback(() => {
+    if (!user?.uid) return;
+
+    const checkWeeklyReport = async () => {
+      try {
+        // Calcule le weekId = lundi de la semaine passée
+        const now = new Date();
+        const thisMonday = new Date(now);
+        thisMonday.setHours(0, 0, 0, 0);
+        const dow = (thisMonday.getDay() + 6) % 7;
+        thisMonday.setDate(thisMonday.getDate() - dow);
+        const lastMonday = new Date(thisMonday);
+        lastMonday.setDate(thisMonday.getDate() - 7);
+        const weekId = [
+          lastMonday.getFullYear(),
+          String(lastMonday.getMonth() + 1).padStart(2, "0"),
+          String(lastMonday.getDate()).padStart(2, "0"),
+        ].join("-");
+
+        const reportRef = doc(db, "users", user.uid, "weeklyReports", weekId);
+        const snap = await getDoc(reportRef);
+
+        if (!snap.exists()) return;
+        const data = snap.data();
+        if (data.seen) return;
+
+        // Petit délai pour laisser la home se monter
+        setTimeout(() => {
+          setWeeklyReport(data as WeeklyReportData);
+          setWeeklyReportVisible(true);
+        }, 1200);
+      } catch {}
+    };
+
+    checkWeeklyReport();
+  }, [user?.uid])
+);
 
   const fadeAnim = useSharedValue(0);
   const fadeStyle = useAnimatedStyle(() => ({ opacity: fadeAnim.value }));
@@ -1717,12 +1767,33 @@ useEffect(() => {
   const unsub = onSnapshot(
     qInv,
     (snap) => {
-      if (snap.empty) {
-        setPendingInvite(null);
-        setDuoInvitePending(false);
-        setDuoInvitePendingFor(null);
-        return;
+      // APRÈS :
+if (snap.empty) {
+  // ✅ Invitation acceptée ou annulée → claim la récompense Forge
+  if (pendingInvite?.id && forgeState && !forgeState.rewardClaimed) {
+    claimForgeReward(forgeState).then((reward) => {
+      if (reward.trophies > 0) {
+        DeviceEventEmitter.emit(MARK_TOAST_EVENT, {
+          kind: "success",
+          vibe: "trophies",
+          title: reward.badge
+            ? t("forge.rewardBadgeTitle", { defaultValue: "Badge \"Forgé\" débloqué ! 🔥" })
+            : t("forge.rewardTitle", { defaultValue: "Récompense Forge !" }),
+          message: t("forge.rewardMsg", {
+            trophies: reward.trophies,
+            defaultValue: `+${reward.trophies} trophées`,
+          }),
+        });
       }
+    }).catch(() => {});
+    clearForge(pendingInvite.id).catch(() => {});
+  }
+
+  setPendingInvite(null);
+  setDuoInvitePending(false);
+  setDuoInvitePendingFor(null);
+  return;
+}
 
       const doc0 = snap.docs[0];
       const data: any = doc0.data();
@@ -1733,17 +1804,22 @@ useEffect(() => {
       const selectedDays =
         typeof data?.selectedDays === "number" ? data.selectedDays : undefined;
 
-      setPendingInvite({
-        id: doc0.id,
-        challengeId,
-        selectedDays,
-        inviteeUsername:
-          typeof data?.inviteeUsername === "string" ? data.inviteeUsername : undefined,
-        createdAt: data?.createdAt,
-      });
+      const isNewInvite = !pendingInvite; // pas d'invite avant → c'est une création
+setPendingInvite({
+  id: doc0.id,
+  challengeId,
+  selectedDays,
+  inviteeUsername:
+    typeof data?.inviteeUsername === "string" ? data.inviteeUsername : undefined,
+  createdAt: data?.createdAt,
+});
+setDuoInvitePending(true);
+setDuoInvitePendingFor(challengeId || null);
 
-      setDuoInvitePending(true);
-      setDuoInvitePendingFor(challengeId || null);
+// Trigger quête invite_duo dès qu'une invitation est créée (première apparition)
+if (isNewInvite) {
+  DeviceEventEmitter.emit(QUEST_INVITATION_SENT);
+}
     },
     () => {
       setPendingInvite(null);
@@ -1766,6 +1842,31 @@ useEffect(() => {
     true
   );
 }, [duoInvitePending, isTutorialBlocking, duoPendingPulse]);
+
+// ─── Init / refresh La Forge ──────────────────────────────────
+useEffect(() => {
+  if (!duoInvitePending || !pendingInvite?.id) {
+    setForgeState(null);
+    setForgeAvailableStep(null);
+    return;
+  }
+
+  let cancelled = false;
+  const run = async () => {
+    const state = await initForge(pendingInvite.id);
+    if (cancelled) return;
+
+    const expired = computeForgeExpired(state);
+    const updated = expired && !state.expired
+      ? { ...state, expired: true }
+      : state;
+
+    setForgeState(updated);
+    setForgeAvailableStep(getAvailableStep(updated));
+  };
+  run();
+  return () => { cancelled = true; };
+}, [duoInvitePending, pendingInvite?.id]);
 
 const bonusPulseStyle = useAnimatedStyle(() => {
   const o = 0.10 + bonusPulse.value * 0.10;
@@ -1826,9 +1927,41 @@ const bonusPulseStyle = useAnimatedStyle(() => {
     return () => unsubscribe();
   }, []);
 
-  useEffect(() => {
-  setIsMounted(true);
-}, []);
+  // Après le useEffect onAuthStateChanged existant, ajoute :
+useEffect(() => {
+  if (!user?.uid) return;
+
+  const saveFcmToken = async () => {
+    try {
+      const { getExpoPushTokenAsync, requestPermissionsAsync } =
+        await import("expo-notifications");
+
+      const { status } = await requestPermissionsAsync();
+      if (status !== "granted") return;
+
+      const tokenData = await getExpoPushTokenAsync({
+        projectId: "f472e9b7-ef09-41b7-81c6-9a4dc44f2f37", // ← ton Expo project ID (app.json → extra.eas.projectId)
+      });
+
+      const expoPushToken = tokenData?.data;
+      if (!expoPushToken) return;
+
+      await updateDoc(doc(db, "users", user.uid), {
+        fcmToken: expoPushToken,
+        fcmTokenUpdatedAt: new Date().toISOString(),
+      });
+    } catch (e) {
+      console.warn("[FCM] saveFcmToken failed:", e);
+    }
+  };
+
+  saveFcmToken();
+}, [user?.uid]);
+
+ const effectiveActiveMetaRef = useRef<typeof effectiveActiveMeta>(null);
+useEffect(() => {
+  effectiveActiveMetaRef.current = effectiveActiveMeta;
+}, [effectiveActiveMeta]);
 
   useEffect(() => {
     const list = dailyFive.length ? dailyFive : allChallenges;
@@ -2000,6 +2133,7 @@ const bonusPulseStyle = useAnimatedStyle(() => {
       task && (task.cancel?.());
     };
   }, [fetchChallenges, i18n.language]);
+  
 
   const safeNavigate = useCallback(
     (path: string, why?: string) => {
@@ -2009,28 +2143,103 @@ const bonusPulseStyle = useAnimatedStyle(() => {
     [gate, router, isMounted, hydrated]
   );
 
-   const { complete: completeQuest } = useOnboardingQuests();
+const { markToday: markTodayCtx, isMarkedToday } = useCurrentChallenges();
 
-  const handleQuestPress = useCallback((questId: QuestId) => {
-    switch (questId) {
-      case "mark_first_day":
-      case "view_challenge": {
-        const id = primaryActiveId ?? activeChallengeId;
-        if (id) safeNavigate(`/challenge-details/${id}`, "onboarding-quest");
-        else safeNavigate("/explore", "onboarding-quest-no-challenge");
-        break;
+// State pour l'animation "premier jour"
+const firstDayAnimOpacity = useSharedValue(0);
+const firstDayAnimTranslateY = useSharedValue(12);
+
+// Vérifie si le challenge actif est déjà marqué aujourd'hui
+const isActiveChallengeMarkedToday = useMemo(() => {
+  const targetId = primaryActiveId ?? activeChallengeId;
+  if (!targetId) return false;
+  const ch = currentChallenges.find(
+    (c) => (c.challengeId ?? c.id) === targetId
+  );
+  if (!ch?.selectedDays) return false;
+  return isMarkedToday(targetId as string, ch.selectedDays);
+}, [primaryActiveId, activeChallengeId, currentChallenges, isMarkedToday]);
+
+// Animation entrée du banner "premier jour"
+useEffect(() => {
+  if (!hasActiveChallenges || isActiveChallengeMarkedToday) {
+    firstDayAnimOpacity.value = withTiming(0, { duration: 200 });
+    return;
+  }
+  firstDayAnimOpacity.value = withTiming(1, { duration: 400 });
+  firstDayAnimTranslateY.value = withSpring(0, { damping: 18, stiffness: 200 });
+}, [hasActiveChallenges, isActiveChallengeMarkedToday]);
+
+
+
+const firstDayBannerStyle = useAnimatedStyle(() => ({
+  opacity: firstDayAnimOpacity.value,
+  transform: [{ translateY: firstDayAnimTranslateY.value }],
+}));
+
+// markToday depuis la home directement
+const handleMarkTodayFromHome = useCallback(async () => {
+  const targetId = primaryActiveId ?? activeChallengeId;
+  if (!targetId) return;
+
+  const ch = currentChallenges.find(
+    (c) => (c.challengeId ?? c.id) === targetId
+  );
+  if (!ch?.selectedDays) return;
+
+  try {
+    await Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Heavy);
+  } catch {}
+
+  const res = await markTodayCtx(targetId as string, ch.selectedDays);
+  // Le FIRST_MARK_EVENT est émis automatiquement par le contexte
+  // → FirstMarkModal s'ouvre via le listener existant
+}, [primaryActiveId, activeChallengeId, currentChallenges, markTodayCtx]);
+
+const handleQuestPress = useCallback((questId: QuestId) => {
+  switch (questId) {
+    case "mark_first_day": {
+      const targetId = primaryActiveId ?? activeChallengeId;
+      if (targetId) {
+        router.push(`/challenge-details/${targetId}` as any);
+      } else {
+        router.push("/explore" as any);
       }
-      case "join_solo_challenge":
-        safeNavigate("/explore", "onboarding-quest-join");
-        break;
-      case "complete_profile":
-        safeNavigate("/profile/UserInfo", "onboarding-quest-profile");
-        break;
-      case "explore_community":
-        router.push("/(tabs)/focus" as any);
-        break;
+      break;
     }
-  }, [primaryActiveId, activeChallengeId, safeNavigate, completeQuest, router]);
+    case "explore_challenges":
+      router.push("/explore" as any);
+      break;
+    case "claim_daily_bonus":
+      setDailyBonusVisible(true);
+      break;
+    case "complete_profile":
+      router.push("/profile/UserInfo" as any);
+      break;
+    case "invite_duo": {
+      const targetId =
+        pendingInvite?.challengeId ??
+        todayHubView.hubChallengeId ??
+        primaryActiveId ??
+        activeChallengeId;
+      if (targetId) {
+        router.push(`/challenge-details/${targetId}?openChoixDuo=1` as any);
+      } else {
+        router.push("/explore" as any);
+      }
+      break;
+    }
+    case "maintain_3day_streak":
+      // Quête auto — pas d'action manuelle
+      break;
+  }
+}, [
+  router,
+  primaryActiveId,
+  activeChallengeId,
+  pendingInvite?.challengeId,
+  todayHubView.hubChallengeId,
+]);
 
   const handlePickChallengePress = useCallback(async () => {
   try {
@@ -2070,10 +2279,113 @@ const handleWarmupPress = useCallback(async () => {
   safeNavigate(`/challenge-details/${warmupTargetId}?warmup=1`, "home-warmup");
 }, [warmupTargetId, safeNavigate]);
 
-  const handleMarkTodayPress = useCallback(async () => {
+const handleForgeStepPress = useCallback(async () => {
+  if (!forgeState || !forgeAvailableStep || !pendingInvite?.id) return;
+
+  // Step 1 → ouvre le modal intention
+  if (forgeAvailableStep === 1) {
+    setForgeIntentionVisible(true);
+    return;
+  }
+
+  // Step 2 → vérifie que le challenge actif est marqué aujourd'hui
+  if (forgeAvailableStep === 2) {
+    const targetId = primaryActiveId ?? activeChallengeId;
+    const ch = currentChallenges.find(
+      (c) => (c.challengeId ?? c.id) === targetId
+    );
+    if (!ch?.selectedDays || !targetId) {
+      safeNavigate("/explore", "forge-step2-no-challenge");
+      return;
+    }
+
+    const alreadyMarked = isMarkedToday(targetId as string, ch.selectedDays);
+    if (!alreadyMarked) {
+      // Marque directement
+      setForgeLoading(true);
+      try {
+        await Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
+      } catch {}
+      const res = await markTodayCtx(targetId as string, ch.selectedDays);
+      setForgeLoading(false);
+      if (!res?.success) return;
+    }
+
+    // Complète le step 2
+    const next = await completeForgeStep(forgeState, 2);
+    setForgeState(next);
+    setForgeAvailableStep(getAvailableStep(next));
+    try { await Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success); } catch {}
+    return;
+  }
+
+  // Step 3 → re-send invitation (notif locale)
+  if (forgeAvailableStep === 3) {
+    setForgeLoading(true);
     try {
-      await Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
+      // Notif locale immédiate simulant un rappel au partenaire
+      const { scheduleNotificationAsync } = await import("expo-notifications");
+      await scheduleNotificationAsync({
+        content: {
+          title: t("forge.reminderSentTitle", { defaultValue: "Rappel envoyé 👊" }),
+          body: t("forge.reminderSentBody", {
+            defaultValue: "Ton futur partenaire a reçu un rappel.",
+          }),
+          sound: "default",
+        },
+        trigger: null,
+      });
     } catch {}
+
+    const next = await completeForgeStep(forgeState, 3);
+    setForgeState(next);
+    setForgeAvailableStep(getAvailableStep(next));
+    setForgeLoading(false);
+    try { await Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success); } catch {}
+  }
+}, [
+  forgeState,
+  forgeAvailableStep,
+  pendingInvite?.id,
+  primaryActiveId,
+  activeChallengeId,
+  currentChallenges,
+  isMarkedToday,
+  markTodayCtx,
+  safeNavigate,
+  t,
+]);
+
+const handleForgeIntentionSubmit = useCallback(async (text: string) => {
+  if (!forgeState || !pendingInvite?.id) return;
+  setForgeIntentionVisible(false);
+  const next = await completeForgeStep(forgeState, 1, { intentionText: text });
+  setForgeState(next);
+  setForgeAvailableStep(getAvailableStep(next));
+  try { await Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success); } catch {}
+}, [forgeState, pendingInvite?.id]);
+
+const handleWeeklyReportClose = useCallback(async () => {
+  setWeeklyReportVisible(false);
+  if (!user?.uid || !weeklyReport?.weekId) return;
+  try {
+    await updateDoc(
+      doc(db, "users", user.uid, "weeklyReports", weeklyReport.weekId),
+      { seen: true }
+    );
+  } catch {}
+}, [user?.uid, weeklyReport?.weekId]);
+
+const handleWeeklyReportGoalAccept = useCallback(async () => {
+  try { await Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success); } catch {}
+  handleWeeklyReportClose();
+}, [handleWeeklyReportClose]);
+
+  const handleMarkTodayPress = useCallback(async () => {
+  try {
+    await Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
+  } catch {}
+
   const targetId =
     primaryActiveId ??
     todayHubView.hubChallengeId ??
@@ -2084,15 +2396,39 @@ const handleWarmupPress = useCallback(async () => {
     return;
   }
 
-  safeNavigate(`/challenge-details/${targetId}`, "home-mark-today");
-}, [primaryActiveId, todayHubView.hubChallengeId, activeChallengeId, safeNavigate]);
+  const ch = currentChallenges.find(
+    (c) => (c.challengeId ?? c.id) === targetId
+  );
 
-  const handleSpotlightMark = useCallback(async () => {
-    await dismissSpotlight();
-    setTimeout(() => {
-      handleMarkTodayPress();
-    }, 80);
-  }, [dismissSpotlight, handleMarkTodayPress]);
+  if (!ch?.selectedDays) {
+    safeNavigate(`/challenge-details/${targetId}`, "home-mark-no-selected-days");
+    return;
+  }
+
+  if (isMarkedToday(targetId as string, ch.selectedDays)) {
+    safeNavigate(`/challenge-details/${targetId}`, "home-mark-already-done");
+    return;
+  }
+
+  await handleMarkTodayFromHome();
+}, [
+  primaryActiveId,
+  todayHubView.hubChallengeId,
+  activeChallengeId,
+  currentChallenges,
+  isMarkedToday,
+  handleMarkTodayFromHome,
+  safeNavigate,
+]);
+
+const handleSpotlightMark = useCallback(async () => {
+  await dismissSpotlight();
+  // Délai légèrement plus long pour laisser le Modal spotlight se fermer
+  // avant de déclencher le marquage (évite les conflits de state sur Android)
+  await new Promise((r) => setTimeout(r, 120));
+  await handleMarkTodayPress();
+  // FirstMarkModal s'ouvre automatiquement via le listener FIRST_MARK_EVENT ci-dessus
+}, [dismissSpotlight, handleMarkTodayPress]);
 
   const handleOpenActiveChallenge = useCallback(async () => {
     if (!activeChallengeId) return;
@@ -2125,6 +2461,7 @@ const handleWarmupPress = useCallback(async () => {
       const reward = await claimDailyBonus();
 
       setHasClaimedDailyBonus(true);
+      DeviceEventEmitter.emit(QUEST_DAILY_BONUS_CLAIMED);
       setDailyReward(reward);
 
       setUserData((prev: any) => {
@@ -2304,13 +2641,13 @@ const onCreate = useCallback(async () => {
 const onPrimaryPress = useCallback(() => {
   if (todayHubPrimaryMode === "mark") return handleMarkTodayPress();
   if (todayHubPrimaryMode === "pick") return handlePickChallengePress();
- if (todayHubPrimaryMode === "new") return handlePickChallengePress();
- return handleWarmupPress();
+  if (todayHubPrimaryMode === "new") return handlePickChallengePress();
+  return handleForgeStepPress(); // ← La Forge remplace Warmup
 }, [
   todayHubPrimaryMode,
   handleMarkTodayPress,
   handlePickChallengePress,
-  handleWarmupPress,
+  handleForgeStepPress,
 ]);
 
 const todayHubPrimaryGradient = useMemo(() => {
@@ -2677,7 +3014,7 @@ setPostWelcomeAbsorbArmed(true);
                 adjustsFontSizeToFit
                 minimumFontScale={IS_TINY ? 0.84 : 0.88}
               >
-                {t("homeZ.hero.headline", "Le déclic du jour.")}
+                {t("homeZ.hero.headline")}
               </Text>
 
               {/* Proof line */}
@@ -2686,7 +3023,7 @@ setPostWelcomeAbsorbArmed(true);
                 numberOfLines={2}
                 minimumFontScale={IS_TINY ? 0.86 : 0.90}
               >
-               {t("homeZ.hero.sub", "Un défi. Un clic. Et si tu veux tenir : Duo.")}
+               {t("homeZ.hero.sub")}
               </Text>
 
               {/* ✨ IMPROVED: Hero CTA with ambient glow effect */}
@@ -2770,12 +3107,7 @@ setPostWelcomeAbsorbArmed(true);
           </Animated.View>
 
           {/* TodayHub */}
-          {/* TodayHub */}
-<View
-  onLayout={(e) => {
-    todayHubYRef.current = e.nativeEvent.layout.y;
-  }}
->
+<View onLayout={(e) => { todayHubYRef.current = e.nativeEvent.layout.y; }}>
   {!isUserDataReady && !isGuest ? (
     <View style={{
       marginHorizontal: normalize(15),
@@ -2892,41 +3224,49 @@ setPostWelcomeAbsorbArmed(true);
       </TouchableOpacity>
     </View>
   ) : (
-    <TodayHub
-      t={t}
-      langKey={i18n.language}
-      isDarkMode={isDarkMode}
-      primaryMode={todayHubView.primaryMode}
-      hasActiveChallenges={todayHubView.hasActiveChallenges}
-      activeCount={todayHubView.activeCount}
-      title={todayHubTitle}
-      sub={todayHubSub}
-      whyReturn={whyReturn}
-      hubMeta={todayHubView.hubMeta}
-      hubDescription={todayHubHubDescription}
-      progressPct={todayHubView.progress.pct}
-      primaryGradient={todayHubPrimaryGradient}
-      primaryIcon={todayHubPrimaryIcon}
-      primaryLabel={todayHubPrimaryLabel}
-      onOpenHub={onOpenHub}
-      onPrimaryPress={onPrimaryPress}
-      onPickSolo={onPickSolo}
-      onCreate={onCreate}
-      CONTENT_MAX_W={CONTENT_MAX_W}
-      staticStyles={staticStyles}
-      normalize={normalize}
-      primaryCtaRef={markCtaRef}
-      primaryAnimatedStyle={markAnimStyle}
-    />
+     <TodayHub
+        t={t}
+        langKey={i18n.language}
+        isDarkMode={isDarkMode}
+        primaryMode={todayHubView.primaryMode}
+        hasActiveChallenges={todayHubView.hasActiveChallenges}
+        activeCount={todayHubView.activeCount}
+        title={todayHubTitle}
+        sub={todayHubSub}
+        whyReturn={whyReturn}
+        hubMeta={todayHubView.hubMeta}
+        hubDescription={todayHubHubDescription}
+        progressPct={todayHubView.progress.pct}
+        primaryGradient={todayHubPrimaryGradient}
+        primaryIcon={todayHubPrimaryIcon}
+        primaryLabel={todayHubPrimaryLabel}
+        onOpenHub={onOpenHub}
+        onPrimaryPress={onPrimaryPress}
+        onPendingWarmupPress={handleForgeStepPress}
+        forgeState={forgeState}
+        forgeAvailableStep={forgeAvailableStep}
+        onCreate={onCreate}
+        CONTENT_MAX_W={CONTENT_MAX_W}
+        staticStyles={staticStyles}
+        normalize={normalize}
+        primaryCtaRef={markCtaRef}
+        primaryAnimatedStyle={markAnimStyle}
+        onPickSolo={onPickSolo}
+        onInviteDuo={handleInviteFriendPress}
+      />
   )}
           </View>
 
         {/* ════ ONBOARDING QUEST BANNER ════ */}
-       <View style={{ zIndex: 1, elevation: 1 }} pointerEvents="box-none">
-          <OnboardingQuestBanner onQuestPress={handleQuestPress} />
-        </View>
+  <View style={{ zIndex: 1, elevation: 1 }} pointerEvents="box-none">
+    <OnboardingQuestBanner
+   onQuestPress={handleQuestPress}
+   streakCurrent={streakCurrent}
+   welcomeVisible={welcomeVisible}
+ />
+  </View>
 
-        {/* ════ QUICK ACTIONS ════ */}
+       {/* ════ QUICK ACTIONS ════ */}
 <View style={{
   paddingHorizontal: normalize(15),
   marginTop: normalize(2),
@@ -2937,109 +3277,15 @@ setPostWelcomeAbsorbArmed(true);
 }}>
   <View style={{ flexDirection: "row", gap: normalize(8) }}>
 
-    {/* Explorer */}
-    <Pressable
-      onPress={async () => {
-        try { await Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium); } catch {}
-        safeNavigate("/explore", "quick-action-explore");
-      }}
-      style={({ pressed }) => ({
-        flex: 1, minWidth: 0,
-        borderRadius: normalize(18),
-        overflow: "hidden",
-        opacity: pressed ? 0.72 : 1,
-        transform: [{ scale: pressed ? 0.94 : 1 }],
-      })}
-    >
-      <View style={{
-        borderRadius: normalize(18),
-        paddingVertical: normalize(15),
-        paddingHorizontal: normalize(8),
-        alignItems: "center",
-        gap: normalize(8),
-        borderWidth: 1,
-        borderColor: isDarkMode ? "rgba(255,255,255,0.10)" : "rgba(2,6,23,0.09)",
-        backgroundColor: isDarkMode ? "rgba(30,41,59,0.90)" : "#FFFFFF",
-      }}>
-        <View style={{
-          width: normalize(44), height: normalize(44),
-          borderRadius: normalize(22),
-          alignItems: "center", justifyContent: "center",
-          backgroundColor: isDarkMode ? "rgba(255,255,255,0.07)" : "rgba(2,6,23,0.05)",
-        }}>
-          <Ionicons name="compass-outline" size={normalize(22)} color={isDarkMode ? "#E2E8F0" : "#334155"} />
-        </View>
-        <Text style={{
-          fontFamily: "Comfortaa_700Bold",
-          fontSize: normalize(11.5),
-          color: isDarkMode ? "rgba(226,232,240,0.85)" : "rgba(30,41,59,0.85)",
-          textAlign: "center", width: "100%",
-        }} numberOfLines={1} adjustsFontSizeToFit minimumFontScale={0.8}>
-          {t("homeZ.quickAction.explore", { defaultValue: "Explorer" })}
-        </Text>
-      </View>
-    </Pressable>
-
-    {/* Créer — seul bouton orange, CTA dominant */}
-    <Pressable
-      onPress={async () => {
-        try { await Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium); } catch {}
-        safeNavigate("/create-challenge", "quick-action-create");
-      }}
-      style={({ pressed }) => ({
-        flex: 1, minWidth: 0,
-        borderRadius: normalize(18),
-        overflow: "hidden",
-        opacity: pressed ? 0.72 : 1,
-        transform: [{ scale: pressed ? 0.94 : 1 }],
-      })}
-    >
-      <LinearGradient
-        colors={["#F97316", "#EA6C0A"]}
-        start={{ x: 0, y: 0 }} end={{ x: 1, y: 1 }}
-        style={{
-          borderRadius: normalize(18),
-          paddingVertical: normalize(15),
-          paddingHorizontal: normalize(8),
-          alignItems: "center",
-          gap: normalize(8),
-        }}
-      >
-        <LinearGradient
-          colors={["rgba(255,255,255,0.18)", "rgba(255,255,255,0.00)"]}
-          start={{ x: 0, y: 0 }} end={{ x: 0, y: 1 }}
-          style={[StyleSheet.absoluteFill, { borderRadius: normalize(18) }]}
-          pointerEvents="none"
-        />
-        <View style={{
-          width: normalize(44), height: normalize(44),
-          borderRadius: normalize(22),
-          alignItems: "center", justifyContent: "center",
-          backgroundColor: "rgba(255,255,255,0.18)",
-        }}>
-          <Ionicons name="add" size={normalize(26)} color="#FFFFFF" />
-        </View>
-        <Text style={{
-          fontFamily: "Comfortaa_700Bold",
-          fontSize: normalize(11.5),
-          color: "#FFFFFF",
-          textAlign: "center", width: "100%",
-        }} numberOfLines={1} adjustsFontSizeToFit minimumFontScale={0.8}>
-          {t("homeZ.todayHub.create", "Créer")}
-        </Text>
-      </LinearGradient>
-    </Pressable>
-
-    {/* Bonus — même style que Explorer */}
-    {canClaimDailyBonus && (
+    {/* ── Explorer ── */}
+    <View style={{ flex: 1, minWidth: 0 }}>
       <Pressable
         onPress={async () => {
-          if (dailyBonusLoading) return;
           try { await Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium); } catch {}
-          setDailyBonusVisible(true);
+          safeNavigate("/explore", "quick-action-explore");
         }}
         style={({ pressed }) => ({
-          flex: 1, minWidth: 0,
+          flex: 1,
           borderRadius: normalize(18),
           overflow: "hidden",
           opacity: pressed ? 0.72 : 1,
@@ -3060,9 +3306,9 @@ setPostWelcomeAbsorbArmed(true);
             width: normalize(44), height: normalize(44),
             borderRadius: normalize(22),
             alignItems: "center", justifyContent: "center",
-            backgroundColor: isDarkMode ? "rgba(249,115,22,0.12)" : "rgba(249,115,22,0.08)",
+            backgroundColor: isDarkMode ? "rgba(255,255,255,0.07)" : "rgba(2,6,23,0.05)",
           }}>
-            <Ionicons name="gift-outline" size={normalize(22)} color="#F97316" />
+            <Ionicons name="compass-outline" size={normalize(22)} color={isDarkMode ? "#E2E8F0" : "#334155"} />
           </View>
           <Text style={{
             fontFamily: "Comfortaa_700Bold",
@@ -3070,11 +3316,113 @@ setPostWelcomeAbsorbArmed(true);
             color: isDarkMode ? "rgba(226,232,240,0.85)" : "rgba(30,41,59,0.85)",
             textAlign: "center", width: "100%",
           }} numberOfLines={1} adjustsFontSizeToFit minimumFontScale={0.8}>
-            {t("dailyBonus.short", { defaultValue: "Bonus" })}
+            {t("homeZ.quickAction.explore", { defaultValue: "Explorer" })}
           </Text>
         </View>
       </Pressable>
+    </View>
+
+    {/* ── Créer ── */}
+    <View style={{ flex: 1, minWidth: 0 }}>
+      <Pressable
+        onPress={async () => {
+          try { await Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium); } catch {}
+          safeNavigate("/create-challenge", "quick-action-create");
+        }}
+        style={({ pressed }) => ({
+          flex: 1,
+          borderRadius: normalize(18),
+          overflow: "hidden",
+          opacity: pressed ? 0.72 : 1,
+          transform: [{ scale: pressed ? 0.94 : 1 }],
+        })}
+      >
+        <LinearGradient
+          colors={["#F97316", "#EA6C0A"]}
+          start={{ x: 0, y: 0 }}
+          end={{ x: 1, y: 1 }}
+          style={{
+            borderRadius: normalize(18),
+            paddingVertical: normalize(15),
+            paddingHorizontal: normalize(8),
+            alignItems: "center",
+            gap: normalize(8),
+          }}
+        >
+          <LinearGradient
+            colors={["rgba(255,255,255,0.18)", "rgba(255,255,255,0.00)"]}
+            start={{ x: 0, y: 0 }} end={{ x: 0, y: 1 }}
+            style={[StyleSheet.absoluteFill, { borderRadius: normalize(18) }]}
+            pointerEvents="none"
+          />
+          <View style={{
+            width: normalize(44), height: normalize(44),
+            borderRadius: normalize(22),
+            alignItems: "center", justifyContent: "center",
+            backgroundColor: "rgba(255,255,255,0.18)",
+          }}>
+            <Ionicons name="add" size={normalize(26)} color="#FFFFFF" />
+          </View>
+          <Text style={{
+            fontFamily: "Comfortaa_700Bold",
+            fontSize: normalize(11.5),
+            color: "#FFFFFF",
+            textAlign: "center", width: "100%",
+          }} numberOfLines={1} adjustsFontSizeToFit minimumFontScale={0.8}>
+            {t("homeZ.todayHub.create", "Créer")}
+          </Text>
+        </LinearGradient>
+      </Pressable>
+    </View>
+
+    {/* ── Bonus ── */}
+    {canClaimDailyBonus && (
+      <View style={{ flex: 1, minWidth: 0 }}>
+        <Pressable
+          onPress={async () => {
+            if (dailyBonusLoading) return;
+            try { await Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium); } catch {}
+            setDailyBonusVisible(true);
+          }}
+          style={({ pressed }) => ({
+            flex: 1,
+            borderRadius: normalize(18),
+            overflow: "hidden",
+            opacity: pressed ? 0.72 : 1,
+            transform: [{ scale: pressed ? 0.94 : 1 }],
+          })}
+        >
+          <View style={{
+            borderRadius: normalize(18),
+            paddingVertical: normalize(15),
+            paddingHorizontal: normalize(8),
+            alignItems: "center",
+            gap: normalize(8),
+            borderWidth: 1,
+            borderColor: isDarkMode ? "rgba(255,255,255,0.10)" : "rgba(2,6,23,0.09)",
+            backgroundColor: isDarkMode ? "rgba(30,41,59,0.90)" : "#FFFFFF",
+          }}>
+            <View style={{
+              width: normalize(44), height: normalize(44),
+              borderRadius: normalize(22),
+              alignItems: "center", justifyContent: "center",
+              backgroundColor: isDarkMode ? "rgba(249,115,22,0.12)" : "rgba(249,115,22,0.08)",
+            }}>
+              <Ionicons name="gift-outline" size={normalize(22)} color="#F97316" />
+            </View>
+            <Text style={{
+              fontFamily: "Comfortaa_700Bold",
+              fontSize: normalize(11.5),
+              color: isDarkMode ? "rgba(226,232,240,0.85)" : "rgba(30,41,59,0.85)",
+              textAlign: "center", width: "100%",
+            }} numberOfLines={1} adjustsFontSizeToFit minimumFontScale={0.8}>
+              {t("dailyBonus.short", { defaultValue: "Bonus" })}
+            </Text>
+          </View>
+        </Pressable>
+      </View>
     )}
+
   </View>
 </View>
 
@@ -3717,10 +4065,13 @@ setPostWelcomeAbsorbArmed(true);
           <WelcomeBonusModal
             visible={welcomeVisible}
             onClose={async () => {
-              await markWelcomeHandled();
-              try { await AsyncStorage.setItem(POST_WELCOME_ABSORB_KEY, "1"); } catch {}
-              setPostWelcomeAbsorbArmed(true);
-            }}
+    await markWelcomeHandled();
+    try { await AsyncStorage.setItem(POST_WELCOME_ABSORB_KEY, "1"); } catch {}
+    setPostWelcomeAbsorbArmed(true);
+    // NE PAS appeler coachmark.tryStartFromOnboarding() ici.
+    // tryTriggerCoachmark (useEffect au mount) gère le déclenchement
+    // via la boucle qui attend welcomeVisibleRef.current === false.
+  }}
             onClaim={handleClaimWelcomeBonus}
             currentDay={welcomeState.currentDay}
             totalDays={WELCOME_TOTAL_DAYS}
@@ -3742,6 +4093,25 @@ setPostWelcomeAbsorbArmed(true);
           rerollAdReady={rerollAdReady}
           rerollAdLoading={rerollAdLoading}
         />
+
+<ForgeIntentionModal
+  visible={forgeIntentionVisible}
+  onDismiss={() => setForgeIntentionVisible(false)}
+  onSubmit={handleForgeIntentionSubmit}
+/>
+
+{weeklyReport && (
+  <WeeklyReportModal
+    visible={weeklyReportVisible}
+    data={weeklyReport}
+    isDark={isDarkMode}
+    onClose={handleWeeklyReportClose}
+    onGoalAccept={handleWeeklyReportGoalAccept}
+    t={t}
+  />
+)}
+
+<RequireAuthModal visible={modalVisible} onClose={closeGate} />
 
         <RequireAuthModal visible={modalVisible} onClose={closeGate} />
 
@@ -3801,6 +4171,53 @@ setPostWelcomeAbsorbArmed(true);
             </View>
           </View>
         </Modal>
+        <FirstMarkModal
+  visible={firstMarkModalVisible}
+  onDismiss={() => {
+    setFirstMarkModalVisible(false);
+    setTimeout(() => {
+      if (spotlightAllowed ) {
+        AsyncStorage.getItem(SPOTLIGHT_SHOWN_KEY).then((v) => {
+          if (v !== "1") setSpotlightArmed(true);
+        }).catch(() => {});
+      }
+    }, 400);
+  }}
+  onInvite={() => {
+    // ✅ Ferme FirstMarkModal → ouvre ChoixDuoModal
+    setFirstMarkModalVisible(false);
+    setTimeout(() => {
+      setChoixDuoModalVisible(true);
+    }, 280);
+  }}
+  challengeTitle={effectiveActiveMeta?.title}
+/>
+<ChoixDuoModal
+  visible={choixDuoModalVisible}
+  onClose={() => setChoixDuoModalVisible(false)}
+  onInviteFriend={() => {
+    setChoixDuoModalVisible(false);
+    setTimeout(() => {
+      handleInviteFriendPress();
+    }, 280);
+  }}
+  onFindPartner={() => {
+    setChoixDuoModalVisible(false);
+    setTimeout(() => {
+      const targetId =
+        pendingInvite?.challengeId ??
+        todayHubView.hubChallengeId ??
+        primaryActiveId;
+      if (targetId) {
+        // ✅ openChoixDuo=1 → challenge-details ouvre automatiquement le modal matching
+        safeNavigate(`/challenge-details/${targetId}?openChoixDuo=1`, "firstmark-find-partner");
+      } else {
+        safeNavigate("/explore", "firstmark-no-challenge");
+      }
+    }, 280);
+  }}
+  challengeTitle={effectiveActiveMeta?.title}
+/>
       </LinearGradient>
     </SafeAreaView>
   );

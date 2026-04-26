@@ -17,6 +17,7 @@
       "buildNumber": "47",
       "bundleIdentifier": "com.mxcrts.ChallengeTies",
       "googleServicesFile": "./GoogleService-Info.plist",
+      "usesAppleSignIn": true,
       "associatedDomains": [
   "applinks:challengeties.app",
   "applinks:www.challengeties.app",
@@ -189,7 +190,9 @@
       ],
       "expo-mail-composer",
       "expo-iap",
-      "expo-tracking-transparency"
+      "expo-tracking-transparency",
+      "expo-apple-authentication",
+["@react-native-google-signin/google-signin"]
     ],
     "newArchEnabled": false,
     "experiments": {

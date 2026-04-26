@@ -188,17 +188,20 @@ export function useTodayHubState({
     return activeChallenges.some((c) => !isMarkedToday(c));
   }, [activeChallenges, isMarkedToday]);
 
-  const primaryMode = useMemo<TodayHubPrimaryMode>(() => {
-  // 1) Si aucun défi actif : si invite pending -> on garde duoPending, sinon pick
-  if (!hasActiveChallenges) return hasOutgoingPendingInvite ? "duoPending" : "pick";
+  // APRÈS :
+const primaryMode = useMemo<TodayHubPrimaryMode>(() => {
+  // Priorité 1 : challenge actif non marqué aujourd'hui
+  if (hasActiveChallenges && anyUnmarkedToday) return "mark";
 
-  // 2) S’il reste au moins 1 défi à marquer aujourd’hui => priorité ABSOLUE
-  if (anyUnmarkedToday) return "mark";
+  // Priorité 2 : invitation en attente (avec ou sans challenge actif)
+  if (hasOutgoingPendingInvite) return "duoPending";
 
-  // 3) Si tout est fait aujourd’hui => “new” (et pending devient secondaire)
-  return "new";
+  // Priorité 3 : challenge actif mais tout marqué aujourd'hui
+  if (hasActiveChallenges) return "new";
+
+  // Priorité 4 : aucun challenge
+  return "pick";
 }, [hasActiveChallenges, hasOutgoingPendingInvite, anyUnmarkedToday]);
-
 
   const progress = useMemo(() => {
     const done = typeof focusChallenge?.completedDays === "number" ? focusChallenge.completedDays : 0;

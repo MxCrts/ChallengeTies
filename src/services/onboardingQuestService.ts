@@ -1,220 +1,296 @@
 // src/services/onboardingQuestService.ts
-// ✅ Onboarding "First Win" — Service top 1 mondial
-// Gère la logique des quêtes d'onboarding adaptatives solo/duo
+// TOP 1 MONDIAL — 6 quêtes onboarding avec triggers auto, trophées Firestore
 
 import AsyncStorage from "@react-native-async-storage/async-storage";
-import { doc, runTransaction, serverTimestamp, increment } from "firebase/firestore";
 import { db, auth } from "@/constants/firebase-config";
+import {
+  doc,
+  runTransaction,
+  increment,
+  serverTimestamp,
+} from "firebase/firestore";
 
-/* ─── Clés AsyncStorage ─────────────────────────────────────── */
-const KEYS = {
-  QUESTS_DONE:   "onboarding.quests.done.v1",   // "1" = banner dismissed définitivement
-  QUEST_STATE:   "onboarding.quests.state.v1",  // JSON des quêtes et leur état
-  USER_PATH:     "onboarding.user.path.v1",     // "solo" | "duo"
-  INITIALIZED:   "onboarding.initialized.v1",   // "1" = déjà initialisé
+// ─── Types ────────────────────────────────────────────────────────────────────
+
+export type QuestId =
+  | "mark_first_day"
+  | "complete_profile"
+  | "explore_challenges"
+  | "claim_daily_bonus"
+  | "invite_duo"
+  | "maintain_3day_streak";
+
+export type QuestDef = {
+  id: QuestId;
+  titleKey: string;
+  descriptionKey: string;
+  icon: string;
+  trophies: number;
+  actionRoute: string | null;
+  actionQuery?: string;
+  order: number;
 };
 
-/* ─── Types ─────────────────────────────────────────────────── */
-export type QuestId =
-  | "mark_first_day"       // Solo : marquer son premier jour
-  | "explore_community"    // Solo + Duo : ouvrir Exploits
-  | "complete_profile"     // Solo + Duo : photo + catégories
-  | "join_solo_challenge"  // Duo : rejoindre un défi solo
-  | "view_challenge";      // Solo : aller voir son défi
-
-export type UserPath = "solo" | "duo";
-
-export interface Quest {
-  id: QuestId;
-  titleKey: string;       // clé i18n
-  descKey: string;        // clé i18n description
-  trophies: number;
+export type QuestState = QuestDef & {
   completed: boolean;
-  icon: string;           // Ionicons name
-}
+  completedAt?: number;
+};
 
-export interface OnboardingState {
-  path: UserPath;
-  quests: Quest[];
-  allCompleted: boolean;
+export type OnboardingState = {
+  initialized: boolean;
   dismissed: boolean;
-  totalTrophiesEarned: number;
-}
+  allCompleted: boolean;
+  quests: QuestState[];
+  exploreCount: number;
+};
 
-/* ─── Quêtes par path ───────────────────────────────────────── */
-const SOLO_QUESTS: Omit<Quest, "completed">[] = [
+// ─── Définition des 6 quêtes ──────────────────────────────────────────────────
+// ORDRE STRATÉGIQUE :
+// 0 - mark_first_day   → action immédiate, gratification rapide
+// 1 - invite_duo       → différenciateur clé, pousser le social dès le début
+// 2 - claim_daily_bonus → récompense simple
+// 3 - explore_challenges → découverte
+// 4 - complete_profile  → engagement identitaire
+// 5 - maintain_3day_streak → long terme, auto-trigger
+
+export const QUEST_DEFINITIONS: QuestDef[] = [
   {
     id: "mark_first_day",
     titleKey: "onboarding.quest.markFirstDay.title",
-    descKey:  "onboarding.quest.markFirstDay.desc",
-    trophies: 30,
+    descriptionKey: "onboarding.quest.markFirstDay.desc",
     icon: "checkmark-circle-outline",
-  },
-  {
-    id: "complete_profile",
-    titleKey: "onboarding.quest.completeProfile.title",
-    descKey:  "onboarding.quest.completeProfile.desc",
-    trophies: 20,
-    icon: "person-circle-outline",
-  },
-  {
-    id: "explore_community",
-    titleKey: "onboarding.quest.exploreCommunity.title",
-    descKey:  "onboarding.quest.exploreCommunity.desc",
-    trophies: 10,
-    icon: "trophy-outline",
-  },
-];
-
-const DUO_QUESTS: Omit<Quest, "completed">[] = [
-  {
-    id: "join_solo_challenge",
-    titleKey: "onboarding.quest.joinSoloChallenge.title",
-    descKey:  "onboarding.quest.joinSoloChallenge.desc",
     trophies: 30,
-    icon: "flag-outline",
+    actionRoute: null,
+    order: 0,
+  },
+  {
+    // MOVED UP: différenciateur principal de ChallengeTies
+    id: "invite_duo",
+    titleKey: "onboarding.quest.inviteDuo.title",
+    descriptionKey: "onboarding.quest.inviteDuo.desc",
+    icon: "people-outline",
+    trophies: 40,
+    actionRoute: null,
+    order: 1,
+  },
+  {
+    id: "claim_daily_bonus",
+    titleKey: "onboarding.quest.claimDailyBonus.title",
+    descriptionKey: "onboarding.quest.claimDailyBonus.desc",
+    icon: "gift-outline",
+    trophies: 25,
+    actionRoute: null,
+    order: 2,
+  },
+  {
+    id: "explore_challenges",
+    titleKey: "onboarding.quest.exploreChallenges.title",
+    descriptionKey: "onboarding.quest.exploreChallenges.desc",
+    icon: "compass-outline",
+    trophies: 15,
+    actionRoute: "/explore",
+    order: 3,
   },
   {
     id: "complete_profile",
     titleKey: "onboarding.quest.completeProfile.title",
-    descKey:  "onboarding.quest.completeProfile.desc",
-    trophies: 20,
+    descriptionKey: "onboarding.quest.completeProfile.desc",
     icon: "person-circle-outline",
+    trophies: 20,
+    actionRoute: "/profile/UserInfo",
+    order: 4,
   },
   {
-    id: "explore_community",
-    titleKey: "onboarding.quest.exploreCommunity.title",
-    descKey:  "onboarding.quest.exploreCommunity.desc",
-    trophies: 10,
-    icon: "trophy-outline",
+    id: "maintain_3day_streak",
+    titleKey: "onboarding.quest.maintain3DayStreak.title",
+    descriptionKey: "onboarding.quest.maintain3DayStreak.desc",
+    icon: "flame-outline",
+    trophies: 50,
+    actionRoute: null,
+    order: 5,
   },
 ];
 
-/* ─── Helpers internes ──────────────────────────────────────── */
-function buildQuests(path: UserPath): Quest[] {
-  const base = path === "solo" ? SOLO_QUESTS : DUO_QUESTS;
-  return base.map(q => ({ ...q, completed: false }));
+export const TOTAL_TROPHIES = QUEST_DEFINITIONS.reduce(
+  (sum, q) => sum + q.trophies,
+  0
+); // = 180
+
+// ─── Clés AsyncStorage ────────────────────────────────────────────────────────
+
+const KEY_STATE = "onboarding.quest.state.v3";
+const KEY_EXPLORE_COUNT = "onboarding.quest.exploreCount.v3";
+const KEY_DISMISSED = "onboarding.quest.dismissed.v3";
+const KEY_INITIALIZED = "onboarding.quest.initialized.v3";
+
+// ─── Helpers ──────────────────────────────────────────────────────────────────
+
+const buildQuestStates = (
+  completedIds: Partial<Record<QuestId, number>>
+): QuestState[] =>
+  QUEST_DEFINITIONS.slice()
+    .sort((a, b) => a.order - b.order)
+    .map((def) => ({
+      ...def,
+      completed: !!completedIds[def.id],
+      completedAt: completedIds[def.id],
+    }));
+
+// ─── Load ─────────────────────────────────────────────────────────────────────
+
+export async function loadOnboardingState(): Promise<OnboardingState> {
+  try {
+    const [rawState, rawExplore, rawDismissed, rawInit] = await Promise.all([
+      AsyncStorage.getItem(KEY_STATE),
+      AsyncStorage.getItem(KEY_EXPLORE_COUNT),
+      AsyncStorage.getItem(KEY_DISMISSED),
+      AsyncStorage.getItem(KEY_INITIALIZED),
+    ]);
+
+    const initialized = rawInit === "1";
+    const dismissed = rawDismissed === "1";
+    const exploreCount = rawExplore ? parseInt(rawExplore, 10) || 0 : 0;
+
+    const completedIds: Partial<Record<QuestId, number>> = rawState
+      ? JSON.parse(rawState)
+      : {};
+
+    const quests = buildQuestStates(completedIds);
+    const allCompleted = quests.every((q) => q.completed);
+
+    return { initialized, dismissed, allCompleted, quests, exploreCount };
+  } catch {
+    return {
+      initialized: false,
+      dismissed: false,
+      allCompleted: false,
+      quests: buildQuestStates({}),
+      exploreCount: 0,
+    };
+  }
 }
 
-/* ─── API publique ──────────────────────────────────────────── */
+// ─── Init ────────────────────────────────────────────────────────────────────
 
-/**
- * Initialise les quêtes d'onboarding.
- * À appeler une seule fois après le firstpick, en passant le path choisi.
- * Idempotent : si déjà initialisé, ne fait rien.
- */
-export async function initOnboardingQuests(path: UserPath): Promise<void> {
+export async function initOnboardingQuests(): Promise<OnboardingState> {
   try {
-    const [alreadyRaw, pathRaw] = await Promise.all([
-      AsyncStorage.getItem(KEYS.INITIALIZED),
-      AsyncStorage.getItem(KEYS.USER_PATH),
-    ]);
-    // ✅ Si déjà initialisé avec le bon path → skip
-    // ✅ Si initialisé avec un mauvais path (ex: solo au lieu de duo) → réinitialise
-    if (alreadyRaw === "1" && pathRaw === path) return;
+    const already = await AsyncStorage.getItem(KEY_INITIALIZED);
+    if (already === "1") return loadOnboardingState();
 
-    const quests = buildQuests(path);
     await AsyncStorage.multiSet([
-      [KEYS.USER_PATH,   path],
-      [KEYS.QUEST_STATE, JSON.stringify(quests)],
-      [KEYS.INITIALIZED, "1"],
+      [KEY_INITIALIZED, "1"],
+      [KEY_STATE, JSON.stringify({})],
+      [KEY_EXPLORE_COUNT, "0"],
     ]);
-  } catch (e) {
-    __DEV__ && console.warn("[onboardingQuests] init error:", e);
-  }
+  } catch {}
+  return loadOnboardingState();
 }
 
-/**
- * Charge l'état complet des quêtes.
- * Retourne null si pas encore initialisé.
- */
-export async function loadOnboardingState(): Promise<OnboardingState | null> {
+// ─── Complete quest + Firestore trophées ─────────────────────────────────────
+
+export async function completeQuest(questId: QuestId): Promise<OnboardingState> {
   try {
-    const [
-      [, pathRaw],
-      [, stateRaw],
-      [, dismissedRaw],
-    ] = await AsyncStorage.multiGet([
-      KEYS.USER_PATH,
-      KEYS.QUEST_STATE,
-      KEYS.QUESTS_DONE,
-    ]);
+    const rawState = await AsyncStorage.getItem(KEY_STATE);
+    const completedIds: Partial<Record<QuestId, number>> = rawState
+      ? JSON.parse(rawState)
+      : {};
 
-    if (!pathRaw || !stateRaw) return null;
+    if (completedIds[questId]) return loadOnboardingState();
 
-    const path     = pathRaw as UserPath;
-    const quests   = JSON.parse(stateRaw) as Quest[];
-    const dismissed = dismissedRaw === "1";
-    const allCompleted = quests.every(q => q.completed);
-    const totalTrophiesEarned = quests
-      .filter(q => q.completed)
-      .reduce((sum, q) => sum + q.trophies, 0);
+    completedIds[questId] = Date.now();
+    await AsyncStorage.setItem(KEY_STATE, JSON.stringify(completedIds));
 
-    return { path, quests, allCompleted, dismissed, totalTrophiesEarned };
-  } catch (e) {
-    __DEV__ && console.warn("[onboardingQuests] load error:", e);
-    return null;
-  }
-}
-
-/**
- * Marque une quête comme complétée.
- * Retourne le nouvel état ou null si erreur.
- */
-export async function completeQuest(questId: QuestId): Promise<OnboardingState | null> {
-  try {
-    const stateRaw = await AsyncStorage.getItem(KEYS.QUEST_STATE);
-    if (!stateRaw) return null;
-
-    const quests = JSON.parse(stateRaw) as Quest[];
-    const quest = quests.find(q => q.id === questId);
-
-    // Déjà complétée → pas de double reward
-    if (!quest || quest.completed) return loadOnboardingState();
-
-    const updated = quests.map(q =>
-      q.id === questId ? { ...q, completed: true } : q
-    );
-
-    // ✅ Donne les trophées dans Firestore
+    const def = QUEST_DEFINITIONS.find((d) => d.id === questId);
+    const trophies = def?.trophies ?? 0;
     const uid = auth.currentUser?.uid;
-    if (uid && quest.trophies > 0) {
-      const userRef = doc(db, "users", uid);
-      await runTransaction(db, async (tx) => {
-        const snap = await tx.get(userRef);
-        if (!snap.exists()) return;
-        tx.update(userRef, {
-          trophies: increment(quest.trophies),
-          totalTrophies: increment(quest.trophies),
-          updatedAt: serverTimestamp(),
+
+    if (uid && trophies > 0) {
+      try {
+        const userRef = doc(db, "users", uid);
+        await runTransaction(db, async (tx) => {
+          tx.update(userRef, {
+            trophies: increment(trophies),
+            totalTrophies: increment(trophies),
+            [`onboardingQuests.${questId}`]: true,
+            [`onboardingQuests.${questId}At`]: serverTimestamp(),
+          });
         });
-      });
+      } catch (e) {
+        console.warn("[OnboardingQuest] Firestore transaction failed:", e);
+      }
+    }
+  } catch (e) {
+    console.warn("[OnboardingQuest] completeQuest error:", e);
+  }
+
+  return loadOnboardingState();
+}
+
+// ─── Explore counter ─────────────────────────────────────────────────────────
+
+export async function incrementExploreCount(): Promise<number> {
+  try {
+    const rawState = await AsyncStorage.getItem(KEY_STATE);
+    const completedIds: Partial<Record<QuestId, number>> = rawState
+      ? JSON.parse(rawState)
+      : {};
+
+    if (completedIds["explore_challenges"]) return 3;
+
+    const raw = await AsyncStorage.getItem(KEY_EXPLORE_COUNT);
+    const current = raw ? parseInt(raw, 10) || 0 : 0;
+    const next = current + 1;
+    await AsyncStorage.setItem(KEY_EXPLORE_COUNT, String(next));
+
+    if (next >= 3) {
+      await completeQuest("explore_challenges");
     }
 
-    await AsyncStorage.setItem(KEYS.QUEST_STATE, JSON.stringify(updated));
-    return loadOnboardingState();
-  } catch (e) {
-    __DEV__ && console.warn("[onboardingQuests] complete error:", e);
-    return null;
+    return next;
+  } catch {
+    return 0;
   }
 }
 
-/**
- * Dismisses définitivement la bannière.
- */
+export async function getExploreCount(): Promise<number> {
+  try {
+    const raw = await AsyncStorage.getItem(KEY_EXPLORE_COUNT);
+    return raw ? parseInt(raw, 10) || 0 : 0;
+  } catch {
+    return 0;
+  }
+}
+
+// ─── Dismiss ──────────────────────────────────────────────────────────────────
+
 export async function dismissOnboarding(): Promise<void> {
   try {
-    await AsyncStorage.setItem(KEYS.QUESTS_DONE, "1");
-  } catch (e) {
-    __DEV__ && console.warn("[onboardingQuests] dismiss error:", e);
-  }
+    await AsyncStorage.setItem(KEY_DISMISSED, "1");
+  } catch {}
 }
 
-/**
- * Reset complet (dev/test uniquement).
- */
-export async function resetOnboarding(): Promise<void> {
+// ─── Reset (dev only) ─────────────────────────────────────────────────────────
+
+export async function resetOnboardingQuests(): Promise<void> {
   try {
-    await AsyncStorage.multiRemove(Object.values(KEYS));
+    await AsyncStorage.multiRemove([
+      KEY_STATE,
+      KEY_EXPLORE_COUNT,
+      KEY_DISMISSED,
+      KEY_INITIALIZED,
+    ]);
   } catch {}
+}
+
+// ─── Check profile completeness ───────────────────────────────────────────────
+
+export function isProfileComplete(userData: any): boolean {
+  if (!userData) return false;
+  const hasPhoto =
+    typeof userData.photoURL === "string" && userData.photoURL.trim().length > 0;
+  const hasBio =
+    typeof userData.bio === "string" && userData.bio.trim().length > 0;
+  const hasUsername =
+    typeof userData.username === "string" && userData.username.trim().length > 0;
+  return hasPhoto && (hasBio || hasUsername);
 }

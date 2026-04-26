@@ -20,7 +20,7 @@ import {
 import { logEvent } from "@/src/analytics";
 import { getDisplayUsername } from "@/services/invitationService";
 
-
+export const socialRegisterPending = { current: false };
 // ✅ helpers (TOP LEVEL) : empêche la création d'un doc user "partiel"
 const sleep = (ms: number) => new Promise((r) => setTimeout(r, ms));
 
@@ -44,6 +44,8 @@ interface AuthContextType {
   logout: () => Promise<void>;
   userDocReady: boolean;
 }
+
+
 
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
 
@@ -87,10 +89,40 @@ const authFailsafe = setTimeout(() => {
         const ok = await waitForUserDoc(uid);
 
         if (!ok) {
-          // ✅ FALLBACK : doc absent après timeout → on le crée plutôt que déconnecter
-          console.log("⚠️ AuthProvider: doc absent après timeout → création fallback");
-          try {
-            await setDoc(doc(db, "users", uid), {
+  // ✅ Si register.tsx est en train de créer le doc → on attend sans créer de fallback
+  if (socialRegisterPending.current) {
+  console.log("⏳ AuthProvider: socialRegisterPending → skip fallback, wait...");
+  const waited = await waitForUserDoc(uid, 120, 500);
+  if (!waited) {
+    console.log("⚠️ AuthProvider: social doc absent après attente → création fallback minimal");
+    // register.tsx n'a pas fini → on crée un doc minimal pour débloquer
+    try {
+      await setDoc(doc(db, "users", uid), {
+        uid,
+        email: firebaseUser.email ?? "",
+        username: firebaseUser.displayName ?? firebaseUser.email?.split("@")[0] ?? "user",
+        bio: "", location: "", profileImage: firebaseUser.photoURL ?? "",
+        interests: [], achievements: [], newAchievements: ["first_connection"],
+        trophies: 0, totalTrophies: 0, completedChallengesCount: 0,
+        CompletedChallenges: [], SavedChallenges: [], customChallenges: [], CurrentChallenges: [],
+        longestStreak: 0, language: "fr", locationEnabled: true, notificationsEnabled: false,
+        country: "Unknown", region: "Unknown",
+        createdAt: serverTimestamp(), updatedAt: serverTimestamp(),
+        isPioneer: false, pioneerRewardGranted: false,
+      }, { merge: true }); // merge:true = idempotent si register.tsx arrive après
+      console.log("✅ AuthProvider: doc social fallback créé");
+    } catch (e) {
+      console.log("⚠️ AuthProvider: social fallback failed:", e);
+    }
+  }
+  socialRegisterPending.current = false; // ← reset ici aussi
+  if (!alive) return;
+  setUserDocReady(true);
+  return;
+}
+  console.log("⚠️ AuthProvider: doc absent après timeout → création fallback");
+  try {
+    await setDoc(doc(db, "users", uid), {
               uid,
               email: firebaseUser.email ?? "",
               username: firebaseUser.displayName ?? firebaseUser.email?.split("@")[0] ?? "user",

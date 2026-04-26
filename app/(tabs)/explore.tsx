@@ -46,6 +46,7 @@ import { useSafeAreaInsets } from "react-native-safe-area-context";
 import useGateForGuest from "@/hooks/useGateForGuest";
 import RequireAuthModal from "@/components/RequireAuthModal";
 import { useCurrentChallenges } from "../../context/CurrentChallengesContext";
+import { translateChallenge } from "../../services/translationService";
 
 // ---------- Helpers globaux (UX / erreurs) ----------
 
@@ -737,7 +738,7 @@ export default function ExploreScreen() {
   const [originFilter, setOriginFilter] = useState<"Existing" | "Created" | "All">("Existing");
   const [isCategoryModalVisible, setIsCategoryModalVisible] = useState(false);
   const [optimisticSaved, setOptimisticSaved] = useState<Set<string>>(new Set());
-
+  const [userChallengeTranslations, setUserChallengeTranslations] = useState<Record<string, { title?: string; description?: string }>>({});
   const router = useRouter();
   const { isSaved, addChallenge, removeChallenge, savedChallenges } = useSavedChallenges();
   const { theme } = useTheme();
@@ -871,6 +872,32 @@ export default function ExploreScreen() {
     };
   }, [t]);
 
+  // ── Traduit les challenges créés par users ──────────────────────────────────
+  const translatingRef = useRef<Set<string>>(new Set());
+
+  useEffect(() => {
+    const userCreated = rawChallenges.filter(c => !!c.creatorId);
+    if (!userCreated.length) return;
+    const lang = i18n.language;
+
+    userCreated.forEach(async (c) => {
+      const key = `${c.id}:${lang}`;
+      if (translatingRef.current.has(key)) return;
+      translatingRef.current.add(key);
+
+      const result = await translateChallenge(c.id, lang);
+      if (!result) {
+        translatingRef.current.delete(key);
+        return;
+      }
+
+      setUserChallengeTranslations(prev => ({
+        ...prev,
+        [key]: { title: result.title, description: result.description },
+      }));
+    });
+  }, [rawChallenges, i18n.language]);
+
   // Projection vue traduite
   const challenges: Challenge[] = useMemo(() => {
     return rawChallenges.map((r) => {
@@ -880,15 +907,25 @@ export default function ExploreScreen() {
         chatId: r.chatId ?? r.id,
         rawCategory: rawCat,
         category: t(`categories.${rawCat}`, { defaultValue: rawCat }),
-        title: (r.chatId
-          ? t(`challenges.${r.chatId}.title`, { defaultValue: r.title })
-          : r.title) as string,
-        description:
-          (r.chatId
-            ? t(`challenges.${r.chatId}.description`, {
-                defaultValue: r.description,
-              })
-            : r.description) || (t("noDescription") as string),
+       title: (() => {
+          if (r.creatorId) {
+            // Challenge user → traduction lazy
+            const key = `${r.id}:${i18n.language}`;
+            return userChallengeTranslations[key]?.title || r.title || "";
+          }
+          return (r.chatId
+            ? t(`challenges.${r.chatId}.title`, { defaultValue: r.title })
+            : r.title) as string;
+        })(),
+        description: (() => {
+          if (r.creatorId) {
+            const key = `${r.id}:${i18n.language}`;
+            return userChallengeTranslations[key]?.description || r.description || t("noDescription");
+          }
+          return (r.chatId
+            ? t(`challenges.${r.chatId}.description`, { defaultValue: r.description })
+            : r.description) || t("noDescription");
+        })(),
         imageUrl: r.imageUrl ?? undefined,
         participantsCount: r.participantsCount ?? 0,
         creatorId: r.creatorId ?? undefined,
@@ -896,7 +933,7 @@ export default function ExploreScreen() {
         approved: true,
       };
     });
-  }, [rawChallenges, t, i18n.language]);
+  }, [rawChallenges, t, i18n.language, userChallengeTranslations]);
 
   const availableCategories = useMemo(() => {
     const raws = rawChallenges.map((c) => c.category ?? "Miscellaneous");

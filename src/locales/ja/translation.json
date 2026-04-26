@@ -292,51 +292,51 @@
     }
   },
   "newFeatures": {
-    "deadlineIso": "2026-02-28T23:59:59+01:00",
-    "byTpl": "{{username}} による",
-    "unknown": "匿名",
-    "proposeIdea": "アイデアを提案する",
-    "shareLabel": "共有",
-
-    "monthLabelTpl": "アップデート • {{month}}",
-    "months": {
-      "01": "1月",
-      "02": "2月",
-      "03": "3月",
-      "04": "4月",
-      "05": "5月",
-      "06": "6月",
-      "07": "7月",
-      "08": "8月",
-      "09": "9月",
-      "10": "10月",
-      "11": "11月",
-      "12": "12月"
-    },
-
-    "title": "新着情報",
-    "description": "次の機能に投票するか、あなたの案を提案しよう。結果は2月末。",
-
-    "heroTitle": "3月末に来るアップデートに投票しよう 🚀",
-    "heroSubtitle": "あなたの声が大事：提案して、投票して、進捗を追おう。",
-
-    "voteCloses": "投票終了まで",
-    "thankYouShort": "投票ありがとう 💜",
-
-    "countdown": {
-      "days": "日",
-      "hours": "時間",
-      "mins": "分",
-      "secs": "秒",
-      "abbr": { "d": "日", "h": "時", "m": "分", "s": "秒" }
-    },
-
-    "share": {
-      "kicker": "投票しよう！",
-      "footerWithDays": "投票はあと{{days}}日で終了 — あなたの声が大事 ✨",
-      "footer": "投票はまもなく終了 — あなたの声が大事 ✨"
-    }
+  "deadlineIso": "2026-04-30T23:59:59+02:00",
+  "byTpl": "{{username}} による",
+  "unknown": "匿名",
+  "proposeIdea": "アイデアを提案する",
+  "shareLabel": "シェア",
+  "monthLabelTpl": "アップデート • {{month}}",
+  "months": {
+    "01": "1月", "02": "2月", "03": "3月", "04": "4月",
+    "05": "5月", "06": "6月", "07": "7月", "08": "8月",
+    "09": "9月", "10": "10月", "11": "11月", "12": "12月"
   },
+  "title": "新機能",
+  "description": "次の機能に投票するか、あなたのアイデアを提案してください。結果は4月末。",
+  "heroTitle": "今後の機能に投票しよう",
+  "heroSubtitle": "あなたの声がアプリを形作る。月1票、リアルな影響力。",
+  "voteCloses": "投票終了まで",
+  "thankYouShort": "投票ありがとう 💜",
+  "countdown": {
+    "days": "日", "hours": "時間", "mins": "分", "secs": "秒",
+    "abbr": { "d": "日", "h": "時", "m": "分", "s": "秒" }
+  },
+  "share": {
+    "kicker": "投票しよう！",
+    "footerWithDays": "投票終了まで {{days}} 日 — あなたの声が大切 ✨",
+    "footer": "投票もうすぐ終了 — あなたの声が大切 ✨"
+  },
+  "loading": "読み込み中...",
+  "noFeatures": "まだ提案はありません。",
+  "featuresTitle": "提案",
+  "vote": "投票する",
+  "voted": "投票済み ✓",
+  "alreadyVotedShort": "投票済み",
+  "alreadyVotedMessage": "今月はすでに投票しました。",
+  "loginRequiredMessage": "投票するにはログインしてください。",
+  "voteRegisteredMessage": "投票が記録されました 🎉",
+  "voteErrorMessage": "投票エラー。もう一度試してください。",
+  "proposalSentMessage": "提案が送信されました 🎉",
+  "proposalErrorMessage": "送信エラー。もう一度試してください。",
+  "noVotesYet": "まだ投票はありません。",
+  "openExplanation": "どのように機能しますか？",
+  "shareDialogTitle": "この機能をシェア",
+  "countdownTitleMars": "3月31日まで投票受付中",
+  "countdownTitleAvril": "4月30日まで投票受付中",
+  "footerMicro": "最良のアイデアは毎月統合されます。"
+},
   "invite": {
       "bootTitle": "招待を準備中…",
       "bootSubtitle": "アプリを閉じないでください。チャレンジを設定しています。",
@@ -381,7 +381,7 @@
   "invalidEmailFormat": "メールアドレスの形式が無効です。",
   "tooManyRequests": "試行回数が多すぎます。しばらくしてから再試行してください。",
   "unknownError": "不明なエラーが発生しました。",
-  "emailPlaceholder": "tony.stark@example.com",
+  "emailPlaceholder": "メールアドレス",
   "passwordPlaceholder": "パスワード",
   "hidePassword": "パスワードを非表示",
   "showPassword": "パスワードを表示",
@@ -415,16 +415,45 @@
     "inviteNow": "友達を招待",
     "button": "了解"
   },
+"coachmark": {
+  "skip": "スキップ",
+  "finish": "さあ始めよう！ 🔥",
+  "create": {
+    "title": "自分だけのチャレンジを作ろう ✍️",
+    "body": "100%カスタム — あなたのルール、期間、ペースで。",
+    "cta": "作成する！"
+  },
+  "explore": {
+    "title": "100以上のチャレンジが待ってる 🧭",
+    "body": "フィットネス、マインドセット、生産性… 全ライブラリを探索しよう。",
+    "cta": "探索する！"
+  },
+  "exploits": {
+    "title": "あなたの実績が待ってる 🏆",
+    "body": "達成したチャレンジ、ストリーク — すべてここに。",
+    "cta": "実績を見る"
+  },
+  "profile": {
+    "title": "プロフィールと統計 📊",
+    "body": "トロフィー、ストリーク、ランキング… すべてプロフィールに。",
+    "cta": "わかった！"
+  },
+  "bonus": {
+    "title": "デイリーボーナス 🎁",
+    "body": "毎日無料の報酬 — トロフィーまたはStreak Pass。",
+    "cta": "最高！"
+  }
+},
 
   "charsRemaining_one": "{{count}} 文字残り",
   "charsRemaining_other": "{{count}} 文字残り",
 
   "fillAllFields": "すべての項目を入力してください。",
   "passwordsDoNotMatch": "パスワードが一致しません。",
-  "emailAlreadyInUse": "このメールアドレスはすでに使用されています。",
+  "emailAlreadyInUse":  "このメールアドレスはすでに登録されています。ログインしてください。",
   "weakPassword": "パスワードが弱すぎます。より強力なものを選んでください。",
   "anErrorOccurred": "エラーが発生しました。もう一度お試しください。",
-  "joinUsAndChallenge": "一人で諦めるな。",
+  "joinUsAndChallenge": "今度こそ、やり遂げてみない？",
   "yourEmail": "あなたのメール",
   "username": "ユーザー名",
   "password": "パスワード",
@@ -1406,33 +1435,52 @@
   },
   "onboarding": {
   "banner": {
-    "title": "さあ始めよう 🔥",
-    "subtitle": "{{trophies}} 個のトロフィーを獲得してスタート",
-    "subtitleProgress": "{{done}}/{{total}} · あと +{{left}} トロフィー",
-    "progress": "{{done}} / {{total}} 完了"
+    "title": "始めよう 🔥",
+        "titleDone": "オンボーディング完了 🎉",
+        "subtitleNew": "{{trophies}} トロフィーを獲得",
+        "subtitleProgress": "{{done}}/{{total}} · あと +{{left}} トロフィー",
+        "subtitleDone": "+{{trophies}} トロフィー獲得 ✓",
+        "progress": "{{done}} / {{total}} 完了",
+    "subtitle": "{{trophies}} 個のトロフィーを獲得してスタート"
   },
-  "quest": {
-    "markFirstDay": {
-      "title": "最初の日をマークする",
-      "desc": "チャレンジを開いてday 1をチェック"
-    },
-    "completeProfile": {
-      "title": "プロフィールを完成させる",
-      "desc": "写真とカテゴリを追加"
-    },
-    "exploreCommunity": {
-      "title": "コミュニティを探索",
-      "desc": "偉業ページを開く"
-    },
-    "joinSoloChallenge": {
-      "title": "ソロチャレンジを始める",
-      "desc": "デュオを待ちながら今すぐスタート"
-    },
-    "viewChallenge": {
-      "title": "チャレンジを見る",
-      "desc": "現在のチャレンジを確認"
-    }
-  }
+  "modal": {
+        "title": "最初の勝利 🔥",
+        "subtitle": "+{{trophies}} トロフィーを獲得",
+        "subtitleDone": "すべて完了 🎉",
+        "cta": "さあ始めよう！ 🚀",
+        "ctaDone": "完璧、続けよう！ 🚀",
+        "hint": "これらのミッションはホームからいつでも確認できます。"
+      },
+      "completion": {
+        "title": "完璧なスタート！ 🔥",
+        "sub": "{{trophies}} トロフィーを獲得しました。あとはあなた次第。"
+      },
+      "quest": {
+        "markFirstDay": {
+          "title": "最初の日を記録",
+          "desc": "今日のチャレンジをチェック"
+        },
+        "inviteDuo": {
+          "title": "友達をデュオに招待",
+          "desc": "大切な人に挑戦する"
+        },
+        "claimDailyBonus": {
+          "title": "ボーナスを受け取る",
+          "desc": "毎日の報酬を開く"
+        },
+        "exploreChallenges": {
+          "title": "チャレンジを探す",
+          "desc": "{{count}}/3 探索済み"
+        },
+        "completeProfile": {
+          "title": "プロフィールを完成",
+          "desc": "写真とカテゴリーを追加"
+        },
+        "maintain3DayStreak": {
+          "title": "3日連続",
+          "desc": "ストリークは毎日成長する"
+        }
+      }
 },
 
   "addLocationHere": "ロケーションを追加",
@@ -1590,7 +1638,8 @@
     "tab": {
       "region": "地域",
       "national": "国",
-      "global": "世界"
+      "global": "世界",
+      "weekly": "今週"
     },
     "listLabel": "ランキングプレイヤー一覧",
     "noPlayers": "このランキングにプレイヤーがいません。"
@@ -2441,45 +2490,13 @@
   "footerLine2": "チャレンジ、集中、毎日の勝利。"
 },
 "duoMoment": {
-  "leader": "リーダー",
-  "badgeSync": "SYNC",
-  "badgeTurn": "相手の番",
-  "stateSync": "同期",
-  "stateTurn": "相手の番",
-  "subtitleSync": "歩幅が揃ってる。同期をキープ。",
-  "subtitleTurn": "あなたはチェック済み。次は相手の番。",
-  "fallbackSync": "完璧——同期できてる。",
-  "fallbackTurn": "{{name}}に送信済み。次は相手の番。",
-  "a11y": {
-    "closeBackdrop": "ウィンドウを閉じる",
-    "closeButton": "閉じる"
-  },
-  "kicker": "デュオ・モーメント",
-  "you": "あなた",
-  "pressureMessages": [
-    "⚡ 次は{{name}}。",
-    "🔥 チェック完了——{{name}}、今だ。",
-    "🎯 先手はあなた。{{name}}が追う番。",
-    "🚀 リードした。{{name}}は合わせて。",
-    "💥 ペースはあなた。{{name}}が続く。",
-    "🏁 デュオスプリント：{{name}}が次。",
-    "📈 進捗確定——{{name}}は同期を。",
-    "🧨 ナイス。{{name}}の番。",
-    "⚔️ デュエル開始——{{name}}、行け。",
-    "🔔 {{name}}に通知が飛ぶ。"
-  ],
-  "syncMessages": [
-    "🤝 完璧——同期してる。",
-    "💎 今日は強いデュオ。",
-    "🏆 両方チェック完了。",
-    "⚖️ バランス完璧。",
-    "🔥 一緒にリズム維持。",
-    "🎯 同期が美しい。",
-    "🚀 デュオが乗ってきた。",
-    "🧱 共有の自律——尊敬。",
-    "✨ 連携が完璧。",
-    "🔒 連続記録を守った。"
-  ]
+  "kicker": "DUOモーメント", "badgeSync": "SYNC", "badgeTurn": "相手のターン",
+      "stateSync": "シンクロ", "stateTurn": "相手のターン", "you": "あなた", "leader": "リーダー",
+      "fallbackSync": "完璧 — シンクロしている。", "fallbackTurn": "チェックを{{name}}に送信。次は彼の番。",
+      "subtitleSync": "揃っている。シンクロを保て。", "subtitleTurn": "チェックイン済。次はパートナーの番。",
+      "syncMessages": ["シンクロしている。これがDuoの強さ。", "同じ日。同じリズム。一緒に続いている。", "二人ともチェックイン。誰も諦めない。", "完璧なシンク。ソロモチベーションより強い。", "同じペース。続けろ。", "Duo稼働中。Duo強固。それだけでいい。"],
+      "pressureMessages": ["{{name}}が見ている。今諦めるな。", "チェック送信。{{name}}の番。", "続けた。{{name}}は君が本気だと分かった。", "チェック済。{{name}}は本気だと知っている。", "前進中。{{name}}も同じことをしなければ。", "チェック済。Duoに通知が届く。👀"],
+      "a11y": { "closeBackdrop": "ウィンドウを閉じる", "closeButton": "閉じる" }
 },
 "exploits": {
   "title": "偉業",
@@ -2616,31 +2633,23 @@
   },
   "dailySelectedSubtitleShort": "本日のセレクション。",
  "soloMoment": {
-    "kicker": "ソロ・モーメント",
-    "badge": "完了",
+  "badge": "CHECK ✓", "kicker": "ソロモーメント", "fallback": "前進している。一日一日。",
+      "cta": "続ける", "progress": "{{day}}日目/{{total}}日", "progressLabel": "{{day}} / {{total}} 日",
+      "complete": "達成", "streak": "{{streak}} 🔥",
+      "subtitle": "またチェックイン。何かを築いている。", "subtitleMilestone": "節目に到達。始めた頃とは違う自分になっている。",
+      "identity": {
+        "day1": "初日。本当に始めたことを証明した。", "day2": "2日間。ほとんどの人は初日で諦める。",
+        "day3": "3日目。始めた80%の人をすでに超えた。", "day7": "7日間。習慣ができた。守れ。",
+        "day14": "折り返し地点。別の人間になりつつある。", "day21": "21日間。神経科学によればここで定着する。",
+        "last": "最終日。最後まで続けた。", "early": "始めて続けられる人になりつつある。",
+        "mid": "折り返し。ここで多くの人が諦める。君は違う。", "late": "ゴールが近い。築いているものは本物だ。",
+        "final": "自分への約束を守っている。それは稀だ。", "default": "一貫した人になりつつある。"
+      },
+      "pool": ["{{day}}日目。約束を守っている。", "チェックイン完了。これが規律だ。", "前進中。小さな日も大事。", "{{streak}}日連続。何かが積み上がっている。", "チェック済。今日何かを証明した。", "完了。未来の自分が感謝する。", "{{total}}日中{{day}}日目。諦めない。", "もう1日勝ち取った。それだけでいい。"],
+      "duoNudge": { "title": "パートナーがいると2倍長く続く。", "sub": "今すぐ誰かを招待 →" },
+      "a11y": { "closeBackdrop": "閉じる", "closeButton": "閉じる", "cta": "続ける" },
     "title": "{{day}}日目をロック",
-    "titleMilestone": "マイルストーン達成 — {{day}}日目",
-    "subtitle": "静かに進む。でも確実に。",
-    "subtitleMilestone": "これは本気。続けよう。",
-    "pool": [
-      "あと1%。それが変化になる。",
-      "リズムを作る。守る。",
-      "完璧じゃなくていい。継続。",
-      "今日は自分に勝った。",
-      "毎日が大事。今日も。",
-      "やり切る人になってる。",
-      "小さくても、後で大きい。",
-      "一つの行動。一つのアイデンティティ。"
-    ],
-    "fallback": "いいね。続けよう。",
-    "progress": "{{day}} / {{total}} 日",
-    "streak": "連続 {{streak}}",
-    "cta": "続ける",
-    "a11y": {
-      "closeBackdrop": "閉じる",
-      "closeButton": "閉じる",
-      "cta": "続ける"
-    }
+    "titleMilestone": "マイルストーン達成 — {{day}}日目"
   },
    "deeplink": {
       "inviteHandoff": {
@@ -2670,8 +2679,8 @@
   },
     "hero": {
       "brand": "ChallengeTies",
-      "headline": "今日のひらめき。",
-      "sub": "1つの挑戦。1タップ。続けたいなら：Duo。",
+      "headline": "今度こそ続けられる？",
+        "sub": "一人では始まる。一緒なら続く。",
       "duoProof": "デュオなら続く。",
       "ctaShort": "はじめる",
       "ctaActive":"続ける",
@@ -2688,6 +2697,9 @@
     },
     "todayHub": {
       "primaryMark": "今日チェックイン",
+      "duoNudge": "パートナーは明日あなたを見る →", 
+      "markHint": "ここをタップしてチャレンジを記録", 
+      "tapToOpen": "チャレンジを見る →",
       "ctaSub": "1タップで今日を記録",
 "progressLabel": "{{percent}}% 達成",
       "badgeMark":"アクションが必要",
@@ -4897,7 +4909,39 @@
     "challengeNotFound": "シミュレーション用のチャレンジが見つかりません。",
     "errorGeneric": "連続記録をシミュレーションできませんでした。"
   },
+  "firstMark": {
+    "title": "やり遂げた。1日目、達成。",
+    "subtitle": "ここで諦める人が多い。でも、あなたは違う。",
+    "badge": "1日目 ✓",
+    "bodyLine1": "明日また戻ってきて、ストリークを続けよう。習慣は1日1日の積み重ねで作られる。",
+    "bodyLine2": "誰かと一緒に取り組むと、継続できる確率が65 %%高くなる。",
+    "cta": {
+      "invite": "誰かを誘う",
+      "tomorrow": "また明日！",
+      "skip": "閉じる"
+    }
+  },
  "firstPick": {
+  "step0": {
+      "title": "何を変えたいですか？",
+      "subtitle": "今、本当に大切なことを選んでください。",
+      "cta": "カテゴリを1つ以上選んでください",
+    "missingCategory": "続けるにはカテゴリを1つ以上選んでください。"
+    },
+    "category": {
+      "Fitness": "フィットネス",
+      "Santé": "健康",
+      "Productivité": "生産性",
+      "Education": "教育",
+      "Bien-être": "ウェルビーイング",
+      "Motivation": "モチベーション",
+    "Mindset": "マインドセット",
+      "Sport": "スポーツ",
+      "Méditation": "瞑想",
+      "Nutrition": "栄養",
+      "Créativité": "創造性",
+      "Social": "社交"
+    },
   "progressShort": "{{current}}/{{total}}",
   "invitePending": {
     "title": "招待を待っています",
@@ -4928,7 +4972,7 @@
     "shuffleA11y": "他のチャレンジを表示"
   },
   "step2": {
-    "title": "ソロ or デュオ？",
+    "title": "何日間コミットしますか？",
     "subtitle": "デュオの方が続きやすい。やめにくくなる。",
     "duoDesc": "デュオなら継続しやすい。次に友だちを招待してね。",
     "cta": "次へ",
@@ -4979,8 +5023,75 @@
   "alert": {
     "missingChoiceBody": "続けるにはチャレンジを選んでください。"
   }
-}
-,
+},
+"heatmap": {
+  "title": "活動記録",
+  "subtitle": "過去16週間",
+  "activeDays": "アクティブ日数",
+  "totalMarks": "マーク数",
+  "currentStreak": "連続日数",
+  "less": "少",
+  "more": "多",
+  "marked": "{{count}} チャレンジ達成",
+  "noMark": "この日はチャレンジなし"
+},
+"weeklyReport": {
+  "sectionTitle": "週次レポート",
+  "btnTitle": "今週のレポート",
+  "btnSubAvailable": "レポートあり — モメンタムを確認",
+  "btnSubEmpty": "アクティブな週の翌月曜日に利用可能",
+  "newBadge": "見る",
+  "noReportTitle": "レポートはまだありません",
+  "noReportDesc": "1週間のアクティビティの後、来週の月曜日に最初のレポートが表示されます。",
+  "kicker": "週次レポート",
+  "title": "あなたのモメンタム",
+  "activeDays": "アクティブな日",
+  "trophies": "トロフィー",
+  "momentum": "モメンタム",
+  "daysOfWeek": "今週",
+  "diagTitle": "私が見ること",
+  "goalTitle": "今週の目標",
+  "goalAccept": "チャレンジを受け入れる 💪",
+  "close": "閉じる"
+},
+"forge": {
+  "title": "鍛冶場",
+   "intentionLabel": "あなたの意図",
+  "titleDone": "鍛冶場 完了 🔥",
+  "subtitle": "準備ができていることを証明しよう — 3日間、3つのコミットメント",
+  "subtitleDone": "報酬は承認待ちです",
+  "step1": {
+    "label": "意図を設定する",
+    "labelShort": "意図",
+    "desc": "なぜこのチャレンジを続けたいのか？",
+    "modal": {
+      "title": "意図を設定する",
+      "subtitle": "なぜこのチャレンジを続けたいのか？",
+      "placeholder": "例：30日間続けられることを自分に証明するために...",
+      "cta": "確認"
+    }
+  },
+  "step2": {
+    "label": "チャレンジをマーク",
+    "labelShort": "チェックイン",
+    "desc": "今日のチェックインは完了しましたか？"
+  },
+  "step3": {
+    "label": "パートナーに連絡する",
+    "labelShort": "リマインド",
+    "desc": "未来のデュオへのリマインダー。"
+  },
+  "stepDone": "完了 ✓",
+  "stepLocked": "{{n}}日目に利用可能",
+  "go": "進む",
+  "rewardFull": "トロフィー10個 + 「鍛造済み」バッジ 承認待ち",
+  "rewardPartial": "{{trophies}}個のトロフィー 待機中",
+  "rewardTitle": "鍛冶場の報酬！",
+  "rewardBadgeTitle": "「鍛造済み」バッジ解除！🔥",
+  "rewardMsg": "+{{trophies}}個のトロフィー",
+  "reminderSentTitle": "リマインダーを送信 👊",
+  "reminderSentBody": "未来のパートナーにリマインダーが届きました。"
+},
 "inventory": {
     "title": "インベントリ",
     "subtitle": "ボーナスと連続記録の保護を、ここでまとめて管理。",

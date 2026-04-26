@@ -115,7 +115,8 @@ export default function LeaderboardScreen() {
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
   const [currentUser, setCurrentUser] = useState<Player | null>(null);
-  const [selectedTab, setSelectedTab] = useState<"region" | "national" | "global">("global");
+  const [selectedTab, setSelectedTab] = useState<"region" | "national" | "global" | "weekly">("global");
+  const [weeklyPlayers, setWeeklyPlayers] = useState<Player[]>([]);
   const [locationDisabledMessage, setLocationDisabledMessage] = useState<string | null>(null);
 
   const router = useRouter();
@@ -174,6 +175,22 @@ export default function LeaderboardScreen() {
       setPlayers(fetched);
       cacheLeaderboard(fetched);
 
+      // ── Leaderboard hebdomadaire ──────────────────────────────────────────
+      try {
+        const wq = query(collection(db, "leaderboard_weekly"), orderBy("trophies", "desc"), limit(20));
+        const wsnap = await getDocs(wq);
+        const wfetched: Player[] = wsnap.docs.map((d) => ({
+          id: d.id,
+          username:     d.data().username?.toString?.()     || t("leaderboard.unknown", { defaultValue: "Unknown" }),
+          trophies:     d.data().trophies || 0,
+          profileImage: d.data().profileImage?.toString?.() || null,
+          country:      d.data().country?.toString?.()      || "",
+          region:       d.data().region?.toString?.()       || "",
+          isPioneer:    !!d.data().isPioneer,
+        }));
+        setWeeklyPlayers(wfetched);
+      } catch {}
+
       const uid = auth.currentUser?.uid;
       if (uid) {
         const userSnap = await getDoc(doc(db, "users", uid));
@@ -224,6 +241,13 @@ export default function LeaderboardScreen() {
   useEffect(() => {
     if (!currentUser) { setFilteredPlayers([]); return; }
     const hasText = (v?: string) => typeof v === "string" && v.trim().length > 0;
+
+    // ── Onglet weekly : on utilise directement weeklyPlayers ────────────────
+    if (selectedTab === "weekly") {
+      setFilteredPlayers(weeklyPlayers.slice(0, 20));
+      return;
+    }
+
     let base = players;
     if (selectedTab === "region") {
   base = players.filter((p) => 
@@ -512,7 +536,7 @@ export default function LeaderboardScreen() {
     const idx = basis.findIndex((p) => p.id === currentUser?.id);
     if (currentUser && idx > 19) slice.push({ ...currentUser, rank: idx + 1 });
     return slice;
-  }, [filteredPlayers, players, currentUser, selectedTab]);
+  }, [filteredPlayers, players, currentUser, selectedTab, weeklyPlayers]);
 
   // ─── MyRankCard (inchangé) ────────────────────────────────────────────────
   const MyRankCard = useMemo(() => {
@@ -669,6 +693,46 @@ export default function LeaderboardScreen() {
               );
             })}
           </BlurView>
+        </Animated.View>
+
+        {/* ── Toggle Cette semaine ───────────────────────────────────────── */}
+        <Animated.View entering={FadeInUp.delay(160)} style={{ paddingHorizontal: SPACING, marginBottom: SPACING * 0.8 }}>
+          <TouchableOpacity
+            onPress={() => setSelectedTab(prev => prev === "weekly" ? "global" : "weekly")}
+            activeOpacity={0.85}
+            style={{
+              flexDirection: "row",
+              alignItems: "center",
+              justifyContent: "center",
+              gap: normalizeSize(8),
+              paddingVertical: normalizeSize(10),
+              paddingHorizontal: normalizeSize(16),
+              borderRadius: normalizeSize(12),
+              borderWidth: StyleSheet.hairlineWidth,
+              borderColor: selectedTab === "weekly"
+                ? (isDarkMode ? "rgba(249,115,22,0.55)" : "rgba(249,115,22,0.40)")
+                : (isDarkMode ? "rgba(255,255,255,0.12)" : "rgba(0,0,0,0.08)"),
+              backgroundColor: selectedTab === "weekly"
+                ? (isDarkMode ? "rgba(249,115,22,0.12)" : "rgba(249,115,22,0.08)")
+                : (isDarkMode ? "rgba(255,255,255,0.04)" : "rgba(0,0,0,0.03)"),
+            }}
+          >
+            <Ionicons
+              name="calendar-outline"
+              size={normalizeSize(14)}
+              color={selectedTab === "weekly" ? "#F97316" : (isDarkMode ? "rgba(255,255,255,0.55)" : "rgba(0,0,0,0.40)")}
+            />
+            <Text style={{
+              fontFamily: "Comfortaa_700Bold",
+              fontSize: normalizeFont(13),
+              color: selectedTab === "weekly" ? "#F97316" : (isDarkMode ? "rgba(255,255,255,0.55)" : "rgba(0,0,0,0.45)"),
+            }}>
+              {t("leaderboard.tab.weekly", { defaultValue: "Cette semaine" })}
+            </Text>
+            {selectedTab === "weekly" && (
+              <Ionicons name="checkmark-circle" size={normalizeSize(14)} color="#F97316" />
+            )}
+          </TouchableOpacity>
         </Animated.View>
 
         <ScrollView

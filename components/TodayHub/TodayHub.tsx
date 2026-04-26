@@ -24,6 +24,8 @@ import { Image as ExpoImage } from "expo-image";
 import * as Haptics from "expo-haptics";
 import type { AnimatedStyle } from "react-native-reanimated";
 import type { ViewStyle } from "react-native";
+import type { ForgeState, ForgeStep } from "../../services/ForgeService";
+import { computeForgeExpired } from "../../services/ForgeService";
 
 export type TodayHubPrimaryMode = "mark" | "new" | "pick" | "duo" | "duoPending";
 
@@ -68,7 +70,10 @@ type Props = {
   onOpenHub: () => void;
   onPrimaryPress: () => void;
   onPendingWarmupPress?: () => void;
+  forgeState?: import("../../services/ForgeService").ForgeState | null;
+  forgeAvailableStep?: import("../../services/ForgeService").ForgeStep | null;
   onPickSolo: () => void;
+  onInviteDuo?: () => void;
   onCreate: () => void;
   CONTENT_MAX_W: number;
   staticStyles: any;
@@ -101,6 +106,7 @@ export default function TodayHub(props: Props) {
     onPrimaryPress,
     onPendingWarmupPress,
     onPickSolo,
+    onInviteDuo,
     CONTENT_MAX_W,
     normalize,
   } = props;
@@ -476,82 +482,313 @@ export default function TodayHub(props: Props) {
 
         {/* ── PRIMARY ACTION ── */}
         {isPending ? (
-          // Mode duoPending
+          // ═══════════════════════════════════════════════════
+          // LA FORGE — mode duoPending top 1 mondial
+          // ═══════════════════════════════════════════════════
           <View style={{ paddingHorizontal: UI.pad, paddingBottom: UI.pad }}>
-            <Pressable
-              ref={primaryCtaRef as any}
-              onPress={() => { hapticTap("selection"); (onPendingWarmupPress ?? onPrimaryPress)(); }}
-              accessibilityRole="button"
-              accessibilityLabel={pendingA11y}
-              style={({ pressed }) => [
-                {
-                  width: "100%",
-                  borderRadius: normalize(UI.cardR),
-                  borderWidth: TOKENS.hairline,
-                  borderColor: TOKENS.border,
-                  backgroundColor: TOKENS.surface2,
-                  paddingVertical: normalize(isTiny ? 12 : isTablet ? 16 : 14),
-                  paddingHorizontal: normalize(isTiny ? 12 : isTablet ? 16 : 14),
-                  overflow: "hidden",
-                  opacity: pressed ? 0.96 : 1,
-                  transform: [{ scale: pressed ? 0.992 : 1 }],
-                },
-                primaryAnimatedStyle as any,
-              ]}
-            >
-              <View style={{ flexDirection: "row", alignItems: "center", gap: normalize(12) }}>
-                {/* Orb animé */}
-                <View style={{ width: normalize(UI.iconBox), height: normalize(UI.iconBox), alignItems: "center", justifyContent: "center" }}>
-                  <Animated.View pointerEvents="none" style={[{
-                    position: "absolute",
-                    width: normalize(UI.aura), height: normalize(UI.aura), borderRadius: 999,
-                    backgroundColor: isDarkMode ? "rgba(99,102,241,0.16)" : "rgba(99,102,241,0.10)",
-                  }, auraStyle]} />
-                  <Animated.View pointerEvents="none" style={[{
-                    position: "absolute",
-                    width: normalize(UI.sheen), height: normalize(UI.sheen), borderRadius: 999,
-                    backgroundColor: isDarkMode ? "rgba(167,139,250,0.18)" : "rgba(167,139,250,0.12)",
-                  }, breathStyle]} />
-                  <Animated.View pointerEvents="none" style={[{
-                    position: "absolute",
-                    width: normalize(UI.ring), height: normalize(UI.ring), borderRadius: 999,
-                    borderWidth: 2,
-                    borderColor: isDarkMode ? "rgba(167,139,250,0.55)" : "rgba(99,102,241,0.42)",
-                  }, ringStyle]} />
-                  <LinearGradient colors={["#6366F1", "#A78BFA"]} start={{ x: 0, y: 0 }} end={{ x: 1, y: 1 }}
-                    style={{ width: normalize(UI.orb), height: normalize(UI.orb), borderRadius: 999, alignItems: "center", justifyContent: "center" }}>
-                    <Ionicons name="hourglass-outline" size={normalize(UI.hourglass)} color="#0B1120" />
-                  </LinearGradient>
-                </View>
+            {(() => {
+              const steps = props.forgeState?.completedSteps ?? [];
+              const availStep = props.forgeAvailableStep ?? null;
+              const isExpired = props.forgeState
+              ? computeForgeExpired(props.forgeState)
+              : false;
+              const allDone = steps.length >= 3;
 
-                {/* Copy */}
-                <View style={{ flex: 1, minWidth: 0 }}>
-                  <Text style={{
-                    fontFamily: F.regular,
-                    fontSize: TYPO.pendingMicro,
-                    color: TOKENS.mutedText,
-                    lineHeight: Math.round(TYPO.pendingMicro * 1.3),
-                  }} numberOfLines={2} adjustsFontSizeToFit minimumFontScale={0.92}>
-                    {pendingSub}
-                  </Text>
-                  <View style={{ marginTop: normalize(10), flexDirection: "row", alignItems: "center", justifyContent: "flex-end" }}>
-                    <View style={{
-                      flexDirection: "row", alignItems: "center", gap: normalize(8),
-                      borderRadius: normalize(999),
-                      paddingHorizontal: normalize(UI.ctaPadX),
-                      paddingVertical: normalize(UI.ctaPadY),
-                      backgroundColor: "#A78BFA",
-                    }}>
-                      <Text style={{ fontFamily: F.bold, fontSize: TYPO.pendingLabel, color: "#0B1120", letterSpacing: 0.2 }}
-                        numberOfLines={1} adjustsFontSizeToFit minimumFontScale={0.88}>
-                        {t("duo.pending.warmup", { defaultValue: "Warmup" })}
+              const FORGE_STEPS = [
+                {
+                  n: 1 as const,
+                  icon: "create-outline",
+                  labelKey: "forge.step1.label",
+                  labelShortKey: "forge.step1.labelShort",
+                  labelDefault: "Pose l'intention",
+                  labelShortDefault: "Intention",
+                  descKey: "forge.step1.desc",
+                  descDefault: "Pourquoi tu veux tenir ce défi ?",
+                },
+                {
+                  n: 2 as const,
+                  icon: "checkmark-circle-outline",
+                  labelKey: "forge.step2.label",
+                  labelShortKey: "forge.step2.labelShort",
+                  labelDefault: "Marque ton défi",
+                  labelShortDefault: "Check-in",
+                  descKey: "forge.step2.desc",
+                  descDefault: "Check-in du jour effectué ?",
+                },
+                {
+                  n: 3 as const,
+                  icon: "send-outline",
+                  labelKey: "forge.step3.label",
+                  labelShortKey: "forge.step3.labelShort",
+                  labelDefault: "Relance ton partenaire",
+                  labelShortDefault: "Relance",
+                  descKey: "forge.step3.desc",
+                  descDefault: "Un rappel à ton futur duo.",
+                },
+              ] as const;
+
+              return (
+                <View style={{ gap: normalize(12) }}>
+                  {/* ── Header Forge ── */}
+                  <View style={{
+                    flexDirection: "row",
+                    alignItems: "center",
+                    gap: normalize(10),
+                    marginBottom: normalize(2),
+                  }}>
+                    <LinearGradient
+                      colors={["#C2410C", "#F97316"]}
+                      start={{ x: 0, y: 0 }} end={{ x: 1, y: 1 }}
+                      style={{
+                        width: normalize(36), height: normalize(36),
+                        borderRadius: normalize(10),
+                        alignItems: "center", justifyContent: "center",
+                      }}
+                    >
+                      <Ionicons name="flame" size={normalize(18)} color="#fff" />
+                    </LinearGradient>
+                    <View style={{ flex: 1 }}>
+                      <Text style={{
+                        fontFamily: F.bold,
+                        fontSize: normalize(isTiny ? 14 : 15),
+                        color: TOKENS.text,
+                        letterSpacing: -0.3,
+                      }}>
+                        {allDone
+                          ? t("forge.titleDone", { defaultValue: "Forge complétée 🔥" })
+                          : t("forge.title", { defaultValue: "La Forge" })}
                       </Text>
-                      <Ionicons name="arrow-forward" size={normalize(UI.ctaIcon)} color="#0B1120" />
+                      <Text style={{
+                        fontFamily: F.regular,
+                        fontSize: normalize(isTiny ? 10.5 : 11),
+                        color: TOKENS.mutedText,
+                        marginTop: normalize(1),
+                      }}>
+                        {allDone
+                          ? t("forge.subtitleDone", { defaultValue: "Récompense en attente d'acceptation" })
+                          : t("forge.subtitle", { defaultValue: "Prouve que t'es prêt — 3 jours, 3 engagements" })}
+                      </Text>
+                    </View>
+                    {/* Flammes prorata */}
+                    <View style={{ flexDirection: "row", gap: normalize(3) }}>
+                      {[1, 2, 3].map(i => (
+                        <Text key={i} style={{
+                          fontSize: normalize(isTiny ? 14 : 16),
+                          opacity: steps.length >= i ? 1 : 0.22,
+                        }}>🔥</Text>
+                      ))}
                     </View>
                   </View>
+
+                  {/* ── Intention sauvegardée ── */}
+                  {props.forgeState?.intentionText ? (
+                    <View style={{
+                      paddingHorizontal: normalize(12),
+                      paddingVertical: normalize(8),
+                      borderRadius: normalize(10),
+                      backgroundColor: isDarkMode
+                        ? "rgba(249,115,22,0.07)"
+                        : "rgba(249,115,22,0.05)",
+                      borderWidth: TOKENS.hairline,
+                      borderColor: "rgba(249,115,22,0.18)",
+                    }}>
+                      <Text style={{
+                        fontFamily: F.regular,
+                        fontSize: normalize(isTiny ? 10.5 : 11),
+                        color: isDarkMode ? "rgba(255,255,255,0.55)" : "rgba(0,0,0,0.45)",
+                        marginBottom: normalize(2),
+                        letterSpacing: 0.3,
+                        textTransform: "uppercase",
+                      }}>
+                        {t("forge.intentionLabel", { defaultValue: "Ton intention" })}
+                      </Text>
+                      <Text style={{
+                        fontFamily: F.bold,
+                        fontSize: normalize(isTiny ? 11.5 : 12),
+                        color: isDarkMode ? "rgba(255,255,255,0.80)" : "rgba(0,0,0,0.72)",
+                        lineHeight: normalize(17),
+                      }} numberOfLines={3}>
+                        "{props.forgeState.intentionText}"
+                      </Text>
+                    </View>
+                  ) : null}
+
+                  {/* ── Barre de progression 3 steps ── */}
+                  <View style={{
+                    flexDirection: "row",
+                    gap: normalize(6),
+                    marginBottom: normalize(4),
+                  }}>
+                    {[1, 2, 3].map(i => {
+                      const done = steps.includes(i as ForgeStep);
+                      const active = availStep === i && !done;
+                      return (
+                        <View key={i} style={{ flex: 1, gap: normalize(4) }}>
+                          <View style={{
+                            height: normalize(4),
+                            borderRadius: normalize(999),
+                            backgroundColor: done
+                              ? "#F97316"
+                              : active
+                                ? "rgba(249,115,22,0.35)"
+                                : TOKENS.track,
+                            overflow: "hidden",
+                          }}>
+                            {active && (
+                              <View style={{
+                                position: "absolute",
+                                inset: 0,
+                                backgroundColor: "rgba(249,115,22,0.5)",
+                              }} />
+                            )}
+                          </View>
+                        </View>
+                      );
+                    })}
+                  </View>
+
+                  {/* ── Steps ── */}
+                  {FORGE_STEPS.map(step => {
+                    const done = steps.includes(step.n);
+                    const isNext = availStep === step.n && !done;
+                    const locked = !done && !isNext;
+
+                    return (
+                      <Pressable
+                        key={step.n}
+                        onPress={() => {
+                          if (!isNext) return;
+                          hapticTap("light");
+                          props.onPendingWarmupPress?.();
+                        }}
+                        disabled={!isNext}
+                        style={({ pressed }) => ({
+                          flexDirection: "row",
+                          alignItems: "center",
+                          gap: normalize(12),
+                          padding: normalize(12),
+                          borderRadius: normalize(UI.cardR),
+                          borderWidth: isNext ? 1.5 : TOKENS.hairline,
+                          borderColor: isNext
+                            ? "rgba(249,115,22,0.55)"
+                            : done
+                              ? "rgba(249,115,22,0.20)"
+                              : TOKENS.border,
+                          backgroundColor: done
+                            ? isDarkMode ? "rgba(249,115,22,0.08)" : "rgba(249,115,22,0.05)"
+                            : isNext
+                              ? isDarkMode ? "rgba(249,115,22,0.10)" : "rgba(249,115,22,0.06)"
+                              : "transparent",
+                          opacity: pressed && isNext ? 0.88 : locked ? 0.45 : 1,
+                          transform: [{ scale: pressed && isNext ? 0.992 : 1 }],
+                        })}
+                      >
+                        {/* Icône step */}
+                        <View style={{
+                          width: normalize(36), height: normalize(36),
+                          borderRadius: normalize(10),
+                          alignItems: "center", justifyContent: "center",
+                          backgroundColor: done
+                            ? "rgba(249,115,22,0.18)"
+                            : isNext
+                              ? "rgba(249,115,22,0.12)"
+                              : TOKENS.track,
+                        }}>
+                          <Ionicons
+                            name={done ? "checkmark" : step.icon as any}
+                            size={normalize(18)}
+                            color={done ? "#F97316" : isNext ? "#F97316" : TOKENS.mutedText}
+                          />
+                        </View>
+
+                        {/* Texte */}
+                        <View style={{ flex: 1, minWidth: 0 }}>
+                          <Text style={{
+                            fontFamily: F.bold,
+                            fontSize: normalize(isTiny ? 12.5 : 13),
+                            color: done || isNext ? TOKENS.text : TOKENS.mutedText,
+                            includeFontPadding: false,
+                          }}
+                            numberOfLines={1}
+                            adjustsFontSizeToFit
+                            minimumFontScale={0.82}
+                            accessibilityLabel={t(step.labelKey, { defaultValue: step.labelDefault })}
+                          >
+                            {t(step.labelShortKey, { defaultValue: step.labelShortDefault })}
+                          </Text>
+                          <Text style={{
+                            fontFamily: F.regular,
+                            fontSize: normalize(isTiny ? 10.5 : 11),
+                            color: TOKENS.mutedText,
+                            marginTop: normalize(2),
+                          }} numberOfLines={1}>
+                            {done
+                              ? t("forge.stepDone", { defaultValue: "Complété ✓" })
+                              : locked
+                                ? t("forge.stepLocked", { n: step.n - 1, defaultValue: `Disponible J${step.n - 1}` })
+                                : t(step.descKey, { defaultValue: step.descDefault })}
+                          </Text>
+                        </View>
+
+                        {/* Chevron / check */}
+                        {isNext && (
+                          <View style={{
+                            paddingHorizontal: normalize(10),
+                            paddingVertical: normalize(5),
+                            borderRadius: normalize(999),
+                            backgroundColor: "#F97316",
+                          }}>
+                            <Text style={{
+                              fontFamily: F.bold,
+                              fontSize: normalize(11),
+                              color: "#0B1120",
+                            }}>
+                              {t("forge.go", { defaultValue: "Go" })}
+                            </Text>
+                          </View>
+                        )}
+                        {done && (
+                          <Ionicons name="checkmark-circle" size={normalize(20)} color="#F97316" />
+                        )}
+                      </Pressable>
+                    );
+                  })}
+
+                  {/* ── Récompense en attente ── */}
+                  {(allDone || steps.length > 0) && (
+                    <View style={{
+                      flexDirection: "row",
+                      alignItems: "center",
+                      gap: normalize(8),
+                      padding: normalize(10),
+                      borderRadius: normalize(12),
+                      backgroundColor: isDarkMode
+                        ? "rgba(249,115,22,0.08)"
+                        : "rgba(249,115,22,0.06)",
+                      borderWidth: TOKENS.hairline,
+                      borderColor: "rgba(249,115,22,0.22)",
+                    }}>
+                      <Text style={{ fontSize: normalize(16) }}>🏆</Text>
+                      <Text style={{
+                        fontFamily: F.regular,
+                        fontSize: normalize(isTiny ? 11 : 11.5),
+                        color: TOKENS.subText,
+                        flex: 1,
+                      }}>
+                        {allDone
+                          ? t("forge.rewardFull", {
+                              defaultValue: "10 trophées + badge \"Forgé\" en attente d'acceptation",
+                            })
+                          : t("forge.rewardPartial", {
+                              trophies: steps.length === 1 ? 4 : 7,
+                              defaultValue: `${steps.length === 1 ? 4 : 7} trophées en attente`,
+                            })}
+                      </Text>
+                    </View>
+                  )}
                 </View>
-              </View>
-            </Pressable>
+              );
+            })()}
           </View>
         ) : (
           // Mode normal — CTA énorme
@@ -624,15 +861,17 @@ export default function TodayHub(props: Props) {
                     {primaryLabel}
                   </Text>
                   {isMark && (
-                    <Text style={{
-                      fontFamily: F.regular,
-                      fontSize: normalize(isTiny ? 10 : 11),
-                      color: "rgba(11,17,32,0.58)",
-                      marginTop: normalize(2),
-                    }}>
-                      {t("homeZ.todayHub.ctaSub", "1 tap pour valider ta journée")}
-                    </Text>
-                  )}
+  <Text style={{
+    fontFamily: F.regular,
+    fontSize: normalize(isTiny ? 10.5 : 11),
+    color: "rgba(11,17,32,0.78)",
+    marginTop: normalize(3),
+  }}>
+    {t("homeZ.todayHub.markHint", {
+      defaultValue: "Appuie ici pour cocher ton défi du jour",
+    })}
+  </Text>
+)}
                 </View>
 
                 {/* Icône dans cercle */}
@@ -666,6 +905,49 @@ export default function TodayHub(props: Props) {
                   }}>
                     {t("homeZ.todayHub.continueSolo", "Continuer en solo")}
                   </Text>
+                </Pressable>
+              </View>
+            )}
+
+            {/* ── Nudge duo — visible sous le CTA mark si pas encore en duo ── */}
+            {isMark && !!onInviteDuo && (
+              <View style={{ marginTop: normalize(10) }}>
+                <Pressable
+                  onPress={() => { hapticTap("light"); onInviteDuo(); }}
+                  style={({ pressed }) => ({
+                    borderRadius: normalize(12),
+                    overflow: "hidden",
+                    opacity: pressed ? 0.80 : 1,
+                  })}
+                >
+                  <View style={{
+                    flexDirection: "row",
+                    alignItems: "center",
+                    justifyContent: "center",
+                    gap: normalize(6),
+                    paddingVertical: normalize(9),
+                    paddingHorizontal: normalize(14),
+                    borderRadius: normalize(12),
+                    backgroundColor: isDarkMode
+                      ? "rgba(99,102,241,0.10)"
+                      : "rgba(99,102,241,0.07)",
+                    borderWidth: 1,
+                    borderColor: isDarkMode
+                      ? "rgba(99,102,241,0.22)"
+                      : "rgba(99,102,241,0.15)",
+                  }}>
+                    <Ionicons name="people" size={normalize(14)} color="#6366F1" />
+                    <Text style={{
+                      fontFamily: F.bold,
+                      fontSize: normalize(isTiny ? 11 : 12),
+                      color: "#6366F1",
+                      opacity: 0.90,
+                    }}>
+                      {t("homeZ.todayHub.duoNudge", {
+                        defaultValue: "Ton partenaire te verra demain →",
+                      })}
+                    </Text>
+                  </View>
                 </Pressable>
               </View>
             )}
