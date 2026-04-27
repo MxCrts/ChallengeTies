@@ -13,6 +13,7 @@ import {
   Pressable,
   StyleSheet,
   useWindowDimensions,
+  ScrollView,
   AccessibilityInfo,
   ActivityIndicator,
   Share,
@@ -47,6 +48,7 @@ import {
 } from "../hooks/useTrophiesEconomy";
 import AsyncStorage from "@react-native-async-storage/async-storage";
 import { collection, getDocs, query, where } from "firebase/firestore";
+import { translateChallenge } from "../services/translationService";
 import * as Notifications from "expo-notifications";
 
 const C = {
@@ -230,21 +232,56 @@ export default function ChallengeCompletionModal({
         );
         const snap = await getDocs(q);
         if (cancelled) return;
-        const results = snap.docs
+
+        // ── Étape 1 : construire la liste avec le titre brut ──────────
+        // Challenges système (chatId) → traduction i18n immédiate
+        // Challenges user (creatorId) → titre brut d'abord, traduit ensuite
+        const candidates = snap.docs
           .filter(d => d.id !== challengeId)
           .slice(0, 3)
-          .map(d => ({
-            id: d.id,
-            title: String((d.data() as any)?.chatId
-              ? t(`challenges.${(d.data() as any).chatId}.title`, { defaultValue: (d.data() as any)?.title || "Défi" })
-              : (d.data() as any)?.title || "Défi"),
-            category: challengeCategory,
-          }));
-        setSuggestedChallenges(results);
+          .map(d => {
+            const data = d.data() as any;
+            const isSystem = !data?.creatorId && !!data?.chatId;
+            const title = isSystem
+              ? t(`challenges.${data.chatId}.title`, { defaultValue: data?.title || "Défi" })
+              : (data?.title || "Défi");
+            return {
+              id: d.id,
+              title,
+              category: challengeCategory,
+              isSystem,
+              creatorId: data?.creatorId ?? null,
+            };
+          });
+
+        if (cancelled) return;
+
+        // ── Étape 2 : affichage immédiat (même UX que challenge-details) ──
+        setSuggestedChallenges(candidates);
+
+        // ── Étape 3 : traduction lazy pour les challenges user ─────────
+        // Exactement comme dans challenge-details/[id].tsx :
+        // on appelle translateChallenge en background et on met à jour
+        const translationPromises = candidates
+          .filter(c => !c.isSystem && !!c.creatorId)
+          .map(async (c) => {
+            const result = await translateChallenge(c.id, i18n.language).catch(() => null);
+            if (cancelled || !result?.title) return;
+            // Mise à jour du titre traduit dans le state
+            setSuggestedChallenges(prev =>
+              prev.map(item =>
+                item.id === c.id ? { ...item, title: result.title! } : item
+              )
+            );
+          });
+
+        // Fire & forget — pas d'await (ne bloque pas l'UI)
+        Promise.allSettled(translationPromises).catch(() => {});
+
       } catch {}
     })();
     return () => { cancelled = true; };
-  }, [visible, challengeCategory, challengeId, t]);
+  }, [visible, challengeCategory, challengeId, t, i18n.language]);
 
   useEffect(() => {
     let m = true;
@@ -737,97 +774,170 @@ export default function ChallengeCompletionModal({
           {showNextStep && (
             <Animated.View style={[{ gap: GAP, marginTop: GAP }, stNextStep] as any}>
 
-              {/* Texte identitaire — le vrai différenciateur */}
-              <View style={{
-                flexDirection: "row", alignItems: "flex-start", gap: 10,
-                paddingHorizontal: 12, paddingVertical: 10,
-                borderRadius: 14,
-                backgroundColor: "rgba(255,209,102,0.08)",
-                borderWidth: 1, borderColor: "rgba(255,209,102,0.20)",
-              }}>
-                <View style={{ width: 3, borderRadius: 2, alignSelf: "stretch", backgroundColor: C.gold, flexShrink: 0 }} />
-                <Text style={{ flex: 1, fontFamily: "Comfortaa_700Bold", fontSize: BDY_S, color: C.white, lineHeight: BDY_S * 1.5, opacity: 0.90 }}>
-                  {identityText}
-                </Text>
-              </View>
-
-              {/* Label section */}
-              <Text style={{ fontFamily: "Comfortaa_700Bold", fontSize: KKR_S, color: C.gold, letterSpacing: 2, textAlign: "center" }}>
-                {t("completion.nextStep.label", { defaultValue: "ET MAINTENANT ?" }).toUpperCase()}
-              </Text>
-
-              {/* Option 1 : Défi de la même catégorie */}
-              {suggestedChallenges.length > 0 && (
-                <Pressable
-                  onPress={() => {
-                    try { Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium).catch(() => {}); } catch {}
-                    onClose?.();
-                    setTimeout(() => {
-                      router.push(`/challenge-details/${suggestedChallenges[0].id}` as any);
-                    }, 280);
-                  }}
-                  style={({ pressed }) => [s.btnWrap, { opacity: pressed ? 0.84 : 1 }]}
-                >
-                  <LinearGradient colors={[C.white, "rgba(255,255,255,0.88)"]} style={[s.continueBtn, { paddingVertical: BTN_PY }]}>
-                    <Ionicons name="flame" size={BTN_FS + 2} color="#1A0800" />
-                    <View style={{ flex: 1, minWidth: 0 }}>
-                      <Text style={{ fontFamily: "Comfortaa_700Bold", fontSize: BTN_FS - 1, color: "#1A0800" }} numberOfLines={1}>
-                        {t("completion.nextStep.newChallenge", { defaultValue: "Continuer sur ta lancée 🔥" })}
-                      </Text>
-                      <Text style={{ fontFamily: "Comfortaa_400Regular", fontSize: KKR_S, color: "rgba(26,8,0,0.60)", marginTop: 2 }} numberOfLines={1}>
-                        {suggestedChallenges[0].title}
-                      </Text>
-                    </View>
-                    <Ionicons name="chevron-forward" size={BTN_FS} color="rgba(26,8,0,0.50)" />
-                  </LinearGradient>
-                </Pressable>
-              )}
-
-              {/* Option 2 : Inviter en Duo */}
-              {!!onInviteDuo && (
-                <Pressable
-                  onPress={() => {
-                    try { Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium).catch(() => {}); } catch {}
-                    onClose?.();
-                    setTimeout(() => onInviteDuo!(), 280);
-                  }}
-                  style={({ pressed }) => [s.dblWrap, { opacity: pressed ? 0.80 : 1 }]}
-                >
-                  <LinearGradient
-                    colors={["rgba(99,102,241,0.22)", "rgba(99,102,241,0.08)"]}
-                    style={[s.dblBtn, {
-                      paddingVertical: BTN_PY * 0.90,
-                      borderColor: "rgba(99,102,241,0.30)",
-                      borderWidth: 1,
-                    }]}
-                  >
-                    <Ionicons name="people" size={BTN_FS + 2} color="#6366F1" />
-                    <View style={{ flex: 1, minWidth: 0 }}>
-                      <Text style={{ fontFamily: "Comfortaa_700Bold", fontSize: BTN_FS - 1, color: "#A5B4FC" }} numberOfLines={1}>
-                        {t("completion.nextStep.inviteDuo", { defaultValue: "Défie quelqu'un 👥" })}
-                      </Text>
-                      <Text style={{ fontFamily: "Comfortaa_400Regular", fontSize: KKR_S, color: "rgba(165,180,252,0.70)", marginTop: 2 }} numberOfLines={1}>
-                        {t("completion.nextStep.inviteDuoSub", { defaultValue: "Avec un partenaire, tu tiens 2x plus." })}
-                      </Text>
-                    </View>
-                  </LinearGradient>
-                </Pressable>
-              )}
-
-              {/* Option 3 : Explorer (fallback si pas de suggestion ni duo) */}
+              {/* ── Close button haut droite ── */}
               <Pressable
                 onPress={() => {
                   try { Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light).catch(() => {}); } catch {}
                   onClose?.();
-                  setTimeout(() => router.push("/explore" as any), 280);
+                  setTimeout(() => router.replace(`/challenge-details/${challengeId}` as any), 280);
                 }}
-                style={({ pressed }) => ({ opacity: pressed ? 0.65 : 0.55, alignItems: "center" as const, paddingVertical: 8 })}
+                accessibilityRole="button"
+                accessibilityLabel={t("common.close", { defaultValue: "Fermer" })}
+                style={({ pressed }) => ({
+                  position: "absolute" as const,
+                  top: -GAP * 0.5,
+                  right: 0,
+                  zIndex: 10,
+                  width: 34,
+                  height: 34,
+                  borderRadius: 17,
+                  alignItems: "center" as const,
+                  justifyContent: "center" as const,
+                  backgroundColor: "rgba(255,255,255,0.08)",
+                  borderWidth: StyleSheet.hairlineWidth,
+                  borderColor: "rgba(255,255,255,0.12)",
+                  opacity: pressed ? 0.6 : 1,
+                })}
               >
-                <Text style={{ fontFamily: "Comfortaa_400Regular", fontSize: KKR_S, color: C.whiteDim, textDecorationLine: "underline" }}>
-                  {t("completion.nextStep.explore", { defaultValue: "Explorer tous les défis →" })}
-                </Text>
+                <Ionicons name="close" size={18} color={C.whiteSoft} />
               </Pressable>
 
+              {/* ScrollView interne pour petits écrans */}
+              <ScrollView
+                showsVerticalScrollIndicator={false}
+                bounces={false}
+                contentContainerStyle={{ gap: GAP, paddingBottom: 4 }}
+                style={{ maxHeight: isTiny ? 280 : isSmall ? 320 : 400 }}
+              >
+
+                {/* Texte identitaire */}
+                <View style={{
+                  flexDirection: "row", alignItems: "flex-start", gap: 10,
+                  paddingHorizontal: 12, paddingVertical: 10,
+                  borderRadius: 14,
+                  backgroundColor: "rgba(255,209,102,0.08)",
+                  borderWidth: 1, borderColor: "rgba(255,209,102,0.20)",
+                }}>
+                  <View style={{ width: 3, borderRadius: 2, alignSelf: "stretch", backgroundColor: C.gold, flexShrink: 0 }} />
+                  <Text
+                    style={{ flex: 1, fontFamily: "Comfortaa_700Bold", fontSize: BDY_S, color: C.white, lineHeight: BDY_S * 1.45, opacity: 0.90 }}
+                    numberOfLines={4}
+                    adjustsFontSizeToFit
+                    minimumFontScale={0.82}
+                  >
+                    {identityText}
+                  </Text>
+                </View>
+
+                {/* Label section */}
+                <Text
+                  style={{ fontFamily: "Comfortaa_700Bold", fontSize: KKR_S, color: C.gold, letterSpacing: 2, textAlign: "center" }}
+                  numberOfLines={1}
+                  adjustsFontSizeToFit
+                  minimumFontScale={0.82}
+                >
+                  {t("completion.nextStep.label", { defaultValue: "ET MAINTENANT ?" }).toUpperCase()}
+                </Text>
+
+                {/* Option 1 : Défi de la même catégorie */}
+                {suggestedChallenges.length > 0 && (
+                  <Pressable
+                    onPress={() => {
+                      try { Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium).catch(() => {}); } catch {}
+                      onClose?.();
+                      setTimeout(() => {
+                        router.push(`/challenge-details/${suggestedChallenges[0].id}` as any);
+                      }, 280);
+                    }}
+                    style={({ pressed }) => [s.btnWrap, { opacity: pressed ? 0.84 : 1 }]}
+                  >
+                    <LinearGradient colors={[C.white, "rgba(255,255,255,0.88)"]} style={[s.continueBtn, { paddingVertical: BTN_PY }]}>
+                      <Ionicons name="flame" size={BTN_FS + 2} color="#1A0800" style={{ flexShrink: 0 }} />
+                      <View style={{ flex: 1, minWidth: 0 }}>
+                        <Text
+                          style={{ fontFamily: "Comfortaa_700Bold", fontSize: BTN_FS - 1, color: "#1A0800" }}
+                          numberOfLines={1}
+                          adjustsFontSizeToFit
+                          minimumFontScale={0.80}
+                        >
+                          {t("completion.nextStep.newChallenge", { defaultValue: "Continuer sur ta lancée 🔥" })}
+                        </Text>
+                        <Text
+                          style={{ fontFamily: "Comfortaa_400Regular", fontSize: KKR_S, color: "rgba(26,8,0,0.60)", marginTop: 2 }}
+                          numberOfLines={1}
+                          adjustsFontSizeToFit
+                          minimumFontScale={0.78}
+                          ellipsizeMode="tail"
+                        >
+                          {suggestedChallenges[0].title}
+                        </Text>
+                      </View>
+                      <Ionicons name="chevron-forward" size={BTN_FS} color="rgba(26,8,0,0.50)" style={{ flexShrink: 0 }} />
+                    </LinearGradient>
+                  </Pressable>
+                )}
+
+                {/* Option 2 : Inviter en Duo */}
+                {!!onInviteDuo && (
+                  <Pressable
+                    onPress={() => {
+                      try { Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium).catch(() => {}); } catch {}
+                      onClose?.();
+                      setTimeout(() => onInviteDuo!(), 280);
+                    }}
+                    style={({ pressed }) => [s.dblWrap, { opacity: pressed ? 0.80 : 1 }]}
+                  >
+                    <LinearGradient
+                      colors={["rgba(99,102,241,0.22)", "rgba(99,102,241,0.08)"]}
+                      style={[s.dblBtn, {
+                        paddingVertical: BTN_PY * 0.90,
+                        borderColor: "rgba(99,102,241,0.30)",
+                        borderWidth: 1,
+                      }]}
+                    >
+                      <Ionicons name="people" size={BTN_FS + 2} color="#6366F1" style={{ flexShrink: 0 }} />
+                      <View style={{ flex: 1, minWidth: 0 }}>
+                        <Text
+                          style={{ fontFamily: "Comfortaa_700Bold", fontSize: BTN_FS - 1, color: "#A5B4FC" }}
+                          numberOfLines={1}
+                          adjustsFontSizeToFit
+                          minimumFontScale={0.80}
+                        >
+                          {t("completion.nextStep.inviteDuo", { defaultValue: "Défie quelqu'un 👥" })}
+                        </Text>
+                        <Text
+                          style={{ fontFamily: "Comfortaa_400Regular", fontSize: KKR_S, color: "rgba(165,180,252,0.70)", marginTop: 2 }}
+                          numberOfLines={2}
+                          adjustsFontSizeToFit
+                          minimumFontScale={0.78}
+                        >
+                          {t("completion.nextStep.inviteDuoSub", { defaultValue: "Avec un partenaire, tu tiens 2x plus." })}
+                        </Text>
+                      </View>
+                    </LinearGradient>
+                  </Pressable>
+                )}
+
+                {/* Option 3 : Explorer — toujours présent comme fallback discret */}
+                <Pressable
+                  onPress={() => {
+                    try { Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light).catch(() => {}); } catch {}
+                    onClose?.();
+                    setTimeout(() => router.push("/explore" as any), 280);
+                  }}
+                  style={({ pressed }) => ({ opacity: pressed ? 0.65 : 0.55, alignItems: "center" as const, paddingVertical: 6 })}
+                >
+                  <Text
+                    style={{ fontFamily: "Comfortaa_400Regular", fontSize: KKR_S, color: C.whiteDim, textDecorationLine: "underline" }}
+                    numberOfLines={1}
+                    adjustsFontSizeToFit
+                    minimumFontScale={0.82}
+                  >
+                    {t("completion.nextStep.explore", { defaultValue: "Explorer tous les défis →" })}
+                  </Text>
+                </Pressable>
+
+              </ScrollView>
             </Animated.View>
           )}
 
