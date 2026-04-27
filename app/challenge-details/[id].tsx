@@ -692,6 +692,7 @@ const [partnerAvatar, setPartnerAvatar] = useState<string>("");
   const [finalSelectedDays, setFinalSelectedDays] = useState<number>(0);
   const [finalCompletedDays, setFinalCompletedDays] = useState<number>(0);
   const [userCount, setUserCount] = useState(0);
+  const [completedChallengesCount, setCompletedChallengesCount] = useState(0);
   const [completionModalVisible, setCompletionModalVisible] = useState(false);
   const [statsModalVisible, setStatsModalVisible] = useState(false);
   const [pendingFavorite, setPendingFavorite] = useState<boolean | null>(null);
@@ -1362,6 +1363,13 @@ useEffect(() => {
           (auth.currentUser?.email ? auth.currentUser.email.split("@")[0] : "") ||
           "You";
           setMyIsPioneer(!!u?.isPioneer);
+          // Nombre de challenges déjà complétés (pour l'identité cumulative)
+          const completed = Array.isArray(u?.CompletedChallenges)
+            ? u.CompletedChallenges.length
+            : typeof u?.completedChallengesCount === "number"
+              ? u.completedChallengesCount
+              : 0;
+          setCompletedChallengesCount(completed);
       } else {
         raw = auth.currentUser?.photoURL || "";
         display =
@@ -3870,6 +3878,19 @@ const scrollContentStyle = useMemo(
   canShowRewarded={!!showBanners}
   rewardedReady={rewardedLoaded}
   rewardedLoading={rewardedLoading}
+  // ── Flow post-complétion top 1 ──
+  challengeCategory={challenge?.category || routeCategory || undefined}
+  completedChallengesCount={completedChallengesCount}
+  onInviteDuo={!isDuo ? () => {
+    setCompletionModalVisible(false);
+    setTimeout(() => {
+      if (isSoloInThisChallenge) {
+        setConfirmResetVisible(true);
+      } else {
+        setChoixDuoVisible(true);
+      }
+    }, 320);
+  } : undefined}
 />
       <StatsModal
         visible={statsModalVisible}

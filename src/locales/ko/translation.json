@@ -1174,6 +1174,21 @@
   "networkError": "네트워크 오류. 다시 시도해 주세요.",
   "completion": {
     "rewardLabel": "보상",
+    "identity": {
+      "first":  "첫 번째 챌린지 완료. 진짜 시작한다는 걸 증명했어.",
+      "second": "두 개의 챌린지 완료. 대부분은 첫 번째에서 멈춰.",
+      "third":  "3개의 챌린지. 시작한 걸 끝내는 사람이야.",
+      "few":    "{{n}}개 챌린지 완료. 진짜 무언가를 쌓고 있어.",
+      "many":   "{{n}}개 챌린지. 버티는 사람들 중 상위 10%야.",
+      "legend": "{{n}}개 챌린지 완료. 세계 상위 1%야."
+    },
+    "nextStep": {
+      "label":        "이제 뭐해?",
+      "newChallenge": "기세를 이어가 🔥",
+      "inviteDuo":    "누군가에게 도전해 👥",
+      "inviteDuoSub": "파트너와 함께하면 2배 더 오래 버텨.",
+      "explore":      "모든 챌린지 탐색하기 →"
+    },
   "doubleRewardLabel": "2배",
   "footer": "약속을 지켰어. 이렇게 정체성이 바뀐다.",
   "modalTitle": "챌린지 완료",
@@ -2517,6 +2532,8 @@
 },
   "notificationsPush": {
     "daily1": "오늘 한 번의 챌린지가 하루를 바꿔. 준비됐어?",
+    "postCompletionTitle": "🔥 다음 준비됐어?",
+    "postCompletionBody": "챌린지를 완료했어. 다음 도전은 뭐야?",
     "streakDangerTitle": "🚨 스트릭 위기!",
 "streakDanger1": "⚠️ 스트릭이 위험합니다. 자정 전에 챌린지를 기록하세요.",
 "streakDanger2": "🔥 지금 포기하지 마세요. 몇 시간밖에 안 남았어요.",
@@ -2644,6 +2661,7 @@
   },
     "hero": {
       "brand": "ChallengeTies",
+      "greeting": "안녕 {{name}} 👋",
       "headline": "이번엔 정말 해낼 수 있어?",
         "sub": "혼자 시작하고. 함께 버텨.",
       "ctaHint": "사용 가능한 챌린지를 확인하세요.",

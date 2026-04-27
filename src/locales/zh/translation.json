@@ -539,6 +539,7 @@
   },
     "hero": {
       "brand": "ChallengeTies",
+      "greeting": "嗨 {{name}} 👋",
       "headline": "这一次，你真的能坚持吗？",
         "sub": "一个人开始，一起坚持。",
       "duoProof": "Duo 让你坚持下去。",
@@ -1792,6 +1793,21 @@
   "completedOnDate": "完成于",
   "completion": {
     "rewardLabel": "奖励",
+    "identity": {
+      "first":  "第一个挑战完成。你刚刚证明了你真的开始了。",
+      "second": "两个挑战完成。大多数人在第一个就停下来了。",
+      "third":  "3个挑战。你是一个能把事情做完的人。",
+      "few":    "{{n}}个挑战完成。你在建立真实的东西。",
+      "many":   "{{n}}个挑战。你在坚持者中排名前10%。",
+      "legend": "{{n}}个挑战完成。你在全球前1%。"
+    },
+    "nextStep": {
+      "label":        "接下来呢？",
+      "newChallenge": "保持势头 🔥",
+      "inviteDuo":    "挑战某人 👥",
+      "inviteDuoSub": "有伙伴，你能坚持两倍时间。",
+      "explore":      "探索所有挑战 →"
+    },
   "doubleRewardLabel": "翻倍",
   "footer": "你兑现了承诺。身份就是这样改变的。",
   "modalTitle": "挑战完成",
@@ -4901,6 +4917,8 @@
 },
   "notificationsPush": {
     "daily1": "今天完成一个挑战，就能改变这一天。准备好了吗？",
+    "postCompletionTitle": "🔥 准备好下一个了吗?",
+    "postCompletionBody": "你完成了一个挑战。下一步是什么？",
     "streakDangerTitle": "🚨 连击岌岌可危！",
 "streakDanger1": "⚠️ 你的连击面临危险。在午夜前标记你的挑战。",
 "streakDanger2": "🔥 现在别放弃。只剩几个小时了。",

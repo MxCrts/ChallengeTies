@@ -632,6 +632,7 @@
   },
     "hero": {
       "brand": "ChallengeTies",
+      "greeting": "Hey {{name}} 👋",
       "headline": "What if this time you actually stuck to it?",
         "sub": "Alone you start. Together you last.",
       "duoProof": "Duo makes it stick.",
@@ -1447,6 +1448,21 @@
   "completedOnDate": "Completed on",
   "completion": {
     "rewardLabel": "Reward",
+    "identity": {
+   "first":  "First challenge done. You just proved you really start.",
+   "second": "Two challenges done. Most people stop at the first.",
+   "third":  "3 challenges. You're someone who finishes what they start.",
+   "few":    "{{n}} challenges done. You're building something real.",
+   "many":   "{{n}} challenges. You're in the top 10% of people who stick.",
+   "legend": "{{n}} challenges done. You're in the top 1% worldwide."
+ },
+ "nextStep": {
+   "label":        "WHAT'S NEXT?",
+   "newChallenge": "Keep the momentum 🔥",
+   "inviteDuo":    "Challenge someone 👥",
+   "inviteDuoSub": "With a partner, you're 2x more likely to stick.",
+   "explore":      "Explore all challenges →"
+ },
   "doubleRewardLabel": "Double",
   "footer": "You kept your word. That’s how identity changes.",
   "modalTitle": "Challenge completed",
@@ -4557,6 +4573,8 @@
 },
   "notificationsPush": {
     "daily1": "One challenge today can change your whole day. Ready?",
+    "postCompletionTitle": "🔥 Ready for what's next?",
+   "postCompletionBody":  "You just finished a challenge. What's your next move?",
     "streakDangerTitle": "🚨 Streak at risk!",
 "streakDanger1": "⚠️ Your streak is in danger. Mark your challenge before midnight.",
 "streakDanger2": "🔥 Don't give up now. Only a few hours left.",

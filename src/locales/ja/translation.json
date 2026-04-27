@@ -1186,6 +1186,21 @@
   "networkError": "ネットワークエラー。再試行してください。",
   "completion": {
     "rewardLabel": "報酬",
+    "identity": {
+      "first":  "最初のチャレンジ完了。本当に始めることを証明した。",
+      "second": "2つのチャレンジ完了。ほとんどの人は最初で諦める。",
+      "third":  "3つのチャレンジ。始めたことを終わらせる人だ。",
+      "few":    "{{n}}個のチャレンジ完了。本物を築いている。",
+      "many":   "{{n}}個のチャレンジ。続けられる人の上位10%だ。",
+      "legend": "{{n}}個のチャレンジ完了。世界のトップ1%。"
+    },
+    "nextStep": {
+      "label":        "次は？",
+      "newChallenge": "勢いを続けろ 🔥",
+      "inviteDuo":    "誰かに挑戦しよう 👥",
+      "inviteDuoSub": "パートナーがいると2倍長く続く。",
+      "explore":      "すべてのチャレンジを見る →"
+    },
   "doubleRewardLabel": "2倍",
   "footer": "約束を守れた。そうやって自分が変わっていく。",
   "modalTitle": "チャレンジ完了",
@@ -2550,6 +2565,8 @@
 },
   "notificationsPush": {
     "daily1": "今日の1チャレンジが、1日を変える。やる？",
+    "postCompletionTitle": "🔥 次は何に挑戦する?",
+    "postCompletionBody": "チャレンジを完了した。次の一手は？",
     "streakDangerTitle": "🚨 ストリーク危機！",
 "streakDanger1": "⚠️ ストリークが危ない。真夜中までにチャレンジをマークして。",
 "streakDanger2": "🔥 今あきらめないで。あと数時間しかない。",
@@ -2679,6 +2696,7 @@
   },
     "hero": {
       "brand": "ChallengeTies",
+      "greeting": "やあ {{name}} 👋",
       "headline": "今度こそ続けられる？",
         "sub": "一人では始まる。一緒なら続く。",
       "duoProof": "デュオなら続く。",

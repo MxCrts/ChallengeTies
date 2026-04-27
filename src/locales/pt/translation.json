@@ -1185,6 +1185,21 @@
   "networkError": "Problema de rede. Tenta novamente.",
   "completion": {
     "rewardLabel": "Recompensa",
+    "identity": {
+      "first":  "Primeiro desafio concluído. Acabaste de provar que realmente começas.",
+      "second": "Dois desafios concluídos. A maioria para no primeiro.",
+      "third":  "3 desafios. És alguém que termina o que começa.",
+      "few":    "{{n}} desafios concluídos. Estás a construir algo real.",
+      "many":   "{{n}} desafios. Estás no top 10% das pessoas que aguentam.",
+      "legend": "{{n}} desafios concluídos. Estás no top 1% mundial."
+    },
+    "nextStep": {
+      "label":        "E AGORA?",
+      "newChallenge": "Mantém o ritmo 🔥",
+      "inviteDuo":    "Desafia alguém 👥",
+      "inviteDuoSub": "Com um parceiro, aguentas o dobro.",
+      "explore":      "Explorar todos os desafios →"
+    },
   "doubleRewardLabel": "Dobro",
   "footer": "Você cumpriu sua palavra. É assim que a identidade muda.",
   "modalTitle": "Desafio concluído",
@@ -2511,6 +2526,8 @@
 },
   "notificationsPush": {
      "daily1": "Um desafio hoje pode mudar o seu dia. Bora?",
+     "postCompletionTitle": "🔥 Pronto para o próximo?",
+    "postCompletionBody": "Terminaste um desafio. Qual é o teu próximo passo?",
      "streakDangerTitle": "🚨 Sequência em risco!",
 "streakDanger1": "⚠️ A tua sequência está em perigo. Marca o teu desafio antes da meia-noite.",
 "streakDanger2": "🔥 Não desistas agora. Restam apenas algumas horas.",
@@ -2631,6 +2648,7 @@
   },
     "hero": {
       "brand": "ChallengeTies",
+      "greeting": "Olá {{name}} 👋",
       "headline": "E se desta vez você realmente aguentar?",
         "sub": "Sozinho começa. Juntos persiste.",
       "ctaHint": "Descubra os desafios disponíveis.",

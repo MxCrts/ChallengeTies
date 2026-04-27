@@ -65,6 +65,7 @@
   },
     "hero": {
       "brand": "ChallengeTies",
+      "greeting": "Hola {{name}} 👋",
       "headline": "¿Y si esta vez sí lo logras?",
         "sub": "Solo empiezas. Juntos aguantas.",
       "ctaHint": "Descubre los desafíos disponibles.",
@@ -1877,6 +1878,21 @@
   "completedOnDate": "Completado el",
   "completion": {
     "rewardLabel": "Recompensa",
+    "identity": {
+      "first":  "Primer reto terminado. Acabas de demostrar que realmente empiezas.",
+      "second": "Dos retos terminados. La mayoría se detiene en el primero.",
+      "third":  "3 retos. Eres alguien que termina lo que empieza.",
+      "few":    "{{n}} retos terminados. Estás construyendo algo real.",
+      "many":   "{{n}} retos. Estás en el top 10% de personas que aguantan.",
+      "legend": "{{n}} retos terminados. Estás en el top 1% mundial."
+    },
+    "nextStep": {
+      "label":        "¿Y AHORA?",
+      "newChallenge": "Mantén el impulso 🔥",
+      "inviteDuo":    "Desafía a alguien 👥",
+      "inviteDuoSub": "Con un compañero, aguantas el doble.",
+      "explore":      "Explorar todos los retos →"
+    },
   "doubleRewardLabel": "Doble",
   "footer": "Acabas de cumplir tu palabra. Así es como cambia la identidad.",
   "modalTitle": "Desafío completado",
@@ -4940,6 +4956,8 @@
 },
   "notificationsPush": {
     "daily1": "Un reto hoy puede cambiar tu día. ¿Listo?",
+    "postCompletionTitle": "🔥 ¿Listo para lo siguiente?",
+    "postCompletionBody": "Terminaste un reto. ¿Cuál es tu próximo desafío?",
     "streakDangerTitle": "🚨 ¡Racha en peligro!",
 "streakDanger1": "⚠️ Tu racha está en peligro. Marca tu reto antes de medianoche.",
 "streakDanger2": "🔥 No te rindas ahora. Solo quedan unas pocas horas.",

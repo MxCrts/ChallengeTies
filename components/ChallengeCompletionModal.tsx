@@ -45,6 +45,9 @@ import {
   coerceToDayKey,
   dayKeyUTC,
 } from "../hooks/useTrophiesEconomy";
+import AsyncStorage from "@react-native-async-storage/async-storage";
+import { collection, getDocs, query, where } from "firebase/firestore";
+import * as Notifications from "expo-notifications";
 
 const C = {
   gold:            "#FFD166",
@@ -135,14 +138,19 @@ type Props = {
   onPreloadRewarded?: () => void;
   onShowRewarded?: () => Promise<boolean>;
   rewardedAdUnitId?: string;
+  // Nouveaux pour le flow post-complétion
+  challengeCategory?: string;        // pour proposer un défi de la même catégorie
+  onInviteDuo?: () => void;          // pour le nudge duo post-complétion
+  completedChallengesCount?: number; // pour l'identité cumulative
 };
 
 export default function ChallengeCompletionModal({
   visible, challengeId, selectedDays, onClose,
   canShowRewarded = true, rewardedReady = false, rewardedLoading = false,
   onPreloadRewarded, onShowRewarded,
+  challengeCategory, onInviteDuo, completedChallengesCount = 0,
 }: Props) {
-  const { t }    = useTranslation();
+  const { t, i18n } = useTranslation();
   const router   = useRouter();
   const insets   = useSafeAreaInsets();
   const { width: W, height: H } = useWindowDimensions();
@@ -188,6 +196,55 @@ export default function ChallengeCompletionModal({
   const [counterDone,  setCounterDone]   = useState(false);
   const [phase,        setPhase]         = useState(0);
   const phraseKey = useMemo(() => pick(MOTIVATIONAL), [visible]);
+
+   const [showNextStep, setShowNextStep] = useState(false);
+  const [suggestedChallenges, setSuggestedChallenges] = useState<Array<{
+    id: string;
+    title: string;
+    category: string;
+  }>>([]);
+  const nextStepOp = useSharedValue(0);
+  const nextStepY  = useSharedValue(20);
+
+  // Identité cumulative : "Tu as terminé X challenges. Tu es quelqu'un qui finit."
+  const identityText = useMemo(() => {
+    const n = completedChallengesCount + 1; // +1 car celui-ci vient d'être terminé
+    if (n === 1) return t("completion.identity.first",  { defaultValue: "Premier challenge terminé. Tu as prouvé que tu commences vraiment." });
+    if (n === 2) return t("completion.identity.second", { defaultValue: "Deux challenges terminés. La plupart s'arrêtent au premier." });
+    if (n === 3) return t("completion.identity.third",  { defaultValue: "3 challenges. Tu es quelqu'un qui finit ce qu'il commence." });
+    if (n < 7)   return t("completion.identity.few",    { n, defaultValue: `${n} challenges terminés. Tu construis quelque chose de réel.` });
+    if (n < 15)  return t("completion.identity.many",   { n, defaultValue: `${n} challenges. Tu es dans le top 10% des gens qui tiennent.` });
+    return t("completion.identity.legend",               { n, defaultValue: `${n} challenges terminés. Tu es dans le top 1% mondial.` });
+  }, [completedChallengesCount, t]);
+
+  // Charger des suggestions de la même catégorie
+  useEffect(() => {
+    if (!visible || !challengeCategory) return;
+    let cancelled = false;
+    (async () => {
+      try {
+        const q = query(
+          collection(db, "challenges"),
+          where("approved", "==", true),
+          where("category", "==", challengeCategory)
+        );
+        const snap = await getDocs(q);
+        if (cancelled) return;
+        const results = snap.docs
+          .filter(d => d.id !== challengeId)
+          .slice(0, 3)
+          .map(d => ({
+            id: d.id,
+            title: String((d.data() as any)?.chatId
+              ? t(`challenges.${(d.data() as any).chatId}.title`, { defaultValue: (d.data() as any)?.title || "Défi" })
+              : (d.data() as any)?.title || "Défi"),
+            category: challengeCategory,
+          }));
+        setSuggestedChallenges(results);
+      } catch {}
+    })();
+    return () => { cancelled = true; };
+  }, [visible, challengeCategory, challengeId, t]);
 
   useEffect(() => {
     let m = true;
@@ -320,7 +377,8 @@ export default function ChallengeCompletionModal({
     rewOp.value = 0; rewY.value = 16;
     ctaOp.value = 0; ctaYsv.value = 16;
     ctrPulse.value = 1;
-    setDisplayed(0); setCounterDone(false); setPhase(0);
+    setDisplayed(0); setCounterDone(false); setPhase(0); setShowNextStep(false);
+    nextStepOp.value = 0; nextStepY.value = 20;
     if (timerRef.current) { clearInterval(timerRef.current); timerRef.current = null; }
   }, [W]);
 
@@ -432,6 +490,53 @@ export default function ChallengeCompletionModal({
 
   useEffect(() => () => { if (timerRef.current) clearInterval(timerRef.current); }, []);
 
+  // Notif J+1 post-complétion — uniquement si pas de challenge actif le lendemain
+  const schedulePostCompletionNotif = useCallback(async (cId: string) => {
+    try {
+      const uid = auth.currentUser?.uid;
+      if (!uid) return;
+
+      // Clé de dédup — une seule notif par challenge complété
+      const dedupKey = `notif.postcompletion.${cId}`;
+      const already  = await AsyncStorage.getItem(dedupKey);
+      if (already === "1") return;
+
+      const snap = await getDoc(doc(db, "users", uid));
+      if (!snap.exists()) return;
+      const userData = snap.data() as any;
+
+      // Guard : si l'user a déjà repris un challenge, pas de notif "prêt pour le prochain"
+      const currentList: any[] = Array.isArray(userData.CurrentChallenges)
+        ? userData.CurrentChallenges : [];
+      const hasOtherActive = currentList.some(
+        ch => !ch?.completed && !ch?.archived && String(ch?.challengeId ?? ch?.id) !== String(cId)
+      );
+      if (hasOtherActive) return; // Il a déjà un autre challenge → notif inutile
+
+      if (userData.notificationsEnabled === false) return;
+
+      const language = String(userData.language || "en");
+      const title = i18n.t("notificationsPush.postCompletionTitle", { lng: language, returnObjects: false });
+      const body  = i18n.t("notificationsPush.postCompletionBody",  { lng: language, returnObjects: false });
+
+      const trigger = new Date();
+      trigger.setDate(trigger.getDate() + 1);
+      trigger.setHours(10, 0, 0, 0); // 10h le lendemain matin
+
+      await Notifications.scheduleNotificationAsync({
+        content: {
+          title: typeof title === "string" ? title : "🔥 Prêt pour la suite ?",
+          body:  typeof body  === "string" ? body  : "Tu viens de terminer un challenge. Quel défi tu relèves maintenant ?",
+          sound: "default",
+          data:  { __tag: "post_completion_v1", kind: "daily_reminder", challengeId: cId },
+        },
+        trigger: trigger as any,
+      });
+
+      await AsyncStorage.setItem(dedupKey, "1");
+    } catch {}
+  }, []);
+
   const dismiss = useCallback(() => { if (busyRef.current) return; onClose?.(); }, [onClose]);
 
   const handleComplete = useCallback(async (double: boolean) => {
@@ -449,7 +554,20 @@ export default function ChallengeCompletionModal({
       await Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success).catch(() => {});
       if (didNavRef.current) return;
       didNavRef.current = true;
-      setTimeout(() => { onClose?.(); router.replace(`/challenge-details/${challengeId}`); setTimeout(() => { didNavRef.current = false; }, 700); }, 340);
+
+      // Notif J+1 en background (ne bloque pas)
+      schedulePostCompletionNotif(challengeId).catch(() => {});
+
+      // Affiche le flow "next step" au lieu de naviguer directement
+      setTimeout(() => {
+        if (!mountedRef.current) return;
+        setBusy(false);
+        busyRef.current = false;
+        setShowNextStep(true);
+        nextStepOp.value = withTiming(1, { duration: 320 });
+        nextStepY.value  = withSpring(0, { damping: 18, stiffness: 220 });
+        setTimeout(() => { didNavRef.current = false; }, 700);
+      }, 340);
     } catch {
       if (mountedRef.current) { setBusy(false); setAdError(t("completion.adError", { defaultValue: "Erreur. Réessaie." }) as string); }
       busyRef.current = false;
@@ -474,6 +592,10 @@ export default function ChallengeCompletionModal({
   const stRew   = useAnimatedStyle(() => ({ opacity: rewOp.value, transform: [{ translateY: rewY.value }] } as any));
   const stCta   = useAnimatedStyle(() => ({ opacity: ctaOp.value, transform: [{ translateY: ctaYsv.value }] } as any));
   const stCtr   = useAnimatedStyle(() => ({ transform: [{ scale: ctrPulse.value }] } as any));
+   const stNextStep = useAnimatedStyle(() => ({
+    opacity: nextStepOp.value,
+    transform: [{ translateY: nextStepY.value }],
+  } as any));
 
   const canDouble   = canShowRewarded && counterDone && !busy && rewardedReady && !rewardedLoading;
   const canContinue = counterDone && !busy;
@@ -566,53 +688,156 @@ export default function ChallengeCompletionModal({
             <Text style={{ fontFamily:"Comfortaa_400Regular", fontSize: BDY_S, color: C.whiteSoft, textAlign:"center" }} numberOfLines={1}>★ {t(phraseKey)}</Text>
           </Animated.View>
 
-          <Animated.View style={[s.ctaBlock, stCta, { gap: GAP, marginTop: GAP }] as any}>
-            <Pressable disabled={!canContinue} onPress={() => handleComplete(false)} accessibilityRole="button"
-              style={({ pressed }) => [s.btnWrap, { opacity: !canContinue ? 0.46 : pressed ? 0.84 : 1 }]}>
-              <LinearGradient colors={[C.white, "rgba(255,255,255,0.88)"]} style={[s.continueBtn, { paddingVertical: BTN_PY }]}>
-                <Ionicons name="checkmark-circle" size={BTN_FS+2} color="#1A0800" />
-                <Text style={{ fontFamily:"Comfortaa_700Bold", fontSize: BTN_FS, color:"#1A0800", letterSpacing:0.3 }}>
-                  {busy ? t("commonS.sending", { defaultValue:"Envoi…" }) : t("completion.continue", { defaultValue:"Continuer" })}
-                </Text>
-                {busy && <ActivityIndicator size="small" color="#1A0800" style={{ marginLeft:8 }} />}
-              </LinearGradient>
-            </Pressable>
-
-            <View style={[s.row2, { gap: GAP }]}>
-              <Pressable disabled={!canDouble} onPress={() => handleComplete(true)} accessibilityRole="button"
-                style={({ pressed }) => [s.dblWrap, { opacity: !canDouble ? 0.38 : pressed ? 0.80 : 1 }]}>
-                <LinearGradient
-                  colors={canDouble ? ["rgba(255,209,102,0.20)","rgba(255,209,102,0.07)"] : ["rgba(255,255,255,0.05)","rgba(255,255,255,0.02)"]}
-                  style={[s.dblBtn, { paddingVertical: BTN_PY*0.82, borderColor: canDouble ? C.glassBorder : C.glassBorderSoft }]}>
-                  <Ionicons name="videocam-outline" size={BTN_FS} color={canDouble ? C.gold : C.whiteDim} />
-                  <View style={{ flex:1, minWidth:0 }}>
-                    <Text style={{ fontFamily:"Comfortaa_700Bold", fontSize: BTN_FS-1, color: canDouble ? C.gold : C.whiteDim }} numberOfLines={1}>
-                      {t("completion.doubleTrophies", { defaultValue:"Doubler" })} +{rt.dbl}🏆
-                    </Text>
-                    <Text style={{ fontFamily:"Comfortaa_400Regular", fontSize: KKR_S, color: C.whiteDim, marginTop:1 }} numberOfLines={1}>
-                      {adError ?? (rewardedLoading ? t("completion.adLoading", { defaultValue:"Chargement…" }) : !rewardedReady ? t("completion.adNotReady", { defaultValue:"Pub pas prête" }) : t("completion.watchAdHint", { defaultValue:"Pub courte" }))}
-                    </Text>
-                  </View>
-                </LinearGradient>
-              </Pressable>
-              <Pressable onPress={handleShare} accessibilityRole="button"
-                style={({ pressed }) => [s.shrWrap, { opacity: pressed ? 0.7 : 1 }]}>
-                <LinearGradient colors={["rgba(249,115,22,0.20)","rgba(249,115,22,0.07)"]}
-                  style={[s.shrBtn, { paddingVertical: BTN_PY*0.82, paddingHorizontal: BTN_PY*1.1, borderColor:"rgba(249,115,22,0.36)" }]}>
-                  <Ionicons name="share-social-outline" size={BTN_FS+1} color={C.orange} />
-                  <Text style={{ fontFamily:"Comfortaa_700Bold", fontSize: BTN_FS-1, color: C.orange }}>
-                    {t("challengeDetails.actions.shareTitle", { defaultValue:"Partager" })}
+          {/* ── Phase 1 : CTA principal (récupérer + doubler) ── */}
+          {!showNextStep && (
+            <Animated.View style={[s.ctaBlock, stCta, { gap: GAP, marginTop: GAP }] as any}>
+              <Pressable disabled={!canContinue} onPress={() => handleComplete(false)} accessibilityRole="button"
+                style={({ pressed }) => [s.btnWrap, { opacity: !canContinue ? 0.46 : pressed ? 0.84 : 1 }]}>
+                <LinearGradient colors={[C.white, "rgba(255,255,255,0.88)"]} style={[s.continueBtn, { paddingVertical: BTN_PY }]}>
+                  <Ionicons name="checkmark-circle" size={BTN_FS+2} color="#1A0800" />
+                  <Text style={{ fontFamily:"Comfortaa_700Bold", fontSize: BTN_FS, color:"#1A0800", letterSpacing:0.3 }}>
+                    {busy ? t("commonS.sending", { defaultValue:"Envoi…" }) : t("completion.continue", { defaultValue:"Récupérer ma récompense" })}
                   </Text>
+                  {busy && <ActivityIndicator size="small" color="#1A0800" style={{ marginLeft:8 }} />}
                 </LinearGradient>
               </Pressable>
-            </View>
-          </Animated.View>
 
-          <Animated.View style={[{ marginTop: GAP*0.65 }, stCta] as any}>
-            <Text style={{ fontFamily:"Comfortaa_400Regular", fontSize: KKR_S, color: C.whiteDim, textAlign:"center", lineHeight: KKR_S*1.55 }} numberOfLines={2}>
-              {t("completion.footer", { defaultValue:"Tu viens de tenir ta parole. C'est comme ça que l'identité change." })}
-            </Text>
-          </Animated.View>
+              <View style={[s.row2, { gap: GAP }]}>
+                <Pressable disabled={!canDouble} onPress={() => handleComplete(true)} accessibilityRole="button"
+                  style={({ pressed }) => [s.dblWrap, { opacity: !canDouble ? 0.38 : pressed ? 0.80 : 1 }]}>
+                  <LinearGradient
+                    colors={canDouble ? ["rgba(255,209,102,0.20)","rgba(255,209,102,0.07)"] : ["rgba(255,255,255,0.05)","rgba(255,255,255,0.02)"]}
+                    style={[s.dblBtn, { paddingVertical: BTN_PY*0.82, borderColor: canDouble ? C.glassBorder : C.glassBorderSoft }]}>
+                    <Ionicons name="videocam-outline" size={BTN_FS} color={canDouble ? C.gold : C.whiteDim} />
+                    <View style={{ flex:1, minWidth:0 }}>
+                      <Text style={{ fontFamily:"Comfortaa_700Bold", fontSize: BTN_FS-1, color: canDouble ? C.gold : C.whiteDim }} numberOfLines={1}>
+                        {t("completion.doubleTrophies", { defaultValue:"Doubler" })} +{rt.dbl}🏆
+                      </Text>
+                      <Text style={{ fontFamily:"Comfortaa_400Regular", fontSize: KKR_S, color: C.whiteDim, marginTop:1 }} numberOfLines={1}>
+                        {adError ?? (rewardedLoading ? t("completion.adLoading", { defaultValue:"Chargement…" }) : !rewardedReady ? t("completion.adNotReady", { defaultValue:"Pub pas prête" }) : t("completion.watchAdHint", { defaultValue:"Pub courte" }))}
+                      </Text>
+                    </View>
+                  </LinearGradient>
+                </Pressable>
+                <Pressable onPress={handleShare} accessibilityRole="button"
+                  style={({ pressed }) => [s.shrWrap, { opacity: pressed ? 0.7 : 1 }]}>
+                  <LinearGradient colors={["rgba(249,115,22,0.20)","rgba(249,115,22,0.07)"]}
+                    style={[s.shrBtn, { paddingVertical: BTN_PY*0.82, paddingHorizontal: BTN_PY*1.1, borderColor:"rgba(249,115,22,0.36)" }]}>
+                    <Ionicons name="share-social-outline" size={BTN_FS+1} color={C.orange} />
+                    <Text style={{ fontFamily:"Comfortaa_700Bold", fontSize: BTN_FS-1, color: C.orange }}>
+                      {t("challengeDetails.actions.shareTitle", { defaultValue:"Partager" })}
+                    </Text>
+                  </LinearGradient>
+                </Pressable>
+              </View>
+            </Animated.View>
+          )}
+
+          {/* ── Phase 2 : "Qu'est-ce qu'on commence maintenant ?" ── */}
+          {showNextStep && (
+            <Animated.View style={[{ gap: GAP, marginTop: GAP }, stNextStep] as any}>
+
+              {/* Texte identitaire — le vrai différenciateur */}
+              <View style={{
+                flexDirection: "row", alignItems: "flex-start", gap: 10,
+                paddingHorizontal: 12, paddingVertical: 10,
+                borderRadius: 14,
+                backgroundColor: "rgba(255,209,102,0.08)",
+                borderWidth: 1, borderColor: "rgba(255,209,102,0.20)",
+              }}>
+                <View style={{ width: 3, borderRadius: 2, alignSelf: "stretch", backgroundColor: C.gold, flexShrink: 0 }} />
+                <Text style={{ flex: 1, fontFamily: "Comfortaa_700Bold", fontSize: BDY_S, color: C.white, lineHeight: BDY_S * 1.5, opacity: 0.90 }}>
+                  {identityText}
+                </Text>
+              </View>
+
+              {/* Label section */}
+              <Text style={{ fontFamily: "Comfortaa_700Bold", fontSize: KKR_S, color: C.gold, letterSpacing: 2, textAlign: "center" }}>
+                {t("completion.nextStep.label", { defaultValue: "ET MAINTENANT ?" }).toUpperCase()}
+              </Text>
+
+              {/* Option 1 : Défi de la même catégorie */}
+              {suggestedChallenges.length > 0 && (
+                <Pressable
+                  onPress={() => {
+                    try { Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium).catch(() => {}); } catch {}
+                    onClose?.();
+                    setTimeout(() => {
+                      router.push(`/challenge-details/${suggestedChallenges[0].id}` as any);
+                    }, 280);
+                  }}
+                  style={({ pressed }) => [s.btnWrap, { opacity: pressed ? 0.84 : 1 }]}
+                >
+                  <LinearGradient colors={[C.white, "rgba(255,255,255,0.88)"]} style={[s.continueBtn, { paddingVertical: BTN_PY }]}>
+                    <Ionicons name="flame" size={BTN_FS + 2} color="#1A0800" />
+                    <View style={{ flex: 1, minWidth: 0 }}>
+                      <Text style={{ fontFamily: "Comfortaa_700Bold", fontSize: BTN_FS - 1, color: "#1A0800" }} numberOfLines={1}>
+                        {t("completion.nextStep.newChallenge", { defaultValue: "Continuer sur ta lancée 🔥" })}
+                      </Text>
+                      <Text style={{ fontFamily: "Comfortaa_400Regular", fontSize: KKR_S, color: "rgba(26,8,0,0.60)", marginTop: 2 }} numberOfLines={1}>
+                        {suggestedChallenges[0].title}
+                      </Text>
+                    </View>
+                    <Ionicons name="chevron-forward" size={BTN_FS} color="rgba(26,8,0,0.50)" />
+                  </LinearGradient>
+                </Pressable>
+              )}
+
+              {/* Option 2 : Inviter en Duo */}
+              {!!onInviteDuo && (
+                <Pressable
+                  onPress={() => {
+                    try { Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium).catch(() => {}); } catch {}
+                    onClose?.();
+                    setTimeout(() => onInviteDuo!(), 280);
+                  }}
+                  style={({ pressed }) => [s.dblWrap, { opacity: pressed ? 0.80 : 1 }]}
+                >
+                  <LinearGradient
+                    colors={["rgba(99,102,241,0.22)", "rgba(99,102,241,0.08)"]}
+                    style={[s.dblBtn, {
+                      paddingVertical: BTN_PY * 0.90,
+                      borderColor: "rgba(99,102,241,0.30)",
+                      borderWidth: 1,
+                    }]}
+                  >
+                    <Ionicons name="people" size={BTN_FS + 2} color="#6366F1" />
+                    <View style={{ flex: 1, minWidth: 0 }}>
+                      <Text style={{ fontFamily: "Comfortaa_700Bold", fontSize: BTN_FS - 1, color: "#A5B4FC" }} numberOfLines={1}>
+                        {t("completion.nextStep.inviteDuo", { defaultValue: "Défie quelqu'un 👥" })}
+                      </Text>
+                      <Text style={{ fontFamily: "Comfortaa_400Regular", fontSize: KKR_S, color: "rgba(165,180,252,0.70)", marginTop: 2 }} numberOfLines={1}>
+                        {t("completion.nextStep.inviteDuoSub", { defaultValue: "Avec un partenaire, tu tiens 2x plus." })}
+                      </Text>
+                    </View>
+                  </LinearGradient>
+                </Pressable>
+              )}
+
+              {/* Option 3 : Explorer (fallback si pas de suggestion ni duo) */}
+              <Pressable
+                onPress={() => {
+                  try { Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light).catch(() => {}); } catch {}
+                  onClose?.();
+                  setTimeout(() => router.push("/explore" as any), 280);
+                }}
+                style={({ pressed }) => ({ opacity: pressed ? 0.65 : 0.55, alignItems: "center" as const, paddingVertical: 8 })}
+              >
+                <Text style={{ fontFamily: "Comfortaa_400Regular", fontSize: KKR_S, color: C.whiteDim, textDecorationLine: "underline" }}>
+                  {t("completion.nextStep.explore", { defaultValue: "Explorer tous les défis →" })}
+                </Text>
+              </Pressable>
+
+            </Animated.View>
+          )}
+
+         {!showNextStep && (
+            <Animated.View style={[{ marginTop: GAP*0.65 }, stCta] as any}>
+              <Text style={{ fontFamily:"Comfortaa_400Regular", fontSize: KKR_S, color: C.whiteDim, textAlign:"center", lineHeight: KKR_S*1.55 }} numberOfLines={2}>
+                {t("completion.footer", { defaultValue:"Tu viens de tenir ta parole. C'est comme ça que l'identité change." })}
+              </Text>
+            </Animated.View>
+          )}
 
         </Animated.View>
       </View>

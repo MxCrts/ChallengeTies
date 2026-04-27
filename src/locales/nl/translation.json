@@ -1208,6 +1208,21 @@
 
   "completion": {
     "rewardLabel": "Beloning",
+    "identity": {
+      "first":  "Eerste uitdaging voltooid. Je hebt bewezen dat je echt begint.",
+      "second": "Twee uitdagingen voltooid. De meeste mensen stoppen bij de eerste.",
+      "third":  "3 uitdagingen. Je bent iemand die afmaakt wat hij begint.",
+      "few":    "{{n}} uitdagingen voltooid. Je bouwt iets echts op.",
+      "many":   "{{n}} uitdagingen. Je bent in de top 10% van mensen die volhouden.",
+      "legend": "{{n}} uitdagingen voltooid. Je bent in de wereldwijde top 1%."
+    },
+    "nextStep": {
+      "label":        "WAT NU?",
+      "newChallenge": "Houd het momentum vast 🔥",
+      "inviteDuo":    "Daag iemand uit 👥",
+      "inviteDuoSub": "Met een partner houd je het 2x langer vol.",
+      "explore":      "Alle uitdagingen verkennen →"
+    },
   "doubleRewardLabel": "Dubbel",
   "footer": "Je hebt je woord gehouden. Zo verandert je identiteit.",
   "modalTitle": "Challenge voltooid",
@@ -2565,6 +2580,8 @@
 },
   "notificationsPush": {
      "daily1": "Eén challenge vandaag kan je dag veranderen. Klaar?",
+     "postCompletionTitle": "🔥 Klaar voor het volgende?",
+    "postCompletionBody": "Je hebt een uitdaging voltooid. Wat is je volgende stap?",
      "streakDangerTitle": "🚨 Streak in gevaar!",
 "streakDanger1": "⚠️ Je reeks staat op het spel. Vink je uitdaging af vóór middernacht.",
 "streakDanger2": "🔥 Geef nu niet op. Nog maar een paar uur over.",
@@ -2684,6 +2701,7 @@
   },
     "hero": {
       "brand": "ChallengeTies",
+      "greeting": "Hey {{name}} 👋",
       "headline": "En als je het deze keer wel volhoudt?",
         "sub": "Alleen begin je. Samen houd je vol.",
       "duoProof": "Duo helpt je vol te houden.",

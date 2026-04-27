@@ -14,6 +14,14 @@
       },
       "oauth_client": [
         {
+          "client_id": "344780684076-64ojacgcv01llj7csipgsi1pdq10kfqv.apps.googleusercontent.com",
+          "client_type": 1,
+          "android_info": {
+            "package_name": "com.mxcrts.ChallengeTies",
+            "certificate_hash": "74e4aa948b104f33d8d2c283e92e6e93372b523d"
+          }
+        },
+        {
           "client_id": "344780684076-vmiqmu2jabad5hij6kfqif3sjmsnlrio.apps.googleusercontent.com",
           "client_type": 1,
           "android_info": {

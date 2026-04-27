@@ -135,6 +135,7 @@ const QuestRow = React.memo(function QuestRow({
       : "Tenir 3 jours de suite",
   });
   const desc = t(descriptionKey, {
+    count: Math.min(exploreCount ?? 0, 3), // ← résout {{count}} dans la clé i18n
     defaultValue:
       questId === "mark_first_day" ? "Coche ton défi du jour"
       : questId === "explore_challenges" ? `${Math.min(exploreCount ?? 0, 3)}/3 explorés`
@@ -520,19 +521,25 @@ export default function OnboardingQuestBanner({
   // FIX CRITIQUE : auto-open bloqué tant que welcomeVisible est true
   // On attend que le WelcomeBonusModal soit fermé pour ouvrir le banner modal
   useEffect(() => {
-    if (!visible) return;
-    if (welcomeVisible) return; // ← BLOQUE si welcome encore ouvert
+  if (!visible) return;
+  if (welcomeVisible) return;
 
-    AsyncStorage.getItem(MODAL_SHOWN_KEY).then((v) => {
-      if (v !== "1") {
-        const timer = setTimeout(() => {
+  let cancelled = false;
+  AsyncStorage.getItem(MODAL_SHOWN_KEY).then((v) => {
+    if (v !== "1" && !cancelled) {
+      const timer = setTimeout(() => {
+        if (!cancelled) {
           setModalVisible(true);
           AsyncStorage.setItem(MODAL_SHOWN_KEY, "1").catch(() => {});
-        }, 1200);
-        return () => clearTimeout(timer);
-      }
-    }).catch(() => {});
-  }, [visible, welcomeVisible]); // ← dépend de welcomeVisible
+        }
+      }, 1200);
+      // cleanup si welcomeVisible change entre temps
+      return () => { cancelled = true; clearTimeout(timer); };
+    }
+  }).catch(() => {});
+
+  return () => { cancelled = true; };
+}, [visible, welcomeVisible]);
 
   if (!visible || !state) return null;
 

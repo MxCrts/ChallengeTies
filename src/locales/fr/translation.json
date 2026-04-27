@@ -54,6 +54,7 @@
     },
     "hero": {
       "brand": "ChallengeTies",
+      "greeting": "Salut {{name}} 👋",
       "headline": "Et si cette fois tu tenais ?",
         "sub": "Seul on commence. Ensemble on tient.",
       "duoProof": "Le Duo transforme l’essai.",
@@ -1461,6 +1462,21 @@
   "networkError": "Problème réseau. Réessaie.",
   "completion": {
     "rewardLabel": "Récompense",
+    "identity": {
+   "first":  "Premier challenge terminé. Tu as prouvé que tu commences vraiment.",
+   "second": "Deux challenges terminés. La plupart s'arrêtent au premier.",
+   "third":  "3 challenges. Tu es quelqu'un qui finit ce qu'il commence.",
+   "few":    "{{n}} challenges terminés. Tu construis quelque chose de réel.",
+   "many":   "{{n}} challenges. Tu es dans le top 10% des gens qui tiennent.",
+   "legend": "{{n}} challenges terminés. Tu es dans le top 1% mondial."
+ },
+ "nextStep": {
+   "label":       "ET MAINTENANT ?",
+   "newChallenge": "Continuer sur ta lancée 🔥",
+   "inviteDuo":   "Défie quelqu'un 👥",
+   "inviteDuoSub": "Avec un partenaire, tu tiens 2x plus.",
+   "explore":     "Explorer tous les défis →"
+ },
   "doubleRewardLabel": "Double",
   "footer": "Tu viens de tenir ta parole. C’est comme ça que l’identité change.",
   "modalTitle": "Challenge terminé",
@@ -2766,6 +2782,8 @@
 },
   "notificationsPush": {
     "daily1": "Un défi aujourd’hui peut changer ta journée. Go ?",
+    "postCompletionTitle": "🔥 Prêt pour la suite ?",
+   "postCompletionBody":  "Tu viens de terminer un challenge. Quel défi tu relèves maintenant ?",
     "streakDangerTitle": "🚨 Streak en danger !",
 "streakDanger1": "⚠️ Ta série est en danger. Marque ton défi avant minuit.",
 "streakDanger2": "🔥 Ne laisse pas tomber maintenant. Quelques heures restantes.",

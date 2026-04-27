@@ -562,6 +562,7 @@
   },
     "hero": {
       "brand": "ChallengeTies",
+      "greeting": "Ciao {{name}} 👋",
       "headline": "E se questa volta ce la facessi?",
         "sub": "Da soli si inizia. Insieme si resiste.",
       "ctaHint": "Scopri le sfide disponibili.",
@@ -1771,6 +1772,21 @@
 ,
 "completion": {
   "rewardLabel": "Ricompensa",
+  "identity": {
+      "first":  "Prima sfida completata. Hai appena dimostrato che inizi davvero.",
+      "second": "Due sfide completate. La maggior parte si ferma alla prima.",
+      "third":  "3 sfide. Sei qualcuno che finisce quello che inizia.",
+      "few":    "{{n}} sfide completate. Stai costruendo qualcosa di reale.",
+      "many":   "{{n}} sfide. Sei nel top 10% delle persone che resistono.",
+      "legend": "{{n}} sfide completate. Sei nel top 1% mondiale."
+    },
+    "nextStep": {
+      "label":        "E ORA?",
+      "newChallenge": "Mantieni lo slancio 🔥",
+      "inviteDuo":    "Sfida qualcuno 👥",
+      "inviteDuoSub": "Con un partner, resisti il doppio.",
+      "explore":      "Esplora tutte le sfide →"
+    },
   "doubleRewardLabel": "Doppio",
   "footer": "Hai mantenuto la parola. È così che l’identità cambia.",
   "modalTitle": "Sfida completata",
@@ -4898,6 +4914,8 @@
 },
   "notificationsPush": {
     "daily1": "Una sfida oggi può cambiarti la giornata. Pronto?",
+    "postCompletionTitle": "🔥 Pronto per il prossimo?",
+    "postCompletionBody": "Hai finito una sfida. Qual è la prossima mossa?",
     "streakDangerTitle": "🚨 Streak a rischio!",
 "streakDanger1": "⚠️ La tua serie è in pericolo. Segna la tua sfida prima di mezzanotte.",
 "streakDanger2": "🔥 Non mollare ora. Restano solo poche ore.",

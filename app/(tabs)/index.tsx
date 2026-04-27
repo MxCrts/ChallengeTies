@@ -1631,6 +1631,24 @@ const persistPremiumEndDismiss = useCallback(async () => {
   } catch {}
 }, [user?.uid]);
 
+useFocusEffect(
+  useCallback(() => {
+    StatusBar.setBarStyle("light-content");
+    if (Platform.OS === "android") {
+      StatusBar.setBackgroundColor("transparent");
+      StatusBar.setTranslucent(true);
+    }
+    return () => {
+      // Restore dark quand on quitte la home
+      StatusBar.setBarStyle("dark-content");
+      if (Platform.OS === "android") {
+        StatusBar.setBackgroundColor("transparent");
+        StatusBar.setTranslucent(true);
+      }
+    };
+  }, [])
+);
+
 useEffect(() => {
   if (!user || !userData) return;
 
@@ -2861,11 +2879,7 @@ setPostWelcomeAbsorbArmed(true);
 
   return (
     <SafeAreaView style={{ flex: 1 }} edges={["bottom"]}>
-      <StatusBar
-  barStyle="light-content"
-  backgroundColor="transparent"
-  translucent
-/>
+
       <LinearGradient
         colors={[
           currentTheme.colors.background,
@@ -2918,16 +2932,12 @@ setPostWelcomeAbsorbArmed(true);
   source={require("../../assets/videos/Hero-Bgopti.mp4")}
   onReadyForDisplay={() => setVideoReady(true)}
   shouldPlay={heroShouldPlay}
-  isLooping={false}
+  isLooping={true}
   isMuted
   progressUpdateIntervalMillis={250}
   onError={() => setVideoReady(false)}
   onPlaybackStatusUpdate={(status: any) => {
     if (!status?.isLoaded) return;
-    if (status.didJustFinish) {
-      heroVideoRef.current?.pauseAsync?.().catch(() => {});
-      return;
-    }
     if (!heroShouldPlay) return;
     if (status.isPlaying) return;
     if (heroPlayGuardRef.current) return;
@@ -3005,6 +3015,17 @@ setPostWelcomeAbsorbArmed(true);
                     </Text>
                   </View>
                 </BlurView>
+                {userData?.username && (
+  <Text style={{
+    fontSize: normalize(12),
+    fontFamily: "Comfortaa_700Bold",
+    color: "rgba(255,255,255,0.72)",
+    letterSpacing: 0.5,
+    marginTop: normalize(4),
+  }}>
+    {t("homeZ.hero.greeting", { name: userData.username, defaultValue: "Salut {{name}} 👋" })}
+  </Text>
+)}
               </View>
 
               {/* Punchline */}

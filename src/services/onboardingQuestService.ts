@@ -172,7 +172,8 @@ export async function loadOnboardingState(): Promise<OnboardingState> {
 
 // ─── Init ────────────────────────────────────────────────────────────────────
 
-export async function initOnboardingQuests(): Promise<OnboardingState> {
+export async function initOnboardingQuests(_mode?: string): Promise<OnboardingState> {
+
   try {
     const already = await AsyncStorage.getItem(KEY_INITIALIZED);
     if (already === "1") return loadOnboardingState();

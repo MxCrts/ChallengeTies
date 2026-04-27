@@ -65,6 +65,7 @@
   },
     "hero": {
       "brand": "ChallengeTies",
+      "greeting": "Hey {{name}} 👋",
       "headline": "Was, wenn du diesmal durchhältst?",
         "sub": "Allein fängt man an. Zusammen hält man durch.",
       "duoProof": "Duo lässt dich dranbleiben.",
@@ -1431,6 +1432,21 @@
   "completedOnDate": "Abgeschlossen am",
   "completion": {
     "rewardLabel": "Belohnung",
+    "identity": {
+      "first":  "Erste Challenge geschafft. Du hast bewiesen, dass du wirklich anfängst.",
+      "second": "Zwei Challenges erledigt. Die meisten hören beim ersten auf.",
+      "third":  "3 Challenges. Du bist jemand, der zu Ende bringt, was er anfängt.",
+      "few":    "{{n}} Challenges erledigt. Du baust etwas Echtes auf.",
+      "many":   "{{n}} Challenges. Du bist in den Top 10% derer, die durchhalten.",
+      "legend": "{{n}} Challenges erledigt. Du bist in den Top 1% weltweit."
+    },
+    "nextStep": {
+      "label":        "WAS JETZT?",
+      "newChallenge": "Schwung beibehalten 🔥",
+      "inviteDuo":    "Jemanden herausfordern 👥",
+      "inviteDuoSub": "Mit einem Partner hältst du 2x länger durch.",
+      "explore":      "Alle Challenges entdecken →"
+    },
   "doubleRewardLabel": "Doppelt",
   "footer": "Du hast dein Wort gehalten. So verändert sich Identität.",
   "modalTitle": "Challenge abgeschlossen",
@@ -2682,6 +2698,8 @@
 },
   "notificationsPush": {
     "daily1": "Eine Challenge heute reicht, um deinen Tag zu drehen. Los?",
+    "postCompletionTitle": "🔥 Bereit für das Nächste?",
+    "postCompletionBody": "Du hast eine Challenge abgeschlossen. Was kommt jetzt?",
     "streakDangerTitle": "🚨 Streak in Gefahr!",
 "streakDanger1": "⚠️ Deine Serie ist in Gefahr. Hake deine Challenge vor Mitternacht ab.",
 "streakDanger2": "🔥 Gib jetzt nicht auf. Nur noch wenige Stunden übrig.",
