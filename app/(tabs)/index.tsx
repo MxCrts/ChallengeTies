@@ -3049,7 +3049,9 @@ setPostWelcomeAbsorbArmed(true);
 
               {/* ✨ IMPROVED: Hero CTA with ambient glow effect */}
              <TouchableOpacity
-                onPress={hasActiveChallenges ? handleMarkTodayPress : handlePickChallengePress}
+                onPress={hasActiveChallenges
+                ? () => safeNavigate("/current-challenges", "hero-cta-continue")
+                : handlePickChallengePress}
                 accessibilityRole="button"
                 accessibilityLabel={t("homeZ.hero.ctaA11y", "Choisir un défi")}
                 testID="cta-button"

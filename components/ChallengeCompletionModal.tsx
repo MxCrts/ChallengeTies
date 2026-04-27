@@ -236,47 +236,40 @@ export default function ChallengeCompletionModal({
         // ── Étape 1 : construire la liste avec le titre brut ──────────
         // Challenges système (chatId) → traduction i18n immédiate
         // Challenges user (creatorId) → titre brut d'abord, traduit ensuite
-        const candidates = snap.docs
-          .filter(d => d.id !== challengeId)
-          .slice(0, 3)
-          .map(d => {
-            const data = d.data() as any;
-            const isSystem = !data?.creatorId && !!data?.chatId;
-            const title = isSystem
-              ? t(`challenges.${data.chatId}.title`, { defaultValue: data?.title || "Défi" })
-              : (data?.title || "Défi");
-            return {
-              id: d.id,
-              title,
-              category: challengeCategory,
-              isSystem,
-              creatorId: data?.creatorId ?? null,
-            };
-          });
+        // APRÈS — on attend les traductions AVANT d'afficher (max 1.5s timeout)
+const candidates = snap.docs
+  .filter(d => d.id !== challengeId)
+  .slice(0, 3)
+  .map(d => {
+    const data = d.data() as any;
+    const isSystem = !data?.creatorId && !!data?.chatId;
+    const title = isSystem
+      ? t(`challenges.${data.chatId}.title`, { defaultValue: data?.title || "Défi" })
+      : (data?.title || "Défi");
+    return { id: d.id, title, category: challengeCategory, isSystem, creatorId: data?.creatorId ?? null };
+  });
 
-        if (cancelled) return;
+if (cancelled) return;
 
-        // ── Étape 2 : affichage immédiat (même UX que challenge-details) ──
-        setSuggestedChallenges(candidates);
+// Affichage immédiat pour les challenges système (traduction i18n synchrone)
+// Pour les challenges user, on attend la traduction avec timeout de 1.5s
+const withTranslations = await Promise.all(
+  candidates.map(async (c) => {
+    if (c.isSystem) return c;
+    try {
+      const timeoutPromise = new Promise<null>((resolve) => setTimeout(() => resolve(null), 1500));
+      const result = await Promise.race([
+        translateChallenge(c.id, i18n.language),
+        timeoutPromise,
+      ]);
+      if (result?.title) return { ...c, title: result.title };
+    } catch {}
+    return c;
+  })
+);
 
-        // ── Étape 3 : traduction lazy pour les challenges user ─────────
-        // Exactement comme dans challenge-details/[id].tsx :
-        // on appelle translateChallenge en background et on met à jour
-        const translationPromises = candidates
-          .filter(c => !c.isSystem && !!c.creatorId)
-          .map(async (c) => {
-            const result = await translateChallenge(c.id, i18n.language).catch(() => null);
-            if (cancelled || !result?.title) return;
-            // Mise à jour du titre traduit dans le state
-            setSuggestedChallenges(prev =>
-              prev.map(item =>
-                item.id === c.id ? { ...item, title: result.title! } : item
-              )
-            );
-          });
-
-        // Fire & forget — pas d'await (ne bloque pas l'UI)
-        Promise.allSettled(translationPromises).catch(() => {});
+if (cancelled) return;
+setSuggestedChallenges(withTranslations);
 
       } catch {}
     })();
@@ -434,8 +427,8 @@ export default function ChallengeCompletionModal({
       }, 250);
     };
     if (target <= 0) { setDisplayed(0); onDone(); return; }
-    const dur  = clamp(target * 22, 600, 1600);
-    const stps = clamp(target, 8, 50);
+    const dur  = clamp(target * 10, 280, 700);
+    const stps = clamp(target, 12, 60);
     const itv  = dur / stps;
     let cur    = 0;
     if (timerRef.current) clearInterval(timerRef.current);

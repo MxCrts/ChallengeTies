@@ -24,6 +24,7 @@ export function useRewardedDetailsAd({
 }: Args) {
   const rewardedRef = useRef<RewardedAd | null>(null);
   const rewardedEarnedRef = useRef(false);
+  const retryCountRef = useRef(0);
 
   const [rewardedLoaded, setRewardedLoaded] = useState(false);
   const [rewardedLoading, setRewardedLoading] = useState(false);
@@ -82,11 +83,6 @@ export function useRewardedDetailsAd({
 
     const ad = ensureRewardedInstance();
 
-    const unsubLoaded = ad.addAdEventListener(RewardedAdEventType.LOADED, () => {
-      setRewardedLoaded(true);
-      setRewardedLoading(false);
-    });
-
     const unsubEarned = ad.addAdEventListener(
       RewardedAdEventType.EARNED_REWARD,
       () => {
@@ -113,19 +109,35 @@ export function useRewardedDetailsAd({
       });
     });
 
-    const unsubErr = ad.addAdEventListener(AdEventType.ERROR, () => {
-      setRewardedShowing(false);
-      setRewardedLoaded(false);
-      setRewardedLoading(false);
-      rewardedEarnedRef.current = false;
+const unsubErr = ad.addAdEventListener(AdEventType.ERROR, () => {
+  setRewardedShowing(false);
+  setRewardedLoaded(false);
+  setRewardedLoading(false);
+  rewardedEarnedRef.current = false;
 
-      // retry soft
-      setTimeout(() => {
-        try {
-          ad.load();
-        } catch {}
-      }, 900);
-    });
+  // Retry exponentiel : 3s → 8s → 20s (cap)
+  const attempt = retryCountRef.current;
+  const delays = [3_000, 8_000, 20_000];
+  const delay = delays[Math.min(attempt, delays.length - 1)];
+  retryCountRef.current = attempt + 1;
+
+  setTimeout(() => {
+    if (!showBanners) return;
+    try {
+      setRewardedLoading(true);
+      ad.load();
+    } catch {
+      setRewardedLoading(false);
+    }
+  }, delay);
+});
+
+// Reset le compteur quand l'ad charge correctement
+const unsubLoaded = ad.addAdEventListener(RewardedAdEventType.LOADED, () => {
+  retryCountRef.current = 0; // ← ajouter cette ligne
+  setRewardedLoaded(true);
+  setRewardedLoading(false);
+});
 
     // preload initial
     try {
