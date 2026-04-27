@@ -86,6 +86,8 @@ import MarkToastListener from "@/src/ui/MarkToastListener";
 import { faLogEvent } from "@/src/firebaseAnalytics";
 import { LinearGradient } from "expo-linear-gradient";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
+import { useForceUpdate } from "@/hooks/useForceUpdate";
+import ForceUpdateModal from "@/components/ForceUpdateModal";
 
 const FORCE_ADS_DEBUG = false;
 
@@ -1334,6 +1336,20 @@ const stylesOverlay = StyleSheet.create({
   },
 });
 
+const ForceUpdateChecker: React.FC = () => {
+  const updateStatus = useForceUpdate();
+
+  if (!updateStatus || updateStatus.type === "ok") return null;
+
+  return (
+    <ForceUpdateModal
+      visible
+      storeUrl={updateStatus.storeUrl}
+      force={updateStatus.type === "force"}
+    />
+  );
+};
+
 
 // =========================
 // RootLayout
@@ -1410,6 +1426,7 @@ export default function RootLayout() {
         </FeatureFlagsProvider>
       </View>
     </ToastProvider>
+    <ForceUpdateChecker /> 
   </GestureHandlerRootView>
   );
 }
